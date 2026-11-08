@@ -32,6 +32,7 @@ namespace L.Checker
 
 open L L.Arena
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section agree
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck)
@@ -181,7 +182,9 @@ theorem runMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checke
         hw hmode hlo hhi hctlf hv)
 
 end agree
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 open ConAgua.Final L.Rom in
 /-- **Entry 2's verdict claim from what `check_pending`'s error arms assume** (as
 `drv_twinAccepts`, with `runMode2_agreeE` for `runMode2_agree` and `TwinVerdict.phaseB` for the
@@ -226,5 +229,6 @@ theorem entry2Verdict_of
     hw' hmode hlo hhi hctlf hv' h₂ hk0
   obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
   exact TwinVerdict.phaseB hA hBp hC hD hE PA.fold hB
+-/
 
 end L.Checker

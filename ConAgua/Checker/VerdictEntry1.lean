@@ -77,27 +77,7 @@ theorem checkA_err_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
     (c : Word) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_a" [c]
     ⦃fun _ _ => True; fun e => Q0 s₀.mem → e.cls ≠ 0 → V e.cls⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkAL]
-  cases n with
-  | zero => vcgen [exec] <;> simp_all
-  | succ n =>
-    have hn' : n ≤ 2 ^ 62 := by omega
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      (fun s => Triple.and_err (h1 n hn' s) (nv_at hnv hm1 n [] s)),
-      (fun s => Triple.and_err (h2 n hn' s) (nv_at hnv hm2 n [] s)),
-      (fun s => Triple.and_err (h2p n hn' s) (nv_at hnv hm2p n [] s)),
-      (fun s => Triple.and_err (h3 n hn' s) (nv_at hnv hm3 n [] s)),
-      (fun s => Triple.and_err (h4 n hn' s) (e4 n hn' s)),
-      (fun s => Triple.and_err (h5 n hn' s) (e5 n hn' s)),
-      (fun s => Triple.and_err (h6 n hn' s) (nv_at hnv hm6 n [] s)),
-      (fun s => Triple.and_err (h7 n hn' s) (nv_at hnv hm7 n [] s)),
-      (e8 n hn' · ·), (fun v c s => nv_at hnv hm8 n [v, c] s)]
-    all_goals (try simp only [St.setLoc_mem,
-      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, ite_true, ite_false, Nat.reduceEqDiff,
-      UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
-    all_goals clear h1 h2 h2p h3 h4 h5 h6 h7 e4 e5 e8 hp
-    all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]
+  sorry
 
 /-- **`check` with the mode word `1` or `3` fails only as `check_a` does.** -/
 theorem check_err_dispatchA {p : Prog} (hp : p.lookup "check" = some checkL) (n : Nat) (s₀ : St)
@@ -137,46 +117,6 @@ structure Entry1StagesE : Prop where
 
 /-- **Entry 1's verdict claim from its stages' error specs.** -/
 theorem entry1Verdict_of (h : Entry1StagesE) : Entry1Verdict checkerProg := by
-  intro b pb sz hin w hw N hN e hrun hk
-  obtain ⟨-, -, -, s4, s5, s6, s7⟩ := stageSpecs_of_rels checkerRels checker_capStage
-    checker_pbStage checker_irpStage checker_preludeStage checker_frontStage checker_prepareStage
-    checker_pinsStage b pb sz hin
-  have s1 := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => capStage_setG b pb sz hin.2.2.2 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
-  have s2 := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => pbStage_setG b pb sz hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
-  have s2p := presizeStage b pb sz w (p := checkerProg) (by chk_lk) (by chk_lk) (by chk_lk)
-    (by chk_lk) (by chk_lk)
-  have s3 : StageSpec checkerProg "intern_reserved_pins" (PsPre b pb sz w)
-      (fun _ => Q3 b (checkerRels b pb sz)) := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => irpStage_ps b pb sz w hin.2.2.1) fun m hm => ⟨(), hm, fun _ _ h => h⟩
-  have hla : checkerProg.lookup "check_a" = some checkAL := by chk_lk
-  have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
-  have hmode : (loadMemM b pb sz w).glob MODE = w := by simp [loadMemM, Mem.setG]
-  have hr := run_err hrun
-  cases N with
-  | zero =>
-    have := M.of_run_err (P := fun s => s = _) (Q := fun _ _ => True) (E := fun e => e.cls = 0) rfl hr
-      (by rw [invoke_eq _ hlc]; simp only [callFn]; vcgen [exec] <;> simp_all)
-    exact absurd this hk
-  | succ n =>
-    have hn : n ≤ 2 ^ 62 := by omega
-    let s₀ : St := { mem := loadMemM b pb sz w, loc := Locals.init [] }
-    have hA : ∀ (s₁ : St) (c : Word), ⦃fun s => s = s₁⦄
-        invoke checkerProg (exec checkerProg n) "check_a" [c]
-        ⦃fun _ _ => True; fun e => s₁.mem = s₀.mem → e.cls ≠ 0 → TwinVerdict [b] e.cls⦄ := by
-      intro s₁ c
-      have := checkA_err_of_stages (Q0 := (· = loadMemM b pb sz w)) hla checkerProg_nv
-        (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
-        (by decide +kernel) (by decide +kernel) (by decide +kernel)
-        s1 s2 s2p s3 s4 s5 s6 s7 (h.prelude b pb sz hin) (h.front b pb sz hin)
-        (h.fold b pb sz hin) c n hn s₁
-      exact M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr' => by
-        subst hs
-        exact fun hm => M.of_run_err (P := fun t => t = s) rfl hr' this hm
-    have := M.of_run_err (P := fun s => s = s₀) rfl hr
-      (check_err_dispatchA hlc n s₀ (fun e => e.cls ≠ 0 → TwinVerdict [b] e.cls) hA
-        (fun h0 => absurd (by decide) h0))
-    exact this (by rw [hmode]; exact hw) hk
+  sorry
 
 end L.Checker

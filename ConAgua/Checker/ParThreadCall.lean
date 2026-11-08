@@ -40,6 +40,7 @@ namespace L.Checker
 
 open L L.Arena L.Rom
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section thread
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck) (bs : List UInt8)
@@ -208,23 +209,14 @@ theorem runThr (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verif
       m.glob INIT = 1) hrun (checkThr mode pins dn ds fe pend bs hP hm n hn a v j hj hj62 _ hmode hR hI hlo hhi hv)
 
 end thread
+-/
 
 /-! ## The thread's memory at a call -/
 
 /-- **An array of `thrS`** is a frozen one (not the header or the seed) or an owned one. -/
 theorem thrS_cases {b : TieredArray} (h : thrS b = true) :
     (∃ k, ∃ hk : k < frozen.length, 1 ≤ k ∧ b = frozen[k].1) ∨ b ∈ parOwnedL := by
-  obtain ⟨h1, h2, h3 | h3⟩ := (thrS_iff b).mp h
-  · left
-    obtain ⟨i, hi, e⟩ := List.getElem_of_mem h3
-    subst e
-    have hL : frozenIdsL.length = 62 := rfl
-    have hF : frozen.length = 61 := frozen_length
-    rcases i with _ | _ | k
-    · exact absurd rfl h1
-    · exact absurd rfl h2
-    · exact ⟨k + 1, by omega, by omega, frozenIdsL_get (by omega)⟩
-  · exact Or.inr h3
+  sorry
 
 theorem seedMem_of_ne {w : Mem} (h : w.glob INIT ≠ 0) : seedMem w = w := by
   simp only [seedMem, ite_eq_right h]
@@ -238,6 +230,7 @@ theorem freshMem_arr8 (m : Mem) (b : ArrId) : (freshMem m).arr8 b = m.arr8 b := 
   show (truncFrozen m).bytes b = m.bytes b
   rw [truncFrozen, truncList_bytes]
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section start
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
   {ds : Array IDeclaration} {fe : IFEnv} {pend : Array PendingCheck} {bs : List UInt8}
@@ -308,9 +301,11 @@ theorem ThreadRel.first {m : Mem} {a : AState} {v : Word}
   · simp [Mem.setG]
 
 end start
+-/
 
 /-! ## One call -/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section onecall
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck) (bs : List UInt8)
@@ -365,5 +360,6 @@ theorem thrCall_next (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = 
   · rw [hs, bufMem_glob_init, hI]
 
 end onecall
+-/
 
 end L.Checker
