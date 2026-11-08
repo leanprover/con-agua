@@ -260,7 +260,8 @@ theorem Keeps.noLss_of_stP {α : Type} {op : AM α} (h : Keeps stDenP op) : Keep
 
 theorem keeps_noLss_andRescueSlots (fe : IFEnv) (c : NIdx) (nP : Nat) :
     Keeps noLss (andRescueSlots fe c nP) := by
-  sorry
+  unfold andRescueSlots
+  exact Keeps.bind (by unfold pinAnd; prim_keeps pinAt) fun _ => Keeps.pure _
 
 /-- **`StoreDen` across a step that keeps the caches, the pins and the level stores** and creates
 no new `sort`/`const` view (`hv`). -/
