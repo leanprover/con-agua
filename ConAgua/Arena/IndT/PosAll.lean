@@ -44,6 +44,7 @@ section steps
 variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv in
 theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p dn vis fe env n) :
     PosRef p dn vis fe env (n + 1) := by
@@ -207,12 +208,14 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
     obtain ⟨hC4, hg4, hk4, hx1, hns4, hP4, hA4, c4⟩ := hQ4
     exact RefE.ret hrun4 ⟨hC4, hg12.trans hg4, by simpa using hk4, by simpa using hwH,
       by simpa [hwd] using hx1.symm, by simpa using hns4, hP4, hA4, c1.trans c4⟩
+-/
 
 end steps
 
 section all
 variable {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- At L fuel `0` every model is out of fuel (class `0`). -/
 theorem nbRef_zero : NbRef p dn vis fe env 0 := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
@@ -225,8 +228,10 @@ theorem nbRef_zero : NbRef p dn vis fe env 0 := by
     | (rw [nfrE.eq_1]; exact RefE.of_cls0 (by simp)) | (rw [nctE.eq_1]; exact RefE.of_cls0 (by simp))
     | (rw [noE.eq_1]; exact RefE.of_cls0 (by simp)) | (rw [nwE.eq_1]; exact RefE.of_cls0 (by simp))
     | (rw [nfE.eq_1]; exact RefE.of_cls0 (by simp))
+-/
 
 variable {dn vis fe env} in
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The block refines con-ron's `nestPos` block, both outcomes**, at every L fuel below `2^62`. -/
 theorem nbRef_all (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
     (henv : ConLeche.EnvWF env) : ∀ n, n ≤ 2 ^ 62 → NbRef p dn vis fe env n
@@ -238,6 +243,7 @@ theorem nbRef_all (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC :
       newRef_step hq dn vis fe L hIlpf hLC n ih, frameRef_step hq dn vis fe henv L n (by omega) ih,
       ctorsRef_step L dn vis fe n ih, oneRef_step L hq hIlpf dn vis fe henv n hn ih,
       walkRef_step L dn vis fe henv n ih, fieldsRef_step L dn vis fe henv n ih⟩
+-/
 
 end all
 
