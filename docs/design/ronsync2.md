@@ -90,3 +90,19 @@ CONFLICT, con-ron 0001 applies.
   phase, `Final/Twin.lean`'s statements). Helpers: ronsync2-vendor (done: Theorem 1 builds on our
   toolchain, `con-ron/0002` re-made), ronsync2-kf (#148), ronsync2-core (the core tier),
   ronsync2-ind (the inductive stage, `Install.lean`), ronsync2-decl (the declaration arms, Basis).
+* 16:20–19:45: helpers ronsync2-core, -ind, -decl finished the L code of their areas (merged);
+  ronsync2-kf (#148) landed on its own (master 09a78343, #232); ronsync2-fix made the whole library
+  build with stage-2 sorries (a big share of the old proofs is commented out under
+  `/- ronsync2 stage 2: … -/` markers, to restate in stage 3; an early `--delete` pass of the
+  sorry-out tool removed declarations in commit 3df264b01, restore candidates are its diff).
+  Program regenerated (1770 functions, no stubs). Two fixes found by running it: the jobs read the
+  ROM's structured constants, but entry 2 has no pin-data buffer, so they are read once at
+  startup into `ROMC` (`rom_fill`, frozen); `lv_lookup` over `EREC` keys reads them at tagged
+  addresses (`lvLookupTG`).
+* First verdicts (`diff-e2e --tests` at con-leche 210a580e, sequential): 687 of 689 agree, `Init`
+  accepts; the two left were the `lv_lookup` tier bug.
+* Environment: the toolchain's `ld.lld` is a nix wrapper whose store path was garbage-collected,
+  so no Lean executable links (`romgen`, `e2e-l`, `e2e-ref`, the census). Workaround for this lane
+  only (`_tmp/ronsync2/cc/`): `LEAN_CC` a clang wrapper with `--ld-path` to a script that calls
+  `bin-unwrapped/ld.lld` with the toolchain's library paths, `libunwind`, `libc_nonshared`,
+  `libpthread_nonshared` and an rpath. Binaries linked so went into the shared Lake cache.
