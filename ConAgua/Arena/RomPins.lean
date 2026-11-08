@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Rom
 public import ConAgua.Arena.Tiers
+public import ConRon.Arena.Pins
 import ConAgua.Front.ApplyExprRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

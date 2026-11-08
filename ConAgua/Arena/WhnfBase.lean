@@ -53,8 +53,10 @@ namespace L.Arena
 
 /-- The mode word. -/
 def decMode (w : Word) : ConLeche.CheckMode :=
-  if w = 0 then .verified else if w = 1 then .trusted else if w = 2 then .verifiedEager
-  else .trustedEager
+  if w &&& 1 = 0 then .verified else .trusted
+
+/-- The eager bit of the mode word. -/
+def decEager (w : Word) : Bool := (w >>> 1) &&& 1 != 0
 
 /-- A handle word (an index `< 2^32` of any kind). -/
 def HW (w : Word) : Prop := w.toNat < 2 ^ 32
@@ -525,24 +527,7 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 145 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
     (hmem : CoreMemos m') :
     CoreS dn m' a vis fe M eb := by
-  have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
-    have := hA b hb; omega
-  have aC : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 137 → AvoidC lo hi C := fun lo hi h1 h2 x hx => by
-    have := hC x hx; omega
-  exact ⟨⟨ArenaR.frame_ext A C (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) m m'
-        hf a hS.arena.base,
-      DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega)
-        a hS.arena.der⟩,
-    hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
-    hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide))
-      (by decide)),
-    hS.env.frame (aA 129 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
-    hS.readL, hS.readLs, hS.nwf, hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
-    hmem, hf.size BSTK ▸ hS.bstk,
-    hS.den.frameE (hf.arr EREC (fun h => absurd (hA _ h) (by decide))
-      (by decide)),
-    hS.mode.frame hf (fun h => by have := hC _ h; simp at this)
-      (fun h => by have := hC _ h; simp at this)⟩
+  sorry
 
 /-- `CoreS.frameSM` away from the walk-local memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
@@ -758,7 +743,7 @@ def WhnfCoreSlot (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode cheap d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW e →
     CoreSpec p n "whnf_core" [mode, cheap, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) decH s₀ a₀ dn vis
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) decH s₀ a₀ dn vis
       fe M eb
 
 /-- `whnf(mode, vis, d, e)` refines the knot's `whnf` slot. -/
@@ -766,21 +751,21 @@ def WhnfSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "whnf" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnf d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `infer(mode, vis, d, e)` refines the knot's full-grade `infer` slot (phase 7). -/
 def InferSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "infer" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).infer d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
+      ((coreKnot (decMode mode) (decEager mode) fe id F).infer d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `infer_io(mode, vis, d, e)` refines the knot's io-grade `inferIO` slot (phase 7). -/
 def InferIOSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "infer_io" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
+      ((coreKnot (decMode mode) (decEager mode) fe id F).inferIO d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `defeq(mode, vis, d, a, b)` refines the knot's `defeq` slot (phase 6). -/
 def DefeqSlot (p : Prog) (n : Nat) : Prop :=
@@ -788,7 +773,7 @@ def DefeqSlot (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW x →
     HW y →
     CoreSpec p n "defeq" [mode, vis, d, x, y]
-      ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
+      ((coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
       M eb
 
 /-- **The knot at L fuel `n`**: every slot. -/

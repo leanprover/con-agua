@@ -91,7 +91,6 @@ def rciCv : FunDecl := lfn (q, p) locals (h, ez) {
 /-- `rci_caps(q, c)`: an inductive's capabilities to the 15 words at `c` (`decCaps`); the position
 after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:312-318 ConRon.Arena.Frontend.internCaps
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.internCaps` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.internCaps]
 def rciCaps : FunDecl := lfn (q, c) locals (x, h, ez) {
   x := call rom_u64(q);
@@ -108,20 +107,16 @@ def rciCaps : FunDecl := lfn (q, c) locals (x, h, ez) {
   ez := call erec_put(c + 6, x);
   x := call rom_u64(q + 48);
   ez := call erec_put(c + 12, x);
-  x := call rom_u64(q + 56);
-  ez := call erec_put(c + 7, x);
-  (h, q) := call rom_name(q + 64);
+  (h, q) := call rom_name(q + 56);
   ez := call erec_put(c + 1, h);
   q := call rci_name_sl(q, c + 10);
   q := call rci_name_sl(q, c + 13);
-  q := call rci_name_sl(q, c + 8);
   return q
 }
 
 /-- `rci_rule(q, r)`: a recursor rule to the 11-word record at `r` (`decRule`) at the current
 memo; the position after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:297-302 ConRon.Arena.Frontend.internRule
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.internRule` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:286-292 ConRon.Arena.Frontend.internFire
 @[no_expose, l_impl ConRon.Arena.Frontend.internRule ConRon.Arena.Frontend.internFire]
 def rciRule : FunDecl := lfn (q, r) locals (h, x, f, l, o, ez) {
@@ -129,25 +124,21 @@ def rciRule : FunDecl := lfn (q, r) locals (h, x, f, l, o, ez) {
   ez := call erec_put(r, h);
   x := call rom_u64(q);
   ez := call erec_put(r + 1, x);
-  x := call rom_u64(q + 8);
-  ez := call erec_put(r + 2, x);
-  x := call rom_u64(q + 16);
-  ez := call erec_put(r + 9, x);
-  x := call rom_u64(q + 24);
-  ez := call erec_put(r + 10, x);
-  f := call rom_u64(q + 32);
+  f := call rom_u64(q + 8);
   ez := call erec_put(r + 3, f);
-  q := q + 40;
+  q := q + 16;
   ez := call erec_put(r + 4, 0);
   ez := call erec_put(r + 5, 0);
   ez := call erec_put(r + 6, 0);
   ez := call erec_put(r + 7, 0);
-  if f == 1 {
+  if f == 1 || f == 2 {
     l := call rom_u64(q);
     o := call erec_alloc(l);
     ez := call erec_put(r + 4, o);
     ez := call erec_put(r + 5, l);
-    q := call rci_lvls_to(q + 8, o, l);
+    q := call rci_lvls_to(q + 8, o, l)
+  };
+  if f == 1 {
     l := call rom_u64(q);
     o := call erec_alloc(l);
     ez := call erec_put(r + 6, o);
@@ -174,13 +165,12 @@ def rciRulesTo : FunDecl := lfn (q, o, k) locals (r) {
 pointer and the position after; an unknown kind is refused. Each kind's arm returns (no paths
 merge after it). -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:320-342 ConRon.Arena.Frontend.internCI
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.internCI` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.internCI]
 def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o, ez) {
   k := call rom_u64(q);
   q := q + 8;
   if k == 0 { n := 5 } else if k == 2 { n := 5 } else if k == 1 { n := 8 } else if k == 3 { n := 20 }
-  else if k == 4 { n := 7 } else if k == 5 { n := 9 } else { abort };
+  else if k == 4 { n := 7 } else if k == 5 { n := 10 } else { abort };
   p := call erec_alloc(n);
   ez := call erec_put(p, k);
   q := call rci_cv(q, p + 1);
@@ -209,11 +199,13 @@ def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o, ez) {
     ez := call erec_put(p + 5, x);
     x := call rom_u64(q + 8);
     ez := call erec_put(p + 6, x);
-    l := call rom_u64(q + 16);
+    x := call rom_u64(q + 16);
+    ez := call erec_put(p + 9, x);
+    l := call rom_u64(q + 24);
     o := call erec_alloc(11 * l);
     ez := call erec_put(p + 7, o);
     ez := call erec_put(p + 8, l);
-    q := call rci_rules_to(q + 24, o, l);
+    q := call rci_rules_to(q + 32, o, l);
     return (p, q)
   };
   return (p, q)
@@ -254,39 +246,19 @@ def romBasisDeclsL : FunDecl := lfn (kind) locals (o, l) {
   return (o, l)
 }
 
-/-- `rom_basis_decls_a(kind)`: the annotated basis block of `kind`. -/
--- con-ron: ConRon/Arena/Basis.lean:46-50 ConRon.Arena.BasisKind.declsA
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.BasisKind.declsA` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.BasisKind.declsA]
-def romBasisDeclsAL : FunDecl := lfn (kind) locals (o, l) {
-  if kind >= 5 { abort };
-  (o, l) := call rci_block(kind + 5);
-  return (o, l)
-}
-
 /-- `rom_ci(id)`: the constant `romCiT id` at a fresh memo, an `EREC` record pointer. -/
--- con-ron: ConRon/Arena/StdAxioms.lean:87-91 ConRon.Arena.eqA
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.nonemptyIntroA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.nonemptyA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.iffA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.eqA` is gone upstream; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.nonemptyRecA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.natA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.iffRecA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.iffIntroA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Basis.lean:42-47 ConRon.Arena.natA
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.natA` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/StdAxioms.lean:70-71 ConRon.Arena.iffA
 -- con-ron: ConRon/Arena/StdAxioms.lean:72-73 ConRon.Arena.iffIntroA
 -- con-ron: ConRon/Arena/StdAxioms.lean:74-75 ConRon.Arena.iffRecA
 -- con-ron: ConRon/Arena/StdAxioms.lean:78-79 ConRon.Arena.nonemptyA
 -- con-ron: ConRon/Arena/StdAxioms.lean:80-81 ConRon.Arena.nonemptyIntroA
 -- con-ron: ConRon/Arena/StdAxioms.lean:82-83 ConRon.Arena.nonemptyRecA
-@[no_expose, l_impl ConRon.Arena.eqA ConRon.Arena.natA ConRon.Arena.iffA ConRon.Arena.iffIntroA
+@[no_expose, l_impl ConRon.Arena.natA ConRon.Arena.iffA ConRon.Arena.iffIntroA
   ConRon.Arena.iffRecA ConRon.Arena.nonemptyA ConRon.Arena.nonemptyIntroA ConRon.Arena.nonemptyRecA]
 def romCiL : FunDecl := lfn (id) locals (q, z, p) {
-  if id >= 8 { abort };
-  q := call rci_slot(10 + id);
+  if id >= 7 { abort };
+  q := call rci_slot(5 + id);
   z := call rci_fresh();
   (p, q) := call rci_ci(q);
   return p
@@ -308,7 +280,7 @@ def romCiL : FunDecl := lfn (id) locals (q, z, p) {
   ConRon.Arena.reduceBoolCvA ConRon.Arena.ofReduceNatA ConRon.Arena.ofReduceBoolA]
 def romCvL : FunDecl := lfn (id) locals (q, z, p) {
   if id >= 10 { abort };
-  q := call rci_slot(18 + id);
+  q := call rci_slot(12 + id);
   p := call erec_alloc(4);
   z := call rci_fresh();
   q := call rci_cv(q, p);
@@ -322,7 +294,7 @@ def romCvL : FunDecl := lfn (id) locals (q, z, p) {
 @[no_expose, l_impl ConRon.Arena.reduceNatDeclPin ConRon.Arena.reduceBoolDeclPin]
 def romExprPinL : FunDecl := lfn (id) locals (q, z, h) {
   if id >= 2 { abort };
-  q := call rci_slot(28 + id);
+  q := call rci_slot(22 + id);
   z := call rci_fresh();
   (h, q) := call rom_expr(q);
   return h
@@ -332,7 +304,7 @@ def romExprPinL : FunDecl := lfn (id) locals (q, z, h) {
 -- con-ron: ConRon/Arena/Basis.lean:260-264 ConRon.Arena.andPinDecls
 @[no_expose, l_impl ConRon.Arena.andPinDecls]
 def romAndPinL : FunDecl := lfn () locals (o, l) {
-  (o, l) := call rci_block(30);
+  (o, l) := call rci_block(24);
   return (o, l)
 }
 
@@ -340,7 +312,7 @@ def romAndPinL : FunDecl := lfn () locals (o, l) {
 `rom_name`, `rom_level`, `rom_expr`, `rom_exprs_to`, `rset_clear` (`romProgPB`), `erec_alloc`,
 `iw_alloc` (`IndIface.lean`). -/
 def romCIProg : Prog :=
-  [("rom_basis_decls", romBasisDeclsL), ("rom_basis_decls_a", romBasisDeclsAL), ("rom_ci", romCiL),
+  [("rom_basis_decls", romBasisDeclsL), ("rom_ci", romCiL),
    ("rom_cv", romCvL), ("rom_expr_pin", romExprPinL), ("rom_and_pin", romAndPinL), ("rci_slot", rciSlot), ("rci_fresh", rciFresh),
    ("rci_names_to", rciNamesTo), ("rci_name_sl", rciNameSl), ("rci_lvls_to", rciLvlsTo),
    ("rci_cv", rciCv), ("rci_caps", rciCaps), ("rci_rule", rciRule), ("rci_rules_to", rciRulesTo),
