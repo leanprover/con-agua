@@ -421,8 +421,8 @@ theorem wsWrites_frame (m : Mem) (q p s f : Word) : MemFrame [IW] [] m (wsWrites
 /-- Writing a fresh record above the top (given the pool's sizes) keeps the stage relation. -/
 theorem stage_frame_iw {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} (hS : StageR vis fe m a) (hf : MemFrame [IW] [200] m m')
-    (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR vis fe m' a := by
-  sorry
+    (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR vis fe m' a :=
+  ⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw (by rw [hf.size IW]; exact htop)⟩
 
 /-- The flag `withSort` computes from the verdict. -/
 def isPropOf (x : Option Bool) : Bool :=

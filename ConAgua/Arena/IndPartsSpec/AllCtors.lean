@@ -124,7 +124,16 @@ theorem ccW_len {n : Nat} {m m1 : Mem} {off q k cl : Word}
 theorem iwGrow_of_copy {m0 m m1 : Mem} (hg : IWGrow m0 m) (hA : ∀ b : TieredArray, b ≠ ↑IW → m1.arr64 b = m.arr64 b)
     (q : Nat) (hq : iwTop m0 ≤ q)
     (hG : ∀ i, i < q → (m1.arr64 IW)[i]? = (m.arr64 IW)[i]?) : IWGrow m0 m1 := by
-  sorry
+  have htop : iwTop m1 = iwTop m := by simp only [iwTop, hA CTL (by decide)]
+  have hEr : erTop m1 = erTop m := by simp only [erTop, hA CTL (by decide)]
+  have hEr1 : erecTop1 m1 = erecTop1 m := by simp only [erecTop1, hA CTL (by decide)]
+  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
+  · rw [htop]; exact hg.iw
+  · rw [hEr]; exact hg.er
+  · rw [hG i (by omega)]; exact hg.iwGet i hi
+  · rw [hA EREC (by decide)]; exact hg.erGet i hi
+  · rw [hEr1]; exact hg.er1
+  · rw [hA (tier1 EREC) (by decide)]; exact hg.er1Get i hi
 
 theorem iwN_eq_agree {m m0 : Mem} {q i : Nat} (hag : ∀ j, j < q → (m.arr64 IW)[j]? = (m0.arr64 IW)[j]?)
     (hi : i < q) : iwN m i = iwN m0 i := by
