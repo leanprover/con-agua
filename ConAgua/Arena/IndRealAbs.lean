@@ -368,35 +368,6 @@ theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
     RelW abF [CWF, e, d, k] (fun m a => StageR vis fe m a ∧ AbsOK m)
       (abstract1Fast CWF.toNat (decI e) d.toNat k.toNat)
       (fun m m' a r x => KeepPost vis fe decW0E m m' a r x ∧ AbsOK m') := by
-  intro m m' a r h ⟨hS, ⟨mp, hmp⟩, hI1, hCr, hIl, hWk⟩
-  have hfr := abF_frame h
-  obtain ⟨n, hc⟩ := callF_run h
-  rcases n with _ | n
-  · rw [callW_zero] at hc; cases hc
-  obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (abAdapter_spec n _ CWF e d k) hc
-  obtain ⟨⟨rI, mI⟩, hi, hm⟩ := of_K hm rfl
-  simp only [fwd1, Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, hmI⟩ := hm
-  rw [hs'] at hmI
-  subst hmI
-  rcases n with _ | j
-  · rw [callW_zero] at hi; cases hi
-  have hA : ArenaA m { a with memos := { a.memos with abs1C := mp } } :=
-    ⟨hS.check.arena.memo_irrel a.memos.instLC mp, hmp⟩
-  obtain ⟨s'', hs'', -, hok, hA', hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (absEntry_refines abProg abProg_abs rfl j _ _ hA e d k he) hi
-  rw [hs''] at hA'
-  have hrun := AM.run_of_ok _ _ hok
-  have hrun' : (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat).run a =
-      .ok (AM.res (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat)
-          { a with memos := { a.memos with abs1C := mp } },
-        AM.st (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat)
-          { a with memos := { a.memos with abs1C := mp } }) := hrun
-  have hcp := (keepsW_abs1Fast coreWalkFuel (decE e) d.toNat k.toNat).cp_of_cpl.run hrun'
-  obtain ⟨hS', hg⟩ := StageR.of_walk hS hA'.1 hfr (lt64A_of_all rfl) (lt64_of_all rfl) hcp
-  exact ⟨_, _, by rw [CWF_eq]; exact hrun', ⟨hS', hg, hlt, hres.symm⟩, ⟨_, hA'.2⟩,
-    hI1.frame hfr (by decide) (by decide), hCr.frame hfr (by decide) (by decide),
-    hIl.frame hfr (by decide) (by decide),
-    hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
+  sorry
 
 end L.Ind

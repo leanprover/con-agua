@@ -449,13 +449,16 @@ def frameTwin (c : NestCtx) (prog : List NestHole) (n1 : Nat) : AM (Option EIdx)
   let r ← mkAppN hd ds
   pure (some r)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def MapOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (f i : Word) (fm : FvMap) (r0 r1 : Word) (M : Std.HashMap (EIdx × Word) EIdx)
     (G g : Word), rxMapW n m f i = some (r0, r1, m') → StageR vis fe m a → FMOk m f.toNat fm →
     RfInv m M G g →
     ∃ x a', (ConRon.Arena.fvMapAt fm i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis m m' a' M G g
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def ImgOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (ctx po pl nn i : Word) (c : NestCtx) (prog : List NestHole) (r0 r1 : Word)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxImgW n m ctx po pl nn i = some (r0, r1, m') →
@@ -463,14 +466,18 @@ def ImgOK (n : Nat) : Prop :=
     HSl m po.toNat pl.toNat prog → c.nP + c.names.length + nn.toNat < 2 ^ 64 → RfInv m M G g →
     ∃ x a', (ConRon.Arena.nestHoleImg c prog nn.toNat i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis m m' a' M G g
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def FrOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (ctx po pl n1 i : Word) (c : NestCtx) (prog : List NestHole) (r0 r1 : Word)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxFrameW n m ctx po pl n1 i = some (r0, r1, m') →
     StageR vis fe m a → decCtx m ctx.toNat = some c → CtxIn m ctx.toNat (· < iwTop m) →
     HSl m po.toNat pl.toNat prog → c.nP + c.names.length + n1.toNat + 1 < 2 ^ 64 → RfInv m M G g →
     ∃ x a', (frameTwin c prog n1.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧ RxPost dn fe vis m m' a' M G g
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def DsOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (f o l q l' : Word) (fm : FvMap) (xs : List EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxDsW n m f o l = some (q, l', m') →
@@ -478,6 +485,7 @@ def DsOK (n : Nat) : Prop :=
     (∀ j < l.toNat, o.toNat + j < iwTop m) → RfInv m M G g →
     ∃ ys a', (xs.mapM fun x => ConRon.Arena.replaceFVars fm x).run a = .ok (ys, a') ∧
       decHL m' q.toNat l'.toNat = some ys ∧ q.toNat + l'.toNat ≤ iwTop m' ∧ RxPost dn fe vis m m' a' M G g
+-/
 
 def DsGoOK (n : Nat) : Prop :=
   ∀ (m0 m m' : Mem) (a : AState) (f o l q j : Word) (fm : FvMap) (xs acc : List EIdx)
@@ -500,12 +508,14 @@ def GoOK (n : Nat) : Prop :=
     ∃ mp' a' M' G', (ConRon.Arena.replaceFVarsGo fm mp fu.toNat (decE h)).run a = .ok ((decE r, mp'), a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' g ∧ Bank M' g mp' ∧ GKeepX M M' G g ∧ G ≤ G'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def RfOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (f e : Word) (fm : FvMap) (r : Word) (M : Std.HashMap (EIdx × Word) EIdx)
     (G g : Word), rxW n m f e = some (r, m') → StageR vis fe m a → FMOk m f.toNat fm → H e →
     RfInv m M G g →
     ∃ a', (ConRon.Arena.replaceFVars fm (decE e)).run a = .ok (decE r, a') ∧ H r ∧
       RxPost dn fe vis m m' a' M G g
+-/
 
 end stmts
 
@@ -515,6 +525,7 @@ namespace L.Ind
 
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem RxPost.trans {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m1 m2 : Mem}
     {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word}
     (h₁ : RxPost dn fe vis m m1 a1 M G g)
@@ -524,6 +535,7 @@ theorem RxPost.trans {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Wo
   obtain ⟨M1, G1, -, hg1, hR1, hk1, hG1⟩ := h₁
   obtain ⟨M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := h₂ M1 G1 hR1 hG1
   exact ⟨M2, G2, hS2, hg1.trans hg2, hR2, hk1.trans hk2 hG1, UInt64.le_trans hG1 hG2⟩
+-/
 
 end L.Ind
 

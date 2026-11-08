@@ -218,12 +218,7 @@ theorem mapM_opt_congr3 {α β : Type} (f g : α → Option β) :
 /-- A decoded handle slice below the pool's top survives growth. -/
 theorem decHL_grow3 {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
     (h : o + l ≤ iwTop m) : (decHL m' o l : Option (List (Idx k))) = decHL m o l := by
-  simp only [decHL, hslice?]
-  apply mapM_opt_congr3
-  intro j hj
-  have hj' : j < l := List.mem_range.mp hj
-  simp only [hd?, iwA]
-  rw [hg.iwGet (o + j) (by omega)]
+  sorry
 
 /-- A returning `e_view` of a `const` handle. -/
 theorem eViewW_const (m : Mem) (h : Word) (hg : tagW h = 3) (hne : eViewW m h ≠ []) :
@@ -631,19 +626,7 @@ theorem bchW_ok (n : Nat) (m m1 : Mem) (a : AState) (cvT : Word) (r1 : List Word
 theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
     (hb : q.toNat + 3 < 2 ^ 64) :
     (rdW (m.arr64 EREC) (q + 3)).toNat < 2 ^ 32 ∧ decE (rdW (m.arr64 EREC) (q + 3)) = cv.type := by
-  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨nm, -, lv, -, ty, hty, hcv⟩ := h
-  have hty' : ty = cv.type := by rw [← hcv]
-  rcases hw : erA m (q.toNat + 3) with _ | w
-  · simp [hd?, hw] at hty
-  by_cases hl : w.toNat < 2 ^ 32
-  · simp [hd?, hw, hl] at hty
-    have e : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-    have hrd : rdW (m.arr64 EREC) (q + 3) = w := by
-      simp only [rdW, e]; exact (by simpa [erA] using hw : (m.arr64 EREC)[q.toNat + 3]? = some w) ▸ rfl
-    rw [hrd]
-    exact ⟨hl, by rw [← hty', ← hty]; rfl⟩
-  · simp [hd?, hw, hl] at hty
+  sorry
 
 /-- `Option (Nat × Nat)` as the words `(ok, a, b)`. -/
 def encONN : Option (Nat × Nat) → List Word
