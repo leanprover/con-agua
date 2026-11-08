@@ -151,7 +151,9 @@ theorem hslice?_congr {k : IdxKind} (a b : Nat → Option Word) (off off' n : Na
     | nil => intro _; rfl
     | cons j js ih =>
       intro hl
-      simp only [List.mapM_cons, hd?, h j (hl j (by simp)), ih (fun x hx => hl x (by simp [hx]))]
+      have e : (hd? a (off + j) : Option (Idx k)) = hd? b (off' + j) := by
+        unfold hd?; rw [h j (hl j (by simp))]
+      rw [List.mapM_cons, List.mapM_cons, e, ih (fun x hx => hl x (by simp [hx]))]
   exact key _ (fun j hj => List.mem_range.mp hj)
 
 theorem consPre_ctl (m : Mem) (x l : Word) (i : Word) (hi : i ≠ 200) :

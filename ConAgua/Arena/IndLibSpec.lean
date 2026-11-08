@@ -698,7 +698,7 @@ def erRd (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) (a
 theorem erRd_of_erecP {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) :
     erRd m a = v ∧ (a &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (a >>> 40))).size := by
   obtain ⟨hlt, hget⟩ := erecP_rd h
-  exact ⟨by simp [erRd, rdW, hget], hlt⟩
+  exact ⟨by simp only [erRd, rdW, hget, Option.getD_some], hlt⟩
 
 theorem erRd_of_erA {m : Mem} {a v : Word} (h : erA m a.toNat = some v) : erRd m a = v :=
   (erRd_of_erecP h).1
