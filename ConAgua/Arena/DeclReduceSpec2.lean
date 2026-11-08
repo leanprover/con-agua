@@ -288,21 +288,29 @@ def reoN1 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Wo
   | some (r2, m2) => reoN2 p n (envFindW m2 (r2.headD 0) vis)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After the `reduceNat` pin. -/
 def reoK1 (n : Nat) (vis c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) => if c = r1.headD 0 then reoN1 p n vis (pinAtW m1 1) else reoB1 p n vis (pinAtW m1 29)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `reduce_elem_ok(vis, c)`.** -/
 def reoW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, vis, c => reoK1 p n vis c (pinAtW m 43)
+-/
 
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 : Mem) (vis c q : Word) (r1 r2 r3 r4 : List Word)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem reoW_step : reoW p (n + 1) m vis c = reoK1 p n vis c (pinAtW m 43) := rfl
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem reoK1_some : reoK1 p n vis c (some (r1, m1)) =
     if c = r1.headD 0 then reoN1 p n vis (pinAtW m1 1) else reoB1 p n vis (pinAtW m1 29) := rfl
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem reoN1_some : reoN1 p n vis (some (r2, m2)) = reoN2 p n (envFindW m2 (r2.headD 0) vis) := rfl
 -/
@@ -348,6 +356,7 @@ theorem reo_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
 
 end reo
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`reduce_elem_ok(vis, c)` refines `reduceElemOk`** at the model level. -/
 theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) (hR : L.Rom.RomRefs p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
@@ -462,6 +471,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     rw [hpre, hfind, hci]
     simp only [StateT.run_bind, hrun4', exc_ok_bind']
     exact hrun5
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`reduce_elem_ok(vis, c)` refines `reduceElemOk`** (through the ROM stubs). -/

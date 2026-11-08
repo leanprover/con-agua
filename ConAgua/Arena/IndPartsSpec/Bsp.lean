@@ -193,10 +193,12 @@ def bbK10 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo 
   | some (r, m) => bbK11 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl lo ll s ip (bmoW (n + 1) m cto ctl io (r.headD 0))
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `param_levels`. -/
 def bbK9 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo ll s ip cof cl2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bbK10 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (bgW n m no nl (r.headD 0) nPd ctl cof cl2)
+-/
 
 /-- After `block_shape_ctors_of`. -/
 def bbK8 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)

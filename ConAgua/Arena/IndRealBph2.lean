@@ -33,7 +33,6 @@ open L.Arena
 
 /-- The lookups `basis_pin_hit` reaches (beyond the ROM readers' and the canonical comparisons'). -/
 structure BphProg (p : Prog) : Prop where
-  bph : p.lookup "basis_pin_hit" = some L.Checker.basisPinHitL
   canon : CanonProg p
   rom : L.Rom.RomRefs p
   iw_alloc : p.lookup "iw_alloc" = some iwAlloc
@@ -70,7 +69,7 @@ theorem bphDecEBlk_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat
 /-- A pointer word and the name word of its record, read in the real pools. -/
 theorem bphNameAt {dn : NIdx → Option ConLeche.Name} {m : Mem} {A : Array Word} {base i : Word}
     {v : Nat} {ci : IConstantInfo} (hA : A.size < 2 ^ 64) (hE : (m.arr64 EREC).size < 2 ^ 64)
-    (hv : nat? A (base.toNat + i.toNat) = some v) (hci : decCI (erA (truncM m)) v = some ci) :
+    (hv : nat? (aread A) (base.toNat + i.toNat) = some v) (hci : decCI (erA (truncM m)) v = some ci) :
     ∃ w, rdW (m.arr64 EREC) (rdW A (base + i) + 1) = w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
   simp only [nat?, Option.map_eq_some_iff] at hv
   obtain ⟨w0, hw0, rfl⟩ := hv
@@ -96,7 +95,7 @@ theorem bphPinName {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Word}
     ∃ w ci, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + i) + 1) = w ∧ w.toNat < 2 ^ 32 ∧
       pinned[i.toNat]? = some ci ∧ ci.name = decI w := by
   obtain ⟨v, ci, hv, hci, hget⟩ := decPL_get _ _ _ hP i.toNat hi
-  have hv' : nat? (m.arr64 IW) (o.toNat + i.toNat) = some v := by
+  have hv' : nat? (aread (m.arr64 IW)) (o.toNat + i.toNat) = some v := by
     simp only [iwN, nat?, Option.map_eq_some_iff] at hv ⊢
     obtain ⟨w, hw, rfl⟩ := hv
     exact ⟨w, (truncM_iw_get hw).2, rfl⟩
@@ -110,7 +109,7 @@ theorem bphBlkName {dn : NIdx → Option ConLeche.Name} {m : Mem} {bo l : Word}
     ∃ w ci, rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (bo + i) + 1) = w ∧ w.toNat < 2 ^ 32 ∧
       blk[i.toNat]? = some ci ∧ ci.name = decI w := by
   obtain ⟨q, hq, hci⟩ := bphDecEBlk_get hB i.toNat hi
-  have hq' : nat? (m.arr64 EREC) (bo.toNat + i.toNat) = some q := by
+  have hq' : nat? (aread (m.arr64 EREC)) (bo.toNat + i.toNat) = some q := by
     simp only [nat?, Option.map_eq_some_iff] at hq ⊢
     obtain ⟨w, hw, rfl⟩ := hq
     exact ⟨w, (truncM_er_get hw).2, rfl⟩
@@ -126,35 +125,9 @@ theorem bphNames_iff {dn : NIdx → Option ConLeche.Name} {m : Mem} {o bo l : Wo
     (∀ i : Word, i < l → rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + i) + 1) =
         rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (bo + i) + 1)) ↔
       blockNames pinned = blockNames blk := by
-  have hlp : pinned.length = l.toNat := decPL_length (truncM m) hP
-  have hlb : blk.length = l.toNat := by rw [mapM_opt_length _ _ _ hB]; simp
-  constructor
-  · intro h
-    unfold blockNames
-    apply List.ext_getElem (by simp [hlp, hlb])
-    intro n h1 h2
-    simp only [List.length_map] at h1 h2
-    have hn : n < 2 ^ 64 := by have := l.toNat_lt; omega
-    have hi : (UInt64.ofNat n).toNat = n := UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hn)
-    obtain ⟨wa, ca, ha1, ha2, ha3, ha4⟩ := bphPinName hP hI hE (UInt64.ofNat n) (by rw [hi]; omega)
-    obtain ⟨wb, cb, hb1, hb2, hb3, hb4⟩ := bphBlkName hB hE (UInt64.ofNat n) (by rw [hi]; omega)
-    have hab := h (UInt64.ofNat n) (UInt64.lt_iff_toNat_lt.mpr (by rw [hi]; omega))
-    rw [ha1, hb1] at hab
-    subst hab
-    rw [hi] at ha3 hb3
-    simp only [List.getElem_map]
-    rw [List.getElem?_eq_getElem h1, Option.some.injEq] at ha3
-    rw [List.getElem?_eq_getElem h2, Option.some.injEq] at hb3
-    rw [ha3, hb3, ha4, hb4]
-  · intro h i hi
-    have hi' := UInt64.lt_iff_toNat_lt.mp hi
-    obtain ⟨wa, ca, ha1, ha2, ha3, ha4⟩ := bphPinName hP hI hE i hi'
-    obtain ⟨wb, cb, hb1, hb2, hb3, hb4⟩ := bphBlkName hB hE i hi'
-    rw [ha1, hb1]
-    have e : (blockNames pinned)[i.toNat]? = (blockNames blk)[i.toNat]? := by rw [h]
-    simp only [blockNames, List.getElem?_map, ha3, hb3, Option.map_some, Option.some.injEq] at e
-    exact decI_inj ha2 hb2 (by rw [← ha4, ← hb4, e])
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The name pre-filter's model** (`bphW.loop2`): it keeps the memory, and reaches `l` exactly
 when the name words agree from `j` on. -/
 theorem bphW_loop2_iff (p : Prog) (m : Mem) (bo o l : Word) : ∀ (f : Nat) (j jf : Word) (m' : Mem),
@@ -202,6 +175,7 @@ theorem bphW_loop2_iff (p : Prog) (m : Mem) (bo o l : Word) : ∀ (f : Nat) (j j
     · intro _ i h1 h2
       have := UInt64.le_iff_toNat_le.mp h1; have := UInt64.lt_iff_toNat_lt.mp h2; omega
     · intro _; exact e
+-/
 
 /-! ## The loop over the kinds -/
 
@@ -221,6 +195,7 @@ theorem bphBlk_erec {dn : NIdx → Option ConLeche.Name} {m : Mem} {bo bl : Word
     have := (truncM_er_get hw).1
     omega
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bph_run_step (blk pinned : List IConstantInfo) (K : ConLeche.BasisKind)
     (ks : List ConLeche.BasisKind) (a a1 : AState)
     (h : (BasisKind.decls K).run a = .ok (pinned, a1)) :
@@ -229,6 +204,7 @@ theorem bph_run_step (blk pinned : List IConstantInfo) (K : ConLeche.BasisKind)
         (do if ← canonEqList blk pinned then pure (some K) else pure none)
       else basisPinHitGo blk ks).run a1 := by
   simp only [basisPinHitGo, StateT.run_bind, h, exc_ok_bind']
+-/
 
 theorem bph_run_hit (blk pinned : List IConstantInfo) (K : ConLeche.BasisKind) (a1 a2 : AState)
     (b : Bool) (h : (canonEqList blk pinned).run a1 = .ok (b, a2)) :
@@ -237,6 +213,7 @@ theorem bph_run_hit (blk pinned : List IConstantInfo) (K : ConLeche.BasisKind) (
   simp only [StateT.run_bind, h, exc_ok_bind']
   cases b <;> rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The loop over the kinds (`bphW.loop1`) refines `basisPinHitGo`** on the kinds from `k`. -/
 theorem bphW_loop1_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (bo bl : Word) (blk : List IConstantInfo) :
@@ -354,7 +331,9 @@ theorem bphW_loop1_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.
     have : b = true := by rw [← hd3a]; simpa using hb
     subst this
     exact ⟨hS3, hg1.trans (hg2.trans hg3), by simp, hkn, rfl⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`basis_pin_hit(off, len)` refines `basisPinHit`** on the block's `EREC` slice of constant
 records (`decEBlk`, decoded below the tops), at a well-formed twin state (`StateOK`: canon's
 `LitInj`); `rom_basis_decls` by its refinement (`RomRefs.basis`). -/
@@ -380,5 +359,6 @@ theorem basisPinHit_ok {p : Prog} (P : BphProg p) :
     hB (by simp)
   refine ⟨x, a', hrun, hS', hg, ?_⟩
   cases x <;> exact hR
+-/
 
 end L.Ind

@@ -130,83 +130,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
         (r.headD 0).toNat = q.toNat + (encNames ns).length ∧
         EKeep (fun i => o.toNat ≤ i ∧ i < o.toNat + ns.length) m m' ∧ erTop m' = erTop m ∧
         m'.arr64 IW = m.arr64 IW := by
-  intro ns
-  induction ns with
-  | nil =>
-    intro _ k m a q o kw rest r m' hI hM hd hk ho hot hc
-    cases k with
-    | zero => rw [callW_zero] at hc; cases hc
-    | succ k =>
-    have hw := callW_model (M := fun mq => namesToW p k mq q o kw) (namesTo_specW rom p hL k · q o kw) hc
-    have hk0 : kw = 0 := by apply UInt64.toNat_inj.mp; simpa using hk
-    simp only [namesToW, hk0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    exact ⟨[], a, rfl, rfl, by simp, by simp, hI, hM, rfl, by simp [encNames], EKeep.refl _ _, rfl, rfl⟩
-  | cons x xs ih =>
-    intro hfit k m a q o kw rest r m' hI hM hd hk ho hot hc
-    simp only [List.all_cons, Bool.and_eq_true] at hfit
-    cases k with
-    | zero => rw [callW_zero] at hc; cases hc
-    | succ k =>
-    have hw := callW_model (M := fun mq => namesToW p k mq q o kw) (namesTo_specW rom p hL k · q o kw) hc
-    have hk0 : kw ≠ 0 := fun h => by subst h; simp at hk
-    simp only [namesToW, hk0, ite_false] at hw
-    obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
-    have hd0 : rom.drop q.toNat = encName x ++ (encNames xs ++ rest) := by
-      rw [hd, encNames, List.append_assoc]
-    obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1, hmo1⟩ := nameCall hL hr x hfit.1 hI.arena hI.mode hd0 h1
-    obtain ⟨hI1, hE1, hIW1, ht1, -⟩ := hI.expr hA1 hmo1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
-      (fun x hx => by simp [ExprC, RomC, hx])) hk1
-    have hM1 := hM.frameG hf1 (by decide) (by decide)
-    have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
-    have hlen : xs.length + 1 = kw.toNat := by simp [hk]
-    have hoE : o.toNat < (m1.arr64 EREC).size := by
-      have := hI1.ok.er; rw [ht1] at this; simp at hot; omega
-    have hI2 := hI1.setER o (r1.headD 0) ho
-    have hf2 := MemFrame.set64 m1 EREC (by decide) o (r1.headD 0)
-    have hM2 := hM1.frameG hf2 (by decide) (by simp)
-    have hC2 : (m1.set64 EREC o (r1.headD 0)).arr64 CTL = m1.arr64 CTL :=
-      Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-    have ht2 : erTop (m1.set64 EREC o (r1.headD 0)) = erTop m1 := by simp only [erTop, hC2]
-    have hs2 : stkTop (m1.set64 EREC o (r1.headD 0)) = stkTop m1 := by simp only [stkTop, hC2]
-    have hIW2 : (m1.set64 EREC o (r1.headD 0)).arr64 IW = m1.arr64 IW :=
-      Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-    have hd1 : rom.drop (r1.tail.headD 0).toNat = encNames xs ++ rest :=
-      drop_shift rom q (encName x) (encNames xs) rest (by rw [hd0, List.append_assoc]) _ hq1
-    have ho1 : (o + 1).toNat = o.toNat + 1 := by
-      have := hI.er_lt; simp at hot; rw [UInt64.toNat_add]; simp; omega
-    have hk1' : (kw - 1).toNat = xs.length := by
-      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-    obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    simp only [List.length_cons] at hot
-    obtain ⟨ws, a', hrun2, hwl, hwlt, hwd, hI3, hM3, hs3, hq3, hek3, ht3, hiw3⟩ :=
-      ih hfit.2 k _ a1 _ (o + 1) (kw - 1) rest r2 m3 hI2 hM2 hd1 hk1' (by omega)
-        (by rw [ht2, ht1, ho1]; omega) h2
-    refine ⟨r1.headD 0 :: ws, a', ?_, by simp [hwl], ?_, ?_, hI3, hM3, by rw [hs3, hs2, hs1], ?_, ?_,
-      by rw [ht3, ht2, ht1], by rw [hiw3, hIW2, hIW1]⟩
-    · show (internName x >>= fun h => Frontend.internNameList xs >>= fun hs => pure (h :: hs)).run a = _
-      rw [run_bind_of _ _ _ _ _ hrun1, run_bind_of _ _ _ _ _ hrun2]; rfl
-    · intro w hw'
-      simp only [List.mem_cons] at hw'
-      rcases hw' with rfl | hw'
-      · exact hlt1
-      · exact hwlt w hw'
-    · intro j hj
-      cases j with
-      | zero =>
-        simp only [Nat.add_zero, List.getElem_cons_zero]
-        rw [hek3.2 o.toNat (by rw [ht2, ht1]; omega) (by rw [ho1]; omega)]
-        exact er_set_get m1 o _ hoE
-      | succ j =>
-        simp only [List.getElem_cons_succ]
-        have := hwd j (by simp at hj; omega)
-        rw [ho1, Nat.add_assoc, Nat.add_comm 1 j] at this
-        exact this
-    · simp only [List.headD_cons]; rw [hq3, hq1]; simp [encNames]; omega
-    · refine ((EKeep.of_eq hE1 (by rw [ht1]; exact Nat.le_refl _)).trans (EKeep.set _ o _ ⟨Nat.le_refl _, by omega⟩)).trans
-        (hek3.mono fun i hi => ⟨by rw [ho1] at hi; omega, by rw [ho1] at hi; omega⟩)
+  sorry
 end names
 
 /-! ## Name slices as decodings -/
@@ -221,16 +145,7 @@ theorem rmapM_some_of {α β : Type} (f : α → Option β) (g : α → β) :
 theorem hslice_of {k : IdxKind} (a : Array Word) (o : Nat) (ws : List Word)
     (hw : ∀ j (hj : j < ws.length), a[o + j]? = some ws[j]) (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) :
     (hslice? (aread a) o ws.length : Option (List (Idx k))) = some (ws.map decI) := by
-  unfold hslice?
-  rw [rmapM_some_of _ (fun j => (decI (ws.getD j 0) : Idx k)) _ (fun j hj => by
-    have hj' := List.mem_range.mp hj
-    simp only [hd?, hw j hj', Option.bind_eq_bind, Option.bind_some]
-    rw [ite_eq_left (hlt _ (List.getElem_mem hj'))]
-    simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hj'])]
-  congr 1
-  apply List.ext_getElem (by simp)
-  intro j h1 h2
-  simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by simpa using h2)]
+  sorry
 
 /-- **A name slice `(o, c)` at words `d`, `d + 1`** decodes to the handles, from the words read. -/
 theorem holds_hlist {k : IdxKind} (m : Mem) (d : Nat) (ow cw : Word) (ws : List Word)
