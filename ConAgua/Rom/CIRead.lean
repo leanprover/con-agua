@@ -308,9 +308,6 @@ def romAndPinRomL : FunDecl := lfn () locals (o, l) {
   return (o, l)
 }
 
-/-- **The ROM stubs' readers.** The functions they call from other modules: `rom_u64`,
-`rom_name`, `rom_level`, `rom_expr`, `rom_exprs_to`, `rset_clear` (`romProgPB`), `erec_alloc`,
-`iw_alloc` (`IndIface.lean`). -/
 /-! ## The startup's cache of the structured constants
 
 A job (the check phase, entry 2) has no pin-data buffer, so the structured constants are read
@@ -337,14 +334,14 @@ addresses) at cache words `2 k`, `2 k + 1`. -/
 -- con-ron: none — the startup's read of the ROM constants (the twin interns them at each use)
 @[no_expose] def romFill : FunDecl := lfn () locals (k, z, p) {
   k := 0;
-  for k < 5 { z := call rom_fill_block(k, k) };
+  while k < 5 { z := call rom_fill_block(k, k); k += 1 };
   z := call rom_fill_block(5, 24);
   k := 0;
-  for k < 7 { p := call rom_ci_rom(k); ROMC.u64[12 + k] := p };
+  while k < 7 { p := call rom_ci_rom(k); ROMC.u64[12 + k] := p; k += 1 };
   k := 0;
-  for k < 10 { p := call rom_cv_rom(k); ROMC.u64[19 + k] := p };
+  while k < 10 { p := call rom_cv_rom(k); ROMC.u64[19 + k] := p; k += 1 };
   k := 0;
-  for k < 2 { p := call rom_expr_pin_rom(k); ROMC.u64[29 + k] := p };
+  while k < 2 { p := call rom_expr_pin_rom(k); ROMC.u64[29 + k] := p; k += 1 };
   return 0
 }
 
@@ -390,6 +387,9 @@ def romAndPinL : FunDecl := lfn () locals (o, l) {
   return (o, l)
 }
 
+/-- **The ROM stubs' readers.** The functions they call from other modules: `rom_u64`,
+`rom_name`, `rom_level`, `rom_expr`, `rom_exprs_to`, `rset_clear` (`romProgPB`), `erec_alloc`,
+`iw_alloc` (`IndIface.lean`). -/
 def romCIProg : Prog :=
   [("rom_basis_decls", romBasisDeclsL), ("rom_ci", romCiL),
    ("rom_cv", romCvL), ("rom_expr_pin", romExprPinL), ("rom_and_pin", romAndPinL),
