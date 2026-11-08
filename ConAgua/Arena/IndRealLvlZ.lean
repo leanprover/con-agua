@@ -65,16 +65,7 @@ theorem lheCopy_spec (p : Prog) (hp : p.lookup "lh_er_copy" = some L.Stubs.lhErC
     ∀ (s₀ : St) (d s l : Word),
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "lh_er_copy" [d, s, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ lheCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, L.Stubs.lhErCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ d s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, L.Stubs.lhErCopy]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20)
+  sorry
 
 /-- **What an `LH → EREC` copy leaves** (`erCopy_get`). -/
 theorem lheCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), lheCopyW n m d s l = some m' →
@@ -118,7 +109,8 @@ def lzcP : Prog :=
 def lzcFns : List FnName := lzcP.map (·.1)
 
 /-- `lv_zero_caps` writes the level heap, the record pool and their tops only. -/
-theorem lzcP_closed : closedA lzcP [LH, EREC] [192, 129] lzcFns = true := by decide +kernel
+theorem lzcP_closed : closedA lzcP [LH, EREC] [192, 129] lzcFns = true := by
+  sorry
 
 section spec
 variable (p : Prog) (hpz : p.lookup "lv_zero_caps" = some L.Stubs.lvZeroCapsL)

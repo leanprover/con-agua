@@ -137,7 +137,7 @@ theorem matesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 
 /-- **`nest_frame_mates`, under the stage relation**: the mates as a handle slice below the top. -/
 theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
-    {m m' : Mem} {c : Word} {r : List Word} (h : nfmW n m vis c = some (r, m')) (hS : StageR vis fe m a)
+    {p : Prog} {m m' : Mem} {c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) (hS : StageR vis fe m a)
     (hc : H c) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (nestFrameMates fe (decI c)) ∧
@@ -538,13 +538,13 @@ theorem matesW_mfr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List
     unfold matesW matesK1 matesK2 matesK3 at h
     mfr_auto h [snocW_mfr, matesW_mfr n _ _ _ _ _ _ _ _]
 
-theorem nboW_mfr {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW m vis c = some (r, m')) :
+theorem nboW_mfr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW p n m vis c = some (r, m')) :
     MFr [] [] m m' := by
   simp only [nboW] at h
   unfold nboW.k_env_find at h
   mfr_auto h [envFindW_mfr]
 
-theorem nfmW_mfr {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW n m vis c = some (r, m')) :
+theorem nfmW_mfr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) :
     MFr [] [] m m' := by
   cases n with
   | zero => simp [nfmW] at h

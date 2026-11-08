@@ -254,14 +254,14 @@ theorem matesW_afr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List
     afr_auto h [snocW_afr, matesW_afr n _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/FgW
-theorem nboW_afr {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW m vis c = some (r, m')) :
+theorem nboW_afr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW p n m vis c = some (r, m')) :
     AFr m m' := by
   simp only [nboW] at h
   unfold nboW.k_env_find at h
   afr_auto h [envFindW_afr]
 
 -- from IndPosSpec/FgW
-theorem nfmW_afr {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW n m vis c = some (r, m')) :
+theorem nfmW_afr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) :
     AFr m m' := by
   cases n with
   | zero => simp [nfmW] at h

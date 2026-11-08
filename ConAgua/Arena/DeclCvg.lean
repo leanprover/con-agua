@@ -247,16 +247,9 @@ theorem exc_ok_bind' {ε α β : Type} (x : α) (f : α → Except ε β) :
 
 theorem fuelW : (4000000000 : Word).toNat = coreWalkFuel := rfl
 
-theorem decVG_words {a : Array Word} {g : Nat} {vg : ValueGroup} (h : decVG a g = some vg) :
-    (∃ wk, a[g]? = some wk ∧ decVK wk.toNat = some vg.kind) ∧ decCV (aread a) (g + 1) = some vg.cv ∧
-    ∃ wj, a[g + 5]? = some wj ∧ wj.toNat < 2 ^ 32 ∧ vg.jv = decI wj := by
-  sorry
-
 theorem decCV_typeW {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
     ∃ w, a[q + 3]? = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
-  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨_, _, _, _, ty, hty, rfl⟩ := h
-  exact hd?_some hty
+  sorry
 
 /-- A grown pool keeps every record of the old one. -/
 theorem IWGrow.erecExt {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erA m') := by

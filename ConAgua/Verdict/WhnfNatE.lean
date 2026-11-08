@@ -51,7 +51,7 @@ theorem reduceNatSucc_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     (fe : IFEnv) (MM : ModeMaps) (eb mode d c b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (hc : HW c) (hb : HW b) :
     RefE (KnotUpToE p n) (reduceNatSuccE p n s₀.mem mode vis d c b)
-      (redSuccT (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decE b)) a₀
+      (redSuccT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI c) (decE b)) a₀
       (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   sorry
 
@@ -63,7 +63,7 @@ theorem reduceNatOp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
     (fe : IFEnv) (MM : ModeMaps) (eb mode d c a b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (hc : HW c) (ha : HW a) (hb : HW b) :
     RefE (KnotUpToE p n) (reduceNatOpE p n s₀.mem mode vis d c a b)
-      (redOpT (coreKnot (decMode mode) fe id F) d.toNat (decI c) (decE a) (decE b)) a₀
+      (redOpT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decI c) (decE a) (decE b)) a₀
       (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   cases n with
   | zero => rw [reduceNatOpE.eq_1]; exact RefE.of_cls0 (by simp)
@@ -117,7 +117,7 @@ theorem reduceNatWf_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     (fe : IFEnv) (MM : ModeMaps) (eb mode d c a b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (hc : HW c) (ha : HW a) (hb : HW b) :
     RefE (KnotUpToE p n) (reduceNatWfE p n s₀.mem mode vis d c a b)
-      (redWfT (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decE a) (decE b)) a₀
+      (redWfT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI c) (decE a) (decE b)) a₀
       (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   sorry
 
@@ -130,7 +130,7 @@ theorem reduceNatK_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     (hf : HW f) (hb : HW b) (hg3 : tagW f = 3)
     (hsc : ¬(tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0)) :
     RefE (KnotUpToE p n) (reduceNatKE p n s₀.mem mode vis d f b)
-      (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
+      (redHeadT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
       (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   have hC := hS.rel
   cases n with
@@ -168,7 +168,7 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
     (hf : HW f) (hb : HW b) (hg4 : tagW f = 4)
     (hsc : ¬(tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0)) :
     RefE (KnotUpToE p n) (reduceNatApE p n s₀.mem mode vis d f b)
-      (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
+      (redHeadT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
       (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   sorry
 
@@ -180,7 +180,7 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
     (fe : IFEnv) (MM : ModeMaps) (eb mode d f b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (hf : HW f) (hb : HW b) :
     RefE (KnotUpToE p n) (reduceNatHeadE p n s₀.mem mode vis d f b)
-      (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
+      (redHeadT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
       (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   sorry
 
@@ -191,7 +191,7 @@ theorem reduceNat_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : 
     (fe : IFEnv) (MM : ModeMaps) (eb mode d e : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (he : HW e) :
     RefE (KnotUpToE p n) (reduceNatE p n s₀.mem mode vis d e)
-      (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
+      (reduceNat (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) a₀
       (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   sorry
 
@@ -222,7 +222,7 @@ def ReduceNatE (p : Prog) : Prop :=
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode d e : Word), N ≤ F → N ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
     CoreSpecE p N "reduce_nat" [mode, vis, d, e]
-      (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) s₀ a₀
+      (reduceNat (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) s₀ a₀
 
 include hp in
 /-- **`ReduceNatE`**: `reduce_nat`'s error claim (`reduceNat_ref`'s error half), the `whnf_step`

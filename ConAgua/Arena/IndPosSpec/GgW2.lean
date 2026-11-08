@@ -77,7 +77,7 @@ open L.Arena
 
 theorem nestFrameMates_specW (p : Prog) (L : FmLook p) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame_mates" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ nfmW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ nfmW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ L.hp, callFn, nestFrameMatesL]
   cases n with
   | zero => vcgen [exec] <;> grind

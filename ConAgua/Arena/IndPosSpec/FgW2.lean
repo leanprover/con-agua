@@ -45,9 +45,9 @@ def nfmK (n : Nat) (c : Word) : Option (List Word × Mem) → Option (List Word 
   | some (r, m1) => matesK3 (matesW n m1 c (r.headD 0) (r.tail.headD 0) 0 0)
 
 /-- The model of `nest_frame_mates(vis, c)`. -/
-def nfmW : Nat → Mem → Word → Word → Option (List Word × Mem)
+def nfmW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | n + 1, m, vis, c => nfmK n c (nboW m vis c)
+  | n + 1, m, vis, c => nfmK n c (nboW p n m vis c)
 
 theorem nfmK_some (n : Nat) (c : Word) (r : List Word) (m1 : Mem) :
     nfmK n c (some (r, m1)) = matesK3 (matesW n m1 c (r.headD 0) (r.tail.headD 0) 0 0) := rfl
