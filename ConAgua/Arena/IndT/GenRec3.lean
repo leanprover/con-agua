@@ -63,6 +63,7 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem feq_find {x y : IFEnv} (h : ConRon.Bridge.Inductives.GR.FEq x y) : x.find? = y.find? := by
   sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **`gen_rec_check`'s unified model**: the prep by its unified model (`grpE`), the pushes, the
 flushes and the pops (outside the verdict closure) lifted, the rules through their run (the ok half
@@ -75,7 +76,9 @@ l_model gckE_spec (p : Prog) (P : GrcProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **`check_block_rec`'s unified model**: `gen_rec_check` by its unified model. -/
 l_model icrE_spec (p : Prog) (P : GrcProg p) (hf : p.lookup "check_block_rec" = some checkBlockRec)
@@ -83,6 +86,7 @@ l_model icrE_spec (p : Prog) (P : GrcProg p) (hf : p.lookup "check_block_rec" = 
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `gen_rec_check` gives besides the twin's index and rules `x` (from `m`, `a`): the stage at
 the returned view, the growth, the rules' records, `AbsOK`, the walk memos, the core step. -/
