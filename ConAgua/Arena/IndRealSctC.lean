@@ -29,7 +29,6 @@ import ConAgua.Arena.IndRealMemoCr
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
-import ConRon.Bridge.Promote.Walk
 public import ConAgua.Arena.IndInstallSpec.DecCNS
 public import ConAgua.Arena.IndInstallSpec.DecISS
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
