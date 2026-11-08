@@ -66,7 +66,7 @@ theorem StageC.of_run {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The stage relation at the pushed view `w`, back from the pre-insertion view. -/
 theorem stageR_of_restrict {dn : NIdx → Option ConLeche.Name} {vis w : Word} {fe2 : IFEnv}
     {m : Mem} {a : AState} (h : StageR vis (fe2.restrictTo vis.toNat) m a)
@@ -74,7 +74,7 @@ theorem stageR_of_restrict {dn : NIdx → Option ConLeche.Name} {vis w : Word} {
   have := h.restrict w
   rw [IFEnv.restrictTo_restrictTo, ← hvb, IFEnv.restrictTo_self] at this
   exact this
--/
+-- RS2E
 
 /-! ## `certify_nat_eqs` -/
 
@@ -186,7 +186,7 @@ end cert
 
 /-! ## `defn_nat_cert` and `defn_nat_gate`: one model and one refinement for both outcomes -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `defn_nat_cert`, both outcomes**: the leaves outside the verdict closure
 (`env_find`, `nat_op_equations`, `subst_const0_pairs`) through their `Option` models,
 `certify_nat_eqs` through its run. -/
@@ -198,9 +198,9 @@ l_model defnNatCert_specE (p : Prog) (hf : p.lookup "defn_nat_cert" = some defnN
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `defn_nat_gate`, both outcomes**: the leaves through their `Option` models,
 `defn_nat_cert` through its model. -/
 l_model defnNatGate_specE (p : Prog) (hf : p.lookup "defn_nat_gate" = some defnNatGate)
@@ -212,7 +212,7 @@ l_model defnNatGate_specE (p : Prog) (hf : p.lookup "defn_nat_gate" = some defnN
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
+-- RS2E
 
 section gate
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name}
@@ -224,7 +224,7 @@ structure DncPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe2 : IFEnv
   grow : IWGrow m m'
   ext : Ext a.store a'.store
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`defn_nat_cert` refines `natCertT` under `StageC`, both outcomes** (con-ron's
 `checkDecl_bridge_defn`, the stored value's branch): `env_find` reads the pushed index (the twin's
 `IFEnvOK.hit` at `env2`), the equations and their substitution are leaves at the pushed view, the
@@ -329,7 +329,7 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   refine RefE.guardIf rfl (fun e4 => by rw [← hd4.1, e4]; rfl)
     (fun e4 => by rw [← hd4.1] at e4; simpa using e4) fun _ _ => ?_
   exact RefE.ret rfl ⟨hC4, (hg2.trans hg3).trans hg4, hx2.trans (hx3.trans hx4)⟩
--/
+-- RS2E
 
 /-- What `defn_nat_gate` gives besides the twin's run (from `m`, `a`): the stage relation at the
 pushed view `w`, `StageC` at the pre-insertion view `vis`, the growth, `Ext` of the twin's
@@ -340,7 +340,7 @@ structure DngPost (dn : NIdx → Option ConLeche.Name) (vis w : Word) (fe2 : IFE
   grow : IWGrow m m'
   ext : Ext a.store a'.store
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`defn_nat_gate` refines `natGateT` under `StageC`, both outcomes** (con-ron's
 `checkDecl_bridge_defn`, the structural-`Nat` gate): from the stage relation at the pushed view
 `w` (extended index `fe2`), `StageC` at the pre-insertion view `vis` (con-ron's `CheckOK` at
@@ -429,7 +429,7 @@ theorem dng_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     (dnc_ref hN hq hcl k hk' hn hS5 hC5 henv (hie.mono hx35) (ConRon.Bridge.denoteN_ext hnm hx35))
     fun _ _ _ _ ⟨hC6, hg6, hx6⟩ => ⟨stageR_of_restrict hC6.stage hvb, hC6,
       (((((hg1.trans hg2).trans hg3).trans hg4).trans hg5).trans hg6), hx35.trans hx6⟩
--/
+-- RS2E
 
 end gate
 

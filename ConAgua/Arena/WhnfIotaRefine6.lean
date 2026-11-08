@@ -34,7 +34,7 @@ namespace L.Arena
 def eRecGetW (m : Mem) (k : Word) : Option Word :=
   if k.toNat < (m.arr64 EREC).size then some (rdW (m.arr64 EREC) k) else none
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem eRecGet_spec (p : Prog) (hp : p.lookup "e_rec_get" = some eRecGetL) (n : Nat) (s₀ : St)
     (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "e_rec_get" [k]
@@ -44,7 +44,7 @@ theorem eRecGet_spec (p : Prog) (hp : p.lookup "e_rec_get" = some eRecGetL) (n :
   sym only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
     finish [eRecGetW, rdW]
--/
+-- RS2E
 
 /-- Model of `const_name_of`. -/
 def cnoW (m : Mem) (hh : Word) : Option Word :=
@@ -93,7 +93,7 @@ def iccW (p : Prog) (n : Nat) (m : Mem) (indP us : Word) : Option (Word × Mem) 
   | none => none
   | some (nz, m7) => some (nz.headD 0, m7)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem indCapsCheck_spec (p : Prog) (hp : p.lookup "ind_caps_check" = some indCapsCheckL)
     (n : Nat) (s₀ : St) (indP us : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ind_caps_check" [indP, us]
@@ -105,7 +105,7 @@ theorem indCapsCheck_spec (p : Prog) (hp : p.lookup "ind_caps_check" = some indC
   simp_all [iccW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
     Sig.retVal, Sig.retOr]
--/
+-- RS2E
 
 /-- Model of `iota_ctor_never_prop` (callees at fuel `n`). -/
 def inpW (p : Prog) (n : Nat) (m : Mem) (vis ctorP us : Word) : Option (Word × Mem) :=
@@ -130,7 +130,7 @@ def inpW (p : Prog) (n : Nat) (m : Mem) (vis ctorP us : Word) : Option (Word × 
   | none => none
   | some (r5, m5) => some (r5.headD 0, m5)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem iotaCtorNeverProp_spec (p : Prog)
     (hp : p.lookup "iota_ctor_never_prop" = some iotaCtorNeverPropL) (n : Nat) (s₀ : St)
     (vis ctorP us : Word) :
@@ -145,7 +145,7 @@ theorem iotaCtorNeverProp_spec (p : Prog)
   simp_all [inpW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
     Sig.retVal, Sig.retOr]
--/
+-- RS2E
 
 
 /-! ## The record of an inductive -/
@@ -167,7 +167,7 @@ theorem hlist?_slice {a : Array Word} {i : Nat} {l : List NIdx} (h : hlist? (are
   obtain ⟨wc, hwc, rfl⟩ := nat?_some hc
   exact ⟨wo, wc, hwo, hwc, hs⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem decPW_ww {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
     {pw : ConLeche.PropWhen} {swd so sc : Word} (h : decPW b dn q = some pw)
     (h0 : b[q]? = some swd) (h1 : b[q+1]? = some so) (h2 : b[q+2]? = some sc) :
@@ -180,9 +180,9 @@ theorem decPW_ww {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
     simp only [hlist?, nat?_of h1, nat?_of h2, Option.bind_eq_bind, Option.bind_some] at h
     simpa using h
   · rw [hs] at h; simp at h
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem decCI_ind_fields (b : Array Word) (dn : NIdx → Option ConLeche.Name) (q : Nat)
     (cv : IConstantVal) (caps : IIndCaps) (h : decCI (aread b) q = some (.indInfo cv caps)) :
     ∃ po pc swd so sc : Word, b[q+2]? = some po ∧ b[q+3]? = some pc ∧
@@ -217,7 +217,7 @@ theorem decCI_ind_fields (b : Array Word) (dn : NIdx → Option ConLeche.Name) (
   refine ⟨o, c, _, _, _, ho, hc, ?_, g12, g13, g14, ?_⟩
   · rw [← hcv']; exact hs
   · rw [← hcz]; exact hww
--/
+-- RS2E
 
 /-! ## The head name of a `const` handle -/
 
@@ -242,14 +242,14 @@ theorem viewConstName_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh 
 
 /-! ## The family test -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The twin's tail of `iotaCtorNeverProp` at an inductive's record. -/
 def inpTail (cvT : IConstantVal) (caps : IIndCaps) (us : LsIdx) : AM Bool := do
   match ← viewLsLen us with
   | none => failDanglingLs
   | some usl =>
     if cvT.levelParams.length == usl then capsNeverZero cvT.levelParams us caps else pure false
--/
+-- RS2E
 
 theorem rdW_get (b : Array Word) (x v : Word) (hx : b[x.toNat]? = some v) : rdW b x = v := by
   simp [rdW, hx]
@@ -261,7 +261,7 @@ theorem eRec_val {m : Mem} {k v : Word} (h : eRecGetW m k = some v) :
   · simp only [Option.some.injEq] at h; exact h
   · cases h
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem inpTail_short (cvT : IConstantVal) (caps : IIndCaps) (us : LsIdx) (a : AState) (usl : Nat)
     (hv : a.store.lss.viewLen us = some usl) (hne : cvT.levelParams.length ≠ usl) :
     (inpTail cvT caps us).run a = .ok (false, a) := by
@@ -269,9 +269,9 @@ theorem inpTail_short (cvT : IConstantVal) (caps : IIndCaps) (us : LsIdx) (a : A
   simp only [inpTail, StateT.run_bind, hv', except_ok_bind]
   have : (cvT.levelParams.length == usl) = false := by simpa using hne
   simp [this]; rfl
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem inpTail_full (cvT : IConstantVal) (caps : IIndCaps) (us : LsIdx) (a a' : AState) (usl : Nat)
     (b : Bool) (hv : a.store.lss.viewLen us = some usl) (heq : cvT.levelParams.length = usl)
     (hc : (capsNeverZero cvT.levelParams us caps).run a = .ok (b, a')) :
@@ -279,9 +279,9 @@ theorem inpTail_full (cvT : IConstantVal) (caps : IIndCaps) (us : LsIdx) (a a' :
   have hv' : (viewLsLen us).run a = .ok (some usl, a) := by rw [viewLsLen_run, hv]
   simp only [inpTail, StateT.run_bind, hv', except_ok_bind]
   simp [heq, hc]
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb : Word) (indP us : Word)
     (hus : HW us) (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
@@ -387,7 +387,7 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
     ⟨M7, hS7, hK7, hSt7⟩, ?_⟩
   · rw [← hw0]; rfl
   · rw [← hw0]; exact hr7
--/
+-- RS2E
 
 
 section inpRun
@@ -398,16 +398,16 @@ variable (fe : IFEnv) (cvj : IConstantVal) (us : LsIdx) (a : AState) (pr hh : EI
 theorem viewConstName_run (a : AState) (h : EIdx) :
     (viewConstName h).run a = .ok (a.store.viewConstName h, a) := rfl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 include hpr hga in
 theorem inp_run_not (ht : hh.tag ≠ ETag.const) :
     (iotaCtorNeverProp fe cvj us).run a = .ok (false, a) := by
   have : (hh.tag == ETag.const) = false := by simpa using ht
   simp only [iotaCtorNeverProp, StateT.run_bind, hpr, except_ok_bind, hga, this]
   simp; rfl
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 include hpr hga in
 theorem inp_run_other (T : NIdx) (hv : a.store.viewConstName hh = some T)
     (ht : hh.tag = ETag.const) (hf : ∀ cvT caps, fe.find? T ≠ some (.indInfo cvT caps)) :
@@ -420,9 +420,9 @@ theorem inp_run_other (T : NIdx) (hv : a.store.viewConstName hh = some T)
     cases ci with
     | indInfo cvT caps => exact absurd hfi (hf cvT caps)
     | _ => simp; rfl
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 include hpr hga in
 theorem inp_run_ind (T : NIdx) (hv : a.store.viewConstName hh = some T)
     (ht : hh.tag = ETag.const) (cvT : IConstantVal) (caps : IIndCaps)
@@ -432,7 +432,7 @@ theorem inp_run_ind (T : NIdx) (hv : a.store.viewConstName hh = some T)
   simp only [iotaCtorNeverProp, StateT.run_bind, hpr, except_ok_bind, hga, ht, beq_self_eq_true,
     ↓reduceIte, viewConstName_run, hv, hf]
   exact htl
--/
+-- RS2E
 
 end inpRun
 
@@ -445,7 +445,19 @@ theorem rdW_eq_three {b : Array Word} {x : Word} (h : rdW b x = 3) : b[x.toNat]?
 theorem iccW_kind (p : Prog) (hp : IotaProg4 p) (n : Nat) (m : Mem) (indP us w : Word) (mF : Mem)
     (hk : rdW (m.arr64 EREC) indP ≠ 3) (h : iccW p n m indP us = some (w, mF)) :
     w = 0 ∧ mF = m := by
-  sorry
+  simp only [iccW] at h
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ n' =>
+  rcases c0 : callW p (n' + 1) "e_rec_get" [indP] m with _ | ⟨k, m0⟩ <;>
+    simp only [c0, reduceCtorEq] at h
+  obtain ⟨t0, ht0, -, hmem0, hget0⟩ := triple_of_callW
+    (eRecGet_spec p hp.eRecGet n' ⟨m, Locals.init []⟩ indP) c0
+  have hm0 : m0 = m := by rw [← ht0]; exact hmem0
+  have hkk : k.headD 0 = rdW (m.arr64 EREC) indP := (eRec_val hget0).symm
+  rw [ite_eq_left (by rw [hkk]; exact hk)] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  exact ⟨h.1.symm, by rw [← h.2, hm0]⟩
 
 /-- **`iota_ctor_never_prop` refines `iotaCtorNeverProp`.** Statement changes: the L function is
 split (`e_rec_get`, `const_name_of`, `ind_caps_check`), `caps_never_zero`'s statement is corrected
@@ -458,7 +470,126 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
     decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj cnP cnF) →
     CoreSpec p n "iota_ctor_never_prop" [vis, ctorP, us] (iotaCtorNeverProp fe cvj (decI us)) decBool
       s₀ a₀ dn vis fe MM eb := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb ctorP us cvj cnP cnF hS hus hci
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n' =>
+  refine triple_post (iotaCtorNeverProp_spec p hp.iotaCtorNeverProp n' s₀ vis ctorP us) fun r s'
+    ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  have hR := hS.arena.base
+  simp only [inpW] at hW
+  cases n' with
+  | zero => rw [callW_zero] at hW; cases hW
+  | succ n' =>
+  -- the constructor's type
+  have hk4 : rdW (s₀.mem.arr64 EREC) ctorP = 4 :=
+    Classical.byContradiction fun hne =>
+      (decCI_ctor hci (fun i v hv => hv) hS.erec).2 hne cvj cnP cnF rfl
+  obtain ⟨cv', np', nf', hcv, hty, hty32⟩ := (decCI_ctor hci (fun i v hv => hv) hS.erec).1 hk4
+  have hcvj : cvj = cv' := by
+    have := hcv; simp only [IConstantInfo.ctorInfo.injEq] at this; exact this.1
+  subst hcvj
+  -- the constructor's type
+  rcases c0 : callW p (n' + 1) "e_rec_get" [ctorP + 4] s₀.mem with _ | ⟨ty, m0⟩ <;>
+    simp only [c0, reduceCtorEq] at hW
+  obtain ⟨t0, ht0, -, hmem0, hget0⟩ := triple_of_callW
+    (eRecGet_spec p hp.eRecGet n' ⟨s₀.mem, Locals.init []⟩ (ctorP + 4)) c0
+  obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
+  have hty0 : ty.headD 0 = rdW (s₀.mem.arr64 EREC) (ctorP + 4) := (eRec_val hget0).symm
+  have hty32' : HW (ty.headD 0) := by rw [hty0]; exact hty32
+  rcases c1 : callW p (n' + 1) "pi_result" [ty.headD 0] s₀.mem with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
+  obtain ⟨t1, ht1, hmem1, -, hHW1, hrun1⟩ := triple_of_callW
+    (piResult_refines' p hp.spine.pires (n' + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hR (ty.headD 0) hty32') c1
+  obtain rfl : m1 = s₀.mem := by rw [← ht1]; exact hmem1
+  rcases c2 : callW p (n' + 1) "get_app_fn" [r1.headD 0] s₀.mem with _ | ⟨r2, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
+  obtain ⟨t2, ht2, hmem2, -, hHW2, hrun2⟩ := triple_of_callW
+    (getAppFn_refines' p hp.spine.fn (n' + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hR (r1.headD 0) hHW1) c2
+  obtain rfl : m2 = s₀.mem := by rw [← ht2]; exact hmem2
+  have hpr : (piResult coreWalkFuel cvj.type).run a₀ = .ok (decE (r1.headD 0), a₀) := by
+    rw [hty, ← hty0]; exact hrun1
+  have hga : (getAppFn coreWalkFuel (decE (r1.headD 0))).run a₀ = .ok (decE (r2.headD 0), a₀) := hrun2
+  by_cases h3 : tagW (r2.headD 0) ≠ 3
+  · rw [ite_eq_left h3] at hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hrun := inp_run_not fe cvj (decI us) a₀ _ _ hpr hga
+      (fun ht => h3 ((decE_tag_eq _ hHW2 3 (by decide)).mp ht))
+    refine CoreRef.of_pure hS hrun hm.symm ?_ ?_
+    · show false = decBool r; simp only [decBool]; rw [← hr]; rfl
+    · unfold ResH HW; rw [← hr]; decide
+  rw [ite_eq_right h3] at hW
+  have h3' : tagW (r2.headD 0) = 3 := by simpa using h3
+  rcases c3 : callW p (n' + 1) "const_name_of" [r2.headD 0] s₀.mem with _ | ⟨r3, m3⟩ <;>
+    simp only [c3, reduceCtorEq] at hW
+  obtain ⟨t3, ht3, -, hmem3, hcno⟩ := triple_of_callW
+    (constNameOf_spec p hp.constNameOf n' ⟨s₀.mem, Locals.init []⟩ (r2.headD 0)) c3
+  obtain rfl : m3 = s₀.mem := by rw [← ht3]; exact hmem3
+  simp only [cnoW] at hcno
+  obtain ⟨g1, hcno⟩ := of_ite_none hcno
+  obtain ⟨g2, hcno⟩ := of_ite_none hcno
+  simp only [Option.some.injEq] at hcno
+  have hvc : viewOK s₀.mem (r2.headD 0) CONST := ⟨g1, UInt64.not_le.mp g2⟩
+  obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r2.headD 0) hHW2 hvc h3'
+  have hvn := viewConstName_f s₀.mem a₀ hR (r2.headD 0) hHW2 hvc h3'
+  rw [hcno] at hvn hn32
+  have htag : (decE (r2.headD 0)).tag = ETag.const := (decE_tag_eq _ hHW2 3 (by decide)).mpr h3'
+  rcases c4 : callW p (n' + 1) "env_find" [r3.headD 0, vis] s₀.mem with _ | ⟨r4, m4⟩ <;>
+    simp only [c4, reduceCtorEq] at hW
+  obtain ⟨t4, ht4, hm4, -, hfind⟩ := triple_of_callW
+    (envFind_refines p hp.envix hp.envrow hp.envfind (n' + 1) ⟨s₀.mem, Locals.init []⟩ vis _ hS.env
+      hn32) c4
+  obtain ⟨t4', ht4', hm4', -, hfound⟩ := triple_of_callW
+    (envFind_found p hp.envix hp.envrow hp.envfind (n' + 1) ⟨s₀.mem, Locals.init []⟩ vis _ hn32) c4
+  obtain rfl : m4 = s₀.mem := by rw [← ht4]; exact hm4
+  by_cases h0 : r4.headD 0 = 0
+  · rw [ite_eq_left h0] at hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hnone : fe.find? (decI (r3.headD 0)) = none := by
+      rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hrun := inp_run_other fe cvj (decI us) a₀ _ _ hpr hga (decI (r3.headD 0)) hvn htag
+      (fun cvT caps hc => by rw [hnone] at hc; cases hc)
+    refine CoreRef.of_pure hS hrun hm.symm ?_ ?_
+    · show false = decBool r; simp only [decBool]; rw [← hr]; rfl
+    · unfold ResH HW; rw [← hr]; decide
+  rw [ite_eq_right h0] at hW
+  obtain ⟨htag2, hrow, hq⟩ := hfound h0
+  obtain ⟨ci, hci2⟩ := hS.env.found_some (r3.headD 0) hn32 htag2 hrow
+  have hfind' : fe.find? (decI (r3.headD 0)) = some ci := by
+    rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci2
+  rw [← hq] at hci2
+  have hciF := ArrExt.decCI (erecP_ext _) hci2
+  rcases c5 : callW p (n' + 1) "ind_caps_check" [r4.tail.headD 0, us] s₀.mem with _ | ⟨r5, m5⟩ <;>
+    simp only [c5, reduceCtorEq] at hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨t5, ht5, -, hicc⟩ := triple_of_callW
+    (indCapsCheck_spec p hp.indCapsCheck n' ⟨s₀.mem, Locals.init []⟩ (r4.tail.headD 0) us) c5
+  rw [ht5] at hicc
+  by_cases hk3 : rdW (s₀.mem.arr64 EREC) (r4.tail.headD 0) = 3
+  · have hg := rdW_eq_three hk3
+    obtain ⟨cvT, caps, rfl, -⟩ := L.Ind.decCI_kind3 hciF (nat?_of hg)
+    obtain ⟨b, a', htail, hb, hCA, hw5⟩ := iccW_ok p hp hcn n' dn vis fe eb (r4.tail.headD 0) us hus
+      s₀.mem a₀ MM hS cvT caps hciF ⟨_, hfind'⟩ (r5.headD 0) m5 hicc
+    have hrun := inp_run_ind fe cvj (decI us) a₀ _ _ hpr hga (decI (r3.headD 0)) hvn htag cvT caps
+      hfind' b a' htail
+    have hr' : r5.headD 0 = r.headD 0 := hr
+    refine CoreRef.of_run hrun (hm ▸ hCA) ?_ ?_
+    · simp only [decBool, ← hr', hb]
+    · unfold ResH HW; rw [← hr']; exact hw5
+  · obtain ⟨hw0, hm5⟩ := iccW_kind p hp n' s₀.mem (r4.tail.headD 0) us _ m5 hk3 hicc
+    have hnind : ∀ cvT caps, fe.find? (decI (r3.headD 0)) ≠ some (.indInfo cvT caps) := by
+      intro cvT caps hc
+      rw [hfind'] at hc
+      have hc' : ci = .indInfo cvT caps := Option.some.inj hc
+      subst hc'
+      obtain ⟨w, hw, hw3⟩ := nat?_some (L.Ind.decCI_indInfo_kind hciF)
+      apply hk3
+      rw [rdW_get _ _ w hw]
+      exact UInt64.toNat_inj.mp (by rw [hw3]; rfl)
+    have hrun := inp_run_other fe cvj (decI us) a₀ _ _ hpr hga (decI (r3.headD 0)) hvn htag hnind
+    refine CoreRef.of_pure hS hrun (by rw [← hm, hm5]) ?_ ?_
+    · show false = decBool r; simp only [decBool]; rw [← hr, hw0]; rfl
+    · unfold ResH HW; rw [← hr, hw0]; decide
 
 /-! ## `iota_case3(rlk, vis, ctorP, us)` -/
 
@@ -469,7 +600,7 @@ def icW (p : Prog) (n : Nat) (m : Mem) (rlk vis ctorP us : Word) : Option (Word 
     | none => none
     | some (r, m') => some (if r.headD 0 = 0 then 1 else 0, m')
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem iotaCase3_spec (p : Prog) (hp : p.lookup "iota_case3" = some iotaCase3L) (n : Nat)
     (s₀ : St) (rlk vis ctorP us : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "iota_case3" [rlk, vis, ctorP, us]
@@ -480,23 +611,23 @@ theorem iotaCase3_spec (p : Prog) (hp : p.lookup "iota_case3" = some iotaCase3L)
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "iota_ctor_never_prop"] <;>
     finish [icW]
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem iotaCase3_run_k (fe : IFEnv) (rl : IRecRule) (cvj : IConstantVal) (us : LsIdx) (a : AState)
     (hk : rl.k = true) : (iotaCase3 fe rl cvj us).run a = .ok (false, a) := by
   simp [iotaCase3, hk]; rfl
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem iotaCase3_run_nk (fe : IFEnv) (rl : IRecRule) (cvj : IConstantVal) (us : LsIdx) (a a' : AState)
     (np : Bool) (hk : rl.k = false) (h : (iotaCtorNeverProp fe cvj us).run a = .ok (np, a')) :
     (iotaCase3 fe rl cvj us).run a = .ok (!np, a') := by
   simp only [iotaCase3, hk, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, h, except_ok_bind]
   rfl
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_case3` refines `iotaCase3`.** -/
 @[refines ConRon.Arena.iotaCase3]
 theorem iotaCase3_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) :
@@ -538,6 +669,6 @@ theorem iotaCase3_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p
       have h1' : (r1.headD 0 != 0) = true := bne_iff_ne.mpr h1
       rw [h1']; decide
   · unfold ResH HW; rw [← hr]; split <;> decide
--/
+-- RS2E
 
 end L.Arena

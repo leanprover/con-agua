@@ -35,7 +35,7 @@ namespace L.Arena
 
 /-! ## `iota_rec_fam(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn)` -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_fam` refines the certificate family, both outcomes**: the errors are
 `iota_rec_vck`'s. -/
 theorem fam_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
@@ -111,9 +111,9 @@ theorem fam_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (fun hG => hG.nv) (fun hG => hG.mono (by omega)) (hvk hlps hrule hcv hsa2 hsat2 hmI hsm2 hsmt2 hcpm)
     fun rk s3 _ a3 _ _ _ ⟨⟨M3, hS3, hK3, hSt3⟩, hr3, hv3⟩ => ?_
   exact RefE.ret rfl ⟨⟨M3, hS3, hK1.trans (hK2.trans hK3), hSt12.trans hSt3⟩, hr3, hv3⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_fam` refines the certificate family** (`fam_ref`'s ok half). -/
 theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
@@ -141,7 +141,7 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
       (fam_ref p hp hc hw hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so usj ctorP
         rl mo mn sn lps rule cvj np nf args margs hS hm4 hebm hus husj hlps hrule hci hfe hsa hsat hmI
         hsm hsmt hcpm)
--/
+-- RS2E
 
 /-! ## The record pool across `iota_rec_vck` and `iota_rec_fam` -/
 
@@ -321,7 +321,7 @@ theorem cpl_mkAppN (f : EIdx) (l : List EIdx) (a a' : AState) (x : EIdx)
   unfold Keeps at this
   exact this a x a' (by simpa using h)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_fire2` refines the fire past the major's arguments, both outcomes**: the errors are
 `iota_rec_fam`'s. -/
 theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
@@ -453,9 +453,9 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   refine RefE.ret rfl ⟨⟨M2, hS4, hK1.trans hK2, hSt13.trans hSt4⟩, ?_, ?_⟩
   · rw [decOptR_some_rec _ rfl]; rfl
   · show ResW [1, ry.headD 0]; unfold ResW HW; exact ⟨by simp, hw4⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_fire2` refines the fire past the major's arguments** (`fire2_ref`'s ok half). -/
 theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
@@ -483,11 +483,11 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
       (fire2_ref p hp hc hw hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj
         ctorP rl mo mn sn lps rule cvj np nf args margs hS hm4 hebm hcw hus husj hlps hrule hci hfe hsa
         hsat hmI hsm hsmt)
--/
+-- RS2E
 
 /-! ## `iota_rec_fire(mode, vis, d, c, us, recP, so, usj, ctorP, rl, major)` -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_fire` refines the fire, both outcomes** (the major's arguments, then
 `iotaRecFire2T`, the top put back): the errors are `iota_rec_fire2`'s. -/
 theorem fire_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
@@ -546,9 +546,9 @@ theorem fire_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   obtain ⟨M2, hS2, hK2, hSt2⟩ := hP.after
   exact RefE.ret rfl ⟨⟨M2, hS2.frame_stk (MemFrame.setCtl _ _ _) (by simp) (by simp), hK2,
     StackKept.restoreG' (gr1.trans hSt2.toGrew)⟩, hP.res, hP.valid⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_fire` refines the fire** (`fire_ref`'s ok half). -/
 theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
@@ -577,7 +577,7 @@ theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees 
       (fire_ref p hp hc hw hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj
         ctorP rl major sn lps rule cvj np nf args hS hm4 hebm hcw hus husj hmaj hlps hrule hci hfe hsa
         hsat hmI)
--/
+-- RS2E
 
 /-! ## `env_find` and `intern_bvar` as runs -/
 
@@ -594,11 +594,11 @@ theorem irEnvFind (p : Prog) (hp : IotaProg' p) (n : Nat) (dn : NIdx → Option 
     (envFind_found p hp.envix hp.envrow hp.envfind n ⟨m, Locals.init []⟩ vis w hw) h
   rw [ht₂] at hm₂
   refine ⟨hm₂, fun h0 => ?_, fun h0 => ?_⟩
-  · rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+  · rw [hfind]; simp only [envFound, h0, ↓reduceIte]
   · obtain ⟨htag2, hrow, hq⟩ := hfound h0
     obtain ⟨ci, hci⟩ := hE.found_some w hw htag2 hrow
     refine ⟨ci, ?_, ?_⟩
-    · rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
+    · rw [hfind]; simp only [envFound, h0, ↓reduceIte, hq]; exact hci
     · rw [hq]; exact (erecP_ext m).decCI hci
 
 /-- **`intern_bvar` under `CoreS`.** -/
@@ -713,7 +713,7 @@ theorem findRule_found (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (
   show decRule (m.arr64 EREC) (ro + 11 * j).toNat = some rule
   rw [hw]; exact hdr
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `prepare_major`'s error claim at fuel `N + 1` (the premises of `prepareMajor_refines'`). -/
 def PrepareMajorE (p : Prog) : Prop :=
   ∀ (N : Nat), KnotUpTo p N → KnotUpToE p N → ∀ (F : Nat), N ≤ F → N ≤ 2 ^ 62 →
@@ -724,9 +724,9 @@ def PrepareMajorE (p : Prog) : Prop :=
     CoreSpecE p (N + 1) "prepare_major" [mode, vis, d, rec, ro, rc, major]
       (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) s₀ a₀
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `iota_rec_fire`'s error claim at fuel `N + 1` (the premises of `iotaRecFire_refines'`). -/
 def IotaRecFireE (p : Prog) : Prop :=
   ∀ (N : Nat), KnotUpTo p N → KnotUpToE p N → ∀ (F : Nat), N ≤ F → N ≤ 2 ^ 62 →
@@ -746,7 +746,7 @@ def IotaRecFireE (p : Prog) : Prop :=
       (iotaRecFireT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI c)
         (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
         (decI us) args.toList (decE major) (decI usj) cvj rule) s₀ a₀
--/
+-- RS2E
 
 /-- **What `iota_rec_major`'s errors assume** at L fuel `n`: the knot's slots', the verdict
 closure, `prepare_major`'s and `iota_rec_fire`'s claims. -/
@@ -754,7 +754,7 @@ structure MajorG (p : Prog) (n : Nat) : Prop where
   knot : KnotUpToE p n
   nv : closedNV p L.Checker.nvFns = true
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_major` refines `iotaRecMajorT`, both outcomes**: the errors are `prepare_major`'s
 and `iota_rec_fire`'s. -/
 theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
@@ -906,9 +906,9 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   refine RefE.ret hrun6 ⟨⟨M6, hS6, hK2.trans hK6, hSt12.trans hSt6⟩, ?_, ?_⟩
   · simp only [decOptR]; rfl
   · unfold ResW at hr6 ⊢; exact hr6
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_major` refines `iotaRecMajorT`** (`major_ref`'s ok half). -/
 theorem iotaRecMajor_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
@@ -933,6 +933,6 @@ theorem iotaRecMajor_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
     RefE.coreSpec (irMajorE_spec p hp.major (n + 1) s₀ mode vis d c us recP so sn)
       (major_ref p hp hc hw hsup hmtc hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP
         so sn cv rules xs hS hm4 hebm hcw hus hcv hrules hrecF hsa hsat hmI)
--/
+-- RS2E
 
 end L.Arena

@@ -70,7 +70,47 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
         fe MM eb ∧
       ∃ xs, AM.res (recFireArgs rl cnP.toNat lps (decI us) args.toList rP.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb fireKind pvo pvc po pc us ao an rP cp rl lps args hS hus hlps hsa hnest
+    hplain hcp hat hpt
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (recFireArgs_spec p hp.recFireArgs (n + 1) s₀ fireKind pvo pvc po pc us ao an rP cp)
+    fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  simp only [rfaW, rfaW.k_inst_spine_pins, rfaW.j1] at hW
+  by_cases h1 : fireKind = 1
+  · rw [ite_eq_left h1] at hW
+    obtain ⟨lv, pins, hfire, hsp⟩ := hnest h1
+    rcases hc1 : callW p n "inst_spine_pins" [po, pc, us, ao, an, rP, pvo, pvc] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hc1, reduceCtorEq] at hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨t₁, ht₁, hloc1, hok, hca, xs, hres, hxs⟩ := triple_of_callW
+      (instSpinePins_refines' p hp hc hw hE n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pc us ao an rP
+        pvo pvc lps args pins.toArray hS hus hlps hsa hsp hat (hpt h1)) hc1
+    rw [recFireArgs_nested_eq rl lps (decI us) args.toList rP.toNat lv pins hfire]
+    simp only at hok hca hres
+    simp only [ht₁] at hxs hca
+    rw [← hm]
+    have hr1 : r.headD 0 = r₁.headD 0 := by
+      have := congrArg (fun l => l.headD 0) hr; simpa using this.symm
+    have hr2 : r.tail.headD 0 = r₁.tail.headD 0 := by
+      have := congrArg (fun l => l.tail.headD 0) hr; simpa using this.symm
+    exact ⟨hok, hca, xs, hres, by rw [hr1, hr2]; exact hxs⟩
+  · rw [ite_eq_right h1] at hW
+    have hW' : some ([ao, ispLen cp an], s₀.mem) = some (r, s'.mem) := by
+      rw [← hW]; by_cases ha : an < cp <;> simp [ispLen, ha]
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW')
+    have hfire := hplain h1
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (recFireArgs_plain_run rl lps (decI us) args.toList
+      rP.toNat hfire a₀)
+    have hr1 : r.headD 0 = ao := by
+      have := congrArg (fun l => l.headD 0) hr.symm; simpa using this
+    have hr2 : r.tail.headD 0 = ispLen cp an := by
+      have := congrArg (fun l => l.tail.headD 0) hr.symm; simpa using this
+    refine ⟨hok, ?_, _, hres, ?_⟩
+    · rw [hst, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, (StackKept.refl _).toGrew⟩
+    · rw [hr1, hr2, ← hm, hcp, ← ispLen_take' cp an args.toList (by simp [hsa.size])]
+      exact hsa.take _ (ispLen_le cp an).2
 
 /-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
 
@@ -82,7 +122,7 @@ theorem rdW_eq_getElem (a : Array Word) (x : Word) (h : x.toNat < a.size) : rdW 
 def ldE (a : Array Word) (x : Word) : Option Word :=
   if h : x.toNat < a.size then some a[x.toNat] else none
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+-- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- Model of the `and_rescue_slots` loop at L fuel `k`. -/
 def iotaArW (p : Prog) (vis ctor nP us an : Word) : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
@@ -110,9 +150,9 @@ def iotaArW (p : Prog) (vis ctor nP us an : Word) : Nat → Mem → Word → Opt
                       else if r₂.headD 0 = 0 then some ([0], m₂)
                       else iotaArW p vis ctor nP us an k m₂ (j + 1)
     else some ([1], m)
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+-- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p k andRescueLoop
@@ -120,48 +160,48 @@ theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       iotaArW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) k s₀.mem (s₀.loc 5) =
         some (r.retOr [1], s'.mem); ⊤⦄ := by
   sorry
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+-- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- Model of `and_rescue_slots`. -/
 def arTop (p : Prog) (k : Nat) (m : Mem) (vis ctor nP us : Word) : Option (List Word × Mem) :=
   match callW p k "pin_at" [11] m with
   | none => none
   | some (r₀, m₀) => iotaArW p vis ctor nP us (r₀.headD 0) (k + 1) m₀ 0
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+-- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 theorem andRescueSlots_spec (p : Prog) (hp : p.lookup "and_rescue_slots" = some andRescueSlotsL)
     (k : Nat) (s₀ : St) (vis ctor nP us : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (k + 1)) "and_rescue_slots" [vis, ctor, nP, us]
     ⦃fun r s' => LocEq s' s₀ ∧ arTop p k s₀.mem vis ctor nP us = some (r, s'.mem); ⊤⦄ := by
   sorry
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+-- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 theorem andRescueSlotsGo_zero_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (j : Nat)
     (a : AState) : (andRescueSlotsGo fe an ctor nP ust 0 j).run a = .ok (true, a) := by
   sorry
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+-- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 theorem andRescueSlotsGo_none_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (n j : Nat)
     (a : AState) (h : fe.findProj? an j = none) :
     (andRescueSlotsGo fe an ctor nP ust (n + 1) j).run a = .ok (false, a) := by
   sorry
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+-- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 theorem andRescueSlotsGo_stop_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (n j : Nat)
     (a a₂ : AState) (e : IProjEntry) (b : Bool) (h : fe.findProj? an j = some e)
     (hb : (e.fireOk ust).run a = .ok (b, a₂))
     (hc : (e.ctor == ctor && e.numParams == nP && e.numFields == 2 && b) = false) :
     (andRescueSlotsGo fe an ctor nP ust (n + 1) j).run a = .ok (false, a₂) := by
   sorry
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+-- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 theorem andRescueSlotsGo_cont_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (n j : Nat)
     (a a₂ a₃ : AState) (e : IProjEntry) (b res : Bool)
     (h : fe.findProj? an j = some e) (hb : (e.fireOk ust).run a = .ok (b, a₂))
@@ -169,11 +209,16 @@ theorem andRescueSlotsGo_cont_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust 
     (hr : (andRescueSlotsGo fe an ctor nP ust n (j + 1)).run a₂ = .ok (res, a₃)) :
     (andRescueSlotsGo fe an ctor nP ust (n + 1) j).run a = .ok (res, a₃) := by
   sorry
--/
+-- RS2E
 
 theorem decTbl_bound (a : Array Word) (q : Nat) (tbl : IProjTable) (h : decTbl (aread a) q = some tbl) :
     q + 12 < a.size := by
-  sorry
+  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, g, hg, -⟩ := h
+  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hg
+  obtain ⟨-, -, c, ⟨w, hw, -⟩, -⟩ := hg
+  exact (Array.getElem?_eq_some_iff.mp hw).1
 
 theorem ldE_eq (a : Array Word) (x : Word) (h : x.toNat < a.size) : ldE a x = some (rdW a x) := by
   simp [ldE, rdW, h]
@@ -182,7 +227,7 @@ theorem addW13 (q c : Word) (a : Array Word) (hq : q.toNat + 12 < a.size)
     (hsz : a.size < 2 ^ 63) (hc : c.toNat ≤ 12) : (q + c).toNat = q.toNat + c.toNat := by
   rw [UInt64.toNat_add]; simp; omega
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+-- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- **The `and_rescue_slots` loop refines `andRescueSlotsGo`**. -/
 theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (eb ctor nP us anW : Word) (hctor : HW ctor) (hus : HW us) (hanW : HW anW) :
@@ -193,21 +238,42 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
       CoreRef (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a decBool
         dn m vis fe M eb L m' := by
   sorry
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+-- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (ust : LsIdx) (an : NIdx)
     (a a₁ : AState) (b : Bool) (hp : (pinAt PIN_AND).run a = .ok (an, a))
     (hr : (andRescueSlotsGo fe an ctor nP ust 2 0).run a = .ok (b, a₁)) :
     (andRescueSlots fe ctor nP ust).run a = .ok (b, a₁) := by
   sorry
--/
+-- RS2E
 
 /-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj`, `fire_ok` and their facts as
 `ProjCallees`). -/
 theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees p) :
     AndRescueSlotsOK p := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus hV
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (andRescueSlots_spec p hp.andRescueSlots n s₀ vis ctor nP us) fun r s' ⟨hloc,
+    hW⟩ => ⟨hloc, ?_⟩
+  simp only [arTop] at hW
+  rcases hc0 : callW p n "pin_at" [11] s₀.mem with _ | ⟨r₀, m₀⟩ <;>
+    simp only [hc0, reduceCtorEq] at hW
+  obtain ⟨t₀, ht₀, hm₀, hloc0, hanHW, hpin⟩ := triple_of_callW
+    (pinAt_refines p hp.pinat n ⟨s₀.mem, Locals.init []⟩ a₀ ⟨fun _ => hS.pins⟩ 11) hc0
+  have hmm : m₀ = s₀.mem := by rw [← ht₀]; exact hm₀
+  subst hmm
+  have hanW : HW (r₀.headD 0) := hanHW
+  obtain ⟨hok, hca, hres, hL1⟩ := arW_ok p hcc dn vis fe eb ctor nP us (r₀.headD 0) hctor hus hanW 2
+    (n + 1) s₀.mem a₀ MM 0 r s'.mem (by simp) hS hV hW
+  have hrunA := andRescueSlots_run fe (decI ctor) nP.toNat (decI us) (decI (r₀.headD 0)) a₀ _ _
+    (by simpa [PIN_AND] using hpin) (AM.run_of_ok _ _ hok)
+  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunA
+  refine ⟨hokF, ?_, ?_, hL1⟩
+  · rw [hstF]; simpa using hca
+  · rw [hresF]; simpa using hres
 
 /-! ## `fab_scope_ok(d, fab, major)` -/
 
@@ -374,7 +440,73 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
     RefE (KnotUpToE p n) (lmtcE p (n + 1) s₀.mem mode vis d h)
       (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
-  sorry
+  have hR := hS.arena.base
+  simp only [lmtcE]
+  -- `lit_to_ctor_if_nat`, whenever the twin runs `litToCtorIfNat`
+  have hnat : (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)).run a₀ =
+      (litToCtorIfNat fe (decE h)).run a₀ →
+      RefE (KnotUpToE p n) (lmtcE.k_lit_to_ctor_if_nat p
+        (liftE (callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem)))
+        (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) a₀
+        (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
+    intro hT
+    rcases c1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩
+    · rw [liftE_none, lmtcE.k_lit_to_ctor_if_nat.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]
+    obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe
+      MM eb h hS hh) c1).post
+    exact RefE.of_run_eq hT (RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩)
+  by_cases h8 : tagW h ≠ 8
+  · rw [ite_eq_left h8]
+    exact hnat (litMajorToCtor_run_nolit _ fe d.toNat (decE h) a₀
+      (fun ht => h8 ((decE_tag_lit h hh).mp ht)))
+  rw [ite_eq_right h8]
+  have h8' : tagW h = 8 := by simpa using h8
+  refine RefE.abort0 (by decide) fun hv1 => ?_
+  refine RefE.abort0 (by decide) fun hv2 => ?_
+  obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8'
+  have htag : (decE h).tag = ETag.lit := (decE_tag_lit h hh).mpr h8'
+  cases l with
+  | natVal N =>
+    have hk0 : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 0 := hrel.1
+    rw [ite_eq_left (by rw [hk0]; decide)]
+    exact hnat (litMajorToCtor_run_nat _ fe d.toNat (decE h) a₀ htag N hview)
+  | strVal str =>
+    have hk1 : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 1 := hrel.1
+    rw [ite_eq_right (by rw [hk1]; decide)]
+    rcases c1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩
+    · rw [liftE_none, lmtcE.k_str_lit_supported.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]
+    obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, -⟩ := CoreSpec.run
+      (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) c1
+    simp only [lmtcE.k_str_lit_supported]
+    by_cases h0 : r₁.headD 0 = 0
+    · rw [ite_eq_left h0]
+      rw [decBool_f_m2c h0] at hrun1
+      exact RefE.ret (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe d.toNat
+        (decE h) a₀ _ htag str hview hrun1) ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, rfl, hh⟩
+    rw [ite_eq_right h0]
+    rw [decBool_t_m2c h0] at hrun1
+    rcases c2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩
+    · rw [liftE_none, lmtcE.k_str_lit_ctor.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]
+    have hviewA : (AM.st (strLitSupported fe) a₀).store.view (decE h) =
+        some (.lit (.strVal str)) := hsup fe a₀ (decE h) _ hview
+    obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
+      (hw.strLitCtor n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb h str hS₁ hh hviewA) c2
+    simp only [lmtcE.k_str_lit_ctor]
+    have hW := (hk n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d _ hnF hn62
+      ⟨hS₂, hm4, hebm⟩ hr₂
+    rcases c3 : callE p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
+    · exact fun hkE => ErrClaim.of_run_err (fun ce h' => litMajorToCtor_err_str _ fe d.toNat (decE h)
+        a₀ _ _ htag str hview hrun1 _ hrun2 ce h')
+        (CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb
+          mode d _ hnF hn62 ⟨hS₂, hm4, hebm⟩ hr₂) c3)
+    obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW hW (callW_of_callE c3)
+    have hrun3 := AM.run_of_ok _ _ hok3
+    exact RefE.ret (litMajorToCtor_run_str (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) a₀
+      _ _ _ htag str hview hrun1 _ _ hrun2 hrun3)
+      ⟨⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩, hres3, hr₃⟩
 
 /-- **`lit_major_to_ctor` refines `litMajorToCtor`** (`lmtc_ref`'s ok half). Statement changes (the
 knot's `whnf` slot needs them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`; and

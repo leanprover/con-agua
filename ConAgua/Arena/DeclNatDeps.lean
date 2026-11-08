@@ -263,7 +263,34 @@ theorem armsW_keep (hN : NatGateProg p) {k : Nat} {m m1 m' : Mem} {a : AState} {
       armsW p k m1 (pinW m) c tab = some (r, m') →
       KeepPost vis fe (decRL (fun m => decHL m) 0) m m' a r
         ((depsL (pinW m) c tab).map (decI : Word → NIdx)) := by
-  sorry
+  intro tab
+  induction tab with
+  | nil =>
+    intro _ hw
+    simp only [armsW, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨hS1, hg1, by simp [depsL, decRL, decHL, hslice?]⟩
+  | cons x t ih =>
+    obtain ⟨i, is⟩ := x
+    intro ht hw
+    simp only [armsW, depsL] at hw ⊢
+    by_cases hci : c = pinW m i
+    · rw [ite_eq_left hci] at hw ⊢
+      cases hq : callW p k "iw_alloc" [UInt64.ofNat is.length] m1 with
+      | none => rw [hq] at hw; simp at hw
+      | some qq =>
+      obtain ⟨rq, mq⟩ := qq
+      rw [hq, bW_some] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hi := ht _ List.mem_cons_self
+      refine (emit_keep hN.lIwAlloc hS1 ?_ ?_ hq rfl rfl).of_grow hg1
+      · rw [List.length_map, UInt64.toNat_ofNat_of_lt' hi.1]
+      · simp only [List.mem_map]
+        rintro _ ⟨j, hj, rfl⟩
+        exact pin_lt hF j (hi.2 j hj).1 (hi.2 j hj).2
+    · rw [ite_eq_right hci] at hw ⊢
+      exact ih (fun x hx => ht x (List.mem_cons_of_mem _ hx)) hw
 
 theorem pinRecW_get (m : Mem) (i : Nat) (h : i < (pinRecW m).length) (hi : i < 15) :
     (pinRecW m)[i] = pinW m (i + 15) := by
@@ -273,7 +300,22 @@ theorem pinRecW_get (m : Mem) (i : Nat) (h : i < (pinRecW m).length) (hi : i < 1
 theorem natOpDeps_ref (hN : NatGateProg p) (c : Word) :
     CallRef p "nat_op_deps" [c] (fun m a => StageR vis fe m a ∧ H c) (natOpDeps (decI c))
       (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
-  sorry
+  refine CallRef.of_succ fun k m a r m' ⟨hS, hc⟩ hcall => ?_
+  have hw := callW_model (M := fun mm => natOpDepsW p k mm c) (natOpDeps_specW p hN.lNatOpDeps k · c) hcall
+  simp only [natOpDepsW] at hw
+  cases hp : callW p k "nat_op_pins" [] m with
+  | none => rw [hp] at hw; simp at hw
+  | some qp =>
+  obtain ⟨rp, m1⟩ := qp
+  rw [hp, bW_some] at hw
+  obtain ⟨h0, hrec, -, hr⟩ := natOpPins_fref hN k m rp m1 hS.iw hp
+  have hrec' : RecPost m m1 [rp.headD 0] (pinRecW m) := by rw [← hr]; exact hrec
+  rw [depsArmW_eq (f := pinW m) fun j hj => by
+    have := pw_rec hS.iw hrec' j.toNat (by simp [pinRecW]; omega)
+    rw [UInt64.ofNat_toNat] at this
+    rw [this, pinRecW_get m _ _ hj]] at hw
+  exact ⟨_, a, natOpDeps_run (hS.check.pins.full ‹_›) hc,
+    armsW_keep hN (hrec.2.1.stage hS) hrec.2.1.1 (hS.check.pins.full ‹_›) depsTab depsTab_ok hw⟩
 
 @[refines ConRon.Arena.natOpDeps]
 theorem natOpDeps_refines (hN : NatGateProg p) (c : Word) :

@@ -115,7 +115,20 @@ theorem CoreS.arena_frameD {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     (hmLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) (hmode : ModeOK m') :
     CoreS dn m' a' vis fe M eb := by
-  sorry
+  simp only [cpl, Prod.mk.injEq] at hcpl
+  obtain ⟨hc, hp, hl⟩ := hcpl
+  refine ⟨hD, ?_, ?_, hS.env.frame henv
+      (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
+      hf.size BSTK ▸ hS.bstk, hden, hmode⟩
+  · rw [hc]
+    exact CoreRM.frame (A := A) (C := C)
+      (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
+      (fun x hx => (hC128 x hx).elim (fun h => .inl h) (fun h => .inr h)) hf hS.core
+  · rw [hp]; exact hS.pins.congr (hf.arr PINS hpins (by decide))
+  · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]; exact this
+  · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
+  · rw [hl]; exact hS.nwf
 
 /-- **`CoreS` across an interning step** that writes neither the `sort` nor the `const` tables
 (`StoreDen` carries over by `StoreDen.of_arena`). -/

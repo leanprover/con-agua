@@ -51,7 +51,7 @@ l_model std_specW (p : Prog) (h : StdProg2 p)
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A `find_pinned` call's run, against its clause. -/
 theorem fp_call {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k ca cb id : Word} {r : List Word}
@@ -65,9 +65,9 @@ theorem fp_call {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   rw [hs'] at hW
   obtain ⟨b, a', hS', hg, hd, hF⟩ := fpW_ok h hW hS hnm hk hid
   exact ⟨b, a', clausePT_of_fp hF, hS', hg, hd⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A family of `stdAxiomOk`, flattened (`stdAxiomOk_eq`). -/
 def famT (fe : IFEnv) (cv : IConstantVal) (s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word) : AM Bool := do
   let x1 ← pinAt s1.toNat
@@ -79,9 +79,9 @@ def famT (fe : IFEnv) (cv : IConstantVal) (s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word) 
       let x3 ← pinAt s3.toNat
       let b3 ← clausePT fe x3 5 c3 c3 (romPinT i3.toNat)
       if !b3 then pure false else cv.matchesPin (← romCvT cvid.toNat)
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`std_ax_family` refines a family of `stdAxiomOk`** at the model level. -/
 theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word}
@@ -160,9 +160,9 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   refine ⟨_, a7, ?_, hS7, hg, hd8⟩
   simp only [StateT.run_bind, hrun7, exc_ok_bind']
   exact hrun8
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A family call's run. -/
 theorem fam_call {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word}
@@ -173,7 +173,7 @@ theorem fam_call {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name
     ∃ b a', (famT fe cv s1 s2 s3 i1 i2 i3 c2 c3 cvid).run a = .ok (b, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
   sorry
--/
+-- RS2E
 
 /-- **`std_axiom_ok(vis, q)` refines `stdAxiomOk`** (through the ROM stubs). -/
 @[refines ConRon.Arena.stdAxiomOk]

@@ -95,7 +95,7 @@ l_model sc0List_specW (p : Prog) (hp : p.lookup "subst_const0_list" = some subst
   specs [callW_spec p n "subst_const0", callW_spec p n "subst_const0_list", callW_spec p n "sl_cons"]
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (hn : H nm) (hr : H r) :
     ∀ (hyps : List EIdx) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
       StageR vis fe m a → decHL m o.toNat l.toNat = some hyps → o.toNat + l.toNat ≤ iwTop m →
@@ -164,7 +164,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
     · simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1, List.headD_cons, List.tail_cons]
       rw [← hx1]
       exact ⟨hd3, by omega⟩
--/
+-- RS2E
 
 end applied
 

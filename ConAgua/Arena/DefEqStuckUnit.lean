@@ -151,7 +151,114 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     RefE (KnotUpToE p n) (suhE p (n + 1) s₀.mem mode vis d b wta)
       (suHeadT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE b) (decE wta)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  have hS := hs.rel
+  have hR := hS.arena.base
+  simp only [suhE]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppFn_callW hq.leaf hR hwta h)
+    fun r₁ m₁ ⟨e1, hh, hgaf⟩ => ?_
+  subst e1
+  dsimp only [suhE.k_get_app_fn]
+  generalize r₁.headD 0 = h at hh hgaf
+  by_cases h3 : tagW h ≠ 3
+  · rw [ite_eq_left h3]
+    exact RefE.ret (suHead_nonconst _ fe _ _ _ a₀ _ hgaf (by rw [decE_tag_const_beq _ hh]; simpa using h3))
+      (CorePost.ret hS rfl hw0)
+  rw [ite_eq_right h3]
+  have h3' : tagW h = 3 := by simpa using h3
+  refine RefE.abort0 (by decide) fun hsc => ?_
+  refine RefE.abort0 (by decide) fun hcc => ?_
+  have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
+  obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3'
+  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3']
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hv
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 1 = us2 at huw hv
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => envFind_callW hq.leaf.core hS.env hnw h)
+    fun r₂ m₂ ⟨e2, hfind, hfound⟩ => ?_
+  subst e2
+  dsimp only [suhE.k_env_find]
+  by_cases h0 : r₂.headD 0 = 0
+  · rw [ite_eq_left h0]
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    exact RefE.ret (suHead_other _ fe _ _ _ a₀ _ hgaf _ _ hct hv
+      (fun cv caps e => by rw [hnone] at e; cases e)) (CorePost.ret hS rfl hw0)
+  rw [ite_eq_right h0]
+  obtain ⟨ci, hci⟩ := hfound h0
+  have hfind' := find_of_found hfind h0 hci
+  have hind := decCI_indK hci (erecP_ext _) hS.erec
+  by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 3
+  · rw [ite_eq_left h4]
+    exact RefE.ret (suHead_other _ fe _ _ _ a₀ _ hgaf _ _ hct hv
+      (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e)))
+      (CorePost.ret hS rfl hw0)
+  rw [ite_eq_right h4]
+  obtain ⟨cvT, caps, hci_eq⟩ := hind.1 (by simpa using h4)
+  rw [hci_eq] at hci
+  have hIR := decCI_indCaps hci (erecP_ext _) hS.erec
+  -- the type's spine, the top put back
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppArgs_callW hq.leaf.core.spine hS hwta h)
+    fun r₃ m₃ ⟨hf3, hg3, _, _, targs, hargs, hsp⟩ => ?_
+  simp only [suhE.k_get_app_args]
+  obtain ⟨hS₃, hK₃⟩ := hS.restoreTop' hf3 hg3
+  have hlen : targs.length = (r₃.tail.headD 0).toNat := by simpa using hsp.size
+  -- `ls_node`
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW
+    (s₀ := ⟨m₃.set64 CTL 136 (rdW (s₀.mem.arr64 CTL) 136), Locals.init []⟩)
+    (lsNode_spec p hq.leaf.core.lsn n ⟨m₃.set64 CTL 136 (rdW (s₀.mem.arr64 CTL) 136), Locals.init []⟩
+      us2) h) fun r₄ m₄ ⟨t₄, ht₄, ht₄s, hne, hr₄⟩ => ?_
+  have em₄ : m₄ = m₃.set64 CTL 136 (rdW (s₀.mem.arr64 CTL) 136) := by rw [← ht₄, ht₄s]
+  rw [hr₄] at hne
+  have hvl := defeq_lsNodeW_viewLen hS₃.arena.base huw hne
+  rw [← hr₄] at hvl
+  subst em₄
+  dsimp only [suhE.k_ls_node]
+  -- `reserved_contains`
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => reservedContains_callW hc hS₃ hnw h)
+    fun r₅ m₅ ⟨hA₅, hr₅⟩ => ?_
+  obtain ⟨M₅, hS₅, hK₅, hSt₅⟩ : CoreAfter dn s₀.mem m₅ a₀ vis fe M eb := by
+    obtain ⟨M', hS', hK', hSt'⟩ := hA₅
+    exact ⟨M', hS', hK', hK₃.trans hSt'⟩
+  have hlpT : cvT.levelParams.length = (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3)).toNat :=
+    hslice?_length hIR.lp
+  have hiff : (caps.unitlike = true ∧ a₀.pins.reserved.contains (decI k) = false ∧
+      targs.length = caps.unitParams ∧ (r₄.tail.headD 0).toNat = cvT.levelParams.length) ↔
+      uhOK (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 9)) (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 10))
+        (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3)) (r₃.tail.headD 0) (r₄.tail.headD 0) r₅ := by
+    unfold uhOK
+    rw [hIR.unitlike, ← hr₅, hlen, hIR.unitParams, hlpT]
+    simp only [decBool, bne_iff_ne, ne_eq, bne_eq_false_iff_eq, UInt64.toNat_inj]
+  refine RefE.of_run_eq (suHead_ind _ fe _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
+    (by rw [hfind', hci_eq]) targs hargs hS.pins _ hvl) ?_
+  dsimp only [suhE.k_reserved_contains_w]
+  by_cases hok : uhOK (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 9))
+      (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 10)) (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3))
+      (r₃.tail.headD 0) (r₄.tail.headD 0) r₅
+  · obtain ⟨o1, o2, o3, o4⟩ := hok
+    rw [ite_eq_left (hiff.mpr ⟨o1, o2, o3, o4⟩)]
+    simp only [o1, o2, o3, o4, ne_eq, not_true_eq_false, ↓reduceIte]
+    cases n with
+    | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+    | succ N =>
+    exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hkE => hkE.mono (Nat.le_succ N)) rfl
+      (fun _ _ _ h => ⟨CoreAfter.comp hK₅ hSt₅ h.after, h.res, h.valid⟩)
+      (sut_ref p N (hk.mono (Nat.le_succ N)) F ⟨m₅, Locals.init []⟩ a₀ dn vis fe M₅ eb mode d b wta
+        (by omega) (by omega) ⟨hS₅, hs.mode4, hs.eb_mode⟩ hb hwta)
+  · rw [ite_eq_right (fun h => hok (hiff.mp h))]
+    have hl : RefE (KnotUpToE p (n + 1)) (.ok ([0], m₅) : Except Err (List Word × Mem))
+        (pure false : AM Bool) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) :=
+      RefE.ret rfl ⟨⟨M₅, hS₅, hK₅, hSt₅⟩, rfl, hw0⟩
+    unfold uhOK at hok
+    by_cases o1 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 9) = 0
+    · rw [ite_eq_left o1]; exact hl
+    rw [ite_eq_right o1]
+    by_cases o2 : r₅.headD 0 ≠ 0
+    · rw [ite_eq_left o2]; exact hl
+    rw [ite_eq_right o2]
+    by_cases o3 : r₃.tail.headD 0 ≠ rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 10)
+    · rw [ite_eq_left o3]; exact hl
+    rw [ite_eq_right o3]
+    by_cases o4 : r₄.tail.headD 0 ≠ rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3)
+    · rw [ite_eq_left o4]; exact hl
+    exact absurd ⟨o1, by simpa using o2, by simpa using o3, by simpa using o4⟩ hok
 
 /-! ## `struct_unit_cert` -/
 

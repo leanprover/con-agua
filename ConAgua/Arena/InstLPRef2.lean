@@ -181,6 +181,118 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     (hfire : FireR m a fk fvo fvc qo qc rl cvjLps)
     (hW : recFireLevelsW p n m fk fvo fvc po pc us qo qc = some (r, m')) :
     ∃ a', (recFireLevels rl lps (decI us) cvjLps).run a = .ok (decI r, a') ∧ RFLOk m m' a a' r := by
-  sorry
+  unfold recFireLevelsW at hW
+  rcases h1 : callW p n "ls_node" [us] m with _ | ⟨vs', m₀⟩ <;> rw [h1] at hW
+  · cases hW
+  obtain ⟨s₁, hs₁m, hs₁, -, hv'⟩ := triple_of_callW (lsNode_spec p hL.ls_node n ⟨m, Locals.init []⟩ us) h1
+  have hm₀ : m₀ = m := by rw [← hs₁m, hs₁]
+  subst hm₀
+  obtain ⟨ids, hvw, hdl'⟩ := denoteLs_view a (decI us) vs hdus
+  obtain ⟨e₁, t₁, sl₁⟩ := lsNodeW_store hA.base hus hvw
+  rw [hv', e₁] at hW
+  simp only [List.headD_cons, List.tail_cons] at hW
+  rcases h2 : callW p n "keys_push" [po, pc] m₀ with _ | ⟨bs, m₁⟩ <;> rw [h2] at hW
+  · cases hW
+  obtain ⟨s₂, hs₂m, -, hW₂⟩ := triple_of_callW (keysPush_spec p hL.toLvSubProg n ⟨m₀, Locals.init []⟩ po pc) h2
+  rw [hs₂m] at hW₂
+  have hk := lp_nmsR_of_hslice a.store.lss.ls.ns m₀ EREC lps ks po pc hlps hpb hks
+  obtain ⟨hb, hk₁, hf₁, htop₁, hroom, hbel₁⟩ := keysPushW_ok n m₀ m₁ po pc (bs.headD 0) ks hk hsz hctl hW₂
+  -- the twin's readbacks
+  obtain ⟨c₁, hrn, hnc₁, el₁, els₁, eq₁⟩ := readNamesM_run a hnc lps ks hks
+  obtain ⟨c₂, hrl, hlsc₂, el₂, en₂, eq₂⟩ := lp_readLevelsM_run { a with caches := c₁ } (decI us) vs hdus
+    (fun h l e => hlsc h l (by rw [← els₁]; exact e))
+  generalize hal : ({ { a with caches := c₁ } with caches := c₂ } : AState) = al at hrl hlsc₂
+  have hstl : al.store = a.store := by rw [← hal]
+  have hA₁ : ArenaD m₁ al := by
+    rw [← hal]; exact (arenaD_frame_hi hA hf₁ (by simp [SPN]) (by simp)).with_caches _
+  have hlcl : ReadLCOK al := by
+    intro h l e; rw [← hal] at e; simp only at e; rw [el₂, el₁] at e
+    have := hlc h l e; rw [hstl]; exact this
+  have hncl : ReadNCOK al := by
+    intro h l e; rw [← hal] at e; simp only at e; rw [en₂] at e
+    have := hnc₁ h l e; rw [hstl]; exact this
+  have hlscl : ReadLsCOK al := hlsc₂
+  have herec₁ : m₁.arr64 EREC = m₀.arr64 EREC := hf₁.arr EREC (by simp [SPN, EREC]) (by decide)
+  have hpool₁ : m₁.arr64 POOL = m₀.arr64 POOL := hf₁.arr POOL (by simp [SPN, POOL]) (by decide)
+  have hpool₁' : m₁.arr64 POOL1 = m₀.arr64 POOL1 := hf₁.arr POOL1 (by simp [SPN, POOL1]) (by decide)
+  have hpool₁v := vpool_congr hpool₁ hpool₁'
+  have hpool₁c := pcap_congr' hpool₁ hpool₁'
+  have htopm₁ : m₁.top = m₀.top := by simp only [top_rdW]; exact hf₁.ctl 0 (by simp)
+  have hsz₁ : (m₁.arr64 SPN).size = (m₀.arr64 SPN).size := hf₁.size SPN
+  have hlen : (m₁.len64 SPN).toNat = (m₀.arr64 SPN).size := by
+    rw [← hsz₁]; exact L.Front.toNat_ofNat_size _ (by rw [hsz₁]; exact hsz)
+  have hk₁' : NmsR (nameN al.store.lss.ls.ns) m₁ SPN (bs.headD 0) pc ks := by rw [hstl]; exact hk₁
+  unfold rflK at hW
+  rcases hfire with ⟨hfk, hpl, hq, hqb, hqd⟩ | ⟨hfk, lvls, pins, hnest, hfv, hfvb, hfvd⟩
+  · -- plain
+    simp only [hfk, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+    by_cases u1 : m₁.len64 SPN < spTop m₁
+    · simp [u1] at hW
+    by_cases u2 : m₁.len64 SPN - spTop m₁ < qc
+    · simp [u1, u2] at hW
+    simp only [u1, u2, ↓reduceIte] at hW
+    have u2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u2)
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp u1), hlen] at u2'
+    have u1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u1)
+    rw [hlen] at u1'
+    cases h3 : callW p n "slp_go" [qo, qc, spTop m₁, bs.headD 0, pc, tfld m₀ LVLS (tierW us) (idxW us) 0,
+        tfld m₀ LVLS (tierW us) (idxW us) 1] m₁ with
+    | none => rw [h3] at hW; cases hW
+    | some q =>
+    obtain ⟨xs, m₂⟩ := q
+    rw [h3] at hW
+    dsimp only at hW
+    obtain ⟨s₃, hs₃m, -, hW₃⟩ := triple_of_callW (slpGo_spec p hL n ⟨m₁, Locals.init []⟩ _ _ _ _ _ _ _) h3
+    rw [hs₃m] at hW₃
+    obtain ⟨hs, a₂, hrun₂, hA₂, hwf₂, hnc₂, hx₂, hpi₂, hme₂, hca₂, hsl₂, hbl₂, hf₂⟩ :=
+      slpW_ok ks vs ids (bs.headD 0) pc _ _ cvjLps n m₁ m₂ al qo qc (spTop m₁) hA₁ (by rw [hstl]; exact hwf)
+        hncl (by rw [herec₁]; exact hq) hqb (by rw [hstl]; exact hqd) hk₁' (by omega)
+        (by rw [hpool₁v]; exact sl₁) (by rw [htopm₁]; exact t₁) (by rw [hstl]; exact hdl')
+        (by rw [hsz₁]; omega) (by rw [hsz₁]; exact hsz) hW₃
+    rcases h4 : callW p n "spn_ls" [spTop m₁, qc] m₂ with _ | ⟨rs, m₃⟩ <;> rw [h4] at hW
+    · cases hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hbc : (bs.headD 0).toNat ≤ (spTop m₁).toNat := by omega
+    obtain ⟨a₃, hrun₃, hok⟩ := rflTail_ok p hL n m₀ m₁ m₂ m₃ a a₂ (bs.headD 0) (spTop m₁) qc hs rs hmode hsz hctl
+      hbc (by omega) hb hf₁ hbel₁ hA₂ (StoreWF.nwf hwf₂) hnc₂ (hlcl.ext hx₂ (by rw [hca₂]))
+      (hlscl.ext hx₂.lss (by rw [hca₂])) (by rw [hca₂, ← hal]; dsimp only; rw [eq₂]; dsimp only; rw [eq₁])
+      (by rw [hpi₂, ← hal]) (by rw [hme₂, ← hal]) hsl₂ hbl₂ (hf₂.mono (by simp; try grind) (by simp)) h4
+    refine ⟨a₃, ?_, hok⟩
+    simp only [recFireLevels, hpl, StateT.run_bind, hrn, except_ok_bind, hrl, hrun₂, hrun₃]
+  · -- nested
+    simp only [ne_eq, hfk, not_false_eq_true, ↓reduceIte] at hW
+    by_cases u1 : m₁.len64 SPN < spTop m₁
+    · simp [u1] at hW
+    by_cases u2 : m₁.len64 SPN - spTop m₁ < fvc
+    · simp [u1, u2] at hW
+    simp only [u1, u2, ↓reduceIte] at hW
+    have u2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u2)
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp u1), hlen] at u2'
+    have u1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u1)
+    rw [hlen] at u1'
+    cases h3 : callW p n "sle_go" [fvo, fvc, spTop m₁, bs.headD 0, pc, tfld m₀ LVLS (tierW us) (idxW us) 0,
+        tfld m₀ LVLS (tierW us) (idxW us) 1] m₁ with
+    | none => rw [h3] at hW; cases hW
+    | some q =>
+    obtain ⟨xs, m₂⟩ := q
+    rw [h3] at hW
+    dsimp only at hW
+    obtain ⟨s₃, hs₃m, -, hW₃⟩ := triple_of_callW (sleGo_spec p hL n ⟨m₁, Locals.init []⟩ _ _ _ _ _ _ _) h3
+    rw [hs₃m] at hW₃
+    obtain ⟨hs, a₂, hrun₂, hA₂, hwf₂, hlc₂, hx₂, hpi₂, hme₂, hca₂, hsl₂, hbl₂, hf₂⟩ :=
+      sleW_ok ks vs ids (bs.headD 0) pc _ _ lvls n m₁ m₂ al fvo fvc (spTop m₁) hA₁ (by rw [hstl]; exact hwf)
+        hlcl (by rw [herec₁]; exact hfv) hfvb (by rw [hstl]; exact hfvd) hk₁' (by omega)
+        (by rw [hpool₁v]; exact sl₁) (by rw [htopm₁]; exact t₁) (by rw [hstl]; exact hdl')
+        (by rw [hsz₁]; omega) (by rw [hsz₁]; exact hsz) hW₃
+    rcases h4 : callW p n "spn_ls" [spTop m₁, fvc] m₂ with _ | ⟨rs, m₃⟩ <;> rw [h4] at hW
+    · cases hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hbc : (bs.headD 0).toNat ≤ (spTop m₁).toNat := by omega
+    obtain ⟨a₃, hrun₃, hok⟩ := rflTail_ok p hL n m₀ m₁ m₂ m₃ a a₂ (bs.headD 0) (spTop m₁) fvc hs rs hmode hsz hctl
+      hbc (by omega) hb hf₁ hbel₁ hA₂ (StoreWF.nwf hwf₂) (hncl.ext hx₂ (by rw [hca₂])) hlc₂
+      (hlscl.ext hx₂.lss (by rw [hca₂])) (by rw [hca₂, ← hal]; dsimp only; rw [eq₂]; dsimp only; rw [eq₁])
+      (by rw [hpi₂, ← hal]) (by rw [hme₂, ← hal]) hsl₂ hbl₂ hf₂ h4
+    refine ⟨a₃, ?_, hok⟩
+    simp only [recFireLevels, hnest, StateT.run_bind, hrn, except_ok_bind, hrl, hrun₂, hrun₃]
 
 end L.Arena

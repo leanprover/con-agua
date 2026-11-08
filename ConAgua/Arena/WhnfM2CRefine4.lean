@@ -191,7 +191,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
     refine GrowRef.of_run ?_ hA7 (decH_of _ _ hr) (resH_of_m2c _ _ hr hh6)
     rw [hpre, decBool_t_m2c g7]; rfl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 include hE in
 /-- **`m2c_eta` refines `m2cEtaT`, both outcomes** (`indP` the family's record; the errors are
 `m2c_pre`'s). -/
@@ -317,7 +317,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   rw [res4] at hrun4
   refine RefE.ret (by rw [hstep, ite_eq_left hcond, hec, hef]; exact hrun4)
     ⟨CoreAfterG.compK (hK1.trans hK3) (hSt1.toGrew.trans (hg2.trans hSt3.toGrew)) hA4, rfl, hr4⟩
--/
+-- RS2E
 
 end etaarm
 

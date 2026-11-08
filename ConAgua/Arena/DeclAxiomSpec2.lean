@@ -56,18 +56,18 @@ def fpcK1 (n : Nat) (k id : Word) : Option (List Word × Mem) → Option (List W
         rdW (m1.arr64 EREC) (r1.tail.headD 0 + 6) ≠ 0) then some ([0], m1)
     else fpcK2 (r1.tail.headD 0) (callW p n "rom_cv" [id] m1)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `find_pinned_cv(vis, n, k, id)`.** -/
 def fpcW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | n + 1, m, vis, nm, k, id => fpcK1 p n k id (envFindW m nm vis)
--/
+-- RS2E
 
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (vis nm k id q : Word) (r1 r2 : List Word)
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem fpcW_step : fpcW p (n + 1) m vis nm k id = fpcK1 p n k id (envFindW m nm vis) := rfl
--/
+-- RS2E
 theorem fpcK1_some : fpcK1 p n k id (some (r1, m1)) =
     if r1.headD 0 = 0 then some ([0], m1)
     else if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ k then some ([0], m1)
@@ -87,7 +87,7 @@ structure TcoProg (p : Prog) : Prop where
   fpc : p.lookup "find_pinned_cv" = some findPinnedCv
   tco : p.lookup "trust_compiler_ok" = some trustCompilerOkL
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxHeartbeats 1600000 in
 theorem fpc_specW (h : TcoProg p) (n : Nat) (s₀ : St) (vis nm k id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "find_pinned_cv" [vis, nm, k, id]
@@ -102,7 +102,7 @@ theorem fpc_specW (h : TcoProg p) (n : Nat) (s₀ : St) (vis nm k id : Word) :
         callW_spec p n "env_find", callW_spec p n "rom_cv",
         mp_specW p h.red.canon h.red.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
--/
+-- RS2E
 
 end model
 
@@ -198,7 +198,7 @@ def FpcT (fe : IFEnv) (nm : NIdx) (k : Word) (T : AM IConstantVal) (a : AState) 
   ((fe.find? nm).bind (fpcShape k)).elim (b = false ∧ a' = a)
     (fun cvT => (do let pin ← T; pure (decide (cvT = pin)) : AM Bool).run a = .ok (b, a'))
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`find_pinned_cv` against the twin's clause**, at the model level. -/
 theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k id : Word} {r : List Word}
@@ -207,7 +207,7 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
     ∃ b a', StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
       FpcT fe (decI nm) k (romCvT id.toNat) a b a' := by
   sorry
--/
+-- RS2E
 
 /-! ## `trust_compiler_ok(vis, q)` -/
 

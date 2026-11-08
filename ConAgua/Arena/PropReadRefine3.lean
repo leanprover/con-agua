@@ -157,7 +157,7 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   by_cases h0 : r₁.headD 0 = 0
   · simp only [h0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
-    have hnone : fe.find? (decI cn) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hnone : fe.find? (decI cn) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     exact ⟨none, a, by simp only [cArmT, hnone]; rfl, RdAfter.refl hS, rfl⟩
   simp only [h0, ↓reduceIte] at hW
   obtain ⟨ci, hci⟩ := hfound h0

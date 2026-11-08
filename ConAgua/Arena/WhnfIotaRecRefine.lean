@@ -42,15 +42,15 @@ namespace L.Arena
 section twin
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The parameter comparison. -/
 def iotaRecCmpT (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (args : List EIdx) (rP : Nat)
     (margs : List EIdx) : AM Bool := do
   let cmpA ← recFireArgs rl lps us args rP
   defEqList r fe depth (margs.take rl.ctorParams) cmpA
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The checks past `iotaCase3` (the twin's text). -/
 def iotaRecVckT (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx) (usj : LsIdx)
     (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) (cmpL : LsIdx) : AM Bool := do
@@ -63,9 +63,9 @@ def iotaRecVckT (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx) 
       else pure false
     else pure false
   else pure false
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The checks past `iotaCase3`, the parameter comparison named. -/
 theorem iotaRecVckT_eq (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
     (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) (cmpL : LsIdx) :
@@ -79,9 +79,9 @@ theorem iotaRecVckT_eq (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List
         else pure false
       else pure false) := by
   simp only [iotaRecVckT, iotaRecCmpT, bind_assoc]
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The certificate family. -/
 def iotaRecFamT (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx) (usj : LsIdx)
     (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) : AM Bool :=
@@ -90,9 +90,9 @@ def iotaRecFamT (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx) 
     if ← iotaCase3 fe rl cvj cmpL then iotaRecVckT r fe depth mI rP lps us args usj cvj rl margs cmpL
     else pure true
   else pure true
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The fire past the major's arguments. -/
 def iotaRecFire2T (c : NIdx) (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
     (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) : AM (Option EIdx) :=
@@ -104,17 +104,17 @@ def iotaRecFire2T (c : NIdx) (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args 
       pure (some x)
     else pure none
   else pure none
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The major's arguments, then the fire. -/
 def iotaRecFireT (c : NIdx) (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
     (major : EIdx) (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) : AM (Option EIdx) := do
   let margs ← getAppArgs coreWalkFuel major
   iotaRecFire2T mode r fe depth c mI rP lps us args usj cvj rl margs
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The major's preparation, its head's constructor, the rule. -/
 def iotaRecMajorT (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat)
     (rules : List IRecRule) (args : List EIdx) : AM (Option EIdx) := do
@@ -132,9 +132,9 @@ def iotaRecMajorT (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat)
       | _ => pure none
     | _ => pure none
   else pure none
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The recursor's record, the arity, the levels' length, the telescope. -/
 def iotaRecCT (c : NIdx) (us : LsIdx) (sargs : Array EIdx) (n : Nat) : AM (Option EIdx) :=
   match fe.find? c with
@@ -150,13 +150,13 @@ def iotaRecCT (c : NIdx) (us : LsIdx) (sargs : Array EIdx) (n : Nat) : AM (Optio
       iotaRecMajorT mode r fe depth c us cv mI rP rules args
     else pure none
   | _ => pure none
--/
+-- RS2E
 
 theorem ite_bind' {m : Type → Type} [Monad m] {α β : Type} (c : Prop) [Decidable c] (x y : m α)
     (f : α → m β) : (ite c x y >>= f) = ite c (x >>= f) (y >>= f) := by
   split <;> rfl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The twin, put back together.** -/
 theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
     iotaRecAt mode r fe depth hd sargs n =
@@ -206,7 +206,7 @@ theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
               · rw [ite_eq_right ht, ite_eq_right ht]
             · rw [ite_eq_right hc, ite_eq_right hc]
   · rfl
--/
+-- RS2E
 
 end twin
 
@@ -277,7 +277,13 @@ theorem erecPushLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     exec p k erecPushLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 3 = s₀.loc 3 ∧
       epW (s₀.loc 0) (s₀.loc 1) (s₀.loc 3) k s₀.mem (s₀.loc 4) = some s'.mem; ⊤⦄ := by
-  sorry
+  induction k generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ k ih =>
+    rw [exec, step_while (w := erecPushLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish [epW_end, epW_cont, epW_bad1, epW_bad2]
 
 /-- Model of `erec_push`. -/
 def epTop (k : Nat) (m : Mem) (o c kd : Word) : Option (List Word × Mem) :=
@@ -407,7 +413,39 @@ theorem callW_erecPush (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (
     (h : callW p n "erec_push" [o, c, 1] m = some (r, m')) :
     MemFrame [SPN] [136] m m' ∧ StackGrew m m' ∧ r.headD 0 = spTop m ∧ spTop m' = spTop m + c ∧
       SpineR m' (spTop m) c pins.toArray := by
-  sorry
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ n =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callW (erecPush_spec p hp n ⟨m, Locals.init []⟩ o c 1) h
+  rw [ht] at hW
+  simp only [epTop, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  obtain ⟨h136, hW⟩ := of_ite_none' hW
+  obtain ⟨hg1, hW⟩ := of_ite_none hW
+  obtain ⟨hg2, hW⟩ := of_ite_none hW
+  cases hm : epW o c (rdW (m.arr64 CTL) 136) (n + 1) m 0 with
+  | none => rw [hm] at hW; cases hW
+  | some m₁ =>
+  rw [hm] at hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  have h64 : (m.arr64 SPN).size < 2 ^ 64 := by omega
+  have hsolt : (rdW (m.arr64 CTL) 136).toNat ≤ (m.arr64 SPN).size := by
+    have : ¬ (m.arr64 SPN).size < (rdW (m.arr64 CTL) 136).toNat := by
+      intro h
+      apply hg1
+      rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' h64]; exact h
+    omega
+  have hso : (rdW (m.arr64 CTL) 136).toNat + c.toNat ≤ (m.arr64 SPN).size := by
+    have h2 : ¬ UInt64.ofNat (m.arr64 SPN).size - rdW (m.arr64 CTL) 136 < c := hg2
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _ (by
+      rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' h64]; exact hsolt),
+      UInt64.toNat_ofNat_of_lt' h64] at h2
+    omega
+  have hspt : spTop m = rdW (m.arr64 CTL) 136 + 0 := by rw [UInt64.add_zero]; rfl
+  obtain ⟨hfr, hgr, htop, hys⟩ := epW_ok (m.arr64 EREC) hE o c (rdW (m.arr64 CTL) 136) pins hpins
+    (c.toNat - (0 : Word).toNat) (n + 1) m 0 m₁ rfl (by simp) rfl hspt hso hspn hm
+  refine ⟨hfr, hgr, by rw [← hr]; rfl, htop, ?_⟩
+  simp only [UInt64.add_zero, UInt64.sub_zero, UInt64.toNat_zero, List.drop_zero] at hys
+  exact hys
 
 /-! ## Reading decoded records by word -/
 
@@ -442,7 +480,7 @@ theorem decCV_rd1 {b : Array Word} {q : Word} {cv : IConstantVal} (hsz : b.size 
   rw [e1, e2, e3, e4]
   exact ⟨hl1, rfl, hs, hslice?_length hs, hl4, rfl⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A recursor record by its kind word `5`. -/
 theorem decCI_rec_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
     {ci : IConstantInfo} (hsz : b.size < 2 ^ 63) (h : decCI (aread b) q.toNat = some ci) :
@@ -451,13 +489,22 @@ theorem decCI_rec_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
       decRules (aread b) (rdW b (q + 7)).toNat (rdW b (q + 8)).toNat = some rules) ∧
     (rdW b q ≠ 5 → ∀ cv mI rP rules, ci ≠ .recInfo cv mI rP rules) := by
   sorry
--/
+-- RS2E
 
 /-- A constructor record by its kind word `4`. -/
 theorem decCI_ctor_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
     {ci : IConstantInfo} (h : decCI (aread b) q.toNat = some ci) (h4 : rdW b q = 4) :
     ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (aread b) (q.toNat + 1) = some cv := by
-  sorry
+  cases hq : b[q.toNat]? with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  rw [irRdW0 hq] at h4
+  subst h4
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some,
+    show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨cv, hcv, np, -, nf, -, rfl⟩ := h
+  exact ⟨cv, np, nf, rfl, hcv⟩
 
 /-- The common fields of a decoded rule record. -/
 theorem decRule_tail {b : Array Word} {q : Nat} {fire : IRecRuleFire} {rl : IRecRule}
@@ -467,7 +514,9 @@ theorem decRule_tail {b : Array Word} {q : Nat} {fire : IRecRuleFire} {rl : IRec
     rl.fire = fire ∧ hd? (aread b) q = some rl.ctor ∧ nat? (aread b) (q + 1) = some rl.nfields ∧
       nat? (aread b) (q + 2) = some rl.ctorParams ∧ hd? (aread b) (q + 8) = some rl.rhs ∧
       bool? (aread b) (q + 9) = some rl.k := by
-  sorry
+  simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+  obtain ⟨c, hc, nf, hnf, cp, hcp, rhs, hrhs, k, hk, eta, -, rfl⟩ := h
+  exact ⟨rfl, hc, hnf, hcp, hrhs, hk⟩
 
 /-- The words of a rule record. -/
 theorem decRule_rd {b : Array Word} {q : Word} {rl : IRecRule} (hsz : b.size < 2 ^ 63)
@@ -478,7 +527,56 @@ theorem decRule_rd {b : Array Word} {q : Word} {rl : IRecRule} (hsz : b.size < 2
       (rdW b (q + 3) = 1 → ∃ lv pins, rl.fire = .nested lv pins ∧
         hslice? (aread b) (rdW b (q + 6)).toNat (rdW b (q + 7)).toNat = some pins) ∧
       HW (rdW b (q + 8)) ∧ rl.rhs = decI (rdW b (q + 8)) ∧ rl.k = (rdW b (q + 9) != 0) := by
-  sorry
+  simp only [decRule, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨kd, hkd, h⟩ := h
+  simp only [nat?, Option.map_eq_some_iff] at hkd
+  obtain ⟨w3, hw3, rfl⟩ := hkd
+  have e3 : rdW b (q + 3) = w3 := irRdW hsz 3 rfl hw3
+  have common : ∀ fire, ((hd? b q.toNat).bind fun c => (nat? b (q.toNat + 1)).bind fun nf =>
+      (nat? b (q.toNat + 2)).bind fun cp => (hd? b (q.toNat + 8)).bind fun rhs =>
+      (bool? b (q.toNat + 9)).bind fun k => (bool? b (q.toNat + 10)).bind fun eta =>
+      pure (IRecRule.mk c nf cp fire rhs k eta)) = some rl →
+      HW (rdW b q) ∧ rl.ctor = decI (rdW b q) ∧ rl.nfields = (rdW b (q + 1)).toNat ∧
+      rl.ctorParams = (rdW b (q + 2)).toNat ∧ HW (rdW b (q + 8)) ∧
+      rl.rhs = decI (rdW b (q + 8)) ∧ rl.k = (rdW b (q + 9) != 0) := by
+    intro fire hf
+    obtain ⟨-, hc, hnf, hcp, hrhs, hk⟩ := decRule_tail hf
+    obtain ⟨w0, hw0, hl0, e0⟩ := hd?_some hc
+    obtain ⟨w8, hw8, hl8, e8⟩ := hd?_some hrhs
+    simp only [nat?, bool?, Option.map_eq_some_iff] at hnf hcp hk
+    obtain ⟨w1, hw1, e1⟩ := hnf
+    obtain ⟨w2, hw2, e2⟩ := hcp
+    obtain ⟨w9, hw9, e9⟩ := hk
+    rw [irRdW0 hw0, irRdW hsz 1 rfl hw1, irRdW hsz 2 rfl hw2, irRdW hsz 8 rfl hw8,
+      irRdW hsz 9 rfl hw9]
+    exact ⟨hl0, e0, e1.symm, e2.symm, hl8, e8, e9.symm⟩
+  rcases hk : w3.toNat with _ | _ | k
+  · rw [hk] at h
+    simp only [Option.bind_some] at h
+    obtain ⟨c1, c2, c3, c4, c5, c6, c7⟩ := common _ h
+    have hf := (decRule_tail h).1
+    refine ⟨c1, c2, c3, c4, fun _ => hf, fun h3 => ?_, c5, c6, c7⟩
+    rw [e3] at h3; subst h3; simp at hk
+  · rw [hk] at h
+    cases hlv : hlist? (k := .level) b (q.toNat + 4) with
+    | none => rw [hlv] at h; simp at h
+    | some lv =>
+    cases hp : hlist? (k := .expr) b (q.toNat + 6) with
+    | none => rw [hlv, hp] at h; simp at h
+    | some pins =>
+    rw [hlv, hp] at h
+    simp only [Option.bind_some] at h
+    obtain ⟨c1, c2, c3, c4, c5, c6, c7⟩ := common _ h
+    have hf := (decRule_tail h).1
+    have h31 : rdW b (q + 3) = 1 := by rw [e3]; exact UInt64.toNat_inj.mp (by rw [hk]; rfl)
+    refine ⟨c1, c2, c3, c4, fun h3 => absurd h31 h3, fun _ => ⟨lv, pins, hf, ?_⟩, c5, c6, c7⟩
+    simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
+      Option.map_eq_some_iff] at hp
+    obtain ⟨o, ⟨w6, hw6, rfl⟩, c, ⟨w7, hw7, rfl⟩, hs⟩ := hp
+    rw [irRdW hsz 6 rfl hw6, irRdW hsz 7 rfl (by rw [← hw7]; congr 1)]
+    exact hs
+  · rw [hk] at h
+    simp at h
 
 theorem callW_erecPush_no (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (n : Nat) (m : Mem)
     (o c kd : Word) (hk : kd ≠ 1) (r : List Word) (m' : Mem)
@@ -544,7 +642,7 @@ theorem callW_stackCover (p : Prog) (hp : p.lookup "stack_cover" = some stackCov
 
 /-! ## `iota_rec_cmp(mode, vis, d, us, recP, so, rl, mo)` -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_cmp` refines the parameter comparison, both outcomes**: the errors are
 `defeq_list`'s (the `defeq` slot's). -/
 theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
@@ -566,9 +664,9 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
         (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat margs.toList) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
   sorry
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_cmp` refines the parameter comparison** (`irCmp_ref`'s ok half). -/
 theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) :
@@ -588,7 +686,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
       (iotaRecCmpT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rule lps (decI us) args.toList
         (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat margs.toList) decBool s₀ a₀ dn vis fe MM eb := by
   sorry
--/
+-- RS2E
 
 /-! ## `iota_rec_vck(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL)` -/
 
@@ -726,7 +824,38 @@ theorem callW_iotaRecCmp_erec (p : Prog) (hp : IotaRecProg' p) (hER : ErecKeptRe
     (hEK : ErecKeptKnot p) (n : Nat) (m : Mem) (vs : List Word) (r : List Word) (m' : Mem)
     (hvs : vs.length = 8) (h : callW p n "iota_rec_cmp" vs m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC := by
-  sorry
+  match vs, hvs with
+  | [mode, vis, d, us, recP, so, rl, mo], _ =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callE
+    (irCmpE_spec p hp.cmp n ⟨m, Locals.init []⟩ mode vis d us recP so rl mo) (callE_of_callW h)
+  rw [ht] at hW
+  cases n with
+  | zero => simp [irCmpE] at hW
+  | succ n =>
+  simp only [irCmpE, irCmpE.k_erec_push, irCmpE.k_rec_fire_args, irCmpE.k_stack_cover,
+    irCmpE.k_defeq_list] at hW
+  split at hW
+  · cases hW
+  rename_i rp m1 c1
+  split at hW
+  · cases hW
+  rename_i ra m2 c2
+  split at hW
+  · cases hW
+  rename_i rx m3 c3
+  split at hW
+  · cases hW
+  rename_i rd m4 c4
+  simp only [Except.ok.injEq, Prod.mk.injEq] at hW
+  have o : ∀ {x : Option (List Word × Mem)} {v}, liftE x = .ok v → x = some v := by
+    intro x v h; cases x <;> cases h; rfl
+  replace c1 := o c1
+  replace c2 := o c2
+  replace c3 := o c3
+  rw [← hW.2, Mem.arr64_set64_ne _ _ _ _ _ (by decide), hEK _ _ _ _ _ _ (by simp) (callW_of_callE c4),
+    (callW_stackCover p hp.stackCover n m2 _ rx m3 c3).1.1 EREC (by simp) (by decide),
+    hER _ _ _ _ _ _ (by simp) c2,
+    (callW_erecPush_frame p hp.erecPush n m _ _ _ rp m1 c1).1 EREC (by simp [SPN, EREC]) (by decide)]
 
 /-- **What the certificate family's errors assume** at L fuel `n` (`iota_rec_vck`, `iota_rec_fam`):
 the knot's slots' claims; the verdict closure for the callees' specs. -/
@@ -737,7 +866,7 @@ structure FamG (p : Prog) (n : Nat) : Prop where
 theorem FamG.mono {p : Prog} {n n' : Nat} (h : FamG p n) (hn : n' ≤ n) : FamG p n' :=
   ⟨h.knot.mono hn, h.nv⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_vck` refines the checks past `iotaCase3`, both outcomes**: the level comparison out
 of fuel declines; the other errors are `iota_rec_cmp`'s, `iota_certs_full`'s, `iota_index_ok`'s. -/
 theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
@@ -762,9 +891,9 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
         (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL)) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
   sorry
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_vck` refines the checks past `iotaCase3`** (`vck_ref`'s ok half). -/
 theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) :
@@ -787,6 +916,6 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
         (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL)) decBool s₀ a₀ dn vis fe
       MM eb := by
   sorry
--/
+-- RS2E
 
 end L.Arena

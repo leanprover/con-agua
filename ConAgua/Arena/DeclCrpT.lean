@@ -75,7 +75,7 @@ theorem mkAppW_leafFrame {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r
 /-- `check_opaque_val` is one of the loop's functions. -/
 theorem checkOpaqueVal_loop : "check_opaque_val" ∈ loopFns := loop_mem _ rfl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `StageC` after a twin run, from `StageT` after it and con-ron's `CheckOK` from the start. -/
 theorem rpg_fin {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
     {m : Mem} {a a' : AState} {c : Word} {cn : ConLeche.Name} {x : Bool}
@@ -85,7 +85,7 @@ theorem rpg_fin {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       x = ConLeche.reducePinGuard env cn := by
   obtain ⟨hck', hx, -, hr⟩ := ConRon.Bridge.reducePinGuard_run hck hd hrun
   exact ⟨StageC.of_T hT hck', hx, hr⟩
--/
+-- RS2E
 
 /-- **`reduce_pin_guard` under `StageC`** (`reducePinGuard_refines`'s): the pin by
 `StageC.of_leaf`, the walks by their `StageT` contracts, `CheckOK` after by con-ron's
@@ -210,7 +210,7 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   obtain ⟨hC, hx, hr⟩ := rpg_fin hS.check hd hrun hS5
   exact ⟨x5, a5, hrun, hC, hx, hr, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hx5⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`is_def_eq_core`'s twin side**: con-ron's `KnotSpec.defeq` at `checkFuel` (`CoreSpec.of_core`)
 gives `CheckOK` and `Ext` after a run from `CheckOK` and the two sides' denotations. -/
 theorem defeq_check {env : ConLeche.Env} {fe : IFEnv} {a a' : AState} {d : Nat} {i j : EIdx}
@@ -222,7 +222,7 @@ theorem defeq_check {env : ConLeche.Env} {fe : IFEnv} {a a' : AState} {d : Nat} 
       ConRon.Bridge.Core.SimV (ConLeche.isDefEqCore V env) d x y b :=
   ConRon.Bridge.AM.of_run (P := fun t => t = a) rfl hrun
     (((CoreSpec.of_core rfl).knot env fe henv).defeq a d i j x y hck hi hj hwx hwy)
--/
+-- RS2E
 
 /-- What `check_reduce_pin` gives besides the twin's run (from `m`): the stage relation at the
 pushed view `vis2`, `StageC` at the pre-insertion view `vis`, the growth. -/
@@ -231,7 +231,7 @@ structure CrpPost (dn : NIdx → Option ConLeche.Name) (vis vis2 : Word) (fe2 : 
   stage2 : StageR vis2 fe2 m' a'
   grow : IWGrow m m'
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_reduce_pin` refines `checkReducePin`, both outcomes** (con-ron's
 `checkReducePin_bridge`'s decomposition): from the stage relation at the pushed view `vis2`,
 con-ron's `CheckOK` at the pre-insertion view `vis` of the index (at `env`, the environment before
@@ -396,7 +396,7 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   have := StageR.restrict hC8.stage vis2
   rw [← hfe, IFEnv.restrictTo_restrictTo, ← hvb, IFEnv.restrictTo_self] at this
   exact this
--/
+-- RS2E
 
 set_option experimental.vcgen true in
 /-- **The model of `check_decl_opaque`, both outcomes**: its callees through their runs. -/
@@ -406,7 +406,7 @@ l_model checkDeclOpaque_specE (p : Prog)
   extra [ld64_rdW_specT, ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The opaque arm refines `checkDecl`, both outcomes**, under `StageT` (con-ron's
 `checkDecl_bridge_opaque`): the constant check and the value check (`ccv_ref`, `ov_ref`), then for
 `Lean.reduceNat`/`Lean.reduceBool` the reduce-pin gate under `StageC` (`crp_ref`) at the
@@ -566,6 +566,6 @@ theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg
       · exact .inr e.symm
     refine RefE.ite_neg (by rw [hc]; decide) ?_
     exact RefE.ret rfl ⟨by simpa using hS3, hM3, hg1.trans (hP2.grow.trans hg3)⟩
--/
+-- RS2E
 
 end L.Arena

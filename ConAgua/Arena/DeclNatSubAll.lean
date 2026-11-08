@@ -317,12 +317,12 @@ theorem substConstAll_refines (hN : NatSubAllProg p) (nm r fuel h : Word) :
   CallRef.refAM (fun k m a res m' ⟨hS, hn, hr, hh⟩ hc =>
     sca_ref hN nm r fuel.toNat fuel rfl h k m a res m' hS hn hr hh hc)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`subst_const_all` at the walk fuel**: `DeclDivModSpec/SubstConst0List`'s `SubstCAll`. -/
 theorem substCAll_of (hN : NatSubAllProg p) : ∀ dn vis fe, SubstCAll p dn vis fe :=
   fun _ _ _ nm r h hn hr hh k m a res m' hS hc =>
     sca_ref hN nm r coreWalkFuel 4000000000 rfl h k m a res m' hS hn hr hh hc
--/
+-- RS2E
 
 end suball
 

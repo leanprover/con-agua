@@ -341,7 +341,37 @@ theorem isl_ref (n : Nat) (hk : KnotUpTo p n) (hb : InferBodySpec p n) (F : Nat)
     RefE (InferSlotBodyG p n) (islE p (n + 1) s₀.mem mode vis d e)
       ((coreKnot (decMode mode) (decEager mode) fe id F).infer d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
-  sorry
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hS := hs.rel
+  have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
+  simp only [islE]
+  rw [hkey]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => callW_memoFind hp.inFind h)
+    fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
+  subst hm hr
+  have hf := hS.core.inf.findE hS.core.eb1 e he hne
+  simp only [islE.k_in_find]
+  by_cases h2 : (mfindG inSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
+  · rw [ite_eq_left h2]
+    exact RefE.ret (knot_infer_hit _ fe F' d.toNat _ a₀ _ (hf.1 h2).1) (CorePost.ret hS rfl (hf.1 h2).2)
+  rw [ite_eq_right h2]
+  have hmiss := hf.2 (by simpa using h2)
+  rcases h3 : callE p n "infer_body" [mode, vis, d, e] s₀.mem with e3 | ⟨r₃, m₃⟩
+  · exact fun hG => ErrClaim.of_run_err (fun ce h => knot_infer_missE _ fe F' d.toNat _ a₀ hmiss ce h)
+      (CoreSpecE.of_callE (hG.body F' s₀ a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk
+        hG.knot) h3)
+  obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
+    (hb F' s₀ a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk) (callW_of_callE h3)
+  simp only [islE.k_infer_body]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
+  simp only [islE.k_in_find_2]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
+  simp only [islE.k_in_put]
+  have hset := callW_memoSet hp.inFind hp.inPut h4 h5
+  obtain ⟨hS₂, hSt₂⟩ := hS₁.set_in e (r₃.headD 0) he hrw hset
+  have hrun := knot_infer_miss _ fe F' d.toNat _ a₀ hmiss _ _ (AM.run_of_ok _ _ hok)
+  rw [hres] at hrun
+  exact RefE.ret hrun ⟨⟨_, hS₂, hK₁.inf _ _, hSt₁.trans hSt₂⟩, rfl, hrw⟩
 
 include hp in
 /-- **`infer` refines the knot's `infer` slot**: `InferSlot p (n + 1)` from `infer_body`'s spec at
@@ -364,7 +394,37 @@ theorem islo_ref (n : Nat) (hk : KnotUpTo p n) (hb : InferIOBodySpec p n) (F : N
     RefE (InferIOSlotBodyG p n) (isloE p (n + 1) s₀.mem mode vis d e)
       ((coreKnot (decMode mode) (decEager mode) fe id F).inferIO d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
-  sorry
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hS := hs.rel
+  have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
+  simp only [isloE]
+  rw [hkey]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => callW_memoFind hp.ioFind h)
+    fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
+  subst hm hr
+  have hf := hS.core.io.findE hS.core.eb1 e he hne
+  simp only [isloE.k_io_find]
+  by_cases h2 : (mfindG ioSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
+  · rw [ite_eq_left h2]
+    exact RefE.ret (knot_inferIO_hit _ fe F' d.toNat _ a₀ _ (hf.1 h2).1) (CorePost.ret hS rfl (hf.1 h2).2)
+  rw [ite_eq_right h2]
+  have hmiss := hf.2 (by simpa using h2)
+  rcases h3 : callE p n "infer_body_io" [mode, vis, d, e] s₀.mem with e3 | ⟨r₃, m₃⟩
+  · exact fun hG => ErrClaim.of_run_err (fun ce h => knot_inferIO_missE _ fe F' d.toNat _ a₀ hmiss ce h)
+      (CoreSpecE.of_callE (hG.body F' s₀ a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk
+        hG.knot) h3)
+  obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
+    (hb F' s₀ a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk) (callW_of_callE h3)
+  simp only [isloE.k_infer_body_io]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
+  simp only [isloE.k_io_find_2]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
+  simp only [isloE.k_io_put]
+  have hset := callW_memoSet hp.ioFind hp.ioPut h4 h5
+  obtain ⟨hS₂, hSt₂⟩ := hS₁.set_io e (r₃.headD 0) he hrw hset
+  have hrun := knot_inferIO_miss _ fe F' d.toNat _ a₀ hmiss _ _ (AM.run_of_ok _ _ hok)
+  rw [hres] at hrun
+  exact RefE.ret hrun ⟨⟨_, hS₂, hK₁.io _ _, hSt₁.trans hSt₂⟩, rfl, hrw⟩
 
 include hp in
 /-- **`infer_io` refines the knot's `inferIO` slot**: `InferIOSlot p (n + 1)` from `infer_body_io`'s spec at
@@ -386,7 +446,40 @@ theorem dsl_ref (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) (F : Nat)
     RefE (SlotBodyG p n) (dslE p (n + 1) s₀.mem mode vis d x y)
       ((coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE x) (decE y)) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
-  sorry
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hS := hs.rel
+  have hkey : y ||| (mode >>> 1 &&& 1) <<< 32 = genW y eb := by rw [hs.eb_mode]; rfl
+  simp only [dslE]
+  rw [hkey]
+  refine RefE.onlySim (fun _ => dslE.k_de_find.none ..) (fun _ _ h => callW_memoFind hp.deFind h)
+    fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
+  subst hm hr
+  have hf := hS.core.de.findD hS.core.eb1 x y hx hy hne
+  simp only [dslE.k_de_find]
+  by_cases h2 : (mfindG deSch s₀.mem x (genW y eb)).headD 0 ≠ 0
+  · rw [ite_eq_left h2]
+    exact RefE.ret (knot_defeq_hit _ fe F' d.toNat _ _ a₀ _ (hf.1 h2))
+      (CorePost.ret hS (by simp only [decBool, decB]; split <;> simp_all [mvG]) (by
+        unfold ResH HW; split <;> decide))
+  rw [ite_eq_right h2]
+  have hmiss := hf.2 (by simpa using h2)
+  rcases h3 : callE p n "defeq_body" [mode, vis, d, x, y] s₀.mem with e | ⟨r₃, m₃⟩
+  · exact fun hG => knot_defeq_missE _ fe F' d.toNat _ _ a₀ hmiss
+      (CoreSpecE.of_callE (hG.body F' s₀ a₀ dn vis fe MM eb mode d x y (by omega) (by omega) hs hx hy hk
+        hG.knot) h3)
+  obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
+    (hb F' s₀ a₀ dn vis fe MM eb mode d x y (by omega) (by omega) hs hx hy hk) (callW_of_callE h3)
+  simp only [dslE.k_defeq_body]
+  refine RefE.onlySim (fun _ => dslE.k_de_find_2.none ..) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
+  simp only [dslE.k_de_find_2]
+  refine RefE.onlySim (fun _ => dslE.k_de_put.none ..) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
+  simp only [dslE.k_de_put]
+  have hset := callW_memoSet hp.deFind hp.dePut h4 h5
+  obtain ⟨hS₂, hSt₂⟩ := hS₁.set_de x y (r₃.headD 0) hx hy hset
+  have hrun := knot_defeq_miss _ fe F' d.toNat _ _ a₀ hmiss _ _ (AM.run_of_ok _ _ hok)
+  rw [hres] at hrun
+  exact RefE.ret hrun ⟨⟨_, hS₂, hK₁.de _ _, hSt₁.trans hSt₂⟩, by simp only [decBool, List.headD_cons],
+    hrw⟩
 
 include hp in
 /-- **`defeq` refines the knot's `defeq` slot**: `DefeqSlot p (n + 1)` from `defeq_body`'s spec
@@ -428,7 +521,8 @@ theorem mode_plain (mode : Word) (h : mode < 4) (he : decEager mode = false) :
 theorem knot_defeqE_eager (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F d : Nat) (x y : EIdx)
     (h : eager = true) :
     (coreKnot mode eager fe id (F + 1)).defeqE d x y = (coreKnot mode eager fe id (F + 1)).defeq d x y := by
-  sorry
+  cases mode <;> simp_all [ConLeche.CheckMode.eager, coreKnot, enterEager, leaveEager,
+    ConLeche.CheckMode.toEager]
 
 /-- The caches after `enterEager false`: the stored eager set in the six fields, the eager slot
 empty. -/
@@ -527,7 +621,27 @@ theorem knot_defeqE_plainE (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEn
     (hr : ((coreKnot mode true fe id (F + 1)).defeq d x y).run
       { a with caches := enterC a.caches } = .error ce) :
     ((coreKnot mode eager fe id (F + 1)).defeqE d x y).run a = .error ce := by
-  sorry
+  simp only [coreKnot, id] at hr ⊢
+  simp only [enterEager, h, Bool.false_eq_true, ite_false]
+  simp only [StateT.run_bind, StateT.run_get, StateT.run_set, StateT.run_pure, pure_bind] at hr ⊢
+  cases hc : (a.caches.eagerMemos.defeqC)[(x, y)]? with
+  | some w =>
+    simp only [enterC, hc, StateT.run_pure] at hr
+    cases hr
+  | none =>
+    simp only [enterC, hc, StateT.run_bind] at hr
+    cases hb : (defeqBody mode.toEager (coreKnot mode.toEager fe id F) fe d x y).run
+        { a with caches := enterC a.caches } with
+    | error e =>
+      simp only [enterC] at hb; simp only [hb] at hr
+      cases hr
+      simp only [StateT.run_bind, hb]
+      rfl
+    | ok q =>
+      simp only [enterC] at hb
+      simp only [hb, except_ok_bind, defeqSet, StateT.run_bind, StateT.run_get, StateT.run_set,
+        StateT.run_pure, pure_bind] at hr
+      cases hr
 
 /-- **`defeq_e`'s unified model**: the `defeq` slot at the mode word with bit 1 set, through its
 run. -/
@@ -546,7 +660,36 @@ theorem de_ref (n : Nat) (hd : DefeqSlot p n) (F : Nat) (s₀ : St) (a₀ : ASta
     RefE (DefeqSlotE p n) (deE p (n + 1) s₀.mem mode vis d x y)
       ((coreKnot (decMode mode) (decEager mode) fe id F).defeqE d.toNat (decE x) (decE y)) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
-  sorry
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [deE]
+  cases he : (decMode mode).eager with
+  | true =>
+    rw [mode_eager mode hs.mode4 he, knot_defeqE_eager _ fe F' d.toNat _ _ he]
+    rcases hc : callE p n "defeq" [mode, vis, d, x, y] s₀.mem with e | ⟨r, m⟩
+    · exact fun hG => CoreSpecE.of_callE (hG (F' + 1) s₀ a₀ dn vis fe MM eb mode d x y (by omega)
+        (by omega) hs hx hy) hc
+    obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (hd (F' + 1) s₀ a₀ dn vis fe MM eb mode d x y (by omega)
+      (by omega) hs hx hy) (callW_of_callE hc)).post
+    exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+  | false =>
+    obtain ⟨hdm, heb0, hm4, heb1⟩ := mode_plain mode hs.mode4 he
+    have heb : eb = 0 := hs.eb_mode.trans heb0
+    subst heb
+    have hpre : SlotPre s₀ { a₀ with caches := enterC a₀.caches } dn vis fe MM 1 (mode ||| 2) :=
+      ⟨hs.rel.enter, hm4, heb1⟩
+    rcases hc : callE p n "defeq" [mode ||| 2, vis, d, x, y] s₀.mem with e | ⟨r, m⟩
+    · intro hG
+      have hE := CoreSpecE.of_callE
+        (hG (F' + 1) s₀ _ dn vis fe MM 1 (mode ||| 2) d x y (by omega) (by omega) hpre hx hy) hc
+      rw [hdm] at hE
+      exact ErrClaim.of_run_err (fun ce h => knot_defeqE_plainE _ fe F' d.toNat _ _ a₀ he ce h) hE
+    obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW
+      (hd (F' + 1) s₀ _ dn vis fe MM 1 (mode ||| 2) d x y (by omega) (by omega) hpre hx hy)
+      (callW_of_callE hc)
+    rw [hdm] at hok hres hS'
+    have hrun := knot_defeqE_plain (decMode mode) fe F' d.toNat (decE x) (decE y) a₀ he _ _
+      (AM.run_of_ok _ _ hok)
+    exact RefE.ret hrun ⟨⟨M', hS'.leave hs.rel.core hK', fun h => absurd rfl h, hSt'⟩, hres, hrw⟩
 
 include hp in
 /-- **`defeq_e` refines the knot's eager slot**: `DefeqESlot p (n + 1)` from the `defeq` slot at

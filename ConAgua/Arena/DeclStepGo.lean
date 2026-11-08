@@ -170,12 +170,12 @@ theorem pinIn_contains {m : Mem} {p : Pins} (hF : PinsFull m p) {n : Nat} {x k h
 
 /-! ## The twin's two arms -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`installStepGo`'s `checkDecl` arm.** -/
 def cdT (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (fe : IFEnv) (d : IDeclaration) :
     AM (IFEnv × Option ValueGroup) := do
   pure (← checkDecl mode pins fe d, none)
--/
+-- RS2E
 
 /-- The pinned definitions' names (`natOpNames ++ natDivModNames`) are the pin table's 15 to 29. -/
 theorem pinnedDefn_contains (m : Mem) (x : NIdx) :
@@ -231,10 +231,10 @@ variable {p : Prog} (h : IvProg p)
 include h
 theorem IvProg.recP : RecProg p := by
   constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem IvProg.ih : IhProg p := by
   constructor <;> first | exact h.bvb | exact h.hf | exact (h.agree _ (by decide) (by decide)).trans rfl
--/
+-- RS2E
 end ivLookups
 
 end L.Arena

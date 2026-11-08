@@ -96,7 +96,62 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (hlv : LvlAll a') (hlc : LvlCnt m m') (hP : (POOL : TieredArray) ∉ A := by decide)
     (hP0 : (0 : Word) ∉ C := by decide) (hP1 : (POOL1 : TieredArray) ∉ A := by decide) (hPT : (PT0 : TieredArray) ∉ A := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
-  sorry
+  have hmode : ModeOK m' := by
+    have hfl : m'.flag = m.flag := hlc.flag
+    unfold ModeOK; rw [hf.top_eq hP0, hfl]; exact hS.mode
+  have hD : DerR m' a' := DerR.of_tiers m' a a'
+    (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega) a hS.arena.der) hL.pers hL.scr
+  have hspn : m'.arr64 SPN = m.arr64 SPN :=
+    hf.arr SPN (fun h => absurd (hA _ h) (by decide)) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
+    hf.ctl 136 (fun h => by have := hC _ h; simp at this)
+  refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; omega)
+      (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
+      hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
+        ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
+          fun h => absurd (hA _ h) (by decide)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
+          fun h => absurd (hC _ h) (by decide)⟩
+        ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
+          fun h => absurd (hA _ h) (by decide)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
+          fun h => absurd (hC _ h) (by decide)⟩,
+      hf.size BSTK ▸ hS.bstk,
+      hS.den.mono (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext) (by rw [hL.pins])
+        (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
+        (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
+        (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)) hlv
+        (hS.den.lsAll.of_ext (fun u hu => by
+            have e : a'.store.lss.view u = a.store.lss.view u := by
+              unfold LsStore.view; rw [hL.lsp, hL.lss, hL.lon]
+            rw [← e]; exact hu)
+          (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext)), hmode⟩,
+    StackKept.of_frameL hf
+      ⟨fun h => absurd (hA _ h) (by decide),
+       fun h => absurd (hA _ h) (by decide), hP⟩
+      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hlc hP1 hPT⟩
+  · rw [hL.caches]
+    exact CoreRM.frame (A := A) (C := C) (fun b hb => by have := hA b hb; omega)
+      (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
+  · rw [hL.pins]
+    exact hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide))
+      (by decide))
+  · intro h l e
+    rw [hL.caches] at e
+    exact hL.ext.lvl h l (hS.readL h l e)
+  · intro h l e
+    rw [hL.caches] at e
+    have h1 := hS.readLs h l e
+    unfold denoteLs at h1 ⊢
+    have hv : a'.store.lss.view h = a.store.lss.view h := by
+      simp only [LsStore.view, hL.lsp, hL.lss, hL.lon]
+    rw [hv]
+    cases hw : a.store.lss.view h with
+    | none => rw [hw] at h1; cases h1
+    | some us => rw [hw] at h1; exact denoteLList_mono_of_lext hL.ext us l h1
+  · rw [hL.ns]; exact hS.nwf
 
 /-! ## The leaves -/
 

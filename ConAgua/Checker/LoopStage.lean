@@ -26,7 +26,7 @@ namespace L.Checker
 
 open L.Arena L.Rom
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The fold's start invariant from the twin's stages before the loop** (`stages_frame`). -/
 theorem twinFold_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AState}
     {rc : ParseResultD} {sC : AState} {ds : Array IDeclaration} {sD : AState}
@@ -38,7 +38,7 @@ theorem twinFold_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB :
     ConAgua.Final.stages_frame (chunks := [b]) hA hB hC hD hE
   exact ⟨⟨ConLeche.Env.empty, hfold, by simp [ConLeche.NodupNames, ConLeche.Env.empty]⟩,
     ⟨_, hpd⟩, hpp, hdp, ⟨_, hden⟩, by simp, hoff⟩
--/
+-- RS2E
 
 /-- The `CTL` words `LoopZero` asks zero, as a list. -/
 def loopZeroCtls : List Nat :=
@@ -50,10 +50,10 @@ theorem loopZeroCtl_mem {x : Nat} (h : loopZeroCtl x) : x ∈ loopZeroCtls := by
   simp only [loopZeroCtls, List.mem_cons, List.not_mem_nil, or_false]
   omega
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem preLoopA_loopZeroArrs : loopZeroArrs.all (fun b => !preLoopA.contains b) = true := by
   decide +kernel
--/
+-- RS2E
 
 theorem preLoopC_loopZeroCtls :
     (preLoopC.map UInt64.toNat).all (fun x => !loopZeroCtls.contains x) = true := by

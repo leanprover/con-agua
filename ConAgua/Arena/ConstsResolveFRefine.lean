@@ -255,7 +255,7 @@ section rel
 variable {p : Prog} (hp : CrfProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 include hp
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 omit hp in
 theorem envFindW_01 {m m1 : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) :
     r.headD 0 = 0 ∨ r.headD 0 = 1 := by
@@ -263,7 +263,7 @@ theorem envFindW_01 {m m1 : Mem} {w vis : Word} {r : List Word} (h : envFindW m 
   split at h; · simp at h
   split at h; · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.1]; simp
   split at h <;> (simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.1]; simp)
--/
+-- RS2E
 
 /-- **`env_find(w, vis)` as a call**: memory unchanged, and the word says whether `w` has a row in
 the environment. -/
@@ -278,10 +278,10 @@ theorem envFind_callW {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
   rw [hf]
   simp only at hci
   rcases envFindW_01 hW with h0 | h1
-  · rw [h0]; simp [decFound]
+  · rw [h0]; simp [envFound]
   · obtain ⟨ci, hci⟩ := hci (by rw [h1]; decide)
     rw [h1]
-    simp only [decFound, ite_eq_right (show (1 : Word) ≠ 0 by decide), hci, Option.isSome_some,
+    simp only [envFound, ite_eq_right (show (1 : Word) ≠ 0 by decide), hci, Option.isSome_some,
       ↓reduceIte]
 
 omit hp in

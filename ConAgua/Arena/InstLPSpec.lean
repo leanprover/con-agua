@@ -385,7 +385,16 @@ theorem sleGo_spec (n : Nat) : ∀ (s₀ : St) (o l b ko kc vo vc : Word),
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "sle_go" [o, l, b, ko, kc, vo, vc]
     ⦃fun _ s' => LocEq s' s₀ ∧ slElemW EREC n s₀.mem o l b ko kc vo vc = some s'.mem; ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ o l b ko kc vo vc; rw [invoke_eq _ hL.sle_go]; simp only [callFn, sleGo]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o l b ko kc vo vc
+    rw [invoke_eq _ hL.sle_go]
+    simp only [callFn, sleGo]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        lvSubInt_spec p hL.toLvSubProg n, ih] <;>
+      finish
 
 theorem slsGo_spec (n : Nat) : ∀ (s₀ : St) (o l b ko kc vo vc : Word),
     ⦃fun s => s = s₀⦄
@@ -406,7 +415,17 @@ theorem slpGo_spec (n : Nat) : ∀ (s₀ : St) (o l b ko kc vo vc : Word),
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "slp_go" [o, l, b, ko, kc, vo, vc]
     ⦃fun _ s' => LocEq s' s₀ ∧ slpW n s₀.mem o l b ko kc vo vc = some s'.mem; ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ o l b ko kc vo vc; rw [invoke_eq _ hL.slp_go]; simp only [callFn, slpGo]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o l b ko kc vo vc
+    rw [invoke_eq _ hL.slp_go]
+    simp only [callFn, slpGo]
+    sym only [lang_grind, arena_grind, level_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        lpLookup_spec p hL.lp_lookup n, lvIntern_spec p hL.toLvInternProg n,
+        internParam_spec p hL.param_find hL.param_push hL.intern_param n, ih] <;>
+      finish
 
 theorem spnPool_spec (n : Nat) : ∀ (s₀ : St) (b d l : Word),
     ⦃fun s => s = s₀⦄

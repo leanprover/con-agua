@@ -154,7 +154,17 @@ theorem ViewsKept.trans {m₁ m₂ m₃ : Mem} (h₁ : ViewsKept m₁ m₂) (h�
 
 theorem viewsKept_of {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m' a')
     (hk : LKeep a a') (hf : MemFrame lvArrs lvCtl m m') : ViewsKept m m' := by
-  sorry
+  intro q hq
+  by_cases hb : q >>> 32 = 0
+  · have hh : q.toNat < 2 ^ 32 := by
+      have := congrArg UInt64.toNat hb
+      simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow] at this
+      have := q.toNat_lt; omega
+    obtain ⟨v, hv⟩ := lvNodeW_view hR hh hq
+    rw [lvNodeW_store hR hh hv, lvNodeW_store hR' hh (hk.1 _ _ hv)]
+  · have hLH : m'.arr64 LH = m.arr64 LH := hf.arr LH (by simp [tier1, lvArrs, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]) (by decide)
+    have h192 : rdW (m'.arr64 CTL) 192 = rdW (m.arr64 CTL) 192 := hf.ctl 192 (by simp [lvCtl])
+    rw [lvNodeW_heap m' q hb, lvNodeW_heap m q hb, hLH, h192]
 
 /-! ## The refinement -/
 
@@ -380,7 +390,61 @@ theorem lp_nmsR_of_hslice (ns : NStore) (m : Mem) (A : ArrId) :
     ∀ (lps : List NIdx) (ks : List Name) (o k : Word),
       hslice? (aread (m.arr64 A)) o.toNat k.toNat = some lps → o.toNat + k.toNat < 2 ^ 64 →
       lps.mapM (denoteN ns) = some ks → NmsR (nameN ns) m A o k ks := by
-  sorry
+  intro lps
+  induction lps with
+  | nil =>
+    intro ks o k hs hb hd
+    simp only [List.mapM_nil, Option.pure_def, Option.some.injEq] at hd; subst hd
+    have hk : k.toNat = 0 := by
+      rcases hk : k.toNat with _ | j
+      · rfl
+      · rw [hk, lp_hslice_succ] at hs
+        simp only [Option.bind_eq_bind] at hs
+        cases e : (hd? (m.arr64 A) o.toNat : Option NIdx) with
+        | none => simp [e] at hs
+        | some x =>
+          cases e' : (hslice? (m.arr64 A) (o.toNat + 1) j : Option (List NIdx)) with
+          | none | some xs => simp [e, e'] at hs
+    have : k = 0 := UInt64.toNat_inj.mp (by simpa using hk)
+    subst this; exact .nil
+  | cons x xs ih =>
+    intro ks o k hs hb hd
+    rcases hk : k.toNat with _ | j
+    · rw [hk] at hs; simp [hslice?] at hs
+    rw [hk, lp_hslice_succ] at hs
+    simp only [Option.bind_eq_bind] at hs
+    cases e : (hd? (m.arr64 A) o.toNat : Option NIdx) with
+    | none => simp [e] at hs
+    | some x' =>
+    cases e' : (hslice? (m.arr64 A) (o.toNat + 1) j : Option (List NIdx)) with
+    | none => simp [e, e'] at hs
+    | some xs' =>
+    simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs
+    obtain ⟨rfl, rfl⟩ := hs
+    simp only [List.mapM_cons, Option.pure_def, Option.bind_eq_bind] at hd
+    cases d1 : denoteN ns x' with
+    | none => simp [d1] at hd
+    | some nm =>
+    cases d2 : (xs'.mapM (denoteN ns)) with
+    | none => simp [d1, d2] at hd
+    | some nms =>
+    simp only [d1, d2, Option.bind_some, Option.some.injEq] at hd
+    subst hd
+    simp only [hd?] at e
+    cases ew : (m.arr64 A)[o.toNat]? with
+    | none => simp [ew] at e
+    | some w =>
+    simp only [ew] at e
+    by_cases hw : w.toNat < 2 ^ 32
+    · simp [hw] at e
+      subst e
+      have hk0 : k ≠ 0 := fun h0 => by subst h0; simp at hk
+      have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hk1 : (k - 1).toNat = j := by
+        rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+      refine .cons hk0 ⟨by simpa [rdW, ew] using hw, by simpa [rdW, ew] using d1⟩
+        (ih _ (o + 1) (k - 1) (by rw [ho1, hk1]; exact e') (by omega) d2)
+    · simp [hw] at e
 
 /-! ## `lv_sub_int` refines `internLevel (Level.subst ks vs l)` -/
 

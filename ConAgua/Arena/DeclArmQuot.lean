@@ -206,7 +206,7 @@ structure QuotProg (p : Prog) : Prop where
   pa : p.lookup "pin_at" = some pinAtL
   cdq : p.lookup "check_decl_quot" = some checkDeclQuot
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_decl_quot(i, vis)`, both outcomes**: `erec_ci` and `quot_pin_hit`
 (outside the verdict closure) lifted, `check_basis_decl` by its unified model. -/
 l_model checkDeclQuot_specE (p : Prog) (hQ : QuotProg p) (hRp : RecProg p)
@@ -216,9 +216,9 @@ l_model checkDeclQuot_specE (p : Prog) (hQ : QuotProg p) (hRp : RecProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_quot(i, vis)` refines the quotient arm of `checkDecl`, both outcomes**
 (con-ron's `checkDecl_bridge_quot`): the record against the pinned block's constant at its slot
 (`quot_pin_hit`), then for `Quot` itself the block's install (`cbd_ref`). -/
@@ -287,6 +287,6 @@ theorem cdq_ref {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
   cases k with
   | type => exact absurd rfl ht
   | ctor | lift | ind | sound => rfl
--/
+-- RS2E
 
 end L.Arena
