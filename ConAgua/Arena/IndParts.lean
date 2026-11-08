@@ -240,6 +240,70 @@ def blockShapeWithSort : FunDecl := lfn (p, s) locals (z, eq, isProp, q) {
   return q
 }
 
+/-- `block_shape_with_members(p, ms.off, ms.len)`: `{ p with members := ms }`, a fresh 9-word
+record (`checkBlock`'s record update after `reduceMembers`). -/
+@[no_expose, l_impl ConRon.Arena.checkBlock]
+def blockShapeWithMembers : FunDecl := lfn (p, mo, ml) locals (q) {
+  q := call iw_alloc(9);
+  IW.u64[q] := mo;
+  IW.u64[q + 1] := ml;
+  IW.u64[q + 2] := IW.u64[p + 2];
+  IW.u64[q + 3] := IW.u64[p + 3];
+  IW.u64[q + 4] := IW.u64[p + 4];
+  IW.u64[q + 5] := IW.u64[p + 5];
+  IW.u64[q + 6] := IW.u64[p + 6];
+  IW.u64[q + 7] := IW.u64[p + 7];
+  IW.u64[q + 8] := IW.u64[p + 8];
+  return q
+}
+
+/-- `block_shape_formers(p)`: `p.members.map (·.cvT)`, the members' formers at their telescopes,
+a fresh `IW` slice of `EREC` pointers. -/
+@[no_expose, l_impl ConRon.Arena.BlockShape.formers]
+def blockShapeFormers : FunDecl := lfn (p) locals (q, u) {
+  q := call iw_alloc(IW.u64[p + 1]);
+  u := call member_field_copy(q, IW.u64[p], IW.u64[p + 1], 0);
+  return (q, IW.u64[p + 1])
+}
+
+/-- `block_shape_declared(p)`: `p.members.map (·.declared)`, the members' formers as declared, a
+fresh `IW` slice of `EREC` pointers. -/
+@[no_expose, l_impl ConRon.Arena.checkBlockInds]
+def blockShapeDeclared : FunDecl := lfn (p) locals (q, u) {
+  q := call iw_alloc(IW.u64[p + 1]);
+  u := call member_field_copy(q, IW.u64[p], IW.u64[p + 1], 4);
+  return (q, IW.u64[p + 1])
+}
+
+/-- `member_field_copy(d, s, l, k)`: `IW[d + j] := IW[IW[s + j] + k]` for `j < l` (word `k` of
+each member record), recursively. -/
+@[no_expose, l_impl ConRon.Arena.BlockShape.formers]
+def memberFieldCopy : FunDecl := lfn (d, s, l, k) locals (u) {
+  if l == 0 { return 0 };
+  IW.u64[d] := IW.u64[IW.u64[s] + k];
+  u := call member_field_copy(d + 1, s + 1, l - 1, k);
+  return 0
+}
+
+/-- `block_shape_member_ctors(p)`: `p.members.map (·.ctors)`, a fresh `IW` slice of pointers to
+the members' `[ctors.off, ctors.len]` headers (word `2` of each member record: no copy of the
+lists). -/
+@[no_expose, l_impl ConRon.Arena.BlockShape.memberCtors]
+def blockShapeMemberCtors : FunDecl := lfn (p) locals (q, u) {
+  q := call iw_alloc(IW.u64[p + 1]);
+  u := call member_ctors_copy(q, IW.u64[p], IW.u64[p + 1]);
+  return (q, IW.u64[p + 1])
+}
+
+/-- `member_ctors_copy(d, s, l)`: `IW[d + j] := IW[s + j] + 2` for `j < l`, recursively. -/
+@[no_expose, l_impl ConRon.Arena.BlockShape.memberCtors]
+def memberCtorsCopy : FunDecl := lfn (d, s, l) locals (u) {
+  if l == 0 { return 0 };
+  IW.u64[d] := IW.u64[s] + 2;
+  u := call member_ctors_copy(d + 1, s + 1, l - 1);
+  return 0
+}
+
 /-! ## Recognition -/
 
 /-- `block_split_recs(off, l)`: `blockSplitRecs` of the `off, l` slice of `EREC` constant-record
@@ -865,6 +929,9 @@ def indPartsFns : Prog :=
    ("block_shape_n_idxs", blockShapeNIdxs), ("n_idxs_copy", nIdxsCopy), ("block_shape_lps", blockShapeLps),
    ("block_shape_ctors_copy", blockShapeCtorsCopy), ("block_shape_all_ctors_go", blockShapeAllCtorsGo), ("block_shape_all_ctors", blockShapeAllCtors), ("block_shape_rule_prefix_at", blockShapeRulePrefixAt),
    ("block_shape_major_idx_at", blockShapeMajorIdxAt), ("block_shape_with_sort", blockShapeWithSort),
+   ("block_shape_with_members", blockShapeWithMembers), ("block_shape_formers", blockShapeFormers),
+   ("block_shape_declared", blockShapeDeclared), ("member_field_copy", memberFieldCopy),
+   ("block_shape_member_ctors", blockShapeMemberCtors), ("member_ctors_copy", memberCtorsCopy),
    ("block_split_recs", blockSplitRecs),
    ("block_split_ctors", blockSplitCtors), ("block_split", blockSplit), ("rec_target_of", recTargetOf),
    ("block_counts_head", blockCountsHead), ("block_counts_pure", blockCountsPure), ("block_counts", blockCounts), ("ctor_member", ctorMember), ("block_groups_one", blockGroupsOne), ("block_groups_go", blockGroupsGo),
