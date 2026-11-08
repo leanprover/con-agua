@@ -260,7 +260,6 @@ def internPinSetsL : FunDecl := lfn (q) locals (c, o) {
 /-- `intern_all_pins()` over the buffer: the memo reset, the startup walk's items at
 `allPinsOff`, then the variant list right after them. -/
 -- con-ron: ConRon/Arena/Checker.lean:124-153 ConRon.Arena.internAllPins
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.internAllPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.internAllPins]
 def internAllPinsPB : FunDecl := lfn () locals (q, z) {
   CTL.u64[132] := 0;
