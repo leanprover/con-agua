@@ -1029,6 +1029,7 @@ theorem bpoW_ready {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word
   rw [resContW_step] at h2
   intro h0; rw [ite_eq_left h0] at h2; cases h2
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_shape_build`'s model refines `buildTwin`.** -/
 theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem} {a : AState}
     {nPd cto ctl cso csl rso rsl : Word} {cvT0 : IConstantVal} {cvTs : List IConstantVal}
@@ -1114,6 +1115,7 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       (fun sv a1 h => ⟨nIdxs, a2, _, a2, hrun2, hRrun, h⟩))) ?_
   rintro r x m5 a5 ⟨hR, hS5, hg5⟩
   exact ⟨by cases x <;> exact hR, hS5, hg04.trans hg5⟩
+-/
 
 theorem partsW0 {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l : Word} {m : Mem}
     (h : PSlR f xs o l m) : (l = 0) ↔ xs = [] := by
@@ -1122,6 +1124,7 @@ theorem partsW0 {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l 
   · intro e; subst e; simpa using this
   · intro e; subst e; exact UInt64.toNat_inj.mp (by simpa using this.symm)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_shape`'s model refines `blockShape?`.** -/
 theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem}
     {a : AState} {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR vis fe m a)
@@ -1179,6 +1182,7 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     (hc.mono (bsW_afr _ _ _ _ _ _ h1) (fun sv a1 h => ⟨cvT0, cvTs', cs, r0, rs', hsp, h⟩))) ?_
   rintro r x m2 a2 ⟨hR, hS2, hg2⟩
   exact ⟨by cases x <;> exact hR, hS2, hg1.trans hg2⟩
+-/
 
 end L.Ind
 

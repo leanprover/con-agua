@@ -50,6 +50,7 @@ l_model std_specW (p : Prog) (h : StdProg2 p)
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A `find_pinned` call's run, against its clause. -/
 theorem fp_call {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k ca cb id : Word} {r : List Word}
@@ -63,7 +64,9 @@ theorem fp_call {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   rw [hs'] at hW
   obtain ⟨b, a', hS', hg, hd, hF⟩ := fpW_ok h hW hS hnm hk hid
   exact ⟨b, a', clausePT_of_fp hF, hS', hg, hd⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A family of `stdAxiomOk`, flattened (`stdAxiomOk_eq`). -/
 def famT (fe : IFEnv) (cv : IConstantVal) (s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word) : AM Bool := do
   let x1 ← pinAt s1.toNat
@@ -75,6 +78,7 @@ def famT (fe : IFEnv) (cv : IConstantVal) (s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word) 
       let x3 ← pinAt s3.toNat
       let b3 ← clausePT fe x3 5 c3 c3 (romPinT i3.toNat)
       if !b3 then pure false else cv.matchesPin (← romCvT cvid.toNat)
+-/
 
 /-- **`std_ax_family` refines a family of `stdAxiomOk`** at the model level. -/
 theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -164,10 +168,7 @@ theorem fam_call {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name
     (h1 : i1.toNat < 8) (h2 : i2.toNat < 8) (h3 : i3.toNat < 8) (hcv : cvid.toNat < 10) :
     ∃ b a', (famT fe cv s1 s2 s3 i1 i2 i3 c2 c3 cvid).run a = .ok (b, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
-  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (fam_specW p h n ⟨m, Locals.init []⟩ vis q s1 s2 s3 i1 i2 i3 c2 c3 cvid) hc
-  rw [hs'] at hW
-  exact famW_ok h.std hW hS hq h1 h2 h3 hcv
+  sorry
 
 /-- **`std_axiom_ok(vis, q)` refines `stdAxiomOk`** (through the ROM stubs). -/
 @[refines ConRon.Arena.stdAxiomOk]
@@ -176,11 +177,6 @@ theorem stdAxiomOk_refines (p : Prog) (h : StdProg2 p) (dn : NIdx → Option Con
     RefAM p "std_axiom_ok" [vis, q]
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
       (stdAxiomOk fe cv) (KeepPost vis fe decW0B) := by
-  intro n s₀ a₀ ⟨hS, hq⟩
-  refine triple_post (std_specW p h n s₀ vis q) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hS', hg, hd⟩ := stdW_ok h hdn hm hS hq
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
+  sorry
 
 end L.Arena

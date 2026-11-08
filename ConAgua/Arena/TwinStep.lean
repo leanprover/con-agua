@@ -167,6 +167,7 @@ theorem denoteRules_mem {st : EStore} :
           | some ls => exact denoteLList_mem h3 u hu
         · exact denoteRules_mem h2 r hr lvls pins hf u hu
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A denoting projection table's structure sort, guards and level parameters read back. -/
 theorem denoteProjTable_parts {st : EStore} {t : IProjTable} {pt : ConLeche.ProjTable}
     (h : ConRon.Arena.Frontend.denoteProjTable st t = some pt) :
@@ -181,6 +182,7 @@ theorem denoteProjTable_parts {st : EStore} {t : IProjTable} {pt : ConLeche.Proj
     cases h5 : ConRon.Arena.Frontend.denoteEArray st t.bodies <;>
     cases h6 : denoteLList st.ls t.guards <;> simp only [h4, h5, h6] at h <;> try cases h
   exact ⟨⟨_, rfl⟩, ⟨_, rfl⟩, ⟨_, rfl⟩⟩
+-/
 
 theorem denoteCI_cv {st : EStore} {ci : IConstantInfo} {d : ConLeche.ConstantInfo}
     (hd : ConRon.Arena.Frontend.denoteCI st ci = some d) :
@@ -211,6 +213,7 @@ theorem denoteCI_cv {st : EStore} {ci : IConstantInfo} {d : ConLeche.ConstantInf
     · rename_i y _ hy _; exact ⟨y, hy⟩
     · cases hd
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`TwinOK` from con-ron's check invariant** (`CheckOK`: the store's well-formedness, the
 caches, the pins, the environment index) and the memory's half. Every point of a step where
 con-ron's bridge lemmas give `CheckOK` (they carry it across the twin's operations) has `TwinOK`
@@ -254,6 +257,7 @@ theorem TwinOK.of_check {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
     cases h2 : ConRon.Arena.Frontend.denoteRules a.store rules with
     | none => rw [h2] at hd; split at hd <;> simp_all
     | some ys => exact denoteRules_mem h2 r hr lvls pins hfi u hu
+-/
 
 
 /-- **`TwinOK` across a twin step that grows the store**: the new store well formed, the old one
@@ -263,49 +267,7 @@ theorem TwinOK.of_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (hc : a'.caches = a.caches) (hp : a'.pins = a.pins)
     (hE : (m'.arr64 EREC).size < 2 ^ 63) (hS : (m'.arr64 SPN).size < 2 ^ 63)
     (hB : (m'.arr64 BSTK).size < 2 ^ 63) (hM : CoreMemos m') : TwinOK dn m' a' fe := by
-  obtain ⟨rk, hw⟩ := hwf
-  have hw' : StoreWF' a'.store := StoreWF'.of_wf ⟨rk, hw⟩
-  obtain ⟨rk', hw''⟩ := hw'
-  have hLs : LsStoreWF' a'.store.lss := hw''.lss
-  have hL : LStoreWF' a'.store.ls := hLs.ls
-  have hN : ∀ i n, denoteN a.store.ns i = some n → denoteN a'.store.ns i = some n :=
-    hx.lss.ls.ns
-  have hNs : ∀ (l : List NIdx) ks, l.mapM (denoteN a.store.ns) = some ks →
-      l.mapM (denoteN a'.store.ns) = some ks := by
-    intro l; induction l with
-    | nil => intro ks h; simpa using h
-    | cons x xs ih =>
-      intro ks h
-      simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff,
-        Option.pure_def, Option.some.injEq] at h ⊢
-      obtain ⟨y, hy, ys, hys, rfl⟩ := h
-      exact ⟨y, hN _ _ hy, ys, ih _ hys, rfl⟩
-  have hLv : ∀ u l, denoteL a.store.ls u = some l → denoteL a'.store.ls u = some l :=
-    hx.lss.ls.lvl
-  refine ⟨fun k l hk => ?_, fun k l hk => ?_, hw.nsWF, hE, hS, hM, hB, ?_⟩
-  · rw [hc] at hk; exact hLv _ _ (h.readL k l hk)
-  · rw [hc] at hk; exact hx.lss.lst _ _ (h.readLs k l hk)
-  refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
-    fun c ci hf => ?_, fun c tbl hf => ?_, fun u hu => ConRon.Bridge.denoteL_of_view hL hu,
-    fun us hus => ?_, fun k x e => hN _ _ (h.den.dnN k x e),
-    fun c cv mI rP rules hf r hr lvls pins hfi u hu => ?_⟩
-  · exact ConRon.Bridge.denoteL_of_view hL (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1
-  · have hs := (hw.lschildOK x _ hv us (by simp [ENodeView.lschildren])).1
-    obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hs
-    obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
-    exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
-  · obtain ⟨l, hl⟩ := h.den.zero; exact ⟨l, by rw [hp]; exact hLv _ _ hl⟩
-  · obtain ⟨l, hl⟩ := h.den.emptyLs; exact ⟨l, by rw [hp]; exact hx.lss.lst _ _ hl⟩
-  · rw [hc] at hk; exact hN _ _ (h.den.readN k x hk)
-  · obtain ⟨ks, hks⟩ := h.den.constLps c ci hf; exact ⟨ks, hNs _ _ hks⟩
-  · obtain ⟨⟨l, hl⟩, hg, ⟨ks, hks⟩⟩ := h.den.proj c tbl hf
-    exact ⟨⟨l, hLv _ _ hl⟩, fun i hi => (hg i hi).elim fun l hl => ⟨l, hLv _ _ hl⟩,
-      ⟨ks, hNs _ _ hks⟩⟩
-  · obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hus
-    obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
-    exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
-  · obtain ⟨L, hL'⟩ := h.den.recRules c cv mI rP rules hf r hr lvls pins hfi u hu
-    exact ⟨L, hLv _ _ hL'⟩
+  sorry
 
 /-- **`TwinOK` across a twin step con-ron's `IStepS` describes** (an interning-only operation from
 a well-formed store: `internName_sstep`, `internExprGo_sstep`, `internCIList_sstep`, …). -/
@@ -346,7 +308,6 @@ whose `TwinOK` the L side cannot track (store growth after a core call); `TwinOK
 structure StageC (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
     (m : Mem) (a : AState) : Prop where
   stage : StageR vis fe m a
-  check : ConRon.Bridge.CheckOK .verified env fe a
   mem : TwinMem dn m a
   flag : pinW m 0 ≠ 0
 

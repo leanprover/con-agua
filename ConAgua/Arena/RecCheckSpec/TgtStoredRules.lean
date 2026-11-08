@@ -26,6 +26,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`tgt_stored_rules` (with `tgt_stored_rules_remap`, `tgt_rule_nested`) refines `tgtStoredRules`**
 (through `sum_rules`' `rec_rule_bits` and `aux_rule_fire`'s `abstract1_fast` stubs): the major's
 record and the right-hand sides decoded below the tops; the rules a pointer slice of rule records
@@ -50,6 +51,7 @@ theorem tgtStoredRules_refines (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) 
   obtain ⟨rules, a', run, hd, hb, hS', hg, hA'⟩ := tsrW_ok dn fe vis n hm hS hM hrh hA (cvv := cvv)
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl', hok, by rw [hres]; exact hd, hb, by rw [hst]; exact hS', hg, hA'⟩
+-/
 
 end L.Ind
 
