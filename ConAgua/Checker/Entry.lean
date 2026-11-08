@@ -112,7 +112,7 @@ entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check
 and images; `c = 0`: the header only); returns `2^63 + k` for the `k` records (`1` if a line did
 not scan). -/
 -- con-ron: ConRon/Arena/Main.lean:137-169 ConRon.Arena.runPipelineHead
--- con-ron: ConRon/Arena/Checker.lean:99-110 ConRon.Arena.checkStream
+-- con-ron: ConRon/Arena/Checker.lean:97-106 ConRon.Arena.checkStream
 @[no_expose] def checkAL : FunDecl := lfn (c) locals (r, z, cnt) {
   z := call cap_check();
   z := call pb_check();

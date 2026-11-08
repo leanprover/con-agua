@@ -44,8 +44,8 @@ open L.Front.Unescape (strPutEscW strPutEsc_specW escSur escOne utf8Put strPutEs
 
 namespace L.Front
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:495-499 ConRon.Arena.Frontend.applyLine -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:479-487 ConRon.Arena.Frontend.lineRecPlaced
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:471-477 ConRon.Arena.Frontend.applyLine -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:455-462 ConRon.Arena.Frontend.lineRecPlaced
 @[no_expose, l_impl ConRon.Arena.Frontend.applyLine ConRon.Arena.Frontend.lineRecPlaced]
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2576-2599 ConLeche.Frontend.scanLineFwd
 def frontLine : FunDecl := lfn (i, first) locals (ok, nx, s, pl, idx, a, c, d, j, q) {

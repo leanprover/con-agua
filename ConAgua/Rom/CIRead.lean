@@ -117,7 +117,7 @@ def rciCaps : FunDecl := lfn (q, c) locals (x, h, ez) {
 /-- `rci_rule(q, r)`: a recursor rule to the 11-word record at `r` (`decRule`) at the current
 memo; the position after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:297-302 ConRon.Arena.Frontend.internRule
--- con-ron: ConRon/Arena/Frontend/Readback.lean:286-292 ConRon.Arena.Frontend.internFire
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:286-295 ConRon.Arena.Frontend.internFire
 @[no_expose, l_impl ConRon.Arena.Frontend.internRule ConRon.Arena.Frontend.internFire]
 def rciRule : FunDecl := lfn (q, r) locals (h, x, f, l, o, ez) {
   (h, q) := call rom_name(q);

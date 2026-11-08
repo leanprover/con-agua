@@ -104,7 +104,7 @@ no row). -/
 
 /-- `env_find(w, vis)`: `(1, record)` if name `w` is in the view: the own layer's row below
 `vis`, else the stream index's row below `CTL[134]`; `(0, 0)` otherwise. -/
--- con-ron: ConRon/Arena/Env.lean:263-275 ConRon.Arena.IFEnv.find?
+-- con-ron: ConRon/Arena/Env.lean:272-275 ConRon.Arena.IFEnv.find?
 @[no_expose, l_impl ConRon.Arena.IFEnv.find?]
 def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   if vis != 0 {

@@ -36,7 +36,7 @@ open L.Ind (IW)
 
 /-- `idx_consts(o, n)`: `insertConsts` over the `n` constant records `IW[o‥o + n)`: each name's row
 written if it has none, at the next counter `CTL[128]`, which always moves. -/
--- con-ron: ConRon/Arena/StreamIndex.lean:45-50 ConRon.Arena.insertConsts
+-- con-ron: ConRon/Arena/StreamIndex.lean:42-47 ConRon.Arena.insertConsts
 @[no_expose, l_impl ConRon.Arena.insertConsts]
 def idxConstsL : FunDecl := lfn (o, n) locals (j, q, w, c, p, nx, z) {
   j := 0;
@@ -54,7 +54,7 @@ def idxConstsL : FunDecl := lfn (o, n) locals (j, q, w, c, p, nx, z) {
 
 /-- `idx_tables(o, n, r)`: `insertTables` over the `n` table records `IW[o‥o + n)` of record
 position `r`: each structure's table row written if it has none. -/
--- con-ron: ConRon/Arena/StreamIndex.lean:52-57 ConRon.Arena.insertTables
+-- con-ron: ConRon/Arena/StreamIndex.lean:49-54 ConRon.Arena.insertTables
 @[no_expose, l_impl ConRon.Arena.insertTables]
 def idxTablesL : FunDecl := lfn (o, n, r) locals (j, q, w, c, p, z) {
   j := 0;
@@ -69,7 +69,7 @@ def idxTablesL : FunDecl := lfn (o, n, r) locals (j, q, w, c, p, z) {
 
 /-- `idx_add(k)`: `IStreamIndex.add` of record `k`: its first counter, its constants, its tables
 (the work pool emptied first: the slices live only for the record). -/
--- con-ron: ConRon/Arena/StreamIndex.lean:59-68 ConRon.Arena.IStreamIndex.add
+-- con-ron: ConRon/Arena/StreamIndex.lean:56-65 ConRon.Arena.IStreamIndex.add
 @[no_expose, l_impl ConRon.Arena.IStreamIndex.add]
 def idxAddL : FunDecl := lfn (k) locals (o, n, z) {
   z := call iw_reset();
@@ -84,8 +84,8 @@ def idxAddL : FunDecl := lfn (k) locals (o, n, z) {
 
 /-- `build_index(cnt)`: `buildIndex` over records `0‥cnt - 1`, from the empty index (zero rows,
 `CTL[128] = 0`). -/
--- con-ron: ConRon/Arena/StreamIndex.lean:70-79 ConRon.Arena.buildIndexGo
--- con-ron: ConRon/Arena/StreamIndex.lean:81-84 ConRon.Arena.buildIndex
+-- con-ron: ConRon/Arena/StreamIndex.lean:67-77 ConRon.Arena.buildIndexGo
+-- con-ron: ConRon/Arena/StreamIndex.lean:79-82 ConRon.Arena.buildIndex
 @[no_expose, l_impl ConRon.Arena.buildIndexGo ConRon.Arena.buildIndex]
 def buildIndexL : FunDecl := lfn (cnt) locals (k, z) {
   k := 0;
@@ -100,9 +100,9 @@ def buildIndexL : FunDecl := lfn (cnt) locals (k, z) {
 /-- `record_job(k)`: `recordJob` of record `k` at the view of position `k`: the bracket, the view
 (`IStreamIndex.view`), a fresh own layer, `recordCheck` (the `And` pin, then `check_decl` at
 `vis = 0`), the bracket closed (the job's own records, `EREC`'s tier 1, with it). -/
--- con-ron: ConRon/Arena/StreamIndex.lean:86-90 ConRon.Arena.IStreamIndex.view
--- con-ron: ConRon/Arena/StreamIndex.lean:92-101 ConRon.Arena.recordCheck
--- con-ron: ConRon/Arena/StreamIndex.lean:103-111 ConRon.Arena.recordJob
+-- con-ron: ConRon/Arena/StreamIndex.lean:84-89 ConRon.Arena.IStreamIndex.view
+-- con-ron: ConRon/Arena/StreamIndex.lean:91-99 ConRon.Arena.recordCheck
+-- con-ron: ConRon/Arena/StreamIndex.lean:101-109 ConRon.Arena.recordJob
 @[no_expose, l_impl ConRon.Arena.IStreamIndex.view ConRon.Arena.recordCheck ConRon.Arena.recordJob]
 def recordJobL : FunDecl := lfn (k) locals (z, st, ok, v) {
   z := call scratch_enter();
@@ -124,7 +124,7 @@ def recordJobL : FunDecl := lfn (k) locals (z, st, ok, v) {
 
 /-- `check_jobs(j, hi)`: the jobs `j‥hi - 1`, in order (`checkJobList` over that range, from the
 worker's state). -/
--- con-ron: ConRon/Arena/Checker.lean:87-97 ConRon.Arena.checkJobList
+-- con-ron: ConRon/Arena/Checker.lean:85-95 ConRon.Arena.checkJobList
 @[no_expose, l_impl ConRon.Arena.checkJobList]
 def checkJobsL : FunDecl := lfn (j, hi) locals (z) {
   for j < hi {
