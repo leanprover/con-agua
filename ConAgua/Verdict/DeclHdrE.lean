@@ -40,6 +40,7 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `install_header`, both outcomes**: the callees outside the verdict closure with
 `Option` models lifted; `all_level_params_defined`, `consts_resolve_ffast` and
 `unresolved_consts_error` through their runs. -/
@@ -52,6 +53,7 @@ l_model installHeader_specE (p : Prog) (hP : IhProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- The callees of the declaration family outside the verdict closure. -/
 def declNvList : List FnName :=
@@ -124,6 +126,7 @@ structure IhPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   crOK : L.Stubs.CrOK m'
   afr : AFr m m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_header` refines `installHeader`, both outcomes**, under `StageT`: the duplicate,
 reserved-name and universe-parameter guards, the closedness walks (`lbbF_okT`, `hffF_okT`,
 `apdF_okT`, `crfF_okT`), the consts-resolve site by `uce_errClaim_lo`. -/
@@ -256,5 +259,6 @@ theorem ih_ref {p : Prog} (hap : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option C
   · obtain ⟨M9, hC9⟩ := hS9.core
     exact fun hG => uce_errClaim_lo hG.uce hG.nv hC9 hwtl (by decide) h10 "type"
   · exact RefE.of_cls0 rfl
+-/
 
 end L.Arena

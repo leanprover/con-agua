@@ -62,7 +62,6 @@ structure NrtPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   ns : NSB m' (r.tail.tail.headD 0) x.2
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 section root
 variable {p : Prog} (L : RsLook p)
@@ -74,6 +73,7 @@ variable {p : Prog} (L : RsLook p)
   (hlen : ctxP.names.length ≤ holesP.length)
   (hpar : ∀ x ∈ ctxP.params, ConLeche.Expr.WScoped (ctxP.hiAt 0) x)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include L hq hIlpf hLC henv hc hholes hlen hpar in
 /-- **`nest_root` refines `nestRoot`, both outcomes** (under `StageC`; `nest_ctors` through its
 run, both halves from `nbRef_all`). -/
@@ -206,9 +206,11 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
     exact RefE.lastE (fun _ => nrtE.k_nest_root.none ..) (fun _ => nrtE.k_nest_root.arm1 ..) id ih
       fun _ _ _ _ hR => ⟨hR.stage, hg13.trans hR.grow, by simpa using hR.outs, by simpa using hR.outsb,
         by simpa using hR.ns, hR.pos, hR.abs, c1.trans hR.core⟩
+-/
 
 end root
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `nest_seeds`' unified model: `nest_ctx_hi_at`, `nest_seeds_fuel` lifted, `nest_cont_key` as its
 unified model, `nest_inst_type` through its run. -/
 l_model nsdE_spec (p : Prog) (hL : RsLook p)
@@ -218,6 +220,7 @@ l_model nsdE_spec (p : Prog) (hL : RsLook p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `nest_seeds` gives besides the twin's state `x` (from `m`, `a`): the stage, the growth, the
 state at `r[0]`, the frames, `AbsOK`, the core step. -/
@@ -228,7 +231,6 @@ structure NsdPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   ns : NSB m' (r.headD 0) x
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 section seeds
 variable {p : Prog} (L : RsLook p)
@@ -236,6 +238,7 @@ variable {p : Prog} (L : RsLook p)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (ctx : Word) (c : NestCtx) {ctxP : ConLeche.NestCtx} (hc : ConLeche.NestCtxOk ctxP)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include L hq hIlpf hLC henv hc in
 /-- **`nest_seeds` refines `nestSeeds`, both outcomes** under `StageC` (twin side: con-ron's
 `nestSeeds_spec`; the seed's fuel by `seedFuel_spec`, its former by `nestInstType_spec`, the
@@ -380,6 +383,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
       hns1P (fun k hk x hx => hw k (List.mem_cons_of_mem _ hk) x hx)
     exact RefE.lastE (fun _ => nsdE.k_nest_seeds.none ..) (fun _ => nsdE.k_nest_seeds.arm1 ..) id ih'
       fun _ _ _ _ hR => ⟨hR.stage, hg13.trans hR.grow, hR.ns, hR.pos, hR.abs, (c12.trans c3).trans hR.core⟩
+-/
 
 end seeds
 

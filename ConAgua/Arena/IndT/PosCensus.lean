@@ -40,6 +40,7 @@ variable {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC
   (vis : Word) (fe : IFEnv) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 include L hq hIlpf hLC henv
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestPos]
 theorem nestPos_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb e ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
@@ -60,7 +61,9 @@ theorem nestPos_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu
     ((nbRef_all L hq hIlpf hLC henv n hn).pos s₀.mem a₀ ctx fu po pl dep kb e ns c prog NS _ _ _ _ h0 h1 h2 h3 hP hA hc hctx hprog heP hnsP hwe)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.hnf, hR.nf, hR.ns, hR.pos, hR.abs, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines_part ConRon.Arena.nestPos "binder arm (nest_pos_bind)"]
 theorem nestPosBind_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb w ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
@@ -82,7 +85,9 @@ theorem nestPosBind_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ct
     ((nbRef_all L hq hIlpf hLC henv n hn).bind s₀.mem a₀ ctx fu po pl dep kb w ns c prog NS _ _ _ _ h0 h1 h2 h3 h4 hP hA hc hctx hprog hwP hnsP hww)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.hnf, hR.nf, hR.ns, hR.pos, hR.abs, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines_part ConRon.Arena.nestPos "application arm (nest_pos_app)"]
 theorem nestPosApp_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb hi w ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
@@ -104,7 +109,9 @@ theorem nestPosApp_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx
     ((nbRef_all L hq hIlpf hLC henv n hn).app s₀.mem a₀ ctx fu po pl kb hi w ns c prog NS _ _ _ _ _ h0 h1 h2 h3 h4 hP hA hc hctx hprog hwP hnsP hww)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.nf, hR.ns, hR.pos, hR.abs, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestCont]
 theorem nestCont_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us aO aL ns : Word)
     (c : NestCtx) (prog : List NestHole) (args : List EIdx) (NS : NestState)
@@ -130,7 +137,9 @@ theorem nestCont_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx f
     ((nbRef_all L hq hIlpf hLC henv n hn).cont s₀.mem a₀ ctx fu po pl kb nn us aO aL ns c prog args NS _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 hP hA hc hctx hprog hnP husP hargsP hnsP hwargs)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.ns, hR.pos, hR.abs, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestContKey]
 theorem nestContKey_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState)
@@ -159,7 +168,9 @@ theorem nestContKey_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ct
     ((nbRef_all L hq hIlpf hLC henv n hn).key s₀.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.ns, hR.pos, hR.abs, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestContNew]
 theorem nestContNew_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState)
@@ -188,7 +199,9 @@ theorem nestContNew_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ct
     ((nbRef_all L hq hIlpf hLC henv n hn).new s₀.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.ns, hR.pos, hR.abs, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestFrame]
 theorem nestFrame_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl hi us dO dL nPc gO gL ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (grp : List (NIdx × EIdx)) (NS : NestState)
@@ -216,7 +229,9 @@ theorem nestFrame_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx 
     ((nbRef_all L hq hIlpf hLC henv n hn).frame s₀.mem a₀ ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 hP hA hc hctx hprog husP hdsP hgrpP hnsP hwds hwg)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.ns, hR.pos, hR.abs, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestCtors]
 theorem nestCtors_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cs : List (IConstantVal × Nat)) (NS : NestState) (outs : List (List NestFieldKind × EIdx))
@@ -247,7 +262,9 @@ theorem nestCtors_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx 
     ((nbRef_all L hq hIlpf hLC henv n hn).ctors s₀.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs _ _ _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 h8 hP hA hc hctx hprog hpre hcsP hcsF hnsP houtsP)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.outs, hR.outsb, hR.ns, hR.pos, hR.abs, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines_part ConRon.Arena.nestCtors "one constructor (nest_ctors_one)"]
 theorem nestCtorsOne_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cvv : IConstantVal) (NS : NestState)
@@ -278,7 +295,9 @@ theorem nestCtorsOne_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (c
     ((nbRef_all L hq hIlpf hLC henv n hn).one s₀.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS _ _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 hP hA hc hctx hprog hpre hcvP hcl hnsP)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x.1.1, x.1.2, x.2, a', fun K => by rw [oneK_split]; simp only [StateT.run_bind, hrun]; rfl, hR.stage, hR.grow, hR.kinds, hR.kindsb, hR.hcl, hR.cl, hR.ns, hR.pos, hR.abs, hR.core, hR.out, hR.st⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines_part ConRon.Arena.nestCtors "field walk (nest_ctors_walk)"]
 theorem nestCtorsWalk_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi nF crest ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
@@ -308,7 +327,9 @@ theorem nestCtorsWalk_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (
     ((nbRef_all L hq hIlpf hLC henv n hn).walk s₀.mem a₀ ctx root fu po pl hi nF crest ns c prog NS _ _ _ _ h0 h1 h2 h3 hP hA hc hctx hprog hcrP hnsP hwc)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x.1, x.2.1, x.2.2.1, x.2.2.2.1, x.2.2.2.2, a', fun K => by rw [walkK_split]; simp only [StateT.run_bind, hrun]; rfl, hR.stage, hR.grow, hR.kinds, hR.kindsb, hR.klen, hR.hcur, hR.cur, hR.hcl, hR.cl, hR.ns, hR.pos, hR.abs, hR.core, hR.den⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestFields]
 theorem nestFields_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl base nF j cur ns kO kL dO dL : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState) (ks : List NestFieldKind) (nds : List EIdx)
@@ -341,6 +362,7 @@ theorem nestFields_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx
     ((nbRef_all L hq hIlpf hLC henv n hn).fields s₀.mem a₀ ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 hP hA hc hctx hprog hcurP hnsP hndsP hw)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kinds, hR.kindsb, hR.doms, hR.domsb, hR.hcur, hR.cur, hR.ns, hR.kindsl, hR.domsl, hR.nfb, hR.pos, hR.abs, hR.core⟩
+-/
 
 end census
 

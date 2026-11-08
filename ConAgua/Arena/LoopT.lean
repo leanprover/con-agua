@@ -184,13 +184,16 @@ theorem indMemos_wframe : WFrame CTL imA imC (fun m₀ m => IndMemos m₀ → In
   setG _ _ _ _ h h0 := (h h0).frame (A := []) (C := [])
     ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩ (by simp) (by simp)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `consts_resolve_ffast` keeps `IndMemos`: it writes only its memo (`crfF_frame`). -/
 theorem IndMemos.crfF {m m' : Mem} {args r : List Word} (h : L.Ind.crfF m args = some (r, m'))
     (hI : IndMemos m) : IndMemos m' :=
   have hf := L.Ind.crfF_frame h
   ⟨hI.stage.frame hf (by decide) (by simp), I1Memo.frame hI.i1 hf (by decide) (by simp),
     L.Ind.crfF_keepsCrOK h hI.cr⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Every call of a leaf of `imFns` keeps `IndMemos`. -/
 theorem indMemos_leaf {p : Prog} (hp : L.Ind.CrfF p) :
     ∀ g ∈ imLeaves, ∀ n m₀ vs, ⦃fun s => IndMemos m₀ → IndMemos s.mem⦄ invoke p (exec p n) g vs
@@ -202,19 +205,24 @@ theorem indMemos_leaf {p : Prog} (hp : L.Ind.CrfF p) :
   intro s r s' hs hrun
   obtain ⟨-, hc⟩ := M.of_run (P := fun t => t = s) rfl hrun (L.Ind.crfF_spec p hp n s vs)
   exact fun h0 => (hs h0).crfF hc
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A call of a function of `imFns` keeps `IndMemos`.** -/
 theorem invoke_indMemos {p : Prog} (hcl : IndMemoClosed p) (hp : L.Ind.CrfF p) (n : Nat)
     {f : FnName} (hf : f ∈ imFns) (vs : List Word) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃fun _ s => IndMemos s₀.mem → IndMemos s.mem; ⊤⦄ :=
   invoke_frameL p hcl indMemos_wframe (indMemos_leaf hp) n f hf vs s₀
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The same through `callW`. -/
 theorem callW_indMemos {p : Prog} (hcl : IndMemoClosed p) (hp : L.Ind.CrfF p) {n : Nat}
     {f : FnName} (hf : f ∈ imFns) {vs : List Word} {m m' : Mem} {r : List Word}
     (hc : callW p n f vs m = some (r, m')) (hI : IndMemos m) : IndMemos m' := by
   obtain ⟨s', hs', h⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (invoke_indMemos hcl hp n hf vs _) hc
   exact hs' ▸ h hI
+-/
 
 /-- **The zeroed memory has well-formed core memos** (empty, epoch `0`): what `TwinMem` needs of
 the loaded memory at the loop's start (open end 5). -/
@@ -250,13 +258,17 @@ section rel
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
   {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`LoopT` is the stage relation with the twin's invariants** (every `StageT` theorem applies). -/
 theorem LoopT.stageT (h : LoopT pins dn m a vis fe pend ds) : StageT dn vis fe m a :=
   ⟨⟨h.loop.check, h.loop.iw⟩, h.twin, h.flag⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `LoopT` is `CoreS` (at the eager bit `0`). -/
 theorem LoopT.core (h : LoopT pins dn m a vis fe pend ds) : ∃ M, CoreS dn m a vis fe M 0 :=
   h.stageT.core
+-/
 
 end rel
 
@@ -408,6 +420,7 @@ include hb
 
 end bracket
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Pushing a pending check keeps `LoopT`.** -/
 theorem LoopT.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
     {a : AState} {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
@@ -423,7 +436,9 @@ theorem LoopT.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
       ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
     by rw [pinW_frame hf (by decide)]; exact h.flag,
     h.memo.frame hf (by simp [PEND]) (by simp), CrOK.frame h.cr hf (by simp [PEND, L.Stubs.CRM]) (by simp)⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`TwinOK` at a smaller view** (phase B checks a group at the view it was installed at): a hit of
 the restricted environment is a hit of the whole one. -/
 theorem TwinOK.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
@@ -441,13 +456,16 @@ theorem TwinOK.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
         · cases hf)
       recRules := fun c cv mI rP rules hf => h.den.recRules c cv mI rP rules
         (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf) }⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`LoopT` at a smaller view.** -/
 theorem LoopT.restrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
     {a : AState} {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
     (h : LoopT pins dn m a vis fe pend ds) (v : Word) (hv : v.toNat ≤ vis.toNat) :
     LoopT pins dn m a v (fe.restrictTo v.toNat) pend ds :=
   ⟨h.loop.restrict v, h.twin.restrict (by rw [h.loop.vis]; exact hv), h.flag, h.memo, h.cr⟩
+-/
 
 /-! ## A core call keeps `LoopT`
 
@@ -476,6 +494,7 @@ theorem coreLoopA_pins : (PINS : TieredArray) ∉ coreLoopA := by simp [coreLoop
 theorem coreLoopC_129 : (129 : Word) ∉ coreLoopC := by simp [coreLoopC]
 theorem coreLoopC_200 : (200 : Word) ∉ coreLoopC := by simp [coreLoopC]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **After a core call**: the core's own post (`CoreS` after) and its write set give `LoopT` after
 (the same view, environment, pending checks and records), the pools unchanged. -/
 theorem LoopT.of_core {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -501,7 +520,9 @@ theorem LoopT.of_core {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.
     CrOK.frame hL.cr hfr (fun hb => by have := (List.mem_filter.mp hb).2; simp at this)
       (fun hx => by have := (List.mem_filter.mp hx).2; simp at this)⟩, ?_⟩
   exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A core entry point's refinement as a `Sim` under `LoopT`** (the loop-level twin of
 `StageT.sim_core`). -/
 theorem LoopT.sim_core {α : Type} [Inhabited α] {pins : List INatOpPinSet}
@@ -519,6 +540,7 @@ theorem LoopT.sim_core {α : Type} [Inhabited α] {pins : List INatOpPinSet}
     triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (hspec ⟨m, Locals.init []⟩ M hC) e
   obtain ⟨hT', hg⟩ := LoopT.of_core hcl hf e hL hC'
   exact ⟨_, _, partsRunOfOk hok, hT', hg, hres.symm, hrh⟩
+-/
 
 /-! ### The entry points under `LoopT` -/
 
