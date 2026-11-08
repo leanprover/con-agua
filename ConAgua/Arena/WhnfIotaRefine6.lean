@@ -398,8 +398,8 @@ variable (fe : IFEnv) (cvj : IConstantVal) (us : LsIdx) (a : AState) (pr hh : EI
 theorem viewConstName_run (a : AState) (h : EIdx) :
     (viewConstName h).run a = .ok (a.store.viewConstName h, a) := rfl
 
-include hpr hga in
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+include hpr hga in
 theorem inp_run_not (ht : hh.tag ≠ ETag.const) :
     (iotaCtorNeverProp fe cvj us).run a = .ok (false, a) := by
   have : (hh.tag == ETag.const) = false := by simpa using ht
@@ -407,8 +407,8 @@ theorem inp_run_not (ht : hh.tag ≠ ETag.const) :
   simp; rfl
 -/
 
-include hpr hga in
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+include hpr hga in
 theorem inp_run_other (T : NIdx) (hv : a.store.viewConstName hh = some T)
     (ht : hh.tag = ETag.const) (hf : ∀ cvT caps, fe.find? T ≠ some (.indInfo cvT caps)) :
     (iotaCtorNeverProp fe cvj us).run a = .ok (false, a) := by
@@ -422,8 +422,8 @@ theorem inp_run_other (T : NIdx) (hv : a.store.viewConstName hh = some T)
     | _ => simp; rfl
 -/
 
-include hpr hga in
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+include hpr hga in
 theorem inp_run_ind (T : NIdx) (hv : a.store.viewConstName hh = some T)
     (ht : hh.tag = ETag.const) (cvT : IConstantVal) (caps : IIndCaps)
     (hf : fe.find? T = some (.indInfo cvT caps)) (b : Bool) (a' : AState)

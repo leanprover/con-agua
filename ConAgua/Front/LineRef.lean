@@ -202,8 +202,8 @@ structure FrontLinePost (b : ByteArray) (i : USize) (st : StateD) (a : AState) (
   grow : DGrow m x.2
   mode : ModeOK x.2
 
-open L.Front.LineRec in
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+open L.Front.LineRec in
 /-- **`front_line` refines con-ron's per-line step, both outcomes**: the scanner's leaves give the
 first non-blank byte, the record and the line's end, which are the validator's `lineFwdN` and so
 con-leche's scan (`scan_of_fwd`, `scan_shape`); a name or level line is `lineRecW_refines`, an

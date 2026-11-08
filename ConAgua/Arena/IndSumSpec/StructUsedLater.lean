@@ -66,8 +66,8 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
   (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p) (hst : StripProg p)
 
-include hv hf hput hins hgo hbp hst in
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+include hv hf hput hins hgo hbp hst in
 theorem structUsedLaterGo_spec (hp : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
     (n : Nat) (s₀ : St) (cty nP j : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_used_later_go" [cty, nP, j]
@@ -158,8 +158,8 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
   (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p) (hst : StripProg p)
 
-include hv hf hput hins hgo hbp hst in
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+include hv hf hput hins hgo hbp hst in
 /-- **`struct_used_later_go` refines `structUsedLaterGo`** (through the stubs `strip_pis`, `bvar_b`),
 sharing the caller's `hb` memo. -/
 @[refines ConRon.Arena.structUsedLaterGo]

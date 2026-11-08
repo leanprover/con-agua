@@ -53,4 +53,6 @@ theorem fireCore_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IR
       (rdW (m.arr64 EREC) (ctorP + 3)) rule cvj.levelParams := by
   sorry
 
+
+end
 end L.Arena

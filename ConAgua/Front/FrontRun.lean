@@ -213,9 +213,10 @@ accepted. -/
   {\"axiom\":{\"isUnsafe\":false,\"levelParams\":[],\"name\":1,\"type\":0}}\n\
   {\"def\":{\"hints\":{\"regular\":3},\"levelParams\":[1],\"name\":1,\"safety\":\"safe\",\"type\":0,\"value\":2}}")).toOption.map
   (·.1) == some [0]
-/- A line that does not scan: its number. An unbound id: the run aborts. -/
+/- A line that does not scan: its number (after the header, which must be line 0, #144). An unbound
+id: the run aborts. -/
 #guard (run frontAllProg 100000 "front_run" [] (frontMemOf
-  "{\"il\":1,\"succ\":0}\n{\"il\":2,\"succ\":}\n")).toOption.map (·.1) == some [2]
+  "{\"meta\":{\"x\":1}}\n{\"il\":1,\"succ\":0}\n{\"il\":2,\"succ\":}\n")).toOption.map (·.1) == some [3]
 #guard (run frontAllProg 100000 "front_run" [] (frontMemOf
   "{\"ie\":0,\"sort\":5}\n")).toOption.isNone
 

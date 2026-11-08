@@ -115,4 +115,6 @@ theorem spnPushW_ok {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : Ab
       (m'.arr64 SPN).size = (m.arr64 SPN).size := by
   sorry
 
+
+end
 end L.Ind

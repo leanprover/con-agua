@@ -24,30 +24,24 @@ open L.Arena
 
 /-! ## `nest_container(_ctors(_go))` refines `nestContainer`: word models -/
 
-mutual
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+mutual
 def ncGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, C, co, cl, cs, ol, fp =>
     if cl = 0 then some ([ol, fp], m)
     else ncK1 k vis C co cl cs ol fp (envFindW m (rdW (m.arr64 EREC) co) vis)
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def ncK1 (k : Nat) (vis C co cl cs ol fp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
     if r.headD 0 = 0 then ncGoW k m1 vis C (co + 1) (cl - 1) cs ol fp
     else ncK2 k vis C co cl cs ol fp (entryW m1 C (r.tail.headD 0))
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def ncK2 (k : Nat) (vis C co cl cs ol fp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
     if r2.headD 0 = 0 then ncGoW k m2 vis C (co + 1) (cl - 1) cs ol fp
     else ncK3 k vis C co cl cs ol fp (r2.tail.tail.headD 0)
       (posRecW m2 [r2.tail.headD 0, r2.tail.tail.tail.headD 0])
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def ncK3 (k : Nat) (vis C co cl cs ol fp nPc : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (q, m3) =>
