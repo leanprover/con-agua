@@ -189,9 +189,9 @@ theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt
       StateOK a' ∧ RsetR mem' ∧ erecTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' := by
   obtain ⟨n', m₁, a₁, v, q', hv, hA1, hz, hs, hf, hS, hmo1⟩ :=
     internAllPinsW_fixed rom hr rest hrom n mem mem' a hA hmo hP hst (by omega) hW
-  obtain ⟨hok1, -⟩ := internAllPins_run hok hpins hpp hoff hv
+  obtain ⟨hok1, -, -, -, -, -, hoff1, -⟩ := internAllPins_run hok hpins hpp hoff hv
   obtain ⟨pins, ips, a', hrun, hA', hPS, hok', hR', -, -, -, htop, hmo'⟩ := internPinSetsW_dec rom hr n' m₁ a₁ _ q' mem' hA1
-    hmo1 (hz hR) hok1 (by rw [hs]; exact hst) (by rw [hf.size]; exact hc) hS
+    hmo1 (hz hR) hok1 (by rw [hs]; exact hst) (by rw [hf.size]; exact hc) (flag_of_off hA1.base hoff1) hS
   refine ⟨pins, ips, a', ?_, hA', hPS, hok', hR', htop, hmo'⟩
   rw [internAllPins_split, run_bind_of _ _ _ _ _ hv]; exact hrun
 
