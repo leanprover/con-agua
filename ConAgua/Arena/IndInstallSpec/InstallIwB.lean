@@ -66,12 +66,14 @@ theorem iwA_truncM_size_le (m : Mem) : (iwA (truncM m)).size ≤ iwTop m := by
   cases this
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A `[off, len]` member record decoded with its bound: the bound. -/
 theorem decCNSB_bound {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
     (h : DecB (fun m => decCNSB m q) m cs) :
     ∃ o l, iwN (truncM m) q = some o ∧ iwN (truncM m) (q + 1) = some l ∧ o + l ≤ iwTop m ∧
       decPL (truncM m) (decCN (truncM m)) o l = some cs := by
   sorry
+-/
 
 /-- The lookups of `check_block_ctors`. -/
 structure CtorsProg (p : Prog) : Prop extends CstProg p where

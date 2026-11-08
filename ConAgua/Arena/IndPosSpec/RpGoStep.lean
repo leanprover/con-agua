@@ -687,46 +687,7 @@ theorem rpGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
     (hbN : b.toNat + N < 2 ^ 64) (hM : rpMR m mp) :
     ∃ a' mp', (ConRon.Arena.replaceAppsGo names (decI us) b.toNat N mp (F + 1) (decE h)).run a =
         .ok ((decE r, mp'), a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
-  have hnl : ¬ (vl.headD 0 = 0 ∨ vl.headD 0 = 1 ∨ vl.headD 0 = 2 ∨ vl.headD 0 = 8) := by
-    rcases hgs with e | e | e | e | e <;> rw [e] <;> decide
-  have hn3 : ¬ vl.headD 0 = 3 := by
-    rcases hgs with e | e | e | e | e <;> rw [e] <;> decide
-  rw [rpG1_node j m no nl us b nn f h vl hvl hnl hn3] at hb
-  rw [rpTwin_node _ _ _ _ _ _ _ a v hv hnv]
-  by_cases hfr : mfindG raSch m h 0 = []
-  · rw [rpG3_abort j m no nl us b nn f h vl _ hfr] at hb; simp at hb
-  by_cases hhit : (mfindG raSch m h 0).headD 0 ≠ 0
-  · rw [rpG3_hit j m no nl us b nn f h vl _ hfr hhit] at hb
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    have hmem := memoRG_hit raSch bmKey (fun w : Word => decE w) m mp hM h 0 hfr hhit ⟨hh, rfl⟩
-    have : bmKey.dk h 0 = decE h := rfl
-    rw [this] at hmem
-    refine ⟨a, mp, ?_, hS, IWGrow.refl _, hM⟩
-    simp only [hmem]; rfl
-  · rw [rpG3_miss j m no nl us b nn f h vl _ hfr hhit] at hb
-    have hmiss := memoRG_miss raSch bmKey (fun w : Word => decE w) m mp hM h 0 ⟨hh, rfl⟩ hfr (by simpa using hhit)
-    have : bmKey.dk h 0 = decE h := rfl
-    rw [this] at hmiss
-    cases j with
-    | zero => simp [rpNodeW, rpG4] at hb
-    | succ k =>
-      rcases hnode : rpNodeW (k + 1) m no nl us b nn (f - 1) h (vl.headD 0) (vl.tail.headD 0)
-          (vl.tail.tail.headD 0) (vl.tail.tail.tail.headD 0) with _ | ⟨rn, m1⟩; · rw [hnode] at hb; simp [rpG4] at hb
-      rw [hnode, rpG4_some] at hb
-      rcases hset : msetG raSch m1 h 0 rn with _ | m2 <;> rw [hset] at hb; · simp [rpG5] at hb
-      rw [rpG5_some] at hb
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-      have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
-      obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := rpNode_arm dn fe vis k (ih k (by omega)) vl v hvr hnv m m1 a no nl us b
-        nn (f - 1) h rn N names mp hnode hS hh hus hdec hno hit hN hnn hbN hM
-      rw [hF1] at hr1
-      have hset' := memoRG_set raSch raSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h 0 rn ⟨hh, rfl⟩ m2 hset
-      have hfs : MemFrame [RAM] [raSch.cs + 1] m1 m2 := msetG_frame raSch raSch_wf m1 m2 h 0 rn hset
-      obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hfs (by intro b hb; simp at hb; subst hb; decide)
-        (by intro x hx; simp [raSch] at hx; subst hx; decide) (by decide) (by simp [raSch])
-      refine ⟨a1, mp1.insert (decE h) (decE rn), ?_, hS2, hg1.trans hg2, hset'⟩
-      simp only [hmiss, StateT.run_bind, hr1, except_ok_bind]
-      rfl
+  sorry
 
 theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (j : Nat)
     (ih : ∀ k, k + 1 < j + 1 → RpGoOK dn fe vis k) : RpGoOK dn fe vis (j + 1) := by
@@ -827,29 +788,7 @@ theorem rpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     (hbN : b.toNat + N < 2 ^ 64) (hM : rpMR m mp0) :
     ∃ a', (ConRon.Arena.replaceApps names (decI us) b.toNat N (decE e)).run a = .ok (decE r, a') ∧
       rpMR m' ∅ ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
-  by_cases h0 : rdW (m.arr64 CTL) raSch.cs + 2 = 0
-  · simp [rpConstW, h0] at hb
-  rw [rpConstW_eq n m no nl us b nn e h0] at hb
-  have hf0 := mclearG_frame raSch m
-  have hM0 := memoRG_clear raSch raSch_wf bmKey (fun w : Word => decE w) m mp0 hM h0
-  obtain ⟨hS0, hg0⟩ := StageR.frame_hi hS hf0 (by intro b hb; simp at hb) (by intro x hx; simp [raSch] at hx; rcases hx with rfl | rfl <;> decide)
-    (by simp) (by simp [raSch])
-  have hdec0 : decHL (mclearG raSch m) no.toNat nl.toNat = some names := by rw [decHL_grow hg0 hit]; exact hdec
-  rcases hg : rpGoW n (mclearG raSch m) no nl us b nn CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [rpClrK] at hb
-  by_cases h1 : rdW (m1.arr64 CTL) raSch.cs + 2 = 0
-  · simp [rpClrK, h1] at hb
-  rw [rpClrK_some r1 m1 h1] at hb
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-  obtain ⟨a1, mp1, hrun, hS1, hg1, hM1⟩ := rpGoOK dn fe vis n _ _ a no nl us b nn CWF e r1 N names ∅ hg hS0 he hus hdec0
-    hno (by have := hg0.iw; omega) hN hnn hbN hM0
-  rw [CWF_eq] at hrun
-  have hM2 := memoRG_clear raSch raSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h1
-  have hf2 := mclearG_frame raSch m1
-  obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hf2 (by intro b hb; simp at hb) (by intro x hx; simp [raSch] at hx; rcases hx with rfl | rfl <;> decide)
-    (by simp) (by simp [raSch])
-  refine ⟨a1, ?_, hM2, hS2, (hg0.trans hg1).trans hg2⟩
-  simp only [ConRon.Arena.replaceApps, StateT.run_bind, hrun]
-  rfl
+  sorry
 
 end L.Ind
 

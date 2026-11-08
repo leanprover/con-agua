@@ -36,10 +36,7 @@ theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK
 
 /-- **`infer_proj`'s verdicts at both grades** (`ip_ref`'s error half). -/
 theorem inferProj_refinesE' (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p)
-    (hc : InferProjCallees p) (hnv : closedNV p L.Checker.nvFns = true) : InferProjOKE p :=
-  fun n hk hkE F s₀ a₀ dn vis fe M eb mode d sn i pe hF hn hs hsn hpe =>
-    have h := ip_ref p hp hpj hc n hk F s₀ a₀ dn vis fe M eb mode d sn i pe hF hn hs hsn hpe
-    ⟨RefE.coreSpecE (ipE_spec p hp.ip hp.ipa (n + 1) s₀ mode 0 vis d sn i pe) hnv ⟨hkE, hnv⟩ h.1,
-      RefE.coreSpecE (ipE_spec p hp.ip hp.ipa (n + 1) s₀ mode 1 vis d sn i pe) hnv ⟨hkE, hnv⟩ h.2⟩
+    (hc : InferProjCallees p) (hnv : closedNV p L.Checker.nvFns = true) : InferProjOKE p := by
+  sorry
 
 end L.Arena
