@@ -76,6 +76,7 @@ theorem pbStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.siz
 
 /-! ## Phase A's fold at the checker's program -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The twin's side of entry 1**: the stages before the loop and phase A, with `k` records
 installed, the environment `fe` and the pending groups `pend`, ending in `sF` (lane parallel's
 structure). -/
@@ -97,13 +98,17 @@ structure PhaseA (b : ByteArray) where
   pfx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE
   fold : installFold .verified ipins (0, mkIFEnv IEnv.empty, #[]) ds.toList sE =
     .ok (.ok (k, fe, pend), sF)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **What phase A's fold leaves at its result `v`**: an accepting twin phase A whose state the
 memory `m` is `PhaseBStart` to, the pin data in place. -/
 def FoldA (b pb : ByteArray) (v : Word) (m : Mem) : Prop :=
   ∃ PA : PhaseA b, PhaseBStart PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend m PA.sF v ∧
     m.arr8 PB = pb.data.toList.toArray ∧ PbPre pb
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The fold from `R7`** (and the twin's stages before the loop), with `cnt` the count
 `DECL[0]`: at the substituted program (`installFoldGo_start`). -/
 theorem foldStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
@@ -141,6 +146,7 @@ theorem foldStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : I
     (by have := hcaps.1 BSTK (by decide); omega) h7.mode))) ?_
   rintro r s' ⟨⟨hl, fe, pend, a', h1, h2⟩, hk, -⟩
   exact ⟨hl, fe, pend, a', h1, h2, by rw [hk.arr8]; exact hpb⟩
+-/
 
 /-- The fold's spec at the stages' end `Q7`, in the form `checkA_of_stages` takes. -/
 theorem foldSpec_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) :
@@ -149,17 +155,7 @@ theorem foldSpec_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : In
       ⦃fun r s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
         (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
         FoldA b pb (r.headD 0) s'.mem); ⊤⦄ := by
-  intro n hn s₀ cnt
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  have hl : LocEq s' s₀ := M.of_run (P := fun s => s = s₀) (Q := fun _ s => LocEq s s₀) hs hrun
-    (L.invoke_loc checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0] s₀)
-  refine ⟨hl, fun hQ hcnt => ?_⟩
-  obtain ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR⟩ := hQ
-  obtain ⟨-, fe, pend, sF, h1, h2, h3⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (foldStage_checker b pb sz hin ⟨hA, hB, hC, hD, hE⟩ n hn s₀ cnt hR hcnt)
-  exact ⟨⟨pins, sA, pre, sB, rc, sC, ds, sD, ipins, sE, ds.size, fe, pend, sF, ⟨hA, hB, hC, hD, hE⟩, h1⟩,
-    h2, h3, hR.since.pbpre⟩
+  sorry
 
 /-! ## The lookups -/
 
@@ -247,6 +243,7 @@ theorem run_post {p : Prog} {N : Nat} {f : FnName} {m m' : Mem} {rs : List Word}
     obtain ⟨rfl, rfl⟩ := hrun
     exact M.of_run (P := fun s => s = _) rfl hr h
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Entry 1 in L**: a run of `check` from the loaded memory with the mode word `w = 1` (images
 and header) or `w = 3` (the header only) that returns anything but `1` is an accepting twin
 phase A (`PhaseA b`) whose state the memory `m` after the fold is `PhaseBStart` to, at the fold's
@@ -312,5 +309,6 @@ theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
     have e : ((parCompactMem m v (modeFlag w)).arr64 CTL)[130]'(by rw [hF.size]; exact h130) =
         (m.arr64 CTL)[130] := by simp only [hF.arr CTL (by decide)]
     rw [e, ← hc, UInt64.ofNat_toNat]
+-/
 
 end L.Checker
