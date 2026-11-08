@@ -206,10 +206,12 @@ def declLoopFns : List FnName :=
 /-- `declLoopFns` as a tree of name codes. -/
 names_tree declLoopTree : declLoopFns
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The arrays of `stepA`, as a test. -/
 def stepPa (a : TieredArray) : Bool :=
   checkerWordArrays.contains a && a != PEND && a != DECL && a != DLP &&
     (decide (a.arr < 146) || decide (149 < a.arr))
+-/
 
 /-- The `CTL` words of `stepC`, as a test. -/
 def stepPc (w : Word) : Bool :=
