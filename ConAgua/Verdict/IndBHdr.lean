@@ -294,6 +294,7 @@ section cco
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p)
   {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd hCrk in
 /-- **`class_const_ok` refines `classConstOk`, both outcomes**: its guards (`cch_ref`, against
 `cchT`: `cchT_bind`), then the knot's `infer_type_core` and `ensure_sort_core` (their ok halves
@@ -304,6 +305,7 @@ theorem cco_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q : Word} 
     RefE (VerdictCtxU p) (classConstOkE p n m vis q) (ConRon.Arena.classConstOk V fe cv) a
       (fun v _ a' => CcoPost dn vis fe m v.2 a') := by
   sorry
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd hCrk in

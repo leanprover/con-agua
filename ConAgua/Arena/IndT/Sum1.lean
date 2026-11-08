@@ -80,6 +80,7 @@ structure WtPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   sort : decI (b.1.tail.tail.headD 0) = x.2
   abs : AbsOK b.2
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The arms of `wtArm` the L guards leave (not a sort at `0`, not a `∀` at `n + 1`) are the
 twin's `.invalid` failures. -/
 theorem wtArm_fail (fe : IFEnv) (i : Nat) {vv : ENodeView} {v : List Word} {n : Word}
@@ -95,11 +96,13 @@ theorem wtArm_fail (fe : IFEnv) (i : Nat) {vv : ENodeView} {v : List Word} {n : 
     cases vv with
     | forallE ty b => exact absurd ⟨hVR.1, hn⟩ h2
     | _ => exact ⟨_, rfl⟩
+-/
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) (hP : WtProg p) {dn : NIdx → Option ConLeche.Name}
   {vis : Word} {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hP henv in
 /-- **`whnf_telescope` refines `whnfTelescope .verified`, both outcomes**, under `StageC` (twin
 side: con-ron's `whnfTelescope_spec`'s proof): `whnf` (`whnfC_rsim`; its error by `WhnfTopE`),
@@ -227,7 +230,9 @@ theorem wt_ref (k : Nat) (hk : k ≤ 2 ^ 62) :
       (((hg1.trans hg2).trans hg3).trans hR4.grow).trans hg6,
       by rw [← hxe, decE_eq]; exact hd6, Nat.le_of_eq ht6, hR4.sort32, hR4.sort, hA6⟩
   | _ => simp [ViewR] at hVR <;> (try omega) <;> (have := hp.1; simp_all)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hP henv in
 /-- **`whnf_telescope` refines `whnfTelescope .verified`** under `StageC` (`wt_ref`'s ok half; the
 type's denotation and scoping as con-ron's `whnfTelescope_spec` asks): the binders' domains as an
@@ -246,6 +251,7 @@ theorem whnfTelescope_refinesC (k : Nat)
       (wt_ref hq hP henv k hk _ a₀ i n e hC hA he hin hdP hwsP)) fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
     exact ⟨hl, hok, by rw [hst, hres]; exact hR⟩
+-/
 
 end sims
 

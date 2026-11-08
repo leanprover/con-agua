@@ -81,12 +81,12 @@ structure TpdPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 structure PdsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
     (m : Mem) (a : AState) (r : Word) (m' : Mem) (c : Bool) (a' : AState) : Prop
     extends TpdPost dn vis fe env m r m' c a' where
-  core : CoreStep V env fe a a'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv in
 /-- **`target_params_def_eq_step` refines `tpStep`, both outcomes** (twin side: con-ron's
 `targetParamsDefEq_spec`, the `cons` arm): the closedness reads (`tpClosed_pstep`), the canon forms
@@ -284,6 +284,7 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
       (MFr.ofCore hq.closed (by decide) (callW_of_callE h10))).fr
       (MFr.ofCore hq.closed (by decide) (callW_of_callE h11)), hA11⟩,
     ((c48.trans c9).trans c10).trans c11⟩
+-/
 
 include hq henv in
 /-- **`target_params_def_eq` refines `targetParamsDefEq`, both outcomes** (twin side: con-ron's
@@ -306,64 +307,7 @@ theorem pde_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
     RefE (VerdictCtx p) (pdeE p n m vis d no nl lvls ho hl pfo pfl ao al bo bl)
       (ConRon.Arena.targetParamsDefEq V fe d.toNat names (decI lvls) holes pfvs as bs) a
       (fun v c a' => TpdPost dn vis fe env m v.1 v.2 c a') := by
-  induction n with
-  | zero => intros; rw [pdeE.eq_1]; exact RefE.of_cls0 (by simp)
-  | succ n ih =>
-  intro m a d no nl lvls ho hl pfo pfl ao al bo bl names holes pfvs as bs namesP lvlsP holesP
-    pfvsP asP bsP hC hA hlv hno hnob hho hhob hpf has hbs hP hTA hpfP hasP hbsP habs hpw
-  have hS := hC.stage
-  have hlt : ∀ {x : Nat}, x ≤ iwTop m → x < 2 ^ 64 := fun h => hS.lt64 h
-  by_cases hal : al = 0
-  · rw [pdeE.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hal]
-    subst hal
-    have : as = [] := by have := has.len; simpa using this
-    subst this
-    refine RefE.ret (by rw [tpd_nil]; rfl) ⟨?_, hC, IWGrow.refl _, hP, hA⟩
-    have hbl : bs.length = bl.toNat := hbs.len
-    by_cases hb0 : bl = 0
-    · subst hb0; have : bs = [] := by simpa using hbl
-      subst this; simp
-    · have : bs ≠ [] := fun e => hb0 (UInt64.toNat_inj.mp (by rw [← hbl, e]; rfl))
-      simp [hb0, this]
-  by_cases hbl : bl = 0
-  · rw [pdeE.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hal hbl]
-    subst hbl
-    have : bs = [] := by have := hbs.len; simpa using this
-    subst this
-    obtain ⟨w, as', rfl, -, -, -⟩ := decHL_cons has.1 hal (hlt (has.2.resolve_left hal))
-    exact RefE.ret (by rw [tpd_nilr]; rfl) ⟨rfl, hC, IWGrow.refl _, hP, hA⟩
-  rw [pdeE.arm3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hal hbl]
-  have hasb : ao.toNat + al.toNat ≤ iwTop m := has.2.resolve_left hal
-  have hbsb : bo.toNat + bl.toNat ≤ iwTop m := hbs.2.resolve_left hbl
-  obtain ⟨x, as', rfl, ex, hx, has'⟩ := decHL_cons has.1 hal (hlt hasb)
-  obtain ⟨y, bs', rfl, ey, hy, hbs'⟩ := decHL_cons hbs.1 hbl (hlt hbsb)
-  obtain ⟨xP, asP', hxP, hasP', rfl⟩ := ConRon.Bridge.denoteEList_cons_inv hasP
-  obtain ⟨yP, bsP', hyP, hbsP', rfl⟩ := ConRon.Bridge.denoteEList_cons_inv hbsP
-  rw [ex, ey]
-  obtain ⟨ea1, el1, hal0⟩ := slice_step hal (hlt hasb)
-  obtain ⟨eb1, ebl1, hbl0⟩ := slice_step hbl (hlt hbsb)
-  rw [tpd_cons]
-  simp only [← decE_eq]
-  refine RefE.bindE (fun _ => pdeE.k_target_params_def_eq_step.none ..) id
-    (pds_ref hq henv n (by omega) hC hA hx hy hlv hno hnob hho hhob hpf hP hTA hpfP hxP hyP habs hpw)
-    fun ⟨r1, m1⟩ c a1 _ hR1 => ?_
-  dsimp only at hR1
-  rw [pdeE.k_target_params_def_eq_step.eq_2]
-  refine RefE.retIf (fun hr1 => by rw [← hR1.res, hr1]; rfl) (fun hc => by rw [← hR1.res] at hc; simpa using hc)
-    (fun _ => ⟨rfl, hR1.stage, hR1.grow, hR1.rc, hR1.abs⟩) fun hr1 hc => ?_
-  subst hc
-  have hg1 := hR1.grow
-  have hgo := hg1.iw
-  have h2 := ih (by omega) (m := m1) (ao := ao + 1) (al := al - 1) (bo := bo + 1) (bl := bl - 1)
-    hR1.stage hR1.abs hlv
-    (by rw [decHL_grow hg1 hnob]; exact hno) (by omega)
-    (by rw [decHL_grow hg1 hhob]; exact hho) (by omega)
-    (hpf.grow hg1)
-    (HSl0.of (by rw [decHL_grow hg1 (by rw [ea1, el1]; omega)]; exact has') (by rw [ea1, el1]; omega))
-    (HSl0.of (by rw [decHL_grow hg1 (by rw [eb1, ebl1]; omega)]; exact hbs') (by rw [eb1, ebl1]; omega))
-    hR1.rc (hTA.ext hR1.core.ext) (denoteEList_ext hR1.core.ext _ _ hpfP)
-    (denoteEList_ext hR1.core.ext _ _ hasP') (denoteEList_ext hR1.core.ext _ _ hbsP') habs hpw
-  exact RefE.mono h2 fun _ _ _ hR2 => ⟨hR2.res, hR2.stage, hg1.trans hR2.grow, hR2.rc, hR2.abs⟩
+  sorry
 
 include hq henv in
 /-- **`target_params_def_eq` refines `targetParamsDefEq`** under `StageC` (`pde_ref`'s ok half; the

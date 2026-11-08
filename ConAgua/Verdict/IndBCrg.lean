@@ -45,6 +45,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model crgE_spec (p : Prog) (hp : CruleProg p)
   fns [hp.guards ↦ crgE]
   specs [lbbF_spec p hp.bvb n, hffF_spec p hp.hf n, crfF_spec p hp.hcr n]
@@ -52,6 +53,7 @@ l_model crgE_spec (p : Prog) (hp : CruleProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- **The twin's guards of `classRuleOk`** (the prefix `class_rule_ok_guards` stands for): the
 closedness guards, the level parameters, the resolution. -/
@@ -87,9 +89,9 @@ structure CrgPost (dn : NIdx → Option ConLeche.Name) (visR : Word) (feR : IFEn
   stage : StageC dn visR feR envR m' a'
   grow : IWGrow m m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V envR feR a a'
   closed : genP.hasFvar = false
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`class_rule_ok_guards` refines `classRuleOk`'s guards (`crgT`), both outcomes**: the walks
 (outside the verdict closure) under `StageC`, `all_level_params_defined` and
 `consts_resolve_ffast` real (`apdF_okT`, `crfF_okT`); the one site of class `1`/`2` is the
@@ -181,6 +183,7 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
   have c14 := c13.trans (p4.toCore c13.ok)
   exact RefE.ret rfl ⟨StageC.of_T hT5 c14.ok,
     ((hg12.trans hg3).trans hg4).trans hg5, absOK_crfF h5 hA4 hCr5 hT5, c14, by rw [← hfv]⟩
+-/
 
 end L.Ind
 

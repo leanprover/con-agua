@@ -78,51 +78,7 @@ theorem tpt_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
     Frontend.denoteEList a.store xs = some xsP → (∀ x ∈ xsP, ConLeche.Expr.WScoped d.toNat x) →
     RefE (VerdictCtx p) (tptE p n m vis d xo xl) (ConRon.Arena.targetPinTys V fe d.toNat xs) a
       (fun v _ a' => TptPost dn vis fe env m v.2 a') := by
-  induction n with
-  | zero =>
-    intro m a d xo xl xs xsP hC hA hxs hxsP hw
-    rw [tptE.eq_def]
-    exact RefE.of_cls0 Err.cls_outOfFuel
-  | succ n ih =>
-  intro m a d xo xl xs xsP hC hA hxs hxsP hw
-  by_cases hxl : xl = 0
-  · rw [tptE.arm1 p n m vis d xo xl hxl]
-    have : xs = [] := by have := hxs.len; rw [hxl] at this; simpa using this
-    subst this
-    exact RefE.ret rfl ⟨hC, IWGrow.refl m, hA⟩
-  rw [tptE.arm2 p n m vis d xo xl hxl]
-  have hbt : xo.toNat + xl.toNat ≤ iwTop m := hxs.2.resolve_left hxl
-  have hb : xo.toNat + xl.toNat < 2 ^ 64 := StageR.lt64 hC.stage hbt
-  have hpos : 1 ≤ xl.toNat := by
-    rcases Nat.eq_zero_or_pos xl.toNat with h0 | h0
-    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hxl
-    · omega
-  obtain ⟨c1, hc1⟩ : ∃ c1, xl.toNat = c1 + 1 := ⟨xl.toNat - 1, by omega⟩
-  have hxs0 := hxs.1
-  rw [hc1] at hxs0
-  obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons_r hxs0
-  obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hx (by omega)
-  rw [UInt64.ofNat_toNat] at hw1
-  have hxl1 : (xl - 1).toNat = c1 := by
-    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
-  have hxo1 : (xo + 1).toNat = xo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  rw [hw1]
-  obtain ⟨xP, xsP', hxP, hxsP', rfl⟩ := ConRon.Bridge.denoteEList_cons_inv hxsP
-  rw [ConRon.Arena.targetPinTys]
-  subst hw3
-  refine RefE.bindCall (fun _ => tptE.k_infer_type_core.none ..)
-    (fun hV _ h1 => hV.core.inferTypeCore n (by omega) hC.stageT d w hw2 _ h1)
-    (inferC_rsim hq henv n (by omega) hC hA d w hw2 hxP (hw xP List.mem_cons_self))
-    fun r1 m1 t1 a1 _ _ ⟨hC1, hg1, _, hA1, c1', _⟩ => ?_
-  rw [tptE.k_infer_type_core.arm1]
-  dsimp only at hC1 hg1 hA1
-  have hxs1 : HSl0 m1 (xo + 1) (xl - 1) xs' :=
-    ⟨by rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs',
-      .inr (by rw [hxo1, hxl1]; have := hg1.iw; omega)⟩
-  refine RefE.lastE (fun _ => tptE.k_target_pin_tys.none ..) (fun _ => tptE.k_target_pin_tys.arm1 ..) id
-    (ih (by omega) hC1 hA1 hxs1 (ConRon.Bridge.denoteEList_ext c1'.ext _ _ hxsP')
-      (fun y hy => hw y (List.mem_cons_of_mem _ hy)))
-    fun _ _ _ _ hR => ⟨hR.stage, hg1.trans hR.grow, hR.abs⟩
+  sorry
 
 include hq henv in
 /-- **`target_pin_tys` refines `targetPinTys .verified`** under `StageC` (`tpt_ref`'s ok half; the

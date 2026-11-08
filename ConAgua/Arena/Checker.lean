@@ -469,6 +469,7 @@ theorem installFold_cons (p p' : Nat × IFEnv × Array PendingCheck) (d : IDecla
   simp only [installFold, StateT.run_bind, r1, exc_ok_bind]
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem installFold_cons_ok (p p' : Nat × IFEnv × Array PendingCheck) (d : IDeclaration)
     (rest : List IDeclaration) (a0 : AState)
     (h1 : AM.ok (installDeclStep mode pins p d) a0)
@@ -482,12 +483,16 @@ theorem installFold_cons_ok (p p' : Nat × IFEnv × Array PendingCheck) (d : IDe
   have e := installFold_cons mode pins p p' d rest a0 h1 hr
   have r2 := AM.run_of_ok _ _ h2
   exact AM.of_run_ok _ _ _ _ (e.trans r2)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem installFold_nil_ok (p : Nat × IFEnv × Array PendingCheck) (a0 : AState) :
     AM.ok (installFold mode pins p []) a0 ∧ AM.st (installFold mode pins p []) a0 = a0 ∧
     AM.res (installFold mode pins p []) a0 = .ok p :=
   AM.of_run_ok _ _ _ _ rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem checkPendingList_cons_ok (fe : IFEnv) (pc : PendingCheck) (rest : List PendingCheck)
     (a0 : AState) (h1 : AM.ok (checkPending mode fe pc) a0)
     (h2 : AM.ok (checkPendingList mode fe rest) (AM.st (checkPending mode fe pc) a0)) :
@@ -501,11 +506,14 @@ theorem checkPendingList_cons_ok (fe : IFEnv) (pc : PendingCheck) (rest : List P
   apply AM.of_run_ok
   simp only [checkPendingList, StateT.run] at r1 r2 ⊢
   rw [r1]; exact r2
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem checkPendingList_nil_ok (fe : IFEnv) (a0 : AState) :
     AM.ok (checkPendingList mode fe []) a0 ∧ AM.st (checkPendingList mode fe []) a0 = a0 ∧
     AM.res (checkPendingList mode fe []) a0 = .ok () :=
   AM.of_run_ok _ _ _ _ rfl
+-/
 
 end twin
 
@@ -513,6 +521,7 @@ section skel
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNoneL) (n : Nat) (s₀ : St) (a₀ : AState)
     (vis v2 nt : Word) (fe' : IFEnv)
     (hR : LoopR pins s₀.mem a₀ v2 fe' ds) :
@@ -535,7 +544,9 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
             (fe'.env.tables.length - nt.toNat) fe') a₀).2
           pend)] <;>
       finish [isNoneT]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem pendPush_spec (hp : p.lookup "pend_push" = some pendPushL) (n : Nat) (s₀ : St)
     (a₀ : AState) (vis : Word) (fe : IFEnv) (g i v : Word)
     (vg : ValueGroup) (hg : decVG (erecP s₀.mem) g.toNat = some vg)
@@ -555,7 +566,9 @@ theorem pendPush_spec (hp : p.lookup "pend_push" = some pendPushL) (n : Nat) (s�
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
       finish [pendPushMem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxHeartbeats 1000000 in
 theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hp : p.lookup "is_some" = some isSomeL) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -580,21 +593,26 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
         (promoteNew_spec pins dn ds p hb.pr n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
         (drop_loop (pins := pins) dn ds p hb n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) v2 (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) (fe'.env.tables.length - nt.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
       finish [isSomeT]
+-/
 
 section phaseB
 variable (fe : IFEnv)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What `check_pending_go` from check `k` ends with: phase B over the checks from `k` accepts,
 related to the memory `m` at view `v`. -/
 def PendPost (m : Mem) (a : AState) (v : Word) (k : Nat) : Prop :=
   AM.ok (checkPendingList mode fe (pend.toList.drop k)) a ∧
     AM.res (checkPendingList mode fe (pend.toList.drop k)) a = .ok () ∧
     LoopR pins m (AM.st (checkPendingList mode fe (pend.toList.drop k)) a) v fe ds
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem drop_cons_pdAt (j : Word) (hj : j.toNat < pend.size) (h1 : (j + 1).toNat = j.toNat + 1) :
     pend.toList.drop j.toNat = pdAt pend j :: pend.toList.drop (j + 1).toNat := by
   rw [h1, List.drop_eq_getElem_cons (by simpa using hj)]
   simp [pdAt, hj]
+-/
 
 end phaseB
 
