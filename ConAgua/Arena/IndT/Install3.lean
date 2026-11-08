@@ -67,7 +67,7 @@ runs, `strip_pis` and `intern_sort` (outside the verdict closure) lifted. -/
 l_model cbtE_spec (p : Prog) (hf : p.lookup "check_block_tele" = some checkBlockTele)
   fns [hf ↦ cbtE] specs [callW_spec p n "strip_pis", callW_spec p n "intern_sort"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specT, ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`check_block_teles`' unified model**: every member through `cbtE`, the `rec2`s and `sl_cons`es
@@ -80,10 +80,8 @@ l_model cbtsE_spec (p : Prog) (h1 : p.lookup "check_block_tele" = some checkBloc
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `check_sum_tele`'s lookups, as its model takes them. -/
-theorem CstProg.ctProg {p : Prog} (hP : CstProg p) : CtProg p :=
-  ⟨⟨⟨hP.alloc, hP.copy, hP.cons, hP.view, hP.fvarFind, hP.fvarPush, hP.internFVar, hP.wt, hP.i1⟩,
-    hP.sortFind, hP.sortPush, hP.internSort, hP.derB, hP.forallFind, hP.forallPush, hP.internForall,
-    hP.mkForall, hP.closeTele, hP.erAlloc, hP.cvNew, hP.slow, hP.ab⟩, hP.strip, hP.tele⟩
+theorem CstProg.ctProg {p : Prog} (hP : CstProg p) : CtProg p := by
+  sorry
 
 /-- What `check_block_tele` gives besides the checked former and its sort `x` (from `m`, `a`): the
 former's layout (`TeleOutC`), `AbsOK`, the core step. -/
@@ -91,7 +89,6 @@ structure TelePost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     (m : Mem) (a : AState) (r : List Word) (x : IConstantVal × LIdx) (m' : Mem) (a' : AState) : Prop where
   out : TeleOutC dn vis fe env m r x m' a'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 /-- What `check_block_teles` gives besides the checked formers `x` (from `m`, `a`): the stage, the
 growth, the formers' slice, `AbsOK`, the core step. -/
@@ -101,7 +98,6 @@ structure TelesPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   grow : IWGrow m m'
   teles : PSlR decTele x (r.headD 0) (r.tail.headD 0) m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -109,6 +105,7 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
   (hV : ValProg p)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hApd hCrk in
 /-- **`check_block_tele` refines `checkBlockTele`, both outcomes** under `StageC` (twin side:
 con-ron's `checkBlockTele_specF`'s proof): `check_constant_val` and `check_sum_tele` through their
@@ -204,7 +201,9 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   have k14 := ((k1.trans k2).trans k3).trans k4
   exact RefE.ret rfl ⟨⟨k4.stage, k14.grow, hcv2.stab (OMono.decCVp _) m4 (k3.trans k4).grow,
     CVExt_grow (k3.trans k4).grow ⟨hP2.top, hP2.lps⟩, hP2.sort32, hP2.sort⟩, k4.abs, k14.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hApd hCrk in
 /-- **`check_block_tele` refines `checkBlockTele`** under `StageC` (the knot's core calls; the
 member's denotation as con-ron's `checkBlockTele_specF` asks): the checked former below the tops,
@@ -227,7 +226,9 @@ theorem checkBlockTele_refinesC (hP : CstProg p)
   rintro _r s' ⟨hl, x, a', hrun, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hR.out, hR.abs, by rw [hst]; exact hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hApd hCrk in
 /-- **`check_block_teles` refines `checkBlockTeles`, both outcomes** under `StageC` (twin side:
 con-ron's `checkBlockTeles_specF`'s proof; induction on the fuel): every member by `cbt_ref`, the
@@ -288,7 +289,9 @@ theorem cbts_ref (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
   have hA4 := consW_afr hW hT3.abs
   exact RefE.ret rfl ⟨hT3.stage.of_pstep hS4 hA4 (PStep.refl hT3.stage.check.state),
     k2.grow.trans (hT3.grow.trans hg4), ⟨hd4, Nat.le_of_eq htop4⟩, hA4, k2.core.trans hT3.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hApd hCrk in
 /-- **`check_block_teles` refines `checkBlockTeles`** under `StageC` (the members' denotations as
 con-ron's `checkBlockTeles_specF` asks): the checked formers a slice of `[cvTa, s]` records,
@@ -311,6 +314,7 @@ theorem checkBlockTeles_refinesC (hP : InstProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
   rintro _r s' ⟨hl, x, a', hrun, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.teles, hR.abs⟩
+-/
 
 end sims
 

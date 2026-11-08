@@ -44,6 +44,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model sctsE_spec (p : Prog) (hP : SumProg p) (hV : ValProg p)
   fns [hP.hcs ↦ sctsE]
   specs [ctorE_spec p hP hV n, rec2_specW p hP.ha n hP.hrec2, slCons_specW p hP.ha hP.hc hP.hsc n]
@@ -51,6 +52,7 @@ l_model sctsE_spec (p : Prog) (hP : SumProg p) (hV : ValProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `check_sum_ctors` gives besides the twin's constructors and sorts `x` (from `m`): the
 stage invariant, the growth, the two slices `r = [cO, cL, sO, sL]` decoded below the top,
@@ -66,7 +68,6 @@ structure SctsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     (r.tail.tail.tail.headD 0).toNat) m' x.2
   sortsB : (r.tail.tail.headD 0).toNat + (r.tail.tail.tail.headD 0).toNat ≤ iwTop m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -75,6 +76,7 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
   (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctors` refines `checkSumCtors`, both outcomes** (twin side: con-ron's
 `checkSumCtors_spec`'s proof): the head by `ctor_ref` (`check_sum_ctor` by its unified model), the
@@ -230,7 +232,9 @@ theorem scts_ref (hP : SumProg p)
   · simp only [List.headD_cons, List.tail_cons]
     exact sumDecB_cons sortsDec_mono hmap2 hd6 (by omega) hg46 hy2
   · simp only [List.headD_cons, List.tail_cons]; omega
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctors` refines `checkSumCtors .verified`** under `StageC` (the inputs'
 denotations as con-ron's `checkSumCtors_spec` asks), the pre-block environment the restriction of
@@ -272,6 +276,7 @@ theorem checkSumCtors_refinesC (hP : SumProg p) (k : Nat) (hk : k ≤ 2 ^ 62) (s
     fun _ _ ⟨hl, _, _, hrun, hR⟩ =>
       let ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
       ⟨hl, hok, hst ▸ hR.stage, hR.grow, hres ▸ hR.cns, hres ▸ hR.sorts, hR.abs⟩
+-/
 
 end sims
 

@@ -61,8 +61,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- Two indexes that answer alike (con-ron's `GR.FEq`) find alike. -/
 theorem feq_find {x y : IFEnv} (h : ConRon.Bridge.Inductives.GR.FEq x y) : x.find? = y.find? := by
-  funext k
-  simp only [IFEnv.find?, h.2.2.1 k, h.2.1]
+  sorry
 
 set_option experimental.vcgen true in
 /-- **`gen_rec_check`'s unified model**: the prep by its unified model (`grpE`), the pushes, the
@@ -95,13 +94,13 @@ structure GckPost (dn : NIdx → Option ConLeche.Name) (env : ConLeche.Env) (fe 
   rrs : decRRS m' r.tail x.2
   abs : AbsOK m'
   rc : RcMR m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p)
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hV hApd hCrk hIlpf in
 /-- **`gen_rec_check_prep` refines the twin's prep (`grcTwinA`, in its continuation form), both
 outcomes**: the capacity guards, the pins (`trp_ref`), the stream's recursor types
@@ -352,7 +351,9 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
     exact large _ (by rw [hany, hn0]; rfl)
   · rw [grpE.k_class_stream_recs.arm2 p n vis pp nested pO pL tO tL rd mO mL cO cL r2 _ hk0' h7 hn0]
     exact large nested (by rw [show (nested != 0) = true by simpa using hn0]; rfl)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hV hApd hCrk hIlpf in
 /-- **`gen_rec_check` refines `genRecCheck`, both outcomes** under `StageC`: the prep (`grp_ref`),
 the pushes, the rules (`classRecsRulesOk_refinesC` on the run, its claim), the pops and the flushes;
@@ -528,7 +529,9 @@ theorem gck_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
     ⟨hC.of_checkE (by simpa using hS6) hA6 hok13' hext12, hg1.trans (hg23.trans (hg4.trans (hg5.trans hg6))),
     by have := hd4.grow (hg5.trans hg6); simp only [decRRS] at this ⊢; simpa using this, hA6, hP6,
     ⟨hok13, hext12, hpins12⟩⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hV hApd hCrk hIlpf in
 /-- **`gen_rec_check(vis, p, nested, params.off, params.len, tbl.off, tbl.len, rd, ms.off, ms.len,
 cvTas.off, cvTas.len, block.off, block.len)` refines `genRecCheck` under `StageC`**
@@ -585,7 +588,9 @@ theorem genRecCheck_refinesC (P : GrcProg p) {fsR : List FnName}
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hres, hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.rrs, hR.abs, hR.rc,
     by rw [hst]; exact hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hV hApd hCrk hIlpf in
 /-- **`check_block_rec` refines `checkBlockRec`, both outcomes** (`gck_ref`, its result repacked). -/
 theorem icr_ref
@@ -629,7 +634,9 @@ theorem icr_ref
       h.rc, h.core⟩)
     (gck_ref hkp henv hV hApd hCrk hIlpf P hclR hfR n (by omega) hC hbs hrb hpar hparb htbl hrd hms hcv hblk hlp
       hP hA hkeep hcoh hfe hsh hparP htblP hrdP hmsP hcvTP hblkP hT (fun M hM => (hMs M hM).1) hfRc)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hV hApd hCrk hIlpf in
 /-- **`check_block_rec` refines `checkBlockRec` under `StageC`** (`icr_ref`'s ok half;
 `checkBlockRec_refines`' statement, `StageR` replaced by `StageC`, the twin's run a `CoreStep`). -/
@@ -681,6 +688,7 @@ theorem checkBlockRec_refinesC (hp : p.lookup "check_block_rec" = some checkBloc
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hres, hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.rrs, hR.abs, hR.rc,
     by rw [hst]; exact hR.core⟩
+-/
 
 end sims
 

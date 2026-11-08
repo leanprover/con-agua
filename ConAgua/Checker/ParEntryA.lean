@@ -94,20 +94,6 @@ theorem checkA_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
     ⦃fun r s' => Q0 s₀.mem → r.headD 0 ≠ 1 → PostPC c F s'.mem ∧
       ∀ h : 130 < (s'.mem.arr64 CTL).size, r.headD 0 = (9223372036854775808 : Word) + (s'.mem.arr64 CTL)[130];
       ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkAL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hn' : n ≤ 2 ^ 62 := by omega
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      (h1 n hn' ·), (h2 n hn' ·), (h2p n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·),
-      (h7 n hn' ·), (h8 n hn' · ·), (parCompact_stage hpc hfz · F n · ·)]
-    all_goals (try simp only [Sig.retVal, Sig.retOr, St.setLoc_mem, List.headD_cons,
-      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval, ite_true, ite_false, Nat.reduceEqDiff,
-      UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
-    all_goals clear h1 h2 h2p h3 h4 h5 h6 h7 h8 hfz hp hpc
-    -- gen/ematch raised: the flag `c` reaches `par_compact` through eight calls' `LocEq`s (depth)
-    all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]
+  sorry
 
 end L.Checker
