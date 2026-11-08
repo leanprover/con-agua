@@ -144,6 +144,7 @@ def ferK4 (n : Nat) (y : Word) : Option (List Word × Mem) → Option (List Word
 
 mutual
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `class_fe_r_go`.** -/
 def ferW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
@@ -160,6 +161,7 @@ def ferK1 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M nm c q vis : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (kq, m1) => ferK2 p n cvo cvl rcl ro rl M nm c q (callW p n "env_push" [vis, kq] m1)
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 def ferK2 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M nm c q : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -205,8 +207,10 @@ theorem ferW_cons (h1 : ¬ cvl = 0) (h2 : ¬ rcl = 0) (h : ¬ 2 < tagW (rdW (m.a
         vis (cfrRecW m (rdW (m.arr64 IW) cvo) (ferMi m ro rl M) (ferRp m ro rl M)) := by
   simp only [ferW]; rw [ite_eq_right h1, ite_eq_right h2, ite_eq_right h]
 -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ferK1_some : ferK1 p n cvo cvl rcl ro rl M nm c q vis (some (kq, m1)) =
     ferK2 p n cvo cvl rcl ro rl M nm c q (callW p n "env_push" [vis, kq] m1) := by rw [ferK1]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ferK2_some : ferK2 p n cvo cvl rcl ro rl M nm c q (some (r2, m2)) =
     ferK3 p n cvo cvl rcl ro rl M (r2.headD 0) (recW m2 3 [nm, c, q]) := by rw [ferK2]

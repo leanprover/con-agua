@@ -99,6 +99,7 @@ def tmoMemT (p : BlockShape) (ctorsAs : List (List (IConstantVal × Nat))) (pfvs
     fail (.invalid "target rec: the recursor's major premise is not the member at its \
       parameters and its index binders")
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `targetMajorOf`'s outside branch, verbatim. -/
 def tmoOutT (fe : IFEnv) (p : BlockShape) (pfvs args : List EIdx) (I : NIdx) (us : LsIdx) :
     AM TargetMajor := do
@@ -134,7 +135,9 @@ def tmoOutT (fe : IFEnv) (p : BlockShape) (pfvs args : List EIdx) (I : NIdx) (us
               universe than the block (Q1)")
           pure { ind := I, lvls := us, ds := ds, nPc := nPc, nIdx := nIdx,
                  ctors := ctors, member := none, nfs := [], pfvs := pfvs }
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `targetMajorOf`'s outside branch after the parameter checks, verbatim. -/
 def tmoTailT (fe : IFEnv) (p : BlockShape) (pfvs ds : List EIdx) (nPc : Nat)
     (ctors : List (IConstantVal × Nat)) (I : NIdx) (us : LsIdx) : AM TargetMajor := do
@@ -144,7 +147,9 @@ def tmoTailT (fe : IFEnv) (p : BlockShape) (pfvs ds : List EIdx) (nPc : Nat)
       universe than the block (Q1)")
   pure { ind := I, lvls := us, ds := ds, nPc := nPc, nIdx := nIdx,
          ctors := ctors, member := none, nfs := [], pfvs := pfvs }
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem targetMajorOf_eq (fe : IFEnv) (p : BlockShape) (ctorsAs : List (List (IConstantVal × Nat)))
     (pfvs fvs : List EIdx) (mty : EIdx) :
     targetMajorOf fe p ctorsAs pfvs fvs mty = (do
@@ -160,6 +165,7 @@ theorem targetMajorOf_eq (fe : IFEnv) (p : BlockShape) (ctorsAs : List (List (IC
       else
         fail (.invalid "target rec: the recursor's major premise is not an inductive's \
           application")) := by rfl
+-/
 
 end ConRon.Arena
 

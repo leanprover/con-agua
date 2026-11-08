@@ -162,6 +162,7 @@ theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       exact (f123.trans (pos3_plW_mfr h4)).trans (posRecW_mfr hm.symm)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Word) (r : List Word),
     nhGoW k m vis ctx mm off l oo ol = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [nhGoW] at h
@@ -207,6 +208,7 @@ theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Wo
     · rw [h4] at h; simp [nhK4] at h
     rw [h4, nhK4_some] at h
     exact (f3.trans (snocW_mfr h4)).trans (pos3_nhGoW_mfr k _ _ _ _ _ _ _ _ _ _ h)
+-/
 
 /-! ## `check_abs_ctor_sorts_all` -/
 

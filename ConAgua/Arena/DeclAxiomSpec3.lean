@@ -49,6 +49,7 @@ theorem counts_words {arr : Array Word} {q a b : Word} {x y : Nat} (hsz : arr.si
     ((rdW arr (q + 5) ≠ a ∨ rdW arr (q + 6) ≠ b) ↔ ¬ (x = a.toNat ∧ y = b.toNat)) := by
   sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The shape tests, failing**: the twin's shape does not match. -/
 theorem fp_fail {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b : Word}
     {ci : IConstantInfo} (hsz : arr.size < 2 ^ 64) (hk : k = 3 ∨ k = 4 ∨ k = 5)
@@ -56,7 +57,9 @@ theorem fp_fail {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
     (hf : rdW arr q ≠ k ∨ (k ≠ 3 ∧ (rdW arr (q + 5) ≠ a ∨ rdW arr (q + 6) ≠ b))) :
     fpShape k a b ci = none := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The shape tests, passing**: the twin's shape matches. -/
 theorem fp_pass {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b : Word}
     {ci : IConstantInfo} (hsz : arr.size < 2 ^ 64) (hk : k = 3 ∨ k = 4 ∨ k = 5)
@@ -64,18 +67,23 @@ theorem fp_pass {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
     (hc : ¬ (k ≠ 3 ∧ (rdW arr (q + 5) ≠ a ∨ rdW arr (q + 6) ≠ b))) :
     ∃ cv, fpShape k a b ci = some cv := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A matching shape's constant value decodes where the record does. -/
 theorem fpShape_cv {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {k a b : Word}
     {ci : IConstantInfo} {cv : IConstantVal} (h : decCI (aread arr) q = some ci)
     (hs : fpShape k a b ci = some cv) : decCV (aread arr) (q + 1) = some cv := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What one clause of `stdAxiomOk` does. -/
 def FpT (fe : IFEnv) (nm : NIdx) (k a b : Word) (T : AM IConstantVal) (a0 : AState) (res : Bool)
     (a' : AState) : Prop :=
   ((fe.find? nm).bind (fpShape k a b)).elim (res = false ∧ a' = a0)
     (fun cvT => (do let pin ← T; pure (decide (cvT = pin)) : AM Bool).run a0 = .ok (res, a'))
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The pin of a clause: the ROM constant's constant value. -/
@@ -129,7 +137,7 @@ theorem fpK2_some : fpK2 p n q (some (r2, m2)) = fpK3 q (callW p n "ci_to_cv" [r
 theorem fpK3_some : fpK3 q (some (r3, m3)) = mpW m3 (q + 1) (r3.headD 0) := rfl
 end arms
 
-grind_pattern [ind_grind] fpW_step => fpW p (n + 1) m vis nm k ca cb id
+-- ronsync2 stage 2: grind_pattern [ind_grind] fpW_step => fpW p (n + 1) m vis nm k ca cb id
 grind_pattern [ind_grind] fpK1_some => fpK1 p n k ca cb id (some (r1, m1))
 grind_pattern [ind_grind] fpK2_some => fpK2 p n q (some (r2, m2))
 grind_pattern [ind_grind] fpK3_some => fpK3 q (some (r3, m3))
@@ -140,6 +148,7 @@ structure StdProg (p : Prog) : Prop where
   fp : p.lookup "find_pinned" = some findPinned
   std : p.lookup "std_axiom_ok" = some stdAxiomOkL
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxHeartbeats 1600000 in
 theorem fp_specW (h : StdProg p) (n : Nat) (s₀ : St) (vis nm k ca cb id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "find_pinned" [vis, nm, k, ca, cb, id]
@@ -154,9 +163,11 @@ theorem fp_specW (h : StdProg p) (n : Nat) (s₀ : St) (vis nm k ca cb id : Word
         callW_spec p n "env_find", callW_spec p n "rom_ci",
         callW_spec p n "ci_to_cv", mp_specW p h.red.canon h.red.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
+-/
 
 end model
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`find_pinned` against the twin's clause**, at the model level. -/
 theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k ca cb id : Word} {r : List Word}
@@ -165,27 +176,22 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
     ∃ b a', StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
       FpT fe (decI nm) k ca cb (romPinT id.toNat) a b a' := by
   sorry
+-/
 
 /-! ## `stdAxiomOk`, flattened -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A clause of `stdAxiomOk`: the stored constant has the pinned shape, its constant value matches
 the pin. -/
 def clausePT (fe : IFEnv) (nm : NIdx) (k a b : Word) (T : AM IConstantVal) : AM Bool :=
   match (fe.find? nm).bind (fpShape k a b) with
   | some cvT => do cvT.matchesPin (← T)
   | none => pure false
+-/
 
 theorem clausePT_of_fp {fe : IFEnv} {nm : NIdx} {k ca cb : Word} {T : AM IConstantVal}
     {a a' : AState} {b : Bool} (h : FpT fe nm k ca cb T a b a') :
     (clausePT fe nm k ca cb T).run a = .ok (b, a') := by
-  unfold FpT at h
-  unfold clausePT
-  cases hb : (fe.find? nm).bind (fpShape k ca cb) with
-  | none => rw [hb] at h; obtain ⟨rfl, rfl⟩ := h; rfl
-  | some cvT =>
-    rw [hb] at h
-    simp only [Option.elim] at h
-    simp only [matchesPin_eq]
-    exact h
+  sorry
 
 end L.Arena

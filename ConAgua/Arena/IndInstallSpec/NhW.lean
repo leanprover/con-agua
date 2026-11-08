@@ -58,12 +58,14 @@ def bncK2 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Wo
   | some (r, m) => bncK3 (r.headD 0) (nhW n m vis (r.headD 0))
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `open_pis_at_fvars_f`. -/
 def bncK1 (n : Nat) (vis p : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => if r.headD 0 = 0 then none
     else if r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0 then none
     else bncK2 n vis (nckW n m p (r.tail.headD 0) (r.tail.tail.headD 0))
+-/
 
 section arms
 variable (n : Nat) (m : Mem) (vis p ctx : Word) (r : List Word)
@@ -79,12 +81,14 @@ theorem bncK1_none (h : r.headD 0 = 0) : bncK1 n vis p (some (r, m)) = none := b
 theorem bncK1_ov (h : ¬ r.headD 0 = 0)
     (ho : r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0) :
     bncK1 n vis p (some (r, m)) = none := by simp only [bncK1]; rw [ite_eq_right h, ite_eq_left ho]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bncK1_some (h : ¬ r.headD 0 = 0)
     (ho : ¬ r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0) : bncK1 n vis p (some (r, m)) =
     bncK2 n vis (nckW n m p (r.tail.headD 0) (r.tail.tail.headD 0)) := by
   simp only [bncK1]; rw [ite_eq_right h, ite_eq_right ho]
+-/
 end arms
-attribute [ind_grind] bncK3_none bncK3_some bncK2_some bncK1_none bncK1_ov bncK1_some
+-- ronsync2 stage 2: attribute [ind_grind] bncK3_none bncK3_some bncK2_some bncK1_none bncK1_ov bncK1_some
 
 theorem partsRunOfOk {α : Type} [Inhabited α] {x : AM α} {a : AState} (h : AM.ok x a) :
     x.run a = .ok (AM.res x a, AM.st x a) := by

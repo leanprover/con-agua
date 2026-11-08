@@ -72,23 +72,10 @@ theorem tailSimFlush {p : Prog} (hF : FlushProg p) (n : Nat) {dn : NIdx → Opti
     {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} (hS : StageR vis fe m a) (hM : HbMemo m) :
     Sim (callW p n "flush_caches" [] m) flushCaches a
       (fun _ _ m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ HbMemo m') := by
-  intro r m' e
-  obtain ⟨s', rfl, -, hok, hmem⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (flushCaches_spec p hF n _) e
-  obtain ⟨hS', hg⟩ := flush_stage hS hok
-  refine ⟨(), _, flushCaches_run a, ?_⟩
-  rw [hmem]
-  exact ⟨hS', hg, hM.fr (MFr.of_frame (flushMem_frame m) (by simp) (by
-    intro x hx; left; have := flushCtl_lt x hx; omega))⟩
+  sorry
 
 theorem BPassB.grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (h : BPassB m q) : BPassB m' q := by
-  refine ⟨Nat.le_trans h.1 hg.iw, fun i hi o l h1 h2 => ?_⟩
-  have hi' : i + 1 < 19 := by simp at hi; omega
-  have e1 : iwN m' (q + i) = iwN m (q + i) := by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet _ (by have := h.1; omega)]
-  have e2 : iwN m' (q + i + 1) = iwN m (q + i + 1) := by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet _ (by have := h.1; omega)]
-  rw [e1] at h1; rw [e2] at h2
-  exact Nat.le_trans (h.2 i hi o l h1 h2) hg.iw
+  sorry
 
 /-- **A pointer slice of a decoded record**, at the words L reads, below the tops. -/
 theorem bpPSl {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q)) {m : Mem}

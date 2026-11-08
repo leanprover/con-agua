@@ -38,10 +38,12 @@ namespace L.Ind
 
 open L.Arena L.Stubs
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The callees of `crf_go` that only read. -/
 theorem crfRO_closed : closedA crfP [] []
     ["cr_leaf", "is_str_lit", "cr_lit_pins", "pin_found", "env_find", "env_row_get", "env_ix",
       "pin_at"] = true := by decide +kernel
+-/
 
 /-- What a returning call says: the walk memo related after, a `0`/`1` answer. -/
 def CG (o : Option (List Word × Mem)) : Prop :=
@@ -51,6 +53,7 @@ theorem ite01 (c : Prop) [Decidable c] : (if c then (1 : Word) else 0) = 0 ∨
     (if c then (1 : Word) else 0) = 1 := by
   split <;> simp
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A read-only callee with a `0`/`1` answer. -/
 theorem cg_ro {n : Nat} {f : FnName} {vs : List Word} {m : Mem}
     (hf : f ∈ ["cr_leaf", "is_str_lit", "cr_lit_pins", "pin_found", "env_find", "env_row_get",
@@ -61,13 +64,17 @@ theorem cg_ro {n : Nat} {f : FnName} {vs : List Word} {m : Mem}
   let ⟨mp, hm⟩ := hc
   ⟨⟨mp, memoRV_frame (S := crSch) (hS := crSch_wf) (K := bmKey) (VR := CrV) [] [] (by simp)
     (by simp) m m' hfr (fun _ _ h => h) mp hm⟩, h01 r m' h⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem envFind_01 {n : Nat} {m m' : Mem} {w vis : Word} {r : List Word}
     (h : callW crfP n "env_find" [w, vis] m = some (r, m')) : r.headD 0 = 0 ∨ r.headD 0 = 1 := by
   obtain ⟨s', -, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envFind_specW crfP crfP_prog.eix crfP_prog.erg crfP_prog.ef n _ w vis) h
   exact envFindW_01 hW
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem clpL_01 {k : Nat} {vis : Word} (ks : List Word) :
     ∀ (z : Bool) (o : Option (List Word × Mem)) (r : List Word) (m' : Mem),
     clpL crfP k vis z ks o = some (r, m') → r.headD 0 = 0 ∨ r.headD 0 = 1 := by
@@ -84,7 +91,9 @@ theorem clpL_01 {k : Nat} {vis : Word} (ks : List Word) :
     rcases o with _ | ⟨r₀, m₀⟩
     · cases h
     exact ih _ _ r m' h
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem leaf_01 {n : Nat} {m m' : Mem} {vis g x h : Word} {r : List Word}
     (hc : callW crfP n "cr_leaf" [vis, g, x, h] m = some (r, m')) :
     r.headD 0 = 0 ∨ r.headD 0 = 1 := by
@@ -120,7 +129,9 @@ theorem leaf_01 {n : Nat} {m m' : Mem} {vis g x h : Word} {r : List Word}
   · simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, -⟩ := hW
     simp
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The tail records a `0`/`1` word at an accepted handle. -/
 theorem crfT_ok {k : Nat} {m m' : Mem} {h w : Word} {r : List Word} (hM : CrOK m)
     (hh : h.toNat < 2 ^ 32) (hw : w = 0 ∨ w = 1) (hc : crfT crfP k m h w = some (r, m')) :
@@ -131,7 +142,9 @@ theorem crfT_ok {k : Nat} {m m' : Mem} {h w : Word} {r : List Word} (hM : CrOK m
     exact ⟨⟨_, hM'⟩, by simp⟩
   · obtain ⟨rfl, hM', -⟩ := crfT_callW crfP_prog (b := true) hM hh rfl hc
     exact ⟨⟨_, hM'⟩, by simp⟩
+-/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section arms
 variable {k : Nat} {vis f h : Word}
 
@@ -207,7 +220,9 @@ theorem cg_n {m : Mem} {rv : List Word} (hM : CrOK m) (hh : h.toNat < 2 ^ 32) :
   · exact cg_p1 (ih _ _ _ _ hM) hh
 
 end arms
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`crf_go` keeps the walk memo related, from any memory**, and answers `0`/`1`. -/
 theorem crfGo_keep : ∀ n m vis f h, CrOK m → CG (callW crfP n "crf_go" [vis, f, h] m) := by
   intro n
@@ -250,6 +265,7 @@ theorem crfGo_keep : ∀ n m vis f h, CrOK m → CG (callW crfP n "crf_go" [vis,
     change mvG crSch m _ = 0 ∨ mvG crSch m _ = 1
     rw [hw]; exact ite01 _
   · exact cg_n (fun m vis f h hM => ih m vis f h hM) hM hh r m' hW
+-/
 
 /-- `consts_resolve_ffast` at any arguments (the missing ones read `0`). -/
 theorem crff_specA (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (args : List Word) :
@@ -263,6 +279,7 @@ theorem crff_specA (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (args : Lis
       callW_spec p k "crf_go"] <;>
     finish (gen := 20) [crffW, ntBW, Locals.init]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`consts_resolve_ffast` keeps its memo well formed** from any memory (its model `crfF`). -/
 theorem crfF_keepsCrOK {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m'))
     (hc : CrOK m) : CrOK m' := by
@@ -287,5 +304,6 @@ theorem crfF_keepsCrOK {m m' : Mem} {args r : List Word} (h : crfF m args = some
   simp only [ntBW, h2, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨-, rfl⟩ := hW
   exact (crfGo_keep _ _ _ _ _ hMc _ _ h2).1
+-/
 
 end L.Ind

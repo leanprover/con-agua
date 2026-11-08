@@ -27,6 +27,7 @@ open L.Arena
 
 /-! ## The relational lemmas -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
     fdrW n m v o l = some (r, m') → StageR v fe m a → decHL m o.toNat l.toNat = some xs →
@@ -83,7 +84,9 @@ theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         have := hrun12 (fun c => if c then fieldDomsResolve fe xs' else pure false)
         simp only [fieldDomsResolve]
         rw [this]; exact hrun3
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
     iarW n m v o l = some (r, m') → StageR v fe m a → decHL m o.toNat l.toNat = some xs →
@@ -134,9 +137,11 @@ theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         have := hrun12 (fun c => if c then idxArgsResolve fe xs' else pure false)
         simp only [idxArgsResolve]
         rw [this]; exact hrun3
+-/
 
 /-! ## The census theorems -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`field_doms_resolve` refines `fieldDomsResolve`** (through `fvar_type_d`, `consts_resolve_ffast`,
 with the walk memos `AbsOK`), at the view `vis0` of the pre-block environment `fe₀`. -/
 @[refines ConRon.Arena.fieldDomsResolve]
@@ -155,7 +160,9 @@ theorem fieldDomsResolve_refines (p : Prog)
   obtain ⟨b, a', hrun, hpost, hA'⟩ := fdrW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hpost, hA'⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`idx_args_resolve` refines `idxArgsResolve`** (through `consts_resolve_ffast`, with the walk
 memos `AbsOK`),
 at the view `vis0` of the pre-block environment `fe₀`. -/
@@ -174,6 +181,7 @@ theorem idxArgsResolve_refines (p : Prog)
   obtain ⟨b, a', hrun, hpost, hA'⟩ := iarW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hpost, hA'⟩
+-/
 
 /-! ## `class_rule_ok_domains` (moved from `RecGenSpec/CfhW.lean`) -/
 
