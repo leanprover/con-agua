@@ -101,9 +101,7 @@ theorem hslice?_bound_fsz {k : IdxKind} (a : Array Word) : ∀ (n o : Nat) (l : 
 /-- A decoded `EREC` name slice is related to the names' readbacks (`NmsR`). -/
 theorem nmsR_of_hslice (m : Mem) (ns : NStore) : ∀ (k : Nat) (lps : List NIdx) (ks : List Name)
     (o n : Word), n.toNat = k → hslice? (erecP m) o.toNat k = some lps →
-    o.toNat + k < 2 ^ 64 → lps.mapM (denoteN ns) = some ks → NmsR (nameN ns) m EREC o n ks
-  | 0, lps, ks, o, n, hn, hs, _, hd => by
-    have : n = 0 := by
+    o.toNat + k < 2 ^ 64 → lps.mapM (denoteN ns) = some ks → NmsR (nameN ns) m EREC o n ks := by
   sorry
 
 /-- `LvsR` (`POOL`) is `LvsAR` at `POOL`. -/
