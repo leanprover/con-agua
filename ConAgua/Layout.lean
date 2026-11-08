@@ -32,7 +32,7 @@ use) and the stand-alone example programs' arrays (`L.Examples.HIST`, `L.Scan.Ut
 of the array in every layout the checker runs in; the compiler then drops the bounds check of a
 constant index below `k`. The entry stubs establish it and their proofs prove it: `ca_setup` and
 `ca_check_seq` give every array a whole slot (except `OUT`, `CTLF`, which have no minimum, and
-`HDRF`'s 132 words), and `ca_check_b` gives the owned arrays a slot and tests every frozen array's
+`HDRF`'s 136 words), and `ca_check_b` gives the owned arrays a slot and tests every frozen array's
 length in the buffer, declining below the minimum; an array that is neither frozen nor owned gets no
 memory there, so it has no minimum. The minima are the largest constant index the program uses,
 plus one (`CTL`: 256, `L.Checker.ctlMin`).

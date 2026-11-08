@@ -244,7 +244,7 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t in_len, const uint8_t *pins,
   return print_verdict(first.r);
 }
 
-int main(int argc, char **argv) {
+static int run_main(int argc, char **argv) {
   int jobs = 0;
   if (argc > 1 && strncmp(argv[1], "--jobs=", 7) == 0) {
     jobs = atoi(argv[1] + 7);
@@ -260,4 +260,15 @@ int main(int argc, char **argv) {
   advise_huge(region + ca_w0, ca_nw);
   if (jobs > 1) return run_jobs(jobs, in, in_len, pins, sizeof pins, region);
   return print_verdict(ca_start(in, in_len, pins, sizeof pins, region, ca_region_size));
+}
+
+/* Every path flushes the verdict line before exiting: a flush that fails is status 3 (the
+   verdict was not written), whatever the run's status was. */
+int main(int argc, char **argv) {
+  int st = run_main(argc, argv);
+  if (fflush(stdout) != 0 || ferror(stdout)) {
+    fprintf(stderr, "error: cannot write the verdict\n");
+    return 3;
+  }
+  return st;
 }
