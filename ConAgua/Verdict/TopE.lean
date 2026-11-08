@@ -208,6 +208,7 @@ def IndArmVerdict : Prop :=
 theorem checkerProg_uceLookupsPB (bs : List UInt8) : UceLookups (Prog.subPB bs checkerProg) := by
   prog_bundle []
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Phase A's fold from `R7`, error half** (`foldStage_checker`'s): a failing
 `install_fold_go(0, cnt, 0)` with class `≠ 0` is the twin pipeline's failure. -/
 theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (sz : TieredArray → Nat)
@@ -217,11 +218,14 @@ theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (sz : Tiered
       (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
       e.cls ≠ 0 → TwinVerdict [b] e.cls⦄ := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Entry 1's verdict claim** from the inductive arm's. -/
 theorem entry1Verdict_of_ind (hia : IndArmVerdict) : Entry1Verdict checkerProg :=
   entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE,
     fun b pb sz hin n hn s₀ cnt => foldStageE_checker hia b pb sz hin n hn s₀ cnt⟩
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **What `check_pending`'s error arms assume, at the programs phase B runs**: proved, no
@@ -240,12 +244,16 @@ theorem cpVerdict_proved : CPVerdict := fun bs dn _ _ _ _ hP pins ds fe pend =>
   checkPending_errT .verified pins dn ds _ fe pend hP rfl (cpG_proved bs hP)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The sequential driver's verdict claims** from the inductive arm's. -/
 theorem seqVerdicts_of (hia : IndArmVerdict) : SeqVerdicts checkerProg := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The threaded harness's verdict claims** from the inductive arm's. -/
 theorem threadVerdicts_of (hia : IndArmVerdict) : ThreadVerdicts := by
   sorry
+-/
 
 end L.Checker
