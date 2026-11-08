@@ -214,10 +214,12 @@ variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   (hp : p.lookup "sum_rules" = some sumRulesL) (hrrb : RrbF p)
 include ha hg hia hp hrrb
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rulesW_spec (n : Nat) (s₀ : St) (vis recName nP cO cL rO rL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "sum_rules" [vis, recName, nP, cO, cL, rO, rL]
     ⦃fun r s' => LocEq s' s₀ ∧ rulesW n s₀.mem vis nP cO cL rO rL = some (r, s'.mem); ⊤⦄ := by
   sorry
+-/
 
 end spec2
 

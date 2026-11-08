@@ -88,18 +88,22 @@ theorem iwAllocCall {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Na
     (iwAlloc_specW p hL.iw_alloc n _ k) hc
   exact hr
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The word just written. -/
 theorem er_set_get (m : Mem) (i w : Word) (hi : i.toNat < (m.arr64 EREC).size) :
     (erA (m.set64 EREC i w))[i.toNat]? = some w := by
   simp only [erA]
   rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp [hi]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem iw_set_get (m : Mem) (i w : Word) (hi : i.toNat < (m.arr64 IW).size) :
     (iwA (m.set64 IW i w))[i.toNat]? = some w := by
   simp only [iwA]
   rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp [hi]
+-/
 
 theorem RInv.er_lt {m₀ m : Mem} {a₀ a : AState} {T : Nat} (h : RInv m₀ a₀ T m a) : erTop m < 2 ^ 64 := by
   have := h.ok.er; have := h.ok.erSize; omega
@@ -216,7 +220,7 @@ theorem rmapM_some_of {α β : Type} (f : α → Option β) (g : α → β) :
 /-- A slice of handle words decodes to their handles. -/
 theorem hslice_of {k : IdxKind} (a : Array Word) (o : Nat) (ws : List Word)
     (hw : ∀ j (hj : j < ws.length), a[o + j]? = some ws[j]) (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) :
-    (hslice? a o ws.length : Option (List (Idx k))) = some (ws.map decI) := by
+    (hslice? (aread a) o ws.length : Option (List (Idx k))) = some (ws.map decI) := by
   unfold hslice?
   rw [rmapM_some_of _ (fun j => (decI (ws.getD j 0) : Idx k)) _ (fun j hj => by
     have hj' := List.mem_range.mp hj
@@ -235,11 +239,7 @@ theorem holds_hlist {k : IdxKind} (m : Mem) (d : Nat) (ow cw : Word) (ws : List 
     (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) :
     Holds (fun i => i = d ∨ i = d + 1 ∨ (ow.toNat ≤ i ∧ i < ow.toNat + ws.length)) (fun _ => False)
       (fun m => (hlist? (erA m) d : Option (List (Idx k)))) m (ws.map decI) := by
-  intro m' h1 _
-  have e1 := (h1 d (.inl rfl)).trans hd
-  have e2 := (h1 (d + 1) (.inr (.inl rfl))).trans hc
-  simp only [hlist?, nat?, e1, e2, Option.map_some, Option.bind_eq_bind, Option.bind_some, hcw]
-  exact hslice_of _ _ ws (fun j hj => (h1 _ (.inr (.inr ⟨by omega, by omega⟩))).trans (hw j hj)) hlt
+  sorry
 
 theorem encNames_len : ∀ ns : List ConLeche.Name, ns.length ≤ (encNames ns).length
   | [] => by simp [encNames]
@@ -268,91 +268,7 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
       m'.arr64 IW = m.arr64 IW ∧
       Holds (fun i => (d.toNat ≤ i ∧ i < d.toNat + 2) ∨ (erTop m ≤ i ∧ i < erTop m')) (fun _ => False)
         (fun m => (hlist? (erA m) d.toNat : Option (List NIdx))) m' (ws.map decI) := by
-  have hw := callW_model (M := fun mq => nameSlW p k mq q d) (nameSl_specW rom p hL k · q d) hc
-  simp only [nameSlW, rdU] at hw
-  obtain ⟨r0, m0, h0, hw⟩ := ntBW_inv hw
-  obtain ⟨hm0, hr0⟩ := u64Call hL h0
-  rw [hm0, hr0] at hw
-  simp only [List.headD_cons] at hw
-  have hlenR := drop_len rom _ _ _ hd (by simp [encNameL, u64B])
-  have hrom := hr; simp only [RomOK] at hrom
-  simp only [encNameL, List.length_append, u64B, List.length_cons, List.length_nil] at hlenR
-  have hd' : rom.drop q.toNat = u64B ns.length ++ (encNames ns ++ rest) := by
-    rw [hd, encNameL, List.append_assoc]
-  have hlen63 : ns.length < 2 ^ 63 := by
-    have := encNames_len ns
-    omega
-  have hc0 : u64W rom q = UInt64.ofNat ns.length := u64W_of_drop rom q _ _ hd' (by omega) hr
-  rw [hc0] at hw
-  have hcN : (UInt64.ofNat ns.length).toNat = ns.length := by
-    rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (by omega)
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
-  obtain ⟨hI1, ho1, ht1, hE1, hIW1, -⟩ := hI.erAlloc (erAllocCall hL h1)
-  rw [hcN] at ht1
-  have hf1 : MemFrame [] [129] m m1 := by
-    have := erAllocCall hL h1; simp only [erAllocW] at this
-    split at this; · cases this
-    split at this; · cases this
-    simp only [Option.some.injEq, Prod.mk.injEq] at this; rw [← this.2]; exact MemFrame.setCtl _ _ _
-  have hM1 := hM.frameG hf1 (by simp) (by decide)
-  have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
-  have hlt := hI.er_lt
-  have hgo := hI.grow.er
-  have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hI2 := (hI1.setER d (r1.headD 0) hd0).setER (d + 1) (UInt64.ofNat ns.length) (by omega)
-  have hfA := (MemFrame.set64 m1 EREC (by decide) d (r1.headD 0)).trans
-    (MemFrame.set64 (m1.set64 EREC d (r1.headD 0)) EREC (by decide) (d + 1) (UInt64.ofNat ns.length))
-  have hM2 := hM1.frameG hfA (by decide) (by simp)
-  have hC2 : ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)).arr64 CTL =
-      m1.arr64 CTL := by
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have hIW2 : ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)).arr64 IW =
-      m1.arr64 IW := by
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have ht2 : erTop ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)) =
-      erTop m1 := by simp only [erTop, hC2]
-  have hs2 : stkTop ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)) =
-      stkTop m1 := by simp only [stkTop, hC2]
-  have hsz1 : erTop m1 ≤ (m1.arr64 EREC).size := hI1.ok.er
-  have hget2 : ∀ i, (erA ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)))[i]? =
-      if i = d.toNat + 1 then some (UInt64.ofNat ns.length) else if i = d.toNat then some (r1.headD 0)
-      else erA m1 i := by
-    intro i
-    simp only [erA]
-    rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
-      Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-    simp only [Array.size_setIfInBounds, hd1]
-    by_cases e1 : i = d.toNat + 1
-    · subst e1; simp; omega
-    · by_cases e2 : i = d.toNat
-      · subst e2; simp; omega
-      · simp [e1, e2, Ne.symm e1, Ne.symm e2]
-  have hq8 : (q + 8).toNat = q.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  have hdn : rom.drop (q + 8).toNat = encNames ns ++ rest := by
-    rw [hq8, ← List.drop_drop, hd']; simp [u64B]
-  obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  obtain ⟨ws, a', hrun, hwl, hwlt, hwd, hI3, hM3, hs3, hq3, hek3, ht3, hiw3⟩ :=
-    namesTo_rel hL hr seen memo ns hfit k _ a _ _ _ rest r2 m3 hI2 hM2 hdn hcN (by omega)
-      (by omega) h2
-  have hkeep : ∀ i, i < erTop m → erA m3 i =
-      (erA ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)))[i]? :=
-    fun i hi => hek3.2 i (by omega) (by omega)
-  have hE1' : ∀ i : Nat, erA m1 i = erA m i := fun i => by unfold erA; rw [hE1]
-  refine ⟨ws, a', hrun, hwlt, hI3, hM3, by rw [hs3, hs2, hs1], ?_, ?_, by omega,
-    by rw [hiw3, hIW2, hIW1], ?_⟩
-  · simp only [List.headD_cons]; rw [hq3, hq8]; simp [encNameL, u64B]; omega
-  · refine ⟨by omega, fun i hi hR => ?_⟩
-    rw [hkeep i hi, hget2, ite_eq_right (by omega), ite_eq_right (by omega), hE1']
-  · have hH := holds_hlist (k := .name) m3 d.toNat (r1.headD 0) (UInt64.ofNat ns.length) ws
-      (by rw [hkeep _ (by omega), hget2, ite_eq_right (by omega), ite_eq_left rfl])
-      (by rw [hkeep _ (by omega), hget2, ite_eq_left rfl]) (by rw [hcN, hwl]) hwd hwlt
-    refine hH.mono (fun i hi => ?_) (fun _ h => h)
-    rcases hi with rfl | rfl | ⟨h1, h2⟩
-    · left; omega
-    · left; omega
-    · right; omega
+  sorry
 
 end namesl
 

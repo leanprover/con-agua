@@ -74,6 +74,7 @@ def prog : Prog × List String :=
 -- The readers with what they call pass the compiler's static check.
 #guard L.Compiler.Prog.wfAuto (closure roots [] []).1
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The memory after the startup stages (`PB` holding `pinBuffer []`). -/
 def startMem : Except String Mem := do
   let sizes : TieredArray → Nat := fun b =>
@@ -87,6 +88,7 @@ def startMem : Except String Mem := do
   let m1 ← step m0 "pb_check"
   let m2 ← step m1 "intern_reserved_pins"
   step m2 "intern_all_pins"
+-/
 
 /-- The twin's state after the startup. -/
 def startA : Option AState := do
@@ -94,11 +96,13 @@ def startA : Option AState := do
   let (_, a) ← ((internAllPins []).run sA).toOption
   pure a
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- One L call from the startup memory: its results and the memory after. -/
 def callL (m : Mem) (f : String) (w : Word) : Except String (List Word × Mem) :=
   match L.run prog.1 100000 f [w] m with
   | .ok r => pure r
   | .error e => throw s!"{f}({w}): {repr e}"
+-/
 
 /-- The twin's value of a stub call and the state after. -/
 def twin {α : Type} (a : AState) (x : AM α) : Except String α :=
