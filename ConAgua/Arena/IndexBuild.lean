@@ -388,6 +388,84 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
   obtain ⟨hpx, dx, hdx⟩ := hR.recs x hx
   exact ⟨hpx, dx, ConRon.Bridge.denoteDecl_pext (ConRon.Bridge.PExt.of_ext (hx3.trans hx5)) hpx hdx⟩
 
+/-- **`idx_add(k)` refines `IStreamIndex.add` of record `k`** (`idxAdd_ref` as a triple). -/
+@[refines ConRon.Arena.IStreamIndex.add]
+theorem idxAdd_refines {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {c r : Nat}
+    (k : Word) (d : IDeclaration) (n : Nat) (s₀ : St) (a : AState) (I : IStreamIndex)
+    (hR : BuildR dn ds c r s₀.mem a I) (hk : I.firsts.size = k.toNat)
+    (hd : ds[k.toNat]? = some d) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_add" [k]
+    ⦃fun _ s' => LocEq s' s₀ ∧ ∃ I' a', (I.add d).run a = .ok (I', a') ∧
+      BuildR dn ds c r s'.mem a' I' ∧ I'.firsts.size = k.toNat + 1; ⊤⦄ :=
+  triple_post (callW_spec p n "idx_add" [k] s₀) fun _ _ ⟨hl, hc⟩ => ⟨hl, idxAdd_ref hP hR hk hd hc⟩
+
+/-- `build_index`'s loop from record `k`: `buildIndexGo` over the records from `k` on. -/
+theorem buildIndexLoop_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {c r : Nat}
+    {cnt : Word} (hcnt : cnt.toNat = ds.size) :
+    ∀ (n : Nat) (m m' : Mem) (k : Word) (a : AState) (I : IStreamIndex),
+      BuildR dn ds c r m a I → I.firsts.size = k.toNat → k.toNat ≤ ds.size →
+      buildIndexW.loop1 p n m cnt k = some m' →
+      ∃ I' a', buildIndexGo I k.toNat (ds.toList.drop k.toNat) a = .ok (.ok I', a') ∧
+        BuildR dn ds c r m' a' I' ∧ I'.firsts.size = ds.size := by
+  intro n
+  induction n with
+  | zero => intro m m' k a I _ _ _ h; rw [buildIndexW.loop1.eq_1] at h; cases h
+  | succ n ih =>
+    intro m m' k a I hR hk hle h
+    by_cases g : k < cnt
+    · rw [buildIndexW.loop1.arm1 _ _ _ _ _ g] at h
+      have hlt : k.toNat < ds.size := by rw [← hcnt]; exact g
+      cases h1 : callW p n "idx_add" [k] m with
+      | none => rw [h1] at h; simp [ntBW] at h
+      | some q =>
+      obtain ⟨ρ, m₁⟩ := q
+      rw [h1, bW_some] at h
+      have hd : ds[k.toNat]? = some ds[k.toNat] := Array.getElem?_eq_getElem hlt
+      obtain ⟨I₁, a₁, hrun, hR₁, hk₁⟩ := idxAdd_ref hP hR hk hd h1
+      have e1 : (k + 1).toNat = k.toNat + 1 := by
+        rw [UInt64.toNat_add]; have := UInt64.toNat_lt cnt; simp; omega
+      obtain ⟨I', a', hgo, hR', hk'⟩ := ih m₁ m' (k + 1) a₁ I₁ hR₁ (by rw [e1]; exact hk₁)
+        (by rw [e1]; omega) h
+      refine ⟨I', a', ?_, hR', hk'⟩
+      rw [e1] at hgo
+      rw [List.drop_eq_getElem_cons (by simpa using hlt)]
+      have hrun' : I.add ds[k.toNat] a = .ok (I₁, a₁) := hrun
+      simp only [Array.getElem_toList]
+      show (match I.add ds[k.toNat] a with
+        | .ok (I', s') => buildIndexGo I' (k.toNat + 1) (ds.toList.drop (k.toNat + 1)) s'
+        | .error e => .ok (.error (e, k.toNat), a)) = _
+      rw [hrun']; exact hgo
+    · rw [buildIndexW.loop1.arm2 _ _ _ _ _ g] at h
+      cases h
+      have hge : ds.size ≤ k.toNat := by rw [← hcnt]; exact Nat.le_of_not_lt g
+      have e : k.toNat = ds.size := by omega
+      refine ⟨I, a, ?_, hR, by rw [hk, e]⟩
+      rw [e, List.drop_of_length_le (by simp)]
+      rfl
+
+/-- **`build_index(cnt)` refines `buildIndex`** over the front's records (`cnt` of them), from the
+builder's relation at the empty index: the twin's index is built, and the relation holds at it. -/
+@[refines ConRon.Arena.buildIndexGo ConRon.Arena.buildIndex]
+theorem buildIndex_refines {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {c r : Nat}
+    (cnt : Word) (hcnt : cnt.toNat = ds.size) (n : Nat) (s₀ : St) (a : AState)
+    (hR : BuildR dn ds c r s₀.mem a {}) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "build_index" [cnt]
+    ⦃fun _ s' => LocEq s' s₀ ∧ ∃ I a', buildIndex ds a = .ok (.ok I, a') ∧
+      BuildR dn ds c r s'.mem a' I ∧ I.firsts.size = ds.size; ⊤⦄ := by
+  refine triple_post (callW_spec p n "build_index" [cnt] s₀) fun _ s' ⟨hl, hc⟩ => ⟨hl, ?_⟩
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
+  have hw := callW_model (M := fun mm => buildIndexW p (n + 1) mm cnt)
+    (fun s₀ => buildIndex_specW p hP.build_index (n + 1) s₀ cnt) hc
+  simp only [buildIndexW] at hw
+  cases h : buildIndexW.loop1 p (n + 1) s₀.mem cnt 0 with
+  | none => rw [h] at hw; simp [buildIndexW.k_loop1] at hw
+  | some m₁ =>
+  rw [h, buildIndexW.k_loop1.arm1] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨-, rfl⟩ := hw
+  exact buildIndexLoop_ref hP hcnt (n + 1) s₀.mem _ 0 a {} hR rfl (Nat.zero_le _) h
+
 end idx
 
 end L.Arena
