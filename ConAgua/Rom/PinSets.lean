@@ -252,13 +252,13 @@ theorem flag_of_scratch {mem mem' : Mem} {a a' : AState} (hA : ArenaR mem a) (hA
   rw [hsc, ← h1, hfl] at h2
   simpa using h2
 
-/-- After an expression: the decoder's invariant, sizes and top as before. -/
 /-- The scratch flag word is off when the twin's scratch tier is. -/
 theorem flag_of_off {mem : Mem} {a : AState} (hA : ArenaR mem a) (h : a.store.scratchOn = false) :
     rdW (mem.arr64 CTL) 1 = 0 := by
   have h1 := ConsR.flag hA.sort
   rw [h] at h1; simpa using h1
 
+/-- After an expression: the decoder's invariant, sizes and top as before. -/
 theorem SInv.of_dec {mem mem' : Mem} {a a' : AState} {seen : List ConLeche.Expr} {m : EMemo}
     (inv : SInv mem a) (hd : DecInv mem' a' seen m) (hf : MemFrame PinsA ExprC mem mem')
     (hsc : a'.store.scratchOn = a.store.scratchOn) : SInv mem' a' :=
