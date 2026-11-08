@@ -13,7 +13,7 @@ public import ConAgua.Front.StateDR
 `declCvW_refines`: if the record `apply_decl` writes (`declCvW`, after `decl_kind`'s `(k, q)`)
 succeeds on fields `f` that con-leche's scanner relates to the declaration record `d` (`DeclR`,
 `DeclIface.lean`), then con-ron's
-`applyLine st (.decl d)` is `pure (.inl st')` (no interning, no verdict), the memory after is
+`applyRecord st (.decl d)` is `pure (.inl st')` (no interning, no verdict), the memory after is
 related to the same arena state by `ArenaD` and to `st'` by `StateDR`: the record is appended to
 `DECL`, its universe parameter names to `DLP` (`DeclsF`, `StateDR.lean`). `apply_decl`'s
 refinement for both outcomes (`applyDecl_ref`) is in `ApplyDLineRef.lean`.
@@ -406,13 +406,13 @@ theorem DeclKindOk.k5 {pl hk hn flag k q : Word} (h : DeclKindOk pl hk hn flag k
 
 /-- **The record `apply_decl` writes refines con-ron's declaration step**: on fields `f` that
 con-leche's scanner relates to the declaration record `d` (`DeclR`), with `decl_kind`'s `(k, q)`,
-a successful `declCvW` is `applyLine st (.decl d) = pure (.inl st')` (no interning, no verdict),
+a successful `declCvW` is `applyRecord st (.decl d) = pure (.inl st')` (no interning, no verdict),
 with `ArenaD` of the same arena state and `StateDR m' st'` (the ok half of `applyDecl_ref`). -/
 theorem declCvW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD)
     (hA : ArenaD m a₀) (hD : StateDR m st) (f : DFld) (d : DeclRec) (hE : DeclR b d f) {k q : Word}
     (hks : DeclKindOk f.pl f.hk f.hn f.flag k q)
     (h : declCvW b.data m k q f.name f.lps f.type f.value f.hn = some m') :
-    ∃ st', applyLine st (.decl d) = pure (.inl st') ∧ ArenaD m' a₀ ∧ StateDR m' st' := by
+    ∃ st', applyRecord st (.decl d) = pure (.inl st') ∧ ArenaD m' a₀ ∧ StateDR m' st' := by
   sorry
 
 end L.Front

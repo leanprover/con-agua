@@ -27,20 +27,20 @@ section pre
 variable (D : Array IDeclaration)
 
 theorem applyLine_pre_ok {st : StateD} {r : LineRec} {a : AState} :
-    AM.ok (applyLine (st.pre D) r) a ↔ AM.ok (applyLine st r) a := by
+    AM.ok (applyLine (st.pre D) r) a ↔ AM.ok (applyRecord st r) a := by
   simp only [AM.ok, applyLine_pre_run]
-  cases (applyLine st r).run a <;> rfl
+  cases (applyRecord st r).run a <;> rfl
 
 theorem applyLine_pre_st {st : StateD} {r : LineRec} {a : AState} :
-    AM.st (applyLine (st.pre D) r) a = AM.st (applyLine st r) a := by
+    AM.st (applyLine (st.pre D) r) a = AM.st (applyRecord st r) a := by
   simp only [AM.st, applyLine_pre_run]
-  cases (applyLine st r).run a <;> rfl
+  cases (applyRecord st r).run a <;> rfl
 
-theorem applyLine_pre_res {st : StateD} {r : LineRec} {a : AState} (h : AM.ok (applyLine st r) a) :
-    AM.res (applyLine (st.pre D) r) a = preL D (AM.res (applyLine st r) a) := by
+theorem applyLine_pre_res {st : StateD} {r : LineRec} {a : AState} (h : AM.ok (applyRecord st r) a) :
+    AM.res (applyLine (st.pre D) r) a = preL D (AM.res (applyRecord st r) a) := by
   simp only [AM.res, AM.ok, applyLine_pre_run] at h ⊢
   revert h
-  cases (applyLine st r).run a with
+  cases (applyRecord st r).run a with
   | error e => simp
   | ok v => intro _; rfl
 

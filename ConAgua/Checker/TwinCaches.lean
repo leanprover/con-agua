@@ -223,7 +223,7 @@ theorem keeps_installIndD (st : StateD) (tys : List ConLeche.Frontend.IndTypeRec
   intro c p; unfold installIndD pushDecl
   repeat' keeps_step [keeps_parseCVD, keeps_parseRuleD]
 
-theorem keeps_applyLine (st : StateD) (r : ConLeche.Frontend.LineRec) : Keeps (applyLine st r) := by
+theorem keeps_applyLine (st : StateD) (r : ConLeche.Frontend.LineRec) : Keeps (applyRecord st r) := by
   intro c p; unfold applyLine applyDeclD processLineCoreD pushDecl getDeclD
   repeat' keeps_step [keeps_parseExprEntryD, keeps_parseNameEntryD, keeps_parseLevelEntryD,
     keeps_parseCVD, keeps_StateD_expr, keeps_validateIndD, keeps_installIndD]

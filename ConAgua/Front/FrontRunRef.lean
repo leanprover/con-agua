@@ -50,8 +50,8 @@ l_model frontRun_specE (p : Prog) (hf : p.lookup "front_run" = some frontRun)
 (through `feedChunk`, or `applyFinalLine` for a last line without a newline). -/
 theorem finishFrom_fail (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat) (a : AState)
     (r : LineRec) (q : USize) (hi : i < b.usize) (hs : scanLineFwd b i = .ok r q) (c : Word)
-    (h : (∃ ce, (applyLine st r).run a = .error ce ∧ twinCls ce = c) ∨
-      ∃ v a', (applyLine st r).run a = .ok (.inr v, a') ∧ twinCls v.toError = c) :
+    (h : (∃ ce, (applyRecord st r).run a = .error ce ∧ twinCls ce = c) ∨
+      ∃ v a', (applyRecord st r).run a = .ok (.inr v, a') ∧ twinCls v.toError = c) :
     TwinFailsV (finishFrom st b i lineNo) a c := by
   have hi' : i < USize.ofNat b.size := hi
   by_cases hq : q = 0
@@ -81,16 +81,16 @@ theorem finishFrom_fail (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat)
 
 /-- A claim at the prefixed parse state is one at the twin's own (`applyLine_pre_run`). -/
 theorem claimR_of_pre (D : Array IDeclaration) {st : StateD} {r : LineRec} {a : AState} {e : Err}
-    (h : VerdictClaimR (applyLine (st.pre D) r) a e) : VerdictClaimR (applyLine st r) a e := by
+    (h : VerdictClaimR (applyLine (st.pre D) r) a e) : VerdictClaimR (applyRecord st r) a e := by
   intro hk
   rcases h hk with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
   · refine .inl ⟨ce, ?_, hc⟩
     rw [applyLine_pre_run] at hce
-    cases hr : (applyLine st r).run a with
+    cases hr : (applyRecord st r).run a with
     | error e' => rw [hr] at hce; cases hce; rfl
     | ok x => rw [hr] at hce; cases hce
   · rw [applyLine_pre_run] at hv
-    cases hr : (applyLine st r).run a with
+    cases hr : (applyRecord st r).run a with
     | error e' => rw [hr] at hv; cases hv
     | ok x =>
       obtain ⟨y, a''⟩ := x
@@ -122,13 +122,13 @@ theorem lineStep_ok (D : Array IDeclaration) (b : ByteArray) {m m' : Mem} {i : U
   have h3' := (applyLine_pre_ok D).mp h3
   rw [applyLine_pre_res D h3'] at h4
   rw [applyLine_pre_st D] at h5
-  cases hres : AM.res (applyLine st r') a with
+  cases hres : AM.res (applyRecord st r') a with
   | inr v => rw [hres] at h4; cases h4
   | inl st₀ =>
   rw [hres] at h4
   simp only [preL, Sum.map_inl, Sum.inl.injEq] at h4
   subst h4
-  have hInv : FrontInvP D b m' (AM.st (applyLine st r') a) st₀ :=
+  have hInv : FrontInvP D b m' (AM.st (applyRecord st r') a) st₀ :=
     ⟨hk.trans hI.1.1, h5, h6, hI.1.2.2.2.1.line h3' hres, hmo⟩
   have hrun := AM.run_of_ok _ _ h3'
   rw [hres] at hrun

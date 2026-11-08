@@ -187,9 +187,9 @@ l_model applyInd_specE (p : Prog) (hf : p.lookup "apply_ind" = some applyInd)
 theorem claimR_of_validate {st : StateD} {tys : List IndTypeRec} {cts : List IndCtorRec}
     {rcs : List IndRecRec} {a : AState} {e : Err}
     (h : VerdictClaimL (ConRon.Arena.Frontend.validateIndD st tys cts rcs) a e) :
-    VerdictClaimR (applyLine st (.decl (.ind tys cts rcs))) a e := by
+    VerdictClaimR (applyRecord st (.decl (.ind tys cts rcs))) a e := by
   intro hk
-  have hrun : (applyLine st (.decl (.ind tys cts rcs))).run a =
+  have hrun : (applyRecord st (.decl (.ind tys cts rcs))).run a =
       (processLineCoreD st (.ind tys cts rcs)).run a := rfl
   rcases h hk with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
   · refine .inl ⟨ce, ?_, hc⟩
@@ -229,7 +229,7 @@ theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups
     {tys : List IndTypeRec} {cts : List IndCtorRec} {rcs : List IndRecRec} {e : USize}
     (hscan : scanIndDecl b v = .ok (.ind tys cts rcs) e) :
     RefC (ApplyIndG p st a) (applyIndE p n m v.toUInt64) (fun x => ApplyIndPost st a tys cts rcs m x.2)
-      (VerdictClaimR (applyLine st (.decl (.ind tys cts rcs))) a) := by
+      (VerdictClaimR (applyRecord st (.decl (.ind tys cts rcs))) a) := by
   have hno := hAL.decl.expr.no_st8
   cases n with
   | zero => simp only [applyIndE, RefC_error]; exact fun _ hk => absurd Err.cls_outOfFuel hk

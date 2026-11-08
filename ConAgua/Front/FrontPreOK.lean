@@ -106,7 +106,7 @@ theorem post_installIndD (st : StateD) (tys : List IndTypeRec) (cts : List IndCt
 
 /-- **A line pushes at most one record**, a `GoodDecl` one. -/
 theorem post_applyLine (st : StateD) (r : LineRec) :
-    Post (applyLine st r) (fun x => ∀ st', x = .inl st' → PushedOne st st') := by
+    Post (applyRecord st r) (fun x => ∀ st', x = .inl st' → PushedOne st st') := by
   cases r with
   | expr i e =>
     refine Post.bind (Q := fun s => s.decls = st.decls) ?_ fun s hs =>
@@ -166,7 +166,7 @@ theorem post_applyLine (st : StateD) (r : LineRec) :
           Post.ret (by intro st' h; cases h; exact .inr hs)
 
 theorem applyLine_decls {st st' : StateD} {r : LineRec} {a a' : AState}
-    (h : (applyLine st r).run a = .ok (.inl st', a')) : PushedOne st st' :=
+    (h : (applyRecord st r).run a = .ok (.inl st', a')) : PushedOne st st' :=
   post_applyLine st r a _ a' h st' rfl
 
 theorem init_decls {a a₁ : AState} {st₀ : StateD} (h : StateD.init.run a = .ok (st₀, a₁)) :

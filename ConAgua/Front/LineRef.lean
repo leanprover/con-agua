@@ -192,7 +192,7 @@ structure FrontLineG (p : Prog) (b : ByteArray) (st : StateD) (a : AState) : Pro
 /-- **A failing line's claim**: con-leche's scan reads a record at `i` and con-ron's `applyLine`
 fails on it with the error's class, in the monad or by its record verdict. -/
 def LineClaim (b : ByteArray) (i : USize) (st : StateD) (a : AState) (e : Err) : Prop :=
-  e.cls ≠ 0 → ∃ r q, scanLineFwd b i = .ok r q ∧ VerdictClaimR (applyLine st r) a e
+  e.cls ≠ 0 → ∃ r q, scanLineFwd b i = .ok r q ∧ VerdictClaimR (applyRecord st r) a e
 
 /-- What a successful `front_line` from `m` gives: `(0, 0)`, or `(1, next)` for a line con-ron
 applies (`LineStep`); the records' table grows, the mode is kept. -/
@@ -287,8 +287,8 @@ theorem frontLine_ref {p : Prog} (hP : LineLookups p) {b : ByteArray}
     intro nx hf
     obtain ⟨r, q', hsc, hq'⟩ := scan_of_fwd b h64 hsize i hf
     obtain ⟨j, e', hjs, hloop⟩ := (scan_shape b h64 hsize i hsc s hsd).2 hlt hb
-    have done : ∀ m' st', AM.ok (applyLine st r) a → AM.res (applyLine st r) a = .inl st' →
-        ArenaD m' (AM.st (applyLine st r) a) → StateDR m' st' → DGrow m m' → ModeOK m' →
+    have done : ∀ m' st', AM.ok (applyRecord st r) a → AM.res (applyRecord st r) a = .inl st' →
+        ArenaD m' (AM.st (applyRecord st r) a) → StateDR m' st' → DGrow m m' → ModeOK m' →
         FrontLinePost b i st a m ([1, nx], m') := fun m' st' h1 h2 h3 h4 hg hmo =>
       ⟨.inr ⟨nx, rfl, r, q', st', hsc, hq', h1, h2, h3, h4⟩, hg, hmo⟩
     simp only [frontLineE.j1]

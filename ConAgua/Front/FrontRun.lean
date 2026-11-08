@@ -96,15 +96,15 @@ def TwinOK (a : AState) (st : StateD) : Prop :=
 
 /-- A line con-ron applies keeps `TwinOK`. -/
 theorem TwinOK.line {a : AState} {st : StateD} (h : TwinOK a st) {r : LineRec} {st' : StateD}
-    (h1 : AM.ok (applyLine st r) a) (h2 : AM.res (applyLine st r) a = .inl st') :
-    TwinOK (AM.st (applyLine st r) a) st' := by
+    (h1 : AM.ok (applyRecord st r) a) (h2 : AM.res (applyRecord st r) a = .inl st') :
+    TwinOK (AM.st (applyRecord st r) a) st' := by
   obtain ⟨hok, hoff, hpins, hp, sc, hrel⟩ := h
-  cases hr : (applyLine st r).run a with
+  cases hr : (applyRecord st r).run a with
   | error e => simp [AM.ok, hr] at h1
   | ok q =>
     obtain ⟨x, a'⟩ := q
     have hx : x = .inl st' := by simpa [AM.res, hr] using h2
-    have ha : AM.st (applyLine st r) a = a' := by simp [AM.st, hr]
+    have ha : AM.st (applyRecord st r) a = a' := by simp [AM.st, hr]
     rw [ha]
     subst hx
     obtain ⟨hstep, hpers, y, -, hsum⟩ := ConRon.Bridge.Frontend.applyLine_run hok hoff hpins hrel hp hr

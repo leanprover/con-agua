@@ -59,7 +59,7 @@ theorem declKind_ref (p : Prog) (m : Mem) (b : ByteArray) (st : StateD) (a : ASt
     (d : DeclRec) :
     RefC (DeclKindG b st d f) (declKindE p m f.pl f.hk f.hn f.flag)
       (fun x => x.2 = m ∧ DeclKindOk f.pl f.hk f.hn f.flag (x.1.headD 0) (x.1.tail.headD 0))
-      (VerdictClaimR (applyLine st (.decl d)) a) := by
+      (VerdictClaimR (applyRecord st (.decl d)) a) := by
   unfold declKindE
   repeat' split
   all_goals first
@@ -129,7 +129,7 @@ structure ApplyDeclG (p : Prog) (d : DeclRec) (f : DFld) : Prop where
 /-- What a successful `apply_decl` from `m` gives at `m'`: the twin's declaration step accepts (the
 state `a` unchanged) at a related state, the arena kept, the mode kept, one record appended. -/
 structure ApplyDeclPost (st : StateD) (a : AState) (d : DeclRec) (m m' : Mem) : Prop where
-  twin : ∃ st', (applyLine st (.decl d)).run a = .ok (.inl st', a) ∧ StateDR m' st'
+  twin : ∃ st', (applyRecord st (.decl d)).run a = .ok (.inl st', a) ∧ StateDR m' st'
   arena : ArenaD m' a
   mode : ModeOK m → ModeOK m'
   grow : DGrow m m'
@@ -143,7 +143,7 @@ theorem applyDecl_ref {p : Prog} (hE : DeclLookups p) {b : ByteArray} (hb : b.da
     (n : Nat) {m : Mem} {a : AState} {st : StateD} (hm : m.arr8 IN = b.data) (hA : ArenaD m a)
     (hD : StateDR m st) {f : DFld} {d : DeclRec} (hR : DeclR b d f) :
     RefC (ApplyDeclG p d f) (applyDeclE p n m f.pl f.name f.lps f.type f.value f.hk f.hn f.flag)
-      (fun x => ApplyDeclPost st a d m x.2) (VerdictClaimR (applyLine st (.decl d)) a) := by
+      (fun x => ApplyDeclPost st a d m x.2) (VerdictClaimR (applyRecord st (.decl d)) a) := by
   cases n with
   | zero => simp only [applyDeclE, RefC_error]; exact fun _ hk => absurd Err.cls_outOfFuel hk
   | succ n =>
@@ -221,7 +221,7 @@ structure ApplyDLineG (p : Prog) (b : ByteArray) (st : StateD) (a : AState) (j :
 /-- What a successful `apply_dline` from `m` gives at `m'`: con-ron's `applyLine` accepts the record
 (the state `a` unchanged) at a related state, the arena kept, the mode kept, one record appended. -/
 structure ApplyDLinePost (st : StateD) (a : AState) (r : LineRec) (m m' : Mem) : Prop where
-  twin : ∃ st', (applyLine st r).run a = .ok (.inl st', a) ∧ StateDR m' st'
+  twin : ∃ st', (applyRecord st r).run a = .ok (.inl st', a) ∧ StateDR m' st'
   arena : ArenaD m' a
   mode : ModeOK m → ModeOK m'
   grow : DGrow m m'
@@ -236,7 +236,7 @@ theorem applyDLine_ref {p : Prog} (hF : DeclFieldLookups p) (hDL : DeclLookups p
     (hm : m.arr8 IN = b.data) (hA : ArenaD m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a)
     {j : USize} {r : LineRec} {e' : USize} (hloop : scanLineLoop b j true 0 0 .absent = .ok r e') :
     RefC (ApplyDLineG p b st a j.toUInt64 r) (applyDLineE p n m j.toUInt64)
-      (fun x => ApplyDLinePost st a r m x.2) (VerdictClaimR (applyLine st r) a) := by
+      (fun x => ApplyDLinePost st a r m x.2) (VerdictClaimR (applyRecord st r) a) := by
   cases n with
   | zero => simp only [applyDLineE, RefC_error]; exact fun _ hk => absurd Err.cls_outOfFuel hk
   | succ n =>
