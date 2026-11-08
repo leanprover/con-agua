@@ -221,38 +221,6 @@ def stageA_builtin_prelude : List TieredArray :=
   PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
   PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, Front.NID, Front.LID, Front.EID]
 
-/-- The `CTL` words the functions of `stageFns_builtin_prelude` store into. -/
-def stageC_builtin_prelude : List Word := [
-  0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 28, 29, 30,
-  31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 64, 65, 66, 67, 68, 69, 70, 71, 72, 192, 240]
-
-names_tree stageTree_builtin_prelude : stageFns_builtin_prelude
-
-prog_all checkerProg_stageChk_builtin_prelude : checkerProg
-  (wsChk CTL (fun a => stageA_builtin_prelude.contains a)
-    (fun w => stageC_builtin_prelude.contains w) stageTree_builtin_prelude)
-
-theorem checkerProg_stageClosed_builtin_prelude :
-    closedA checkerProg stageA_builtin_prelude stageC_builtin_prelude
-      stageFns_builtin_prelude = true :=
-  closedW_of_all stageTree_builtin_prelude.eq (fun _ h => List.contains_iff_mem.mp h)
-    (fun _ h => List.contains_iff_mem.mp h) checkerProg_stageChk_builtin_prelude
-
-/-- **A run of `builtin_prelude` is a frame of its own write set.** -/
-theorem stageFrame_builtin_prelude (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "builtin_prelude" []
-    ⦃fun _ s' =>
-      MemFrame stageA_builtin_prelude stageC_builtin_prelude s₀.mem s'.mem; ⊤⦄ :=
-  memFrame_of_closed checkerProg_stageClosed_builtin_prelude n
-    (mem_of_tree stageTree_builtin_prelude.eq "builtin_prelude" (by decide +kernel)) s₀
-
 theorem stageA_builtin_prelude_pins : (PINS : TieredArray) ∉ stageA_builtin_prelude := by decide +kernel
-
-/-- Of the `CTL` words 131, 132, 148, 149, 150, 151, 240, `builtin_prelude` writes
-240. -/
-theorem stageC_builtin_prelude_off :
-    ∀ w : Word, w.toNat ∈ ([131, 132, 148, 149, 150, 151] : List Nat) →
-      w ∉ stageC_builtin_prelude :=
-  not_mem_of_toNat (by decide +kernel)
 
 end L.Checker

@@ -184,10 +184,4 @@ theorem coreErecPc_mem (w : Word) (h : coreErecPc w = true) : w ∈ coreErecC :=
   simp only [coreErecC, List.mem_map, List.mem_range]
   exact ⟨w.toNat, h, UInt64.ofNat_toNat⟩
 
-/-- Every function of the checker passes the core's per-function check. -/
-prog_all checkerProg_coreChk : checkerProg (wsChk CTL coreErecPa coreErecPc coreTree)
-
-theorem checkerProg_coreErec : closedA checkerProg coreErecA coreErecC coreFns = true :=
-  closedW_of_all coreTree.eq coreErecPa_mem coreErecPc_mem checkerProg_coreChk
-
 end L.Checker

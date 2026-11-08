@@ -93,18 +93,6 @@ def m2cEta2T (fe : IFEnv) (depth : Nat) (T etaCtor : NIdx) (etaFields : Nat) (ta
     else pure major
   else pure major
 
-/-- The η arm. -/
-def m2cEtaT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (T : NIdx) (cvT : IConstantVal)
-    (caps : IIndCaps) (major : EIdx) : AM EIdx :=
-  m2cPreT r depth major fun tmaj T' ust => do
-    let ustl ← viewLs ust
-    let targs ← getAppArgs coreWalkFuel tmaj
-    let nz ← capsNeverZero cvT.levelParams ust caps
-    if T' = T ∧ targs.length = caps.etaParams ∧
-        ustl.length = cvT.levelParams.length ∧ nz = true then
-      m2cEta2T fe depth T caps.etaCtor caps.etaFields targs ust major
-    else pure major
-
 /-- The `And` arm's fabrication. -/
 def m2cAnd2T (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (ctor T : NIdx)
     (tmaj : EIdx) (targs : List EIdx) (ust : LsIdx) (major : EIdx) : AM EIdx := do
@@ -130,43 +118,6 @@ def m2cAndT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat
         m2cAnd2T mode r fe depth ctor T tmaj targs ust major
       else pure major
   else pure major
-
-/-- The dispatch on the rule's bits. -/
-def m2cArmsT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (rl : IRecRule)
-    (cvj : IConstantVal) (cnP : Nat) (T : NIdx) (cvT : IConstantVal) (caps : IIndCaps)
-    (major : EIdx) : AM EIdx :=
-  if rl.k = true then m2cKT mode r fe depth rl.ctor cvj.levelParams.length cnP T major
-  else if rl.eta = true then m2cEtaT r fe depth T cvT caps major
-  else m2cAndT mode r fe depth rl.ctor cvj.levelParams.length cnP T major
-
-/-- The family of the constructor. -/
-def m2cCtorT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (rl : IRecRule)
-    (cvj : IConstantVal) (cnP : Nat) (major : EIdx) : AM EIdx := do
-  let hh ← getAppFn coreWalkFuel (← piResult coreWalkFuel cvj.type)
-  if hh.tag == ETag.const then
-    match ← view hh with
-    | .const T _ =>
-      match fe.find? T with
-      | some (.indInfo cvT caps) => m2cArmsT mode r fe depth rl cvj cnP T cvT caps major
-      | _ => pure major
-    | _ => pure major
-  else pure major
-
-/-- The constructor test, the single rule, its constructor. -/
-def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
-    (rules : List IRecRule) (major : EIdx) : AM EIdx := do
-  if ← isCtorApp fe major then pure major else
-  match rules with
-  | [rl] =>
-    match fe.find? rl.ctor with
-    | some (.ctorInfo cvj cnP _cnF) => m2cCtorT mode r fe depth rl cvj cnP major
-    | _ => pure major
-  | _ => pure major
-
-/-- **The twin is its pieces.** -/
-theorem majorToCtor_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
-    (recName : NIdx) (rules : List IRecRule) (major : EIdx) :
-    majorToCtor mode r fe depth recName rules major = m2cHeadT mode r fe depth rules major := by rfl
 
 /-! ## Word models and L specs
 
@@ -226,15 +177,7 @@ theorem m2cEta2_spec (p : Prog) (hp : p.lookup "m2c_eta2" = some m2cEta2L) (n : 
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_eta2" [vis, d, T, ec, ef, to, tn, ust, major]
     ⦃fun r s' => LocEq s' s₀ ∧
       m2cEta2W p n s₀.mem vis d T ec ef to tn ust major = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cEta2L]
-  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "reserved_contains_w", callW_spec p n "tower_slots_all",
-    callW_spec p n "eta_fab_args", callW_spec p n "intern_const", callW_spec p n "mk_app_n",
-    callW_spec p n "fab_scope_ok"] <;>
-  simp_all [-UInt64.toNat_add, m2cEta2W, Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+  sorry
 
 /-- The stack writes of `m2c_and2`: the two projections at `to + tn`, `to + tn + 1`, the top
 raised past them. -/

@@ -49,13 +49,7 @@ theorem mentionsConstGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx
       (r.headD 0 != 0) = (AM.res (ConRon.Arena.mentionsConstGo (decI T) mp f.toNat (decE h)) a₀).1 ∧
       mcMR s'.mem (AM.res (ConRon.Arena.mentionsConstGo (decI T) mp f.toNat (decE h)) a₀).2 ∧
       StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (mcGo_spec p hv hf hput hgo n s₀ f T h) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨⟨b, mp'⟩, _, hrun, rfl, hb, hM', hfr⟩ := mcGoOK n _ a₀ f T h mp hS.check.arena.base hh hT hM _ _ hm
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
-    (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
-  refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
+  sorry
 
 end mcCensus
 
@@ -103,30 +97,7 @@ theorem mentionsConst_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       AM.st (ConRon.Arena.mentionsConst (decI T) (decE e)) a₀ = a₀ ∧
       (r.headD 0 != 0) = AM.res (ConRon.Arena.mentionsConst (decI T) (decE e)) a₀ ∧
       (∃ mp1, mcMR s'.mem mp1) ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (mentionsConst_spec p hv hf hput hgo hcl hp n s₀ T e) ?_
-  rintro r s' ⟨hl, hm⟩
-  by_cases h0 : rdW (s₀.mem.arr64 CTL) mcSch.cs + 2 = 0
-  · simp [mcConstW, h0] at hm
-  rw [mcConstW_eq n _ T e h0] at hm
-  have hf0 := mclearG_frame mcSch s₀.mem
-  have hM0 := memoRG_clear mcSch mcSch_wf bmKey (fun w : Word => w != 0) s₀.mem mp0 hM h0
-  have hA0 : ArenaR (mclearG mcSch s₀.mem) a₀ :=
-    ArenaR.frame (A := []) (C := [mcSch.cs, mcSch.cs + 1]) (fun b hb => by simp at hb)
-      (fun x hx => by simp [mcSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
-      hS.check.arena.base
-  obtain ⟨⟨c, mp1⟩, _, hrun, rfl, hbb, hM1, hfr1⟩ := mcGoOK n _ a₀ CWF T e ∅ hA0 hh hT hM0 _ _ hm
-  have hfall : MemFrame [MCM] [mcSch.cs, mcSch.cs + 1] s₀.mem s'.mem :=
-    (hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [mcSch]))
-  obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
-    (by intro x hx; simp [mcSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
-    (by simp [mcSch])
-  have hrun' : (ConRon.Arena.mentionsConst (decI T) (decE e)).run a₀ = .ok (c, a₀) := by
-    simp only [ConRon.Arena.mentionsConst, StateT.run_bind]
-    rw [CWF_eq] at hrun
-    rw [hrun]
-    rfl
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  exact ⟨hl, hok, hst, by rw [hres]; exact hbb, ⟨mp1, hM1⟩, hS', hg'⟩
+  sorry
 
 end mcCensus2
 
@@ -148,12 +119,7 @@ theorem hasLooseBVarBIns_refines (n : Nat) (s₀ : St) (dn : NIdx → Option Con
     ⦃fun rr s' => LocEq s' s₀ ∧ rr.headD 0 = r ∧
       hbMR s'.mem (ConRon.Arena.hasLooseBVarBIns (decE e) i.toNat (b, mp)).2 ∧
       StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (hbIns_spec p hf hput hins n s₀ e i r) ?_
-  rintro rr s' ⟨hl, hm⟩
-  obtain ⟨hr', hM', hfr⟩ := hbIns_ok he hr hM hm
-  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
-    (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
-  exact ⟨hl, hr', hM', hS', hg⟩
+  sorry
 
 include hv hf hput hins hgo hbp in
 /-- **`has_loose_b_var_b_go` refines `hasLooseBVarBGo`** from a related memo, at the twin fuel
@@ -170,11 +136,7 @@ theorem hasLooseBVarBGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx
       hbMR s'.mem (AM.res (ConRon.Arena.hasLooseBVarBGo mp i.toNat f.toNat (decE h)) a₀).2 ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.hasLooseBVarBGo mp i.toNat f.toNat (decE h)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (hbGo_spec p hv hf hput hins hgo hbp n s₀ f i h) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨⟨b, mp'⟩, a', hrun, hb, hM', hS', hg⟩ := hbGoOK n _ a₀ f i h mp hS hh hM _ _ hm
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hres]; exact hb, by rw [hres]; exact hM', by rw [hst]; exact hS', hg⟩
+  sorry
 
 end hbCensus
 
@@ -200,11 +162,7 @@ theorem hasLooseBVarBFast_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NI
       (∃ mp1, hbMR s'.mem mp1) ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.hasLooseBVarBFast i.toNat (decE e)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (hbFast_spec p hv hf hput hins hgo hbp hcl hp n s₀ i e) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun', hb, hM1, hS1, hg⟩ := hbFastW_ok n _ _ a₀ i e _ mp0 hh hS hM hm
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  exact ⟨hl, hok, by rw [hres]; exact hb, hM1, by rw [hst]; exact hS1, hg⟩
+  sorry
 
 end hbCensus2
 

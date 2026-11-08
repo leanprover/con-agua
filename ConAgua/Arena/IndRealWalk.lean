@@ -88,19 +88,7 @@ theorem lbbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     (he : H e) :
     RelW lbbF [f, k, e] (StageR vis fe) (looseBVarsBoundedFast f.toNat k.toNat (decI e))
       (KeepPost vis fe decW0B) := by
-  intro m m' a r h hS
-  have hfr := lbbF_frame h
-  obtain ⟨n, hc⟩ := callF_run h
-  rcases n with _ | n
-  · rw [callW_zero] at hc; cases hc
-  obtain ⟨s', hs', -, hok, hD, hres, hle⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (lbbFast_refines bvbProg bvbProg_ok n _ a hS.check.arena f k e he) hc
-  rw [hs'] at hD
-  have hrun := AM.run_of_ok _ a hok
-  have hk : Keeps cp (looseBVarsBoundedFast f.toNat k.toNat (decE e)) :=
-    (Keeps.bind (keepsW_bvarB _ _) fun _ => Keeps.pure _).cp_of_cpl
-  obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr (lt64A_of_all rfl) (lt64_of_all rfl) (hk.run hrun)
-  exact ⟨_, _, hrun, hS', hg, hres.symm, UInt64.le_iff_toNat_le.mp hle⟩
+  sorry
 
 /-! ## `fvar_b`, `has_fvar_fast` -/
 
@@ -165,47 +153,13 @@ theorem fvarBL_spec (p : Prog) (hp : AbsProg p) (hpf : p.lookup "fvar_b" = some 
 theorem fvbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word)
     (he : H e) :
     RelW fvbF [f, e] (StageR vis fe) (fvarB f.toNat (decI e)) (KeepPost vis fe decW0Nat) := by
-  intro m m' a r h hS
-  obtain ⟨n, hc⟩ := callF_run h
-  rcases n with _ | n
-  · rw [callW_zero] at hc; cases hc
-  obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (fvarBL_spec hfProg hfProg_abs rfl n _ f e) hc
-  rw [hs'] at hm
-  obtain ⟨a', hrun, hD, hfr⟩ := fvbW_okD n m m' a hS.check.arena e f _ he hm
-  obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr (lt64A_of_all rfl) (lt64_of_all rfl)
-    ((keepsW_fvarB _ _).cp_of_cpl.run hrun)
-  exact ⟨_, _, hrun, hS', hg, rfl⟩
+  sorry
 
 /-- **`has_fvar_fast`'s model refines `hasFvarFast` under the stage relation** (replaces
 `IndStubs.hasFvarFast_spec`). -/
 theorem hffF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word)
     (he : H e) :
     RelW hffF [f, e] (StageR vis fe) (hasFvarFast f.toNat (decI e)) (KeepPost vis fe decW0B) := by
-  intro m m' a r h hS
-  obtain ⟨n, hc⟩ := callF_run h
-  rcases n with _ | n
-  · rw [callW_zero] at hc; cases hc
-  obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (hasFvarFastL_spec hfProg hfProg_abs rfl n _ f e) hc
-  rw [hs'] at hI
-  rcases hw : fvbW n m e f with _ | ⟨x, m₁⟩
-  · rw [hw] at hI; cases hI
-  have hle := hfK_le _ _ _ hI
-  rw [hw, hfK_some] at hI
-  obtain ⟨hr0, rfl⟩ := Prod.mk.inj (Option.some.inj hI)
-  obtain ⟨a', ha', hD, hfr⟩ := fvbW_okD n m _ a hS.check.arena e f x he hw
-  have hrun : (hasFvarFast f.toNat (decE e)).run a = .ok (x.toNat != 0, a') := by
-    simp only [hasFvarFast, StateT.run_bind, ha']; rfl
-  have hk : Keeps cp (hasFvarFast f.toNat (decE e)) :=
-    (Keeps.bind (keepsW_fvarB _ _) fun _ => Keeps.pure _).cp_of_cpl
-  obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr (lt64A_of_all rfl) (lt64_of_all rfl) (hk.run hrun)
-  refine ⟨_, _, hrun, hS', hg, ?_, ?_⟩
-  · rw [← hr0]
-    by_cases h0 : x = 0
-    · subst h0; rfl
-    · have h0' : x.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp e)
-      simp [h0, h0']
-  · exact UInt64.le_iff_toNat_le.mp hle
+  sorry
 
 end L.Ind

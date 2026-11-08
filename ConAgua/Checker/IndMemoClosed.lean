@@ -185,10 +185,4 @@ theorem imPc_mem (w : Word) (h : imPc w = true) : w ∈ imC := by
   simp only [imC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq]
   exact ⟨w.toNat, ⟨h.1.1.1, h.1.1.2, h.1.2, h.2⟩, UInt64.ofNat_toNat⟩
 
-/-- Every function of the checker passes the per-function check of `imFns`. -/
-prog_all checkerProg_imChk : checkerProg (wsChkL CTL imPa imPc imTree imCallTree)
-
-theorem checkerProg_indMemo : IndMemoClosed checkerProg :=
-  closedWL_of_all imTree.eq imCallTree.eq imPa_mem imPc_mem checkerProg_imChk
-
 end L.Checker

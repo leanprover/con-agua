@@ -34,9 +34,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **The lookups of every function the canonical-form chain reaches.** -/
-abbrev CanonProg (p : Prog) : Prop := ProgHas p canonProgFns
-
 /-! ## The models -/
 
 /-- `n` words from `o1` and `o2` agree. -/
@@ -128,14 +125,6 @@ def ciEqB (a : Array Word) (p q : Word) : Bool :=
   else if 5 < rdW a p then false
   else cvEqB a (p + 1) (q + 1) && ciEqRestB a p q (rdW a p)
 
-/-- **`find_is`**: `env_find`'s row, then `ci_eq` against `pin`. -/
-def findIsW (m : Mem) (n vis pin : Word) : Option Word :=
-  match envFindW m n vis with
-  | none => none
-  | some (rr, _) =>
-    if rr.headD 0 = 0 then some 0
-    else some (if ciEqB (m.arr64 EREC) (rr.tail.headD 0) pin then 1 else 0)
-
 theorem toNat_pred {l : Word} (h0 : l ≠ 0) : l.toNat = (l - 1).toNat + 1 := by
   have : 0 < l.toNat := by
     rcases Nat.eq_zero_or_pos l.toNat with h | h
@@ -194,233 +183,12 @@ grind_pattern [ind_grind] rulesEqB_len => rulesEqB a o1 l1 o2 l2
 grind_pattern [ind_grind] rulesEqB_nil => rulesEqB a o1 l1 o2 l2
 grind_pattern [ind_grind] rulesEqB_step => rulesEqB a o1 l1 o2 l2
 
-theorem cnEnvFindW_mem {m m1 : Mem} {w vis : Word} {r : List Word}
-    (h : envFindW m w vis = some (r, m1)) : m1 = m := by
-  unfold envFindW at h
-  repeat' split at h
-  all_goals first | (simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm) | cases h
-
 /-! ## The specs -/
 
 section specs
-variable (p : Prog) (hp : CanonProg p)
 include hp
 
-theorem erSlEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_eq" [o1, l1, o2, l2]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if erSlEqB (s₀.mem.arr64 EREC) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ o1 l1 o2 l2; rw [invoke_eq _ (hp.get "er_sl_eq")]; simp only [callFn, erSlEq]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ (hp.get "er_sl_eq")]
-    simp only [callFn, erSlEq]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-theorem bEq_spec (n : Nat) (s₀ : St) (x y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "b_eq" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = if bEqB x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "b_eq")]
-  simp only [callFn, bEq]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
-      finish [bEqB]
-
 set_option maxHeartbeats 1000000 in
-theorem cvEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_eq" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if cvEqB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "cv_eq")]
-  simp only [callFn, cvEq]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erSlEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, cvEqB]
-
-theorem hintEq_spec (n : Nat) (s₀ : St) (h : Word) (g : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "hint_eq" [h, g]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if hintEqB (s₀.mem.arr64 EREC) h g then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "hint_eq")]
-  simp only [callFn, hintEq]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish (gen := 20) [rdW_eq, hintEqB]
-
-theorem erSlAt_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_at" [x, y, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if erSlAtB (s₀.mem.arr64 EREC) x y i then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "er_sl_at")]
-  simp only [callFn, erSlAt]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erSlEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, erSlAtB]
-
-theorem capsEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_a" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if capsEqAB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "caps_eq_a")]
-  simp only [callFn, capsEqA]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, bEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, capsEqAB]
-
-theorem capsEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_b" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if capsEqBB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "caps_eq_b")]
-  simp only [callFn, capsEqB]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, bEq_spec p hp n, pwEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, capsEqBB]
-
-theorem capsEqC_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_c" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if capsEqCB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "caps_eq_c")]
-  simp only [callFn, capsEqC]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erSlAt_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, capsEqCB]
-
-theorem capsEq_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if capsEqAll (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "caps_eq")]
-  simp only [callFn, capsEq]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, capsEqA_spec p hp n, capsEqB_spec p hp n, capsEqC_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, capsEqAll]
-
-theorem ruleEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_a" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if ruleEqAB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "rule_eq_a")]
-  simp only [callFn, ruleEqA]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish (gen := 20) [rdW_eq, ruleEqAB]
-
-theorem ruleEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_b" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if ruleEqBB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "rule_eq_b")]
-  simp only [callFn, ruleEqB]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erSlAt_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, ruleEqBB]
-
-theorem ruleEqButRhs_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_but_rhs" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if ruleEqButRhsB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "rule_eq_but_rhs")]
-  simp only [callFn, ruleEqButRhs]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ruleEqA_spec p hp n, ruleEqB_spec p hp n, bEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, ruleEqButRhsB]
-
-theorem rulesEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rules_eq" [o1, l1, o2, l2]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if rulesEqB (s₀.mem.arr64 EREC) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ o1 l1 o2 l2; rw [invoke_eq _ (hp.get "rules_eq")]; simp only [callFn, rulesEq]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ (hp.get "rules_eq")]
-    simp only [callFn, rulesEq]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
-        ruleEqButRhs_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq]
-
-theorem ciEqRest_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_eq_rest" [x, y, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if ciEqRestB (s₀.mem.arr64 EREC) x y k then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "ci_eq_rest")]
-  simp only [callFn, ciEqRest]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, hintEq_spec p hp n, capsEq_spec p hp n, rulesEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, ciEqRestB]
-
-theorem ciEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_eq" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if ciEqB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "ci_eq")]
-  simp only [callFn, ciEq]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, cvEq_spec' p hp n, ciEqRest_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, ciEqB]
-
-theorem findIs_spec' (n : Nat) (s₀ : St) (nm vis pin : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "find_is" [vis, nm, pin]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ findIsW s₀.mem nm vis pin = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "find_is")]
-  simp only [callFn, findIs]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        envFind_specW p (hp.get "env_ix") (hp.get "env_row_get") (hp.get "env_find") n, ciEq_spec' p hp n] <;>
-      finish (gen := 20) [findIsW, cnEnvFindW_mem]
-
 end specs
 
 end L.Ind

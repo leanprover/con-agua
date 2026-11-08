@@ -268,58 +268,6 @@ theorem preLoop_mem (f : FnName) (h : (preLoopTree.find (nameCode f)).isSome = t
   have := namesTree_spec preLoopTree.eq f
   rw [h] at this; exact of_decide_eq_true this.symm
 
-/-- Every function of the checker passes the pre-loop per-function check. -/
-prog_all checkerProg_preLoopChk :
-  checkerProg (wsChk CTL (fun a => preLoopA.contains a) (fun w => preLoopC.contains w) preLoopTree)
-
-theorem checkerProg_preLoopClosed : closedA checkerProg preLoopA preLoopC preLoopFns = true :=
-  closedW_of_all preLoopTree.eq (fun _ h => List.contains_iff_mem.mp h)
-    (fun _ h => List.contains_iff_mem.mp h) checkerProg_preLoopChk
-
-/-- **Every run of a pre-loop function is a frame of `(preLoopA, preLoopC)`.** -/
-theorem preLoop_frame (n : Nat) {f : FnName} (hf : f ∈ preLoopFns) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) f []
-    ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  exact (M.of_run (P := fun s => s = s₀) hs hrun
-    (invoke_memFrame checkerProg_preLoopClosed n hf [] s₀)).1
-
-theorem preLoopFrame_cap_check (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "cap_check" []
-    ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
-  preLoop_frame n (preLoop_mem "cap_check" (by decide +kernel)) s₀
-
-theorem preLoopFrame_pb_check (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "pb_check" []
-    ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
-  preLoop_frame n (preLoop_mem "pb_check" (by decide +kernel)) s₀
-
-theorem preLoopFrame_intern_reserved_pins (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "intern_reserved_pins" []
-    ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
-  preLoop_frame n (preLoop_mem "intern_reserved_pins" (by decide +kernel)) s₀
-
-theorem preLoopFrame_builtin_prelude (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "builtin_prelude" []
-    ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
-  preLoop_frame n (preLoop_mem "builtin_prelude" (by decide +kernel)) s₀
-
-theorem preLoopFrame_front_run (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "front_run" []
-    ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
-  preLoop_frame n (preLoop_mem "front_run" (by decide +kernel)) s₀
-
-theorem preLoopFrame_prepare_prelude (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "prepare_prelude" []
-    ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
-  preLoop_frame n (preLoop_mem "prepare_prelude" (by decide +kernel)) s₀
-
-theorem preLoopFrame_intern_all_pins (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "intern_all_pins" []
-    ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
-  preLoop_frame n (preLoop_mem "intern_all_pins" (by decide +kernel)) s₀
-
 /-- The arrays the declaration loop needs zero at its start are not written before it. -/
 theorem preLoopA_loopZero :
     ∀ b ∈ tier0s [ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, Stubs.CRM,

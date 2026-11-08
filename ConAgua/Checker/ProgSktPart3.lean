@@ -11,8 +11,4 @@ meta import ConAgua.Checker.ProgI
 
 namespace L.Checker
 
-open L L.Compiler
-
-skt_part checkerSkt : checkerProgI "check" 909 1212
-
 end L.Checker

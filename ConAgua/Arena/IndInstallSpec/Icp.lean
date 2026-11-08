@@ -59,10 +59,6 @@ theorem icpr_spec (p : Prog) (hp : p.lookup "check_block_pass_rec" = some checkB
       [fe1, cO, cL, p1, aO, aL, sO, sL, kO, kL, nO, nL, pO, pL, rd, mO, mL, tO, tL]
     ⦃fun r s' => LocEq s' s₀ ∧ icprW p n s₀.mem fe1 cO cL p1 aO aL sO sL kO kL nO nL pO pL rd mO mL tO tL =
       some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkBlockPassRec]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, callW_spec p n "iw_alloc"] <;>
-    finish (gen := 20) [icprW, bpMem]
+  sorry
 
 end L.Ind

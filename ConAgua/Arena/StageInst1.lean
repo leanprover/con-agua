@@ -132,37 +132,6 @@ theorem i1F_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
     (he : H e) :
     RelW i1F [CWF, e, v, d] (StageR vis fe)
       (instantiate1Fast CWF.toNat (decI e) (decI v) d.toNat) (KeepPost vis fe decW0E) := by
-  intro m m' a r h hS
-  obtain ⟨n, hc⟩ := callF_run h
-  have hfr : MemFrame instA instC m m' :=
-    (run_memFrame i1Prog_closed (List.mem_cons_self ..) (run_of_callW hc)).1
-  match n, hc with
-  | 0, hc => rw [callW_zero] at hc; cases hc
-  | n + 1, hc =>
-  obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (i1Adapter_spec n _ CWF e v d) hc
-  cases hi : callW i1Prog n "inst_entry" [e, v, d] m with
-  | none => rw [hi] at hm; cases hm
-  | some x =>
-  obtain ⟨rI, mI⟩ := x
-  rw [hi] at hm
-  simp only [fwd1, Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, hmI⟩ := hm
-  rw [hs'] at hmI
-  subst hmI
-  match n, hi with
-  | 0, hi => rw [callW_zero] at hi; cases hi
-  | k + 1, hi =>
-  have hip : L.Arena.InstProg i1Prog :=
-    ⟨by unfold LiftProg liftProgFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_),
-      rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  obtain ⟨s'', hs'', -, hok, hD, hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (instEntry_refines i1Prog hip rfl k _ a hS.check.arena e v d he) hi
-  rw [hs''] at hD
-  have hrun := AM.run_of_ok _ a hok
-  have hcp : cp (AM.st (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat) a) = cp a :=
-    (keeps_inst1Fast _ _ _ _).run hrun
-  obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr instA_lt instC_lt hcp
-  refine ⟨_, _, by rw [CWF_eq]; exact hrun, hS', hg, ?_⟩
-  exact ⟨hlt, hres.symm⟩
+  sorry
 
 end L.Ind

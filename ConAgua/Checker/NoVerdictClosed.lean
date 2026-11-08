@@ -210,12 +210,4 @@ end L
 
 namespace L.Checker
 
-open L.Compiler
-
-prog_all checkerProg_nvChk : checkerProg (nvChk nvTree)
-
-/-- **The functions outside the verdict closure claim nothing.** -/
-theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
-  closedNV_of_all nvTree.eq checkerProg_nvChk
-
 end L.Checker

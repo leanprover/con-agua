@@ -22,12 +22,4 @@ not edit), apart from `ProgI.lean` so that the modules importing the program do 
 
 namespace L.Checker
 
-open L L.Compiler
-
--- The frames of `checkerProgI`'s leaves without a stack check (`Prog.skt`), as a literal, with
--- `checkerSkt_eq : Prog.skt checkerProgI "check" = checkerSkt` (`skt_lit`, from the parts'
--- `checkerSkt.part<i>`, `ProgSktPart<k>`): every function's stack check of the compiled code looks
--- its callees' frames up in it (`asm_lit`).
-skt_lit checkerSkt : checkerProgI "check"
-
 end L.Checker

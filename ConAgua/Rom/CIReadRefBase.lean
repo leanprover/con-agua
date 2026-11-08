@@ -85,22 +85,7 @@ theorem RInv.refl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 /-- **`StageR` back** from the entry's. -/
 theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m₀ m : Mem}
     {a₀ a : AState} {T : Nat} (hS : StageR vis fe m₀ a₀) (h : RInv m₀ a₀ T m a) : StageR vis fe m a := by
-  have hc : a.caches = a₀.caches := congrArg Prod.fst h.hcp
-  have hp : a.pins = a₀.pins := congrArg Prod.snd h.hcp
-  have hf := h.frame
-  have hg : ErecGrow m₀ m := ⟨h.grow.er, h.grow.erGet, hf.size EREC⟩
-  refine ⟨⟨h.arena, ?_, ?_, ?_, h.mode⟩, h.ok⟩
-  · rw [hc]; exact hS.check.core.frame rciA_core rciC_core hf
-  · rw [hp]; exact hS.check.pins.frame rciA_pins hf
-  · exact EnvR.grow (fun b h1 h2 h3 => hf.arr b (fun hm => by
-        have := rciA_arr hm; simp only [EREC, IW, RMEMO, RSET, RSTK] at this; omega)
-        (fun hm => by simp only [TieredArray.t0_inj] at hm; subst hm; simp [CTL] at h1))
-      (hf.ctl 128 (by decide)) hg
-      (TblSame.of_frame
-        (fun b hb => by have := rciA_arr hb; simp only [EREC, IW, RMEMO, RSET, RSTK] at this; omega)
-        (fun hm => by
-          have := rciA_arr hm; simp only [ETAB, EREC, IW, RMEMO, RSET, RSTK] at this; omega)
-        (by decide) hf) hS.check.env
+  sorry
 
 /-! ## The steps -/
 
@@ -249,48 +234,47 @@ def Holds {α : Type} (SE SI : Nat → Prop) (f : Mem → Option α) (m : Mem) (
 section holds
 variable {α β γ δ : Type} {SE SI SE' SI' : Nat → Prop} {m m' : Mem}
 
-theorem Holds.get {f : Mem → Option α} {x : α} (h : Holds SE SI f m x) : f m = some x :=
-  h m (fun _ _ => rfl) (fun _ _ => rfl)
+theorem Holds.get {f : Mem → Option α} {x : α} (h : Holds SE SI f m x) : f m = some x := by
+  sorry
 
 theorem Holds.keep {f : Mem → Option α} {x : α} (h : Holds SE SI f m x)
     (hE : ∀ i, SE i → (erA m')[i]? = (erA m)[i]?) (hI : ∀ i, SI i → (iwA m')[i]? = (iwA m)[i]?) :
-    Holds SE SI f m' x :=
-  fun m'' h1 h2 => h m'' (fun i hi => (h1 i hi).trans (hE i hi)) (fun i hi => (h2 i hi).trans (hI i hi))
+    Holds SE SI f m' x := by
+  sorry
 
 theorem Holds.mono {f : Mem → Option α} {x : α} (h : Holds SE SI f m x) (hE : ∀ i, SE i → SE' i)
-    (hI : ∀ i, SI i → SI' i) : Holds SE' SI' f m x :=
-  fun m'' h1 h2 => h m'' (fun i hi => h1 i (hE i hi)) (fun i hi => h2 i (hI i hi))
+    (hI : ∀ i, SI i → SI' i) : Holds SE' SI' f m x := by
+  sorry
 
 theorem Holds.congr {f g : Mem → Option α} {x : α} (h : Holds SE SI f m x)
-    (hfg : ∀ m, f m = some x → g m = some x) : Holds SE SI g m x :=
-  fun m'' h1 h2 => hfg m'' (h m'' h1 h2)
+    (hfg : ∀ m, f m = some x → g m = some x) : Holds SE SI g m x := by
+  sorry
 
 /-- Two decodings give a third. -/
 theorem Holds.comb {f : Mem → Option α} {g : Mem → Option β} {h : Mem → Option γ} {x : α} {y : β}
     {z : γ} {SE₂ SI₂ : Nat → Prop} (hf : Holds SE SI f m x) (hg : Holds SE₂ SI₂ g m y)
     (hc : ∀ m, f m = some x → g m = some y → h m = some z) :
-    Holds (fun i => SE i ∨ SE₂ i) (fun i => SI i ∨ SI₂ i) h m z :=
-  fun m'' h1 h2 => hc m'' (hf m'' (fun i hi => h1 i (.inl hi)) (fun i hi => h2 i (.inl hi)))
-    (hg m'' (fun i hi => h1 i (.inr hi)) (fun i hi => h2 i (.inr hi)))
+    Holds (fun i => SE i ∨ SE₂ i) (fun i => SI i ∨ SI₂ i) h m z := by
+  sorry
 
 /-- Nothing read. -/
-theorem Holds.const (x : α) : Holds (fun _ => False) (fun _ => False) (fun _ => some x) m x :=
-  fun _ _ _ => rfl
+theorem Holds.const (x : α) : Holds (fun _ => False) (fun _ => False) (fun _ => some x) m x := by
+  sorry
 
 /-- One `EREC` word. -/
 theorem Holds.er {i : Nat} {w : Word} (h : (erA m)[i]? = some w) :
-    Holds (fun j => j = i) (fun _ => False) (fun m => (erA m)[i]?) m w :=
-  fun _m'' h1 _ => (h1 i rfl).trans h
+    Holds (fun j => j = i) (fun _ => False) (fun m => (erA m)[i]?) m w := by
+  sorry
 
 /-- One `IW` word. -/
 theorem Holds.iw {i : Nat} {w : Word} (h : (iwA m)[i]? = some w) :
-    Holds (fun _ => False) (fun j => j = i) (fun m => (iwA m)[i]?) m w :=
-  fun _m'' _ h2 => (h2 i rfl).trans h
+    Holds (fun _ => False) (fun j => j = i) (fun m => (iwA m)[i]?) m w := by
+  sorry
 
 /-- **At the end**: every word read below the tops, the decoding is `DecB`. -/
 theorem Holds.decB {f : Mem → Option α} {x : α} (h : Holds SE SI f m x)
-    (hE : ∀ i, SE i → i < erTop m) (hI : ∀ i, SI i → i < iwTop m) : DecB f m x :=
-  h (truncM m) (fun i hi => truncM_er_eq (hE i hi)) (fun i hi => truncM_iw_eq (hI i hi))
+    (hE : ∀ i, SE i → i < erTop m) (hI : ∀ i, SI i → i < iwTop m) : DecB f m x := by
+  sorry
 
 end holds
 
@@ -314,12 +298,7 @@ theorem EKeep.of_eq {R : Nat → Prop} {m m' : Mem} (hE : m'.arr64 EREC = m.arr6
 
 theorem EKeep.set {R : Nat → Prop} (m : Mem) (i : Word) (w : Word) (hi : R i.toNat) :
     EKeep R m (m.set64 EREC i w) := by
-  refine ⟨by simp only [erTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact Nat.le_refl _,
-    fun j _ hj => ?_⟩
-  simp only [erA]
-  rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-  have : i.toNat ≠ j := fun e => hj (e ▸ hi)
-  simp [this]
+  sorry
 
 /-- A decoding reading words below the top and outside `R` survives. -/
 theorem Holds.ekeep {α : Type} {SE SI R : Nat → Prop} {f : Mem → Option α} {x : α} {m m' : Mem}

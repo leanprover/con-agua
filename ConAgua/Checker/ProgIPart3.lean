@@ -153,8 +153,4 @@ literals, each with its kernel-checked equation (`inl_round_fns`, `ConAgua/Compi
 
 namespace L.Checker
 
-open L L.Compiler
-
-inl_round_fns checkerProgI : 80 checkerIdx checkerProg 608 805
-
 end L.Checker

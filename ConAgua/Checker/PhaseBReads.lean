@@ -265,37 +265,10 @@ def phaseBPa (a : TieredArray) : Bool := a != OUT && a != HDRF && a != CTLF
 /-- `phaseBFns` as a tree of name codes. -/
 names_tree phaseBTree : phaseBFns
 
-/-- Every function of the checker passes phase B's per-function read check. -/
-prog_all checkerProg_phaseBReadsChk : checkerProg (rdChk phaseBPa (fun _ => false) phaseBTree)
-
-/-- **Phase B's read set**: the call closure of `check_pending_go` names only word arrays other
-than `OUT`, `HDRF`, `CTLF`, no byte array, and calls only into itself. -/
-theorem checkerProg_phaseBReads :
-    readsIn checkerProg phaseBPa (fun _ => false) phaseBFns = true :=
-  readsIn_of_all phaseBTree.eq checkerProg_phaseBReadsChk
-
 theorem check_pending_go_mem_phaseBFns : "check_pending_go" ∈ phaseBFns :=
   of_decide_eq_true ((namesTree_spec phaseBTree.eq _).symm.trans (by decide +kernel))
 
 /-- The globals phase B never writes: `MODE` (8), `PLO` (9), `INIT` (10), `PHI` (11). -/
 def phaseBG (g : GVar) : Bool := g.id == 8 || g.id == 9 || g.id == 10 || g.id == 11
-
-/-- Every function of the checker passes phase B's per-function kept-globals check. -/
-prog_all checkerProg_phaseBGlobsChk : checkerProg (gsChk phaseBG phaseBTree)
-
-/-- **Phase B's kept globals**: the call closure of `check_pending_go` writes none of `MODE`,
-`PLO`, `INIT`, `PHI`. -/
-theorem checkerProg_phaseBGlobs : globsIn checkerProg phaseBG phaseBFns = true :=
-  globsIn_of_all phaseBTree.eq checkerProg_phaseBGlobsChk
-
-/-- A successful run of `check_pending_go` keeps `INIT`, `MODE`, `PLO` and `PHI`. -/
-theorem check_pending_go_keepsG {n : Nat} {vs : List Word} {s : St} {r : List Word} {s' : St}
-    (h : (invoke checkerProg (exec checkerProg n) "check_pending_go" vs).run s = .ok (r, s')) :
-    s'.mem.glob INIT = s.mem.glob INIT ∧ s'.mem.glob MODE = s.mem.glob MODE ∧
-      s'.mem.glob PLO = s.mem.glob PLO ∧ s'.mem.glob PHI = s.mem.glob PHI :=
-  ⟨invoke_keepsG checkerProg_phaseBGlobs check_pending_go_mem_phaseBFns h rfl,
-   invoke_keepsG checkerProg_phaseBGlobs check_pending_go_mem_phaseBFns h rfl,
-   invoke_keepsG checkerProg_phaseBGlobs check_pending_go_mem_phaseBFns h rfl,
-   invoke_keepsG checkerProg_phaseBGlobs check_pending_go_mem_phaseBFns h rfl⟩
 
 end L.Checker

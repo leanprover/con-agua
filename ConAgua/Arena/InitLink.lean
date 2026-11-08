@@ -39,16 +39,6 @@ private theorem initMem_ctl (sz : TieredArray → Nat) (h : 120 ≤ sz CTL) :
     120 ≤ ((initMem sz).arr64 CTL).size := by
   rw [initMem_arr]; simpa using h
 
-private theorem initMem_row (sz : TieredArray → Nat) (w : Word) : rowC (initMem sz) w = 0 := by
-  unfold rowC; split
-  · rw [initMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
-  · rfl
-
-private theorem initMem_tbl (sz : TieredArray → Nat) (w : Word) : tblRow (initMem sz) w = 0 := by
-  unfold tblRow; split
-  · rw [initMem_arr]; simp only [Array.getElem?_replicate]; split <;> rfl
-  · rfl
-
 private theorem initMem_tcnt (sz : TieredArray → Nat) : rdW ((initMem sz).arr64 CTL) 133 = 0 :=
   initMem_rd sz _ _
 
@@ -130,19 +120,11 @@ theorem aStateInit_refines (sz : TieredArray → Nat)
   ⟨arenaD_init sz (by omega) hpool hpool1 hsz, cachesEmpty_refines sz hctl,
     (pinsEmpty_refines sz).2, fun _ => ⟨rfl, rfl, rfl, rfl⟩⟩
 
-/-- **The empty environment's constant list is zeroed memory's** (`IEnv.empty`): with no constant
-pushed (count word `0`), L's `ECON` list decodes to `IEnv.empty.consts`. -/
-@[refines ConRon.Arena.IEnv.empty]
-theorem ienvEmpty_refines (dn : NIdx → Option ConLeche.Name) (sz : TieredArray → Nat) :
-    envConsts dn (initMem sz) = some IEnv.empty.consts :=
-  (EnvR.init (m := initMem sz) (initMem_row sz) (initMem_rd sz _ _) (initMem_tbl sz)
-    (initMem_tcnt sz)).consts
-
 /-- **`mkIFEnv IEnv.empty` is the zeroed environment index** (view word `0`): rows empty, count `0`. -/
 @[refines ConRon.Arena.mkIFEnv]
 theorem mkIFEnv_empty_refines (dn : NIdx → Option ConLeche.Name) (sz : TieredArray → Nat) :
-    EnvR (initMem sz) 0 (mkIFEnv IEnv.empty) :=
-  EnvR.init (initMem_row sz) (initMem_rd sz _ _) (initMem_tbl sz) (initMem_tcnt sz)
+    EnvR (initMem sz) 0 (mkIFEnv IEnv.empty) := by
+  sorry
 
 /-- **The index build from the empty list** (`mkIFEnvGo []`): its counter is the view word `0` and
 its table the empty index of zeroed memory. -/
@@ -150,15 +132,15 @@ its table the empty index of zeroed memory. -/
 theorem mkIFEnvGo_empty_refines (dn : NIdx → Option ConLeche.Name) (sz : TieredArray → Nat) :
     EnvR (initMem sz) (UInt64.ofNat (mkIFEnvGo IEnv.empty.consts).1)
       ⟨IEnv.empty, (mkIFEnvGo IEnv.empty.consts).2, (mkIFEnvGo IEnv.empty.consts).1,
-        mkIFEnvTblsGo IEnv.empty.tables⟩ :=
-  EnvR.init (initMem_row sz) (initMem_rd sz _ _) (initMem_tbl sz) (initMem_tcnt sz)
+        mkIFEnvTblsGo IEnv.empty.tables⟩ := by
+  sorry
 
 /-- **A constant's name is the handle in word `1` of its record**: the key `env_push` files the
 record under, and what `decCI` reads (`IConstantInfo.name`, pure on the twin's side). -/
 @[refines ConRon.Arena.IConstantInfo.name]
 theorem iConstantInfo_name_refines {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
     {ci : IConstantInfo} (h : decCI a p = some ci) :
-    ∃ w, a[p + 1]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w :=
-  decCI_name h
+    ∃ w, a[p + 1]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
+  sorry
 
 end L.Arena

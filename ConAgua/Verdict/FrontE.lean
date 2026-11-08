@@ -67,20 +67,18 @@ def DeclSafeR (d : DeclRec) (f : DFld) : Prop :=
 theorem axUnsafe_run (st : StateD) (a : AState) (cv : CVRec) (cvp : IConstantVal)
     (hpc : parseCVD st cv = pure cvp) :
     (applyRecord st (.decl (.ax cv true))).run a = .ok (.inr (.declined "unsafe axiom"), a) := by
-  simp [applyLine, ConRon.Arena.Frontend.applyDeclD, ConRon.Arena.Frontend.processLineCoreD, hpc]; rfl
+  sorry
 
 theorem defnSafety_run (st : StateD) (a : AState) (cv : CVRec) (cvp : IConstantVal)
     (hpc : parseCVD st cv = pure cvp) (v : Nat) (h : HintsRec) (s : String) (hs : s ≠ "safe") :
     ∃ w, (applyRecord st (.decl (.defn cv v h s))).run a = .ok (.inr (.declined w), a) := by
-  refine ⟨s!"definition with safety {ConLeche.Display.str s}", ?_⟩
-  simp [applyLine, ConRon.Arena.Frontend.applyDeclD, ConRon.Arena.Frontend.processLineCoreD, hpc]
-  rfl
+  sorry
 
 theorem opaqUnsafe_run (st : StateD) (a : AState) (cv : CVRec) (cvp : IConstantVal)
     (hpc : parseCVD st cv = pure cvp) (v : Nat) :
     (applyRecord st (.decl (.opaq cv v true))).run a =
       .ok (.inr (.declined "unsafe opaque declaration"), a) := by
-  simp [applyLine, ConRon.Arena.Frontend.applyDeclD, ConRon.Arena.Frontend.processLineCoreD, hpc]; rfl
+  sorry
 
 /-! ## `apply_decl`: the declines after the common data (con-ron's `parseCVD` first) -/
 

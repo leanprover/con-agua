@@ -153,8 +153,4 @@ distinct), apart from `ProgWf.lean` so that the modules that need only the names
 
 namespace L.Checker
 
-open L L.Compiler
-
-prog_tree checkerProg_wf : checkerProg
-
 end L.Checker

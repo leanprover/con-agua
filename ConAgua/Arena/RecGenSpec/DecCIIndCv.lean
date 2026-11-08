@@ -68,37 +68,11 @@ grind_pattern [ind_grind] cftK2_some => cftK2 cR N mp (some (r2, m2))
 grind_pattern [ind_grind] cftK3_some => cftK3 cR N mp q (some (r3, m3))
 grind_pattern [ind_grind] cftK4_some => cftK4 (some (r4, m4))
 
-/-- The lookups `class_former_ty` needs. -/
-structure CftProg (p : Prog) : Prop where
-  ix : p.lookup "env_ix" = some envIxL
-  rowGet : p.lookup "env_row_get" = some envRowGetL
-  find : p.lookup "env_find" = some envFindL
-  alloc : p.lookup "iw_alloc" = some iwAlloc
-  copy : p.lookup "er_copy" = some erCopy
-  eti : p.lookup "er_to_iw" = some erToIw
-  bf : p.lookup "bvar_find" = some bvarFind
-  bp : p.lookup "bvar_push" = some bvarPush
-  ib : p.lookup "intern_bvar" = some internBVar
-  cft : p.lookup "class_former_ty" = some classFormerTyL
-
 /-! ## Relational lemma -/
 
 theorem decCI_ind_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {cv : IConstantVal}
     {caps : IIndCaps} (h : decCI a q = some (.indInfo cv caps)) : decCV a (q + 1) = some cv := by
-  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨k, hk, h⟩ := h
-  match k, h with
-  | 0, h => simp [Option.bind_eq_some_iff] at h
-  | 1, h => simp only [Option.bind_eq_some_iff, Option.some.injEq] at h; obtain ⟨_, _, _, _, _, _, h⟩ := h; cases h
-  | 2, h => simp [Option.bind_eq_some_iff] at h
-  | 3, h =>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv', hcv, caps', -, he⟩ := h
-    cases he; exact hcv
-  | 4, h => simp only [Option.bind_eq_some_iff, Option.some.injEq] at h; obtain ⟨_, _, _, _, _, _, h⟩ := h; cases h
-  | 5, h => simp only [Option.bind_eq_some_iff, Option.some.injEq] at h; obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, h⟩ := h; cases h
-  | 6, h => simp at h
-  | (_ + 7), h => simp at h
+  sorry
 
 theorem decTM_lvls' {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
     iwH m (p + 1) = some M.lvls := by

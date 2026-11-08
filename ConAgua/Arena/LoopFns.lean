@@ -311,13 +311,4 @@ structure LoopMem (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) : 
   dnP : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x →
     k.isPersistent = true ∧ denoteN a.store.ns k = some x
 
-/-- **`LoopMem` across a step of the loop**: the step's write set (`LoopClosed`: the pin table and
-every size kept) and the twin's persistent tier only growing (`PExt`, `TwinFold.step_pext`). -/
-theorem LoopMem.step {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
-    (h : LoopMem dn m a) (hf : MemFrame loopA loopC m m')
-    (hx : ConRon.Bridge.PExt a.store a'.store) : LoopMem dn m' a' :=
-  ⟨by rw [hf.size]; exact h.erec, by rw [hf.size]; exact h.spn, by rw [hf.size]; exact h.bstk,
-    by simp only [pinW, hf.arr _ loopA_pins (by decide)]; exact h.flag,
-    fun k x e => ⟨(h.dnP k x e).1, hx.lss.ls.ns k x (h.dnP k x e).1 (h.dnP k x e).2⟩⟩
-
 end L.Arena

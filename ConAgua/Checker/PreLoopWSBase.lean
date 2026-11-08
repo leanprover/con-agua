@@ -24,15 +24,6 @@ theorem mem_of_tree {fs : List FnName} {t : NTree} (ht : namesTree fs = some t) 
   have := namesTree_spec ht f
   rw [h] at this; exact of_decide_eq_true this.symm
 
-/-- `invoke_memFrame` without the byte arrays, at no arguments. -/
-theorem memFrame_of_closed {A : List TieredArray} {C : List Word} {fs : List FnName}
-    (hp : closedA checkerProg A C fs = true) (n : Nat) {f : FnName} (hf : f ∈ fs) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) f []
-    ⦃fun _ s' => MemFrame A C s₀.mem s'.mem; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  exact (M.of_run (P := fun s => s = s₀) hs hrun (invoke_memFrame hp n hf [] s₀)).1
-
 /-- Non-membership of words in a list of words, by numbers (deciding it on `List Word`
 membership is slow). -/
 theorem not_mem_of_toNat {C : List Word} {Z : List Nat}

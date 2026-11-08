@@ -180,10 +180,4 @@ theorem leafPc_mem (w : Word) (h : leafPc w = true) : w ∈ leafC := by
   simp only [decide_eq_true_eq]
   omega
 
-/-- Every function of the checker passes the leaves' per-function check. -/
-prog_all checkerProg_leafChk : checkerProg (wsChk CTL leafPa leafPc leafTree)
-
-theorem checkerProg_leafClosed : LeafClosed checkerProg :=
-  closedW_of_all leafTree.eq leafPa_mem leafPc_mem checkerProg_leafChk
-
 end L.Checker

@@ -41,7 +41,4 @@ namespace L.Checker
 
 open L L.Compiler
 
-/-- **The program the compiler compiles**: `checkerProg` with its small leaves inlined. -/
-inl_round checkerProgI : 80 checkerIdx checkerProg
-
 end L.Checker

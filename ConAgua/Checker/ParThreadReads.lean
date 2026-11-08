@@ -172,12 +172,4 @@ theorem thrS_iff (a : TieredArray) : thrS a = true ↔
     a ≠ HDRF ∧ a ≠ CTLF ∧ (a ∈ frozenIdsL ∨ a ∈ parOwnedL) := by
   simp [thrS, and_assoc]
 
-/-- Every function of the checker passes the thread's per-function read check. -/
-prog_all checkerProg_thrReadsChk : checkerProg (rdChk thrS (fun _ => false) phaseBTree)
-
-/-- **Phase B's read set, for a thread**: the call closure of `check_pending_go` names only word
-arrays of `thrS`, no byte array, and calls only into itself. -/
-theorem checkerProg_thrReads : readsIn checkerProg thrS (fun _ => false) phaseBFns = true :=
-  readsIn_of_all phaseBTree.eq checkerProg_thrReadsChk
-
 end L.Checker

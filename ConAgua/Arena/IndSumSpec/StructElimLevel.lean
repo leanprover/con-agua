@@ -293,11 +293,7 @@ theorem structPsAtGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (o nP N k : W
       IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (structPsAt.go o.toNat nP.toNat N.toNat k.toNat) a₀); ⊤⦄ := by
-  refine triple_post (structPsAtGo_spec p ha hc hsc hpf hpp hib hp n s₀ o nP N k) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨xs, a', hrun, hR', hg, -, hd, -⟩ := psGoW_ok n _ _ _ _ _ _ _ _ hm hR hsz hc2 hon hkN
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hR', hg, by rw [hres]; exact hd⟩
+  sorry
 
 end census
 

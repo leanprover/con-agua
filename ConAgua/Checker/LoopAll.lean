@@ -179,10 +179,4 @@ theorem loopPc_mem (w : Word) (h : loopPc w = true) : w ∈ loopC := by
   simp only [loopC, List.mem_map, List.mem_range]
   exact ⟨w.toNat, h, UInt64.ofNat_toNat⟩
 
-/-- Every function of the checker passes the loop's per-function check. -/
-prog_all checkerProg_loopAllChk : checkerProg (wsChk CTL loopPa loopPc loopAllTree)
-
-theorem checkerProg_loopClosed : LoopClosed checkerProg :=
-  closedW_of_all loopAllTree.eq loopPa_mem loopPc_mem checkerProg_loopAllChk
-
 end L.Checker

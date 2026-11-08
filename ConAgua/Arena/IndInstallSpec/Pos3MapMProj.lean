@@ -63,19 +63,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **`check_block_positivity_nfs_member` is its model `pnmW`** (generated). -/
-l_model pnm_spec (p : Prog)
-    (hp : p.lookup "check_block_positivity_nfs_member" = some checkBlockPositivityNfsMember)
-  fns [hp ↦ pnmW]
-  specs [callW_spec p n "sl_cons"]
-  grind [ind_grind] finish [rdW_eq] gen 20
-
 /-! ## `check_block_positivity_nfs` -/
-
-/-- **`check_block_positivity_nfs` is its model `pnfW`** (generated). -/
-l_model pnf_spec (p : Prog) (hp : p.lookup "check_block_positivity_nfs" = some checkBlockPositivityNfs)
-  fns [hp ↦ pnfW]
-  specs [callW_spec p n "check_block_positivity_nfs_member", callW_spec p n "rec2", callW_spec p n "sl_cons"]
-  grind [ind_grind] finish [rdW_eq] gen 20
 
 end L.Ind

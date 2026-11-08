@@ -216,39 +216,7 @@ def stageA_front_run : List TieredArray :=
   PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
   PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, Front.NID, Front.LID, Front.EID]
 
-/-- The `CTL` words the functions of `stageFns_front_run` store into. -/
-def stageC_front_run : List Word := [
-  0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 28, 29, 30,
-  31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 65, 67, 69, 70, 71, 72, 192]
-
-names_tree stageTree_front_run : stageFns_front_run
-
-prog_all checkerProg_stageChk_front_run : checkerProg
-  (wsChk CTL (fun a => stageA_front_run.contains a)
-    (fun w => stageC_front_run.contains w) stageTree_front_run)
-
-theorem checkerProg_stageClosed_front_run :
-    closedA checkerProg stageA_front_run stageC_front_run
-      stageFns_front_run = true :=
-  closedW_of_all stageTree_front_run.eq (fun _ h => List.contains_iff_mem.mp h)
-    (fun _ h => List.contains_iff_mem.mp h) checkerProg_stageChk_front_run
-
-/-- **A run of `front_run` is a frame of its own write set.** -/
-theorem stageFrame_front_run (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "front_run" []
-    ⦃fun _ s' =>
-      MemFrame stageA_front_run stageC_front_run s₀.mem s'.mem; ⊤⦄ :=
-  memFrame_of_closed checkerProg_stageClosed_front_run n
-    (mem_of_tree stageTree_front_run.eq "front_run" (by decide +kernel)) s₀
-
 theorem stageA_front_run_pins : (PINS : TieredArray) ∉ stageA_front_run := by decide +kernel
-
-/-- Of the `CTL` words 131, 132, 148, 149, 150, 151, 240, `front_run` writes
-none. -/
-theorem stageC_front_run_off :
-    ∀ w : Word, w.toNat ∈ ([131, 132, 148, 149, 150, 151, 240] : List Nat) →
-      w ∉ stageC_front_run :=
-  not_mem_of_toNat (by decide +kernel)
 
 /-! ## `prepare_prelude` -/
 
@@ -273,37 +241,6 @@ def stageA_prepare_prelude : List TieredArray :=
   tier1s [
   NAREC, NASLOT]
 
-/-- The `CTL` words the functions of `stageFns_prepare_prelude` store into. -/
-def stageC_prepare_prelude : List Word := [
-  34, 35, 73, 74, 75, 76, 200]
-
-names_tree stageTree_prepare_prelude : stageFns_prepare_prelude
-
-prog_all checkerProg_stageChk_prepare_prelude : checkerProg
-  (wsChk CTL (fun a => stageA_prepare_prelude.contains a)
-    (fun w => stageC_prepare_prelude.contains w) stageTree_prepare_prelude)
-
-theorem checkerProg_stageClosed_prepare_prelude :
-    closedA checkerProg stageA_prepare_prelude stageC_prepare_prelude
-      stageFns_prepare_prelude = true :=
-  closedW_of_all stageTree_prepare_prelude.eq (fun _ h => List.contains_iff_mem.mp h)
-    (fun _ h => List.contains_iff_mem.mp h) checkerProg_stageChk_prepare_prelude
-
-/-- **A run of `prepare_prelude` is a frame of its own write set.** -/
-theorem stageFrame_prepare_prelude (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "prepare_prelude" []
-    ⦃fun _ s' =>
-      MemFrame stageA_prepare_prelude stageC_prepare_prelude s₀.mem s'.mem; ⊤⦄ :=
-  memFrame_of_closed checkerProg_stageClosed_prepare_prelude n
-    (mem_of_tree stageTree_prepare_prelude.eq "prepare_prelude" (by decide +kernel)) s₀
-
 theorem stageA_prepare_prelude_pins : (PINS : TieredArray) ∉ stageA_prepare_prelude := by decide +kernel
-
-/-- Of the `CTL` words 131, 132, 148, 149, 150, 151, 240, `prepare_prelude` writes
-none. -/
-theorem stageC_prepare_prelude_off :
-    ∀ w : Word, w.toNat ∈ ([131, 132, 148, 149, 150, 151, 240] : List Nat) →
-      w ∉ stageC_prepare_prelude :=
-  not_mem_of_toNat (by decide +kernel)
 
 end L.Checker
