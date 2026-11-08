@@ -627,7 +627,7 @@ theorem inferBody_const (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
 
 /-- A decoded constant record has its `ConstantVal` at `q + 1`. -/
 theorem decCI_cvA {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt a b) :
+    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b)) :
     decCV (aread b) (q.toNat + 1) = some ci.toConstantVal := by
   cases hq : a[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h

@@ -54,7 +54,7 @@ theorem find_of_found {dn : NIdx → Option ConLeche.Name} {m : Mem} {fe : IFEnv
 
 /-- **A constructor record's counts**: kind word `4`, parameters at `q + 5`, fields at `q + 6`. -/
 theorem decCI_ctorF {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
     (hsz : b.size < 2 ^ 63) :
     (rdW b q = 4 → ∃ cv, ci = .ctorInfo cv (rdW b (q + 5)).toNat (rdW b (q + 6)).toNat) ∧
     (rdW b q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
