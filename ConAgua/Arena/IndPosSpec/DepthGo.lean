@@ -674,31 +674,48 @@ theorem nestPhs_spec (k : Nat) (s₀ : St) (nn : Word) :
 end spec2
 
 /-- The pool outside `[q, q + n)`, its top and size, the constant records: unchanged. -/
-def KeepIW (q n : Word) (m m' : Mem) : Prop :=
-  (∀ idx, (idx < q.toNat ∨ q.toNat + n.toNat ≤ idx) → (m'.arr64 IW)[idx]? = (m.arr64 IW)[idx]?) ∧
-  iwTop m' = iwTop m ∧ erTop m' = erTop m ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
-  m'.arr64 EREC = m.arr64 EREC
+structure KeepIW (q n : Word) (m m' : Mem) : Prop where
+  get : ∀ idx, (idx < q.toNat ∨ q.toNat + n.toNat ≤ idx) → (m'.arr64 IW)[idx]? = (m.arr64 IW)[idx]?
+  iwTop_eq : iwTop m' = iwTop m
+  erTop_eq : erTop m' = erTop m
+  size : (m'.arr64 IW).size = (m.arr64 IW).size
+  er : m'.arr64 EREC = m.arr64 EREC
+  er1Top_eq : erecTop1 m' = erecTop1 m
+  er1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC)
 
-theorem KeepIW.refl (q n : Word) (m : Mem) : KeepIW q n m m := ⟨fun _ _ => rfl, rfl, rfl, rfl, rfl⟩
+theorem KeepIW.refl (q n : Word) (m : Mem) : KeepIW q n m m :=
+  ⟨fun _ _ => rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 theorem KeepIW.trans {q n : Word} {m₁ m₂ m₃ : Mem} (h₁ : KeepIW q n m₁ m₂) (h₂ : KeepIW q n m₂ m₃) :
-    KeepIW q n m₁ m₃ :=
-  ⟨fun idx hi => (h₂.1 idx hi).trans (h₁.1 idx hi), h₂.2.1.trans h₁.2.1, h₂.2.2.1.trans h₁.2.2.1,
-    h₂.2.2.2.1.trans h₁.2.2.2.1, h₂.2.2.2.2.trans h₁.2.2.2.2⟩
+    KeepIW q n m₁ m₃ where
+  get idx hi := (h₂.get idx hi).trans (h₁.get idx hi)
+  iwTop_eq := h₂.iwTop_eq.trans h₁.iwTop_eq
+  erTop_eq := h₂.erTop_eq.trans h₁.erTop_eq
+  size := h₂.size.trans h₁.size
+  er := h₂.er.trans h₁.er
+  er1Top_eq := h₂.er1Top_eq.trans h₁.er1Top_eq
+  er1 := h₂.er1.trans h₁.er1
 
 theorem KeepIW.of_low {q n : Word} {m m' : Mem} (h : LowFr m m') : KeepIW q n m m' := by
   obtain ⟨A, C, hf, hA, hC⟩ := h
   have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (fun hh => by have := hA _ hh; simp [IW] at this) (by decide)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (fun hh => by have := hA _ hh; simp [EREC] at this) (by decide)
+  have hE1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
+    hf.arr (tier1 EREC) (fun hh => by have := hA _ hh; simp [tier1, EREC] at this) (by decide)
   have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (fun hh => by have := hC _ hh; simp at this)
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (fun hh => by have := hC _ hh; simp at this)
-  exact ⟨fun _ _ => by rw [hI], by simp only [iwTop, h200], by simp only [erTop, h129], by rw [hI], hE⟩
+  have h130 : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := hf.ctl 130 (fun hh => by have := hC _ hh; simp at this)
+  exact ⟨fun _ _ => by rw [hI], by simp only [iwTop, h200], by simp only [erTop, h129], by rw [hI], hE,
+    by simp only [erecTop1, h130], hE1⟩
 
 theorem KeepIW.set {q n i v : Word} (m : Mem) (hi : i.toNat < n.toNat) (hqi : (q + i).toNat = q.toNat + i.toNat) :
     KeepIW q n m (m.set64 IW (q + i) v) := by
   have hC : (m.set64 IW (q + i) v).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hE : (m.set64 IW (q + i) v).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨fun idx hidx => ?_, by simp only [iwTop, hC], by simp only [erTop, hC], (set64IW_frame m _ _).size IW, hE⟩
+  have hE1 : (m.set64 IW (q + i) v).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  refine ⟨fun idx hidx => ?_, by simp only [iwTop, hC], by simp only [erTop, hC], (set64IW_frame m _ _).size IW, hE,
+    by simp only [erecTop1, hC], hE1⟩
   rw [set64IW_get, ite_eq_right (by omega)]
 
 theorem lowFr_iw {m m' : Mem} (h : LowFr m m') : m'.arr64 IW = m.arr64 IW := by
@@ -805,7 +822,33 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     ∃ phs a', (ConRon.Arena.nestPhs nn.toNat).run a = .ok (phs, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some phs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  sorry
+  unfold phsW at h
+  rcases hal : allocW m nn with _ | ⟨q, m1⟩ <;> rw [hal] at h; · simp [phsA] at h
+  rw [phsA_some] at h
+  obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
+  rcases hl : phsGoW k m1 q nn 0 with _ | m2 <;> rw [hl] at h; · simp [phsB] at h
+  rw [phsB_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
+  have hroom1 : q.toNat + nn.toNat ≤ (m1.arr64 IW).size := by
+    have := hS1.iw.iw; simp only [iwTop] at htop1 this; omega
+  obtain ⟨phs, a', hrun, hS2, hK, hdec⟩ := phsGoW_ok k m1 m2 a q nn 0 [] dn fe vis hl hS1
+    (by simp) hroom1 hsz1 (by simp [decHL, hslice?])
+  refine ⟨phs, a', ?_, hS2, ?_, by simpa using hdec, ?_⟩
+  · rw [nestPhs_eq]
+    simpa using hrun
+  · refine ⟨?_, ?_, fun idx hidx => ?_, fun idx hidx => ?_, ?_, fun idx hidx => ?_⟩
+    · rw [hK.iwTop_eq]; exact hg1.iw
+    · rw [hK.erTop_eq]; exact hg1.er
+    · have hq : idx < q.toNat := by
+        have : q.toNat = iwTop m := by simp only [iwTop, hqd]
+        omega
+      rw [hK.get idx (Or.inl hq)]; exact hg1.iwGet idx hidx
+    · rw [hK.er]; exact hg1.erGet idx hidx
+    · rw [hK.er1Top_eq]; exact hg1.er1
+    · rw [hK.er1]; exact hg1.er1Get idx hidx
+  · show q.toNat + nn.toNat ≤ iwTop m2
+    rw [hK.iwTop_eq, htop1]; exact Nat.le_refl _
 
 section census
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hpw : p.lookup "pin_word" = some pinWordL)

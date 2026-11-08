@@ -128,7 +128,8 @@ theorem EnvR.rebase {m m' : Mem} {vis : Word} {fe : IFEnv} {I : IStreamIndex} {A
   have hraw : ∀ w, ownRaw m' w = ownRaw m w := fun w => by simp only [ownRaw, hor, hs]
   have hot : ∀ w, ownTbl m' w = ownTbl m w := fun w => by simp only [ownTbl, ha _ (o2 _ _).1 (o2 _ _).2, hs]
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn hq => ?_, fun n => ?_,
-    fun n hn => ?_, ?_, ?_, fun n => hI.base n, fun n => hI.btbl n, by rw [hs]; exact h.stamp⟩
+    fun n hn => ?_, ?_, ?_, fun n => hI.base n, fun n => hI.btbl n, by rw [hs]; exact h.stamp, fun w hw => by
+      rw [hor, hs, ha _ (o2 _ _).1 (o2 _ _).2]; exact h.ownBelow w hw⟩
   · show fe.idx[n]? = _; rw [h.own n]; simp only [ownFind, hraw, hP]
   · rw [hraw] at hn ⊢; rw [hP]; exact h.own_dec n hn
   · rw [hraw] at hn ⊢; exact h.fresh n hn

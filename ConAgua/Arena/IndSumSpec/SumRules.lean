@@ -369,7 +369,7 @@ theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hoS : o.toNat < (M.arr64 IW).size := by
     obtain ⟨h1, -, -, -, -⟩ := hSM.iw; have := hgm1M.iw; omega
   have haccM : decPL M (rlDec M) q0.toNat j = some acc :=
-    sumDecPL_grow hgm1M (fun q x h => ArrExt.decRule (IWGrow.erecPExtR hgm1M) h) _ _ _
+    sumDecPL_grow hgm1M (fun q x h => ArrExt.decRule (IWGrow.ext hgm1M) h) _ _ _
       (by omega) hacc
   have hacc' := sumDecPL_write M (rlDec M) q0.toNat j o q acc _ ho (by omega) haccM hrec
   rw [← rlDec_set_iw M o q] at hacc'

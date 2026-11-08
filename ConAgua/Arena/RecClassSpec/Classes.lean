@@ -41,7 +41,88 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
     (hxs : decNL m o.toNat l.toNat = some xs) :
     decNL m' (rdW (m.arr64 CTL) 200).toNat (l + 1).toNat = some (x.toNat :: xs) ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + (l + 1) := by
-  sorry
+  generalize hq : rdW (m.arr64 CTL) 200 = q at *
+  have hlm : l.toNat ≠ 2 ^ 64 - 1 := fun h0 => hne (by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp [h0])
+  have hl1 : (l + 1).toNat = l.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp
+    have : l.toNat < 2 ^ 64 := l.toNat_lt
+    omega
+  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  rw [hl1] at hroom
+  -- the memory before the copy
+  have hm1IW : (consPre m x l).arr64 IW = ((m.arr64 IW).set! q.toNat x) := by
+    simp only [consPre, allocMem, hq]
+    rw [Mem.arr64_set64_same, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hm1sz : ((consPre m x l).arr64 IW).size = (m.arr64 IW).size := by rw [hm1IW]; simp
+  obtain ⟨hA, hS, hG⟩ := copyW_get n _ _ _ _ _ h (by rw [hq1]; omega) (by rw [hq1, hm1sz]; omega)
+    (by rw [hm1sz]; exact hsz)
+  have hm1get : ∀ i, ((consPre m x l).arr64 IW)[i]? =
+      if i = q.toNat then some x else (m.arr64 IW)[i]? := by
+    intro i
+    rw [hm1IW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    by_cases hi : q.toNat = i
+    · subst hi; simp [show q.toNat < (m.arr64 IW).size by omega]
+    · simp [hi, Ne.symm hi]
+  have hget : ∀ i, (m'.arr64 IW)[i]? =
+      if i = q.toNat then some x
+      else if q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + l.toNat then (m.arr64 IW)[o.toNat + (i - (q.toNat + 1))]?
+      else (m.arr64 IW)[i]? := by
+    intro i
+    rw [hG i, hq1]
+    by_cases hi : q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + l.toNat
+    · rw [ite_eq_left hi, ite_eq_right (by omega), ite_eq_left hi, hm1get, ite_eq_right (by omega)]
+    · rw [ite_eq_right hi, hm1get]
+      by_cases hiq : i = q.toNat
+      · simp [hiq]
+      · rw [ite_eq_right hiq, ite_eq_right hiq, ite_eq_right hi]
+  -- the other arrays and CTL
+  have hCTL : ∀ i, i ≠ (200 : Word) → rdW (m'.arr64 CTL) i = rdW (m.arr64 CTL) i := by
+    intro i hi
+    rw [hA CTL (by decide)]; exact consPre_ctl m x l i hi
+  have hEREC : m'.arr64 EREC = m.arr64 EREC := by
+    rw [hA EREC (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hEREC1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := by
+    rw [hA (tier1 EREC) (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have htop : rdW (m'.arr64 CTL) 200 = q + (l + 1) := by
+    rw [hA CTL (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64]; simp [hc, hq]
+  refine ⟨?_, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
+  · rw [hl1, decNL_succ]
+    have h0 : iwN m' q.toNat = some x.toNat := by
+      simp [iwN, nat?, iwA, aread_apply, hget]
+    rw [h0]
+    have : decNL m' (q.toNat + 1) l.toNat = some xs := by
+      rw [← hxs]
+      simp only [decNL]
+      apply mapM_opt_congr
+      intro j hj
+      have hj' : j < l.toNat := List.mem_range.mp hj
+      simp only [iwN, nat?, iwA, aread_apply, hget]
+      rw [ite_eq_right (by omega), ite_eq_left (by omega)]
+      have : o.toNat + (q.toNat + 1 + j - (q.toNat + 1)) = o.toNat + j := by omega
+      simp
+    simp [this]
+  · have : (q + (l + 1)).toNat = q.toNat + (l.toNat + 1) := by
+      rw [UInt64.toNat_add, hl1]; simp; omega
+    simp only [iwTop, htop, this, hq]; omega
+  · simp only [erTop, hCTL 129 (by decide)]; exact Nat.le_refl _
+  · intro i hi
+    simp only [iwTop, hq] at hi
+    rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
+  · intro i _; rw [hEREC]
+  · simp only [erecTop1, hCTL 130 (by decide)]; exact Nat.le_refl _
+  · intro i _; rw [hEREC1]
+  · intro b hb hbc
+    rw [hA b (by simpa using hb)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by simpa using hb), Mem.arr64_set64_ne _ _ _ _ _ hbc]
+  · intro i hi; exact hCTL i (by simpa using hi)
+  · intro b
+    by_cases hb : b = IW
+    · subst hb; rw [hS, hm1sz]
+    · rw [hA b hb]; simp only [consPre, allocMem, size_set64]
 
 /-- `consW` is the memory `slCons_dec` speaks about. -/
 theorem consW_decN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List Nat}
@@ -121,7 +202,13 @@ theorem consW_stageN {vis : Word} {fe : IFEnv} {a : AState}
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (x.toNat :: xs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+  have hsz := hS.iw.iwSize
+  have hc := hS.iw.ctl
+  obtain ⟨hr, hd, hg, hf, -, ht⟩ := consW_decN h hsz hc hsrc hxs
+  have hroom := consW_roomN h hsz hc hsrc hxs
+  subst hr
+  exact ⟨⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw hroom⟩, hg,
+    by simpa using hd, by simpa using ht⟩
 
 theorem gafF_afr {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : AFr m m' :=
   AFr.of_frame (gafF_frame h)
@@ -185,15 +272,17 @@ theorem decNL_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : o + l ≤ iw
 
 /-! ## Constant records are stable under the pool's growth -/
 
-/-- `q`'s constant-value record lies below the `EREC` top (its four words and its level-parameter
-slice). -/
-def CVExt (m : Mem) (q : Nat) : Prop :=
-  q + 4 ≤ erTop m ∧ ∀ o l, nat? (erA m) (q + 1) = some o → nat? (erA m) (q + 2) = some l →
-    o + l ≤ erTop m ∨ l = 0
+/-- `q`'s constant-value record decodes (its four words and its level-parameter slice are all
+defined in the record pool, in either tier), so it stays decoded as the pool grows. -/
+def CVExt (m : Mem) (q : Nat) : Prop := (decCVp m q).isSome
+
+theorem CVExt.of_dec {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv) : CVExt m q := by
+  simp [CVExt, h]
 
 theorem decCVp_grow_r {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) :
     decCVp m' q = decCVp m q := by
-  sorry
+  obtain ⟨cv, hcv⟩ := Option.isSome_iff_exists.mp hq
+  rw [hcv]; exact ArrExt.decCV hg.ext hcv
 
 theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o : Nat),
     decPL m f o l = (decNL m o l).bind (fun ps => ps.mapM f) := by
@@ -214,7 +303,7 @@ theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o :
         | some ps => simp [hf]
 
 theorem CVExt_grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) : CVExt m' q := by
-  sorry
+  simp only [CVExt, decCVp_grow_r hg hq]; exact hq
 
 /-! ## `class_read_classes` (loop rewritten as recursion: the rest, then `sl_cons` at a motive) -/
 

@@ -64,7 +64,7 @@ theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
-    ilF_ok dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
+    ilF_ok vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
   have hrun : (paramLevels lps).run a₀ = .ok (x, a2) := by
     simp only [paramLevels, StateT.run_bind, hrun1]
     exact hrun2

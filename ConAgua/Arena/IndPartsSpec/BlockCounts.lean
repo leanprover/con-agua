@@ -162,7 +162,15 @@ include ha hc hv hs hpb hh
 theorem blockCountsHead_spec (n : Nat) (s₀ : St) (cvT : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts_head" [cvT]
     ⦃fun r s' => LocEq s' s₀ ∧ bchW n s₀.mem cvT = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hh]
+  simp only [callFn, blockCountsHead]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        piBinders_spec p ha hc hv hs hpb n, eViewSpec4 p hv n] <;>
+      finish (gen := 20) [rdW_eq, erRd, CWF, List.getD_cons_zero, List.getD_cons_succ, List.tail_cons]
 
 theorem blockCountsHead_spec' (n : Nat) (s₀ : St) (cvT : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts_head" [cvT]

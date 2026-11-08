@@ -340,7 +340,74 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
     off.toNat + l.toNat < 2 ^ 64 → decPL m (decMS m) off.toNat l.toNat = some ms →
     numCtorsOfW n m off l = some r →
     r = UInt64.ofNat (ConRon.Arena.numCtorsOf ms) ∧ ConRon.Arena.numCtorsOf ms < 2 ^ 64 := by
-  sorry
+  induction n with
+  | zero => intro m off l r ms _ _ _ h; simp [numCtorsOfW] at h
+  | succ n ih =>
+    intro m off l r ms hsmall hbnd hd h
+    by_cases hl : l = 0
+    · rw [numCtorsOfW_nil n m off l hl] at h
+      have hl0 : l.toNat = 0 := by
+        have := congrArg UInt64.toNat hl; simpa using this
+      rw [hl0] at hd
+      simp only [decPL, List.range_zero, List.mapM_nil, pure, Option.some.injEq] at hd
+      simp only [Option.some.injEq] at h
+      simp [← hd, ConRon.Arena.numCtorsOf, ← h]
+    · obtain ⟨k, hk⟩ : ∃ k, l.toNat = k + 1 := by
+        have : l.toNat ≠ 0 := fun h0 => hl (by
+          apply UInt64.toNat_inj.mp; simpa using h0)
+        exact ⟨l.toNat - 1, by omega⟩
+      rw [hk] at hd
+      rw [decPL_succ] at hd
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd
+      obtain ⟨v, hv, ms0, hms0, mrest, hmrest, rfl⟩ := hd
+      have hoff1 : (off + 1).toNat = off.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp; omega
+      have hl1 : (l - 1).toNat = k := by
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp [hk]
+      have hd1 : decPL m (decMS m) (off + 1).toNat (l - 1).toNat = some mrest := by
+        rw [hoff1, hl1]; exact hmrest
+      have hbnd1 : (off + 1).toNat + (l - 1).toNat < 2 ^ 64 := by rw [hoff1, hl1]; omega
+      cases hcons : numCtorsOfW n m (off + 1) (l - 1) with
+      | none =>
+        exfalso
+        have hcontra : numCtorsOfW (n + 1) m off l = none := by
+          simp [numCtorsOfW, numCtorsOfW.cons, hl, hcons]
+        rw [hcontra] at h; simp at h
+      | some r' =>
+        rw [numCtorsOfW_cons n m off l hl, hcons] at h
+        obtain ⟨hr', hlt'⟩ := ih m (off + 1) (l - 1) r' mrest hsmall hbnd1 hd1 hcons
+        have hv3 : v + 3 < 2 ^ 64 := by
+          obtain ⟨_, _, _, hl3, _⟩ := decAt_some (decMS_some hms0).2.2.2
+          have : v + 2 + 1 < (m.arr64 IW).size := by
+            simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hl3
+            obtain ⟨w, hw, -⟩ := hl3
+            exact (Array.getElem?_eq_some_iff.mp hw).1
+          omega
+        have hv' := (iwN_rdW hv (by omega)).1
+        rw [ofNat_toNat_word] at hv'
+        have hdm := decMS_some hms0
+        obtain ⟨o2, l2, ho2, hl2, hg2⟩ := decAt_some hdm.2.2.2
+        have heq1 : v + 2 + 1 = v + 3 := by omega
+        rw [heq1] at hl2
+        have hl2rd := (iwN_rdW hl2 (by omega)).1
+        have e3 : UInt64.ofNat (v + 3) = UInt64.ofNat v + 3 := by
+          apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+        rw [e3, ← hv'] at hl2rd
+        by_cases hw : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r' < r'
+        · rw [numCtorsOfW_cons_wrap _ _ _ hw] at h; cases h
+        rw [numCtorsOfW_cons_some _ _ _ hw] at h
+        have hnw := nctAddNowrap hw
+        simp only [Option.some.injEq] at h
+        rw [hl2rd, hr'] at h hnw
+        have hl2b : l2 < 2 ^ 64 := by
+          simp only [iwN, nat?, Option.map_eq_some_iff] at hl2
+          obtain ⟨w, -, rfl⟩ := hl2; exact w.toNat_lt
+        rw [UInt64.toNat_ofNat_of_lt' (show l2 < UInt64.size from hl2b),
+          UInt64.toNat_ofNat_of_lt' (show _ < UInt64.size from hlt')] at hnw
+        rw [← ofNat_add_word] at h
+        rw [← decPL_length m hg2] at h hnw
+        simp only [ConRon.Arena.numCtorsOf]
+        exact ⟨h.symm, hnw⟩
 
 /-- **`num_ctors_of` is `numCtorsOf`.** -/
 @[refines ConRon.Arena.numCtorsOf]
@@ -630,7 +697,87 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
     decNL m' (rdW (m.arr64 CTL) 200).toNat bs.k = some bs.nIdxs ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
     (rdW (m.arr64 CTL) 200).toNat + bs.k = iwTop m' := by
-  sorry
+  obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).1
+  have hlen := decPL_length m hg
+  have hk : bs.k = l := by rw [BlockShape.k, hlen]
+  obtain ⟨ho', hob⟩ := iwN_rdW ho (by omega)
+  obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
+  have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [ofNat_toNat_word] at ho'
+  rw [e1] at hl'
+  have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
+  have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
+  have hsrc' := hsrc o l ho hl
+  simp only [nIdxsW, ho', hl'] at h
+  rcases hal : allocW m (UInt64.ofNat l) with _ | ⟨q, m1⟩
+  · simp [hal] at h
+  obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
+  rw [hll] at hroom
+  simp only [hal] at h
+  rcases hcp : nIdxsCopyW (n - 1) m1 q (UInt64.ofNat o) (UInt64.ofNat l) with _ | m2
+  · simp [hcp] at h
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  subst hq' hm1
+  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
+  have hIW := allocMem_IW m (UInt64.ofNat l)
+  have htop0 : iwTop m = q.toNat := by simp only [iwTop, hqq]
+  have hptr' : ∀ j < (UInt64.ofNat l).toNat,
+      (rdW ((allocMem m (UInt64.ofNat l)).arr64 IW) (UInt64.ofNat ((UInt64.ofNat o).toNat + j)) + 1).toNat < q.toNat := by
+    intro j hj
+    rw [hll] at hj
+    obtain ⟨v, y, hv, -, -⟩ := decPL_get l o bs.members hg j hj
+    have hvb := hptr o l j v ho hl hj hv
+    obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+    rw [hIW, hoo]
+    have e : UInt64.ofNat (o + j) = UInt64.ofNat o + UInt64.ofNat j := ofNat_add_word _ _
+    rw [hv']
+    have : (UInt64.ofNat v + 1).toNat = v + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    rw [this]; omega
+  obtain ⟨hA, hS, hG⟩ := nIdxsCopyW_get (n - 1) _ _ _ _ _ hcp
+    (by rw [hoo, hll]; simp only [iwTop, hqq] at hsrc'; omega)
+    (by rw [hIW, hll]; exact hroom) (by rw [hIW]; exact hsz) hptr'
+  rw [hIW] at hS hG
+  have hfr : MemFrame [IW] [200] m m2 :=
+    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
+  have htop : rdW (m2.arr64 CTL) 200 = q + UInt64.ofNat l := by
+    rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
+  have hsum : (q + UInt64.ofNat l).toNat = q.toNat + l := by
+    rw [UInt64.toNat_add]; simp [hll]; omega
+  refine ⟨by rw [hk], ?_, ?_, hfr, ?_⟩
+  · rw [hk]
+    have hxs : bs.nIdxs.length = l := by simp [BlockShape.nIdxs, hlen]
+    have := decNL_of_get m2 bs.nIdxs q.toNat (fun j hj => by
+      have hj' : j < l := by omega
+      obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l o bs.members hg j hj'
+      obtain ⟨-, -, hnI, -⟩ := decMS_some hy
+      have hGj := hG (q.toNat + j)
+      rw [ite_eq_left (by rw [hll]; omega)] at hGj
+      have e2 : q.toNat + j - q.toNat = j := by omega
+      rw [e2, hoo] at hGj
+      obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+      have hvb := hptr o l j v ho hl hj' hv
+      rw [hv'] at hGj
+      obtain ⟨hn', hnb⟩ := iwN_rdW hnI (by omega)
+      have e4 : UInt64.ofNat v + 1 = UInt64.ofNat (v + 1) := by
+        apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+      rw [e4, hn'] at hGj
+      simp only [iwN, nat?, iwA, aread_apply]
+      rw [hGj]
+      have hy' : bs.members[j]'(by omega) = y := by
+        simpa [List.getElem?_eq_getElem (show j < bs.members.length by omega)] using hget
+      simp [BlockShape.nIdxs, List.getElem_map, hy', Nat.mod_eq_of_lt hnb])
+    rw [hxs] at this
+    exact this
+  · refine iwGrow_of_frame hfr (N := UInt64.ofNat l) ?_ ?_ hsz ?_
+    · rw [htop, hqq]
+    · simp only [iwTop, hqq, hll]; omega
+    · intro i hi
+      simp only [iwTop, hqq] at hi
+      rw [hG, ite_eq_right (by omega)]
+  · simp only [iwTop, htop, hsum, hk]
 
 /-- **`block_shape_n_idxs` is `BlockShape.nIdxs`**: the new `IW` slice holds the members' index counts. -/
 @[refines ConRon.Arena.BlockShape.nIdxs]

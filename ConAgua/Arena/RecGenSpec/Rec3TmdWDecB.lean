@@ -73,9 +73,11 @@ theorem rec3CG_parts {m : Mem} {g : Nat} {G : ClassGen} (h : DecB (fun m => decC
 /-- `CVExt` bounds the record's address. -/
 theorem rec3CVExt_lt {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     {q : Nat} (hS : StageR vis fe m a) (h : CVExt m q) : q + 3 < 2 ^ 64 := by
-  obtain ⟨-, hE1, -, hEs, -⟩ := hS.iw
-  have := h.1
-  omega
+  obtain ⟨cv, hcv⟩ := Option.isSome_iff_exists.mp h
+  have h3 : erecP m (q + 3) ≠ none := by
+    intro e; simp [decCVp, decCV, erA, hd?, e] at hcv
+  obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp h3
+  exact erecP_lt64 hv
 
 /-! ## `class_rules_ok_one` -/
 

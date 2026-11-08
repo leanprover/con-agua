@@ -132,7 +132,19 @@ theorem StageR.alloc {vis : Word} {fe : IFEnv} {a : AState}
     {m m1 : Mem} {k q : Word} (hS : StageR vis fe m a) (h : allocW m k = some (q, m1)) :
     StageR vis fe m1 a ∧ IWGrow m m1 ∧ q = rdW (m.arr64 CTL) 200 ∧ q.toNat + k.toNat ≤ (m.arr64 IW).size ∧
       iwTop m1 = q.toNat + k.toNat := by
-  sorry
+  have h1 := hS.iw.iw
+  have h3 := hS.iw.iwSize
+  have h5 := hS.iw.ctl
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts h h3
+  subst hm1
+  have hf := allocMem_frame m k
+  have hqi : q.toNat = iwTop m := by simp only [iwTop, hq]
+  have htop : iwTop (allocMem m k) = q.toNat + k.toNat := by
+    simp only [iwTop, allocMem_top m k h5, ← hq]
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  refine ⟨⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw ?_⟩, allocMem_grow m k (by omega) h5, hq,
+    hroom, htop⟩
+  rw [htop, hf.size IW]; exact hroom
 
 /-! ## `nest_canon_crest` -/
 

@@ -250,7 +250,8 @@ open L.Arena
 import) -/
 
 def pos2PinW (m : Mem) (i : Word) : Option (List Word × Mem) :=
-  if pinW m 0 = 0 then none else if 51 ≤ i then none else some ([rdW (m.arr64 PINS) (1 + i)], m)
+  if pinW m 0 = 0 then none else if 52 ≤ i then none
+  else if i = 51 then some ([rdW (m.arr64 PINS) 71], m) else some ([rdW (m.arr64 PINS) (1 + i)], m)
 
 end L.Ind
 

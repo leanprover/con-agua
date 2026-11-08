@@ -822,6 +822,24 @@ theorem nidx_beq (n n' : NIdx) : (n == n') = decide (n'.word.toUInt64 = n.word.t
 theorem vis_toNat_succ {v : Word} (h : v.toNat < 2 ^ 32 - 2) : (v + 1).toNat = v.toNat + 1 := by
   rw [UInt64.toNat_add]; simp; omega
 
+/-- **An own-row write keeps `OwnBelow`**: the row word carries the current stamp. -/
+theorem OwnBelow.of_ownSet {m : Mem} {w c p : Word} (h : OwnBelow m) (hc32 : c.toNat < 2 ^ 32)
+    (hs : (stampW m).toNat < 2 ^ 32) : OwnBelow (ownSet m w c p) := by
+  intro x hx
+  rw [stampW_ownSet]
+  obtain ⟨h1, h2⟩ := h x hx
+  refine ⟨?_, ?_⟩
+  · rw [ownRow_eq] at h1 ⊢
+    have e1 := rowIx_even w; have e2 := rowIx_even x
+    simp only [ownSet, rdN_set64, ixW_succ, ixW_toNat]
+    rw [if_neg (fun hh => by omega)]
+    split
+    · by_cases hc : c = 0
+      · subst hc; simp [rowWord_zero]
+      · rw [(rowWord_read (m := m) hc hc32 hs).1]; exact Nat.le_refl _
+    · exact h1
+  · rw [ownSet_arr_of (otxArrT_arr' x)]; exact h2
+
 /-- **`push`**: the own row of the record's name becomes `(vis + 1, q)`. -/
 theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) q.toNat = some ci) {w : Word} (hw : erecP m (q.toNat + 1) = some w)
@@ -842,7 +860,7 @@ theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
     intro n; rw [hname, nidx_beq, decI_word_self w hw32]
   have hP := erecP_ownSet m w (vis + 1) q
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn he => ?_, fun n => ?_, fun n hn => ?_,
-    ?_, ?_, fun n => ?_, fun n => ?_, ?_⟩
+    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_⟩
   · simp only [IFEnv.push, Std.HashMap.getElem?_insert, hname']
     by_cases e : n.word.toUInt64 = w
     · simp only [e, decide_true, ite_true, ownFind, s1, s2, hP, hci, hv1]
@@ -873,6 +891,7 @@ theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
   · simp only [IFEnv.push, baseRow_ownSet, hP]; exact h.base n
   · simp only [IFEnv.push, baseTbl_ownSet, hP]; exact h.btbl n
   · simp only [stampW, ownSet_ctl]; exact hs
+  · exact h.ownBelow.of_ownSet (by rw [hv1]; omega) hs
 
 /-- **`popTemp`**: the own row of `w` (the newest push, counter `vis`) put back to `(c, q)`, the
 row read before that push (`prev` its decoding), and the view lowered. -/
@@ -906,7 +925,7 @@ theorem EnvR.popTemp (h : EnvR m vis fe) {w c q : Word} (hw : w.toNat < 2 ^ 32) 
   have hkey : ∀ n : NIdx, ((decI w : NIdx) == n) = decide (n.word.toUInt64 = w) := by
     intro n; rw [nidx_beq, hwn]
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn he => ?_, fun n => ?_, fun n hn => ?_,
-    ?_, ?_, fun n => ?_, fun n => ?_, ?_⟩
+    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_⟩
   · by_cases e : n.word.toUInt64 = w
     · have e' : n = decI w := by rw [← e, decI_word]
       subst e'
@@ -946,6 +965,7 @@ theorem EnvR.popTemp (h : EnvR m vis fe) {w c q : Word} (hw : w.toNat < 2 ^ 32) 
   · simp only [IFEnv.popTemp, baseRow_ownSet, hP]; exact h.base n
   · simp only [IFEnv.popTemp, baseTbl_ownSet, hP]; exact h.btbl n
   · simp only [stampW, ownSet_ctl]; exact hs
+  · exact h.ownBelow.of_ownSet hc32 hs
 
 /-! ### Table-row writes and the relation -/
 
@@ -1007,6 +1027,23 @@ theorem ownTbl_tblSet_other {m : Mem} {w v x : Word} (hw : w.toNat < 2 ^ 32) (hx
     · simp [tblSet, Mem.arr64_set64_ne _ _ _ _ _ ha]
   · simp [ownTbl, ht']
 
+/-- **A table-row write keeps `OwnBelow`**: the table row carries the current stamp. -/
+theorem OwnBelow.of_tblSet {m : Mem} {w v : Word} (h : OwnBelow m) : OwnBelow (tblSet m w v) := by
+  intro x hx
+  have hst : stampW (tblSet m w v) = stampW m := by simp only [stampW, tblSet_ctl]
+  rw [hst]
+  obtain ⟨h1, h2⟩ := h x hx
+  refine ⟨?_, ?_⟩
+  · have := ownArr_arr x
+    rw [ownRow_eq] at h1 ⊢; rw [tblSet_arr_of (b := ownArr x) (by omega)]; exact h1
+  · have e1 := rowIx_even w; have e2 := rowIx_even x
+    show (rdN ((tblSet m w v).arr64 (otxArrT x)) (rowIx x)).toNat ≤ _
+    simp only [tblSet, rdN_set64, ixW_succ, ixW_toNat]
+    rw [if_neg (fun hh => by omega)]
+    split
+    · exact Nat.le_refl _
+    · exact h2
+
 /-- **`pushTable`**: the own table row of the table's structure becomes the record. -/
 theorem EnvR.pushTable (h : EnvR m vis fe) {q : Word} {tb : IProjTable}
     (htb : decTbl (erecP m) q.toNat = some tb) {w : Word} (hw : erecP m (q.toNat + 2) = some w)
@@ -1024,7 +1061,7 @@ theorem EnvR.pushTable (h : EnvR m vis fe) {q : Word} {tb : IProjTable}
     intro n; rw [hname, nidx_beq, decI_word_self w hw32]
   have hP := erecP_tblSet m w (q + 1)
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn he => ?_, fun n => ?_, fun n hn => ?_,
-    ?_, ?_, fun n => ?_, fun n => ?_, ?_⟩
+    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_⟩
   · simp only [IFEnv.pushTable, ownFind, ownRaw_tblSet, hP]; exact h.own n
   · rw [ownRaw_tblSet] at hn ⊢; rw [hP]; exact h.own_dec n hn
   · rw [ownRaw_tblSet] at hn ⊢; exact h.fresh n hn
@@ -1041,6 +1078,7 @@ theorem EnvR.pushTable (h : EnvR m vis fe) {q : Word} {tb : IProjTable}
   · simp only [IFEnv.pushTable, baseRow_tblSet, hP]; exact h.base n
   · simp only [IFEnv.pushTable, baseTbl_tblSet, hP]; exact h.btbl n
   · simp only [stampW, tblSet_ctl]; exact h.stamp
+  · exact h.ownBelow.of_tblSet
 
 /-! ### Stream-index writes (`build_index`) -/
 

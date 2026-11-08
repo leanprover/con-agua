@@ -503,7 +503,7 @@ theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx),
 
 /-- **`intern_ls_iw`'s model refines `internLsNode us`** at the `IW` slice decoding to `us`
 (replaces `IndStubs.internLsIw_spec`). -/
-theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l : Word)
+theorem ilF_ok (vis : Word) (fe : IFEnv) (o l : Word)
     (us : List LIdx) :
     RelW ilF [o, l] (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some us)
       (internLsNode us) (KeepPost vis fe (fun _ r (x : LsIdx) => H (r.headD 0) ∧ decI (r.headD 0) = x)) := by
