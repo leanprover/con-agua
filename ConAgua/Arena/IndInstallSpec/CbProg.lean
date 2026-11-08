@@ -37,8 +37,6 @@ structure IndsProg (p : Prog) : Prop extends InstProg p, ConsIndsProg p where
   agreeP : AgreeProg p
   pinWord : p.lookup "pin_word" = some pinWordL
   withSort : p.lookup "block_shape_with_sort" = some blockShapeWithSort
-  cvTas : p.lookup "check_block_inds_cv_tas" = some checkBlockIndsCvTas
-  cvTasGo : p.lookup "check_block_inds_cv_tas_go" = some checkBlockIndsCvTasGo
   inds : p.lookup "check_block_inds" = some checkBlockInds
 
 end L.Ind
@@ -115,9 +113,6 @@ structure CbProg (p : Prog) : Prop where
   slc : p.lookup "sl_contains" = some slContains
   nodup : p.lookup "sl_nodup" = some slNodup
   pdm : p.lookup "pi_doms_mention_any" = some piDomsMentionAny
-  brm : p.lookup "block_raw_rec_member" = some blockRawRecMember
-  brg : p.lookup "block_raw_rec_go" = some blockRawRecGo
-  brr : p.lookup "block_raw_rec" = some blockRawRec
   cb : p.lookup "check_block" = some checkBlock
 
 end L.Ind

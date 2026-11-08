@@ -170,10 +170,12 @@ theorem ivg_ref {p : Prog} (hap : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option 
   · exact RefE.of_cls0 rfl
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_value_guards`' error claim under `StageT`** (`ivg_ref`'s error half). -/
 theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
     (hnv : closedNV p L.Checker.nvFns = true) (hU : UceProg p) : IvgE p := by
   sorry
+-/
 
 /-! ## `check_thm_val(vis, c)` -/
 
@@ -192,7 +194,6 @@ l_model checkThmVal_specE (p : Prog) (hV : ValProg p)
 `lvl_eq_c` outside the verdict closure (`lvl_eq_fueled`'s claim). -/
 structure TvCtx (p : Prog) : Prop where
   core : CoreStubsE p
-  ivg : IvgE p
   lvc : NVAt p "lvl_eq_c"
 
 /-- What a value check that pushes (`check_thm_val`) or a declaration arm (`check_decl_thm`) gives
@@ -358,7 +359,6 @@ l_model checkValueGroup_specE (p : Prog) (hP : CvgProg p)
 claims. -/
 structure CvgCtx (p : Prog) : Prop where
   core : CoreStubsE p
-  ivg : IvgE p
 
 /-- What `check_value_group` gives besides the twin's run (from `m`): `StageT` after it, the
 growth from the memory after `iw_reset`, the memo of `consts_resolve_ffast`. -/

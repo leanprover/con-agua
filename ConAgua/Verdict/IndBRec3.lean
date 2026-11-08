@@ -36,12 +36,14 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model classRecTysOkE_spec (p : Prog) (hp : RtsProg p)
   fns [hp.rts ↦ classRecTysOkE]
   specs [classRecTyOkE_spec p hp.toRtoProg n, slCons_specW p hp.alloc hp.copy hp.cons n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `class_rec_tys_ok` gives besides the twin's checked constants `xs` (from `m`): the stage
 invariant under `StageC`, the growth, the result a slice of constant records, the abstraction
@@ -59,6 +61,7 @@ variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p)
   {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd hCrk henv in
 /-- **`class_rec_tys_ok` refines `classRecTysOk`, both outcomes** under `StageC` (twin side:
 con-ron's `classRecTysOk_spec`'s proof; the extension after one recursor from con-ron's
@@ -171,6 +174,7 @@ theorem rts_ref (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 6
   have hA3 := consW_afr h3 hR2.abs
   exact RefE.ret rfl ⟨hR2.stage.of_pstep hS3 hA3 (PStep.refl hR2.stage.check.state),
     hg1.trans (hR2.grow.trans hg3), by simpa [decCVS] using hsp3, hA3⟩
+-/
 
 include hq hApd hCrk henv in
 /-- **`class_rec_tys_ok` refines `classRecTysOk`** under `StageC` (`rts_ref`'s ok half). -/
@@ -192,12 +196,7 @@ theorem classRecTysOk_refinesC (hp : RtsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s
       KPC dn vis fe env s₀.mem decCVS (r, s'.mem)
         (AM.st (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀)
         (AM.res (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (RefE.triple (classRecTysOkE_spec p hp n s₀ vis g k ro rl vo vl co cl)
-    (rts_ref hq hApd hCrk henv g k G hns gP n hn _ a₀ ro rl vo vl co cl rcs cvs cs rcsP cvsP hC hG
-      hrcs hok hcvs hcs hA hgP hrcsP hcvsP hw)) ?_
-  rintro r s' ⟨hl, x, a', run, hR⟩
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
-  exact ⟨hl, hok, ⟨by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.dec⟩, hR.abs⟩
+  sorry
 
 include hq hApd hCrk hnv hcE hU henv in
 /-- **`class_rec_tys_ok`'s error claim** (the hypotheses of `classRecTysOk_refinesC`, and the core
@@ -215,11 +214,8 @@ theorem classRecTysOk_claim (hp : RtsProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
     (hcvsP : cvs.mapM (Frontend.denoteCV a₀.store) = some cvsP)
     (hw : ∀ cv ∈ cvsP, ConLeche.Expr.WScoped 0 cv.type) :
     CoreSpecE p n "class_rec_tys_ok" [vis, g, k, ro, rl, vo, vl, co, cl]
-      (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) s₀ a₀ :=
-  RefE.coreSpecE (classRecTysOkE_spec p hp n s₀ vis g k ro rl vo vl co cl) hnv
-    { nv := hnv, core := hcE, uce := hU }
-    (rts_ref hq hApd hCrk henv g k G hns gP n hn _ a₀ ro rl vo vl co cl rcs cvs cs rcsP cvsP hC hG
-      hrcs hok hcvs hcs hA hgP hrcsP hcvsP hw)
+      (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) s₀ a₀ := by
+  sorry
 
 end sims
 

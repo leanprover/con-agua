@@ -50,6 +50,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model crsE_spec (p : Prog) (hP : CrsProg p)
   fns [hP.crs ↦ crsE]
   specs [cvLps_specW p hP.cr.alloc hP.cr.copy hP.cr.eti hP.cr.lps n,
@@ -60,6 +61,7 @@ l_model crsE_spec (p : Prog) (hP : CrsProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `class_rules_ok` gives besides the twin's rules `xs` (from `m`, `a`): the stage invariant
 under `StageC`, the growth, the rules a handle slice below the top, the abstraction memo, the core
@@ -70,12 +72,12 @@ structure CrsPost (dn : NIdx → Option ConLeche.Name) (visR : Word) (feR : IFEn
   grow : IWGrow m m'
   dec : decEL m' r xs
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env feR a a'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) {dn : NIdx → Option ConLeche.Name}
   {env : ConLeche.Env}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd in
 /-- **`class_rules_ok` refines `classRulesOk`, both outcomes** under `StageC` (the inputs'
 denotations as con-ron's `classRulesOk_spec` asks). -/
@@ -204,7 +206,9 @@ theorem crs_ref (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
     simp only [getD_zero, List.headD_cons, hR4.res]
   · exact hd6
   · exact Nat.le_of_eq ht6
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd in
 /-- **`class_rules_ok` refines `classRulesOk`** under `StageC` (`crs_ref`'s ok half): the rules,
 a handle slice below the top. -/
@@ -241,6 +245,7 @@ theorem classRulesOk_refinesC (hp : CrsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s�
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, ⟨by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.dec⟩, hR.abs⟩
+-/
 
 end sims
 
