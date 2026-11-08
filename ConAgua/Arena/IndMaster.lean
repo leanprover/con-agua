@@ -261,23 +261,9 @@ theorem allocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     StageR vis fe m1 a ∧ IWGrow m m1 ∧ q.toNat = iwTop m ∧ iwTop m1 = iwTop m + k.toNat := by
   sorry
 
-/-! ## `erec_alloc` and the constant records, under the stage relation -/
+/-! ## `erec_alloc` and the constant records, under the stage relation
 
-/-- The memory after `erec_alloc(k)`. -/
-def erAllocMem (m : Mem) (k : Word) : Mem := m.set64 CTL 129 (rdW (m.arr64 CTL) 129 + k)
-
-/-- The model of `erec_alloc(k)`. -/
-def erAllocW (m : Mem) (k : Word) : Option (Word × Mem) :=
-  let o := rdW (m.arr64 CTL) 129
-  if m.len64 EREC < o then none
-  else if m.len64 EREC - o < k then none
-  else some (o, erAllocMem m k)
-
-theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc) (n : Nat) (s₀ : St)
-    (k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_alloc" [k]
-    ⦃fun r s' => LocEq s' s₀ ∧ erAllocW s₀.mem k = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+`erAllocMem`, `erAllocW`, `erecAlloc_specW`, `erecPutMem`, `erecPut_specW`: `IndIface.lean`. -/
 
 /-- Write `ws` into `EREC` at `q, q + 1, …`. -/
 def wrER (m : Mem) (q : Word) : List Word → Mem
