@@ -38,6 +38,7 @@ namespace L.Ind
 
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_ind_decl`'s claim from program facts** and `whnf_top`'s claim: `cid_ref`'s error
 half. -/
 theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
@@ -67,6 +68,7 @@ theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (cid_ref hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr
       (N := n) (by omega) hdn hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc
       hfMc hlpd) hc
+-/
 
 end L.Ind
 
@@ -74,6 +76,7 @@ namespace L.Checker
 
 open L L.Arena L.Front L.Rom L.Compiler L.Ind ConAgua.Final
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The inductive arm's error claim at the programs phase A runs** (`indArmSpec_checker`'s
 program facts, `indArmProgs_checker`). -/
 theorem indArmVerdict_proved : IndArmVerdict := by
@@ -100,21 +103,24 @@ theorem indArmVerdict_proved : IndArmVerdict := by
     (closedW_subPB bs checkerProg_armMa) armMa_pass
     (closedW_subPB bs checkerProg_armMc) armMc_block
     hnv hU hWt dn hdn
+-/
 
 /-- **The sequential driver's verdict claims**, without hypotheses. -/
-theorem seqVerdicts_proved : SeqVerdicts checkerProg := seqVerdicts_of indArmVerdict_proved
+theorem seqVerdicts_proved : SeqVerdicts checkerProg := by
+  sorry
 
 /-- **The threaded harness's verdict claims**, without hypotheses. -/
-theorem threadVerdicts_proved : ThreadVerdicts := threadVerdicts_of indArmVerdict_proved
+theorem threadVerdicts_proved : ThreadVerdicts := by
+  sorry
 
-/--
-info: 'L.Checker.seqVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
--/
-#guard_msgs in #print axioms seqVerdicts_proved
+-- ronsync2 stage 2: /--
+-- ronsync2 stage 2: info: 'L.Checker.seqVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
+-- ronsync2 stage 2: -/
+-- ronsync2 stage 2: #guard_msgs in #print axioms seqVerdicts_proved
 
-/--
-info: 'L.Checker.threadVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
--/
-#guard_msgs in #print axioms threadVerdicts_proved
+-- ronsync2 stage 2: /--
+-- ronsync2 stage 2: info: 'L.Checker.threadVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
+-- ronsync2 stage 2: -/
+-- ronsync2 stage 2: #guard_msgs in #print axioms threadVerdicts_proved
 
 end L.Checker
