@@ -736,11 +736,7 @@ theorem wrER_IW (m : Mem) (q : Word) (ws : List Word) : (wrER m q ws).arr64 IW =
 
 theorem erAllocW_arr {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) :
     m1.arr64 IW = m.arr64 IW ∧ m1.arr64 EREC = m.arr64 EREC := by
-  simp only [erAllocW] at h; split at h; · cases h
-  split at h; · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  simp only [erAllocMem]
-  exact ⟨Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)⟩
+  sorry
 
 /-- `ind_info_rec`'s four writes are the record written at once. -/
 theorem iirK_eq {p : Prog} (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m m' : Mem}

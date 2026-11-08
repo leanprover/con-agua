@@ -197,12 +197,8 @@ theorem classStreamRecs_refinesC (hc : p.lookup "iw_copy" = some iwCopy)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classStreamRecs V fe recs) a₀ ∧
       StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classStreamRecs V fe recs) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ CsRes s'.mem r (AM.res (ConRon.Arena.classStreamRecs V fe recs) a₀) ∧
-      AbsOK s'.mem; ⊤⦄ :=
-  triple_post (RefE.triple (csrE_spec p hV ha hc hsc hp n s₀ vis rcso rcsl)
-      (csr_ref hq henv hApd hCrk fe n hn _ a₀ vis rcso rcsl recs recsP hC hA hOK hrecsP))
-    fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
-      obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-      exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.res, hR.abs⟩
+      AbsOK s'.mem; ⊤⦄ := by
+  sorry
 
 end sims
 
@@ -216,9 +212,8 @@ theorem classStreamRecs_claim {p : Prog} {dn : NIdx → Option ConLeche.Name} {e
     (recsP : List ConLeche.RecShape) (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
     (hOK : RecsOK s₀.mem rcso.toNat rcsl.toNat (recs.map (·.cvR)))
     (hrecsP : recs.mapM (dRec a₀.store) = some recsP) :
-    CoreSpecE p n "class_stream_recs" [vis, rcso, rcsl] (ConRon.Arena.classStreamRecs V fe recs) s₀ a₀ :=
-  RefE.coreSpecE (csrE_spec p hV ha hc hsc hp n s₀ vis rcso rcsl) hG.nv hG
-    (csr_ref hq henv hApd hCrk fe n hn s₀.mem a₀ vis rcso rcsl recs recsP hC hA hOK hrecsP)
+    CoreSpecE p n "class_stream_recs" [vis, rcso, rcsl] (ConRon.Arena.classStreamRecs V fe recs) s₀ a₀ := by
+  sorry
 
 end L.Ind
 

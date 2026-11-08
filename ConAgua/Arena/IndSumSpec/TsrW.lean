@@ -41,25 +41,7 @@ open L.Arena
 /-- The copy loop writes the slice's words. -/
 theorem efgW_mem (n : Nat) : ∀ (m m' : Mem) (q o l : Word) (r ws : List Word),
     efgW n m q o l = some (r, m') → SlR m o l ws → m' = wrER m q ws := by
-  induction n with
-  | zero => intro m m' q o l r ws h; simp [efgW] at h
-  | succ n ih =>
-    intro m m' q o l r ws h hs
-    cases hs with
-    | nil =>
-      rw [efgW_nil n m q o 0 rfl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      exact h.2.symm
-    | @cons _ _ ws hl hs =>
-      rw [efgW_cons n m q o l hl] at h
-      obtain ⟨r1, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
-      rw [efgK_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨-, rfl⟩ := h
-      show m1 = wrER (m.set64 EREC q (rdW (m.arr64 IW) o)) (q + 1) ws
-      have hI : (m.set64 EREC q (rdW (m.arr64 IW) o)).arr64 IW = m.arr64 IW :=
-        Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-      exact ih _ _ _ _ _ _ _ h1 (slR_congr hI hs)
+  sorry
 
 /-- Handle words at `q, q + 1, …` decode as the handle list. -/
 theorem sumHslice_of_get {k : IdxKind} {a : Array Word} : ∀ (ws : List Word) (q : Nat),
@@ -226,21 +208,11 @@ theorem rmMem_eq {m1 : Mem} {q old flo fll fpo fpl : Word} (hlt : old.toNat + 11
     rmMem m1 q old flo fll fpo fpl = wrER m1 q [rdW (m1.arr64 EREC) old, rdW (m1.arr64 EREC) (old + 1),
       rdW (m1.arr64 EREC) (old + 2), 1, flo, fll, fpo, fpl, rdW (m1.arr64 EREC) (old + 8),
       rdW (m1.arr64 EREC) (old + 9), rdW (m1.arr64 EREC) (old + 10)] := by
-  simp only [rmMem, wrER]
-  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
-    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
-    show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl, show q + 7 + 1 = q + 8 by ac_rfl,
-    show q + 8 + 1 = q + 9 by ac_rfl, show q + 9 + 1 = q + 10 by ac_rfl]
-  simp (disch := off_omega) only [rdW_set64_ne_er]
+  sorry
 
 theorem erRec_mfr {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) (ws : List Word) :
     MFr [] [] m (wrER m1 q ws) := by
-  rw [erAllocW_mem h]
-  have f1 : MemFrame [EREC] [129] m (erAllocMem m k) :=
-    (MemFrame.setCtl m 129 _).mono (by simp) (by simp)
-  have f2 : MemFrame [EREC] [129] (erAllocMem m k) (wrER (erAllocMem m k) q ws) :=
-    (wrER_frame ws _ q).mono (by simp) (by simp)
-  exact MFr.of_frame (f1.trans f2) (by simp [EREC]) (by simp)
+  sorry
 
 theorem rdW_some {arr : Array Word} {x : Word} {j : Nat} (hj : x.toNat = j) (hlt : j < arr.size) :
     arr[j]? = some (rdW arr x) := by

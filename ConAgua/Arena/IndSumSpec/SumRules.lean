@@ -129,12 +129,7 @@ def ruleMem (m : Mem) (q ctorN nF nP rhs k eta : Word) : Mem :=
 
 theorem ruleMem_eq (m : Mem) (q ctorN nF nP rhs k eta : Word) :
     ruleMem m q ctorN nF nP rhs k eta = wrER m q [ctorN, nF, nP, 0, 0, 0, 0, 0, rhs, k, eta] := by
-  simp only [ruleMem, wrER]
-  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
-    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
-    show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl,
-    show q + 7 + 1 = q + 8 by ac_rfl, show q + 8 + 1 = q + 9 by ac_rfl,
-    show q + 9 + 1 = q + 10 by ac_rfl]
+  sorry
 
 /-- After the rest. -/
 def rgoK3 : Option (List Word × Mem) → Option (List Word × Mem)

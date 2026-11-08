@@ -382,7 +382,6 @@ theorem idxConsts_spec (hp : p.lookup "idx_consts" = some idxConstsL)
       | exact hI0
       | (rename_i h; simpa [List.take_length] using h.idx)
       | (rename_i h; exact h.frame)
-      | trace_state; sorry
 
 theorem idxTablesLoop_spec (hg : p.lookup "tbl_base_get" = some tblBaseGetL)
     (hs : p.lookup "tbl_base_set" = some tblBaseSetL) {m₀ : Mem} {I : IStreamIndex}
@@ -480,7 +479,6 @@ theorem idxTables_spec (hp : p.lookup "idx_tables" = some idxTablesL)
       | exact hI0
       | (rename_i h; simpa [List.take_length] using h.idx)
       | (rename_i h; exact h.frame)
-      | trace_state; sorry
 
 end loops
 

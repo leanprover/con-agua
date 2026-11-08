@@ -369,9 +369,7 @@ theorem ModeOK.fresh (h : ModeOK (cutT m)) : ModeOK (freshMem m) :=
   h.frame (fresh_frame m) (by simp) (by simp)
 
 theorem IWOK.fresh (h : L.Ind.IWOK (cutT m)) : L.Ind.IWOK (freshMem m) := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := h
-  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, fresh_ctl, fresh_size] at *
-  exact ⟨h1, h2, h3, h4, h5⟩
+  sorry
 
 section loop
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}

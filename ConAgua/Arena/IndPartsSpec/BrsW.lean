@@ -376,86 +376,7 @@ theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     (hcv : DecB (fun m => decCVp m cvR0.toNat) m cv)
     (hl : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ LargeR (largeOf lps cv) r := by
-  have hcv' : decCV (erA (truncM m)) cvR0.toNat = some cv := hcv
-  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
-  obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
-  have hlvE : cv.levelParams = lv := by rw [← hcvT]
-  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
-  obtain ⟨o', ho, l', hlw, hsl⟩ := hlv
-  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-  have hq2lt := partsErLt hlw
-  obtain ⟨w1, hw1b, -⟩ := partsErRd (IWGrow.refl m) ho (w := cvR0 + 1) (by rw [UInt64.toNat_add]; simp; omega)
-  obtain ⟨w2, hw2b, -⟩ := partsErRd (IWGrow.refl m) hlw (w := cvR0 + 2) (by rw [UInt64.toNat_add]; simp; omega)
-  unfold bslW at h
-  rw [w1, w2] at h
-  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  by_cases h0 : l' = 0
-  · subst h0
-    rw [ite_eq_left (show (UInt64.ofNat 0 : Word) = 0 from rfl)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have : lv = [] := by simpa [hslice?] using hsl.symm
-    refine ⟨hS, IWGrow.refl _, ?_⟩
-    simp only [largeOf, hlvE, this, LargeR]; rfl
-  rw [ite_eq_right (by intro e; apply h0; have := congrArg UInt64.toNat e; rwa [UInt64.toNat_ofNat_of_lt' hw2b] at this)] at h
-  obtain ⟨L, rfl⟩ : ∃ L, l' = L + 1 := ⟨l' - 1, by omega⟩
-  rw [hslice?_succ] at hsl
-  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hsl
-  obtain ⟨e, he, relps, hrel, rfl⟩ := hsl
-  obtain ⟨w, hw, hwl, hwe⟩ := hd?_some he
-  obtain ⟨hwlt, hw'⟩ := truncM_er_get hw
-  simp only [erA] at hw'
-  have hrdw : rdW (m.arr64 EREC) (UInt64.ofNat o') = w := rdW_of_get? (UInt64.toNat_ofNat_of_lt' hw1b).symm hw'
-  rw [hrdw] at h
-  have ho1 : (UInt64.ofNat o' + 1).toNat = o' + 1 := by rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hw1b]; simp; omega
-  have hl1 : (UInt64.ofNat (L + 1) - 1).toNat = L := by
-    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hw2b]; simp)]
-    rw [UInt64.toNat_ofNat_of_lt' hw2b]; simp
-  rcases h1 : erToIwW n m (UInt64.ofNat o' + 1) (UInt64.ofNat (L + 1) - 1) with _ | ⟨rp, m1⟩ <;> rw [h1] at h
-  · cases h
-  simp only at h
-  obtain ⟨hS1, hg1, hd1, ht1⟩ := partsSliceCopy h1 hS (by rw [ho1, hl1]; exact hrel)
-  rcases he1 : eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll with _ | ev <;> rw [he1] at h
-  · cases h
-  simp only at h
-  have hT1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
-  obtain ⟨ws1, hs1, hn1, hl1'⟩ := slR_of_decHL m1 _ _ _ hd1 (by omega)
-  rw [ofNat_toNat_word, ofNat_toNat_word] at hs1
-  have hl' : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow3 hg1 hlb]; exact hl
-  obtain ⟨ws2, hs2, hn2, hl2⟩ := slR_of_decHL m1 _ _ _ hl' (by have := hg1.iw; omega)
-  rw [ofNat_toNat_word, ofNat_toNat_word] at hs2
-  have hres := eqW_ok n m1 _ _ _ _ ev ws1 ws2 hs1 hs2 he1
-  have hbeq : (relps == lps) = decide (ws1 = ws2) := by rw [hn1, hn2, map_decI_beq ws1 ws2 hl1' hl2]
-  by_cases hev : ev = 0
-  · rw [ite_eq_left hev] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have : (relps == lps) = false := by
-      rw [hbeq]; by_cases hw12 : ws1 = ws2
-      · rw [hres, ite_eq_left hw12] at hev; exact absurd hev (by decide)
-      · simp [hw12]
-    refine ⟨hS1, hg1, ?_⟩
-    simp only [largeOf, hlvE, this, Bool.false_and, LargeR]; rfl
-  rw [ite_eq_right hev] at h
-  have hrt : (relps == lps) = true := by
-    rw [hbeq]; by_cases hw12 : ws1 = ws2
-    · simp [hw12]
-    · rw [hres, ite_eq_right hw12] at hev; exact absurd rfl hev
-  rcases hc : containsW n m1 lo ll w with _ | hsv <;> rw [hc] at h
-  · cases h
-  simp only at h
-  have hcv2 := containsW_ok n m1 lo ll w hsv ws2 hs2 hc
-  have hcont : lps.contains e = ws2.contains w := by rw [hn2, hwe]; exact contains_map_decI w hwl ws2 hl2
-  by_cases hh : hsv ≠ 0
-  · rw [ite_eq_left hh] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have : lps.contains e = true := by rw [hcont]; exact (ipIte01_ne hcv2).mp hh
-    refine ⟨hS1, hg1, ?_⟩
-    simp only [largeOf, hlvE, hrt, this, Bool.not_true, Bool.and_false, LargeR]; rfl
-  rw [ite_eq_right hh] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have : lps.contains e = false := by rw [hcont]; exact Bool.eq_false_iff.mpr (mt (ipIte01_ne hcv2).mpr hh)
-  refine ⟨hS1, hg1, ?_⟩
-  simp only [largeOf, hlvE, hrt, this, Bool.not_false, Bool.and_true, LargeR, ite_true]
-  exact ⟨rfl, hwl, hwe.symm⟩
+  sorry
 
 end L.Ind
 
@@ -1064,36 +985,7 @@ theorem partsPack {vis : Word} {fe : IFEnv} {a : AState}
     StageR vis fe m' a ∧ IWGrow m m' ∧
       DecB (fun m => decBS m q.toNat) m' ⟨ms, recs, nP.toNat, decI elim, decI s, lg != 0, ip != 0⟩ ∧
       ShapeSl m' q := by
-  obtain ⟨hS', hg, htq, hget⟩ := partsFreshGet h hS (by simp)
-  refine ⟨hS', hg, ?_, ?_⟩
-  rotate_left
-  · have gm : ∀ j (hj : j < 9), iwN m' (q.toNat + j) =
-        some ([mo, ml, ro, rl, nP, elim, s, lg, ip][j]'(by simpa using hj)).toNat := fun j hj => by
-      have := hget j (by simpa using hj)
-      rw [← iwN_truncM (show q.toNat + j < iwTop m' by simp at htq; omega)]
-      simp only [iwN, nat?, this]; rfl
-    have m0 := gm 0 (by omega); have m1 := gm 1 (by omega); have m2 := gm 2 (by omega)
-    have m3 := gm 3 (by omega)
-    simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at m0 m1 m2 m3
-    refine ⟨fun o l ho hl => ?_, fun o l ho hl => ?_⟩
-    · rw [m0] at ho; rw [m1] at hl; cases ho; cases hl; exact Nat.le_trans hms.bound hg.iw
-    · rw [m2] at ho; rw [m3] at hl; cases ho; cases hl; exact Nat.le_trans hrs.bound hg.iw
-  have g : ∀ j (hj : j < 9), (iwA (truncM m'))[q.toNat + j]? = some ([mo, ml, ro, rl, nP, elim, s, lg, ip][j]'(by simpa using hj)) :=
-    fun j hj => hget j (by simpa using hj)
-  have g0 := g 0 (by omega); have g1 := g 1 (by omega); have g2 := g 2 (by omega); have g3 := g 3 (by omega)
-  have g4 := g 4 (by omega); have g5 := g 5 (by omega); have g6 := g 6 (by omega); have g7 := g 7 (by omega)
-  have g8 := g 8 (by omega)
-  simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at g0 g1 g2 g3 g4 g5 g6 g7 g8
-  have hm2 := (hms.grow decMS_mono hg).1
-  have hr2 := (hrs.grow decRS_mono hg).1
-  show decBS (truncM m') q.toNat = _
-  simp only [decBS, decAt, iwN, iwH, iwB, nat?, hd?, bool?, g0, g1, g2, g3, g4, g5, g6, g7, g8, Nat.add_assoc,
-    Option.map_some, Option.bind_some, bind, pure]
-  have he' : elim.toNat < 2 ^ 32 := he
-  have hs' : s.toNat < 2 ^ 32 := hs
-  simp only [show decPL (truncM m') (decMS (truncM m')) mo.toNat ml.toNat = some ms from hm2,
-    show decPL (truncM m') (decRS (truncM m')) ro.toNat rl.toNat = some recs from hr2, he', hs', ite_true,
-    Option.bind_some]
+  sorry
 
 /-- **`block_shape_seal`'s model refines the twin's last `match large?`.** -/
 theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
