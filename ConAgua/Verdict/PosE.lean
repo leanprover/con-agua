@@ -423,17 +423,6 @@ def FieldsRef (n : Nat) : Prop :=
 
 /-- **The block's refinements at L fuel `n`.** -/
 structure NbRef (n : Nat) : Prop where
-  pos : PosRef p dn vis fe env n
-  bind : BindRef p dn vis fe env n
-  app : AppRef p dn vis fe env n
-  cont : ContRef p dn vis fe env n
-  key : KeyRef p dn vis fe env n
-  new : NewRef p dn vis fe env n
-  frame : FrameRef p dn vis fe env n
-  ctors : CtorsRef p dn vis fe env n
-  one : OneRef p dn vis fe env n
-  walk : WalkRef p dn vis fe env n
-  fields : FieldsRef p dn vis fe env n
 
 end refs
 

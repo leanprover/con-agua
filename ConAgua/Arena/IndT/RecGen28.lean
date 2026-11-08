@@ -53,6 +53,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## The loop's refinement -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What `classes_nfs`' loop gives besides the twin's records `rest` (from cursor `j`, the records
 `acc` before it; the classes' slice `(mo, ml)` and the inputs in `mb`, the result slots at `qr`):
 the stage, the growth from `mb`, the result slots below the top, the memos, `AbsOK`, and the
@@ -67,6 +68,7 @@ structure CnsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   abs : AbsOK m'
   recs : ∃ ws', decNL m' qr.toNat ml.toNat = some ws' ∧
     FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m') ws' (acc ++ rest)
+-/
 
 section loop
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -76,6 +78,7 @@ variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLech
   {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
 include hkp henv P
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`classes_nfs`' loop refines `classesNfs`, both outcomes** (twin side: con-ron's `classesNfs_spec`'s
 list induction): per class `target_major_nfs` (`tmn_ref` through its run; on an ok run con-ron's
 `targetMajorNfs_spec` for the extension), `iw_alloc` and the record's copy (L only, class `0` on
@@ -321,6 +324,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   rw [hj1] at this
   exact RefE.tailMap_pure (k := id) (f := id) (fun _ => rfl) (fun _ => rfl) id
     (fun _ _ _ hR => ⟨hR.stage, hR.grow, hR.top, hR.rc, hR.abs, by simpa using hR.recs⟩) this
+-/
 
 end loop
 
