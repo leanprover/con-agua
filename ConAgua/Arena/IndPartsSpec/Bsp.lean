@@ -223,11 +223,13 @@ theorem bbK8_some : bbK8 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll 
 end arms
 attribute [ind_grind] bbK11_some bbK8_some
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `block_shape_fin`** (at exec fuel `n + 2`). -/
 def bfW (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl no nl io lo ll s ip : Word) :
     Option (List Word × Mem) :=
   bbK8 n nPd cto ctl cso csl rso rsl 0 (rdW (m.arr64 IW) (rdW (m.arr64 IW) rso)) no nl io lo ll s ip
     (bctW (n + 1) m cso csl)
+-/
 
 /-- After `lvl_eq_c`. -/
 def btK3 (_c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : Word) :

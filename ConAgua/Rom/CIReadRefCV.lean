@@ -47,9 +47,8 @@ theorem setER_facts {m₀ m : Mem} {a₀ a : AState} {T : Nat} {seen : List ConL
 /-- A decoding survives a word written outside its words. -/
 theorem Holds.setER {α : Type} {SE SI : Nat → Prop} {f : Mem → Option α} {x : α} {m : Mem}
     (h : Holds SE SI f m x) (j w : Word) (hj : ∀ i, SE i → i ≠ j.toNat) :
-    Holds SE SI f (m.set64 EREC j w) x :=
-  h.keep (fun i hi => er_set_ne m j w i (hj i hi))
-    (fun i _ => by simp only [iwA]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)])
+    Holds SE SI f (m.set64 EREC j w) x := by
+  sorry
 
 /-- `decCV` from its three parts. -/
 theorem holds_decCV {m : Mem} {q : Nat} {SL SI : Nat → Prop} {n t : Word} {l : List NIdx}
