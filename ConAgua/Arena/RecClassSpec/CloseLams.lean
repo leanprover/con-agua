@@ -227,8 +227,10 @@ theorem decCV_some {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (ar
 /-- A decoded `EREC` handle, read back as a memory word (`iwH_rdW`'s analogue over `EREC`). -/
 theorem erH_rdW {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : hd? (erA m) i = some x)
     (hi : i < 2 ^ 64) :
-    ∃ w, rdW (m.arr64 EREC) (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  sorry
+    ∃ w, erRd m (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
+  obtain ⟨w, hw, hl, hx⟩ := hd?_some h
+  have hiw : (UInt64.ofNat i).toNat = i := by simp; omega
+  exact ⟨w, erRd_of_erA (by rw [hiw]; exact hw), hl, hx.symm⟩
 
 /-! ## `class_of_motive_var`, model form (for callers) -/
 
@@ -759,8 +761,7 @@ def classRecOfW : Nat → Mem → Word → Word → Word → Word → Word → O
     if cgl = 0 then some [0, 0]
     else if rcl ≠ 0 ∧ ¬ rco.toNat < (m.arr64 IW).size then none
     else if (if rcl ≠ 0 then rdW (m.arr64 IW) rco else 0) = t then
-      (if cgo.toNat < (m.arr64 IW).size ∧ (rdW (m.arr64 IW) cgo).toNat < (m.arr64 EREC).size
-        then some [1, rdW (m.arr64 EREC) (rdW (m.arr64 IW) cgo)] else none)
+      (if cgo.toNat < (m.arr64 IW).size then some [1, erRd m (rdW (m.arr64 IW) cgo)] else none)
     else croK (classRecOfW n m (rco + 1) (if rcl ≠ 0 then rcl - 1 else 0) (cgo + 1) (cgl - 1) t)
 
 section arms
@@ -773,8 +774,7 @@ theorem classRecOfW_oob (h : cgl ≠ 0) (h1 : rcl ≠ 0) (h2 : ¬ rco.toNat < (m
 theorem classRecOfW_hit (h : cgl ≠ 0) (h1 : rcl ≠ 0 → rco.toNat < (m.arr64 IW).size)
     (h2 : (if rcl ≠ 0 then rdW (m.arr64 IW) rco else 0) = t) :
     classRecOfW (n + 1) m rco rcl cgo cgl t =
-      (if cgo.toNat < (m.arr64 IW).size ∧ (rdW (m.arr64 IW) cgo).toNat < (m.arr64 EREC).size
-        then some [1, rdW (m.arr64 EREC) (rdW (m.arr64 IW) cgo)] else none) := by
+      (if cgo.toNat < (m.arr64 IW).size then some [1, erRd m (rdW (m.arr64 IW) cgo)] else none) := by
   have : ¬ (rcl ≠ 0 ∧ ¬ rco.toNat < (m.arr64 IW).size) := fun ⟨a, b⟩ => b (h1 a)
   simp only [classRecOfW, h, this, h2, ite_false, ite_true]
 theorem classRecOfW_miss (h : cgl ≠ 0) (h1 : rcl ≠ 0 → rco.toNat < (m.arr64 IW).size)
