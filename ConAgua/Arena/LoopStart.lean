@@ -53,11 +53,12 @@ def loopZeroCtl (x : Nat) : Prop :=
 /-- **The zeros the loop starts from.** -/
 structure LoopZero (m : Mem) : Prop where
   ctl : 220 ≤ (m.arr64 CTL).size
-  arr : ∀ b, loopZeroArr b → ∀ j, rdW (m.arr64 b) j = 0
   word : ∀ x : Word, loopZeroCtl x.toNat → rdW (m.arr64 CTL) x = 0
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem lz_stage {b : ArrId} (h1 : 201 ≤ b) (h2 : b ≤ 208) : loopZeroArr b := by
   sorry
+-/
 theorem lzc_pm {x : Nat} (h1 : 140 ≤ x) (h2 : x ≤ 147) : loopZeroCtl x :=
   .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
 
