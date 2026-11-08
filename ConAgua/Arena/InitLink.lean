@@ -130,16 +130,15 @@ theorem mkIFEnv_empty_refines (dn : NIdx → Option ConLeche.Name) (sz : TieredA
 its table the empty index of zeroed memory. -/
 @[refines ConRon.Arena.mkIFEnvGo]
 theorem mkIFEnvGo_empty_refines (dn : NIdx → Option ConLeche.Name) (sz : TieredArray → Nat) :
-    EnvR (initMem sz) (UInt64.ofNat (mkIFEnvGo IEnv.empty.consts).1)
-      ⟨IEnv.empty, (mkIFEnvGo IEnv.empty.consts).2, (mkIFEnvGo IEnv.empty.consts).1,
-        mkIFEnvTblsGo IEnv.empty.tables⟩ := by
+    EnvR (initMem sz) 0
+      ⟨IEnv.empty, mkIFEnvGo IEnv.empty.consts, {}, mkIFEnvTblsGo IEnv.empty.tables⟩ := by
   sorry
 
 /-- **A constant's name is the handle in word `1` of its record**: the key `env_push` files the
 record under, and what `decCI` reads (`IConstantInfo.name`, pure on the twin's side). -/
 @[refines ConRon.Arena.IConstantInfo.name]
-theorem iConstantInfo_name_refines {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a p = some ci) :
+theorem iConstantInfo_name_refines {a : Array Word} {p : Nat}
+    {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
     ∃ w, a[p + 1]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
   sorry
 

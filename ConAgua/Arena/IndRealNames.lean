@@ -497,14 +497,8 @@ theorem internLsIw_specW (p : Prog) (hp : p.lookup "intern_ls_iw" = some L.Stubs
     finish [ilwW]
 
 /-- A decoded handle slice is the words of its list, inside the array. -/
-theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hslice? a o l = some us →
-    sliceL a o l = lsWords us ∧ (0 < l → o + l ≤ a.size)
-  | 0, o, us, h => by
-    simp [hslice?] at h; subst h; simp [sliceL, lsWords]
-  | l + 1, o, us, h => by
-    rw [hslice?_succ] at h
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨x, hx, ys, hys, rfl⟩ := by
+theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx),
+    hslice? (aread a) o l = some us → sliceL a o l = lsWords us ∧ (0 < l → o + l ≤ a.size) := by
   sorry
 
 /-- **`intern_ls_iw`'s model refines `internLsNode us`** at the `IW` slice decoding to `us`

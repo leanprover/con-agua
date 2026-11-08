@@ -144,12 +144,14 @@ word at `p`, then decodes the constant there). -/
 theorem decRS_some {m : Mem} {p : Nat} {rs : RecShape} (h : decRS m p = some rs) :
     (∃ a, iwN m p = some a ∧ decCVp m a = some rs.cvR) ∧ iwN m (p + 1) = some rs.rP ∧
     iwN m (p + 2) = some rs.mI ∧ iwN m (p + 3) = some rs.tgt ∧
-    decAt m (decHL m) (p + 4) = some rs.rhss := by
+    (∃ o c, iwN m (p + 4) = some o ∧ iwN m (p + 5) = some c ∧ decRules (erA m) o c = some rs.rules) ∧
+    iwB m (p + 6) = some rs.isK := by
   sorry
 
 /-- `MemberShape`'s fields: `cvT` is read through the same indirection. -/
 theorem decMS_some {m : Mem} {p : Nat} {ms : MemberShape} (h : decMS m p = some ms) :
-    (∃ a, iwN m p = some a ∧ decCVp m a = some ms.cvT) ∧ iwN m (p + 1) = some ms.nIdx ∧
+    (∃ a, iwN m p = some a ∧ decCVp m a = some ms.cvT) ∧
+    (∃ a, iwN m (p + 4) = some a ∧ decCVp m a = some ms.declared) ∧ iwN m (p + 1) = some ms.nIdx ∧
     decAt m (decPL m (decCN m)) (p + 2) = some ms.ctors := by
   sorry
 

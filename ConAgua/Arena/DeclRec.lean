@@ -176,8 +176,8 @@ theorem decI_mask32 {k : IdxKind} (w : Word) : (decI (mask32 w) : Idx k) = decI 
   rw [show (UInt64.toNat 4294967295) = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
   simp
 
-theorem hd?_mask {k : IdxKind} {a : Array Word} {i : Nat} {w : Word}
-    (h : a[i]? = some (mask32 w)) : (hd? a i : Option (Idx k)) = some (decI w) := by
+theorem hd?_mask {k : IdxKind} {a : Nat → Option Word} {i : Nat} {w : Word}
+    (h : a i = some (mask32 w)) : (hd? a i : Option (Idx k)) = some (decI w) := by
   sorry
 
 theorem mapM_some_of {α β : Type} (f : α → Option β) (g : α → β) :
@@ -186,23 +186,23 @@ theorem mapM_some_of {α β : Type} (f : α → Option β) (g : α → β) :
   | x :: xs, h => by
     simp [List.mapM_cons, h x (by simp), mapM_some_of f g xs (fun y hy => h y (by simp [hy]))]
 
-theorem hslice?_mask {k : IdxKind} {a : Array Word} {o l : Nat} {f : Nat → Word}
-    (h : ∀ j < l, a[o + j]? = some (mask32 (f j))) :
+theorem hslice?_mask {k : IdxKind} {a : Nat → Option Word} {o l : Nat} {f : Nat → Word}
+    (h : ∀ j < l, a (o + j) = some (mask32 (f j))) :
     (hslice? a o l : Option (List (Idx k))) = some ((List.range l).map fun j => decI (f j)) := by
   sorry
 
 /-- A constant value from its words: the name and type masked, the slice of masked words. -/
-theorem decCV_of_words {a : Array Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
-    (h0 : a[q]? = some (mask32 wn)) (h1 : a[q + 1]? = some s) (h2 : a[q + 2]? = some ll)
-    (h3 : a[q + 3]? = some (mask32 wt))
-    (hs : ∀ j < ll.toNat, a[s.toNat + j]? = some (mask32 (f j))) :
+theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
+    (h0 : a q = some (mask32 wn)) (h1 : a (q + 1) = some s) (h2 : a (q + 2) = some ll)
+    (h3 : a (q + 3) = some (mask32 wt))
+    (hs : ∀ j < ll.toNat, a (s.toNat + j) = some (mask32 (f j))) :
     decCV a q = some ⟨decI wn, (List.range ll.toNat).map (fun j => decI (f j)), decI wt⟩ := by
   sorry
 
 /-- **A constant value moved**: its four words copied, the slice read in an extension. -/
-theorem decCV_move {a b : Array Word} {q cq : Nat} {cv : IConstantVal} (hext : ArrExt a b)
-    (h0 : b[q]? = a[cq]?) (h1 : b[q + 1]? = a[cq + 1]?) (h2 : b[q + 2]? = a[cq + 2]?)
-    (h3 : b[q + 3]? = a[cq + 3]?) (h : decCV a cq = some cv) : decCV b q = some cv := by
+theorem decCV_move {a b : Nat → Option Word} {q cq : Nat} {cv : IConstantVal} (hext : ArrExt a b)
+    (h0 : b q = a cq) (h1 : b (q + 1) = a (cq + 1)) (h2 : b (q + 2) = a (cq + 2))
+    (h3 : b (q + 3) = a (cq + 3)) (h : decCV a cq = some cv) : decCV b q = some cv := by
   sorry
 
 theorem getElem?_rdW' {a : Array Word} {x : Word} {k : Nat} (hk : x.toNat = k) (h : k < a.size) :
@@ -217,10 +217,10 @@ theorem rdW_dw (D : Array Word) {i c : Word} {k : Nat} (hi : 8 * i.toNat + 9 < 2
 
 /-! ### The pool below its top -/
 
-theorem erecP_getE {m : Mem} {j : Nat} (h : j < erTop m) : (erecP m)[j]? = (m.arr64 EREC)[j]? := by
+theorem erecP_getE {m : Mem} {j : Nat} (h : j < erTop m) : erecP m j = (m.arr64 EREC)[j]? := by
   sorry
 
-theorem erecP_lt {m : Mem} {j : Nat} {v : Word} (h : (erecP m)[j]? = some v) : j < erTop m := by
+theorem erecP_lt {m : Mem} {j : Nat} {v : Word} (h : erecP m j = some v) : j < erTop m := by
   sorry
 
 theorem IWGrow.erecPExtR {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erecP m') := by

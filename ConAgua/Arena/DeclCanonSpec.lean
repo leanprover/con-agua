@@ -183,12 +183,4 @@ grind_pattern [ind_grind] rulesEqB_len => rulesEqB a o1 l1 o2 l2
 grind_pattern [ind_grind] rulesEqB_nil => rulesEqB a o1 l1 o2 l2
 grind_pattern [ind_grind] rulesEqB_step => rulesEqB a o1 l1 o2 l2
 
-/-! ## The specs -/
-
-section specs
-include hp
-
-set_option maxHeartbeats 1000000 in
-end specs
-
 end L.Ind

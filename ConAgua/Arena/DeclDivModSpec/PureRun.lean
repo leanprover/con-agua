@@ -27,8 +27,8 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 /-- A three-word record at `p`. -/
 def Rec3At (m : Mem) (p a b c : Word) : Prop :=
-  p.toNat + 3 ≤ iwTop m ∧ (iwA m)[p.toNat]? = some a ∧ (iwA m)[p.toNat + 1]? = some b ∧
-    (iwA m)[p.toNat + 2]? = some c
+  p.toNat + 3 ≤ iwTop m ∧ iwA m (p.toNat) = some a ∧ iwA m (p.toNat + 1) = some b ∧
+    iwA m (p.toNat + 2) = some c
 
 /-- **A statement record** `[hyps.off, hyps.len, eq]` at `p`. -/
 def StmtAt (m : Mem) (p : Word) (st : List EIdx × EIdx) : Prop :=
@@ -38,7 +38,7 @@ def StmtAt (m : Mem) (p : Word) (st : List EIdx × EIdx) : Prop :=
 /-- **A statement list**: the slice `(o, l)` of pointers to statement records. -/
 def StmtL (m : Mem) (o l : Nat) (ss : List (List EIdx × EIdx)) : Prop :=
   o + l ≤ iwTop m ∧ l = ss.length ∧ ∀ (j : Nat) (hj : j < ss.length), ∃ p : Word,
-    (iwA m)[o + j]? = some p ∧ StmtAt m p ss[j]
+    iwA m (o + j) = some p ∧ StmtAt m p ss[j]
 
 def decStmtL (m : Mem) (r : List Word) (ss : List (List EIdx × EIdx)) : Prop :=
   StmtL m (r.getD 0 0).toNat (r.getD 1 0).toNat ss

@@ -38,8 +38,8 @@ open L.Arena
 the names (the converse of `nmsR_of_hslice`). -/
 theorem hslice_of_nmsR (ns : NStore) {m : Mem} {A : ArrId} {o k : Word} {ps : List ConLeche.Name}
     (h : NmsR (nameN ns) m A o k ps) :
-    o.toNat + k.toNat < 2 ^ 64 → ∀ (arr : Array Word) (q : Nat),
-      (∀ j < k.toNat, arr[q + j]? = some ((m.arr64 A)[o.toNat + j]?.getD 0)) →
+    o.toNat + k.toNat < 2 ^ 64 → ∀ (arr : Nat → Option Word) (q : Nat),
+      (∀ j < k.toNat, arr (q + j) = some ((m.arr64 A)[o.toNat + j]?.getD 0)) →
       ∃ lps : List NIdx, hslice? arr q k.toNat = some lps ∧ lps.mapM (denoteN ns) = some ps := by
   sorry
 

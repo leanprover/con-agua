@@ -314,24 +314,27 @@ lemma for it (PLAN.md's vcgen gaps). `wtArm` is its body after the view, and `wh
 the unfolding, by `Nat.brecOn` and a case split on the view. -/
 
 /-- The arms of `whnfTelescope` after the view. -/
-def wtArm (mode : ConLeche.CheckMode) (fe : IFEnv) (i : Nat) :
+def wtArm (mode : ConLeche.CheckMode) (fe : IFEnv) (i : Nat) (out : List EIdx) :
     ENodeView → Nat → AM (List EIdx × LIdx)
-  | .sort s, 0 => pure ([], s)
-  | .sort _, _ + 1 => fail (.invalid "direct sum: type former does not reduce to a telescope")
-  | .forallE _ _, 0 => fail (.invalid "direct sum: type former does not reduce to a sort")
+  | .sort s, 0 => pure (out, s)
+  | .sort _, _ + 1 =>
+    fail (.invalid "direct sum: type former does not reduce to a telescope                ")
+  | .forallE _ _, 0 =>
+    fail (.invalid "direct sum: type former does not reduce to a sort                 ")
   | .forallE dom body, n + 1 => do
-      let fv ← internE (.fvar i dom)
+      let fv ← internFVarE i dom
       let b ← instantiate1Fast coreWalkFuel body fv 0
-      let x ← whnfTelescope mode fe (i + 1) n b
-      pure (dom :: x.1, x.2)
-  | _, 0 => fail (.invalid "direct sum: type former does not reduce to a sort")
-  | _, _ + 1 => fail (.invalid "direct sum: type former does not reduce to a telescope")
+      whnfTelescope mode fe (i + 1) n b (out ++ [dom])
+  | _, 0 => fail (.invalid "direct sum: type former does not reduce to a sort                 ")
+  | _, _ + 1 =>
+    fail (.invalid "direct sum: type former does not reduce to a telescope                ")
 
-theorem whnfTelescope_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (i n : Nat) (e : EIdx) :
-    whnfTelescope mode fe i n e = (do
+theorem whnfTelescope_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (i n : Nat) (e : EIdx)
+    (out : List EIdx) :
+    whnfTelescope mode fe i n e out = (do
       let e' ← whnf mode fe checkFuel i e
       let v ← view e'
-      wtArm mode fe i v n) := by
+      wtArm mode fe i out v n) := by
   sorry
 
 end L.Ind

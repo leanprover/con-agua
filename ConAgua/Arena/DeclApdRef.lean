@@ -86,7 +86,7 @@ theorem nmsR_congr {N : Word → ConLeche.Name → Prop} {m m' : Mem} {A : ArrId
   | nil => exact .nil
   | cons hk hn _ ih => exact .cons hk (by rw [rdW, h]; exact hn) ih
 
-theorem hd_word {a : Array Word} {i : Nat} {x : NIdx} (h : hd? a i = some x) :
+theorem hd_word {a : Array Word} {i : Nat} {x : NIdx} (h : hd? (aread a) i = some x) :
     ∃ w, a[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
   sorry
 

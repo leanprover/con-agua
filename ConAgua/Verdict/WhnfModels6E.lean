@@ -59,12 +59,14 @@ l_model m2cKE_spec (p : Prog) (hp : M2CProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 l_model m2cEtaE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.eta ↦ m2cEtaE list]
   specs [m2cPreE_spec p hp n, callW_spec p n "get_app_args", callW_spec p n "caps_never_zero", callW_spec p n "m2c_eta2"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 l_model m2cAnd2E_spec (p : Prog) (hp : M2CProg p)
   fns [hp.and2 ↦ m2cAnd2E list]
@@ -80,32 +82,40 @@ l_model m2cAndE_spec (p : Prog) (hp : M2CProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 l_model m2cArmsE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.arms ↦ m2cArmsE list]
   specs [m2cKE_spec p hp n, m2cEtaE_spec p hp n, m2cAndE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 l_model m2cCtorE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.ctor ↦ m2cCtorE list]
   specs [callW_spec p n "pi_result", callW_spec p n "get_app_fn", callW_spec p n "m2c_const_view", callW_spec p n "env_find", m2cArmsE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 l_model m2cHeadE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.head ↦ m2cHeadE list]
   specs [callW_spec p n "is_ctor_app", callW_spec p n "env_find", m2cCtorE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 l_model mtcE_spec (p : Prog) (hp : M2CProg p) (hf : p.lookup "major_to_ctor" = some majorToCtorL)
   fns [hf ↦ mtcE list]
   specs [m2cHeadE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 end L.Arena

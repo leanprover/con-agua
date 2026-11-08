@@ -26,7 +26,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-theorem rec3SliceLast {k : IdxKind} {a : Array Word} {o l : Nat} {xs : List (Idx k)} (h : hslice? a o l = some xs)
+theorem rec3SliceLast {k : IdxKind} {a : Array Word} {o l : Nat} {xs : List (Idx k)} (h : hslice? (aread a) o l = some xs)
     (hl : 0 < l) : ∃ w, a[o + (l - 1)]? = some w := by
   sorry
 

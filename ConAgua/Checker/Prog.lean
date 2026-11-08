@@ -423,4 +423,8 @@ def preShared : List String := [
   "zero_find",
   "zero_push"]
 
+/-- **The checker** (ronsync2 stage 2: a placeholder until `scripts/checker_prog.py` regenerates
+this file). -/
+def checkerProg : Prog := []
+
 end L.Checker

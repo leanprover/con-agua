@@ -113,7 +113,7 @@ def m2cAndT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat
       | none => failDanglingLs
       | some ustl =>
       let targs ← getAppArgs coreWalkFuel tmaj
-      let ars ← andRescueSlots fe ctor cnP ust
+      let ars ← andRescueSlots fe ctor cnP
       if T' = T ∧ targs.length = cnP ∧ lpl = ustl ∧ ars = true then
         m2cAnd2T mode r fe depth ctor T tmaj targs ust major
       else pure major

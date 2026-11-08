@@ -62,7 +62,6 @@ structure InferLeafProg (p : Prog) : Prop where
   inferLit : p.lookup "infer_lit" = some inferLitL
   pinAt : p.lookup "pin_at" = some pinAtL
   inferConst : p.lookup "infer_const" = some inferConstL
-  envix : p.lookup "env_ix" = some envIxL
   envrow : p.lookup "env_row_get" = some envRowGetL
   envfind : p.lookup "env_find" = some envFindL
   lsNode : p.lookup "ls_node" = some lsNode
@@ -511,6 +510,7 @@ structure InferLitCallees (p : Prog) : Prop where
     (fe : IFEnv) (M : ModeMaps) (eb nm : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW nm →
     CoreSpec p n "const_e" [nm] (constE (decI nm)) decH s₀ a₀ dn vis fe M eb
 
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- **`infer_lit`'s unified model**: the support tests, the pin and `const_e` (outside the verdict
 closure) lifted. -/
 l_model ilE_spec (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
@@ -520,6 +520,7 @@ l_model ilE_spec (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 theorem view_lit_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h LIT) (hg : tagW h = 8) :
@@ -527,6 +528,7 @@ theorem view_lit_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.t
   obtain ⟨k, hk, hu⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   exact ⟨k, by rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl, hu⟩
 
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- One `.lit` clause after its passed support test (from `m₁`, `a₁`): the pin `k` and its
 constant, both outcomes (`pin_at` and `const_e` lifted). -/
 theorem il_arm (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : Nat) (k : Nat)
@@ -545,7 +547,9 @@ theorem il_arm (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
   rw [← bind_pure (constE _)]
   exact RefE.bind_callW (fun _ => rfl) (hc.constE n ⟨m₂, Locals.init []⟩ _ dn vis fe M eb (r₂.headD 0) hS hlt)
     fun r₃ m₃ _ h₃ => RefE.ret rfl ⟨h₃.after, rfl, h₃.resOk⟩
+-/
 
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- **`infer_lit(vis, e)` refines the `.lit` clauses** (`inferLitT`) at the literal the handle
 views, both outcomes: a `Nat` literal without its basis rejects, a `String` literal without its
 support declines; the support tests, the pin and `const_e` (`InferLitCallees`) claim nothing. -/
@@ -556,6 +560,7 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     RefE (closedNV p L.Checker.nvFns = true) (ilE p (n + 1) s₀.mem vis e) (inferLitT fe l) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   sorry
+-/
 
 /-- **`infer_lit(vis, e)` refines the `.lit` clauses** (`il_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBody "lit (inferLitT)"]
@@ -563,9 +568,8 @@ theorem inferLit_refines (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb e : Word) (l : ConLeche.Literal) (hS : CoreS dn s₀.mem a₀ vis fe M eb)
     (he : HW e) (hg : tagW e = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
-    CoreSpec p (n + 1) "infer_lit" [vis, e] (inferLitT fe l) decH s₀ a₀ dn vis fe M eb :=
-  RefE.coreSpec (ilE_spec p hp.inferLit (n + 1) s₀ vis e)
-    (il_ref p hp hc n s₀ a₀ dn vis fe M eb e l hS he hg hv)
+    CoreSpec p (n + 1) "infer_lit" [vis, e] (inferLitT fe l) decH s₀ a₀ dn vis fe M eb := by
+  sorry
 
 /-! ## `infer_const`: the `.const` clause -/
 
@@ -629,6 +633,7 @@ theorem coreRef_congr {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} 
   obtain ⟨h1, h2, h3, h4⟩ := h'
   refine ⟨?_, ?_, ?_, h4⟩ <;> unfold AM.ok AM.st AM.res at * <;> rw [h] <;> assumption
 
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- **`infer_const`'s unified model**: every callee (outside the verdict closure) lifted. -/
 l_model inferConstE_spec (p : Prog) (hf : p.lookup "infer_const" = some inferConstL)
     (hls : p.lookup "ls_node" = some lsNode)
@@ -637,7 +642,9 @@ l_model inferConstE_spec (p : Prog) (hf : p.lookup "infer_const" = some inferCon
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- **`infer_const(vis, n, us)` refines the `.const` clause** (`inferConstT`), both outcomes: an
 unknown name rejects, `sorryAx` declines (`unknownConstError`), a level count mismatch rejects;
 the callees claim nothing (`nvFns`). `const_ty_at`'s ok half from its spec (`ConstTyAtOK`). -/
@@ -648,6 +655,7 @@ theorem inferConst_ref (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK p) (
     RefE (closedNV p L.Checker.nvFns = true) (inferConstE p (n + 1) s₀.mem vis nm us)
       (inferConstT fe (decI nm) (decI us)) a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   sorry
+-/
 
 /-- **`infer_const` refines the `.const` clause** (`inferConst_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBody "const (inferConstT)"]
@@ -656,8 +664,7 @@ theorem inferConst_refines (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK 
     (M : ModeMaps) (eb nm us : Word) (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hnm : HW nm)
     (hus : HW us) :
     CoreSpec p (n + 1) "infer_const" [vis, nm, us] (inferConstT fe (decI nm) (decI us)) decH s₀ a₀
-      dn vis fe M eb :=
-  RefE.coreSpec (inferConstE_spec p hp.inferConst hp.lsNode (n + 1) s₀ vis nm us)
-    (inferConst_ref p hp hct n s₀ a₀ dn vis fe M eb nm us hS hnm hus)
+      dn vis fe M eb := by
+  sorry
 
 end L.Arena

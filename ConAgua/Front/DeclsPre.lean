@@ -76,15 +76,15 @@ theorem processLineCoreD_pre (d : DeclRec) :
     simp [map_bind, map_pure, Sum.map_inl, Sum.map_inr]
 
 /-- **A line on the prefixed state** is the line on the state, prefixed. -/
-theorem applyLine_pre (r : LineRec) :
-    applyLine (st.pre D) r = preL D <$> applyRecord st r := by
+theorem applyLine_pre (r : LineRec) (k : Nat) :
+    applyLine (st.pre D) r k = preL D <$> applyLine st r k := by
   sorry
 
-theorem applyLine_pre_run (r : LineRec) (a : AState) :
-    (applyLine (st.pre D) r).run a =
-      ((applyRecord st r).run a).map fun p => (preL D p.1, p.2) := by
+theorem applyLine_pre_run (r : LineRec) (k : Nat) (a : AState) :
+    (applyLine (st.pre D) r k).run a =
+      ((applyLine st r k).run a).map fun p => (preL D p.1, p.2) := by
   rw [applyLine_pre, StateT.run_map]
-  cases (applyRecord st r).run a <;> rfl
+  cases (applyLine st r k).run a <;> rfl
 
 end
 

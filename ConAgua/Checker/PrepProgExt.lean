@@ -17,6 +17,6 @@ open L
 
 set_option Elab.async false
 
-set_option maxRecDepth 100000 in
-set_option maxRecDepth 100000 in
+-- ronsync2 stage 2: the lookups come back with the regenerated `checkerProg`.
+
 end L.Checker

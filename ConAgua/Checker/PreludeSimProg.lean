@@ -250,13 +250,65 @@ def simChk (x : FnName × FunDecl) : Bool :=
     (x.2.body.noSt8In && x.2.body.callsIn (fun g => inT preCT g || inT preST g))) &&
   (!inT preST x.1 || (!inT preCT x.1 && x.2.body.noIn && x.2.body.callsIn (inT preST)))
 
+/-- Every function of `checkerProg` passes `simChk`. -/
+prog_all checkerProg_simChk : checkerProg simChk
+
 /-! ## The copies' bindings -/
 
+/-- `f` and its copy `pre_f` are bound, the copy to `preFn preTree` of `f`'s declaration. -/
+def CopyAt (f : FnName) : Prop :=
+  ∃ fd, (f, fd) ∈ checkerProg ∧ ("pre_" ++ f, preFn preTree fd) ∈ checkerProg
+
 theorem copyAt_of {f : FnName} {fd : FunDecl} {i j : Nat} (hi : checkerProg[i]? = some (f, fd))
-    (hj : checkerProg[j]? = some ("pre_" ++ f, preFn preTree fd)) : CopyAt f := by
-  sorry
+    (hj : checkerProg[j]? = some ("pre_" ++ f, preFn preTree fd)) : CopyAt f :=
+  ⟨fd, List.mem_of_getElem? hi, List.mem_of_getElem? hj⟩
 
 open Lean Elab Command Meta in
+/-- `copy_facts h` declares `h : ∀ f ∈ preNames, CopyAt f`. For each copied name `f` it finds
+(by evaluation here) the indices `i` of `f` and `j` of `pre_f` in `checkerProg`, and declares
+`h.n<k> : CopyAt f` by `copyAt_of` with `rfl` for `checkerProg[i]?` and `checkerProg[j]?` (one
+small kernel check per name; no `String` comparison against the program's names). The main
+theorem chains them along `preNames` (no evaluation). -/
+elab "copy_facts " n:ident : command =>
+  liftTermElabM <| withTheReader Core.Context
+      (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
+    let name := (← getCurrNamespace) ++ n.getId
+    let elems ← listElems (mkConst ``checkerProg)
+    let names ← listElems (mkConst ``preNames)
+    let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
+    let key (e : Lean.Expr) : Option String :=
+      match e.appFn!.appArg! with
+      | .lit (.strVal s) => some s
+      | _ => none
+    let P := mkConst ``CopyAt
+    let mut hs : Array Lean.Expr := #[]
+    for nm in names do
+      let .lit (.strVal f) := nm | throwError "copy_facts: not a string literal: {nm}"
+      let some i := elems.findIdx? (key · == some f) | throwError "copy_facts: {f} is not bound"
+      let some j := elems.findIdx? (key · == some ("pre_" ++ f))
+        | throwError "copy_facts: pre_{f} is not bound"
+      let refl (e : Lean.Expr) : MetaM Lean.Expr :=
+        mkEqRefl (mkApp2 (mkConst ``Option.some [0]) elemTy e)
+      let pf := mkAppN (mkConst ``copyAt_of)
+        #[nm, elems[i]!.appArg!, mkNatLit i, mkNatLit j, ← refl elems[i]!, ← refl elems[j]!]
+      let hN := name ++ Name.mkSimple s!"n{hs.size}"
+      addDecl (thm hN (mkApp P nm) pf [])
+      hs := hs.push (mkConst hN)
+    let strTy := mkConst ``String
+    let mut chain := mkApp2 (mkConst ``forall_mem_nil_of) strTy P
+    let mut tl := mkApp (mkConst ``List.nil [0]) strTy
+    for e in (List.range names.size).reverse do
+      chain := mkAppN (mkConst ``forall_mem_cons_of) #[strTy, P, names[e]!, tl, hs[e]!, chain]
+      tl := mkApp3 (mkConst ``List.cons [0]) strTy names[e]! tl
+    let ty ← withLocalDeclD `f strTy fun x => do
+      mkForallFVars #[x] (← mkArrow (← mkAppM ``Membership.mem #[mkConst ``preNames, x]) (mkApp P x))
+    addDecl (thm name ty chain [])
+
+-- Every copied name and its copy are bound as `preFn` says.
+-- ronsync2 stage 2: needs the regenerated `checkerProg`.
+theorem copyAt_all : ∀ f ∈ preNames, CopyAt f := by
+  sorry
+
 /-! ## The shape -/
 
 theorem lookup_of_mem {p : Prog} (hnd : (p.map (·.1)).Nodup) {f : FnName} {fd : FunDecl}
@@ -274,9 +326,21 @@ theorem lookup_of_mem {p : Prog} (hnd : (p.map (·.1)).Nodup) {f : FnName} {fd :
       rw [this]
       exact ih hnd.2 h
 
+theorem checkerProg_nodup : (checkerProg.map (·.1)).Nodup := by
+  sorry
+
 theorem mem_of_lookup {p : Prog} {f : FnName} {fd : FunDecl} (h : p.lookup f = some fd) :
     (f, fd) ∈ p := by
   obtain ⟨_, _, hp, -⟩ := List.lookup_eq_some_iff.mp h
   exact hp ▸ List.mem_append_right _ List.mem_cons_self
+
+/-- **The checker program has the simulation's shape**, the shared functions as a name tree. -/
+theorem checkerProg_preSimT : PreSimProg checkerProg preTree (inT preST) := by
+  sorry
+
+/-- **The checker program has the simulation's shape.** -/
+theorem checkerProg_preSim : PreSimProg checkerProg preTree (fun f => decide (f ∈ preShared)) := by
+  have h : (fun f => decide (f ∈ preShared)) = inT preST := funext fun f => (inT_preST f).symm
+  rw [h]; exact checkerProg_preSimT
 
 end L.Checker

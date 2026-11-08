@@ -228,7 +228,7 @@ open L.Arena L.Ind
 /-- The decoder `f` gives `x` in every memory agreeing with `m` on the `EREC` words `SE` and the
 `IW` words `SI`. -/
 def Holds {α : Type} (SE SI : Nat → Prop) (f : Mem → Option α) (m : Mem) (x : α) : Prop :=
-  ∀ m', (∀ i, SE i → (erA m')[i]? = (erA m)[i]?) → (∀ i, SI i → (iwA m')[i]? = (iwA m)[i]?) →
+  ∀ m', (∀ i, SE i → erA m' i = erA m i) → (∀ i, SI i → iwA m' i = iwA m i) →
     f m' = some x
 
 section holds
@@ -238,7 +238,7 @@ theorem Holds.get {f : Mem → Option α} {x : α} (h : Holds SE SI f m x) : f m
   sorry
 
 theorem Holds.keep {f : Mem → Option α} {x : α} (h : Holds SE SI f m x)
-    (hE : ∀ i, SE i → (erA m')[i]? = (erA m)[i]?) (hI : ∀ i, SI i → (iwA m')[i]? = (iwA m)[i]?) :
+    (hE : ∀ i, SE i → erA m' i = erA m i) (hI : ∀ i, SI i → iwA m' i = iwA m i) :
     Holds SE SI f m' x := by
   sorry
 
@@ -262,13 +262,13 @@ theorem Holds.const (x : α) : Holds (fun _ => False) (fun _ => False) (fun _ =>
   sorry
 
 /-- One `EREC` word. -/
-theorem Holds.er {i : Nat} {w : Word} (h : (erA m)[i]? = some w) :
-    Holds (fun j => j = i) (fun _ => False) (fun m => (erA m)[i]?) m w := by
+theorem Holds.er {i : Nat} {w : Word} (h : erA m i = some w) :
+    Holds (fun j => j = i) (fun _ => False) (fun m => erA m i) m w := by
   sorry
 
 /-- One `IW` word. -/
-theorem Holds.iw {i : Nat} {w : Word} (h : (iwA m)[i]? = some w) :
-    Holds (fun _ => False) (fun j => j = i) (fun m => (iwA m)[i]?) m w := by
+theorem Holds.iw {i : Nat} {w : Word} (h : iwA m i = some w) :
+    Holds (fun _ => False) (fun j => j = i) (fun m => iwA m i) m w := by
   sorry
 
 /-- **At the end**: every word read below the tops, the decoding is `DecB`. -/
@@ -282,7 +282,7 @@ end holds
 
 /-- `EREC` below `m`'s top unchanged outside `R`. -/
 def EKeep (R : Nat → Prop) (m m' : Mem) : Prop :=
-  erTop m ≤ erTop m' ∧ ∀ i, i < erTop m → ¬ R i → (erA m')[i]? = (erA m)[i]?
+  erTop m ≤ erTop m' ∧ ∀ i, i < erTop m → ¬ R i → erA m' i = erA m i
 
 theorem EKeep.refl (R : Nat → Prop) (m : Mem) : EKeep R m m := ⟨Nat.le_refl _, fun _ _ _ => rfl⟩
 

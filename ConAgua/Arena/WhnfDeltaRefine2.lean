@@ -614,7 +614,7 @@ end refs11
 /-- The model of `lit_to_ctor_if_nat`. -/
 l_model litToCtorIfNat_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.litToCtorIfNat ↦ litToCtorIfNatW ]
-  specs [callW_spec p n "nat_lit_supported", callW_spec p n "nat_lit_to_ctor"]
+  specs [callW_spec p n "nat_lit_stored", callW_spec p n "nat_lit_to_ctor"]
   grind [arena_grind] fold [tierW, idxW]
   extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 30
