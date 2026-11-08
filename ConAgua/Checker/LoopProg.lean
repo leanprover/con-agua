@@ -339,6 +339,7 @@ theorem checkerProg_romRefsPB (bs : List UInt8) (hr : RomOK bs)
 
 /-! ## The loop's program hypotheses -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The declaration loop's callees at the substituted checker program.** -/
 theorem checkerProg_loopCalleesPB (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length) :
@@ -356,6 +357,7 @@ theorem checkerProg_loopCalleesPB (bs : List UInt8) (hr : RomOK bs)
     (closedWL_subPB bs checkerProg_indMemo : IndMemoClosed (Prog.subPB bs checkerProg)),
     (by prog_bundle [] : L.Ind.CrfF (Prog.subPB bs checkerProg)),
     hdn, harm, hq, hrom]
+-/
 
 /-- **The loop's own program hypotheses at the substituted checker program.** -/
 theorem checkerProg_loopTopPB (bs : List UInt8) : LoopTopProg (Prog.subPB bs checkerProg) := by

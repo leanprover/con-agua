@@ -31,6 +31,7 @@ namespace L.Arena
 
 open L.Front (DECL DLP DeclsF)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Phase A's fold, from record `0`, refines the twin's phase A and ends in `PhaseBStart`.** -/
 theorem installFoldGo_phaseA (mode : ConLeche.CheckMode) (pins : List INatOpPinSet)
     (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
@@ -62,7 +63,9 @@ theorem installFoldGo_phaseA (mode : ConLeche.CheckMode) (pins : List INatOpPinS
   refine ⟨hl, _, _, _, hrun, hL, h3, h4, ?_, h5.cr⟩
   subst hm
   exact TwinPend.startAM hT h1 e
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Phase A's fold from the loop's start**: from the memory facts the stages before it leave and
 the twin's fold invariant at its start state `a`, a returning `install_fold_go(0, cnt, 0)` is an
 accepting phase A ending in `PhaseBStart` at its result (the final view). The name decoder is the
@@ -84,6 +87,7 @@ theorem installFoldGo_start {p : Prog} {pins : List INatOpPinSet} {ds : Array ID
   exact installFoldGo_phaseA .verified pins (dnOf a.store) ds p rfl hP.bracket hdc hFD
     (declsLpsDn_dnOf hT.pd hT.den) hP.pp hP.pn hP.ps hP.pi hP.pd hP.pg hP.px n hn s₀ a cnt hcnt hT hR
     hM hc hIM
+-/
 
 /-- The number of records at the loop's start is `DECL[0]` (`DeclsF`). -/
 theorem declCount_eq {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
@@ -92,6 +96,7 @@ theorem declCount_eq {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.N
     ((m.arr64 DECL)[0]).toNat = ds.size := by
   have := hR.decls.count; simpa [h] using this
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The number of pending groups is `CTL[130]` (`PendR`). -/
 theorem pendCount_eq {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
     {a : AState} {v : Word} {fe : IFEnv} {ds : Array IDeclaration}
@@ -99,5 +104,6 @@ theorem pendCount_eq {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.N
     ((m.arr64 CTL)[130]).toNat = pend.size := by
   have := hR.pend.count; simp only [pendCount] at this
   rwa [rdW_eq _ _ 130 rfl h] at this
+-/
 
 end L.Arena
