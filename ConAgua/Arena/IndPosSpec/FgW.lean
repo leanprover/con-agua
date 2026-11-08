@@ -471,13 +471,24 @@ theorem pos2PinW_ok {m m' : Mem} {a : AState} {i : Word} {r : List Word}
   by_cases h0 : pinW m 0 = 0
   · simp [h0] at h
   rw [ite_eq_right h0] at h
-  by_cases hi : 51 ≤ i
+  by_cases hi : 52 ≤ i
   · simp [hi] at h
   rw [ite_eq_right hi] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hF := hP.full h0
+  by_cases h51 : i = 51
+  · rw [ite_eq_left h51] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    subst h51
+    have e : rdW (m.arr64 PINS) 71 = pinW m 71 := by simp only [rdW, pinW]; rfl
+    refine ⟨rfl, ?_, ?_⟩ <;> simp only [List.headD_cons] <;> rw [e]
+    · exact hF.quotMk_lt
+    · exact pinAt_run51 hF
+  rw [ite_eq_right h51] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hi' : i.toNat < 51 := by
-    have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hi); simpa using this
+    have h52 := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hi)
+    have : i.toNat ≠ 51 := fun e => h51 (UInt64.toNat_inj.mp (by simpa using e))
+    simp at h52; omega
   have e : rdW (m.arr64 PINS) (1 + i) = pinW m (1 + i.toNat) := by
     simp only [rdW, pinW]
     congr 2
