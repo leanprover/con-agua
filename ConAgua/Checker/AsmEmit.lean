@@ -25,7 +25,7 @@ open L.Compiler L.Checker
 def main (args : List String) : IO Unit := do
   let out := args.headD "checker.s"
   let code := compileProg checkerTab checkerProgI "check"
-  IO.FS.writeFile out (asmTextAbiPar checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.HDRF L.Arena.CTLF 136 L.Arena.frozenIdsL
+  IO.FS.writeFile out (asmTextAbiPar checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.HDRF L.Arena.CTLF 138 L.Arena.frozenIdsL
       L.Arena.parOwnedL code ++
     tabSymbols checkerTab ++ ".globl ca_diag\nca_diag: .quad -1\n")
   IO.println s!"wrote {out}: {code.length} directives, nb {checkerTab.nb}, nw {checkerTab.nw}"

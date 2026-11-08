@@ -240,7 +240,7 @@ def rciBlock : FunDecl := lfn (s) locals (q, c, o, z) {
 /-- `rom_basis_decls(kind)`: the raw basis block of `kind` (`0` eqK … `4` quotK). -/
 -- con-ron: ConRon/Arena/Basis.lean:37-40 ConRon.Arena.BasisKind.decls
 @[no_expose, l_impl ConRon.Arena.BasisKind.decls]
-def romBasisDeclsL : FunDecl := lfn (kind) locals (o, l) {
+def romBasisDeclsRomL : FunDecl := lfn (kind) locals (o, l) {
   if kind >= 5 { abort };
   (o, l) := call rci_block(kind);
   return (o, l)
@@ -256,7 +256,7 @@ def romBasisDeclsL : FunDecl := lfn (kind) locals (o, l) {
 -- con-ron: ConRon/Arena/StdAxioms.lean:82-83 ConRon.Arena.nonemptyRecA
 @[no_expose, l_impl ConRon.Arena.natA ConRon.Arena.iffA ConRon.Arena.iffIntroA
   ConRon.Arena.iffRecA ConRon.Arena.nonemptyA ConRon.Arena.nonemptyIntroA ConRon.Arena.nonemptyRecA]
-def romCiL : FunDecl := lfn (id) locals (q, z, p) {
+def romCiRomL : FunDecl := lfn (id) locals (q, z, p) {
   if id >= 7 { abort };
   q := call rci_slot(5 + id);
   z := call rci_fresh();
@@ -278,7 +278,7 @@ def romCiL : FunDecl := lfn (id) locals (q, z, p) {
 @[no_expose, l_impl ConRon.Arena.propextA ConRon.Arena.choiceA ConRon.Arena.trueCvA ConRon.Arena.trueIntroCvA
   ConRon.Arena.trustCompilerA ConRon.Arena.boolCvA ConRon.Arena.reduceNatCvA
   ConRon.Arena.reduceBoolCvA ConRon.Arena.ofReduceNatA ConRon.Arena.ofReduceBoolA]
-def romCvL : FunDecl := lfn (id) locals (q, z, p) {
+def romCvRomL : FunDecl := lfn (id) locals (q, z, p) {
   if id >= 10 { abort };
   q := call rci_slot(12 + id);
   p := call erec_alloc(4);
@@ -292,7 +292,7 @@ def romCvL : FunDecl := lfn (id) locals (q, z, p) {
 -- con-ron: ConRon/Arena/TrustAxioms.lean:109-111 ConRon.Arena.reduceNatDeclPin
 -- con-ron: ConRon/Arena/TrustAxioms.lean:105-107 ConRon.Arena.reduceBoolDeclPin
 @[no_expose, l_impl ConRon.Arena.reduceNatDeclPin ConRon.Arena.reduceBoolDeclPin]
-def romExprPinL : FunDecl := lfn (id) locals (q, z, h) {
+def romExprPinRomL : FunDecl := lfn (id) locals (q, z, h) {
   if id >= 2 { abort };
   q := call rci_slot(22 + id);
   z := call rci_fresh();
@@ -303,7 +303,7 @@ def romExprPinL : FunDecl := lfn (id) locals (q, z, h) {
 /-- `rom_and_pin()`: the pinned `And` block (`andPinDecls`, `internCIList andPin`), an `IW` slice. -/
 -- con-ron: ConRon/Arena/Basis.lean:260-264 ConRon.Arena.andPinDecls
 @[no_expose, l_impl ConRon.Arena.andPinDecls]
-def romAndPinL : FunDecl := lfn () locals (o, l) {
+def romAndPinRomL : FunDecl := lfn () locals (o, l) {
   (o, l) := call rci_block(24);
   return (o, l)
 }
@@ -311,9 +311,91 @@ def romAndPinL : FunDecl := lfn () locals (o, l) {
 /-- **The ROM stubs' readers.** The functions they call from other modules: `rom_u64`,
 `rom_name`, `rom_level`, `rom_expr`, `rom_exprs_to`, `rset_clear` (`romProgPB`), `erec_alloc`,
 `iw_alloc` (`IndIface.lean`). -/
+/-! ## The startup's cache of the structured constants
+
+A job (the check phase, entry 2) has no pin-data buffer, so the structured constants are read
+once at startup (`rom_fill`, after `intern_all_pins`, the scratch tier off) into tier-0 `EREC`
+records, and the readers the checks call (`rom_basis_decls`, `rom_ci`, `rom_cv`,
+`rom_expr_pin`, `rom_and_pin`) read the cache `ROMC`: words `2 k`, `2 k + 1` the `EREC` slice of
+record addresses of block `k` (`0‥4` the basis blocks, `5` the pinned `And`), `12 + id` the
+`rom_ci` record, `19 + id` the `rom_cv` record, `29 + id` the `rom_expr_pin` handle. The twin
+interns each constant at each call; the cached records denote the same values (every term of
+them is already persistent, so the twin's interning returns the same handles). -/
+
+/-- `rom_fill_block(k, s)`: block `s` of the ROM into `EREC` (a tier-0 slice of the records'
+addresses) at cache words `2 k`, `2 k + 1`. -/
+-- con-ron: none — the startup's read of the ROM constants (the twin interns them at each use)
+@[no_expose] def romFillBlock : FunDecl := lfn (k, s) locals (o, l, q, m) {
+  (o, l) := call rci_block(s);
+  (q, m) := call er_from_iw(o, l);
+  ROMC.u64[2 * k] := q;
+  ROMC.u64[2 * k + 1] := m;
+  return 0
+}
+
+/-- `rom_fill()`: the cache, filled (at startup, with the scratch tier off). -/
+-- con-ron: none — the startup's read of the ROM constants (the twin interns them at each use)
+@[no_expose] def romFill : FunDecl := lfn () locals (k, z, p) {
+  k := 0;
+  for k < 5 { z := call rom_fill_block(k, k) };
+  z := call rom_fill_block(5, 24);
+  k := 0;
+  for k < 7 { p := call rom_ci_rom(k); ROMC.u64[12 + k] := p };
+  k := 0;
+  for k < 10 { p := call rom_cv_rom(k); ROMC.u64[19 + k] := p };
+  k := 0;
+  for k < 2 { p := call rom_expr_pin_rom(k); ROMC.u64[29 + k] := p };
+  return 0
+}
+
+/-- `rom_basis_decls(kind)`: the raw basis block of `kind` (`0` eqK … `4` quotK), a fresh `IW`
+slice of record addresses, from the cache. -/
+-- con-ron: none — the startup cache of the ROM constants (the twin interns them at each use)
+@[no_expose]
+def romBasisDeclsL : FunDecl := lfn (kind) locals (o, l) {
+  if kind >= 5 { abort };
+  (o, l) := call er_to_iw(ROMC.u64[2 * kind], ROMC.u64[2 * kind + 1]);
+  return (o, l)
+}
+
+/-- `rom_ci(id)`: the constant `romCiT id`, an `EREC` record address, from the cache. -/
+-- con-ron: none — the startup cache of the ROM constants (the twin interns them at each use)
+@[no_expose]
+def romCiL : FunDecl := lfn (id) locals () {
+  if id >= 7 { abort };
+  return ROMC.u64[12 + id]
+}
+
+/-- `rom_cv(id)`: the constant value `romCvT id`, a 4-word `EREC` record, from the cache. -/
+-- con-ron: none — the startup cache of the ROM constants (the twin interns them at each use)
+@[no_expose]
+def romCvL : FunDecl := lfn (id) locals () {
+  if id >= 10 { abort };
+  return ROMC.u64[19 + id]
+}
+
+/-- `rom_expr_pin(id)`: the expression `romExprT id`, a handle, from the cache. -/
+-- con-ron: none — the startup cache of the ROM constants (the twin interns them at each use)
+@[no_expose]
+def romExprPinL : FunDecl := lfn (id) locals () {
+  if id >= 2 { abort };
+  return ROMC.u64[29 + id]
+}
+
+/-- `rom_and_pin()`: the pinned `And` block, a fresh `IW` slice, from the cache. -/
+-- con-ron: none — the startup cache of the ROM constants (the twin interns them at each use)
+@[no_expose]
+def romAndPinL : FunDecl := lfn () locals (o, l) {
+  (o, l) := call er_to_iw(ROMC.u64[10], ROMC.u64[11]);
+  return (o, l)
+}
+
 def romCIProg : Prog :=
   [("rom_basis_decls", romBasisDeclsL), ("rom_ci", romCiL),
-   ("rom_cv", romCvL), ("rom_expr_pin", romExprPinL), ("rom_and_pin", romAndPinL), ("rci_slot", rciSlot), ("rci_fresh", rciFresh),
+   ("rom_cv", romCvL), ("rom_expr_pin", romExprPinL), ("rom_and_pin", romAndPinL),
+   ("rom_basis_decls_rom", romBasisDeclsRomL), ("rom_ci_rom", romCiRomL), ("rom_cv_rom", romCvRomL),
+   ("rom_expr_pin_rom", romExprPinRomL), ("rom_and_pin_rom", romAndPinRomL),
+   ("rom_fill_block", romFillBlock), ("rom_fill", romFill), ("rci_slot", rciSlot), ("rci_fresh", rciFresh),
    ("rci_names_to", rciNamesTo), ("rci_name_sl", rciNameSl), ("rci_lvls_to", rciLvlsTo),
    ("rci_cv", rciCv), ("rci_caps", rciCaps), ("rci_rule", rciRule), ("rci_rules_to", rciRulesTo),
    ("rci_ci", rciCi), ("rci_block_to", rciBlockTo), ("rci_block", rciBlock)]

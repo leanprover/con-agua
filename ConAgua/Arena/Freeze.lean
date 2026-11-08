@@ -45,7 +45,7 @@ table rows `TIX*[0‥2 count₀)` (`Env.lean`; a job's own layer is the worker's
 tier 0 `POOL[0‥CTL[0])` (lane tierpool: after the index build the scratch flag is off and `CTL[0]`
 is tier 0's top; a job allocates in `POOL⟨1⟩`, the worker's own, and saves the tier-0 top in
 `PT0`, also the worker's); `PINS[0‥72)`, `EREC[0‥CTL[129])` (tier 0; a job's records are tier 1,
-the worker's), `FIRSTS[0‥DECL[0])`, the front's records `DECL[0‥1 + 8 DECL[0])` and their pool
+the worker's), `FIRSTS[0‥DECL[0])`, the ROM constants' cache `ROMC[0‥31)`, the front's records `DECL[0‥1 + 8 DECL[0])` and their pool
 `DLP[0‥1 + DLP[0])` (every job reads its record); and one **seed**, which entry 2 copies into its
 own array before the first job: `CTLF` (`CTL[0‥256)`).
 
@@ -113,6 +113,7 @@ def frozen : List (ArrId × Fz) :=
    (TIXN, ⟨TIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩),
    (EREC, ⟨EREC, fzCtl 129⟩),
    (FIRSTS, ⟨FIRSTS, fzDecl⟩),
+   (L.Rom.ROMC, ⟨L.Rom.ROMC, fzC 31⟩),
    (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDecl)⟩),
    (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩)]
 
@@ -187,7 +188,7 @@ def frozenIdsL : List TieredArray :=
    PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC,
    LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC,
    LSSLOT, ADER, LADER, FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, PINS, EIXA,
-   EIXS, EIXN, TIXA, TIXS, TIXN, EREC, FIRSTS, L.Front.DECL, L.Front.DLP]
+   EIXS, EIXN, TIXA, TIXS, TIXN, EREC, FIRSTS, L.Rom.ROMC, L.Front.DECL, L.Front.DLP]
 
 /-- `parOwned` as a literal (as `frozenIdsL`). -/
 def parOwnedL : List TieredArray :=
@@ -202,7 +203,7 @@ def parOwnedL : List TieredArray :=
 
 #guard frozenIdsL == frozenIds
 #guard parOwnedL == parOwned
-#guard frozen.length = 63
-#guard hdrW = 136
+#guard frozen.length = 64
+#guard hdrW = 138
 
 end L.Arena

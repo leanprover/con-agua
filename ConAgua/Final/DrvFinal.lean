@@ -35,26 +35,26 @@ universe w
 /-- The file's code as the driver sees it: the parallel mode's entries, the stub, the compiler's
 output. -/
 theorem code_of_checkerFile_par [Host] {k0 : Nat} (hcode : Code checkerFile k0) :
-    Code (parStub checkerTab MODE PLO PHI OUT HDRF CTLF 136 frozenIdsL parOwnedL ++
+    Code (parStub checkerTab MODE PLO PHI OUT HDRF CTLF 138 frozenIdsL parOwnedL ++
       (abiStub checkerTab ++ compileProg checkerTab checkerProgI "check")) k0 := by
   rw [checkerFile_eq, checkerStub_eq, List.append_assoc] at hcode
   exact hcode
 
-theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF 136 = true := by decide +kernel
+theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF 138 = true := by decide +kernel
 
 /-- `getD 0 0` is the head. -/
 theorem getD_zero_headD (rs : List Word) : rs.getD 0 0 = rs.headD 0 := by cases rs <;> rfl
 
 /-- `seqMem`'s word arrays (the globals' writes keep them). -/
 theorem seqMem_arr64 (m : Mem) (lo hi : Word) (s : TieredArray) :
-    (seqMem m MODE PLO PHI OUT HDRF CTLF 136 lo hi).arr64 s =
+    (seqMem m MODE PLO PHI OUT HDRF CTLF 138 lo hi).arr64 s =
       if s = ↑OUT ∨ s = ↑CTLF then #[] else if s = ↑HDRF then (m.arr64 OUT).extract 0 132 else m.arr64 s := by
   sorry
 
 /-- **The driver's accept is the twin's**: `DrvAccepts` at the checker's program gives
 `TwinAccepts [b]`. -/
 theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (h : DrvAccepts checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 136 b pb) :
+    (h : DrvAccepts checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 138 b pb) :
     TwinAccepts [b] := by
   sorry
 
