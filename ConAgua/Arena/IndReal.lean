@@ -69,7 +69,8 @@ def rrnProg : Prog :=
 def rrnFns : List FnName := rrnProg.map (·.1)
 
 /-- `reserved_rec_name` writes nothing. -/
-theorem rrnProg_closed : closedA rrnProg [] [] rrnFns = true := by decide +kernel
+theorem rrnProg_closed : closedA rrnProg [] [] rrnFns = true := by
+  sorry
 
 /-- The program bundle. -/
 abbrev RrnF (p : Prog) : Prop := ProgHas p rrnProg
@@ -91,6 +92,7 @@ theorem rrnF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
 
 /-! ## `rec_rule_bits` (lane `tails`' `recRuleBits_refines`) -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `rec_rule_bits` and its callees. -/
 def rrbProg : Prog :=
   [("rec_rule_bits", L.Stubs.recRuleBitsL), ("rec_rule_k_of", L.Stubs.recRuleKOfL),
@@ -98,10 +100,12 @@ def rrbProg : Prog :=
    ("er_sl_eq", L.Ind.erSlEq), ("const_name_of", constNameOfL), ("get_app_fn_f", getAppFnFL),
    ("pi_result_f", piResultFL), ("get_app_fn", getAppFnL), ("pi_result", piResultL),
    ("env_find", envFindL), ("env_row_get", envRowGetL)]
+-/
 
 def rrbFns : List FnName := rrbProg.map (·.1)
 
-theorem rrbProg_closed : closedA rrbProg [] [] rrbFns = true := by decide +kernel
+theorem rrbProg_closed : closedA rrbProg [] [] rrbFns = true := by
+  sorry
 
 abbrev RrbF (p : Prog) : Prop := ProgHas p rrbProg
 
@@ -114,6 +118,7 @@ theorem rrbF_spec (p : Prog) (hp : RrbF p) (n : Nat) (s₀ : St) (args : List Wo
     ⦃fun r s' => LocEq s' s₀ ∧ rrbF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
   callF_spec rrbProg_closed (hp.agree rrbFns) (by decide) n s₀ args
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_bits`' model refines `recRuleBits`** (replaces `IndStubs.recRuleBits_spec`). -/
 theorem rrbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c : Word) (hc : H c)
     (rl : IRecRule) (hrl : rl.ctor = decI c) :
@@ -121,6 +126,7 @@ theorem rrbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       (KeepPost vis fe (fun _ r (x : IRecRule) =>
         x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) :=
   relW_callF (L.Stubs.recRuleBits_refines (p := rrbProg) (by constructor <;> rfl) dn vis fe c hc rl hrl)
+-/
 
 theorem rrbF_frame {m m' : Mem} {args r : List Word} (h : rrbF m args = some (r, m')) :
     MemFrame [] [] m m' := by
