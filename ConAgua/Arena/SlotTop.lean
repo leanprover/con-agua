@@ -45,8 +45,8 @@ theorem walkW_toNat (N h : Word) : ∀ e : Nat, h.toNat + e < N.toNat →
 unmarked slots, and stops there (not live unmarked, or the top slot). -/
 theorem kupW_res (sl : Array Word) (ob N bt : Word) : ∀ j : Word, j < N →
     ∃ D : Nat, j.toNat + D < N.toNat ∧ kupW sl ob N bt j = walkW N j D ∧
-      (∀ e < D, bt < rdW sl (ob + walkW N j e * 2) ∧ rdW sl (ob + walkW N j e * 2) < MARK) ∧
-      ¬ (bt < rdW sl (ob + kupW sl ob N bt j * 2) ∧ rdW sl (ob + kupW sl ob N bt j * 2) < MARK ∧
+      (∀ e < D, bt < vwd sl (ob + walkW N j e) ∧ vwd sl (ob + walkW N j e) < MARK) ∧
+      ¬ (bt < vwd sl (ob + kupW sl ob N bt j) ∧ vwd sl (ob + kupW sl ob N bt j) < MARK ∧
         kupW sl ob N bt j + 1 < N) := by
   intro j hj
   induction j using kupW.induct sl ob N bt with
@@ -58,7 +58,7 @@ theorem kupW_res (sl : Array Word) (ob N bt : Word) : ∀ j : Word, j < N →
     have hw : ∀ e, e ≤ D → walkW N (j + 1) e = walkW N j (e + 1) := fun e he =>
       UInt64.toNat_inj.mp (by rw [walkW_toNat _ _ _ (by omega), walkW_toNat _ _ _ (by omega), e1]; omega)
     rw [kupW]
-    simp only [show j < N ∧ bt < rdW sl (ob + j * 2) ∧ rdW sl (ob + j * 2) < MARK ∧ j + 1 < N from
+    simp only [show j < N ∧ bt < vwd sl (ob + j) ∧ vwd sl (ob + j) < MARK ∧ j + 1 < N from
       ⟨hjN, hl1, hl2, hj1⟩, and_self, ↓reduceIte]
     refine ⟨D + 1, by omega, by rw [hk, hw D (Nat.le_refl _)], fun e he => ?_, hs⟩
     rcases e with _ | e
@@ -103,9 +103,9 @@ structure TopInv (m0 mi : Mem) (H : Word) (k : MkR) : Prop where
   b1n : k.b1 ≤ n
 
 variable (m0 : Mem)
-  (hob : 2 ≤ ob.toNat) (hNL : ob.toNat + 2 * N.toNat ≤ (m0.arr64 sa).size)
+  (hob : 2 ≤ ob.toNat) (hNL : ob.toNat + N.toNat ≤ (m0.arr64 sa).size)
   (hL : (m0.arr64 sa).size < 2 ^ 61)
-  (hbt : bt.toNat + c.toNat + 1 < 2 ^ 63) (hnN : n ≤ N) (hN0 : 0 < N)
+  (hbt : bt.toNat + c.toNat + 1 < 2 ^ 47) (hnN : n ≤ N) (hN0 : 0 < N)
   (hOld : ∀ j, j < n → VW sa ob m0 j ≤ bt ∨ (LiveU bt (VW sa ob m0 j) ∧
     (VW sa ob m0 j).toNat ≤ bt.toNat + c.toNat ∧ KPm (VW sa ob m0 j - bt - 1) (KW sa ob m0 j)))
 
@@ -146,7 +146,7 @@ omit hob hNL hL hbt hnN hN0 hOld in
 /-- A found path stays when the live slots from `H` on keep their value words. -/
 theorem foundT_keep (H : Word) (mi mf : Mem) (x : Word) (hx : x.toNat < c.toNat)
     (hk : ∀ j, j < N → H ≤ j → LiveU bt (VW sa ob mi j) → VW sa ob mf j = VW sa ob mi j)
-    (hbt : bt.toNat + c.toNat + 1 < 2 ^ 63)
+    (hbt : bt.toNat + c.toNat + 1 < 2 ^ 47)
     (h : FoundT sa ob N bt hsm H mi x) : FoundT sa ob N bt hsm H mf x := by
   obtain ⟨hH, d, hd, h1, h2⟩ := h
   have hw : ∀ e, e ≤ d → walkW N (homeW (hsm x) N) e < N ∧ H ≤ walkW N (homeW (hsm x) N) e :=
@@ -241,7 +241,7 @@ include hob hNL hL hbt hnN hOld in
 /-- **The deferral**: slot `i = H - 1`'s live entry gets the mark and joins a range. -/
 theorem top_mark (mi : Mem) (H i : Word) (k : MkR) (hI : TopInv sa ob N n bt c KPm hsm m0 mi H k)
     (hc : CurStep H i) (hv : bt < VW sa ob mi i) :
-    TopInv sa ob N n bt c KPm hsm m0 (mi.set64 sa (ob + i * 2) (VW sa ob mi i + MARK)) i
+    TopInv sa ob N n bt c KPm hsm m0 (mi.set64 sa (ob + i) (pk (VW sa ob mi i + MARK) (KW sa ob mi i))) i
       (kdefR n i k) := by
   have hiH := hc.toNat
   have hn := UInt64.le_iff_toNat_le.mp hI.hn
@@ -256,30 +256,40 @@ theorem top_mark (mi : Mem) (H i : Word) (k : MkR) (hI : TopInv sa ob N n bt c K
   · exact absurd hv (UInt64.not_lt.mpr hO)
   obtain ⟨R1, R2, R3, R4, R5, R6⟩ := kdefR_ok n H i k hc hI.hn hI.a1 hI.a1n hI.b1 hI.b1n
   have hsz := hI.fr.size sa
+  have hqlt : (KW sa ob mi i).toNat < 2 ^ 16 := shr48_lt _
   generalize hV : VW sa ob mi i = v at *
-  have hVf := fun j hj => VW_setV sa ob N m0 hob hNL hL mi hsz i j hiN hj (v + MARK)
-  have hKf := fun j hj => KW_setV sa ob N m0 hob hNL hL mi hsz i j hiN hj (v + MARK)
+  generalize hQ : KW sa ob mi i = q at *
   have hvt := UInt64.lt_iff_toNat_lt.mp hl.2
   rw [MARK_toNat] at hvt
+  have hpk : (v + MARK).toNat < 2 ^ 48 := by rw [add_mark_toNat _ (by omega)]; omega
+  have hVf : ∀ j, j < N → VW sa ob (mi.set64 sa (ob + i) (pk (v + MARK) q)) j =
+      if i = j then v + MARK else VW sa ob mi j := fun j hj => by
+    rw [VW_set sa ob N m0 hob hNL hL mi hsz i j hiN hj, pk_vmask _ _ hpk hqlt]
+  have hKf : ∀ j, j < N → KW sa ob (mi.set64 sa (ob + i) (pk (v + MARK) q)) j = KW sa ob mi j :=
+    fun j hj => by
+      rw [KW_set sa ob N m0 hob hNL hL mi hsz i j hiN hj, pk_shr _ _ hpk hqlt]
+      split
+      · rename_i e; subst e; exact hQ.symm
+      · rfl
   have hsub : v + MARK - MARK = v := UInt64.add_sub_cancel _ _
   -- the other slots keep their words
-  have hne : ∀ j, j < N → j ≠ i → VW sa ob (mi.set64 sa (ob + i * 2) (v + MARK)) j = VW sa ob mi j ∧
-      KW sa ob (mi.set64 sa (ob + i * 2) (v + MARK)) j = KW sa ob mi j := fun j hj e =>
+  have hne : ∀ j, j < N → j ≠ i → VW sa ob (mi.set64 sa (ob + i) (pk (v + MARK) q)) j = VW sa ob mi j ∧
+      KW sa ob (mi.set64 sa (ob + i) (pk (v + MARK) q)) j = KW sa ob mi j := fun j hj e =>
     ⟨by rw [hVf j hj, ite_eq_right (Ne.symm e)], hKf j hj⟩
   have ltI : ∀ j, j ≠ i → i ≤ j → H ≤ j := fun j e hj => UInt64.le_iff_toNat_le.mpr (by
     have := UInt64.le_iff_toNat_le.mp hj
     have : i.toNat ≠ j.toNat := fun h' => e (UInt64.toNat_inj.mp h'.symm); omega)
   refine ⟨hI.fr.trans (GFr.set64 _ _ _ _), ?_, ?_, fun j hj => ?_, fun j hj hjN => ?_,
     fun x hx => ?_, UInt64.le_of_lt hin, R3, R4, R5, R6⟩
-  · rw [rd01_setV sa ob N m0 hob hNL hL mi hsz i hiN _ 0 (by simp), hI.w0]
-  · rw [rd01_setV sa ob N m0 hob hNL hL mi hsz i hiN _ 1 (by simp), hI.w1]
+  · rw [rd01_set sa ob N m0 hob hNL hL mi hsz i hiN _ 0 (by simp), hI.w0]
+  · rw [rd01_set sa ob N m0 hob hNL hL mi hsz i hiN _ 1 (by simp), hI.w1]
   · have hjN : j < N := UInt64.lt_trans hj hiN
     rw [(hne j hjN (fun e => UInt64.lt_irrefl _ (e ▸ hj))).1, (hne j hjN (fun e => UInt64.lt_irrefl _ (e ▸ hj))).2]
     exact hI.lo j (UInt64.lt_trans hj hiH')
   · by_cases e : j = i
     · subst e
       unfold SlotOK
-      rw [hVf j hjN, hKf j hjN, ite_eq_left rfl, hsub]
+      rw [hVf j hjN, hKf j hjN, ite_eq_left rfl, hsub, hQ]
       exact .inr (.inr ⟨(mark_le_iff _).mpr (by rw [add_mark_toNat _ (by omega)]; omega), hl.1, hle,
         hK, R1⟩)
     · exact slotOK_keep sa ob bt c KPm _ _ _ _ mi _ _ _ j (hI.hi j (ltI j e hj) hjN)
@@ -356,8 +366,7 @@ theorem top_move (mi : Mem) (H i : Word) (k : MkR) (hI : TopInv sa ob N n bt c K
     (hD : h0.toNat + D < N.toNat) (hp : ∀ e < D, LiveU bt (VW sa ob mi (walkW N h0 e)))
     (j' : Word) (hj' : walkW N h0 D = j') (hfree : VW sa ob mi j' ≤ bt) :
     TopInv sa ob N n bt c KPm hsm m0
-      (((mi.set64 sa (ob + j' * 2) (VW sa ob mi i)).set64 sa (ob + j' * 2 + 1) (KW sa ob mi i)).set64 sa
-        (ob + i * 2) 0) i k := by
+      ((mi.set64 sa (ob + j') (pk (VW sa ob mi i) (KW sa ob mi i))).set64 sa (ob + i) 0) i k := by
   have hiH := hc.toNat
   have hn := UInt64.le_iff_toNat_le.mp hI.hn
   have hnN' := UInt64.le_iff_toNat_le.mp hnN
@@ -377,40 +386,39 @@ theorem top_move (mi : Mem) (H i : Word) (k : MkR) (hI : TopInv sa ob N n bt c K
   have hji : j' ≠ i := fun e => by have := congrArg UInt64.toNat e; omega
   have hHj : H ≤ j' := UInt64.le_iff_toNat_le.mpr (by omega)
   generalize hX : VW sa ob mi i - bt - 1 = X at *
-  have f1 : GFr sa m0 (mi.set64 sa (ob + j' * 2) (VW sa ob mi i)) := hI.fr.trans (GFr.set64 _ _ _ _)
-  have f2 : GFr sa m0 ((mi.set64 sa (ob + j' * 2) (VW sa ob mi i)).set64 sa (ob + j' * 2 + 1) (KW sa ob mi i)) :=
-    f1.trans (GFr.set64 _ _ _ _)
-  have hVf : ∀ j, j < N → VW sa ob (((mi.set64 sa (ob + j' * 2) (VW sa ob mi i)).set64 sa (ob + j' * 2 + 1) (KW sa ob mi i)).set64 sa
-      (ob + i * 2) 0) j = if i = j then 0 else if j' = j then (VW sa ob mi i) else VW sa ob mi j := fun j hj => by
-    rw [VW_setV sa ob N m0 hob hNL hL _ (f2.size sa) i j hiN hj,
-      VW_setK sa ob N m0 hob hNL hL _ (f1.size sa) j' j hjN hj,
-      VW_setV sa ob N m0 hob hNL hL mi hsz j' j hjN hj]
-  have hKf : ∀ j, j < N → KW sa ob (((mi.set64 sa (ob + j' * 2) (VW sa ob mi i)).set64 sa (ob + j' * 2 + 1) (KW sa ob mi i)).set64 sa
-      (ob + i * 2) 0) j = if j' = j then (KW sa ob mi i) else KW sa ob mi j := fun j hj => by
-    rw [KW_setV sa ob N m0 hob hNL hL _ (f2.size sa) i j hiN hj,
-      KW_setK sa ob N m0 hob hNL hL _ (f1.size sa) j' j hjN hj,
-      KW_setV sa ob N m0 hob hNL hL mi hsz j' j hjN hj]
-  have hr01 : ∀ y : Word, y.toNat < 2 → rdW ((((mi.set64 sa (ob + j' * 2) (VW sa ob mi i)).set64 sa (ob + j' * 2 + 1)
-      (KW sa ob mi i)).set64 sa (ob + i * 2) 0).arr64 sa) y = rdW (mi.arr64 sa) y := fun y hy => by
-    rw [rd01_setV sa ob N m0 hob hNL hL _ (f2.size sa) i hiN 0 y hy,
-      rd01_setK sa ob N m0 hob hNL hL _ (f1.size sa) j' hjN (KW sa ob mi i) y hy,
-      rd01_setV sa ob N m0 hob hNL hL mi hsz j' hjN (VW sa ob mi i) y hy]
+  have hvlt : (VW sa ob mi i).toNat < 2 ^ 48 := by
+    have := UInt64.lt_iff_toNat_lt.mp hl.2; rw [MARK_toNat] at this; omega
+  have hqlt : (KW sa ob mi i).toNat < 2 ^ 16 := shr48_lt _
+  have f1 : GFr sa m0 (mi.set64 sa (ob + j') (pk (VW sa ob mi i) (KW sa ob mi i))) :=
+    hI.fr.trans (GFr.set64 _ _ _ _)
+  have hVf : ∀ j, j < N → VW sa ob ((mi.set64 sa (ob + j') (pk (VW sa ob mi i) (KW sa ob mi i))).set64 sa
+      (ob + i) 0) j = if i = j then 0 else if j' = j then (VW sa ob mi i) else VW sa ob mi j := fun j hj => by
+    rw [VW_set sa ob N m0 hob hNL hL _ (f1.size sa) i j hiN hj,
+      VW_set sa ob N m0 hob hNL hL mi hsz j' j hjN hj, pk_vmask _ _ hvlt hqlt, UInt64.zero_and]
+  have hKf : ∀ j, j < N → KW sa ob ((mi.set64 sa (ob + j') (pk (VW sa ob mi i) (KW sa ob mi i))).set64 sa
+      (ob + i) 0) j = if i = j then 0 else if j' = j then (KW sa ob mi i) else KW sa ob mi j := fun j hj => by
+    rw [KW_set sa ob N m0 hob hNL hL _ (f1.size sa) i j hiN hj,
+      KW_set sa ob N m0 hob hNL hL mi hsz j' j hjN hj, pk_shr _ _ hvlt hqlt, UInt64.zero_shiftRight]
+  have hr01 : ∀ y : Word, y.toNat < 2 → rdW (((mi.set64 sa (ob + j') (pk (VW sa ob mi i) (KW sa ob mi i))).set64 sa
+      (ob + i) 0).arr64 sa) y = rdW (mi.arr64 sa) y := fun y hy => by
+    rw [rd01_set sa ob N m0 hob hNL hL _ (f1.size sa) i hiN 0 y hy,
+      rd01_set sa ob N m0 hob hNL hL mi hsz j' hjN _ y hy]
   have ltI : ∀ j, j ≠ i → i ≤ j → H ≤ j := fun j e hj => UInt64.le_iff_toNat_le.mpr (by
     have := UInt64.le_iff_toNat_le.mp hj
     have : i.toNat ≠ j.toNat := fun h' => e (UInt64.toNat_inj.mp h'.symm); omega)
   have hjL : ¬ LiveU bt (VW sa ob mi j') := fun h => absurd h.1 (UInt64.not_lt.mpr hfree)
-  refine ⟨f2.trans (GFr.set64 _ _ _ _), by rw [hr01 0 (by simp), hI.w0], by rw [hr01 1 (by simp), hI.w1],
+  refine ⟨f1.trans (GFr.set64 _ _ _ _), by rw [hr01 0 (by simp), hI.w0], by rw [hr01 1 (by simp), hI.w1],
     fun j hj => ?_, fun j hj hjN' => ?_, fun x hx => ?_, UInt64.le_of_lt hin, ?_, hI.a1n, ?_, hI.b1n⟩
   · have hjN' : j < N := UInt64.lt_trans hj hiN
     have e1 : i ≠ j := fun e => UInt64.lt_irrefl _ (e ▸ hj)
     have e2 : j' ≠ j := fun e => by
       have := UInt64.lt_iff_toNat_lt.mp hj; have := congrArg UInt64.toNat e; omega
-    rw [hVf j hjN', hKf j hjN', ite_eq_right e1, ite_eq_right e2, ite_eq_right e2]
+    simp only [hVf j hjN', hKf j hjN', e1, e2, ↓reduceIte]
     exact hI.lo j (UInt64.lt_trans hj hiH')
   · unfold SlotOK
     rw [hVf j hjN', hKf j hjN']
     by_cases e1 : i = j
-    · subst e1; simp only [ite_eq_right hji]
+    · subst e1; simp only [↓reduceIte]
       exact .inl (by simp [UInt64.le_iff_toNat_le])
     · simp only [e1, ↓reduceIte]
       by_cases e2 : j' = j
@@ -461,10 +469,10 @@ theorem top_move (mi : Mem) (H i : Word) (k : MkR) (hI : TopInv sa ob N n bt c K
     · exact .inr (UInt64.lt_trans hiH' h)
 
 include hob hNL hL hbt hnN hN0 hOld in
-/-- **One step of the sweep keeps the invariant** (`ktopS` at `i = H - 1`), if `G` of every
-admissible key word is its node's hash. -/
+/-- **One step of the sweep keeps the invariant** (`ktopS` at `i = H - 1`), if `G` of every node
+is its hash. -/
 theorem ktopS_inv (G : Mem → Word → Word)
-    (hGh : ∀ mi : Mem, GFr sa m0 mi → ∀ x K, KPm x K → G mi K = hsm x)
+    (hGh : ∀ mi : Mem, GFr sa m0 mi → ∀ x, G mi x = hsm x)
     (mi : Mem) (H i : Word) (k : MkR) (hI : TopInv sa ob N n bt c KPm hsm m0 mi H k)
     (hc : CurStep H i) :
     TopInv sa ob N n bt c KPm hsm m0 (ktopS sa G N n ob bt i k mi).1 i
@@ -475,17 +483,11 @@ theorem ktopS_inv (G : Mem → Word → Word)
   have hiH' : i < H := UInt64.lt_iff_toNat_lt.mpr (by omega)
   have hin : i < n := UInt64.lt_iff_toNat_lt.mpr (by omega)
   unfold ktopS
-  by_cases hv : bt < rdW (mi.arr64 sa) (ob + i * 2)
+  by_cases hv : bt < vwd (mi.arr64 sa) (ob + i)
   · simp only [hv, ↓reduceIte]
     have hv' : bt < VW sa ob mi i := hv
-    obtain ⟨hv0, hk0⟩ := hI.lo i hiH'
-    have hO := hOld i hin
-    rw [← hv0, ← hk0] at hO
-    rcases hO with hO | ⟨hl, hle, hK⟩
-    · exact absurd hv' (UInt64.not_lt.mpr hO)
-    have hG : G mi (KW sa ob mi i) = hsm (VW sa ob mi i - bt - 1) := hGh mi hI.fr _ _ hK
-    have hj : kjW sa G N ob i mi = homeW (hsm (VW sa ob mi i - bt - 1)) N := by
-      simp only [kjW]; rw [← hG]; rfl
+    have hj : kjW sa G N ob bt i mi = homeW (hsm (VW sa ob mi i - bt - 1)) N := by
+      simp only [kjW]; rw [hGh mi hI.fr]; rfl
     have hh0N := homeW_lt (hsm (VW sa ob mi i - bt - 1)) N hN0
     generalize hh0 : homeW (hsm (VW sa ob mi i - bt - 1)) N = h0 at hj hh0N
     unfold ktopBW ktopQW
@@ -520,7 +522,7 @@ theorem ktopS_inv (G : Mem → Word → Word)
 include hob hNL hL hbt hnN hN0 hOld in
 /-- **The sweep keeps the invariant** (`ktopW`), down to the cursor `0`. -/
 theorem ktopW_inv (G : Mem → Word → Word)
-    (hGh : ∀ mi : Mem, GFr sa m0 mi → ∀ x K, KPm x K → G mi K = hsm x)
+    (hGh : ∀ mi : Mem, GFr sa m0 mi → ∀ x, G mi x = hsm x)
     (H : Word) (k : MkR) (mi : Mem) (hI : TopInv sa ob N n bt c KPm hsm m0 mi H k) :
     TopInv sa ob N n bt c KPm hsm m0 (ktopW sa G N n ob bt H k mi).1 0
       (ktopW sa G N n ob bt H k mi).2 := by
