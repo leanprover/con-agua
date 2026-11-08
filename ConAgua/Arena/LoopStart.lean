@@ -37,8 +37,10 @@ def loopZeroArrs : List TieredArray :=
   tier1s [TIXA, TIXS, TIXN]
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- An array the loop needs zero at its start. -/
 abbrev loopZeroArr (b : TieredArray) : Prop := b ∈ loopZeroArrs
+-/
 
 /-- The `CTL` words the loop needs zero at its start: the core's memo stamps, the number of
 constants (128), of pending checks (130), the promotion memo's words (140‥147),
@@ -63,13 +65,8 @@ namespace LoopZero
 variable {m : Mem} (h : LoopZero m)
 include h
 
-theorem coreMemos : CoreMemos m :=
-  CoreMemos.zero (by have := h.ctl; omega)
-    (fun b hb j => h.arr b (by
-      rcases hb with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide) j)
-    (fun x hx => h.word x (by
-      unfold loopZeroCtl
-      rcases hx with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide))
+theorem coreMemos : CoreMemos m := by
+  sorry
 
 theorem crOK : L.Stubs.CrOK m := by
   sorry
