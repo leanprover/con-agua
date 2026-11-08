@@ -78,7 +78,7 @@ The slot base `B` rises by `2^32` per reset. At `B ≥ 2^47 - 2^33` (`SCBLIM`, a
 `scratch_reset` vacates the scratch tier's slot tables, zeroing the `n` words of each of the 19
 tables' tier-1 table (the growth's zero loop `kzeroLs`), and restarts `B` at `0`, as con-ron's
 `ConsMap::clear` vacates its slots and restarts the epoch at `1` when its 16-bit epoch reaches
-`EPOCH_MAX` (ours has 15 bits, D61). Only the slot tables carry `B`: the memos have their own
+`EPOCH_MAX` (ours has 15 bits, D43). Only the slot tables carry `B`: the memos have their own
 stamps. -/
 
 /-- The 19 tables' slot arrays (tier 0's ids; the wrap vacates tier 1, `tier1 sa`). -/
@@ -230,7 +230,7 @@ theorem scrHead_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) scrHead
     ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧
-      (rdW (s'.mem.arr64 CTL) SCB).toNat < 2 ^ 62 ∧ s'.mem = preMem s₀.mem; ⊤⦄ := by
+      (rdW (s'.mem.arr64 CTL) SCB).toNat < 2 ^ 47 - 2 ^ 33 ∧ s'.mem = preMem s₀.mem; ⊤⦄ := by
   unfold scrHead
   sym only [lang_grind, arena_grind] =>
     vcgen [step, evalE, evalC, setLoc, ld64, st64, scrVac_spec p n] <;>
@@ -252,7 +252,7 @@ include hp in
 theorem scratchReset_spec (n : Nat) (s₀ : St) (f : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_reset" [f]
-    ⦃fun _ s' => LocEq s' s₀ ∧ (rdW ((preMem s₀.mem).arr64 CTL) SCB).toNat < 2 ^ 62 ∧
+    ⦃fun _ s' => LocEq s' s₀ ∧ (rdW ((preMem s₀.mem).arr64 CTL) SCB).toNat < 2 ^ 47 - 2 ^ 33 ∧
       SCB.toNat < ((preMem s₀.mem).arr64 CTL).size ∧
       ((resetMemA (preMem s₀.mem) f).top >>> 40 = 0 ∨ f = 0 →
         0 < ((resetMemA (preMem s₀.mem) f).arr64 PT0).size) ∧
@@ -309,7 +309,7 @@ include hp hr hb hl hi hf in
 theorem scratchEnter_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_enter" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ (rdW ((preMem s₀.mem).arr64 CTL) SCB).toNat < 2 ^ 62 ∧
+    ⦃fun _ s' => LocEq s' s₀ ∧ (rdW ((preMem s₀.mem).arr64 CTL) SCB).toNat < 2 ^ 47 - 2 ^ 33 ∧
       SCB.toNat < ((preMem s₀.mem).arr64 CTL).size ∧
       rdW ((resetMem (preMem s₀.mem) 1).arr64 CTL) bmSch.cs + 2 ≠ 0 ∧
       rdW ((mclearG bmSch (resetMem (preMem s₀.mem) 1)).arr64 CTL) lfSch.cs + 2 ≠ 0 ∧
@@ -341,7 +341,7 @@ theorem scratchDrop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_drop" []
     ⦃fun _ s' => LocEq s' s₀ ∧ FlushOK s₀.mem ∧
-      (rdW ((preMem (flushMem s₀.mem)).arr64 CTL) SCB).toNat < 2 ^ 62 ∧
+      (rdW ((preMem (flushMem s₀.mem)).arr64 CTL) SCB).toNat < 2 ^ 47 - 2 ^ 33 ∧
       SCB.toNat < ((preMem (flushMem s₀.mem)).arr64 CTL).size ∧
       ((resetMemA (preMem (flushMem s₀.mem)) 0).top >>> 40 = 0 ∨ (0 : Word) = 0 →
         0 < ((resetMemA (preMem (flushMem s₀.mem)) 0).arr64 PT0).size) ∧

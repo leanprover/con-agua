@@ -157,13 +157,13 @@ theorem resetMemP_frame (m : Mem) (f : Word) :
   ((preMem_frame m).mono (fun b h => List.mem_cons_of_mem _ h) (by simp [resetCtl])).trans
     ((resetMem_frame (preMem m) f).mono (by simp) (fun x h => h))
 
-/-- **The wrap zeroes a scratch table**: the `8 ⌊n / 4⌋` words of tier 1's table of slot array
+/-- **The wrap zeroes a scratch table**: the `8 ⌊n / 8⌋` words of tier 1's table of slot array
 `sa` (from word `2 + o`), and nothing else of its array. -/
 theorem vacL_rd (sa : ArrId) : ∀ (l : List ArrId) (m : Mem), l.Nodup → sa ∈ l →
-    (koW sa m 1 + 2).toNat + 8 * (knW sa m 1 >>> 2).toNat < 2 ^ 64 →
+    (koW sa m 1 + 2).toNat + 8 * (knW sa m 1 >>> 3).toNat < 2 ^ 64 →
     ((vacL l m).arr64 (tierA sa 1)).size = (m.arr64 (tierA sa 1)).size ∧
     ∀ y, rdW ((vacL l m).arr64 (tierA sa 1)) y =
-      if (koW sa m 1 + 2).toNat ≤ y.toNat ∧ y.toNat < (koW sa m 1 + 2).toNat + 8 * (knW sa m 1 >>> 2).toNat
+      if (koW sa m 1 + 2).toNat ≤ y.toNat ∧ y.toNat < (koW sa m 1 + 2).toNat + 8 * (knW sa m 1 >>> 3).toNat
       then 0 else rdW (m.arr64 (tierA sa 1)) y
   | [], _, _, h, _ => absurd h (by simp)
   | a :: as, m, hnd, hin, hb => by
@@ -343,7 +343,7 @@ theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
     (hA₀ : ∀ b ∈ A₀, b ∉ slot1Arrs ∧ b ≠ CTL) (hC₀ : ∀ x ∈ C₀, x ∉ resetCtl)
     (hca : C.ca ∉ scratchCnts ∧ C.ca + 1 ∈ scratchCnts) (hsa : C.sa ∈ scrSlots)
     (hra : tier1 C.ra ∉ slot1Arrs)
-    (m : Mem) (f : Word) (hlo : (rdW ((preMem m).arr64 CTL) SCB).toNat < 2 ^ 62)
+    (m : Mem) (f : Word) (hlo : (rdW ((preMem m).arr64 CTL) SCB).toNat < 2 ^ 47 - 2 ^ 33)
     (h62 : SCB.toNat < ((preMem m).arr64 CTL).size) {on : Bool} {tbP tbS : Tbl α (Idx k) δ}
     (hR : ConsR C R m on tbP tbS) :
     ConsR C R (resetMemA (preMem m) f) (f != 0) tbP (Tbl.empty : Tbl α (Idx k) δ) := by
@@ -368,7 +368,7 @@ theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
     · have e2 : (preMem m).arr64 (tierA C.sa 1) = (vacL scrSlots m).arr64 (tierA C.sa 1) := by
         rw [preMem, ite_eq_left hw, Mem.arr64_set64_ne _ _ _ _ _ (show tierA C.sa 1 ≠ CTL from hS.sa_ctl' 1)]
       obtain ⟨l1, l2, l3, l4⟩ := hR.lay1
-      have hn4 : 8 * (knW C.sa m 1 >>> 2).toNat = 2 * (knW C.sa m 1).toNat := by
+      have hn4 : 8 * (knW C.sa m 1 >>> 3).toNat = (knW C.sa m 1).toNat := by
         rw [UInt64.toNat_shiftRight]; simp; omega
       have ho2 : (koW C.sa m 1 + 2).toNat = (koW C.sa m 1).toNat + 2 := by
         rw [UInt64.toNat_add]; simp; omega
@@ -427,7 +427,7 @@ def EStore.reset (st : EStore) (on : Bool) : EStore :=
 /-- Phase A: **`scratch_reset(f)`'s counts keep `ArenaD`**, with every scratch table emptied and every flag
 `f ≠ 0`; the memos stay. -/
 theorem ArenaD.resetA (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
-    (hlo : (rdW ((preMem m).arr64 CTL) SCB).toNat < 2 ^ 62)
+    (hlo : (rdW ((preMem m).arr64 CTL) SCB).toNat < 2 ^ 47 - 2 ^ 33)
     (h62 : SCB.toNat < ((preMem m).arr64 CTL).size) :
     ArenaD (resetMemA (preMem m) f) { a with store := EStore.reset a.store (f != 0) } := by
   obtain ⟨hR, hDer⟩ := hD
@@ -521,7 +521,7 @@ theorem ArenaD.resetTop (m : Mem) (a : AState) (f : Word) (on : Bool)
 `f ≠ 0`; the memos stay. -/
 @[refines_part ConRon.Arena.EStore.enableScratch "ArenaD"]
 theorem ArenaD.reset (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
-    (hlo : (rdW ((preMem m).arr64 CTL) SCB).toNat < 2 ^ 62)
+    (hlo : (rdW ((preMem m).arr64 CTL) SCB).toNat < 2 ^ 47 - 2 ^ 33)
     (h62 : SCB.toNat < ((preMem m).arr64 CTL).size)
     (hpt : (resetMemA (preMem m) f).top >>> 40 = 0 ∨ f = 0 →
       0 < ((resetMemA (preMem m) f).arr64 PT0).size) :
@@ -570,7 +570,7 @@ theorem clears_frame (m : Mem) :
 
 /-- **`scratch_enter`'s memory after `ArenaD` is `enterScratch`'s state.** -/
 theorem ArenaD.enter (m : Mem) (a : AState) (hD : ArenaD m a)
-    (hlo : (rdW ((preMem m).arr64 CTL) SCB).toNat < 2 ^ 62)
+    (hlo : (rdW ((preMem m).arr64 CTL) SCB).toNat < 2 ^ 47 - 2 ^ 33)
     (h62 : SCB.toNat < ((preMem m).arr64 CTL).size)
     (c1 : rdW ((resetMem (preMem m) 1).arr64 CTL) bmSch.cs + 2 ≠ 0)
     (c2 : rdW ((mclearG bmSch (resetMem (preMem m) 1)).arr64 CTL) lfSch.cs + 2 ≠ 0)
@@ -798,21 +798,22 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
     | .error _ => false
   | .error _ => false
 
-/- The wrap: from a base just below the limit, `scratch_enter` raises it to `2^62` (no slot
-written), and the next reset (`scratch_drop`) vacates every scratch table (a grown one in tier 1
-of `ASLOT`: 16 slots at offset 2) and restarts the base: `2^32`. -/
+/- The wrap: from a base just below the limit, `scratch_enter` raises it to `SCBLIM` (no slot
+written), and the next reset (`scratch_drop`) vacates every scratch table (its `n` words only; a
+grown one in tier 1 of `ASLOT`: 16 slots at offset 2) and restarts the base: `2^32`. -/
 #guard
-  let ctl : Array Word := (Array.replicate 120 0).set! 62 (4611686018427387904 - 4294967296)
+  let ctl : Array Word := (Array.replicate 120 0).set! 62 (140728898420736 - 4294967296)
   let slot (a : TieredArray) : Array Word :=
     if a = tier1 ASLOT then #[8, 2, 5, 5] ++ Array.replicate 32 7
     else if a ∈ slot1Arrs then #[0, 0] ++ Array.replicate 16 7 else #[]
   let m : Mem := Mem.ofWords ([((CTL : TieredArray), ctl), ((PT0 : TieredArray), #[0])] ++ slot1Arrs.map fun a => (a, slot a))
   match run scratchProg 100 "scratch_enter" [] m with
   | .ok (_, m1) => match run scratchProg 100 "scratch_drop" [] m1 with
-    | .ok (_, m2) => (m1.arr64 CTL)[62]! == 4611686018427387904 && (m1.arr64 (tier1 SLOT))[2]! == 7 &&
+    | .ok (_, m2) => (m1.arr64 CTL)[62]! == 140728898420736 && (m1.arr64 (tier1 SLOT))[2]! == 7 &&
         (m2.arr64 CTL)[62]! == 4294967296 && (m2.arr64 CTL)[1]! == 0 &&
-        m2.arr64 (tier1 ASLOT) == #[8, 2, 5, 5] ++ Array.replicate 32 0 &&
-        slot1Arrs.all (fun a => a == tier1 ASLOT || m2.arr64 a == #[0, 0] ++ Array.replicate 16 0)
+        m2.arr64 (tier1 ASLOT) == #[8, 2, 5, 5] ++ Array.replicate 16 0 ++ Array.replicate 16 7 &&
+        slot1Arrs.all (fun a => a == tier1 ASLOT ||
+          m2.arr64 a == #[0, 0] ++ Array.replicate 8 0 ++ Array.replicate 8 7)
     | .error _ => false
   | .error _ => false
 

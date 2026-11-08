@@ -35,7 +35,7 @@ the node and reads no record), else the key's 64-bit hash.
   restarts `B` at `0` when `B ≥ SCBLIM = 2^47 - 2^33` (before: `2^62`), i.e. once every 32 766
   resets (two per declaration), where upstream wraps every 65 535 clears of one table. Every
   scratch table is cleared together with all others here (one base, `CTL[62]`), so per table
-  the wrap comes twice as often as upstream's. Deviation D61 (deliberate, verdict-neutral).
+  the wrap comes twice as often as upstream's. Deviation D43 (deliberate, verdict-neutral).
 * **The fragment**: `fragW h = ((h · golden) >>> 16) &&& 0xffff`. Upstream takes the top 16 bits
   of `h · golden` because its home is the mask of `x = m ^ (m >> 32)` (`m = h · golden`), i.e.
   the low bits of `m` and of `m >> 32`, and the top bits of `m` are those it uses least. Our
