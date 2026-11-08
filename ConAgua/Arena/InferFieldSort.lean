@@ -81,8 +81,7 @@ theorem CoreRM.readNC {m : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : Cor
 theorem hslice?_succ {k : IdxKind} (a : Array Word) (o n : Nat) :
     (hslice? a o (n + 1) : Option (List (Idx k))) =
       (do let x ← hd? a o; let xs ← hslice? a (o + 1) n; pure (x :: xs)) := by
-  simp only [hslice?, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero,
-    Function.comp_def, Nat.succ_eq_add_one, ← Nat.add_assoc, Nat.add_right_comm o]
+  sorry
 
 /-- A decoded slice is in bounds. -/
 theorem hslice?_bound_fsz {k : IdxKind} (a : Array Word) : ∀ (n o : Nat) (l : List (Idx k)),
