@@ -43,7 +43,7 @@ def recUW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | n + 1, m, ro, rl =>
     if rl = 0 then some ([1], m)
     else recUK1 n ro rl
-      (rrnF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))])
+      (rrnF m [erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))])
 
 /-- After `reserved_rec_name`. -/
 def recUK1 (n : Nat) (ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -61,7 +61,7 @@ section arms
 variable (n : Nat) (m m1 m2 : Mem) (ro rl : Word) (r1 r : List Word)
 theorem recUW_nil (h : rl = 0) : recUW (n + 1) m ro rl = some ([1], m) := by simp [recUW, h]
 theorem recUW_cons (h : rl ≠ 0) : recUW (n + 1) m ro rl = recUK1 n ro rl
-    (rrnF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))]) := by
+    (rrnF m [erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))]) := by
   simp [recUW, h]
 theorem recUK1_hit (h : r1.headD 0 ≠ 0) : recUK1 n ro rl (some (r1, m1)) = some ([0], m1) := by
   simp only [recUK1]; rw [ite_eq_left h]
@@ -85,15 +85,36 @@ include hp hrrn
 theorem blockRecNamesUnreserved_spec (n : Nat) : ∀ (s₀ : St) (ro rl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_names_unreserved" [ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ recUW n s₀.mem ro rl = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  induction n with
+  | zero =>
+    intro s₀ ro rl; rw [invoke_eq _ hp]; simp only [callFn, blockRecNamesUnreserved]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ ro rl
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockRecNamesUnreserved]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        rrnF_spec p hrrn n, ih] <;>
+      finish (gen := 20) [rdW_eq, erRd]
 
 end spec
 
 theorem decCVp_name_p {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv)
     (hb : q < 2 ^ 64) :
-    (rdW (m.arr64 EREC) (UInt64.ofNat q)).toNat < 2 ^ 32 ∧
-      decI (rdW (m.arr64 EREC) (UInt64.ofNat q)) = cv.name := by
-  sorry
+    (erRd m (UInt64.ofNat q)).toNat < 2 ^ 32 ∧
+      decI (erRd m (UInt64.ofNat q)) = cv.name := by
+  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨nm, hnm, lv, -, ty, -, hcv⟩ := h
+  have hnm' : nm = cv.name := by rw [← hcv]
+  have e : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+  rcases hw : erA m q with _ | w
+  · simp [hd?, hw] at hnm
+  have hrd : erRd m (UInt64.ofNat q) = w := erRd_of_erA (by rw [e]; exact hw)
+  by_cases hl : w.toNat < 2 ^ 32
+  · simp [hd?, hw, hl] at hnm
+    rw [hrd]; exact ⟨hl, by rw [hnm, hnm']⟩
+  · simp [hd?, hw, hl] at hnm
 
 theorem decPL_tail {m : Mem} {α : Type} {f : Nat → Option α} {o k : Nat} {x : α} {xs : List α}
     (h : decPL m f o (k + 1) = some (x :: xs)) : decPL m f (o + 1) k = some xs := by
@@ -149,8 +170,8 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
       obtain ⟨hn32, hnI⟩ := decCVp_name_p hcvR hab
       rw [ofNat_toNat_word] at hv'
-      have hrd : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro)) =
-          rdW (m.arr64 EREC) (UInt64.ofNat a0) := by rw [hv', hva']
+      have hrd : erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro)) =
+          erRd m (UInt64.ofNat a0) := by rw [hv', hva']
       rw [hrd] at h
       obtain ⟨r1, m1, hra, h⟩ := ipK_inv h (by simp [recUK1])
       obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
