@@ -4,7 +4,6 @@ import ConRon.Bridge.Checker.Arms
 import ConRon.Bridge.Checker.Base
 public import ConAgua.Verdict.DeclValsE
 public import ConAgua.Arena.DeclStepGo
-import ConRon.Bridge.Checker.Split
 import all ConRon.Bridge.Checker.Inv
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.DeclValT

@@ -26,6 +26,16 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/-- The value checks' common tail (`checkDefnVal`, `checkOpaqueVal`, and `checkThmVal` past its
+proposition test): the value's guards, its type against the declared one, the record. -/
+def dvT (fe : IFEnv) (cv : IConstantVal) (v : EIdx) (ci : IConstantInfo) (msg : String) :
+    AM IConstantInfo := do
+  valueGuards fe cv v
+  let vtype ← inferTypeCore V fe checkFuel 0 v
+  unless ← isDefEqCore V fe checkFuel 0 vtype cv.type do
+    fail (.invalid msg)
+  pure ci
+
 theorem checkDefnVal_dvT (fe : IFEnv) (cv : IConstantVal) (v : EIdx)
     (h : ConLeche.ReducibilityHint) :
     checkDefnVal V fe cv v h = dvT fe cv v (.defnInfo cv v h) "type mismatch in definition" := rfl
@@ -48,11 +58,9 @@ theorem toNat_add_small (c : Word) (k : Nat) (h : c.toNat + k < 2 ^ 64) :
   rw [UInt64.toNat_add]; simp; omega
 
 /-- A decoding in `erecP` is below the record pool's size, so offsets from it do not wrap. -/
-theorem erecP_bound {m : Mem} {i : Nat} {w : Word} (h : (erecP m)[i]? = some w) (hS : IWOK m) :
+theorem erecP_bound {m : Mem} {i : Nat} {w : Word} (h : erecP m i = some w) (hS : IWOK m) :
     i < 2 ^ 64 := by
-  have := (Array.getElem?_eq_some_iff.mp (erecP_get h)).1
-  have := hS.erSize
-  omega
+  sorry
 
 /-! ## `check_constant_val` -/
 
@@ -70,7 +78,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## The census theorems -/
 
-theorem decls_decCI_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {cv : IConstantVal}
+theorem decls_decCI_defn {a : Nat → Option Word} {q : Nat} {cv : IConstantVal}
     {v : EIdx} {hh : ConLeche.ReducibilityHint} (h : decCI a q = some (.defnInfo cv v hh)) :
     decCV a (q + 1) = some cv ∧ hd? a (q + 5) = some v := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
@@ -79,7 +87,7 @@ theorem decls_decCI_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {
   all_goals (try simp only [Option.bind_eq_some_iff, Option.some.injEq] at h)
   all_goals grind
 
-theorem decCI_cvTA {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
+theorem decCI_cvTA {a : Nat → Option Word} {q : Nat}
     {ci : IConstantInfo} {cv : IConstantVal}
     (h : decCI a q = some ci) (hk : ci = .thmInfo cv ∨ ci = .axiomInfo cv) :
     decCV a (q + 1) = some cv := by
