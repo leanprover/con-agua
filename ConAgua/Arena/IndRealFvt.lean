@@ -53,22 +53,17 @@ open L.Arena
 
 /-- The stage relation across a writer above array 136 and `CTL[129]` that leaves the pool alone
 (`IndPosSpec/MatesW`'s `StageR.frame_hi`, which sits above this file). -/
-theorem stageR_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem stageR_hi {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {A : List TieredArray} {C : List Word} (hS : StageR vis fe m a) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr) ∧ (b.arr < 146 ∨ 149 ≤ b.arr))
     (hC : ∀ x ∈ C, 131 ≤ x.toNat ∧ x.toNat ≠ 133 ∧ x.toNat ≠ 134 ∧ x.toNat ≠ 135) (hA2 : (IW : TieredArray) ∉ A) (hC2 : (200 : Word) ∉ C) :
     StageR vis fe m' a ∧ IWGrow m m' := by
-  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW hA2 (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (fun h => by have := hA _ h; simp [EREC] at this)
-    (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 hC2
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
-    hf.ctl 129 (fun h => by have := (hC _ h).1; simp at this)
-  refine ⟨⟨CheckR.frame_hi hA hC hf hS.check, ?_⟩, ?_⟩
-  · simp only [IWOK_iff, iwTop, erTop, hI, hE, h200, h129, hf.size CTL]; exact (IWOK_iff _).1 hS.iw
-  · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
-    · simp only [iwTop, h200]; exact Nat.le_refl _
-    · simp only [erTop, h129]; exact Nat.le_refl _
+  have hA3 : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A :=
+    ⟨hA2, fun h => by have := hA _ h; simp [EREC] at this,
+      fun h => by have := hA _ h; simp [EREC, tier1] at this⟩
+  have hC3 : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C :=
+    ⟨fun h => by have := (hC _ h).1; simp at this, fun h => by have := (hC _ h).1; simp at this, hC2⟩
+  exact ⟨⟨CheckR.frame_hi hA hC hf hS.check, IWOK.of_keep hf hA3 hC3 hS.iw⟩, IWGrow.of_keep hf hA3 hC3⟩
 
 /-- A decoded `IW` handle slice, word by word. -/
 theorem decHL_word {m : Mem} {o l : Word} {xs : List EIdx} (h : decHL m o.toNat l.toNat = some xs)
@@ -202,7 +197,65 @@ theorem ftdsGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       r = [q, l] ∧ ∃ ws : List Word, m' = wrIW m (q + k) ws ∧ ws.length = l.toNat - k.toNat ∧
         (∀ w ∈ ws, w.toNat < 2 ^ 32) ∧
         (fvarTypeDs (xs.drop k.toNat)).run a = .ok (ws.map decI, a) := by
-  sorry
+  have hxl : xs.length = l.toNat := decHL_length m0 hxs
+  intro f
+  induction f with
+  | zero => intro m k r m' h; simp [ftdsGoW] at h
+  | succ f ih =>
+    intro m k r m' h hS hkl hroom hin
+    by_cases hk : k < l
+    · have hk' : k.toNat < l.toNat := hk
+      rcases h1 : ftdF m [rdW (m.arr64 IW) (o + k)] with _ | ⟨r1, m1⟩
+      · rw [ftdsGoW_none o l q f m k hk h1] at h; cases h
+      rw [ftdsGoW_step o l q f m m1 k r1 hk h1] at h
+      obtain ⟨w, hw, hw32, hxk⟩ := decHL_word hxs hsz0 k.toNat hk'
+      rw [word_ofNat_toNat] at hw
+      have hx : rdW (m.arr64 IW) (o + k) = w := by
+        have := hin k.toNat (Nat.le_refl _) hk'
+        rw [word_ofNat_toNat] at this
+        rw [this, hw]
+      rw [hx] at h1
+      obtain ⟨hm1, hrun1, hlt1⟩ := ftdW_ok m m1 a hS.check.arena.base w hw32 r1 (ftdF_eq h1)
+      rw [hm1] at h
+      have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
+      have hk1 : (k + 1).toNat = k.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp; omega
+      have hqk : (q + k).toNat = q.toNat + k.toNat := by
+        rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+      have hsz2 : ((m.set64 IW (q + k) (r1.headD 0)).arr64 IW).size = (m.arr64 IW).size :=
+        size_set64 _ _ _ _ _
+      obtain ⟨rfl, ws, hm', hlen, hws, hrun⟩ := ih _ _ _ _ h (hS.set_iw _ _) (by omega)
+        (by rw [hsz2]; exact hroom) (fun j hj1 hj2 => by
+          rw [← hin j (by omega) hj2, rdW_set64]
+          have hoj : (o + j.toUInt64).toNat = o.toNat + j := by
+            rw [UInt64.toNat_add]; simp [Nat.toUInt64]; omega
+          have hol' := hol (by omega)
+          have hne : q + k ≠ o + j.toUInt64 := by
+            intro he; have := congrArg UInt64.toNat he; rw [hqk, hoj] at this; omega
+          simp [hne])
+      refine ⟨rfl, r1.headD 0 :: ws, ?_, by simp [hlen]; omega, ?_, ?_⟩
+      · rw [hm']; simp only [wrIW]; rw [UInt64.add_assoc]
+      · intro x hx; simp only [List.mem_cons] at hx
+        rcases hx with rfl | hx
+        · exact hlt1
+        · exact hws x hx
+      · have hd : xs.drop k.toNat = decI w :: xs.drop (k.toNat + 1) := by
+          rw [List.drop_eq_getElem_cons (by omega)]
+          have := List.getElem?_eq_getElem (l := xs) (i := k.toNat) (by omega)
+          rw [hxk] at this
+          rw [← Option.some.inj this]
+        rw [hd, hk1] at *
+        rw [hk1] at hrun
+        simp only [fvarTypeDs, StateT.run_bind, hrun1, except_ok_bind, hrun, List.map_cons]
+        rfl
+    · rw [ftdsGoW_ge o l q f m k hk] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      have hkl' : k.toNat = l.toNat := by
+        have : ¬ k.toNat < l.toNat := hk
+        omega
+      refine ⟨rfl, [], rfl, by simp; omega, by simp, ?_⟩
+      rw [hkl', ← hxl, List.drop_length]
+      rfl
 
 /-- **`fvar_type_ds`' model refines `fvarTypeDs`** (replaces `IndStubs.fvarTypeDs_spec`, with the
 input slice below the pool's top, see the header): a fresh slice, the twin state unchanged. -/

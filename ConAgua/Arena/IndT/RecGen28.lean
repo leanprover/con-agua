@@ -124,7 +124,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   obtain ⟨p0, hp0, hsrc⟩ := decPL_getH (truncM mb) hms0 j.toNat hjl
   obtain ⟨hp0t, hp0m⟩ := rec2IwN_trunc hp0
   have hp0m' : iwN m (mo.toNat + j.toNat) = some p0 := by
-    simp only [iwN, nat?, iwA] at hp0m ⊢; rw [hg.iwGet _ hp0t]; exact hp0m
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply] at hp0m ⊢; rw [hg.iwGet _ hp0t]; exact hp0m
   obtain ⟨hrd, hp0b⟩ := iwN_rdW_at (w := mo) (k := j.toNat) hp0m' hsz
   rw [show mo + UInt64.ofNat j.toNat = mo + j by simp] at hrd
   rw [cnsE_step (h := hj), hrd]
@@ -253,7 +253,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     intro t ht v hv
     obtain ⟨hlt, hv'⟩ := truncM_iw_get hv
     have e : (s2.mem.arr64 IW)[p0 + t]? = (mb.arr64 IW)[p0 + t]? := ((hg.trans hg1).trans hg2).iwGet _ hlt
-    simp only [rdW, hmt t ht, e]; simp only [iwA] at hv'; rw [hv']; rfl
+    simp only [rdW, hmt t ht, e]; simp only [iwA, aread_apply, aread_apply] at hv'; rw [hv']; rfl
   have hlow : ∀ i, i < nm.toNat → (mC.arr64 IW)[i]? = (s2.mem.arr64 IW)[i]? := by
     intro i hi
     rw [← hC, set64IW_get, ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get,
@@ -283,12 +283,12 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     rw [← hC, set64IW_get, ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get,
       ite_eq_right (by omega), g2 k (by simp) (by omega), hsrcw k hk v hv]
   have hw9 : iwN m4 (nm.toNat + 9) = some (r1.headD 0).toNat := by
-    simp only [iwN, nat?, iwA]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]
     rw [← hE, set64IW_get, ite_eq_right (by omega), ← hD, set64IW_get, ite_eq_right (by omega), ← hC, set64IW_get,
       ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get, ite_eq_left ⟨by omega, by rw [hn9] at b9; exact b9⟩]
     rfl
   have hw10 : iwN m4 (nm.toNat + 10) = some (r1.tail.headD 0).toNat := by
-    simp only [iwN, nat?, iwA]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]
     rw [← hE, set64IW_get, ite_eq_right (by omega), ← hD, set64IW_get, ite_eq_right (by omega), ← hC, set64IW_get,
       ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_left ⟨by omega, by rw [szA]; rw [hn10] at b10; exact b10⟩]
     rfl
@@ -308,7 +308,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have hws4 : decNL m4 qr.toNat (j + 1).toNat = some (ws ++ [nm.toNat]) := by
     rw [hj1, decNL_snoc, decNL_frX hFr (by omega) (by right; right; omega), hws]
     have : iwN m4 (qr.toNat + j.toNat) = some nm.toNat := by
-      simp only [iwN, nat?, iwA]
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply]
       rw [← hE, set64IW_get, ite_eq_left ⟨hqj.symm, by rw [szD]; rw [hqj] at bq; exact bq⟩]
       rfl
     simp [this]

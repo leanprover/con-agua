@@ -67,14 +67,14 @@ theorem bphDecEBlk_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat
 /-! ## The name words -/
 
 /-- A pointer word and the name word of its record, read in the real pools. -/
-theorem bphNameAt {dn : NIdx → Option ConLeche.Name} {m : Mem} {A : Array Word} {base i : Word}
+theorem bphNameAt {m : Mem} {A : Array Word} {base i : Word}
     {v : Nat} {ci : IConstantInfo} (hA : A.size < 2 ^ 64) (hE : (m.arr64 EREC).size < 2 ^ 64)
     (hv : nat? (aread A) (base.toNat + i.toNat) = some v) (hci : decCI (erA (truncM m)) v = some ci) :
     ∃ w, rdW (m.arr64 EREC) (rdW A (base + i) + 1) = w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
   sorry
 
 /-- The pinned block's name word `i`. -/
-theorem bphPinName {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Word}
+theorem bphPinName {m : Mem} {o l : Word}
     {pinned : List IConstantInfo}
     (hP : decPL (truncM m) (fun q => decCI (erA (truncM m)) q) o.toNat l.toNat = some pinned)
     (hI : (m.arr64 IW).size < 2 ^ 64) (hE : (m.arr64 EREC).size < 2 ^ 64) (i : Word)
@@ -100,7 +100,34 @@ theorem bphNames_iff {dn : NIdx → Option ConLeche.Name} {m : Mem} {o bo l : Wo
     (∀ i : Word, i < l → rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + i) + 1) =
         rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (bo + i) + 1)) ↔
       blockNames pinned = blockNames blk := by
-  sorry
+  have hlp : pinned.length = l.toNat := decPL_length (truncM m) hP
+  have hlb : blk.length = l.toNat := by rw [mapM_opt_length _ _ _ hB]; simp
+  constructor
+  · intro h
+    unfold blockNames
+    apply List.ext_getElem (by simp [hlp, hlb])
+    intro n h1 h2
+    simp only [List.length_map] at h1 h2
+    have hn : n < 2 ^ 64 := by have := l.toNat_lt; omega
+    have hi : (UInt64.ofNat n).toNat = n := UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hn)
+    obtain ⟨wa, ca, ha1, ha2, ha3, ha4⟩ := bphPinName hP hI hE (UInt64.ofNat n) (by rw [hi]; omega)
+    obtain ⟨wb, cb, hb1, hb2, hb3, hb4⟩ := bphBlkName hB hE (UInt64.ofNat n) (by rw [hi]; omega)
+    have hab := h (UInt64.ofNat n) (UInt64.lt_iff_toNat_lt.mpr (by rw [hi]; omega))
+    rw [ha1, hb1] at hab
+    subst hab
+    rw [hi] at ha3 hb3
+    simp only [List.getElem_map]
+    rw [List.getElem?_eq_getElem h1, Option.some.injEq] at ha3
+    rw [List.getElem?_eq_getElem h2, Option.some.injEq] at hb3
+    rw [ha3, hb3, ha4, hb4]
+  · intro h i hi
+    have hi' := UInt64.lt_iff_toNat_lt.mp hi
+    obtain ⟨wa, ca, ha1, ha2, ha3, ha4⟩ := bphPinName hP hI hE i hi'
+    obtain ⟨wb, cb, hb1, hb2, hb3, hb4⟩ := bphBlkName hB hE i hi'
+    rw [ha1, hb1]
+    have e : (blockNames pinned)[i.toNat]? = (blockNames blk)[i.toNat]? := by rw [h]
+    simp only [blockNames, List.getElem?_map, ha3, hb3, Option.map_some, Option.some.injEq] at e
+    exact decI_inj ha2 hb2 (by rw [← ha4, ← hb4, e])
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The name pre-filter's model** (`bphW.loop2`): it keeps the memory, and reaches `l` exactly
@@ -160,15 +187,7 @@ theorem bphBlk_erec {dn : NIdx → Option ConLeche.Name} {m : Mem} {bo bl : Word
     {blk : List IConstantInfo} (hB : decEBlk dn (truncM m) bo.toNat bl.toNat = some blk)
     (hne : bl.toNat ≠ 0) :
     L.Front.decCIsR (erecP m) bo.toNat bl.toNat = some blk ∧ bo.toNat + bl.toNat ≤ erTop m := by
-  refine ⟨mapM_imp _ _ hB fun j _ y hy => ?_, ?_⟩
-  · simp only [bind, Option.bind_eq_some_iff] at hy ⊢
-    obtain ⟨v, hv, hy⟩ := hy
-    exact ⟨v, (truncM_erecP m).nat? hv, ArrExt.decCI (truncM_erecP m) hy⟩
-  · obtain ⟨q, hq, -⟩ := bphDecEBlk_get hB (bl.toNat - 1) (by omega)
-    simp only [nat?, Option.map_eq_some_iff] at hq
-    obtain ⟨w, hw, -⟩ := hq
-    have := (truncM_er_get hw).1
-    omega
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bph_run_step (blk pinned : List IConstantInfo) (K : ConLeche.BasisKind)

@@ -168,7 +168,12 @@ def CnsSrc (mb : Mem) (mo ml : Word) (p0 : Nat) : Prop := ∃ c < ml.toNat, iwN 
 
 theorem decNL_frX {x : Nat} {m m' : Mem} (h : FrX x m m') {o l : Nat} (hb : o + l ≤ iwTop m)
     (hx : l = 0 ∨ x < o ∨ o + l ≤ x) : decNL m' o l = decNL m o l := by
-  sorry
+  simp only [decNL]
+  apply mapM_opt_congr
+  intro j hj
+  have hj' : j < l := List.mem_range.mp hj
+  simp only [iwN, nat?, iwA, aread_apply, aread_apply]
+  rw [h.2 (o + j) (by omega) (by omega)]
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem CnsRec.frame {mb : Mem} {S : Nat → Prop} {hi x : Nat} {m m' : Mem} {w : Nat} {M : TargetMajor}

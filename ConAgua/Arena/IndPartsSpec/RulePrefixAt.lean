@@ -169,7 +169,49 @@ theorem blockShapeRulePrefixAt_refines (p : Prog)
       iwN s₀.mem (o + r.toNat) = some v → v + 1 < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_rule_prefix_at" [q, r]
     ⦃fun res s' => s' = s₀ ∧ res.headD 0 = UInt64.ofNat (bs.rulePrefixAt r.toNat); ⊤⦄ := by
-  sorry
+  obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).2.1
+  have holl := hol o l ho hl
+  obtain ⟨ho', -⟩ := iwN_rdW ho (by omega)
+  obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
+  have e2 : UInt64.ofNat (q.toNat + 2) = q + 2 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  have e3 : UInt64.ofNat (q.toNat + 3) = q + 3 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [e2] at ho'; rw [e3] at hl'
+  have hlo : (UInt64.ofNat l).toNat = l := by simp [hlb]
+  rw [BlockShape.rulePrefixAt]
+  by_cases hlen : l < r.toNat + 1
+  have hNone : bs.recs[r.toNat]? = none := by
+    rw [List.getElem?_eq_none_iff, decPL_length s₀.mem hg]; omega
+  rw [hNone]
+  have hc : UInt64.ofNat l ≤ r := by
+    apply UInt64.le_iff_toNat_le.mpr; rw [hlo]; omega
+  rotate_left
+  obtain ⟨v, y, hv, hf, hget⟩ := decPL_get l o bs.recs hg r.toNat (by omega)
+  obtain ⟨-, hrP, -, -, -⟩ := decRS_some hf
+  rw [hget]
+  have hovv := hov o l v ho hl hv
+  obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+  have ev : UInt64.ofNat (o + r.toNat) = UInt64.ofNat o + r := by
+    rw [ofNat_add_word, ofNat_toNat_word]
+  rw [ev] at hv'
+  obtain ⟨hw1, -⟩ := iwN_rdW hrP (by omega)
+  have ew : UInt64.ofNat (v + 1) = UInt64.ofNat v + 1 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [ew] at hw1
+  have hc : ¬ UInt64.ofNat l ≤ r := by
+    intro hcontra
+    have := UInt64.le_iff_toNat_le.mp hcontra
+    rw [hlo] at this; omega
+  all_goals
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockShapeRulePrefixAt]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      sym only [lang_grind, arena_grind] =>
+        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+        finish
 
 /-- **`block_shape_major_idx_at` is `BlockShape.majorIdxAt`.** -/
 @[refines ConRon.Arena.BlockShape.majorIdxAt]
@@ -183,7 +225,49 @@ theorem blockShapeMajorIdxAt_refines (p : Prog)
       iwN s₀.mem (o + r.toNat) = some v → v + 2 < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_major_idx_at" [q, r]
     ⦃fun res s' => s' = s₀ ∧ res.headD 0 = UInt64.ofNat (bs.majorIdxAt r.toNat); ⊤⦄ := by
-  sorry
+  obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).2.1
+  have holl := hol o l ho hl
+  obtain ⟨ho', -⟩ := iwN_rdW ho (by omega)
+  obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
+  have e2 : UInt64.ofNat (q.toNat + 2) = q + 2 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  have e3 : UInt64.ofNat (q.toNat + 3) = q + 3 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [e2] at ho'; rw [e3] at hl'
+  have hlo : (UInt64.ofNat l).toNat = l := by simp [hlb]
+  rw [BlockShape.majorIdxAt]
+  by_cases hlen : l < r.toNat + 1
+  have hNone : bs.recs[r.toNat]? = none := by
+    rw [List.getElem?_eq_none_iff, decPL_length s₀.mem hg]; omega
+  rw [hNone]
+  have hc : UInt64.ofNat l ≤ r := by
+    apply UInt64.le_iff_toNat_le.mpr; rw [hlo]; omega
+  rotate_left
+  obtain ⟨v, y, hv, hf, hget⟩ := decPL_get l o bs.recs hg r.toNat (by omega)
+  obtain ⟨-, -, hmI, -, -⟩ := decRS_some hf
+  rw [hget]
+  have hovv := hov o l v ho hl hv
+  obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+  have ev : UInt64.ofNat (o + r.toNat) = UInt64.ofNat o + r := by
+    rw [ofNat_add_word, ofNat_toNat_word]
+  rw [ev] at hv'
+  obtain ⟨hw1, -⟩ := iwN_rdW hmI (by omega)
+  have ew : UInt64.ofNat (v + 2) = UInt64.ofNat v + 2 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [ew] at hw1
+  have hc : ¬ UInt64.ofNat l ≤ r := by
+    intro hcontra
+    have := UInt64.le_iff_toNat_le.mp hcontra
+    rw [hlo] at this; omega
+  all_goals
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockShapeMajorIdxAt]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      sym only [lang_grind, arena_grind] =>
+        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+        finish
 
 /-! ## `numCtorsOf`, `BlockShape.numCtors` -/
 
@@ -262,7 +346,10 @@ theorem numCtorsOf_refines (p : Prog) (hp : p.lookup "num_ctors_of" = some numCt
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "num_ctors_of" [off, l]
     ⦃fun r s' => s' = s₀ ∧ r.headD 0 = UInt64.ofNat (ConRon.Arena.numCtorsOf ms) ∧
       ConRon.Arena.numCtorsOf ms < 2 ^ 64; ⊤⦄ := by
-  sorry
+  have h := numCtorsOf_spec p hp n s₀ off l
+  refine triple_post h ?_
+  intro r s' ⟨h1, h2⟩
+  exact ⟨h1, (numCtorsOfW_ok n s₀.mem off l (r.headD 0) ms hsmall hbnd hd h2)⟩
 
 /-! ## `BlockShape.numCtors`: the word-model idiom for a caller
 
@@ -319,7 +406,14 @@ theorem blockShapeNumCtors_refines (p : Prog) (hc : p.lookup "num_ctors_of" = so
     (hsmall : (s₀.mem.arr64 IW).size < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_num_ctors" [q]
     ⦃fun r s' => s' = s₀ ∧ r.headD 0 = UInt64.ofNat bs.numCtors; ⊤⦄ := by
-  sorry
+  cases n with
+  | zero =>
+    rw [invoke_eq _ hp]; simp only [callFn, blockShapeNumCtors]; vcgen [exec] <;> grind
+  | succ n =>
+    have h := blockShapeNumCtorsW_spec p hc hp n s₀ q
+    refine triple_post h ?_
+    intro r s' ⟨h1, h2⟩
+    exact ⟨h1, blockShapeNumCtorsW_ok n s₀.mem q (r.headD 0) bs hq hb hol hsmall h2⟩
 
 end L.Ind
 
@@ -548,7 +642,9 @@ theorem blockShapeNIdxs_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAl
       decNL s'.mem (rdW (s₀.mem.arr64 CTL) 200).toNat bs.k = some bs.nIdxs ∧
       IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem ∧
       (rdW (s₀.mem.arr64 CTL) 200).toNat + bs.k = iwTop s'.mem; ⊤⦄ := by
-  sorry
+  refine triple_post (blockShapeNIdxs_spec p ha hc hp n s₀ q) ?_
+  intro r s' ⟨_, h⟩
+  exact nIdxsW_dec h hsz hcl hq hb hsrc hptr
 
 end L.Ind
 

@@ -34,7 +34,7 @@ open L.Arena
 /-- **A decoded record at kind word `3` is `indInfo`**, with its caps: `decCI`'s match only
 reaches the `.indInfo` arm from `nat? a p = some 3` (`Env.lean`'s `decCI_name` destructures the
 same match generically, for the name field). -/
-theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_kind3 {a : Array Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) p = some ci) (hk : nat? (aread a) p = some 3) :
     ∃ cv caps, ci = .indInfo cv caps ∧ decCaps (aread a) (p + 5) = some caps := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
@@ -46,7 +46,7 @@ theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : N
   exact ⟨cv, caps, rfl, hcaps⟩
 
 /-- The contrapositive: an `indInfo` record's kind word is `3`. -/
-theorem decCI_indInfo_kind {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_indInfo_kind {a : Array Word} {p : Nat}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) p = some (.indInfo cv caps)) :
     nat? (aread a) p = some 3 := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
@@ -185,45 +185,10 @@ theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : 
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
 /-- An `indInfo` record is fully inside the array it decodes from. -/
-theorem decCI_indInfo_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_indInfo_bound {a : Array Word} {p : Nat}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) p = some (.indInfo cv caps)) :
     p + 16 < a.size := by
   sorry
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem EnvR.row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
-    (h : EnvR m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) :
-    rowTag w ≤ 2 → rowC m w ≠ 0 → ∃ ci, decCI (erecP m) (rowP m w).toNat = some ci := by
-  intro ht h0
-  have hk := h.keys (decI w) (by rwa [decI_word_self w hw])
-  have hv := h.vals (decI w) (by rwa [decI_word_self w hw])
-  rw [decI_word_self w hw] at hk hv
-  have hv := hv h0
-  simp only [rowW, h0, ite_false, Option.map_some] at hk
-  cases e : fe.idx[(decI w : NIdx)]? with
-  | none => simp [e] at hk
-  | some r =>
-    simp only [e, Option.map_some] at hv
-    exact ⟨r.2, hv.symm⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- A found `indInfo` row, seen through `erecP`, gives the pointer bound. -/
-theorem erecP_size_lt (m : Mem) : (erecP m).size < 2 ^ 64 := by
-  have h : (erecP m).size ≤ erecTop m := by simp [erecP]; exact Nat.min_le_left _ _
-  have := (rdW (m.arr64 CTL) 129).toNat_lt
-  simp only [erecTop] at h
-  omega
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem blk_nok3 {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
-    (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q) (h0 : found ≠ 0)
-    (hk : rdW (m.arr64 EREC) q ≠ 3) :
-    hslice? (erA m) (0 : Word).toNat (0 : Word).toNat = some (nestBlockOf fe (decI c)) := by
-  have := nestBlockOf_key found q hfound (fun h => absurd h hk) (fun h => absurd h hk)
-  simpa [h0, hk] using this
--/
 
 /-! ## `nest_ctor_entry_strip`, `nest_ctor_entry` -/
 

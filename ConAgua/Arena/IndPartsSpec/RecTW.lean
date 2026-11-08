@@ -218,7 +218,12 @@ theorem mapM_opt_congr3 {α β : Type} (f g : α → Option β) :
 /-- A decoded handle slice below the pool's top survives growth. -/
 theorem decHL_grow3 {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
     (h : o + l ≤ iwTop m) : (decHL m' o l : Option (List (Idx k))) = decHL m o l := by
-  sorry
+  simp only [decHL, hslice?]
+  apply mapM_opt_congr3
+  intro j hj
+  have hj' : j < l := List.mem_range.mp hj
+  simp only [hd?, iwA, aread_apply, aread_apply]
+  rw [hg.iwGet (o + j) (by omega)]
 
 /-- A returning `e_view` of a `const` handle. -/
 theorem eViewW_const (m : Mem) (h : Word) (hg : tagW h = 3) (hne : eViewW m h ≠ []) :

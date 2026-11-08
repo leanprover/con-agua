@@ -70,7 +70,7 @@ theorem posInit_dec {m : Mem} (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.
       rw [this]
       have : j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5 := by omega
       rcases this with rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
-    simp only [decNS, decAt, decPL, iwN, nat?, iwA]
+    simp only [decNS, decAt, decPL, iwN, nat?, iwA, aread_apply, aread_apply]
     have e0 := e 0 (by omega)
     have e1 := e 1 (by omega)
     have e2 := e 2 (by omega)

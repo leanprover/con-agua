@@ -67,13 +67,38 @@ theorem BSOK.grow {m m' : Mem} {p : Nat} {bs : BlockShape} (h : BSOK m p bs) (hg
     exact Nat.lt_of_lt_of_le (hp o l j v ho hl hj hv) hg.iw
 
 /-- `block_shape_member_names` under the stage relation. -/
-theorem memberNamesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem memberNamesW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockShape}
     (h : memberNamesW n m p = some (r, m')) (hS : StageR vis fe m a) (hb : BSOK m p.toNat bs) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, UInt64.ofNat bs.k] ∧
     decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.memberNames ∧
     (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+  have ht := hb.ptop
+  have hsz := hS.iw.iwSize
+  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
+  have hk : bs.k < 2 ^ 64 := by
+    obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hb.dec).1
+    have := decPL_length m hg; simp only [BlockShape.k, this]; exact (iwN_rdW hl (by omega)).2
+  obtain ⟨hr, hd, hg, hf, htop⟩ := memberNamesW_dec h hsz hS.iw.ctl hb.dec (by omega) hb.2.1 hb.2.2
+  have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
+    simp only [memberNamesW] at h
+    rcases hal : allocW m (rdW (m.arr64 IW) (p + 1)) with _ | qm
+    · rw [hal] at h; cases h
+    obtain ⟨q, m1⟩ := qm
+    obtain ⟨hq, rfl, hroom⟩ := allocW_facts hal hsz
+    rw [hf.size IW, ← htop]
+    have hl := (decBS_some hb.dec).1
+    obtain ⟨o, l, ho, hl', hgl⟩ := decAt_some hl
+    have hlen := decPL_length m hgl
+    have e1 : rdW (m.arr64 IW) (p + 1) = UInt64.ofNat l := by
+      have := (iwN_rdW hl' (by omega)).1
+      rwa [show UInt64.ofNat (p.toNat + 1) = p + 1 by
+        apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp] at this
+    rw [e1, UInt64.toNat_ofNat_of_lt' (by rw [← hlen]; exact hk)] at hroom
+    rw [← hq, BlockShape.k, hlen]; exact hroom
+  refine ⟨stage_frame_iw hS hf (by rw [← hf.size IW]; exact hroom), hg, hr, ?_, ?_⟩
+  · rw [hr]; simpa [UInt64.toNat_ofNat_of_lt' hk] using hd
+  · rw [hr]; simpa [UInt64.toNat_ofNat_of_lt' hk] using htop
 
 /-! ## `env_find` through the rows -/
 
@@ -128,7 +153,7 @@ theorem envFindW_found {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
 -/
 
 /-- An `indInfo` record's `nparams` word, and no other kind is one. -/
-theorem decCI_ind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_ind_cases {a : Array Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
     ∃ k, nat? (aread a) p = some k ∧
       ((k = 3 ∧ ∃ cv caps, ci = .indInfo cv caps ∧ nat? (aread a) (p + 17) = some caps.nparams) ∨
@@ -240,7 +265,7 @@ theorem npc_other {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : ¬ bs.memberNam
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`class_n_pc_of` computes `classNPcOf`** (a pure twin), under the stage relation. -/
-theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem npcW_ok {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {p i : Word} {r : List Word} {bs : BlockShape}
     (h : npcW n m p vis i = some (r, m')) (hS : StageR vis fe m a) (hb : BSOK m p.toNat bs)
     (hi : H i) :

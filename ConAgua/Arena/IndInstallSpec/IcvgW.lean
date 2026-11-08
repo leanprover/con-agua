@@ -43,16 +43,19 @@ l_model icv_spec (p : Prog) (hp : p.lookup "check_block_inds_cv_tas" = some chec
 
 /-- `sl_cons`' run under the stage relation. -/
 theorem installConsRun {p : Prog} (hP : CstProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
-    (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (hf : ∀ q, OMono (fun m => f m q)) {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' := by
-  sorry
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (slCons_specW p hP.alloc hP.copy hP.cons n _ x o l) h
+  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf hW hS hxs.bound hxs.dec hy
+  exact ⟨hS', hg, hd, Nat.le_of_eq htop⟩
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_inds_cv_tas_go`'s model**: the constants of the `[cvTa, s]` records. -/
-theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem icvgW_ok {p : Prog} (hP : CstProg p) {vis : Word}
     {fe : IFEnv} {a : AState} (n : Nat) : ∀ (m m' : Mem) (s l : Word) (r : List Word)
       (xs : List (IConstantVal × LIdx)),
     icvgW p n m s l = some (r, m') → StageR vis fe m a → PSlR decTele xs s l m →
@@ -98,7 +101,7 @@ theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `check_block_inds_cv_tas`' run: `c0 :: cvs.map (·.1)`, a slice of constants below the tops. -/
-theorem installCvTasRun {p : Prog} (hP : CstProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
+theorem installCvTasRun {p : Prog} (hP : CstProg p) {n : Nat}
     {vis : Word} {fe : IFEnv} {a : AState} {m m' : Mem} {c0 o l : Word} {r : List Word}
     {cv0 : IConstantVal} {cvs : List (IConstantVal × LIdx)}
     (hcv : p.lookup "check_block_inds_cv_tas" = some checkBlockIndsCvTas)

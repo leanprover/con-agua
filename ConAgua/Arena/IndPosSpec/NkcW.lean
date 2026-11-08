@@ -256,7 +256,47 @@ theorem KsB.cons {m : Mem} {o l : Nat} {ks : List NestKey} (h : KsB m o (l + 1) 
 theorem nkcW_ok (k : Word) (K : NestKey) : ∀ (n : Nat) (m : Mem) (o l r : Word) (ks : List NestKey),
     nkcW n m o l k = some r → KsB m o.toNat l.toNat ks → DecB (fun m => decNK m k.toNat) m K →
     iwTop m < 2 ^ 64 → r = if ks.contains K then 1 else 0 := by
-  sorry
+  intro n
+  induction n with
+  | zero => intro m o l r ks h; simp [nkcW] at h
+  | succ n ih =>
+    intro m o l r ks h hks hK htop
+    by_cases hl0 : l = 0
+    · rw [nkcW_nil (h := hl0)] at h; cases h
+      subst hl0
+      have : ks = [] := by
+        have := (show decPL (truncM m) (decNK (truncM m)) o.toNat 0 = some ks from hks)
+        simpa [decPL] using this.symm
+      subst this; simp
+    rw [nkcW_cons (h := hl0)] at h
+    obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by
+      have : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
+    rw [hl'] at hks
+    obtain ⟨v, K0, ks', rfl, hoi, hv, hK0, hks'⟩ := hks.cons
+    have hrd : (rdW (m.arr64 IW) o).toNat = v := by
+      simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hv
+      obtain ⟨w, hw, rfl⟩ := hv; simp [rdW, hw]
+    rcases he : nkeWf n m (rdW (m.arr64 IW) o) k with _ | r0 <;> rw [he] at h; · simp [nkcK] at h
+    have hr0 := nkeWf_ok he (by rw [hrd]; exact hK0) hK htop
+    have hcons : (K0 :: ks').contains K = ((K0 == K) || ks'.contains K) := by
+      simp [List.contains_cons, pos2_nk_beq_comm K]
+    by_cases hb : r0 ≠ 0
+    · rw [nkcK_hit (h := hb)] at h; cases h
+      have : (K0 == K) = true := by
+        cases hc : (K0 == K) with
+        | true => rfl
+        | false => rw [hc] at hr0; exact absurd (by simpa using hr0) hb
+      simp [hcons, this]
+    · rw [nkcK_miss (h := hb)] at h
+      have : (K0 == K) = false := by
+        cases hc : (K0 == K) with
+        | false => rfl
+        | true => rw [hc] at hr0; simp at hr0 hb; rw [hb] at hr0; exact absurd hr0 (by decide)
+      have ho1 : (o + 1).toNat = o.toNat + 1 := word_add_toNat (by simp; omega)
+      have hl1 : (l - 1).toNat = l' := by
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+      rw [ih m (o + 1) (l - 1) r ks' h (by rw [ho1, hl1]; exact hks') hK htop]
+      simp [hcons, this]
 
 end L.Ind
 
@@ -295,7 +335,18 @@ theorem pos2_decB_snoc (hf : ∀ q, OMono (fun m => f m q)) {m m' : Mem} {o l q 
     (hw : ∀ i < l, (m'.arr64 IW)[q + i]? = (m.arr64 IW)[o + i]?) (hx : (m'.arr64 IW)[q + l]? = some w)
     (hxd : DecB (fun m => f m w.toNat) m' x) :
     DecB (fun m => decPL m (f m) q (l + 1)) m' (xs ++ [x]) := by
-  sorry
+  obtain ⟨hl, he⟩ := pos2_decB_elems h
+  have := pos2_decB_of_elems (m := m') (o := q) (xs := xs ++ [x]) (f := f) fun j hj => by
+    simp only [List.length_append, List.length_cons, List.length_nil] at hj
+    by_cases hjl : j < xs.length
+    · obtain ⟨v, h1, h2, h3⟩ := he j hjl
+      refine ⟨v, by omega, ?_, by rw [List.getElem_append_left hjl]; exact (DecB.grow (hf v) hg h3)⟩
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply] at h2 ⊢; rw [hw j (by omega)]; exact h2
+    · have hj' : j = xs.length := by omega
+      subst hj'
+      refine ⟨w.toNat, by omega, by simp [iwN, nat?, iwA, aread_apply, hl, hx], ?_⟩
+      simpa using hxd
+  simpa [hl] using this
 
 end pslice
 

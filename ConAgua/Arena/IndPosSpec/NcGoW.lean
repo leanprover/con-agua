@@ -177,7 +177,7 @@ theorem nt_spec (k : Nat) (s₀ : St) (vis C : Word) :
 
 end spec
 
-theorem decCI_ctor_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_ctor_cv {a : Array Word} {p : Nat}
     {cv : IConstantVal} {nPc nF : Nat} (h : decCI (aread a) p = some (.ctorInfo cv nPc nF)) :
     decCV (aread a) (p + 1) = some cv := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
@@ -400,10 +400,10 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
         refine ⟨⟨by rw [ht4]; omega, Or.inr (by omega)⟩, ⟨by rw [ht4]; omega, Or.inr (by omega)⟩,
           (ciq + 1).toNat, ?_, by rw [hciq1]; exact hE4.decCV hcvE, ?_⟩
         · have := hget3 0 (by simp)
-          simp only [iwN, nat?, iwA, set64IW_get]
+          simp only [iwN, nat?, iwA, aread_apply, set64IW_get]
           rw [ite_eq_right (by omega)]; simp at this; simp [this]
         · have := hget3 1 (by simp)
-          simp only [iwN, nat?, iwA, set64IW_get]
+          simp only [iwN, nat?, iwA, aread_apply, set64IW_get]
           rw [ite_eq_right (by omega)]; simp at this; simp [this, hnF]
       have hacc4 : CsAt (m3.set64 IW (cs + ol) q3) cs.toNat
           ((acc ++ [(cv, nPc, nF)]).map ncProj) (OutR cs.toNat N (iwTop (m3.set64 IW (cs + ol) q3))) := by
@@ -475,7 +475,7 @@ theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   sorry
 -/
 
-theorem decCaps_ctors {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {caps : IIndCaps}
+theorem decCaps_ctors {a : Array Word} {q : Nat} {caps : IIndCaps}
     (h : decCaps (aread a) q = some caps) :
     nat? (aread a) (q + 12) = some caps.nparams ∧ hlist? (aread a) (q + 13) = some caps.ctors := by
   sorry

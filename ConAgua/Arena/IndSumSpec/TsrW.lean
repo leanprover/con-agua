@@ -69,7 +69,7 @@ theorem sumHslice_of_get {k : IdxKind} {a : Array Word} : ∀ (ws : List Word) (
 
 /-- **`er_from_iw` under the stage relation**: a fresh `EREC` slice (at the old record top) holding
 the `IW` list, decoded in the record pool below its new top. -/
-theorem efW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (n : Nat)
+theorem efW_stage {vis : Word} {fe : IFEnv} {a : AState} (n : Nat)
     {m m' : Mem} {o l : Word} {r : List Word} {kk : IdxKind} {xs : List (Idx kk)}
     (h : efW n m o l = some (r, m'))
     (hS : StageR vis fe m a) (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
@@ -249,7 +249,7 @@ theorem rdW_some {arr : Array Word} {x : Word} {j : Nat} (hj : x.toNat = j) (hlt
 set_option maxRecDepth 4000 in
 /-- **One rebuilt rule record under the stage relation**: a fresh 11-word record, the old record's
 plain fields, the NESTED fire at the given record-pool slices. -/
-theorem rmRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem rmRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m1 : Mem} {q old flo fll fpo fpl : Word} {rl : IRecRule} {lvls : List LIdx} {pins : List EIdx}
     (h : erAllocW m 11 = some (q, m1)) (hS : StageR vis fe m a) (hold : rlDec m old.toNat = some rl)
     (hl : hslice? (erecP m) flo.toNat fll.toNat = some lvls) (hp : hslice? (erecP m) fpo.toNat fpl.toNat = some pins) :
@@ -259,18 +259,37 @@ theorem rmRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   sorry
 
 /-- A rule pointer consed onto a rule-pointer slice (`sl_cons`). -/
-theorem consW_rl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem consW_rl {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {rules : List IRecRule} {rl : IRecRule}
     (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a) (hb : o.toNat + l.toNat ≤ iwTop m)
     (hd : decPL m (rlDec m) o.toNat l.toNat = some rules) (hx : rlDec m x.toNat = some rl) :
     decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some (rl :: rules) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ StageR vis fe m' a ∧ IWGrow m m' ∧
       MFr [] [] m m' := by
-  sorry
+  rw [decPL_eq_bind] at hd
+  rcases hps : decNL m o.toNat l.toNat with _ | ps <;> rw [hps] at hd
+  · cases hd
+  simp only [Option.bind_some] at hd
+  obtain ⟨hS', hg, hd', ht'⟩ := consW_stageN h hS hb hps
+  have hext := IWGrow.erecPExtR hg
+  refine ⟨?_, ht', hS', hg, consW_mfr h⟩
+  rw [decPL_eq_bind, hd']
+  simp only [Option.bind_some, List.mapM_cons]
+  rw [show rlDec m' x.toNat = some rl from hext.decRule hx,
+    ArrExt.mapM (f := rlDec m) (g := rlDec m') (fun _ _ hy => hext.decRule hy) _ _ hd]
+  rfl
 
 theorem decPL_rl_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} {rules : List IRecRule}
     (hb : o + l ≤ iwTop m) (hd : decPL m (rlDec m) o l = some rules) : decPL m' (rlDec m') o l = some rules := by
-  sorry
+  rw [decPL_eq_bind] at hd ⊢
+  rcases hps : decNL m o l with _ | ps <;> rw [hps] at hd
+  · cases hd
+  have hps' : decNL m' o l = some ps := by
+    rw [← hps]; simp only [decNL]; apply mapM_opt_congr; intro j hj
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by simp at hj; omega)]
+  rw [hps']
+  simp only [Option.bind_some] at hd ⊢
+  exact ArrExt.mapM (fun _ _ hy => (IWGrow.erecPExtR hg).decRule hy) _ _ hd
 
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
@@ -403,7 +422,7 @@ theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r
 
 /-! ## `tgt_stored_rules` -/
 
-theorem rcPoolSmall {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+theorem rcPoolSmall {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (h : StageR vis fe m a) : PoolSmall m := by
   have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega

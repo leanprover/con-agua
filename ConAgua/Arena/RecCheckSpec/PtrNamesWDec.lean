@@ -190,7 +190,7 @@ theorem tmMem_dec (m : Mem) (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word)
   have r11 := hrd 11 (by simp)
   have r12 := hrd 12 (by simp)
   simp only [List.getElem?_cons_zero, List.getElem?_cons_succ] at r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12
-  simp only [decTM, bind, pure, iwH, hd?, iwN, nat?, decAt, iwA, Nat.add_zero] at *
+  simp only [decTM, bind, pure, iwH, hd?, iwN, nat?, decAt, iwA, aread_apply, Nat.add_zero] at *
   simp [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, h0, h1, hds, hct, hnf, hpf]
 
 /-! ## `target_major_default` -/
@@ -284,7 +284,38 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     (r : List Word) (h : tmdW m = some (r, m')) (hS : StageR vis fe m a) :
     ∃ tm a', ConRon.Arena.targetMajorDefault.run a = .ok (tm, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       decTM m' (r.headD 0).toNat = some tm := by
-  sorry
+  rw [tmdW_eq] at h
+  rcases h1 : naF m [] with _ | ⟨ra, m1⟩ <;> simp only [h1, tmdK1, reduceCtorEq] at h
+  obtain ⟨anon, a1, hrun1, hS1, hg1, hw1, hl1⟩ := naF_ok dn vis fe m m1 a ra h1 hS
+  rcases hp : pinWordV m1 52 with _ | ls <;> simp only [hp, tmdK2, reduceCtorEq] at h
+  have hpne : rdW (m1.arr64 PINS) 0 ≠ 0 := by
+    intro h0; simp [pinWordV, h0] at hp
+  have hz : ls = pinW m1 52 := by
+    simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hp
+    rw [← hp]; rfl
+  have hfull := hS1.check.pins.full hpne
+  have hlslt : ls.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.1
+  have hrunP : pinEmptyLevels.run a1 = .ok (decI ls, a1) := by rw [hz]; exact pinEmptyLevels_run hfull
+  rcases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with _ | ⟨r3, m2⟩ <;> simp only [hmk, tmdK3, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨hI, hE, hIsz, hEsz, hCsz⟩ := hS1.iw
+  have hdec0 : ∀ {k : IdxKind} (mm : Mem), (decHL mm (0 : Word).toNat (0 : Word).toNat : Option (List (Idx k))) = some [] := by
+    intro k mm; simp [decHL, hslice?]
+  have hdecP : ∀ {α : Type} (mm : Mem) (f : Nat → Option α), decPL mm f (0 : Word).toNat (0 : Word).toNat = some [] := by
+    intro α mm f; simp [decPL]
+  obtain ⟨hg2, hfr, htop, hdec⟩ := mkTMW_dec (m := m1) (m' := m2) (r := r3) (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0
+    hmk hIsz hCsz [] [] [] [] hw1 hlslt (hdec0 _) (hdecP _ _) (hdecP _ _) (hdec0 _)
+  refine ⟨{ ind := decI (ra.headD 0), lvls := decI ls, ds := [], nPc := (0 : Word).toNat,
+            nIdx := (0 : Word).toNat, ctors := [], member := decON (0 : Word).toNat, nfs := [],
+            pfvs := [] }, a1, ?_, stage_frame_iw hS1 hfr htop, hg1.trans hg2, ?_⟩
+  · simp only [ConRon.Arena.targetMajorDefault, StateT.run_bind]
+    rw [hrun1]
+    simp only [bind, Except.bind]
+    rw [hrunP]
+    subst hl1
+    simp [StateT.run, decON]
+    rfl
+  · simpa using hdec
 
 end L.Ind
 
@@ -331,13 +362,33 @@ theorem plnW_stage {α : Type} {f : Mem → Nat → Option α} (cvOf : α → IC
     (hf : ∀ q, OMono (fun m => f m q))
     (hcv : ∀ m pp x, f m pp = some x → ∃ a, iwN m pp = some a ∧ decCVp m a = some (cvOf x))
     (hfb : ∀ m pp x, f (truncM m) pp = some x → pp < iwTop m)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
     (h : ptrNamesW n m o l = some (r, m')) (hS : StageR vis fe m a) (hx : PSlR0 f xs o l m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, l] ∧
       decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat = some (xs.map fun x => (cvOf x).name) ∧
       (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
-  sorry
+  obtain ⟨-, -, hsz, -, hc⟩ := hS.iw
+  have hroom := ptrNamesW_room h hsz
+  have hlen : xs.length = l.toNat := decPL_length _ hx.1
+  by_cases hl : l = 0
+  · have hxs := hx.nil hl
+    subst hxs
+    rw [ptrNamesW_src0 hl] at h
+    obtain ⟨hr, hd, hg, hfr, ht⟩ := ptrNamesW_dec [] h hsz hc (by simp [hl]) (by simp [hl])
+      (fun j hj => absurd hj (by simp))
+    exact ⟨stage_frame_iw hS hfr (by rw [← ht]; exact hroom), hg, hr, by simpa using hd, ht⟩
+  · have hP := hx.pslr hl
+    obtain ⟨-, hel⟩ := pos2_decPL_trunc hx.1
+    obtain ⟨hr, hd, hg, hfr, ht⟩ := ptrNamesW_dec (xs.map cvOf) h hsz hc (by simp [hlen]) hP.2
+      (fun j hj => by
+        have hj' : j < xs.length := by simpa using hj
+        obtain ⟨v, -, hv, hj2, hfv⟩ := hel j (by omega)
+        have hvt : v < iwTop m := hfb m v _ hfv
+        have hfm : f m v = some xs[j] := (show DecB (fun m => f m v) m xs[j] from hfv).get (hf v)
+        obtain ⟨a, ha, hca⟩ := hcv m v _ hfm
+        exact ⟨v, a, hv, hvt, ha, by simpa using hca⟩)
+    exact ⟨stage_frame_iw hS hfr (by rw [← ht]; exact hroom), hg, hr, by simpa [List.map_map, Function.comp_def] using hd, ht⟩
 
 /-! ## `target_rec_pins_names` -/
 

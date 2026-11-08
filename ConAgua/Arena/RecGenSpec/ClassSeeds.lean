@@ -108,7 +108,7 @@ theorem NKSl.grow' {m m' : Mem} {key : Word} {nk : NestKey} (h : NKSl m key)
   exact Nat.le_trans h hg.iw
 
 /-- **`sl_cons` of a seed record onto the seeds' slice.** -/
-theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {vis : Word}
     {fe : IFEnv} {a : AState} {m m' : Mem} {x o l : Word} {r : List Word} {seeds : List (NestKey × Nat)}
     {sd : NestKey × Nat} {key nPc : Word}
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR vis fe m a)
@@ -117,7 +117,48 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
     (hksl : NKSl m key) (hn : nPc.toNat = sd.2) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ SdRes m' (r.headD 0) (r.tail.headD 0) (sd :: seeds) ∧
       MFr [] [] m m' := by
-  sorry
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (slCons_specW p hP.rx.ha hP.copy hP.cons n _ x o l) h
+  obtain ⟨hb, hlen, ⟨ps, hps⟩, hat⟩ := hsd
+  obtain ⟨hS', hg, hdn, htop'⟩ := consW_stageN hW hS hb hps
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
+  have htop1 : iwTop s'.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS'.iw.iw hS'.iw.iwSize
+  have hl1 : (r.tail.headD 0).toNat = l.toNat + 1 := by
+    have h1 := decNL_length _ hdn; have h2 := decNL_length _ hps
+    simp only [List.length_cons] at h1; omega
+  refine ⟨hS', hg, ⟨Nat.le_of_eq htop', by rw [hl1, List.length_cons, hlen], ⟨_, hdn⟩, ?_⟩, consW_mfr hW⟩
+  have hat' := hat.grow hg htop
+  -- the words of the new slice
+  have hw : ∀ j (hj : j < l.toNat + 1), ∃ w, (s'.mem.arr64 IW)[(r.headD 0).toNat + j]? = some w ∧
+      w.toNat = (x.toNat :: ps)[j]'(by have := decNL_length m hps; simp; omega) := by
+    intro j hj
+    have := decNL_at hdn j (by omega)
+    simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at this
+    obtain ⟨w, hw, hwe⟩ := this
+    exact ⟨w, hw, hwe⟩
+  intro i hi
+  rcases i with _ | i
+  · obtain ⟨w, hw0, hwe⟩ := hw 0 (by omega)
+    have hwx : w = x := UInt64.toNat_inj.mp (by simpa using hwe)
+    rw [hwx] at hw0
+    have hgt := hg.iw
+    have hx1' : x.toNat + 1 < iwTop s'.mem := Nat.lt_of_lt_of_le hx1 hgt
+    have hb0 : (r.headD 0).toNat + 0 < iwTop s'.mem := by rw [← htop']; omega
+    refine ⟨x, key, nPc, hw0, hb0, hx1', by rw [hg.iwGet x.toNat (Nat.lt_of_succ_lt hx1)]; exact hx0,
+      by rw [hg.iwGet _ hx1]; exact hxk, hk.grow (decNK_mono _) hg, hksl.grow' hk hg htop, by simpa using hn⟩
+  have hi' : i < l.toNat := by simp only [List.length_cons] at hi; omega
+  obtain ⟨sp, key', nPc', h1, h2, rest⟩ := hat' i (by rw [← hlen]; exact hi')
+  obtain ⟨w, hwi, hwe⟩ := hw (i + 1) (by omega)
+  have hold := decNL_at hps i hi'
+  rw [show o.toNat + i = o.toNat + i from rfl] at hold
+  have hsp : (m.arr64 IW)[o.toNat + i]? = some sp := by
+    rw [← hg.iwGet (o.toNat + i) (Nat.lt_of_lt_of_le (Nat.add_lt_add_left hi' _) hb)]; exact h1
+  have e1 : sp.toNat = ps[i]'(by have := decNL_length m hps; omega) := by
+    have := iwN_of_get hsp; rw [hold] at this; exact (Option.some.inj this).symm
+  have : w = sp := UInt64.toNat_inj.mp (by rw [hwe, e1]; simp)
+  subst this
+  exact ⟨w, key', nPc', by rw [show (r.headD 0).toNat + (i + 1) = (r.headD 0).toNat + (i + 1) from rfl]; exact hwi,
+    by omega, by simpa using rest⟩
 
 /-! ## `class_seeds` -/
 
@@ -154,7 +195,71 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
     Sim (csdW p n m ctx hO hL mo ml) (ConRon.Arena.classSeeds c holes ms) a
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ SdRes m' (r.headD 0) (r.tail.headD 0) x ∧
         PosMR m') := by
-  sorry
+  induction n with
+  | zero => intro m a mo ml ms _ _ _ _ _ _; rw [csdW.eq_1]; exact Sim.of_none
+  | succ n ih =>
+  intro m a mo ml ms hS hU hho hhob hms hPm
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
+  by_cases hml : ml = 0
+  · rw [csdW.arm1 p n m ctx hO hL mo ml hml]
+    have : ms = [] := by
+      have h := hms.1; simp only [DecB, hml] at h
+      simpa [decPL] using h.symm
+    subst this
+    exact Sim.ret ⟨hS, IWGrow.refl m, by simpa using SdRes.nil m, hPm⟩
+  obtain ⟨q, tm, ms', rfl, hw, hqb, hdt, hms'⟩ := partsPSl_cons hms hml
+  have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
+  rw [← hq'] at hdt
+  obtain ⟨k, hk8, hkb, hmem, -⟩ := decTM_words hdt
+  by_cases hk : k = 0
+  · -- an outside class: its seed
+    subst hk
+    rw [csdW.arm3 p n m ctx hO hL mo ml hml (by rw [hw, hk8]; simp), hw]
+    have hmn : tm.member = none := by rw [hmem]; rfl
+    simp only [ConRon.Arena.classSeeds, hmn]
+    refine Sim.bindK (K := csdW.k_nest_seed_of p n ctx hO hL mo ml) (body := fun r1 m1 => csdW.k_rec2 p n ctx hO hL mo ml
+        (callW p n "rec2" [r1.headD 0, r1.tail.headD 0] m1)) (by simp [csdW.k_nest_seed_of])
+        (fun r m₁ => csdW.k_nest_seed_of.arm1 p n ctx hO hL mo ml r m₁)
+      (sgCall_sim hP.sg n hS hU hhi hho hhob hdt hPm) ?_
+    rintro r1 sd m1 a1 ⟨hk1, hksl1, hn1, hS1, hg1, hP1⟩
+    refine Sim.mstep (K := csdW.k_rec2 p n ctx hO hL mo ml) (by simp [csdW.k_rec2])
+      (fun r m₁ => csdW.k_rec2.arm1 p n ctx hO hL mo ml r m₁) fun r2 m2 h2 => ?_
+    obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+      (posRec2_specW p hP.rx.ha hP.rx.h2 n _ (r1.headD 0) (r1.tail.headD 0)) h2
+    obtain ⟨hS2, hg2, hp2, ht2, hget2⟩ := posRecW_stage hW2 hS1 (by simp)
+    simp only [List.length_cons, List.length_nil] at ht2
+    have hf2 := posRecW_mfr hW2
+    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
+    have hg12 := hg1.trans hg2
+    refine Sim.bindK (K := csdW.k_class_seeds_2 p n (r2.headD 0)) (body := fun r3 m3 => csdW.k_class_seeds p (callW p n "sl_cons"
+        [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3)) rfl (fun _ _ => rfl)
+      (ih s2.mem a1 (mo + 1) (ml - 1) ms' hS2 (hU.grow hg12) (by rw [decHL_grow hg12 hhob]; exact hho)
+        (Nat.le_trans hhob hg12.iw) (hms'.grow decTM_mono hg12) (hP1.fr hf2)) ?_
+    rintro r3 xs m3 a3 ⟨hS3, hg3, hd3, hP3⟩
+    refine Sim.mstep (K := csdW.k_class_seeds p) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
+    have htop2 : iwTop s2.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
+    have g0 := hget2 0 (by simp)
+    have g1 := hget2 1 (by simp)
+    simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at g0 g1
+    have hp2' : (r2.headD 0).toNat = iwTop m1 := hp2
+    have ht2' : iwTop s2.mem = iwTop m1 + 2 := ht2
+    have hg3t := hg3.iw
+    obtain ⟨hS4, hg4, hd4, hf4⟩ := sdCons hP.toKeysProg h4 hS3 hd3 (key := r1.headD 0) (nPc := r1.tail.headD 0)
+      (sd := sd) (by omega) (by rw [hg3.iwGet (r2.headD 0).toNat (by omega)]; exact g0)
+      (by rw [hg3.iwGet ((r2.headD 0).toNat + 1) (by omega)]; exact g1)
+      ((hk1.grow (decNK_mono _) hg2).grow (decNK_mono _) hg3)
+      ((hksl1.grow' hk1 hg2 htop1).grow' (hk1.grow (decNK_mono _) hg2) hg3 htop2) hn1
+    exact Sim.ret ⟨hS4, ((hg1.trans hg2).trans hg3).trans hg4, by simpa using hd4, hP3.fr hf4⟩
+  · -- a member: skipped
+    rw [csdW.arm2 p n m ctx hO hL mo ml hml (by
+      rw [hw, hk8]; intro e; apply hk
+      have := congrArg UInt64.toNat e; rwa [UInt64.toNat_ofNat_of_lt' hkb] at this)]
+    obtain ⟨t, ht⟩ : ∃ t, tm.member = some t := ⟨k - 1, by rw [hmem]; simp [decON, hk]⟩
+    simp only [ConRon.Arena.classSeeds, ht]
+    refine Sim.post (K := csdW.k_class_seeds p) (f := fun r => [r.headD 0, r.tail.headD 0]) rfl (fun _ _ => rfl)
+      (ih m a (mo + 1) (ml - 1) ms' hS hU hho hhob hms' hPm) ?_
+    rintro r x m' a' ⟨h1, h2, h3, h4⟩
+    exact ⟨h1, h2, by simpa using h3, h4⟩
 
 /-- **`class_seeds` refines `classSeeds`** (through the stubs below `nest_seed_of`): the classes a
 slice of `TargetMajor` records decoded below the tops, the walk's context `UCtx`, the holes a slice

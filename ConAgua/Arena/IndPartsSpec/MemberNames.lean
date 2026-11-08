@@ -153,7 +153,9 @@ theorem blockShapeMemberNames_refines (p : Prog) (ha : p.lookup "iw_alloc" = som
       decHL s'.mem (rdW (s₀.mem.arr64 CTL) 200).toNat bs.k = some bs.memberNames ∧
       IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem ∧
       (rdW (s₀.mem.arr64 CTL) 200).toNat + bs.k = iwTop s'.mem; ⊤⦄ := by
-  sorry
+  refine triple_post (blockShapeMemberNames_spec p ha hc hp n s₀ q) ?_
+  intro r s' ⟨_, h⟩
+  exact memberNamesW_dec h hsz hcl hq hb hsrc hptr
 
 /-! ## `BlockParts.complete` -/
 
@@ -226,8 +228,8 @@ theorem erToIw_specW2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (s₀ : St) (o l : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "er_to_iw" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ erToIwW n s₀.mem o l = some (r, s'.mem) ∧
-      r = [r.headD 0, r.tail.headD 0]; ⊤⦄ := by
-  sorry
+      r = [r.headD 0, r.tail.headD 0]; ⊤⦄ :=
+  triple_post (erToIw_specW p ha hc hp n s₀ o l) (fun _r _s' ⟨h1, h2⟩ => ⟨h1, h2, erToIwW_two h2⟩)
 
 /-- The model of `block_shape_lps` (its callee runs at `n - 1`). -/
 def lpsW : Nat → Mem → Word → Option (List Word × Mem)
@@ -282,7 +284,9 @@ theorem blockShapeLps_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.lps ∧
       IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ IWRoom s₀.mem s'.mem; ⊤⦄ := by
-  sorry
+  refine triple_post (blockShapeLps_spec p ha hc he hp n s₀ q) ?_
+  intro r s' ⟨_, h⟩
+  exact lpsW_dec h hsz hcl hE hq hb
 
 end L.Ind
 

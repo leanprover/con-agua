@@ -1,0 +1,79 @@
+module
+
+public import ConAgua.Arena.IndDeclConsts
+public import ConAgua.Arena.DeclAndPinIndRef
+public import ConRon.Arena.Install
+public import ConAgua.Arena.LoopT
+public import ConAgua.Rom.CIReadSpec
+
+@[expose] public section
+
+/-!
+# What a declaration installs: the refinements (lane `ronsync2`, stage 3)
+
+`decl_constants(i)` refines `declConstants d` and `decl_tables(i)` refines `declTables d` for
+every record `i` the front produces (`DeclAtF`), in the stage's shape (`RefAM`, `StageR`,
+`KeepPost`, `IndIface.lean`): the stream index's builder (`idx_add`, `CheckerL.lean`) reads its
+rows off these. The results are `IW` slices of `EREC` record pointers (`decCIL`, `decTblL`), below
+the pool's top; the inductive memos (`IndMemos`) are kept.
+-/
+
+open ConRon.Arena
+
+namespace L.Ind
+
+open L.Arena
+open L.Front (DECL DLP)
+
+/-- The results `(off, len)`: an `IW` slice of `EREC` constant-record pointers. -/
+def decCIL (m : Mem) (r : List Word) (L : List IConstantInfo) : Prop :=
+  decRL (fun m o l => decPL m (fun q => decCI (erecP m) q) o l) 0 m r L
+
+/-- The results `(off, len)`: an `IW` slice of `EREC` table-record pointers. -/
+def decTblL (m : Mem) (r : List Word) (Q : List IProjTable) : Prop :=
+  decRL (fun m o l => decPL m (fun q => decTbl (erecP m) q) o l) 0 m r Q
+
+/-- The pre-condition of both: the stage relation, the record `i` the declaration `d` (an
+inductive block of the front's shape), the twin state's invariant, the inductive memos. -/
+structure DeclConstsPre (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (i : Word)
+    (d : IDeclaration) (m : Mem) (a : AState) : Prop where
+  stage : StageR vis fe m a
+  decl : L.Front.DeclAtF (m.arr64 DECL) (m.arr64 DLP) i.toNat d
+  front : ∀ b nP, d = .indDecl b nP → FrontBlock b
+  ok : ConRon.Bridge.StateOK a
+  /-- `Quot`'s `sortZ` names under `dn` (`quot_at`'s pre, `L.Rom.QuotAtRef`). -/
+  quotDn : L.Rom.NamesDn dn a L.Rom.quotNames
+  memos : IndMemos m
+  dsize : (m.arr64 DECL).size < 2 ^ 63
+  psize : (m.arr64 DLP).size < 2 ^ 63
+
+/-- The lookups the two refinements take. -/
+structure DeclConstsProg (p : Prog) : Prop where
+  decl_constants : p.lookup "decl_constants" = some declConstants
+  decl_constants_axiom : p.lookup "decl_constants_axiom" = some declConstantsAxiom
+  decl_constants_ind : p.lookup "decl_constants_ind" = some declConstantsInd
+  decl_tables : p.lookup "decl_tables" = some declTables
+  block_constants : p.lookup "block_constants" = some blockConstants
+  block_tables : p.lookup "block_tables" = some blockTables
+
+/-- **`decl_constants(i)` refines `declConstants d`**: the constants record `i` installs, in
+push order, an `IW` slice of `EREC` constant records. -/
+@[refines ConRon.Arena.declConstants]
+theorem declConstants_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv)
+    (i : Word) (d : IDeclaration) :
+    RefAM p "decl_constants" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declConstants d)
+      (fun m m' a r x => KeepPost vis fe decCIL m m' a r x ∧ IndMemos m') := by
+  sorry
+
+/-- **`decl_tables(i)` refines `declTables d`**: the projection tables record `i` installs, an
+`IW` slice of `EREC` table records. -/
+@[refines ConRon.Arena.declTables]
+theorem declTables_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv)
+    (i : Word) (d : IDeclaration) :
+    RefAM p "decl_tables" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declTables d)
+      (fun m m' a r x => KeepPost vis fe decTblL m m' a r x ∧ IndMemos m') := by
+  sorry
+
+end L.Ind

@@ -240,6 +240,11 @@ theorem eView_refines (p : Prog) (hp : p.lookup "e_view" = some eView) (n : Nat)
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "e_view" [h]
     ⦃fun r s' => s' = s₀ ∧ AM.ok (view (decE h)) a₀ ∧ AM.st (view (decE h)) a₀ = a₀ ∧
       ViewR r (AM.res (view (decE h)) a₀); ⊤⦄ := by
-  sorry
+  refine triple_post (eView_spec p hp n s₀ h) ?_
+  rintro r s' ⟨rfl, hne, rfl⟩
+  obtain ⟨v, hv, hr⟩ := eViewW_ok s'.mem a₀ hR h hne
+  have := view_run (decE h) a₀ v hv
+  simp only [AM.ok, AM.st, AM.res, this]
+  refine ⟨?_, ?_, ?_, hr⟩ <;> trivial
 
 end L.Ind

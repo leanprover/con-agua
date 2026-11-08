@@ -46,7 +46,7 @@ L function reads the stored pointer directly (no allocation), which decodes to t
 `ms[c]`, just as the twin's `pure m` does nothing to the state. -/
 @[refines_part ConRon.Arena.targetMajorAt "hit"]
 theorem targetMajorAt_refines_hit (p : Prog) (hp : p.lookup "target_major_at" = some targetMajorAt)
-    (n : Nat) (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (n : Nat) (s₀ : St) (a₀ : AState) {vis : Word} {fe : IFEnv}
     (hR : StageR vis fe s₀.mem a₀) (mo ml c : Word) (ms : List TargetMajor)
     (bigM : TargetMajor) (hms : decPL s₀.mem (decTM s₀.mem) mo.toNat ml.toNat = some ms)
     (hc : c.toNat < ml.toNat) (hfound : ms[c.toNat]? = some bigM)

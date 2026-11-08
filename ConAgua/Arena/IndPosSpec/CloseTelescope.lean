@@ -81,7 +81,7 @@ include hg hf hp
 
 /-- **`nest_block_of` refines `nestBlockOf`**: the result is the `IndCaps.all` slice of `EREC`. -/
 @[refines ConRon.Arena.nestBlockOf]
-theorem nestBlockOf_refines (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv}
+theorem nestBlockOf_refines (n : Nat) (s₀ : St) {fe : IFEnv}
     (vis c : Word) (hE : EnvR s₀.mem vis fe) (hc : c.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_block_of" [vis, c]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧

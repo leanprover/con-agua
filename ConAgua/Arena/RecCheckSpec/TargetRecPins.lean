@@ -37,11 +37,14 @@ open L.Arena
 
 /-- **`block_rec_lps_ok` under the stage relation**: no hypothesis beyond the shape decoded below
 the tops. -/
-theorem lokW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem lokW_stage {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Word} {r : List Word} {bs : BlockShape} (h : lokW n m q = some (r, m'))
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m q.toNat) m bs) :
     r = [if ConRon.Arena.blockRecLpsOk bs then 1 else 0] ∧ StageR vis fe m' a ∧ IWGrow m m' := by
-  sorry
+  obtain ⟨hI1, -, hsz, hEs, hc⟩ := hS.iw
+  obtain ⟨hr, hg, hf, hw⟩ := lokW_ok n m m' q r bs h (hq.get (decBS_mono _)) (hq.stab (decBS_mono _))
+    (rpShape9 hq) hsz hc hEs
+  exact ⟨hr, stage_frame_iw hS hf (by rw [← hf.size IW]; exact hw hI1), hg⟩
 
 end L.Ind
 
@@ -79,7 +82,13 @@ theorem tpn_spec (p : Prog) (hp : p.lookup "target_rec_pins_names" = some target
     (s₀ : St) (mo k reco recl auxo auxl : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "target_rec_pins_names" [mo, k, reco, recl, auxo, auxl]
     ⦃fun r s' => LocEq s' s₀ ∧ tpnW p n s₀.mem mo k reco recl auxo auxl = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, targetRecPinsNames]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "intern_nanon", callW_spec p n "block_rec_want_aux_names",
+      callW_spec p n "ptr_list_names", callW_spec p n "sl_set_eq", callW_spec p n "sl_nodup"] <;>
+    finish (gen := 40) (instances := 20000) [tpnW, tpnB, rdW_eq]
 
 end L.Ind
 

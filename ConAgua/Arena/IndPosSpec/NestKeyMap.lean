@@ -246,7 +246,7 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
 /-! ## Reading decoded words without side conditions on the index -/
 
 theorem iwN_idx {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, -⟩ := h
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
@@ -508,7 +508,12 @@ theorem nestKindsFlat_refines (n : Nat) (s₀ : St) (off cnt : Word)
     (hdec : decPL s₀.mem (decLH s₀.mem (decPL s₀.mem (decLH s₀.mem (decKL s₀.mem)))) off.toNat cnt.toNat = some kss) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_kinds_flat" [off, cnt]
     ⦃fun r s' => s' = s₀ ∧ (r.headD 0 != 0) = ConRon.Arena.nestKindsFlat kss; ⊤⦄ := by
-  sorry
+  refine triple_post (nestKindsFlat_spec p hf hi hm hp n s₀ off cnt) ?_
+  rintro r s' ⟨rfl, hm'⟩
+  refine ⟨rfl, ?_⟩
+  have := kindsFlatOutW_ok n _ _ _ kss _ hsz hdec hm'
+  rw [this]
+  by_cases hb : ConRon.Arena.nestKindsFlat kss = true <;> simp [hb]
 
 end census
 

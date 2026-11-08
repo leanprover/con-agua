@@ -74,7 +74,41 @@ theorem plgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     ∃ us a', (paramLevels.go lps).run a = .ok (us, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some us ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+  induction k with
+  | zero => intro m m' a o l lps r h; simp [plgW] at h
+  | succ k ih =>
+    intro m m' a o l lps r h hS hd hb ht
+    by_cases hl : l = 0
+    · subst hl
+      rw [plgW_nil k m o 0 rfl] at h
+      obtain ⟨q, m1, h0, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+      rw [plK0_some] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage h0 hS
+      have : lps = [] := by simpa [decHL, hslice?] using hd.symm
+      subst this
+      exact ⟨[], a, rfl, hS1, hg1, by simp [decHL, hslice?], by simp [htop, hq]⟩
+    · obtain ⟨w, lps', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
+      obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
+      rw [plgW_cons k m o l hl, hw] at h
+      obtain ⟨u, m1, h1, h⟩ := kSome_inv h (by simp [plK1]) (fun _ _ => rfl)
+      by_cases hu : 4294967296 ≤ u
+      · rw [plK1_big k m1 o l u hu] at h; cases h
+      rw [plK1_ok k m1 o l u hu] at h
+      have hu32 : u.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ u.toNat := hu; omega
+      obtain ⟨a1, hrun1, hS1, hg1⟩ := internParam_stage hS w hw32 h1
+      obtain ⟨r2, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+      rw [plK2_some] at h
+      obtain ⟨us, a2, hrun2, hS2, hg2, hd2, ht2⟩ := ih m1 m2 a1 (o + 1) (l - 1) lps' r2 h2 hS1
+        (by rw [decHL_grow hg1 (by omega)]; exact hd') (by omega) (by have := hg1.iw; omega)
+      obtain ⟨r3, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+      rw [plK3_some] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 (Nat.le_of_eq ht2) hu32 hd2
+      refine ⟨decI u :: us, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hd3, by simpa using ht3⟩
+      simp only [paramLevels.go, StateT.run_bind, hrun1]
+      simp only [bind, Except.bind, hrun2]
+      rfl
 
 section census
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
@@ -180,13 +214,37 @@ def decBL (m : Mem) (o l : Nat) : Option (List Bool) := (List.range l).mapM fun 
 
 theorem decBL_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : o + l ≤ iwTop m) :
     decBL m' o l = decBL m o l := by
-  sorry
+  simp only [decBL]
+  apply mapM_opt_congr
+  intro j hj
+  have hj' : j < l := List.mem_range.mp hj
+  simp only [iwB, bool?, iwA, aread_apply, aread_apply]
+  rw [hg.iwGet (o + j) (by omega)]
 
 /-- `sl_getd(o, l, j, 0)` of a Boolean slice is the twin's `getD j false`. -/
 theorem getDW_bool {m : Mem} {o l : Word} {bs : List Bool} (h : decBL m o.toNat l.toNat = some bs)
     (hb : o.toNat + l.toNat < 2 ^ 64) (j : Word) :
     (getDW m o l j 0 ≠ 0) ↔ bs.getD j.toNat false = true := by
-  sorry
+  have hl : bs.length = l.toNat := by simpa using mapM_opt_length _ _ _ h
+  unfold getDW
+  by_cases hj : l ≤ j
+  · have : l.toNat ≤ j.toNat := UInt64.le_iff_toNat_le.mp hj
+    simp [hj, List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega : bs.length ≤ j.toNat)]
+  · have hjl : j.toNat < l.toNat := by
+      have : ¬ l.toNat ≤ j.toNat := fun h' => hj (UInt64.le_iff_toNat_le.mpr h'); omega
+    rw [ite_eq_right hj]
+    have hget := mapM_opt_get (fun i => iwB m (o.toNat + i)) (List.range l.toNat) bs h j.toNat
+      (by simpa using hjl)
+    simp only [List.getElem_range, iwB, bool?, iwA, aread_apply, aread_apply] at hget
+    have hoj : (o + j).toNat = o.toNat + j.toNat := by rw [UInt64.toNat_add]; omega
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by omega)]
+    simp only [rdW, hoj]
+    cases hw : (m.arr64 IW)[o.toNat + j.toNat]? with
+    | none => rw [hw] at hget; simp at hget
+    | some w =>
+      rw [hw] at hget
+      simp only [Option.map_some, Option.some.injEq] at hget
+      simp [← hget]
 
 /-- `sl_getd(o, l, j, z)` of a handle slice is the twin's `getD j z`. -/
 theorem getDW_handle {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)}
@@ -456,7 +514,51 @@ theorem psGoW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
       StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+  induction n with
+  | zero => intro m m' a o nP N k r h; simp [psGoW] at h
+  | succ n ih =>
+    intro m m' a o nP N k r h hS hon hkN
+    by_cases hN : N = 0
+    · subst hN
+      rw [psGoW_nil n m o nP 0 k rfl] at h
+      obtain ⟨q, m1, h0, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+      rw [psK0_some] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage h0 hS
+      exact ⟨[], a, by simp [structPsAt.go]; rfl, hS1, hg1, by simp [decHL, hslice?], by simp [htop, hq]⟩
+    · rw [psGoW_cons n m o nP N k hN] at h
+      obtain ⟨b, m1, hI, h⟩ := kSome_inv h (by simp [psK1]) (fun _ _ => rfl)
+      by_cases hb : 4294967296 ≤ b
+      · rw [psK1_big n m1 o nP N k b hb] at h; simp at h
+      rw [psK1_ok n m1 o nP N k b hb] at h
+      have hb32 : b.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ b.toNat := hb; omega
+      have hN1 : 1 ≤ N.toNat := by
+        have : N.toNat ≠ 0 := fun h0 => hN (UInt64.toNat_inj.mp (by simpa using h0))
+        omega
+      obtain ⟨a1, hrun1, hS1, hg1⟩ := internBVar_stage hS _ hI
+      obtain ⟨r2, m2, hr, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+      rw [psK2_some] at h
+      have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hN1' : (N - 1).toNat = N.toNat - 1 := by rw [UInt64.toNat_sub]; simp; omega
+      obtain ⟨xs, a2, hrun2, hS2, hg2, hd2, ht2⟩ :=
+        ih m1 m2 a1 o nP (N - 1) (k + 1) r2 hr hS1 hon (by rw [hk1, hN1']; omega)
+      obtain ⟨r3, m3, hcw, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+      rw [psK3_some] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hcw hS2 (Nat.le_of_eq ht2) hb32 hd2
+      refine ⟨decE b :: xs, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa [decE_eq] using hd3,
+        by simpa using ht3⟩
+      have hu : (o + nP - 1 - k).toNat = o.toNat + nP.toNat - 1 - k.toNat := by
+        rw [UInt64.toNat_sub, UInt64.toNat_sub, UInt64.toNat_add]; simp; omega
+      have hNs : N.toNat = (N.toNat - 1) + 1 := by omega
+      rw [hNs]
+      simp only [structPsAt.go]
+      rw [StateT.run_bind, ← hu, hrun1]
+      simp only [bind, Except.bind]
+      rw [← hk1, ← hN1']
+      simp only [StateT.run] at hrun2
+      simp only [StateT.bind, StateT.run, hrun2]
+      rfl
 
 theorem psAtW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat)
     (m m' : Mem) (a : AState) (o nP : Word) (r : List Word)

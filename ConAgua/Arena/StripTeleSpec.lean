@@ -212,15 +212,40 @@ theorem viewBind_run_s (h : EIdx) (a : AState) :
     (viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
 
 
-theorem StageR.set_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+theorem StageR.set_iw {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) (p x : Word) : StageR vis fe (m.set64 IW p x) a := by
-  sorry
+  have hf := set64IW_frame m p x
+  have hC : (m.set64 IW p x).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hE : (m.set64 IW p x).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  refine ⟨CheckR.frame_iw hf hS.check, ?_⟩
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
+  have hI := hf.size IW
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · simp only [iwTop, hC, hI]; exact h1
+  · simp only [erTop, hC, hE]; exact h2
+  · rw [hI]; exact h3
+  · rw [hE]; exact h4
+  · rw [hC]; exact h5
 
 /-- Putting the pool's top back to `o ≤` the top keeps the stage relation. -/
-theorem StageR.set_top {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+theorem StageR.set_top {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (hS : StageR vis fe m a) (o : Word) (ho : o.toNat ≤ iwTop m) :
     StageR vis fe (m.set64 CTL 200 o) a ∧ iwTop (m.set64 CTL 200 o) = o.toNat := by
-  sorry
+  have hf : MemFrame [IW] [200] m (m.set64 CTL 200 o) :=
+    MemFrame.mono (MemFrame.setCtl m 200 o) (by simp) (by simp)
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
+  have ht : iwTop (m.set64 CTL 200 o) = o.toNat := by
+    simp only [iwTop, rdW_set64]
+    have h200 : UInt64.toNat 200 < (m.arr64 CTL).size := by simpa using h5
+    rw [ite_eq_left ⟨trivial, trivial, h200⟩]
+  have h129 : rdW ((m.set64 CTL 200 o).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
+  have hE : (m.set64 CTL 200 o).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
+  refine ⟨⟨CheckR.frame_iw hf hS.check, ?_, ?_, ?_, ?_, ?_⟩, ht⟩
+  · rw [ht, hf.size IW]; omega
+  · simp only [erTop, h129, hE]; exact h2
+  · rw [hf.size IW]; exact h3
+  · rw [hE]; exact h4
+  · rw [hf.size CTL]; exact h5
 
 /-- One step of the twin's strippers (`stripPis`/`stripLams` at `k + 1`, tag `T`, the rest `rec`). -/
 def stripStepT (T : UInt32) (rec : EIdx → AM (Option (List EIdx × EIdx))) (h : EIdx) :
@@ -282,7 +307,86 @@ theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
     ∃ x, (tw (k.toNat - n.toNat) (decE h)).run a = .ok (x, a) ∧ StageR vis fe m' a ∧
       MemFrame [IW] [200] m m' ∧ (∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
       StripRes o k n m' r x := by
-  sorry
+  intro f
+  induction f with
+  | zero => intro m m' n h r hm; simp [stripGoW] at hm
+  | succ f ih =>
+  intro m m' n h r hm hS hh hnk htop
+  by_cases hn' : ¬ n < k
+  · have hn := hn'
+    rw [stripGoW_ge tg k o f m n h hn] at hm
+    simp only [Option.some.injEq, Prod.mk.injEq] at hm
+    obtain ⟨rfl, rfl⟩ := hm
+    have hk : n = k := by
+      have := UInt64.le_iff_toNat_le.mp hnk
+      have : ¬ n.toNat < k.toNat := fun h => hn (UInt64.lt_iff_toNat_lt.mpr h)
+      exact UInt64.toNat_inj.mp (by omega)
+    subst hk
+    refine ⟨some ([], decE h), by rw [Nat.sub_self, h0]; rfl, hS, MemFrame.refl _ _ _,
+      fun _ _ => rfl, rfl, ?_, hh, rfl, by omega⟩
+    simp [decHL, hslice?]
+  have hn : n < k := Classical.not_not.mp hn'
+  have hnk' : n.toNat < k.toNat := UInt64.lt_iff_toNat_lt.mp hn
+  have hj : k.toNat - n.toNat = (k.toNat - (n + 1).toNat) + 1 := by
+    rw [UInt64.toNat_add]; simp; rw [Nat.mod_eq_of_lt (by have := k.toNat_lt; omega)]; omega
+  rw [hj, hs]
+  by_cases hg : tagW h ≠ tg
+  · rw [stripGoW_tag tg k o f m n h hn hg] at hm
+    simp only [Option.some.injEq, Prod.mk.injEq] at hm
+    obtain ⟨rfl, rfl⟩ := hm
+    obtain ⟨hS', ht'⟩ := hS.set_top o (by omega)
+    have hf : MemFrame [IW] [200] m (m.set64 CTL 200 o) :=
+      MemFrame.mono (MemFrame.setCtl m 200 o) (by simp) (by simp)
+    refine ⟨none, ?_, hS', hf, fun i _ => by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], rfl, ht'⟩
+    simp only [stripStepT, hT h hh, decide_eq_true_iff, hg, ite_false]; rfl
+  have hg' : tagW h = tg := Classical.not_not.mp hg
+  by_cases hv : eViewW m h = []
+  · simp [stripGoW, hn, hg, hv] at hm
+  cases ha : allocW m 1 with
+  | none => simp [stripGoW, hn, hg, ha] at hm
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  rw [stripGoW_step tg k o f m m1 n h q hn hg hv ha] at hm
+  obtain ⟨hvr, hty, hb⟩ := hvb m a h hS.check.arena.base hh hv hg'
+  obtain ⟨hS1, hgr1, hq, ht1⟩ := allocW_stage ha hS
+  obtain ⟨-, rfl, hroom⟩ := allocW_facts ha hS.iw.iwSize
+  have hS2 := hS1.set_iw q ((eViewW m h).tail.headD 0)
+  have ht2 : iwTop ((allocMem m 1).set64 IW q ((eViewW m h).tail.headD 0)) = iwTop m + 1 := by
+    have e : iwTop ((allocMem m 1).set64 IW q ((eViewW m h).tail.headD 0)) = iwTop (allocMem m 1) := by
+      simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+    rw [e, ht1]; rfl
+  have hn1 : (n + 1).toNat = n.toNat + 1 := by
+    have := k.toNat_lt
+    rw [UInt64.toNat_add]; simp; first | omega | rw [Nat.mod_eq_of_lt (by omega)]
+  obtain ⟨x', hrun', hS', hf', hlow', hres'⟩ := ih _ m' (n + 1) ((eViewW m h).tail.tail.headD 0) r hm hS2 hb
+    (UInt64.le_iff_toNat_le.mpr (by omega)) (by rw [ht2, htop, hn1]; omega)
+  have hfr : MemFrame [IW] [200] m m' :=
+    ((allocMem_frame m 1).trans (set64IW_frame _ q ((eViewW m h).tail.headD 0))).trans hf'
+  have hq' : q.toNat = iwTop m := hq
+  have hlowm : ∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]? := by
+    intro i hi
+    rw [hlow' i (by omega), set64IW_get, ite_eq_right (by omega), allocMem_IW]
+  have hat : (m'.arr64 IW)[q.toNat]? = some ((eViewW m h).tail.headD 0) := by
+    rw [hlow' _ (by omega), set64IW_get, ite_eq_left ⟨rfl, by rw [allocMem_IW]; have := hroom; simp at this; omega⟩]
+  refine ⟨match x' with | some p => some (decE ((eViewW m h).tail.headD 0) :: p.1, p.2) | none => none, ?_, hS', hfr, hlowm, ?_⟩
+  · simp only [stripStepT, hT h hh, decide_eq_true_iff, hg', ite_true, StateT.run_bind, hvr,
+      except_ok_bind]
+    simp only [hrun']
+    cases x' <;> rfl
+  · cases x' with
+    | none => exact hres'
+    | some p =>
+      obtain ⟨l, bb⟩ := p
+      obtain ⟨hr, hdec, hH, hbd, htop'⟩ := hres'
+      refine ⟨hr, ?_, hH, hbd, htop'⟩
+      have hkn : k.toNat - n.toNat = (k.toNat - (n.toNat + 1)) + 1 := by omega
+      rw [hkn, decHL, hslice?_succ]
+      rw [hn1] at hdec
+      simp only [decHL] at hdec
+      have hon : o.toNat + n.toNat = q.toNat := by omega
+      rw [hon, show q.toNat + 1 = o.toNat + (n.toNat + 1) by omega, hdec]
+      simp only [hd?, iwA, aread_apply, hat, Option.bind_eq_bind, Option.bind]
+      rw [ite_eq_left hty]; rfl
 
 end loop
 
@@ -386,14 +490,14 @@ theorem stripF_of_TW {tg : Word} {n : Nat} {m : Mem} {k e : Word} {x : List Word
 /-- `strip_pis(k, e)` returns `stripF 6`. -/
 theorem stripPis_specF (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "strip_pis" [k, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ stripF 6 s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ := by
-  sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ stripF 6 s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ :=
+  triple_post (stripPis_specW p hp n s₀ k e) fun _ _ h => ⟨h.1, stripF_of_TW h.2⟩
 
 /-- `strip_lams(k, e)` returns `stripF 5`. -/
 theorem stripLams_specF (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "strip_lams" [k, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ stripF 5 s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ := by
-  sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ stripF 5 s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ :=
+  triple_post (stripLams_specW p hp n s₀ k e) fun _ _ h => ⟨h.1, stripF_of_TW h.2⟩
 
 /-- **`strip_pis` refines `stripPis`**, the fuel-free model (replaces `IndStubs.stripPis_spec`). -/
 theorem stripF_pis_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -417,7 +521,12 @@ theorem stripPis_refines (p : Prog) (hp : StripProg p) (dn : NIdx → Option Con
     (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
     RefAM p "strip_pis" [k, e] (StageR vis fe) (stripPis k.toNat (decI e))
       (KeepPost vis fe decOLE) := by
-  sorry
+  intro n s₀ a₀ hS
+  refine triple_post (stripPis_specW p hp n s₀ k e) ?_
+  rintro r s' ⟨hloc, hw⟩
+  obtain ⟨x, a', hrun, hpost⟩ := stripTW_pis_ok n dn vis fe k e he _ _ _ _ hw hS
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hloc, hok, by rw [hst, hres]; exact hpost⟩
 
 /-- **`strip_lams` refines `stripLams`** under the stage relation, at every L fuel. -/
 @[refines ConRon.Arena.stripLams]
@@ -425,7 +534,12 @@ theorem stripLams_refines (p : Prog) (hp : StripProg p) (dn : NIdx → Option Co
     (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
     RefAM p "strip_lams" [k, e] (StageR vis fe) (stripLams k.toNat (decI e))
       (KeepPost vis fe decOLE) := by
-  sorry
+  intro n s₀ a₀ hS
+  refine triple_post (stripLams_specW p hp n s₀ k e) ?_
+  rintro r s' ⟨hloc, hw⟩
+  obtain ⟨x, a', hrun, hpost⟩ := stripTW_lams_ok n dn vis fe k e he _ _ _ _ hw hS
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hloc, hok, by rw [hst, hres]; exact hpost⟩
 
 /-- A call of `strip_pis` meets its model (for callers whose models use `callW`). -/
 theorem stripF_of_callW {p : Prog} (hp : StripProg p) {n : Nat} {k e : Word} {m m' : Mem}

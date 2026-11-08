@@ -81,7 +81,7 @@ theorem slR_of_decNL (m : Mem) : ∀ (n off : Nat) (ns : List Nat),
       simp; omega
 
 theorem iwN_lt {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, -⟩ := h
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
@@ -99,7 +99,7 @@ theorem iwH_off {m : Mem} {k' : IdxKind} {p k : Nat} {x : Idx k'} (h : iwH m (p 
     ∃ w, rdW (m.arr64 IW) (UInt64.ofNat p + UInt64.ofNat k) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
   have e : UInt64.ofNat p + UInt64.ofNat k = UInt64.ofNat (p + k) := by simp [UInt64.ofNat_add]
   have hl : p + k < (m.arr64 IW).size := by
-    simp only [iwH, hd?, iwA] at h
+    simp only [iwH, hd?, iwA, aread_apply, aread_apply] at h
     rcases hw : (m.arr64 IW)[p + k]? with _ | w
     · simp [hw] at h
     · exact (Array.getElem?_eq_some_iff.mp hw).1

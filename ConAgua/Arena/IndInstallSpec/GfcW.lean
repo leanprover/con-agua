@@ -71,20 +71,78 @@ theorem gftW_ok (p : Prog) (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantV
     decHL m q.toNat j.toNat = some ((cvTas.map (·.type)).take j.toNat) →
     StageR vis fe m' a ∧ IWGrow s0 m' ∧ iwTop m' = iwTop m1 ∧ MFr [] [] m1 m' ∧
       decHL m' q.toNat l.toNat = some (cvTas.map (·.type)) := by
-  sorry
+  induction f with
+  | zero => intro m m' j h; simp [gftW.loop1] at h
+  | succ f ih =>
+  intro m m' j h hS hg ht hfr hjl hacc
+  have hlen : cvTas.length = l.toNat := decPL_length _ hcv.dec
+  have hjl' : j.toNat ≤ l.toNat := UInt64.le_iff_toNat_le.mp hjl
+  by_cases hj : ¬ j < l
+  · rw [gftW.loop1.arm2 (hc1 := hj)] at h
+    cases h
+    have hj' : j.toNat = l.toNat := by
+      have : ¬ j.toNat < l.toNat := fun e => hj (UInt64.lt_iff_toNat_lt.mpr e)
+      omega
+    refine ⟨hS, hg, ht, hfr, ?_⟩
+    rw [← hj', hacc, List.take_of_length_le (by simp; omega)]
+  simp only [Decidable.not_not] at hj
+  rw [gftW.loop1.arm1 (hc1 := hj)] at h
+  have hjn : j.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hj
+  obtain ⟨hI1, hE1, hsz, hEs, -⟩ := hS.iw
+  have hT0 := hcv.bound
+  have hgt : iwTop s0 ≤ iwTop m := hg.iw
+  -- constant `j`
+  have hdm : decPL m (decCVp m) o.toNat l.toNat = some cvTas :=
+    (hcv.grow (fun q => OMono.decCVp q) hg).1.get (OMono.decPL (fun q => OMono.decCVp q) _ _)
+  obtain ⟨v, hv, hcvj⟩ := decPL_getH m hdm j.toNat hjn
+  have hrv : (rdW (m.arr64 IW) (o + j)).toNat = v := rd_iwN hv (by have := (rdW (s0.arr64 CTL) 200).toNat_lt; simp only [iwTop] at hT0; omega)
+  obtain ⟨w, hw, hw32, hty⟩ := decCV_typeW hcvj
+  have hvs : v + 3 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hw).1
+  have hv3 : (rdW (m.arr64 IW) (o + j) + 3).toNat = v + 3 := by
+    rw [UInt64.toNat_add, hrv]; simp; omega
+  have hrw : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + j) + 3) = w := rdW_of_get? hv3.symm hw
+  rw [hrw] at h
+  -- the write
+  have hqj : q.toNat + j.toNat < (m.arr64 IW).size := by omega
+  have hdec := decHL_write m q j w _ hw32 hsz hqj hacc
+  have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hqj' : (q + j).toNat = q.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
+  refine ih _ m' (j + 1) h (hS.set_iw _ _) (hg.set_iw _ _ (by rw [hqj']; omega))
+    (by rw [cnsTop_set]; exact ht) (hfr.trans (MFr.set_iw _ _ _)) ?_ ?_
+  · exact UInt64.le_iff_toNat_le.mpr (by rw [hj1]; omega)
+  · rw [hj1, hdec, List.take_add_one, List.getElem?_map, List.getElem?_eq_getElem (by omega)]
+    simp [hty]
 
 end rel
 
 /-- **`gen_rec_check_former_tys` is `cvTas.map (·.type)`**, a fresh slice. -/
 theorem genRecCheckFormerTys_refines {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "gen_rec_check_former_tys" = some genRecCheckFormerTys) (n : Nat) (s₀ : St) (a : AState)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (cO cL : Word) (cvTas : List IConstantVal)
+    {vis : Word} {fe : IFEnv} (cO cL : Word) (cvTas : List IConstantVal)
     (hS : StageR vis fe s₀.mem a) (hcv : PSlR decCVp cvTas cO cL s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_former_tys" [cO, cL]
     ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a ∧ IWGrow s₀.mem s'.mem ∧ MFr [] [] s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat = some (cvTas.map (·.type)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
-  sorry
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
+  refine triple_post (gft_spec p hp (n + 1) s₀ cO cL) ?_
+  rintro r s' ⟨hl, hm⟩
+  rw [gftW.arm1] at hm
+  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl; rw [gftW.k_iw_alloc.arm1] at hm
+  cases c1 : gftW.loop1 p (n + 1) m0 cO cL (r0.headD 0) 0 with
+  | none => rw [c1] at hm; cases hm
+  | some mF =>
+  rw [c1, gftW.k_loop1.arm1] at hm
+  simp only [Option.some.injEq, Prod.mk.injEq] at hm; obtain ⟨rfl, hmF⟩ := hm
+  obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p ha n _ cL) c0
+  simp only at hs0 hw0; subst hs0
+  obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hS
+  obtain ⟨hSF, hgF, htF, hfF, hdF⟩ := gftW_ok p s₀.mem s0.mem cO cL (r0.headD 0) cvTas hcv hq0 (by omega) (n + 1)
+    s0.mem mF 0 c1 hS0 hg0 rfl (MFr.refl _ _ _) UInt64.zero_le (by simp [decHL, hslice?])
+  rw [← hmF]
+  refine ⟨hl, hSF, hgF, (allocW_mfr hw0).trans hfF, by simpa using hdF, ?_⟩
+  simp only [List.headD_cons, List.tail_cons]; omega
 
 /-! ## `gen_rec_check_former_tys_c`: `ms2.mapM (classFormerTy fe cvTas)` -/
 

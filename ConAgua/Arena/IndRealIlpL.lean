@@ -164,7 +164,89 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
     (hsz0 : (s₀.mem.arr64 LPIW).size < 2 ^ 64) :
     CoreSpec p n "inst_lp_fast" [f, po, pl, us, e]
       (instLPFast f.toNat lps (decI us) (decE e)) decH s₀ a₀ dn vis fe M eb := by
-  sorry
+  apply CoreSpec.of_call
+  intro rs m' hc
+  rcases n with _ | k
+  · rw [callW_zero] at hc; cases hc
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (instLPFast_specW p hf k _ f po pl us e) hc
+  rw [hs'] at hW
+  change ilpfW p k s₀.mem f po pl us e = some (rs.headD 0, m') at hW
+  unfold ilpfW at hW
+  obtain ⟨hf0, hW⟩ := of_ite_none hW
+  obtain rfl : f = 4000000000 := by simpa using hf0
+  rw [show (4000000000 : Word).toNat = coreWalkFuel from rfl]
+  generalize s₀.mem = m at hS hlps hW hsz0
+  -- `keys_push_iw`
+  rcases h1 : callW p k "keys_push_iw" [po, pl] m with _ | ⟨bs, m₁⟩
+  · rw [h1] at hW; cases hW
+  rw [h1, ilwLPW.k_keys_push.arm1] at hW
+  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (keysPushIW_spec p hkp hik k _ po pl) h1
+  rw [hs1] at hW1
+  change keysPushIWW k m po pl = some (bs.headD 0, m₁) at hW1
+  rcases k with _ | k
+  · simp [keysPushIWW] at hW1
+  simp only [keysPushIWW] at hW1
+  have hsz := hS.spn
+  have hlen : (m.len64 SPN).toNat = (m.arr64 SPN).size := L.Front.toNat_ofNat_size _ (by omega)
+  by_cases t1 : m.len64 SPN < spTop m
+  · simp [t1] at hW1
+  by_cases t2 : m.len64 SPN - spTop m < pl
+  · simp [t1, t2] at hW1
+  simp only [t1, t2, ↓reduceIte] at hW1
+  have t1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t1)
+  have t2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t2)
+  rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
+  rw [hlen] at t1'
+  cases hcp : ikCopyW k m po (spTop m) pl with
+  | none => rw [hcp] at hW1; simp [kpK] at hW1
+  | some mc =>
+  rw [hcp, kpK_some] at hW1
+  obtain ⟨hb, rfl⟩ := Prod.mk.inj (Option.some.inj hW1)
+  have hnw : po.toNat + pl.toNat < 2 ^ 64 := by
+    rcases hslice?_bound_fsz _ _ _ _ hlps with h0 | h0
+    · have := po.toNat_lt; omega
+    · omega
+  obtain ⟨hsl, hfc, hbc⟩ := ikCopyW_slice lps k m mc po (spTop m) pl hlps (by omega) hsz hnw hcp
+  have hctl := hS.ctl136
+  have hfm : MemFrame [SPN] [136] m (mc.set64 CTL 136 (spTop m + pl)) :=
+    (hfc.mono (by simp) (by simp)).trans ((MemFrame.setCtl _ _ _).mono (by simp) (by simp))
+  have hS₁ : CoreS dn (mc.set64 CTL 136 (spTop m + pl)) a₀ vis fe M eb :=
+    hS.frame_stk hfm (by simp) (by simp)
+  have hspn₁ : (mc.set64 CTL 136 (spTop m + pl)).arr64 SPN = mc.arr64 SPN :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have htop₁ : (spTop (mc.set64 CTL 136 (spTop m + pl))).toNat = (spTop m).toNat + pl.toNat := by
+    have hc' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hfc.size CTL]; simpa using hctl
+    simp only [spTop]; rw [rdW_set64]; simp only [hc', and_self, ↓reduceIte]
+    rw [UInt64.toNat_add]; simp only [spTop] at t1' t2' ⊢; omega
+  -- the core
+  rw [← hb] at hW
+  rcases h2 : callW p (k + 1) "inst_lp_core" [spTop m, pl, us, e] (mc.set64 CTL 136 (spTop m + pl)) with _ | ⟨r2, m₂⟩
+  · rw [h2] at hW; cases hW
+  rw [h2, ilwLPW.k_inst_lp_core.arm1] at hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨hok, ⟨M', hS₂, hK₂, hSt₂⟩, hres, hw⟩ := ilwCore_ok hp k hS₁ he hus (by rw [hspn₁]; exact hsl)
+    (Nat.le_of_eq htop₁.symm) h2
+  -- the stack top put back
+  have hfb : MemFrame [] [136] m₂ (m₂.set64 CTL 136 (spTop m)) := MemFrame.setCtl _ _ _
+  have hS₃ := hS₂.frame_stk hfb (by simp) (by simp)
+  refine ⟨hok, ⟨M', hS₃, hK₂, ?_⟩, by rw [hres]; simp only [decH, hr], by unfold ResH; rw [← hr]; exact hw⟩
+  have hc₂ : (136 : Word).toNat < (m₂.arr64 CTL).size := by simpa using hS₂.ctl136
+  have hspn₃ : (m₂.set64 CTL 136 (spTop m)).arr64 SPN = m₂.arr64 SPN :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  refine ⟨?_, ?_, fun i hi => ?_, (BKept.of_frame hfm (by decide) (by decide)).trans
+      (hSt₂.bstk.trans (BKept.of_frame hfb (by decide) (by decide))),
+    (PoolGrew.of_frame hfm (by decide) (by decide)).trans
+      (hSt₂.pool.trans (PoolGrew.of_frame hfb (by decide) (by decide)))⟩
+  · simp only [spTop]; rw [rdW_set64]; simp only [hc₂, and_self, ↓reduceIte]
+  · rw [hspn₃, hSt₂.size, hspn₁, hfc.size SPN]
+  · have hi' : i.toNat < (spTop m).toNat := UInt64.lt_iff_toNat_lt.mp hi
+    simp only [spW]
+    rw [hspn₃]
+    have := hSt₂.below i (UInt64.lt_iff_toNat_lt.mpr (by rw [htop₁]; omega))
+    simp only [spW] at this
+    rw [this, hspn₁, hbc i hi']
 
 
 /-! ## The program and the model -/

@@ -78,7 +78,28 @@ theorem opfIl_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (h
     ∃ a', (instantiateListFast coreWalkFuel (decE e) vs d.toNat).run a = .ok (decE (r.headD 0), a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ m'.arr64 SPN = m.arr64 SPN ∧
       rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 ∧ (r.headD 0).toNat < 2 ^ 32 := by
-  sorry
+  rcases k with _ | k
+  · rw [callW_zero] at hc; cases hc
+  obtain ⟨mp, hmp⟩ := hAb.il
+  have hA : ArenaL m (withLLC a mp) := ⟨hS.check.arena.withLLC mp, hmp⟩
+  have hbd : o.toNat + l.toNat < 2 ^ 64 := by
+    have := hsl.bound; have := hAb.wk.2.2.1; omega
+  obtain ⟨s', hs', -, hok, hA', hres, -, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (instList_refines opfP opfP_il rfl k _ _ hA e o l d vs hsl hbd he) hc
+  rw [hs'] at hA'
+  have hfr : MemFrame instListA instListC m m' := instList_frame opfP_il rfl (run_of_callW hc)
+  have hrun0 := AM.run_of_ok _ _ hok
+  have hrun : (instantiateListFast coreWalkFuel (decE e) vs d.toNat).run a =
+      .ok (AM.res (instantiateListFast coreWalkFuel (decE e) vs d.toNat) (withLLC a mp),
+        AM.st (instantiateListFast coreWalkFuel (decE e) vs d.toNat) (withLLC a mp)) := by
+    rw [← hrun0]; rfl
+  have hk := Keeps.run (keepsW_instListFast coreWalkFuel (decE e) vs d.toNat).cp_of_cpl hrun
+  obtain ⟨hS', hg⟩ := StageR.of_walk hS hA'.1 hfr (lt64A_of_all rfl) (lt64_of_all rfl) hk
+  obtain ⟨h1, h2⟩ := spn_of_lt64 hfr (lt64A_of_all rfl) (lt64_of_all rfl)
+  refine ⟨_, by rw [hrun, hres], hS', hg, ?_, h1, h2, hlt⟩
+  exact ⟨hAb.ab.frame hfr (by decide) (by decide), hAb.i1.frame hfr (by decide) (by decide),
+    hAb.cr.frame hfr (by decide) (by decide), ⟨_, hA'.2⟩,
+    hAb.wk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
 
 /-- **`intern_fvar` under the stage relation and `AbsOK`.** -/
 theorem opfFv_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : AbsOK m)
@@ -103,7 +124,17 @@ theorem opfI1_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (h
     ∃ a', (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat).run a = .ok (decE (r.headD 0), a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ m'.arr64 SPN = m.arr64 SPN ∧
       rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 ∧ (r.headD 0).toNat < 2 ^ 32 := by
-  sorry
+  rcases k with _ | k
+  · rw [callW_zero] at hc; cases hc
+  obtain ⟨s', hs', -, hok, hD, hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (instEntry_refines opfP opfP_inst rfl k _ a hS.check.arena e v d he) hc
+  rw [hs'] at hD
+  have hfr : MemFrame instA instC m m' := instEntry_frame opfP_inst rfl rfl (run_of_callW hc)
+  have hrun := AM.run_of_ok _ a hok
+  have hk := (keeps_inst1Fast coreWalkFuel (decE e) (decE v) d.toNat).run hrun
+  obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr instA_lt instC_lt hk
+  obtain ⟨h1, h2⟩ := spn_of_lt64 hfr instA_lt instC_lt
+  exact ⟨_, by rw [hrun, hres], hS', hg, hAb.frameD hfr (by decide) (by decide), h1, h2, hlt⟩
 
 /-- **`spn_push` under the stage relation and `AbsOK`.** -/
 theorem spnPushW_ok {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : AbsOK m)

@@ -216,16 +216,20 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
 
 theorem iwB_rdW {m : Mem} {i : Nat} {b : Bool} (h : iwB m i = some b) (hi : i < 2 ^ 64) :
     (rdW (m.arr64 IW) (UInt64.ofNat i) != 0) = b := by
-  sorry
+  simp only [iwB, bool?, iwA, aread_apply, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  have : (UInt64.ofNat i).toNat = i := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hi)
+  simp only [rdW, this, hw, Option.getD_some]
 
 theorem iwN_lt_p {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, -⟩ := h
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
 theorem iwN_cell {m m' : Mem} {i v : Nat} (hg : IWGrow m m') (hi : i < iwTop m)
     (h : iwN m i = some v) : iwN m' i = some v := by
-  sorry
+  simp only [iwN, nat?, iwA, aread_apply, aread_apply] at h ⊢
+  rw [hg.iwGet i hi]; exact h
 
 /-- The record loop on top of a wanted list. -/
 theorem lokKey (n : Nat) (m m2 m' : Mem) (p wo wl : Word) (r : List Word) (bs : BlockShape)

@@ -177,7 +177,23 @@ theorem structProjArgP_refines (p : Prog) (hd : p.lookup "der_b" = some derB)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjArgP (decI T) j.toNat) a₀ ∧
       StageR vis fe s'.mem (AM.st (structProjArgP (decI T) j.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       AM.res (structProjArgP (decI T) j.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
-  sorry
+  refine triple_post (spaW_spec p hd hpf hpp hib hjf hjp hji hmp hp n s₀ T j) ?_
+  rintro r s' ⟨hl, hm⟩
+  simp only [spaW] at hm
+  obtain ⟨b, m1, h1, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
+  rw [spaK_some] at hm
+  obtain ⟨e, m2, h2, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
+  rw [spaK2_some] at hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+  obtain ⟨a1, hr1, hS1, hg1⟩ := internBVar_stage hS 0 h1
+  obtain ⟨a2, hr2, hS2, hg2⟩ := mkProj_stage hS1 T j b h2
+  have hrun : (structProjArgP (decI T) j.toNat).run a₀ = .ok (decE e, a2) := by
+    simp only [structProjArgP, StateT.run_bind]
+    rw [show (0 : Word).toNat = 0 from rfl] at hr1
+    rw [hr1]
+    exact hr2
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS2, hg1.trans hg2, by rw [hres]; rfl⟩
 
 end L.Ind
 
@@ -277,7 +293,11 @@ theorem structPsAt_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       ArenaR s'.mem (AM.st (structPsAt o.toNat nP.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (structPsAt o.toNat nP.toNat) a₀); ⊤⦄ := by
-  sorry
+  refine triple_post (psAtW_spec p ha hc hsc hpf hpp hib hg hp n s₀ o nP) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨xs, a', hrun, hR', hgr, -, hd, -⟩ := psAtW_ok n _ _ _ _ _ _ hm hR hsz hc2 hon
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hR', hgr, by rw [hres]; exact hd⟩
 
 /-- **`struct_proj_ps` refines `structProjPs`** under `ArenaR`. -/
 @[refines ConRon.Arena.structProjPs]
@@ -295,7 +315,19 @@ theorem structProjPs_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc
       ArenaR s'.mem (AM.st (structProjPs nP.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (structProjPs nP.toNat) a₀); ⊤⦄ := by
-  sorry
+  refine triple_post (projPsW_spec p ha hc hsc hpf hpp hib hg hp hq n s₀ nP) ?_
+  rintro r s' ⟨hl, hm⟩
+  cases n with
+  | zero => cases hm
+  | succ n =>
+  rw [projPsW_succ] at hm
+  obtain ⟨r0, m0, h1, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
+  rw [psK3_some] at hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+  obtain ⟨xs, a', hrun, hR', hgr, -, hd, -⟩ := psAtW_ok n _ _ _ _ _ _ h1 hR hsz hc2 (by simpa using hon)
+  have hrun' : (structProjPs nP.toNat).run a₀ = .ok (xs, a') := by simpa [structProjPs] using hrun
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  exact ⟨hl, hok, by rw [hst]; exact hR', hgr, by rw [hres]; simpa using hd⟩
 
 end L.Ind
 

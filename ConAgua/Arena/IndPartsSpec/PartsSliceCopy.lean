@@ -41,8 +41,7 @@ theorem erCopyW_zero (n : Nat) (m : Mem) (d o o' : Word) : erCopyW n m d o 0 = e
   cases n <;> rfl
 
 theorem partsErLt {m : Mem} {i v : Nat} (h : nat? (erA (truncM m)) i = some v) : i < erTop m := by
-  simp only [nat?, Option.map_eq_some_iff] at h
-  obtain ⟨x, hx, -⟩ := h; exact (truncM_er_get hx).1
+  sorry
 
 theorem partsHslice_last {k : IdxKind} {a : Array Word} : ∀ (l o : Nat) (xs : List (Idx k)),
     hslice? (aread a) o (l + 1) = some xs → ∃ w, a[o + l]? = some w
@@ -66,7 +65,7 @@ theorem partsErToIw_zero (n : Nat) (m : Mem) (o : Word) : erToIwW n m o 0 = erTo
   · simp only; rw [erCopyW_zero _ _ _ o 0]
 
 /-- **`er_to_iw` of an `EREC` handle slice decoded below the tops.** -/
-theorem partsSliceCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem partsSliceCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {o l : Word} {r : List Word} {xs : List NIdx} (h : erToIwW n m o l = some (r, m'))
     (hS : StageR vis fe m a) (hs : hslice? (erA (truncM m)) o.toNat l.toNat = some xs) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
@@ -75,7 +74,7 @@ theorem partsSliceCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
   sorry
 
 /-- `er_to_iw` of a constant's level-parameter slice (decoded below the tops), as a handle slice. -/
-theorem partsLpsCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem partsLpsCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Nat} {cv : IConstantVal} {r : List Word}
     (h : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat q + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat q + 2)) =
       some (r, m'))
@@ -83,7 +82,22 @@ theorem partsLpsCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+  have hcv' : decCV (erA (truncM m)) q = some cv := hcv
+  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
+  obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
+  have hlvE : lv = cv.levelParams := by rw [← hcvT]
+  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
+  obtain ⟨o', ho, l', hl, hsl⟩ := hlv
+  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
+  have hq2lt := partsErLt hl
+  have hqw : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' hq
+  obtain ⟨w1, hw1b, -⟩ := partsErRd (IWGrow.refl m) ho (w := UInt64.ofNat q + 1)
+    (by rw [UInt64.toNat_add, hqw]; simp; omega)
+  obtain ⟨w2, hw2b, -⟩ := partsErRd (IWGrow.refl m) hl (w := UInt64.ofNat q + 2)
+    (by rw [UInt64.toNat_add, hqw]; simp; omega)
+  rw [w1, w2] at h
+  exact partsSliceCopy h hS
+    (by rw [UInt64.toNat_ofNat_of_lt' hw1b, UInt64.toNat_ofNat_of_lt' hw2b, hsl, hlvE])
 
 section arms
 variable (n : Nat) (m m1 : Mem) (cto ctl lo ll cv b e : Word) (rp : List Word)

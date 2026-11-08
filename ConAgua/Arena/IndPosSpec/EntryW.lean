@@ -88,7 +88,7 @@ theorem erec_hd {m : Mem} {w : Word} {c : Nat} {k : IdxKind} {x : Idx k}
   exact ⟨v, erec_rd hv hc, hlt, rfl⟩
 
 /-- A record's kind word and, for a constructor, its fields. -/
-theorem decCI_kind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_kind_cases {a : Array Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
     ∃ k, nat? (aread a) p = some k ∧
       ((k = 4 ∧ ∃ cv nPc nF, ci = .ctorInfo cv nPc nF ∧ decCV (aread a) (p + 1) = some cv ∧

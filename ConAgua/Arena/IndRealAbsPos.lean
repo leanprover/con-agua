@@ -259,6 +259,7 @@ theorem matesW_afr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List
 theorem nboW_afr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW p n m vis c = some (r, m')) :
     AFr m m' := by
   sorry
+
 theorem nfmW_afr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) :
     AFr m m' := by
   cases n with

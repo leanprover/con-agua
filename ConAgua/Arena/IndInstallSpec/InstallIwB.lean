@@ -29,7 +29,7 @@ theorem installIwB {m : Mem} {w : Word} {k : Nat} {b : Bool} (h : iwB (truncM m)
   simp only [iwB, bool?, Option.map_eq_some_iff] at h
   obtain ⟨x, hx, rfl⟩ := h
   obtain ⟨hi, hx'⟩ := truncM_iw_get hx
-  simp only [iwA] at hx'
+  simp only [iwA, aread_apply, aread_apply] at hx'
   have hlt : w.toNat + k < (m.arr64 IW).size := (Array.getElem?_eq_some_iff.mp hx').1
   have hk : k < 2 ^ 64 := by omega
   have hwk : w.toNat + k < 2 ^ 64 := by omega

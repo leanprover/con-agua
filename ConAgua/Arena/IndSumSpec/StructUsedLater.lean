@@ -148,7 +148,33 @@ theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hS : StageR vis fe m a) (hM : hbMR m mp) (h : ustW n m cty nP j = some (r, m')) :
     ∃ b a', (structUsedLater (decI cty) nP.toNat j.toNat).run a = .ok (b, a') ∧
       r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
-  sorry
+  simp only [ustW] at h
+  obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
+  have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [hbSch, HBM, IW])
+    (by simp [hbSch]) m m1 (stripF_frame hst) (fun _ _ h => h) mp hM
+  rw [add3_toNat hsum] at hrun
+  cases x with
+  | none =>
+    have hz : rs.headD 0 = 0 := hdec
+    rw [ustK1_some_zero hz] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨false, a1, ?_, rfl, ⟨mp, hM1⟩, hS1, hg1⟩
+    simp only [structUsedLater, StateT.run_bind]
+    rw [hrun]
+    rfl
+  | some le =>
+    obtain ⟨l, e⟩ := le
+    obtain ⟨h1, -, hb32, hbe⟩ := hdec
+    rw [ustK1_some_ne (by rw [h1]; decide)] at h
+    rw [usDrop3_eq] at hb32 hbe
+    have hbH : H (rs.tail.tail.tail.headD 0) := hb32
+    obtain ⟨b, a', hr2, hb, hM2, hS2, hg2⟩ :=
+      hbFastW_ok n m1 m' a1 0 (rs.tail.tail.tail.headD 0) r mp hbH hS1 hM1 h
+    refine ⟨b, a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
+    rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe] at hr2
+    simp only [structUsedLater, StateT.run_bind, hrun, except_ok_bind]
+    exact hr2
 
 /-! ## The census theorems -/
 
@@ -269,7 +295,10 @@ include hv hf hput hins hgo hbp hst hsg in
 theorem structUsedLaterGo_spec0 (n : Nat) (s₀ : St) (cty nP j : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later_go" [cty, nP, j]
     ⦃fun r s' => LocEq s' s₀ ∧ usg0 n s₀.mem cty nP j = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  cases n with
+  | zero =>
+    rw [invoke_eq _ hsg]; simp only [callFn, structUsedLaterGoL]; vcgen [exec] <;> grind
+  | succ n => exact structUsedLaterGo_spec p hv hf hput hins hgo hbp hst hsg n s₀ cty nP j
 
 include hv hf hput hins hgo hbp hst hsg ha hc hsc hp in
 theorem ulW_spec (n : Nat) : ∀ (s₀ : St) (cty nP m base : Word),
@@ -292,7 +321,7 @@ end ulspec
 -/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
+theorem ulW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (cty nP n base : Word) (r : List Word)
       (mp : Std.HashMap (EIdx × Nat) Bool),
     nP.toNat + base.toNat + n.toNat + 1 < 2 ^ 64 → H cty →
