@@ -59,12 +59,14 @@ l_model m2cKE_spec (p : Prog) (hp : M2CProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model m2cEtaE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.eta ↦ m2cEtaE list]
   specs [m2cPreE_spec p hp n, callW_spec p n "get_app_args", callW_spec p n "caps_never_zero", callW_spec p n "m2c_eta2"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 l_model m2cAnd2E_spec (p : Prog) (hp : M2CProg p)
   fns [hp.and2 ↦ m2cAnd2E list]

@@ -34,6 +34,7 @@ namespace L.Ind
 
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model grpE_spec (p : Prog) (hf : p.lookup "gen_rec_check_prep" = some genRecCheckPrep)
   fns [hf ↦ grpE]
   specs [callW_spec p n "block_large_elim_allowed", callW_spec p n "class_gen_prefix_binders",
@@ -44,6 +45,7 @@ l_model grpE_spec (p : Prog) (hf : p.lookup "gen_rec_check_prep" = some genRecCh
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 20000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 end L.Ind
 
