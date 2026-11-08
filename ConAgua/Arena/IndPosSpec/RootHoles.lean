@@ -34,8 +34,9 @@ open L.Arena
 
 /-- Words written into the pool keep the stage relation. -/
 theorem StageR.wrIW {vis : Word} {fe : IFEnv} {a : AState} :
-    ∀ {m : Mem}, StageR vis fe m a → ∀ (q : Word) (ws : List Word), StageR vis fe (wrIW m q ws) a := by
-  sorry
+    ∀ {m : Mem}, StageR vis fe m a → ∀ (q : Word) (ws : List Word), StageR vis fe (wrIW m q ws) a
+  | _, hS, _, [] => hS
+  | _, hS, q, x :: ws => StageR.wrIW (hS.set_iw q x) (q + 1) ws
 
 /-- **A record write under the stage relation**: the relation kept, the pool grown by `|ws|`
 words at the old top, where `ws` is readable. -/
@@ -110,13 +111,17 @@ theorem NKIn.agree {m m' : Mem} {P : Nat → Prop} {k : Nat} (hk : NKIn m k P) (
 
 theorem NHIn.agree {m m' : Mem} {P : Nat → Prop} {w : Nat} (hw : NHIn m w P) (h : RdS m m' P) :
     decNH m' w = decNH m w ∧ NHIn m' w P := by
-  sorry
+  have e0 := iwN_agree h hw.w0
+  refine ⟨?_, ⟨hw.w0, hw.w1, hw.w2, fun k hk' => (hw.key k (e0 ▸ hk')).agree h |>.2⟩⟩
+  simp only [decNH, e0, iwN_agree h hw.w1, iwN_agree h hw.w2]
+  rcases hkk : iwN m w with _ | k; · simp
+  simp only [Option.bind_eq_bind, Option.bind_some, ((hw.key k hkk).agree h).1]
 
 theorem NKIn.mono {m : Mem} {P Q : Nat → Prop} {k : Nat} (h : NKIn m k P) (hq : ∀ i, P i → Q i) :
     NKIn m k Q := ⟨fun j hj => hq _ (h.1 j hj), fun o l ho hl j hj => hq _ (h.2 o l ho hl j hj)⟩
 
 theorem NHIn.mono {m : Mem} {P Q : Nat → Prop} {w : Nat} (h : NHIn m w P) (hq : ∀ i, P i → Q i) :
-    NHIn m w Q := ⟨hq _ h.1, hq _ h.2.1, fun k hk => (h.2.2 k hk).mono hq⟩
+    NHIn m w Q := ⟨hq _ h.w0, hq _ h.w1, hq _ h.w2, fun k hk => (h.key k hk).mono hq⟩
 
 /-- Below the top: a decoding there survives every growth. -/
 theorem NHIn.grow {m m' : Mem} {w : Nat} (hw : NHIn m w (· < iwTop m)) (h : IWGrow m m') :
@@ -178,32 +183,45 @@ def OutR (q n t : Nat) (x : Nat) : Prop := x < t ∧ (x < q ∨ q + n ≤ x)
 
 /-- The pool grew, and outside `[q, q + n)` its old words stayed (a writer into an allocated
 region). -/
-def GrowX (q n : Nat) (m m' : Mem) : Prop :=
-  iwTop m ≤ iwTop m' ∧ erTop m ≤ erTop m' ∧ RdS m m' (OutR q n (iwTop m)) ∧
-  (∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
+structure GrowX (q n : Nat) (m m' : Mem) : Prop where
+  iw : iwTop m ≤ iwTop m'
+  er : erTop m ≤ erTop m'
+  rd : RdS m m' (OutR q n (iwTop m))
+  erGet : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
+  er1 : erecTop1 m ≤ erecTop1 m'
+  er1Get : ∀ i < erecTop1 m, (m'.arr64 (tier1 EREC))[i]? = (m.arr64 (tier1 EREC))[i]?
 
 theorem GrowX.of_grow {q n : Nat} {m m' : Mem} (h : IWGrow m m') : GrowX q n m m' :=
-  ⟨h.iw, h.er, (RdS.of_grow h).mono fun _ hi => hi.1, h.erGet⟩
+  ⟨h.iw, h.er, (RdS.of_grow h).mono fun _ hi => hi.1, h.erGet, h.er1, h.er1Get⟩
 
 theorem GrowX.trans {q n : Nat} {m₁ m₂ m₃ : Mem} (h₁ : GrowX q n m₁ m₂) (h₂ : GrowX q n m₂ m₃) :
     GrowX q n m₁ m₃ :=
-  ⟨Nat.le_trans h₁.1 h₂.1, Nat.le_trans h₁.2.1 h₂.2.1,
-    h₁.2.2.1.trans (h₂.2.2.1.mono fun _ hi => ⟨Nat.lt_of_lt_of_le hi.1 h₁.1, hi.2⟩),
-    fun i hi => (h₂.2.2.2 i (Nat.lt_of_lt_of_le hi h₁.2.1)).trans (h₁.2.2.2 i hi)⟩
+  ⟨Nat.le_trans h₁.iw h₂.iw, Nat.le_trans h₁.er h₂.er,
+    h₁.rd.trans (h₂.rd.mono fun _ hi => ⟨Nat.lt_of_lt_of_le hi.1 h₁.iw, hi.2⟩),
+    fun i hi => (h₂.erGet i (Nat.lt_of_lt_of_le hi h₁.er)).trans (h₁.erGet i hi),
+    Nat.le_trans h₁.er1 h₂.er1,
+    fun i hi => (h₂.er1Get i (Nat.lt_of_lt_of_le hi h₁.er1)).trans (h₁.er1Get i hi)⟩
 
 theorem GrowX.set {q n : Nat} (m : Mem) (x v : Word) (hx : q ≤ x.toNat ∧ x.toNat < q + n) :
     GrowX q n m (m.set64 IW x v) := by
   have hC : (m.set64 IW x v).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hE : (m.set64 IW x v).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hE1 : (m.set64 IW x v).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   refine ⟨by simp only [iwTop, hC]; exact Nat.le_refl _, by simp only [erTop, hC]; exact Nat.le_refl _,
-    RdS.set x v (fun h => by rcases h.2 with h | h <;> omega), fun i _ => by rw [hE]⟩
+    RdS.set x v (fun h => by rcases h.2 with h | h <;> omega), fun i _ => by rw [hE],
+    by simp only [erecTop1, hC]; exact Nat.le_refl _, fun i _ => by rw [hE1]⟩
 
-theorem GrowX.grow {q n : Nat} {m m' : Mem} (h : GrowX q n m m') (hq : iwTop m ≤ q) : IWGrow m m' := by
-  sorry
+theorem GrowX.grow {q n : Nat} {m m' : Mem} (h : GrowX q n m m') (hq : iwTop m ≤ q) : IWGrow m m' :=
+  ⟨h.iw, h.er, fun i hi => h.rd i ⟨hi, Or.inl (by omega)⟩, h.erGet, h.er1, h.er1Get⟩
 
 theorem GrowX.grow' {q n : Nat} {m m1 m2 : Mem} (h : GrowX q n m1 m2) (hg : IWGrow m m1)
-    (hq : iwTop m ≤ q) : IWGrow m m2 := by
-  sorry
+    (hq : iwTop m ≤ q) : IWGrow m m2 :=
+  ⟨Nat.le_trans hg.iw h.iw, Nat.le_trans hg.er h.er,
+    fun i hi => (h.rd i ⟨Nat.lt_of_lt_of_le hi hg.iw, Or.inl (by omega)⟩).trans (hg.iwGet i hi),
+    fun i hi => (h.erGet i (Nat.lt_of_lt_of_le hi hg.er)).trans (hg.erGet i hi),
+    Nat.le_trans hg.er1 h.er1,
+    fun i hi => (h.er1Get i (Nat.lt_of_lt_of_le hi hg.er1)).trans (hg.er1Get i hi)⟩
 
 theorem HolesAt.decPL {m : Mem} {q : Nat} {hs : List NestHole} {P : Nat → Prop}
     (h : HolesAt m q hs.length hs P) : decPL m (decNH m) q hs.length = some hs :=
@@ -307,8 +325,13 @@ end census
 
 theorem StageR.ofCopyW {vis : Word} {fe : IFEnv} {a : AState} :
     ∀ (n : Nat) {m m' : Mem} {d s l : Word}, copyW n m d s l = some m' → StageR vis fe m a →
-    StageR vis fe m' a := by
-  sorry
+    StageR vis fe m' a
+  | 0, _, _, _, _, _, h, _ => by simp [copyW] at h
+  | n + 1, m, m', d, s, l, h, hS => by
+    by_cases hl : l = 0
+    · rw [copyW_nil n m d s l hl] at h; cases h; exact hS
+    · rw [copyW_step n m d s l hl] at h
+      exact StageR.ofCopyW n h (hS.set_iw d _)
 
 /-- **`sl_append` keeps the stage relation**: the pool grew by the new slice, whose words are the
 two sources' (any words: pointers too). -/

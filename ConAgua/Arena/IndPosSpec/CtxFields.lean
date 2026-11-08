@@ -129,8 +129,11 @@ def NKIn (m : Mem) (k : Nat) (P : Nat → Prop) : Prop :=
   (∀ j < 4, P (k + j)) ∧ ∀ o l, iwN m (k + 2) = some o → iwN m (k + 3) = some l → ∀ j < l, P (o + j)
 
 /-- The indices `decNH m w` reads lie in `P`. -/
-def NHIn (m : Mem) (w : Nat) (P : Nat → Prop) : Prop :=
-  P w ∧ P (w + 1) ∧ ∀ k, iwN m w = some k → NKIn m k P
+structure NHIn (m : Mem) (w : Nat) (P : Nat → Prop) : Prop where
+  w0 : P w
+  w1 : P (w + 1)
+  w2 : P (w + 2)
+  key : ∀ k, iwN m w = some k → NKIn m k P
 
 /-! ## Word reads of decoded fields -/
 
