@@ -101,11 +101,10 @@ CONFLICT, con-ron 0001 applies.
   addresses (`lvLookupTG`).
 * First verdicts (`diff-e2e --tests` at con-leche 210a580e, sequential): 687 of 689 agree, `Init`
   accepts; the two left were the `lv_lookup` tier bug.
-* Environment: the toolchain's `ld.lld` is a nix wrapper whose store path was garbage-collected,
-  so no Lean executable links (`romgen`, `e2e-l`, `e2e-ref`, the census). Workaround for this lane
-  only (`_tmp/ronsync2/cc/`): `LEAN_CC` a clang wrapper with `--ld-path` to a script that calls
-  `bin-unwrapped/ld.lld` with the toolchain's library paths, `libunwind`, `libc_nonshared`,
-  `libpthread_nonshared` and an rpath. Binaries linked so went into the shared Lake cache.
+* Environment (resolved, not a lane change): the toolchain's `ld.lld` wrapper pointed at a
+  garbage-collected nix store path, so no Lean executable linked; a temporary `LEAN_CC` wrapper
+  was used until the coordinator reinstalled the toolchain (23:30), after which the executables
+  were rebuilt normally.
 * 19:56–20:15, performance of the stage-2 binary (L code final, proofs pending) against master
   09a78343 (which already has #148, ronsync2-kf: its own numbers are in
   `docs/design/ronsync2-kf.md`, `Init` peak RSS −12 %, −17 % at 16 threads, +0.9 % instructions):
@@ -123,3 +122,20 @@ CONFLICT, con-ron 0001 applies.
 
   The install phase is gone, so the jobs carry the blocks' checks and the pool parallelises them
   (the 16-thread gain); one thread breaks even (`_tmp/ronsync2/perf/`).
+* 20:15– stage 3 (proofs), three areas on helper branches (`ronsync2-p3a` infrastructure/pipeline/
+  Final/Front/Rom, `ronsync2-p3b` the inductive stage, `ronsync2-p3c` the core tier and the
+  declarations), helpers handing over through area files as their context runs out. By 21:35:
+  the shared relations restated and proved (`EnvR` as the own layer over the frozen index, the
+  two-tier record pool in `IWOK`/`IWGrow`, `CheckR.erGrow`), every `Env.lean` function refined,
+  the stream index's relation `IndexR` and the `idx_consts`/`idx_tables` loops proved,
+  `check_decl` ⊑ `checkDecl` proved from the arms' contracts; master's proofs restored wherever
+  they still check. Left: ~860 sorries over the three areas.
+* Decision (21:55), the fold invariant at a job's view. A job's check needs con-ron's `FoldOK` at
+  `I.view k`, whose `envWF` upstream obtains only from the model (`view_foldOK`, `job_spec`,
+  `pooled_fold_records`, `Arena.pooledAccepts_bridge` all take `(V) [ConLeche.SetTheory V]`;
+  upstream proves no V-free accept and no rejection theorem for the pool). Mirroring that: the
+  Final accept theorems (`checkerFile_accepts(_regs)`, `threadsRun_twinAcceptsPooled(_regs)`, their
+  Audit copies) and the sequential verdict gain `(V : Type w) [ConLeche.SetTheory V]` (the
+  sequential verdict keeps `TwinVerdict [b] c`); the threaded verdict `TwinVerdictPooled` keeps
+  job `k`'s failure with class `c` or, weakened, some job below `k` rejected (a failure in another
+  thread below `k` leaves no `PrefixOK` at `k`). Before/after texts: §6 (statement changes).
