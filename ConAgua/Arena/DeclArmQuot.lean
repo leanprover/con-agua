@@ -87,7 +87,7 @@ theorem qph_specW (hp : p.lookup "quot_pin_hit" = some quotPinHitL) (n : Nat) (s
 end model
 
 /-- The pool's size bound canon's comparisons take (`LitR`'s `PoolOK`). -/
-theorem poolSmall_of_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem poolSmall_of_stage {vis : Word} {fe : IFEnv}
     {m : Mem} {a : AState} (h : StageR vis fe m a) : PoolSmall m := by
   have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega

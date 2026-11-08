@@ -80,7 +80,7 @@ theorem EqL.decNL {m : Mem} {o l : Nat} {ps : List (EIdx × EIdx)} (h : EqL m o 
     simp [iwN, nat?, hp])
   simpa [h2] using this
 
-theorem eqL_cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem eqL_cons {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {x o l : Word} {r : List Word} {es : List (EIdx × EIdx)} {ea eb : Word}
     (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hE : EqL m o.toNat l.toNat es) (hx : RecAt m x ea eb) (hea : H ea) (heb : H eb) :

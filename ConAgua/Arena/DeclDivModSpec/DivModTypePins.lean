@@ -228,7 +228,7 @@ l_model divModDeclPin_specW (p : Prog) (hp : p.lookup "div_mod_decl_pin" = some 
   specs [callW_spec p n "div_mod_slot"]
   grind [arena_grind] heartbeats 1600000 bind ntBW
 
-theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+theorem divModDeclPin_ref {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     CallRef p "div_mod_decl_pin" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModDeclPin ip (decI c)) (KeepPost vis fe decW0E) := by
@@ -240,14 +240,14 @@ l_model divModTypePins_specW (p : Prog) (hp : p.lookup "div_mod_type_pins" = som
   specs [callW_spec p n "div_mod_slot"]
   grind [arena_grind] heartbeats 1600000 bind ntBW
 
-theorem divModTypePins_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+theorem divModTypePins_ref {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     CallRef p "div_mod_type_pins" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModTypePins ip (decI c)) (KeepPost vis fe decTP) := by
   sorry
 
 @[refines ConRon.Arena.divModTypePins]
-theorem divModTypePins_refines {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem divModTypePins_refines {vis : Word} {fe : IFEnv}
     {p : Prog} (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     RefAM p "div_mod_type_pins" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModTypePins ip (decI c)) (KeepPost vis fe decTP) := by
@@ -278,7 +278,7 @@ l_model divModCertProofs_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAll
   specs [callW_spec p n "div_mod_slot", erToIw_specW p ha hc he n]
   grind [arena_grind] heartbeats 1600000 bind ntBW
 
-theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+theorem divModCertProofs_ref {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     CallRef p "div_mod_cert_proofs" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModCertProofs ip (decI c))
@@ -286,14 +286,14 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
   sorry
 
 @[refines ConRon.Arena.divModDeclPin]
-theorem divModDeclPin_refines {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+theorem divModDeclPin_refines {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     RefAM p "div_mod_decl_pin" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModDeclPin ip (decI c)) (KeepPost vis fe decW0E) := by
   sorry
 
 @[refines ConRon.Arena.divModCertProofs]
-theorem divModCertProofs_refines {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem divModCertProofs_refines {vis : Word} {fe : IFEnv}
     {p : Prog} (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     RefAM p "div_mod_cert_proofs" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModCertProofs ip (decI c)) (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by

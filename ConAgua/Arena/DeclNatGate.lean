@@ -32,7 +32,7 @@ def defnMono : IConstantInfo → Bool
   | .defnInfo cv _ _ => cv.levelParams.isEmpty
   | _ => false
 
-theorem decCI_defn_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_defn_cases {a : Array Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
     (∃ cv v hint, ci = .defnInfo cv v hint ∧ a[p]? = some 1 ∧ decCV (aread a) (p + 1) = some cv) ∨
     (∃ w, a[p]? = some w ∧ w ≠ 1 ∧ ∀ cv v hint, ci ≠ .defnInfo cv v hint) := by
@@ -80,7 +80,7 @@ theorem decCV_lps_len {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV 
   unfold hslice? at hsl
   simpa using (mapM_opt_length _ _ _ hsl).symm
 
-theorem defnMono_words {m : Mem} {dn : NIdx → Option ConLeche.Name} {q : Word} {ci : IConstantInfo}
+theorem defnMono_words {m : Mem} {q : Word} {ci : IConstantInfo}
     (hsz : (m.arr64 EREC).size < 2 ^ 64) (h : decCI (erecP m) q.toNat = some ci) :
     (rdW (m.arr64 EREC) q ≠ 1 ∧ defnMono ci = false) ∨
     (rdW (m.arr64 EREC) q = 1 ∧ (defnMono ci = true ↔ rdW (m.arr64 EREC) (q + 3) = 0)) := by

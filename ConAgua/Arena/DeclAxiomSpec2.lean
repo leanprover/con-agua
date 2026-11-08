@@ -119,7 +119,7 @@ theorem ctor_counts {a : Array Word} {q : Word} {np nf : Nat} (hsz : a.size < 2 
   omega
 
 /-- **The shape tests on a stored record, failing**: the twin's shape does not match. -/
-theorem fpc_fail {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Word}
+theorem fpc_fail {a : Array Word} {q k : Word}
     {ci : IConstantInfo} (hsz : a.size < 2 ^ 64) (hk : k = 3 ∨ k = 4) (h : decCI (aread a) q.toNat = some ci)
     (hf : rdW a q ≠ k ∨ (k = 4 ∧ (rdW a (q + 5) ≠ 0 ∨ rdW a (q + 6) ≠ 0))) :
     fpcShape k ci = none := by
@@ -127,7 +127,7 @@ theorem fpc_fail {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Wo
 
 /-- **The shape tests on a stored record, passing**: the twin's shape matches, with the constant
 value at `q + 1`. -/
-theorem fpc_pass {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Word}
+theorem fpc_pass {a : Array Word} {q k : Word}
     {ci : IConstantInfo} (hsz : a.size < 2 ^ 64) (hk : k = 3 ∨ k = 4)
     (h : decCI (aread a) q.toNat = some ci) (hkw : rdW a q = k)
     (hc : ¬ (k = 4 ∧ (rdW a (q + 5) ≠ 0 ∨ rdW a (q + 6) ≠ 0))) :
@@ -135,7 +135,7 @@ theorem fpc_pass {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Wo
   sorry
 
 /-- A matching shape's constant value decodes where the record does. -/
-theorem fpcShape_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {k : Word}
+theorem fpcShape_cv {a : Array Word} {q : Nat} {k : Word}
     {ci : IConstantInfo} {cv : IConstantVal} (h : decCI (aread a) q = some ci)
     (hs : fpcShape k ci = some cv) : decCV (aread a) (q + 1) = some cv := by
   sorry
@@ -149,7 +149,7 @@ def FpcT (fe : IFEnv) (nm : NIdx) (k : Word) (T : AM IConstantVal) (a : AState) 
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`find_pinned_cv` against the twin's clause**, at the model level. -/
-theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k id : Word} {r : List Word}
     (hW : fpcW p n m vis nm k id = some (r, m')) (hS : StageR vis fe m a)
     (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4) (hid : id.toNat < 10) :
@@ -289,7 +289,7 @@ theorem trustCompilerOk_eq (fe : IFEnv) (cv : IConstantVal) :
     | _ => simp [fpcShape]
 
 /-- A `find_pinned_cv` call's run, against its clause. -/
-theorem fpc_call {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem fpc_call {p : Prog} (h : TcoProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k id : Word} {r : List Word}
     (hc : callW p n "find_pinned_cv" [vis, nm, k, id] m = some (r, m'))
     (hS : StageR vis fe m a) (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4)
@@ -299,7 +299,7 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name}
   sorry
 
 /-- **`trust_compiler_ok(vis, q)` refines `trustCompilerOk`** at the model level. -/
-theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem tcoW_ok {p : Prog} (h : TcoProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q : Word} {r : List Word}
     {cv : IConstantVal} (hW : tcoW p n m vis q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) :

@@ -86,14 +86,14 @@ theorem matchesPin_refines (p : Prog) (hC : CanonProg p)
 /-! ## The kind word of a decoded constant record -/
 
 /-- A record of kind word `0` is an `axiomInfo`, any other kind word is not. -/
-theorem decCI_kind0 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_kind0 {a : Array Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI (aread a) p = some ci) (hw : a[p]? = some w) :
     (w = 0 → ∃ cv, decCV (aread a) (p + 1) = some cv ∧ ci = .axiomInfo cv) ∧
       (w ≠ 0 → ∀ cv, ci ≠ .axiomInfo cv) := by
   sorry
 
 /-- A record of kind word `3` is an `indInfo`, any other kind word is not. -/
-theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_kind3 {a : Array Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI (aread a) p = some ci) (hw : a[p]? = some w) :
     (w = 3 → ∃ cv caps, decCV (aread a) (p + 1) = some cv ∧ ci = .indInfo cv caps) ∧
       (w ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
@@ -164,7 +164,7 @@ end rso
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`reduce_stored_ok(vis, c)` refines `reduceStoredOk`** at the model level. -/
-theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem rsoW_ok {p : Prog} (h : RedProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
     (hW : rsoW p n m vis c = some (r, m')) (hS : StageR vis fe m a) (hc : c.toNat < 2 ^ 32) :
     ∃ b a', (reduceStoredOk fe (decI c)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧

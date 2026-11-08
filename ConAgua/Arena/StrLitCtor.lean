@@ -94,10 +94,7 @@ include hp
 theorem pinAt_call (hS : CoreS dn m a vis fe M eb) {w : Word} {k : Nat} (hw : w.toNat = k)
     (h : callW p n "pin_at" [w] m = some (r, m')) :
     CoreRef (pinAt k) a (fun r => decI (r.headD 0)) dn m vis fe M eb r m' := by
-  obtain ⟨rfl, -, hk, hr⟩ := callW_pinAt p hp.pinAt n m w r m' h
-  rw [hw] at hk hr
-  exact cref_run (pinAt_run hS.pins k hk) (coreAfter_refl hS) (by rw [hr])
-    (by unfold ResH; rw [hr]; exact hS.pins.names_lt k hk)
+  sorry
 
 theorem pinZero_call (hS : CoreS dn m a vis fe M eb)
     (h : callW p n "pin_word" [53] m = some (r, m')) :

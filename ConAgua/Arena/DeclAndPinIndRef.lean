@@ -189,14 +189,14 @@ theorem decRBlk_canon {dn : NIdx → Option ConLeche.Name} {m : Mem} {r : List W
     omega
 
 /-- A pointer slice decoded in `IW` below its top, in `erecP`, stays decoded as the pools grow. -/
-theorem decPL_growAP {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Nat}
+theorem decPL_growAP {m m' : Mem} {o l : Nat}
     {xs : List IConstantInfo} (h : decPL m (fun q => decCI (erecP m) q) o l = some xs)
     (hb : o + l ≤ iwTop m) (hg : IWGrow m m') :
     decPL m' (fun q => decCI (erecP m') q) o l = some xs := by
   sorry
 
 /-- **`er_to_iw` of the copied block**: the `IW` slice decodes (in `erecP`) to the block. -/
-theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem erToIw_blk {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {block : List IConstantInfo}
     (h : erToIwW n m o l = some (r, m')) (hS : StageR vis fe m a)
     (hd : L.Front.decCIsR (erecP m) o.toNat l.toNat = some block) (hb : o.toNat + l.toNat ≤ erTop m) :
@@ -277,7 +277,7 @@ theorem andpW_one {p : Prog} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
   exact ⟨hfl, h.2.symm, h.1.symm⟩
 
 /-- A one-constant record: `and_pin_ok` is `andPinOk`'s name test, memory and twin state kept. -/
-theorem andPinOkOne_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLeche.Name}
+theorem andPinOkOne_ok {p : Prog} (hp : AndPinIndProg p)
     {vis : Word} {fe : IFEnv} (i : Word) (d : IDeclaration) :
     L.Ind.RefAM p "and_pin_ok" [i]
       (fun m a => StageR vis fe m a ∧ L.Front.DeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat d ∧

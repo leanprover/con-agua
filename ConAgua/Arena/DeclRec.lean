@@ -334,7 +334,7 @@ theorem sliceL_map_decI {k : IdxKind} (P : Array Word) (o l : Nat) :
 /-- **What `erec_ci(i, ck)` builds**, for any record kind: the stage relation kept, the pool
 grown, the kind word `ck`, the record's constant value (whenever the declaration's record has
 one, `CVAt`), its value word, its hint, all of it below the top. -/
-theorem erecCiW_core {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {i ck : Word} {r : List Word} {ds : Array IDeclaration}
     (h : erecCiW n m i ck = some (r, m')) (hS : StageR vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size) :
@@ -351,7 +351,7 @@ theorem erecCiW_core {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 /-- **`erec_ci(i, ck)` builds the constant record of declaration `i`**: the stage relation kept,
 the pool grown, the record decoding as the constant `installStepGo` pushes (`stepCI`), its
 constant value at `q + 1`, its value at `q + 5`, all of it below the top. -/
-theorem erecCiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem erecCiW_ok {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {i ck : Word} {r : List Word} {ds : Array IDeclaration}
     {ci : IConstantInfo}
     (h : erecCiW n m i ck = some (r, m')) (hS : StageR vis fe m a)
@@ -365,7 +365,7 @@ theorem erecCiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
 
 /-- **`erec_ci(i, 0)` on an axiom or a quotient record** builds `axiomInfo cv` (the checkDecl
 arms' constant record of those kinds). -/
-theorem erecCiW_okA {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem erecCiW_okA {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {ds : Array IDeclaration}
     {cv : IConstantVal}
     (h : erecCiW n m i 0 = some (r, m')) (hS : StageR vis fe m a)

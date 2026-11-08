@@ -139,7 +139,7 @@ abbrev CrFrame (m m' : Mem) : Prop := MemFrame [CRM] [158, 159] m m'
 
 theorem crV_stable : VStable crSch CrV := fun _ _ _ _ _ h => h
 
-theorem StageR.crf {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem StageR.crf {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} (hS : StageR vis fe m a) (hf : CrFrame m m') :
     StageR vis fe m' a ∧ IWGrow m m' :=
   StageR.frame_hi hS hf (by simp [CRM]) (by simp) (by simp [IW, CRM]) (by simp)

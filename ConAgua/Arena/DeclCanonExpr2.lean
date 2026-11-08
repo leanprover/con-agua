@@ -44,7 +44,7 @@ def LitInj (a : AState) : Prop :=
   ∀ (x y : EIdx) (l : ConLeche.Literal), a.store.view x = some (.lit l) →
     a.store.view y = some (.lit l) → x = y
 
-theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (po pl qo ql co cl fuel x y r : Word) (ps qs cs : List NIdx),
     ceW n m po pl qo ql co cl fuel x y = some (r, m') → StageR vis fe m a →
     CtxR m po pl qo ql co cl ps qs cs → LitInj a → PoolSmall m → x.toNat < 2 ^ 32 →

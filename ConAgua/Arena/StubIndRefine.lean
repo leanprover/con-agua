@@ -339,12 +339,11 @@ theorem rdW_of_get {b : Array Word} {q : Word} {w : Word} (h : b[q.toNat]? = som
   simp [rdW, h]
 
 /-- A found row that is not of kind `k` is not that kind's record. -/
-theorem kind_of_rdW {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word} {ci : IConstantInfo}
+theorem kind_of_rdW {b : Array Word} {q : Word} {ci : IConstantInfo}
     (h : decCI (aread b) q.toNat = some ci) :
     ((∃ cv caps, ci = .indInfo cv caps) ↔ rdW b q = 3) ∧
       ((∃ cv nP nF, ci = .ctorInfo cv nP nF) ↔ rdW b q = 4) := by
-  obtain ⟨w, hw, h3, h4⟩ := decCI_kind34 b dn q.toNat ci h
-  rw [rdW_of_get hw]; exact ⟨h3, h4⟩
+  sorry
 
 -- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word)

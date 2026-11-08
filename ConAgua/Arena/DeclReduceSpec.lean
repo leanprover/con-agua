@@ -65,7 +65,7 @@ grind_pattern [ind_grind] selK2_some => selK2 (some (r2, m2))
 /-! ## The relational lemma -/
 
 /-- **A pin-selected ROM value is the twin's**: `do let x ← pinAt k; if c == x then T i else T j`. -/
-theorem selW_ok {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem selW_ok {α : Type} {vis : Word} {fe : IFEnv}
     {a : AState} {p : Prog} {n : Nat} {m m' : Mem} {c k : Word} {f : FnName} {i j : Word}
     {r : List Word} {T : Nat → AM α} {dec : Mem → List Word → α → Prop}
     (hT : ∀ w, (w = i ∨ w = j) →
@@ -204,7 +204,7 @@ end refines
 theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
     (hpw : p.lookup "pin_word" = some pinWordL) (hcf : p.lookup "const_find" = some constFind)
     (hcp : p.lookup "const_push" = some constPush) (hic : p.lookup "intern_const" = some internConst)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {nm : Word} {r : List Word}
     (h : callW p n "const_e" [nm] m = some (r, m')) (hS : StageR vis fe m a)
     (hnm : nm.toNat < 2 ^ 32) :

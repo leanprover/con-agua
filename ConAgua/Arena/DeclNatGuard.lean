@@ -73,7 +73,7 @@ theorem pinFind_call (hN : NatGuardProg p) {i : Word} (hi : i.toNat < 51) {k : N
     (h2 : callW p k "env_find" [r1.headD 0, vis] m1 = some (rf, m2)) :
     m1 = m ∧ m2 = m ∧ pinW m 0 ≠ 0 ∧ H (r1.headD 0) ∧ r1.headD 0 = pinW m (1 + i.toNat) ∧
       (pinAt i.toNat).run a = .ok (decI (r1.headD 0), a) ∧
-      decFd dn m rf (fe.find? (decI (r1.headD 0))) := by
+      decFd m rf (fe.find? (decI (r1.headD 0))) := by
   obtain ⟨hm1, h0, hr1⟩ := pinAt_call hN.lPinAt (j := 1 + i.toNat) rfl h1
   subst hm1
   have hF := hS.check.pins.full h0

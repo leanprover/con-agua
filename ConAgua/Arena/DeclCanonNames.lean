@@ -105,7 +105,7 @@ theorem canonNamesGo_spec (n : Nat) : ∀ (s₀ : St) (i k : Word),
 end specs5
 
 
-theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
+theorem gnW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (i n : Word) (r : List Word),
     gnW k m i n = some (r, m') → StageR vis fe m a → i.toNat + n.toNat < 2 ^ 64 → PoolSmall m →
     ∃ (hs : List NIdx) (a' : AState),
@@ -207,7 +207,7 @@ def NamesPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m 
   KeepPost vis fe (fun m r (cs : List NIdx) => decRL (fun m => decHL m) 0 m r cs) m m' a r cs ∧
     PoolSmall m' ∧ LitInj a
 
-theorem cnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat}
+theorem cnW_ok {vis : Word} {fe : IFEnv} {n : Nat}
     {m m' : Mem} {a : AState} {k : Word} {r : List Word} (hr : cnW n m k = some (r, m'))
     (hS : StageR vis fe m a) (hP : PoolSmall m) :
     ∃ (hs : List NIdx) (a' : AState), (ConRon.Arena.canonNames k.toNat).run a = .ok (hs, a') ∧

@@ -35,7 +35,7 @@ def ciTag : IConstantInfo → Nat
   | .axiomInfo _ => 0 | .defnInfo .. => 1 | .thmInfo _ => 2 | .indInfo .. => 3
   | .ctorInfo .. => 4 | .recInfo .. => 5
 
-theorem decCI_tag {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_tag {a : Array Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
     ∃ w, a[p]? = some w ∧ w.toNat = ciTag ci := by
   sorry
@@ -50,14 +50,14 @@ theorem natCvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC
   sorry
 
 /-- A word read of the record's tag. -/
-theorem tagWord {m : Mem} {q : Word} {ci : IConstantInfo} {dn : NIdx → Option ConLeche.Name}
+theorem tagWord {m : Mem} {q : Word} {ci : IConstantInfo}
     (hsz : (m.arr64 EREC).size < 2 ^ 64) (h : decCI (erecP m) q.toNat = some ci) :
     (rdW (m.arr64 EREC) q).toNat = ciTag ci := by
   sorry
 
 /-- The record's constant value decodes at `q + 1`. -/
 theorem ciCv_decodes {m : Mem} {q : Word} {ci : IConstantInfo} {cv : IConstantVal}
-    {dn : NIdx → Option ConLeche.Name} (h : decCI (erecP m) q.toNat = some ci)
+    (h : decCI (erecP m) q.toNat = some ci)
     (hcv : ci.toConstantVal = cv) : decCV (erecP m) (q.toNat + 1) = some cv := by
   sorry
 
@@ -81,7 +81,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 /-- The decoded `env_find` answer of `(found, q)`. -/
 def FoundR (dn : NIdx → Option ConLeche.Name) (m : Mem) (found q : Word) (o : Option IConstantInfo) :
-    Prop := decFd dn m [found, q] o
+    Prop := decFd m [found, q] o
 
 /-! ### `nat_ind_ok` -/
 

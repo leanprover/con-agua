@@ -568,7 +568,7 @@ theorem decRL_unpack {k : IdxKind} {m : Mem} {r : List Word} {ids : List (Idx k)
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m := by
   simpa only [decRL, getD0, cnGetD1] using h
 
-theorem lsEqW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
+theorem lsEqW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     {m m' : Mem} {a : AState} {po pl qo ql co cl fuel us vs r : Word} {ps qs cs : List NIdx}
     (h : lsEqW n m po pl qo ql co cl fuel us vs = some (r, m')) (hS : StageR vis fe m a)
     (hC : CtxR m po pl qo ql co cl ps qs cs) (hu : us.toNat < 2 ^ 32) (hv : vs.toNat < 2 ^ 32)

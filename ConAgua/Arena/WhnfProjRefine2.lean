@@ -79,7 +79,7 @@ theorem findProj_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (vis T 
 /-- **`find_proj` as words**: memory unchanged; the twin's lookup is the decoded answer; when the
 flag is set, the record decodes to a table the environment holds at that structure. -/
 theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
-    {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis T i : Word) (hE : EnvR s₀.mem vis fe)
+    {fe : IFEnv} (vis T i : Word) (hE : EnvR s₀.mem vis fe)
     (hsz : (s₀.mem.arr64 EREC).size < 2 ^ 63) {r : List Word} {s' : St}
     (hW : findProjK T i (callW p n "find_table" [vis, T] s₀.mem) = some (r.headD 0, r.tail.headD 0, s'.mem)) :
     s'.mem = s₀.mem ∧ r.headD 0 ≤ 1 ∧

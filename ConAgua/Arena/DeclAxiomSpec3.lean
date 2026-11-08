@@ -63,7 +63,7 @@ theorem counts_words {arr : Array Word} {q a b : Word} {x y : Nat} (hsz : arr.si
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The shape tests, failing**: the twin's shape does not match. -/
-theorem fp_fail {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b : Word}
+theorem fp_fail {arr : Array Word} {q k a b : Word}
     {ci : IConstantInfo} (hsz : arr.size < 2 ^ 64) (hk : k = 3 ∨ k = 4 ∨ k = 5)
     (h : decCI (aread arr) q.toNat = some ci)
     (hf : rdW arr q ≠ k ∨ (k ≠ 3 ∧ (rdW arr (q + 5) ≠ a ∨ rdW arr (q + 6) ≠ b))) :
@@ -74,7 +74,7 @@ theorem fp_fail {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The shape tests, passing**: the twin's shape matches. -/
-theorem fp_pass {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b : Word}
+theorem fp_pass {arr : Array Word} {q k a b : Word}
     {ci : IConstantInfo} (hsz : arr.size < 2 ^ 64) (hk : k = 3 ∨ k = 4 ∨ k = 5)
     (h : decCI (aread arr) q.toNat = some ci) (hkw : rdW arr q = k)
     (hc : ¬ (k ≠ 3 ∧ (rdW arr (q + 5) ≠ a ∨ rdW arr (q + 6) ≠ b))) :
@@ -85,7 +85,7 @@ theorem fp_pass {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A matching shape's constant value decodes where the record does. -/
-theorem fpShape_cv {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {k a b : Word}
+theorem fpShape_cv {arr : Array Word} {q : Nat} {k a b : Word}
     {ci : IConstantInfo} {cv : IConstantVal} (h : decCI (aread arr) q = some ci)
     (hs : fpShape k a b ci = some cv) : decCV (aread arr) (q + 1) = some cv := by
   sorry
@@ -177,7 +177,7 @@ end model
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`find_pinned` against the twin's clause**, at the model level. -/
-theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem fpW_ok {p : Prog} (h : StdProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k ca cb id : Word} {r : List Word}
     (hW : fpW p n m vis nm k ca cb id = some (r, m')) (hS : StageR vis fe m a)
     (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4 ∨ k = 5) (hid : id.toNat < 8) :

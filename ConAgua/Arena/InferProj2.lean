@@ -91,7 +91,7 @@ theorem rdW_ext' {a b : Array Word} (hab : ArrExt (aread a) (aread b)) (hsz : b.
 
 /-- **An inductive record's parameter count and constructors**: `nparams` at `q + 17`, the
 constructor slice at `q + 18`, `q + 19`. -/
-theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+theorem decCI_indNC {a b : Array Word} {q : Word}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) q.toNat = some (.indInfo cv caps))
     (hab : ArrExt (aread a) (aread b)) (hsz : b.size < 2 ^ 63) :
     caps.nparams = (rdW b (q + 17)).toNat ∧ caps.ctors.length = (rdW b (q + 19)).toNat ∧
@@ -100,8 +100,9 @@ theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
 
 /-- **An ok `env_find` run**: the memory unchanged, the twin's `find?` decoded, a found record
 decodes. -/
-theorem envFind_callE {p : Prog}     (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
-    {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv} {w : Word}
+theorem envFind_callE {p : Prog}
+    (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
+    {n : Nat} {m m' : Mem} {vis : Word} {fe : IFEnv} {w : Word}
     (hE : EnvR m vis fe) (hw : HW w) {r : List Word}
     (hc : callE p n "env_find" [w, vis] m = .ok (r, m')) :
     m' = m ∧ fe.find? (decI w) = envFound m (r.headD 0) (r.tail.headD 0) ∧
@@ -117,7 +118,7 @@ def ctorFieldsGt (fe : IFEnv) (c : NIdx) (i : Nat) : Bool :=
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`projIndexedStructLike` at `T = sn` from `env_find(T)`'s record**: the L test `f ≠ 0`, kind
 `3`, one constructor, fewer parameters than arguments; then the constructor test. -/
-theorem pisl_first {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : Mem} {T : NIdx}
+theorem pisl_first {fe : IFEnv} {m : Mem} {T : NIdx}
     {f q tn : Word} {i : Nat} (hsz : (m.arr64 EREC).size < 2 ^ 63)
     (hf : fe.find? T = envFound m f q)
     (hs : f ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) :
@@ -136,7 +137,7 @@ theorem pisl_first {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : Mem} {
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The constructor test from `env_find(c)`'s record**: `f ≠ 0`, kind `4`, `i` below the field
 count at `q + 6`. -/
-theorem ctorFieldsGt_eq {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : NIdx}
+theorem ctorFieldsGt_eq {fe : IFEnv} {m : Mem} {c : NIdx}
     {f q iw : Word} (hsz : (m.arr64 EREC).size < 2 ^ 63)
     (hf : fe.find? c = envFound m f q)
     (hs : f ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) :

@@ -63,7 +63,7 @@ theorem StageC.of_run {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The stage relation at the pushed view `w`, back from the pre-insertion view. -/
-theorem stageR_of_restrict {dn : NIdx → Option ConLeche.Name} {vis w : Word} {fe2 : IFEnv}
+theorem stageR_of_restrict {vis w : Word} {fe2 : IFEnv}
     {m : Mem} {a : AState} (h : StageR vis (fe2.restrictTo vis.toNat) m a)
     (hvb : fe2.visibleBelow = w.toNat) : StageR w fe2 m a := by
   sorry

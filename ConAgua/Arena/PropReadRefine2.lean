@@ -27,20 +27,20 @@ open ConLeche (Name Level PropWhen)
 /-! ## Helpers -/
 
 /-- A decoded definition record: its value is word `q + 5`. -/
-theorem decCI_defnV {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+theorem decCI_defnV {a b : Array Word} {q : Word}
     {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
     (hsz : b.size < 2 ^ 63) (h1 : rdW b q = 1) :
     ∃ cv hint, ci = .defnInfo cv (decE (rdW b (q + 5))) hint ∧ HW (rdW b (q + 5)) := by
   sorry
 
 /-- A decoded record whose kind word is not `1` is not a definition. -/
-theorem decCI_not_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+theorem decCI_not_defn {a b : Array Word} {q : Word}
     {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
     (hsz : b.size < 2 ^ 63) (h1 : rdW b q ≠ 1) : ∀ cv v hint, ci ≠ .defnInfo cv v hint := by
   sorry
 
 /-- A run of `env_find`: the memory unchanged, the twin's lookup decoded. -/
-theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
+theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat}
     {m m' : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR m vis fe) {k : Word} (hk : HW k)
     {r : List Word} (hc : callW p n "env_find" [k, vis] m = some (r, m')) :
     m' = m ∧ fe.find? (decI k) = envFound m (r.headD 0) (r.tail.headD 0) ∧

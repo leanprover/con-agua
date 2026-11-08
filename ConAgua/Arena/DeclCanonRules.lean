@@ -93,7 +93,7 @@ theorem decRules_length {a : Array Word} {o l : Nat} {xs : List IRecRule}
   have := mapM_opt_length _ _ _ h
   simpa using this
 
-theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
+theorem cnCrW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (po pl qo ql co cl fuel o1 l1 o2 l2 x : Word) (ps qs cs : List NIdx)
       (xs ys : List IRecRule),
     cnCrW k m po pl qo ql co cl fuel o1 l1 o2 l2 = some (x, m') → StageR vis fe m a →

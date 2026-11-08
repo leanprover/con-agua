@@ -61,7 +61,7 @@ theorem erecP_tagRead {m : Mem} {j : Nat} {w : Word} (h : erecP m j = some w) :
     (m.arr64 EREC)[j]? = some w := by
   rw [← erecP_getE (erecP_lt h)]; exact h
 
-theorem ctc_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+theorem ctc_ok {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) {x : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) x.toNat = some ci) :
     decCV (erecP m) (x + 1).toNat = some ci.toConstantVal := by

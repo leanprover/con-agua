@@ -193,7 +193,7 @@ structure IstgProg (p : Prog) : Prop where
 theorem stepC_200 : (200 : Word) ∈ stepC := by decide +kernel
 
 /-- **`iw_reset` keeps the loop's relation.** -/
-theorem LoopR.reset {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
+theorem LoopR.reset {pins : List INatOpPinSet} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {ds : Array IDeclaration}
     (h : LoopR pins m a vis fe ds) : LoopR pins (m.set64 CTL 200 0) a vis fe ds := by
   sorry

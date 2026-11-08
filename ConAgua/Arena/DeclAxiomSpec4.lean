@@ -53,7 +53,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A `find_pinned` call's run, against its clause. -/
-theorem fp_call {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k ca cb id : Word} {r : List Word}
     (hc : callW p n "find_pinned" [vis, nm, k, ca, cb, id] m = some (r, m'))
     (hS : StageR vis fe m a) (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4 ∨ k = 5)
@@ -80,7 +80,7 @@ def famT (fe : IFEnv) (cv : IConstantVal) (s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word) 
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`std_ax_family` refines a family of `stdAxiomOk`** at the model level. -/
-theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem famW_ok {p : Prog} (h : StdProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word}
     {r : List Word} {cv : IConstantVal}
     (hW : famW p n m vis q s1 s2 s3 i1 i2 i3 c2 c3 cvid = some (r, m'))
@@ -94,7 +94,7 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A family call's run. -/
-theorem fam_call {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem fam_call {p : Prog} (h : StdProg2 p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word}
     {r : List Word} {cv : IConstantVal}
     (hc : callW p n "std_ax_family" [vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid] m = some (r, m'))

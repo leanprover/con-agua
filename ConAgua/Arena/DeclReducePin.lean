@@ -34,7 +34,7 @@ open L.Ind
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The stage relation at another view of the same environment. -/
-theorem StageR.restrict {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+theorem StageR.restrict {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (h : StageR vis fe m a) (k : Word) :
     StageR k (fe.restrictTo k.toNat) m a := by
   sorry

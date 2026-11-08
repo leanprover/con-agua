@@ -35,7 +35,7 @@ theorem PinsIW.grow {m m' : Mem} {o l : Nat} {ips : List INatOpPinSet} (h : Pins
     (hg : IWGrow m m') : PinsIW m' o l ips := by
   sorry
 
-theorem decCI_defn_value {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_defn_value {a : Array Word} {p : Nat}
     {cv : IConstantVal} {v : EIdx} {hint : ConLeche.ReducibilityHint}
     (h : decCI (aread a) p = some (.defnInfo cv v hint)) :
     a[p]? = some 1 ∧ ∃ w, a[p + 5]? = some w ∧ w.toNat < 2 ^ 32 ∧ v = decI w := by

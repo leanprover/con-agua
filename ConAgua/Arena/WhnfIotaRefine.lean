@@ -303,6 +303,7 @@ structure IotaProg' (p : Prog) : Prop extends IotaProg p where
   spine : SpineProg p
   envrow : p.lookup "env_row_get" = some envRowGetL
   envfind : p.lookup "env_find" = some envFindL
+  baserow : p.lookup "base_row_get" = some baseRowGetL
   ctf : p.lookup "ct_find" = some (memoFindG ctSch)
   ctp : p.lookup "ct_put" = some (memoPutG ctSch)
   rrf : p.lookup "rr_find" = some (memoFindG rrSch)
