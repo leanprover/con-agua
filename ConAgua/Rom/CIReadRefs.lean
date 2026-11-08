@@ -111,9 +111,9 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom) (
 include hL hr hrom
 
 /-- **`rom_ci(id)` refines `romCiT id`.** -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.eqA ConRon.Arena.natA ConRon.Arena.iffA ConRon.Arena.iffIntroA
   ConRon.Arena.iffRecA ConRon.Arena.nonemptyA ConRon.Arena.nonemptyIntroA ConRon.Arena.nonemptyRecA]
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
     RomCiRef p dn vis fe := by
   intro id hid n m a r m' hS hc
@@ -158,10 +158,10 @@ theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
 -/
 
 /-- **`rom_cv(id)` refines `romCvT id`.** -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.propextA ConRon.Arena.choiceA ConRon.Arena.trueCvA ConRon.Arena.trueIntroCvA
   ConRon.Arena.trustCompilerA ConRon.Arena.boolCvA ConRon.Arena.reduceNatCvA ConRon.Arena.reduceBoolCvA
   ConRon.Arena.ofReduceNatA ConRon.Arena.ofReduceBoolA]
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem romCvRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
     RomCvRef p dn vis fe := by
   intro id hid n m a r m' hS hc

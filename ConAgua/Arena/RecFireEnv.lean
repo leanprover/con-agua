@@ -54,5 +54,4 @@ theorem fireCore_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IR
   sorry
 
 
-end
 end L.Arena
