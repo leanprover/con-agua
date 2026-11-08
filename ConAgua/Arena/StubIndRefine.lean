@@ -21,16 +21,13 @@ import all ConAgua.Arena.WhnfEntry
 @[expose] public section
 
 /-!
-# `rec_rule_bits` refines `recRuleBits` (lane `tails`)
+# `ctor_family`'s prefix and the record readers it shares
 
-`StubInd.lean`'s `ctor_family`, `rec_rule_k_of`, `rec_rule_eta_of`, `rec_rule_bits` (lane
-`stubs`), under the inductive stage's relation `StageR` in its `RefAM` shape (for lane
-`indproofs3`'s `IndStubs.recRuleBits_spec`). Every function here reads only: the memory and the
-twin's state are unchanged. The shared prefix `ctor_family(vis, c)` is `iota_ctor_never_prop`'s
-(`WhnfIotaRefine6.lean`): the constructor's record, its type's Π-result's head (`pi_result_f`,
-`get_app_fn_f` at `CWF`, the twin's `coreWalkFuel`), the head's name (`const_name_of`) and its
-record; `CFOut` says what its two words mean for the twin, as a tail `famTail g hh` that both bits
-share.
+`StubInd.lean`'s `ctor_family(vis, c)` (the constructor's record, its type's Π-result's head by
+`pi_result_f`, `get_app_fn_f` at `CWF`, the twin's `coreWalkFuel`, the head's name and its record),
+under the inductive stage's relation `StageR`; `CFOut` says what its two words mean for the twin,
+as a tail `famTail g hh`. (`rec_rule_k_of`, `rec_rule_eta_of`, `rec_rule_bits` left the twin with
+the sync; their refinements went with them.)
 -/
 
 open ConRon.Arena
@@ -94,56 +91,6 @@ theorem cf_spec (p : Prog) (hp : p.lookup "ctor_family" = some ctorFamily) (n : 
     (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ctor_family" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ cfW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  sorry
-
--/
-
-/-- The model of `rec_rule_k_of(vis, c)`. -/
-def kofW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "ctor_family" [vis, c] m) fun r m1 =>
-  if r.tail.tail.headD 0 = 0 then some ([0], m1) else
-  if rdW (m1.arr64 EREC) (r.tail.headD 0 + 11) ≠ 0 ∧ rdW (m1.arr64 EREC) (r.headD 0 + 6) = 0 then
-    some ([1], m1)
-  else some ([0], m1)
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem kof_spec (p : Prog) (hp : p.lookup "rec_rule_k_of" = some recRuleKOfL) (n : Nat)
-    (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rec_rule_k_of" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ kofW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  sorry
-
--/
-
-/-- The model of `rec_rule_eta_of(vis, c)`. -/
-def eofW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "ctor_family" [vis, c] m) fun r m1 =>
-  if r.tail.tail.headD 0 = 0 then some ([0], m1) else
-  if rdW (m1.arr64 EREC) (r.tail.headD 0 + 5) = 0 then some ([0], m1) else
-  if rdW (m1.arr64 EREC) (r.tail.headD 0 + 6) ≠ c then some ([0], m1) else
-  ntBW (callW p n "er_sl_eq" [rdW (m1.arr64 EREC) (r.headD 0 + 2), rdW (m1.arr64 EREC) (r.headD 0 + 3),
-    rdW (m1.arr64 EREC) (r.tail.headD 0 + 2), rdW (m1.arr64 EREC) (r.tail.headD 0 + 3)] m1) fun x m2 =>
-  some ([x.headD 0], m2)
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem eof_spec (p : Prog) (hp : p.lookup "rec_rule_eta_of" = some recRuleEtaOfL) (n : Nat)
-    (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rec_rule_eta_of" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ eofW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  sorry
-
--/
-
-/-- The model of `rec_rule_bits(vis, c)`. -/
-def rrbW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "rec_rule_k_of" [vis, c] m) fun k m1 =>
-  ntBW (callW p n "rec_rule_eta_of" [vis, c] m1) fun e m2 => some ([k.headD 0, e.headD 0], m2)
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem rrb_spec (p : Prog) (hp : p.lookup "rec_rule_bits" = some recRuleBitsL) (n : Nat)
-    (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rec_rule_bits" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ rrbW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
   sorry
 
 -/
@@ -237,25 +184,6 @@ def famBlk (fe : IFEnv) (g : IConstantVal → IIndCaps → Bool) (cv : IConstant
       | _ => pure false
     | _ => pure false
   else pure false
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem recRuleKOf_blk (fe : IFEnv) (ctor : NIdx) :
-    recRuleKOf fe ctor = (match fe.find? ctor with
-      | some (.ctorInfo cvj _ cnF) => famBlk fe (fun _ caps => caps.ruleK && cnF == 0) cvj
-      | _ => pure false) := by
-  sorry
-
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem recRuleEtaOf_blk (fe : IFEnv) (ctor : NIdx) :
-    recRuleEtaOf fe ctor = (match fe.find? ctor with
-      | some (.ctorInfo cvj _ _) => famBlk fe (fun cvT caps =>
-          caps.eta && caps.etaCtor == ctor && cvj.levelParams == cvT.levelParams) cvj
-      | _ => pure false) := by
-  sorry
-
--/
 
 section famRun
 variable (fe : IFEnv) (g : IConstantVal → IIndCaps → Bool) (cv : IConstantVal) (a : AState)
@@ -372,72 +300,8 @@ theorem cf_call (k : Nat) (m m1 : Mem) (a : AState) (hS : StageR vis fe m a) (c 
     m1 = m ∧ CFOut dn fe a m c rf := by
   sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`rec_rule_k_of(vis, c)` refines `recRuleKOf fe c`** (the K bit). -/
-theorem recRuleKOf_ref (c : Word) (hc : H c) :
-    CallRef p "rec_rule_k_of" [vis, c] (StageR vis fe) (recRuleKOf fe (decI c))
-      (KeepPost vis fe decW0B) := by
-  sorry
-
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`rec_rule_eta_of(vis, c)` refines `recRuleEtaOf fe c`** (the η-rescue bit). -/
-theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
-    CallRef p "rec_rule_eta_of" [vis, c] (StageR vis fe) (recRuleEtaOf fe (decI c))
-      (KeepPost vis fe decW0B) := by
-  sorry
-
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`rec_rule_bits(vis, c)` refines `recRuleBits fe rl`** for a rule with constructor `c`: the
-two words are the rule's new bits. -/
-theorem recRuleBits_ref (c : Word) (hc : H c) (rl : IRecRule) (hrl : rl.ctor = decI c) :
-    CallRef p "rec_rule_bits" [vis, c] (StageR vis fe) (recRuleBits fe rl)
-      (KeepPost vis fe (fun _ r (x : IRecRule) =>
-        x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) := by
-  sorry
-
--/
-
 end bits
 
 /-! ## The census theorems (`RefAM`, the shape of `IndStubs.lean`'s contracts) -/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`rec_rule_k_of` refines `recRuleKOf`** under `StageR`. -/
-@[refines ConRon.Arena.recRuleKOf]
-theorem recRuleKOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (c : Word) (hc : H c) :
-    RefAM p "rec_rule_k_of" [vis, c] (StageR vis fe) (recRuleKOf fe (decI c))
-      (KeepPost vis fe decW0B) := by
-  sorry
-
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`rec_rule_eta_of` refines `recRuleEtaOf`** under `StageR`. -/
-@[refines ConRon.Arena.recRuleEtaOf]
-theorem recRuleEtaOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (c : Word) (hc : H c) :
-    RefAM p "rec_rule_eta_of" [vis, c] (StageR vis fe) (recRuleEtaOf fe (decI c))
-      (KeepPost vis fe decW0B) := by
-  sorry
-
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`rec_rule_bits` refines `recRuleBits`** under `StageR`: the shape of
-`IndStubs.recRuleBits_spec`. -/
-@[refines ConRon.Arena.recRuleBits]
-theorem recRuleBits_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (c : Word) (hc : H c) (rl : IRecRule) (hrl : rl.ctor = decI c) :
-    RefAM p "rec_rule_bits" [vis, c] (StageR vis fe) (recRuleBits fe rl)
-      (KeepPost vis fe (fun _ r (x : IRecRule) =>
-        x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) := by
-  sorry
-
--/
 
 end L.Stubs
