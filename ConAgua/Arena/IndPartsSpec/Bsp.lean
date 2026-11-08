@@ -293,12 +293,14 @@ def bbH2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 no nl : Word) :
       (erToIwW (n + 3) m (rdW (m.arr64 EREC) (cvT0 + 1)) (rdW (m.arr64 EREC) (cvT0 + 2)))
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_shape_names_of`. -/
 def bbH1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bbH2 c n nPd cto ctl cso csl rso rsl cvT0 (r.headD 0) (r.tail.headD 0)
       (bmcW (n + 2) m nPd ctl csl (r.headD 0) (r.tail.headD 0) rso rsl cto ctl)
+-/
 
 section arms
 variable (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) (m : Mem) (r : List Word)
@@ -320,9 +322,11 @@ theorem bbH3_some : bbH3 c n nPd cto ctl cso csl rso rsl no nl io il (some (r, m
     bbH4 c n nPd cto ctl cso csl rso rsl no nl io il (r.headD 0) (r.tail.headD 0)
       (bpoW (n + 2) m nPd cto ctl (r.headD 0) (r.tail.headD 0) rso rsl cso csl) := rfl
 -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbH1_some : bbH1 c n nPd cto ctl cso csl rso rsl cvT0 (some (r, m)) =
     bbH2 c n nPd cto ctl cso csl rso rsl cvT0 (r.headD 0) (r.tail.headD 0)
       (bmcW (n + 2) m nPd ctl csl (r.headD 0) (r.tail.headD 0) rso rsl cto ctl) := rfl
+-/
 end arms
 attribute [ind_grind] btK2_some bbH4_fail bbH4_ok bbH3_some bbH1_some
 
