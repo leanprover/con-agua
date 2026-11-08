@@ -75,7 +75,7 @@ theorem OMono.mapM {f : Mem → Nat → Option α} (hf : ∀ j, OMono (fun m => 
     obtain ⟨y, hy, ys, hys, rfl⟩ := h
     exact ⟨y, (hf j).mono m m' y he hy, ys, (OMono.mapM hf js).mono m m' ys he hys, rfl⟩
 
-theorem OMono.iwGet (i : Nat) : OMono (fun m => (iwA m)[i]?) := by
+theorem OMono.iwGet (i : Nat) : OMono (fun m => iwA m i) := by
   sorry
 
 theorem OMono.iwN (i : Nat) : OMono (fun m => iwN m i) := ⟨fun _ _ _ he h => he.1.nat? h⟩
@@ -516,20 +516,20 @@ def truncM (m : Mem) : Mem :=
 
 /-- A word of the cut `IW`: the pool's word below the top. -/
 theorem truncM_iw_get? (m : Mem) (i : Nat) :
-    (iwA (truncM m))[i]? = if i < iwTop m then (iwA m)[i]? else none := by
+    iwA (truncM m) i = if i < iwTop m then iwA m i else none := by
   sorry
 
 theorem truncM_er_get? (m : Mem) (i : Nat) :
-    (erA (truncM m))[i]? = if i < erTop m then (erA m)[i]? else none := by
+    erA (truncM m) i = if i < erTop m then erA m i else none := by
   sorry
 
 /-- A word of the cut pool is a word below the top. -/
-theorem truncM_iw_get {m : Mem} {i : Nat} {v : Word} (h : (iwA (truncM m))[i]? = some v) :
-    i < iwTop m ∧ (iwA m)[i]? = some v := by
+theorem truncM_iw_get {m : Mem} {i : Nat} {v : Word} (h : iwA (truncM m) i = some v) :
+    i < iwTop m ∧ iwA m i = some v := by
   sorry
 
-theorem truncM_er_get {m : Mem} {i : Nat} {v : Word} (h : (erA (truncM m))[i]? = some v) :
-    i < erTop m ∧ (erA m)[i]? = some v := by
+theorem truncM_er_get {m : Mem} {i : Nat} {v : Word} (h : erA (truncM m) i = some v) :
+    i < erTop m ∧ erA m i = some v := by
   sorry
 
 /-- **Below the top, the cut pool reads as the pool.** -/
