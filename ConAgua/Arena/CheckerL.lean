@@ -7,140 +7,134 @@ public import ConAgua.Arena.Reasons
 @[expose] public section
 
 /-!
-# The declaration loop's L functions: `install_fold_go`, `check_pending_go` and their steps
+# The check phase's L functions: the stream index and the jobs
 
-The L code of the twin's two-phase fold (`installFold`, `checkPendingList`); the refinements are in
-`Arena/Checker.lean`. Kept apart from the proofs so that the assembled program
-(`Checker/Prog.lean`) does not wait for them.
+con-ron's driver (#143, con-leche's #480): after the parse, the preparation and the pins, the
+stream's index is built from the records alone (`buildIndex`, `Arena/StreamIndex.lean`): every
+record's constants and tables, read off it with no inference (`declConstants`, `declTables`),
+a name's first entry winning; then every record's check is a **job** at the index's view of its
+position (`recordJob`). The refinements are in `Arena/Checker.lean`; the L code is kept apart
+so that the assembled program (`Checker/Prog.lean`) does not wait for them.
+
+* `build_index(cnt)`: `buildIndex` over the front's records `0‥cnt - 1`: for record `k`,
+  `FIRSTS[k]` is the next counter (`IStreamIndex.firsts`), its constants go to the stream
+  index's rows (`insertConsts`: a row is written only where none is, the counter always moves),
+  its tables to the table rows at position `k` (`insertTables`). The next counter is `CTL[128]`.
+  It runs with the scratch tier off, so every record lands in `EREC`'s tier 0.
+* `record_job(k)`: `recordJob`: the scratch bracket, the view of position `k` (`CTL[134]` its
+  first counter, `CTL[135]` the position), a fresh own layer (the stamp `CTL[133]` bumped,
+  `vis = 0`), the `And` pin, then `check_decl(k, 0)`; the tier-1 records dropped with the bracket.
+* `check_jobs(j, hi)`: the jobs `j‥hi - 1` in order (`checkJobList` over a range).
 -/
 
 namespace L.Arena
 
-/-! ## Phase A's step: `install_step` -/
+open L.Front (DECL)
+open L.Ind (IW)
 
-/-- `is_none(vis, v2, nt)`: `installStep`'s `none` arm (`isNoneT`; `nt` the tables list's length
-before the step). -/
--- con-ron: ConRon/Arena/Checker.lean:157-214 ConRon.Arena.installStep
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installStep` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.installStep]
-def isNoneL : FunDecl := lfn (vis, v2, nt) locals (k, kt, z) {
+/-! ## The stream index -/
+
+/-- `idx_consts(o, n)`: `insertConsts` over the `n` constant records `IW[o‥o + n)`: each name's row
+written if it has none, at the next counter `CTL[128]`, which always moves. -/
+-- con-ron: ConRon/Arena/StreamIndex.lean:45-50 ConRon.Arena.insertConsts
+@[no_expose, l_impl ConRon.Arena.insertConsts]
+def idxConstsL : FunDecl := lfn (o, n) locals (j, q, w, c, p, nx, z) {
+  j := 0;
+  for j < n {
+    q := IW.u64[o + j];
+    w := EREC⦃q + 1⦄;
+    nx := CTL.u64[128];
+    if 4294967294 <= nx { abort };
+    (c, p) := call base_row_get(w);
+    if c == 0 { z := call base_row_set(w, nx + 1, q) };
+    CTL.u64[128] := nx + 1
+  };
+  return 0
+}
+
+/-- `idx_tables(o, n, r)`: `insertTables` over the `n` table records `IW[o‥o + n)` of record
+position `r`: each structure's table row written if it has none. -/
+-- con-ron: ConRon/Arena/StreamIndex.lean:52-57 ConRon.Arena.insertTables
+@[no_expose, l_impl ConRon.Arena.insertTables]
+def idxTablesL : FunDecl := lfn (o, n, r) locals (j, q, w, c, p, z) {
+  j := 0;
+  for j < n {
+    q := IW.u64[o + j];
+    w := EREC⦃q + 2⦄;
+    (c, p) := call tbl_base_get(w);
+    if c == 0 { z := call tbl_base_set(w, r + 1, q) }
+  };
+  return 0
+}
+
+/-- `idx_add(k)`: `IStreamIndex.add` of record `k`: its first counter, its constants, its tables
+(the work pool emptied first: the slices live only for the record). -/
+-- con-ron: ConRon/Arena/StreamIndex.lean:59-68 ConRon.Arena.IStreamIndex.add
+@[no_expose, l_impl ConRon.Arena.IStreamIndex.add]
+def idxAddL : FunDecl := lfn (k) locals (o, n, z) {
+  z := call iw_reset();
+  if len(FIRSTS.u64) <= k { abort };
+  FIRSTS.u64[k] := CTL.u64[128];
+  (o, n) := call decl_constants(k);
+  z := call idx_consts(o, n);
+  (o, n) := call decl_tables(k);
+  z := call idx_tables(o, n, k);
+  return 0
+}
+
+/-- `build_index(cnt)`: `buildIndex` over records `0‥cnt - 1`, from the empty index (zero rows,
+`CTL[128] = 0`). -/
+-- con-ron: ConRon/Arena/StreamIndex.lean:70-79 ConRon.Arena.buildIndexGo
+-- con-ron: ConRon/Arena/StreamIndex.lean:81-84 ConRon.Arena.buildIndex
+@[no_expose, l_impl ConRon.Arena.buildIndexGo ConRon.Arena.buildIndex]
+def buildIndexL : FunDecl := lfn (cnt) locals (k, z) {
   k := 0;
-  if vis <= v2 { k := v2 - vis };
-  kt := call tbl_grown(nt);
-  z := call promote_new(k, kt, v2, 1);
-  z := call scratch_drop();
+  for k < cnt {
+    z := call idx_add(k)
+  };
   return 0
 }
 
-/-- `pend_push(g, i, v)`: append the pending check `(g, i, v)` to `PEND`. -/
--- con-ron: none — appends to the `PEND` array (the twin's `Array.push` on its pending list)
-@[no_expose] def pendPushL : FunDecl := lfn (g, i, v) locals (c) {
-  c := CTL.u64[130];
-  if 4611686018427387904 <= c { abort };
-  PEND.u64[3 * c] := g;
-  PEND.u64[3 * c + 1] := i;
-  PEND.u64[3 * c + 2] := v;
-  CTL.u64[130] := c + 1;
-  return 0
-}
+/-! ## The jobs -/
 
-/-- `is_some(i, vis, v2, nt, g)`: `installStep`'s `some` arm (`isSomeT`); the pending check is
-written right after `promote_vg` (where its record is known to decode), the twin pushes it at
-the end (a value, so the order is invisible). -/
--- con-ron: ConRon/Arena/Checker.lean:157-214 ConRon.Arena.installStep
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installStep` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.installStep]
-def isSomeL : FunDecl := lfn (i, vis, v2, nt, g) locals (k, kt, z, g2) {
-  k := 0;
-  if vis <= v2 { k := v2 - vis };
-  kt := call tbl_grown(nt);
-  g2 := call promote_vg(g, v2);
-  z := call pend_push(g2, i, vis);
-  z := call promote_new(k, kt, v2, 0);
-  z := call scratch_drop();
-  return 0
-}
-
-/-- `install_step(i, vis)`: `installStep` (the tables list's length read first, the bracket,
-`installStepGo`, then one of the arms). -/
--- con-ron: ConRon/Arena/Checker.lean:157-214 ConRon.Arena.installStep
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installStep` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.installStep]
-def installStepL : FunDecl := lfn (i, vis) locals (nt, v2, f, g, z) {
-  nt := call tbl_cnt();
-  z := call flush_caches();
+/-- `record_job(k)`: `recordJob` of record `k` at the view of position `k`: the bracket, the view
+(`IStreamIndex.view`), a fresh own layer, `recordCheck` (the `And` pin, then `check_decl` at
+`vis = 0`), the bracket closed (the job's own records, `EREC`'s tier 1, with it). -/
+-- con-ron: ConRon/Arena/StreamIndex.lean:86-90 ConRon.Arena.IStreamIndex.view
+-- con-ron: ConRon/Arena/StreamIndex.lean:92-101 ConRon.Arena.recordCheck
+-- con-ron: ConRon/Arena/StreamIndex.lean:103-111 ConRon.Arena.recordJob
+@[no_expose, l_impl ConRon.Arena.IStreamIndex.view ConRon.Arena.recordCheck ConRon.Arena.recordJob]
+def recordJobL : FunDecl := lfn (k) locals (z, st, ok, v) {
   z := call scratch_enter();
-  (v2, f, g) := call install_step_go(i, vis);
-  if f == 0 { z := call is_none(vis, v2, nt) } else { z := call is_some(i, vis, v2, nt, g) };
-  return v2
-}
-
-/-- `install_decl_step(i, vis)`: `installDeclStep` (the `And` pin, then the step; a rejected pin
-or a failing step is an `abort`). -/
--- con-ron: ConRon/Arena/Checker.lean:216-243 ConRon.Arena.installDeclStep
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installDeclStep` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.installDeclStep]
-def installDeclStepL : FunDecl := lfn (i, vis) locals (ok, v) {
-  ok := call and_pin_ok(i);
+  CTL.u64[130] := 0;
+  st := CTL.u64[133];
+  if 4294967294 <= st { abort };
+  CTL.u64[133] := st + 1;
+  if len(FIRSTS.u64) <= k { abort };
+  CTL.u64[134] := FIRSTS.u64[k];
+  CTL.u64[135] := k;
+  ok := call and_pin_ok(k);
   if ok == 0 { fail L.Arena.R_AND_MUST_BE };
-  v := call install_step(i, vis);
-  return v
-}
-
-/-- `install_fold_go(i, cnt, vis)`: `installFold` over records `i`‥`cnt - 1`. -/
--- con-ron: ConRon/Arena/Checker.lean:245-256 ConRon.Arena.installFold
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installFold` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.installFold]
-def installFoldGoL : FunDecl := lfn (i, cnt, vis) locals (r) {
-  if i == cnt { return vis };
-  r := call install_fold_next(i, cnt, vis);
-  return r
-}
-
-/-- `install_fold_next(i, cnt, vis)`: one step of `installFold` (`i < cnt`), then the rest. -/
--- con-ron: ConRon/Arena/Checker.lean:245-256 ConRon.Arena.installFold
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installFold` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.installFold]
-def installFoldNextL : FunDecl := lfn (i, cnt, vis) locals (v, r) {
-  v := call install_decl_step(i, vis);
-  r := call install_fold_go(i + 1, cnt, v);
-  return r
-}
-
-/-- `check_pending(j, vis)`: `checkPending` on pending check `j`, the environment seen at its
-recorded view. -/
--- con-ron: ConRon/Arena/Checker.lean:258-274 ConRon.Arena.checkPending
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkPending` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkPending]
-def checkPendingL : FunDecl := lfn (j, vis) locals (g, v, z) {
-  if 4611686018427387904 <= j { abort };
-  z := call scratch_enter();
-  g := PEND.u64[3 * j];
-  v := PEND.u64[3 * j + 2];
-  z := call check_value_group(v, g);
+  v := call check_decl(k, 0);
   z := call scratch_drop();
+  CTL.u64[130] := 0;
   return 0
 }
 
-/-- `check_pending_go(j, cnt, vis)`: `checkPendingList` over pending checks `j`‥`cnt - 1`. -/
--- con-ron: ConRon/Arena/Checker.lean:276-285 ConRon.Arena.checkPendingList
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkPendingList` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkPendingList]
-def checkPendingGoL : FunDecl := lfn (j, cnt, vis) locals (z) {
-  if j == cnt { return 0 };
-  z := call check_pending_next(j, cnt, vis);
+/-- `check_jobs(j, hi)`: the jobs `j‥hi - 1`, in order (`checkJobList` over that range, from the
+worker's state). -/
+-- con-ron: ConRon/Arena/Checker.lean:87-97 ConRon.Arena.checkJobList
+@[no_expose, l_impl ConRon.Arena.checkJobList]
+def checkJobsL : FunDecl := lfn (j, hi) locals (z) {
+  for j < hi {
+    z := call record_job(j)
+  };
   return 0
 }
 
-/-- `check_pending_next(j, cnt, vis)`: one pending check (`j < cnt`), then the rest. -/
--- con-ron: ConRon/Arena/Checker.lean:276-285 ConRon.Arena.checkPendingList
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkPendingList` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkPendingList]
-def checkPendingNextL : FunDecl := lfn (j, cnt, vis) locals (z) {
-  if 4611686018427387904 <= j { abort };
-  z := call check_pending(j, vis);
-  z := call check_pending_go(j + 1, cnt, vis);
-  return 0
-}
+/-- The check phase's functions. -/
+def checkerProgL : Prog :=
+  [("idx_consts", idxConstsL), ("idx_tables", idxTablesL), ("idx_add", idxAddL),
+   ("build_index", buildIndexL), ("record_job", recordJobL), ("check_jobs", checkJobsL)]
 
 end L.Arena

@@ -103,15 +103,17 @@ the checker cannot work with declines; any larger one is fine). -/
 
 `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
 region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
-`check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
-`Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
+`check_a(1)`: the stages, the stream index and `par_compact` (the frozen buffer in `OUT`,
+`Arena/Freeze.lean`), returning `2^63 + k` for `k` records (jobs); `3` (the sequential driver's
 entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
-`ca_check_seq`, entry 2) is `check_b`: the pending groups `PLO‥PHI-1` over the frozen arrays. -/
+`ca_check_seq`, entry 2) is `check_b`: the jobs `PLO‥PHI-1` over the frozen arrays. -/
 
-/-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-`c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
+/-- `check_a(c)`: `check`'s stages, then the stream index and the frozen buffer (`c ≠ 0`: header
+and images; `c = 0`: the header only); returns `2^63 + k` for the `k` records (`1` if a line did
+not scan). -/
 -- con-ron: ConRon/Arena/Main.lean:137-169 ConRon.Arena.runPipelineHead
-@[no_expose] def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+-- con-ron: ConRon/Arena/Checker.lean:99-110 ConRon.Arena.checkStream
+@[no_expose] def checkAL : FunDecl := lfn (c) locals (r, z, cnt) {
   z := call cap_check();
   z := call pb_check();
   z := call presize_tables();
@@ -122,27 +124,25 @@ entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check
   z := call prepare_prelude();
   z := call intern_all_pins();
   cnt := L.Front.DECL.u64[0];
-  v := call install_fold_go(0, cnt, 0);
-  z := call par_compact(v, c);
-  return 9223372036854775808 + CTL.u64[130]
+  z := call build_index(cnt);
+  z := call par_compact(c);
+  return 9223372036854775808 + cnt
 }
 
 /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
-pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
-B's loop (`check_pending_go`); returns `ACCEPT`. -/
+jobs `PLO‥PHI-1` (`PHI` at most the number of records), in order, from the worker's state, as
+the pool's worker does (`checkJobList`); returns `ACCEPT`. -/
 -- con-ron: ConRon/Arena/Checker.lean:64-71 ConRon.Arena.AState.worker
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.PooledAccepts`, `ConRon.Arena.buildIndex`, `ConRon.Arena.checkJobList` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Pooled.lean:33-45 ConRon.Arena.PooledAccepts
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.PooledAccepts` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
     n := len(CTLF.u64);
     copy!(CTL.u64, 0, CTLF.u64, 0, n);
     INIT := 1
   };
-  if CTL.u64[130] < PHI { abort };
+  if L.Front.DECL.u64[0] < PHI { abort };
   if PHI < PLO { abort };
-  z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
+  z := call check_jobs(PLO, PHI);
   return 71757147230292
 }
 
@@ -181,38 +181,6 @@ Lane `induct`'s callers pass the walk fuel first (`abstract1_fast(fuel, e, d, k)
 @[no_expose] def inst1A : FunDecl := lfn (e, v, d) locals (r) {
   r := call inst_entry(e, v, d);
   return r
-}
-
-/-! ## `basis_pin_hit(off, len)` -/
-
-/-- `basis_pin_hit(off, len)` → `(ok, kind)`: `basisPinHit block` for the block `check_decl` built
-(`ind_block_to_erec`: an `EREC` slice of `EREC` constant records) — the kinds `eqK`, `natK`,
-`emptyK`, `falseK` (`0`‥`3`) in order, each pinned block interned first (`rom_basis_decls(kind)`, an
-`IW` slice); the first kind whose member names equal the block's (the name pre-filter; a constant
-record's name is its word `1`, `decCI`) decides by `canon_eq_list` (over `IW` slices: the block is
-copied there, `er_to_iw`); no such kind is `(0, 0)`. -/
--- con-ron: ConRon/Arena/Basis.lean:58-74 ConRon.Arena.basisPinHitGo
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.basisPinHitGo` is gone upstream; re-check the L code and its proofs, then delete this line
--- con-ron: ConRon/Arena/Basis.lean:76-84 ConRon.Arena.basisPinHit
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.basisPinHit` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.basisPinHit]
-def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
-  k := 0;
-  while k < 4 {
-    (o, l) := call rom_basis_decls(k);
-    if l == bl {
-      j := 0;
-      for j < l { if EREC⦃IW.u64[o + j] + 1⦄ != EREC⦃EREC⦃bo + j⦄ + 1⦄ { break } };
-      if j == l {
-        (q, ql) := call er_to_iw(bo, bl);
-        e := call canon_eq_list(q, ql, o, l);
-        if e != 0 { return (1, k) };
-        return (0, 0)
-      }
-    };
-    k += 1
-  };
-  return (0, 0)
 }
 
 /-! ## `ind_params_ok(nP, off, len)` -/
@@ -270,7 +238,6 @@ def entryProg : Prog :=
    ("intern_all_pins", L.Rom.internAllPinsPB),
    ("abstract1_fast", abstract1FastA), ("instantiate1_fast", instantiate1FastA),
    ("inst1", inst1A),
-   ("basis_pin_hit", basisPinHitL),
    ("ind_params_ok", indParamsOkL)]
 
 end L.Checker

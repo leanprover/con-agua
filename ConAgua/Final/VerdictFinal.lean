@@ -33,7 +33,7 @@ open L L.Compiler L.Checker L.Arena ConRon.Arena
 the entries' verdict claims, gives `TwinVerdict [b]` at that class. -/
 theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k : Word)
     (hV : SeqVerdicts checkerProg)
-    (h : DrvErr checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 132 b pb k) (hk : k &&& 3 ≠ 0) :
+    (h : DrvErr checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 136 b pb k) (hk : k &&& 3 ≠ 0) :
     TwinVerdict [b] (k &&& 3) := by
   obtain ⟨hb, hpb, h⟩ := h
   have hin : InputsOK b pb (abiSz checkerTab) := ⟨h64, hb, hpb, fun s => by
@@ -45,7 +45,7 @@ theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k :
   · subst hc
     rw [getD_zero_headD] at hge he
     refine hV.entry2 b pb _ hin abiFuel hN rs₁ m₁ h₁ hge abiFuel (by simp [abiFuel])
-      (seqMem m₁ MODE PLO PHI OUT HDRF CTLF 132 0 (rs₁.headD 0 - 9223372036854775808))
+      (seqMem m₁ MODE PLO PHI OUT HDRF CTLF 136 0 (rs₁.headD 0 - 9223372036854775808))
       ?_ rfl rfl rfl ?_ ?_ e he hk
     · intro a ha
       rw [seqMem_arr64]
@@ -76,7 +76,7 @@ theorem checkerFile_verdict_of [Host]
       dm (label abiStartL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, _, h⟩ => ⟨hpc, fun hV h2 hk => drvErr_twin b pb h64 _ hV (h h2) hk⟩)
     (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
-      HDRF CTLF 132 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
+      HDRF CTLF 136 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
       (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
 
 /-- info: 'ConAgua.Final.checkerFile_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/

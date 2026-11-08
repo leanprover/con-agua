@@ -6,61 +6,56 @@ meta import ConAgua.Arena.IndIface
 @[expose] public section
 
 /-!
-# The uniform inductive install, at k members (lane `induct`, module `IndInstall`)
+# The inductive block's check, at k members (lane `induct`, module `IndInstall`)
 
 The L translation of `vendor/con-ron/ConRon/Arena/Inductives/BlockInstall.lean` and
-`.../BlockTail.lean`: the capability record per member, the formers' stage (telescopes, the two
-agreements, the cons), the constructors' stage, the positivity check on the stored constructors,
-the index sorts and the constructors' cons (`BlockInstall.lean`), then one pass over formers,
-constructors and classes, the recursor stage, the projection tables and the entry `check_block`
-(`BlockTail.lean`). No proofs this round: the translation is split, one L function per twin
-function (more for the bigger ones), each tagged `@[l_impl …]`.
-
-**One pointer serves as both a `BlockShape` and a `BlockParts`.** `BlockParts` (`decBP`) is a
-one-field wrapper around `BlockShape` (`decBS`) at the SAME pool offset (`BlockParts.complete`
-is the identity on that pointer), so every `p : BlockParts` argument below is just the
-`BlockShape` pointer, and `BlockParts.complete _ p₁` is simply `p₁`.
+`.../BlockTail.lean`: the capability record per member, official's `is_rec`, the formers' stage
+(telescopes, the two agreements, the cons as declared), the constructors' stage, the positivity
+check on the stored constructors, the index sorts and the constructors' cons
+(`BlockInstall.lean`), then the members reduced to their telescopes (`reduceMember(s)`), one pass
+over formers, constructors and classes, the generated recursors, the stream's recursors and K
+flags against them (at the generated family pushed in place and popped, `consBlockRecsTemp`), the
+projection tables' checks, and the block's install pushed onto the constructors' environment
+(`checkBlock`, `BlockTail.lean`). One L function per twin function (more for the bigger ones),
+each tagged `@[l_impl …]`.
 
 **Foreign callees** (owned by other modules, named by the project's naming rule; each is a
-`stub` here, closing this module's program on its own):
+`stub` in `indInstallForeign`, closing this module's program on its own):
 
-* `IndSum`: `check_sum_tele(vis, cv, n, cvTa0) → (cvTa, s)`; `check_sum_ctors(vis0, vis, T,
-  lps.off, lps.len, nP, nIdx, resSort, isProp, large, cvTa, ctors.off, ctors.len) → (cs.off,
-  cs.len, ss.off, ss.len)`; `cons_sum_ctors(nP, ctors.off, ctors.len, vis) → vis'`;
-  `check_struct_field_sorts_i(vis, isProp, large, s, nP, fvs.off, fvs.len, idx.off, idx.len, j) →
-  (off, len)`; `param_levels(lps.off, lps.len) → lvls`; `struct_proj_guards(cty, nP, nF,
-  sorts.off, sorts.len) → (off, len)`; `check_struct_proj_table(T, C, lps.off, lps.len, nP, nF,
-  resSort, guards.off, guards.len, off, cvCa, vis) → vis'`.
-* `IndPos`/`IndPos2`: `mentions_any_const(names.off, names.len, e) → bool`; `nest_holes(vis,
-  ctx) → (ok, off, len)`; `nest_ctx_hi_at(ctx, nf) → hi`; `nest_uniform(ctx, ctorsAs.off,
-  ctorsAs.len)`; `nest_root(vis, ctx, holes.off, holes.len, ctorsAs.off, ctorsAs.len, ns, outs.off,
-  outs.len) → (outs'.off, outs'.len, ns')`; `nest_seeds(vis, ctx, seeds.off, seeds.len, ns) →
-  ns'`.
-* `IndParts`: `block_shape_with_sort(p, s) → p'`; `block_shape_member_names(p) → (off, len)`;
-  `block_shape_lps(p) → (off, len)`; `block_shape_n_idxs(p) → (off, len)`;
-  `block_shape_all_ctors(p) → (off, len)` (a list of `[cv, nF]` pointers).
-* `RecGen`: `check_block_classes(vis, p, params.off, params.len, ctorsAs.off, ctorsAs.len) →
-  (rd, ms.off, ms.len)`; `class_seeds(ctx, holes.off, holes.len, ms.off, ms.len) → (off, len)`;
-  `gen_rec_check(vis, p, nested, params.off, params.len, tbl.off, tbl.len, rd, ms.off, ms.len,
-  block.off, block.len, cvTas.off, cvTas.len) → (fe', out.off, out.len)` (`checkBlockRec`'s own
-  parameter order has `block` before `cvTas`; `genRecCheck`'s has `ms`, `cvTas`, `block` — the
-  wrapper reorders).
-* `RecCheck`: `block_nested_bit(p, kinds.off, kinds.len) → nested`; `cons_block_recs_tf(vis2, p,
-  m, out.off, out.len, vis) → vis'`.
-
-`block_large_elim_allowed` (also IndParts) is not called by anything in this module.
+* `IndSum`: `check_sum_tele(n, cvTa0) → (cvTa, s)`; `check_sum_ctors(vis0, vis, T, lps.off,
+  lps.len, nP, nIdx, resSort, isProp, large, cvTa, ctors.off, ctors.len)`; `cons_sum_ctors(nP,
+  ctors.off, ctors.len, vis) → vis'`;
+  `check_struct_field_sorts_i(vis, isProp, large, s, nP, fvs.off, fvs.len, idx.off, idx.len, j)`;
+  `param_levels(lps.off, lps.len) → lvls`; `check_struct_proj_table(T, lps.off, lps.len, nP, nF,
+  cvCa, vis)`.
+* `IndPos`/`IndPos2`: `mentions_any_const`, `nest_holes(ctx) → (ok, off, len)`, `nest_ctx_hi_at`,
+  `nest_uniform`, `nest_root`, `nest_seeds`, `reduced_former(vis, cv, n) → cv'`.
+* `IndParts`: `block_shape_with_sort(p, s)`, `block_shape_with_members(p, ms.off, ms.len)`,
+  `block_shape_member_names`, `block_shape_lps`, `block_shape_n_idxs`, `block_shape_formers`,
+  `block_shape_declared`, `block_shape_member_ctors` (a list of pointers to the members' ctor-slice
+  headers), `block_shape_all_ctors`.
+* `RecGen`: `check_block_classes(vis, p, params.off, params.len) → (rd, ms.off, ms.len)`,
+  `class_seeds`, `gen_rec_check(vis, p, nested, params.off, params.len, tbl.off, tbl.len, rd,
+  ms.off, ms.len, block.off, block.len) → (vis', out.off, out.len)`, `gen_rec_check_pop_all`.
+* `RecCheck`: `block_nested_bit`, `block_rec_infos_tf(p, m, out.off, out.len) → (infos.off,
+  infos.len)`.
+* `IndStream`: `stream_k_check(p, recs.off, recs.len, out.off, out.len)`,
+  `stream_recs_check(vis, recs.off, recs.len, out.off, out.len)`.
+* `IndDeclConsts`: `block_recs(p, recs.off, recs.len)`, `block_tables(p, ms.off, ms.len)`,
+  `ifenv_push_delta(vis, L.off, L.len, Q.off, Q.len) → vis'`.
+* the core tier: `former_def_headed(ty)` (`Core.lean`'s `formerDefHeaded`), the declarations':
+  `check_constant_val(vis, cv, allowOp)`.
 -/
 
 namespace L.Ind
 
 open L.Arena
 
-/-! ## `blockCapsAt`: one member's `IIndCaps`, built in `EREC` (`decCaps`, 15 words) -/
+/-! ## `blockCapsAt`: one member's `IIndCaps` (`decCaps`, 15 words) -/
 
 /-- `block_caps_ctor_names(o, l)`: the ctor-name list of a `(cv, nF)` pointer slice `(o, l)`, built
 fresh in `IW`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:46-80 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsCtorNames : FunDecl := lfn (o, l) locals (q, u) {
   q := call iw_alloc(l);
@@ -71,7 +66,6 @@ def blockCapsCtorNames : FunDecl := lfn (o, l) locals (q, u) {
 /-- `block_caps_at_er_copy(o, l)`: an `IW` slice copied into fresh `EREC` words (the reverse of
 `er_to_iw`), for `IIndCaps`'s `all`/`ctors` fields (both EREC slices). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:46-80 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsAtErCopy : FunDecl := lfn (o, l) locals (q, u) {
   q := call erec_alloc(l);
@@ -81,7 +75,6 @@ def blockCapsAtErCopy : FunDecl := lfn (o, l) locals (q, u) {
 
 /-- `block_caps_at_er_copy_go(d, s, l)`: `EREC[d + j] := IW[s + j]` for `j < l`, recursively. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:46-80 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsAtErCopyGo : FunDecl := lfn (d, s, l) locals (u, ez) {
   if l == 0 { return 0 };
@@ -91,37 +84,32 @@ def blockCapsAtErCopyGo : FunDecl := lfn (d, s, l) locals (u, ez) {
 }
 
 /-- `block_caps_at(p, mi, is_rec)`: member `mi`'s `IIndCaps`, a fresh 15-word `IW` record (the
-`EREC` layout of `decCaps`; `cons_block_inds` copies it into the former's record). At exactly one
-constructor `c`: `eta`, `etaCtor`, `etaParams`, `etaFields`, `unitlike`, `unitParams`, `ruleK`
-(AENEAS_FINDINGS F18); else (no member, or another ctor count) their defaults `0`. At every
-member the result sort's zero-ness (`lv_zero_caps`, three words), `all` (the member names, copied
-into `EREC`), `nparams`, `ctors` (the member's ctor names, copied into `EREC`). Every field is
-computed first, the record written last (three consecutive `rec5`s) (lane `indproofs2`: round 2 wrote the record across
-calls, below the record pool's top, which the stage relation cannot follow; and `ruleK` took the
-`isProp` word unnormalised, wrong for a word other than `0`/`1`). -/
+`EREC` layout of `decCaps`; `ind_info_rec` copies it into the former's record). At exactly one
+constructor `c`: `eta`, `etaCtor`, `etaParams`, `etaFields`, `unitlike`, `unitParams`
+(AENEAS_FINDINGS F18); else their defaults `0`. At every member `all` (the member names, copied
+into `EREC`), `nparams`, `nIdx` (`0` past the members) and the member's ctor names (copied into
+`EREC`). Pure in the twin: no level is read. Every field is computed first, the record written
+last (three consecutive `rec5`s; words `7`‥`9`, the removed `sortZ`, are `0`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:46-80 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsAt : FunDecl := lfn (p, mi, isRec) locals
-    (coff, clen, one, ms, w0, w1, w2, w3, w4, w6, z0, z1, z2, caps) {
-  (coff, clen, one, ms) := call block_caps_head(p, mi);
+    (coff, clen, one, ms, nIdx, w0, w1, w2, w3, w4, caps) {
+  (coff, clen, one, ms, nIdx) := call block_caps_head(p, mi);
   if one == 1 {
-    (w0, w1, w2, w3, w4, w6) := call block_caps_one(p, ms, isRec)
+    (w0, w1, w2, w3, w4) := call block_caps_one(p, ms, isRec)
   } else {
-    w0 := 0; w1 := 0; w2 := 0; w3 := 0; w4 := 0; w6 := 0
+    w0 := 0; w1 := 0; w2 := 0; w3 := 0; w4 := 0
   };
-  (z0, z1, z2) := call lv_zero_caps(IW.u64[p + 6]);
-  caps := call block_caps_fin(p, coff, clen, w0, w1, w2, w3, w4, w6, z0, z1, z2);
+  caps := call block_caps_fin(p, coff, clen, w0, w1, w2, w3, w4, nIdx);
   return caps
 }
 
-/-- `block_caps_fin(p, coff, clen, w0, w1, w2, w3, w4, w6, z0, z1, z2)`: `blockCapsAt`'s record —
-the member names and the ctor names copied into `EREC`, then the 15 words (three consecutive
-`rec5`s at the pool top). -/
+/-- `block_caps_fin(p, coff, clen, w0, w1, w2, w3, w4, nIdx)`: `blockCapsAt`'s record — the member
+names and the ctor names copied into `EREC`, then the 15 words (three consecutive `rec5`s at the
+pool top). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:46-80 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
-def blockCapsFin : FunDecl := lfn (p, coff, clen, w0, w1, w2, w3, w4, w6, z0, z1, z2) locals
+def blockCapsFin : FunDecl := lfn (p, coff, clen, w0, w1, w2, w3, w4, nIdx) locals
     (namesO, namesL, allQ, allL, ctNO, ctNL, ctQ, ctL, np, caps, u) {
   (namesO, namesL) := call block_shape_member_names(p);
   (allQ, allL) := call block_caps_at_er_copy(namesO, namesL);
@@ -129,38 +117,35 @@ def blockCapsFin : FunDecl := lfn (p, coff, clen, w0, w1, w2, w3, w4, w6, z0, z1
   (ctQ, ctL) := call block_caps_at_er_copy(ctNO, ctNL);
   np := IW.u64[p + 4];
   caps := call rec5(w0, w1, w2, w3, w4);
-  u := call rec5(w2, w6, z0, z1, z2);
+  u := call rec5(w2, nIdx, 0, 0, 0);
   u := call rec5(allQ, allL, np, ctQ, ctL);
   return caps
 }
 
 /-- `block_caps_head(p, mi)`: member `mi`'s constructor slice `(coff, clen)` (`(0, 0)` past the
-members; `(0, 0)` also at no constructor, whatever its offset word), whether it has exactly one
-constructor, and its record pointer. -/
+members, and at no constructor), whether it has exactly one constructor, its record pointer, and
+its index count (`0` past the members: the default member's). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:46-80 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsHead : FunDecl := lfn (p, mi) locals (ms) {
-  if IW.u64[p + 1] <= mi { return (0, 0, 0, 0) };
+  if IW.u64[p + 1] <= mi { return (0, 0, 0, 0, 0) };
   ms := IW.u64[IW.u64[p] + mi];
-  if IW.u64[ms + 3] == 0 { return (0, 0, 0, ms) };
-  return (IW.u64[ms + 2], IW.u64[ms + 3], u64(IW.u64[ms + 3] == 1), ms)
+  if IW.u64[ms + 3] == 0 { return (0, 0, 0, ms, IW.u64[ms + 1]) };
+  return (IW.u64[ms + 2], IW.u64[ms + 3], u64(IW.u64[ms + 3] == 1), ms, IW.u64[ms + 1])
 }
 
-/-- `block_caps_one(p, ms, is_rec)`: the fields of exactly one constructor `c` — `eta`,
-`etaCtor`, `etaParams` (= `unitParams`), `etaFields`, `unitlike`, `ruleK` (AENEAS_FINDINGS F18;
-`isProp` normalised to `0`/`1`). -/
+/-- `block_caps_one(p, ms, is_rec)`: the fields of exactly one constructor `c` — `eta` (index-free,
+the block not recursive: official's `is_non_rec_structure`), `etaCtor`, `etaParams` (=
+`unitParams`), `etaFields`, `unitlike` (AENEAS_FINDINGS F18). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:46-80 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
-def blockCapsOne : FunDecl := lfn (p, ms, isRec) locals (nIdx, c, nF, isP) {
+def blockCapsOne : FunDecl := lfn (p, ms, isRec) locals (nIdx, c, nF) {
   nIdx := IW.u64[ms + 1]; c := IW.u64[IW.u64[ms + 2]]; nF := IW.u64[c + 1];
-  isP := u64(IW.u64[p + 8] != 0);
-  return (u64(nIdx == 0) & u64(isP == 0) & u64(isRec == 0), EREC⦃IW.u64[c]⦄, IW.u64[p + 4], nF,
-    u64(nIdx == 0) & u64(nF == 0) & u64(isRec == 0), u64(IW.u64[p + 1] == 1) & u64(nF == 0) & isP)
+  return (u64(nIdx == 0) & u64(isRec == 0), EREC⦃IW.u64[c]⦄, IW.u64[p + 4], nF,
+    u64(nIdx == 0) & u64(nF == 0) & u64(isRec == 0))
 }
 
-/-! ## `piDomsMentionAny`, `blockRawRec`: official's `is_rec` -/
+/-! ## `piDomsMentionAny`, `blockIsRec`: official's `is_rec` -/
 
 /-- `pi_doms_mention_any(names.off, names.len, fuel, e)`: does some binder domain of the
 syntactic `∀`-telescope of `e` mention one of `names`? Fueled (recurses on a handle). -/
@@ -176,58 +161,53 @@ def piDomsMentionAny : FunDecl := lfn (namesO, namesL, fuel, e) locals (g, x, y,
   return r
 }
 
-/-- `block_raw_rec_member(names.off, names.len, ms)`: does some DECLARED constructor type of
-member `ms` mention one of `names` in some binder domain of its telescope? -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:112-118 ConRon.Arena.blockRawRec
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockRawRec` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockRawRec]
-def blockRawRecMember : FunDecl := lfn (namesO, namesL, coff, clen) locals (b, r) {
+/-- `block_is_rec_member(names.off, names.len, coff, clen)`: does some DECLARED constructor type of
+the member (its ctor slice) mention one of `names` in some binder domain of its telescope? -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:96-102 ConRon.Arena.blockIsRec
+@[no_expose, l_impl ConRon.Arena.blockIsRec]
+def blockIsRecMember : FunDecl := lfn (namesO, namesL, coff, clen) locals (b, r) {
   if clen == 0 { return 0 };
   b := call pi_doms_mention_any(namesO, namesL, ⟪CWF⟫, EREC⦃IW.u64[IW.u64[coff]] + 3⦄);
   if b != 0 { return 1 };
-  r := call block_raw_rec_member(namesO, namesL, coff + 1, clen - 1);
+  r := call block_is_rec_member(namesO, namesL, coff + 1, clen - 1);
   return r
 }
 
-/-- `block_raw_rec_go(names.off, names.len, moff, mlen)`: the members' `anyM`, in order
-(recursive, lane `indproofs2`: was a loop). -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:112-118 ConRon.Arena.blockRawRec
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockRawRec` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockRawRec]
-def blockRawRecGo : FunDecl := lfn (namesO, namesL, moff, mlen) locals (ms, b, r) {
+/-- `block_is_rec_go(names.off, names.len, moff, mlen)`: the members' `anyM`, in order. -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:96-102 ConRon.Arena.blockIsRec
+@[no_expose, l_impl ConRon.Arena.blockIsRec]
+def blockIsRecGo : FunDecl := lfn (namesO, namesL, moff, mlen) locals (ms, b, r) {
   if mlen == 0 { return 0 };
   ms := IW.u64[moff];
-  b := call block_raw_rec_member(namesO, namesL, IW.u64[ms + 2], IW.u64[ms + 3]);
+  b := call block_is_rec_member(namesO, namesL, IW.u64[ms + 2], IW.u64[ms + 3]);
   if b != 0 { return 1 };
-  r := call block_raw_rec_go(namesO, namesL, moff + 1, mlen - 1);
+  r := call block_is_rec_go(namesO, namesL, moff + 1, mlen - 1);
   return r
 }
 
-/-- `block_raw_rec(p)`: official's `is_rec` — some member occurs in some binder domain of some
+/-- `block_is_rec(p)`: official's `is_rec` — some member occurs in some binder domain of some
 declared constructor's telescope. -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:112-118 ConRon.Arena.blockRawRec
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockRawRec` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockRawRec]
-def blockRawRec : FunDecl := lfn (p) locals (namesO, namesL, b) {
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:96-102 ConRon.Arena.blockIsRec
+@[no_expose, l_impl ConRon.Arena.blockIsRec]
+def blockIsRec : FunDecl := lfn (p) locals (namesO, namesL, b) {
   (namesO, namesL) := call block_shape_member_names(p);
-  b := call block_raw_rec_go(namesO, namesL, IW.u64[p], IW.u64[p + 1]);
+  b := call block_is_rec_go(namesO, namesL, IW.u64[p], IW.u64[p + 1]);
   return b
 }
 
 /-! ## Stage 1: the formers -/
 
-/-- `check_block_tele(vis, nP, ms)`: one member's type former — the constant check, official's
-telescope loop and the result sort (`nP + nIdx` past `2^64` a capacity abort). -/
+/-- `check_block_tele(vis, nP, ms)`: one member's type former (at its telescope) — the constant
+check, the telescope and the result sort (`nP + nIdx` past `2^64` a capacity abort). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:106-119 ConRon.Arena.checkBlockTele
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockTele` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockTele]
 def checkBlockTele : FunDecl := lfn (vis, nP, ms) locals
     (cvT, z, cvTa, s, ok, bsOff, bsLen, body, srt, k) {
   cvT := IW.u64[ms];
   k := nP + IW.u64[ms + 1];
   if k < nP { abort };
-  z := call check_constant_val(vis, cvT);
-  (cvTa, s) := call check_sum_tele(vis, cvT, k, cvT);
+  z := call check_constant_val(vis, cvT, 0);
+  (cvTa, s) := call check_sum_tele(k, cvT);
   (ok, bsOff, bsLen, body) := call strip_pis(k, EREC⦃cvTa + 3⦄);
   if ok == 0 { abort };
   srt := call intern_sort(s);
@@ -304,12 +284,11 @@ def checkBlockAgree : FunDecl := lfn (vis, nP, cvTa0, s0, restO, restL) locals
   return 0
 }
 
-/-- `cons_block_inds(p1, is_rec, cvTas.off, cvTas.len, vis, i)`: the members' formers consed, in
-block order, each with its capability record at `is_rec` (member `i` first), by recursion as the
-twin's; the `.indInfo` record (kind `3`, the constant's four words, the capability record's 15) is
-`ind_info_rec`'s. Returns the new view. -/
+/-- `cons_block_inds(p1, is_rec, cvs.off, cvs.len, vis, i)`: the formers `cvs` (as declared)
+consed, in block order, each with its capability record at `is_rec` (member `i` first), by
+recursion as the twin's; the `.indInfo` record (kind `3`, the constant's four words, the
+capability record's 15) is `ind_info_rec`'s. Returns the new view. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:169-177 ConRon.Arena.consBlockInds
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.consBlockInds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (caps, rec, v1, v2) {
   if cvL == 0 { return vis };
@@ -324,7 +303,6 @@ def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (caps, r
 words at `cv`, the capability record's 15 `IW` words at `caps` — written right after its
 allocation, five words at a time. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:169-177 ConRon.Arena.consBlockInds
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.consBlockInds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def indInfoRec : FunDecl := lfn (cv, caps) locals (q, u) {
   q := call erec_alloc(20);
@@ -340,7 +318,6 @@ def indInfoRec : FunDecl := lfn (cv, caps) locals (q, u) {
 
 /-- `er_put5(d, a, b, c, e, f)`: `EREC[d‥d+5) := [a, b, c, e, f]`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:169-177 ConRon.Arena.consBlockInds
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.consBlockInds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def erPut5 : FunDecl := lfn (d, a, b, c, e, f) locals (ez) {
   ez := call erec_put(d, a); ez := call erec_put(d + 1, b); ez := call erec_put(d + 2, c); ez := call erec_put(d + 3, e);
@@ -348,36 +325,12 @@ def erPut5 : FunDecl := lfn (d, a, b, c, e, f) locals (ez) {
   return 0
 }
 
-/-- `check_block_inds_cv_tas(cvTa0, rest.off, rest.len)`: `cvTa0 :: rest.map (·.1)`, the
-formers' constants, a fresh `IW` slice (consed: `sl_cons`, D18). -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:179-194 ConRon.Arena.checkBlockInds
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockInds` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkBlockInds]
-def checkBlockIndsCvTas : FunDecl := lfn (cvTa0, restO, restL) locals (ro, rl, o, l) {
-  (ro, rl) := call check_block_inds_cv_tas_go(restO, restL);
-  (o, l) := call sl_cons(cvTa0, ro, rl);
-  return (o, l)
-}
-
-/-- `check_block_inds_cv_tas_go(s, l)`: `[IW[IW[s + j]] | j < l]` (each former's constant, the
-first word of its `(cv, s)` pointer), by recursion, each consed onto the rest's slice. -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:179-194 ConRon.Arena.checkBlockInds
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockInds` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkBlockInds]
-def checkBlockIndsCvTasGo : FunDecl := lfn (s, l) locals (ro, rl, o, l2) {
-  if l == 0 { return (0, 0) };
-  (ro, rl) := call check_block_inds_cv_tas_go(s + 1, l - 1);
-  (o, l2) := call sl_cons(IW.u64[IW.u64[s]], ro, rl);
-  return (o, l2)
-}
-
 /-- `check_block_inds(vis, p, is_rec)`: **stage 1** — the k type formers, checked, agreed and
-consed (`p` a `BlockParts`/`BlockShape` pointer, same word). -/
+consed as declared (`block_shape_declared`); returns `(vis', p1)`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:179-194 ConRon.Arena.checkBlockInds
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockInds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockInds]
 def checkBlockInds : FunDecl := lfn (vis, p, isRec) locals
-    (moff, mlen, ms0, nP, cvTa0, s0, cvsO, cvsL, u, p1, cvTasO, cvTasL, fe1) {
+    (moff, mlen, ms0, nP, cvTa0, s0, cvsO, cvsL, u, p1, dO, dL, fe1) {
   moff := IW.u64[p]; mlen := IW.u64[p + 1];
   if mlen == 0 { abort };
   ms0 := IW.u64[moff];
@@ -386,28 +339,28 @@ def checkBlockInds : FunDecl := lfn (vis, p, isRec) locals
   (cvsO, cvsL) := call check_block_teles(vis, nP, moff + 1, mlen - 1);
   u := call check_block_agree(vis, nP, cvTa0, s0, cvsO, cvsL);
   p1 := call block_shape_with_sort(p, s0);
-  (cvTasO, cvTasL) := call check_block_inds_cv_tas(cvTa0, cvsO, cvsL);
-  fe1 := call cons_block_inds(p1, isRec, cvTasO, cvTasL, vis, 0);
-  return (fe1, cvTasO, cvTasL, p1)
+  (dO, dL) := call block_shape_declared(p);
+  fe1 := call cons_block_inds(p1, isRec, dO, dL, vis, 0);
+  return (fe1, p1)
 }
 
 /-! ## Stage 1b: the constructors, and the positivity check -/
 
 /-- `block_shape_nest_ctx(p, fvsP.off, fvsP.len)`: the block's positivity context at the
-canonical parameter variables `fvsP` (a pointer to the 11-word `NestCtx` record). -/
+canonical parameter variables `fvsP`, with the members' formers at their telescopes (a pointer to
+the 13-word `NestCtx` record). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:198-207 ConRon.Arena.BlockShape.nestCtx
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.BlockShape.nestCtx`, `ConRon.Arena.BlockShape.formers` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.BlockShape.nestCtx` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.BlockShape.nestCtx]
 def blockShapeNestCtx : FunDecl := lfn (p, fvsPO, fvsPL) locals
-    (namesO, namesL, lpsO, lpsL, nIdxsO, nIdxsL, lvls, np, srt, q) {
+    (namesO, namesL, lpsO, lpsL, nIdxsO, nIdxsL, lvls, np, srt, fO, fL, q) {
   (namesO, namesL) := call block_shape_member_names(p);
   (lpsO, lpsL) := call block_shape_lps(p);
   (nIdxsO, nIdxsL) := call block_shape_n_idxs(p);
   lvls := call param_levels(lpsO, lpsL);
   np := IW.u64[p + 4];
   srt := IW.u64[p + 6];
-  q := call iw_alloc(11);
+  (fO, fL) := call block_shape_formers(p);
+  q := call iw_alloc(13);
   IW.u64[q] := namesO; IW.u64[q + 1] := namesL;
   IW.u64[q + 2] := lpsO; IW.u64[q + 3] := lpsL;
   IW.u64[q + 4] := np;
@@ -415,68 +368,36 @@ def blockShapeNestCtx : FunDecl := lfn (p, fvsPO, fvsPL) locals
   IW.u64[q + 7] := fvsPO; IW.u64[q + 8] := fvsPL;
   IW.u64[q + 9] := srt;
   IW.u64[q + 10] := lvls;
+  IW.u64[q + 11] := fO; IW.u64[q + 12] := fL;
   return q
 }
 
-/-- `check_block_ctors_one(vis0, vis, p, lps.off, lps.len, ms, cvTa)`: one member's constructors,
-at the environment holding all the formers. -/
+/-- `check_block_ctors(vis0, vis, p, ms.off, ms.len)`: every member's constructors against the
+member's former at its telescope, at the environment holding all the formers; recursion as the
+twin's (the block's level parameters read per member, as the twin's `p.lps`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:209-219 ConRon.Arena.checkBlockCtors
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockCtors` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockCtors]
-def checkBlockCtorsOne : FunDecl := lfn (vis0, vis, p, lpsO, lpsL, ms, cvTa) locals
-    (cvT, nIdx, coff, clen, csO, csL, ssO, ssL, h1, h2) {
-  cvT := IW.u64[ms];
-  nIdx := IW.u64[ms + 1];
-  coff := IW.u64[ms + 2]; clen := IW.u64[ms + 3];
-  (csO, csL, ssO, ssL) := call check_sum_ctors(vis0, vis, EREC⦃cvT⦄, lpsO, lpsL,
-    IW.u64[p + 4], nIdx, IW.u64[p + 6], IW.u64[p + 8], IW.u64[p + 7], cvTa, coff, clen);
-  h1 := call rec2(csO, csL);
-  h2 := call rec2(ssO, ssL);
-  return (h1, h2)
-}
-
-/-- `check_block_ctors(vis0, vis, p, ms.off, ms.len, cvTa.off, cvTa.len)`: every member's
-constructors beside its checked former (stopping at the shorter list), each wrapped as a pointer
-(`List (List …)`); the block's level parameters read once. -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:209-219 ConRon.Arena.checkBlockCtors
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockCtors` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkBlockCtors]
-def checkBlockCtors : FunDecl := lfn (vis0, vis, p, msO, msL, cvO, cvL) locals
-    (lpsO, lpsL, aO, aL, bO, bL) {
+def checkBlockCtors : FunDecl := lfn (vis0, vis, p, msO, msL) locals (ms, lpsO, lpsL, u) {
+  if msL == 0 { return 0 };
+  ms := IW.u64[msO];
   (lpsO, lpsL) := call block_shape_lps(p);
-  (aO, aL, bO, bL) := call check_block_ctors_go(vis0, vis, p, lpsO, lpsL, msO, msL, cvO, cvL);
-  return (aO, aL, bO, bL)
-}
-
-/-- `check_block_ctors_go(vis0, vis, p, lps.off, lps.len, ms.off, ms.len, cvTa.off, cvTa.len)`:
-recursion as the twin's, each member's two pointers consed onto the rest's slices (`sl_cons`,
-D18). -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:209-219 ConRon.Arena.checkBlockCtors
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockCtors` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkBlockCtors]
-def checkBlockCtorsGo : FunDecl := lfn (vis0, vis, p, lpsO, lpsL, msO, msL, cvO, cvL) locals
-    (h1, h2, aO, aL, bO, bL, o1, l1, o2, l2) {
-  if msL == 0 { return (0, 0, 0, 0) };
-  if cvL == 0 { return (0, 0, 0, 0) };
-  (h1, h2) := call check_block_ctors_one(vis0, vis, p, lpsO, lpsL, IW.u64[msO], IW.u64[cvO]);
-  (aO, aL, bO, bL) := call check_block_ctors_go(vis0, vis, p, lpsO, lpsL, msO + 1, msL - 1, cvO + 1, cvL - 1);
-  (o1, l1) := call sl_cons(h1, aO, aL);
-  (o2, l2) := call sl_cons(h2, bO, bL);
-  return (o1, l1, o2, l2)
+  u := call check_sum_ctors(vis0, vis, EREC⦃IW.u64[ms]⦄, lpsO, lpsL, IW.u64[p + 4], IW.u64[ms + 1],
+    IW.u64[p + 6], IW.u64[p + 8], IW.u64[p + 7], IW.u64[ms], IW.u64[ms + 2], IW.u64[ms + 3]);
+  u := call check_block_ctors(vis0, vis, p, msO + 1, msL - 1);
+  return 0
 }
 
 /-- `check_abs_ctor_sorts_one(vis, ctx, isProp, nF, tyN, hi)`: one constructor's fields' universes
 at the holes. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:221-240 ConRon.Arena.checkAbsCtorSorts
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkAbsCtorSorts` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkAbsCtorSorts]
 def checkAbsCtorSortsOne : FunDecl := lfn (vis, ctx, isProp, nF, tyN, hi) locals
-    (srt, ok, fvsO, fvsL, body, so, sl) {
+    (srt, ok, fvsO, fvsL, body, so) {
   srt := IW.u64[ctx + 9];
   if hi + nF < hi { abort };
   (ok, fvsO, fvsL, body) := call open_pis_at_fvars_f(nF, tyN, hi);
   if ok == 0 { abort };
-  (so, sl) := call check_struct_field_sorts_i(vis, isProp, 0, srt, hi, fvsO, fvsL, 0, 0, nF);
+  so := call check_struct_field_sorts_i(vis, isProp, 0, srt, hi, fvsO, fvsL, 0, 0, nF);
   return 0
 }
 
@@ -485,7 +406,6 @@ the holes, pairwise over the constructors `c` (`[cv, nF]` pointers) and their po
 forms `o` (`[k.off, k.len, e]` pointers), stopping at the shorter list; recursion as the
 twin's. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:221-240 ConRon.Arena.checkAbsCtorSorts
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkAbsCtorSorts` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkAbsCtorSorts]
 def checkAbsCtorSorts : FunDecl := lfn (vis, ctx, isProp, cOff, cLen, oOff, oLen) locals
     (c, o, ok, hi, u) {
@@ -517,29 +437,37 @@ def checkAbsCtorSortsAll : FunDecl := lfn (vis, ctx, isProp, csOff, csLen, osOff
   return 0
 }
 
-/-- `block_nest_ctx(vis, p, cvTas.off, cvTas.len)`: the walk's context — the canonical parameter
-variables are the first former's opened telescope, with the members' holes (the parameters' and
+/-- `block_nest_ctx(p)`: the walk's context — the canonical parameter variables are the first
+former's (at its telescope) opened telescope, with the members' holes (the parameters' and
 members' counts summing past `2^64` a capacity abort). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:252-264 ConRon.Arena.blockNestCtx
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockNestCtx` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockNestCtx]
-def blockNestCtx : FunDecl := lfn (vis, p, cvO, cvL) locals
-    (cvTa0, ok, pqO, pqL, body, ctx, ok2, hO, hL) {
-  if cvL == 0 { abort };
+def blockNestCtx : FunDecl := lfn (p) locals
+    (fO, fL, cvTa0, ok, pqO, pqL, body, ctx, ok2, hO, hL) {
+  (fO, fL) := call block_shape_formers(p);
+  if fL == 0 { abort };
   if IW.u64[p + 4] + IW.u64[p + 1] < IW.u64[p + 4] { abort };
-  cvTa0 := IW.u64[cvO];
+  cvTa0 := IW.u64[fO];
   (ok, pqO, pqL, body) := call open_pis_at_fvars_f(IW.u64[p + 4], EREC⦃cvTa0 + 3⦄, 0);
   if ok == 0 { abort };
   if pqL + IW.u64[p + 1] < pqL { abort };
   ctx := call block_shape_nest_ctx(p, pqO, pqL);
-  (ok2, hO, hL) := call nest_holes(vis, ctx);
+  (ok2, hO, hL) := call nest_holes(ctx);
   if ok2 == 0 { abort };
   return (ctx, hO, hL)
 }
 
+/-- `nest_out_kinds(outs.off, outs.len)`: the root frame's outputs' field kinds, `outs.map (·.map
+(·.1))`. No copy: an output record `[k.off, k.len, e]` starts with its kinds' slice, so the
+outputs' list of `[off, len]` headers already reads as the kinds' (`decKL`). -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:266-270 ConRon.Arena.nestOutKinds
+@[no_expose, l_impl ConRon.Arena.nestOutKinds]
+def nestOutKinds : FunDecl := lfn (o, l) locals () {
+  return (o, l)
+}
+
 /-- `check_block_positivity_init()`: `{}`, a fresh all-zero `NestState` (three empty lists). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:272-287 ConRon.Arena.checkBlockPositivity
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockPositivity` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockPositivity]
 def checkBlockPositivityInit : FunDecl := lfn () locals (q) {
   q := call iw_alloc(6);
@@ -548,97 +476,52 @@ def checkBlockPositivityInit : FunDecl := lfn () locals (q) {
   return q
 }
 
-/-- `check_block_positivity_nfs_member(o, l)`: one member's normal forms `pairs.map (·.2)` from its
-`(kinds × eidx)` pointer list `(o, l)` (word `2` of each record), a fresh handle slice; recursion as
-the twin's `map`, each handle consed onto the rest's slice (`sl_cons`, D18). -/
+/-- `check_block_positivity(vis, p)`: the block's positivity on its stored constructors
+(`p.memberCtors`), at the walk's context; returns the root frame's outputs and the walk's
+state. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:272-287 ConRon.Arena.checkBlockPositivity
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockPositivity` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockPositivity]
-def checkBlockPositivityNfsMember : FunDecl := lfn (o, l) locals (e, ro, rl, qo, ql) {
-  if l == 0 { return (0, 0) };
-  e := IW.u64[o];
-  (ro, rl) := call check_block_positivity_nfs_member(o + 1, l - 1);
-  (qo, ql) := call sl_cons(IW.u64[e + 2], ro, rl);
-  return (qo, ql)
-}
-
-/-- `check_block_positivity_nfs(outs.off, outs.len)`: `outs.map (·.map (·.2))`, each member's
-handle slice wrapped as a fresh `[off, len]` pointer (`rec2`), consed onto the rest's slice
-(`sl_cons`, D18). The kinds `outs.map (·.map (·.1))` need no copy: a `(kinds, eidx)` record's
-first two words are its kinds' `[off, len]`, so `outs` itself reads as the kinds. -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:272-287 ConRon.Arena.checkBlockPositivity
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockPositivity` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkBlockPositivity]
-def checkBlockPositivityNfs : FunDecl := lfn (s, l) locals (mp, no, nl, hp, ro, rl, qo, ql) {
-  if l == 0 { return (0, 0) };
-  mp := IW.u64[s];
-  (no, nl) := call check_block_positivity_nfs_member(IW.u64[mp], IW.u64[mp + 1]);
-  hp := call rec2(no, nl);
-  (ro, rl) := call check_block_positivity_nfs(s + 1, l - 1);
-  (qo, ql) := call sl_cons(hp, ro, rl);
-  return (qo, ql)
-}
-
-/-- `check_block_positivity(vis, p, cvTas.off, cvTas.len, ctorsAs.off, ctorsAs.len)`: the block's
-positivity on its stored constructors, at the walk's context; returns the walk's kinds, its
-normal forms and its state. -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:272-287 ConRon.Arena.checkBlockPositivity
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockPositivity` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkBlockPositivity]
-def checkBlockPositivity : FunDecl := lfn (vis, p, cvO, cvL, caOff, caLen) locals
-    (ctx, hO, hL, u, nsEmpty, outsO, outsL, nsPtr, z, isProp, u2, nOuterO, nOuterL) {
-  (ctx, hO, hL) := call block_nest_ctx(vis, p, cvO, cvL);
+def checkBlockPositivity : FunDecl := lfn (vis, p) locals
+    (ctx, hO, hL, caOff, caLen, u, nsEmpty, outsO, outsL, nsPtr, z, isProp, u2) {
+  (ctx, hO, hL) := call block_nest_ctx(p);
+  (caOff, caLen) := call block_shape_member_ctors(p);
   u := call nest_uniform(ctx, caOff, caLen);
   nsEmpty := call check_block_positivity_init();
   (outsO, outsL, nsPtr) := call nest_root(vis, ctx, hO, hL, caOff, caLen, nsEmpty, 0, 0);
   z := call pin_word(53);
   isProp := call lvl_eq_true(IW.u64[ctx + 9], z);
   u2 := call check_abs_ctor_sorts_all(vis, ctx, isProp, caOff, caLen, outsO, outsL);
-  (nOuterO, nOuterL) := call check_block_positivity_nfs(outsO, outsL);
-  return (outsO, outsL, nOuterO, nOuterL, nsPtr)
+  return (outsO, outsL, nsPtr)
 }
 
 /-! ## Stage 2: the tail -/
 
-/-- `check_block_idx_sorts_one(vis, p, ms, cvTa)`: one member's index binders' universes, as a
-pointer `[off, len]` (`nP + nIdx` past `2^64` a capacity abort; the index binders the telescope's
-tail past `nP`, the empty slice at offset `0` when there is none). -/
+/-- `check_block_idx_sorts(vis, p, ms.off, ms.len)`: every member's INDEX binders have sorts: the
+member's telescope (at its former's telescope) opened at variables, each index domain's sort
+inferred (`nP + nIdx` past `2^64` a capacity abort; the index binders the telescope's tail past
+`nP`, the empty slice at offset `0` when there is none). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:291-302 ConRon.Arena.checkBlockIdxSorts
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockIdxSorts` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockIdxSorts]
-def checkBlockIdxSortsOne : FunDecl := lfn (vis, p, ms, cvTa) locals
-    (nP, ni, srt, k, ok, tqO, tqL, body, dOff, dLen, isO, isL, hp) {
+def checkBlockIdxSorts : FunDecl := lfn (vis, p, msO, msL) locals
+    (ms, nP, ni, srt, k, ok, tqO, tqL, body, dOff, dLen, u) {
+  if msL == 0 { return 0 };
+  ms := IW.u64[msO];
   nP := IW.u64[p + 4]; ni := IW.u64[ms + 1]; srt := IW.u64[p + 6];
   k := nP + ni;
   if k < nP { abort };
-  (ok, tqO, tqL, body) := call open_pis_at_fvars_f(k, EREC⦃cvTa + 3⦄, 0);
+  (ok, tqO, tqL, body) := call open_pis_at_fvars_f(k, EREC⦃IW.u64[ms] + 3⦄, 0);
   if ok == 0 { abort };
   dOff := 0; dLen := 0;
   if nP < tqL { dOff := tqO + nP; dLen := tqL - nP };
-  (isO, isL) := call check_struct_field_sorts_i(vis, 1, 0, srt, nP, dOff, dLen, 0, 0, ni);
-  hp := call rec2(isO, isL);
-  return hp
+  u := call check_struct_field_sorts_i(vis, 1, 0, srt, nP, dOff, dLen, 0, 0, ni);
+  u := call check_block_idx_sorts(vis, p, msO + 1, msL - 1);
+  return 0
 }
 
-/-- `check_block_idx_sorts(vis, p, ms.off, ms.len, cvTa.off, cvTa.len)`: every member's index
-binders' universes (beside its checked former), stopping at the shorter list; recursion as the
-twin's, each member's pointer consed onto the rest's slice (`sl_cons`, D18). -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:291-302 ConRon.Arena.checkBlockIdxSorts
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockIdxSorts` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkBlockIdxSorts]
-def checkBlockIdxSorts : FunDecl := lfn (vis, p, msO, msL, cvO, cvL) locals (hp, ro, rl, o, l) {
-  if msL == 0 { return (0, 0) };
-  if cvL == 0 { return (0, 0) };
-  hp := call check_block_idx_sorts_one(vis, p, IW.u64[msO], IW.u64[cvO]);
-  (ro, rl) := call check_block_idx_sorts(vis, p, msO + 1, msL - 1, cvO + 1, cvL - 1);
-  (o, l) := call sl_cons(hp, ro, rl);
-  return (o, l)
-}
-
-/-- `cons_block_ctors(nP, ctorsAs.off, ctorsAs.len, vis)`: the members' constructors consed,
-member by member, in block order (recursion as the twin's). -/
+/-- `cons_block_ctors(nP, ctorLists.off, ctorLists.len, vis)`: the members' constructors consed,
+member by member, in block order (each list a pointer to an `[off, len]` header; recursion as the
+twin's). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:304-310 ConRon.Arena.consBlockCtors
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.consBlockCtors` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockCtors]
 def consBlockCtors : FunDecl := lfn (nP, caOff, caLen, vis) locals (mp, v1, v2) {
   if caLen == 0 { return vis };
@@ -648,168 +531,230 @@ def consBlockCtors : FunDecl := lfn (nP, caOff, caLen, vis) locals (mp, v1, v2) 
   return v2
 }
 
-/-- `check_block_pass_rec(fe1, cvTas.off, cvTas.len, p, ctorsAs.off, ctorsAs.len, sortsss.off,
-sortsss.len, kinds.off, kinds.len, nfs.off, nfs.len, params.off, params.len, rd, cls.off, cls.len,
-tbl.off, tbl.len)`: the 19-word `BlockPass` record (layout in `IndIface`) in a fresh `IW` block. -/
+/-! ## `BlockTail.lean`: the pass, the tail, the block's check -/
+
+/-- `check_block_pass_rec(fe1, p, kinds.off, kinds.len, params.off, params.len, rd, cls.off,
+cls.len, tbl.off, tbl.len)`: the 11-word `BlockPass` record (layout in `IndIface`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:67-86 ConRon.Arena.checkBlockPass
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockPass` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.checkBlockPass`, `ConRon.Arena.nestOutKinds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockPass]
-def checkBlockPassRec : FunDecl := lfn
-    (fe1, cO, cL, p1, aO, aL, sO, sL, kO, kL, nO, nL, pO, pL, rd, mO, mL, tO, tL) locals (q) {
-  q := call iw_alloc(19);
+def checkBlockPassRec : FunDecl := lfn (fe1, p1, kO, kL, pO, pL, rd, mO, mL, tO, tL) locals (q) {
+  q := call iw_alloc(11);
   IW.u64[q] := fe1;
-  IW.u64[q + 1] := cO; IW.u64[q + 2] := cL;
-  IW.u64[q + 3] := p1;
-  IW.u64[q + 4] := aO; IW.u64[q + 5] := aL;
-  IW.u64[q + 6] := sO; IW.u64[q + 7] := sL;
-  IW.u64[q + 8] := kO; IW.u64[q + 9] := kL;
-  IW.u64[q + 10] := nO; IW.u64[q + 11] := nL;
-  IW.u64[q + 12] := pO; IW.u64[q + 13] := pL;
-  IW.u64[q + 14] := rd;
-  IW.u64[q + 15] := mO; IW.u64[q + 16] := mL;
-  IW.u64[q + 17] := tO; IW.u64[q + 18] := tL;
+  IW.u64[q + 1] := p1;
+  IW.u64[q + 2] := kO; IW.u64[q + 3] := kL;
+  IW.u64[q + 4] := pO; IW.u64[q + 5] := pL;
+  IW.u64[q + 6] := rd;
+  IW.u64[q + 7] := mO; IW.u64[q + 8] := mL;
+  IW.u64[q + 9] := tO; IW.u64[q + 10] := tL;
   return q
 }
 
 /-- `check_block_pass(vis, p0, is_rec)`: one pass over the formers, the constructors and the
-classes — returns a pointer to the 19-word `BlockPass` record (`check_block_pass_rec`; the words
-copied from the context and the positivity state are read before the record is allocated). -/
+classes — the formers (and the flush entering the environment that holds them all), the
+constructors, the walk's context, the classes, the positivity check and the seeds; returns a
+pointer to the `BlockPass` record. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:67-86 ConRon.Arena.checkBlockPass
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockPass` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.checkBlockPass`, `ConRon.Arena.nestOutKinds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockPass]
 def checkBlockPass : FunDecl := lfn (vis, p0, isRec) locals
-    (fe1, cvTasO, cvTasL, p1, u, ctorsAsO, ctorsAsL, sortsssO, sortsssL, ctx, holesO, holesL,
-     rd, msO, msL, kindsO, kindsL, nfsO, nfsL, nsPtr, seedsO, seedsL, ns2, q) {
-  (fe1, cvTasO, cvTasL, p1) := call check_block_inds(vis, p0, isRec);
+    (fe1, p1, u, ctx, holesO, holesL, rd, msO, msL, outsO, outsL, nsPtr, seedsO, seedsL, ns2,
+     kO, kL, q) {
+  (fe1, p1) := call check_block_inds(vis, p0, isRec);
   u := call flush_caches();
-  (ctorsAsO, ctorsAsL, sortsssO, sortsssL) :=
-    call check_block_ctors(fe1, fe1, p1, IW.u64[p1], IW.u64[p1 + 1], cvTasO, cvTasL);
-  (ctx, holesO, holesL) := call block_nest_ctx(fe1, p1, cvTasO, cvTasL);
-  (rd, msO, msL) := call check_block_classes(fe1, p1, IW.u64[ctx + 7], IW.u64[ctx + 8], ctorsAsO, ctorsAsL);
-  (kindsO, kindsL, nfsO, nfsL, nsPtr) := call check_block_positivity(fe1, p1, cvTasO, cvTasL, ctorsAsO, ctorsAsL);
+  u := call check_block_ctors(fe1, fe1, p1, IW.u64[p1], IW.u64[p1 + 1]);
+  (ctx, holesO, holesL) := call block_nest_ctx(p1);
+  (rd, msO, msL) := call check_block_classes(fe1, p1, IW.u64[ctx + 7], IW.u64[ctx + 8]);
+  (outsO, outsL, nsPtr) := call check_block_positivity(fe1, p1);
   (seedsO, seedsL) := call class_seeds(ctx, holesO, holesL, msO, msL);
   ns2 := call nest_seeds(fe1, ctx, seedsO, seedsL, nsPtr);
-  q := call check_block_pass_rec(fe1, cvTasO, cvTasL, p1, ctorsAsO, ctorsAsL, sortsssO, sortsssL,
-    kindsO, kindsL, nfsO, nfsL, IW.u64[ctx + 7], IW.u64[ctx + 8], rd, msO, msL,
+  (kO, kL) := call nest_out_kinds(outsO, outsL);
+  q := call check_block_pass_rec(fe1, p1, kO, kL, IW.u64[ctx + 7], IW.u64[ctx + 8], rd, msO, msL,
     IW.u64[ns2 + 4], IW.u64[ns2 + 5]);
   return q
 }
 
 /-- `check_block_rec(vis, p, nested, params.off, params.len, tbl.off, tbl.len, rd, ms.off, ms.len,
-block.off, block.len, cvTas.off, cvTas.len)`: the generated recursor stage, at the constructors'
-environment — a thin wrapper reordering its arguments to `gen_rec_check`'s own order. -/
+block.off, block.len)`: the generated recursor stage at the constructors' environment. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:88-96 ConRon.Arena.checkBlockRec
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockRec` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockRec]
 def checkBlockRec : FunDecl := lfn
-    (vis, p, nested, paramsO, paramsL, tblO, tblL, rd, msO, msL, blockO, blockL, cvO, cvL)
+    (vis, p, nested, paramsO, paramsL, tblO, tblL, rd, msO, msL, blockO, blockL)
     locals (fe2, outO, outL) {
   (fe2, outO, outL) := call gen_rec_check(vis, p, nested, paramsO, paramsL, tblO, tblL, rd, msO, msL,
-    cvO, cvL, blockO, blockL);
+    blockO, blockL);
   return (fe2, outO, outL)
 }
 
-/-- `check_block_tables_one(p, m, cs.off, ss.off, vis)`: one structure-like member's (one
-constructor, no index) projection table install (`nP + nF + 1` past `2^64` a capacity abort:
-the twin's `structProjGuards` computes it in `Nat`). -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:112-122 ConRon.Arena.checkBlockTables
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockTables` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkBlockTables]
-def checkBlockTablesOne : FunDecl := lfn (p, m, csOff, ssOff, vis) locals
-    (ctorPtr, cA, nF, sortsPtr, sortsO, sortsL, lpsO, lpsL, guardsO, guardsL, vis2) {
-  ctorPtr := IW.u64[csOff]; cA := IW.u64[ctorPtr]; nF := IW.u64[ctorPtr + 1];
-  sortsPtr := IW.u64[ssOff]; sortsO := IW.u64[sortsPtr]; sortsL := IW.u64[sortsPtr + 1];
-  if IW.u64[p + 4] + nF + 1 <= IW.u64[p + 4] { abort };
-  (guardsO, guardsL) := call struct_proj_guards(EREC⦃cA + 3⦄, IW.u64[p + 4], nF, sortsO, sortsL);
-  (lpsO, lpsL) := call block_shape_lps(p);
-  vis2 := call check_struct_proj_table(EREC⦃IW.u64[m]⦄, EREC⦃cA⦄, lpsO, lpsL,
-    IW.u64[p + 4], nF, IW.u64[p + 6], guardsO, guardsL, cA, vis);
-  return vis2
+/-- `cons_block_recs_temp(infos.off, infos.len, vis, prevs.off, prevs.len)`: the checked family's
+records (`EREC` constant records) pushed TEMPORARILY, in order; returns the new view and the rows
+the pushes displaced (`[name, c, q]`, the own layer's raw row before each push, `env_row_get`), in
+push order (`prevs ++ [·]`, `sl_snoc`), for the pop. -/
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:98-110 ConRon.Arena.consBlockRecsTemp
+@[no_expose, l_impl ConRon.Arena.consBlockRecsTemp]
+def consBlockRecsTemp : FunDecl := lfn (io, il, vis, po, pl) locals (ci, nm, c, q, e, v, no, nl, ro, rl, rv) {
+  if il == 0 { return (vis, po, pl) };
+  ci := IW.u64[io];
+  nm := EREC⦃ci + 1⦄;
+  (c, q) := call env_row_get(nm);
+  e := call rec3(nm, c, q);
+  v := call env_push(vis, ci);
+  (no, nl) := call sl_snoc(po, pl, e);
+  (rv, ro, rl) := call cons_block_recs_temp(io + 1, il - 1, v, no, nl);
+  return (rv, ro, rl)
 }
 
-/-- `check_block_tables(p, ms.off, ms.len, cs.off, cs.len, ss.off, ss.len, vis)`: the projection
-table at every structure-like member, the three lists walked side by side, stopping at the
-shortest; recursion as the twin's. -/
+/-- `check_block_tables(p, vis, ms.off, ms.len)`: the projection table's checks at every
+structure-like member (`MemberShape.structCtor?`: one constructor, no index), at the environment
+holding the formers and the constructors. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:112-122 ConRon.Arena.checkBlockTables
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockTables` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockTables]
-def checkBlockTables : FunDecl := lfn (p, msO, msL, csO, csL, ssO, ssL, vis) locals
-    (m, csp, ssp, vis2) {
-  if msL == 0 { return vis };
-  if csL == 0 { return vis };
-  if ssL == 0 { return vis };
-  m := IW.u64[msO];
-  csp := IW.u64[csO];
-  ssp := IW.u64[ssO];
-  vis2 := vis;
-  if IW.u64[csp + 1] == 1 {
-    if IW.u64[ssp + 1] == 1 {
-      if IW.u64[m + 1] == 0 {
-        vis2 := call check_block_tables_one(p, m, IW.u64[csp], IW.u64[ssp], vis)
-      }
+def checkBlockTables : FunDecl := lfn (p, vis, msO, msL) locals (ms, c, lpsO, lpsL, u) {
+  if msL == 0 { return 0 };
+  ms := IW.u64[msO];
+  if IW.u64[ms + 3] == 1 {
+    if IW.u64[ms + 1] == 0 {
+      c := IW.u64[IW.u64[ms + 2]];
+      (lpsO, lpsL) := call block_shape_lps(p);
+      u := call check_struct_proj_table(EREC⦃IW.u64[ms]⦄, lpsO, lpsL, IW.u64[p + 4], IW.u64[c + 1],
+        IW.u64[c], vis)
     }
   };
-  vis2 := call check_block_tables(p, msO + 1, msL - 1, csO + 1, csL - 1, ssO + 1, ssL - 1, vis2);
-  return vis2
+  u := call check_block_tables(p, vis, msO + 1, msL - 1);
+  return 0
 }
 
-/-- `check_block_tail(block.off, block.len, q)`: the install after the pass — the index binders'
-sorts, the constructors consed (with the flush entering that environment), the container bit, then
-`check_block_tail_rec` (`q` a `BlockPass` pointer). -/
+/-- `check_block_tail_stream(p, fe2b, out.off, out.len)`: the second half of `checkBlockTail` (the
+Rust's `check_block_tail_stream`): the stream's K flags against the generated recursors, the
+generated family's records pushed in place (a flush entering), the stream's recursors against them,
+the pushes undone in reverse order (`gen_rec_check_pop_all`) and the flush leaving. Returns the
+constructors' environment. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:124-149 ConRon.Arena.checkBlockTail
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockTail` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.checkBlockTail`, `ConRon.Arena.blockRecInfosTF`, `ConRon.Arena.consBlockRecsTemp`, `ConRon.Arena.streamKCheck`, `ConRon.Arena.streamRecsCheck` changed; re-check the L code and its proofs, then delete this line
+@[no_expose, l_impl ConRon.Arena.checkBlockTail]
+def checkBlockTailStream : FunDecl := lfn (p, fe2b, outO, outL) locals
+    (u, io, il, feG, po, pl, fe3) {
+  u := call stream_k_check(p, IW.u64[p + 2], IW.u64[p + 3], outO, outL);
+  (io, il) := call block_rec_infos_tf(p, 0, outO, outL);
+  (feG, po, pl) := call cons_block_recs_temp(io, il, fe2b, 0, 0);
+  u := call flush_caches();
+  u := call stream_recs_check(feG, IW.u64[p + 2], IW.u64[p + 3], outO, outL);
+  fe3 := call gen_rec_check_pop_all(feG, po, pl);
+  u := call flush_caches();
+  return fe3
+}
+
+/-- `check_block_tail(block.off, block.len, q)`: the checks after the pass — the index binders'
+sorts, the constructors consed (and the flush entering that environment), the generated
+recursors, the stream's K flags and recursors against them (`check_block_tail_stream`), and the
+projection tables' checks; returns the constructors' environment (`q` a `BlockPass` pointer). -/
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:124-149 ConRon.Arena.checkBlockTail
 @[no_expose, l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTail : FunDecl := lfn (blockO, blockL, q) locals
-    (env1, p, isoO, isoL, fe2, u, nested, fe4) {
+    (env1, p, u, mcO, mcL, fe2, nested, fe2b, outO, outL, fe3) {
   env1 := IW.u64[q];
-  p := IW.u64[q + 3];
-  (isoO, isoL) := call check_block_idx_sorts(env1, p, IW.u64[p], IW.u64[p + 1], IW.u64[q + 1], IW.u64[q + 2]);
-  fe2 := call cons_block_ctors(IW.u64[p + 4], IW.u64[q + 4], IW.u64[q + 5], env1);
+  p := IW.u64[q + 1];
+  u := call check_block_idx_sorts(env1, p, IW.u64[p], IW.u64[p + 1]);
+  (mcO, mcL) := call block_shape_member_ctors(p);
+  fe2 := call cons_block_ctors(IW.u64[p + 4], mcO, mcL, env1);
   u := call flush_caches();
-  nested := call block_nested_bit(p, IW.u64[q + 8], IW.u64[q + 9]);
-  fe4 := call check_block_tail_rec(blockO, blockL, q, p, fe2, nested);
-  return fe4
+  nested := call block_nested_bit(p, IW.u64[q + 2], IW.u64[q + 3]);
+  (fe2b, outO, outL) := call check_block_rec(fe2, p, nested, IW.u64[q + 4], IW.u64[q + 5],
+    IW.u64[q + 9], IW.u64[q + 10], IW.u64[q + 6], IW.u64[q + 7], IW.u64[q + 8], blockO, blockL);
+  fe3 := call check_block_tail_stream(p, fe2b, outO, outL);
+  u := call check_block_tables(p, fe3, IW.u64[p], IW.u64[p + 1]);
+  return fe3
 }
 
-/-- `check_block_tail_rec(block.off, block.len, q, p, fe2, nested)`: the rest of the tail — the
-recursor stage at the constructors' environment `fe2`, the recursors consed at their majors (the
-rules' lookups bounded at `fe2`), and the projection tables. -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:124-149 ConRon.Arena.checkBlockTail
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.checkBlockTail`, `ConRon.Arena.blockRecInfosTF`, `ConRon.Arena.consBlockRecsTemp`, `ConRon.Arena.streamKCheck`, `ConRon.Arena.streamRecsCheck` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockTail` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkBlockTail]
-def checkBlockTailRec : FunDecl := lfn (blockO, blockL, q, p, fe2, nested) locals
-    (fe2b, outO, outL, fe3, fe4) {
-  (fe2b, outO, outL) := call check_block_rec(fe2, p, nested, IW.u64[q + 12], IW.u64[q + 13],
-    IW.u64[q + 17], IW.u64[q + 18], IW.u64[q + 14], IW.u64[q + 15], IW.u64[q + 16], blockO, blockL,
-    IW.u64[q + 1], IW.u64[q + 2]);
-  fe3 := call cons_block_recs_tf(fe2, p, 0, outO, outL, fe2b);
-  fe4 := call check_block_tables(p, IW.u64[p], IW.u64[p + 1], IW.u64[q + 4], IW.u64[q + 5],
-    IW.u64[q + 6], IW.u64[q + 7], fe3);
-  return fe4
+/-! ## The block's check -/
+
+/-- `declined_at_definition()`: the families declined at a definition — the names a literal's
+constructor form applies (`String.ofList`, `List.nil`, `List.cons`, `Char.ofNat`) and `Bool`, off
+the pin table, as an `IW` list. -/
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:153-157 ConRon.Arena.declinedAtDefinition
+@[no_expose, l_impl ConRon.Arena.declinedAtDefinition]
+def declinedAtDefinition : FunDecl := lfn () locals (a, b, c, d, e, q) {
+  a := call pin_at(6);
+  b := call pin_at(8);
+  c := call pin_at(9);
+  d := call pin_at(12);
+  e := call pin_at(29);
+  q := call iw_alloc(5);
+  IW.u64[q] := a; IW.u64[q + 1] := b; IW.u64[q + 2] := c; IW.u64[q + 3] := d; IW.u64[q + 4] := e;
+  return (q, 5)
 }
 
-/-- `check_block(vis, boff, blen, p)`: check and install a block on the uniform route — the
-distinct names, the flush, the pass at official's `is_rec`, and the install after it. -/
+/-- `reduce_member(vis, ms, nP)`: a member's former at its telescope — where the declared type
+does not show one (`former_def_headed`), and the family is not one declined at a definition, the
+declared type checked, reduced (`reduced_former`) and the two compared, a fresh member record with
+`cvT` the reduct; else `ms` itself. -/
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:159-176 ConRon.Arena.reduceMember
+@[no_expose, l_impl ConRon.Arena.reduceMember]
+def reduceMember : FunDecl := lfn (vis, ms, nP) locals (cvT, dh, dO, dL, hit, u, k, cvR, eq, q) {
+  cvT := IW.u64[ms];
+  dh := call former_def_headed(EREC⦃cvT + 3⦄);
+  if dh == 0 { return ms };
+  (dO, dL) := call declined_at_definition();
+  hit := call sl_contains(dO, dL, EREC⦃cvT⦄);
+  if hit != 0 { fail R_THIS_FAMILY_STORED };
+  u := call check_constant_val(vis, cvT, 0);
+  k := nP + IW.u64[ms + 1];
+  if k < nP { abort };
+  cvR := call reduced_former(vis, cvT, k);
+  eq := call is_def_eq_core(vis, 0, EREC⦃cvT + 3⦄, EREC⦃cvR + 3⦄);
+  if eq == 0 { fail R_DIRECT_SUM_A };
+  q := call rec5(cvR, IW.u64[ms + 1], IW.u64[ms + 2], IW.u64[ms + 3], IW.u64[ms + 4]);
+  return q
+}
+
+/-- `reduce_members(vis, nP, ms.off, ms.len)`: the members, each at its telescope, a flush before
+each (the cached twin's); recursion as the twin's, each record consed onto the rest's slice. -/
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:178-188 ConRon.Arena.reduceMembers
+@[no_expose, l_impl ConRon.Arena.reduceMembers]
+def reduceMembers : FunDecl := lfn (vis, nP, msO, msL) locals (u, m, ro, rl, o, l) {
+  if msL == 0 { return (0, 0) };
+  u := call flush_caches();
+  m := call reduce_member(vis, IW.u64[msO], nP);
+  (ro, rl) := call reduce_members(vis, nP, msO + 1, msL - 1);
+  (o, l) := call sl_cons(m, ro, rl);
+  return (o, l)
+}
+
+/-- `check_block_names(p0)`: `checkBlock`'s opening guards — the distinct constructor and member
+names, and no member at a `Bool` constructor's name. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:190-217 ConRon.Arena.checkBlock
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlock` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.checkBlock`, `ConRon.Arena.blockIsRec`, `ConRon.Arena.blockRecs`, `ConRon.Arena.blockTables`, `ConRon.Arena.reduceMembers` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlock]
-def checkBlock : FunDecl := lfn (vis, blockO, blockL, p0) locals
-    (ctO, ctL, cnO, cnL, nmO, nmL, nd1, nd2, u, raw, q, fe) {
+def checkBlockNames : FunDecl := lfn (p0) locals (ctO, ctL, cnO, cnL, nmO, nmL, nd1, nd2, bt, bf, h1, h2) {
   (ctO, ctL) := call block_shape_all_ctors(p0);
   (cnO, cnL) := call block_caps_ctor_names(ctO, ctL);
   (nmO, nmL) := call block_shape_member_names(p0);
   nd1 := call sl_nodup(cnO, cnL);
   nd2 := call sl_nodup(nmO, nmL);
   if nd1 == 0 || nd2 == 0 { fail R_DIRECT_REC_DUPLICATE };
+  bt := call pin_at(30);
+  bf := call pin_at(31);
+  h1 := call sl_contains(nmO, nmL, bt);
+  h2 := call sl_contains(nmO, nmL, bf);
+  if h1 != 0 || h2 != 0 { fail R_DIRECT_REC_A };
+  return 0
+}
+
+/-- `check_block(vis, boff, blen, p0)`: check an inductive block and install it — the names'
+guards, each former reduced to its telescope once (`reduce_members`), the flush, the pass at
+official's `is_rec` (`block_is_rec`, read off the block as declared), the checks after it, and the
+block's install (`block_recs`, `block_tables` pushed onto the constructors' environment the tail
+hands back, `ifenv_push_delta`). -/
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:190-217 ConRon.Arena.checkBlock
+@[no_expose, l_impl ConRon.Arena.checkBlock]
+def checkBlock : FunDecl := lfn (vis, blockO, blockL, p0) locals
+    (u, msO, msL, isRec, p1, q, fe2, rO, rL, tO, tL, fe) {
+  u := call check_block_names(p0);
+  (msO, msL) := call reduce_members(vis, IW.u64[p0 + 4], IW.u64[p0], IW.u64[p0 + 1]);
   u := call flush_caches();
-  raw := call block_raw_rec(p0);
-  q := call check_block_pass(vis, p0, raw);
-  fe := call check_block_tail(blockO, blockL, q);
+  isRec := call block_is_rec(p0);
+  p1 := call block_shape_with_members(p0, msO, msL);
+  q := call check_block_pass(vis, p1, isRec);
+  fe2 := call check_block_tail(blockO, blockL, q);
+  (rO, rL) := call block_recs(p0, IW.u64[p0 + 2], IW.u64[p0 + 3]);
+  (tO, tL) := call block_tables(p0, IW.u64[p0], IW.u64[p0 + 1]);
+  fe := call ifenv_push_delta(fe2, rO, rL, tO, tL);
   return fe
 }
 
@@ -820,40 +765,45 @@ def indInstallFns : Prog :=
   [("block_caps_ctor_names", blockCapsCtorNames), ("block_caps_at_er_copy", blockCapsAtErCopy),
    ("block_caps_at_er_copy_go", blockCapsAtErCopyGo),
    ("block_caps_at", blockCapsAt), ("block_caps_head", blockCapsHead), ("block_caps_fin", blockCapsFin), ("block_caps_one", blockCapsOne),
-   ("pi_doms_mention_any", piDomsMentionAny), ("block_raw_rec_member", blockRawRecMember), ("block_raw_rec_go", blockRawRecGo),
-   ("block_raw_rec", blockRawRec), ("check_block_tele", checkBlockTele),
+   ("pi_doms_mention_any", piDomsMentionAny), ("block_is_rec_member", blockIsRecMember), ("block_is_rec_go", blockIsRecGo),
+   ("block_is_rec", blockIsRec), ("check_block_tele", checkBlockTele),
    ("check_block_teles", checkBlockTeles), ("check_block_doms_at", checkBlockDomsAt),
    ("check_block_agree_one", checkBlockAgreeOne), ("check_block_agree", checkBlockAgree),
-   ("cons_block_inds", consBlockInds), ("ind_info_rec", indInfoRec), ("er_put5", erPut5), ("check_block_inds_cv_tas", checkBlockIndsCvTas), ("check_block_inds_cv_tas_go", checkBlockIndsCvTasGo),
+   ("cons_block_inds", consBlockInds), ("ind_info_rec", indInfoRec), ("er_put5", erPut5),
    ("check_block_inds", checkBlockInds), ("block_shape_nest_ctx", blockShapeNestCtx),
-   ("check_block_ctors_one", checkBlockCtorsOne), ("check_block_ctors", checkBlockCtors), ("check_block_ctors_go", checkBlockCtorsGo),
+   ("check_block_ctors", checkBlockCtors),
    ("check_abs_ctor_sorts_one", checkAbsCtorSortsOne), ("check_abs_ctor_sorts", checkAbsCtorSorts),
    ("check_abs_ctor_sorts_all", checkAbsCtorSortsAll), ("block_nest_ctx", blockNestCtx),
+   ("nest_out_kinds", nestOutKinds),
    ("check_block_positivity_init", checkBlockPositivityInit),
-   ("check_block_positivity_nfs_member", checkBlockPositivityNfsMember),
-   ("check_block_positivity_nfs", checkBlockPositivityNfs),
    ("check_block_positivity", checkBlockPositivity),
-   ("check_block_idx_sorts_one", checkBlockIdxSortsOne), ("check_block_idx_sorts", checkBlockIdxSorts),
+   ("check_block_idx_sorts", checkBlockIdxSorts),
    ("cons_block_ctors", consBlockCtors), ("check_block_pass_rec", checkBlockPassRec),
-   ("check_block_pass", checkBlockPass),
-   ("check_block_rec", checkBlockRec), ("check_block_tables_one", checkBlockTablesOne),
-   ("check_block_tables", checkBlockTables), ("check_block_tail", checkBlockTail),
-   ("check_block_tail_rec", checkBlockTailRec),
+   ("check_block_pass", checkBlockPass), ("check_block_rec", checkBlockRec),
+   ("cons_block_recs_temp", consBlockRecsTemp), ("check_block_tables", checkBlockTables),
+   ("check_block_tail_stream", checkBlockTailStream), ("check_block_tail", checkBlockTail),
+   ("declined_at_definition", declinedAtDefinition), ("reduce_member", reduceMember),
+   ("reduce_members", reduceMembers), ("check_block_names", checkBlockNames),
    ("check_block", checkBlock)]
 
 /-- Stubs for the functions of OTHER modules this module calls (arity per the naming rule; see
 the module doc comment for each one's convention). -/
 def indInstallForeign : Prog :=
-  [("check_sum_tele", stub 4), ("check_sum_ctors", stub 13), ("cons_sum_ctors", stub 4),
+  [("check_sum_tele", stub 2), ("check_sum_ctors", stub 13), ("cons_sum_ctors", stub 4),
    ("check_struct_field_sorts_i", stub 10), ("param_levels", stub 2),
-   ("struct_proj_guards", stub 5), ("check_struct_proj_table", stub 12),
-   ("mentions_any_const", stub 3), ("nest_holes", stub 2), ("nest_ctx_hi_at", stub 2),
+   ("check_struct_proj_table", stub 7),
+   ("mentions_any_const", stub 3), ("nest_holes", stub 1), ("nest_ctx_hi_at", stub 2),
    ("nest_uniform", stub 3), ("nest_root", stub 9), ("nest_seeds", stub 5),
-   ("block_shape_with_sort", stub 2), ("block_shape_member_names", stub 1),
-   ("block_shape_lps", stub 1), ("block_shape_n_idxs", stub 1),
-   ("block_shape_all_ctors", stub 1), ("check_block_classes", stub 6),
-   ("class_seeds", stub 5), ("gen_rec_check", stub 14), ("block_nested_bit", stub 3),
-   ("cons_block_recs_tf", stub 6), ("member_names_copy", stub 3)]
+   ("block_shape_with_sort", stub 2), ("block_shape_with_members", stub 3),
+   ("block_shape_member_names", stub 1), ("block_shape_lps", stub 1), ("block_shape_n_idxs", stub 1),
+   ("block_shape_formers", stub 1), ("block_shape_declared", stub 1),
+   ("block_shape_member_ctors", stub 1),
+   ("block_shape_all_ctors", stub 1), ("check_block_classes", stub 4),
+   ("class_seeds", stub 5), ("gen_rec_check", stub 12), ("block_nested_bit", stub 3),
+   ("gen_rec_check_pop_all", stub 3), ("stream_k_check", stub 5), ("stream_recs_check", stub 5),
+   ("block_rec_infos_tf", stub 4), ("block_recs", stub 3), ("block_tables", stub 3),
+   ("ifenv_push_delta", stub 5), ("former_def_headed", stub 1), ("reduced_former", stub 3),
+   ("check_constant_val", stub 3), ("member_names_copy", stub 3)]
 
 -- `check_block_doms_at` at `j = 0`: no binders to compare, no callee touched.
 #guard
