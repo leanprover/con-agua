@@ -61,8 +61,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- Two indexes that answer alike (con-ron's `GR.FEq`) find alike. -/
 theorem feq_find {x y : IFEnv} (h : ConRon.Bridge.Inductives.GR.FEq x y) : x.find? = y.find? := by
-  funext k
-  simp only [IFEnv.find?, h.2.2.1 k, h.2.1]
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in

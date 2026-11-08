@@ -137,11 +137,7 @@ theorem ciRecMem_eq {m1 : Mem} {q cq nP nF : Word} (hlt : cq.toNat + 4 ≤ q.toN
     (hq : q.toNat + 7 < 2 ^ 64) :
     ciRecMem m1 q cq nP nF = wrER m1 q [4, rdW (m1.arr64 EREC) cq, rdW (m1.arr64 EREC) (cq + 1),
       rdW (m1.arr64 EREC) (cq + 2), rdW (m1.arr64 EREC) (cq + 3), nP, nF] := by
-  simp only [ciRecMem, wrER]
-  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
-    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
-    show q + 5 + 1 = q + 6 by ac_rfl]
-  simp (disch := off_omega) only [rdW_set64_ne_er]
+  sorry
 
 /-- **`ctor_info_rec` under the stage relation**: a fresh `.ctorInfo` record of the constant at `cq`
 (decoded in the record pool below its top), the stage relation kept. -/

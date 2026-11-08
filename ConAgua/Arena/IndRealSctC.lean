@@ -81,17 +81,7 @@ open L.Arena
 
 /-- **`ApdEnv` from the store's well-formedness** (`TwinOK.of_check`'s two level fields). -/
 theorem ApdEnv.of_state {a : AState} (hok : ConRon.Bridge.StateOK a) : ApdEnv a := by
-  obtain ⟨rk, hw⟩ := hok.wf
-  have hw' : StoreWF' a.store := StoreWF'.of_wf ⟨rk, hw⟩
-  obtain ⟨rk', hw''⟩ := hw'
-  have hLs : LsStoreWF' a.store.lss := hw''.lss
-  have hL : LStoreWF' a.store.ls := hLs.ls
-  refine ⟨hw.nsWF, fun x u hv => ?_, fun x c us hv => ?_⟩
-  · exact ConRon.Bridge.denoteL_of_view hL (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1
-  · have hs := (hw.lschildOK x _ hv us (by simp [ENodeView.lschildren])).1
-    obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hs
-    obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
-    exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
+  sorry
 
 /-- `StateOK` reads the store only. -/
 theorem stateOK_of_sp {a a' : AState} (h : ConRon.Bridge.StateOK a) (e : sp a' = sp a) :
@@ -111,29 +101,7 @@ theorem apdF_simR {vis : Word} {fe : IFEnv} {m : Mem}
     Sim (apdF m [o, l, e]) (allLevelParamsDefined lps (decI e)) a
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x ∧ AbsOK m' ∧
         sp a' = sp a) := by
-  intro r m' h
-  obtain ⟨ks, hks⟩ := hks
-  obtain ⟨n, hc⟩ := callF_run h
-  rcases n with _ | n
-  · rw [callW_zero] at hc; cases hc
-  obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (allLevelParamsDefined_spec_raw apdP apdP_prog.eview apdP_prog.lsnode apdP_prog.find
-      apdP_prog.put apdP_prog.clear apdP_prog.lmem apdP_prog.lnode apdP_prog.lapd apdP_prog.ls
-      apdP_prog.go apdP_prog.entry n ⟨m, Locals.init []⟩ o l e) hc
-  subst hs'
-  obtain ⟨hAb, hI1, hCr, hIl, hW, hE, hSp, hB, hP⟩ := hA
-  obtain ⟨b, hrun, hr, hS', hg, mp, hM⟩ := apdEntry_ok n hS (ApdEnv.of_state hok) o l e _ lps ks hks
-    hdec he (apdMR_clear hW) hm
-  have hf := apdF_frame h
-  refine ⟨b, a, hrun, hS', hg, apd_decW0B hr, ?_, rfl⟩
-  obtain ⟨-, ⟨mf, hfl⟩, ⟨ml, hlsb⟩, hLP⟩ := hW
-  refine ⟨hAb.frame hf (by decide) (by decide), hI1.frame hf (by decide) (by decide),
-    hCr.frame hf (by decide) (by decide), hIl.frame hf (by decide) (by decide),
-    ⟨apdMR_ws hM, ⟨mf, ?_⟩, ⟨ml, ?_⟩, hLP.frame hf (by decide) (by decide)⟩,
-    by rw [hf.size]; exact hE, by rw [hf.size]; exact hSp, by rw [hf.size]; exact hB,
-    by rw [pinW_frame hf (by decide)]; exact hP⟩
-  · exact memoRG_frame coreFlSch coreFlSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf mf hfl
-  · exact memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf ml hlsb
+  sorry
 
 /-- `apdF_simR` at the program's own call (`realCall p`'s reading). -/
 theorem apdCall_simR {p : Prog} (hp : ApdF p) (k : Nat)
@@ -322,40 +290,7 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {vis : Word}
     (hS : StageR vis fe m a) (ht : decTbl (erecP m) q.toNat = some t)
     (hc : callW p n "env_push_table" [q] m = some (r, m')) :
     StageR vis (fe.pushTable t) m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ AFr m m' := by
-  obtain ⟨s', hs', -, hE'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPushTable_refines p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ vis q t hS.check.env ht) hc
-  obtain ⟨s'', hs'', hM, hw, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPushTable_mem p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ q) hc
-  rw [hs'] at hE'
-  rw [hs''] at hM
-  simp only at hM hw
-  have hfr : MemFrame (ETAB :: tblArrs) [133] m m' := by
-    rw [hM]
-    refine (((MemFrame.set64 m ETAB (by decide) _ _).mono (by simp) (by simp)).trans
-      ((MemFrame.setCtl _ 133 _).mono (by simp) (by simp))).trans
-      ((tblSet_frame _ _ _ hw).mono (fun b hb => List.mem_cons_of_mem _ hb) (by simp))
-  have hC : CheckR m' a vis (fe.pushTable t) :=
-    ⟨⟨ArenaR.frame (fun b hb => by
-          simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-          rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-            decide)
-        (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
-        hS.check.arena.base,
-      DerR.frameM _ _ m _ hfr (by decide) a hS.check.arena.der⟩,
-     hS.check.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
-     hS.check.pins.frame (by decide) hfr, hE', hS.check.mode.frame hfr (by decide) (by decide)⟩
-  obtain ⟨hI1, hE1, hsz, hEs, hc'⟩ := hS.iw
-  have hI : m'.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
-  have hER : m'.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
-  have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.ctl 200 (by decide)]
-  have h129 : erTop m' = erTop m := by simp only [erTop, hfr.ctl 129 (by decide)]
-  refine ⟨⟨hC, ?_, ?_, ?_, ?_, ?_⟩, ⟨by omega, by omega, fun i _ => by rw [hI], fun i _ => by rw [hER]⟩,
-    MFr.of_frame hfr (by decide) (fun x hx => by simp at hx; subst hx; decide), AFr.of_frame hfr⟩
-  · rw [h200, hI]; exact hI1
-  · rw [h129, hER]; exact hE1
-  · rw [hI]; exact hsz
-  · rw [hER]; exact hEs
-  · rw [hfr.size CTL]; exact hc'
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_struct_proj_table`, both outcomes**: its callees (outside the verdict

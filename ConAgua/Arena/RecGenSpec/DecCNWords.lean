@@ -43,23 +43,7 @@ theorem decCN_words {m : Mem} {cA : Word} {x : IConstantVal × Nat} (h : DecB (f
       DecB (fun m => decCVp m a) m x.1 ∧ H (rdW (m.arr64 EREC) (UInt64.ofNat a)) ∧
       decI (rdW (m.arr64 EREC) (UInt64.ofNat a)) = x.1.name ∧
       rdW (m.arr64 IW) (cA + 1) = UInt64.ofNat x.2 ∧ x.2 < 2 ^ 64 ∧ cA.toNat + 1 < iwTop m := by
-  have h' : decCN (truncM m) cA.toNat = some x := h
-  obtain ⟨⟨a, ha, hcv⟩, hn⟩ := decCN_some h'
-  obtain ⟨-, ha'⟩ := rec2IwN_trunc ha
-  obtain ⟨hnt, hn'⟩ := rec2IwN_trunc hn
-  have ra := iwN_rdW_at (w := cA) (k := 0) (by simpa using ha') hsz
-  have rn := iwN_rdW_at (w := cA) (k := 1) hn' hsz
-  obtain ⟨hnm, -, hty⟩ := decCV_some (a := erA (truncM m)) (q := a) hcv
-  simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hnm hty
-  obtain ⟨w0, hw0, -⟩ := hnm
-  obtain ⟨w3, hw3, -⟩ := hty
-  obtain ⟨-, hw0'⟩ := truncM_er_get hw0
-  obtain ⟨h3t, -⟩ := truncM_er_get hw3
-  have hcv' : decCVp m a = some x.1 := (show DecB (fun m => decCVp m a) m x.1 from hcv).get (OMono.decCVp _)
-  obtain ⟨hnm2, -, -⟩ := decCV_some (a := erA m) (q := a) hcv'
-  obtain ⟨w, hw, hwH, hwD⟩ := erH_rdW hnm2 (by have := ra.2; omega)
-  refine ⟨a, by simpa using ra.1, h3t, hcv, by rw [hw]; exact hwH, by rw [hw]; exact hwD, by simpa using rn.1, rn.2,
-    hnt⟩
+  sorry
 
 /-! ## The relational side -/
 

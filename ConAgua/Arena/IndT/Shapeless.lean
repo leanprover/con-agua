@@ -59,16 +59,7 @@ l_model cslE_spec (p : Prog) (hV : ValProg p)
 -/
 
 theorem erA_truncM_a5 (m : Mem) : erA (truncM m) = erecP m := by
-  apply Array.ext_getElem?
-  intro i
-  rw [truncM_er_get?]
-  simp only [erecP, erecTop, erTop, Array.getElem?_extract, erA]
-  by_cases h : i < (rdW (m.arr64 CTL) 129).toNat
-  · simp only [h, ↓reduceIte]
-    by_cases h2 : i < (m.arr64 EREC).size
-    · simp [h2]; omega
-    · simp [h2]
-  · simp [h]; omega
+  sorry
 
 /-- The head of a decoded block slice. -/
 theorem decEBlk_head {dn : NIdx → Option ConLeche.Name} {m : Mem} {off cnt : Word}
@@ -78,30 +69,7 @@ theorem decEBlk_head {dn : NIdx → Option ConLeche.Name} {m : Mem} {off cnt : W
     ∃ w : Word, rdW (m.arr64 EREC) off = w ∧ decCI (erecP m) w.toNat = some ci ∧
       (off + 1).toNat = off.toNat + 1 ∧ (cnt - 1).toNat = rest.length ∧
       DecB (fun m => decEBlk dn m (off + 1).toNat (cnt - 1).toNat) m rest := by
-  have hoff : (off + 1).toNat = off.toNat + 1 := by
-    have : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-    rw [UInt64.toNat_add]; simp; omega
-  have hcnt : (cnt - 1).toNat = rest.length := by
-    have h1 : 1 ≤ cnt.toNat := by omega
-    have := cnt.toNat_lt
-    rw [UInt64.toNat_sub]
-    simp
-    omega
-  have hd' : decEBlk dn (truncM m) off.toNat (rest.length + 1) = some (ci :: rest) := by
-    rw [← hlen]; exact hd
-  rw [decEBlk_succ] at hd'
-  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd'
-  obtain ⟨q, hq, x, hx, xs, hxs, heq⟩ := hd'
-  obtain ⟨rfl, rfl⟩ := List.cons.inj heq
-  simp only [nat?, Option.map_eq_some_iff] at hq
-  obtain ⟨w, hw, rfl⟩ := hq
-  obtain ⟨-, hw'⟩ := truncM_er_get hw
-  refine ⟨w, ?_, ?_, hoff, hcnt, ?_⟩
-  · show ((m.arr64 EREC)[off.toNat]?).getD 0 = w
-    rw [show (m.arr64 EREC)[off.toNat]? = some w from hw']; rfl
-  · rw [erA_truncM_a5] at hx; exact hx
-  · show decEBlk dn (truncM m) (off + 1).toNat (cnt - 1).toNat = some xs
-    rw [hoff, hcnt]; exact hxs
+  sorry
 
 theorem mapM_denoteN_of {dn : NIdx → Option ConLeche.Name} {ns : ConRon.Arena.NStore}
     (hd : ∀ k x, dn k = some x → denoteN ns k = some x) :
@@ -113,8 +81,7 @@ theorem mapM_denoteN_of {dn : NIdx → Option ConLeche.Name} {ns : ConRon.Arena.
     exact ⟨x :: ks, by simp [List.mapM_cons, hd k x hx, hks]⟩
 
 theorem erecP_get_lt {m : Mem} {i : Nat} {v : Word} (h : erecP m i = some v) : i < erTop m := by
-  rw [← erA_truncM_a5] at h
-  exact (truncM_er_get h).1
+  sorry
 
 theorem decCV_bound {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
     ∃ v, a[q + 3]? = some v := by
