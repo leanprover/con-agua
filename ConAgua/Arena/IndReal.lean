@@ -121,10 +121,12 @@ noncomputable def rrbF (m : Mem) (args : List Word) : Option (List Word × Mem) 
   callF rrbProg "rec_rule_bits" m args
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rrbF_spec (p : Prog) (hp : RrbF p) (n : Nat) (s₀ : St) (args : List Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_rule_bits" args
     ⦃fun r s' => LocEq s' s₀ ∧ rrbF s₀.mem args = some (r, s'.mem); ⊤⦄ := by
   sorry
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_bits`' model refines `recRuleBits`** (replaces `IndStubs.recRuleBits_spec`). -/
@@ -136,8 +138,10 @@ theorem rrbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   relW_callF (L.Stubs.recRuleBits_refines (p := rrbProg) (by constructor <;> rfl) dn vis fe c hc rl hrl)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rrbF_frame {m m' : Mem} {args r : List Word} (h : rrbF m args = some (r, m')) :
     MemFrame [] [] m m' := by
   sorry
+-/
 
 end L.Ind
