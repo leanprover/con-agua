@@ -197,7 +197,7 @@ theorem viewLs_run' (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss
 
 theorem lsWords_length (ids : List LIdx) : (lsWords ids).length = ids.length := by simp [lsWords]
 
-theorem word_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
+theorem nidx_word_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
   simp only [UInt32.toNat_toUInt64]; exact x.word.toNat_lt
 
 theorem hslice_sliceL {P : Array Word} {o l : Nat} {ids : List LIdx}
@@ -220,7 +220,7 @@ theorem hslice_sliceL {P : Array Word} {o l : Nat} {ids : List LIdx}
         rw [← e2]
         simp only [h]
         simp only [lsWords, List.getElem_map]
-        exact word_lt32 _
+        exact nidx_word_lt32 _
       simp only [hd?, e1, Option.getD_some] at hw ⊢
       simp [hw]
     have := mapM_some_of (fun j => (hd? P (o + j) : Option LIdx)) (fun j => (decI (P[o + j]?.getD 0) : LIdx))

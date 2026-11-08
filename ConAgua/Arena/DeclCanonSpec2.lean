@@ -69,7 +69,7 @@ theorem decCV_new {a a' : Array Word} {N q : Nat} {nm lo ll ty : Word} {lps : Li
     exact ⟨lo.toNat, ⟨lo, h1, rfl⟩, ll.toNat, ⟨ll, h2, rfl⟩, hsl⟩
   · simp [hd?, h3, hty]
 
-theorem erecP_rd {m : Mem} {j : Nat} {w : Word} (h : erecP m j = some w) :
+theorem erecP_tagRead {m : Mem} {j : Nat} {w : Word} (h : erecP m j = some w) :
     (m.arr64 EREC)[j]? = some w := by
   rw [← erecP_getE (erecP_lt h)]; exact h
 

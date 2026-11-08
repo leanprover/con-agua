@@ -201,13 +201,34 @@ theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (ust : LsIdx) (
     (a a₁ : AState) (b : Bool) (hp : (pinAt PIN_AND).run a = .ok (an, a))
     (hr : (andRescueSlotsGo fe an ctor nP ust 2 0).run a = .ok (b, a₁)) :
     (andRescueSlots fe ctor nP ust).run a = .ok (b, a₁) := by
-  sorry
+  simp only [andRescueSlots, pinAnd, StateT.run_bind, hp, except_ok_bind, hr]
 
 /-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj`, `fire_ok` and their facts as
 `ProjCallees`). -/
 theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees p) :
     AndRescueSlotsOK p := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus hV
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (andRescueSlots_spec p hp.andRescueSlots n s₀ vis ctor nP us) fun r s' ⟨hloc,
+    hW⟩ => ⟨hloc, ?_⟩
+  simp only [arTop] at hW
+  rcases hc0 : callW p n "pin_at" [11] s₀.mem with _ | ⟨r₀, m₀⟩ <;>
+    simp only [hc0, reduceCtorEq] at hW
+  obtain ⟨t₀, ht₀, hm₀, hloc0, hanHW, hpin⟩ := triple_of_callW
+    (pinAt_refines p hp.pinat n ⟨s₀.mem, Locals.init []⟩ a₀ ⟨fun _ => hS.pins⟩ 11) hc0
+  have hmm : m₀ = s₀.mem := by rw [← ht₀]; exact hm₀
+  subst hmm
+  have hanW : HW (r₀.headD 0) := hanHW
+  obtain ⟨hok, hca, hres, hL1⟩ := arW_ok p hcc dn vis fe eb ctor nP us (r₀.headD 0) hctor hus hanW 2
+    (n + 1) s₀.mem a₀ MM 0 r s'.mem (by simp) hS hV hW
+  have hrunA := andRescueSlots_run fe (decI ctor) nP.toNat (decI us) (decI (r₀.headD 0)) a₀ _ _
+    (by simpa [PIN_AND] using hpin) (AM.run_of_ok _ _ hok)
+  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunA
+  refine ⟨hokF, ?_, ?_, hL1⟩
+  · rw [hstF]; simpa using hca
+  · rw [hresF]; simpa using hres
 
 /-! ## `fab_scope_ok(d, fab, major)` -/
 

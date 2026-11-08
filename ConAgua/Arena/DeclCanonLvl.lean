@@ -314,7 +314,7 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
     all_goals first
       | (-- succ.succ
          obtain ⟨b, hb, hr⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h hR hC
-           (word_lt32 _) (word_lt32 _)
+           (nidx_word_lt32 _) (nidx_word_lt32 _)
          rw [decI_word, decI_word] at hb
          exact ⟨b, hb, hr⟩)
       | (-- max.max, imax.imax
@@ -324,12 +324,12 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
          | some r1 =>
          rw [cnClK1_some] at h
          obtain ⟨b1, hb1, hr1⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hx1 hR hC
-           (word_lt32 _) (word_lt32 _)
+           (nidx_word_lt32 _) (nidx_word_lt32 _)
          rw [decI_word, decI_word] at hb1
          refine andThen_ok hb1 hr1 (fun hne => ?_) (fun h0 => ?_)
          · rw [ite_eq_right hne] at h
            obtain ⟨b2, hb2, hr2⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h hR hC
-             (word_lt32 _) (word_lt32 _)
+             (nidx_word_lt32 _) (nidx_word_lt32 _)
            rw [decI_word, decI_word] at hb2
            exact ⟨b2, hb2, hr2⟩
          · rw [ite_eq_left h0] at h; simp at h; simp [← h])
@@ -344,9 +344,9 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
          rename_i y hy
          simp only [Option.some.injEq] at h
          obtain ⟨hx32, hxd⟩ := nmW_ok hx hC.p hC.c (by have := iwTop_lt m; have := hC.pt; omega)
-           (by have := iwTop_lt m; have := hC.ct; omega) (word_lt32 _)
+           (by have := iwTop_lt m; have := hC.ct; omega) (nidx_word_lt32 _)
          obtain ⟨hy32, hyd⟩ := nmW_ok hy hC.q hC.c (by have := iwTop_lt m; have := hC.qt; omega)
-           (by have := iwTop_lt m; have := hC.ct; omega) (word_lt32 _)
+           (by have := iwTop_lt m; have := hC.ct; omega) (nidx_word_lt32 _)
          rw [decI_word] at hxd hyd
          refine ⟨ConRon.Arena.canonNameMap ps cs _ == ConRon.Arena.canonNameMap qs cs _, rfl, ?_⟩
          rw [← hxd, ← hyd, ← h]

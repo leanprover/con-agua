@@ -430,8 +430,8 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   have hsz' : (erecP m).size < 2 ^ 64 := Nat.lt_of_le_of_lt (by simp [erecP]; exact Nat.min_le_right _ _) hsz
   obtain ⟨wk, e, hx⟩ := ciD hp
   obtain ⟨wk', e', hy⟩ := ciD hq
-  have r1 : rdW (m.arr64 EREC) p = wk := rdW_zero' (erecP_rd e)
-  have r2 : rdW (m.arr64 EREC) q = wk' := rdW_zero' (erecP_rd e')
+  have r1 : rdW (m.arr64 EREC) p = wk := rdW_zero' (erecP_tagRead e)
+  have r2 : rdW (m.arr64 EREC) q = wk' := rdW_zero' (erecP_tagRead e')
   rw [r1, r2] at h
   have wl : ∀ (w : Word) (n : Nat) (hn : n < 2 ^ 64), w.toNat = n → w = UInt64.ofNat n := fun w n hn h =>
     UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hn])
