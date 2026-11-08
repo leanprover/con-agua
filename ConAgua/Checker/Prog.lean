@@ -1407,7 +1407,7 @@ def checkerProg : Prog := [
   ("lv_intern", L.Arena.lvIntern),
   ("lv_leq", L.Arena.lvLeq),
   ("lv_leq_top", L.Arena.lvLeqTop),
-  ("lv_lookup", L.Arena.lvLookupG L.Arena.EREC L.Arena.POOL),
+  ("lv_lookup", L.Arena.lvLookupTG L.Arena.EREC L.Arena.POOL),
   ("lv_mem", L.Arena.lvMemG L.Ind.IW),
   ("lv_never", L.Arena.lvNever),
   ("lv_node", L.Arena.lvNode),

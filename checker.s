@@ -134750,11 +134750,15 @@ jmp .Lca_lv_lookup_0R
 jmp .Lca_lv_lookup_1X
 .Lca_lv_lookup_1E:
 .Lca_lv_lookup_1X:
-movq (%rsp), %rax
-cmpq 2656(%r15), %rax
+movq (%rsp), %rcx
+shrq $40, %rcx
+andq $1, %rcx
+movq $1099511627775, %rax
+andq (%rsp), %rax
+cmpq 2656(%r15,%rcx,8), %rax
 jae ca_error
-movq 1176(%r15), %rcx
-movq (%rcx,%rax,8), %rax
+movq 1176(%r15,%rcx,8), %rdx
+movq (%rdx,%rax,8), %rax
 cmpq 32(%rsp), %rax
 jne .Lca_lv_lookup_21E
 movq 16(%rsp), %rax
