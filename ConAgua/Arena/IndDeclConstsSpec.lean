@@ -4,6 +4,7 @@ public import ConAgua.Arena.IndDeclConsts
 public import ConAgua.Arena.DeclAndPinIndRef
 public import ConRon.Arena.Install
 public import ConAgua.Arena.LoopT
+public import ConAgua.Rom.CIReadSpec
 
 @[expose] public section
 
@@ -34,12 +35,14 @@ def decTblL (m : Mem) (r : List Word) (Q : List IProjTable) : Prop :=
 
 /-- The pre-condition of both: the stage relation, the record `i` the declaration `d` (an
 inductive block of the front's shape), the twin state's invariant, the inductive memos. -/
-structure DeclConstsPre (vis : Word) (fe : IFEnv) (i : Word) (d : IDeclaration) (m : Mem)
-    (a : AState) : Prop where
+structure DeclConstsPre (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (i : Word)
+    (d : IDeclaration) (m : Mem) (a : AState) : Prop where
   stage : StageR vis fe m a
   decl : L.Front.DeclAtF (m.arr64 DECL) (m.arr64 DLP) i.toNat d
   front : ∀ b nP, d = .indDecl b nP → FrontBlock b
   ok : ConRon.Bridge.StateOK a
+  /-- `Quot`'s `sortZ` names under `dn` (`quot_at`'s pre, `L.Rom.QuotAtRef`). -/
+  quotDn : L.Rom.NamesDn dn a L.Rom.quotNames
   memos : IndMemos m
   dsize : (m.arr64 DECL).size < 2 ^ 63
   psize : (m.arr64 DLP).size < 2 ^ 63
@@ -56,18 +59,20 @@ structure DeclConstsProg (p : Prog) : Prop where
 /-- **`decl_constants(i)` refines `declConstants d`**: the constants record `i` installs, in
 push order, an `IW` slice of `EREC` constant records. -/
 @[refines ConRon.Arena.declConstants]
-theorem declConstants_refines {p : Prog} (hp : DeclConstsProg p) (vis : Word) (fe : IFEnv)
+theorem declConstants_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv)
     (i : Word) (d : IDeclaration) :
-    RefAM p "decl_constants" [i] (DeclConstsPre vis fe i d) (ConRon.Arena.declConstants d)
+    RefAM p "decl_constants" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declConstants d)
       (fun m m' a r x => KeepPost vis fe decCIL m m' a r x ∧ IndMemos m') := by
   sorry
 
 /-- **`decl_tables(i)` refines `declTables d`**: the projection tables record `i` installs, an
 `IW` slice of `EREC` table records. -/
 @[refines ConRon.Arena.declTables]
-theorem declTables_refines {p : Prog} (hp : DeclConstsProg p) (vis : Word) (fe : IFEnv)
+theorem declTables_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv)
     (i : Word) (d : IDeclaration) :
-    RefAM p "decl_tables" [i] (DeclConstsPre vis fe i d) (ConRon.Arena.declTables d)
+    RefAM p "decl_tables" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declTables d)
       (fun m m' a r x => KeepPost vis fe decTblL m m' a r x ∧ IndMemos m') := by
   sorry
 
