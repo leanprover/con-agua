@@ -45,7 +45,6 @@ structure IndApplyLookups (p : Prog) : Prop where
   ifl_push : p.lookup "ifl_push" = some iflPush
   ctl_sum : p.lookup "ctl_sum" = some ctlSum
   store_fuel : p.lookup "store_fuel" = some storeFuel
-  pi_result_d : p.lookup "pi_result_d" = some piResultD
   ind_pi_tele_len : p.lookup "ind_pi_tele_len" = some indPiTeleLen
   pi_sort_tele_len : p.lookup "pi_sort_tele_len" = some piSortTeleLen
   name_rec_pre : p.lookup "name_rec_pre" = some nameRecPre
@@ -64,7 +63,6 @@ structure IndApplyLookups (p : Prog) : Prop where
   vi_order_in : p.lookup "vi_order_in" = some viOrderIn
   vi_order_go : p.lookup "vi_order_go" = some viOrderGo
   vi_order : p.lookup "vi_order" = some viOrder
-  vi_k_expected : p.lookup "vi_k_expected" = some viKExpected
   vi_rec_idx : p.lookup "vi_rec_idx" = some viRecIdx
   vi_rec : p.lookup "vi_rec" = some viRec
   vi_nested : p.lookup "vi_nested" = some viNested
@@ -116,11 +114,6 @@ theorem storeFuel_spec (n : Nat) (s₀ : St) :
 end
 
 /-! ## Telescopes -/
-
-l_model piRes_spec (p : Prog) (hL : IndApplyLookups p)
-  fns [hL.pi_result_d ↦ piResW ro]
-  specs [eView_spec p hL.e_view n]
-  grind [arena_grind] extra [ld64_rd_spec]
 
 /-- After `ind_pi_tele_len`'s recursive call. -/
 def teleK : Option Word → Option Word
@@ -515,21 +508,6 @@ def keK2 (n : Nat) (c s : Word) : Option (Word × Mem) → Option (Word × Mem)
 @[arena_grind =] theorem keK2_none (n : Nat) (c s : Word) : keK2 n c s none = none := rfl
 @[arena_grind =] theorem keK2_some (n : Nat) (c s z : Word) (m : Mem) :
     keK2 n c s (some (z, m)) = keK3 c (equivW n m s z) := rfl
-
-/-- `vi_k_expected` after `pi_result_d`. -/
-def keK1 (n : Nat) (m : Mem) (oo : Word) : Option Word → Option (Word × Mem)
-  | none => none
-  | some r =>
-    if eViewW m r = [] then none
-    else if (eViewW m r).headD 0 ≠ 2 then some (0, m)
-    else keK2 n (rdW (m.arr64 IFL) oo) ((eViewW m r).tail.headD 0) (lhMkW (m.set64 CTL 192 0) 0 0 0)
-
-@[arena_grind =] theorem keK1_none (n : Nat) (m : Mem) (oo : Word) : keK1 n m oo none = none := rfl
-@[arena_grind =] theorem keK1_some (n : Nat) (m : Mem) (oo r : Word) :
-    keK1 n m oo (some r) =
-      if eViewW m r = [] then none
-      else if (eViewW m r).headD 0 ≠ 2 then some (0, m)
-      else keK2 n (rdW (m.arr64 IFL) oo) ((eViewW m r).tail.headD 0) (lhMkW (m.set64 CTL 192 0) 0 0 0) := rfl
 
 /-- **The model of `vi_nested(to, tn, j)`.** -/
 def nestedW : Nat → Mem → Word → Word → Word → Option Word
