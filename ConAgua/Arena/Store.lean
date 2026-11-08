@@ -341,6 +341,7 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   room := condOf (lblk (t, o, l, h, j, c) { if len(REC⟨t⟩) >> 2 <= c { skip } })
   recW := [.const kd, .var 1, .var 2, .var 3]
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
+  hrec := rhsOf (lblk (t, i, h) { h := REC⟨t⟩[i * 4 + 3] })
   skipW := none
   mtM m ks t i := mt (m.arr64 (tierA REC t)) (tpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM m ks := hashN (tpool m) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
@@ -415,11 +416,11 @@ def litGrowMem (slots : Array Word) : Mem :=
       (SLOT, slots)]
 
 /- Growth: 8 slots per tier at the start; the seventh node (past 3/4 load) doubles them in place
-(16 slots, words `2‥33`), which a `consTestWords` slot array holds; the thirteenth doubles them
+(16 slots, words `2‥17`), which a `consMinWords` slot array holds; the thirteenth doubles them
 again (32 slots), which it cannot (abort); a `consGrowWords` one holds both doublings (then all 13
 nodes are found again). -/
-#guard (internAll (litGrowMem (Array.replicate consTestWords 0)) ((List.range 13).map fun i => (UInt64.ofNat i, 1))).isNone
-#guard (internAll (litGrowMem (Array.replicate consTestWords 0)) ((List.range 12).map fun i => (UInt64.ofNat i, 1))).isSome
+#guard (internAll (litGrowMem (Array.replicate consMinWords 0)) ((List.range 13).map fun i => (UInt64.ofNat i, 1))).isNone
+#guard (internAll (litGrowMem (Array.replicate consMinWords 0)) ((List.range 12).map fun i => (UInt64.ofNat i, 1))).isSome
 #guard internAll (litGrowMem (Array.replicate consGrowWords 0))
     ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
   some ((List.range 13 ++ List.range 13).map fun i => 0x20000000 + UInt64.ofNat i)
@@ -553,9 +554,9 @@ theorem litOK (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
   ihashG := fun h => by simp [litCS, litCSk] at h
-  qpure := fun _ h => by simp [litCS, litCSk] at h
+  qpure := fun h => by simp [litCS, litCSk] at h
   mloc := fun _ => by simp [litCS, litCSk]
-  exnk := fun h => by simp [litCS, litCSk] at h
+  hrec := fun s => by simp [litCS, litCSk, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, litH]
   ihash := litCSk_ihash p _ _ _ _ _ hph
   pre := rfl
   colA := by simp [litCS, litCSk]
@@ -578,9 +579,9 @@ theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
   ihashG := fun h => by simp [litStrCS, litCSk] at h
-  qpure := fun _ h => by simp [litStrCS, litCSk] at h
+  qpure := fun h => by simp [litStrCS, litCSk] at h
   mloc := fun _ => by simp [litStrCS, litCSk]
-  exnk := fun h => by simp [litStrCS, litCSk] at h
+  hrec := fun s => by simp [litStrCS, litCSk, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, litH]
   ihash := litCSk_ihash p _ _ _ _ _ hph
   pre := rfl
   colA := by simp [litStrCS, litCSk]

@@ -23,7 +23,7 @@ The arena's `app` constructor is a `Tbl AppNode EIdx UInt64` per tier, `AppNode 
   interleaved: node `i` of tier `t` at `AREC⟨t⟩[i]`. No stored hash: the hash is a
   cheap function of the two handle words. The node count of tier `t` is `CTL[4 + t]`.
 * **Cons table.** Word array `ASLOT`, the cons-table library's layout (`ConsLib.lean`): one table
-  per tier, the key word the key itself (an exact table), linear probing from `homeW`.
+  per tier, one word per slot (the key's hash fragment and the node), linear probing from `homeW`.
 * **The scratch skip.** `internE (.app f a)` does not probe the persistent tier when the scratch
   tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 31 of `f | a`.
@@ -72,7 +72,6 @@ def appCS : ConsSch where
   fname := "app_find"
   pname := "app_push"
   nk := 2
-  exact := true
   kpk := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
     if (AREC⟨t⟩[v - 1] & 4294967295) == f && (AREC⟨t⟩[v - 1] >> 32) == a { skip } })
@@ -80,6 +79,7 @@ def appCS : ConsSch where
   room := condOf (lblk (t, f, a, j, c) { if len(AREC⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ (AREC⟨t⟩[i] & 4294967295)) * ⟪fnvPrime⟫ ^ (AREC⟨t⟩[i] >> 32)) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 31) & 1 }))
   mtM m ks t i := amatchW (m.arr64 (tierA AREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := appHashW (ks.getD 0 0) (ks.getD 1 0)
@@ -186,9 +186,9 @@ theorem appOK : ConsOK p appCS where
   colA := by simp [appCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [appCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [appCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [appCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, ahash, appHashW]
 
 theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
   by_cases h : y ≤ x

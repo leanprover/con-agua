@@ -123,6 +123,7 @@ def lsCS : ConsSch where
     if len(LSREC⟨t⟩) < (c + 1) * 3 || len(LSHP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2, .var 3]
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
+  hrec := rhsOf (lblk (t, i, h) { h := LSREC⟨t⟩[i * 3 + 2] })
   skipW := none
   xloc := 7
   pre := some lsPre
@@ -208,9 +209,9 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
   ihashG := fun h => by simp [lsCS] at h
-  qpure := fun _ h => by simp [lsCS] at h
+  qpure := fun h => by simp [lsCS] at h
   mloc := fun _ => by simp [lsCS]
-  exnk := fun h => by simp [lsCS] at h
+  hrec := fun s => by simp [lsCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, lshash]
   ihash := by
     intro n s₀
     apply triple_pre_and

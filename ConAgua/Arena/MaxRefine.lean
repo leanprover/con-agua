@@ -168,20 +168,6 @@ theorem maxCS_wf : maxCS.WF where
     simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m MHP _ t hp.2
   vs ks h hk := by simp [pushArgs, maxCS, hk]
-  ex _ := {
-    nk := by decide
-    nkw := by decide
-    kpk := fun _ => rfl
-    mt := by
-      intro m ks h t i hl
-      obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [maxCS] using hl)
-      simp [maxCS, mmatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
-    hs := by intro m t i; simp [maxCS, mmatchW, mhash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
-    qh := fun _ _ _ => rfl
-    vs := by
-      intro ks h hl f hf
-      simp only [nkW, maxCS, ↓reduceIte, Nat.lt_one_iff] at hf
-      subst hf; simp [pushArgs, maxCS, recK, kwQ] }
 
 /-- `MRecRel` does not read the column. -/
 theorem maxColFree : ColFree maxCS MRecRel := by

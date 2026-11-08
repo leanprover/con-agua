@@ -73,7 +73,6 @@ def succCS : ConsSch where
   fname := "succ_find"
   pname := "succ_push"
   nk := 1
-  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
     if SREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
@@ -81,6 +80,7 @@ def succCS : ConsSch where
     if len(SREC⟨t⟩) <= c || len(SHP⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := (⟪fnvBasis⟫ ^ SREC⟨t⟩[i]) * ⟪fnvPrime⟫ })
   skipW := none
   xloc := 4
   pre := some sPre
@@ -205,9 +205,9 @@ theorem succOK : ConsOK p succCS where
     simp [succCS] at he
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [succCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [succCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [succCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, shash, succHashW]
 
 theorem spushOK_eqC (m : Mem) (t : Word) : spushOK m t = pushOKC succCS m t := by
   simp only [spushOK, pushOKC, succCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

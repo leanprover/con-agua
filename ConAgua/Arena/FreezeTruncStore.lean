@@ -9,7 +9,7 @@ public import ConAgua.Arena.Frame
 # The truncation theorem, part 3: a store under truncation of its tier 0 (lane parmode)
 
 `storeR_trunc`: a two-tier table (`StoreR`, `StoreLib.lean`) whose tier-0 record array is cut
-to `count₀ · w` words and whose tier-0 slot array is cut to `2 + 2 n` words keeps its relation,
+to `count₀ · w` words and whose tier-0 slot array is cut to `2 + n` words keeps its relation,
 the table sitting at word 2 (`koW = 0`: the offset word is never written; `TierLay` states it
 for tier 0), given that the tier-1 arrays and `CTL` are unchanged, and
 that the instance's node relation and hash survive any change that keeps the node's own words
@@ -42,7 +42,7 @@ structure StoreTr (m m' : Mem) : Prop where
   ra1 : m'.arr64 (tier1 S.ra) = m.arr64 (tier1 S.ra)
   sa1 : m'.arr64 (tier1 S.sa) = m.arr64 (tier1 S.sa)
   ra0 : m'.arr64 S.ra = (m.arr64 S.ra).extract 0 (cntW S m 0 * S.w).toNat
-  sa0 : m'.arr64 S.sa = (m.arr64 S.sa).extract 0 (2 + 2 * knW S.sa m 0).toNat
+  sa0 : m'.arr64 S.sa = (m.arr64 S.sa).extract 0 (2 + knW S.sa m 0).toNat
 
 theorem mul_toNat_small {c w : Word} (hc : c.toNat ≤ 2 ^ 30) (hw : w.toNat ≤ 256) :
     (c * w).toNat = c.toNat * w.toNat := by
@@ -68,13 +68,13 @@ variable {m m' : Mem} (hT : StoreTr S m m') (hG : GrowR S m) (hko : koW S.sa m 0
 include hT hG hko
 
 omit hT hko in
-theorem ext_slot_toNat : (2 + 2 * knW S.sa m 0).toNat = 2 + 2 * (knW S.sa m 0).toNat := by
+theorem ext_slot_toNat : (2 + knW S.sa m 0).toNat = 2 + (knW S.sa m 0).toNat := by
   have := (knW_toNat S m hG 0 (by decide)).1
-  rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
+  rw [UInt64.toNat_add]; simp; omega
 
 omit hko in
 theorem knW_trunc0 : knW S.sa m' 0 = knW S.sa m 0 ∧ koW S.sa m' 0 = koW S.sa m 0 := by
-  have e : (2 + 2 * (rdW (m.arr64 S.sa) 0 + SN0)).toNat = 2 + 2 * (knW S.sa m 0).toNat :=
+  have e : (2 + (rdW (m.arr64 S.sa) 0 + SN0)).toNat = 2 + (knW S.sa m 0).toNat :=
     ext_slot_toNat S hG
   simp only [knW, koW, tierA_zero', hT.sa0]
   constructor
@@ -87,13 +87,13 @@ theorem slots_trunc0 (j : Word) (hj : j < nSl S m 0) :
   obtain ⟨hn, ho⟩ := knW_trunc0 S hT hG
   have hkr : krW S.sa m' 0 = krW S.sa m 0 := by simp only [krW, ho]
   have hkr2 : (krW S.sa m 0).toNat = 2 := by simp only [krW, hko]; rfl
-  obtain ⟨k1, k2⟩ := kslot_toNat S m hG 0 (by decide) j hj
+  have k1 := kslot_toNat S m hG 0 (by decide) j hj
   have hjn : j.toNat < (knW S.sa m 0).toNat := hj
   have hbase : baseW m' 0 = baseW m 0 := by simp only [baseW, hT.ctl]
   simp only [slotW, slotK, slotV, hkr, hbase, tierA_zero', hT.sa0]
   constructor
   · rw [rdW_extract]; rw [e, k1]; omega
-  · rw [rdW_extract]; rw [e, k2]; omega
+  · rw [rdW_extract]; rw [e, k1]; omega
 
 end slots
 

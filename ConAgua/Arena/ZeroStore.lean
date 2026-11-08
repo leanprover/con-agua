@@ -68,12 +68,12 @@ def zeroCS : ConsSch where
   fname := "zero_find"
   pname := "zero_push"
   nk := 0
-  exact := true
   mc := condOf (lblk (t, h, n, j, d, v, b) { if 0 == 0 { skip } })
   np := 0
   room := condOf (lblk (t, j, c) { if len(ZREC⟨t⟩) <= c { skip } })
   recW := [.const 0]
   ihash := lblk (h) { h := ⟪zeroHashW⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ⟪zeroHashW⟫ })
   skipW := none
   mtM m _ t i := zmatchW (m.arr64 (tierA ZREC t)) t i
   qhM _ _ := zeroHashW
@@ -166,9 +166,9 @@ theorem zeroOK : ConsOK p zeroCS where
   colA := by simp [zeroCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [zeroCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [zeroCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [zeroCS, rhsOf, L.Notation.blk, Expr.pval, zhash]
 
 theorem zpushOK_eqC (m : Mem) (t : Word) : zpushOK m t = pushOKC zeroCS m t := by
   simp only [zpushOK, pushOKC, zcnt, cntC, zeroCS, ← decide_not, UInt64.not_le]; rfl

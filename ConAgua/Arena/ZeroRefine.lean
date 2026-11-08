@@ -127,17 +127,6 @@ theorem zeroCS_wf : zeroCS.WF where
   colRoom A h := by simp [zeroCS] at h
   room m t h := (zpushOK_room m t ((zpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, zeroCS]
-  ex _ := {
-    nk := by decide
-    nkw := by decide
-    kpk := fun h => absurd h (by decide)
-    mt := by
-      intro m ks h t i hl
-      obtain rfl := list_zero ks (by simpa [zeroCS] using hl)
-      simp [zeroCS, zmatchW, fieldsL]
-    hs := by intro m t i; simp [zeroCS, zmatchW, zhash, fieldsL]
-    qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [zeroCS, nkW] at hf }
 
 /-! ## `intern_zero` refines `internLNode .zero` -/
 

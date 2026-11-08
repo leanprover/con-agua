@@ -73,7 +73,6 @@ def imaxCS : ConsSch where
   fname := "imax_find"
   pname := "imax_push"
   nk := 2
-  exact := true
   kpk := true
   mc := condOf (lblk (t, u, v, h, n, j, d, w, b) {
     if (IREC⟨t⟩[w - 1] & 4294967295) == u && (IREC⟨t⟩[w - 1] >> 32) == v { skip } })
@@ -82,6 +81,7 @@ def imaxCS : ConsSch where
     if len(IREC⟨t⟩) <= c || len(IHP⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ (IREC⟨t⟩[i] & 4294967295)) * ⟪fnvPrime⟫ ^ (IREC⟨t⟩[i] >> 32)) * ⟪fnvPrime⟫ })
   skipW := none
   xloc := 5
   pre := some imPre
@@ -204,9 +204,9 @@ theorem imaxOK : ConsOK p imaxCS where
     simp [imaxCS] at he
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [imaxCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [imaxCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [imaxCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, imhash, imaxHashW]
 
 theorem impushOK_eqC (m : Mem) (t : Word) : impushOK m t = pushOKC imaxCS m t := by
   simp only [impushOK, pushOKC, imaxCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

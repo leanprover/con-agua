@@ -180,20 +180,6 @@ theorem constCS_wf : constCS.WF where
     simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m CLP _ t hp.2
   vs ks h hk := by simp [pushArgs, constCS, hk]
-  ex _ := {
-    nk := by decide
-    nkw := by decide
-    kpk := fun _ => rfl
-    mt := by
-      intro m ks h t i hl
-      obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [constCS] using hl)
-      simp [constCS, cematchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
-    hs := by intro m t i; simp [constCS, cematchW, cehash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
-    qh := fun _ _ _ => rfl
-    vs := by
-      intro ks h hl f hf
-      simp only [nkW, constCS, ↓reduceIte, Nat.lt_one_iff] at hf
-      subst hf; simp [pushArgs, constCS, recK, kwQ] }
 
 /-- `CeRecRel` does not read the column. -/
 theorem constColFree : ColFree constCS CeRecRel := by

@@ -27,7 +27,7 @@ same width-2, scratch-skipping shape:
   interleaved: node `i` of tier `t` at `CREC⟨t⟩[i]`. No stored hash: the hash is a
   cheap function of the two handle words. The node count of tier `t` is `CTL[18 + t]`.
 * **Cons table.** Word array `CSLOT`, the cons-table library's layout (`ConsLib.lean`): one table
-  per tier, the key word the key itself (an exact table), linear probing from `homeW`.
+  per tier, one word per slot (the key's hash fragment and the node), linear probing from `homeW`.
 * **The scratch skip.** `internE (.const n us)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 31 of `n | us`.
@@ -75,7 +75,6 @@ def constCS : ConsSch where
   fname := "const_find"
   pname := "const_push"
   nk := 2
-  exact := true
   kpk := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
     if (CREC⟨t⟩[v - 1] & 4294967295) == f && (CREC⟨t⟩[v - 1] >> 32) == a { skip } })
@@ -84,6 +83,7 @@ def constCS : ConsSch where
     if len(CREC⟨t⟩) <= c || len(CLP⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ (CREC⟨t⟩[i] & 4294967295)) * ⟪fnvPrime⟫ ^ (CREC⟨t⟩[i] >> 32)) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 31) & 1 }))
   xloc := 4
   pre := some lsBlkC
@@ -208,9 +208,9 @@ theorem constOK : ConsOK p constCS where
     simp [constCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [constCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [constCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [constCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, cehash, constHashW]
 
 theorem cepushOK_eqC (m : Mem) (t : Word) : cepushOK m t = pushOKC constCS m t := by
   simp only [cepushOK, pushOKC, constCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

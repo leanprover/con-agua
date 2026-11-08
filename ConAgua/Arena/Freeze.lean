@@ -37,7 +37,7 @@ number of pending groups, `3` phase A's final view, `4` the number of frozen arr
 `(off, len)` of `HDRF` itself at words `8`, `9` and of frozen entry `i` at `10 + 2 i`, `11 + 2 i`.
 
 **Images** (`frozen`): the store library's tier-0 extents; every image is a **prefix** of its
-array. A store's records `R[0‥count₀ · w)`, its slot table `S[0‥2 + 2 n)` (`n = S[0] + SN0`; the
+array. A store's records `R[0‥count₀ · w)`, its slot table `S[0‥2 + n)` (`n = S[0] + SN0`; the
 offset word `S[1]` is never written, so the table sits at word `2`, and growth in place keeps it
 there), its derived or hash column `C[0‥count₀)`; the env index `EIX*[0‥2 count₀)` and the
 table rows `TIX*[0‥count₀)` (tier 0 only: tier 1 is the worker's own); the pool's tier 0 `POOL[0‥CTL[0])` (lane tierpool: after phase A the scratch flag
@@ -87,9 +87,9 @@ def fzC (k : Nat) : Expr := .const k.toUInt64
 /-- The tier-0 extent of a packed column of `CTL[k]` elements, in words: `(CTL[k] + 1) >> 1`. -/
 def fzPExt (k : Nat) : Expr := .bin .shr (.bin .add (fzCtl k) (fzC 1)) (fzC 1)
 
-/-- The tier-0 extent of the slot array `sa`: `2 + 2 (sa[0] + SN0)`. -/
+/-- The tier-0 extent of the slot array `sa`: `2 + (sa[0] + SN0)`. -/
 def fzSlotExt (sa : ArrId) : Expr :=
-  .bin .add (fzC 2) (.bin .mul (fzC 2) (.bin .add (.ld64 sa (fzC 0)) (.const SN0)))
+  .bin .add (fzC 2) (.bin .add (.ld64 sa (fzC 0)) (.const SN0))
 
 /-- **The frozen arrays**, in header order: (the id entry 2 reads it as, how entry 1 makes it). -/
 def frozen : List (ArrId × Fz) :=

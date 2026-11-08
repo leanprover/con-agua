@@ -76,6 +76,7 @@ def nnumCS : ConsSch where
   room := condOf (lblk (t, pre, u, j, c) { if len(NNREC⟨t⟩) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (pre, u, h) { h := ((⟪fnvBasis⟫ ^ pre) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ NNREC⟨t⟩[i * 2]) * ⟪fnvPrime⟫ ^ NNREC⟨t⟩[i * 2 + 1]) * ⟪fnvPrime⟫ })
   skipW := none
   mtM m ks t i := nnmatchW (m.arr64 (tierA NNREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := nnumHashW (ks.getD 0 0) (ks.getD 1 0)
@@ -170,9 +171,9 @@ theorem nnumOK : ConsOK p nnumCS where
   colA := by simp [nnumCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun _ _ _ _ _ => rfl
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [nnumCS] at h
-  exnk := fun h => by simp [nnumCS] at h
+  hrec := fun s => by simp [nnumCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, nnhash, nnumHashW]
 
 theorem nnpushOK_eqC (m : Mem) (t : Word) : nnpushOK m t = pushOKC nnumCS m t := by
   simp only [nnpushOK, pushOKC, nncnt, cntC, nnumCS, ← decide_not, UInt64.not_le]; rfl

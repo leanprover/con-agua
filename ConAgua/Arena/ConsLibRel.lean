@@ -92,36 +92,6 @@ def ConsSch.sch (C : ConsSch) : Schema := ⟨C.ra, C.sa, C.w, C.ca, C.tag, C.wid
 theorem ConsSch.capW_toNat (C : ConsSch) : C.capW.toNat = capS C.wide := by
   cases h : C.wide <;> simp [ConsSch.capW, capS, h]
 
-/-- Key word `f` of node `i` of tier `t`: record word `f`, or (a packed record, `kpk`) the low
-(`f = 0`) or high half of record word `0`. -/
-def kfld (C : ConsSch) (m : Mem) (t i : Word) (f : Nat) : Word :=
-  if C.kpk then (if f = 0 then fld C.sch m t i 0 &&& 4294967295 else fld C.sch m t i 0 >>> 32)
-  else fld C.sch m t i (UInt64.ofNat f)
-
-/-- The node's key words (`kfld`): its first `nk` record words, or the two halves of word `0`. -/
-def fieldsL (C : ConsSch) (m : Mem) (t i : Word) : List Word :=
-  (List.range C.nk).map (kfld C m t i)
-
-/-- The number of record words the key fills: `1` packed, else `nk`. -/
-def nkW (C : ConsSch) : Nat := if C.kpk then 1 else C.nk
-
-/-- The record words of a key: the key, or (packed) its two words in one (`kwQ`). -/
-def recK (C : ConsSch) (ks : List Word) : List Word := if C.kpk then [kwQ C ks 0] else ks
-
-/-- **An exact table's facts**: at most two key words, inside the record (a packed record: two,
-in word `0`); the match is equality of the key words; the node's hash is the key's hash of its
-key words, which reads no memory; the pushed record starts with the key's record words. -/
-structure ExactOK (C : ConsSch) : Prop where
-  nk : C.nk ≤ 2
-  nkw : nkW C ≤ C.w.toNat
-  kpk : C.kpk = true → C.nk = 2
-  mt : ∀ (m : Mem) (ks : List Word) (h t i : Word), ks.length = C.nk →
-    (C.mtM m (ks ++ [h]) t i = true ↔ fieldsL C m t i = ks)
-  hs : ∀ (m : Mem) (t i : Word), C.hsM m t i = C.qhM m (fieldsL C m t i)
-  qh : ∀ (m m' : Mem) (ks : List Word), C.qhM m ks = C.qhM m' ks
-  vs : ∀ (ks : List Word) (h : Word), ks.length = C.nk → ∀ f, f < nkW C →
-    (C.vsM (pushArgs C ks h)).getD f 0 = (recK C ks).getD f 0
-
 /-- **What the generic lemmas need of a cons table.** -/
 structure ConsSch.WF (C : ConsSch) : Prop where
   sch : C.sch.WF
@@ -137,8 +107,6 @@ structure ConsSch.WF (C : ConsSch) : Prop where
     (cntC C m t).toNat < (m.arr64 (tierA A t)).size
   vs : ∀ (ks : List Word) (h : Word), ks.length = C.nk →
     (C.vsM (pushArgs C ks h)).length = C.w.toNat
-  /-- An exact table's facts (`ExactOK`). -/
-  ex : C.exact = true → ExactOK C
 
 /-- The record relation `R` does not read the table's column. -/
 def ColFree {α : Type} (C : ConsSch) (R : Mem → Word → Word → α → Prop) : Prop :=
@@ -178,58 +146,19 @@ theorem ConsSch.WF.room' (m : Mem) (t : Word) (h : pushOKC C m t = true) : PushR
 
 end shape
 
-/-! ## The key words of a slot -/
+/-! ## The fragments of a slot -/
 
-/-- **The key words a slot of node `i` of tier `t` may hold**: an exact table's packed key words
-(`kwQ`, two words below `2^32`), else the node's hash (a fingerprint). -/
-def ConsSch.KP (C : ConsSch) (m : Mem) (t i K : Word) : Prop :=
-  if C.exact then K = kwQ C (fieldsL C m t i) 0 ∧
-    (C.nk = 2 → ∀ f : Nat, f < 2 → (kfld C m t i f).toNat < 2 ^ 32)
-  else K = C.hsM m t i
-
-theorem fieldsL_congr {C : ConsSch} {m m' : Mem} {t i : Word}
-    (h : ∀ f : Nat, f < C.nk → kfld C m' t i f = kfld C m t i f) :
-    fieldsL C m' t i = fieldsL C m t i := by
-  unfold fieldsL; apply List.map_congr_left; intro f hf; exact h f (List.mem_range.mp hf)
-
-/-- The key words depend only on the record words the key fills. -/
-theorem kfld_congr {C : ConsSch} {m m' : Mem} {t i : Word}
-    (h : ∀ g : Nat, g < nkW C → fld C.sch m' t i (UInt64.ofNat g) = fld C.sch m t i (UInt64.ofNat g))
-    (f : Nat) (hf : f < C.nk) : kfld C m' t i f = kfld C m t i f := by
-  unfold kfld
-  cases hp : C.kpk
-  · simp only [Bool.false_eq_true, ↓reduceIte]; exact h f (by simp [nkW, hp, hf])
-  · have h0 : fld C.sch m' t i 0 = fld C.sch m t i 0 := h 0 (by simp [nkW, hp])
-    simp only [↓reduceIte, h0]
+/-- **The fragment a slot of node `i` of tier `t` holds**: its hash's (`fragW`, con-ron's
+`frag_of`). -/
+def ConsSch.KP (C : ConsSch) (m : Mem) (t i K : Word) : Prop := K = fragW (C.hsM m t i)
 
 theorem ConsSch.kp_mono (C : ConsSch) : KMono C.sch C.hsM C.KP := by
-  intro m m' t i hra hh K hK
-  have hf : ∀ f, fld C.sch m' t i f = fld C.sch m t i f := fun f => by simp only [fld, hra]
-  have hk : ∀ f, kfld C m' t i f = kfld C m t i f := fun f => by simp only [kfld, hf]
-  unfold ConsSch.KP at hK ⊢
-  cases hx : C.exact
-  · simp only [hx, Bool.false_eq_true, ↓reduceIte] at hK ⊢; rw [hh]; exact hK
-  · simp only [hx, ↓reduceIte] at hK ⊢
-    rw [fieldsL_congr (fun f _ => hk _)]; simp only [hk]; exact hK
+  intro m m' t i _ hh K hK
+  unfold ConsSch.KP at hK ⊢; rw [hh]; exact hK
 
-theorem ConsSch.WF.kframe {C : ConsSch} (hW : C.WF) : KFrame C.sch C.hsM C.KP := by
-  intro m m' t i hf hh K hK
-  unfold ConsSch.KP at hK ⊢
-  cases hx : C.exact
-  · simp only [hx, Bool.false_eq_true, ↓reduceIte] at hK ⊢; rw [hh]; exact hK
-  · have hE := hW.ex hx
-    have hw := hW.sch.w_le
-    have hg : ∀ g : Nat, g < nkW C →
-        fld C.sch m' t i (UInt64.ofNat g) = fld C.sch m t i (UInt64.ofNat g) := fun g hg0 =>
-      hf _ (by
-        have := hE.nk
-        have : nkW C ≤ 2 := by unfold nkW; split <;> omega
-        rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
-        have := hE.nkw; simp only [ConsSch.sch] at hw ⊢; omega)
-    have hf' := kfld_congr hg
-    simp only [hx, ↓reduceIte] at hK ⊢
-    rw [fieldsL_congr hf']
-    refine ⟨hK.1, fun h2 f hf2 => by rw [hf' f (by omega)]; exact hK.2 h2 f hf2⟩
+theorem ConsSch.WF.kframe {C : ConsSch} (_hW : C.WF) : KFrame C.sch C.hsM C.KP := by
+  intro m m' t i _ hh K hK
+  unfold ConsSch.KP at hK ⊢; rw [hh]; exact hK
 
 /-! ## The relation -/
 
@@ -247,14 +176,10 @@ theorem consR_iff {C : ConsSch} {R : Mem → Word → Word → α → Prop} {m :
 variable {C : ConsSch} {R : Mem → Word → Word → α → Prop} {m : Mem} {on : Bool}
   {P Q : Tbl α (Idx k) δ}
 
-/-- Two schemas with the same arrays, counts, tag, hash and key words have the same relation. -/
-theorem ConsR.congr {C' : ConsSch} (hs : C.sch = C'.sch) (hh : C.hsM = C'.hsM)
-    (he : C.exact = C'.exact := by rfl) (hn : C.nk = C'.nk := by rfl)
-    (hp : C.kpk = C'.kpk := by rfl) :
+/-- Two schemas with the same arrays, counts, tag and hash have the same relation. -/
+theorem ConsR.congr {C' : ConsSch} (hs : C.sch = C'.sch) (hh : C.hsM = C'.hsM) :
     ConsR C R m on P Q ↔ ConsR C' R m on P Q := by
-  have hkf : kfld C = kfld C' := by funext m t i f; simp only [kfld, hs, hp]
-  have hk : C.KP = C'.KP := by
-    funext m t i K; simp only [ConsSch.KP, fieldsL, hkf, kwQ, hh, he, hn]
+  have hk : C.KP = C'.KP := by funext m t i K; simp only [ConsSch.KP, hh]
   simp only [consR_iff, hs, hh, hk]
 
 theorem ConsR.tier (h : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) :
@@ -476,17 +401,17 @@ theorem ConsR.resetG (h : ConsR C R m on P Q) {m' : Mem} {on' : Bool}
     (hfree : ∀ j : Word, j < nSl C.sch m 1 → slotW C.sch m' 1 j = 0)
     (hsz : (m'.arr64 CTL).size = (m.arr64 CTL).size)
     (hc0 : cntC C m' 0 = cntC C m 0) (hc1 : cntC C m' 1 = 0)
-    (hb : (rdW (m'.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32)
+    (hb : (rdW (m'.arr64 CTL) SCB).toNat < 2 ^ 47 - 2 ^ 32)
     (hfl : (rdW (m'.arr64 CTL) 1 != 0) = on')
     (hR0 : ∀ i a, R m 0 i a → R m' 0 i a) (hh0 : ∀ i, C.hsM m' 0 i = C.hsM m 0 i) :
     ConsR C R m' on' P (Tbl.empty : Tbl α (Idx k) δ) :=
   storeR_resetG C.sch R C.hsM C.KP m m' on on' P Q h hra hsa0 hsz1 hw0 hw1 hfree hsz hc0 hc1
     hb hfl hR0 hh0 (fun i K hK => C.kp_mono m m' 0 i (hra 0) (hh0 i) K hK)
 
-/-- The slots a base raised by `2^32` (from below `2^62`) leaves free: all of tier 1's. -/
+/-- The slots a base raised by `2^32` (from below `SCBLIM`) leaves free: all of tier 1's. -/
 theorem ConsR.free_raise (h : ConsR C R m on P Q) {m' : Mem}
     (hsa : m'.arr64 (tierA C.sa 1) = m.arr64 (tierA C.sa 1))
-    (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62)
+    (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 47 - 2 ^ 33)
     (hb : rdW (m'.arr64 CTL) SCB = rdW (m.arr64 CTL) SCB + 4294967296) :
     ∀ j : Word, j < nSl C.sch m 1 → slotW C.sch m' 1 j = 0 :=
   slotW_free_raise C.sch R C.hsM C.KP m m' Q h.2.2.2.1 hsa hlo hb
@@ -495,7 +420,7 @@ theorem ConsR.free_raise (h : ConsR C R m on P Q) {m' : Mem}
 theorem ConsR.free_zero (h : ConsR C R m on P Q) {m' : Mem}
     (hw1 : rdW (m'.arr64 (tierA C.sa 1)) 1 = rdW (m.arr64 (tierA C.sa 1)) 1)
     (hz : ∀ y : Word, (krW C.sa m 1).toNat ≤ y.toNat →
-      y.toNat < (krW C.sa m 1).toNat + 2 * (knW C.sa m 1).toNat → rdW (m'.arr64 (tierA C.sa 1)) y = 0) :
+      y.toNat < (krW C.sa m 1).toNat + (knW C.sa m 1).toNat → rdW (m'.arr64 (tierA C.sa 1)) y = 0) :
     ∀ j : Word, j < nSl C.sch m 1 → slotW C.sch m' 1 j = 0 :=
   slotW_free_zero C.sch m m' h.2.2.2.2 hw1 hz
 
@@ -504,7 +429,7 @@ inside its array (below `2^61` words). -/
 theorem ConsR.lay1 (h : ConsR C R m on P Q) :
     (m.arr64 (tierA C.sa 1)).size < 2 ^ 61 ∧ 8 ≤ (knW C.sa m 1).toNat ∧
     (knW C.sa m 1).toNat % 8 = 0 ∧
-    2 + (koW C.sa m 1).toNat + 2 * (knW C.sa m 1).toNat ≤ (m.arr64 (tierA C.sa 1)).size :=
+    2 + (koW C.sa m 1).toNat + (knW C.sa m 1).toNat ≤ (m.arr64 (tierA C.sa 1)).size :=
   let ⟨h1, h2, h3, h4, _⟩ := h.2.2.2.2.2
   ⟨h1, h2, h3, h4⟩
 
@@ -534,9 +459,9 @@ theorem consR_init (hz : ∀ b x, rdW (m.arr64 b) x = 0) (hctl : C.ca.toNat + 2 
 
 theorem probeC_ok (C : ConsSch) (m : Mem) (ks : List Word) (h t : Word)
     (hn : 0 < nSl C.sch m t) :
-    ProbeOKG C.sch m t (C.mtM m (ks ++ [h]) t) C.exact (kwQ C ks h) (homeS C.sch m t h)
+    ProbeOKG C.sch m t (C.mtM m (ks ++ [h]) t) (fragW h) (homeS C.sch m t h)
       (probeC C m ks h t) :=
-  probe_homeG C.sch m t _ _ _ (cprobeW (m.arr64 (tierA C.sa t)) (C.mtM m (ks ++ [h]) t) C.exact (kwQ C ks h)
+  probe_homeG C.sch m t _ _ (cprobeW (m.arr64 (tierA C.sa t)) (C.mtM m (ks ++ [h]) t) (fragW h)
     (baseW m t) (knW C.sa m t) (krW C.sa m t)) (fun j d => by rw [cprobeW]; rfl) h hn
 
 theorem wrRecK_eq (C : ConsSch) (t c : Word) :
@@ -639,83 +564,13 @@ theorem pack_hi (a b : Word) (ha : a.toNat < 2 ^ 32) (hb : b.toNat < 2 ^ 32) :
     Nat.shiftRight_eq_div_pow]
   omega
 
-/-- The key words below `2^32` when their `|` has no bit from 32 on (`ciChk`). -/
-theorem small_of_or (a b : Word) (h : (a ||| b) >>> 32 = 0) :
-    a.toNat < 2 ^ 32 ∧ b.toNat < 2 ^ 32 := by
-  have e := congrArg UInt64.toNat h
-  rw [UInt64.toNat_shiftRight, show (32 : Word).toNat % 64 = 32 from rfl,
-    Nat.shiftRight_eq_div_pow, UInt64.toNat_or] at e
-  simp only [UInt64.toNat_zero] at e
-  have h1 : a.toNat ≤ a.toNat ||| b.toNat := Nat.left_le_or
-  have h2 : b.toNat ≤ a.toNat ||| b.toNat := Nat.right_le_or
-  constructor <;> omega
-
-theorem fieldsL_length (C : ConsSch) (m : Mem) (t i : Word) : (fieldsL C m t i).length = C.nk := by
-  simp [fieldsL]
-
-theorem list_two {α : Type} (ks : List α) (h : ks.length = 2) : ∃ a b, ks = [a, b] := by
-  match ks, h with
-  | [a, b], _ => exact ⟨a, b, rfl⟩
-
-theorem list_one {α : Type} (ks : List α) (h : ks.length = 1) : ∃ a, ks = [a] := by
-  match ks, h with
-  | [a], _ => exact ⟨a, rfl⟩
-
-theorem list_zero {α : Type} (ks : List α) (h : ks.length = 0) : ks = [] := by
-  match ks, h with
-  | [], _ => rfl
-
-/-- The key words of a list of `nk` words. -/
-theorem list_eq_range (ks : List Word) (n : Nat) (h : ks.length = n) :
-    (List.range n).map (fun f => ks.getD f 0) = ks := by
-  subst h
-  apply List.ext_getElem (by simp)
-  intro i h1 h2
-  simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h2]
-
-/-- **The key word of an exact key with small words is injective.** -/
-theorem kwQ_inj (C : ConsSch) (hE : ExactOK C) (hx : C.exact = true) (ks ks' : List Word)
-    (hl : ks.length = C.nk) (hl' : ks'.length = C.nk)
-    (hs : C.nk = 2 → (ks.getD 0 0).toNat < 2 ^ 32 ∧ (ks.getD 1 0).toNat < 2 ^ 32)
-    (hs' : C.nk = 2 → (ks'.getD 0 0).toNat < 2 ^ 32 ∧ (ks'.getD 1 0).toNat < 2 ^ 32)
-    (h : kwQ C ks 0 = kwQ C ks' 0) : ks = ks' := by
-  have hn := hE.nk
-  simp only [kwQ, hx, ↓reduceIte] at h
-  rcases (by omega : C.nk = 0 ∨ C.nk = 1 ∨ C.nk = 2) with hn0 | hn1 | hn2
-  · rw [hn0] at hl hl'; rw [List.length_eq_zero_iff.mp hl, List.length_eq_zero_iff.mp hl']
-  · rw [hn1] at hl hl' h
-    obtain ⟨a, rfl⟩ := List.length_eq_one_iff.mp hl
-    obtain ⟨b, rfl⟩ := List.length_eq_one_iff.mp hl'
-    simp at h; rw [h]
-  · rw [hn2] at hl hl' h
-    obtain ⟨a1, a2⟩ := hs hn2
-    obtain ⟨b1, b2⟩ := hs' hn2
-    have h' : ks.getD 0 0 ||| ks.getD 1 0 <<< 32 = ks'.getD 0 0 ||| ks'.getD 1 0 <<< 32 := h
-    have e1 := congrArg (fun x : Word => x &&& 4294967295) h'
-    have e2 := congrArg (fun x : Word => x >>> 32) h'
-    simp only [pack_lo _ _ a1 a2, pack_lo _ _ b1 b2] at e1
-    simp only [pack_hi _ _ a1 a2, pack_hi _ _ b1 b2] at e2
-    match ks, ks', hl, hl' with
-    | [x, y], [x', y'], _, _ => simp at e1 e2; rw [e1, e2]
-
-/-- A key's small words, from the key check `intern_X` passed. -/
-theorem small_of_bigK (C : ConsSch) (ks : List Word) (h : ¬ bigK C ks) (hx : C.exact = true) :
-    C.nk = 2 → (ks.getD 0 0).toNat < 2 ^ 32 ∧ (ks.getD 1 0).toNat < 2 ^ 32 := by
-  intro hn
-  simp only [bigK, hx, hn, true_and, Classical.not_not] at h
-  exact small_of_or _ _ h
-
-theorem fieldsL_getD (C : ConsSch) (m : Mem) (t i : Word) (f : Nat) (hf : f < C.nk) :
-    (fieldsL C m t i).getD f 0 = kfld C m t i f := by
-  simp [fieldsL, List.getD_eq_getElem?_getD, hf]
-
 omit [BEq α] [Hashable α] in
-/-- **The new record admits the query's key word**, and holds the key with the query's hash. -/
+/-- **The new record admits the query's fragment**, and holds the key with the query's hash. -/
 theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem) (ks : List Word)
-    (hks : ks.length = C.nk) (hbig : ¬ bigK C ks) (key : α)
+    (hks : ks.length = C.nk) (key : α)
     (h : NewOKR C.sch R C.hsM m (C.vsM (pushArgs C ks (C.qhM m ks))) key (C.qhM m ks)) :
     NewOK C.sch R C.hsM C.KP m (C.vsM (pushArgs C ks (C.qhM m ks))) key (C.qhM m ks)
-      (kwQ C ks (C.qhM m ks)) := by
+      (fragW (C.qhM m ks)) := by
   have hS := hW.sch
   intro t j ht hroom ht0
   obtain ⟨h1, h2⟩ := h t ht hroom ht0
@@ -725,14 +580,13 @@ theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem
   generalize hvs : C.vsM (pushArgs C ks (C.qhM m ks)) = vs at h1 h2
   have hl : vs.length = C.sch.w.toNat := by rw [← hvs]; exact hW.vs ks _ hks
   have hout : OutEq C.sch (newRecM C.sch m t vs)
-      (pushG C.sch m t vs j (cntW C.sch m t) (kwQ C ks (C.qhM m ks))) := by
+      (pushG C.sch m t vs j (cntW C.sch m t) (fragW (C.qhM m ks))) := by
     refine ⟨fun b h1 h1' h2 h2' h3 => ?_, ?_⟩
     · have hb : b ≠ tierA C.sch.sa t := fun e => by
         rcases tierA_eq_or C.sch.sa t with e' | e' <;> rw [e'] at e <;> contradiction
       simp only [pushG, newRecM, Mem.arr64_set64_ne _ _ _ _ _ hb, Mem.arr64_set64_ne _ _ _ _ _ h3]
     · simp only [pushG, newRecM]
-      rw [rdW_set64, Mem.arr64_set64_ne _ _ _ _ _ (hS.sa_ctl' t).symm,
-        Mem.arr64_set64_ne _ _ _ _ _ (hS.sa_ctl' t).symm]
+      rw [rdW_set64, Mem.arr64_set64_ne _ _ _ _ _ (hS.sa_ctl' t).symm]
       have : C.sch.ca + (t &&& 1) ≠ 0 := by
         rcases word_le_one t ht with rfl | rfl
         · intro e; have := congrArg UInt64.toNat e; simp at this; omega
@@ -740,7 +594,7 @@ theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem
           simp [UInt64.toNat_add] at this; omega
       simp [this]
   have hfl : ∀ f, f < C.sch.w →
-      fld C.sch (pushG C.sch m t vs j (cntW C.sch m t) (kwQ C ks (C.qhM m ks))) t (cntW C.sch m t) f =
+      fld C.sch (pushG C.sch m t vs j (cntW C.sch m t) (fragW (C.qhM m ks))) t (cntW C.sch m t) f =
       fld C.sch (newRecM C.sch m t vs) t (cntW C.sch m t) f := by
     intro f _
     simp only [fld, pushG, newRecM, Mem.arr64_set64_ne _ _ _ _ _ (hS.ra_ctl' t),
@@ -748,70 +602,7 @@ theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem
   obtain ⟨e1, e2⟩ := hfr _ _ t (cntW C.sch m t) hout hfl
   refine ⟨e1 key h1, by rw [e2]; exact h2, ?_⟩
   unfold ConsSch.KP
-  cases hx : C.exact
-  · have ek : kwQ C ks (C.qhM m ks) = C.qhM m ks := by simp [kwQ, hx]
-    rw [ek] at e2
-    simp only [Bool.false_eq_true, ↓reduceIte, ek]; rw [e2, h2]
-  · have hE := hW.ex hx
-    have hw := hS.w_le
-    have hnk := hE.nk
-    have hsm := small_of_bigK C ks hbig hx
-    -- the new node's record words that hold the key are the key's (`recK`)
-    have hfk : ∀ g : Nat, g < nkW C →
-        fld C.sch (pushG C.sch m t vs j (cntW C.sch m t) (kwQ C ks (C.qhM m ks))) t
-          (cntW C.sch m t) (UInt64.ofNat g) = (recK C ks).getD g 0 := by
-      intro g hg
-      have hnkW : nkW C ≤ 2 := by unfold nkW; split <;> omega
-      have hfw : UInt64.ofNat g < C.sch.w := by
-        rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
-        have := hE.nkw; simp only [ConsSch.sch] at hw ⊢; omega
-      have h30 := Nat.lt_of_lt_of_le hroom.1 (capS_le _)
-      rw [hfl _ hfw, fld_newRecM C.sch hS m t vs t _ _ ht h30 ht h30 hfw hl]
-      have hfn : (UInt64.ofNat g).toNat = g :=
-        UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
-      have had : (C.sch.ad (cntW C.sch m t) (UInt64.ofNat g)).toNat <
-          (m.arr64 (tierA C.sch.ra t)).size := by
-        have hr2 := hroom.2
-        rw [C.sch.ad_toNat hS _ _ h30 hfw, hfn]
-        have hwf : g < C.sch.w.toNat := by have := UInt64.lt_iff_toNat_lt.mp hfw; rwa [hfn] at this
-        have : (cntW C.sch m t).toNat * C.sch.w.toNat + g <
-            C.sch.w.toNat * ((cntW C.sch m t).toNat + 1) := by
-          rw [Nat.mul_add, Nat.mul_one, Nat.mul_comm C.sch.w.toNat]; omega
-        omega
-      simp only [had, and_self, ↓reduceIte, hfn]
-      rw [← hvs]; exact hE.vs ks _ hks g hg
-    -- the new node's key words are the key
-    have hfk' : ∀ f : Nat, f < C.nk →
-        kfld C (pushG C.sch m t vs j (cntW C.sch m t) (kwQ C ks (C.qhM m ks))) t
-          (cntW C.sch m t) f = ks.getD f 0 := by
-      intro f hf
-      unfold kfld
-      cases hp : C.kpk
-      · simp only [Bool.false_eq_true, ↓reduceIte]
-        rw [hfk f (by simp [nkW, hp, hf])]; simp [recK, hp]
-      · have h2 := hE.kpk hp
-        obtain ⟨s1, s2⟩ := hsm h2
-        have h0 : fld C.sch (pushG C.sch m t vs j (cntW C.sch m t) (kwQ C ks (C.qhM m ks))) t
-            (cntW C.sch m t) 0 = (recK C ks).getD 0 0 := hfk 0 (by simp [nkW, hp])
-        simp only [↓reduceIte]
-        rw [h0]
-        simp only [recK, hp, ↓reduceIte, kwQ, hx, h2, List.getD_cons_zero]
-        rcases (by omega : f = 0 ∨ f = 1) with rfl | rfl
-        · simp only [↓reduceIte]; rw [pack_lo _ _ s1 s2]
-        · simp only [Nat.one_ne_zero, ↓reduceIte]; rw [pack_hi _ _ s1 s2]
-    have hfL : fieldsL C (pushG C.sch m t vs j (cntW C.sch m t) (kwQ C ks (C.qhM m ks))) t
-        (cntW C.sch m t) = ks := by
-      refine Eq.trans ?_ (list_eq_range ks C.nk hks)
-      unfold fieldsL
-      apply List.map_congr_left; intro f hf; exact hfk' f (List.mem_range.mp hf)
-    simp only [↓reduceIte]
-    refine ⟨?_, fun h2 f hf2 => ?_⟩
-    · rw [hfL]; simp only [kwQ, hx, ↓reduceIte]
-    · rw [hfk' f (by omega)]
-      obtain ⟨s1, s2⟩ := hsm h2
-      rcases (by omega : f = 0 ∨ f = 1) with rfl | rfl
-      · exact s1
-      · exact s2
+  rw [e2, h2]
 
 /-- **The obligations of a query** `ks` for the arena key `key` in memory `m`: the key has `nk`
 words, the match is key equality on the table's nodes, a matching node has the query's hash, and
@@ -824,54 +615,29 @@ structure ConsKeyOK (C : ConsSch) (R : Mem → Word → Word → α → Prop) (m
   new : NewOKR C.sch R C.hsM m (C.vsM (pushArgs C ks (C.qhM m ks))) key (C.qhM m ks)
 
 omit [BEq α] [Hashable α] in
-/-- **The query's key word** `kwQ`: on a matching node, the admissible key word is the query's;
-an exact table's node with the query's key word matches. -/
-theorem qkey_of {C : ConsSch} (hW : C.WF) {m : Mem} {ks : List Word} {key : α}
-    (hK : ConsKeyOK C R m ks key) (hbig : ¬ bigK C ks) :
-    QKeyOK C.KP (C.mtM m (ks ++ [C.qhM m ks])) m C.exact (kwQ C ks (C.qhM m ks)) := by
-  intro t i K hKP
+/-- **The query's fragment**: on a matching node, the slot's fragment is the query's. -/
+theorem qkey_of {C : ConsSch} {m : Mem} {ks : List Word} {key : α}
+    (hK : ConsKeyOK C R m ks key) :
+    QKeyOK C.KP (C.mtM m (ks ++ [C.qhM m ks])) m (fragW (C.qhM m ks)) := by
+  intro t i K hKP hm
   unfold ConsSch.KP at hKP
-  cases hx : C.exact
-  · simp only [hx, Bool.false_eq_true, ↓reduceIte] at hKP
-    refine ⟨fun hm => ?_, fun h => absurd h (by simp)⟩
-    rw [hKP, hK.home t i hm]; simp [kwQ, hx]
-  · have hE := hW.ex hx
-    simp only [hx, ↓reduceIte] at hKP
-    obtain ⟨hk1, hk2⟩ := hKP
-    refine ⟨fun hm => ?_, fun _ hq => ?_⟩
-    · have := (hE.mt m ks _ t i hK.hlen).mp hm
-      rw [hk1, this]; simp only [kwQ, hx, ↓reduceIte]
-    · apply (hE.mt m ks _ t i hK.hlen).mpr
-      refine kwQ_inj C hE hx _ _ (fieldsL_length C m t i) hK.hlen ?_ (small_of_bigK C ks hbig hx) ?_
-      · intro hn2
-        rw [fieldsL_getD C m t i 0 (by omega), fieldsL_getD C m t i 1 (by omega)]
-        exact ⟨hk2 hn2 0 (by omega), hk2 hn2 1 (by omega)⟩
-      · rw [← hk1, hq]; simp only [kwQ, hx, ↓reduceIte]
+  rw [hKP, hK.home t i hm]
 
-/-- **The growth's hash of an admissible key word is the node's hash.** -/
-theorem ghC_kp {C : ConsSch} (hW : C.WF) (m mi : Mem) (t i K : Word) (hK : C.KP m t i K) :
-    ghC C mi K = C.hsM m t i := by
-  unfold ConsSch.KP at hK
-  unfold ghC
-  cases hx : C.exact
-  · simp only [hx, Bool.false_eq_true, ↓reduceIte] at hK ⊢; exact hK
-  · have hE := hW.ex hx
-    simp only [hx, ↓reduceIte] at hK ⊢
-    obtain ⟨hk1, hk2⟩ := hK
-    rw [hE.hs m t i, hE.qh mi m]
-    congr 1
-    rw [hk1]
-    have hn := hE.nk
-    rcases (by omega : C.nk = 0 ∨ C.nk = 1 ∨ C.nk = 2) with hn0 | hn1 | hn2
-    · simp [fieldsL, kwQ, hx, hn0, unpackK]
-    · simp [fieldsL, kwQ, hx, hn1, unpackK]
-    · have e : fieldsL C m t i = [kfld C m t i 0, kfld C m t i 1] := by
-        simp [fieldsL, hn2, List.range_succ]
-      have s0 : (kfld C m t i 0).toNat < 2 ^ 32 := hk2 hn2 0 (by omega)
-      have s1 : (kfld C m t i 1).toNat < 2 ^ 32 := hk2 hn2 1 (by omega)
-      rw [e]
-      simp only [kwQ, hx, hn2, ↓reduceIte, unpackK, List.getD_cons_zero, List.getD_cons_succ]
-      rw [pack_lo _ _ s0 s1, pack_hi _ _ s0 s1]
+omit [BEq α] [Hashable α] in
+/-- **The growth's hash of a node is its hash** in a memory that differs only in the tier's slot
+array. -/
+theorem ghC_eq {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m mi : Mem) (t : Word)
+    (hmi : ∀ a, a ≠ tierA C.sa t → mi.arr64 a = m.arr64 a) (i : Word) :
+    ghC C t mi i = C.hsM m t i := by
+  have hS := hW.sch
+  have hsat : ∀ b : TieredArray, b ≠ C.sch.sa → b ≠ tier1 C.sch.sa → b ≠ tierA C.sa t :=
+    fun b h1 h2 e => by
+      rcases tierA_eq_or C.sa t with e' | e' <;> rw [e'] at e
+      · exact h1 e
+      · exact h2 e
+  have hout : OutEq C.sch m mi :=
+    ⟨fun b _ _ hb hb' _ => hmi b (hsat b hb hb'), by rw [hmi _ (hS.sa_ctl' t).symm]⟩
+  exact (hfr m mi t i hout (fun f _ => by simp only [fld, hmi _ (hS.ra_sa' t t)])).2
 
 /-! ## An interning -/
 
@@ -1067,19 +833,18 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
   simp only [consInternM, pushC] at hI
   split at hI
   · simp at hI
-  rename_i hbig
   simp only [kwP_pushArgs C m ks hK.hlen] at hI
-  have hQ := qkey_of hW hK hbig
-  have hN := newOK_of hW hfr m ks hK.hlen hbig key hK.new
+  have hQ := qkey_of hK
+  have hN := newOK_of hW hfr m ks hK.hlen key hK.new
   have hl := hW.vs ks (C.qhM m ks) hK.hlen
   have hnz : ∀ t, t ≤ 1 → 0 < nSl C.sch m t := fun t ht =>
     UInt64.lt_iff_toNat_lt.mpr (by have := (lay C.sch m hG t ht).1; simp; omega)
   have hP0 := probeC_ok C m ks (C.qhM m ks) 0 (hnz 0 (by decide))
   have hP1 := probeC_ok C m ks (C.qhM m ks) 1 (hnz 1 (by decide))
-  have hit0 := tierR_hit C.sch R C.hsM C.KP m 0 _ hT0 _ key hK.match_ _ _ hQ _ _ hP0
-  have hit1 := tierR_hit C.sch R C.hsM C.KP m 1 _ hT1 _ key hK.match_ _ _ hQ _ _ hP1
-  have miss0 := tierR_miss C.sch R C.hsM C.KP m 0 _ hT0 _ key hK.match_ _ _ hQ _ hK.home _ hP0
-  have miss1 := tierR_miss C.sch R C.hsM C.KP m 1 _ hT1 _ key hK.match_ _ _ hQ _ hK.home _ hP1
+  have hit0 := tierR_hit C.sch R C.hsM C.KP m 0 _ hT0 _ key hK.match_ _ _ _ hP0
+  have hit1 := tierR_hit C.sch R C.hsM C.KP m 1 _ hT1 _ key hK.match_ _ _ _ hP1
+  have miss0 := tierR_miss C.sch R C.hsM C.KP m 0 _ hT0 _ key hK.match_ _ hQ _ hK.home _ hP0
+  have miss1 := tierR_miss C.sch R C.hsM C.KP m 1 _ hT1 _ key hK.match_ _ hQ _ hK.home _ hP1
   have e0 := hW.base 0 (by decide)
   have e1 := hW.base 1 (by decide)
   simp only [↓reduceIte, show (1 : Word) ≠ 0 by decide] at e0 e1
@@ -1088,9 +853,9 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
   -- the append to tier `t` at slot `j`, then the column, then the growth
   have push : ∀ t, t ≤ 1 → ∀ (j : Word) (P' Q' : Tbl α (Idx k) δ) (m₂ : Mem),
       StoreR C.sch R C.hsM C.KP (pushG C.sch m t (C.vsM (pushArgs C ks (C.qhM m ks))) j (cntC C m t)
-        (kwQ C ks (C.qhM m ks))) (L.on a) P' Q' →
+        (fragW (C.qhM m ks))) (L.on a) P' Q' →
       kgrowIf C t m (pushMX C m t (C.vsM (pushArgs C ks (C.qhM m ks)))
-        (C.colM m (pushArgs C ks (C.qhM m ks))) j (cntC C m t) (kwQ C ks (C.qhM m ks)))
+        (C.colM m (pushArgs C ks (C.qhM m ks))) j (cntC C m t) (fragW (C.qhM m ks)))
         (cntC C m t) = some m₂ →
       StoreR C.sch R C.hsM C.KP m₂ (L.on a) P' Q' := by
     intro t ht j P' Q' m₂ hX hg
@@ -1098,8 +863,8 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
     have hX' := storeR_colW hW hcR t (cntC C m t) (C.colM m (pushArgs C ks (C.qhM m ks))) hX
     unfold kgrowIf at hg
     split at hg
-    · exact storeR_kgrow C.sch R C.hsM C.KP hS hfr hkf (ghC C) _ m₂ t ht
-        (fun mi _ i K hK => ghC_kp hW _ mi t i K hK) _ _ _ hX' hg
+    · exact storeR_kgrow C.sch R C.hsM C.KP hS hfr hkf (ghC C t) _ m₂ t ht
+        (fun mi hmi i => ghC_eq hW hfr _ mi t hmi i) _ _ _ hX' hg
     · cases hg; exact hX'
   split at hI
   · simp at hI
@@ -1156,15 +921,15 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
         have e : UInt64.ofNat (L.getS a).nodes.size = cntC C m 1 := by
           rw [← hT1.1]; exact UInt64.ofNat_toNat
         rw [e] at hst hres
-        have hp1 := tierR_push C.sch R C.hsM C.KP hS hfr hkf m 1 (by decide) _ hT1 _ key hK.match_ _ _
-          hQ _ hK.home _ hP1 hn1 hz1 hroom hctl hb _ hl hN (fun h => absurd h (by decide)) d hG
+        have hp1 := tierR_push C.sch R C.hsM C.KP hS hfr hkf m 1 (by decide) _ hT1 _ key hK.match_ _
+          hQ (fragW_lt _) _ hK.home _ hP1 hn1 hz1 hroom hctl hb _ hl hN (fun h => absurd h (by decide)) d hG
         have hj : (probeC C m ks (C.qhM m ks) 1).tail.tail.headD 0 < nSl C.sch m 1 :=
           ((hP1 hn1).2 hz1).2.1
         rw [hst, hres, L.on_setS, L.getP_setS, L.getS_setS]
         refine ⟨hok, push 1 (by decide) _ _ _ m₂ ?_ hg, by rw [e1]⟩
         refine storeR_push C.sch R C.hsM C.KP hS m 1 (by decide) _ _ _ hj _ _ _ _ _ hR ?_ hp1
         exact tierR_other C.sch R C.hsM C.KP hS hfr hkf m 1 0 (by decide) (by decide) (by decide) _
-          hT0 hroom hb _ hl _ _ hG hj
+          hT0 hroom hb _ hl _ _ (fragW_lt _) hG hj
       · simp at hI
     · simp at hI
   rename_i hfl
@@ -1191,15 +956,15 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
       have e : UInt64.ofNat (L.getP a).nodes.size = cntC C m 0 := by
         rw [← hT0.1]; exact UInt64.ofNat_toNat
       rw [e] at hst hres
-      have hp0 := tierR_push C.sch R C.hsM C.KP hS hfr hkf m 0 (by decide) _ hT0 _ key hK.match_ _ _
-        hQ _ hK.home _ hP0 hn0' hz0 hroom hctl hb _ hl hN (fun _ => by simpa using hfl) d hG
+      have hp0 := tierR_push C.sch R C.hsM C.KP hS hfr hkf m 0 (by decide) _ hT0 _ key hK.match_ _
+        hQ (fragW_lt _) _ hK.home _ hP0 hn0' hz0 hroom hctl hb _ hl hN (fun _ => by simpa using hfl) d hG
       have hj : (probeC C m ks (C.qhM m ks) 0).tail.tail.headD 0 < nSl C.sch m 0 :=
         ((hP0 hn0').2 hz0).2.1
       rw [hst, hres, L.on_setP, L.getP_setP, L.getS_setP]
       refine ⟨hok, push 0 (by decide) _ _ _ m₂ ?_ hg, by rw [e0]⟩
       refine storeR_push C.sch R C.hsM C.KP hS m 0 (by decide) _ _ _ hj _ _ _ _ _ hR hp0 ?_
       exact tierR_other C.sch R C.hsM C.KP hS hfr hkf m 0 1 (by decide) (by decide) (by decide) _
-        hT1 hroom hb _ hl _ _ hG hj
+        hT1 hroom hb _ hl _ _ (fragW_lt _) hG hj
     · simp at hI
   · simp at hI
 
