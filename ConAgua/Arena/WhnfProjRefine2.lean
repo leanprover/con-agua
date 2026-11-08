@@ -91,10 +91,30 @@ theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
 /-- **`find_proj` refines `IFEnv.findProj?`** under `CoreS`. -/
 @[refines ConRon.Arena.IFEnv.findProj?]
 theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
-  sorry
+  intro n s₀ a₀ dn vis fe M eb T i hS hT
+  cases n with
+  | zero => exact CoreSpec.zeroW hp.findProj _ _ _ _ _ _ _ _ _ _ _
+  | succ n =>
+  refine CoreSpec.of_pure p (n + 1) "find_proj" [vis, T, i] _ _ s₀ a₀ dn vis fe M eb _ hS
+    (by unfold AM.ok; exact trivial) rfl ?_
+  refine triple_post (findProj_spec p hp n s₀ vis T i) fun r s' ⟨hloc, hW⟩ => ?_
+  obtain ⟨hm, h1, hres, -⟩ := findProj_word p hp n s₀ vis T i hS.env hS.erec hW
+  refine ⟨hloc, hm, hres, ?_⟩
+  unfold ResH HW
+  have := UInt64.le_iff_toNat_le.mp h1
+  have e : (1 : Word).toNat = 1 := rfl
+  omega
 
 /-- **`find_proj` answers a record that decodes, a table the environment holds** (`ProjFound`). -/
 theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
-  sorry
+  intro n m a₀ dn vis fe M eb T i r m' hS hc hr
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (findProj_spec p hp n _ vis T i) hc
+  obtain ⟨-, -, -, hf⟩ := findProj_word p hp n ⟨m, Locals.init []⟩ vis T i hS.env hS.erec hW
+  obtain ⟨tbl, htbl, hft⟩ := hf hr
+  exact ⟨tbl, htbl, decI T, hft⟩
 
 end L.Arena

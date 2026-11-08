@@ -417,7 +417,166 @@ theorem chain10_eq (mp : Mem) (q v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 : Word) :
 theorem certCtx_ref (hD : DmProg2 p) :
     CallRef p "cert_ctx" [] (StageR vis fe) certCtx
       (KeepPost vis fe (fun m r (c : CertCtxA) => CertCtxR m (r.headD 0) c)) := by
-  sorry
+  refine CallRef.of_succ fun k m a r m' hS hc => ?_
+  have hw := callW_model (M := fun mm => certCtxW p k mm) (certCtx_specW p hD.lCertCtx k ·) hc
+  unfold certCtxW at hw
+  obtain ⟨r0, m0, ⟨h0, hrec, hPINS, hr0⟩, hw⟩ := (natOpPins_fref hD.toNatGateProg).bind_ hS.iw hw
+  have hg0 : IWGrow m m0 := hrec.2.1.1
+  have hS0 := hrec.2.1.stage hS
+  have hF := hS.check.pins.full h0
+  have hlt : ∀ j, j < 51 → (pinW m (1 + j)).toNat < 2 ^ 32 := hF.names_lt
+  have rdk : ∀ mk, IWGrow m0 mk → ∀ kk : Word, kk.toNat < 21 →
+      rdW (mk.arr64 IW) (r0.headD 0 + kk) = (pinRecW m).getD kk.toNat 0 :=
+    fun mk hg kk hk => RecPost.rdGrow hrec hg kk (by have : (pinRecW m).length = 21 := rfl; omega)
+  have e15 : rdW (m0.arr64 IW) (r0.headD 0 + 15) = pinW m 2 := rdk m0 (IWGrow.refl m0) 15 (by decide)
+  rw [e15] at hw
+  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg01, hl1, rfl⟩, hw⟩ :=
+    (constE_ref hD.toMasterProg (pinW m 2)).bind_ ⟨hS0, hlt 1 (by decide)⟩ hw
+  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg12, hl2, rfl⟩, hw⟩ :=
+    (natVar_ref hD (0 : Word)).bind_ hS1 hw
+  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg23, hl3, rfl⟩, hw⟩ :=
+    (natVar_ref hD (1 : Word)).bind_ hS2 hw
+  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg34, hl4, rfl⟩, hw⟩ :=
+    (natOne_ref hD).bind_ hS3 hw
+  have hg04 : IWGrow m0 m4 := hg01.trans (hg12.trans (hg23.trans hg34))
+  have e20 : rdW (m4.arr64 IW) (r0.headD 0 + 20) = pinW m 30 := rdk m4 hg04 20 (by decide)
+  have e6 : rdW (m4.arr64 IW) (r0.headD 0 + 6) = pinW m 21 := rdk m4 hg04 6 (by decide)
+  rw [e20] at hw
+  obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg45, hl5, rfl⟩, hw⟩ :=
+    (constE_ref hD.toMasterProg (pinW m 30)).bind_ ⟨hS4, hlt 29 (by decide)⟩ hw
+  have hg05 : IWGrow m0 m5 := hg04.trans hg45
+  have e18 : rdW (m5.arr64 IW) (r0.headD 0 + 18) = pinW m 31 := rdk m5 hg05 18 (by decide)
+  rw [e18] at hw
+  obtain ⟨r6, m6, x6, a6, hrun6, ⟨hS6, hg56, hl6, rfl⟩, hw⟩ :=
+    (constE_ref hD.toMasterProg (pinW m 31)).bind_ ⟨hS5, hlt 30 (by decide)⟩ hw
+  have hg06 : IWGrow m0 m6 := hg05.trans hg56
+  have e19 : rdW (m6.arr64 IW) (r0.headD 0 + 19) = pinW m 32 := rdk m6 hg06 19 (by decide)
+  rw [e19] at hw
+  obtain ⟨r7, m7, x7, a7, hrun7, ⟨hS7, hg67, hl7, rfl⟩, hw⟩ :=
+    (constE_ref hD.toMasterProg (pinW m 32)).bind_ ⟨hS6, hlt 31 (by decide)⟩ hw
+  have hg07 : IWGrow m0 m7 := hg06.trans hg67
+  have e16 : rdW (m7.arr64 IW) (r0.headD 0 + 16) = pinW m 3 := rdk m7 hg07 16 (by decide)
+  rw [e16] at hw
+  obtain ⟨r8, m8, x8, a8, hrun8, ⟨hS8, hg78, hl8, rfl⟩, hw⟩ :=
+    (constE_ref hD.toMasterProg (pinW m 3)).bind_ ⟨hS7, hlt 2 (by decide)⟩ hw
+  have hg08 : IWGrow m0 m8 := hg07.trans hg78
+  have e17 : rdW (m8.arr64 IW) (r0.headD 0 + 17) = pinW m 4 := rdk m8 hg08 17 (by decide)
+  rw [e17] at hw
+  obtain ⟨r9, m9, x9, a9, hrun9, ⟨hS9, hg89, hl9, rfl⟩, hw⟩ :=
+    (natAp1_ref hD.toNatEqProg (pinW m 4) (r4.headD 0)).bind_ ⟨hS8, hlt 3 (by decide), hl4⟩ hw
+  have hg09 : IWGrow m0 m9 := hg08.trans hg89
+  obtain ⟨rq, mq, ⟨hq0, hmq, hKq, hroomq, htopq⟩, hw⟩ :=
+    (iwAlloc_fref p hD.lIwAlloc 21).bind_ hS9.iw hw
+  have hgq : IWGrow m0 mq := hg09.trans hKq.1
+  cases hpc : callW p k "cert_ctx_pins" [rq.headD 0, r0.headD 0] mq with
+  | none => rw [hpc] at hw; simp at hw
+  | some qp =>
+  obtain ⟨rp, mp⟩ := qp
+  rw [hpc, bW_some] at hw
+  obtain ⟨-, hmp⟩ := certCtxPins_model hD.lCertCtxPins hpc
+  cases hmc : callW p k "cert_ctx_main" [rq.headD 0, r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0,
+      rdW (m4.arr64 IW) (r0.headD 0 + 6), r5.headD 0, r6.headD 0, r7.headD 0, r8.headD 0, r9.headD 0] mp with
+  | none => rw [hmc] at hw; simp at hw
+  | some qm =>
+  obtain ⟨rm, mf⟩ := qm
+  rw [hmc, bW_some] at hw
+  obtain ⟨-, hmf⟩ := certCtxMain_model hD.lCertCtxMain hmc
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm'⟩ := hw
+  -- the record
+  have p8 : rdW (mq.arr64 IW) (r0.headD 0 + 8) = pinW m 23 := rdk mq hgq 8 (by decide)
+  have p7 : rdW (mq.arr64 IW) (r0.headD 0 + 7) = pinW m 22 := rdk mq hgq 7 (by decide)
+  have p1 : rdW (mq.arr64 IW) (r0.headD 0 + 1) = pinW m 16 := rdk mq hgq 1 (by decide)
+  have p3 : rdW (mq.arr64 IW) (r0.headD 0 + 3) = pinW m 18 := rdk mq hgq 3 (by decide)
+  have p2 : rdW (mq.arr64 IW) (r0.headD 0 + 2) = pinW m 17 := rdk mq hgq 2 (by decide)
+  have p9 : rdW (mq.arr64 IW) (r0.headD 0 + 9) = pinW m 24 := rdk mq hgq 9 (by decide)
+  have p13 : rdW (mq.arr64 IW) (r0.headD 0 + 13) = pinW m 28 := rdk mq hgq 13 (by decide)
+  have p14 : rdW (mq.arr64 IW) (r0.headD 0 + 14) = pinW m 29 := rdk mq hgq 14 (by decide)
+  have p10 : rdW (mq.arr64 IW) (r0.headD 0 + 10) = pinW m 25 := rdk mq hgq 10 (by decide)
+  have p11 : rdW (mq.arr64 IW) (r0.headD 0 + 11) = pinW m 26 := rdk mq hgq 11 (by decide)
+  have p12 : rdW (mq.arr64 IW) (r0.headD 0 + 12) = pinW m 27 := rdk mq hgq 12 (by decide)
+  rw [e6] at hmf
+  rw [hmf, hmp, certCtxPinsMem_eq, p8, p7, p1, p3, p2, p9, p13, p14, p10, p11, p12] at hm'
+  rw [certCtxMainMem, chain10_eq] at hm'
+  have hm1 : m' = wrIW (wrIW (allocMem m9 21) (rdW (m9.arr64 CTL) 200 + UInt64.ofNat 10)
+      [pinW m 23, pinW m 22, pinW m 16, pinW m 18, pinW m 17, pinW m 24, pinW m 28, pinW m 29,
+        pinW m 25, pinW m 26, pinW m 27]) (rdW (m9.arr64 CTL) 200)
+      [r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0, pinW m 21, r5.headD 0, r6.headD 0,
+        r7.headD 0, r8.headD 0, r9.headD 0] := by
+    rw [← hm', hmq, hq0]; rfl
+  have hrp := recPost_wr2 m9 [r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0, pinW m 21, r5.headD 0,
+      r6.headD 0, r7.headD 0, r8.headD 0, r9.headD 0]
+    [pinW m 23, pinW m 22, pinW m 16, pinW m 18, pinW m 17, pinW m 24, pinW m 28, pinW m 29,
+      pinW m 25, pinW m 26, pinW m 27] 21 rfl hS9.iw (by simpa using hroomq)
+  have hrp' : RecPost m9 m' [rdW (m9.arr64 CTL) 200]
+      ([r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0, pinW m 21, r5.headD 0, r6.headD 0,
+        r7.headD 0, r8.headD 0, r9.headD 0] ++
+      [pinW m 23, pinW m 22, pinW m 16, pinW m 18, pinW m 17, pinW m 24, pinW m 28, pinW m 29,
+        pinW m 25, pinW m 26, pinW m 27]) := by
+    rw [hm1]; exact hrp
+  -- the twin
+  have hp1 : a1.pins = a.pins := pins_of_keeps (keeps_constE _) hrun1
+  have hp2 : a2.pins = a.pins := (pins_of_keeps (keeps_natVar _) hrun2).trans hp1
+  have hp3 : a3.pins = a.pins := (pins_of_keeps (keeps_natVar _) hrun3).trans hp2
+  have hp4 : a4.pins = a.pins := (pins_of_keeps keeps_natOne hrun4).trans hp3
+  have hp5 : a5.pins = a.pins := (pins_of_keeps (keeps_constE _) hrun5).trans hp4
+  have hp6 : a6.pins = a.pins := (pins_of_keeps (keeps_constE _) hrun6).trans hp5
+  have hp7 : a7.pins = a.pins := (pins_of_keeps (keeps_constE _) hrun7).trans hp6
+  have hp8 : a8.pins = a.pins := (pins_of_keeps (keeps_constE _) hrun8).trans hp7
+  have hp9 : a9.pins = a.pins := (pins_of_keeps (keeps_natAp1 _ _) hrun9).trans hp8
+  have pn : pinNat.run a = .ok (decI (pinW m 2), a) := pinAt_run' hF rfl 1 (by decide)
+  have pble : natBleName.run a4 = .ok (decI (pinW m 21), a4) := pinAt_run' hF hp4 20 (by decide)
+  have pbool : boolName.run a4 = .ok (decI (pinW m 30), a4) := pinAt_run' hF hp4 29 (by decide)
+  have ptrue : boolTrueName.run a5 = .ok (decI (pinW m 31), a5) := pinAt_run' hF hp5 30 (by decide)
+  have pfalse : boolFalseName.run a6 = .ok (decI (pinW m 32), a6) := pinAt_run' hF hp6 31 (by decide)
+  have pzero : pinNatZero.run a7 = .ok (decI (pinW m 3), a7) := pinAt_run' hF hp7 2 (by decide)
+  have psucc : pinNatSucc.run a8 = .ok (decI (pinW m 4), a8) := pinAt_run' hF hp8 3 (by decide)
+  have pmod : natModName.run a9 = .ok (decI (pinW m 23), a9) := pinAt_run' hF hp9 22 (by decide)
+  have pdiv : natDivName.run a9 = .ok (decI (pinW m 22), a9) := pinAt_run' hF hp9 21 (by decide)
+  have padd : natAddName.run a9 = .ok (decI (pinW m 16), a9) := pinAt_run' hF hp9 15 (by decide)
+  have pmul : natMulName.run a9 = .ok (decI (pinW m 18), a9) := pinAt_run' hF hp9 17 (by decide)
+  have psub : natSubName.run a9 = .ok (decI (pinW m 17), a9) := pinAt_run' hF hp9 16 (by decide)
+  have pgcd : natGcdName.run a9 = .ok (decI (pinW m 24), a9) := pinAt_run' hF hp9 23 (by decide)
+  have psl : natShiftLeftName.run a9 = .ok (decI (pinW m 28), a9) := pinAt_run' hF hp9 27 (by decide)
+  have psr : natShiftRightName.run a9 = .ok (decI (pinW m 29), a9) := pinAt_run' hF hp9 28 (by decide)
+  have pland : natLandName.run a9 = .ok (decI (pinW m 25), a9) := pinAt_run' hF hp9 24 (by decide)
+  have plor : natLorName.run a9 = .ok (decI (pinW m 26), a9) := pinAt_run' hF hp9 25 (by decide)
+  have pxor : natXorName.run a9 = .ok (decI (pinW m 27), a9) := pinAt_run' hF hp9 26 (by decide)
+  have hrun2' : (natVar 0).run a1 = .ok (decI (r2.headD 0), a2) := hrun2
+  have hrun3' : (natVar 1).run a2 = .ok (decI (r3.headD 0), a3) := hrun3
+  have hrun9' : (natAp1 (decI (pinW m 4)) (decI (r4.headD 0))).run a8 = .ok (decI (r9.headD 0), a9) :=
+    hrun9
+  have hw21 : H (pinW m 21) := hlt 20 (by decide)
+  have hw23 : H (pinW m 23) := hlt 22 (by decide)
+  have hw22 : H (pinW m 22) := hlt 21 (by decide)
+  have hw16 : H (pinW m 16) := hlt 15 (by decide)
+  have hw18 : H (pinW m 18) := hlt 17 (by decide)
+  have hw17 : H (pinW m 17) := hlt 16 (by decide)
+  have hw24 : H (pinW m 24) := hlt 23 (by decide)
+  have hw28 : H (pinW m 28) := hlt 27 (by decide)
+  have hw29 : H (pinW m 29) := hlt 28 (by decide)
+  have hw25 : H (pinW m 25) := hlt 24 (by decide)
+  have hw26 : H (pinW m 26) := hlt 25 (by decide)
+  have hw27 : H (pinW m 27) := hlt 26 (by decide)
+  have hws := ctxWords_decI (r1.headD 0) (r2.headD 0) (r3.headD 0) (r4.headD 0) (pinW m 21) (r5.headD 0)
+    (r6.headD 0) (r7.headD 0) (r8.headD 0) (r9.headD 0) (pinW m 23) (pinW m 22) (pinW m 16)
+    (pinW m 18) (pinW m 17) (pinW m 24) (pinW m 28) (pinW m 29) (pinW m 25) (pinW m 26) (pinW m 27)
+    hl1 hl2 hl3 hl4 hw21 hl5 hl6 hl7 hl8 hl9 hw23 hw22 hw16 hw18 hw17 hw24 hw28 hw29 hw25 hw26 hw27
+  refine ⟨⟨decI (r1.headD 0), decI (r2.headD 0), decI (r3.headD 0), decI (r4.headD 0),
+    decI (pinW m 21), decI (r5.headD 0), decI (r6.headD 0), decI (r7.headD 0), decI (r8.headD 0),
+    decI (r9.headD 0), decI (pinW m 23), decI (pinW m 22), decI (pinW m 16), decI (pinW m 18),
+    decI (pinW m 17), decI (pinW m 24), decI (pinW m 28), decI (pinW m 29), decI (pinW m 25),
+    decI (pinW m 26), decI (pinW m 27)⟩, a9, ?_, ?_, ?_, ?_⟩
+  · simp only [certCtx, StateT.run_bind, exc_ok_bind', pn, hrun1, hrun2', hrun3', hrun4, pble, pbool,
+      hrun5, ptrue, hrun6, pfalse, hrun7, pzero, hrun8, psucc, hrun9', pmod, pdiv, padd, pmul, psub,
+      pgcd, psl, psr, pland, plor, pxor]
+    rfl
+  · exact hrp'.2.1.stage hS9
+  · exact hg0.trans (hg09.trans hrp'.2.1.1)
+  · rw [← hr]
+    show CertCtxR m' (rq.headD 0) _
+    rw [hq0]
+    exact CertCtxR.of_rec (by rw [hws]; exact hrp')
 
 /-! ### The context's fields -/
 
@@ -667,7 +826,17 @@ l_model stmt1_specW (p : Prog) (hp : p.lookup "stmt1" = some stmt1)
 theorem stmt1_ref (hD : DmProg2 p) (h e : Word) :
     CallRef p "stmt1" [h, e] (fun m s => StageR vis fe m s ∧ H h ∧ H e)
       (pure ([decE h], decE e) : AM (List EIdx × EIdx)) (KeepPost vis fe decStmt) := by
-  sorry
+  refine CallRef.of_sim (M := fun k mq => stmt1W p (k + 1) mq h e) (fun k s₀ => stmt1_specW p hD.lStmt1 (k + 1) s₀ h e)
+    fun k m s ⟨hS, hh, he⟩ => ?_
+  refine (slNew1_fref p hD.lIwAlloc hD.lSlNew1 h).simB hS.iw fun r1 m1 ⟨hrec1, hr1⟩ => ?_
+  have hS1 := hrec1.2.1.stage hS
+  refine (rec3_fref p hD.lIwAlloc hD.lRec3 (r1.headD 0) (r1.tail.headD 0) e).simB hS1.iw fun r2 m2 hrec2 =>
+    Sim.ret ⟨hrec2.2.1.stage hS1, hrec1.2.1.1.trans hrec2.2.1.1, ?_⟩
+  have hq : (r1.headD 0).toNat = iwTop m := by rw [hrec1.1]; rfl
+  have hl1 : (r1.tail.headD 0).toNat = 1 := by rw [hr1]; rfl
+  have hbound : (r1.headD 0).toNat + (r1.tail.headD 0).toNat ≤ iwTop m1 := by
+    have := hrec1.2.2.2.1; simp at this; omega
+  exact stmtAt_of_rec3 hrec2 hS1.iw hbound (slNew1_dec hrec1 hh hr1) he
 
 /-! ## `cert_two_eqs` -/
 

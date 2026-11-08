@@ -334,7 +334,64 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (reduceCertVar (decI c)) a₀ ∧
       StageR vis fe s'.mem (AM.st (reduceCertVar (decI c)) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       AM.res (reduceCertVar (decI c)) a₀ = decE (r.headD 0); ⊤⦄ := by
-  sorry
+  refine triple_post (rcv_specW p hp n s₀ c) ?_
+  rintro r s' ⟨hl, h⟩
+  cases n with
+  | zero => simp [rcvW] at h
+  | succ n =>
+  rw [rcvW_step] at h
+  rcases h1 : pinAtW s₀.mem 43 with _ | ⟨r1, m1⟩ <;> simp only [h1, rcvK1, reduceCtorEq] at h
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
+  subst hm1
+  generalize s₀.mem = m1 at *
+  have e1 : r1.headD 0 = pinW m1 (1 + (43 : Word).toNat) := by rw [hr1]; rfl
+  have hbeq : ((decI c : NIdx) == decI (pinW m1 (1 + (43 : Word).toNat))) =
+      decide (c = pinW m1 (1 + (43 : Word).toNat)) := decI_beq c _ hc hl1
+  -- the element's name: one of two pins
+  generalize hpick : (if c = r1.headD 0 then pinAtW m1 1 else pinAtW m1 29) = pk at h
+  cases pk with
+  | none => cases h
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [rcvK2_some] at h
+  have hname : m2 = m1 ∧ (r2.headD 0).toNat < 2 ^ 32 ∧
+      ((if (decI c : NIdx) == decI (pinW m1 (1 + (43 : Word).toNat)) then pinAt 1 else pinAt 29) :
+        AM NIdx).run a₀ = .ok (decI (r2.headD 0), a₀) := by
+    by_cases he : c = r1.headD 0
+    · rw [ite_eq_left he] at hpick
+      obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.check.pins
+      rw [e1] at he
+      subst hr
+      refine ⟨hm, hl, ?_⟩
+      simp only [he, List.headD_cons]
+      simpa using hrun
+    · rw [ite_eq_right he] at hpick
+      obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.check.pins
+      rw [e1] at he
+      subst hr
+      refine ⟨hm, hl, ?_⟩
+      simp only [hbeq, he, decide_false, Bool.false_eq_true, ite_false, List.headD_cons]
+      simpa using hrun
+  obtain ⟨rfl, hnl, hrun2⟩ := hname
+  -- `const_e`
+  rcases h3 : callW p n "const_e" [r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;> simp only [h3, rcvK3, reduceCtorEq] at h
+  obtain ⟨a3, hrun3, hS3, hg3⟩ := constE_stage hp.ce hp.pw hp.cf hp.cp hp.ic h3 hS hnl
+  by_cases hb : 4294967296 ≤ r3.headD 0
+  · rw [ite_eq_left hb] at h; cases h
+  rw [ite_eq_right hb] at h
+  have ht : (r3.headD 0).toNat < 2 ^ 32 := by
+    have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this
+  -- `intern_fvar`
+  rcases h4 : fvinternW m3 0 (r3.headD 0) with _ | ⟨r4, m4⟩ <;> simp only [h4, rcvK4, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a4, hrun4, hS4, hg4⟩ := internFVar_stage hS3 0 (r3.headD 0) ht h4
+  have hrun : (reduceCertVar (decI c)).run a₀ = .ok (decE r4, a4) := by
+    rw [reduceCertVar_eq]
+    rw [show (43 : Nat) = (43 : Word).toNat from rfl, StateT.run_bind, hrun1, exc_ok_bind',
+      StateT.run_bind, hrun2, exc_ok_bind', StateT.run_bind, hrun3, exc_ok_bind']
+    exact hrun4
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS4, hg3.trans hg4, by rw [hres]; rfl⟩
 
 /-! ## `reduce_pin_guard(vis, c)` -/
 

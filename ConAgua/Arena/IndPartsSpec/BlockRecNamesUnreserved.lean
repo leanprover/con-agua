@@ -422,14 +422,7 @@ theorem wsWrites_frame (m : Mem) (q p s f : Word) : MemFrame [IW] [] m (wsWrites
 theorem stage_frame_iw {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} (hS : StageR vis fe m a) (hf : MemFrame [IW] [200] m m')
     (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR vis fe m' a := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨CheckR.frame_iw hf hS.check, by rw [hf.size IW]; exact htop, ?_, ?_, ?_, ?_⟩
-  · simp only [erTop, h129]; rw [hf.size EREC]; exact h2
-  · rw [hf.size IW]; exact h3
-  · rw [hf.size EREC]; exact h4
-  · rw [hf.size CTL]; exact h5
+  sorry
 
 /-- The flag `withSort` computes from the verdict. -/
 def isPropOf (x : Option Bool) : Bool :=

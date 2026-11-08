@@ -174,8 +174,9 @@ theorem recs_step (hN : NatEqProg p) {n : Nat} {m m0 : Mem} {s : AState} {ws : L
     {op : AM α} {R : γ → α → Mem → AState → Prop} (hS : StageR vis fe m s) (hG : IWGrow m0 m)
     (hR : RecsAt m ws ps) (ha : H a) (hb : H b) (h2 : ∀ r m1, StageR vis fe m1 s → IWGrow m0 m1 →
       RecsAt m1 (ws ++ [r.headD 0]) (ps ++ [(decE a, decE b)]) → Sim (body r m1) op s R) :
-    Sim (ntBW (callW p n "rec2" [a, b] m) body) op s R := by
-  sorry
+    Sim (ntBW (callW p n "rec2" [a, b] m) body) op s R :=
+  (rec2_fref p hN.lIwAlloc hN.lRec2 a b).simB hS.iw fun r m1 hR1 =>
+    h2 r m1 (hR1.2.1.stage hS) (hG.trans hR1.2.1.1) (hR.snoc hR1.2.1.1 (recAt_of_post hR1 hS.iw) ha hb)
 
 /-- **Emitting an equation list**: the record pointers `ws`, written into a fresh slice. -/
 theorem emit_sim (hal : p.lookup "iw_alloc" = some iwAlloc) {n : Nat} {m m0 : Mem} {s : AState}

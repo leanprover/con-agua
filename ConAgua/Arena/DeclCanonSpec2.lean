@@ -79,7 +79,11 @@ theorem ciToCv_refines (q : Word) (ci : IConstantInfo) :
       (fun m a => StageR vis fe m a ∧ decCI (erecP m) q.toNat = some ci)
       (pure ci.toConstantVal)
       (KeepPost vis fe (fun m r (cv : IConstantVal) => decCV (erecP m) (r.headD 0).toNat = some cv)) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hci⟩
+  refine triple_post (ciToCv_spec' p hp n s₀ q) ?_
+  rintro r s' ⟨hl, hm, hr⟩
+  exact ⟨hl, trivial, by rw [hm]; exact hS, by rw [hm]; exact IWGrow.refl _,
+    by rw [hm]; show decCV _ (r.headD 0).toNat = some ci.toConstantVal; rw [hr]; exact ctc_ok hS hci⟩
 
 end refs
 

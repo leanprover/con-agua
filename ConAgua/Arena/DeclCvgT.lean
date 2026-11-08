@@ -42,8 +42,9 @@ theorem hffF_store {f : Nat} {e : EIdx} {a a' : AState} {x : Bool}
 
 /-- The memory after `iw_reset` keeps `StageT`. -/
 theorem iwReset_stageT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (hT : StageT dn vis fe m a) : StageT dn vis fe (m.set64 CTL 200 0) a := by
-  sorry
+    {a : AState} (hT : StageT dn vis fe m a) : StageT dn vis fe (m.set64 CTL 200 0) a :=
+  StageT.of_iw hT (iwReset_stage hT.stage).1
+    (MemFrame.mono (MemFrame.setCtl m 200 0) (by simp) (by simp))
 
 /-- **The theorem test's prefix extends the twin's store** (con-ron's `KnotSpec.infer` and
 `EnsureSortSpec`, as in `checkValueGroup_bridge`): from `CheckOK` and the constant's type denoting

@@ -62,6 +62,7 @@ theorem shapeCV_of_decB {m : Mem} {q : Word} {bs : BlockShape}
 
 /-! ## The arm -/
 
+/- ronsync2 stage 2: commented out (statement at the new twin/L fails; p3e)
 /-- The lookups of the inductive arm. -/
 structure CidProg (p : Prog) : Prop where
   cid : p.lookup "check_ind_decl" = some checkIndDecl
@@ -78,4 +79,5 @@ structure CidProg (p : Prog) : Prop where
   cb : CbProg p
   bph : BphProg p
 
+-/
 end L.Ind

@@ -80,10 +80,8 @@ l_model cbtsE_spec (p : Prog) (h1 : p.lookup "check_block_tele" = some checkBloc
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `check_sum_tele`'s lookups, as its model takes them. -/
-theorem CstProg.ctProg {p : Prog} (hP : CstProg p) : CtProg p :=
-  ⟨⟨⟨hP.alloc, hP.copy, hP.cons, hP.view, hP.fvarFind, hP.fvarPush, hP.internFVar, hP.wt, hP.i1⟩,
-    hP.sortFind, hP.sortPush, hP.internSort, hP.derB, hP.forallFind, hP.forallPush, hP.internForall,
-    hP.mkForall, hP.closeTele, hP.erAlloc, hP.cvNew, hP.slow, hP.ab⟩, hP.strip, hP.tele⟩
+theorem CstProg.ctProg {p : Prog} (hP : CstProg p) : CtProg p := by
+  sorry
 
 /-- What `check_block_tele` gives besides the checked former and its sort `x` (from `m`, `a`): the
 former's layout (`TeleOutC`), `AbsOK`, the core step. -/

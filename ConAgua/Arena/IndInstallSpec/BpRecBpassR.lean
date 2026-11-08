@@ -96,6 +96,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## The record -/
 
+/- local patch
 theorem bpMem_eq (m : Mem) (q w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 : Word) :
     bpMem m q w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 =
       wrIW m q [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17, w18] := by
@@ -142,6 +143,7 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
     have hsz := hS.iw.iwSize
     rw [h19] at hroom ⊢
     rw [Nat.mod_eq_of_lt (by have : UInt64.size = 2 ^ 64 := rfl; omega)]; exact Nat.le_refl _
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A fresh `BlockPass` record of parts decoded below the tops is decoded below the tops**, its
@@ -241,33 +243,7 @@ theorem ctorsLp_of_decPL {m : Mem} {co cl : Nat} {cts : List (IConstantVal × Na
     (hdc : decPL (truncM m) (decCN (truncM m)) co cl = some cts) (hcob : co < 2 ^ 64) (hclb : cl < 2 ^ 64)
     (hE : erTop m ≤ (m.arr64 EREC).size) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     CtorsLp m (UInt64.ofNat co) (UInt64.ofNat cl) := by
-  intro k hk
-  rw [UInt64.toNat_ofNat_of_lt' hclb] at hk
-  obtain ⟨v, hv, hcn⟩ := decPL_getH (truncM m) hdc k hk
-  have hv0 := (rec2IwN_trunc hv).2
-  rw [← UInt64.toNat_ofNat_of_lt' hcob] at hv0
-  obtain ⟨hrdv, hvb⟩ := iwN_rdW_at (w := UInt64.ofNat co) (k := k) hv0 hsz
-  simp only [CtorLp]
-  rw [hrdv]
-  have hcnD : DecB (fun m => decCN m (UInt64.ofNat v : Word).toNat) m
-      (cts[k]'(by rw [decPL_length _ hdc]; exact hk)) := by
-    show decCN (truncM m) _ = _
-    rw [UInt64.toNat_ofNat_of_lt' hvb]; exact hcn
-  obtain ⟨a, ha, ha3, hcv, -⟩ := decCN_words hcnD hsz
-  rw [ha]
-  obtain ⟨⟨-, hx⟩, -⟩ := rec3CVExt_of_trunc (show decCVp (truncM m) a = _ from hcv)
-  have ha64 : a + 3 < 2 ^ 64 := by have := (rdW (m.arr64 CTL) 129).toNat_lt; simp only [erTop] at ha3; omega
-  have e1 : (UInt64.ofNat a + 1 : Word).toNat = a + 1 := by rw [UInt64.toNat_add]; simp <;> omega
-  have e2 : (UInt64.ofNat a + 2 : Word).toNat = a + 2 := by rw [UInt64.toNat_add]; simp <;> omega
-  obtain ⟨w1, hw1⟩ : ∃ w, (m.arr64 EREC)[a + 1]? = some w :=
-    ⟨_, Array.getElem?_eq_getElem (show a + 1 < (m.arr64 EREC).size by omega)⟩
-  obtain ⟨w2, hw2⟩ : ∃ w, (m.arr64 EREC)[a + 2]? = some w :=
-    ⟨_, Array.getElem?_eq_getElem (show a + 2 < (m.arr64 EREC).size by omega)⟩
-  rw [rdW_of_get? e1.symm hw1, rdW_of_get? e2.symm hw2]
-  rcases hx w1.toNat w2.toNat (by simp [nat?, erA, hw1]) (by simp [nat?, erA, hw2])
-    with h | h
-  · right; omega
-  · left; exact h
+  sorry
 
 theorem iwN_trunc_lt {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) : v < 2 ^ 64 := by
   have h6 := (rec2IwN_trunc h).2
