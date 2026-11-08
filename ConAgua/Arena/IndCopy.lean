@@ -143,7 +143,7 @@ open L.Arena
 
 theorem hslice?_congr {k : IdxKind} (a b : Array Word) (off off' n : Nat)
     (h : ∀ j < n, a[off + j]? = b[off' + j]?) :
-    (hslice? a off n : Option (List (Idx k))) = hslice? b off' n := by
+    (hslice? (aread a) off n : Option (List (Idx k))) = hslice? (aread b) off' n := by
   sorry
 
 theorem consPre_ctl (m : Mem) (x l : Word) (i : Word) (hi : i ≠ 200) :

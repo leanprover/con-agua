@@ -490,24 +490,6 @@ def natOpEquationsL : FunDecl :=
   return (q, l)
 }
 
-/-- `defn_nat_cert(vis, w, n)`: the stored value of `n` at the extended view `w` (a definition),
-its recurrences (`nat_op_equations 0 n`) with `n` replaced by the value, certified at the
-pre-insertion view `vis`. Returns `0`. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:102-184 ConRon.Arena.checkDecl
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.checkDecl`, `ConRon.Arena.basisNameHit`, `ConRon.Arena.checkBasisBlock`, `ConRon.Arena.checkQuotRecord`, `ConRon.Arena.checkStructuralNatPin` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkDecl` changed; re-check the L code and its proofs, then delete this line
-@[no_expose] def defnNatCert : FunDecl :=
-    lfn (vis, w, n) locals (f, r, eo, el, so, sl, ok) {
-  (f, r) := call env_find(n, w);
-  if f == 0 { abort };
-  if EREC⦃r⦄ != 1 { abort };
-  (eo, el) := call nat_op_equations(0, n);
-  (so, sl) := call subst_const0_pairs(n, EREC⦃r + 5⦄, eo, el);
-  ok := call certify_nat_eqs(vis, so, sl);
-  if ok == 0 { fail R_NONSTANDARD_STRUCTURAL_NAT };
-  return 0
-}
-
 /-- `subst_const0(n, r, fuel, h)`: `Expr.substConst0`: `.const n []` replaced by `r` through an
 application spine. -/
 -- con-ron: ConRon/Arena/Core.lean:1150-1164 ConRon.Arena.substConst0
@@ -1064,21 +1046,27 @@ def boolCtorTypedL : FunDecl := lfn (vis2, n) locals (f, r, q, bn, bt) {
   return u64(EREC⦃q + 3⦄ == bt)
 }
 
+/-- `eq_stored(vis)`: `(fe.find? eqName).isSome`, the test the three guards share (the
+environment holds `Eq` only as a copy of its pin). -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:42-50 ConRon.Arena.eqStored
+@[no_expose, l_impl ConRon.Arena.eqStored]
+def eqStoredL : FunDecl := lfn (vis) locals (en, f, r) {
+  en := call pin_at(0);
+  (f, r) := call env_find(en, vis);
+  return f
+}
+
 /-- `div_mod_env_guard(vis2, c)`: the dependency guard, the pinned dependencies, the pinned `Eq`
 basis, the `Bool` constructors at `Bool`. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:544-555 ConRon.Arena.divModEnvGuard
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.divModEnvGuard`, `ConRon.Arena.eqStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.divModEnvGuard` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.divModEnvGuard]
-def divModEnvGuardL : FunDecl := lfn (vis2, c) locals (g, o, l, en, ea, e, n) {
+def divModEnvGuardL : FunDecl := lfn (vis2, c) locals (g, o, l, e, n) {
   g := call nat_op_guard(vis2, c);
   if g == 0 { return 0 };
   (o, l) := call nat_op_deps(c);
   g := call nat_op_stored_ok_all(vis2, o, l);
   if g == 0 { return 0 };
-  en := call pin_at(0);
-  ea := call rom_ci(0);
-  e := call find_is(vis2, en, ea);
+  e := call eq_stored(vis2);
   if e == 0 { return 0 };
   n := call pin_at(30);
   e := call bool_ctor_typed(vis2, n);
@@ -1254,20 +1242,31 @@ def checkDivModPinLoopL : FunDecl := lfn (vis, c, value, po, pl) locals (ps, g, 
   return r
 }
 
-/-- `check_div_mod_pin(po, pl, vis, vis2, c)`: the gate after the definition check (`vis2` the
-extended view, `vis` the pre-insertion one every check runs at). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:731-748 ConRon.Arena.checkDivModPin
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkDivModPin` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.checkDivModPin`, `ConRon.Arena.checkDivModPinAtFe2` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkDivModPin]
-def checkDivModPinL : FunDecl := lfn (po, pl, vis, vis2, c) locals (g, f, r, z) {
+/-- `check_div_mod_pin_at_fe2(vis2, c)`: the two reads at the extended view `vis2`: the
+environment guards, then the stored definition's value. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:719-729 ConRon.Arena.checkDivModPinAtFe2
+@[no_expose, l_impl ConRon.Arena.checkDivModPinAtFe2]
+def checkDivModPinAtFe2L : FunDecl := lfn (vis2, c) locals (g, f, r) {
   g := call div_mod_env_guard(vis2, c);
   if g == 0 { fail R_UNSUPPORTED_NAT_DIV };
   (f, r) := call env_find(c, vis2);
   if f == 0 { abort };
   if EREC⦃r⦄ != 1 { abort };
-  z := call check_div_mod_pin_loop(vis, c, EREC⦃r + 5⦄, po, pl);
-  return 0
+  return EREC⦃r + 5⦄
+}
+
+/-- `check_div_mod_pin(po, pl, vis, p, c)`: the gate after the definition check: the record `p`
+pushed for the reads at the extended view (`check_div_mod_pin_at_fe2`) and popped (the own
+layer's row of `c` put back, `env_pop_temp`), then the variant loop at `vis`; returns the view. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:731-748 ConRon.Arena.checkDivModPin
+@[no_expose, l_impl ConRon.Arena.checkDivModPin]
+def checkDivModPinL : FunDecl := lfn (po, pl, vis, p, c) locals (rc, rq, w, v, v2, z) {
+  (rc, rq) := call env_row_get(c);
+  w := call env_push(vis, p);
+  v := call check_div_mod_pin_at_fe2(w, c);
+  v2 := call env_pop_temp(w, c, rc, rq);
+  z := call check_div_mod_pin_loop(v2, c, v, po, pl);
+  return v2
 }
 
 /-! ## The module's program -/
@@ -1283,7 +1282,7 @@ def declArmsNatFns : Prog :=
    ("nat_op_stored_ok_all", natOpStoredOkAllL), ("nat_ap1", natAp1L), ("nat_ap2", natAp2L),
    ("nat_eq_list2", natEqList2), ("nat_eq_list3", natEqList3), ("nat_eq_list4", natEqList4),
    ("nat_eq_pr", natEqPr), ("nat_eq_un", natEqUn), ("nat_eq_mu", natEqMu), ("nat_eq_po", natEqPo),
-   ("nat_eq_be", natEqBe), ("nat_eq_bl", natEqBl), ("nat_eq_ctx", natEqCtx), ("nat_eq_disp", natEqDisp), ("nat_op_equations", natOpEquationsL), ("defn_nat_cert", defnNatCert),
+   ("nat_eq_be", natEqBe), ("nat_eq_bl", natEqBl), ("nat_eq_ctx", natEqCtx), ("nat_eq_disp", natEqDisp), ("nat_op_equations", natOpEquationsL),
    ("subst_const0", substConst0L), ("subst_const_all", substConstAllL),
    ("subst_const0_pairs", substConst0PairsL), ("certify_nat_eqs", certifyNatEqsL),
    ("div_mod_slot", divModSlot), ("div_mod_decl_pin", divModDeclPinL),
@@ -1306,7 +1305,8 @@ def declArmsNatFns : Prog :=
    ("div_mod_certs_guard", divModCertsGuardL), ("check_div_mod_certs", checkDivModCertsL),
    ("check_type_pins", checkTypePinsL), ("check_div_mod_pin_value", checkDivModPinValueL),
    ("check_div_mod_pin_at", checkDivModPinAtL), ("check_div_mod_pin_loop", checkDivModPinLoopL),
-   ("check_div_mod_pin", checkDivModPinL)]
+   ("check_div_mod_pin_at_fe2", checkDivModPinAtFe2L), ("check_div_mod_pin", checkDivModPinL),
+   ("eq_stored", eqStoredL)]
 
 /-- **The ROM stubs** (lane lead: the con-leche values the twin interns, read from the ROM). Each
 call stands for the twin's intern of the value (its store effect included) and returns where the
@@ -1315,10 +1315,8 @@ value now lives:
 * `rom_basis_decls(kind)` → `(off, len)`: `BasisKind.decls kind` (the RAW block), an `IW` slice
   of `EREC` pointers to constant records (`decCI`); `kind` `0` `eqK`, `1` `natK`, `2` `emptyK`,
   `3` `falseK`, `4` `quotK` (con-leche's constructor order).
-* `rom_basis_decls_a(kind)` → `(off, len)`: `BasisKind.declsA kind` (the ANNOTATED block), the
-  same shape.
-* `rom_ci(id)` → an `EREC` pointer to a constant record: `0` `eqA`, `1` `natA`, `2` `iffA`, `3`
-  `iffIntroA`, `4` `iffRecA`, `5` `nonemptyA`, `6` `nonemptyIntroA`, `7` `nonemptyRecA`.
+* `rom_ci(id)` → an `EREC` pointer to a constant record: `0` `natA`, `1` `iffA`, `2`
+  `iffIntroA`, `3` `iffRecA`, `4` `nonemptyA`, `5` `nonemptyIntroA`, `6` `nonemptyRecA`.
 * `rom_cv(id)` → an `EREC` pointer to a constant value (`decCV`, 4 words): `0` `propextA`, `1`
   `choiceA`, `2` `trueCvA`, `3` `trueIntroCvA`, `4` `trustCompilerA`, `5` `boolCvA`, `6`
   `reduceNatCvA`, `7` `reduceBoolCvA`, `8` `ofReduceNatA`, `9` `ofReduceBoolA`.
@@ -1327,7 +1325,7 @@ value now lives:
   `IW` slice of `EREC` pointers to 40-word variant records (this module's doc). Empty for the
   program's ROM today (`romPins = []`). -/
 def romStubs : Prog :=
-  [("rom_basis_decls", stub 1), ("rom_basis_decls_a", stub 1), ("rom_ci", stub 1),
+  [("rom_basis_decls", stub 1), ("rom_ci", stub 1),
    ("rom_cv", stub 1), ("rom_expr_pin", stub 1), ("rom_pin_sets", stub 0), ("rom_and_pin", stub 0)]
 
 /-! ## Runs on stub-free paths -/
