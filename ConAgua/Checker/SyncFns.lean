@@ -19,6 +19,7 @@ def syncFns : L.Prog :=
    ("nat_op_name", L.Stubs.natOpNameL), ("reserved_rec_bool", L.Stubs.reservedRecBoolL),
    ("check_proj_guard", L.Arena.checkProjGuardL), ("lv_never", L.Arena.lvNever),
    ("check_guard_rows", L.Arena.checkGuardRowsL), ("proj_guard_sort", L.Arena.projGuardSortL),
-   ("proj_guard_rows_at", L.Arena.projGuardRowsAtL), ("proj_guard_rows", L.Arena.projGuardRowsL)]
+   ("proj_guard_rows_at", L.Arena.projGuardRowsAtL), ("proj_guard_rows", L.Arena.projGuardRowsL),
+   ("lv_always_zero", L.Arena.lvAlwaysZero), ("lv_zero_where_zero", L.Arena.lvZeroWhereZero)]
 
 end L.Checker

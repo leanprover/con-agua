@@ -151,7 +151,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1760 functions, 3 of them stubs.
+1763 functions, 2 of them stubs.
 -/
 
 namespace L.Checker
@@ -159,7 +159,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- The called functions with no L code yet (each aborts). -/
-def checkerStubs : List String := ["check_guard_rows", "proj_guard_rows", "proj_guard_sort"]
+def checkerStubs : List String := ["lv_always_zero", "lv_zero_where_zero"]
 
 /-- The frontend functions `builtin_prelude` runs on the prelude's bytes (96; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
@@ -644,6 +644,7 @@ def checkerProg : Prog := [
   ("check_div_mod_pin_loop", L.Ind.checkDivModPinLoopL),
   ("check_div_mod_pin_value", L.Ind.checkDivModPinValueL),
   ("check_field_sort_bound", L.Ind.checkFieldSortBoundL),
+  ("check_guard_rows", L.Arena.checkGuardRowsL),
   ("check_ind_decl", L.Ind.checkIndDecl),
   ("check_jobs", L.Arena.checkJobsL),
   ("check_opaque_val", L.Ind.checkOpaqueValL),
@@ -1699,6 +1700,9 @@ def checkerProg : Prog := [
   ("presize_tables", L.Checker.presizeTablesL),
   ("proj_cert", L.Arena.projCertL),
   ("proj_find", L.Arena.projFind),
+  ("proj_guard_rows", L.Arena.projGuardRowsL),
+  ("proj_guard_rows_at", L.Arena.projGuardRowsAtL),
+  ("proj_guard_sort", L.Arena.projGuardSortL),
   ("proj_lit_to_ctor", L.Arena.projLitToCtorL),
   ("proj_push", L.Arena.projPush),
   ("proj_type_at", L.Arena.projTypeAtL),
@@ -2165,8 +2169,7 @@ def checkerProg : Prog := [
   ("pre_utf8_char", preFn preTree (L.Scan.Utf8.utf8Char)),
   ("pre_utf8_valid", preFn preTree (L.Scan.Str.utf8Valid)),
   ("pre_value_at", preFn preTree (L.Scan.Key.valueAt)),
-  ("check_guard_rows", abortStub 6),
-  ("proj_guard_rows", abortStub 4),
-  ("proj_guard_sort", abortStub 4)]
+  ("lv_always_zero", abortStub 1),
+  ("lv_zero_where_zero", abortStub 2)]
 
 end L.Checker
