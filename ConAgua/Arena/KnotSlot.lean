@@ -401,7 +401,7 @@ end slots
 /-! ## The eager slot
 
 From an eager mode the twin's `defeqE` moves nothing and is the `defeq` slot
-(`knot_defeqE_eager`). From a plain mode it is the `defeq` slot of the knot at `mode.toEager`
+(`knot_defeqE_eager`). From a plain mode it is the `defeq` slot of the knot at `mode` with `eager := true`
 on the eager set (`enterC`), then the sets swap back (`leaveC`, `knot_defeqE_plain`). In L both
 sets live in one memo told apart by the eager bit, and `defeq_e` is `defeq` at the mode word with
 bit 1 set: the relation at `eb = 0` on the twin's state is the relation at `eb = 1` on the entered
@@ -419,12 +419,12 @@ theorem mode_eager (mode : Word) (h : mode < 4) (he : decEager mode = true) :
   rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> revert he <;> decide
 
 theorem mode_plain (mode : Word) (h : mode < 4) (he : decEager mode = false) :
-    decMode (mode ||| 2) = (decMode mode).toEager ∧ (mode >>> 1) &&& 1 = 0 ∧ mode ||| 2 < 4 ∧
+    decMode (mode ||| 2) = decMode mode ∧ decEager (mode ||| 2) = true ∧ (mode >>> 1) &&& 1 = 0 ∧ mode ||| 2 < 4 ∧
       (1 : Word) = ((mode ||| 2) >>> 1) &&& 1 := by
   rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> revert he <;> decide
 
 theorem knot_defeqE_eager (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F d : Nat) (x y : EIdx)
-    (h : mode.eager = true) :
+    (h : eager = true) :
     (coreKnot mode eager fe id (F + 1)).defeqE d x y = (coreKnot mode eager fe id (F + 1)).defeq d x y := by
   sorry
 
@@ -441,7 +441,7 @@ def leaveC (c : Caches) (mm : ModeMemos) : Caches :=
   { c with eagerMemos := c.modeMemos,
            whnfCoreC := mm.whnfCoreC, whnfCoreCheapC := mm.whnfCoreCheapC, whnfC := mm.whnfC,
            inferC := mm.inferC, inferIOC := mm.inferIOC, defeqC := mm.defeqC }
-/-- **The eager slot from a plain mode** is the `defeq` slot of the knot at `mode.toEager`, run
+/-- **The eager slot from a plain mode** is the `defeq` slot of the knot at `mode` with `eager := true`, run
 on the entered caches, then left. -/
 theorem knot_defeqE_plain (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F d : Nat) (x y : EIdx) (a : AState)
     (h : eager = false) (v : Bool) (a₁ : AState)

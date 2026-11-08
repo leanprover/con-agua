@@ -163,7 +163,7 @@ theorem add_toNat_of_lt (q : Word) (c : Nat) (hc : c < 2 ^ 63) (h : q.toNat + c 
 /-- **The words of a decoded projection table**: the level-parameter count at `q + 4`, the
 parameter count at `q + 5`, the constructor handle at `q + 6`, the field count at `q + 7`. -/
 theorem decTbl_words {a : Array Word} {q : Word} {tbl : IProjTable}
-    (h : decTbl a q.toNat = some tbl) (hsz : a.size < 2 ^ 63) :
+    (h : decTbl (aread a) q.toNat = some tbl) (hsz : a.size < 2 ^ 63) :
     tbl.levelParams.length = (rdW a (q + 4)).toNat ∧ tbl.numParams = (rdW a (q + 5)).toNat ∧
     HW (rdW a (q + 6)) ∧ tbl.ctor = decI (rdW a (q + 6)) ∧
     tbl.numFields = (rdW a (q + 7)).toNat := by
@@ -476,9 +476,8 @@ def rpFireT (mode : ConLeche.CheckMode) (fe : IFEnv) (entry : IProjEntry) (i : N
   match ← viewLsLen us with
   | none => failDanglingLs
   | some usl =>
-    let fok ← entry.fireOk us
     if k = entry.ctor ∧ i < entry.numFields ∧ args.length = entry.numParams + entry.numFields ∧
-        usl = entry.levelParams.length ∧ fok = true then
+        usl = entry.levelParams.length then
       rpArgT fe mode.verifiedChecks k args (entry.numParams + i)
     else pure none
 
