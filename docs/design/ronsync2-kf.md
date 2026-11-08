@@ -78,3 +78,68 @@ same for every table, `K = fragW (hs m t i)` (the node's hash's fragment), and t
 word is the query hash's fragment. `TierR`, `SlotsOKG`, `StoreR`, `ConsR` and the user lemmas
 keep their statements; the scratch base bound in `StoreR` changes from `2^62 + 2^32` to
 `2^47 - 2^32`.
+
+## 3. What changed
+
+* **L code** (`ConsLib.lean`): `kfHead` computes the query's fragment (`fragE`) beside the home;
+  `kfLoad` masks the slot word to its value, `kfKey` compares the fragment (`x >> 48 == q`) and
+  no longer loads a key word; `kfMatch` always runs the table's match (no exact hit);
+  `cpKey` stores the fragment of the stored or recomputed hash; `cpSlot` writes one word; the
+  growth (`kgrowH*`, `kupL`, `ktopP/Q`, `kpickB`, `kprobeL`, `kplaceB`, `krehashS`) moves one word
+  per slot and hashes an entry from its record (`khashB`, the schema's new `hrec`); `ciChk` checks
+  only packed records (`kpk`). `Scratch.lean`: `SCBLIM = 2^47 - 2^33`, the wrap zeroes `n` words.
+  `ConsPresize.lean`: room `n + 2`. `Freeze.lean`: the frozen slot extent `2 + n`.
+* **Schemas** (`*Store.lean`, `Store.lean`): `exact` removed, `hrec` added (the node's hash from
+  its record, the expression of `hsM`), its obligation `ConsOK.hrec` (one `simp`), `exnk` removed,
+  `ihashG`/`qpure` now for every table without a stored hash.
+* **Models and library proofs**: `SlotGrowSpec` (`vwd`, `kwd`, `pk` and their lemmas; the growth
+  models with one word per slot; `G` takes the node, not the key word), `ConsLibSpecBase/Find/
+  Grow/Spec` (no `exact` arms; `HRecOK`; `pval_mapE`), `StoreLib` (`slotW`/`slotK` from one word,
+  `pushG` one write, no `ex` in the probe; `slotW_pushG`/`slotK_pushG`/`tierR_push`/`tierR_other`
+  take the fragment's bound `q < 2^16`; `tierR_hit` no longer needs `QKeyOK`), `SlotRehash`,
+  `SlotTop`, `StoreGrow` (one-word slot writes `VW_set`/`KW_set`; `hGh` is "G of a node is its
+  hash"), `ConsLibRel` (`KP` is the fragment of the node's hash; `ExactOK`, `kfld`, `fieldsL`,
+  `recK`, `kwQ_inj`, `small_of_bigK`, the `list_*` helpers removed; `ghC_eq` replaces `ghC_kp`),
+  `ScratchRefine`, `FreezeTruncStore`, `FreezeTruncBase`.
+* **Outside the library**: the `ex` field of each table's `C.WF` proof (`*Refine.lean`, 19 files)
+  is gone; no statement there changed. `ConsR.congr` lost its three defaulted arguments (its one
+  user, `LitRefine`, passes none). The scratch base bound in `StoreR`/`ConsR.resetG` and the head's
+  post in `scratchReset_spec`/`scratchEnter_spec`/`scratchDrop_spec` (`< 2^62` → `< 2^47 - 2^33`):
+  their users (`Checker`, `CheckerT`, `PhaseBT`) destructure them with `-`, unchanged. The test
+  `#guard`s of `Store.lean` (growth abort: `consMinWords` now, since a 36-word array holds two
+  doublings) and `ScratchRefine.lean` (the wrap: the new limit, `n` words zeroed).
+* `pins.bin` was not regenerated here: linking `romgen` fails in this sandbox (the toolchain's
+  `ld` wrapper points into a missing nix store path); the change does not touch the pin data.
+
+## 4. Measurements
+
+Master 25e13127's binary (`make` of its `checker.s`, `_tmp/ronsync2-kf/perf/base`) against this
+branch's; `perf stat -e instructions:u`, peak RSS from GNU `time` (`%M`); two alternated runs
+each, identical to within 0.02 % (instructions) and 0.2 % (RSS); all accept.
+
+| | instructions:u master | this | Δ | peak RSS master | this | Δ |
+|---|---:|---:|---:|---:|---:|---:|
+| Init (`init435.ndjson`), default jobs | 221.70 G | 223.85 G | +0.97 % | 732 MB | 643 MB | **−12.1 %** |
+| Init, `--jobs=16` | 223.48 G | 225.48 G | +0.90 % | 976 MB | 808 MB | **−17.2 %** |
+| `complete_c04a_restart_70` (largest e2e fixture, 9 MB) | 16.500 G | 16.512 G | +0.07 % | 379 MB | 260 MB | **−31.2 %** |
+
+Upstream measured +1.5 % instructions and −23 % peak on `Init` (its peak includes no mapped
+input); ours is −89 MB on `Init`, of which the input mapping (346 MB) is not touched by the change.
+
+Wall (`_tmp/bce/wb2.py` interleaved paired rounds, `wstats.py`; data in `_tmp/ronsync2-kf/perf/`):
+
+| | master median | this | rounds, load |
+|---|---:|---:|---|
+| Init, one thread (CPUs 44,92) | 17.55 s | −0.0 % (Wilcoxon p = 0.54; mean 95 % CI [−1.6, +0.7]) | 14, load 3–5 |
+| Init, `--jobs=16` (CPUs 24–39) | 3.71 s | −1.7 % (p = 0.097; mean −4.8 % [−9.8, +0.5]) | 20, load 4–11 |
+
+So: about +1 % instructions, no measurable wall cost, 12–31 % less peak memory.
+
+## 5. Checks
+
+`scripts/diff-e2e.py --parallel 16`: 634/634 agree (0 UNSOUND/INCOMPLETE/CRASH/TIMEOUT).
+`scripts/gates.sh`: green (14 OK, `checker-prog` skipped). Not run here, because linking a Lean
+executable (`romgen`, `e2e-ref`, `e2e-l`) fails in this sandbox: `asm_file.py`'s `pins.bin`
+step and `--check`, and `scripts/e2e.py --latest ''`; `checker.s` was written with
+`scripts/lake env lean --run ConAgua/Checker/AsmEmit.lean`, which is `asm_file.py`'s own step,
+and `checkerFile_eq` (the `build` gate) accepts it.
