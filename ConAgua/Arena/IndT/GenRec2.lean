@@ -94,7 +94,6 @@ structure GrpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   cvs : decCVS m' r.tail cvGs
   abs : AbsOK m'
   rc : RcMR m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
   den : ∃ (gP : ConLeche.ClassGen) (cvGsP : List ConLeche.ConstantVal), dClassGen a'.store G = some gP ∧
     cvGs.mapM (Frontend.denoteCV a'.store) = some cvGsP ∧ (∀ c ∈ cvGsP, env.find? c.name = none) ∧
     ∀ f : Nat → Nat, ConLeche.EnvWF (ConLeche.consBlockRecsBare pP 0
@@ -104,6 +103,7 @@ section parts
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hApd hCrk in
 /-- **`gen_rec_check_prep`'s third part refines `grcTwinC`, both outcomes** (the generator record,
 its prefix, the recursor types; `class_rec_tys_ok` through its run). Besides the twin's facts the
@@ -331,7 +331,9 @@ theorem grpC_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
     c19.trans c10, _, cvGsP, ConRon.Bridge.Inductives.dClassGen_ext c10.ext _ _ hgPd, hcvGs, hfrG, henvR⟩⟩
   · simp only [grcTwinC, StateT.run_bind, hrun2, except_ok_bind, hrun3]
   · simpa [decCVS] using hd3
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hApd hCrk hIlpf in
 /-- **`gen_rec_check_prep`'s second part refines `grcTwinB`, both outcomes** (the classes' entries
 and constructors, the count, the formers, the level, then the third part, `grpC_ref`). -/
@@ -580,6 +582,7 @@ theorem grpB_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
     refine ErrClaim.bind_right hrun2 (ErrClaim.bind_right hrun3 ?_)
     simp only [hcount, ite_true]
     exact ErrClaim.bind_right hrun5 (ErrClaim.bind_right hrun6 (hc k))
+-/
 
 end parts
 
