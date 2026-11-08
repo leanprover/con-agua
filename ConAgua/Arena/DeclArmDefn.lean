@@ -60,14 +60,14 @@ def natGateT (feR fe2 : IFEnv) (c : NIdx) : AM Unit := do
     | _ => fail (.internal
         "structural Nat operation not stored")
 
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The `Nat.div`-family pin gate (`checkDecl`'s lines 123-124). -/
 def divGateT (pins : List INatOpPinSet) (feR fe2 : IFEnv) (c : NIdx) : AM Unit := do
   if (← natDivModNames).contains c then
     checkDivModPin V pins feR fe2 c
--- RS2E
+-/
 
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The arm is the two checks, then the two gates** (the twin's `do` block, its join points
 distributed over the gates' branches). -/
 theorem checkDecl_defn_eq (pins : List INatOpPinSet) (fe : IFEnv) (cv : IConstantVal) (v : EIdx)
@@ -78,31 +78,9 @@ theorem checkDecl_defn_eq (pins : List INatOpPinSet) (fe : IFEnv) (cv : IConstan
       natGateT (fe2.restrictTo fe.visibleBelow) fe2 cv.name
       divGateT pins (fe2.restrictTo fe.visibleBelow) fe2 cv.name
       pure fe2) := by
-  simp only [checkDecl, natGateT, divGateT, bind_assoc]
-  congr 1; funext _; congr 1; funext fe2; congr 1; funext x
-  split
-  · rw [bind_assoc]
-    congr 1; funext g
-    rw [bind_assoc]; congr 1; funext deps
-    rw [bind_assoc]; congr 1; funext b
-    cases hf : fe2.find? cv.name with
-    | none => split <;> simp [fail_bindAM] <;> try (congr 1; funext u; congr 1; funext y; split <;> simp [fail_bindAM])
-    | some ci =>
-      cases ci
-      case defnInfo cv' val hint =>
-        split
-        · simp only [bind_assoc]
-          congr 1; funext eqs; congr 1; funext l; congr 1; funext ok
-          split <;> simp [fail_bindAM] <;> try (congr 1; funext u; congr 1; funext y; split <;> simp)
-        · simp only [bind_assoc]
-          congr 1; funext u
-          congr 1; funext eqs; congr 1; funext l; congr 1; funext ok
-          split <;> simp [fail_bindAM] <;> try (congr 1; funext u; congr 1; funext y; split <;> simp)
-      all_goals (split <;> simp [fail_bindAM] <;> try (congr 1; funext u; congr 1; funext y; split <;> simp [fail_bindAM]))
-  · simp only [pure_bind]
-    congr 1; funext y
-    split <;> simp
--- RS2E
+  sorry
+
+-/
 
 /-! ## The gates' specs (hypotheses) -/
 

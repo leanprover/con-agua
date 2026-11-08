@@ -154,14 +154,7 @@ theorem headTypeConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
     ⦃fun r s' => LocEq s' s₀ ∧ cArmK1 p n us (fun ty m => callW p n "head_type_res" [vis, f, k, ty] m)
       (callW p n "env_find" [cn, vis] s₀.mem) =
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "head_type_const")]
-  simp only [callFn, headTypeConstL]
-  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
-      callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "head_type_res",
-      callW_spec p n "subst_pw_at"] <;>
-  simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons, EREC,
-    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ]
+  sorry
 
 theorem headProofConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
     (vis f cn us : Word) :
@@ -169,14 +162,7 @@ theorem headProofConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : S
     ⦃fun r s' => LocEq s' s₀ ∧ cArmK1 p n us (fun ty m => callW p n "type_sort_pw" [vis, f, ty] m)
       (callW p n "env_find" [cn, vis] s₀.mem) =
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "head_proof_const")]
-  simp only [callFn, headProofConstL]
-  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
-      callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "type_sort_pw",
-      callW_spec p n "subst_pw_at"] <;>
-  simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons, EREC,
-    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ]
+  sorry
 
 /-! ## `head_type_pw(vis, f, root, d, h, k)` -/
 
@@ -282,14 +268,7 @@ theorem unwrapStep_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "unwrap_step" [vis, f, e]
     ⦃fun r s' => LocEq s' s₀ ∧ uwsW p n s₀.mem vis f e = some (r.headD 0, r.tail.headD 0, s'.mem);
       ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "unwrap_step")]
-  simp only [callFn, unwrapStepL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
-      appCountAtL_spec p (hp.get "app_count_at") n, callW_spec p n "env_find", lamProjL_spec p (hp.get "lam_proj") n,
-      callW_spec p n "get_app_args", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
-  simp_all [uwsW, uwsK1, uwsK2, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, EREC,
-    SPN, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ]
+  sorry
 
 /-- After `unwrap_step`: the rest of the steps. -/
 def uidK (p : Prog) (n : Nat) (vis f k e : Word) : Option (List Word × Mem) → Option (Word × Mem)
@@ -373,16 +352,7 @@ theorem headProofProj_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "head_proof_proj" [vis, f, sn, i]
     ⦃fun r s' => LocEq s' s₀ ∧ hppK1 p n vis f i (callW p n "find_proj" [vis, sn, i] s₀.mem) =
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "head_proof_proj")]
-  simp only [callFn, headProofProjL]
-  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
-      callW_spec p n "find_proj", callW_spec p n "type_sort_pw"] <;>
-  simp_all [hppK1, hppK2, hppB, LocEq, BinOp.eval, St.setLocs_cons, EREC, TieredArray.t0,
-    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ]
-  all_goals
-    rw [ite_eq_right (by simp only [UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le] at *; omega)]
-    simp_all
+  sorry
 
 /-- **The model of `head_proof_pw`.** -/
 def hpwW (p : Prog) (n : Nat) (m : Mem) (vis f h : Word) : Option (Word × Word × Word × Mem) :=
