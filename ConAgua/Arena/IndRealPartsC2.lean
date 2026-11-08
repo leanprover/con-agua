@@ -124,25 +124,6 @@ theorem blockShape_refinesC (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ :
     let ⟨hok, hQ⟩ := Sim.run (bshW_sim (realCall p) n hC.stage hblk (lvlHyp_real p hcl hL n hC hA hbP)) hm
     ⟨hl, hok, hQ⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hcl hL in
-/-- **`block_parts` refines `blockParts?` under `StageC`**, its `lvl_eq_c` the real call
-(`blockParts_refines`' statement, as `blockShape_refinesC`). -/
-@[refines ConRon.Arena.blockParts?]
-theorem blockParts_refinesC (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (nPd off l : Word) (blk : List IConstantInfo) {blkP : List ConLeche.ConstantInfo}
-    (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
-    (hbP : Frontend.denoteCIList a₀.store blk = some blkP)
-    (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) s₀.mem blk) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 6)) "block_parts" [nPd, off, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockParts? nPd.toNat blk) a₀ ∧
-      PartsR (AM.res (ConRon.Arena.blockParts? nPd.toNat blk) a₀) r s'.mem ∧
-      StageR vis fe s'.mem (AM.st (ConRon.Arena.blockParts? nPd.toNat blk) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (bpa_spec p hP (realCall p) (realCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (bpW_sim (realCall p) n hC.stage hblk (lvlHyp_real p hcl hL n hC hA hbP)) hm
-    ⟨hl, hok, hQ⟩
--/
 
 end
 

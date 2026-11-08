@@ -327,32 +327,5 @@ theorem bphW_loop1_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.
     exact ⟨hS3, hg1.trans (hg2.trans hg3), by simp, hkn, rfl⟩
 -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`basis_pin_hit(off, len)` refines `basisPinHit`** on the block's `EREC` slice of constant
-records (`decEBlk`, decoded below the tops), at a well-formed twin state (`StateOK`: canon's
-`LitInj`); `rom_basis_decls` by its refinement (`RomRefs.basis`). -/
-@[refines ConRon.Arena.basisPinHit ConRon.Arena.basisPinHitGo]
-theorem basisPinHit_ok {p : Prog} (P : BphProg p) :
-  ∀ (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a : AState)
-    (o l : Word) (blk : List IConstantInfo) (r : List Word),
-    StageR vis fe m a → ConRon.Bridge.StateOK a →
-    DecB (fun m => decEBlk dn m o.toNat l.toNat) m blk →
-    callW p n "basis_pin_hit" [o, l] m = some (r, m') →
-    ∃ x a', (basisPinHit blk).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
-      match x with
-      | none => r.headD 0 = 0
-      | some k => r.headD 0 ≠ 0 ∧ (r.tail.headD 0).toNat < 4 ∧ basisOfW (r.tail.headD 0).toNat = k := by
-  intro n dn vis fe m m' a o l blk r hS hok hB hc
-  rcases n with _ | n
-  · rw [callW_zero] at hc; cases hc
-  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (bph_specW p P.bph (n + 1) ⟨m, Locals.init []⟩ o l) hc
-  subst hs'
-  rw [bphW.arm1] at hW
-  obtain ⟨x, a', hrun, hS', hg, hR⟩ := bphW_loop1_ok P dn vis fe o l blk (n + 1) m s'.mem a 0 r hW hS hok
-    hB (by simp)
-  refine ⟨x, a', hrun, hS', hg, ?_⟩
-  cases x <;> exact hR
--/
 
 end L.Ind

@@ -218,64 +218,6 @@ theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {vis : Word}
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some]
   exact hd
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`check_block_positivity_nfs`' model: `outs.map (·.map (·.2))`**, member by member behind fresh
-headers. -/
-theorem pnfW_ok {p : Prog} (hP : NfsProg p) {vis : Word} {fe : IFEnv}
-    (n : Nat) : ∀ (m m' : Mem) (a : AState) (s l : Word) (outss : List (List (List NestFieldKind × EIdx)))
-    (r : List Word), pnfW p n m s l = some (r, m') → StageR vis fe m a → PSlR decKES outss s l m →
-    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
-      PSlR decNFS (outss.map (·.map (·.2))) (r.headD 0) (r.tail.headD 0) m' := by
-  induction n with
-  | zero => intro m m' a s l outss r h; simp [pnfW.eq_1] at h
-  | succ n ih =>
-  intro m m' a s l outss r h hS hos
-  by_cases hl : l = 0
-  · rw [pnfW.arm1 p n m s l hl] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have : outss = [] := by
-      have h1 := hos.1; simp only [DecB, hl] at h1
-      simpa [decPL] using h1.symm
-    subst this
-    exact ⟨hS, IWGrow.refl _, MFr.refl _ _ _, PSlR.nil decNFS m⟩
-  rw [pnfW.arm2 p n m s l hl] at h
-  obtain ⟨q, pairs, outss', rfl, hw, hqb, hdq, hrest⟩ := partsPSl_cons hos hl
-  have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  obtain ⟨po, pl, hpo, hpl, hpd, hpb⟩ := partsAt decKE_mono (show decAt (truncM m)
-    (decPL (truncM m) (decKE (truncM m))) q = some pairs from hdq)
-  obtain ⟨w1, -, -⟩ := partsIwRd hpo (w := UInt64.ofNat q) hq'
-  obtain ⟨w2, -, -⟩ := partsIwRd hpl (w := UInt64.ofNat q + 1) (by
-    have := partsIwLt hpl; have : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-    rw [UInt64.toNat_add, hq']; simp; omega)
-  rw [UInt64.ofNat_toNat] at w1 w2
-  rw [hw, w1, w2] at h
-  -- the member
-  rcases h1 : callW p n "check_block_positivity_nfs_member" [po, pl] m with _ | ⟨r1, m1⟩
-  · rw [h1] at h; simp [pnfW.k_check_block_positivity_nfs_member.none] at h
-  rw [h1, pnfW.k_check_block_positivity_nfs_member.arm1] at h
-  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (pnm_spec p hP.mem n _ po pl) h1
-  obtain ⟨hS1, hg1, hf1, hd1, hb1⟩ := pnmW_ok hP n m s1.mem a po pl pairs r1 hW1 hS ⟨hpd, hpb⟩
-  -- its header
-  rcases h2 : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with _ | ⟨r2, m2⟩
-  · rw [h2] at h; simp [pnfW.k_rec2.none] at h
-  rw [h2, pnfW.k_rec2.arm1] at h
-  obtain ⟨hS2, hg2, hf2, hd2⟩ := pos3_rec2H hP h2 hS1 hd1 hb1
-  -- the rest
-  rcases h3 : pnfW p n m2 (s + 1) (l - 1) with _ | ⟨r3, m3⟩
-  · rw [h3] at h; simp [pnfW.k_check_block_positivity_nfs.none] at h
-  rw [h3, pnfW.k_check_block_positivity_nfs.arm1] at h
-  have hg12 := hg1.trans hg2
-  obtain ⟨hS3, hg3, hf3, hd3⟩ := ih m2 m3 a (s + 1) (l - 1) outss' r3 h3 hS2 (hrest.grow decKES_mono hg12)
-  -- the cons
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [pnfW.k_sl_cons.arm1] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (slCons_specW p hP.alloc hP.copy hP.cons n _ _ _ _) h4
-  obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decNFS_mono hW4 hS3 hd3.2 hd3.1 (hd2.grow (decNFS_mono _) hg3)
-  refine ⟨hS4, (hg12.trans hg3).trans hg4, ((hf1.trans hf2).trans hf3).trans (consW_mfr hW4), ?_, ?_⟩
-  · simpa using hd4
-  · simp only [List.headD_cons, List.tail_cons]; omega
--/
 
 end L.Ind
 

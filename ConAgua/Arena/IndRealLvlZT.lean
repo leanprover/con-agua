@@ -68,30 +68,6 @@ theorem lzc_alloc {m m2 : Mem} {k q : Word} (h : erAllocW m k = some (q, m2))
     (hEs : (m.arr64 EREC).size < 2 ^ 64) (hc : 129 < (m.arr64 CTL).size) :
     q = rdW (m.arr64 CTL) 129 ∧ m2 = erAllocMem m k ∧ q.toNat + k.toNat ≤ (m.arr64 EREC).size ∧
       erTop m2 = q.toNat + k.toNat := by
-  simp only [erAllocW] at h
-  by_cases h1 : m.len64 EREC < rdW (m.arr64 CTL) 129
-  · simp [h1] at h
-  by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < k
-  · simp [h1, h2] at h
-  simp only [h1, h2, ite_false, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
-  have hq : (rdW (m.arr64 CTL) 129).toNat ≤ (m.arr64 EREC).size := by
-    have : ¬ (m.len64 EREC).toNat < (rdW (m.arr64 CTL) 129).toNat := h1
-    omega
-  have hroom : (rdW (m.arr64 CTL) 129).toNat + k.toNat ≤ (m.arr64 EREC).size := by
-    have : ¬ (m.len64 EREC - rdW (m.arr64 CTL) 129).toNat < k.toNat := h2
-    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at this
-    omega
-  refine ⟨rfl, rfl, hroom, ?_⟩
-  have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
-  simp only [erTop, erAllocMem, rdW_set64]
-  rw [ite_eq_left ⟨trivial, trivial, h129⟩, UInt64.toNat_add]
-  omega
-
-section
-variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-
-end
+  sorry
 
 end L.Ind

@@ -33,13 +33,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`check_block_inds_cv_tas` is its model `icvW`** (generated). -/
-l_model icv_spec (p : Prog) (hp : p.lookup "check_block_inds_cv_tas" = some checkBlockIndsCvTas)
-  fns [hp ↦ icvW]
-  specs [callW_spec p n "check_block_inds_cv_tas_go", callW_spec p n "sl_cons"]
-  grind [ind_grind] finish [rdW_eq] gen 20
--/
 
 /-- `sl_cons`' run under the stage relation. -/
 theorem installConsRun {p : Prog} (hP : CstProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
@@ -99,31 +92,6 @@ theorem icvgW_ok {p : Prog} (hP : CstProg p) {vis : Word}
   exact ⟨hS2, hg1.trans hg2, by simpa using hd2⟩
 -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- `check_block_inds_cv_tas`' run: `c0 :: cvs.map (·.1)`, a slice of constants below the tops. -/
-theorem installCvTasRun {p : Prog} (hP : CstProg p) {n : Nat}
-    {vis : Word} {fe : IFEnv} {a : AState} {m m' : Mem} {c0 o l : Word} {r : List Word}
-    {cv0 : IConstantVal} {cvs : List (IConstantVal × LIdx)}
-    (hcv : p.lookup "check_block_inds_cv_tas" = some checkBlockIndsCvTas)
-    (hcg : p.lookup "check_block_inds_cv_tas_go" = some checkBlockIndsCvTasGo)
-    (h : callW p n "check_block_inds_cv_tas" [c0, o, l] m = some (r, m')) (hS : StageR vis fe m a)
-    (hc0 : DecB (fun m => decCVp m c0.toNat) m cv0) (hcvs : PSlR decTele cvs o l m) :
-    StageR vis fe m' a ∧ IWGrow m m' ∧
-      PSlR decCVp (cv0 :: cvs.map (·.1)) (r.headD 0) (r.tail.headD 0) m' := by
-  rcases n with _ | n
-  · rw [callW_zero] at h; cases h
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (icv_spec p hcv (n + 1) _ c0 o l) h
-  rw [icvW.arm1] at hW
-  obtain ⟨⟨r1, m1⟩, h1, hW⟩ := of_K hW rfl
-  rw [icvW.k_check_block_inds_cv_tas_go.arm1] at hW
-  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (icvg_spec p hcg n _ o l) h1
-  obtain ⟨hS1, hg1, hd1⟩ := icvgW_ok hP n _ _ o l r1 cvs hW1 hS hcvs
-  obtain ⟨⟨r2, m2⟩, h2, hW⟩ := of_K hW rfl; rw [icvW.k_sl_cons.arm1] at hW
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  obtain ⟨hS2, hg2, hd2⟩ := installConsRun hP (fun q => OMono.decCVp q) h2 hS1 hd1
-    (hc0.grow (OMono.decCVp _) hg1)
-  exact ⟨hS2, hg1.trans hg2, by simpa using hd2⟩
--/
 
 theorem RecsB.grow {m m' : Mem} {pp : Word} (h : RecsB m pp) (hg : IWGrow m m') (h3 : pp.toNat + 3 < iwTop m) :
     RecsB m' pp := by

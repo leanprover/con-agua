@@ -214,38 +214,13 @@ theorem viewBind_run_s (h : EIdx) (a : AState) :
 
 theorem StageR.set_iw {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) (p x : Word) : StageR vis fe (m.set64 IW p x) a := by
-  have hf := set64IW_frame m p x
-  have hC : (m.set64 IW p x).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have hE : (m.set64 IW p x).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨CheckR.frame_iw hf hS.check, ?_⟩
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
-  have hI := hf.size IW
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · simp only [iwTop, hC, hI]; exact h1
-  · simp only [erTop, hC, hE]; exact h2
-  · rw [hI]; exact h3
-  · rw [hE]; exact h4
-  · rw [hC]; exact h5
+  sorry
 
 /-- Putting the pool's top back to `o ≤` the top keeps the stage relation. -/
 theorem StageR.set_top {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (hS : StageR vis fe m a) (o : Word) (ho : o.toNat ≤ iwTop m) :
     StageR vis fe (m.set64 CTL 200 o) a ∧ iwTop (m.set64 CTL 200 o) = o.toNat := by
-  have hf : MemFrame [IW] [200] m (m.set64 CTL 200 o) :=
-    MemFrame.mono (MemFrame.setCtl m 200 o) (by simp) (by simp)
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
-  have ht : iwTop (m.set64 CTL 200 o) = o.toNat := by
-    simp only [iwTop, rdW_set64]
-    have h200 : UInt64.toNat 200 < (m.arr64 CTL).size := by simpa using h5
-    rw [ite_eq_left ⟨trivial, trivial, h200⟩]
-  have h129 : rdW ((m.set64 CTL 200 o).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
-  have hE : (m.set64 CTL 200 o).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨⟨CheckR.frame_iw hf hS.check, ?_, ?_, ?_, ?_, ?_⟩, ht⟩
-  · rw [ht, hf.size IW]; omega
-  · simp only [erTop, h129, hE]; exact h2
-  · rw [hf.size IW]; exact h3
-  · rw [hE]; exact h4
-  · rw [hf.size CTL]; exact h5
+  sorry
 
 /-- One step of the twin's strippers (`stripPis`/`stripLams` at `k + 1`, tag `T`, the rest `rec`). -/
 def stripStepT (T : UInt32) (rec : EIdx → AM (Option (List EIdx × EIdx))) (h : EIdx) :

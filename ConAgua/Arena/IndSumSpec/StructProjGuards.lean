@@ -55,38 +55,6 @@ attribute [ind_grind] spgK1_some_zero spgK1_some
 
 /-! ## The spec -/
 
-/- ronsync2 stage 2: commented out (a section at a removed L function)
-section spec
-variable (p : Prog) (hv : p.lookup "e_view" = some eView)
-  (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
-  (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
-  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p) (hst : StripProg p)
-  (hsg : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
-  (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
-  (hul : p.lookup "struct_used_later_list" = some structUsedLaterListL)
-  (hgd : p.lookup "sl_getd" = some slGetD)
-  (hmf : p.lookup "max_find" = some maxFind) (hmp : p.lookup "max_push" = some maxPush)
-  (him : p.lookup "intern_max" = some internMax)
-  (hcol : p.lookup "struct_proj_guards_col" = some structProjGuardsColL)
-  (hrow : p.lookup "struct_proj_guards_row" = some structProjGuardsRowL)
-  (hpw : p.lookup "pin_word" = some pinWordL) (hcl : p.lookup "hb_clear" = some (memoClearG hbSch))
-  (hp : p.lookup "struct_proj_guards" = some structProjGuardsL)
-
-include hv hf hput hins hgo hbp hst hsg ha hc hsc hul hgd hmf hmp him hcol hrow hpw hcl hp in
-theorem spg_spec (n : Nat) (s₀ : St) (cty nP nF so sl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_proj_guards" [cty, nP, nF, so, sl]
-    ⦃fun r s' => LocEq s' s₀ ∧ spgW n s₀.mem cty nP nF so sl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, structProjGuardsL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinWord_specV p hpw n,
-      memoClearG_spec hbSch p _ hcl n, ulW_spec p hv hf hput hins hgo hbp hst hsg ha hc hsc hul n,
-      rowW_spec p hgd hmf hmp him hcol ha hc hsc hrow n] <;>
-    finish (gen := 20) [spgW]
-
-end spec
--/
 
 /-! ## The relation to the twin -/
 
@@ -171,47 +139,6 @@ theorem spgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 
 /-! ## The census theorem -/
 
-/- ronsync2 stage 2: commented out (a section at a removed L function)
-section census
-variable (p : Prog) (hv : p.lookup "e_view" = some eView)
-  (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
-  (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
-  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p) (hst : StripProg p)
-  (hsg : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
-  (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
-  (hul : p.lookup "struct_used_later_list" = some structUsedLaterListL)
-  (hgd : p.lookup "sl_getd" = some slGetD)
-  (hmf : p.lookup "max_find" = some maxFind) (hmp : p.lookup "max_push" = some maxPush)
-  (him : p.lookup "intern_max" = some internMax)
-  (hcol : p.lookup "struct_proj_guards_col" = some structProjGuardsColL)
-  (hrow : p.lookup "struct_proj_guards_row" = some structProjGuardsRowL)
-  (hpw : p.lookup "pin_word" = some pinWordL) (hcl : p.lookup "hb_clear" = some (memoClearG hbSch))
-  (hp : p.lookup "struct_proj_guards" = some structProjGuardsL)
-
-include hv hf hput hins hgo hbp hst hsg ha hc hsc hul hgd hmf hmp him hcol hrow hpw hcl hp in
-/-- **`struct_proj_guards` refines `structProjGuards`** from the stage relation and a related `hb`
-memo (any well-formed one: the walk clears it). -/
-@[refines ConRon.Arena.structProjGuards]
-theorem structProjGuards_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis cty nP nF so sl : Word) (sorts : List LIdx) (mp : Std.HashMap (EIdx × Nat) Bool)
-    (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
-    (hS : StageR vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp)
-    (hs : decHL s₀.mem so.toNat sl.toNat = some sorts) (hsbd : so.toNat + sl.toNat ≤ iwTop s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_proj_guards" [cty, nP, nF, so, sl]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a₀ ∧
-      StageR vis fe s'.mem (AM.st (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
-        some (AM.res (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a₀); ⊤⦄ := by
-  refine triple_post (spg_spec p hv hf hput hins hgo hbp hst hsg ha hc hsc hul hgd hmf hmp him hcol hrow
-    hpw hcl hp n s₀ cty nP nF so sl) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨hok, hS', hg, hd, -⟩ := (spgW_ok n _ a₀ cty nP nF so sl sorts mp hc' hb hS hM hs hsbd).run hm
-  exact ⟨hl, hok, hS', hg, hd⟩
-
-end census
--/
 
 end L.Ind
 

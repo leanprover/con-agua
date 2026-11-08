@@ -83,27 +83,9 @@ namespace L.Ind
 
 open L.Arena
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`block_shape_rhss_of` is its model `brhW`** (generated). -/
-l_model brh_spec (p : Prog) (hP : IndPartsProg4 p)
-    (hp : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf)
-  fns [hp ↦ brhW]
-  specs [slCons_specW p hP.alloc hP.copy hP.cons n]
-  grind [ind_grind] finish [rdW_eq] gen 20
--/
 
 /-! ## `block_shape_recs_of` -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`block_shape_recs_of` is its model `brsW`** (generated). -/
-l_model brs_spec (p : Prog) (hP : IndPartsProg4 p) (h6 : p.lookup "rec6" = some rec6)
-    (hr : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf)
-    (hp : p.lookup "block_shape_recs_of" = some blockShapeRecsOf)
-  fns [hp ↦ brsW]
-  specs [recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n, brh_spec p hP hr n,
-    rec6_specW p hP.alloc h6 n, slCons_specW p hP.alloc hP.copy hP.cons n]
-  grind [ind_grind] finish [rdW_eq] gen 20
--/
 
 end L.Ind
 
