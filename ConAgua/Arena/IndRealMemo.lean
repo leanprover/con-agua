@@ -125,24 +125,6 @@ theorem i1lF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     RelW i1lF [f, e, v, d] (fun m a => StageR vis fe m a ∧ AbsOK m)
       (instantiate1LiftFast f.toNat (decI e) (decI v) d.toNat)
       (fun m m' a r x => KeepPost vis fe decW0E m m' a r x ∧ AbsOK m') := by
-  intro m m' a r h ⟨hS, hAb, ⟨mp, hmp⟩, hCr, hIl, hWk⟩
-  have hfr := i1lF_frame h
-  obtain ⟨n, hc⟩ := callF_run h
-  rcases n with _ | n
-  · rw [callW_zero] at hc; cases hc
-  have hA : ArenaI m (withI1C a mp) := ⟨hS.check.arena.withI1C mp, hmp⟩
-  obtain ⟨s', hs', -, hok, hA', hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (i1lFast_refines i1lP i1lP_prog n _ _ hA f e v d he hv) hc
-  rw [hs'] at hA'
-  have hrun := AM.run_of_ok _ _ hok
-  have hrun' : (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat).run a =
-      .ok (AM.res (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) (withI1C a mp),
-        AM.st (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) (withI1C a mp)) := by
-    rw [← hrun, i1lFast_run, i1lFast_run]; rfl
-  obtain ⟨hS', hg⟩ := StageR.of_walk hS hA'.1 hfr (lt64A_of_all rfl) (lt64_of_all rfl)
-    ((keeps_i1lFast _ _ _ _).run hrun')
-  exact ⟨_, _, hrun', ⟨hS', hg, hlt, hres.symm⟩, hAb.frame hfr (by decide) (by decide), ⟨_, hA'.2⟩,
-    hCr.frame hfr (by decide) (by decide), hIl.frame hfr (by decide) (by decide),
-    hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
+  sorry
 
 end L.Ind

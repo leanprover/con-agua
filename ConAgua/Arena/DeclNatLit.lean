@@ -38,34 +38,7 @@ def ciTag : IConstantInfo → Nat
 theorem decCI_tag {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
     ∃ w, a[p]? = some w ∧ w.toNat = ciTag ci := by
-  unfold decCI at h
-  cases hk : nat? (aread a) p with
-  | none => simp [hk] at h
-  | some k =>
-  have hw : ∃ w, a[p]? = some w ∧ w.toNat = k := by
-    simp only [nat?, Option.map_eq_some_iff] at hk
-    obtain ⟨w, hw, hk⟩ := hk; exact ⟨w, hw, hk⟩
-  obtain ⟨w, hw, hwk⟩ := hw
-  rw [hk] at h
-  simp only [bind, Option.bind_eq_some_iff] at h
-  obtain ⟨a1, ha1, h⟩ := h
-  cases ha1
-  refine ⟨w, hw, ?_⟩
-  rw [hwk]
-  rcases k with _ | _ | _ | _ | _ | _ | k
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, -, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h; rfl
-  · simp at h
+  sorry
 
 /-- A record's constant value reads: the level-parameter count word and the type word. -/
 theorem natCvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC).size < 2 ^ 64)

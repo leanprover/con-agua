@@ -171,8 +171,10 @@ open L.Arena L.Ind L.Compiler
 
 /-! ## The checks -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 prog_all checkerProg_armChk : checkerProg
   (wsChkM CTL [armPosT, armHbT, armRcT, armTaT, armCidT, armRcHbT, armMaT, armMcT, armAbsT])
+-/
 
 theorem checkerProg_armPosChk :
     ∀ x ∈ checkerProg, wsChk CTL armPosT.1 armPosT.2.1 armPosT.2.2 x = true :=

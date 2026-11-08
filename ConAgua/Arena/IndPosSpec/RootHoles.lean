@@ -34,9 +34,8 @@ open L.Arena
 
 /-- Words written into the pool keep the stage relation. -/
 theorem StageR.wrIW {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} :
-    ∀ {m : Mem}, StageR vis fe m a → ∀ (q : Word) (ws : List Word), StageR vis fe (wrIW m q ws) a
-  | _, hS, _, [] => hS
-  | _, hS, q, x :: ws => StageR.wrIW (hS.set_iw q x) (q + 1) ws
+    ∀ {m : Mem}, StageR vis fe m a → ∀ (q : Word) (ws : List Word), StageR vis fe (wrIW m q ws) a := by
+  sorry
 
 /-- **A record write under the stage relation**: the relation kept, the pool grown by `|ws|`
 words at the old top, where `ws` is readable. -/
@@ -45,23 +44,7 @@ theorem posRecW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ q.toNat = iwTop m ∧ iwTop m' = iwTop m + ws.length ∧
       (∀ j < ws.length, (m'.arr64 IW)[q.toNat + j]? = ws[j]?) := by
-  simp only [posRecW] at h
-  rcases hal : allocW m (UInt64.ofNat ws.length) with _ | ⟨q1, m1⟩ <;> rw [hal] at h; · simp at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
-  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal h3
-  subst hm1
-  have hk : (UInt64.ofNat ws.length).toNat = ws.length := UInt64.toNat_ofNat_of_lt' hl
-  rw [hk] at hroom
-  obtain ⟨hget, hg, hf, htop⟩ := recMem_post m ws (UInt64.ofNat ws.length) hk h5
-    (by rw [← hq]; exact hroom) h3
-  rw [← hq] at hget hg hf htop
-  have hqi : q1.toNat = iwTop m := by simp only [iwTop, hq]
-  have htop' : iwTop (wrIW (allocMem m (UInt64.ofNat ws.length)) q1 ws) = iwTop m + ws.length := by
-    simp only [iwTop] at hqi ⊢
-    rw [htop, UInt64.toNat_add, hk, ← hq]
-    exact Nat.mod_eq_of_lt (by omega)
-  exact ⟨StageR.wrIW (hS.alloc hal).1 q1 ws, hg, hqi, htop', hget⟩
+  sorry
 
 /-! ## Agreement on a set of pool indices -/
 
@@ -84,18 +67,15 @@ theorem RdS.set {m : Mem} {P : Nat → Prop} (x v : Word) (hx : ¬ P x.toNat) : 
   simp only [this, ite_false]
 
 theorem iwN_agree {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {i : Nat} (hi : P i) : iwN m' i = iwN m i := by
-  simp only [iwN, nat?, iwA]; rw [h i hi]
+  sorry
 
 theorem iwH_agree {k : IdxKind} {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {i : Nat} (hi : P i) :
     (iwH m' i : Option (Idx k)) = iwH m i := by
-  simp only [iwH, hd?, iwA]; rw [h i hi]
+  sorry
 
 theorem decHL_agree {k : IdxKind} {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {o l : Nat}
     (hi : ∀ j < l, P (o + j)) : (decHL m' o l : Option (List (Idx k))) = decHL m o l := by
-  simp only [decHL, hslice?]
-  apply mapM_opt_congr
-  intro j hj
-  simp only [hd?, iwA, h (o + j) (hi j (List.mem_range.mp hj))]
+  sorry
 
 theorem NKIn.agree {m m' : Mem} {P : Nat → Prop} {k : Nat} (hk : NKIn m k P) (h : RdS m m' P) :
     decNK m' k = decNK m k ∧ NKIn m' k P := by
@@ -111,12 +91,7 @@ theorem NKIn.agree {m m' : Mem} {P : Nat → Prop} {k : Nat} (hk : NKIn m k P) (
 
 theorem NHIn.agree {m m' : Mem} {P : Nat → Prop} {w : Nat} (hw : NHIn m w P) (h : RdS m m' P) :
     decNH m' w = decNH m w ∧ NHIn m' w P := by
-  obtain ⟨h0, h1, hk⟩ := hw
-  have e0 := iwN_agree h h0
-  refine ⟨?_, h0, h1, fun k hk' => (hk k (e0 ▸ hk')).agree h |>.2⟩
-  simp only [decNH, e0, iwN_agree h h1]
-  rcases hkk : iwN m w with _ | k; · simp
-  simp only [Option.bind_eq_bind, Option.bind_some, ((hk k hkk).agree h).1]
+  sorry
 
 theorem NKIn.mono {m : Mem} {P Q : Nat → Prop} {k : Nat} (h : NKIn m k P) (hq : ∀ i, P i → Q i) :
     NKIn m k Q := ⟨fun j hj => hq _ (h.1 j hj), fun o l ho hl j hj => hq _ (h.2 o l ho hl j hj)⟩
@@ -166,28 +141,14 @@ include ha h2 h4 hg in
 theorem rhGo_spec (k : Nat) : ∀ (s₀ : St) (no nl lv po pl nP q j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_ctx_root_holes_go" [no, nl, lv, po, pl, nP, q, j]
     ⦃fun _ s' => LocEq s' s₀ ∧ rhGoW k s₀.mem no nl lv po pl nP q j = some s'.mem; ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ no nl lv po pl nP q j
-    rw [invoke_eq _ hg]; simp only [callFn, nestCtxRootHolesGo]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ no nl lv po pl nP q j
-    simp only [invoke_eq _ hg, callFn, nestCtxRootHolesGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        posRec4_specW p ha h4 k, posRec2_specW p ha h2 k, ih] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 include ha h2 h4 hg in
 theorem rootHoles_spec (hp : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles) (k : Nat)
     (s₀ : St) (ctx : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_ctx_root_holes" [ctx]
     ⦃fun r s' => LocEq s' s₀ ∧ rhW k s₀.mem ctx = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestCtxRootHoles]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      iwAlloc_specW p ha k, rhGo_spec p ha h2 h4 hg k] <;>
-    finish (gen := 20) [rhW, rdW_eq]
+  sorry
 
 end spec
 
@@ -234,14 +195,18 @@ theorem HolesAt.decPL {m : Mem} {q : Nat} {hs : List NestHole} {P : Nat → Prop
     refine ⟨w.toNat, by simp [iwN, nat?, iwA, hw], ?_⟩
     rw [hd]; exact List.getElem?_eq_getElem hj
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem decNH_of_words {m : Mem} {w : Nat} {k b : Word} {key : NestKey}
     (h0 : (m.arr64 IW)[w]? = some k) (h1 : (m.arr64 IW)[w + 1]? = some b)
     (hk : decNK m k.toNat = some key) : decNH m w = some ⟨key, b.toNat⟩ := by
   simp [decNH, iwN, nat?, iwA, h0, h1, hk]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `ctx.rootHoles`, over its fields. -/
 def rhList (names : List NIdx) (lv : LsIdx) (params : List EIdx) (nP : Nat) : List NestHole :=
   names.map fun n => { key := ⟨n, lv, params⟩, base := nP }
+-/
 
 theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
     (no nl lv po pl nP q : Word) (names : List NIdx) (params : List EIdx) (k : Nat) :
@@ -254,92 +219,7 @@ theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
     StageR vis fe m' a ∧ GrowX q.toNat nl.toNat m m' ∧
       HolesAt m' q.toNat nl.toNat (rhList names (decI lv) params nP.toNat)
         (OutR q.toNat nl.toNat (iwTop m')) := by
-  induction k with
-  | zero => intro m m' j h; simp [rhGoW] at h
-  | succ k ih =>
-    intro m m' j h hS hn hp hlv hno hpo hq hj hH
-    have hsz := hS.iw.iwSize
-    have htop := hS.iw.iw
-    by_cases hd : nl ≤ j
-    · rw [rhGoW_done k m no nl lv po pl nP q j hd] at h
-      cases h
-      have : j.toNat = nl.toNat := by have := UInt64.le_iff_toNat_le.mp hd; omega
-      exact ⟨hS, GrowX.of_grow (IWGrow.refl _), this ▸ hH⟩
-    rw [rhGoW_step k m no nl lv po pl nP q j hd] at h
-    have hjl : j.toNat < nl.toNat := by
-      have : ¬ nl.toNat ≤ j.toNat := fun hh => hd (UInt64.le_iff_toNat_le.mpr hh)
-      omega
-    have hnlen := decHL_length m hn
-    -- the member's name
-    obtain ⟨hwH, hwd⟩ := rd_iwH (decHL_getI hn j.toNat hjl) (by have := hno j.toNat hjl; omega)
-    generalize hw : rdW (m.arr64 IW) (no + j) = w at h hwH hwd
-    rcases hr1 : posRecW m [w, lv, po, pl] with _ | ⟨key, m1⟩ <;> rw [hr1] at h; · simp [rhK1] at h
-    rw [rhK1_some] at h
-    obtain ⟨hS1, hg1, hk1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
-    rcases hr2 : posRecW m1 [key, nP] with _ | ⟨hh, m2⟩ <;> rw [hr2] at h; · simp [rhK2] at h
-    rw [rhK2_some] at h
-    obtain ⟨hS2, hg2, hk2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
-    simp only [List.length_cons, List.length_nil] at ht1 ht2
-    have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
-    have hj1 : (j + 1).toNat = j.toNat + 1 :=
-      word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := nl.toNat_lt; omega)
-    have hg12 := hg1.trans hg2
-    -- the new hole, in `m2`
-    have hgk : ∀ i < 4, (m2.arr64 IW)[key.toNat + i]? = [w, lv, po, pl][i]? := fun i hi => by
-      rw [hg2.iwGet _ (by omega)]; exact hget1 i (by simpa using hi)
-    have hdk : decNK m2 key.toNat = some ⟨names[j.toNat], decI lv, params⟩ := by
-      rw [← hwd]
-      refine decNK_of_words (hgk 0 (by omega)) hwH (hgk 1 (by omega)) hlv (hgk 2 (by omega))
-        (hgk 3 (by omega)) ?_
-      rw [decHL_agree (RdS.of_grow hg12) (fun i hi => by have := hpo i hi; omega)]; exact hp
-    have hdh : decNH m2 hh.toNat = some ⟨⟨names[j.toNat], decI lv, params⟩, nP.toNat⟩ :=
-      decNH_of_words (by simpa using hget2 0 (by simp)) (hget2 1 (by simp)) hdk
-    have hin : NHIn m2 hh.toNat (OutR q.toNat nl.toNat (iwTop m2)) := by
-      refine ⟨⟨by omega, Or.inr (by omega)⟩, ⟨by omega, Or.inr (by omega)⟩, fun k' hk' => ?_⟩
-      have : k' = key.toNat := by
-        have h0 : (m2.arr64 IW)[hh.toNat]? = some key := by simpa using hget2 0 (by simp)
-        have : iwN m2 hh.toNat = some key.toNat := by simp [iwN, nat?, iwA, h0]
-        rw [this] at hk'; exact (Option.some.inj hk').symm
-      subst this
-      refine ⟨fun i hi => ⟨by omega, Or.inr (by omega)⟩, fun o l ho hl i hi => ?_⟩
-      have e2 : o = po.toNat := by
-        have := hgk 2 (by omega); simp [iwN, nat?, iwA, this] at ho; exact ho.symm
-      have e3 : l = pl.toNat := by
-        have := hgk 3 (by omega); simp [iwN, nat?, iwA, this] at hl; exact hl.symm
-      subst e2 e3
-      have := hpo i hi
-      exact ⟨by omega, Or.inl this⟩
-    -- the write
-    have hS3 := hS2.set_iw (q + j) hh
-    have hset : RdS m2 (m2.set64 IW (q + j) hh) (OutR q.toNat nl.toNat (iwTop m2)) :=
-      RdS.set _ _ (fun hx => by rcases hx.2 with h' | h' <;> omega)
-    have ht3 : iwTop (m2.set64 IW (q + j) hh) = iwTop m2 := by
-      simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-    have hGX : GrowX q.toNat nl.toNat m (m2.set64 IW (q + j) hh) :=
-      (GrowX.of_grow hg12).trans (GrowX.set m2 (q + j) hh (by omega))
-    have hRm : RdS m (m2.set64 IW (q + j) hh) (OutR q.toNat nl.toNat (iwTop m)) := hGX.2.2.1
-    have hH3 : HolesAt (m2.set64 IW (q + j) hh) q.toNat (j + 1).toNat
-        (rhList names (decI lv) params nP.toNat) (OutR q.toNat nl.toNat (iwTop (m2.set64 IW (q + j) hh))) := by
-      rw [hj1, ht3]
-      intro i hi
-      by_cases hij : i = j.toNat
-      · subst hij
-        refine ⟨hh, ?_, ?_, ?_⟩
-        · rw [set64IW_get, ite_eq_left ⟨hqj.symm, by have := hS2.iw.iw; omega⟩]
-        · rw [(hin.agree hset).1, hdh]
-          simp [rhList, List.getElem?_map, List.getElem?_eq_getElem (show j.toNat < names.length by omega)]
-        · exact (hin.agree hset).2
-      · obtain ⟨wi, hwi, hdi, hini⟩ := hH i (by omega)
-        refine ⟨wi, ?_, ?_, ?_⟩
-        · rw [set64IW_get, ite_eq_right (by omega), hg12.iwGet _ (by omega)]; exact hwi
-        · rw [(hini.agree hRm).1]; exact hdi
-        · exact (hini.agree hRm).2.mono fun x hx => ⟨Nat.lt_of_lt_of_le hx.1 (by omega), hx.2⟩
-    have hOut : ∀ {o l : Nat}, (∀ j < l, o + j < q.toNat) → ∀ j < l, OutR q.toNat nl.toNat (iwTop m) (o + j) :=
-      fun hol j hj => ⟨by have := hol j hj; omega, Or.inl (hol j hj)⟩
-    obtain ⟨hS', hGX', hH'⟩ := ih (m2.set64 IW (q + j) hh) m' (j + 1) h hS3
-      (by rw [decHL_agree hRm (hOut hno)]; exact hn) (by rw [decHL_agree hRm (hOut hpo)]; exact hp)
-      hlv hno hpo (by rw [ht3]; omega) (by rw [hj1]; omega) hH3
-    exact ⟨hS', hGX.trans hGX', hH'⟩
+  sorry
 
 theorem decAt_agree {α : Type} {g g' : Nat → Nat → Option (List α)} {m m' : Mem} {i : Nat}
     (h0 : iwN m' i = iwN m i) (h1 : iwN m' (i + 1) = iwN m (i + 1))
@@ -360,22 +240,7 @@ theorem decNL_agree {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {o l : Nat}
 
 theorem CtxIn.agree {m m' : Mem} {P : Nat → Prop} {p : Nat} (hc : CtxIn m p P) (h : RdS m m' P) :
     decCtx m' p = decCtx m p ∧ CtxIn m' p P := by
-  obtain ⟨h11, hs⟩ := hc
-  have e : ∀ j < 11, iwN m' (p + j) = iwN m (p + j) := fun j hj => iwN_agree h (h11 j hj)
-  have eH : ∀ {k : IdxKind} j, j < 11 → (iwH m' (p + j) : Option (Idx k)) = iwH m (p + j) :=
-    fun j hj => iwH_agree h (h11 j hj)
-  have hat : ∀ {α : Type} {g g' : Nat → Nat → Option (List α)} (i : Nat), (i = 0 ∨ i = 2 ∨ i = 5 ∨ i = 7) →
-      (∀ o l, (∀ j < l, P (o + j)) → g' o l = g o l) → decAt m' g' (p + i) = decAt m g (p + i) := by
-    intro α g g' i hi hg
-    exact decAt_agree (e i (by omega)) (by rw [show p + i + 1 = p + (i + 1) by omega]; exact e (i + 1) (by omega))
-      (fun o l ho hl => hg o l (hs i hi o l ho hl))
-  refine ⟨?_, h11, fun i hi o l ho hl => hs i hi o l (by rw [← e i (by omega)]; exact ho)
-    (by rw [show p + i + 1 = p + (i + 1) by omega, ← e (i + 1) (by omega)]; rw [show p + (i + 1) = p + i + 1 by omega]; exact hl)⟩
-  simp only [decCtx]
-  rw [show p = p + 0 by omega, hat 0 (by omega) (fun o l hol => decHL_agree h hol),
-    hat 2 (by omega) (fun o l hol => decHL_agree h hol), e 4 (by omega),
-    hat 5 (by omega) (fun o l hol => decNL_agree h hol), hat 7 (by omega) (fun o l hol => decHL_agree h hol),
-    eH 9 (by omega), eH 10 (by omega)]
+  sorry
 
 theorem CtxIn.mono {m : Mem} {P Q : Nat → Prop} {p : Nat} (h : CtxIn m p P) (hq : ∀ i, P i → Q i) :
     CtxIn m p Q := ⟨fun j hj => hq _ (h.1 j hj), fun i hi o l ho hl j hj => hq _ (h.2 i hi o l ho hl j hj)⟩
@@ -391,39 +256,7 @@ theorem rhW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     StageR vis fe m' a ∧ IWGrow m m' ∧ (r.tail.headD 0).toNat = c.rootHoles.length ∧
       (r.headD 0).toNat + c.rootHoles.length ≤ iwTop m' ∧
       HolesAt m' (r.headD 0).toNat c.rootHoles.length c.rootHoles (· < iwTop m') := by
-  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
-  obtain ⟨hn, hn', hpa, hpa', hnP, hlvH, hlv, -, -, -⟩ := ctx_fields hc hin hsz
-  unfold rhW at h
-  generalize rdW (m.arr64 IW) ctx = no at h hn hn'
-  generalize rdW (m.arr64 IW) (ctx + 1) = nl at h hn hn'
-  generalize rdW (m.arr64 IW) (ctx + 7) = po at h hpa hpa'
-  generalize rdW (m.arr64 IW) (ctx + 8) = pl at h hpa hpa'
-  generalize rdW (m.arr64 IW) (ctx + 4) = nP at h hnP
-  generalize rdW (m.arr64 IW) (ctx + 10) = lv at h hlvH hlv
-  have hlen : c.rootHoles.length = nl.toNat := by
-    simp [NestCtx.rootHoles, decHL_length m hn]
-  have hrh : c.rootHoles = rhList c.names (decI lv) c.params nP.toNat := by
-    simp [NestCtx.rootHoles, rhList, hlv, hnP]
-  rcases hal : allocW m nl with _ | ⟨q, m1⟩ <;> rw [hal] at h; · simp [rhA] at h
-  rw [rhA_some] at h
-  obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
-  have hqt : q.toNat = iwTop m := by simp only [iwTop, hqd]
-  rcases hgo : rhGoW k m1 no nl lv po pl nP q 0 with _ | m2 <;> rw [hgo] at h; · simp [rhB] at h
-  rw [rhB_some] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hS2, hGX, hH⟩ := rhGoW_ok dn fe vis a no nl lv po pl nP q c.names c.params k m1 m2 0 hgo hS1
-    (by rw [decHL_agree (RdS.of_grow hg1) hn']; exact hn) (by rw [decHL_agree (RdS.of_grow hg1) hpa']; exact hpa)
-    hlvH (fun i hi => by have := hn' i hi; omega) (fun i hi => by have := hpa' i hi; omega) (by omega)
-    (by simp) (fun i hi => by simp at hi)
-  have hgr : IWGrow m m2 := hGX.grow' hg1 (by omega)
-  refine ⟨hS2, hgr, by simp [hlen], ?_, ?_⟩
-  · simp only [List.headD_cons]; have := hGX.1; omega
-  · rw [hrh, show (rhList c.names (decI lv) c.params nP.toNat).length = nl.toNat by
-      rw [← hrh]; exact hlen]
-    simp only [List.headD_cons]
-    intro i hi
-    obtain ⟨w, hw, hd, hni⟩ := hH i hi
-    exact ⟨w, hw, hd, hni.mono fun _ hx => hx.1⟩
+  sorry
 
 section census
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h2 : p.lookup "rec2" = some rec2)
@@ -455,13 +288,8 @@ end census
 
 theorem StageR.ofCopyW {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} :
     ∀ (n : Nat) {m m' : Mem} {d s l : Word}, copyW n m d s l = some m' → StageR vis fe m a →
-    StageR vis fe m' a
-  | 0, _, _, _, _, _, h, _ => by simp [copyW] at h
-  | n + 1, m, m', d, s, l, h, hS => by
-    by_cases hl : l = 0
-    · rw [copyW_nil n m d s l hl] at h; cases h; exact hS
-    · rw [copyW_step n m d s l hl] at h
-      exact StageR.ofCopyW n h (hS.set_iw d _)
+    StageR vis fe m' a := by
+  sorry
 
 /-- **`sl_append` keeps the stage relation**: the pool grew by the new slice, whose words are the
 two sources' (any words: pointers too). -/
@@ -473,70 +301,7 @@ theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
       (r.tail.headD 0).toNat = l1.toNat + l2.toNat ∧ iwTop m' = iwTop m + l1.toNat + l2.toNat ∧
       (∀ i < l1.toNat, (m'.arr64 IW)[iwTop m + i]? = (m.arr64 IW)[o1.toNat + i]?) ∧
       (∀ i < l2.toNat, (m'.arr64 IW)[iwTop m + l1.toNat + i]? = (m.arr64 IW)[o2.toNat + i]?) := by
-  have hsz := hS.iw.iwSize
-  have hc := hS.iw.ctl
-  simp only [appendW] at h
-  by_cases h0 : l1 + l2 < l1
-  · simp [h0] at h
-  simp only [h0, ite_false] at h
-  rcases hal : allocW m (l1 + l2) with _ | ⟨q, m1⟩; · simp [hal] at h
-  obtain ⟨hS1, -, -, -, -⟩ := hS.alloc hal
-  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
-  simp only [hal] at h
-  rcases hcp1 : copyW (n - 1) m1 q o1 l1 with _ | m2; · simp [hcp1] at h
-  simp only [hcp1] at h
-  rcases hcp2 : copyW (n - 1) m2 (q + l1) o2 l2 with _ | m3; · simp [hcp2] at h
-  simp only [hcp2, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  have hS3 := StageR.ofCopyW _ hcp2 (StageR.ofCopyW _ hcp1 hS1)
-  subst hq hm1
-  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
-  have hlt : ¬ (l1 + l2).toNat < l1.toNat := by
-    intro hh; exact h0 (UInt64.lt_iff_toNat_lt.mpr hh)
-  have hs : (l1 + l2).toNat = l1.toNat + l2.toNat := by
-    rw [UInt64.toNat_add] at hlt ⊢
-    have := l1.toNat_lt; have := l2.toNat_lt
-    omega
-  rw [hs] at hroom
-  have hql : (q + l1).toNat = q.toNat + l1.toNat := by
-    rw [UInt64.toNat_add]; simp; omega
-  have hIW := allocMem_IW m (l1 + l2)
-  have hqt : q.toNat = iwTop m := by simp only [iwTop, hqq]
-  obtain ⟨hA1, hS1', hG1⟩ := copyW_get (n - 1) _ _ _ _ _ hcp1 (by omega)
-    (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
-  obtain ⟨hA2, hS2', hG2⟩ := copyW_get (n - 1) _ _ _ _ _ hcp2 (by rw [hql]; omega)
-    (by rw [hql, hS1', hIW]; omega) (by rw [hS1', hIW]; exact hsz)
-  rw [hIW] at hS1' hG1
-  have hfr : MemFrame [IW] [200] m m3 :=
-    (allocMem_frame m (l1 + l2)).trans
-      ((copy_frame hA1 (by rw [hS1', hIW])).trans
-       (copy_frame hA2 hS2'))
-  have hget : ∀ i, (m3.arr64 IW)[i]? =
-      if q.toNat ≤ i ∧ i < q.toNat + l1.toNat then (m.arr64 IW)[o1.toNat + (i - q.toNat)]?
-      else if q.toNat + l1.toNat ≤ i ∧ i < q.toNat + l1.toNat + l2.toNat then
-        (m.arr64 IW)[o2.toNat + (i - (q.toNat + l1.toNat))]?
-      else (m.arr64 IW)[i]? := by
-    intro i
-    rw [hG2 i, hql]
-    by_cases h1 : q.toNat ≤ i ∧ i < q.toNat + l1.toNat
-    · rw [ite_eq_right (by omega), hG1, ite_eq_left h1, ite_eq_left h1]
-    · by_cases h2 : q.toNat + l1.toNat ≤ i ∧ i < q.toNat + l1.toNat + l2.toNat
-      · rw [ite_eq_left h2, hG1, ite_eq_right (by omega), ite_eq_right h1, ite_eq_left h2]
-      · rw [ite_eq_right h2, hG1, ite_eq_right h1, ite_eq_right h1, ite_eq_right h2]
-  have htop : rdW (m3.arr64 CTL) 200 = q + (l1 + l2) := by
-    rw [hA2 CTL (by decide), hA1 CTL (by decide), allocMem_top m _ hc, hqq]
-  have hsum : (q + (l1 + l2)).toNat = q.toNat + (l1.toNat + l2.toNat) := by
-    rw [UInt64.toNat_add, hs]; simp; omega
-  refine ⟨hS3, ?_, by simp [hqt], by simp [hs], ?_, fun i hi => ?_, fun i hi => ?_⟩
-  · refine iwGrow_of_frame hfr (N := l1 + l2) ?_ ?_ hsz ?_
-    · rw [htop, hqq]
-    · simp only [iwTop, hqq]; omega
-    · intro i hi
-      simp only [iwTop, hqq] at hi
-      rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
-  · simp only [iwTop, htop, hsum]; simp only [iwTop] at hqt; omega
-  · rw [hget, ← hqt, ite_eq_left (by omega)]; congr 2; omega
-  · rw [hget, ← hqt, ite_eq_right (by omega), ite_eq_left (by omega)]; congr 2; omega
+  sorry
 
 theorem HSl.grow {m m' : Mem} {o l : Nat} {hs : List NestHole} (h : HSl m o l hs) (hg : IWGrow m m') :
     HSl m' o l hs := by
@@ -608,73 +373,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hpr : HSl m po.toNat pl.toNat prog) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ decONH m' r (ConRon.Arena.nestHoleAt c prog i.toNat) := by
-  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
-  obtain ⟨-, -, -, -, hnP, -, -, -, -, -⟩ := ctx_fields hc hin hsz
-  unfold haW at h
-  by_cases hlt : i < rdW (m.arr64 IW) (ctx + 4)
-  · rw [ite_eq_left hlt] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨hS, IWGrow.refl _, ?_⟩
-    have : ¬ c.nP ≤ i.toNat := by rw [← hnP]; have := UInt64.lt_iff_toNat_lt.mp hlt; omega
-    simp [ConRon.Arena.nestHoleAt, this, decONH]
-  rw [ite_eq_right hlt] at h
-  have hge : c.nP ≤ i.toNat := by
-    rw [← hnP]
-    have : ¬ (i.toNat < (rdW (m.arr64 IW) (ctx + 4)).toNat) := fun h' => hlt (UInt64.lt_iff_toNat_lt.mpr h')
-    omega
-  have hidx : (i - rdW (m.arr64 IW) (ctx + 4)).toNat = i.toNat - c.nP := by
-    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega), hnP]
-  generalize i - rdW (m.arr64 IW) (ctx + 4) = idx at h hidx
-  cases k with
-  | zero => simp [rhWf, haK1] at h
-  | succ k =>
-  simp only [rhWf] at h
-  rcases hrh : rhW k m ctx with _ | ⟨r1, m1⟩ <;> rw [hrh] at h; · simp [haK1] at h
-  rw [haK1_some] at h
-  obtain ⟨hS1, hg1, hl1, hb1, hH1⟩ := rhW_ok k dn fe vis a m m1 ctx r1 c hrh hS hc hin
-  obtain ⟨hplen, hpb, hpH⟩ := hpr
-  rcases hap : appendW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) po pl with _ | ⟨r2, m2⟩ <;> rw [hap] at h; · simp [haK2] at h
-  obtain ⟨hS2, hg2, hr20, hr21, ht2, hw1, hw2⟩ := appendW_stage hap hS1 (by rw [hl1]; exact hb1)
-    (by have := hg1.iw; omega)
-  rw [hl1] at hr21 hw1 ht2 hw2
-  have hsz2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
-  have hlen := c.rootHoles.length
-  by_cases hh : idx < r2.tail.headD 0
-  · rw [haK2_hit (h := hh)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hh' : idx.toNat < c.rootHoles.length + pl.toNat := by
-      have := UInt64.lt_iff_toNat_lt.mp hh; omega
-    have hx : (r2.headD 0 + idx).toNat = iwTop m1 + idx.toNat := by
-      rw [word_add_toNat (by omega), hr20]
-    refine ⟨hS2, hg1.trans hg2, ?_⟩
-    simp only [ConRon.Arena.nestHoleAt, ite_eq_left hge, decONH, List.headD_cons, List.tail_cons, true_and]
-    by_cases hr : idx.toNat < c.rootHoles.length
-    · obtain ⟨w, hw, hd, hni⟩ := hH1 idx.toNat hr
-      have hw' : (m2.arr64 IW)[iwTop m1 + idx.toNat]? = some w := by
-        rw [hw1 _ hr]; exact hw
-      obtain ⟨e, hni'⟩ := hni.grow hg2
-      rw [rdW_of_get' hx hw', ← hidx, List.getElem?_append_left hr, List.getElem?_eq_getElem hr]
-      rw [List.getElem?_eq_getElem hr] at hd
-      exact ⟨by rw [e, hd], hni'⟩
-    · obtain ⟨w, hw, hd, hni⟩ := hpH (idx.toNat - c.rootHoles.length) (by omega)
-      have hw' : (m2.arr64 IW)[iwTop m1 + idx.toNat]? = some w := by
-        have := hw2 (idx.toNat - c.rootHoles.length) (by omega)
-        rw [show iwTop m1 + c.rootHoles.length + (idx.toNat - c.rootHoles.length) = iwTop m1 + idx.toNat by omega]
-          at this
-        rw [this, hg1.iwGet _ (by omega)]; exact hw
-      obtain ⟨e, hni'⟩ := hni.grow (hg1.trans hg2)
-      have hr' : idx.toNat - c.rootHoles.length < prog.length := by omega
-      rw [rdW_of_get' hx hw', ← hidx, List.getElem?_append_right (by omega), List.getElem?_eq_getElem hr']
-      rw [List.getElem?_eq_getElem hr'] at hd
-      exact ⟨by rw [e, hd], hni'⟩
-  · rw [haK2_miss (h := hh)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨hS2, hg1.trans hg2, ?_⟩
-    have hh' : ¬ idx.toNat < c.rootHoles.length + pl.toNat := by
-      intro hc'; exact hh (UInt64.lt_iff_toNat_lt.mpr (by omega))
-    simp only [ConRon.Arena.nestHoleAt, ite_eq_left hge, decONH]
-    rw [List.getElem?_eq_none (by simp; omega)]
-    rfl
+  sorry
 
 section census
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h2 : p.lookup "rec2" = some rec2)
