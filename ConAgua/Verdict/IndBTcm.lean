@@ -1,6 +1,5 @@
 module
 
-public import ConRon.Bridge.Inductives.BlockParts
 public import ConRon.Bridge.Inductives.StructParts
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk

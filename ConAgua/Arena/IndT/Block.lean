@@ -16,7 +16,6 @@ import ConAgua.Arena.RecGenSpec.FlushStage
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.ScratchRefine
 import ConAgua.Checker.NoVerdictTree
-import ConRon.Bridge.Promote.WalkDecl
 public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 public import ConAgua.Arena.IndInstallSpec.CbProg
 public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf

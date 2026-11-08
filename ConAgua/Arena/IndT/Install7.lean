@@ -1,6 +1,5 @@
 module
 
-import ConRon.Bridge.Inductives.BlockParts
 import ConAgua.Verdict.IndBSum4
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors

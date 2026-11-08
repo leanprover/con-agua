@@ -8,7 +8,6 @@ meta import ConAgua.Front.DeclsPre
 meta import ConAgua.Front.FrontRun
 meta import ConAgua.Checker.NoVerdictClosed
 meta import ConAgua.L.ModelGen
-import ConRon.Bridge.Promote.Walk
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.BVarStore
 import all ConAgua.Arena.ConsLib

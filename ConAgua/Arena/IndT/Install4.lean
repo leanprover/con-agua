@@ -1,6 +1,5 @@
 module
 
-import ConRon.Bridge.Inductives.BlockParts
 public import ConAgua.Verdict.IndsE5
 public import ConAgua.Arena.IndT.KeepC
 public import ConAgua.Arena.IndT.Install3

@@ -1,6 +1,5 @@
 module
 
-import ConRon.Bridge.Promote.Walk
 public import ConAgua.Arena.IndTwin
 public import ConRon.Bridge.Frontend.Shared
 

@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.Frame
 public import ConAgua.Arena.Tiers
 public import ConAgua.Arena.WhnfBase
-public import ConRon.Bridge.Promote.Pers
 import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section

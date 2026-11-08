@@ -17,7 +17,6 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Inductives.Decl
-import ConRon.Bridge.Promote.WalkDecl
 import all ConAgua.Arena.IndParts
 
 @[expose] public section

@@ -16,7 +16,6 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.ScratchRefine
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Checker.Fold
-import ConRon.Bridge.Checker.Split
 public import ConAgua.Arena.DeclArmT
 public import ConAgua.Arena.DeclTwin
 import all ConAgua.Arena.CheckerL

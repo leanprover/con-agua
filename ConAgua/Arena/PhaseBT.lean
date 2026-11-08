@@ -16,8 +16,6 @@ import ConRon.Bridge.Specs
 public import ConAgua.Arena.Checker
 public import ConAgua.Arena.DeclTwin
 public import ConAgua.Arena.LeafFns
-public import ConRon.Arena.Phased
-public import ConRon.Bridge.Checker.Split
 import all ConAgua.Arena.CheckerL
 
 @[expose] public section
