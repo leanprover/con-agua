@@ -17,6 +17,8 @@ namespace L.Checker
 def syncFns : L.Prog :=
   [("erec_alloc", L.Ind.erecAlloc), ("erec_put", L.Ind.erecPut),
    ("nat_op_name", L.Stubs.natOpNameL), ("reserved_rec_bool", L.Stubs.reservedRecBoolL),
-   ("check_proj_guard", L.Arena.checkProjGuardL), ("lv_never", L.Arena.lvNever)]
+   ("check_proj_guard", L.Arena.checkProjGuardL), ("lv_never", L.Arena.lvNever),
+   ("check_guard_rows", L.Arena.checkGuardRowsL), ("proj_guard_sort", L.Arena.projGuardSortL),
+   ("proj_guard_rows_at", L.Arena.projGuardRowsAtL), ("proj_guard_rows", L.Arena.projGuardRowsL)]
 
 end L.Checker

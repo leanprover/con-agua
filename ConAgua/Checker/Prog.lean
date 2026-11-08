@@ -151,7 +151,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1757 functions, 7 of them stubs.
+1760 functions, 3 of them stubs.
 -/
 
 namespace L.Checker
@@ -159,7 +159,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- The called functions with no L code yet (each aborts). -/
-def checkerStubs : List String := ["check_proj_guard", "erec_put", "fz_61", "fz_62", "lv_never", "nat_op_name", "reserved_rec_bool"]
+def checkerStubs : List String := ["check_guard_rows", "proj_guard_rows", "proj_guard_sort"]
 
 /-- The frontend functions `builtin_prelude` runs on the prelude's bytes (96; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
@@ -647,6 +647,7 @@ def checkerProg : Prog := [
   ("check_ind_decl", L.Ind.checkIndDecl),
   ("check_jobs", L.Arena.checkJobsL),
   ("check_opaque_val", L.Ind.checkOpaqueValL),
+  ("check_proj_guard", L.Arena.checkProjGuardL),
   ("check_quot_record", L.Ind.checkQuotRecordL),
   ("check_reduce_pin", L.Ind.checkReducePinL),
   ("check_reduce_pin_pre", L.Ind.checkReducePinPreL),
@@ -898,6 +899,7 @@ def checkerProg : Prog := [
   ("erec_alloc", L.Ind.erecAlloc),
   ("erec_ci", L.Arena.erecCi),
   ("erec_push", L.Arena.erecPushL),
+  ("erec_put", L.Ind.erecPut),
   ("esc_one", L.Front.Unescape.escOne),
   ("esc_sur", L.Front.Unescape.escSur),
   ("esp_find", L.Arena.memoFindG (L.Front.spS L.Front.EID)),
@@ -1019,6 +1021,8 @@ def checkerProg : Prog := [
   ("fz_59", L.Arena.fzF 59),
   ("fz_6", L.Arena.fzF 6),
   ("fz_60", L.Arena.fzF 60),
+  ("fz_61", L.Arena.fzF 61),
+  ("fz_62", L.Arena.fzF 62),
   ("fz_7", L.Arena.fzF 7),
   ("fz_8", L.Arena.fzF 8),
   ("fz_9", L.Arena.fzF 9),
@@ -1401,6 +1405,7 @@ def checkerProg : Prog := [
   ("lv_leq_top", L.Arena.lvLeqTop),
   ("lv_lookup", L.Arena.lvLookupG L.Arena.EREC L.Arena.POOL),
   ("lv_mem", L.Arena.lvMemG L.Ind.IW),
+  ("lv_never", L.Arena.lvNever),
   ("lv_node", L.Arena.lvNode),
   ("lv_nz", L.Arena.lvNz),
   ("lv_rest", L.Arena.lvRest),
@@ -1514,6 +1519,7 @@ def checkerProg : Prog := [
   ("nat_op_equations", L.Ind.natOpEquationsL),
   ("nat_op_guard", L.Ind.natOpGuardL),
   ("nat_op_is_wf", L.Arena.natOpIsWfL),
+  ("nat_op_name", L.Stubs.natOpNameL),
   ("nat_op_names", L.Ind.natOpNamesL),
   ("nat_op_pins", L.Ind.natOpPinsL),
   ("nat_op_pins_a", L.Ind.natOpPinsAL),
@@ -1776,6 +1782,7 @@ def checkerProg : Prog := [
   ("reserved_contains", L.Ind.reservedContains),
   ("reserved_contains_w", L.Arena.reservedContainsL),
   ("reserved_from", L.Ind.reservedFrom),
+  ("reserved_rec_bool", L.Stubs.reservedRecBoolL),
   ("reserved_rec_name", L.Stubs.reservedRecNameL),
   ("residual_pw", L.Arena.residualPWL),
   ("rf_bank_enter", L.Arena.bankEnterG 218),
@@ -2158,12 +2165,8 @@ def checkerProg : Prog := [
   ("pre_utf8_char", preFn preTree (L.Scan.Utf8.utf8Char)),
   ("pre_utf8_valid", preFn preTree (L.Scan.Str.utf8Valid)),
   ("pre_value_at", preFn preTree (L.Scan.Key.valueAt)),
-  ("check_proj_guard", abortStub 5),
-  ("erec_put", abortStub 2),
-  ("fz_61", abortStub 2),
-  ("fz_62", abortStub 2),
-  ("lv_never", abortStub 1),
-  ("nat_op_name", abortStub 1),
-  ("reserved_rec_bool", abortStub 1)]
+  ("check_guard_rows", abortStub 6),
+  ("proj_guard_rows", abortStub 4),
+  ("proj_guard_sort", abortStub 4)]
 
 end L.Checker
