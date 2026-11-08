@@ -81,6 +81,7 @@ variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLech
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_block` refines `checkBlock`, both outcomes** under `StageC` (twin side con-ron's
 `checkBlock_bridge_of`): the iw-only steps and the names' checks keep the twin's state; the flush
@@ -298,7 +299,9 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
   rw [icbE.k_check_block_tail.arm1]
   exact RefE.ret rfl ⟨hR9'.stage, hg18.trans hR9'.grow, hR9'.memo, hR9'.abs, hR9'.rc,
     maMR.ofClosed hclM (hfM _ (by simp)) (callW_of_callE c9) hma8⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_block(vis, block.off, block.len, p0)` refines `checkBlock` under `StageC`**
 (`checkBlock_refines`'s, from `StageC` at the entry index and con-ron's `checkBlock_bridge_of`
@@ -340,6 +343,7 @@ theorem checkBlock_refinesC (hP : CbProg p) {fs fs2 : List FnName}
   rintro r s' ⟨hl, x, a', run, hR'⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hres, hst]; exact hR'.stage, hR'.grow, hR'.memo, hR'.abs, hR'.rc, hR'.ma⟩
+-/
 
 end sims
 

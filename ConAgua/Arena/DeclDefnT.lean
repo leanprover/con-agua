@@ -58,20 +58,17 @@ structure DefnProgT (p : Prog) (pins : List INatOpPinSet) : Prop where
   df : p.lookup "check_decl_defn" = some checkDeclDefn
   nat : NatSubProg' p
   natIn : StepIn p natGateFns
-  div : DivGateSpecC p pins
 
 set_option experimental.vcgen true in
 /-- **The model of `check_decl_defn`, both outcomes**: its callees through their runs. -/
 l_model checkDeclDefn_specE (p : Prog) (hf : p.lookup "check_decl_defn" = some checkDeclDefn)
   fns [hf ↦ checkDeclDefnE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  extra [ld64_rdW_specT, ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
 
 /-- What the definition arm's error arms assume: `check_constant_val`'s (`VerdictCtxU`),
 `install_value_guards`' claim (`check_defn_val`), the pin gate's claim. -/
 structure CdfCtx (p : Prog) (pins : List INatOpPinSet) : Prop extends VerdictCtxU p where
-  ivg : IvgE p
-  div : DivGateSpecE p pins
 
 /-- What the definition arm gives besides the twin's run: the stage at the twin's environment,
 the core's memos, the growth, the variant records. -/
@@ -82,6 +79,7 @@ structure CdfPost (dn : NIdx → Option ConLeche.Name) (pins : List INatOpPinSet
   grow : IWGrow m w.2
   pins : PinSetsR w.2 pins
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The definition arm refines `checkDecl`, both outcomes**, under `StageT` (con-ron's
 `checkDecl_bridge_defn`'s decomposition): from `StageT`, the fold invariant `FoldOK`, the
 declaration's constant and value denoting, the variant records in memory (`PinSetsR`) and in the
@@ -216,5 +214,6 @@ theorem cdf_ref {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOp
     (hstepOK2.mono hP4.ext) hPS4 hPD4 (ConRon.Bridge.denoteN_ext hnm3 hP4.ext) hCr4
   exact RefE.bind_right hrun5 (RefE.ret rfl ⟨by simpa using hS5, hC5.mem.memos,
     hg1.trans (hP2.grow.trans (hg3.trans (hP4.grow.trans hg5))), hPS5⟩)
+-/
 
 end L.Arena
