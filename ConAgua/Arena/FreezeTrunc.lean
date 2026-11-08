@@ -186,9 +186,11 @@ theorem tblRow_trunc (w : Word) :
   · simp [hg]
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem EnvR.trunc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (hk : EnvKeysIn m fe) (h : EnvR m vis fe) : EnvR (truncFrozen m) vis fe := by
   sorry
+-/
 
 end env
 
@@ -218,15 +220,19 @@ section main
 variable {m : Mem} (htop : m.top.toNat < 2 ^ 40)
 include htop
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem CheckR.trunc {dn : NIdx → Option ConLeche.Name} {a : AState} {vis : Word} {fe : IFEnv}
     (hk : EnvKeysIn m fe) (h : CheckR m a vis fe) : CheckR (truncFrozen m) a vis fe := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem LoopR.trunc {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {a : AState}
     {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
     (hk : EnvKeysIn m fe) (h : LoopR pins m a vis fe ds) :
     LoopR pins (truncFrozen m) a vis fe ds := by
   sorry
+-/
 
 end main
 

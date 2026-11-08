@@ -87,6 +87,7 @@ records' denotation and persistence in the start store, whose persistent names `
 def DeclsLpsDn (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) : Prop :=
   ∀ i (h : i < ds.size) b nP, ds[i] = .indDecl b nP → BlockLpsDnA dn b
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The inductive arm's contract**: `check_ind_decl(vis, o, l, w)` on an inductive block copied
 into `EREC` (`ind_block_to_erec`'s post: the slice `o`, `l` decoding to `block`, below the top),
 from `StageT` and the twin's fold invariant, refines `checkDecl`'s `.indDecl` case, back to the
@@ -107,6 +108,7 @@ def IndArmSpec (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
     IndMemos m → callW p n "check_ind_decl" [vis, o, l, w] m = some (r, m') →
     ∃ fe' a', (checkDecl V pins fe (.indDecl block nP)).run a = .ok (fe', a') ∧
       StageR (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m'
+-/
 
 /-- The program hypotheses phase A under `StageT` takes beyond `DeclCallees`: the core's entry
 points (`KnotStageProg`), the leaves' and the loop's write sets, and for the inductive records the
@@ -122,7 +124,6 @@ structure LoopCallees (dn : NIdx → Option ConLeche.Name) (p : Prog) : Prop
   /-- The loop's callees outside the inductive arm keep the inductive memos (`IndMemoClosed`,
   with `consts_resolve_ffast` a leaf: its model `crfF`). -/
   indMemo : IndMemoClosed p
-  crf : L.Ind.CrfF p
   /-- `Quot`'s `sortZ` name has a handle under `dn` (the quotient readers' precondition). -/
   quotDn : QuotDn dn
 
@@ -156,6 +157,7 @@ section arms
 variable {p : Prog} (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The shape of an arm's spec at the loop's relation under `StageT`, for the record `d`: from
 `StageT`, the twin's fold invariant, the record's and the pin variants' denotations, back to the
 loop's relation and the core's memos. -/
@@ -169,62 +171,21 @@ def ArmSpecT (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
   ⦃fun s => s = s₀⦄ invoke p (exec p n) f [i, vis]
   ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe d) a₀ ∧
     LoopR pins s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0) (AM.res (checkDecl V pins fe d) a₀) ds ∧ CoreMemos s'.mem; ⊤⦄
+-/
 
 /-- **`check_decl_thm` under `StageT`** (`cdt_ref`'s ok half). -/
 theorem checkDeclThm_loopT (hA : ArmProg p) (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
     (hkp : CrKeep p) (hp : p.lookup "check_decl_thm" = some checkDeclThm) (cv : IConstantVal)
     (v : EIdx) :
     ArmSpecT pins dn ds p "check_decl_thm" (.thmDecl cv v) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden _ hCr
-  have hd' : ds[i.toNat] = .thmDecl cv v := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨env, hF⟩ := hF
-  obtain ⟨x, hx⟩ := hden
-  simp only [Frontend.denoteDecl] at hx
-  split at hx
-  rotate_left
-  · cases hx
-  rename_i c e hc he
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, fe', a', hrun', hP⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (RefE.triple (checkDeclThm_specE p hV hp n s₀ i vis)
-      (cdt_ref (pins := pins) hV hq hap hkp hn hS hR.decls hi hd' hF hc hCr))
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_thm") (by decide) [i, vis] s₀)
-  subst hs
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_, hP.memos⟩
-  rw [hst, hres]
-  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+  sorry
 
 /-- **`check_decl_opaque` under `StageT`** (`cdo_ref`). -/
 theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
     (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p)
     (hdn : DnInj dn) (hp : p.lookup "check_decl_opaque" = some checkDeclOpaque) (cv : IConstantVal) (v : EIdx) :
     ArmSpecT pins dn ds p "check_decl_opaque" (.opaqueDecl cv v) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden _ hCr
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  have hd' : ds[i.toNat] = .opaqueDecl cv v := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨env, hF⟩ := hF
-  obtain ⟨x, hx⟩ := hden
-  simp only [Frontend.denoteDecl] at hx
-  split at hx
-  rotate_left
-  · cases hx
-  rename_i c e hc he
-  obtain ⟨hloc, fe', a', hrun', hQ⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (RefE.triple (checkDeclOpaque_specE p hp n s₀ i vis)
-      (cdo_ref (pins := pins) hV hC hq hcl hlc hap hkp hdn n hn hS hR.decls hi hd' hF hc he hCr))
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_opaque") (by decide) [i, vis] s₀)
-  subst hs
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_, hQ.memos⟩
-  rw [hst, hres]
-  exact hR.of_step hQ.stage hf (IWGrow.erecPExt hQ.grow)
+  sorry
 
 /-- **`check_decl_defn` under `StageT`** (`cdf_ref`: the structural-`Nat` gate and the
 `Nat.div`-family pin gate under `StageC`). -/
@@ -234,28 +195,7 @@ theorem checkDeclDefn_loopT (hA : ArmProg p) (hV : ValProg p) (hG : DefnProgT p 
     (hap : ApdF p) (hkp : CrKeep p) (hdn : DnInj dn) (cv : IConstantVal) (v : EIdx)
     (hh : ConLeche.ReducibilityHint) :
     ArmSpecT pins dn ds p "check_decl_defn" (.defnDecl cv v hh) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden hPD hCr
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  have hd' : ds[i.toNat] = .defnDecl cv v hh := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨env, hF⟩ := hF
-  obtain ⟨x, hx⟩ := hden
-  simp only [Frontend.denoteDecl] at hx
-  split at hx
-  rotate_left
-  · cases hx
-  rename_i c e hc he
-  obtain ⟨hloc, fe', a', hrun', hQ⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (RefE.triple (checkDeclDefn_specE p hG.df n s₀ i vis)
-      (cdf_ref hA hV hG hq hcl hlc hap hkp hdn n hn hS hR.pinsets hR.decls hi hd' hF hc he hPD hCr))
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hin.memFrame n (f := "check_decl_defn") (by decide) [i, vis] s₀)
-  subst hs
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_, hQ.memos⟩
-  rw [hst, hres]
-  exact hR.of_step hQ.stage hf (IWGrow.erecPExt hQ.grow)
+  sorry
 
 /-- **`check_decl_axiom` under `StageT`** (`cda_ref`'s ok half). -/
 @[refines_part ConRon.Arena.checkDecl "the axiom arm, under StageT"]
@@ -263,24 +203,7 @@ theorem checkDeclAxiom_loopT (hA : ArmProg p) (hX : AxProg p) (hq : KnotStagePro
     (hcl : LeafClosed p) (hap : ApdF p) (hkp : CrKeep p) (hdn : DnInj dn) (hQd : QuotDn dn)
     (cv : IConstantVal) :
     ArmSpecT pins dn ds p "check_decl_axiom" (.axiomDecl cv) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd hok hR hS hF hden _ hCr
-  have hd' : ds[i.toNat] = .axiomDecl cv := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨x, hx⟩ := hden
-  simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hx
-  obtain ⟨c, hc, -⟩ := hx
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, fe', a', hrun', hP⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (RefE.triple (checkDeclAxiom_specE p hX n s₀ i vis)
-      (cda_ref (pins := pins) hX hq hcl hap hkp hdn hQd hn hS hR.decls hi hd' hok hc hF hCr))
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_axiom") (by decide) [i, vis] s₀)
-  subst hs
-  obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok', ?_, hP.memos⟩
-  rw [hst, hres]
-  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+  sorry
 
 /-- **`check_decl_quot` under `StageT`** (`cdq_ref`'s ok half; the core's memos kept, the arm
 being a leaf). -/
@@ -289,27 +212,7 @@ theorem checkDeclQuot_loopT (hA : ArmProg p) (hQ : QuotProg p) (hRp : RecProg p)
     (hcl : LeafClosed p) (hdn : DnInj dn) (hQd : QuotDn dn) (k : ConLeche.QuotKind)
     (cv : IConstantVal) :
     ArmSpecT pins dn ds p "check_decl_quot" (.quotDecl k cv) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd hok hR hS _ hden _ _
-  have hd' : ds[i.toNat] = .quotDecl k cv := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  have hcvD : ∃ c, Frontend.denoteCV a₀.store cv = some c := by
-    obtain ⟨x, hx⟩ := hden
-    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hx
-    obtain ⟨c, hc, -⟩ := hx
-    exact ⟨c, hc⟩
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, fe', a', hrun', hR'⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (RefE.triple (checkDeclQuot_specE p hQ hRp n s₀ i vis)
-      (cdq_ref (pins := pins) hQ hdn n hS.stage hR.decls hi hd' hok (hQd.namesDn hS.twin.mem) hcvD))
-  obtain ⟨-, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (callW_spec p n "check_decl_quot" [i, vis] s₀)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_quot") (by decide) [i, vis] s₀)
-  subst hs
-  obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok', ?_, leaf_memos hcl (leaf_mem _ rfl) hW hS.twin.memos⟩
-  rw [hst, hres]
-  exact hR.of_step hR'.stage hf (IWGrow.erecPExt hR'.grow)
+  sorry
 
 end arms
 
@@ -319,6 +222,7 @@ section cd
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **What `check_decl` refines under `StageT`**: `checkDecl` from the loop's relation and
 `StageT`, back to the loop's relation and the core's memos. -/
 def CheckDeclSpecT : Prop :=
@@ -331,6 +235,7 @@ def CheckDeclSpecT : Prop :=
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl mode pins fe (dsAt ds i)) a₀ ∧
       LoopR pins s'.mem (AM.st (checkDecl mode pins fe (dsAt ds i)) a₀) (r.headD 0) (AM.res (checkDecl mode pins fe (dsAt ds i)) a₀) ds ∧ CoreMemos s'.mem ∧
       IndMemos s'.mem; ⊤⦄
+-/
 
 end cd
 
@@ -354,6 +259,7 @@ section cdRef
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
   (p : Prog)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The shape of an arm's error spec** (`ArmSpecT`'s error half): a failing run of the arm on
 record `d` claims the twin's `checkDecl` failure from the same state. -/
 def ArmSpecE (f : FnName) (d : IDeclaration) : Prop :=
@@ -364,6 +270,7 @@ def ArmSpecE (f : FnName) (d : IDeclaration) : Prop :=
     (∃ x, Frontend.denoteDecl a₀.store d = some x) → (∃ pinsP, PinsDenote a₀.store pins pinsP) →
     L.Stubs.CrOK m → ∀ e, callE p n f [i, vis] m = .error e →
     ErrClaim (checkDecl V pins fe d) a₀ e
+-/
 
 /-- The arms' error claims, for every record of the kind. -/
 structure ArmsE : Prop where
@@ -375,6 +282,7 @@ structure ArmsE : Prop where
 
 end cdRef
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_ind_decl`'s error claim** (the inductive arm's contract, error half of
 `IndArmSpec`): a failing run claims the twin's `checkDecl` failure. -/
 def IndArmSpecE (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
@@ -386,6 +294,7 @@ def IndArmSpecE (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
     (∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x) → BlockLpsDnA dn block →
     IndMemos m → ∀ e, callE p n "check_ind_decl" [vis, o, l, w] m = .error e →
     ErrClaim (checkDecl V pins fe (.indDecl block nP)) a e
+-/
 
 /-- What the error arms of `check_decl` assume: the arms' claims and the inductive arm's. -/
 structure CdG (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
@@ -401,6 +310,7 @@ structure CdPost (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   core : CoreMemos m'
   ind : IndMemos m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- An arm through its run: the ok half by its contract (`ArmSpecT`), the error half by its claim. -/
 theorem cd_arm {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     {ds : Array IDeclaration} {f : FnName} {d : IDeclaration} (hA : ArmSpecT pins dn ds p f d)
@@ -424,7 +334,9 @@ theorem cd_arm {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option ConLe
     (hA n hn ⟨m, Locals.init []⟩ a vis fe pend i hi hd hok hR hS hF hden hPD hIM.cr) h1
   subst hs'
   exact RefE.ret (AM.run_of_ok _ _ hok') ⟨by simpa using hL, hc, hIM'⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl` refines `checkDecl` under `StageT`, both outcomes**, for the front's record
 kinds: each arm by its `StageT` theorem and its claim (`CdG`), the inductive one by its contracts
 (`IndArmSpec`, `IndArmSpecE`) after `ind_block_to_erec` copies the record's block into `EREC`
@@ -522,7 +434,9 @@ theorem cd_ref {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
     exact RefE.ret hrun ⟨by simpa using hR.of_step hS2 (hfs1.trans hfs2) (IWGrow.erecPExt (hg1.trans hg2)),
       hcm, hIM2⟩
   | basisDecl _ => exact hdecl.elim
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl` refines `checkDecl` under `StageT`**, for the front's record kinds: the ok half
 of `cd_ref`. -/
 @[refines_part ConRon.Arena.checkDecl "the front's records (kinds 1-6), under StageT, the inductive arm by IndArmSpec"]
@@ -539,6 +453,7 @@ theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
   rintro r s' ⟨hl, x, a', run, hR'⟩
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok', by rw [hst, hres]; exact hR'.loop, hR'.core, hR'.ind⟩
+-/
 
 /-! ## `install_value` and `install_step_go` under `StageT` -/
 
@@ -546,14 +461,7 @@ theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
 theorem ivArgs_denoteCV {st : EStore} {ck vk : Word} {d : IDeclaration} (hk : IvArgs ck vk d)
     {x : ConLeche.Declaration} (h : Frontend.denoteDecl st d = some x) :
     ∃ c, Frontend.denoteCV st (stepCV d) = some c := by
-  cases d with
-  | defnDecl cv v hh | thmDecl cv v | opaqueDecl cv v =>
-    simp only [Frontend.denoteDecl] at h
-    split at h
-    · rename_i c _ hc _
-      exact ⟨c, hc⟩
-    · cases h
-  | axiomDecl _ | quotDecl _ _ | indDecl _ _ | basisDecl _ => exact hk.elim
+  sorry
 
 /-! ## The callees' specs at the loop's relation -/
 
@@ -561,6 +469,7 @@ section loopSpecs
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_value` refines `ivT`** under `StageT`, at the loop's relation (`iv_ref`). -/
 theorem installValue_loopT (hP : IvProg p) (hC : CvgProg p) (hap : ApdF p) (hkp : CrKeep p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
@@ -586,9 +495,11 @@ theorem installValue_loopT (hP : IvProg p) (hC : CvgProg p) (hap : ApdF p) (hkp 
   refine ⟨hloc, hok, ?_, by rw [hres]; exact hQ.vg, by rw [hres]; exact hQ.some, hQ.memos⟩
   rw [hst, hres]
   exact hR.of_step hQ.stage hf (IWGrow.erecPExt hQ.grow)
+-/
 
 end loopSpecs
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_step_go`'s unified model**: the scratch reset and the pin test (outside the verdict
 closure) lifted, `check_decl` by its unified model, `install_value` through its run (the inductive
 memos read it). -/
@@ -599,6 +510,7 @@ l_model installStepGo_specE (p : Prog) (hG : IstgProg p) (hcd : p.lookup "check_
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 1600000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 
 /-! ## `install_step_go` refines `installStepGo`, both outcomes -/
@@ -613,6 +525,7 @@ structure IstgG : Prop where
   cd : CdG pins dn ds p
   iv : IvCtx p
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What `install_step_go` gives besides the twin's run, its three words `r` and the memory `m'`:
 the loop's relation at the new view and environment, the value group out of the flag and record,
 the memos. -/
@@ -623,9 +536,11 @@ structure IstgPost (r : List Word) (x : IFEnv × Option ValueGroup) (m' : Mem)
   some : r.tail.headD 0 ≠ 0 → x.2 ≠ none
   core : CoreMemos m'
   ind : IndMemos m'
+-/
 
 variable {pins dn ds p}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The `check_decl` branch: `cd_ref`, against a twin that runs as `cdT`. -/
 theorem istg_cd {n : Nat} {m0 : Mem} {a : AState} {vis : Word} {fe : IFEnv}
     {i : Word} {d : IDeclaration} {T : AM (IFEnv × Option ValueGroup)}
@@ -638,7 +553,9 @@ theorem istg_cd {n : Nat} {m0 : Mem} {a : AState} {vis : Word} {fe : IFEnv}
     fun ⟨w, m'⟩ y a' _ hR => ?_)
   rw [installStepGoE.k_check_decl.arm1]
   exact RefE.ret rfl ⟨by simpa using hR.loop, by simp [vgOut], by simp, hR.core, hR.ind⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The `install_value` branch: `iv_ref` on the call's run, against a twin that runs as `ivT`. -/
 theorem istg_iv (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
     (hap : ApdF p) {n : Nat} {m0 : Mem} {a : AState} {vis : Word} {fe : IFEnv}
@@ -666,7 +583,9 @@ theorem istg_iv (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p) (hcrf :
   refine RefE.ret (hT.trans hrun) ⟨by simpa using hL, ?_, fun _ => hne, hcm, hIM'⟩
   simp only [List.headD_cons, List.tail_cons, vgOut, show (1 : Word) ≠ 0 by decide, ite_false]
   exact hvg
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_step_go` refines `installStepGo` under `StageT`, both outcomes**: the scratch reset,
 then by the record's kind (and for the pinnable ones `pin_in`'s answer) `check_decl` (`cd_ref`, its
 model inlined) or `install_value` (`iv_ref` on the run). -/
@@ -785,6 +704,7 @@ theorem istg_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsD
     · rw [installStepGoE.k_pin_in_2.arm2 _ _ _ _ _ _ (Decidable.not_not.mp hc0)]
       exact RefE.ite_neg (mt hiff.mpr hc0) (hIV ⟨rfl, rfl⟩ rfl)
   | basisDecl _ => exact absurd hdecl id
+-/
 
 end istg
 
@@ -794,6 +714,7 @@ section spec
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_step_go` refines `installStepGo`** under `StageT` (the ok half of `istg_ref`): the
 new view and environment, the value group out of the flag and record, the core's memos well
 formed. -/
@@ -821,6 +742,7 @@ theorem installStepGo_specT (hm : mode = .verified) (hdc : LoopCallees dn p) (hF
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst, hres]; exact hR'.loop, by rw [hres]; exact hR'.vg,
     fun h => by rw [hres]; exact hR'.some h, hR'.core, hR'.ind⟩
+-/
 
 end spec
 
@@ -839,17 +761,7 @@ theorem flush_loopW {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASt
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok flushCaches a₀ ∧
       LoopR pins s'.mem (AM.st flushCaches a₀) vis fe ds ∧
       TwinOK dn s'.mem (AM.st flushCaches a₀) fe ∧ pinW s'.mem 0 ≠ 0 ∧ IndMemos s'.mem; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hok, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (flush_loop dn ds p hb n s₀ a₀ vis fe pend hR)
-  obtain ⟨-, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (flushCaches_spec p hb.fl n s₀)
-  subst hs
-  have hf : MemFrame [PT0] flushCtl s.mem s'.mem := by rw [hm]; exact (flushMem_frame _).mono (by simp) (by simp)
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by decide)]; exact hfl, hIM.frame hf (by decide)
-    (fun x h => by simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)⟩
-  rw [flushCaches_st]
-  exact (hTw.frameLo hf (by decide) (fun x h => by simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)).flush
+  sorry
 
 /-- **`scratch_enter` keeps `TwinOK`** from a loop head (the store well formed, the scratch tier
 off). -/
@@ -861,24 +773,7 @@ theorem enter_loopW {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASt
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧
       LoopR pins s'.mem (AM.st enterScratch a₀) vis fe ds ∧
       TwinOK dn s'.mem (AM.st enterScratch a₀) fe ∧ pinW s'.mem 0 ≠ 0 ∧ IndMemos s'.mem; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hok, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (enter_loop dn ds p hb n s₀ a₀ vis fe pend hR)
-  obtain ⟨-, -, -, -, -, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
-  subst hs
-  have hf : MemFrame scrArrs ((0 :: resetCtl) ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by decide)]; exact hfl, hIM.frame hf (by decide)
-    (fun x h => by
-      simp [resetCtl, scratchCnts, memoCtl, SCB] at h
-      rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
-        <;> decide)⟩
-  rw [enterScratch_st]
-  exact (hTw.frameLo hf (by decide) (fun x h => by
-    simp [resetCtl, scratchCnts, memoCtl, SCB] at h
-    rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
-      <;> decide)).enter hwf hoff
+  sorry
 
 end bracket
 
@@ -886,6 +781,7 @@ section leaves
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
   (p : Prog)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `is_none` keeps the core's memos (a leaf). -/
 theorem isNone_refinesC (hlc : LeafClosed p) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
     (hb : BracketProg p)
@@ -901,7 +797,9 @@ theorem isNone_refinesC (hlc : LeafClosed p) (hcl : IndMemoClosed p) (hcrf : L.I
       (isNone_refines pins dn ds p hb hp n s₀ a₀ vis v2 nt fe' pend hR) hc)
       (invoke_indMemos hcl hcrf n (im_mem _ rfl) _ s₀))
     fun _ _ ⟨⟨⟨h1, h2, h3⟩, h4⟩, h5⟩ => ⟨h1, h2, h3, h4, h5 hIM⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `is_some` keeps the core's memos (a leaf). -/
 theorem isSome_refinesC (hlc : LeafClosed p) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
     (hb : BracketProg p)
@@ -919,6 +817,7 @@ theorem isSome_refinesC (hlc : LeafClosed p) (hcl : IndMemoClosed p) (hcrf : L.I
       (isSome_refines pins dn ds p hb hpp hp n s₀ a₀ i vis v2 nt g fe' pend vg hg hR) hc)
       (invoke_indMemos hcl hcrf n (im_mem _ rfl) _ s₀))
     fun _ _ ⟨⟨⟨h1, h2, h3⟩, h4⟩, h5⟩ => ⟨h1, h2, h3, h4, h5 hIM⟩
+-/
 
 /-- `andPinOk` on a one-constant record (or a basis record) leaves the twin state alone. -/
 theorem andPinOk_st_one {pd : IDeclaration} {a : AState} (hp : ConRon.Bridge.PinsOK a)

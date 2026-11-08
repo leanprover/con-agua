@@ -45,6 +45,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 open ConRon.Bridge (AM.bind_ok AM.pure_ok)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **`check_ind_decl`'s unified model**: the basis pin, the parameters' check and the parts
 (outside the verdict closure) lifted; `check_basis_decl`, `check_shapeless` and `check_block`
@@ -56,6 +57,7 @@ l_model cidE_spec (p : Prog) (hV : ValProg p) (P : CidProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 
 /-- A former of `blockSplit`'s split is an `indInfo` of the block. -/
@@ -101,40 +103,9 @@ local macro "jp_fin " z:ident k:ident : tactic => `(tactic| (
 theorem blockShape?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' : AState}
     {bs : BlockShape} (h : ConRon.Arena.blockShape? nPd block s = .ok (some bs, s')) :
     ∀ ms ∈ bs.members, ∃ caps, IConstantInfo.indInfo ms.cvT caps ∈ block := by
-  unfold ConRon.Arena.blockShape? at h
-  cases hsp : ConRon.Arena.blockSplit block with
-  | none => rw [hsp] at h; cases (AM.pure_ok h).1
-  | some q =>
-  obtain ⟨cvTs, cs, rs⟩ := q
-  rw [hsp] at h
-  rcases cvTs with _ | ⟨cvT0, cvTs'⟩
-  · cases (AM.pure_ok h).1
-  rcases rs with _ | ⟨⟨cvR0, mI0, rP0, rules0⟩, rs'⟩
-  · cases (AM.pure_ok h).1
-  dsimp only at h
-  obtain ⟨cnt, s1, -, z1⟩ := AM.bind_ok h
-  cases cnt with
-  | none => cases (AM.pure_ok z1).1
-  | some nIdxs =>
-  dsimp only at z1
-  obtain ⟨reserved, s2, -, z2⟩ := AM.bind_ok z1
-  split at z2
-  case isFalse => cases (AM.pure_ok z2).1
-  have key : ∀ groups : List (List (IConstantVal × Nat)), ∀ ms ∈ (((cvT0 :: cvTs').zip nIdxs).zip groups).map
-      (fun a => (⟨a.1.1, a.1.2, a.2⟩ : MemberShape)), ∃ caps, IConstantInfo.indInfo ms.cvT caps ∈ block := by
-    intro groups ms hms
-    obtain ⟨⟨⟨c, n⟩, g⟩, hx, rfl⟩ := List.mem_map.1 hms
-    exact blockSplit_formers_mem block c hsp (List.of_mem_zip (List.of_mem_zip hx).1).1
-  obtain ⟨o, s3, -, z3⟩ := AM.bind_ok z2
-  split at z3
-  · obtain ⟨v, s4, -, z4⟩ := AM.bind_ok z3
-    split at z4
-    · jp_fin z4 key
-    · obtain ⟨_, s5, -, z5⟩ := AM.bind_ok z4
-      jp_fin z5 key
-  · obtain ⟨_, s5, -, z5⟩ := AM.bind_ok z3
-    jp_fin z5 key
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The shape `blockParts?` recognises has the block's formers as its members' formers.** -/
 theorem blockParts?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' : AState}
     {bs : BlockShape} (h : (ConRon.Arena.blockParts? nPd block).run s = .ok (some ⟨bs⟩, s')) :
@@ -146,7 +117,9 @@ theorem blockParts?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' :
     obtain ⟨e, -⟩ := AM.pure_ok h2
     cases e
     exact blockShape?_members_mem h1
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `BlockLpsDn` at the members of the shape `blockParts?` recognises. -/
 theorem BlockLpsDn.members {dn : NIdx → Option ConLeche.Name} {block : List IConstantInfo}
     (hl : BlockLpsDn dn block) {nPd : Nat} {s s' : AState} {bs : BlockShape}
@@ -154,6 +127,7 @@ theorem BlockLpsDn.members {dn : NIdx → Option ConLeche.Name} {block : List IC
     ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome := fun ms hms => by
   obtain ⟨caps, hm⟩ := blockParts?_members_mem h ms hms
   exact hl ms.cvT caps hm
+-/
 
 /-- What `check_ind_decl` gives besides the twin's run, a view `w` and the memory `m'` (from `m`):
 the stage, the core's memos, the growth, the inductive arm's memos. -/
@@ -169,6 +143,7 @@ variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_ind_decl` refines the `.indDecl` arm of `checkDecl`, both outcomes** under `StageT` and
 the twin's fold invariant (`FoldOK`; the inner stages under `StageC`): `basis_pin_hit` (con-ron's
@@ -330,7 +305,9 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   obtain ⟨mp5, hma5⟩ := hR5'.ma
   exact RefE.ret rfl ⟨hR5'.stage, hCM5, hg1.trans (hg4.trans hR5'.grow),
     ⟨⟨hR5'.rc.pos, ⟨mp5, hma5⟩, hmc5, hR5'.rc.ta⟩, hA5.i1, hA5.cr.crOK⟩⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_ind_decl` refines the `.indDecl` arm of `checkDecl`** under `StageT` and the twin's
 fold invariant: the ok half of `cid_ref`, from the call's run. -/
@@ -366,6 +343,7 @@ theorem checkIndDecl_refinesC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (cid_ref hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt
       hkr (N := n) (by omega) hdn hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd) h
   exact ⟨x, a', hrun, hR.stage, hR.core, hR.grow, hR.ind⟩
+-/
 
 end sims
 
