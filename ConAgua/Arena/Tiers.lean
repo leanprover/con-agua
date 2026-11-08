@@ -428,7 +428,7 @@ def stampW (m : Mem) : Word := rdW (m.arr64 CTL) 133
 
 /-- The own layer's row of name handle `w` (tag at most `2`): its two words. -/
 def ownRow (m : Mem) (w : Word) : Word × Word :=
-  let a := m.arr64 (tierA (oixArr (rowTag w)) (UInt64.ofNat (rowTier w)))
+  let a := m.arr64 (tierA (oixArr (rowTag w)) (tierW w))
   (rdN a (rowIx w), rdN a (rowIx w + 1))
 
 /-- The own layer's raw row (`fe.idx[n]?`'s counter plus one and record): `(0, 0)` unless it
@@ -446,7 +446,7 @@ def baseRow (m : Mem) (w : Word) : Word × Word :=
 
 /-- The own layer's table row: the record's address plus one, `0` for none. -/
 def ownTbl (m : Mem) (w : Word) : Word :=
-  let a := m.arr64 (tierA (otxArr (rowTag w)) (UInt64.ofNat (rowTier w)))
+  let a := m.arr64 (tierA (otxArr (rowTag w)) (tierW w))
   if rowTag w ≤ 2 ∧ rdN a (rowIx w) = stampW m then rdN a (rowIx w + 1) else 0
 
 /-- The stream index's table row: position plus one and record. -/
@@ -461,12 +461,16 @@ def erecTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 129).toNat
 /-- The record pool's tier-1 top, `CTL[130]`. -/
 def erecTop1 (m : Mem) : Nat := (rdW (m.arr64 CTL) 130).toNat
 
-/-- **The record pool in use**, both tiers as one address space (tier 1 at `2^40 + i`), each
-below its top. Every record the relations decode is decoded here, so a writer above a top (an
-allocation, `erec_alloc`) keeps them all (`ArrExt`). -/
+/-- **The record pool in use**, both tiers as one address space, read exactly as L's tagged
+read `EREC⦃a⦄` reads the word address `a < 2^64`: tier bit 40, offset the low 40 bits (so tier 1
+is at `2^40 + o`), each tier below its top. Every record the relations decode is decoded here, so
+a writer above a top (an allocation, `erec_alloc`) keeps them all (`ArrExt`), and a decoded word
+is the word L reads (`erecP_rd`). -/
 def erecP (m : Mem) : Nat → Option Word := fun i =>
-  if i < 2 ^ 40 then (if i < erecTop m then (m.arr64 EREC)[i]? else none)
-  else if i - 2 ^ 40 < erecTop1 m then (m.arr64 (tier1 EREC))[i - 2 ^ 40]? else none
+  if i < 2 ^ 64 then
+    (if i / 2 ^ 40 % 2 = 0 then (if i % 2 ^ 40 < erecTop m then (m.arr64 EREC)[i % 2 ^ 40]? else none)
+     else if i % 2 ^ 40 < erecTop1 m then (m.arr64 (tier1 EREC))[i % 2 ^ 40]? else none)
+  else none
 
 /-- `m'`'s record pool extends `m`'s: both tops only moved up, nothing below them changed. -/
 structure ErecGrow (m m' : Mem) : Prop where
@@ -478,17 +482,49 @@ structure ErecGrow (m m' : Mem) : Prop where
 theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP m') := by
   intro i v hv
   unfold erecP at hv ⊢
-  by_cases hi : i < 2 ^ 40
-  · simp only [hi, ite_true] at hv ⊢
-    by_cases ht : i < erecTop m
-    · simp only [ht, ite_true] at hv
-      rw [if_pos (Nat.lt_of_lt_of_le ht h.top), h.get i ht]; exact hv
-    · simp [ht] at hv
-  · simp only [hi, ite_false] at hv ⊢
-    by_cases ht : i - 2 ^ 40 < erecTop1 m
-    · simp only [ht, ite_true] at hv
-      rw [if_pos (Nat.lt_of_lt_of_le ht h.top1), h.get1 _ ht]; exact hv
-    · simp [ht] at hv
+  by_cases h64 : i < 2 ^ 64
+  · simp only [h64, ite_true] at hv ⊢
+    by_cases hi : i / 2 ^ 40 % 2 = 0
+    · simp only [hi, ite_true] at hv ⊢
+      by_cases ht : i % 2 ^ 40 < erecTop m
+      · simp only [ht, ite_true] at hv
+        rw [if_pos (Nat.lt_of_lt_of_le ht h.top), h.get _ ht]; exact hv
+      · simp [ht] at hv
+    · simp only [hi, ite_false] at hv ⊢
+      by_cases ht : i % 2 ^ 40 < erecTop1 m
+      · simp only [ht, ite_true] at hv
+        rw [if_pos (Nat.lt_of_lt_of_le ht h.top1), h.get1 _ ht]; exact hv
+      · simp [ht] at hv
+  · simp [h64] at hv
+
+/-- **A decoded word is the word L's tagged read `EREC⦃a⦄` reads** (`ld64t EREC (a >>> 40)
+(a &&& (2^40 - 1))`), in bounds. -/
+theorem erecP_rd {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) :
+    (a &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (a >>> 40))).size ∧
+      (m.arr64 (tierA EREC (a >>> 40)))[(a &&& 0xFFFFFFFFFF).toNat]? = some v := by
+  have hmask : (a &&& 0xFFFFFFFFFF).toNat = a.toNat % 2 ^ 40 := by
+    rw [UInt64.toNat_and]; exact Nat.and_two_pow_sub_one_eq_mod _ 40
+  have hbit : ((a >>> 40) &&& 1).toNat = a.toNat / 2 ^ 40 % 2 := by
+    rw [UInt64.toNat_and, UInt64.toNat_shiftRight]
+    simp only [Nat.shiftRight_eq_div_pow, UInt64.toNat_ofNat]
+    exact Nat.and_one_is_mod _
+  have ht : tierA EREC (a >>> 40) = if a.toNat / 2 ^ 40 % 2 = 0 then (EREC : TieredArray) else tier1 EREC := by
+    unfold tierA
+    by_cases e : a.toNat / 2 ^ 40 % 2 = 0
+    · have : (a >>> 40) &&& 1 = 0 := UInt64.toNat_inj.mp (by rw [hbit, e]; rfl)
+      simp [e, this]
+    · have : (a >>> 40) &&& 1 ≠ 0 := fun h' => e (by rw [← hbit, h']; rfl)
+      simp [e, this]
+  rw [hmask, ht]
+  unfold erecP at h
+  simp only [a.toNat_lt, ite_true] at h
+  split at h
+  · rename_i e; simp only [e, ite_true]; split at h
+    · exact ⟨(Array.getElem?_eq_some_iff.mp h).1, h⟩
+    · simp at h
+  · rename_i e; simp only [e, ite_false]; split at h
+    · exact ⟨(Array.getElem?_eq_some_iff.mp h).1, h⟩
+    · simp at h
 
 theorem ErecGrow.refl (m : Mem) : ErecGrow m m :=
   ⟨Nat.le_refl _, fun _ _ => rfl, Nat.le_refl _, fun _ _ => rfl⟩
@@ -505,24 +541,41 @@ def ownFind (m : Mem) (vis : Word) (w : Word) : Option IConstantInfo :=
   let r := ownRaw m w
   if r.1 ≠ 0 ∧ r.1.toNat - 1 < vis.toNat then decCI (erecP m) r.2.toNat else none
 
-/-- **The environment relation** (one view). -/
+/-- **The environment relation** (one view). Every clause is over all names (a row of a word
+of another tag reads as absent: `ownRaw`, `baseRow`, `ownTbl`, `baseTbl`):
+
+* the own layer is the twin's `idx` (`own`), its rows decode (`own_dec`), every row is in the
+  view (`fresh`: the view is the newest, so a push at `vis` sees no stale row) and the rows'
+  counters are distinct (`uniq`: `popTemp` lowers the view past exactly one row);
+* the own table rows are the twin's `tbls` and decode (`otbl`, `otbl_dec`);
+* the stream index is the twin's `base` (`below`, `belowRec`, `base`, `btbl`);
+* the stamp is below `2^32` (`stamp`: a row word is `stamp · 2^32 + c + 1`). -/
 structure EnvR (m : Mem) (vis : Word) (fe : IFEnv) : Prop where
-  own : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → fe.idx[n]? = ownFind m vis n.word.toUInt64
-  otbl : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
+  own : ∀ n : NIdx, fe.idx[n]? = ownFind m vis n.word.toUInt64
+  own_dec : ∀ n : NIdx, (ownRaw m n.word.toUInt64).1 ≠ 0 →
+    ∃ ci, decCI (erecP m) (ownRaw m n.word.toUInt64).2.toNat = some ci
+  fresh : ∀ n : NIdx, (ownRaw m n.word.toUInt64).1 ≠ 0 →
+    (ownRaw m n.word.toUInt64).1.toNat - 1 < vis.toNat
+  uniq : ∀ n n' : NIdx, (ownRaw m n.word.toUInt64).1 ≠ 0 →
+    (ownRaw m n.word.toUInt64).1 = (ownRaw m n'.word.toUInt64).1 → n = n'
+  otbl : ∀ n : NIdx,
     fe.tbls[n]? = (if ownTbl m n.word.toUInt64 = 0 then none
       else decTbl (erecP m) ((ownTbl m n.word.toUInt64).toNat - 1))
+  otbl_dec : ∀ n : NIdx, ownTbl m n.word.toUInt64 ≠ 0 →
+    ∃ t, decTbl (erecP m) ((ownTbl m n.word.toUInt64).toNat - 1) = some t
   below : fe.base.below = (rdW (m.arr64 CTL) 134).toNat
   belowRec : fe.base.belowRec = (rdW (m.arr64 CTL) 135).toNat
-  base : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
+  base : ∀ n : NIdx,
     (fe.base.idx[n]?).map (fun e => (e.1, some e.2)) =
       (if (baseRow m n.word.toUInt64).1 = 0 then none
        else some ((baseRow m n.word.toUInt64).1.toNat - 1,
          decCI (erecP m) (baseRow m n.word.toUInt64).2.toNat))
-  btbl : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
+  btbl : ∀ n : NIdx,
     (fe.base.tbls[n]?).map (fun e => (e.1, some e.2)) =
       (if (baseTbl m n.word.toUInt64).1 = 0 then none
        else some ((baseTbl m n.word.toUInt64).1.toNat - 1,
          decTbl (erecP m) (baseTbl m n.word.toUInt64).2.toNat))
+  stamp : (stampW m).toNat < 2 ^ 32
 
 /-- The arrays and globals `EnvR` reads. -/
 def envArrs : List TieredArray :=
@@ -569,9 +622,12 @@ theorem EnvR.congr {m m' : Mem} {vis : Word} {fe : IFEnv}
     simp only [baseRow, he _ (eix_mem _)]
   have hbt : ∀ w, baseTbl m' w = baseTbl m w := fun w => by
     simp only [baseTbl, he _ (tix_mem _)]
-  exact ⟨fun n hn => by rw [hfind]; exact h.own n hn, fun n hn => by rw [hot, hP]; exact h.otbl n hn,
+  exact ⟨fun n => by rw [hfind]; exact h.own n, fun n => by rw [hraw, hP]; exact h.own_dec n,
+    fun n => by rw [hraw]; exact h.fresh n, fun n n' => by rw [hraw, hraw]; exact h.uniq n n',
+    fun n => by rw [hot, hP]; exact h.otbl n, fun n => by rw [hot, hP]; exact h.otbl_dec n,
     by rw [hc 134 (by decide)]; exact h.below, by rw [hc 135 (by decide)]; exact h.belowRec,
-    fun n hn => by rw [hb, hP]; exact h.base n hn, fun n hn => by rw [hbt, hP]; exact h.btbl n hn⟩
+    fun n => by rw [hb, hP]; exact h.base n, fun n => by rw [hbt, hP]; exact h.btbl n,
+    by rw [hs]; exact h.stamp⟩
 
 /-- **`EnvR` across a frame** that avoids its arrays and control words. -/
 theorem EnvR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {vis : Word} {fe : IFEnv}

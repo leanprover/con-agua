@@ -3,7 +3,17 @@ module
 public import ConAgua.Arena.Tiers
 public import ConAgua.L.Logic
 import ConAgua.Census.Attr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+meta import ConAgua.Arena.Tiers
+meta import ConAgua.Arena.GrindAttr
+meta import ConAgua.L.GrindAttr
+meta import Std.Tactic.BVDecide.Normalize.BitVec
+meta import Std.Tactic.BVDecide.Normalize.Prop
+meta import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
@@ -247,11 +257,29 @@ theorem hd?_some {k : IdxKind} {a : Nat → Option Word} {i : Nat} {x : Idx k} (
 
 theorem decCV_name {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
     ∃ w, a q = some w ∧ w.toNat < 2 ^ 32 ∧ cv.name = decI w := by
-  sorry
+  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨n, hn, ls, -, ty, -, rfl⟩ := h
+  exact hd?_some hn
 
 theorem decCI_name {a : Nat → Option Word} {p : Nat} {ci : IConstantInfo} (h : decCI a p = some ci) :
     ∃ w, a (p + 1) = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
-  sorry
+  cases e : decCV a (p + 1) with
+  | none =>
+    exfalso; simp only [decCI, e, Option.bind_eq_bind] at h
+    cases hk : nat? a p with
+    | none => simp [hk] at h
+    | some k => simp only [hk, Option.bind_some] at h; split at h <;> simp_all
+  | some cv =>
+    obtain ⟨w, h1, h2, h3⟩ := decCV_name e
+    refine ⟨w, by simpa using h1, h2, ?_⟩
+    rw [← h3]
+    simp only [decCI, e, Option.bind_eq_bind] at h
+    cases hk : nat? a p with
+    | none => simp [hk] at h
+    | some k =>
+      simp only [hk, Option.bind_some] at h
+      split at h <;> simp [Option.bind_eq_some_iff] at h <;> grind [IConstantInfo.name]
 
 theorem triple_post {α : Type} {prog : M α} {P : St → Prop} {Q Q' : α → St → Prop}
     (h : ⦃fun s => P s⦄ prog ⦃fun r s => Q r s; ⊤⦄) (hq : ∀ r s, Q r s → Q' r s) :
@@ -259,5 +287,281 @@ theorem triple_post {α : Type} {prog : M α} {P : St → Prop} {Q Q' : α → S
   M.triple_of_run fun _ _ _ hp hr => hq _ _ (M.of_run hp hr h)
 
 end helpers
+
+/-! ## Row addresses and the row models -/
+
+section rows
+open ConRon.Arena Std.WP
+open scoped Lean.Order
+
+/-- `w`'s row index as an L expression computes it: `2 ⟦w⟧.idx`. -/
+def ixW (w : Word) : Word := idxW w <<< 1
+
+theorem ixW_toNat (w : Word) : (ixW w).toNat = rowIx w := by
+  have h1 : (idxW w).toNat < 0x44000000 := UInt64.lt_iff_toNat_lt.mp (idxW_lt w)
+  rw [ixW, UInt64.toNat_shiftLeft, Nat.shiftLeft_eq, show (1 : Word).toNat % 64 = 1 from rfl, rowIx]
+  omega
+
+theorem ixW_succ (w : Word) : (ixW w + 1).toNat = rowIx w + 1 := by
+  have h1 : (idxW w).toNat < 0x44000000 := UInt64.lt_iff_toNat_lt.mp (idxW_lt w)
+  rw [UInt64.toNat_add, ixW_toNat w]; simp [rowIx]; omega
+
+/-- A narrow word below `2^32` is its tier, tag and index. -/
+theorem nat_split27 (a : Nat) (ha : a < 2 ^ 32) (hn : a / 2 ^ 30 % 2 = 0) :
+    a = 2 ^ 31 * (a / 2 ^ 31 % 2) + 2 ^ 26 * (a / 2 ^ 26 % 16) + a % 2 ^ 26 := by
+  omega
+
+/-- Two name words (below `2^32`, tags at most `2`) with the same tag, tier and row index are
+equal. -/
+theorem row_inj {w w' : Word} (hw : w.toNat < 2 ^ 32) (hw' : w'.toNat < 2 ^ 32)
+    (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2) (hg : rowTag w = rowTag w')
+    (hr : rowTier w = rowTier w') (hi : rowIx w = rowIx w') : w = w' := by
+  have hn := rowTag_narrow ht; have hn' := rowTag_narrow ht'
+  have e := rowTag_eq ht; have e' := rowTag_eq ht'
+  simp only [rowIx, idxW_toNat_narrow w hn, idxW_toNat_narrow w' hn'] at hi
+  simp only [rowTier] at hr
+  have e1 := nat_split27 _ hw hn; have e2 := nat_split27 _ hw' hn'
+  exact UInt64.toNat_inj.mp (by omega)
+
+/-- A handle's word is below `2^32`. -/
+theorem word_lt32 {k : IdxKind} (n : Idx k) : n.word.toUInt64.toNat < 2 ^ 32 := by
+  simp; exact UInt32.toNat_lt _
+
+/-- Distinct names have distinct words. -/
+theorem nidx_word_inj {n n' : NIdx} (h : n.word.toUInt64 = n'.word.toUInt64) : n = n' := by
+  rw [← decI_word n, ← decI_word n', h]
+
+theorem decTbl_name {a : Nat → Option Word} {p : Nat} {t : IProjTable} (h : decTbl a p = some t) :
+    ∃ w, a (p + 2) = some w ∧ w.toNat < 2 ^ 32 ∧ t.structName = decI w := by
+  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨n, hn, -, -, -, -, -, -, -, -, -, -, rfl⟩ := h
+  exact hd?_some hn
+
+theorem rdN_eq (a : Array Word) (k : Nat) (h : k < a.size) : rdN a k = a[k] := by simp [rdN, h]
+
+/-- The own row arrays by tag. -/
+theorem oixArr_0 : oixArr 0 = OIXA := rfl
+theorem oixArr_1 : oixArr 1 = OIXS := rfl
+theorem oixArr_2 : oixArr 2 = OIXN := rfl
+
+theorem rdN_ixW (a : Array Word) (w : Word) : rdN a (rowIx w) = rdW a (idxW w <<< 1) := by
+  rw [← ixW_toNat w]; rfl
+
+theorem rdN_ixW1 (a : Array Word) (w : Word) : rdN a (rowIx w + 1) = rdW a ((idxW w <<< 1) + 1) := by
+  rw [← ixW_succ w]; rfl
+
+/-- `ownRaw` at a name of tag `g` (`OIXA`, `OIXS`, `OIXN`): what `env_row_get` reads. -/
+theorem ownRaw_tag {m : Mem} {w : Word} (A : ArrId) (g : Word) (hg : tagW w = g) (hg2 : g.toNat ≤ 2)
+    (hA : oixArr g.toNat = A) :
+    ownRaw m w =
+      if rdW (m.arr64 (tierA A (tierW w))) (idxW w <<< 1) >>> 32 = rdW (m.arr64 CTL) 133 then
+        (rdW (m.arr64 (tierA A (tierW w))) (idxW w <<< 1) &&& 4294967295,
+         rdW (m.arr64 (tierA A (tierW w))) ((idxW w <<< 1) + 1))
+      else (0, 0) := by
+  have ht : rowTag w = g.toNat := by rw [rowTag, hg]
+  simp only [ownRaw, ownRow, ht, hA, hg2, true_and, stampW, rdN_ixW, rdN_ixW1]
+
+theorem ownRaw_0 {m : Mem} {w : Word} (hg : tagW w = 0) : ownRaw m w =
+      if rdW (m.arr64 (tierA OIXA (tierW w))) (idxW w <<< 1) >>> 32 = rdW (m.arr64 CTL) 133 then
+        (rdW (m.arr64 (tierA OIXA (tierW w))) (idxW w <<< 1) &&& 4294967295,
+         rdW (m.arr64 (tierA OIXA (tierW w))) ((idxW w <<< 1) + 1))
+      else (0, 0) := ownRaw_tag _ 0 hg (by decide) rfl
+theorem ownRaw_1 {m : Mem} {w : Word} (hg : tagW w = 1) : ownRaw m w =
+      if rdW (m.arr64 (tierA OIXS (tierW w))) (idxW w <<< 1) >>> 32 = rdW (m.arr64 CTL) 133 then
+        (rdW (m.arr64 (tierA OIXS (tierW w))) (idxW w <<< 1) &&& 4294967295,
+         rdW (m.arr64 (tierA OIXS (tierW w))) ((idxW w <<< 1) + 1))
+      else (0, 0) := ownRaw_tag _ 1 hg (by decide) rfl
+theorem ownRaw_2 {m : Mem} {w : Word} (hg : tagW w = 2) : ownRaw m w =
+      if rdW (m.arr64 (tierA OIXN (tierW w))) (idxW w <<< 1) >>> 32 = rdW (m.arr64 CTL) 133 then
+        (rdW (m.arr64 (tierA OIXN (tierW w))) (idxW w <<< 1) &&& 4294967295,
+         rdW (m.arr64 (tierA OIXN (tierW w))) ((idxW w <<< 1) + 1))
+      else (0, 0) := ownRaw_tag _ 2 hg (by decide) rfl
+
+theorem rdN_set64 (m : Mem) (a b : TieredArray) (k v : Word) (j : Nat) :
+    rdN ((m.set64 a k v).arr64 b) j =
+      if b = a ∧ k.toNat = j ∧ j < (m.arr64 a).size then v else rdN (m.arr64 b) j := by
+  by_cases h : b = a
+  · subst h
+    rw [Mem.arr64_set64_same]
+    simp only [rdN, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    grind
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
+
+/-- The own row array of name handle `w`. -/
+def ownArr (w : Word) : TieredArray := tierA (oixArr (rowTag w)) (tierW w)
+
+/-- The own table-row array of name handle `w`. -/
+def otxArrT (w : Word) : TieredArray := tierA (otxArr (rowTag w)) (tierW w)
+
+theorem ownArr_arr (w : Word) : (ownArr w).arr = 140 ∨ (ownArr w).arr = 141 ∨ (ownArr w).arr = 142 := by
+  unfold ownArr tierA oixArr; split <;> (try split) <;> simp [OIXA, OIXS, OIXN] <;> decide
+
+theorem otxArrT_arr (w : Word) :
+    (otxArrT w).arr = 146 ∨ (otxArrT w).arr = 147 ∨ (otxArrT w).arr = 148 := by
+  unfold otxArrT tierA otxArr; split <;> (try split) <;> simp [OTXA, OTXS, OTXN] <;> decide
+
+theorem ownArr_ne {w : Word} {b : TieredArray} (h : b.arr ≠ 140 ∧ b.arr ≠ 141 ∧ b.arr ≠ 142) :
+    b ≠ ownArr w := fun e => by subst e; have := ownArr_arr w; omega
+
+theorem otxArrT_ne {w : Word} {b : TieredArray} (h : b.arr ≠ 146 ∧ b.arr ≠ 147 ∧ b.arr ≠ 148) :
+    b ≠ otxArrT w := fun e => by subst e; have := otxArrT_arr w; omega
+
+theorem tierW_eq_of_bit {w w' : Word} (h : (tierW w &&& 1 != 0) = (tierW w' &&& 1 != 0)) :
+    rowTier w = rowTier w' := by
+  have a := tierW_lt w; have b := tierW_lt w'
+  rw [← tierW_toNat_row, ← tierW_toNat_row]
+  have ea : tierW w &&& 1 = tierW w := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_and]; simp; omega
+  have eb : tierW w' &&& 1 = tierW w' := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_and]; simp; omega
+  rw [ea, eb] at h
+  have k : ∀ t : Word, ((t != 0) = true) ↔ t.toNat ≠ 0 := by
+    intro t; simp only [bne_iff_ne, ne_eq]; exact not_congr ⟨fun e => by simp [e], fun e => UInt64.toNat_inj.mp (by simpa using e)⟩
+  have h2 : ((tierW w != 0) = true) ↔ ((tierW w' != 0) = true) := by rw [h]
+  rw [k, k] at h2
+  omega
+
+/-- Equal own row arrays (tags at most `2`) have equal tags and tiers. -/
+theorem ownArr_inj {w w' : Word} (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2) (h : ownArr w = ownArr w') :
+    rowTag w = rowTag w' ∧ rowTier w = rowTier w' := by
+  simp only [ownArr, tierA, TieredArray.mk.injEq] at h
+  refine ⟨?_, tierW_eq_of_bit h.2⟩
+  have h1 := h.1
+  unfold oixArr at h1
+  rcases (by omega : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2) with a | a | a <;>
+  rcases (by omega : rowTag w' = 0 ∨ rowTag w' = 1 ∨ rowTag w' = 2) with b | b | b <;>
+  simp [a, b, OIXA, OIXS, OIXN] at h1 <;> omega
+
+theorem otxArrT_inj {w w' : Word} (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2) (h : otxArrT w = otxArrT w') :
+    rowTag w = rowTag w' ∧ rowTier w = rowTier w' := by
+  simp only [otxArrT, tierA, TieredArray.mk.injEq] at h
+  refine ⟨?_, tierW_eq_of_bit h.2⟩
+  have h1 := h.1
+  unfold otxArr at h1
+  rcases (by omega : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2) with a | a | a <;>
+  rcases (by omega : rowTag w' = 0 ∨ rowTag w' = 1 ∨ rowTag w' = 2) with b | b | b <;>
+  simp [a, b, OTXA, OTXS, OTXN] at h1 <;> omega
+
+/-- The own row's first word for counter `c` (`0`: no row). -/
+def rowWord (m : Mem) (c : Word) : Word := if c = 0 then 0 else (rdW (m.arr64 CTL) 133 <<< 32) + c
+
+/-- The memory after `env_row_set(w, c, p)`. -/
+def ownSet (m : Mem) (w c p : Word) : Mem :=
+  (m.set64 (ownArr w) (ixW w) (rowWord m c)).set64 (ownArr w) (ixW w + 1) p
+
+/-- The memory after `tbl_own_set(w, v)`. -/
+def tblSet (m : Mem) (w v : Word) : Mem :=
+  (m.set64 (otxArrT w) (ixW w) (rdW (m.arr64 CTL) 133)).set64 (otxArrT w) (ixW w + 1) v
+
+theorem ownSet_arr {m : Mem} {w c p : Word} {b : TieredArray} (h : b ≠ ownArr w) :
+    (ownSet m w c p).arr64 b = m.arr64 b := by
+  simp only [ownSet, Mem.arr64_set64_ne _ _ _ _ _ h]
+
+theorem tblSet_arr {m : Mem} {w v : Word} {b : TieredArray} (h : b ≠ otxArrT w) :
+    (tblSet m w v).arr64 b = m.arr64 b := by
+  simp only [tblSet, Mem.arr64_set64_ne _ _ _ _ _ h]
+
+theorem ctl_ne_ownArr (w : Word) : (CTL : TieredArray) ≠ ownArr w := ownArr_ne (by decide)
+theorem ctl_ne_otxArrT (w : Word) : (CTL : TieredArray) ≠ otxArrT w := otxArrT_ne (by decide)
+
+/-- The packed row word reads back. -/
+theorem rowWord_read {m : Mem} {c : Word} (hc : c ≠ 0) (hc32 : c.toNat < 2 ^ 32)
+    (hs : (rdW (m.arr64 CTL) 133).toNat < 2 ^ 32) :
+    rowWord m c >>> 32 = rdW (m.arr64 CTL) 133 ∧ rowWord m c &&& 4294967295 = c := by
+  simp only [rowWord, hc, ite_false]
+  generalize rdW (m.arr64 CTL) 133 = st at hs ⊢
+  have e : ((st <<< 32) + c).toNat = st.toNat * 2 ^ 32 + c.toNat := by
+    rw [UInt64.toNat_add, UInt64.toNat_shiftLeft]; simp [Nat.shiftLeft_eq]; omega
+  constructor
+  · apply UInt64.toNat_inj.mp; rw [UInt64.toNat_shiftRight, e]; simp [Nat.shiftRight_eq_div_pow]; omega
+  · apply UInt64.toNat_inj.mp; rw [UInt64.toNat_and, e]
+    rw [show (4294967295 : Word).toNat = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]; omega
+
+theorem rowWord_zero (m : Mem) : rowWord m 0 = 0 := by simp [rowWord]
+
+theorem rowIx_lt (w : Word) : rowIx w < 2 ^ 32 := by
+  have h1 : (idxW w).toNat < 0x44000000 := UInt64.lt_iff_toNat_lt.mp (idxW_lt w)
+  simp only [rowIx]; omega
+
+theorem rowIx_mod (w : Word) : (rowIx w + 1) % 18446744073709551616 = rowIx w + 1 :=
+  Nat.mod_eq_of_lt (by have := rowIx_lt w; omega)
+
+theorem ownRow_eq (m : Mem) (w : Word) :
+    ownRow m w = (rdN (m.arr64 (ownArr w)) (rowIx w), rdN (m.arr64 (ownArr w)) (rowIx w + 1)) := rfl
+
+theorem stampW_ownSet (m : Mem) (w c p : Word) : stampW (ownSet m w c p) = stampW m := by
+  simp only [stampW, ownSet_arr (ctl_ne_ownArr w)]
+
+theorem rowIx_even (w : Word) : rowIx w % 2 = 0 := by simp [rowIx]
+
+/-- Rows of distinct name words (below `2^32`) are distinct words of the own arrays. -/
+theorem row_ne {w w' : Word} (hw : w.toNat < 2 ^ 32) (hw' : w'.toNat < 2 ^ 32)
+    (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2) (hne : w' ≠ w) (ha : ownArr w' = ownArr w) :
+    rowIx w' ≠ rowIx w := fun hi => by
+  obtain ⟨h1, h2⟩ := ownArr_inj ht' ht ha
+  exact hne (row_inj hw' hw ht' ht h1 h2 hi)
+
+theorem ownRaw_ownSet_self {m : Mem} {w c p : Word} (ht : rowTag w ≤ 2)
+    (hb : rowIx w + 1 < (m.arr64 (ownArr w)).size) (hc32 : c.toNat < 2 ^ 32)
+    (hs : (stampW m).toNat < 2 ^ 32) :
+    (ownRaw (ownSet m w c p) w).1 = c ∧ (c ≠ 0 → (ownRaw (ownSet m w c p) w).2 = p) := by
+  have hr : ownRow (ownSet m w c p) w = (rowWord m c, p) := by
+    rw [ownRow_eq]
+    simp [ownSet, rdN_set64, ixW_toNat, ixW_succ, hb, Nat.lt_of_succ_lt hb, rowIx_mod, Mem.arr64_set64_same, Array.size_set!, rdN, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.size_setIfInBounds]
+  simp only [ownRaw, stampW_ownSet, hr, ht, true_and]
+  by_cases hc : c = 0
+  · subst hc; simp only [rowWord_zero]; split <;> simp
+  · obtain ⟨e1, e2⟩ := rowWord_read (m := m) hc hc32 hs
+    simp only [stampW] at *
+    simp [e1, e2, hc]
+
+theorem ownRaw_ownSet_other {m : Mem} {w c p w' : Word} (hw : w.toNat < 2 ^ 32)
+    (hw' : w'.toNat < 2 ^ 32) (ht : rowTag w ≤ 2) (hne : w' ≠ w) :
+    ownRaw (ownSet m w c p) w' = ownRaw m w' := by
+  by_cases ht' : rowTag w' ≤ 2
+  · have hr : ownRow (ownSet m w c p) w' = ownRow m w' := by
+      rw [ownRow_eq, ownRow_eq]
+      by_cases ha : ownArr w' = ownArr w
+      · have := row_ne hw hw' ht ht' hne ha
+        have e1 := rowIx_even w; have e2 := rowIx_even w'
+        have n1 : rowIx w ≠ rowIx w' := Ne.symm this
+        have n2 : rowIx w + 1 ≠ rowIx w' := by omega
+        have n3 : rowIx w ≠ rowIx w' + 1 := by omega
+        have n4 : rowIx w + 1 ≠ rowIx w' + 1 := by omega
+        rw [ha]
+        simp [ownSet, rdN, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
+          Array.getElem?_setIfInBounds, ixW_toNat, ixW_succ, rowIx_mod, n1, n2, n3, n4]
+      · simp [ownSet, Mem.arr64_set64_ne _ _ _ _ _ ha]
+    simp only [ownRaw, stampW_ownSet, hr]
+  · simp [ownRaw, ht']
+
+end rows
+
+section specs
+open ConRon.Arena Std.WP
+open scoped Lean.Order
+set_option experimental.vcgen true
+variable (p : Prog)
+
+theorem envRowGet_spec (hp : p.lookup "env_row_get" = some envRowGetL) (n : Nat) (s₀ : St)
+    (w : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "env_row_get" [w]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = (ownRaw s₀.mem w).1 ∧
+      r.tail.headD 0 = (ownRaw s₀.mem w).2; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, envRowGetL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs]
+    all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
+      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
+      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *
+    all_goals subst_vars
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, ownRaw_0, ownRaw_1, ownRaw_2]
+
+end specs
 
 end L.Arena
