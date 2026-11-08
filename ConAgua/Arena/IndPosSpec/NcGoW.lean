@@ -114,10 +114,14 @@ theorem ntK2_empty (h : r2.tail.headD 0 = 0) :
 theorem ntK2_cons (h : ¬ r2.tail.headD 0 = 0) :
     ntK2 q (some (r2, m2)) = some ([1, r2.tail.tail.headD 0, r2.headD 0, r2.tail.headD 0], m2) := by
   rw [ntK2, ite_eq_right h]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ntK1_miss (h : r.headD 0 = 0) : ntK1 k vis C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by
   rw [ntK1, ite_eq_left h]
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ntK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
     ntK1 k vis C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by rw [ntK1, ite_eq_right h, ite_eq_left h3]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ntK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
     ntK1 k vis C (some (r, m1)) = ntK2 (r.tail.headD 0) (ncWf k m1 vis C

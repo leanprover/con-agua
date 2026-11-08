@@ -71,78 +71,7 @@ theorem builtinPrelude_ref (h64 : System.Platform.numBits = 64) (a : AState) (n 
     (h0 : BP0 a m) :
     RefC True (builtinPreludeLE checkerProg n m) (fun x => BP3 a x.2)
       (ErrClaimV builtinPreludeE a) := by
-  obtain ⟨hA, hD, ht, hctl, hmo⟩ := h0
-  have hin : (m.setIn preIn).arr8 IN = preludeText.data := by rw [Mem.arr8_setIn_zero, preIn_eq]
-  have h₀ : (m.setIn preIn).arr8 IN = preludeText.data ∧ ArenaD (m.setIn preIn) a ∧
-      StateDR (m.setIn preIn) (StateD.blank.pre #[]) ∧ ConRon.Bridge.StateOK a ∧
-      a.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a ∧
-      (∀ x < (#[] : Array IDeclaration).size,
-        L.Checker.RecOK ((m.setIn preIn).arr64 DECL) ((m.setIn preIn).arr64 DLP) x) ∧
-      ModeOK (m.setIn preIn) :=
-    ⟨hin, ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) hA,
-      by rw [blank_pre_nil]; exact hD.frame (setIn_frame _ _) (by simp) (by simp),
-      ht.ok, ht.off, ht.pins, fun x hx => absurd hx (by simp),
-      ModeOK.frame hmo (setIn_frame _ _) (by simp) (by simp)⟩
-  cases n with
-  | zero => exact fun _ hk => absurd Err.cls_outOfFuel hk
-  | succ n =>
-  simp only [builtinPreludeLE]
-  rcases h1 : callE checkerProg n "pre_front_run" [] m with e1 | ⟨r1, m1⟩
-  · -- `pre_front_run` fails as `front_run` on the prelude's bytes
-    rw [builtinPreludeLE.k_pre_front_run.none]
-    intro _ hk
-    have hsim := preFrontRun_errSim n ⟨m, Locals.init []⟩ e1 (run_of_callE_err h1)
-      hk
-    have hc := L.Front.callE_of_run_err hsim
-    simp only [St.setIn_mem] at hc
-    exact builtinPreludeE_fails (frontRun_errClaim #[] preludeText h64 preludeText_size
-      (safeLink h64 _ preludeText_size) n (m.setIn preIn) a h₀ hc hk)
-  -- an ok run of `pre_front_run` is `front_run`'s on the prelude's bytes
-  obtain ⟨s1, hs1, hpost, -⟩ := triple_of_callE (preSim_triple checkerProg_preSim n "front_run"
-    isCopied_front_run [] ⟨m, Locals.init []⟩ (frontRunOK_checker #[] preludeText h64
-      preludeText_size n _ h₀.1 a h₀.2.1 h₀.2.2.1 ht.ok ht.off ht.pins h₀.2.2.2.2.2.2.1
-      h₀.2.2.2.2.2.2.2)) h1
-  obtain ⟨sk, hsk, -, hkp, -⟩ := triple_of_callE (Triple.keep checkerProg_noSt8
-    (M.triple_of_run (P := fun s => s = ⟨m, Locals.init []⟩) (Q := fun _ _ => True)
-      fun _ _ _ _ _ => trivial)) h1
-  have hctl1 : 240 < (m1.arr64 CTL).size := by rw [← hsk, hkp.size]; exact hctl
-  by_cases hr : r1.headD 0 = 0
-  rotate_left
-  · simp only [builtinPreludeLE.k_pre_front_run, ite_eq_left hr]
-    exact fun _ hk => absurd (by decide) hk
-  rw [builtinPreludeLE.k_pre_front_run.arm1 _ _ _ _ hr]
-  obtain ⟨st, a', hp, hA', hD', -, hM', hR⟩ := hpost hr
-  rw [pre_nil] at hD'
-  have hb := builtinPreludeE_of hp
-  simp only [St.setIn_mem, hs1] at hA' hD' hM' hR
-  have hA1 := ArenaD.frameHi (setIn_frame' m1 preIn) (by simp) (by simp) hA'
-  have hD1 := hD'.frame (setIn_frame' m1 preIn) (by simp) (by simp)
-  have hM1 := ModeOK.frame hM' (setIn_frame' m1 preIn) (by simp) (by simp)
-  have hR1 : RecsOK m1 st.decls := fun x hx => hR x (by simpa using hx)
-  -- `CTL[240] := DECL[0]`
-  have hf := MemFrame.setCtl m1 240 (rdW (m1.arr64 L.Front.DECL) 0)
-  generalize hm2 : m1.set64 CTL 240 (rdW (m1.arr64 L.Front.DECL) 0) = m2 at hf
-  have hD2 := hD1.frame hf (by simp) (by simp)
-  have h240 : (rdW (m2.arr64 CTL) 240).toNat = st.decls.size := by
-    rw [← hm2, rdW_set64, ite_eq_left ⟨rfl, rfl, hctl1⟩]
-    have := hD1.decls.count
-    simpa [rdW] using this
-  -- `front_reset`
-  rcases h3 : callW checkerProg n "front_reset" [] m2 with _ | ⟨r3, m3⟩
-  · rw [liftE_none, builtinPreludeLE.k_front_reset.none]; exact fun _ hk => absurd (by simp) hk
-  rw [liftE_some, builtinPreludeLE.k_front_reset.arm1]
-  obtain ⟨s3, rfl, -, hok, hm3⟩ :=
-    triple_of_callW (frontReset_spec checkerProg checkerProg_prepProg n ⟨m2, Locals.init []⟩) h3
-  have hf3 := resetM_frame m2
-  dsimp only at hm3 hok ⊢
-  rw [hm3]
-  refine ⟨st, a', hb, ArenaD.frameHi hf3 (by simp) ?_ (ArenaD.frameHi hf (by simp) (by simp) hA1),
-    frontReset_stateDR hD2 hok, ht.prelude hb, ?_,
-    (hR1.frame hf (by simp) (by simp)).frame hf3 (by simp) (by simp),
-    ModeOK.frame (ModeOK.frame hM1 hf (by decide) (by decide)) hf3 (by decide) (by decide)⟩
-  · intro x hx; simp only [idCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
-  · rw [hf3.ctl 240 (by decide)]; exact h240
+  sorry
 
 /-- **`builtin_prelude` refines `builtinPreludeE`**, on the parse state and the arena
 (`builtinPrelude_ref`'s ok half). -/

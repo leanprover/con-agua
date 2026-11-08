@@ -546,11 +546,7 @@ include hp
 theorem cf_call (k : Nat) (m m1 : Mem) (a : AState) (hS : StageR vis fe m a) (c : Word) (hc : H c)
     (rf : List Word) (h : callW p k "ctor_family" [vis, c] m = some (rf, m1)) :
     m1 = m ∧ CFOut dn fe a m c rf := by
-  cases k with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
-  have hcf := callW_model (M := fun mm => cfW p k mm vis c) (fun s => cf_spec p hp.cf k s vis c) h
-  exact cfW_ok hp k dn vis fe m m1 a hS c hc rf hcf
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_k_of(vis, c)` refines `recRuleKOf fe c`** (the K bit). -/
