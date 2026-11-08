@@ -165,8 +165,7 @@ hand proofs are not rewritten, and `HashMap`/`Nat`, `Pins*` and `Ind*` are out
 of its scope.
 
 The two sets `Refine/SimpSets.lean` registers are populated here with the
-plumbing above; later files add their own (`ExprOps.binder_meta_eq`,
-`BasisTables`'s `expr_dup_eq`). -/
+plumbing above; later files add their own (`ExprOps.binder_meta_eq`). -/
 
 attribute [rust_reduce, rust_invert] arc_deref_eq bind_ok lift_eq ptr_new_eq
   ptr_clone_eq name_dup_eq level_dup_eq name.NameNode.hash._simpLemma_
@@ -574,10 +573,7 @@ and the node layer of the port's three-type mutual inductive. -/
 /-! ## The environment records (task #46)
 
 `kernel::env`'s seven stored-constant records, its two little enums and the
-environment itself.  These came here from `ConRon/Refine/BasisTables.lean`'s
-temporary `T22` namespace (task #22 wrote them there because `Abs.lean` had
-nothing above `Expr` yet, and said so in a note); the `T22` namespace is gone
-and this is the one copy.
+environment itself.
 
 None of them carries derived data, so none needs a smart constructor: a
 record's abstraction is its fields' abstractions, and its well-formedness
@@ -603,16 +599,14 @@ def absHint : env.ReducibilityHint → ConLeche.ReducibilityHint
 def absFire : env.RecRuleFire → ConLeche.RecRuleFire
   | .Plain => .plain
   | .Nested us es => .nested (absLevels us) (absExprs es)
+  | .Levels us => .levels (absLevels us)
 
 /-- `ConLeche/Kernel/Env.lean:259` — `RecRule`. -/
 def absRecRule (r : env.RecRule) : ConLeche.RecRule where
   ctor := absName r.ctor
   nfields := r.nfields.val
-  ctorParams := r.ctor_params.val
   fire := absFire r.fire
   rhs := absExpr r.rhs
-  k := r.k
-  eta := r.eta
 
 /-- `ConLeche/Kernel/Env.lean:362` — `IndCaps`. -/
 def absIndCaps (c : env.IndCaps) : ConLeche.IndCaps where
@@ -622,10 +616,9 @@ def absIndCaps (c : env.IndCaps) : ConLeche.IndCaps where
   etaFields := c.eta_fields.val
   unitlike := c.unitlike
   unitParams := c.unit_params.val
-  ruleK := c.rule_k
-  sortZ := absPropWhen c.sort_z
   all := absNames c.all
   nparams := c.nparams.val
+  nIdx := c.n_idx.val
   ctors := absNames c.ctors
 
 /-- `ConLeche/Kernel/Env.lean:471` — `ConstantInfo`. -/
@@ -635,8 +628,8 @@ def absConstantInfo : env.ConstantInfo → ConLeche.ConstantInfo
   | .ThmInfo cv => .thmInfo (absConstantVal cv)
   | .IndInfo cv c => .indInfo (absConstantVal cv) (absIndCaps c)
   | .CtorInfo cv np nf => .ctorInfo (absConstantVal cv) np.val nf.val
-  | .RecInfo cv mi rp rs =>
-    .recInfo (absConstantVal cv) mi.val rp.val (rs.val.map absRecRule)
+  | .RecInfo cv mi rp k rs =>
+    .recInfo (absConstantVal cv) mi.val rp.val k (rs.val.map absRecRule)
 
 /-- A `Vec<ConstantInfo>` as a `List ConLeche.ConstantInfo`.  Also the reading
 of `Env.consts`' `Vec<P<ConstantInfo>>`: `P` is the identity in the model. -/
@@ -648,8 +641,6 @@ def absConstantInfos (cs : alloc.vec.Vec env.ConstantInfo) :
 def absMode : env.CheckMode → ConLeche.CheckMode
   | .Verified => .verified
   | .Trusted => .trusted
-  | .VerifiedEager => .verifiedEager
-  | .TrustedEager => .trustedEager
 
 /-- `ConLeche/Kernel/Env.lean:352` — `BasisKind`. -/
 def absBasisKind : env.BasisKind → ConLeche.BasisKind
@@ -668,11 +659,9 @@ def absQuotKind : env.QuotKind → ConLeche.QuotKind
   | .Ind => .ind
   | .Sound => .sound
 
-/- These are deliberately **not** in the plumbing `simp` set: task #22's
-`BasisTables.lean` drives its 192-node `step*` proof with `simp only
-[absBasisKind]` and friends at the end, and a global `simp` attribute makes
-those calls no-ops ("`simp` made no progress").  Each client unfolds the one it
-needs by name. -/
+/- These are deliberately **not** in the plumbing `simp` set: a global `simp`
+attribute makes a client's `simp only [absBasisKind]` a no-op ("`simp` made no
+progress").  Each client unfolds the one it needs by name. -/
 
 /-! ## Well-formedness of the environment records (task #46)
 
@@ -695,19 +684,20 @@ def ConstantValWF (cv : env.ConstantVal) : Prop :=
 def RecRuleFireWF : env.RecRuleFire → Prop
   | .Plain => True
   | .Nested us es => LevelsWF us ∧ ExprsWF es
+  | .Levels us => LevelsWF us
 
 /-- `RecRule`: the constructor name, the firing mode and the right-hand side
-(the five counters and bits are machine words). -/
+(the field count is a machine word). -/
 def RecRuleWF (r : env.RecRule) : Prop :=
   NameWF r.ctor ∧ RecRuleFireWF r.fire ∧ ExprWF r.rhs
 
 /-- A `Vec<RecRule>` all of whose entries are well formed. -/
 def RecRulesWF (rs : alloc.vec.Vec env.RecRule) : Prop := ∀ r ∈ rs.val, RecRuleWF r
 
-/-- `IndCaps`: the η constructor's name, the result-sort zero-ness datum, and
-the block's member and constructor names. -/
+/-- `IndCaps`: the η constructor's name, and the block's member and constructor
+names. -/
 def IndCapsWF (c : env.IndCaps) : Prop :=
-  NameWF c.eta_ctor ∧ PropWhenWF c.sort_z ∧ NamesWF c.all ∧ NamesWF c.ctors
+  NameWF c.eta_ctor ∧ NamesWF c.all ∧ NamesWF c.ctors
 
 /-- `ConstantInfo`: the hereditary invariant of a stored constant, one clause
 per constructor in the cited field order. -/
@@ -717,7 +707,7 @@ def ConstantInfoWF : env.ConstantInfo → Prop
   | .ThmInfo cv => ConstantValWF cv
   | .IndInfo cv c => ConstantValWF cv ∧ IndCapsWF c
   | .CtorInfo cv _ _ => ConstantValWF cv
-  | .RecInfo cv _ _ rs => ConstantValWF cv ∧ RecRulesWF rs
+  | .RecInfo cv _ _ _ rs => ConstantValWF cv ∧ RecRulesWF rs
 
 /-- A `Vec<ConstantInfo>` — or a `Vec<P<ConstantInfo>>`, the same type in the
 model — all of whose entries are well formed. -/

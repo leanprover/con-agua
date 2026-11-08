@@ -45,7 +45,7 @@ open ConLeche
 
 /-! ## The error -/
 
-/-- con-leche: ConLeche/Kernel/Core.lean:50-69 CheckError — the checker's
+/-- con-leche: ConLeche/Kernel/Error.lean:15-34 CheckError — the checker's
 error, verbatim (census class (P)), plus the fourth constructor the arena
 needs: DESIGN §8.3's handle word runs out at 2^30 `app` or 2^26 other nodes per constructor per
 tier and the checker `throw`s `native` there, exactly as the Rust port's
@@ -135,7 +135,7 @@ structure AState where
   pins : Pins
 
 /-- con-leche: ConLeche/Cached/StateC.lean:157-159 CheckCM
-con-leche: ConLeche/Kernel/Core.lean:77 CheckM
+con-leche: ConLeche/Kernel/Error.lean:42 CheckM
 The one monad of (B)
 (DESIGN §8.4: "`AM := StateT AState (Except CheckError)` and nothing
 else"). -/
@@ -144,7 +144,7 @@ abbrev AM := StateT AState (Except CheckError)
 /-- con-leche: none — the initial state over a given arena. -/
 def AState.init (st : EStore) : AState := ⟨st, .empty, .empty, .empty⟩
 
-/-- con-leche: ConLeche/Kernel/Core.lean:50-69 CheckError — **the one failure
+/-- con-leche: ConLeche/Kernel/Error.lean:15-34 CheckError — **the one failure
 primitive of (B)**.  Every failure site goes through this `def`, so the
 Rust has one function to match (`arena::monad::fail`) and Theorem 2 one
 `@[lockstep]` lemma (`Refine2/Tactic/Prims.lean`'s `fail_spec`) for all of
@@ -616,84 +616,6 @@ def readLevelsM (h : LsIdx) : AM (List Level) := do
       let s := { s with caches := { s.caches with readLsC := ∅ } }
       set { s with caches := { s.caches with readLsC := mp.insert h us } }
       pure us
-
-/-! ## Interning into the PERSISTENT tier (the promotion's primitives)
-
-DESIGN §8.3, "Phase A runs in the scratch tier too, with promotion".  Four
-monadic twins of `internE` / `internNNode` / `internLNode` / `internLsNode`
-that append to the PERSISTENT tier whatever tier the store is in, over
-`Arena/Store.lean`'s `internPersistent` family.  The capacity test is the same
-one at the same place, against the persistent array; the error is the same
-`Native` kind.  `Arena/Promote.lean` is the only caller.
--/
-
-/-- con-leche: none — arena infrastructure; hash-cons an expression node into
-the persistent tier.
-
-**In the Rust's order** (task #97-T2-LOCKSTEP, audit D3): the node probe at
-the persistent tier; then the NODE array's test, on the node miss only (task
-#97-P5-1's finding 9); then the append. -/
-def internPersistentE (v : ENodeView) : AM EIdx := do
-  let s ← get
-  match s.store.pers.find? v with
-  | some h => pure h
-  | none =>
-    if s.store.pers.sizeOf v < v.cap then
-      let st := s.store
-      let s := { s with store := EStore.empty }
-      let (st, h) := st.internPersistent v
-      set { s with store := st }
-      pure h
-    else
-      fail (.native "arena: expression constructor array full")
-
-/-- con-leche: none — arena infrastructure; hash-cons a name node into the
-persistent tier, through the nesting. -/
-def internPersistentN (v : NNodeView) : AM NIdx := do
-  let s ← get
-  match s.store.ns.pers.find? v with
-  | some h => pure h
-  | none =>
-  if s.store.ns.pers.sizeOf v < Idx.idxCap then
-    let st := s.store
-    let s := { s with store := EStore.empty }
-    let (st, h) := st.internNamePersistent v
-    set { s with store := st }
-    pure h
-  else
-    fail (.native "arena: name constructor array full")
-
-/-- con-leche: none — arena infrastructure; hash-cons a level node into the
-persistent tier, through the nesting. -/
-def internPersistentL (v : LNodeView) : AM LIdx := do
-  let s ← get
-  match s.store.ls.pers.find? v with
-  | some h => pure h
-  | none =>
-  if s.store.ls.pers.sizeOf v < Idx.idxCap then
-    let st := s.store
-    let s := { s with store := EStore.empty }
-    let (st, h) := st.internLevelPersistent v
-    set { s with store := st }
-    pure h
-  else
-    fail (.native "arena: level constructor array full")
-
-/-- con-leche: none — arena infrastructure; hash-cons a universe-argument list
-into the persistent tier, through the nesting. -/
-def internPersistentLs (v : LsNodeView) : AM LsIdx := do
-  let s ← get
-  match s.store.lss.pers.find? v with
-  | some h => pure h
-  | none =>
-  if s.store.lss.pers.sizeOf v < Idx.idxCap then
-    let st := s.store
-    let s := { s with store := EStore.empty }
-    let (st, h) := st.internLevelsPersistent v
-    set { s with store := st }
-    pure h
-  else
-    fail (.native "arena: level-list array full")
 
 /-! ## The memo tables, one probe/record/drop triple per walk
 

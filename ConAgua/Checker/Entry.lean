@@ -110,7 +110,7 @@ entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check
 
 /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
 `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
--- con-ron: ConRon/Arena/Main.lean:135-167 ConRon.Arena.runPipelineHead
+-- con-ron: ConRon/Arena/Main.lean:137-169 ConRon.Arena.runPipelineHead
 @[no_expose] def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
   z := call cap_check();
   z := call pb_check();
@@ -130,8 +130,10 @@ entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check
 /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
 pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
 B's loop (`check_pending_go`); returns `ACCEPT`. -/
--- con-ron: ConRon/Arena/Phased.lean:33-40 ConRon.Arena.AState.worker
--- con-ron: ConRon/Arena/Pooled.lean:34-47 ConRon.Arena.PooledAccepts
+-- con-ron: ConRon/Arena/Checker.lean:64-71 ConRon.Arena.AState.worker
+-- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.PooledAccepts`, `ConRon.Arena.buildIndex`, `ConRon.Arena.checkJobList` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Pooled.lean:33-45 ConRon.Arena.PooledAccepts
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.PooledAccepts` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
     n := len(CTLF.u64);
@@ -190,7 +192,9 @@ Lane `induct`'s callers pass the walk fuel first (`abstract1_fast(fuel, e, d, k)
 record's name is its word `1`, `decCI`) decides by `canon_eq_list` (over `IW` slices: the block is
 copied there, `er_to_iw`); no such kind is `(0, 0)`. -/
 -- con-ron: ConRon/Arena/Basis.lean:58-74 ConRon.Arena.basisPinHitGo
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.basisPinHitGo` is gone upstream; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Basis.lean:76-84 ConRon.Arena.basisPinHit
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.basisPinHit` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.basisPinHit]
 def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
   k := 0;
@@ -217,7 +221,7 @@ def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
 constant records (`decCI`: an `indInfo` is `3, name, lps.off, lps.len, type, …`, a `ctorInfo`
 `4, name, lps.off, lps.len, type, nP, nF`): a type former's telescope to a sort has at least `nP`
 binders (no such telescope: fine), a constructor declares exactly `nP` parameters. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:330-343 ConRon.Arena.indParamsOk
+-- con-ron: ConRon/Arena/CheckerBase.lean:291-304 ConRon.Arena.indParamsOk
 @[no_expose, l_impl ConRon.Arena.indParamsOk]
 def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;

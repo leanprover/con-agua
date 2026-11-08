@@ -23,6 +23,7 @@ section pins
 open ConLeche ConRon.Bridge
 
 /-- con-ron: ConRon/Bridge/Checker/Pins.lean:625-746 ConRon.Bridge.internAllPins_run — the same walk, for the conjunct
+-- con-ron: CHANGED since 97eead2d — `ConRon.Bridge.internAllPins_run` is gone upstream; re-check the L code and its proofs, then delete this line
 that lemma does not export: `internAllPins` leaves the pin table (it builds the pin SETS, its
 result). -/
 theorem internAllPins_pins {ps : List NatOpPinSet} {r : List INatOpPinSet}

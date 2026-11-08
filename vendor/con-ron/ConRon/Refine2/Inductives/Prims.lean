@@ -94,34 +94,9 @@ namespace IndPrims
 
 end IndPrims
 
--- A checker-tier statement at a split counter reads `lf.restrictTo (absU vis)`;
--- where the counter is the environment's own (`hvis`), that IS `lf`.
-macro_rules
-  | `(tactic| lockstep_side_ext) =>
-    `(tactic| (apply IFEnv.restrictTo_of_eq; assumption))
-
-
-/-! ## The recursor rule's two install bits (`core::rec_rule_bits`)
-
-Moved down from `PrimsModeled.lean` (coordinator's ruling, task #97-T2-LOCKSTEP
-lane Inductives Install), names kept: the sum route's `sum_rules` needs them
-too.  The record-field equations are registered locally: `Shape`'s
-`absIRecRule_{ctor,nfields,rhs}_eq`, `Core/LS/Iota`'s `absIRecRule_{fire,k,eta}` and
-`absIIndCaps_{eta,etaCtor}`, and the ones only this tier needs in `IndModeledPrims`. -/
+/-! ## Two record-field readings this tier needs (`IndModeledPrims`) -/
 
 namespace IndModeledPrims
-
-theorem absIRecRule_ctorParams (r : arena.env.IRecRule) :
-    (absIRecRule r).ctorParams = absU r.ctor_params := rfl
-
-theorem absIIndCaps_ruleK (c : arena.env.IIndCaps) : (absIIndCaps c).ruleK = c.rule_k := rfl
-
-/-- `decide (x = 0)` at a `u64` is the twin's `(x : Nat) == 0`. -/
-theorem decide_u64_eq_zero (x : Std.U64) : decide (x = 0#u64) = (x.val == 0) := by
-  by_cases h : x = 0#u64
-  · subst h; rfl
-  · have : x.val ≠ 0 := fun hc => h (by scalar_tac)
-    simp [h, this]
 
 end IndModeledPrims
 
@@ -135,5 +110,28 @@ open Lockstep in
     intro v; simp [absEIdxLFrom, absEIdxL]
   rw [e, e]
   cases h' : decide (absEIdxL a = absEIdxL b) <;> simp_all
+
+/-! ## The core tier's readers, in this tier's list spelling
+
+`Core/LS/ProjGuard.lean` states the telescope openers over `absEIdxList` and the
+counter's value; this tier's statements spell the lists `absEIdxL` and the
+counter `absU`, the same terms. -/
+
+namespace IndCore
+
+open Lockstep
+
+/-- `former_def_headed` ⊑ `formerDefHeaded`: a former whose type does not show its
+telescope. -/
+@[lockstep] theorem ind_former_def_headed_ls {pers st lst} {cv : arena.env.IConstantVal}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st) :
+    LSR pers (fun a b => b = a)
+      (arena.core.former_def_headed pers st cv) st lst
+      (formerDefHeaded (absIConstantVal cv)) := by
+  apply LSR.of_LS
+  rw [arena.core.former_def_headed, formerDefHeaded]
+  lockstep
+
+end IndCore
 
 end ConRon.Refine2

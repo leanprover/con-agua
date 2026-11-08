@@ -46,9 +46,12 @@ def runLoop : Stmt := lblk (i, ok, nx, ln) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:565-578 ConRon.Arena.Frontend.parseBytes -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:524-553 ConRon.Arena.Frontend.feedChunk
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:510-522 ConRon.Arena.Frontend.applyFinalLine
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:561-574 ConRon.Arena.Frontend.parseBytes -/
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.parseBytes` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:520-549 ConRon.Arena.Frontend.feedChunk
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.feedChunk` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:506-518 ConRon.Arena.Frontend.applyFinalLine
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.applyFinalLine` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.parseBytes ConRon.Arena.Frontend.feedChunk
   ConRon.Arena.Frontend.applyFinalLine]
 def frontRun : FunDecl := lfn () locals (i, ok, nx, ln) {

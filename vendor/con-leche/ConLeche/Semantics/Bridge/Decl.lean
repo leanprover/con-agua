@@ -1,7 +1,6 @@
 module
 
 public import ConLeche.Semantics.Decl
-public import ConLeche.Kernel.CheckDecl
 public import ConLeche.Verify.Extend.Inversions
 import ConLeche.Kernel.Checker
 
@@ -32,10 +31,10 @@ literal tier): the verdict is one `isDefEqCore` success per equation,
 and the recorded form is the checker's literal call —
 `fueledOps_isDefEq` at fuel `F`, depth `2`.  The P tier's
 `NatOps` establishment consumes these through `DefEqClaim`. -/
-theorem natEqsRun_of_certs {μ : CheckMode} {F : Nat} {env : Env} :
+theorem natEqsRun_of_certs {F : Nat} {env : Env} :
     ∀ (eqs : List (Expr × Expr)),
-      certifyNatEqs (m := CheckM) (fueledOps μ F) env eqs = .ok true →
-      NatEqsRun μ F env eqs := by
+      certifyNatEqs (m := CheckM) (fueledOps .verified F) env eqs = .ok true →
+      NatEqsRun F env eqs := by
   intro eqs
   induction eqs with
   | nil => intro _ eq heq; exact nomatch heq
@@ -43,7 +42,7 @@ theorem natEqsRun_of_certs {μ : CheckMode} {F : Nat} {env : Env} :
     intro h eq heq
     simp only [certifyNatEqs, fueledOps_isDefEq, Bind.bind,
       Except.bind] at h
-    cases hx : isDefEqCore μ env F 2 e.1 e.2 with
+    cases hx : isDefEqCore .verified false env F 2 e.1 e.2 with
     | error err => rw [hx] at h; exact nomatch h
     | ok b =>
       cases b with
@@ -58,9 +57,9 @@ theorem natEqsRun_of_certs {μ : CheckMode} {F : Nat} {env : Env} :
         · exact hx
         · exact ih h eq heq'
 
-/-! ## `basisDecl`
+/-! ## A pinned block and a quotient record
 
-The simplest branch: a guard on the pinned `Eq` former, then a fold of
+The simplest branches: the comparison with the pin, then a fold of
 duplicate checks.  `BasisInstallRun` records exactly the fold's output —
 each constant fresh, then consed — so the inversion is one induction
 over `installBasisDecl_inv`. -/
@@ -84,28 +83,31 @@ theorem foldlM_installBasisDecl_invR :
       exact ⟨Option.isNone_iff_eq_none.mpr hfresh,
         foldlM_installBasisDecl_invR l h⟩
 
-/-- **The pinned-block install, bridged.**  Stated over
-`checkBasisDecl` and not over `checkDecl`'s `.basisDecl` arm, because
-since task #293 three arms share that body: the fold's own
-`basisDecl` kind, a stream block `basisPinHit` recognises, and the
-first quotient record `quotPinHit` recognises. -/
-theorem declBasisRunOf {env env₂ : Env} {kind : BasisKind}
-    (h : checkBasisDecl (m := CheckM) env kind = .ok env₂) :
-    DeclBasisRun env kind env₂ := by
-  simp only [checkBasisDecl, Bind.bind, Except.bind] at h
-  by_cases hk : kind = .quotK
-  · subst hk
-    by_cases hEq : env.find? eqName = some eqA
-    · simp only [hEq, ite_true] at h
-      exact ⟨fun _ => hEq, foldlM_installBasisDecl_invR _ h⟩
-    · simp [hEq] at h
-  · simp only [ite_eq_right hk] at h
-    exact ⟨fun hh => absurd hh hk, foldlM_installBasisDecl_invR _ h⟩
+/-- **A pinned block's check and install, bridged.** -/
+theorem declBasisRunOf {env env₂ : Env} {kind : BasisKind} {block : List ConstantInfo}
+    (h : checkBasisBlock (m := CheckM) env kind block = .ok env₂) :
+    DeclBasisRun env kind block env₂ := by
+  unfold checkBasisBlock at h
+  by_cases hok : pinListOk block kind.decls = true
+  · rw [ite_eq_left hok] at h
+    exact ⟨hok, foldlM_installBasisDecl_invR _ h⟩
+  · rw [ite_eq_right hok] at h
+    exact nomatch h
 
-/-- **`basisDecl`, bridged.** -/
-theorem declBasisRun {μ : CheckMode} {F : Nat} {env env₂ : Env}
-    {kind : BasisKind}
-    (h : checkDecl μ (fueledOps μ F) pins env (.basisDecl kind) = .ok env₂) :
-    DeclBasisRun env kind env₂ := declBasisRunOf h
+/-- **A quotient record's check and install, bridged.** -/
+theorem declQuotRunOf {env env₂ : Env} {k : QuotKind} {cv : ConstantVal}
+    (h : checkQuotRecord (m := CheckM) env k cv = .ok env₂) :
+    DeclQuotRun env k cv env₂ := by
+  unfold checkQuotRecord at h
+  by_cases h1 : quotPinHit k cv = true
+  · rw [ite_eq_left h1] at h
+    by_cases h2 : quotPredsOk env.find? k = true
+    · rw [ite_eq_left h2] at h
+      obtain ⟨hfresh, rfl⟩ := installBasisDecl_inv h
+      exact ⟨h1, h2, Option.isNone_iff_eq_none.mpr hfresh, rfl⟩
+    · rw [ite_eq_right h2] at h
+      exact nomatch h
+  · rw [ite_eq_right h1] at h
+    exact nomatch h
 
 end ConLeche.Semantics

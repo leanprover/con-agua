@@ -355,10 +355,15 @@ apart: a refinement lemma's hypothesis is the pair, and its conclusion
 re-establishes the pair, but the two say different things and are proved by
 different lemmas. -/
 
-structure TblInv {A I D : Type} [DecidableEq A] (hA : ron.hashmap.Hashable A)
+structure TblInv {A I D : Type} [DecidableEq A] [hCH : arena.cons_map.ConsHandle I]
+    (hA : ron.hashmap.Hashable A)
     (P : A → Prop) (rt : arena.store.Tbl A I D) : Prop where
-  inv : Inv hA rt.cons
-  keys : KeysOk P rt.cons
+  inv : Inv hA (consView rt)
+  keys : KeysOk P (consView rt)
+  /-- What the view of the key-free table cannot see (`Refine/ConsMap.lean`'s
+  `KInv`): no stamp above the epoch, and every live slot names a row whose
+  key's fragment is the slot's. -/
+  kinv : ConRon.Refine.ConsMap.KInv hA hCH rt.rows rt.cons
   /-- **Every record in the NODE column is well formed too** (task #97-P5-2).
   `keys` says it of the cons table; this says it of the array, and the two
   are separate because `Tbl.node` reads the array and not the table.  (It was
@@ -460,46 +465,6 @@ structure StoreInv (pers : arena.store.PersTier) (rs : arena.store.EStore) :
   perst : ETablesInv (rPersE pers rs)
   scrt : ETablesInv rs.scr
   frz : pers.frozen = true → rs.scratch_on = true
-
-/-! ### The relation and the invariant at another tier with the same tables
-
-A promotion grows ONE table of the tier (task #98-FREEZE); the stores that
-read the other three are related, and well formed, exactly as before. -/
-
-theorem NStoreRel.tier_congr {p p' : arena.store.PersTier} {rs ls}
-    (h : NStoreRel p rs ls) (hf : p'.frozen = p.frozen) (hn : p'.n = p.n) :
-    NStoreRel p' rs ls :=
-  ⟨by unfold rPersN; rw [hf, hn]; exact h.perst, h.scrt, h.scratchOn⟩
-
-theorem LStoreRel.tier_congr {p p' : arena.store.PersTier} {rs ls}
-    (h : LStoreRel p rs ls) (hf : p'.frozen = p.frozen) (hn : p'.n = p.n)
-    (hl : p'.l = p.l) : LStoreRel p' rs ls :=
-  ⟨h.ns.tier_congr hf hn, by unfold rPersL; rw [hf, hl]; exact h.perst, h.scrt,
-    h.scratchOn⟩
-
-theorem LsStoreRel.tier_congr {p p' : arena.store.PersTier} {rs ls}
-    (h : LsStoreRel p rs ls) (hf : p'.frozen = p.frozen) (hn : p'.n = p.n)
-    (hl : p'.l = p.l) (hls : p'.ls = p.ls) : LsStoreRel p' rs ls :=
-  ⟨h.lvl.tier_congr hf hn hl, by unfold rPersLs; rw [hf, hls]; exact h.perst, h.scrt,
-    h.scratchOn⟩
-
-
-theorem NStoreInv.tier_congr {p p' : arena.store.PersTier} {rs}
-    (h : NStoreInv p rs) (hf : p'.frozen = p.frozen) (hn : p'.n = p.n) :
-    NStoreInv p' rs :=
-  ⟨by unfold rPersN; rw [hf, hn]; exact h.perst, h.scrt, by rw [hf]; exact h.frz⟩
-
-theorem LStoreInv.tier_congr {p p' : arena.store.PersTier} {rs}
-    (h : LStoreInv p rs) (hf : p'.frozen = p.frozen) (hn : p'.n = p.n)
-    (hl : p'.l = p.l) : LStoreInv p' rs :=
-  ⟨h.ns.tier_congr hf hn, by unfold rPersL; rw [hf, hl]; exact h.perst, h.scrt,
-    by rw [hf]; exact h.frz⟩
-
-theorem LsStoreInv.tier_congr {p p' : arena.store.PersTier} {rs}
-    (h : LsStoreInv p rs) (hf : p'.frozen = p.frozen) (hn : p'.n = p.n)
-    (hl : p'.l = p.l) (hls : p'.ls = p.ls) : LsStoreInv p' rs :=
-  ⟨h.lvl.tier_congr hf hn hl, by unfold rPersLs; rw [hf, hls]; exact h.perst, h.scrt,
-    by rw [hf]; exact h.frz⟩
 
 set_option hygiene false in
 /-- **The `frz` field of a rebuilt store invariant** (task #98-FREEZE): a

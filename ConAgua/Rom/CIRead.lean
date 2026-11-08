@@ -44,7 +44,7 @@ needs room above `CTL[131]`; nothing else holds the stack between two ROM reads)
 }
 
 /-- `rci_names_to(q, o, k)`: `k` names to `EREC[o ‥]`; the position after. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:274-280 ConRon.Arena.Frontend.internNameList
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:271-277 ConRon.Arena.Frontend.internNameList
 @[no_expose] def rciNamesTo : FunDecl := lfn (q, o, k) locals (h, r) {
   if k == 0 { return q };
   (h, q) := call rom_name(q);
@@ -55,7 +55,7 @@ needs room above `CTL[131]`; nothing else holds the stack between two ROM reads)
 
 /-- `rci_name_sl(q, d)`: a name list (count, names) as an `EREC` slice, its offset and length to
 `EREC[d]`, `EREC[d + 1]`; the position after. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:274-280 ConRon.Arena.Frontend.internNameList
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:271-277 ConRon.Arena.Frontend.internNameList
 @[no_expose] def rciNameSl : FunDecl := lfn (q, d) locals (c, o) {
   c := call rom_u64(q);
   o := call erec_alloc(c);
@@ -77,7 +77,7 @@ needs room above `CTL[131]`; nothing else holds the stack between two ROM reads)
 
 /-- `rci_cv(q, p)`: a constant value to `EREC[p ‥ p + 3]` (name, level parameters, type) at the
 current memo; the position after. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:282-287 ConRon.Arena.Frontend.internCV
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:279-284 ConRon.Arena.Frontend.internCV
 @[no_expose, l_impl ConRon.Arena.Frontend.internCV]
 def rciCv : FunDecl := lfn (q, p) locals (h) {
   (h, q) := call rom_name(q);
@@ -91,6 +91,7 @@ def rciCv : FunDecl := lfn (q, p) locals (h) {
 /-- `rci_caps(q, c)`: an inductive's capabilities to the 15 words at `c` (`decCaps`); the position
 after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:312-318 ConRon.Arena.Frontend.internCaps
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.internCaps` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.internCaps]
 def rciCaps : FunDecl := lfn (q, c) locals (x, h) {
   x := call rom_u64(q);
@@ -120,7 +121,8 @@ def rciCaps : FunDecl := lfn (q, c) locals (x, h) {
 /-- `rci_rule(q, r)`: a recursor rule to the 11-word record at `r` (`decRule`) at the current
 memo; the position after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:297-302 ConRon.Arena.Frontend.internRule
--- con-ron: ConRon/Arena/Frontend/Readback.lean:289-295 ConRon.Arena.Frontend.internFire
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.internRule` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:286-292 ConRon.Arena.Frontend.internFire
 @[no_expose, l_impl ConRon.Arena.Frontend.internRule ConRon.Arena.Frontend.internFire]
 def rciRule : FunDecl := lfn (q, r) locals (h, x, f, l, o) {
   (h, q) := call rom_name(q);
@@ -172,6 +174,7 @@ def rciRulesTo : FunDecl := lfn (q, o, k) locals (r) {
 pointer and the position after; an unknown kind is refused. Each kind's arm returns (no paths
 merge after it). -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:320-342 ConRon.Arena.Frontend.internCI
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.internCI` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.internCI]
 def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o) {
   k := call rom_u64(q);
@@ -243,7 +246,7 @@ def rciBlock : FunDecl := lfn (s) locals (q, c, o, z) {
 /-! ## The entries -/
 
 /-- `rom_basis_decls(kind)`: the raw basis block of `kind` (`0` eqK … `4` quotK). -/
--- con-ron: ConRon/Arena/Basis.lean:41-44 ConRon.Arena.BasisKind.decls
+-- con-ron: ConRon/Arena/Basis.lean:37-40 ConRon.Arena.BasisKind.decls
 @[no_expose, l_impl ConRon.Arena.BasisKind.decls]
 def romBasisDeclsL : FunDecl := lfn (kind) locals (o, l) {
   if kind >= 5 { abort };
@@ -253,6 +256,7 @@ def romBasisDeclsL : FunDecl := lfn (kind) locals (o, l) {
 
 /-- `rom_basis_decls_a(kind)`: the annotated basis block of `kind`. -/
 -- con-ron: ConRon/Arena/Basis.lean:46-50 ConRon.Arena.BasisKind.declsA
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.BasisKind.declsA` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.BasisKind.declsA]
 def romBasisDeclsAL : FunDecl := lfn (kind) locals (o, l) {
   if kind >= 5 { abort };
@@ -262,7 +266,16 @@ def romBasisDeclsAL : FunDecl := lfn (kind) locals (o, l) {
 
 /-- `rom_ci(id)`: the constant `romCiT id` at a fresh memo, an `EREC` record pointer. -/
 -- con-ron: ConRon/Arena/StdAxioms.lean:87-91 ConRon.Arena.eqA
--- con-ron: ConRon/Arena/StdAxioms.lean:93-95 ConRon.Arena.natA
+-- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.nonemptyIntroA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.nonemptyA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.iffA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.eqA` is gone upstream; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.nonemptyRecA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.natA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.iffRecA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.iffIntroA`, `ConRon.Arena.internCI` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Basis.lean:42-47 ConRon.Arena.natA
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.natA` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/StdAxioms.lean:70-71 ConRon.Arena.iffA
 -- con-ron: ConRon/Arena/StdAxioms.lean:72-73 ConRon.Arena.iffIntroA
 -- con-ron: ConRon/Arena/StdAxioms.lean:74-75 ConRon.Arena.iffRecA
@@ -316,7 +329,7 @@ def romExprPinL : FunDecl := lfn (id) locals (q, z, h) {
 }
 
 /-- `rom_and_pin()`: the pinned `And` block (`andPinDecls`, `internCIList andPin`), an `IW` slice. -/
--- con-ron: ConRon/Arena/Basis.lean:99-103 ConRon.Arena.andPinDecls
+-- con-ron: ConRon/Arena/Basis.lean:260-264 ConRon.Arena.andPinDecls
 @[no_expose, l_impl ConRon.Arena.andPinDecls]
 def romAndPinL : FunDecl := lfn () locals (o, l) {
   (o, l) := call rci_block(30);

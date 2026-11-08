@@ -2,6 +2,7 @@ module
 
 public import ConLeche.Verify.Cached.BinderLoopC
 import ConLeche.Verify.BetaSpine
+public import ConLeche.Verify.ProjGuard
 
 public section
 
@@ -38,7 +39,7 @@ namespace ConLeche.Cached
 open ConLeche.Expr Std.WP
 open scoped Lean.Order
 
-variable {mode : CheckMode}
+variable {mode : CheckMode} {eager : Bool}
 
 section Walks
 
@@ -79,7 +80,7 @@ private theorem iotaRecI_of_arityOk_false {mi : CheckMode} {r : CoreFnsI}
     | some ci =>
       rw [hf] at h
       cases ci with
-      | recInfo cv mI rP rules =>
+      | recInfo cv mI rP isK rules =>
         dsimp only at h ⊢
         rw [ite_eq_right]
         rintro ⟨hlen, hlvl, -⟩
@@ -98,12 +99,12 @@ private theorem iotaArityOk_guard {mi : CheckMode} {r : CoreFnsI}
   · rw [ite_eq_right h, iotaRecI_of_arityOk_false (Bool.not_eq_true _ |>.mp h)]
 
 /-- The projection rule simulates its specification. -/
-theorem reduceProjCoreC_spec (ih : SSimC mode env f) {d : Nat} {sn : Name} {ip : Nat}
-    {i : Expr} {s₀ : CState} (hs : CSOK mode env s₀) (hw : Expr.WScoped d i) :
+theorem reduceProjCoreC_spec (ih : SSimC mode eager env f) {d : Nat} {sn : Name} {ip : Nat}
+    {i : Expr} {s₀ : CState} (hs : CSOK mode eager env s₀) (hw : Expr.WScoped d i) :
     ⦃fun s => s = s₀⦄
-      reduceProjCoreI mode (coreKnotI mode (mkFEnv env) f) (mkFEnv env) d sn ip i
-    ⦃fun o s' => CSOK mode env s' ∧
-      Runs (reduceProjCore mode (fueledFns mode env) env d sn ip i) o ∧ OptWS d o; ⊤⦄ := by
+      reduceProjCoreI mode (coreKnotI mode eager (mkFEnv env) f) (mkFEnv env) d sn ip i
+    ⦃fun o s' => CSOK mode eager env s' ∧
+      Runs (reduceProjCore mode (fueledFns mode eager env) env d sn ip i) o ∧ OptWS d o; ⊤⦄ := by
   sym only [conleche_grind, reduceProjCore, mkFEnv_findProj?, projCertAtF_mkFEnv] =>
     vcgen [reduceProjCoreI, projLitToCtorC_spec ih] <;> finish
 
@@ -135,11 +136,11 @@ grind_pattern [conleche_grind] wscoped_peel =>
 
 /-- The peel loop simulates its pure mirror. -/
 theorem betaPeelC_spec (r : CoreFnsI) {d : Nat} :
-    ∀ {args : List Expr} {t : Expr} {acc : List Expr} {s₀ : CState}, CSOK mode env s₀ →
+    ∀ {args : List Expr} {t : Expr} {acc : List Expr} {s₀ : CState}, CSOK mode eager env s₀ →
       Expr.WScoped d (t.instantiateList acc) → AllWS d args →
       ⦃fun s => s = s₀⦄ betaPeelI r (mkFEnv env) d t acc args
-      ⦃fun v s' => CSOK mode env s' ∧
-          Runs (betaPeelW mode (fueledFns mode env) env d t acc args) v ∧ StepWS d v; ⊤⦄ := by
+      ⦃fun v s' => CSOK mode eager env s' ∧
+          Runs (betaPeelW mode (fueledFns mode eager env) env d t acc args) v ∧ StepWS d v; ⊤⦄ := by
   intro args
   induction args with
   | nil =>
@@ -152,13 +153,13 @@ theorem betaPeelC_spec (r : CoreFnsI) {d : Nat} :
       vcgen [betaPeelI.eq_def, mkAppNM, instListM_spec hs, ihr] <;> finish
 
 /-- The bulk-beta argument loop simulates its pure mirror. -/
-theorem whnfAppC_spec (hμ : mode.verifiedChecks = true) (ih : SSimC mode env f)
+theorem whnfAppC_spec (ih : SSimC .verified eager env f)
     (henv : EnvWF env) {d : Nat} :
-    ∀ {args : List Expr} {v : Expr} {s₀ : CState}, CSOK mode env s₀ →
+    ∀ {args : List Expr} {v : Expr} {s₀ : CState}, CSOK .verified eager env s₀ →
       Expr.WScoped d v → AllWS d args →
-      ⦃fun s => s = s₀⦄ whnfAppI mode (coreKnotI mode (mkFEnv env) f) (mkFEnv env) d v args
-      ⦃fun w s' => CSOK mode env s' ∧
-          Runs (whnfAppW mode (fueledFns mode env) env d v args) w ∧ StepWS d w; ⊤⦄ := by
+      ⦃fun s => s = s₀⦄ whnfAppI .verified (coreKnotI .verified eager (mkFEnv env) f) (mkFEnv env) d v args
+      ⦃fun w s' => CSOK .verified eager env s' ∧
+          Runs (whnfAppW .verified (fueledFns .verified eager env) env d v args) w ∧ StepWS d w; ⊤⦄ := by
   intro args
   induction args with
   | nil =>
@@ -169,42 +170,42 @@ theorem whnfAppC_spec (hμ : mode.verifiedChecks = true) (ih : SSimC mode env f)
     intro _ _ _ _ _
     rw [whnfAppI.eq_def]; simp only [iotaArityOk_guard]
     sym only [conleche_grind, whnfAppW.eq_2, whnfAppW.eq_3] =>
-      vcgen [mkAppNM, iotaRecC_spec hμ ih henv,
-        betaPeelC_spec (coreKnotI mode (mkFEnv env) f), ihr] <;> finish
+      vcgen [mkAppNM, iotaRecC_spec ih henv,
+        betaPeelC_spec (coreKnotI .verified eager (mkFEnv env) f), ihr] <;> finish
 
 /-- One head-normalization step simulates its pure mirror. -/
-theorem whnfCoreStepC_spec (hμ : mode.verifiedChecks = true) (ih : SSimC mode env f)
-    (henv : EnvWF env) {c : Bool} {d : Nat} {i : Expr} {s₀ : CState} (hs : CSOK mode env s₀)
+theorem whnfCoreStepC_spec (ih : SSimC .verified eager env f)
+    (henv : EnvWF env) {c : Bool} {d : Nat} {i : Expr} {s₀ : CState} (hs : CSOK .verified eager env s₀)
     (hw : Expr.WScoped d i) :
     ⦃fun s => s = s₀⦄
-      whnfCoreStepI mode (coreKnotI mode (mkFEnv env) f) (mkFEnv env) c d i
-    ⦃fun v s' => CSOK mode env s' ∧
-      Runs (whnfCoreStepW mode (fueledFns mode env) env c d i) v ∧ StepWS d v; ⊤⦄ := by
+      whnfCoreStepI .verified (coreKnotI .verified eager (mkFEnv env) f) (mkFEnv env) c d i
+    ⦃fun v s' => CSOK .verified eager env s' ∧
+      Runs (whnfCoreStepW .verified (fueledFns .verified eager env) env c d i) v ∧ StepWS d v; ⊤⦄ := by
   sym only [conleche_grind, whnfCoreStepW] =>
     vcgen [whnfCoreStepI, inst1M_spec hs, ih.whnfCore_spec, ih.whnf_spec,
-      reduceProjCoreC_spec ih, whnfAppC_spec hμ ih henv] <;> finish
+      reduceProjCoreC_spec ih, whnfAppC_spec ih henv] <;> finish
 
 /-- The mirror loop's answer is the chained body's
 (`whnfCoreLoop_sound_body`). -/
 theorem Runs.whnfCoreBody_of_loop {c : Bool} {d n : Nat} {e v : Expr}
-    (h : Runs (whnfCoreLoopM mode (fueledFns mode env) env c d n e) v) :
-    Runs (whnfCoreBody mode (fueledFns mode env) env c d e) v := by
+    (h : Runs (whnfCoreLoopM mode (fueledFns mode eager env) env c d n e) v) :
+    Runs (whnfCoreBody mode (fueledFns mode eager env) env c d e) v := by
   obtain ⟨F, hF⟩ := h
   exact whnfCoreLoop_sound_body d e v n F hF
 grind_pattern [conleche_grind] Runs.whnfCoreBody_of_loop =>
-  Runs (whnfCoreLoopM mode (fueledFns mode env) env c d n e) v,
-  whnfCoreBody mode (fueledFns mode env) env c d e
+  Runs (whnfCoreLoopM mode (fueledFns mode eager env) env c d n e) v,
+  whnfCoreBody mode (fueledFns mode eager env) env c d e
 
 /-- The head-normalization *loop* simulates its mirror, by induction on
 the shared step budget (task #106); a step's outcome is the same on
 both sides, and a continuation re-enters the loop (task #342 R2). -/
-theorem whnfCoreLoopC_spec (hμ : mode.verifiedChecks = true) (ih : SSimC mode env f)
+theorem whnfCoreLoopC_spec (ih : SSimC .verified eager env f)
     (henv : EnvWF env) {c : Bool} {d : Nat} (n : Nat) :
-    ∀ {i : Expr} {s₀ : CState}, CSOK mode env s₀ → Expr.WScoped d i →
+    ∀ {i : Expr} {s₀ : CState}, CSOK .verified eager env s₀ → Expr.WScoped d i →
       ⦃fun s => s = s₀⦄
-        whnfCoreLoopI mode (coreKnotI mode (mkFEnv env) f) (mkFEnv env) c d n i
-      ⦃fun v s' => CSOK mode env s' ∧
-        Runs (whnfCoreLoopM mode (fueledFns mode env) env c d n i) v ∧
+        whnfCoreLoopI .verified (coreKnotI .verified eager (mkFEnv env) f) (mkFEnv env) c d n i
+      ⦃fun v s' => CSOK .verified eager env s' ∧
+        Runs (whnfCoreLoopM .verified (fueledFns .verified eager env) env c d n i) v ∧
         Expr.WScoped d v; ⊤⦄ := by
   induction n with
   | zero =>
@@ -213,18 +214,19 @@ theorem whnfCoreLoopC_spec (hμ : mode.verifiedChecks = true) (ih : SSimC mode e
   | succ n ihn =>
     intro i s₀ hs hw
     sym only [conleche_grind, whnfCoreLoopM] =>
-      vcgen [whnfCoreLoopI, whnfCoreStepC_spec hμ ih henv, ihn] <;> finish
+      vcgen [whnfCoreLoopI, whnfCoreStepC_spec ih henv, ihn] <;> finish
 
 /-- The cached head-normalization body simulates the chained
 specification body: the loop run is reproduced by `whnfCoreBody` at
 some knot fuel (`whnfCoreLoop_sound_body`). -/
-theorem whnfCoreBodyC_spec (hμ : mode.verifiedChecks = true) (ih : SSimC mode env f)
+theorem whnfCoreBodyC_spec (ih : SSimC .verified eager env f)
     (henv : EnvWF env) (c : Bool) :
-    BodySpec mode env (whnfCoreBodyI mode (coreKnotI mode (mkFEnv env) f) (mkFEnv env) c)
-      (whnfCoreBody mode (fueledFns mode env) env c) := by
+    BodySpec .verified eager env (whnfCoreBodyI .verified (coreKnotI .verified eager (mkFEnv env) f) (mkFEnv env)
+        c)
+      (whnfCoreBody .verified (fueledFns .verified eager env) env c) := by
   intro s₀ d i hs hw
   sym only [conleche_grind] =>
-    vcgen [whnfCoreBodyI, whnfCoreLoopC_spec hμ ih henv] <;> finish
+    vcgen [whnfCoreBodyI, whnfCoreLoopC_spec ih henv] <;> finish
 
 end Walks
 
@@ -234,11 +236,11 @@ variable {env : Env} {f : Nat}
 
 /-- The reduction loop simulates its specification, by induction on the
 shared step budget (task #106). -/
-theorem whnfLoopC_spec (ih : SSimC mode env f) (henv : EnvWF env) {d : Nat} (n : Nat) :
-    ∀ {i : Expr} {s₀ : CState}, CSOK mode env s₀ → Expr.WScoped d i →
-      ⦃fun s => s = s₀⦄ whnfLoopI (coreKnotI mode (mkFEnv env) f) (mkFEnv env) d n i
-      ⦃fun v s' => CSOK mode env s' ∧
-        Runs (whnfLoop (fueledFns mode env) env d n i) v ∧ Expr.WScoped d v; ⊤⦄ := by
+theorem whnfLoopC_spec (ih : SSimC mode eager env f) (henv : EnvWF env) {d : Nat} (n : Nat) :
+    ∀ {i : Expr} {s₀ : CState}, CSOK mode eager env s₀ → Expr.WScoped d i →
+      ⦃fun s => s = s₀⦄ whnfLoopI (coreKnotI mode eager (mkFEnv env) f) (mkFEnv env) d n i
+      ⦃fun v s' => CSOK mode eager env s' ∧
+        Runs (whnfLoop (fueledFns mode eager env) env d n i) v ∧ Expr.WScoped d v; ⊤⦄ := by
   induction n with
   | zero =>
     intro i s₀ hs hw
@@ -247,11 +249,11 @@ theorem whnfLoopC_spec (ih : SSimC mode env f) (henv : EnvWF env) {d : Nat} (n :
     intro i s₀ hs hw
     sym only [conleche_grind, whnfLoop, whnfStep, unfoldDefinition_WScoped henv] =>
       vcgen [whnfLoopI, whnfStepI, ih.whnfCore_spec, reduceNatC_spec ih,
-        unfoldDefinitionC_spec (mode := mode) (env := env), ihn] <;> finish
+        unfoldDefinitionC_spec (mode := mode) (eager := eager) (env := env), ihn] <;> finish
 
-theorem whnfBodyC_spec (ih : SSimC mode env f) (henv : EnvWF env) :
-    BodySpec mode env (whnfBodyI (coreKnotI mode (mkFEnv env) f) (mkFEnv env))
-      (whnfBody (fueledFns mode env) env) := by
+theorem whnfBodyC_spec (ih : SSimC mode eager env f) (henv : EnvWF env) :
+    BodySpec mode eager env (whnfBodyI (coreKnotI mode eager (mkFEnv env) f) (mkFEnv env))
+      (whnfBody (fueledFns mode eager env) env) := by
   intro s₀ d i hs hw
   sym only [conleche_grind, whnfBody] =>
     vcgen [whnfBodyI, whnfLoopC_spec ih henv] <;> finish
@@ -268,25 +270,25 @@ The io-grade walks run on `CoreFnsI.ioView` of the knot; `vcgen` looks
 specs up at the projection form, so the knot's specs are restated
 there, and the pure views are read through `CoreFns.ioView_*`. -/
 
-theorem SSimC.ioWhnf_spec (ih : SSimC mode env f) {s₀ : CState} {d : Nat} {i : Expr}
-    (hs : CSOK mode env s₀) (hw : Expr.WScoped d i) :
-    ⦃fun s => s = s₀⦄ (CoreFnsI.ioView (coreKnotI mode (mkFEnv env) f)).whnf d i
-    ⦃fun r s' => CSOK mode env s' ∧ Runs ((fueledFns mode env).whnf d i) r ∧
+theorem SSimC.ioWhnf_spec (ih : SSimC mode eager env f) {s₀ : CState} {d : Nat} {i : Expr}
+    (hs : CSOK mode eager env s₀) (hw : Expr.WScoped d i) :
+    ⦃fun s => s = s₀⦄ (CoreFnsI.ioView (coreKnotI mode eager (mkFEnv env) f)).whnf d i
+    ⦃fun r s' => CSOK mode eager env s' ∧ Runs ((fueledFns mode eager env).whnf d i) r ∧
       Expr.WScoped d r; ⊤⦄ :=
   ih.whnf_spec hs hw
 
-theorem SSimC.ioInfer_spec (ih : SSimC mode env f) {s₀ : CState} {d : Nat} {i : Expr}
-    (hs : CSOK mode env s₀) (hw : Expr.WScoped d i) :
-    ⦃fun s => s = s₀⦄ (CoreFnsI.ioView (coreKnotI mode (mkFEnv env) f)).infer d i
-    ⦃fun r s' => CSOK mode env s' ∧ Runs ((fueledFns mode env).inferIO d i) r ∧
+theorem SSimC.ioInfer_spec (ih : SSimC mode eager env f) {s₀ : CState} {d : Nat} {i : Expr}
+    (hs : CSOK mode eager env s₀) (hw : Expr.WScoped d i) :
+    ⦃fun s => s = s₀⦄ (CoreFnsI.ioView (coreKnotI mode eager (mkFEnv env) f)).infer d i
+    ⦃fun r s' => CSOK mode eager env s' ∧ Runs ((fueledFns mode eager env).inferIO d i) r ∧
       Expr.WScoped d r; ⊤⦄ :=
   ih.inferIO_spec hs hw
 
-theorem ensureSortIOC_spec (ih : SSimC mode env f) {d : Nat} {i : Expr} {s₀ : CState}
-    (hs : CSOK mode env s₀) (hw : Expr.WScoped d i) :
-    ⦃fun s => s = s₀⦄ ensureSortI (CoreFnsI.ioView (coreKnotI mode (mkFEnv env) f)) d i
-    ⦃fun v s' => CSOK mode env s' ∧
-      Runs (ensureSort (CoreFns.ioView (fueledFns mode env)) env d i) v; ⊤⦄ :=
+theorem ensureSortIOC_spec (ih : SSimC mode eager env f) {d : Nat} {i : Expr} {s₀ : CState}
+    (hs : CSOK mode eager env s₀) (hw : Expr.WScoped d i) :
+    ⦃fun s => s = s₀⦄ ensureSortI (CoreFnsI.ioView (coreKnotI mode eager (mkFEnv env) f)) d i
+    ⦃fun v s' => CSOK mode eager env s' ∧
+      Runs (ensureSort (CoreFns.ioView (fueledFns mode eager env)) env d i) v; ⊤⦄ :=
   ensureSortC_spec ih hs hw
 
 theorem CoreFns.ioView_whnf {m : Type → Type} (r : CoreFns m) (d : Nat) (e : Expr) :
@@ -301,12 +303,12 @@ As for the argument loop: the cached loops by their `eq_def`, the pure
 mirrors' own equation lemmas in the `sym` list. -/
 
 /-- The application-inference spine loop simulates its pure mirror. -/
-theorem inferSpineC_spec (ih : SSimC mode env f) {d : Nat} :
-    ∀ {args : List Expr} {ty : Expr} {acc : Array Expr} {s₀ : CState}, CSOK mode env s₀ →
+theorem inferSpineC_spec (ih : SSimC mode eager env f) {d : Nat} :
+    ∀ {args : List Expr} {ty : Expr} {acc : Array Expr} {s₀ : CState}, CSOK mode eager env s₀ →
       Expr.WScoped d (ty.instantiateList acc.toList.reverse) → AllWS d args →
-      ⦃fun s => s = s₀⦄ inferSpineI (coreKnotI mode (mkFEnv env) f) (mkFEnv env) d ty acc args
-      ⦃fun v s' => CSOK mode env s' ∧
-        Runs (inferSpine (fueledFns mode env) d ty acc.toList.reverse args) v ∧
+      ⦃fun s => s = s₀⦄ inferSpineI (coreKnotI mode eager (mkFEnv env) f) (mkFEnv env) d ty acc args
+      ⦃fun v s' => CSOK mode eager env s' ∧
+        Runs (inferSpine (fueledFns mode eager env) d ty acc.toList.reverse args) v ∧
         Expr.WScoped d v; ⊤⦄ := by
   intro args
   induction args with
@@ -317,17 +319,19 @@ theorem inferSpineC_spec (ih : SSimC mode env f) {d : Nat} :
   | cons _ rest ihr =>
     intro _ _ _ _ _ _
     sym only [conleche_grind, inferSpine.eq_2, inferSpine.eq_3, toListRev_singleton] =>
-      vcgen [inferSpineI.eq_def, instListRevM_spec (mode := mode) (env := env), ih.infer_spec,
+      vcgen [inferSpineI.eq_def, instListRevM_spec (mode := mode) (eager := eager) (env := env),
+          ih.infer_spec,
         ih.whnf_spec, defeqArgC_spec ih, ihr] <;> finish
 
 /-- The io-grade spine loop simulates its pure mirror. -/
-theorem inferSpineIOC_spec (ih : SSimC mode env f) {d : Nat} :
-    ∀ {args : List Expr} {ty : Expr} {acc : Array Expr} {s₀ : CState}, CSOK mode env s₀ →
+theorem inferSpineIOC_spec (ih : SSimC mode eager env f) {d : Nat} :
+    ∀ {args : List Expr} {ty : Expr} {acc : Array Expr} {s₀ : CState}, CSOK mode eager env s₀ →
       Expr.WScoped d (ty.instantiateList acc.toList.reverse) → AllWS d args →
       ⦃fun s => s = s₀⦄
-        inferSpineIOI (CoreFnsI.ioView (coreKnotI mode (mkFEnv env) f)) (mkFEnv env) d ty acc args
-      ⦃fun v s' => CSOK mode env s' ∧
-        Runs (inferSpineIO (fueledFns mode env) d ty acc.toList.reverse args) v ∧
+        inferSpineIOI (CoreFnsI.ioView (coreKnotI mode eager (mkFEnv env) f)) (mkFEnv env) d ty acc
+            args
+      ⦃fun v s' => CSOK mode eager env s' ∧
+        Runs (inferSpineIO (fueledFns mode eager env) d ty acc.toList.reverse args) v ∧
         Expr.WScoped d v; ⊤⦄ := by
   intro args
   induction args with
@@ -338,7 +342,7 @@ theorem inferSpineIOC_spec (ih : SSimC mode env f) {d : Nat} :
   | cons _ rest ihr =>
     intro _ _ _ _ _ _
     sym only [conleche_grind, inferSpineIO.eq_2, inferSpineIO.eq_3, toListRev_singleton] =>
-      vcgen [inferSpineIOI.eq_def, instListRevM_spec (mode := mode) (env := env),
+      vcgen [inferSpineIOI.eq_def, instListRevM_spec (mode := mode) (eager := eager) (env := env),
         ih.ioWhnf_spec, ihr] <;> finish
 
 /-! ### The inference bodies -/
@@ -366,51 +370,154 @@ theorem wscoped_typeAt (henv : EnvWF env) {T : Name} {i : Nat} {entry : ProjEntr
 /-- The cached spine walk's answer is the chained application clause's
 (`inferSpine_sound_body`). -/
 theorem Runs.inferBody_app {d : Nat} {g a tf v : Expr}
-    (h₁ : Runs ((fueledFns mode env).infer d (Expr.app g a).getAppFn) tf)
-    (h₂ : Runs (inferSpine (fueledFns mode env) d tf [] (Expr.app g a).getAppArgs) v) :
-    Runs (inferBody (fueledFns mode env) env d (.app g a)) v := by
+    (h₁ : Runs ((fueledFns mode eager env).infer d (Expr.app g a).getAppFn) tf)
+    (h₂ : Runs (inferSpine (fueledFns mode eager env) d tf [] (Expr.app g a).getAppArgs) v) :
+    Runs (inferBody (fueledFns mode eager env) env d (.app g a)) v := by
   obtain ⟨F, hF⟩ := Runs.bind (f := fun tf =>
-    inferSpine (fueledFns mode env) d tf [] (Expr.app g a).getAppArgs) h₁ h₂
+    inferSpine (fueledFns mode eager env) d tf [] (Expr.app g a).getAppArgs) h₁ h₂
   exact inferSpine_sound_body d g a v F hF
 grind_pattern [conleche_grind] Runs.inferBody_app =>
-  Runs (inferSpine (fueledFns mode env) d tf [] (Expr.app g a).getAppArgs) v,
-  inferBody (fueledFns mode env) env d (.app g a)
+  Runs (inferSpine (fueledFns mode eager env) d tf [] (Expr.app g a).getAppArgs) v,
+  inferBody (fueledFns mode eager env) env d (.app g a)
 
 /-- The ∀-telescope loop against `inferBody`'s ∀ tail, as a triple. -/
-theorem inferPisC_tail_spec (ih : SSimC mode env f) {d fuel : Nat} {b ty : Expr} {u : Level}
-    {s₀ : CState} (hs : CSOK mode env s₀) (hwty : Expr.WScoped d ty)
+theorem inferPisC_tail_spec (ih : SSimC mode eager env f) {d fuel : Nat} {b ty : Expr} {u : Level}
+    {s₀ : CState} (hs : CSOK mode eager env s₀) (hwty : Expr.WScoped d ty)
     (hwb : Expr.WScoped d b) :
-    ⦃fun s => s = s₀⦄ inferPisI (coreKnotI mode (mkFEnv env) f) d fuel b 1 #[.fvar d ty] [u]
-    ⦃fun r s' => CSOK mode env s' ∧
+    ⦃fun s => s = s₀⦄ inferPisI (coreKnotI mode eager (mkFEnv env) f) d fuel b 1 #[.fvar d ty] [u]
+    ⦃fun r s' => CSOK mode eager env s' ∧
       Runs (do
-        let v ← ensureSort (fueledFns mode env) env (d + 1)
-          (← (fueledFns mode env).infer (d + 1) (b.instantiate1 (.fvar d ty)))
+        let v ← ensureSort (fueledFns mode eager env) env (d + 1)
+          (← (fueledFns mode eager env).infer (d + 1) (b.instantiate1 (.fvar d ty)))
         pure (Expr.sort (.imax u v))) r ∧ Expr.WScoped d r; ⊤⦄ :=
   (inferPisC_tail_sim ih hs rfl rfl rfl hwty hwb).triple relEC_inv
 
 /-- The λ-telescope loop against `inferBody`'s λ tail, as a triple. -/
-theorem inferLamsC_tail_spec (ih : SSimC mode env f) (henv : EnvWF env) {d fuel : Nat}
-    {b ty : Expr} {s₀ : CState} (hs : CSOK mode env s₀) (hwty : Expr.WScoped d ty)
+theorem inferLamsC_tail_spec (ih : SSimC mode eager env f) (henv : EnvWF env) {d fuel : Nat}
+    {b ty : Expr} {s₀ : CState} (hs : CSOK mode eager env s₀) (hwty : Expr.WScoped d ty)
     (hwb : Expr.WScoped d b) :
-    ⦃fun s => s = s₀⦄ inferLamsI (coreKnotI mode (mkFEnv env) f) d fuel b 1 #[.fvar d ty] [ty]
-    ⦃fun r s' => CSOK mode env s' ∧
+    ⦃fun s => s = s₀⦄ inferLamsI (coreKnotI mode eager (mkFEnv env) f) d fuel b 1 #[.fvar d ty] [ty]
+    ⦃fun r s' => CSOK mode eager env s' ∧
       Runs (do
-        let bt ← (fueledFns mode env).infer (d + 1) (b.instantiate1 (.fvar d ty))
+        let bt ← (fueledFns mode eager env).infer (d + 1) (b.instantiate1 (.fvar d ty))
         pure (Expr.forallE ty (bt.abstract1 d))) r ∧ Expr.WScoped d r; ⊤⦄ :=
   (inferLamsC_tail_sim ih henv hs rfl rfl rfl hwty hwb).triple relEC_inv
 
+/-- The rows of a projection's guard simulate their fueled original. -/
+theorem checkGuardRowsC_spec (ih : SSimC mode eager env f) (guardSort : Level) :
+    ∀ {rows : List (Nat × Expr)} {s₀ : CState}, CSOK mode eager env s₀ → GuardRowsWS rows →
+      ⦃fun s => s = s₀⦄ checkGuardRowsI (coreKnotI mode eager (mkFEnv env) f).inferIO
+        (coreKnotI mode eager (mkFEnv env) f).whnf guardSort rows
+      ⦃fun v s' => CSOK mode eager env s' ∧
+        Runs (checkGuardRows (fueledFns mode eager env).inferIO
+          (fueledFns mode eager env).whnf guardSort rows) v; ⊤⦄ := by
+  intro rows
+  induction rows with
+  | nil =>
+    intro _ _ _
+    sym only [conleche_grind, checkGuardRows] =>
+      vcgen [checkGuardRowsI] <;> finish
+  | cons p rest ihr =>
+    obtain ⟨d, dom⟩ := p
+    intro s₀ hs hw
+    have hd := hw.head
+    have hr := hw.tail
+    sym only [conleche_grind, checkGuardRows] =>
+      vcgen [checkGuardRowsI.eq_def, ih.inferIO_spec, ih.whnf_spec, ihr] <;> finish
+
+/-- What a projection's rows lie under simulates its fueled original. -/
+theorem projGuardSortC_spec (ih : SSimC mode eager env f) {cvT : ConstantVal} {caps : IndCaps}
+    {us : List Level} {s₀ : CState} (hcl : cvT.type.hasFvar = false)
+    (hs : CSOK mode eager env s₀) :
+    ⦃fun s => s = s₀⦄ projGuardSortI (coreKnotI mode eager (mkFEnv env) f).whnf cvT caps us
+    ⦃fun v s' => CSOK mode eager env s' ∧
+      Runs (projGuardSort (fueledFns mode eager env).whnf cvT caps us) v; ⊤⦄ := by
+  have hw : Expr.WScoped 0 (cvT.type.instantiateLevelParams cvT.levelParams us) :=
+    Expr.WScoped.of_not_hasFvar (by rw [hasFvar_instantiateLevelParams]; exact hcl)
+  sym only [conleche_grind, projGuardSort] =>
+    vcgen [projGuardSortI, instLevelParamsM, formerSortLoopC_spec ih] <;> finish
+
+/-- The rows at a guardSort simulate their fueled original. -/
+theorem projRowsC_spec (ih : SSimC mode eager env f) (henv : EnvWF env)
+    {entry : ProjEntry} {us : List Level} {guardSort : Level} {s₀ : CState}
+    (hs : CSOK mode eager env s₀) :
+    ⦃fun s => s = s₀⦄ checkProjRowsI (coreKnotI mode eager (mkFEnv env) f).inferIO
+      (coreKnotI mode eager (mkFEnv env) f).whnf (mkFEnv env) entry us guardSort
+    ⦃fun v s' => CSOK mode eager env s' ∧
+      Runs (match projGuardRows env.find? entry us with
+        | some rows => checkGuardRows (fueledFns mode eager env).inferIO
+            (fueledFns mode eager env).whnf guardSort rows
+        | none => throw (.invalid "projection from a propositional structure must be a proposition"))
+        v; ⊤⦄ := by
+  cases hc : env.find? entry.ctor with
+  | none =>
+    have hp : projGuardRows env.find? entry us = none := by
+      simp only [projGuardRows, hc]
+    sym only [conleche_grind, constTyOf, Option.isSome_some, openPisAtFvarsF_eq] =>
+      vcgen [checkProjRowsI, constTyAtM_spec (mode := mode) (eager := eager) (env := env),
+        checkGuardRowsC_spec ih] <;> finish
+  | some ci =>
+    cases ho : openPisAtFvars (entry.numParams + entry.idx + 1)
+        (ci.toConstantVal.type.instantiateLevelParams ci.toConstantVal.levelParams us) 0 with
+    | none =>
+      have hp : projGuardRows env.find? entry us = none := by
+        simp only [projGuardRows, hc, ho]
+      sym only [conleche_grind, constTyOf, Option.isSome_some, openPisAtFvarsF_eq] =>
+        vcgen [checkProjRowsI, constTyAtM_spec (mode := mode) (eager := eager) (env := env),
+          checkGuardRowsC_spec ih] <;> finish
+    | some p =>
+      obtain ⟨fvs, b⟩ := p
+      have hp : projGuardRows env.find? entry us
+          = some (projGuardRowsAt ci.toConstantVal.type entry.numParams entry.idx fvs) := by
+        simp only [projGuardRows, hc, ho]
+      have hws : GuardRowsWS (projGuardRowsAt ci.toConstantVal.type entry.numParams entry.idx fvs) :=
+        projGuardRowsAt_ws ho (Expr.WScoped.of_not_hasFvar (by
+          rw [hasFvar_instantiateLevelParams]; exact (henv.consts _ (Env.find?_mem hc)).1))
+      sym only [conleche_grind, constTyOf, Option.isSome_some, openPisAtFvarsF_eq] =>
+        vcgen [checkProjRowsI, constTyAtM_spec (mode := mode) (eager := eager) (env := env),
+          checkGuardRowsC_spec ih] <;> finish
+
+/-- A projection's guard simulates its fueled original. -/
+theorem checkProjGuardC_spec (ih : SSimC mode eager env f) (henv : EnvWF env)
+    {entry : ProjEntry} {us : List Level} {s₀ : CState} (hs : CSOK mode eager env s₀) :
+    ⦃fun s => s = s₀⦄ checkProjGuardI (coreKnotI mode eager (mkFEnv env) f).inferIO
+      (coreKnotI mode eager (mkFEnv env) f).whnf (mkFEnv env) entry us
+    ⦃fun v s' => CSOK mode eager env s' ∧
+      Runs (checkProjGuard (fueledFns mode eager env).inferIO
+        (fueledFns mode eager env).whnf env entry us) v; ⊤⦄ := by
+  unfold checkProjGuardI checkProjGuard
+  simp only [mkFEnv_find_fun]
+  split
+  · next cvT caps hT =>
+    have hcl : cvT.type.hasFvar = false := (henv.consts _ (Env.find?_mem hT)).1
+    sym only [conleche_grind] =>
+      vcgen [projGuardSortC_spec ih hcl, projRowsC_spec ih henv] <;> finish
+  · sym only [conleche_grind] => vcgen <;> finish
+
+/-- `checkProjGuardC_spec` at the io views the io body runs it at. -/
+theorem checkProjGuardC_specIO (ih : SSimC mode eager env f) (henv : EnvWF env)
+    {entry : ProjEntry} {us : List Level} {s₀ : CState} (hs : CSOK mode eager env s₀) :
+    ⦃fun s => s = s₀⦄ checkProjGuardI (CoreFnsI.ioView (coreKnotI mode eager (mkFEnv env) f)).inferIO
+      (CoreFnsI.ioView (coreKnotI mode eager (mkFEnv env) f)).whnf (mkFEnv env) entry us
+    ⦃fun v s' => CSOK mode eager env s' ∧
+      Runs (checkProjGuard (CoreFns.ioView (fueledFns mode eager env)).infer
+        (CoreFns.ioView (fueledFns mode eager env)).whnf env entry us) v; ⊤⦄ :=
+  checkProjGuardC_spec ih henv hs
+
 /-- The cached inference body simulates the specification body; the
 application clause through the spine walk and `inferSpine_sound_body`. -/
-theorem inferBodyC_spec (ih : SSimC mode env f) (henv : EnvWF env) :
-    BodySpec mode env (inferBodyI (coreKnotI mode (mkFEnv env) f) (mkFEnv env))
-      (inferBody (fueledFns mode env) env) := by
+theorem inferBodyC_spec (ih : SSimC mode eager env f) (henv : EnvWF env) :
+    BodySpec mode eager env (inferBodyI (coreKnotI mode eager (mkFEnv env) f) (mkFEnv env))
+      (inferBody (fueledFns mode eager env) env) := by
   intro s₀ d i hs hw
-  sym only [conleche_grind, inferBody, natLitSupportedF_eq, strLitSupportedF_eq,
+  sym only [conleche_grind, inferBody, natLitStoredF_eq, strLitStoredF_eq,
       mkFEnv_findProj?, constTyOf, ProjEntry.typeAtI_eq,
       toListRev_empty, Option.isSome_some, EnvWF.constTy_closed henv, wscoped_typeAt henv] =>
-    vcgen [inferBodyI, peelFuelM, inst1M_spec (mode := mode) (env := env), ih.infer_spec, ih.whnf_spec, ih.defeq_spec,
-      ensureSortC_spec ih, constTyAtM_spec (mode := mode) (env := env),
-      inferSpineC_spec ih, inferPisC_tail_spec ih, inferLamsC_tail_spec ih henv] <;> finish
+    vcgen [inferBodyI, peelFuelM, inst1M_spec (mode := mode) (eager := eager) (env := env),
+        ih.infer_spec, ih.whnf_spec, ih.defeq_spec,
+      ensureSortC_spec ih, constTyAtM_spec (mode := mode) (eager := eager) (env := env),
+      inferSpineC_spec ih, inferPisC_tail_spec ih, inferLamsC_tail_spec ih henv,
+      checkProjGuardC_spec ih henv] <;> finish
 
 /-- Abstracting away the top variable lowers the scope bound. -/
 theorem wscoped_abstract1 {d : Nat} {e : Expr} (k : Nat) (h : Expr.WScoped (d + 1) e) :
@@ -421,33 +528,35 @@ grind_pattern [conleche_grind] wscoped_abstract1 => Expr.WScoped (d + 1) e, e.ab
 /-- The cached io spine walk's answer is the io application clause's
 (`inferSpineIO_sound_body`). -/
 theorem Runs.inferBodyIO_app {d : Nat} {g a tf v : Expr}
-    (h₁ : Runs ((fueledFns mode env).inferIO d (Expr.app g a).getAppFn) tf)
-    (h₂ : Runs (inferSpineIO (fueledFns mode env) d tf [] (Expr.app g a).getAppArgs) v) :
-    Runs (inferBodyIO (CoreFns.ioView (fueledFns mode env)) env d (.app g a)) v := by
+    (h₁ : Runs ((fueledFns mode eager env).inferIO d (Expr.app g a).getAppFn) tf)
+    (h₂ : Runs (inferSpineIO (fueledFns mode eager env) d tf [] (Expr.app g a).getAppArgs) v) :
+    Runs (inferBodyIO (CoreFns.ioView (fueledFns mode eager env)) env d (.app g a)) v := by
   obtain ⟨F, hF⟩ := Runs.bind (f := fun tf =>
-    inferSpineIO (fueledFns mode env) d tf [] (Expr.app g a).getAppArgs) h₁ h₂
+    inferSpineIO (fueledFns mode eager env) d tf [] (Expr.app g a).getAppArgs) h₁ h₂
   exact inferSpineIO_sound_body d g a v F hF
 grind_pattern [conleche_grind] Runs.inferBodyIO_app =>
-  Runs (inferSpineIO (fueledFns mode env) d tf [] (Expr.app g a).getAppArgs) v,
-  inferBodyIO (CoreFns.ioView (fueledFns mode env)) env d (.app g a)
+  Runs (inferSpineIO (fueledFns mode eager env) d tf [] (Expr.app g a).getAppArgs) v,
+  inferBodyIO (CoreFns.ioView (fueledFns mode eager env)) env d (.app g a)
 
 /-- The io inference body's walk (task #172 B4).  The leaf and `proj`
 arms are `inferBodyI`'s at the io view; the binder and `letE` arms are
 the io lane's own chained clauses; the application arm is the io spine
 walk (`inferSpineIOI`, no argument check) with
 `inferSpineIO_sound_body`. -/
-theorem inferBodyIOC_spec (ih : SSimC mode env f) (henv : EnvWF env) :
-    BodySpec mode env
-      (inferBodyIOI (CoreFnsI.ioView (coreKnotI mode (mkFEnv env) f)) (mkFEnv env))
-      (inferBodyIO (CoreFns.ioView (fueledFns mode env)) env) := by
+theorem inferBodyIOC_spec (ih : SSimC mode eager env f) (henv : EnvWF env) :
+    BodySpec mode eager env
+      (inferBodyIOI (CoreFnsI.ioView (coreKnotI mode eager (mkFEnv env) f)) (mkFEnv env))
+      (inferBodyIO (CoreFns.ioView (fueledFns mode eager env)) env) := by
   intro s₀ d i hs hw
   sym only [conleche_grind, inferBodyIO, CoreFns.ioView_infer, CoreFns.ioView_whnf,
-      natLitSupportedF_eq, strLitSupportedF_eq, mkFEnv_findProj?, constTyOf,
+      natLitStoredF_eq, strLitStoredF_eq, mkFEnv_findProj?, constTyOf,
       ProjEntry.typeAtI_eq, toListRev_empty, Option.isSome_some,
       abstract1C_spec, EnvWF.constTy_closed henv, wscoped_typeAt henv] =>
     vcgen [inferBodyIOI, inferBodyI, abstract1M, ensureSortIOC_spec ih,
-      inst1M_spec (mode := mode) (env := env), ih.ioInfer_spec, ih.ioWhnf_spec,
-      constTyAtM_spec (mode := mode) (env := env), inferSpineIOC_spec ih] <;> finish
+      inst1M_spec (mode := mode) (eager := eager) (env := env), ih.ioInfer_spec, ih.ioWhnf_spec,
+      constTyAtM_spec (mode := mode) (eager := eager) (env := env), inferSpineIOC_spec ih,
+      checkProjGuardC_specIO ih henv] <;>
+          finish
 
 end Walks3
 

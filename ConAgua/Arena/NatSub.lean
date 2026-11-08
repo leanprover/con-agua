@@ -73,7 +73,7 @@ def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
+/-- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult -/
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natSub : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y, pt, pb) {
   top := CTL.u64[0];

@@ -1,9 +1,9 @@
 /-
 # `ConRon.Bridge.Core.Walks.StrLit` — the `String` literal guard
 
-The literal clauses of `inferBody`, `inferBodyIO` and `annotateBody` run
-`natLitSupported` (`Walks/Nat.lean`) and `strLitSupported`
-(`Arena/Core.lean:709`).  This module is the second's spec and the seven state-only walks under it (`stringTyOk`,
+The literal clauses of `inferBody` and `inferBodyIO` run `natLitStored`
+(`Walks/Nat.lean`) and `strLitStored`.  This module is the spec of
+`strLitStored` and of the seven state-only walks (`stringTyOk`,
 `stringOfListTyOk`, `listTyOk`, `listNilTyOk`, `listConsTyOk`, `charTyOk`,
 `charOfNatTyOk`), each an EQUATION with the con-leche function of the same
 name (`ConLeche/Kernel/CoreDefs.lean:301-403`) — `Walks/Nat.lean`'s
@@ -32,7 +32,7 @@ set_option maxHeartbeats 1000000
 open ConLeche ConRon.Arena ConRon.Bridge Std.WP
 open scoped Lean.Order
 
-variable {mode : CheckMode} {env : Env} {fe : IFEnv}
+variable {eager : Bool} {env : Env} {fe : IFEnv}
 
 /-! ## 1. A stored constant's common data -/
 
@@ -56,9 +56,9 @@ attribute [local bridge_grind =] ETag.bvar ETag.fvar ETag.sort ETag.const ETag.a
 
 /-- con-leche: none — `internLNode` at the tier's invariant. -/
 theorem internLNode_okS (s₀ : AState) (w : LNodeView)
-    (hok : CheckOK mode env fe s₀) (hv : s₀.store.ls.ViewOK w) :
+    (hok : CheckOK eager env fe s₀) (hv : s₀.store.ls.ViewOK w) :
     ⦃fun s => s = s₀⦄ internLNode w
-    ⦃fun h s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+    ⦃fun h s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧ s'.store.ls.view h = some w ∧
         denoteL s'.store.ls h = denoteLView s'.store.ls w; ⊤⦄ :=
   triple_mono (internLNode_spec s₀ w hok.state.wf hv)
@@ -96,8 +96,7 @@ term: the environment's answer IS the stored record's denotation, present. -/
     exact ⟨_, (h1.symm.trans h2), h2⟩
 
 grind_pattern [bridge_grind] optCI_find => OptCI s.store (fe.find? n) (env.find? nm),
-  CheckOK mode env fe s
-
+  CheckOK eager env fe s
 
 /-- con-leche: ConLeche/Kernel/Env.lean:502-504 ConstantInfo.toConstantVal —
 **Theorem 1 for `toConstantVal`**, at the two fields the shape guards read
@@ -117,10 +116,10 @@ grind_pattern [bridge_grind] cvFieldsAt => Frontend.denoteCI st ci, ci.toConstan
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:301-307 stringTyOk — **THEOREM 1
 for `stringTyOk`**. -/
 theorem stringTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
-    (oc' : Option ConstantInfo) (hok : CheckOK mode env fe s₀)
+    (oc' : Option ConstantInfo) (hok : CheckOK eager env fe s₀)
     (hrel : OptCI s₀.store oc oc') :
     ⦃fun s => s = s₀⦄ ConRon.Arena.stringTyOk oc
-    ⦃fun b s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+    ⦃fun b s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧ b = ConLeche.stringTyOk oc'; ⊤⦄ := by
   sym only [bridge_grind, ConLeche.stringTyOk] =>
     vcgen [ConRon.Arena.stringTyOk, ConRon.Arena.sortOne] <;> finish
@@ -128,10 +127,10 @@ theorem stringTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:309-315 charTyOk — **THEOREM 1
 for `charTyOk`**. -/
 theorem charTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
-    (oc' : Option ConstantInfo) (hok : CheckOK mode env fe s₀)
+    (oc' : Option ConstantInfo) (hok : CheckOK eager env fe s₀)
     (hrel : OptCI s₀.store oc oc') :
     ⦃fun s => s = s₀⦄ ConRon.Arena.charTyOk oc
-    ⦃fun b s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+    ⦃fun b s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧ b = ConLeche.charTyOk oc'; ⊤⦄ := by
   sym only [bridge_grind, ConLeche.charTyOk] =>
     vcgen [ConRon.Arena.charTyOk, ConRon.Arena.sortOne] <;> finish
@@ -320,9 +319,9 @@ theorem triple_pureS {α : Type} {s₀ : AState} {v : α}
 
 /-- con-leche: none — `internLsNode` at the tier's invariant. -/
 theorem internLsNode_okS (s₀ : AState) (w : LsNodeView)
-    (hok : CheckOK mode env fe s₀) (hv : s₀.store.lss.ViewOK w) :
+    (hok : CheckOK eager env fe s₀) (hv : s₀.store.lss.ViewOK w) :
     ⦃fun s => s = s₀⦄ internLsNode w
-    ⦃fun h s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+    ⦃fun h s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧ s'.store.lss.view h = some w ∧
         denoteLs s'.store.lss h = denoteLsView s'.store.lss w; ⊤⦄ :=
   triple_mono (internLsNode_spec s₀ w hok.state.wf hv)
@@ -331,9 +330,9 @@ theorem internLsNode_okS (s₀ : AState) (w : LsNodeView)
 
 /-- con-leche: none — `internE` at the tier's invariant. -/
 theorem internE_okS (s₀ : AState) (w : ENodeView)
-    (hok : CheckOK mode env fe s₀) (hv : s₀.store.ViewOK w) :
+    (hok : CheckOK eager env fe s₀) (hv : s₀.store.ViewOK w) :
     ⦃fun s => s = s₀⦄ internE w
-    ⦃fun h s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+    ⦃fun h s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧ s'.store.view h = some w ∧
         denoteE s'.store h = denoteEView s'.store w; ⊤⦄ :=
   triple_mono (internE_spec s₀ w hok.state.wf hv)
@@ -341,7 +340,7 @@ theorem internE_okS (s₀ : AState) (w : ENodeView)
       ⟨hok.mono ⟨hwf'⟩ hx' hc' hp', hx', hp', hv', hd⟩)
 
 /-- con-leche: none — a pinned name, off the table. -/
-theorem pinAt_okS (s₀ : AState) (i : Nat) (hok : CheckOK mode env fe s₀) :
+theorem pinAt_okS (s₀ : AState) (i : Nat) (hok : CheckOK eager env fe s₀) :
     ⦃fun s => s = s₀⦄ pinAt i
     ⦃fun n s' => s' = s₀ ∧ ∀ x, pinNames[i]? = some x →
         denoteN s₀.store.ns n = some x; ⊤⦄ :=
@@ -350,10 +349,10 @@ theorem pinAt_okS (s₀ : AState) (i : Nat) (hok : CheckOK mode env fe s₀) :
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:317-328 listTyOk — **THEOREM 1
 for `listTyOk`**. -/
 theorem listTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
-    (oc' : Option ConstantInfo) (hok : CheckOK mode env fe s₀)
+    (oc' : Option ConstantInfo) (hok : CheckOK eager env fe s₀)
     (hrel : OptCI s₀.store oc oc') :
     ⦃fun s => s = s₀⦄ ConRon.Arena.listTyOk oc
-    ⦃fun b s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+    ⦃fun b s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧ b = ConLeche.listTyOk oc'; ⊤⦄ := by
   cases oc with
   | none =>
@@ -432,10 +431,10 @@ theorem StoreWF.lssWF' {st : EStore} (h : StoreWF st) : LsStoreWF st.lss := by
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:330-341 listNilTyOk — **THEOREM
 1 for `listNilTyOk`**. -/
 theorem listNilTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
-    (oc' : Option ConstantInfo) (hok : CheckOK mode env fe s₀)
+    (oc' : Option ConstantInfo) (hok : CheckOK eager env fe s₀)
     (hrel : OptCI s₀.store oc oc') :
     ⦃fun s => s = s₀⦄ ConRon.Arena.listNilTyOk oc
-    ⦃fun b s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+    ⦃fun b s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧ b = ConLeche.listNilTyOk oc'; ⊤⦄ := by
   cases oc with
   | none =>
@@ -489,7 +488,7 @@ theorem listNilTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
     have hwf5 := hok5.state.wf
     have hfalse : ∀ (b : Bool), b = ConLeche.listNilTyOk (some c) →
         ⦃fun s => s = s5⦄ (pure b : AM Bool)
-        ⦃fun r s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+        ⦃fun r s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
           s'.pins = s₀.pins ∧ r = ConLeche.listNilTyOk (some c); ⊤⦄ :=
       fun b hb => triple_pureS ⟨hok5, hx05, hp05, hb⟩
     obtain ⟨v, hv⟩ := denoteE_view hty5
@@ -616,10 +615,10 @@ theorem listConsR2_of_not {P : ConLeche.Name} {R : Expr}
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:343-360 listConsTyOk — **THEOREM
 1 for `listConsTyOk`**. -/
 theorem listConsTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
-    (oc' : Option ConstantInfo) (hok : CheckOK mode env fe s₀)
+    (oc' : Option ConstantInfo) (hok : CheckOK eager env fe s₀)
     (hrel : OptCI s₀.store oc oc') :
     ⦃fun s => s = s₀⦄ ConRon.Arena.listConsTyOk oc
-    ⦃fun b s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+    ⦃fun b s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧ b = ConLeche.listConsTyOk oc'; ⊤⦄ := by
   cases oc with
   | none =>
@@ -709,7 +708,7 @@ theorem listConsTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
     have hty' := denote_ext hty hx111
     have hret : ∀ (b : Bool), b = ConLeche.listConsTyOk (some c) →
         ⦃fun s => s = s11⦄ (pure b : AM Bool)
-        ⦃fun r s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+        ⦃fun r s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
           s'.pins = s₀.pins ∧ r = ConLeche.listConsTyOk (some c); ⊤⦄ :=
       fun b hb => triple_pureS ⟨hok11, hx011, hp011, hb⟩
     obtain ⟨v, hv⟩ := denoteE_view hty'
@@ -814,10 +813,10 @@ theorem fnTyOks_not_empty {c : ConstantInfo}
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:362-371 charOfNatTyOk — **THEOREM
 1 for `charOfNatTyOk`**. -/
 theorem charOfNatTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
-    (oc' : Option ConstantInfo) (hok : CheckOK mode env fe s₀)
+    (oc' : Option ConstantInfo) (hok : CheckOK eager env fe s₀)
     (hrel : OptCI s₀.store oc oc') :
     ⦃fun s => s = s₀⦄ ConRon.Arena.charOfNatTyOk oc
-    ⦃fun b s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+    ⦃fun b s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧ b = ConLeche.charOfNatTyOk oc'; ⊤⦄ := by
   cases oc with
   | none =>
@@ -891,10 +890,10 @@ theorem stringOfListTyOk_forallE {c : ConstantInfo} {D B : Expr} (hl : c.toConst
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:373-383 stringOfListTyOk —
 **THEOREM 1 for `stringOfListTyOk`**. -/
 theorem stringOfListTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
-    (oc' : Option ConstantInfo) (hok : CheckOK mode env fe s₀)
+    (oc' : Option ConstantInfo) (hok : CheckOK eager env fe s₀)
     (hrel : OptCI s₀.store oc oc') :
     ⦃fun s => s = s₀⦄ ConRon.Arena.stringOfListTyOk oc
-    ⦃fun b s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
+    ⦃fun b s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧ b = ConLeche.stringOfListTyOk oc'; ⊤⦄ := by
   cases oc with
   | none =>
@@ -975,27 +974,20 @@ theorem stringOfListTyOk_spec (s₀ : AState) (oc : Option IConstantInfo)
       dsimp only
       exact triple_pureS ⟨hok6, hx06, hp06, (fnTyOks_not_forallE
         (denote_not_forallE hwf hv hty' (fun _ _ h => nomatch h))).2.symm⟩
-/-! ## 6. `strLitSupported` -/
+/-! ## 6. `strLitStored` -/
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:385-403 strLitSupported —
-**THEOREM 1 for `strLitSupported`**: the `Nat` literal guard, then the seven
-string-support declarations at exactly the expected types. -/
-theorem strLitSupported_spec (s₀ : AState) (hok : CheckOK mode env fe s₀) :
-    ⦃fun s => s = s₀⦄ ConRon.Arena.strLitSupported fe
-    ⦃fun b s' => CheckOK mode env fe s' ∧ Ext s₀.store s'.store ∧
-        s'.pins = s₀.pins ∧ b = ConLeche.strLitSupported env; ⊤⦄ := by
-  sym only [bridge_grind, ConLeche.strLitSupported] =>
-    vcgen [ConRon.Arena.strLitSupported, ConRon.Arena.pinString,
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:366-371 strLitStored
+con-leche: ConLeche/Kernel/FEnv.lean:196-201 strLitStoredF —
+**THEOREM 1 for `strLitStored`**: `natLitStored`, then the seven
+string-support names present, read through the index. -/
+theorem strLitStored_spec (s₀ : AState) (hok : CheckOK eager env fe s₀) :
+    ⦃fun s => s = s₀⦄ ConRon.Arena.strLitStored fe
+    ⦃fun b s' => s' = s₀ ∧ b = ConLeche.strLitStored env; ⊤⦄ := by
+  sym only [bridge_grind, ConLeche.strLitStored] =>
+    vcgen [ConRon.Arena.strLitStored, ConRon.Arena.pinString,
       ConRon.Arena.pinStringOfList, ConRon.Arena.pinList,
       ConRon.Arena.pinListNil, ConRon.Arena.pinListCons, ConRon.Arena.pinChar,
-      ConRon.Arena.pinCharOfNat, natLitSupported_spec (mode := mode) (env := env) (fe := fe),
-      stringTyOk_spec (mode := mode) (env := env) (fe := fe) (oc' := env.find? ConLeche.stringName),
-      stringOfListTyOk_spec (mode := mode) (env := env) (fe := fe) (oc' := env.find? ConLeche.stringOfListName),
-      listTyOk_spec (mode := mode) (env := env) (fe := fe) (oc' := env.find? ConLeche.listName),
-      listNilTyOk_spec (mode := mode) (env := env) (fe := fe) (oc' := env.find? ConLeche.listNilName),
-      listConsTyOk_spec (mode := mode) (env := env) (fe := fe) (oc' := env.find? ConLeche.listConsName),
-      charTyOk_spec (mode := mode) (env := env) (fe := fe) (oc' := env.find? ConLeche.charName),
-      charOfNatTyOk_spec (mode := mode) (env := env) (fe := fe) (oc' := env.find? ConLeche.charOfNatName),
+      ConRon.Arena.pinCharOfNat, natLitStored_spec (eager := eager) (env := env) (fe := fe),
       pinAt_specE] <;> finish
 
 /-! ## 7. The axiom census -/
@@ -1010,7 +1002,7 @@ section Census
 #print axioms listConsTyOk_spec
 #print axioms charOfNatTyOk_spec
 #print axioms stringOfListTyOk_spec
-#print axioms strLitSupported_spec
+#print axioms strLitStored_spec
 
 end Census
 

@@ -47,8 +47,9 @@ namespace L.Arena
 
 /-! ## The slots -/
 
-/-- con-ron: ConRon/Arena/Core.lean:3533-3623 ConRon.Arena.coreKnot
-con-ron: ConRon/Arena/Core.lean:3474-3480 ConRon.Arena.inferSet -/
+/-- con-ron: ConRon/Arena/Core.lean:3825-3915 ConRon.Arena.coreKnot
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
+con-ron: ConRon/Arena/Core.lean:3766-3772 ConRon.Arena.inferSet -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.inferSet]
 def inferSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) {
   k := ((mode >> 1) & 1) << 32;
@@ -60,9 +61,10 @@ def inferSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) {
   return x
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3533-3623 ConRon.Arena.coreKnot
-con-ron: ConRon/Arena/Core.lean:3482-3489 ConRon.Arena.inferIOSet
-con-ron: ConRon/Arena/Core.lean:271-276 ConRon.Arena.CoreFnsA.ioView -/
+/-- con-ron: ConRon/Arena/Core.lean:3825-3915 ConRon.Arena.coreKnot
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
+con-ron: ConRon/Arena/Core.lean:3774-3781 ConRon.Arena.inferIOSet
+con-ron: ConRon/Arena/Core.lean:270-275 ConRon.Arena.CoreFnsA.ioView -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.inferIOSet ConRon.Arena.CoreFnsA.ioView]
 def inferIOSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) {
   k := ((mode >> 1) & 1) << 32;
@@ -74,8 +76,9 @@ def inferIOSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) 
   return x
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3533-3623 ConRon.Arena.coreKnot
-con-ron: ConRon/Arena/Core.lean:3491-3498 ConRon.Arena.defeqSet -/
+/-- con-ron: ConRon/Arena/Core.lean:3825-3915 ConRon.Arena.coreKnot
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
+con-ron: ConRon/Arena/Core.lean:3783-3790 ConRon.Arena.defeqSet -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.defeqSet]
 def defeqSlotL : FunDecl := lfn (mode, vis, d, a, b) locals (k, fd, j, dd, x, z) {
   k := b | (((mode >> 1) & 1) << 32);
@@ -87,9 +90,10 @@ def defeqSlotL : FunDecl := lfn (mode, vis, d, a, b) locals (k, fd, j, dd, x, z)
   return x
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3533-3623 ConRon.Arena.coreKnot
-con-ron: ConRon/Arena/Core.lean:3500-3515 ConRon.Arena.enterEager
-con-ron: ConRon/Arena/Core.lean:3517-3531 ConRon.Arena.leaveEager -/
+/-- con-ron: ConRon/Arena/Core.lean:3825-3915 ConRon.Arena.coreKnot
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
+con-ron: ConRon/Arena/Core.lean:3792-3807 ConRon.Arena.enterEager
+con-ron: ConRon/Arena/Core.lean:3809-3823 ConRon.Arena.leaveEager -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.enterEager ConRon.Arena.leaveEager]
 def defeqESlotL : FunDecl := lfn (mode, vis, d, a, b) locals (r) {
   r := call defeq(mode | 2, vis, d, a, b);
@@ -98,22 +102,26 @@ def defeqESlotL : FunDecl := lfn (mode, vis, d, a, b) locals (r) {
 
 /-! ## The entry points (the verified mode, `checkFuel`) -/
 
-/-- con-ron: ConRon/Arena/Core.lean:3655-3659 ConRon.Arena.inferTypeCore
-con-ron: ConRon/Arena/Core.lean:3641-3647 ConRon.Arena.pureFnsA -/
+/-- con-ron: ConRon/Arena/Core.lean:3947-3951 ConRon.Arena.inferTypeCore
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferTypeCore` changed; re-check the L code and its proofs, then delete this line
+con-ron: ConRon/Arena/Core.lean:3933-3939 ConRon.Arena.pureFnsA -/
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.pureFnsA` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.inferTypeCore ConRon.Arena.pureFnsA]
 def inferTypeCoreL : FunDecl := lfn (vis, dep, e) locals (r) {
   r := call infer(0, vis, dep, e);
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3661-3665 ConRon.Arena.isDefEqCore -/
+/-- con-ron: ConRon/Arena/Core.lean:3953-3957 ConRon.Arena.isDefEqCore -/
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.isDefEqCore` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.isDefEqCore]
 def isDefEqCoreL : FunDecl := lfn (vis, dep, a, b) locals (r) {
   r := call defeq(0, vis, dep, a, b);
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3667-3671 ConRon.Arena.ensureSortCore -/
+/-- con-ron: ConRon/Arena/Core.lean:3959-3963 ConRon.Arena.ensureSortCore -/
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.ensureSortCore` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.ensureSortCore]
 def ensureSortCoreL : FunDecl := lfn (vis, dep, t) locals (r) {
   r := call ensure_sort(0, vis, dep, t);

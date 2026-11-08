@@ -187,7 +187,7 @@ end spec
 /-! ## `lv_sub_int(u, ko, kc, vo, vc)`: substitute, then intern -/
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:2076-2091 ConRon.Arena.substLMemoAt
-con-ron: ConRon/Arena/Core.lean:1945-1955 ConRon.Arena.substLevelsAt -/
+con-ron: ConRon/Arena/Core.lean:2016-2026 ConRon.Arena.substLevelsAt -/
 @[no_expose] def lvSubInt : FunDecl := lfn (u, ko, kc, vo, vc) locals (x, h) {
   CTL.u64[192] := 0;
   x := call lp_substl(u, ko, kc, vo, vc);
@@ -266,6 +266,7 @@ attribute [arena_grind =] lvSubIntW_succ
 /-! ## `caps_never_zero(po, pc, us, swd, so, sc)` -/
 
 /-- con-ron: ConRon/Arena/Core.lean:345-351 ConRon.Arena.capsNeverZero -/
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.capsNeverZero` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.capsNeverZero]
 def capsNeverZeroL : FunDecl := lfn (po, pc, us, swd, so, sc) locals (vo, vc, b, x) {
   (vo, vc) := call ls_node(us);

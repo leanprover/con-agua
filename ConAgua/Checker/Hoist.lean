@@ -129,7 +129,8 @@ def hoistIndexGoL : FunDecl := lfn (ord, c, k) locals (z, r) {
 /-- `hoist_note(n, i, k, tg, ws, sp)`: record `k` (being processed for the operation at `i`)
 references the name `n`: the position `m` first declaring it, if it lies after `i`, is not `k` and
 has no target yet, gets target `i` and is pushed (`ws[sp] := m`); the new stack size. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-204 ConRon.Arena.Frontend.hoistClosure.pushOne
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-205 ConRon.Arena.Frontend.hoistClosure.pushOne
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistClosure.pushOne` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistClosure.pushOne]
 def hoistNoteL : FunDecl := lfn (n, i, k, tg, ws, sp) locals (m) {
   m := call hoist_ix(n);
@@ -252,6 +253,7 @@ def hoistRulesGoL : FunDecl := lfn (k, i, tg, ws, sp, ro, rc, r) locals (x) {
 /-- `hoist_block_go(k, i, tg, ws, sp, o, c, q)`: the block members `DIND[o + q ‥ o + c)`: each
 member's type, a recursor's rules. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:91-102 ConRon.Arena.Frontend.usedConstsBlock
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.usedConstsBlock` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.usedConstsBlock]
 def hoistBlockGoL : FunDecl := lfn (k, i, tg, ws, sp, o, c, q) locals (p, x) {
   if c <= q { return sp };
@@ -267,8 +269,10 @@ def hoistBlockGoL : FunDecl := lfn (k, i, tg, ws, sp, o, c, q) locals (p, x) {
 /-- `hoist_deps_of(k, i, x, tg, ws, sp)`: the constants of the record at `DECL[x ..]` (position
 `k`), one visited set: the type and the value; an inductive block's members; a quotient none. The
 new stack size. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-204 ConRon.Arena.Frontend.hoistClosure.pushDeps
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-205 ConRon.Arena.Frontend.hoistClosure.pushDeps
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistClosure.pushDeps` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:104-113 ConRon.Arena.Frontend.IDeclaration.usedConsts
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.IDeclaration.usedConsts` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistClosure.pushDeps ConRon.Arena.Frontend.IDeclaration.usedConsts]
 def hoistDepsOfL : FunDecl := lfn (k, i, x, tg, ws, sp) locals (z, kd) {
   z := call hs_clear();
@@ -289,7 +293,8 @@ def hoistDepsOfL : FunDecl := lfn (k, i, x, tg, ws, sp) locals (z, kd) {
 
 /-- `hoist_close_go(i, ord, tg, ws, sp)`: the worklist `ws[0 ‥ sp)`: pop a position, push the
 positions its constants reach (`hoist_deps_of`), until empty. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-204 ConRon.Arena.Frontend.hoistClosure
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-205 ConRon.Arena.Frontend.hoistClosure
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistClosure` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:147-152 ConRon.Arena.Frontend.hoistDone
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:154-160 ConRon.Arena.Frontend.hoistDropDone
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistClosure ConRon.Arena.Frontend.hoistDone
@@ -304,7 +309,8 @@ def hoistCloseGoL : FunDecl := lfn (i, ord, tg, ws, sp) locals (k, r) {
 
 /-- `hoist_closure(i, j, ord, tg, ws)`: position `j` (after `i`) and every position it reaches
 through unmarked positions after `i` get target `i`. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-204 ConRon.Arena.Frontend.hoistClosure
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-205 ConRon.Arena.Frontend.hoistClosure
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistClosure` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def hoistClosureL : FunDecl := lfn (i, j, ord, tg, ws) locals (r) {
   if IW.u64[tg + j] != 0 { return 0 };
   IW.u64[tg + j] := i + 1;
@@ -338,7 +344,8 @@ def natOpRecordL : FunDecl := lfn (n) locals (o1, l1, o2, l2, a, b) {
 
 /-- `hoist_deps(i, o, l, q, ord, tg, ws)`: the grounds `IW[o + q ‥ o + l)` of the operation at
 `i`: each first declared after `i` pulls its closure ahead of `i`. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:290-318 ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:291-321 ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps]
 def hoistDepsL : FunDecl := lfn (i, o, l, q, ord, tg, ws) locals (m, z, r) {
   if l <= q { return 0 };
@@ -350,7 +357,8 @@ def hoistDepsL : FunDecl := lfn (i, o, l, q, ord, tg, ws) locals (m, z, r) {
 
 /-- `hoist_targets_go(ord, c, tg, ws, i)`: positions `i ‥ c`: for every pinned `Nat` operation
 record (a definition named in `natDivModNames`/`natOpNames`), its grounds' closures. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:290-318 ConRon.Arena.Frontend.hoistTargetsGo
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:291-321 ConRon.Arena.Frontend.hoistTargetsGo
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistTargetsGo` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistTargetsGo]
 def hoistTargetsGoL : FunDecl := lfn (ord, c, tg, ws, i) locals (x, n, op, o, l, z, r) {
   if c <= i { return 0 };
@@ -379,7 +387,8 @@ def hoistTargetsGoL : FunDecl := lfn (ord, c, tg, ws, i) locals (x, n, op, o, l,
 }
 
 /-- `hoist_any(tg, c, k)`: `1` if some position `k ‥ c` has a target (the map is not empty). -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:373-380 ConRon.Arena.Frontend.hoistNatOpGround
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:377-384 ConRon.Arena.Frontend.hoistNatOpGround
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistNatOpGround` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def hoistAnyL : FunDecl := lfn (tg, c, k) locals (r) {
   if c <= k { return 0 };
   if IW.u64[tg + k] != 0 { return 1 };
@@ -390,8 +399,8 @@ def hoistTargetsGoL : FunDecl := lfn (ord, c, tg, ws, i) locals (x, n, op, o, l,
 /-- `hoist_bucket(tg, c, hd, tl, nx, k)`: positions `k ‥ c` with a target `t` appended, in order,
 to the list of target `t` (`hd[t]`, `tl[t]`: its first and last position `+ 1`; `nx[k]`: the next
 one `+ 1`). -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:329-337 ConRon.Arena.Frontend.hoistKey
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:339-345 ConRon.Arena.Frontend.hoistLt
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:333-341 ConRon.Arena.Frontend.hoistKey
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:343-349 ConRon.Arena.Frontend.hoistLt
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistKey ConRon.Arena.Frontend.hoistLt]
 def hoistBucketL : FunDecl := lfn (tg, c, hd, tl, nx, k) locals (t, r) {
   if c <= k { return 0 };
@@ -410,7 +419,7 @@ def hoistBucketL : FunDecl := lfn (tg, c, hd, tl, nx, k) locals (t, r) {
 
 /-- `hoist_chain(ord, nx, out, q, e)`: the list from `e` (a position `+ 1`, `0` at its end): the
 records to `out[q ..]`; the new `q`. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:357-364 ConRon.Arena.Frontend.reorder
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:361-368 ConRon.Arena.Frontend.reorder
 @[no_expose] def hoistChainL : FunDecl := lfn (ord, nx, out, q, e) locals (r) {
   if e == 0 { return q };
   IW.u64[out + q] := IW.u64[ord + e - 1];
@@ -420,7 +429,7 @@ records to `out[q ..]`; the new `q`. -/
 
 /-- `hoist_emit(ord, c, tg, hd, nx, out, q, p)`: positions `p ‥ c` of the sorted order: the
 positions moved to `p`, then `p` itself unless it moved. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:357-364 ConRon.Arena.Frontend.reorder
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:361-368 ConRon.Arena.Frontend.reorder
 @[no_expose, l_impl ConRon.Arena.Frontend.reorder]
 def hoistEmitL : FunDecl := lfn (ord, c, tg, hd, nx, out, q, p) locals (r) {
   if c <= p { return 0 };
@@ -436,7 +445,7 @@ def hoistEmitL : FunDecl := lfn (ord, c, tg, hd, nx, out, q, p) locals (r) {
 /-- `hoist_apply(ord, c, tg)`: the positions sorted by `hoistKey` (the key `(t, 0, k)` of a
 position moved to `t`, `(k, 1, k)` of one that stays; distinct keys), as a new `IW` slice of
 record indices. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:366-371 ConRon.Arena.Frontend.applyHoist
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:370-375 ConRon.Arena.Frontend.applyHoist
 @[no_expose, l_impl ConRon.Arena.Frontend.applyHoist]
 def hoistApplyL : FunDecl := lfn (ord, c, tg) locals (hd, tl, nx, out, z) {
   hd := call iw_alloc(c);
@@ -451,8 +460,10 @@ def hoistApplyL : FunDecl := lfn (ord, c, tg) locals (hd, tl, nx, out, z) {
 }
 
 /-- `hoist_nat_op_ground(ord, c)`: the order after the hoist (`ord` itself when nothing moves). -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:373-380 ConRon.Arena.Frontend.hoistNatOpGround
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:320-325 ConRon.Arena.Frontend.hoistTargets
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:377-384 ConRon.Arena.Frontend.hoistNatOpGround
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistNatOpGround` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:323-329 ConRon.Arena.Frontend.hoistTargets
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistTargets` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistNatOpGround ConRon.Arena.Frontend.hoistTargets]
 def hoistNatOpGroundL : FunDecl := lfn (ord, c) locals (z, tg, ws, a, r) {
   z := call hn_clear();

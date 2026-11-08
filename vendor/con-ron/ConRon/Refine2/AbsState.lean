@@ -21,15 +21,16 @@ indexed `IFEnv`.
    con-leche's newest-first `List`s and the Rust's are oldest-first `Vec`s
    (its indexes store POSITIONS into them), so the abstraction reverses — exactly as
    `RefineOld/Abs.lean`'s `absEnv` did for the `Expr`-tree checker.
-3. **`IFEnv.idx` stores a POSITION where the twin stores the CONSTANT**
-   (task #97-P6-5's lever 1, absorbed there and owed here).  The Rust's
-   index is `HashMap<NIdx, (u64, u64)>` — the installation counter and the
-   position — and `ifenv_find` reads the constant out of `env.consts` at that
-   position; the twin's is `HashMap NIdx (Nat × IConstantInfo)`.  `IFEnvRel`
-   therefore composes the probe with the array read, which is the one clause
-   of this file that is not a field-for-field map.  The table map `tbls` is
-   the same design: the Rust row is the table's slot in `env.tables`, the
-   twin's the table, and `IFEnvRel.tbls` composes the same way.
+3. **The Rust's maps store a SLOT where the twin's store the CONSTANT**
+   (task #97-P6-5's lever 1).  A layer's index is `HashMap<NIdx, u64>`, a
+   position into `env.consts`; the twin's is `HashMap NIdx IConstantInfo`.  The
+   stream index (`PersTier.env`) maps a name to its counter, which is its slot
+   in `consts`; the twin's base maps it to `(counter, constant)`.  The relations
+   therefore compose the probe with the array read (`ownRow`, `ixRow`); the
+   table maps are the same design (`ownTbl`, `ixTbl`).
+4. **The base is shared**: the Rust's frozen index lives in the `PersTier` every
+   worker reads, the twin's in its `IFEnv.base`; a layer carries its two bounds
+   (`base_below`, `base_below_rec`) where the twin's base carries them.
 -/
 import ConRon.Refine2.Inv
 import ConRon.Arena.Env
@@ -386,7 +387,7 @@ structure AStateInv (pers : arena.store.PersTier) (rs : arena.monad.AState) :
 
 Field-for-field, `Vec` to the container the twin has; the places the shape
 genuinely moves are the order of `IEnv`'s two lists and the values of
-`IFEnv`'s two maps, and the module note says why. -/
+`IFEnv`'s maps, and the module note says why. -/
 
 def absIConstantVal (cv : arena.env.IConstantVal) : IConstantVal :=
   ⟨absNIdx cv.name, cv.level_params.val.map absNIdx, absEIdx cv.ty⟩
@@ -395,20 +396,20 @@ def absIRecRuleFire : arena.env.IRecRuleFire → IRecRuleFire
   | .Plain => .plain
   | .Nested lvls pins =>
     .nested (lvls.val.map absLIdx) (pins.val.map absEIdx)
+  | .Levels lvls => .levels (lvls.val.map absLIdx)
 
 def absIRecRule (r : arena.env.IRecRule) : IRecRule :=
-  ⟨absNIdx r.ctor, absU r.nfields, absU r.ctor_params, absIRecRuleFire r.fire,
-    absEIdx r.rhs, r.k, r.eta⟩
+  ⟨absNIdx r.ctor, absU r.nfields, absIRecRuleFire r.fire, absEIdx r.rhs⟩
 
 def absIIndCaps (c : arena.env.IIndCaps) : IIndCaps :=
   ⟨c.eta, absNIdx c.eta_ctor, absU c.eta_params, absU c.eta_fields, c.unitlike,
-    absU c.unit_params, c.rule_k, ConRon.Refine.absPropWhen c.sort_z,
-    c.all.val.map absNIdx, absU c.nparams, c.ctors.val.map absNIdx⟩
+    absU c.unit_params, c.all.val.map absNIdx, absU c.nparams, absU c.n_idx,
+    c.ctors.val.map absNIdx⟩
 
 def absIProjTable (t : arena.env.IProjTable) : IProjTable :=
   ⟨absNIdx t.struct_name, t.level_params.val.map absNIdx,
-    absU t.num_params, absNIdx t.ctor, absU t.num_fields, absLIdx t.struct_sort,
-    (t.bodies.val.map absEIdx).toArray, t.guards.val.map absLIdx⟩
+    absU t.num_params, absNIdx t.ctor, absU t.num_fields,
+    (t.bodies.val.map absEIdx).toArray⟩
 
 def absIConstantInfo : arena.env.IConstantInfo → IConstantInfo
   | .AxiomInfo cv => .axiomInfo (absIConstantVal cv)
@@ -417,8 +418,8 @@ def absIConstantInfo : arena.env.IConstantInfo → IConstantInfo
   | .ThmInfo cv => .thmInfo (absIConstantVal cv)
   | .IndInfo cv caps => .indInfo (absIConstantVal cv) (absIIndCaps caps)
   | .CtorInfo cv np nf => .ctorInfo (absIConstantVal cv) (absU np) (absU nf)
-  | .RecInfo cv mi rp rules =>
-    .recInfo (absIConstantVal cv) (absU mi) (absU rp)
+  | .RecInfo cv mi rp k rules =>
+    .recInfo (absIConstantVal cv) (absU mi) (absU rp) k
       (rules.val.map absIRecRule)
 
 def absIDeclaration : arena.env.IDeclaration → IDeclaration
@@ -427,7 +428,6 @@ def absIDeclaration : arena.env.IDeclaration → IDeclaration
     .defnDecl (absIConstantVal cv) (absEIdx v) (ConRon.Refine.absHint hint)
   | .ThmDecl cv v => .thmDecl (absIConstantVal cv) (absEIdx v)
   | .OpaqueDecl cv v => .opaqueDecl (absIConstantVal cv) (absEIdx v)
-  | .BasisDecl k => .basisDecl (ConRon.Refine.absBasisKind k)
   | .IndDecl block np =>
     .indDecl (block.val.map absIConstantInfo) (absU np)
   | .QuotDecl k cv =>
@@ -440,71 +440,77 @@ def absIEnv (e : arena.env.IEnv) : IEnv :=
   ⟨(e.consts.val.map absIConstantInfo).reverse,
     (e.tables.val.map absIProjTable).reverse⟩
 
-/-- **The index clause `index_promoted` needs** (a statement gap, found by this
-task): every row of the port's index points at a slot whose constant carries
-the row's key.  `IFEnvRel` reads a row THROUGH its position, so overwriting a
-slot moves every row that points at it; the twin re-indexes by NAME.  The two
-agree exactly when the rows at a slot are keyed by that slot's name.  It is a
-fact about the Rust `IFEnv` alone (every writer — `mk_ifenv_go`,
-`ifenv_push`, `index_promoted` — stores its own constant's name at its own
-slot), a key predicate on the Rust `IFEnv`, carried by `IFEnvRel.keys` (task
-#97-P5-Core round 5, the coordinator's ruling; found by task #97-T2-LOCKSTEP
-lane Promote). -/
-def IFEnvKeys (rf : arena.env.IFEnv) : Prop :=
-  ∀ k p, ConRon.Refine.HashMap2.toFun rf.idx k = some p →
-    ∃ ci, rf.env.consts.val[p.2.val]? = some ci ∧ (absIConstantInfo ci).name = absNIdx k
+/-- **A layer's own row of `n`**, read through its slot: the twin's own index
+stores the constant.  An out-of-range slot, which `ifenv_find` declines, is
+`none`. -/
+noncomputable def ownRow (rf : arena.env.IFEnv) (n : arena.handle.NIdx) : Option IConstantInfo :=
+  (ConRon.Refine.HashMap2.toFun rf.idx n).bind fun s =>
+    (rf.env.consts.val[s.val]?).map absIConstantInfo
 
-/-- **The table map's key clause**, `IFEnvKeys` for `tbls`: every row of the
-port's table map points at a slot of `env.tables` whose table belongs to the
-row's key.  `IFEnvRel.tbls` reads a row through its slot, the twin keys by
-the structure's name; they agree exactly when the rows at a slot are keyed by
-that slot's structure (every writer — `mk_tbls_go`, `ifenv_push_table`,
-`index_promoted_tables` — stores its own table's structure at its own
-slot). -/
-def IFEnvTblKeys (rf : arena.env.IFEnv) : Prop :=
-  ∀ k s, ConRon.Refine.HashMap2.toFun rf.tbls k = some s →
-    ∃ t, rf.env.tables.val[s.val]? = some t ∧ absNIdx t.struct_name = absNIdx k
+/-- **A layer's own table of `n`**, read through its slot. -/
+noncomputable def ownTbl (rf : arena.env.IFEnv) (n : arena.handle.NIdx) : Option IProjTable :=
+  (ConRon.Refine.HashMap2.toFun rf.tbls n).bind fun s =>
+    (rf.env.tables.val[s.val]?).map absIProjTable
 
-/-- **The Rust-side representation predicate of a stored constant** (task
-#97-P5-Core round 5, coordinator's ruling (d)): the data a lockstep step reads
-out of the environment and hands to a function that is exact only on
-canonical data — the subtype invariants Charon erased from con-leche's
-types, and nothing else (the maintainer's ruling).  Since task #119 the
-Rust `PropWhen` is con-leche's plain `never | ifAllZero ps` datum, and its one
-invariant is that the parameter names are well formed (`absName` is
-injective only there, so `prop_when::beq` is exact only there).  Only the
-clause a proof needs is here: an inductive's result-sort datum.  (Add a
-clause only with the proof that needs it.) -/
-def IConstantInfoWF : arena.env.IConstantInfo → Prop
-  | .IndInfo _ caps => ConRon.Refine.PropWhenWF caps.sort_z
-  | _ => True
+/-- **The stream index's entry of `n`**, as the twin's base stores it: the
+counter and the constant at that slot (the Rust's slot IS the counter,
+`arena::stream_index`'s note). -/
+noncomputable def ixRow (ix : arena.stream_index.IStreamIndex) (n : arena.handle.NIdx) :
+    Option (Nat × IConstantInfo) :=
+  (ConRon.Refine.HashMap2.toFun ix.idx n).bind fun c =>
+    (ix.consts.val[c.val]?).map fun ci => (absU c, absIConstantInfo ci)
 
-/-- **The one clause that is not a field map** (task #97-P6-5's lever 1): the
-Rust's index answers `(counter, position)` and `ifenv_find` reads the constant
-out of `env.consts` at that position, where the twin's index answers
-`(counter, constant)`.  The relation composes the probe with the array read,
-and an out-of-range position — which `ifenv_find` declines — is `none` on the
-twin's side too. -/
-structure IFEnvRel (rf : arena.env.IFEnv) (lf : IFEnv) : Prop where
+/-- **The stream index's table of `n`**: the record position and the table at
+its slot. -/
+noncomputable def ixTbl (ix : arena.stream_index.IStreamIndex) (n : arena.handle.NIdx) :
+    Option (Nat × IProjTable) :=
+  (ConRon.Refine.HashMap2.toFun ix.tbls n).bind fun p =>
+    (ix.tables.val[p.2.val]?).map fun t => (absU p.1, absIProjTable t)
+
+/-- **The stream index's maps against the twin's frozen layer**, entry for
+entry.  The bounds are the reading layer's, so they are not here. -/
+structure BaseRel (ix : arena.stream_index.IStreamIndex) (b : IFBase) : Prop where
+  idx : ∀ n, ixRow ix n = b.idx[absNIdx n]?
+  tbls : ∀ n, ixTbl ix n = b.tbls[absNIdx n]?
+
+/-- **What a reader needs of the frozen base** (`PersTier.env`): its two maps
+well formed, since `HashMap2.get` specifies nothing otherwise, and every counter
+and slot they store in range, so the `as usize` casts are the identity. -/
+structure BaseOK (pers : arena.store.PersTier) : Prop where
+  idx : Inv arena.handle.NIdx.Insts.Con_ron_coreRonHashmapHashable pers.env.idx
+  tbls : Inv arena.handle.NIdx.Insts.Con_ron_coreRonHashmapHashable pers.env.tbls
+  idxRange : ∀ n c, ConRon.Refine.HashMap2.toFun pers.env.idx n = some c →
+    c.val < pers.env.consts.val.length
+  tblRange : ∀ n p, ConRon.Refine.HashMap2.toFun pers.env.tbls n = some p →
+    p.2.val < pers.env.tables.val.length
+
+/-- **A layer's own invariant**: its maps are well formed and every slot they
+store is in range (so a push at the end moves no row). -/
+def IFEnvInv (rf : arena.env.IFEnv) : Prop :=
+  Inv arena.handle.NIdx.Insts.Con_ron_coreRonHashmapHashable rf.idx ∧
+    (∀ n s, ConRon.Refine.HashMap2.toFun rf.idx n = some s →
+      s.val < rf.env.consts.val.length) ∧
+    Inv arena.handle.NIdx.Insts.Con_ron_coreRonHashmapHashable rf.tbls ∧
+    ∀ n s, ConRon.Refine.HashMap2.toFun rf.tbls n = some s →
+      s.val < rf.env.tables.val.length
+
+/-- **What a reader sees of a Rust layer, against the twin's `IFEnv`**: the own
+rows and tables (`ownRow`, `ownTbl`) are the twin's own maps, and the frozen base
+`pers.env`, at the layer's two bounds, is the twin's `base`. -/
+structure IFEnvRead (pers : arena.store.PersTier) (rf : arena.env.IFEnv) (lf : IFEnv) :
+    Prop where
+  idx : ∀ n, ownRow rf n = lf.idx[absNIdx n]?
+  tbls : ∀ n, ownTbl rf n = lf.tbls[absNIdx n]?
+  base : BaseRel pers.env lf.base
+  below : lf.base.below = absU rf.base_below
+  belowRec : lf.base.belowRec = absU rf.base_below_rec
+  baseOK : BaseOK pers
+
+/-- **A Rust environment layer against the twin's `IFEnv`**: what a reader sees
+(`IFEnvRead`) and the pushed lists.  A job's layer starts empty on both sides
+(`stream_index_view`, `IStreamIndex.view`), so the lists are field for field. -/
+structure IFEnvRel (pers : arena.store.PersTier) (rf : arena.env.IFEnv) (lf : IFEnv) :
+    Prop extends IFEnvRead pers rf lf where
   env : lf.env = absIEnv rf.env
-  idx : ∀ n, ((ConRon.Refine.HashMap2.toFun rf.idx n).bind fun p =>
-      (rf.env.consts.val[p.2.val]?).map fun ci => (absU p.1, absIConstantInfo ci))
-    = lf.idx[absNIdx n]?
-  visibleBelow : lf.visibleBelow = absU rf.visible_below
-  /-- The stored constants are canonical Rust data (`IConstantInfoWF`): a
-  Rust environment represents a twin one only when it is. -/
-  envWF : ∀ ci ∈ rf.env.consts.val, IConstantInfoWF ci
-  /-- Every index row points at a slot whose constant carries the row's key
-  (`IFEnvKeys`). -/
-  keys : IFEnvKeys rf
-  /-- The table map, as `idx`: a row is a slot of `env.tables`, read through,
-  where the twin's row is the table; an out-of-range slot — which
-  `ifenv_raw_table` declines — is `none` on the twin's side too. -/
-  tbls : ∀ n, ((ConRon.Refine.HashMap2.toFun rf.tbls n).bind fun s =>
-      (rf.env.tables.val[s.val]?).map absIProjTable)
-    = lf.tbls[absNIdx n]?
-  /-- Every table-map row points at a slot whose table belongs to the row's
-  key (`IFEnvTblKeys`). -/
-  tblKeys : IFEnvTblKeys rf
 
 end ConRon.Refine2

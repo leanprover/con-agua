@@ -47,6 +47,7 @@ open L.Ind (IW)
 /-- `pin_in(x, k, hi)`: `1` if `x` is one of `PINS[k‥hi)`; aborts on an empty pin table, where the
 twin's pin reads raise `.internal`. -/
 -- con-ron: ConRon/Arena/Checker.lean:117-155 ConRon.Arena.installStepGo
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installStepGo` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose] def pinIn : FunDecl := lfn (x, k, hi) locals (r) {
   if PINS.u64[0] == 0 { abort R_PIN_DATA };
   if hi <= k { return 0 };
@@ -70,6 +71,7 @@ twin's pin reads raise `.internal`. -/
 (`decCI`'s layout: kind, the constant value, the value, the hint (`0` opaque, `1` abbrev, `2`
 regular), the height); its universe parameters a fresh `EREC` slice. -/
 -- con-ron: ConRon/Arena/Checker.lean:117-155 ConRon.Arena.installStepGo
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installStepGo` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose] def erecCi : FunDecl := lfn (i, kind) locals (lo, ll, s, z, p, hq) {
   lo := DECL.u64[3 + 8 * i];
   ll := DECL.u64[4 + 8 * i];
@@ -92,6 +94,7 @@ regular), the height); its universe parameters a fresh `EREC` slice. -/
 /-- `erec_vg(p, vk)`: the value group of the constant record `p` with value kind `vk` (`0`
 defn, `1` thm, `2` opaque): kind, the constant value, the value (`p + 5`). -/
 -- con-ron: ConRon/Arena/Checker.lean:117-155 ConRon.Arena.installStepGo
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installStepGo` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose] def erecVg : FunDecl := lfn (p, vk) locals (g) {
   g := call erec_alloc(6);
   EREC.u64[g] := vk;
@@ -107,6 +110,7 @@ defn, `1` thm, `2` opaque): kind, the constant value, the value (`p + 5`). -/
 
 /-- `install_header(vis, q)`: `installHeader fe cv`, `q` the constant value in `EREC`. -/
 -- con-ron: ConRon/Arena/CheckerSplit.lean:63-81 ConRon.Arena.installHeader
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installHeader` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.installHeader]
 def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a, u) {
   n := EREC.u64[q];
@@ -131,6 +135,7 @@ def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, 
 
 /-- `install_value_guards(vis, q, v)`: `installValueGuards fe cv v`. -/
 -- con-ron: ConRon/Arena/CheckerSplit.lean:83-95 ConRon.Arena.installValueGuards
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installValueGuards` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.installValueGuards]
 def installValueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c, u) {
   (o, l) := call cv_lps(q);
@@ -204,7 +209,9 @@ constructor, 7; `5` recursor, 9 and its 11-word rules) copied into `EREC`, its s
 /-! ## `check_decl`, `install_step_go` -/
 
 /-- `check_decl(i, vis)`: `checkDecl` on record `i`. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:87-219 ConRon.Arena.checkDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:102-184 ConRon.Arena.checkDecl
+-- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.checkDecl`, `ConRon.Arena.basisNameHit`, `ConRon.Arena.checkBasisBlock`, `ConRon.Arena.checkQuotRecord`, `ConRon.Arena.checkStructuralNatPin` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkDecl` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDecl]
 def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, np, v) {
   k := DECL.u64[1 + 8 * i];
@@ -229,6 +236,7 @@ theorem (`vk = 1`), the push, the value group (kind `vk`) → the new view and t
 Split out of `install_step_go` so that its call closure is the arm's alone (its write set comes
 from the text, `DeclStepSpec.lean`). -/
 -- con-ron: ConRon/Arena/Checker.lean:117-155 ConRon.Arena.installStepGo
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installStepGo` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose] def installValueL : FunDecl := lfn (i, vis, ck, vk) locals (p, z, v, g) {
   p := call erec_ci(i, ck);
   z := call install_header(vis, p + 1);
@@ -241,6 +249,7 @@ from the text, `DeclStepSpec.lean`). -/
 /-- `install_step_go(i, vis)`: `installStepGo` on record `i` → the new view, the value group's
 flag and record. -/
 -- con-ron: ConRon/Arena/Checker.lean:117-155 ConRon.Arena.installStepGo
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installStepGo` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.installStepGo]
 def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, z, g) {
   z := call iw_reset();
@@ -273,6 +282,7 @@ sort, for a theorem the proposition test and the value's guards, the value's typ
 declared one. The level comparison is lane `whnf`'s cached `lvl_eq_c` (`lvlEq?` consults and fills
 `lvlEqC`; `0` none, `1` false, `2` true). -/
 -- con-ron: ConRon/Arena/CheckerSplit.lean:97-114 ConRon.Arena.checkValueGroup
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkValueGroup` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkValueGroup]
 def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt, d) {
   z := call iw_reset();

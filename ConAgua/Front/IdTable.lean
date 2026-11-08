@@ -118,7 +118,7 @@ def putK (b : ArrId) (i : Word) : Option (Word × Mem) → Option Mem
 /-! ## The L functions -/
 
 /-- `tbl_get(i)` of table `b`, the sparse probe `fnd`.
-con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:335-337 ConLeche.Frontend.IdTable.get? -/
 @[no_expose] def tblGetG (b : ArrId) (fnd : FnName) : FunDecl :=
   let _sa : ArrId := spArr b
   lfn (i) locals (fd, j, d) {
@@ -130,7 +130,7 @@ con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.g
   }
 
 /-- `tbl_fresh(i)` of table `b`, the sparse probe `fnd`.
-con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:352-361 ConLeche.Frontend.IdTable.bound -/
 @[no_expose] def tblFreshG (b : ArrId) (fnd : FnName) : FunDecl := lfn (i) locals (fd, j, d) {
   if i < CTL.u64[⟪szC b⟫] { abort };
   if i == ⟪TOMB⟫ { abort };
@@ -140,7 +140,7 @@ con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.b
 }
 
 /-- `tbl_put(i, h)` of table `b`, the sparse probe `fnd` and put `pt`.
-con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:339-346 ConLeche.Frontend.IdTable.insert -/
 @[no_expose] def tblPutG (b : ArrId) (fnd pt : FnName) : FunDecl := lfn (i, h) locals (s, fd, j, d, z) {
   s := CTL.u64[⟪szC b⟫];
   if i == s && i >> 1 < len(b.u64) {

@@ -67,30 +67,30 @@ namespace L.Front
 /-! ## `name_get`, `level_get`, `name_fresh`, `level_fresh`, `name_put`, `level_put` -/
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:117-122 ConRon.Arena.Frontend.StateD.name
-con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:335-337 ConLeche.Frontend.IdTable.get? -/
 @[no_expose] def nameGet : FunDecl := tblGetG NID "nsp_find"
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:124-129 ConRon.Arena.Frontend.StateD.level
-con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:335-337 ConLeche.Frontend.IdTable.get? -/
 @[no_expose] def levelGet : FunDecl := tblGetG LID "lsp_find"
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:151-156 ConRon.Arena.Frontend.StateD.freshName
-con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:352-361 ConLeche.Frontend.IdTable.bound -/
 @[no_expose] def nameFresh : FunDecl := tblFreshG NID "nsp_find"
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:158-161 ConRon.Arena.Frontend.StateD.freshLevel
-con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:352-361 ConLeche.Frontend.IdTable.bound -/
 @[no_expose] def levelFresh : FunDecl := tblFreshG LID "lsp_find"
 
-/-- con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
+/-- con-leche: ConLeche/Frontend/Scan/Types.lean:339-346 ConLeche.Frontend.IdTable.insert -/
 @[no_expose] def namePut : FunDecl := tblPutG NID "nsp_find" "nsp_put"
 
-/-- con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
+/-- con-leche: ConLeche/Frontend/Scan/Types.lean:339-346 ConLeche.Frontend.IdTable.insert -/
 @[no_expose] def levelPut : FunDecl := tblPutG LID "lsp_find" "lsp_put"
 
 /-! ## `front_init()` -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:494-503 ConRon.Arena.Frontend.StateD.init -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:490-499 ConRon.Arena.Frontend.StateD.init -/
 @[no_expose, l_impl ConRon.Arena.Frontend.StateD.init]
 def frontInit : FunDecl := lfn () locals (h, z) {
   h := call intern_nanon();

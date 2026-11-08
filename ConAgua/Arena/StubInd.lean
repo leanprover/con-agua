@@ -43,7 +43,8 @@ open L.Arena L.Ind
 /-- `lv_zero_caps(l)`: `(0, 0, 0)` for `never`, `(1, off, len)` for `ifAllZero` with the
 parameter names at `EREC[off ‥ off + len)`. -/
 -- con-leche: ConLeche/Kernel/Level.lean:187-197 ConLeche.Level.zeronessOf
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:51-96 ConRon.Arena.blockCapsAt
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:46-80 ConRon.Arena.blockCapsAt
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def lvZeroCapsL : FunDecl := lfn (l) locals (t0, z, n, q, u) {
   t0 := CTL.u64[192];
   z := call lv_zero(l);
@@ -63,7 +64,9 @@ the head a `const` naming an inductive in the environment), else `ok = 0` (and `
 common prefix of `recRuleKOf` and `recRuleEtaOf`. The flag is a word of its own: a record may
 sit at offset `0` of `EREC`, so an offset is no sentinel. -/
 -- con-ron: ConRon/Arena/Core.lean:1857-1872 ConRon.Arena.recRuleKOf
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleKOf` is gone upstream; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Core.lean:1874-1892 ConRon.Arena.recRuleEtaOf
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleEtaOf` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose] def ctorFamily : FunDecl := lfn (vis, c) locals (f, q, pr, hh, t, f2, q2) {
   (f, q) := call env_find(c, vis);
   if f == 0 { return (0, 0, 0) };
@@ -79,6 +82,7 @@ sit at offset `0` of `EREC`, so an offset is no sentinel. -/
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1857-1872 ConRon.Arena.recRuleKOf -/
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleKOf` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.recRuleKOf]
 def recRuleKOfL : FunDecl := lfn (vis, c) locals (q, tq, ok) {
   (q, tq, ok) := call ctor_family(vis, c);
@@ -88,6 +92,7 @@ def recRuleKOfL : FunDecl := lfn (vis, c) locals (q, tq, ok) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1874-1892 ConRon.Arena.recRuleEtaOf -/
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleEtaOf` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.recRuleEtaOf]
 def recRuleEtaOfL : FunDecl := lfn (vis, c) locals (q, tq, ok, r) {
   (q, tq, ok) := call ctor_family(vis, c);
@@ -100,6 +105,7 @@ def recRuleEtaOfL : FunDecl := lfn (vis, c) locals (q, tq, ok, r) {
 
 /-- `rec_rule_bits(vis, c)`: the rule's `(k, eta)`. -/
 -- con-ron: ConRon/Arena/Core.lean:1894-1900 ConRon.Arena.recRuleBits
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleBits` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.recRuleBits]
 def recRuleBitsL : FunDecl := lfn (vis, c) locals (k, eta) {
   k := call rec_rule_k_of(vis, c);
@@ -121,7 +127,7 @@ def recRuleBitsL : FunDecl := lfn (vis, c) locals (k, eta) {
 
 /-- `opf_go(n, e, i, co, cn)`: `openPisAtFvarsFGo acc n e i` with `acc = SPN[co ‥ co + cn)`:
 `(1, body)` or `(0, 0)`; the free variables made are pushed. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:290-307 ConRon.Arena.openPisAtFvarsFGo
+-- con-ron: ConRon/Arena/Core.lean:2598-2615 ConRon.Arena.openPisAtFvarsFGo
 @[no_expose, l_impl ConRon.Arena.openPisAtFvarsFGo]
 def opfGo : FunDecl := lfn (n, e, i, co, cn) locals (g, x, y, w, d, fv, u, ok, b) {
   if n == 0 { b := call inst_list(e, co, cn, 0); return (1, b) };
@@ -136,7 +142,7 @@ def opfGo : FunDecl := lfn (n, e, i, co, cn) locals (g, x, y, w, d, fv, u, ok, b
 
 /-- `opa_go(n, e, i)`: `openPisAtFvars n e i`: `(1, body)` or `(0, 0)`; the free variables made
 are pushed. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:272-288 ConRon.Arena.openPisAtFvars
+-- con-ron: ConRon/Arena/Core.lean:2580-2596 ConRon.Arena.openPisAtFvars
 @[no_expose, l_impl ConRon.Arena.openPisAtFvars]
 def opaGo : FunDecl := lfn (n, e, i) locals (g, x, y, w, fv, b, u, ok) {
   if n == 0 { return (1, e) };
@@ -152,7 +158,7 @@ def opaGo : FunDecl := lfn (n, e, i) locals (g, x, y, w, fv, b, u, ok) {
 /-- `open_pis_at_fvars_f(n, e, i)`: `(1, off, n, body)` (the free variables an `IW` slice, in
 binder order) or `(0, 0, 0, 0)`. A first fvar index `i ≥ 2^63` aborts (a capacity guard, deviation
 D33: the indices `i, i + 1, …` must not wrap). -/
--- con-ron: ConRon/Arena/CheckerBase.lean:309-316 ConRon.Arena.openPisAtFvarsF
+-- con-ron: ConRon/Arena/Core.lean:2617-2624 ConRon.Arena.openPisAtFvarsF
 @[no_expose, l_impl ConRon.Arena.openPisAtFvarsF]
 def openPisAtFvarsFL : FunDecl := lfn (n, e, i) locals (co, ok, b, q, u) {
   if i >> 63 != 0 { abort };

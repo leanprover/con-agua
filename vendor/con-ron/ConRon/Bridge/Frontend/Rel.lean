@@ -64,7 +64,7 @@ module
 
 public import ConRon.Bridge.Checker.Inv
 public import ConLeche.Frontend.ExportC
-import ConRon.Bridge.Promote.WalkDecl
+import ConRon.Bridge.EnvDenote
 public import ConRon.Arena.Frontend.ExportC
 
 public section
@@ -541,6 +541,11 @@ theorem PersFire_of_denote {st : EStore} (hwf : StoreWF st)
     | none => rw [h1, h2] at hd; simp at hd
     | some ps =>
     exact ⟨PersLList_of_denote hwf hoff h1, PersEList_of_denote hwf hoff h2⟩
+  | levels lvls =>
+    rw [denoteFire] at hd
+    cases h1 : denoteLList st.ls lvls with
+    | none => rw [h1] at hd; simp at hd
+    | some ls => exact PersLList_of_denote hwf hoff h1
 
 /-- con-leche: none — one recursor rule. -/
 theorem PersRule_of_denote {st : EStore} (hwf : StoreWF st)
@@ -638,7 +643,7 @@ theorem PersCI_of_denote {st : EStore} (hwf : StoreWF st)
     | none => rw [h1, h2] at hd; simp at hd
     | some caps =>
       exact ⟨PersCV_of_denote hwf hoff h1, PersCaps_of_denote hwf hoff h2⟩
-  | recInfo v mI rP rs =>
+  | recInfo v mI rP k rs =>
     rw [denoteCI] at hd
     cases h1 : denoteCV st v with
     | none => rw [h1] at hd; simp at hd
@@ -679,7 +684,6 @@ theorem PersDecl_of_denote {st : EStore} (hwf : StoreWF st)
     (hd : denoteDecl st di = some d) :
     PersDecl di := by
   cases di with
-  | basisDecl k => trivial
   | axiomDecl v =>
     rw [denoteDecl] at hd
     cases h1 : denoteCV st v with
@@ -809,10 +813,6 @@ theorem declNames_denote {st : EStore} {d : IDeclaration} {dP : Declaration}
         obtain rfl := Option.some.inj hd
         simp only [IDeclaration.names, Declaration.names,
           ConRon.Arena.Frontend.denoteNList, hcv v cv hv]
-  | basisDecl k =>
-    simp only [ConRon.Arena.Frontend.denoteDecl, Option.some.injEq] at hd
-    subst hd
-    rfl
   | quotDecl k v =>
     simp only [ConRon.Arena.Frontend.denoteDecl, Option.map_eq_some_iff] at hd
     obtain ⟨cv, hv, rfl⟩ := hd
@@ -885,7 +885,6 @@ theorem denoteDecl_ext {st st' : EStore} (hx : Ext st st') {pd : IDeclaration}
     (h : ConRon.Arena.Frontend.denoteDecl st pd = some d) :
     ConRon.Arena.Frontend.denoteDecl st' pd = some d := by
   cases pd with
-  | basisDecl k => exact h
   | axiomDecl v =>
     simp only [ConRon.Arena.Frontend.denoteDecl, Option.map_eq_some_iff] at h ⊢
     obtain ⟨cv, hcv, hc⟩ := h
@@ -978,7 +977,7 @@ that the induction has one invariant rather than two. -/
 
 /-- con-leche: none — every declaration record the parse state holds is
 persistent (`Bridge/Promote/Pers.lean`'s `PersDecl`).  This is the clause
-`Arena.installThenCheck_bridge` names `hpd`. -/
+`Arena.pooledAccepts_bridge` names `hpd`. -/
 @[expose] def PersDecls (ds : Array IDeclaration) : Prop := ∀ d ∈ ds, PersDecl d
 
 /-- con-leche: none — the parse state's handles are persistent.  Free (the

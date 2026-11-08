@@ -163,7 +163,7 @@ theorem spK_zero : spK KA VA PA n po pc ko kc vo vc (some (0, m₁)) =
     spwW KA VA PA n m₁ (po + 1) (pc - 1) ko kc vo vc := by rw [spK]; simp
 end arms2
 
-/-- con-leche: ConLeche/Kernel/Level.lean:199-205 ConLeche.Level.substPW -/
+/-- con-leche: ConLeche/Kernel/Level.lean:215-221 ConLeche.Level.substPW -/
 @[no_expose] def lvSpwG : FunDecl := lfn (po, pc, ko, kc, vo, vc) locals (f, v, x, w) {
   if pc == 0 { return 0 };
   w := PA.u64[po];
@@ -180,7 +180,7 @@ def substPWW (n : Nat) (m : Mem) (kd po pc ko kc vo vc : Word) : Option (Word ×
   | 0 => none
   | n + 1 => if kd = 0 then some (1, m) else spwW KA VA PA n m po pc ko kc vo vc
 
-/-- con-leche: ConLeche/Kernel/Level.lean:199-205 ConLeche.Level.substPW -/
+/-- con-leche: ConLeche/Kernel/Level.lean:215-221 ConLeche.Level.substPW -/
 @[no_expose, l_impl ConLeche.Level.substPW]
 def lvSubstPW : FunDecl := lfn (kd, po, pc, ko, kc, vo, vc) locals (x) {
   if kd == 0 { return 1 };

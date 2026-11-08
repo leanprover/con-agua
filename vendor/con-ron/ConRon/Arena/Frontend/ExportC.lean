@@ -91,7 +91,7 @@ def storeFuel : AM Nat := do
 
 /-! ## The direct parse state -/
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:55-59 StateD — the direct parse
+/-- con-leche: ConLeche/Frontend/ExportC.lean:56-60 StateD — the direct parse
 state: stream-index-keyed tables of HANDLES (a table hit is the same shared
 node, named by its handle) and the parsed declarations as `IDeclaration`.
 Every field the modeller and the projection rewrite used is gone with them
@@ -106,7 +106,7 @@ structure StateD where
   exprs : IdTable EIdx := {}
   decls : Array IDeclaration := #[]
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:65-72 pushDecl — one parsed
+/-- con-leche: ConLeche/Frontend/ExportC.lean:66-70 pushDecl — one parsed
 record, appended: the decoder keeps the file's records in the file's order.
 What used to sit here — the constants-and-heights bookkeeping the in-process
 modeller read (`noteDecl`) — is gone with the modeller: `pushDecl` is a plain
@@ -114,28 +114,28 @@ state update now. -/
 def pushDecl (st : StateD) (d : IDeclaration) : AM StateD :=
   pure { st with decls := st.decls.push d }
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:74-77 StateD.name — the name
+/-- con-leche: ConLeche/Frontend/ExportC.lean:72-75 StateD.name — the name
 table read. -/
 def StateD.name (st : StateD) (i : Nat) : AM NIdx :=
   match st.names.get? i with
   | some n => pure n
   | none => fail (.internal s!"undefined name index {i}")
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:79-82 StateD.level — the level
+/-- con-leche: ConLeche/Frontend/ExportC.lean:77-80 StateD.level — the level
 table read. -/
 def StateD.level (st : StateD) (i : Nat) : AM LIdx :=
   match st.levels.get? i with
   | some l => pure l
   | none => fail (.internal s!"undefined level index {i}")
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:84-87 StateD.expr — the
+/-- con-leche: ConLeche/Frontend/ExportC.lean:82-85 StateD.expr — the
 expression table read. -/
 def StateD.expr (st : StateD) (i : Nat) : AM EIdx :=
   match st.exprs.get? i with
   | some e => pure e
   | none => fail (.internal s!"undefined expr index {i}")
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:84-87 StateD.expr —
+/-- con-leche: ConLeche/Frontend/ExportC.lean:82-85 StateD.expr —
 declaration-level expression lookup: the table read.  (The frontend tree-size
 budget that used to sit here was retired at con-leche's task #215.) -/
 def getDeclD (st : StateD) (i : Nat) : AM EIdx :=
@@ -143,31 +143,31 @@ def getDeclD (st : StateD) (i : Nat) : AM EIdx :=
 
 /-! ## The rebinding test -/
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:178-180 reboundError — the
+/-- con-leche: ConLeche/Frontend/ExportC.lean:174-176 reboundError — the
 rebinding error, named once. -/
 def reboundError (what : String) (i : Nat) : String :=
   s!"{what} index {i} is already bound"
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:182-191 StateD.freshName — the
+/-- con-leche: ConLeche/Frontend/ExportC.lean:178-187 StateD.freshName — the
 name test, on a BORROWED state (con-leche measured a 17 % parse-phase
 instruction increase when an owned read let the compiler deconstruct the state
 before the test). -/
 @[noinline] def StateD.freshName (st : @& StateD) (i : Nat) : AM Unit :=
   if st.names.bound i then fail (.internal (reboundError "name" i)) else pure ()
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:192-193 StateD.freshLevel — the
+/-- con-leche: ConLeche/Frontend/ExportC.lean:188-189 StateD.freshLevel — the
 level test, on a borrowed state. -/
 @[noinline] def StateD.freshLevel (st : @& StateD) (i : Nat) : AM Unit :=
   if st.levels.bound i then fail (.internal (reboundError "level" i)) else pure ()
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:194-195 StateD.freshExpr — the
+/-- con-leche: ConLeche/Frontend/ExportC.lean:190-191 StateD.freshExpr — the
 expression test, on a borrowed state. -/
 @[noinline] def StateD.freshExpr (st : @& StateD) (i : Nat) : AM Unit :=
   if st.exprs.bound i then fail (.internal (reboundError "expression" i)) else pure ()
 
 /-! ## Table entries -/
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:199-203 parseNameEntryD — a
+/-- con-leche: ConLeche/Frontend/ExportC.lean:195-199 parseNameEntryD — a
 name-table entry: the node is INTERNED and the table records its handle. -/
 def parseNameEntryD (st : StateD) (i : Nat) : NameRec → AM StateD
   | .str pre s => do
@@ -181,7 +181,7 @@ def parseNameEntryD (st : StateD) (i : Nat) : NameRec → AM StateD
     let h ← internNNode (.num p n)
     pure { st with names := st.names.insert i h }
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:205-209 parseLevelEntryD — a
+/-- con-leche: ConLeche/Frontend/ExportC.lean:201-205 parseLevelEntryD — a
 level-table entry, interned. -/
 def parseLevelEntryD (st : StateD) (i : Nat) (r : LevelRec) : AM StateD := do
   st.freshLevel i
@@ -192,7 +192,7 @@ def parseLevelEntryD (st : StateD) (i : Nat) (r : LevelRec) : AM StateD := do
     | .param n => do internLNode (.param (← st.name n))
   pure { st with levels := st.levels.insert i l }
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:211-215 parseExprEntryD — an
+/-- con-leche: ConLeche/Frontend/ExportC.lean:207-211 parseExprEntryD — an
 expression-table entry: the node is interned from the children's HANDLES, and
 the packed derived word `Expr.data` computes is computed by `intern` out of
 the children's derived columns (task #97a's `EStore.derOfView`).  Binder names
@@ -227,7 +227,7 @@ def parseExprEntryD (st : StateD) (i : Nat) (r : ExprRec) : AM StateD := do
 
 /-! ## Declaration records -/
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:219-225 cvOfF — a
+/-- con-leche: ConLeche/Frontend/ExportC.lean:215-221 cvOfF — a
 declaration's common data; the type stays a handle. -/
 def parseCVD (st : StateD) (cv : CVRec) : AM IConstantVal := do
   let name ← st.name cv.name
@@ -236,7 +236,7 @@ def parseCVD (st : StateD) (cv : CVRec) : AM IConstantVal := do
          levelParams := ← cv.levelParams.mapM st.name
          type := ty }
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:227-233 indPiTeleLen — the
+/-- con-leche: ConLeche/Frontend/ExportC.lean:223-229 indPiTeleLen — the
 syntactic Π-telescope length of a declared type: official counts a
 constructor's binders by walking `is_pi` without reducing, and the count past
 the parameters is the `numFields` of the constructor it generates. -/
@@ -247,34 +247,19 @@ def indPiTeleLen : Nat → EIdx → AM Nat
     | .forallE _ b => pure ((← indPiTeleLen fuel b) + 1)
     | _ => pure 0
 
-/-- con-leche: ConLeche/Kernel/ExprOps.lean:1164-1168 piResult — the body of a
-syntactic `∀`-telescope, reading the WHOLE `view` at each step: the port's
-`export_c::pi_result`, `validate_ind_d`'s `is_K_target` walk, is written over
-`env::view_e`, where `Arena/ExprOps.lean`'s `piResult` — the twin of
-`expr_ops::pi_result` — reads the binder projection (task #97-P5-Core round
-4), so `validateIndD` calls this one (task #97-T2-LOCKSTEP lane Frontend). -/
-def piResultD : Nat → EIdx → AM EIdx
-  | 0, _ => fail (.internal "fuel exhausted: piResult")
-  | fuel + 1, h => do
-    match ← view h with
-    | .forallE _ b => piResultD fuel b
-    | _ => pure h
-
-/-- con-leche: ConLeche/Frontend/ExportC.lean:235-238 ruleOfF — one recursor
+/-- con-leche: ConLeche/Frontend/ExportC.lean:231-233 ruleOfF — one recursor
 rule of an inductive record, resolved.  The install-computed fields carry
 con-leche's own parse placeholders. -/
 def parseRuleD (st : StateD) (ru : RuleRec) : AM IRecRule := do
-  pure (IRecRule.mk (← st.name ru.ctor) ru.nfields 0 .plain
-    (← getDeclD st ru.rhs) false false)
+  pure (IRecRule.mk (← st.name ru.ctor) ru.nfields .plain (← getDeclD st ru.rhs))
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:240-392 validateIndF — an
+/-- con-leche: ConLeche/Frontend/ExportC.lean:235-371 validateIndF — an
 inductive record, VALIDATED: the half of the record's processing that reads
 the state and changes nothing.  Every guard, every verdict and every message
 is con-leche's; what changed is that a name comparison is a handle comparison
 (sound because `denoteN` is injective — task #97a's `denoteN_inj`, DESIGN
-§8.3's exactness obligation), that a structural read of a type is a `view`,
-and that the level algorithm behind `kExpected?` runs on a READ-BACK level
-tree (DESIGN §8.3 lesson 4).
+§8.3's exactness obligation) and that a structural read of a type is a
+`view`.
 
 The two `for`/`mut` loops are con-leche's own; they run over a block's records
 — a handful — and not over the linear store, so DESIGN §8.4's "explicit tail
@@ -335,20 +320,11 @@ def validateIndD (st : @& StateD) (tys : List IndTypeRec) (cts : List IndCtorRec
       ordered := ordered.push c
       j := j + 1
   let cts := ordered.toList
-  -- the recursor records: the counts and the K flag the GENERATED recursor
-  -- carries.  NOT at a NESTED block.
+  -- the recursor records: the counts the GENERATED recursor carries.  NOT at a
+  -- NESTED block.
   let nested := tys.any (·.numNested != 0)
   let nTypes := tys.length
   let nCtors := cts.length
-  -- official's `is_K_target`
-  let kExpected? : Option Bool ← match tyTypes, listed, cts with
-    | [ty], [[_]], [c] => do
-      let r ← piResultD fuel ty
-      match ← view r with
-      | .sort s =>
-        pure (some (c.numFields == 0 && Level.isEquiv (← readLevel s) .zero == some true))
-      | _ => pure none
-    | _, _, _ => pure (some false)
   for r in (if nested then [] else rcs) do
     let rn ← st.name r.cv.name
     unless r.numParams == nPd do
@@ -360,10 +336,6 @@ def validateIndD (st : @& StateD) (tys : List IndTypeRec) (cts : List IndCtorRec
     unless r.numMinors == nCtors do
       return .inl (.invalid s!"recursor {← readName rn} declares {r.numMinors} \
         minor premises; the block has {nCtors} constructors")
-    if let some kE := kExpected? then
-      unless r.k == kE do
-        return .inl (.invalid s!"recursor {← readName rn} declares k := {r.k}; the \
-          generated recursor of this block is{if kE then "" else " not"} K-like")
     -- `numIndices` of `T.rec` is what is left of `T`'s own telescope once the
     -- parameters are peeled
     match ← viewN rn with
@@ -379,7 +351,7 @@ def validateIndD (st : @& StateD) (tys : List IndTypeRec) (cts : List IndCtorRec
     | _ => pure ()
   return .inr (cts, nPd)
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:394-416 indBlockOfF — an
+/-- con-leche: ConLeche/Frontend/ExportC.lean:373-390 indBlockOfF — an
 inductive record, INSTALLED: the block's constants, pushed as one `IndDecl`.
 Every change to the state a validated inductive record makes is here.
 
@@ -389,8 +361,8 @@ the `wants`/`inModel` gate); the uniform installer (task #105,
 `Arena/Inductives/**`, the kernel lane's) replaces both, so the parser has
 nothing left to do but push the block.
 
-**EVERY BLOCK IS AN `indDecl`**: the basis-pin match is `preparePrelude`'s and
-the fold's, never the parser's. -/
+**EVERY BLOCK IS AN `indDecl`**: the fold recognises a pinned block by its
+members' names (`basisNameHit`) and its check compares it with the pin. -/
 def installIndD (st : StateD) (tys : List IndTypeRec)
     (cts : List IndCtorRec) (rcs : List IndRecRec) (nPd : Nat) :
     AM StateD := do
@@ -402,11 +374,11 @@ def installIndD (st : StateD) (tys : List IndTypeRec)
     let rules ← r.rules.mapM (parseRuleD st)
     pure (IConstantInfo.recInfo (← parseCVD st r.cv)
       (r.numParams + r.numMotives + r.numMinors + r.numIndices)
-      (r.numParams + r.numMotives + r.numMinors) rules)
+      (r.numParams + r.numMotives + r.numMinors) r.k rules)
   let block := types ++ ctors ++ recs
   pushDecl st (.indDecl block nPd)
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:479-484 processLineCoreD — the
+/-- con-leche: ConLeche/Frontend/ExportC.lean:450-455 processLineCoreD — the
 record's own semantics: the declaration kinds, producing `IDeclaration`
 records.  Every branch, guard and error string is con-leche's; the
 projection-function rewrite that used to run in the `.defn`/`.thm` arms is
@@ -458,19 +430,19 @@ def processLineCoreD (st : StateD) (d : DeclRec) :
     | .inl v => pure (.inr v)
     | .inr (cts, nPd) => pure (.inl (← installIndD st tys cts rcs nPd))
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:486-493 applyDeclD — a
+/-- con-leche: ConLeche/Frontend/ExportC.lean:457-464 applyDeclD — a
 declaration record.  `sorryAx` is the FOLD's: the parse forwards every
 declaration record, the `sorryAx` axiom record included. -/
 def applyDeclD (st : StateD) (d : DeclRec) :
     AM (StateD ⊕ RecordVerdict) :=
   processLineCoreD st d
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:495-505 applyLine — THE SEMANTIC
-LAYER: one scanned line applied to the parse state.  The scanned record is
-con-leche's own (`Scan/Fast.lean`, reused); what this does with it is resolve
-the indices and INTERN the nodes.  There is no rewrite and no modeller seam
-left to run (task #105). -/
-def applyLine (st : StateD) (r : LineRec) :
+/-- con-leche: ConLeche/Frontend/ExportC.lean:466-477 applyRecord — one record
+applied to the parse state.  The scanned record is con-leche's own
+(`Scan/Fast.lean`, reused); what this does with it is resolve the indices and
+INTERN the nodes.  The header and a blank line change nothing (where they may
+stand is `applyLine`'s). -/
+def applyRecord (st : StateD) (r : LineRec) :
     AM (StateD ⊕ RecordVerdict) :=
   match r with
   | .expr i e => do pure (.inl (← parseExprEntryD st i e))
@@ -480,9 +452,33 @@ def applyLine (st : StateD) (r : LineRec) :
   | .header => pure (.inl st)
   | .blank => pure (.inl st)
 
+/-- con-leche: ConLeche/Frontend/ExportC.lean:479-487 LineRec.placed — where a
+line may stand: the format's first line is its `meta` header (`first`), and
+every later line is a record — the header only first, every other record never
+first, a blank line nowhere. -/
+def lineRecPlaced (first : Bool) : LineRec → Bool
+  | .header => first
+  | .blank => false
+  | _ => !first
+
+/-- con-leche: ConLeche/Frontend/ExportC.lean:489-493 LineRec.misplaced — what a
+line that stands where it may not is told. -/
+def lineRecMisplaced : LineRec → String
+  | .header => "a meta line after the first line"
+  | .blank => "a blank line"
+  | _ => "the first line is not the meta header"
+
+/-- con-leche: ConLeche/Frontend/ExportC.lean:495-499 applyLine — THE SEMANTIC
+LAYER: one scanned line, after `lineNo` lines, applied to the parse state if it
+stands where it may. -/
+def applyLine (st : StateD) (r : LineRec) (lineNo : Nat) :
+    AM (StateD ⊕ RecordVerdict) :=
+  if lineRecPlaced (lineNo == 0) r then applyRecord st r
+  else fail (.internal (lineRecMisplaced r))
+
 /-! ## The line feed and the drivers -/
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:509-513 ParseResultD — the direct
+/-- con-leche: ConLeche/Frontend/ExportC.lean:503-507 ParseResultD — the direct
 parse result: the declarations over handles.  No arena conversion: the handles
 already point into the persistent tier the fold will read.  con-leche's
 receipts (the projection rewrites, the modelled blocks, the generated-record
@@ -491,7 +487,7 @@ structure ParseResultD where
   /-- the FILE's declaration records, in the file's order -/
   decls : Array IDeclaration
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:515-517 StateD.init — the initial
+/-- con-leche: ConLeche/Frontend/ExportC.lean:509-511 StateD.init — the initial
 parse state.  Over handles it is monadic: index 0 of the name table is the
 format's implicit `Name.anonymous` and index 0 of the level table its
 `Level.zero`, and those are the handles those two nodes intern at — in the
@@ -502,26 +498,26 @@ def StateD.init : AM StateD := do
   let l0 ← internLNode .zero
   pure { names := IdTable.singleton n0, levels := IdTable.singleton l0 }
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:533-534 ParseResultD.ofState —
+/-- con-leche: ConLeche/Frontend/ExportC.lean:527-528 ParseResultD.ofState —
 the result: the file's records, in the file's order. -/
 def ParseResultD.ofState (st : StateD) : ParseResultD :=
   ⟨st.decls⟩
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:537-547 applyFinalLine — scan and
-apply the LAST line of a stream, the one no newline ends.  A syntactic failure
-is reported at its offset in the line.  con-leche calls `scanLineSpec` and lets
+/-- con-leche: ConLeche/Frontend/ExportC.lean:531-542 applyFinalLine — scan and
+apply the LAST line of a stream, the one no newline ends, after `lineNo` lines.
+A syntactic failure is reported at its offset in the line.  con-leche calls `scanLineSpec` and lets
 `@[csimp]` substitute `scanLineFwd`; this calls `scanLineFwd`, which is what
 both binaries execute. -/
 def applyFinalLine (st : StateD) (b : @& ByteArray) (i : USize)
     (lineNo : Nat) : AM (Except (CheckError × Nat) StateD) := do
   match scanLineFwd b i with
-  | .err e => pure (.error (.internal (ScanErr.render ⟨e.offset - i.toNat, e.what⟩), lineNo))
+  | .err e => pure (.error (.internal (ScanErr.render ⟨e.offset - i.toNat, e.what⟩), lineNo + 1))
   | .ok r _ =>
-    match ← applyLine st r with
-    | .inr v => pure (.error (v.toError, lineNo))
+    match ← applyLine st r lineNo with
+    | .inr v => pure (.error (v.toError, lineNo + 1))
     | .inl st => pure (.ok st)
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:549-583 feedChunk — every
+/-- con-leche: ConLeche/Frontend/ExportC.lean:544-578 feedChunk — every
 COMPLETE line of the chunk from `i`, applied in order: the state, the line
 count, and where the incomplete tail begins.  A line the chunk cut in half is
 told from a malformed one by whether the rest of the chunk holds a newline at
@@ -542,7 +538,7 @@ def feedChunk (st : StateD) (b : @& ByteArray) (i : USize)
       -- COMPARED, not matched.)
       if j == 0 then pure (.ok (st, lineNo, i))
       else do
-        match ← applyLine st r with
+        match ← applyLine st r lineNo with
         | .inr v => pure (.error (v.toError, lineNo + 1))
         | .inl st =>
           if _hj : i < j then feedChunk st b j (lineNo + 1)
@@ -552,17 +548,17 @@ termination_by b.size - i.toNat
 decreasing_by
   exact Nat.sub_lt_sub_left (usizeInBounds b i _h) (USize.lt_iff_toNat_lt.mp _hj)
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:585-586 chunkSize — how many
+/-- con-leche: ConLeche/Frontend/ExportC.lean:580-581 chunkSize — how many
 bytes the streaming driver asks for at a time. -/
 def chunkSize : USize := 4 * 1024 * 1024
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:588-596 sizeError — THE SIZE
+/-- con-leche: ConLeche/Frontend/ExportC.lean:583-591 sizeError — THE SIZE
 GUARD: the byte reader addresses its buffer by machine word, so an input of
 `USize.size` bytes or more is refused before any of it is read. -/
 def sizeError : CheckError × Nat :=
   (.notImplemented s!"an input of {USize.size} bytes or more", 0)
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:598-610 parseBytes — wholesale
+/-- con-leche: ConLeche/Frontend/ExportC.lean:593-605 parseBytes — wholesale
 direct parse of a byte buffer: the whole input fed at once, then the last
 line.  The specification the streaming parse is proved equal to. -/
 def parseBytes (b : ByteArray) : AM (Except (CheckError × Nat) ParseResultD) := do
@@ -571,13 +567,13 @@ def parseBytes (b : ByteArray) : AM (Except (CheckError × Nat) ParseResultD) :=
   | .error e => pure (.error e)
   | .ok (st, lineNo, tail) =>
     if tail < b.usize then
-      match ← applyFinalLine st b tail (lineNo + 1) with
+      match ← applyFinalLine st b tail lineNo with
       | .error e => pure (.error e)
       | .ok st => pure (.ok (.ofState st))
     else
       pure (.ok (.ofState st))
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:630-640 chunkStep — one chunk of
+/-- con-leche: ConLeche/Frontend/ExportC.lean:625-635 chunkStep — one chunk of
 the stream, applied: the carried incomplete tail is put in front of the new
 bytes, every complete line of the buffer is fed, and the new incomplete tail is
 cut off for the next chunk. -/
@@ -591,16 +587,16 @@ def chunkStep (st : StateD) (carry : ByteArray) (lineNo total : Nat)
   | .ok (st, lineNo, tail) =>
     pure (.ok (st, buf.extract tail.toNat buf.size, lineNo, total + buf0.size))
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:641-650 chunkFinish — the end of
+/-- con-leche: ConLeche/Frontend/ExportC.lean:635-642 chunkFinish — the end of
 the stream: the carried tail, if any, is its last line. -/
 def chunkFinish (st : StateD) (carry : ByteArray) (lineNo : Nat) :
     AM (Except (CheckError × Nat) ParseResultD) := do
   if carry.isEmpty then return .ok (.ofState st)
-  match ← applyFinalLine st carry 0 (lineNo + 1) with
+  match ← applyFinalLine st carry 0 lineNo with
   | .error e => pure (.error e)
   | .ok st => pure (.ok (.ofState st))
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:655-674 parseChunks — THE
+/-- con-leche: ConLeche/Frontend/ExportC.lean:650-669 parseChunks — THE
 STREAMING PARSE, PURELY: `chunkStep` folded over a list of chunks,
 `chunkFinish` at its end — what the driver's read loop does with the chunks its
 handle hands out, minus the reads.  The list is folded whole: an empty chunk
@@ -616,7 +612,7 @@ def parseChunksGo (st : StateD) (carry : ByteArray) (lineNo total : Nat) :
     | .error e => pure (.error e)
     | .ok (st, carry, lineNo, total) => parseChunksGo st carry lineNo total cs
 
-/-- con-leche: ConLeche/Frontend/ExportC.lean:655-674 parseChunks — the
+/-- con-leche: ConLeche/Frontend/ExportC.lean:650-669 parseChunks — the
 streaming parse's entry point: the initial state, then `parseChunksGo` above. -/
 def parseChunks (chunks : List ByteArray) : AM (Except (CheckError × Nat) ParseResultD) := do
   parseChunksGo (← StateD.init) .empty 0 0 chunks

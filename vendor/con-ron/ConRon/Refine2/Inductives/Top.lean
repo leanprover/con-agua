@@ -13,7 +13,7 @@ over the three companions this module exports:
 
 | Rust | twin |
 |---|---|
-| `block_parts::block_parts` | `blockParts?` |
+| `block_shape::block_shape` | `blockShape?` |
 | `block_tail::check_block` | `checkBlock` |
 | `check_decl::check_shapeless` | `checkShapeless` |
 
@@ -26,6 +26,7 @@ installs, because the checker's fold needs both for its next step).  No
 import ConRon.Refine2.Inductives.Abs
 import ConRon.Refine2.Inductives.Prims
 import ConRon.Refine2.Inductives.BlockTail
+import ConRon.Refine2.Inductives.StreamRecs
 -- `checker_base::ind_params_ok` and `check_constant_val` are the checker
 -- tier's (`Checker/Base.lean`).
 import ConRon.Refine2.Checker.Base
@@ -50,11 +51,10 @@ skipped). -/
 @[lockstep] theorem check_shapeless_formers_ls {pers st lst} {mode : kernel.env.CheckMode}
     {rf lf} {block : alloc.vec.Vec arena.env.IConstantInfo} {i : Std.Usize}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    (hfe : IFEnvRelI rf lf) :
+    (hfe : IFEnvRelI pers rf lf) :
     LS pers (fun a b => b = a)
       (arena.check_decl.check_shapeless_formers pers st mode rf block i) lst
       (checkShapelessFormers (ConRon.Refine.absMode mode) lf (absICILFrom block i)) := by
-  have hvis : absU rf.visible_below = lf.visibleBelow := hfe.rel.visibleBelow.symm
   revert st lst hrel hinv
   simp only [absICILFrom]
   intro st lst hrel hinv
@@ -76,8 +76,8 @@ recogniser does not read: its formers checked, then a decline. -/
 @[lockstep] theorem check_shapeless_ls {pers st lst} {mode : kernel.env.CheckMode} {rf lf}
     {block : alloc.vec.Vec arena.env.IConstantInfo}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    (hfe : IFEnvRelI rf lf) :
-    LS pers IFEnvRelI
+    (hfe : IFEnvRelI pers rf lf) :
+    LS pers (IFEnvRelI pers)
       (arena.check_decl.check_shapeless pers st mode rf block) lst
       (checkShapeless (ConRon.Refine.absMode mode) lf (absICIL block)) := by
   rw [arena.check_decl.check_shapeless, checkShapeless]

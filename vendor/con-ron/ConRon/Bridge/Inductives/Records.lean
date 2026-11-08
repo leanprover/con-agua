@@ -2,7 +2,7 @@
 # `ConRon.Bridge.Inductives.Records` — the uniform route's records, denoted
 
 DESIGN §8.2's **Theorem 1** at the uniform inductive route (task #105).
-The twin's records (`Arena/Inductives/{BlockParts, Positivity, ClassRead,
+The twin's records (`Arena/Inductives/{BlockShape, Positivity, ClassRead,
 RecCheck, GenRec, BlockTail}.lean`) hold handles where con-leche's hold terms;
 this module gives each an `Option`-valued DENOTATION (`d…`), so that every
 relation the tier states between a twin record and con-leche's is one
@@ -22,7 +22,7 @@ module
 
 import ConRon.Bridge.Rel
 public import ConLeche.Verify.BridgeDecl
-public import ConRon.Arena.Inductives.BlockParts
+public import ConRon.Arena.Inductives.BlockShape
 public import ConRon.Arena.Frontend.Readback
 
 public section
@@ -72,19 +72,19 @@ theorem FOk.liftFueled {α : Type} {a : α} {w : String} :
 answer, as the Core tier's `SimE` states it, IS an `FOk` of the fueled
 operation. -/
 theorem FOk.whnf {μ : CheckMode} {env : Env} {d : Nat} {e v : Expr}
-    (h : ∃ F, ConLeche.whnf μ env F d e = .ok v) :
+    (h : ∃ F, ConLeche.whnf μ false env F d e = .ok v) :
     FOk ((fueledOpsM μ).whnf env d e) v := h
 
 theorem FOk.inferType {μ : CheckMode} {env : Env} {d : Nat} {e v : Expr}
-    (h : ∃ F, ConLeche.inferTypeCore μ env F d e = .ok v) :
+    (h : ∃ F, ConLeche.inferTypeCore μ false env F d e = .ok v) :
     FOk ((fueledOpsM μ).inferType env d e) v := h
 
 theorem FOk.isDefEq {μ : CheckMode} {env : Env} {d : Nat} {a b : Expr} {v : Bool}
-    (h : ∃ F, ConLeche.isDefEqCore μ env F d a b = .ok v) :
+    (h : ∃ F, ConLeche.isDefEqCore μ false env F d a b = .ok v) :
     FOk ((fueledOpsM μ).isDefEq env d a b) v := h
 
 theorem FOk.ensureSort {μ : CheckMode} {env : Env} {d : Nat} {e : Expr} {v : Level}
-    (h : ∃ F, ConLeche.ensureSortCore μ env F d e = .ok v) :
+    (h : ∃ F, ConLeche.ensureSortCore μ false env F d e = .ok v) :
     FOk ((fueledOpsM μ).ensureSort env d e) v := h
 
 /-- con-leche: ConLeche/Verify/BridgeDecl.lean:1201 checkDecl_datF — the
@@ -235,17 +235,6 @@ theorem mapM_option_congr {α β : Type} {f g : α → Option β} (h : ∀ x, f 
     (xs : List α) : xs.mapM f = xs.mapM g := by
   rw [show f = g from funext h]
 
-/-- con-leche: none — a member of a denoting list has a denoted partner. -/
-theorem mapM_option_mem {α β : Type} {f : α → Option β} :
-    ∀ {xs : List α} {ys : List β}, xs.mapM f = some ys → ∀ x ∈ xs, ∃ y ∈ ys, f x = some y
-  | [], _, _, _, hx => nomatch hx
-  | a :: as, _, h, x, hx => by
-    obtain ⟨b, bs, rfl, hb, hbs⟩ := mapM_option_cons_inv h
-    rcases List.mem_cons.mp hx with rfl | hx
-    · exact ⟨b, List.mem_cons_self, hb⟩
-    · obtain ⟨y, hy, hfy⟩ := mapM_option_mem hbs x hx
-      exact ⟨y, List.mem_cons_of_mem _ hy, hfy⟩
-
 /-- con-leche: none — `Option`'s `mapM` at the empty list, inverted. -/
 theorem mapM_option_nil_inv {α β : Type} {f : α → Option β} {ys : List β}
     (h : ([] : List α).mapM f = some ys) : ys = [] := by
@@ -262,8 +251,6 @@ theorem DExt.list {α β : Type} {d : EStore → α → Option β} (h : DExt d) 
 
 theorem dExt_denoteE : DExt denoteE := fun hx _ _ h => denote_ext h hx
 theorem dExt_denoteCV : DExt Frontend.denoteCV := fun hx _ _ h => denoteCV_ext h hx
-theorem dExt_denoteEList : DExt Frontend.denoteEList :=
-  fun hx xs ys h => denoteEList_ext hx xs ys h
 /-- con-leche: none — the do-notation form every record denotation below is
 written in: two transported pieces give a transported pair. -/
 theorem option_bind_ext {α β : Type} {o o' : Option α} {f : α → Option β} {y : β}
@@ -272,40 +259,37 @@ theorem option_bind_ext {α β : Type} {o o' : Option α} {f : α → Option β}
   | none => rw [hc] at h; exact nomatch h
   | some a => rw [hc] at h; rw [ho a hc]; exact h
 
-/-! ## The block's shape (`Arena/Inductives/BlockParts.lean`) -/
+/-! ## The block's shape (`Arena/Inductives/BlockShape.lean`) -/
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockParts.lean:66 MemberShape
+/-- con-leche: ConLeche/Kernel/Inductives/BlockShape.lean:66 MemberShape
 (`ctors`) — a constructor with its field count. -/
 @[expose] def dCtor (st : EStore) (c : IConstantVal × Nat) : Option (ConstantVal × Nat) :=
   (Frontend.denoteCV st c.1).map (·, c.2)
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockParts.lean:66 MemberShape. -/
+/-- con-leche: ConLeche/Kernel/Inductives/BlockShape.lean:66 MemberShape. -/
 @[expose] def dCtors (st : EStore) (cs : List (IConstantVal × Nat)) :
     Option (List (ConstantVal × Nat)) := cs.mapM (dCtor st)
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockParts.lean:58-69 MemberShape. -/
+/-- con-leche: ConLeche/Kernel/Inductives/BlockShape.lean:58-69 MemberShape. -/
 @[expose] def dMember (st : EStore) (m : Arena.MemberShape) : Option ConLeche.MemberShape := do
   let cvT ← Frontend.denoteCV st m.cvT
+  let declared ← Frontend.denoteCV st m.declared
   let cs ← dCtors st m.ctors
-  pure ⟨cvT, m.nIdx, cs⟩
+  pure ⟨cvT, declared, m.nIdx, cs⟩
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockParts.lean:71-96 RecShape. -/
+/-- con-leche: ConLeche/Kernel/Inductives/BlockShape.lean:71-96 RecShape. -/
 @[expose] def dRec (st : EStore) (r : Arena.RecShape) : Option ConLeche.RecShape := do
   let cvR ← Frontend.denoteCV st r.cvR
-  let rhss ← Frontend.denoteEList st r.rhss
-  pure ⟨cvR, r.rP, r.mI, r.tgt, rhss⟩
+  let rules ← Frontend.denoteRules st r.rules
+  pure ⟨cvR, r.rP, r.mI, r.tgt, rules, r.isK⟩
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockParts.lean:98-121 BlockShape. -/
+/-- con-leche: ConLeche/Kernel/Inductives/BlockShape.lean:98-121 BlockShape. -/
 @[expose] def dShape (st : EStore) (p : Arena.BlockShape) : Option ConLeche.BlockShape := do
   let members ← p.members.mapM (dMember st)
   let recs ← p.recs.mapM (dRec st)
   let elim ← denoteN st.ns p.elim
   let s ← denoteL st.ls p.resSort
   pure ⟨members, recs, p.nP, elim, s, p.large, p.isProp⟩
-
-/-- con-leche: ConLeche/Kernel/Inductives/BlockParts.lean:198-201 BlockParts. -/
-@[expose] def dParts (st : EStore) (p : Arena.BlockParts) : Option ConLeche.BlockParts :=
-  (dShape st p.shape).map fun q => ⟨q⟩
 
 theorem dCtor_ext : DExt dCtor := by
   intro st st' hx c y h
@@ -324,7 +308,13 @@ theorem dMember_ext : DExt dMember := by
   | some cv =>
     rw [hcv] at h
     simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
-    exact option_bind_ext (fun a ha => dCtors_ext hx _ a ha) h
+    refine option_bind_ext (fun a ha => denoteCV_ext ha hx) ?_
+    cases hdv : Frontend.denoteCV st m.declared with
+    | none => rw [hdv] at h; exact nomatch h
+    | some dv =>
+      rw [hdv] at h
+      simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
+      exact option_bind_ext (fun a ha => dCtors_ext hx _ a ha) h
 
 theorem dRec_ext : DExt dRec := by
   intro st st' hx r y h
@@ -335,7 +325,7 @@ theorem dRec_ext : DExt dRec := by
   | some cv =>
     rw [hcv] at h
     simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
-    exact option_bind_ext (fun a ha => denoteEList_ext hx _ a ha) h
+    exact option_bind_ext (fun a ha => denoteRules_ext hx _ a ha) h
 
 theorem dShape_ext : DExt dShape := by
   intro st st' hx p y h
@@ -357,12 +347,6 @@ theorem dShape_ext : DExt dShape := by
     show p.recs.mapM (dRec st') = some rs from dRec_ext.list hx _ _ h2, denoteN_ext h3 hx,
     denoteL_ext h4 hx]
   exact h
-
-theorem dParts_ext : DExt dParts := by
-  intro st st' hx p y h
-  simp only [dParts, Option.map_eq_some_iff] at h ⊢
-  obtain ⟨q, hq, rfl⟩ := h
-  exact ⟨q, dShape_ext hx _ _ hq, rfl⟩
 
 /-! ## The positivity walk's records (`Arena/Inductives/Positivity.lean`) -/
 
@@ -388,7 +372,7 @@ theorem kindOf_flat (k : Arena.NestFieldKind) :
 
 /-- con-leche: ConLeche/Kernel/Inductives/Positivity.lean:530-536 NestHole. -/
 @[expose] def dHole (st : EStore) (h : Arena.NestHole) : Option ConLeche.NestHole :=
-  (dKey st h.key).map fun k => ⟨k, h.base⟩
+  (dKey st h.key).map fun k => ⟨k, h.base, h.nIdx⟩
 
 /-- con-leche: ConLeche/Kernel/Inductives/Positivity.lean:621-641 NestCtorNf. -/
 @[expose] def dCtorNf (st : EStore) (n : Arena.NestCtorNf) : Option ConLeche.NestCtorNf := do
@@ -421,8 +405,9 @@ it), its interned level list denoting `lps.map .param`. -/
   let lps ← Frontend.denoteNList st.ns c.lps
   let params ← Frontend.denoteEList st c.params
   let sort ← denoteL st.ls c.sort
+  let formers ← c.formers.mapM (Frontend.denoteCV st)
   let lvls ← denoteLs st.lss c.lvls
-  if lvls = lps.map .param then pure ⟨names, lps, c.nP, c.nIdxs, params, sort, find?⟩
+  if lvls = lps.map .param then pure ⟨names, lps, c.nP, c.nIdxs, params, sort, find?, formers⟩
   else none
 
 theorem dKey_ext : DExt dKey := by
@@ -506,12 +491,17 @@ theorem dCtx_ext (find? : ConLeche.Name → Option ConstantInfo) :
   cases h4 : denoteL st.ls k.sort with
   | none => rw [h1, h2, h3, h4] at h; exact nomatch h
   | some s =>
+  cases h6 : k.formers.mapM (Frontend.denoteCV st) with
+  | none => rw [h1, h2, h3, h4, h6] at h; exact nomatch h
+  | some f =>
   cases h5 : denoteLs st.lss k.lvls with
-  | none => rw [h1, h2, h3, h4, h5] at h; exact nomatch h
+  | none => rw [h1, h2, h3, h4, h6, h5] at h; exact nomatch h
   | some l =>
-  rw [h1, h2, h3, h4, h5] at h
+  rw [h1, h2, h3, h4, h6, h5] at h
   rw [denoteNListE_ext hx _ _ h1, denoteNListE_ext hx _ _ h2, denoteEList_ext hx _ _ h3,
-    denoteL_ext h4 hx, denoteLs_ext h5 hx]
+    denoteL_ext h4 hx,
+    show k.formers.mapM (Frontend.denoteCV st') = some f from dExt_denoteCV.list hx _ _ h6,
+    denoteLs_ext h5 hx]
   exact h
 
 /-! ## The shape records, inverted -/
@@ -544,32 +534,36 @@ theorem dShape_inv {st : EStore} {p : Arena.BlockShape} {pP : ConLeche.BlockShap
 theorem dMember_inv {st : EStore} {m : Arena.MemberShape} {mP : ConLeche.MemberShape}
     (h : dMember st m = some mP) :
     Frontend.denoteCV st m.cvT = some mP.cvT ∧ m.nIdx = mP.nIdx ∧
-      dCtors st m.ctors = some mP.ctors := by
+      dCtors st m.ctors = some mP.ctors ∧
+      Frontend.denoteCV st m.declared = some mP.declared := by
   simp only [dMember] at h
   cases h1 : Frontend.denoteCV st m.cvT with
   | none => rw [h1] at h; exact nomatch h
   | some cv =>
+  cases h3 : Frontend.denoteCV st m.declared with
+  | none => rw [h1, h3] at h; exact nomatch h
+  | some dv =>
   cases h2 : dCtors st m.ctors with
-  | none => rw [h1, h2] at h; exact nomatch h
+  | none => rw [h1, h3, h2] at h; exact nomatch h
   | some cs =>
-  rw [h1, h2] at h
+  rw [h1, h3, h2] at h
   obtain rfl := (Option.some.inj h).symm
-  exact ⟨rfl, rfl, rfl⟩
+  exact ⟨rfl, rfl, rfl, rfl⟩
 
 /-- con-leche: none — a denoted recursor record, field by field. -/
 theorem dRec_inv {st : EStore} {r : Arena.RecShape} {rP : ConLeche.RecShape}
     (h : dRec st r = some rP) :
     Frontend.denoteCV st r.cvR = some rP.cvR ∧ r.rP = rP.rP ∧ r.mI = rP.mI ∧
-      r.tgt = rP.tgt ∧ Frontend.denoteEList st r.rhss = some rP.rhss := by
+      r.tgt = rP.tgt ∧ Frontend.denoteRules st r.rules = some rP.rules ∧ r.isK = rP.isK := by
   simp only [dRec] at h
   cases h1 : Frontend.denoteCV st r.cvR with
   | none => rw [h1] at h; exact nomatch h
   | some cv =>
-  cases h2 : Frontend.denoteEList st r.rhss with
+  cases h2 : Frontend.denoteRules st r.rules with
   | none => rw [h1, h2] at h; exact nomatch h
   | some rh =>
   rw [h1, h2] at h
   obtain rfl := (Option.some.inj h).symm
-  exact ⟨rfl, rfl, rfl, rfl, rfl⟩
+  exact ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 end ConRon.Bridge.Inductives

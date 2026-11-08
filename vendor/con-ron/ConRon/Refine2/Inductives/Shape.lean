@@ -40,15 +40,6 @@ def absNatL (v : alloc.vec.Vec Std.U64) : List Nat := v.val.map absU
 def absNatLFrom (v : alloc.vec.Vec Std.U64) (i : Std.Usize) : List Nat :=
   (v.val.drop i.val).map absU
 
-/-- A `Vec<bool>` as the twin's `List Bool` — `structUsedLaterList`'s
-answers. -/
-def absBoolL (v : alloc.vec.Vec Bool) : List Bool := v.val
-
-/-- A `Vec<Vec<LIdx>>` as the twin's `List (List LIdx)` — the fields' sorts,
-one list per constructor. -/
-def absLIdxLL (v : alloc.vec.Vec (alloc.vec.Vec arena.handle.LIdx)) :
-    List (List LIdx) := v.val.map absLIdxL
-
 /-! ## The constructor spines -/
 
 /-- `Vec<(IConstantVal, u64)>` as the twin's `List (IConstantVal × Nat)` — the
@@ -71,21 +62,23 @@ def absCtors3LFrom (v : alloc.vec.Vec (arena.env.IConstantVal × Std.U64 × Std.
     (i : Std.Usize) : List (IConstantVal × Nat × Nat) :=
   (v.val.drop i.val).map fun p => (absIConstantVal p.1, absU p.2.1, absU p.2.2)
 
-/-- `Vec<(IConstantVal, u64, u64, Vec<IRecRule>)>` as the twin's
-`List (IConstantVal × Nat × Nat × List IRecRule)` — `provisionRecs`' answer. -/
+/-- `Vec<(IConstantVal, u64, u64, bool, Vec<IRecRule>)>` as the twin's
+`List (IConstantVal × Nat × Nat × Bool × List IRecRule)` — `blockSplitRecs`'
+answer: a recursor record's constant, major index, rule prefix, K flag and
+rules. -/
 def absRecsL
-    (v : alloc.vec.Vec (arena.env.IConstantVal × Std.U64 × Std.U64 ×
+    (v : alloc.vec.Vec (arena.env.IConstantVal × Std.U64 × Std.U64 × Bool ×
       (alloc.vec.Vec arena.env.IRecRule))) :
-    List (IConstantVal × Nat × Nat × List IRecRule) :=
+    List (IConstantVal × Nat × Nat × Bool × List IRecRule) :=
   v.val.map fun p =>
-    (absIConstantVal p.1, absU p.2.1, absU p.2.2.1, p.2.2.2.val.map absIRecRule)
+    (absIConstantVal p.1, absU p.2.1, absU p.2.2.1, p.2.2.2.1, p.2.2.2.2.val.map absIRecRule)
 
 def absRecsLFrom
-    (v : alloc.vec.Vec (arena.env.IConstantVal × Std.U64 × Std.U64 ×
+    (v : alloc.vec.Vec (arena.env.IConstantVal × Std.U64 × Std.U64 × Bool ×
       (alloc.vec.Vec arena.env.IRecRule))) (i : Std.Usize) :
-    List (IConstantVal × Nat × Nat × List IRecRule) :=
+    List (IConstantVal × Nat × Nat × Bool × List IRecRule) :=
   (v.val.drop i.val).map fun p =>
-    (absIConstantVal p.1, absU p.2.1, absU p.2.2.1, p.2.2.2.val.map absIRecRule)
+    (absIConstantVal p.1, absU p.2.1, absU p.2.2.1, p.2.2.2.1, p.2.2.2.2.val.map absIRecRule)
 
 /-! ## `IRecRule`'s fields -/
 
@@ -179,13 +172,6 @@ macro_rules
         | rfl
         | (refine am_bind_congr _ ?_; intro __x)
         | split)
-
-/-! ## The state-free cursor recursion, and the `arena::env` copies
-
-`cursor_induction`, `vec_cursor_copy` and the record copies' identity lemmas
-(`i_constant_val_dup_abs` … `i_rec_rules_dup_abs`) moved down to
-`Refine2/Dup.lean` (task #97-P5-Front round 2), so the frontend tier can cite
-them. -/
 
 /-! ### The boolean scans, once
 
@@ -450,14 +436,7 @@ statement is `SimRel₀` at the relation below — the answer bit equal and the 
 memos related — which is `ExprOps/Read.lean`'s `WOut`/`LOut` without the
 `Ext`/`StoreWF` those carried. -/
 
-/-- The `(handle, depth)`-keyed memo walk's answer relation.  `@[lockstep_rel]`,
-so the zip splits a related answer (`splitRels`) where a walk's continuation
-matches on it. -/
-@[lockstep_rel] def WOutRel (r : Bool × ron.hashmap2.HashMap2 arena.monad.EIdxNat Bool)
-    (v : Bool × Std.HashMap (EIdx × Nat) Bool) : Prop :=
-  r.1 = v.1 ∧ ExprOps.WMemoRel r.2 v.2
-
-attribute [simp] absNatL absNatLFrom absBoolL absLIdxLL absBinderL absBinderLFrom
+attribute [simp] absNatL absNatLFrom absBinderL absBinderLFrom
   absCtorsL absCtorsLFrom absCtors3L absCtors3LFrom absRecsL absRecsLFrom
 
 /-! ## The tier's side-goal extension

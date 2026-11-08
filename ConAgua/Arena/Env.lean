@@ -332,7 +332,8 @@ end rel
 /-! ## `env_find` -/
 
 /-- `env_find(w, vis)`: `(1, record)` if name `w` has a row below the view `vis`, else `(0, 0)`. -/
--- con-ron: ConRon/Arena/Env.lean:258-263 ConRon.Arena.IFEnv.find?
+-- con-ron: ConRon/Arena/Env.lean:272-275 ConRon.Arena.IFEnv.find?
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.IFEnv.find?` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IFEnv.find?]
 def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   (c, q) := call env_row_get(w);
@@ -532,7 +533,8 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
 
 /-- `env_push(vis, q)`: install the record at `q` (its name is word `q + 1`) at counter `vis`:
 its row, its slot in `ECON`; returns the new view `vis + 1`. -/
--- con-ron: ConRon/Arena/Env.lean:270-275 ConRon.Arena.IFEnv.push
+-- con-ron: ConRon/Arena/Env.lean:277-280 ConRon.Arena.IFEnv.push
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.IFEnv.push` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IFEnv.push]
 def envPushL : FunDecl := lfn (vis, q) locals (w, k, z) {
   if vis + 1 == 0 { abort };
@@ -630,6 +632,7 @@ theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} 
 
 /-- `env_erase(w)`: drop the row of name `w` (one step of `eraseInstalled`). -/
 -- con-ron: ConRon/Arena/Promote.lean:347-356 ConRon.Arena.eraseInstalled
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.eraseInstalled` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose] def envEraseL : FunDecl := lfn (w) locals (z) {
   z := call env_row_set(w, 0, 0);
   return 0
@@ -749,7 +752,8 @@ def prevD (dn : NIdx → Option ConLeche.Name) (m : Mem) (c q : Word) :
 
 /-- `env_pop_temp(vis, w, c, q)`: undo a temporary push of name `w`: its row put back to
 `(c, q)` (`IFEnv.popTemp`'s `prev`), the newest constant dropped, the view lowered. -/
--- con-ron: ConRon/Arena/Env.lean:284-293 ConRon.Arena.IFEnv.popTemp
+-- con-ron: ConRon/Arena/Env.lean:288-298 ConRon.Arena.IFEnv.popTemp
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.IFEnv.popTemp` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IFEnv.popTemp]
 def envPopTempL : FunDecl := lfn (vis, w, c, q) locals (k, z) {
   z := call env_row_set(w, c, q);
@@ -1215,7 +1219,7 @@ theorem EnvR.findTable?_eq {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis :
 
 /-- `find_table(vis, t)`: the table row of structure `t` if `t` is visible below `vis`, else `0`
 (`IFEnv.findTable?`). -/
--- con-ron: ConRon/Arena/Env.lean:301-305 ConRon.Arena.IFEnv.findTable?
+-- con-ron: ConRon/Arena/Env.lean:307-310 ConRon.Arena.IFEnv.findTable?
 @[no_expose, l_impl ConRon.Arena.IFEnv.findTable?]
 def findTableL : FunDecl := lfn (vis, t) locals (c, q, r) {
   (c, q) := call env_row_get(t);
@@ -1254,7 +1258,8 @@ theorem findTable_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
 
 /-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + 2`): its
 slot in `ETAB`, the count, its structure's table row (`IFEnv.pushTable`). -/
--- con-ron: ConRon/Arena/Env.lean:277-282 ConRon.Arena.IFEnv.pushTable
+-- con-ron: ConRon/Arena/Env.lean:282-286 ConRon.Arena.IFEnv.pushTable
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.IFEnv.pushTable` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IFEnv.pushTable]
 def envPushTableL : FunDecl := lfn (q) locals (w, k, z) {
   if 4294967295 < q { abort };

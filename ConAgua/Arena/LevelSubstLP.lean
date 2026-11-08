@@ -67,7 +67,7 @@ con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst.go -/
 }
 
 /-- `lv_spw` over `lp_lookup`, the datum's names in the record pool.
-con-leche: ConLeche/Kernel/Level.lean:199-205 ConLeche.Level.substPW -/
+con-leche: ConLeche/Kernel/Level.lean:215-221 ConLeche.Level.substPW -/
 @[no_expose] def lpSpw : FunDecl := lfn (po, pc, ko, kc, vo, vc) locals (f, v, x, w) {
   if pc == 0 { return 0 };
   w := EREC.u64[po];
@@ -79,7 +79,7 @@ con-leche: ConLeche/Kernel/Level.lean:199-205 ConLeche.Level.substPW -/
 }
 
 /-- `lv_substpw` over `lp_spw`.
-con-leche: ConLeche/Kernel/Level.lean:199-205 ConLeche.Level.substPW -/
+con-leche: ConLeche/Kernel/Level.lean:215-221 ConLeche.Level.substPW -/
 @[no_expose] def lpSubstPW : FunDecl := lfn (kd, po, pc, ko, kc, vo, vc) locals (x) {
   if kd == 0 { return 1 };
   x := call lp_spw(po, pc, ko, kc, vo, vc);

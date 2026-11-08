@@ -36,7 +36,7 @@ open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 /-- `and_block_named(bo, bl)`: some member of the inductive block at `DLP[bo ‥ bo + bl)` (record
 pointers into `DLP` (`DIND`), a record's name at `+ 1`) declares one of the three pinned `And` names. -/
--- con-ron: ConRon/Arena/Basis.lean:114-119 ConRon.Arena.blockAndNamed
+-- con-ron: ConRon/Arena/Basis.lean:275-280 ConRon.Arena.blockAndNamed
 @[no_expose, l_impl ConRon.Arena.blockAndNamed]
 def andBlockNamed : FunDecl := lfn (bo, bl) locals (s, x, r) {
   if bl == 0 { return 0 };
@@ -51,7 +51,8 @@ def andBlockNamed : FunDecl := lfn (bo, bl) locals (s, x, r) {
 three pinned `And` names, or an inductive block that declares none of them, or one that does and
 is the pinned `And` block (two parameters, equal to the ROM's `andPin` up to the canonical form:
 the block copied into `EREC` and an `IW` slice, `canon_eq_list`). -/
--- con-ron: ConRon/Arena/Basis.lean:128-148 ConRon.Arena.andPinOk
+-- con-ron: ConRon/Arena/Basis.lean:289-307 ConRon.Arena.andPinOk
+-- con-ron: CHANGED since 97eead2d — `ConRon.Arena.andPinOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.andPinOk]
 def andPinOkL : FunDecl := lfn (i) locals (x, k, bo, bl, nmd, np, o, l, io, il, po, pl, e) {
   if PINS.u64[0] == 0 { abort R_PIN_DATA };

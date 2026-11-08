@@ -8,23 +8,24 @@ one a reader can check without knowing what an `Env` is:
 > a file whose chunks are one of the shapes `ConLeche.jsonWithTheoremFalse`
 > describes is never accepted by the Lean arena checker.
 
-`Bridge/Checker/Split.lean`'s `Arena.installThenCheck_bridge` is the statement
-at the FOLD (the twin's accept is con-leche's, at a declaration list); this is
-the letter at the BYTES, and the distance between them is exactly this tier:
-the parse's exactness, the preparation's, and the prelude.
+`Bridge/Checker/Pool.lean`'s `Arena.pooledAccepts_bridge` is the statement
+at the FOLD (the twin's accept is con-leche's, at a declaration list);
+`Bridge/Stages.lean`'s `stages_no_False` is the letter at the BYTES, and the
+distance between them is the frontend tier: the parse's exactness, the
+preparation's, and the prelude.  This module holds the last step.
 
 ## The assembly, four steps, one theorem each
 
 | step | the theorem |
 |---|---|
-| 1. the parse holds the record | `Bridge/Frontend/Chunks.lean`'s `parseChunks_exact` |
-| 2. the preparation keeps it | `Bridge/Frontend/Prepare.lean`'s `mem_preparePrelude_denote` |
-| 3. the twin's accept is con-leche's | `Bridge/Checker/Split.lean`'s `Arena.installThenCheck_bridge` |
+| 1. the parse holds the record | `Bridge/Frontend/Chunks.lean`'s `parseChunks_run`, con-leche's `parseChunks_jsonWithTheoremFalse` |
+| 2. the preparation keeps it | `Bridge/Frontend/Prepare.lean`'s `preparePrelude_run`, con-leche's `mem_preparePrelude` |
+| 3. the twin's accept is con-leche's | `Bridge/Checker/Pool.lean`'s `Arena.pooledAccepts_bridge` |
 | 4. con-leche refutes it | `checkDeclsPure_thmDecl_const` + `ConLeche.Model.no_proof_of_False_pure` |
 
 **Step 4 is the one that is not a transport**, and §3 below says why: con-leche
 states its stream ingredient at the CACHED fold (`Cached.checkDecls_thmDecl_const`,
-`Verify/Cached/StreamThm.lean:101`) and the arena's bridge lands on the PURE
+`Verify/Cached/StreamThm.lean:80`) and the arena's bridge lands on the PURE
 one, so the pure-tier twin of that one lemma has to be stated here.
 
 ## Two things this statement does not need
@@ -44,10 +45,10 @@ axiom of the environment — which is what makes "two named hypotheses" a
 checkable claim (`#print axioms` in `Bridge/Frontend/Axioms.lean` shows none
 of them):
 
-* `hk : CoreSpec .verified Arena.checkFuel` — the Core tier's
+* `hk : CoreSpec Arena.checkFuel` — the Core tier's
   (`Bridge/Core/**`; its `knot` field is already discharged by
   `Bridge/Core/Induction.lean`'s `knot_spec_checkFuel`);
-* `hind : IndSpec .verified` — the Inductives tier's.
+* `hind : IndSpec` — the Inductives tier's.
 
 The inductive installer (`Arena/Inductives/**`, the uniform route) needs no
 premise of its own: `hind` alone covers it.
@@ -72,64 +73,12 @@ open ConLeche ConRon.Arena ConRon.Arena.Frontend
 
 universe w
 
-/-! ## 1. The post-parse state
-
-The fold theorem `Arena.installThenCheck_bridge` asks this tier for three
-things.  Two are `Bridge/Frontend/Chunks.lean`'s `parseChunks_exact` (the denotation
-and the persistence); the third is this. -/
-
-/-- con-leche: ConLeche/Verify/Cached/BridgeC.lean:609 checkDeclStepC_run —
-**the fold's start invariant, at the post-parse state**: the state the driver
-hands `installThenCheck` satisfies `FoldOK` at the empty environment.
-
-Its four halves, and what each costs:
-
-* `CheckOK` — `StateOK` is `ParseStep`'s, `PinsOK` is
-  `Bridge/Checker/Pins.lean`'s `internReservedPins_run`, `CacheOK` is the
-  fourth hypothesis, and `IFEnvOK Env.empty (mkIFEnv IEnv.empty)` is
-  `Bridge/Checker/Inv.lean`'s `IFEnvOK_of_denote` at the empty index;
-* `EnvWF Env.empty` — immediate;
-* `PersPins` — `internReservedPins_run`, carried by `PinsOK.mono`;
-* `PersIFEnv` / `IFEnvCoh` / `denoteFEnv … = some Env.empty` — all three are
-  `rfl`-level at `mkIFEnv IEnv.empty`.
-
-**The fourth hypothesis is the driver's own start**: what the parse gives is
-that the per-declaration tables did not MOVE, not that they were empty.
-`AState.init` sets them empty (`Arena/Monad.lean:146`), so the driver has it;
-a statement about an arbitrary start state has to say so.
-
-It is `CacheOK` itself rather than `s.caches = Caches.empty`: the parse is not
-cache-neutral — see `Bridge/Frontend/Rel.lean`'s frame note — so "the tables
-are empty" does not survive a `ParseStep`, while `CacheOK` does, through
-`CheckOK.monoF`.  `CacheOK.of_empty` is what the driver reaches it with and is
-one line at each of the two call sites. -/
-theorem FoldOK_of_start {μ : CheckMode} {s : AState} (hok : StateOK s)
-    (hpins : PinsOK s) (hpp : PersPins s) (hc : CacheOK μ Env.empty s) :
-    FoldOK μ Env.empty (mkIFEnv IEnv.empty) s where
-  check :=
-    { state := hok
-      caches := hc
-      pins := hpins
-      ienv := IFEnvOK_of_denote hok (IFEnvCoh.mk _)
-        (by intro t ht; simp [mkIFEnv, IEnv.empty] at ht) rfl }
-  envWF := ⟨by intro c hc'; exact absurd hc' (by simp [Env.empty]),
-    by intro t ht; exact absurd ht (by simp [Env.empty])⟩
-  tblShape := by intro t ht; simp [mkIFEnv, IEnv.empty] at ht
-  persPins := hpp
-  persEnv := { env := by intro c hc'; simp [mkIFEnv, IEnv.empty] at hc'
-               idx := by intro n p hn; simp [mkIFEnv, mkIFEnvGo, IEnv.empty] at hn
-               tables := by intro t ht; simp [mkIFEnv, IEnv.empty] at ht
-               tbls := by intro n t hn; simp [mkIFEnv, mkIFEnvTblsGo, IEnv.empty] at hn }
-  coh := IFEnvCoh.mk _
-  denote := rfl
-
 /-! ## 2. The pure fold's stream ingredient
 
 con-leche proves *"an accepted stream that declares a theorem of a bare
 constant type leaves a constant of that type in the environment"* at the
-CACHED fold (`Cached.checkDecls_thmDecl_const`, `Verify/Cached/StreamThm.lean:101`,
-through `installRun_thmDecl_const` and `installStepC_thm_consts`).  The arena's
-bridge (`Bridge/Checker/Fold.lean`, `Bridge/Checker/Split.lean`) lands on
+CACHED fold (`Cached.checkDecls_thmDecl_const`, `Verify/Cached/StreamThm.lean:80`).
+The arena's bridge (`Bridge/Checker/Pool.lean`) lands on
 `ConLeche.checkDeclsPure`, so the pure twin of that lemma is what this
 capstone needs and it is the one thing on the path con-leche does not already
 have.
@@ -142,11 +91,7 @@ PREFIX of an accepted pure run is an accepted pure run**, at the same mode,
 the same ops and the same fuel.
 
 `checkDeclsPure` is `ds.foldlM (checkDecl …) Env.empty` and nothing else, so
-this is `List.foldlM_append` read left to right.  The CACHED fold is not of
-that shape — `Cached.checkDecls` runs two phases over the whole array and
-phase B pends every value phase A installed — which is why con-leche's own
-stream lemma has to carry the installed constant to the END of the run
-(`installRun_trace`'s `PushChain`) and this tier does not. -/
+this is `List.foldlM_append` read left to right. -/
 theorem checkDeclsPure_prefix {μ : CheckMode} {F : Nat}
     {pins : List NatOpPinSet} {ds₁ ds₂ : List Declaration} {env' : Env}
     (h : ConLeche.checkDeclsPure μ (ConLeche.fueledOps μ F) pins (ds₁ ++ ds₂)
@@ -160,7 +105,7 @@ theorem checkDeclsPure_prefix {μ : CheckMode} {F : Nat}
   | error e => rw [h₁] at h; exact nomatch h
   | ok env₁ => exact ⟨env₁, rfl⟩
 
-/-- con-leche: ConLeche/Verify/Cached/StreamThm.lean:101 checkDecls_thmDecl_const
+/-- con-leche: ConLeche/Verify/Cached/StreamThm.lean:80 checkDecls_thmDecl_const
 — **the same lemma at the PURE fold**: an accepted `checkDeclsPure` run of a
 stream that declares a theorem of a bare constant type has an accepted PREFIX
 RUN whose environment holds a constant of that type.
@@ -177,13 +122,13 @@ env.consts, env.tables⟩`) — and the third, the `PushChain`, is not needed at
 **It is still a con-leche-tier lemma** and belongs beside the original: the
 whole statement is about con-leche's own functions and mentions no handle.
 The upstream ask is this file's §5 note. -/
-theorem checkDeclsPure_thmDecl_const {μ : CheckMode} {F : Nat}
+theorem checkDeclsPure_thmDecl_const {F : Nat}
     {pins : List NatOpPinSet} {ds : List Declaration} {env' : Env}
     {cv : ConstantVal} {value : Expr} {n : ConLeche.Name} {ls : List Level}
     (hty : cv.type = .const n ls) (hmem : Declaration.thmDecl cv value ∈ ds)
-    (h : ConLeche.checkDeclsPure μ (ConLeche.fueledOps μ F) pins ds = .ok env') :
+    (h : ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins ds = .ok env') :
     ∃ ds₀ env₀,
-      ConLeche.checkDeclsPure μ (ConLeche.fueledOps μ F) pins ds₀ = .ok env₀ ∧
+      ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins ds₀ = .ok env₀ ∧
         ∃ c ∈ env₀.consts, c.toConstantVal.type = .const n ls := by
   -- the stream around the record
   obtain ⟨pre, post, rfl⟩ := List.append_of_mem hmem
@@ -196,13 +141,13 @@ theorem checkDeclsPure_thmDecl_const {μ : CheckMode} {F : Nat}
   -- the record's own step, at the environment the prefix left
   simp only [ConLeche.checkDeclsPure, List.foldlM_append, List.foldlM_cons,
     List.foldlM_nil, Bind.bind, Except.bind] at h₀
-  cases h₁ : List.foldlM (ConLeche.checkDecl μ (ConLeche.fueledOps μ F) pins)
+  cases h₁ : List.foldlM (ConLeche.checkDecl .verified (ConLeche.fueledOps .verified F) pins)
       Env.empty pre with
   | error e => rw [h₁] at h₀; exact nomatch h₀
   | ok env₁ =>
   rw [h₁] at h₀
   simp only [] at h₀
-  cases h₂ : ConLeche.checkDecl μ (ConLeche.fueledOps μ F) pins env₁
+  cases h₂ : ConLeche.checkDecl .verified (ConLeche.fueledOps .verified F) pins env₁
       (.thmDecl cv value) with
   | error e => rw [h₂] at h₀; exact nomatch h₀
   | ok env₂ =>
@@ -210,9 +155,9 @@ theorem checkDeclsPure_thmDecl_const {μ : CheckMode} {F : Nat}
   simp only [pure, Except.pure, Except.ok.injEq] at h₀
   subst h₀
   -- `DeclThmRun`: the header as declared, and the constant it pushes
-  obtain ⟨type', value', hcv, -, -, henv⟩ :=
+  obtain ⟨-, type', value', hcv, -, -, henv⟩ :=
     ConLeche.Semantics.declThmRun_of (pins := pins) h₂
-  obtain ⟨-, -, -, -, -, htype, -, -, -⟩ := hcv
+  obtain ⟨-, -, -, -, -, htype, -⟩ := hcv
   obtain rfl : type' = .const n ls := htype.trans hty
   refine ⟨ConstantInfo.thmInfo ⟨cv.name, cv.levelParams, .const n ls⟩,
     ?_, rfl⟩
@@ -223,17 +168,17 @@ theorem checkDeclsPure_thmDecl_const {μ : CheckMode} {F : Nat}
 — **the same letter at the PURE fold**: a stream that declares a theorem of
 type `False` is never accepted.  con-leche's own two steps, at the pure tier:
 the record's constant survives the run, and in the model of the main theorem
-its type denotes the empty set.  Stated at the `--verified` mode itself
-(`isVerified`, not its eager tower), as con-leche's model tier is. -/
+its type denotes the empty set.  Stated at `.verified`, as con-leche's model tier
+is. -/
 theorem no_False_theorem_accepted_pure (V : Type w) [ConLeche.SetTheory V]
-    {μ : CheckMode} (hμ : μ.isVerified = true) {F : Nat}
+    {F : Nat}
     {pins : List NatOpPinSet} {ds : List Declaration} {env' : Env}
     {cv : ConstantVal} {value : Expr}
     (hmem : Declaration.thmDecl cv value ∈ ds)
     (hty : cv.type = .const ConLeche.falseName [])
-    (h : ConLeche.checkDeclsPure μ (ConLeche.fueledOps μ F) pins ds = .ok env') :
+    (h : ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins ds = .ok env') :
     False := by
   obtain ⟨ds₀, env₀, h₀, c, hc, hcty⟩ := checkDeclsPure_thmDecl_const hty hmem h
-  exact ConLeche.Model.no_proof_of_False_pure (V := V) (pins := pins) hμ h₀ c hc hcty
+  exact ConLeche.Model.no_proof_of_False_pure (V := V) (pins := pins) h₀ c hc hcty
 
 end ConRon.Bridge.Frontend

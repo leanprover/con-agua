@@ -67,9 +67,7 @@ the tidy step leaves whole. -/
 macro "lockstep_a1" : tactic =>
   `(tactic| repeat' (first | lockstep_step | (casesm* _ ∧ _) | a1_twin_eqs))
 
-theorem some_beq_some_true (b : Bool) : (some b == some true) = b := by cases b <;> rfl
-
-attribute [local lockstep_simp] some_beq_some_true Bool.not_eq_true
+attribute [local lockstep_simp] Bool.not_eq_true
 
 /-! ## The pinned constants -/
 
@@ -113,9 +111,9 @@ The answer is a `CheckError` on both sides; messages are never compared
 
 /-- `proj_indexed_struct_like` is pure on both sides: the cited `&&` chain,
 read off the environment. -/
-theorem proj_indexed_struct_like_abs {vis fe lfe} (hctx : CoreCtx vis fe lfe)
+theorem proj_indexed_struct_like_abs {pers : arena.store.PersTier} {fe lfe} (hctx : CoreCtx pers fe lfe)
     {t sn : arena.handle.NIdx} {i n : Std.U64} {b : Bool}
-    (h : arena.core.proj_indexed_struct_like vis fe t sn i n = ok b) :
+    (h : arena.core.proj_indexed_struct_like pers fe t sn i n = ok b) :
     b = projIndexedStructLike lfe (absNIdx t) (absNIdx sn) (absU i) (absU n) := by
   rw [arena.core.proj_indexed_struct_like] at h
   obtain ⟨e, he, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
@@ -176,9 +174,9 @@ theorem proj_indexed_struct_like_abs {vis fe lfe} (hctx : CoreCtx vis fe lfe)
 
 /-- `proj_miss_error` against `projMissError`: the error KIND (messages are
 never compared, DESIGN §3.1). -/
-@[lockstep] theorem proj_miss_error_spec {vis fe lfe} (hctx : CoreCtx vis fe lfe)
+@[lockstep] theorem proj_miss_error_spec {fe lfe} (hctx : CoreCtx pers fe lfe)
     (ht : Bool) (t sn : arena.handle.NIdx) (i n : Std.U64) :
-    LSP (arena.core.proj_miss_error vis fe ht t sn i n)
+    LSP (arena.core.proj_miss_error pers fe ht t sn i n)
       (fun ce => absAErrKind ce
         = lAErrKind (projMissError lfe ht (absNIdx t) (absNIdx sn) (absU i) (absU n))) := by
   intro ce h
@@ -219,10 +217,10 @@ the twin's `what` is free (messages are never compared). -/
     rw [fail_run hr]
     exact AErrSim.notImplemented rfl
 
-@[lockstep] theorem is_ctor_app_ls {pers vis st fe lfe e lst}
+@[lockstep] theorem is_ctor_app_ls {pers st fe lfe e lst}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    (hctx : CoreCtx vis fe lfe) :
-    LS pers (fun a b => b = a) (arena.core.is_ctor_app pers vis st fe e) lst
+    (hctx : CoreCtx pers fe lfe) :
+    LS pers (fun a b => b = a) (arena.core.is_ctor_app pers st fe e) lst
       (isCtorApp lfe (absEIdx e)) := by
   rw [arena.core.is_ctor_app, isCtorApp]
   lockstep_core
@@ -260,18 +258,18 @@ the twin's `what` is free (messages are never compared). -/
   rw [arena.core.is_eager_reduce, isEagerReduce]
   lockstep_core
 
-@[lockstep] theorem head_hint_ls {pers vis st fe lfe e lst}
+@[lockstep] theorem head_hint_ls {pers st fe lfe e lst}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    (hctx : CoreCtx vis fe lfe) :
-    LS pers (fun a b => b = ConRon.Refine.absHint a) (arena.core.head_hint pers vis st fe e) lst
+    (hctx : CoreCtx pers fe lfe) :
+    LS pers (fun a b => b = ConRon.Refine.absHint a) (arena.core.head_hint pers st fe e) lst
       (headHint lfe (absEIdx e)) := by
   rw [arena.core.head_hint, headHint]
   lockstep_core
 
-@[lockstep] theorem unfoldable_head_ls {pers vis st fe lfe e lst}
+@[lockstep] theorem unfoldable_head_ls {pers st fe lfe e lst}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    (hctx : CoreCtx vis fe lfe) :
-    LS pers (fun a b => b = a) (arena.core.unfoldable_head pers vis st fe e) lst
+    (hctx : CoreCtx pers fe lfe) :
+    LS pers (fun a b => b = a) (arena.core.unfoldable_head pers st fe e) lst
       (unfoldableHead lfe (absEIdx e)) := by
   rw [arena.core.unfoldable_head, unfoldableHead]
   lockstep_core
@@ -320,25 +318,7 @@ attribute [-lockstep_simp] ConRon.Refine.absLevels ConRon.Refine.absNames
   rw [arena.core.rule_rhs_at, ruleRhsAt]
   lockstep_a1
 
-/-! ## The level predicates -/
-
-@[lockstep] theorem proj_entry_fire_ok_ls {pers st entry us lst}
-    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st) :
-    LS pers (fun a b => b = a) (arena.core.proj_entry_fire_ok pers st entry us) lst
-      ((absIProjEntry entry).fireOk (absLsIdx us)) := by
-  rw [arena.core.proj_entry_fire_ok, IProjEntry.fireOk]
-  lockstep_a1
-
-/-- `hcaps`: the stored zero-ness datum is a well-formed `PropWhen` (a
-representation fact about the Rust input `caps`; `level::subst_pw`'s
-refinement needs it). -/
-@[lockstep] theorem caps_never_zero_ls {pers st lps us caps lst}
-    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    (hcaps : ConRon.Refine.PropWhenWF caps.sort_z) :
-    LS pers (fun a b => b = a) (arena.core.caps_never_zero pers st lps us caps) lst
-      (capsNeverZero (lps.val.map absNIdx) (absLsIdx us) (absIIndCaps caps)) := by
-  rw [arena.core.caps_never_zero, capsNeverZero]
-  lockstep_a1
+/-! ## The projection entry's type -/
 
 @[lockstep] theorem proj_entry_type_at_ls {pers st entry us targs pe lst}
     (_hx : ExprOpsHyp pers) (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st) :
@@ -512,11 +492,11 @@ the twin in each arm — the same reads, so the split is taken once for both. -/
   cases hf : rl.fire <;> simp only [absIRecRuleFire] <;> lockstep_a1
 
 /-- `arena::core::rec_fire_args` against `recFireArgs`. -/
-@[lockstep] theorem rec_fire_args_ls {pers st rl lps us args r_p lst}
+@[lockstep] theorem rec_fire_args_ls {pers st rl cn_p lps us args r_p lst}
     (hx : ExprOpsHyp pers) (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st) :
     LS pers (fun a b => b = absEIdxList a)
-      (arena.core.rec_fire_args pers st rl lps us args r_p) lst
-      (recFireArgs (absIRecRule rl) (lps.val.map absNIdx) (absLsIdx us)
+      (arena.core.rec_fire_args pers st rl cn_p lps us args r_p) lst
+      (recFireArgs (absIRecRule rl) (absU cn_p) (lps.val.map absNIdx) (absLsIdx us)
         (absEIdxList args) (absU r_p)) := by
   rw [arena.core.rec_fire_args, recFireArgs]
   simp only [absIRecRule]
