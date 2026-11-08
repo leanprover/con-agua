@@ -106,3 +106,20 @@ CONFLICT, con-ron 0001 applies.
   only (`_tmp/ronsync2/cc/`): `LEAN_CC` a clang wrapper with `--ld-path` to a script that calls
   `bin-unwrapped/ld.lld` with the toolchain's library paths, `libunwind`, `libc_nonshared`,
   `libpthread_nonshared` and an rpath. Binaries linked so went into the shared Lake cache.
+* 19:56–20:15, performance of the stage-2 binary (L code final, proofs pending) against master
+  09a78343 (which already has #148, ronsync2-kf: its own numbers are in
+  `docs/design/ronsync2-kf.md`, `Init` peak RSS −12 %, −17 % at 16 threads, +0.9 % instructions):
+
+  | | master 09a78343 | ronsync2 | Δ |
+  |---|---:|---:|---:|
+  | `Init`, `instructions:u`, one thread | 223.85 G | 223.53 G | −0.14 % |
+  | `Init`, `cycles:u`, one thread | 75.78 G | 75.31 G | −0.6 % |
+  | `Init`, peak RSS, one thread | 645 MB | 638 MB | −1.0 % |
+  | `Init`, peak RSS, `--jobs=16` | 808 MB | 782 MB | −3.3 % |
+  | `Init` wall, one thread (CPU 44, 16 paired rounds, load 0.7–6.2) | 17.33 s | −0.4 % (Wilcoxon p = 0.30; mean [−1.0, +0.2]) | |
+  | `Init` wall, `--jobs=16` (CPUs 24–39, 20 paired rounds, load 4–12) | 3.49 s | **−7.7 %** (p = 0.007; mean [−11.8, −2.1]) | |
+  | `complete_c04a_restart_70` (largest e2e fixture), instructions | 16.51 G | 17.09 G | +3.5 % |
+  | `complete_c04a_restart_70`, peak RSS | 261 MB | 261 MB | 0 |
+
+  The install phase is gone, so the jobs carry the blocks' checks and the pool parallelises them
+  (the 16-thread gain); one thread breaks even (`_tmp/ronsync2/perf/`).
