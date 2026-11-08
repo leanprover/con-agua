@@ -652,6 +652,72 @@ theorem not_mem_envCtl {x : Word}
   simp only [envCtl, List.mem_cons, List.not_mem_nil, or_false] at hm
   rcases hm with e | e | e | e | e <;> subst e <;> simp at h
 
+/-- **`EnvR` across a growth of the record pool** (allocations and writes above the tops):
+the rows are untouched and every decoding they name decodes in the bigger pool too. -/
+theorem EnvR.grow {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (hf : MemFrame [EREC, tier1 EREC] [129, 130] m m') (hg : ErecGrow m m') (h : EnvR m vis fe) :
+    EnvR m' vis fe := by
+  have hx := hg.ext
+  have he : ∀ b : TieredArray, b.arr ≠ 136 → b.arr ≠ 1 → m'.arr64 b = m.arr64 b :=
+    fun b h1 h2 => hf.arr b (by
+      simp only [List.mem_cons, List.not_mem_nil, or_false]
+      rintro (e | e) <;> subst e <;> exact h1 rfl) (fun e => by subst e; exact h2 rfl)
+  have hc : ∀ x, x ≠ 129 → x ≠ 130 → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x :=
+    fun x h1 h2 => hf.ctl x (by simp [h1, h2])
+  have hs : stampW m' = stampW m := hc 133 (by decide) (by decide)
+  have o1 : ∀ g t, (tierA (oixArr g) t).arr ≠ 136 ∧ (tierA (oixArr g) t).arr ≠ 1 := fun g t => by
+    unfold tierA oixArr; split <;> (try split) <;> simp [OIXA, OIXS, OIXN]
+  have o2 : ∀ g t, (tierA (otxArr g) t).arr ≠ 136 ∧ (tierA (otxArr g) t).arr ≠ 1 := fun g t => by
+    unfold tierA otxArr; split <;> (try split) <;> simp [OTXA, OTXS, OTXN]
+  have o3 : ∀ g, (eixArr g : TieredArray).arr ≠ 136 ∧ (eixArr g : TieredArray).arr ≠ 1 := fun g => by
+    unfold eixArr; split <;> (try split) <;> decide
+  have o4 : ∀ g, (tixArr g : TieredArray).arr ≠ 136 ∧ (tixArr g : TieredArray).arr ≠ 1 := fun g => by
+    unfold tixArr; split <;> (try split) <;> decide
+  have hor : ∀ w, ownRow m' w = ownRow m w := fun w => by
+    simp only [ownRow, he _ (o1 _ _).1 (o1 _ _).2]
+  have hraw : ∀ w, ownRaw m' w = ownRaw m w := fun w => by simp only [ownRaw, hor, hs]
+  have hot : ∀ w, ownTbl m' w = ownTbl m w := fun w => by
+    simp only [ownTbl, he _ (o2 _ _).1 (o2 _ _).2, hs]
+  have hb : ∀ w, baseRow m' w = baseRow m w := fun w => by
+    simp only [baseRow, he _ (o3 _).1 (o3 _).2]
+  have hbt : ∀ w, baseTbl m' w = baseTbl m w := fun w => by
+    simp only [baseTbl, he _ (o4 _).1 (o4 _).2]
+  refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn hq => ?_, fun n => ?_, fun n hn => ?_,
+    by rw [hc 134 (by decide) (by decide)]; exact h.below, by rw [hc 135 (by decide) (by decide)]; exact h.belowRec,
+    fun n => ?_, fun n => ?_, by rw [hs]; exact h.stamp⟩
+  · rw [h.own n]; simp only [ownFind, hraw]
+    split
+    · rename_i c; obtain ⟨ci, hci⟩ := h.own_dec n c.1; rw [hci, hx.decCI hci]
+    · rfl
+  · rw [hraw] at hn ⊢; obtain ⟨ci, hci⟩ := h.own_dec n hn; exact ⟨ci, hx.decCI hci⟩
+  · rw [hraw] at hn ⊢; exact h.fresh n hn
+  · rw [hraw, hraw] at hq; rw [hraw] at hn; exact h.uniq n n' hn hq
+  · rw [h.otbl n, hot]
+    split
+    · rfl
+    · rename_i c; obtain ⟨t, ht⟩ := h.otbl_dec n c; rw [ht, hx.decTbl ht]
+  · rw [hot] at hn ⊢; obtain ⟨t, ht⟩ := h.otbl_dec n hn; exact ⟨t, hx.decTbl ht⟩
+  · have := h.base n; rw [hb]
+    rw [this]; split
+    · rfl
+    · cases e : fe.base.idx[n]? with
+      | none => rw [e] at this; simp_all
+      | some y =>
+        rw [e] at this
+        simp only [Option.map_some, ite_cond_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
+          Prod.mk.injEq] at this
+        rw [← this.2, hx.decCI this.2.symm]
+  · have := h.btbl n; rw [hbt]
+    rw [this]; split
+    · rfl
+    · cases e : fe.base.tbls[n]? with
+      | none => rw [e] at this; simp_all
+      | some y =>
+        rw [e] at this
+        simp only [Option.map_some, ite_cond_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
+          Prod.mk.injEq] at this
+        rw [← this.2, hx.decTbl this.2.symm]
+
 /-! ## The whole relation -/
 
 theorem MemFrame.top_eq {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
@@ -723,5 +789,19 @@ theorem CheckR.frame_hi {A : List TieredArray} {C : List Word}
       (fun x hx => by have := (hC x hx).1; omega) m m' hf a h.arena.base
   · exact DerR.frameM A C m m' hf (fun b hb => by
       have := hA b hb; omega) a h.arena.der
+
+/-- **The relation across a growth of the record pool** (`erec_alloc`, `erec_put` above the
+tops): only `EREC` (both tiers) and its tops change. -/
+theorem CheckR.erGrow {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (h : CheckR m a vis fe)
+    (hf : MemFrame [EREC, tier1 EREC] [129, 130] m m') (hg : ErecGrow m m') : CheckR m' a vis fe := by
+  have hA : ∀ b ∈ [(EREC : TieredArray), tier1 EREC], 136 ≤ b.arr ∧ b.arr < 137 := by
+    simp [EREC, tier1]
+  have hC : ∀ x ∈ ([129, 130] : List Word), 129 ≤ x.toNat ∧ x.toNat < 131 := by simp
+  have hlow : ∀ y ∈ arenaArrs, y.arr < 64 := by decide
+  refine ⟨⟨?_, ?_⟩, h.core.frame (fun b hb => .inr (by have := hA b hb; omega)) (fun x hx => .inr (by have := hC x hx; omega)) hf,
+    h.pins.frame (fun b hb => .inr (by have := hA b hb; omega)) hf, h.env.grow hf hg,
+    h.mode.frame hf (by decide) (by decide)⟩
+  · exact ArenaR.frame (fun b hb hm => by have := hlow b hm; have := hA b hb; omega) (fun x hx => not_mem_arenaCtl x (by have := hC x hx; omega)) hf h.arena.base
+  · exact DerR.frameM _ _ m m' hf (fun b hb => by have := hA b hb; omega) a h.arena.der
 
 end L.Arena
