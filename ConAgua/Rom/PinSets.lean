@@ -142,10 +142,12 @@ theorem EW.set (m : Mem) (x v : Word) : EW x.toNat (x.toNat + 1) m (m.set64 EREC
 
 /-- **`erec_alloc`**: the old top, raised by `k`, inside `EREC`. -/
 theorem erAlloc_ok {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m'))
-    (hc : 151 < (m.arr64 CTL).size) :
+    (hc : 151 < (m.arr64 CTL).size) (hfl : rdW (m.arr64 CTL) 1 = 0) :
     o.toNat = erecTop m ∧ erecTop m' = o.toNat + k.toNat ∧ o.toNat + k.toNat ≤ (m.arr64 EREC).size ∧
       MemFrame [] [129] m m' ∧ ∀ lo hi, EW lo hi m m' := by
-  simp only [erAllocW] at h
+  simp only [erAllocW, hfl, ite_true] at h
+  have hmem : erAllocMem m k = m.set64 CTL 129 (rdW (m.arr64 CTL) 129 + k) := by
+    simp [erAllocMem, hfl]
   by_cases h1 : m.len64 EREC < rdW (m.arr64 CTL) 129
   · simp [h1] at h
   by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < k
@@ -162,9 +164,9 @@ theorem erAlloc_ok {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m'))
     have : ¬ (m.len64 EREC - rdW (m.arr64 CTL) 129).toNat < k.toNat := h2
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at this
     omega
-  have hf : MemFrame [] [129] m (erAllocMem m k) := MemFrame.setCtl m 129 _
+  have hf : MemFrame [] [129] m (erAllocMem m k) := hmem ▸ MemFrame.setCtl m 129 _
   have htop : erecTop (erAllocMem m k) = (rdW (m.arr64 CTL) 129).toNat + k.toNat := by
-    simp only [erecTop, erAllocMem, rdW_set64]
+    simp only [erecTop, hmem, rdW_set64]
     rw [ite_eq_left ⟨trivial, trivial, by simp; omega⟩, addN (by omega)]
   refine ⟨rfl, htop, by omega, hf, fun lo hi => ?_⟩
   have hE : (erAllocMem m k).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
@@ -215,6 +217,9 @@ structure SInv (mem : Mem) (a : AState) : Prop where
   top : erecTop mem ≤ (mem.arr64 EREC).size
   /-- The pool's mode (lane tierpool). -/
   mode : ModeOK mem
+  /-- The scratch flag is off (the pin sets are built at startup): `erec_alloc` allocates in
+  `EREC`'s tier 0. -/
+  flag : rdW (mem.arr64 CTL) 1 = 0
 
 theorem hiA : ∀ b ∈ ([EREC] : List TieredArray), InHigh b := by decide
 theorem hiC : ∀ x ∈ ([129, 150, 151] : List Word), 64 ≤ x.toNat := by simp
@@ -235,13 +240,16 @@ theorem SInv.frameE {mem mem' : Mem} {a : AState} (inv : SInv mem a)
   ⟨ArenaD.frameHi hf hiA hiC inv.arena,
    inv.rset.frame hf (by decide) (by decide) (by decide) (by decide),
    inv.ok, by simp only [stkTop]; rw [hf.ctl 131 (by decide)]; exact inv.stk,
-   by rw [hf.size CTL]; exact inv.ctl, ht, inv.mode.frame hf (by decide) (by decide)⟩
+   by rw [hf.size CTL]; exact inv.ctl, ht, inv.mode.frame hf (by decide) (by decide),
+   by rw [hf.ctl 1 (by decide)]; exact inv.flag⟩
 
 /-- After an expression: the decoder's invariant, sizes and top as before. -/
 theorem SInv.of_dec {mem mem' : Mem} {a a' : AState} {seen : List ConLeche.Expr} {m : EMemo}
     (inv : SInv mem a) (hd : DecInv mem' a' seen m) (hf : MemFrame PinsA ExprC mem mem') : SInv mem' a' :=
   ⟨hd.arena, hd.rset, hd.ok, hd.stk, by rw [hf.size CTL]; exact inv.ctl, by
-    simp only [erecTop]; rw [hf.ctl 129 (by decide), hf.size EREC]; exact inv.top, hd.mode⟩
+    simp only [erecTop]; rw [hf.ctl 129 (by decide), hf.size EREC]; exact inv.top, hd.mode,
+    -- ronsync2-p3a TODO: the flag from `hd.arena` (`ConsR.flag`) and the twin's `scratchOn` kept
+    sorry⟩
 
 /-- A memo reset: the decoder's invariant at the empty memo. -/
 theorem SInv.reset {mem : Mem} {a : AState} (inv : SInv mem a) (hok : rclearOK mem) :
@@ -734,7 +742,7 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   rcases hA : erAllocW mem (u64W rom q) with _ | ⟨o, m₁⟩ <;> rw [hA] at hW
   · simp [listsK] at hW
   generalize hl : u64W rom q = l at hA hW
-  obtain ⟨ho, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl
+  obtain ⟨ho, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl inv.flag
   obtain ⟨hi8, hi9⟩ := hdrIdx (r := r) (j := j) (by omega) hj8
   have hs₁ : (m₁.arr64 EREC).size = (mem.arr64 EREC).size := hf₁.size EREC
   have inv₁ : SInv m₁ a := inv.frameE (hf₁.mono (by simp) (by simp)) (by omega)
@@ -852,7 +860,9 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
   have inv₁ : SInv m₁ (AM.st (ConRon.Arena.internName x) a) :=
     ⟨hR1, inv.rset.frameS hf1, hstN.ok, by rw [frame_exprA_stk hf1]; exact inv.stk,
       by rw [hf1.size CTL]; exact inv.ctl, by rw [ht₁, hs₁]; exact inv.top,
-      (romNameW_topK hN).mode inv.arena.base.lit.1 inv.mode⟩
+      (romNameW_topK hN).mode inv.arena.base.lit.1 inv.mode,
+      -- ronsync2-p3a TODO: the flag from `hR1` (`ConsR.flag`) and the twin's `scratchOn` kept
+      sorry⟩
   -- its handle
   by_cases hc' : ¬ rclearOK (m₁.set64 EREC o h)
   · simp [tpK, hc'] at hW
@@ -950,7 +960,7 @@ theorem tpinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
     rw [UInt64.toNat_mul]; simp only [UInt64.reduceToNat]; omega
   rcases hA : erAllocW mem (2 * l) with _ | ⟨o, m₁⟩ <;> rw [hA] at hW
   · simp [tpinsK] at hW
-  obtain ⟨ho, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl
+  obtain ⟨ho, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl inv.flag
   rw [h2l] at ht₁ hroom
   obtain ⟨hi8, hi9⟩ := thdrIdx (r := r) (j := j) (by omega) hj8
   have hs₁ : (m₁.arr64 EREC).size = (mem.arr64 EREC).size := hf₁.size EREC
@@ -1041,7 +1051,7 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
   rcases hA : erAllocW mem 40 with _ | ⟨r, m₁⟩ <;> rw [hA] at hW
   · simp [setsK] at hW
   rw [setsK_some] at hW
-  obtain ⟨hr₀, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl
+  obtain ⟨hr₀, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl inv.flag
   have hs₁ : (m₁.arr64 EREC).size = (mem.arr64 EREC).size := hf₁.size EREC
   have h24 : (40 : Word).toNat = 40 := rfl
   have inv₁ : SInv m₁ a := inv.frameE (hf₁.mono (by simp) (by simp)) (by omega)

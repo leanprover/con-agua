@@ -114,11 +114,14 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
     exact hE.ordR k hk
   · exact memoRV_frame hnSch hnSch_wf nmKey _ [IW, HSEEN] [73, 74] (by decide) (by decide) m m' hf.1
       (fun _ _ h => h) idx hE.nix
-  · obtain ⟨h1, h2, h3, h4, h5⟩ := hE.iwok
+  · obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hE.iwok
     have hER : m'.arr64 EREC = m.arr64 EREC := hD EREC (by decide) (by decide)
+    have hER1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hD (tier1 EREC) (by decide) (by decide)
     have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.1.ctl 129 (by decide)]
+    have h130 : erecTop1 m' = erecTop1 m := by simp only [erecTop1]; rw [hf.1.ctl 130 (by decide)]
     refine ⟨by rw [htop, hsz]; exact h1, by rw [h129, hER]; exact h2, by rw [hsz]; exact h3,
-      by rw [hER]; exact h4, by rw [hf.1.size CTL]; exact h5⟩
+      by rw [hER]; exact h4, by rw [hf.1.size CTL]; exact h5, by rw [h130, hER1]; exact h6,
+      by rw [hER1]; exact h7, by rw [hER]; exact h8, by rw [hER1]; exact h9⟩
 
 /-- **What an allocation keeps**: `IW` and `CTL[200]` only, the pool grown. -/
 structure AFr (m m' : Mem) : Prop where
