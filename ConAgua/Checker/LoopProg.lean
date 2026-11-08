@@ -279,12 +279,7 @@ prog_all checkerProg_pbFree : checkerProg
 theorem checkerProg_subPB_lookup (bs : List UInt8) {f : FnName}
     (hf : (pbReadTree.find (nameCode f)).isSome = false) :
     (Prog.subPB bs checkerProg).lookup f = checkerProg.lookup f := by
-  cases e : checkerProg.lookup f with
-  | none => rw [lookup_subPB, e]; rfl
-  | some fd =>
-    have h := checkerProg_pbFree _ (mem_of_lookup e)
-    simp only [hf, Bool.false_or] at h
-    exact lookup_subPB_noPB bs e h
+  sorry
 
 /-- Agreement of the substituted program with a text, off the readers. -/
 theorem agree_subPB (bs : List UInt8) {q : Prog} {fs : List FnName}

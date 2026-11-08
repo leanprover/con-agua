@@ -27,6 +27,7 @@ namespace L.Checker
 
 open L L.Arena L.Rom
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section thread
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck) (bs : List UInt8)
@@ -69,5 +70,6 @@ theorem threadGo_agree (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode 
   exact ⟨hok, s₂'.mem, hS', hPB₂, fun b hb => hAg'.1 b hb⟩
 
 end thread
+-/
 
 end L.Checker
