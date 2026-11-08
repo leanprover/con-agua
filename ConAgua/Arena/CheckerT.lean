@@ -1229,6 +1229,7 @@ def FoldGoRef (n : Nat) : Prop :=
       (ErrClaimV (installFold mode pins (i.toNat, fe, pend) (ds.toList.drop i.toNat)) a₀)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `install_fold_next`'s, the same (`i` below the count). -/
 def FoldNextRef (n : Nat) : Prop :=
   ∀ (m : Mem) (a₀ : AState) (i cnt vis : Word) (fe : IFEnv),
@@ -1237,7 +1238,9 @@ def FoldNextRef (n : Nat) : Prop :=
     RefC (IstgG pins dn ds p) (installFoldNextE p n m i cnt vis)
       (fun v => FoldPost mode pins dn ds v.2 a₀ v.1 i.toNat fe pend)
       (ErrClaimV (installFold mode pins (i.toNat, fe, pend) (ds.toList.drop i.toNat)) a₀)
+-/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section fold
 variable (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
@@ -1350,6 +1353,7 @@ theorem installFoldGo_refines (n : Nat) (hn : n ≤ 2 ^ 62) : FoldGoSpec mode pi
       s₀.mem a₀ i cnt vis fe pend hi hc hT hR hM hcm him) :)
 
 end fold
+-/
 
 end skel
 
