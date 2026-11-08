@@ -88,7 +88,14 @@ theorem nmsR_congr {N : Word → ConLeche.Name → Prop} {m m' : Mem} {A : ArrId
 
 theorem hd_word {a : Array Word} {i : Nat} {x : NIdx} (h : hd? (aread a) i = some x) :
     ∃ w, a[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  sorry
+  unfold hd? at h
+  cases e : a[i]? with
+  | none => simp [e] at h
+  | some w =>
+    by_cases hw : w.toNat < 2 ^ 32
+    · simp [e, hw] at h
+      exact ⟨w, rfl, hw, h⟩
+    · simp [e, hw] at h
 
 /-- A decoded slice of `IW` handles with names is an `NmsR`. -/
 theorem nmsR_of_slice {m : Mem} {ns : NStore} (hsz : (m.arr64 IW).size < 2 ^ 64) :

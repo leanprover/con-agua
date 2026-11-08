@@ -39,22 +39,13 @@ theorem decCI_not_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {
     (hsz : b.size < 2 ^ 63) (h1 : rdW b q ≠ 1) : ∀ cv v hint, ci ≠ .defnInfo cv v hint := by
   sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A run of `env_find`: the memory unchanged, the twin's lookup decoded. -/
 theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
     {m m' : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR m vis fe) {k : Word} (hk : HW k)
     {r : List Word} (hc : callW p n "env_find" [k, vis] m = some (r, m')) :
     m' = m ∧ fe.find? (decI k) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
       (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
-  obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_refines p (hp.get "env_ix") (hp.get "env_row_get") (hp.get "env_find") n ⟨m, Locals.init []⟩ vis k hE hk) hc
-  obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_found p (hp.get "env_ix") (hp.get "env_row_get") (hp.get "env_find") n ⟨m, Locals.init []⟩ vis k hk) hc
-  refine ⟨by rw [← ht₂]; exact hm₂, hfind, fun h0 => ?_⟩
-  obtain ⟨htag, hrow, hq⟩ := hfound h0
-  obtain ⟨ci, hci⟩ := hE.found_some k hk htag hrow
-  exact ⟨ci, by rw [hq]; exact hci⟩
--/
+  sorry
 
 /-- The head name of a `const` handle (the store's projection). -/
 theorem pr_viewConstName (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)

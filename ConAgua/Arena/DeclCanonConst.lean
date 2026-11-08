@@ -76,7 +76,6 @@ theorem cvLpsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
       (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   sorry
 
-
 /-! ## `canon_ctx` -/
 
 mutual
@@ -127,7 +126,6 @@ theorem canonCtx_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (cp cq
     ⦃fun r s' => LocEq s' s₀ ∧ ctxW n s₀.mem cp cq = some (r, s'.mem); ⊤⦄ := by
   sorry
 
-
 theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {cp cq : Word} {r : List Word} {cv cv' : IConstantVal}
     (h : ctxW k m cp cq = some (r, m')) (hS : StageR vis fe m a)
@@ -139,7 +137,6 @@ theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       StageR vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a' ∧
       CtxR m' po pl qo ql co cl cv.levelParams cv'.levelParams cs := by
   sorry
-
 
 /-! ## `cv_canon_eq` -/
 
@@ -181,7 +178,6 @@ theorem cvCanonEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (q r 
     ⦃fun x s' => LocEq s' s₀ ∧ cvceW n s₀.mem q r = some (x.headD 0, s'.mem); ⊤⦄ := by
   sorry
 
-
 /-- The three words of a constant value that the comparison reads. -/
 theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC).size < 2 ^ 64)
     (h : decCV (erA m) q.toNat = some cv) :
@@ -199,7 +195,6 @@ theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     ∃ (b : Bool) (a' : AState), (cv.canonEq cv').run a = .ok (b, a') ∧ x = (if b then 1 else 0) ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a' := by
   sorry
-
 
 /-- **`cv_canon_eq` refines `IConstantVal.canonEq`.** -/
 @[refines ConRon.Arena.IConstantVal.canonEq]

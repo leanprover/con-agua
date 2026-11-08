@@ -103,7 +103,6 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       x = (if b then 1 else 0) ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
   sorry
 
-
 /-- **`canon_rules_eq` refines `canonRulesEq`.** -/
 @[refines ConRon.Arena.canonRulesEq]
 theorem canonRulesEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name)

@@ -369,8 +369,11 @@ theorem mtc_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
 
 /-- **`major_to_ctor` refines `majorToCtor`** (the callees' specs as hypotheses): `mtc_ref`'s ok
 half. -/
-theorem majorToCtor_refines' : MajorToCtorOK p := by
-  sorry
+theorem majorToCtor_refines' : MajorToCtorOK p :=
+  fun n hk F hnF s₀ a₀ dn vis fe MM eb mode d rec ro rc major rules hn62 hS hm4 hebm hmaj hr =>
+    RefE.coreSpec (mtcE_spec p hp.toM2CProg hp.majorToCtor (n + 1) s₀ mode vis d rec ro rc major)
+      (mtc_ref p hp hc hpi hE hcc n F hk hnF hn62 dn vis fe eb mode d rec ro rc major hm4 hebm hmaj
+        rules s₀.mem a₀ MM hS hr)
 
 end top
 

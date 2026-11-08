@@ -238,8 +238,8 @@ theorem stepPc_mem (w : Word) (h : stepPc w = true) : w ∈ stepC := by
 prog_all checkerProg_declChk : checkerProg (wsChk CTL stepPa stepPc declLoopTree)
 -/
 
-theorem checkerProg_declClosed : closedA checkerProg stepA stepC declLoopFns = true := by
-  sorry
+theorem checkerProg_declClosed : closedA checkerProg stepA stepC declLoopFns = true :=
+  closedW_of_all declLoopTree.eq stepPa_mem stepPc_mem checkerProg_declChk
 
 theorem checkerProg_stepIn {fs : List FnName} (h : ∀ f ∈ fs, f ∈ declLoopFns) :
     StepIn checkerProg fs :=

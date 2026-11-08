@@ -47,7 +47,19 @@ def fpShape (k a b : Word) : IConstantInfo → Option IConstantVal
 theorem counts_words {arr : Array Word} {q a b : Word} {x y : Nat} (hsz : arr.size < 2 ^ 64)
     (hx : nat? (aread arr) (q.toNat + 5) = some x) (hy : nat? (aread arr) (q.toNat + 6) = some y) :
     ((rdW arr (q + 5) ≠ a ∨ rdW arr (q + 6) ≠ b) ↔ ¬ (x = a.toNat ∧ y = b.toNat)) := by
-  sorry
+  obtain ⟨w5, e5, rfl⟩ := natD hx
+  obtain ⟨w6, e6, rfl⟩ := natD hy
+  have hq5 : (q + 5).toNat = q.toNat + 5 := by
+    have := (Array.getElem?_eq_some_iff.mp e5).1; rw [UInt64.toNat_add]; simp; omega
+  have hq6 : (q + 6).toNat = q.toNat + 6 := by
+    have := (Array.getElem?_eq_some_iff.mp e6).1; rw [UInt64.toNat_add]; simp; omega
+  have r5 : rdW arr (q + 5) = w5 := by simp [rdW, hq5, e5]
+  have r6 : rdW arr (q + 6) = w6 := by simp [rdW, hq6, e6]
+  rw [r5, r6]
+  have i5 : w5 = a ↔ w5.toNat = a.toNat := ⟨fun h => by rw [h], fun h => UInt64.toNat_inj.mp h⟩
+  have i6 : w6 = b ↔ w6.toNat = b.toNat := ⟨fun h => by rw [h], fun h => UInt64.toNat_inj.mp h⟩
+  rw [Ne, Ne, i5, i6]
+  omega
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The shape tests, failing**: the twin's shape does not match. -/

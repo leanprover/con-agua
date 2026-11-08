@@ -236,7 +236,14 @@ theorem erToIwW_frame {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 theorem decCV_slice {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
     ∃ w1 w2, a[q + 1]? = some w1 ∧ a[q + 2]? = some w2 ∧
       hslice? (aread a) w1.toNat w2.toNat = some cv.levelParams := by
-  sorry
+  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨nm, -, lv, hlv, ty, -, rfl⟩ := h
+  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
+  obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
+  simp only [nat?, Option.map_eq_some_iff] at ho2 hl2
+  obtain ⟨w1, hw1, rfl⟩ := ho2
+  obtain ⟨w2, hw2, rfl⟩ := hl2
+  exact ⟨w1, w2, hw1, hw2, hsl⟩
 
 theorem rdW_of_get? {a : Array Word} {x w : Word} {k : Nat} (hk : k = x.toNat) (h : a[k]? = some w) :
     rdW a x = w := by
@@ -249,7 +256,9 @@ theorem fuelW : (4000000000 : Word).toNat = coreWalkFuel := rfl
 
 theorem decCV_typeW {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
     ∃ w, a[q + 3]? = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
-  sorry
+  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨_, _, _, _, ty, hty, rfl⟩ := h
+  exact hd?_some hty
 
 /-- A grown pool keeps every record of the old one. -/
 theorem IWGrow.erecExt {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erA m') := by

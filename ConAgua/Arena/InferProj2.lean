@@ -98,7 +98,6 @@ theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
     ∀ c, caps.ctors = [c] → c = decI (rdW b (rdW b (q + 18))) ∧ HW (rdW b (rdW b (q + 18))) := by
   sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **An ok `env_find` run**: the memory unchanged, the twin's `find?` decoded, a found record
 decodes. -/
 theorem envFind_callE {p : Prog}     (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
@@ -107,15 +106,7 @@ theorem envFind_callE {p : Prog}     (hg : p.lookup "env_row_get" = some envRowG
     (hc : callE p n "env_find" [w, vis] m = .ok (r, m')) :
     m' = m ∧ fe.find? (decI w) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
       (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
-  obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callE
-    (envFind_refines p hx hg hp n ⟨m, Locals.init []⟩ vis w hE hw) hc
-  obtain ⟨t₂, ht₂, -, -, hfound⟩ := triple_of_callE
-    (envFind_found p hx hg hp n ⟨m, Locals.init []⟩ vis w hw) hc
-  refine ⟨ht₁ ▸ hm₁, hfind, fun h0 => ?_⟩
-  obtain ⟨htag, hrow, hq⟩ := hfound h0
-  rw [hq]
-  exact hE.found_some w hw htag hrow
--/
+  sorry
 
 /-- The constructor test of `projIndexedStructLike`: `c` a constructor with more than `i` fields. -/
 def ctorFieldsGt (fe : IFEnv) (c : NIdx) (i : Nat) : Bool :=

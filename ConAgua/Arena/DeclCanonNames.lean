@@ -113,7 +113,6 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
       IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r hs ∧ a'.store.view = a.store.view ∧ PoolSmall m' := by
   sorry
 
-
 /-- **The model of `canon_names(n)`**. -/
 def cnW : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none

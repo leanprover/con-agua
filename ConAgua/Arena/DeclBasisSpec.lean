@@ -50,7 +50,14 @@ theorem pinAt_specW (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) 
     (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ pinAtW s₀.mem i = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, pinAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [pinAtW, pinW_eq, rdW_eq]
 
 /-- **A pin read is the twin's** (`pinAt`), the memory unchanged. -/
 theorem pinAtW_ok {m m' : Mem} {a : AState} {i : Word} {r : List Word}
@@ -186,7 +193,9 @@ end models
 
 /-- The cut record pool is the record pool below its top. -/
 theorem truncM_erecP (m : Mem) : ArrExt (erA (truncM m)) (erecP m) := by
-  sorry
+  intro i v h
+  obtain ⟨hi, hv⟩ := truncM_er_get h
+  rw [erecP_getE hi]; exact hv
 
 /-- What `install_basis_decl` gives besides the twin's environment `fe'` (from `m`): the stage
 over the result word, the growth. -/

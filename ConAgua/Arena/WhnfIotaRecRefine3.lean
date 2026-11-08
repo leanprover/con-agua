@@ -265,7 +265,8 @@ variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (
 
 theorem at_run_tag (a : AState) (ht : hd.tag ≠ ETag.const) :
     (iotaRecAt mode r fe depth hd sargs n).run a = .ok (none, a) := by
-  sorry
+  have : (hd.tag == ETag.const) = false := by simpa using ht
+  rw [iotaRecAt_eq]; simp only [this, Bool.false_eq_true, ↓reduceIte]; rfl
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem at_eq_c (a : AState) (c : NIdx) (us : LsIdx)
@@ -291,7 +292,29 @@ theorem at_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     RefE (MajorG p n) (irAtE p (n + 1) s₀.mem mode vis d hd so sn)
       (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs xs.size) a₀
       (CorePost decOptR dn s₀.mem vis fe M eb ResW) := by
-  sorry
+  have hS := hpre.rel
+  simp only [irAtE]
+  refine RefE.onlySim (fun _ => irAtE.k_iota_rec_head.none ..) (fun _ _ h => h) fun rv m1 c1 => ?_
+  obtain ⟨hm1, hnot, hyes⟩ := irCallW_head p hp.head n s₀.mem a₀ hS.arena.base hd hhd rv m1 c1
+  subst m1
+  simp only [irAtE.k_iota_rec_head]
+  by_cases v0 : rv.headD 0 = 0
+  · rw [ite_eq_left v0]
+    exact RefE.ret (at_run_tag (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs
+      xs.size a₀ (hnot v0)) (CorePost.ret hS rfl
+        ⟨by show HW (0 : Word); unfold HW; decide, by show HW (0 : Word); unfold HW; decide⟩)
+  rw [ite_eq_right v0]
+  obtain ⟨htag, hview, hcw, husw⟩ := hyes v0
+  have hvc := L.Ind.EStore.viewConst_of_view _ _ htag _ _ hview
+  cases n with
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+  | succ N =>
+  exact RefE.tail_eq (k := irAtE.k_iota_rec_c p) (G' := MajorG p N)
+    (fun _ => rfl) (fun _ => rfl) (fun hG => ⟨hG.knot.mono (Nat.le_succ N), hG.nv, hG.pm, hG.fire⟩)
+    (at_eq_c (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ _ _
+      htag hvc) (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
+    (c_ref p hp hc hw hsup hmtc hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis
+      fe M eb mode d _ _ so sn xs hS hpre.mode4 hpre.eb_mode hcw husw hsa hsat)
 
 /-- **`iota_rec_at` refines `iotaRecAt`** (`IotaRecAtOK`, what `whnf_app` assumes; `at_ref`'s ok
 half), from the callees' specs and the stub assumption `ErecKeptRec` (the callees the pieces read

@@ -149,13 +149,91 @@ theorem callW_iotaRecVck_erec (p : Prog) (hp : IotaRecProg' p) (hER : ErecKeptRe
     (hEK : ErecKeptKnot p) (n : Nat) (m : Mem) (vs : List Word) (r : List Word) (m' : Mem)
     (hvs : vs.length = 12) (h : callW p n "iota_rec_vck" vs m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC := by
-  sorry
+  match vs, hvs with
+  | [mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL], _ =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callE
+    (vckE_spec p hp.vck n ⟨m, Locals.init []⟩ mode vis d us recP so usj ctorP rl mo mn cmpL)
+    (callE_of_callW h)
+  rw [ht] at hW
+  cases n with
+  | zero => simp [vckE] at hW
+  | succ n =>
+  have o : ∀ {x : Option (List Word × Mem)} {v}, liftE x = .ok v → x = some v := by
+    intro x v h; cases x <;> cases h; rfl
+  simp only [vckE, vckE.k_lvls_eq_c, vckE.k_iota_rec_cmp, vckE.k_const_ty_at, vckE.k_iota_certs_full,
+    vckE.k_iota_index_ok] at hW
+  split at hW
+  · cases hW
+  rename_i rq m1 c1
+  have e1 := hER _ _ _ _ _ _ (by simp) (o c1)
+  split at hW
+  · cases hW
+  split at hW
+  · simp only [Except.ok.injEq, Prod.mk.injEq] at hW; rw [← hW.2, e1]
+  split at hW
+  · cases hW
+  rename_i rc m2 c2
+  have e2 := callW_iotaRecCmp_erec p hp hER hEK _ _ _ _ _ rfl (callW_of_callE c2)
+  split at hW
+  · simp only [Except.ok.injEq, Prod.mk.injEq] at hW; rw [← hW.2, e2, e1]
+  split at hW
+  · cases hW
+  rename_i rt m3 c3
+  have e3 := hER _ _ _ _ _ _ (by simp) (o c3)
+  split at hW
+  · cases hW
+  rename_i rf m4 c4
+  have e4 := hER _ _ _ _ _ _ (by simp) (callW_of_callE c4)
+  split at hW
+  · simp only [Except.ok.injEq, Prod.mk.injEq] at hW; rw [← hW.2, e4, e3, e2, e1]
+  split at hW
+  · cases hW
+  rename_i ri m5 c5
+  have e5 := hEK _ _ _ _ _ _ (by simp) (callW_of_callE c5)
+  simp only [Except.ok.injEq, Prod.mk.injEq] at hW; rw [← hW.2, e5, e4, e3, e2, e1]
 
 theorem callW_iotaRecFam_erec (p : Prog) (hp : IotaRecProg' p) (hER : ErecKeptRec p)
     (hEK : ErecKeptKnot p) (n : Nat) (m : Mem) (vs : List Word) (r : List Word) (m' : Mem)
     (hvs : vs.length = 11) (h : callW p n "iota_rec_fam" vs m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC := by
-  sorry
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ n =>
+  match vs, hvs with
+  | [mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn], _ =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callE
+    (irFamE_spec p hp.fam (n + 1) ⟨m, Locals.init []⟩ mode vis d us recP so usj ctorP rl mo mn)
+    (callE_of_callW h)
+  rw [ht] at hW
+  simp only [irFamE, irFamE.k_rec_fire_levels, irFamE.k_iota_case3, irFamE.k_iota_rec_vck] at hW
+  split at hW
+  · simp only [Except.ok.injEq, Prod.mk.injEq] at hW; rw [← hW.2]
+  cases c1 : callW p n "rec_fire_levels" [rdW (m.arr64 EREC) (rl + 3), rdW (m.arr64 EREC) (rl + 4),
+      rdW (m.arr64 EREC) (rl + 5), rdW (m.arr64 EREC) (recP + 2), rdW (m.arr64 EREC) (recP + 3), us,
+      rdW (m.arr64 EREC) (ctorP + 2), rdW (m.arr64 EREC) (ctorP + 3)] m with
+  | none => rw [c1] at hW; cases hW
+  | some q =>
+  obtain ⟨rv, m1⟩ := q
+  rw [c1, liftE_some] at hW
+  simp only at hW
+  have e1 := hER _ _ _ _ _ _ (by simp) c1
+  cases c2 : callW p n "iota_case3" [rdW (m1.arr64 EREC) (rl + 9), vis, ctorP, rv.headD 0] m1 with
+  | none => rw [c2] at hW; cases hW
+  | some q =>
+  obtain ⟨r3, m2⟩ := q
+  rw [c2, liftE_some] at hW
+  have e2 := hER _ _ _ _ _ _ (by simp) c2
+  simp only at hW
+  split at hW
+  · simp only [Except.ok.injEq, Prod.mk.injEq] at hW; rw [← hW.2, e2, e1]
+  cases c3 : callE p n "iota_rec_vck" [mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, rv.headD 0]
+      m2 with
+  | error e => rw [c3] at hW; cases hW
+  | ok q =>
+  obtain ⟨rk, m3⟩ := q
+  rw [c3] at hW
+  have e3 := callW_iotaRecVck_erec p hp hER hEK _ _ _ _ _ rfl (callW_of_callE c3)
+  simp only [Except.ok.injEq, Prod.mk.injEq] at hW; rw [← hW.2, e3, e2, e1]
 
 /-! ## `mk_app_n`, `mk_app_n_from` as runs -/
 
@@ -510,7 +588,18 @@ theorem irEnvFind (p : Prog) (hp : IotaProg' p) (n : Nat) (dn : NIdx → Option 
     m' = m ∧ (r.headD 0 = 0 → fe.find? (decI w) = none) ∧
       (r.headD 0 ≠ 0 → ∃ ci, fe.find? (decI w) = some ci ∧
         decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
-  sorry
+  obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW
+    (envFind_refines p hp.envix hp.envrow hp.envfind n ⟨m, Locals.init []⟩ vis w hE hw) h
+  obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW
+    (envFind_found p hp.envix hp.envrow hp.envfind n ⟨m, Locals.init []⟩ vis w hw) h
+  rw [ht₂] at hm₂
+  refine ⟨hm₂, fun h0 => ?_, fun h0 => ?_⟩
+  · rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+  · obtain ⟨htag2, hrow, hq⟩ := hfound h0
+    obtain ⟨ci, hci⟩ := hE.found_some w hw htag2 hrow
+    refine ⟨ci, ?_, ?_⟩
+    · rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
+    · rw [hq]; exact (erecP_ext m).decCI hci
 
 /-- **`intern_bvar` under `CoreS`.** -/
 theorem irCallW_internBVar (p : Prog) (hp : IotaRecProg' p) (n : Nat)
@@ -609,7 +698,20 @@ theorem findRule_found (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (
     (hr : decRules (erecP m) ro.toNat rc.toNat = some rules) (r : List Word) (m' : Mem)
     (h : callW p n "find_rule" [ro, rc, c] m = some (r, m')) (hne : r.headD 0 ≠ 0) :
     ∃ rule, decRule (erecP m) (r.tail.headD 0).toNat = some rule := by
-  sorry
+  obtain ⟨t, ht, -, -, hW⟩ := triple_of_callW (findRule_spec p hp n ⟨m, Locals.init []⟩ ro rc c) h
+  subst hW
+  obtain ⟨j, hj, hq⟩ := frN_found _ ro rc c 0 hne
+  obtain ⟨hl, hg⟩ := decRules_get _ _ _ _ hr
+  have hj' : j.toNat < rc.toNat := hj
+  have hdr := hg j.toNat hj'
+  obtain ⟨rule, hrule⟩ : ∃ rule, rules[j.toNat]? = some rule :=
+    ⟨rules[j.toNat], List.getElem?_eq_getElem (by omega)⟩
+  rw [hrule] at hdr
+  obtain ⟨hw, -⟩ := rule_idx _ ro j rule hsz hdr
+  refine ⟨rule, ?_⟩
+  rw [hq]
+  show decRule (m.arr64 EREC) (ro + 11 * j).toNat = some rule
+  rw [hw]; exact hdr
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `prepare_major`'s error claim at fuel `N + 1` (the premises of `prepareMajor_refines'`). -/

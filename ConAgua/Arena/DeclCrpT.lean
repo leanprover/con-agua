@@ -101,7 +101,114 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
     ∃ x a', (reducePinGuard fe (decI c)).run a = .ok (x, a') ∧ StageC dn vis fe env m' a' ∧
       Ext a.store a'.store ∧ x = ConLeche.reducePinGuard env cn ∧
       IWGrow m m' ∧ decW0B m' r x := by
-  sorry
+  cases n with
+  | zero => simp [rpgW] at h
+  | succ n =>
+  rw [rpgW_step] at h
+  cases h1 : callW p n "reduce_decl_pin" [c] m with
+  | none => rw [h1] at h; cases h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1, rpgK1_some] at h
+  have hCr1 := hck.call (im_mem _ rfl) h1 hCr
+  obtain ⟨s1, hs1, -, hok1, hS1, hg1, he1l, he1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (reduceDeclPin_refines p hpa n ⟨m, Locals.init []⟩ a dn fe vis c hS.stage hc hR hpd) h1
+  subst hs1
+  have hrun1 := AM.run_of_ok _ _ hok1
+  obtain ⟨hi1, -⟩ := ConRon.Bridge.reduceDeclPin_run hS.check.state hS.check.pins hd hrun1
+  have hC1 := StageC.of_leaf hS hS1 (callW_leafFrame hcl (leaf_mem _ (by decide)) h1) hi1
+  have hT1 := hC1.stageT
+  generalize AM.st (reduceDeclPin (decI c)) a = a1 at hrun1 hT1
+  rw [← he1] at hrun1
+  generalize r1.headD 0 = e at h hrun1 he1l
+  have h00 : (0 : Word).toNat = 0 := rfl
+  have hF : (4000000000 : Word).toNat = coreWalkFuel := rfl
+  -- `loose_bvars_bounded_fast`
+  cases h2 : lbbF s1.mem [4000000000, 0, e] with
+  | none => rw [h2] at h; simp [rpgK2] at h
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [h2, rpgK2_some] at h
+  have hCr2 := CrOK.frame hCr1 (lbbF_frame h2) (by decide) (by decide)
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
+    lbbF_okT dn vis fe 4000000000 0 e he1l s1.mem m2 a1 r2 h2 hT1
+  rw [hF, h00] at hrun2
+  by_cases hb2 : r2.headD 0 = 0
+  · rw [ite_eq_left hb2] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have ex2 : x2 = false := by rw [← hx2]; simpa using hb2
+    have hrun : (reducePinGuard fe (decI c)).run a = .ok (false, a2) := by
+      simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_false,
+        ite_true, StateT.run_pure]
+      rfl
+    obtain ⟨hC, hx, hr⟩ := rpg_fin hS.check hd hrun hS2
+    exact ⟨false, a2, hrun, hC, hx, hr, hg1.trans hg2, by simp [decW0B]⟩
+  rw [ite_eq_right hb2] at h
+  have ex2 : x2 = true := by rw [← hx2]; simpa using hb2
+  -- `has_fvar_fast`
+  cases h3 : hffF m2 [4000000000, e] with
+  | none => rw [h3] at h; simp [rpgK3] at h
+  | some rm3 =>
+  obtain ⟨r3, m3⟩ := rm3
+  rw [h3, rpgK3_some] at h
+  have hCr3 := CrOK.frame hCr2 (hffF_frame h3) (by decide) (by decide)
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
+    hffF_okT dn vis fe 4000000000 e he1l m2 m3 a2 r3 h3 hS2
+  rw [hF] at hrun3
+  by_cases hb3 : r3.headD 0 ≠ 0
+  · rw [ite_eq_left hb3] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have ex3 : x3 = true := by rw [← hx3]; simpa using hb3
+    have hrun : (reducePinGuard fe (decI c)).run a = .ok (false, a3) := by
+      simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_true,
+        Bool.false_eq_true, ite_false, hrun3, ex3, ite_true, StateT.run_pure]
+      rfl
+    obtain ⟨hC, hx, hr⟩ := rpg_fin hS.check hd hrun hS3
+    exact ⟨false, a3, hrun, hC, hx, hr, hg1.trans (hg2.trans hg3), by simp [decW0B]⟩
+  rw [ite_eq_right hb3] at h
+  have ex3 : x3 = false := by rw [← hx3]; simpa using hb3
+  -- `all_level_params_defined`
+  cases h4 : realCall p n "all_level_params_defined" [0, 0, e] m3 with
+  | none => rw [h4] at h; simp [rpgK4] at h
+  | some rm4 =>
+  obtain ⟨r4, m4⟩ := rm4
+  rw [h4, rpgK4_some] at h
+  have hCr4 := CrOK.frame hCr3 (apdF_frame (apdF_of_callW hap h4)) (by decide) (by decide)
+  obtain ⟨x4, a4, hrun4, hS4, hg4, hx4, -⟩ :=
+    apdF_okT dn vis fe 0 0 e he1l [] m3 m4 a3 r4 (apdF_of_callW hap h4)
+      ⟨hS3, by simp [decHL, hslice?], [], rfl⟩
+  by_cases hb4 : r4.headD 0 = 0
+  · rw [ite_eq_left hb4] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have ex4 : x4 = false := by rw [← hx4]; simpa using hb4
+    have hrun : (reducePinGuard fe (decI c)).run a = .ok (false, a4) := by
+      simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_true,
+        Bool.false_eq_true, ite_false, hrun3, ex3, hrun4, ex4, Bool.not_false, ite_true,
+        StateT.run_pure]
+      rfl
+    obtain ⟨hC, hx, hr⟩ := rpg_fin hS.check hd hrun hS4
+    exact ⟨false, a4, hrun, hC, hx, hr, hg1.trans (hg2.trans (hg3.trans hg4)), by simp [decW0B]⟩
+  rw [ite_eq_right hb4] at h
+  have ex4 : x4 = true := by rw [← hx4]; simpa using hb4
+  -- `consts_resolve_ffast`
+  cases h5 : realCall p n "consts_resolve_ffast" [vis, e] m4 with
+  | none => rw [h5] at h; simp [rpgK5] at h
+  | some rm5 =>
+  obtain ⟨r5, m5⟩ := rm5
+  rw [h5, rpgK5_some] at h
+  obtain ⟨x5, a5, hrun5, ⟨hS5, hg5, hx5⟩, -⟩ :=
+    crfF_okT dn vis fe e he1l m4 m5 a4 r5 (crfF_of_callW hck.crf h5) ⟨hS4, hCr4.crMemo⟩
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hrun : (reducePinGuard fe (decI c)).run a = .ok (x5, a5) := by
+    simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_true,
+      Bool.false_eq_true, ite_false, hrun3, ex3, hrun4, ex4]
+    exact hrun5
+  obtain ⟨hC, hx, hr⟩ := rpg_fin hS.check hd hrun hS5
+  exact ⟨x5, a5, hrun, hC, hx, hr, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hx5⟩
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`is_def_eq_core`'s twin side**: con-ron's `KnotSpec.defeq` at `checkFuel` (`CoreSpec.of_core`)

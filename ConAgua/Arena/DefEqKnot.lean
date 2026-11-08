@@ -166,8 +166,8 @@ theorem KnotAllProg.instLP : InstLPOK p := instLP_refines p hq.ilw
 
 include hq in
 /-- Lane `whnf`'s `WhnfCallees` (four leaves, all proved). -/
-theorem KnotAllProg.whnfC : WhnfCallees p := by
-  sorry
+theorem KnotAllProg.whnfC : WhnfCallees p :=
+  ⟨hq.walks.instListOK, hq.instLP, strLitCtor_core p hq.str, strLitSupported_core p hq.str⟩
 
 include hq in
 /-- `find_proj` and its record-pool facts. -/
@@ -204,8 +204,11 @@ theorem KnotAllProg.coreC : CoreCallees p :=
 
 include hq in
 /-- `reduce_proj_core` (lane `whnf`'s `reduceProjCore_refines'`). -/
-theorem KnotAllProg.reduceProjCore : ReduceProjCoreH p := by
-  sorry
+theorem KnotAllProg.reduceProjCore : ReduceProjCoreH p :=
+  fun n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc' =>
+    reduceProjCore_refines' p hq.core (strLitSupported_core p hq.str) (strLitCtor_core p hq.str)
+      (KnotAllProg.projC hq) hq.core.lsn (erecKept_of hq.hcl) n hk F hF hn s₀ a₀ dn vis fe MM eb
+      mode d sn i c hs hsn hc' (supKeep_of fe)
 
 include hq in
 /-- `unfold_definition` (lane `whnf`'s `unfoldDefinition_refines'`, over `inst_lp`). -/
@@ -242,13 +245,19 @@ theorem KnotAllProg.lazy : LazyCallees p :=
     reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree), StoreDenotes.of_den coreDen_of⟩
 
 include hq in
-theorem KnotAllProg.stuck : StuckCallees p := by
-  sorry
+theorem KnotAllProg.stuck : StuckCallees p :=
+  ⟨KnotAllProg.defeq hq, KnotAllProg.proofIrrel hq, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
+    reservedContainsOK_of p hq.rc,
+    towerSlotsAll_refines' p hq.body.iota (findProj_refines p hq.projp) (projFound p hq.projp),
+    lvlsEqCH_of p hq.lvc, coreDen_of, strLitSupported_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
+    lazyDeltaStepH_of p hq.body.lazy (KnotAllProg.lazy hq), KnotAllProg.reduceProjCore hq⟩
 
 include hq in
 /-- The literal callees: `nat_lit_supported`, `const_e` (lane `whnf`'s proofs), `str_lit_supported`. -/
-theorem KnotAllProg.lit : InferLitCallees p := by
-  sorry
+theorem KnotAllProg.lit : InferLitCallees p :=
+  ⟨fun n s₀ a₀ dn vis fe M eb hS => natLitSupported_refines p hq.delta n s₀ a₀ dn vis fe M eb hS,
+    strLitSupported_core p hq.str,
+    fun n s₀ a₀ dn vis fe M eb nm hS hnm => constE_refines p hq.delta n s₀ a₀ dn vis fe M eb nm hS hnm⟩
 
 include hq in
 theorem KnotAllProg.inferC : InferCallees p :=

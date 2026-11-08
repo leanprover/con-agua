@@ -32,7 +32,13 @@ include hp
 theorem ciToCv_spec' (n : Nat) (s₀ : St) (x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_to_cv" [x]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = x + 1; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ (hp.get "ci_to_cv")]
+  simp only [callFn, ciToCv]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+      simp_all [LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
 
 end specs
 

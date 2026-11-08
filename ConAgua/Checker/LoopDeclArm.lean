@@ -60,8 +60,8 @@ def armOwn10 : List FnName :=
    "ci_canon_rec", "canon_rules_eq"]
 
 set_option maxRecDepth 100000 in
-theorem checkerProg_armOwn10 : ∀ f ∈ armOwn10, checkerProg.lookup f = armText.lookup f := by
-  sorry
+theorem checkerProg_armOwn10 : ∀ f ∈ armOwn10, checkerProg.lookup f = armText.lookup f :=
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 11. -/
 def armOwn11 : List FnName :=

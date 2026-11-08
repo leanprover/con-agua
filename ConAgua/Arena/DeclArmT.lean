@@ -84,12 +84,17 @@ theorem erecCiW_okT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
       decCV (erecP m') ((r.headD 0).toNat + 1) = some (stepCV ds[i.toNat]) ∧
       hd? (erecP m') ((r.headD 0).toNat + 5) = some (stepVal ds[i.toNat]) ∧
       (r.headD 0).toNat + 8 ≤ erTop m' := by
-  sorry
+  obtain ⟨hS', hg, h1, h2, h3, h4⟩ := erecCiW_ok h hS.stage hD hi hci
+  have hf := erecCiW_frame h
+  refine ⟨⟨hS', hS.twin.frame hf ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
+      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩
+      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
+    by simp only [pinW, hf.arr PINS (by decide) (by decide)]; exact hS.flag⟩, hg, h1, h2, h3, h4⟩
 
 /-- `lvl_eq_c` at its text (`FireProg.lvlText`). -/
 theorem _root_.L.Ind.KnotStageProg.lvlEqC {p : Prog} (hq : KnotStageProg p) :
-    p.lookup "lvl_eq_c" = some lvlEqCL := by
-  sorry
+    p.lookup "lvl_eq_c" = some lvlEqCL :=
+  (hq.knot.fire.lvlText _ (by decide)).trans rfl
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_constant_val` refines `checkConstantVal .verified`** under `StageT`, at the call (the

@@ -63,7 +63,19 @@ theorem preLoopC_loopZeroCtls :
 before the loop writes (`Since.frame`: `preLoopA`, `preLoopC`). -/
 theorem loopZero_of_since {b pb : ByteArray} {sz : TieredArray → Nat} {m : Mem}
     (h : Since (ConAgua.Final.loadMem b pb sz) m pb) : LoopZero m := by
-  sorry
+  have hf := h.frame
+  refine ⟨?_, fun a ha j => ?_, fun x hx => ?_⟩
+  · rw [hf.size]; have := h.caps.2.1; simp only [ctlMin] at this; omega
+  · have hm : a ∈ loopZeroArrs := ha
+    have hn : a ∉ preLoopA := by
+      intro hc
+      have := List.all_eq_true.mp preLoopA_loopZeroArrs a hm
+      simp [hc] at this
+    have hc : a ≠ CTL := by
+      intro e; subst e; exact absurd hm (by decide)
+    rw [hf.arr a hn hc]; exact loadMem_rd (b := b) (pb := pb) (sz := sz) a j
+  · rw [hf.ctl x (not_mem_of_toNat preLoopC_loopZeroCtls x (loopZeroCtl_mem hx))]
+    exact loadMem_rd (b := b) (pb := pb) (sz := sz) _ x
 
 /-- `FrontDecls` from the twin prefix's shape fact (lane `pipeline`'s `prefix_frontDecls`). -/
 theorem frontDecls_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AState}

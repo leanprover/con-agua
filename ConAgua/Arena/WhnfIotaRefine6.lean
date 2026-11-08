@@ -447,7 +447,6 @@ theorem iccW_kind (p : Prog) (hp : IotaProg4 p) (n : Nat) (m : Mem) (indP us w :
     w = 0 ∧ mF = m := by
   sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_ctor_never_prop` refines `iotaCtorNeverProp`.** Statement changes: the L function is
 split (`e_rec_get`, `const_name_of`, `ind_caps_check`), `caps_never_zero`'s statement is corrected
 (`CapsNeverZeroOK`), and the callee fuel is generic (`CoreSpec p n`, as before). -/
@@ -459,128 +458,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
     decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj cnP cnF) →
     CoreSpec p n "iota_ctor_never_prop" [vis, ctorP, us] (iotaCtorNeverProp fe cvj (decI us)) decBool
       s₀ a₀ dn vis fe MM eb := by
-  intro n s₀ a₀ dn vis fe MM eb ctorP us cvj cnP cnF hS hus hci
-  cases n with
-  | zero => exact invoke_zero_triple
-  | succ n' =>
-  refine triple_post (iotaCtorNeverProp_spec p hp.iotaCtorNeverProp n' s₀ vis ctorP us) fun r s'
-    ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  have hR := hS.arena.base
-  simp only [inpW] at hW
-  cases n' with
-  | zero => rw [callW_zero] at hW; cases hW
-  | succ n' =>
-  -- the constructor's type
-  have hk4 : rdW (s₀.mem.arr64 EREC) ctorP = 4 :=
-    Classical.byContradiction fun hne =>
-      (decCI_ctor hci (fun i v hv => hv) hS.erec).2 hne cvj cnP cnF rfl
-  obtain ⟨cv', np', nf', hcv, hty, hty32⟩ := (decCI_ctor hci (fun i v hv => hv) hS.erec).1 hk4
-  have hcvj : cvj = cv' := by
-    have := hcv; simp only [IConstantInfo.ctorInfo.injEq] at this; exact this.1
-  subst hcvj
-  -- the constructor's type
-  rcases c0 : callW p (n' + 1) "e_rec_get" [ctorP + 4] s₀.mem with _ | ⟨ty, m0⟩ <;>
-    simp only [c0, reduceCtorEq] at hW
-  obtain ⟨t0, ht0, -, hmem0, hget0⟩ := triple_of_callW
-    (eRecGet_spec p hp.eRecGet n' ⟨s₀.mem, Locals.init []⟩ (ctorP + 4)) c0
-  obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
-  have hty0 : ty.headD 0 = rdW (s₀.mem.arr64 EREC) (ctorP + 4) := (eRec_val hget0).symm
-  have hty32' : HW (ty.headD 0) := by rw [hty0]; exact hty32
-  rcases c1 : callW p (n' + 1) "pi_result" [ty.headD 0] s₀.mem with _ | ⟨r1, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at hW
-  obtain ⟨t1, ht1, hmem1, -, hHW1, hrun1⟩ := triple_of_callW
-    (piResult_refines' p hp.spine.pires (n' + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hR (ty.headD 0) hty32') c1
-  obtain rfl : m1 = s₀.mem := by rw [← ht1]; exact hmem1
-  rcases c2 : callW p (n' + 1) "get_app_fn" [r1.headD 0] s₀.mem with _ | ⟨r2, m2⟩ <;>
-    simp only [c2, reduceCtorEq] at hW
-  obtain ⟨t2, ht2, hmem2, -, hHW2, hrun2⟩ := triple_of_callW
-    (getAppFn_refines' p hp.spine.fn (n' + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hR (r1.headD 0) hHW1) c2
-  obtain rfl : m2 = s₀.mem := by rw [← ht2]; exact hmem2
-  have hpr : (piResult coreWalkFuel cvj.type).run a₀ = .ok (decE (r1.headD 0), a₀) := by
-    rw [hty, ← hty0]; exact hrun1
-  have hga : (getAppFn coreWalkFuel (decE (r1.headD 0))).run a₀ = .ok (decE (r2.headD 0), a₀) := hrun2
-  by_cases h3 : tagW (r2.headD 0) ≠ 3
-  · rw [ite_eq_left h3] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hrun := inp_run_not fe cvj (decI us) a₀ _ _ hpr hga
-      (fun ht => h3 ((decE_tag_eq _ hHW2 3 (by decide)).mp ht))
-    refine CoreRef.of_pure hS hrun hm.symm ?_ ?_
-    · show false = decBool r; simp only [decBool]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; decide
-  rw [ite_eq_right h3] at hW
-  have h3' : tagW (r2.headD 0) = 3 := by simpa using h3
-  rcases c3 : callW p (n' + 1) "const_name_of" [r2.headD 0] s₀.mem with _ | ⟨r3, m3⟩ <;>
-    simp only [c3, reduceCtorEq] at hW
-  obtain ⟨t3, ht3, -, hmem3, hcno⟩ := triple_of_callW
-    (constNameOf_spec p hp.constNameOf n' ⟨s₀.mem, Locals.init []⟩ (r2.headD 0)) c3
-  obtain rfl : m3 = s₀.mem := by rw [← ht3]; exact hmem3
-  simp only [cnoW] at hcno
-  obtain ⟨g1, hcno⟩ := of_ite_none hcno
-  obtain ⟨g2, hcno⟩ := of_ite_none hcno
-  simp only [Option.some.injEq] at hcno
-  have hvc : viewOK s₀.mem (r2.headD 0) CONST := ⟨g1, UInt64.not_le.mp g2⟩
-  obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r2.headD 0) hHW2 hvc h3'
-  have hvn := viewConstName_f s₀.mem a₀ hR (r2.headD 0) hHW2 hvc h3'
-  rw [hcno] at hvn hn32
-  have htag : (decE (r2.headD 0)).tag = ETag.const := (decE_tag_eq _ hHW2 3 (by decide)).mpr h3'
-  rcases c4 : callW p (n' + 1) "env_find" [r3.headD 0, vis] s₀.mem with _ | ⟨r4, m4⟩ <;>
-    simp only [c4, reduceCtorEq] at hW
-  obtain ⟨t4, ht4, hm4, -, hfind⟩ := triple_of_callW
-    (envFind_refines p hp.envix hp.envrow hp.envfind (n' + 1) ⟨s₀.mem, Locals.init []⟩ vis _ hS.env
-      hn32) c4
-  obtain ⟨t4', ht4', hm4', -, hfound⟩ := triple_of_callW
-    (envFind_found p hp.envix hp.envrow hp.envfind (n' + 1) ⟨s₀.mem, Locals.init []⟩ vis _ hn32) c4
-  obtain rfl : m4 = s₀.mem := by rw [← ht4]; exact hm4
-  by_cases h0 : r4.headD 0 = 0
-  · rw [ite_eq_left h0] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hnone : fe.find? (decI (r3.headD 0)) = none := by
-      rw [hfind]; simp only [decFound, h0, ↓reduceIte]
-    have hrun := inp_run_other fe cvj (decI us) a₀ _ _ hpr hga (decI (r3.headD 0)) hvn htag
-      (fun cvT caps hc => by rw [hnone] at hc; cases hc)
-    refine CoreRef.of_pure hS hrun hm.symm ?_ ?_
-    · show false = decBool r; simp only [decBool]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; decide
-  rw [ite_eq_right h0] at hW
-  obtain ⟨htag2, hrow, hq⟩ := hfound h0
-  obtain ⟨ci, hci2⟩ := hS.env.found_some (r3.headD 0) hn32 htag2 hrow
-  have hfind' : fe.find? (decI (r3.headD 0)) = some ci := by
-    rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci2
-  rw [← hq] at hci2
-  have hciF := ArrExt.decCI (erecP_ext _) hci2
-  rcases c5 : callW p (n' + 1) "ind_caps_check" [r4.tail.headD 0, us] s₀.mem with _ | ⟨r5, m5⟩ <;>
-    simp only [c5, reduceCtorEq] at hW
-  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  obtain ⟨t5, ht5, -, hicc⟩ := triple_of_callW
-    (indCapsCheck_spec p hp.indCapsCheck n' ⟨s₀.mem, Locals.init []⟩ (r4.tail.headD 0) us) c5
-  rw [ht5] at hicc
-  by_cases hk3 : rdW (s₀.mem.arr64 EREC) (r4.tail.headD 0) = 3
-  · have hg := rdW_eq_three hk3
-    obtain ⟨cvT, caps, rfl, -⟩ := L.Ind.decCI_kind3 hciF (nat?_of hg)
-    obtain ⟨b, a', htail, hb, hCA, hw5⟩ := iccW_ok p hp hcn n' dn vis fe eb (r4.tail.headD 0) us hus
-      s₀.mem a₀ MM hS cvT caps hciF ⟨_, hfind'⟩ (r5.headD 0) m5 hicc
-    have hrun := inp_run_ind fe cvj (decI us) a₀ _ _ hpr hga (decI (r3.headD 0)) hvn htag cvT caps
-      hfind' b a' htail
-    have hr' : r5.headD 0 = r.headD 0 := hr
-    refine CoreRef.of_run hrun (hm ▸ hCA) ?_ ?_
-    · simp only [decBool, ← hr', hb]
-    · unfold ResH HW; rw [← hr']; exact hw5
-  · obtain ⟨hw0, hm5⟩ := iccW_kind p hp n' s₀.mem (r4.tail.headD 0) us _ m5 hk3 hicc
-    have hnind : ∀ cvT caps, fe.find? (decI (r3.headD 0)) ≠ some (.indInfo cvT caps) := by
-      intro cvT caps hc
-      rw [hfind'] at hc
-      have hc' : ci = .indInfo cvT caps := Option.some.inj hc
-      subst hc'
-      obtain ⟨w, hw, hw3⟩ := nat?_some (L.Ind.decCI_indInfo_kind hciF)
-      apply hk3
-      rw [rdW_get _ _ w hw]
-      exact UInt64.toNat_inj.mp (by rw [hw3]; rfl)
-    have hrun := inp_run_other fe cvj (decI us) a₀ _ _ hpr hga (decI (r3.headD 0)) hvn htag hnind
-    refine CoreRef.of_pure hS hrun (by rw [← hm, hm5]) ?_ ?_
-    · show false = decBool r; simp only [decBool]; rw [← hr, hw0]; rfl
-    · unfold ResH HW; rw [← hr, hw0]; decide
--/
-
+  sorry
 
 /-! ## `iota_case3(rlk, vis, ctorP, us)` -/
 

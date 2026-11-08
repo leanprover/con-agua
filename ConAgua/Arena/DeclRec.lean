@@ -186,7 +186,7 @@ theorem decI_mask32 {k : IdxKind} (w : Word) : (decI (mask32 w) : Idx k) = decI 
 
 theorem hd?_mask {k : IdxKind} {a : Nat → Option Word} {i : Nat} {w : Word}
     (h : a i = some (mask32 w)) : (hd? a i : Option (Idx k)) = some (decI w) := by
-  sorry
+  simp [hd?, h, decI_mask32, show (mask32 w).toNat < 4294967296 from mask32_lt w]
 
 theorem mapM_some_of {α β : Type} (f : α → Option β) (g : α → β) :
     ∀ l : List α, (∀ x ∈ l, f x = some (g x)) → l.mapM f = some (l.map g)
@@ -196,8 +196,8 @@ theorem mapM_some_of {α β : Type} (f : α → Option β) (g : α → β) :
 
 theorem hslice?_mask {k : IdxKind} {a : Nat → Option Word} {o l : Nat} {f : Nat → Word}
     (h : ∀ j < l, a (o + j) = some (mask32 (f j))) :
-    (hslice? a o l : Option (List (Idx k))) = some ((List.range l).map fun j => decI (f j)) := by
-  sorry
+    (hslice? a o l : Option (List (Idx k))) = some ((List.range l).map fun j => decI (f j)) :=
+  mapM_some_of _ _ _ (fun j hj => hd?_mask (h j (List.mem_range.mp hj)))
 
 /-- A constant value from its words: the name and type masked, the slice of masked words. -/
 theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
@@ -211,7 +211,18 @@ theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {
 theorem decCV_move {a b : Nat → Option Word} {q cq : Nat} {cv : IConstantVal} (hext : ArrExt a b)
     (h0 : b q = a cq) (h1 : b (q + 1) = a (cq + 1)) (h2 : b (q + 2) = a (cq + 2))
     (h3 : b (q + 3) = a (cq + 3)) (h : decCV a cq = some cv) : decCV b q = some cv := by
-  sorry
+  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h ⊢
+  obtain ⟨nm, hn, lps, hl, ty, ht, e⟩ := h
+  refine ⟨nm, ?_, lps, ?_, ty, ?_, e⟩
+  · simp only [hd?, h0]; exact hn
+  · simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl ⊢
+    obtain ⟨lo, hlo, ll, hll, hs⟩ := hl
+    refine ⟨lo, ?_, ll, ?_, hext.hslice? hs⟩
+    · simp only [nat?] at hlo ⊢; rw [h1]; exact hlo
+    · simp only [nat?] at hll ⊢
+      rw [show q + 1 + 1 = q + 2 from rfl, h2]; rw [show cq + 1 + 1 = cq + 2 from rfl] at hll
+      exact hll
+  · simp only [hd?, h3]; exact ht
 
 theorem getElem?_rdW' {a : Array Word} {x : Word} {k : Nat} (hk : x.toNat = k) (h : k < a.size) :
     a[k]? = some (rdW a x) := by
@@ -232,7 +243,10 @@ theorem erecP_lt {m : Mem} {j : Nat} {v : Word} (h : erecP m j = some v) : j < e
   sorry
 
 theorem IWGrow.erecPExtR {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erecP m') := by
-  sorry
+  intro j v hv
+  have hj := erecP_lt hv
+  rw [erecP_getE (by have := h.er; omega), h.erGet j hj, ← erecP_getE hj]
+  exact hv
 
 /-! ### Memories -/
 

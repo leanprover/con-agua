@@ -182,6 +182,11 @@ theorem stdAxiomOk_refines (p : Prog) (h : StdProg2 p) (dn : NIdx → Option Con
     RefAM p "std_axiom_ok" [vis, q]
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
       (stdAxiomOk fe cv) (KeepPost vis fe decW0B) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hq⟩
+  refine triple_post (std_specW p h n s₀ vis q) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨b, a', hrun, hS', hg, hd⟩ := stdW_ok h hdn hm hS hq
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
 
 end L.Arena

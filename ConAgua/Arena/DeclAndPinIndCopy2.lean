@@ -332,7 +332,27 @@ theorem decCI_of_copy {P B : Array Word} {t : Nat} {dn : NIdx → Option ConLech
         B[rW.toNat + x]? = some (rdW P (rdW P (sW + 7) + UInt64.ofNat x))) ∧
       (rdW P (sW + 8) ≠ 0 → rdW P (sW + 7) ≠ 0) ∧ (rdW P (sW + 8)).toNat < 2 ^ 60) :
     decCI (aread B) p = some c := by
-  sorry
+  refine decCI_reloc (q := qW.toNat) (r := rW.toNat) hc hF
+    (fun kk hkk => shR_of_copy hs0 hP (hkind kk hkk)) (by simp [nat?, hq]) ?_ ?_
+  · intro off cnt hoff hcnt
+    have e2 := hdr_of_trunc (k := 2) hP hs0 hoff
+    have e3 := hdr_of_trunc (k := 3) hP hs0 hcnt
+    simp only [show UInt64.ofNat 2 = 2 from rfl, show UInt64.ofNat 3 = 3 from rfl] at e2 e3
+    rw [← e2, ← e3]
+    exact slice_of_copy hP hl0 hl
+  · intro h5
+    obtain ⟨h7, hrs, hr0, hb⟩ := hr h5
+    refine ⟨by simp [nat?, h7], fun off cnt hoff hcnt => ?_⟩
+    have e7 := hdr_of_trunc (k := 7) hP hs0 hoff
+    have e8 := hdr_of_trunc (k := 8) hP hs0 hcnt
+    simp only [show UInt64.ofNat 7 = 7 from rfl, show UInt64.ofNat 8 = 8 from rfl] at e7 e8
+    rw [← e7, ← e8]
+    have hcw : (UInt64.ofNat (11 * (rdW P (sW + 8)).toNat)).toNat = 11 * (rdW P (sW + 8)).toNat :=
+      UInt64.toNat_ofNat_of_lt' (by rw [show UInt64.size = 2 ^ 64 from rfl]; omega)
+    have hcp := slice_of_copy (t := t) (cntW := UInt64.ofNat (11 * (rdW P (sW + 8)).toNat)) hP
+      (fun hne => hr0 (fun h0 => hne (by rw [h0]; rfl))) (fun j hj => hrs j (by rw [hcw] at hj; exact hj))
+    intro x v hx hv
+    exact hcp x v (by rw [hcw]; exact hx) hv
 
 /-! ## `ind_rec_copy` -/
 

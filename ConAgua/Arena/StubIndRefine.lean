@@ -537,7 +537,17 @@ theorem erSlEq_spec' (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_eq" [o1, l1, o2, l2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if erSlEqB (s₀.mem.arr64 EREC) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
-  sorry
+  induction n with
+  | zero =>
+    intro s₀ o1 l1 o2 l2; rw [invoke_eq _ hp]; simp only [callFn, L.Ind.erSlEq]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o1 l1 o2 l2
+    rw [invoke_eq _ hp]
+    simp only [callFn, L.Ind.erSlEq]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      finish (gen := 20) [rdW_eq]
 
 section bits
 variable {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -546,7 +556,11 @@ include hp
 theorem cf_call (k : Nat) (m m1 : Mem) (a : AState) (hS : StageR vis fe m a) (c : Word) (hc : H c)
     (rf : List Word) (h : callW p k "ctor_family" [vis, c] m = some (rf, m1)) :
     m1 = m ∧ CFOut dn fe a m c rf := by
-  sorry
+  cases k with
+  | zero => rw [callW_zero] at h; cases h
+  | succ k =>
+  have hcf := callW_model (M := fun mm => cfW p k mm vis c) (fun s => cf_spec p hp.cf k s vis c) h
+  exact cfW_ok hp k dn vis fe m m1 a hS c hc rf hcf
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_k_of(vis, c)` refines `recRuleKOf fe c`** (the K bit). -/

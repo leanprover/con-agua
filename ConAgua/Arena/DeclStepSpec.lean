@@ -29,23 +29,19 @@ open L.Front (DECL DLP DeclsF)
 theorem IWGrow.erecPExt {m m' : Mem} (h : L.Ind.IWGrow m m') : ArrExt (erecP m) (erecP m') := by
   sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The pending checks across a step's callee**: `PEND` and its count unchanged, the records
 only extended. -/
 theorem PendR.ext {m m' : Mem} (hP : m'.arr64 PEND = m.arr64 PEND)
     (hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130) (hx : ArrExt (erecP m) (erecP m'))
     (h : PendR m pend) : PendR m' pend := by
   sorry
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The loop's relation after a step's callee**: the stage relation after it (at any view and
 environment), a frame of the step's write set (`stepA`, `stepC`: nothing of `PEND`, `DECL`,
 `DLP`, `CTL[130]`), and the records only extended. -/
 theorem step_keeps : (PEND : TieredArray) ∉ stepA ∧ (DECL : TieredArray) ∉ stepA ∧
     (DLP : TieredArray) ∉ stepA ∧ (130 : Word) ∉ stepC := by
-  decide +kernel
--/
+  sorry
 
 /-- The step's write set misses the pin variant list's header. -/
 theorem step_pins : (150 : Word) ∉ stepC ∧ (151 : Word) ∉ stepC := by decide +kernel

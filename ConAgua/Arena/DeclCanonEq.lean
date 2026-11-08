@@ -53,25 +53,31 @@ theorem toNat_succ_lt {o : Word} (hsz : a.size < 2 ^ 64) {w : Word} (h : a[o.toN
 theorem hdW_ {kk : IdxKind} {q k : Word} {kn : Nat} {x : Idx kk} (hsz : a.size < 2 ^ 64)
     (hk : k.toNat = kn) (h : hd? (aread a) (q.toNat + kn) = some x) :
     ∃ w, rdW a (q + k) = w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
-  sorry
+  obtain ⟨w, hw, hlt, rfl⟩ := hd?_some h
+  exact ⟨w, rdW_off hsz (by rw [hk]; exact hw), hlt, rfl⟩
 
 theorem hdW0_ {kk : IdxKind} {q : Word} {x : Idx kk} (h : hd? (aread a) q.toNat = some x) :
     ∃ w, rdW a q = w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
-  sorry
+  obtain ⟨w, hw, hlt, rfl⟩ := hd?_some h
+  exact ⟨w, rdW_zero' hw, hlt, rfl⟩
 
 theorem natD {i n : Nat} (h : nat? (aread a) i = some n) : ∃ w, a[i]? = some w ∧ n = w.toNat := by
-  sorry
+  simp only [nat?, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h; exact ⟨w, hw, rfl⟩
 
 theorem boolD {i : Nat} {b : Bool} (h : bool? (aread a) i = some b) : ∃ w, a[i]? = some w ∧ b = (w != 0) := by
-  sorry
+  simp only [bool?, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h; exact ⟨w, hw, rfl⟩
 
 theorem natW_ {q k : Word} {kn n : Nat} (hsz : a.size < 2 ^ 64) (hk : k.toNat = kn)
     (h : nat? (aread a) (q.toNat + kn) = some n) : ∃ w, rdW a (q + k) = w ∧ n = w.toNat := by
-  sorry
+  obtain ⟨w, hw, rfl⟩ := natD h
+  exact ⟨w, rdW_off hsz (by rw [hk]; exact hw), rfl⟩
 
 theorem boolW_ {q k : Word} {kn : Nat} {b : Bool} (hsz : a.size < 2 ^ 64) (hk : k.toNat = kn)
     (h : bool? (aread a) (q.toNat + kn) = some b) : ∃ w, rdW a (q + k) = w ∧ b = (w != 0) := by
-  sorry
+  obtain ⟨w, hw, rfl⟩ := boolD h
+  exact ⟨w, rdW_off hsz (by rw [hk]; exact hw), rfl⟩
 
 theorem boolW0_ {q : Word} {b : Bool} (h : bool? (aread a) q.toNat = some b) :
     ∃ w, rdW a q = w ∧ b = (w != 0) := by
@@ -90,7 +96,8 @@ theorem fld_bool {w w' : Word} : ((w != 0) = (w' != 0)) ↔ bEqB w w' = true := 
 
 theorem hslice_len {kk : IdxKind} {a : Array Word} {o c : Nat} {xs : List (Idx kk)}
     (h : hslice? (aread a) o c = some xs) : xs.length = c := by
-  sorry
+  have := mapM_opt_length _ _ _ h
+  simpa using this
 
 theorem slEqN_ok {kk : IdxKind} {a : Array Word} (hsz : a.size < 2 ^ 64) :
     ∀ (c : Nat) (o1 o2 : Word) (xs ys : List (Idx kk)),
@@ -102,14 +109,26 @@ theorem erSlEqB_ok {kk : IdxKind} {a : Array Word} (hsz : a.size < 2 ^ 64) {o1 l
     {xs ys : List (Idx kk)} (h1 : hslice? (aread a) o1.toNat l1.toNat = some xs)
     (h2 : hslice? (aread a) o2.toNat l2.toNat = some ys) :
     erSlEqB a o1 l1 o2 l2 = decide (xs = ys) := by
-  sorry
+  have n1 := hslice_len h1
+  have n2 := hslice_len h2
+  by_cases hl : l1 = l2
+  · subst hl
+    simp only [erSlEqB, beq_self_eq_true, Bool.true_and]
+    exact slEqN_ok hsz _ o1 o2 xs ys h1 h2
+  · have : xs ≠ ys := fun e => hl (UInt64.toNat_inj.mp (by rw [← n1, ← n2, e]))
+    have hb : (l1 == l2) = false := by simpa using hl
+    simp [erSlEqB, hb, this]
 
 /-- A slice stored in a record: its words `q + i`, `q + i + 1` are `(off, len)`. -/
 theorem hlistW_ {kk : IdxKind} {a : Array Word} {q k k1 : Word} {kn : Nat} {xs : List (Idx kk)}
     (hsz : a.size < 2 ^ 64) (hk : k.toNat = kn) (hk1 : k1.toNat = kn + 1)
     (h : hlist? (aread a) (q.toNat + kn) = some xs) :
     ∃ o l, rdW a (q + k) = o ∧ rdW a (q + k1) = l ∧ hslice? (aread a) o.toNat l.toNat = some xs := by
-  sorry
+  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨o, ho, l, hl, hs⟩ := h
+  obtain ⟨wo, hwo, rfl⟩ := natW_ hsz hk ho
+  obtain ⟨wl, hwl, rfl⟩ := natW_ (q := q) (k := k1) (kn := kn + 1) hsz hk1 hl
+  exact ⟨wo, wl, hwo, hwl, hs⟩
 
 /-! ## Constant values, hints, `PropWhen` -/
 
@@ -118,7 +137,14 @@ theorem cvFields {a : Array Word} {q : Word} {cv : IConstantVal} (hsz : a.size <
     ∃ wn o l wt : Word, rdW a q = wn ∧ rdW a (q + 1) = o ∧ rdW a (q + 2) = l ∧ rdW a (q + 3) = wt ∧
       wn.toNat < 2 ^ 32 ∧ wt.toNat < 2 ^ 32 ∧ cv.name = decI wn ∧ cv.type = decI wt ∧
       hslice? (aread a) o.toNat l.toNat = some cv.levelParams := by
-  sorry
+  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
+  obtain ⟨n, hn, lps, hl, t, ht, e⟩ := h
+  have e' := Option.some.inj e
+  subst e'
+  obtain ⟨wn, e0, hn32, rfl⟩ := hdW0_ hn
+  obtain ⟨o, l, e1, e2, hs⟩ := hlistW_ (q := q) (k := 1) (k1 := 2) (kn := 1) hsz rfl rfl hl
+  obtain ⟨wt, e3, ht32, rfl⟩ := hdW_ (q := q) (k := 3) (kn := 3) hsz rfl ht
+  exact ⟨wn, o, l, wt, e0, e1, e2, e3, hn32, ht32, rfl, rfl, hs⟩
 
 theorem cvEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {q r : Word} {cv cv' : IConstantVal}
     (h1 : decCV (aread a) q.toNat = some cv) (h2 : decCV (aread a) r.toNat = some cv') :
@@ -156,7 +182,39 @@ theorem hintD {a : Array Word} {q : Nat} {x : ConLeche.ReducibilityHint} (h : de
 theorem hintEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {h g : Word} {x y : ConLeche.ReducibilityHint}
     (hx : decHint (aread a) h.toNat = some x) (hy : decHint (aread a) g.toNat = some y) :
     hintEqB a h g = decide (x = y) := by
-  sorry
+  obtain ⟨wk, e, hx⟩ := hintD hx
+  obtain ⟨wk', e', hy⟩ := hintD hy
+  have r1 := rdW_zero' e
+  have r2 := rdW_zero' e'
+  simp only [hintEqB, r1, r2]
+  have hwk : ∀ w : Word, w.toNat = 0 ↔ w = 0 := fun w => ⟨fun h => UInt64.toNat_inj.mp (by simpa using h), fun h => by simp [h]⟩
+  have w2 : ∀ w : Word, w.toNat = 2 → w = 2 := fun w h => UInt64.toNat_inj.mp (by simpa using h)
+  have w0 : ∀ w : Word, w.toNat = 0 → w = 0 := fun w h => UInt64.toNat_inj.mp (by simpa using h)
+  have w1 : ∀ w : Word, w.toNat = 1 → w = 1 := fun w h => UInt64.toNat_inj.mp (by simpa using h)
+  rcases hx with ⟨k0, rfl⟩ | ⟨k0, rfl⟩ | ⟨k0, w, hw, rfl⟩ <;>
+  rcases hy with ⟨k1, rfl⟩ | ⟨k1, rfl⟩ | ⟨k1, w', hw', rfl⟩
+  · rw [w0 _ k0, w0 _ k1]; simp
+  · have : wk ≠ wk' := fun e => by have := congrArg UInt64.toNat e; omega
+    simp [this]
+  · have : wk ≠ wk' := fun e => by have := congrArg UInt64.toNat e; omega
+    simp [this]
+  · have : wk ≠ wk' := fun e => by have := congrArg UInt64.toNat e; omega
+    simp [this]
+  · rw [w1 _ k0, w1 _ k1]; simp
+  · have : wk ≠ wk' := fun e => by have := congrArg UInt64.toNat e; omega
+    simp [this]
+  · have : wk ≠ wk' := fun e => by have := congrArg UInt64.toNat e; omega
+    simp [this]
+  · have : wk ≠ wk' := fun e => by have := congrArg UInt64.toNat e; omega
+    simp [this]
+  · rw [w2 _ k0, w2 _ k1]
+    have a1 : rdW a (h + 1) = w := rdW_off hsz (k := 1) (by simpa using hw)
+    have a2 : rdW a (g + 1) = w' := rdW_off hsz (k := 1) (by simpa using hw')
+    simp only [a1, a2]
+    by_cases e : w = w'
+    · subst e; simp
+    · have : ¬ w.toNat = w'.toNat := fun h => e (UInt64.toNat_inj.mp h)
+      simp [e, this]
 
 theorem mapM_dn_inj {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) :
     ∀ (ns ms : List NIdx) (l : List ConLeche.Name), ns.mapM dn = some l → ms.mapM dn = some l →
@@ -270,12 +328,18 @@ theorem rulesEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {o1 l1 o2 l2 : Word
 theorem cvEqB_ok' {a : Array Word} (hsz : a.size < 2 ^ 64) {p q k : Word} {kn : Nat} (hk : k.toNat = kn)
     {cv cv' : IConstantVal} (hx : decCV (aread a) (p.toNat + kn) = some cv)
     (hy : decCV (aread a) (q.toNat + kn) = some cv') : cvEqB a (p + k) (q + k) = decide (cv = cv') := by
-  sorry
+  obtain ⟨w, hw, -⟩ := decCV_name hx
+  obtain ⟨w', hw', -⟩ := decCV_name hy
+  exact cvEqB_ok hsz (by rw [toNat_add_of_get hsz hk hw]; exact hx)
+    (by rw [toNat_add_of_get hsz hk hw']; exact hy)
 
 theorem hintEqB_ok' {a : Array Word} (hsz : a.size < 2 ^ 64) {p q k : Word} {kn : Nat} (hk : k.toNat = kn)
     {x y : ConLeche.ReducibilityHint} (hx : decHint (aread a) (p.toNat + kn) = some x)
     (hy : decHint (aread a) (q.toNat + kn) = some y) : hintEqB a (p + k) (q + k) = decide (x = y) := by
-  sorry
+  obtain ⟨w, hw, -⟩ := hintD hx
+  obtain ⟨w', hw', -⟩ := hintD hy
+  exact hintEqB_ok hsz (by rw [toNat_add_of_get hsz hk hw]; exact hx)
+    (by rw [toNat_add_of_get hsz hk hw']; exact hy)
 
 theorem capsEqAll_ok' {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     (hsz : a.size < 2 ^ 64) {p q k : Word} {kn : Nat} (hk : k.toNat = kn) {x y : IIndCaps}
@@ -368,7 +432,13 @@ theorem refAM_pure {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : Li
       ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
       ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ dec s₀.mem r x; ⊤⦄) :
     RefAM p f args pre (pure x) (KeepPost vis fe dec) := by
-  sorry
+  intro n s₀ a₀ hp
+  refine triple_post (h n s₀ a₀ hp) ?_
+  rintro r s' ⟨hl, hm, hd⟩
+  refine ⟨hl, by simp [AM.ok_pure], ?_⟩
+  simp only [AM.st_pure, AM.res_pure]
+  rw [hm]
+  exact ⟨hpre _ _ hp, IWGrow.refl _, hd⟩
 
 section refs
 variable (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)

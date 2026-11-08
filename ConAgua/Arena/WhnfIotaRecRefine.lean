@@ -459,7 +459,6 @@ theorem decCI_ctor_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
     ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (aread b) (q.toNat + 1) = some cv := by
   sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The common fields of a decoded rule record. -/
 theorem decRule_tail {b : Array Word} {q : Nat} {fire : IRecRuleFire} {rl : IRecRule}
     (h : ((hd? (aread b) q).bind fun c => (nat? (aread b) (q + 1)).bind fun nf => (nat? (aread b) (q + 2)).bind fun cp =>
@@ -469,9 +468,7 @@ theorem decRule_tail {b : Array Word} {q : Nat} {fire : IRecRuleFire} {rl : IRec
       nat? (aread b) (q + 2) = some rl.ctorParams ∧ hd? (aread b) (q + 8) = some rl.rhs ∧
       bool? (aread b) (q + 9) = some rl.k := by
   sorry
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The words of a rule record. -/
 theorem decRule_rd {b : Array Word} {q : Word} {rl : IRecRule} (hsz : b.size < 2 ^ 63)
     (h : decRule (aread b) q.toNat = some rl) :
@@ -482,7 +479,6 @@ theorem decRule_rd {b : Array Word} {q : Word} {rl : IRecRule} (hsz : b.size < 2
         hslice? (aread b) (rdW b (q + 6)).toNat (rdW b (q + 7)).toNat = some pins) ∧
       HW (rdW b (q + 8)) ∧ rl.rhs = decI (rdW b (q + 8)) ∧ rl.k = (rdW b (q + 9) != 0) := by
   sorry
--/
 
 theorem callW_erecPush_no (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (n : Nat) (m : Mem)
     (o c kd : Word) (hk : kd ≠ 1) (r : List Word) (m' : Mem)

@@ -63,7 +63,11 @@ theorem mpW_ok {m m' : Mem} {a : AState} {q pin : Word} {r : List Word} {cv cv' 
     (h1 : decCV (erA m) q.toNat = some cv) (h2 : decCV (erA m) pin.toNat = some cv') :
     m' = m ∧ (cv.matchesPin cv').run a = .ok (decide (cv = cv'), a) ∧
       decW0B m' r (decide (cv = cv')) := by
-  sorry
+  simp only [mpW, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  rw [cvEqB_ok hsz h1 h2, matchesPin_eq]
+  refine ⟨rfl, rfl, ?_⟩
+  by_cases e : cv = cv' <;> simp [e, decW0B]
 
 /-- **`matches_pin(q, pin)` refines `IConstantVal.matchesPin`** (sorry-free). -/
 @[refines ConRon.Arena.IConstantVal.matchesPin]
@@ -90,14 +94,46 @@ theorem decCI_kind0 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : N
     {ci : IConstantInfo} {w : Word} (h : decCI (aread a) p = some ci) (hw : a[p]? = some w) :
     (w = 0 → ∃ cv, decCV (aread a) (p + 1) = some cv ∧ ci = .axiomInfo cv) ∧
       (w ≠ 0 → ∀ cv, ci ≠ .axiomInfo cv) := by
-  sorry
+  obtain ⟨wk, e, hk⟩ := ciD h
+  rw [hw] at e; cases e
+  constructor
+  · intro h0
+    subst h0
+    rcases hk with ⟨-, cv, hcv, rfl⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩
+    · exact ⟨cv, hcv, rfl⟩
+    all_goals simp at h1
+  · intro h0 cv hc
+    subst hc
+    rcases hk with ⟨h1, -⟩ | ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, -, h2⟩ | ⟨-, _, _, -, -, h2⟩ |
+      ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, _, _, _, _, _, -, -, -, -, -, -, h2⟩
+    · exact h0 (UInt64.toNat_inj.mp (by simpa using h1))
+    all_goals cases h2
 
 /-- A record of kind word `3` is an `indInfo`, any other kind word is not. -/
 theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI (aread a) p = some ci) (hw : a[p]? = some w) :
     (w = 3 → ∃ cv caps, decCV (aread a) (p + 1) = some cv ∧ ci = .indInfo cv caps) ∧
       (w ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
-  sorry
+  obtain ⟨wk, e, hk⟩ := ciD h
+  rw [hw] at e; cases e
+  constructor
+  · intro h0
+    subst h0
+    rcases hk with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨-, cv, caps, hcv, -, rfl⟩ | ⟨h1, -⟩ | ⟨h1, -⟩
+    · simp at h1
+    · simp at h1
+    · simp at h1
+    · exact ⟨cv, caps, hcv, rfl⟩
+    all_goals simp at h1
+  · intro h0 cv caps hc
+    subst hc
+    rcases hk with ⟨-, _, -, h2⟩ | ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, -, h2⟩ | ⟨h1, -⟩ |
+      ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, _, _, _, _, _, -, -, -, -, -, -, h2⟩
+    · cases h2
+    · cases h2
+    · cases h2
+    · exact h0 (UInt64.toNat_inj.mp (by simpa using h1))
+    all_goals cases h2
 
 /-! ## `reduce_stored_ok(vis, c)` -/
 

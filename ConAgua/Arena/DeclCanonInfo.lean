@@ -99,17 +99,10 @@ theorem ciCanonDefn_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (
     ⦃fun x s' => LocEq s' s₀ ∧ cdW n s₀.mem p q = some (x.headD 0, s'.mem); ⊤⦄ := by
   sorry
 
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ciD_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {cv : IConstantVal}
     {v : EIdx} {hi : ConLeche.ReducibilityHint} (h : decCI (aread a) p = some (.defnInfo cv v hi)) :
     decCV (aread a) (p + 1) = some cv ∧ hd? (aread a) (p + 5) = some v ∧ decHint (aread a) (p + 6) = some hi := by
-  obtain ⟨wk, e, hk⟩ := ciD h
-  rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
-      ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, hc, hnp, hnf, hx⟩ |
-      ⟨-, c, mi, rp, o, c', rules, hc, hmi, hrp, ho, hc', hr, hx⟩ <;>
-    (cases hx <;> first | exact ⟨hc, hv, hh⟩ | skip)
--/
+  sorry
 
 theorem cdW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {p q x : Word} {cv cv' : IConstantVal} {v v' : EIdx}
@@ -122,7 +115,6 @@ theorem cdW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
       (IConstantInfo.canonEq (.defnInfo cv v hi) (.defnInfo cv' v' hi')).run a = .ok (b, a') ∧
       x = (if b then 1 else 0) ∧ CQ dn vis fe m m' a' := by
   sorry
-
 
 /-! ## `ci_canon_rec` -/
 
@@ -174,20 +166,12 @@ theorem ciCanonRec_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p
     ⦃fun x s' => LocEq s' s₀ ∧ cwW n s₀.mem p q = some (x.headD 0, s'.mem); ⊤⦄ := by
   sorry
 
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ciD_rec {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {cv : IConstantVal}
     {mi rp : Nat} {rules : List IRecRule} (h : decCI (aread a) p = some (.recInfo cv mi rp rules)) :
     decCV (aread a) (p + 1) = some cv ∧ nat? (aread a) (p + 5) = some mi ∧ nat? (aread a) (p + 6) = some rp ∧
     ∃ o c, nat? (aread a) (p + 7) = some o ∧ nat? (aread a) (p + 8) = some c ∧ decRules (aread a) o c = some rules := by
-  obtain ⟨wk, e, hk⟩ := ciD h
-  rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
-      ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, hc, hnp, hnf, hx⟩ |
-      ⟨-, c, mi', rp', o, c', rules', hc, hmi, hrp, ho, hc', hr, hx⟩ <;>
-    (cases hx <;> first | exact ⟨hc, hmi, hrp, o, c', ho, hc', hr⟩ | skip)
--/
+  sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {p q x : Word} {cv cv' : IConstantVal} {mi mi' rp rp' : Nat}
     {rules rules' : List IRecRule}
@@ -198,99 +182,7 @@ theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
     ∃ (b : Bool) (a' : AState),
       (IConstantInfo.canonEq (.recInfo cv mi rp rules) (.recInfo cv' mi' rp' rules')).run a =
         .ok (b, a') ∧ x = (if b then 1 else 0) ∧ CQ dn vis fe m m' a' := by
-  cases k with
-  | zero => simp [cwW] at h
-  | succ k =>
-  rw [cwW_succ] at h
-  obtain ⟨hcp, hmp, hrp, o1, l1, ho1, hl1, hrs⟩ := ciD_rec hp
-  obtain ⟨hcq, hmq, hrq, o2, l2, ho2, hl2, hrs'⟩ := ciD_rec hq
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
-  have hsz' : (erecP m).size < 2 ^ 64 := Nat.lt_of_le_of_lt (by simp [erecP]; exact Nat.min_le_right _ _) hsz
-  obtain ⟨w1, hw1, -⟩ := decCV_name hcp
-  obtain ⟨u1, hu1, -⟩ := decCV_name hcq
-  have p1 : (p + 1).toNat = p.toNat + 1 := toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
-  have q1 : (q + 1).toNat = q.toNat + 1 := toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hu1
-  obtain ⟨wm, em, rfl⟩ := natW_ (a := erA m) (q := p) (k := 5) (kn := 5) hsz rfl
-    (ArrExt.nat? (erecP_ext m) hmp)
-  obtain ⟨wm', em', rfl⟩ := natW_ (a := erA m) (q := q) (k := 5) (kn := 5) hsz rfl
-    (ArrExt.nat? (erecP_ext m) hmq)
-  obtain ⟨wr, er, rfl⟩ := natW_ (a := erA m) (q := p) (k := 6) (kn := 6) hsz rfl
-    (ArrExt.nat? (erecP_ext m) hrp)
-  obtain ⟨wr', er', rfl⟩ := natW_ (a := erA m) (q := q) (k := 6) (kn := 6) hsz rfl
-    (ArrExt.nat? (erecP_ext m) hrq)
-  simp only [erA] at em em' er er'
-  simp only [IConstantInfo.canonEq]
-  rw [em, em', er, er'] at h
-  by_cases hc : wm ≠ wm' ∨ wr ≠ wr'
-  · rw [ite_eq_left hc] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hb : (wm.toNat == wm'.toNat && wr.toNat == wr'.toNat) = false := by
-      rcases hc with hc | hc
-      · have : (wm.toNat == wm'.toNat) = false := by
-          simpa using fun e => hc (UInt64.toNat_inj.mp e)
-        simp [this]
-      · have : (wr.toNat == wr'.toNat) = false := by
-          simpa using fun e => hc (UInt64.toNat_inj.mp e)
-        simp [this]
-    rw [hb]
-    exact ⟨false, a, rfl, rfl, hS, IWGrow.refl _, hP, hL⟩
-  · rw [ite_eq_right hc] at h
-    have hw : wm = wm' ∧ wr = wr' := by
-      rw [not_or] at hc; exact ⟨Classical.byContradiction hc.1, Classical.byContradiction hc.2⟩
-    obtain ⟨rfl, rfl⟩ := hw
-    simp only [beq_self_eq_true, Bool.and_self, ite_true]
-    cases hc1 : cvceW k m (p + 1) (q + 1) with
-    | none => rw [hc1] at h; simp [cwK1] at h
-    | some xx =>
-    obtain ⟨e1, m1⟩ := xx
-    rw [hc1, cwK1_some] at h
-    obtain ⟨b1, a1, hb1, hr1, hS1, hg1, hP1, hL1⟩ := cvceW_ok k hc1 hS (by rw [p1]; exact hcp)
-      (by rw [q1]; exact hcq) hP hL
-    obtain ⟨b, a', hb, hr, hq⟩ := andThen_st (Q := CQ dn vis fe m m') (A := cv.canonEq cv')
-      (B := (do let cs ← ConRon.Arena.canonNames cv.levelParams.length
-                ConRon.Arena.canonRulesEq cv.levelParams cv'.levelParams cs coreWalkFuel rules rules' : AM Bool))
-      hb1 hr1
-      (fun hne1 => by
-        rw [ite_eq_right hne1] at h
-        cases hx : ctxW k m1 (p + 1) (q + 1) with
-        | none => rw [hx] at h; simp [cwK2] at h
-        | some x2 =>
-        obtain ⟨rc, m2⟩ := x2
-        rw [hx, cwK2_some] at h
-        have hcp1 : decCV (erecP m1) (p + 1).toNat = some cv :=
-          ArrExt.decCV (IWGrow.erecPExtR hg1) (by rw [p1]; exact hcp)
-        have hcq1 : decCV (erecP m1) (q + 1).toNat = some cv' :=
-          ArrExt.decCV (IWGrow.erecPExtR hg1) (by rw [q1]; exact hcq)
-        obtain ⟨cs, a2, po, pl, qo, ql, co, cl, hrc, hrun, hS2, hg2, hP2, hL2, hC2⟩ :=
-          ctxW_ok k hx hS1 hcp1 hcq1 hP1 hL1
-        subst hrc
-        simp only [List.headD_cons, List.tail_cons] at h
-        have hsz2 : (m2.arr64 EREC).size < 2 ^ 64 := hS2.iw.erSize
-        have hgg : IWGrow m m2 := hg1.trans hg2
-        obtain ⟨wa, ea, rfl⟩ := natW_ (a := erA m2) (q := p) (k := 7) (kn := 7) hsz2 rfl
-          (ArrExt.nat? (IWGrow.erecExt hgg) ho1)
-        obtain ⟨wb, eb, rfl⟩ := natW_ (a := erA m2) (q := p) (k := 8) (kn := 8) hsz2 rfl
-          (ArrExt.nat? (IWGrow.erecExt hgg) hl1)
-        obtain ⟨wc, ec, rfl⟩ := natW_ (a := erA m2) (q := q) (k := 7) (kn := 7) hsz2 rfl
-          (ArrExt.nat? (IWGrow.erecExt hgg) ho2)
-        obtain ⟨wd, ed, rfl⟩ := natW_ (a := erA m2) (q := q) (k := 8) (kn := 8) hsz2 rfl
-          (ArrExt.nat? (IWGrow.erecExt hgg) hl2)
-        simp only [erA] at ea eb ec ed
-        rw [ea, eb, ec, ed] at h
-        obtain ⟨b3, hb3, hr3, hS3, hg3, hP3⟩ := cnCrW_ok k m2 m' a2 po pl qo ql co cl 4000000000 wa wb wc wd x
-          cv.levelParams cv'.levelParams cs rules rules' h hS2 hC2 hL2 hP2
-          (ArrExt.decRules (IWGrow.erecPExtR hgg) hrs) (ArrExt.decRules (IWGrow.erecPExtR hgg) hrs')
-        refine ⟨b3, a2, ?_, hr3, hS3, hgg.trans hg3, hP3, hL2⟩
-        rw [StateT.run_bind, hrun, exc_ok_bind']
-        rw [fuelW] at hb3
-        exact hb3)
-      (fun h0 => by
-        rw [ite_eq_left h0] at h
-        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-        exact ⟨rfl, hS1, hg1, hP1, hL1⟩)
-    exact ⟨b, a', hb, hr, hq⟩
--/
-
+  sorry
 
 /-! ## `ci_canon_eq` -/
 
@@ -322,7 +214,6 @@ theorem ciCanonEq_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p 
     ⦃fun x s' => LocEq s' s₀ ∧ cieW n s₀.mem p q = some (x.headD 0, s'.mem); ⊤⦄ := by
   sorry
 
-
 theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} (k : Nat) {m m' : Mem} {p q x : Word} {c c' : IConstantInfo}
     (h : cieW k m p q = some (x, m')) (hS : StageR vis fe m a)
@@ -331,7 +222,6 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     ∃ (b : Bool) (a' : AState), (c.canonEq c').run a = .ok (b, a') ∧ x = (if b then 1 else 0) ∧
       CQ dn vis fe m m' a' := by
   sorry
-
 
 /-- **`ci_canon_eq` refines `IConstantInfo.canonEq`.** -/
 @[refines ConRon.Arena.IConstantInfo.canonEq]
@@ -404,7 +294,6 @@ theorem decPL_grow {α : Type} {m m' : Mem} {f f' : Nat → Option α} (hg : IWG
     decPL m' f' o c = some xs := by
   sorry
 
-
 theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (o1 l1 o2 l2 x : Word) (xs ys : List IConstantInfo),
     celW k m o1 l1 o2 l2 = some (x, m') → StageR vis fe m a →
@@ -414,7 +303,6 @@ theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     ∃ (b : Bool) (a' : AState), (ConRon.Arena.canonEqList xs ys).run a = .ok (b, a') ∧
       x = (if b then 1 else 0) ∧ CQ dn vis fe m m' a' := by
   sorry
-
 
 /-- **`canon_eq_list` refines `canonEqList`.** The records are `EREC` pointers in two `IW` slices
 (decoded below the record pool's top, as the other record statements). -/

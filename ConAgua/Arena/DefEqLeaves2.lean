@@ -38,7 +38,6 @@ theorem erSliceEqLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
         then 1 else 0]; ⊤⦄ := by
   sorry
 
-
 theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL) (n : Nat)
     (s₀ : St) (o1 n1 o2 n2 : Word) :
     ⦃fun s => s = s₀⦄
