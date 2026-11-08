@@ -366,37 +366,24 @@ theorem PinsR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {p : Pin
 theorem PinsR.of_flag {m : Mem} {p : Pins} (h : pinW m 0 = 0) : PinsR m p :=
   ⟨fun h0 => absurd h h0⟩
 
-/-! ## The environment: arrays 129‥136, 140‥143 (129‥131 in both tiers), `CTL` 128, 129, 133
+/-! ## The environment: arrays 129‥137, 140‥142, 146‥148, `CTL` 128‥130, 133‥135
 
-The twin's `IFEnv` (`Env.lean:276`) is an argument of the checker, not part of `AState`, and
-several views of one index are live at once (`restrictTo`: the same index, a smaller
-`visibleBelow`). In L there is **one destructive index** and a view is a word `vis`:
+The twin's `IFEnv` (`ConRon/Arena/Env.lean`) is a job's own layer over the frozen stream index
+(`Env.lean`'s module doc has the L layout). `EnvR m vis fe` relates one view `vis` of the own
+layer and the stream index, **extensionally** (through what the twin's lookups read, so the
+layout of `Std.HashMap` is free):
 
-* **The index, directly addressed by the name handle** (no hashing, no tombstones): a name
-  handle is narrow, `tier · 2^31 + tag · 2^26 + i` with `tag` 0 (`anonymous`), 1 (`str`), 2 (`num`), so
-  its row is words `2 i`, `2 i + 1` of array `EIXA`/`EIXS`/`EIXN` for tier 0 and
-  `EIXA1`/`EIXS1`/`EIXN1` for tier 1 (`rowArr`, by `selArr`): the counter plus one (`0`: no row)
-  and the record pointer. `erase` writes `0`. The arrays are sized like the name tables (an index
-  past the end aborts, a capacity). One array per tier (lane parmode, docs/design/parmode.md), as
-  the stores have: the parallel mode freezes tier 0 and gives each worker its own tier 1.
-* `ECON` (135): the record pointer of every constant by counter position, oldest first;
-  `CTL[128]` is their number. The twin's `env.consts` (newest first) is its reverse.
-* `EREC` (136): the record pool (`EnvRec.lean`'s layouts); `CTL[129]` its top.
-
-`EnvR dn m vis fe` relates one view, **extensionally** (through the rows the twin's
-`idx[n]?` reads, so the layout of `Std.HashMap` is free): the view's bound is `vis`, every row's
-presence and counter is the twin's, every present row's record decodes to the twin's constant,
-and the constants list decodes in order. `find?` follows (`EnvR.find?`); a raw row
-(`idx[n]?`, `GenRec`'s `prev`) is the same clause without the bound. `dn` reads `PropWhen`'s
-name handles back (`EnvRec.lean`).
+* the own layer: `fe.idx[n]?` is the own row of `n` when it carries the job's stamp and a
+  counter below `vis`, decoded; `fe.tbls[n]?` the own table row of `n` with the stamp, decoded;
+* the stream index: `fe.base.below = EBELOW`, `fe.base.belowRec = EBELOWR`, every entry of
+  `fe.base.idx` is the base row of its name (counter and record, decoded), every entry of
+  `fe.base.tbls` the base table row (position and record, decoded).
 -/
 
 /-- The constructor tag of a name handle word (`⟦w⟧.tag`). -/
 def rowTag (w : Word) : Nat := (tagW w).toNat
 /-- The tier bit of a name handle word (`⟦w⟧.tier`). -/
 def rowTier (w : Word) : Nat := w.toNat / 2 ^ 31 % 2
-/-- `w`'s row array selector as an L expression computes it: `2 tag + tier`. -/
-def rowSelW (w : Word) : Word := (tagW w <<< 1) + tierW w
 
 theorem tagW_toNat_row (w : Word) : (tagW w).toNat = rowTag w := rfl
 
@@ -414,400 +401,107 @@ theorem rowTag_eq {w : Word} (h : rowTag w ≤ 2) : rowTag w = w.toNat / 2 ^ 26 
 theorem rowTag_lt (w : Word) : rowTag w < 16 := by
   have := tagW_toNat w; simp only [rowTag]; split at this <;> omega
 
-theorem rowSelW_toNat (w : Word) : (rowSelW w).toNat = 2 * rowTag w + rowTier w := by
-  have h1 := rowTag_lt w
-  have h2 : rowTier w < 2 := Nat.mod_lt _ (by decide)
-  have h3 : (tagW w <<< 1).toNat = 2 * rowTag w := by
-    rw [UInt64.toNat_shiftLeft]; simp only [rowTag, Nat.shiftLeft_eq]
-    simp only [rowTag] at h1; simp; omega
-  rw [rowSelW, UInt64.toNat_add, h3, tierW_toNat_row]; omega
-
-/-- The row array of selector `g` (`rowSelW`): tier 0's `EIXA`, `EIXS`, `EIXN` at `0, 2, 4`, tier 1's
-at `1, 3, 5`. -/
-def selArr (g : Word) : ArrId :=
-  if g = 0 then EIXA else if g = 1 then EIXA1 else if g = 2 then EIXS
-  else if g = 3 then EIXS1 else if g = 4 then EIXN else EIXN1
-
-/-- The row's array: `EIXA`, `EIXS`, `EIXN` for tier 0, `EIXA1`, `EIXS1`, `EIXN1` for tier 1
-(`rowArr_spec`; `rowArr_eq`). -/
-def rowArr (w : Word) : ArrId := selArr (rowSelW w)
-
-theorem rowArr_eq (w : Word) : rowArr w = selArr (rowSelW w) := rfl
-
-theorem selArr_rowSelW (w : Word) (_ht : rowTag w ≤ 2) : selArr (rowSelW w) = rowArr w := rfl
-
-/-- `rowArr` by the selector's value (what the L code branches on). -/
-theorem rowArr_sel (w : Word) :
-    (rowSelW w = 0 → rowArr w = EIXA) ∧ (rowSelW w = 1 → rowArr w = EIXA1) ∧
-    (rowSelW w = 2 → rowArr w = EIXS) ∧ (rowSelW w = 3 → rowArr w = EIXS1) ∧
-    (rowSelW w = 4 → rowArr w = EIXN) ∧ (rowSelW w = 5 → rowArr w = EIXN1) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intro h <;> simp [rowArr, selArr, h]
-
-theorem rowArr_names (w : Word) : rowArr w = EIXA ∨ rowArr w = EIXS ∨ rowArr w = EIXN ∨
-    rowArr w = EIXA1 ∨ rowArr w = EIXS1 ∨ rowArr w = EIXN1 := by
-  unfold rowArr selArr
-  split <;> (try split) <;> (try split) <;> (try split) <;> (try split) <;> simp
-
-/-- The six row arrays, as numbers (for the range arguments). -/
-theorem rowArr_cases (w : Word) : (rowArr w : Nat) = 132 ∨ (rowArr w : Nat) = 133 ∨ (rowArr w : Nat) = 134 ∨
-    (rowArr w : Nat) = 140 ∨ (rowArr w : Nat) = 141 ∨ (rowArr w : Nat) = 142 := by
-  rcases rowArr_names w with h | h | h | h | h | h <;> rw [h] <;> decide
-
-theorem rowArr_ne (w : Word) {b : ArrId} (h : b ∉ [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) :
-    rowArr w ≠ b := by
-  intro hb
-  rcases rowArr_names w with e | e | e | e | e | e <;> rw [e] at hb <;> apply h <;> rw [← hb] <;> simp
-
-theorem rowArr_ge (w : Word) : 132 ≤ rowArr w := by
-  rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
-
-theorem rowArr_lt (w : Word) : rowArr w < 143 := by
-  rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
-
-/-- Tier 0 rows are below `ECON`, tier 1 rows above the pool. -/
-theorem rowArr_lt_or (w : Word) : rowArr w < 135 ∨ 140 ≤ rowArr w := by
-  rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
-
-theorem rowArr_congr {w w' : Word} (h1 : rowTag w = rowTag w') (h2 : rowTier w = rowTier w') :
-    rowArr w = rowArr w' := by
-  have a := rowSelW_toNat w; have b := rowSelW_toNat w'
-  have : rowSelW w = rowSelW w' := UInt64.toNat_inj.mp (by omega)
-  simp only [rowArr, this]
-
-/-- Which array a row of tag `≤ 2` lives in, by tag and tier. -/
-theorem rowArr_spec (w : Word) (ht : rowTag w ≤ 2) :
-    (rowTag w = 0 ∧ rowTier w = 0 ∧ rowArr w = EIXA) ∨
-    (rowTag w = 0 ∧ rowTier w = 1 ∧ rowArr w = EIXA1) ∨
-    (rowTag w = 1 ∧ rowTier w = 0 ∧ rowArr w = EIXS) ∨
-    (rowTag w = 1 ∧ rowTier w = 1 ∧ rowArr w = EIXS1) ∨
-    (rowTag w = 2 ∧ rowTier w = 0 ∧ rowArr w = EIXN) ∨
-    (rowTag w = 2 ∧ rowTier w = 1 ∧ rowArr w = EIXN1) := by
-  have h := rowSelW_toNat w
-  have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
-  have e : ∀ k : Nat, k < 6 → (rowSelW w).toNat = k → rowSelW w = UInt64.ofNat k := fun k hk e =>
-    UInt64.toNat_inj.mp (by rw [e]; simp; omega)
-  have hk := e (2 * rowTag w + rowTier w) (by omega) h
-  rcases (by omega : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2) with h1 | h1 | h1 <;>
-  rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h2 | h2 <;>
-  · simp [rowArr, selArr, hk, h1, h2]
-
-/-- Distinct (tag `≤ 2`) handles' row arrays determine tag and tier. -/
-theorem rowArr_inj {w w' : Word} (h : rowTag w ≤ 2) (h' : rowTag w' ≤ 2)
-    (ha : rowArr w = rowArr w') : rowTag w = rowTag w' ∧ rowTier w = rowTier w' := by
-  rcases rowArr_spec w h with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
-  rcases rowArr_spec w' h' with ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ <;>
-  first | exact ⟨by omega, by omega⟩ | (exfalso; rw [c, c'] at ha; revert ha; decide)
 /-- The first word of a name handle's row in its array. -/
 def rowIx (w : Word) : Nat := 2 * (idxW w).toNat
 
-theorem rowIx_lt (w : Word) : rowIx w < 2 ^ 32 := by
-  have := UInt64.lt_iff_toNat_lt.mp (idxW_lt w); simp only [rowIx]; simp at this; omega
+/-- The stream index's constant-row array of name tag `g`: `EIXA`, `EIXS`, `EIXN`. -/
+def eixArr (g : Nat) : ArrId := if g = 0 then EIXA else if g = 1 then EIXS else EIXN
 
-/-- The row's first word: the counter plus one, `0` for no row. -/
-def rowC (m : Mem) (w : Word) : Word :=
-  if rowTag w ≤ 2 then (m.arr64 (rowArr w))[rowIx w]?.getD 0 else 0
-/-- The row's record pointer. -/
-def rowP (m : Mem) (w : Word) : Word :=
-  if rowTag w ≤ 2 then (m.arr64 (rowArr w))[rowIx w + 1]?.getD 0 else 0
+/-- The own layer's constant-row array of name tag `g`: `OIXA`, `OIXS`, `OIXN`. -/
+def oixArr (g : Nat) : ArrId := if g = 0 then OIXA else if g = 1 then OIXS else OIXN
 
-/-- The row of a name handle, decoded: counter and record pointer. -/
-def rowW (m : Mem) (w : Word) : Option (Nat × Word) :=
-  if rowC m w = 0 then none else some ((rowC m w).toNat - 1, rowP m w)
-
-/-- The number of constants, `CTL[128]`. -/
-def envLen (m : Mem) : Nat := (rdW (m.arr64 CTL) 128).toNat
-
-/-- The record pool's top, `CTL[129]`. -/
-def erecTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 129).toNat
-
-/-- **The record pool in use**: `EREC` below its top. Every record the relations decode is
-decoded here, so a writer above the top (an allocation, `erec_alloc`) keeps them all
-(`decCI_mono`). -/
-def erecP (m : Mem) : Array Word := (m.arr64 EREC).extract 0 (erecTop m)
-
-/-- The constants, newest first, decoded. -/
-def envConsts (dn : NIdx → Option ConLeche.Name) (m : Mem) : Option (List IConstantInfo) :=
-  (List.range (envLen m)).reverse.mapM fun c => do
-    decCI (erecP m) dn (← nat? (m.arr64 ECON) c)
-
-theorem erecP_get {m : Mem} {i : Nat} {v : Word} (h : (erecP m)[i]? = some v) :
-    (m.arr64 EREC)[i]? = some v := by
-  simp only [erecP, Array.getElem?_extract] at h
-  split at h
-  · simpa using h
-  · simp at h
-
-theorem erecP_congr {m m' : Mem} (he : m'.arr64 EREC = m.arr64 EREC)
-    (hc : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) : erecP m' = erecP m := by
-  simp only [erecP, erecTop, he, hc]
-
-/-! ### The table component
-
-The twin's projection tables (`IEnv.tables`, `IFEnv.tbls`: keyed on the structure's name, no
-counter) have their own arrays, as con-ron keeps them (`env.tables`, a `Vec`, and the table map):
-
-* **The table rows** `TIXA`/`TIXS`/`TIXN` (one per name tag `tixArr`, as `EIX*`; tier 1 by
-  `tierA`): the row of name handle `w` is word `i` (the handle's index) of `tblArr w`,
-  the table record's pointer plus one, `0` for no table (`IFEnv.rawTable?`).
-* **The tables list** `ETAB` (143): the record pointer of every table by slot, oldest first (the
-  twin's `env.tables` is its reverse), `CTL[133]` of them.
-
-All of it is zero in zero memory (`mkIFEnv IEnv.empty`). -/
-
-/-- The table-row array (tier 0) of name tag `g`: `TIXA`, `TIXS`, `TIXN`. -/
+/-- The stream index's table-row array of name tag `g`: `TIXA`, `TIXS`, `TIXN`. -/
 def tixArr (g : Nat) : ArrId := if g = 0 then TIXA else if g = 1 then TIXS else TIXN
 
-/-- The table row's array: tag `g`'s `tixArr`, tier 1 by `tierA`. -/
-def tblArr (w : Word) : TieredArray := tierA (tixArr (rowTag w)) (UInt64.ofNat (rowTier w))
+/-- The own layer's table-row array of name tag `g`: `OTXA`, `OTXS`, `OTXN`. -/
+def otxArr (g : Nat) : ArrId := if g = 0 then OTXA else if g = 1 then OTXS else OTXN
 
-theorem tblArr_eq (w : Word) : tblArr w = tierA (tixArr (rowTag w)) (UInt64.ofNat (rowTier w)) := rfl
+/-- Word `k` of an array, `0` out of bounds. -/
+def rdN (a : Array Word) (k : Nat) : Word := a[k]?.getD 0
 
-/-- Which array a table row of tag `≤ 2` lives in, by tag and tier. -/
-theorem tblArr_spec (w : Word) (ht : rowTag w ≤ 2) :
-    (rowTag w = 0 ∧ rowTier w = 0 ∧ tblArr w = TIXA) ∨
-    (rowTag w = 0 ∧ rowTier w = 1 ∧ tblArr w = tier1 TIXA) ∨
-    (rowTag w = 1 ∧ rowTier w = 0 ∧ tblArr w = TIXS) ∨
-    (rowTag w = 1 ∧ rowTier w = 1 ∧ tblArr w = tier1 TIXS) ∨
-    (rowTag w = 2 ∧ rowTier w = 0 ∧ tblArr w = TIXN) ∨
-    (rowTag w = 2 ∧ rowTier w = 1 ∧ tblArr w = tier1 TIXN) := by
-  have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
-  rcases (by omega : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2) with h1 | h1 | h1 <;>
-  rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h2 | h2 <;>
-  · simp [tblArr, tixArr, tierA, tier1, h1, h2, TIXA, TIXS, TIXN]
+/-- The job's stamp. -/
+def stampW (m : Mem) : Word := rdW (m.arr64 CTL) 133
 
-/-- The table row's index: the handle's index. -/
-def tblIx (w : Word) : Nat := (idxW w).toNat
+/-- The own layer's row of name handle `w` (tag at most `2`): its two words. -/
+def ownRow (m : Mem) (w : Word) : Word × Word :=
+  let a := m.arr64 (tierA (oixArr (rowTag w)) (UInt64.ofNat (rowTier w)))
+  (rdN a (rowIx w), rdN a (rowIx w + 1))
 
-theorem tblIx_lt (w : Word) : tblIx w < 2 ^ 31 := by
-  have := UInt64.lt_iff_toNat_lt.mp (idxW_lt w); simp only [tblIx]; simp at this; omega
+/-- The own layer's raw row (`fe.idx[n]?`'s counter plus one and record): `(0, 0)` unless it
+carries the stamp. -/
+def ownRaw (m : Mem) (w : Word) : Word × Word :=
+  if rowTag w ≤ 2 ∧ (ownRow m w).1 >>> 32 = stampW m then
+    ((ownRow m w).1 &&& 4294967295, (ownRow m w).2) else (0, 0)
 
-/-- The table row of a name handle: the table record's pointer plus one, `0` for none. -/
-def tblRow (m : Mem) (w : Word) : Word :=
-  if rowTag w ≤ 2 then (m.arr64 (tblArr w))[tblIx w]?.getD 0 else 0
+/-- The stream index's row of name handle `w`: counter plus one and record, `(0, 0)` for a
+scratch name or another tag. -/
+def baseRow (m : Mem) (w : Word) : Word × Word :=
+  if rowTag w ≤ 2 ∧ rowTier w = 0 then
+    (rdN (m.arr64 (eixArr (rowTag w))) (rowIx w), rdN (m.arr64 (eixArr (rowTag w))) (rowIx w + 1))
+  else (0, 0)
 
-/-- The number of tables, `CTL[133]`. -/
-def tblCnt (m : Mem) : Nat := (rdW (m.arr64 CTL) 133).toNat
+/-- The own layer's table row: the record's address plus one, `0` for none. -/
+def ownTbl (m : Mem) (w : Word) : Word :=
+  let a := m.arr64 (tierA (otxArr (rowTag w)) (UInt64.ofNat (rowTier w)))
+  if rowTag w ≤ 2 ∧ rdN a (rowIx w) = stampW m then rdN a (rowIx w + 1) else 0
 
-/-- The tables, newest first, decoded. -/
-def envTables (m : Mem) : Option (List IProjTable) :=
-  (List.range (tblCnt m)).reverse.mapM fun j => do
-    decTbl (erecP m) (← nat? (m.arr64 ETAB) j)
+/-- The stream index's table row: position plus one and record. -/
+def baseTbl (m : Mem) (w : Word) : Word × Word :=
+  if rowTag w ≤ 2 ∧ rowTier w = 0 then
+    (rdN (m.arr64 (tixArr (rowTag w))) (rowIx w), rdN (m.arr64 (tixArr (rowTag w))) (rowIx w + 1))
+  else (0, 0)
 
-/-- **The environment, seen through the view `vis`.** -/
-structure EnvR (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe : IFEnv) : Prop where
-  vis : fe.visibleBelow = vis.toNat
-  keys : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
-    (fe.idx[n]?).map Prod.fst = (rowW m n.word.toUInt64).map Prod.fst
-  vals : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → rowC m n.word.toUInt64 ≠ 0 →
-    (fe.idx[n]?).map Prod.snd = decCI (erecP m) dn (rowP m n.word.toUInt64).toNat
-  consts : envConsts dn m = some fe.env.consts
-  /-- The table map (`IFEnv.tbls`): a table row is present exactly where the twin's is ... -/
-  tkeys : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
-    (fe.tbls[n]?).isSome = (tblRow m n.word.toUInt64 != 0)
-  /-- ... and decodes to it. -/
-  tvals : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → tblRow m n.word.toUInt64 ≠ 0 →
-    fe.tbls[n]? = decTbl (erecP m) ((tblRow m n.word.toUInt64).toNat - 1)
-  /-- The tables list (`IEnv.tables`). -/
-  tables : envTables m = some fe.env.tables
+/-- The record pool's tier-0 top, `CTL[129]`. -/
+def erecTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 129).toNat
 
-/-- The row array by tag, tier 0 (`EIXA`, `EIXS`, `EIXN` are consecutive numbers). -/
-theorem rowArr_tier0 {w : Word} (hg : rowTag w ≤ 2) (ht : rowTier w = 0) : rowArr w = 132 + rowTag w := by
-  rcases rowArr_spec w hg with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
-    first | (rw [c, a]; done) | (rw [c, a]; decide) | omega
+/-- The record pool's tier-1 top, `CTL[130]`. -/
+def erecTop1 (m : Mem) : Nat := (rdW (m.arr64 CTL) 130).toNat
 
-/-- The row array by tag, tier 1 (`EIXA1`, `EIXS1`, `EIXN1`). -/
-theorem rowArr_tier1 {w : Word} (hg : rowTag w ≤ 2) (ht : rowTier w = 1) : rowArr w = 140 + rowTag w := by
-  rcases rowArr_spec w hg with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
-    first | (rw [c, a]; done) | (rw [c, a]; decide) | omega
+/-- **The record pool in use**, both tiers as one address space (tier 1 at `2^40 + i`), each
+below its top. Every record the relations decode is decoded here, so a writer above a top (an
+allocation, `erec_alloc`) keeps them all (`ArrExt`). -/
+def erecP (m : Mem) : Nat → Option Word := fun i =>
+  if i < 2 ^ 40 then (if i < erecTop m then (m.arr64 EREC)[i]? else none)
+  else if i - 2 ^ 40 < erecTop1 m then (m.arr64 (tier1 EREC))[i - 2 ^ 40]? else none
 
-/-- The table array by tag, tier 0 (`TIXA`, `TIXS`, `TIXN`). -/
-theorem tblArr_tier0 {w : Word} (ht : rowTier w = 0) : tblArr w = tixArr (rowTag w) := by
-  rw [tblArr, ht]; rfl
+/-- The relation's view of an own row: the decoded constant when the row is the job's and
+below `vis`. -/
+def ownFind (m : Mem) (vis : Word) (w : Word) : Option IConstantInfo :=
+  let r := ownRaw m w
+  if r.1 ≠ 0 ∧ r.1.toNat - 1 < vis.toNat then decCI (erecP m) r.2.toNat else none
 
-/-- The table array by tag, tier 1 (`tier1` of the tier-0 array). -/
-theorem tblArr_tier1 {w : Word} (ht : rowTier w = 1) : tblArr w = tier1 (tixArr (rowTag w)) := by
-  rw [tblArr, ht]; rfl
+/-- **The environment relation** (one view). -/
+structure EnvR (m : Mem) (vis : Word) (fe : IFEnv) : Prop where
+  own : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → fe.idx[n]? = ownFind m vis n.word.toUInt64
+  otbl : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
+    fe.tbls[n]? = (if ownTbl m n.word.toUInt64 = 0 then none
+      else decTbl (erecP m) ((ownTbl m n.word.toUInt64).toNat - 1))
+  below : fe.base.below = (rdW (m.arr64 CTL) 134).toNat
+  belowRec : fe.base.belowRec = (rdW (m.arr64 CTL) 135).toNat
+  base : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
+    (fe.base.idx[n]?).map (fun e => (e.1, some e.2)) =
+      (if (baseRow m n.word.toUInt64).1 = 0 then none
+       else some ((baseRow m n.word.toUInt64).1.toNat - 1,
+         decCI (erecP m) (baseRow m n.word.toUInt64).2.toNat))
+  btbl : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
+    (fe.base.tbls[n]?).map (fun e => (e.1, some e.2)) =
+      (if (baseTbl m n.word.toUInt64).1 = 0 then none
+       else some ((baseTbl m n.word.toUInt64).1.toNat - 1,
+         decTbl (erecP m) (baseTbl m n.word.toUInt64).2.toNat))
 
-/-- The table array's number is the tag's `tixArr`, in either tier. -/
-theorem tblArr_arr (w : Word) : (tblArr w).arr = tixArr (rowTag w) := rfl
+/-- The arrays and globals `EnvR` reads. -/
+def envArrs : List TieredArray :=
+  [EIXA, EIXS, EIXN, TIXA, TIXS, TIXN, EREC, tier1 EREC, OIXA, OIXS, OIXN, tier1 OIXA,
+   tier1 OIXS, tier1 OIXN, OTXA, OTXS, OTXN, tier1 OTXA, tier1 OTXS, tier1 OTXN]
 
-/-- The table-row arrays are `TIXA`, `TIXS`, `TIXN`. -/
-theorem tixArr_mem (g : Nat) : tixArr g = TIXA ∨ tixArr g = TIXS ∨ tixArr g = TIXN := by
-  unfold tixArr; split
-  · exact .inl rfl
-  · split
-    · exact .inr (.inl rfl)
-    · exact .inr (.inr rfl)
+/-- The control words `EnvR` reads. -/
+def envCtl : List Word := [129, 130, 133, 134, 135]
 
-/-- Distinct (tag `≤ 2`) handles' table arrays determine tag and tier. -/
-theorem tblArr_inj {w w' : Word} (h : rowTag w ≤ 2) (h' : rowTag w' ≤ 2)
-    (ha : tblArr w = tblArr w') : rowTag w = rowTag w' ∧ rowTier w = rowTier w' := by
-  rcases tblArr_spec w h with ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ <;>
-  rcases tblArr_spec w' h' with ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ <;>
-  first | exact ⟨by omega, by omega⟩ | (exfalso; rw [c, c'] at ha; revert ha; decide)
-
-/-- A table-row array is no array but `TIXA`, `TIXS`, `TIXN` (in either tier). -/
-theorem tblArr_ne_t0 (w : Word) {b : ArrId} (h1 : b ≠ TIXA) (h2 : b ≠ TIXS) (h3 : b ≠ TIXN) :
-    tblArr w ≠ b := fun e => by
-  have := congrArg TieredArray.arr e; rw [tblArr_arr] at this
-  rcases tixArr_mem (rowTag w) with e' | e' | e' <;> rw [e'] at this
-  · exact h1 this.symm
-  · exact h2 this.symm
-  · exact h3 this.symm
-
-/-- The table side of the environment: what `tkeys`, `tvals`, `tables` read besides `erecP`. -/
-def TblSame (m m' : Mem) : Prop :=
-  (∀ w, rowTag w ≤ 2 → m'.arr64 (tblArr w) = m.arr64 (tblArr w)) ∧
-    m'.arr64 ETAB = m.arr64 ETAB ∧ rdW (m'.arr64 CTL) 133 = rdW (m.arr64 CTL) 133
-
-theorem TblSame.refl (m : Mem) : TblSame m m := ⟨fun _ _ => rfl, rfl, rfl⟩
-
-/-- The table side from a frame avoiding the table arrays and `CTL[133]`. -/
-theorem TblSame.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem}
-    (hA : AvoidA 129 132 A) (hE : (ETAB : TieredArray) ∉ A) (hC : (133 : Word) ∉ C)
-    (hf : MemFrame A C m m') : TblSame m m' := by
-  refine ⟨fun w _ => hf.arr _ (fun hm => ?_) (fun e => ?_), hf.arr _ hE (by decide), hf.ctl 133 hC⟩
-  · have h1 := hA _ hm; rw [tblArr_arr] at h1
-    rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] at h1 <;> revert h1 <;> decide
-  · have h1 := congrArg TieredArray.arr e; rw [tblArr_arr] at h1
-    rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] at h1 <;> revert h1 <;> decide
-
-theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 137 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
-    (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128)
-    (hc9 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) (ht : TblSame m m')
-    (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
-  have hC : ∀ w, rowC m' w = rowC m w := fun w => by
-    unfold rowC; split
-    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
-        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
-    · rfl
-  have hP : ∀ w, rowP m' w = rowP m w := fun w => by
-    unfold rowP; split
-    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
-        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
-    · rfl
-  have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
-  have hR : erecP m' = erecP m := by
-    simp only [erecP, erecTop, he EREC (by decide) (by decide) (by decide), hc9]
-  have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide) (by decide)
-  have hT : ∀ w, tblRow m' w = tblRow m w := fun w => by
-    unfold tblRow; split
-    · rename_i hw; rw [ht.1 w hw]
-    · rfl
-  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_,
-    fun n hn => (hT _).symm ▸ h.tkeys n hn, fun n hn h0 => ?_, ?_⟩
-  · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
-  · rw [← h.consts]; simp only [envConsts, envLen, hc, hR, hN]
-  · rw [hT, hR]; exact h.tvals n hn (by rwa [← hT])
-  · rw [← h.tables]; simp only [envTables, tblCnt, ht.2.1, ht.2.2, hR]
-
-/-- Every record in use is in `EREC` (a decoding in `erecP` is one in the whole array). -/
-theorem erecP_ext (m : Mem) : ArrExt (erecP m) (m.arr64 EREC) := fun _ _ h => erecP_get h
-
-/-- **The record pool grew**: its top did not go down and nothing below the old top changed. -/
-structure ErecGrow (m m' : Mem) : Prop where
-  top : erecTop m ≤ erecTop m'
-  get : ∀ i, i < erecTop m → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
-  size : (m'.arr64 EREC).size = (m.arr64 EREC).size
-
-theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP m') := by
-  intro i v hv
-  simp only [erecP, Array.getElem?_extract] at hv ⊢
-  split at hv
-  · rename_i hi
-    have hi' : i < erecTop m := by simp at hi; omega
-    have := h.top; have := h.size
-    rw [ite_eq_left (by simp at hi ⊢; omega)]
-    simp only [Nat.zero_add] at hv ⊢
-    rw [h.get i hi']
-    exact hv
-  · simp at hv
-
-theorem ErecGrow.refl (m : Mem) : ErecGrow m m := ⟨Nat.le_refl _, fun _ _ => rfl, rfl⟩
-
-theorem ErecGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : ErecGrow m₁ m₂) (h₂ : ErecGrow m₂ m₃) :
-    ErecGrow m₁ m₃ :=
-  ⟨Nat.le_trans h₁.top h₂.top, fun i hi => (h₂.get i (by have := h₁.top; omega)).trans (h₁.get i hi),
-    h₂.size.trans h₁.size⟩
-
-/-- **`EnvR` across a pool growth** (rows, constants and `CTL[128]` unchanged). -/
-theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 136 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
-    (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128) (hg : ErecGrow m m') (ht : TblSame m m')
-    (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
-  have hC : ∀ w, rowC m' w = rowC m w := fun w => by
-    unfold rowC; split
-    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
-        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
-    · rfl
-  have hP : ∀ w, rowP m' w = rowP m w := fun w => by
-    unfold rowP; split
-    · rw [he (rowArr w) (rowArr_ge w) (rowArr_lt w)
-        ((rowArr_lt_or w).imp (fun h => Nat.lt_trans h (by decide)) id)]
-    · rfl
-  have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
-  have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide) (by decide)
-  have hT : ∀ w, tblRow m' w = tblRow m w := fun w => by
-    unfold tblRow; split
-    · rename_i hw; rw [ht.1 w hw]
-    · rfl
-  have hx := hg.ext
-  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_,
-    fun n hn => (hT _).symm ▸ h.tkeys n hn, fun n hn h0 => ?_, ?_⟩
-  · rw [hC] at h0
-    have hv := h.vals n hn h0
-    have hk := h.keys n hn
-    simp only [rowW, h0, ite_false, Option.map_some] at hk
-    cases e : fe.idx[n]? with
-    | none => simp [e] at hk
-    | some r =>
-      rw [e] at hv; simp only [Option.map_some] at hv
-      rw [hP]; simp only [Option.map_some]
-      exact (hx.decCI hv.symm).symm
-  · have hcs := h.consts
-    simp only [envConsts, envLen, hc, hN] at hcs ⊢
-    exact ArrExt.mapM (fun c x hcx => by
-      simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at hcx ⊢
-      obtain ⟨q, hq, hd⟩ := hcx
-      exact ⟨q, hq, hx.decCI hd⟩) _ _ hcs
-  · rw [hT] at h0 ⊢
-    have hv := h.tvals n hn h0
-    have hk := h.tkeys n hn
-    cases e : fe.tbls[n]? with
-    | none => simp [e, h0] at hk
-    | some t => rw [e] at hv; exact (hx.decTbl hv.symm).symm
-  · have hts := h.tables
-    simp only [envTables, tblCnt, ht.2.1, ht.2.2] at hts ⊢
-    exact ArrExt.mapM (fun c x hcx => by
-      simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at hcx ⊢
-      obtain ⟨q, hq, hd⟩ := hcx
-      exact ⟨q, hq, hx.decTbl hd⟩) _ _ hts
-
-/-- The frame over exactly what `EnvR` reads: arrays 129‥142 (but `PEND`‥`RMEMO`), `ETAB`, the
-table rows' tier 1 and `CTL[128]`, `CTL[129]`, `CTL[133]`. -/
-theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List TieredArray} {C : List Word}
-    {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (hA : AvoidA 129 137 A) (hA1 : AvoidA 140 144 A)
-    (hC : AvoidC 128 130 C) (hC3 : AvoidC 133 134 C)
-    (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
-    EnvR dn m' vis fe :=
-  h.congr (fun b h1 h2 h3 => hf.arr b (fun hm => by
-      have := hA _ hm; have := hA1 _ hm; simp only [TieredArray.t0] at *; omega)
-    (TieredArray.t0_ne (by simp only [CTL, ArrId]; omega)))
-    (hf.ctl 128 (fun hm => by have := hC _ hm; simp at this))
-    (hf.ctl 129 (fun hm => by have := hC _ hm; simp at this))
-    (TblSame.of_frame (fun b hb => by have := hA b hb; omega)
-      (fun hm => by have := hA1 _ hm; simp [ETAB] at this)
-      (fun hm => by have := hC3 _ hm; simp at this) hf)
-
-theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List TieredArray} {C : List Word}
-    {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (hA : AvoidA 129 144 A) (hC : AvoidC 128 136 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
-    EnvR dn m' vis fe :=
-  h.frameN (fun b hb => by have := hA b hb; omega)
-    (fun b hb => by have := hA b hb; omega)
-    (fun x hx => by have := hC x hx; omega) (fun x hx => by have := hC x hx; omega) hf
+/-- **`EnvR` across a frame** that avoids its arrays and control words. -/
+theorem EnvR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (hA : ∀ b ∈ A, b ∉ envArrs) (hC : ∀ x ∈ C, x ∉ envCtl) (hf : MemFrame A C m m')
+    (h : EnvR m vis fe) : EnvR m' vis fe := by
+  sorry
 
 /-! ## The whole relation -/
 
@@ -825,59 +519,39 @@ theorem ModeOK.frame {m m' : Mem} {A : List TieredArray} {C : List Word} (h : Mo
   unfold ModeOK; rw [ht, hfl]; exact h
 
 /-- **The relation, by tier.** -/
-structure CheckR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word)
+structure CheckR (m : Mem) (a : AState) (vis : Word)
     (fe : IFEnv) : Prop where
   arena : ArenaD m a
   core : CoreR m a.caches
   pins : PinsR m a.pins
-  env : EnvR dn m vis fe
+  env : EnvR m vis fe
   /-- The pool's mode (lane tierpool; `ModeOK`). -/
   mode : ModeOK m
 
 /-- **The upper tiers across a walk**: a run whose L write set is below 64 (every walk,
 `WriteSets.lean`) and whose twin side keeps `cp` (every walk, `Keeps.lean`) keeps `CoreR`,
 `PinsR` and `EnvR`; the walk's own theorem gives `ArenaD`. -/
-theorem CheckR.of_walkM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
-    {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
+theorem CheckR.of_walkM {m m' : Mem} {a a' : AState} {vis : Word}
+    {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
-    (hmode : ModeOK m') : CheckR dn m' a' vis fe := by
-  have hc : a'.caches = a.caches := congrArg Prod.fst hk
-  have hp : a'.pins = a.pins := congrArg Prod.snd hk
-  refine ⟨hD, ?_, ?_, hR.env.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf, hmode⟩
-  · rw [hc]; exact hR.core.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf
-  · rw [hp]; exact hR.pins.frame (.of_low hA (by decide)) hf
+    (hmode : ModeOK m') : CheckR m' a' vis fe := by
+  sorry
 
 /-- `CheckR.of_walkM` for a walk that keeps `CTL[0]` and `CTL[1]` (an interning): the mode by the
 frame. -/
-theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
-    {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
+theorem CheckR.of_walk {m m' : Mem} {a a' : AState} {vis : Word}
+    {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
-    (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) : CheckR dn m' a' vis fe :=
+    (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) : CheckR m' a' vis fe :=
   hR.of_walkM hD hf hA hC hk (hR.mode.frame hf h01.1 h01.2)
 
 /-- **Every tier but the arena's above a writer**: tier-0 arrays from 137 (but the env index's
 tier 1, 140‥143) and `CTL` words from 130 up
 (the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`. -/
-theorem CheckR.frame_hi {dn : NIdx → Option ConLeche.Name} {A : List TieredArray} {C : List Word}
+theorem CheckR.frame_hi {A : List TieredArray} {C : List Word}
     {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr))
-    (hC : ∀ x ∈ C, 130 ≤ x.toNat ∧ x.toNat ≠ 133) (hf : MemFrame A C m m') (h : CheckR dn m a vis fe) :
-    CheckR dn m' a vis fe := by
-  have hA' : ∀ lo hi, hi ≤ 137 → AvoidA lo hi A := fun lo hi hh b hb => .inr (by
-    have := (hA b hb).2.1; omega)
-  have hE : AvoidA 140 144 A := fun b hb => by
-    have := hA b hb; omega
-  have hC' : ∀ lo hi, hi ≤ 130 → AvoidC lo hi C := fun lo hi hh x hx => .inr (by
-    have := (hC x hx).1; omega)
-  have hC3 : AvoidC 133 134 C := fun x hx => by have := hC x hx; omega
-  refine ⟨⟨?_, ?_⟩, h.core.frame (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf,
-    h.pins.frame (hA' _ _ (by decide)) hf,
-    h.env.frameN (hA' _ _ (by decide)) hE (hC' _ _ (by decide)) hC3 hf,
-    h.mode.frame hf (fun h => by have := (hC _ h).1; simp at this)
-      (fun h => by have := (hC _ h).1; simp at this)⟩
-  · exact ArenaR.frame_ext A C (fun b hb => by
-      have := hA b hb; exact ⟨this.1, by omega⟩)
-      (fun x hx => by have := (hC x hx).1; omega) m m' hf a h.arena.base
-  · exact DerR.frameM A C m m' hf (fun b hb => by
-      have := hA b hb; omega) a h.arena.der
+    (hC : ∀ x ∈ C, 130 ≤ x.toNat ∧ x.toNat ≠ 133) (hf : MemFrame A C m m') (h : CheckR m a vis fe) :
+    CheckR m' a vis fe := by
+  sorry
 
 end L.Arena

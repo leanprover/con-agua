@@ -370,7 +370,7 @@ def decOE (m : Mem) (r : List Word) : Option EIdx → Prop
 
 /-- `erec_alloc(n)`: `n` fresh words of `EREC`, returns their tagged address: tier 0 (below
 `CTL[129]`) while the scratch flag `CTL[1]` is off (the stream index, the pins), tier 1 (below
-`ETOP1`, emptied with the scratch tier) inside a job. -/
+`CTL[130]`, emptied with the scratch tier) inside a job. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 @[no_expose] def erecAlloc : FunDecl := lfn (n) locals (o) {
   if CTL.u64[1] == 0 {
@@ -380,10 +380,10 @@ def decOE (m : Mem) (r : List Word) : Option EIdx → Prop
     CTL.u64[129] := o + n;
     return o
   };
-  o := ETOP1;
+  o := CTL.u64[130];
   if len(EREC⟨1⟩) < o { abort };
   if len(EREC⟨1⟩) - o < n { abort };
-  ETOP1 := o + n;
+  CTL.u64[130] := o + n;
   return 1099511627776 + o
 }
 
