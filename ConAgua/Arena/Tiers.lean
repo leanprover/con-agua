@@ -532,11 +532,69 @@ def envArrs : List TieredArray :=
 /-- The control words `EnvR` reads. -/
 def envCtl : List Word := [129, 130, 133, 134, 135]
 
+/-- The own layer's row arrays of every tag and tier are `EnvR`'s. -/
+theorem tierA_oix_mem (g : Nat) (t : UInt64) : tierA (oixArr g) t ∈ envArrs := by
+  unfold tierA oixArr; generalize (t &&& 1 != 0) = b
+  cases b <;> split <;> (try split) <;> decide
+
+theorem tierA_otx_mem (g : Nat) (t : UInt64) : tierA (otxArr g) t ∈ envArrs := by
+  unfold tierA otxArr; generalize (t &&& 1 != 0) = b
+  cases b <;> split <;> (try split) <;> decide
+
+theorem eix_mem (g : Nat) : (eixArr g : TieredArray) ∈ envArrs := by
+  unfold eixArr; split <;> (try split) <;> decide
+
+theorem tix_mem (g : Nat) : (tixArr g : TieredArray) ∈ envArrs := by
+  unfold tixArr; split <;> (try split) <;> decide
+
+/-- **`EnvR` reads only `envArrs` and `envCtl`.** -/
+theorem EnvR.congr {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (he : ∀ b ∈ envArrs, m'.arr64 b = m.arr64 b)
+    (hc : ∀ x ∈ envCtl, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
+    (h : EnvR m vis fe) : EnvR m' vis fe := by
+  have hP : erecP m' = erecP m := by
+    funext i
+    simp only [erecP, erecTop, erecTop1, he EREC (by decide), he (tier1 EREC) (by decide),
+      hc 129 (by decide), hc 130 (by decide)]
+    rfl
+  have hs : stampW m' = stampW m := hc 133 (by decide)
+  have hor : ∀ w, ownRow m' w = ownRow m w := fun w => by
+    simp only [ownRow, he _ (tierA_oix_mem _ _)]
+  have hraw : ∀ w, ownRaw m' w = ownRaw m w := fun w => by simp only [ownRaw, hor, hs]
+  have hfind : ∀ w, ownFind m' vis w = ownFind m vis w := fun w => by
+    simp only [ownFind, hraw, hP]
+  have hot : ∀ w, ownTbl m' w = ownTbl m w := fun w => by
+    simp only [ownTbl, he _ (tierA_otx_mem _ _), hs]
+  have hb : ∀ w, baseRow m' w = baseRow m w := fun w => by
+    simp only [baseRow, he _ (eix_mem _)]
+  have hbt : ∀ w, baseTbl m' w = baseTbl m w := fun w => by
+    simp only [baseTbl, he _ (tix_mem _)]
+  exact ⟨fun n hn => by rw [hfind]; exact h.own n hn, fun n hn => by rw [hot, hP]; exact h.otbl n hn,
+    by rw [hc 134 (by decide)]; exact h.below, by rw [hc 135 (by decide)]; exact h.belowRec,
+    fun n hn => by rw [hb, hP]; exact h.base n hn, fun n hn => by rw [hbt, hP]; exact h.btbl n hn⟩
+
 /-- **`EnvR` across a frame** that avoids its arrays and control words. -/
 theorem EnvR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {vis : Word} {fe : IFEnv}
     (hA : ∀ b ∈ A, b ∉ envArrs) (hC : ∀ x ∈ C, x ∉ envCtl) (hf : MemFrame A C m m')
-    (h : EnvR m vis fe) : EnvR m' vis fe := by
-  sorry
+    (h : EnvR m vis fe) : EnvR m' vis fe :=
+  h.congr (fun b hb => hf.arr b (fun hm => hA b hm hb) (fun e => by subst e; revert hb; decide))
+    (fun x hx => hf.ctl x (fun hm => hC x hm hx))
+
+/-- `EnvR`'s arrays are at 129‥148. -/
+theorem envArrs_arr {b : TieredArray} (h : b ∈ envArrs) :
+    129 ≤ b.arr ∧ b.arr < 149 ∧ b.arr ≠ 135 ∧ (b.arr < 137 ∨ 140 ≤ b.arr) ∧ (b.arr < 143 ∨ 146 ≤ b.arr) := by
+  simp only [envArrs, List.mem_cons, List.not_mem_nil, or_false] at h
+  rcases h with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h <;>
+    subst h <;> decide
+
+theorem not_mem_envArrs {b : TieredArray}
+    (h : b.arr < 129 ∨ 149 ≤ b.arr ∨ b.arr = 135 ∨ (137 ≤ b.arr ∧ b.arr < 140) ∨ (143 ≤ b.arr ∧ b.arr < 146)) :
+    b ∉ envArrs := fun hm => by have := envArrs_arr hm; omega
+
+theorem not_mem_envCtl {x : Word}
+    (h : x.toNat < 129 ∨ 136 ≤ x.toNat ∨ x.toNat = 131 ∨ x.toNat = 132) : x ∉ envCtl := fun hm => by
+  simp only [envCtl, List.mem_cons, List.not_mem_nil, or_false] at hm
+  rcases hm with e | e | e | e | e <;> subst e <;> simp at h
 
 /-! ## The whole relation -/
 
@@ -570,7 +628,12 @@ theorem CheckR.of_walkM {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (hmode : ModeOK m') : CheckR m' a' vis fe := by
-  sorry
+  have hc : a'.caches = a.caches := congrArg Prod.fst hk
+  have hp : a'.pins = a.pins := congrArg Prod.snd hk
+  refine ⟨hD, ?_, ?_, hR.env.frame (fun b hb => not_mem_envArrs (.inl (by have := hA b hb; omega)))
+    (fun x hx => not_mem_envCtl (.inl (by have := hC x hx; omega))) hf, hmode⟩
+  · rw [hc]; exact hR.core.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf
+  · rw [hp]; exact hR.pins.frame (.of_low hA (by decide)) hf
 
 /-- `CheckR.of_walkM` for a walk that keeps `CTL[0]` and `CTL[1]` (an interning): the mode by the
 frame. -/
@@ -580,13 +643,29 @@ theorem CheckR.of_walk {m m' : Mem} {a a' : AState} {vis : Word}
     (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) : CheckR m' a' vis fe :=
   hR.of_walkM hD hf hA hC hk (hR.mode.frame hf h01.1 h01.2)
 
-/-- **Every tier but the arena's above a writer**: tier-0 arrays from 137 (but the env index's
-tier 1, 140‥143) and `CTL` words from 130 up
+/-- **Every tier but the arena's above a writer**: tier-0 arrays from 137 but the own layer's
+(140‥142, 146‥148), and `CTL` words from 131 up but the stamp and the base view (133‥135)
 (the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`. -/
 theorem CheckR.frame_hi {A : List TieredArray} {C : List Word}
-    {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr))
-    (hC : ∀ x ∈ C, 130 ≤ x.toNat ∧ x.toNat ≠ 133) (hf : MemFrame A C m m') (h : CheckR m a vis fe) :
+    {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
+    (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr) ∧ (b.arr < 146 ∨ 149 ≤ b.arr))
+    (hC : ∀ x ∈ C, 131 ≤ x.toNat ∧ x.toNat ≠ 133 ∧ x.toNat ≠ 134 ∧ x.toNat ≠ 135)
+    (hf : MemFrame A C m m') (h : CheckR m a vis fe) :
     CheckR m' a vis fe := by
-  sorry
+  have hA' : ∀ lo hi, hi ≤ 137 → AvoidA lo hi A := fun lo hi hh b hb => .inr (by
+    have := (hA b hb).2.1; omega)
+  have hC' : ∀ lo hi, hi ≤ 131 → AvoidC lo hi C := fun lo hi hh x hx => .inr (by
+    have := (hC x hx).1; omega)
+  refine ⟨⟨?_, ?_⟩, h.core.frame (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf,
+    h.pins.frame (hA' _ _ (by decide)) hf,
+    h.env.frame (fun b hb => not_mem_envArrs (by have := hA b hb; omega))
+      (fun x hx => not_mem_envCtl (by have := hC x hx; omega)) hf,
+    h.mode.frame hf (fun h => by have := (hC _ h).1; simp at this)
+      (fun h => by have := (hC _ h).1; simp at this)⟩
+  · exact ArenaR.frame_ext A C (fun b hb => by
+      have := hA b hb; exact ⟨this.1, by omega⟩)
+      (fun x hx => by have := (hC x hx).1; omega) m m' hf a h.arena.base
+  · exact DerR.frameM A C m m' hf (fun b hb => by
+      have := hA b hb; omega) a h.arena.der
 
 end L.Arena
