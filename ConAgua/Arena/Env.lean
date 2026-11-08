@@ -761,6 +761,106 @@ theorem tblFound_succ {m : Mem} {q : Word} {tb : IProjTable} (h : decTbl (erecP 
   have hne : q + 1 ≠ 0 := fun h0 => by have := congrArg UInt64.toNat h0; simp only [e] at this; simp at this
   simp only [tblFound, hne, ite_false, e, Nat.add_sub_cancel]
 
+/-! ### Row writes and the relation -/
+
+theorem ownSet_arr_of {m : Mem} {w c p : Word} {b : TieredArray}
+    (h : b.arr ≠ 140 ∧ b.arr ≠ 141 ∧ b.arr ≠ 142) : (ownSet m w c p).arr64 b = m.arr64 b :=
+  ownSet_arr (ownArr_ne h)
+
+theorem ownSet_ctl (m : Mem) (w c p : Word) : (ownSet m w c p).arr64 CTL = m.arr64 CTL :=
+  ownSet_arr_of (by decide)
+
+theorem erecP_ownSet (m : Mem) (w c p : Word) : erecP (ownSet m w c p) = erecP m := by
+  funext i
+  simp only [erecP, erecTop, erecTop1, ownSet_ctl, ownSet_arr_of (b := (EREC : TieredArray)) (by decide),
+    ownSet_arr_of (b := tier1 EREC) (by decide)]
+  rfl
+
+theorem otxArrT_arr' (x : Word) : (tierA (otxArr (rowTag x)) (tierW x)).arr ≠ 140 ∧
+    (tierA (otxArr (rowTag x)) (tierW x)).arr ≠ 141 ∧ (tierA (otxArr (rowTag x)) (tierW x)).arr ≠ 142 := by
+  have := otxArrT_arr x; simp only [otxArrT] at this; omega
+
+theorem ownTbl_ownSet (m : Mem) (w c p x : Word) : ownTbl (ownSet m w c p) x = ownTbl m x := by
+  simp only [ownTbl, ownSet_arr_of (otxArrT_arr' x), stampW, ownSet_ctl]
+  rfl
+
+theorem eixArr_arr (g : Nat) : (eixArr g : TieredArray).arr = 132 ∨ (eixArr g : TieredArray).arr = 133 ∨
+    (eixArr g : TieredArray).arr = 134 := by
+  unfold eixArr; split <;> (try split) <;> simp [EIXA, EIXS, EIXN] <;> decide
+
+theorem tixArr_arr (g : Nat) : (tixArr g : TieredArray).arr = 129 ∨ (tixArr g : TieredArray).arr = 130 ∨
+    (tixArr g : TieredArray).arr = 131 := by
+  unfold tixArr; split <;> (try split) <;> simp [TIXA, TIXS, TIXN] <;> decide
+
+theorem baseRow_ownSet (m : Mem) (w c p x : Word) : baseRow (ownSet m w c p) x = baseRow m x := by
+  have := eixArr_arr (rowTag x)
+  simp only [baseRow, ownSet_arr_of (b := (eixArr (rowTag x) : TieredArray)) (by omega)]
+
+theorem baseTbl_ownSet (m : Mem) (w c p x : Word) : baseTbl (ownSet m w c p) x = baseTbl m x := by
+  have := tixArr_arr (rowTag x)
+  simp only [baseTbl, ownSet_arr_of (b := (tixArr (rowTag x) : TieredArray)) (by omega)]
+
+theorem nidx_beq (n n' : NIdx) : (n == n') = decide (n'.word.toUInt64 = n.word.toUInt64) := by
+  by_cases e : n = n'
+  · subst e; simp
+  · have : n'.word.toUInt64 ≠ n.word.toUInt64 := fun h => e (nidx_word_inj h).symm
+    simp [e, this]
+
+theorem toNat_succ_lt {v : Word} (h : v.toNat < 2 ^ 32 - 2) : (v + 1).toNat = v.toNat + 1 := by
+  rw [UInt64.toNat_add]; simp; omega
+
+/-- **`push`**: the own row of the record's name becomes `(vis + 1, q)`. -/
+theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
+    (hci : decCI (erecP m) q.toNat = some ci) {w : Word} (hw : erecP m (q.toNat + 1) = some w)
+    (hv : vis.toNat < 2 ^ 32 - 2) (ht : rowTag w ≤ 2)
+    (hb : rowIx w + 1 < (m.arr64 (ownArr w)).size) :
+    EnvR (ownSet m w (vis + 1) q) (vis + 1) (fe.push ci) := by
+  obtain ⟨w', hw', hw32, hname⟩ := decCI_name hci
+  rw [hw] at hw'; cases hw'
+  have hv1 := toNat_succ_lt hv
+  have hne : vis + 1 ≠ 0 := fun e => by have := congrArg UInt64.toNat e; simp only [hv1] at this; simp at this
+  have hs := h.stamp
+  obtain ⟨s1, s2⟩ := ownRaw_ownSet_self (m := m) (p := q) ht hb (by rw [hv1]; omega) hs
+  have s2 := s2 hne
+  have oth : ∀ n : NIdx, n.word.toUInt64 ≠ w →
+      ownRaw (ownSet m w (vis + 1) q) n.word.toUInt64 = ownRaw m n.word.toUInt64 := fun n hn =>
+    ownRaw_ownSet_other hw32 (word_lt32 n) ht hn
+  have hname' : ∀ n : NIdx, (ci.name == n) = decide (n.word.toUInt64 = w) := by
+    intro n; rw [hname, nidx_beq, decI_word_self w hw32]
+  have hP := erecP_ownSet m w (vis + 1) q
+  refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn he => ?_, fun n => ?_, fun n hn => ?_,
+    ?_, ?_, fun n => ?_, fun n => ?_, ?_⟩
+  · simp only [IFEnv.push, Std.HashMap.getElem?_insert, hname']
+    by_cases e : n.word.toUInt64 = w
+    · simp only [e, decide_true, ite_true, ownFind, s1, s2, hP, hci, hv1]
+      simp [hne]
+    · simp only [e, decide_false, Bool.false_eq_true, ite_false, ownFind, oth n e, hP, h.own n, hv1]
+      by_cases c0 : (ownRaw m n.word.toUInt64).1 = 0
+      · simp [c0]
+      · have := h.fresh n c0
+        simp [c0, this, show (ownRaw m n.word.toUInt64).1.toNat - 1 < vis.toNat + 1 by omega]
+  · by_cases e : n.word.toUInt64 = w
+    · rw [e, s2, hP]; exact ⟨ci, hci⟩
+    · rw [oth n e] at hn ⊢; rw [hP]; exact h.own_dec n hn
+  · by_cases e : n.word.toUInt64 = w
+    · rw [e, s1, hv1]; omega
+    · rw [oth n e] at hn ⊢; have := h.fresh n hn; rw [hv1]; omega
+  · by_cases e : n.word.toUInt64 = w <;> by_cases e' : n'.word.toUInt64 = w
+    · exact nidx_word_inj (e.trans e'.symm)
+    · exfalso; rw [e, s1, oth n' e'] at he
+      have hn' : (ownRaw m n'.word.toUInt64).1 ≠ 0 := by rw [← he]; exact hne
+      have := h.fresh n' hn'; rw [← he, hv1] at this; omega
+    · exfalso; rw [e', s1, oth n e] at he
+      rw [oth n e] at hn; have := h.fresh n hn; rw [he, hv1] at this; omega
+    · rw [oth n e, oth n' e'] at he; rw [oth n e] at hn; exact h.uniq n n' hn he
+  · simp only [IFEnv.push, ownTbl_ownSet, hP]; exact h.otbl n
+  · rw [ownTbl_ownSet] at hn ⊢; rw [hP]; exact h.otbl_dec n hn
+  · simp only [IFEnv.push, ownSet_ctl]; exact h.below
+  · simp only [IFEnv.push, ownSet_ctl]; exact h.belowRec
+  · simp only [IFEnv.push, baseRow_ownSet, hP]; exact h.base n
+  · simp only [IFEnv.push, baseTbl_ownSet, hP]; exact h.btbl n
+  · simp only [stampW, ownSet_ctl]; exact hs
+
 end rel
 
 section specs

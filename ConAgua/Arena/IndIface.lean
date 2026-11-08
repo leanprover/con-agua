@@ -301,13 +301,17 @@ structure IWOK (m : Mem) : Prop where
   /-- The tier-1 record pool (a job's own records, `erec_alloc` with the scratch flag on). -/
   er1 : erecTop1 m ≤ (m.arr64 (tier1 EREC)).size
   er1Size : (m.arr64 (tier1 EREC)).size < 2 ^ 64
+  /-- Both record tiers are addressable by a tagged address (offset below `2^40`). -/
+  erCap : (m.arr64 EREC).size < 2 ^ 40
+  er1Cap : (m.arr64 (tier1 EREC)).size < 2 ^ 40
 
 /-- `IWOK` as its conjunction, for `simp` (a memory changed only where `IWOK` does not read). -/
 theorem IWOK_iff (m : Mem) : IWOK m ↔ iwTop m ≤ (m.arr64 IW).size ∧ erTop m ≤ (m.arr64 EREC).size ∧
     (m.arr64 IW).size < 2 ^ 64 ∧ (m.arr64 EREC).size < 2 ^ 64 ∧ 200 < (m.arr64 CTL).size ∧
-    erecTop1 m ≤ (m.arr64 (tier1 EREC)).size ∧ (m.arr64 (tier1 EREC)).size < 2 ^ 64 :=
-  ⟨fun h => ⟨h.iw, h.er, h.iwSize, h.erSize, h.ctl, h.er1, h.er1Size⟩,
-   fun ⟨a, b, c, d, e, f, g⟩ => ⟨a, b, c, d, e, f, g⟩⟩
+    erecTop1 m ≤ (m.arr64 (tier1 EREC)).size ∧ (m.arr64 (tier1 EREC)).size < 2 ^ 64 ∧
+    (m.arr64 EREC).size < 2 ^ 40 ∧ (m.arr64 (tier1 EREC)).size < 2 ^ 40 :=
+  ⟨fun h => ⟨h.iw, h.er, h.iwSize, h.erSize, h.ctl, h.er1, h.er1Size, h.erCap, h.er1Cap⟩,
+   fun ⟨a, b, c, d, e, f, g, i, j⟩ => ⟨a, b, c, d, e, f, g, i, j⟩⟩
 
 /-- The pool and the constant records only grew. -/
 structure IWGrow (m m' : Mem) : Prop where
@@ -602,11 +606,13 @@ theorem erecP_putMem_other {m : Mem} {a v : Word} {i : Nat} (hi : i % 2 ^ 41 ≠
 flag's tier (tier 1 at `2^40`), that top moved up by `k` within the array, only `CTL[129]` or
 `CTL[130]` changed. -/
 theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m'))
-    (hc : 130 < (m.arr64 CTL).size) (hs0 : (m.arr64 EREC).size < 2 ^ 40)
-    (hs1 : (m.arr64 (tier1 EREC)).size < 2 ^ 40) :
+    (hW : IWOK m) :
     ErecGrow m m' ∧ MemFrame [] [129, 130] m m' ∧ erOff a = erTopOf m a ∧
       erTopOf m' a = erTopOf m a + k.toNat ∧ erTopOf m' a ≤ (m.arr64 (erTier a)).size ∧
-      (a.toNat / 2 ^ 40 % 2 = 0 ↔ rdW (m.arr64 CTL) 1 = 0) ∧ a.toNat < 2 ^ 41 := by
+      (a.toNat / 2 ^ 40 % 2 = 0 ↔ rdW (m.arr64 CTL) 1 = 0) ∧ a.toNat < 2 ^ 41 ∧ IWOK m' := by
+  have hc : 130 < (m.arr64 CTL).size := by have := hW.ctl; omega
+  have hs0 := hW.erCap
+  have hs1 := hW.er1Cap
   have e129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
   have e130 : (130 : Word).toNat < (m.arr64 CTL).size := by simp; omega
   unfold erAllocW at h
@@ -636,10 +642,19 @@ theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m')
     have hE1 : (m.set64 CTL 129 (o + k)).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
       Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have hd : o.toNat / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt (by omega)]
+    have hok' : IWOK (m.set64 CTL 129 (o + k)) := by
+      have hI : (m.set64 CTL 129 (o + k)).arr64 IW = m.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+      have h200 : iwTop (m.set64 CTL 129 (o + k)) = iwTop m := by
+        simp only [iwTop, rdW_set64]; rw [if_neg (by simp)]
+      have h0 : erTop (m.set64 CTL 129 (o + k)) = o.toNat + k.toNat := t0
+      refine ⟨by rw [h200, hI]; exact hW.iw, by rw [h0, hE]; omega, by rw [hI]; exact hW.iwSize,
+        by rw [hE]; exact hW.erSize, by rw [Mem.size_arr64_set64]; exact hW.ctl,
+        by rw [t1, hE1]; exact hW.er1, by rw [hE1]; exact hW.er1Size, by rw [hE]; exact hs0,
+        by rw [hE1]; exact hs1⟩
     have hof : erOff o = o.toNat := Nat.mod_eq_of_lt (by omega)
     have htop : erecTop m = o.toNat := by simp [erecTop, ho]
     refine ⟨⟨by omega, fun i _ => by rw [hE], by rw [t1]; exact Nat.le_refl _, fun i _ => by rw [hE1]⟩,
-      hmem.mono (by simp) (by simp), ?_, ?_, ?_, ?_, by omega⟩
+      hmem.mono (by simp) (by simp), ?_, ?_, ?_, ?_, by omega, hok'⟩
     · simp only [hof, erTopOf, hd, ite_true, htop]
     · simp only [erTopOf, hd, ite_true, t0, htop]
     · simp only [erTopOf, erTier, hd, ite_true, t0]; omega
@@ -669,11 +684,20 @@ theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m')
     have hE1 : (m.set64 CTL 130 (o + k)).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
       Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have ha : (1099511627776 + o).toNat = 2 ^ 40 + o.toNat := by rw [UInt64.toNat_add]; simp; omega
+    have hok' : IWOK (m.set64 CTL 130 (o + k)) := by
+      have hI : (m.set64 CTL 130 (o + k)).arr64 IW = m.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+      have h200 : iwTop (m.set64 CTL 130 (o + k)) = iwTop m := by
+        simp only [iwTop, rdW_set64]; rw [if_neg (by simp)]
+      have h0 : erTop (m.set64 CTL 130 (o + k)) = erTop m := t0
+      refine ⟨by rw [h200, hI]; exact hW.iw, by rw [h0, hE]; exact hW.er, by rw [hI]; exact hW.iwSize,
+        by rw [hE]; exact hW.erSize, by rw [Mem.size_arr64_set64]; exact hW.ctl,
+        by rw [t1, hE1]; omega, by rw [hE1]; exact hW.er1Size, by rw [hE]; exact hs0,
+        by rw [hE1]; exact hs1⟩
     have hd : (1099511627776 + o).toNat / 2 ^ 40 % 2 = 1 := by rw [ha]; omega
     have hof : erOff (1099511627776 + o) = o.toNat := by simp only [erOff, ha]; omega
     have htop : erecTop1 m = o.toNat := by simp [erecTop1, ho]
     refine ⟨⟨by rw [t0]; exact Nat.le_refl _, fun i _ => by rw [hE], by omega, fun i _ => by rw [hE1]⟩,
-      hmem.mono (by simp) (by simp), ?_, ?_, ?_, ?_, by omega⟩
+      hmem.mono (by simp) (by simp), ?_, ?_, ?_, ?_, by omega, hok'⟩
     · simp only [hof, erTopOf, hd, htop]; simp
     · simp only [erTopOf, hd, t1, htop]; simp
     · simp only [erTopOf, erTier, hd, t1]; simp; omega
