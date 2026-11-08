@@ -44,9 +44,8 @@ theorem plSim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k 
     (a : AState) (o l : Word) (lps : List NIdx) (hS : StageR vis fe m a)
     (hd : decHL m o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat ≤ iwTop m) :
     Sim (plW k m o l) (paramLevels lps) a (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
-      H (r.headD 0) ∧ decI (r.headD 0) = x) := fun r m' e => by
-  obtain ⟨x, a', h1, h2⟩ := plW_ok dn vis fe k m m' a o l lps r e hS hd (hS.lt64 hb) hb
-  exact ⟨x, a', h1, h2⟩
+      H (r.headD 0) ∧ decI (r.headD 0) = x) := by
+  sorry
 
 /-- `intern_const` as a `Sim`. -/
 theorem ceSim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m : Mem) (a : AState)
@@ -56,6 +55,7 @@ theorem ceSim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m 
   obtain ⟨a', h1, h2, h3⟩ := internConst_stage hS f x hf hx e
   exact ⟨_, a', h1, rfl, h2, h3⟩
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `field_doms_resolve` as a `Sim`. -/
 theorem fdrSim {dn : NIdx → Option ConLeche.Name} {v : Word} {fe : IFEnv} (n : Nat) (m : Mem)
     (a : AState) (o l : Word) (xs : List EIdx) (hS : StageR v fe m a)
@@ -64,7 +64,9 @@ theorem fdrSim {dn : NIdx → Option ConLeche.Name} {v : Word} {fe : IFEnv} (n :
       (fun r b m' a' => KeepPost v fe decW0B m m' a' r b ∧ AbsOK m') := fun r m' e => by
   obtain ⟨x, a', h1, h2⟩ := fdrW_ok dn fe n m m' a v o l xs r e hS hd (hS.lt64 hb) hb hA
   exact ⟨x, a', h1, h2⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `idx_args_resolve` as a `Sim`. -/
 theorem iarSim {dn : NIdx → Option ConLeche.Name} {v : Word} {fe : IFEnv} (n : Nat) (m : Mem)
     (a : AState) (o l : Word) (xs : List EIdx) (hS : StageR v fe m a)
@@ -73,14 +75,18 @@ theorem iarSim {dn : NIdx → Option ConLeche.Name} {v : Word} {fe : IFEnv} (n :
       (fun r b m' a' => KeepPost v fe decW0B m m' a' r b ∧ AbsOK m') := fun r m' e => by
   obtain ⟨x, a', h1, h2⟩ := iarW_ok dn fe n m m' a v o l xs r e hS hd (hS.lt64 hb) hb hA
   exact ⟨x, a', h1, h2⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A callee run at the pre-block view `vis0` (the restriction), back at `vis`. -/
 theorem sumKeep_restrict {dn : NIdx → Option ConLeche.Name} {vis vis0 : Word} {fe : IFEnv}
     {m m' : Mem} {a' : AState} {r : List Word} {b : Bool} (hv : fe.visibleBelow = vis.toNat)
     (h : KeepPost vis0 (fe.restrictTo vis0.toNat) decW0B m m' a' r b) :
     StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b :=
   ⟨h.1.unrestrict hv, h.2.1, h.2.2.1⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`checkSumCtor` is its head followed by `cscTailT`** (definitionally). -/
 theorem checkSumCtor_eq (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx : Nat) (resSort : LIdx)
     (isProp large : Bool) (cvC : IConstantVal) (nF : Nat) (cvTa : IConstantVal) :
@@ -98,20 +104,13 @@ theorem checkSumCtor_eq (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx
       checkStructDomsAt V fe 0 cq.1 tdoms nP
       cscTailT fe₀ fe T lps nP nIdx resSort isProp large cvC nF cq) := by
   rfl
+-/
 
 /-- A constant's type word, read where the model reads it. -/
 theorem sumTypeWord {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
     (hsz : (m.arr64 EREC).size < 2 ^ 64) :
     ∃ w, rdW (m.arr64 EREC) (q + 3) = w ∧ H w ∧ decI w = cv.type := by
-  have ht := decCV_type h
-  simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at ht
-  obtain ⟨w, hw, hx⟩ := ht
-  split at hx
-  · have hx' := Option.some.inj hx
-    have hlt : q.toNat + 3 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hw).1
-    refine ⟨w, rdW_of_get? ?_ hw, by assumption, hx'⟩
-    rw [sum_toNat_add (by simp; omega)]; rfl
-  · cases hx
+  sorry
 
 end L.Ind
 

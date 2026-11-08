@@ -87,6 +87,7 @@ end spec
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sgW_ok (k : Nat)
     (m m' : Mem) (a : AState) (ctx hO hL ind us dO dL nPc : Word) (r : List Word) (c : NestCtx)
     (holes ds : List EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
@@ -158,6 +159,7 @@ theorem sgW_ok (k : Nat)
     cases ho; cases hl
     have := hg4.iw; omega
   · exact ⟨M3, G3, hS4, (hg1.trans hg13).trans hg4, hR3.frame (posRecW_fr hr4), hk3, hG3⟩
+-/
 
 end rel
 
@@ -165,6 +167,7 @@ section census
 variable (p : Prog) (L : SgLook p)
 include L
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_seed_of` refines `nestSeedOf`** (through the stubs below `replace_apps` and `replace_fvars`;
 the walk memos well formed in the memory at hand, `PosMR`, and again after). -/
 @[refines ConRon.Arena.nestSeedOf]
@@ -191,6 +194,7 @@ theorem nestSeedOf_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → 
     M G g hm hS hc hin hsl hb hho hhob hds hdsb hind hus hR hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact h1, by rw [hres]; exact h2, h3, by rw [hst]; exact h4, hP'⟩
+-/
 
 end census
 end L.Ind

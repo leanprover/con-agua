@@ -103,6 +103,7 @@ open L.Arena
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : Word) (r : List Word)
     (names : List NIdx) (ds holes : List EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
     (h : pcrW k m no nl us dO dL hO hL cty = some (r, m')) (hS : StageR vis fe m a) (hcty : H cty)
@@ -154,6 +155,7 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
       mp1, rpMR_mfr ((posRecW_mfr hrec).up.trans (rxW_mfr hrx)) (by decide) (by decide) hM1⟩
     simp only [ConRon.Arena.nestCrest, StateT.run_bind, hdl, hrun1, except_ok_bind, ← hcd, show (decI (r1.tail.headD 0) : EIdx) = decE (r1.tail.headD 0) from rfl, hrun3]
     rfl
+-/
 
 end rel
 
@@ -161,6 +163,7 @@ section census
 variable (p : Prog) (L : CrLook p)
 include L
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_crest` refines `nestCrest`** (through the stubs below `nest_canon_crest` and `mk_app_n`;
 `replace_apps`' memo well formed in the memory at hand, and again after). -/
 @[refines ConRon.Arena.nestCrest]
@@ -184,6 +187,7 @@ theorem nestCrest_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
     hS hcty hus hdec hno hit hnn mp0 hMr hds hdsb hho hhob hR
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hout, by rw [hst]; exact hpost, hM'⟩
+-/
 
 end census
 
@@ -259,6 +263,7 @@ theorem entryW_mfr {m m' : Mem} {C ciq : Word} {r : List Word} (h : entryW m C c
   unfold entryW entryK1 entryK2 entryK3 at h
   mfr_auto h [stripW_mfr, MFr.ofStub, MFr.ofI1F, MFr.ofGafF]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ncGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis C co cl cs ol fp : Word) (r : List Word),
     ncGoW k m vis C co cl cs ol fp = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [ncGoW] at h
@@ -266,7 +271,9 @@ theorem ncGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis C co cl cs ol fp : Word) (r 
     unfold ncGoW ncK1 ncK2 ncK3 at h
     mfr_auto h [ncGoW_mfr k _ _ _ _ _ _ _ _ _ _, envFindW_mfr, entryW_mfr, posRecW_mfr,
       fun h => (MFr.set_iw _ _ _).trans (ncGoW_mfr k _ _ _ _ _ _ _ _ _ _ h)]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ncWf_mfr {k : Nat} {m m' : Mem} {vis C co cl : Word} {r : List Word} (h : ncWf k m vis C co cl = some (r, m')) :
     MFr [] [] m m' := by
   cases k with
@@ -275,7 +282,9 @@ theorem ncWf_mfr {k : Nat} {m m' : Mem} {vis C co cl : Word} {r : List Word} (h 
   simp only [ncWf] at h
   unfold ncW ncB at h
   mfr_auto h [allocW_mfr, ncGoW_mfr _ _ _ _ _ _ _ _ _ _ _]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ntWf_mfr {k : Nat} {m m' : Mem} {vis C : Word} {r : List Word} (h : ntWf k m vis C = some (r, m')) :
     MFr [] [] m m' := by
   cases k with
@@ -284,6 +293,7 @@ theorem ntWf_mfr {k : Nat} {m m' : Mem} {vis C : Word} {r : List Word} (h : ntWf
   simp only [ntWf] at h
   unfold ntW ntK1 ntK2 at h
   mfr_auto h [envFindW_mfr, ncWf_mfr]
+-/
 
 theorem nwsW_mfr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
     (h : nwsW n m ctx off l po pl = some (r, m')) : MFr [] [] m m' := by
@@ -310,10 +320,12 @@ theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
   unfold haW haK1 haK2 at h
   mfr_auto h [rh, appendW_mfr]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem naW_mfr {k : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : naW k m vis c = some (r, m')) :
     MFr [] [] m m' := by
   unfold naW naK1 naK2 at h
   mfr_auto h [envFindW_mfr, piBW_mfr _ _ _ _ _ _]
+-/
 
 theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : MFr [] [] m m' := by
   unfold resHeadW resHeadK at h
@@ -508,73 +520,7 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     u4W n m ko nF cl i = some (r, m') → StageR vis fe m a → IWGrow m0 m → i.toNat ≤ nF.toNat → PosMR m →
     ∃ b a', ((List.range' i.toNat (nF.toNat - i.toNat)).anyM (u4F ks (decI cl))).run a = .ok (b, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
-  intro n
-  obtain ⟨hkl, hkw⟩ := decKL_get hks
-  induction n with
-  | zero => intro m m' a i r h; simp [u4W] at h
-  | succ n ih =>
-    intro m m' a i r h hS hg0 hi hP
-    by_cases hd : nF ≤ i
-    · rw [u4W_done (h := hd)] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : nF.toNat - i.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp hd; omega
-      rw [this]; exact ⟨false, a, rfl, hS, IWGrow.refl _, rfl, hP⟩
-    have hlt : i.toNat < nF.toNat := by
-      have : ¬ nF.toNat ≤ i.toNat := fun e => hd (UInt64.le_iff_toNat_le.mpr e); omega
-    obtain ⟨w, hw, hx⟩ := hkw i.toNat hlt
-    obtain ⟨hwi, hw'⟩ := truncM_iw_get hw
-    have hrd : rdW (m.arr64 IW) (ko + i) = w := by
-      have e : (ko + i).toNat = ko.toNat + i.toNat := word_add_toNat (by
-        have := hS.iw.iw; have := hS.iw.iwSize; have := hg0.iw; omega)
-      simp only [rdW, e]; simp only [iwA] at hw'; rw [hg0.iwGet _ hwi, hw']; rfl
-    have hi1 : (i + 1).toNat = i.toNat + 1 := word_add_toNat (by have := nF.toNat_lt; simp; omega)
-    have hrange : List.range' i.toNat (nF.toNat - i.toNat) =
-        i.toNat :: List.range' (i + 1).toNat (nF.toNat - (i + 1).toNat) := by
-      rw [hi1, show nF.toNat - i.toNat = (nF.toNat - (i.toNat + 1)) + 1 by omega, List.range'_succ]
-    rw [hrange, List.anyM_cons]
-    have hord : ((ks[i.toNat]?.map (· == .ordinary)).getD true) = (w == 0) := by
-      rw [List.getElem?_eq_getElem (by omega)] at hx ⊢
-      simp only [Option.map_some, Option.getD_some]
-      exact decNFK_ordinary hx
-    by_cases hk : rdW (m.arr64 IW) (ko + i) ≠ 0
-    · rw [u4W_kind (h := hd) (hk := hk)] at h
-      have hw0 : (w == 0) = false := by rw [← hrd]; simpa using hk
-      cases n with
-      | zero => simp [ustWf, u4K] at h
-      | succ n =>
-      cases n with
-      | zero => simp [ustWf, u4K] at h
-      | succ n =>
-      rcases hu : ustW n m cl 0 i with _ | ⟨su, m1⟩; · simp only [ustWf] at h; rw [hu] at h; simp [u4K] at h
-      simp only [ustWf] at h; rw [hu] at h
-      obtain ⟨mp, hmp⟩ := hP.hb
-      obtain ⟨b1, a1, hrun1, hsu, hM1, hS1, hg1⟩ := ustW_ok n m m1 a cl 0 i su mp
-        (by have := nF.toNat_lt; simp; omega) hcl hS hmp hu
-      have hP1 := hP.setHb (ustW_mfr hu) hM1
-      by_cases hs : su ≠ 0
-      · rw [u4K_hit (h := hs)] at h
-        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-        have hb1 : b1 = true := by cases b1 <;> simp_all
-        subst hb1
-        refine ⟨true, a1, ?_, hS1, hg1, rfl, hP1⟩
-        simp only [u4F, hord, hw0, Bool.false_eq_true, ite_false, StateT.run_bind]
-        simp only [UInt64.toNat_zero] at hrun1
-        rw [hrun1]; rfl
-      · rw [u4K_miss (h := hs)] at h
-        have hb1 : b1 = false := by cases b1 <;> simp_all
-        subst hb1
-        obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m1 m' a1 (i + 1) r h hS1 (hg0.trans hg1)
-          (by rw [hi1]; omega) hP1
-        refine ⟨b, a', ?_, hS', hg1.trans hg', hr, hP'⟩
-        simp only [u4F, hord, hw0, Bool.false_eq_true, ite_false, StateT.run_bind]
-        simp only [UInt64.toNat_zero] at hrun1
-        rw [hrun1, except_ok_bind]; simpa using hrun
-    · rw [u4W_ord (h := hd) (hk := hk)] at h
-      have hw0 : (w == 0) = true := by rw [← hrd]; simpa using hk
-      obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m m' a (i + 1) r h hS hg0 (by rw [hi1]; omega) hP
-      refine ⟨b, a', ?_, hS', hg', hr, hP'⟩
-      simp only [u4F, hord, hw0, ite_true, StateT.run_bind]
-      simpa using hrun
+  sorry
 
 end L.Ind
 

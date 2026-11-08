@@ -76,11 +76,15 @@ theorem bncK3_some (h : ¬ r.headD 0 = 0) : bncK3 ctx (some (r, m)) =
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bncK2_some : bncK2 n vis (some (r, m)) = bncK3 (r.headD 0) (nhW n m vis (r.headD 0)) := rfl
 -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bncK1_none (h : r.headD 0 = 0) : bncK1 n vis p (some (r, m)) = none := by
   simp only [bncK1]; exact ite_eq_left h
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bncK1_ov (h : ¬ r.headD 0 = 0)
     (ho : r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0) :
     bncK1 n vis p (some (r, m)) = none := by simp only [bncK1]; rw [ite_eq_right h, ite_eq_left ho]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bncK1_some (h : ¬ r.headD 0 = 0)
     (ho : ¬ r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0) : bncK1 n vis p (some (r, m)) =

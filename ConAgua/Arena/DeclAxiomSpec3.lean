@@ -189,9 +189,11 @@ def clausePT (fe : IFEnv) (nm : NIdx) (k a b : Word) (T : AM IConstantVal) : AM 
   | none => pure false
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem clausePT_of_fp {fe : IFEnv} {nm : NIdx} {k ca cb : Word} {T : AM IConstantVal}
     {a a' : AState} {b : Bool} (h : FpT fe nm k ca cb T a b a') :
     (clausePT fe nm k ca cb T).run a = .ok (b, a') := by
   sorry
+-/
 
 end L.Arena

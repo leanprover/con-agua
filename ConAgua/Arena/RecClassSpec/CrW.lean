@@ -989,6 +989,7 @@ def ssK2 (cR : CallM) (N : Nat) (p vis np n d dom body slot : Word) :
 def ssK3 (cR : CallM) (N : Nat) (p vis np n d dom body slot mo2 ml2 : Word) (m2 : Mem) : Option (List Word × Mem) :=
   ssK4 cR N p vis np n d body slot mo2 ml2 (fvinternW m2 d dom)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `intern_fvar`. -/
 def ssK4 (cR : CallM) (N : Nat) (p vis np n d body slot mo2 ml2 : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
@@ -996,6 +997,7 @@ def ssK4 (cR : CallM) (N : Nat) (p vis np n d body slot mo2 ml2 : Word) :
   | some (fv, m3) =>
     if 4294967296 ≤ fv then none
     else ssK5 cR N p vis np n d slot mo2 ml2 (i1F m3 [CWF, body, fv, 0])
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `instantiate1_fast`. -/
@@ -1060,9 +1062,11 @@ theorem ssK3_eq : ssK3 cR N p vis np n d dom body slot mo2 ml2 m2 =
     ssK4 cR N p vis np n d body slot mo2 ml2 (fvinternW m2 d dom) := by rw [ssK3]
 theorem ssK4_big (h : 4294967296 ≤ fv) : ssK4 cR N p vis np n d body slot mo2 ml2 (some (fv, m3)) = none := by
   rw [ssK4, ite_eq_left h]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ssK4_ok (h : ¬ 4294967296 ≤ fv) : ssK4 cR N p vis np n d body slot mo2 ml2 (some (fv, m3)) =
     ssK5 cR N p vis np n d slot mo2 ml2 (i1F m3 [CWF, body, fv, 0]) := by
   rw [ssK4, ite_eq_right h]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ssK5_some : ssK5 cR N p vis np n d slot mo2 ml2 (some (r4, m4)) =
     ssK6 N slot (slotsW cR N m4 p vis np (n - 1) mo2 ml2 (d + 1) (r4.headD 0)) := by rw [ssK5]
@@ -1087,7 +1091,7 @@ grind_pattern [ind_grind] ssK2_some => ssK2 cR N p vis np n d dom body slot (som
 grind_pattern [ind_grind] ssK3_eq => ssK3 cR N p vis np n d dom body slot mo2 ml2 m2
 grind_pattern [ind_grind] ssK4_big => ssK4 cR N p vis np n d body slot mo2 ml2 (some (fv, m3))
 grind_pattern [ind_grind] ssK4_ok => ssK4 cR N p vis np n d body slot mo2 ml2 (some (fv, m3))
-grind_pattern [ind_grind] ssK5_some => ssK5 cR N p vis np n d slot mo2 ml2 (some (r4, m4))
+-- ronsync2 stage 2: grind_pattern [ind_grind] ssK5_some => ssK5 cR N p vis np n d slot mo2 ml2 (some (r4, m4))
 grind_pattern [ind_grind] ssK6_fail => ssK6 N slot (some (r5, m5))
 grind_pattern [ind_grind] ssK6_ok => ssK6 N slot (some (r5, m5))
 grind_pattern [ind_grind] ssK7_some => ssK7 (some (r6, m6))
@@ -1303,6 +1307,7 @@ def rdK1 (cR : CallM) (N : Nat) (p vis nP ro rl rc0 : Word) : Option (List Word 
       (r1.tail.tail.tail.headD 0))
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `class_read`.** -/
 def readW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _ => none
@@ -1310,6 +1315,7 @@ def readW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Wor
     if rl = 0 then some ([0, 0], m)
     else rdK1 cR N p vis nP ro rl (rdW (m.arr64 IW) ro)
       (cR N "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m)
+-/
 
 /-! ## Arms -/
 
@@ -1328,12 +1334,16 @@ theorem tsubW_le (h : b ≤ a) : tsubW a b = a - b := by simp [tsubW, h]
 theorem tsubW_gt (h : ¬ b ≤ a) : tsubW a b = 0 := by simp [tsubW, h]
 theorem readW_nil (h : rl = 0) : readW cR (N + 1) m p vis nP ro rl = some ([0, 0], m) := by
   simp [readW, h]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem readW_ok (h : rl ≠ 0) : readW cR (N + 1) m p vis nP ro rl =
     rdK1 cR N p vis nP ro rl (rdW (m.arr64 IW) ro)
       (cR N "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m) := by
   simp [readW, h]
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rdK1_fail (h : r1.headD 0 = 0) : rdK1 cR N p vis nP ro rl rc0 (some (r1, m1)) = some ([0, 0], m1) := by
   rw [rdK1, ite_eq_left h]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rdK1_ok (h : r1.headD 0 ≠ 0) : rdK1 cR N p vis nP ro rl rc0 (some (r1, m1)) =
     rdK2 cR N nP ro rl (slotsW cR N m1 p vis nP (tsubW (rdW (m1.arr64 IW) (rc0 + 1)) nP) 0 0 nP
@@ -1355,8 +1365,8 @@ grind_pattern [ind_grind] tsubW_le => tsubW a b
 grind_pattern [ind_grind] tsubW_gt => tsubW a b
 grind_pattern [ind_grind] readW_nil => readW cR (N + 1) m p vis nP ro rl
 grind_pattern [ind_grind] readW_ok => readW cR (N + 1) m p vis nP ro rl
-grind_pattern [ind_grind] rdK1_fail => rdK1 cR N p vis nP ro rl rc0 (some (r1, m1))
-grind_pattern [ind_grind] rdK1_ok => rdK1 cR N p vis nP ro rl rc0 (some (r1, m1))
+-- ronsync2 stage 2: grind_pattern [ind_grind] rdK1_fail => rdK1 cR N p vis nP ro rl rc0 (some (r1, m1))
+-- ronsync2 stage 2: grind_pattern [ind_grind] rdK1_ok => rdK1 cR N p vis nP ro rl rc0 (some (r1, m1))
 grind_pattern [ind_grind] rdK2_fail => rdK2 cR N nP ro rl (some (r2, m2))
 grind_pattern [ind_grind] rdK2_ok => rdK2 cR N nP ro rl (some (r2, m2))
 grind_pattern [ind_grind] rdK3_some => rdK3 (some (r3, m3))
