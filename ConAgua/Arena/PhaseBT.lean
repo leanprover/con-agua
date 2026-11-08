@@ -516,6 +516,7 @@ theorem cpd_ref (hm : mode = .verified) (hP : PhaseBProg p) {N : Nat} (hN : N �
   exact RefE.ret (AM.run_of_ok _ _ hok3) ⟨hR3, hcm3, hCr3⟩
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending` refines `checkPending` under `StageT`** (`cpd_ref`'s ok half). -/
 @[refines ConRon.Arena.checkPending]
 theorem checkPending_refinesT (hm : mode = .verified) (hP : PhaseBProg p) (n : Nat)
@@ -533,10 +534,12 @@ theorem checkPending_refinesT (hm : mode = .verified) (hP : PhaseBProg p) (n : N
   rintro r s' ⟨hloc, _, a', hrun, hp⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst]; exact hp.loop, hp.core, hp.cr⟩
+-/
 
 /-- `check_pending` is one of the loop's functions. -/
 theorem checkPending_loop : "check_pending" ∈ loopFns := loop_mem _ rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending` under `StageT`, carrying phase B's invariants**: the twin's (`TwinPend`, for
 the records after `j`), the memory's half (`LoopMem` by the loop's write set and the twin's
 `PExt`, `CoreMemos`). -/
@@ -564,22 +567,28 @@ theorem checkPending_loopT (hm : mode = .verified) (hP : PhaseBProg p) (n : Nat)
   have hrun' := AM.run_of_ok _ _ ho
   obtain ⟨hT', hx⟩ := TwinPend.step hT hrun'
   exact ⟨h0, ho, hL, hcm, hM.step hf hx, hT', hCr'⟩
+-/
 
 end specs
 
 /-! ## `check_pending_go` / `check_pending_next`: one model and one refinement -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending_go`'s unified model** (`check_pending_next` through its run: the two are
 mutually recursive). -/
 l_model checkPendingGo_specE (p : Prog) (hf : p.lookup "check_pending_go" = some checkPendingGoL)
   fns [hf ↦ checkPendingGoE] grind [arena_grind] unified
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending_next`'s unified model** (`check_pending` and `check_pending_go` through their
 runs). -/
 l_model checkPendingNext_specE (p : Prog)
   (hf : p.lookup "check_pending_next" = some checkPendingNextL)
   fns [hf ↦ checkPendingNextE] grind [arena_grind] unified
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A record's failure is the list's failure, as a value. -/
 theorem checkPendingList_fails_head {mode : ConLeche.CheckMode} {fe : IFEnv} {pc : PendingCheck}
     {rest : List PendingCheck} {a : AState} {c : Word}
@@ -591,7 +600,9 @@ theorem checkPendingList_fails_head {mode : ConLeche.CheckMode} {fe : IFEnv} {pc
     | .ok ((), s') => checkPendingList mode fe rest s'
     | .error e => .ok (.error (e, pc.pos), AState.abandoned)) = _
   rw [hce]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A record that checks ok: the list fails as the rest does. -/
 theorem checkPendingList_fails_tail {mode : ConLeche.CheckMode} {fe : IFEnv} {pc : PendingCheck}
     {rest : List PendingCheck} {a : AState} {c : Word} (hok : AM.ok (checkPending mode fe pc) a)
@@ -606,18 +617,22 @@ theorem checkPendingList_fails_tail {mode : ConLeche.CheckMode} {fe : IFEnv} {pc
     rw [hrun]; rfl
   unfold TwinFailsV at h ⊢
   rw [e]; exact h
+-/
 
 section phaseB
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog) (fe : IFEnv)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What `check_pending_go` from check `k` ends with under `StageT`: `PendPost` (phase B over the
 checks from `k` accepts, the loop's relation after), the core's memos and the memory's half
 `LoopMem` after. -/
 def PendPostT (m : Mem) (a : AState) (v : Word) (k : Nat) : Prop :=
   PendPost mode pins dn ds fe pend m a v k ∧ CoreMemos m ∧
     LoopMem dn m (AM.st (checkPendingList mode fe (pend.toList.drop k)) a) ∧ L.Stubs.CrOK m
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending_go`'s refinement at fuel `n`, both outcomes**: from phase B's twin invariant
 (`TwinPend`) at check `j`, the loop's relation and the memory's half, an ok value ends in
 `PendPostT`; an error (under `check_pending`'s `CpG`) claims that phase B over the
@@ -629,7 +644,9 @@ def CPGoRef (n : Nat) : Prop :=
     RefC (CpG p) (checkPendingGoE p n m j cnt vis)
       (fun v => PendPostT mode pins dn ds fe pend v.2 a₀ vis j.toNat)
       (ErrClaimV (checkPendingList mode fe (pend.toList.drop j.toNat)) a₀)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `check_pending_next`'s, the same (`j` below the count). -/
 def CPNextRef (n : Nat) : Prop :=
   ∀ (m : Mem) (a₀ : AState) (j cnt vis : Word), j.toNat < pend.size → cnt.toNat = pend.size →
@@ -638,7 +655,9 @@ def CPNextRef (n : Nat) : Prop :=
     RefC (CpG p) (checkPendingNextE p n m j cnt vis)
       (fun v => PendPostT mode pins dn ds fe pend v.2 a₀ vis j.toNat)
       (ErrClaimV (checkPendingList mode fe (pend.toList.drop j.toNat)) a₀)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `check_pending_go`'s spec under `StageT` at fuel `n`. -/
 def CPGoSpecT (n : Nat) : Prop :=
   ∀ (s₀ : St) (a₀ : AState) (j cnt vis : Word), j.toNat ≤ pend.size → cnt.toNat = pend.size →
@@ -647,7 +666,9 @@ def CPGoSpecT (n : Nat) : Prop :=
     L.Stubs.CrOK s₀.mem →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending_go" [j, cnt, vis]
     ⦃fun _ s' => LocEq s' s₀ ∧ PendPostT mode pins dn ds fe pend s'.mem a₀ vis j.toNat; ⊤⦄
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `check_pending_next`'s spec under `StageT` at fuel `n`. -/
 def CPNextSpecT (n : Nat) : Prop :=
   ∀ (s₀ : St) (a₀ : AState) (j cnt vis : Word), j.toNat < pend.size → cnt.toNat = pend.size →
@@ -656,7 +677,9 @@ def CPNextSpecT (n : Nat) : Prop :=
     L.Stubs.CrOK s₀.mem →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending_next" [j, cnt, vis]
     ⦃fun _ s' => LocEq s' s₀ ∧ PendPostT mode pins dn ds fe pend s'.mem a₀ vis j.toNat; ⊤⦄
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending`'s error claim** under `checkPending_loopT`'s hypotheses (the threads' error
 chain reads it at each group). -/
 def CPErrT : Prop :=
@@ -665,11 +688,13 @@ def CPErrT : Prop :=
     LoopR pins s₀.mem a₀ vis fe ds → LoopMem dn s₀.mem a₀ → CoreMemos s₀.mem →
     j.toNat < 2 ^ 62 → L.Stubs.CrOK s₀.mem →
     CoreSpecE p n "check_pending" [j, vis] (checkPending mode fe (pdAt pend j)) s₀ a₀
+-/
 
 section cp
 variable (hP : PhaseBProg p) (hm : mode = .verified)
 include hP hm
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending_go` and `check_pending_next` refine `checkPendingList` from check `j` on, both
 outcomes**, by one induction on the fuel over the two models: `check_pending`'s ok run is the twin's
 step (`checkPending_loopT`), its failure the twin's value failure at the record (`cpd_ref`); the
@@ -753,7 +778,9 @@ theorem cp_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
     · rw [hd, this.2.2]; exact hp2
     · rw [hd, this.2.1]; exact hp3
     · rw [hd, this.2.1]; exact hp5
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending_go` refines `checkPendingList` under `StageT`** from check `j` on (and
 `check_pending_next` for one check and the rest): `cp_ref`'s ok halves as triples. -/
 @[refines ConRon.Arena.checkPendingList]
@@ -767,7 +794,9 @@ theorem checkPendingGo_refinesT (n : Nat) (hn : n ≤ 2 ^ 62) :
   · intro s₀ a₀ j cnt vis hj hc hT hR hM hcm hCr
     exact (RefC.triple (checkPendingNext_specE p hP.cpx n s₀ j cnt vis)
       (h.2 s₀.mem a₀ j cnt vis hj hc hT hR hM hcm hCr) :)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **L's phase B under `StageT` refines phase B on the worker** (the second half of
 `SeqAccepts`): a returning `check_pending_go(0, cnt, vis)` from phase A's memory (the twin's
 caches are empty: `TwinPend.caches`) means the twin's phase B on `a₀.worker` accepts; beside it
@@ -790,7 +819,9 @@ theorem checkPendingGo_workerT (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ :
   simp only [UInt64.toNat_zero, List.drop_zero] at hrun hres
   rw [hres] at hrun
   exact checkPendingList_worker_ok hT.caches hrun
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `CPErrT` from `cpd_ref`. -/
 theorem checkPending_errT (hG : CpG p) : CPErrT mode pins dn ds p fe pend := by
   intro n hn s₀ a₀ j vis hj hT hR hM hc hj62 hCr
@@ -798,6 +829,7 @@ theorem checkPending_errT (hG : CpG p) : CPErrT mode pins dn ds p fe pend := by
   rw [drop_cons_pdAt pend j hj h1] at hT
   exact RefE.coreSpecE (checkPending_specE p hP.cp n s₀ j vis) hG.nv hG
     (cpd_ref mode pins dn ds p hm hP (by omega) hj hT hR hM hc hCr)
+-/
 
 end cp
 end phaseB

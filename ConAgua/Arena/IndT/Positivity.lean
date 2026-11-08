@@ -104,12 +104,14 @@ noncomputable def bncC (cR : CallM) (n : Nat) (m : Mem) (vis p cvO cvL : Word) :
     rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvO + 3), 0] m)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 theorem bnc_specC (p : Prog) (hP : NckProg p) (hl : NhLook p)
     (hp : p.lookup "block_nest_ctx" = some blockNestCtx) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis q cvO cvL : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 2)) "block_nest_ctx" [vis, q, cvO, cvL]
     ⦃fun r s' => LocEq s' s₀ ∧ bncC cR n s₀.mem vis q cvO cvL = some (r, s'.mem); ⊤⦄ := by
   sorry
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `bncC_sim` with the walk memos: `AbsOK` after, `open_pis_at_fvars_f`'s from its `Sim`, the
@@ -230,6 +232,7 @@ theorem bncC_simA (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     omega
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_nest_ctx`'s model, its `open_pis_at_fvars_f` the real call, leaves the walk memos
 alone** (`bncW_mfr`'s). -/
 theorem bncC_mfr {p : Prog} (hOpf : OpfF p) {n : Nat} {m m' : Mem} {vis q cvO cvL : Word} {r : List Word}
@@ -255,6 +258,7 @@ theorem bncC_mfr {p : Prog} (hOpf : OpfF p) {n : Nat} {m m' : Mem} {vis q cvO cv
   simp only [bncK3_some m3 (r2.headD 0) r3 h30, Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]
   exact f2.trans (pos3_nhGoW_mfr _ _ _ _ _ _ _ _ _ _ _ h3)
+-/
 
 set_option experimental.vcgen true in
 /-- **`check_block_positivity`'s unified model**: the callees outside the verdict closure lifted,
