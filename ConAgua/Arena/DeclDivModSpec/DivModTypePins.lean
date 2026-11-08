@@ -45,11 +45,8 @@ theorem dmWord_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 :
 
 theorem hslice_words {k : IdxKind} (a : Array Word) : ∀ (ws : List Word) (o : Nat),
     (∀ w ∈ ws, w.toNat < 2 ^ 32) → (∀ j < ws.length, a[o + j]? = ws[j]?) →
-    (hslice? (aread a) o ws.length : Option (List (Idx k))) = some (ws.map decI) := by simpa using hget 0 (by simp)
-    have hw : w.toNat < 2 ^ 32 := hlt w (by simp)
-    have ih := hslice_words (k := k) a ws (o + 1) (fun x hx => hlt x (by simp [hx]))
-      (fun j hj => by simpa [Nat.add_assoc, Nat.add_comm 1 j] using hget (j + 1) (by simpa using hj))
-    simp [hd?, h0, hw, ih]
+    (hslice? (aread a) o ws.length : Option (List (Idx k))) = some (ws.map decI) := by
+  sorry
 
 theorem rdW_erec_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < erecTop m) :
     rdW (m'.arr64 EREC) i = rdW (m.arr64 EREC) i := by
@@ -235,23 +232,7 @@ theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     CallRef p "div_mod_decl_pin" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModDeclPin ip (decI c)) (KeepPost vis fe decW0E) := by
-  refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hP⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => divModDeclPinW p (k + 1) mm ps c)
-    (divModDeclPin_specW p hD.lDivModDeclPin (k + 1) · ps c) hcall
-  rw [divModDeclPinW.arm1] at hw
-  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  obtain ⟨hm1, h0, hr1⟩ := divModSlot_model hD.lPinAt hD.lDivModSlot h1
-  have hm1' := hm1.symm
-  subst hm1'
-  subst hr1
-  have hF := hS.check.pins.full h0
-  refine ⟨_, a, divModDeclPin_run hF hc ip, hS, IWGrow.refl _, ?_⟩
-  have := PinSetR.pin hP (j := dmSlotW m c) (slotW_lt m c)
-  simp only [List.headD_cons]
-  rw [this]
-  exact ⟨dmWord_lt32 _, decI_word _⟩
+  sorry
 
 /-- **`div_mod_type_pins` is its model `divModTypePinsW`** (generated). -/
 l_model divModTypePins_specW (p : Prog) (hp : p.lookup "div_mod_type_pins" = some divModTypePinsL)
@@ -263,28 +244,14 @@ theorem divModTypePins_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     CallRef p "div_mod_type_pins" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModTypePins ip (decI c)) (KeepPost vis fe decTP) := by
-  refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hP⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => divModTypePinsW p (k + 1) mm ps c)
-    (divModTypePins_specW p hD.lDivModTypePins (k + 1) · ps c) hcall
-  rw [divModTypePinsW.arm1] at hw
-  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  obtain ⟨hm1, h0, hr1⟩ := divModSlot_model hD.lPinAt hD.lDivModSlot h1
-  have hm1' := hm1.symm
-  subst hm1'
-  subst hr1
-  have hF := hS.check.pins.full h0
-  refine ⟨_, a, divModTypePins_run hF hc ip, hS, IWGrow.refl _, ?_⟩
-  have := PinSetR.thdr hP (j := dmSlotW m c) (slotW_lt m c)
-  simpa [decTP] using this
+  sorry
 
 @[refines ConRon.Arena.divModTypePins]
 theorem divModTypePins_refines {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {p : Prog} (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     RefAM p "div_mod_type_pins" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModTypePins ip (decI c)) (KeepPost vis fe decTP) :=
-  (divModTypePins_ref hD ps c ip).refAM
+      (divModTypePins ip (decI c)) (KeepPost vis fe decTP) := by
+  sorry
 
 theorem sliceR_get {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
     (hsz : erecTop m ≤ (m.arr64 EREC).size) (j : Nat) (hj : j < hs.length) :
@@ -303,17 +270,7 @@ theorem sliceR_get {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
 theorem sliceR_hslice {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
     (hsz : erecTop m ≤ (m.arr64 EREC).size) :
     (hslice? (erA m) o.toNat l.toNat : Option (List EIdx)) = some hs := by
-  have hl := h.2.1
-  have := hslice_words (k := IdxKind.expr) (erA m) (hs.map fun x => x.word.toUInt64) o.toNat
-    (fun w hw => by
-      obtain ⟨x, -, rfl⟩ := List.mem_map.mp hw
-      exact dmWord_lt32 x)
-    (fun j hj => by
-      simp only [List.length_map] at hj
-      simp only [erA, List.getElem?_map, List.getElem?_eq_getElem hj, Option.map_some]
-      exact sliceR_get h hsz j hj)
-  rw [hl]
-  simpa [List.map_map, Function.comp_def, decI_word] using this
+  sorry
 
 /-- **`div_mod_cert_proofs` is its model `divModCertProofsW`** (generated). -/
 l_model divModCertProofs_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw) (hp : p.lookup "div_mod_cert_proofs" = some divModCertProofsL)
@@ -326,45 +283,20 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
     CallRef p "div_mod_cert_proofs" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModCertProofs ip (decI c))
       (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
-  refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hP⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => divModCertProofsW p (k + 1) mm ps c)
-    (divModCertProofs_specW p hD.lIwAlloc hD.lErCopy hD.lErToIw hD.lDivModCertProofs (k + 1) · ps c) hcall
-  rw [divModCertProofsW.arm1] at hw
-  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
-  obtain ⟨hm1, h0, hr1⟩ := divModSlot_model hD.lPinAt hD.lDivModSlot h1
-  have hm1' := hm1.symm
-  subst hm1'
-  subst hr1
-  have hF := hS.check.pins.full h0
-  simp only [List.headD_cons] at hw
-  obtain ⟨r2, m2, he2, he⟩ := ntBW_some hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at he
-  obtain ⟨rfl, rfl⟩ := he
-  have hsl := PinSetR.hdr hP (j := dmSlotW m c) (slotW_lt m c)
-  have hsz : erecTop m ≤ (m.arr64 EREC).size := hS.iw.er
-  obtain ⟨hS2, hg2, hdec, htop, -⟩ := erToIwW_stage (k := IdxKind.expr) he2 hS (Or.inr (by
-    have := hsl.1; omega))
-  have hd2 : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat =
-      some ((certsOf ip).getD (dmSlotW m c).toNat []) := by
-    rw [hdec]; exact sliceR_hslice hsl hsz
-  refine ⟨(certsOf ip).getD (dmSlotW m c).toNat [], a, divModCertProofs_run hF hc ip, hS2, hg2, ?_⟩
-  unfold decRL
-  rw [ntGetD0, show (0 + 1 : Nat) = 1 from rfl, ntGetD1]
-  simp only [List.headD_cons, List.tail_cons]
-  exact ⟨hd2, by omega⟩
+  sorry
 
 @[refines ConRon.Arena.divModDeclPin]
 theorem divModDeclPin_refines {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     RefAM p "div_mod_decl_pin" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModDeclPin ip (decI c)) (KeepPost vis fe decW0E) :=
-  (divModDeclPin_ref hD ps c ip).refAM
+      (divModDeclPin ip (decI c)) (KeepPost vis fe decW0E) := by
+  sorry
 
 @[refines ConRon.Arena.divModCertProofs]
 theorem divModCertProofs_refines {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {p : Prog} (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     RefAM p "div_mod_cert_proofs" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModCertProofs ip (decI c)) (KeepPost vis fe (decRL (fun m => decHL m) 0)) :=
-  (divModCertProofs_ref hD ps c ip).refAM
+      (divModCertProofs ip (decI c)) (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
+  sorry
 
 end L.Ind

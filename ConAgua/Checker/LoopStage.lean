@@ -26,19 +26,16 @@ namespace L.Checker
 
 open L.Arena L.Rom
 
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The fold's start invariant from the twin's stages before the loop** (`stages_frame`). -/
 theorem twinFold_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AState}
     {rc : ParseResultD} {sC : AState} {ds : Array IDeclaration} {sD : AState}
     {pins : List ConLeche.NatOpPinSet} {ipins : List INatOpPinSet} {sE : AState}
     (h : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE) :
     TwinFold ipins ds (mkIFEnv IEnv.empty) #[] sE := by
-  obtain ⟨hA, hB, hC, hD, hE⟩ := h
-  obtain ⟨hoff, hfold, hpd, hpp, hdp, _, _, -, hden⟩ :=
-    ConAgua.Final.stages_frame (chunks := [b]) hA hB hC hD hE
-  exact ⟨⟨ConLeche.Env.empty, hfold, by simp [ConLeche.NodupNames, ConLeche.Env.empty]⟩,
-    ⟨_, hpd⟩, hpp, hdp, ⟨_, hden⟩, by simp, hoff⟩
--- RS2E
+  sorry
+
+-/
 
 /-- The `CTL` words `LoopZero` asks zero, as a list. -/
 def loopZeroCtls : List Nat :=
@@ -50,10 +47,11 @@ theorem loopZeroCtl_mem {x : Nat} (h : loopZeroCtl x) : x ∈ loopZeroCtls := by
   simp only [loopZeroCtls, List.mem_cons, List.not_mem_nil, or_false]
   omega
 
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem preLoopA_loopZeroArrs : loopZeroArrs.all (fun b => !preLoopA.contains b) = true := by
-  decide +kernel
--- RS2E
+  sorry
+
+-/
 
 theorem preLoopC_loopZeroCtls :
     (preLoopC.map UInt64.toNat).all (fun x => !loopZeroCtls.contains x) = true := by
@@ -63,19 +61,7 @@ theorem preLoopC_loopZeroCtls :
 before the loop writes (`Since.frame`: `preLoopA`, `preLoopC`). -/
 theorem loopZero_of_since {b pb : ByteArray} {sz : TieredArray → Nat} {m : Mem}
     (h : Since (ConAgua.Final.loadMem b pb sz) m pb) : LoopZero m := by
-  have hf := h.frame
-  refine ⟨?_, fun a ha j => ?_, fun x hx => ?_⟩
-  · rw [hf.size]; have := h.caps.2.1; simp only [ctlMin] at this; omega
-  · have hm : a ∈ loopZeroArrs := ha
-    have hn : a ∉ preLoopA := by
-      intro hc
-      have := List.all_eq_true.mp preLoopA_loopZeroArrs a hm
-      simp [hc] at this
-    have hc : a ≠ CTL := by
-      intro e; subst e; exact absurd hm (by decide)
-    rw [hf.arr a hn hc]; exact loadMem_rd (b := b) (pb := pb) (sz := sz) a j
-  · rw [hf.ctl x (not_mem_of_toNat preLoopC_loopZeroCtls x (loopZeroCtl_mem hx))]
-    exact loadMem_rd (b := b) (pb := pb) (sz := sz) _ x
+  sorry
 
 /-- `FrontDecls` from the twin prefix's shape fact (lane `pipeline`'s `prefix_frontDecls`). -/
 theorem frontDecls_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AState}

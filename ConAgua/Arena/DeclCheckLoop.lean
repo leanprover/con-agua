@@ -58,12 +58,12 @@ structure CheckDeclProg (p : Prog) : Prop where
   dm : DmProg10 p
   dgClosed : StepIn p dgFns
 
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `subst_const0` at the walk fuel: helper `decls3-nat`'s `sc0_ref`. -/
 theorem substC0_of {p : Prog} (hN : NatSubProg p) :
-    ∀ dn vis fe, SubstC0 p dn vis fe :=
-  fun _ _ _ nm r h hn hr hh k m a res m' hS hc =>
-    sc0_ref hN nm r coreWalkFuel 4000000000 rfl h k m a res m' hS hn hr hh hc
--- RS2E
+    ∀ dn vis fe, SubstC0 p dn vis fe := by
+  sorry
+
+-/
 
 end L.Arena
