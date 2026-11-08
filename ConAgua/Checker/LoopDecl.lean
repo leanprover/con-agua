@@ -218,10 +218,12 @@ def stepPc (w : Word) : Bool :=
   decide (w.toNat < 1024) && w.toNat != 130 && w.toNat != 150 && w.toNat != 151 &&
     (decide (w.toNat < 140) || decide (147 < w.toNat))
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem stepPa_mem (a : TieredArray) (h : stepPa a = true) : a ∈ stepA := by
   simp only [stepPa, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,
     ne_eq, List.contains_iff_mem] at h
   simp [stepA, List.mem_filter, h]
+-/
 
 theorem stepPc_mem (w : Word) (h : stepPc w = true) : w ∈ stepC := by
   simp only [stepPc, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,
@@ -231,8 +233,10 @@ theorem stepPc_mem (w : Word) (h : stepPc w = true) : w ∈ stepC := by
   simp only [decide_eq_true_eq]
   exact ⟨h.1.1.1.2, h.1.1.2, h.1.2, h.2⟩
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Every function of the checker passes the declaration texts' per-function check. -/
 prog_all checkerProg_declChk : checkerProg (wsChk CTL stepPa stepPc declLoopTree)
+-/
 
 theorem checkerProg_declClosed : closedA checkerProg stepA stepC declLoopFns = true :=
   closedW_of_all declLoopTree.eq stepPa_mem stepPc_mem checkerProg_declChk

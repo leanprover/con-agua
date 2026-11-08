@@ -44,6 +44,7 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model classConstOkHeaderE_spec (p : Prog) (hP : IhProg p)
     (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
   fns [hh ↦ classConstOkHeaderE]
@@ -54,6 +55,7 @@ l_model classConstOkHeaderE_spec (p : Prog) (hP : IhProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- **The twin's guards of `classConstOk`** (the prefix `class_const_ok_header` stands for): the
 syntactic checks of the constant, in `classConstOk`'s order and with its messages. -/
@@ -78,7 +80,7 @@ theorem cchT_bind (mode : ConLeche.CheckMode) (fe : IFEnv) (cv : IConstantVal) :
     ConRon.Arena.classConstOk mode fe cv = cchT fe cv >>= fun _ => (do
       let stype ← inferTypeCore mode fe checkFuel 0 cv.type
       let _u ← ensureSortCore mode fe checkFuel 0 stype) := by
-  simp only [ConRon.Arena.classConstOk, cchT, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
+  sorry
 
 /-- A hit of `reserved_from`: one of the reserved words is `x`. -/
 theorem ibResFromW_hit (n : Nat) : ∀ (m : Mem) (x j c : Word), j.toNat ≤ 16 → c ≠ 0 →
@@ -130,6 +132,7 @@ structure CchPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   grow : IWGrow m m'
   afr : AFr m m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`class_const_ok_header` refines `classConstOk`'s guards (`cchT`), both outcomes**: the
 name's guards (`env_find`, `reserved_contains`), the level parameters' copy and their
 duplicates (`cv_lps`, `sl_nodup`), the four walks under `StageT` (`lbbF_okT`, `hffF_okT`,
@@ -259,6 +262,7 @@ theorem cch_ref {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   · obtain ⟨M9, hC9⟩ := hS9.core
     exact fun hG => uce_errClaim_hi hG.uce hG.nv hC9.arena.base hC9.pins hwtl (by decide) h10 "type of"
   · exact RefE.of_cls0 rfl
+-/
 
 end L.Arena
 
@@ -268,6 +272,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model classConstOkE_spec (p : Prog) (h : IhProg p)
     (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
     (hf : p.lookup "class_const_ok" = some classConstOkL)
@@ -275,6 +280,7 @@ l_model classConstOkE_spec (p : Prog) (h : IhProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `class_const_ok` gives besides the twin's run (from `m`): the stage invariant, the
 growth, the abstraction memo. -/
@@ -297,28 +303,9 @@ theorem cco_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q : Word} 
     (hA : AbsOK m) (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) :
     RefE (VerdictCtxU p) (classConstOkE p n m vis q) (ConRon.Arena.classConstOk V fe cv) a
       (fun v _ a' => CcoPost dn vis fe m v.2 a') := by
-  cases n with
-  | zero => rw [classConstOkE.eq_1]; exact RefE.of_cls0 (by simp)
-  | succ n =>
-  rw [classConstOkE.arm1, cchT_bind]
-  refine RefE.bindE (fun _ => rfl) id (cch_ref hApd hCrk.crf n hS hq' hqb hlps hA.crMemo.crOK)
-    fun ⟨r1, m1⟩ _ a1 hrun ⟨hS1, hg1, hA1⟩ => ?_
-  dsimp only [classConstOkE.k_class_const_ok_header]
-  have hq1 : decCV (erA m1) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg1) hq'
-  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hq1
-  have et : rdW (m1.arr64 EREC) (q + 3) = wt :=
-    rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hwt
-  rw [et, hty]
-  refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n (by omega) hS1 0 wt hwtl _ h2)
-    (RSim.coreAbs hq.closed (by decide) (hA1 hA) (inferT_rsim hq n (by omega) hS1 0 wt hwtl))
-    fun r2 m2 _ a2 _ hrun2 ⟨⟨hS2, hg2, hb2, rfl⟩, hA2⟩ => ?_
-  dsimp only [classConstOkE.k_infer_type_core]
-  refine RefE.bindCall (fun _ => rfl)
-    (fun hG _ h3 => hG.core.ensureSortCore n (by omega) hS2 0 (r2.headD 0) hb2 _ h3)
-    (RSim.coreAbs hq.closed (by decide) hA2 (ensureSortT_rsim hq n (by omega) hS2 0 (r2.headD 0) hb2))
-    fun r3 m3 _ a3 _ hrun3 ⟨⟨hS3, hg3, _⟩, hA3⟩ => ?_
-  exact RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, hA3⟩
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd hCrk in
 /-- **`class_const_ok` refines `classConstOk`** under `StageT` (`cco_ref`'s ok half). -/
 @[refines ConRon.Arena.classConstOk]
@@ -337,6 +324,7 @@ theorem classConstOk_refinesT (h : IhProg p)
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, ⟨by rw [hst]; exact hR.stage, hR.grow, trivial⟩, hR.abs⟩
+-/
 
 end cco
 

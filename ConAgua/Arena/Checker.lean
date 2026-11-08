@@ -74,6 +74,7 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 
 Each stub is a not-yet-translated callee; the spec is what the real code will have to prove. -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The promotion's two entries are `Promote.lean`'s `promote_vg(g, vis)` and
 `promote_new(k, kt, vis, fresh)` (program: `PromoteProg`). `promote_vg` refines `promoteVG
 PMemo.empty coreWalkFuel` under the loop's relation (`PromoteRecRef.lean`'s `vg_rel`). -/
@@ -136,7 +137,9 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
   · exact PinSetsR.grow hR.pinsets ⟨hg.top, hg.get⟩
       (hf.ctl 150 (fun h => by have := hC _ h; simp at this))
       (hf.ctl 151 (fun h => by have := hC _ h; simp at this))
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `tbl_grown(nt)` under the loop's relation: the tables list's length minus `nt`. -/
 theorem tblGrown_loop (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
@@ -147,7 +150,9 @@ theorem tblGrown_loop (hpr : PromoteProg p) :
   intro n s₀ a₀ vis fe pend nt hR
   refine triple_post (tblGrown_spec p hpr n s₀ nt) fun r s' ⟨h1, h2, h3⟩ => ⟨h1, h2, ?_⟩
   rw [h3, hR.check.env.tables_length]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem promoteNew_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
       (k kt fresh : Word) (pm : PMemo), (if fresh = 0 then PMemoR s₀.mem pm else pm = PMemo.empty) →
@@ -165,6 +170,7 @@ theorem promoteNew_spec (hpr : PromoteProg p) :
     simp [AM.res, hrun]
   rw [hst, hres]
   exact ⟨hl, hok, hLoop⟩
+-/
 
 end stubs
 
@@ -185,8 +191,8 @@ structure BracketProg (p : Prog) : Prop where
   im : p.lookup "if_clear" = some (memoClearG imSch)
   fm : p.lookup "fm_clear" = some (memoClearG frSch)
   /-- The promotion (`promote_vg`, `promote_new` and their callees). -/
-  pr : PromoteProg p
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem PendR.frameLo {m m' : Mem} {C : List Word}
     (hf : MemFrame scrArrs C m m') (hC : ∀ x ∈ C, x.toNat < 128) (h : PendR m pend) : PendR m' pend := by
   have hP : m'.arr64 PEND = m.arr64 PEND := hf.arr _ (by decide) (by decide)
@@ -197,22 +203,15 @@ theorem PendR.frameLo {m m' : Mem} {C : List Word}
   refine ⟨by simp only [pendCount, hc]; exact h.count, fun j hj => ?_,
     by simp only [pendCount, hc]; exact h.bound⟩
   rw [← h.recs j hj]; simp only [decPend, hP, hE]
+-/
 
 theorem LoopR.of_lo {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {ds : Array IDeclaration} {C : List Word}
     (h : LoopR pins m a vis fe ds) (hC' : CheckR m' a' vis fe) (hf : MemFrame scrArrs C m m')
     (hC : ∀ x ∈ C, x.toNat < 128) : LoopR pins m' a' vis fe ds := by
-  have h1 : m'.arr64 DECL = m.arr64 DECL := hf.arr _ (by decide) (by decide)
-  have h2 : m'.arr64 DLP = m.arr64 DLP := hf.arr _ (by decide) (by decide)
-  exact ⟨hC', h.pend.frameLo hf hC, by rw [h1, h2]; exact h.decls,
-    IWOK.frame hf (by decide) (by decide) (fun h' => by have := hC _ h'; simp at this)
-      (fun h' => by have := hC _ h'; simp at this) h.iw,
-    h.pmemo.imp fun _ hp => hp.frame (by decide) (fun x hx => .inl (by have := hC x hx; omega)) hf,
-    PinSetsR.grow h.pinsets (RecGrow.of_eq (hf.arr _ (by decide) (by decide))
-        (hf.ctl 129 (fun h' => by have := hC _ h'; simp at this)))
-      (hf.ctl 150 (fun h' => by have := hC _ h'; simp at this))
-      (hf.ctl 151 (fun h' => by have := hC _ h'; simp at this))⟩
+  sorry
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section bracket
 variable (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
   (hb : BracketProg p)
@@ -269,13 +268,17 @@ theorem drop_loop {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : AStat
   · exact Nat.lt_trans (resetCtl_lt x (List.mem_append_left _ h)) (by decide)
 
 end bracket
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem LoopR.restrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {ds : Array IDeclaration}
     (h : LoopR pins m a vis fe ds) (v : Word) : LoopR pins m a v (fe.restrictTo v.toNat) ds :=
   ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo v, h.check.mode⟩, h.pend, h.decls, h.iw,
     h.pmemo, h.pinsets⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem LoopR.unrestrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v vis : Word}
     {fe : IFEnv} {k : Nat} {ds : Array IDeclaration}
     (h : LoopR pins m a v (fe.restrictTo k) ds) (hv : fe.visibleBelow = vis.toNat) :
@@ -284,16 +287,22 @@ theorem LoopR.unrestrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLec
   have e : (fe.restrictTo k).restrictTo vis.toNat = fe := by
     cases fe; simp only [IFEnv.restrictTo] at hv ⊢; rw [hv]
   rwa [e] at this
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Pending check `j` (a plain function, as `dsAt`). -/
 def pdAt (j : Word) : PendingCheck := pend.getD j.toNat default
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The pending checks after pushing `(g, i, vis)`. -/
 def pendPushMem (m : Mem) (g i vis : Word) : Mem :=
   let c := rdW (m.arr64 CTL) 130
   (((m.set64 PEND (3 * c) g).set64 PEND (3 * c + 1) i).set64 PEND (3 * c + 2) vis).set64 CTL 130
     (c + 1)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem pendPushMem_frame (m : Mem) (g i v : Word) : MemFrame [PEND] [130] m (pendPushMem m g i v) := by
   simp only [pendPushMem]
   have fP : ∀ (m₁ : Mem) (k x : Word), MemFrame [PEND] [130] m₁ (m₁.set64 PEND k x) :=
@@ -301,16 +310,22 @@ theorem pendPushMem_frame (m : Mem) (g i v : Word) : MemFrame [PEND] [130] m (pe
   have fC : ∀ (m₁ : Mem) (x : Word), MemFrame [PEND] [130] m₁ (m₁.set64 CTL 130 x) :=
     fun m₁ x => MemFrame.mono (MemFrame.setCtl m₁ 130 x) (by simp) (by simp)
   exact (((fP _ _ _).trans (fP _ _ _)).trans (fP _ _ _)).trans (fC _ _)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Pushing a pending check keeps the promotion memo (`PEND`, `CTL[130]` are not its). -/
 theorem PMemoR.pendPush {m : Mem} {pm : PMemo} (h : PMemoR m pm) (g i v : Word) :
     PMemoR (pendPushMem m g i v) pm :=
   h.frame (by simp; decide) (by simp) (pendPushMem_frame m g i v)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem LoopR.vis {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v : Word}
     {fe : IFEnv} {ds : Array IDeclaration}
     (h : LoopR pins m a v fe ds) : fe.visibleBelow = v.toNat := h.check.env.vis
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Pushing a pending check** keeps the loop's relation. -/
 theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {ds : Array IDeclaration}
@@ -382,6 +397,7 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
       have : 3 * c.toNat + 2 < (m.arr64 PEND).size := hb
       simp [this, show 3 * c.toNat < (m.arr64 PEND).size by omega,
         show 3 * c.toNat + 1 < (m.arr64 PEND).size by omega, hg]
+-/
 
 @[simp] theorem exc_ok_bind {ε α β : Type} (x : α) (f : α → Except ε β) :
     (Except.ok x >>= f) = f x := rfl
@@ -389,6 +405,7 @@ theorem LoopR.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
 section twin
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `installStep`'s `none` arm, named (`nt` the table count before the step). -/
 def isNoneT (vis nt : Nat) (fe' : IFEnv) :
     AM (IFEnv × Array PendingCheck) := do
@@ -396,7 +413,9 @@ def isNoneT (vis nt : Nat) (fe' : IFEnv) :
     (fe'.env.tables.length - nt) fe'
   dropScratch
   pure (r.2, pend)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `installStep`'s `some` arm, named. -/
 def isSomeT (i vis nt : Nat) (fe' : IFEnv) (vg : ValueGroup) :
     AM (IFEnv × Array PendingCheck) := do
@@ -404,14 +423,18 @@ def isSomeT (i vis nt : Nat) (fe' : IFEnv) (vg : ValueGroup) :
   let r2 ← promoteNew r.1 coreWalkFuel (fe'.visibleBelow - vis) (fe'.env.tables.length - nt) fe'
   dropScratch
   pure (r2.2, pend.push ⟨r.2, i, vis⟩)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `installStep` after `installStepGo`, named. -/
 def installStepK (i vis nt : Nat) (r : IFEnv × Option ValueGroup) :
     AM (IFEnv × Array PendingCheck) :=
   match r.2 with
   | none => isNoneT vis nt r.1 pend
   | some vg => isSomeT i vis nt r.1 pend vg
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem installStep_eq (i : Nat) (fe : IFEnv) (pd : IDeclaration) :
     installStep mode pins i fe pend pd = (do
       flushCaches
@@ -419,15 +442,21 @@ theorem installStep_eq (i : Nat) (fe : IFEnv) (pd : IDeclaration) :
       let r ← installStepGo mode pins fe pd
       installStepK i fe.visibleBelow fe.env.tables.length pend r) := by
   simp only [installStep, installStepK, isNoneT, isSomeT]; rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem installStepK_none (i v nt : Nat) (r : IFEnv × Option ValueGroup)
     (h : r.2 = none) : installStepK i v nt pend r = isNoneT v nt r.1 pend := by
   simp [installStepK, h]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem installStepK_some (i v nt : Nat) (r : IFEnv × Option ValueGroup)
     (vg : ValueGroup) (h : r.2 = some vg) : installStepK i v nt pend r = isSomeT i v nt r.1 pend vg := by
   simp [installStepK, h]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `installFold` past a successful step. -/
 theorem installFold_cons (p p' : Nat × IFEnv × Array PendingCheck) (d : IDeclaration)
     (rest : List IDeclaration) (a0 : AState)
@@ -438,6 +467,7 @@ theorem installFold_cons (p p' : Nat × IFEnv × Array PendingCheck) (d : IDecla
   have r1 := AM.run_of_ok _ _ h1
   rw [hr] at r1
   simp only [installFold, StateT.run_bind, r1, exc_ok_bind]
+-/
 
 theorem installFold_cons_ok (p p' : Nat × IFEnv × Array PendingCheck) (d : IDeclaration)
     (rest : List IDeclaration) (a0 : AState)
