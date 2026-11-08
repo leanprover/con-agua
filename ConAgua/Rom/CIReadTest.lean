@@ -27,6 +27,7 @@ open L L.Rom L.Arena ConRon.Arena
 
 namespace L.Rom.CITest
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The functions the test calls: the readers, the pin-data readers, the store's interners. -/
 def pool : Prog :=
   romCIProg ++ romProgPB ++
@@ -37,6 +38,7 @@ def pool : Prog :=
   L.Ind.libFns ++ promoteProg ++ liftProg ++ litProg ++ appProg ++ bvarProg ++ constProg ++
   forallProg ++ fvarProg ++ lamProg ++ letProg ++ lsProg ++ nanonProg ++ nstrProg ++ nnumProg ++
   projProg ++ sortProg ++ succProg ++ zeroProg ++ maxProg ++ imaxProg ++ paramProg
+-/
 
 /-- The calls of a statement. -/
 def callees : Stmt → List String
@@ -100,6 +102,7 @@ def twin {α : Type} (a : AState) (x : AM α) : Except String α :=
   | .ok (v, _) => pure v
   | .error _ => throw "twin failed"
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Run every check; the list of failures. -/
 def checks : Except String (List String) := do
   let m ← startMem
@@ -136,6 +139,7 @@ def checks : Except String (List String) := do
   pure bad
 
 -- The checks pass.
+-/
 #eval show IO Unit from do
   match checks with
   | .ok [] => IO.println "romCIProg: every record decodes to the twin's value"

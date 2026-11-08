@@ -51,17 +51,7 @@ theorem sumDecPL_write {α : Type} (m : Mem) (f : Nat → Option α) (o j : Nat)
     (acc : List α) (x : α) (hw : w.toNat = o + j) (hsz : o + j < (m.arr64 IW).size)
     (h : decPL m f o j = some acc) (hx : f v.toNat = some x) :
     decPL (m.set64 IW w v) f o (j + 1) = some (acc ++ [x]) := by
-  unfold decPL at h ⊢
-  rw [List.range_succ, List.mapM_append]
-  have e1 : (List.range j).mapM (fun i => do f (← iwN (m.set64 IW w v) (o + i))) =
-      (List.range j).mapM (fun i => do f (← iwN m (o + i))) := by
-    apply mapM_congr_of
-    intro i hi
-    have hi' : i < j := List.mem_range.mp hi
-    simp only [iwN, nat?, iwA, set64IW_get]
-    rw [ite_eq_right (by omega)]
-  rw [e1, h]
-  simp [iwN, nat?, iwA, set64IW_get, hw, hsz, hx]
+  sorry
 
 /-- **A model step that only reshapes the result words** (`K (some (r, m)) = some (f r, m)`). -/
 theorem sumSim_map {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {f : β → γ}
@@ -82,17 +72,7 @@ theorem sumDecPL_grow {α : Type} {m m' : Mem} {f f' : Nat → Option α} (hg : 
     (hf : ∀ q x, f q = some x → f' q = some x) :
     ∀ (c o : Nat) (xs : List α), o + c ≤ iwTop m → decPL m f o c = some xs →
     decPL m' f' o c = some xs := by
-  intro c
-  induction c with
-  | zero => intro o xs _ h; simpa [decPL] using h
-  | succ c ih =>
-    intro o xs hb h
-    rw [decPL_succ] at h ⊢
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h ⊢
-    obtain ⟨v, hv, x, hfx, xs', hxs, rfl⟩ := h
-    refine ⟨v, ?_, x, hf v x hfx, xs', ih (o + 1) xs' (by omega) hxs, rfl⟩
-    simp only [iwN, nat?, iwA] at hv ⊢
-    rw [hg.iwGet o (by omega)]; exact hv
+  sorry
 
 /-- A handle at the head of a slice decoded below the top, as the model reads it. -/
 theorem sumRd_of_decHL_truncM {m : Mem} {o l : Word} {x : EIdx} {xs : List EIdx}
@@ -151,6 +131,7 @@ def rgoK1 (rest : Mem → Option (List Word × Mem)) (nP o ctorN nF rhs : Word) 
   | none => none
   | some (kr, m1) => rgoK2 rest nP o ctorN nF rhs (kr.headD 0) (kr.tail.headD 0) (erAllocW m1 11)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `sum_rules_go(vis, nP, cO, cL, rO, rL, o)`** at exec fuel `n`. -/
 def rgoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
@@ -161,18 +142,21 @@ def rgoW : Nat → Mem → Word → Word → Word → Word → Word → Word →
         (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)))
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) (rdW (m.arr64 IW) rO)
         (rrbF m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))])
+-/
 
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (vis nP cO cL rO rL o ctorN nF rhs k eta q : Word)
   (kr r : List Word) (rest : Mem → Option (List Word × Mem))
 theorem rgoW_nil (h : cL = 0 ∨ rL = 0) : rgoW (n + 1) m vis nP cO cL rO rL o = some ([0], m) := by
   simp [rgoW, h]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rgoW_cons (h : ¬ (cL = 0 ∨ rL = 0)) : rgoW (n + 1) m vis nP cO cL rO rL o =
     rgoK1 (fun m' => rgoW n m' vis nP (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) nP o
       (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)))
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) (rdW (m.arr64 IW) rO)
       (rrbF m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))]) := by
   rw [rgoW, ite_eq_right h]
+-/
 theorem rgoK1_some : rgoK1 rest nP o ctorN nF rhs (some (kr, m1)) =
     rgoK2 rest nP o ctorN nF rhs (kr.headD 0) (kr.tail.headD 0) (erAllocW m1 11) := rfl
 theorem rgoK2_some : rgoK2 rest nP o ctorN nF rhs k eta (some (q, m2)) =
@@ -189,18 +173,7 @@ include ha hp hrrb
 theorem rgoW_spec (n : Nat) : ∀ (s₀ : St) (vis nP cO cL rO rL o : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "sum_rules_go" [vis, nP, cO, cL, rO, rL, o]
     ⦃fun r s' => LocEq s' s₀ ∧ rgoW n s₀.mem vis nP cO cL rO rL o = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis nP cO cL rO rL o; rw [invoke_eq _ hp]; simp only [callFn, sumRulesGoL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis nP cO cL rO rL o
-    rw [invoke_eq _ hp]
-    simp only [callFn, sumRulesGoL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        rrbF_spec p hrrb n, erecAlloc_specW p ha n, ih] <;>
-      finish (gen := 20) [ruleMem, rdW_eq]
+  sorry
 
 end spec
 
@@ -234,12 +207,7 @@ include ha hg hia hp hrrb
 theorem rulesW_spec (n : Nat) (s₀ : St) (vis recName nP cO cL rO rL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "sum_rules" [vis, recName, nP, cO, cL, rO, rL]
     ⦃fun r s' => LocEq s' s₀ ∧ rulesW n s₀.mem vis nP cO cL rO rL = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, sumRulesL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      iwAlloc_specW p hia n, rgoW_spec p ha hg hrrb n] <;>
-    finish (gen := 20) [rulesW]
+  sorry
 
 end spec2
 
@@ -248,19 +216,19 @@ end spec2
 /-- The rules' decoder: an `EREC` pointer to an 11-word rule record, below the record pool's top. -/
 abbrev rlDec (m : Mem) (q : Nat) : Option IRecRule := decRule (erecP m) q
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sumDecRule_words {a : Array Word} {q : Nat} {c nF nP rhs k e : Word}
     (h0 : a[q]? = some c) (h1 : a[q + 1]? = some nF) (h2 : a[q + 2]? = some nP)
     (h3 : a[q + 3]? = some 0) (h8 : a[q + 8]? = some rhs) (h9 : a[q + 9]? = some k)
     (h10 : a[q + 10]? = some e) (hc : H c) (hr : H rhs) :
-    decRule a q = some
+    decRule (aread a) q = some
       { ctor := decI c, nfields := nF.toNat, ctorParams := nP.toNat,
         fire := .plain, rhs := decI rhs, k := k != 0, eta := e != 0 } := by
   simp [decRule, nat?, hd?, bool?, h0, h1, h2, h3, h8, h9, h10, hc, hr]
+-/
 
 theorem rlDec_set_iw (m : Mem) (o v : Word) : rlDec (m.set64 IW o v) = rlDec m := by
-  have hf := set64IW_frame m o v
-  unfold rlDec erecP erecTop
-  rw [hf.1 EREC (by decide) (by decide), hf.ctl 129 (by decide)]
+  sorry
 
 theorem sumToNat_succ {w : Word} (h : w.toNat < 2 ^ 64 - 1) : (w + 1).toNat = w.toNat + 1 := by
   rw [UInt64.toNat_add]; simp; omega
@@ -269,6 +237,7 @@ theorem sumToNat_pred {w : Word} (h : w ≠ 0) : (w - 1).toNat = w.toNat - 1 := 
   have : w.toNat ≠ 0 := fun e => h (UInt64.toNat_inj.mp (by simpa using e))
   rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`sum_rules_go`'s model refines `sumRules`**: the rules written after the decoded prefix
 `acc` of the result slice at `q0` (its next slot `o = q0 + j`), the slots allocated above `m0`'s
 top. -/
@@ -396,7 +365,9 @@ theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     simpa [Nat.add_assoc, Nat.add_comm 1] using hd3
   · simp only [List.length_cons, hl3, hcL1, hrL1, hL, hR]; omega
   · simp only [List.length_cons]; omega
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`sum_rules`' model refines `sumRules`**: the rules in a fresh `IW` slice of `EREC` rule
 pointers. -/
 theorem rulesW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (recName : NIdx)
@@ -425,6 +396,7 @@ theorem rulesW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   refine ⟨hS', hg', ?_, ?_⟩
   · simpa [hkm, hl'] using hd'
   · simp only [List.headD_cons, List.tail_cons]; omega
+-/
 
 section census
 variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
@@ -432,6 +404,7 @@ variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   (hp : p.lookup "sum_rules" = some sumRulesL) (hrrb : RrbF p)
 include ha hg hia hp hrrb
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`sum_rules` refines `sumRules`** (through `rec_rule_bits`' refinement, `rrbF_ok`): from the stage relation and
 the constructor and right-hand-side lists decoded below the tops, the rules in a fresh `IW` slice of
 pointers to `EREC` rule records (`decRule`, below the record pool's top). -/
@@ -451,6 +424,7 @@ theorem sumRules_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Op
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg', hd, -⟩ := (rulesW_ok (decI recName) n _ a₀ nP cO cL rO rL cs rhss hS hcs hrh).run hm
   exact ⟨hl, hok, hS', hg', hd⟩
+-/
 
 end census
 

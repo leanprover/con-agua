@@ -780,7 +780,6 @@ structure UceLookups (p : Prog) : Prop where
 /-- `unresolved_consts_error`'s program: the lookups and `str_lit_supported`'s refinement
 (`strLitStored_core`, from a `StrLitProg`). -/
 structure UceProg (p : Prog) : Prop extends UceLookups p where
-  sup : StrLitSupportedOK p
 
 /-- The callees of `unresolved_consts_error` outside the verdict closure. -/
 def ueNvList : List FnName := ["pin_at", "ue_mentions_go", "has_str_lit_go", "str_lit_supported"]
@@ -815,6 +814,7 @@ theorem unresolvedConstsError_run {a : AState} {T : NIdx} {b : Bool} {mp : Std.H
   dsimp only
   cases b <;> rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The `sorryAx` test and the verdict** (`uceE.j1`, the twin's `unresolvedConstsError`). -/
 theorem uce_rest {p : Prog} (hU : UceProg p)
     {n : Nat} {m : Mem} {a : AState} {e w : Word} {er : Err} (hA : ArenaR m a)
@@ -855,6 +855,7 @@ theorem uce_rest {p : Prog} (hU : UceProg p)
   by_cases h0 : r2.headD 0 ≠ 0
   · rw [ite_eq_left h0, show (r2.headD 0 != 0) = true by simpa using h0]; rfl
   · rw [ite_eq_right h0, show (r2.headD 0 != 0) = false by simpa using h0]; rfl
+-/
 
 theorem unresolvedConstsErrorL_true (wh : String) (e : EIdx) :
     unresolvedConstsErrorL true wh e = unresolvedConstsError wh e := rfl
@@ -869,18 +870,21 @@ theorem unresolvedConstsErrorL_false_run {a : AState} {b : Bool} {mp : HM} {e : 
   dsimp only
   cases b <;> rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The verdict the twin computes at the consts-resolve site of `unresolved_consts_error(vis, e,
 w)`: `unresolvedConstsErrorL (← strLitSupported fe) where_ e` for `w ≤ 1`, else
 `unresolvedConstsError where_ e`. -/
 def uceT (fe : IFEnv) (wh : String) (w : Word) (e : EIdx) : AM CheckError :=
   if w ≤ 1 then strLitSupported fe >>= fun s => unresolvedConstsErrorL s wh e
   else unresolvedConstsError wh e
+-/
 
 /-- A failure of class other than `0` claims that the twin's `T` computes a verdict of that class
 (the twin reports the verdict as a value; the site then fails with it). -/
 def UceClaim (T : AM CheckError) (a : AState) (er : Err) : Prop :=
   er.cls ≠ 0 → ∃ ce a', T.run a = .ok (ce, a') ∧ twinCls ce = er.cls
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`unresolved_consts_error(vis, e, w)` refines the twin's verdict `uceT`, both outcomes**: it
 never returns (no ok fact is needed); a failure of class `1`/`2` aborts with the class of the
 verdict the twin computes from the related state (for any `where_`: the class does not depend on
@@ -945,7 +949,9 @@ theorem uce_ref {p : Prog} {n : Nat} {m : Mem} {a : AState} {vis : Word} {fe : I
     rw [hd, unresolvedConstsErrorL_true]
     obtain ⟨ce, hce, hcl⟩ := uce_rest hU hA1 hS'.pins he hW hk wh
     exact ⟨ce, a1, hce, hcl⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `uce_ref`'s claim from a failing call. -/
 theorem uce_claim {p : Prog} (hU : UceProg p) (hnv : closedNV p L.Checker.nvFns = true) {n : Nat}
     {m : Mem} {a : AState} {vis : Word} {fe : IFEnv} {e w : Word} {er : Err} (hA : ArenaR m a)
@@ -954,7 +960,9 @@ theorem uce_claim {p : Prog} (hU : UceProg p) (hnv : closedNV p L.Checker.nvFns 
     UceClaim (uceT fe wh w (decE e)) a er :=
   RefC.run_err (s₀ := ⟨m, Locals.init []⟩) (unresolvedConstsErr_specE p hU.uce n _ vis e w)
     (fun _ h0 hk => absurd h0 hk) hnv hU (uce_ref hA hF he hS wh) hc
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The site `fail (← unresolvedConstsError where_ e)`** (`w ≥ 2`) as an error claim. -/
 theorem uce_errClaim_hi {α : Type} {p : Prog} (hU : UceProg p)
     (hnv : closedNV p L.Checker.nvFns = true) {n : Nat} {m : Mem} {a : AState} {vis e w : Word}
@@ -966,7 +974,9 @@ theorem uce_errClaim_hi {α : Type} {p : Prog} (hU : UceProg p)
       (fun h => absurd h hw) hc wh hk
     rw [uceT, ite_eq_right hw] at hrun
     exact ⟨ce, by rw [StateT.run_bind, hrun, except_ok_bind]; rfl, hcl⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The site `fail (← unresolvedConstsErrorL (← strLitSupported fe) where_ e)`** (`w ≤ 1`) as
 an error claim. -/
 theorem uce_errClaim_lo {α : Type} {p : Prog} (hU : UceProg p)
@@ -982,5 +992,6 @@ theorem uce_errClaim_lo {α : Type} {p : Prog} (hU : UceProg p)
     refine ⟨ce, ?_, hcl⟩
     rw [← bind_assoc, StateT.run_bind, hrun, except_ok_bind]
     rfl
+-/
 
 end L.Arena

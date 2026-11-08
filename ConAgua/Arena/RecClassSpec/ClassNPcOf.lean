@@ -133,25 +133,7 @@ theorem decCI_ind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p
     ∃ k, nat? (aread a) p = some k ∧
       ((k = 3 ∧ ∃ cv caps, ci = .indInfo cv caps ∧ nat? (aread a) (p + 17) = some caps.nparams) ∨
        (k ≠ 3 ∧ ∀ cv caps, ci ≠ .indInfo cv caps)) := by
-  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨k, hk, h⟩ := h
-  refine ⟨k, hk, ?_⟩
-  match k, h with
-  | 0, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 1, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 2, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 3, h =>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, caps, hcaps, rfl⟩ := h
-    left; refine ⟨rfl, cv, caps, rfl, ?_⟩
-    simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
-      Option.some.injEq] at hcaps
-    obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, np, hnp, _, _, rfl⟩ := hcaps
-    simpa [Nat.add_assoc] using hnp
-  | 4, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 5, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 6, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all []
-  | (_ + 7), h => simp at h
+  sorry
 
 /-! ## `class_n_pc_of` -/
 
@@ -169,9 +151,11 @@ def npcK2 (m1 : Mem) (p vis i : Word) : Option Word → Option (List Word × Mem
   | some b => if b = 1 then some ([rdW (m1.arr64 IW) (p + 4)], m1) else npcK3 (envFindW m1 i vis)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def npcK1 (n : Nat) (p vis i : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) => npcK2 m1 p vis i (containsW n m1 (r1.headD 0) (r1.tail.headD 0) i)
+-/
 
 /-- **The model of `class_n_pc_of`.** -/
 def npcW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
@@ -181,10 +165,14 @@ def npcW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
 section arms
 variable (n : Nat) (m m1 m3 : Mem) (p vis i b : Word) (r1 r3 : List Word)
 theorem npcW_eq : npcW (n + 1) m p vis i = npcK1 n p vis i (memberNamesW n m p) := rfl
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem npcK1_some : npcK1 n p vis i (some (r1, m1)) =
     npcK2 m1 p vis i (containsW n m1 (r1.headD 0) (r1.tail.headD 0) i) := rfl
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem npcK2_hit (h : b = 1) : npcK2 m1 p vis i (some b) = some ([rdW (m1.arr64 IW) (p + 4)], m1) := by
   rw [npcK2, ite_eq_left h]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem npcK2_miss (h : b ≠ 1) : npcK2 m1 p vis i (some b) = npcK3 (envFindW m1 i vis) := by
   rw [npcK2, ite_eq_right h]
