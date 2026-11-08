@@ -151,7 +151,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1764 functions, 0 of them stubs.
+1770 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -1024,6 +1024,7 @@ def checkerProg : Prog := [
   ("fz_60", L.Arena.fzF 60),
   ("fz_61", L.Arena.fzF 61),
   ("fz_62", L.Arena.fzF 62),
+  ("fz_63", L.Arena.fzF 63),
   ("fz_7", L.Arena.fzF 7),
   ("fz_8", L.Arena.fzF 8),
   ("fz_9", L.Arena.fzF 9),
@@ -1800,14 +1801,19 @@ def checkerProg : Prog := [
   ("rom_and_pin", L.Rom.romAndPinL),
   ("rom_basis_decls", L.Rom.romBasisDeclsL),
   ("rom_ci", L.Rom.romCiL),
+  ("rom_ci_rom", L.Rom.romCiRomL),
   ("rom_cv", L.Rom.romCvL),
+  ("rom_cv_rom", L.Rom.romCvRomL),
   ("rom_ex_leaf", L.Rom.romExLeaf),
   ("rom_ex_one", L.Rom.romExOne),
   ("rom_ex_ref", L.Rom.romExRef),
   ("rom_ex_two", L.Rom.romExTwo),
   ("rom_expr", (L.Rom.romExpr []).toPB),
   ("rom_expr_pin", L.Rom.romExprPinL),
+  ("rom_expr_pin_rom", L.Rom.romExprPinRomL),
   ("rom_exprs_to", L.Rom.romExprsTo),
+  ("rom_fill", L.Rom.romFill),
+  ("rom_fill_block", L.Rom.romFillBlock),
   ("rom_items", (L.Rom.romItems []).toPB),
   ("rom_level", (L.Rom.romLevel []).toPB),
   ("rom_levels", L.Rom.romLevels),
