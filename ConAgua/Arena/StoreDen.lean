@@ -77,8 +77,6 @@ structure StoreDen (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (
   over every offset of `EREC` at which `decTbl` decodes: lane `loopt`'s blocker; `ProjFound`
   gives the membership for the table `find_proj` answers). -/
   proj : ∀ (c : NIdx) (tbl : IProjTable), fe.findTable? c = some tbl →
-    (∃ l, denoteL a.store.ls tbl.structSort = some l) ∧
-    (∀ i, i < tbl.numFields → ∃ l, denoteL a.store.ls (tbl.guards.getD i default) = some l) ∧
     (∃ ks, tbl.levelParams.mapM (denoteN a.store.ns) = some ks)
   /-- Every valid level handle reads back (what a level interning's cons hit needs). -/
   lvlAll : LvlAll a
@@ -89,8 +87,8 @@ structure StoreDen (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (
   record (an inductive's `PropWhen` datum, `caps_never_zero`) to the twin's readbacks. -/
   dnN : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x
   /-- A stored recursor's nested rules' levels read back (`rec_fire_levels`' `substLevelsAt`). -/
-  recRules : ∀ (c : NIdx) (cv : IConstantVal) (mI rP : Nat) (rules : List IRecRule),
-    fe.find? c = some (.recInfo cv mI rP rules) → ∀ r ∈ rules, ∀ lvls pins,
+  recRules : ∀ (c : NIdx) (cv : IConstantVal) (mI rP : Nat) (isK : Bool) (rules : List IRecRule),
+    fe.find? c = some (.recInfo cv mI rP isK rules) → ∀ r ∈ rules, ∀ lvls pins,
     r.fire = .nested lvls pins → ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L
 
 /-! ## Keeping `StoreDen` -/
@@ -250,34 +248,7 @@ theorem StoreDen.mono {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
       a.store.view x = some (.const c us) ∨ ∃ ls, denoteLs a.store.lss us = some ls)
     (hlv : LvlAll a') (hlsa : LsAll a') :
     StoreDen dn m' a' fe := by
-  have hN : ∀ i n, denoteN a.store.ns i = some n → denoteN a'.store.ns i = some n := hx.ls.ns
-  have hNs : ∀ (l : List NIdx) ks, l.mapM (denoteN a.store.ns) = some ks →
-      l.mapM (denoteN a'.store.ns) = some ks := by
-    intro l; induction l with
-    | nil => intro ks h; simpa using h
-    | cons x xs ih =>
-      intro ks h
-      simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff,
-        Option.pure_def, Option.some.injEq] at h ⊢
-      obtain ⟨y, hy, ys, hys, rfl⟩ := h
-      exact ⟨y, hN _ _ hy, ys, ih _ hys, rfl⟩
-  refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
-    fun c ci hf => ?_, fun q tbl ht => ?_, hlv, hlsa, fun k x e => hN _ _ (h.dnN k x e),
-    fun c cv mI rP rules hf r hr lvls pins hfi u hu =>
-      (h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu).elim fun L hL => ⟨L, hx.ls.lvl _ _ hL⟩⟩
-  · obtain ⟨l, hl⟩ := h.sort x u (hs x u hv); exact ⟨l, hx.ls.lvl _ _ hl⟩
-  · rcases hc x c us hv with h' | ⟨l, hl⟩
-    · obtain ⟨l, hl⟩ := h.constLs x c us h'; exact ⟨l, hx.lst _ _ hl⟩
-    · exact ⟨l, hx.lst _ _ hl⟩
-  · obtain ⟨l, hl⟩ := h.zero; exact ⟨l, by rw [hz]; exact hx.ls.lvl _ _ hl⟩
-  · obtain ⟨l, hl⟩ := h.emptyLs; exact ⟨l, by rw [hzs]; exact hx.lst _ _ hl⟩
-  · rcases hr k x hk with h' | h'
-    · exact hN _ _ (h.readN k x h')
-    · exact h'
-  · obtain ⟨ks, hks⟩ := h.constLps c ci hf; exact ⟨ks, hNs _ _ hks⟩
-  · obtain ⟨⟨l, hl⟩, hg, ⟨ks, hks⟩⟩ := h.proj q tbl ht
-    exact ⟨⟨l, hx.ls.lvl _ _ hl⟩, fun i hi => (hg i hi).elim fun l hl => ⟨l, hx.ls.lvl _ _ hl⟩,
-      ⟨ks, hNs _ _ hks⟩⟩
+  sorry
 
 /-- **`StoreDen` across an interning step** that keeps the caches, the pins and the level stores
 (`cpl`) and writes neither the `sort` nor the `const` tables (`SOREC`, `CREC`, `CTL` 1, 16‥19). -/

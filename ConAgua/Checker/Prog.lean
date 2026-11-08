@@ -77,7 +77,6 @@ public import ConAgua.Arena.NatSub
 public import ConAgua.Arena.ParamStore
 public import ConAgua.Arena.Pins
 public import ConAgua.Arena.ProjStore
-public import ConAgua.Arena.Promote
 public import ConAgua.Arena.PropRead
 public import ConAgua.Arena.RecCheck
 public import ConAgua.Arena.RecClass

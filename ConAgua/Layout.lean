@@ -152,7 +152,7 @@ declare_arrays checkerArrays
   | /-- The level-equality memo (`lqSch`). -/ Arena.LQ : word min 3 := 105
   | /-- The level-list-equality memo (`lsqSch`). -/ Arena.LSQ : word min 3 := 106
   -- the environment (`Arena/Tiers.lean`)
-  | /-- The pin table. -/ Arena.PINS : word min 55 := 128
+  | /-- The pin table. -/ Arena.PINS : word min 72 := 128
   | /-- The frozen stream index's projection-table rows of `anonymous` names (`Env.lean`). -/
     Arena.TIXA : word := 129
   | /-- The stream index's table rows of `str` names. -/ Arena.TIXS : word := 130

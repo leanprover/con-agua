@@ -132,7 +132,7 @@ decoded below `t` by `decCIs`; the slice does not start at the pool's word `0`).
 theorem hNamesGo_ok (n : Nat) : ∀ (m m' : Mem) (k o c q r : Word) (P : Array Word) (t : Nat)
     (cs : List IConstantInfo) (idx : Std.HashMap NIdx Nat),
     NixR m idx → m.arr64 DIND = P → t ≤ (P[0]?.getD 0).toNat → o.toNat ≠ 0 →
-    decCIs (trunc P t) (fun _ => none) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs →
+    decCIs (trunc P t) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs →
     k.toNat + 1 < 2 ^ 64 → hNamesGoW n m k o c q = some (r, m') →
     NixR m' (insertNames idx k.toNat (cs.map (·.name))) ∧ MemFrame [HNIX] [75, 76] m m' := by
   induction n with

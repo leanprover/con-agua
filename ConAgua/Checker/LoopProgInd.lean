@@ -82,7 +82,6 @@ import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
