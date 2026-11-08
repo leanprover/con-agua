@@ -437,26 +437,44 @@ open L.Arena
 
 -- `IWGrow.refl`, `IWGrow.trans`: `IndIface.lean` (with the tier-1 record pool).
 
+/-- `IWOK` from a frame that keeps the pool arrays and the tops (`IW`, `EREC` in both tiers,
+`CTL[129]`, `CTL[130]`, `CTL[200]`). -/
+theorem IWOK.of_keep {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A)
+    (hC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C) (h : IWOK m) : IWOK m' := by
+  have hI := hf.arr IW hA.1 (by decide)
+  have hE := hf.arr EREC hA.2.1 (by decide)
+  have hE1 := hf.arr (tier1 EREC) hA.2.2 (by decide)
+  have hc := hf.size CTL
+  simp only [IWOK_iff, iwTop, erTop, erecTop1, hI, hE, hE1, hc, hf.ctl _ hC.1, hf.ctl _ hC.2.1,
+    hf.ctl _ hC.2.2]
+  exact (IWOK_iff m).1 h
+
+
 /-- A write to `IW` at or above the top keeps the growth. -/
 theorem IWGrow.set_iw {m m' : Mem} (h : IWGrow m m') (k v : Word) (hk : iwTop m ≤ k.toNat) :
     IWGrow m (m'.set64 IW k v) := by
-  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
+  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
   · simp only [iwTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.iw
   · simp only [erTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.er
   · rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
     have : ¬ (k.toNat = i) := by omega
     simp only [this, ite_false]; exact h.iwGet i hi
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.erGet i hi
+  · simp only [erecTop1, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.er1
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.er1Get i hi
 
 /-- Raising the top keeps the growth. -/
 theorem IWGrow.set_top {m m' : Mem} (h : IWGrow m m') (t : Word) (ht : iwTop m' ≤ t.toNat)
     (hc : 200 < (m'.arr64 CTL).size) :
     IWGrow m (m'.set64 CTL 200 t) := by
-  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
+  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
   · simp only [iwTop, rdW_set64]; simp [hc]; have := h.iw; simp only [iwTop] at this ht; omega
   · simp only [erTop, rdW_set64]; simp; exact h.er
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.iwGet i hi
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.erGet i hi
+  · simp only [erecTop1, rdW_set64]; simp; exact h.er1
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.er1Get i hi
 
 end L.Ind
 
@@ -657,19 +675,14 @@ theorem StageR.of_walkM {vis : Word} {fe : IFEnv}
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (hmode : ModeOK m') :
     StageR vis fe m' a' ∧ IWGrow m m' := by
-  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (fun h => by have := hA _ h; simp [IW] at this)
-    (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (fun h => by have := hA _ h; simp [EREC] at this)
-    (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 :=
-    hf.ctl 200 (fun h => by have := hC _ h; simp at this)
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
-    hf.ctl 129 (fun h => by have := hC _ h; simp at this)
-  refine ⟨⟨CheckR.of_walkM hS.check hD hf hA hC hk hmode, ?_⟩, ?_⟩
-  · simp only [IWOK_iff, iwTop, erTop, hI, hE, h200, h129, hf.size CTL]; exact (IWOK_iff _).1 hS.iw
-  · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
-    · simp only [iwTop, h200]; exact Nat.le_refl _
-    · simp only [erTop, h129]; exact Nat.le_refl _
+  have hA3 : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A :=
+    ⟨fun h => by have := hA _ h; simp [IW] at this, fun h => by have := hA _ h; simp [EREC] at this,
+      fun h => by have := hA _ h; simp [EREC, tier1] at this⟩
+  have hC3 : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C :=
+    ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
+      fun h => by have := hC _ h; simp at this⟩
+  exact ⟨⟨CheckR.of_walkM hS.check hD hf hA hC hk hmode, IWOK.of_keep hf hA3 hC3 hS.iw⟩,
+    IWGrow.of_keep hf hA3 hC3⟩
 
 /-- `StageR.of_walkM` for a walk that keeps `CTL[0]` and `CTL[1]`. -/
 theorem StageR.of_walk {vis : Word} {fe : IFEnv}

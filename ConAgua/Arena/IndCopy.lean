@@ -217,7 +217,10 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
   have htop : rdW (m'.arr64 CTL) 200 = q + (l + 1) := by
     rw [hA CTL (by decide)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64]; simp [hc, hq]
-  refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
+  have hEREC1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := by
+    rw [hA (tier1 EREC) (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  refine ⟨?_, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
   · simp only [decHL, hl1, hslice?_succ]
     have h0 : (hd? (iwA m') q.toNat : Option (Idx k)) = some (decI x) := by
       simp [hd?, iwA, aread_apply, hget, hx]
@@ -238,6 +241,8 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
     simp only [iwTop, hq] at hi
     rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
   · intro i _; rw [hEREC]
+  · simp only [erecTop1, hCTL 130 (by decide)]; exact Nat.le_refl _
+  · intro i _; rw [hEREC1]
   · intro b hb hbc
     rw [hA b (by simpa using hb)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by simpa using hb), Mem.arr64_set64_ne _ _ _ _ _ hbc]
