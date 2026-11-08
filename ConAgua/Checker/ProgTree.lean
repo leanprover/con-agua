@@ -22,6 +22,7 @@ import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.DeclArmsCanon
 import all ConAgua.Arena.DeclArmsNat
 import all ConAgua.Arena.DeclStep
+import all ConAgua.Arena.DefEq
 import all ConAgua.Arena.Env
 import all ConAgua.Arena.ExprMk
 import all ConAgua.Arena.FVarRange
@@ -80,6 +81,7 @@ import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
+import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
 import all ConAgua.Arena.RecGen
@@ -94,7 +96,9 @@ import all ConAgua.Arena.RomPins
 import all ConAgua.Arena.Scratch
 import all ConAgua.Arena.SortStore
 import all ConAgua.Arena.Store
+import all ConAgua.Arena.StrLit
 import all ConAgua.Arena.StripTele
+import all ConAgua.Arena.StubInd
 import all ConAgua.Arena.StubNames
 import all ConAgua.Arena.TeleLift
 import all ConAgua.Arena.Walk
@@ -103,6 +107,7 @@ import all ConAgua.Arena.WalkLift
 import all ConAgua.Arena.WalkScope
 import all ConAgua.Arena.WhnfCore
 import all ConAgua.Arena.WhnfDelta
+import all ConAgua.Arena.WhnfEntry
 import all ConAgua.Arena.WhnfIota
 import all ConAgua.Arena.WhnfIotaRec
 import all ConAgua.Arena.WhnfM2C
@@ -119,6 +124,7 @@ import all ConAgua.Front.ApplyDecl
 import all ConAgua.Front.ApplyExpr
 import all ConAgua.Front.Driver
 import all ConAgua.Front.Fields
+import all ConAgua.Front.FieldsDecl
 import all ConAgua.Front.IdTable
 import all ConAgua.Front.IndApply
 import all ConAgua.Front.IndFields
