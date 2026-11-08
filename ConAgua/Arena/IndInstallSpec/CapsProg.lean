@@ -44,14 +44,15 @@ def ShapeSrc (m : Mem) (q : Word) : Prop :=
 /-! ## The capability record's decoding -/
 
 /-- **`IIndCaps` at `IW[q‥q+15)`**, decoded in every array that holds those words (at any `e`) and
-agrees with the record pool below its top (where `cons_block_inds` copies them). -/
+extends the record pool in use, both tiers (where `cons_block_inds` copies them). -/
 def CapsAt (dn : NIdx → Option ConLeche.Name) (m : Mem) (q : Nat) (c : IIndCaps) : Prop :=
   q + 15 ≤ iwTop m ∧ ∀ (a : Nat → Option Word) (e : Nat), (∀ i < 15, a (e + i) = iwA m (q + i)) →
-    (∀ i < erTop m, a i = erA m i) → decCaps a e = some c
+    ArrExt (erA m) a → decCaps a e = some c
 
 theorem CapsAt.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {q : Nat} {c : IIndCaps}
     (h : CapsAt dn m q c) (hg : IWGrow m m') : CapsAt dn m' q c := by
-  sorry
+  refine ⟨Nat.le_trans h.1 hg.iw, fun a e h1 h2 => h.2 a e (fun i hi => ?_) (fun i v hv => h2 i v (hg.ext i v hv))⟩
+  rw [h1 i hi]; simp only [iwA, aread]; rw [hg.iwGet _ (by have := h.1; omega)]
 
 end L.Ind
 
