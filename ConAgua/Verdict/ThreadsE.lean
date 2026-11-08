@@ -422,6 +422,7 @@ def CPVerdict : Prop :=
     CPErrT .verified pins dn ds (Prog.subPB bs checkerProg) fe pend
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 open ConAgua.Final in
 /-- **A thread's failing call is the twin pool's failure.** Entry 1 (`check` with the mode word
 `1`, from the loaded memory) returning `2^63 + k`; the buffer `B` (the first `len` words of `OUT`,
@@ -443,5 +444,6 @@ theorem threads_twinVerdictPooled (hCP : CPVerdict)
     (hj : j < rs₁.headD 0 - 9223372036854775808) (hk0 : e.cls ≠ 0) :
     TwinVerdictPooled [b] e.cls := by
   sorry
+-/
 
 end L.Checker
