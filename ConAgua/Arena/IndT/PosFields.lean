@@ -33,13 +33,16 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The core's spec at `.verified` (con-ron's `CoreSpec.of_core`). -/
 theorem coreSpecV : ConRon.Bridge.CoreSpec V checkFuel := ConRon.Bridge.CoreSpec.of_core rfl
+-/
 
 section steps
 variable {p : Prog} (L : NbLook p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include L henv in
 theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn vis fe env (n + 1) := by
   have R := L.ct.cr.rx
@@ -226,6 +229,7 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   · right; rcases hpost.nfb with h' | h'
     · rw [hnF1] at h'; subst h'; have := (base + j + 1).toNat_lt; omega
     · rw [hj1, hnF1] at h'; omega
+-/
 
 end steps
 

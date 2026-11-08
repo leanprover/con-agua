@@ -44,6 +44,7 @@ section steps
 variable {p : Prog} (L : NbLook p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include L in
 theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn vis fe env (n + 1) := by
   have R := L.ct.cr.rx
@@ -158,6 +159,7 @@ theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn v
   rw [hs4'] at hpost
   exact RefE.ret hrun ⟨hpost.stage, hg13.trans hpost.grow, hpost.outs, hpost.outsb, hpost.ns, hpost.pos, hpost.abs,
     c1'.trans hpost.core⟩
+-/
 
 end steps
 

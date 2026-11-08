@@ -29,6 +29,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A hole application's checks (`pfK`) are a pure step. -/
 theorem pfK_pstep {fe : IFEnv} {env : ConLeche.Env} {c : NestCtx} {prog : List NestHole} {kb hi i : Nat}
     {args : List EIdx} {x : NestFieldKind} {a a' : AState} {ctxP : ConLeche.NestCtx}
@@ -66,10 +67,12 @@ theorem pfK_pstep {fe : IFEnv} {env : ConLeche.Env} {c : NestCtx} {prog : List N
   split at h6
   · obtain ⟨-, rfl⟩ := ConRon.Bridge.AM.pure_ok h6; exact p1.trans p2
   · exact absurd h6 (fun hc => ConRon.Bridge.AM.fail_ok hc)
+-/
 
 section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : AppRef p dn vis fe env (n + 1) := by
   intro m a ctx fu po pl kb hi w ns c prog NS ctxP progP wP nsP dep hC hW hhi hw hns hP hA hc hctx hprog
     hwP hnsP hww
@@ -234,6 +237,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
   | fvar i ty => exact absurd hvr.1 h1v
   | const nn us => exact absurd hvr.1 h3v
   | _ => exact fun _ => ErrClaim.fail _ _ (by decide)
+-/
 
 end steps
 

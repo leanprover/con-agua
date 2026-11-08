@@ -31,6 +31,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model clmE_spec (p : Prog) (P : ClmProg p)
   fns [P.cm ↦ clmE]
   specs [tmfE_spec p P.tmf n, tmpE_spec p P.tmp n, internConst_spec p P.tmp.cf P.tmp.cp P.tmp.ic n,
@@ -39,6 +40,7 @@ l_model clmE_spec (p : Prog) (P : ClmProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 end L.Ind
 

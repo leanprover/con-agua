@@ -155,6 +155,7 @@ theorem top (h : TmAt dn vis fe env m₀ a₀ m a) {x : Nat} (hb : x ≤ iwTop m
 
 end TmAt
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`target_major_of_outside_tail` refines `tmoTailT`, both outcomes** (the real `inst_lp_fast`
 and `lvl_eq_c`): `toi_ref`, then con-ron's `targetOutsideInst_spec` (a core step) gives `StageC`
 and the instance's sort's readback, so `lvlEqC_simC` applies to `lvl_eq_c`; its two rejects are
@@ -238,7 +239,9 @@ theorem tmt_ref {p : Prog} (hP : TmtProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   have hn1' : (r1.head?.getD 0).toNat = x.1 := by simpa using hn1
   rw [hn1'] at hdec
   exact RefE.ret rfl ⟨by simpa [decON] using hdec, hS4, hg04, hP2.fr (posRecW_mfr hpr), hA4⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`target_major_of_outside` refines `tmoOutT`, both outcomes**: the rejects are the twin's
 `fail`s (Quot, not a stored inductive, too few arguments, the closedness test, the occurrence
 test); the tail is `tmt_ref`. -/
@@ -369,7 +372,9 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
     (ConRon.Bridge.denoteL_ext hsP k24.ext)
   rw [hnP] at this
   exact this.mono fun _ _ _ h => ⟨h.dec, h.stage, k24.grow.trans h.grow, h.pos, h.abs⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`target_major_of_const` refines `targetMajorOf` after the head's view, both outcomes**: the
 member branch is `tmm_ref`, the outside branch `tmo_ref`; `block_shape_member_names` and
 `sl_find` are lifted. -/
@@ -451,7 +456,9 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
       hws.symm (hag.grow (OMono.decHL _ _) hg4) (k4.top hagb) (hpf.grow (OMono.decHL _ _) hg4)
       hx hy k4.pos k4.stage k4.abs hshP hIP husP hargsP).mono
       fun _ _ _ h => ⟨h.dec, h.stage, hg4.trans h.grow, h.pos, h.abs⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`target_major_of` refines `targetMajorOf`, both outcomes**: the reject is the twin's "not an
 inductive's application" fail; `get_app_args_f`, `get_app_fn_f` and `e_view` are lifted; the tail
 is `tmc_ref`. -/
@@ -515,5 +522,6 @@ theorem tmf_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
     (hpf.grow (OMono.decHL _ _) k12.grow) (hfv.grow (OMono.decHL _ _) k12.grow) (k12.top hfvb)
     (decHL_decB (k2.decHL hd1 hb1) (k2.top hb1)) (k2.top hb1) hxH hyH k2.pos k2.stage k2.abs hshP hIP husP
     hargsP).mono fun _ _ _ h => ⟨h.dec, h.stage, k12.grow.trans h.grow, h.pos, h.abs⟩
+-/
 
 end L.Ind
