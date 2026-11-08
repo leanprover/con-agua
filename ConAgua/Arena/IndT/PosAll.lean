@@ -230,8 +230,8 @@ theorem nbRef_zero : NbRef p dn vis fe env 0 := by
     | (rw [nfE.eq_1]; exact RefE.of_cls0 (by simp))
 -/
 
-variable {dn vis fe env} in
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+variable {dn vis fe env} in
 /-- **The block refines con-ron's `nestPos` block, both outcomes**, at every L fuel below `2^62`. -/
 theorem nbRef_all (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
     (henv : ConLeche.EnvWF env) : ∀ n, n ≤ 2 ^ 62 → NbRef p dn vis fe env n

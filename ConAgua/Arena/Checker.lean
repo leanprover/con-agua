@@ -208,8 +208,7 @@ theorem PendR.frameLo {m m' : Mem} {C : List Word}
 theorem LoopR.of_lo {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {ds : Array IDeclaration} {C : List Word}
     (h : LoopR pins m a vis fe ds) (hC' : CheckR m' a' vis fe) (hf : MemFrame scrArrs C m m')
-    (hC : ∀ x ∈ C, x.toNat < 128) : LoopR pins m' a' vis fe ds := by
-  sorry
+    (hC : ∀ x ∈ C, x.toNat < 128) : LoopR pins m' a' vis fe ds := by sorry
 
 /- ronsync2 stage 2: commented out (a section at a removed L function)
 section bracket
@@ -429,9 +428,9 @@ def isSomeT (i vis nt : Nat) (fe' : IFEnv) (vg : ValueGroup) :
 /-- `installStep` after `installStepGo`, named. -/
 def installStepK (i vis nt : Nat) (r : IFEnv × Option ValueGroup) :
     AM (IFEnv × Array PendingCheck) :=
-  match r.2 with
-  | none => isNoneT vis nt r.1 pend
-  | some vg => isSomeT i vis nt r.1 pend vg
+  match r.2 with := by
+  sorry
+
 -/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
