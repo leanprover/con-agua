@@ -170,9 +170,9 @@ structure StuckCallees (p : Prog) : Prop where
   lvlsEqC : LvlsEqCH p
   /-- Stored levels read back (`StoreDen.lean`). -/
   den : CoreDen
-  strLitSupported : StrLitSupportedOK p
+  strLitStored : StrLitStoredOK p
   strLitCtor : StrLitCtorOK p
-  /-- `strLitSupported` keeps every stored node's view (`supKeep_of`, `StrLitKeep.lean`). -/
+  /-- `strLitStored` keeps every stored node's view (`supKeep_of`, `StrLitKeep.lean`). -/
   supKeep : ∀ fe, SupKeep fe
   lazyDeltaStep : LazyDeltaStepH p
   reduceProjCore : ReduceProjCoreH p

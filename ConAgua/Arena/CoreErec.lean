@@ -113,7 +113,7 @@ def coreFns : List FnName := [
   "reserved_contains_w", "residual_pw", "rom_lit", "rr_find", "rr_put", "rule_rhs_at",
   "same_const_heads", "sl_memo", "sle_go", "slp_go", "sls_go", "sls_memo", "sort_find",
   "sort_push", "spine_cmp", "spine_head", "spn_get", "spn_ls", "spn_pool", "stack_cover",
-  "str_cons_spine", "str_ctor_pre", "str_cv", "str_lit_ctor", "str_lit_supported", "str_ls1",
+  "str_cons_spine", "str_ctor_pre", "str_cv", "str_lit_ctor", "str_lit_stored", "str_ls1",
   "str_param_sort", "str_sup_1", "str_sup_2", "str_sup_3", "str_sup_4", "str_sup_5", "str_sup_6",
   "str_sup_7", "str_utf8_char", "string_of_list_ty_ok", "string_ty_ok", "struct_eta_cert",
   "struct_eta_cert_go", "struct_eta_cert_tail", "struct_eta_cert_with", "struct_eta_cert_wtb",

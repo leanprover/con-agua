@@ -189,7 +189,8 @@ def ueMentionsGoL : FunDecl := lfn (f, T, h) locals (g, x, y, z, r, b1, b2, b3) 
 /-- `unresolved_consts_error(vis, e, w)`: the twin's `fail (← unresolvedConstsErrorL (←
 strLitStored fe) where_ e)` (`w ≤ 1`) and `fail (← unresolvedConstsError where_ e)` (`w ≥ 2`):
 always aborts. `w` names the twin's `where_` (`0` "type", `1` "value", `2` "type of", `3`
-"generated rule of", `4` "the domains of a generated rule of"; the reason of each message). For
+"generated rule of", `4` "the domains of a generated rule of", `5` "the type of the recursor", `6`
+"the recursor's rule"; the reason of each message). For
 `w ≤ 1`: without the String support declarations, a string literal in `e` (`has_str_lit_go`)
 declines. Then a term mentioning `sorryAx` (pin 13, `ue_mentions_go`: the twin's `mentionsConst`)
 declines, anything else rejects. -/
@@ -211,12 +212,16 @@ def unresolvedConstsErrL : FunDecl := lfn (vis, e, w) locals (s, r, sa, m) {
     if w == 1 { fail R_USE_OF_THE_SORRYAX_IN_VALUE };
     if w == 2 { fail R_USE_OF_THE_SORRYAX_IN_TYPE_OF };
     if w == 3 { fail R_USE_OF_THE_SORRYAX_IN_GENERATED };
+    if w == 5 { fail R_USE_OF_THE_SORRYAX_IN_REC_TYPE };
+    if w == 6 { fail R_USE_OF_THE_SORRYAX_IN_REC_RULE };
     fail R_USE_OF_THE_SORRYAX_IN_THE
   };
   if w == 0 { fail R_UNKNOWN_CONSTANT_IN_TYPE };
   if w == 1 { fail R_UNKNOWN_CONSTANT_IN_VALUE };
   if w == 2 { fail R_UNKNOWN_CONSTANT_IN_TYPE_OF };
   if w == 3 { fail R_UNKNOWN_CONSTANT_IN_GENERATED };
+  if w == 5 { fail R_UNKNOWN_CONSTANT_IN_REC_TYPE };
+  if w == 6 { fail R_UNKNOWN_CONSTANT_IN_REC_RULE };
   fail R_UNKNOWN_CONSTANT_IN_THE
 }
 

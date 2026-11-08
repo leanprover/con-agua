@@ -7,7 +7,7 @@ public import ConRon.Bridge.ExprOps.MemoSpecs
 @[expose] public section
 
 /-!
-# `strLitSupported` keeps every stored node's view
+# `strLitStored` keeps every stored node's view
 
 `VMono op`: every successful run of `op` keeps each `view` the store already answers. Closed
 under `pure`, `fail`, `bind`, `if` and `match` (by `split`), with leaves for the pin readers,
@@ -117,22 +117,24 @@ theorem vmono_natLitSupported (fe : IFEnv) : VMono (natLitSupported fe) := by
     | (unfold pinNat) | (unfold pinNatZero) | (unfold pinNatSucc)
     | with_reducible apply VMono.bind | apply VMono.ite | intro _)
 
-theorem vmono_strLitSupported (fe : IFEnv) : VMono (strLitSupported fe) := by
-  unfold strLitSupported pinString pinStringOfList pinList pinListNil pinListCons pinChar
+theorem vmono_natLitStored (fe : IFEnv) : VMono (natLitStored fe) := by
+  unfold natLitStored pinNat pinNatZero pinNatSucc
+  repeat' (first
+    | with_reducible exact VMono.pure _ | with_reducible exact vmono_pinAt _
+    | with_reducible apply VMono.bind | with_reducible apply VMono.ite | intro _)
+
+theorem vmono_strLitStored (fe : IFEnv) : VMono (strLitStored fe) := by
+  unfold strLitStored pinString pinStringOfList pinList pinListNil pinListCons pinChar
     pinCharOfNat
   repeat' (first
     | with_reducible exact VMono.pure _ | with_reducible exact vmono_pinAt _
-    | with_reducible exact vmono_natLitSupported _
-    | with_reducible exact vmono_stringTyOk _ | with_reducible exact vmono_charTyOk _
-    | with_reducible exact vmono_listTyOk _ | with_reducible exact vmono_listNilTyOk _
-    | with_reducible exact vmono_listConsTyOk _ | with_reducible exact vmono_charOfNatTyOk _
-    | with_reducible exact vmono_stringOfListTyOk _
+    | with_reducible exact vmono_natLitStored _
     | with_reducible apply VMono.bind | with_reducible apply VMono.ite | intro _)
 
-/-- **`strLitSupported` keeps every stored node's view.** -/
+/-- **`strLitStored` keeps every stored node's view.** -/
 theorem supKeep_of (fe : IFEnv) : SupKeep fe := by
   intro a h w hw
-  have hm := vmono_strLitSupported fe
+  have hm := vmono_strLitStored fe
   unfold VMono at hm
   unfold AM.st
   split

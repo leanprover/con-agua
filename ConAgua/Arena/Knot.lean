@@ -22,8 +22,8 @@ wrote the two `whnf` slots (`whnf_core`, `whnf`); this file has the other four:
 again (the body may have changed the table) and inserts, as `whnf`/`whnf_core` do.
 
 **The eager slot.** The twin's `defeqE` at knot level `F + 1` swaps the eager tower's memos into
-the six fields (`enterEager`, from a plain mode), probes `defeqC`, runs `defeqBody mode.toEager`
-at the knot `coreKnot mode.toEager fe id F`, inserts, and swaps back (`leaveEager`). That is the
+the six fields (`enterEager`, from a plain mode), probes `defeqC`, runs `defeqBody mode true`
+at the knot `coreKnot mode true fe id F`, inserts, and swaps back (`leaveEager`). That is the
 `defeq` slot of the knot at `mode.toEager` one level up, run on the eager set; in L each memo
 holds both sets keyed by the eager bit (lane `whnf`'s design), so `defeq_e` is `defeq` at the mode
 word with bit 1 set (`toEager`: `0 ↦ 2`, `1 ↦ 3`, eager modes fixed) and moves nothing.

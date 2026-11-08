@@ -26,10 +26,10 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem knot_whnf_miss_err (mode : ConLeche.CheckMode) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx)
+theorem knot_whnf_miss_err (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx)
     (a : AState) (h : whnfStuckTag e = false) (hm : a.caches.whnfC[e]? = none) (ce : CheckError)
-    (hb : (whnfBody (coreKnot mode fe id F) fe d e).run a = .error ce) :
-    ((coreKnot mode fe id (F + 1)).whnf d e).run a = .error ce := by
+    (hb : (whnfBody (coreKnot mode eager fe id F) fe d e).run a = .error ce) :
+    ((coreKnot mode eager fe id (F + 1)).whnf d e).run a = .error ce := by
   simp [coreKnot, h, hm, StateT.run_bind, hb]; try rfl
 
 section refs
@@ -131,7 +131,7 @@ theorem wloop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
       fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.valid⟩
 
 include hp hno hlp in
-/-- **`whnf` at `n + 1` refines the knot's `whnf` slot of `coreKnot mode fe id F`, both
+/-- **`whnf` at `n + 1` refines the knot's `whnf` slot of `coreKnot mode eager fe id F`, both
 outcomes**, `F ≥ n + 1`: a stuck tag answers itself, a memo hit its entry, a miss the body's
 answer (`whnf_loop` at `n`, its unified model), recorded. -/
 theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)

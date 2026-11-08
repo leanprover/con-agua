@@ -188,3 +188,7 @@ R_THE_TYPE_OF_THE_RECURSOR	reject	the type of the recursor is not the generated 
 R_THE_TYPE_OF_THE_RECURSOR_IS	reject	the type of the recursor is not the generated one: the domain of binder differs
 R_TWO_MODULES_STORE	reject	two modules store different constants named …
 R_UNDECLARED_UNIVERSE_PARAMETER_IN_THE	reject	undeclared universe parameter in the type of the recursor
+R_USE_OF_THE_SORRYAX_IN_REC_TYPE	decline	use of the sorryAx axiom in the type of the recursor
+R_USE_OF_THE_SORRYAX_IN_REC_RULE	decline	use of the sorryAx axiom in the recursor's rule
+R_UNKNOWN_CONSTANT_IN_REC_TYPE	reject	unknown constant in the type of the recursor
+R_UNKNOWN_CONSTANT_IN_REC_RULE	reject	unknown constant in the recursor's rule

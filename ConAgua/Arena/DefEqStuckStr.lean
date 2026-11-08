@@ -35,7 +35,7 @@ def stuckStrT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (side : Boo
         | .const cO usO => do
           let el ← emptyLevels
           let sl ← pinStringOfList
-          if cO = sl ∧ usO = el ∧ (← strLitSupported fe) then do
+          if cO = sl ∧ usO = el ∧ (← strLitStored fe) then do
             let c ← strLitToConstructor st
             if side then r.defeq depth a c else r.defeq depth c b
           else stuckIrrel r fe depth a b
@@ -48,7 +48,7 @@ theorem stuckStrT_run (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (si
     (st : String) (fo : EIdx) (s : AState) (m : Mem) (hP : PinsFull m s.pins) (cO : NIdx) (usO : LsIdx)
     (ht : (fo.tag == ETag.const) = true) (hv : s.store.view fo = some (.const cO usO)) :
     (stuckStrT r fe depth a b side (.strVal st) fo).run s =
-      (strLitSupported fe >>= fun x =>
+      (strLitStored fe >>= fun x =>
         if cO = decI (pinW m (1 + 6)) ∧ usO = decI (pinW m 52) ∧ x = true then do
           let c ← strLitToConstructor st
           if side then r.defeq depth a c else r.defeq depth c b
@@ -147,7 +147,7 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
     dsimp only [strE.k_pin_at]
     -- `str_lit_supported`
     refine RefE.of_run_eq (stuckStrT_run _ fe _ _ _ _ st _ a₀ s₀.mem hS.pins _ _ hct hv) ?_
-    refine RefE.bind_callW (fun _ => rfl) (hc.strLitSupported n s₀ a₀ dn vis fe M eb hS)
+    refine RefE.bind_callW (fun _ => rfl) (hc.strLitStored n s₀ a₀ dn vis fe M eb hS)
       fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
     dsimp only [strE.k_str_lit_supported]
     have hsl : HW (rdW (s₀.mem.arr64 PINS) (1 + 6)) := by

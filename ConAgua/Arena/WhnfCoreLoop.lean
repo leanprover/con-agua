@@ -42,7 +42,7 @@ def isDoneV : ENodeView → Bool
   | _ => false
 
 section stepRuns
-variable {mode : ConLeche.CheckMode} {r : CoreFnsA} {fe : IFEnv} {cheap : Bool} {depth : Nat}
+variable {mode : ConLeche.CheckMode} {eager : Bool} {r : CoreFnsA} {fe : IFEnv} {cheap : Bool} {depth : Nat}
   {e : EIdx} {a : AState}
 
 theorem step_run_done (v : ENodeView) (hv : a.store.view e = some v) (hd : isDoneV v = true) :
@@ -121,7 +121,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     cases n with
     | zero => exact RefE.of_cls0 rfl
     | succ N =>
-    have h1 := stepProj_ref p hp hwc.strLitSupported hwc.strLitCtor hcc.toProjCallees hcc.erec N
+    have h1 := stepProj_ref p hp hwc.strLitStored hwc.strLitCtor hcc.toProjCallees hcc.erec N
       (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode cheap d e
       (tfld s₀.mem PROJ (tierW e) (idxW e) 0) (tfld s₀.mem PROJ (tierW e) (idxW e) 1)
       (tfld s₀.mem PROJ (tierW e) (idxW e) 2) hs he hsn hpe (hsup fe)
@@ -301,18 +301,18 @@ end loopRef
 /-! ## The slot: a mode memo around the body -/
 
 section twin
-variable (mode : ConLeche.CheckMode) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx) (a : AState)
+variable (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx) (a : AState)
 
 theorem knot_whnfCore_missK_err (h : whnfCoreStuckTag e = false)
     (hm : a.caches.whnfCoreCheapC[e]? = none) (ce : CheckError)
-    (hb : (whnfCoreBody mode (coreKnot mode fe id F) fe true d e).run a = .error ce) :
-    ((coreKnot mode fe id (F + 1)).whnfCore true d e).run a = .error ce := by
+    (hb : (whnfCoreBody mode (coreKnot mode eager fe id F) fe true d e).run a = .error ce) :
+    ((coreKnot mode eager fe id (F + 1)).whnfCore true d e).run a = .error ce := by
   simp [coreKnot, h, hm, StateT.run_bind, hb]; try rfl
 
 theorem knot_whnfCore_missF_err (h : whnfCoreStuckTag e = false)
     (hm : a.caches.whnfCoreC[e]? = none) (ce : CheckError)
-    (hb : (whnfCoreBody mode (coreKnot mode fe id F) fe false d e).run a = .error ce) :
-    ((coreKnot mode fe id (F + 1)).whnfCore false d e).run a = .error ce := by
+    (hb : (whnfCoreBody mode (coreKnot mode eager fe id F) fe false d e).run a = .error ce) :
+    ((coreKnot mode eager fe id (F + 1)).whnfCore false d e).run a = .error ce := by
   simp [coreKnot, h, hm, StateT.run_bind, hb]; try rfl
 
 end twin
@@ -322,7 +322,7 @@ variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCalle
   (hsup : ∀ fe : IFEnv, SupKeep fe)
 
 include hp hwc hcc hsup in
-/-- **`whnf_core` at `n + 1` refines the knot's `whnfCore` slot of `coreKnot mode fe id F`, both
+/-- **`whnf_core` at `n + 1` refines the knot's `whnfCore` slot of `coreKnot mode eager fe id F`, both
 outcomes**, `F ≥ n + 1`: a stuck tag answers itself, a memo hit its entry, a miss the body's
 answer (`whnf_core_loop` at `n`, through its run), recorded. The errors are the body's
 (`CoreStepE`). -/

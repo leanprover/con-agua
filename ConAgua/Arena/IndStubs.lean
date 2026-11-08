@@ -97,7 +97,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- A `PropWhen` from its three words (`decPW`'s layout: `0` `never`, `1` `ifAllZero` with the
 names the handle slice `(o, l)` of `a`). -/
-def pwWords (a : Array Word) (t o l : Word) : Option ConLeche.PropWhen :=
+def pwWords (a : Nat → Option Word) (t o l : Word) : Option ConLeche.PropWhen :=
   match t.toNat with
   | 0 => some .never
   | 1 => do
@@ -108,7 +108,7 @@ def pwWords (a : Array Word) (t o l : Word) : Option ConLeche.PropWhen :=
 /-- `lv_zero_caps`' result `(tag, off, len)`: the zero-ness of the level `lv`, decoded in every
 array that agrees with the record pool below its top. -/
 def decZC (m : Mem) (r : List Word) (lv : ConLeche.Level) : Prop :=
-  ∀ a : Array Word, (∀ i < erTop m, a[i]? = (erA m)[i]?) →
+  ∀ a : Nat → Option Word, (∀ i < erTop m, a i = erA m i) →
     pwWords dn a (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) = some (ConLeche.Level.zeronessOf lv)
 
 end specs
