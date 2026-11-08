@@ -280,8 +280,7 @@ theorem checkBlockTables_spec (p : Arena.BlockShape) (pP : ConLeche.BlockShape)
       rw [hc] at hrun hsc
       simp only [ROp] at hsc
       rw [hsc]
-      obtain ⟨u, s₁, k1, z1⟩ := AM.bind_ok hrun
-      obtain ⟨rfl, rfl⟩ := AM.pure_ok k1
+      have z1 := hrun  -- con-agua patch: no `pure () >>=` left (new `do` elaborator)
       obtain ⟨p2, hF2⟩ := rest (PStep.refl hok) z1
       exact ⟨p2, FOk.seq (FOk.pure ()) hF2⟩
     | some c =>
@@ -622,7 +621,7 @@ theorem reduceMember_spec {env : Env} (fe : IFEnv) (hk : CoreSpec Arena.checkFue
     obtain ⟨c5, hF5⟩ := defeq_crun (hk.knot env fe henv) c4.ok
       (denoteCV_type (denoteCV_ext hcvT (c3.ext.trans c4.ext))) (denoteCV_type hcvR) hws hwR k5
     obtain ⟨hd5, z6⟩ := AM.dunless_ok AM.Never.fail_any z5
-    replace z6 := AM.pure_bind_ok z6
+    try replace z6 := AM.pure_bind_ok z6  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
     obtain ⟨rfl, rfl⟩ := AM.pure_ok z6
     have x := (c3.ext.trans c4.ext).trans c5.ext
     refine ⟨(c3.trans c4).trans c5, { mP with cvT := cvRP }, ?_, ?_⟩
