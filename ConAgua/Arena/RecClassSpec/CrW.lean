@@ -957,6 +957,7 @@ def slotsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Wo
       (slotW cR N m p vis np mo ml d ((eViewW m e).tail.headD 0))
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `class_read_slot`. -/
 def ssK1 (cR : CallM) (N : Nat) (p vis np n mo ml d dom body : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -964,6 +965,7 @@ def ssK1 (cR : CallM) (N : Nat) (p vis np n mo ml d dom body : Word) :
   | some (r1, m1) =>
     if r1.headD 0 = 0 then some ([0, 0, 0], m1)
     else ssK1b (nextW cR N m1 p vis np n mo ml d dom body (r1.tail.headD 0))
+-/
 
 /-- After `class_read_slots_next`. -/
 def ssK1b : Option (List Word × Mem) → Option (List Word × Mem)
@@ -1052,13 +1054,17 @@ theorem slotsW_ok (h : n ≠ 0) (h2 : ¬ tagW e ≠ 6) (h3 : eViewW m e ≠ []) 
 -/
 theorem ssK1_fail (h : r1.headD 0 = 0) : ssK1 cR N p vis np n mo ml d dom body (some (r1, m1)) =
     some ([0, 0, 0], m1) := by rw [ssK1, ite_eq_left h]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ssK1_ok (h : r1.headD 0 ≠ 0) : ssK1 cR N p vis np n mo ml d dom body (some (r1, m1)) =
     ssK1b (nextW cR N m1 p vis np n mo ml d dom body (r1.tail.headD 0)) := by rw [ssK1, ite_eq_right h]
+-/
 theorem ssK1b_some : ssK1b (some (r1, m1)) =
     some ([r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0], m1) := by rw [ssK1b]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nextW_mot (h : rdW (m.arr64 IW) slot = 0) : nextW cR (N + 1) m p vis np n mo ml d dom body slot =
     ssK2 cR N p vis np n d dom body slot (motSnocW N m mo ml np d) := by
   rw [nextW, ite_eq_left h]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nextW_min (h : rdW (m.arr64 IW) slot ≠ 0) : nextW cR (N + 1) m p vis np n mo ml d dom body slot =
     ssK3 cR N p vis np n d dom body slot mo ml m := by
@@ -1099,9 +1105,9 @@ end arms
 grind_pattern [ind_grind] ssK1_fail => ssK1 cR N p vis np n mo ml d dom body (some (r1, m1))
 grind_pattern [ind_grind] ssK1_ok => ssK1 cR N p vis np n mo ml d dom body (some (r1, m1))
 grind_pattern [ind_grind] ssK1b_some => ssK1b (some (r1, m1))
-grind_pattern [ind_grind] nextW_mot => nextW cR (N + 1) m p vis np n mo ml d dom body slot
-grind_pattern [ind_grind] nextW_min => nextW cR (N + 1) m p vis np n mo ml d dom body slot
-grind_pattern [ind_grind] ssK2_some => ssK2 cR N p vis np n d dom body slot (some (r2, m2))
+-- ronsync2 stage 2: grind_pattern [ind_grind] nextW_mot => nextW cR (N + 1) m p vis np n mo ml d dom body slot
+-- ronsync2 stage 2: grind_pattern [ind_grind] nextW_min => nextW cR (N + 1) m p vis np n mo ml d dom body slot
+-- ronsync2 stage 2: grind_pattern [ind_grind] ssK2_some => ssK2 cR N p vis np n d dom body slot (some (r2, m2))
 -- ronsync2 stage 2: grind_pattern [ind_grind] ssK3_eq => ssK3 cR N p vis np n d dom body slot mo2 ml2 m2
 -- ronsync2 stage 2: grind_pattern [ind_grind] ssK4_big => ssK4 cR N p vis np n d body slot mo2 ml2 (some (fv, m3))
 -- ronsync2 stage 2: grind_pattern [ind_grind] ssK4_ok => ssK4 cR N p vis np n d body slot mo2 ml2 (some (fv, m3))

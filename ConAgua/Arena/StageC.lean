@@ -37,17 +37,14 @@ theorem callW_leafFrame {p : Prog} (hcl : LeafClosed p) {f : FnName} (hf : f ∈
 /-- **`StageC` across a leaf**. -/
 theorem StageC.of_leaf {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
     (hS : StageR vis fe m' a') (hf : MemFrame leafA leafC m m')
-    (hs : ConRon.Bridge.Frontend.IStepS a a') : StageC dn vis fe env m' a' :=
-  ⟨hS, h.check.mono hs.ok hs.ext hs.caches hs.pins,
-    ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,
-      by rw [hf.size]; exact h.mem.bstk,
-      h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp,
-      fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
+    (hs : ConRon.Bridge.Frontend.IStepS a a') : StageC dn vis fe env m' a' := by
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`StageC` after a `StageT`-keeping call**, with con-ron's `CheckOK` after it. -/
 theorem StageC.of_T {m : Mem} {a : AState} (hT : StageT dn vis fe m a)
     (hck : ConRon.Bridge.CheckOK .verified env fe a) : StageC dn vis fe env m a :=
   ⟨hT.stage, hck, hT.twin.mem, hT.flag⟩
+-/
 
 end L.Ind

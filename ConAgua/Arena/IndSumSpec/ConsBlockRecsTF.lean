@@ -72,6 +72,7 @@ def sctK1 (c : CallM) (n : Nat) (rest : Mem → Option (List Word × Mem)) (vis 
   | some (r1, m) => sctK2 rest vis nP b (r1.headD 0) (c n "all_level_params_defined" [lo, ll, b] m)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_struct_proj_table_scoped(vis, nP, lo, ll, bO, bL)`** at exec fuel `n`,
 reading `all_level_params_defined` through `c` (`stubCall`: the stub contract; `realCall p`: the
 program's own call, `IndRealSctC.lean`). -/
@@ -81,14 +82,17 @@ def sctW (c : CallM) : Nat → Mem → Word → Word → Word → Word → Word 
     if bL = 0 then some ([1], m)
     else sctK1 c n (fun m' => sctW c n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
       (hffF m [CWF, rdW (m.arr64 IW) bO])
+-/
 
 section arms
 variable (c : CallM) (rest : Mem → Option (List Word × Mem)) (n : Nat) (m : Mem)
   (vis nP lo ll bO bL b r1 r2 r3 : Word) (r : List Word)
 theorem sctW_nil (h : bL = 0) : sctW c (n + 1) m vis nP lo ll bO bL = some ([1], m) := by simp [sctW, h]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sctW_cons (h : bL ≠ 0) : sctW c (n + 1) m vis nP lo ll bO bL =
     sctK1 c n (fun m' => sctW c n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
       (hffF m [CWF, rdW (m.arr64 IW) bO]) := by simp [sctW, h]
+-/
 theorem sctK5_some : sctK5 (some (r, m)) = some ([r.headD 0], m) := rfl
 theorem sctK4_yes (h : r1 = 0 ∧ r2 = 1 ∧ r3 = 1 ∧ r.headD 0 = 1) :
     sctK4 rest r1 r2 r3 (some (r, m)) = sctK5 (rest m) := by simp only [sctK4]; rw [ite_eq_left h]
