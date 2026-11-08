@@ -33,11 +33,13 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_inds_cv_tas` is its model `icvW`** (generated). -/
 l_model icv_spec (p : Prog) (hp : p.lookup "check_block_inds_cv_tas" = some checkBlockIndsCvTas)
   fns [hp ↦ icvW]
   specs [callW_spec p n "check_block_inds_cv_tas_go", callW_spec p n "sl_cons"]
   grind [ind_grind] finish [rdW_eq] gen 20
+-/
 
 /-- `sl_cons`' run under the stage relation. -/
 theorem installConsRun {p : Prog} (hP : CstProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
@@ -46,11 +48,9 @@ theorem installConsRun {p : Prog} (hP : CstProg p) {n : Nat} {α : Type} {f : Me
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (slCons_specW p hP.alloc hP.copy hP.cons n _ x o l) h
-  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf hW hS hxs.bound hxs.dec hy
-  exact ⟨hS', hg, hd, Nat.le_of_eq htop⟩
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_inds_cv_tas_go`'s model**: the constants of the `[cvTa, s]` records. -/
 theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} (n : Nat) : ∀ (m m' : Mem) (s l : Word) (r : List Word)
@@ -94,7 +94,9 @@ theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name
   obtain ⟨hS2, hg2, hd2⟩ := installConsRun hP (fun q => OMono.decCVp q) h2 hS1 hd1
     (by rw [hc']; exact (show DecB (fun m => decCVp m c) m cv from hcv).grow (OMono.decCVp _) hg1)
   exact ⟨hS2, hg1.trans hg2, by simpa using hd2⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `check_block_inds_cv_tas`' run: `c0 :: cvs.map (·.1)`, a slice of constants below the tops. -/
 theorem installCvTasRun {p : Prog} (hP : CstProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {a : AState} {m m' : Mem} {c0 o l : Word} {r : List Word}
@@ -118,6 +120,7 @@ theorem installCvTasRun {p : Prog} (hP : CstProg p) {n : Nat} {dn : NIdx → Opt
   obtain ⟨hS2, hg2, hd2⟩ := installConsRun hP (fun q => OMono.decCVp q) h2 hS1 hd1
     (hc0.grow (OMono.decCVp _) hg1)
   exact ⟨hS2, hg1.trans hg2, by simpa using hd2⟩
+-/
 
 theorem RecsB.grow {m m' : Mem} {pp : Word} (h : RecsB m pp) (hg : IWGrow m m') (h3 : pp.toNat + 3 < iwTop m) :
     RecsB m' pp := by

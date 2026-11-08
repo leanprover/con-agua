@@ -157,14 +157,18 @@ def npcK1 (n : Nat) (p vis i : Word) : Option (List Word × Mem) → Option (Lis
   | some (r1, m1) => npcK2 m1 p vis i (containsW n m1 (r1.headD 0) (r1.tail.headD 0) i)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `class_n_pc_of`.** -/
 def npcW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, p, vis, i => npcK1 n p vis i (memberNamesW n m p)
+-/
 
 section arms
 variable (n : Nat) (m m1 m3 : Mem) (p vis i b : Word) (r1 r3 : List Word)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem npcW_eq : npcW (n + 1) m p vis i = npcK1 n p vis i (memberNamesW n m p) := rfl
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem npcK1_some : npcK1 n p vis i (some (r1, m1)) =
     npcK2 m1 p vis i (containsW n m1 (r1.headD 0) (r1.tail.headD 0) i) := rfl

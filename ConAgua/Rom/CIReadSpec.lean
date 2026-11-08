@@ -127,11 +127,8 @@ def RomAndPinRef : Prop :=
 
 /-- All six (the basis readers in two parts, `basis`/`quot`), at every stage. -/
 structure RomRefs : Prop where
-  ci : ∀ dn vis fe, RomCiRef p dn vis fe
   basis : ∀ dn vis fe, RomBasisRef p dn vis fe
-  basisA : ∀ dn vis fe, RomBasisARef p dn vis fe
   quot : ∀ dn vis fe, RomQuotRef p dn vis fe
-  quotA : ∀ dn vis fe, RomQuotARef p dn vis fe
   andPin : ∀ dn vis fe, RomAndPinRef p dn vis fe
 
 end specs

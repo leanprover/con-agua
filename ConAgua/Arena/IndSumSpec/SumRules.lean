@@ -147,8 +147,10 @@ def rgoW : Nat → Mem → Word → Word → Word → Word → Word → Word →
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (vis nP cO cL rO rL o ctorN nF rhs k eta q : Word)
   (kr r : List Word) (rest : Mem → Option (List Word × Mem))
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rgoW_nil (h : cL = 0 ∨ rL = 0) : rgoW (n + 1) m vis nP cO cL rO rL o = some ([0], m) := by
   simp [rgoW, h]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rgoW_cons (h : ¬ (cL = 0 ∨ rL = 0)) : rgoW (n + 1) m vis nP cO cL rO rL o =
     rgoK1 (fun m' => rgoW n m' vis nP (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) nP o
@@ -170,10 +172,12 @@ variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   (hp : p.lookup "sum_rules_go" = some sumRulesGoL) (hrrb : RrbF p)
 include ha hp hrrb
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rgoW_spec (n : Nat) : ∀ (s₀ : St) (vis nP cO cL rO rL o : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "sum_rules_go" [vis, nP, cO, cL, rO, rL, o]
     ⦃fun r s' => LocEq s' s₀ ∧ rgoW n s₀.mem vis nP cO cL rO rL o = some (r, s'.mem); ⊤⦄ := by
   sorry
+-/
 
 end spec
 
@@ -183,17 +187,21 @@ end spec
 def rulesK2 (o k : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m2) => some ([o, k], m2)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After the allocation: the rules. -/
 def rulesK1 (n : Nat) (vis nP cO cL rO rL k : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (o, m1) => rulesK2 o k (rgoW n m1 vis nP cO cL rO rL o)
+-/
 
 /-- **The model of `sum_rules(vis, recName, nP, cO, cL, rO, rL)`** at callee fuel `n`. -/
 def rulesW (n : Nat) (m : Mem) (vis nP cO cL rO rL : Word) : Option (List Word × Mem) :=
   rulesK1 n vis nP cO cL rO rL (if rL < cL then rL else cL) (allocW m (if rL < cL then rL else cL))
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rulesK1_some (n : Nat) (vis nP cO cL rO rL k o : Word) (m1 : Mem) :
     rulesK1 n vis nP cO cL rO rL k (some (o, m1)) = rulesK2 o k (rgoW n m1 vis nP cO cL rO rL o) := rfl
+-/
 theorem rulesK2_some (o k : Word) (r : List Word) (m2 : Mem) :
     rulesK2 o k (some (r, m2)) = some ([o, k], m2) := rfl
 attribute [ind_grind] rulesK1_some rulesK2_some

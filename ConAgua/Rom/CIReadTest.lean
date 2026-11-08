@@ -47,6 +47,7 @@ def callees : Stmt → List String
   | .call _ f _ => [f]
   | _ => []
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The program reachable from `todo` (first binding wins), and the names with no binding. -/
 partial def closure (todo : List String) (acc : Prog) (miss : List String) : Prog × List String :=
   match todo with
@@ -56,6 +57,7 @@ partial def closure (todo : List String) (acc : Prog) (miss : List String) : Pro
     else match pool.lookup f with
       | some fd => closure (callees fd.body ++ rest) ((f, fd) :: acc) miss
       | none => closure rest acc (f :: miss)
+-/
 
 /-- The readers' entries. -/
 def roots : List String :=

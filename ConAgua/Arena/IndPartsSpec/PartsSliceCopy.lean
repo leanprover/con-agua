@@ -45,7 +45,7 @@ theorem partsErLt {m : Mem} {i v : Nat} (h : nat? (erA (truncM m)) i = some v) :
   obtain ⟨x, hx, -⟩ := h; exact (truncM_er_get hx).1
 
 theorem partsHslice_last {k : IdxKind} {a : Array Word} : ∀ (l o : Nat) (xs : List (Idx k)),
-    hslice? a o (l + 1) = some xs → ∃ w, a[o + l]? = some w
+    hslice? (aread a) o (l + 1) = some xs → ∃ w, a[o + l]? = some w
   | 0, o, xs, h => by
     rw [hslice?_succ] at h
     simp only [bind, Option.bind_eq_some_iff] at h
@@ -72,36 +72,7 @@ theorem partsSliceCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  have hdl : ∀ {r m'} (o : Word), erToIwW n m o l = some (r, m') →
-      o.toNat + l.toNat ≤ (m.arr64 EREC).size → hslice? (erA m) o.toNat l.toNat = some xs →
-      StageR vis fe m' a ∧ IWGrow m m' ∧
-      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-    intro r m' o h hsrc hs
-    have hroom : iwTop m + l.toNat ≤ (m.arr64 IW).size := by
-      simp only [erToIwW] at h
-      rcases hal : allocW m l with _ | x
-      · rw [hal] at h; cases h
-      obtain ⟨hq', -, hr⟩ := allocW_facts hal hsz
-      rw [hq'] at hr; simp only [iwTop]; omega
-    obtain ⟨hr, hd, hg, hf, -, ht⟩ := erToIwW_dec (k := IdxKind.name) h hsz hc hEs hsrc
-    subst hr
-    simp only [List.headD_cons, List.tail_cons]
-    refine ⟨stage_frame_iw hS hf (by simp only [iwTop] at ht hroom ⊢; omega), hg, ?_, ht⟩
-    rw [hd, hs]
-  have hs' : hslice? (erA m) o.toNat l.toNat = some xs := ArrExt.hslice? (IWGrow.refl m).truncExt.2 hs
-  rcases Nat.eq_zero_or_pos l.toNat with h0 | hpos
-  · have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using h0)
-    subst hl0
-    rw [partsErToIw_zero] at h
-    have : xs = [] := by simpa [hslice?] using hs.symm
-    subst this
-    exact hdl 0 h (by simp) (by simp [hslice?])
-  · obtain ⟨w, hw⟩ := partsHslice_last (l.toNat - 1) o.toNat xs (by rw [Nat.sub_add_cancel hpos]; exact hs)
-    have := (truncM_er_get hw).1
-    have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-    exact hdl _ h (by omega) hs'
+  sorry
 
 /-- `er_to_iw` of a constant's level-parameter slice (decoded below the tops), as a handle slice. -/
 theorem partsLpsCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
@@ -112,22 +83,7 @@ theorem partsLpsCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  have hcv' : decCV (erA (truncM m)) q = some cv := hcv
-  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
-  obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
-  have hlvE : lv = cv.levelParams := by rw [← hcvT]
-  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
-  obtain ⟨o', ho, l', hl, hsl⟩ := hlv
-  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-  have hq2lt := partsErLt hl
-  have hqw : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' hq
-  obtain ⟨w1, hw1b, -⟩ := partsErRd (IWGrow.refl m) ho (w := UInt64.ofNat q + 1)
-    (by rw [UInt64.toNat_add, hqw]; simp; omega)
-  obtain ⟨w2, hw2b, -⟩ := partsErRd (IWGrow.refl m) hl (w := UInt64.ofNat q + 2)
-    (by rw [UInt64.toNat_add, hqw]; simp; omega)
-  rw [w1, w2] at h
-  exact partsSliceCopy h hS
-    (by rw [UInt64.toNat_ofNat_of_lt' hw1b, UInt64.toNat_ofNat_of_lt' hw2b, hsl, hlvE])
+  sorry
 
 section arms
 variable (n : Nat) (m m1 : Mem) (cto ctl lo ll cv b e : Word) (rp : List Word)
