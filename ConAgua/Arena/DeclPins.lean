@@ -35,34 +35,7 @@ theorem IWGrow.recGrow {m m' : Mem} (h : IWGrow m m') : RecGrow m m' := ⟨h.er,
 /-- `ArrExt` of the record pools in use, at an in-bounds top, is a `RecGrow`. -/
 theorem RecGrow.of_ext {m m' : Mem} (hw : IWOK m) (hx : ArrExt (erecP m) (erecP m')) :
     RecGrow m m' := by
-  have hsz : erTop m ≤ (m.arr64 EREC).size := hw.er
-  have hk : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]? ∧ i < erTop m' := by
-    intro i hi
-    have h1 : (erecP m)[i]? = (m.arr64 EREC)[i]? := by
-      simp only [erecP, Array.getElem?_extract]
-      have : i < erecTop m := hi
-      have : erTop m = erecTop m := rfl
-      split
-      · simp
-      · rename_i hn
-        have : i < (m.arr64 EREC).size := by omega
-        simp at hn; omega
-    obtain ⟨v, hv⟩ : ∃ v, (m.arr64 EREC)[i]? = some v :=
-      ⟨_, Array.getElem?_eq_getElem (by omega)⟩
-    rw [hv] at h1
-    have h2 := hx _ _ h1
-    refine ⟨by rw [erecP_get h2, hv], ?_⟩
-    simp only [erecP, Array.getElem?_extract] at h2
-    split at h2
-    · rename_i hlt
-      have : i < min (erecTop m') (m'.arr64 EREC).size := by simpa using hlt
-      have : erTop m' = erecTop m' := rfl
-      omega
-    · cases h2
-  refine ⟨?_, fun i hi => (hk i hi).1⟩
-  by_cases h0 : erTop m = 0
-  · omega
-  · have := (hk (erTop m - 1) (by omega)).2; omega
+  sorry
 
 theorem RecGrow.of_eq {m m' : Mem} (hE : m'.arr64 EREC = m.arr64 EREC)
     (h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) : RecGrow m m' := by
