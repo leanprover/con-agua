@@ -243,7 +243,7 @@ theorem consW_rl {vis : Word} {fe : IFEnv} {a : AState}
   · cases hd
   simp only [Option.bind_some] at hd
   obtain ⟨hS', hg, hd', ht'⟩ := consW_stageN h hS hb hps
-  have hext := IWGrow.erecPExtR hg
+  have hext := IWGrow.ext hg
   refine ⟨?_, ht', hS', hg, consW_mfr h⟩
   rw [decPL_eq_bind, hd']
   simp only [Option.bind_some, List.mapM_cons]
@@ -261,7 +261,7 @@ theorem decPL_rl_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} {rules : List 
     simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by simp at hj; omega)]
   rw [hps']
   simp only [Option.bind_some] at hd ⊢
-  exact ArrExt.mapM (fun _ _ hy => (IWGrow.erecPExtR hg).decRule hy) _ _ hd
+  exact ArrExt.mapM (fun _ _ hy => (IWGrow.ext hg).decRule hy) _ _ hd
 
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
@@ -308,14 +308,14 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
   obtain ⟨hS1, hg1, hf1, hq1⟩ := rmRec_stage ha hS hold hl hp
   generalize hM : rmMem m1 q (UInt64.ofNat pp) flo fll fpo fpl = M at h hS1 hg1 hf1 hq1
   rcases h2 : tsrmW n M (ro + 1) (rl - 1) flo fll fpo fpl with _ | ⟨rr, m2⟩ <;> simp only [h2, tsrmW.k_tgt_stored_rules_remap, reduceCtorEq] at h
-  have hext := IWGrow.erecPExtR hg1
+  have hext := IWGrow.ext hg1
   obtain ⟨hd2, hb2, hS2, hg2, hf2⟩ := ih h2 hS1
     (decPL_rl_grow hg1 (by rw [eo, el]; omega) (by rw [eo, el, hl']; simpa using hrest))
     (by rw [eo, el]; have := hg1.iw; omega) (hext.hslice? hl) (hext.hslice? hp)
   rcases h3 : consW n m2 q (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, tsrmW.k_sl_cons, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hd3, ht3, hS3, hg3, hf3⟩ := consW_rl h3 hS2 hb2 hd2
-    ((IWGrow.erecPExtR hg2).decRule hq1)
+    ((IWGrow.ext hg2).decRule hq1)
   exact ⟨by simpa using hd3, Nat.le_of_eq ht3, hS3, (hg1.trans hg2).trans hg3, (hf1.trans hf2).trans hf3⟩
 -/
 
@@ -526,7 +526,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   obtain ⟨hd5, hb5, hS5, hg5, -⟩ := tsrmW_ok dn fe vis a2 (k + 1) h5 hS4
     (decPL_rl_grow hg24 (by have := hg1.2; omega) (by simpa using decPL_rl_grow (IWGrow.refl _) (by simpa using hb1) hd1))
     (by have := hg24.iw; simpa using (by omega : (rs.headD 0).toNat + (rs.tail.headD 0).toNat ≤ iwTop m4))
-    ((IWGrow.erecPExtR hg4).hslice? hsl3) hsl4
+    ((IWGrow.ext hg4).hslice? hsl3) hsl4
   refine ⟨_, a2, ?_, by simpa using hd5, by simpa using hb5, hS5, (((hg1.trans hg2).trans hg3).trans hg4).trans hg5,
     tsrmW_afr _ h5 (efW_afr h4 (efW_afr h3 hA2))⟩
   simp only [ConRon.Arena.tgtStoredRules, StateT.run_bind, eCs, eNP, run1, except_ok_bind, eMem, decON, hk0,

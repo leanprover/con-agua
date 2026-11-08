@@ -588,7 +588,7 @@ theorem riRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hcv' : decCV (erecP M) (q1.toNat + 1) = some cv := by
     rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
       (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
-    exact ArrExt.decCV (IWGrow.erecPExtR hg) hcv
+    exact ArrExt.decCV (IWGrow.ext hg) hcv
   have nk : ∀ j (hj : j < 9), nat? (erecP M) (q1.toNat + j) =
       some (([5, rdW (m.arr64 EREC) cq, rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2),
         rdW (m.arr64 EREC) (cq + 3), mi, rp3, reo, rel] : List Word)[j]'(by simpa using hj)).toNat := by
@@ -601,7 +601,7 @@ theorem riRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have n7 := nk 7 (by decide)
   have n8 := nk 8 (by decide)
   simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at n0 n5 n6 n7 n8
-  have hru' : decRules (erecP M) reo.toNat rel.toNat = some rules := (IWGrow.erecPExtR hg).decRules hru
+  have hru' : decRules (erecP M) reo.toNat rel.toNat = some rules := (IWGrow.ext hg).decRules hru
   simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5, n6, n7, n8, Option.pure_def]
   simp [hru']
 -/
@@ -713,7 +713,7 @@ theorem cbpW_ok (p : Prog) (L : CbrLook p) (n : Nat) {m m' : Mem} {a : AState} {
     · cases h2
     · simp only [Option.some.injEq, Prod.mk.injEq] at h2; rw [← h2.1]; rfl
   rw [hrq] at h2
-  obtain ⟨hS2, hg2, -, hci⟩ := riRec_stage h2 hS1 ((IWGrow.erecPExtR hg1).decCV hcv) hru
+  obtain ⟨hS2, hg2, -, hci⟩ := riRec_stage h2 hS1 ((IWGrow.ext hg1).decCV hcv) hru
   obtain ⟨wn, hwn, hwnl, -⟩ := decCI_name hci
   have hwn' : (rdW (m2.arr64 EREC) (rq.headD 0 + 1)).toNat < 2 ^ 32 := by
     have hq1 : (rq.headD 0 + 1).toNat = (rq.headD 0).toNat + 1 := by
@@ -977,7 +977,7 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
   have hS1' : StageR vis fe m1 a1 := hS1.unrestrict hS.check.env.vis
   rw [hrp] at run1
   rcases h2 : cbpW p n m1 vis (UInt64.ofNat cvp) (bmjW m pp mm) (brpW m pp mm) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rv, m2⟩ <;> simp only [h2, cbrK2, reduceCtorEq] at h
-  obtain ⟨hS2, hg2, hf2⟩ := cbpW_ok dn fe vis p L n h2 hS1' ((IWGrow.erecPExtR hg1).decCV hcvE) hd1 hb1
+  obtain ⟨hS2, hg2, hf2⟩ := cbpW_ok dn fe vis p L n h2 hS1' ((IWGrow.ext hg1).decCV hcvE) hd1 hb1
   rw [hmj, hrp] at hS2
   rcases h3 : cbrW p n m2 vis2 pp (mm + 1) (lo + 1) (ll - 1) (rv.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [h3, cbrK3, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h

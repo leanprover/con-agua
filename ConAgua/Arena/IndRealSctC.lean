@@ -463,13 +463,14 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   generalize hM : wrER m8 q _ = M at hSM hgM htM hget hfM
   have hPE : ∀ i < 13, erecP M (q.toNat + i) = (M.arr64 EREC)[q.toNat + i]? :=
     fun i hi => erecP_getE (by simp at htM; omega)
-  have he6 := IWGrow.erecPExtR (hg6.trans hg7 |>.trans hgM)
-  have he7 := IWGrow.erecPExtR (hg7.trans hgM)
-  have he5 := IWGrow.erecPExtR ((hg6.trans hg7).trans hgM)
+      (by have := hSM.iw.er; have := hSM.iw.erCap; simp at htM; omega)
+  have he6 := IWGrow.ext (hg6.trans hg7 |>.trans hgM)
+  have he7 := IWGrow.ext (hg7.trans hgM)
+  have he5 := IWGrow.ext ((hg6.trans hg7).trans hgM)
   have htbl := sumDecTbl (a := erecP M) (q := q.toNat)
     (fun i hi => by rw [hPE i hi, hget i (by simpa using hi)]) hT hC hrs
     (by rw [hrl1]; exact ArrExt.hslice? he5 hsl5) (by rw [hrb1]; exact ArrExt.hslice? he7 hsl6)
-    (by rw [hrg1]; exact ArrExt.hslice? (IWGrow.erecPExtR hgM) hsl7)
+    (by rw [hrg1]; exact ArrExt.hslice? (IWGrow.ext hgM) hsl7)
   -- `env_push_table`
   refine RefE.onlySim (fun _ => tblE.k_env_push_table.none ..) (fun _ _ h => h) fun rv m9 hc => ?_
   rw [tblE.k_env_push_table.arm1]

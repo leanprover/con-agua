@@ -125,7 +125,7 @@ theorem apdF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       apdP_prog.put apdP_prog.clear apdP_prog.lmem apdP_prog.lnode apdP_prog.lapd apdP_prog.ls
       apdP_prog.go apdP_prog.entry n ⟨m, Locals.init []⟩ o l e) hc
   subst hs'
-  obtain ⟨b, hrun, hr, hS', hg, mp, hM⟩ := apdEntry_ok (dn := dn) n hT.stage
+  obtain ⟨b, hrun, hr, hS', hg, mp, hM⟩ := apdEntry_ok n hT.stage
     (ApdEnv.of_den hT.twin.den hT.twin.nwf) o l e _ lps ks hks hdec he
     (apdMR_clear hT.twin.memos.walk) hm
   have hf := apdF_frame h

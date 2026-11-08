@@ -316,7 +316,7 @@ theorem cfrRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hcv' : decCV (erecP M) (q1.toNat + 1) = some cv := by
     rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
       (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
-    exact ArrExt.decCV (IWGrow.erecPExtR hg) hcv
+    exact ArrExt.decCV (IWGrow.ext hg) hcv
   have nk : ∀ j (hj : j < 9), nat? (erecP M) (q1.toNat + j) =
       some (([5, rdW (m.arr64 EREC) cq, rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2),
         rdW (m.arr64 EREC) (cq + 3), mi, rp3, 0, 0] : List Word)[j]'(by simpa using hj)).toNat := by
@@ -379,7 +379,7 @@ theorem rec3PrevD_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} (hg : I
   · rename_i h0; rw [ite_eq_left h0] at h; exact h
   · rename_i h0; rw [ite_eq_right h0] at h
     obtain ⟨ci, hci, rfl⟩ := Option.map_eq_some_iff.mp h
-    rw [ArrExt.decCI (IWGrow.erecPExtR hg) hci]; rfl
+    rw [ArrExt.decCI (IWGrow.ext hg) hci]; rfl
 -/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)

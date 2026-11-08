@@ -198,7 +198,7 @@ theorem eqAt1_ref (hD : DmProg2 p) (ty a b : Word) :
   refine Sim.ntB ((internSucc_ref hD.toMasterProg (r1.headD 0) hl1).simG hS1 hg1)
     fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_
   refine (slNew1_fref p hD.lIwAlloc hD.lSlNew1 (r2.headD 0)).simB hS2.iw fun r3 m3 ⟨hrec, hr3⟩ => ?_
-  refine Sim.ntB ((ilF_ok (fun _ => none) vis fe (r3.headD 0) (r3.tail.headD 0) [decI (r2.headD 0)]).simS
+  refine Sim.ntB ((ilF_ok vis fe (r3.headD 0) (r3.tail.headD 0) [decI (r2.headD 0)]).simS
     ⟨hrec.2.1.stage hS2, slNew1_dec hrec hl2 hr3⟩) fun r4 _ m4 a4 ⟨hS4, hg4, hl4, rfl⟩ => ?_
   refine Sim.ntB ((pinSlot_ref p hD.lPinAt 0 pinEq rfl).simG hS4 (hg2.trans (hrec.2.1.1.trans hg4)))
     fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
