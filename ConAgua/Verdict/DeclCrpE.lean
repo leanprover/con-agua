@@ -37,6 +37,7 @@ open ConRon.Bridge (CheckOK StepOK CoreSpec)
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_reduce_pin`'s error claim**, from `crp_ref` through the run. -/
 theorem crpE_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p)
@@ -53,5 +54,6 @@ theorem crpE_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
     ErrClaim (checkReducePin V (fe2.restrictTo vis.toNat) fe2 (decI c) (decI v)) a e :=
   RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkReducePin_specE p hC n _ vis vis2 c v) hnv hcE
     (crp_ref hC hq hcl hkp hdn hn hS hck henv hok2 hmem hflag hnm hvx hws hc hv hCr) hce
+-/
 
 end L.Arena

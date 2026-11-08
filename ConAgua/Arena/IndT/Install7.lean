@@ -53,6 +53,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_ctors_one`'s unified model**: `check_sum_ctors` through its run (not migrated),
 the `rec2`s (outside the verdict closure) lifted. -/
 l_model icboE_spec (p : Prog) (hP : CtorsProg p)
@@ -61,7 +62,9 @@ l_model icboE_spec (p : Prog) (hP : CtorsProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_ctors_go`'s unified model**: the head through `icboE`, the `sl_cons` lifted. -/
 l_model icbgE_spec (p : Prog) (hP : CtorsProg p)
   fns [hP.go ↦ icbgE]
@@ -69,7 +72,9 @@ l_model icbgE_spec (p : Prog) (hP : CtorsProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_ctors`' unified model**: `block_shape_lps` (outside the verdict closure) lifted,
 `check_block_ctors_go` through `icbgE`. -/
 l_model ictE_spec (p : Prog) (hP : CtorsProg p)
@@ -78,6 +83,7 @@ l_model ictE_spec (p : Prog) (hP : CtorsProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 
 /-- What `check_block_ctors_one` gives besides the twin's constructors and their sorts `x` (from
@@ -90,9 +96,7 @@ structure IcboPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   grow : IWGrow m m'
   cns : DecB (fun m => decCNS m (r.headD 0).toNat) m' x.1
   iss : DecB (fun m => decISS m (r.tail.headD 0).toNat) m' x.2
-  cnsB : DecB (fun m => decCNSB m (r.headD 0).toNat) m' x.1
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 /-- What `check_block_ctors_go` gives besides the twin's constructors and sorts per member `x`:
 the stage invariant, the growth, the two slices (the constructors also with their bounds),
@@ -104,7 +108,6 @@ structure IcbgPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   grow : IWGrow m m'
   cns : PSlR decCNS x.1 (r.headD 0) (r.tail.headD 0) m'
   iss : PSlR decISS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m'
-  cnsB : PSlR decCNSB x.1 (r.headD 0) (r.tail.headD 0) m'
   abs : AbsOK m'
 
 section sims
@@ -114,6 +117,7 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
   (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_block_ctors_one` refines `checkSumCtors`, both outcomes** (twin side: one member of
 con-ron's `checkBlockCtors_specF`'s proof): `check_sum_ctors` through its run (`scts_ref`), the two `rec2`s (outside the verdict closure) claim nothing. -/
@@ -188,7 +192,9 @@ theorem icbo_ref (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   exact RefE.ret rfl ⟨hR.stage.of_pstep hS3 hA3 (PStep.refl hR.stage.check.state),
     (hR.grow.trans hg2).trans hg3,
     hd2.grow (decCNS_mono _) hg3, hd3, hd2b.grow (decCNSB_mono _) hg3, hA3, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_block_ctors_go` refines `checkBlockCtors`, both outcomes** (twin side: con-ron's
 `checkBlockCtors_specF`'s proof): the head by `icbo_ref`, the rest by induction, the two
@@ -281,7 +287,9 @@ theorem icbg_ref (hP : CtorsProg p) (pp lo ll : Word) (bs : BlockShape) {bsP : C
     by simpa using (show PSlR decCNS _ _ _ m3 from ⟨hd3, Nat.le_of_eq ht3⟩).grow decCNS_mono hg4,
     by simpa using (show PSlR decISS _ _ _ m4 from ⟨hd4, Nat.le_of_eq ht4⟩),
     by simpa using (show PSlR decCNSB _ _ _ m3 from ⟨hb3, Nat.le_of_eq hbt3⟩).grow decCNSB_mono hg4, hA4⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_block_ctors` refines `checkBlockCtors`, both outcomes** (at one environment,
 `vis0 = vis`, as `check_block_pass` calls it): the shape's level parameters (L only, outside the
@@ -315,7 +323,9 @@ theorem ict_ref (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a₀
   exact RefE.lastE (fun _ => ictE.k_check_block_ctors_go.none ..)
     (fun _ => ictE.k_check_block_ctors_go.arm1 ..) id h2
     fun _ _ _ _ hR => { hR with grow := hg1.trans hR.grow }
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_block_ctors` refines `checkBlockCtors`** under `StageC` (at one environment,
 `vis0 = vis`, as `check_block_pass` calls it; the denotations as con-ron's `checkBlockCtors_specF`
@@ -352,6 +362,7 @@ theorem checkBlockCtors_refinesC (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.cns, by rw [hres]; exact hR.iss,
     by rw [hres]; exact hR.cnsB, hR.abs⟩
+-/
 
 end sims
 

@@ -73,42 +73,7 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
         DecB (fun m => decBS m (r.headD 0).toNat) m' x ∧ ShapeSrc m' (r.headD 0) ∧
         (RecsB m pp → RecsB m' (r.headD 0))) := by
-  intro r m' e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (blockShapeWithSort_specC p ha hpw hp (realCall p) (realCall_spec p) n _ pp s) e
-  obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
-  have hS := hC.stage
-  obtain ⟨bs', a', q, hrun, rfl, -, hS', hg, htopq, hcell, hD⟩ :=
-    wsC_ok (realCall p) n dn fe vis m s'.mem a pp s r bs hW hS hs
-      (fun m'' hg => hq.stab (decBS_mono _) m'' hg) hq9 (fun k r2 m2 h0 e2 => by
-        have hF := hS.check.pins.full h0
-        obtain ⟨lz, hdz⟩ := hC.stageT.twin.den.zero
-        rw [hF.zeroLevel] at hdz
-        obtain ⟨x, a2, hrun2, hC2, hg2, hd2, -, -⟩ :=
-          lvlEqC_simC p hcl hLC k hC hA s (pinW m 53) hs hF.lv_lt.2.1 sP lz hsP hdz r2 m2 e2
-        exact ⟨x, a2, hrun2, hC2.stage, hg2, hd2⟩)
-  refine ⟨bs', a', hrun, hS', hg, by simpa using hD hq, ?_, fun hrb o l h1 h2 => ?_⟩
-  rotate_left
-  · simp only [List.headD_cons] at h1 h2
-    have e2 := hcell 2 (by decide) (by decide) (by decide)
-    have e3 := hcell 3 (by decide) (by decide) (by decide)
-    have hp2 : iwN s'.mem (pp.toNat + 2) = iwN m (pp.toNat + 2) := iwN_grow hg (by omega)
-    have hp3 : iwN s'.mem (pp.toNat + 3) = iwN m (pp.toNat + 3) := iwN_grow hg (by omega)
-    have g2 : iwN s'.mem (q.toNat + 2) = iwN s'.mem (pp.toNat + 2) := by simp only [iwN, nat?, iwA, e2]
-    have g3 : iwN s'.mem (q.toNat + 3) = iwN s'.mem (pp.toNat + 3) := by simp only [iwN, nat?, iwA, e3]
-    rw [g2, hp2] at h1; rw [g3, hp3] at h2
-    exact Nat.le_trans (hrb o l h1 h2) hg.iw
-  intro o l h1 h2
-  simp only [List.headD_cons] at h1 h2
-  have e0 := hcell 0 (by decide) (by decide) (by decide)
-  have e1 := hcell 1 (by decide) (by decide) (by decide)
-  simp only [Nat.add_zero] at e0
-  have hp0 : iwN s'.mem pp.toNat = iwN m pp.toNat := iwN_grow hg (by omega)
-  have hp1 : iwN s'.mem (pp.toNat + 1) = iwN m (pp.toNat + 1) := iwN_grow hg (by omega)
-  have g0 : iwN s'.mem q.toNat = iwN s'.mem pp.toNat := by simp only [iwN, nat?, iwA, e0]
-  have g1 : iwN s'.mem (q.toNat + 1) = iwN s'.mem (pp.toNat + 1) := by simp only [iwN, nat?, iwA, e1]
-  rw [g0, hp0] at h1; rw [g1, hp1] at h2
-  exact Nat.le_trans (hsrc o l h1 h2) hg.iw
+  sorry
 
 set_option experimental.vcgen true in
 /-- **`check_block_inds`' unified model**: the formers and the agreements by their unified models
@@ -132,7 +97,6 @@ structure IndsPost (dn : NIdx → Option ConLeche.Name) (env : ConLeche.Env) (fe
   out : IndsOut dn m r x m' a'
   abs : AbsOK m'
   recs : RecsB m pp → RecsB m' (r.tail.tail.tail.headD 0)
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -140,6 +104,7 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
   (hV : ValProg p) (hOpf : OpfF p) (hLC : LvlCacheProg p)
   (hApd : ApdF p) (hCrk : CrKeep p) (hLz : LzcF p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hOpf hLC hApd hCrk hLz in
 /-- **`check_block_inds` refines `checkBlockInds`, both outcomes** under `StageC` (twin side:
 con-ron's `checkBlockInds_spec`'s proof): member 0's former by `cbt_ref`, the other formers by
@@ -289,7 +254,9 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
     hp1'.grow (decBS_mono _) hg6, partsHsrc_grow hg6 hp9' hsrc5⟩, hA6, fun hrb =>
     ((hrb4 ((hrb.grow (k1.trans k2).grow (by omega)).grow k3.grow
       (by have := (k1.trans k2).grow.1; omega))).grow (hg5.trans hg6) (by omega)), k04.core.trans c5'⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hOpf hLC hApd hCrk hLz in
 /-- **`check_block_inds` refines `checkBlockInds`** under `StageC` (stage 1; the shape's and the
 environment's denotations as con-ron's `checkBlockInds_spec` asks): the environment with the
@@ -315,6 +282,7 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hres, hst]; exact hR.out, hR.abs, hR.recs, by rw [hst]; exact hR.core⟩
+-/
 
 end sims
 

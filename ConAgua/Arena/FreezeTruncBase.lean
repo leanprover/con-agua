@@ -119,8 +119,8 @@ theorem truncFrozen_ctl (m : Mem) : (truncFrozen m).arr64 CTL = m.arr64 CTL := b
 
 /-- **A frozen array is its prefix up to its extent.** -/
 theorem truncFrozen_mem (m : Mem) {x : ArrId} {z : Fz} (h : (x, z) ∈ frozen.drop 1) :
-    (truncFrozen m).arr64 z.src = (m.arr64 z.src).extract 0 (fzExt m z) :=
-  truncList_mem m x z _ m h frozen_pairwise
+    (truncFrozen m).arr64 z.src = (m.arr64 z.src).extract 0 (fzExt m z) := by
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem frozen_drop1 : frozen.drop 1 =

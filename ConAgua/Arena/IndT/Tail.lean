@@ -53,6 +53,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `StageC` from its parts: the stage relation, con-ron's `CheckOK`, the memory's half from
 `AbsOK`, the name decoder's agreement. -/
 theorem StageC.of_parts {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -63,7 +64,9 @@ theorem StageC.of_parts {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
   ⟨hS, hck,
     ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩, hdn⟩,
     hA.wk.2.2.2.2⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **`check_block_tail_rec`'s unified model**: the recursor stage and the tables through their runs
 (the ok half reads the calls' memos), the recursors consed (outside the verdict closure) lifted. -/
@@ -72,7 +75,9 @@ l_model ictrE_spec (p : Prog) (hP : TailProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **`check_block_tail`'s unified model**: the index sorts through their run, the constructors consed,
 the flush and the nested bit (outside the verdict closure) lifted, `check_block_tail_rec` by its
@@ -84,6 +89,7 @@ l_model ictlE_spec (p : Prog) (hP : TailProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `check_block_tail` gives besides the index `x` it returns, at the view `w` (from `m`): the
 stage, the growth, the `hb` memo, `AbsOK`, the recursor stage's memos. -/
@@ -101,6 +107,7 @@ variable {p : Prog} (hkp : KnotStageProg p) {env₁ : ConLeche.Env} (henv₁ : C
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_block_tail` refines `checkBlockTail`, both outcomes** (twin side con-ron's
 `checkBlockTail_of`): the index sorts (`iisr_ref` through its run), the
@@ -377,7 +384,9 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
     fun r8 s8 x a' c8 _ h1 h2 => ?_
   exact RefE.ret rfl ⟨h2.stage, hg06.trans h2.grow, h2.memo, h2.abs,
     RcMR.ofClosedHb hclH hfH (callW_of_callE c8) hR6 h2.memo⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_block_tail` refines `checkBlockTail` under `StageC`** (`checkBlockTail_refines`'s;
 twin side con-ron's `checkBlockTail_of`): from `StageC` at the formers' index and the pass record's
@@ -413,6 +422,7 @@ theorem checkBlockTail_refinesC (hP : TailProg p) (L : CbrLook p) {fs : List FnN
   rintro r s' ⟨hl, x, a', run, hR'⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hres, hst]; exact hR'.stage, hR'.grow, hR'.memo, hR'.abs, hR'.rc⟩
+-/
 
 end sims
 
