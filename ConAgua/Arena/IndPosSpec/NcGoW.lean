@@ -66,7 +66,7 @@ theorem ncK3_next (h : ¬ ol = 0) : ncK3 k vis C co cl cs ol fp nPc (some (q, m3
     ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) fp := by rw [ncK3, ite_eq_right h]
 -/
 end arms
-attribute [ind_grind] ncGoW_done ncGoW_step ncK1_miss ncK1_hit ncK2_miss ncK2_hit ncK3_first ncK3_next
+-- ronsync2 stage 2: attribute [ind_grind] ncGoW_done ncGoW_step ncK1_miss ncK1_hit ncK2_miss ncK2_hit ncK3_first ncK3_next
 
 def ncB (cs : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -129,7 +129,7 @@ theorem ntK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.hea
   rw [ntK1, ite_eq_right h, ite_eq_right h3]
 -/
 end arms
-attribute [ind_grind] ntK2_empty ntK2_cons ntK1_miss ntK1_noind ntK1_ind
+-- ronsync2 stage 2: attribute [ind_grind] ntK2_empty ntK2_cons ntK1_miss ntK1_noind ntK1_ind
 
 section spec
 variable (p : Prog) (hl : NtLook p)

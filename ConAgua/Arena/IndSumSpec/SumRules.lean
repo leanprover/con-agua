@@ -165,8 +165,9 @@ theorem rgoK2_some : rgoK2 rest nP o ctorN nF rhs k eta (some (q, m2)) =
     rgoK3 (rest ((ruleMem m2 q ctorN nF nP rhs k eta).set64 IW o q)) := rfl
 theorem rgoK3_some : rgoK3 (some (r, m3)) = some ([0], m3) := rfl
 end arms
-attribute [ind_grind] rgoW_nil rgoW_cons rgoK1_some rgoK2_some rgoK3_some
+-- ronsync2 stage 2: attribute [ind_grind] rgoW_nil rgoW_cons rgoK1_some rgoK2_some rgoK3_some
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section spec
 variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   (hp : p.lookup "sum_rules_go" = some sumRulesGoL) (hrrb : RrbF p)
@@ -180,6 +181,7 @@ theorem rgoW_spec (n : Nat) : ∀ (s₀ : St) (vis nP cO cL rO rL o : Word),
 -/
 
 end spec
+-/
 
 /-! ## `sum_rules`: the word model -/
 
@@ -206,8 +208,9 @@ theorem rulesK1_some (n : Nat) (vis nP cO cL rO rL k o : Word) (m1 : Mem) :
 -/
 theorem rulesK2_some (o k : Word) (r : List Word) (m2 : Mem) :
     rulesK2 o k (some (r, m2)) = some ([o, k], m2) := rfl
-attribute [ind_grind] rulesK1_some rulesK2_some
+-- ronsync2 stage 2: attribute [ind_grind] rulesK1_some rulesK2_some
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section spec2
 variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   (hg : p.lookup "sum_rules_go" = some sumRulesGoL) (hia : p.lookup "iw_alloc" = some iwAlloc)
@@ -222,6 +225,7 @@ theorem rulesW_spec (n : Nat) (s₀ : St) (vis recName nP cO cL rO rL : Word) :
 -/
 
 end spec2
+-/
 
 /-! ## The relation to the twin -/
 
@@ -410,6 +414,7 @@ theorem rulesW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   · simp only [List.headD_cons, List.tail_cons]; omega
 -/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section census
 variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   (hg : p.lookup "sum_rules_go" = some sumRulesGoL) (hia : p.lookup "iw_alloc" = some iwAlloc)
@@ -439,6 +444,7 @@ theorem sumRules_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Op
 -/
 
 end census
+-/
 
 end L.Ind
 

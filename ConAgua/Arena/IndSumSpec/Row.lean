@@ -148,6 +148,7 @@ grind_pattern [ind_grind] colK_big => colK n uo ul so sl z j k (some (mx, m1))
 grind_pattern [ind_grind] colK_ok => colK n uo ul so sl z j k (some (mx, m1))
 grind_pattern [ind_grind] colK2_some => colK2 (some (r, m2))
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section spec
 variable (p : Prog) (hgd : p.lookup "sl_getd" = some slGetD)
   (hmf : p.lookup "max_find" = some maxFind) (hmp : p.lookup "max_push" = some maxPush)
@@ -172,6 +173,7 @@ theorem colW_spec (n : Nat) : ∀ (s₀ : St) (uo ul so sl z j k acc : Word),
       finish (gen := 20)
 
 end spec
+-/
 
 /-- A slice of `IW` Booleans (`0` false, any other word true). -/
 def decBL (m : Mem) (o l : Nat) : Option (List Bool) := (List.range l).mapM fun j => iwB m (o + j)
@@ -320,6 +322,7 @@ grind_pattern [ind_grind] rowW_cons => rowW (n + 1) m uo ul so sl z i k
 grind_pattern [ind_grind] rowK1_some => rowK1 n uo ul so sl z i k (some (rg, m1))
 grind_pattern [ind_grind] rowK2_some => rowK2 n g (some (rr, m2))
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section spec
 variable (p : Prog) (hgd : p.lookup "sl_getd" = some slGetD)
   (hmf : p.lookup "max_find" = some maxFind) (hmp : p.lookup "max_push" = some maxPush)
@@ -348,6 +351,7 @@ theorem rowW_spec (n : Nat) : ∀ (s₀ : St) (uo ul so sl z i k : Word),
       finish (gen := 20)
 
 end spec
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rowW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :

@@ -254,6 +254,7 @@ grind_pattern [ind_grind] ulK1_some => ulK1 k cty nP n base (some (r, m1))
 grind_pattern [ind_grind] ulK2_some => ulK2 k r (some (rr, m2))
 grind_pattern [ind_grind] ulK3_some => ulK3 (some (rc, m2))
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section ulspec
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
@@ -288,6 +289,7 @@ theorem ulW_spec (n : Nat) : ∀ (s₀ : St) (cty nP m base : Word),
         slCons_specW p ha hc hsc n, ih] <;> finish (gen := 20)
 
 end ulspec
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
@@ -369,6 +371,7 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
         · rw [hlen3] at htop3; simpa only [List.headD_cons, List.tail_cons] using htop3
 -/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section ulCensus
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
@@ -406,6 +409,7 @@ theorem structUsedLaterList_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : 
 -/
 
 end ulCensus
+-/
 
 end L.Ind
 end

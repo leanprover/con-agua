@@ -136,7 +136,7 @@ theorem rsoK1_some : rsoK1 p n c (some (r1, m1)) =
 theorem rsoK2_some : rsoK2 q (some (r2, m2)) = mpW m2 (q + 1) (r2.headD 0) := rfl
 end arms
 
-grind_pattern [ind_grind] rsoW_step => rsoW p (n + 1) m vis c
+-- ronsync2 stage 2: grind_pattern [ind_grind] rsoW_step => rsoW p (n + 1) m vis c
 grind_pattern [ind_grind] rsoK1_some => rsoK1 p n c (some (r1, m1))
 grind_pattern [ind_grind] rsoK2_some => rsoK2 q (some (r2, m2))
 
@@ -328,12 +328,12 @@ theorem reoB2_some : reoB2 p n (some (r3, m3)) =
 theorem reoB3_some : reoB3 q (some (r4, m4)) = mpW m4 (q + 1) (r4.headD 0) := rfl
 end arms
 
-grind_pattern [ind_grind] reoW_step => reoW p (n + 1) m vis c
-grind_pattern [ind_grind] reoK1_some => reoK1 p n vis c (some (r1, m1))
-grind_pattern [ind_grind] reoN1_some => reoN1 p n vis (some (r2, m2))
+-- ronsync2 stage 2: grind_pattern [ind_grind] reoW_step => reoW p (n + 1) m vis c
+-- ronsync2 stage 2: grind_pattern [ind_grind] reoK1_some => reoK1 p n vis c (some (r1, m1))
+-- ronsync2 stage 2: grind_pattern [ind_grind] reoN1_some => reoN1 p n vis (some (r2, m2))
 grind_pattern [ind_grind] reoN2_some => reoN2 p n (some (r3, m3))
 grind_pattern [ind_grind] reoN3_some => reoN3 r3 (some (r4, m4))
-grind_pattern [ind_grind] reoB1_some => reoB1 p n vis (some (r2, m2))
+-- ronsync2 stage 2: grind_pattern [ind_grind] reoB1_some => reoB1 p n vis (some (r2, m2))
 grind_pattern [ind_grind] reoB2_some => reoB2 p n (some (r3, m3))
 grind_pattern [ind_grind] reoB3_some => reoB3 q (some (r4, m4))
 

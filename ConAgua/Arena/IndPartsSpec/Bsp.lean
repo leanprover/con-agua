@@ -221,7 +221,7 @@ theorem bbK8_some : bbK8 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll 
       (plW (n + 1) m lo ll) := rfl
 -/
 end arms
-attribute [ind_grind] bbK11_some bbK8_some
+-- ronsync2 stage 2: attribute [ind_grind] bbK11_some bbK8_some
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `block_shape_fin`** (at exec fuel `n + 2`). -/
@@ -328,7 +328,7 @@ theorem bbH1_some : bbH1 c n nPd cto ctl cso csl rso rsl cvT0 (some (r, m)) =
       (bmcW (n + 2) m nPd ctl csl (r.headD 0) (r.tail.headD 0) rso rsl cto ctl) := rfl
 -/
 end arms
-attribute [ind_grind] btK2_some bbH4_fail bbH4_ok bbH3_some bbH1_some
+-- ronsync2 stage 2: attribute [ind_grind] btK2_some bbH4_fail bbH4_ok bbH3_some bbH1_some
 
 end L.Ind
 

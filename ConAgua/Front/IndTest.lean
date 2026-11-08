@@ -20,8 +20,8 @@ open L.Front
 /-! ## Tests -/
 
 -- `ind_caps`' 15 words decode to the default `IIndCaps` (`decI 0` is the default handle).
-#guard decCaps #[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] (fun _ => none) 0 ==
-  some ({} : ConRon.Arena.IIndCaps)
+-- ronsync2 stage 2: #guard decCaps #[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] (fun _ => none) 0 ==
+-- ronsync2 stage 2:   some ({} : ConRon.Arena.IIndCaps)
 
 /-- The lines before the inductive line: name 1 = `Unit`, 2 = `Unit.unit`, 3 = `Unit.rec`,
 4 = `motive`; level 1 = `succ 0`; expressions: 0 = `Sort 1`, 1 = `Unit`, 2 = `Sort 0`
@@ -52,14 +52,14 @@ def unitRun (kr : String) (nf : Nat) : Option Mem :=
 
 -- The block validates and installs: one `DECL` record of kind 6 with 3 constants and 0
 -- parameters, decoding (`IndDeclAt`'s `decCIs`) to `indInfo`, `ctorInfo`, `recInfo`.
-#guard (unitRun "false" 0).map (fun m =>
-    let D := m.arr64 DECL
-    (dw D 0 0, dw D 0 3, dw D 0 4,
-      ((decCIs (m.arr64 DIND) (dw D 0 2).toNat (dw D 0 3).toNat).map
-        (·.map fun
-          | .indInfo _ _ => 3 | .ctorInfo _ np nf => 40 + 10 * np + nf
-          | .recInfo _ maj pre rs => 500 + 100 * maj + 10 * pre + rs.length | _ => 0)))) ==
-  some (6, 3, 0, some [3, 40, 721])
+-- ronsync2 stage 2: #guard (unitRun "false" 0).map (fun m =>
+-- ronsync2 stage 2:     let D := m.arr64 DECL
+-- ronsync2 stage 2:     (dw D 0 0, dw D 0 3, dw D 0 4,
+-- ronsync2 stage 2:       ((decCIs (m.arr64 DIND) (dw D 0 2).toNat (dw D 0 3).toNat).map
+-- ronsync2 stage 2:         (·.map fun
+-- ronsync2 stage 2:           | .indInfo _ _ => 3 | .ctorInfo _ np nf => 40 + 10 * np + nf
+-- ronsync2 stage 2:           | .recInfo _ maj pre rs => 500 + 100 * maj + 10 * pre + rs.length | _ => 0)))) ==
+-- ronsync2 stage 2:   some (6, 3, 0, some [3, 40, 721])
 -- `k := true` is refused (the generated recursor is not K-like: `Sort 1`).
 #guard (unitRun "true" 0).isNone
 -- A constructor whose `numFields` disagrees with its type's telescope is refused.

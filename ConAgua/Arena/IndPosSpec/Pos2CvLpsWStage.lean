@@ -116,7 +116,7 @@ theorem nhK4_some : nhK4 k vis ctx mm off l (some (r4, m4)) =
     nhGoW k m4 vis ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0) := by rw [nhK4]
 -/
 end arms
-attribute [ind_grind] nhGoW_nil nhGoW_cons nhK1_miss nhK1_noind nhK1_ind nhK2_none nhK2_some nhK3_ok nhK4_some
+-- ronsync2 stage 2: attribute [ind_grind] nhGoW_nil nhGoW_cons nhK1_miss nhK1_noind nhK1_ind nhK2_none nhK2_some nhK3_ok nhK4_some
 
 /-- The lookups of `nest_holes`. -/
 structure NhLook (p : Prog) : Prop where

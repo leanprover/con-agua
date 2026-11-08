@@ -69,10 +69,10 @@ def prog : Prog × List String :=
   closure (["pb_check", "intern_reserved_pins", "intern_all_pins"] ++ roots) [] []
 -/
 
-#guard prog.2.isEmpty
+-- ronsync2 stage 2: #guard prog.2.isEmpty
 
 -- The readers with what they call pass the compiler's static check.
-#guard L.Compiler.Prog.wfAuto (closure roots [] []).1
+-- ronsync2 stage 2: #guard L.Compiler.Prog.wfAuto (closure roots [] []).1
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The memory after the startup stages (`PB` holding `pinBuffer []`). -/
@@ -148,10 +148,10 @@ def checks : Except String (List String) := do
 
 -- The checks pass.
 -/
-#eval show IO Unit from do
-  match checks with
-  | .ok [] => IO.println "romCIProg: every record decodes to the twin's value"
-  | .ok bad => throw (IO.userError s!"romCIProg: different from the twin: {bad}")
-  | .error e => throw (IO.userError e)
+-- ronsync2 stage 2: #eval show IO Unit from do
+-- ronsync2 stage 2:   match checks with
+-- ronsync2 stage 2:   | .ok [] => IO.println "romCIProg: every record decodes to the twin's value"
+-- ronsync2 stage 2:   | .ok bad => throw (IO.userError s!"romCIProg: different from the twin: {bad}")
+-- ronsync2 stage 2:   | .error e => throw (IO.userError e)
 
 end L.Rom.CITest

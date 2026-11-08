@@ -191,10 +191,10 @@ theorem npcK3_other (h : r3.headD 0 ≠ 0) (h3 : rdW (m3.arr64 EREC) (r3.tail.he
   rw [npcK3, ite_eq_right h, ite_eq_right h3]
 end arms
 
-grind_pattern [ind_grind] npcW_eq => npcW (n + 1) m p vis i
-grind_pattern [ind_grind] npcK1_some => npcK1 n p vis i (some (r1, m1))
-grind_pattern [ind_grind] npcK2_hit => npcK2 m1 p vis i (some b)
-grind_pattern [ind_grind] npcK2_miss => npcK2 m1 p vis i (some b)
+-- ronsync2 stage 2: grind_pattern [ind_grind] npcW_eq => npcW (n + 1) m p vis i
+-- ronsync2 stage 2: grind_pattern [ind_grind] npcK1_some => npcK1 n p vis i (some (r1, m1))
+-- ronsync2 stage 2: grind_pattern [ind_grind] npcK2_hit => npcK2 m1 p vis i (some b)
+-- ronsync2 stage 2: grind_pattern [ind_grind] npcK2_miss => npcK2 m1 p vis i (some b)
 grind_pattern [ind_grind] npcK3_none => npcK3 (some (r3, m3))
 grind_pattern [ind_grind] npcK3_ind => npcK3 (some (r3, m3))
 grind_pattern [ind_grind] npcK3_other => npcK3 (some (r3, m3))
