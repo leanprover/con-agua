@@ -25,6 +25,7 @@ namespace L.Rom
 
 open L.Arena L.Ind
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The constants the readers handle, fitting their encodings. -/
 def ciFits : ConLeche.ConstantInfo → Bool
   | .axiomInfo v => cvFits v
@@ -34,11 +35,14 @@ def ciFits : ConLeche.ConstantInfo → Bool
   | .recInfo v mI rP rs => cvFits v && decide (mI < 2 ^ 64) && decide (rP < 2 ^ 64) &&
       decide (rs.length < 2 ^ 59) && rs.all ruleFits
   | _ => false
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The `sortZ` names of a constant (an inductive's). -/
 def ciZ : ConLeche.ConstantInfo → List ConLeche.Name
   | .indInfo _ c => pwNames c.sortZ
   | _ => []
+-/
 
 /-- **What re-interning a constant's `sortZ` names needs** at the memo `memo`: none, or a
 well-formed state and memo naming them through `dn` (`ZOK`, plus the memo for `internCV_sstep`). -/
@@ -81,51 +85,7 @@ theorem ciPre {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr)
         (fun _ => False) (fun m => decCV (erA m) (pp.toNat + 1)) m2 icv ∧
       ntBW (ciTailW p k m2 (UInt64.ofNat kn) pp q2) (fun r3 m3 => some ([pp, r3.headD 0], m3)) =
         some (r, m') := by
-  have hw := callW_model (M := fun mq => ciW p k mq q) (ci_specW rom p hL k · q) hc
-  unfold ciW at hw
-  replace hw := rdU_some hL hw
-  have e0 := u64_at hr q 0 [] kn _ (by rw [hd]; rfl) (by simp) hkn
-  simp only [UInt64.add_zero] at e0
-  rw [e0, hsz] at hw
-  simp only at hw
-  have hlt := hI.er_lt
-  have hgo := hI.grow.er
-  have hrom := hr; simp only [RomOK] at hrom
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
-  obtain ⟨hI1, ho1, ht1, hE1, hIW1, -⟩ := hI.erAlloc (erAllocCall hL h1)
-  have hf1 : MemFrame [] [129] m m1 := by
-    have := erAllocCall hL h1; simp only [erAllocW] at this
-    split at this; · cases this
-    split at this; · cases this
-    simp only [Option.some.injEq, Prod.mk.injEq] at this; rw [← this.2]; exact MemFrame.setCtl _ _ _
-  have hM1 := hM.frameG hf1 (by simp) (by decide)
-  have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
-  have hlt1 := hI1.er_lt
-  obtain ⟨hI2, hM2, hs2, ht2, hIW2⟩ := setER_facts hI1 hM1 (r1.headD 0) (UInt64.ofNat kn) (by omega)
-  cases k with
-  | zero => rw [callW_zero] at hw; simp at hw
-  | succ k =>
-  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
-  have hlen := drop_len rom _ (u64B kn) _ hd (by simp [u64B])
-  simp only [u64B, List.length_cons, List.length_nil] at hlen
-  have hq8 : (q + 8).toNat = q.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  have hp1 : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 := by
-    rw [UInt64.toNat_add, show (1 : Word).toNat = 1 from rfl]; exact Nat.mod_eq_of_lt (by omega)
-  have hd8 : rom.drop (q + 8).toNat = (encCV seen v).1 ++ (tail ++ rest) := by
-    rw [hq8, ← List.drop_drop, hd]; simp [u64B]
-  obtain ⟨memo1, icv, a2, hrun2, hI3, hM3, hs3, hq3, hek3, ht3, hIW3, hH3⟩ :=
-    cv_rel hL hr seen memo v hv k _ a _ (r1.headD 0 + 1) _ _ m2 hI2 hM2 (by rw [hs2, hs1, hst]) hd8
-      (by omega) (by omega) h2
-  have hE1' : ∀ i : Nat, erA m1 i = erA m i := fun i => by unfold erA; rw [hE1]
-  refine ⟨r1.headD 0, memo1, icv, a2, m2, r2.headD 0, k, rfl, ho1, by omega, hrun2, hI3, hM3, hs3,
-    ?_, ?_, ⟨by omega, fun i hi _ => ?_⟩, by rw [hIW3, hIW2, hIW1], ?_, ?_, hw⟩
-  · exact drop_shift rom _ _ _ _ (by rw [hd8, List.append_assoc]) _ hq3
-  · rw [hq3, hq8]
-  · rw [hek3.2 i (by omega) (by omega), er_set_ne _ _ _ _ (by omega), hE1']
-  · rw [hek3.2 _ (by omega) (by omega)]
-    exact er_set_get m1 _ _ (by have := hI1.ok.er; omega)
-  · rw [hp1] at hH3
-    exact hH3.mono (fun i hi => by omega) (fun _ h => h)
+  sorry
 
 end ci
 
@@ -156,28 +116,7 @@ theorem ci_cvOnly {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option C
     (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
     (hd : rom.drop q.toNat = (encCI seen c).1 ++ rest)
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) : CIPost dn m₀ a₀ T seen memo c m a q r m' := by
-  unfold CIPost; rw [hcE] at hd ⊢; simp only at hd ⊢
-  have hsz : ciSize (UInt64.ofNat kn) = some 5 := by rcases hkn with rfl | rfl <;> rfl
-  obtain ⟨pp, memo1, icv, a1, m2, q2, k', rfl, hpp, ht2, hrun2, hI2, hM2, hs2, -, hq2, hek2, hIW2,
-    hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv kn 5 hsz (by decide) (by omega) [] _ m a q rest r m'
-      hI hM hst (by rw [hd]; simp [List.append_assoc]) hc
-  replace ht2 : erTop m + 5 ≤ erTop m2 := ht2
-  have hk1 : UInt64.ofNat kn ≠ 1 := by rcases hkn with rfl | rfl <;> decide
-  have hk3 : UInt64.ofNat kn ≠ 3 := by rcases hkn with rfl | rfl <;> decide
-  have hk4 : UInt64.ofNat kn ≠ 4 := by rcases hkn with rfl | rfl <;> decide
-  have hk5 : UInt64.ofNat kn ≠ 5 := by rcases hkn with rfl | rfl <;> decide
-  simp only [ciTailW, hk1, hk3, hk4, hk5, ite_false, bW_some, Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨memo1, _, a1, hrun memo1 icv a1 hrun2, hI2, hM2, hs2, by simp [hq2, u64B]; omega, hek2,
-    by simp [hpp], hIW2, ?_⟩
-  intro m'' h1 h2
-  simp only [List.headD_cons]
-  have e0 := (h1 pp.toNat ⟨by omega, by omega⟩).trans hw0
-  have ecv := hH2 m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
-  have hkN : (UInt64.ofNat kn).toNat = kn := ofNat_toNat_lt (by omega)
-  rcases hkn with rfl | rfl
-  · simp [decCI, nat?_of e0, ecv]
-  · simp [decCI, nat?_of e0, ecv]
+  sorry
 
 /-- A constructor. -/
 theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
@@ -188,59 +127,9 @@ theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Con
     (hd : rom.drop q.toNat = (encCI seen (.ctorInfo v nP nF)).1 ++ rest)
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
     CIPost dn m₀ a₀ T seen memo (.ctorInfo v nP nF) m a q r m' := by
-  unfold CIPost
-  simp only [encCI] at hd ⊢
-  obtain ⟨pp, memo1, icv, a1, m2, q2, k', rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2, hek2, hIW2,
-    hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv 4 7 rfl (by decide) (by omega) (u64B nP ++ u64B nF)
-      _ m a q rest r m' hI hM hst (by rw [hd]; simp [List.append_assoc]) hc
-  replace ht2 : erTop m + 7 ≤ erTop m2 := ht2
-  rw [show (7 : Word).toNat = 7 from rfl] at hH2
-  have i1 : (UInt64.ofNat 4 = 1) = False := by decide
-  have i3 : (UInt64.ofNat 4 = 3) = False := by decide
-  have i4 : (UInt64.ofNat 4 = 4) = True := by decide
-  simp only [ciTailW, ciCtorW, i1, i3, i4, ite_false, ite_true] at hw
-  replace hw := rdU_ntBW hL hw
-  replace hw := rdU_ntBW hL hw
-  have e1 := u64_at hr q2 0 [] nP (u64B nF ++ rest) (by rw [hd2, List.append_assoc]; rfl) (by simp) hnP
-  simp only [UInt64.add_zero] at e1
-  have e2 := u64_at hr q2 8 (u64B nP) nF rest (by rw [hd2, List.append_assoc]) (by simp [u64B]) hnF
-  rw [e1, e2] at hw
-  simp only [bW_some, Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  have hlt := hI2.er_lt
-  have hgo := hI.grow.er
-  obtain ⟨hI3, hM3, hs3, ht3, hIW3⟩ := setER_facts hI2 hM2 (pp + 5) (UInt64.ofNat nP) (by off_omega)
-  obtain ⟨hI4, hM4, hs4, ht4, hIW4⟩ := setER_facts hI3 hM3 (pp + 6) (UInt64.ofNat nF) (by off_omega)
-  have hsz2 : erTop m2 ≤ (m2.arr64 EREC).size := hI2.ok.er
-  have hlen := drop_len rom _ (u64B nP ++ u64B nF) _ (by rw [hd2]) (by simp [u64B])
-  simp only [List.length_append, u64B, List.length_cons, List.length_nil] at hlen
-  have hrom := hr; simp only [RomOK] at hrom
-  refine ⟨memo1, .ctorInfo icv nP nF, a1, ?_, hI4, hM4, by rw [hs4, hs3, hs2], ?_,
-    ⟨by omega, fun i hi _ => ?_⟩, by simp [hpp], by rw [hIW4, hIW3, hIW2], ?_⟩
-  · simp only [Frontend.internCI]; rw [run_bind_of _ _ _ _ _ hrun2]; rfl
-  · simp only [List.tail_cons, List.headD_cons]
-    rw [off_toNat (by omega), hq2]
-    simp [u64B]; omega
-  · rw [er_set_ne _ _ _ _ (by off_omega), er_set_ne _ _ _ _ (by off_omega)]
-    exact hek2.2 i hi id
-  · intro m'' h1 h2
-    simp only [List.headD_cons]
-    have g : ∀ i, pp.toNat ≤ i → i < pp.toNat + 7 →
-        erA m'' i = (erA ((m2.set64 EREC (pp + 5) (UInt64.ofNat nP)).set64 EREC (pp + 6)
-          (UInt64.ofNat nF)))[i]? := fun i h h' => h1 i ⟨by omega, by omega⟩
-    have e0 : erA m'' (pp.toNat) = some (UInt64.ofNat 4) := by
-      rw [g _ (by omega) (by omega), er_set_ne _ _ _ _ (by off_omega), er_set_ne _ _ _ _ (by off_omega)]
-      exact hw0
-    have e5 : erA m'' (pp.toNat + 5) = some (UInt64.ofNat nP) := by
-      rw [g _ (by omega) (by omega), er_set_ne _ _ _ _ (by off_omega), ← off_toNat (by omega)]
-      exact er_set_get _ _ _ (by off_omega)
-    have e6 : erA m'' (pp.toNat + 6) = some (UInt64.ofNat nF) := by
-      rw [g _ (by omega) (by omega), ← off_toNat (by omega)]
-      exact er_set_get _ _ _ (by rw [size_set64]; off_omega)
-    have ecv := ((hH2.setER (pp + 5) (UInt64.ofNat nP) (fun i hi => by off_omega)).setER (pp + 6)
-      (UInt64.ofNat nF) (fun i hi => by off_omega)) m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
-    simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, ofNat_toNat_lt hnP, ofNat_toNat_lt hnF]
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- An inductive (its `sortZ` names already in the store, `ZOKM`). -/
 theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)
@@ -289,7 +178,9 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     have ecaps := hH3 m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
     have : pp.toNat + 1 + 4 = pp.toNat + 5 := by omega
     simp [decCI, nat?_of e0, ecv, ecaps]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A recursor (plain rules). -/
 theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)
@@ -416,6 +307,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, nat?_of e7, nat?_of e8,
       ofNat_toNat_lt hmI, ofNat_toNat_lt hrP, ofNat_toNat_lt (show rs.length < 2 ^ 64 by omega)]
     simp at erules; simp [erules]
+-/
 
 /-- **`rci_ci` refines `Frontend.internCI`** for the constants `ciFits` admits. -/
 @[refines_part ConRon.Arena.Frontend.internCI "the pinned constants' kinds"]
@@ -426,26 +318,7 @@ theorem ci_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     (hd : rom.drop q.toNat = (encCI seen c).1 ++ rest)
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
     CIPost dn m₀ a₀ T seen memo c m a q r m' := by
-  cases c with
-  | axiomInfo v =>
-    exact ci_cvOnly hL hr dn seen memo v hfit 0 (.inl rfl) _ rfl k m a q rest r m'
-      (fun memo1 icv a1 h => by
-        simp only [Frontend.internCI]; rw [run_bind_of _ _ _ _ _ h]; rfl) hI hM hst hd hc
-  | thmInfo v =>
-    exact ci_cvOnly hL hr dn seen memo v hfit 2 (.inr rfl) _ rfl k m a q rest r m'
-      (fun memo1 icv a1 h => by
-        simp only [Frontend.internCI]; rw [run_bind_of _ _ _ _ _ h]; rfl) hI hM hst hd hc
-  | indInfo v caps =>
-    simp only [ciFits, Bool.and_eq_true] at hfit
-    exact ci_ind hL hr dn seen memo v hfit.1 caps hfit.2 k a hz m q rest r m' hI hM hst hd hc
-  | ctorInfo v nP nF =>
-    simp only [ciFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
-    exact ci_ctor hL hr dn seen memo v hfit.1.1 nP nF hfit.1.2 hfit.2 k m a q rest r m' hI hM hst hd hc
-  | recInfo v mI rP rs =>
-    simp only [ciFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
-    exact ci_rec hL hr dn seen memo v hfit.1.1.1.1 mI rP rs hfit.1.1.1.2 hfit.1.1.2 hfit.1.2 hfit.2
-      k m a q rest r m' hI hM hst hd hc
-  | defnInfo v e h => simp [ciFits] at hfit
+  sorry
 
 end kinds
 

@@ -255,11 +255,13 @@ def btK1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll : Wor
   | some (r, m) => btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll (r.headD 0) m (pinWordV m 53)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `block_shape_tail`** (at exec fuel `n + 3`). -/
 def btW (c : CallM) (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
     Option (List Word × Mem) :=
   btK1 c n nPd cto ctl cso csl rso rsl no nl io lo ll
     (bsoW m nPd io il (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cto + 3)))
+-/
 
 /-- After `block_shape_pins_ok`. -/
 def bbH4 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
