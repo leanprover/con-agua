@@ -43,8 +43,8 @@ theorem envFind_found (p : Prog) (hp : p.lookup "env_find" = some envFindL)
   sorry
 
 theorem hd?_eq {k : IdxKind} {a : Nat → Option Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
-    ∃ w, a i = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
-  sorry
+    ∃ w, a i = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w :=
+  hd?_some h
 
 theorem decCV_type {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
     ∃ w, a (q + 3) = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
