@@ -110,8 +110,8 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom) (
   (hrom : rom = romData ++ rest)
 include hL hr hrom
 
-/-- **`rom_ci(id)` refines `romCiT id`.** -/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+/-- **`rom_ci(id)` refines `romCiT id`.** -/
 @[refines ConRon.Arena.eqA ConRon.Arena.natA ConRon.Arena.iffA ConRon.Arena.iffIntroA
   ConRon.Arena.iffRecA ConRon.Arena.nonemptyA ConRon.Arena.nonemptyIntroA ConRon.Arena.nonemptyRecA]
 theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
@@ -157,8 +157,8 @@ theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     exact hH.decB (fun i hi => hi.2) (fun _ h => h.elim)
 -/
 
-/-- **`rom_cv(id)` refines `romCvT id`.** -/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+/-- **`rom_cv(id)` refines `romCvT id`.** -/
 @[refines ConRon.Arena.propextA ConRon.Arena.choiceA ConRon.Arena.trueCvA ConRon.Arena.trueIntroCvA
   ConRon.Arena.trustCompilerA ConRon.Arena.boolCvA ConRon.Arena.reduceNatCvA ConRon.Arena.reduceBoolCvA
   ConRon.Arena.ofReduceNatA ConRon.Arena.ofReduceBoolA]

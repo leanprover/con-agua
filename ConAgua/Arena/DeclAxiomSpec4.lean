@@ -39,13 +39,14 @@ structure StdProg2 (p : Prog) : Prop where
 l_model fam_specW (p : Prog) (h : StdProg2 p)
   fns [h.fam ↦ famW list]
   specs [pinAt_specW p h.std.red.pa n, callW_spec p n "find_pinned", callW_spec p n "rom_cv",
+    callW_spec p n "eq_stored",
     mp_specW p h.std.red.canon h.std.red.mp n]
   grind [arena_grind] extra [ld64_rd_spec]
 
 l_model std_specW (p : Prog) (h : StdProg2 p)
   fns [h.std.std ↦ stdW list]
   specs [pinAt_specW p h.std.red.pa n, callW_spec p n "rom_ci", callW_spec p n "find_is",
-    callW_spec p n "std_ax_family"]
+    callW_spec p n "std_ax_family", callW_spec p n "eq_stored"]
   grind [arena_grind] extra [ld64_rd_spec]
 
 local notation "V" => ConLeche.CheckMode.verified

@@ -943,6 +943,7 @@ theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   sorry
 
+/- ronsync2 stage 2: commented out (a mutual block at the old twin/L)
 mutual
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `class_read_slots`.** -/
@@ -1027,6 +1028,7 @@ def ssK7 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r6, m6) => some ([1, r6.headD 0, r6.tail.headD 0], m6)
 end
+-/
 
 section arms
 variable (N : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (p vis np n mo ml d e dom body slot mo2 ml2 fv : Word)

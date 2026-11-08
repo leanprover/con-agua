@@ -142,7 +142,10 @@ def ferK4 (n : Nat) (y : Word) : Option (List Word × Mem) → Option (List Word
   | none => none
   | some (r4, m4) => ferK5 (r4.headD 0) (consW n m4 y (r4.tail.headD 0) (r4.tail.tail.headD 0))
 
+/- ronsync2 stage 2: commented out (a mutual block at the old twin/L)
 mutual
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `class_fe_r_go`.** -/
@@ -162,19 +165,18 @@ def ferK1 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M nm c q vis : Word) :
   | none => none
   | some (kq, m1) => ferK2 p n cvo cvl rcl ro rl M nm c q (callW p n "env_push" [vis, kq] m1)
 -/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def ferK2 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M nm c q : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rv, m2) => ferK3 p n cvo cvl rcl ro rl M (rv.headD 0) (recW m2 3 [nm, c, q])
 -/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def ferK3 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M v : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (re, m3) => ferK4 n (re.headD 0) (ferW p n m3 (cvo + 1) (cvl - 1) (rcl - 1) ro rl v (M + 1))
 -/
 end
+-/
 
 section arms
 variable (p : Prog) (n : Nat) (m m1 m2 m3 m4 m5 : Mem)

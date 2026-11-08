@@ -58,13 +58,13 @@ def sctK3 (rest : Mem → Option (List Word × Mem)) (nP b r1 r2 : Word) :
   | some (r3, m) => sctK4 rest r1 r2 (r3.headD 0)
       (lbbF m [CWF, nP + 1, b])
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `all_level_params_defined`. -/
 def sctK2 (rest : Mem → Option (List Word × Mem)) (vis nP b r1 : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m) => sctK3 rest nP b r1 (r2.headD 0) (crfF m [vis, b])
 -/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `has_fvar_fast`. -/
 def sctK1 (c : CallM) (n : Nat) (rest : Mem → Option (List Word × Mem)) (vis nP lo ll b : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
