@@ -102,7 +102,69 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     i.toNat + k.toNat < 2 ^ 64 → AbsOK m →
     Sim (pbW n m T k i h) (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ PBDec m' r x ∧ AbsOK m') := by
-  sorry
+  induction n with
+  | zero => intro m a T k i h _ _ _ _; rw [pbW.eq_1]; exact Sim.of_none
+  | succ n ih =>
+    intro m a T k i h hS hh hik hA
+    by_cases hk : k = 0
+    · subst hk; rw [pbW.arm1 n m T 0 i h rfl]
+      exact Sim.congr (Sim.ret (x := some []) ⟨hS, IWGrow.refl m, by simp [PBDec, decHL, hslice?], hA⟩)
+        (by simp [structProjBodiesGo])
+    have hk1 : 1 ≤ k.toNat := by
+      rcases Nat.eq_zero_or_pos k.toNat with h0 | h0
+      · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hk
+      · omega
+    have hkm : (k - 1).toNat = k.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hk1))]; simp
+    have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hks : k.toNat = (k.toNat - 1) + 1 := by omega
+    have htf : ((decE h).tag == ETag.forallE) = true ↔ tagW h = 6 := by
+      rw [beq_iff_eq, show ETag.forallE = (6 : Word).toUInt32 from rfl]
+      exact decE_tag_eqW h hh 6 (by decide)
+    by_cases ht : tagW h = 6
+    case neg =>
+      rw [pbW.arm2 n m T k i h hk ht, hks, structProjBodiesGo, ← decE_eq, ite_eq_right (fun e => ht (htf.mp e))]
+      exact Sim.ret ⟨hS, IWGrow.refl m, rfl, hA⟩
+    by_cases he : eViewW m h = []
+    · rw [pbW.abort1 n m T k i h hk ht he]; exact Sim.of_none
+    rw [pbW.arm3 n m T k i h hk ht he, hks, structProjBodiesGo, ← decE_eq, ite_eq_left (htf.mpr ht)]
+    obtain ⟨vv, hview, hVR⟩ := eViewW_ok m a hS.check.arena.base h he
+    have h6 := eViewW_head6S m h ht he
+    refine Sim.bind_twin (view_run _ _ _ hview) ?_
+    cases vv with
+    | forallE ty body =>
+      obtain ⟨-, hx32, rfl, hy32, rfl⟩ := hVR
+      simp only [getD1_eq', getD2_eq] at hx32 hy32 ⊢
+      generalize (eViewW m h).tail.headD 0 = x at hx32 ⊢
+      generalize (eViewW m h).tail.tail.headD 0 = y at hy32 ⊢
+      refine Sim.bindD (dec := fun ra => decE (ra.headD 0))
+        (R₁ := fun m1 a1 => StageR vis fe m1 a1 ∧ IWGrow m m1 ∧ AbsOK m1)
+        (pbW.k_struct_proj_arg_p.none ..) (fun _ _ => rfl) (fun ra m1 h1 => ?_) ?_
+      · obtain ⟨a1, hr, hS1, hg1⟩ := spaW_ok dn vis fe m m1 a T i ra h1 hS
+        exact ⟨_, a1, hr, rfl, hS1, hg1, spaW_afr h1 hA⟩
+      rintro ra m1 a1 ⟨hS1, hg1, hA1⟩
+      by_cases hab : 4294967296 ≤ ra.headD 0
+      · rw [pbW.k_struct_proj_arg_p.abort1 (hc1 := hab)]; exact Sim.of_none
+      rw [pbW.k_struct_proj_arg_p.arm1 (hc1 := hab)]
+      have ha32 : (ra.headD 0).toNat < 2 ^ 32 := by
+        have : ¬ (4294967296 : Nat) ≤ (ra.headD 0).toNat := hab; omega
+      refine Sim.bindK (pbW.k_instantiate1_lift_fast.none ..) (fun _ _ => rfl) (fun r m' e =>
+        i1lF_ok dn vis fe CWF y (ra.headD 0) 0 hy32 ha32 m1 m' a1 r e ⟨hS1, hA1⟩) ?_
+      rintro rb _ m2 a2 ⟨⟨hS2, hg2, hb32, rfl⟩, hA2⟩
+      rw [pbW.k_instantiate1_lift_fast.arm1, ← hkm, ← hi1]
+      refine Sim.bindK (pbW.k_struct_proj_bodies_go.none ..) (fun _ _ => rfl)
+        (ih m2 a2 T (k - 1) (i + 1) (rb.headD 0) hS2 hb32 (by omega) hA2) ?_
+      rintro rr (_ | l) m3 a3 ⟨hS3, hg3, hdec3, hA3⟩
+      · rw [pbW.k_struct_proj_bodies_go.arm1 (hc1 := hdec3)]
+        exact Sim.ret ⟨hS3, (hg1.trans hg2).trans hg3, rfl, hA3⟩
+      obtain ⟨h1', hdl, htl⟩ := hdec3
+      rw [pbW.k_struct_proj_bodies_go.arm2 (hc1 := by rw [h1']; decide)]
+      rcases h4 : consW n m3 x (rr.tail.headD 0) (rr.tail.tail.headD 0) with _ | ⟨ro, m4⟩
+      · exact Sim.of_none
+      obtain ⟨hS4, hg4, hd4, ht4⟩ := consW_stage h4 hS3 htl hx32 hdl
+      exact Sim.ret ⟨hS4, ((hg1.trans hg2).trans hg3).trans hg4, ⟨rfl, by simpa [decE_eq] using hd4,
+        by simp only [List.tail_cons, List.headD_cons]; omega⟩, consW_afr h4 hA3⟩
+    | _ => simp only [ViewR] at hVR <;> (rw [h6] at hVR) <;> simp at hVR
 
 section census
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)

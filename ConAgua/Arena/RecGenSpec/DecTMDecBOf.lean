@@ -44,7 +44,21 @@ theorem decTM_decB_of {m : Mem} {q : Nat} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11
     DecB (fun m => decTM m q) m
       { ind := decI a0, lvls := decI a1, ds := ds, nPc := a4.toNat, nIdx := a5.toNat,
         ctors := ctors, member := decON a8.toNat, nfs := nfs, pfvs := pfvs } := by
-  sorry
+  have t : ∀ j, j < 13 → ∀ a, (m.arr64 IW)[q + j]? = some a → (iwA (truncM m))[q + j]? = some a :=
+    fun j hj a h => by rw [truncM_iw_eq (by omega)]; exact h
+  have r0 := t 0 (by omega) _ h0; have r1 := t 1 (by omega) _ h1; have r2 := t 2 (by omega) _ h2
+  have r3 := t 3 (by omega) _ h3; have r4 := t 4 (by omega) _ h4; have r5 := t 5 (by omega) _ h5
+  have r6 := t 6 (by omega) _ h6; have r7 := t 7 (by omega) _ h7; have r8 := t 8 (by omega) _ h8
+  have r9 := t 9 (by omega) _ h9; have r10 := t 10 (by omega) _ h10; have r11 := t 11 (by omega) _ h11
+  have r12 := t 12 (by omega) _ h12
+  have hds' : decHL (truncM m) a2.toNat a3.toNat = some ds := hds
+  have hct' : decPL (truncM m) (decCN (truncM m)) a6.toNat a7.toNat = some ctors := hct
+  have hnf' : decPL (truncM m) (decNCN (truncM m)) a9.toNat a10.toNat = some nfs := hnf
+  have hpf' : decHL (truncM m) a11.toNat a12.toNat = some pfvs := hpf
+  show decTM (truncM m) q = _
+  simp only [Nat.add_zero] at r0
+  simp only [decTM, bind, pure, iwH, hd?, iwN, nat?, decAt]
+  simp [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, hI, hu, hds', hct', hnf', hpf']
 
 /-! ## `target_major_of_member` -/
 

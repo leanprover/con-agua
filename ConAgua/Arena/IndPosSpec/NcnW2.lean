@@ -36,7 +36,11 @@ theorem nestCtorNf_spec (p : Prog) (L : RxLook p) (hp : p.lookup "nest_ctor_nf" 
     (s₀ : St) (ctx po pl us dO dL cv closed : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_ctor_nf" [ctx, po, pl, us, dO, dL, cv, closed]
     ⦃fun r s' => LocEq s' s₀ ∧ ncnW k s₀.mem ctx po pl us dO dL cv closed = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  simp only [invoke_eq _ hp, callFn, nestCtorNfL]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      posRec5_specW p L.ha L.h5 k, (rxSpec_all p L k).2.2.2.1, (rxSpec_all p L k).2.2.2.2.2.2.2] <;>
+    finish (gen := 20) [ncnW, rdW_eq]
 
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)

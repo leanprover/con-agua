@@ -51,7 +51,17 @@ theorem sumDecPL_write {α : Type} (m : Mem) (f : Nat → Option α) (o j : Nat)
     (acc : List α) (x : α) (hw : w.toNat = o + j) (hsz : o + j < (m.arr64 IW).size)
     (h : decPL m f o j = some acc) (hx : f v.toNat = some x) :
     decPL (m.set64 IW w v) f o (j + 1) = some (acc ++ [x]) := by
-  sorry
+  unfold decPL at h ⊢
+  rw [List.range_succ, List.mapM_append]
+  have e1 : (List.range j).mapM (fun i => do f (← iwN (m.set64 IW w v) (o + i))) =
+      (List.range j).mapM (fun i => do f (← iwN m (o + i))) := by
+    apply mapM_congr_of
+    intro i hi
+    have hi' : i < j := List.mem_range.mp hi
+    simp only [iwN, nat?, iwA, set64IW_get]
+    rw [ite_eq_right (by omega)]
+  rw [e1, h]
+  simp [iwN, nat?, iwA, set64IW_get, hw, hsz, hx]
 
 /-- **A model step that only reshapes the result words** (`K (some (r, m)) = some (f r, m)`). -/
 theorem sumSim_map {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {f : β → γ}
@@ -72,7 +82,17 @@ theorem sumDecPL_grow {α : Type} {m m' : Mem} {f f' : Nat → Option α} (hg : 
     (hf : ∀ q x, f q = some x → f' q = some x) :
     ∀ (c o : Nat) (xs : List α), o + c ≤ iwTop m → decPL m f o c = some xs →
     decPL m' f' o c = some xs := by
-  sorry
+  intro c
+  induction c with
+  | zero => intro o xs _ h; simpa [decPL] using h
+  | succ c ih =>
+    intro o xs hb h
+    rw [decPL_succ] at h ⊢
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h ⊢
+    obtain ⟨v, hv, x, hfx, xs', hxs, rfl⟩ := h
+    refine ⟨v, ?_, x, hf v x hfx, xs', ih (o + 1) xs' (by omega) hxs, rfl⟩
+    simp only [iwN, nat?, iwA] at hv ⊢
+    rw [hg.iwGet o (by omega)]; exact hv
 
 /-- A handle at the head of a slice decoded below the top, as the model reads it. -/
 theorem sumRd_of_decHL_truncM {m : Mem} {o l : Word} {x : EIdx} {xs : List EIdx}
@@ -244,7 +264,9 @@ theorem sumDecRule_words {a : Array Word} {q : Nat} {c nF nP rhs k e : Word}
 -/
 
 theorem rlDec_set_iw (m : Mem) (o v : Word) : rlDec (m.set64 IW o v) = rlDec m := by
-  sorry
+  have hf := set64IW_frame m o v
+  unfold rlDec erecP erecTop
+  rw [hf.1 EREC (by decide) (by decide), hf.ctl 129 (by decide)]
 
 theorem sumToNat_succ {w : Word} (h : w.toNat < 2 ^ 64 - 1) : (w + 1).toNat = w.toNat + 1 := by
   rw [UInt64.toNat_add]; simp; omega

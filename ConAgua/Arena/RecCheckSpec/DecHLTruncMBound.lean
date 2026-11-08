@@ -41,7 +41,13 @@ structure TmpProg (p : Prog) : Prop where
 /-- A non-empty slice decoded below the tops ends below the top. -/
 theorem decHL_truncM_bound {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
     (h : decHL (truncM m) o l = some xs) (hl : l ≠ 0) : o + l ≤ iwTop m := by
-  sorry
+  have := decHL_getI h (l - 1) (by omega)
+  simp only [iwH, hd?] at this
+  cases hw : (iwA (truncM m))[o + (l - 1)]? with
+  | none => simp [hw] at this
+  | some w =>
+    have := (truncM_iw_get hw).1
+    omega
 
 end L.Ind
 

@@ -36,7 +36,48 @@ theorem pos2_cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
     StageR vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+  obtain ⟨-, hl, -⟩ := decCV_some (a := erA m) (q := q.toNat) hcv
+  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl
+  obtain ⟨o', ho, l', hl', hs⟩ := hl
+  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have hr2 : rdW (m.arr64 EREC) (q + 2) = UInt64.ofNat l' := by
+    simp only [nat?, erA, Option.map_eq_some_iff] at hl'
+    obtain ⟨w, hw, rfl⟩ := hl'
+    simp [rdW, hq2, hw]
+  rcases Nat.eq_zero_or_pos l' with h0 | hpos
+  · subst h0
+    have : cv.levelParams = [] := by simpa [hslice?] using hs.symm
+    rw [this]
+    simp only [cvLpsW, hr2, show (UInt64.ofNat 0 : Word) = 0 from rfl, erToIwW] at h
+    obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
+    rcases hal : allocW m 0 with _ | ⟨q0, m1⟩; · rw [hal] at h; simp at h
+    obtain ⟨hS1, hg1, -, -⟩ := allocW_stage hal hS
+    obtain ⟨rfl, rfl, -⟩ := allocW_facts hal hsz
+    rw [hal] at h
+    simp only at h
+    generalize n - 1 - 1 = k at h
+    cases k with
+    | zero => simp [erCopyW] at h
+    | succ k =>
+    simp only [erCopyW_nil k _ _ _ _ rfl, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨hS1, hg1, ?_, by simp [decHL, hslice?], ?_⟩
+    · exact (allocMem_frame m 0).1 EREC (by decide) (by decide)
+    · have := allocMem_top m 0 hc; simp only [iwTop, this]; simp
+  · have hb := L.Ind.hslice?_bound (erA m) l' o' _ hs hpos
+    have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hr1 : rdW (m.arr64 EREC) (q + 1) = UInt64.ofNat o' := by
+      simp only [nat?, erA, Option.map_eq_some_iff] at ho
+      obtain ⟨w, hw, rfl⟩ := ho
+      simp [rdW, hq1, hw]
+    have hEs := hS.iw.erSize
+    have hob : o' < 2 ^ 64 := by simp [erA] at hb; omega
+    have hlb : l' < 2 ^ 64 := by simp [erA] at hb; omega
+    have hlp : (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size := by
+      rw [hr1, hr2, UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; simpa [erA] using hb
+    exact cvLpsW_stage h hS hcv hq (.inr hlp)
+
+mutual
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 def nhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none

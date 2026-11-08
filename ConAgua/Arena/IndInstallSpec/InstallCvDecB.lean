@@ -31,7 +31,33 @@ local notation "V" => ConLeche.CheckMode.verified
 the tops. -/
 theorem installCvDecB {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv)
     (hx : CVExt m q) : DecB (fun m => decCVp m q) m cv := by
-  sorry
+  obtain ⟨hq, hsl⟩ := hx
+  have e : ∀ i, i < erTop m → (erA (truncM m))[i]? = (erA m)[i]? := fun i hi => truncM_er_eq hi
+  show decCVp (truncM m) q = some cv
+  simp only [decCVp] at h ⊢
+  simp only [decCV, bind, Option.bind, pure, hlist?] at h ⊢
+  have e0 : (hd? (erA (truncM m)) q : Option NIdx) = hd? (erA m) q := by simp only [hd?, e q (by omega)]
+  have e1 : nat? (erA (truncM m)) (q + 1) = nat? (erA m) (q + 1) := by simp only [nat?, e (q + 1) (by omega)]
+  have e2 : nat? (erA (truncM m)) (q + 1 + 1) = nat? (erA m) (q + 1 + 1) := by
+    simp only [nat?, e (q + 1 + 1) (by omega)]
+  have e3 : (hd? (erA (truncM m)) (q + 3) : Option EIdx) = hd? (erA m) (q + 3) := by
+    simp only [hd?, e (q + 3) (by omega)]
+  rw [e0, e1, e2, e3]
+  cases h1 : nat? (erA m) (q + 1) with
+  | none => rw [h1] at h; revert h; cases (hd? (erA m) q : Option NIdx) <;> simp
+  | some lo =>
+  cases h2 : nat? (erA m) (q + 1 + 1) with
+  | none => rw [h1, h2] at h; revert h; cases (hd? (erA m) q : Option NIdx) <;> simp
+  | some ll =>
+  have hN := hsl lo ll h1 (by simpa using h2)
+  have hs : (hslice? (erA (truncM m)) lo ll : Option (List NIdx)) = hslice? (erA m) lo ll := by
+    simp only [hslice?]
+    exact mapM_congr_of _ _ _ (fun j hj => by
+      have := List.mem_range.mp hj
+      simp only [hd?, e (lo + j) (by omega)])
+  rw [h1, h2] at h
+  simp only [hs]
+  exact h
 
 /-! ## The lookups of `check_sum_tele` -/
 

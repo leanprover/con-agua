@@ -66,7 +66,10 @@ theorem decCI_indInfo_kind {a : Array Word} {dn : NIdx → Option ConLeche.Name}
 /-- A word read off `EREC` at a `Nat` position, as `nat?` decodes it. -/
 theorem erN_rdW {m : Mem} {q : Nat} {k : Nat} (h : nat? (erA m) q = some k) (hq : q < 2 ^ 64) :
     rdW (m.arr64 EREC) (UInt64.ofNat q) = UInt64.ofNat k := by
-  sorry
+  simp only [nat?, erA, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  have hqq : (UInt64.ofNat q).toNat = q := by simp; omega
+  simp only [rdW, hqq, hw, Option.getD_some, UInt64.ofNat_toNat]
 
 /-- A `nat?`-decoded value is below `2 ^ 64` (it is some word's `toNat`). -/
 theorem nat?_lt {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : k < 2 ^ 64 := by
@@ -188,7 +191,12 @@ theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : 
 theorem decCI_indInfo_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) p = some (.indInfo cv caps)) :
     p + 16 < a.size := by
-  sorry
+  obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 h (decCI_indInfo_kind h)
+  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, vall, hvall, _, _, hcapseq⟩ := hcaps
+  obtain ⟨o, l, ho, hl, hs⟩ := hlist?_some hvall
+  have := nat?_idx hl
+  omega
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem EnvR.row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
@@ -266,7 +274,11 @@ grind_pattern [ind_grind] stripK_ok => stripK ciq nPc nF (some (r, m1))
 
 theorem erec_rd {m : Mem} {w : Word} {c : Nat} {v : Word} (h : erecP m (w.toNat + c) = some v)
     (hc : c < 2 ^ 64) : rdW (m.arr64 EREC) (w + UInt64.ofNat c) = v := by
-  sorry
+  have hlt := (Array.getElem?_eq_some_iff.mp h).1
+  have hsz := erecP_size_lt m
+  have e : (w + UInt64.ofNat c).toNat = w.toNat + c := by
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hc]; exact Nat.mod_eq_of_lt (by omega)
+  simp only [rdW, e, erecP_get h, Option.getD_some]
 
 theorem decCV_type {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
     hd? (aread a) (q + 3) = some cv.type := by

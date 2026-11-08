@@ -28,7 +28,16 @@ open L.Arena
 theorem snocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} (h : snocW n m o l x = some (r, m'))
     (hS : StageR vis fe m a) : StageR vis fe m' a := by
-  sorry
+  simp only [snocW] at h
+  by_cases h0 : l + 1 = 0
+  · simp [h0] at h
+  simp only [h0, ite_false] at h
+  rcases hal : allocW m (l + 1) with _ | ⟨q, m1⟩; · simp [hal] at h
+  simp only [hal] at h
+  rcases hcp : copyW (n - 1) m1 q o l with _ | m2; · simp [hcp] at h
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact (StageR.ofCopyW _ hcp (hS.alloc hal).1).set_iw _ _
 
 theorem CtxSl.grow {m m' : Mem} {p : Nat} (h : CtxSl m p) (hin : CtxIn m p (· < iwTop m))
     (hg : IWGrow m m') : CtxSl m' p := by

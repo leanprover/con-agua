@@ -110,7 +110,22 @@ theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
     (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR vis fe m a) (hx : PSlR f xs o l m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       DecB (fun m => decAt m (fun o l => decPL m (f m) o l) (r.headD 0).toNat) m' xs := by
-  sorry
+  obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage hW hS rfl
+  refine ⟨hS', hg, ?_⟩
+  subst hr
+  have hq0 : (rdW (m.arr64 CTL) 200).toNat < iwTop m' := by rw [htop]; simp [iwTop]
+  have hq1 : (rdW (m.arr64 CTL) 200).toNat + 1 < iwTop m' := by rw [htop]; simp [iwTop]
+  have w0 : iwN (truncM m') (rdW (m.arr64 CTL) 200).toNat = some o.toNat := by
+    rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
+    simp [iwN, nat?, iwA, this]
+  have w1 : iwN (truncM m') ((rdW (m.arr64 CTL) 200).toNat + 1) = some l.toNat := by
+    rw [iwN_truncM hq1]; have := hget 1 (by simp)
+    simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
+    simp [iwN, nat?, iwA, this]
+  have hd := hx.dec.grow (OMono.decPL hf _ _) hg
+  show decAt (truncM m') _ _ = some xs
+  simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some]
+  exact hd
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A `rec2` header `[off, len]` of a slice below the tops**, decoded with its bound. -/

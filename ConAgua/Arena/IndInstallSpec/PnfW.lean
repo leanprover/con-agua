@@ -139,7 +139,10 @@ theorem pos3_consH {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option C
     StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (decI x :: xs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (slCons_specW p hP.alloc hP.copy hP.cons n _ x o l) h
+  obtain ⟨hS', hg, hd, ht⟩ := consW_stage hW hS hb hx hxs
+  exact ⟨hS', hg, consW_mfr hW, hd, ht⟩
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_positivity_nfs_member`'s model: the members' normal forms**, a fresh handle slice. -/
@@ -195,7 +198,25 @@ theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option C
     (h : callW p n "rec2" [o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hx : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ DecB (fun m => decNFS m (r.headD 0).toNat) m' xs := by
-  sorry
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
+  obtain ⟨-, -, -, hf, -, -⟩ := recW_post hW hS.iw.ctl hS.iw.iwSize rfl
+  obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage hW hS rfl
+  refine ⟨hS', hg, MFr.of_iw hf, ?_⟩
+  subst hr
+  have hq0 : (rdW (m.arr64 CTL) 200).toNat < iwTop s'.mem := by rw [htop]; simp [iwTop]
+  have hq1 : (rdW (m.arr64 CTL) 200).toNat + 1 < iwTop s'.mem := by rw [htop]; simp [iwTop]
+  have w0 : iwN (truncM s'.mem) (rdW (m.arr64 CTL) 200).toNat = some o.toNat := by
+    rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
+    simp [iwN, nat?, iwA, this]
+  have w1 : iwN (truncM s'.mem) ((rdW (m.arr64 CTL) 200).toNat + 1) = some l.toNat := by
+    rw [iwN_truncM hq1]; have := hget 1 (by simp)
+    simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
+    simp [iwN, nat?, iwA, this]
+  have hd := (decHL_decB hx hb).grow (OMono.decHL _ _) hg
+  show decAt (truncM s'.mem) _ _ = some xs
+  simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some]
+  exact hd
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_positivity_nfs`' model: `outs.map (·.map (·.2))`**, member by member behind fresh

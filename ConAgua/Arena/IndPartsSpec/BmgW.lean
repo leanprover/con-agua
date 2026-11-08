@@ -221,7 +221,63 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (fun r x m' a' => r = encONN (x.map fun q => (q.2.1, q.2.2.1)) ∧
         (∀ q, x = some q → q.2.1 < 2 ^ 64 ∧ q.2.2.1 < 2 ^ 64) ∧ StageR vis fe m' a' ∧
         IWGrow m m') := by
-  sorry
+  induction n with
+  | zero => intro m a ro rl rs _ _ _ _ r m' e; rw [bmfW.eq_1] at e; cases e
+  | succ n ih =>
+    intro m a ro rl rs hS hrs hnm hnb
+    by_cases hl : rl = 0
+    · rw [bmfW.arm1 n m no nl ro rl mm hl]
+      subst hl; rw [partsPSl_nil hrs]
+      exact Sim.ret ⟨rfl, by simp, hS, IWGrow.refl _⟩
+    rw [bmfW.arm2 n m no nl ro rl mm hl]
+    obtain ⟨pc, ⟨cv, mI, rP, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
+    obtain ⟨⟨cvp, hcvp, hcv⟩, hmI, hrP⟩ := decSR_fields (show decSR (truncM m) pc = _ from hrs0)
+    have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+    have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
+    have hp1 : (UInt64.ofNat pc + 1).toNat = pc + 1 := by
+      have := partsIwLt hmI; rw [UInt64.toNat_add, hpw]; simp; omega
+    have hp2 : (UInt64.ofNat pc + 2).toNat = pc + 2 := by
+      have := partsIwLt hrP; rw [UInt64.toNat_add, hpw]; simp; omega
+    obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp hpw
+    obtain ⟨hmw, hmb, -⟩ := partsIwRd hmI hp1
+    obtain ⟨hrw, hrb, hrlt⟩ := partsIwRd hrP hp2
+    obtain ⟨htyl, htye⟩ := partsCVType hcv (UInt64.toNat_ofNat_of_lt' hcvb)
+    rw [hw, hcw, hmw]
+    rw [partsFindM_cons]
+    simp only [bmfPred, bind_assoc, pure_bind]
+    have hnames : decHL m no.toNat nl.toNat = some names := hnm.get (OMono.decHL _ _)
+    refine Sim.bindK (bmfW.k_rec_target_of.none ..) (fun _ _ => by rw [bmfW.k_rec_target_of.eq_2])
+      (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR vis fe m1 a1 ∧ IWGrow m m1)
+      ?_ ?_
+    · intro r1 m1 e
+      obtain ⟨t, a1, hrun, hr, hS1, hg1⟩ := recTW_ok n dn fe vis m m1 a no nl _ _ r1 names e hS htyl
+        hnames (by omega) hnb
+      rw [UInt64.toNat_ofNat_of_lt' hmb, htye] at hrun
+      exact ⟨t, a1, hrun, hr, partsRecTarget_le hrun, hS1, hg1⟩
+    rintro r1 t m1 a1 ⟨rfl, htl, hS1, hg1⟩
+    have hnlen : names.length < 2 ^ 64 := by
+      rw [decHL_length _ hnames]; omega
+    have hcond : (UInt64.ofNat t = mm) ↔ (t == mm.toNat) = true := by
+      simp only [beq_iff_eq]
+      constructor
+      · intro e; rw [← e, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
+      · intro e; rw [e, ofNat_toNat_word]
+    simp only [List.headD_cons]
+    by_cases hc : UInt64.ofNat t = mm
+    · have hb : (t == mm.toNat) = true := hcond.mp hc
+      simp only [hc, hb, ite_true]
+      rw [partsRdIW_grow hg1 (by rw [hp2]; exact hrlt), hrw]
+      exact Sim.ret ⟨rfl, fun q e => by simp only [Option.some.injEq] at e; subst e; exact ⟨hmb, hrb⟩,
+        hS1, hg1⟩
+    · have hb : (t == mm.toNat) = false := by simpa using (fun e => hc (hcond.mpr e))
+      simp only [hc, hb, ite_false, Bool.false_eq_true]
+      refine Sim.congr (op := List.findM? (bmfPred names mm.toNat) rs' >>= pure) ?_ (bind_pure _)
+      refine Sim.bindK rfl (fun _ _ => by rw [bmfW.k_block_member_counts_find])
+        (ih m1 a1 (ro + 1) (rl - 1) rs' hS1 (hrs'.grow decSR_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
+          (Nat.le_trans hnb hg1.iw)) ?_
+      rintro r x m' a' ⟨rfl, hxb, hS', hg'⟩
+      refine Sim.ret ⟨?_, hxb, hS', hg1.trans hg'⟩
+      cases x <;> rfl
 
 /-! ## `block_member_counts_go`, `block_member_counts` -/
 

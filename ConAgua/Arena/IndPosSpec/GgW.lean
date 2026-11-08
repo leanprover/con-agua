@@ -36,7 +36,11 @@ theorem snocW_words {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
       (r.tail.headD 0).toNat = l.toNat + 1 ∧ iwTop m' = iwTop m + l.toNat + 1 ∧
       (∀ i < l.toNat, (m'.arr64 IW)[iwTop m + i]? = (m.arr64 IW)[o.toNat + i]?) ∧
       (m'.arr64 IW)[iwTop m + l.toNat]? = some x := by
-  sorry
+  obtain ⟨hr, hl1, hqt, -, hg, htop, hget⟩ := snocW_core h hS.iw.iwSize hS.iw.ctl hsrc
+  subst hr
+  refine ⟨snocW_stage h hS, hg, by simp [hqt], by simp [hl1], by omega, fun i hi => ?_, ?_⟩
+  · rw [hget, ite_eq_right (by omega), ite_eq_left (by omega)]; congr 2; omega
+  · rw [hget, ite_eq_left rfl]
 
 end L.Ind
 

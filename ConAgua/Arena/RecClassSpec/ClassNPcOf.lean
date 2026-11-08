@@ -73,7 +73,32 @@ theorem memberNamesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
     StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, UInt64.ofNat bs.k] ∧
     decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.memberNames ∧
     (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+  have ht := hb.ptop
+  have hsz := hS.iw.iwSize
+  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
+  have hk : bs.k < 2 ^ 64 := by
+    obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hb.dec).1
+    have := decPL_length m hg; simp only [BlockShape.k, this]; exact (iwN_rdW hl (by omega)).2
+  obtain ⟨hr, hd, hg, hf, htop⟩ := memberNamesW_dec h hsz hS.iw.ctl hb.dec (by omega) hb.2.1 hb.2.2
+  have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
+    simp only [memberNamesW] at h
+    rcases hal : allocW m (rdW (m.arr64 IW) (p + 1)) with _ | qm
+    · rw [hal] at h; cases h
+    obtain ⟨q, m1⟩ := qm
+    obtain ⟨hq, rfl, hroom⟩ := allocW_facts hal hsz
+    rw [hf.size IW, ← htop]
+    have hl := (decBS_some hb.dec).1
+    obtain ⟨o, l, ho, hl', hgl⟩ := decAt_some hl
+    have hlen := decPL_length m hgl
+    have e1 : rdW (m.arr64 IW) (p + 1) = UInt64.ofNat l := by
+      have := (iwN_rdW hl' (by omega)).1
+      rwa [show UInt64.ofNat (p.toNat + 1) = p + 1 by
+        apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp] at this
+    rw [e1, UInt64.toNat_ofNat_of_lt' (by rw [← hlen]; exact hk)] at hroom
+    rw [← hq, BlockShape.k, hlen]; exact hroom
+  refine ⟨stage_frame_iw hS hf (by rw [← hf.size IW]; exact hroom), hg, hr, ?_, ?_⟩
+  · rw [hr]; simpa [UInt64.toNat_ofNat_of_lt' hk] using hd
+  · rw [hr]; simpa [UInt64.toNat_ofNat_of_lt' hk] using htop
 
 /-! ## `env_find` through the rows -/
 
@@ -133,7 +158,25 @@ theorem decCI_ind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p
     ∃ k, nat? (aread a) p = some k ∧
       ((k = 3 ∧ ∃ cv caps, ci = .indInfo cv caps ∧ nat? (aread a) (p + 17) = some caps.nparams) ∨
        (k ≠ 3 ∧ ∀ cv caps, ci ≠ .indInfo cv caps)) := by
-  sorry
+  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨k, hk, h⟩ := h
+  refine ⟨k, hk, ?_⟩
+  match k, h with
+  | 0, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 1, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 2, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 3, h =>
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨cv, hcv, caps, hcaps, rfl⟩ := h
+    left; refine ⟨rfl, cv, caps, rfl, ?_⟩
+    simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
+      Option.some.injEq] at hcaps
+    obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, np, hnp, _, _, rfl⟩ := hcaps
+    simpa [Nat.add_assoc] using hnp
+  | 4, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 5, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 6, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all []
+  | (_ + 7), h => simp at h
 
 /-! ## `class_n_pc_of` -/
 
@@ -261,8 +304,10 @@ theorem classNPcOf_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hS : StageR vis fe s₀.mem a₀) (hb : BSOK s₀.mem q.toNat bs) (hi : H i) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_n_pc_of" [q, vis, i]
     ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
-      r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))]; ⊤⦄ := by
-  sorry
+      r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))]; ⊤⦄ :=
+  triple_post (classNPcOf_spec p ha hmc hmn hct hx hg hef hp n s₀ q vis i) fun _ _ ⟨hl, hw⟩ =>
+    have h := npcW_ok hw hS hb hi
+    ⟨hl, h.1, h.2.1, h.2.2.1⟩
 
 end L.Ind
 

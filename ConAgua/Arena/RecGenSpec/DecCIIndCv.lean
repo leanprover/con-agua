@@ -72,7 +72,20 @@ grind_pattern [ind_grind] cftK4_some => cftK4 (some (r4, m4))
 
 theorem decCI_ind_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {cv : IConstantVal}
     {caps : IIndCaps} (h : decCI (aread a) q = some (.indInfo cv caps)) : decCV (aread a) (q + 1) = some cv := by
-  sorry
+  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨k, hk, h⟩ := h
+  match k, h with
+  | 0, h => simp [Option.bind_eq_some_iff] at h
+  | 1, h => simp only [Option.bind_eq_some_iff, Option.some.injEq] at h; obtain ⟨_, _, _, _, _, _, h⟩ := h; cases h
+  | 2, h => simp [Option.bind_eq_some_iff] at h
+  | 3, h =>
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨cv', hcv, caps', -, he⟩ := h
+    cases he; exact hcv
+  | 4, h => simp only [Option.bind_eq_some_iff, Option.some.injEq] at h; obtain ⟨_, _, _, _, _, _, h⟩ := h; cases h
+  | 5, h => simp only [Option.bind_eq_some_iff, Option.some.injEq] at h; obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, h⟩ := h; cases h
+  | 6, h => simp at h
+  | (_ + 7), h => simp at h
 
 theorem decTM_lvls' {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
     iwH m (p + 1) = some M.lvls := by

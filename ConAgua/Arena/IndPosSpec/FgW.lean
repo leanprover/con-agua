@@ -113,7 +113,27 @@ open L.Arena
 theorem matesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) :
     ∀ (m m' : Mem) (c off l oO oL : Word) (r : List Word),
     matesW n m c off l oO oL = some (r, m') → StageR vis fe m a → StageR vis fe m' a := by
-  sorry
+  induction n with
+  | zero => intro m m' c off l oO oL r h; simp [matesW] at h
+  | succ n ih =>
+    intro m m' c off l oO oL r h hS
+    by_cases hl : l = 0
+    · rw [matesW_nil n m c off l oO oL hl] at h; cases h; exact hS
+    rw [matesW_cons n m c off l oO oL hl] at h
+    rcases hb : containsW n m oO oL (rdW (m.arr64 EREC) off) with _ | b <;> rw [hb] at h; · simp [matesK1] at h
+    simp only [matesK1] at h
+    split at h
+    · cases hr : matesW n m c (off + 1) (l - 1) oO oL with
+      | none => rw [hr] at h; simp [matesK3] at h
+      | some pr => rw [hr, matesK3_some] at h; cases h; exact ih _ _ _ _ _ _ _ _ hr hS
+    · cases hs : snocW n m oO oL (rdW (m.arr64 EREC) off) with
+      | none => rw [hs] at h; simp [matesK2] at h
+      | some pr =>
+        obtain ⟨r2, m2⟩ := pr
+        simp only [hs, matesK2] at h
+        cases hr : matesW n m2 c (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0) with
+        | none => rw [hr] at h; simp [matesK3] at h
+        | some pr => rw [hr, matesK3_some] at h; cases h; exact ih _ _ _ _ _ _ _ _ hr (snocW_stage hs hS)
 
 /-- **`nest_frame_mates`, under the stage relation**: the mates as a handle slice below the top. -/
 theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
@@ -122,7 +142,41 @@ theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (nestFrameMates fe (decI c)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  sorry
+  cases n with
+  | zero => simp [nfmW] at h
+  | succ n =>
+  simp only [nfmW, nboW] at h
+  have hE := hS.check.env
+  obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.iw
+  rcases hef : envFindW m c vis with _ | ⟨r1, m1⟩; · rw [hef] at h; simp [nboW.k_env_find.none, nfmK] at h
+  have hm1 := envFindW_mem hef
+  subst m1
+  rw [hef] at h
+  -- the block slice
+  have hblk : ∃ o l : Word, nboW.k_env_find (some (r1, m)) = some ([o, l], m) ∧
+      hslice? (erA m) o.toNat l.toNat = some (nestBlockOf fe (decI c)) := by
+    rw [nboW.k_env_find.eq_2]
+    by_cases h0 : r1.headD 0 = 0
+    · rw [ite_eq_left h0]
+      obtain ⟨-, hn⟩ := envFindW_miss hef hE hc h0
+      exact ⟨0, 0, rfl, by simp [nestBlockOf, hn, hslice?]⟩
+    rw [ite_eq_right h0]
+    obtain ⟨-, hfind, hex⟩ := envFindW_hit hef hE hc h0
+    have hfound : fe.find? (decI c) = decFound dn m (r1.headD 0) (r1.tail.headD 0) := by
+      rw [hfind]; simp only [decFound, ite_eq_right h0]
+    by_cases h3 : rdW (m.arr64 EREC) (r1.tail.headD 0) ≠ 3
+    · rw [ite_eq_left h3]; exact ⟨0, 0, rfl, blk_nok3 _ _ hfound h0 h3⟩
+    rw [ite_eq_right h3]
+    exact ⟨_, _, rfl, blk_k3 _ _ hfound h0 hex (by simpa using h3)⟩
+  obtain ⟨o, l, ho, hsl⟩ := hblk
+  simp only [ho, nfmK_some, List.headD_cons, List.tail_cons] at h
+  rcases hmt : matesW n m c o l 0 0 with _ | ⟨r2, m2⟩ <;> rw [hmt] at h; · simp [matesK3] at h
+  rw [matesK3_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨h1, h2, -, h4⟩ := matesW_ok n _ _ c o l 0 0 _ [] r2 hmt hsz hc200 hEs hc hsl
+    (by simp [decHL, hslice?]) (by simp) (by simp)
+  exact ⟨matesW_stage n _ _ _ _ _ _ _ _ hmt ⟨hS.check, hI1, hE1, hsz, hEs, hc200⟩, h2, by simpa [nestFrameMates] using h1,
+    by simpa using h4⟩
 
 end L.Ind
 
@@ -296,7 +350,67 @@ theorem fhW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : 
     ∃ vs a', (pos2FhT hi.toNat grp).run a = .ok (vs, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (acc ++ vs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  sorry
+  intro n
+  induction n with
+  | zero => intro m m' a hi gO gL aO aL grp acc r h; simp [fhW] at h
+  | succ n ih =>
+    intro m m' a hi gO gL aO aL grp acc r h hS hgl hgb hgrp hA hAb
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
+    by_cases hg0 : gL = 0
+    · rw [fhW_nil (h := hg0)] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      subst hg0
+      have : grp = [] := List.eq_nil_of_length_eq_zero (by simpa using hgl.symm)
+      subst this
+      exact ⟨[], a, rfl, hS, IWGrow.refl _, by simpa using hA, by simpa using hAb⟩
+    by_cases hov : hi + 1 = 0
+    · rw [fhW_ovf (h := hg0) (h1 := hov)] at h; cases h
+    rw [fhW_cons (h := hg0) (h1 := hov)] at h
+    obtain ⟨⟨c, t⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
+      cases grp with
+      | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hgl)) hg0
+      | cons x grp' => exact ⟨x, grp', rfl⟩
+    simp only [List.length_cons] at hgl hgb
+    obtain ⟨w, cw, tw, hrw, hw1, -, -, -, hrt, htH, htd⟩ := hgrp.head (by omega) htop
+    rw [UInt64.ofNat_toNat] at hrw
+    rw [hrw, hrt] at h
+    rcases hf : fvinternW m hi tw with _ | ⟨v, m1⟩ <;> rw [hf] at h; · simp [fhK1] at h
+    by_cases hvb : 4294967296 ≤ v
+    · rw [fhK1_big (h := hvb)] at h; cases h
+    rw [fhK1_ok (h := hvb)] at h
+    obtain ⟨a1, hrun1, hS1, hg1⟩ := internFVar_stage hS hi tw htH hf
+    rcases hs : snocW n m1 aO aL v with _ | ⟨r2, m2⟩ <;> rw [hs] at h; · simp [fhK2] at h
+    rw [fhK2_some] at h
+    have hvH : H v := by
+      have : ¬ (4294967296 : Word).toNat ≤ v.toNat := fun h' => hvb (UInt64.le_iff_toNat_le.mpr h')
+      simp only [H]; simpa using this
+    obtain ⟨hr2, hA2, hg2, -, -, ht2⟩ := snocW_decK hs hS1.iw.iwSize hS1.iw.ctl (by have := hg1.iw; omega)
+      hvH (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hA)
+    have hS2 := snocW_stage hs hS1
+    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
+    have hgL1 : (gL - 1).toNat = grp'.length := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+    have hhi1 : (hi + 1).toNat = hi.toNat + 1 := by
+      rcases Nat.lt_or_ge (hi.toNat + 1) (2 ^ 64) with hl | hl
+      · exact word_add_toNat (by simpa using hl)
+      · exfalso; apply hov; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; have := hi.toNat_lt; simp; omega
+    have hg12 := hg1.trans hg2
+    have hb2 : (gO + 1).toNat + grp'.length ≤ iwTop m2 := by
+      rw [hgO1]; have := hg12.iw; omega
+    have hgr2 : GrpAt m2 (gO + 1).toNat grp' := by
+      rw [hgO1]; exact (hgrp.grow (by simpa using hgb) hg12).tail
+    have hA2' : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat = some (acc ++ [decI v]) := by
+      rw [hr2]; simpa using hA2
+    have hAb2 : (r2.headD 0).toNat + (r2.tail.headD 0).toNat ≤ iwTop m2 := by
+      rw [hr2]; simp only [List.headD_cons, List.tail_cons]; omega
+    obtain ⟨vs, a', hrun, hS', hg', hA', hAb'⟩ := ih m2 m' a1 (hi + 1) (gO + 1) (gL - 1) _ _ grp' _ r h hS2
+      hgL1 hb2 hgr2 hA2' hAb2
+    refine ⟨decI v :: vs, a', ?_, hS', hg12.trans hg', by simpa using hA', hAb'⟩
+    rw [hhi1] at hrun
+    have htd' : t = decE tw := by simpa [decE_eq] using htd.symm
+    subst htd'
+    simp only [pos2FhT, internFVarE, StateT.run_bind, hrun1, except_ok_bind, hrun]
+    rfl
 
 end L.Ind
 
@@ -316,7 +430,53 @@ theorem caW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (u
       KsB m' (r.headD 0).toNat (r.tail.headD 0).toNat
         (acc ++ grp.map fun x => (⟨x.1, decI us, ds⟩ : NestKey)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  sorry
+  intro n
+  induction n with
+  | zero => intro m m' a gO gL aO aL grp acc r h; simp [caW] at h
+  | succ n ih =>
+    intro m m' a gO gL aO aL grp acc r h hS hds hgl hgb hgrp hA hAb
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
+    by_cases hg0 : gL = 0
+    · rw [caW_nil (h := hg0)] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      subst hg0
+      have : grp = [] := List.eq_nil_of_length_eq_zero (by simpa using hgl.symm)
+      subst this
+      exact ⟨hS, IWGrow.refl _, by simpa using hA, by simpa using hAb⟩
+    rw [caW_cons (h := hg0)] at h
+    obtain ⟨⟨c, t⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
+      cases grp with
+      | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hgl)) hg0
+      | cons x grp' => exact ⟨x, grp', rfl⟩
+    simp only [List.length_cons] at hgl hgb
+    obtain ⟨w, cw, tw, hrw, hw1, hrc, hcH, hcd, -, -, -⟩ := hgrp.head (by omega) htop
+    rw [UInt64.ofNat_toNat] at hrw
+    rw [hrw, hrc] at h
+    rcases hk : posRecW m [cw, us, dO, dL] with _ | ⟨key, m1⟩ <;> rw [hk] at h; · simp [caK1] at h
+    rw [caK1_some] at h
+    obtain ⟨hS1, hg1, hkq, ht1, hget1⟩ := posRecW_stage hk hS (by simp)
+    simp only [List.length_cons, List.length_nil] at ht1
+    have hds1 := DecB.grow (OMono.decHL _ _) hg1 hds
+    have hK : DecB (fun m => decNK m key.toNat) m1 ⟨decI cw, decI us, ds⟩ :=
+      pos2_key_rec hcH hus (by omega) hget1 hds1
+    rcases hs : snocW n m1 aO aL key with _ | ⟨r2, m2⟩ <;> rw [hs] at h; · simp [caK2] at h
+    rw [caK2_some] at h
+    obtain ⟨hS2, hg2, h20, h21, ht2, hw2, hx2⟩ := snocW_words hs hS1 (by have := hg1.iw; omega)
+    have hA2 : KsB m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat (acc ++ [⟨decI cw, decI us, ds⟩]) := by
+      rw [h20, h21]
+      exact pos2_decB_snoc decNK_mono (hA.grow hg1) hg2 (by omega) hw2 hx2 (DecB.grow (decNK_mono _) hg2 hK)
+    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
+    have hgL1 : (gL - 1).toNat = grp'.length := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+    have hg12 := hg1.trans hg2
+    have hb2 : (gO + 1).toNat + grp'.length ≤ iwTop m2 := by rw [hgO1]; have := hg12.iw; omega
+    have hgr2 : GrpAt m2 (gO + 1).toNat grp' := by
+      rw [hgO1]; exact (hgrp.grow (by simpa using hgb) hg12).tail
+    have hAb2 : (r2.headD 0).toNat + (r2.tail.headD 0).toNat ≤ iwTop m2 := by rw [h20, h21]; omega
+    obtain ⟨hS', hg', hA', hAb'⟩ := ih m2 m' a (gO + 1) (gL - 1) _ _ grp' _ r h hS2
+      (DecB.grow (OMono.decHL _ _) hg2 hds1) hgL1 hb2 hgr2 hA2 hAb2
+    refine ⟨hS', hg12.trans hg', ?_, hAb'⟩
+    simpa [hcd] using hA'
 
 end L.Ind
 
@@ -384,7 +544,9 @@ theorem matesW_mfr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List
 
 theorem nboW_mfr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW p n m vis c = some (r, m')) :
     MFr [] [] m m' := by
-  sorry
+  simp only [nboW] at h
+  unfold nboW.k_env_find at h
+  mfr_auto h [envFindW_mfr]
 
 theorem nfmW_mfr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) :
     MFr [] [] m m' := by

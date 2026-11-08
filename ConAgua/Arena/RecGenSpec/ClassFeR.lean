@@ -47,7 +47,11 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- A constant record below the top decodes in the record pool in use. -/
 theorem rec2DecCV_erecP {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv) (hq : CVExt m q) :
     decCV (erecP m) q = some cv := by
-  sorry
+  rw [rec2DecCV_agree (a := erA m) (T := erTop m) (fun i hi => ?_) hq.1 hq.2]
+  · exact h
+  · simp only [erecP, erA, Array.getElem?_extract, erecTop, erTop] at hi ⊢
+    simp only [Nat.zero_add]
+    split <;> simp_all <;> omega
 
 end L.Ind
 
@@ -124,7 +128,15 @@ theorem cfrRec_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
     (hp : p.lookup "class_fe_r_rec" = some classFeRRec) (n : Nat) (s₀ : St) (cv mi rp3 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fe_r_rec" [cv, mi, rp3]
     ⦃fun r s' => LocEq s' s₀ ∧ cfrRecW s₀.mem cv mi rp3 = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, classFeRRec]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        erecAlloc_specW p ha n] <;>
+      finish [cfrRecW, cfrMem]
 
 /-! ## `class_fe_r_go`: the word model -/
 

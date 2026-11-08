@@ -33,7 +33,35 @@ open L.Arena
 theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : List Word),
     piBW n m fuel h = some (rs, m') → StageR vis fe m a → H h → StageR vis fe m' a := by
-  sorry
+  induction n with
+  | zero => intro m m' a fuel h rs hh; simp [piBW] at hh
+  | succ n ih =>
+    intro m m' a fuel h rs hpb hS hh
+    have hR := hS.check.arena.base
+    by_cases hf : fuel = 0
+    · rw [piBW_fuel0 n m fuel h hf] at hpb; simp at hpb
+    by_cases hg : tagW h ≠ 6
+    · rw [piBW_leaf n m fuel h hf hg] at hpb
+      simp only [Option.some.injEq, Prod.mk.injEq] at hpb
+      obtain ⟨-, rfl⟩ := hpb; exact hS
+    rw [piBW_node n m fuel h hf hg] at hpb
+    have hg6 : tagW h = 6 := by simpa using hg
+    by_cases hr : eViewW m h = []
+    · rw [hr, piBK1_nil] at hpb; simp at hpb
+    obtain ⟨hvok, hew⟩ := eViewW_forall m h hg6 hr
+    rw [piBK1_ne n m fuel _ hr] at hpb
+    rcases hrec : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with _ | ⟨rs1, m1⟩ <;> rw [hrec] at hpb; · simp [piBK2] at hpb
+    rw [piBK2_some] at hpb
+    rcases hcons : consW n m1 ((eViewW m h).getD 1 0) (rs1.headD 0) (rs1.getD 1 0) with _ | ⟨r2, m2⟩ <;> rw [hcons] at hpb; · simp [piBK3] at hpb
+    rw [piBK3_some] at hpb
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hpb)
+    obtain ⟨-, hty, hb⟩ := view_forall m a hR h hh hvok hg6
+    have hty2 : ((eViewW m h).getD 1 0).toNat < 2 ^ 32 := by rw [hew]; exact hty
+    have hb2 : ((eViewW m h).getD 2 0).toNat < 2 ^ 32 := by rw [hew]; exact hb
+    have hS1 := ih m m1 a (fuel - 1) _ rs1 hrec hS hb2
+    obtain ⟨bs1, e1, -, -, hdec1, -, -, -, -, hle1⟩ :=
+      piBW_ok n m m1 a (fuel - 1) _ rs1 hR hrec hb2 hS.iw.iwSize hS.iw.ctl
+    exact (consW_stage hcons hS1 hle1 hty2 hdec1).1
 
 /-- `pi_binders` at `CWF` from the stage relation: the twin's run, the stage relation kept. -/
 theorem piBW_cwf {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
@@ -43,7 +71,10 @@ theorem piBW_cwf {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       decHL m' (rs.headD 0).toNat (rs.getD 1 0).toNat = some bs ∧
       (rs.getD 2 0).toNat < 2 ^ 32 ∧ decE (rs.getD 2 0) = e ∧
       StageR vis fe m' a ∧ IWGrow m m' ∧ (rs.headD 0).toNat + (rs.getD 1 0).toNat ≤ iwTop m' := by
-  sorry
+  obtain ⟨bs, e, hrun, -, hdec, hb1, hb2, hg, -, hle⟩ :=
+    piBW_ok n m m' a CWF h rs hS.check.arena.base hpb hh hS.iw.iwSize hS.iw.ctl
+  rw [CWF_eq] at hrun
+  exact ⟨bs, e, hrun, hdec, hb1, hb2, piBW_stage n m m' a CWF h rs hpb hS hh, hg, hle⟩
 
 /-! ## `nest_arity` refines `nestArity` -/
 
@@ -86,7 +117,10 @@ theorem nestCtxHiAt_specE (p : Prog) (hp : p.lookup "nest_ctx_hi_at" = some nest
 /-- A decoded handle at `o`, as the word L reads there. -/
 theorem rd_iwH0E {k : IdxKind} {m : Mem} {o : Word} {x : Idx k} (h : iwH m o.toNat = some x) :
     H (rdW (m.arr64 IW) o) ∧ decI (rdW (m.arr64 IW) o) = x := by
-  sorry
+  obtain ⟨w, hw, hl, hx⟩ := hd?_some h
+  simp only [iwA] at hw
+  simp only [rdW, hw, Option.getD_some]
+  exact ⟨hl, hx.symm⟩
 
 /-! ## `nest_ds_closed(_go)`: `ds.allM (fvarB · ≤ hi)` -/
 

@@ -56,7 +56,15 @@ theorem efgW_spec (p : Prog) (hp : p.lookup "er_from_iw_go" = some erFromIwGo) (
     ∀ (s₀ : St) (q o l : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_from_iw_go" [q, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ efgW n s₀.mem q o l = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ q o l; rw [invoke_eq _ hp]; simp only [callFn, erFromIwGo]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ q o l
+    rw [invoke_eq _ hp]
+    simp only [callFn, erFromIwGo]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish (gen := 20) [rdW_eq]
 
 /-- After the copy. -/
 def efK2 (q l : Word) : Option (List Word × Mem) → Option (List Word × Mem)

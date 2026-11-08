@@ -44,8 +44,9 @@ theorem plSim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k 
     (a : AState) (o l : Word) (lps : List NIdx) (hS : StageR vis fe m a)
     (hd : decHL m o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat ≤ iwTop m) :
     Sim (plW k m o l) (paramLevels lps) a (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
-      H (r.headD 0) ∧ decI (r.headD 0) = x) := by
-  sorry
+      H (r.headD 0) ∧ decI (r.headD 0) = x) := fun r m' e => by
+  obtain ⟨x, a', h1, h2⟩ := plW_ok dn vis fe k m m' a o l lps r e hS hd (hS.lt64 hb) hb
+  exact ⟨x, a', h1, h2⟩
 
 /-- `intern_const` as a `Sim`. -/
 theorem ceSim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m : Mem) (a : AState)
@@ -110,7 +111,15 @@ theorem checkSumCtor_eq (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx
 theorem sumTypeWord {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
     (hsz : (m.arr64 EREC).size < 2 ^ 64) :
     ∃ w, rdW (m.arr64 EREC) (q + 3) = w ∧ H w ∧ decI w = cv.type := by
-  sorry
+  have ht := decCV_type h
+  simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at ht
+  obtain ⟨w, hw, hx⟩ := ht
+  split at hx
+  · have hx' := Option.some.inj hx
+    have hlt : q.toNat + 3 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hw).1
+    refine ⟨w, rdW_of_get? ?_ hw, by assumption, hx'⟩
+    rw [sum_toNat_add (by simp; omega)]; rfl
+  · cases hx
 
 end L.Ind
 

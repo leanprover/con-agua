@@ -51,7 +51,15 @@ theorem sumRec2 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     (hS : StageR vis fe m a0) :
     StageR vis fe m' a0 ∧ IWGrow m m' ∧ iwN (truncM m') (r.headD 0).toNat = some x.toNat ∧
       iwN (truncM m') ((r.headD 0).toNat + 1) = some y.toNat := by
-  sorry
+  obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage h hS rfl
+  subst hr
+  have hT : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
+  refine ⟨hS', hg, ?_, ?_⟩
+  · rw [List.headD_cons, iwN_truncM (by simp at htop; omega)]
+    simp only [iwN, nat?, iwA]; rw [show (rdW (m.arr64 CTL) 200).toNat = (rdW (m.arr64 CTL) 200).toNat + 0 from rfl,
+      hget 0 (by simp)]; rfl
+  · rw [List.headD_cons, iwN_truncM (by simp at htop; omega)]
+    simp only [iwN, nat?, iwA]; rw [hget 1 (by simp)]; rfl
 
 /-- The `[cv, nF]` record of a constructor, decoded below the top. -/
 theorem sumDecCN_of {m : Mem} {q cvw nF : Nat} {cv : IConstantVal}

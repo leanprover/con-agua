@@ -87,7 +87,13 @@ theorem nestBlockOf_refines (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
       hslice? (erA s₀.mem) (r.headD 0).toNat (r.tail.headD 0).toNat = some (nestBlockOf fe (decI c));
       ⊤⦄ := by
-  sorry
+  simp only [invoke_eq _ hp, callFn, nestBlockOfL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        envFind_refines' p hx hg hf n (fe := fe)] <;> finish (gen := 20) [blk_none, blk_nok3, blk_k3', rdW_eq]
 
 end blockof
 
@@ -108,7 +114,11 @@ theorem nestCtorEntry_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       StageR vis fe s'.mem (AM.st (ConRon.Arena.nestCtorEntry (decI C) ci) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       EntryOut s'.mem r ciq (AM.res (ConRon.Arena.nestCtorEntry (decI C) ci) a₀); ⊤⦄ := by
-  sorry
+  refine triple_post (nestCtorEntry_spec p hs hv hp hst had n s₀ C ciq) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := entryW_ok hC hm hS hci
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
 
 end census
 
@@ -255,7 +265,13 @@ theorem nestFrameMates_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
     ⦃fun r s' => LocEq s' s₀ ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (ConRon.Arena.nestFrameMates fe (decI c)) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  sorry
+  obtain ⟨hOK1, hOK2, hOK3, hOK4, hOK5⟩ := hS.iw
+  have hE := hS.check.env
+  simp only [invoke_eq _ hp, callFn, nestFrameMatesL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      nestBlockOf_refines p hx hg hf hbo n (fe := fe),
+      nestFrameMatesGo_refines p hc ha hcp hsn hgo n (block := ConRon.Arena.nestBlockOf fe (decI c)) (out := [])] <;> finish (gen := 20) [ConRon.Arena.nestFrameMates, decHL_zero_zero]
 
 end census2
 

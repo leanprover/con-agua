@@ -33,7 +33,26 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem rec2DecCV_agree {a b : Array Word} {q T : Nat} (hag : ∀ i, i < T → b[i]? = a[i]?) (hq4 : q + 4 ≤ T)
     (hl : ∀ o l, nat? (aread a) (q + 1) = some o → nat? (aread a) (q + 2) = some l → o + l ≤ T ∨ l = 0) :
     decCV (aread b) q = decCV (aread a) q := by
-  sorry
+  have hn : ∀ i, i < T → nat? b i = nat? a i := fun i hi => by simp only [nat?, hag i hi]
+  have hh : ∀ {k : IdxKind} i, i < T → (hd? b i : Option (Idx k)) = hd? a i :=
+    fun i hi => by simp only [hd?, hag i hi]
+  simp only [decCV]
+  rw [hh q (by omega), hh (q + 3) (by omega)]
+  have hlist : (hlist? b (q + 1) : Option (List (Idx IdxKind.name))) = hlist? a (q + 1) := by
+    simp only [hlist?]
+    rw [hn (q + 1) (by omega), hn (q + 1 + 1) (by omega)]
+    cases ho : nat? a (q + 1) with
+    | none => simp
+    | some o =>
+      cases hl' : nat? a (q + 1 + 1) with
+      | none => simp
+      | some l =>
+        try simp only [Option.bind_some]
+        apply hslice?_congr
+        intro j hj
+        have := hl o l ho hl'
+        exact hag (o + j) (by omega)
+  rw [hlist]
 
 /-- The lookups `class_rec_ty_ok` needs. -/
 structure RtoProg (p : Prog) : Prop extends GtProg p where
@@ -49,7 +68,9 @@ structure RtoProg (p : Prog) : Prop extends GtProg p where
 theorem rec2DecRS_parts {m : Mem} {p : Nat} {RS : RecShape} (h : decRS m p = some RS) :
     ∃ q, iwN m p = some q ∧ decCVp m q = some RS.cvR ∧ iwN m (p + 1) = some RS.rP ∧
       iwN m (p + 2) = some RS.mI ∧ iwN m (p + 3) = some RS.tgt := by
-  sorry
+  simp only [decRS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨q, hq, cv, hcv, rP, hrP, mI, hmI, tgt, htgt, rh, hrh, rfl⟩ := h
+  exact ⟨q, hq, hcv, hrP, hmI, htgt⟩
 
 theorem rec2W_inj {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64)
     (h : (UInt64.ofNat a : Word) = UInt64.ofNat b) : a = b := by

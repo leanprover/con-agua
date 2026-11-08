@@ -48,7 +48,10 @@ theorem installConsRun {p : Prog} (hP : CstProg p) {n : Nat} {α : Type} {f : Me
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' := by
-  sorry
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (slCons_specW p hP.alloc hP.copy hP.cons n _ x o l) h
+  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf hW hS hxs.bound hxs.dec hy
+  exact ⟨hS', hg, hd, Nat.le_of_eq htop⟩
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_inds_cv_tas_go`'s model**: the constants of the `[cvTa, s]` records. -/

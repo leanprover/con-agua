@@ -53,7 +53,34 @@ theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     (hws : SlR m no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hM : maMR m mp0) :
     ∃ b, (ConRon.Arena.mentionsAnyConst (ws.map (fun w => (decI w : NIdx))) (decE e)).run a =
         .ok (b, a) ∧ (r != 0) = b ∧ maMR m' ∅ ∧ StageR vis fe m' a ∧ IWGrow m m' := by
-  sorry
+  by_cases h0 : rdW (m.arr64 CTL) maSch.cs + 2 = 0
+  · simp [maConstW, h0] at hb
+  rw [maConstW_eq n m no nl e h0] at hb
+  have hf0 := mclearG_frame maSch m
+  have hM0 := memoRG_clear maSch maSch_wf bmKey (fun w : Word => w != 0) m mp0 hM h0
+  have hA0 : ArenaR (mclearG maSch m) a :=
+    ArenaR.frame (A := []) (C := [maSch.cs, maSch.cs + 1]) (fun b hb => by simp at hb)
+      (fun x hx => by simp [maSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
+      hS.check.arena.base
+  have hws0 : SlR (mclearG maSch m) no nl ws := slR_congr (hf0.arr IW (by simp) (by decide)) hws
+  rcases hg : maGoW n (mclearG maSch m) no nl CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [maClrK] at hb
+  by_cases h1 : rdW (m1.arr64 CTL) maSch.cs + 2 = 0
+  · simp [maClrK, h1] at hb
+  rw [maClrK_some r1 m1 h1] at hb
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+  obtain ⟨c, mp1, hrun, hbb, hM1, hfr1⟩ := maGoOK n _ _ a no nl CWF e r1 ws ∅ hg hA0 hh hws0 hwlt hM0
+  rw [CWF_eq] at hrun
+  have hM2 := memoRG_clear maSch maSch_wf bmKey (fun w : Word => w != 0) m1 mp1 hM1 h1
+  have hf2 := mclearG_frame maSch m1
+  have hfall : MemFrame [MAM] [maSch.cs, maSch.cs + 1] m (mclearG maSch m1) :=
+    ((hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [maSch]))).trans
+      (hf2.mono (by simp) (by simp))
+  obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp [maSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
+    (by simp [maSch])
+  refine ⟨c, ?_, hbb, hM2, hS', hg'⟩
+  simp only [ConRon.Arena.mentionsAnyConst, StateT.run_bind, hrun]
+  rfl
 
 section census3
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hc : p.lookup "sl_contains" = some slContains)
@@ -113,7 +140,13 @@ theorem nestOccGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
       noMR s'.mem
         (AM.res (ConRon.Arena.nestOccGo (ws.map (fun w => (decI w : NIdx))) lo.toNat hi.toNat mp f.toNat (decE h)) a₀).2 ∧
       StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  sorry
+  refine triple_post ((noGo_spec p hv hc hf hput hgo hnode n).1 s₀ no nl lo hi f h) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := noGoOK n _ _ a₀ no nl lo hi f h _ ws mp hm hS.check.arena.base hh hws hwlt hM
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
+  refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
 
 end census
 
@@ -140,7 +173,34 @@ theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     ∃ b, (ConRon.Arena.nestOcc (ws.map (fun w => (decI w : NIdx))) lo.toNat hi.toNat (decE e)).run a =
         .ok (b, a) ∧ (r != 0) = b ∧ noMR m' ∅ ∧ StageR vis fe m' a ∧ IWGrow m m' ∧
         MFr [NOM] [204, 205] m m' := by
-  sorry
+  by_cases h0 : rdW (m.arr64 CTL) noSch.cs + 2 = 0
+  · simp [noConstW, h0] at hb
+  rw [noConstW_eq n m no nl lo hi e h0] at hb
+  have hf0 := mclearG_frame noSch m
+  have hM0 := memoRG_clear noSch noSch_wf bmKey (fun w : Word => w != 0) m mp0 hM h0
+  have hA0 : ArenaR (mclearG noSch m) a :=
+    ArenaR.frame (A := []) (C := [noSch.cs, noSch.cs + 1]) (fun b hb => by simp at hb)
+      (fun x hx => by simp [noSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
+      hS.check.arena.base
+  have hws0 : SlR (mclearG noSch m) no nl ws := slR_congr (hf0.arr IW (by simp) (by decide)) hws
+  rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [noClrK] at hb
+  by_cases h1 : rdW (m1.arr64 CTL) noSch.cs + 2 = 0
+  · simp [noClrK, h1] at hb
+  rw [noClrK_some r1 m1 h1] at hb
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+  obtain ⟨c, mp1, hrun, hbb, hM1, hfr1⟩ := noGoOK n _ _ a no nl lo hi CWF e r1 ws ∅ hg hA0 hh hws0 hwlt hM0
+  rw [CWF_eq] at hrun
+  have hM2 := memoRG_clear noSch noSch_wf bmKey (fun w : Word => w != 0) m1 mp1 hM1 h1
+  have hf2 := mclearG_frame noSch m1
+  have hfall : MemFrame [NOM] [noSch.cs, noSch.cs + 1] m (mclearG noSch m1) :=
+    ((hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [noSch]))).trans
+      (hf2.mono (by simp) (by simp))
+  obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp [noSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
+    (by simp [noSch])
+  refine ⟨c, ?_, hbb, hM2, hS', hg', ⟨_, _, hfall, by simp, fun x hx => .inr (.inr (by simpa [noSch] using hx))⟩⟩
+  simp only [ConRon.Arena.nestOcc, StateT.run_bind, hrun]
+  rfl
 
 section census3
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hc : p.lookup "sl_contains" = some slContains)

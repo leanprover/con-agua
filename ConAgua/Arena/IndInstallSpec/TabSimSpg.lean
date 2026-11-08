@@ -66,7 +66,24 @@ theorem spgW_hb {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
     (hS : StageR vis fe m a) (hM : hbMR m mp) (h : spgW n m cty nP nF so sl = some (r, m')) :
     ∃ mp', hbMR m' mp' := by
-  sorry
+  unfold spgW at h
+  cases hz' : pinWordV m 53 with
+  | none => rw [hz'] at h; simp [spgK1] at h
+  | some z =>
+  rw [hz'] at h
+  by_cases h0 : rdW (m.arr64 CTL) hbSch.cs + 2 = 0
+  · rw [spgK1_some_zero n m cty nP nF so sl z h0] at h; cases h
+  rw [spgK1_some n m cty nP nF so sl z h0] at h
+  have hf0 := mclearG_frame hbSch m
+  have hM0 := memoRV_clear hbSch hbSch_wf lfKey hbVR m mp hM h0
+  obtain ⟨hS0, -⟩ := StageR.frame_hi hS hf0 (by simp) (by
+      intro x hx; simp [hbSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [hbSch])
+  obtain ⟨⟨u, m2⟩, hu, h⟩ := of_K h rfl; rw [spgK2_some] at h
+  obtain ⟨-, mp', -, -, -, -, -, hM2, -, -⟩ :=
+    ulW_ok n _ _ a cty nP nF 0 u ∅ (by simpa using hb) hc' hS0 hM0 hu
+  obtain ⟨⟨rr, m3⟩, hr, h⟩ := of_K h rfl; rw [spgK3_some] at h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  exact ⟨mp', hbMR_mfr (rowW_mfr _ _ _ _ _ _ _ _ _ _ _ hr) (by simp) (by simp) hM2⟩
 
 /-! ## `check_struct_proj_table` -/
 

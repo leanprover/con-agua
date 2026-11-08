@@ -196,7 +196,19 @@ theorem IlpFr.mfr {cR : CallM} (hF : IlpFr cR) {k : Nat} {args r : List Word} {m
 /-- **A constructor slice read by `nest_container` is decoded below the tops.** -/
 theorem csAt_decB {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} (h : CsAt m o xs (· < iwTop m))
     (hb : o + xs.length ≤ iwTop m) : DecB (fun m => decPL m (decCN m) o xs.length) m xs := by
-  sorry
+  show decPL (truncM m) (decCN (truncM m)) o xs.length = some xs
+  refine decPL_of_get _ xs o fun j hj => ?_
+  obtain ⟨w, hw, h0, h1, q, hq, hcv, hn⟩ := h j hj
+  have hE : ArrExt (erecP m) (erA (truncM m)) := fun i v hv => by
+    have hi : i < erTop m := by
+      have := (Array.getElem?_eq_some_iff.mp hv).1
+      simp only [erecP, Array.size_extract] at this
+      have : erecTop m = erTop m := rfl
+      omega
+    rw [truncM_er_eq hi]; rw [erecP_getE hi] at hv; exact hv
+  refine ⟨w.toNat, by rw [iwN_truncM (by omega)]; simp [iwN, nat?, iwA, hw], ?_⟩
+  simp only [decCN, decCVp, bind, Option.bind, iwN_truncM h0, iwN_truncM h1, hq, hn, hE.decCV hcv]
+  rfl
 
 /-! ## `target_major_of_outside` -/
 

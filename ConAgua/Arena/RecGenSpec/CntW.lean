@@ -42,7 +42,8 @@ theorem clsConsW {α : Type} {f : Mem → Nat → Option α}
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
       MFr [] [] m m' := by
-  sorry
+  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf h hS hxs.bound hxs.dec hy
+  exact ⟨hS', hg, ⟨hd, Nat.le_of_eq htop⟩, consW_mfr h⟩
 
 /-- **`sl_cons` of a decoded record onto a decoded slice**, with its frame. -/
 theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
@@ -52,7 +53,9 @@ theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → 
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
       MFr [] [] m m' := by
-  sorry
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (slCons_specW p hP.rx.ha hP.copy hP.cons n _ x o l) h
+  exact clsConsW hf hW hS hxs hy
 
 /-! ## `check_block_classes_keys`: one model and one refinement for both outcomes -/
 
@@ -84,7 +87,49 @@ theorem ckk_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
     RefE (closedNV p _root_.L.Checker.nvFns = true) (ckkE p n m nP po pl ko kl)
       (ks.mapM (ConRon.Arena.classKeyOf nP.toNat pfvs)) a
       (fun v x a' => CkkPost dn vis fe m v.1 v.2 x a') := by
-  sorry
+  induction n with
+  | zero => intro m a ko kl ks _ _ _ _ _; rw [ckkE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ n ih =>
+  intro m a ko kl ks hS hpf hpb hks hPm
+  by_cases hkl : kl = 0
+  · rw [ckkE.arm1 p n m nP po pl ko kl hkl]
+    have : ks = [] := by
+      have h := hks.1; simp only [DecB, hkl] at h
+      simpa [decPL] using h.symm
+    subst this
+    exact RefE.ret rfl ⟨hS, IWGrow.refl m, PSlR.nil decCK m, hPm⟩
+  obtain ⟨q, k0, ks', rfl, hw, hqb, hdk, hks'⟩ := partsPSl_cons hks hkl
+  have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
+  rw [ckkE.arm2 p n m nP po pl ko kl hkl, hw]
+  simp only [List.mapM_cons]
+  -- `class_key_of`
+  have h1 := kof_ref (p := p) (nP := nP) dn fe vis n hS (hpf.get (OMono.decHL _ _)) hpb (by rw [hq']; exact hdk) hPm
+  rcases h1' : classKeyOfE p n m nP po pl (UInt64.ofNat q) with e1 | ⟨r1, m1⟩
+  · rw [h1'] at h1
+    rw [ckkE.k_class_key_of.none]; exact RefE.bind_left h1
+  rw [h1'] at h1
+  obtain ⟨x1, a1, hrun1, hR1⟩ := h1
+  dsimp only at hR1
+  rw [ckkE.k_class_key_of.arm1]
+  refine RefE.bind_right hrun1 ?_
+  have hg1 := hR1.grow
+  -- the rest
+  have h2 := ih m1 a1 (ko + 1) (kl - 1) ks' hR1.stage (hpf.grow (OMono.decHL _ _) hg1)
+    (Nat.le_trans hpb hg1.iw) (hks'.grow decCK_mono hg1) hR1.pos
+  rcases h2' : ckkE p n m1 nP po pl (ko + 1) (kl - 1) with e2 | ⟨r2, m2⟩
+  · rw [h2'] at h2
+    rw [ckkE.k_check_block_classes_keys.none]; exact RefE.bind_left h2
+  rw [h2'] at h2
+  obtain ⟨xs, a2, hrun2, hR2⟩ := h2
+  dsimp only at hR2
+  rw [ckkE.k_check_block_classes_keys.arm1]
+  refine RefE.bind_right hrun2 ?_
+  -- `sl_cons`
+  refine RefE.onlySim (fun _ => ckkE.k_sl_cons.none ..) (fun _ _ h => h) fun r3 m3 h3 => ?_
+  rw [ckkE.k_sl_cons.arm1]
+  obtain ⟨hS3, hg3, hd3, hf3⟩ := clsConsW decCK_mono h3 hR2.stage hR2.keys
+    (hR1.key.grow (decCK_mono _) hR2.grow)
+  exact RefE.ret rfl ⟨hS3, (hg1.trans hR2.grow).trans hg3, by simpa using hd3, hR2.pos.fr hf3⟩
 
 /-! ## One class per member: `check_block_classes_count`, `check_block_classes_one_per_member` -/
 

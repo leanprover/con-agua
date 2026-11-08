@@ -40,7 +40,12 @@ theorem mapM_opt_congr {α β : Type} (f g : α → Option β) :
 
 theorem decHL_grow {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
     (h : o + l ≤ iwTop m) : (decHL m' o l : Option (List (Idx k))) = decHL m o l := by
-  sorry
+  simp only [decHL, hslice?]
+  apply mapM_opt_congr
+  intro j hj
+  have hj' : j < l := List.mem_range.mp hj
+  simp only [hd?, iwA]
+  rw [hg.iwGet (o + j) (by omega)]
 
 theorem decHL_getI {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
     (h : decHL m o l = some xs) (j : Nat) (hj : j < l) :

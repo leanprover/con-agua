@@ -72,7 +72,9 @@ theorem blockNestedBitGo_spec (p : Prog) (hp : p.lookup "block_nested_bit_go" = 
 
 theorem decRS_tgt {m : Mem} {p : Nat} {R : RecShape} (h : decRS m p = some R) :
     iwN m (p + 3) = some R.tgt := by
-  sorry
+  simp only [decRS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨q, hq, cv, hcv, rP, hrP, mI, hmI, tg, htg, rh, hrh, rfl⟩ := h
+  exact htg
 
 theorem nbGoW_ok (n : Nat) : ∀ (m : Mem) (o l k r : Word) (recs : List RecShape),
     (m.arr64 IW).size < 2 ^ 64 → decPL m (decRS m) o.toNat l.toNat = some recs →
@@ -156,7 +158,41 @@ theorem blockNestedBit_refines (p : Prog)
     (hdec : decPL s₀.mem (decLH s₀.mem (decPL s₀.mem (decLH s₀.mem (decKL s₀.mem)))) ko.toNat kl.toNat = some kss) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_nested_bit" [q, ko, kl]
     ⦃fun r s' => s' = s₀ ∧ r.headD 0 = if ConRon.Arena.blockNestedBit bs kss then 1 else 0; ⊤⦄ := by
-  sorry
+  refine triple_post (blockNestedBit_spec p hf hi hm hk hg hp n s₀ q ko kl) ?_
+  rintro r s' ⟨rfl, h⟩
+  refine ⟨rfl, ?_⟩
+  obtain _ | n := n
+  · simp [nbW] at h
+  rw [nbW_eq] at h
+  rcases h1 : kindsFlatOutW n s'.mem ko kl with _ | f <;> rw [h1] at h <;>
+    try (simp only [nbK, reduceCtorEq] at h; done)
+  have hf' := kindsFlatOutW_ok n _ _ _ kss f hsz hdec h1
+  by_cases hfl : ConRon.Arena.nestKindsFlat kss = true
+  · rw [ite_eq_left hfl] at hf'; subst hf'
+    rw [nbK_ne n _ q 1 (by decide)] at h
+    obtain ⟨hmem, hrecs, -⟩ := decBS_some hbs
+    obtain ⟨o1, l1, ho1, hl1, hg1⟩ := decAt_some hmem
+    obtain ⟨o2, l2, ho2, hl2, hg2⟩ := decAt_some hrecs
+    have r1 := iwN_rdW_at (w := q) (k := 1) hl1 hsz
+    have r2 := iwN_rdW_at (w := q) (k := 2) ho2 hsz
+    have r3 := iwN_rdW_at (w := q) (k := 3) (by simpa [Nat.add_assoc] using hl2) hsz
+    rw [show UInt64.ofNat 1 = (1 : Word) from rfl] at r1
+    rw [show UInt64.ofNat 2 = (2 : Word) from rfl] at r2
+    rw [show UInt64.ofNat 3 = (3 : Word) from rfl] at r3
+    rw [r1.1, r2.1, r3.1] at h
+    have hg2' : decPL s'.mem (decRS s'.mem) (UInt64.ofNat o2).toNat (UInt64.ofNat l2).toNat = some bs.recs := by
+      rw [UInt64.toNat_ofNat_of_lt' r2.2, UInt64.toNat_ofNat_of_lt' r3.2]; exact hg2
+    have := nbGoW_ok n _ _ _ _ _ bs.recs hsz hg2' h
+    have hk' : (UInt64.ofNat l1).toNat = bs.k := by
+      rw [UInt64.toNat_ofNat_of_lt' r1.2, BlockShape.k, decPL_length _ hg1]
+    rw [hk'] at this
+    rw [this]
+    simp [ConRon.Arena.blockNestedBit, hfl]
+  · have hf0 : f = 0 := by rw [hf']; simp [hfl]
+    rw [nbK_zero n _ q f hf0] at h
+    simp only [Option.some.injEq] at h
+    rw [← h]
+    simp [ConRon.Arena.blockNestedBit, hfl]
 
 end L.Ind
 

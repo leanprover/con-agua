@@ -54,7 +54,22 @@ theorem KlB.snoc {m m' : Mem} {o l q : Nat} {ks : List NestFieldKind} {w : Word}
     (h : KlB m o l ks) (_hg : IWGrow m m') (hq : q + l < iwTop m')
     (hw : ∀ i < l, (m'.arr64 IW)[q + i]? = (m.arr64 IW)[o + i]?) (hx : (m'.arr64 IW)[q + l]? = some w)
     (hk : decNFK w = some k) : KlB m' q (l + 1) (ks ++ [k]) := by
-  sorry
+  have h' : decKL (truncM m) o l = some ks := h
+  obtain ⟨hl, hg'⟩ := decKL_get h'
+  show decKL (truncM m') q (l + 1) = some (ks ++ [k])
+  unfold decKL
+  rw [List.range_succ, List.mapM_append]
+  have e1 : (List.range l).mapM (fun j => do decNFK (← (iwA (truncM m'))[q + j]?)) = some ks := by
+    rw [← h']; unfold decKL
+    refine mapM_congr_range _ fun j hj => ?_
+    have hj' := List.mem_range.mp hj
+    obtain ⟨w', hw', -⟩ := hg' j hj'
+    obtain ⟨hi, -⟩ := truncM_iw_get hw'
+    rw [truncM_iw_eq (m := m') (by omega), truncM_iw_eq hi]
+    simp only [iwA]; rw [hw j hj']
+  rw [e1]
+  have e2 : (iwA (truncM m'))[q + l]? = some w := by rw [truncM_iw_eq hq]; exact hx
+  simp [e2, hk]
 
 theorem OutsB.grow {m m' : Mem} {o l : Nat} {outs : List (List NestFieldKind × EIdx)} (h : OutsB m o l outs)
     (hg : IWGrow m m') : OutsB m' o l outs := DecB.grow (OMono.decPL decKE_mono o l) hg h
@@ -67,7 +82,17 @@ theorem pos2_ke_rec {m' : Mem} {q ko kl cl : Word} {ks : List NestFieldKind} {e 
     (hget : ∀ j < [ko, kl, cl].length, (m'.arr64 IW)[q.toNat + j]? = [ko, kl, cl][j]?)
     (hks : KlB m' ko.toNat kl.toNat ks) (hcl : H cl) (he : decI cl = e) :
     DecB (fun m => decKE m q.toNat) m' (ks, e) := by
-  sorry
+  have g : ∀ j < 3, (iwA (truncM m'))[q.toNat + j]? = [ko, kl, cl][j]? := fun j hj => by
+    rw [truncM_iw_eq (by omega)]; exact hget j (by simpa using hj)
+  have n0 : iwN (truncM m') q.toNat = some ko.toNat := by
+    simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 0 (by omega))
+  have n1 : iwN (truncM m') (q.toNat + 1) = some kl.toNat := by
+    simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 1 (by omega))
+  have h2 : (iwA (truncM m'))[q.toNat + 2]? = some cl := by simpa using g 2 (by omega)
+  have hks' : decKL (truncM m') ko.toNat kl.toNat = some ks := hks
+  show decKE (truncM m') q.toNat = some (ks, e)
+  simp only [decKE, decAt, n0, n1, hks', iwH, hd?, h2, Option.bind_eq_bind, Option.bind_some, Option.pure_def]
+  simp [hcl, he]
 
 end L.Ind
 

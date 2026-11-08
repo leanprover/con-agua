@@ -228,7 +228,16 @@ theorem decCV_some {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (ar
 theorem erH_rdW {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : hd? (erA m) i = some x)
     (hi : i < 2 ^ 64) :
     ∃ w, rdW (m.arr64 EREC) (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  sorry
+  simp only [hd?, erA] at h
+  cases hw : (m.arr64 EREC)[i]? with
+  | none => simp [hw] at h
+  | some w =>
+    simp only [hw] at h
+    by_cases hl : w.toNat < 2 ^ 32
+    · simp [hl] at h
+      have hiw : (UInt64.ofNat i).toNat = i := by simp; omega
+      exact ⟨w, by simp [rdW, hiw, hw], hl, h⟩
+    · simp [hl] at h
 
 /-! ## `class_of_motive_var`, model form (for callers) -/
 

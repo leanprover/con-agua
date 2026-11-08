@@ -197,7 +197,12 @@ theorem decCI_ctor_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p :
 
 theorem erecP_ext_of {m m' : Mem} (h1 : erTop m ≤ erTop m')
     (h2 : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) : ArrExt (erecP m) (erecP m') := by
-  sorry
+  intro i v hv
+  have hlt : i < erTop m := by
+    have := (Array.getElem?_eq_some_iff.mp hv).1
+    simp only [erecP, Array.size_extract, erecTop] at this
+    simp only [erTop]; omega
+  rw [erecP_getE (by omega), h2 i hlt, ← erecP_getE hlt]; exact hv
 
 theorem CNOk.agree {m m' : Mem} {p : Nat} {x : IConstantVal × Nat} {P : Nat → Prop} (h : CNOk m p x P)
     (hR : RdS m m' P) (hE : ArrExt (erecP m) (erecP m')) : CNOk m' p x P := by
@@ -478,12 +483,17 @@ theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
 theorem decCaps_ctors {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {caps : IIndCaps}
     (h : decCaps (aread a) q = some caps) :
     nat? (aread a) (q + 12) = some caps.nparams ∧ hlist? (aread a) (q + 13) = some caps.ctors := by
-  sorry
+  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, np, hnp, cts, hcts, heq⟩ := h
+  cases Option.some.inj heq
+  exact ⟨hnp, hcts⟩
 
 /-- A number read off the constant records below their top is the word L reads there. -/
 theorem erecP_rdN {m : Mem} {i v : Nat} {x : Word} (h : nat? (erecP m) i = some v) (hx : x.toNat = i) :
     (rdW (m.arr64 EREC) x).toNat = v := by
-  sorry
+  simp only [nat?, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  simp [rdW, hx, erecP_get hw]
 
 theorem nestContainer_ind {fe : IFEnv} {C : NIdx} {cv : IConstantVal} {caps : IIndCaps}
     (h : fe.find? C = some (.indInfo cv caps)) :

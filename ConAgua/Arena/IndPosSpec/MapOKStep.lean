@@ -217,7 +217,9 @@ open L.Arena
 /-! ### Word reads and small facts -/
 
 theorem rdIW0 {m : Mem} {f : Word} {v : Nat} (h : iwN m f.toNat = some v) : (rdW (m.arr64 IW) f).toNat = v := by
-  sorry
+  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  simp [rdW, hw]
 
 theorem rdIW {m : Mem} {f : Word} {i v : Nat} (h : iwN m (f.toNat + i) = some v) (hb : f.toNat + i < 2 ^ 64)
     (hi : i < 2 ^ 64) : (rdW (m.arr64 IW) (f + UInt64.ofNat i)).toNat = v :=

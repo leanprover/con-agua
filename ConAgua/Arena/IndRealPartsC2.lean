@@ -119,8 +119,10 @@ theorem blockShape_refinesC (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ :
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockShape? nPd.toNat blk) a₀ ∧
       ShapeR (AM.res (ConRon.Arena.blockShape? nPd.toNat blk) a₀) r s'.mem ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.blockShape? nPd.toNat blk) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  sorry
+      IWGrow s₀.mem s'.mem; ⊤⦄ :=
+  triple_post (bsh_spec p hP (realCall p) (realCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
+    let ⟨hok, hQ⟩ := Sim.run (bshW_sim (realCall p) n hC.stage hblk (lvlHyp_real p hcl hL n hC hA hbP)) hm
+    ⟨hl, hok, hQ⟩
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hcl hL in

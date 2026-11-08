@@ -83,7 +83,13 @@ theorem partsIwLt {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) : i < iw
 theorem partsCVType {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp (truncM m) q = some cv)
     {w : Word} (hw : w.toNat = q) :
     (rdW (m.arr64 EREC) (w + 3)).toNat < 2 ^ 32 ∧ decI (rdW (m.arr64 EREC) (w + 3)) = cv.type := by
-  sorry
+  obtain ⟨x, hx, hxl, hxe⟩ := hd?_some (decCV_type h)
+  obtain ⟨hi, hx'⟩ := truncM_er_get hx
+  simp only [erA] at hx'
+  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
+  have hw3 : (w + 3).toNat = q + 3 := by rw [UInt64.toNat_add]; simp; omega
+  rw [rdW_of_get? hw3.symm hx']
+  exact ⟨hxl, hxe.symm⟩
 
 /-- A word sum that does not wrap. -/
 theorem partsAddNoOv {a b : Word} (h : ¬ a + b < a) : (a + b).toNat = a.toNat + b.toNat := by

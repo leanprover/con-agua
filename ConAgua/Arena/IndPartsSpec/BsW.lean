@@ -138,7 +138,13 @@ theorem partsBlk_nil {dn : NIdx → Option ConLeche.Name} {m : Mem} {off : Nat}
 theorem partsErRd {m m' : Mem} (hg : IWGrow m m') {i v : Nat} (h : nat? (erA (truncM m)) i = some v)
     {w : Word} (hw : w.toNat = i) :
     rdW (m'.arr64 EREC) w = UInt64.ofNat v ∧ v < 2 ^ 64 ∧ i < erTop m := by
-  sorry
+  simp only [nat?, Option.map_eq_some_iff] at h
+  obtain ⟨x, hx, rfl⟩ := h
+  obtain ⟨hi, hx'⟩ := truncM_er_get hx
+  simp only [erA] at hx'
+  refine ⟨?_, x.toNat_lt, hi⟩
+  rw [rdW_of_get? hw.symm (by rw [hg.erGet i hi]; exact hx')]
+  simp
 
 /-- **A fresh record, read back below the new top.** -/
 theorem partsFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -146,7 +152,10 @@ theorem partsFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ q.toNat = iwTop m ∧ q.toNat + ws.length = iwTop m' ∧
       ∀ j (hj : j < ws.length), iwN (truncM m') (q.toNat + j) = some (ws[j]).toNat := by
-  sorry
+  obtain ⟨hS', hg, hq, htop, hget⟩ := posRecW_stage h hS hl
+  refine ⟨hS', hg, hq, by omega, fun j hj => ?_⟩
+  rw [iwN_truncM (by omega)]
+  simp only [iwN, nat?, iwA, hget j hj, List.getElem?_eq_getElem hj, Option.map_some]
 
 /-- A word `w + k` of the record pool, read below the top in any memory the pools grew into. -/
 theorem partsErW {m m1 : Mem} (hg : IWGrow m m1) {w k : Word} {v : Nat}
@@ -190,7 +199,16 @@ theorem ipBlkHead {dn : NIdx → Option ConLeche.Name} {m : Mem} {off l : Word}
       rdW (m.arr64 EREC) (UInt64.ofNat q) = UInt64.ofNat (ciKind x) ∧
       decCI (erA (truncM m)) q = some x ∧
       DecB (fun m => decEBlk dn m (off + 1).toNat (l - 1).toNat) m rest := by
-  sorry
+  obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
+    ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
+  rw [hL] at hblk
+  obtain ⟨q, x, rest, rfl, hq, hx, hrest⟩ := partsBlk_cons hblk
+  obtain ⟨hoff, hqb, hofft⟩ := partsErRd (IWGrow.refl m) hq rfl
+  obtain ⟨hkw, -, -⟩ := partsErRd (IWGrow.refl m) (partsCI_fields hx).1 (w := UInt64.ofNat q)
+    (UInt64.toNat_ofNat_of_lt' hqb)
+  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
+  refine ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, ?_⟩
+  rw [partsSucc_of_lt hofft hE, partsPred_of hL]; exact hrest
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_split_recs`' model refines `blockSplitRecs`.** -/
@@ -389,7 +407,25 @@ theorem partsRec6 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (h : posRecW m [b0, b1, b2, b3, b4, b5] = some (q, m')) (hS : StageR vis fe m a)
     (h1 : PSlR decCVp ts b0 b1 m) (h2 : PSlR decSC cs b2 b3 m) (h3 : PSlR decSR rs b4 b5 m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ SplitRec (ts, cs, rs) q m' := by
-  sorry
+  obtain ⟨hS', hg, hq, htop, hget⟩ := posRecW_stage h hS (by simp)
+  have hlt : iwTop m' < 2 ^ 64 := (rdW (m'.arr64 CTL) 200).toNat_lt
+  simp only [List.length_cons, List.length_nil] at htop
+  have rd : ∀ (i : Nat) (hi : i < 6), rdW (m'.arr64 IW) (q + UInt64.ofNat i) =
+      [b0, b1, b2, b3, b4, b5][i]'(by simpa using hi) := by
+    intro i hi
+    exact rdW_of_get? (partsWadd (by omega)).symm
+      (by rw [hget i (by simpa using hi), List.getElem?_eq_getElem])
+  have r0 : rdW (m'.arr64 IW) q = b0 := by simpa using rd 0 (by omega)
+  have r1 : rdW (m'.arr64 IW) (q + 1) = b1 := by simpa using rd 1 (by omega)
+  have r2 : rdW (m'.arr64 IW) (q + 2) = b2 := by simpa using rd 2 (by omega)
+  have r3 : rdW (m'.arr64 IW) (q + 3) = b3 := by simpa using rd 3 (by omega)
+  have r4 : rdW (m'.arr64 IW) (q + 4) = b4 := by simpa using rd 4 (by omega)
+  have r5 : rdW (m'.arr64 IW) (q + 5) = b5 := by simpa using rd 5 (by omega)
+  refine ⟨hS', hg, by omega, ?_, ?_, ?_⟩
+  · rw [r0, r1]; exact h1.grow (fun _ => OMono.decCVp _) hg
+  · rw [r2, r3]; exact h2.grow decSC_mono hg
+  · rw [r4, r5]
+    exact h3.grow decSR_mono hg
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_split`'s model refines `blockSplit`.** -/

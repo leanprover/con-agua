@@ -210,7 +210,12 @@ theorem slNodup_refines (p : Prog) (hc : p.lookup "sl_contains" = some slContain
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "sl_nodup" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       (r.headD 0 != 0) = nameNodup (ws.map decI); ⊤⦄ := by
-  sorry
+  have h := slNodup_spec p hc hp n s₀ o l
+  refine triple_post h ?_
+  intro r s' ⟨h1, h2, h3⟩
+  refine ⟨h1, h2, ?_⟩
+  rw [nodupW_ok n _ _ _ _ _ hs h3, nameNodup_map ws hw]
+  by_cases hn : ws.Nodup <;> simp [hn]
 
 end L.Ind
 
@@ -238,7 +243,52 @@ theorem slR_of_decHL {k : IdxKind} (m : Mem) : ∀ (n off : Nat) (ns : List (Idx
     decHL m off n = some ns → off + n < 2 ^ 64 →
     ∃ ws, SlR m (UInt64.ofNat off) (UInt64.ofNat n) ws ∧ ns = ws.map decI ∧
       ∀ w ∈ ws, w.toNat < 2 ^ 32 := by
-  sorry
+  intro n
+  induction n with
+  | zero =>
+    intro off ns h _
+    simp [decHL, hslice?] at h
+    exact ⟨[], by simpa using (SlR.nil (m := m) (o := UInt64.ofNat off)), by simp [h], by simp⟩
+  | succ n ih =>
+    intro off ns h hb
+    simp only [decHL, hslice?_succ] at h
+    cases hx : (hd? (iwA m) off : Option (Idx k)) with
+    | none => simp [hx] at h
+    | some x =>
+      cases hxs : (hslice? (iwA m) (off + 1) n : Option (List (Idx k))) with
+      | none => simp [hx, hxs] at h
+      | some xs =>
+        simp [hx, hxs] at h
+        obtain ⟨ws, hws, rfl, hlt⟩ := ih (off + 1) xs hxs (by omega)
+        simp only [hd?] at hx
+        cases hw : (iwA m)[off]? with
+        | none => simp [hw] at hx
+        | some w =>
+          simp only [hw] at hx
+          by_cases hwl : w.toNat < 2 ^ 32
+          · simp [hwl] at hx
+            subst h
+            refine ⟨w :: ws, ?_, by simp [hx], ?_⟩
+            · have e1 : rdW (m.arr64 IW) (UInt64.ofNat off) = w := by
+                simp only [rdW, iwA] at hw ⊢
+                have : (UInt64.ofNat off).toNat = off := by simp; omega
+                rw [this, hw]; rfl
+              have e2 : UInt64.ofNat off + 1 = UInt64.ofNat (off + 1) := by
+                simp [UInt64.ofNat_add]
+              have e3 : UInt64.ofNat (n + 1) - 1 = UInt64.ofNat n := by
+                simp [UInt64.ofNat_add]
+              have hne : UInt64.ofNat (n + 1) ≠ 0 := by
+                intro h0
+                have := congrArg UInt64.toNat h0
+                simp at this; omega
+              rw [← e1]
+              exact SlR.cons hne (by rw [e2, e3]; exact hws)
+            · intro v hv
+              simp at hv
+              rcases hv with rfl | hv
+              · exact hwl
+              · exact hlt v hv
+          · simp [hwl] at hx
 
 end L.Ind
 
@@ -438,11 +488,24 @@ variable {m : Mem}
 
 theorem iwN_rdW {i v : Nat} (h : iwN m i = some v) (hi : i < 2 ^ 64) :
     rdW (m.arr64 IW) (UInt64.ofNat i) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
-  sorry
+  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  have : (UInt64.ofNat i).toNat = i := by simp; omega
+  simp only [rdW, this, hw, Option.getD_some]
+  exact ⟨by simp, w.toNat_lt⟩
 
 theorem iwH_rdW {k : IdxKind} {i : Nat} {x : Idx k} (h : iwH m i = some x) (hi : i < 2 ^ 64) :
     ∃ w, rdW (m.arr64 IW) (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  sorry
+  simp only [iwH, hd?, iwA] at h
+  cases hw : (m.arr64 IW)[i]? with
+  | none => simp [hw] at h
+  | some w =>
+    simp only [hw] at h
+    by_cases hl : w.toNat < 2 ^ 32
+    · simp [hl] at h
+      have : (UInt64.ofNat i).toNat = i := by simp; omega
+      exact ⟨w, by simp [rdW, this, hw], hl, h⟩
+    · simp [hl] at h
 
 theorem decAt_some {α : Type} {g : Nat → Nat → Option (List α)} {i : Nat} {xs : List α}
     (h : decAt m g i = some xs) : ∃ o l, iwN m i = some o ∧ iwN m (i + 1) = some l ∧ g o l = some xs := by
@@ -619,7 +682,7 @@ theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     (hS : StageR vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) :
-    StageR vis fe m' a' ∧ IWGrow m m' := by
-  sorry
+    StageR vis fe m' a' ∧ IWGrow m m' :=
+  StageR.of_walkM hS hD hf hA hC hk (hS.check.mode.frame hf h01.1 h01.2)
 
 end L.Ind

@@ -204,7 +204,16 @@ include hc ha hcp hsn hp
 theorem nestFrameMatesGo_spec (n : Nat) : ∀ (s₀ : St) (c off l oO oL : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame_mates_go" [c, off, l, oO, oL]
     ⦃fun r s' => LocEq s' s₀ ∧ matesW n s₀.mem c off l oO oL = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  induction n with
+  | zero =>
+    intro s₀ c off l oO oL
+    rw [invoke_eq _ hp]; simp only [callFn, nestFrameMatesGoL]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ c off l oO oL
+    simp only [invoke_eq _ hp, callFn, nestFrameMatesGoL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        slContains_spec p hc n, slSnoc_specW p ha hcp hsn n, ih] <;> finish (gen := 20)
 
 end spec
 
