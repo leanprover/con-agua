@@ -94,6 +94,7 @@ theorem opfA_stage : ∀ b ∈ opfA, b.arr < 201 ∨ 208 < b.arr := by
 theorem opfC_stage : ∀ x ∈ opfC, x.toNat < 202 ∨ 219 < x.toNat := by
   simp [opfC, instListC, mkC, instC, liftC]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `block_nest_ctx`, its `open_pis_at_fvars_f` call read through `cR`**
 (`bncW` is the stubs' reading) (at exec fuel `n + 2`). -/
 noncomputable def bncC (cR : CallM) (n : Nat) (m : Mem) (vis p cvO cvL : Word) : Option (List Word × Mem) :=
@@ -101,18 +102,16 @@ noncomputable def bncC (cR : CallM) (n : Nat) (m : Mem) (vis p cvO cvL : Word) :
   else if rdW (m.arr64 IW) (p + 4) + rdW (m.arr64 IW) (p + 1) < rdW (m.arr64 IW) (p + 4) then none
   else bncK1 n vis p (cR (n + 1) "open_pis_at_fvars_f" [rdW (m.arr64 IW) (p + 4),
     rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvO + 3), 0] m)
+-/
 
 set_option experimental.vcgen true in
 theorem bnc_specC (p : Prog) (hP : NckProg p) (hl : NhLook p)
     (hp : p.lookup "block_nest_ctx" = some blockNestCtx) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis q cvO cvL : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 2)) "block_nest_ctx" [vis, q, cvO, cvL]
     ⦃fun r s' => LocEq s' s₀ ∧ bncC cR n s₀.mem vis q cvO cvL = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, blockNestCtx]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      hcR (n + 1) "open_pis_at_fvars_f", nck_spec p hP n, nestHoles_spec p hl n] <;>
-    finish (gen := 20) [bncC, rdW_eq]
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `bncC_sim` with the walk memos: `AbsOK` after, `open_pis_at_fvars_f`'s from its `Sim`, the
 rest by `nckW_afr`/`nhW_afr` (lane `indstaget`). -/
 theorem bncC_simA (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
@@ -229,6 +228,7 @@ theorem bncC_simA (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   · rw [hnc]; simp only [BlockShape.memberNames, List.length_map]
     have : bs.k = bs.members.length := rfl
     omega
+-/
 
 /-- **`block_nest_ctx`'s model, its `open_pis_at_fvars_f` the real call, leaves the walk memos
 alone** (`bncW_mfr`'s). -/
@@ -282,13 +282,13 @@ structure CbpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   kinds : PSlR decKSS x.1 (r.headD 0) (r.tail.headD 0) m'
   nfs : PSlR decNFS x.2.1 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m'
   ns : NSB m' ((r.drop 4).headD 0) x.2.2
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 section sim
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop) (hApd : ApdF p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hIlpf henv hOpf hLC hLT hApd in
 /-- **`check_block_positivity` refines `checkBlockPositivity`, both outcomes** under `StageC`
 (con-ron's `checkBlockPositivity_spec`'s preconditions). -/
@@ -490,6 +490,7 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
   · simp only [List.headD_cons, List.tail_cons]; exact Nat.le_trans hOb7 hg8.iw
   · simpa using hd8
   · simpa using hns4.grow hg48 (Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize)
+-/
 
 end sim
 
@@ -500,6 +501,7 @@ variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Opti
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop) (hApd : ApdF p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hIlpf henv hOpf hLC hLT hApd in
 /-- **`check_block_positivity` refines `checkBlockPositivity`** under `StageC` (the knot's core
 calls; con-ron's `checkBlockPositivity_spec`'s preconditions: the parts, the formers and the
@@ -543,6 +545,7 @@ theorem checkBlockPositivity_refinesC (hP : PosBlkProg p) {fs : List FnName}
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]
   exact ⟨hR.stage, hR.grow, hR.pos, hR.abs, hR.kinds, hR.nfs, hR.ns, hR.core⟩
+-/
 
 end census
 

@@ -37,6 +37,7 @@ variable {p : Prog} (L : RsLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC
   (fe : IFEnv) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 include L hq hIlpf hLC henv
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_root` refines `nestRoot`** under `StageC` (the knot's core calls; con-ron's
 `nestRoot_spec`'s preconditions). -/
 @[refines ConRon.Arena.nestRoot]
@@ -67,7 +68,9 @@ theorem nestRoot_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx h
       houtsP hcF)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.outs, hR.outsb, hR.ns, hR.pos, hR.abs, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_seeds` refines `nestSeeds`** under `StageC` (con-ron's `nestSeeds_spec`'s
 preconditions). -/
 @[refines ConRon.Arena.nestSeeds]
@@ -90,6 +93,7 @@ theorem nestSeeds_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx 
       hns hP hA hctx hseedsP hnsP hw)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.ns, hR.pos, hR.abs, hR.core⟩
+-/
 
 end census
 

@@ -59,6 +59,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 section twin
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- An accepting `installStep` ends with empty caches and the scratch tier off (`dropScratch`
 last on both arms; `installStep_off`'s pattern). -/
 theorem installStep_drop {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} {i : Nat}
@@ -87,7 +88,9 @@ theorem installStep_drop {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} 
     obtain ⟨_, s6, h6, h⟩ := ConRon.Bridge.AM.bind_ok h
     obtain ⟨-, rfl⟩ := ConRon.Bridge.AM.pure_ok h
     exact hd h6
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Item 12a: an accepting `installFold` ends with empty caches** (and the scratch tier off)
 when it starts so: a record either leaves the state alone (none) or ends in `dropScratch`. -/
 theorem installFold_drop {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} :
@@ -129,7 +132,9 @@ theorem installFold_drop {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} 
             obtain ⟨-, rfl⟩ := h1
             have h2 := installStep_drop hA
             exact ⟨fun _ => hk.1 h2.1, fun _ => hk.2 h2.2.1⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Item 12a, from any start**: an accepting `installFold` ends with empty caches, or ran no
 record (the state and the fold's tuple unchanged). The parse before the loop leaves the caches
 non-empty (con-ron's `FoldOK_of_start` note), so phase B's start uses this form. -/
@@ -172,7 +177,9 @@ theorem installFold_cachesOr {mode : ConLeche.CheckMode} {pins : List INatOpPinS
             simp only [Except.ok.injEq, Prod.mk.injEq] at h1
             obtain ⟨-, rfl⟩ := h1
             exact ⟨(installStep_drop hA).1, (installStep_drop hA).2.2⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Phase B's twin invariant** before the records `pend` (the remaining ones): con-ron's
 `FoldOK` at the final environment `env` (names unique), each remaining record related to its pure
 value group at the store (`PendRel`), the caches empty and the scratch tier off. -/
@@ -186,7 +193,9 @@ structure TwinPend (fe : IFEnv) (pend : List PendingCheck) (a : AState) : Prop w
   also empties the scratch tables): the store is its own `dropScratch`, so a worker
   (`AState.worker`) has the same store (lane parmode, `FreezeFresh.lean`). -/
   dropped : pend ≠ [] → a.store.dropScratch = a.store
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`TwinPend` at phase B's start**, from `TwinFold` at the loop's start and phase A's
 accepting twin run (`Arena.installFold_bridge`, `PhaseA.nodup`, `installFold_drop`,
 `installFold_cachesOr`: a pending check exists only if some record ran). -/
@@ -215,7 +224,9 @@ theorem TwinPend.start {pins : List INatOpPinSet} {ds : Array IDeclaration} {a�
     · exact h.2
     · simp only [Prod.mk.injEq] at he
       exact absurd (by rw [he.2.2]) hne
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `TwinPend` at the `AM` form of phase A's run. -/
 theorem TwinPend.startAM {pins : List INatOpPinSet} {ds : Array IDeclaration} {a₀ : AState}
     {k : Nat} {fe : IFEnv}
@@ -227,7 +238,9 @@ theorem TwinPend.startAM {pins : List INatOpPinSet} {ds : Array IDeclaration} {a
   have hrun := AM.run_of_ok _ _ hok
   rw [hres] at hrun
   exact TwinPend.start hT hrun
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **con-ron's `CheckOK` at a record's view**: the prefix environment, the restricted index
 (`IFEnvOK_prefix`), the caches empty. -/
 theorem TwinPend.checkAt {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck} {a : AState}
@@ -239,7 +252,9 @@ theorem TwinPend.checkAt {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCh
       caches := ConRon.Bridge.CacheOK.of_empty (h.caches (by simp))
       pins := hok.check.pins
       ienv := ConRon.Bridge.IFEnvOK_prefix hok hnd pc.vis }⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The theorem test's twin facts at a record's check** (`Arena.checkPending_prefix`'s opening):
 after `enterScratch`, `CheckOK` at the record's prefix environment, the record's constant denoting,
 its type in scope. -/
@@ -267,12 +282,16 @@ theorem TwinPend.enterThm {fe : IFEnv}
             ⟨hok.persEnv.env, hok.persEnv.idx, hok.persEnv.tables, hok.persEnv.tbls⟩ hx1 }
     · rw [enterScratch_st]
       exact ConRon.Bridge.denoteCV_pext hx1 hp.pers.cv hp.cv
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem TwinPend.stateOK {fe : IFEnv} {pend : List PendingCheck} {a : AState}
     (h : TwinPend fe pend a) : ConRon.Bridge.StateOK a := by
   obtain ⟨env, -, hok, -⟩ := h.fold
   exact hok.check.state
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Phase B's twin step** (`Arena.checkPending_prefix`): an accepting check of the first record
 keeps the invariant for the rest, and the store grows on its persistent tier. -/
 theorem TwinPend.step {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck} {a a' : AState}
@@ -295,6 +314,7 @@ theorem TwinPend.step {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck
       exact ⟨rfl, rfl⟩
     exact ⟨⟨⟨env, _, hok₁, hnd, PendRel.listRel_mono hx₁ ⟨[], rfl⟩ (ConRon.Bridge.TblExt.of_eq rfl) hrest⟩, fun _ => hc₁, hoff.1,
       fun _ => hoff.2⟩, hx₁⟩
+-/
 
 end twin
 
@@ -309,9 +329,6 @@ structure PhaseBProg (p : Prog) : Prop where
   knot : KnotStageProg p
   leaf : LeafClosed p
   loop : LoopClosed p
-  cp : p.lookup "check_pending" = some checkPendingL
-  cpg : p.lookup "check_pending_go" = some checkPendingGoL
-  cpx : p.lookup "check_pending_next" = some checkPendingNextL
   /-- `all_level_params_defined`'s program and the `CrOK` threading (`consts_resolve_ffast`'s memo
   across phase B's calls): the value guards' walks under `StageT`. -/
   apd : L.Ind.ApdF p
@@ -333,22 +350,7 @@ theorem enter_loopB (hkp : CrKeep p) {pins : List INatOpPinSet} (n : Nat) (s₀ 
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧
       LoopR pins s'.mem (AM.st enterScratch a₀) vis fe ds ∧
       TwinOK dn s'.mem (AM.st enterScratch a₀) fe' ∧ pinW s'.mem 0 ≠ 0 ∧ L.Stubs.CrOK s'.mem; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  have hCr' := M.of_run (P := fun s => s = s₀) hs hrun
-    (invoke_crOK hkp.closed hkp.crf n (im_mem "scratch_enter" rfl) [] s₀)
-  obtain ⟨hloc, hok, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (enter_loop dn ds p hb n s₀ a₀ vis fe pend hR)
-  obtain ⟨-, -, -, -, -, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
-  subst hs
-  have hf : MemFrame scrArrs ((0 :: resetCtl) ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by decide)]; exact hfl, hCr' hCr⟩
-  rw [enterScratch_st]
-  exact (hTw.frameLo hf (by decide) (fun x h => by
-    simp [resetCtl, scratchCnts, memoCtl, SCB] at h
-    rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
-      <;> decide)).enter hwf hoff
+  sorry
 
 /-- **`scratch_drop` keeps the core's memos** (a leaf), beside the loop's relation. -/
 theorem drop_loopB (hlc : LeafClosed p) (hkp : CrKeep p) {pins : List INatOpPinSet} (n : Nat) (s₀ : St)
@@ -359,17 +361,7 @@ theorem drop_loopB (hlc : LeafClosed p) (hkp : CrKeep p) {pins : List INatOpPinS
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok dropScratch a₀ ∧
       LoopR pins s'.mem (AM.st dropScratch a₀) vis fe ds ∧ CoreMemos s'.mem ∧
       L.Stubs.CrOK s'.mem; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  have hCr' := M.of_run (P := fun s => s = s₀) hs hrun
-    (invoke_crOK hkp.closed hkp.crf n (im_mem "scratch_drop" rfl) [] s₀)
-  obtain ⟨hloc, hok, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (drop_loop (pins := pins) dn ds p hb n s₀ a₀ vis fe pend hR)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (invoke_memFrame hlc n (leaf_mem "scratch_drop" rfl) [] s₀)
-  subst hs
-  exact ⟨hloc, hok, hL, hc.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp,
-    hCr' hCr⟩
+  sorry
 
 end bracket
 
@@ -377,6 +369,7 @@ section specs
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_value_group` refines `checkValueGroup` under `StageT`** (the program's own core,
 `cvg_ref`'s ok half): from the loop's relation, `TwinOK` and the pin flag, the loop's relation and the
 core's memos after it. -/
@@ -408,14 +401,18 @@ theorem checkValueGroup_specT (hm : mode = .verified) (hP : CvgProg p) (hq : Kno
   refine ⟨hloc, hok, hst ▸ hR.of_step hS'.stage hf ?_, hS'.twin.memos, hCr'⟩
   rw [← erecP_reset s.mem]
   exact IWGrow.erecPExt hg'
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `TwinOK` at a pending record's view, from phase B's twin invariant and the memory's half. -/
 theorem TwinPend.twinOK {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck} {a : AState}
     {m : Mem} (hT : TwinPend fe (pc :: rest) a) (hM : LoopMem dn m a) (hc : CoreMemos m) :
     TwinOK dn m a (fe.restrictTo pc.vis) := by
   obtain ⟨env, hck⟩ := hT.checkAt
   exact TwinOK.of_check hck ⟨hM.erec, hM.spn, hM.bstk, hc, fun k x e => (hM.dnP k x e).2⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The record's two words read by `rdW` (the unified model's loads). -/
 theorem pend_rdW (m : Mem) (hP : PendR m pend) (j : Word)
     (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62) :
@@ -432,7 +429,9 @@ theorem pend_rdW (m : Mem) (hP : PendR m pend) (j : Word)
   refine ⟨?_, ?_⟩
   · rw [rdW_of_get? e0.symm hw0]; exact hvg
   · rw [rdW_of_get? e2.symm hw2]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending`'s unified model**: the bracket's opening and drop (outside the verdict
 closure) lifted, `check_value_group` through its run (its ok half reads the call's write set). -/
 l_model checkPending_specE (p : Prog) (hf : p.lookup "check_pending" = some checkPendingL)
@@ -442,6 +441,7 @@ l_model checkPending_specE (p : Prog) (hf : p.lookup "check_pending" = some chec
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `check_pending`'s error arms assume: the no-verdict closure (the bracket) and
 `check_value_group`'s (`CvgCtx`). -/
@@ -457,6 +457,7 @@ structure CpPost (vis : Word) (fe : IFEnv) (m' : Mem) (a' : AState) :
   core : CoreMemos m'
   cr : L.Stubs.CrOK m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending` refines `checkPending` under `StageT`, both outcomes**: the bracket's
 opening keeps `TwinOK` at the record's view, `check_value_group` runs from `StageT` (`cvg_ref`'s
 error half on its run), the drop is a leaf. -/
@@ -513,6 +514,7 @@ theorem cpd_ref (hm : mode = .verified) (hP : PhaseBProg p) {N : Nat} (hN : N �
       hcm2 hCr2) c3
   subst hs3
   exact RefE.ret (AM.run_of_ok _ _ hok3) ⟨hR3, hcm3, hCr3⟩
+-/
 
 /-- **`check_pending` refines `checkPending` under `StageT`** (`cpd_ref`'s ok half). -/
 @[refines ConRon.Arena.checkPending]

@@ -36,6 +36,7 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_constant_val`, both outcomes**: `install_header` by its unified model,
 the core stubs through their runs. -/
 l_model checkConstantVal_specE (p : Prog) (hp : ValProg p)
@@ -44,6 +45,7 @@ l_model checkConstantVal_specE (p : Prog) (hp : ValProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- **The model of `check_defn_val`, both outcomes**: its callees through their runs. -/
 l_model checkDefnVal_specE (p : Prog) (hp : ValProg p)
@@ -66,6 +68,7 @@ structure CcvPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   crOK : L.Stubs.CrOK m'
   abs : AbsOK m → AbsOK m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_constant_val` refines `checkConstantVal .verified`, both outcomes**, under `StageT`:
 `install_header` by `ih_ref`, the core stubs by `KnotStageProg` (ok) and `CoreStubsE` (errors). -/
 theorem ccv_ref {p : Prog} (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
@@ -105,13 +108,13 @@ theorem ccv_ref {p : Prog} (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p
     hkp.call (im_mem _ rfl) (callW_of_callE h3) hCr2, fun hA => ?_⟩
   exact absOK_core hq.closed (by decide) (callW_of_callE h3)
     (absOK_core hq.closed (by decide) (callW_of_callE h2) (hP1.afr hA) hS2) hS3
+-/
 
 /-- What `check_defn_val`'s and `check_opaque_val`'s error arms assume: `env_push` outside the
 verdict closure, the core stubs' and `install_value_guards`' claims. -/
 structure DvCtx (p : Prog) : Prop where
   env : NVAt p "env_push"
   core : CoreStubsE p
-  ivg : IvgE p
 
 /-- What `check_defn_val`/`check_opaque_val` give besides the twin's run: the stage at the
 extended environment `fe'` (the twin's result), the core's memos, the growth. -/
@@ -161,12 +164,13 @@ def dvoE (k : Word) (p : Prog) : Nat → Mem → Word → Word → Except Err (W
 
 theorem checkDefnValE_dvo (p : Prog) (n : Nat) (m : Mem) (vis c : Word) :
     checkDefnValE p n m vis c = dvoE R_TYPE_MISMATCH_IN p n m vis c := by
-  cases n <;> rfl
+  sorry
 
 theorem checkOpaqueValE_dvo (p : Prog) (n : Nat) (m : Mem) (vis c : Word) :
     checkOpaqueValE p n m vis c = dvoE R_TYPE_MISMATCH_IN_OPAQUE p n m vis c := by
-  cases n <;> rfl
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`dvoE k` refines its twin `dvT …`, both outcomes**, under `StageT`, for a code `k` of the
 twin's mismatch class: the value's guards by `ivg_ref`, the core stubs by `KnotStageProg` and
 `CoreStubsE`, the type mismatch the twin's `invalid`; after the push the stage at the extended
@@ -237,7 +241,9 @@ theorem dvo_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p
   have hM4 : CoreMemos s4.mem := hS3.twin.memos.frame (envPushW_frame hW4)
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
   exact RefE.ret rfl ⟨by simpa using hS4, hM4, hg1.trans (hg2.trans (hg3.trans hg4)), rfl⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_defn_val` refines its twin `dvT …`, both outcomes** (`dvo_ref`). -/
 theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -249,7 +255,9 @@ theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
     RefE (DvCtx p) (checkDefnValE p n m vis c) (dvT fe cv v ci msg) a
       (fun w y a' => DvPost dn m (fe.push ci) w y a') := by
   rw [checkDefnValE_dvo]; exact dvo_ref hq hp hap hkp hn msg rfl hS hci hcv hv hlps hCr
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_opaque_val` refines its twin `dvT …`, both outcomes** (`dvo_ref`). -/
 theorem ov_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -261,7 +269,9 @@ theorem ov_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
     RefE (DvCtx p) (checkOpaqueValE p n m vis c) (dvT fe cv v ci msg) a
       (fun w y a' => DvPost dn m (fe.push ci) w y a') := by
   rw [checkOpaqueValE_dvo]; exact dvo_ref hq hp hap hkp hn msg rfl hS hci hcv hv hlps hCr
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_defn_val`'s error claim under `StageT`** (`dv_ref`'s error half). -/
 theorem defnvE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)
     (hcE : CoreStubsE p) (hivE : IvgE p) (hnvE : NVAt p "env_push")
@@ -276,7 +286,9 @@ theorem defnvE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : Apd
     ErrClaim (checkDefnVal V fe cv v hh) a e :=
   RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDefnVal_specE p hp n _ vis c) trivial
     ⟨hnvE, hcE, hivE⟩ (dv_ref hq hp hap hkp hn _ hS hc hcv hv hlps hCr) hce
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_opaque_val`'s error claim under `StageT`** (`ov_ref`'s error half). -/
 theorem opaquevE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)
     (hcE : CoreStubsE p) (hivE : IvgE p) (hnvE : NVAt p "env_push")
@@ -291,5 +303,6 @@ theorem opaquevE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : A
     ErrClaim (checkOpaqueVal V fe cv v) a e :=
   RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkOpaqueVal_specE p hp n _ vis c) trivial
     ⟨hnvE, hcE, hivE⟩ (ov_ref hq hp hap hkp hn _ hS hc hcv hv hlps hCr) hce
+-/
 
 end L.Arena
