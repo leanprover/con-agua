@@ -20,7 +20,7 @@ movq $3, %rax
 movq %rax, 35568(%r8)
 jmp ca_setup
 ca_check_b_go:
-movq $3264175144960, %rax
+movq $3607772528640, %rax
 cmpq %rax, %r8
 jb ca_abi_decline
 movq %rdx, %r9
@@ -47,7 +47,7 @@ movq 104(%rdi), %rax
 movq %rax, 1512(%rcx)
 addq %rax, %rax
 movq %rax, 2992(%rcx)
-movq $1271310319616, %rax
+movq $1614907703296, %rax
 addq %rcx, %rax
 movq %rax, 40(%rcx)
 movq $4294967296, %rax
@@ -62,7 +62,7 @@ movq 120(%rdi), %rax
 movq %rax, 1528(%rcx)
 addq %rax, %rax
 movq %rax, 3008(%rcx)
-movq $1546188226560, %rax
+movq $1889785610240, %rax
 addq %rcx, %rax
 movq %rax, 56(%rcx)
 movq $4294967296, %rax
@@ -77,7 +77,7 @@ movq 136(%rdi), %rax
 movq %rax, 1544(%rcx)
 addq %rax, %rax
 movq %rax, 3024(%rcx)
-movq $1580547964928, %rax
+movq $1924145348608, %rax
 addq %rcx, %rax
 movq %rax, 72(%rcx)
 movq $4294967296, %rax
@@ -92,7 +92,7 @@ movq 152(%rdi), %rax
 movq %rax, 1560(%rcx)
 addq %rax, %rax
 movq %rax, 3040(%rcx)
-movq $1614907703296, %rax
+movq $1958505086976, %rax
 addq %rcx, %rax
 movq %rax, 88(%rcx)
 movq $4294967296, %rax
@@ -107,7 +107,7 @@ movq 168(%rdi), %rax
 movq %rax, 1576(%rcx)
 addq %rax, %rax
 movq %rax, 3056(%rcx)
-movq $1649267441664, %rax
+movq $1992864825344, %rax
 addq %rcx, %rax
 movq %rax, 104(%rcx)
 movq $4294967296, %rax
@@ -122,7 +122,7 @@ movq 184(%rdi), %rax
 movq %rax, 1592(%rcx)
 addq %rax, %rax
 movq %rax, 3072(%rcx)
-movq $1683627180032, %rax
+movq $2027224563712, %rax
 addq %rcx, %rax
 movq %rax, 120(%rcx)
 movq $4294967296, %rax
@@ -137,7 +137,7 @@ movq 200(%rdi), %rax
 movq %rax, 1608(%rcx)
 addq %rax, %rax
 movq %rax, 3088(%rcx)
-movq $1717986918400, %rax
+movq $2061584302080, %rax
 addq %rcx, %rax
 movq %rax, 136(%rcx)
 movq $4294967296, %rax
@@ -152,7 +152,7 @@ movq 216(%rdi), %rax
 movq %rax, 1624(%rcx)
 addq %rax, %rax
 movq %rax, 3104(%rcx)
-movq $1752346656768, %rax
+movq $2095944040448, %rax
 addq %rcx, %rax
 movq %rax, 152(%rcx)
 movq $4294967296, %rax
@@ -167,7 +167,7 @@ movq 232(%rdi), %rax
 movq %rax, 1640(%rcx)
 addq %rax, %rax
 movq %rax, 3120(%rcx)
-movq $1786706395136, %rax
+movq $2130303778816, %rax
 addq %rcx, %rax
 movq %rax, 168(%rcx)
 movq $4294967296, %rax
@@ -182,7 +182,7 @@ movq 248(%rdi), %rax
 movq %rax, 1656(%rcx)
 addq %rax, %rax
 movq %rax, 3136(%rcx)
-movq $1821066133504, %rax
+movq $2164663517184, %rax
 addq %rcx, %rax
 movq %rax, 184(%rcx)
 movq $4294967296, %rax
@@ -197,7 +197,7 @@ movq 264(%rdi), %rax
 movq %rax, 1672(%rcx)
 addq %rax, %rax
 movq %rax, 3152(%rcx)
-movq $1855425871872, %rax
+movq $2199023255552, %rax
 addq %rcx, %rax
 movq %rax, 200(%rcx)
 movq $4294967296, %rax
@@ -212,7 +212,7 @@ movq 280(%rdi), %rax
 movq %rax, 1688(%rcx)
 addq %rax, %rax
 movq %rax, 3168(%rcx)
-movq $1889785610240, %rax
+movq $2233382993920, %rax
 addq %rcx, %rax
 movq %rax, 216(%rcx)
 movq $4294967296, %rax
@@ -227,7 +227,7 @@ movq 296(%rdi), %rax
 movq %rax, 1704(%rcx)
 addq %rax, %rax
 movq %rax, 3184(%rcx)
-movq $1924145348608, %rax
+movq $2267742732288, %rax
 addq %rcx, %rax
 movq %rax, 232(%rcx)
 movq $4294967296, %rax
@@ -242,7 +242,7 @@ movq 312(%rdi), %rax
 movq %rax, 1720(%rcx)
 addq %rax, %rax
 movq %rax, 3200(%rcx)
-movq $1958505086976, %rax
+movq $2302102470656, %rax
 addq %rcx, %rax
 movq %rax, 248(%rcx)
 movq $4294967296, %rax
@@ -257,7 +257,7 @@ movq 328(%rdi), %rax
 movq %rax, 1736(%rcx)
 addq %rax, %rax
 movq %rax, 3216(%rcx)
-movq $1992864825344, %rax
+movq $2336462209024, %rax
 addq %rcx, %rax
 movq %rax, 264(%rcx)
 movq $4294967296, %rax
@@ -272,7 +272,7 @@ movq 344(%rdi), %rax
 movq %rax, 1752(%rcx)
 addq %rax, %rax
 movq %rax, 3232(%rcx)
-movq $2027224563712, %rax
+movq $2370821947392, %rax
 addq %rcx, %rax
 movq %rax, 280(%rcx)
 movq $4294967296, %rax
@@ -287,7 +287,7 @@ movq 360(%rdi), %rax
 movq %rax, 1768(%rcx)
 addq %rax, %rax
 movq %rax, 3248(%rcx)
-movq $2061584302080, %rax
+movq $2405181685760, %rax
 addq %rcx, %rax
 movq %rax, 296(%rcx)
 movq $4294967296, %rax
@@ -302,7 +302,7 @@ movq 376(%rdi), %rax
 movq %rax, 1784(%rcx)
 addq %rax, %rax
 movq %rax, 3264(%rcx)
-movq $2095944040448, %rax
+movq $2439541424128, %rax
 addq %rcx, %rax
 movq %rax, 312(%rcx)
 movq $4294967296, %rax
@@ -317,7 +317,7 @@ movq 392(%rdi), %rax
 movq %rax, 1800(%rcx)
 addq %rax, %rax
 movq %rax, 3280(%rcx)
-movq $2130303778816, %rax
+movq $2473901162496, %rax
 addq %rcx, %rax
 movq %rax, 328(%rcx)
 movq $4294967296, %rax
@@ -332,7 +332,7 @@ movq 408(%rdi), %rax
 movq %rax, 1816(%rcx)
 addq %rax, %rax
 movq %rax, 3296(%rcx)
-movq $2164663517184, %rax
+movq $2508260900864, %rax
 addq %rcx, %rax
 movq %rax, 344(%rcx)
 movq $4294967296, %rax
@@ -347,7 +347,7 @@ movq 424(%rdi), %rax
 movq %rax, 1832(%rcx)
 addq %rax, %rax
 movq %rax, 3312(%rcx)
-movq $2199023255552, %rax
+movq $2542620639232, %rax
 addq %rcx, %rax
 movq %rax, 360(%rcx)
 movq $4294967296, %rax
@@ -362,7 +362,7 @@ movq 440(%rdi), %rax
 movq %rax, 1848(%rcx)
 addq %rax, %rax
 movq %rax, 3328(%rcx)
-movq $2233382993920, %rax
+movq $2576980377600, %rax
 addq %rcx, %rax
 movq %rax, 376(%rcx)
 movq $4294967296, %rax
@@ -377,7 +377,7 @@ movq 456(%rdi), %rax
 movq %rax, 1864(%rcx)
 addq %rax, %rax
 movq %rax, 3344(%rcx)
-movq $2267742732288, %rax
+movq $2611340115968, %rax
 addq %rcx, %rax
 movq %rax, 392(%rcx)
 movq $4294967296, %rax
@@ -399,7 +399,7 @@ movq 472(%rdi), %rax
 movq %rax, 1888(%rcx)
 addq %rax, %rax
 movq %rax, 3368(%rcx)
-movq $2302102470656, %rax
+movq $2645699854336, %rax
 addq %rcx, %rax
 movq %rax, 416(%rcx)
 movq $4294967296, %rax
@@ -414,7 +414,7 @@ movq 488(%rdi), %rax
 movq %rax, 1904(%rcx)
 addq %rax, %rax
 movq %rax, 3384(%rcx)
-movq $2336462209024, %rax
+movq $2680059592704, %rax
 addq %rcx, %rax
 movq %rax, 432(%rcx)
 movq $4294967296, %rax
@@ -429,7 +429,7 @@ movq 504(%rdi), %rax
 movq %rax, 1920(%rcx)
 addq %rax, %rax
 movq %rax, 3400(%rcx)
-movq $2370821947392, %rax
+movq $2714419331072, %rax
 addq %rcx, %rax
 movq %rax, 448(%rcx)
 movq $4294967296, %rax
@@ -444,7 +444,7 @@ movq 520(%rdi), %rax
 movq %rax, 1936(%rcx)
 addq %rax, %rax
 movq %rax, 3416(%rcx)
-movq $2405181685760, %rax
+movq $2748779069440, %rax
 addq %rcx, %rax
 movq %rax, 464(%rcx)
 movq $4294967296, %rax
@@ -459,7 +459,7 @@ movq 536(%rdi), %rax
 movq %rax, 1952(%rcx)
 addq %rax, %rax
 movq %rax, 3432(%rcx)
-movq $2439541424128, %rax
+movq $2783138807808, %rax
 addq %rcx, %rax
 movq %rax, 480(%rcx)
 movq $4294967296, %rax
@@ -474,7 +474,7 @@ movq 552(%rdi), %rax
 movq %rax, 1968(%rcx)
 addq %rax, %rax
 movq %rax, 3448(%rcx)
-movq $2473901162496, %rax
+movq $2817498546176, %rax
 addq %rcx, %rax
 movq %rax, 496(%rcx)
 movq $4294967296, %rax
@@ -489,7 +489,7 @@ movq 568(%rdi), %rax
 movq %rax, 1984(%rcx)
 addq %rax, %rax
 movq %rax, 3464(%rcx)
-movq $2508260900864, %rax
+movq $2851858284544, %rax
 addq %rcx, %rax
 movq %rax, 512(%rcx)
 movq $4294967296, %rax
@@ -504,7 +504,7 @@ movq 584(%rdi), %rax
 movq %rax, 2000(%rcx)
 addq %rax, %rax
 movq %rax, 3480(%rcx)
-movq $2542620639232, %rax
+movq $2886218022912, %rax
 addq %rcx, %rax
 movq %rax, 528(%rcx)
 movq $4294967296, %rax
@@ -519,7 +519,7 @@ movq 600(%rdi), %rax
 movq %rax, 2016(%rcx)
 addq %rax, %rax
 movq %rax, 3496(%rcx)
-movq $2576980377600, %rax
+movq $2920577761280, %rax
 addq %rcx, %rax
 movq %rax, 544(%rcx)
 movq $4294967296, %rax
@@ -534,7 +534,7 @@ movq 616(%rdi), %rax
 movq %rax, 2032(%rcx)
 addq %rax, %rax
 movq %rax, 3512(%rcx)
-movq $2611340115968, %rax
+movq $2954937499648, %rax
 addq %rcx, %rax
 movq %rax, 560(%rcx)
 movq $4294967296, %rax
@@ -549,7 +549,7 @@ movq 632(%rdi), %rax
 movq %rax, 2048(%rcx)
 addq %rax, %rax
 movq %rax, 3528(%rcx)
-movq $2645699854336, %rax
+movq $2989297238016, %rax
 addq %rcx, %rax
 movq %rax, 576(%rcx)
 movq $4294967296, %rax
@@ -564,7 +564,7 @@ movq 648(%rdi), %rax
 movq %rax, 2064(%rcx)
 addq %rax, %rax
 movq %rax, 3544(%rcx)
-movq $2680059592704, %rax
+movq $3023656976384, %rax
 addq %rcx, %rax
 movq %rax, 592(%rcx)
 movq $4294967296, %rax
@@ -579,7 +579,7 @@ movq 664(%rdi), %rax
 movq %rax, 2080(%rcx)
 addq %rax, %rax
 movq %rax, 3560(%rcx)
-movq $2714419331072, %rax
+movq $3058016714752, %rax
 addq %rcx, %rax
 movq %rax, 608(%rcx)
 movq $4294967296, %rax
@@ -594,7 +594,7 @@ movq 680(%rdi), %rax
 movq %rax, 2096(%rcx)
 addq %rax, %rax
 movq %rax, 3576(%rcx)
-movq $2748779069440, %rax
+movq $3092376453120, %rax
 addq %rcx, %rax
 movq %rax, 624(%rcx)
 movq $4294967296, %rax
@@ -609,7 +609,7 @@ movq 696(%rdi), %rax
 movq %rax, 2112(%rcx)
 addq %rax, %rax
 movq %rax, 3592(%rcx)
-movq $2783138807808, %rax
+movq $3126736191488, %rax
 addq %rcx, %rax
 movq %rax, 640(%rcx)
 movq $4294967296, %rax
@@ -624,16 +624,19 @@ movq 712(%rdi), %rax
 movq %rax, 2128(%rcx)
 addq %rax, %rax
 movq %rax, 3608(%rcx)
-movq $2817498546176, %rax
+movq $3161095929856, %rax
 addq %rcx, %rax
 movq %rax, 656(%rcx)
 movq $4294967296, %rax
 movq %rax, 2136(%rcx)
 movq $8589934592, %rax
 movq %rax, 3616(%rcx)
-movq $0, %rax
+movq $1271310319616, %rax
+addq %rcx, %rax
 movq %rax, 664(%rcx)
+movq $4294967296, %rax
 movq %rax, 2144(%rcx)
+movq $8589934592, %rax
 movq %rax, 3624(%rcx)
 movq 720(%rdi), %rax
 shlq $3, %rax
@@ -643,7 +646,7 @@ movq 728(%rdi), %rax
 movq %rax, 2152(%rcx)
 addq %rax, %rax
 movq %rax, 3632(%rcx)
-movq $2851858284544, %rax
+movq $3195455668224, %rax
 addq %rcx, %rax
 movq %rax, 680(%rcx)
 movq $4294967296, %rax
@@ -658,7 +661,7 @@ movq 744(%rdi), %rax
 movq %rax, 2168(%rcx)
 addq %rax, %rax
 movq %rax, 3648(%rcx)
-movq $2886218022912, %rax
+movq $3229815406592, %rax
 addq %rcx, %rax
 movq %rax, 696(%rcx)
 movq $4294967296, %rax
@@ -673,7 +676,7 @@ movq 760(%rdi), %rax
 movq %rax, 2184(%rcx)
 addq %rax, %rax
 movq %rax, 3664(%rcx)
-movq $2920577761280, %rax
+movq $3264175144960, %rax
 addq %rcx, %rax
 movq %rax, 712(%rcx)
 movq $4294967296, %rax
@@ -688,7 +691,7 @@ movq 776(%rdi), %rax
 movq %rax, 2200(%rcx)
 addq %rax, %rax
 movq %rax, 3680(%rcx)
-movq $2954937499648, %rax
+movq $3298534883328, %rax
 addq %rcx, %rax
 movq %rax, 728(%rcx)
 movq $4294967296, %rax
@@ -703,7 +706,7 @@ movq 792(%rdi), %rax
 movq %rax, 2216(%rcx)
 addq %rax, %rax
 movq %rax, 3696(%rcx)
-movq $2989297238016, %rax
+movq $3332894621696, %rax
 addq %rcx, %rax
 movq %rax, 744(%rcx)
 movq $4294967296, %rax
@@ -738,9 +741,12 @@ movq $4294967296, %rax
 movq %rax, 2256(%rcx)
 movq $8589934592, %rax
 movq %rax, 3736(%rcx)
-movq $0, %rax
+movq $1305670057984, %rax
+addq %rcx, %rax
 movq %rax, 784(%rcx)
+movq $4294967296, %rax
 movq %rax, 2264(%rcx)
+movq $8589934592, %rax
 movq %rax, 3744(%rcx)
 movq $240518168576, %rax
 addq %rcx, %rax
@@ -771,7 +777,7 @@ movq 808(%rdi), %rax
 movq %rax, 2296(%rcx)
 addq %rax, %rax
 movq %rax, 3776(%rcx)
-movq $3023656976384, %rax
+movq $3367254360064, %rax
 addq %rcx, %rax
 movq %rax, 824(%rcx)
 movq $4294967296, %rax
@@ -786,7 +792,7 @@ movq 824(%rdi), %rax
 movq %rax, 2312(%rcx)
 addq %rax, %rax
 movq %rax, 3792(%rcx)
-movq $3058016714752, %rax
+movq $3401614098432, %rax
 addq %rcx, %rax
 movq %rax, 840(%rcx)
 movq $4294967296, %rax
@@ -801,7 +807,7 @@ movq 840(%rdi), %rax
 movq %rax, 2328(%rcx)
 addq %rax, %rax
 movq %rax, 3808(%rcx)
-movq $3092376453120, %rax
+movq $3435973836800, %rax
 addq %rcx, %rax
 movq %rax, 856(%rcx)
 movq $4294967296, %rax
@@ -816,7 +822,7 @@ movq 856(%rdi), %rax
 movq %rax, 2344(%rcx)
 addq %rax, %rax
 movq %rax, 3824(%rcx)
-movq $3126736191488, %rax
+movq $3470333575168, %rax
 addq %rcx, %rax
 movq %rax, 872(%rcx)
 movq $4294967296, %rax
@@ -831,7 +837,7 @@ movq 872(%rdi), %rax
 movq %rax, 2360(%rcx)
 addq %rax, %rax
 movq %rax, 3840(%rcx)
-movq $3161095929856, %rax
+movq $3504693313536, %rax
 addq %rcx, %rax
 movq %rax, 888(%rcx)
 movq $4294967296, %rax
@@ -846,7 +852,7 @@ movq 888(%rdi), %rax
 movq %rax, 2376(%rcx)
 addq %rax, %rax
 movq %rax, 3856(%rcx)
-movq $3195455668224, %rax
+movq $3539053051904, %rax
 addq %rcx, %rax
 movq %rax, 904(%rcx)
 movq $4294967296, %rax
@@ -861,7 +867,7 @@ movq 904(%rdi), %rax
 movq %rax, 2392(%rcx)
 addq %rax, %rax
 movq %rax, 3872(%rcx)
-movq $3229815406592, %rax
+movq $3573412790272, %rax
 addq %rcx, %rax
 movq %rax, 920(%rcx)
 movq $4294967296, %rax
@@ -1072,7 +1078,7 @@ movq 1032(%rdi), %rax
 movq %rax, 2656(%rcx)
 addq %rax, %rax
 movq %rax, 4136(%rcx)
-movq $1305670057984, %rax
+movq $1649267441664, %rax
 addq %rcx, %rax
 movq %rax, 1184(%rcx)
 movq $4294967296, %rax
@@ -1102,7 +1108,7 @@ movq $4294967296, %rax
 movq %rax, 2696(%rcx)
 movq $8589934592, %rax
 movq %rax, 4176(%rcx)
-movq $1340029796352, %rax
+movq $1683627180032, %rax
 addq %rcx, %rax
 movq %rax, 1224(%rcx)
 movq $4294967296, %rax
@@ -1116,7 +1122,7 @@ movq $4294967296, %rax
 movq %rax, 2712(%rcx)
 movq $8589934592, %rax
 movq %rax, 4192(%rcx)
-movq $1374389534720, %rax
+movq $1717986918400, %rax
 addq %rcx, %rax
 movq %rax, 1240(%rcx)
 movq $4294967296, %rax
@@ -1130,7 +1136,7 @@ movq $4294967296, %rax
 movq %rax, 2728(%rcx)
 movq $8589934592, %rax
 movq %rax, 4208(%rcx)
-movq $1408749273088, %rax
+movq $1752346656768, %rax
 addq %rcx, %rax
 movq %rax, 1256(%rcx)
 movq $4294967296, %rax
@@ -1152,7 +1158,7 @@ movq $4294967296, %rax
 movq %rax, 2752(%rcx)
 movq $8589934592, %rax
 movq %rax, 4232(%rcx)
-movq $1443109011456, %rax
+movq $1786706395136, %rax
 addq %rcx, %rax
 movq %rax, 1280(%rcx)
 movq $4294967296, %rax
@@ -1166,7 +1172,7 @@ movq $4294967296, %rax
 movq %rax, 2768(%rcx)
 movq $8589934592, %rax
 movq %rax, 4248(%rcx)
-movq $1477468749824, %rax
+movq $1821066133504, %rax
 addq %rcx, %rax
 movq %rax, 1296(%rcx)
 movq $4294967296, %rax
@@ -1180,7 +1186,7 @@ movq $4294967296, %rax
 movq %rax, 2784(%rcx)
 movq $8589934592, %rax
 movq %rax, 4264(%rcx)
-movq $1511828488192, %rax
+movq $1855425871872, %rax
 addq %rcx, %rax
 movq %rax, 1312(%rcx)
 movq $4294967296, %rax
@@ -1254,37 +1260,61 @@ movq $4294967296, %rax
 movq %rax, 2872(%rcx)
 movq $8589934592, %rax
 movq %rax, 4352(%rcx)
-movq $0, %rax
+movq $1340029796352, %rax
+addq %rcx, %rax
 movq %rax, 1400(%rcx)
+movq $4294967296, %rax
 movq %rax, 2880(%rcx)
+movq $8589934592, %rax
 movq %rax, 4360(%rcx)
-movq $0, %rax
+movq $1374389534720, %rax
+addq %rcx, %rax
 movq %rax, 1408(%rcx)
+movq $4294967296, %rax
 movq %rax, 2888(%rcx)
+movq $8589934592, %rax
 movq %rax, 4368(%rcx)
-movq $0, %rax
+movq $1408749273088, %rax
+addq %rcx, %rax
 movq %rax, 1416(%rcx)
+movq $4294967296, %rax
 movq %rax, 2896(%rcx)
+movq $8589934592, %rax
 movq %rax, 4376(%rcx)
-movq $0, %rax
+movq $1443109011456, %rax
+addq %rcx, %rax
 movq %rax, 1424(%rcx)
+movq $4294967296, %rax
 movq %rax, 2904(%rcx)
+movq $8589934592, %rax
 movq %rax, 4384(%rcx)
-movq $0, %rax
+movq $1477468749824, %rax
+addq %rcx, %rax
 movq %rax, 1432(%rcx)
+movq $4294967296, %rax
 movq %rax, 2912(%rcx)
+movq $8589934592, %rax
 movq %rax, 4392(%rcx)
-movq $0, %rax
+movq $1511828488192, %rax
+addq %rcx, %rax
 movq %rax, 1440(%rcx)
+movq $4294967296, %rax
 movq %rax, 2920(%rcx)
+movq $8589934592, %rax
 movq %rax, 4400(%rcx)
-movq $0, %rax
+movq $1546188226560, %rax
+addq %rcx, %rax
 movq %rax, 1448(%rcx)
+movq $4294967296, %rax
 movq %rax, 2928(%rcx)
+movq $8589934592, %rax
 movq %rax, 4408(%rcx)
-movq $0, %rax
+movq $1580547964928, %rax
+addq %rcx, %rax
 movq %rax, 1456(%rcx)
+movq $4294967296, %rax
 movq %rax, 2936(%rcx)
+movq $8589934592, %rax
 movq %rax, 4416(%rcx)
 movq $0, %rax
 movq %rax, 1464(%rcx)
@@ -228392,7 +228422,7 @@ ca_w0: .quad 68719476736
 .globl ca_out_off
 .globl ca_worker_size
 ca_out_off: .quad 6219112644608
-ca_worker_size: .quad 3264175144960
+ca_worker_size: .quad 3607772528640
 .section .rodata
 .globl ca_nw
 .globl ca_nb
