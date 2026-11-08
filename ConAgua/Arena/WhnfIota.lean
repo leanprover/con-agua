@@ -18,10 +18,9 @@ everything it calls that is not already owned by another file (`WhnfSpine.lean`'
   stub `IotaInst1OK` only PINS its twin fuel at `coreWalkFuel` exactly (the existing
   `instEntry_refines` is generic over any twin fuel `F ≥ n`); named `IotaInst1OK` rather than
   `Inst1OK` to avoid a clash with lane `whnf`'s own `whnfCore`-side stub of the same shape.
-* `find_proj(vis, T, i)`, `fire_ok(q, i, us)`: another agent's L functions (`IFEnv.findProj?`,
-  `IProjEntry.fireOk`), not yet written anywhere; assumed here as named stubs.
-* `caps_never_zero(po, pc, us, swd, so, sc)`: `(Level.substPW ks vs pw).isNever` at the recursor's
-  own level parameters (`po, pc`, an `EREC` name slice), the universe arguments `us` (an `LsIdx`),
+* `find_proj(vis, T, i)`: `IFEnv.findProj?` (`WhnfProj.lean`).
+* (formerly `caps_never_zero`, now `former_never_zero` with `lv_spw` on a heap datum)
+  `(Level.substPW ks vs pw).isNever` at the family's own level parameters (`po, pc`, an `EREC` name slice), the universe arguments `us` (an `LsIdx`),
   and a `PropWhen` datum `(swd, so, sc)` (`swd = 0` never, `1` `ifAllZero` with name slice
   `(so, sc)`, also in `EREC`). Lane `levels`' `lv_substpw`/`lv_spw`/`lv_zero` implement exactly
   this algorithm, but only when its KA/VA/PA arrays are concretely instantiated and wired to a
@@ -39,7 +38,7 @@ everything it calls that is not already owned by another file (`WhnfSpine.lean`'
 * `lit_to_ctor_if_nat(vis, h)`: "written by another agent in `WhnfDelta.lean`" (which does not
   exist yet); called by name.
 
-`str_lit_supported`, `str_lit_ctor`, `inst_list`, `inst_lp` are already `WhnfCallees` stubs
+`str_lit_stored`, `str_lit_ctor`, `inst_list`, `inst_lp` are already `WhnfCallees` stubs
 (`WhnfBase.lean`) and are reused via that hypothesis, not redeclared here.
 -/
 
@@ -74,9 +73,9 @@ def isStrLitL : FunDecl := lfn (h) locals (t, i) {
   return u64(LIT⟨t, i⟩.kind == 1)
 }
 
-/-! ## `find_rule(ro, rc, c)`, `rec_rule_k(ro, rc)`
+/-! ## `find_rule(ro, rc, c)`
 
-Both read only the 11-word rule records at `(ro, rc)` in `EREC`; neither touches `AM`. -/
+It reads only the 11-word rule records at `(ro, rc)` in `EREC`; it does not touch `AM`. -/
 
 /-- The scan of `find_rule` (a named block, for the proofs). -/
 def findRuleLoop : Stmt := lblk (ro, rc, c, i) {
@@ -91,15 +90,6 @@ def findRuleL : FunDecl := lfn (ro, rc, c) locals (i) {
   i := 0;
   ⟪findRuleLoop⟫;
   return (0, 0)
-}
-
-/-- con-leche: `CoreDefs.lean:899-906` `recRuleK` — the stored bit of the single rule. -/
--- con-ron: ConRon/Arena/Core.lean:1902-1907 ConRon.Arena.recRuleK
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleK` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.recRuleK]
-def recRuleKL : FunDecl := lfn (ro, rc) locals () {
-  if rc != 1 { return 0 };
-  return EREC⦃ro + 9⦄
 }
 
 /-! ## Reserved names: a small fusion of `reservedBasisNames` and `List.contains`
@@ -118,69 +108,161 @@ the house style allows for small dispatchers); `major_to_ctor`'s eta branch is i
   return 0
 }
 
-/-! ## `caps_never_zero(…)`, `iota_ctor_never_prop(…)`, `iota_case3(…)`
+/-! ## The family's sort at the use: `former_res_sort`, …, `iota_case3_at`, `eta_rescue_ok`
 
-`caps_never_zero` is a named stub (see the module note); `iota_ctor_never_prop` and `iota_case3`
-are real dispatchers around it, faithful to the twin's own head-symbol/env-lookup/arity gates. -/
-
-/-- A word of the record pool (a one-line reader, so that callers' proofs read it through a call). -/
--- con-ron: ConRon/Arena/Core.lean:353-370 ConRon.Arena.iotaCtorNeverProp
-@[no_expose] def eRecGetL : FunDecl := lfn (k) locals () { return EREC⦃k⦄ }
+con-leche task #480 removed the install-time data (the rule's `k`/`eta` bits, the capabilities'
+`sortZ`): the family's sort zero-ness is computed where it is asked. A stored inductive's record
+`p` (kind `3`) has its `IConstantVal` at `p + 1` (level parameters `p + 2`, `p + 3`, type `p + 4`)
+and its capabilities at `p + 5` (`eta` `p + 5`, `etaCtor` `p + 6`, `nIdx` `p + 11`, `nparams`
+`p + 17`). A zero-ness datum lives on the level heap `LH` (`lv_zero`'s convention), so the core
+writes no `EREC` word (`CoreErec.lean`). -/
 
 /-- The head name of a `const` handle (the view checks, then the stored name). -/
--- con-ron: ConRon/Arena/Core.lean:353-370 ConRon.Arena.iotaCtorNeverProp
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.iotaCtorNeverProp` is gone upstream; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Core.lean:382-395 ConRon.Arena.ctorFamily
 @[no_expose] def constNameOfL : FunDecl := lfn (hh) locals (t, i) {
   (t, i) := node CONST⟦hh⟧;
   return CONST⟨t, i⟩.n
 }
 
-/-- The family test of `iota_ctor_never_prop` at the inductive's record `indP`: it is an
-inductive, its level-parameter count is `us`' length, and `caps_never_zero`. -/
--- con-ron: ConRon/Arena/Core.lean:353-370 ConRon.Arena.iotaCtorNeverProp
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.iotaCtorNeverProp` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def indCapsCheckL : FunDecl := lfn (indP, us) locals (k, uso, usl, lp, po, swd, so, sc, nz) {
-  k := call e_rec_get(indP);
-  if k != 3 { return 0 };
-  (uso, usl) := call ls_node(us);
-  lp := call e_rec_get(indP + 3);
-  if lp != usl { return 0 };
-  po := call e_rec_get(indP + 2);
-  swd := call e_rec_get(indP + 12);
-  so := call e_rec_get(indP + 13);
-  sc := call e_rec_get(indP + 14);
-  nz := call caps_never_zero(po, lp, us, swd, so, sc);
-  return nz
+/-- `former_res_sort(ty)`: the sort a stored type ends in, `(1, u)`, or `(0, 0)`. -/
+-- con-ron: ConRon/Arena/Core.lean:344-353 ConRon.Arena.formerResSort
+@[no_expose, l_impl ConRon.Arena.formerResSort]
+def formerResSortL : FunDecl := lfn (ty) locals (pr, t, i) {
+  pr := call pi_result(ty);
+  if ⟦pr⟧.tag != 2 { return (0, 0) };
+  (t, i) := node SORT⟦pr⟧;
+  return (1, SORT⟨t, i⟩.u)
 }
 
-/-- con-leche: `CoreDefs.lean:72-93` `iotaCtorNeverProp` — is the matched constructor's family
-never `Prop` at the comparand levels? `ctorP` is the constructor's `IConstantInfo` pointer
-(`cvj`'s record base); its type's Π-result's head constant is looked up for the family's `caps`. -/
--- con-ron: ConRon/Arena/Core.lean:353-370 ConRon.Arena.iotaCtorNeverProp
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.iotaCtorNeverProp` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.iotaCtorNeverProp]
-def iotaCtorNeverPropL : FunDecl := lfn (vis, ctorP, us)
-    locals (ty, piRes, hh, T, indFlag, indP, nz) {
-  ty := call e_rec_get(ctorP + 4);
-  piRes := call pi_result(ty);
-  hh := call get_app_fn(piRes);
-  if ⟦hh⟧.tag != 3 { return 0 };
+/-- `former_def_headed(ty)`: a stored former (type `ty`) that does not show its telescope. -/
+-- con-ron: ConRon/Arena/Core.lean:355-360 ConRon.Arena.formerDefHeaded
+@[no_expose, l_impl ConRon.Arena.formerDefHeaded]
+def formerDefHeadedL : FunDecl := lfn (ty) locals (f, u) {
+  (f, u) := call former_res_sort(ty);
+  return u64(f == 0)
+}
+
+/-- `former_z(ty)`: the family's result-sort zero-ness datum read off its type `ty`, as `lv_zero`
+leaves one: `(0, 0, 0)` for `never`, `(1, o, c)` for `ifAllZero` with the names the heap words
+`LH[o ‥ o + c)`, pushed above the heap top `CTL[192]` (which stays raised: the caller puts it
+back); `ifAllZero []` where the sort is not read. -/
+-- con-ron: ConRon/Arena/Core.lean:362-370 ConRon.Arena.formerZ
+@[no_expose, l_impl ConRon.Arena.formerZ]
+def formerZL : FunDecl := lfn (ty) locals (f, u, t0, z) {
+  t0 := CTL.u64[192];
+  (f, u) := call former_res_sort(ty);
+  if f == 0 { return (1, t0, 0) };
+  z := call lv_zero(u);
+  if z != 0 { return (0, 0, 0) };
+  return (1, t0, CTL.u64[192] - t0)
+}
+
+/-- `former_never_zero(p, us)`: the stored inductive `p`'s result sort, at the level instantiation
+`us`, is provably nonzero: `Level.substPW ks vs (formerZ cvT)` is `never` (`lv_spw`, the keys the
+family's level parameters, an `EREC` slice, the values `us`' `POOL` slice, the datum on the heap);
+the heap top put back. -/
+-- con-ron: ConRon/Arena/Core.lean:372-380 ConRon.Arena.formerNeverZero
+@[no_expose, l_impl ConRon.Arena.formerNeverZero]
+def formerNeverZeroL : FunDecl := lfn (p, us) locals (po, pc, t0, w, o, c, vo, vc, x) {
+  po := EREC⦃p + 2⦄;
+  pc := EREC⦃p + 3⦄;
+  t0 := CTL.u64[192];
+  (w, o, c) := call former_z(EREC⦃p + 4⦄);
+  (vo, vc) := call ls_node(us);
+  if w == 0 { CTL.u64[192] := t0; return 1 };
+  x := call lv_spw(o, c, po, pc, vo, vc);
+  CTL.u64[192] := t0;
+  return x
+}
+
+/-- `ctor_family(vis, cq)`: the family the constructor record `cq`'s type concludes in, `(1, p)`
+with `p` the inductive's record, or `(0, 0)`. -/
+-- con-ron: ConRon/Arena/Core.lean:382-395 ConRon.Arena.ctorFamily
+@[no_expose, l_impl ConRon.Arena.ctorFamily]
+def ctorFamilyL : FunDecl := lfn (vis, cq) locals (pr, hh, T, f, q) {
+  pr := call pi_result(EREC⦃cq + 4⦄);
+  hh := call get_app_fn(pr);
+  if ⟦hh⟧.tag != 3 { return (0, 0) };
   T := call const_name_of(hh);
-  (indFlag, indP) := call env_find(T, vis);
-  if indFlag == 0 { return 0 };
-  nz := call ind_caps_check(indP, us);
-  return nz
+  (f, q) := call env_find(T, vis);
+  if f == 0 { return (0, 0) };
+  if EREC⦃q⦄ != 3 { return (0, 0) };
+  return (1, q)
 }
 
-/-- con-leche: `CoreDefs.lean:95-104` `iotaCase3` — case 3 of the ι split: not K, and the
-constructor's family may be `Prop` at the comparand levels. `ctorP` as above. -/
--- con-ron: ConRon/Arena/Core.lean:372-381 ConRon.Arena.iotaCase3
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.iotaCase3` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.iotaCase3]
-def iotaCase3L : FunDecl := lfn (rlk, vis, ctorP, us) locals (np) {
-  if rlk != 0 { return 0 };
-  np := call iota_ctor_never_prop(vis, ctorP, us);
-  return u64(np == 0)
+/-- `former_sort_loop(mode, vis, d, n, e)`: official's walk to a family's sort, `n` binders down,
+each reached by `whnf`, then a sort: `(1, u)` or `(0, 0)`. The body is instantiated at a fresh free
+variable at depth `d` (`inst_entry`, the memoized `instantiate1`). The depth capacity: `d + 1` must
+not wrap. -/
+-- con-ron: ConRon/Arena/Core.lean:1698-1722 ConRon.Arena.formerSortLoop
+@[no_expose, l_impl ConRon.Arena.formerSortLoop]
+def formerSortLoopL : FunDecl := lfn (mode, vis, d, n, e) locals (w, t, i, dom, b, fv, b2, f, u) {
+  w := call whnf(mode, vis, d, e);
+  if n == 0 {
+    if ⟦w⟧.tag != 2 { return (0, 0) };
+    (t, i) := node SORT⟦w⟧;
+    return (1, SORT⟨t, i⟩.u)
+  };
+  if ⟦w⟧.tag != 6 { return (0, 0) };
+  (t, i) := node FORALL⟦w⟧;
+  dom := FORALL⟨t, i⟩.ty;
+  b := FORALL⟨t, i⟩.b;
+  if d + 1 == 0 { abort };
+  fv := call intern_fvar(d, dom);
+  b2 := call inst_entry(b, fv, 0);
+  (f, u) := call former_sort_loop(mode, vis, d + 1, n - 1, b2);
+  return (f, u)
+}
+
+/-- `former_never_zero_at(mode, vis, p, us)`: is the family `p`'s sort never zero at the levels
+`us`, computed where it is asked: read off a type that ends in a sort (`former_never_zero`), else
+walked to by `former_sort_loop` at the use's levels (from depth `0`); no sort reached is `0`. -/
+-- con-ron: ConRon/Arena/Core.lean:1724-1741 ConRon.Arena.formerNeverZeroAt
+@[no_expose, l_impl ConRon.Arena.formerNeverZeroAt]
+def formerNeverZeroAtL : FunDecl := lfn (mode, vis, p, us)
+    locals (po, pc, ty, n, f, u, r, ity) {
+  po := EREC⦃p + 2⦄;
+  pc := EREC⦃p + 3⦄;
+  ty := EREC⦃p + 4⦄;
+  n := EREC⦃p + 17⦄ + EREC⦃p + 11⦄;
+  (f, u) := call former_res_sort(ty);
+  if f != 0 { r := call former_never_zero(p, us); return r };
+  ity := call inst_lp(po, pc, us, ty);
+  (f, u) := call former_sort_loop(mode, vis, 0, n, ity);
+  if f == 0 { return 0 };
+  r := call lv_never(u);
+  return r
+}
+
+/-- `iota_case3_at(mode, vis, isK, cq, us)`: case 3 of the ι split: the recursor is not K and the
+constructor `cq`'s family may be `Prop` at the comparand levels `us` (a family not found, or at
+another level count, may). The family is not read at a K recursor. -/
+-- con-ron: ConRon/Arena/Core.lean:1743-1761 ConRon.Arena.iotaCase3At
+@[no_expose, l_impl ConRon.Arena.iotaCase3At]
+def iotaCase3AtL : FunDecl := lfn (mode, vis, isK, cq, us) locals (ok, p, lp, uso, usl, nz) {
+  if isK != 0 { return 0 };
+  (ok, p) := call ctor_family(vis, cq);
+  if ok == 0 { return 1 };
+  lp := EREC⦃p + 3⦄;
+  (uso, usl) := call ls_node(us);
+  if lp != usl { return 1 };
+  nz := call former_never_zero_at(mode, vis, p, us);
+  return u64(nz == 0)
+}
+
+/-- `eta_rescue_ok(ctor, cq, p)`: the structure-η rescue's standing condition at use: `ctor` (its
+record `cq`) is the η constructor of its family `p` (`eta`, `etaCtor`) and carries the family's
+level parameters; `And.intro` (pin 48, read only when the chain reaches it) is left to `And`'s
+rescue. -/
+-- con-ron: ConRon/Arena/Core.lean:1794-1805 ConRon.Arena.etaRescueOk
+@[no_expose, l_impl ConRon.Arena.etaRescueOk]
+def etaRescueOkL : FunDecl := lfn (ctor, cq, p) locals (r, ai) {
+  if EREC⦃p + 5⦄ == 0 { return 0 };
+  if EREC⦃p + 6⦄ != ctor { return 0 };
+  r := call er_sl_eq(EREC⦃cq + 2⦄, EREC⦃cq + 3⦄, EREC⦃p + 2⦄, EREC⦃p + 3⦄);
+  if r == 0 { return 0 };
+  ai := call pin_at(48);
+  return u64(ctor != ai)
 }
 
 /-! ## `tower_slots_all(vis, T, nF)`, `eta_projs(T, b, nF)`, `eta_fab_args(…)` -/
@@ -236,20 +318,17 @@ def etaFabArgsL : FunDecl := lfn (T, to, tn, major, nF) locals (o2, n2) {
   return (to, tn + n2)
 }
 
-/-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
+/-! ## `and_rescue_slots(vis, ctor, nP)` -/
 
-/-- The two-slot walk of `and_rescue_slots` (a named block, for the proofs). `fire_ok` is called
-before the shape checks: the twin's `(← e.fireOk ust)` is lifted out of the `if` and runs
-regardless, with its cache effects. -/
-def andRescueLoop : Stmt := lblk (vis, ctor, nP, us, an, j, flag, q, ok) {
+/-- The two-slot walk of `and_rescue_slots` (a named block, for the proofs): each slot stored,
+naming the rule's constructor at the major's parameter count, with two fields. -/
+def andRescueLoop : Stmt := lblk (vis, ctor, nP, an, j, flag, q) {
   while j < 2 {
     (flag, q) := call find_proj(vis, an, j);
     if flag == 0 { return 0 };
-    ok := call fire_ok(q, j, us);
     if EREC⦃q + 6⦄ != ctor { return 0 };
     if EREC⦃q + 5⦄ != nP { return 0 };
     if EREC⦃q + 7⦄ != 2 { return 0 };
-    if ok == 0 { return 0 };
     j += 1
   }
 }
@@ -259,11 +338,9 @@ def andRescueLoop : Stmt := lblk (vis, ctor, nP, us, an, j, flag, q, ok) {
 fire. `q`, the table pointer `find_proj` hands back, has `ctor` at `q + 6`, `numParams` at `q + 5`,
 `numFields` at `q + 7` (`EnvRec.lean`'s `decTbl`). -/
 -- con-ron: ConRon/Arena/Core.lean:1771-1783 ConRon.Arena.andRescueSlotsGo
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.andRescueSlotsGo` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Core.lean:1785-1792 ConRon.Arena.andRescueSlots
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.andRescueSlots` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.andRescueSlotsGo ConRon.Arena.andRescueSlots]
-def andRescueSlotsL : FunDecl := lfn (vis, ctor, nP, us) locals (an, j, flag, q, ok) {
+def andRescueSlotsL : FunDecl := lfn (vis, ctor, nP) locals (an, j, flag, q) {
   an := call pin_at(11);
   j := 0;
   ⟪andRescueLoop⟫;
@@ -291,22 +368,20 @@ def fabScopeOkL : FunDecl := lfn (d, fab, major) locals (ok) {
 /-- con-leche: `Core.lean:665-677` `litMajorToCtor` — a `Nat` literal major one layer, a `String`
 literal to its reduced constructor form. -/
 -- con-ron: ConRon/Arena/Core.lean:1949-1962 ConRon.Arena.litMajorToCtor
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.litMajorToCtor`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.litMajorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.litMajorToCtor]
 def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, sup, c, r) {
   if ⟦h⟧.tag != 8 { r := call lit_to_ctor_if_nat(vis, h); return r };
   (t, i) := node LIT⟦h⟧;
   kind := LIT⟨t, i⟩.kind;
   if kind != 1 { r := call lit_to_ctor_if_nat(vis, h); return r };
-  sup := call str_lit_supported(vis);
+  sup := call str_lit_stored(vis);
   if sup == 0 { return h };
   c := call str_lit_ctor(h);
   r := call whnf(mode, vis, d, c);
   return r
 }
 
-/-! ## `major_to_ctor(mode, vis, d, rec, ro, rc, major)`
+/-! ## `major_to_ctor(mode, vis, d, rec, isK, ro, rc, major)`
 
 `rec` (the recursor's own name) is unused by the twin (`_recName`) and so by this code too: it is
 accepted only to match the twin's argument list. The body is split into small functions
@@ -315,47 +390,44 @@ K and `And` arms leave slices on the spine stack; the twin has no stack, so rest
 faithful). -/
 
 /-- con-leche: `Core.lean:502-663`/`Cached/CoreC.lean:428-453` `majorToCtor`/`majorToCtorI` — the
-stuck-major rescue: K-flagged, η-capable, or the pinned `And`. No certificate on a fabricated
+stuck-major rescue: K-flagged (the recursor's `isK`), η-capable (`eta_rescue_ok`), or the
+pinned `And`. No certificate on a fabricated
 spine; the K and `And` fabrications keep the type check, and the proof-irrelevance run is a
 certificate family (off at `.trusted`). -/
 -- con-ron: ConRon/Arena/Core.lean:1830-1947 ConRon.Arena.majorToCtor
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.etaRescueOk`, `ConRon.Arena.formerNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.majorToCtor]
-def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major) locals (top, r) {
+def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major) locals (top, r) {
   top := CTL.u64[136];
-  r := call m2c_head(mode, vis, d, ro, rc, major);
+  r := call m2c_head(mode, vis, d, isK, ro, rc, major);
   CTL.u64[136] := top;
   return r
 }
 
-/-! ## `prepare_major(mode, vis, d, rec, ro, rc, major)` -/
+/-! ## `prepare_major(mode, vis, d, rec, isK, ro, rc, major)` -/
 
 /-- con-leche: `Core.lean:701-775`/`Cached/CoreC.lean:553-575` `prepareMajor`/`prepareMajorI` — at
-a K-flagged recursor the K rescue runs on the raw major; elsewhere the structure rescues run on
+a K-flagged recursor (the record's `isK`) the K rescue runs on the raw major; elsewhere the structure rescues run on
 the major as found first (a `String` literal skips that attempt), and only if they produce no
 constructor is the major head-normalized, its literal converted, and the rescue tried again. -/
 -- con-ron: ConRon/Arena/Core.lean:1988-2014 ConRon.Arena.prepareMajor
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.prepareMajor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.prepareMajor]
-def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major)
-    locals (k, majorK, ok, majorE, major0, major1, res) {
-  k := call rec_rule_k(ro, rc);
-  if k != 0 {
-    majorK := call major_to_ctor(mode, vis, d, rec, ro, rc, major);
+def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major)
+    locals (majorK, ok, majorE, major0, major1, res) {
+  if isK != 0 {
+    majorK := call major_to_ctor(mode, vis, d, rec, isK, ro, rc, major);
     ok := call is_ctor_app(vis, majorK);
     if ok != 0 { res := call lit_major_to_ctor(mode, vis, d, majorK); return res }
     else { return majorK }
   } else {
     ok := call is_str_lit(major);
     if ok != 0 { majorE := major }
-    else { majorE := call major_to_ctor(mode, vis, d, rec, ro, rc, major) };
+    else { majorE := call major_to_ctor(mode, vis, d, rec, isK, ro, rc, major) };
     ok := call is_ctor_app(vis, majorE);
     if ok != 0 { return majorE }
     else {
       major0 := call whnf(mode, vis, d, majorE);
       major1 := call lit_major_to_ctor(mode, vis, d, major0);
-      res := call major_to_ctor(mode, vis, d, rec, ro, rc, major1);
+      res := call major_to_ctor(mode, vis, d, rec, isK, ro, rc, major1);
       return res
     }
   }
@@ -545,19 +617,18 @@ def instSpinePinsL : FunDecl := lfn (po, pl, us, ao, an, rP, pvo, pvc) locals (s
 
 /-- con-leche: `CoreDefs.lean:908-927` `recFireComparands` (its `.2`) — the constructor-PARAMETER
 comparands of a firing rule: a `.nested` rule's stored pins, instantiated and spined; a `.plain`
-rule's the recursor's own leading `ctorParams` arguments (`args.take ctorParams` of the spine
-`(ao, an)`: all `an` of them when `an < ctorParams`). -/
+or `.levels` rule's the recursor's own leading `cnP` arguments, the stored constructor's parameter
+count (`args.take cnP` of the spine `(ao, an)`: all `an` of them when `an < cnP`). -/
 -- con-ron: ConRon/Arena/Core.lean:2077-2087 ConRon.Arena.recFireArgs
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recFireArgs` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.recFireArgs]
-def recFireArgsL : FunDecl := lfn (fireKind, pvo, pvc, po, pc, us, ao, an, rP, ctorParams)
+def recFireArgsL : FunDecl := lfn (fireKind, pvo, pvc, po, pc, us, ao, an, rP, cnP)
     locals (so, sc) {
   if fireKind == 1 {
     (so, sc) := call inst_spine_pins(po, pc, us, ao, an, rP, pvo, pvc);
     return (so, sc)
   };
-  if an < ctorParams { ctorParams := an };
-  return (ao, ctorParams)
+  if an < cnP { cnP := an };
+  return (ao, cnP)
 }
 
 /-! ## `iota_certs_full(mode, vis, d, h, ao, an)` -/
@@ -684,8 +755,6 @@ already holds: `hd` the head, `(so, sn)` the stack slice of arguments, `sn` the 
 `const` view (`iota_rec_head`), then the rest, split into small functions (`WhnfIotaRec.lean`,
 from `iota_rec_c` on). -/
 -- con-ron: ConRon/Arena/Core.lean:2096-2183 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaCase3At` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.iotaRecAt]
 def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn) locals (hf, c, us, r1, r2) {
   (hf, c, us) := call iota_rec_head(hd);
@@ -701,13 +770,17 @@ structure IotaProg (p : Prog) : Prop where
   isCtorApp : p.lookup "is_ctor_app" = some isCtorAppL
   isStrLit : p.lookup "is_str_lit" = some isStrLitL
   findRule : p.lookup "find_rule" = some findRuleL
-  recRuleK : p.lookup "rec_rule_k" = some recRuleKL
   reservedContains : p.lookup "reserved_contains_w" = some reservedContainsL
-  iotaCtorNeverProp : p.lookup "iota_ctor_never_prop" = some iotaCtorNeverPropL
-  eRecGet : p.lookup "e_rec_get" = some eRecGetL
   constNameOf : p.lookup "const_name_of" = some constNameOfL
-  indCapsCheck : p.lookup "ind_caps_check" = some indCapsCheckL
-  iotaCase3 : p.lookup "iota_case3" = some iotaCase3L
+  formerResSort : p.lookup "former_res_sort" = some formerResSortL
+  formerDefHeaded : p.lookup "former_def_headed" = some formerDefHeadedL
+  formerZ : p.lookup "former_z" = some formerZL
+  formerNeverZero : p.lookup "former_never_zero" = some formerNeverZeroL
+  ctorFamily : p.lookup "ctor_family" = some ctorFamilyL
+  formerSortLoop : p.lookup "former_sort_loop" = some formerSortLoopL
+  formerNeverZeroAt : p.lookup "former_never_zero_at" = some formerNeverZeroAtL
+  iotaCase3At : p.lookup "iota_case3_at" = some iotaCase3AtL
+  etaRescueOk : p.lookup "eta_rescue_ok" = some etaRescueOkL
   towerSlotsAll : p.lookup "tower_slots_all" = some towerSlotsAllL
   etaProjs : p.lookup "eta_projs" = some etaProjsL
   etaFabArgs : p.lookup "eta_fab_args" = some etaFabArgsL
@@ -751,56 +824,22 @@ def IotaInst1OK (p : Prog) : Prop :=
     CoreSpec p n "inst_entry" [e, v, d]
       (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat) decH s₀ a₀ dn vis fe MM eb
 
-/-- A `PropWhen` datum from its three words `(swd, so, sc)` (`swd = 0` `.never`, `1` `.ifAllZero`
-with the `EREC` name slice `(so, sc)`), as `decPW` reads it at consecutive words. -/
-def decPWw (a : Array Word) (dn : NIdx → Option ConLeche.Name) (swd so sc : Word) :
-    Option ConLeche.PropWhen :=
-  match swd.toNat with
-  | 0 => some .never
-  | 1 => do
-    let l : List NIdx ← hslice? a so.toNat sc.toNat
-    pure (.ifAllZero (← l.mapM dn))
-  | _ => none
-
-/-- con-leche: `CoreDefs.lean:60-70` `capsNeverZero`, at a `PropWhen` datum. -/
-def capsNeverZeroPW (lps : List NIdx) (us : LsIdx) (pw : ConLeche.PropWhen) : AM Bool := do
-  let ks ← readNamesM lps
-  let vs ← readLevelsM us
-  pure (ConLeche.Level.substPW ks vs pw).isNever
-
-/-- `caps_never_zero(po, pc, us, swd, so, sc)` refines `capsNeverZero lps us caps` at the recursor's
-own level parameters (`po, pc`, an `EREC` name slice, read back by `readNamesM`), the universe
-arguments `us` (an `LsIdx`, `readLevelsM`), and a `PropWhen` datum `(swd, so, sc)` (`caps.sortZ`).
-**Statement correction**: the stub's `ks`, `vs`, `pw` were arbitrary and its twin a `pure`; the real
-twin runs the two readbacks (`capsNeverZero`), and the datum is linked to the words. The level
-parameters read back (a stored constant's, `StoreDen.constLps`); the list `us` need not: `ls_node`
-aborts on a handle that is not stored (`capsNeverZeroOK_of`). -/
-def CapsNeverZeroOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb po pc us swd so sc : Word) (lps : List NIdx) (pw : ConLeche.PropWhen),
-    CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps →
-    (∃ ks, lps.mapM (denoteN a₀.store.ns) = some ks) →
-    decPWw (s₀.mem.arr64 EREC) dn swd so sc = some pw →
-    CoreSpec p n "caps_never_zero" [po, pc, us, swd, so, sc]
-      (capsNeverZeroPW lps (decI us) pw) decBool s₀ a₀ dn vis fe MM eb
-
 /-- **The fire datum at its words, reading back**: kind `0` plain (the constructor's level
-parameters the `EREC` name slice `(qo, qc)`, their names reading back), else nested (the stored
-levels the `EREC` slice `(fvo, fvc)`, reading back). -/
+parameters the `EREC` name slice `(qo, qc)`, their names reading back), else nested or levels (the
+stored levels the `EREC` slice `(fvo, fvc)`, reading back). -/
 def FireCore (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (cvjLps : List NIdx) :
     Prop :=
-  (fk = 0 ∧ rl.fire = .plain ∧ hslice? (m.arr64 EREC) qo.toNat qc.toNat = some cvjLps ∧
+  (fk = 0 ∧ rl.fire = .plain ∧ hslice? (erecP m) qo.toNat qc.toNat = some cvjLps ∧
       ∃ ks, cvjLps.mapM (denoteN a.store.ns) = some ks) ∨
-    (fk ≠ 0 ∧ ∃ lvls pins, rl.fire = .nested lvls pins ∧
-      hslice? (m.arr64 EREC) fvo.toNat fvc.toNat = some lvls ∧
+    (fk ≠ 0 ∧ ∃ lvls, (rl.fire = .levels lvls ∨ ∃ pins, rl.fire = .nested lvls pins) ∧
+      hslice? (erecP m) fvo.toNat fvc.toNat = some lvls ∧
       ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L)
 
 /-- **Where a firing rule comes from**: a rule of a recursor of the environment (whose level
 parameters are `lps`), and a constructor of the environment. State-free, so it passes down the
 ι block's calls; the readbacks follow at any state from `StoreDen` (`constLps`, `recRules`). -/
 def FireEnv (fe : IFEnv) (lps : List NIdx) (rule : IRecRule) (cvj : IConstantVal) : Prop :=
-  (∃ c cv mI rP rules, fe.find? c = some (.recInfo cv mI rP rules) ∧ cv.levelParams = lps ∧
+  (∃ c cv mI rP isK rules, fe.find? c = some (.recInfo cv mI rP isK rules) ∧ cv.levelParams = lps ∧
       rule ∈ rules) ∧
     ∃ c np nf, fe.find? c = some (.ctorInfo cvj np nf)
 
@@ -812,7 +851,7 @@ def RecFireLevelsOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb fireKind fvo fvc po pc us qo qc : Word) (rl : IRecRule) (lps cvjLps : List NIdx),
     CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps →
+    hslice? (erecP s₀.mem) po.toNat pc.toNat = some lps →
     (∃ ks, lps.mapM (denoteN a₀.store.ns) = some ks) →
     FireCore s₀.mem a₀ fireKind fvo fvc qo qc rl cvjLps →
     CoreSpec p n "rec_fire_levels" [fireKind, fvo, fvc, po, pc, us, qo, qc]
@@ -852,8 +891,6 @@ def LitToCtorIfNatOK (p : Prog) : Prop :=
 structure IotaCallees (p : Prog) : Prop where
   inst1 : IotaInst1OK p
   findProj : FindProjOK p
-  fireOk : FireOkOK p
-  capsNeverZero : CapsNeverZeroOK p
   recFireLevels : RecFireLevelsOK p
   wscopedBFast : WscopedBFastOK p
   looseBVarsBoundedFast : LooseBVarsBoundedFastOK p
@@ -884,14 +921,12 @@ def TowerSlotsAllOK (p : Prog) : Prop :=
     CoreSpec p n "tower_slots_all" [vis, T, nF] (pure (towerSlotsAll fe (decI T) nF.toNat)) decBool s₀ a₀
       dn vis fe MM eb
 
-/-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlots`, at
-universe arguments that are a stored `const` node's list (`fire_ok`'s hypothesis, `FireOkOK`). -/
+/-- con-leche: `CoreDefs.lean:1105-1119`/`FEnv.lean:179-181` `andRescueSlots`. -/
 def AndRescueSlotsOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb ctor nP us : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW ctor → HW us →
-    (∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) →
-    CoreSpec p n "and_rescue_slots" [vis, ctor, nP, us]
-      (andRescueSlots fe (decI ctor) nP.toNat (decI us)) decBool s₀ a₀ dn vis fe MM eb
+    (MM : ModeMaps) (eb ctor nP : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW ctor →
+    CoreSpec p n "and_rescue_slots" [vis, ctor, nP]
+      (andRescueSlots fe (decI ctor) nP.toNat) decBool s₀ a₀ dn vis fe MM eb
 
 /-- con-leche: `Core.lean:502-663` (the shared scope guard) `fabScopeOk`. -/
 def FabScopeOkOK (p : Prog) : Prop :=
@@ -904,19 +939,19 @@ def FabScopeOkOK (p : Prog) : Prop :=
 def MajorToCtorOK (p : Prog) : Prop :=
   ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
+    (MM : ModeMaps) (eb mode d rec isK ro rc major : Word) (rules : List IRecRule),
     n ≤ 2 ^ 62 → CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 →
-    HW major → decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
-    CoreSpec p (n + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, major]
-      (majorToCtor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
-        (decE major)) decH s₀ a₀ dn vis fe MM eb
+    HW major → decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules →
+    CoreSpec p (n + 1) "major_to_ctor" [mode, vis, d, rec, isK, ro, rc, major]
+      (majorToCtor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec)
+        (isK != 0) rules (decE major)) decH s₀ a₀ dn vis fe MM eb
 
 /-- con-leche: none (`ruleRhsAt`'s cache probe). -/
 def RuleRhsAtOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb rec ctor po pl rhs us : Word) (lps : List NIdx),
     CoreS dn s₀.mem a₀ vis fe MM eb → HW rec → HW ctor → HW rhs → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps →
+    hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps →
     CoreSpec p n "rule_rhs_at" [rec, ctor, po, pl, rhs, us]
       (ruleRhsAt (decI rec) (decI ctor) lps (decE rhs) (decI us)) decH s₀ a₀ dn vis fe MM eb
 
@@ -924,18 +959,18 @@ def RuleRhsAtOK (p : Prog) : Prop :=
 def ConstTyAtOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb nn po pl ty us : Word) (lps : List NIdx), CoreS dn s₀.mem a₀ vis fe MM eb →
-    HW nn → HW ty → HW us → hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps →
+    HW nn → HW ty → HW us → hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps →
     CoreSpec p n "const_ty_at" [nn, po, pl, ty, us]
       (constTyAt ⟨decI nn, lps, decE ty⟩ (decI us)) decH s₀ a₀ dn vis fe MM eb
 
 end specs
 
-/-! ## Leaf proofs: `find_rule`, `rec_rule_k`, `is_str_lit`, `defeq_list`, `pi_residual`
+/-! ## Leaf proofs: `find_rule`, `is_str_lit`, `defeq_list`, `pi_residual`
 
-Pure/read-only, over `EREC` alone (no `CoreS` needed): `find_rule`, `rec_rule_k`. -/
+Pure/read-only, over `EREC` alone (no `CoreS` needed): `find_rule`. -/
 
 /-- The rule record at `q` decodes, or `f = 0` and there is none: `find_rule`'s result. -/
 def decRuleAt (m : Mem) (f q : Word) : Option IRecRule :=
-  if f = 0 then none else decRule (m.arr64 EREC) q.toNat
+  if f = 0 then none else decRule (erecP m) q.toNat
 
 end L.Arena

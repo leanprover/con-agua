@@ -328,8 +328,8 @@ def CFOut (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (a : AState) (m : Me
   ∀ G : IConstantVal → Nat → IConstantVal → IIndCaps → Bool,
     (r.tail.tail.headD 0 = 0 → (famT fe G (decI c)).run a = .ok (false, a)) ∧
     (r.tail.tail.headD 0 ≠ 0 → ∃ cvj np nF cvT caps,
-      decCI (m.arr64 EREC) dn (r.headD 0).toNat = some (.ctorInfo cvj np nF) ∧
-      decCI (m.arr64 EREC) dn (r.tail.headD 0).toNat = some (.indInfo cvT caps) ∧
+      decCI (erecP m) dn (r.headD 0).toNat = some (.ctorInfo cvj np nF) ∧
+      decCI (erecP m) dn (r.tail.headD 0).toNat = some (.indInfo cvT caps) ∧
       (famT fe G (decI c)).run a = .ok (G cvj nF cvT caps, a))
 
 theorem famT_none {fe : IFEnv} {G : IConstantVal → Nat → IConstantVal → IIndCaps → Bool} {c : NIdx}
@@ -630,8 +630,8 @@ theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
       caps.eta && caps.etaCtor == decI c && cvj.levelParams == cvT.levelParams)
   have hret0 : ∀ (hw : some ([(0 : Word)], m) = some (r, m')) (hb : rf.tail.tail.headD 0 ≠ 0 →
       ∀ cvj np nF cvT caps,
-      decCI (m.arr64 EREC) dn (rf.headD 0).toNat = some (.ctorInfo cvj np nF) →
-      decCI (m.arr64 EREC) dn (rf.tail.headD 0).toNat = some (.indInfo cvT caps) →
+      decCI (erecP m) dn (rf.headD 0).toNat = some (.ctorInfo cvj np nF) →
+      decCI (erecP m) dn (rf.tail.headD 0).toNat = some (.indInfo cvT caps) →
       (caps.eta && caps.etaCtor == decI c && cvj.levelParams == cvT.levelParams) = false),
       ∃ x a', (recRuleEtaOf fe (decI c)).run a = .ok (x, a') ∧ KeepPost vis fe decW0B m m' a' r x := by
     intro hw hb

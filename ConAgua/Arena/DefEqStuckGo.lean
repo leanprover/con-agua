@@ -239,7 +239,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
     (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (htt : to.toNat + tn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (SetG p n) (secgE p (n + 1) s₀.mem mode vis d b us c pc T q us2 ao an to tn)
-      (setGoT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc (decI T)
+      (setGoT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc (decI T)
         (decI us2) cvT caps aargs.toList targs.toList) a₀
       (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel

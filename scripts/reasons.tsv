@@ -161,3 +161,30 @@ R_USE_OF_THE_SORRYAX_IN_VALUE	decline	use of the sorryAx axiom in value
 R_USE_OF_THE_SORRYAX_IN_TYPE_OF	decline	use of the sorryAx axiom in type of
 R_USE_OF_THE_SORRYAX_IN_GENERATED	decline	use of the sorryAx axiom in generated rule of
 R_USE_OF_THE_SORRYAX_IN_THE	decline	use of the sorryAx axiom in the domains of a generated rule of
+R_A_DECLARATION_AT	decline	a declaration at a literal's name with another shape
+R_A_DECLARATION_AT_A	decline	a declaration at a literal's name with another shape ()
+R_QUOTIENT_DECLARATION_BEFORE	decline	quotient declaration before what it needs
+R_THIS_FAMILY_STORED	decline	this family stored at a definition
+R_A_CERTIFIED_NAT	reject	a certified Nat operation's name, not a definition: …
+R_A_FAMILY_S	reject	a family's key is no stored family
+R_APPLICATION_TYPE_MISMATCH_AT	reject	application type mismatch at a family's parameters
+R_DIRECT_REC_A	reject	direct rec: a family at a `Bool` constructor's name
+R_DIRECT_SUM_A	reject	direct sum: a type former's declared type and its reduct differ
+R_FUNCTION_EXPECTED_AT	reject	function expected at a family's parameters
+R_INCORRECT_NUMBER_OF_UNIVERSE	reject	incorrect number of universe levels at a family's key
+R_PROJECTION_FROM_A_STRUCTURE	reject	projection from a structure whose type reaches no sort
+R_RECURSOR_DECLARES_K_THE	reject	recursor declares k := ; the generated recursor of this block is K-like
+R_RESERVED_BASIS_NAME_THE	reject	reserved basis name: the block is not the pinned one
+R_THE_RECURSOR_S	reject	the recursor 's rule for has a right-hand side that is not closed
+R_THE_RECURSOR_S_RULE	reject	the recursor 's rule for has a right-hand side that is not definitionally equal to the generated one
+R_THE_RECURSOR_S_RULE_FOR	reject	the recursor 's rule for has a right-hand side whose type is not the generated one's
+R_THE_RECURSOR_S_RULE_FOR_HAS	reject	the recursor 's rule for has an undeclared universe parameter
+R_THE_RECURSOR_S_RULE_FOR_IS	reject	the recursor 's rule for is not the generated one's (constructor , fields)
+R_THE_RECURSOR_S_STORED	reject	the recursor 's stored type does not apply its major's container at the generated firing data
+R_THE_RECURSOR_CARRIES	reject	the recursor carries more or fewer rules than the generated one ( unmatched)
+R_THE_TYPE_OF	reject	the type of the recursor is not closed
+R_THE_TYPE_OF_THE	reject	the type of the recursor is not the generated one: it has fewer than binders
+R_THE_TYPE_OF_THE_RECURSOR	reject	the type of the recursor is not the generated one: its body after the major differs
+R_THE_TYPE_OF_THE_RECURSOR_IS	reject	the type of the recursor is not the generated one: the domain of binder differs
+R_TWO_MODULES_STORE	reject	two modules store different constants named …
+R_UNDECLARED_UNIVERSE_PARAMETER_IN_THE	reject	undeclared universe parameter in the type of the recursor

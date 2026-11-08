@@ -91,7 +91,7 @@ theorem es_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AStat
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d e : Word)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (he : HW e) :
     RefE (KnotUpToE p n) (esE p (n + 1) s₀.mem mode vis d e)
-      (ensureSort (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
+      (ensureSort (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) a₀
       (CorePost decLv dn s₀.mem vis fe M eb ResH) := by
   simp only [esE]
   refine RefE.bind_callE (fun _ => rfl)
@@ -123,7 +123,7 @@ def EnsureSortSpecE (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW e →
     CoreSpecE p n "ensure_sort" [mode, vis, d, e]
-      (ensureSort (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) s₀ a₀
+      (ensureSort (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) s₀ a₀
 
 /-- `ensure_sort`'s error claim at every L fuel up to `n` (`es_ref`'s error half). -/
 theorem ensureSortSpecE_of_knot (p : Prog) (hp : InferLeafProg p) :
@@ -263,7 +263,7 @@ theorem defeqE_anyE (p : Prog) (hkp : KnotProg p) :
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d x y : Word),
     n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW x → HW y →
     CoreSpecE p n "defeq_e" [mode, vis, d, x, y]
-      ((coreKnot (decMode mode) fe id F).defeqE d.toNat (decE x) (decE y)) s₀ a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).defeqE d.toNat (decE x) (decE y)) s₀ a₀
   | 0, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => CoreSpecE.zero p _ _ _ s₀ a₀
   | n + 1, hk, hkE, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, x, y, hF, hn, hs, hx, hy =>
     RefE.coreSpecE (deE_spec p hkp.defeqE (n + 1) s₀ mode vis d x y) trivial
@@ -278,7 +278,7 @@ theorem da_ref (p : Prog) (hkp : KnotProg p) (n : Nat) (he : IsEagerReduceH p) (
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hta : HW ta)
     (hty : HW ty) :
     RefE (InferG p n) (daE p (n + 1) s₀.mem mode vis d a ta ty)
-      (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) a₀
+      (defeqArg (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [daE, defeqArg]
   refine RefE.bind_callW (fun _ => rfl) (he n s₀ a₀ dn vis fe M eb a hs.rel ha)
@@ -287,7 +287,7 @@ theorem da_ref (p : Prog) (hkp : KnotProg p) (n : Nat) (he : IsEagerReduceH p) (
   have hs' : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M' eb mode := ⟨hS', hs.mode4, hs.eb_mode⟩
   by_cases h0 : r₁.headD 0 ≠ 0
   · rw [ite_eq_left h0, show decBool r₁ = true by simpa [decBool] using h0, ite_eq_left rfl,
-      ← bind_pure ((coreKnot (decMode mode) fe id F).defeqE _ _ _)]
+      ← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeqE _ _ _)]
     have hde : DefeqESlot p n := by
       cases n with
       | zero => intro F s₀ a₀ dn vis fe M eb mode d x y _ _ _ _ _
@@ -297,7 +297,7 @@ theorem da_ref (p : Prog) (hkp : KnotProg p) (n : Nat) (he : IsEagerReduceH p) (
       (fun (hG : InferG p n) => defeqE_anyE p hkp n hk hG.knot F _ _ dn vis fe M' eb mode d ta ty hF hn
         hs' hta hty) fun r₂ m₂ _ h₂ => RefE.ret rfl ⟨h₂.after, rfl, h₂.resOk⟩
   rw [ite_eq_right h0, show decBool r₁ = false by simpa [decBool] using h0, ite_eq_right (by decide),
-    ← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+    ← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
   exact RefE.bind_callE (fun _ => rfl)
     ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M' eb mode d ta ty hF hn hs' hta hty)
     (fun (hG : InferG p n) => (hG.knot n (Nat.le_refl _)).defeq F _ _ dn vis fe M' eb mode d ta ty hF hn
@@ -311,7 +311,7 @@ theorem defeqArg_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (n
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hta : HW ta)
     (hty : HW ty) :
     CoreSpec p (n + 1) "defeq_arg" [mode, vis, d, a, ta, ty]
-      (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) decBool
+      (defeqArg (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) decBool
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (daE_spec p hp.defeqArg (n + 1) s₀ mode vis d a ta ty)
     (da_ref p hkp n he hk F s₀ a₀ dn vis fe M eb mode d a ta ty hF hn hs ha hta hty)
@@ -323,7 +323,7 @@ theorem defeqArg_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he :
     (eb mode d a ta ty : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW a →
     HW ta → HW ty →
     CoreSpecE p n "defeq_arg" [mode, vis, d, a, ta, ty]
-      (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) s₀ a₀
+      (defeqArg (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) s₀ a₀
   | 0, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => CoreSpecE.zero p _ _ _ s₀ a₀
   | n + 1, hk, hG, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, ta, ty, hF, hn, hs, ha, hta, hty =>
     RefE.coreSpecE (daE_spec p hp.defeqArg (n + 1) s₀ mode vis d a ta ty) hG.nv (hG.mono (by omega))

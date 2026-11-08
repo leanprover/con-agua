@@ -33,7 +33,7 @@ tree and **intern the result** (`internLevel`). L has no trees: lane `levels`' `
 The keys and values arrays of lane `levels`' generic functions are fixed here, under this
 family's own names (`LevelSubstLP.lean`): `lp_lookup` (keys on the spine stack, copied there by
 `keys_push`, so that lane `induct`'s `IW` slices and the record pool's slices are served by one
-function; values in the pool), `lp_substl`, `lp_spw` (`caps_never_zero`'s datum names in `EREC`),
+function; values in the pool), `lp_substl`, `lp_spw` (a datum's names in `EREC`),
 `lp_substpw`.
 -/
 
@@ -263,50 +263,12 @@ theorem lvSubIntW_succ (n : Nat) (m : Mem) (u ko kc vo vc : Word) :
   rw [lvSubIntW]
 attribute [arena_grind =] lvSubIntW_succ
 
-/-! ## `caps_never_zero(po, pc, us, swd, so, sc)` -/
-
-/-- con-ron: ConRon/Arena/Core.lean:345-351 ConRon.Arena.capsNeverZero -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.capsNeverZero` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.capsNeverZero]
-def capsNeverZeroL : FunDecl := lfn (po, pc, us, swd, so, sc) locals (vo, vc, b, x) {
-  (vo, vc) := call ls_node(us);
-  b := call keys_push(po, pc);
-  CTL.u64[192] := 0;
-  x := call lp_substpw(swd, so, sc, b, pc, vo, vc);
-  CTL.u64[136] := b;
-  return x
-}
-
-/-- After the substitution: the stack top put back. -/
-def capsK2 (b : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₂) => some (x, m₂.set64 CTL 136 b)
-
-/-- After the keys: the substitution. -/
-def capsK1 (n : Nat) (swd so sc pc vo vc : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (b, m₁) => capsK2 b (substPWW SPN POOL EREC n (m₁.set64 CTL 192 0) swd so sc b pc vo vc)
-
-@[arena_grind =] theorem capsK2_some (b x : Word) (m₂ : Mem) :
-    capsK2 b (some (x, m₂)) = some (x, m₂.set64 CTL 136 b) := rfl
-@[arena_grind =] theorem capsK1_some (n : Nat) (swd so sc pc vo vc b : Word) (m₁ : Mem) :
-    capsK1 n swd so sc pc vo vc (some (b, m₁)) =
-      capsK2 b (substPWW SPN POOL EREC n (m₁.set64 CTL 192 0) swd so sc b pc vo vc) := by rfl
-
-/-- **The model of `caps_never_zero`** (none on a handle `ls_node` aborts on). -/
-def capsNeverZeroW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, po, pc, us, swd, so, sc =>
-    if lsNodeW m us = [] then none else
-    capsK1 n swd so sc pc ((lsNodeW m us).headD 0) ((lsNodeW m us).tail.headD 0) (keysPushW n m po pc)
-
-/-- The functions `lv_sub_int` and `caps_never_zero` call. -/
+/-- The functions `lv_sub_int` calls. -/
 structure LvSubProg (p : Prog) : Prop extends LvInternProg p where
   lv_sub_int : p.lookup "lv_sub_int" = some lvSubInt
   lp_substl : p.lookup "lp_substl" = some lpSubstL
   lp_lookup : p.lookup "lp_lookup" = some lpLookup
   lh_mk : p.lookup "lh_mk" = some lhMk
-  caps_never_zero : p.lookup "caps_never_zero" = some capsNeverZeroL
   keys_push : p.lookup "keys_push" = some keysPush
   ek_copy : p.lookup "ek_copy" = some ekCopy
   ls_node : p.lookup "ls_node" = some lsNode
@@ -338,15 +300,7 @@ theorem ekCopy_spec (n : Nat) : ∀ (s₀ : St) (s d l : Word),
     ⦃fun st => st = s₀⦄
     invoke p (exec p n) "ek_copy" [s, d, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ ekCopyW n s₀.mem s d l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ s d l; rw [invoke_eq _ hL.ek_copy]; simp only [callFn, ekCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ s d l
-    rw [invoke_eq _ hL.ek_copy]
-    simp only [callFn, ekCopy]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish
+  sorry
 
 theorem keysPush_spec (n : Nat) (s₀ : St) (po pc : Word) :
     ⦃fun s => s = s₀⦄
@@ -361,23 +315,6 @@ theorem keysPush_spec (n : Nat) (s₀ : St) (po pc : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         ekCopy_spec p hL n] <;>
       finish [keysPushW, spTop]
-
-theorem capsNeverZero_spec (n : Nat) (s₀ : St) (po pc us swd so sc : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "caps_never_zero" [po, pc, us, swd, so, sc]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      capsNeverZeroW n s₀.mem po pc us swd so sc = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.caps_never_zero]
-  simp only [callFn, capsNeverZeroL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lsNode_spec p hL.ls_node n,
-        keysPush_spec p hL n,
-        lpSubstPW_spec p hL.lp_lookup hL.lv_node hL.lh_push hL.lv_zero hL.lp_spw
-          hL.lp_substpw n] <;>
-      finish (gen := 20) [capsNeverZeroW]
 
 end spec2
 

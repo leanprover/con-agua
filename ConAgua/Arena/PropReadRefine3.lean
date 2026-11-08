@@ -84,7 +84,7 @@ theorem rpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
 theorem spa_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     {lo lc us k o c : Word} {lps : List NIdx} {pw : PropWhen}
-    (hl : hslice? (m.arr64 EREC) lo.toNat lc.toNat = some lps)
+    (hl : hslice? (erecP m) lo.toNat lc.toNat = some lps)
     (hks : ∃ ks, lps.mapM (denoteN a.store.ns) = some ks) (hus : HW us)
     (hls : ∃ ls, denoteLs a.store.lss (decI us) = some ls)
     (hd : PWD (nameN a.store.lss.ls.ns) m k o c (some pw)) {r : List Word}

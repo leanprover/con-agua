@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.InstLPLevel2
-import ConAgua.Arena.CapsNeverZeroCore
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.InferFieldSort
@@ -105,7 +104,7 @@ stack top. -/
 theorem sleElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs : List Level} :
     ∀ (lvls : List LIdx) (n : Nat) (m m' : Mem) (a : AState) (o l b : Word),
     CoreS dn m a vis fe M eb → ILWEnv m a ko kc vo vc ks us vs →
-    hslice? (m.arr64 EREC) o.toNat l.toNat = some lvls → o.toNat + l.toNat < 2 ^ 64 →
+    hslice? (erecP m) o.toNat l.toNat = some lvls → o.toNat + l.toNat < 2 ^ 64 →
     (∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L) →
     (spTop m).toNat ≤ b.toNat → b.toNat + l.toNat ≤ (m.arr64 SPN).size →
     slElemW EREC n m o l b ko kc vo vc = some m' →
@@ -240,7 +239,7 @@ record-pool name slice `(o, l)` of names that read back: the results land at `SP
 theorem slpElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs : List Level} :
     ∀ (ids : List NIdx) (n : Nat) (m m' : Mem) (a : AState) (o l b : Word),
     CoreS dn m a vis fe M eb → ILWEnv m a ko kc vo vc ks us vs →
-    hslice? (m.arr64 EREC) o.toNat l.toNat = some ids → o.toNat + l.toNat < 2 ^ 64 →
+    hslice? (erecP m) o.toNat l.toNat = some ids → o.toNat + l.toNat < 2 ^ 64 →
     (∀ u ∈ ids, ∃ nm, denoteN a.store.ns u = some nm) →
     (spTop m).toNat ≤ b.toNat → b.toNat + l.toNat ≤ (m.arr64 SPN).size →
     slpW n m o l b ko kc vo vc = some m' →

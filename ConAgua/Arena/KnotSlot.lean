@@ -212,7 +212,7 @@ def InferBodySpec (p : Prog) (n : Nat) : Prop :=
     (MM : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
     KnotUpTo p n →
     CoreSpec p n "infer_body" [mode, vis, d, e]
-      (inferBody (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decH s₀ a₀ dn vis fe MM eb
+      (inferBody (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) decH s₀ a₀ dn vis fe MM eb
 
 /-- `infer_body_io(mode, vis, d, e)` refines `inferBodyIO` at the io view of the knot one level
 down. -/
@@ -221,7 +221,7 @@ def InferIOBodySpec (p : Prog) (n : Nat) : Prop :=
     (MM : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
     KnotUpTo p n →
     CoreSpec p n "infer_body_io" [mode, vis, d, e]
-      (inferBodyIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)) decH
+      (inferBodyIO (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE e)) decH
       s₀ a₀ dn vis fe MM eb
 
 /-- `defeq_body(mode, vis, d, a, b)` refines `defeqBody` at the knot one level down. -/
@@ -230,7 +230,7 @@ def DefeqBodySpec (p : Prog) (n : Nat) : Prop :=
     (MM : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode →
     HW x → HW y → KnotUpTo p n →
     CoreSpec p n "defeq_body" [mode, vis, d, x, y]
-      (defeqBody (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE x) (decE y))
+      (defeqBody (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE x) (decE y))
       decBool s₀ a₀ dn vis fe MM eb
 
 /-- **`defeq_body`'s error spec** (the error half of `DefeqBodySpec`): under the same hypotheses
@@ -240,7 +240,7 @@ def DefeqBodySpecE (p : Prog) (n : Nat) : Prop :=
     (MM : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode →
     HW x → HW y → KnotUpTo p n → KnotUpToE p n →
     CoreSpecE p n "defeq_body" [mode, vis, d, x, y]
-      (defeqBody (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE x) (decE y)) s₀ a₀
+      (defeqBody (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE x) (decE y)) s₀ a₀
 
 /-- **What the `defeq` slot's errors claim from**: `defeq_body`'s claim and the error knot at the
 body's fuel. -/
@@ -263,7 +263,7 @@ def InferBodySpecE (p : Prog) (n : Nat) : Prop :=
     (MM : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode →
     HW e → KnotUpTo p n → KnotUpToE p n →
     CoreSpecE p n "infer_body" [mode, vis, d, e]
-      (inferBody (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) s₀ a₀
+      (inferBody (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) s₀ a₀
 
 /-- `infer_body_io`'s error claim (the error half of `InferIOBodySpec`). -/
 def InferIOBodySpecE (p : Prog) (n : Nat) : Prop :=
@@ -271,7 +271,7 @@ def InferIOBodySpecE (p : Prog) (n : Nat) : Prop :=
     (MM : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode →
     HW e → KnotUpTo p n → KnotUpToE p n →
     CoreSpecE p n "infer_body_io" [mode, vis, d, e]
-      (inferBodyIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)) s₀ a₀
+      (inferBodyIO (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE e)) s₀ a₀
 
 /-- **What the `infer` slot's errors claim from**: `infer_body`'s claim and the error knot at the
 body's fuel. -/
@@ -339,7 +339,7 @@ theorem isl_ref (n : Nat) (hk : KnotUpTo p n) (hb : InferBodySpec p n) (F : Nat)
     (eb mode d e : Word) (hF : n + 1 ≤ F) (hn : n + 1 ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     RefE (InferSlotBodyG p n) (islE p (n + 1) s₀.mem mode vis d e)
-      ((coreKnot (decMode mode) fe id F).infer d.toNat (decE e)) a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).infer d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   have hS := hs.rel
@@ -392,7 +392,7 @@ theorem islo_ref (n : Nat) (hk : KnotUpTo p n) (hb : InferIOBodySpec p n) (F : N
     (eb mode d e : Word) (hF : n + 1 ≤ F) (hn : n + 1 ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     RefE (InferIOSlotBodyG p n) (isloE p (n + 1) s₀.mem mode vis d e)
-      ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE e)) a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).inferIO d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   have hS := hs.rel
@@ -444,7 +444,7 @@ theorem dsl_ref (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) (F : Nat)
     (eb mode d x y : Word) (hF : n + 1 ≤ F) (hn : n + 1 ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hx : HW x) (hy : HW y) :
     RefE (SlotBodyG p n) (dslE p (n + 1) s₀.mem mode vis d x y)
-      ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE x) (decE y)) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   have hS := hs.rel
@@ -612,7 +612,7 @@ def DefeqESlot (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW x → HW y →
     CoreSpec p n "defeq_e" [mode, vis, d, x, y]
-      ((coreKnot (decMode mode) fe id F).defeqE d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
+      ((coreKnot (decMode mode) (decEager mode) fe id F).defeqE d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
       M eb
 
 /-- **A failure of the eager tower's `defeq` slot from a plain mode** is the eager slot's. -/
@@ -658,7 +658,7 @@ theorem de_ref (n : Nat) (hd : DefeqSlot p n) (F : Nat) (s₀ : St) (a₀ : ASta
     (hF : n + 1 ≤ F) (hn2 : n + 1 ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hx : HW x)
     (hy : HW y) :
     RefE (DefeqSlotE p n) (deE p (n + 1) s₀.mem mode vis d x y)
-      ((coreKnot (decMode mode) fe id F).defeqE d.toNat (decE x) (decE y)) a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).defeqE d.toNat (decE x) (decE y)) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   simp only [deE]
@@ -720,7 +720,7 @@ def EnsureSortSpec (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW e →
     CoreSpec p n "ensure_sort" [mode, vis, d, e]
-      (ensureSort (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decLv s₀ a₀ dn vis fe M eb
+      (ensureSort (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) decLv s₀ a₀ dn vis fe M eb
 
 /-- **`is_def_eq_core`'s model, both outcomes** (generated; the `defeq` slot through its run). -/
 l_model iceE_spec (p : Prog) (hf : p.lookup "is_def_eq_core" = some isDefEqCoreL)

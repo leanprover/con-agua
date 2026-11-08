@@ -125,7 +125,7 @@ theorem plit_ref (p : Prog) (hStrSup : StrLitSupportedOK p) (hStrCtor : StrLitCt
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb mode d h : Word)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hh : HW h) (hsupKeep : SupKeep fe) :
     RefE (KnotUpToE p n) (projLitToCtorE p (n + 1) s₀.mem mode vis d h)
-      (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) a₀
+      (projLitToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   have hS := hs.rel
   simp only [projLitToCtorE]
@@ -190,7 +190,7 @@ theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLi
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb mode d h : Word)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hh : HW h) (hsupKeep : SupKeep fe) :
     CoreSpec p (n + 1) "proj_lit_to_ctor" [mode, vis, d, h]
-      (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
+      (projLitToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
       MM eb :=
   RefE.coreSpec (projLitToCtorE_spec p hp.plit (n + 1) s₀ mode vis d h)
     (plit_ref p hStrSup hStrCtor n hk F hF hn s₀ a₀ dn vis fe MM eb mode d h hs hh hsupKeep)
@@ -690,7 +690,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode e1 q i k us : Word) (tbl : IProjTable)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1) (hk : HW k) (hus : HW us)
-    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
+    (hq : decTbl (erecP s₀.mem) q.toNat = some tbl)
     (hfe : ∃ c, fe.findTable? c = some tbl) (hlt : i.toNat < tbl.numFields)
     (hvus : ∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) :
     GrowSpec p (n + 1) "reduce_proj_fire" [mode, vis, e1, q, i, k, us]
@@ -730,7 +730,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   -- fire_ok
   rcases hc3 : callW p n "fire_ok" [q, i, us] m₂ with _ | ⟨r₃, m₃⟩
     <;> simp only [hc3, reduceCtorEq] at hW
-  have hq₂ : decTbl (m₂.arr64 EREC) q.toNat = some tbl := by rw [hE₁]; exact hq
+  have hq₂ : decTbl (erecP m₂) q.toNat = some tbl := by rw [hE₁]; exact hq
   have hfok := hc.fireOk n { s with mem := m₂ } a₀ dn vis fe MM eb q i us tbl hS₁ hus hq₂ hfe hlt hvus
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, -⟩ := CoreSpec.of_callW hfok hc3
   have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := by
@@ -893,7 +893,7 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode e1 q i : Word) (tbl : IProjTable)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1)
-    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
+    (hq : decTbl (erecP s₀.mem) q.toNat = some tbl)
     (hfe : ∃ c, fe.findTable? c = some tbl) (hlt : i.toNat < tbl.numFields) :
     GrowSpec p (n + 1) "reduce_proj_head" [mode, vis, e1, q, i]
       (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1))
@@ -989,7 +989,7 @@ theorem rp_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
     (eb mode d sn i c : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hsn : HW sn) (hc' : HW c)
     (hsup : SupKeep fe) :
     RefE (KnotUpToE p n) (reduceProjCoreE p (n + 1) s₀.mem mode vis d sn i c)
-      (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+      (reduceProjCore (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) a₀ (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   simp only [reduceProjCoreE]
   cases n with
@@ -1008,23 +1008,23 @@ theorem rp_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
   have hE₂ : m₂.arr64 EREC = m₁.arr64 EREC :=
     hE (N + 1) "find_proj" [vis, sn, i] m₁ r₂ m₂ (Or.inl rfl) c2
   have hfx : fe.findProj? (decI sn) i.toNat =
-      decEntry (m₁.arr64 EREC) (r₂.headD 0) (r₂.tail.headD 0) i.toNat := hres2
+      decEntry (erecP m₁) (r₂.headD 0) (r₂.tail.headD 0) i.toNat := hres2
   simp only [reduceProjCoreE.k_find_proj]
   by_cases hf : r₂.headD 0 = 0
   · rw [ite_eq_left hf]
-    have hde : decEntry (m₁.arr64 EREC) (r₂.headD 0) (r₂.tail.headD 0) i.toNat = none := by
+    have hde : decEntry (erecP m₁) (r₂.headD 0) (r₂.tail.headD 0) i.toNat = none := by
       unfold decEntry; rw [ite_eq_left hf]
     rw [hfx, hde]
     exact RefE.ret rfl ⟨⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, rfl,
       ⟨by show HW (0 : Word); unfold HW; decide, by show HW (0 : Word); unfold HW; decide⟩⟩
   rw [ite_eq_right hf]
   obtain ⟨tbl, hdt, hfe⟩ := hc.projFound (N + 1) m₁ _ dn vis fe M₁ eb sn i r₂ m₂ hS₁ c2 hf
-  have hde : decEntry (m₁.arr64 EREC) (r₂.headD 0) (r₂.tail.headD 0) i.toNat =
+  have hde : decEntry (erecP m₁) (r₂.headD 0) (r₂.tail.headD 0) i.toNat =
       some (tbl.entry i.toNat) := by
     unfold decEntry; rw [ite_eq_right hf, hdt]; rfl
   rw [hde] at hfx
   rw [hfx]
-  have hq : decTbl (m₂.arr64 EREC) (r₂.tail.headD 0).toNat = some tbl := by rw [hE₂]; exact hdt
+  have hq : decTbl (erecP m₂) (r₂.tail.headD 0).toNat = some tbl := by rw [hE₂]; exact hdt
   refine RefE.onlySim (fun _ => reduceProjCoreE.k_reduce_proj_head.none ..)
     (fun _ _ h => GrowSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
       (rpHead_refines p hp hc N _ _ dn vis fe M₂ eb mode (r₁.headD 0) (r₂.tail.headD 0) i tbl
@@ -1046,7 +1046,7 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrL
     (eb mode d sn i c : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hsn : HW sn) (hc' : HW c)
     (hsup : SupKeep fe) :
     CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
-      (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+      (reduceProjCore (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (reduceProjCoreE_spec p hp.rproj hp.plit (n + 1) s₀ mode vis d sn i c)
     (rp_ref p hp hStrSup hStrCtor hc hE n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc'
@@ -1063,13 +1063,13 @@ theorem stepProj_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupported
     (eb mode cheap d e sn i pe : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e)
     (hsn : HW sn) (hpe : HW pe) (hsup : SupKeep fe) :
     RefE (KnotUpToE p n) (coreStepProjE p (n + 1) s₀.mem mode cheap vis d e sn i pe)
-      (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
+      (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE e) (decI sn) i.toNat (decE pe)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   -- the rest after the scrutinee's normalization `(r₁, m₁)`
   have rest : ∀ (r₁ : List Word) (m₁ : Mem) (a₁ : AState) (M₁ : ModeMaps),
       CoreS dn m₁ a₁ vis fe M₁ eb → KeptAll MM M₁ eb → StackKept s₀.mem m₁ → HW (r₁.headD 0) →
       RefE (KnotUpToE p n) (coreStepProjE.k_whnf_core p n mode vis d e sn i (.ok (r₁, m₁)))
-        (do match ← reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+        (do match ← reduceProjCore (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
               (decI sn) i.toNat (decE (r₁.headD 0)) with
             | some m' => pure (WhnfStep.cont m')
             | none => pure (WhnfStep.done (decE e))) a₁
@@ -1126,7 +1126,7 @@ theorem whnfCoreStepProj_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : St
     (eb mode cheap d e sn i pe : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e)
     (hsn : HW sn) (hpe : HW pe) (hsup : SupKeep fe) :
     CoreSpec p (n + 1) "whnf_core_step_proj" [mode, cheap, vis, d, e, sn, i, pe]
-      (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
+      (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (coreStepProjE_spec p hp.sproj hp.rproj hp.plit (n + 1) s₀ mode cheap vis d e sn i pe)
     (stepProj_ref p hp hStrSup hStrCtor hc hE n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs

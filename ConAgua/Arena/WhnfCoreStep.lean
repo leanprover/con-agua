@@ -61,7 +61,7 @@ theorem capp2_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
     (hlo : so.toNat + sn.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
     (htop : (spTop s₀.mem).toNat ≤ (s₀.mem.arr64 SPN).size) :
     RefE (AppG p n) (coreApp2E p (n + 2) s₀.mem mode vis d v h so sn)
-      (whnfCoreApp2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE h)
+      (whnfCoreApp2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v) (decE h)
         args nodes) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hS := hs.rel
   simp only [coreApp2E]
@@ -101,7 +101,7 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
     (hlo : so.toNat + sn.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
     (htop : (spTop s₀.mem).toNat ≤ (s₀.mem.arr64 SPN).size) :
     CoreSpec p (n + 2) "whnf_core_app2" [mode, vis, d, v, h, so, sn]
-      (whnfCoreApp2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE h)
+      (whnfCoreApp2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v) (decE h)
         args nodes) decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (coreApp2E_spec p hp.capp2 hp.app (n + 2) s₀ mode vis d v h so sn)
     (capp2_ref p hp hwc hcc n hk F hF hn s₀ a₀ dn vis fe MM eb mode d v h so sn args nodes hs hv hh har
@@ -114,7 +114,7 @@ theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N 
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     RefE (AppG p N) (coreAppE p (N + 1) s₀.mem mode cheap vis d e)
-      (whnfCoreAppT (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat (decE e))
+      (whnfCoreAppT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat (decE e))
       a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hS := hs.rel
   simp only [coreAppE]
@@ -174,7 +174,7 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     CoreSpec p (N + 1) "whnf_core_app" [mode, cheap, vis, d, e]
-      (whnfCoreAppT (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat (decE e))
+      (whnfCoreAppT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat (decE e))
       decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (coreAppE_spec p hp.capp hp.capp2 hp.app (N + 1) s₀ mode cheap vis d e)
     (capp_ref p hp hwc hcc N hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he)

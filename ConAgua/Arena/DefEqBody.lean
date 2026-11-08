@@ -106,7 +106,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d x y : Word)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hx : HW x) (hy : HW y) :
     RefE (BodyG p n) (bodyE p n s₀.mem mode vis d x y)
-      (defeqBody (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE x) (decE y)) a₀
+      (defeqBody (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE x) (decE y)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   cases n with
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
@@ -139,7 +139,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   have rest : ∀ (sc : Word) (st : AState) (m₃ : Mem) (M₃ : ModeMaps), CoreS dn m₃ st vis fe M₃ eb →
       RefE (BodyG p (k + 1 + 1)) (bodyE.j1 p (k + 1) mode vis d x y sc m₃)
         (if (sc != 0) = true then pure true else
-          defeqBodyRestT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE x) (decE y))
+          defeqBodyRestT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE x) (decE y))
         st (CorePost decBool dn m₃ vis fe M₃ eb ResH) := by
     intro sc st m₃ M₃ hS₃
     simp only [bodyE.j1]

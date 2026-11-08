@@ -108,7 +108,7 @@ theorem sut_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
     (M : ModeMaps) (eb mode d b wta : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b) (hwta : HW wta) :
     RefE (KnotUpToE p n) (sutE p (n + 1) s₀.mem mode vis d b wta)
-      (suTailT (coreKnot (decMode mode) fe id F) d.toNat (decE b) (decE wta)) a₀
+      (suTailT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE b) (decE wta)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [sutE]
@@ -129,7 +129,7 @@ theorem sut_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
     exact RefE.ret rfl (CorePost.ret hS₂ rfl hw0)
   simp only [h6, decide_false, Bool.false_eq_true, ↓reduceIte]
   have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
-  rw [← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+  rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
   exact RefE.bind_callE (fun _ => rfl) (hK.defeq F _ _ dn vis fe M₂ eb mode d wta _ hF hn hs₂ hwta hh2)
     (fun (hkE : KnotUpToE p n) => (hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode d wta _ hF hn
       hs₂ hwta hh2)
@@ -149,7 +149,7 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d b wta : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b) (hwta : HW wta) :
     RefE (KnotUpToE p n) (suhE p (n + 1) s₀.mem mode vis d b wta)
-      (suHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decE wta)) a₀
+      (suHeadT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE b) (decE wta)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hR := hS.arena.base
@@ -269,7 +269,7 @@ theorem suc_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (KnotUpToE p n) (sucE p (n + 1) s₀.mem mode vis d a b)
-      (structUnitCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (structUnitCert (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [sucE]
@@ -299,7 +299,7 @@ theorem suCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : 
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "struct_unit_cert" [mode, vis, d, a, b]
-      (structUnitCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
+      (structUnitCert (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (sucE_spec p hq.sunit hq.suHead hq.suTail (n + 1) s₀ mode vis d a b)
     (suc_ref p hq hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)

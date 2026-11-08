@@ -132,7 +132,7 @@ theorem ilet_ref (p : Prog) (hp : InferLeafProg p) (hi1 : Inst1OK p) (n : Nat) (
     (M : ModeMaps) (eb mode d ty v b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hv : HW v) (hbb : HW b) :
     RefE (InferG p n) (iletE p (n + 1) s₀.mem mode vis d ty v b)
-      (inferLetT (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE v) (decE b)) a₀
+      (inferLetT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty) (decE v) (decE b)) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [iletE, inferLetT]
@@ -178,7 +178,7 @@ theorem inferLet_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p
     (eb mode d ty v b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (hty : HW ty) (hv : HW v) (hbb : HW b) :
     CoreSpec p (n + 1) "infer_let" [mode, vis, d, ty, v, b]
-      (inferLetT (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE v) (decE b)) decH
+      (inferLetT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty) (decE v) (decE b)) decH
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (iletE_spec p hb.inferLet (n + 1) s₀ mode vis d ty v b)
     (ilet_ref p hp hi1 n hk F s₀ a₀ dn vis fe M eb mode d ty v b hF hn hs hty hv hbb)
@@ -235,7 +235,7 @@ theorem ilam_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
     (eb mode d ty body : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
     RefE (InferG p n) (ilamE p (n + 1) s₀.mem mode vis d ty body)
-      (inferLamIOT (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) d.toNat (decE ty) (decE body))
+      (inferLamIOT (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) d.toNat (decE ty) (decE body))
       a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [ilamE, inferLamIOT]
@@ -269,7 +269,7 @@ theorem inferLamIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg
     (eb mode d ty body : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
     CoreSpec p (n + 1) "infer_lam_io" [mode, vis, d, ty, body]
-      (inferLamIOT (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) d.toNat (decE ty) (decE body))
+      (inferLamIOT (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) d.toNat (decE ty) (decE body))
       decH s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (ilamE_spec p hb.inferLamIO (n + 1) s₀ mode vis d ty body)
     (ilam_ref p hp hb hi1 ha1 n hk F s₀ a₀ dn vis fe M eb mode d ty body hF hn hs hty hbody)
@@ -329,7 +329,7 @@ theorem ifa_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
     (eb mode d ty body : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
     RefE (InferG p n) (ifaE p (n + 1) s₀.mem mode vis d ty body)
-      (inferForallIOT (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty)
+      (inferForallIOT (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE ty)
         (decE body)) a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [ifaE, inferForallIOT]
@@ -408,7 +408,7 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
     (eb mode d ty body : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
     CoreSpec p (n + 1) "infer_forall_io" [mode, vis, d, ty, body]
-      (inferForallIOT (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty)
+      (inferForallIOT (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE ty)
         (decE body)) decH s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (ifaE_spec p hb.inferForallIO (n + 1) s₀ mode vis d ty body)
     (ifa_ref p hp hb hi1 n hk F s₀ a₀ dn vis fe M eb mode d ty body hF hn hs hty hbody)

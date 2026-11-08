@@ -72,7 +72,7 @@ theorem ln_ref (p : Prog) (hc : LazyCallees p) (n : Nat)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (LnG p n) (lnE p (n + 1) s₀.mem mode vis d a b)
-      (natT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (natT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decNat dn s₀.mem vis fe M eb NatW) := by
   simp only [lnE]
   unfold natT
@@ -80,7 +80,7 @@ theorem ln_ref (p : Prog) (hc : LazyCallees p) (n : Nat)
   have dq : ∀ (x y : Word) (m₂ : Mem) (M₂ : ModeMaps) (a₂ : AState), CoreS dn m₂ a₂ vis fe M₂ eb →
       HW x → HW y →
       RefE (LnG p n) (lnE.k_defeq p (callE p n "defeq" [mode, vis, d, x, y] m₂))
-        ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y) >>= fun v =>
+        ((coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE x) (decE y) >>= fun v =>
           pure (some v)) a₂ (CorePost decNat dn m₂ vis fe M₂ eb NatW) := by
     intro x y m₂ M₂ a₂ hS₂ hx hy
     have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
@@ -116,7 +116,7 @@ theorem lazyNat_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "lazy_nat" [mode, vis, d, a, b]
-      (natT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decNat s₀ a₀ dn vis fe
+      (natT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decNat s₀ a₀ dn vis fe
       M eb NatW :=
   RefE.coreSpec (lnE_spec p hp.nat (n + 1) s₀ mode vis d a b)
     (ln_ref p hc n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb)
@@ -249,13 +249,13 @@ theorem it_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (LazyG p n) (itE p (n + 1) s₀.mem mode vis d a b)
-      (iterT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (iterT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decIter dn s₀.mem vis fe M eb Res3) := by
   have hS := hs.rel
   -- the step arm
   have stepArm : ∀ (m₃ : Mem) (M₃ : ModeMaps) (a₃ : AState), CoreS dn m₃ a₃ vis fe M₃ eb →
       RefE (LazyG p n) (itE.j1 p n mode vis d a b m₃)
-        (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a)
+        (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a)
           (decE b) >>= fun st => match st with
           | .cont a' b' => pure (.inr (a', b'))
           | .eq => pure (.inl (.verdict true))
@@ -342,7 +342,7 @@ theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : 
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "lazy_iter" [mode, vis, d, a, b]
-      (iterT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decIter
+      (iterT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decIter
       s₀ a₀ dn vis fe M eb Res3 :=
   RefE.coreSpec (itE_spec p hp.iter hp.mid.off hp.nat hp.step hp.both hp.mid.tupa hp.left hp.right
     hp.same hp.unfold2 hp.mid.dq hp.spine.sp hp.spine.sp2 hp.spine.cmp hp.spine.rev (n + 1) s₀ mode vis
@@ -381,7 +381,7 @@ theorem lazy_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     ∀ j, j ≤ n + 1 → ∀ K, j ≤ K + 1 → ∀ (a b : Word) (m : Mem) (s : AState) (M : ModeMaps)
       (eb : Word), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW a → HW b →
       RefE (LazyG p n) (ldrE.loop1 p j m mode vis d a b)
-        (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat K
+        (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat K
           (decE a) (decE b)) s
         (fun v y a' => CorePost decLR dn m vis fe M eb Res3 v y a') := by
   intro j
@@ -420,7 +420,7 @@ theorem lazyDeltaReduction_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (LazyG p n) (ldrE p (n + 1) s₀.mem mode vis d a b)
-      (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat defeqLoopFuel
+      (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat defeqLoopFuel
         (decE a) (decE b)) a₀
       (fun v y a' => CorePost decLR dn s₀.mem vis fe M eb Res3 v y a') := by
   rw [ldrE.arm1]
@@ -437,7 +437,7 @@ theorem lazyDeltaReduction_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF :
     (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "lazy_delta_reduction" [mode, vis, d, a, b]
-      (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat defeqLoopFuel
+      (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat defeqLoopFuel
         (decE a) (decE b)) decLR s₀ a₀ dn vis fe M eb Res3 :=
   CoreSpec.of_refE (w := id)
     (lazyDeltaReduction_specE p hp.red (n + 1) s₀ mode vis d a b)

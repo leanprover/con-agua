@@ -27,8 +27,8 @@ Callees from elsewhere: the spine walks (`WhnfSpine.lean`), `whnf` (`WhnfDelta.l
 `iota_rec_at` (`WhnfIota.lean`), `env_find` (`Env.lean`), `ls_node` (lane `levels`), `mk_app`,
 `intern_bvar`; stubs (`CoreCallees` below): `inst1` (`instantiate1Fast` at the exact
 `coreWalkFuel` counter, which lane `exprops`' `inst_entry` does not have), `find_proj`
-(`IFEnv.findProj?`: interns the table name), `fire_ok` (`IProjEntry.fireOk`); from
-`WhnfCallees`: `inst_list`, `str_lit_supported`, `str_lit_ctor`.
+(`IFEnv.findProj?`: interns the table name); from
+`WhnfCallees`: `inst_list`, `str_lit_stored`, `str_lit_ctor`.
 
 The `projCertAt` mode test is `mode & 1 == 0` (`verifiedChecks`: the two verified modes).
 -/
@@ -214,7 +214,6 @@ def whnfCoreStepProjL : FunDecl := lfn (mode, cheap, vis, d, e, sn, i, pe) local
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2382-2415 ConRon.Arena.reduceProjCore -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.reduceProjCore` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.reduceProjCore]
 def reduceProjCoreL : FunDecl :=
     lfn (mode, vis, d, sn, i, c) locals (top, e1, f, q, st, r) {
@@ -230,7 +229,6 @@ def reduceProjCoreL : FunDecl :=
 /-- `reduceProjCore` from the scrutinee's head on (`q` the table record): the head must be a
 constant.
 con-ron: ConRon/Arena/Core.lean:2382-2415 ConRon.Arena.reduceProjCore -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.reduceProjCore` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def reduceProjHeadL : FunDecl :=
     lfn (mode, vis, e1, q, i) locals (hh, t, x, k, us, st, r) {
   hh := call get_app_fn(e1);
@@ -243,18 +241,16 @@ con-ron: ConRon/Arena/Core.lean:2382-2415 ConRon.Arena.reduceProjCore -/
 }
 
 /-- `reduceProjCore` at a constant head `k.{us}`: the arguments (pushed on the stack), the
-level count, the entry's fire check, the shape conditions. The twin's `args.length = numParams +
+level count, the shape conditions (the rule fires unguarded). The twin's `args.length = numParams +
 numFields` (`Nat`) is tested as `nf <= an && an - nf == np`, which does not wrap; then `np + i < an`.
 con-ron: ConRon/Arena/Core.lean:2382-2415 ConRon.Arena.reduceProjCore -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.reduceProjCore` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def reduceProjFireL : FunDecl :=
-    lfn (mode, vis, e1, q, i, k, us) locals (ao, an, lo, usl, fok, np, nf, st, r) {
+    lfn (mode, vis, e1, q, i, k, us) locals (ao, an, lo, usl, np, nf, st, r) {
   (ao, an) := call get_app_args(e1);
   (lo, usl) := call ls_node(us);
-  fok := call fire_ok(q, i, us);
   np := EREC⦃q + 5⦄;
   nf := EREC⦃q + 7⦄;
-  if k == EREC⦃q + 6⦄ && i < nf && nf <= an && an - nf == np && usl == EREC⦃q + 4⦄ && fok != 0 {
+  if k == EREC⦃q + 6⦄ && i < nf && nf <= an && an - nf == np && usl == EREC⦃q + 4⦄ {
     (st, r) := call reduce_proj_arg(mode, vis, k, ao, an, np + i);
     return (st, r)
   };
@@ -264,7 +260,6 @@ con-ron: ConRon/Arena/Core.lean:2382-2415 ConRon.Arena.reduceProjCore -/
 /-- `reduceProjCore`'s fire: argument `j` of the slice `(ao, an)` (else `bvar 0`), certified at
 the verified mode.
 con-ron: ConRon/Arena/Core.lean:2382-2415 ConRon.Arena.reduceProjCore -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.reduceProjCore` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def reduceProjArgL : FunDecl :=
     lfn (mode, vis, k, ao, an, j) locals (b0, arg, ok) {
   b0 := call intern_bvar(0);
@@ -288,14 +283,12 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1964-1976 ConRon.Arena.projLitToCtor -/
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.projLitToCtor`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.projLitToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.projLitToCtor]
 def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
   if ⟦h⟧.tag != 8 { return h };
   (t, x) := node LIT⟦h⟧;
   if LIT⟨t, x⟩.kind != 1 { return h };
-  s := call str_lit_supported(vis);
+  s := call str_lit_stored(vis);
   if s == 0 { return h };
   c := call str_lit_ctor(h);
   c := call whnf(mode, vis, d, c);
@@ -324,7 +317,6 @@ structure WhnfCoreProg (p : Prog) : Prop where
   wcp : p.lookup "wc_put" = some (memoPutG wcSch)
   wkf : p.lookup "wk_find" = some (memoFindG wkSch)
   wkp : p.lookup "wk_put" = some (memoPutG wkSch)
-  envix : p.lookup "env_ix" = some envIxL
   envrow : p.lookup "env_row_get" = some envRowGetL
   envfind : p.lookup "env_find" = some envFindL
   bvf : p.lookup "bvar_find" = some bvarFind
@@ -341,7 +333,7 @@ def Inst1OK (p : Prog) : Prop :=
       s₀ a₀ dn vis fe M eb
 
 /-- The projection entry at field `i` of the table record at `q`, if any. -/
-def decEntry (a : Array Word) (f q : Word) (i : Nat) : Option IProjEntry :=
+def decEntry (a : Nat → Option Word) (f q : Word) (i : Nat) : Option IProjEntry :=
   if f = 0 then none else (decTbl a q.toNat).map (·.entry i)
 
 /-- `find_proj(vis, T, i)` refines `fe.findProj? T i`: `(0, _)` none, `(1, q)` the table record. -/
@@ -349,23 +341,8 @@ def FindProjOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb T i : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW T →
     CoreSpec p n "find_proj" [vis, T, i] (pure (fe.findProj? (decI T) i.toNat))
-      (fun r => decEntry (s₀.mem.arr64 EREC) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
+      (fun r => decEntry (erecP s₀.mem) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
       M eb
-
-/-- `fire_ok(q, i, us)` refines `IProjEntry.fireOk` at the entry of table record `q`. **Statement
-correction** (helper `whnf4-leaves`): at a field `i` below the table's `numFields` (the twin's
-`findProj?` answers no other entry) and universe arguments that are a stored `const` node's list
-(the callers' `us` is; the twin reads them back when the structure is a proposition, and a
-stored `const` node's list reads back, `StoreDen.constLs`), of a table the environment holds
-(`StoreDen.proj`; `ProjFound` gives it for the table `find_proj` answers). -/
-def FireOkOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M eb →
-    HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl →
-    (∃ c, fe.findTable? c = some tbl) → i.toNat < tbl.numFields →
-    (∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) →
-    CoreSpec p n "fire_ok" [q, i, us] ((tbl.entry i.toNat).fireOk (decI us)) decBool s₀ a₀ dn vis
-      fe M eb
 
 /-- `iota_rec_at(mode, vis, d, hd, so, sn)` refines `iotaRecAt` (`WhnfIota.lean`). -/
 def IotaRecAtOK (p : Prog) (n : Nat) : Prop :=
@@ -374,14 +351,14 @@ def IotaRecAtOK (p : Prog) (n : Nat) : Prop :=
     SlotPre s₀ a₀ dn vis fe M eb mode → HW hd → SpineR s₀.mem so sn xs →
     so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p n "iota_rec_at" [mode, vis, d, hd, so, sn]
-      (iotaRecAt (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size)
+      (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs xs.size)
       decOptR s₀ a₀ dn vis fe M eb ResW
 
-/-- **`find_proj` and `fire_ok` leave the record pool alone** (`fire_ok` interns into the level
-store); `reduce_proj_core` reads the table's words after them. -/
+/-- **`find_proj` leaves the record pool alone**; `reduce_proj_core` reads the table's words after
+it. -/
 def ErecKept (p : Prog) : Prop :=
   ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
-    (f = "find_proj" ∨ f = "fire_ok") → callW p n f vs m = some (r, m') →
+    f = "find_proj" → callW p n f vs m = some (r, m') →
     m'.arr64 EREC = m.arr64 EREC
 
 /-- **`find_proj` answers a table record that decodes** (added for `reduce_proj_core`):
@@ -394,16 +371,15 @@ def ProjFound (p : Prog) : Prop :=
   ∀ (n : Nat) (m : Mem) (a : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb T i : Word) (r : List Word) (m' : Mem), CoreS dn m a vis fe M eb →
     callW p n "find_proj" [vis, T, i] m = some (r, m') → r.headD 0 ≠ 0 →
-    ∃ tbl : IProjTable, decTbl (m.arr64 EREC) (r.tail.headD 0).toNat = some tbl ∧
+    ∃ tbl : IProjTable, decTbl (erecP m) (r.tail.headD 0).toNat = some tbl ∧
       ∃ c, fe.findTable? c = some tbl
 
-/-- **The projection-table callees** (`find_proj`, `fire_ok`) and their record-pool facts: what
+/-- **The projection-table callee** (`find_proj`) and their record-pool facts: what
 `reduce_proj_core` and the ι side's `and_rescue_slots`/`major_to_ctor` assume of them. A part of
 `CoreCallees` on its own, so that `major_to_ctor` (which `iota_rec_at` calls) does not take
 `CoreCallees.iota` (helper `whnf4-knot`). -/
 structure ProjCallees (p : Prog) : Prop where
   findProj : FindProjOK p
-  fireOk : FireOkOK p
   erec : ErecKept p
   projFound : ProjFound p
 

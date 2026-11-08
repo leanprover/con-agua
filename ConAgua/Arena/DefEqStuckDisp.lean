@@ -172,12 +172,12 @@ theorem dr_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (hwa : ViewW ga a1 a2 va) (hwb : ViewW gb b1 b2 vb)
     (h1 : ¬ (ga = 8 ∧ gb = 4)) (h2 : ¬ (ga = 4 ∧ gb = 8)) (h3 : ¬ (ga = 4 ∧ gb = 4)) :
     RefE (StuckG p n) (drE p (n + 1) s₀.mem mode vis d a b ga a1 a2 gb b1 b2)
-      (defeqStuck (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (defeqStuck (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hirr : ∀ (st : AState) (m : Mem) (M' : ModeMaps), CoreS dn m st vis fe M' eb →
       RefE (StuckG p n) (drE.k_stuck_irrel p (siE p n m mode vis d a b))
-        (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) st
+        (stuckIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) st
         (CorePost decBool dn m vis fe M' eb ResH) := fun st m M' hS' =>
     si_tail hq hi hc (fun _ => rfl) (fun _ => rfl) n hk F hF hn m st dn vis fe M' eb mode d a b hS'
       hs.mode4 hs.eb_mode ha hb
@@ -231,7 +231,7 @@ theorem dr_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
   simp only [drE.j2]
   have hlam : ∀ (t bd : EIdx) (w1 w2 x : Word) (T : AM Bool),
       HW w1 → decE w1 = t → HW w2 → decE w2 = bd → HW x →
-      T.run a₀ = (lamArmT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+      T.run a₀ = (lamArmT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
         (decE a) (decE b) t bd (decE x)).run a₀ →
       RefE (StuckG p n) (drE.k_eta_cert p n mode vis d a b (ecE p n s₀.mem mode vis d w1 w2 x)) T a₀
         (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
@@ -306,7 +306,7 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (StuckG p n) (dsE p (n + 1) s₀.mem mode vis d a b)
-      (defeqStuck (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (defeqStuck (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [dsE]
@@ -385,7 +385,7 @@ theorem defeqStuck_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc 
     (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "defeq_stuck" [mode, vis, d, a, b]
-      (defeqStuck (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+      (defeqStuck (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b))
       decBool s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (dsE_spec p hq.defeqStuck hq.stuckStr hq.stuckApp hq.stuckAppCong hq.stuckRest
     hq.stuckIrrel hq.setCert hq.setWith hq.setWtb hq.setGo hq.setTail hq.sunit hq.suHead hq.suTail

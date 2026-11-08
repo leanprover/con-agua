@@ -118,17 +118,17 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hcw : HW c) (hus : HW us) (hsa : SpineR s₀.mem so sn xs)
     (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (MajorG p n) (irCE p (n + 1) s₀.mem mode vis d c us so sn)
-      (iotaRecCT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decI us) xs
+      (iotaRecCT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI c) (decI us) xs
         xs.size) a₀ (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   simp only [irCE]
   have hspn := hS.spn
   have herec := hS.erec
   have hsz : xs.size = sn.toNat := hsa.size
   have hnone : ∀ (m : Mem), m = s₀.mem →
-      (iotaRecCT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decI us) xs
+      (iotaRecCT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI c) (decI us) xs
         xs.size).run a₀ = .ok (none, a₀) →
       RefE (MajorG p n) (.ok ([0, 0], m) : Except Err (List Word × Mem))
-        (iotaRecCT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decI us)
+        (iotaRecCT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI c) (decI us)
           xs xs.size) a₀ (CorePost decOptR dn s₀.mem vis fe MM eb ResW) :=
     fun m hm hrunT => by
       subst hm
@@ -214,7 +214,7 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     refine ⟨htk, ?_, by unfold decOpt; rw [ite_eq_right p0]; rfl⟩
     rw [hlen]; have := Classical.not_not.mp u1; simp only [List.tail_cons, List.headD_cons] at this
     rw [this]; rfl
-  have hT := (cT_eq_major (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c)
+  have hT := (cT_eq_major (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI c)
     (decI us) xs xs.size a₀ cv _ _ rules _ _ hfind hn hvl hrunP' hcnd).trans
     (by rw [takeEidx_size])
   cases n with
@@ -238,7 +238,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW c → HW us →
     SpineR s₀.mem so sn xs → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p (n + 1) "iota_rec_c" [mode, vis, d, c, us, so, sn]
-      (iotaRecCT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decI us) xs
+      (iotaRecCT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI c) (decI us) xs
         xs.size) decOptR s₀ a₀ dn vis fe MM eb ResW :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us so sn xs hS hm4 hebm hcw hus hsa hsat =>
     RefE.coreSpec (irCE_spec p hp.recC hp.major (n + 1) s₀ mode vis d c us so sn)
@@ -276,7 +276,7 @@ theorem at_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hpre : SlotPre s₀ a₀ dn vis fe M eb mode) (hhd : HW hd) (hsa : SpineR s₀.mem so sn xs)
     (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (MajorG p n) (irAtE p (n + 1) s₀.mem mode vis d hd so sn)
-      (iotaRecAt (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size) a₀
+      (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs xs.size) a₀
       (CorePost decOptR dn s₀.mem vis fe M eb ResW) := by
   have hS := hpre.rel
   simp only [irAtE]
@@ -286,7 +286,7 @@ theorem at_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   simp only [irAtE.k_iota_rec_head]
   by_cases v0 : rv.headD 0 = 0
   · rw [ite_eq_left v0]
-    exact RefE.ret (at_run_tag (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs
+    exact RefE.ret (at_run_tag (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs
       xs.size a₀ (hnot v0)) (CorePost.ret hS rfl
         ⟨by show HW (0 : Word); unfold HW; decide, by show HW (0 : Word); unfold HW; decide⟩)
   rw [ite_eq_right v0]
@@ -297,7 +297,7 @@ theorem at_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   | succ N =>
   exact RefE.tail_eq (k := irAtE.k_iota_rec_c p) (G' := MajorG p N)
     (fun _ => rfl) (fun _ => rfl) (fun hG => ⟨hG.knot.mono (Nat.le_succ N), hG.nv, hG.pm, hG.fire⟩)
-    (at_eq_c (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ _ _
+    (at_eq_c (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ _ _
       htag hvc) (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
     (c_ref p hp hc hw hsup hmtc hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis
       fe M eb mode d _ _ so sn xs hS hpre.mode4 hpre.eb_mode hcw husw hsa hsat)

@@ -134,7 +134,7 @@ theorem m2cAnd2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (hS : CoreS dn m a vis fe M eb) (hsp : SpineR m to tn targs.toArray) (htop : to + tn = spTop m)
     (hvus : ∃ x c, a.store.view x = some (.const c (decI ust))) :
     RefE (M2CCtxE p N) (m2cAnd2E p (N + 1) m mode vis d ctor T tmaj to tn ust major)
-      (m2cAnd2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+      (m2cAnd2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor)
         (decI T) (decE tmaj) targs (decI ust) (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cAnd2E.arm1]
   cases N with
@@ -212,7 +212,7 @@ theorem m2cAnd_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     (hT : HW T) (hmaj : HW major) (hctor : HW ctor) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) :
     RefE (M2CCtxE p N) (m2cAndE p (N + 1) m mode vis d T major ctor lpl cnP)
-      (m2cAndT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+      (m2cAndT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor)
         lpl.toNat cnP.toNat (decI T) (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cAndE.arm1]
   cases N with
@@ -267,11 +267,11 @@ theorem m2cAnd_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hA4 : GrowPost decH dn m vis fe M eb ResH ([major], m4) (decE major) (AM.st (andRescueSlots fe
       (decI ctor) cnP.toNat (decI (L.tail.tail.tail.headD 0))) a2) :=
     ⟨⟨M4, hS4, hK2.trans hK4, hSt2.toGrew.trans (hg3.trans hSt4.toGrew)⟩, rfl, hmaj⟩
-  have hstep : (m2cAndT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+  have hstep : (m2cAndT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor)
       lpl.toNat cnP.toNat (decI T) (decE major)).run a =
       (if (decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = cnP.toNat ∧
           lpl.toNat = (L.tail.tail.tail.tail.headD 0).toNat ∧ decBool r4 = true then
-        m2cAnd2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor) (decI T)
+        m2cAnd2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor) (decI T)
           (decE (L.tail.headD 0)) xs (decI (L.tail.tail.tail.headD 0)) (decE major)
       else pure (decE major)).run
         (AM.st (andRescueSlots fe (decI ctor) cnP.toNat (decI (L.tail.tail.tail.headD 0))) a2) := by
@@ -281,7 +281,7 @@ theorem m2cAnd_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hmaj' : ∀ (hn : ¬ ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = cnP.toNat ∧
       lpl.toNat = (L.tail.tail.tail.tail.headD 0).toNat ∧ decBool r4 = true)),
       RefE (M2CCtxE p (N' + 1)) (.ok ([major], m4))
-        (m2cAndT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+        (m2cAndT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor)
           lpl.toNat cnP.toNat (decI T) (decE major)) a (GrowPost decH dn m vis fe M eb ResH) :=
     fun hn => RefE.ret (by rw [hstep, ite_eq_right hn]; rfl) hA4
   by_cases g2 : L.tail.tail.headD 0 ≠ T

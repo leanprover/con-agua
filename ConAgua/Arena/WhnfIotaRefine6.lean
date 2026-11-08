@@ -269,7 +269,7 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb : Word) (indP us : Word)
     (hus : HW us) (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
     (cvT : IConstantVal) (caps : IIndCaps)
-    (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps))
+    (hci : decCI (erecP m) dn indP.toNat = some (.indInfo cvT caps))
     (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) (w : Word) (mF : Mem)
     (h : iccW p n m indP us = some (w, mF)) :
     ∃ (b : Bool) (a' : AState), (inpTail cvT caps (decI us)).run a = .ok (b, a') ∧
@@ -329,7 +329,7 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
   rw [ite_eq_right hne] at h
   have heq : cvT.levelParams.length = l1.toNat := by
     rw [hlen]; have := Classical.not_not.mp hne; rw [hlp] at this; simp at this; rw [this]
-  have hlps : hslice? (m2.arr64 EREC) po.toNat pc.toNat = some cvT.levelParams := hsl
+  have hlps : hslice? (erecP m2) po.toNat pc.toNat = some cvT.levelParams := hsl
   rcases c3 : callW p (n' + 1) "e_rec_get" [indP + 2] m2 with _ | ⟨po', m3⟩ <;>
     simp only [c3, reduceCtorEq] at h
   obtain ⟨t3, ht3, -, hmem3, hget3⟩ := triple_of_callW
@@ -443,7 +443,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb ctorP us : Word) (cvj : IConstantVal) (cnP cnF : Nat),
     CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    decCI (s₀.mem.arr64 EREC) dn ctorP.toNat = some (.ctorInfo cvj cnP cnF) →
+    decCI (erecP s₀.mem) dn ctorP.toNat = some (.ctorInfo cvj cnP cnF) →
     CoreSpec p n "iota_ctor_never_prop" [vis, ctorP, us] (iotaCtorNeverProp fe cvj (decI us)) decBool
       s₀ a₀ dn vis fe MM eb := by
   intro n s₀ a₀ dn vis fe MM eb ctorP us cvj cnP cnF hS hus hci
@@ -604,7 +604,7 @@ theorem iotaCase3_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb rlk ctorP us : Word) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat),
     CoreS dn s₀.mem a₀ vis fe MM eb → HW us → rl.k = (rlk != 0) →
-    decCI (s₀.mem.arr64 EREC) dn ctorP.toNat = some (.ctorInfo cvj cnP cnF) →
+    decCI (erecP s₀.mem) dn ctorP.toNat = some (.ctorInfo cvj cnP cnF) →
     CoreSpec p n "iota_case3" [rlk, vis, ctorP, us] (iotaCase3 fe rl cvj (decI us)) decBool s₀ a₀ dn
       vis fe MM eb := by
   intro n s₀ a₀ dn vis fe MM eb rlk ctorP us rl cvj cnP cnF hS hus hrl hci

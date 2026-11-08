@@ -92,7 +92,7 @@ def fpRes (o : Option IProjTable) (i : Nat) : Option IProjEntry :=
 theorem findProj_of_tbl {fe : IFEnv} {m : Mem} (T : NIdx) (i : Nat) (r : Word)
     (hr : fe.findTable? T = tblOut m r) (hs : r ≠ 0 → (tblOut m r).isSome) :
     (r = 0 → fe.findProj? T i = none) ∧
-    (r ≠ 0 → ∃ tbl w, decTbl (m.arr64 EREC) (r - 1).toNat = some tbl ∧ fe.findTable? T = some tbl ∧
+    (r ≠ 0 → ∃ tbl w, decTbl (erecP m) (r - 1).toNat = some tbl ∧ fe.findTable? T = some tbl ∧
       (m.arr64 EREC)[(r - 1).toNat + 7]? = some w ∧ tbl.numFields = w.toNat ∧
       fe.findProj? T i = if i < w.toNat then some (tbl.entry i) else none) := by
   refine ⟨fun h0 => by simp [IFEnv.findProj?, hr, h0, tblOut], fun h0 => ?_⟩
@@ -135,8 +135,8 @@ theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
     (hsz : (s₀.mem.arr64 EREC).size < 2 ^ 63) {r : List Word} {s' : St}
     (hW : findProjK T i (callW p n "find_table" [vis, T] s₀.mem) = some (r.headD 0, r.tail.headD 0, s'.mem)) :
     s'.mem = s₀.mem ∧ r.headD 0 ≤ 1 ∧
-      fe.findProj? (decI T) i.toNat = decEntry (s₀.mem.arr64 EREC) (r.headD 0) (r.tail.headD 0) i.toNat ∧
-      (r.headD 0 ≠ 0 → ∃ tbl, decTbl (s₀.mem.arr64 EREC) (r.tail.headD 0).toNat = some tbl ∧
+      fe.findProj? (decI T) i.toNat = decEntry (erecP s₀.mem) (r.headD 0) (r.tail.headD 0) i.toNat ∧
+      (r.headD 0 ≠ 0 → ∃ tbl, decTbl (erecP s₀.mem) (r.tail.headD 0).toNat = some tbl ∧
         fe.findTable? (decI T) = some tbl) := by
   unfold findProjK at hW
   by_cases hT : 4294967295 < T

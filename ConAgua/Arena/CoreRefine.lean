@@ -4,6 +4,7 @@ import ConAgua.Arena.ScratchRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.DerRel
 public import ConAgua.Arena.Tiers
+public import ConRon.Arena.Core
 
 @[expose] public section
 

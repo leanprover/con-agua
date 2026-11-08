@@ -22,10 +22,11 @@ Everything the L code of `whnfCore`/`whnf` and their arms (`WhnfSpine.lean`, `Wh
 
 **Arguments.** The twin's bodies take `mode : CheckMode`, the knot record `r : CoreFnsA`, the
 environment view `fe : IFEnv` and `depth : Nat`. In L: a mode word (`decMode`: `0` verified, `1`
-trusted, `2` verified-eager, `3` trusted-eager; bit 0 is "trusted", bit 1 "eager"), the view word
+trusted, `2` verified-eager, `3` trusted-eager; bit 0 is "trusted" (`decMode`), bit 1 the
+twin's `eager` beside the mode (`decEager`)), the view word
 `vis` (`EnvR m vis fe`), the depth word; the record is the program itself (the knot's slots
 are L functions, `whnf_core`, `whnf`, `infer`, `infer_io`, `defeq`), tied at the twin's knot
-`coreKnot mode fe id F` for every `F` at or above the L fuel (the `GoOK` shape of `WalkRefine`).
+`coreKnot mode eager fe id F` for every `F` at or above the L fuel (the `GoOK` shape of `WalkRefine`).
 
 **The spine stack.** The twin's `Array EIdx`/`List EIdx` values (spines, accumulators, rule
 arguments) live in the word array `SPN` (144) as slices `(off, cnt)`; `CTL[136]` is the top.
@@ -55,7 +56,7 @@ namespace L.Arena
 def decMode (w : Word) : ConLeche.CheckMode :=
   if w &&& 1 = 0 then .verified else .trusted
 
-/-- The eager bit of the mode word. -/
+/-- The mode word's eager bit (the twin's `eager : Bool` beside `mode`, con-leche #452). -/
 def decEager (w : Word) : Bool := (w >>> 1) &&& 1 != 0
 
 /-- A handle word (an index `< 2^32` of any kind). -/
@@ -527,7 +528,24 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 145 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
     (hmem : CoreMemos m') :
     CoreS dn m' a vis fe M eb := by
-  sorry
+  have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
+    have := hA b hb; omega
+  have aC : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 137 → AvoidC lo hi C := fun lo hi h1 h2 x hx => by
+    have := hC x hx; omega
+  exact ⟨⟨ArenaR.frame_ext A C (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) m m'
+        hf a hS.arena.base,
+      DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega)
+        a hS.arena.der⟩,
+    hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
+    hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide))
+      (by decide)),
+    hS.env.frame (fun _ _ => sorry) (fun _ _ => sorry) hf,
+    hS.readL, hS.readLs, hS.nwf, hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
+    hmem, hf.size BSTK ▸ hS.bstk,
+    hS.den.frameE (hf.arr EREC (fun h => absurd (hA _ h) (by decide))
+      (by decide)),
+    hS.mode.frame hf (fun h => by have := hC _ h; simp at this)
+      (fun h => by have := hC _ h; simp at this)⟩
 
 /-- `CoreS.frameSM` away from the walk-local memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
@@ -812,7 +830,7 @@ parameters a slice of the environment's record pool (`EREC`). -/
 def InstLPOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb po pl us e : Word) (lps : List NIdx), CoreS dn s₀.mem a₀ vis fe M eb →
-    HW e → HW us → hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps →
+    HW e → HW us → hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps →
     CoreSpec p n "inst_lp" [po, pl, us, e]
       (instLPFast coreWalkFuel lps (decI us) (decE e)) decH s₀ a₀ dn vis fe M eb
 
@@ -824,11 +842,11 @@ def StrLitCtorOK (p : Prog) : Prop :=
     a₀.store.view (decE h) = some (.lit (.strVal s)) →
     CoreSpec p n "str_lit_ctor" [h] (strLitToConstructor s) decH s₀ a₀ dn vis fe M eb
 
-/-- `str_lit_supported(vis)` refines `strLitSupported fe`. -/
-def StrLitSupportedOK (p : Prog) : Prop :=
+/-- `str_lit_stored(vis)` refines `strLitStored fe`. -/
+def StrLitStoredOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
-    CoreSpec p n "str_lit_supported" [vis] (strLitSupported fe) decBool s₀ a₀ dn vis fe M eb
+    CoreSpec p n "str_lit_stored" [vis] (strLitStored fe) decBool s₀ a₀ dn vis fe M eb
 
 /-- **The stub callees.** (It held the knot's `infer`/`infer_io`/`defeq` slot steps too; no proof
 used them, and lane `defeq`'s knot proves those steps from facts that themselves come from proofs
@@ -837,13 +855,13 @@ structure WhnfCallees (p : Prog) : Prop where
   instList : InstListOK p
   instLP : InstLPOK p
   strLitCtor : StrLitCtorOK p
-  strLitSupported : StrLitSupportedOK p
+  strLitStored : StrLitStoredOK p
 
-/-- **`strLitSupported` keeps every stored node's view** (it reads the pins and the environment
-and interns the nodes it compares against, which only adds nodes). `StrLitSupportedOK` says
+/-- **`strLitStored` keeps every stored node's view** (it reads the pins and the environment,
+which changes no node). `StrLitStoredOK` says
 nothing about the store; `proj_lit_to_ctor` carries a `view` fact across the call. -/
 def SupKeep (fe : IFEnv) : Prop :=
   ∀ (a : AState) (h : EIdx) (w : ENodeView), a.store.view h = some w →
-    (AM.st (strLitSupported fe) a).store.view h = some w
+    (AM.st (strLitStored fe) a).store.view h = some w
 
 end L.Arena

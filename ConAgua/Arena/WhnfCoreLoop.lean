@@ -84,7 +84,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (he : HW e) :
     RefE (AppG p n) (whnfCoreStepE p (n + 1) s₀.mem mode cheap vis d e)
-      (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
+      (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hS := hs.rel
   have hR := hS.arena.base
@@ -94,7 +94,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
   -- a stuck arm answers `(0, e)` after its view check
   have done : ∀ v : ENodeView, a₀.store.view (decE e) = some v → isDoneV v = true →
       RefE (AppG p n) (.ok ([0, e], s₀.mem))
-        (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
+        (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
           (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := fun v hv hd =>
     RefE.ret (step_run_done v hv hd) (CorePost.ret hS (by simp [decStep])
       ⟨by show HW (0 : Word); unfold HW; decide, he⟩)
@@ -187,7 +187,7 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (he : HW e) :
     CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, e]
-      (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
+      (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (whnfCoreStepE_spec p hp (n + 1) s₀ mode cheap vis d e)
     (step_ref p hp hwc hcc hsup n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he)
@@ -209,7 +209,7 @@ def CoreStepE (p : Prog) (n : Nat) : Prop :=
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode cheap d e : Word), SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
     CoreSpecE p (j + 1) "whnf_core_step" [mode, cheap, vis, d, e]
-      (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
+      (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE e)) s₀ a₀
 
 section loopRef
@@ -225,7 +225,7 @@ theorem coreLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
     ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (m : Mem) (a : AState) (MM : ModeMaps) (eb e : Word),
       CoreS dn m a vis fe MM eb → eb = (mode >>> 1) &&& 1 → HW e →
       RefE (CoreStepE p n) (whnfCoreLoopE.loop1 p k m mode cheap vis d e)
-        (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0)
+        (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0)
           d.toNat K (decE e)) a
         (fun v y a' => CorePost decH dn m vis fe MM eb ResH ([v.1], v.2) y a') := by
   intro k
@@ -263,7 +263,7 @@ theorem whnfCoreLoop_ref (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F
     (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     RefE (CoreStepE p n) (whnfCoreLoopE p (n + 1) s₀.mem mode cheap vis d e)
-      (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat K
+      (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat K
         (decE e)) a₀
       (fun v y a' => CorePost decH dn s₀.mem vis fe MM eb ResH ([v.1], v.2) y a') := by
   rw [whnfCoreLoopE.arm1]
@@ -277,7 +277,7 @@ theorem whnfCoreLoop_refines' (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n 
     (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
-      (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat K
+      (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat K
         (decE e)) decH s₀ a₀ dn vis fe MM eb :=
   CoreSpec.of_refE (w := fun v => ([v.1], v.2))
     (whnfCoreLoop_specE p hp.loop (n + 1) s₀ mode cheap vis d e)
@@ -291,7 +291,7 @@ theorem whnfCoreBody_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
-      (whnfCoreBody (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
+      (whnfCoreBody (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE e)) decH s₀ a₀ dn vis fe MM eb :=
   whnfCoreLoop_refines' p hp hwc hcc hsup n hk F whnfCoreLoopFuel hF (by simp only [whnfCoreLoopFuel]; omega) hn s₀
     a₀ dn vis fe MM eb mode cheap d e hs he
@@ -331,7 +331,7 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     (eb mode cheap d e : Word) (hF : n + 1 ≤ F) (hn : n + 1 ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     RefE (CoreStepE p n) (whnfCoreE p (n + 1) s₀.mem mode cheap vis d e)
-      ((coreKnot (decMode mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   have hS := hs.rel
@@ -347,7 +347,7 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   -- the body's error claim at fuel `n' + 1`
   have body : ∀ (n' : Nat), n = n' + 1 → ∀ (c : Word) (er : Err),
       callE p (n' + 1) "whnf_core_loop" [mode, c, vis, d, e] s₀.mem = .error er → CoreStepE p n →
-      ErrClaim (whnfCoreBody (decMode mode) (coreKnot (decMode mode) fe id F') fe (c != 0) d.toNat
+      ErrClaim (whnfCoreBody (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F') fe (c != 0) d.toNat
         (decE e)) a₀ er := by
     intro n' hn' c er h2 hG
     exact CoreSpecE.of_callE (RefE.coreSpecE (whnfCoreLoop_specE p hp.loop (n' + 1) s₀ mode c vis d e)

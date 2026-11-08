@@ -5,7 +5,7 @@ public import ConAgua.Arena.IndIface
 @[expose] public section
 
 /-!
-# Former stubs: the inductive stage's telescopes, zero-ness, rule bits (lane `stubs`)
+# Former stubs: the inductive stage's telescopes, zero-ness (lane `stubs`)
 
 L code for callees of the inductive stage that were `abortStub`s in `checkerProg` (their
 `RelAM` contracts are lane `induct`'s, `IndStubs.lean`, still `sorry`):
@@ -14,9 +14,6 @@ L code for callees of the inductive stage that were `abortStub`s in `checkerProg
   `never`, `1, off, len` for `ifAllZero` with the names an `EREC` slice): `lv_zero` pushes the
   parameters on the level heap `LH`, they are copied to fresh `EREC` words, and the heap top is
   restored.
-* `rec_rule_bits(vis, c)`: `recRuleBits`' two bits `(k, eta)` of a rule with constructor `c`
-  (`recRuleKOf`, `recRuleEtaOf`): the constructor's record, its type's Π-result's head constant,
-  that inductive's record and capabilities (`EnvRec.lean`'s `decCI` layout).
 * `open_pis_at_fvars_f(n, e, i)`: `openPisAtFvarsF`: `(1, off, len, body)` with the `n` fresh
   free variables an `IW` slice, or `(0, 0, 0, 0)`. The one-pass walk (`opf_go`) keeps the free
   variables made so far on the spine stack `SPN` above `CTL[136]` (the twin's `acc`, oldest
@@ -43,8 +40,7 @@ open L.Arena L.Ind
 /-- `lv_zero_caps(l)`: `(0, 0, 0)` for `never`, `(1, off, len)` for `ifAllZero` with the
 parameter names at `EREC[off ‥ off + len)`. -/
 -- con-leche: ConLeche/Kernel/Level.lean:187-197 ConLeche.Level.zeronessOf
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:46-80 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Core.lean:362-370 ConRon.Arena.formerZ
 @[no_expose] def lvZeroCapsL : FunDecl := lfn (l) locals (t0, z, n, q, u) {
   t0 := CTL.u64[192];
   z := call lv_zero(l);
@@ -54,63 +50,6 @@ parameter names at `EREC[off ‥ off + len)`. -/
   u := call lh_er_copy(q, t0, n);
   CTL.u64[192] := t0;
   return (1, q, n)
-}
-
-/-! ## `rec_rule_bits(vis, c)` -/
-
-/-- `ctor_family(vis, c)`: `(cq, tq, ok)`, the constructor `c`'s record and the record of the
-inductive its type's Π-result's head constant names, `ok = 1` when both exist (`c` a constructor,
-the head a `const` naming an inductive in the environment), else `ok = 0` (and `tq = 0`). The
-common prefix of `recRuleKOf` and `recRuleEtaOf`. The flag is a word of its own: a record may
-sit at offset `0` of `EREC`, so an offset is no sentinel. -/
--- con-ron: ConRon/Arena/Core.lean:1857-1872 ConRon.Arena.recRuleKOf
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleKOf` is gone upstream; re-check the L code and its proofs, then delete this line
--- con-ron: ConRon/Arena/Core.lean:1874-1892 ConRon.Arena.recRuleEtaOf
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleEtaOf` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def ctorFamily : FunDecl := lfn (vis, c) locals (f, q, pr, hh, t, f2, q2) {
-  (f, q) := call env_find(c, vis);
-  if f == 0 { return (0, 0, 0) };
-  if EREC⦃q⦄ != 4 { return (0, 0, 0) };
-  pr := call pi_result_f(⟪CWF⟫, EREC⦃q + 4⦄);
-  hh := call get_app_fn_f(⟪CWF⟫, pr);
-  if ⟦hh⟧.tag != 3 { return (q, 0, 0) };
-  t := call const_name_of(hh);
-  (f2, q2) := call env_find(t, vis);
-  if f2 == 0 { return (q, 0, 0) };
-  if EREC⦃q2⦄ != 3 { return (q, 0, 0) };
-  return (q, q2, 1)
-}
-
-/-- con-ron: ConRon/Arena/Core.lean:1857-1872 ConRon.Arena.recRuleKOf -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleKOf` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.recRuleKOf]
-def recRuleKOfL : FunDecl := lfn (vis, c) locals (q, tq, ok) {
-  (q, tq, ok) := call ctor_family(vis, c);
-  if ok == 0 { return 0 };
-  if EREC⦃tq + 11⦄ != 0 && EREC⦃q + 6⦄ == 0 { return 1 };
-  return 0
-}
-
-/-- con-ron: ConRon/Arena/Core.lean:1874-1892 ConRon.Arena.recRuleEtaOf -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleEtaOf` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.recRuleEtaOf]
-def recRuleEtaOfL : FunDecl := lfn (vis, c) locals (q, tq, ok, r) {
-  (q, tq, ok) := call ctor_family(vis, c);
-  if ok == 0 { return 0 };
-  if EREC⦃tq + 5⦄ == 0 { return 0 };
-  if EREC⦃tq + 6⦄ != c { return 0 };
-  r := call er_sl_eq(EREC⦃q + 2⦄, EREC⦃q + 3⦄, EREC⦃tq + 2⦄, EREC⦃tq + 3⦄);
-  return r
-}
-
-/-- `rec_rule_bits(vis, c)`: the rule's `(k, eta)`. -/
--- con-ron: ConRon/Arena/Core.lean:1894-1900 ConRon.Arena.recRuleBits
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recRuleBits` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.recRuleBits]
-def recRuleBitsL : FunDecl := lfn (vis, c) locals (k, eta) {
-  k := call rec_rule_k_of(vis, c);
-  eta := call rec_rule_eta_of(vis, c);
-  return (k, eta)
 }
 
 /-! ## `open_pis_at_fvars_f(n, e, i)` -/

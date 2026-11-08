@@ -97,7 +97,7 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (eb mode d a1 b1 : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a1) (hb : HW b1) (hd : d.toNat < 2 ^ 63) :
     RefE (TailG p n) (dtE p (n + 1) s₀.mem mode vis d a1 b1)
-      (defeqTailT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a1) (decE b1)) a₀
+      (defeqTailT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a1) (decE b1)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   unfold defeqTailT
@@ -107,7 +107,7 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
   -- `defeq_stuck` from any state related at `m`
   have hstk : ∀ (st : AState) (m : Mem) (M' : ModeMaps), CoreS dn m st vis fe M' eb →
       RefE (TailG p (k + 1)) (dtE.k_defeq_stuck p (dsE p (k + 1) m mode vis d a1 b1))
-        (defeqStuck (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a1) (decE b1)) st
+        (defeqStuck (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a1) (decE b1)) st
         (CorePost decBool dn m vis fe M' eb ResH) := fun st m M' hS' =>
     RefE.tail_relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.stuck.mono (by omega))
       (ds_ref p hq hi hc k (hk.mono (by omega)) F ⟨m, Locals.init []⟩ st dn vis fe M' eb mode d a1 b1
@@ -165,7 +165,7 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
   rw [ite_eq_right hm]
   simp only [hm, decide_false, Bool.false_eq_true, ↓reduceIte]
   have hs₅ : SlotPre ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb mode := ⟨hS₅, hs.mode4, hs.eb_mode⟩
-  rw [← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+  rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
   exact RefE.bind_callE (fun _ => rfl)
     ((hk (k + 1) (Nat.le_refl _)).defeq F _ _ dn vis fe M₅ eb mode d _ _ hF hn hs₅ h₄.resOk h₅.resOk)
     (fun (hG : TailG p (k + 1)) => (hG.knot (k + 1) (Nat.le_refl _)).defeq F _ _ dn vis fe M₅ eb mode d _
@@ -181,7 +181,7 @@ theorem defeqTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
     (eb mode d a1 b1 : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a1) (hb : HW b1) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "defeq_tail" [mode, vis, d, a1, b1]
-      (defeqTailT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a1) (decE b1))
+      (defeqTailT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a1) (decE b1))
       decBool s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (dtE_spec p hq.defeqTail hq.projPair hq.ldpr hq.defeqStuck hq.stuckStr hq.stuckApp
     hq.stuckAppCong hq.stuckRest hq.stuckIrrel hq.setCert hq.setWith hq.setWtb hq.setGo hq.setTail

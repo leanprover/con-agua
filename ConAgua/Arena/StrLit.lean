@@ -6,7 +6,7 @@ import ConAgua.Census.Attr
 @[expose] public section
 
 /-!
-# String literals in L: `str_lit_supported`, `str_lit_ctor` (lane `defeq2`, helper `defeq2-str`)
+# String literals in L: `str_lit_stored`, `lit_shape_ok`, `str_lit_ctor` (lane `defeq2`, helper `defeq2-str`)
 
 Twin: `vendor/con-ron/ConRon/Arena/Core.lean` ("String literals"). L names and their twins:
 
@@ -17,7 +17,8 @@ Twin: `vendor/con-ron/ConRon/Arena/Core.lean` ("String literals"). L names and t
 | `str_param_sort(pn)` | none | `internLNode (.param p)`, `.succ`, `internE (.sort ·)`: the prefix of the three `List` tests |
 | `str_ls1(u)` | `internLsNode [u]` | the one-element list at the pool top |
 | `list_ty_ok`, `list_nil_ty_ok`, `list_cons_ty_ok`, `char_of_nat_ty_ok`, `string_of_list_ty_ok` | the `…TyOk` tests | `(found, q)` is `find?`'s result, as `nat_ind_ok` |
-| `str_lit_supported(vis)`, `str_sup_1` … `str_sup_7` | `strLitSupported` | one function per tested declaration (the suffixes of the twin's chain) |
+| `str_lit_stored(vis)` | `strLitStored` | presence of the seven names after `nat_lit_stored` |
+| `lit_shape_ok(p)` | `litShapeOk` | the `…TyOk` test of the name's pin, `1` elsewhere |
 | `str_utf8_char(k, n)` | none | `utf8_char` (`Scan/Utf8.lean`) on the pool's byte words: one code point of `s.toList` |
 | `str_cons_spine(cons, ofNat, nilE, k, n)` | `strLitConsSpine` | the bytes `[k, n)` of the pool; recursion over the characters as the twin's |
 | `str_ctor_pre()` | none | the literal-independent prefix of `strLitToConstructor` |
@@ -33,7 +34,6 @@ namespace L.Arena
 /-- `str_cv(p)`: the constant value of the record at `p` (`IConstantInfo.toConstantVal`, inline at
 `p + 1`) as `(lo, ll, ty)`: the level parameters `EREC[lo‥lo+ll)` and the type. -/
 -- con-ron: ConRon/Arena/Env.lean:168-172 ConRon.Arena.IConstantInfo.toConstantVal
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.IConstantInfo.toConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def strCvL : FunDecl := lfn (p) locals () {
   return (EREC⦃p + 2⦄, EREC⦃p + 3⦄, EREC⦃p + 4⦄)
 }
@@ -187,99 +187,63 @@ def stringOfListTyOkL : FunDecl :=
   return 0
 }
 
-/-! ## `str_lit_supported`: one function per tested declaration -/
+/-! ## `str_lit_stored`, `lit_shape_ok` -/
 
-/-- `str_sup_7(vis)`: `Char.ofNat`. -/
--- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.strLitSupported` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def strSup7L : FunDecl := lfn (vis) locals (x, f, q, r) {
-  x := call pin_at(12);
-  (f, q) := call env_find(x, vis);
-  r := call char_of_nat_ty_ok(f, q);
-  return r
-}
-
-/-- `str_sup_6(vis)`: `Char`, then `str_sup_7`. -/
--- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.strLitSupported` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def strSup6L : FunDecl := lfn (vis) locals (x, f, q, r) {
-  x := call pin_at(10);
-  (f, q) := call env_find(x, vis);
-  r := call char_ty_ok(f, q);
+/-- `str_lit_stored(vis)`: `nat_lit_stored` and the seven string-support names, by presence only;
+the seven pinned before their conjunction. -/
+-- con-ron: ConRon/Arena/Core.lean:803-820 ConRon.Arena.strLitStored
+@[no_expose, l_impl ConRon.Arena.strLitStored]
+def strLitStoredL : FunDecl :=
+  lfn (vis) locals (r, st, sl, li, ln, lc, ch, co, f1, q1, f2, q2, f3, q3, f4, q4, f5, q5, f6, q6,
+    f7, q7) {
+  r := call nat_lit_stored(vis);
   if r == 0 { return 0 };
-  r := call str_sup_7(vis);
-  return r
+  st := call pin_at(5);
+  sl := call pin_at(6);
+  li := call pin_at(7);
+  ln := call pin_at(8);
+  lc := call pin_at(9);
+  ch := call pin_at(10);
+  co := call pin_at(12);
+  (f1, q1) := call env_find(st, vis);
+  (f2, q2) := call env_find(sl, vis);
+  (f3, q3) := call env_find(li, vis);
+  (f4, q4) := call env_find(ln, vis);
+  (f5, q5) := call env_find(lc, vis);
+  (f6, q6) := call env_find(ch, vis);
+  (f7, q7) := call env_find(co, vis);
+  return u64(f1 != 0) & u64(f2 != 0) & u64(f3 != 0) & u64(f4 != 0) & u64(f5 != 0) &
+    u64(f6 != 0) & u64(f7 != 0)
 }
 
-/-- `str_sup_5(vis)`: `List.cons`, then `str_sup_6`. -/
--- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.strLitSupported` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def strSup5L : FunDecl := lfn (vis) locals (x, f, q, r) {
-  x := call pin_at(9);
-  (f, q) := call env_find(x, vis);
-  r := call list_cons_ty_ok(f, q);
-  if r == 0 { return 0 };
-  r := call str_sup_6(vis);
-  return r
-}
-
-/-- `str_sup_4(vis)`: `List.nil`, then `str_sup_5`. -/
--- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.strLitSupported` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def strSup4L : FunDecl := lfn (vis) locals (x, f, q, r) {
-  x := call pin_at(8);
-  (f, q) := call env_find(x, vis);
-  r := call list_nil_ty_ok(f, q);
-  if r == 0 { return 0 };
-  r := call str_sup_5(vis);
-  return r
-}
-
-/-- `str_sup_3(vis)`: `List`, then `str_sup_4`. -/
--- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.strLitSupported` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def strSup3L : FunDecl := lfn (vis) locals (x, f, q, r) {
-  x := call pin_at(7);
-  (f, q) := call env_find(x, vis);
-  r := call list_ty_ok(f, q);
-  if r == 0 { return 0 };
-  r := call str_sup_4(vis);
-  return r
-}
-
-/-- `str_sup_2(vis)`: `String.ofList`, then `str_sup_3`. -/
--- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.strLitSupported` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def strSup2L : FunDecl := lfn (vis) locals (x, f, q, r) {
-  x := call pin_at(6);
-  (f, q) := call env_find(x, vis);
-  r := call string_of_list_ty_ok(f, q);
-  if r == 0 { return 0 };
-  r := call str_sup_3(vis);
-  return r
-}
-
-/-- `str_sup_1(vis)`: `String`, then `str_sup_2`. -/
--- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.strLitSupported` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def strSup1L : FunDecl := lfn (vis) locals (x, f, q, r) {
+/-- `lit_shape_ok(p)`: the shape a declaration (the record at `p`, its name at `p + 1`) at a
+literal's name must have; any other name passes. The cited `if`-chain, each name pinned only when
+the chain reaches it. -/
+-- con-ron: ConRon/Arena/Core.lean:822-838 ConRon.Arena.litShapeOk
+@[no_expose, l_impl ConRon.Arena.litShapeOk]
+def litShapeOkL : FunDecl := lfn (p) locals (n, x, r) {
+  n := EREC⦃p + 1⦄;
+  x := call pin_at(1);
+  if n == x { r := call nat_ind_ok(1, p); return r };
+  x := call pin_at(2);
+  if n == x { r := call nat_zero_ok(1, p); return r };
+  x := call pin_at(3);
+  if n == x { r := call nat_succ_ok(1, p); return r };
   x := call pin_at(5);
-  (f, q) := call env_find(x, vis);
-  r := call string_ty_ok(f, q);
-  if r == 0 { return 0 };
-  r := call str_sup_2(vis);
-  return r
-}
-
-/-- `str_lit_supported(vis)`: the `Nat` literal guard, then the seven declarations. -/
--- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.strLitSupported` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.strLitSupported]
-def strLitSupportedL : FunDecl := lfn (vis) locals (r) {
-  r := call nat_lit_supported(vis);
-  if r == 0 { return 0 };
-  r := call str_sup_1(vis);
-  return r
+  if n == x { r := call string_ty_ok(1, p); return r };
+  x := call pin_at(6);
+  if n == x { r := call string_of_list_ty_ok(1, p); return r };
+  x := call pin_at(7);
+  if n == x { r := call list_ty_ok(1, p); return r };
+  x := call pin_at(8);
+  if n == x { r := call list_nil_ty_ok(1, p); return r };
+  x := call pin_at(9);
+  if n == x { r := call list_cons_ty_ok(1, p); return r };
+  x := call pin_at(10);
+  if n == x { r := call char_ty_ok(1, p); return r };
+  x := call pin_at(12);
+  if n == x { r := call char_of_nat_ty_ok(1, p); return r };
+  return 1
 }
 
 /-! ## `str_lit_ctor` -/

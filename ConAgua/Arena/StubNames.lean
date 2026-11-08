@@ -61,9 +61,31 @@ def litGuardHas : FunDecl := lfn (n) locals (a, b, c, d, f, g, h, i, j, k) {
   return 0
 }
 
+/-- `nat_op_name(n)`: one of the certified operations' names (`natOpNames`, pins 14‥20, then
+`natDivModNames`, pins 21‥28): only a definition may take one. -/
+-- con-ron: ConRon/Arena/Core.lean:939-946 ConRon.Arena.natOpName
+@[no_expose, l_impl ConRon.Arena.natOpName]
+def natOpNameL : FunDecl := lfn (n) locals (r) {
+  r := call pin_range_has(n, 14, 21);
+  if r != 0 { return 1 };
+  r := call pin_range_has(n, 21, 29);
+  return r
+}
+
+/-- `reserved_rec_bool(n)`: `Bool` and its two constructors (pins 29, 30, 31), each read only when
+the chain reaches it. -/
+-- con-ron: ConRon/Arena/Core.lean:1522-1532 ConRon.Arena.reservedRecBool
+@[no_expose, l_impl ConRon.Arena.reservedRecBool]
+def reservedRecBoolL : FunDecl := lfn (n) locals (b) {
+  b := call pin_at(29);
+  if n == b { return 1 };
+  b := call pin_at(30);
+  if n == b { return 1 };
+  b := call pin_at(31);
+  return u64(n == b)
+}
+
 /-- con-ron: ConRon/Arena/Core.lean:1534-1551 ConRon.Arena.reservedRecName -/
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.reservedRecName`, `ConRon.Arena.reservedRecBool` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.reservedRecName` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.reservedRecName]
 def reservedRecNameL : FunDecl := lfn (n) locals (r) {
   r := call reserved_contains(n);
@@ -73,6 +95,8 @@ def reservedRecNameL : FunDecl := lfn (n) locals (r) {
   r := call pin_range_has(n, 14, 21);
   if r != 0 { return 1 };
   r := call pin_range_has(n, 21, 29);
+  if r != 0 { return 1 };
+  r := call reserved_rec_bool(n);
   return r
 }
 

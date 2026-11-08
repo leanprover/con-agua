@@ -109,7 +109,7 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   obtain ⟨hok, hafter, hres, -⟩ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
     (hfp n ⟨m, Locals.init []⟩ a dn vis fe M eb sn i hS hsn) hc1
   have hfx : fe.findProj? (decI sn) i.toNat =
-      decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) i.toNat := hres
+      decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) i.toNat := hres
   replace hafter : CoreAfter dn m m₁ a vis fe M eb := hafter
   generalize ha₁ : a = a₁ at hafter
   subst ha₁
@@ -131,7 +131,7 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   rcases hc2 : callW p n "type_sort_pw" [vis, f, b] m₁ with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
   · cases hW
   obtain ⟨res₂, a₂, hrun₂, hRd₂, hd₂⟩ := tsp_call hp hden hlps hS₁ hf hbw hc2
-  have hentry : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) i.toNat =
+  have hentry : decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) i.toNat =
       some (tbl.entry i.toNat) := by
     simp only [decEntry, h0, ↓reduceIte, htbl, Option.map_some]
   have hbody : (tbl.entry i.toNat).body = decE b := hbe.symm

@@ -214,7 +214,7 @@ arguments the slice `(to, tn)` at the stack top. -/
 theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb q i us to tn pe : Word) (tbl : IProjTable) (xs : List EIdx)
-    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
+    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hq : decTbl (erecP s₀.mem) q.toNat = some tbl)
     (hus : HW us) (hpe : HW pe) (hsp : SpineR s₀.mem to tn xs.toArray)
     (htop : spTop s₀.mem = to + tn) :
     CoreSpec p (n + 1) "proj_type_at" [q, i, us, to, tn, pe]
@@ -471,7 +471,7 @@ table record `q` of field `i`, the subject type `te` headed by `T.{us}`. -/
 theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb sn i pe te T us q : Word) (tbl : IProjTable)
-    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
+    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hq : decTbl (erecP s₀.mem) q.toNat = some tbl)
     (hfe : ∃ c, fe.findTable? c = some tbl)
     (hi : i.toNat < tbl.numFields) (hus : HW us) (hte : HW te) (hpe : HW pe)
     (hden : ∃ ls, denoteLs a₀.store.lss (decI us) = some ls) (hsn : HW sn) (hT : HW T) :
@@ -488,7 +488,7 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
   rw [ht₁] at hf₁ hg₁ htop₁ hsp₁
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   have hE₁ : m₁.arr64 EREC = s₀.mem.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
-  have hq₁ : decTbl (m₁.arr64 EREC) q.toNat = some tbl := by rw [hE₁]; exact hq
+  have hq₁ : decTbl (erecP m₁) q.toNat = some tbl := by rw [hE₁]; exact hq
   obtain ⟨hlp, hnp, -, -, -⟩ := decTbl_words hq₁ hS₁.erec
   have hlen0 : xs.length = (r₁.tail.headD 0).toNat := by
     have := hsp₁.size; simp only [List.size_toArray] at this; exact this
@@ -559,7 +559,7 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
   have hrun3 := ipRun_of_ref h₃
   obtain ⟨-, ⟨M₃, hS₃, hK₃, hSt₃⟩, -, -⟩ := h₃
   have hE₃ : m₃.arr64 EREC = mp.arr64 EREC := hc.erecProj _ _ _ _ _ _ (Or.inl rfl) hc3
-  have hq₃ : decTbl (m₃.arr64 EREC) q.toNat = some tbl := by rw [hE₃]; exact hq₁
+  have hq₃ : decTbl (erecP m₃) q.toNat = some tbl := by rw [hE₃]; exact hq₁
   have hst₃ := lvlEq?_store _ _ _ _ _ _ _ hdss hdz hS.readL hrun3
   have hss' : (tbl.entry i.toNat).structSort = decI (rdW (mp.arr64 EREC) (q + 8)) := hssd
   have hT1 := projAtT_run (decI sn) (decI T) (decI us) (tbl.entry i.toNat) (decE te) (decE pe) a₀ _
@@ -574,7 +574,7 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
     rw [htop₂, addW _ _ (by omega)]; exact Nat.le_refl _
   -- `proj_type_at` from `m'`, after the run to `m'` kept the stack, both outcomes
   have hpta : ∀ (m' : Mem) (a' : AState) (M' : ModeMaps), CoreS dn m' a' vis fe M' eb →
-      KeptAll M M' eb → StackKept mp m' → decTbl (m'.arr64 EREC) q.toNat = some tbl →
+      KeptAll M M' eb → StackKept mp m' → decTbl (erecP m') q.toNat = some tbl →
       (∀ y a'', ((tbl.entry i.toNat).typeAt (decI us) xs (decE pe)).run a' = .ok (y, a'') →
         (projAtT (decI sn) (decI T) (decI us) (tbl.entry i.toNat) (decE te) (decE pe)).run a₀ =
           .ok (y, a'')) →
@@ -624,7 +624,7 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
     have hrun4 := ipRun_of_ref h₄
     obtain ⟨-, ⟨M₄, hS₄, hK₄, hSt₄⟩, -, -⟩ := h₄
     have hE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hc.erecProj _ _ _ _ _ _ (Or.inr rfl) hc4
-    have hq₄ : decTbl (m₄.arr64 EREC) q.toNat = some tbl := by rw [hE₄]; exact hq₃
+    have hq₄ : decTbl (erecP m₄) q.toNat = some tbl := by rw [hE₄]; exact hq₃
     have hfs : (tbl.entry i.toNat).fieldSort = decI (guardW m₃ q i) := hfdec.symm
     have hT2 := fszTail_run (tbl.entry i.toNat) (decI us) xs (decE pe) _ _ _
       (by rw [hfs]; exact hrun4)

@@ -115,7 +115,7 @@ the results land at `SPN[b ‥ b + l)`. -/
 theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo vc : Word) :
     ∀ (ids : List LIdx) (n : Nat) (m m' : Mem) (a : AState) (o l b : Word),
     ArenaD m a → StoreWF a.store → ReadLCOK a →
-    hslice? (m.arr64 EREC) o.toNat l.toNat = some ids → o.toNat + l.toNat < 2 ^ 64 →
+    hslice? (erecP m) o.toNat l.toNat = some ids → o.toNat + l.toNat < 2 ^ 64 →
     (∀ u ∈ ids, ∃ L, denoteL a.store.ls u = some L) →
     NmsR (nameN a.store.lss.ls.ns) m SPN ko kc ks → ko.toNat + kc.toNat ≤ b.toNat →
     sliceL (vpool m) vo.toNat vc.toNat = lsWords usIds → vo.toNat + vc.toNat ≤ m.top.toNat →
@@ -137,10 +137,10 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
       · rfl
       · rw [hk', lp_hslice_succ] at hs
         simp only [Option.bind_eq_bind] at hs
-        cases e : (hd? (m.arr64 EREC) o.toNat : Option LIdx) with
+        cases e : (hd? (erecP m) o.toNat : Option LIdx) with
         | none => simp [e] at hs
         | some x =>
-          cases e' : (hslice? (m.arr64 EREC) (o.toNat + 1) j : Option (List LIdx)) with
+          cases e' : (hslice? (erecP m) (o.toNat + 1) j : Option (List LIdx)) with
           | none => simp [e, e'] at hs
           | some xs => simp [e, e'] at hs
     have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
@@ -157,10 +157,10 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     · rw [hk'] at hs; simp [hslice?] at hs
     rw [hk', lp_hslice_succ] at hs
     simp only [Option.bind_eq_bind] at hs
-    cases e : (hd? (m.arr64 EREC) o.toNat : Option LIdx) with
+    cases e : (hd? (erecP m) o.toNat : Option LIdx) with
     | none => simp [e] at hs
     | some x' =>
-    cases e' : (hslice? (m.arr64 EREC) (o.toNat + 1) j : Option (List LIdx)) with
+    cases e' : (hslice? (erecP m) (o.toNat + 1) j : Option (List LIdx)) with
     | none => simp [e, e'] at hs
     | some xs' =>
     simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs
@@ -309,7 +309,7 @@ the results land at `SPN[b ‥ b + l)`. -/
 theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo vc : Word) :
     ∀ (ids : List NIdx) (n : Nat) (m m' : Mem) (a : AState) (o l b : Word),
     ArenaD m a → StoreWF a.store → ReadNCOK a →
-    hslice? (m.arr64 EREC) o.toNat l.toNat = some ids → o.toNat + l.toNat < 2 ^ 64 →
+    hslice? (erecP m) o.toNat l.toNat = some ids → o.toNat + l.toNat < 2 ^ 64 →
     (∀ u ∈ ids, ∃ nm, denoteN a.store.lss.ls.ns u = some nm) →
     NmsR (nameN a.store.lss.ls.ns) m SPN ko kc ks → ko.toNat + kc.toNat ≤ b.toNat →
     sliceL (vpool m) vo.toNat vc.toNat = lsWords usIds → vo.toNat + vc.toNat ≤ m.top.toNat →
@@ -331,10 +331,10 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
       · rfl
       · rw [hk', lp_hslice_succ] at hs
         simp only [Option.bind_eq_bind] at hs
-        cases e : (hd? (m.arr64 EREC) o.toNat : Option NIdx) with
+        cases e : (hd? (erecP m) o.toNat : Option NIdx) with
         | none => simp [e] at hs
         | some x =>
-          cases e' : (hslice? (m.arr64 EREC) (o.toNat + 1) j : Option (List NIdx)) with
+          cases e' : (hslice? (erecP m) (o.toNat + 1) j : Option (List NIdx)) with
           | none => simp [e, e'] at hs
           | some xs => simp [e, e'] at hs
     have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
@@ -351,10 +351,10 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     · rw [hk'] at hs; simp [hslice?] at hs
     rw [hk', lp_hslice_succ] at hs
     simp only [Option.bind_eq_bind] at hs
-    cases e : (hd? (m.arr64 EREC) o.toNat : Option NIdx) with
+    cases e : (hd? (erecP m) o.toNat : Option NIdx) with
     | none => simp [e] at hs
     | some x' =>
-    cases e' : (hslice? (m.arr64 EREC) (o.toNat + 1) j : Option (List NIdx)) with
+    cases e' : (hslice? (erecP m) (o.toNat + 1) j : Option (List NIdx)) with
     | none => simp [e, e'] at hs
     | some xs' =>
     simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs

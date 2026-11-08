@@ -75,7 +75,7 @@ def ReduceNatSpec' (p : Prog) (n : Nat) : Prop :=
     (MM : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode →
     HW e → KnotUpTo p n →
     CoreSpec p n "reduce_nat" [mode, vis, d, e]
-      (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decOptR s₀ a₀ dn vis fe MM eb
+      (reduceNat (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) decOptR s₀ a₀ dn vis fe MM eb
       ResW
 
 /-- `whnf_step(mode, vis, d, e)` refines `whnfStep` at every knot fuel `F ≥ n`, given `KnotUpTo p n`
@@ -85,7 +85,7 @@ def WhnfStepSpec' (p : Prog) (n : Nat) : Prop :=
     (MM : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode →
     HW e → KnotUpTo p n →
     CoreSpec p n "whnf_step" [mode, vis, d, e]
-      (whnfStep (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decStep s₀ a₀ dn vis fe MM eb
+      (whnfStep (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) decStep s₀ a₀ dn vis fe MM eb
       ResW
 
 end L.Arena

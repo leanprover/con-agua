@@ -34,7 +34,7 @@ verified mode: `infer_type_core(vis, dep, e)`, `is_def_eq_core(vis, dep, a, b)`,
 `ensure_sort_core(vis, dep, t)`. These replace the stubs of the same names in a whole program.
 
 **Callees** (`DefeqCallees`): `has_fvar`, `abs_entry`, `ar_entry` are the phase-4 walks under
-`CoreS` at exactly `coreWalkFuel` (`CoreWalks.lean`); `field_sort_zero` is `InferFieldSort.lean`;
+`CoreS` at exactly `coreWalkFuel` (`CoreWalks.lean`);
 `not_proof_fast`/`is_proof_fast` (`PropRead`) are `KnotCallees` fields until their proofs land.
 -/
 
@@ -48,7 +48,6 @@ namespace L.Arena
 /-! ## The slots -/
 
 /-- con-ron: ConRon/Arena/Core.lean:3825-3915 ConRon.Arena.coreKnot
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:3766-3772 ConRon.Arena.inferSet -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.inferSet]
 def inferSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) {
@@ -62,7 +61,6 @@ def inferSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3825-3915 ConRon.Arena.coreKnot
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:3774-3781 ConRon.Arena.inferIOSet
 con-ron: ConRon/Arena/Core.lean:270-275 ConRon.Arena.CoreFnsA.ioView -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.inferIOSet ConRon.Arena.CoreFnsA.ioView]
@@ -77,7 +75,6 @@ def inferIOSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) 
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3825-3915 ConRon.Arena.coreKnot
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:3783-3790 ConRon.Arena.defeqSet -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.defeqSet]
 def defeqSlotL : FunDecl := lfn (mode, vis, d, a, b) locals (k, fd, j, dd, x, z) {
@@ -91,7 +88,6 @@ def defeqSlotL : FunDecl := lfn (mode, vis, d, a, b) locals (k, fd, j, dd, x, z)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3825-3915 ConRon.Arena.coreKnot
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:3792-3807 ConRon.Arena.enterEager
 con-ron: ConRon/Arena/Core.lean:3809-3823 ConRon.Arena.leaveEager -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.enterEager ConRon.Arena.leaveEager]
@@ -103,9 +99,7 @@ def defeqESlotL : FunDecl := lfn (mode, vis, d, a, b) locals (r) {
 /-! ## The entry points (the verified mode, `checkFuel`) -/
 
 /-- con-ron: ConRon/Arena/Core.lean:3947-3951 ConRon.Arena.inferTypeCore
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferTypeCore` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:3933-3939 ConRon.Arena.pureFnsA -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.pureFnsA` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.inferTypeCore ConRon.Arena.pureFnsA]
 def inferTypeCoreL : FunDecl := lfn (vis, dep, e) locals (r) {
   r := call infer(0, vis, dep, e);
@@ -113,7 +107,6 @@ def inferTypeCoreL : FunDecl := lfn (vis, dep, e) locals (r) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3953-3957 ConRon.Arena.isDefEqCore -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.isDefEqCore` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.isDefEqCore]
 def isDefEqCoreL : FunDecl := lfn (vis, dep, a, b) locals (r) {
   r := call defeq(0, vis, dep, a, b);
@@ -121,7 +114,6 @@ def isDefEqCoreL : FunDecl := lfn (vis, dep, a, b) locals (r) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3959-3963 ConRon.Arena.ensureSortCore -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.ensureSortCore` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.ensureSortCore]
 def ensureSortCoreL : FunDecl := lfn (vis, dep, t) locals (r) {
   r := call ensure_sort(0, vis, dep, t);
@@ -133,20 +125,11 @@ end L.Arena
 /-! ## The callees' specs
 
 Each is a named L function with the spec of its twin (`CoreSpec`, `WhnfBase.lean`); `DefeqCallees p`
-bundles them. `DefEqKnot.lean` builds it: the walks from `CoreWalks.lean`, `field_sort_zero` from
-`InferFieldSort.lean`, the `PropRead` readers from `KnotCallees`. The callees lane `whnf` specifies
+bundles them. `DefEqKnot.lean` builds it: the walks from `CoreWalks.lean`, the `PropRead` readers from `KnotCallees`. The callees lane `whnf` specifies
 (`inst_list`, `inst_lp`, `str_lit_*`: `WhnfCallees`; `inst1`, `find_proj`: `CoreCallees`) are not
 repeated. -/
 
 namespace L.Arena
-
-/-- `inferProj`'s propositional-structure test on the readbacks: the field's sort, at the
-subject's levels, is equivalent to `Prop` (`none` is "not `some true`"). -/
-def fieldSortZeroT (lps : List NIdx) (us : LsIdx) (fs : LIdx) : AM Bool := do
-  let ks ← readNamesM lps
-  let vs ← readLevelsM us
-  let f ← readLevelM fs
-  pure (ConLeche.Level.isEquiv (ConLeche.Level.subst ks vs f) .zero == some true)
 
 /-- `has_fvar(e)` refines `hasFvarFast coreWalkFuel e` (phase 4: `fvarB` with the counter). -/
 def HasFvarOK (p : Prog) : Prop :=
@@ -182,19 +165,6 @@ def AbstractRangeOK (p : Prog) : Prop :=
     CoreSpec p n "ar_entry" [e, d, k, c]
       (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat) decH s₀ a₀ dn vis fe M eb
 
-/-- `field_sort_zero(po, pl, us, fs)` refines `fieldSortZeroT` (the level parameters an `EREC`
-slice; `InferFieldSort.lean`). The twin's three readbacks fail on a dangling handle, which L
-cannot see: the caller supplies that they succeed (and that the name cache holds readbacks). -/
-def FieldSortZeroOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb po pl us fs : Word) (lps : List NIdx), CoreS dn s₀.mem a₀ vis fe M eb →
-    HW us → HW fs → hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps →
-    ReadNCOK a₀ → (∃ ks, lps.mapM (denoteN a₀.store.ns) = some ks) →
-    (∃ ls, denoteLs a₀.store.lss (decI us) = some ls) →
-    (∃ l, denoteL a₀.store.ls (decI fs) = some l) →
-    CoreSpec p n "field_sort_zero" [po, pl, us, fs] (fieldSortZeroT lps (decI us) (decI fs)) decBool
-      s₀ a₀ dn vis fe M eb
-
 /-- **The leaf callees of phases 6 and 7.** -/
 structure DefeqCallees (p : Prog) : Prop where
   hasFvar : HasFvarOK p
@@ -202,6 +172,5 @@ structure DefeqCallees (p : Prog) : Prop where
   isProofFast : IsProofFastOK p
   abstract1 : Abstract1OK p
   abstractRange : AbstractRangeOK p
-  fieldSortZero : FieldSortZeroOK p
 
 end L.Arena

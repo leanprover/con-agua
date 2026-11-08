@@ -264,7 +264,7 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
     (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode io d sn i pe : Word) (R : CoreFnsA)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn)
-    (hpe : HW pe) (hWh : R.whnf = (coreKnot (decMode mode) fe id F).whnf) (f : FnName)
+    (hpe : HW pe) (hWh : R.whnf = (coreKnot (decMode mode) (decEager mode) fe id F).whnf) (f : FnName)
     (hx : ipE p (n + 1) s₀.mem mode io vis d sn i pe =
       ipE.k_infer_io p n mode vis d sn i pe (callE p n f [mode, vis, d, pe] s₀.mem))
     (hI : CoreSpec p n f [mode, vis, d, pe] (R.infer d.toNat (decE pe)) decH s₀ a₀ dn vis fe M eb)
@@ -322,7 +322,7 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
   dsimp only [ipE.k_find_proj]
   have h₄ := CoreSpec.of_callW (hc.findProj n ⟨m₃, Locals.init []⟩ _ dn vis fe M₂ eb wT i hS₂ hcTw) hc4
   have hrun4 : fe.findProj? (decI wT) i.toNat =
-      decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat := h₄.res
+      decEntry (erecP m₃) (r₄.headD 0) (r₄.tail.headD 0) i.toNat := h₄.res
   obtain ⟨-, ⟨M₄, hS₄, hK₄, hSt₄⟩, -, -⟩ := h₄
   have hE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hc.erec n "find_proj" _ m₃ r₄ m₄ (Or.inl rfl) hc4
   by_cases g4 : r₄.headD 0 = 0
@@ -406,11 +406,11 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
   · -- a hit: `infer_proj_at`
     rw [ite_eq_right g4]
     obtain ⟨tbl, hdt, hfe⟩ := hc.projFound n m₃ _ dn vis fe M₂ eb wT i r₄ m₄ hS₂ hc4 g4
-    have hde : decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat =
+    have hde : decEntry (erecP m₃) (r₄.headD 0) (r₄.tail.headD 0) i.toNat =
         some (tbl.entry i.toNat) := by
       unfold decEntry; rw [ite_eq_right g4, hdt]; rfl
     rw [hde] at hrun4
-    have hq₄ : decTbl (m₄.arr64 EREC) (r₄.tail.headD 0).toNat = some tbl := by rw [hE₄]; exact hdt
+    have hq₄ : decTbl (erecP m₄) (r₄.tail.headD 0).toNat = some tbl := by rw [hE₄]; exact hdt
     have hi : i.toNat < tbl.numFields := findProj?_lt hrun4
     cases n with
     | zero => exact RefE.of_cls0 (by simp)
@@ -432,10 +432,10 @@ theorem ip_ref (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : InferP
     (eb mode d sn i pe : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (hsn : HW sn) (hpe : HW pe) :
     RefE (InferG p n) (ipE p (n + 1) s₀.mem mode 0 vis d sn i pe)
-      (inferProj (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat (decE pe)) a₀
+      (inferProj (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat (decE pe)) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) ∧
     RefE (InferG p n) (ipE p (n + 1) s₀.mem mode 1 vis d sn i pe)
-      (inferProj (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decI sn) i.toNat
+      (inferProj (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decI sn) i.toNat
         (decE pe)) a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   exact ⟨ip_grade p hp hpj hc n hk F s₀ a₀ dn vis fe M eb mode 0 d sn i pe _ hF hn hs hsn hpe rfl

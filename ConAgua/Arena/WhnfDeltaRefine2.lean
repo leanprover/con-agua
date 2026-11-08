@@ -850,7 +850,7 @@ theorem callW_constValAt (hp : WhnfDeltaProg p) (hlp : InstLPOK p) (n : Nat) (s�
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb nm po pl value us : Word) (lps : List NIdx) (hC : CoreS dn s₀.mem a₀ vis fe MM eb)
     (hnm : HW nm) (hv : HW value) (hu : HW us)
-    (hlps : hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps) (r : List Word) (m' : Mem)
+    (hlps : hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps) (r : List Word) (m' : Mem)
     (h : callW p n "const_val_at" [nm, po, pl, value, us] s₀.mem = some (r, m')) :
     CoreRef (constValAt (decI nm) lps (decE value) (decI us)) a₀ decH dn s₀.mem vis fe MM eb r m'
       ResH := by
@@ -909,7 +909,7 @@ theorem constValAt_refines' (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ :
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb nm po pl value us : Word) (lps : List NIdx)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hnm : HW nm) (hv : HW value) (hu : HW us)
-    (hlp : InstLPOK p) (hlps : hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps) :
+    (hlp : InstLPOK p) (hlps : hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps) :
     CoreSpec p n "const_val_at" [nm, po, pl, value, us]
       (constValAt (decI nm) lps (decE value) (decI us)) decH s₀ a₀ dn vis fe MM eb :=
   CoreSpec.of_call fun r m' h => callW_constValAt p hp hlp n s₀ a₀ dn vis fe MM eb nm po pl value us lps

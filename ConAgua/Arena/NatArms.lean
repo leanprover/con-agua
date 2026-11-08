@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.Tiers
+public import ConRon.Arena.Core
 public import ConAgua.Arena.NatGcd
 public import ConAgua.Arena.NatCmp
 import ConAgua.Arena.NatBitsNat

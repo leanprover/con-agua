@@ -170,7 +170,7 @@ theorem frN_rel (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc c : Word) (hc : 
 theorem findRule_refines (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (n : Nat)
     (s₀ : St) (ro rc c : Word) (rules : List IRecRule) (hc : HW c)
     (hsz : (s₀.mem.arr64 EREC).size < 2 ^ 64)
-    (hr : decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules) :
+    (hr : decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "find_rule" [ro, rc, c]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
@@ -209,7 +209,7 @@ theorem recRuleK_spec (p : Prog) (hp : p.lookup "rec_rule_k" = some recRuleKL) (
 theorem recRuleK_refines (p : Prog) (hp : p.lookup "rec_rule_k" = some recRuleKL) (n : Nat)
     (s₀ : St) (ro rc : Word) (rules : List IRecRule)
     (hsz : (s₀.mem.arr64 EREC).size < 2 ^ 64)
-    (hr : decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules) :
+    (hr : decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rec_rule_k" [ro, rc]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ (r.headD 0 != 0) = recRuleK rules; ⊤⦄ := by
