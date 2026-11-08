@@ -75,6 +75,113 @@ theorem EnvR.ofIndex {m : Mem} {I : IStreamIndex} {k : Nat} (hI : IndexR m I) (h
   · simp only [IStreamIndex.view]; rw [h134]
   · simp only [IStreamIndex.view]; rw [h135]
 
+/-! ### One step of `insertConsts`, `insertTables`, and a record's first counter -/
+
+theorem baseSet_arr_of {m : Mem} {w c p : Word} {b : TieredArray}
+    (h : b ≠ (eixArr (rowTag w) : TieredArray)) : (baseSet m w c p).arr64 b = m.arr64 b := by
+  simp only [baseSet, Mem.arr64_set64_ne _ _ _ _ _ h]
+
+theorem baseTblSet_arr_of {m : Mem} {w r p : Word} {b : TieredArray}
+    (h : b ≠ (tixArr (rowTag w) : TieredArray)) : (baseTblSet m w r p).arr64 b = m.arr64 b := by
+  simp only [baseTblSet, Mem.arr64_set64_ne _ _ _ _ _ h]
+
+theorem eix_ne {w : Word} {b : TieredArray} (h : b.arr ≠ 132 ∧ b.arr ≠ 133 ∧ b.arr ≠ 134) :
+    b ≠ (eixArr (rowTag w) : TieredArray) := fun e => by
+  have := eixArr_arr (rowTag w); rw [← e] at this; omega
+
+theorem tix_ne {w : Word} {b : TieredArray} (h : b.arr ≠ 129 ∧ b.arr ≠ 130 ∧ b.arr ≠ 131) :
+    b ≠ (tixArr (rowTag w) : TieredArray) := fun e => by
+  have := tixArr_arr (rowTag w); rw [← e] at this; omega
+
+/-- A memory change outside `EREC`, `FIRSTS`, the base rows and the `CTL` words `128‥130` keeps
+the decodings. -/
+theorem erecP_congr' {m m' : Mem} (h1 : m'.arr64 EREC = m.arr64 EREC)
+    (h2 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC))
+    (h3 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) (h4 : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130) :
+    erecP m' = erecP m := by
+  funext i; simp only [erecP, erecTop, erecTop1, h1, h2, h3, h4]
+  rfl
+
+theorem rdW_set_ctl (m : Mem) (k v x : Word) (h : k ≠ x) :
+    rdW ((m.set64 CTL k v).arr64 CTL) x = rdW (m.arr64 CTL) x := by
+  rw [rdW_set64]; simp [h]
+
+/-- **One step of `insertConsts`** (`idx_consts`' loop body): the constant record at `q` (its name
+`w`), at the next counter: its base row written if it has none, the counter moved. -/
+theorem IndexR.insertConst {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Word}
+    {ci : IConstantInfo} (hci : decCI (erecP m) q.toNat = some ci) {w : Word}
+    (hw : erecP m (q.toNat + 1) = some w) (hnx : I.next < 2 ^ 32 - 2)
+    (hset : (baseRow m w).1 = 0 → rowTag w ≤ 2 ∧ rowTier w = 0 ∧
+      rowIx w + 1 < (m.arr64 (eixArr (rowTag w))).size) (hc : 128 < (m.arr64 CTL).size) :
+    IndexR ((if (baseRow m w).1 = 0 then baseSet m w (rdW (m.arr64 CTL) 128 + 1) q else m).set64 CTL 128
+        (rdW (m.arr64 CTL) 128 + 1))
+      { I with base := { I.base with idx := I.base.idx.insertIfNew ci.name (I.next, ci) },
+               next := I.next + 1 } := by
+  obtain ⟨w', hw', hw32, hname⟩ := decCI_name hci
+  rw [hw] at hw'; cases hw'
+  have hn := h.next
+  have hnx1 : (rdW (m.arr64 CTL) 128 + 1).toNat = I.next + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  generalize hm1 : (if (baseRow m w).1 = 0 then baseSet m w (rdW (m.arr64 CTL) 128 + 1) q else m) = m1
+  have a1 : ∀ b : TieredArray, b.arr ≠ 132 ∧ b.arr ≠ 133 ∧ b.arr ≠ 134 → m1.arr64 b = m.arr64 b := by
+    intro b hb; rw [← hm1]; split
+    · exact baseSet_arr_of (eix_ne hb)
+    · rfl
+  have a2 : ∀ b : TieredArray, b ≠ CTL → b.arr ≠ 132 ∧ b.arr ≠ 133 ∧ b.arr ≠ 134 →
+      (m1.set64 CTL 128 (rdW (m.arr64 CTL) 128 + 1)).arr64 b = m.arr64 b := fun b h1 h2 => by
+    rw [Mem.arr64_set64_ne _ _ _ _ _ h1, a1 b h2]
+  have hctl : ∀ x : Word, x ≠ 128 → rdW ((m1.set64 CTL 128 (rdW (m.arr64 CTL) 128 + 1)).arr64 CTL) x =
+      rdW (m.arr64 CTL) x := fun x hx => by
+    rw [rdW_set_ctl _ _ _ _ (Ne.symm hx), a1 (CTL : TieredArray) (by decide)]
+  have hP : erecP (m1.set64 CTL 128 (rdW (m.arr64 CTL) 128 + 1)) = erecP m :=
+    erecP_congr' (a2 _ (by decide) (by decide)) (a2 _ (by decide) (by decide))
+      (hctl 129 (by decide)) (hctl 130 (by decide))
+  have hbr : ∀ x : Word, baseRow (m1.set64 CTL 128 (rdW (m.arr64 CTL) 128 + 1)) x = baseRow m1 x := by
+    intro x; have := eixArr_arr (rowTag x)
+    have n1 : (eixArr (rowTag x) : TieredArray) ≠ CTL := by
+      unfold eixArr; split <;> (try split) <;> decide
+    simp only [baseRow, Mem.arr64_set64_ne _ _ _ _ _ n1]
+  have hbt : ∀ x : Word, baseTbl (m1.set64 CTL 128 (rdW (m.arr64 CTL) 128 + 1)) x = baseTbl m x := by
+    intro x; have := tixArr_arr (rowTag x)
+    have n1 : (tixArr (rowTag x) : TieredArray) ≠ CTL := by
+      unfold tixArr; split <;> (try split) <;> decide
+    have n2 : (tixArr (rowTag x) : TieredArray).arr ≠ 132 ∧ (tixArr (rowTag x) : TieredArray).arr ≠ 133 ∧
+      (tixArr (rowTag x) : TieredArray).arr ≠ 134 := by omega
+    simp only [baseTbl, a2 _ n1 n2]
+  have hname' : ∀ n : NIdx, (ci.name == n) = decide (n.word.toUInt64 = w) := by
+    intro n; rw [hname, nidx_beq, decI_word_self w hw32]
+  have hmem : ci.name ∈ I.base.idx ↔ (baseRow m w).1 ≠ 0 := by
+    have hb := h.base (decI w); rw [decI_word_self w hw32] at hb
+    rw [hname, Std.HashMap.mem_iff_isSome_getElem?]
+    cases e : I.base.idx[(decI w : NIdx)]? with
+    | none => rw [e] at hb; by_cases b0 : (baseRow m w).1 = 0 <;> simp_all
+    | some y => rw [e] at hb; by_cases b0 : (baseRow m w).1 = 0 <;> simp_all
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_⟩
+  · simp only [Std.HashMap.getElem?_insertIfNew, hname', hmem, hbr, hP]
+    by_cases e : n.word.toUInt64 = w
+    · by_cases b0 : (baseRow m w).1 = 0
+      · obtain ⟨t1, t2, t3⟩ := hset b0
+        have : m1 = baseSet m w (rdW (m.arr64 CTL) 128 + 1) q := by rw [← hm1, if_pos b0]
+        rw [this, e, baseRow_baseSet_self t1 t2 t3]
+        have hne : rdW (m.arr64 CTL) 128 + 1 ≠ 0 := fun z => by rw [z] at hnx1; simp at hnx1
+        simp [b0, hne, hnx1, hci]
+      · have : m1 = m := by rw [← hm1, if_neg b0]
+        rw [this, e]; simp only [b0, ne_eq, not_false_eq_true, not_true_eq_false, and_false,
+          decide_true, true_and, ite_false]
+        have := h.base n; rw [e, if_neg b0] at this; exact this
+    · have hb1 : baseRow m1 n.word.toUInt64 = baseRow m n.word.toUInt64 := by
+        rw [← hm1]; split
+        · rename_i b0; obtain ⟨t1, t2, -⟩ := hset b0
+          exact baseRow_baseSet_other hw32 (nidx_word_lt32 n) t1 t2 e
+        · rfl
+      simp only [e, decide_false, Bool.false_eq_true, false_and, ite_false, hb1]
+      exact h.base n
+  · simp only [hbt, hP]; exact h.btbl n
+  · rw [a2 _ (by decide) (by decide)]; exact h.firsts i hi
+  · rw [a2 _ (by decide) (by decide)]; exact h.firstsSize
+  · simp only [Mem.arr64_set64_same, rdW_set!, a1 (CTL : TieredArray) (by decide)]
+    simp only [show (128 : Word).toNat = 128 from rfl, hc, and_self, ite_true]; exact hnx1
+
 end rel
 
 end L.Arena
