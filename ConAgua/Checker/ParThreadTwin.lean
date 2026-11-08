@@ -51,10 +51,13 @@ def ThreadRuns (B : Array Word) : Mem → List (Word × Nat × Mem) → Prop
       (∃ rs, L.run checkerProg n "check" [] (bufMem B r j) = .ok (rs, r')) ∧ BufKept B r' ∧
       ThreadRuns B r' cs
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The group list a thread's calls check. -/
 def thrGroups (pend : Array PendingCheck) (cs : List (Word × Nat × Mem)) : List PendingCheck :=
   cs.map fun c => pdAt pend c.1
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem checkPendingList_cons_ok {mode : ConLeche.CheckMode} {fe : IFEnv} {pc : PendingCheck}
     {rest : List PendingCheck} {a : AState} (h : AM.ok (checkPending mode fe pc) a) :
     checkPendingList mode fe (pc :: rest) a =
@@ -66,7 +69,9 @@ theorem checkPendingList_cons_ok {mode : ConLeche.CheckMode} {fe : IFEnv} {pc : 
     obtain ⟨u, a'⟩ := x
     simp only [hx]
   · exact h.elim
+-/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section chain
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck) (bs : List UInt8)
@@ -153,6 +158,7 @@ theorem threads_pool (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = 
     exact thread_accepts mode pins dn ds fe pend bs hP hm hS hPB hok hlt t.1 hz hI t.2 hruns hj
 
 end chain
+-/
 
 /-! ## With entry 1 -/
 
@@ -188,58 +194,6 @@ theorem threads_twinAcceptsPooled (b pb : ByteArray) (sz : TieredArray → Nat) 
       t.1.glob INIT = 0 ∧ ThreadRuns B t.1 t.2 ∧ ∀ c ∈ t.2, c.1 < rs₁.headD 0 - 9223372036854775808)
     (hcov : ∀ j : Word, j < rs₁.headD 0 - 9223372036854775808 → ∃ t ∈ ths, ∃ c ∈ t.2, c.1 = j) :
     TwinAcceptsPooled [b] := by
-  have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
-  obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ :=
-    checkA_run b pb sz hin 1 (Or.inl rfl) N₁ hN₁ rs₁ m₁ h₁ hr
-  have hflag : modeFlag 1 = 1 := rfl
-  rw [hflag] at hok hm₁
-  -- the twin's facts behind the program bundle (as `drv_twinAccepts`)
-  have hrom : RomOK pb.data.toList := by simpa [RomOK] using hin.2.2.1
-  have hT := twinFold_of_prefix PA.pfx
-  have hdn : L.Ind.DnInj (dnOf PA.sE.store) := dnOf_inj hT.stateOK.wf
-  have hQd : QuotDn (dnOf PA.sE.store) := by
-    obtain ⟨k, hk, hd⟩ := prefix_quotU PA.pfx
-    exact ⟨k, by simp [dnOf, hk, hd]⟩
-  have hLC := checkerProg_loopCalleesPB pb.data.toList hrom hpre (dnOf PA.sE.store) hdn
-    (indArmSpec_checker _ hrom hpre _ hdn) hQd
-  have hTop := checkerProg_loopTopPB pb.data.toList
-  have hPB' : PhaseBProg (Prog.subPB pb.data.toList checkerProg) :=
-    ⟨hTop.bracket, hLC.cvg, hLC.knot, hLC.leaf, hLC.loop, hTop.pc, hTop.pcg, hTop.pcx,
-      hLC.cd.crp.apd, ⟨hLC.indMemo, hLC.crf⟩⟩
-  -- the buffer and the sizes
-  have hF := parCompactMem_out m v 1
-  rw [← hm₁] at hF
-  have hlt : (m.arr64 OUT).size < 2 ^ 64 := by
-    rw [← hF.size OUT]; exact run_load_size hin.2.2.2 h₁ OUT
-  have hBm : B = bufOf m v := by
-    rw [hB, bufOf, hm₁, (parCompactMem_hdr hok).2.1]
-  -- the number of groups
-  have hk : (rs₁.headD 0 - 9223372036854775808).toNat = PA.pend.size := by
-    have hc := hS.loop.pend.count
-    have hlt' : PA.pend.size < 2 ^ 64 := by rw [← hc]; exact UInt64.toNat_lt_size _
-    have e : (9223372036854775808 : Word) + UInt64.ofNat PA.pend.size - 9223372036854775808 =
-        UInt64.ofNat PA.pend.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
-    rw [hres, e, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hlt')]
-  have hth' : ∀ t ∈ ths, ThreadOK m (bufOf m v) PA.pend t := by
-    intro t ht
-    obtain ⟨h2, h3, h4, h5⟩ := hth t ht
-    refine ⟨fun b hb => ?_, h3, hBm ▸ h4, fun c hc => ?_⟩
-    · rw [h2 b hb, hF.size]
-    · have := h5 c hc
-      rw [UInt64.lt_iff_toNat_lt, hk] at this
-      exact this
-  have hcov' : ∀ i < PA.pend.size, ∃ t ∈ ths, ∃ c ∈ t.2, c.1.toNat = i := by
-    intro i hi
-    have hi64 : i < 2 ^ 64 := by
-      have := hS.loop.pend.bound; rw [hS.loop.pend.count] at this; omega
-    obtain ⟨t, ht, c, hc, hcj⟩ := hcov (UInt64.ofNat i) (by
-      rw [UInt64.lt_iff_toNat_lt, hk, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hi64)]
-      exact hi)
-    exact ⟨t, ht, c, hc, by rw [hcj, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hi64)]⟩
-  obtain ⟨hcv, hsub, hacc⟩ := threads_pool .verified PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend
-    pb.data.toList hPB' rfl hS hPB hok hlt ths hth' hcov'
-  obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
-  exact ⟨PA.pins, PA.sA, PA.sB, PA.sC, PA.sD, PA.sE, PA.sF, PA.pre, PA.rc, PA.ds, PA.ipins, PA.fe,
-    hA, hBp, hC, hD, hE, PA.k, PA.pend, _, PA.fold, hcv, hsub, hacc⟩
+  sorry
 
 end L.Checker
