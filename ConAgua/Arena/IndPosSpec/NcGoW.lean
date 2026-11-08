@@ -216,7 +216,7 @@ def ncF (fe : IFEnv) (C : NIdx) (n : NIdx) : AM (Option (IConstantVal × Nat × 
 def ncProj (c : IConstantVal × Nat × Nat) : IConstantVal × Nat := (c.1, c.2.2)
 
 theorem GrowX.erecP {q n : Nat} {m m' : Mem} (h : GrowX q n m m') : ArrExt (erecP m) (erecP m') :=
-  erecP_ext_of h.2.1 h.2.2.2
+  (⟨h.er, h.erGet, h.er1, h.er1Get⟩ : ErecGrow m m').ext
 
 theorem nestCtorEntry_some {C : NIdx} {cv : IConstantVal} {nPc nF : Nat} {a a' : AState}
     {x : IConstantVal × Nat × Nat}

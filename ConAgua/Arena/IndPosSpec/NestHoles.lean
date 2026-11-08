@@ -219,7 +219,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     simp only [List.headD_cons, List.tail_cons] at h
     have hg24 := hg23.trans hg4
     obtain ⟨xr, a', hrun, hS', hg', hout'⟩ := ih m4 m' a3 (mm + 1) (off + 1) (l - 1) _ _ ns' (out ++ [decI v]) r h
-      hS4 (by rw [(CtxIn.grow hin hg24).1]; exact hc) (CtxIn.grow hin hg24).2 (hsl.grow hin hg24)
+      hS4 ((CtxIn.grow hin hg24).1 hc) (CtxIn.grow hin hg24).2 (hsl.grow hin hg24)
       (by rw [hoff1, hl1, decHL_agree (RdS.of_grow hg24) (fun j hj => by
             have := hnb (j + 1) (by omega); omega)]; simpa [decHL] using hns')
       (fun j hj => by rw [hoff1, hl1] at *; have := hnb (j + 1) (by omega); have := hg24.iw; omega)
