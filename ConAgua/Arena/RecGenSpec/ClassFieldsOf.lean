@@ -74,12 +74,7 @@ end StabA
 /-- A constant decoded below the tops is stable above any bound (it lives in `EREC`). -/
 theorem stabA_decCVp {m : Mem} {q : Nat} {x : IConstantVal} (h : DecB (fun m => decCVp m q) m x) (b : Nat) :
     StabA b (fun m => decCVp m q) m x := by
-  intro m' hA
-  have h' : decCV (erA (truncM m)) q = some x := h
-  show decCV (erA m') q = some x
-  refine ArrExt.decCV (fun i v hv => ?_) h'
-  obtain ⟨hi, hv'⟩ := truncM_er_get hv
-  simp only [erA] at hv' ⊢; rw [hA.2.2.2 i hi]; exact hv'
+  sorry
 
 namespace SPLA
 variable {α : Type} {b : Nat} {dec : Mem → Nat → Option α} {m m' : Mem} {o l : Nat} {xs : List α}

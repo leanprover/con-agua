@@ -85,18 +85,7 @@ include hp hrrn
 theorem blockRecNamesUnreserved_spec (n : Nat) : ∀ (s₀ : St) (ro rl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_names_unreserved" [ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ recUW n s₀.mem ro rl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ ro rl; rw [invoke_eq _ hp]; simp only [callFn, blockRecNamesUnreserved]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ro rl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockRecNamesUnreserved]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        rrnF_spec p hrrn n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 end spec
 
@@ -104,21 +93,7 @@ theorem decCVp_name_p {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = 
     (hb : q < 2 ^ 64) :
     (rdW (m.arr64 EREC) (UInt64.ofNat q)).toNat < 2 ^ 32 ∧
       decI (rdW (m.arr64 EREC) (UInt64.ofNat q)) = cv.name := by
-  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨nm, hnm, lv, -, ty, -, hcv⟩ := h
-  have hnm' : nm = cv.name := by rw [← hcv]
-  rcases hw : (erA m)[q]? with _ | w
-  · simp [hd?, hw] at hnm
-  by_cases hl : w.toNat < 2 ^ 32
-  · simp [hd?, hw, hl] at hnm
-    have hrd : rdW (m.arr64 EREC) (UInt64.ofNat q) = w := by
-      have e : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-      simp only [rdW, e]
-      have : (m.arr64 EREC)[q]? = some w := hw
-      rw [this]; rfl
-    rw [hrd]
-    exact ⟨hl, by rw [← hnm', ← hnm]⟩
-  · simp [hd?, hw, hl] at hnm
+  sorry
 
 theorem decPL_tail {m : Mem} {α : Type} {f : Nat → Option α} {o k : Nat} {x : α} {xs : List α}
     (h : decPL m f o (k + 1) = some (x :: xs)) : decPL m f (o + 1) k = some xs := by

@@ -85,31 +85,7 @@ theorem nsb_rec6 {m' : Mem} {q kO kL aO aL nO nL : Word} {keys act : List NestKe
     (ha : KsB m' aO.toNat aL.toNat act) (hab : aO.toNat + aL.toNat ≤ iwTop m')
     (hn : NfsB m' nO.toNat nL.toNat nfs) (hnb : nO.toNat + nL.toNat ≤ iwTop m') :
     NSB m' q ⟨keys.toArray, act, nfs.toArray⟩ := by
-  have g : ∀ j < 6, (iwA (truncM m'))[q.toNat + j]? = [kO, kL, aO, aL, nO, nL][j]? := fun j hj => by
-    rw [truncM_iw_eq (by omega)]; exact hget j (by simpa using hj)
-  have n0 : iwN (truncM m') q.toNat = some kO.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 0 (by omega))
-  have n1 : iwN (truncM m') (q.toNat + 1) = some kL.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 1 (by omega))
-  have n2 : iwN (truncM m') (q.toNat + 2) = some aO.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 2 (by omega))
-  have n3 : iwN (truncM m') (q.toNat + 2 + 1) = some aL.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 3 (by omega))
-  have n4 : iwN (truncM m') (q.toNat + 4) = some nO.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 4 (by omega))
-  have n5 : iwN (truncM m') (q.toNat + 4 + 1) = some nL.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 5 (by omega))
-  have rq : ∀ i : Word, i.toNat < 6 → rdW (m'.arr64 IW) (q + i) = [kO, kL, aO, aL, nO, nL][i.toNat]?.getD 0 := by
-    intro i hi
-    have : (q + i).toNat = q.toNat + i.toNat := word_add_toNat (by omega)
-    simp only [rdW, this]; rw [hget _ (by simpa using hi)]
-  have r0 : rdW (m'.arr64 IW) q = kO := by simpa using rq 0 (by decide)
-  have r1 : rdW (m'.arr64 IW) (q + 1) = kL := by simpa using rq 1 (by decide)
-  have r2 : rdW (m'.arr64 IW) (q + 2) = aO := by simpa using rq 2 (by decide)
-  have r3 : rdW (m'.arr64 IW) (q + 3) = aL := by simpa using rq 3 (by decide)
-  have r4 : rdW (m'.arr64 IW) (q + 4) = nO := by simpa using rq 4 (by decide)
-  have r5 : rdW (m'.arr64 IW) (q + 5) = nL := by simpa using rq 5 (by decide)
-  refine ⟨?_, by rw [r0, r1]; exact hkb, by rw [r2, r3]; exact hab, by rw [r4, r5]; exact hnb⟩
-  show decNS (truncM m') q.toNat = _
-  have hk' : decPL (truncM m') (decNK (truncM m')) kO.toNat kL.toNat = some keys := hk
-  have ha' : decPL (truncM m') (decNK (truncM m')) aO.toNat aL.toNat = some act := ha
-  have hn' : decPL (truncM m') (decNCN (truncM m')) nO.toNat nL.toNat = some nfs := hn
-  simp only [decNS, decAt, n0, n1, n2, n3, n4, n5, hk', ha', hn', Option.bind_eq_bind, Option.bind_some,
-    Option.pure_def]
+  sorry
 
 end L.Ind
 

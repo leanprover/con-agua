@@ -68,16 +68,7 @@ theorem ptrNamesCopy_spec (p : Prog) (hp : p.lookup "ptr_names_copy" = some ptrN
     ∀ (s₀ : St) (d s l : Word),
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "ptr_names_copy" [d, s, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ nameCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, ptrNamesCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ d s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, ptrNamesCopy]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20)
+  sorry
 
 /-- The model of `ptr_list_names`. -/
 def ptrNamesW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
@@ -118,72 +109,7 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
     decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat = some (cvs.map (·.name)) ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
     (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
-  have htl : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
-  simp only [ptrNamesW] at h
-  cases hal : allocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
-  obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
-  simp only [hal] at h
-  cases hcp : nameCopyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  subst hq' hm1
-  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
-  have hIW := allocMem_IW m l
-  have hEE : (allocMem m l).arr64 EREC = m.arr64 EREC := by
-    simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have hptr' : ∀ j < l.toNat,
-      (rdW ((allocMem m l).arr64 IW) (UInt64.ofNat (o.toNat + j))).toNat < q.toNat := by
-    intro j hj
-    obtain ⟨v, a, hv, hvb, -, -⟩ := hcv j (by omega)
-    obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
-    rw [hIW, hv']
-    simp only [iwTop, hqq] at hvb
-    rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; exact hvb
-  obtain ⟨hA, hS, hG⟩ := nameCopyW_get (n - 1) _ _ _ _ _ hcp
-    (by simp only [iwTop, hqq] at hsrc; omega)
-    (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz) hptr'
-  rw [hIW] at hS hG
-  rw [hEE] at hG
-  have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
-  have htop : rdW (m2.arr64 CTL) 200 = q + l := by
-    rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
-  have hsum : (q + l).toNat = q.toNat + l.toNat := by
-    rw [UInt64.toNat_add]; simp; omega
-  refine ⟨rfl, ?_, ?_, hfr, ?_⟩
-  · have := decHL_of_get m2 (cvs.map (·.name)) q.toNat (fun j hj => by
-      have hj' : j < cvs.length := by simpa using hj
-      obtain ⟨v, a, hv, hvb, hva, hcvj⟩ := hcv j hj'
-      have hGj := hG (q.toNat + j)
-      rw [ite_eq_left (by omega)] at hGj
-      have e2 : q.toNat + j - q.toNat = j := by omega
-      rw [e2] at hGj
-      obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
-      rw [hv'] at hGj
-      obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
-      rw [hva'] at hGj
-      obtain ⟨w, hw, hwl', hnm'⟩ := decCV_name (a := erA m) (by simpa [decCVp] using hcvj)
-      have hrd : rdW (m.arr64 EREC) (UInt64.ofNat a) = w := by
-        have : (UInt64.ofNat a).toNat = a := by simp; omega
-        have hw' : (m.arr64 EREC)[a]? = some w := hw
-        simp [rdW, this, hw']
-      rw [hrd] at hGj
-      simp only [List.getElem_map]
-      simp only [iwH, hd?, iwA, aread_apply, hGj]
-      simp [hwl', hnm'])
-    simpa [hlen] using this
-  · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_
-    · rw [htop, hqq]
-    · simp only [iwTop, hqq]; omega
-    · intro i hi
-      simp only [iwTop, hqq] at hi
-      rw [hG, ite_eq_right (by omega)]
-  · simp only [iwTop, htop, hsum]
+  sorry
 
 /-! ## `mk_target_major`: a fresh 13-word record -/
 

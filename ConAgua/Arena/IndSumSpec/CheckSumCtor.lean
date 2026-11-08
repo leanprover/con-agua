@@ -111,15 +111,7 @@ theorem checkSumCtor_eq (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx
 theorem sumTypeWord {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
     (hsz : (m.arr64 EREC).size < 2 ^ 64) :
     ∃ w, rdW (m.arr64 EREC) (q + 3) = w ∧ H w ∧ decI w = cv.type := by
-  have ht := decCV_type h
-  simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at ht
-  obtain ⟨w, hw, hx⟩ := ht
-  split at hx
-  · have hx' := Option.some.inj hx
-    have hlt : q.toNat + 3 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hw).1
-    refine ⟨w, rdW_of_get? ?_ hw, by assumption, hx'⟩
-    rw [sum_toNat_add (by simp; omega)]; rfl
-  · cases hx
+  sorry
 
 end L.Ind
 

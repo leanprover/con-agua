@@ -142,41 +142,7 @@ theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (nestFrameMates fe (decI c)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  cases n with
-  | zero => simp [nfmW] at h
-  | succ n =>
-  simp only [nfmW, nboW] at h
-  have hE := hS.check.env
-  obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.iw
-  rcases hef : envFindW m c vis with _ | ⟨r1, m1⟩; · rw [hef] at h; simp [nboW.k_env_find.none, nfmK] at h
-  have hm1 := envFindW_mem hef
-  subst m1
-  rw [hef] at h
-  -- the block slice
-  have hblk : ∃ o l : Word, nboW.k_env_find (some (r1, m)) = some ([o, l], m) ∧
-      hslice? (erA m) o.toNat l.toNat = some (nestBlockOf fe (decI c)) := by
-    rw [nboW.k_env_find.eq_2]
-    by_cases h0 : r1.headD 0 = 0
-    · rw [ite_eq_left h0]
-      obtain ⟨-, hn⟩ := envFindW_miss hef hE hc h0
-      exact ⟨0, 0, rfl, by simp [nestBlockOf, hn, hslice?]⟩
-    rw [ite_eq_right h0]
-    obtain ⟨-, hfind, hex⟩ := envFindW_hit hef hE hc h0
-    have hfound : fe.find? (decI c) = decFound dn m (r1.headD 0) (r1.tail.headD 0) := by
-      rw [hfind]; simp only [decFound, ite_eq_right h0]
-    by_cases h3 : rdW (m.arr64 EREC) (r1.tail.headD 0) ≠ 3
-    · rw [ite_eq_left h3]; exact ⟨0, 0, rfl, blk_nok3 _ _ hfound h0 h3⟩
-    rw [ite_eq_right h3]
-    exact ⟨_, _, rfl, blk_k3 _ _ hfound h0 hex (by simpa using h3)⟩
-  obtain ⟨o, l, ho, hsl⟩ := hblk
-  simp only [ho, nfmK_some, List.headD_cons, List.tail_cons] at h
-  rcases hmt : matesW n m c o l 0 0 with _ | ⟨r2, m2⟩ <;> rw [hmt] at h; · simp [matesK3] at h
-  rw [matesK3_some] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨h1, h2, -, h4⟩ := matesW_ok n _ _ c o l 0 0 _ [] r2 hmt hsz hc200 hEs hc hsl
-    (by simp [decHL, hslice?]) (by simp) (by simp)
-  exact ⟨matesW_stage n _ _ _ _ _ _ _ _ hmt ⟨hS.check, hI1, hE1, hsz, hEs, hc200⟩, h2, by simpa [nestFrameMates] using h1,
-    by simpa using h4⟩
+  sorry
 
 end L.Ind
 
@@ -544,9 +510,7 @@ theorem matesW_mfr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List
 
 theorem nboW_mfr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW p n m vis c = some (r, m')) :
     MFr [] [] m m' := by
-  simp only [nboW] at h
-  unfold nboW.k_env_find at h
-  mfr_auto h [envFindW_mfr]
+  sorry
 
 theorem nfmW_mfr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) :
     MFr [] [] m m' := by

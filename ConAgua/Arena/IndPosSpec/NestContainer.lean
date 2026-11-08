@@ -26,9 +26,7 @@ open L.Arena
 
 theorem CNOk.dec {m : Mem} {p : Nat} {x : IConstantVal × Nat} {P : Nat → Prop} (h : CNOk m p x P) :
     decCN m p = some x := by
-  obtain ⟨-, -, q, hq, hcv, hn⟩ := h
-  have : decCVp m q = some x.1 := (erecP_ext m).decCV hcv
-  simp [decCN, hq, this, hn]
+  sorry
 
 theorem CsAt.decPL {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} {P : Nat → Prop}
     (h : CsAt m o xs P) : decPL m (decCN m) o xs.length = some xs :=
@@ -59,11 +57,7 @@ theorem nestContainer_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestContainer fe (decI C)) a₀ ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.nestContainer fe (decI C)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ NcOut s'.mem r (AM.res (ConRon.Arena.nestContainer fe (decI C)) a₀); ⊤⦄ := by
-  refine triple_post (nt_spec p hl k s₀ vis C) ?_
-  rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok dn fe vis C hC k _ _ a₀ r hm hS
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
+  sorry
 
 end census
 

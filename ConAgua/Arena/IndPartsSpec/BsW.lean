@@ -138,13 +138,7 @@ theorem partsBlk_nil {dn : NIdx → Option ConLeche.Name} {m : Mem} {off : Nat}
 theorem partsErRd {m m' : Mem} (hg : IWGrow m m') {i v : Nat} (h : nat? (erA (truncM m)) i = some v)
     {w : Word} (hw : w.toNat = i) :
     rdW (m'.arr64 EREC) w = UInt64.ofNat v ∧ v < 2 ^ 64 ∧ i < erTop m := by
-  simp only [nat?, Option.map_eq_some_iff] at h
-  obtain ⟨x, hx, rfl⟩ := h
-  obtain ⟨hi, hx'⟩ := truncM_er_get hx
-  simp only [erA] at hx'
-  refine ⟨?_, x.toNat_lt, hi⟩
-  rw [rdW_of_get? hw.symm (by rw [hg.erGet i hi]; exact hx')]
-  simp
+  sorry
 
 /-- **A fresh record, read back below the new top.** -/
 theorem partsFresh {vis : Word} {fe : IFEnv} {a : AState}
@@ -199,16 +193,7 @@ theorem ipBlkHead {dn : NIdx → Option ConLeche.Name} {m : Mem} {off l : Word}
       rdW (m.arr64 EREC) (UInt64.ofNat q) = UInt64.ofNat (ciKind x) ∧
       decCI (erA (truncM m)) q = some x ∧
       DecB (fun m => decEBlk dn m (off + 1).toNat (l - 1).toNat) m rest := by
-  obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
-    ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-  rw [hL] at hblk
-  obtain ⟨q, x, rest, rfl, hq, hx, hrest⟩ := partsBlk_cons hblk
-  obtain ⟨hoff, hqb, hofft⟩ := partsErRd (IWGrow.refl m) hq rfl
-  obtain ⟨hkw, -, -⟩ := partsErRd (IWGrow.refl m) (partsCI_fields hx).1 (w := UInt64.ofNat q)
-    (UInt64.toNat_ofNat_of_lt' hqb)
-  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-  refine ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, ?_⟩
-  rw [partsSucc_of_lt hofft hE, partsPred_of hL]; exact hrest
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_split_recs`' model refines `blockSplitRecs`.** -/

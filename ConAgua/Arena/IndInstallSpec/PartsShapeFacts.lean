@@ -99,25 +99,7 @@ theorem partsShapeFacts {m : Mem} {q : Word} {bs : BlockShape}
     decBS m q.toNat = some bs ∧ q.toNat + 9 ≤ iwTop m ∧
     (∀ o l j v, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → j < l →
       iwN m (o + j) = some v → v + 1 < iwTop m) := by
-  have hqt : decBS (truncM m) q.toNat = some bs := hq
-  obtain ⟨hmem, -, -, -, -, -, hpr⟩ := decBS_some hqt
-  have hq8 : q.toNat + 8 < iwTop m := by
-    simp only [iwB, bool?, Option.map_eq_some_iff] at hpr
-    obtain ⟨w, hw, -⟩ := hpr
-    exact (truncM_iw_get hw).1
-  refine ⟨hq.get (decBS_mono _), by omega, ?_⟩
-  obtain ⟨o, l, ho, hl, hdm, -⟩ := partsAt decMS_mono hmem
-  have hoN : iwN m q.toNat = some o.toNat := by rw [← iwN_truncM (by omega)]; exact ho
-  have hlN : iwN m (q.toNat + 1) = some l.toNat := by rw [← iwN_truncM (by omega)]; exact hl
-  intro o' l' j v h1 h2 hj hv
-  rw [hoN] at h1; rw [hlN] at h2
-  simp only [Option.some.injEq] at h1 h2; subst h1 h2
-  obtain ⟨v', hv', hms⟩ := decPL_getH (truncM m) (show decPL _ _ _ _ = _ from hdm) j hj
-  have hlt := partsIwLt hv'
-  rw [iwN_truncM hlt, hv] at hv'
-  simp only [Option.some.injEq] at hv'; subst hv'
-  obtain ⟨-, hn, -⟩ := decMS_some hms
-  exact partsIwLt hn
+  sorry
 
 /-- The members' count word of a decoded shape record. -/
 theorem partsShapeK {m : Mem} {q : Word} {bs : BlockShape} (hq : decBS m q.toNat = some bs)

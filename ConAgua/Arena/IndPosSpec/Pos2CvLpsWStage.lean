@@ -38,7 +38,6 @@ theorem pos2_cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   sorry
 
-mutual
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 def nhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none

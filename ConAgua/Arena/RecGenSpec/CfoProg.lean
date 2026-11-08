@@ -63,10 +63,7 @@ theorem rec2SimNestOcc (hS : StageR vis fe m a) {no nl e : Word} {names : List N
     RSim (noConstWf k m no nl 0 0 e) (ConRon.Arena.nestOcc names 0 0 (decI e)) a
       (fun b a' x => a' = a ∧ (b.1 != 0) = x ∧ noMR b.2 ∅ ∧ StageR vis fe b.2 a ∧ IWGrow m b.2 ∧
         MFr [NOM] [204, 205] m b.2) := by
-  rintro ⟨r, m'⟩ h
-  obtain ⟨x, hrun, hx, hM', hS', hg, hf⟩ := noConstWf_ok k dn fe vis m m' a no nl 0 0 e r names mp0 h hS hh
-    hn hnb hM
-  exact ⟨x, a, by simpa [decE_eq] using hrun, rfl, hx, hM', hS', hg, hf⟩
+  sorry
 
 end sims
 

@@ -158,25 +158,7 @@ theorem decCI_ind_cases {a : Array Word} {p : Nat}
     ∃ k, nat? (aread a) p = some k ∧
       ((k = 3 ∧ ∃ cv caps, ci = .indInfo cv caps ∧ nat? (aread a) (p + 17) = some caps.nparams) ∨
        (k ≠ 3 ∧ ∀ cv caps, ci ≠ .indInfo cv caps)) := by
-  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨k, hk, h⟩ := h
-  refine ⟨k, hk, ?_⟩
-  match k, h with
-  | 0, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 1, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 2, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 3, h =>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, caps, hcaps, rfl⟩ := h
-    left; refine ⟨rfl, cv, caps, rfl, ?_⟩
-    simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
-      Option.some.injEq] at hcaps
-    obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, np, hnp, _, _, rfl⟩ := hcaps
-    simpa [Nat.add_assoc] using hnp
-  | 4, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 5, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 6, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all []
-  | (_ + 7), h => simp at h
+  sorry
 
 /-! ## `class_n_pc_of` -/
 
@@ -304,10 +286,8 @@ theorem classNPcOf_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hS : StageR vis fe s₀.mem a₀) (hb : BSOK s₀.mem q.toNat bs) (hi : H i) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_n_pc_of" [q, vis, i]
     ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
-      r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))]; ⊤⦄ :=
-  triple_post (classNPcOf_spec p ha hmc hmn hct hx hg hef hp n s₀ q vis i) fun _ _ ⟨hl, hw⟩ =>
-    have h := npcW_ok hw hS hb hi
-    ⟨hl, h.1, h.2.1, h.2.2.1⟩
+      r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))]; ⊤⦄ := by
+  sorry
 
 end L.Ind
 

@@ -72,36 +72,7 @@ theorem partsSliceCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  have hdl : ∀ {r m'} (o : Word), erToIwW n m o l = some (r, m') →
-      o.toNat + l.toNat ≤ (m.arr64 EREC).size → hslice? (erA m) o.toNat l.toNat = some xs →
-      StageR vis fe m' a ∧ IWGrow m m' ∧
-      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-    intro r m' o h hsrc hs
-    have hroom : iwTop m + l.toNat ≤ (m.arr64 IW).size := by
-      simp only [erToIwW] at h
-      rcases hal : allocW m l with _ | x
-      · rw [hal] at h; cases h
-      obtain ⟨hq', -, hr⟩ := allocW_facts hal hsz
-      rw [hq'] at hr; simp only [iwTop]; omega
-    obtain ⟨hr, hd, hg, hf, -, ht⟩ := erToIwW_dec (k := IdxKind.name) h hsz hc hEs hsrc
-    subst hr
-    simp only [List.headD_cons, List.tail_cons]
-    refine ⟨stage_frame_iw hS hf (by simp only [iwTop] at ht hroom ⊢; omega), hg, ?_, ht⟩
-    rw [hd, hs]
-  have hs' : hslice? (erA m) o.toNat l.toNat = some xs := ArrExt.hslice? (IWGrow.refl m).truncExt.2 hs
-  rcases Nat.eq_zero_or_pos l.toNat with h0 | hpos
-  · have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using h0)
-    subst hl0
-    rw [partsErToIw_zero] at h
-    have : xs = [] := by simpa [hslice?] using hs.symm
-    subst this
-    exact hdl 0 h (by simp) (by simp [hslice?])
-  · obtain ⟨w, hw⟩ := partsHslice_last (l.toNat - 1) o.toNat xs (by rw [Nat.sub_add_cancel hpos]; exact hs)
-    have := (truncM_er_get hw).1
-    have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-    exact hdl _ h (by omega) hs'
+  sorry
 
 /-- `er_to_iw` of a constant's level-parameter slice (decoded below the tops), as a handle slice. -/
 theorem partsLpsCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}

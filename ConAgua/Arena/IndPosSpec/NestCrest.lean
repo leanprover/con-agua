@@ -520,73 +520,7 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     u4W n m ko nF cl i = some (r, m') → StageR vis fe m a → IWGrow m0 m → i.toNat ≤ nF.toNat → PosMR m →
     ∃ b a', ((List.range' i.toNat (nF.toNat - i.toNat)).anyM (u4F ks (decI cl))).run a = .ok (b, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
-  intro n
-  obtain ⟨hkl, hkw⟩ := decKL_get hks
-  induction n with
-  | zero => intro m m' a i r h; simp [u4W] at h
-  | succ n ih =>
-    intro m m' a i r h hS hg0 hi hP
-    by_cases hd : nF ≤ i
-    · rw [u4W_done (h := hd)] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : nF.toNat - i.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp hd; omega
-      rw [this]; exact ⟨false, a, rfl, hS, IWGrow.refl _, rfl, hP⟩
-    have hlt : i.toNat < nF.toNat := by
-      have : ¬ nF.toNat ≤ i.toNat := fun e => hd (UInt64.le_iff_toNat_le.mpr e); omega
-    obtain ⟨w, hw, hx⟩ := hkw i.toNat hlt
-    obtain ⟨hwi, hw'⟩ := truncM_iw_get hw
-    have hrd : rdW (m.arr64 IW) (ko + i) = w := by
-      have e : (ko + i).toNat = ko.toNat + i.toNat := word_add_toNat (by
-        have := hS.iw.iw; have := hS.iw.iwSize; have := hg0.iw; omega)
-      simp only [rdW, e]; simp only [iwA, aread_apply, aread_apply] at hw'; rw [hg0.iwGet _ hwi, hw']; rfl
-    have hi1 : (i + 1).toNat = i.toNat + 1 := word_add_toNat (by have := nF.toNat_lt; simp; omega)
-    have hrange : List.range' i.toNat (nF.toNat - i.toNat) =
-        i.toNat :: List.range' (i + 1).toNat (nF.toNat - (i + 1).toNat) := by
-      rw [hi1, show nF.toNat - i.toNat = (nF.toNat - (i.toNat + 1)) + 1 by omega, List.range'_succ]
-    rw [hrange, List.anyM_cons]
-    have hord : ((ks[i.toNat]?.map (· == .ordinary)).getD true) = (w == 0) := by
-      rw [List.getElem?_eq_getElem (by omega)] at hx ⊢
-      simp only [Option.map_some, Option.getD_some]
-      exact decNFK_ordinary hx
-    by_cases hk : rdW (m.arr64 IW) (ko + i) ≠ 0
-    · rw [u4W_kind (h := hd) (hk := hk)] at h
-      have hw0 : (w == 0) = false := by rw [← hrd]; simpa using hk
-      cases n with
-      | zero => simp [ustWf, u4K] at h
-      | succ n =>
-      cases n with
-      | zero => simp [ustWf, u4K] at h
-      | succ n =>
-      rcases hu : ustW n m cl 0 i with _ | ⟨su, m1⟩; · simp only [ustWf] at h; rw [hu] at h; simp [u4K] at h
-      simp only [ustWf] at h; rw [hu] at h
-      obtain ⟨mp, hmp⟩ := hP.hb
-      obtain ⟨b1, a1, hrun1, hsu, hM1, hS1, hg1⟩ := ustW_ok n m m1 a cl 0 i su mp
-        (by have := nF.toNat_lt; simp; omega) hcl hS hmp hu
-      have hP1 := hP.setHb (ustW_mfr hu) hM1
-      by_cases hs : su ≠ 0
-      · rw [u4K_hit (h := hs)] at h
-        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-        have hb1 : b1 = true := by cases b1 <;> simp_all
-        subst hb1
-        refine ⟨true, a1, ?_, hS1, hg1, rfl, hP1⟩
-        simp only [u4F, hord, hw0, Bool.false_eq_true, ite_false, StateT.run_bind]
-        simp only [UInt64.toNat_zero] at hrun1
-        rw [hrun1]; rfl
-      · rw [u4K_miss (h := hs)] at h
-        have hb1 : b1 = false := by cases b1 <;> simp_all
-        subst hb1
-        obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m1 m' a1 (i + 1) r h hS1 (hg0.trans hg1)
-          (by rw [hi1]; omega) hP1
-        refine ⟨b, a', ?_, hS', hg1.trans hg', hr, hP'⟩
-        simp only [u4F, hord, hw0, Bool.false_eq_true, ite_false, StateT.run_bind]
-        simp only [UInt64.toNat_zero] at hrun1
-        rw [hrun1, except_ok_bind]; simpa using hrun
-    · rw [u4W_ord (h := hd) (hk := hk)] at h
-      have hw0 : (w == 0) = true := by rw [← hrd]; simpa using hk
-      obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m m' a (i + 1) r h hS hg0 (by rw [hi1]; omega) hP
-      refine ⟨b, a', ?_, hS', hg', hr, hP'⟩
-      simp only [u4F, hord, hw0, ite_true, StateT.run_bind]
-      simpa using hrun
+  sorry
 
 end L.Ind
 

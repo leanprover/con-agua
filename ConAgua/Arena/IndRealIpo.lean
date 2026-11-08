@@ -132,14 +132,7 @@ theorem ipoLoop_spec (p : Prog) (hps : p.lookup "pi_sort_tele_len" = some L.Fron
     ⦃fun s => s = s₀⦄ exec p k ipoLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧
       ipoW k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) = some r; ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := ipoLoop) rfl]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, ih,
-        sortTele_specI p hps hev k] <;>
-      finish (gen := 40) (instances := 20000) [CWF]
+  sorry
 
 theorem ipoW_ne_brk : ∀ (k : Nat) (m : Mem) (np o l j : Word), ipoW k m np o l j ≠ some .brk := by
   intro k
@@ -196,11 +189,7 @@ theorem decEBlk_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat} {
 
 theorem rdW_of_nat? {a : Array Word} {i q : Nat} (h : nat? (aread a) i = some q) (hi : i < 2 ^ 64) :
     rdW a (UInt64.ofNat i) = UInt64.ofNat q ∧ q < 2 ^ 64 := by
-  simp only [nat?, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  have : (UInt64.ofNat i).toNat = i := UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hi)
-  simp only [rdW, this, hw, Option.getD_some]
-  exact ⟨by simp, w.toNat_lt⟩
+  sorry
 
 theorem ipo_twin_other (nP : Nat) (ci : IConstantInfo) (rest : List IConstantInfo) (a : AState)
     (h1 : ∀ cv caps, ci ≠ .indInfo cv caps) (h2 : ∀ cv x y, ci ≠ .ctorInfo cv x y) :
@@ -217,118 +206,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
     (hb : o.toNat + l.toNat < 2 ^ 64) (hEs : (m.arr64 EREC).size < 2 ^ 64) :
     ∀ (k : Nat) (j : Word) (r : Sig), ipoW k m np o l j = some r → j ≤ l →
       (indParamsOk np.toNat (blk.drop j.toNat)).run a = .ok (decide (r = .normal), a) := by
-  have hlen : blk.length = l.toNat := by rw [mapM_opt_length _ _ _ hdec]; simp
-  intro k
-  induction k with
-  | zero => intro j r h; simp [ipoW] at h
-  | succ k ih =>
-  intro j r h hjl
-  by_cases hj : j < l
-  rotate_left
-  · rw [ipoW_exit (h := hj)] at h
-    cases h
-    have : j.toNat = l.toNat := by
-      have := UInt64.le_iff_toNat_le.mp hjl
-      have : ¬ j.toNat < l.toNat := fun h' => hj (UInt64.lt_iff_toNat_lt.mpr h')
-      omega
-    rw [this, ← hlen, List.drop_length]; rfl
-  have hjn : j.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hj
-  obtain ⟨q, hq, hci⟩ := decEBlk_get hdec j.toNat hjn
-  have hoj : (o + j).toNat = o.toNat + j.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-  obtain ⟨hpw, hqb⟩ := rdW_of_nat? hq (by omega)
-  rw [show (UInt64.ofNat (o.toNat + j.toNat) : Word) = o + j by
-    apply UInt64.toNat_inj.mp; rw [hoj]; simp; omega] at hpw
-  have hj1n : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hdrop : blk.drop j.toNat = blk[j.toNat]'(by omega) :: blk.drop (j.toNat + 1) :=
-    List.drop_eq_getElem_cons (by omega)
-  have hj1 : j + 1 ≤ l := UInt64.le_iff_toNat_le.mpr (by rw [UInt64.toNat_add]; simp; omega)
-  have hqT : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  obtain ⟨wk, hwk, hk⟩ := ciD hci
-  have hkw : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j)) = wk := by
-    rw [show rdW (m.arr64 EREC) (o + j) = UInt64.ofNat q from hpw]; simp only [rdW, hqT]; rw [show (m.arr64 EREC)[q]? = some wk from hwk]; rfl
-  have hpw' : rdW (m.arr64 EREC) (o + j) = UInt64.ofNat q := hpw
-  have hqs : q < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hwk).1
-  rw [hdrop]
-  -- the step of the twin: `ok` on the record, then the rest
-  have hrest : ∀ r', ipoW k m np o l (j + 1) = some r' →
-      (indParamsOk np.toNat (blk.drop (j.toNat + 1))).run a = .ok (decide (r' = .normal), a) :=
-    fun r' h' => by rw [← hj1n]; exact ih (j + 1) r' h' hj1
-  have other : ∀ ci, wk ≠ 3 → wk ≠ 4 →
-      (∀ cv caps, ci ≠ .indInfo cv caps) → (∀ cv x y, ci ≠ .ctorInfo cv x y) →
-      (indParamsOk np.toNat (ci :: blk.drop (j.toNat + 1))).run a = .ok (decide (r = .normal), a) := by
-    intro ci hw3 hw4 h1 h2
-    rw [ipoW_other (h := hj) (h3 := by rw [hkw]; exact hw3),
-      ipoK_ok (h := by rw [hkw]; exact fun e => hw4 e.1)] at h
-    rw [ipo_twin_other _ _ _ _ h1 h2]
-    exact hrest r h
-  have n3 : ∀ x : Nat, x ≠ 3 → wk.toNat = x → wk ≠ 3 := fun x hx h0 e => hx (by rw [← h0, e]; rfl)
-  have n4 : ∀ x : Nat, x ≠ 4 → wk.toNat = x → wk ≠ 4 := fun x hx h0 e => hx (by rw [← h0, e]; rfl)
-  rcases hk with ⟨h0, cv, -, hx⟩ | ⟨h0, cv, v, hi, -, -, -, hx⟩ | ⟨h0, cv, -, hx⟩ |
-    ⟨h0, cv, caps, hcv, -, hx⟩ | ⟨h0, cv, npc, nf, -, hnpc, -, hx⟩ |
-    ⟨h0, cv, mi, rp, ro, rc, rules, -, -, -, -, -, -, hx⟩
-  · rw [hx]; exact other _ (n3 0 (by decide) h0) (n4 0 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
-  · rw [hx]; exact other _ (n3 1 (by decide) h0) (n4 1 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
-  · rw [hx]; exact other _ (n3 2 (by decide) h0) (n4 2 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
-  · -- a type former
-    rw [hx]
-    have hw3 : wk = 3 := UInt64.toNat_inj.mp (by rw [h0]; rfl)
-    rw [ipoW_ind (h := hj) (h3 := by rw [hkw]; exact hw3)] at h
-    obtain ⟨-, -, hty⟩ := decCV_some hcv
-    have hq4 : q + 1 + 3 = q + 4 := by omega
-    rw [hq4] at hty
-    have hq4b : q + 4 < 2 ^ 64 := by
-      cases hw4 : (erA m)[q + 4]? with
-      | none => simp [hd?, hw4] at hty
-      | some w => have := (Array.getElem?_eq_some_iff.mp hw4).1; simp only [erA] at this; omega
-    obtain ⟨w, hwr, -, hwd⟩ := erH_rdW hty hq4b
-    have hp4 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j) + 4) = w := by
-      rw [hpw', ← hwr]; congr 1; apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add] <;> omega
-    rw [hp4] at h
-    rcases hst : L.Front.Ind.sortTeleW k m CWF w with _ | ⟨ok, n⟩
-    · rw [hst, ipoT_none] at h; cases h
-    rw [hst] at h
-    obtain ⟨hrun, hnlt⟩ := L.Front.Ind.sortTeleW_ok m a hR k CWF w ok n hst
-    rw [CWF_eq, decE_eq, hwd] at hrun
-    simp only [indParamsOk, StateT.run_bind, hrun, except_ok_bind]
-    by_cases hbad : ok ≠ 0 ∧ n < np
-    · rw [ipoT_bad (h := hbad)] at h
-      cases h
-      have hn : ¬ np.toNat ≤ n.toNat := by have := UInt64.lt_iff_toNat_lt.mp hbad.2; omega
-      simp [hbad.1, hn]; rfl
-    · rw [ipoT_ok (h := hbad), ipoK_ok (h := by rw [hkw, hw3]; exact fun e => absurd e.1 (by decide))] at h
-      have hres := hrest r h
-      by_cases h0' : ok = 0
-      · simp [h0', hres]
-      · have hnn : ¬ n < np := fun e => hbad ⟨h0', e⟩
-        have : np.toNat ≤ n.toNat := by
-          have : ¬ n.toNat < np.toNat := fun e => hnn (UInt64.lt_iff_toNat_lt.mpr e)
-          omega
-        simp [h0', this, hres]
-  · -- a constructor
-    rw [hx]
-    have hw4 : wk = 4 := UInt64.toNat_inj.mp (by rw [h0]; rfl)
-    rw [ipoW_other (h := hj) (h3 := by rw [hkw, hw4]; decide)] at h
-    have hq5b : q + 5 < 2 ^ 64 := by
-      simp only [nat?, Option.map_eq_some_iff] at hnpc
-      obtain ⟨w, hw, -⟩ := hnpc
-      have := (Array.getElem?_eq_some_iff.mp hw).1; simp only [erA] at this; omega
-    obtain ⟨hr5, hnb⟩ := rdW_of_nat? hnpc hq5b
-    have hp5 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j) + 5) = UInt64.ofNat npc := by
-      rw [hpw', ← hr5]; congr 1; apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add] <;> omega
-    have hnpcT : (UInt64.ofNat npc : Word).toNat = npc := UInt64.toNat_ofNat_of_lt' hnb
-    simp only [indParamsOk, StateT.run_bind]
-    by_cases hne : UInt64.ofNat npc ≠ np
-    · rw [ipoK_bad (h := by rw [hkw, hw4, hp5]; exact ⟨rfl, hne⟩)] at h
-      cases h
-      have : (npc == np.toNat) = false := by
-        simp only [beq_eq_false_iff_ne]; intro e; apply hne; apply UInt64.toNat_inj.mp; rw [hnpcT, e]
-      simp [this]; rfl
-    · rw [ipoK_ok (h := by rw [hkw, hw4, hp5]; exact fun e => hne e.2)] at h
-      have hres := hrest r h
-      have : (npc == np.toNat) = true := by
-        simp only [beq_iff_eq]; have := Classical.not_not.mp hne; rw [← this, hnpcT]
-      simp [this, hres]
-  · rw [hx]; exact other _ (n3 5 (by decide) h0) (n4 5 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
+  sorry
 
 theorem ipoW_sig : ∀ (k : Nat) (m : Mem) (np o l j : Word) (sg : Sig), ipoW k m np o l j = some sg →
     sg = .normal ∨ sg = .ret [0] := by

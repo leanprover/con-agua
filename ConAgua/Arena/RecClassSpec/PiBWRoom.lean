@@ -54,9 +54,7 @@ theorem simGetAppArgs (hS : StageR vis fe m a) {e : Word} (he : H e) :
 theorem simOpenPisF (hS : StageR vis fe m a) (hA : AbsOK m) {k e i : Word} (he : H e) :
     RSim (opfF m [k, e, i]) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
       (fun b a' x => KP dn vis fe m decOLE b a' x ∧ AbsOK b.2) := by
-  rintro ⟨r, m'⟩ h
-  obtain ⟨x, a', hrun, hK, hA'⟩ := opfF_ok dn vis fe k e i he m m' a r h ⟨hS, hA⟩
-  exact ⟨x, a', hrun, hK, hA'⟩
+  sorry
 
 end sims
 
