@@ -710,13 +710,15 @@ theorem scrArrs_low : ∀ b ∈ scrArrs, InStoreTier b := by decide
 
 /-- The bracket keeps the pins and the environment: it writes arrays below 64 and `CTL` words
 below 128 only. -/
-theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
+theorem CheckR.of_bracket {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR m a vis fe)
     (hD : ArenaD m' a') (hc : CoreR m' a'.caches) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b)
     (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :
-    CheckR m' a' vis fe := by
-  sorry
+    CheckR m' a' vis fe :=
+  ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_low hA (by decide)) hf,
+    hR.env.frame (fun b hb => not_mem_envArrs (.inl (by have := hA b hb; omega)))
+      (fun x hx => not_mem_envCtl (.inl (by have := hC x hx; omega))) hf, hmode⟩
 
 /-- `scratch_enter()` refines `enterScratch` under `CheckR`. -/
 @[refines ConRon.Arena.enterScratch]
@@ -732,7 +734,20 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
     invoke p (exec p n) "scratch_enter" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧
       CheckR s'.mem (AM.st enterScratch a₀) vis fe; ⊤⦄ := by
-  sorry
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hlo, h62, c1, c2, c3, c4, hpt, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchEnter_spec p hp hr hb hl hi hf n s₀)
+  subst hs
+  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (enterScratch_run a₀)
+  refine ⟨hloc, hok, ?_⟩
+  rw [hst, hm]
+  exact hC.of_bracket (C := (0 :: resetCtl) ++ memoCtl)
+    (ArenaD.enter _ _ hC.arena hlo h62 c1 c2 c3 c4 hpt)
+    (hC.core.frame (.of_low scrArrs_low (by decide))
+      (.of_lt (fun x h => resetCtl_lt x h) (by decide)) (enterMem_frame _))
+    (enterMem_frame _) scrArrs_low (fun x h => Nat.lt_trans (resetCtl_lt x h) (by decide)) rfl
+    (modeOK_enterMem _ h62)
 
 /-- `scratch_drop()` refines `dropScratch` under `CheckR`. -/
 @[refines ConRon.Arena.dropScratch]
@@ -744,7 +759,36 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
     invoke p (exec p n) "scratch_drop" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok dropScratch a₀ ∧
       CheckR s'.mem (AM.st dropScratch a₀) vis fe; ⊤⦄ := by
-  sorry
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, -, hD⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchDrop_refines p hp hr hfl a₀ n s₀ hC.arena)
+  obtain ⟨-, hfok, -, h62, hpt, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchDrop_spec p hp hr hfl n s₀)
+  subst hs
+  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (dropScratch_run a₀)
+  have hrf : MemFrame scrArrs (0 :: resetCtl) (flushMem s.mem) (resetMem (preMem (flushMem s.mem)) 0) :=
+    resetMemP_frame _ 0
+  have hcore : CoreR (resetMem (preMem (flushMem s.mem)) 0) Caches.empty :=
+    (hC.core.flush hfok).frame (.of_low scrArrs_low (by decide))
+      (.of_lt (fun x h => resetCtl_lt x (List.mem_append_left _ h)) (by decide)) hrf
+  refine ⟨hloc, hok, hC.of_bracket (A := scrArrs) (C := flushCtl ++ (0 :: resetCtl)) hD
+    (by rw [hst, hm]; exact hcore) ?_ scrArrs_low ?_ (by rw [hst]) ?_⟩
+  · rw [hm]
+    exact ((flushMem_frame _).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
+      (hrf.mono (by simp) (fun x h => List.mem_append_right _ h))
+  · intro x h
+    rcases List.mem_append.mp h with h | h
+    · exact flushCtl_lt x h
+    · exact Nat.lt_trans (resetCtl_lt x (List.mem_append_left _ h)) (by decide)
+  · rw [hm]
+    have hff : MemFrame slot1Arrs (flushCtl ++ [SCB]) s.mem (preMem (flushMem s.mem)) :=
+      ((flushMem_frame s.mem).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
+        ((preMem_frame _).mono (fun b h => h) (fun x h => List.mem_append_right _ h))
+    have hp := hC.arena.base.lit.1
+    refine modeOK_resetMem _ 0 (hp.frame (hff.arr POOL (by decide) (by decide))
+      (hff.arr POOL1 (by decide) (by decide)) (hff.arr PT0 (by decide) (by decide)) (hff.size CTL)
+      (hff.top_eq (by decide))) h62 hpt
 
 #guard
   let m : Mem := Mem.ofWords [(CTL, Array.replicate 120 0), (PT0, #[0])]

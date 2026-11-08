@@ -381,12 +381,6 @@ theorem IWOK.of_er {m m' : Mem} (hf : MemFrame [EREC, tier1 EREC] [] m m') (h : 
     hf.ctl 129 (by simp), hf.ctl 130 (by simp), hf.ctl 200 (by simp)] at h1 ⊢
   exact h1
 
-/-- **CheckR across a growth of the record pool** (both tiers, the tops `CTL[129]`, `CTL[130]`):
-requested from the infrastructure (`Tiers.lean`, `CheckR.erGrow`); stated here until it lands. -/
-theorem CheckR.erGrowP {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (h : CheckR m a vis fe)
-    (hf : MemFrame [EREC, tier1 EREC] [129, 130] m m') (hg : ErecGrow m m') : CheckR m' a vis fe := by
-  sorry
-
 /-- **A record allocated in `EREC` and written**: `erec_alloc(ws.length)` then `ws` at the
 returned address keeps the stage relation and grows the pools; the words read back through
 `erecP`, the address in the flag's tier at its old top. -/
@@ -434,7 +428,7 @@ theorem erRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hI : (wrER m1 q ws).arr64 IW = m.arr64 IW := by
     rw [hfw.arr IW (by decide) (by decide), hm1 _ (by decide)]
   have h200 : rdW ((wrER m1 q ws).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl 200 (by simp)
-  refine ⟨⟨CheckR.erGrowP hS.check hfr hgrow, hW⟩, ⟨by simp only [iwTop, h200]; exact Nat.le_refl _,
+  refine ⟨⟨CheckR.erGrow hS.check hfr hgrow, hW⟩, ⟨by simp only [iwTop, h200]; exact Nat.le_refl _,
     hgrow.top, fun i _ => by rw [hI], hgrow.get, hgrow.top1, hgrow.get1⟩, hoff, ?_, hq41, htier,
     fun j hj => ?_⟩
   · rw [hT _ hcw, htop1, hk]
@@ -542,20 +536,61 @@ theorem cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
         erecAlloc_specW p ha n, erecPut_specW p hpu n] <;>
       finish [cvNewW, cvNewMem]
 
+/-- A word the record pool reads at `cq + j` (as a number) is `EREC⦃cq + j⦄`. -/
+theorem erRd_add {m : Mem} {cq : Word} {j : Nat} {w : Word} (h : erecP m (cq.toNat + j) = some w)
+    (hj : j < 2 ^ 64) : erRd m (cq + UInt64.ofNat j) = w ∧ (cq + UInt64.ofNat j).toNat = cq.toNat + j := by
+  have hlt : cq.toNat + j < 2 ^ 64 := by
+    rcases Nat.lt_or_ge (cq.toNat + j) (2 ^ 64) with h' | h'
+    · exact h'
+    · unfold erecP at h; rw [if_neg (by omega)] at h; cases h
+  have e : (cq + UInt64.ofNat j).toNat = cq.toNat + j := by
+    rw [UInt64.toNat_add]; simp; omega
+  exact ⟨(erRd_of_erecP (by rw [e]; exact h)).1, e⟩
+
 /-- **`cv_new` with the name and level parameters of the record at `cq`** keeps the stage
 relation and decodes as `{cv with type := ty}`. -/
 theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cq ty q : Word} {cv : IConstantVal}
-    (h : cvNewW m (rdW (m.arr64 EREC) cq) (rdW (m.arr64 EREC) (cq + 1)) (rdW (m.arr64 EREC) (cq + 2)) ty
-      = some (q, m'))
-    (hS : StageR vis fe m a) (hcv : decCVp m cq.toNat = some cv) (hcq : cq.toNat + 4 ≤ erTop m)
-    (hsl : ∀ lo ll, nat? (erA m) (cq.toNat + 1) = some lo → nat? (erA m) (cq.toNat + 2) = some ll →
-      lo + ll ≤ erTop m ∨ ll = 0)
-    (hty : ty.toNat < 2 ^ 32) :
-    StageR vis fe m' a ∧ IWGrow m m' ∧ q.toNat = erTop m ∧ erTop m' = erTop m + 4 ∧
-      (∀ lo ll, nat? (erA m') (q.toNat + 1) = some lo → nat? (erA m') (q.toNat + 2) = some ll →
-        lo + ll ≤ erTop m ∨ ll = 0) ∧
+    (h : cvNewW m (erRd m cq) (erRd m (cq + 1)) (erRd m (cq + 2)) ty = some (q, m'))
+    (hS : StageR vis fe m a) (hcv : decCVp m cq.toNat = some cv) (hty : ty.toNat < 2 ^ 32) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ erOff q = erTopOf m q ∧ erTopOf m' q = erTopOf m q + 4 ∧
+      q.toNat < 2 ^ 41 ∧ (q.toNat / 2 ^ 40 % 2 = 0 ↔ rdW (m.arr64 CTL) 1 = 0) ∧
       decCVp m' q.toNat = some { cv with type := decI ty } := by
-  sorry
+  simp only [cvNewW] at h
+  cases h1 : erAllocW m 4 with
+  | none => rw [h1] at h; cases h
+  | some x =>
+  obtain ⟨q1, m1⟩ := x
+  rw [h1] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  rw [cvNewMem_eq]
+  obtain ⟨hS', hg, hq, htop, hq41, htier, hget⟩ := erRec_stage h1 hS
+    [erRd m cq, erRd m (cq + 1), erRd m (cq + 2), ty] (by simp)
+  refine ⟨hS', hg, hq, htop, hq41, htier, ?_⟩
+  -- the source record's words
+  simp only [decCVp, decCV, hlist?, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv
+  obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, hlps⟩, t, ht, rfl⟩ := hcv
+  obtain ⟨w0, hw0, hw0l, rfl⟩ := hd?_some hnm
+  obtain ⟨w1, hw1, rfl⟩ : ∃ w, erA m (cq.toNat + 1) = some w ∧ w.toNat = lo := by
+    simp only [nat?, Option.map_eq_some_iff] at hlo; exact hlo
+  obtain ⟨w2, hw2, rfl⟩ : ∃ w, erA m (cq.toNat + 1 + 1) = some w ∧ w.toNat = ll := by
+    simp only [nat?, Option.map_eq_some_iff] at hll; exact hll
+  have r0 : erRd m cq = w0 := (erRd_of_erecP (by simpa [erA] using hw0)).1
+  obtain ⟨r1, -⟩ := erRd_add (j := 1) (cq := cq) (m := m) (by simpa [erA] using hw1) (by decide)
+  obtain ⟨r2, -⟩ := erRd_add (j := 2) (cq := cq) (m := m) (by simpa [erA, Nat.add_assoc] using hw2) (by decide)
+  simp only [show (UInt64.ofNat 1 : Word) = 1 from rfl, show (UInt64.ofNat 2 : Word) = 2 from rfl] at r1 r2
+  have g0 := hget 0 (by simp)
+  have g1 := hget 1 (by simp)
+  have g2 := hget 2 (by simp)
+  have g3 := hget 3 (by simp)
+  simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.add_zero, r0, r1, r2] at g0 g1 g2 g3
+  have hlps' : (hslice? (erecP m) w1.toNat w2.toNat : Option (List NIdx)) = some lps := hlps
+  have hs : (hslice? (erecP (wrER m1 q1 [w0, w1, w2, ty])) w1.toNat w2.toNat : Option (List NIdx)) =
+      some lps := by rw [r0, r1, r2] at hg; exact ArrExt.hslice? (IWGrow.ext hg) hlps'
+  rw [r0, r1, r2]
+  simp only [decCVp, decCV, hlist?, erA, nat?, hd?, g0, g1, Nat.add_assoc, g2, g3, hw0l, hty,
+    ite_true, Option.map_some, bind, Option.bind_some, pure]
+  rw [hs]; rfl
 
 end L.Ind

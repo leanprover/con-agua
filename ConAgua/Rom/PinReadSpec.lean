@@ -438,26 +438,26 @@ grind_pattern [arena_grind] internAllPinsW_eq => internAllPinsW rom (n + 1) m
 
 /-! ## The models keep the top in a tier -/
 
-@[arena_grind =] theorem erAllocMem_top (m : Mem) (k : Word) : (erAllocMem m k).top = m.top :=
-  top_set64_ne _ _ _ (by decide)
-@[arena_grind =] theorem erAllocMem_pcap (m : Mem) (k : Word) : pcap (erAllocMem m k) = pcap m :=
-  pcap_set64 _ _ _ _
+@[arena_grind =] theorem erAllocMem_top (m : Mem) (k : Word) : (erAllocMem m k).top = m.top := by
+  unfold erAllocMem; split <;> exact top_set64_ne _ _ _ (by decide)
+@[arena_grind =] theorem erAllocMem_pcap (m : Mem) (k : Word) : pcap (erAllocMem m k) = pcap m := by
+  unfold erAllocMem; split <;> exact pcap_set64 _ _ _ _
+theorem erAllocMem_flag (m : Mem) (k : Word) : (erAllocMem m k).flag = m.flag := by
+  unfold erAllocMem; split <;> exact flag_set64_ctl _ _ _ (by decide)
+
+theorem erAllocW_mem {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m')) : m' = erAllocMem m k := by
+  unfold erAllocW at h
+  split at h <;> (dsimp only at h; split at h; · cases h
+                  split at h; · cases h
+                  simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm)
 
 theorem erAllocW_topK {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m')) : TopK m m' := by
-  simp only [erAllocW] at h
-  split at h; · cases h
-  split at h; · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  exact TopK.of_eq (erAllocMem_top _ _) (erAllocMem_pcap _ _) (flag_set64_ctl _ _ _ (by decide))
+  rw [erAllocW_mem h]
+  exact TopK.of_eq (erAllocMem_top _ _) (erAllocMem_pcap _ _) (erAllocMem_flag _ _)
 
 theorem erAllocW_eqs {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m')) :
     m'.top = m.top ∧ pcap m' = pcap m := by
-  simp only [erAllocW] at h
-  split at h; · cases h
-  split at h; · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  rw [erAllocW_mem h]
   exact ⟨erAllocMem_top _ _, erAllocMem_pcap _ _⟩
 theorem erAllocW_top' (m m' : Mem) (k o : Word) (h : erAllocW m k = some (o, m')) : m'.top = m.top :=
   (erAllocW_eqs h).1
