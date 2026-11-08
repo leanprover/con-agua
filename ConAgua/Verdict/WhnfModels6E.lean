@@ -82,32 +82,40 @@ l_model m2cAndE_spec (p : Prog) (hp : M2CProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model m2cArmsE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.arms ↦ m2cArmsE list]
   specs [m2cKE_spec p hp n, m2cEtaE_spec p hp n, m2cAndE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model m2cCtorE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.ctor ↦ m2cCtorE list]
   specs [callW_spec p n "pi_result", callW_spec p n "get_app_fn", callW_spec p n "m2c_const_view", callW_spec p n "env_find", m2cArmsE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model m2cHeadE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.head ↦ m2cHeadE list]
   specs [callW_spec p n "is_ctor_app", callW_spec p n "env_find", m2cCtorE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model mtcE_spec (p : Prog) (hp : M2CProg p) (hf : p.lookup "major_to_ctor" = some majorToCtorL)
   fns [hf ↦ mtcE list]
   specs [m2cHeadE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 end L.Arena
