@@ -17,7 +17,7 @@ public import ConAgua.Arena.IndIface
 The callW pattern (`InferBodyLet.lean`): a word model of each function with its callees through
 their runs (`callW`), the L spec by `vcgen` + `simp_all`, the refinement from the callees'
 specs, threaded through the twin's `do` blocks by `coreRef_bind`. Bodies at L fuel `n + 1`
-assume `KnotUpTo p n` and refine the twin at `coreKnot (decMode mode) fe id F`, `F ≥ n`.
+assume `KnotUpTo p n` and refine the twin at `coreKnot (decMode mode) (decEager mode) fe id F`, `F ≥ n`.
 
 Callees with no proof yet are hypotheses (`StuckCallees`): `not_proof_fast`/`is_proof_fast`
 (`DefeqCallees`), `proof_irrel` (`ProofIrrelOK`, a `sorry` in `WhnfIota.lean`).
@@ -73,7 +73,7 @@ def DefeqLstOK (p : Prog) : Prop :=
     SlotPre s₀ a₀ dn vis fe M eb mode → SpineR s₀.mem ao an xs → SpineR s₀.mem bo bn ys →
     ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat → bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p (n + 1) "defeq_lst" [mode, vis, d, ao, an, bo, bn]
-      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) decBool s₀ a₀ dn
+      (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat xs.toList ys.toList) decBool s₀ a₀ dn
       vis fe M eb
 
 /-- The twin's reserved-name test: `reservedBasisNames`, then `List.contains`. -/
@@ -117,7 +117,7 @@ def LazyDeltaStepH (p : Prog) : Prop :=
     (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
     d.toNat < 2 ^ 63 →
     CoreSpec p (n + 1) "lazy_delta_step" [mode, vis, d, a, b]
-      (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+      (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b))
       decDSs s₀ a₀ dn vis fe M eb ResW3
 
 /-- `reduce_proj_core` refines `reduceProjCore` (lane `whnf`'s `reduceProjCore_refines'`; plugged in
@@ -127,7 +127,7 @@ def ReduceProjCoreH (p : Prog) : Prop :=
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d sn i c : Word), SlotPre s₀ a₀ dn vis fe MM eb mode → HW sn → HW c →
     CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
-      (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+      (reduceProjCore (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW
 
 /-- `proof_irrel` refines `proofIrrel` (the shape of lane `whnf`'s `proofIrrel_refines`,
@@ -138,7 +138,7 @@ def ProofIrrelOK (p : Prog) : Prop :=
     (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
     eb = (mode >>> 1) &&& 1 → HW a → HW b →
     CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
-      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
+      (proofIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
       vis fe MM eb
 
 /-- `proof_irrel`'s error claim at fuel `N + 1` (the premises of `ProofIrrelOK`). -/
@@ -148,7 +148,7 @@ def ProofIrrelWE (p : Prog) : Prop :=
     (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
     eb = (mode >>> 1) &&& 1 → HW a → HW b →
     CoreSpecE p (n + 1) "proof_irrel" [mode, vis, d, a, b]
-      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
+      (proofIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
 
 /-- **What the error claims of `major_to_ctor`'s pieces and of `prop_irrel` assume** at L fuel
 `N + 1`: the knot's slots' claims up to `N`, `proof_irrel`'s. -/
@@ -184,7 +184,7 @@ theorem proofIrrel_at (p : Prog) (hc : StuckCallees p) :
       (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
       eb = (mode >>> 1) &&& 1 → HW a → HW b →
       CoreSpec p n "proof_irrel" [mode, vis, d, a, b]
-        (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀
+        (proofIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀
         dn vis fe MM eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, MM, eb, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe MM eb _
@@ -217,7 +217,7 @@ theorem pi_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (M2CCtxE p n) (piE p (n + 1) s₀.mem mode vis d a b)
-      (propIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (propIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [piE]
   rw [propIrrel_eq]
@@ -285,7 +285,7 @@ theorem propIrrel_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "prop_irrel" [mode, vis, d, a, b]
-      (propIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
+      (propIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (piE_spec p hq.propIrrel (n + 1) s₀ mode vis d a b)
     (pi_ref p hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)

@@ -660,7 +660,7 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hsm : SpineR s₀.mem mo mn margs) (hsmt : mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat)
     (hcpm : rule.ctorParams ≤ mn.toNat) :
     RefE (KnotUpToE p n) (irCmpE p (n + 1) s₀.mem mode vis d us recP so rl mo)
-      (iotaRecCmpT (coreKnot (decMode mode) fe id F) fe d.toNat rule lps (decI us) args.toList
+      (iotaRecCmpT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rule lps (decI us) args.toList
         (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat margs.toList) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
   simp only [irCmpE]
@@ -776,7 +776,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     SpineR s₀.mem mo mn margs → mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat →
     rule.ctorParams ≤ mn.toNat →
     CoreSpec p (n + 1) "iota_rec_cmp" [mode, vis, d, us, recP, so, rl, mo]
-      (iotaRecCmpT (coreKnot (decMode mode) fe id F) fe d.toNat rule lps (decI us) args.toList
+      (iotaRecCmpT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rule lps (decI us) args.toList
         (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat margs.toList) decBool s₀ a₀ dn vis fe MM eb :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so rl mo mn sn lps rule args margs hS hm4
       hebm hus hlps hrule hsa hsat hmI hsm hsmt hcpm =>
@@ -981,7 +981,7 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hsm : SpineR s₀.mem mo mn margs) (hsmt : mo + mn = spTop s₀.mem)
     (hcpm : rule.ctorParams ≤ mn.toNat) :
     RefE (FamG p n) (vckE p (n + 1) s₀.mem mode vis d us recP so usj ctorP rl mo mn cmpL)
-      (iotaRecVckT (coreKnot (decMode mode) fe id F) fe d.toNat
+      (iotaRecVckT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
         (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
         (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL)) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
@@ -1123,7 +1123,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →
     SpineR s₀.mem mo mn margs → mo + mn = spTop s₀.mem → rule.ctorParams ≤ mn.toNat →
     CoreSpec p (n + 1) "iota_rec_vck" [mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL]
-      (iotaRecVckT (coreKnot (decMode mode) fe id F) fe d.toNat
+      (iotaRecVckT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
         (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
         (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL)) decBool s₀ a₀ dn vis fe
       MM eb :=

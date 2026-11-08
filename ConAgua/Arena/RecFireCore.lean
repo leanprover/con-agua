@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.InstLPLevel2
-import ConAgua.Arena.CapsNeverZeroCore
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.InferFieldSort

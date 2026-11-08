@@ -132,7 +132,7 @@ theorem defeqLst_at (p : Prog) (hc : StuckCallees p) :
       SlotPre s₀ a₀ dn vis fe M eb mode → SpineR s₀.mem ao an xs → SpineR s₀.mem bo bn ys →
       ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat → bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat →
       CoreSpec p n "defeq_lst" [mode, vis, d, ao, an, bo, bn]
-        (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) decBool s₀ a₀
+        (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat xs.toList ys.toList) decBool s₀ a₀
         dn vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
@@ -238,7 +238,7 @@ def DefeqLstWE (p : Prog) : Prop :=
     SlotPre s₀ a₀ dn vis fe M eb mode → SpineR s₀.mem ao an xs → SpineR s₀.mem bo bn ys →
     ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat → bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpecE p (n + 1) "defeq_lst" [mode, vis, d, ao, an, bo, bn]
-      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) s₀ a₀
+      (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat xs.toList ys.toList) s₀ a₀
 
 /-- **What the structure-η certificate's errors assume** at L fuel `n`: the knot's slots' claims,
 `defeq_lst`'s. -/
@@ -257,7 +257,7 @@ theorem SetG.lstE {p : Prog} {n : Nat} (hG : SetG p n) (hk : KnotUpTo p n) {F : 
     (h2 : SpineR s₀.mem bo bn ys) (h3 : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (h4 : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) {e : Err}
     (hc : callE p n "defeq_lst" [mode, vis, d, ao, an, bo, bn] s₀.mem = .error e) :
-    ErrClaim (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) a₀ e := by
+    ErrClaim (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat xs.toList ys.toList) a₀ e := by
   cases n with
   | zero =>
     obtain ⟨e', he', h0⟩ := callE_zero p "defeq_lst" [mode, vis, d, ao, an, bo, bn] s₀.mem
@@ -280,7 +280,7 @@ theorem sect_ref (p : Prog) (hi : IotaProg' p) (hc : StuckCallees p)
     (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (htt : to.toNat + tn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (SetG p n) (sectE p (n + 1) s₀.mem mode vis d b us T us2 ao an to tn ep nf)
-      (setTailT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI us) (decI T) (decI us2)
+      (setTailT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE b) (decI us) (decI T) (decI us2)
         ep.toNat nf.toNat aargs.toList targs.toList) a₀
       (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
   have hspn := hs.rel.spn

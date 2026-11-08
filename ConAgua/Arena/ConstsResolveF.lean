@@ -187,7 +187,7 @@ def ueMentionsGoL : FunDecl := lfn (f, T, h) locals (g, x, y, z, r, b1, b2, b3) 
 }
 
 /-- `unresolved_consts_error(vis, e, w)`: the twin's `fail (← unresolvedConstsErrorL (←
-strLitSupported fe) where_ e)` (`w ≤ 1`) and `fail (← unresolvedConstsError where_ e)` (`w ≥ 2`):
+strLitStored fe) where_ e)` (`w ≤ 1`) and `fail (← unresolvedConstsError where_ e)` (`w ≥ 2`):
 always aborts. `w` names the twin's `where_` (`0` "type", `1` "value", `2` "type of", `3`
 "generated rule of", `4` "the domains of a generated rule of"; the reason of each message). For
 `w ≤ 1`: without the String support declarations, a string literal in `e` (`has_str_lit_go`)
@@ -198,7 +198,7 @@ declines, anything else rejects. -/
 @[no_expose, l_impl ConRon.Arena.unresolvedConstsError ConRon.Arena.unresolvedConstsErrorL]
 def unresolvedConstsErrL : FunDecl := lfn (vis, e, w) locals (s, r, sa, m) {
   if w <= 1 {
-    s := call str_lit_supported(vis);
+    s := call str_lit_stored(vis);
     if s == 0 {
       r := call has_str_lit_go(⟪CWF⟫, e);
       if r != 0 { fail R_STRING_LITERALS_BEFORE }

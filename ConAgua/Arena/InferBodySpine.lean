@@ -174,7 +174,7 @@ theorem spioLoop_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
       (∀ j, j < co → spW m j = spW m₀ j) → (m.arr64 SPN).size = (m₀.arr64 SPN).size →
       BKept m₀ m → PoolGrew m₀ m →
       RefE (InferG p N) (spioE.k_loop1 p N co (spioE.loop1 p k m mode vis d ty ao an co cn i))
-        (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty) acc
+        (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE ty) acc
           args i.toNat) a (CorePost decH dn m₀ vis fe M eb ResH) := by
   intro k
   induction k with
@@ -291,7 +291,7 @@ theorem spio_ref (p : Prog) (hil : InstListOK p) (n : Nat)
     (ht : HW ty) (har : SpineR s₀.mem ao an args)
     (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (InferG p n) (spioE p (n + 1) s₀.mem mode vis d ty ao an)
-      (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty) #[]
+      (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE ty) #[]
         args 0) a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [spioE]
@@ -310,7 +310,7 @@ theorem inferSpineIO_refines (p : Prog) (hq : SpineInferProg p) (hil : InstListO
     (ht : HW ty) (har : SpineR s₀.mem ao an args)
     (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     CoreSpec p (n + 1) "infer_spine_io" [mode, vis, d, ty, ao, an]
-      (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty) #[]
+      (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE ty) #[]
         args 0) decH s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (spioE_spec p hq.spineIO (n + 1) s₀ mode vis d ty ao an)
     (spio_ref p hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d ty ao an args hs ht har hlo)
@@ -322,7 +322,7 @@ theorem inferSpineIO_any (p : Prog) (hq : SpineInferProg p) (hil : InstListOK p)
     (eb mode d ty ao an : Word) (args : Array EIdx), SlotPre s₀ a₀ dn vis fe M eb mode →
     HW ty → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p n "infer_spine_io" [mode, vis, d, ty, ao, an]
-      (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty) #[]
+      (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE ty) #[]
         args 0) decH s₀ a₀ dn vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
@@ -337,7 +337,7 @@ theorem inferSpineIO_anyE (p : Prog) (hq : SpineInferProg p) (hil : InstListOK p
     (eb mode d ty ao an : Word) (args : Array EIdx), SlotPre s₀ a₀ dn vis fe M eb mode →
     HW ty → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpecE p n "infer_spine_io" [mode, vis, d, ty, ao, an]
-      (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty) #[]
+      (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE ty) #[]
         args 0) s₀ a₀
   | 0, _, _, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => CoreSpecE.zero p _ _ _ s₀ a₀
   | n + 1, hk, hG, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, ty, ao, an, args, hs, ht, har, hlo =>
@@ -417,7 +417,7 @@ theorem aio_ref (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p)
     (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (he : HW e)
     (h4 : tagW e = 4) :
     RefE (InferG p n) (aioE p (n + 1) s₀.mem mode vis d e)
-      (inferAppIOAt (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)) a₀
+      (inferAppIOAt (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hK := hk n (Nat.le_refl _)
@@ -461,7 +461,7 @@ theorem inferAppIO_refines (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p
     (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (he : HW e)
     (h4 : tagW e = 4) :
     CoreSpec p (n + 1) "infer_app_io" [mode, vis, d, e]
-      (inferAppIOAt (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)) decH
+      (inferAppIOAt (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE e)) decH
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (aioE_spec p hq.appIO (n + 1) s₀ mode vis d e)
     (aio_ref p hq hsp hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d e hs he h4)

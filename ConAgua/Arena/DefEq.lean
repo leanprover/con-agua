@@ -38,7 +38,7 @@ is `(kind, height)`, `kind` `0` opaque, `1` abbrev, `2` regular (`decHint`'s lay
 
 **Callees not written yet** (stubs, `DefeqCallees` in `Knot.lean`): `has_fvar(e)`
 (`hasFvarFast coreWalkFuel`), `not_proof_fast(vis, a)`, `is_proof_fast(vis, a)` (`PropRead.lean`,
-phase 2); from lane `whnf`: `inst_list`, `inst1`, `find_proj`, `str_lit_supported`,
+phase 2); from lane `whnf`: `inst_list`, `inst1`, `find_proj`, `str_lit_stored`,
 `str_lit_ctor`.
 -/
 
@@ -291,7 +291,6 @@ def defeqNoFvarsL : FunDecl := lfn (a, b) locals (x, y) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3214-3220 ConRon.Arena.lazyFoldOk -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.lazyFoldOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.lazyFoldOk]
 def lazyFoldOkL : FunDecl := lfn (mode, a, b) locals (r) {
   if (mode >> 1) & 1 != 0 { return 1 };
@@ -720,7 +719,6 @@ def lazyDeltaStepL : FunDecl := lfn (mode, vis, d, a, b) locals (ua, ub, f, e2, 
 (the comparison restarted on the reduct; `v` normalised to `0`/`1`), `(3, 0, 0)` when neither
 does. -/
 -- con-ron: ConRon/Arena/Core.lean:3554-3582 ConRon.Arena.lazyDeltaReduction
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.lazyDeltaReduction` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.lazyDeltaReduction]
 def lazyNatL : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, v) {
   (fa, a2) := call reduce_nat(mode, vis, d, a);
@@ -739,7 +737,6 @@ def lazyNatL : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, v) {
 /-- One lazy-delta iteration: `(k, x, y)` with `k` = `0` `.verdict false`, `1` `.verdict true`, `2`
 `.unknown a b`, `3` continue with `(x, y)`. -/
 -- con-ron: ConRon/Arena/Core.lean:3554-3582 ConRon.Arena.lazyDeltaReduction
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.lazyDeltaReduction` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.lazyDeltaReduction]
 def lazyIterL : FunDecl := lfn (mode, vis, d, a, b) locals (of, ov, nf, k, x, y) {
   (of, ov) := call defeq_offset(mode, vis, d, a, b);
@@ -769,7 +766,6 @@ def lazyDeltaLoop : Stmt := lblk (mode, vis, d, a, b, k, x, y) {
 /-- The lazy-delta loop on its uncounted `2^62` budget (`defeqLoopFuel`; each step costs L a unit of its own fuel, which
 is below `2^62`). -/
 -- con-ron: ConRon/Arena/Core.lean:3554-3582 ConRon.Arena.lazyDeltaReduction
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.lazyDeltaReduction` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.lazyDeltaReduction]
 def lazyDeltaReductionL : FunDecl := lfn (mode, vis, d, a, b) locals (k, x, y) {
   ⟪lazyDeltaLoop⟫;
@@ -1094,8 +1090,6 @@ def stuckIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (r) {
 `fo`; `side` `0` when the literal is on the left (`a`). The head's record words are read before
 the first call. -/
 -- con-ron: ConRon/Arena/Core.lean:3621-3690 ConRon.Arena.defeqStuck
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.defeqStuck`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckStrL : FunDecl :=
     lfn (mode, vis, d, a, b, side, lt, fo) locals (t, i, co, uo, el, sl, ss, c, r) {
@@ -1106,7 +1100,7 @@ def stuckStrL : FunDecl :=
     uo := CONST⟨t, i⟩.us;
     el := call pin_word(52);
     sl := call pin_at(6);
-    ss := call str_lit_supported(vis);
+    ss := call str_lit_stored(vis);
     if co == sl && uo == el && ss != 0 {
       c := call str_lit_ctor(lt);
       if side == 0 { r := call defeq(mode, vis, d, c, b) } else { r := call defeq(mode, vis, d, a, c) };
@@ -1120,8 +1114,6 @@ def stuckStrL : FunDecl :=
 /-- `defeqStuck`'s application arm, its congruence (split off for the proofs): `1` when the heads
 and the spines agree pairwise; the top put back. -/
 -- con-ron: ConRon/Arena/Core.lean:3621-3690 ConRon.Arena.defeqStuck
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.defeqStuck`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckAppCongL : FunDecl := lfn (mode, vis, d, a, b) locals (top, ao, an, bo, bn, fa, fb, ok) {
   top := CTL.u64[136];
@@ -1140,8 +1132,6 @@ def stuckAppCongL : FunDecl := lfn (mode, vis, d, a, b) locals (top, ao, an, bo,
 
 /-- `defeqStuck`'s application arm: spine-wise congruence, else the stuck fallbacks. -/
 -- con-ron: ConRon/Arena/Core.lean:3621-3690 ConRon.Arena.defeqStuck
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.defeqStuck`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckAppL : FunDecl := lfn (mode, vis, d, a, b) locals (ok, r) {
   ok := call stuck_app_cong(mode, vis, d, a, b);
@@ -1153,8 +1143,6 @@ def stuckAppL : FunDecl := lfn (mode, vis, d, a, b) locals (ok, r) {
 /-- `defeqStuck`'s free-variable, constant and λ arms and the fallback, by the two views' words
 (split off for the proofs). -/
 -- con-ron: ConRon/Arena/Core.lean:3621-3690 ConRon.Arena.defeqStuck
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.defeqStuck`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckRestL : FunDecl :=
     lfn (mode, vis, d, a, b, ga, a1, a2, gb, b1, b2) locals (z, ok, r) {
@@ -1195,8 +1183,6 @@ def stuckRestL : FunDecl :=
 /-- The tags tested one at a time (no `&&` chains: the proof's paths); the twin's pairs are
 disjoint, so grouping by `a`'s tag keeps its match order.
 con-ron: ConRon/Arena/Core.lean:3621-3690 ConRon.Arena.defeqStuck -/
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.defeqStuck`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def defeqStuckL : FunDecl :=
     lfn (mode, vis, d, a, b) locals (ga, a1, a2, a3, gb, b1, b2, b3, r) {
@@ -1224,7 +1210,6 @@ def defeqStuckL : FunDecl :=
 
 /-- The second half of `defeqBody`, from the lazy-delta loop's `.unknown` pair on. -/
 -- con-ron: ConRon/Arena/Core.lean:3692-3730 ConRon.Arena.defeqBody
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.defeqBody` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqBody]
 def defeqTailL : FunDecl := lfn (mode, vis, d, a1, b1) locals (pp, pa, pb, a2, b2, r) {
   pp := call defeq_proj_pair(mode, vis, d, a1, b1);
@@ -1248,7 +1233,6 @@ def defeqTailL : FunDecl := lfn (mode, vis, d, a1, b1) locals (pp, pa, pb, a2, b
 /-- A depth word `≥ 2^63` aborts (the binder descents below add to it, the twin's `Nat` does not
 wrap); the lazy loop's verdict words `0`/`1` are tested one by one (`decLR`: any other is `.unknown`).
 con-ron: ConRon/Arena/Core.lean:3692-3730 ConRon.Arena.defeqBody -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.defeqBody` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqBody]
 def defeqBodyL : FunDecl :=
     lfn (mode, vis, d, a, b) locals (bt, hf, sc, qf, qv, pi, a1, b1, lk, la, lb, r) {

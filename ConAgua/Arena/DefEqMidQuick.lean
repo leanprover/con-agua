@@ -344,7 +344,7 @@ theorem qf_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (n : Nat)
     (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (h6a : tagW a = 6) (h6b : tagW b = 6) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (qfE p (n + 1) s₀.mem mode vis d a b)
-      (quickPairT (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) a₀
+      (quickPairT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) a₀
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [qfE]
@@ -383,7 +383,7 @@ theorem ql_ref (p : Prog) (hp : QuickProg p) (hi : Inst1OK p) (n : Nat)
     (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (h5a : tagW a = 5) (h5b : tagW b = 5) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (qlE p (n + 1) s₀.mem mode vis d a b)
-      (quickPairT (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) a₀
+      (quickPairT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) a₀
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [qlE]
@@ -471,7 +471,7 @@ theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK 
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hx : HW x) (hy : HW y)
     (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (qdE p (n + 1) s₀.mem mode vis d x y)
-      (quickDefEq (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE x) (decE y)) a₀
+      (quickDefEq (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE x) (decE y)) a₀
       (CorePost decOB dn s₀.mem vis fe M eb ResW) := by
   have hS := hs.rel
   rw [quickDefEq_eq]

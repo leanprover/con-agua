@@ -264,7 +264,7 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
     (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode io d sn i pe : Word) (R : CoreFnsA)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn)
-    (hpe : HW pe) (hWh : R.whnf = (coreKnot (decMode mode) fe id F).whnf) (f : FnName)
+    (hpe : HW pe) (hWh : R.whnf = (coreKnot (decMode mode) (decEager mode) fe id F).whnf) (f : FnName)
     (hx : ipE p (n + 1) s₀.mem mode io vis d sn i pe =
       ipE.k_infer_io p n mode vis d sn i pe (callE p n f [mode, vis, d, pe] s₀.mem))
     (hI : CoreSpec p n f [mode, vis, d, pe] (R.infer d.toNat (decE pe)) decH s₀ a₀ dn vis fe M eb)
@@ -432,10 +432,10 @@ theorem ip_ref (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : InferP
     (eb mode d sn i pe : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (hsn : HW sn) (hpe : HW pe) :
     RefE (InferG p n) (ipE p (n + 1) s₀.mem mode 0 vis d sn i pe)
-      (inferProj (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat (decE pe)) a₀
+      (inferProj (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat (decE pe)) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) ∧
     RefE (InferG p n) (ipE p (n + 1) s₀.mem mode 1 vis d sn i pe)
-      (inferProj (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decI sn) i.toNat
+      (inferProj (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decI sn) i.toNat
         (decE pe)) a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   exact ⟨ip_grade p hp hpj hc n hk F s₀ a₀ dn vis fe M eb mode 0 d sn i pe _ hF hn hs hsn hpe rfl

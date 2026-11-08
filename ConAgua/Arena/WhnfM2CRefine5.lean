@@ -111,7 +111,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps))
     (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) :
     RefE (M2CCtxE p N) (m2cArmsE p (N + 1) m mode vis d ro cvjP T indP major)
-      (m2cArmsT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP (decI T)
+      (m2cArmsT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rl cvj cnP (decI T)
         cvT caps (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cArmsE.eq_2]
   have hsz := hS.erec
@@ -163,7 +163,7 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (hrl : decRule (m.arr64 EREC) ro.toNat = some rl)
     (hcj : decCI (m.arr64 EREC) dn cvjP.toNat = some (.ctorInfo cvj cnP cnF)) :
     RefE (M2CCtxE p N) (m2cCtorE p (N + 1) m mode vis d ro cvjP major)
-      (m2cCtorT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP
+      (m2cCtorT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rl cvj cnP
         (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cCtorE.arm1]
   have hsz := hS.erec
@@ -253,7 +253,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (hmaj : HW major) (rules : List IRecRule) (m : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m a vis fe M eb) (hr : decRules (m.arr64 EREC) ro.toNat rc.toNat = some rules) :
     RefE (M2CCtxE p N) (m2cHeadE p (N + 1) m mode vis d ro rc major)
-      (m2cHeadT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rules
+      (m2cHeadT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rules
         (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cHeadE.arm1]
   cases N with
@@ -272,12 +272,12 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     exact RefE.ret (by simp only [m2cHeadT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte]; rfl) hA1
   rw [decBool_f_m2c (by simpa using g1)] at hrun1
   have g1' : r1.headD 0 = 0 := by simpa using g1
-  have hstep : (m2cHeadT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rules
+  have hstep : (m2cHeadT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rules
       (decE major)).run a = (match rules with
         | [rl] =>
           match fe.find? rl.ctor with
           | some (.ctorInfo cvj cnP _cnF) =>
-            m2cCtorT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP
+            m2cCtorT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rl cvj cnP
               (decE major)
           | _ => pure (decE major)
         | _ => pure (decE major)).run (AM.st (isCtorApp fe (decE major)) a) := by
@@ -341,7 +341,7 @@ theorem mtc_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
     (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
     (hr : decRules (m.arr64 EREC) ro.toNat rc.toNat = some rules) :
     RefE (M2CCtxE p n) (mtcE p (n + 1) m mode vis d rec ro rc major)
-      (majorToCtor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
+      (majorToCtor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) a (CorePost decH dn m vis fe M eb ResH) := by
   simp only [mtcE]
   cases n with

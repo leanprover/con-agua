@@ -194,7 +194,7 @@ theorem pih_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
     (eb mode d x : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (hx : HW x)
     (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) :
     RefE (PihG p n) (pihE p (n + 1) m mode vis d x)
-      (piHalfA (coreKnot (decMode mode) fe id F) d.toNat (decE x)) a
+      (piHalfA (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE x)) a
       (fun v y a' => CorePost (fun r => decO (r.headD 0)) dn m vis fe M eb ResH v y a') := by
   simp only [pihE]
   unfold piHalfA
@@ -287,7 +287,7 @@ theorem pirr_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hk : 
     (eb mode d a b : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (ha : HW a)
     (hb : HW b) (m : Mem) (a₀ : AState) (M : ModeMaps) (hS : CoreS dn m a₀ vis fe M eb) :
     RefE (PihG p n) (pirrE p (n + 1) m mode vis d a b)
-      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (proofIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn m vis fe M eb ResH) := by
   simp only [pirrE]
   rw [proofIrrel_eq_halves, piHalfT_eq]
@@ -344,7 +344,7 @@ theorem proofIrrel_refines' (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) :
     (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
     eb = (mode >>> 1) &&& 1 → HW a → HW b →
     CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
-      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
+      (proofIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
       vis fe MM eb :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d a b hS hm4 hebm ha hb =>
     RefE.coreSpec (pirrE_spec p hp.proofIrrel hp.proofIrrelHalf (n + 1) s₀ mode vis d a b)
@@ -361,7 +361,7 @@ theorem proofIrrel_refines (p : Prog) (hp : IotaProg4 p) :
     (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
     eb = (mode >>> 1) &&& 1 → HW a → HW b →
     CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
-      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
+      (proofIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
       vis fe MM eb :=
   proofIrrel_refines' p hp (fun _ _ _ _ _ _ _ hS => hS.lvl_den)
 
@@ -391,7 +391,7 @@ def MajorToCtorE (p : Prog) : Prop :=
     N ≤ 2 ^ 62 → CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 →
     HW major → decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
     CoreSpecE p (N + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, major]
-      (majorToCtor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
+      (majorToCtor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) s₀ a₀
 
 /-- **What `prepare_major`'s errors assume** at L fuel `n`: the knot's slots' claims, the verdict
@@ -433,7 +433,7 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
     (hS : CoreS dn m3 a vis fe M eb)
     (hrules : decRules (m3.arr64 EREC) ro.toNat rc.toNat = some rules) :
     RefE (PmG p (N + 1)) (pmE.j1 p (N + 1) mode vis d rec ro rc me m3)
-      (pmTailT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules (decE me))
+      (pmTailT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules (decE me))
       a (CorePost decH dn m3 vis fe M eb ResH) := by
   simp only [pmE.j1]
   unfold pmTailT
@@ -479,7 +479,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hmaj : HW major) (hr : decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules) :
     RefE (PmG p n) (pmE p (n + 1) s₀.mem mode vis d rec ro rc major)
-      (prepareMajor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
+      (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) a₀ (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   simp only [pmE]
   cases n with
@@ -560,7 +560,7 @@ theorem prepareMajor_refines' :
     CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW major →
     decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
     CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, ro, rc, major]
-      (prepareMajor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
+      (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) decH s₀ a₀ dn vis fe MM eb :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d rec ro rc major rules hS hm4 hebm hmaj hr =>
     RefE.coreSpec (pmE_spec p hp.prepareMajor (n + 1) s₀ mode vis d rec ro rc major)

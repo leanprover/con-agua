@@ -106,7 +106,7 @@ theorem ac_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (StuckG p n) (acE p (n + 1) s₀.mem mode vis d a b)
-      (appCongT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (appCongT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hspn := hS.spn
@@ -199,7 +199,7 @@ theorem appCong_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "stuck_app_cong" [mode, vis, d, a, b]
-      (appCongT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
+      (appCongT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (acE_spec p hq.stuckAppCong (n + 1) s₀ mode vis d a b)
     (ac_ref p hq hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
@@ -231,7 +231,7 @@ theorem sa_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (StuckG p n) (saE p (n + 1) s₀.mem mode vis d a b)
-      (stuckAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (stuckAppT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   rw [stuckAppT_eq]
   cases n with
@@ -258,7 +258,7 @@ theorem stuckApp_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
     (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "stuck_app" [mode, vis, d, a, b]
-      (stuckAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
+      (stuckAppT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (saE_spec p hq.stuckApp hq.stuckAppCong hq.stuckIrrel hq.setCert hq.setWith hq.setWtb
     hq.setGo hq.setTail hq.sunit hq.suHead hq.suTail (n + 1) s₀ mode vis d a b)

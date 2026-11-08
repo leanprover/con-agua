@@ -52,7 +52,7 @@ def ReduceProjCoreE (p : Prog) : Prop :=
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d sn i c : Word), SlotPre s₀ a₀ dn vis fe MM eb mode → HW sn → HW c →
     CoreSpecE p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
-      (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+      (reduceProjCore (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) s₀ a₀
 
 /-- **What `ldpr_exit`'s errors claim from**: the `defeq` slot's and `reduce_proj_core`'s. -/
@@ -98,17 +98,17 @@ theorem ex_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn) (ha : HW a) (hb : HW b)
     (hk0 : k ≠ 0) :
     RefE (ExitG p n) (exE p (n + 1) s₀.mem mode vis d sn i a b k)
-      (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+      (ldprExitT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE a) (decE b) (decDSs [k])) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hdef : ∀ (st : AState) (m : Mem) (M' : ModeMaps) (x y : Word), CoreS dn m st vis fe M' eb →
       HW x → HW y →
       RefE (ExitG p n) (exE.k_defeq p (callE p n "defeq" [mode, vis, d, x, y] m))
-        ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) st
+        ((coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE x) (decE y)) st
         (CorePost decBool dn m vis fe M' eb ResH) := by
     intro st m M' x y hS' hx hy
     have hs' : SlotPre ⟨m, Locals.init []⟩ st dn vis fe M' eb mode := ⟨hS', hs.mode4, hs.eb_mode⟩
-    rw [← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+    rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
     exact RefE.bind_callE (fun _ => rfl) ((hk n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn
         hs' hx hy)
       (fun (hG : ExitG p n) => (hG.knot n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn hs'
@@ -122,16 +122,16 @@ theorem ex_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
   have hst : decDSs [k] = (if k = 2 then .diff else .unknown) := by
     unfold decDSs; simp [hk0, h1]
   have hbody : ∀ st, (st = DeltaStepA.diff ∨ st = DeltaStepA.unknown) →
-      ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+      ldprExitT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE a) (decE b) st =
-      (do match ← reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+      (do match ← reduceProjCore (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
             (decI sn) i.toNat (decE a) with
           | some x =>
-            match ← reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+            match ← reduceProjCore (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
                 (decI sn) i.toNat (decE b) with
-            | some y => (coreKnot (decMode mode) fe id F).defeq d.toNat x y
-            | none => (coreKnot (decMode mode) fe id F).defeq d.toNat (decE a) (decE b)
-          | none => (coreKnot (decMode mode) fe id F).defeq d.toNat (decE a) (decE b)) := by
+            | some y => (coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat x y
+            | none => (coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE a) (decE b)
+          | none => (coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE a) (decE b)) := by
     rintro st (rfl | rfl) <;> rfl
   rw [hbody _ (by rw [hst]; split <;> simp)]
   cases n with
@@ -168,7 +168,7 @@ theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn) (ha : HW a) (hb : HW b)
     (hk0 : k ≠ 0) :
     CoreSpec p (n + 1) "ldpr_exit" [mode, vis, d, sn, i, a, b, k]
-      (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+      (ldprExitT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE a) (decE b) (decDSs [k])) decBool s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (exE_spec p hq.ldprExit (n + 1) s₀ mode vis d sn i a b k)
     (ex_ref p hc n hk F s₀ a₀ dn vis fe M eb mode d sn i a b k hF hn hs hsn ha hb hk0)
@@ -190,7 +190,7 @@ structure LdprG (p : Prog) (n : Nat) : Prop where
       (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
       d.toNat < 2 ^ 63 →
       CoreSpecE p (j + 1) "lazy_delta_step" [mode, vis, d, a, b]
-        (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+        (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b))
         s₀ a₀
   knot : KnotUpToE p n
   rpc : ReduceProjCoreE p
@@ -206,7 +206,7 @@ theorem ldpr_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
     ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (m : Mem) (a : AState) (MM : ModeMaps) (eb x y : Word),
       CoreS dn m a vis fe MM eb → eb = (mode >>> 1) &&& 1 → HW x → HW y →
       RefE (LdprG p n) (ldprE.loop1 p k m mode vis d sn i x y)
-        (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+        (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
           (decI sn) i.toNat K (decE x) (decE y)) a
         (fun v y' a' => CorePost decBool dn m vis fe MM eb ResH ([v.1], v.2) y' a') := by
   intro k
@@ -232,7 +232,7 @@ theorem ldpr_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
     · rw [ldprE.k_lazy_delta_step.arm2 _ _ _ _ _ _ _ _ _ _ _ h0, decDS_zero h0]
       exact ih (by omega) K' (by omega) m₁ _ M₁ eb _ _ hS₁ heb h₁.resOk.2.1 h₁.resOk.2.2
     rw [ldprE.k_lazy_delta_step.arm1 _ _ _ _ _ _ _ _ _ _ _ h0]
-    refine RefE.of_run_eq (T' := ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+    refine RefE.of_run_eq (T' := ldprExitT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
       (decI sn) i.toNat (decE x) (decE y) (decDSs [r.headD 0]) >>= pure) (by
         rw [bind_pure, ← decDS_nz h0]
         rcases hd : decDSs r with _ | _ | _ | _ <;> first | rfl | exact absurd hd (decDS_ne_cont h0 _ _)) ?_
@@ -255,7 +255,7 @@ theorem ldpr_refC (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (eb mode d sn i a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn) (ha : HW a)
     (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (LdprG p n) (ldprE p (n + 1) s₀.mem mode vis d sn i a b)
-      (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
+      (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn)
         i.toNat K (decE a) (decE b)) a₀
       (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [ldprE.arm1]
@@ -271,7 +271,7 @@ theorem ldpr_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Na
     (eb mode d sn i a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn) (ha : HW a)
     (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "lazy_delta_proj_reduction" [mode, vis, d, sn, i, a, b]
-      (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
+      (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn)
         i.toNat K (decE a) (decE b)) decBool s₀ a₀ dn vis fe M eb :=
   CoreSpec.of_refE (w := fun (v : Word × Mem) => ([v.1], v.2))
     (ldpr_specE p hq.ldpr (n + 1) s₀ mode vis d sn i a b)
@@ -318,7 +318,7 @@ theorem pp_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
     (hd : d.toNat < 2 ^ 63) :
     RefE (LdprG p n) (ppE p (n + 1) s₀.mem mode vis d a b)
-      (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (defeqProjPair (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hR := hS.arena.base
@@ -326,7 +326,7 @@ theorem pp_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     fun h hh => tag_beq_w _ hh 9 (by decide) ETag.proj rfl 9 rfl
   have hfalse : (((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = false) →
       RefE (LdprG p n) (.ok ([0], s₀.mem) : Except Err (List Word × Mem))
-        (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+        (defeqProjPair (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b))
         a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := fun hno =>
     RefE.ret (pp_no _ _ fe _ _ _ a₀ hno) (CorePost.ret hS rfl hw0)
   simp only [ppE]
@@ -390,7 +390,7 @@ theorem projPair_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
     (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "defeq_proj_pair" [mode, vis, d, a, b]
-      (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+      (defeqProjPair (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b))
       decBool s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (ppE_spec p hq.projPair hq.ldpr (n + 1) s₀ mode vis d a b)
     (pp_ref p hq hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb hd)

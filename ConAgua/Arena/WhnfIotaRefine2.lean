@@ -106,7 +106,7 @@ theorem dl_ref (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
       (an ≠ 0 → ao.toNat + an.toNat ≤ (spTop m).toNat) →
       (bn ≠ 0 → bo.toNat + bn.toNat ≤ (spTop m).toNat) →
       RefE (KnotUpToE p n) (dlE.loop1 p k m mode vis d ao an bo bn i)
-        (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat (aas.toList.drop i.toNat)
+        (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (aas.toList.drop i.toNat)
           (bs.toList.drop i.toNat)) a
         (fun v y a' => CorePost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   intro k
@@ -118,7 +118,7 @@ theorem dl_ref (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
     intro m a M i hia hib hk hS hsa hsb hta htb
     rcases Classical.em ¬(i < an ∧ i < bn) with hn | hn
     · rw [dlE.loop1.arm2 (hc1 := hn)]
-      refine RefE.ret (dl_exit (coreKnot (decMode mode) fe id F) fe d.toNat an bn i aas bs hsa.1 hsb.1 hia
+      refine RefE.ret (dl_exit (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat an bn i aas bs hsa.1 hsb.1 hia
         hib hn a) (CorePost.ret hS ?_ ?_)
       · simp only [decBool]; by_cases h : an = bn <;> simp [h]
       · simp only [ResH]; split <;> simp [HW]
@@ -183,7 +183,7 @@ theorem defeqList_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : 
     (hta : an ≠ 0 → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (htb : bn ≠ 0 → bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (KnotUpToE p n) (dlE p (n + 1) s₀.mem mode vis d ao an bo bn)
-      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat aas.toList bs.toList) a₀
+      (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat aas.toList bs.toList) a₀
       (fun v y a' => CorePost decBool dn s₀.mem vis fe MM eb ResH ([v.1], v.2) y a') := by
   rw [dlE.arm1]
   simpa using dl_ref p n F hk hnF hn62 dn vis fe eb mode d ao an bo bn hm4 hebm aas bs (n + 1) s₀.mem a₀
@@ -244,7 +244,7 @@ theorem io_ref (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p) (n : Nat) (hk
     (htm : mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat)
     (htx : xo.toNat + xn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (KnotUpToE p n) (ioE p (n + 1) s₀.mem mode vis d mI rP cnP tyCtor mo mn xo xn)
-      (iotaIndexOk (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
+      (iotaIndexOk (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
         (decE tyCtor) margs.toList idx.toList) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
   rw [ioE]; unfold iotaIndexOk
@@ -318,7 +318,7 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
     SpineR s₀.mem mo mn margs → SpineR s₀.mem xo xn idx →
     mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat → xo.toNat + xn.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p (n + 1) "iota_index_ok" [mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn]
-      (iotaIndexOk (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
+      (iotaIndexOk (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
         (decE tyCtor) margs.toList idx.toList) decBool s₀ a₀ dn vis fe MM eb :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d mI rP cnP tyCtor mo mn xo xn margs idx hS hm4 hebm
       hty hsm hsx htm htx =>

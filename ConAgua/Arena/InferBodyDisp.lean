@@ -114,10 +114,10 @@ def InferProjOK (p : Prog) : Prop :=
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d sn i pe : Word), n ≤ F → n ≤ 2 ^ 62 →
     SlotPre s₀ a₀ dn vis fe M eb mode → HW sn → HW pe →
     CoreSpec p (n + 1) "infer_proj" [mode, 0, vis, d, sn, i, pe]
-      (inferProj (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat (decE pe)) decH
+      (inferProj (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat (decE pe)) decH
       s₀ a₀ dn vis fe M eb ∧
     CoreSpec p (n + 1) "infer_proj" [mode, 1, vis, d, sn, i, pe]
-      (inferProj (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decI sn) i.toNat
+      (inferProj (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decI sn) i.toNat
         (decE pe)) decH s₀ a₀ dn vis fe M eb
 
 /-- **The callees of the inference bodies with no proof here.** -/
@@ -336,9 +336,9 @@ def InferProjOKE (p : Prog) : Prop :=
     (eb mode d sn i pe : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW sn →
     HW pe →
     CoreSpecE p (n + 1) "infer_proj" [mode, 0, vis, d, sn, i, pe]
-      (inferProj (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat (decE pe)) s₀ a₀ ∧
+      (inferProj (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat (decE pe)) s₀ a₀ ∧
     CoreSpecE p (n + 1) "infer_proj" [mode, 1, vis, d, sn, i, pe]
-      (inferProj (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decI sn) i.toNat
+      (inferProj (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decI sn) i.toNat
         (decE pe)) s₀ a₀
 
 /-- **What the bodies' errors assume**: `InferG` and `infer_proj`'s claim. -/
@@ -395,7 +395,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
     (eb mode d e : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (he : HW e) (hk : KnotUpTo p n) :
     RefE (InferBodyG p n) (ibE p (n + 1) s₀.mem mode vis d e)
-      (inferBody (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
+      (inferBody (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   have hS := hs.rel
   simp only [ibE]
@@ -540,7 +540,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     (eb mode d e : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (he : HW e) (hk : KnotUpTo p n) :
     RefE (InferBodyG p n) (iboE p (n + 1) s₀.mem mode vis d e)
-      (inferBodyIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)) a₀
+      (inferBodyIO (CoreFnsA.ioView (coreKnot (decMode mode) (decEager mode) fe id F)) fe d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   have hS := hs.rel
   simp only [iboE]

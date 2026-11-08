@@ -144,14 +144,8 @@ structure StrLitProg (p : Prog) : Prop extends WhnfDeltaProg' p where
   listConsTyOk : p.lookup "list_cons_ty_ok" = some listConsTyOkL
   charOfNatTyOk : p.lookup "char_of_nat_ty_ok" = some charOfNatTyOkL
   stringOfListTyOk : p.lookup "string_of_list_ty_ok" = some stringOfListTyOkL
-  strSup7 : p.lookup "str_sup_7" = some strSup7L
-  strSup6 : p.lookup "str_sup_6" = some strSup6L
-  strSup5 : p.lookup "str_sup_5" = some strSup5L
-  strSup4 : p.lookup "str_sup_4" = some strSup4L
-  strSup3 : p.lookup "str_sup_3" = some strSup3L
-  strSup2 : p.lookup "str_sup_2" = some strSup2L
-  strSup1 : p.lookup "str_sup_1" = some strSup1L
-  strLitSupported : p.lookup "str_lit_supported" = some strLitSupportedL
+  strLitStored : p.lookup "str_lit_stored" = some strLitStoredL
+  litShapeOk : p.lookup "lit_shape_ok" = some litShapeOkL
   strUtf8Char : p.lookup "str_utf8_char" = some strUtf8CharL
   strConsSpine : p.lookup "str_cons_spine" = some strConsSpineL
   strLitCtor : p.lookup "str_lit_ctor" = some strLitCtorL

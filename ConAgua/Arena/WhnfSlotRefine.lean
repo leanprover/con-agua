@@ -42,13 +42,13 @@ theorem wstep_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     RefE (KnotUpToE p n) (whnfStepE p (n + 1) s₀.mem mode vis d e)
-      (whnfStep (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
+      (whnfStep (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) a₀
       (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hs' : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hs.rel, hs.mode4, hs.eb_mode⟩
   have hW1 := (hk n (Nat.le_refl _)).whnfCore F _ a₀ dn vis fe MM eb mode 0 d e hF hn hs' he
   rw [show ((0 : Word) != 0) = false from rfl] at hW1
   have hE1 : KnotUpToE p n → CoreSpecE p n "whnf_core" [mode, 0, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).whnfCore false d.toNat (decE e)) ⟨s₀.mem, Locals.init []⟩ a₀ :=
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnfCore false d.toNat (decE e)) ⟨s₀.mem, Locals.init []⟩ a₀ :=
     fun hG => by
       have h := (hG n (Nat.le_refl _)).whnfCore F _ a₀ dn vis fe MM eb mode 0 d e hF hn hs' he
       rwa [show ((0 : Word) != 0) = false from rfl] at h
@@ -100,7 +100,7 @@ theorem wloop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
     ∀ k, k ≤ n + 1 → ∀ K, k ≤ K → ∀ (m : Mem) (a : AState) (MM : ModeMaps) (eb e : Word),
       CoreS dn m a vis fe MM eb → eb = (mode >>> 1) &&& 1 → HW e →
       RefE (KnotUpToE p n) (whnfLoopE.loop1 p k m mode vis d e)
-        (whnfLoop (coreKnot (decMode mode) fe id F) fe d.toNat K (decE e)) a
+        (whnfLoop (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat K (decE e)) a
         (fun v y a' => CorePost decH dn m vis fe MM eb ResH ([v.1], v.2) y a') := by
   intro k
   induction k with
@@ -138,7 +138,7 @@ theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb mode d e : Word)
     (hF : n + 1 ≤ F) (hn : n + 1 ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     RefE (KnotUpToE p n) (whnfE p (n + 1) s₀.mem mode vis d e)
-      ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE e)) a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnf d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   have hS := hs.rel

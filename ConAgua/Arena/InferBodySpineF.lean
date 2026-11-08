@@ -51,7 +51,7 @@ theorem defeqArg_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : 
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a ta ty : Word), n ≤ F → n ≤ 2 ^ 62 →
     SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW ta → HW ty →
     CoreSpec p n "defeq_arg" [mode, vis, d, a, ta, ty]
-      (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) decBool
+      (defeqArg (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) decBool
       s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
@@ -66,7 +66,7 @@ theorem isa_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : IsEag
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a dom : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hdom : HW dom) :
     RefE (InferG p n) (isaE p (n + 1) s₀.mem mode vis d a dom)
-      (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) a₀
+      (inferSpineArgT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE dom)) a₀
       (CorePost (fun _ => ()) dn s₀.mem vis fe M eb ResH) := by
   simp only [isaE, inferSpineArgT]
   -- the slot `infer`, then `defeq_arg`
@@ -91,7 +91,7 @@ theorem inferSpineArg_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg 
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a dom : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hdom : HW dom) :
     CoreSpec p (n + 1) "infer_spine_arg" [mode, vis, d, a, dom]
-      (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) (fun _ => ())
+      (inferSpineArgT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE dom)) (fun _ => ())
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (isaE_spec p hq.arg (n + 1) s₀ mode vis d a dom)
     (isa_ref p hp hkp he n hk F hF hn s₀ a₀ dn vis fe M eb mode d a dom hs ha hdom)
@@ -105,7 +105,7 @@ theorem inferSpineArg_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a dom : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW dom →
     CoreSpec p n "infer_spine_arg" [mode, vis, d, a, dom]
-      (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) (fun _ => ())
+      (inferSpineArgT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE dom)) (fun _ => ())
       s₀ a₀ dn vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
@@ -120,7 +120,7 @@ theorem inferSpineArg_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) 
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a dom : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW dom →
     CoreSpecE p n "infer_spine_arg" [mode, vis, d, a, dom]
-      (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) s₀ a₀
+      (inferSpineArgT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE dom)) s₀ a₀
   | 0, _, _, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _ => CoreSpecE.zero p _ _ _ s₀ a₀
   | n + 1, hk, hG, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, dom, hs, ha, hdom =>
       RefE.coreSpecE (isaE_spec p hq.arg (n + 1) s₀ mode vis d a dom) trivial (hG.mono (by omega))
@@ -151,7 +151,7 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
       (∀ j, j < co → spW m j = spW m₀ j) → (m.arr64 SPN).size = (m₀.arr64 SPN).size →
       BKept m₀ m → PoolGrew m₀ m →
       RefE (InferG p N) (ispE.k_loop1 p N co (ispE.loop1 p k m mode vis d ty ao an co cn i))
-        (inferSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) acc args i.toNat) a
+        (inferSpine (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty) acc args i.toNat) a
         (CorePost decH dn m₀ vis fe M eb ResH) := by
   intro k
   induction k with
@@ -298,7 +298,7 @@ theorem isp_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Spine
     (ht : HW ty) (har : SpineR s₀.mem ao an args)
     (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (InferG p n) (ispE p (n + 1) s₀.mem mode vis d ty ao an)
-      (inferSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) #[] args 0) a₀
+      (inferSpine (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty) #[] args 0) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [ispE]
@@ -318,7 +318,7 @@ theorem inferSpine_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) 
     (ht : HW ty) (har : SpineR s₀.mem ao an args)
     (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     CoreSpec p (n + 1) "infer_spine" [mode, vis, d, ty, ao, an]
-      (inferSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) #[] args 0) decH s₀ a₀ dn vis
+      (inferSpine (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty) #[] args 0) decH s₀ a₀ dn vis
         fe M eb :=
   RefE.coreSpec (ispE_spec p hq.spine (n + 1) s₀ mode vis d ty ao an)
     (isp_ref p hp hkp hq he hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d ty ao an args hs ht har hlo)
@@ -331,7 +331,7 @@ theorem inferSpine_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq 
     (eb mode d ty ao an : Word) (args : Array EIdx), SlotPre s₀ a₀ dn vis fe M eb mode →
     HW ty → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p n "infer_spine" [mode, vis, d, ty, ao, an]
-      (inferSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) #[] args 0) decH s₀ a₀ dn
+      (inferSpine (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty) #[] args 0) decH s₀ a₀ dn
         vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
@@ -347,7 +347,7 @@ theorem inferSpine_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq
     (eb mode d ty ao an : Word) (args : Array EIdx), SlotPre s₀ a₀ dn vis fe M eb mode →
     HW ty → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpecE p n "infer_spine" [mode, vis, d, ty, ao, an]
-      (inferSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) #[] args 0) s₀ a₀
+      (inferSpine (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty) #[] args 0) s₀ a₀
   | 0, _, _, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => CoreSpecE.zero p _ _ _ s₀ a₀
   | n + 1, hk, hG, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, ty, ao, an, args, hs, ht, har, hlo =>
       RefE.coreSpecE (ispE_spec p hq.spine (n + 1) s₀ mode vis d ty ao an) hG.nv (hG.mono (by omega))
@@ -372,7 +372,7 @@ theorem a_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFP
     (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hHe : HW e)
     (h4 : tagW e = 4) :
     RefE (InferG p n) (aE p (n + 1) s₀.mem mode vis d e)
-      (inferApp (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
+      (inferApp (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hK := hk n (Nat.le_refl _)
@@ -418,7 +418,7 @@ theorem inferApp_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (h
     (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hHe : HW e)
     (h4 : tagW e = 4) :
     CoreSpec p (n + 1) "infer_app" [mode, vis, d, e]
-      (inferApp (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb :=
+      (inferApp (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (aE_spec p hq.app (n + 1) s₀ mode vis d e)
     (a_ref p hp hkp hq hsp he hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d e hs hHe h4)
 

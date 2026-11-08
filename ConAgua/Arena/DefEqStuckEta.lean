@@ -110,7 +110,7 @@ theorem ect_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hd : ¬ d + 1 = 0) (hl : HW lhs)
     (hcod : HW cod2) (hfv : HW fv) :
     RefE (KnotUpToE p n) (ectE p (n + 1) s₀.mem mode vis d lhs cod2 fv)
-      (etaTyT (coreKnot (decMode mode) fe id F) d.toNat (decE lhs) (decE cod2) (decE fv)) a₀
+      (etaTyT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE lhs) (decE cod2) (decE fv)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [ectE]
@@ -125,7 +125,7 @@ theorem ect_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     hcod hfv) fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
   dsimp only [ectE.k_inst1]
   have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
-  rw [← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+  rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
   exact RefE.bind_callE (fun _ => rfl) (hK.defeq F _ _ dn vis fe M₂ eb mode (d + 1) _ _ hF hn hs₂ h₁.resOk
       h₂.resOk)
     (fun (hkE : KnotUpToE p n) => (hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + 1) _ _ hF
@@ -147,7 +147,7 @@ theorem ecb_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty1) (hbody : HW body1)
     (hcod : HW cod2) :
     RefE (KnotUpToE p n) (ecbE p (n + 1) s₀.mem mode vis d ty1 body1 b cod2)
-      (etaBodyT (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE ty1) (decE body1)
+      (etaBodyT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE ty1) (decE body1)
         (decE b) (decE cod2)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [ecbE]
@@ -198,7 +198,7 @@ theorem ec_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty1) (hbody : HW body1)
     (hb : HW b) :
     RefE (KnotUpToE p n) (ecE p (n + 1) s₀.mem mode vis d ty1 body1 b)
-      (etaCert (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty1) (decE body1)
+      (etaCert (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty1) (decE body1)
         (decE b)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [ecE]
@@ -264,7 +264,7 @@ theorem etaCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty1) (hbody : HW body1)
     (hb : HW b) :
     CoreSpec p (n + 1) "eta_cert" [mode, vis, d, ty1, body1, b]
-      (etaCert (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty1) (decE body1)
+      (etaCert (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty1) (decE body1)
         (decE b)) decBool s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (ecE_spec p hq.etaCert hq.etaCertBody hq.etaCertTy (n + 1) s₀ mode vis d ty1 body1 b)
     (ec_ref p hq hc n hk F s₀ a₀ dn vis fe M eb mode d ty1 body1 b hF hn hs hty hbody hb)

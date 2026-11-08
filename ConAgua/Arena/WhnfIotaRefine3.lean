@@ -591,16 +591,16 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hh : HW h) :
     RefE (KnotUpToE p n) (lmtcE p (n + 1) s₀.mem mode vis d h)
-      (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) a₀
+      (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   have hR := hS.arena.base
   simp only [lmtcE]
   -- `lit_to_ctor_if_nat`, whenever the twin runs `litToCtorIfNat`
-  have hnat : (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)).run a₀ =
+  have hnat : (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)).run a₀ =
       (litToCtorIfNat fe (decE h)).run a₀ →
       RefE (KnotUpToE p n) (lmtcE.k_lit_to_ctor_if_nat p
         (liftE (callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem)))
-        (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) a₀
+        (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) a₀
         (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
     intro hT
     rcases c1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩
@@ -636,7 +636,7 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
     by_cases h0 : r₁.headD 0 = 0
     · rw [ite_eq_left h0]
       rw [decBool_f_m2c h0] at hrun1
-      exact RefE.ret (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe d.toNat
+      exact RefE.ret (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
         (decE h) a₀ _ htag str hview hrun1) ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, rfl, hh⟩
     rw [ite_eq_right h0]
     rw [decBool_t_m2c h0] at hrun1
@@ -657,7 +657,7 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
           mode d _ hnF hn62 ⟨hS₂, hm4, hebm⟩ hr₂) c3)
     obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW hW (callW_of_callE c3)
     have hrun3 := AM.run_of_ok _ _ hok3
-    exact RefE.ret (litMajorToCtor_run_str (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) a₀
+    exact RefE.ret (litMajorToCtor_run_str (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h) a₀
       _ _ _ htag str hview hrun1 _ _ hrun2 hrun3)
       ⟨⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩, hres3, hr₃⟩
 
@@ -671,7 +671,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
     (MM : ModeMaps) (eb mode d h : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
     eb = (mode >>> 1) &&& 1 → HW h →
     CoreSpec p (n + 1) "lit_major_to_ctor" [mode, vis, d, h]
-      (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
+      (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
       eb :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h hS hm4 hebm hh =>
     RefE.coreSpec (lmtcE_spec p hp.litMajorToCtor (n + 1) s₀ mode vis d h)

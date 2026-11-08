@@ -305,4 +305,62 @@ theorem zeroW_ok (n : Nat) : ∀ (m m' : Mem) (l x : Word) (L : Level), LvR N m 
               (by rw [hd₁, hd₂]; have := (htop m').toNat_lt; omega)
             rwa [e₂] at this
 
+/-! ## `lv_never(l)`, `lv_always_zero(l)`, `lv_zero_where_zero(s, u)`: questions on the datum
+
+Each runs `lv_zero` above the current heap top and puts the top back (`lv_zero_caps`' convention,
+`StubInd.lean`). -/
+
+/-- `lv_never(l)`: `(zeronessOf l).isNever`. -/
+-- con-leche: ConLeche/Kernel/PropWhen.lean:53-55 ConLeche.PropWhen.isNever
+@[no_expose] def lvNever : FunDecl := lfn (l) locals (t0, z) {
+  t0 := CTL.u64[192];
+  z := call lv_zero(l);
+  CTL.u64[192] := t0;
+  return u64(z != 0)
+}
+
+/-- `lv_always_zero(l)`: `Level.isAlwaysZero l`, the datum `ifAllZero []`. -/
+-- con-leche: ConLeche/Kernel/Level.lean:199-204 ConLeche.Level.isAlwaysZero
+@[no_expose, l_impl ConLeche.Level.isAlwaysZero]
+def lvAlwaysZero : FunDecl := lfn (l) locals (t0, z, t1) {
+  t0 := CTL.u64[192];
+  z := call lv_zero(l);
+  t1 := CTL.u64[192];
+  CTL.u64[192] := t0;
+  return u64(z == 0) & u64(t1 == t0)
+}
+
+/-- `lh_contains(o, e, w)`: the heap words `[o, e)` contain `w`. -/
+-- con-ron: none — `List.contains` on a heap slice (L plumbing for the twin's list value)
+@[no_expose] def lhContains : FunDecl := lfn (o, e, w) locals (j) {
+  j := o;
+  while j < e {
+    if LH.u64[j] == w { return 1 };
+    j += 1
+  };
+  return 0
+}
+
+/-- `lv_zero_where_zero(s, u)`: `Level.zeroWhereZero s u`: `s` never zero, or `u` an `ifAllZero`
+whose parameters are all among `s`'s. -/
+-- con-leche: ConLeche/Kernel/Level.lean:206-213 ConLeche.Level.zeroWhereZero
+@[no_expose, l_impl ConLeche.Level.zeroWhereZero]
+def lvZeroWhereZero : FunDecl := lfn (s, u) locals (t0, zs, t1, zu, t2, j, c) {
+  t0 := CTL.u64[192];
+  zs := call lv_zero(s);
+  if zs != 0 { CTL.u64[192] := t0; return 1 };
+  t1 := CTL.u64[192];
+  zu := call lv_zero(u);
+  if zu != 0 { CTL.u64[192] := t0; return 0 };
+  t2 := CTL.u64[192];
+  j := t1;
+  while j < t2 {
+    c := call lh_contains(t0, t1, LH.u64[j]);
+    if c == 0 { CTL.u64[192] := t0; return 0 };
+    j += 1
+  };
+  CTL.u64[192] := t0;
+  return 1
+}
+
 end L.Arena

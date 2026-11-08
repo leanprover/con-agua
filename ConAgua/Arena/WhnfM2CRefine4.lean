@@ -202,7 +202,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps))
     (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) :
     RefE (M2CCtxE p N) (m2cEtaE p (N + 1) m mode vis d T indP major)
-      (m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a
+      (m2cEtaT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a
       (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cEtaE.arm1]
   -- the record's words
@@ -260,7 +260,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hA3 : GrowPost decH dn m vis fe M eb ResH ([major], m3) (decE major) (AM.st (capsNeverZeroPW
       cvT.levelParams (decI (L.tail.tail.tail.headD 0)) caps.sortZ) a1) :=
     ⟨⟨M3, hS3, hK1.trans hK3, hSt1.toGrew.trans (hg2.trans hSt3.toGrew)⟩, rfl, hmaj⟩
-  have hstep : (m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps
+  have hstep : (m2cEtaT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI T) cvT caps
       (decE major)).run a =
       (if (decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = caps.etaParams ∧
           l.length = cvT.levelParams.length ∧ decBool r3' = true then
@@ -273,7 +273,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hmaj' : ∀ (hn : ¬ ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = caps.etaParams ∧
       l.length = cvT.levelParams.length ∧ decBool r3' = true)),
       RefE (M2CCtxE p (N' + 1)) (.ok ([major], m3))
-        (m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a
+        (m2cEtaT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a
         (GrowPost decH dn m vis fe M eb ResH) :=
     fun hn => RefE.ret (by rw [hstep, ite_eq_right hn]; rfl) hA3
   by_cases g2 : L.tail.tail.headD 0 ≠ T

@@ -164,7 +164,7 @@ theorem pl_ref (p : Prog) (hil : InstListOK p) (n : Nat)
     (eb mode d a b k fo : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
     (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs) (hdk : d.toNat + k.toNat < 2 ^ 64) :
     RefE (KnotUpToE p n) (plE p (n + 1) s₀.mem mode vis d a b k fo)
-      (defeqPeelLeaf (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs) a₀
+      (defeqPeelLeaf (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [plE]
   unfold defeqPeelLeaf
@@ -192,7 +192,7 @@ theorem peelLeaf_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : 
     (eb mode d a b k fo : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
     (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs) (hdk : d.toNat + k.toNat < 2 ^ 64) :
     CoreSpec p (n + 1) "peel_leaf" [mode, vis, d, a, b, k, fo]
-      (defeqPeelLeaf (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs)
+      (defeqPeelLeaf (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs)
       decBool s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (plE_spec p hp.leaf (n + 1) s₀ mode vis d a b k fo)
     (pl_ref p hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b k fo hs ha hb fvs hx hdk)
@@ -227,7 +227,7 @@ theorem pd_ref (p : Prog) (hil : InstListOK p) (n : Nat)
     (eb mode d da db k fo : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW da) (hb : HW db)
     (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs) (hdk : d.toNat + k.toNat < 2 ^ 64) :
     RefE (KnotUpToE p n) (pdE p (n + 1) s₀.mem mode vis d da db k fo)
-      (peelDomT (coreKnot (decMode mode) fe id F) d.toNat (decE da) (decE db) k.toNat fvs) a₀
+      (peelDomT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE da) (decE db) k.toNat fvs) a₀
       (CorePost decDom dn s₀.mem vis fe M eb ResW) := by
   simp only [pdE]
   unfold peelDomT
@@ -364,7 +364,7 @@ theorem ps2_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
     (hg : tagW b = 6) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
     (hdk : d.toNat + k.toNat < 2 ^ 64) :
     RefE (KnotUpToE p n) (ps2E p (n + 1) s₀.mem mode vis d da b k fo)
-      (peelStep2T (coreKnot (decMode mode) fe id F) d.toNat (decE da) (decE b) k.toNat fvs) a₀
+      (peelStep2T (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE da) (decE b) k.toNat fvs) a₀
       (CorePost decPS2 dn s₀.mem vis fe M eb Res3') := by
   simp only [ps2E]
   rcases c1 : callW p n "e_view" [b] s₀.mem with _ | ⟨r₁, m₁⟩
@@ -372,8 +372,8 @@ theorem ps2_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
   rw [liftE_some]; simp only [ps2E.k_e_view]
   obtain ⟨k', rfl⟩ := callW_succ c1
   obtain ⟨rfl, -, -, hw1, hw2, hvb⟩ := eView_forall_callW (a := a₀) hp.eview hs.rel.arena.base hb hg c1
-  have hT : (peelStep2T (coreKnot (decMode mode) fe id F) d.toNat (decE da) (decE b) k.toNat fvs).run a₀ =
-      (peelDomT (coreKnot (decMode mode) fe id F) d.toNat (decE da) (decE (r₁.tail.headD 0)) k.toNat fvs
+  have hT : (peelStep2T (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE da) (decE b) k.toNat fvs).run a₀ =
+      (peelDomT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE da) (decE (r₁.tail.headD 0)) k.toNat fvs
         >>= fun x => pure (x.1, x.2, decE (r₁.tail.tail.headD 0))).run a₀ := by
     simp only [peelStep2T, StateT.run_bind, viewBind_run', hvb, except_ok_bind]
   refine RefE.of_run_eq hT ?_
@@ -401,7 +401,7 @@ theorem ps_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
     (hga : tagW a = 6) (hgb : tagW b = 6) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
     (hdk : d.toNat + k.toNat < 2 ^ 64) :
     RefE (KnotUpToE p n) (psE p (n + 1) s₀.mem mode vis d a b k fo)
-      (peelStepT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs) a₀
+      (peelStepT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs) a₀
       (CorePost decPS dn s₀.mem vis fe M eb Res4) := by
   simp only [psE]
   rcases c1 : callW p n "e_view" [a] s₀.mem with _ | ⟨r₁, m₁⟩
@@ -409,8 +409,8 @@ theorem ps_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
   rw [liftE_some]; simp only [psE.k_e_view]
   obtain ⟨k', rfl⟩ := callW_succ c1
   obtain ⟨rfl, -, -, hw1, hw2, hva⟩ := eView_forall_callW (a := a₀) hp.eview hs.rel.arena.base ha hga c1
-  have hT : (peelStepT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs).run a₀ =
-      (peelStep2T (coreKnot (decMode mode) fe id F) d.toNat (decE (r₁.tail.headD 0)) (decE b) k.toNat fvs
+  have hT : (peelStepT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs).run a₀ =
+      (peelStep2T (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE (r₁.tail.headD 0)) (decE b) k.toNat fvs
         >>= fun y => pure (y.1, y.2.1, decE (r₁.tail.tail.headD 0), y.2.2)).run a₀ := by
     simp only [peelStepT, StateT.run_bind, viewBind_run', hva, except_ok_bind]
   refine RefE.of_run_eq hT ?_
@@ -427,7 +427,7 @@ theorem peelStep_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : 
     (hga : tagW a = 6) (hgb : tagW b = 6) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
     (hdk : d.toNat + k.toNat < 2 ^ 64) :
     CoreSpec p (n + 1) "peel_step" [mode, vis, d, a, b, k, fo]
-      (peelStepT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs)
+      (peelStepT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs)
       decPS s₀ a₀ dn vis fe M eb Res4 :=
   RefE.coreSpec (psE_spec p hp.step hp.step2 hp.dom (n + 1) s₀ mode vis d a b k fo)
     (ps_ref p hp hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b k fo hs ha hb hga hgb fvs hx hdk)
@@ -645,7 +645,7 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       (fvs : Array EIdx), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW a → HW b →
       FvsR m fo k fvs → d.toNat + k.toNat + peel.toNat < 2 ^ 64 →
       RefE (KnotNvG p n) (peelE.loop1 p j m mode vis d peel a b k fo)
-        (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b)
+        (defeqPeel (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat peel.toNat (decE a) (decE b)
           k.toNat fvs) s
         (fun v y a' => GrowPost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   intro j
@@ -658,7 +658,7 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     have hab : (decE a == decE b) = decide (a = b) := decE_beq_eq _ _ ha hb
     by_cases he : a = b
     · rw [peelE.loop1.arm1 (hc1 := rfl) (hc2 := he)]
-      have hr := defeqPeel_eq_run (coreKnot (decMode mode) fe id F) d.toNat peel.toNat _ _ k.toNat
+      have hr := defeqPeel_eq_run (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat peel.toNat _ _ k.toNat
         fvs s (by rw [hab]; simp [he])
       exact RefE.ret hr (GrowPost.of_core (CorePost.ret hS rfl resH_one))
     have hab' : (decE a == decE b) = false := by rw [hab]; simp [he]
@@ -669,7 +669,7 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
         simp [h1, h2, h3]
     by_cases hl : peel = 0 ∨ tagW a ≠ 6 ∨ tagW b ≠ 6
     · rw [peelE.loop1.arm2 (hc1 := rfl) (hc2 := he) (hc3 := hl)]
-      have hr := defeqPeel_leaf_run (coreKnot (decMode mode) fe id F) d.toNat peel.toNat _ _ k.toNat
+      have hr := defeqPeel_leaf_run (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat peel.toNat _ _ k.toNat
         fvs s hab' (by rw [hlw]; simp [hl])
       refine RefE.of_run_eq hr ?_
       cases j with
@@ -695,7 +695,7 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     have hk1 : (k + 1).toNat = k.toNat + 1 := by
       rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
     rw [peelE.loop1.arm3 (hc1 := rfl) (hc2 := he) (hc3 := hl)]
-    have hr := defeqPeel_succ_eq (coreKnot (decMode mode) fe id F) d.toNat q (decE a) (decE b)
+    have hr := defeqPeel_succ_eq (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat q (decE a) (decE b)
       k.toNat fvs
     have hl' : (decide (q + 1 = 0) || (decE a).tag != ETag.forallE ||
         (decE b).tag != ETag.forallE) = false := by rw [← hq, hlw]; simp [hl]
@@ -744,7 +744,7 @@ theorem defeqPeel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn
     (ha : HW a) (hb : HW b) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
     (hdk : d.toNat + k.toNat + peel.toNat < 2 ^ 64) :
     RefE (KnotNvG p n) (peelE p (n + 1) s₀.mem mode vis d peel a b k fo)
-      (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b) k.toNat fvs) a₀
+      (defeqPeel (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat peel.toNat (decE a) (decE b) k.toNat fvs) a₀
       (fun v y a' => GrowPost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [peelE.arm1]
   exact peel_ref p hp hil n hk F hF hn dn vis fe mode d fo hs.mode4 (n + 1) (Nat.le_refl _) peel a b k
@@ -761,7 +761,7 @@ theorem defeqPeel_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n :
     (eb mode d peel a b k fo : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
     (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs) (hdk : d.toNat + k.toNat + peel.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_peel" [mode, vis, d, peel, a, b, k, fo]
-    ⦃fun r s' => LocEq s' s₀ ∧ GrowRefP (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat
+    ⦃fun r s' => LocEq s' s₀ ∧ GrowRefP (defeqPeel (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat
       peel.toNat (decE a) (decE b) k.toNat fvs) a₀ decBool dn s₀.mem vis fe M eb r s'.mem; ⊤⦄ := by
   refine L.M.triple_of_run fun _ r s' hp0 hr => ?_
   obtain ⟨hl, y, a', hrun, hR⟩ := L.M.of_run (P := fun s => s = s₀) hp0 hr
@@ -816,7 +816,7 @@ theorem db_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
     (h1 : HW ty1) (hb1 : HW body1) (h2 : HW ty2) (hb2 : HW body2)
     (hd : d.toNat + 1 + peelFuel < 2 ^ 64) :
     RefE (KnotNvG p n) (dbE p (n + 1) s₀.mem mode vis d ty1 body1 ty2 body2)
-      (defeqBinders (coreKnot (decMode mode) fe id F) d.toNat (decE ty1) (decE body1) (decE ty2)
+      (defeqBinders (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE ty1) (decE body1) (decE ty2)
         (decE body2)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [dbE]
   unfold defeqBinders
@@ -880,7 +880,7 @@ theorem defeqBinders_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (
     (h1 : HW ty1) (hb1 : HW body1) (h2 : HW ty2) (hb2 : HW body2)
     (hd : d.toNat + 1 + peelFuel < 2 ^ 64) :
     CoreSpec p (n + 1) "defeq_binders" [mode, vis, d, ty1, body1, ty2, body2]
-      (defeqBinders (coreKnot (decMode mode) fe id F) d.toNat (decE ty1) (decE body1) (decE ty2)
+      (defeqBinders (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE ty1) (decE body1) (decE ty2)
         (decE body2)) decBool s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (dbE_spec p hp.binders (n + 1) s₀ mode vis d ty1 body1 ty2 body2)
     (db_ref p hp hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d ty1 body1 ty2 body2 hs h1 hb1 h2 hb2 hd)

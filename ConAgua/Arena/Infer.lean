@@ -24,10 +24,8 @@ stack `BSTK`** (array 145, top `CTL[137]`, lane `defeq`; outside every tier of `
 `CoreS.frame` already allows). Both tops are put back before a function returns.
 
 **Callees not written yet** (stubs, `DefeqCallees` in `Knot.lean`): `abs_entry(e, d, k)`
-(`abstract1Fast coreWalkFuel`), `ar_entry(e, d, k, c)` (`abstractRangeFast coreWalkFuel`),
-`field_sort_zero(po, pl, us, fs)` (`Level.isEquiv (Level.subst ks vs fs) .zero == some true` on
-the readbacks, `inferProj`'s propositional-structure test); from lane `whnf`: `inst_list`,
-`inst1`, `inst_lp`, `find_proj`, `str_lit_supported`.
+(`abstract1Fast coreWalkFuel`), `ar_entry(e, d, k, c)` (`abstractRangeFast coreWalkFuel`); from lane `whnf`: `inst_list`,
+`inst1`, `inst_lp`, `find_proj`, `str_lit_stored`.
 -/
 
 open ConRon.Arena
@@ -49,11 +47,7 @@ def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
 /-- The `.const n us` clause of both bodies: the stored constant, the level count, `constTyAt` (`const_ty_at`, lane `whnf`, with its cache) at the record's own name
 (word `p + 1`, the twin's `cv.name`; the cache key). -/
 -- con-ron: ConRon/Arena/Core.lean:3035-3093 ConRon.Arena.inferBody
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferBodyIO`, `ConRon.Arena.natLitStored`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferBody`, `ConRon.Arena.natLitStored`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferBody` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Core.lean:3095-3163 ConRon.Arena.inferBodyIO
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Core.lean:232-246 ConRon.Arena.unknownConstError
 @[no_expose, l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO ConRon.Arena.unknownConstError]
 def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
@@ -73,22 +67,18 @@ def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
 /-- The two `.lit` clauses of both bodies: `Nat` (`pinNat`) or `String` (`pinString`), each
 behind its basis guard. -/
 -- con-ron: ConRon/Arena/Core.lean:3035-3093 ConRon.Arena.inferBody
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferBodyIO`, `ConRon.Arena.natLitStored`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferBody`, `ConRon.Arena.natLitStored`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferBody` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Core.lean:3095-3163 ConRon.Arena.inferBodyIO
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO]
 def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
   (t, i) := node LIT⟦e⟧;
   if LIT⟨t, i⟩.kind == 0 {
-    s := call nat_lit_supported(vis);
+    s := call nat_lit_stored(vis);
     if s == 0 { fail R_NAT_LITERAL_WITHOUT };
     c := call pin_at(1);
     r := call const_e(c);
     return r
   };
-  s := call str_lit_supported(vis);
+  s := call str_lit_stored(vis);
   if s == 0 { fail R_STRING_LITERALS_BEFORE };
   c := call pin_at(5);
   r := call const_e(c);
@@ -389,36 +379,136 @@ def projTypeAtL : FunDecl := lfn (q, i, us, to, tn, pe) locals (body, b, r) {
   return r
 }
 
+/-! ## The projection's guard at the use (`checkProjGuard`, con-leche task #480)
+
+Nothing about the guard is stored: the structure's sort is read off its type or walked to at the
+use's levels (`proj_guard_sort`), the rows are read off the constructor's telescope opened at the
+use's levels (`proj_guard_rows`), and each row's term must be a proposition wherever the guard sort
+is zero (`check_guard_rows`). The rows are pairs `(depth, term)` on the spine stack `SPN` (two words
+each, at `ro`), above the top while they are checked. -/
+
+/-- `check_guard_rows(mode, vis, ro, rn, i, gs)`: rows `i, …, rn - 1` of the slice at `ro`: each
+row's term, inferred at the io grade at its own depth and head-normalized, has a sort that is zero
+wherever `gs` is (`lv_zero_where_zero`). -/
+-- con-ron: ConRon/Arena/Core.lean:2534-2556 ConRon.Arena.checkGuardRows
+@[no_expose, l_impl ConRon.Arena.checkGuardRows]
+def checkGuardRowsL : FunDecl := lfn (mode, vis, ro, rn, i, gs) locals (d, dom, t, w, tg, x, u, ok, r) {
+  if rn <= i { return 0 };
+  d := SPN.u64[ro + 2 * i];
+  dom := SPN.u64[ro + 2 * i + 1];
+  t := call infer_io(mode, vis, d, dom);
+  w := call whnf(mode, vis, d, t);
+  if ⟦w⟧.tag != 2 { fail R_EXPECTED_A_SORT };
+  (tg, x) := node SORT⟦w⟧;
+  u := SORT⟨tg, x⟩.u;
+  ok := call lv_zero_where_zero(gs, u);
+  if ok == 0 { fail R_PROJECTION_FROM_A };
+  r := call check_guard_rows(mode, vis, ro, rn, i + 1, gs);
+  return r
+}
+
+/-- `proj_guard_sort(mode, vis, p, us)`: the sort the rows answer to at this use, `(1, gs)`, or
+`(0, 0)` where the guard asks nothing (`p` the structure's inductive record). A stored type that
+ends in a sort answers at once (`Prop` asks for propositions: the zero level, pin word 53); else the
+sort is walked to (`former_sort_loop`, from depth `0`): never zero asks nothing, no sort rejects. -/
+-- con-ron: ConRon/Arena/Core.lean:2558-2578 ConRon.Arena.projGuardSort
+@[no_expose, l_impl ConRon.Arena.projGuardSort]
+def projGuardSortL : FunDecl := lfn (mode, vis, p, us) locals (po, pc, ty, n, f, u, a, z, ity, nv) {
+  po := EREC⦃p + 2⦄;
+  pc := EREC⦃p + 3⦄;
+  ty := EREC⦃p + 4⦄;
+  n := EREC⦃p + 17⦄ + EREC⦃p + 11⦄;
+  (f, u) := call former_res_sort(ty);
+  if f != 0 {
+    a := call lv_always_zero(u);
+    if a != 0 { z := call pin_word(53); return (1, z) };
+    return (0, 0)
+  };
+  ity := call inst_lp(po, pc, us, ty);
+  (f, u) := call former_sort_loop(mode, vis, 0, n, ity);
+  if f == 0 { fail R_PROJECTION_FROM_A_STRUCTURE };
+  nv := call lv_never(u);
+  if nv != 0 { return (0, 0) };
+  return (1, u)
+}
+
+/-- `proj_guard_rows_at(cty, nP, idx, fo, fn, j, ro, rn)`: the rows of fields `j, …, idx` read off
+the opened telescope's free variables (the `IW` slice `(fo, fn)`): field `idx`, and every earlier
+field a later one uses (`struct_used_later`), as `(nP + j, its variable's type)`, appended at row
+`rn` of the slice at `ro` (the top raised past each); the row count after. -/
+-- con-ron: ConRon/Arena/Core.lean:2695-2712 ConRon.Arena.projGuardRowsAt
+@[no_expose, l_impl ConRon.Arena.projGuardRowsAt]
+def projGuardRowsAtL : FunDecl := lfn (cty, nP, idx, fo, fn, j, ro, rn) locals (used, ty, r) {
+  if idx < j { return rn };
+  if j == idx { used := 1 } else { used := call struct_used_later(cty, nP, j) };
+  if used != 0 && nP + j < fn {
+    ty := call fvar_type_d(IW.u64[fo + nP + j]);
+    if len(SPN.u64) <= ro + 2 * rn + 1 { abort };
+    SPN.u64[ro + 2 * rn] := nP + j;
+    SPN.u64[ro + 2 * rn + 1] := ty;
+    CTL.u64[136] := ro + 2 * rn + 2;
+    r := call proj_guard_rows_at(cty, nP, idx, fo, fn, j + 1, ro, rn + 1);
+    return r
+  };
+  r := call proj_guard_rows_at(cty, nP, idx, fo, fn, j + 1, ro, rn);
+  return r
+}
+
+/-- `proj_guard_rows(vis, q, i, us)`: what a `.proj` use of field `i` of the table record `q` must
+show: `(1, ro, rn)` the rows at `ro` on the stack (left above the top), or `(0, 0, 0)` where the
+stored constructor does not bind what the entry says. The constructor's type at the use's levels
+(`const_ty_at`), opened in one pass (`open_pis_at_fvars_f`). -/
+-- con-ron: ConRon/Arena/Core.lean:2714-2733 ConRon.Arena.projGuardRows
+@[no_expose, l_impl ConRon.Arena.projGuardRows]
+def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, ok, fo, fn, b, ro, rn) {
+  np := EREC⦃q + 5⦄;
+  (f, c) := call env_find(EREC⦃q + 6⦄, vis);
+  if f == 0 { return (0, 0, 0) };
+  cty := call const_ty_at(EREC⦃c + 1⦄, EREC⦃c + 2⦄, EREC⦃c + 3⦄, EREC⦃c + 4⦄, us);
+  (ok, fo, fn, b) := call open_pis_at_fvars_f(np + i + 1, cty, 0);
+  if ok == 0 { return (0, 0, 0) };
+  ro := CTL.u64[136];
+  rn := call proj_guard_rows_at(EREC⦃c + 4⦄, np, i, fo, fn, 0, ro, 0);
+  return (1, ro, rn)
+}
+
+/-- `check_proj_guard(mode, vis, q, i, us)`: the official `infer_proj` restriction at this use of
+field `i` of the table record `q` (the structure's name at `q + 2`); the stack top put back. -/
+-- con-ron: ConRon/Arena/Core.lean:2735-2752 ConRon.Arena.checkProjGuard
+@[no_expose, l_impl ConRon.Arena.checkProjGuard]
+def checkProjGuardL : FunDecl := lfn (mode, vis, q, i, us) locals (top, f, p, g, gs, ok, ro, rn, u) {
+  top := CTL.u64[136];
+  (f, p) := call env_find(EREC⦃q + 2⦄, vis);
+  if f == 0 { fail R_PROJECTION_FROM_A };
+  if EREC⦃p⦄ != 3 { fail R_PROJECTION_FROM_A };
+  (g, gs) := call proj_guard_sort(mode, vis, p, us);
+  if g == 0 { return 0 };
+  (ok, ro, rn) := call proj_guard_rows(vis, q, i, us);
+  if ok == 0 { fail R_PROJECTION_FROM_A };
+  u := call check_guard_rows(mode, vis, ro, rn, 0, gs);
+  CTL.u64[136] := top;
+  return 0
+}
+
 /-- `inferProj` from the subject type's head constant `T.{us}` on (`te` the head-normal subject
 type, `q` the table record of field `i`). -/
 -- con-ron: ConRon/Arena/Core.lean:2999-3033 ConRon.Arena.inferProj
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferProj`, `ConRon.Arena.checkProjGuard` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferProj` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.inferProj]
 def inferProjAtL : FunDecl :=
-    lfn (vis, sn, i, pe, te, T, us, q) locals (top, to, tn, lo, usl, z, ok, fs, r) {
+    lfn (mode, vis, sn, i, pe, te, T, us, q) locals (top, to, tn, lo, usl, u, r) {
   top := CTL.u64[136];
   (to, tn) := call get_app_args(te);
   if T != sn { fail R_INVALID_PROJECTION_THE };
   if tn != EREC⦃q + 5⦄ { fail R_PROJECTION_PARAMETER_MISMATCH };
   (lo, usl) := call ls_node(us);
   if usl != EREC⦃q + 4⦄ { fail R_PROJECTION_WITHOUT_A };
-  z := call pin_word(53);
-  ok := call lvl_eq_c(EREC⦃q + 8⦄, z);
-  if 2 <= ok {
-    fs := 0;
-    if i < EREC⦃q + 12⦄ { fs := EREC⦃EREC⦃q + 11⦄ + i⦄ };
-    ok := call field_sort_zero(EREC⦃q + 3⦄, EREC⦃q + 4⦄, us, fs);
-    if ok == 0 { fail R_PROJECTION_FROM_A }
-  };
+  u := call check_proj_guard(mode, vis, q, i, us);
   r := call proj_type_at(q, i, us, to, tn, pe);
   CTL.u64[136] := top;
   return r
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2999-3033 ConRon.Arena.inferProj
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferProj`, `ConRon.Arena.checkProjGuard` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferProj` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:300-311 ConRon.Arena.projMissError -/
 @[no_expose, l_impl ConRon.Arena.inferProj ConRon.Arena.projMissError]
 def inferProjL : FunDecl :=
@@ -447,7 +537,7 @@ def inferProjL : FunDecl :=
     };
     fail R_INVALID_PROJECTION_NOT
   };
-  r := call infer_proj_at(vis, sn, i, pe, te, cT, cu, q);
+  r := call infer_proj_at(mode, vis, sn, i, pe, te, cT, cu, q);
   return r
 }
 
@@ -455,8 +545,6 @@ def inferProjL : FunDecl :=
 
 /-- The full body's `.letE` clause (official `infer_let`). -/
 -- con-ron: ConRon/Arena/Core.lean:3035-3093 ConRon.Arena.inferBody
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferBody` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferBody`, `ConRon.Arena.natLitStored`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.inferBody]
 def inferLetL : FunDecl := lfn (mode, vis, d, ty, v, b) locals (tty, u, tv, ok, ob, r) {
   tty := call infer(mode, vis, d, ty);
@@ -470,8 +558,6 @@ def inferLetL : FunDecl := lfn (mode, vis, d, ty, v, b) locals (tty, u, tv, ok, 
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3035-3093 ConRon.Arena.inferBody -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferBody` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferBody`, `ConRon.Arena.natLitStored`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.inferBody]
 def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) {
   (g, x1, x2, x3) := call e_view(e);
@@ -518,8 +604,6 @@ def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) 
 /-- The io body's `.forallE` clause (chained, one binder). The depth capacity: the body runs at
 `d + 1`, which must not wrap (the twin's depth is a `Nat`). -/
 -- con-ron: ConRon/Arena/Core.lean:3095-3163 ConRon.Arena.inferBodyIO
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferBodyIO`, `ConRon.Arena.natLitStored`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.inferBodyIO]
 def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, i, u, fv, ob, bt, v, iu, r) {
   if d + 1 == 0 { abort };
@@ -539,8 +623,6 @@ def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, 
 
 /-- The io body's `.lam` clause (no domain-sort run; the depth capacity as `infer_forall_io`'s). -/
 -- con-ron: ConRon/Arena/Core.lean:3095-3163 ConRon.Arena.inferBodyIO
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferBodyIO`, `ConRon.Arena.natLitStored`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.inferBodyIO]
 def inferLamIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (fv, ob, bt, r) {
   if d + 1 == 0 { abort };
@@ -552,8 +634,6 @@ def inferLamIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (fv, ob, bt, r)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3095-3163 ConRon.Arena.inferBodyIO -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.inferBodyIO`, `ConRon.Arena.natLitStored`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.inferBodyIO]
 def inferBodyIOL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, ob, r) {
   (g, x1, x2, x3) := call e_view(e);

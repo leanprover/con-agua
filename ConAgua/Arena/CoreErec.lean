@@ -37,9 +37,9 @@ def coreErecC : List Word := (List.range 256).map Nat.toUInt64
 /-- The roots of `coreFns`. -/
 def coreRoots : List FnName :=
   ["whnf", "whnf_core", "infer", "infer_io", "defeq", "iota_rec_at", "major_to_ctor",
-   "prepare_major", "inst_lp", "inst_spine", "rec_fire_levels", "iota_case3", "lvls_eq_c",
+   "prepare_major", "inst_lp", "inst_spine", "rec_fire_levels", "iota_case3_at", "lvls_eq_c",
    "rec_fire_args", "const_ty_at", "iota_certs_full", "lit_major_to_ctor", "is_ctor_app",
-   "is_str_lit", "proof_irrel", "defeq_list", "iota_index_ok", "find_proj", "fire_ok"]
+   "is_str_lit", "proof_irrel", "defeq_list", "iota_index_ok", "find_proj"]
 
 /-- The call closure of `coreRoots` in the checker's program. -/
 def coreFns : List FnName := [

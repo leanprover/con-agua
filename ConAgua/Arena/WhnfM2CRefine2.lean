@@ -246,7 +246,7 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb mode d major : Word)
     (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (hmaj : HW major) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) :
-    PreRef (M2CCtxE p N) (m2cPreE p (N + 1) m mode vis d major) (coreKnot (decMode mode) fe id F)
+    PreRef (M2CCtxE p N) (m2cPreE p (N + 1) m mode vis d major) (coreKnot (decMode mode) (decEager mode) fe id F)
       d.toNat (decE major) a dn m vis fe M eb := by
   rw [m2cPreE.arm1]
   rcases c1 : callE p N "infer_io" [mode, vis, d, major] m with e1 | ⟨r1, m1⟩
@@ -342,7 +342,7 @@ def ProofIrrelOKM (p : Prog) : Prop :=
     (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
     eb = (mode >>> 1) &&& 1 → HW a → HW b →
     CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
-      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
+      (proofIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
       vis fe MM eb
 
 section check
@@ -356,7 +356,7 @@ theorem m2cCheck_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (htm : HW tmaj) (hfab : HW fab)
     (hmaj : HW major) (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) :
     RefE (M2CCtxE p N) (m2cCheckE p (N + 1) m mode vis d tmaj fab major)
-      (m2cCheckT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE tmaj)
+      (m2cCheckT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE tmaj)
         (decE fab) (decE major)) a (CorePost decH dn m vis fe M eb ResH) := by
   rw [m2cCheckE.arm1]
   cases N with
@@ -464,7 +464,7 @@ theorem m2cK2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
     (hdus : ∃ ls, denoteLs a.store.lss (decI ust) = some ls) :
     RefE (M2CCtxE p N) (m2cK2E p (N + 1) m mode vis d ctor cnP tmaj ust major)
-      (m2cK2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+      (m2cK2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor)
         cnP.toNat (decE tmaj) (decI ust) (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cK2E.arm1]
   cases N with
@@ -522,7 +522,7 @@ theorem m2cK_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
     (hT : HW T) (hmaj : HW major) (hctor : HW ctor) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) :
     RefE (M2CCtxE p N) (m2cKE p (N + 1) m mode vis d T major ctor lpl cnP)
-      (m2cKT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+      (m2cKT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor)
         lpl.toNat cnP.toNat (decI T) (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cKE.arm1]
   cases N with
@@ -566,9 +566,9 @@ theorem m2cK_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
   rw [m2cKE.k_m2c_pre.arm4 _ _ _ _ _ _ _ _ _ _ _ _ g0 g2' g3']
   have hcd : ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ lpl.toNat = l.length) :=
     ⟨by rw [g2'], by rw [hll, g3']⟩
-  have hrun : (m2cKT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+  have hrun : (m2cKT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor)
       lpl.toNat cnP.toNat (decI T) (decE major)).run a =
-      (m2cK2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor) cnP.toNat
+      (m2cK2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor) cnP.toNat
         (decE (L.tail.headD 0)) (decI (L.tail.tail.tail.headD 0)) (decE major)).run a1 := by
     unfold m2cKT; rw [hpre']
     simp only [StateT.run_bind, hvls, except_ok_bind]

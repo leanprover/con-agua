@@ -185,7 +185,7 @@ theorem spc_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F 
     (hxt : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (KnotUpToE p n) (spcE p (n + 1) s₀.mem mode vis d nm us nm₂ us₂ ao an bo bn)
-      (spineCmpT (coreKnot (decMode mode) fe id F) fe d.toNat (decI nm) (decI us) (decI nm₂) (decI us₂)
+      (spineCmpT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI nm) (decI us) (decI nm₂) (decI us₂)
         xs ys) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hxl := slice_len hx
@@ -264,7 +264,7 @@ theorem sp2_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F 
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hnm : HW nm) (hnm₂ : HW nm₂)
     (hus : HW us) (hus₂ : HW us₂) :
     RefE (KnotUpToE p n) (sp2E p (n + 1) s₀.mem mode vis d a b nm us nm₂ us₂)
-      (spine2T (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decI nm) (decI us)
+      (spine2T (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b) (decI nm) (decI us)
         (decI nm₂) (decI us₂)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [sp2E]
@@ -294,8 +294,8 @@ theorem sp2_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F 
     rw [htop₂, UInt64.toNat_add, ← ho₂]; omega
   have hle : (spTop m₁).toNat ≤ (spTop m₂).toNat := UInt64.le_iff_toNat_le.mp hg₂.1
   have hx₂ := hx₁.keep hg₂.size hg₂.below (by omega) hsp₁
-  have hT : (spine2T (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decI nm)
-      (decI us) (decI nm₂) (decI us₂)).run a₀ = (spineCmpT (coreKnot (decMode mode) fe id F) fe
+  have hT : (spine2T (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b) (decI nm)
+      (decI us) (decI nm₂) (decI us₂)).run a₀ = (spineCmpT (coreKnot (decMode mode) (decEager mode) fe id F) fe
         d.toNat (decI nm) (decI us) (decI nm₂) (decI us₂) xs ys).run a₀ := by
     simp only [spine2T, StateT.run_bind, hxs, hys, except_ok_bind]
   refine RefE.of_run_eq hT ?_
@@ -360,7 +360,7 @@ theorem sp_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F :
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (KnotUpToE p n) (spE p (n + 1) s₀.mem mode vis d a b)
-      (defeqSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (defeqSpine (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   rw [defeqSpine_eq]
@@ -396,7 +396,7 @@ theorem defeqSpine_refines (p : Prog) (hp : SpineDProg p) (n : Nat)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "defeq_spine" [mode, vis, d, a, b]
-      (defeqSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
+      (defeqSpine (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
       vis fe M eb :=
   RefE.coreSpec (spE_spec p hp.sp hp.sp2 hp.cmp hp.rev (n + 1) s₀ mode vis d a b)
     (sp_ref p hp n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb)

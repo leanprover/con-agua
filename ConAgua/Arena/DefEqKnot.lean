@@ -12,7 +12,6 @@ import ConAgua.Arena.WalkCore
 public import ConAgua.Arena.InstLPEntry
 import ConAgua.Arena.WhnfM2CRefine5
 import ConAgua.Arena.WhnfSlotRefine
-import ConAgua.Arena.CapsNeverZeroCore
 import ConAgua.Arena.CoreNatOp
 import ConAgua.Arena.DefEqStuckGo
 import ConAgua.Arena.WhnfDeltaRefine2
@@ -47,8 +46,6 @@ public import ConAgua.Arena.WhnfM2CRefine2
    slot step of this file. Lane `whnf`'s two slot steps then come from its primed proofs over these
    bundles: `whnfCoreSlot_step` (`KnotAllProg.whnfCoreStep`) and the `whnf` chain over
    `whnfStep_refines'` (`KnotAllProg.whnfStep`).
-4. **`fire_ok` from `CoreDen`** (helper `whnf4-leaves`): `KnotAllProg.fireOk` is lane `whnf3`'s
-   `fireOk_refines` with `ProjSortDen`/`FireDen` from `StoreDen` (`fireOk_core`).
 -/
 
 open ConRon.Arena
@@ -99,15 +96,12 @@ structure KnotAllProg (p : Prog) : Prop where
   `ar_entry`, `has_fvar` under `CoreS` at exactly `coreWalkFuel`. -/
   walks : CoreWalkProg p
   rc : p.lookup "reserved_contains_w" = some reservedContainsL
-  fsz : FieldSortZeroProg p
   natPred : NatPredProg p
   lvc : LvlCacheProg p
   prop : PropReadProg p
   proj : InferProjProg p
   str : StrLitProg p
   projp : ProjProg p
-  /-- `fire_ok` and its callees (`pin_word`, the level cache, `lvl_eq_c`'s text). -/
-  fire : FireProg p
   /-- `caps_never_zero`, `rec_fire_levels` and their callees (`capsNeverZeroOK_of`,
   `recFireLevelsOK_of`). -/
   ls : LsProg p
@@ -150,9 +144,9 @@ theorem constLpsDen_of (h : CoreDen) : ConstLpsDen :=
   fun dn m a vis fe M eb hS => (h dn m a vis fe M eb hS).constLps
 
 set_option maxRecDepth 8192 in
-/-- `ErecKept` (`find_proj`, `fire_ok`) from the core's write set (`CoreErec.lean`). -/
+/-- `ErecKept` (`find_proj`) from the core's write set (`CoreErec.lean`). -/
 theorem erecKept_of {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) : ErecKept p :=
-  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by rcases hf with rfl | rfl <;> decide) h
+  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by subst hf; decide) h
 
 set_option maxRecDepth 8192 in
 /-- `ErecKeptProj` (`lvl_eq_c`, `field_sort_zero`) from the core's write set. -/
@@ -173,22 +167,18 @@ theorem KnotAllProg.instLP : InstLPOK p := instLP_refines p hq.ilw
 include hq in
 /-- Lane `whnf`'s `WhnfCallees` (four leaves, all proved). -/
 theorem KnotAllProg.whnfC : WhnfCallees p :=
-  ⟨hq.walks.instListOK, hq.instLP, strLitCtor_core p hq.str, strLitSupported_core p hq.str⟩
+  ⟨hq.walks.instListOK, hq.instLP, strLitCtor_core p hq.str, strLitStored_core p hq.str⟩
 
 include hq in
-/-- `fire_ok` (lane `whnf3`'s `fireOk_refines` over `CoreDen`, helper `whnf4-leaves`). -/
-theorem KnotAllProg.fireOk : FireOkOK p := fireOk_core p hq.fire (fieldSortZero_core p hq.fsz) coreDen_of
-
-include hq in
-/-- `find_proj`, `fire_ok` and their record-pool facts. -/
+/-- `find_proj` and its record-pool facts. -/
 theorem KnotAllProg.projC : ProjCallees p :=
-  ⟨findProj_refines p hq.projp, KnotAllProg.fireOk hq, erecKept_of hq.hcl, projFound p hq.projp⟩
+  ⟨findProj_refines p hq.projp, erecKept_of hq.hcl, projFound p hq.projp⟩
 
 include hq in
-/-- Lane `whnf`'s `IotaCallees`: the walks, `find_proj`, `lit_to_ctor_if_nat` proved; `fire_ok`,
-`caps_never_zero` (`capsNeverZeroOK_of`), `rec_fire_levels` (`recFireLevelsOK_of`). -/
+/-- Lane `whnf`'s `IotaCallees`: the walks, `find_proj`, `lit_to_ctor_if_nat` proved;
+`rec_fire_levels` (`recFireLevelsOK_of`). -/
 theorem KnotAllProg.iotaC : IotaCallees p :=
-  ⟨hq.walks.iotaInst1OK, findProj_refines p hq.projp, KnotAllProg.fireOk hq, capsNeverZeroOK_of p hq.ls.toLvSubProg,
+  ⟨hq.walks.iotaInst1OK, findProj_refines p hq.projp,
     recFireLevelsOK_of p hq.ls,
     wscoped_core hq.ws, hq.walks.lbbOK, leafGuard_core hq.lg,
     fun n s₀ a₀ dn vis fe MM eb h hS hh => litToCtorIfNat_refines p hq.delta n s₀ a₀ dn vis fe MM eb h hS hh⟩
@@ -247,7 +237,7 @@ theorem KnotAllProg.defeq : DefeqCallees p :=
   ⟨hasFvar_core hq.walks.abs hq.walks.hf,
     notProofFast_core hq.prop coreDen_of (constLpsDen_of coreDen_of) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
     isProofFast_core hq.prop coreDen_of (constLpsDen_of coreDen_of) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
-    abs1_core hq.walks.abs hq.walks.ae, absRange_core hq.walks.ar hq.walks.are, fieldSortZero_core p hq.fsz⟩
+    abs1_core hq.walks.abs hq.walks.ae, absRange_core hq.walks.ar hq.walks.are⟩
 
 include hq in
 theorem KnotAllProg.lazy : LazyCallees p :=

@@ -384,8 +384,8 @@ fuel explicit: anything but `coreWalkFuel` aborts, as `WhnfEntry.lean`'s `_f` ad
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2052-2075 ConRon.Arena.recFireLevels -/
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.recFireLevels` changed; re-check the L code and its proofs, then delete this line
+/-- con-ron: ConRon/Arena/Core.lean:2052-2075 ConRon.Arena.recFireLevels — a `.nested` or `.levels`
+rule (kind `1`, `2`) substitutes its stored levels, a `.plain` one the constructor's parameters. -/
 @[no_expose, l_impl ConRon.Arena.recFireLevels]
 def recFireLevelsL : FunDecl := lfn (fireKind, fvo, fvc, po, pc, us, qo, qc) locals (vo, vc, b, c, x, r) {
   (vo, vc) := call ls_node(us);

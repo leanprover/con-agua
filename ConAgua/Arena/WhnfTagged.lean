@@ -62,7 +62,7 @@ theorem iotaIndexOk_refines (hp : IotaProg' p) (hw : CoreWalkProg p) :
     SpineR s₀.mem mo mn margs → SpineR s₀.mem xo xn idx →
     mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat → xo.toNat + xn.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p (n + 1) "iota_index_ok" [mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn]
-      (iotaIndexOk (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
+      (iotaIndexOk (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
         (decE tyCtor) margs.toList idx.toList) decBool s₀ a₀ dn vis fe MM eb :=
   iotaIndexOk_refines' p hp hw.iotaInst1OK
 
@@ -81,7 +81,7 @@ theorem iotaCertsFull_refines (hp : IotaProg4 p) (hw : CoreWalkProg p) :
     CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW h →
     SpineR s₀.mem ao an args → ao + an = spTop s₀.mem →
     CoreSpec p (n + 1) "iota_certs_full" [mode, vis, d, h, ao, an]
-      (iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList) decBool s₀
+      (iotaCertsFull (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h) args.toList) decBool s₀
       a₀ dn vis fe MM eb :=
   iotaCertsFull_refines' p hp hw.instListOK
 
