@@ -437,6 +437,18 @@ open L.Arena
 
 -- `IWGrow.refl`, `IWGrow.trans`: `IndIface.lean` (with the tier-1 record pool).
 
+/-- `IWOK` across a writer of `IW` and its top alone, the new top within the array. -/
+theorem IWOK.of_iw {m m' : Mem} (hf : MemFrame [IW] [200] m m') (h : IWOK m)
+    (hroom : iwTop m' ≤ (m'.arr64 IW).size) : IWOK m' := by
+  have hE := hf.arr EREC (by decide) (by decide)
+  have hE1 := hf.arr (tier1 EREC) (by decide) (by decide)
+  have hc := hf.size CTL
+  have hI := hf.size IW
+  have h1 := (IWOK_iff m).1 h
+  simp only [IWOK_iff, erTop, erecTop1, hE, hE1, hc, hI, hf.ctl 129 (by decide),
+    hf.ctl 130 (by decide)] at h1 ⊢
+  exact ⟨by rw [← hI]; exact hroom, h1.2.1, h1.2.2.1, h1.2.2.2.1, h1.2.2.2.2.1, h1.2.2.2.2.2⟩
+
 /-- `IWOK` from a frame that keeps the pool arrays and the tops (`IW`, `EREC` in both tiers,
 `CTL[129]`, `CTL[130]`, `CTL[200]`). -/
 theorem IWOK.of_keep {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')

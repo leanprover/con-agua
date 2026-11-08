@@ -84,10 +84,12 @@ theorem iwGrow_of_frame {m m' : Mem} {N : Word} (hf : MemFrame [IW] [200] m m')
     (htop : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + N)
     (hroom : iwTop m + N.toNat ≤ (m.arr64 IW).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hlow : ∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) : IWGrow m m' := by
-  refine ⟨?_, ?_, hlow, ?_⟩
+  refine ⟨?_, ?_, hlow, ?_, ?_, ?_⟩
   · simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp only [iwTop] at hroom; omega
   · simp only [erTop]; rw [hf.ctl 129 (by simp)]; exact Nat.le_refl _
   · intro i _; rw [hf.arr EREC (by decide) (by decide)]
+  · simp only [erecTop1]; rw [hf.ctl 130 (by simp)]; exact Nat.le_refl _
+  · intro i _; rw [hf.arr (tier1 EREC) (by decide) (by decide)]
 
 /-- A copy that touches only `IW` is a frame. -/
 theorem memFrame_of_copy {m m' : Mem} (hA : ∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b)
