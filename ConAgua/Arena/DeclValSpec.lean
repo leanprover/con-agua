@@ -40,7 +40,6 @@ structure ValProg (p : Prog) : Prop where
   tv : p.lookup "check_thm_val" = some checkThmValL
   ov : p.lookup "check_opaque_val" = some checkOpaqueValL
   lef : p.lookup "lvl_eq_fueled" = some lvlEqFueled
-  ih : IhProg p
   cvg : CvgProg p
   rcp : RecProg p
 

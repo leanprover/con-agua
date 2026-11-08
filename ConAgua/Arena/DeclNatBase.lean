@@ -643,9 +643,11 @@ end slc
 
 /-! ## `env_find` -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ntRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
     rowPW m w = rowP m w := by
   sorry
+-/
 
 /-- The result of `env_find`: the miss flag, or the hit flag and a record pointer that decodes. -/
 def decFd (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word) :
@@ -653,10 +655,12 @@ def decFd (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word) :
   | none => r.headD 0 = 0
   | some ci => r.headD 0 = 1 ∧ decCI (erecP m) (r.tail.headD 0).toNat = some ci
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem EnvR.hit_some {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
     (h : EnvR m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2)
     (hc : rowC m w ≠ 0) : ∃ ci, decCI (erecP m) (rowP m w).toNat = some ci := by
   sorry
+-/
 
 theorem envFind_call {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hM : MasterProg p) (w : Word) (hw : H w) {n : Nat} {m m' : Mem} {r : List Word}

@@ -35,10 +35,12 @@ theorem resOf_eq {α : Type} [Inhabited α] {x : AM α} {a a' : AState} {c : α}
     (h : x.run a = .ok (c, a')) : resOf x a = c := by
   simp [resOf, h]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The constant record at `q`** decodes as `ci` in every pool that holds `m`'s words from `q`
 to the top. -/
 def RecAt (m : Mem) (q : Nat) (ci : IConstantInfo) : Prop :=
   ∀ P, AgreesFrom P m q → decCI (aread P) (fun _ => none) q = some ci
+-/
 
 theorem RecAt.keep {m m' : Mem} {q : Nat} {ci : IConstantInfo} (h : RecAt m q ci)
     (ht : topN m DLP ≤ topN m' DLP) (hk : ∀ i, q ≤ i → i ≤ topN m DLP → wd m' DLP i = wd m DLP i) :
@@ -66,12 +68,14 @@ theorem AgreesFrom.get {P : Array Word} {m : Mem} {q : Nat} (h : AgreesFrom P m 
 
 /-! ## The capabilities -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `ind_caps`' fifteen words decode as the default capabilities. -/
 theorem capsM_dec (m : Mem) (q : Word) (hs : q.toNat + 15 ≤ (m.arr64 DLP).size) (hq : q.toNat + 15 < 2 ^ 64)
     (P : Array Word) (dn : NIdx → Option ConLeche.Name)
     (h : ∀ k, k < 15 → P[q.toNat + k]? = some (wd (capsM m q) DLP (q.toNat + k))) :
     decCaps (aread P) dn q.toNat = some {} := by
   sorry
+-/
 
 /-- `ind_caps` writes only its fifteen words. -/
 theorem capsM_out (m : Mem) (q : Word) (hq : q.toNat + 15 < 2 ^ 64) (j : Nat)

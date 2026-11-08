@@ -66,18 +66,22 @@ theorem iext_of_heap {m m' : Mem} (h : MemFrame [LH] [192] m m') : IExt m m' := 
 
 /-! ## The unified models -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model viTail_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_tail ↦ viTailE]
   specs [storeFuel_spec p hL n, viOrder_specE p hL n, kExp_spec p hL n, recs_specE p hL n]
   grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model validate_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.validate_ind_d ↦ validateE]
   specs [viUnsafe_specE p hL.vi_unsafe n, viNparams_specE p hL n, map_spec p hL n, listed_spec p hL n,
     nodup_spec p hL n, viTail_specE p hL n]
   grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 
 /-! ## `validate_ind_d` -/
@@ -140,6 +144,7 @@ structure ValidatePost (st : StateD) (a : AState) (tys : List IndTypeRec) (cts :
   room : (v.1.headD 0).toNat + cts.length ≤ topN v.2 IFL + 1
   np : (v.1.tail.headD 0).toNat < 10 ^ 18
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`validate_ind_d`, both outcomes**: on the records of an inductive line (`IndFR`), the
 model's ok value is `validateIndD`'s success (`ValidatePost`), its error (of class `≠ 0`, at the
 twin facts `XV`) `validateIndD`'s record verdict. -/
@@ -152,5 +157,6 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     RefC (XV st a) (validateE p n m to tn co cn ro rn) (ValidatePost st a tys cts rcs co m)
       (L.Front.VerdictClaimL (ConRon.Arena.Frontend.validateIndD st tys cts rcs) a) := by
   sorry
+-/
 
 end L.Front.Ind
