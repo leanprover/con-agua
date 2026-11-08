@@ -263,6 +263,7 @@ def btW (c : CallM) (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl no nl io il
     (bsoW m nPd io il (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cto + 3)))
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_shape_pins_ok`. -/
 def bbH4 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -270,6 +271,7 @@ def bbH4 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il lo ll : 
   | some (r, m) =>
     if r.headD 0 = 0 then some ([0, 0], m)
     else bgoK3 (btW c n m nPd cto ctl cso csl rso rsl no nl io il lo ll)
+-/
 
 /-- After `er_to_iw`. -/
 def bbH3 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il : Word) :
@@ -303,8 +305,10 @@ theorem btK2_some : btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll s m (som
 -/
 theorem bbH4_fail (h : r.headD 0 = 0) : bbH4 c n nPd cto ctl cso csl rso rsl no nl io il lo ll (some (r, m)) =
     some ([0, 0], m) := by simp only [bbH4]; exact ite_eq_left h
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbH4_ok (h : ¬ r.headD 0 = 0) : bbH4 c n nPd cto ctl cso csl rso rsl no nl io il lo ll (some (r, m)) =
     bgoK3 (btW c n m nPd cto ctl cso csl rso rsl no nl io il lo ll) := by simp only [bbH4]; exact ite_eq_right h
+-/
 theorem bbH3_some : bbH3 c n nPd cto ctl cso csl rso rsl no nl io il (some (r, m)) =
     bbH4 c n nPd cto ctl cso csl rso rsl no nl io il (r.headD 0) (r.tail.headD 0)
       (bpoW (n + 2) m nPd cto ctl (r.headD 0) (r.tail.headD 0) rso rsl cso csl) := rfl

@@ -309,6 +309,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     simp at erules; simp [erules]
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rci_ci` refines `Frontend.internCI`** for the constants `ciFits` admits. -/
 @[refines_part ConRon.Arena.Frontend.internCI "the pinned constants' kinds"]
 theorem ci_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
@@ -319,6 +320,7 @@ theorem ci_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
     CIPost dn m₀ a₀ T seen memo c m a q r m' := by
   sorry
+-/
 
 end kinds
 
