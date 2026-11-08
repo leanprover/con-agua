@@ -58,25 +58,35 @@ def dlpCopyW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, d, s, l =>
     if l = 0 then some m
-    else dlpCopyW n (m.set64 EREC d (mask32 (rdW (m.arr64 DLP) s))) (d + 1) (s + 1) (l - 1)
+    else dlpCopyW n (erecPutMem m d (mask32 (rdW (m.arr64 DLP) s))) (d + 1) (s + 1) (l - 1)
 
 section arms
 variable (n : Nat) (m : Mem) (d s l : Word)
 theorem dlpCopyW_nil (hl : l = 0) : dlpCopyW (n + 1) m d s l = some m := by simp [dlpCopyW, hl]
 theorem dlpCopyW_step (hl : l ≠ 0) :
     dlpCopyW (n + 1) m d s l =
-      dlpCopyW n (m.set64 EREC d (mask32 (rdW (m.arr64 DLP) s))) (d + 1) (s + 1) (l - 1) := by
+      dlpCopyW n (erecPutMem m d (mask32 (rdW (m.arr64 DLP) s))) (d + 1) (s + 1) (l - 1) := by
   simp [dlpCopyW, hl]
 end arms
 
 grind_pattern [ind_grind] dlpCopyW_nil => dlpCopyW (n + 1) m d s l
 grind_pattern [ind_grind] dlpCopyW_step => dlpCopyW (n + 1) m d s l
 
-theorem dlpCopy_specW (p : Prog) (hp : p.lookup "dlp_copy" = some dlpCopy) (n : Nat) :
+theorem dlpCopy_specW (p : Prog) (hp : p.lookup "dlp_copy" = some dlpCopy)
+    (hpu : p.lookup "erec_put" = some erecPut) (n : Nat) :
     ∀ (s₀ : St) (d s l : Word),
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "dlp_copy" [d, s, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ dlpCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, dlpCopy]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ d s l
+    rw [invoke_eq _ hp]
+    simp only [callFn, dlpCopy]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
+        erecPut_specW p hpu n] <;>
+      finish (gen := 20) [mask32]
 
 /-- The hint word of a front hint kind `hq` (`1` abbrev, `2` opaque, else regular): `decHint`'s
 `1`, `0`, `2`. -/
@@ -282,8 +292,19 @@ theorem dlpWords_get (P : Array Word) : ∀ (k : Nat) (s : Word) (j : Nat), j < 
       show s.toNat + 1 + j = s.toNat + (j + 1) by omega]
 
 theorem dlpCopyW_eq : ∀ (n : Nat) (m m' : Mem) (d s l : Word), dlpCopyW n m d s l = some m' →
-    m' = wrER m d (dlpWords (m.arr64 DLP) s l.toNat) := by
-  sorry -- stage 3: `dlp_copy` now writes through `erec_put` (`erecPutMem`)
+    m' = wrER m d (dlpWords (m.arr64 DLP) s l.toNat)
+  | 0, m, m', d, s, l, h => by simp [dlpCopyW] at h
+  | n + 1, m, m', d, s, l, h => by
+    by_cases hl : l = 0
+    · rw [dlpCopyW_nil n m d s l hl] at h; cases h; subst hl; rfl
+    · rw [dlpCopyW_step n m d s l hl] at h
+      have hl1 : l.toNat = (l - 1).toNat + 1 := by
+        have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+      have hD : (erecPutMem m d (mask32 (rdW (m.arr64 DLP) s))).arr64 DLP = m.arr64 DLP := by
+        rw [erecPutMem_arr, if_neg (by unfold erTier; split <;> decide)]
+      rw [dlpCopyW_eq n _ m' _ _ _ h, hl1, hD]
+      rfl
 
 /-- The constant record's words. -/
 def eciWords (D : Array Word) (i kind s ll : Word) : List Word :=
