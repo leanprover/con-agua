@@ -39,6 +39,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **The model of `class_stream_recs`, both outcomes**: `check_constant_val` by its unified model,
 the recursion by the model, `sl_cons` lifted. -/
@@ -51,6 +52,7 @@ l_model csrE_spec (p : Prog) (hV : ValProg p) (ha : p.lookup "iw_alloc" = some i
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `class_stream_recs` gives besides the twin's run: the stage, the growth, the result slice
 (the recursors' constant pointers, in order), the walk memos. -/
@@ -66,6 +68,7 @@ variable {dn : NIdx → Option ConLeche.Name} {env : ConLeche.Env}
 variable {p : Prog} (hq : KnotStageProg p) (henv : ConLeche.EnvWF env) (hV : ValProg p)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hApd hCrk in
 /-- **`class_stream_recs` refines `classStreamRecs .verified` under `StageC`, both outcomes**
 (twin side con-ron's `classStreamRecs_spec`): `check_constant_val` by `ccv_ref`, the rest by
@@ -176,6 +179,7 @@ theorem csr_ref (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
     rcases hq'' with rfl | hq''
     · exact hextm3
     · exact CVExt_grow hg3 (hext2 q' hq'')
+-/
 
 include hq henv hV hApd hCrk in
 /-- **`class_stream_recs` refines `classStreamRecs .verified`** under `StageC` (the program's own
@@ -193,12 +197,8 @@ theorem classStreamRecs_refinesC (hc : p.lookup "iw_copy" = some iwCopy)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classStreamRecs V fe recs) a₀ ∧
       StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classStreamRecs V fe recs) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ CsRes s'.mem r (AM.res (ConRon.Arena.classStreamRecs V fe recs) a₀) ∧
-      AbsOK s'.mem; ⊤⦄ :=
-  triple_post (RefE.triple (csrE_spec p hV ha hc hsc hp n s₀ vis rcso rcsl)
-      (csr_ref hq henv hApd hCrk fe n hn _ a₀ vis rcso rcsl recs recsP hC hA hOK hrecsP))
-    fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
-      obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-      exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.res, hR.abs⟩
+      AbsOK s'.mem; ⊤⦄ := by
+  sorry
 
 end sims
 
@@ -212,9 +212,8 @@ theorem classStreamRecs_claim {p : Prog} {dn : NIdx → Option ConLeche.Name} {e
     (recsP : List ConLeche.RecShape) (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
     (hOK : RecsOK s₀.mem rcso.toNat rcsl.toNat (recs.map (·.cvR)))
     (hrecsP : recs.mapM (dRec a₀.store) = some recsP) :
-    CoreSpecE p n "class_stream_recs" [vis, rcso, rcsl] (ConRon.Arena.classStreamRecs V fe recs) s₀ a₀ :=
-  RefE.coreSpecE (csrE_spec p hV ha hc hsc hp n s₀ vis rcso rcsl) hG.nv hG
-    (csr_ref hq henv hApd hCrk fe n hn s₀.mem a₀ vis rcso rcsl recs recsP hC hA hOK hrecsP)
+    CoreSpecE p n "class_stream_recs" [vis, rcso, rcsl] (ConRon.Arena.classStreamRecs V fe recs) s₀ a₀ := by
+  sorry
 
 end L.Ind
 

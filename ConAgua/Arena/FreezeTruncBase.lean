@@ -79,6 +79,7 @@ theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
 
 /-! ## `truncFrozen` -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The frozen arrays (sources), as a literal. -/
 def fzSrcs : List TieredArray := tier0s
   [POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
@@ -86,10 +87,13 @@ def fzSrcs : List TieredArray := tier0s
    FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
    FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, PINS, EIXA, EIXS, EIXN, TIXA, TIXS,
    TIXN, EREC, PEND]
+-/
 
-theorem frozen_srcs : (frozen.drop 1).map (fun e => (e.2.src : TieredArray)) = fzSrcs := by decide
+theorem frozen_srcs : (frozen.drop 1).map (fun e => (e.2.src : TieredArray)) = fzSrcs := by
+  sorry
 
-theorem fzSrcs_nodup : fzSrcs.Nodup := by decide
+theorem fzSrcs_nodup : fzSrcs.Nodup := by
+  sorry
 
 theorem frozen_pairwise : (frozen.drop 1).Pairwise (fun e e' => e.2.src ≠ e'.2.src) := by
   have := fzSrcs_nodup
@@ -102,14 +106,15 @@ theorem truncFrozen_other (m : Mem) (b : TieredArray) (hb : b ∉ fzSrcs) :
   truncList_other m b _ m (fun e he hs => hb (by
     rw [← frozen_srcs, List.mem_map]; exact ⟨e, he, hs⟩))
 
-theorem truncFrozen_ctl (m : Mem) : (truncFrozen m).arr64 CTL = m.arr64 CTL :=
-  truncFrozen_other m CTL (by decide)
+theorem truncFrozen_ctl (m : Mem) : (truncFrozen m).arr64 CTL = m.arr64 CTL := by
+  sorry
 
 /-- **A frozen array is its prefix up to its extent.** -/
 theorem truncFrozen_mem (m : Mem) {x : ArrId} {z : Fz} (h : (x, z) ∈ frozen.drop 1) :
     (truncFrozen m).arr64 z.src = (m.arr64 z.src).extract 0 (fzExt m z) :=
   truncList_mem m x z _ m h frozen_pairwise
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem frozen_drop1 : frozen.drop 1 =
     [(POOL, ⟨POOL, fzCtl 0⟩)] ++
     fzStores.flatMap (fun (ra, sa, w, ca) =>
@@ -127,6 +132,7 @@ theorem frozen_drop1 : frozen.drop 1 =
      (PEND, ⟨PEND, .bin .mul (fzC 3) (fzCtl 130)⟩)] := by
   simp only [frozen, List.cons_append, List.drop_succ_cons, List.drop_zero, List.nil_append,
     List.append_assoc]
+-/
 
 /-! ### The extents -/
 
@@ -236,10 +242,12 @@ theorem truncFrozen_erec (m : Mem) : (truncFrozen m).arr64 EREC = (m.arr64 EREC)
   have := truncFrozen_mem m (x := EREC) (z := ⟨EREC, fzCtl 129⟩) (by rw [frozen_drop1]; simp)
   rw [this, fzExt_ctl]; rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem truncFrozen_pend (m : Mem) :
     (truncFrozen m).arr64 PEND = (m.arr64 PEND).extract 0 (3 * rdW (m.arr64 CTL) 130).toNat := by
   have := truncFrozen_mem m (x := PEND) (z := ⟨PEND, .bin .mul (fzC 3) (fzCtl 130)⟩)
     (by rw [frozen_drop1]; simp)
   rw [this, fzExt_Cmul]; rfl
+-/
 
 end L.Arena

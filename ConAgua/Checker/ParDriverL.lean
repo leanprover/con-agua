@@ -40,6 +40,7 @@ open L L.Arena
 -- `check_b` (`checkBL`, `ConAgua/Checker/Entry.lean`) returns the literal `ACCEPT`.
 example : (71757147230292 : Word) = ConAgua.Final.ACCEPT := rfl
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section frame0
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
   {fe : IFEnv} {pend : Array PendingCheck} {m m' : Mem} {a : AState} {v : Word}
@@ -55,10 +56,12 @@ theorem PhaseBStart.frame0 (hf : MemFrame [] [] m m') (h : PhaseBStart pins dn d
     by simp only [pinW, hf.arr PINS (by simp) (by decide)]; exact hM.flag, hM.dnP⟩
 
 end frame0
+-/
 
 /-- The arrays phase B's loop may name: every word array but `OUT`, `HDRF`, `CTLF`. -/
 abbrev phaseBS : TieredArray → Bool := phaseBPa
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section agree
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck)
@@ -198,5 +201,6 @@ theorem runMode2_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checker
         hlo hhi hctlf hv) hacc
 
 end agree
+-/
 
 end L.Checker

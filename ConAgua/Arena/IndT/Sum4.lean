@@ -58,6 +58,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 set_option experimental.vcgen true
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_sum_ctor_tail`, both outcomes**: the field sorts by their unified model,
 the other callees (outside the verdict closure) lifted. -/
 l_model ctlE_spec (p : Prog) (hP : SumProg p)
@@ -70,7 +71,9 @@ l_model ctlE_spec (p : Prog) (hP : SumProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_sum_ctor`, both outcomes**: the constant check, the domains and the tail by
 their unified models, the other callees (outside the verdict closure) lifted. -/
 l_model ctorE_spec (p : Prog) (hP : SumProg p) (hV : ValProg p)
@@ -82,6 +85,7 @@ l_model ctorE_spec (p : Prog) (hP : SumProg p) (hV : ValProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -102,8 +106,8 @@ structure CtlPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   sorts : decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some x.2
   sortsB : (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT in
 /-- **`check_sum_ctor_tail` refines the tail of `checkSumCtor .verified` (`cscTailT`), both
 outcomes** (twin side: the tail of con-ron's `checkSumCtor_spec`'s proof): its callees outside the
@@ -211,6 +215,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
     dsimp only [ctlE.j1]
     rw [ite_eq_left (Or.inr (Or.inr rfl))]
     exact RefE.twinFail (by decide) (by have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle); grind)
+-/
 
 /-- What `check_sum_ctor` gives besides the twin's `(cvCa, sorts)` `x` (from `m`, `a`): the stage,
 the growth, the constant returned unchanged, the sorts as the `IW` slice `r = [cv, o, l]`, `AbsOK`, the
@@ -225,8 +230,8 @@ structure CtorPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   sorts : decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some x.2
   sortsB : (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctor` refines `checkSumCtor .verified`, both outcomes** (twin side: con-ron's
 `checkSumCtor_spec`'s proof): the constant check (`ccv_ref`), the constructor's and the type former's
@@ -342,7 +347,9 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
       (hok₀.mono k07.core.ext) (ConRon.Bridge.denoteFEnv_mono k07.core.ext hfe))
     fun v x a8 _ hR8 => ⟨hR8.stage, k07.grow.trans hR8.grow, rfl, hR8.cv, by simpa using hR8.sorts,
       by simpa using hR8.sortsB, hR8.abs, k07.core.trans hR8.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctor` refines `checkSumCtor .verified`** under `StageC` (the knot's core calls;
 the inputs' denotations as con-ron's `checkSumCtor_spec` asks), the pre-block environment the
@@ -386,6 +393,7 @@ theorem checkSumCtor_refinesC (hP : SumProg p) (n : Nat) (hn : n + 1 ≤ 2 ^ 62)
       obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
       exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.cvW, by rw [hres]; exact hR.cv,
         by rw [hres]; exact hR.sorts, hR.abs⟩
+-/
 
 end sims
 

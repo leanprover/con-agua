@@ -58,7 +58,6 @@ structure CtsProg (p : Prog) : Prop extends WtProg p where
   ct : p.lookup "close_telescope" = some closeTelescope
   ea : p.lookup "erec_alloc" = some erecAlloc
   cn : p.lookup "cv_new" = some cvNew
-  sl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL
   ab : AbF p
 
 /-- The lookups `check_sum_tele`'s model reads besides the slow arm's. -/
@@ -66,6 +65,7 @@ structure CtProg (p : Prog) : Prop extends CtsProg p where
   st : StripProg p
   cst : p.lookup "check_sum_tele" = some checkSumTeleL
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **The model of `check_sum_tele_slow`, both outcomes**: `whnf_telescope` and
 `check_constant_val` by their unified models, the intern, the closing and the record write
@@ -79,7 +79,9 @@ l_model ctsE_spec (p : Prog) (hV : ValProg p) (hP : CtsProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **The model of `check_sum_tele`, both outcomes**: `strip_pis` and `e_view` (outside the
 verdict closure) through their `Option` models, the slow arm by its unified model. -/
@@ -90,6 +92,7 @@ l_model ctE_spec (p : Prog) (hV : ValProg p) (hP : CtProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -117,6 +120,7 @@ structure CtsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   sort : decI (w.1.tail.headD 0) = res.2
   abs : AbsOK w.2
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hApd hCrk hP in
 /-- **`check_sum_tele_slow` refines `checkSumTele.checkSumTeleSlow .verified` under `StageC`,
 both outcomes** (twin side: the `slow` arm of con-ron's `checkSumTele_spec`): `whnf_telescope` by
@@ -227,7 +231,9 @@ theorem cts_ref (k : Nat) (hk : k ≤ 2 ^ 62)
       simp only [nat?, erA]; rw [hg5.erGet _ (by omega)]
     rw [hn 1 (by decide)] at e1; rw [hn 2 (by decide)] at e2
     have := hsl4 lo ll e1 e2; have := hg4.er; have := hg5.er; omega
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hApd hCrk hP in
 /-- **`check_sum_tele` refines `checkSumTele .verified` under `StageC`, both outcomes** (twin side:
 con-ron's `checkSumTele_spec`'s proof: `stripPis` leaves the twin's state, the syntactic sort is a
@@ -336,7 +342,9 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
     fun _ _ _ _ hR2 => ⟨hR2.stage, hg1.trans hR2.grow,
     by simpa using hR2.cv, by simpa using hR2.top, by simpa using hR2.lps, by simpa using hR2.sort32,
     by simpa using hR2.sort, hR2.abs⟩
+-/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section census
 variable (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
@@ -426,6 +434,7 @@ theorem checkSumTele_refinesC (hp : p.lookup "check_sum_tele" = some checkSumTel
     by rw [hres]; exact hR.sort, hR.top, hR.lps, hR.abs⟩
 
 end census
+-/
 
 end sims
 

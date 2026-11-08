@@ -27,6 +27,7 @@ namespace L.Arena
 
 open ConRon.Bridge (PendRel ListRel)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem listRel_mem_left {α β : Type} {R : α → β → Prop} :
     ∀ {xs : List α} {ys : List β}, ListRel R xs ys → ∀ x ∈ xs, ∃ y, R x y
   | _, _, .nil, _, hx => absurd hx (by simp)
@@ -34,7 +35,9 @@ theorem listRel_mem_left {α β : Type} {R : α → β → Prop} :
     rcases List.mem_cons.mp hx with rfl | hx
     · exact ⟨_, hab⟩
     · exact listRel_mem_left hr x hx
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A pending group of the list may be checked first**: `TwinPend` over `pend` gives it over
 `pc :: pend` for every `pc ∈ pend`. -/
 theorem TwinPend.dup {fe : IFEnv} {pend : List PendingCheck} {a : AState} {pc : PendingCheck}
@@ -43,16 +46,20 @@ theorem TwinPend.dup {fe : IFEnv} {pend : List PendingCheck} {a : AState} {pc : 
   obtain ⟨y, hy⟩ := listRel_mem_left hrel pc hpc
   exact ⟨⟨env, y :: pendP, hok, hnd, .cons hy hrel⟩,
     fun _ => h.caches (List.ne_nil_of_mem hpc), h.off, fun _ => h.dropped (List.ne_nil_of_mem hpc)⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem pdAt_mem (pend : Array PendingCheck) (j : Word) (hj : j.toNat < pend.size) :
     pdAt pend j ∈ pend.toList := by
   simp only [pdAt, Array.getD, hj, dite_true]
   exact Array.getElem_mem_toList hj
+-/
 
 section step
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **One pending group from `PhaseBStart`**: `check_pending(j, v)` (any `j` below the count)
 refines `checkPending` on group `j` and ends in `PhaseBStart` at the twin's state after it. -/
 theorem PhaseBStart.step (hm : mode = .verified) (hP : PhaseBProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
@@ -73,6 +80,7 @@ theorem PhaseBStart.step (hm : mode = .verified) (hP : PhaseBProg p) (n : Nat) (
   have hrun' := AM.run_of_ok _ _ ho
   obtain ⟨hT', hx⟩ := TwinPend.step hT hrun'
   exact ⟨h0, ho, ⟨hL, h.mem.step hf hx, hcm, hT', hCr'⟩⟩
+-/
 
 end step
 

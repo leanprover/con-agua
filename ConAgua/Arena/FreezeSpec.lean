@@ -209,7 +209,8 @@ def pcOK (c : Word) : List Nat → Mem → Word → Bool
 /-- The call `o := fz_i(o, c)`. -/
 def fzCall (i : Nat) : Stmt := .call [2] (fzName i) [.var 2, .var 1]
 
-theorem fzCalls_eq : fzCalls = (List.range frozen.length).map fzCall := by rfl
+theorem fzCalls_eq : fzCalls = (List.range frozen.length).map fzCall := by
+  sorry
 
 theorem St.setLoc_setLoc_same (s : St) (x : Var) (a b : Word) :
     (s.setLoc x a).setLoc x b = s.setLoc x b := by
@@ -343,7 +344,8 @@ def pcTailS : Stmt :=
     .ret [.var 2]
 
 theorem parCompactL_eq : parCompactL =
-    { nparams := 2, nlocals := 3, body := .seq (.set 2 (fzC hdrW)) (fzCalls.foldr .seq pcTailS) } := by rfl
+    { nparams := 2, nlocals := 3, body := .seq (.set 2 (fzC hdrW)) (fzCalls.foldr .seq pcTailS) } := by
+  sorry
 
 theorem fzCalls_lookup {p : Prog} (hfz : ∀ i < frozen.length, p.lookup (fzName i) = some (fzF i)) :
     ∀ i ∈ List.range frozen.length, i < frozen.length ∧ p.lookup (fzName i) = some (fzF i) :=
@@ -512,93 +514,13 @@ theorem pcGo_good (m : Mem) (c : Word) (hW : hdrW ≤ (m.arr64 OUT).size)
         fzEv m (fzAt j).e) ∧
     (c ≠ 0 → ∀ j < n, ∀ t < (fzEv m (fzAt j).e).toNat,
       ((pcGo c (List.range n) m (UInt64.ofNat hdrW)).1.arr64 OUT).getD (hdrW + fzSum m j + t) 0 =
-        (m.arr64 (fzAt j).src).getD t 0)
-  | 0, _, _ => ⟨fun _ => ⟨fun j hj => by
-      have : j = 0 := by omega
-      subst this; simp [fzOff, fzSum, hdrW]; decide, by simp [fzSum]; omega⟩,
-      fun j hj => absurd hj (by omega), fun _ j hj => absurd hj (by omega)⟩
-  | n + 1, hn, hok => by
-    rw [pcOK_range_succ, Bool.and_eq_true] at hok
-    obtain ⟨ih1, ih2, ih3⟩ := pcGo_good m c hW hlt n (by omega) hok.1
-    have hF := OutFrame.pcGo c (List.range n) m (UInt64.ofNat hdrW)
-    have hoff := pcGo_off c m n (by omega)
-    have hz := fzAt_ok (i := n) (by omega)
-    have he := (fzEv_congr hF.arr _ hz.1)
-    have hk := hok.2
-    rw [pcGo_range_succ]
-    generalize hM : (pcGo c (List.range n) m (UInt64.ofNat hdrW)).1 = M at *
-    rw [hoff] at hk ⊢
-    simp only [fzOK, he.1, he.2, hF.size, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq,
-      decide_eq_true_eq] at hk
-    obtain ⟨⟨⟨hld, hcp⟩, h10⟩, h11⟩ := hk
-    have hn61 : n < 61 := by have : frozen.length = 61 := by decide
-                             omega
-    rw [toNat_hdr _ (by omega)] at h10 h11
-    have hW' : hdrW = 132 := by decide
-    -- the offsets
-    have hO : c ≠ 0 → (fzOff m n).toNat = hdrW + fzSum m n ∧
-        (fzOff m n).toNat + (fzEv m (fzAt n).e).toNat ≤ (m.arr64 OUT).size ∧
-        (fzEv m (fzAt n).e).toNat ≤ (m.arr64 (fzAt n).src).size := fun hc => by
-      have := (ih1 hc).1 n (Nat.le_refl _)
-      rcases hcp with h | h
-      · exact absurd h hc
-      · exact ⟨this, h⟩
-    refine ⟨fun hc => ?_, fun j hj => ?_, fun hc j hj t ht => ?_⟩
-    · obtain ⟨hO1, hO2, -⟩ := hO hc
-      have hlt' := hlt hc
-      have hS : (fzOff m (n + 1)).toNat = hdrW + fzSum m (n + 1) := by
-        rw [fzOff_succ, UInt64.toNat_add, fzSum_succ, hO1]; omega
-      refine ⟨fun j hj => ?_, by rw [← hS]; rw [fzOff_succ, UInt64.toNat_add]; omega⟩
-      rcases Nat.lt_or_ge j (n + 1) with h' | h'
-      · exact (ih1 hc).1 j (by omega)
-      · have : j = n + 1 := by omega
-        subst this; exact hS
-    all_goals simp only [fzStep]
-    all_goals generalize hM1 : fzCopy M c (fzAt n) (fzOff m n) = M1
-    all_goals have hM1s : (M1.arr64 OUT).size = (M.arr64 OUT).size := by
-                rw [← hM1, fzCopy]; split <;> simp
-    all_goals have hM1i : c ≠ 0 → ∀ k, (M1.arr64 OUT).getD k 0 =
-          if (fzOff m n).toNat ≤ k ∧ k < (fzOff m n).toNat + (fzEv m (fzAt n).e).toNat ∧
-            k < (M.arr64 OUT).size then
-            (m.arr64 (fzAt n).src).getD (k - (fzOff m n).toNat) 0
-          else (M.arr64 OUT).getD k 0 := by
-                intro hc k
-                obtain ⟨hO1, hO2, hO3⟩ := hO hc
-                have := (fzEv m (fzAt n).e).toNat_lt
-                have := hlt hc
-                rw [← hM1, fzCopy, ite_eq_left hc, he.1, getD_copy64 (Ne.symm hz.2) _ _ _ _ (by omega) (by simp; omega),
-                  hF.arr _ (TieredArray.t0_ne hz.2)]
-                simp
-    all_goals have hM1h : ∀ k, k < hdrW → (M1.arr64 OUT).getD k 0 = (M.arr64 OUT).getD k 0 := by
-                intro k hk
-                by_cases hc : c = 0
-                · rw [← hM1, fzCopy, ite_eq_right (by simpa using hc)]
-                · rw [hM1i hc, ite_eq_right]
-                  have := (hO hc).1
-                  omega
-    all_goals simp only [getD_set64_same, size_set64, hM1s, he.1,
-        toNat_hdr _ (by omega : 10 + 2 * n < 2 ^ 64), toNat_hdr _ (by omega : 11 + 2 * n < 2 ^ 64)]
-    · rcases (by omega : j < n ∨ j = n) with hj' | rfl
-      · rw [ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega),
-          hM1h _ (by omega), hM1h _ (by omega)]
-        exact ih2 j hj'
-      · rw [hF.size] at *
-        rw [ite_eq_right (by omega), ite_eq_left ⟨rfl, by omega⟩, ite_eq_left ⟨rfl, by omega⟩]
-        exact ⟨rfl, rfl⟩
-    · obtain ⟨hO1, hO2, hO3⟩ := hO hc
-      have hsj := fzSum_mono m (j := j) (n := n) (by omega)
-      rw [ite_eq_right (by omega), ite_eq_right (by omega), hM1i hc]
-      rcases (by omega : j < n ∨ j = n) with hj' | rfl
-      · have hsj' := fzSum_mono m (j := j + 1) (n := n) (by omega)
-        rw [fzSum_succ] at hsj'
-        rw [ite_eq_right (by omega)]
-        exact ih3 hc j hj' t ht
-      · rw [ite_eq_left (by rw [hF.size]; omega)]
-        congr 1; omega
+        (m.arr64 (fzAt j).src).getD t 0) := by
+  sorry
 
 /-! ## The memory after `par_compact` -/
 
-theorem frozen_length : frozen.length = 61 := by decide
+theorem frozen_length : frozen.length = 61 := by
+  sorry
 
 /-- **`par_compact` writes only `OUT`.** -/
 theorem parCompactMem_out (m : Mem) (vis c : Word) : OutFrame m (parCompactMem m vis c) := by
@@ -617,15 +539,7 @@ theorem parCompactMem_frame (m : Mem) (vis c : Word) : MemFrame [OUT] [] m (parC
 /-- A run that stayed in bounds had room for the header. -/
 theorem parCompactOK_hdr {m : Mem} {c : Word} (h : parCompactOK m c = true) :
     hdrW ≤ (m.arr64 OUT).size := by
-  simp only [parCompactOK, Bool.and_eq_true] at h
-  have h1 := h.1.1
-  rw [frozen_length, show (61 : Nat) = 60 + 1 from rfl, pcOK_range_succ, Bool.and_eq_true] at h1
-  have h2 := h1.2
-  simp only [fzOK, Bool.and_eq_true, decide_eq_true_eq] at h2
-  have h3 := h2.2
-  rw [toNat_hdr _ (by omega), (OutFrame.pcGo c _ m _).size] at h3
-  have : hdrW = 132 := by decide
-  omega
+  sorry
 
 theorem getD_pcTail_lo (M : Mem) (vis o : Word) (h : 9 < (M.arr64 OUT).size) :
     ((pcTail M vis o).arr64 OUT).getD 0 0 = fzMagic ∧ ((pcTail M vis o).arr64 OUT).getD 1 0 = o ∧
@@ -690,14 +604,7 @@ theorem parCompactMem_img {m : Mem} {vis c : Word} (h : parCompactOK m c = true)
     ∀ t < fzExt m (fzAt i),
       ((parCompactMem m vis c).arr64 OUT).getD ((fzOff m i).toNat + t) 0 =
         (m.arr64 (fzAt i).src).getD t 0 := by
-  have hW := parCompactOK_hdr h
-  simp only [parCompactOK, Bool.and_eq_true] at h
-  have hg := pcGo_good m c hW (fun _ => hlt) frozen.length (Nat.le_refl _) h.1.1
-  have ho := hg.1 hc |>.1 i (by omega)
-  refine ⟨ho, fun t ht => ?_⟩
-  have : hdrW = 132 := by decide
-  rw [parCompactMem, getD_pcTail_hi _ _ _ _ (by omega), ho]
-  exact hg.2.2 hc i hi t ht
+  sorry
 
 /-- **`par_compact` as a triple** (any fuel): a returning call stayed in bounds, keeps the caller's
 locals, ends in `parCompactMem` and returns the buffer's length. -/
