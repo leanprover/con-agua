@@ -30,10 +30,10 @@ open L.Arena
 theorem partsConsPL {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q))
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
-    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hb : o.toNat + l.toNat ≤ iwTop m)
     (hxs : DecB (fun m => decPL m (f m) o.toNat l.toNat) m xs) (hy : DecB (fun m => f m x.toNat) m y) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       DecB (fun m => decPL m (f m) (r.headD 0).toNat (r.tail.headD 0).toNat) m' (y :: xs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   have hxs' : decPL (truncM m) (f (truncM m)) o.toNat l.toNat = some xs := hxs

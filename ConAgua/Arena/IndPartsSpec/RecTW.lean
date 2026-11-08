@@ -364,11 +364,11 @@ end spec
 
 theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl mI ty : Word) (r : List Word) (names : List NIdx),
-    recTW n m no nl mI ty = some (r, m') → StageR dn vis fe m a → ty.toNat < 2 ^ 32 →
+    recTW n m no nl mI ty = some (r, m') → StageR vis fe m a → ty.toNat < 2 ^ 32 →
     decHL m no.toNat nl.toNat = some names → no.toNat + nl.toNat < 2 ^ 64 →
     no.toNat + nl.toNat ≤ iwTop m →
     ∃ t a', (ConRon.Arena.recTargetOf names mI.toNat (decI ty)).run a = .ok (t, a') ∧
-      r = [UInt64.ofNat t] ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      r = [UInt64.ofNat t] ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   intro dn fe vis m m' a no nl mI ty r names hrt hS hty hnames hb hbt
   cases n with
   | zero => simp [recTW] at hrt

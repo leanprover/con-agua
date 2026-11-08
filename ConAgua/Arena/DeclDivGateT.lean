@@ -51,12 +51,12 @@ def DivGateSpecC (p : Prog) (pins : List INatOpPinSet) : Prop :=
     (env env2 : ConLeche.Env) (n : Word) (nm : ConLeche.Name) (k : Nat), k ≤ 2 ^ 62 →
     ∀ (m m' : Mem) (a : AState) (r : List Word), n.toNat < 2 ^ 32 →
     callW p k "defn_div_gate" [vis, w, n] m = some (r, m') →
-    StageR dn w fe2 m a → StageC dn vis (fe2.restrictTo vis.toNat) env m a →
+    StageR w fe2 m a → StageC dn vis (fe2.restrictTo vis.toNat) env m a →
     ConLeche.EnvWF env → StepOK env2 fe2 a → PinSetsR m pins →
     (∃ pinsP, PinsDenote a.store pins pinsP) →
     denoteN a.store.ns (decI n) = some nm → L.Stubs.CrOK m →
     ∃ a', (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n)).run a = .ok ((), a') ∧
-      StageR dn w fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
+      StageR w fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
       Ext a.store a'.store ∧ IWGrow m m' ∧ PinSetsR m' pins ∧ MemFrame stepA stepC m m'
 
 /-- **`defn_div_gate`'s error claim under `StageC`** (the error half of `DivGateSpecC`). -/
@@ -64,7 +64,7 @@ def DivGateSpecE (p : Prog) (pins : List INatOpPinSet) : Prop :=
   ∀ (dn : NIdx → Option ConLeche.Name), DnInj dn → ∀ (vis w : Word) (fe2 : IFEnv)
     (env env2 : ConLeche.Env) (n : Word) (nm : ConLeche.Name) (k : Nat), k ≤ 2 ^ 62 →
     ∀ (m : Mem) (a : AState), n.toNat < 2 ^ 32 →
-    StageR dn w fe2 m a → StageC dn vis (fe2.restrictTo vis.toNat) env m a →
+    StageR w fe2 m a → StageC dn vis (fe2.restrictTo vis.toNat) env m a →
     ConLeche.EnvWF env → StepOK env2 fe2 a → PinSetsR m pins →
     (∃ pinsP, PinsDenote a.store pins pinsP) →
     denoteN a.store.ns (decI n) = some nm → L.Stubs.CrOK m →
@@ -86,7 +86,7 @@ pushed view `w`, `StageC` at the pre-insertion view `vis`, `Ext` of the twin's s
 (The variant records after and the frame come from the call's run: `divGateSpecC`.) -/
 structure DgPost (dn : NIdx → Option ConLeche.Name) (vis w : Word) (fe2 : IFEnv)
     (env : ConLeche.Env) (m : Mem) (a : AState) (m' : Mem) (a' : AState) : Prop where
-  stageW : StageR dn w fe2 m' a'
+  stageW : StageR w fe2 m' a'
   stage : StageC dn vis (fe2.restrictTo vis.toNat) env m' a'
   ext : Ext a.store a'.store
   grow : IWGrow m m'
@@ -102,7 +102,7 @@ theorem dg_ref {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafCl
     (hsA : ∀ dn vis fe, SubstCAll p dn vis fe) (hkp : CrKeep p) {pins : List INatOpPinSet}
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis w : Word} {fe2 : IFEnv}
     {env env2 : ConLeche.Env} {n : Word} {nm : ConLeche.Name} {k : Nat} (hk : k ≤ 2 ^ 62)
-    {m : Mem} {a : AState} (hn : n.toNat < 2 ^ 32) (hS : StageR dn w fe2 m a)
+    {m : Mem} {a : AState} (hn : n.toNat < 2 ^ 32) (hS : StageR w fe2 m a)
     (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a) (henv : ConLeche.EnvWF env)
     (hok2 : StepOK env2 fe2 a) (hP : PinSetsR m pins) (hpd : ∃ pinsP, PinsDenote a.store pins pinsP)
     (hnm : denoteN a.store.ns (decI n) = some nm) (hCr : L.Stubs.CrOK m) :

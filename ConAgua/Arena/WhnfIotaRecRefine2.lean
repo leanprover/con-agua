@@ -571,7 +571,7 @@ theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees 
 
 /-- **`env_find` as a run**: the memory unchanged, `find?` decoded at the record pool. -/
 theorem irEnvFind (p : Prog) (hp : IotaProg' p) (n : Nat) (dn : NIdx → Option ConLeche.Name)
-    (m : Mem) (vis : Word) (fe : IFEnv) (hE : EnvR dn m vis fe) (w : Word) (hw : HW w)
+    (m : Mem) (vis : Word) (fe : IFEnv) (hE : EnvR m vis fe) (w : Word) (hw : HW w)
     (r : List Word) (m' : Mem) (h : callW p n "env_find" [w, vis] m = some (r, m')) :
     m' = m ∧ (r.headD 0 = 0 → fe.find? (decI w) = none) ∧
       (r.headD 0 ≠ 0 → ∃ ci, fe.find? (decI w) = some ci ∧

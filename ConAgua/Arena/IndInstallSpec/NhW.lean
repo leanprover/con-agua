@@ -27,10 +27,10 @@ open L.Arena
 
 /-- `nest_holes`' model as a `Sim` (helper `pos`'s `nestHoles_refines`, unpacked). -/
 theorem nhW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) {m : Mem}
-    {a : AState} {ctx : Word} {c : NestCtx} (hS : StageR dn vis fe m a) (hc : decCtx m ctx.toNat = some c)
+    {a : AState} {ctx : Word} {c : NestCtx} (hS : StageR vis fe m a) (hc : decCtx m ctx.toNat = some c)
     (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat) (hhi : c.hiAt 0 < 2 ^ 64) :
     Sim (nhW k m vis ctx) (ConRon.Arena.nestHoles fe c) a
-      (fun r x m' a' => NhOut m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => NhOut m' r x ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   intro r m' hm
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hnb, -⟩ := ctx_fields hc hin htop

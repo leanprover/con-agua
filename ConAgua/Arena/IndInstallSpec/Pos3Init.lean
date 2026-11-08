@@ -51,8 +51,8 @@ structure PosBlkProg (p : Prog) : Prop where
 
 theorem pos3_init {p : Prog} (hP : PosBlkProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {m m' : Mem} {r : List Word}
-    (h : callW p n "check_block_positivity_init" [] m = some (r, m')) (hS : StageR dn vis fe m a) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ NSB m' (r.headD 0) {} := by
+    (h : callW p n "check_block_positivity_init" [] m = some (r, m')) (hS : StageR vis fe m a) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ NSB m' (r.headD 0) {} := by
   obtain ⟨s', rfl, -, hm, hr, hroom⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (checkBlockPositivityInit_spec p hP.nfs.alloc hP.init n _ hS.iw.iwSize) h
   simp only at hm hr hroom

@@ -38,13 +38,13 @@ include hv hph hf hpw hsf hsp his hff hfp hif hcs hp
 @[refines ConRon.Arena.appHole?]
 theorem appHole_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl us b nn e : Word) (N : Nat) (names : List NIdx) (hN : nn.toNat = N)
-    (he : H e) (hus : H us) (hb : b.toNat + N < 2 ^ 64) (hS : StageR dn vis fe s₀.mem a₀)
+    (he : H e) (hus : H us) (hb : b.toNat + N < 2 ^ 64) (hS : StageR vis fe s₀.mem a₀)
     (hdec : decHL s₀.mem no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hnn : nn.toNat + names.length < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "app_hole" [no, nl, us, b, nn, e]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decOE s'.mem r (AM.res (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)) a₀); ⊤⦄ := by
   refine triple_post (appHole_spec p hv hph hf hpw hsf hsp his hff hfp hif hcs hp (n + 1) s₀ no nl us b nn e) ?_
@@ -68,7 +68,7 @@ the twin's. -/
 @[refines ConRon.Arena.replaceAppsGo]
 theorem replaceAppsGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl us b nn f h : Word) (N : Nat) (names : List NIdx)
-    (mp : Std.HashMap EIdx EIdx) (hh : H h) (hus : H us) (hS : StageR dn vis fe s₀.mem a₀)
+    (mp : Std.HashMap EIdx EIdx) (hh : H h) (hus : H us) (hS : StageR vis fe s₀.mem a₀)
     (hdec : decHL s₀.mem no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop s₀.mem) (hN : nn.toNat = N)
     (hnn : nn.toNat + names.length < 2 ^ 64) (hbN : b.toNat + N < 2 ^ 64) (hM : rpMR s₀.mem mp) :
@@ -79,7 +79,7 @@ theorem replaceAppsGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
         (AM.res (ConRon.Arena.replaceAppsGo names (decI us) b.toNat N mp f.toNat (decE h)) a₀).1 ∧
       rpMR s'.mem
         (AM.res (ConRon.Arena.replaceAppsGo names (decI us) b.toNat N mp f.toNat (decE h)) a₀).2 ∧
-      StageR dn vis fe s'.mem
+      StageR vis fe s'.mem
         (AM.st (ConRon.Arena.replaceAppsGo names (decI us) b.toNat N mp f.toNat (decE h)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post ((rpGo_spec p hl hk hf hput hgo hnode n).1 s₀ no nl us b nn f h) ?_
@@ -104,7 +104,7 @@ include hl hk hf hput hgo hnode hcl hp
 @[refines ConRon.Arena.replaceApps]
 theorem replaceApps_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl us b nn e : Word) (N : Nat) (names : List NIdx)
-    (mp0 : Std.HashMap EIdx EIdx) (he : H e) (hus : H us) (hS : StageR dn vis fe s₀.mem a₀)
+    (mp0 : Std.HashMap EIdx EIdx) (he : H e) (hus : H us) (hS : StageR vis fe s₀.mem a₀)
     (hdec : decHL s₀.mem no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop s₀.mem) (hN : nn.toNat = N)
     (hnn : nn.toNat + names.length < 2 ^ 64) (hbN : b.toNat + N < 2 ^ 64) (hM : rpMR s₀.mem mp0) :
@@ -113,7 +113,7 @@ theorem replaceApps_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx →
       AM.ok (ConRon.Arena.replaceApps names (decI us) b.toNat N (decE e)) a₀ ∧
       decE (r.headD 0) = AM.res (ConRon.Arena.replaceApps names (decI us) b.toNat N (decE e)) a₀ ∧
       rpMR s'.mem ∅ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.replaceApps names (decI us) b.toNat N (decE e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.replaceApps names (decI us) b.toNat N (decE e)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (replaceApps_spec p hl hk hf hput hgo hnode hcl hp n s₀ no nl us b nn e) ?_
   rintro r s' ⟨hlc, hm⟩

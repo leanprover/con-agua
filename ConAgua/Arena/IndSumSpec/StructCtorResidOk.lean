@@ -141,10 +141,10 @@ end spec
 
 theorem plW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
     (m m' : Mem) (a : AState) (o l : Word) (lps : List NIdx) (r : List Word)
-    (h : plW k m o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : plW k m o l = some (r, m')) (hS : StageR vis fe m a)
     (hd : decHL m o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat < 2 ^ 64)
     (ht : o.toNat + l.toNat ≤ iwTop m) :
-    ∃ x a', (paramLevels lps).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ x a', (paramLevels lps).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       H (r.headD 0) ∧ decI (r.headD 0) = x := by
   cases k with
   | zero => cases h
@@ -170,12 +170,12 @@ theorem srRes_ok (fn hd al nP nIdx e : Word) (b1 b2 b3 : Bool)
 
 theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
     (m m' : Mem) (a : AState) (T lo ll nP o nIdx cbody : Word) (r : List Word) (lps : List NIdx)
-    (h : srW k m T lo ll nP o nIdx cbody = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : srW k m T lo ll nP o nIdx cbody = some (r, m')) (hS : StageR vis fe m a)
     (hT : H T) (hcb : H cbody) (hd : decHL m lo.toNat ll.toNat = some lps)
     (hb : lo.toNat + ll.toNat < 2 ^ 64) (ht : lo.toNat + ll.toNat ≤ iwTop m)
     (hon : o.toNat + nP.toNat < 2 ^ 64) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) :
     ∃ x a', (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)).run a =
-      .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
+      .ok (x, a') ∧ KeepPost vis fe decW0B m m' a' r x := by
   cases k with
   | zero => cases h
   | succ k =>
@@ -306,14 +306,14 @@ include ha hc hsc hg hpf hpp hip hplg hpl hil hcf hcp hic hbf hbp hib hpg hps he
 @[refines ConRon.Arena.structCtorResidOk]
 theorem structCtorResidOk_refines (k : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T lo ll nP o nIdx cbody : Word)
-    (lps : List NIdx) (hS : StageR dn vis fe s₀.mem a₀) (hT : H T) (hcb : H cbody)
+    (lps : List NIdx) (hS : StageR vis fe s₀.mem a₀) (hT : H T) (hcb : H cbody)
     (hd : decHL s₀.mem lo.toNat ll.toNat = some lps) (hb : lo.toNat + ll.toNat < 2 ^ 64)
     (ht : lo.toNat + ll.toNat ≤ iwTop s₀.mem) (hon : o.toNat + nP.toNat < 2 ^ 64)
     (hni : nP.toNat + nIdx.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "struct_ctor_resid_ok" [T, lo, ll, nP, o, nIdx, cbody]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀ ∧
-      KeepPost dn vis fe decW0B s₀.mem s'.mem
+      KeepPost vis fe decW0B s₀.mem s'.mem
         (AM.st (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀) r
         (AM.res (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀); ⊤⦄ := by
   refine triple_post (srW_spec p ha hc hsc hg hpf hpp hip hplg hpl hil hcf hcp hic hbf hbp hib hpg hps

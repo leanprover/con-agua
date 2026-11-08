@@ -332,7 +332,7 @@ structure StageS (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
 /-- **`StageS` across an interning step**: the step's stage relation after it, the twin step's
 `IStepS`, the memory's sizes, core memos and pin flag kept. -/
 theorem StageS.of_istep {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {m m' : Mem} {a a' : AState} (h : StageS dn vis fe m a) (hS : StageR dn vis fe m' a')
+    {m m' : Mem} {a a' : AState} (h : StageS dn vis fe m a) (hS : StageR vis fe m' a')
     (hs : ConRon.Bridge.Frontend.IStepS a a')
     (hsz : ∀ b, (m'.arr64 b).size = (m.arr64 b).size) (hM : CoreMemos m')
     (hP : pinW m' 0 = pinW m 0) : StageS dn vis fe m' a' :=
@@ -346,7 +346,7 @@ whose `TwinOK` the L side cannot track (store growth after a core call); `TwinOK
 `TwinOK.of_check` (`StageC.stageT`). -/
 structure StageC (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
     (m : Mem) (a : AState) : Prop where
-  stage : StageR dn vis fe m a
+  stage : StageR vis fe m a
   check : ConRon.Bridge.CheckOK .verified env fe a
   mem : TwinMem dn m a
   flag : pinW m 0 ≠ 0

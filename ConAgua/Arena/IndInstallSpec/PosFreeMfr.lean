@@ -69,9 +69,9 @@ theorem PosMR.ofClosed {p : Prog} {fs : List FnName} (hcl : closedA p posFreeA p
 
 /-- **`flush_caches()` as a `Sim`**, keeping the stage relation and the `hb` memo. -/
 theorem tailSimFlush {p : Prog} (hF : FlushProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
-    {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hM : HbMemo m) :
+    {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} (hS : StageR vis fe m a) (hM : HbMemo m) :
     Sim (callW p n "flush_caches" [] m) flushCaches a
-      (fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ HbMemo m') := by
+      (fun _ _ m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ HbMemo m') := by
   intro r m' e
   obtain ⟨s', rfl, -, hok, hmem⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (flushCaches_spec p hF n _) e
   obtain ⟨hS', hg⟩ := flush_stage hS hok

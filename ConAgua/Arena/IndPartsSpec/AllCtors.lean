@@ -381,10 +381,10 @@ theorem blockShapeAllCtors_refines (p : Prog) (ha : p.lookup "iw_alloc" = some i
     (hg : p.lookup "block_shape_all_ctors_go" = some blockShapeAllCtorsGo)
     (hp : p.lookup "block_shape_all_ctors" = some blockShapeAllCtors)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (q : Word) (bs : BlockShape) (hS : StageR dn vis fe s₀.mem a₀)
+    (q : Word) (bs : BlockShape) (hS : StageR vis fe s₀.mem a₀)
     (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_all_ctors" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       DecB (fun m => decPL m (decCN m) (r.headD 0).toNat (r.getD 1 0).toNat) s'.mem bs.allCtors ∧
       (r.headD 0).toNat + (r.getD 1 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
   refine triple_post (blockShapeAllCtors_spec p ha hcp hnc hcc hg hp n s₀ q) ?_

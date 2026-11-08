@@ -46,7 +46,7 @@ theorem andThen_st {A B : AM Bool} {a a1 : AState} {r r1 : Word} {b1 : Bool} {Q 
 
 /-- The state-and-pool facts every comparison carries. -/
 def CQ (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a' : AState) : Prop :=
-  StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a'
+  StageR vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a'
 
 
 /-! ## `ci_canon_defn` -/
@@ -110,7 +110,7 @@ theorem ciCanonDefn_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (
 
 
 theorem ciD_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {cv : IConstantVal}
-    {v : EIdx} {hi : ConLeche.ReducibilityHint} (h : decCI a dn p = some (.defnInfo cv v hi)) :
+    {v : EIdx} {hi : ConLeche.ReducibilityHint} (h : decCI a p = some (.defnInfo cv v hi)) :
     decCV a (p + 1) = some cv ∧ hd? a (p + 5) = some v ∧ decHint a (p + 6) = some hi := by
   obtain ⟨wk, e, hk⟩ := ciD h
   rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
@@ -121,9 +121,9 @@ theorem ciD_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
 theorem cdW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {p q x : Word} {cv cv' : IConstantVal} {v v' : EIdx}
     {hi hi' : ConLeche.ReducibilityHint}
-    (h : cdW k m p q = some (x, m')) (hS : StageR dn vis fe m a)
-    (hp : decCI (erecP m) dn p.toNat = some (.defnInfo cv v hi))
-    (hq : decCI (erecP m) dn q.toNat = some (.defnInfo cv' v' hi'))
+    (h : cdW k m p q = some (x, m')) (hS : StageR vis fe m a)
+    (hp : decCI (erecP m) p.toNat = some (.defnInfo cv v hi))
+    (hq : decCI (erecP m) q.toNat = some (.defnInfo cv' v' hi'))
     (hP : PoolSmall m) (hL : LitInj a) :
     ∃ (b : Bool) (a' : AState),
       (IConstantInfo.canonEq (.defnInfo cv v hi) (.defnInfo cv' v' hi')).run a = .ok (b, a') ∧
@@ -268,7 +268,7 @@ theorem ciCanonRec_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p
 
 
 theorem ciD_rec {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {cv : IConstantVal}
-    {mi rp : Nat} {rules : List IRecRule} (h : decCI a dn p = some (.recInfo cv mi rp rules)) :
+    {mi rp : Nat} {rules : List IRecRule} (h : decCI a p = some (.recInfo cv mi rp rules)) :
     decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some mi ∧ nat? a (p + 6) = some rp ∧
     ∃ o c, nat? a (p + 7) = some o ∧ nat? a (p + 8) = some c ∧ decRules a o c = some rules := by
   obtain ⟨wk, e, hk⟩ := ciD h
@@ -280,9 +280,9 @@ theorem ciD_rec {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} 
 theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {p q x : Word} {cv cv' : IConstantVal} {mi mi' rp rp' : Nat}
     {rules rules' : List IRecRule}
-    (h : cwW k m p q = some (x, m')) (hS : StageR dn vis fe m a)
-    (hp : decCI (erecP m) dn p.toNat = some (.recInfo cv mi rp rules))
-    (hq : decCI (erecP m) dn q.toNat = some (.recInfo cv' mi' rp' rules'))
+    (h : cwW k m p q = some (x, m')) (hS : StageR vis fe m a)
+    (hp : decCI (erecP m) p.toNat = some (.recInfo cv mi rp rules))
+    (hq : decCI (erecP m) q.toNat = some (.recInfo cv' mi' rp' rules'))
     (hP : PoolSmall m) (hL : LitInj a) :
     ∃ (b : Bool) (a' : AState),
       (IConstantInfo.canonEq (.recInfo cv mi rp rules) (.recInfo cv' mi' rp' rules')).run a =
@@ -422,8 +422,8 @@ theorem ciCanonEq_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p 
 
 theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} (k : Nat) {m m' : Mem} {p q x : Word} {c c' : IConstantInfo}
-    (h : cieW k m p q = some (x, m')) (hS : StageR dn vis fe m a)
-    (hp : decCI (erecP m) dn p.toNat = some c) (hq : decCI (erecP m) dn q.toNat = some c')
+    (h : cieW k m p q = some (x, m')) (hS : StageR vis fe m a)
+    (hp : decCI (erecP m) p.toNat = some c) (hq : decCI (erecP m) q.toNat = some c')
     (hP : PoolSmall m) (hL : LitInj a) :
     ∃ (b : Bool) (a' : AState), (c.canonEq c').run a = .ok (b, a') ∧ x = (if b then 1 else 0) ∧
       CQ dn vis fe m m' a' := by
@@ -555,8 +555,8 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 theorem ciCanonEq_refines (pr : Prog) (hp : CanonProg pr) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (p q : Word) (c c' : IConstantInfo) :
     RefAM pr "ci_canon_eq" [p, q]
-      (fun m a => StageR dn vis fe m a ∧ decCI (erecP m) dn p.toNat = some c ∧
-        decCI (erecP m) dn q.toNat = some c' ∧ PoolSmall m ∧ LitInj a)
+      (fun m a => StageR vis fe m a ∧ decCI (erecP m) p.toNat = some c ∧
+        decCI (erecP m) q.toNat = some c' ∧ PoolSmall m ∧ LitInj a)
       (c.canonEq c') (CPostL dn vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, hc, hc', hP, hL⟩
   refine triple_post (ciCanonEq_spec pr hp n s₀ p q) ?_
@@ -641,9 +641,9 @@ theorem decPL_grow {α : Type} {m m' : Mem} {f f' : Nat → Option α} (hg : IWG
 
 theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (o1 l1 o2 l2 x : Word) (xs ys : List IConstantInfo),
-    celW k m o1 l1 o2 l2 = some (x, m') → StageR dn vis fe m a →
-    decPL m (fun q => decCI (erecP m) dn q) o1.toNat l1.toNat = some xs →
-    decPL m (fun q => decCI (erecP m) dn q) o2.toNat l2.toNat = some ys →
+    celW k m o1 l1 o2 l2 = some (x, m') → StageR vis fe m a →
+    decPL m (fun q => decCI (erecP m) q) o1.toNat l1.toNat = some xs →
+    decPL m (fun q => decCI (erecP m) q) o2.toNat l2.toNat = some ys →
     o1.toNat + l1.toNat ≤ iwTop m → o2.toNat + l2.toNat ≤ iwTop m → PoolSmall m → LitInj a →
     ∃ (b : Bool) (a' : AState), (ConRon.Arena.canonEqList xs ys).run a = .ok (b, a') ∧
       x = (if b then 1 else 0) ∧ CQ dn vis fe m m' a' := by
@@ -739,9 +739,9 @@ theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 theorem canonEqList_refines (pr : Prog) (hp : CanonProg pr) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (o1 l1 o2 l2 : Word) (xs ys : List IConstantInfo) :
     RefAM pr "canon_eq_list" [o1, l1, o2, l2]
-      (fun m a => StageR dn vis fe m a ∧
-        decPL m (fun q => decCI (erecP m) dn q) o1.toNat l1.toNat = some xs ∧
-        decPL m (fun q => decCI (erecP m) dn q) o2.toNat l2.toNat = some ys ∧
+      (fun m a => StageR vis fe m a ∧
+        decPL m (fun q => decCI (erecP m) q) o1.toNat l1.toNat = some xs ∧
+        decPL m (fun q => decCI (erecP m) q) o2.toNat l2.toNat = some ys ∧
         o1.toNat + l1.toNat ≤ iwTop m ∧ o2.toNat + l2.toNat ≤ iwTop m ∧ PoolSmall m ∧ LitInj a)
       (ConRon.Arena.canonEqList xs ys) (CPostL dn vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, hxs, hys, hb1, hb2, hP, hL⟩

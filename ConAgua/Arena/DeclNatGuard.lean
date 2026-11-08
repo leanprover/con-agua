@@ -76,8 +76,8 @@ l_model boolCtorOk_specW (p : Prog) (hp : p.lookup "bool_ctor_ok" = some boolCto
 
 theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
     CallRef p "bool_ctor_ok" [c]
-      (fun m a => StageR dn vis fe m a ∧ decCI (erecP m) dn c.toNat = some ci)
-      (boolCtorOk ci) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ decCI (erecP m) c.toNat = some ci)
+      (boolCtorOk ci) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hci⟩ hc => ?_
   have hw := callW_model (M := fun mm => boolCtorOkW p (k + 1) mm c) (boolCtorOk_specW p hN.lBoolCtorOk (k + 1) · c) hc
   rw [boolCtorOkW.eq_2] at hw
@@ -128,15 +128,15 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
 @[refines ConRon.Arena.boolCtorOk]
 theorem boolCtorOk_refines (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
     RefAM p "bool_ctor_ok" [c]
-      (fun m a => StageR dn vis fe m a ∧ decCI (erecP m) dn c.toNat = some ci)
-      (boolCtorOk ci) (KeepPost dn vis fe decW0B) :=
+      (fun m a => StageR vis fe m a ∧ decCI (erecP m) c.toNat = some ci)
+      (boolCtorOk ci) (KeepPost vis fe decW0B) :=
   (boolCtorOk_ref hN c ci).refAM
 
 
 /-- A pin read followed by the lookup of the pinned name: memory unchanged, the twin's pin read,
 the decoded lookup. -/
 theorem pinFind_call (hN : NatGuardProg p) {i : Word} (hi : i.toNat < 51) {k : Nat} {m m1 m2 : Mem}
-    {a : AState} {r1 rf : List Word} (hS : StageR dn vis fe m a)
+    {a : AState} {r1 rf : List Word} (hS : StageR vis fe m a)
     (h1 : callW p k "pin_at" [i] m = some (r1, m1))
     (h2 : callW p k "env_find" [r1.headD 0, vis] m1 = some (rf, m2)) :
     m1 = m ∧ m2 = m ∧ pinW m 0 ≠ 0 ∧ H (r1.headD 0) ∧ r1.headD 0 = pinW m (1 + i.toNat) ∧
@@ -181,17 +181,17 @@ def natBoolCtorsT (fe : IFEnv) : AM Bool := do
     | none => pure false
 
 theorem boolCtors_ref (hN : NatGuardProg p) :
-    CallRef p "nat_op_bool_ctors" [vis] (StageR dn vis fe) (natBoolCtorsT fe)
-      (KeepPost dn vis fe decW0B) := by
+    CallRef p "nat_op_bool_ctors" [vis] (StageR vis fe) (natBoolCtorsT fe)
+      (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
   have hw := callW_model (M := fun mm => boolCtorsW p (k + 1) mm vis) (boolCtors_specW p hN.lBoolCtors (k + 1) · vis) hc
   rw [boolCtorsW.arm1] at hw
   have lastStep : ∀ (m4 : Mem) (a4 : AState) (rf : List Word) (mf : Mem) (ci : IConstantInfo)
-      (rr : List Word) (mr : Mem), StageR dn vis fe m4 a4 →
+      (rr : List Word) (mr : Mem), StageR vis fe m4 a4 →
       decFd dn m4 rf (some ci) → mf = m4 →
       (if rf.headD 0 = 0 then some ([0], mf) else
         ntBW (callW p k "bool_ctor_ok" [rf.tail.headD 0] mf) fun ρ μ => some ([ρ.headD 0], μ)) = some (rr, mr) →
-      ∃ x a', (boolCtorOk ci).run a4 = .ok (x, a') ∧ KeepPost dn vis fe decW0B m4 mr a' rr x := by
+      ∃ x a', (boolCtorOk ci).run a4 = .ok (x, a') ∧ KeepPost vis fe decW0B m4 mr a' rr x := by
     intro m4 a4 rf mf ci rr mr hS4 hfd hmf hb
     subst hmf
     obtain ⟨hf1, hci⟩ := hfd
@@ -307,8 +307,8 @@ theorem natOpGuard_unfold (fe : IFEnv) (c : NIdx) : natOpGuard fe c = (do
         if c == be || c == bl || dm.contains c then natBoolCtorsT fe else pure true) := rfl
 
 theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
-    CallRef p "nat_op_guard" [vis, c] (fun m a => StageR dn vis fe m a ∧ H c)
-      (natOpGuard fe (decI c)) (KeepPost dn vis fe decW0B) := by
+    CallRef p "nat_op_guard" [vis, c] (fun m a => StageR vis fe m a ∧ H c)
+      (natOpGuard fe (decI c)) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc⟩ hcall => ?_
   have hw := callW_model (M := fun mm => natOpGuardW p (k + 1) mm vis c) (natOpGuard_specW p hN.lNatOpGuard (k + 1) · vis c) hcall
   rw [natOpGuardW.arm1] at hw
@@ -445,8 +445,8 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
 
 @[refines ConRon.Arena.natOpGuard]
 theorem natOpGuard_refines (hN : NatGuardProg p) (c : Word) :
-    RefAM p "nat_op_guard" [vis, c] (fun m a => StageR dn vis fe m a ∧ H c)
-      (natOpGuard fe (decI c)) (KeepPost dn vis fe decW0B) :=
+    RefAM p "nat_op_guard" [vis, c] (fun m a => StageR vis fe m a ∧ H c)
+      (natOpGuard fe (decI c)) (KeepPost vis fe decW0B) :=
   (natOpGuard_ref hN c).refAM
 
 end guard

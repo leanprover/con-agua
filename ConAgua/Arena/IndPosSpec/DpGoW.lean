@@ -129,8 +129,8 @@ theorem decHL_write {k : IdxKind} (m : Mem) (q i v : Word) (ws : List (Idx k))
   rw [h1, h2]; simp
 
 theorem StageR.alloc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {m m1 : Mem} {k q : Word} (hS : StageR dn vis fe m a) (h : allocW m k = some (q, m1)) :
-    StageR dn vis fe m1 a ∧ IWGrow m m1 ∧ q = rdW (m.arr64 CTL) 200 ∧ q.toNat + k.toNat ≤ (m.arr64 IW).size ∧
+    {m m1 : Mem} {k q : Word} (hS : StageR vis fe m a) (h : allocW m k = some (q, m1)) :
+    StageR vis fe m1 a ∧ IWGrow m m1 ∧ q = rdW (m.arr64 CTL) 200 ∧ q.toNat + k.toNat ≤ (m.arr64 IW).size ∧
       iwTop m1 = q.toNat + k.toNat := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts h h3

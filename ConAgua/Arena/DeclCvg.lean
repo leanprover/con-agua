@@ -209,11 +209,11 @@ local notation "V" => ConLeche.CheckMode.verified
 relation holds after it, the pool only grew. A zero-length copy needs no source bound. -/
 theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erToIwW n m o l = some (r, m'))
-    (hS : StageR dn vis fe m a) (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
+    (hS : StageR vis fe m a) (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
     r = [r.headD 0, r.tail.headD 0] ∧ r.tail.headD 0 = l ∧
     (∀ {k : IdxKind}, (decHL m' (r.headD 0).toNat l.toNat : Option (List (Idx k))) =
       hslice? (erA m) o.toNat l.toNat) ∧
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ (r.headD 0).toNat + l.toNat ≤ iwTop m' := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ (r.headD 0).toNat + l.toNat ≤ iwTop m' := by
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   have hh := erToIwW_two h
   rcases hsrc with hl0 | hsrc
@@ -264,7 +264,7 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 /-- **`er_to_iw` writes only the pool and its top** (`IW`, `CTL[200]`). -/
 theorem erToIwW_frame {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erToIwW n m o l = some (r, m'))
-    (hS : StageR dn vis fe m a) (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
+    (hS : StageR vis fe m a) (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
     MemFrame [IW] [200] m m' := by
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   rcases hsrc with hl0 | hsrc
@@ -340,8 +340,8 @@ theorem IWGrow.erecExt {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erA m'
 
 /-- The memory after `iw_reset` is in the stage relation. -/
 theorem iwReset_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (hS : StageR dn vis fe m a) :
-    StageR dn vis fe (m.set64 CTL 200 0) a ∧ m.set64 CTL 200 0 = m.set64 CTL 200 0 ∧
+    {a : AState} (hS : StageR vis fe m a) :
+    StageR vis fe (m.set64 CTL 200 0) a ∧ m.set64 CTL 200 0 = m.set64 CTL 200 0 ∧
       (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC ∧ erTop (m.set64 CTL 200 0) = erTop m := by
   have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw

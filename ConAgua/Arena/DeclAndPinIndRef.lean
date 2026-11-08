@@ -204,7 +204,7 @@ theorem andPinDecls_ok {a a1 : AState} {pinned : List IConstantInfo}
 /-- A block decoded below the tops (`decRBlk`) is canon's slice premise. -/
 theorem decRBlk_canon {dn : NIdx → Option ConLeche.Name} {m : Mem} {r : List Word}
     {cis : List IConstantInfo} (h : decRBlk dn m r cis) (hl : cis.length ≠ 0) :
-    decPL m (fun q => decCI (erecP m) dn q) (r.headD 0).toNat (r.tail.headD 0).toNat = some cis ∧
+    decPL m (fun q => decCI (erecP m) q) (r.headD 0).toNat (r.tail.headD 0).toNat = some cis ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m := by
   obtain ⟨hD, -⟩ := h
   have hD' : decPL (truncM m) (fun q => decCI (erA (truncM m)) dn q) (r.headD 0).toNat
@@ -222,9 +222,9 @@ theorem decRBlk_canon {dn : NIdx → Option ConLeche.Name} {m : Mem} {r : List W
 
 /-- A pointer slice decoded in `IW` below its top, in `erecP`, stays decoded as the pools grow. -/
 theorem decPL_growAP {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Nat}
-    {xs : List IConstantInfo} (h : decPL m (fun q => decCI (erecP m) dn q) o l = some xs)
+    {xs : List IConstantInfo} (h : decPL m (fun q => decCI (erecP m) q) o l = some xs)
     (hb : o + l ≤ iwTop m) (hg : IWGrow m m') :
-    decPL m' (fun q => decCI (erecP m') dn q) o l = some xs := by
+    decPL m' (fun q => decCI (erecP m') q) o l = some xs := by
   unfold decPL at h ⊢
   refine mapM_imp _ _ h fun j hj y hy => ?_
   have hj' := List.mem_range.mp hj
@@ -237,10 +237,10 @@ theorem decPL_growAP {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Na
 /-- **`er_to_iw` of the copied block**: the `IW` slice decodes (in `erecP`) to the block. -/
 theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {block : List IConstantInfo}
-    (h : erToIwW n m o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : erToIwW n m o l = some (r, m')) (hS : StageR vis fe m a)
     (hd : decCIs (erecP m) dn o.toNat l.toNat = some block) (hb : o.toNat + l.toNat ≤ erTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧
-      decPL m' (fun q => decCI (erecP m') dn q) (r.headD 0).toNat l.toNat = some block ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧
+      decPL m' (fun q => decCI (erecP m') q) (r.headD 0).toNat l.toNat = some block ∧
       (r.headD 0).toNat + l.toNat ≤ iwTop m' := by
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   obtain ⟨hr, -, hg, hf, hE, htop⟩ := L.Ind.erToIwW_dec (k := .name) h hsz (by omega) hEs (by
@@ -290,11 +290,11 @@ only grew, and the result word is `b`. `rom_and_pin` by its refinement (`RomAndP
 theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} (hR : L.Rom.RomAndPinRef p dn vis fe) {n : Nat} {m m' : Mem}
     {i : Word} {r : List Word} {block : List IConstantInfo} {nP : Nat} {a : AState}
-    (h : andpW p n m i = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : andpW p n m i = some (r, m')) (hS : StageR vis fe m a)
     (hdecl : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP) (hFB : FrontBlock block)
     (hok : ConRon.Bridge.StateOK a)
     (hD : (m.arr64 DECL).size < 2 ^ 63) (hP : (m.arr64 DLP).size < 2 ^ 63) :
-    ∃ b a', (andPinOk (.indDecl block nP)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ b a', (andPinOk (.indDecl block nP)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0B m' r b := by
   cases n with
   | zero => simp [andpW] at h
@@ -394,10 +394,10 @@ theorem andPinOkInd_refines {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Opt
     {vis : Word} {fe : IFEnv} (hR : L.Rom.RomAndPinRef p dn vis fe) (i : Word)
     (block : List IConstantInfo) (nP : Nat) :
     L.Ind.RefAM p "and_pin_ok" [i]
-      (fun m a => StageR dn vis fe m a ∧ IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP ∧
+      (fun m a => StageR vis fe m a ∧ IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP ∧
         FrontBlock block ∧ ConRon.Bridge.StateOK a ∧
         (m.arr64 DECL).size < 2 ^ 63 ∧ (m.arr64 DLP).size < 2 ^ 63)
-      (andPinOk (.indDecl block nP)) (L.Ind.KeepPost dn vis fe decW0B) := by
+      (andPinOk (.indDecl block nP)) (L.Ind.KeepPost vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, hdecl, hFB, hok, hD, hP⟩
   refine triple_post (andPinOk_specA p hp.and_pin_ok hp.and_block_named n s₀ i) ?_
   rintro r s' ⟨hl, hW⟩
@@ -424,9 +424,9 @@ theorem andpW_one {p : Prog} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
 theorem andPinOkOne_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} (i : Word) (d : IDeclaration) :
     L.Ind.RefAM p "and_pin_ok" [i]
-      (fun m a => StageR dn vis fe m a ∧ L.Front.DeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat d ∧
+      (fun m a => StageR vis fe m a ∧ L.Front.DeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat d ∧
         (m.arr64 DECL).size < 2 ^ 63)
-      (andPinOk d) (L.Ind.KeepPost dn vis fe decW0B) := by
+      (andPinOk d) (L.Ind.KeepPost vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, hd, hD⟩
   refine triple_post (andPinOk_specA p hp.and_pin_ok hp.and_block_named n s₀ i) ?_
   rintro r s' ⟨hl, hW⟩
@@ -460,10 +460,10 @@ theorem andPinOkF_refines {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Optio
     {vis : Word} {fe : IFEnv} (hR : L.Rom.RomAndPinRef p dn vis fe) (i : Word)
     (d : IDeclaration) :
     L.Ind.RefAM p "and_pin_ok" [i]
-      (fun m a => StageR dn vis fe m a ∧ L.Front.DeclAtF (m.arr64 DECL) (m.arr64 DLP) i.toNat d ∧
+      (fun m a => StageR vis fe m a ∧ L.Front.DeclAtF (m.arr64 DECL) (m.arr64 DLP) i.toNat d ∧
         (∀ b nP, d = .indDecl b nP → FrontBlock b) ∧ ConRon.Bridge.StateOK a ∧
         (m.arr64 DECL).size < 2 ^ 63 ∧ (m.arr64 DLP).size < 2 ^ 63)
-      (andPinOk d) (L.Ind.KeepPost dn vis fe decW0B) := by
+      (andPinOk d) (L.Ind.KeepPost vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, hdecl, hFB, hok, hD, hP⟩
   cases d with
   | indDecl b nP =>

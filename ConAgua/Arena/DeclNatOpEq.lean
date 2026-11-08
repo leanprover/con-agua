@@ -109,8 +109,8 @@ theorem pw_of_rec {m m' : Mem} {pi : Word} (hP : PinRecAt m pi) (hI : IWOK m) (h
 
 theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
     CallRef p "nat_eq_ctx" [pi, d]
-      (fun m a => StageR dn vis fe m a ∧ PinRecAt m pi ∧ H d)
-      (natEqCtxT d.toNat) (KeepPost dn vis fe NatCtxR) := by
+      (fun m a => StageR vis fe m a ∧ PinRecAt m pi ∧ H d)
+      (natEqCtxT d.toNat) (KeepPost vis fe NatCtxR) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hP, hd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natEqCtxW p (k + 1) mm pi d) (natEqCtx_specW p hN.lNatEqCtx (k + 1) · pi d) hc
   rw [natEqCtxW.arm1] at hw; simp only [pw_fold] at hw
@@ -292,22 +292,22 @@ theorem Sim.iteH {β α : Type} {c q : Word} {e1 e2 : Option (β × Mem)} {o1 o2
 
 /-- A last callee returning an equation list, as the pair `(o, l)`. -/
 theorem CallRef.simPairE {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
-    {op : AM (List (EIdx × EIdx))} (h : CallRef p f args pre op (KeepPost dn vis fe decEqRL)) {n : Nat}
+    {op : AM (List (EIdx × EIdx))} (h : CallRef p f args pre op (KeepPost vis fe decEqRL)) {n : Nat}
     {m : Mem} {a : AState} (hp : pre m a) :
     Sim (ntBW (callW p n f args m) fun r m' => some ([r.headD 0, r.tail.headD 0], m')) op a
-      (fun r x m' a' => KeepPost dn vis fe decEqRL m m' a' r x) :=
+      (fun r x m' a' => KeepPost vis fe decEqRL m m' a' r x) :=
   Sim.ntRet (h.sim hp) fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decEqRL_norm h3⟩
 
 theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z sN sx sy bT bF : Word) :
     CallRef p "nat_eq_disp" [c, pi, cx]
-      (fun m a => StageR dn vis fe m a ∧ H c ∧ H p0 ∧ H p1 ∧ H p2 ∧ H p3 ∧ H p4 ∧ H p5 ∧ H p6 ∧
+      (fun m a => StageR vis fe m a ∧ H c ∧ H p0 ∧ H p1 ∧ H p2 ∧ H p3 ∧ H p4 ∧ H p5 ∧ H p6 ∧
         H x ∧ H y ∧ H z ∧ H sN ∧ H sx ∧ H sy ∧ H bT ∧ H bF ∧
         pw m pi 0 = p0 ∧ pw m pi 1 = p1 ∧ pw m pi 2 = p2 ∧ pw m pi 3 = p3 ∧ pw m pi 4 = p4 ∧
         pw m pi 5 = p5 ∧ pw m pi 6 = p6 ∧ pw m cx 0 = x ∧ pw m cx 1 = y ∧ pw m cx 2 = z ∧
         pw m cx 3 = sN ∧ pw m cx 4 = sx ∧ pw m cx 5 = sy ∧ pw m cx 6 = bT ∧ pw m cx 7 = bF)
       (natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
         (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF))
-      (KeepPost dn vis fe decEqRL) := by
+      (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqDispW p k mm c pi cx)
     (fun k s₀ => natEqDisp_specW p hN.lNatEqDisp k s₀ c pi cx) fun k m a ⟨hS, hc, h0, h1, h2, h3, h4, h5, h6,
       hx, hy, hz, hsN, hsx, hsy, hbT, hbF, e0, e1, e2, e3, e4, e5, e6, f0, f1, f2, f3, f4, f5, f6, f7⟩ => ?_
@@ -385,8 +385,8 @@ theorem pw_of_get {m : Mem} {cx w : Word} {j : Nat} (hI : IWOK m) (hcx : cx.toNa
 
 theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
     CallRef p "nat_op_equations" [d, c]
-      (fun m a => StageR dn vis fe m a ∧ H d ∧ H c)
-      (natOpEquations d.toNat (decI c)) (KeepPost dn vis fe decEqRL) := by
+      (fun m a => StageR vis fe m a ∧ H d ∧ H c)
+      (natOpEquations d.toNat (decI c)) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hd, hc⟩ hw => ?_
   have hw := callW_model (M := fun mm => natOpEquationsW p (k + 1) mm d c) (natOpEquations_specW p hN.toNatSubProg.toNatEqProg.lNatOpEquations (k + 1) · d c) hw
   rw [natOpEquationsW.arm1] at hw
@@ -450,8 +450,8 @@ theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
 
 @[refines ConRon.Arena.natOpEquations]
 theorem natOpEquations_refines (hN : NatSubProg' p) (d c : Word) :
-    RefAM p "nat_op_equations" [d, c] (fun m a => StageR dn vis fe m a ∧ H d ∧ H c)
-      (natOpEquations d.toNat (decI c)) (KeepPost dn vis fe decEqRL) :=
+    RefAM p "nat_op_equations" [d, c] (fun m a => StageR vis fe m a ∧ H d ∧ H c)
+      (natOpEquations d.toNat (decI c)) (KeepPost vis fe decEqRL) :=
   (natOpEquations_ref hN d c).refAM
 
 end opeq

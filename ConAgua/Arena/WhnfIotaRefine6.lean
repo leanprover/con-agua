@@ -175,7 +175,7 @@ theorem decPW_ww {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
   · rw [hs] at h; simp at h
 
 theorem decCI_ind_fields (b : Array Word) (dn : NIdx → Option ConLeche.Name) (q : Nat)
-    (cv : IConstantVal) (caps : IIndCaps) (h : decCI b dn q = some (.indInfo cv caps)) :
+    (cv : IConstantVal) (caps : IIndCaps) (h : decCI b q = some (.indInfo cv caps)) :
     ∃ po pc swd so sc : Word, b[q+2]? = some po ∧ b[q+3]? = some pc ∧
       hslice? b po.toNat pc.toNat = some cv.levelParams ∧ b[q+12]? = some swd ∧
       b[q+13]? = some so ∧ b[q+14]? = some sc ∧ decPWw b dn swd so sc = some caps.sortZ := by

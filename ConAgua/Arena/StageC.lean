@@ -36,7 +36,7 @@ theorem callW_leafFrame {p : Prog} (hcl : LeafClosed p) {f : FnName} (hf : f ∈
 
 /-- **`StageC` across a leaf**. -/
 theorem StageC.of_leaf {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR dn vis fe m' a') (hf : MemFrame leafA leafC m m')
+    (hS : StageR vis fe m' a') (hf : MemFrame leafA leafC m m')
     (hs : ConRon.Bridge.Frontend.IStepS a a') : StageC dn vis fe env m' a' :=
   ⟨hS, h.check.mono hs.ok hs.ext hs.caches hs.pins,
     ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,

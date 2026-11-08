@@ -79,12 +79,12 @@ theorem trans (h₁ : RcAt dn vis fe env m₀ a₀ m₁ a₁) (h₂ : RcAt dn vi
   ⟨h₂.stage, h₂.abs, h₂.rc, h₁.grow.trans h₂.grow, h₁.core.trans h₂.core⟩
 
 /-- A step that con-ron calls a `PStep`. -/
-theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR dn vis fe m a) (hA : AbsOK m) (hP : RcMR m)
+theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR vis fe m a) (hA : AbsOK m) (hP : RcMR m)
     (hg : IWGrow m₀ m) (hp : PStep a₀ a) : RcAt dn vis fe env m₀ a₀ m a :=
   ⟨h.of_pstep hS hA hp, hA, hP, hg, hp.toCore h.check⟩
 
 /-- A core step. -/
-theorem cstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR dn vis fe m a) (hA : AbsOK m) (hP : RcMR m)
+theorem cstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR vis fe m a) (hA : AbsOK m) (hP : RcMR m)
     (hg : IWGrow m₀ m) (hc : CoreStep V env fe a₀ a) : RcAt dn vis fe env m₀ a₀ m a :=
   ⟨h.of_check hS hA hc.ok hc.ext, hA, hP, hg, hc⟩
 

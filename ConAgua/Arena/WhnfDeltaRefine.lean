@@ -92,7 +92,7 @@ theorem decCV_rd {a b : Array Word} {q : Word} {cv : IConstantVal} (hab : ArrExt
 
 /-- The kind word of a decoded record, and what each kind decodes to. -/
 theorem decCI_split {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b)
     (hsz : b.size < 2 ^ 63) :
     (rdW b q = 1 → ∃ cv v hint, ci = .defnInfo cv v hint ∧ decCV a (q.toNat + 1) = some cv ∧
       v = decI (rdW b (q + 5)) ∧ (rdW b (q + 5)).toNat < 2 ^ 32) ∧
@@ -460,7 +460,7 @@ variable (p : Prog)
 theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb)
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) q.toNat = some ci)
     (r : List Word) (m' : Mem) (h : callW p n "nat_ind_ok" [found, q] s₀.mem = some (r, m')) :
     CRef (natIndOk (decFound dn s₀.mem found q)) a₀ decBool dn s₀.mem vis fe MM eb r m' ResH := by
   cases n with
@@ -534,7 +534,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
 theorem natIndOk_refines (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (_hq : HW q)
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn q.toNat = some ci) :
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) q.toNat = some ci) :
     CoreSpec p n "nat_ind_ok" [found, q] (natIndOk (decFound dn s₀.mem found q)) decBool s₀ a₀ dn
       vis fe MM eb :=
   CoreSpec.of_callC fun r m' h => callW_natIndOk p hp n s₀ a₀ dn vis fe MM eb found q hC hdec r m' h
@@ -576,7 +576,7 @@ variable (p : Prog)
 theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb)
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) q.toNat = some ci)
     (r : List Word) (m' : Mem) (h : callW p n "nat_zero_ok" [found, q] s₀.mem = some (r, m')) :
     CRef (natZeroOk (decFound dn s₀.mem found q)) a₀ decBool dn s₀.mem vis fe MM eb r m' ResH := by
   cases n with
@@ -669,7 +669,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
 theorem natZeroOk_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (_hq : HW q)
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn q.toNat = some ci) :
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) q.toNat = some ci) :
     CoreSpec p n "nat_zero_ok" [found, q] (natZeroOk (decFound dn s₀.mem found q)) decBool s₀ a₀ dn
       vis fe MM eb :=
   CoreSpec.of_callC fun r m' h => callW_natZeroOk p hp n s₀ a₀ dn vis fe MM eb found q hC hdec r m' h
@@ -726,7 +726,7 @@ theorem ite_some_pair {α β : Type} (c : Prop) [Decidable c] (a b : α) (m : β
 theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb)
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) q.toNat = some ci)
     (r : List Word) (m' : Mem) (h : callW p n "nat_succ_ok" [found, q] s₀.mem = some (r, m')) :
     CRef (natSuccOk (decFound dn s₀.mem found q)) a₀ decBool dn s₀.mem vis fe MM eb r m' ResH := by
   cases n with
@@ -846,7 +846,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
 theorem natSuccOk_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (_hq : HW q)
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn q.toNat = some ci) :
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP s₀.mem) q.toNat = some ci) :
     CoreSpec p n "nat_succ_ok" [found, q] (natSuccOk (decFound dn s₀.mem found q)) decBool s₀ a₀ dn
       vis fe MM eb :=
   CoreSpec.of_callC fun r m' h => callW_natSuccOk p hp n s₀ a₀ dn vis fe MM eb found q hC hdec r m' h
@@ -861,10 +861,10 @@ variable (p : Prog)
 /-- **`env_find` as a run**: memory unchanged, the result is the twin's lookup, and a found row
 decodes. -/
 theorem callW_envFind (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name}
-    {fe : IFEnv} (vis w : Word) (hE : EnvR dn s₀.mem vis fe) (hw : HW w) (r : List Word) (m' : Mem)
+    {fe : IFEnv} (vis w : Word) (hE : EnvR s₀.mem vis fe) (hw : HW w) (r : List Word) (m' : Mem)
     (h : callW p n "env_find" [w, vis] s₀.mem = some (r, m')) :
     m' = s₀.mem ∧ fe.find? (decI w) = decFound dn s₀.mem (r.headD 0) (r.tail.headD 0) ∧
-    (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn (r.tail.headD 0).toNat = some ci) := by
+    (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP s₀.mem) (r.tail.headD 0).toNat = some ci) := by
   obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callW
     (envFind_refines p hp.envIx' hp.envRow' hp.envFind n s₀ vis w hE hw) h
   obtain ⟨t₁', ht₁', hm₁', -, hfound⟩ := triple_of_callW
@@ -1011,7 +1011,7 @@ theorem callW_pinFind (hp : WhnfDeltaProg' p) (k : Word) (hk : k.toNat < 51) (n 
     (h2 : callW p n "env_find" [r₁.headD 0, vis] m₁ = some (r₂, m₂)) :
     m₁ = m ∧ m₂ = m ∧ fe.find? (decI (pinW m (1 + k.toNat))) =
         decFound dn m (r₂.headD 0) (r₂.tail.headD 0) ∧
-      (r₂.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) dn (r₂.tail.headD 0).toNat = some ci) := by
+      (r₂.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r₂.tail.headD 0).toNat = some ci) := by
   obtain ⟨M, eb, hC⟩ := hC
   obtain ⟨hm1, -, -, hr₁⟩ := callW_pinAt p hp.pinAt n m k r₁ m₁ h1
   subst m₁

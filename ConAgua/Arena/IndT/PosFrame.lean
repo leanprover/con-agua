@@ -113,7 +113,7 @@ theorem frameRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p
   have hhn : (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
         none ∨ ∃ (rn : List Word) (m1 : Mem) (a1 : AState),
       (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
-        some (rn, m1) ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ MFr [] [] m m1 ∧ AFr m m1 ∧ H (rn.headD 0) ∧
+        some (rn, m1) ∧ StageR vis fe m1 a1 ∧ IWGrow m m1 ∧ MFr [] [] m m1 ∧ AFr m m1 ∧ H (rn.headD 0) ∧
       (nestHeadT grp).run a = .ok (decI (rn.headD 0), a1) := by
     by_cases h0 : gL = 0
     · rw [ite_eq_left h0]

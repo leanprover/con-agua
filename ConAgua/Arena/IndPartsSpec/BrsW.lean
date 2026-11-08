@@ -115,9 +115,9 @@ theorem partsLpsEq {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     (h : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat q + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat q + 2)) =
       some (rp, m1))
     (he : eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll = some e)
-    (hS : StageR dn vis fe m a) (hcv : DecB (fun m => decCVp m q) m cv) (hq : q < 2 ^ 64)
+    (hS : StageR vis fe m a) (hcv : DecB (fun m => decCVp m q) m cv) (hq : q < 2 ^ 64)
     (hl : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m) :
-    StageR dn vis fe m1 a ∧ IWGrow m m1 ∧ e = if cv.levelParams == lps then 1 else 0 := by
+    StageR vis fe m1 a ∧ IWGrow m m1 ∧ e = if cv.levelParams == lps then 1 else 0 := by
   obtain ⟨hS1, hg1, hd1, ht1⟩ := partsLpsCopy h hS hcv hq
   have hT : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
   obtain ⟨ws1, hs1, hn1, hl1⟩ := slR_of_decHL m1 _ _ _ hd1 (by omega)
@@ -144,9 +144,9 @@ theorem ipIte01_eq {c : Bool} {b : Word} (h : b = if c then 1 else 0) : b = 0 �
 theorem bpfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
     {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
     ∀ (m m' : Mem) (cto ctl : Word) (cvTs : List IConstantVal) (r : List Word),
-    bpfW n m cto ctl lo ll = some (r, m') → StageR dn vis fe m a → PSlR decCVp cvTs cto ctl m →
+    bpfW n m cto ctl lo ll = some (r, m') → StageR vis fe m a → PSlR decCVp cvTs cto ctl m →
     decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       r = [if cvTs.all (fun c => !R.contains c.name && c.levelParams == lps) then 1 else 0] := by
   induction n with
   | zero => intro m m' cto ctl cvTs r h; simp [bpfW] at h
@@ -195,7 +195,7 @@ theorem bpfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
 theorem bprW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
     ∀ (m m' : Mem) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × List IRecRule)) (r : List Word),
-    bprW n m ro rl = some (r, m') → StageR dn vis fe m a → PSlR decSR rs ro rl m →
+    bprW n m ro rl = some (r, m') → StageR vis fe m a → PSlR decSR rs ro rl m →
     m' = m ∧ r = [if rs.all (fun r => !R.contains r.1.name) then 1 else 0] := by
   induction n with
   | zero => intro m m' ro rl rs r h; simp [bprW] at h
@@ -236,9 +236,9 @@ theorem bprW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
 theorem bpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
     {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
     ∀ (m m' : Mem) (cso csl : Word) (cs : List (IConstantVal × Nat × Nat)) (r : List Word),
-    bpcW n m nP cso csl lo ll = some (r, m') → StageR dn vis fe m a → PSlR decSC cs cso csl m →
+    bpcW n m nP cso csl lo ll = some (r, m') → StageR vis fe m a → PSlR decSC cs cso csl m →
     decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       r = [if cs.all (fun c => c.2.1 == nP.toNat && c.1.levelParams == lps && !R.contains c.1.name)
         then 1 else 0] := by
   induction n with
@@ -315,10 +315,10 @@ theorem bpoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word} {cvTs : List IConstantVal}
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)} {cs : List (IConstantVal × Nat × Nat)}
     {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a))
-    (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) (hS : StageR vis fe m a)
     (hts : PSlR decCVp cvTs cto ctl m) (hrs : PSlR decSR rs ro rl m) (hcs : PSlR decSC cs cso csl m)
     (hl : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       r = [if ((cvTs.all fun c => !R.contains c.name && c.levelParams == lps) &&
           (rs.all fun r => !R.contains r.1.name) &&
           (cs.all fun c => c.2.1 == nP.toNat && c.1.levelParams == lps && !R.contains c.1.name))
@@ -372,10 +372,10 @@ def LargeR : Option NIdx → List Word → Prop
 /-- **`block_shape_large`**: the twin's eliminator choice. -/
 theorem bslW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {cvR0 lo ll : Word} {r : List Word} {cv : IConstantVal} {lps : List NIdx}
-    (h : bslW n m cvR0 lo ll = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : bslW n m cvR0 lo ll = some (r, m')) (hS : StageR vis fe m a)
     (hcv : DecB (fun m => decCVp m cvR0.toNat) m cv)
     (hl : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ LargeR (largeOf lps cv) r := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ LargeR (largeOf lps cv) r := by
   have hcv' : decCV (erA (truncM m)) cvR0.toNat = some cv := hcv
   simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
   obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
@@ -482,8 +482,8 @@ open L.Arena
 /-- **`block_shape_names_of`**: the formers' names. -/
 theorem bsnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (cto ctl : Word) (cvTs : List IConstantVal) (r : List Word),
-    bsnW n m cto ctl = some (r, m') → StageR dn vis fe m a → PSlR decCVp cvTs cto ctl m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    bsnW n m cto ctl = some (r, m') → StageR vis fe m a → PSlR decCVp cvTs cto ctl m →
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (cvTs.map (·.name)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   induction n with
@@ -539,9 +539,9 @@ theorem partsRule_rhs {a : Array Word} {q : Nat} {x : IRecRule} (h : decRule a q
 /-- **`block_shape_rhss_of`**: the rules' right-hand sides (`EREC` 11-word records). -/
 theorem brhW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (ro rl : Word) (rules : List IRecRule) (r : List Word),
-    brhW n m ro rl = some (r, m') → StageR dn vis fe m a →
+    brhW n m ro rl = some (r, m') → StageR vis fe m a →
     DecB (fun m => decRules (erA m) ro.toNat rl.toNat) m rules →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (rules.map (·.rhs)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   induction n with
@@ -593,8 +593,8 @@ theorem brhW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 /-- A fresh record's `IW` word `j`, decoded below the new top. -/
 theorem partsFreshN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
-    (hS : StageR dn vis fe m a) (hl : ws.length < 2 ^ 64) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       ∀ j (hj : j < ws.length), iwN (truncM m') (q.toNat + j) = some (ws[j]).toNat := by
   obtain ⟨h1, h2, -, -, h5⟩ := partsFresh h hS hl
   exact ⟨h1, h2, h5⟩
@@ -602,8 +602,8 @@ theorem partsFreshN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
 /-- **`block_shape_ctors_of`**: the constructors as `[cv, nF]`. -/
 theorem bctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (cso csl : Word) (cs : List (IConstantVal × Nat × Nat)) (r : List Word),
-    bctW n m cso csl = some (r, m') → StageR dn vis fe m a → PSlR decSC cs cso csl m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    bctW n m cso csl = some (r, m') → StageR vis fe m a → PSlR decSC cs cso csl m →
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       PSlR decCN (cs.map fun c => (c.1, c.2.2)) (r.headD 0) (r.tail.headD 0) m' := by
   induction n with
   | zero => intro m m' a cso csl cs r h; simp [bctW] at h
@@ -674,10 +674,10 @@ theorem partsNL_cons {ns : List Nat} {o l : Word} {m : Mem} (h : DecB (fun m => 
 theorem bmoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (cto ctl io go : Word) (cvTs : List IConstantVal) (ns : List Nat)
       (gss : List (List (IConstantVal × Nat))) (r : List Word),
-    bmoW n m cto ctl io go = some (r, m') → StageR dn vis fe m a → PSlR decCVp cvTs cto ctl m →
+    bmoW n m cto ctl io go = some (r, m') → StageR vis fe m a → PSlR decCVp cvTs cto ctl m →
     DecB (fun m => decNL m io.toNat ctl.toNat) m ns → io.toNat + ctl.toNat ≤ iwTop m →
     PSlR decGH gss go ctl m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       PSlR decMS (((cvTs.zip ns).zip gss).map fun a => (⟨a.1.1, a.1.2, a.2⟩ : MemberShape))
         (r.headD 0) (r.tail.headD 0) m' := by
   induction n with
@@ -755,10 +755,10 @@ def brsF (names : List NIdx) (r : IConstantVal × Nat × Nat × List IRecRule) :
 theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) :
     ∀ (m : Mem) (a : AState) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × List IRecRule)),
-    StageR dn vis fe m a → PSlR decSR rs ro rl m →
+    StageR vis fe m a → PSlR decSR rs ro rl m →
     DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
     Sim (brsW n m no nl ro rl) (rs.mapM (brsF names)) a
-      (fun r xs m' a' => PSlR decRS xs (r.headD 0) (r.tail.headD 0) m' ∧ StageR dn vis fe m' a' ∧
+      (fun r xs m' a' => PSlR decRS xs (r.headD 0) (r.tail.headD 0) m' ∧ StageR vis fe m' a' ∧
         IWGrow m m') := by
   induction n with
   | zero => intro m a ro rl rs _ _ _ _ r m' e; rw [brsW.eq_1] at e; cases e
@@ -791,7 +791,7 @@ theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     simp only [brsF, bind_assoc, pure_bind]
     have hnames : decHL m no.toNat nl.toNat = some names := hnm.get (OMono.decHL _ _)
     refine Sim.bindK (brsW.k_rec_target_of.none ..) (fun _ _ => brsW.k_rec_target_of.arm1 ..)
-      (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1)
+      (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR vis fe m1 a1 ∧ IWGrow m m1)
       ?_ ?_
     · intro r1 m1 e
       obtain ⟨t, a1, hrun, hr, hS1, hg1⟩ := recTW_ok n dn fe vis m m1 a no nl _ _ r1 names e hS htyl
@@ -878,11 +878,11 @@ theorem getDW_head {m : Mem} {io il : Word} {ns : List Nat} (h : DecB (fun m => 
 
 /-- **`block_shape_result_sort`'s model refines the twin's result sort.** -/
 theorem bsoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    {nP io il ty : Word} {ns : List Nat} (hS : StageR dn vis fe m a)
+    {nP io il ty : Word} {ns : List Nat} (hS : StageR vis fe m a)
     (hns : DecB (fun m => decNL m io.toNat il.toNat) m ns) (hb : io.toNat + il.toNat ≤ iwTop m)
     (hty : H ty) :
     Sim (bsoW m nP io il ty) (bsoTwin nP.toNat ns (decI ty)) a
-      (fun r s m' a' => H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r s m' a' => H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   intro r m' e
   unfold bsoW at e
   split at e
@@ -932,7 +932,7 @@ theorem bsoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       exact ⟨u, a1, rfl, hul, hue, hS1, hg1⟩
     · rename_i h2
       have hns : ∀ u, v ≠ .sort u := fun u hu => h2 ((sort_head_iff m1 _ v hvr).mpr ⟨u, hu⟩)
-      have hzz := hz (fun r s m' a' => H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR dn vis fe m' a' ∧
+      have hzz := hz (fun r s m' a' => H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR vis fe m' a' ∧
         IWGrow m m') (fun z hz' => ⟨hz', rfl, hS1, hg1⟩) r m' e
       cases v with
       | sort u => exact absurd rfl (hns u)
@@ -1043,9 +1043,9 @@ theorem tailJP_eq {X : Type} (nP : Nat) (nIdxs : List Nat) (ty : EIdx) (jp : LId
 /-- **The packed `BlockShape` record, decoded.** -/
 theorem partsPack {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {q mo ml ro rl nP elim s lg ip : Word} {ms : List MemberShape} {recs : List RecShape}
-    (h : posRecW m [mo, ml, ro, rl, nP, elim, s, lg, ip] = some (q, m')) (hS : StageR dn vis fe m a)
+    (h : posRecW m [mo, ml, ro, rl, nP, elim, s, lg, ip] = some (q, m')) (hS : StageR vis fe m a)
     (hms : PSlR decMS ms mo ml m) (hrs : PSlR decRS recs ro rl m) (he : H elim) (hs : H s) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       DecB (fun m => decBS m q.toNat) m' ⟨ms, recs, nP.toNat, decI elim, decI s, lg != 0, ip != 0⟩ ∧
       ShapeSl m' q := by
   obtain ⟨hS', hg, htq, hget⟩ := partsFreshGet h hS (by simp)
@@ -1082,7 +1082,7 @@ theorem partsPack {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 /-- **`block_shape_seal`'s model refines the twin's last `match large?`.** -/
 theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {mo ml ro2 rl2 nPd s ip lgw elimw : Word} {ms : List MemberShape} {recs : List RecShape}
-    {sv : LIdx} {isProp : Bool} {lg : Option NIdx} (hS : StageR dn vis fe m a)
+    {sv : LIdx} {isProp : Bool} {lg : Option NIdx} (hS : StageR vis fe m a)
     (hms : PSlR decMS ms mo ml m) (hrs : PSlR decRS recs ro2 rl2 m) (hs : H s) (hsv : decI s = sv)
     (hip : (ip != 0) = isProp) (hlg : LargeR lg [lgw, elimw]) :
     Sim (bsealW m mo ml ro2 rl2 nPd s ip lgw elimw)
@@ -1091,7 +1091,7 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
         | none => do
           let anon ← internNNode .anonymous
           pure (some ⟨ms, recs, nPd.toNat, anon, sv, false, isProp⟩)) a
-      (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => ShapeR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   intro r m' e
   unfold bsealW at e
   cases lg with
@@ -1199,7 +1199,7 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     {nPd cto ctl cso csl rso rsl no nl io lo ll s ip : Word} {cvTs : List IConstantVal} {nIdxs : List Nat}
     {lps : List NIdx} {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)} {sv : LIdx} {isProp : Bool}
-    (hS : StageR dn vis fe m a) (hts : PSlR decCVp cvTs cto ctl m) (hcs : PSlR decSC cs cso csl m)
+    (hS : StageR vis fe m a) (hts : PSlR decCVp cvTs cto ctl m) (hcs : PSlR decSC cs cso csl m)
     (hrs : PSlR decSR (r0 :: rs) rso rsl m)
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m (cvTs.map (·.name))) (hnb : no.toNat + nl.toNat ≤ iwTop m)
     (hns : DecB (fun m => decNL m io.toNat ctl.toNat) m nIdxs) (hnsb : io.toNat + ctl.toNat ≤ iwTop m)
@@ -1207,7 +1207,7 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hs : H s) (hsv : decI s = sv) (hip : (ip != 0) = isProp) :
     Sim (bfW n m nPd cto ctl cso csl rso rsl no nl io lo ll s ip)
       (finRest nPd.toNat cvTs nIdxs lps cs (r0 :: rs) r0.1 sv isProp) a
-      (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => ShapeR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   have hctl : cvTs.length = ctl.toNat := decPL_length _ hts.dec
   -- `cvR0`, read first
   have hrl : rsl ≠ 0 := by
@@ -1288,7 +1288,7 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     {nPd cto ctl cso csl rso rsl no nl io lo ll : Word} {cvT0 : IConstantVal} {cvTs : List IConstantVal}
     {nIdxs : List Nat} {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
-    (hS : StageR dn vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
+    (hS : StageR vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
     (hrs : PSlR decSR (r0 :: rs) rso rsl m)
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m ((cvT0 :: cvTs).map (·.name)))
     (hnb : no.toNat + nl.toNat ≤ iwTop m)
@@ -1298,7 +1298,7 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     Sim (btW c n m nPd cto ctl cso csl rso rsl no nl io ctl lo ll)
       (tailJP nPd.toNat nIdxs cvT0.type
         (finJP nPd.toNat (cvT0 :: cvTs) nIdxs cvT0.levelParams cs (r0 :: rs) r0.1)) a
-      (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => ShapeR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (partsPSl_nil hts) (by simp)
   obtain ⟨p0, cv0, ts', he, hw, hpb, hcv0, -⟩ := partsPSl_cons hts hctl
   simp only [List.cons.injEq] at he; obtain ⟨rfl, rfl⟩ := he
@@ -1307,7 +1307,7 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   unfold btW
   rw [hw]
   refine Sim.bindK rfl (fun _ _ => by rw [btK1])
-    (Q := fun r s m' a' => ((H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR dn vis fe m' a' ∧ IWGrow m m') ∧
+    (Q := fun r s m' a' => ((H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR vis fe m' a' ∧ IWGrow m m') ∧
       (bsoTwin nPd.toNat nIdxs cvT0.type).run a = .ok (s, a')) ∧
       bsoW m nPd io ctl (rdW (m.arr64 EREC) (UInt64.ofNat p0 + 3)) = some (r, m')) ?_ ?_
   · have := bsoW_sim (nP := nPd) (ty := rdW (m.arr64 EREC) (UInt64.ofNat p0 + 3)) hS hns hnsb htyl
@@ -1323,7 +1323,7 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   revert r m' e
   refine Sim.bind_twin hzrun ?_
   refine Sim.bindK rfl (fun _ _ => by rw [btK3])
-    (Q := fun r x m' a' => KeepPost dn vis fe decLvlEq m1 m' a' r x) ?_ ?_
+    (Q := fun r x m' a' => KeepPost vis fe decLvlEq m1 m' a' r x) ?_ ?_
   · exact hc sv a1 (r1.headD 0) z m1 hrun1 (bsoW_afr he1) hS1 hs hsv hz
   rintro r2 x2 m2 a2 ⟨hS2, hg2, hd2⟩
   have hg02 := hg1.trans hg2
@@ -1367,12 +1367,12 @@ theorem bmc_length {nPd k nC : Nat} {names : List NIdx} {rs : List (IConstantVal
 theorem bmcW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     {nPd k nC no nl ro rl cto ctl : Word} {names : List NIdx} {cvTs : List IConstantVal}
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
-    (hS : StageR dn vis fe m a) (hts : PSlR decCVp cvTs cto ctl m)
+    (hS : StageR vis fe m a) (hts : PSlR decCVp cvTs cto ctl m)
     (hrs : PSlR decSR rs ro rl m) (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m names)
     (hnb : no.toNat + nl.toNat ≤ iwTop m) :
     Sim (bmcW n m nPd k nC no nl ro rl cto ctl)
       (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a
-      (fun r x m' a' => NsR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => NsR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   intro r m' hm
   unfold bmcW at hm
   split at hm
@@ -1413,11 +1413,11 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     {nPd cto ctl cso csl rso rsl : Word} {cvT0 : IConstantVal} {cvTs : List IConstantVal}
     {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
-    (hS : StageR dn vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
+    (hS : StageR vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
     (hrs : PSlR decSR (r0 :: rs) rso rsl m)
     (hc : LvlHyp c n dn vis fe m (TbbT nPd.toNat cvT0 (cvT0 :: cvTs) cs (r0 :: rs) a)) :
     Sim (bbW c n m nPd cto ctl cso csl rso rsl) (buildTwin nPd.toNat (cvT0 :: cvTs) cvT0 cs (r0 :: rs) r0.1) a
-      (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => ShapeR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (partsPSl_nil hts) (by simp)
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨p0, cv0, ts', he, hw, hpb, hcv0, -⟩ := partsPSl_cons hts hctl
@@ -1503,11 +1503,11 @@ theorem partsW0 {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l 
 
 /-- **`block_shape`'s model refines `blockShape?`.** -/
 theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem}
-    {a : AState} {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR dn vis fe m a)
+    {a : AState} {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR vis fe m a)
     (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk)
     (hc : LvlHyp c n dn vis fe m (TshT nPd.toNat blk a)) :
     Sim (bshW c n m nPd off l) (ConRon.Arena.blockShape? nPd.toNat blk) a
-      (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => ShapeR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   rw [blockShape_eq]
   intro r m' e
   unfold bshW at e

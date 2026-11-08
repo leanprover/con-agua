@@ -211,7 +211,7 @@ theorem RelAM.sim {α : Type} {f : FnName} {args : List Word} {pre : Mem → ASt
 decoded by `dec`. -/
 def KP {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
     (dec : Mem → List Word → α → Prop) (b : List Word × Mem) (a' : AState) (x : α) : Prop :=
-  StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ dec b.2 b.1 x
+  StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ dec b.2 b.1 x
 
 /-! ## Words read at a decoded record -/
 

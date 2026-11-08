@@ -56,7 +56,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- `StageC` from its parts: the stage relation, con-ron's `CheckOK`, the memory's half from
 `AbsOK`, the name decoder's agreement. -/
 theorem StageC.of_parts {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {env : ConLeche.Env} {m : Mem} {a : AState} (hS : StageR dn vis fe m a)
+    {env : ConLeche.Env} {m : Mem} {a : AState} (hS : StageR vis fe m a)
     (hck : ConRon.Bridge.CheckOK V env fe a) (hA : AbsOK m)
     (hdn : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x) :
     StageC dn vis fe env m a :=
@@ -89,7 +89,7 @@ l_model ictlE_spec (p : Prog) (hP : TailProg p)
 stage, the growth, the `hb` memo, `AbsOK`, the recursor stage's memos. -/
 structure TailPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x : IFEnv) (m' : Mem)
     (a' : AState) : Prop where
-  stage : StageR dn w x m' a'
+  stage : StageR w x m' a'
   grow : IWGrow m m'
   memo : HbMemo m'
   abs : AbsOK m'
@@ -404,7 +404,7 @@ theorem checkBlockTail_refinesC (hP : TailProg p) (L : CbrLook p) {fs : List FnN
     (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true) (hfH : "check_block_tables" ∈ fsH) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_block_tail" [bO, bL, q]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockTail V block bp) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlockTail V block bp) a₀) s'.mem
+      StageR (r.headD 0) (AM.res (ConRon.Arena.checkBlockTail V block bp) a₀) s'.mem
         (AM.st (ConRon.Arena.checkBlockTail V block bp) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (ictlE_spec p hP (n + 1) s₀ bO bL q)

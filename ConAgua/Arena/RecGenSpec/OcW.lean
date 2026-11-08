@@ -113,10 +113,10 @@ theorem oc_spec (p : Prog) (hp : p.lookup "target_major_of_outside_occ" = some t
 theorem ocW_sim {p : Prog} (hN : NoProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (no nl : Word) (ws : List Word) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) (n : Nat) :
     ∀ (m : Mem) (a : AState) (o l : Word) (ds : List EIdx),
-    StageR dn vis fe m a → SlR m no nl ws → (∀ i < nl.toNat, no.toNat + i < iwTop m) →
+    StageR vis fe m a → SlR m no nl ws → (∀ i < nl.toNat, no.toNat + i < iwTop m) →
     decHL m o.toNat l.toNat = some ds → o.toNat + l.toNat ≤ iwTop m → PosMR m →
     Sim (ocW p n m no nl o l) (ds.anyM (fun x => ConRon.Arena.nestOcc (ws.map (fun w => (decI w : NIdx))) 0 0 x)) a
-      (fun r b m' a' => (r.headD 0 != 0) = b ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') := by
+      (fun r b m' a' => (r.headD 0 != 0) = b ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') := by
   induction n with
   | zero => intro m a o l ds _ _ _ _ _ _; rw [ocW_zero]; exact Sim.of_none
   | succ n ih =>
@@ -137,7 +137,7 @@ theorem ocW_sim {p : Prog} (hN : NoProg p) {dn : NIdx → Option ConLeche.Name} 
       by_cases h : r.headD 0 ≠ 0
       · rw [ocK1_hit p n m₁ no nl o l r h, ite_eq_left h]
       · rw [ocK1_miss p n m₁ no nl o l r h, ite_eq_right h])
-    (Q := fun r b m' a' => (r.headD 0 != 0) = b ∧ a' = a ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') ?_ ?_
+    (Q := fun r b m' a' => (r.headD 0 != 0) = b ∧ a' = a ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') ?_ ?_
   · intro r1 m1 e1
     rcases n with _ | k
     · rw [callW_zero] at e1; cases e1

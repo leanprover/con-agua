@@ -54,11 +54,11 @@ theorem nestRootCanon_spec (p : Prog) (hl : PccLook p) (hc : p.lookup "er_copy" 
 theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem)
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word) (cR : CallM)
     (hI : IlpRd cR dn vis fe (IlpBase m a))
-    (h : nrcW cR k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : nrcW cR k m ctx cv = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
     (hcv : decCV (erecP m) cv.toNat = some cvv)
     (hnn : c.nP + c.names.length < 2 ^ 64) (hP : PosMR m) :
-    ∃ x a', (ConRon.Arena.nestRootCanon c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.nestRootCanon c cvv).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x ∧ PosMR m' ∧ (PccAfr → AFr m m') := by
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, hty⟩ := decCV_some hcv
@@ -126,11 +126,11 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
       pdoW (k + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
         (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (rdW (m.arr64 EREC) (cv + 3)) = some (r1, m1) →
       (ConRon.Arena.piDomsOcc c.names c.nP (c.hiAt 0) c.nP cvv.type).run a = .ok (b, a1) →
-      StageR dn vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
-    (h : nuW cR k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
+      StageR vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
+    (h : nuW cR k m ctx cv = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
     (hcv : decCV (erecP m) cv.toNat = some cvv) (hhi : c.hiAt 0 < 2 ^ 64) (hP : PosMR m) :
-    ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ r = [if x then 1 else 0] ∧ PosMR m' ∧ (NuAfr → AFr m m') := by
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hnb, -, -, hnP, -⟩ := ctx_fields hc hin htop
@@ -294,11 +294,11 @@ theorem nuWf_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       pdoW (k' + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
         (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (rdW (m.arr64 EREC) (cv + 3)) = some (r1, m1) →
       (ConRon.Arena.piDomsOcc c.names c.nP (c.hiAt 0) c.nP cvv.type).run a = .ok (b, a1) →
-      StageR dn vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
-    (h : nuWf cR k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
+      StageR vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
+    (h : nuWf cR k m ctx cv = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
     (hcv : decCV (erecP m) cv.toNat = some cvv) (hhi : c.hiAt 0 < 2 ^ 64) (hP : PosMR m) :
-    ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ r = [if x then 1 else 0] ∧ PosMR m' ∧ (NuAfr → AFr m m') := by
   match k, h with
   | k + 4, h => exact nuW_ok k dn fe vis m m' a ctx cv c cvv r cR (hI k) h hS hc hin hsl hcv hhi hP
@@ -310,17 +310,17 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       pdoW (k' + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
         (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (rdW (m.arr64 EREC) (cv + 3)) = some (r1, m1) →
       (ConRon.Arena.piDomsOcc c.names c.nP (c.hiAt 0) c.nP cvv.type).run a = .ok (b, a1) →
-      StageR dn vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
+      StageR vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
     (hJnu : ∀ (k : Nat) (m m' : Mem) (a a' : AState) (cv : Word) (cvv : IConstantVal) (r : List Word) (x : Bool),
       J m a → Pcv cvv → nuWf cR k m ctx cv = some (r, m') →
-      (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') → StageR dn vis fe m' a' → (NuAfr → AFr m m') →
+      (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') → StageR vis fe m' a' → (NuAfr → AFr m m') →
       J m' a') (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (o l : Word) (cs : List (IConstantVal × Nat)) (r : List Word),
-    ucW cR k m ctx o l = some (r, m') → StageR dn vis fe m a → J m a → (∀ x ∈ cs, Pcv x.1) →
+    ucW cR k m ctx o l = some (r, m') → StageR vis fe m a → J m a → (∀ x ∈ cs, Pcv x.1) →
     UCtx dn vis fe m ctx c →
     l.toNat = cs.length → o.toNat + cs.length ≤ iwTop m → CsAt m o.toNat cs (· < iwTop m) → PosMR m →
     ∃ b a', (cs.allM (fun x => ConRon.Arena.nestUniformOk c x.1)).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' ∧ J m' a' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' ∧ J m' a' := by
   induction k with
   | zero => intro m m' a o l cs r h; simp [ucW] at h
   | succ k ih =>

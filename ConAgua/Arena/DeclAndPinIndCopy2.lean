@@ -645,10 +645,10 @@ relation kept, the pool grown, and the result an `EREC` slice below the top deco
 block. -/
 theorem ibeW_ok {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {block : List IConstantInfo}
     {nP : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    (h : ibeW n m i = some (r, m')) (hS : L.Ind.StageR dn vis fe m a)
+    (h : ibeW n m i = some (r, m')) (hS : L.Ind.StageR vis fe m a)
     (hdecl : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP) (hFB : FrontBlock block)
     (hD : (m.arr64 DECL).size < 2 ^ 63) (hP : (m.arr64 DLP).size < 2 ^ 63) :
-    L.Ind.StageR dn vis fe m' a ∧ L.Ind.IWGrow m m' ∧ MemFrame [EREC] [129] m m' ∧
+    L.Ind.StageR vis fe m' a ∧ L.Ind.IWGrow m m' ∧ MemFrame [EREC] [129] m m' ∧
       r = [r.headD 0, r.tail.headD 0] ∧ (r.tail.headD 0).toNat = block.length ∧
       decCIs (erecP m') dn (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ erTop m' := by
@@ -695,10 +695,10 @@ pointers below the top that decodes (`decCIs`, in `erecP`) to the block. -/
 theorem indBlockToErec_ok {p : Prog} (hp : IbeProg p) {n : Nat} {m m' : Mem} {i : Word}
     {r : List Word} {block : List IConstantInfo} {nP : Nat} {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {a : AState}
-    (hc : callW p n "ind_block_to_erec" [i] m = some (r, m')) (hS : L.Ind.StageR dn vis fe m a)
+    (hc : callW p n "ind_block_to_erec" [i] m = some (r, m')) (hS : L.Ind.StageR vis fe m a)
     (hdecl : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP) (hFB : FrontBlock block)
     (hD : (m.arr64 DECL).size < 2 ^ 63) (hP : (m.arr64 DLP).size < 2 ^ 63) :
-    L.Ind.StageR dn vis fe m' a ∧ L.Ind.IWGrow m m' ∧ MemFrame [EREC] [129] m m' ∧
+    L.Ind.StageR vis fe m' a ∧ L.Ind.IWGrow m m' ∧ MemFrame [EREC] [129] m m' ∧
       r = [r.headD 0, r.tail.headD 0] ∧ (r.tail.headD 0).toNat = block.length ∧
       decCIs (erecP m') dn (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ erTop m' := by

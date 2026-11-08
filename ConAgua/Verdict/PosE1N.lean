@@ -43,7 +43,7 @@ theorem nvAt_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) {f :
 count of binders at `r[0]`, the container's type at `r[1]`, the frames, `AbsOK`. -/
 structure NitPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)
     (m' : Mem) (x : Nat × EIdx) (a' : AState) : Prop where
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   count : (r.headD 0).toNat = x.1
   hty : H (r.tail.headD 0)

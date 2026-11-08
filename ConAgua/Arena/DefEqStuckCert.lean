@@ -37,7 +37,7 @@ theorem erecP_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : Me
 
 /-- The kind word of a decoded record says whether it is an inductive. -/
 theorem decCI_indK {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b)
     (hsz : b.size < 2 ^ 63) :
     (rdW b q = 3 → ∃ cv caps, ci = .indInfo cv caps) ∧
     (rdW b q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
@@ -129,7 +129,7 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b)
     (hus : HW us) (hcw : HW c) (hwtb : HW wtb)
     (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
-    (hcvc : decCI (erecP s₀.mem) dn pc.toNat = some (.ctorInfo cvc np nf))
+    (hcvc : decCI (erecP s₀.mem) pc.toNat = some (.ctorInfo cvc np nf))
     (ha : SpineR s₀.mem ao an aargs) (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (SetG p n) (secwtbE p (n + 1) s₀.mem mode vis d b us c pc ao an wtb)
       (setWtbT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc

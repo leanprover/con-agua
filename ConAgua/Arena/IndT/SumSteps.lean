@@ -138,7 +138,7 @@ theorem gaa_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {e : 
 
 /-- **`sl_eq`** (an L helper, no twin step): the memory unchanged, `0` exactly when the two decoded
 slices differ. -/
-theorem slEq_step (hP : SumProg p) (hS : StageR dn vis fe m a) {o1 l1 o2 l2 : Word}
+theorem slEq_step (hP : SumProg p) (hS : StageR vis fe m a) {o1 l1 o2 l2 : Word}
     {xs ys : List EIdx} (h1 : decHL m o1.toNat l1.toNat = some xs) (hb1 : o1.toNat + l1.toNat ≤ iwTop m)
     (h2 : decHL m o2.toNat l2.toNat = some ys) (hb2 : o2.toNat + l2.toNat ≤ iwTop m) :
     ∀ r m', callW p n "sl_eq" [o1, l1, o2, l2] m = some (r, m') →

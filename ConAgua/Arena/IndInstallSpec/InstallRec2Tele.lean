@@ -117,7 +117,7 @@ theorem installRec2Tele {p : Prog} (hP : InstProg p) (n : Nat) {dn : NIdx → Op
     {vis : Word} {fe : IFEnv} {m m1 m2 : Mem} {a : AState} {r1 r2 : List Word} {x : IConstantVal × LIdx}
     (hT : TeleOut dn vis fe m r1 x m1 a)
     (h : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] m1 = some (r2, m2)) :
-    StageR dn vis fe m2 a ∧ IWGrow m m2 ∧ DecB (fun m => decTele m (r2.headD 0).toNat) m2 x ∧
+    StageR vis fe m2 a ∧ IWGrow m m2 ∧ DecB (fun m => decTele m (r2.headD 0).toNat) m2 x ∧
       (r2.headD 0).toNat < iwTop m2 := by
   obtain ⟨hS1, hg1, hcv, hcx, hs32, hsd⟩ := hT
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)

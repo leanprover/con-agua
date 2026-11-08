@@ -75,9 +75,9 @@ theorem matchesPin_refines (p : Prog) (hC : CanonProg p)
     (hp : p.lookup "matches_pin" = some matchesPinL) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (q pin : Word) (cv cv' : IConstantVal) :
     RefAM p "matches_pin" [q, pin]
-      (fun m a => StageR dn vis fe m a ∧ decCV (erA m) q.toNat = some cv ∧
+      (fun m a => StageR vis fe m a ∧ decCV (erA m) q.toNat = some cv ∧
         decCV (erA m) pin.toNat = some cv')
-      (cv.matchesPin cv') (KeepPost dn vis fe decW0B) := by
+      (cv.matchesPin cv') (KeepPost vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, h1, h2⟩
   refine triple_post (mp_specW p hC hp n s₀ q pin) ?_
   rintro r s' ⟨hl, hm⟩
@@ -91,7 +91,7 @@ theorem matchesPin_refines (p : Prog) (hC : CanonProg p)
 
 /-- A record of kind word `0` is an `axiomInfo`, any other kind word is not. -/
 theorem decCI_kind0 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} {w : Word} (h : decCI a dn p = some ci) (hw : a[p]? = some w) :
+    {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a[p]? = some w) :
     (w = 0 → ∃ cv, decCV a (p + 1) = some cv ∧ ci = .axiomInfo cv) ∧
       (w ≠ 0 → ∀ cv, ci ≠ .axiomInfo cv) := by
   obtain ⟨wk, e, hk⟩ := ciD h
@@ -111,7 +111,7 @@ theorem decCI_kind0 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : N
 
 /-- A record of kind word `3` is an `indInfo`, any other kind word is not. -/
 theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} {w : Word} (h : decCI a dn p = some ci) (hw : a[p]? = some w) :
+    {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a[p]? = some w) :
     (w = 3 → ∃ cv caps, decCV a (p + 1) = some cv ∧ ci = .indInfo cv caps) ∧
       (w ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
   obtain ⟨wk, e, hk⟩ := ciD h
@@ -202,8 +202,8 @@ end rso
 /-- **`reduce_stored_ok(vis, c)` refines `reduceStoredOk`** at the model level. -/
 theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
-    (hW : rsoW p n m vis c = some (r, m')) (hS : StageR dn vis fe m a) (hc : c.toNat < 2 ^ 32) :
-    ∃ b a', (reduceStoredOk fe (decI c)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧
+    (hW : rsoW p n m vis c = some (r, m')) (hS : StageR vis fe m a) (hc : c.toNat < 2 ^ 32) :
+    ∃ b a', (reduceStoredOk fe (decI c)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0B m' r b := by
   cases n with
   | zero => simp [rsoW] at hW
@@ -262,8 +262,8 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
 @[refines ConRon.Arena.reduceStoredOk]
 theorem reduceStoredOk_refines (p : Prog) (h : RedProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (c : Word) (hc : c.toNat < 2 ^ 32) :
-    RefAM p "reduce_stored_ok" [vis, c] (StageR dn vis fe) (reduceStoredOk fe (decI c))
-      (KeepPost dn vis fe decW0B) := by
+    RefAM p "reduce_stored_ok" [vis, c] (StageR vis fe) (reduceStoredOk fe (decI c))
+      (KeepPost vis fe decW0B) := by
   intro n s₀ a₀ hS
   refine triple_post (rso_specW p h n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
@@ -368,8 +368,8 @@ end reo
 /-- **`reduce_elem_ok(vis, c)` refines `reduceElemOk`** at the model level. -/
 theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) (hR : L.Rom.RomRefs p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
-    (hW : reoW p n m vis c = some (r, m')) (hS : StageR dn vis fe m a) (hc : c.toNat < 2 ^ 32) :
-    ∃ b a', (reduceElemOk fe (decI c)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧
+    (hW : reoW p n m vis c = some (r, m')) (hS : StageR vis fe m a) (hc : c.toNat < 2 ^ 32) :
+    ∃ b a', (reduceElemOk fe (decI c)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0B m' r b := by
   cases n with
   | zero => simp [reoW] at hW
@@ -412,7 +412,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨-, hptr, hfind, htag, hrc⟩ := envFindW_hit h3 hS.check.env hl2 hf
     obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env _ hl2 htag hrc
-    have hci4 : decCI (erA m4) dn (r3.tail.headD 0).toNat = some ci := by
+    have hci4 : decCI (erA m4) (r3.tail.headD 0).toNat = some ci := by
       rw [hptr]; exact ArrExt.decCI (IWGrow.erecExt hg4) hci
     have hq := ciEqB_ok hdn hS4.iw.erSize hci4 (decRCI_get hna)
     rw [hq]
@@ -484,8 +484,8 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
 @[refines ConRon.Arena.reduceElemOk]
 theorem reduceElemOk_refines (p : Prog) (h : RedProg p) (dn : NIdx → Option ConLeche.Name)
     (hdn : DnInj dn) (vis : Word) (fe : IFEnv) (c : Word) (hc : c.toNat < 2 ^ 32) :
-    RefAM p "reduce_elem_ok" [vis, c] (StageR dn vis fe) (reduceElemOk fe (decI c))
-      (KeepPost dn vis fe decW0B) := by
+    RefAM p "reduce_elem_ok" [vis, c] (StageR vis fe) (reduceElemOk fe (decI c))
+      (KeepPost vis fe decW0B) := by
   intro n s₀ a₀ hS
   refine triple_post (reo_specW p h n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩

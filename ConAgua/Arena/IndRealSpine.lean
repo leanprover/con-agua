@@ -55,7 +55,7 @@ theorem adF_ok {P : Prog} {fF g : FnName} {op : Nat → EIdx → AM EIdx}
       ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ HW (r.headD 0) ∧
         (op coreWalkFuel (decE e)).run a₀ = .ok (decE (r.headD 0), a₀); ⊤⦄)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
-    RelW (callF P fF) [f, e] (StageR dn vis fe) (op f.toNat (decI e)) (KeepPost dn vis fe decW0E) := by
+    RelW (callF P fF) [f, e] (StageR vis fe) (op f.toNat (decI e)) (KeepPost vis fe decW0E) := by
   intro m m' a r h hS
   obtain ⟨n, hc⟩ := callF_run h
   rcases n with _ | k
@@ -111,7 +111,7 @@ theorem gafF_spec0 (p : Prog) (hp : GafF p) (n : Nat) (s₀ : St) (args : List W
 /-- **`get_app_fn_f`'s model refines `getAppFn`** (replaces `IndStubs.getAppFn_spec`): memory and
 twin state unchanged. -/
 theorem gafF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
-    RelW gafF [f, e] (StageR dn vis fe) (getAppFn f.toNat (decI e)) (KeepPost dn vis fe decW0E) :=
+    RelW gafF [f, e] (StageR vis fe) (getAppFn f.toNat (decI e)) (KeepPost vis fe decW0E) :=
   adF_ok (fun k s f e => gafAd_spec gafProg rfl k s f e) (getAppFn_refines' gafProg rfl) dn vis fe f e he
 
 /-- `get_app_fn_f` writes nothing. -/
@@ -160,7 +160,7 @@ theorem pirF_spec0 (p : Prog) (hp : PirF p) (n : Nat) (s₀ : St) (args : List W
 /-- **`pi_result_f`'s model refines `piResult`** (replaces `IndStubs.piResult_spec`): memory and
 twin state unchanged. -/
 theorem pirF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
-    RelW pirF [f, e] (StageR dn vis fe) (piResult f.toNat (decI e)) (KeepPost dn vis fe decW0E) :=
+    RelW pirF [f, e] (StageR vis fe) (piResult f.toNat (decI e)) (KeepPost vis fe decW0E) :=
   adF_ok (fun k s f e => pirAd_spec pirProg rfl k s f e) (piResult_refines' pirProg rfl) dn vis fe f e he
 
 /-- `pi_result_f` writes nothing. -/
@@ -306,8 +306,8 @@ the stage relation across the copy and the top (above array 136, `stageR_hi`) an
 `mk_app` (the app tables, below 64, `StageR.of_walk`; the twin keeps `cp`). -/
 theorem mknF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f o l : Word) (hf : H f)
     (xs : List EIdx) :
-    RelW mknF [f, o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
-      (mkAppN (decI f) xs) (KeepPost dn vis fe decW0E) := by
+    RelW mknF [f, o, l] (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
+      (mkAppN (decI f) xs) (KeepPost vis fe decW0E) := by
   intro m m' a r h ⟨hS, hxs⟩
   obtain ⟨n, hc⟩ := callF_run h
   rcases n with _ | k

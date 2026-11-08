@@ -710,11 +710,11 @@ theorem scrArrs_low : ∀ b ∈ scrArrs, InStoreTier b := by decide
 /-- The bracket keeps the pins and the environment: it writes arrays below 64 and `CTL` words
 below 128 only. -/
 theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
-    {vis : Word} {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR dn m a vis fe)
+    {vis : Word} {fe : IFEnv} {A : List TieredArray} {C : List Word} (hR : CheckR m a vis fe)
     (hD : ArenaD m' a') (hc : CoreR m' a'.caches) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b)
     (hC : ∀ x ∈ C, x.toNat < 128) (hp : a'.pins = a.pins) (hmode : ModeOK m') :
-    CheckR dn m' a' vis fe :=
+    CheckR m' a' vis fe :=
   ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_low hA (by decide)) hf,
     hR.env.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf, hmode⟩
 
@@ -727,11 +727,11 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
     (hi : p.lookup "if_clear" = some (memoClearG imSch))
     (hf : p.lookup "fm_clear" = some (memoClearG frSch))
     (a₀ : AState) (n : Nat) (s₀ : St) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (hC : CheckR dn s₀.mem a₀ vis fe) :
+    (hC : CheckR s₀.mem a₀ vis fe) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_enter" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧
-      CheckR dn s'.mem (AM.st enterScratch a₀) vis fe; ⊤⦄ := by
+      CheckR s'.mem (AM.st enterScratch a₀) vis fe; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hlo, h62, c1, c2, c3, c4, hpt, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
@@ -752,11 +752,11 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
 theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scratchDrop)
     (hr : p.lookup "scratch_reset" = some scratchReset) (hfl : FlushProg p)
     (a₀ : AState) (n : Nat) (s₀ : St) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (hC : CheckR dn s₀.mem a₀ vis fe) :
+    (hC : CheckR s₀.mem a₀ vis fe) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_drop" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok dropScratch a₀ ∧
-      CheckR dn s'.mem (AM.st dropScratch a₀) vis fe; ⊤⦄ := by
+      CheckR s'.mem (AM.st dropScratch a₀) vis fe; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, -, hD⟩ := M.of_run (P := fun s => s = s₀) hs hrun

@@ -57,10 +57,10 @@ theorem callW_opfF {p : Prog} (hOpf : OpfF p) {n : Nat} {args r : List Word} {m 
 /-- **`open_pis_at_fvars_f`, the real call, as a `Sim`** (the stub contract's `KeepPost`, the
 twin's run, and `AbsOK` after: `opfF_ok`). -/
 theorem opfSimRA {p : Prog} (hOpf : OpfF p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {k e i : Word} (he : H e) {m : Mem} {a : AState} (hS : StageR dn vis fe m a)
+    {fe : IFEnv} {k e i : Word} (he : H e) {m : Mem} {a : AState} (hS : StageR vis fe m a)
     (hA : AbsOK m) :
     Sim (callW p n "open_pis_at_fvars_f" [k, e, i] m) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
-      (fun r x m' a' => ((StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x) ∧
+      (fun r x m' a' => ((StageR vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x) ∧
         (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a')) ∧ AbsOK m') := by
   intro r m' h
   obtain ⟨x, a', hrun, ⟨hS', hg, hd⟩, hA'⟩ :=
@@ -70,9 +70,9 @@ theorem opfSimRA {p : Prog} (hOpf : OpfF p) {n : Nat} {dn : NIdx → Option ConL
 /-- The same, from the model's run. -/
 theorem opfF_okRA {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {k e i : Word}
     (he : H e) {m m' : Mem} {a : AState} {r : List Word} (h : opfF m [k, e, i] = some (r, m'))
-    (hS : StageR dn vis fe m a) (hA : AbsOK m) :
+    (hS : StageR vis fe m a) (hA : AbsOK m) :
     ∃ x a', (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x ∧ AbsOK m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x ∧ AbsOK m' := by
   obtain ⟨x, a', hrun, ⟨hS', hg, hd⟩, hA'⟩ := opfF_ok dn vis fe k e i he m m' a r h ⟨hS, hA⟩
   exact ⟨x, a', hrun, hS', hg, hd, hA'⟩
 
@@ -116,12 +116,12 @@ theorem trans (h₁ : InsAt dn vis fe env m₀ a₀ m₁ a₁) (h₂ : InsAt dn 
   ⟨h₂.stage, h₂.abs, h₁.grow.trans h₂.grow, h₁.core.trans h₂.core⟩
 
 /-- A step that con-ron calls a `PStep`. -/
-theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR dn vis fe m a) (hA : AbsOK m)
+theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR vis fe m a) (hA : AbsOK m)
     (hg : IWGrow m₀ m) (hp : PStep a₀ a) : InsAt dn vis fe env m₀ a₀ m a :=
   ⟨h.of_pstep hS hA hp, hA, hg, hp.toCore h.check⟩
 
 /-- A core step. -/
-theorem cstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR dn vis fe m a) (hA : AbsOK m)
+theorem cstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR vis fe m a) (hA : AbsOK m)
     (hg : IWGrow m₀ m) (hc : ConRon.Bridge.CoreStep V env fe a₀ a) : InsAt dn vis fe env m₀ a₀ m a :=
   ⟨h.of_check hS hA hc.ok hc.ext, hA, hg, hc⟩
 

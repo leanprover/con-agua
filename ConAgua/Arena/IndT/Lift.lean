@@ -37,7 +37,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 /-- **`StageC` across a twin step con-ron calls a `PStep`**: the stage relation after it, the
 memory's half (`AbsOK` after: `WkOK` and the two core walk memos it holds). -/
 theorem StageC.of_pstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR dn vis fe m' a') (hA : AbsOK m') (hs : PStep a a') :
+    (hS : StageR vis fe m' a') (hA : AbsOK m') (hs : PStep a a') :
     StageC dn vis fe env m' a' :=
   ⟨hS, (hs.toCore h.check).ok,
     ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
@@ -47,7 +47,7 @@ theorem StageC.of_pstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
 /-- **`StageC` after a twin step whose result con-ron's lemmas give `CheckOK` for** (a `CoreStep`,
 a flush, …), the store extended. -/
 theorem StageC.of_check {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR dn vis fe m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK V env fe a')
+    (hS : StageR vis fe m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK V env fe a')
     (hx : ConRon.Arena.Ext a.store a'.store) : StageC dn vis fe env m' a' :=
   ⟨hS, hck,
     ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
@@ -59,7 +59,7 @@ twin at the inputs' denotation `P`; the post `Q` gives the stage relation and `A
 theorem RSim.liftP {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Mem} {a : AState}
     {Q : β × Mem → AState → α → Prop} {P : EStore → Prop} {R : EStore → α → Prop}
     (hC : StageC dn vis fe env m a) (h : RSim o op a Q)
-    (hq : ∀ b a' x, Q b a' x → StageR dn vis fe b.2 a' ∧ AbsOK b.2)
+    (hq : ∀ b a' x, Q b a' x → StageR vis fe b.2 a' ∧ AbsOK b.2)
     (hsp : PSpec P op R) (hP : P a.store) :
     RSim o op a (fun b a' x => StageC dn vis fe env b.2 a' ∧ Q b a' x ∧ R a'.store x ∧
       PStep a a') := by
@@ -72,7 +72,7 @@ theorem RSim.liftP {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Mem
 theorem RSim.liftPP {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Mem} {a : AState}
     {Q : β × Mem → AState → α → Prop} {P : EStore → Prop} {R : EStore → α → Prop}
     (hC : StageC dn vis fe env m a) (h : RSim o op a Q)
-    (hq : ∀ b a' x, Q b a' x → StageR dn vis fe b.2 a' ∧ AbsOK b.2)
+    (hq : ∀ b a' x, Q b a' x → StageR vis fe b.2 a' ∧ AbsOK b.2)
     (hsp : PSpecP P op R) (hP : P a.store) :
     RSim o op a (fun b a' x => StageC dn vis fe env b.2 a' ∧ Q b a' x ∧ R a'.store x ∧
       PStep a a') := by

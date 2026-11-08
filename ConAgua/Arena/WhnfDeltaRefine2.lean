@@ -1031,7 +1031,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb e nw usw q : Word) (cv : IConstantVal) (value : EIdx) (hint : ConLeche.ReducibilityHint)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (hnw : HW nw) (hus : HW usw)
-    (hci : decCI (erecP s₀.mem) dn q.toNat = some (.defnInfo cv value hint))
+    (hci : decCI (erecP s₀.mem) q.toNat = some (.defnInfo cv value hint))
     (hk1 : rdW (s₀.mem.arr64 EREC) q = 1) (r : List Word) (m' : Mem)
     (h : callW p n "unfold_defn_at" [e, nw, usw, q] s₀.mem = some (r, m')) :
     CoreRef (unfoldTailT (decI nw) (decI usw) cv value (decE e)) a₀ decOptR dn s₀.mem vis fe MM eb r
@@ -1283,7 +1283,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   rw [← hm]
-  have hci' : decCI (erecP s₀.mem) dn (r₂.tail.headD 0).toNat = some (.defnInfo cv value hint) := hci
+  have hci' : decCI (erecP s₀.mem) (r₂.tail.headD 0).toNat = some (.defnInfo cv value hint) := hci
   have hcore := callW_unfoldDefnAt p hp hlp n s₀ a₀ dn vis fe MM eb e _ _ (r₂.tail.headD 0) cv value hint
     hC he hnl hul hci' g4' r₃ m₃ h3
   have hrun := unfoldDef_run_tail fe (decE e) (decE (r₁.headD 0)) a₀ n_ us_ cv value hint hgf ht hview

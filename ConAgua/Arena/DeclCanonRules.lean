@@ -108,11 +108,11 @@ theorem decRules_length {a : Array Word} {o l : Nat} {xs : List IRecRule}
 theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (po pl qo ql co cl fuel o1 l1 o2 l2 x : Word) (ps qs cs : List NIdx)
       (xs ys : List IRecRule),
-    cnCrW k m po pl qo ql co cl fuel o1 l1 o2 l2 = some (x, m') → StageR dn vis fe m a →
+    cnCrW k m po pl qo ql co cl fuel o1 l1 o2 l2 = some (x, m') → StageR vis fe m a →
     CtxR m po pl qo ql co cl ps qs cs → LitInj a → PoolSmall m →
     decRules (erecP m) o1.toNat l1.toNat = some xs → decRules (erecP m) o2.toNat l2.toNat = some ys →
     ∃ b, (ConRon.Arena.canonRulesEq ps qs cs fuel.toNat xs ys).run a = .ok (b, a) ∧
-      x = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
+      x = (if b then 1 else 0) ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
   induction k with
   | zero => intro m m' a po pl qo ql co cl fuel o1 l1 o2 l2 x ps qs cs xs ys h; simp [cnCrW] at h
   | succ k ih =>
@@ -187,7 +187,7 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         hc hS hC hL hP h8 g8
       rw [c8, d8] at *
       rw [ite_eq_left hcond]
-      obtain ⟨b, hb, hr, q1, q2, q3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
+      obtain ⟨b, hb, hr, q1, q2, q3⟩ := andThen_ok' (Q := StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
         hb1 hr1
         (fun hne2 => by
           rw [ite_eq_right hne2] at h
@@ -222,7 +222,7 @@ theorem canonRulesEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option
     (vis : Word) (fe : IFEnv) (po pl qo ql co cl fuel o1 l1 o2 l2 : Word) (ps qs cs : List NIdx)
     (xs ys : List IRecRule) :
     RefAM p "canon_rules_eq" [po, pl, qo, ql, co, cl, fuel, o1, l1, o2, l2]
-      (fun m a => StageR dn vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧ LitInj a ∧
+      (fun m a => StageR vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧ LitInj a ∧
         PoolSmall m ∧ decRules (erecP m) o1.toNat l1.toNat = some xs ∧
         decRules (erecP m) o2.toNat l2.toNat = some ys)
       (ConRon.Arena.canonRulesEq ps qs cs fuel.toNat xs ys) (CPostL dn vis fe decW0B) := by

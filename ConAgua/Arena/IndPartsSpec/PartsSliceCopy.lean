@@ -68,14 +68,14 @@ theorem partsErToIw_zero (n : Nat) (m : Mem) (o : Word) : erToIwW n m o 0 = erTo
 /-- **`er_to_iw` of an `EREC` handle slice decoded below the tops.** -/
 theorem partsSliceCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {o l : Word} {r : List Word} {xs : List NIdx} (h : erToIwW n m o l = some (r, m'))
-    (hS : StageR dn vis fe m a) (hs : hslice? (erA (truncM m)) o.toNat l.toNat = some xs) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    (hS : StageR vis fe m a) (hs : hslice? (erA (truncM m)) o.toNat l.toNat = some xs) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   have hdl : ∀ {r m'} (o : Word), erToIwW n m o l = some (r, m') →
       o.toNat + l.toNat ≤ (m.arr64 EREC).size → hslice? (erA m) o.toNat l.toNat = some xs →
-      StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
     intro r m' o h hsrc hs
@@ -108,8 +108,8 @@ theorem partsLpsCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     {m m' : Mem} {q : Nat} {cv : IConstantVal} {r : List Word}
     (h : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat q + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat q + 2)) =
       some (r, m'))
-    (hS : StageR dn vis fe m a) (hcv : DecB (fun m => decCVp m q) m cv) (hq : q < 2 ^ 64) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    (hS : StageR vis fe m a) (hcv : DecB (fun m => decCVp m q) m cv) (hq : q < 2 ^ 64) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   have hcv' : decCV (erA (truncM m)) q = some cv := hcv

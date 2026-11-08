@@ -30,7 +30,7 @@ include L hp
 @[refines ConRon.Arena.nestCtorNf]
 theorem nestCtorNf_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis ctx po pl us dO dL cv closed : Word) (c : NestCtx) (prog : List NestHole) (ds : List EIdx)
-    (cvv : IConstantVal) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hS : StageR dn vis fe s₀.mem a₀)
+    (cvv : IConstantVal) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hS : StageR vis fe s₀.mem a₀)
     (hc : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem))
     (hs : HSl s₀.mem po.toNat pl.toNat prog) (hb : c.nP + c.names.length + pl.toNat < 2 ^ 64) (hus : H us)
     (hds : decHL s₀.mem dO.toNat dL.toNat = some ds) (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop s₀.mem)

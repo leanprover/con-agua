@@ -212,16 +212,16 @@ theorem rec2Count_succ (sl : List ClassSlot) (s : Nat) (hs : s < sl.length) :
 
 /-- The common tail of a slot: the rest of the walk, then the cons. -/
 theorem pfTail {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem} {a1 : AState}
-    (n : Nat) (ty : Word) (hty : H ty) (_hS1 : StageR dn vis fe m1 a1) (hg1 : IWGrow m m1)
+    (n : Nat) (ty : Word) (hty : H ty) (_hS1 : StageR vis fe m1 a1) (hg1 : IWGrow m m1)
     (rest : Option (List Word × Mem)) (opR : AM (Option (List EIdx)))
     (hrest : RSim rest opR a1
-      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2)) :
+      (fun b a' o => StageR vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2)) :
     RSim (psW.k_class_gen_prefix_binders_slot_motive (smW.k_class_gen_prefix_binders_slots_go n ty rest)) (do
       let __do_lift ← opR
       match __do_lift with
       | none => pure none
       | some rest => pure (some (decI ty :: rest))) a1
-      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2) := by
+      (fun b a' o => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2) := by
   refine RSim.bind (K := fun o => psW.k_class_gen_prefix_binders_slot_motive (smW.k_class_gen_prefix_binders_slots_go n ty o)) rfl hrest ?_
   rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
   dsimp only at hS2 hg2 ho
@@ -237,10 +237,10 @@ theorem pfTail {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m
 
 theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (g : Word)
     (hns : G.nP + G.slots.length < 2 ^ 64) (n : Nat) :
-    ∀ (m : Mem) (a : AState) (s mc : Word), StageR dn vis fe m a → DecB (fun m => decCG m g.toNat) m G →
+    ∀ (m : Mem) (a : AState) (s mc : Word), StageR vis fe m a → DecB (fun m => decCG m g.toNat) m G →
     s.toNat ≤ G.slots.length → mc.toNat = ((G.slots.take s.toNat).filter rec2IsMot).length → AbsOK m →
     RSim (psW n m g s mc) (ConRon.Arena.ClassGen.prefixBinders.slotsGo G s.toNat (G.slots.drop s.toNat)) a
-      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2) := by
+      (fun b a' o => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2) := by
   induction n using Nat.strongRecOn with
   | ind n ih =>
   intro m a s mc hS hG hsl hmc hA
@@ -352,7 +352,7 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     exact pfTail n _ htyH hS1 hg1 _ _ hr
 
 theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem) (a : AState)
-    (g : Word) (G : ClassGen) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (g : Word) (G : ClassGen) (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK m) :
     RSim (gpbW n m g) (ConRon.Arena.ClassGen.prefixBinders G) a
       (fun b a' x => KP dn vis fe m decIHO b a' x ∧ AbsOK b.2) := by
@@ -414,7 +414,7 @@ every slot's, a slice below the top. -/
 @[refines ConRon.Arena.ClassGen.prefixBinders]
 theorem classGenPrefixBinders_refines (p : Prog) (hp : PbProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g : Word) (G : ClassGen)
-    (hS : StageR dn vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
+    (hS : StageR vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_prefix_binders" [g]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.prefixBinders G) a₀ ∧

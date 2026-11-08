@@ -224,9 +224,9 @@ end model
 /-- **`find_pinned` against the twin's clause**, at the model level. -/
 theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k ca cb id : Word} {r : List Word}
-    (hW : fpW p n m vis nm k ca cb id = some (r, m')) (hS : StageR dn vis fe m a)
+    (hW : fpW p n m vis nm k ca cb id = some (r, m')) (hS : StageR vis fe m a)
     (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4 ∨ k = 5) (hid : id.toNat < 8) :
-    ∃ b a', StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
+    ∃ b a', StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
       FpT fe (decI nm) k ca cb (romPinT id.toNat) a b a' := by
   cases n with
   | zero => simp [fpW] at hW
@@ -273,7 +273,7 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   -- the pin's constant
   rcases h2 : callW p n "rom_ci" [id] m1 with _ | ⟨r2, m2⟩ <;> simp only [h2, fpK2, reduceCtorEq] at hW
   obtain ⟨pci, a2, hrun2, hS2, hg2, hpci⟩ := h.red.rom.ci dn vis fe id hid n m1 a r2 m2 hS h2
-  have hpciP : decCI (erecP m2) dn (r2.headD 0).toNat = some pci :=
+  have hpciP : decCI (erecP m2) (r2.headD 0).toNat = some pci :=
     ArrExt.decCI (truncM_erecP m2) hpci
   -- its constant value
   rcases h3 : callW p n "ci_to_cv" [r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;> simp only [h3, fpK3, reduceCtorEq] at hW

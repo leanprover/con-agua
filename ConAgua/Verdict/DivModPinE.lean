@@ -191,7 +191,7 @@ stage relation at the extended view `vis2`. -/
 structure CpPost (dn : NIdx → Option ConLeche.Name) (vis vis2 : Word) (fe2 : IFEnv)
     (env : ConLeche.Env) (m : Mem) (a : AState) (m' : Mem) (a' : AState) : Prop
     extends PinPost dn vis (fe2.restrictTo vis.toNat) env m a m' a' where
-  stageW : StageR dn vis2 fe2 m' a'
+  stageW : StageR vis2 fe2 m' a'
 
 section pin
 variable {p : Prog}
@@ -206,7 +206,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     (hsA : SubstCAll p dn vis (fe2.restrictTo vis.toNat)) (henv : ConLeche.EnvWF env)
     {po pl c : Word} {ips : List INatOpPinSet} {psPs : List ConLeche.NatOpPinSet}
     {nm : ConLeche.Name} {k : Nat} (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState}
-    (hS : StageR dn vis2 fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
+    (hS : StageR vis2 fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
     (hok2 : StepOK env2 fe2 a) (hc : H c) (hI : PinsIW m po.toNat pl.toNat ips)
     (hpd : PinsDenote a.store ips psPs) (hn : denoteN a.store.ns (decI c) = some nm)
     (hCr : L.Stubs.CrOK m) :

@@ -32,7 +32,7 @@ call, at generation `0`, clears the memo). -/
 @[refines ConRon.Arena.replaceFVars]
 theorem replaceFVars_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis f e : Word) (fm : FvMap) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) (hfm : FMOk s₀.mem f.toNat fm) (he : H e) (hR : RfInv s₀.mem M G g) :
+    (hS : StageR vis fe s₀.mem a₀) (hfm : FMOk s₀.mem f.toNat fm) (he : H e) (hR : RfInv s₀.mem M G g) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "replace_fvars" [f, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.replaceFVars fm (decE e)) a₀ ∧
       decE (r.headD 0) = AM.res (ConRon.Arena.replaceFVars fm (decE e)) a₀ ∧ H (r.headD 0) ∧
@@ -49,7 +49,7 @@ current bank is the twin's (inside a bank: generation `g ≠ 0`). -/
 theorem replaceFVarsGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis f fu h : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) (hfm : FMOk s₀.mem f.toNat fm) (hh : H h) (hR : RfInv s₀.mem M G g)
+    (hS : StageR vis fe s₀.mem a₀) (hfm : FMOk s₀.mem f.toNat fm) (hh : H h) (hR : RfInv s₀.mem M G g)
     (hb : Bank M g mp) (hg0 : g ≠ 0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "replace_fvars_go" [f, fu, h]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.replaceFVarsGo fm mp fu.toNat (decE h)) a₀ ∧
@@ -67,7 +67,7 @@ theorem replaceFVarsGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
 @[refines ConRon.Arena.fvMapAt]
 theorem fvMapAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis f i : Word) (fm : FvMap) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) (hfm : FMOk s₀.mem f.toNat fm) (hR : RfInv s₀.mem M G g) :
+    (hS : StageR vis fe s₀.mem a₀) (hfm : FMOk s₀.mem f.toNat fm) (hR : RfInv s₀.mem M G g) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "fv_map_at" [f, i]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.fvMapAt fm i.toNat) a₀ ∧
       OptE (r.headD 0) (r.tail.headD 0) (AM.res (ConRon.Arena.fvMapAt fm i.toNat) a₀) ∧
@@ -82,7 +82,7 @@ theorem fvMapAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Opt
 @[refines ConRon.Arena.nestHoleImg]
 theorem nestHoleImg_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx po pl nn i : Word) (c : NestCtx) (prog : List NestHole)
-    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hS : StageR dn vis fe s₀.mem a₀)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hS : StageR vis fe s₀.mem a₀)
     (hc : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem))
     (hs : HSl s₀.mem po.toNat pl.toNat prog) (hb : c.nP + c.names.length + nn.toNat < 2 ^ 64)
     (hR : RfInv s₀.mem M G g) :

@@ -271,7 +271,7 @@ theorem cgRec_decB {m : Mem} {g : Word}
 /-! ## The prefix, fresh -/
 
 theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem) (a : AState)
-    (g : Word) (G : ClassGen) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (g : Word) (G : ClassGen) (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK m) :
     RSim (gpbW n m g) (ConRon.Arena.ClassGen.prefixBinders G) a
       (fun b a' x => (KP dn vis fe m decIHO b a' x ∧ AbsOK b.2) ∧

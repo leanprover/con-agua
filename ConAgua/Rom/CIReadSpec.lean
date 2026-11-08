@@ -82,43 +82,43 @@ variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
 
 /-- **`rom_ci(id)` refines `romCiT id`** (`eqA`, `natA`, the `Iff`/`Nonempty` families). -/
 def RomCiRef : Prop := ∀ id : Word, id.toNat < 8 →
-  RomRef p "rom_ci" [id] (StageR dn vis fe) (romCiT id.toNat) (KeepPost dn vis fe (decRCI dn))
+  RomRef p "rom_ci" [id] (StageR vis fe) (romCiT id.toNat) (KeepPost vis fe (decRCI dn))
 
 /-- **`rom_cv(id)` refines `romCvT id`**. -/
 def RomCvRef : Prop := ∀ id : Word, id.toNat < 10 →
-  RomRef p "rom_cv" [id] (StageR dn vis fe) (romCvT id.toNat) (KeepPost dn vis fe decRCV)
+  RomRef p "rom_cv" [id] (StageR vis fe) (romCvT id.toNat) (KeepPost vis fe decRCV)
 
 /-- **`rom_expr_pin(id)` refines `romExprT id`** (the reduce operations' pinned values). -/
 def RomExprPinRef : Prop := ∀ id : Word, id.toNat < 2 →
-  RomRef p "rom_expr_pin" [id] (StageR dn vis fe) (romExprT id.toNat) (KeepPost dn vis fe decW0E)
+  RomRef p "rom_expr_pin" [id] (StageR vis fe) (romExprT id.toNat) (KeepPost vis fe decW0E)
 
 /-- **`rom_basis_decls(k)` refines `BasisKind.decls`**, for the kinds without `sortZ` names
 (all but the quotient block, `RomQuotRef`). -/
 def RomBasisRef : Prop := ∀ k : Word, k.toNat < 4 →
-  RomRef p "rom_basis_decls" [k] (StageR dn vis fe) (BasisKind.decls (basisOfW k.toNat))
-    (KeepPost dn vis fe (decRBlk dn))
+  RomRef p "rom_basis_decls" [k] (StageR vis fe) (BasisKind.decls (basisOfW k.toNat))
+    (KeepPost vis fe (decRBlk dn))
 
 /-- **`rom_basis_decls_a(k)` refines `BasisKind.declsA`** (as `RomBasisRef`). -/
 def RomBasisARef : Prop := ∀ k : Word, k.toNat < 4 →
-  RomRef p "rom_basis_decls_a" [k] (StageR dn vis fe) (BasisKind.declsA (basisOfW k.toNat))
-    (KeepPost dn vis fe (decRBlk dn))
+  RomRef p "rom_basis_decls_a" [k] (StageR vis fe) (BasisKind.declsA (basisOfW k.toNat))
+    (KeepPost vis fe (decRBlk dn))
 
 /-- **`rom_basis_decls(4)` refines the quotient block**, from a well-formed twin state that
 names `Quot`'s `sortZ` names (`quotNames`) through `dn`. -/
 def RomQuotRef : Prop :=
   RomRef p "rom_basis_decls" [4]
-    (fun m a => StageR dn vis fe m a ∧ ConRon.Bridge.StateOK a ∧ NamesDn dn a quotNames)
-    (BasisKind.decls (basisOfW 4)) (KeepPost dn vis fe (decRBlk dn))
+    (fun m a => StageR vis fe m a ∧ ConRon.Bridge.StateOK a ∧ NamesDn dn a quotNames)
+    (BasisKind.decls (basisOfW 4)) (KeepPost vis fe (decRBlk dn))
 
 /-- **`rom_basis_decls_a(4)` refines the annotated quotient block** (as `RomQuotRef`). -/
 def RomQuotARef : Prop :=
   RomRef p "rom_basis_decls_a" [4]
-    (fun m a => StageR dn vis fe m a ∧ ConRon.Bridge.StateOK a ∧ NamesDn dn a quotNames)
-    (BasisKind.declsA (basisOfW 4)) (KeepPost dn vis fe (decRBlk dn))
+    (fun m a => StageR vis fe m a ∧ ConRon.Bridge.StateOK a ∧ NamesDn dn a quotNames)
+    (BasisKind.declsA (basisOfW 4)) (KeepPost vis fe (decRBlk dn))
 
 /-- **`rom_and_pin()` refines `andPinDecls`**. -/
 def RomAndPinRef : Prop :=
-  RomRef p "rom_and_pin" [] (StageR dn vis fe) andPinDecls (KeepPost dn vis fe (decRBlk dn))
+  RomRef p "rom_and_pin" [] (StageR vis fe) andPinDecls (KeepPost vis fe (decRBlk dn))
 
 /-- All six (the basis readers in two parts, `basis`/`quot`), at every stage. -/
 structure RomRefs : Prop where

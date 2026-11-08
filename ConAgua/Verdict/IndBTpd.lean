@@ -119,7 +119,7 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   unfold tpStep
   -- a `false` from the closedness reads answers `0` at once
   have early : ∀ {m' : Mem} {a' : AState},
-      (tpClosed pfvs (decE x) (decE y)).run a = .ok (false, a') → StageR dn vis fe m' a' →
+      (tpClosed pfvs (decE x) (decE y)).run a = .ok (false, a') → StageR vis fe m' a' →
       IWGrow m m' → RcMR m' → AFr m m' →
       RefE (VerdictCtx p) (.ok ((0 : Word), m') : Except Err (Word × Mem))
         (do let closed ← tpClosed pfvs (decE x) (decE y)

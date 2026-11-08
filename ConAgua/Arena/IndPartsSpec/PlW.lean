@@ -31,10 +31,10 @@ open L.Arena
 
 /-- `paramLevels` as a `Sim` (from lane `indproofs`' `plgW_ok`, through `intern_ls_iw`). -/
 theorem plW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {k : Nat} {m : Mem}
-    {a : AState} {o l : Word} {lps : List NIdx} (hS : StageR dn vis fe m a)
+    {a : AState} {o l : Word} {lps : List NIdx} (hS : StageR vis fe m a)
     (hd : decHL m o.toNat l.toNat = some lps) (ht : o.toNat + l.toNat ≤ iwTop m) :
     Sim (plW k m o l) (paramLevels lps) a
-      (fun r x m' a' => H (r.headD 0) ∧ decI (r.headD 0) = x ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => H (r.headD 0) ∧ decI (r.headD 0) = x ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   intro r m' hm
   cases k with
   | zero => cases hm
@@ -72,8 +72,8 @@ def ShapeR (x : Option BlockShape) (r : List Word) (m : Mem) : Prop :=
 /-- A fresh record's words, in the cut pool. -/
 theorem partsFreshGet {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
-    (hS : StageR dn vis fe m a) (hl : ws.length < 2 ^ 64) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ q.toNat + ws.length = iwTop m' ∧
+    (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ q.toNat + ws.length = iwTop m' ∧
       ∀ j (hj : j < ws.length), (iwA (truncM m'))[q.toNat + j]? = some ws[j] := by
   obtain ⟨hS', hg, hq, htop, hget⟩ := posRecW_stage h hS hl
   refine ⟨hS', hg, by omega, fun j hj => ?_⟩
@@ -87,10 +87,10 @@ twin state `a1` the twin's prefix reaches with the sort `sv` (`T sv a1`) and eve
 model's prefix reaches from `m` (`AFr m m1`). -/
 def LvlHyp (c : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (m : Mem) (T : LIdx → AState → Prop) : Prop :=
-  ∀ (sv : LIdx) (a1 : AState) (s z : Word) (m1 : Mem), T sv a1 → AFr m m1 → StageR dn vis fe m1 a1 →
+  ∀ (sv : LIdx) (a1 : AState) (s z : Word) (m1 : Mem), T sv a1 → AFr m m1 → StageR vis fe m1 a1 →
     H s → decI s = sv → pinWordV m1 53 = some z →
     Sim (c (n + 2) "lvl_eq_c" [s, z] m1) (lvlEq? sv (decI z)) a1
-      (fun r x m' a' => KeepPost dn vis fe decLvlEq m1 m' a' r x)
+      (fun r x m' a' => KeepPost vis fe decLvlEq m1 m' a' r x)
 
 theorem LvlHyp.mono {c : CallM} {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {m m' : Mem} {T T' : LIdx → AState → Prop} (h : LvlHyp c n dn vis fe m T) (hf : AFr m m')

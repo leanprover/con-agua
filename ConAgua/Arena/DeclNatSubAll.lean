@@ -46,18 +46,18 @@ l_model sca_specW (p : Prog) (hp : p.lookup "subst_const_all" = some substConstA
 def ScaIH (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nm r : Word)
     (f : Nat) : Prop :=
   ∀ (fuel : Word), fuel.toNat = f → ∀ (h : Word) (k : Nat) (m : Mem) (a : AState)
-    (res : List Word) (m' : Mem), StageR dn vis fe m a → H nm → H r → H h →
+    (res : List Word) (m' : Mem), StageR vis fe m a → H nm → H r → H h →
     callW p k "subst_const_all" [nm, r, fuel, h] m = some (res, m') →
     ∃ x a', (substConstAll (decI nm) (decE r) f (decE h)).run a = .ok (x, a') ∧
-      KeepPost dn vis fe decW0E m m' a' res x
+      KeepPost vis fe decW0E m m' a' res x
 
 /-- A binary arm: both children, then the interner `mk` (refining `I`). -/
 theorem sca_bin {nm r : Word} {f : Nat} (ih : ScaIH p dn vis fe nm r f) (mk : FnName)
     (I : EIdx → EIdx → AM EIdx)
-    (hmk : ∀ t b, CallRef p mk [t, b] (StageR dn vis fe) (I (decE t) (decE b))
-      (KeepPost dn vis fe decW0E))
+    (hmk : ∀ t b, CallRef p mk [t, b] (StageR vis fe) (I (decE t) (decE b))
+      (KeepPost vis fe decW0E))
     {fuel x y : Word} (hf : (fuel - 1).toNat = f) {k : Nat} {m1 : Mem} {a1 : AState}
-    {res : List Word} {m' : Mem} (hS1 : StageR dn vis fe m1 a1) (hn : H nm) (hr : H r)
+    {res : List Word} {m' : Mem} (hS1 : StageR vis fe m1 a1) (hn : H nm) (hr : H r)
     (hx : H x) (hy : H y)
     (hw : (ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, x] m1) fun r1 m2 =>
       ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, y] m2) fun r2 m3 =>
@@ -66,7 +66,7 @@ theorem sca_bin {nm r : Word} {f : Nat} (ih : ScaIH p dn vis fe nm r f) (mk : Fn
     ∃ e a', (do
         let f' ← substConstAll (decI nm) (decE r) f (decE x)
         let a' ← substConstAll (decI nm) (decE r) f (decE y)
-        I f' a').run a1 = .ok (e, a') ∧ KeepPost dn vis fe decW0E m1 m' a' res e := by
+        I f' a').run a1 = .ok (e, a') ∧ KeepPost vis fe decW0E m1 m' a' res e := by
   cases h2 : callW p k "subst_const_all" [nm, r, fuel - 1, x] m1 with
   | none => rw [h2] at hw; simp [ntBW] at hw
   | some q2 =>
@@ -94,7 +94,7 @@ theorem sca_bin {nm r : Word} {f : Nat} (ih : ScaIH p dn vis fe nm r f) (mk : Fn
 /-- The `letE` arm. -/
 theorem sca_let (hM : MasterProg p) {nm r : Word} {f : Nat} (ih : ScaIH p dn vis fe nm r f)
     {fuel x y z : Word} (hf : (fuel - 1).toNat = f) {k : Nat} {m1 : Mem} {a1 : AState}
-    {res : List Word} {m' : Mem} (hS1 : StageR dn vis fe m1 a1) (hn : H nm) (hr : H r)
+    {res : List Word} {m' : Mem} (hS1 : StageR vis fe m1 a1) (hn : H nm) (hr : H r)
     (hx : H x) (hy : H y) (hz : H z)
     (hw : (ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, x] m1) fun r1 m2 =>
       ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, y] m2) fun r2 m3 =>
@@ -105,7 +105,7 @@ theorem sca_let (hM : MasterProg p) {nm r : Word} {f : Nat} (ih : ScaIH p dn vis
         let t' ← substConstAll (decI nm) (decE r) f (decE x)
         let v' ← substConstAll (decI nm) (decE r) f (decE y)
         let b' ← substConstAll (decI nm) (decE r) f (decE z)
-        internE (.letE t' v' b')).run a1 = .ok (e, a') ∧ KeepPost dn vis fe decW0E m1 m' a' res e := by
+        internE (.letE t' v' b')).run a1 = .ok (e, a') ∧ KeepPost vis fe decW0E m1 m' a' res e := by
   cases h2 : callW p k "subst_const_all" [nm, r, fuel - 1, x] m1 with
   | none => rw [h2] at hw; simp [ntBW] at hw
   | some q2 =>
@@ -140,14 +140,14 @@ theorem sca_let (hM : MasterProg p) {nm r : Word} {f : Nat} (ih : ScaIH p dn vis
 /-- The `proj` arm. -/
 theorem sca_proj (hM : MasterProg p) {nm r : Word} {f : Nat} (ih : ScaIH p dn vis fe nm r f)
     {fuel x y z : Word} (hf : (fuel - 1).toNat = f) {k : Nat} {m1 : Mem} {a1 : AState}
-    {res : List Word} {m' : Mem} (hS1 : StageR dn vis fe m1 a1) (hn : H nm) (hr : H r) (hz : H z)
+    {res : List Word} {m' : Mem} (hS1 : StageR vis fe m1 a1) (hn : H nm) (hr : H r) (hz : H z)
     (hw : (ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, z] m1) fun r1 m2 =>
       ntBW (callW p k "mk_proj" [x, y, r1.headD 0] m2) fun r3 m3 => some ([r3.headD 0], m3)) =
       some (res, m')) :
     ∃ e a', (do
         let e' ← substConstAll (decI nm) (decE r) f (decE z)
         internE (.proj (decI x) y.toNat e')).run a1 = .ok (e, a') ∧
-      KeepPost dn vis fe decW0E m1 m' a' res e := by
+      KeepPost vis fe decW0E m1 m' a' res e := by
   cases h2 : callW p k "subst_const_all" [nm, r, fuel - 1, z] m1 with
   | none => rw [h2] at hw; simp [ntBW] at hw
   | some q2 =>
@@ -203,7 +203,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p dn vis fe 
         rv.headD 0 ≠ 7 → rv.headD 0 ≠ 9 →
         ((substConstAll (decI nm) (decE r) (f + 1) (decE h)).run a = .ok (decE h, a1)) →
         ∃ x a', (substConstAll (decI nm) (decE r) (f + 1) (decE h)).run a = .ok (x, a') ∧
-          KeepPost dn vis fe decW0E m m' a' res x := by
+          KeepPost vis fe decW0E m m' a' res x := by
       intro n3 n4 n5 n6 n7 n9 hrun
       rw [ite_eq_right n3, ite_eq_right n4, ite_eq_right n5, ite_eq_right n6, ite_eq_right n7, ite_eq_right n9] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -312,8 +312,8 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p dn vis fe 
 @[refines ConRon.Arena.substConstAll]
 theorem substConstAll_refines (hN : NatSubAllProg p) (nm r fuel h : Word) :
     RefAM p "subst_const_all" [nm, r, fuel, h]
-      (fun m a => StageR dn vis fe m a ∧ H nm ∧ H r ∧ H h)
-      (substConstAll (decI nm) (decE r) fuel.toNat (decE h)) (KeepPost dn vis fe decW0E) :=
+      (fun m a => StageR vis fe m a ∧ H nm ∧ H r ∧ H h)
+      (substConstAll (decI nm) (decE r) fuel.toNat (decE h)) (KeepPost vis fe decW0E) :=
   CallRef.refAM (fun k m a res m' ⟨hS, hn, hr, hh⟩ hc =>
     sca_ref hN nm r fuel.toNat fuel rfl h k m a res m' hS hn hr hh hc)
 

@@ -40,7 +40,7 @@ local notation "V" => ConLeche.CheckMode.verified
 memory's half from `AbsOK` and the store's extension. -/
 theorem StageC.of_checkE {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe fe' : IFEnv}
     {env env' : ConLeche.Env} {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR dn vis' fe' m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK V env' fe' a')
+    (hS : StageR vis' fe' m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK V env' fe' a')
     (hx : ConRon.Arena.Ext a.store a'.store) : StageC dn vis' fe' env' m' a' :=
   ⟨hS, hck,
     ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,

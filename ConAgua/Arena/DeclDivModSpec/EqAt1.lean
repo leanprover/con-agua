@@ -108,16 +108,16 @@ theorem DW.of {κ : IdxKind} {w : Word} {x : Idx κ} (e : w = x.word.toUInt64) :
 /-- The post of a `KeepPost` callee, its growth counted from `m0`. -/
 abbrev KG {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m0 : Mem)
     (dec : Mem → List Word → α → Prop) : List Word → α → Mem → AState → Prop :=
-  fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧ dec m' r x
+  fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m0 m' ∧ dec m' r x
 
 theorem CallRef.simG {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
-    {op : AM α} {dec : Mem → List Word → α → Prop} (h : CallRef p f args pre op (KeepPost dn vis fe dec))
+    {op : AM α} {dec : Mem → List Word → α → Prop} (h : CallRef p f args pre op (KeepPost vis fe dec))
     {n : Nat} {m m0 : Mem} {a : AState} (hp : pre m a) (hG : IWGrow m0 m) :
     Sim (callW p n f args m) op a (KG dn vis fe m0 dec) :=
   (h.sim hp).mono fun _ _ _ _ ⟨hS', hg, hd⟩ => ⟨hS', hG.trans hg, hd⟩
 
 theorem natAp2_dw (hN : NatEqProg p) {n : Nat} {m m0 : Mem} {a : AState} {c x y : Word} {c' : NIdx}
-    {x' y' : EIdx} (hS : StageR dn vis fe m a) (hG : IWGrow m0 m) (h1 : DW c c') (h2 : DW x x')
+    {x' y' : EIdx} (hS : StageR vis fe m a) (hG : IWGrow m0 m) (h1 : DW c c') (h2 : DW x x')
     (h3 : DW y y') : Sim (callW p n "nat_ap2" [c, x, y] m) (natAp2 c' x' y') a (KG dn vis fe m0 decW0E) := by
   obtain ⟨h1, rfl⟩ := h1; obtain ⟨h2, rfl⟩ := h2; obtain ⟨h3, rfl⟩ := h3
   exact (natAp2_ref hN c x y).simG ⟨hS, h1, h2, h3⟩ hG
@@ -137,7 +137,7 @@ l_model natVar_specW (p : Prog) (hp : p.lookup "nat_var" = some natVarL)
   grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem natVar_ref (hD : DmProg2 p) (i : Word) :
-    CallRef p "nat_var" [i] (StageR dn vis fe) (natVar i.toNat) (KeepPost dn vis fe decW0E) := by
+    CallRef p "nat_var" [i] (StageR vis fe) (natVar i.toNat) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mm => natVarW p (k + 1) mm i) (fun k s₀ => natVar_specW p hD.lNatVar (k + 1) s₀ i)
     fun k m a hS => ?_
   rw [natVarW.arm1]; unfold natVar
@@ -156,7 +156,7 @@ l_model natOne_specW (p : Prog) (hp : p.lookup "nat_one" = some natOneL)
   grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem natOne_ref (hD : DmProg2 p) :
-    CallRef p "nat_one" [] (StageR dn vis fe) natOne (KeepPost dn vis fe decW0E) := by
+    CallRef p "nat_one" [] (StageR vis fe) natOne (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mm => natOneW p (k + 1) mm) (fun k s₀ => natOne_specW p hD.lNatOne (k + 1) s₀)
     fun k m a hS => ?_
   rw [natOneW.arm1]; unfold natOne
@@ -189,8 +189,8 @@ l_model eqAt1_specW (p : Prog) (hp : p.lookup "eq_at1" = some eqAt1L) (hil : IlF
   grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem eqAt1_ref (hD : DmProg2 p) (ty a b : Word) :
-    CallRef p "eq_at1" [ty, a, b] (StageR dn vis fe)
-      (eqAt1 (decE ty) (decE a) (decE b)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "eq_at1" [ty, a, b] (StageR vis fe)
+      (eqAt1 (decE ty) (decE a) (decE b)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mm => eqAt1W p (k + 1) mm ty a b)
     (fun k s₀ => eqAt1_specW p hD.lEqAt1 hD.lIl (k + 1) s₀ ty a b) fun k m s hS => ?_
   rw [eqAt1W.arm1]; unfold eqAt1 zeroLevel
@@ -508,8 +508,8 @@ theorem chain10_eq (mp : Mem) (q v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 : Word) :
   simp [wrIW, UInt64.add_assoc]
 
 theorem certCtx_ref (hD : DmProg2 p) :
-    CallRef p "cert_ctx" [] (StageR dn vis fe) certCtx
-      (KeepPost dn vis fe (fun m r (c : CertCtxA) => CertCtxR m (r.headD 0) c)) := by
+    CallRef p "cert_ctx" [] (StageR vis fe) certCtx
+      (KeepPost vis fe (fun m r (c : CertCtxA) => CertCtxR m (r.headD 0) c)) := by
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
   have hw := callW_model (M := fun mm => certCtxW p k mm) (certCtx_specW p hD.lCertCtx k ·) hc
   unfold certCtxW at hw
@@ -743,18 +743,18 @@ theorem decE_eq_decI (w : Word) : (decE w : EIdx) = decI w := rfl
 
 @[refines ConRon.Arena.natVar]
 theorem natVar_refines (hD : DmProg2 p) (i : Word) :
-    RefAM p "nat_var" [i] (StageR dn vis fe) (natVar i.toNat) (KeepPost dn vis fe decW0E) :=
+    RefAM p "nat_var" [i] (StageR vis fe) (natVar i.toNat) (KeepPost vis fe decW0E) :=
   (natVar_ref hD i).refAM
 
 @[refines ConRon.Arena.natOne]
 theorem natOne_refines (hD : DmProg2 p) :
-    RefAM p "nat_one" [] (StageR dn vis fe) natOne (KeepPost dn vis fe decW0E) :=
+    RefAM p "nat_one" [] (StageR vis fe) natOne (KeepPost vis fe decW0E) :=
   (natOne_ref hD ).refAM
 
 @[refines ConRon.Arena.eqAt1]
 theorem eqAt1_refines (hD : DmProg2 p) (ty a b : Word) :
-    RefAM p "eq_at1" [ty, a, b] (StageR dn vis fe)
-      (eqAt1 (decE ty) (decE a) (decE b)) (KeepPost dn vis fe decW0E) :=
+    RefAM p "eq_at1" [ty, a, b] (StageR vis fe)
+      (eqAt1 (decE ty) (decE a) (decE b)) (KeepPost vis fe decW0E) :=
   (eqAt1_ref hD ty a b).refAM
 
 instance : Inhabited CertCtxA :=
@@ -764,8 +764,8 @@ instance : Inhabited CertCtxA :=
 
 @[refines ConRon.Arena.certCtx]
 theorem certCtx_refines (hD : DmProg2 p) :
-    RefAM p "cert_ctx" [] (StageR dn vis fe) certCtx
-      (KeepPost dn vis fe (fun m r (c : CertCtxA) => CertCtxR m (r.headD 0) c)) :=
+    RefAM p "cert_ctx" [] (StageR vis fe) certCtx
+      (KeepPost vis fe (fun m r (c : CertCtxA) => CertCtxR m (r.headD 0) c)) :=
   (certCtx_ref hD ).refAM
 
 end nat
@@ -820,8 +820,8 @@ l_model certGuard_specW (p : Prog) (hp : p.lookup "cert_guard" = some certGuardL
   grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem certGuard_ref (hD : DmProg2 p) (cx a b rv : Word) (cc : CertCtxA) :
-    CallRef p "cert_guard" [cx, a, b, rv] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H a ∧ H b ∧ H rv)
-      (certGuard cc (decE a) (decE b) (decE rv)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "cert_guard" [cx, a, b, rv] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H a ∧ H b ∧ H rv)
+      (certGuard cc (decE a) (decE b) (decE rv)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mm => certGuardW p (k + 1) mm cx a b rv)
     (fun k s₀ => certGuard_specW p hD.lCertGuard (k + 1) s₀ cx a b rv) fun k m s ⟨hS, hC, ha, hb, hrv⟩ => ?_
   rw [certGuardW.arm1]; unfold certGuard
@@ -837,8 +837,8 @@ l_model certEq_specW (p : Prog) (hp : p.lookup "cert_eq" = some certEqL)
   grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem certEq_ref (hD : DmProg2 p) (cx c rhs : Word) (cc : CertCtxA) :
-    CallRef p "cert_eq" [cx, c, rhs] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H rhs)
-      (certEq cc (decI c) (decE rhs)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "cert_eq" [cx, c, rhs] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H rhs)
+      (certEq cc (decI c) (decE rhs)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mm => certEqW p (k + 1) mm cx c rhs)
     (fun k s₀ => certEq_specW p hD.lCertEq (k + 1) s₀ cx c rhs) fun k m s ⟨hS, hC, hc, hrhs⟩ => ?_
   rw [certEqW.arm1]; unfold certEq
@@ -854,8 +854,8 @@ l_model certHalves_specW (p : Prog) (hp : p.lookup "cert_halves" = some certHalv
   grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem certHalves_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_halves" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certHalves cc (decI c)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "cert_halves" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certHalves cc (decI c)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mm => certHalvesW p (k + 1) mm cx c)
     (fun k s₀ => certHalves_specW p hD.lCertHalves (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certHalvesW.arm1]; unfold certHalves
@@ -940,8 +940,8 @@ l_model stmt1_specW (p : Prog) (hp : p.lookup "stmt1" = some stmt1)
   grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem stmt1_ref (hD : DmProg2 p) (h e : Word) :
-    CallRef p "stmt1" [h, e] (fun m s => StageR dn vis fe m s ∧ H h ∧ H e)
-      (pure ([decE h], decE e) : AM (List EIdx × EIdx)) (KeepPost dn vis fe decStmt) := by
+    CallRef p "stmt1" [h, e] (fun m s => StageR vis fe m s ∧ H h ∧ H e)
+      (pure ([decE h], decE e) : AM (List EIdx × EIdx)) (KeepPost vis fe decStmt) := by
   refine CallRef.of_sim (M := fun k mq => stmt1W p (k + 1) mq h e) (fun k s₀ => stmt1_specW p hD.lStmt1 (k + 1) s₀ h e)
     fun k m s ⟨hS, hh, he⟩ => ?_
   refine (slNew1_fref p hD.lIwAlloc hD.lSlNew1 h).simB hS.iw fun r1 m1 ⟨hrec1, hr1⟩ => ?_
@@ -964,9 +964,9 @@ l_model certTwoEqs_specW (p : Prog) (hp : p.lookup "cert_two_eqs" = some certTwo
 
 theorem certTwoEqs_ref (hD : DmProg2 p) (cx c h1 h2 r1 r2 : Word) (cc : CertCtxA) :
     CallRef p "cert_two_eqs" [cx, c, h1, h2, r1, r2]
-      (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H h1 ∧ H h2 ∧ H r1 ∧ H r2)
+      (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H h1 ∧ H h2 ∧ H r1 ∧ H r2)
       (certTwoEqs cc (decI c) (decE h1) (decE h2) (decE r1) (decE r2))
-      (KeepPost dn vis fe decStmtL) := by
+      (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mq => certTwoEqsW p (k + 1) mq cx c h1 h2 r1 r2)
     (fun k s₀ => certTwoEqs_specW p hD.lCertTwoEqs (k + 1) s₀ cx c h1 h2 r1 r2)
     fun k m s ⟨hS, hC, hc, hh1, hh2, hr1, hr2⟩ => ?_
@@ -983,7 +983,7 @@ theorem certTwoEqs_ref (hD : DmProg2 p) (cx c h1 h2 r1 r2 : Word) (cc : CertCtxA
 
 /-- `cert_guard` at decoded arguments, the context grown from `m0`. -/
 theorem certGuard_dw (hD : DmProg2 p) {n : Nat} {m m0 : Mem} {s : AState} {cx a b rv : Word}
-    {cc : CertCtxA} {a' b' rv' : EIdx} (hS : StageR dn vis fe m s) (hC : CertCtxR m0 cx cc)
+    {cc : CertCtxA} {a' b' rv' : EIdx} (hS : StageR vis fe m s) (hC : CertCtxR m0 cx cc)
     (hG : IWGrow m0 m) (ha : DW a a') (hb : DW b b') (hr : DW rv rv') :
     Sim (callW p n "cert_guard" [cx, a, b, rv] m) (certGuard cc a' b' rv') s (KG dn vis fe m0 decW0E) := by
   obtain ⟨ha, rfl⟩ := ha; obtain ⟨hb, rfl⟩ := hb; obtain ⟨hr, rfl⟩ := hr
@@ -991,7 +991,7 @@ theorem certGuard_dw (hD : DmProg2 p) {n : Nat} {m m0 : Mem} {s : AState} {cx a 
 
 /-- `cert_two_eqs` at decoded arguments, the context grown from `m0`. -/
 theorem certTwoEqs_dw (hD : DmProg2 p) {n : Nat} {m m0 : Mem} {s : AState} {cx c h1 h2 r1 r2 : Word}
-    {cc : CertCtxA} {h1' h2' r1' r2' : EIdx} (hS : StageR dn vis fe m s) (hC : CertCtxR m0 cx cc)
+    {cc : CertCtxA} {h1' h2' r1' r2' : EIdx} (hS : StageR vis fe m s) (hC : CertCtxR m0 cx cc)
     (hG : IWGrow m0 m) (hc : H c) (d1 : DW h1 h1') (d2 : DW h2 h2') (d3 : DW r1 r1') (d4 : DW r2 r2') :
     Sim (callW p n "cert_two_eqs" [cx, c, h1, h2, r1, r2] m) (certTwoEqs cc (decI c) h1' h2' r1' r2') s
       (KG dn vis fe m0 decStmtL) := by
@@ -1033,10 +1033,10 @@ theorem Sim.iteW {β α : Type} {N : NIdx} {c w : Word} {e1 e2 : Option (β × M
 
 /-- A last callee returning a statement list `(o, l)`. -/
 theorem CallRef.simPair {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
-    {op : AM (List (List EIdx × EIdx))} (h : CallRef p f args pre op (KeepPost dn vis fe decStmtL)) {n : Nat}
+    {op : AM (List (List EIdx × EIdx))} (h : CallRef p f args pre op (KeepPost vis fe decStmtL)) {n : Nat}
     {m m0 : Mem} {a : AState} (hp : pre m a) (hG : IWGrow m0 m) :
     Sim (ntBW (callW p n f args m) fun r m' => some ([r.headD 0, r.tail.headD 0], m')) op a
-      (fun r x m' a' => KeepPost dn vis fe decStmtL m0 m' a' r x) :=
+      (fun r x m' a' => KeepPost vis fe decStmtL m0 m' a' r x) :=
   Sim.ntRet (h.simG hp hG) fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
 /-- **`cert_lor_rhs` is its model `certLorRhsW`** (generated). -/
@@ -1046,8 +1046,8 @@ l_model certLorRhs_specW (p : Prog) (hp : p.lookup "cert_lor_rhs" = some certLor
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certLorRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_lor_rhs" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certLorRhs cc (decI c)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "cert_lor_rhs" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certLorRhs cc (decI c)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mm => certLorRhsW p (k + 1) mm cx c)
     (fun k s₀ => certLorRhs_specW p hD.lCertLorRhs (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certLorRhsW.arm1]; unfold certLorRhs
@@ -1072,8 +1072,8 @@ l_model certXorRhs_specW (p : Prog) (hp : p.lookup "cert_xor_rhs" = some certXor
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certXorRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_xor_rhs" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certXorRhs cc (decI c)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "cert_xor_rhs" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certXorRhs cc (decI c)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mm => certXorRhsW p (k + 1) mm cx c)
     (fun k s₀ => certXorRhs_specW p hD.lCertXorRhs (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certXorRhsW.arm1]; unfold certXorRhs
@@ -1098,8 +1098,8 @@ l_model certGcd_specW (p : Prog) (hp : p.lookup "cert_gcd" = some certGcdL)
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certGcd_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_gcd" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certGcd cc (decI c)) (KeepPost dn vis fe decStmtL) := by
+    CallRef p "cert_gcd" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certGcd cc (decI c)) (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mm => certGcdW p (k + 1) mm cx c)
     (fun k s₀ => certGcd_specW p hD.lCertGcd (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certGcdW.arm1]; unfold certGcd
@@ -1121,8 +1121,8 @@ l_model certShiftLeft_specW (p : Prog) (hp : p.lookup "cert_shift_left" = some c
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certShiftLeft_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_shift_left" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certShiftLeft cc (decI c)) (KeepPost dn vis fe decStmtL) := by
+    CallRef p "cert_shift_left" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certShiftLeft cc (decI c)) (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mm => certShiftLeftW p (k + 1) mm cx c)
     (fun k s₀ => certShiftLeft_specW p hD.lCertShiftLeft (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certShiftLeftW.arm1]; unfold certShiftLeft
@@ -1146,8 +1146,8 @@ l_model certShiftRight_specW (p : Prog) (hp : p.lookup "cert_shift_right" = some
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certShiftRight_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_shift_right" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certShiftRight cc (decI c)) (KeepPost dn vis fe decStmtL) := by
+    CallRef p "cert_shift_right" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certShiftRight cc (decI c)) (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mm => certShiftRightW p (k + 1) mm cx c)
     (fun k s₀ => certShiftRight_specW p hD.lCertShiftRight (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certShiftRightW.arm1]; unfold certShiftRight
@@ -1171,8 +1171,8 @@ l_model certLand_specW (p : Prog) (hp : p.lookup "cert_land" = some certLandL)
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certLand_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_land" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certLand cc (decI c)) (KeepPost dn vis fe decStmtL) := by
+    CallRef p "cert_land" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certLand cc (decI c)) (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mm => certLandW p (k + 1) mm cx c)
     (fun k s₀ => certLand_specW p hD.lCertLand (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certLandW.arm1]; unfold certLand
@@ -1200,8 +1200,8 @@ l_model certLor_specW (p : Prog) (hp : p.lookup "cert_lor" = some certLorL)
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certLor_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_lor" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certLor cc (decI c)) (KeepPost dn vis fe decStmtL) := by
+    CallRef p "cert_lor" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certLor cc (decI c)) (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mm => certLorW p (k + 1) mm cx c)
     (fun k s₀ => certLor_specW p hD.lCertLor (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certLorW.arm1]; unfold certLor
@@ -1221,8 +1221,8 @@ l_model certXor_specW (p : Prog) (hp : p.lookup "cert_xor" = some certXorL)
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certXor_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_xor" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certXor cc (decI c)) (KeepPost dn vis fe decStmtL) := by
+    CallRef p "cert_xor" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certXor cc (decI c)) (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mm => certXorW p (k + 1) mm cx c)
     (fun k s₀ => certXor_specW p hD.lCertXor (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certXorW.arm1]; unfold certXor
@@ -1244,8 +1244,8 @@ l_model certRecRhs_specW (p : Prog) (hp : p.lookup "cert_rec_rhs" = some certRec
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certRecRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_rec_rhs" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certRecRhs cc (decI c)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "cert_rec_rhs" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certRecRhs cc (decI c)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mq => certRecRhsW p (k + 1) mq cx c)
     (fun k s₀ => certRecRhs_specW p hD.lCertRecRhs (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certRecRhsW.arm1]; unfold certRecRhs
@@ -1269,10 +1269,10 @@ l_model certDivModEqs_specW (p : Prog) (hp : p.lookup "cert_div_mod_eqs" = some 
 
 theorem certDivModEqs_ref (hD : DmProg2 p) (cx c h1 h2 h3 h4 recRhs baseRhs : Word) (cc : CertCtxA) :
     CallRef p "cert_div_mod_eqs" [cx, c, h1, h2, h3, h4, recRhs, baseRhs]
-      (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H h1 ∧ H h2 ∧ H h3 ∧ H h4 ∧
+      (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H h1 ∧ H h2 ∧ H h3 ∧ H h4 ∧
         H recRhs ∧ H baseRhs)
       (certDivModEqs cc (decI c) (decE h1) (decE h2) (decE h3) (decE h4) (decE recRhs) (decE baseRhs))
-      (KeepPost dn vis fe decStmtL) := by
+      (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mq => certDivModEqsW p (k + 1) mq cx c h1 h2 h3 h4 recRhs baseRhs)
     (fun k s₀ => certDivModEqs_specW p hD.lCertDivModEqs (k + 1) s₀ cx c h1 h2 h3 h4 recRhs baseRhs)
     fun k m s ⟨hS, hC, hc, hh1, hh2, hh3, hh4, hrr, hbr⟩ => ?_
@@ -1304,8 +1304,8 @@ l_model certDivModGuards_specW (p : Prog) (hp : p.lookup "cert_div_mod_guards" =
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certDivModGuards_ref (hD : DmProg2 p) (cx c recRhs baseRhs : Word) (cc : CertCtxA) :
-    CallRef p "cert_div_mod_guards" [cx, c, recRhs, baseRhs] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H recRhs ∧ H baseRhs)
-      (certDivModGuards cc (decI c) (decE recRhs) (decE baseRhs)) (KeepPost dn vis fe decStmtL) := by
+    CallRef p "cert_div_mod_guards" [cx, c, recRhs, baseRhs] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H recRhs ∧ H baseRhs)
+      (certDivModGuards cc (decI c) (decE recRhs) (decE baseRhs)) (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mm => certDivModGuardsW p (k + 1) mm cx c recRhs baseRhs)
     (fun k s₀ => certDivModGuards_specW p hD.lCertDivModGuards (k + 1) s₀ cx c recRhs baseRhs)
     fun k m s ⟨hS, hC, hc, hrecRhs, hbaseRhs⟩ => ?_
@@ -1330,8 +1330,8 @@ l_model certDivMod_specW (p : Prog) (hp : p.lookup "cert_div_mod" = some certDiv
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certDivMod_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_div_mod" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (certDivMod cc (decI c)) (KeepPost dn vis fe decStmtL) := by
+    CallRef p "cert_div_mod" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (certDivMod cc (decI c)) (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mq => certDivModW p (k + 1) mq cx c)
     (fun k s₀ => certDivMod_specW p hD.lCertDivMod (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [certDivModW.arm1]; unfold certDivMod
@@ -1357,8 +1357,8 @@ l_model divModCertStmtsAt_specW (p : Prog) (hp : p.lookup "div_mod_cert_stmts_at
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem divModCertStmtsAt_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "div_mod_cert_stmts_at" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
-      (divModCertStmtsAt cc (decI c)) (KeepPost dn vis fe decStmtL) := by
+    CallRef p "div_mod_cert_stmts_at" [cx, c] (fun m s => StageR vis fe m s ∧ CertCtxR m cx cc ∧ H c)
+      (divModCertStmtsAt cc (decI c)) (KeepPost vis fe decStmtL) := by
   refine CallRef.of_sim (M := fun k mq => divModCertStmtsAtW p (k + 1) mq cx c)
     (fun k s₀ => divModCertStmtsAt_specW p hD.lDivModCertStmtsAt (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
   rw [divModCertStmtsAtW.eq_2]; unfold divModCertStmtsAt

@@ -168,8 +168,8 @@ theorem ptnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Nam
     exact cdec_mono hg₂₃.ext _ _ (fun i _ => by
       rw [hX₃ ECON (fun h => absurd (pts_arrs _ h) (by decide))
         (by decide)]) h0
-  have hE₃ : EnvR dn m₃ vis ⟨⟨consts, Lt' ++ B⟩, idx, vb, eraseInstalledTables tbls Lc⟩ :=
-    (show EnvR dn m₂ vis ⟨⟨consts, tables⟩, idx, vb, eraseInstalledTables tbls Lc⟩ from hE₂).promoted
+  have hE₃ : EnvR m₃ vis ⟨⟨consts, Lt' ++ B⟩, idx, vb, eraseInstalledTables tbls Lc⟩ :=
+    (show EnvR m₂ vis ⟨⟨consts, tables⟩, idx, vb, eraseInstalledTables tbls Lc⟩ from hE₂).promoted
       hrows₃ htr₃ hg₂₃ consts (Lt' ++ B) hEnv₃c hEnv₃t
   have hsz₃ : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [hg₂₃.size]; exact hsz₂
   -- index

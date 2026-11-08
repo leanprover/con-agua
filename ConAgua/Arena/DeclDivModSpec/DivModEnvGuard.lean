@@ -46,8 +46,8 @@ l_model eg_specW (p : Prog) (hp : p.lookup "div_mod_env_guard" = some divModEnvG
 theorem DmProg7.ty (hD : DmProg7 p) : NatTyProg p := hD.toDmProg6.toDmProg5.toDmProg2.toNatEqProg.toNatTyProg
 
 theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
-    CallRef p "div_mod_env_guard" [vis, c] (fun m s => StageR dn vis fe m s ∧ H c)
-      (divModEnvGuard fe (decI c)) (KeepPost dn vis fe decW0B) := by
+    CallRef p "div_mod_env_guard" [vis, c] (fun m s => StageR vis fe m s ∧ H c)
+      (divModEnvGuard fe (decI c)) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc⟩ hcall => ?_
   have hw := callW_model (M := fun mq => egW p (k + 1) mq vis c)
     (eg_specW p hD.lDivModEnvGuard (k + 1) · vis c) hcall
@@ -145,8 +145,8 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
 
 @[refines ConRon.Arena.divModEnvGuard]
 theorem divModEnvGuard_refines (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
-    RefAM p "div_mod_env_guard" [vis, c] (fun m s => StageR dn vis fe m s ∧ H c)
-      (divModEnvGuard fe (decI c)) (KeepPost dn vis fe decW0B) :=
+    RefAM p "div_mod_env_guard" [vis, c] (fun m s => StageR vis fe m s ∧ H c)
+      (divModEnvGuard fe (decI c)) (KeepPost vis fe decW0B) :=
   (eg_ref hD hdn c).refAM
 
 end envguard

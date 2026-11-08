@@ -97,7 +97,7 @@ end model
 
 /-- The pool's size bound canon's comparisons take (`LitR`'s `PoolOK`). -/
 theorem poolSmall_of_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {m : Mem} {a : AState} (h : StageR dn vis fe m a) : PoolSmall m := by
+    {m : Mem} {a : AState} (h : StageR vis fe m a) : PoolSmall m := by
   have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega
 
@@ -107,10 +107,10 @@ theorem slot_lt (k : ConLeche.QuotKind) : k.slot < 5 := by cases k <;> decide
 theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal} {k : ConLeche.QuotKind}
-    (hW : qphW p n m (UInt64.ofNat k.slot) q = some (r, m')) (hS : StageR dn vis fe m a)
+    (hW : qphW p n m (UInt64.ofNat k.slot) q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) (hok : ConRon.Bridge.StateOK a)
     (hN : L.Rom.NamesDn dn a L.Rom.quotNames) :
-    ∃ b a', (quotPinHit k cv).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ b a', (quotPinHit k cv).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       decW0B m' r b := by
   have hks : (UInt64.ofNat k.slot).toNat = k.slot :=
     UInt64.toNat_ofNat_of_lt' (by have := slot_lt k; rw [UInt64_size_eq]; omega)
@@ -154,7 +154,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
   have ew : rdW (m1.arr64 IW) (o + UInt64.ofNat k.slot) = w := by
     simp only [rdW, hidx]; simp only [iwA] at hw; simp [hw]
   rw [ew] at hW
-  have hciP : decCI (erecP m1) dn w.toNat = some ci := ArrExt.decCI (truncM_erecP m1) hci
+  have hciP : decCI (erecP m1) w.toNat = some ci := ArrExt.decCI (truncM_erecP m1) hci
   -- `ci_to_cv`
   cases h2 : callW p n "ci_to_cv" [w] m1 with
   | none => rw [h2] at hW; cases hW
@@ -232,7 +232,7 @@ theorem checkDecl_quot_shape (pins : List INatOpPinSet) (fe : IFEnv) (k : ConLec
 theorem cdq_ref {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem} {i : Word}
     {ds : Array IDeclaration} {pins : List INatOpPinSet} {k : ConLeche.QuotKind}
-    {cv : IConstantVal} (hS : StageR dn vis fe m a)
+    {cv : IConstantVal} (hS : StageR vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .quotDecl k cv) (hok : ConRon.Bridge.StateOK a)
     (hN : L.Rom.NamesDn dn a L.Rom.quotNames)

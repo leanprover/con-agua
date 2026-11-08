@@ -82,9 +82,9 @@ theorem EqL.decNL {m : Mem} {o l : Nat} {ps : List (EIdx × EIdx)} (h : EqL m o 
 
 theorem eqL_cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {x o l : Word} {r : List Word} {es : List (EIdx × EIdx)} {ea eb : Word}
-    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hE : EqL m o.toNat l.toNat es) (hx : RecAt m x ea eb) (hea : H ea) (heb : H eb) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       EqL m' (r.headD 0).toNat (r.tail.headD 0).toNat ((decE ea, decE eb) :: es) := by
   obtain ⟨xs, hxs⟩ := hE.decNL
   obtain ⟨hS', hg, hd, ht⟩ := consW_stageN h hS hE.1 hxs
@@ -133,10 +133,10 @@ l_model sc0_specW (p : Prog) (hp : p.lookup "subst_const0" = some substConst0L)
 
 theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
     ∀ (f : Nat) (fuel : Word), fuel.toNat = f → ∀ (h : Word) (k : Nat) (m : Mem) (a : AState)
-      (res : List Word) (m' : Mem), StageR dn vis fe m a → H nm → H r → H h →
+      (res : List Word) (m' : Mem), StageR vis fe m a → H nm → H r → H h →
       callW p k "subst_const0" [nm, r, fuel, h] m = some (res, m') →
       ∃ x a', (substConst0 (decI nm) (decE r) f (decE h)).run a = .ok (x, a') ∧
-        KeepPost dn vis fe decW0E m m' a' res x := by
+        KeepPost vis fe decW0E m m' a' res x := by
   intro f
   induction f with
   | zero =>
@@ -235,8 +235,8 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
 @[refines ConRon.Arena.substConst0]
 theorem substConst0_refines (hN : NatSubProg p) (nm r fuel h : Word) :
     RefAM p "subst_const0" [nm, r, fuel, h]
-      (fun m a => StageR dn vis fe m a ∧ H nm ∧ H r ∧ H h)
-      (substConst0 (decI nm) (decE r) fuel.toNat (decE h)) (KeepPost dn vis fe decW0E) :=
+      (fun m a => StageR vis fe m a ∧ H nm ∧ H r ∧ H h)
+      (substConst0 (decI nm) (decE r) fuel.toNat (decE h)) (KeepPost vis fe decW0E) :=
   CallRef.refAM (fun k m a res m' ⟨hS, hn, hr, hh⟩ hc =>
     sc0_ref hN nm r fuel.toNat fuel rfl h k m a res m' hS hn hr hh hc)
 
@@ -250,10 +250,10 @@ l_model pairs_specW (p : Prog) (hp : p.lookup "subst_const0_pairs" = some substC
 
 theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     ∀ (ps : List (EIdx × EIdx)) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word)
-      (m' : Mem), StageR dn vis fe m a → EqL m o.toNat l.toNat ps → o.toNat + l.toNat < 2 ^ 64 →
+      (m' : Mem), StageR vis fe m a → EqL m o.toNat l.toNat ps → o.toNat + l.toNat < 2 ^ 64 →
       callW p k "subst_const0_pairs" [nm, r, o, l] m = some (res, m') →
       ∃ x a', (substConst0Pairs (decI nm) (decE r) ps).run a = .ok (x, a') ∧
-        KeepPost dn vis fe decEqRL m m' a' res x := by
+        KeepPost vis fe decEqRL m m' a' res x := by
   intro ps
   induction ps with
   | nil =>
@@ -331,9 +331,9 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
 @[refines ConRon.Arena.substConst0Pairs]
 theorem substConst0Pairs_refines (hN : NatSubProg p) (nm r o l : Word) (ps : List (EIdx × EIdx)) :
     RefAM p "subst_const0_pairs" [nm, r, o, l]
-      (fun m a => StageR dn vis fe m a ∧ H nm ∧ H r ∧ EqL m o.toNat l.toNat ps ∧
+      (fun m a => StageR vis fe m a ∧ H nm ∧ H r ∧ EqL m o.toNat l.toNat ps ∧
         o.toNat + l.toNat < 2 ^ 64)
-      (substConst0Pairs (decI nm) (decE r) ps) (KeepPost dn vis fe decEqRL) :=
+      (substConst0Pairs (decI nm) (decE r) ps) (KeepPost vis fe decEqRL) :=
   CallRef.refAM (fun k m a res m' ⟨hS, hn, hr, hE, hb⟩ hc =>
     pairs_ref hN nm r hn hr ps o l k m a res m' hS hE hb hc)
 

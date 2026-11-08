@@ -54,12 +54,12 @@ l_model appHole_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
 
 theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl us b nn e : Word) (N : Nat) (names : List NIdx) (r : List Word)
-    (hh : ahWf (n + 1) m no nl us b nn e = some (r, m')) (hS : StageR dn vis fe m a) (hN : nn.toNat = N)
+    (hh : ahWf (n + 1) m no nl us b nn e = some (r, m')) (hS : StageR vis fe m a) (hN : nn.toNat = N)
     (he : H e) (hus : H us) (hb : b.toNat + N < 2 ^ 64)
     (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hnn : nn.toNat + names.length < 2 ^ 64) :
     ∃ x a', (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
   rw [ahWf.arm1] at hh
   rcases hph : phW n m b e nn with _ | r0 <;> rw [hph] at hh; · simp [ahWf.k_ph_app.none] at hh
   obtain ⟨o, hrun, hpo⟩ := phW_ok n m a b e nn N r0 hN hph hS.check.arena.base he hb
@@ -454,25 +454,25 @@ theorem ahW_low {n : Nat} {m m' : Mem} {no nl us b nn e : Word} {r : List Word}
 def RpGoOK (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (no nl us b nn f h r : Word) (N : Nat) (names : List NIdx)
     (mp : Std.HashMap EIdx EIdx),
-    rpGoW n m no nl us b nn f h = some (r, m') → StageR dn vis fe m a → H h → H us →
+    rpGoW n m no nl us b nn f h = some (r, m') → StageR vis fe m a → H h → H us →
     decHL m no.toNat nl.toNat = some names → no.toNat + nl.toNat < 2 ^ 64 →
     no.toNat + nl.toNat ≤ iwTop m → nn.toNat = N → nn.toNat + names.length < 2 ^ 64 →
     b.toNat + N < 2 ^ 64 → rpMR m mp →
     ∃ a' mp', (ConRon.Arena.replaceAppsGo names (decI us) b.toNat N mp f.toNat (decE h)).run a =
-        .ok ((decE r, mp'), a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp'
+        .ok ((decE r, mp'), a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp'
 
 /-- Two children and an interning: the shared shape of `lam` and `forallE`. -/
 theorem rpBin_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : RpGoOK dn fe vis k) (g : Word)
     (mkW : Mem → Word → Word → Option (Word × Mem)) (iop : EIdx → EIdx → AM EIdx)
     (hmk : ∀ m a2 x2, rpMkW m g a2 x2 0 0 0 = mkW m a2 x2)
-    (hst : ∀ (m m' : Mem) (a : AState) (u v r : Word), StageR dn vis fe m a → mkW m u v = some (r, m') →
-      ∃ a', (iop (decE u) (decE v)).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m')
+    (hst : ∀ (m m' : Mem) (a : AState) (u v r : Word), StageR vis fe m a → mkW m u v = some (r, m') →
+      ∃ a', (iop (decE u) (decE v)).run a = .ok (decE r, a') ∧ StageR vis fe m' a' ∧ IWGrow m m')
     (hlow : ∀ (m m' : Mem) (u v r : Word), mkW m u v = some (r, m') → LowFr m m')
     (m m' : Mem) (a : AState) (no nl us b nn f1 x y r : Word) (N : Nat) (names : List NIdx)
     (mp : Std.HashMap EIdx EIdx)
     (hn : rpB1 k no nl us b nn f1 g x y (rpGoW k m no nl us b nn f1 x) = some (r, m'))
-    (hS : StageR dn vis fe m a) (hx : H x) (hy : H y) (hus : H us)
+    (hS : StageR vis fe m a) (hx : H x) (hy : H y) (hus : H us)
     (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop m) (hN : nn.toNat = N) (hnn : nn.toNat + names.length < 2 ^ 64)
     (hb : b.toNat + N < 2 ^ 64) (hM : rpMR m mp) :
@@ -481,7 +481,7 @@ theorem rpBin_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
         let (b2, m2) ← ConRon.Arena.replaceAppsGo names (decI us) b.toNat N mm f1.toNat (decE y)
         let r ← iop t2 b2
         pure (r, m2) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
   rcases h1 : rpGoW k m no nl us b nn f1 x with _ | ⟨a2, m1⟩ <;> rw [h1] at hn; · simp [rpB1] at hn
   rw [rpB1_some] at hn
   rcases h2 : rpGoW k m1 no nl us b nn f1 y with _ | ⟨x2, m2⟩ <;> rw [h2] at hn; · simp [rpB2] at hn
@@ -500,7 +500,7 @@ theorem rpLet_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
     (m m' : Mem) (a : AState) (no nl us b nn f1 x y z r : Word) (N : Nat) (names : List NIdx)
     (mp : Std.HashMap EIdx EIdx)
     (hn : rpL1 k no nl us b nn f1 x y z (rpGoW k m no nl us b nn f1 x) = some (r, m'))
-    (hS : StageR dn vis fe m a) (hx : H x) (hy : H y) (hz : H z) (hus : H us)
+    (hS : StageR vis fe m a) (hx : H x) (hy : H y) (hz : H z) (hus : H us)
     (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop m) (hN : nn.toNat = N) (hnn : nn.toNat + names.length < 2 ^ 64)
     (hb : b.toNat + N < 2 ^ 64) (hM : rpMR m mp) :
@@ -510,7 +510,7 @@ theorem rpLet_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
         let (b2, m3) ← ConRon.Arena.replaceAppsGo names (decI us) b.toNat N m2 f1.toNat (decE z)
         let r ← internLetEE t2 v2 b2
         pure (r, m3) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
   rcases h1 : rpGoW k m no nl us b nn f1 x with _ | ⟨a2, m1⟩ <;> rw [h1] at hn; · simp [rpL1] at hn
   rw [rpL1_some] at hn
   rcases h2 : rpGoW k m1 no nl us b nn f1 y with _ | ⟨x2, m2⟩ <;> rw [h2] at hn; · simp [rpL2] at hn
@@ -537,7 +537,7 @@ theorem rpProj_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl us b nn f1 x y z r : Word) (N : Nat) (names : List NIdx)
     (mp : Std.HashMap EIdx EIdx)
     (hn : rpP1 k m no nl us b nn f1 x y z (rpGoW k m no nl us b nn f1 z) = some (r, m'))
-    (hS : StageR dn vis fe m a) (hz : H z) (hus : H us)
+    (hS : StageR vis fe m a) (hz : H z) (hus : H us)
     (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop m) (hN : nn.toNat = N) (hnn : nn.toNat + names.length < 2 ^ 64)
     (hb : b.toNat + N < 2 ^ 64) (hM : rpMR m mp) :
@@ -545,7 +545,7 @@ theorem rpProj_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
         let (x2, mm) ← ConRon.Arena.replaceAppsGo names (decI us) b.toNat N mp f1.toNat (decE z)
         let r ← internProjE (decI x) y.toNat x2
         pure (r, mm) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
   rcases h1 : rpGoW k m no nl us b nn f1 z with _ | ⟨a2, m1⟩ <;> rw [h1] at hn; · simp [rpP1] at hn
   rw [rpP1_some, rpMkW_proj] at hn
   obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl us b nn f1 z a2 N names mp h1 hS hz hus hdec hno hit hN hnn hb hM
@@ -561,12 +561,12 @@ theorem rpApp_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
     (m m' : Mem) (a : AState) (no nl us b nn f1 h x y r : Word) (N : Nat) (names : List NIdx)
     (mp : Std.HashMap EIdx EIdx)
     (hn : rpA1 k m no nl us b nn f1 h x y (ahWf k m no nl us b nn h) = some (r, m'))
-    (hS : StageR dn vis fe m a) (hh : H h) (hx : H x) (hy : H y) (hus : H us)
+    (hS : StageR vis fe m a) (hh : H h) (hx : H x) (hy : H y) (hus : H us)
     (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop m) (hN : nn.toNat = N) (hnn : nn.toNat + names.length < 2 ^ 64)
     (hb : b.toNat + N < 2 ^ 64) (hM : rpMR m mp) :
     ∃ a' mp', (rpArm names (decI us) b.toNat N mp f1.toNat (decE h) (.app (decE x) (decE y))).run a =
-        .ok ((decE r, mp'), a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
+        .ok ((decE r, mp'), a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
   cases k with
   | zero => simp [ahWf, rpA1] at hn
   | succ j =>
@@ -609,12 +609,12 @@ theorem rpNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
     (mp : Std.HashMap EIdx EIdx)
     (hn : rpNodeW (k + 1) m no nl us b nn f1 h (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
       (vl.tail.tail.tail.headD 0) = some (r, m'))
-    (hS : StageR dn vis fe m a) (hh : H h) (hus : H us)
+    (hS : StageR vis fe m a) (hh : H h) (hus : H us)
     (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop m) (hN : nn.toNat = N) (hnn : nn.toNat + names.length < 2 ^ 64)
     (hb : b.toNat + N < 2 ^ 64) (hM : rpMR m mp) :
     ∃ a' mp', (rpArm names (decI us) b.toNat N mp f1.toNat (decE h) v).run a = .ok ((decE r, mp'), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
   cases v with
   | app f x' =>
     simp only [ViewR, getD1_eq', getD2_eq] at hvr
@@ -681,12 +681,12 @@ theorem rpGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
     (hF : f.toNat = F + 1) (hf0 : f ≠ 0) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v)
     (hnv : NodeVr v) (hv : a.store.view (decE h) = some v) (hvl : vl ≠ [])
     (hgs : vl.headD 0 = 4 ∨ vl.headD 0 = 5 ∨ vl.headD 0 = 6 ∨ vl.headD 0 = 7 ∨ vl.headD 0 = 9)
-    (hb : rpG1 j m no nl us b nn f h vl = some (r, m')) (hS : StageR dn vis fe m a) (hh : H h) (hus : H us)
+    (hb : rpG1 j m no nl us b nn f h vl = some (r, m')) (hS : StageR vis fe m a) (hh : H h) (hus : H us)
     (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop m) (hN : nn.toNat = N) (hnn : nn.toNat + names.length < 2 ^ 64)
     (hbN : b.toNat + N < 2 ^ 64) (hM : rpMR m mp) :
     ∃ a' mp', (ConRon.Arena.replaceAppsGo names (decI us) b.toNat N mp (F + 1) (decE h)).run a =
-        .ok ((decE r, mp'), a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
+        .ok ((decE r, mp'), a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
   have hnl : ¬ (vl.headD 0 = 0 ∨ vl.headD 0 = 1 ∨ vl.headD 0 = 2 ∨ vl.headD 0 = 8) := by
     rcases hgs with e | e | e | e | e <;> rw [e] <;> decide
   have hn3 : ¬ vl.headD 0 = 3 := by
@@ -744,7 +744,7 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
     have leaf : ∀ (hg : (g :: vt).headD 0 = 0 ∨ (g :: vt).headD 0 = 1 ∨ (g :: vt).headD 0 = 2 ∨ (g :: vt).headD 0 = 8),
         (match v with | .bvar _ | .sort _ | .lit _ | .fvar _ _ => True | _ => False) →
         ∃ a' mp', (ConRon.Arena.replaceAppsGo names (decI us) b.toNat N mp f.toNat (decE h)).run a =
-          .ok ((decE r, mp'), a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
+          .ok ((decE r, mp'), a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
       intro hg hv'
       rw [rpG1_leaf j m no nl us b nn f h _ (by simp) hg] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
@@ -821,12 +821,12 @@ theorem rpGoOK (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n
 theorem rpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl us b nn e r : Word) (N : Nat) (names : List NIdx)
     (mp0 : Std.HashMap EIdx EIdx)
-    (hb : rpConstW n m no nl us b nn e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e) (hus : H us)
+    (hb : rpConstW n m no nl us b nn e = some (r, m')) (hS : StageR vis fe m a) (he : H e) (hus : H us)
     (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop m) (hN : nn.toNat = N) (hnn : nn.toNat + names.length < 2 ^ 64)
     (hbN : b.toNat + N < 2 ^ 64) (hM : rpMR m mp0) :
     ∃ a', (ConRon.Arena.replaceApps names (decI us) b.toNat N (decE e)).run a = .ok (decE r, a') ∧
-      rpMR m' ∅ ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      rpMR m' ∅ ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   by_cases h0 : rdW (m.arr64 CTL) raSch.cs + 2 = 0
   · simp [rpConstW, h0] at hb
   rw [rpConstW_eq n m no nl us b nn e h0] at hb

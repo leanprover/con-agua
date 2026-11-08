@@ -41,7 +41,7 @@ theorem PinsIW.grow {m m' : Mem} {o l : Nat} {ips : List INatOpPinSet} (h : Pins
 
 theorem decCI_defn_value {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
     {cv : IConstantVal} {v : EIdx} {hint : ConLeche.ReducibilityHint}
-    (h : decCI a dn p = some (.defnInfo cv v hint)) :
+    (h : decCI a p = some (.defnInfo cv v hint)) :
     a[p]? = some 1 ∧ ∃ w, a[p + 5]? = some w ∧ w.toNat < 2 ^ 32 ∧ v = decI w := by
   obtain ⟨hk, -⟩ : a[p]? = some 1 ∧ True := by
     rcases decCI_defn_cases h with ⟨cv', v', hint', he, hk, hcv⟩ | ⟨w, hw, hne, hnd⟩

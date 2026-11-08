@@ -36,14 +36,14 @@ untouched, so `DerR` and `cp` carry over. -/
 theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .name} {op : AM NIdx}
     {key : β} {tag : UInt32} {wide : Bool} {pf : Option NIdx} {d : δ} {err : CheckError}
     {A : List TieredArray} {C : List Word}
-    (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag wide pf d err a) (hok : AM.ok op a)
+    (hS : StageR vis fe m a) (hrun : op.run a = protoRun L key tag wide pf d err a) (hok : AM.ok op a)
     (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b.arr < 42) (hC : ∀ x ∈ C, x.toNat < 64)
     (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
     (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a)
     (hv : ∀ t, (L.setP a t).store.view = a.store.view ∧ (L.setS a t).store.view = a.store.view)
     (hmode : ModeOK m') :
-    ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ a', op.run a = .ok (decI r, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       a'.store.view = a.store.view ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf
     (fun b hb => by have := hA b hb; omega) a hS.check.arena.der
@@ -63,8 +63,8 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
     · exact (hv t).2
   exact ⟨_, hrun', h1, h2, hvw, hf.size⟩
 
-theorem internNAnon_stage (hS : StageR dn vis fe m a) (hI : nainternW m = some (r, m')) :
-    ∃ a', (internNNode .anonymous).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
+theorem internNAnon_stage (hS : StageR vis fe m a) (hI : nainternW m = some (r, m')) :
+    ∃ a', (internNNode .anonymous).run a = .ok (decI r, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ a'.store.view = a.store.view ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   have hR := hS.check.arena.base
   obtain ⟨hok, hX, hres⟩ := naintern_correct m a hR.nanon _ _ hI
@@ -76,10 +76,10 @@ theorem internNAnon_stage (hS : StageR dn vis fe m a) (hI : nainternW m = some (
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))
 
-theorem internNNum_stage (hS : StageR dn vis fe m a) (pre u : Word) (hpre : pre.toNat < 2 ^ 32)
+theorem internNNum_stage (hS : StageR vis fe m a) (pre u : Word) (hpre : pre.toNat < 2 ^ 32)
     (hI : nninternW m pre u = some (r, m')) :
     ∃ a', (internNNode (.num (decI pre) u.toNat)).run a = .ok (decI r, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ a'.store.view = a.store.view ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ a'.store.view = a.store.view ∧
       (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   have hR := hS.check.arena.base
   obtain ⟨hok, hX, hres⟩ := nnintern_correct m a hR.nnum pre u hpre _ _ hI
@@ -97,9 +97,9 @@ section succ
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState}
   {r : Word}
 
-theorem internSucc_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 2 ^ 32)
+theorem internSucc_stage (hS : StageR vis fe m a) (u : Word) (hu : u.toNat < 2 ^ 32)
     (hI : sinternW m u = some (r, m')) :
-    ∃ a', (internLNode (.succ (decI u))).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ a', (internLNode (.succ (decI u))).run a = .ok (decI r, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' := by
   have hR := hS.check.arena.base
   obtain ⟨hok, hX, hres⟩ := sintern_correct m a hR.succ u hu _ _ hI

@@ -31,8 +31,8 @@ variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
 
 /-- **`subst_const_all` refines `substConstAll`** at the walk fuel `4000000000`. -/
 def SubstCAll : Prop := ∀ nm r h : Word, H nm → H r → H h →
-  CallRef p "subst_const_all" [nm, r, 4000000000, h] (StageR dn vis fe)
-    (substConstAll (decI nm) (decE r) coreWalkFuel (decE h)) (KeepPost dn vis fe decW0E)
+  CallRef p "subst_const_all" [nm, r, 4000000000, h] (StageR vis fe)
+    (substConstAll (decI nm) (decE r) coreWalkFuel (decE h)) (KeepPost vis fe decW0E)
 
 end subst
 
@@ -42,19 +42,19 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 @[refines ConRon.Arena.divModCertApplied]
 theorem divModCertApplied_refines (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
     RefAM p "div_mod_cert_applied" [pr, ho, hl]
-      (fun m s => StageR dn vis fe m s ∧ H pr ∧ decHL m ho.toNat hl.toNat = some hyps ∧
+      (fun m s => StageR vis fe m s ∧ H pr ∧ decHL m ho.toNat hl.toNat = some hyps ∧
         ho.toNat + hl.toNat ≤ iwTop m)
-      (divModCertApplied (decE pr) hyps) (KeepPost dn vis fe decW0E) :=
+      (divModCertApplied (decE pr) hyps) (KeepPost vis fe decW0E) :=
   (applied_ref hD pr ho hl hyps).refAM
 
 @[refines ConRon.Arena.substConst0List]
 theorem substConst0List_refines (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r o l : Word)
     (hn : H nm) (hr : H r) (hyps : List EIdx) :
     RefAM p "subst_const0_list" [nm, r, o, l]
-      (fun m s => StageR dn vis fe m s ∧ decHL m o.toNat l.toNat = some hyps ∧
+      (fun m s => StageR vis fe m s ∧ decHL m o.toNat l.toNat = some hyps ∧
         o.toNat + l.toNat ≤ iwTop m)
       (substConst0List (decI nm) (decE r) hyps)
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) :=
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) :=
   CallRef.refAM (fun k m a res m' ⟨hS, hd, hb⟩ hc =>
     sc0List_ref hD hs0 nm r hn hr hyps o l k m a res m' hS hd hb hc)
 

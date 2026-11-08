@@ -92,7 +92,7 @@ recursors' bound, the classes' layout; `StageC` at the formers' environment `env
 takes (`PassTwin`). -/
 structure PassPost (dn : NIdx → Option ConLeche.Name) (env : ConLeche.Env) (m : Mem) (p0 : Word)
     (a : AState) (w : Word) (x : BlockPass) (m' : Mem) (a' : AState) : Prop where
-  stage : StageR dn (rdW (m'.arr64 IW) w) x.env1 m' a'
+  stage : StageR (rdW (m'.arr64 IW) w) x.env1 m' a'
   grow : IWGrow m m'
   bpass : BPassR (rdW (m'.arr64 IW) w) x.env1 m' w x
   pos : PosMR m'
@@ -484,7 +484,7 @@ theorem checkBlockPass_refinesC (hP : PassProg p) {fs : List FnName}
     (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 4)) "check_block_pass" [vis, p0, isRec]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b).run a₀ = .ok (x, a') ∧
-      (StageR dn (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
+      (StageR (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
       BPassR (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧
       (RecsB s₀.mem p0 → RecsB s'.mem (rdW (s'.mem.arr64 IW) (r.headD 0 + 3))) ∧
       ClassesLp s'.mem (rdW (s'.mem.arr64 IW) (r.headD 0 + 15)) (rdW (s'.mem.arr64 IW) (r.headD 0 + 16))) ∧

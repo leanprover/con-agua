@@ -51,8 +51,8 @@ theorem envFind_found (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
 
 /-- **Every row of the index decodes.** -/
 theorem EnvR.found_some {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
-    (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2)
-    (hc : rowC m w ≠ 0) : ∃ ci, decCI (erecP m) dn (rowP m w).toNat = some ci := by
+    (h : EnvR m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2)
+    (hc : rowC m w ≠ 0) : ∃ ci, decCI (erecP m) (rowP m w).toNat = some ci := by
   have hn : (decI w : NIdx).word.toUInt64 = w := (word_decI _ w hw).mpr rfl
   have hk := h.keys (decI w) (by rw [hn]; exact ht)
   have hv := h.vals (decI w) (by rw [hn]; exact ht) (by rw [hn]; exact hc)
@@ -78,7 +78,7 @@ theorem decCV_type {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q
 /-- The kind word of a decoded constant record says whether it is a constructor, and a
 constructor's type is the handle at `q + 4`. -/
 theorem decCI_ctor {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b)
     (hsz : b.size < 2 ^ 63) :
     (rdW b q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ cv.type = decI (rdW b (q + 4)) ∧
       (rdW b (q + 4)).toNat < 2 ^ 32) ∧

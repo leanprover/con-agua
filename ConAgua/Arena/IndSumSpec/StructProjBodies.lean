@@ -60,9 +60,9 @@ l_model pbW_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 /-! ## The relational lemma -/
 
 theorem spaW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a : AState)
-    (T j : Word) (r : List Word) (h : spaW m T j = some (r, m')) (hS : StageR dn vis fe m a) :
+    (T j : Word) (r : List Word) (h : spaW m T j = some (r, m')) (hS : StageR vis fe m a) :
     ∃ a', (structProjArgP (decI T) j.toNat).run a = .ok (decE (r.headD 0), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' := by
   simp only [spaW] at h
   obtain ⟨b, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   rw [spaK_some] at h
@@ -98,10 +98,10 @@ def PBDec (m : Mem) (r : List Word) : Option (List EIdx) → Prop
       (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m
 
 theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
-    ∀ (m : Mem) (a : AState) (T k i h : Word), StageR dn vis fe m a → H h →
+    ∀ (m : Mem) (a : AState) (T k i h : Word), StageR vis fe m a → H h →
     i.toNat + k.toNat < 2 ^ 64 → AbsOK m →
     Sim (pbW n m T k i h) (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PBDec m' r x ∧ AbsOK m') := by
+      (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ PBDec m' r x ∧ AbsOK m') := by
   induction n with
   | zero => intro m a T k i h _ _ _ _; rw [pbW.eq_1]; exact Sim.of_none
   | succ n ih =>
@@ -138,7 +138,7 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       generalize (eViewW m h).tail.headD 0 = x at hx32 ⊢
       generalize (eViewW m h).tail.tail.headD 0 = y at hy32 ⊢
       refine Sim.bindD (dec := fun ra => decE (ra.headD 0))
-        (R₁ := fun m1 a1 => StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ AbsOK m1)
+        (R₁ := fun m1 a1 => StageR vis fe m1 a1 ∧ IWGrow m m1 ∧ AbsOK m1)
         (pbW.k_struct_proj_arg_p.none ..) (fun _ _ => rfl) (fun ra m1 h1 => ?_) ?_
       · obtain ⟨a1, hr, hS1, hg1⟩ := spaW_ok dn vis fe m m1 a T i ra h1 hS
         exact ⟨_, a1, hr, rfl, hS1, hg1, spaW_afr h1 hA⟩
@@ -184,11 +184,11 @@ bodies' slice. -/
 @[refines ConRon.Arena.structProjBodiesGo]
 theorem structProjBodiesGo_refines (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T k i h : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) (hh : H h) (hik : i.toNat + k.toNat < 2 ^ 64)
+    (hS : StageR vis fe s₀.mem a₀) (hh : H h) (hik : i.toNat + k.toNat < 2 ^ 64)
     (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_bodies_go" [T, k, i, h]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       PBDec s'.mem r (AM.res (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by
@@ -278,10 +278,10 @@ end spec2
 
 theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
     (m m' : Mem) (a : AState) (T nP nF cty : Word) (r : List Word)
-    (h : spbW k m T nP nF cty = some (r, m')) (hS : StageR dn vis fe m a) (hcty : H cty)
+    (h : spbW k m T nP nF cty = some (r, m')) (hS : StageR vis fe m a) (hcty : H cty)
     (hnP : 1 + nP.toNat < 2 ^ 64) (hnF : nF.toNat < 2 ^ 64) (hA : AbsOK m) :
     ∃ x a', (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PBDecA m' r x ∧ AbsOK m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ PBDecA m' r x ∧ AbsOK m' := by
   cases k with
   | zero => cases h
   | succ k =>
@@ -367,11 +367,11 @@ include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp hi1 h
 @[refines ConRon.Arena.structProjBodies]
 theorem structProjBodies_refines (k : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T nP nF cty : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) (hcty : H cty) (hnP : 1 + nP.toNat < 2 ^ 64)
+    (hS : StageR vis fe s₀.mem a₀) (hcty : H cty) (hnP : 1 + nP.toNat < 2 ^ 64)
     (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "struct_proj_bodies" [T, nP, nF, cty]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       PBDecA s'.mem r (AM.res (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by

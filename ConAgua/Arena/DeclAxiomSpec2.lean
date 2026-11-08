@@ -120,7 +120,7 @@ theorem ctor_counts {a : Array Word} {q : Word} {np nf : Nat} (hsz : a.size < 2 
 
 /-- **The shape tests on a stored record, failing**: the twin's shape does not match. -/
 theorem fpc_fail {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Word}
-    {ci : IConstantInfo} (hsz : a.size < 2 ^ 64) (hk : k = 3 ∨ k = 4) (h : decCI a dn q.toNat = some ci)
+    {ci : IConstantInfo} (hsz : a.size < 2 ^ 64) (hk : k = 3 ∨ k = 4) (h : decCI a q.toNat = some ci)
     (hf : rdW a q ≠ k ∨ (k = 4 ∧ (rdW a (q + 5) ≠ 0 ∨ rdW a (q + 6) ≠ 0))) :
     fpcShape k ci = none := by
   obtain ⟨wk, e, hk'⟩ := ciD h
@@ -154,7 +154,7 @@ theorem fpc_fail {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Wo
 value at `q + 1`. -/
 theorem fpc_pass {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Word}
     {ci : IConstantInfo} (hsz : a.size < 2 ^ 64) (hk : k = 3 ∨ k = 4)
-    (h : decCI a dn q.toNat = some ci) (hkw : rdW a q = k)
+    (h : decCI a q.toNat = some ci) (hkw : rdW a q = k)
     (hc : ¬ (k = 4 ∧ (rdW a (q + 5) ≠ 0 ∨ rdW a (q + 6) ≠ 0))) :
     ∃ cv, fpcShape k ci = some cv ∧ decCV a (q.toNat + 1) = some cv := by
   obtain ⟨wk, e, hk'⟩ := ciD h
@@ -175,7 +175,7 @@ theorem fpc_pass {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Wo
 
 /-- A matching shape's constant value decodes where the record does. -/
 theorem fpcShape_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {k : Word}
-    {ci : IConstantInfo} {cv : IConstantVal} (h : decCI a dn q = some ci)
+    {ci : IConstantInfo} {cv : IConstantVal} (h : decCI a q = some ci)
     (hs : fpcShape k ci = some cv) : decCV a (q + 1) = some cv := by
   obtain ⟨wk, -, hk'⟩ := ciD h
   rcases hk' with ⟨-, cv', -, rfl⟩ | ⟨-, cv', v, hi, -, -, -, rfl⟩ | ⟨-, cv', -, rfl⟩ |
@@ -195,9 +195,9 @@ def FpcT (fe : IFEnv) (nm : NIdx) (k : Word) (T : AM IConstantVal) (a : AState) 
 /-- **`find_pinned_cv` against the twin's clause**, at the model level. -/
 theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k id : Word} {r : List Word}
-    (hW : fpcW p n m vis nm k id = some (r, m')) (hS : StageR dn vis fe m a)
+    (hW : fpcW p n m vis nm k id = some (r, m')) (hS : StageR vis fe m a)
     (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4) (hid : id.toNat < 10) :
-    ∃ b a', StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
+    ∃ b a', StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
       FpcT fe (decI nm) k (romCvT id.toNat) a b a' := by
   cases n with
   | zero => simp [fpcW] at hW
@@ -391,10 +391,10 @@ theorem trustCompilerOk_eq (fe : IFEnv) (cv : IConstantVal) :
 theorem fpc_call {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k id : Word} {r : List Word}
     (hc : callW p n "find_pinned_cv" [vis, nm, k, id] m = some (r, m'))
-    (hS : StageR dn vis fe m a) (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4)
+    (hS : StageR vis fe m a) (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4)
     (hid : id.toNat < 10) :
     ∃ b a', (clauseT fe (decI nm) k (romCvT id.toNat)).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (fpc_specW p h n ⟨m, Locals.init []⟩ vis nm k id) hc
   rw [hs'] at hW
@@ -404,9 +404,9 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name}
 /-- **`trust_compiler_ok(vis, q)` refines `trustCompilerOk`** at the model level. -/
 theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q : Word} {r : List Word}
-    {cv : IConstantVal} (hW : tcoW p n m vis q = some (r, m')) (hS : StageR dn vis fe m a)
+    {cv : IConstantVal} (hW : tcoW p n m vis q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) :
-    ∃ b a', (trustCompilerOk fe cv).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ b a', (trustCompilerOk fe cv).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0B m' r b := by
   cases n with
   | zero => simp [tcoW] at hW
@@ -471,8 +471,8 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
 theorem trustCompilerOk_refines (p : Prog) (h : TcoProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal) :
     RefAM p "trust_compiler_ok" [vis, q]
-      (fun m a => StageR dn vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
-      (trustCompilerOk fe cv) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
+      (trustCompilerOk fe cv) (KeepPost vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, hq⟩
   refine triple_post (tco_specW p h n s₀ vis q) ?_
   rintro r s' ⟨hl, hm⟩

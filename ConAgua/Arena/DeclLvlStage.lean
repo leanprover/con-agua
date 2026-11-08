@@ -55,7 +55,7 @@ structure TwinOK (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (fe
 /-- The stage relation with the twin invariants and a filled pin table is `CoreS` (outside the
 eager tower). -/
 theorem StageR.coreS {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (hS : StageR dn vis fe m a) (hT : TwinOK dn m a fe) (hflag : pinW m 0 ≠ 0) :
+    {a : AState} (hS : StageR vis fe m a) (hT : TwinOK dn m a fe) (hflag : pinW m 0 ≠ 0) :
     ∃ M, CoreS dn m a vis fe M 0 := by
   obtain ⟨M, hM⟩ := hS.check.core
   exact ⟨M, ⟨hS.check.arena, hM, hS.check.pins.full hflag, hS.check.env, hT.readL, hT.readLs, hT.nwf, hT.erec,
@@ -64,7 +64,7 @@ theorem StageR.coreS {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 /-- `CoreS` (outside the eager tower) is `CheckR` and the twin invariants. -/
 theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {M : ModeMaps} (hS : CoreS dn m a vis fe M 0) :
-    CheckR dn m a vis fe ∧ TwinOK dn m a fe :=
+    CheckR m a vis fe ∧ TwinOK dn m a fe :=
   ⟨⟨hS.arena, ⟨M, hS.core⟩, ⟨fun _ => hS.pins⟩, hS.env, hS.mode⟩,
     ⟨hS.readL, hS.readLs, hS.nwf, hS.erec, hS.spn, hS.memos, hS.bstk, hS.den⟩⟩
 

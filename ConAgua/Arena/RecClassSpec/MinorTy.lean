@@ -30,7 +30,7 @@ and the constructor record decoded below the tops). -/
 @[refines ConRon.Arena.ClassGen.minorTy]
 theorem classGenMinorTy_refines (p : Prog) (hp : MnProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g c x d : Word) (G : ClassGen) (X : ClassCtor)
-    (hS : StageR dn vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
+    (hS : StageR vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hX : DecB (fun m => decCC m x.toNat) s₀.mem X)
     (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ty" [g, c, x, d]

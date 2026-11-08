@@ -81,7 +81,7 @@ theorem erecCiW_okT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     (h : erecCiW n m i ck = some (r, m')) (hS : StageT dn vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hci : stepCI ck.toNat ds[i.toNat] = some ci) :
-    StageT dn vis fe m' a ∧ IWGrow m m' ∧ decCI (erecP m') dn (r.headD 0).toNat = some ci ∧
+    StageT dn vis fe m' a ∧ IWGrow m m' ∧ decCI (erecP m') (r.headD 0).toNat = some ci ∧
       decCV (erecP m') ((r.headD 0).toNat + 1) = some (stepCV ds[i.toNat]) ∧
       hd? (erecP m') ((r.headD 0).toNat + 5) = some (stepVal ds[i.toNat]) ∧
       (r.headD 0).toNat + 8 ≤ erTop m' := by
@@ -124,14 +124,14 @@ theorem checkThmVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) 
     (hkp : CrKeep p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis c : Word) (cv : IConstantVal) (v : EIdx) (hS : StageT dn vis fe s₀.mem a₀)
-    (hc : decCI (erecP s₀.mem) dn c.toNat = some (.thmInfo cv))
+    (hc : decCI (erecP s₀.mem) c.toNat = some (.thmInfo cv))
     (hv : hd? (erecP s₀.mem) (c.toNat + 5) = some v)
     (hpre : ∃ env cP, ConLeche.EnvWF env ∧ ConRon.Bridge.CheckOK V env fe a₀ ∧
       Frontend.denoteCV a₀.store cv = some cP ∧ ConLeche.Expr.WScoped 0 cP.type)
     (hCr : L.Stubs.CrOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_thm_val" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkThmVal V fe cv v) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (checkThmVal V fe cv v) a₀) s'.mem
+      StageR (r.headD 0) (AM.res (checkThmVal V fe cv v) a₀) s'.mem
         (AM.st (checkThmVal V fe cv v) a₀) ∧ CoreMemos s'.mem ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (checkThmVal_specE p hp n s₀ vis c)
     (tv_ref hq hp hap hkp hn hS hc hv hpre hCr)) ?_
@@ -147,12 +147,12 @@ theorem checkDefnVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis c : Word) (cv : IConstantVal) (v : EIdx) (hh : ConLeche.ReducibilityHint)
     (hS : StageT dn vis fe s₀.mem a₀)
-    (hc : decCI (erecP s₀.mem) dn c.toNat = some (.defnInfo cv v hh))
+    (hc : decCI (erecP s₀.mem) c.toNat = some (.defnInfo cv v hh))
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks)
     (hCr : L.Stubs.CrOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_defn_val" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDefnVal V fe cv v hh) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (checkDefnVal V fe cv v hh) a₀) s'.mem
+      StageR (r.headD 0) (AM.res (checkDefnVal V fe cv v hh) a₀) s'.mem
         (AM.st (checkDefnVal V fe cv v hh) a₀) ∧ CoreMemos s'.mem ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   obtain ⟨hcv, hv⟩ := decls_decCI_defn hc
   refine triple_post (RefE.triple (checkDefnVal_specE p hp n s₀ vis c)
@@ -169,13 +169,13 @@ theorem checkOpaqueVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg 
     (hkp : CrKeep p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis c : Word) (cv : IConstantVal) (v : EIdx) (hS : StageT dn vis fe s₀.mem a₀)
-    (hc : decCI (erecP s₀.mem) dn c.toNat = some (.axiomInfo cv))
+    (hc : decCI (erecP s₀.mem) c.toNat = some (.axiomInfo cv))
     (hv : hd? (erecP s₀.mem) (c.toNat + 5) = some v)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks)
     (hCr : L.Stubs.CrOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_opaque_val" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkOpaqueVal V fe cv v) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (checkOpaqueVal V fe cv v) a₀) s'.mem
+      StageR (r.headD 0) (AM.res (checkOpaqueVal V fe cv v) a₀) s'.mem
         (AM.st (checkOpaqueVal V fe cv v) a₀) ∧ CoreMemos s'.mem ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   have hcv := decCI_cvTA hc (.inr rfl)
   refine triple_post (RefE.triple (checkOpaqueVal_specE p hp n s₀ vis c)
@@ -300,7 +300,7 @@ def ivCoreT (fe : IFEnv) (cv : IConstantVal) (v : EIdx) (vk : Word) (ci : IConst
 the core's memos, the growth, the value group's record. -/
 structure IvPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (v : List Word × Mem)
     (y : IFEnv × Option ValueGroup) (a' : AState) : Prop where
-  stage : StageR dn (v.1.headD 0) y.1 v.2 a'
+  stage : StageR (v.1.headD 0) y.1 v.2 a'
   memos : CoreMemos v.2
   grow : IWGrow m v.2
   vg : y.2 = decVG (erecP v.2) (v.1.tail.headD 0).toNat

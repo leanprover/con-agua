@@ -153,9 +153,9 @@ theorem ciRecMem_eq {m1 : Mem} {q cq nP nF : Word} (hlt : cq.toNat + 4 ≤ q.toN
 (decoded in the record pool below its top), the stage relation kept. -/
 theorem ciRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cq nP nF q : Word} {cv : IConstantVal} (h : ciRecW m cq nP nF = some (q, m'))
-    (hS : StageR dn vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
-      decCI (erecP m') dn q.toNat = some (.ctorInfo cv nP.toNat nF.toNat) := by
+    (hS : StageR vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
+      decCI (erecP m') q.toNat = some (.ctorInfo cv nP.toNat nF.toNat) := by
   rcases h1 : erAllocW m 7 with _ | ⟨q1, m1⟩
   · simp [ciRecW, h1] at h
   have e : ciRecW m cq nP nF = if 4294967296 ≤ rdW ((ciRecMem m1 q1 cq nP nF).arr64 EREC) (q1 + 1)
@@ -239,9 +239,9 @@ with the constructors pushed. -/
 theorem cscW_ok (p : Prog) (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (vis : Word) (fe : IFEnv) (nP o l : Word) (cs : List (IConstantVal × Nat))
       (r : List Word),
-    cscW p k m nP o l vis = some (r, m') → StageR dn vis fe m a →
+    cscW p k m nP o l vis = some (r, m') → StageR vis fe m a →
     DecB (fun m => decPL m (decCN m) o.toNat l.toNat) m cs →
-    StageR dn (r.headD 0) (consSumCtors nP.toNat cs fe) m' a ∧ IWGrow m m' := by
+    StageR (r.headD 0) (consSumCtors nP.toNat cs fe) m' a ∧ IWGrow m m' := by
   induction k with
   | zero => intro m m' a vis fe nP o l cs r h; simp [cscW] at h
   | succ k ih =>
@@ -311,9 +311,9 @@ theorem consSumCtors_refines (p : Prog) (hRp : RecProg p)
     (hci : p.lookup "ctor_info_rec" = some ctorInfoRecL)
     (hp : p.lookup "cons_sum_ctors" = some consSumCtorsL) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nP o l : Word) (cs : List (IConstantVal × Nat))
-    (hS : StageR dn vis fe s₀.mem a₀) (hcs : DecB (fun m => decPL m (decCN m) o.toNat l.toNat) s₀.mem cs) :
+    (hS : StageR vis fe s₀.mem a₀) (hcs : DecB (fun m => decPL m (decCN m) o.toNat l.toNat) s₀.mem cs) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_sum_ctors" [nP, o, l, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn (r.headD 0) (consSumCtors nP.toNat cs fe) s'.mem a₀ ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR (r.headD 0) (consSumCtors nP.toNat cs fe) s'.mem a₀ ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (csc_spec p hRp.alloc hci hp n s₀ nP o l vis) ?_
   rintro r s' ⟨hl, hm⟩

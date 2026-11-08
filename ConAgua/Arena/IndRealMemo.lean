@@ -122,9 +122,9 @@ theorem i1lF_frame {m m' : Mem} {args r : List Word} (h : i1lF m args = some (r,
 walk memos** (replaces `IndStubs.instantiate1LiftFast_spec`); the memos are well formed after. -/
 theorem i1lF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e v d : Word)
     (he : H e) (hv : H v) :
-    RelW i1lF [f, e, v, d] (fun m a => StageR dn vis fe m a ∧ AbsOK m)
+    RelW i1lF [f, e, v, d] (fun m a => StageR vis fe m a ∧ AbsOK m)
       (instantiate1LiftFast f.toNat (decI e) (decI v) d.toNat)
-      (fun m m' a r x => KeepPost dn vis fe decW0E m m' a r x ∧ AbsOK m') := by
+      (fun m m' a r x => KeepPost vis fe decW0E m m' a r x ∧ AbsOK m') := by
   intro m m' a r h ⟨hS, hAb, ⟨mp, hmp⟩, hCr, hIl, hWk⟩
   have hfr := i1lF_frame h
   obtain ⟨n, hc⟩ := callF_run h

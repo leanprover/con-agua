@@ -33,7 +33,7 @@ theorem LoopR.of_frame {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
       ((129 ≤ b.arr ∧ b.arr ≤ 131) ∨ b.arr = 143))
     (hC : ∀ x ∈ C, (x.toNat < 64 ∨ x.toNat = 129 ∨ (140 ≤ x.toNat ∧ x.toNat ≤ 147)) ∨ x.toNat = 133)
     (hcp : cp a' = cp a) (hg : ErecGrow m m') (hts : erecTop m' ≤ (m'.arr64 EREC).size)
-    (hP : PMemoR m' pm') (hE : EnvR dn m' vis fe') (hmode : ModeOK m') :
+    (hP : PMemoR m' pm') (hE : EnvR m' vis fe') (hmode : ModeOK m') :
     LoopR pins dn m' a' vis fe' pend ds := by
   obtain ⟨hiw1, hiw2, hiw3, hiw4, hiw5⟩ := hR.iw
   have hcA : a'.caches = a.caches := congrArg Prod.fst hcp

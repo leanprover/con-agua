@@ -149,7 +149,7 @@ theorem nt_spec (k : Nat) (s₀ : St) (vis C : Word) :
 end spec
 
 theorem decCI_ctor_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {cv : IConstantVal} {nPc nF : Nat} (h : decCI a dn p = some (.ctorInfo cv nPc nF)) :
+    {cv : IConstantVal} {nPc nF : Nat} (h : decCI a p = some (.ctorInfo cv nPc nF)) :
     decCV a (p + 1) = some cv := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, -, h⟩ := h
@@ -255,12 +255,12 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
     (hC : H C) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (co cl ol fp : Word) (ns : List NIdx)
       (acc : List (IConstantVal × Nat × Nat)) (r : List Word),
-    ncGoW k m vis C co cl cs ol fp = some (r, m') → StageR dn vis fe m a →
+    ncGoW k m vis C co cl cs ol fp = some (r, m') → StageR vis fe m a →
     hslice? (erecP m) co.toNat cl.toNat = some ns → cs.toNat + N ≤ iwTop m →
     ol.toNat = acc.length → acc.length + cl.toNat ≤ N →
     CsAt m cs.toNat (acc.map ncProj) (OutR cs.toNat N (iwTop m)) →
     fp.toNat = (acc.head?.map (·.2.1)).getD 0 →
-    ∃ ys a', (ns.filterMapM (ncF fe (decI C))).run a = .ok (ys, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ ys a', (ns.filterMapM (ncF fe (decI C))).run a = .ok (ys, a') ∧ StageR vis fe m' a' ∧
       GrowX cs.toNat N m m' ∧ (r.headD 0).toNat = acc.length + ys.length ∧
       CsAt m' cs.toNat ((acc ++ ys).map ncProj) (OutR cs.toNat N (iwTop m')) ∧
       (r.tail.headD 0).toNat = ((acc ++ ys).head?.map (·.2.1)).getD 0 ∧ ys.length ≤ ns.length := by
@@ -405,7 +405,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
         rw [word_add_toNat (show ol.toNat + (1 : Word).toNat < 2 ^ 64 by simp; omega)]; simp [hol]
       have hrest : ∀ fp' : Word, fp'.toNat = ((acc ++ [(cv, nPc, nF)]).head?.map (·.2.1)).getD 0 →
           ncGoW k (m3.set64 IW (cs + ol) q3) vis C (co + 1) (cl - 1) cs (ol + 1) fp' = some (r, m') →
-          ∃ ys a', (List.filterMapM (ncF fe (decI C)) ns').run a1 = .ok (ys, a') ∧ StageR dn vis fe m' a' ∧
+          ∃ ys a', (List.filterMapM (ncF fe (decI C)) ns').run a1 = .ok (ys, a') ∧ StageR vis fe m' a' ∧
             GrowX cs.toNat N m m' ∧ (r.headD 0).toNat = acc.length + ((cv, nPc, nF) :: ys).length ∧
             CsAt m' cs.toNat ((acc ++ (cv, nPc, nF) :: ys).map ncProj) (OutR cs.toNat N (iwTop m')) ∧
             (r.tail.headD 0).toNat = ((acc ++ (cv, nPc, nF) :: ys).head?.map (·.2.1)).getD 0 ∧
@@ -419,7 +419,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
         · simpa using h2
         · simpa using h3
       obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ : ∃ ys a', (List.filterMapM (ncF fe (decI C)) ns').run a1 =
-          .ok (ys, a') ∧ StageR dn vis fe m' a' ∧
+          .ok (ys, a') ∧ StageR vis fe m' a' ∧
             GrowX cs.toNat N m m' ∧ (r.headD 0).toNat = acc.length + ((cv, nPc, nF) :: ys).length ∧
             CsAt m' cs.toNat ((acc ++ (cv, nPc, nF) :: ys).map ncProj) (OutR cs.toNat N (iwTop m')) ∧
             (r.tail.headD 0).toNat = ((acc ++ (cv, nPc, nF) :: ys).head?.map (·.2.1)).getD 0 ∧
@@ -439,9 +439,9 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
 
 theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C)
     (k : Nat) (m m' : Mem) (a : AState) (co cl : Word) (ns : List NIdx) (r : List Word)
-    (h : ncW k m vis C co cl = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : ncW k m vis C co cl = some (r, m')) (hS : StageR vis fe m a)
     (hns : hslice? (erecP m) co.toNat cl.toNat = some ns) :
-    ∃ ys a', (ns.filterMapM (ncF fe (decI C))).run a = .ok (ys, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ ys a', (ns.filterMapM (ncF fe (decI C))).run a = .ok (ys, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ (r.tail.headD 0).toNat = ys.length ∧ (r.headD 0).toNat + ys.length ≤ iwTop m' ∧
       CsAt m' (r.headD 0).toNat (ys.map ncProj) (· < iwTop m') ∧
       (r.tail.tail.headD 0).toNat = (ys.head?.map (·.2.1)).getD 0 := by
@@ -466,7 +466,7 @@ theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     exact ⟨w, by simpa using hw, by simpa using hc.mono fun _ hx => hx.1⟩
 
 theorem decCaps_ctors {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {caps : IIndCaps}
-    (h : decCaps a dn q = some caps) :
+    (h : decCaps a q = some caps) :
     nat? a (q + 12) = some caps.nparams ∧ hlist? a (q + 13) = some caps.ctors := by
   simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, np, hnp, cts, hcts, heq⟩ := h
@@ -496,8 +496,8 @@ theorem nestContainer_none {fe : IFEnv} {C : NIdx} (h : ∀ cv caps, fe.find? C 
 
 theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C)
     (k : Nat) (m m' : Mem) (a : AState) (r : List Word)
-    (h : ntW k m vis C = some (r, m')) (hS : StageR dn vis fe m a) :
-    ∃ x a', (ConRon.Arena.nestContainer fe (decI C)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    (h : ntW k m vis C = some (r, m')) (hS : StageR vis fe m a) :
+    ∃ x a', (ConRon.Arena.nestContainer fe (decI C)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ NcOut m' r x := by
   have hE := hS.check.env
   unfold ntW at h

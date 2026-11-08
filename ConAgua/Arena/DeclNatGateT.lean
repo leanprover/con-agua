@@ -56,7 +56,7 @@ local notation "V" => ConLeche.CheckMode.verified
 state (`StateOK` after, `Ext`, caches and pins unchanged). -/
 theorem StageC.of_run {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {env : ConLeche.Env} {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR dn vis fe m' a') (hf : MemFrame leafA leafC m m')
+    (hS : StageR vis fe m' a') (hf : MemFrame leafA leafC m m')
     (hok : ConRon.Bridge.StateOK a') (hx : Ext a.store a'.store) (hc : a'.caches = a.caches)
     (hp : a'.pins = a.pins) : StageC dn vis fe env m' a' :=
   ⟨hS, h.check.mono hok hx hc hp,
@@ -68,8 +68,8 @@ theorem StageC.of_run {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 
 /-- The stage relation at the pushed view `w`, back from the pre-insertion view. -/
 theorem stageR_of_restrict {dn : NIdx → Option ConLeche.Name} {vis w : Word} {fe2 : IFEnv}
-    {m : Mem} {a : AState} (h : StageR dn vis (fe2.restrictTo vis.toNat) m a)
-    (hvb : fe2.visibleBelow = w.toNat) : StageR dn w fe2 m a := by
+    {m : Mem} {a : AState} (h : StageR vis (fe2.restrictTo vis.toNat) m a)
+    (hvb : fe2.visibleBelow = w.toNat) : StageR w fe2 m a := by
   have := h.restrict w
   rw [IFEnv.restrictTo_restrictTo, ← hvb, IFEnv.restrictTo_self] at this
   exact this
@@ -227,7 +227,7 @@ the twin's `notImplemented`. -/
 theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vis w n : Word}
     {fe2 : IFEnv} {env env2 : ConLeche.Env} {nm : ConLeche.Name} (k : Nat) (hk : k ≤ 2 ^ 62)
     {m : Mem} {a : AState} (hn : H n)
-    (hSw : StageR dn w fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
+    (hSw : StageR w fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
     (henv : ConLeche.EnvWF env) (hie : StepOK env2 fe2 a)
     (hnm : denoteN a.store.ns (decI n) = some nm) :
     RefE (CoreStubsE p) (defnNatCertE p k m vis w n) (natCertT fe2 (fe2.restrictTo vis.toNat) (decI n))
@@ -329,7 +329,7 @@ pushed view `w`, `StageC` at the pre-insertion view `vis`, the growth, `Ext` of 
 store. -/
 structure DngPost (dn : NIdx → Option ConLeche.Name) (vis w : Word) (fe2 : IFEnv)
     (env : ConLeche.Env) (m m' : Mem) (a a' : AState) : Prop where
-  stageW : StageR dn w fe2 m' a'
+  stageW : StageR w fe2 m' a'
   stage : StageC dn vis (fe2.restrictTo vis.toNat) env m' a'
   grow : IWGrow m m'
   ext : Ext a.store a'.store
@@ -343,7 +343,7 @@ certificate by `dnc_ref`. -/
 theorem dng_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vis w n : Word} {fe2 : IFEnv}
     {env env2 : ConLeche.Env} {nm : ConLeche.Name} (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem}
     {a : AState} (hn : H n)
-    (hSw : StageR dn w fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
+    (hSw : StageR w fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
     (henv : ConLeche.EnvWF env) (hie : StepOK env2 fe2 a)
     (hnm : denoteN a.store.ns (decI n) = some nm) :
     RefE (CoreStubsE p) (defnNatGateE p k m vis w n)
@@ -429,11 +429,11 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
     {vis w n : Word} {fe2 : IFEnv} {env env2 : ConLeche.Env} {nm : ConLeche.Name} {k : Nat}
     (hk : k ≤ 2 ^ 62) {m m' : Mem} {a : AState} {r : List Word} (hn : H n)
     (hcall : callW p k "defn_nat_gate" [vis, w, n] m = some (r, m'))
-    (hSw : StageR dn w fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
+    (hSw : StageR w fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
     (henv : ConLeche.EnvWF env) (hie : StepOK env2 fe2 a)
     (hnm : denoteN a.store.ns (decI n) = some nm) :
     ∃ a', (natGateT (fe2.restrictTo vis.toNat) fe2 (decI n)).run a = .ok ((), a') ∧
-      StageR dn w fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
+      StageR w fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
       IWGrow m m' ∧ Ext a.store a'.store := by
   obtain ⟨s', rfl, -, ⟨⟩, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
     (defnNatGate_specE p hg hc k _ vis w n) (dng_ref hN hq hcl k hk hn hSw hC henv hie hnm) hcall

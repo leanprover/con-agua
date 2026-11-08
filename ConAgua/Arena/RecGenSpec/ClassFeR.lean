@@ -273,9 +273,9 @@ theorem cfrMem_eq {m1 : Mem} {q cq mi rp3 : Word} (hlt : cq.toNat + 4 ≤ q.toNa
 at `cq`. -/
 theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cq mi rp3 q : Word} {cv : IConstantVal} (h : cfrRecW m cq mi rp3 = some (q, m'))
-    (hS : StageR dn vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
-      decCI (erecP m') dn q.toNat = some (.recInfo cv mi.toNat rp3.toNat []) := by
+    (hS : StageR vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
+      decCI (erecP m') q.toNat = some (.recInfo cv mi.toNat rp3.toNat []) := by
   rcases h1 : erAllocW m 9 with _ | ⟨q1, m1⟩
   · simp [cfrRecW, h1] at h
   have e : cfrRecW m cq mi rp3 = if 4294967296 ≤ rdW ((cfrMem m1 q1 cq mi rp3).arr64 EREC) (q1 + 1)
@@ -351,7 +351,7 @@ theorem rec3FerGo_acc (P : BlockShape) : ∀ (L : List (IConstantVal × Nat)) (k
 
 /-- The row of a name handle, as `env_pop_temp` takes it back, is the twin's `idx` entry. -/
 theorem rec3PrevD {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
-    (h : EnvR dn m vis fe) {w : Word} (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2) :
+    (h : EnvR m vis fe) {w : Word} (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2) :
     prevD dn m (rowC m w) (rowP m w) = some (fe.idx[(decI w : NIdx)]?) := by
   have hk := h.keys (decI w) (by rwa [decI_word_self w hw])
   have hv := h.vals (decI w) (by rwa [decI_word_self w hw])
@@ -429,10 +429,10 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
     (ro rl : Word) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (vis : Word) (fe : IFEnv) (cvo cvl rcl M : Word) (cvs : List IConstantVal)
       (rcs : List Nat) (r : List Word),
-    ferW p k m cvo cvl rcl ro rl vis M = some (r, m') → StageR dn vis fe m a →
+    ferW p k m cvo cvl rcl ro rl vis M = some (r, m') → StageR vis fe m a →
     DecB (fun m => decPL m (decRS m) ro.toNat rl.toNat) m P.recs →
     SPL decCVX m cvo.toNat cvl.toNat cvs → rcs.length = rcl.toNat → M.toNat + cvl.toNat < 2 ^ 64 →
-    StageR dn (r.headD 0) (ConRon.Arena.classFeR.go P M.toNat (cvs.zip rcs) fe []).1 m' a ∧ IWGrow m m' ∧
+    StageR (r.headD 0) (ConRon.Arena.classFeR.go P M.toNat (cvs.zip rcs) fe []).1 m' a ∧ IWGrow m m' ∧
       SPL (decPrev dn) m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat
         (ConRon.Arena.classFeR.go P M.toNat (cvs.zip rcs) fe []).2 := by
   induction k with
@@ -536,11 +536,11 @@ records, in push order. -/
 @[refines ConRon.Arena.classFeR]
 theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (pp cgo cgl rco rcl : Word) (P : BlockShape)
-    (cvGs : List IConstantVal) (recCls : List Nat) (hS : StageR dn vis fe s₀.mem a₀)
+    (cvGs : List IConstantVal) (recCls : List Nat) (hS : StageR vis fe s₀.mem a₀)
     (hP : DecB (fun m => decBS m pp.toNat) s₀.mem P) (hcg : SPL decCVX s₀.mem cgo.toNat cgl.toNat cvGs)
     (hrc : DecB (fun m => decNL m rco.toNat rcl.toNat) s₀.mem recCls) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fe_r" [pp, cgo, cgl, rco, rcl, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn (r.headD 0) (ConRon.Arena.classFeR P cvGs recCls fe).1 s'.mem a₀ ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR (r.headD 0) (ConRon.Arena.classFeR P cvGs recCls fe).1 s'.mem a₀ ∧
       IWGrow s₀.mem s'.mem ∧
       SPL (decPrev dn) s'.mem (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat
         (ConRon.Arena.classFeR P cvGs recCls fe).2; ⊤⦄ := by

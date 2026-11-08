@@ -52,7 +52,7 @@ theorem rec2ExprGetD_specF (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFin
   | succ n => exact exprGetD_spec p hpf hpp hib hp n s₀ o l i
 
 theorem rec2SimExprGetD {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (n : Nat) (hS : StageR dn vis fe m a) {o l i : Word} {xs : List EIdx}
+    {a : AState} (n : Nat) (hS : StageR vis fe m a) {o l i : Word} {xs : List EIdx}
     (hxs : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat < 2 ^ 64) :
     RSim (fuelW n (exprGetDW m o l i)) (ConRon.Arena.exprGetD xs i.toNat) a (KP dn vis fe m decW0E) := by
   rcases n with _ | n

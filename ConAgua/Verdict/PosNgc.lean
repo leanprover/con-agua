@@ -29,7 +29,7 @@ open L.Arena
 slice `r` (offset, length), the stage, the growth, the frames. -/
 structure GcPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)
     (m' : Mem) (res : List (IConstantVal × Nat)) (a' : AState) : Prop where
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   length : (r.tail.headD 0).toNat = res.length
   bound : (r.headD 0).toNat + res.length ≤ iwTop m'
@@ -41,7 +41,7 @@ structure GcPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
 whose parameter count disagrees, rejects as the twin does. -/
 theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nPc : Word) (k : Nat) :
     ∀ (m : Mem) (a : AState) (off l oo ol : Word) (cs : List NIdx) (out : List (IConstantVal × Nat)),
-    StageR dn vis fe m a →
+    StageR vis fe m a →
     decHL m off.toNat l.toNat = some cs → (∀ j < l.toNat, off.toNat + j < iwTop m) →
     ol.toNat = out.length → oo.toNat + out.length ≤ iwTop m → CsAt m oo.toNat out (· < iwTop m) →
     RefE (closedNV p _root_.L.Checker.nvFns = true) (ngcE p k m vis nPc off l oo ol)
@@ -157,13 +157,13 @@ include hl hc hap hp
 @[refines ConRon.Arena.nestGroupCtors]
 theorem nestGroupCtors_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis nPc off l oo ol : Word) (cs : List NIdx) (out : List (IConstantVal × Nat))
-    (hS : StageR dn vis fe s₀.mem a₀)
+    (hS : StageR vis fe s₀.mem a₀)
     (hcs' : decHL s₀.mem off.toNat l.toNat = some cs) (hcb : ∀ j < l.toNat, off.toNat + j < iwTop s₀.mem)
     (hol : ol.toNat = out.length) (hob : oo.toNat + out.length ≤ iwTop s₀.mem)
     (hout : CsAt s₀.mem oo.toNat out (· < iwTop s₀.mem)) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_group_ctors" [vis, nPc, off, l, oo, ol]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       (r.tail.headD 0).toNat = (AM.res (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀).length ∧
       (r.headD 0).toNat + (AM.res (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀).length ≤ iwTop s'.mem ∧

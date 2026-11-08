@@ -32,7 +32,7 @@ open L.Arena
 /-- **`pi_binders` keeps the stage relation** (it only conses into the pool). -/
 theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : List Word),
-    piBW n m fuel h = some (rs, m') → StageR dn vis fe m a → H h → StageR dn vis fe m' a := by
+    piBW n m fuel h = some (rs, m') → StageR vis fe m a → H h → StageR vis fe m' a := by
   induction n with
   | zero => intro m m' a fuel h rs hh; simp [piBW] at hh
   | succ n ih =>
@@ -66,11 +66,11 @@ theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
 /-- `pi_binders` at `CWF` from the stage relation: the twin's run, the stage relation kept. -/
 theorem piBW_cwf {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
     {a : AState} {h : Word} {rs : List Word} (hpb : piBW n m CWF h = some (rs, m'))
-    (hS : StageR dn vis fe m a) (hh : H h) :
+    (hS : StageR vis fe m a) (hh : H h) :
     ∃ bs e, (ConRon.Arena.piBinders coreWalkFuel (decI h)).run a = .ok ((bs, e), a) ∧
       decHL m' (rs.headD 0).toNat (rs.getD 1 0).toNat = some bs ∧
       (rs.getD 2 0).toNat < 2 ^ 32 ∧ decE (rs.getD 2 0) = e ∧
-      StageR dn vis fe m' a ∧ IWGrow m m' ∧ (rs.headD 0).toNat + (rs.getD 1 0).toNat ≤ iwTop m' := by
+      StageR vis fe m' a ∧ IWGrow m m' ∧ (rs.headD 0).toNat + (rs.getD 1 0).toNat ≤ iwTop m' := by
   obtain ⟨bs, e, hrun, -, hdec, hb1, hb2, hg, -, hle⟩ :=
     piBW_ok n m m' a CWF h rs hS.check.arena.base hpb hh hS.iw.iwSize hS.iw.ctl
   rw [CWF_eq] at hrun

@@ -258,10 +258,10 @@ theorem structProjArgP_refines (p : Prog) (hd : p.lookup "der_b" = some derB)
     (hji : p.lookup "intern_proj" = some internProj) (hmp : p.lookup "mk_proj" = some mkProj)
     (hp : p.lookup "struct_proj_arg_p" = some structProjArgPL) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T j : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) :
+    (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_arg_p" [T, j]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjArgP (decI T) j.toNat) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (structProjArgP (decI T) j.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (structProjArgP (decI T) j.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       AM.res (structProjArgP (decI T) j.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
   refine triple_post (spaW_spec p hd hpf hpp hib hjf hjp hji hmp hp n s₀ T j) ?_
   rintro r s' ⟨hl, hm⟩

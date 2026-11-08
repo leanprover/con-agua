@@ -60,9 +60,9 @@ def OpfJ (cR : CallM) (J : Mem → Prop) (dn : NIdx → Option ConLeche.Name) (v
     Prop :=
   (∀ m m', AFr m m' → J m → J m') ∧
   ∀ (N : Nat) (k e i : Word), H e → ∀ (m m' : Mem) (a : AState) (r : List Word),
-    cR N "open_pis_at_fvars_f" [k, e, i] m = some (r, m') → StageR dn vis fe m a → J m →
+    cR N "open_pis_at_fvars_f" [k, e, i] m = some (r, m') → StageR vis fe m a → J m →
     ∃ x a', (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a') ∧
-      KeepPost dn vis fe decOLE m m' a' r x ∧ J m'
+      KeepPost vis fe decOLE m m' a' r x ∧ J m'
 
 /-- The program's own reading keeps `AbsOK` (`opfF_ok`). -/
 theorem opfJ_real {p : Prog} (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
@@ -230,13 +230,13 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
     (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (nP mo ml ro rl : Word) (r : List Word) (recs : List RecShape)
       (motPos : List Nat),
-    crW cR n m nP mo ml ro rl = some (r, m') → StageR dn vis fe m a → J m →
+    crW cR n m nP mo ml ro rl = some (r, m') → StageR vis fe m a → J m →
     decPL m (decRS m) ro.toNat rl.toNat = some recs →
     (∀ m1, IWGrow m m1 → decPL m1 (decRS m1) ro.toNat rl.toNat = some recs) →
     decNL m mo.toNat ml.toNat = some motPos → mo.toNat + ml.toNat ≤ iwTop m →
     ro.toNat + rl.toNat < 2 ^ 64 →
     ∃ res a', (ConRon.Arena.classReadRecCls nP.toNat motPos recs).run a = .ok (res, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CrRes m' r res ∧ J m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ CrRes m' r res ∧ J m' := by
   induction n with
   | zero => intro m m' a nP mo ml ro rl r recs motPos h; simp [crW] at h
   | succ n ih =>
@@ -501,18 +501,18 @@ open L.Arena
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
-theorem simPiResult (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
+theorem simPiResult (hS : StageR vis fe m a) {e : Word} (he : H e) :
     RSim (pirF m [CWF, e]) (piResult coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
   have h := (pirF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
-theorem simGetAppFn (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
+theorem simGetAppFn (hS : StageR vis fe m a) {e : Word} (he : H e) :
     RSim (gafF m [CWF, e]) (getAppFn coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
   have h := (gafF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 /-- A reading `cR` of `open_pis_at_fvars_f` with `OpfJ` as a `RSim`: the stub contract's post and
 the invariant `J` after. -/
 theorem OpfJ.sim {cR : CallM} {J : Mem → Prop} (hO : OpfJ cR J dn vis fe) (N : Nat)
-    (hS : StageR dn vis fe m a) (hJ : J m) {k e i : Word} (he : H e) :
+    (hS : StageR vis fe m a) (hJ : J m) {k e i : Word} (he : H e) :
     RSim (cR N "open_pis_at_fvars_f" [k, e, i] m) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
       (fun b a' x => KP dn vis fe m decOLE b a' x ∧ J b.2) := by
   rintro ⟨r, m'⟩ h
@@ -531,9 +531,9 @@ def decFH (r : List Word) : Option Nat → Prop
   | none => r = [0, 0]
   | some i => r = [1, UInt64.ofNat i] ∧ i < 2 ^ 64
 
-theorem simFvarHead (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
+theorem simFvarHead (hS : StageR vis fe m a) {e : Word} (he : H e) :
     RSim (fvarHeadW m e) (ConRon.Arena.fvarHead (decI e)) a
-      (fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decFH b.1 x) := by
+      (fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ decFH b.1 x) := by
   rintro ⟨r, m'⟩ h
   obtain ⟨x, a', hrun, hS', hg, hr, hb⟩ := fvarHeadW_ok dn vis fe m m' a e he r h hS
   refine ⟨x, a', hrun, hS', hg, ?_⟩
@@ -593,7 +593,7 @@ theorem ofNat_sub_word (f : Nat) (d : Word) (hf : f < 2 ^ 64) (hd : d.toNat ≤ 
     UInt64.toNat_ofNat_of_lt' hf, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
 
 theorem ih1W_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
-    (a : AState) (nP mo ml d x : Word) (motPos : List Nat) (hS : StageR dn vis fe m a) (hx : H x)
+    (a : AState) (nP mo ml d x : Word) (motPos : List Nat) (hS : StageR vis fe m a) (hx : H x)
     (hmot : decNL m mo.toNat ml.toNat = some motPos) (hmt : mo.toNat + ml.toNat ≤ iwTop m) :
     RSim (ih1W n m nP mo ml d x) (ihStep nP.toNat motPos d.toNat (decI x)) a (KP dn vis fe m decIH) := by
   rcases n with _ | n
@@ -693,7 +693,7 @@ def decIHS (m' : Mem) (r : List Word) (ihs : List (Nat × Nat)) : Prop :=
 
 theorem ihsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nP mo ml d : Word)
     (motPos : List Nat) (n : Nat) : ∀ (m : Mem) (a : AState) (fo fl : Word) (fvs : List EIdx),
-    StageR dn vis fe m a → decHL m fo.toNat fl.toNat = some fvs → fo.toNat + fl.toNat ≤ iwTop m →
+    StageR vis fe m a → decHL m fo.toNat fl.toNat = some fvs → fo.toNat + fl.toNat ≤ iwTop m →
     decNL m mo.toNat ml.toNat = some motPos → mo.toNat + ml.toNat ≤ iwTop m →
     RSim (ihsW n m nP mo ml d fo fl) (fvs.filterMapM (ihStep nP.toNat motPos d.toNat)) a
       (KP dn vis fe m decIHS) := by
@@ -820,7 +820,7 @@ def decSlot (m' : Mem) (r : List Word) : Option ClassSlot → Prop
 
 theorem finW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (nP mo ml d fo fl hd c : Word) (motPos : List Nat) (fvs : List EIdx)
-    (hS : StageR dn vis fe m a) (hH : H hd) (hfvs : decHL m fo.toNat fl.toNat = some fvs)
+    (hS : StageR vis fe m a) (hH : H hd) (hfvs : decHL m fo.toNat fl.toNat = some fvs)
     (hft : fo.toNat + fl.toNat ≤ iwTop m) (hmot : decNL m mo.toNat ml.toNat = some motPos)
     (hmt : mo.toNat + ml.toNat ≤ iwTop m) :
     RSim (finW n m nP mo ml d fo fl hd c) (minorFin nP.toNat motPos d.toNat c.toNat fvs (decI hd)) a
@@ -929,7 +929,7 @@ theorem decSlot_pair {m : Mem} {r : List Word} {x : Option ClassSlot} (h : decSl
 
 theorem tailW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (nP mo ml d fo fl concl c : Word) (motPos : List Nat) (fvs : List EIdx)
-    (hS : StageR dn vis fe m a) (hH : H concl) (hfvs : decHL m fo.toNat fl.toNat = some fvs)
+    (hS : StageR vis fe m a) (hH : H concl) (hfvs : decHL m fo.toNat fl.toNat = some fvs)
     (hft : fo.toNat + fl.toNat ≤ iwTop m) (hmot : decNL m mo.toNat ml.toNat = some motPos)
     (hmt : mo.toNat + ml.toNat ≤ iwTop m) :
     RSim (tailW n m nP mo ml d fo fl concl c)
@@ -967,7 +967,7 @@ theorem tailW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 
 theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)
     (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (n : Nat) (m : Mem)
-    (a : AState) (nP mo ml d dom : Word) (motPos : List Nat) (hS : StageR dn vis fe m a) (hJ : J m)
+    (a : AState) (nP mo ml d dom : Word) (motPos : List Nat) (hS : StageR vis fe m a) (hJ : J m)
     (hH : H dom)
     (hmot : decNL m mo.toNat ml.toNat = some motPos) (hmt : mo.toNat + ml.toNat ≤ iwTop m) :
     RSim (minorW cR n m nP mo ml d dom) (ConRon.Arena.classReadMinor nP.toNat motPos d.toNat (decI dom)) a
@@ -1148,7 +1148,7 @@ def slotMot (bs : BlockShape) (fe : IFEnv) (dom : EIdx) : AM (Option ClassSlot) 
     else pure none
 
 theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
-    (a : AState) (p dom : Word) (bs : BlockShape) (hS : StageR dn vis fe m a) (hH : H dom)
+    (a : AState) (p dom : Word) (bs : BlockShape) (hS : StageR vis fe m a) (hH : H dom)
     (hb : BSOK m p.toNat bs) :
     RSim (slotMotW n m p vis dom) (slotMot bs fe (decI dom)) a (KP dn vis fe m decSlot) := by
   rcases n with _ | n
@@ -1279,7 +1279,7 @@ theorem slotMotW_afr {n : Nat} {m m' : Mem} {p vis dom : Word} {r : List Word}
 theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)
     (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (n : Nat) (m : Mem)
     (a : AState) (p np mo ml d dom : Word) (bs : BlockShape) (motPos : List Nat)
-    (hS : StageR dn vis fe m a) (hJ : J m) (hH : H dom) (hb : BSOK m p.toNat bs)
+    (hS : StageR vis fe m a) (hJ : J m) (hH : H dom) (hb : BSOK m p.toNat bs)
     (hmot : decNL m mo.toNat ml.toNat = some motPos) (hmt : mo.toNat + ml.toNat ≤ iwTop m) :
     RSim (slotW cR n m p vis np mo ml d dom)
       (ConRon.Arena.classReadSlot bs fe np.toNat motPos d.toNat (decI dom)) a
@@ -1357,15 +1357,15 @@ theorem snocW_room {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
 /-- `class_read_slots_snoc` under the stage relation. -/
 theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {N : Nat} {m m' : Mem} {mo ml np d : Word} {r : List Word} {xs : List Nat}
-    (h : motSnocW N m mo ml np d = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : motSnocW N m mo ml np d = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : mo.toNat + ml.toNat ≤ iwTop m) (hxs : decNL m mo.toNat ml.toNat = some xs) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (xs ++ [d.toNat - np.toNat]) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   rcases N with _ | N
   · simp [motSnocW] at h
   have key : ∀ x, x.toNat = d.toNat - np.toNat → motSnocW.k_sl_snoc (snocW N m mo ml x) = some (r, m') →
-      StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      StageR vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (xs ++ [d.toNat - np.toNat]) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := fun x hx h2 => by
     obtain ⟨⟨r3, m3⟩, h3, h2⟩ := of_K h2 rfl
@@ -1580,7 +1580,7 @@ theorem viewBindW {m : Mem} {a : AState} (hR : ArenaR m a) {w : Word} (hH : H w)
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
-theorem simInst1 (hS : StageR dn vis fe m a) {e v : Word} (he : H e) :
+theorem simInst1 (hS : StageR vis fe m a) {e v : Word} (he : H e) :
     RSim (i1F m [CWF, e, v, 0]) (instantiate1Fast coreWalkFuel (decI e) (decI v) 0)
       a (KP dn vis fe m decW0E) := by
   rintro ⟨r, m'⟩ hb
@@ -1614,13 +1614,13 @@ theorem slotsRest_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
     (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (p np : Word)
     (bs : BlockShape) (N : Nat)
     (ih : ∀ (m : Mem) (a : AState) (n mo ml d e : Word) (motPos : List Nat),
-      StageR dn vis fe m a → J m → H e → BSOK m p.toNat bs → decNL m mo.toNat ml.toNat = some motPos →
+      StageR vis fe m a → J m → H e → BSOK m p.toNat bs → decNL m mo.toNat ml.toNat = some motPos →
       mo.toNat + ml.toNat ≤ iwTop m → d.toNat + n.toNat < 2 ^ 64 →
       RSim (slotsW cR N m p vis np n mo ml d e)
         (ConRon.Arena.classReadSlots bs fe np.toNat n.toNat motPos d.toNat (decI e)) a
         (fun b a' x => KP dn vis fe m decSlots b a' x ∧ J b.2))
     (m0 m2 : Mem) (a2 : AState) (n d dom body slotw mo2 ml2 : Word) (k : Nat) (motPos' : List Nat)
-    (slot : ClassSlot) (hS : StageR dn vis fe m2 a2) (hJ : J m2) (hg : IWGrow m0 m2) (hdom : H dom)
+    (slot : ClassSlot) (hS : StageR vis fe m2 a2) (hJ : J m2) (hg : IWGrow m0 m2) (hdom : H dom)
     (hbody : H body)
     (hb : BSOK m2 p.toNat bs) (hmot : decNL m2 mo2.toNat ml2.toNat = some motPos')
     (hmt : mo2.toNat + ml2.toNat ≤ iwTop m2) (hn : n.toNat = k + 1) (hd : d.toNat + n.toNat < 2 ^ 64)
@@ -1676,14 +1676,14 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (p np : Word)
     (bs : BlockShape) (N : Nat) :
     (∀ (m : Mem) (a : AState) (n mo ml d e : Word) (motPos : List Nat),
-      StageR dn vis fe m a → J m → H e → BSOK m p.toNat bs → decNL m mo.toNat ml.toNat = some motPos →
+      StageR vis fe m a → J m → H e → BSOK m p.toNat bs → decNL m mo.toNat ml.toNat = some motPos →
       mo.toNat + ml.toNat ≤ iwTop m → d.toNat + n.toNat < 2 ^ 64 →
       RSim (slotsW cR N m p vis np n mo ml d e)
         (ConRon.Arena.classReadSlots bs fe np.toNat n.toNat motPos d.toNat (decI e)) a
         (fun b a' x => KP dn vis fe m decSlots b a' x ∧ J b.2)) ∧
     (∀ (m : Mem) (a : AState) (n mo ml d dom body slotw : Word) (motPos : List Nat) (k : Nat)
       (slot : ClassSlot),
-      StageR dn vis fe m a → J m → H dom → H body → BSOK m p.toNat bs →
+      StageR vis fe m a → J m → H dom → H body → BSOK m p.toNat bs →
       decNL m mo.toNat ml.toNat = some motPos → mo.toNat + ml.toNat ≤ iwTop m →
       n.toNat = k + 1 → d.toNat + n.toNat < 2 ^ 64 → StabD (fun m => decCS m slotw.toNat) m slot →
       RSim (nextW cR N m p vis np n mo ml d dom body slotw)
@@ -1945,9 +1945,9 @@ theorem range'_filter_step (f : Nat → Bool) (j k : Nat) :
 
 theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a : AState)
     (so sl : Word) (slots : List ClassSlot) (N : Nat) : ∀ (m m' : Mem) (j : Word) (r : List Word),
-    motPosW N m so sl j = some (r, m') → StageR dn vis fe m a → SPL decCS m so.toNat sl.toNat slots →
+    motPosW N m so sl j = some (r, m') → StageR vis fe m a → SPL decCS m so.toNat sl.toNat slots →
     j.toNat ≤ sl.toNat →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat =
         some ((List.range' j.toNat (sl.toNat - j.toNat)).filter (motF slots)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
@@ -2027,7 +2027,7 @@ theorem motPosW_afr : ∀ (N : Nat) (m m' : Mem) (so sl j : Word) (r : List Word
 theorem readFinW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)
     (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (N : Nat) (m : Mem)
     (a : AState) (nP so sl ro rl : Word) (slots : List ClassSlot) (recs : List RecShape)
-    (hS : StageR dn vis fe m a) (hJ : J m) (hsp : SPL decCS m so.toNat sl.toNat slots)
+    (hS : StageR vis fe m a) (hJ : J m) (hsp : SPL decCS m so.toNat sl.toNat slots)
     (hrecs : RecsDec m ro rl recs) :
     RSim (readFinW cR N m nP so sl ro rl) (readFinTw nP.toNat slots recs) a
       (fun b a' x => KP dn vis fe m decRead b a' x ∧ J b.2) := by
@@ -2043,7 +2043,7 @@ theorem readFinW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   rw [frK1_some]
   have hcr : RSim (crW cR N m1 nP (r1.headD 0) (r1.tail.headD 0) ro rl)
       (ConRon.Arena.classReadRecCls nP.toNat ((List.range slots.length).filter (motF slots)) recs) a
-      (fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ CrRes b.2 b.1 x ∧ J b.2) := by
+      (fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ CrRes b.2 b.1 x ∧ J b.2) := by
     rintro ⟨r, m'⟩ h
     exact crW_ok dn vis fe cR J hO N m1 m' a nP _ _ ro rl r recs _ h hS1 hJ1 (hrecs.dec hg1)
       (fun m3 hg3 => hrecs.dec (hg1.trans hg3)) hd1 ht1 hrecs.2
@@ -2092,7 +2092,7 @@ theorem decRS_rP {m : Mem} {p : Nat} {R : RecShape} (h : decRS m p = some R) :
 theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)
     (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (N : Nat) (m : Mem)
     (a : AState) (p nP ro rl : Word) (bs : BlockShape) (recs : List RecShape)
-    (hS : StageR dn vis fe m a) (hJ : J m) (hb : BSOK m p.toNat bs) (hrecs : RecsDec m ro rl recs) :
+    (hS : StageR vis fe m a) (hJ : J m) (hb : BSOK m p.toNat bs) (hrecs : RecsDec m ro rl recs) :
     RSim (readW cR N m p vis nP ro rl) (ConRon.Arena.classRead bs fe nP.toNat recs) a
       (fun b a' x => KP dn vis fe m decRead b a' x ∧ J b.2) := by
   rcases N with _ | N
@@ -2190,7 +2190,7 @@ own `open_pis_at_fvars_f` (`opfF_ok`), so the walk memos are well formed after (
 premise). -/
 theorem classRead_refinesA (p : Prog) (hP : ReadProg p) (hOpf : OpfF p) (N : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q nP ro rl : Word)
-    (bs : BlockShape) (recs : List RecShape) (hS : StageR dn vis fe s₀.mem a₀) (hA : AbsOK s₀.mem)
+    (bs : BlockShape) (recs : List RecShape) (hS : StageR vis fe s₀.mem a₀) (hA : AbsOK s₀.mem)
     (hb : BSOK s₀.mem q.toNat bs) (hrecs : RecsDec s₀.mem ro rl recs) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read" [q, vis, nP, ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classRead bs fe nP.toNat recs) a₀ ∧

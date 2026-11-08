@@ -48,11 +48,11 @@ theorem bpa_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p 
 
 /-- **`block_parts`' model refines `blockParts?`** (`bshW_sim`). -/
 theorem bpW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem}
-    {a : AState} {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR dn vis fe m a)
+    {a : AState} {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR vis fe m a)
     (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk)
     (hc : LvlHyp c n dn vis fe m (TshT nPd.toNat blk a)) :
     Sim (bgoK3 (bshW c n m nPd off l)) (ConRon.Arena.blockParts? nPd.toNat blk) a
-      (fun r x m' a' => PartsR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => PartsR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   unfold ConRon.Arena.blockParts?
   intro r m' e
   rcases h1 : bshW c n m nPd off l with _ | ⟨r1, m1⟩ <;> rw [h1] at e

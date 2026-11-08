@@ -104,8 +104,8 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {m m' : Mem}
     {r : List Word} {w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 : Word}
     (h : icprW p n m w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 = some (r, m'))
-    (hS : StageR dn vis fe m a) (hP : PosMR m) :
-    ∃ q : Word, r = [q] ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ PosMR m' ∧ q.toNat = iwTop m ∧
+    (hS : StageR vis fe m a) (hP : PosMR m) :
+    ∃ q : Word, r = [q] ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ PosMR m' ∧ q.toNat = iwTop m ∧
       q.toNat + 19 ≤ iwTop m' ∧
       ∀ j (_hj : j < 19), (m'.arr64 IW)[q.toNat + j]? =
         [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17, w18][j]? := by

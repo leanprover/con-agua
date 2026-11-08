@@ -33,8 +33,8 @@ theorem crfP_prog : L.Stubs.CrfProg crfP := by
 memos** (replaces `IndStubs.constsResolveFFast_spec` at the inductive stage's uses); the memos are
 well formed after. -/
 theorem crfF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e) :
-    RelW crfF [vis, e] (fun m a => StageR dn vis fe m a ∧ AbsOK m) (constsResolveFFast fe (decI e))
-      (fun m m' a r x => KeepPost dn vis fe decW0B m m' a r x ∧ AbsOK m') := by
+    RelW crfF [vis, e] (fun m a => StageR vis fe m a ∧ AbsOK m) (constsResolveFFast fe (decI e))
+      (fun m m' a r x => KeepPost vis fe decW0B m m' a r x ∧ AbsOK m') := by
   intro m m' a r h ⟨hS, hAb, hI1, hCr, hIl, hWk⟩
   have hfr := crfF_frame h
   obtain ⟨x, a', hrun, hK, hCr'⟩ := relW_callF (P := crfP)

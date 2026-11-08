@@ -111,7 +111,7 @@ theorem trunc_get_zero {P : Array Word} {t : Nat} {v : Word} (h : (trunc P t)[0]
 
 theorem decCIs_succ (a : Array Word) (dn : NIdx → Option ConLeche.Name) (o k : Nat) :
     decCIs a dn o (k + 1) = (do
-      let x ← (do let v ← nat? a o; decCI a dn v)
+      let x ← (do let v ← nat? a o; decCI a v)
       let xs ← decCIs a dn (o + 1) k
       pure (x :: xs)) := by
   simp only [decCIs, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]

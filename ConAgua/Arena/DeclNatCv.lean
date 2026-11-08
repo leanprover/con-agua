@@ -54,9 +54,9 @@ theorem rdW_erec_of {m : Mem} {q : Word} {w : Word} (_hsz : (m.arr64 EREC).size 
 
 theorem ciToCv_ref (hN : NatCvProg p) (q : Word) (ci : IConstantInfo) :
     CallRef p "ci_to_cv" [q]
-      (fun m a => StageR dn vis fe m a ∧ decCI (erecP m) dn q.toNat = some ci)
+      (fun m a => StageR vis fe m a ∧ decCI (erecP m) q.toNat = some ci)
       (pure ci.toConstantVal)
-      (KeepPost dn vis fe (fun m r (cv : IConstantVal) => decCV (erecP m) (r.headD 0).toNat = some cv)) :=
+      (KeepPost vis fe (fun m r (cv : IConstantVal) => decCV (erecP m) (r.headD 0).toNat = some cv)) :=
   CallRef.of_refAM (ciToCv_refines p hN.lCanon dn vis fe q ci)
 
 end cvref

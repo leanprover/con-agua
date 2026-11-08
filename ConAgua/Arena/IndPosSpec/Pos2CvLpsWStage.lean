@@ -31,9 +31,9 @@ open L.Arena
 
 theorem pos2_cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
-    (h : cvLpsW n m q = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
     (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   obtain ⟨-, hl, -⟩ := decCV_some (a := erA m) (q := q.toNat) hcv

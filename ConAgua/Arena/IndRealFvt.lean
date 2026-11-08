@@ -54,9 +54,9 @@ open L.Arena
 /-- The stage relation across a writer above array 136 and `CTL[129]` that leaves the pool alone
 (`IndPosSpec/MatesW`'s `StageR.frame_hi`, which sits above this file). -/
 theorem stageR_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} {A : List TieredArray} {C : List Word} (hS : StageR dn vis fe m a) (hf : MemFrame A C m m')
+    {a : AState} {A : List TieredArray} {C : List Word} (hS : StageR vis fe m a) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr)) (hC : ∀ x ∈ C, 130 ≤ x.toNat ∧ x.toNat ≠ 133) (hA2 : (IW : TieredArray) ∉ A) (hC2 : (200 : Word) ∉ C) :
-    StageR dn vis fe m' a ∧ IWGrow m m' := by
+    StageR vis fe m' a ∧ IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW hA2 (by decide)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (fun h => by have := hA _ h; simp [EREC] at this)
     (by decide)
@@ -194,7 +194,7 @@ theorem ftdsGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     (o l q : Word) (m0 : Mem) (xs : List EIdx) (hxs : decHL m0 o.toNat l.toNat = some xs)
     (hsz0 : (m0.arr64 IW).size < 2 ^ 64) (hol : 0 < l.toNat → o.toNat + l.toNat ≤ q.toNat) :
     ∀ (f : Nat) (m : Mem) (k : Word) (r : List Word) (m' : Mem),
-      ftdsGoW o l q f m k = some (r, m') → StageR dn vis fe m a → k.toNat ≤ l.toNat →
+      ftdsGoW o l q f m k = some (r, m') → StageR vis fe m a → k.toNat ≤ l.toNat →
       q.toNat + l.toNat ≤ (m.arr64 IW).size →
       (∀ j : Nat, k.toNat ≤ j → j < l.toNat →
         rdW (m.arr64 IW) (o + j.toUInt64) = rdW (m0.arr64 IW) (o + j.toUInt64)) →
@@ -266,9 +266,9 @@ input slice below the pool's top, see the header): a fresh slice, the twin state
 theorem ftdsF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l : Word)
     (xs : List EIdx) :
     RelW ftdsF [o, l]
-      (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs ∧
+      (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some xs ∧
         (0 < l.toNat → o.toNat + l.toNat ≤ iwTop m))
-      (fvarTypeDs xs) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
+      (fvarTypeDs xs) (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
   intro m m' a r h ⟨hS, hxs, hol⟩
   obtain ⟨n, hc⟩ := callF_run h
   rcases n with _ | k
@@ -577,8 +577,8 @@ theorem gaaF_frame {m m' : Mem} {args r : List Word} (h : gaaF m args = some (r,
 `get_app_args` (`getAppArgs_refinesR`), the stack slice into a fresh pool slice
 (`s2iW_wr`, `recPost_wr`, `slice_keep`), the stack top put back (`stageR_hi`). -/
 theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
-    RelW gaaF [f, e] (StageR dn vis fe) (getAppArgs f.toNat (decI e))
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
+    RelW gaaF [f, e] (StageR vis fe) (getAppArgs f.toNat (decI e))
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
   intro m m' a r h hS
   obtain ⟨n, hc⟩ := callF_run h
   rcases n with _ | k

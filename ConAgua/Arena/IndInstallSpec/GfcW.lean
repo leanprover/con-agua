@@ -67,9 +67,9 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : ASt
 theorem gftW_ok (p : Prog) (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantVal)
     (hcv : PSlR decCVp cvTas o l s0) (hq : q.toNat = iwTop s0) (hT : iwTop m1 = q.toNat + l.toNat)
     (f : Nat) : ∀ (m m' : Mem) (j : Word), gftW.loop1 p f m o l q j = some m' →
-    StageR dn vis fe m a → IWGrow s0 m → iwTop m = iwTop m1 → MFr [] [] m1 m → j ≤ l →
+    StageR vis fe m a → IWGrow s0 m → iwTop m = iwTop m1 → MFr [] [] m1 m → j ≤ l →
     decHL m q.toNat j.toNat = some ((cvTas.map (·.type)).take j.toNat) →
-    StageR dn vis fe m' a ∧ IWGrow s0 m' ∧ iwTop m' = iwTop m1 ∧ MFr [] [] m1 m' ∧
+    StageR vis fe m' a ∧ IWGrow s0 m' ∧ iwTop m' = iwTop m1 ∧ MFr [] [] m1 m' ∧
       decHL m' q.toNat l.toNat = some (cvTas.map (·.type)) := by
   induction f with
   | zero => intro m m' j h; simp [gftW.loop1] at h
@@ -119,9 +119,9 @@ end rel
 theorem genRecCheckFormerTys_refines {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "gen_rec_check_former_tys" = some genRecCheckFormerTys) (n : Nat) (s₀ : St) (a : AState)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (cO cL : Word) (cvTas : List IConstantVal)
-    (hS : StageR dn vis fe s₀.mem a) (hcv : PSlR decCVp cvTas cO cL s₀.mem) :
+    (hS : StageR vis fe s₀.mem a) (hcv : PSlR decCVp cvTas cO cL s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_former_tys" [cO, cL]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a ∧ IWGrow s₀.mem s'.mem ∧ MFr [] [] s₀.mem s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a ∧ IWGrow s₀.mem s'.mem ∧ MFr [] [] s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat = some (cvTas.map (·.type)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
   rcases n with _ | n
@@ -160,19 +160,19 @@ omit P in
 theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (ms : List TargetMajor)
     (hcv : PSlR decCVp cvTas co cl s0) (hms : PSlR decTM ms mo ml s0) (hq : q.toNat = iwTop s0)
     (J : Mem → AState → Prop)
-    (hJiw : ∀ m m' a, J m a → MemFrame [IW] [200] m m' → StageR dn vis fe m' a → J m' a)
+    (hJiw : ∀ m m' a, J m a → MemFrame [IW] [200] m m' → StageR vis fe m' a → J m' a)
     (hcft : ∀ (k : Nat) (m m1 : Mem) (a : AState) (mp : Word) (M : TargetMajor) (r : List Word), J m a →
-      StageR dn vis fe m a → M ∈ ms → DecB (fun m => decTM m mp.toNat) m M →
+      StageR vis fe m a → M ∈ ms → DecB (fun m => decTM m mp.toNat) m M →
       decPL m (decCVp m) co.toNat cl.toNat = some cvTas → co.toNat + cl.toNat < 2 ^ 64 →
       callW p k "class_former_ty" [vis, co, cl, mp] m = some (r, m1) →
-      ∃ x a1, (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a1) ∧ StageR dn vis fe m1 a1 ∧
+      ∃ x a1, (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a1) ∧ StageR vis fe m1 a1 ∧
         IWGrow m m1 ∧ decW0E m1 r x ∧ J m1 a1)
     (k : Nat) : ∀ (m m' : Mem) (a : AState) (j : Word) (acc : List EIdx),
     gfcW.loop1 p k m vis co cl mo ml q j = some m' →
-    StageR dn vis fe m a → J m a → IWGrow s0 m → q.toNat + ml.toNat ≤ iwTop m → j ≤ ml →
+    StageR vis fe m a → J m a → IWGrow s0 m → q.toNat + ml.toNat ≤ iwTop m → j ≤ ml →
     decHL m q.toNat j.toNat = some acc →
     ∃ rest a', ((ms.drop j.toNat).mapM (ConRon.Arena.classFormerTy fe cvTas)).run a = .ok (rest, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow s0 m' ∧ q.toNat + ml.toNat ≤ iwTop m' ∧
+      StageR vis fe m' a' ∧ IWGrow s0 m' ∧ q.toNat + ml.toNat ≤ iwTop m' ∧
       decHL m' q.toNat ml.toNat = some (acc ++ rest) ∧ J m' a' := by
   induction k with
   | zero => intro m m' a j acc h; simp [gfcW.loop1] at h
@@ -233,20 +233,20 @@ a fresh slice; each `class_former_ty` call by the contract `hcft`, an invariant 
 theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
     (hp : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cO cL mO mL : Word)
-    (cvTas : List IConstantVal) (ms : List TargetMajor) (hS : StageR dn vis fe s₀.mem a₀)
+    (cvTas : List IConstantVal) (ms : List TargetMajor) (hS : StageR vis fe s₀.mem a₀)
     (hcv : PSlR decCVp cvTas cO cL s₀.mem) (hms : PSlR decTM ms mO mL s₀.mem)
     (J : Mem → AState → Prop)
-    (hJiw : ∀ m m' a, J m a → MemFrame [IW] [200] m m' → StageR dn vis fe m' a → J m' a)
+    (hJiw : ∀ m m' a, J m a → MemFrame [IW] [200] m m' → StageR vis fe m' a → J m' a)
     (hcft : ∀ (k : Nat) (m m1 : Mem) (a : AState) (mp : Word) (M : TargetMajor) (r : List Word), J m a →
-      StageR dn vis fe m a → M ∈ ms → DecB (fun m => decTM m mp.toNat) m M →
+      StageR vis fe m a → M ∈ ms → DecB (fun m => decTM m mp.toNat) m M →
       decPL m (decCVp m) cO.toNat cL.toNat = some cvTas → cO.toNat + cL.toNat < 2 ^ 64 →
       callW p k "class_former_ty" [vis, cO, cL, mp] m = some (r, m1) →
-      ∃ x a1, (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a1) ∧ StageR dn vis fe m1 a1 ∧
+      ∃ x a1, (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a1) ∧ StageR vis fe m1 a1 ∧
         IWGrow m m1 ∧ decW0E m1 r x ∧ J m1 a1)
     (hJ : J s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_former_tys_c" [vis, cO, cL, mO, mL]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧

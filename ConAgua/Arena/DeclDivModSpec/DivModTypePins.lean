@@ -237,8 +237,8 @@ l_model divModDeclPin_specW (p : Prog) (hp : p.lookup "div_mod_decl_pin" = some 
 
 theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
-    CallRef p "div_mod_decl_pin" [ps, c] (fun m a => StageR dn vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModDeclPin ip (decI c)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "div_mod_decl_pin" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
+      (divModDeclPin ip (decI c)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hP⟩ hcall => ?_
   have hw := callW_model (M := fun mm => divModDeclPinW p (k + 1) mm ps c)
     (divModDeclPin_specW p hD.lDivModDeclPin (k + 1) · ps c) hcall
@@ -265,8 +265,8 @@ l_model divModTypePins_specW (p : Prog) (hp : p.lookup "div_mod_type_pins" = som
 
 theorem divModTypePins_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
-    CallRef p "div_mod_type_pins" [ps, c] (fun m a => StageR dn vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModTypePins ip (decI c)) (KeepPost dn vis fe decTP) := by
+    CallRef p "div_mod_type_pins" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
+      (divModTypePins ip (decI c)) (KeepPost vis fe decTP) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hP⟩ hcall => ?_
   have hw := callW_model (M := fun mm => divModTypePinsW p (k + 1) mm ps c)
     (divModTypePins_specW p hD.lDivModTypePins (k + 1) · ps c) hcall
@@ -286,8 +286,8 @@ theorem divModTypePins_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
 @[refines ConRon.Arena.divModTypePins]
 theorem divModTypePins_refines {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {p : Prog} (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
-    RefAM p "div_mod_type_pins" [ps, c] (fun m a => StageR dn vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModTypePins ip (decI c)) (KeepPost dn vis fe decTP) :=
+    RefAM p "div_mod_type_pins" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
+      (divModTypePins ip (decI c)) (KeepPost vis fe decTP) :=
   (divModTypePins_ref hD ps c ip).refAM
 
 theorem sliceR_get {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
@@ -327,9 +327,9 @@ l_model divModCertProofs_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAll
 
 theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
-    CallRef p "div_mod_cert_proofs" [ps, c] (fun m a => StageR dn vis fe m a ∧ H c ∧ PinSetR m ps ip)
+    CallRef p "div_mod_cert_proofs" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
       (divModCertProofs ip (decI c))
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hP⟩ hcall => ?_
   have hw := callW_model (M := fun mm => divModCertProofsW p (k + 1) mm ps c)
     (divModCertProofs_specW p hD.lIwAlloc hD.lErCopy hD.lErToIw hD.lDivModCertProofs (k + 1) · ps c) hcall
@@ -360,15 +360,15 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
 @[refines ConRon.Arena.divModDeclPin]
 theorem divModDeclPin_refines {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
-    RefAM p "div_mod_decl_pin" [ps, c] (fun m a => StageR dn vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModDeclPin ip (decI c)) (KeepPost dn vis fe decW0E) :=
+    RefAM p "div_mod_decl_pin" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
+      (divModDeclPin ip (decI c)) (KeepPost vis fe decW0E) :=
   (divModDeclPin_ref hD ps c ip).refAM
 
 @[refines ConRon.Arena.divModCertProofs]
 theorem divModCertProofs_refines {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {p : Prog} (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
-    RefAM p "div_mod_cert_proofs" [ps, c] (fun m a => StageR dn vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModCertProofs ip (decI c)) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) :=
+    RefAM p "div_mod_cert_proofs" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
+      (divModCertProofs ip (decI c)) (KeepPost vis fe (decRL (fun m => decHL m) 0)) :=
   (divModCertProofs_ref hD ps c ip).refAM
 
 end L.Ind

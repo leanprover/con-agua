@@ -37,9 +37,9 @@ section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
 /-- `pi_binders` as a simulation, with its write set. -/
-theorem rec2SimPiBinders (n : Nat) (hS : StageR dn vis fe m a) {h : Word} (hh : H h) :
+theorem rec2SimPiBinders (n : Nat) (hS : StageR vis fe m a) {h : Word} (hh : H h) :
     RSim (piBW n m CWF h) (ConRon.Arena.piBinders coreWalkFuel (decI h)) a
-      (fun b a' x => a' = a ∧ StageR dn vis fe b.2 a ∧ IWGrow m b.2 ∧ MemFrame [IW] [200] m b.2 ∧
+      (fun b a' x => a' = a ∧ StageR vis fe b.2 a ∧ IWGrow m b.2 ∧ MemFrame [IW] [200] m b.2 ∧
         decHL b.2 (b.1.headD 0).toNat (b.1.tail.headD 0).toNat = some x.1) := by
   intro b hb
   obtain ⟨x, a', hrun, hS', hg, hd, -⟩ := simPiBinders n hS hh b hb
@@ -104,9 +104,9 @@ theorem toSPL (h : SPLA b dec m o l xs) : SPL dec m o l xs := by
 `b` on. -/
 theorem cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {x ow lw : Word} {r : List Word} {y : α} (h : consW n m x ow lw = some (r, m'))
-    (hS : StageR dn vis fe m a) (hl : SPLA b dec m ow.toNat lw.toNat xs) (hbt : b ≤ iwTop m)
+    (hS : StageR vis fe m a) (hl : SPLA b dec m ow.toNat lw.toNat xs) (hbt : b ≤ iwTop m)
     (hy : StabA b (fun m => dec m x.toNat) m y) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       SPLA b dec m' (r.headD 0).toNat (r.tail.headD 0).toNat (y :: xs) := by
   obtain ⟨h1, h2, ps, hps, hf⟩ := hl
   obtain ⟨hr, -, -, -, -, -⟩ := consW_decN h hS.iw.iwSize hS.iw.ctl h2 hps
@@ -139,7 +139,7 @@ theorem rec2RecW_decCF_A {m m' : Mem} {k : Word} {ws r : List Word} {y : ClassFi
 records lie above the entry's top (`SPLA`, for `class_ctors_of`'s writes into its result slots). -/
 def CfoQ (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (b : List Word × Mem)
     (a' : AState) (ks : List ClassField) : Prop :=
-  StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧
+  StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧
     SPLA (iwTop m) decCF b.2 (b.1.headD 0).toNat (b.1.tail.headD 0).toNat ks ∧
     (∃ mp, noMR b.2 mp) ∧ MFr [NOM] [204, 205] m b.2
 

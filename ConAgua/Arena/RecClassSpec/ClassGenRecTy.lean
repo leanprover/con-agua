@@ -65,10 +65,10 @@ theorem rec2MotVar_specF (p : Prog) (h : MtProg p) (hff : p.lookup "fvar_find" =
   | succ n => exact motVar_spec p h.pw h.sf h.sp h.isort hff hfp hif hsv hms hp n s₀ g c
 
 theorem rec2SimMotVar {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (n : Nat) (hS : StageR dn vis fe m a) {g : Word} (c : Word) {G : ClassGen}
+    {a : AState} (n : Nat) (hS : StageR vis fe m a) {g : Word} (c : Word) {G : ClassGen}
     (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64) :
     RSim (rec2MotVarF n m g c) (ConRon.Arena.ClassGen.motVar G c.toNat) a
-      (fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ H (b.1.headD 0) ∧ decE (b.1.headD 0) = x) := by
+      (fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ H (b.1.headD 0) ∧ decE (b.1.headD 0) = x) := by
   rcases n with _ | n
   · exact RSim.none
   rintro ⟨r, m'⟩ h
@@ -114,7 +114,7 @@ section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G : ClassGen)
-    (ifs : List EIdx) (po : Nat) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (ifs : List EIdx) (po : Nat) (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64)
     (hpo : iwN m (g.toNat + 12) = some po)
     (hpre : DecB (fun m => (decHL m po rP.toNat : Option (List EIdx))) m G.pre)
@@ -171,7 +171,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   have hb3 : (r3.headD 0).toNat + (r3.tail.headD 0).toNat ≤ iwTop m3 := by rw [hr3]; simp only [List.headD_cons, List.tail_cons]; omega
   have hd3' : decHL m6 (r3.headD 0).toNat (r3.tail.headD 0).toNat = some (G.pre ++ ibs ++ [decI maj]) := by
     rw [decHL_grow hg36 hb3, hr3]; exact hd3
-  refine RSim.bind (K := grtW.k_close_telescope) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m6 b.2 ∧
+  refine RSim.bind (K := grtW.k_close_telescope) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m6 b.2 ∧
     decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r7, m7⟩ h7
     obtain ⟨x, a', hrun, hS', hg, hx, hA7⟩ := closeW_ok n dn fe vis m6 m7 a6 _ _ 0 _ _ r7 h7 hS6 hbH hd3'
@@ -186,7 +186,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
 end sims
 
 theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
-    (a : AState) (g c : Word) (G : ClassGen) (hS : StageR dn vis fe m a)
+    (a : AState) (g c : Word) (G : ClassGen) (hS : StageR vis fe m a)
     (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK m) :
     RSim (gtW n m g c) (ConRon.Arena.classGenRecTy G c.toNat) a
       (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
@@ -254,7 +254,7 @@ the tops). -/
 @[refines ConRon.Arena.classGenRecTy]
 theorem classGenRecTy_refines (p : Prog) (hp : GtProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g c : Word) (G : ClassGen)
-    (hS : StageR dn vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
+    (hS : StageR vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rec_ty" [g, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classGenRecTy G c.toNat) a₀ ∧

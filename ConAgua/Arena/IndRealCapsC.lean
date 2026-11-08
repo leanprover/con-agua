@@ -83,15 +83,15 @@ section
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 /-- The stage relation with the level readback cache replaced. -/
-theorem StageR.withReadLC {m : Mem} {a : AState} (hS : StageR dn vis fe m a)
+theorem StageR.withReadLC {m : Mem} {a : AState} (hS : StageR vis fe m a)
     (X : Std.HashMap LIdx ConLeche.Level) :
-    StageR dn vis fe m { a with caches := { a.caches with readLC := X } } :=
+    StageR vis fe m { a with caches := { a.caches with readLC := X } } :=
   ⟨⟨hS.check.arena.caches_irrel _, let ⟨M, hM⟩ := hS.check.core; ⟨M, hM.readLC X⟩, hS.check.pins, hS.check.env,
     hS.check.mode⟩, hS.iw⟩
 
 /-- The stage relation across a level-heap writer. -/
-theorem StageR.of_lheap {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
-    (hf : MemFrame [LH] [192] m m') : StageR dn vis fe m' a ∧ IWGrow m m' :=
+theorem StageR.of_lheap {m m' : Mem} {a : AState} (hS : StageR vis fe m a)
+    (hf : MemFrame [LH] [192] m m') : StageR vis fe m' a ∧ IWGrow m m' :=
   hS.frame_hi hf (fun b hb => by simp only [List.mem_singleton] at hb; subst hb; decide)
     (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; decide) (by simp [LH, IW])
     (by simp)
@@ -100,10 +100,10 @@ theorem StageR.of_lheap {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
 environment free): the twin's `readLevelM l` (the store unchanged, the cache holding readbacks
 after), `StageR` after, the pools grown, the zero-ness of `lv` as three words, its names decoded
 by the name store. -/
-theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : ReadLCOK a) (l : Word)
+theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR vis fe m a) (hrl : ReadLCOK a) (l : Word)
     (hl : H l) (lv : ConLeche.Level) (hd : denoteL a.store.ls (decI l) = some lv) :
     Sim (lzcF m [l]) (readLevelM (decI l)) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
         decZC (denoteN a.store.lss.ls.ns) m' r x ∧ x = lv ∧ a'.store = a.store ∧ ReadLCOK a') := by
   intro r m' h
   obtain ⟨k, hw⟩ := lzcF_lzcW h
@@ -185,10 +185,10 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : Read
 /-- **`lv_zero_caps` under `StageR` and the read-back facts, as a call** in a program with
 `lzcP`. -/
 theorem lzc_simR {p : Prog} (hp : LzcF p) (n : Nat) {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) (hrl : ReadLCOK a) (l : Word) (hl : H l) (lv : ConLeche.Level)
+    (hS : StageR vis fe m a) (hrl : ReadLCOK a) (l : Word) (hl : H l) (lv : ConLeche.Level)
     (hd : denoteL a.store.ls (decI l) = some lv) :
     Sim (callW p n "lv_zero_caps" [l] m) (readLevelM (decI l)) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
         decZC (denoteN a.store.lss.ls.ns) m' r x ∧ x = lv ∧ a'.store = a.store ∧ ReadLCOK a') := by
   intro r m' e
   obtain ⟨s', rfl, -, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (lzcF_spec p hp n _ [l]) e
@@ -230,10 +230,10 @@ theorem LzFacts.of_stageC {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
 takes it. -/
 theorem lzcSimR_of {p : Prog} (hp : LzcF p) {dn : NIdx → Option ConLeche.Name} {st₀ : EStore}
     {p1 : Word} {bs : BlockShape} (hF : LzFacts dn st₀ bs) (k : Nat) (m : Mem) (a : AState)
-    (vis : Word) (fe : IFEnv) (hS : StageR dn vis fe m a) (hI : LzInv st₀ a)
+    (vis : Word) (fe : IFEnv) (hS : StageR vis fe m a) (hI : LzInv st₀ a)
     (hq : DecB (fun m => decBS m p1.toNat) m bs) (hsrc : ShapeSrc m p1) :
     Sim (callW p k "lv_zero_caps" [rdW (m.arr64 IW) (p1 + 6)] m) (readLevelM bs.resSort) a
-      (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decZC dn m' r x) ∧ LzInv st₀ a') := by
+      (fun r x m' a' => (StageR vis fe m' a' ∧ IWGrow m m' ∧ decZC dn m' r x) ∧ LzInv st₀ a') := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
   obtain ⟨-, -, hrs32, hrse⟩ := partsShapeWords (IWGrow.refl m) hq hq9
@@ -253,12 +253,12 @@ holding readbacks. -/
 theorem consBlockInds_refinesR (p : Prog) (hP : ConsIndsProg p) (hp : LzcF p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (p1 isRec o l i : Word)
     (bs : BlockShape) (b : Bool) (cvs : List IConstantVal) (hb : (isRec != 0) = b)
-    (hS : StageR dn vis fe s₀.mem a₀) (hrl : ReadLCOK a₀) (hF : LzFacts dn a₀.store bs)
+    (hS : StageR vis fe s₀.mem a₀) (hrl : ReadLCOK a₀) (hF : LzFacts dn a₀.store bs)
     (hq : DecB (fun m => decBS m p1.toNat) s₀.mem bs)
     (hsrc : ShapeSrc s₀.mem p1) (hcvs : PSlR decCVp cvs o l s₀.mem) (hil : i.toNat + l.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_inds" [p1, isRec, o, l, vis, i]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀) s'.mem
+      StageR (r.headD 0) (AM.res (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀) s'.mem
         (AM.st (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       LzInv a₀.store (AM.st (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀); ⊤⦄ :=
   triple_post (icbi_spec p hP.cbi n s₀ p1 isRec o l vis i) fun _ _ ⟨hl, hm⟩ =>

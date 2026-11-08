@@ -138,7 +138,7 @@ include hp
 /-- **`string_ty_ok` (at any name bound to its body) refines `stringTyOk`.** -/
 theorem sTy_call (f : FnName) (hf : p.lookup f = some stringTyOkL)
     (hS : CoreS dn m a vis fe M eb) {found q : Word}
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (h : callW p n f [found, q] m = some (r, m')) :
     CoreRef (stringTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
@@ -201,7 +201,7 @@ theorem sTy_call (f : FnName) (hf : p.lookup f = some stringTyOkL)
 /-- **`string_ty_ok` refines `stringTyOk`.** -/
 @[refines ConRon.Arena.stringTyOk]
 theorem stringTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (h : callW p n "string_ty_ok" [found, q] m = some (r, m')) :
     CoreRef (stringTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' :=
   sTy_call p hp "string_ty_ok" hp.stringTyOk hS hdec h
@@ -209,7 +209,7 @@ theorem stringTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 /-- **`char_ty_ok` refines `charTyOk`.** -/
 @[refines ConRon.Arena.charTyOk]
 theorem charTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (h : callW p n "char_ty_ok" [found, q] m = some (r, m')) :
     CoreRef (charTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
   rw [charTyOk_eq]; exact sTy_call p hp "char_ty_ok" hp.charTyOk hS hdec h

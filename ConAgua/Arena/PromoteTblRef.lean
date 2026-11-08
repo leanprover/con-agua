@@ -103,11 +103,11 @@ theorem tblName_call {n : Nat} {q : Word} {m m' : Mem} {r : List Word} {t : IPro
 /-- **`erase_installed_tables` refines `eraseInstalledTables`.** -/
 theorem eraseT_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem) (vis j k : Word)
     (fe : IFEnv) (installed : List IProjTable) (r : List Word) (m' : Mem),
-    EnvR dn m vis fe → (m.arr64 EREC).size < 2 ^ 64 → k.toNat = installed.length →
+    EnvR m vis fe → (m.arr64 EREC).size < 2 ^ 64 → k.toNat = installed.length →
     installed.length ≤ j.toNat + 1 →
     TablesAt (erecP m) (m.arr64 ETAB) j.toNat installed →
     callW p n "erase_installed_tables" [j, k] m = some (r, m') →
-    EnvR dn m' vis ⟨fe.env, fe.idx, fe.visibleBelow, eraseInstalledTables fe.tbls installed⟩ ∧
+    EnvR m' vis ⟨fe.env, fe.idx, fe.visibleBelow, eraseInstalledTables fe.tbls installed⟩ ∧
       MemFrame tblArrs [] m m' := by
   intro n
   induction n with
@@ -144,7 +144,7 @@ theorem eraseT_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     obtain ⟨hm1, hrt, hrb⟩ := tblRowSet_call p hp hcb
     subst m1
     generalize g0 rw' = w at hwl hname hrt hrb hcb hW
-    have hE1 : EnvR dn (tblSet m w 0) vis
+    have hE1 : EnvR (tblSet m w 0) vis
         ⟨fe.env, fe.idx, fe.visibleBelow, fe.tbls.erase t.structName⟩ := by
       refine hE.setTblRow w 0 hwl hrt hrb _ none ?_ (by simp) (fun h => absurd rfl h)
       intro nn
@@ -191,11 +191,11 @@ theorem eraseT_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
 /-- **`index_promoted_tables` refines `indexPromotedTables`.** -/
 theorem indexT_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem) (vis j k : Word)
     (fe : IFEnv) (installed : List IProjTable) (r : List Word) (m' : Mem),
-    EnvR dn m vis fe → (m.arr64 EREC).size < 2 ^ 64 → k.toNat = installed.length →
+    EnvR m vis fe → (m.arr64 EREC).size < 2 ^ 64 → k.toNat = installed.length →
     installed.length ≤ j.toNat + 1 →
     TablesAt (erecP m) (m.arr64 ETAB) j.toNat installed →
     callW p n "index_promoted_tables" [j, k] m = some (r, m') →
-    EnvR dn m' vis ⟨fe.env, fe.idx, fe.visibleBelow, indexPromotedTables fe.tbls installed⟩ ∧
+    EnvR m' vis ⟨fe.env, fe.idx, fe.visibleBelow, indexPromotedTables fe.tbls installed⟩ ∧
       MemFrame tblArrs [] m m' := by
   intro n
   induction n with
@@ -267,7 +267,7 @@ theorem indexT_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     generalize g0 rw' = w at hwl hname hrt hrb hcb
     have hq1 : (ptr + 1).toNat = ptr.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hne : ptr + 1 ≠ 0 := fun e => by rw [e] at hq1; simp at hq1
-    have hE2 : EnvR dn (tblSet m1 w (ptr + 1)) vis
+    have hE2 : EnvR (tblSet m1 w (ptr + 1)) vis
         ⟨fe.env, fe.idx, fe.visibleBelow, (indexPromotedTables fe.tbls ts).insert t.structName t⟩ := by
       refine hE1.setTblRow w (ptr + 1) hwl hrt hrb _ (some t) ?_ (by simp [hne])
         (fun _ => by rw [hq1, Nat.add_sub_cancel, hdec])

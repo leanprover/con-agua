@@ -45,7 +45,7 @@ theorem opf_view_run {a : AState} {h : EIdx} {v : ENodeView} (hv : a.store.view 
   simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
 
 /-- **`e_view` at a `∀`**: the memory kept, the binder's words, the twin's `view`. -/
-theorem opfV_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) {e : Word}
+theorem opfV_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR vis fe m a) {e : Word}
     (hg : tagW e = 6) {r : List Word} (hc : callW opfP k "e_view" [e] m = some (r, m')) :
     m' = m ∧ (r.tail.headD 0).toNat < 2 ^ 32 ∧ (r.tail.tail.headD 0).toNat < 2 ^ 32 ∧
       (view (decE e)).run a = .ok (.forallE (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0)), a) := by
@@ -72,11 +72,11 @@ theorem spn_of_lt64 {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : Me
     hf.ctl 136 (fun h => by have := hC _ h; simp at this)⟩
 
 /-- **`inst_list` under the stage relation and `AbsOK`.** -/
-theorem opfIl_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (hAb : AbsOK m)
+theorem opfIl_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : AbsOK m)
     {e o l d : Word} {vs : Array EIdx} (hsl : SpineR m o l vs) (he : e.toNat < 2 ^ 32)
     {r : List Word} (hc : callW opfP k "inst_list" [e, o, l, d] m = some (r, m')) :
     ∃ a', (instantiateListFast coreWalkFuel (decE e) vs d.toNat).run a = .ok (decE (r.headD 0), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ m'.arr64 SPN = m.arr64 SPN ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ m'.arr64 SPN = m.arr64 SPN ∧
       rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 ∧ (r.headD 0).toNat < 2 ^ 32 := by
   rcases k with _ | k
   · rw [callW_zero] at hc; cases hc
@@ -102,11 +102,11 @@ theorem opfIl_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
     hAb.wk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
 
 /-- **`intern_fvar` under the stage relation and `AbsOK`.** -/
-theorem opfFv_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (hAb : AbsOK m)
+theorem opfFv_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : AbsOK m)
     {u ty : Word} (hty : ty.toNat < 2 ^ 32) {r : List Word}
     (hc : callW opfP k "intern_fvar" [u, ty] m = some (r, m')) :
     ∃ a', (internE (.fvar u.toNat (decE ty))).run a = .ok (decE (r.headD 0), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ m'.arr64 SPN = m.arr64 SPN ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ m'.arr64 SPN = m.arr64 SPN ∧
       rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 ∧ (r.headD 0).toNat < 2 ^ 32 := by
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internFVar_spec opfP rfl rfl rfl k ⟨m, Locals.init []⟩ u ty) hc
@@ -118,11 +118,11 @@ theorem opfFv_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
     fvinternW_hw m a hS.check.arena.base.fvar u ty _ _ hI⟩
 
 /-- **`inst_entry` under the stage relation and `AbsOK`.** -/
-theorem opfI1_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (hAb : AbsOK m)
+theorem opfI1_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : AbsOK m)
     {e v d : Word} (he : e.toNat < 2 ^ 32) {r : List Word}
     (hc : callW opfP k "inst_entry" [e, v, d] m = some (r, m')) :
     ∃ a', (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat).run a = .ok (decE (r.headD 0), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ m'.arr64 SPN = m.arr64 SPN ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ m'.arr64 SPN = m.arr64 SPN ∧
       rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 ∧ (r.headD 0).toNat < 2 ^ 32 := by
   rcases k with _ | k
   · rw [callW_zero] at hc; cases hc
@@ -137,9 +137,9 @@ theorem opfI1_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
   exact ⟨_, by rw [hrun, hres], hS', hg, hAb.frameD hfr (by decide) (by decide), h1, h2, hlt⟩
 
 /-- **`spn_push` under the stage relation and `AbsOK`.** -/
-theorem spnPushW_ok {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (hAb : AbsOK m)
+theorem spnPushW_ok {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : AbsOK m)
     {x : Word} {r : List Word} (h : spnPushW m x = some (r, m')) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ AbsOK m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ AbsOK m' ∧
       (rdW (m.arr64 CTL) 136).toNat < (m.arr64 SPN).size ∧
       rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 + 1 ∧
       (∀ w : Word, spW m' w = if w = rdW (m.arr64 CTL) 136 then x else spW m w) ∧

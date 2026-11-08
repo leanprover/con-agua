@@ -132,9 +132,9 @@ open L.Arena
 /-- `sl_cons` of a handle onto a handle slice, under the stage relation. -/
 theorem pos3_consH {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List EIdx}
-    (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hb : o.toNat + l.toNat ≤ iwTop m) (hx : x.toNat < 2 ^ 32) (hxs : decHL m o.toNat l.toNat = some xs) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (decI x :: xs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -145,8 +145,8 @@ theorem pos3_consH {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option C
 /-- **`check_block_positivity_nfs_member`'s model: the members' normal forms**, a fresh handle slice. -/
 theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) : ∀ (m m' : Mem) (a : AState) (o l : Word) (pairs : List (List NestFieldKind × EIdx))
-    (r : List Word), pnmW p n m o l = some (r, m') → StageR dn vis fe m a → PSlR0 decKE pairs o l m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
+    (r : List Word), pnmW p n m o l = some (r, m') → StageR vis fe m a → PSlR0 decKE pairs o l m →
+    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (pairs.map (·.2)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   induction n with
@@ -191,9 +191,9 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
 /-- **A `rec2` header `[off, len]` of a handle slice below the top**, decoded below the tops. -/
 theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List EIdx}
-    (h : callW p n "rec2" [o, l] m = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : callW p n "rec2" [o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hx : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ DecB (fun m => decNFS m (r.headD 0).toNat) m' xs := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ DecB (fun m => decNFS m (r.headD 0).toNat) m' xs := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
   obtain ⟨-, -, -, hf, -, -⟩ := recW_post hW hS.iw.ctl hS.iw.iwSize rfl
@@ -218,8 +218,8 @@ theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option C
 headers. -/
 theorem pnfW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) : ∀ (m m' : Mem) (a : AState) (s l : Word) (outss : List (List (List NestFieldKind × EIdx)))
-    (r : List Word), pnfW p n m s l = some (r, m') → StageR dn vis fe m a → PSlR decKES outss s l m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
+    (r : List Word), pnfW p n m s l = some (r, m') → StageR vis fe m a → PSlR decKES outss s l m →
+    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       PSlR decNFS (outss.map (·.map (·.2))) (r.headD 0) (r.tail.headD 0) m' := by
   induction n with
   | zero => intro m m' a s l outss r h; simp [pnfW.eq_1] at h

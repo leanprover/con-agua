@@ -30,7 +30,7 @@ namespace L.Arena
 
 /-- **A constructor record's level parameters**: the slice at `p + 2`, `p + 3`. -/
 theorem decCI_ctorLp {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {cv : IConstantVal} {np nf : Nat} (h : decCI a dn q.toNat = some (.ctorInfo cv np nf))
+    {cv : IConstantVal} {np nf : Nat} (h : decCI a q.toNat = some (.ctorInfo cv np nf))
     (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) :
     hslice? a (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
   cases hq : a[q.toNat]? with
@@ -63,7 +63,7 @@ structure IndRecR (b : Array Word) (a : Array Word) (q : Word) (cv : IConstantVa
   unitParams : caps.unitParams = (rdW b (q + 10)).toNat
 
 theorem decCI_indCaps {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a dn q.toNat = some (.indInfo cv caps))
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a q.toNat = some (.indInfo cv caps))
     (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) : IndRecR b a q cv caps := by
   cases hq : a[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h
@@ -233,8 +233,8 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
     (hcw : HW c) (hT : HW T) (hus2 : HW us2)
     (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
     (hvus2 : ∃ x c', a₀.store.view x = some (.const c' (decI us2)))
-    (hcvc : decCI (erecP s₀.mem) dn pc.toNat = some (.ctorInfo cvc np nf))
-    (hcvT : decCI (erecP s₀.mem) dn q.toNat = some (.indInfo cvT caps))
+    (hcvc : decCI (erecP s₀.mem) pc.toNat = some (.ctorInfo cvc np nf))
+    (hcvT : decCI (erecP s₀.mem) q.toNat = some (.indInfo cvT caps))
     (ha : SpineR s₀.mem ao an aargs) (ht : SpineR s₀.mem to tn targs)
     (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (htt : to.toNat + tn.toNat ≤ (spTop s₀.mem).toNat) :

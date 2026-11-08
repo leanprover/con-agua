@@ -60,7 +60,7 @@ def BphR : Option ConLeche.BasisKind → List Word → Prop
 theorem bphDecEBlk_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat}
     {blk : List IConstantInfo} (h : decEBlk dn m o l = some blk) (j : Nat) (hj : j < l) :
     ∃ q, nat? (erA m) (o + j) = some q ∧
-      decCI (erA m) dn q = some (blk[j]'(by rw [mapM_opt_length _ _ _ h]; simpa using hj)) := by
+      decCI (erA m) q = some (blk[j]'(by rw [mapM_opt_length _ _ _ h]; simpa using hj)) := by
   have := mapM_opt_get _ (List.range l) blk h j (by simpa using hj)
   simp only [List.getElem_range, Option.bind_eq_bind, Option.bind_eq_some_iff] at this
   exact this
@@ -241,10 +241,10 @@ theorem bph_run_hit (blk pinned : List IConstantInfo) (K : ConLeche.BasisKind) (
 theorem bphW_loop1_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (bo bl : Word) (blk : List IConstantInfo) :
     ∀ (f : Nat) (m m' : Mem) (a : AState) (k : Word) (r : List Word),
-      bphW.loop1 p f m bo bl k = some (r, m') → StageR dn vis fe m a → ConRon.Bridge.StateOK a →
+      bphW.loop1 p f m bo bl k = some (r, m') → StageR vis fe m a → ConRon.Bridge.StateOK a →
       DecB (fun m => decEBlk dn m bo.toNat bl.toNat) m blk → k.toNat ≤ 4 →
       ∃ x a', (basisPinHitGo blk (bphKinds.drop k.toNat)).run a = .ok (x, a') ∧
-        StageR dn vis fe m' a' ∧ IWGrow m m' ∧ BphR x r := by
+        StageR vis fe m' a' ∧ IWGrow m m' ∧ BphR x r := by
   intro f
   induction f with
   | zero => intro m m' a k r h; rw [bphW.loop1.eq_1] at h; cases h
@@ -284,7 +284,7 @@ theorem bphW_loop1_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.
       ∃ x a', (if blockNames pinned == blockNames blk then
           (do if ← canonEqList blk pinned then pure (some (basisOfW k.toNat)) else pure none)
         else basisPinHitGo blk (bphKinds.drop (k.toNat + 1))).run a1 = .ok (x, a') ∧
-        StageR dn vis fe m' a' ∧ IWGrow m m' ∧ BphR x r := by
+        StageR vis fe m' a' ∧ IWGrow m m' ∧ BphR x r := by
     intro h hne
     rw [ite_eq_right (by simpa using hne)]
     obtain ⟨x, a', hr, hS', hg', hR'⟩ := ih m1 m' a1 (k + 1) r h hS1 hok1 hB1 (by omega)
@@ -362,10 +362,10 @@ records (`decEBlk`, decoded below the tops), at a well-formed twin state (`State
 theorem basisPinHit_ok {p : Prog} (P : BphProg p) :
   ∀ (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a : AState)
     (o l : Word) (blk : List IConstantInfo) (r : List Word),
-    StageR dn vis fe m a → ConRon.Bridge.StateOK a →
+    StageR vis fe m a → ConRon.Bridge.StateOK a →
     DecB (fun m => decEBlk dn m o.toNat l.toNat) m blk →
     callW p n "basis_pin_hit" [o, l] m = some (r, m') →
-    ∃ x a', (basisPinHit blk).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ x a', (basisPinHit blk).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       match x with
       | none => r.headD 0 = 0
       | some k => r.headD 0 ≠ 0 ∧ (r.tail.headD 0).toNat < 4 ∧ basisOfW (r.tail.headD 0).toNat = k := by

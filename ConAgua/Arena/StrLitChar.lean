@@ -193,7 +193,7 @@ def noLpT (T : EIdx → AM Bool) : Option IConstantInfo → AM Bool
 
 /-- **The common prefix of the two tests refines the twins'**, given the tail's refinement. -/
 theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     {K0 : Option (List Word × Mem) → Option (Word × Mem)} {TW : Mem → Word → Option (Word × Mem)}
     {T : EIdx → AM Bool} (hn : K0 none = none)
     (hK : ∀ c m₁, K0 (some (c, m₁)) =
@@ -243,7 +243,7 @@ theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 /-- **`char_of_nat_ty_ok` refines `charOfNatTyOk`.** -/
 @[refines ConRon.Arena.charOfNatTyOk]
 theorem charOfNatTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (h : callW p n "char_of_nat_ty_ok" [found, q] m = some (r, m')) :
     CoreRef (charOfNatTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
@@ -328,7 +328,7 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
 /-- **`string_of_list_ty_ok` refines `stringOfListTyOk`.** -/
 @[refines ConRon.Arena.stringOfListTyOk]
 theorem stringOfListTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (h : callW p n "string_of_list_ty_ok" [found, q] m = some (r, m')) :
     CoreRef (stringOfListTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with

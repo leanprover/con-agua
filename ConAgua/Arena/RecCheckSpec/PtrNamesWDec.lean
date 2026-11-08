@@ -355,8 +355,8 @@ theorem mkTMW_dec {m m' : Mem} {r : List Word} (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a1
   omega
 
 theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a : AState)
-    (r : List Word) (h : tmdW m = some (r, m')) (hS : StageR dn vis fe m a) :
-    ∃ tm a', ConRon.Arena.targetMajorDefault.run a = .ok (tm, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    (r : List Word) (h : tmdW m = some (r, m')) (hS : StageR vis fe m a) :
+    ∃ tm a', ConRon.Arena.targetMajorDefault.run a = .ok (tm, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       decTM m' (r.headD 0).toNat = some tm := by
   rw [tmdW_eq] at h
   rcases h1 : naF m [] with _ | ⟨ra, m1⟩ <;> simp only [h1, tmdK1, reduceCtorEq] at h
@@ -438,8 +438,8 @@ theorem plnW_stage {α : Type} {f : Mem → Nat → Option α} (cvOf : α → IC
     (hfb : ∀ m pp x, f (truncM m) pp = some x → pp < iwTop m)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
-    (h : ptrNamesW n m o l = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR0 f xs o l m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, l] ∧
+    (h : ptrNamesW n m o l = some (r, m')) (hS : StageR vis fe m a) (hx : PSlR0 f xs o l m) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, l] ∧
       decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat = some (xs.map fun x => (cvOf x).name) ∧
       (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
   obtain ⟨-, -, hsz, -, hc⟩ := hS.iw

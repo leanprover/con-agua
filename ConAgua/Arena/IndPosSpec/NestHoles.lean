@@ -88,13 +88,13 @@ theorem ctx_params_end {m : Mem} {p : Word} {c : NestCtx} (hc : decCtx m p.toNat
 
 theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (mm off l oo ol : Word) (ns : List NIdx) (out : List EIdx) (r : List Word),
-    nhGoW k m vis ctx mm off l oo ol = some (r, m') → StageR dn vis fe m a →
+    nhGoW k m vis ctx mm off l oo ol = some (r, m') → StageR vis fe m a →
     decCtx m ctx.toNat = some c → CtxIn m ctx.toNat (· < iwTop m) → CtxSl m ctx.toNat →
     decHL m off.toNat l.toNat = some ns → (∀ j < l.toNat, off.toNat + j < iwTop m) →
     decHL m oo.toNat ol.toNat = some out → oo.toNat + ol.toNat ≤ iwTop m →
     c.nP + mm.toNat + l.toNat < 2 ^ 64 →
     ∃ x a', (ConRon.Arena.nestHoles.go fe c mm.toNat ns out).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ NhOut m' r x := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ NhOut m' r x := by
   induction k with
   | zero => intro m m' a mm off l oo ol ns out r h; simp [nhGoW] at h
   | succ k ih =>
@@ -233,12 +233,12 @@ include hl
 the top and `nP + |names| < 2^64`). -/
 @[refines ConRon.Arena.nestHoles]
 theorem nestHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (hS : StageR dn vis fe s₀.mem a₀)
+    (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (hS : StageR vis fe s₀.mem a₀)
     (hc : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem))
     (hsl : CtxSl s₀.mem ctx.toNat) (hhi : c.hiAt 0 < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_holes" [vis, ctx]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestHoles fe c) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestHoles fe c) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestHoles fe c) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       NhOut s'.mem r (AM.res (ConRon.Arena.nestHoles fe c) a₀); ⊤⦄ := by
   refine triple_post (nestHoles_spec p hl k s₀ vis ctx) ?_
   rintro r s' ⟨hlc, hm⟩
@@ -263,14 +263,14 @@ decoded with its words and slices below the top, `nP + |names| < 2^64`. -/
 @[refines ConRon.Arena.nestHoles.go]
 theorem nestHolesGo_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx mm off l oo ol : Word) (c : NestCtx) (ns : List NIdx) (out : List EIdx)
-    (hS : StageR dn vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
+    (hS : StageR vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
     (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) (hsl : CtxSl s₀.mem ctx.toNat)
     (hns : decHL s₀.mem off.toNat l.toNat = some ns) (hnb : ∀ j < l.toNat, off.toNat + j < iwTop s₀.mem)
     (hout : decHL s₀.mem oo.toNat ol.toNat = some out) (hob : oo.toNat + ol.toNat ≤ iwTop s₀.mem)
     (hmm : c.nP + mm.toNat + l.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_holes_go" [vis, ctx, mm, off, l, oo, ol]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestHoles.go fe c mm.toNat ns out) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestHoles.go fe c mm.toNat ns out) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestHoles.go fe c mm.toNat ns out) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ NhOut s'.mem r (AM.res (ConRon.Arena.nestHoles.go fe c mm.toNat ns out) a₀); ⊤⦄ := by
   refine triple_post (nhGo_spec p hl k s₀ vis ctx mm off l oo ol) ?_
   rintro r s' ⟨hlc, hm⟩

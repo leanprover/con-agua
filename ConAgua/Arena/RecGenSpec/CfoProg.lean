@@ -57,11 +57,11 @@ section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
 /-- `nest_occ` as a simulation: the twin keeps its state, the memo relation is reset to `∅`. -/
-theorem rec2SimNestOcc (hS : StageR dn vis fe m a) {no nl e : Word} {names : List NIdx} (hh : H e)
+theorem rec2SimNestOcc (hS : StageR vis fe m a) {no nl e : Word} {names : List NIdx} (hh : H e)
     (hn : decHL m no.toNat nl.toNat = some names) (hnb : no.toNat + nl.toNat < 2 ^ 64)
     {mp0 : Std.HashMap EIdx Bool} (hM : noMR m mp0) (k : Nat) :
     RSim (noConstWf k m no nl 0 0 e) (ConRon.Arena.nestOcc names 0 0 (decI e)) a
-      (fun b a' x => a' = a ∧ (b.1 != 0) = x ∧ noMR b.2 ∅ ∧ StageR dn vis fe b.2 a ∧ IWGrow m b.2 ∧
+      (fun b a' x => a' = a ∧ (b.1 != 0) = x ∧ noMR b.2 ∅ ∧ StageR vis fe b.2 a ∧ IWGrow m b.2 ∧
         MFr [NOM] [204, 205] m b.2) := by
   rintro ⟨r, m'⟩ h
   obtain ⟨x, hrun, hx, hM', hS', hg, hf⟩ := noConstWf_ok k dn fe vis m m' a no nl 0 0 e r names mp0 h hS hh

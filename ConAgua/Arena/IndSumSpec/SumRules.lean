@@ -275,13 +275,13 @@ top. -/
 theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (recName : NIdx)
     (n : Nat) : ∀ (m : Mem) (a : AState) (nP cO cL rO rL o : Word) (m0 : Mem) (q0 : Word) (j : Nat)
     (acc : List IRecRule) (cs : List (IConstantVal × Nat)) (rhss : List EIdx),
-    StageR dn vis fe m a → IWGrow m0 m → iwTop m0 ≤ q0.toNat → o.toNat = q0.toNat + j →
+    StageR vis fe m a → IWGrow m0 m → iwTop m0 ≤ q0.toNat → o.toNat = q0.toNat + j →
     o.toNat + min cL.toNat rL.toNat ≤ iwTop m →
     decPL m (rlDec m) q0.toNat j = some acc →
     DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m0 cs →
     DecB (fun m => decHL m rO.toNat rL.toNat) m0 rhss →
     Sim (rgoW n m vis nP cO cL rO rL o) (sumRules fe recName nP.toNat cs rhss) a
-      (fun _ rules m' a' => StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
+      (fun _ rules m' a' => StageR vis fe m' a' ∧ IWGrow m0 m' ∧
         decPL m' (rlDec m') q0.toNat (j + rules.length) = some (acc ++ rules) ∧
         rules.length = min cL.toNat rL.toNat ∧ q0.toNat + j + rules.length ≤ iwTop m') := by
   induction n with
@@ -401,11 +401,11 @@ theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 pointers. -/
 theorem rulesW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (recName : NIdx)
     (n : Nat) (m : Mem) (a : AState) (nP cO cL rO rL : Word) (cs : List (IConstantVal × Nat))
-    (rhss : List EIdx) (hS : StageR dn vis fe m a)
+    (rhss : List EIdx) (hS : StageR vis fe m a)
     (hcs : DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m cs)
     (hrh : DecB (fun m => decHL m rO.toNat rL.toNat) m rhss) :
     Sim (rulesW n m vis nP cO cL rO rL) (sumRules fe recName nP.toNat cs rhss) a
-      (fun r rules m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      (fun r rules m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
         decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some rules ∧
         (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m') := by
   unfold rulesW
@@ -438,12 +438,12 @@ pointers to `EREC` rule records (`decRule`, below the record pool's top). -/
 @[refines ConRon.Arena.sumRules]
 theorem sumRules_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis recName nP cO cL rO rL : Word) (cs : List (IConstantVal × Nat)) (rhss : List EIdx)
-    (hS : StageR dn vis fe s₀.mem a₀)
+    (hS : StageR vis fe s₀.mem a₀)
     (hcs : DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) s₀.mem cs)
     (hrh : DecB (fun m => decHL m rO.toNat rL.toNat) s₀.mem rhss) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "sum_rules" [vis, recName, nP, cO, cL, rO, rL]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (sumRules fe (decI recName) nP.toNat cs rhss) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (sumRules fe (decI recName) nP.toNat cs rhss) a₀) ∧
+      StageR vis fe s'.mem (AM.st (sumRules fe (decI recName) nP.toNat cs rhss) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decPL s'.mem (rlDec s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (sumRules fe (decI recName) nP.toNat cs rhss) a₀); ⊤⦄ := by

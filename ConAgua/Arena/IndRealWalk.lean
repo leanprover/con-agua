@@ -86,8 +86,8 @@ theorem lbbF_frame {m m' : Mem} {args r : List Word} (h : lbbF m args = some (r,
 (replaces `IndStubs.looseBVarsBoundedFast_spec`). -/
 theorem lbbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f k e : Word)
     (he : H e) :
-    RelW lbbF [f, k, e] (StageR dn vis fe) (looseBVarsBoundedFast f.toNat k.toNat (decI e))
-      (KeepPost dn vis fe decW0B) := by
+    RelW lbbF [f, k, e] (StageR vis fe) (looseBVarsBoundedFast f.toNat k.toNat (decI e))
+      (KeepPost vis fe decW0B) := by
   intro m m' a r h hS
   have hfr := lbbF_frame h
   obtain ⟨n, hc⟩ := callF_run h
@@ -164,7 +164,7 @@ theorem fvarBL_spec (p : Prog) (hp : AbsProg p) (hpf : p.lookup "fvar_b" = some 
 `IndStubs.fvarB_spec`). -/
 theorem fvbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word)
     (he : H e) :
-    RelW fvbF [f, e] (StageR dn vis fe) (fvarB f.toNat (decI e)) (KeepPost dn vis fe decW0Nat) := by
+    RelW fvbF [f, e] (StageR vis fe) (fvarB f.toNat (decI e)) (KeepPost vis fe decW0Nat) := by
   intro m m' a r h hS
   obtain ⟨n, hc⟩ := callF_run h
   rcases n with _ | n
@@ -181,7 +181,7 @@ theorem fvbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
 `IndStubs.hasFvarFast_spec`). -/
 theorem hffF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word)
     (he : H e) :
-    RelW hffF [f, e] (StageR dn vis fe) (hasFvarFast f.toNat (decI e)) (KeepPost dn vis fe decW0B) := by
+    RelW hffF [f, e] (StageR vis fe) (hasFvarFast f.toNat (decI e)) (KeepPost vis fe decW0B) := by
   intro m m' a r h hS
   obtain ⟨n, hc⟩ := callF_run h
   rcases n with _ | n

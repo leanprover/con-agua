@@ -55,7 +55,7 @@ structure NtyPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (stripPis kk.ds.length cv.type).run a = .ok (some q, a3) ∧
     (instLPFast coreWalkFuel cv.levelParams kk.lvls cv.type).run a3 = .ok (tl, a4) ∧
     (ConRon.Arena.instPisWith kk.ds tl).run a4 = .ok (some ty, a')
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   hw : H w
   dec : decI w = ty

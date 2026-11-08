@@ -45,7 +45,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 /-- **`StageC` across a twin step con-ron calls a `CoreStep`**, the memory's half from `AbsOK`
 after (`StageC.of_pstep` for a `CSpec`'s step). -/
 theorem StageC.of_cstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR dn vis fe m' a') (hA : AbsOK m') (hs : ConRon.Bridge.CoreStep V env fe a a') :
+    (hS : StageR vis fe m' a') (hA : AbsOK m') (hs : ConRon.Bridge.CoreStep V env fe a a') :
     StageC dn vis fe env m' a' :=
   ⟨hS, hs.ok,
     ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,

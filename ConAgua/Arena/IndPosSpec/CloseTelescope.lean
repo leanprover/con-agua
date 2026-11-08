@@ -38,12 +38,12 @@ open L.Arena
 theorem envFind_refines' (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
     (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis w : Word)
-    (hE : EnvR dn s₀.mem vis fe) (hw : w.toNat < 2 ^ 32) :
+    (hE : EnvR s₀.mem vis fe) (hw : w.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_find" [w, vis]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
       fe.find? (decI w) = decFound dn s₀.mem (r.headD 0) (r.tail.headD 0) ∧
-      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn (r.tail.headD 0).toNat = some ci); ⊤⦄ := by
+      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP s₀.mem) (r.tail.headD 0).toNat = some ci); ⊤⦄ := by
   have key := EnvR.find?_eq hE w hw
   have key2 := EnvR.row_dec hE w hw
   simp only [invoke_eq _ hp, callFn, envFindL]
@@ -62,7 +62,7 @@ theorem blk_none {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m
 
 theorem blk_k3' {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
     (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q) (h0 : found ≠ 0)
-    (hex : ∃ ci, decCI (erecP m) dn q.toNat = some ci) (hk : rdW (m.arr64 EREC) q = 3)
+    (hex : ∃ ci, decCI (erecP m) q.toNat = some ci) (hk : rdW (m.arr64 EREC) q = 3)
     (h15 : (q + 15).toNat < (m.arr64 EREC).size) (h16 : (q + 16).toNat < (m.arr64 EREC).size) :
     hslice? (erA m) ((m.arr64 EREC)[(q + 15).toNat]'h15).toNat ((m.arr64 EREC)[(q + 16).toNat]'h16).toNat =
       some (nestBlockOf fe (decI c)) := by
@@ -78,7 +78,7 @@ include hx hg hf hp
 /-- **`nest_block_of` refines `nestBlockOf`**: the result is the `IndCaps.all` slice of `EREC`. -/
 @[refines ConRon.Arena.nestBlockOf]
 theorem nestBlockOf_refines (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv}
-    (vis c : Word) (hE : EnvR dn s₀.mem vis fe) (hc : c.toNat < 2 ^ 32) :
+    (vis c : Word) (hE : EnvR s₀.mem vis fe) (hc : c.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_block_of" [vis, c]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
       hslice? (erA s₀.mem) (r.headD 0).toNat (r.tail.headD 0).toNat = some (nestBlockOf fe (decI c));
@@ -104,10 +104,10 @@ parameter and field counts' sum wraps, a capacity guard). -/
 @[refines ConRon.Arena.nestCtorEntry]
 theorem nestCtorEntry_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis C ciq : Word) (ci : IConstantInfo) (hC : H C)
-    (hS : StageR dn vis fe s₀.mem a₀) (hci : decCI (erecP s₀.mem) dn ciq.toNat = some ci) :
+    (hS : StageR vis fe s₀.mem a₀) (hci : decCI (erecP s₀.mem) ciq.toNat = some ci) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctor_entry" [C, ciq]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestCtorEntry (decI C) ci) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestCtorEntry (decI C) ci) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestCtorEntry (decI C) ci) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       EntryOut s'.mem r ciq (AM.res (ConRon.Arena.nestCtorEntry (decI C) ci) a₀); ⊤⦄ := by
   refine triple_post (nestCtorEntry_spec p hs hv hp hst had n s₀ C ciq) ?_
@@ -122,10 +122,10 @@ end census
 @[refines ConRon.Arena.nestResHead]
 theorem nestResHead_refines (p : Prog) (hg : p.lookup "nest_res_head" = some nestResHeadL) (had : AdF p) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis e : Word)
-    (he : H e) (hS : StageR dn vis fe s₀.mem a₀) :
+    (he : H e) (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_res_head" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestResHead (decI e)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestResHead (decI e)) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestResHead (decI e)) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       (r.headD 0 != 0) = AM.res (ConRon.Arena.nestResHead (decI e)) a₀; ⊤⦄ := by
   refine triple_post (nestResHead_spec p hg had n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
@@ -147,11 +147,11 @@ include hv hp hi1
 @[refines ConRon.Arena.instPisWith]
 theorem instPisWith_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ao al e : Word) (args : List EIdx) (he : H e)
-    (hS : StageR dn vis fe s₀.mem a₀) (hdec : decHL s₀.mem ao.toNat al.toNat = some args)
+    (hS : StageR vis fe s₀.mem a₀) (hdec : decHL s₀.mem ao.toNat al.toNat = some args)
     (hb : ao.toNat + al.toNat < 2 ^ 64) (hit : ao.toNat + al.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "inst_pis_with" [ao, al, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.instPisWith args (decI e)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.instPisWith args (decI e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.instPisWith args (decI e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decOE s'.mem r (AM.res (ConRon.Arena.instPisWith args (decI e)) a₀); ⊤⦄ := by
   refine triple_post (instPisWith_spec p hv hp hi1 n s₀ ao al e) ?_
@@ -175,12 +175,12 @@ include hd hpf hpp hpi hmk hp hab
 @[refines ConRon.Arena.closeTelescope]
 theorem closeTelescope_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis dO dl i body : Word) (ds : List EIdx) (hbody : H body)
-    (hS : StageR dn vis fe s₀.mem a₀) (hdec : decHL s₀.mem dO.toNat dl.toNat = some ds)
+    (hS : StageR vis fe s₀.mem a₀) (hdec : decHL s₀.mem dO.toNat dl.toNat = some ds)
     (hb : dO.toNat + dl.toNat < 2 ^ 64) (hit : dO.toNat + dl.toNat ≤ iwTop s₀.mem)
     (hib : i.toNat + dl.toNat < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "close_telescope" [dO, dl, i, body]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.closeTelescope ds i.toNat (decI body)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.closeTelescope ds i.toNat (decI body)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.closeTelescope ds i.toNat (decI body)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decW0E s'.mem r (AM.res (ConRon.Arena.closeTelescope ds i.toNat (decI body)) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by
@@ -256,7 +256,7 @@ include hc ha hcp hsn hgo hx hg hf hbo hp
 /-- **`nest_frame_mates` refines `nestFrameMates`**. -/
 @[refines ConRon.Arena.nestFrameMates]
 theorem nestFrameMates_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis c : Word) (hcH : H c) (hS : StageR dn vis fe s₀.mem a₀) :
+    (fe : IFEnv) (vis c : Word) (hcH : H c) (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_frame_mates" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =

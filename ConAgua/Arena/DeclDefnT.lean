@@ -79,7 +79,7 @@ structure CdfCtx (p : Prog) (pins : List INatOpPinSet) : Prop extends VerdictCtx
 the core's memos, the growth, the variant records. -/
 structure CdfPost (dn : NIdx → Option ConLeche.Name) (pins : List INatOpPinSet) (m : Mem)
     (w : Word × Mem) (y : IFEnv) (a' : AState) : Prop where
-  stage : StageR dn w.1 y w.2 a'
+  stage : StageR w.1 y w.2 a'
   memos : CoreMemos w.2
   grow : IWGrow m w.2
   pins : PinSetsR w.2 pins

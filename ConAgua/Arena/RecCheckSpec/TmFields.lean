@@ -114,10 +114,10 @@ section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem tteW_ok (n : Nat) {m m' : Mem} {a : AState} {bso bsl teo tel : Word} {r : List Word}
-    {bs tele : List EIdx} (h : tteW n m bso bsl teo tel = some (r, m')) (hS : StageR dn vis fe m a)
+    {bs tele : List EIdx} (h : tteW n m bso bsl teo tel = some (r, m')) (hS : StageR vis fe m a)
     (hbs : HSl0 m bso bsl bs) (htl : HSl0 m teo tel tele) (hP : RcMR m) :
     ∃ c a', (tkTele bs tele).run a = .ok (c, a') ∧ (r.headD 0 != 0) = c ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   obtain _ | n := n
   · simp [tteW] at h
   rw [tteW_succ] at h
@@ -161,10 +161,10 @@ section rel2
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem noF_ok (n : Nat) {m m' : Mem} {a : AState} {no nl e r : Word} {names : List NIdx}
-    (h : noF n m no nl 0 0 e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e)
+    (h : noF n m no nl 0 0 e = some (r, m')) (hS : StageR vis fe m a) (he : H e)
     (hno : decHL m no.toNat nl.toNat = some names) (hnob : no.toNat + nl.toNat ≤ iwTop m) (hP : RcMR m) :
     ∃ b, (ConRon.Arena.nestOcc names 0 0 (decE e)).run a = .ok (b, a) ∧ (r != 0) = b ∧
-      StageR dn vis fe m' a ∧ IWGrow m m' ∧ RcMR m' := by
+      StageR vis fe m' a ∧ IWGrow m m' ∧ RcMR m' := by
   obtain _ | n := n
   · simp [noF] at h
   obtain ⟨ws, hws, hwm, hwl⟩ := slR_of_decHL m _ _ _ hno (hS.lt64 hnob)

@@ -72,7 +72,7 @@ theorem rec3CG_parts {m : Mem} {g : Nat} {G : ClassGen} (h : DecB (fun m => decC
 
 /-- `CVExt` bounds the record's address. -/
 theorem rec3CVExt_lt {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    {q : Nat} (hS : StageR dn vis fe m a) (h : CVExt m q) : q + 3 < 2 ^ 64 := by
+    {q : Nat} (hS : StageR vis fe m a) (h : CVExt m q) : q + 3 < 2 ^ 64 := by
   obtain ⟨-, hE1, -, hEs, -⟩ := hS.iw
   have := h.1
   omega
@@ -125,7 +125,7 @@ theorem rec3DecTM_trunc {m : Mem} {q : Nat} (hq : q + 13 ≤ iwTop m) (h3 : iwN 
 
 /-- **`target_major_default`'s record is decoded below the tops.** -/
 theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {m m' : Mem} {r : List Word} {tm : TargetMajor} (h : tmdW m = some (r, m')) (hS : StageR dn vis fe m a)
+    {m m' : Mem} {r : List Word} {tm : TargetMajor} (h : tmdW m = some (r, m')) (hS : StageR vis fe m a)
     (hd : decTM m' (r.headD 0).toNat = some tm) : DecB (fun m => decTM m (r.headD 0).toNat) m' tm := by
   rw [tmdW_eq] at h
   obtain ⟨⟨ra, m1⟩, h1, h⟩ := of_K h rfl
@@ -170,10 +170,10 @@ theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 
 /-- **`target_major_at`, its record decoded below the tops.** -/
 theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
-    (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR dn vis fe m a)
+    (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR vis fe m a)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hb : mo.toNat + ml.toNat < 2 ^ 64) :
     RSim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a
-      (fun b a' tm => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧
+      (fun b a' tm => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧
         DecB (fun m => decTM m (b.1.headD 0).toNat) b.2 tm) := by
   have hms0 : decPL m (decTM m) mo.toNat ml.toNat = some ms :=
     hms.get (OMono.decPL (fun q => decTM_mono q) _ _)
@@ -288,7 +288,7 @@ structure CrrProg (p : Prog) : Prop where
 
 /-- The constructors of class `c`, as `class_recs_rules_ok_go` reads them. -/
 theorem rec3CtorsAt {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    {g c : Word} {G : ClassGen} (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G) :
+    {g c : Word} {G : ClassGen} (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G) :
     DecB (fun m' => decPL m' (decCC m') (crrXs m g c).1.toNat (crrXs m g c).2.toNat) m (G.ctors.getD c.toNat []) := by
   have hsz := hS.iw.iwSize
   obtain ⟨-, o9, l9, h9, h10, hct⟩ := rec3CG_parts hG

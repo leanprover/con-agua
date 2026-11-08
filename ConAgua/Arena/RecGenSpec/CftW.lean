@@ -82,10 +82,10 @@ theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSp
 theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {N : Nat} {m m' : Mem} {o l mp : Word} {r : List Word} {M : TargetMajor} {cvTas : List IConstantVal}
     (cR : CallM) (hI : IlpRd cR dn vis fe (IlpBase m a))
-    (h : cftW cR N m vis o l mp = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : cftW cR N m vis o l mp = some (r, m')) (hS : StageR vis fe m a)
     (hM : DecB (fun m => decTM m mp.toNat) m M) (hcv : decPL m (decCVp m) o.toNat l.toNat = some cvTas)
     (hol : o.toNat + l.toNat < 2 ^ 64) :
-    ∃ x a', (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0E m' r x ∧ AFr m m' := by
   cases N with
   | zero => simp [cftW] at h

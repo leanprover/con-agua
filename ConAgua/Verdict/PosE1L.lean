@@ -58,7 +58,7 @@ theorem pfK_run {β : Type} {fe : IFEnv} {c : NestCtx} {prog : List NestHole} {k
 result word, the frames. -/
 structure PfvPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (w : Word)
     (m' : Mem) (x : NestFieldKind) (a' : AState) : Prop where
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   kind : decNFK w = some x
   pos : PosMR m'
@@ -67,7 +67,7 @@ structure PfvPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 /-- **`nest_pos_fvar` refines `pfK`, both outcomes.** -/
 theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m : Mem} {a : AState} {ctx po pl kb hi i aO aL : Word} {c : NestCtx}
-    {prog : List NestHole} {args : List EIdx} (hS : StageR dn vis fe m a)
+    {prog : List NestHole} {args : List EIdx} (hS : StageR vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hpr : HSl m po.toNat pl.toNat prog) (hhi : c.hiAt 0 < 2 ^ 64)
     (hargs : decHL m aO.toNat aL.toNat = some args) (hab : aO.toNat + aL.toNat ≤ iwTop m) (hP : PosMR m) :
     RefE (closedNV p _root_.L.Checker.nvFns = true) (pfvE p k m vis ctx po pl kb hi i aO aL)
@@ -160,9 +160,9 @@ def nccT {β : Type} (c : NestCtx) (hp : Nat) (n : NIdx) (ds idx : List EIdx) (R
 /-- `cpW_ok` with no exec-fuel bound (its walks run at `CWF`: `bvbW_stageW`'s first case). -/
 theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (dO dL : Word) (ds : List EIdx) (r : List Word),
-    cpW n m hp dO dL = some (r, m') → StageR dn vis fe m a →
+    cpW n m hp dO dL = some (r, m') → StageR vis fe m a →
     decHL m dO.toNat dL.toNat = some ds → (∀ j < dL.toNat, dO.toNat + j < iwTop m) →
-    ∃ b a', (ds.allM (pcF hp.toNat)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ b a', (ds.allM (pcF hp.toNat)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       r.headD 0 = (if b then 1 else 0) := by
   induction n with
   | zero => intro m m' a dO dL ds r h; simp [cpW] at h
@@ -254,7 +254,7 @@ structure NccPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   occ : (idx.anyM (fun x => ConRon.Arena.nestOcc c.names c.nP hp.toNat x)).run a = .ok (false, a)
   quot : ∃ q, pinQuot.run a = .ok (q, a) ∧ (decI nn == q) = false
   params : (ds.allM (pcF hp.toNat)).run a = .ok (true, a')
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   pos : PosMR m'
   abs : AFr m m'
@@ -262,7 +262,7 @@ structure NccPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 /-- **`nest_cont_checks` refines `nccT`, both outcomes.** -/
 theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m : Mem} {a : AState} {ctx hp nn dO dL iO iL : Word}
-    {c : NestCtx} {ds idx : List EIdx} (hS : StageR dn vis fe m a)
+    {c : NestCtx} {ds idx : List EIdx} (hS : StageR vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hds : decHL m dO.toNat dL.toNat = some ds)
     (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m) (hidx : decHL m iO.toNat iL.toNat = some idx)
     (hidxb : ∀ j < iL.toNat, iO.toNat + j < iwTop m) (hnH : H nn) (hP : PosMR m) :

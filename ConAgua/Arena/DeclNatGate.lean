@@ -33,7 +33,7 @@ def defnMono : IConstantInfo → Bool
   | _ => false
 
 theorem decCI_defn_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a dn p = some ci) :
+    {ci : IConstantInfo} (h : decCI a p = some ci) :
     (∃ cv v hint, ci = .defnInfo cv v hint ∧ a[p]? = some 1 ∧ decCV a (p + 1) = some cv) ∨
     (∃ w, a[p]? = some w ∧ w ≠ 1 ∧ ∀ cv v hint, ci ≠ .defnInfo cv v hint) := by
   unfold decCI at h
@@ -81,7 +81,7 @@ theorem decCV_lps_len {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV 
   simpa using (mapM_opt_length _ _ _ hsl).symm
 
 theorem defnMono_words {m : Mem} {dn : NIdx → Option ConLeche.Name} {q : Word} {ci : IConstantInfo}
-    (hsz : (m.arr64 EREC).size < 2 ^ 64) (h : decCI (erecP m) dn q.toNat = some ci) :
+    (hsz : (m.arr64 EREC).size < 2 ^ 64) (h : decCI (erecP m) q.toNat = some ci) :
     (rdW (m.arr64 EREC) q ≠ 1 ∧ defnMono ci = false) ∨
     (rdW (m.arr64 EREC) q = 1 ∧ (defnMono ci = true ↔ rdW (m.arr64 EREC) (q + 3) = 0)) := by
   rcases decCI_defn_cases h with ⟨cv, v, hint, rfl, hk, hcv⟩ | ⟨w, hw, hne, hnd⟩
@@ -162,10 +162,10 @@ theorem decHL_cons_iw {κ : IdxKind} {m : Mem} {o l : Word} {n : Idx κ} {ns : L
       exact hlt
 
 theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
-    ∀ (k : Nat) (m : Mem) (a : AState) (r : List Word) (m' : Mem), StageR dn vis fe m a →
+    ∀ (k : Nat) (m : Mem) (a : AState) (r : List Word) (m' : Mem), StageR vis fe m a →
       decHL m o.toNat l.toNat = some ns →
       callW p k "nat_op_deps_stored" [vis, o, l] m = some (r, m') →
-      ∃ x a', (natOpDepsStored fe ns).run a = .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
+      ∃ x a', (natOpDepsStored fe ns).run a = .ok (x, a') ∧ KeepPost vis fe decW0B m m' a' r x := by
   induction ns generalizing o l with
   | nil =>
     intro k m a r m' hS hd hc
@@ -236,15 +236,15 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
           exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
 theorem natOpDepsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     CallRef p "nat_op_deps_stored" [vis, o, l]
-      (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some ns)
-      (natOpDepsStored fe ns) (KeepPost dn vis fe decW0B) :=
+      (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some ns)
+      (natOpDepsStored fe ns) (KeepPost vis fe decW0B) :=
   fun k m a r m' ⟨hS, hd⟩ hc => depsStored_ref hN o l ns k m a r m' hS hd hc
 
 @[refines ConRon.Arena.natOpDepsStored]
 theorem natOpDepsStored_refines (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     RefAM p "nat_op_deps_stored" [vis, o, l]
-      (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some ns)
-      (natOpDepsStored fe ns) (KeepPost dn vis fe decW0B) :=
+      (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some ns)
+      (natOpDepsStored fe ns) (KeepPost vis fe decW0B) :=
   (natOpDepsStored_ref hN o l ns).refAM
 
 end stored

@@ -118,7 +118,7 @@ l_model cfbE_spec (p : Prog) (hf : p.lookup "check_field_sort_bound" = some chec
 growth, `AbsOK`. -/
 structure CfbPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a' : AState) : Prop where
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   abs : AbsOK m'
 

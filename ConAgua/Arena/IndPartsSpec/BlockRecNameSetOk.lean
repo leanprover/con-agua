@@ -69,12 +69,12 @@ theorem partsMemberIdx_lt {names : List NIdx} {lvls : LsIdx} {e : EIdx} {a a' : 
 tops at `c`, the member names a handle slice below the top. -/
 theorem ctmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
     {a : AState} {no nl lvls nP c : Word} {cv : IConstantVal} {nF : Nat} {names : List NIdx}
-    (hS : StageR dn vis fe m a) (hc : DecB (fun m => decCN m c.toNat) m (cv, nF))
+    (hS : StageR vis fe m a) (hc : DecB (fun m => decCN m c.toNat) m (cv, nF))
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m names) (hnb : no.toNat + nl.toNat ≤ iwTop m)
     (hlv : H lvls) :
     Sim (ctmW (n + 1) m no nl lvls nP c) (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a
       (fun r o m' a' => MemIdxOut r o ∧ (∀ i, o = some i → i < names.length) ∧
-        StageR dn vis fe m' a' ∧ IWGrow m m') := by
+        StageR vis fe m' a' ∧ IWGrow m m') := by
   obtain ⟨⟨cvp, hcvp, hcv⟩, hnF⟩ := decCN_some (show decCN (truncM m) c.toNat = some (cv, nF) from hc)
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hcw, -, -⟩ := partsIwRd hcvp rfl
@@ -204,10 +204,10 @@ theorem partsFilter_step (names : List NIdx) (lvls : LsIdx) (nP mm : Nat) (c0 : 
 theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl lvls nP mm : Word}
     {names : List NIdx} (hlv : H lvls) (n : Nat) :
     ∀ (m : Mem) (a : AState) (co cl : Word) (cs : List (IConstantVal × Nat)),
-    StageR dn vis fe m a → PSlR decCN cs co cl m →
+    StageR vis fe m a → PSlR decCN cs co cl m →
     DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
     Sim (bgoW n m no nl lvls nP co cl mm) (cs.filterM (bgPred names (decI lvls) nP.toNat mm.toNat)) a
-      (fun r gs m' a' => PSlR decCN gs (r.headD 0) (r.tail.headD 0) m' ∧ StageR dn vis fe m' a' ∧
+      (fun r gs m' a' => PSlR decCN gs (r.headD 0) (r.tail.headD 0) m' ∧ StageR vis fe m' a' ∧
         IWGrow m m') := by
   induction n with
   | zero => intro m a co cl cs _ _ _ _ r m' e; rw [bgoW.eq_1] at e; cases e
@@ -236,7 +236,7 @@ theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hnlen : names.length < 2 ^ 64 := by
       have := decHL_length _ (show decHL (truncM m) no.toNat nl.toNat = some names from hnm); omega
     refine Sim.bindK (bgoW.k_ctor_member.none ..) (fun _ _ => bgoW.k_ctor_member.arm1 ..) (Q := fun r o m' a' => MemIdxOut r o ∧ (∀ i, o = some i → i < names.length) ∧
-        StageR dn vis fe m' a' ∧ IWGrow m m') ?_ ?_
+        StageR vis fe m' a' ∧ IWGrow m m') ?_ ?_
     · cases n with
       | zero => exact Sim.of_none
       | succ n => exact ctmW_sim n hS hc0B hnm hnb hlv
@@ -302,8 +302,8 @@ l_model bgg_spec (p : Prog) (hP : IndPartsProg p) (hv : p.lookup "e_view" = some
 /-- A fresh group header over a constructor slice decoded below the tops. -/
 theorem partsGH {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {g0 g1 h0 : Word} {gs : List (IConstantVal × Nat)}
-    (h : posRecW m [g0, g1] = some (h0, m')) (hS : StageR dn vis fe m a) (hg : PSlR decCN gs g0 g1 m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ DecB (fun m => decGH m h0.toNat) m' gs := by
+    (h : posRecW m [g0, g1] = some (h0, m')) (hS : StageR vis fe m a) (hg : PSlR decCN gs g0 g1 m) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ DecB (fun m => decGH m h0.toNat) m' gs := by
   obtain ⟨hS', hgr, -, -, hget⟩ := partsFresh h hS (by simp)
   refine ⟨hS', hgr, ?_⟩
   have e0 := hget 0 (by simp); have e1 := hget 1 (by simp)
@@ -317,12 +317,12 @@ theorem partsGH {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
 theorem bggW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl lvls nP co cl k : Word}
     {names : List NIdx} {cs : List (IConstantVal × Nat)} (hlv : H lvls) (n : Nat) :
     ∀ (m : Mem) (a : AState) (mm : Word),
-    StageR dn vis fe m a → PSlR decCN cs co cl m →
+    StageR vis fe m a → PSlR decCN cs co cl m →
     DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
     Sim (bggW n m no nl lvls nP co cl mm k)
       ((List.range' mm.toNat (k.toNat - mm.toNat)).mapM
         (fun j => cs.filterM (bgPred names (decI lvls) nP.toNat j))) a
-      (fun r gss m' a' => PSlR decGH gss (r.headD 0) (r.tail.headD 0) m' ∧ StageR dn vis fe m' a' ∧
+      (fun r gss m' a' => PSlR decGH gss (r.headD 0) (r.tail.headD 0) m' ∧ StageR vis fe m' a' ∧
         IWGrow m m') := by
   induction n with
   | zero => intro m a mm _ _ _ _ r m' e; rw [bggW.eq_1] at e; cases e
@@ -388,10 +388,10 @@ theorem bg_spec (p : Prog) (hP : IndPartsProg p) (hv : p.lookup "e_view" = some 
 /-- **`block_groups`' model refines `blockGroups`.** -/
 theorem bgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl lvls nP k co cl : Word}
     {names : List NIdx} {cs : List (IConstantVal × Nat)} (hlv : H lvls) (n : Nat) {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) (hcs : PSlR decCN cs co cl m)
+    (hS : StageR vis fe m a) (hcs : PSlR decCN cs co cl m)
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m names) (hnb : no.toNat + nl.toNat ≤ iwTop m) :
     Sim (bgW n m no nl lvls nP k co cl) (ConRon.Arena.blockGroups names (decI lvls) nP.toNat k.toNat cs) a
-      (fun r gss m' a' => PSlR decGH gss (r.headD 0) (r.tail.headD 0) m' ∧ StageR dn vis fe m' a' ∧
+      (fun r gss m' a' => PSlR decGH gss (r.headD 0) (r.tail.headD 0) m' ∧ StageR vis fe m' a' ∧
         IWGrow m m') := by
   unfold bgW ConRon.Arena.blockGroups
   by_cases hk : k = 1
@@ -423,7 +423,7 @@ aborts when `nP + nF` wraps, a capacity). -/
 @[refines ConRon.Arena.ctorMember?]
 theorem ctorMember_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (no nl lvls nP c : Word)
-    (cv : IConstantVal) (nF : Nat) (names : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (cv : IConstantVal) (nF : Nat) (names : List NIdx) (hS : StageR vis fe s₀.mem a₀)
     (hc : DecB (fun m => decCN m c.toNat) s₀.mem (cv, nF))
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names)
     (hnb : no.toNat + nl.toNat ≤ iwTop s₀.mem) (hlv : H lvls) :
@@ -431,7 +431,7 @@ theorem ctorMember_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : S
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀ ∧
       MemIdxOut r (AM.res (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ :=
   triple_post (ctorMember_specK p hP.view hP.find hP.midx hP.cmem hP.strip hP.ad (n + 1) s₀ no nl lvls nP c)
     fun _ _ ⟨hl, hm⟩ =>
@@ -444,7 +444,7 @@ below the tops, the member names a handle slice below the top; the result a slic
 @[refines ConRon.Arena.blockGroups]
 theorem blockGroups_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (no nl lvls nP k co cl : Word)
-    (cs : List (IConstantVal × Nat)) (names : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (cs : List (IConstantVal × Nat)) (names : List NIdx) (hS : StageR vis fe s₀.mem a₀)
     (hcs : PSlR decCN cs co cl s₀.mem)
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names)
     (hnb : no.toNat + nl.toNat ≤ iwTop s₀.mem) (hlv : H lvls) :
@@ -453,7 +453,7 @@ theorem blockGroups_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : 
       AM.ok (ConRon.Arena.blockGroups names (decI lvls) nP.toNat k.toNat cs) a₀ ∧
       PSlR decGH (AM.res (ConRon.Arena.blockGroups names (decI lvls) nP.toNat k.toNat cs) a₀)
         (r.headD 0) (r.tail.headD 0) s'.mem ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockGroups names (decI lvls) nP.toNat k.toNat cs) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.blockGroups names (decI lvls) nP.toNat k.toNat cs) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ :=
   triple_post (bg_spec p hP.toIndPartsProg hP.view hP.find hP.midx hP.cmem hP.gone hP.rec2 hP.ggo
       hP.groups n s₀ no nl lvls nP k co cl)
@@ -574,8 +574,8 @@ end spec
 /-- **`block_rec_got`'s model**: the recursors' names. -/
 theorem brgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (ro rl : Word) (recs : List RecShape) (r : List Word),
-    brgW n m ro rl = some (r, m') → StageR dn vis fe m a → PSlR decRS recs ro rl m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    brgW n m ro rl = some (r, m') → StageR vis fe m a → PSlR decRS recs ro rl m →
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (recs.map (·.cvR.name)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   induction n with
@@ -610,11 +610,11 @@ theorem brgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 /-- **`block_rec_want`'s model refines the twin's `mapM` of `name_rec`.** -/
 theorem brwW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m : Mem) (a : AState) (mo ml : Word) (ms : List MemberShape),
-    StageR dn vis fe m a →
+    StageR vis fe m a →
     DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) m ms ∧ (ml = 0 ∨ mo.toNat + ml.toNat ≤ iwTop m) →
     Sim (brwW n m mo ml) (ms.mapM fun ms => internNNode (.str ms.cvT.name "rec")) a
       (fun r xs m' a' => decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
-        (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+        (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   induction n with
   | zero => intro m a mo ml ms _ _ r m' e; simp [brwW] at e
   | succ n ih =>
@@ -691,20 +691,20 @@ empty: an empty slice's offset is whatever its record holds). -/
 @[refines ConRon.Arena.blockRecNameSetOk]
 theorem blockRecNameSetOk_refines (p : Prog) (hP : IndPartsProg3 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mo ml ro rl : Word)
-    (ms : List MemberShape) (recs : List RecShape) (hS : StageR dn vis fe s₀.mem a₀)
+    (ms : List MemberShape) (recs : List RecShape) (hS : StageR vis fe s₀.mem a₀)
     (hms : DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) s₀.mem ms ∧
       (ml = 0 ∨ mo.toNat + ml.toNat ≤ iwTop s₀.mem))
     (hrs : PSlR decRS recs ro rl s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "block_rec_name_set_ok" [mo, ml, ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockRecNameSetOk ms recs) a₀ ∧
       r = [if AM.res (ConRon.Arena.blockRecNameSetOk ms recs) a₀ then 1 else 0] ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockRecNameSetOk ms recs) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.blockRecNameSetOk ms recs) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (brn_spec p hP.toIndPartsProg hP.want hP.got hP.contains hP.allIn hP.setEq hP.nameSet
     n s₀ mo ml ro rl) ?_
   rintro r s' ⟨hl, hm⟩
   have hsim : Sim (brnW n s₀.mem mo ml ro rl) (ConRon.Arena.blockRecNameSetOk ms recs) a₀
-      (fun r b m' a' => r = [if b then 1 else 0] ∧ StageR dn vis fe m' a' ∧ IWGrow s₀.mem m') := by
+      (fun r b m' a' => r = [if b then 1 else 0] ∧ StageR vis fe m' a' ∧ IWGrow s₀.mem m') := by
     unfold brnW ConRon.Arena.blockRecNameSetOk
     refine Sim.bindK (K := fun x => match x with
       | none => none

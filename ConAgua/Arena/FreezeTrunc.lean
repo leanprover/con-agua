@@ -204,7 +204,7 @@ theorem tblRow_trunc (w : Word) :
   · simp [hg]
 
 theorem EnvR.trunc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    (hk : EnvKeysIn m fe) (h : EnvR dn m vis fe) : EnvR dn (truncFrozen m) vis fe := by
+    (hk : EnvKeysIn m fe) (h : EnvR m vis fe) : EnvR (truncFrozen m) vis fe := by
   have hN : (truncFrozen m).arr64 ECON = m.arr64 ECON := truncFrozen_other m _ (by decide)
   have hc := truncFrozen_ctl m
   -- a row the environment holds reads the same
@@ -300,7 +300,7 @@ variable {m : Mem} (htop : m.top.toNat < 2 ^ 40)
 include htop
 
 theorem CheckR.trunc {dn : NIdx → Option ConLeche.Name} {a : AState} {vis : Word} {fe : IFEnv}
-    (hk : EnvKeysIn m fe) (h : CheckR dn m a vis fe) : CheckR dn (truncFrozen m) a vis fe :=
+    (hk : EnvKeysIn m fe) (h : CheckR m a vis fe) : CheckR (truncFrozen m) a vis fe :=
   ⟨h.arena.trunc htop, (keepNF_trunc m).coreR h.core, h.pins.trunc,
     h.env.trunc (nmCnt_le h.arena.base) hk, h.mode.trunc⟩
 
@@ -325,7 +325,7 @@ theorem LoopMem.trunc {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState
 
 /-- With the scratch flag off (the twin's `scratchOn` is `false`), the pool top is in tier 0. -/
 theorem top_tier0_of {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} (h : CheckR dn m a vis fe) (hoff : a.store.scratchOn = false) :
+    {fe : IFEnv} (h : CheckR m a vis fe) (hoff : a.store.scratchOn = false) :
     m.top.toNat < 2 ^ 40 := by
   have hf := h.arena.base.app.flag
   rw [hoff] at hf

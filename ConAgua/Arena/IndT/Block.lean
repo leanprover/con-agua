@@ -69,7 +69,7 @@ l_model icbE_spec (p : Prog) (hP : CbProg p)
 stage, the growth, the memos of the tail, `AbsOK`, the recursors' memo, the main-arg memo. -/
 structure BlockPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x : IFEnv) (m' : Mem)
     (a' : AState) : Prop where
-  stage : StageR dn w x m' a'
+  stage : StageR w x m' a'
   grow : IWGrow m m'
   memo : HbMemo m'
   abs : AbsOK m'
@@ -159,7 +159,7 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
       refine ⟨v, a', hv', by omega, hva', ?_⟩
       simp only [List.getElem_map, hy']
       exact DecB.get (f := fun m => decCVp m a') (OMono.decCVp _) hcv)
-  have hS2 : StageR dn vis fe s2.mem a := stage_frame_iw hS1 hf2 (by
+  have hS2 : StageR vis fe s2.mem a := stage_frame_iw hS1 hf2 (by
     have := ctorNamesW_room hW2 hS1.iw.iwSize; simp only [iwTop] at this ht2 ⊢; omega)
   subst hr2
   simp only [List.map_map] at hd2
@@ -189,7 +189,7 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
   rw [UInt64.toNat_ofNat_of_lt' hkb] at hroom
   simp only at hs3 hr3 hdn3 hg3 hf3 ht3
   subst hs3
-  have hS3 : StageR dn vis fe s3.mem a := stage_frame_iw hS2 hf3 (by
+  have hS3 : StageR vis fe s3.mem a := stage_frame_iw hS2 hf3 (by
     rw [← ht3]; simp only [iwTop] at hroom ⊢; omega)
   subst hr3
   simp only [List.headD_cons, List.tail_cons]
@@ -331,7 +331,7 @@ theorem checkBlock_refinesC (hP : CbProg p) {fs fs2 : List FnName}
     (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 5)) "check_block" [vis, bO, bL, p0]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) s'.mem
+      StageR (r.headD 0) (AM.res (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) s'.mem
         (AM.st (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem ∧ RcMR s'.mem ∧ (∃ mp, maMR s'.mem mp); ⊤⦄ := by
   refine triple_post (RefE.triple (icbE_spec p hP (n + 5) s₀ vis bO bL p0)

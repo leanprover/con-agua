@@ -30,7 +30,7 @@ open L.Arena
 
 /-- **`pin_word(53)` is `zeroLevel`** under the stage relation (the read leaves the memory). -/
 theorem pinZero_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} {z : Word} (hS : StageR dn vis fe m a) (hz : pinWordV m 53 = some z) :
+    {a : AState} {z : Word} (hS : StageR vis fe m a) (hz : pinWordV m 53 = some z) :
     zeroLevel.run a = .ok (decI z, a) ∧ H z := by
   have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by intro h0; simp [pinWordV, h0] at hz
   have hz' : z = pinW m 53 := by
@@ -41,7 +41,7 @@ theorem pinZero_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 
 /-- A slice below the pool's top has its end below `2^64` (`IWOK`). -/
 theorem StageR.lt64 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (hS : StageR dn vis fe m a) {x : Nat} (h : x ≤ iwTop m) : x < 2 ^ 64 := by
+    {a : AState} (hS : StageR vis fe m a) {x : Nat} (h : x ≤ iwTop m) : x < 2 ^ 64 := by
   obtain ⟨h1, -, h3, -, -⟩ := hS.iw; omega
 
 /-- A memory fact of the model's result, added to a `Sim`'s post. -/

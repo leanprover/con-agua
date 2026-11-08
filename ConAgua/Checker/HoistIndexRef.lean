@@ -89,7 +89,7 @@ theorem hix_decCV_name {a : Array Word} {q : Nat} {v : IConstantVal} (h : decCV 
   exact hix_hd?_some hn
 
 theorem hix_decCI_name {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a dn p = some ci) :
+    {ci : IConstantInfo} (h : decCI a p = some ci) :
     ∃ w, a[p + 1]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
   simp only [decCI, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨t, -, h⟩ := h
@@ -115,7 +115,7 @@ theorem hix_trunc_get {P : Array Word} {t i : Nat} {v : Word} (h : (trunc P t)[i
 
 theorem hix_decCIs_succ (a : Array Word) (dn : NIdx → Option ConLeche.Name) (o k : Nat) :
     decCIs a dn o (k + 1) = (do
-      let x ← (do let v ← nat? a o; decCI a dn v)
+      let x ← (do let v ← nat? a o; decCI a v)
       let xs ← decCIs a dn (o + 1) k
       pure (x :: xs)) := by
   simp only [decCIs, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]

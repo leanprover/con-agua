@@ -41,8 +41,8 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem push_call {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
     {ci : IConstantInfo} (hc : callW p n "env_push" [vis, c] m = some (r, m'))
-    (hS : StageR dn vis fe m a) (hci : decCI (erecP m) dn c.toNat = some ci) :
-    StageR dn (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' := by
+    (hS : StageR vis fe m a) (hci : decCI (erecP m) c.toNat = some ci) :
+    StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' := by
   obtain ⟨w, hw1, hwl, -⟩ := decCI_name hci
   have hcb : c.toNat + 1 < 2 ^ 64 := erecP_bound hw1 hS.iw
   have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 hcb

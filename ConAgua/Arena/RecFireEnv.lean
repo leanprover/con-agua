@@ -21,7 +21,7 @@ namespace L.Arena
 
 /-- A constructor record's `ConstantVal`. -/
 theorem decCI_ctorInfo_cv {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
-    {cvj : IConstantVal} {np nf : Nat} (h : decCI b dn q = some (.ctorInfo cvj np nf)) :
+    {cvj : IConstantVal} {np nf : Nat} (h : decCI b q = some (.ctorInfo cvj np nf)) :
     decCV b (q + 1) = some cvj := by
   cases hq : b[q]? with
   | none => simp [decCI, nat?, hq] at h

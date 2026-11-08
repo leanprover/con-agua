@@ -635,10 +635,10 @@ at `cq`. -/
 theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cq mi rp3 reo rel q : Word} {cv : IConstantVal} {rules : List IRecRule}
     (h : riW m cq mi rp3 reo rel = some ([q], m'))
-    (hS : StageR dn vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv)
+    (hS : StageR vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv)
     (hru : decRules (erecP m) reo.toNat rel.toNat = some rules) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
-      decCI (erecP m') dn q.toNat = some (.recInfo cv mi.toNat rp3.toNat rules) := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
+      decCI (erecP m') q.toNat = some (.recInfo cv mi.toNat rp3.toNat rules) := by
   cases h1 : erAllocW m 9 with
   | none => simp [riW, h1] at h
   | some x =>
@@ -709,9 +709,9 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 /-- **`rules_to_erec` under the stage relation**: a fresh consecutive run of the rule records at the
 old record top, decoding as the rules. -/
 theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Word} {rules : List IRecRule}
-    (h : rteW n m ro rl = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : rteW n m ro rl = some (r, m')) (hS : StageR vis fe m a)
     (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules) (_hb : ro.toNat + rl.toNat ≤ iwTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = rl ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = rl ∧
       decRules (erecP m') (r.headD 0).toNat rl.toNat = some rules ∧ MFr [] [] m m' := by
   obtain _ | n := n
   · simp [rteW] at h
@@ -870,10 +870,10 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 /-- **`cons_block_recs_push` under the stage relation**: the rules' run, the `.recInfo` record, pushed. -/
 theorem cbpW_ok (p : Prog) (L : CbrLook p) (n : Nat) {m m' : Mem} {a : AState} {cv mI rP ro rl : Word}
     {r : List Word} {cvv : IConstantVal} {rules : List IRecRule}
-    (h : cbpW p n m vis cv mI rP ro rl = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : cbpW p n m vis cv mI rP ro rl = some (r, m')) (hS : StageR vis fe m a)
     (hcv : decCV (erecP m) cv.toNat = some cvv)
     (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules) (hb : ro.toNat + rl.toNat ≤ iwTop m) :
-    StageR dn (r.headD 0) (fe.push (.recInfo cvv mI.toNat rP.toNat rules)) m' a ∧ IWGrow m m' ∧
+    StageR (r.headD 0) (fe.push (.recInfo cvv mI.toNat rP.toNat rules)) m' a ∧ IWGrow m m' ∧
       AFr m m' := by
   obtain _ | n := n
   · simp [cbpW] at h
@@ -1106,11 +1106,11 @@ variable (dn : NIdx → Option ConLeche.Name)
 
 theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
     {vis2 pp mm lo ll : Word} {r : List Word} {bs : BlockShape} {xs : List (IConstantVal × TargetMajor × List EIdx)},
-    cbrW p n m vis2 pp mm lo ll vis = some (r, m') → StageR dn vis fe m a →
+    cbrW p n m vis2 pp mm lo ll vis = some (r, m') → StageR vis fe m a →
     DecB (fun m => decBS m pp.toNat) m bs → PSlR decRR xs lo ll m → mm.toNat + ll.toNat < 2 ^ 64 →
     AbsOK m →
     ∃ fe' a', (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' ∧ AbsOK m' := by
+      StageR (r.headD 0) fe' m' a' ∧ IWGrow m m' ∧ AbsOK m' := by
   induction n with
   | zero => intro m m' a vis fe vis2 pp mm lo ll r bs xs h; simp [cbrW] at h
   | succ n ih =>
@@ -1156,7 +1156,7 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
   rcases h1 : tsrW n m vis2 (UInt64.ofNat cvp) (brpW m pp mm) (UInt64.ofNat mp) (UInt64.ofNat o) (UInt64.ofNat l) with _ | ⟨rr, m1⟩ <;> simp only [h1, cbrK1, reduceCtorEq] at h
   obtain ⟨rules, a1, run1, hd1, hb1, hS1, hg1, hA1⟩ := tsrW_ok dn (fe.restrictTo vis2.toNat) vis2 n h1
     (hS.restrict vis2) hM hrh hA (cvv := cvv)
-  have hS1' : StageR dn vis fe m1 a1 := hS1.unrestrict hS.check.env.vis
+  have hS1' : StageR vis fe m1 a1 := hS1.unrestrict hS.check.env.vis
   rw [hrp] at run1
   rcases h2 : cbpW p n m1 vis (UInt64.ofNat cvp) (bmjW m pp mm) (brpW m pp mm) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rv, m2⟩ <;> simp only [h2, cbrK2, reduceCtorEq] at h
   obtain ⟨hS2, hg2, hf2⟩ := cbpW_ok dn fe vis p L n h2 hS1' ((IWGrow.erecPExtR hg1).decCV hcvE) hd1 hb1
@@ -1184,12 +1184,12 @@ view. -/
 @[refines ConRon.Arena.consBlockRecsTF]
 theorem consBlockRecsTF_refines (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis2 pp mm lo ll vis : Word) (bs : BlockShape)
-    (xs : List (IConstantVal × TargetMajor × List EIdx)) (hS : StageR dn vis fe s₀.mem a₀)
+    (xs : List (IConstantVal × TargetMajor × List EIdx)) (hS : StageR vis fe s₀.mem a₀)
     (hbs : DecB (fun m => decBS m pp.toNat) s₀.mem bs) (hxs : PSlR decRR xs lo ll s₀.mem)
     (hml : mm.toNat + ll.toNat < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_tf" [vis2, pp, mm, lo, ll, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀) s'.mem
+      StageR (r.headD 0) (AM.res (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀) s'.mem
         (AM.st (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (cbr_spec p L n s₀ vis2 pp mm lo ll vis) ?_

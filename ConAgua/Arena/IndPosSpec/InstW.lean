@@ -26,10 +26,10 @@ open L.Arena
 
 theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (ao al e : Word) (args : List EIdx) (r : List Word),
-    instW n m ao al e = some (r, m') → StageR dn vis fe m a → H e →
+    instW n m ao al e = some (r, m') → StageR vis fe m a → H e →
     decHL m ao.toNat al.toNat = some args → ao.toNat + al.toNat < 2 ^ 64 →
     ao.toNat + al.toNat ≤ iwTop m →
-    ∃ x a', (ConRon.Arena.instPisWith args (decI e)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.instPisWith args (decI e)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x := by
   induction n with
   | zero => intro dn fe vis m m' a ao al e args r h; simp [instW] at h

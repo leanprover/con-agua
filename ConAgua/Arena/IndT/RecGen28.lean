@@ -183,7 +183,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   | none => rw [cnsEK3_none]; exact RefE.of_cls0 (by simp)
   | some m3 =>
   obtain ⟨g1, g2⟩ := ncpW_words nm _ (by omega) hmw (k + 1) _ _ 0 c3 (by simp)
-  have hS3 := ncpW_ind nm (UInt64.ofNat p0) (by omega) (fun m'' => StageR dn vis fe m'' a1)
+  have hS3 := ncpW_ind nm (UInt64.ofNat p0) (by omega) (fun m'' => StageR vis fe m'' a1)
     (fun _ _ _ h _ => h.set_iw _ _) (k + 1) _ _ 0 c3 (by simp) hS2
   have hg3 := ncpW_ind nm (UInt64.ofNat p0) (by omega) (fun m'' => IWGrow s1.mem m'')
     (fun _ x _ h hx => h.set_iw _ _ (by omega)) (k + 1) _ _ 0 c3 (by simp) hg2
@@ -223,7 +223,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have szC : (mC.arr64 IW).size = (m3.arr64 IW).size := by rw [← hC, size_set64, szB]
   have szD : (mD.arr64 IW).size = (m3.arr64 IW).size := by rw [← hD, size_set64, szC]
   -- the stage relation, growth, tops, memos
-  have hS4 : StageR dn vis fe m4 a1 := by
+  have hS4 : StageR vis fe m4 a1 := by
     rw [← hE, ← hD, ← hC, ← hB, ← hA]
     exact ((((hS3.set_iw _ _).set_iw _ _).set_iw _ _).set_iw _ _).set_iw _ _
   have hA4 : AbsOK m4 := by

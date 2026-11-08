@@ -191,10 +191,10 @@ theorem consW_roomN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
 `x :: xs`. -/
 theorem consW_stageN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List Nat}
-    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : o.toNat + l.toNat ≤ iwTop m)
     (hxs : decNL m o.toNat l.toNat = some xs) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (x.toNat :: xs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
@@ -422,9 +422,9 @@ def CcRes (m' : Mem) (r : List Word) (keys : List ClassKey) : Prop :=
 
 theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a : AState) (n : Nat) :
     ∀ (m m' : Mem) (so sl : Word) (r : List Word) (slots : List ClassSlot),
-    rcW n m so sl = some (r, m') → StageR dn vis fe m a →
+    rcW n m so sl = some (r, m') → StageR vis fe m a →
     decPL m (decCS m) so.toNat sl.toNat = some slots → SlotsExt m so.toNat sl.toNat →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ CcRes m' r (ConRon.Arena.ClassRead.classes slots) := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ CcRes m' r (ConRon.Arena.ClassRead.classes slots) := by
   induction n with
   | zero => intro m m' so sl r slots h; simp [rcW] at h
   | succ n ih =>
@@ -523,11 +523,11 @@ theorem classReadClasses_refines (p : Prog) (hc : p.lookup "iw_copy" = some iwCo
     (ha : p.lookup "iw_alloc" = some iwAlloc) (hsc : p.lookup "sl_cons" = some slCons)
     (hp : p.lookup "class_read_classes" = some classReadClasses) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (so sl : Word) (slots : List ClassSlot)
-    (hS : StageR dn vis fe s₀.mem a₀)
+    (hS : StageR vis fe s₀.mem a₀)
     (hslots : decPL s₀.mem (decCS s₀.mem) so.toNat sl.toNat = some slots)
     (hext : SlotsExt s₀.mem so.toNat sl.toNat) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_classes" [so, sl]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       CcRes s'.mem r (ConRon.Arena.ClassRead.classes slots); ⊤⦄ := by
   refine triple_post (classReadClasses_spec p hc ha hsc hp n s₀ so sl) ?_
   rintro r s' ⟨hl, hm⟩

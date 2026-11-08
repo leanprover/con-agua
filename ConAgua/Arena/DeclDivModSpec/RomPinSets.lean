@@ -127,9 +127,9 @@ theorem romPinSets_spec' (hD : DmProg10 p) (n : Nat) (s₀ : St) :
 /-- **`rom_pin_sets()` under the stage relation**: the variant records, as an `IW` slice. -/
 theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List INatOpPinSet}
     {n : Nat} {m m' : Mem} {a : AState} {r : List Word}
-    (hS : StageR dn vis fe m a) (hP : PinSetsR m ips)
+    (hS : StageR vis fe m a) (hP : PinSetsR m ips)
     (hc : callW p n "rom_pin_sets" [] m = some (r, m')) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ PinSetsR m' ips ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ PinSetsR m' ips ∧
       PinsIW m' (r.headD 0).toNat (r.tail.headD 0).toNat ips := by
   cases n with
   | zero => rw [callW_zero] at hc; cases hc

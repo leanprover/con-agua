@@ -439,7 +439,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 /-- The common post: the stage relation, the pool grown, the memo's invariant at the same current
 generation, the map unchanged up to the old last generation. -/
 def RxPost (m m' : Mem) (a' : AState) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : Prop :=
-  ∃ M' G', StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' g ∧ GKeep M M' G g ∧ G ≤ G'
+  ∃ M' G', StageR vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' g ∧ GKeep M M' G g ∧ G ≤ G'
 
 /-- A frame's hole, read back (`nestHoleImg`'s hit arm). -/
 def frameTwin (c : NestCtx) (prog : List NestHole) (n1 : Nat) : AM (Option EIdx) := do
@@ -451,7 +451,7 @@ def frameTwin (c : NestCtx) (prog : List NestHole) (n1 : Nat) : AM (Option EIdx)
 
 def MapOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (f i : Word) (fm : FvMap) (r0 r1 : Word) (M : Std.HashMap (EIdx × Word) EIdx)
-    (G g : Word), rxMapW n m f i = some (r0, r1, m') → StageR dn vis fe m a → FMOk m f.toNat fm →
+    (G g : Word), rxMapW n m f i = some (r0, r1, m') → StageR vis fe m a → FMOk m f.toNat fm →
     RfInv m M G g →
     ∃ x a', (ConRon.Arena.fvMapAt fm i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis m m' a' M G g
@@ -459,7 +459,7 @@ def MapOK (n : Nat) : Prop :=
 def ImgOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (ctx po pl nn i : Word) (c : NestCtx) (prog : List NestHole) (r0 r1 : Word)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxImgW n m ctx po pl nn i = some (r0, r1, m') →
-    StageR dn vis fe m a → decCtx m ctx.toNat = some c → CtxIn m ctx.toNat (· < iwTop m) →
+    StageR vis fe m a → decCtx m ctx.toNat = some c → CtxIn m ctx.toNat (· < iwTop m) →
     HSl m po.toNat pl.toNat prog → c.nP + c.names.length + nn.toNat < 2 ^ 64 → RfInv m M G g →
     ∃ x a', (ConRon.Arena.nestHoleImg c prog nn.toNat i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis m m' a' M G g
@@ -467,14 +467,14 @@ def ImgOK (n : Nat) : Prop :=
 def FrOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (ctx po pl n1 i : Word) (c : NestCtx) (prog : List NestHole) (r0 r1 : Word)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxFrameW n m ctx po pl n1 i = some (r0, r1, m') →
-    StageR dn vis fe m a → decCtx m ctx.toNat = some c → CtxIn m ctx.toNat (· < iwTop m) →
+    StageR vis fe m a → decCtx m ctx.toNat = some c → CtxIn m ctx.toNat (· < iwTop m) →
     HSl m po.toNat pl.toNat prog → c.nP + c.names.length + n1.toNat + 1 < 2 ^ 64 → RfInv m M G g →
     ∃ x a', (frameTwin c prog n1.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧ RxPost dn fe vis m m' a' M G g
 
 def DsOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (f o l q l' : Word) (fm : FvMap) (xs : List EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxDsW n m f o l = some (q, l', m') →
-    StageR dn vis fe m a → FMOk m f.toNat fm → decHL m o.toNat l.toNat = some xs →
+    StageR vis fe m a → FMOk m f.toNat fm → decHL m o.toNat l.toNat = some xs →
     (∀ j < l.toNat, o.toNat + j < iwTop m) → RfInv m M G g →
     ∃ ys a', (xs.mapM fun x => ConRon.Arena.replaceFVars fm x).run a = .ok (ys, a') ∧
       decHL m' q.toNat l'.toNat = some ys ∧ q.toNat + l'.toNat ≤ iwTop m' ∧ RxPost dn fe vis m m' a' M G g
@@ -482,11 +482,11 @@ def DsOK (n : Nat) : Prop :=
 def DsGoOK (n : Nat) : Prop :=
   ∀ (m0 m m' : Mem) (a : AState) (f o l q j : Word) (fm : FvMap) (xs acc : List EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxDsGoW n m f o l q j = some m' →
-    StageR dn vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat → q.toNat + l.toNat ≤ iwTop m →
+    StageR vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat → q.toNat + l.toNat ≤ iwTop m →
     FMOk m0 f.toNat fm → decHL m0 o.toNat l.toNat = some xs → (∀ j < l.toNat, o.toNat + j < iwTop m0) →
     j.toNat ≤ l.toNat → decHL m q.toNat j.toNat = some acc → RfInv m M G g →
     ∃ ys a', ((xs.drop j.toNat).mapM fun x => ConRon.Arena.replaceFVars fm x).run a = .ok (ys, a') ∧
-      decHL m' q.toNat l.toNat = some (acc ++ ys) ∧ StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
+      decHL m' q.toNat l.toNat = some (acc ++ ys) ∧ StageR vis fe m' a' ∧ IWGrow m0 m' ∧
       iwTop m ≤ iwTop m' ∧ ∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G g ∧ G ≤ G'
 
 /-- The map unchanged up to `G` except at the current generation. -/
@@ -496,13 +496,13 @@ def GKeepX (M M' : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : Prop :=
 def GoOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (f fu h : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx) (r : Word)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxGoW n m f fu h = some (r, m') →
-    StageR dn vis fe m a → FMOk m f.toNat fm → H h → RfInv m M G g → Bank M g mp → g ≠ 0 →
+    StageR vis fe m a → FMOk m f.toNat fm → H h → RfInv m M G g → Bank M g mp → g ≠ 0 →
     ∃ mp' a' M' G', (ConRon.Arena.replaceFVarsGo fm mp fu.toNat (decE h)).run a = .ok ((decE r, mp'), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' g ∧ Bank M' g mp' ∧ GKeepX M M' G g ∧ G ≤ G'
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' g ∧ Bank M' g mp' ∧ GKeepX M M' G g ∧ G ≤ G'
 
 def RfOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (f e : Word) (fm : FvMap) (r : Word) (M : Std.HashMap (EIdx × Word) EIdx)
-    (G g : Word), rxW n m f e = some (r, m') → StageR dn vis fe m a → FMOk m f.toNat fm → H e →
+    (G g : Word), rxW n m f e = some (r, m') → StageR vis fe m a → FMOk m f.toNat fm → H e →
     RfInv m M G g →
     ∃ a', (ConRon.Arena.replaceFVars fm (decE e)).run a = .ok (decE r, a') ∧ H r ∧
       RxPost dn fe vis m m' a' M G g
@@ -518,7 +518,7 @@ open L.Arena
 theorem RxPost.trans {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m1 m2 : Mem}
     {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word}
     (h₁ : RxPost dn fe vis m m1 a1 M G g)
-    (h₂ : ∀ M1 G1, RfInv m1 M1 G1 g → G ≤ G1 → ∃ M2 G2, StageR dn vis fe m2 a2 ∧ IWGrow m1 m2 ∧
+    (h₂ : ∀ M1 G1, RfInv m1 M1 G1 g → G ≤ G1 → ∃ M2 G2, StageR vis fe m2 a2 ∧ IWGrow m1 m2 ∧
       RfInv m2 M2 G2 g ∧ GKeep M1 M2 G1 g ∧ G1 ≤ G2) :
     RxPost dn fe vis m m2 a2 M G g := by
   obtain ⟨M1, G1, -, hg1, hR1, hk1, hG1⟩ := h₁

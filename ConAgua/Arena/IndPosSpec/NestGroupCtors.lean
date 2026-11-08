@@ -70,8 +70,8 @@ theorem nestArity_none {fe : IFEnv} {C : NIdx} (h : ∀ cv caps, fe.find? C ≠ 
 
 theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C)
     (n : Nat) (m m' : Mem) (a : AState) (r : List Word)
-    (h : naW n m vis C = some (r, m')) (hS : StageR dn vis fe m a) :
-    ∃ x a', (ConRon.Arena.nestArity fe (decI C)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    (h : naW n m vis C = some (r, m')) (hS : StageR vis fe m a) :
+    ∃ x a', (ConRon.Arena.nestArity fe (decI C)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ (r.headD 0).toNat = x := by
   have hE := hS.check.env
   unfold naW at h
@@ -136,10 +136,10 @@ include hl
 /-- **`nest_arity` refines `nestArity`**. -/
 @[refines ConRon.Arena.nestArity]
 theorem nestArity_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis C : Word) (hC : H C) (hS : StageR dn vis fe s₀.mem a₀) :
+    (fe : IFEnv) (vis C : Word) (hC : H C) (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_arity" [vis, C]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestArity fe (decI C)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestArity fe (decI C)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestArity fe (decI C)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat = AM.res (ConRon.Arena.nestArity fe (decI C)) a₀; ⊤⦄ := by
   refine triple_post (nestArity_spec p hl n s₀ vis C) ?_
   rintro r s' ⟨hlc, hm⟩
@@ -206,9 +206,9 @@ theorem dc_spec (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some n
 theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Word) (HI : Nat)
     (hHI : hi.toNat = HI) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (off l : Word) (ds : List EIdx) (r : List Word),
-    dcGoW n m hi off l = some (r, m') → StageR dn vis fe m a →
+    dcGoW n m hi off l = some (r, m') → StageR vis fe m a →
     decHL m off.toNat l.toNat = some ds → (∀ j < l.toNat, off.toNat + j < iwTop m) →
-    ∃ b a', (ds.allM (dsF HI)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ b a', (ds.allM (dsF HI)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       r.headD 0 = (if b then 1 else 0) := by
   induction n with
   | zero => intro m m' a off l ds r h; simp [dcGoW] at h
@@ -270,11 +270,11 @@ theorem dc_spec' (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some 
 /-- `nest_ds_closed` from the stage relation: `ds.allM (fvarB · ≤ ctx.hiAt 0)`. -/
 theorem dcWf_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) (m m' : Mem)
     (a : AState) (ctx off l : Word) (c : NestCtx) (ds : List EIdx) (r : List Word)
-    (h : dcWf n m ctx off l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : dcWf n m ctx off l = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hhi : c.hiAt 0 < 2 ^ 64) (hds : decHL m off.toNat l.toNat = some ds)
     (hdi : ∀ j < l.toNat, off.toNat + j < iwTop m) :
-    ∃ b a', (ds.allM (dsF (c.hiAt 0))).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ b a', (ds.allM (dsF (c.hiAt 0))).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       r.headD 0 = (if b then 1 else 0) := by
   cases n with
   | zero => simp [dcWf] at h
@@ -314,11 +314,11 @@ theorem nestWalkStack_eq (ctx : NestCtx) (prog : List NestHole) (ds : List EIdx)
 
 theorem nwsW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) (m m' : Mem)
     (a : AState) (ctx off l po pl : Word) (c : NestCtx) (ds : List EIdx) (prog : List NestHole)
-    (r : List Word) (h : nwsW n m ctx off l po pl = some (r, m')) (hS : StageR dn vis fe m a)
+    (r : List Word) (h : nwsW n m ctx off l po pl = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hhi : c.hiAt 0 < 2 ^ 64) (hds : decHL m off.toNat l.toNat = some ds)
     (hdi : ∀ j < l.toNat, off.toNat + j < iwTop m) :
-    ∃ x a', (ConRon.Arena.nestWalkStack c prog ds).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.nestWalkStack c prog ds).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ ((x = [] ∧ r = [0, 0]) ∨ (x = prog ∧ r = [po, pl])) := by
   unfold nwsW at h
   rcases hd : dcWf n m ctx off l with _ | ⟨r1, m1⟩ <;> rw [hd] at h; · simp [nwsK] at h
@@ -345,12 +345,12 @@ below `2^64`): the empty stack `(0, 0)` or the given one. -/
 @[refines ConRon.Arena.nestWalkStack]
 theorem nestWalkStack_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx off l po pl : Word) (c : NestCtx) (ds : List EIdx) (prog : List NestHole)
-    (hS : StageR dn vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
+    (hS : StageR vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
     (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) (hhi : c.hiAt 0 < 2 ^ 64)
     (hds : decHL s₀.mem off.toNat l.toNat = some ds) (hdi : ∀ j < l.toNat, off.toNat + j < iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_walk_stack" [ctx, off, l, po, pl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestWalkStack c prog ds) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestWalkStack c prog ds) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestWalkStack c prog ds) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       ((AM.res (ConRon.Arena.nestWalkStack c prog ds) a₀ = [] ∧ r = [0, 0]) ∨
         (AM.res (ConRon.Arena.nestWalkStack c prog ds) a₀ = prog ∧ r = [po, pl])); ⊤⦄ := by
@@ -400,11 +400,11 @@ theorem piDomsOcc_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" =
 theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo hi : Word)
     (names : List NIdx) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (n e : Word) (r : List Word) (mp : Std.HashMap EIdx Bool),
-    pdoW k m no nl lo hi n e = some (r, m') → StageR dn vis fe m a → H e →
+    pdoW k m no nl lo hi n e = some (r, m') → StageR vis fe m a → H e →
     decHL m no.toNat nl.toNat = some names → (∀ j < nl.toNat, no.toNat + j < iwTop m) →
     noMR m mp →
     ∃ b a' mp', (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ noMR m' mp' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ noMR m' mp' ∧
       MFr [NOM] [204, 205] m m' := by
   induction k with
   | zero => intro m m' a n e r mp h; simp [pdoW] at h
@@ -478,12 +478,12 @@ include hl hp
 @[refines ConRon.Arena.piDomsOcc]
 theorem piDomsOcc_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl lo hi n e : Word) (names : List NIdx) (mp : Std.HashMap EIdx Bool)
-    (hS : StageR dn vis fe s₀.mem a₀) (he : H e) (hn : decHL s₀.mem no.toNat nl.toNat = some names)
+    (hS : StageR vis fe s₀.mem a₀) (he : H e) (hn : decHL s₀.mem no.toNat nl.toNat = some names)
     (hnb : ∀ j < nl.toNat, no.toNat + j < iwTop s₀.mem) (hM : noMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "pi_doms_occ" [no, nl, lo, hi, n, e]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       r.headD 0 = (if AM.res (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀
         then 1 else 0) ∧ ∃ mp', noMR s'.mem mp'; ⊤⦄ := by

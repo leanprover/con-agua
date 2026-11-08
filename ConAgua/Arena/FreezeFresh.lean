@@ -319,7 +319,7 @@ theorem tblRow_fresh (w : Word) :
   · simp [hg]
 
 theorem EnvR.fresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    (hk : EnvKeysIn (cutT m) fe) (h : EnvR dn (cutT m) vis fe) : EnvR dn (freshMem m) vis fe := by
+    (hk : EnvKeysIn (cutT m) fe) (h : EnvR (cutT m) vis fe) : EnvR (freshMem m) vis fe := by
   have he : erecP (freshMem m) = erecP (cutT m) :=
     erecP_congr (fresh_keep m (by decide)) (by rw [fresh_ctl])
   have hET : (freshMem m).arr64 ETAB = (cutT m).arr64 ETAB := fresh_keep m (by decide)

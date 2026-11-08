@@ -31,14 +31,14 @@ open L.Arena
 theorem decEBlk_succ (dn : NIdx → Option ConLeche.Name) (m : Mem) (off n : Nat) :
     decEBlk dn m off (n + 1) = (do
       let q ← nat? (erA m) off
-      let x ← decCI (erA m) dn q
+      let x ← decCI (erA m) q
       let xs ← decEBlk dn m (off + 1) n
       pure (x :: xs)) := by
   have e1 : decEBlk dn m off (n + 1) = (List.range (n + 1)).mapM
-      (fun j => (nat? (erA m) (off + j)).bind (decCI (erA m) dn)) := rfl
+      (fun j => (nat? (erA m) (off + j)).bind (decCI (erA m))) := rfl
   have e2 : decEBlk dn m (off + 1) n = (List.range n).mapM
-      (fun j => (nat? (erA m) (off + 1 + j)).bind (decCI (erA m) dn)) := rfl
-  rw [e1, e2, mapM_shift_succ (fun i => (nat? (erA m) i).bind (decCI (erA m) dn)) off n]
+      (fun j => (nat? (erA m) (off + 1 + j)).bind (decCI (erA m))) := rfl
+  rw [e1, e2, mapM_shift_succ (fun i => (nat? (erA m) i).bind (decCI (erA m))) off n]
   cases nat? (erA m) off <;> rfl
 
 end L.Ind
@@ -86,7 +86,7 @@ theorem ciKind_w (x : IConstantInfo) (k : Nat) (hk : k < 7) :
 
 /-- **A decoded constant record's kind and the fields the split reads.** -/
 theorem partsCI_fields {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
-    {ci : IConstantInfo} (h : decCI a dn q = some ci) :
+    {ci : IConstantInfo} (h : decCI a q = some ci) :
     nat? a q = some (ciKind ci) ∧
     (match ci with
      | .indInfo cv _ => decCV a (q + 1) = some cv
@@ -147,8 +147,8 @@ theorem partsErRd {m m' : Mem} (hg : IWGrow m m') {i v : Nat} (h : nat? (erA (tr
 /-- **A fresh record, read back below the new top.** -/
 theorem partsFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
-    (hS : StageR dn vis fe m a) (hl : ws.length < 2 ^ 64) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ q.toNat = iwTop m ∧ q.toNat + ws.length = iwTop m' ∧
+    (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ q.toNat = iwTop m ∧ q.toNat + ws.length = iwTop m' ∧
       ∀ j (hj : j < ws.length), iwN (truncM m') (q.toNat + j) = some (ws[j]).toNat := by
   obtain ⟨hS', hg, hq, htop, hget⟩ := posRecW_stage h hS hl
   refine ⟨hS', hg, hq, by omega, fun j hj => ?_⟩
@@ -211,9 +211,9 @@ theorem ipBlkHead {dn : NIdx → Option ConLeche.Name} {m : Mem} {off l : Word}
 /-- **`block_split_recs`' model refines `blockSplitRecs`.** -/
 theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (off l : Word) (blk : List IConstantInfo) (r : List Word),
-    bsrW n m off l = some (r, m') → StageR dn vis fe m a →
+    bsrW n m off l = some (r, m') → StageR vis fe m a →
     DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ RecsR (ConRon.Arena.blockSplitRecs blk) r m' := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ RecsR (ConRon.Arena.blockSplitRecs blk) r m' := by
   induction n with
   | zero => intro m m' a off l blk r h; simp [bsrW.eq_1] at h
   | succ n ih =>
@@ -313,9 +313,9 @@ def CtorsR (x : Option (List (IConstantVal × Nat × Nat) × List (IConstantVal 
 /-- **`block_split_ctors`' model refines `blockSplitCtors`.** -/
 theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (off l : Word) (blk : List IConstantInfo) (r : List Word),
-    bscW n m off l = some (r, m') → StageR dn vis fe m a →
+    bscW n m off l = some (r, m') → StageR vis fe m a →
     DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ CtorsR (ConRon.Arena.blockSplitCtors blk) r m' := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ CtorsR (ConRon.Arena.blockSplitCtors blk) r m' := by
   induction n with
   | zero => intro m m' a off l blk r h; simp [bscW.eq_1] at h
   | succ n ih =>
@@ -398,9 +398,9 @@ theorem partsWadd {q : Word} {i : Nat} (h : q.toNat + i < 2 ^ 64) :
 theorem partsRec6 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {q b0 b1 b2 b3 b4 b5 : Word} {ts : List IConstantVal}
     {cs : List (IConstantVal × Nat × Nat)} {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
-    (h : posRecW m [b0, b1, b2, b3, b4, b5] = some (q, m')) (hS : StageR dn vis fe m a)
+    (h : posRecW m [b0, b1, b2, b3, b4, b5] = some (q, m')) (hS : StageR vis fe m a)
     (h1 : PSlR decCVp ts b0 b1 m) (h2 : PSlR decSC cs b2 b3 m) (h3 : PSlR decSR rs b4 b5 m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ SplitRec (ts, cs, rs) q m' := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ SplitRec (ts, cs, rs) q m' := by
   obtain ⟨hS', hg, hq, htop, hget⟩ := posRecW_stage h hS (by simp)
   have hlt : iwTop m' < 2 ^ 64 := (rdW (m'.arr64 CTL) 200).toNat_lt
   simp only [List.length_cons, List.length_nil] at htop
@@ -424,9 +424,9 @@ theorem partsRec6 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 /-- **`block_split`'s model refines `blockSplit`.** -/
 theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (off l : Word) (blk : List IConstantInfo) (r : List Word),
-    bsW n m off l = some (r, m') → StageR dn vis fe m a →
+    bsW n m off l = some (r, m') → StageR vis fe m a →
     DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ SplitR (ConRon.Arena.blockSplit blk) r m' := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ SplitR (ConRon.Arena.blockSplit blk) r m' := by
   induction n with
   | zero => intro m m' a off l blk r h; simp [bsW.eq_1] at h
   | succ n ih =>

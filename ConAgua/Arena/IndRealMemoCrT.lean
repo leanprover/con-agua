@@ -37,9 +37,9 @@ include hp
 /-- **`consts_resolve_ffast` refines `constsResolveFFast` and keeps the twin state**: lane `tails`'
 `constsResolveFFast_ref` with the state after the run named (it is the state before). -/
 theorem constsResolveFFast_keepsSt (e : Word) (he : H e) (a₀ : AState) :
-    CallRef p "consts_resolve_ffast" [vis, e] (fun m a => StageR dn vis fe m a ∧ CrOK m ∧ a = a₀)
+    CallRef p "consts_resolve_ffast" [vis, e] (fun m a => StageR vis fe m a ∧ CrOK m ∧ a = a₀)
       (constsResolveFFast fe (decI e))
-      (fun m m' a r x => KeepPost dn vis fe decW0B m m' a r x ∧ CrOK m' ∧ a = a₀) := by
+      (fun m m' a r x => KeepPost vis fe decW0B m m' a r x ∧ CrOK m' ∧ a = a₀) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, ⟨memo0, hM0⟩, ha⟩ hc => ?_
   have hW := callW_model (M := fun mm => crffW p k mm vis e) (crff_spec p hp k · vis e) hc
   unfold crffW at hW

@@ -62,7 +62,7 @@ result words, the stage invariant, the growth, the frames. -/
 structure ToiPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
     (r : List Word) (m' : Mem) (x : Nat × LIdx) (a' : AState) : Prop where
   res : ToiR r x
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   mfr : MFr [] [] m m'
   afr : AFr m m'

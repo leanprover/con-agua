@@ -112,7 +112,7 @@ open L.Arena
 /-- `nest_frame_mates_go` keeps the stage relation (it writes `IW` by `sl_snoc` only). -/
 theorem matesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) :
     ∀ (m m' : Mem) (c off l oO oL : Word) (r : List Word),
-    matesW n m c off l oO oL = some (r, m') → StageR dn vis fe m a → StageR dn vis fe m' a := by
+    matesW n m c off l oO oL = some (r, m') → StageR vis fe m a → StageR vis fe m' a := by
   induction n with
   | zero => intro m m' c off l oO oL r h; simp [matesW] at h
   | succ n ih =>
@@ -137,9 +137,9 @@ theorem matesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 
 /-- **`nest_frame_mates`, under the stage relation**: the mates as a handle slice below the top. -/
 theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
-    {m m' : Mem} {c : Word} {r : List Word} (h : nfmW n m vis c = some (r, m')) (hS : StageR dn vis fe m a)
+    {m m' : Mem} {c : Word} {r : List Word} (h : nfmW n m vis c = some (r, m')) (hS : StageR vis fe m a)
     (hc : H c) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (nestFrameMates fe (decI c)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   cases n with
@@ -238,11 +238,11 @@ theorem GrpAt.head {m : Mem} {o : Nat} {x : NIdx × EIdx} {grp : List (NIdx × E
 theorem fgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hi us dO dL : Word)
     (ds : List EIdx) (hus : H us) : ∀ (n : Nat) (m m' : Mem) (a : AState) (gO gL pO pL nO nL : Word)
     (grp : List (NIdx × EIdx)) (accP : List NestHole) (accN : List NIdx) (r : List Word),
-    fgW n m hi us dO dL gO gL pO pL nO nL = some (r, m') → StageR dn vis fe m a →
+    fgW n m hi us dO dL gO gL pO pL nO nL = some (r, m') → StageR vis fe m a →
     DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) m ds →
     gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp →
     HSl m pO.toNat pL.toNat accP → decHL m nO.toNat nL.toNat = some accN → nO.toNat + nL.toNat ≤ iwTop m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       HSl m' (r.headD 0).toNat (r.tail.headD 0).toNat
         (accP ++ grp.map fun x => (⟨⟨x.1, decI us, ds⟩, hi.toNat⟩ : NestHole)) ∧
       decHL m' (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat = some (accN ++ grp.map (·.1)) ∧
@@ -340,10 +340,10 @@ theorem pos2_zipIdx_holes (hi : Nat) : ∀ (grp : List (NIdx × EIdx)) (k : Nat)
 /-- **`nest_frame_holes`**: the group's holes from `hi` on, appended to the accumulator. -/
 theorem fhW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : ∀ (n : Nat) (m m' : Mem)
     (a : AState) (hi gO gL aO aL : Word) (grp : List (NIdx × EIdx)) (acc : List EIdx) (r : List Word),
-    fhW n m hi gO gL aO aL = some (r, m') → StageR dn vis fe m a →
+    fhW n m hi gO gL aO aL = some (r, m') → StageR vis fe m a →
     gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp →
     decHL m aO.toNat aL.toNat = some acc → aO.toNat + aL.toNat ≤ iwTop m →
-    ∃ vs a', (pos2FhT hi.toNat grp).run a = .ok (vs, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ vs a', (pos2FhT hi.toNat grp).run a = .ok (vs, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (acc ++ vs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   intro n
@@ -418,11 +418,11 @@ open L.Arena
 theorem caW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (us dO dL : Word)
     (ds : List EIdx) (hus : H us) : ∀ (n : Nat) (m m' : Mem) (a : AState) (gO gL aO aL : Word)
     (grp : List (NIdx × EIdx)) (acc : List NestKey) (r : List Word),
-    caW n m us dO dL gO gL aO aL = some (r, m') → StageR dn vis fe m a →
+    caW n m us dO dL gO gL aO aL = some (r, m') → StageR vis fe m a →
     DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) m ds →
     gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp →
     KsB m aO.toNat aL.toNat acc → aO.toNat + aL.toNat ≤ iwTop m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       KsB m' (r.headD 0).toNat (r.tail.headD 0).toNat
         (acc ++ grp.map fun x => (⟨x.1, decI us, ds⟩ : NestKey)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by

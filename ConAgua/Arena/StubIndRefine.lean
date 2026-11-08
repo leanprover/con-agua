@@ -198,7 +198,7 @@ theorem decCV_ty {q : Nat} {cv : IConstantVal} (h : decCV b q = some cv) :
 
 /-- A constructor record's words. -/
 theorem decCI_ctorW {q : Nat} {cv : IConstantVal} {np nf : Nat}
-    (h : decCI b dn q = some (.ctorInfo cv np nf)) :
+    (h : decCI b q = some (.ctorInfo cv np nf)) :
     nat? b q = some 4 ∧ decCV b (q + 1) = some cv ∧ nat? b (q + 6) = some nf := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
@@ -211,8 +211,8 @@ theorem decCI_ctorW {q : Nat} {cv : IConstantVal} {np nf : Nat}
 
 /-- An inductive record's words. -/
 theorem decCI_indW {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
-    (h : decCI b dn q = some (.indInfo cv caps)) :
-    nat? b q = some 3 ∧ decCV b (q + 1) = some cv ∧ decCaps b dn (q + 5) = some caps := by
+    (h : decCI b q = some (.indInfo cv caps)) :
+    nat? b q = some 3 ∧ decCV b (q + 1) = some cv ∧ decCaps b (q + 5) = some caps := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   rcases k with _ | _ | _ | _ | _ | _ | _ | k <;>
@@ -222,7 +222,7 @@ theorem decCI_indW {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
   obtain ⟨rfl, rfl⟩ := hc
   exact ⟨hk, hcv, hcaps⟩
 
-theorem decCaps_w {q : Nat} {caps : IIndCaps} (h : decCaps b dn q = some caps) :
+theorem decCaps_w {q : Nat} {caps : IIndCaps} (h : decCaps b q = some caps) :
     bool? b q = some caps.eta ∧ hd? b (q + 1) = some caps.etaCtor ∧ bool? b (q + 6) = some caps.ruleK := by
   simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
   obtain ⟨e1, h1, e2, h2, _, _, _, _, _, _, _, _, e7, h7, _, _, _, _, _, _, _, _, e⟩ := h
@@ -348,14 +348,14 @@ theorem rdW_of_get {b : Array Word} {q : Word} {w : Word} (h : b[q.toNat]? = som
 
 /-- A found row that is not of kind `k` is not that kind's record. -/
 theorem kind_of_rdW {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word} {ci : IConstantInfo}
-    (h : decCI b dn q.toNat = some ci) :
+    (h : decCI b q.toNat = some ci) :
     ((∃ cv caps, ci = .indInfo cv caps) ↔ rdW b q = 3) ∧
       ((∃ cv nP nF, ci = .ctorInfo cv nP nF) ↔ rdW b q = 4) := by
   obtain ⟨w, hw, h3, h4⟩ := decCI_kind34 b dn q.toNat ci h
   rw [rdW_of_get hw]; exact ⟨h3, h4⟩
 
 theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (m m' : Mem) (a : AState) (hS : StageR dn vis fe m a) (c : Word) (hc : H c)
+    (fe : IFEnv) (m m' : Mem) (a : AState) (hS : StageR vis fe m a) (c : Word) (hc : H c)
     (r : List Word) (hW : cfW p n m vis c = some (r, m')) :
     m' = m ∧ CFOut dn fe a m c r := by
   have hR := hS.check.arena.base
@@ -542,7 +542,7 @@ section bits
 variable {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 include hp
 
-theorem cf_call (k : Nat) (m m1 : Mem) (a : AState) (hS : StageR dn vis fe m a) (c : Word) (hc : H c)
+theorem cf_call (k : Nat) (m m1 : Mem) (a : AState) (hS : StageR vis fe m a) (c : Word) (hc : H c)
     (rf : List Word) (h : callW p k "ctor_family" [vis, c] m = some (rf, m1)) :
     m1 = m ∧ CFOut dn fe a m c rf := by
   cases k with
@@ -553,8 +553,8 @@ theorem cf_call (k : Nat) (m m1 : Mem) (a : AState) (hS : StageR dn vis fe m a) 
 
 /-- **`rec_rule_k_of(vis, c)` refines `recRuleKOf fe c`** (the K bit). -/
 theorem recRuleKOf_ref (c : Word) (hc : H c) :
-    CallRef p "rec_rule_k_of" [vis, c] (StageR dn vis fe) (recRuleKOf fe (decI c))
-      (KeepPost dn vis fe decW0B) := by
+    CallRef p "rec_rule_k_of" [vis, c] (StageR vis fe) (recRuleKOf fe (decI c))
+      (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' hS hcall => ?_
   have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   have hw := callW_model (M := fun mm => kofW p k mm vis c) (fun s => kof_spec p hp.kof k s vis c) hcall
@@ -610,8 +610,8 @@ theorem recRuleKOf_ref (c : Word) (hc : H c) :
 
 /-- **`rec_rule_eta_of(vis, c)` refines `recRuleEtaOf fe c`** (the η-rescue bit). -/
 theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
-    CallRef p "rec_rule_eta_of" [vis, c] (StageR dn vis fe) (recRuleEtaOf fe (decI c))
-      (KeepPost dn vis fe decW0B) := by
+    CallRef p "rec_rule_eta_of" [vis, c] (StageR vis fe) (recRuleEtaOf fe (decI c))
+      (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' hS hcall => ?_
   have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   have hw := callW_model (M := fun mm => eofW p k mm vis c) (fun s => eof_spec p hp.eof k s vis c) hcall
@@ -633,7 +633,7 @@ theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
       decCI (m.arr64 EREC) dn (rf.headD 0).toNat = some (.ctorInfo cvj np nF) →
       decCI (m.arr64 EREC) dn (rf.tail.headD 0).toNat = some (.indInfo cvT caps) →
       (caps.eta && caps.etaCtor == decI c && cvj.levelParams == cvT.levelParams) = false),
-      ∃ x a', (recRuleEtaOf fe (decI c)).run a = .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
+      ∃ x a', (recRuleEtaOf fe (decI c)).run a = .ok (x, a') ∧ KeepPost vis fe decW0B m m' a' r x := by
     intro hw hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
     by_cases hz : rf.tail.tail.headD 0 = 0
@@ -702,8 +702,8 @@ theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
 /-- **`rec_rule_bits(vis, c)` refines `recRuleBits fe rl`** for a rule with constructor `c`: the
 two words are the rule's new bits. -/
 theorem recRuleBits_ref (c : Word) (hc : H c) (rl : IRecRule) (hrl : rl.ctor = decI c) :
-    CallRef p "rec_rule_bits" [vis, c] (StageR dn vis fe) (recRuleBits fe rl)
-      (KeepPost dn vis fe (fun _ r (x : IRecRule) =>
+    CallRef p "rec_rule_bits" [vis, c] (StageR vis fe) (recRuleBits fe rl)
+      (KeepPost vis fe (fun _ r (x : IRecRule) =>
         x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) := by
   refine CallRef.of_succ fun k m a r m' hS hcall => ?_
   have hw := callW_model (M := fun mm => rrbW p k mm vis c) (fun s => rrb_spec p hp.bits k s vis c) hcall
@@ -733,16 +733,16 @@ end bits
 @[refines ConRon.Arena.recRuleKOf]
 theorem recRuleKOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (c : Word) (hc : H c) :
-    RefAM p "rec_rule_k_of" [vis, c] (StageR dn vis fe) (recRuleKOf fe (decI c))
-      (KeepPost dn vis fe decW0B) :=
+    RefAM p "rec_rule_k_of" [vis, c] (StageR vis fe) (recRuleKOf fe (decI c))
+      (KeepPost vis fe decW0B) :=
   (recRuleKOf_ref hp dn vis fe c hc).refAM
 
 /-- **`rec_rule_eta_of` refines `recRuleEtaOf`** under `StageR`. -/
 @[refines ConRon.Arena.recRuleEtaOf]
 theorem recRuleEtaOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (c : Word) (hc : H c) :
-    RefAM p "rec_rule_eta_of" [vis, c] (StageR dn vis fe) (recRuleEtaOf fe (decI c))
-      (KeepPost dn vis fe decW0B) :=
+    RefAM p "rec_rule_eta_of" [vis, c] (StageR vis fe) (recRuleEtaOf fe (decI c))
+      (KeepPost vis fe decW0B) :=
   (recRuleEtaOf_ref hp dn vis fe c hc).refAM
 
 /-- **`rec_rule_bits` refines `recRuleBits`** under `StageR`: the shape of
@@ -750,8 +750,8 @@ theorem recRuleEtaOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option C
 @[refines ConRon.Arena.recRuleBits]
 theorem recRuleBits_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (c : Word) (hc : H c) (rl : IRecRule) (hrl : rl.ctor = decI c) :
-    RefAM p "rec_rule_bits" [vis, c] (StageR dn vis fe) (recRuleBits fe rl)
-      (KeepPost dn vis fe (fun _ r (x : IRecRule) =>
+    RefAM p "rec_rule_bits" [vis, c] (StageR vis fe) (recRuleBits fe rl)
+      (KeepPost vis fe (fun _ r (x : IRecRule) =>
         x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) :=
   (recRuleBits_ref hp dn vis fe c hc rl hrl).refAM
 

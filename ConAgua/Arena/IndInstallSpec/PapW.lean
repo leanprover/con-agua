@@ -61,10 +61,10 @@ theorem selm_spec (p : Prog) (hp : p.lookup "struct_elim_level" = some structEli
 result a handle. -/
 theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (a : AState)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (elim large : Word)
-    (hS : StageR dn vis fe s₀.mem a) (he : elim.toNat < 2 ^ 32) :
+    (hS : StageR vis fe s₀.mem a) (he : elim.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_elim_level" [elim, large]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ a', (ConRon.Arena.structElimLevel (decI elim) (large != 0)).run a =
-        .ok (decI (r.headD 0), a') ∧ StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
+        .ok (decI (r.headD 0), a') ∧ StageR vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
       (r.headD 0).toNat < 2 ^ 32; ⊤⦄ := by
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
@@ -110,10 +110,10 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
 /-- **A run that writes only the environment's rows, `ECON` and `CTL[128]`**, relating its
 memory to an environment `fe'` at view `vis'`, keeps the stage relation (at `fe'`) and the pool. -/
 theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe fe' : IFEnv}
-    {a : AState} {m m' : Mem} (hS : StageR dn vis fe m a)
-    (hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] m m') (hE : EnvR dn m' vis' fe') :
-    StageR dn vis' fe' m' a ∧ IWGrow m m' := by
-  have hC : CheckR dn m' a vis' fe' :=
+    {a : AState} {m m' : Mem} (hS : StageR vis fe m a)
+    (hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] m m') (hE : EnvR m' vis' fe') :
+    StageR vis' fe' m' a ∧ IWGrow m m' := by
+  have hC : CheckR m' a vis' fe' :=
     ⟨⟨ArenaR.frame (fun b hb => by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
           rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -179,9 +179,9 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (a : AState) (po pl : Word)
     (prevs : List (NIdx × Option (Nat × IConstantInfo))) (k : Nat) :
     ∀ (m m' : Mem) (vis v' j : Word), papW.loop1 p k m vis po j = some (v', m') →
-    StageR dn vis ((prevs.drop j.toNat).foldr (fun x acc => acc.popTemp x.1 x.2) fe) m a →
+    StageR vis ((prevs.drop j.toNat).foldr (fun x acc => acc.popTemp x.1 x.2) fe) m a →
     j.toNat ≤ pl.toNat → SPL (decPrev dn) m po.toNat pl.toNat prevs →
-    StageR dn v' (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) m' a ∧ IWGrow m m' := by
+    StageR v' (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) m' a ∧ IWGrow m m' := by
   induction k with
   | zero => intro m m' vis v' j h; simp [papW.loop1.eq_1] at h
   | succ k ih =>
@@ -259,11 +259,11 @@ theorem genRecCheckPopAll_refines {p : Prog} (hx : p.lookup "env_ix" = some envI
     (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
     (hp : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll) (n : Nat) (s₀ : St) (a : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (po pl : Word)
-    (prevs : List (NIdx × Option (Nat × IConstantInfo))) (hS : StageR dn vis fe s₀.mem a)
+    (prevs : List (NIdx × Option (Nat × IConstantInfo))) (hS : StageR vis fe s₀.mem a)
     (hpv : SPL (decPrev dn) s₀.mem po.toNat pl.toNat prevs) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_pop_all" [vis, po, pl]
     ⦃fun r s' => LocEq s' s₀ ∧
-      StageR dn (r.headD 0) (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) s'.mem a ∧
+      StageR (r.headD 0) (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) s'.mem a ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)

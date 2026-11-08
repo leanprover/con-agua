@@ -160,7 +160,7 @@ theorem BlockLpsDn.members {dn : NIdx → Option ConLeche.Name} {block : List IC
 the stage, the core's memos, the growth, the inductive arm's memos. -/
 structure CidPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x : IFEnv) (m' : Mem)
     (a' : AState) : Prop where
-  stage : StageR dn w x m' a'
+  stage : StageR w x m' a'
   core : CoreMemos m'
   grow : IWGrow m m'
   ind : IndMemos m'
@@ -361,7 +361,7 @@ theorem checkIndDecl_refinesC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
     (hlpd : BlockLpsDn dn block) :
     ∃ fe' a', (checkDecl V pins fe (.indDecl block w.toNat)).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m' := by
+      StageR (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m' := by
   obtain ⟨s', rfl, -, x, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
     (cidE_spec p hV P n _ vis o l w)
     (cid_ref hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt

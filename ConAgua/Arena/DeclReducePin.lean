@@ -34,8 +34,8 @@ open L.Ind
 
 /-- The stage relation at another view of the same environment. -/
 theorem StageR.restrict {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (h : StageR dn vis fe m a) (k : Word) :
-    StageR dn k (fe.restrictTo k.toNat) m a :=
+    {a : AState} (h : StageR vis fe m a) (k : Word) :
+    StageR k (fe.restrictTo k.toNat) m a :=
   ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo k, h.check.mode⟩, h.iw⟩
 
 theorem IFEnv.restrictTo_restrictTo (fe : IFEnv) (j k : Nat) :

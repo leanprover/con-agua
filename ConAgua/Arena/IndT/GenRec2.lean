@@ -163,7 +163,7 @@ theorem grpC_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
   rw [e4, er0, er1]
   generalize hws : [UInt64.ofNat bs.nP, pO, pL, m2o, m2l, fo, fl, rdW (m.arr64 IW) rd,
     rdW (m.arr64 IW) (rd + 1), co, cl, el, (0 : Word), 0] = ws at ⊢
-  have hS1G : StageR dn vis fe (wrIW s1.mem g ws) a := StageR.wrIW hS1 g ws
+  have hS1G : StageR vis fe (wrIW s1.mem g ws) a := StageR.wrIW hS1 g ws
   have hwl : ws.length = 14 := by rw [← hws]; rfl
   obtain ⟨hget, hgG, hfG, htopG⟩ := recMem_post m ws 14 (by rw [hwl]; rfl) hc (by rw [hwl, ← hq]; omega) hsz
   rw [← hm1, ← hq] at hget hgG htopG hfG
@@ -230,7 +230,7 @@ theorem grpC_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
   have e13 : (g + 13).toNat = g.toNat + 13 := by rw [UInt64.toNat_add]; simp; omega
   have hgP : IWGrow m (grpPMem s2.mem g o l) :=
     ((hgG.trans hg2).set_iw _ _ (by rw [e12]; omega)).set_iw _ _ (by rw [e13]; omega)
-  have hSP : StageR dn vis fe (grpPMem s2.mem g o l) a2 := (hS2.set_iw _ _).set_iw _ _
+  have hSP : StageR vis fe (grpPMem s2.mem g o l) a2 := (hS2.set_iw _ _).set_iw _ _
   have hAP : AbsOK (grpPMem s2.mem g o l) :=
     AFr.set64 _ IW (by decide) (by decide) _ _ (AFr.set64 _ IW (by decide) (by decide) _ _ hA2)
   have hPP : RcMR (grpPMem s2.mem g o l) := by

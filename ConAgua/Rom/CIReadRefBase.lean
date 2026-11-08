@@ -79,12 +79,12 @@ structure RInv (m₀ : Mem) (a₀ : AState) (T : Nat) (m : Mem) (a : AState) : P
   mode : ModeOK m
 
 theorem RInv.refl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) : RInv m a (iwTop m) m a :=
+    (hS : StageR vis fe m a) : RInv m a (iwTop m) m a :=
   ⟨hS.check.arena, rfl, MemFrame.refl _ _ _, IWGrow.refl m, hS.iw, rfl, hS.check.mode⟩
 
 /-- **`StageR` back** from the entry's. -/
 theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m₀ m : Mem}
-    {a₀ a : AState} {T : Nat} (hS : StageR dn vis fe m₀ a₀) (h : RInv m₀ a₀ T m a) : StageR dn vis fe m a := by
+    {a₀ a : AState} {T : Nat} (hS : StageR vis fe m₀ a₀) (h : RInv m₀ a₀ T m a) : StageR vis fe m a := by
   have hc : a.caches = a₀.caches := congrArg Prod.fst h.hcp
   have hp : a.pins = a₀.pins := congrArg Prod.snd h.hcp
   have hf := h.frame

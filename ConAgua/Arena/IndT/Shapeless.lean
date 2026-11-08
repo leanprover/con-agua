@@ -71,7 +71,7 @@ theorem decEBlk_head {dn : NIdx → Option ConLeche.Name} {m : Mem} {off cnt : W
     {ci : IConstantInfo} {rest : List IConstantInfo}
     (hd : DecB (fun m => decEBlk dn m off.toNat cnt.toNat) m (ci :: rest))
     (hlen : cnt.toNat = rest.length + 1) (hb : off.toNat + cnt.toNat ≤ erTop m) :
-    ∃ w : Word, rdW (m.arr64 EREC) off = w ∧ decCI (erecP m) dn w.toNat = some ci ∧
+    ∃ w : Word, rdW (m.arr64 EREC) off = w ∧ decCI (erecP m) w.toNat = some ci ∧
       (off + 1).toNat = off.toNat + 1 ∧ (cnt - 1).toNat = rest.length ∧
       DecB (fun m => decEBlk dn m (off + 1).toNat (cnt - 1).toNat) m rest := by
   have hoff : (off + 1).toNat = off.toNat + 1 := by

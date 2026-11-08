@@ -64,7 +64,7 @@ open L.Arena
 theorem spgW_hb {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem}
     {a : AState} {cty nP nF so sl : Word} {r : List Word} {mp : Std.HashMap (EIdx × Nat) Bool}
     (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
-    (hS : StageR dn vis fe m a) (hM : hbMR m mp) (h : spgW n m cty nP nF so sl = some (r, m')) :
+    (hS : StageR vis fe m a) (hM : hbMR m mp) (h : spgW n m cty nP nF so sl = some (r, m')) :
     ∃ mp', hbMR m' mp' := by
   unfold spgW at h
   cases hz' : pinWordV m 53 with
@@ -243,11 +243,11 @@ theorem spgW_sl0 (n : Nat) (m : Mem) (cty nP nF so : Word) :
 theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} (cty nP nF so sl : Word) (sorts : List LIdx)
     (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
-    (hS : StageR dn vis fe m a) (hM : HbMemo m) (hs : decHL m so.toNat sl.toNat = some sorts)
+    (hS : StageR vis fe m a) (hM : HbMemo m) (hs : decHL m so.toNat sl.toNat = some sorts)
     (hst : sl = 0 ∨ so.toNat + sl.toNat ≤ iwTop m) :
     Sim (callW p (k + 1) "struct_proj_guards" [cty, nP, nF, so, sl] m)
       (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a
-      (fun r gs m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      (fun r gs m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
         decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some gs ∧
         (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ HbMemo m') := by
   intro r m' e

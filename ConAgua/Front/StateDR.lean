@@ -71,7 +71,7 @@ theorem trunc_congr (P P' : Array Word) (t : Nat) (hs : P'.size = P.size)
 /-- The constants of a slice of record pointers (lane `pinsenv`'s layout, `decCI`). -/
 def decCIs (a : Array Word) (dn : NIdx → Option ConLeche.Name) (off cnt : Nat) :
     Option (List IConstantInfo) :=
-  (List.range cnt).mapM fun j => do L.Arena.decCI a dn (← L.Arena.nat? a (off + j))
+  (List.range cnt).mapM fun j => do L.Arena.decCI a (← L.Arena.nat? a (off + j))
 
 /-- **`DECL` record `i` is the inductive block `block` with `nP` parameters** (`IndApply.lean`):
 kind `6`, its block a slice of the pool `P` (`DLP`) of pointers to `decCI` constant records in

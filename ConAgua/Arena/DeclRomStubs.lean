@@ -53,7 +53,7 @@ def basisOfW : Nat → ConLeche.BasisKind
 /-- A constant record at `r[0]`, decoded below the record pool's top. -/
 def decRCI (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word) (ci : IConstantInfo) :
     Prop :=
-  DecB (fun m => decCI (erA m) dn (r.headD 0).toNat) m ci
+  DecB (fun m => decCI (erA m) (r.headD 0).toNat) m ci
 
 /-- A constant value at `r[0]`, decoded below the record pool's top. -/
 def decRCV (m : Mem) (r : List Word) (cv : IConstantVal) : Prop :=

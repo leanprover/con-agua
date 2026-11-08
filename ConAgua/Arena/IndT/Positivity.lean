@@ -116,18 +116,18 @@ theorem bnc_specC (p : Prog) (hP : NckProg p) (hl : NhLook p)
 /-- `bncC_sim` with the walk memos: `AbsOK` after, `open_pis_at_fvars_f`'s from its `Sim`, the
 rest by `nckW_afr`/`nhW_afr` (lane `indstaget`). -/
 theorem bncC_simA (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
-    {q cvO cvL : Word} {bs : BlockShape} {cvTas : List IConstantVal} (_hS : StageR dn vis fe m a)
+    {q cvO cvL : Word} {bs : BlockShape} {cvTas : List IConstantVal} (_hS : StageR vis fe m a)
     (hq : DecB (fun m => decBS m q.toNat) m bs)
     (hsrc : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m)
     (hcv : PSlR decCVp cvTas cvO cvL m)
     (hopf : ∀ e : Word, H e → Sim (cR (n + 1) "open_pis_at_fvars_f" [rdW (m.arr64 IW) (q + 4), e, 0] m)
       (openPisAtFvarsF (rdW (m.arr64 IW) (q + 4)).toNat (decI e) (0 : Word).toNat) a
-      (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x) ∧ AbsOK m')) :
+      (fun r x m' a' => (StageR vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x) ∧ AbsOK m')) :
     Sim (bncC cR n m vis q cvO cvL) (ConRon.Arena.blockNestCtx fe bs cvTas) a
       (fun r x m' a' => DecB (fun m => decCtx m (r.headD 0).toNat) m' x.1 ∧
         decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some x.2 ∧
         (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m' ∧
-        StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+        StageR vis fe m' a' ∧ IWGrow m m' ∧
         CtxIn m' (r.headD 0).toNat (· < iwTop m') ∧ CtxSl m' (r.headD 0).toNat ∧ x.1.hiAt 0 < 2 ^ 64 ∧
         x.1.params.length + x.1.names.length < 2 ^ 64 ∧ AbsOK m') := by
   intro r m' e

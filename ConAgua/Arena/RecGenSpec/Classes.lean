@@ -107,11 +107,11 @@ theorem classReadClasses_refines_decB (p : Prog) (hc : p.lookup "iw_copy" = some
     (ha : p.lookup "iw_alloc" = some iwAlloc) (hsc : p.lookup "sl_cons" = some slCons)
     (hp : p.lookup "class_read_classes" = some classReadClasses) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (so sl : Word) (slots : List ClassSlot)
-    (hS : StageR dn vis fe s₀.mem a₀)
+    (hS : StageR vis fe s₀.mem a₀)
     (hslots : DecB (fun m => decPL m (decCS m) so.toNat sl.toNat) s₀.mem slots)
     (hb : so.toNat + sl.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_classes" [so, sl]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       CcRes s'.mem r (ConRon.Arena.ClassRead.classes slots); ⊤⦄ :=
   classReadClasses_refines p hc ha hsc hp n s₀ a₀ dn vis fe so sl slots hS
     (hslots.get (OMono.decPL (fun q => decCS_mono q) _ _)) (rec3SlotsExt_of_decB hslots hb)

@@ -87,8 +87,8 @@ theorem tcW_mfr {cR : CallM} {n : Nat} (hF : IlpFr cR) {m m' : Mem} {M c : Word}
 /-- `inst_pis_with` with its arguments a slice below the top unless empty. -/
 theorem instW_ok0 (n : Nat) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m' : Mem}
     {a : AState} {ao al e : Word} {args : List EIdx} {r : List Word} (h : instW n m ao al e = some (r, m'))
-    (hS : StageR dn vis fe m a) (he : H e) (hsl : HSl0 m ao al args) :
-    ∃ x a', (ConRon.Arena.instPisWith args (decI e)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    (hS : StageR vis fe m a) (he : H e) (hsl : HSl0 m ao al args) :
+    ∃ x a', (ConRon.Arena.instPisWith args (decI e)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x := by
   rcases hsl.2 with h0 | hb
   · subst h0

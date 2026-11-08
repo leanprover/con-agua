@@ -28,13 +28,13 @@ open L.Arena
 
 /-- The stage relation at a smaller view of the same index. -/
 theorem StageR.restrict {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (h : StageR dn vis fe m a) (k : Word) : StageR dn k (fe.restrictTo k.toNat) m a :=
+    {a : AState} (h : StageR vis fe m a) (k : Word) : StageR k (fe.restrictTo k.toNat) m a :=
   ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo k, h.check.mode⟩, h.iw⟩
 
 /-- Back from a smaller view (`fe`'s own view is `vis`). -/
 theorem StageR.unrestrict {dn : NIdx → Option ConLeche.Name} {vis k : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (h : StageR dn k (fe.restrictTo k.toNat) m a) (hv : fe.visibleBelow = vis.toNat) :
-    StageR dn vis fe m a :=
+    {a : AState} (h : StageR k (fe.restrictTo k.toNat) m a) (hv : fe.visibleBelow = vis.toNat) :
+    StageR vis fe m a :=
   ⟨⟨h.check.arena, h.check.core, h.check.pins, ⟨hv, h.check.env.keys, h.check.env.vals, h.check.env.consts, h.check.env.tkeys, h.check.env.tvals, h.check.env.tables⟩, h.check.mode⟩, h.iw⟩
 
 /-! ## `class_rule_ok` -/

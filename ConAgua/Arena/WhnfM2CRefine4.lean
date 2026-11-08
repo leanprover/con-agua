@@ -26,7 +26,7 @@ namespace L.Arena
 /-- The η words of an inductive's record: `etaCtor` at `q + 6`, `etaParams` at `q + 7`,
 `etaFields` at `q + 8`. -/
 theorem decCI_ind_eta (b : Array Word) (dn : NIdx → Option ConLeche.Name) (q : Nat)
-    (cv : IConstantVal) (caps : IIndCaps) (h : decCI b dn q = some (.indInfo cv caps)) :
+    (cv : IConstantVal) (caps : IIndCaps) (h : decCI b q = some (.indInfo cv caps)) :
     ∃ w6 w7 w8 : Word, b[q+6]? = some w6 ∧ w6.toNat < 2 ^ 32 ∧ caps.etaCtor = decI w6 ∧
       b[q+7]? = some w7 ∧ caps.etaParams = w7.toNat ∧ b[q+8]? = some w8 ∧
       caps.etaFields = w8.toNat := by

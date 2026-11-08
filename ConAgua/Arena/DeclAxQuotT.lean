@@ -99,7 +99,7 @@ l_model checkDeclAxiom_specE (p : Prog) (hX : AxProg p)
 over the result word, the core's memos, the growth. -/
 structure CdaPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : Word) (m' : Mem) (fe' : IFEnv)
     (a' : AState) : Prop where
-  stage : StageR dn r fe' m' a'
+  stage : StageR r fe' m' a'
   memos : CoreMemos m'
   grow : IWGrow m m'
 
@@ -249,7 +249,7 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   obtain ⟨-, hext4, hcache4, -, -⟩ := ConRon.Bridge.stdAxiomOk_run hok1 hcA hrun4
   have hP4 : ArrExt (erecP m2) (erecP m4) := IWGrow.erecPExt (hg3.trans hg4)
   -- a push of the axiom, after a passed test
-  have push : ∀ {mx : Mem} {ax : AState}, StageR dn vis fe mx ax → IWGrow m2 mx → CoreMemos mx →
+  have push : ∀ {mx : Mem} {ax : AState}, StageR vis fe mx ax → IWGrow m2 mx → CoreMemos mx →
       RefE (VerdictCtxU p) (checkDeclAxiomE.k_env_push p (liftE (callW p n "env_push" [vis, q] mx)))
         (pure (fe.push (.axiomInfo cv)) : AM IFEnv) ax
         (fun v fe' a' => CdaPost dn m v.1 v.2 fe' a') := by

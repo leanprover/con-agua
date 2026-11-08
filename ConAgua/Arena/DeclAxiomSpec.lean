@@ -141,9 +141,9 @@ end model
 /-- **`of_reduce_ax_ok(vis, q)` refines `ofReduceAxOk`** at the model level. -/
 theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q : Word} {r : List Word}
-    {cv : IConstantVal} (hW : oraW p n m vis q = some (r, m')) (hS : StageR dn vis fe m a)
+    {cv : IConstantVal} (hW : oraW p n m vis q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) :
-    ∃ b a', (ofReduceAxOk fe cv).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ b a', (ofReduceAxOk fe cv).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0B m' r b := by
   obtain ⟨⟨wn, hwn, hwnl, hname⟩, -, -⟩ := decCV_words hq
   have ewn : rdW (m.arr64 EREC) q = wn := rdW_of_get? rfl (erecP_get hwn)
@@ -248,8 +248,8 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
 theorem ofReduceAxOk_refines (p : Prog) (h : OraProg p) (dn : NIdx → Option ConLeche.Name)
     (hdn : DnInj dn) (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal) :
     RefAM p "of_reduce_ax_ok" [vis, q]
-      (fun m a => StageR dn vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
-      (ofReduceAxOk fe cv) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
+      (ofReduceAxOk fe cv) (KeepPost vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, hq⟩
   refine triple_post (ora_specW p h n s₀ vis q) ?_
   rintro r s' ⟨hl, hm⟩

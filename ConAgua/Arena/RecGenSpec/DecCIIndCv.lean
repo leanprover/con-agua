@@ -84,7 +84,7 @@ structure CftProg (p : Prog) : Prop where
 /-! ## Relational lemma -/
 
 theorem decCI_ind_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {cv : IConstantVal}
-    {caps : IIndCaps} (h : decCI a dn q = some (.indInfo cv caps)) : decCV a (q + 1) = some cv := by
+    {caps : IIndCaps} (h : decCI a q = some (.indInfo cv caps)) : decCV a (q + 1) = some cv := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   match k, h with

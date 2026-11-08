@@ -98,10 +98,10 @@ theorem abstractPrefix_spec (p : Prog) (hp : p.lookup "abstract_prefix" = some a
 
 theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (k c e : Word) (r : List Word),
-    absPrefW n m k c e = some (r, m') → StageR dn vis fe m a → H e → c.toNat + k.toNat < 2 ^ 64 →
+    absPrefW n m k c e = some (r, m') → StageR vis fe m a → H e → c.toNat + k.toNat < 2 ^ 64 →
     AbsOK m →
     ∃ x a', (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x ∧
       AbsOK m' := by
   induction n with
   | zero => intro m m' a k c e r h; simp [absPrefW] at h
@@ -167,11 +167,11 @@ theorem rcSl_step {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)}
 
 theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (rP dso dsl : Word) (r : List Word) (ds : List EIdx),
-    aplW n m rP dso dsl = some (r, m') → StageR dn vis fe m a →
+    aplW n m rP dso dsl = some (r, m') → StageR vis fe m a →
     decHL m dso.toNat dsl.toNat = some ds → dso.toNat + dsl.toNat < 2 ^ 64 →
     dso.toNat + dsl.toNat ≤ iwTop m → rP.toNat < 2 ^ 64 → AbsOK m →
     ∃ xs a', (ConRon.Arena.abstractPrefixList rP.toNat ds).run a = .ok (xs, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ AbsOK m' := by
   induction n with
@@ -280,11 +280,11 @@ theorem targetHoles_spec (p : Prog) (hff : p.lookup "fvar_find" = some fvarFind)
 
 theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (tyo tyl base : Word) (r : List Word) (tys : List EIdx),
-    thW n m tyo tyl base = some (r, m') → StageR dn vis fe m a →
+    thW n m tyo tyl base = some (r, m') → StageR vis fe m a →
     decHL m tyo.toNat tyl.toNat = some tys → tyo.toNat + tyl.toNat < 2 ^ 64 →
     tyo.toNat + tyl.toNat ≤ iwTop m → base.toNat + tyl.toNat < 2 ^ 64 →
     ∃ xs a', (ConRon.Arena.targetHoles tys base.toNat).run a = .ok (xs, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   induction n with
@@ -421,9 +421,9 @@ def PdRes (m' : Mem) (r : List Word) : Option (List EIdx) → Prop
 
 theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {k : IdxKind}
-    (h : erToIwW n m o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : erToIwW n m o l = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       (decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat : Option (List (Idx k))) =
         hslice? (erA m) o.toNat l.toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ m'.arr64 EREC = m.arr64 EREC := by
@@ -494,11 +494,11 @@ theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 
 theorem cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
-    (h : cvLpsW n m q = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
     (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64)
     (hlpb : (rdW (m.arr64 EREC) (q + 2)).toNat = 0 ∨
       (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   obtain ⟨-, hl, -⟩ := decCV_some (a := erA m) (q := q.toNat) hcv

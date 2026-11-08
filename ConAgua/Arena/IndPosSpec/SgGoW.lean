@@ -96,13 +96,13 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 theorem sgGoW_ok (k : Nat) :
     ∀ (m0 m m' : Mem) (a : AState) (ctx f dO dL q j : Word) (c : NestCtx) (holes ds acc : List EIdx)
       (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word),
-    sgGoW k m ctx f dO dL q j = some m' → StageR dn vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat →
+    sgGoW k m ctx f dO dL q j = some m' → StageR vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat →
     q.toNat + dL.toNat ≤ iwTop m → decCtx m0 ctx.toNat = some c → CtxIn m0 ctx.toNat (· < iwTop m0) →
     CtxSl m0 ctx.toNat → c.nP + c.names.length < 2 ^ 64 → FMOk m0 f.toNat (.keyMap c.params holes) →
     decHL m0 dO.toNat dL.toNat = some ds → (∀ j < dL.toNat, dO.toNat + j < iwTop m0) → j.toNat ≤ dL.toNat →
     decHL m q.toNat j.toNat = some acc → RfInv m M G g → PosMR m →
     ∃ ys a', ((ds.drop j.toNat).mapM (sgF c holes)).run a = .ok (ys, a') ∧
-      decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
+      decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR vis fe m' a' ∧ IWGrow m0 m' ∧
       iwTop m ≤ iwTop m' ∧ (∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G g ∧ G ≤ G') ∧ PosMR m' := by
   induction k with
   | zero => intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h; simp [sgGoW] at h

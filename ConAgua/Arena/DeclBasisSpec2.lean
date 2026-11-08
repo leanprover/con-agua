@@ -34,7 +34,7 @@ open L.Ind
 
 /-- A constant record decoded below the top decodes in the whole pool. -/
 theorem decRCI_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {r : List Word}
-    {ci : IConstantInfo} (h : decRCI dn m r ci) : decCI (erA m) dn (r.headD 0).toNat = some ci :=
+    {ci : IConstantInfo} (h : decRCI dn m r ci) : decCI (erA m) (r.headD 0).toNat = some ci :=
   DecB.get ⟨fun _ _ _ he h => he.2.decCI h⟩ h
 
 /-- **The model of `check_basis_decl(vis, kind)`, both outcomes**: the ROM readers and `find_is`
@@ -54,7 +54,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- The block's read and install (`j1`), both outcomes. -/
 theorem cbdJ_ref {p : Prog} (hB : BasisProg p) (hR : L.Rom.RomRefs p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m : Mem}
-    {k : Word} (hk : k.toNat < 5) (hS : StageR dn vis fe m a)
+    {k : Word} (hk : k.toNat < 5) (hS : StageR vis fe m a)
     (hQ : k.toNat = 4 → ConRon.Bridge.StateOK a ∧ L.Rom.NamesDn dn a L.Rom.quotNames) :
     RefE True (checkBasisDeclE.j1 p n vis k m)
       (do installBasisDecls fe (← BasisKind.declsA (basisOfW k.toNat)) : AM IFEnv) a
@@ -64,7 +64,7 @@ theorem cbdJ_ref {p : Prog} (hB : BasisProg p) (hR : L.Rom.RomRefs p)
   rw [checkBasisDeclE.k_rom_basis_decls_a.arm1]
   obtain ⟨cis, a4, hrun4, hS4, hg4, hD4, -⟩ :
       ∃ cis a4, (BasisKind.declsA (basisOfW k.toNat)).run a = .ok (cis, a4) ∧
-        KeepPost dn vis fe (decRBlk dn) m m4 a4 r4 cis := by
+        KeepPost vis fe (decRBlk dn) m m4 a4 r4 cis := by
     by_cases h4' : k.toNat < 4
     · exact hR.basisA dn vis fe k h4' n m a r4 m4 hS h4
     · have hk4 : k.toNat = 4 := by omega
@@ -79,7 +79,7 @@ theorem cbdJ_ref {p : Prog} (hB : BasisProg p) (hR : L.Rom.RomRefs p)
 stubs): the quotient block without the pinned `Eq` basis declines, then the install. -/
 theorem cbd_ref {p : Prog} (hB : BasisProg p) (hC : CanonProg p) (hR : L.Rom.RomRefs p)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {a : AState}
-    (n : Nat) {m : Mem} {k : Word} (hk : k.toNat < 5) (hS : StageR dn vis fe m a)
+    (n : Nat) {m : Mem} {k : Word} (hk : k.toNat < 5) (hS : StageR vis fe m a)
     (hQ : k = 4 → ConRon.Bridge.StateOK a ∧ L.Rom.NamesDn dn a L.Rom.quotNames) :
     RefE True (checkBasisDeclE p n m vis k) (checkBasisDecl fe (basisOfW k.toNat)) a
       (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
@@ -147,11 +147,11 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p) 
     (hpa : p.lookup "pin_at" = some pinAtL)
     (hp : p.lookup "check_basis_decl" = some checkBasisDeclL) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn) (fe : IFEnv) (vis k : Word)
-    (hk : k.toNat < 5) (hS : StageR dn vis fe s₀.mem a₀)
+    (hk : k.toNat < 5) (hS : StageR vis fe s₀.mem a₀)
     (hQ : k = 4 → ConRon.Bridge.StateOK a₀ ∧ L.Rom.NamesDn dn a₀ L.Rom.quotNames) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_basis_decl" [vis, k]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkBasisDecl fe (basisOfW k.toNat)) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (checkBasisDecl fe (basisOfW k.toNat)) a₀) s'.mem
+      StageR (r.headD 0) (AM.res (checkBasisDecl fe (basisOfW k.toNat)) a₀) s'.mem
         (AM.st (checkBasisDecl fe (basisOfW k.toNat)) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (checkBasisDecl_specE p hB hpa hp n s₀ vis k)
     (cbd_ref hB hC hR hdn n hk hS hQ)) ?_

@@ -28,7 +28,7 @@ open ConLeche (Name Level PropWhen)
 
 /-- A decoded definition record: its value is word `q + 5`. -/
 theorem decCI_defnV {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b)
     (hsz : b.size < 2 ^ 63) (h1 : rdW b q = 1) :
     ∃ cv hint, ci = .defnInfo cv (decE (rdW b (q + 5))) hint ∧ HW (rdW b (q + 5)) := by
   cases hq : a[q.toNat]? with
@@ -47,16 +47,16 @@ theorem decCI_defnV {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
 
 /-- A decoded record whose kind word is not `1` is not a definition. -/
 theorem decCI_not_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b)
     (hsz : b.size < 2 ^ 63) (h1 : rdW b q ≠ 1) : ∀ cv v hint, ci ≠ .defnInfo cv v hint :=
   (decCI_defn h hab hsz).2 h1
 
 /-- A run of `env_find`: the memory unchanged, the twin's lookup decoded. -/
 theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
-    {m m' : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR dn m vis fe) {k : Word} (hk : HW k)
+    {m m' : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR m vis fe) {k : Word} (hk : HW k)
     {r : List Word} (hc : callW p n "env_find" [k, vis] m = some (r, m')) :
     m' = m ∧ fe.find? (decI k) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
-      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) := by
+      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
   obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envFind_refines p (hp.get "env_ix") (hp.get "env_row_get") (hp.get "env_find") n ⟨m, Locals.init []⟩ vis k hE hk) hc
   obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

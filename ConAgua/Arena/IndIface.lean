@@ -133,9 +133,9 @@ section dec
 variable (m : Mem)
 
 /-- The work pool. -/
-def iwA : Array Word := m.arr64 IW
-/-- The constant records. -/
-def erA : Array Word := m.arr64 EREC
+def iwA : Nat → Option Word := aread (m.arr64 IW)
+/-- The constant records (both tiers of `EREC`, `erecP`). -/
+def erA : Nat → Option Word := erecP m
 
 /-- Word `i` of `IW`, a number. -/
 def iwN (i : Nat) : Option Nat := nat? (iwA m) i
@@ -165,27 +165,29 @@ def decCVp (q : Nat) : Option IConstantVal := decCV (erA m) q
 def decCN (p : Nat) : Option (IConstantVal × Nat) := do
   pure (← decCVp m (← iwN m p), ← iwN m (p + 1))
 
-/-- `MemberShape`. -/
+/-- `MemberShape`: `cvT` (an `EREC` pointer), `nIdx`, the constructors' slice, `declared` (an
+`EREC` pointer) at `p + 4`. -/
 def decMS (p : Nat) : Option MemberShape := do
-  pure ⟨← decCVp m (← iwN m p), ← iwN m (p + 1), ← decAt m (decPL m (decCN m)) (p + 2)⟩
+  pure ⟨← decCVp m (← iwN m p), ← decCVp m (← iwN m (p + 4)), ← iwN m (p + 1),
+    ← decAt m (decPL m (decCN m)) (p + 2)⟩
 
-/-- `RecShape`. -/
+/-- `RecShape`: `cvR` (an `EREC` pointer), `rP`, `mI`, `tgt`, the rules (the stored recursor's
+`EREC` slice of 11-word rule records, `(off, cnt)` at `p + 4`, `p + 5`), `isK` at `p + 6`. -/
 def decRS (p : Nat) : Option RecShape := do
   pure ⟨← decCVp m (← iwN m p), ← iwN m (p + 1), ← iwN m (p + 2), ← iwN m (p + 3),
-    ← decAt m (decHL m) (p + 4)⟩
+    ← decRules (erA m) (← iwN m (p + 4)) (← iwN m (p + 5)), ← iwB m (p + 6)⟩
 
 /-- `BlockShape`. -/
 def decBS (p : Nat) : Option BlockShape := do
   pure ⟨← decAt m (decPL m (decMS m)) p, ← decAt m (decPL m (decRS m)) (p + 2), ← iwN m (p + 4),
     ← iwH m (p + 5), ← iwH m (p + 6), ← iwB m (p + 7), ← iwB m (p + 8)⟩
 
-/-- `BlockParts` (its shape). -/
-def decBP (p : Nat) : Option BlockParts := do pure ⟨← decBS m p⟩
-
-/-- `NestCtx`. -/
+/-- `NestCtx`: … `sort` at `p + 9`, `lvls` at `p + 10`, the formers (a slice of `EREC` pointers)
+at `p + 11`, `p + 12`. -/
 def decCtx (p : Nat) : Option NestCtx := do
   pure ⟨← decAt m (decHL m) p, ← decAt m (decHL m) (p + 2), ← iwN m (p + 4),
-    ← decAt m (decNL m) (p + 5), ← decAt m (decHL m) (p + 7), ← iwH m (p + 9), ← iwH m (p + 10)⟩
+    ← decAt m (decNL m) (p + 5), ← decAt m (decHL m) (p + 7), ← iwH m (p + 9),
+    ← decAt m (decPL m (decCVp m)) (p + 11), ← iwH m (p + 10)⟩
 
 /-- `NestKey`. -/
 def decNK (p : Nat) : Option NestKey := do
@@ -195,9 +197,9 @@ def decNK (p : Nat) : Option NestKey := do
 def decCK (p : Nat) : Option ClassKey := do
   pure ⟨← iwH m p, ← iwH m (p + 1), ← decAt m (decHL m) (p + 2)⟩
 
-/-- `NestHole`. -/
+/-- `NestHole`: the key (a pointer), `base`, `nIdx`. -/
 def decNH (p : Nat) : Option NestHole := do
-  pure ⟨← decNK m (← iwN m p), ← iwN m (p + 1)⟩
+  pure ⟨← decNK m (← iwN m p), ← iwN m (p + 1), ← iwN m (p + 2)⟩
 
 /-- `NestCtorNf`. -/
 def decNCN (p : Nat) : Option NestCtorNf := do
@@ -222,7 +224,7 @@ def decNFK (w : Word) : Option NestFieldKind :=
 
 /-- A slice of `NestFieldKind` words. -/
 def decKL (o l : Nat) : Option (List NestFieldKind) :=
-  (List.range l).mapM fun j => do decNFK (← (iwA m)[o + j]?)
+  (List.range l).mapM fun j => do decNFK (← iwA m (o + j))
 
 /-- A `(Nat × Nat)` record. -/
 def decNN (p : Nat) : Option (Nat × Nat) := do pure (← iwN m p, ← iwN m (p + 1))
@@ -305,9 +307,9 @@ structure IWGrow (m m' : Mem) : Prop where
   erGet : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
 
 /-- **The stage relation**: the checker state at the view `vis` of `fe`, and the pool. -/
-structure StageR (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) :
+structure StageR (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) :
     Prop where
-  check : CheckR dn m a vis fe
+  check : CheckR m a vis fe
   iw : IWOK m
 
 /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
@@ -324,9 +326,9 @@ def RefAM {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
 
 /-- The usual post: the stage relation at the same environment, the pool grown, and the results
 decoding the twin's result by `dec`. -/
-def KeepPost {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+def KeepPost {α : Type} (vis : Word) (fe : IFEnv)
     (dec : Mem → List Word → α → Prop) (m m' : Mem) (a : AState) (r : List Word) (x : α) : Prop :=
-  StageR dn vis fe m' a ∧ IWGrow m m' ∧ dec m' r x
+  StageR vis fe m' a ∧ IWGrow m m' ∧ dec m' r x
 
 /-- Result decoders. -/
 def decW0E (_m : Mem) (r : List Word) (e : EIdx) : Prop := (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = e

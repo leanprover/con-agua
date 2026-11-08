@@ -254,7 +254,7 @@ theorem kmW_ok {m : Mem} {dO dL hO hL i : Word} {ds holes : List EIdx}
       rfl
 
 theorem RfInv.post {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m' : Mem} {a' : AState}
-    {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (hR : RfInv m M G g) (hS : StageR dn vis fe m' a')
+    {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (hR : RfInv m M G g) (hS : StageR vis fe m' a')
     (hg : IWGrow m m') (hf : RfFr m m') : RxPost dn fe vis m m' a' M G g :=
   ⟨M, G, hS, hg, hR.frame hf, GKeep.refl _ _ _, UInt64.le_refl _⟩
 
@@ -342,7 +342,7 @@ theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1
 
 theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : List NestHole) (r0 r1 : Word)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (h : rxRootW m ctx i = some (r0, r1, m'))
-    (hS : StageR dn vis fe m a) (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
+    (hS : StageR vis fe m a) (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hb : c.nP + c.names.length < 2 ^ 64) (hR : RfInv m M G g) :
     ∃ x a', (ConRon.Arena.nestHoleImg c prog 0 i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis m m' a' M G g := by
@@ -460,7 +460,7 @@ theorem RxPost.of_fr {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Wo
 
 theorem RxPost.then {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m1 m2 : Mem}
     {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (h : RxPost dn fe vis m m1 a1 M G g)
-    (hS : StageR dn vis fe m2 a2) (hg : IWGrow m1 m2) (hf : RfFr m1 m2) : RxPost dn fe vis m m2 a2 M G g := by
+    (hS : StageR vis fe m2 a2) (hg : IWGrow m1 m2) (hf : RfFr m1 m2) : RxPost dn fe vis m m2 a2 M G g := by
   obtain ⟨M1, G1, -, hg1, hR1, hk1, hG1⟩ := h
   exact ⟨M1, G1, hS, hg1.trans hg, hR1.frame hf, hk1, hG1⟩
 
@@ -520,7 +520,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
     (c : NestCtx) (prog : List NestHole) (H0 : NestHole) (r0 r1 : Word)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
     (hk : pfrK2 n (rdW (mh.arr64 IW) h) (posRecW mh [0, ctx, po, pl, n1]) = some (r0, r1, m'))
-    (hS : StageR dn vis fe mh a) (hc : decCtx mh ctx.toNat = some c) (hin : CtxIn mh ctx.toNat (· < iwTop mh))
+    (hS : StageR vis fe mh a) (hc : decCtx mh ctx.toNat = some c) (hin : CtxIn mh ctx.toNat (· < iwTop mh))
     (hs : HSl mh po.toNat pl.toNat prog) (hb : c.nP + c.names.length + n1.toNat + 1 < 2 ^ 64)
     (hh : decNH mh h.toNat = some H0) (hhin : NHIn mh h.toNat (· < iwTop mh)) (hR : RfInv mh M G g) :
     ∃ x a', (do
@@ -752,7 +752,7 @@ theorem rfOK_step (n : Nat) (hGo : GoOK dn fe vis n) : RfOK dn fe vis (n + 1) :=
 /-- The walk's post. -/
 def GoPost (m m' : Mem) (a' : AState) (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
     (mp' : Std.HashMap EIdx EIdx) : Prop :=
-  ∃ M' G', StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' gn ∧ Bank M' gn mp' ∧ GKeepX M M' G gn ∧
+  ∃ M' G', StageR vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' gn ∧ Bank M' gn mp' ∧ GKeepX M M' G gn ∧
     G ≤ G'
 
 theorem GKeepX.trans {M₁ M₂ M₃ : Std.HashMap (EIdx × Word) EIdx} {G G' g : Word} (h₁ : GKeepX M₁ M₂ G g)
@@ -764,7 +764,7 @@ theorem GKeepX.refl (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : GKeepX 
 /-- One child walked, then the rest. -/
 theorem goStep {k : Nat} (hGo : GoOK dn fe vis k) {m m1 : Mem} {a : AState} {f f1 x x2 : Word} {fm : FvMap}
     {mp : Std.HashMap EIdx EIdx} {M : Std.HashMap (EIdx × Word) EIdx} {G gn : Word}
-    (h1 : rxGoW k m f f1 x = some (x2, m1)) (hS : StageR dn vis fe m a) (hfm : FMOk m f.toNat fm) (hx : H x)
+    (h1 : rxGoW k m f f1 x = some (x2, m1)) (hS : StageR vis fe m a) (hfm : FMOk m f.toNat fm) (hx : H x)
     (hR : RfInv m M G gn) (hb : Bank M gn mp) (hg0 : gn ≠ 0) :
     ∃ mp1 a1, (ConRon.Arena.replaceFVarsGo fm mp f1.toNat (decE x)).run a = .ok ((decE x2, mp1), a1) ∧
       GoPost dn fe vis m m1 a1 M G gn mp1 := by
@@ -773,8 +773,8 @@ theorem goStep {k : Nat} (hGo : GoOK dn fe vis k) {m m1 : Mem} {a : AState} {f f
 
 theorem GoPost.then {m m1 m2 : Mem} {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G gn : Word}
     {mp1 mp2 : Std.HashMap EIdx EIdx} (h : GoPost dn fe vis m m1 a1 M G gn mp1)
-    (k : ∀ M1 G1, RfInv m1 M1 G1 gn → Bank M1 gn mp1 → G ≤ G1 → StageR dn vis fe m1 a1 →
-      ∃ M2 G2, StageR dn vis fe m2 a2 ∧ IWGrow m1 m2 ∧ RfInv m2 M2 G2 gn ∧ Bank M2 gn mp2 ∧
+    (k : ∀ M1 G1, RfInv m1 M1 G1 gn → Bank M1 gn mp1 → G ≤ G1 → StageR vis fe m1 a1 →
+      ∃ M2 G2, StageR vis fe m2 a2 ∧ IWGrow m1 m2 ∧ RfInv m2 M2 G2 gn ∧ Bank M2 gn mp2 ∧
         GKeepX M1 M2 G1 gn ∧ G1 ≤ G2) :
     GoPost dn fe vis m m2 a2 M G gn mp2 := by
   obtain ⟨M1, G1, hS1, hg1, hR1, hb1, hk1, hG1⟩ := h
@@ -782,7 +782,7 @@ theorem GoPost.then {m m1 m2 : Mem} {a1 a2 : AState} {M : Std.HashMap (EIdx × W
   exact ⟨M2, G2, hS2, hg1.trans hg2, hR2, hb2, hk1.trans hk2 hG1, UInt64.le_trans hG1 hG2⟩
 
 theorem GoPost.mk {m m1 m2 : Mem} {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G gn : Word}
-    {mp1 : Std.HashMap EIdx EIdx} (h : GoPost dn fe vis m m1 a1 M G gn mp1) (hS : StageR dn vis fe m2 a2)
+    {mp1 : Std.HashMap EIdx EIdx} (h : GoPost dn fe vis m m1 a1 M G gn mp1) (hS : StageR vis fe m2 a2)
     (hg : IWGrow m1 m2) (hf : LowFr m1 m2) : GoPost dn fe vis m m2 a2 M G gn mp1 :=
   h.then dn fe vis fun M1 G1 hR1 hb1 _ _ =>
     ⟨M1, G1, hS, hg, hR1.frame (RfFr.of_low hf), hb1, GKeepX.refl _ _ _, UInt64.le_refl _⟩
@@ -791,13 +791,13 @@ theorem GoPost.mk {m m1 m2 : Mem} {a1 a2 : AState} {M : Std.HashMap (EIdx × Wor
 theorem rxBin_ok (k : Nat) (hGo : GoOK dn fe vis k) (g : Word)
     (mkW : Mem → Word → Word → Option (Word × Mem)) (iop : EIdx → EIdx → AM EIdx)
     (hmk : ∀ m a2 x2, rpMkW m g a2 x2 0 0 0 = mkW m a2 x2)
-    (hst : ∀ (m m' : Mem) (a : AState) (u v r : Word), StageR dn vis fe m a → mkW m u v = some (r, m') →
-      ∃ a', (iop (decE u) (decE v)).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m')
+    (hst : ∀ (m m' : Mem) (a : AState) (u v r : Word), StageR vis fe m a → mkW m u v = some (r, m') →
+      ∃ a', (iop (decE u) (decE v)).run a = .ok (decE r, a') ∧ StageR vis fe m' a' ∧ IWGrow m m')
     (hlow : ∀ (m m' : Mem) (u v r : Word), mkW m u v = some (r, m') → LowFr m m')
     (m m' : Mem) (a : AState) (f f1 x y r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
     (hn : rxB1 k f f1 g x y (rxGoW k m f f1 x) = some (r, m'))
-    (hS : StageR dn vis fe m a) (hfm : FMOk m f.toNat fm) (hx : H x) (hy : H y) (hR : RfInv m M G gn)
+    (hS : StageR vis fe m a) (hfm : FMOk m f.toNat fm) (hx : H x) (hy : H y) (hR : RfInv m M G gn)
     (hb : Bank M gn mp) (hg0 : gn ≠ 0) :
     ∃ mp' a', (do
         let (t2, mm) ← ConRon.Arena.replaceFVarsGo fm mp f1.toNat (decE x)
@@ -823,7 +823,7 @@ theorem rxLet_ok (k : Nat) (hGo : GoOK dn fe vis k)
     (m m' : Mem) (a : AState) (f f1 x y z r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
     (hn : rxL1 k f f1 x y z (rxGoW k m f f1 x) = some (r, m'))
-    (hS : StageR dn vis fe m a) (hfm : FMOk m f.toNat fm) (hx : H x) (hy : H y) (hz : H z)
+    (hS : StageR vis fe m a) (hfm : FMOk m f.toNat fm) (hx : H x) (hy : H y) (hz : H z)
     (hR : RfInv m M G gn) (hb : Bank M gn mp) (hg0 : gn ≠ 0) :
     ∃ mp' a', (do
         let (t2, mm) ← ConRon.Arena.replaceFVarsGo fm mp f1.toNat (decE x)
@@ -856,7 +856,7 @@ theorem rxProj_ok (k : Nat) (hGo : GoOK dn fe vis k)
     (m m' : Mem) (a : AState) (f f1 x y z r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
     (hn : rxP1 x y (rxGoW k m f f1 z) = some (r, m'))
-    (hS : StageR dn vis fe m a) (hfm : FMOk m f.toNat fm) (hz : H z) (hR : RfInv m M G gn) (hb : Bank M gn mp)
+    (hS : StageR vis fe m a) (hfm : FMOk m f.toNat fm) (hz : H z) (hR : RfInv m M G gn) (hb : Bank M gn mp)
     (hg0 : gn ≠ 0) :
     ∃ mp' a', (do
         let (x2, mm) ← ConRon.Arena.replaceFVarsGo fm mp f1.toNat (decE z)
@@ -878,7 +878,7 @@ theorem rxNode_arm (k : Nat) (hGo : GoOK dn fe vis k) (vl : List Word) (v : ENod
     (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
     (hn : rxNodeW (k + 1) m f f1 (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
       (vl.tail.tail.tail.headD 0) = some (r, m'))
-    (hS : StageR dn vis fe m a) (hfm : FMOk m f.toNat fm) (hR : RfInv m M G gn) (hb : Bank M gn mp)
+    (hS : StageR vis fe m a) (hfm : FMOk m f.toNat fm) (hR : RfInv m M G gn) (hb : Bank M gn mp)
     (hg0 : gn ≠ 0) :
     ∃ mp' a', (rfArm fm mp f1.toNat (decE h) v).run a = .ok ((decE r, mp'), a') ∧
       GoPost dn fe vis m m' a' M G gn mp' := by
@@ -944,7 +944,7 @@ theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK dn fe vis k)
     (F : Nat) (hF : fu.toNat = F + 1) (hf0 : fu ≠ 0) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v)
     (hnv : NodeVr v) (hv : a.store.view (decE h) = some v) (hvl : vl ≠ [])
     (hgs : vl.headD 0 = 4 ∨ vl.headD 0 = 5 ∨ vl.headD 0 = 6 ∨ vl.headD 0 = 7 ∨ vl.headD 0 = 9)
-    (hgo : rxG1 j m f fu h vl = some (r, m')) (hS : StageR dn vis fe m a) (hfm : FMOk m f.toNat fm) (hh : H h)
+    (hgo : rxG1 j m f fu h vl = some (r, m')) (hS : StageR vis fe m a) (hfm : FMOk m f.toNat fm) (hh : H h)
     (hR : RfInv m M G gn) (hb : Bank M gn mp) (hg0 : gn ≠ 0) :
     ∃ mp' a', (ConRon.Arena.replaceFVarsGo fm mp (F + 1) (decE h)).run a = .ok ((decE r, mp'), a') ∧
       GoPost dn fe vis m m' a' M G gn mp' := by
@@ -1021,7 +1021,7 @@ theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 
       (g :: vt).headD 0 = 3),
       (match v with | .bvar _ | .sort _ | .lit _ | .const _ _ => True | _ => False) →
       ∃ mp' a' M' G', (ConRon.Arena.replaceFVarsGo fm mp fu.toNat (decE h)).run a = .ok ((decE r, mp'), a') ∧
-        StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' gn ∧ Bank M' gn mp' ∧ GKeepX M M' G gn ∧
+        StageR vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' gn ∧ Bank M' gn mp' ∧ GKeepX M M' G gn ∧
         G ≤ G' := by
     intro hg hv'
     rw [rxG1_leaf (hv := by simp) (hg := hg)] at hgo
@@ -1032,7 +1032,7 @@ theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 
   have node : ∀ (hgs : (g :: vt).headD 0 = 4 ∨ (g :: vt).headD 0 = 5 ∨ (g :: vt).headD 0 = 6 ∨
       (g :: vt).headD 0 = 7 ∨ (g :: vt).headD 0 = 9), NodeVr v →
       ∃ mp' a' M' G', (ConRon.Arena.replaceFVarsGo fm mp fu.toNat (decE h)).run a = .ok ((decE r, mp'), a') ∧
-        StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' gn ∧ Bank M' gn mp' ∧ GKeepX M M' G gn ∧
+        StageR vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' gn ∧ Bank M' gn mp' ∧ GKeepX M M' G gn ∧
         G ≤ G' := by
     intro hgs hnv
     rw [hF]

@@ -107,9 +107,9 @@ theorem add3_toNat {nP j : Word} (h : nP.toNat + j.toNat + 1 < 2 ^ 64) :
 theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (cty nP j r : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
     (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty)
-    (hS : StageR dn vis fe m a) (hM : hbMR m mp) (h : usgW n m cty nP j = some (r, m')) :
+    (hS : StageR vis fe m a) (hM : hbMR m mp) (h : usgW n m cty nP j = some (r, m')) :
     ∃ b mp' a', (structUsedLaterGo mp (decI cty) nP.toNat j.toNat).run a = .ok ((b, mp'), a') ∧
-      r = (if b then 1 else 0) ∧ hbMR m' mp' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      r = (if b then 1 else 0) ∧ hbMR m' mp' ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   simp only [usgW] at h
   obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
@@ -141,9 +141,9 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (cty nP j r : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
     (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty)
-    (hS : StageR dn vis fe m a) (hM : hbMR m mp) (h : ustW n m cty nP j = some (r, m')) :
+    (hS : StageR vis fe m a) (hM : hbMR m mp) (h : ustW n m cty nP j = some (r, m')) :
     ∃ b a', (structUsedLater (decI cty) nP.toNat j.toNat).run a = .ok (b, a') ∧
-      r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   simp only [ustW] at h
   obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
@@ -187,14 +187,14 @@ sharing the caller's `hb` memo. -/
 theorem structUsedLaterGo_refines (hp : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis cty nP j : Word)
     (mp : Std.HashMap (EIdx × Nat) Bool)
-    (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty) (hS : StageR dn vis fe s₀.mem a₀)
+    (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty) (hS : StageR vis fe s₀.mem a₀)
     (hM : hbMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_used_later_go" [cty, nP, j]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (structUsedLaterGo mp (decI cty) nP.toNat j.toNat) a₀ ∧
       r.headD 0 = (if (AM.res (structUsedLaterGo mp (decI cty) nP.toNat j.toNat) a₀).1 then 1 else 0) ∧
       hbMR s'.mem (AM.res (structUsedLaterGo mp (decI cty) nP.toNat j.toNat) a₀).2 ∧
-      StageR dn vis fe s'.mem (AM.st (structUsedLaterGo mp (decI cty) nP.toNat j.toNat) a₀) ∧
+      StageR vis fe s'.mem (AM.st (structUsedLaterGo mp (decI cty) nP.toNat j.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (structUsedLaterGo_spec p hv hf hput hins hgo hbp hst hp n s₀ cty nP j) ?_
   rintro r s' ⟨hl, hm⟩
@@ -211,14 +211,14 @@ theorem structUsedLater_refines (hcl : p.lookup "hb_clear" = some (memoClearG hb
     (hp : p.lookup "struct_used_later" = some structUsedLaterL)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis cty nP j : Word)
     (mp : Std.HashMap (EIdx × Nat) Bool)
-    (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty) (hS : StageR dn vis fe s₀.mem a₀)
+    (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty) (hS : StageR vis fe s₀.mem a₀)
     (hM : hbMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "struct_used_later" [cty, nP, j]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (structUsedLater (decI cty) nP.toNat j.toNat) a₀ ∧
       r.headD 0 = (if AM.res (structUsedLater (decI cty) nP.toNat j.toNat) a₀ then 1 else 0) ∧
       (∃ mp1, hbMR s'.mem mp1) ∧
-      StageR dn vis fe s'.mem (AM.st (structUsedLater (decI cty) nP.toNat j.toNat) a₀) ∧
+      StageR vis fe s'.mem (AM.st (structUsedLater (decI cty) nP.toNat j.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (structUsedLater_spec p hv hf hput hins hgo hbp hst hcl hfast hp n s₀ cty nP j) ?_
   rintro r s' ⟨hl, hm⟩
@@ -320,10 +320,10 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     ∀ (m m' : Mem) (a : AState) (cty nP n base : Word) (r : List Word)
       (mp : Std.HashMap (EIdx × Nat) Bool),
     nP.toNat + base.toNat + n.toNat + 1 < 2 ^ 64 → H cty →
-    StageR dn vis fe m a → hbMR m mp → ulW k m cty nP n base = some (r, m') →
+    StageR vis fe m a → hbMR m mp → ulW k m cty nP n base = some (r, m') →
     ∃ bs mp' a', (structUsedLaterList (decI cty) nP.toNat mp n.toNat base.toNat).run a = .ok (bs, a') ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (bnums bs) ∧ r.tail.headD 0 = n ∧
-      (r.headD 0).toNat + n.toNat = iwTop m' ∧ hbMR m' mp' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      (r.headD 0).toNat + n.toNat = iwTop m' ∧ hbMR m' mp' ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   induction k with
   | zero => intro m m' a cty nP n base r mp _ _ _ _ h; simp [ulW] at h
   | succ k ih =>
@@ -411,7 +411,7 @@ as the `0`/`1` numbers of an `IW` slice, all through the caller's shared `hb` me
 theorem structUsedLaterList_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis cty nP cnt base : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
     (hb : nP.toNat + base.toNat + cnt.toNat + 1 < 2 ^ 64) (hc' : H cty)
-    (hS : StageR dn vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp) :
+    (hS : StageR vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later_list" [cty, nP, cnt, base]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (structUsedLaterList (decI cty) nP.toNat mp cnt.toNat base.toNat) a₀ ∧
@@ -419,7 +419,7 @@ theorem structUsedLaterList_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : 
         some (bnums (AM.res (structUsedLaterList (decI cty) nP.toNat mp cnt.toNat base.toNat) a₀)) ∧
       r.tail.headD 0 = cnt ∧ (r.headD 0).toNat + cnt.toNat = iwTop s'.mem ∧
       (∃ mp1, hbMR s'.mem mp1) ∧
-      StageR dn vis fe s'.mem (AM.st (structUsedLaterList (decI cty) nP.toNat mp cnt.toNat base.toNat) a₀) ∧
+      StageR vis fe s'.mem (AM.st (structUsedLaterList (decI cty) nP.toNat mp cnt.toNat base.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (ulW_spec p hv hf hput hins hgo hbp hst hsg ha hc hsc hp n s₀ cty nP cnt base) ?_
   rintro r s' ⟨hl, hm⟩

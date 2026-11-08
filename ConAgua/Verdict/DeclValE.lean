@@ -196,7 +196,7 @@ besides the twin's environment `fe'` (from `m`): the stage relation at it over t
 the core's memos, the growth. -/
 structure ArmPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : Word) (m' : Mem) (fe' : IFEnv)
     (a' : AState) : Prop where
-  stage : StageR dn r fe' m' a'
+  stage : StageR r fe' m' a'
   memos : CoreMemos m'
   grow : IWGrow m m'
 
@@ -208,7 +208,7 @@ theorem tv_ref {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hap : ApdF p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word}
     {cv : IConstantVal} {v : EIdx} (hS : StageT dn vis fe m a)
-    (hci : decCI (erecP m) dn c.toNat = some (.thmInfo cv))
+    (hci : decCI (erecP m) c.toNat = some (.thmInfo cv))
     (hv : hd? (erecP m) (c.toNat + 5) = some v)
     (hpre : ∃ env cP, ConLeche.EnvWF env ∧ ConRon.Bridge.CheckOK V env fe a ∧
       Frontend.denoteCV a.store cv = some cP ∧ ConLeche.Expr.WScoped 0 cP.type)

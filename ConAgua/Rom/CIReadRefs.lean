@@ -235,9 +235,9 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hs : s.toNat < 31) (cs : List ConLeche.ConstantInfo)
     (hcs : ciEntries[s.toNat]'(by rw [ciEntries_len]; exact hs) = encBlock cs)
     (hfit : cs.all ciFits = true) (hcl : cs.length < 2 ^ 63) {n : Nat} {m m' : Mem} {a : AState}
-    {r : List Word} (hS : StageR dn vis fe m a) (hz : ZOK dn (blkZ cs) a) (hc : callW p n "rci_block" [s] m = some (r, m')) :
+    {r : List Word} (hS : StageR vis fe m a) (hz : ZOK dn (blkZ cs) a) (hc : callW p n "rci_block" [s] m = some (r, m')) :
     ∃ (ics : List IConstantInfo) (a' : AState), (ConRon.Arena.internCIList cs).run a = .ok (ics, a') ∧
-      KeepPost dn vis fe (decRBlk dn) m m' a' r ics := by
+      KeepPost vis fe (decRBlk dn) m m' a' r ics := by
   cases n with
   | zero => rw [callW_zero] at hc; cases hc
   | succ n =>
@@ -289,7 +289,7 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     rw [← hlen]
     have hH := holds_mapM_range (m := m4) (SE := fun i => erTop (allocMem m2 (UInt64.ofNat cs.length)) ≤ i ∧
         i < erTop m4) (SI := fun i => (r3.headD 0).toNat ≤ i ∧ i < (r3.headD 0).toNat + ics.length)
-      (g := fun m j => do decCI (erA m) dn (← iwN m ((r3.headD 0).toNat + j))) ics (fun j hj => by
+      (g := fun m j => do decCI (erA m) (← iwN m ((r3.headD 0).toNat + j))) ics (fun j hj => by
         obtain ⟨w, hw1, hw2⟩ := hB4 j hj
         intro m'' h1 h2
         have e := (h2 _ ⟨by omega, by omega⟩).trans hw1
@@ -319,8 +319,8 @@ theorem romAndPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
 @[refines_part ConRon.Arena.BasisKind.decls "the four kinds basisPinHit tries"]
 theorem romBasisRef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Word)
     (hk : k.toNat < 4) :
-    RomRef p "rom_basis_decls" [k] (StageR dn vis fe) (BasisKind.decls (basisOfW k.toNat))
-      (KeepPost dn vis fe (decRBlk dn)) := by
+    RomRef p "rom_basis_decls" [k] (StageR vis fe) (BasisKind.decls (basisOfW k.toNat))
+      (KeepPost vis fe (decRBlk dn)) := by
   intro n m a r m' hS hc
   cases n with
   | zero => rw [callW_zero] at hc; cases hc
@@ -342,8 +342,8 @@ theorem romBasisRef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
 @[refines_part ConRon.Arena.BasisKind.declsA "the four kinds basisPinHit tries"]
 theorem romBasisARef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Word)
     (hk : k.toNat < 4) :
-    RomRef p "rom_basis_decls_a" [k] (StageR dn vis fe) (BasisKind.declsA (basisOfW k.toNat))
-      (KeepPost dn vis fe (decRBlk dn)) := by
+    RomRef p "rom_basis_decls_a" [k] (StageR vis fe) (BasisKind.declsA (basisOfW k.toNat))
+      (KeepPost vis fe (decRBlk dn)) := by
   intro n m a r m' hS hc
   cases n with
   | zero => rw [callW_zero] at hc; cases hc

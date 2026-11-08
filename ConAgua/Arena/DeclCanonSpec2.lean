@@ -75,8 +75,8 @@ theorem erecP_rd {m : Mem} {j : Nat} {w : Word} (h : (erecP m)[j]? = some w) :
   rw [← erecP_getE (erecP_lt h)]; exact h
 
 theorem ctc_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) {x : Word} {ci : IConstantInfo}
-    (hci : decCI (erecP m) dn x.toNat = some ci) :
+    (hS : StageR vis fe m a) {x : Word} {ci : IConstantInfo}
+    (hci : decCI (erecP m) x.toNat = some ci) :
     decCV (erecP m) (x + 1).toNat = some ci.toConstantVal := by
   have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   have hsz' : (erecP m).size < 2 ^ 64 := Nat.lt_of_le_of_lt (by simp [erecP]; exact Nat.min_le_right _ _) hsz
@@ -93,9 +93,9 @@ memory after (records below the pool's top). -/
 @[refines ConRon.Arena.IConstantInfo.toConstantVal]
 theorem ciToCv_refines (q : Word) (ci : IConstantInfo) :
     RefAM p "ci_to_cv" [q]
-      (fun m a => StageR dn vis fe m a ∧ decCI (erecP m) dn q.toNat = some ci)
+      (fun m a => StageR vis fe m a ∧ decCI (erecP m) q.toNat = some ci)
       (pure ci.toConstantVal)
-      (KeepPost dn vis fe (fun m r (cv : IConstantVal) => decCV (erecP m) (r.headD 0).toNat = some cv)) := by
+      (KeepPost vis fe (fun m r (cv : IConstantVal) => decCV (erecP m) (r.headD 0).toNat = some cv)) := by
   intro n s₀ a₀ ⟨hS, hci⟩
   refine triple_post (ciToCv_spec' p hp n s₀ q) ?_
   rintro r s' ⟨hl, hm, hr⟩

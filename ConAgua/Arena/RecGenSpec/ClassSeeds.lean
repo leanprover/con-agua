@@ -78,7 +78,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 theorem sgW_nksl (k : Nat)
     (m m' : Mem) (a : AState) (ctx hO hL ind us dO dL nPc : Word) (r : List Word) (c : NestCtx)
     (holes ds : List EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (h : sgW k m ctx hO hL ind us dO dL nPc = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : sgW k m ctx hO hL ind us dO dL nPc = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
     (hb : c.nP + c.names.length < 2 ^ 64) (hho : decHL m hO.toNat hL.toNat = some holes)
     (hhob : hO.toNat + hL.toNat ≤ iwTop m) (hds : decHL m dO.toNat dL.toNat = some ds)
@@ -164,11 +164,11 @@ theorem NKSl.grow' {m m' : Mem} {key : Word} {nk : NestKey} (h : NKSl m key)
 theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {m m' : Mem} {x o l : Word} {r : List Word} {seeds : List (NestKey × Nat)}
     {sd : NestKey × Nat} {key nPc : Word}
-    (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hsd : SdRes m o l seeds) (hx1 : x.toNat + 1 < iwTop m) (hx0 : (m.arr64 IW)[x.toNat]? = some key)
     (hxk : (m.arr64 IW)[x.toNat + 1]? = some nPc) (hk : DecB (fun m => decNK m key.toNat) m sd.1)
     (hksl : NKSl m key) (hn : nPc.toNat = sd.2) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ SdRes m' (r.headD 0) (r.tail.headD 0) (sd :: seeds) ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ SdRes m' (r.headD 0) (r.tail.headD 0) (sd :: seeds) ∧
       MFr [] [] m m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (slCons_specW p hP.rx.ha hP.copy hP.cons n _ x o l) h
@@ -228,14 +228,14 @@ structure SdProg (p : Prog) : Prop extends KeysProg p where
 /-- **`nest_seed_of`'s run simulates `nestSeedOf`** at a class's words. -/
 theorem sgCall_sim {p : Prog} (L : SgLook p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) {m : Mem} {a : AState} {ctx hO hL q : Word} {c : NestCtx} {holes : List EIdx} {tm : TargetMajor}
-    (hS : StageR dn vis fe m a) (hU : UCtx dn vis fe m ctx c) (hhi : c.hiAt 0 < 2 ^ 64)
+    (hS : StageR vis fe m a) (hU : UCtx dn vis fe m ctx c) (hhi : c.hiAt 0 < 2 ^ 64)
     (hho : decHL m hO.toNat hL.toNat = some holes) (hhob : hO.toNat + hL.toNat ≤ iwTop m)
     (hdt : DecB (fun m => decTM m q.toNat) m tm) (hP : PosMR m) :
     Sim (callW p n "nest_seed_of" [ctx, hO, hL, rdW (m.arr64 IW) q, rdW (m.arr64 IW) (q + 1),
         rdW (m.arr64 IW) (q + 2), rdW (m.arr64 IW) (q + 3), rdW (m.arr64 IW) (q + 4)] m)
       (ConRon.Arena.nestSeedOf c holes tm.ind tm.lvls tm.ds tm.nPc) a
       (fun r x m' a' => DecB (fun m => decNK m (r.headD 0).toNat) m' x.1 ∧ NKSl m' (r.headD 0) ∧
-        (r.tail.headD 0).toNat = x.2 ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') := by
+        (r.tail.headD 0).toNat = x.2 ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') := by
   intro r m' e
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rcases n with _ | k
@@ -259,10 +259,10 @@ the tops, the walk's context as `nestRoot` takes it. -/
 theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (ctx hO hL : Word) (c : NestCtx) (holes : List EIdx) (hhi : c.hiAt 0 < 2 ^ 64) (n : Nat) :
     ∀ (m : Mem) (a : AState) (mo ml : Word) (ms : List TargetMajor),
-    StageR dn vis fe m a → UCtx dn vis fe m ctx c → decHL m hO.toNat hL.toNat = some holes →
+    StageR vis fe m a → UCtx dn vis fe m ctx c → decHL m hO.toNat hL.toNat = some holes →
     hO.toNat + hL.toNat ≤ iwTop m → PSlR decTM ms mo ml m → PosMR m →
     Sim (csdW p n m ctx hO hL mo ml) (ConRon.Arena.classSeeds c holes ms) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ SdRes m' (r.headD 0) (r.tail.headD 0) x ∧
+      (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ SdRes m' (r.headD 0) (r.tail.headD 0) x ∧
         PosMR m') := by
   induction n with
   | zero => intro m a mo ml ms _ _ _ _ _ _; rw [csdW.eq_1]; exact Sim.of_none
@@ -337,13 +337,13 @@ below the top, the walk memos well formed (`PosMR`); the seeds as `nestSeeds_ref
 @[refines ConRon.Arena.classSeeds]
 theorem classSeeds_refines {p : Prog} (hP : SdProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (ctx hO hL mo ml : Word) (c : NestCtx)
-    (holes : List EIdx) (ms : List TargetMajor) (hS : StageR dn vis fe s₀.mem a₀)
+    (holes : List EIdx) (ms : List TargetMajor) (hS : StageR vis fe s₀.mem a₀)
     (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64)
     (hho : decHL s₀.mem hO.toNat hL.toNat = some holes) (hhob : hO.toNat + hL.toNat ≤ iwTop s₀.mem)
     (hms : PSlR decTM ms mo ml s₀.mem) (hPm : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_seeds" [ctx, hO, hL, mo, ml]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classSeeds c holes ms) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classSeeds c holes ms) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.classSeeds c holes ms) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       SdRes s'.mem (r.headD 0) (r.tail.headD 0) (AM.res (ConRon.Arena.classSeeds c holes ms) a₀) ∧
       PosMR s'.mem; ⊤⦄ :=
   triple_post (csd_spec p hP.sds n s₀ ctx hO hL mo ml) fun _ _ ⟨hl, hm⟩ =>

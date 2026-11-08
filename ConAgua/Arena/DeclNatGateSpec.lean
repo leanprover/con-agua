@@ -31,7 +31,7 @@ variable {dn : NIdx → Option ConLeche.Name} {p : Prog}
 
 theorem decCI_defn_val {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
     {cv : IConstantVal} {v : EIdx} {hint : ConLeche.ReducibilityHint}
-    (h : decCI a dn q = some (.defnInfo cv v hint)) :
+    (h : decCI a q = some (.defnInfo cv v hint)) :
     ∃ w, a[q]? = some 1 ∧ a[q + 5]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = v := by
   unfold decCI at h
   cases hk : nat? a q with

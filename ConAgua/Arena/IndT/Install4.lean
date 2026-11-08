@@ -71,7 +71,7 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
     (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp) (hs : H s)
     {sP : ConLeche.Level} (hsP : denoteL a.store.ls (decI s) = some sP) :
     Sim (callW p n "block_shape_with_sort" [pp, s] m) (bs.withSort (decI s)) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
         DecB (fun m => decBS m (r.headD 0).toNat) m' x ∧ ShapeSrc m' (r.headD 0) ∧
         (RecsB m pp → RecsB m' (r.headD 0))) := by
   intro r m' e

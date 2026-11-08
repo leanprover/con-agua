@@ -44,12 +44,12 @@ include ha hc hsc hg hpf hpp hip hp
 @[refines ConRon.Arena.paramLevels]
 theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (hil : IlF p) (k : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l : Word)
-    (lps : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (lps : List NIdx) (hS : StageR vis fe s₀.mem a₀)
     (hd : decHL s₀.mem o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat < 2 ^ 64)
     (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "param_levels" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (paramLevels lps) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (paramLevels lps) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (paramLevels lps) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       H (r.headD 0) ∧ decI (r.headD 0) = AM.res (paramLevels lps) a₀; ⊤⦄ := by
   refine triple_post (plW_spec p ha hc hsc hg hpf hpp hip hp hq hil k s₀ o l) ?_
   rintro r s' ⟨hl, hm⟩

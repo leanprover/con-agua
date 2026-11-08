@@ -54,7 +54,7 @@ theorem mapM_range_succ {β : Type} {F : Nat → Option β} {k : Nat} {cs : List
 
 theorem decCIs_succ {a : Array Word} {dn : NIdx → Option ConLeche.Name} {off k : Nat}
     {cs : List IConstantInfo} (h : decCIs a dn off (k + 1) = some cs) :
-    ∃ p ci cs', nat? a off = some p ∧ decCI a dn p = some ci ∧ decCIs a dn (off + 1) k = some cs' ∧
+    ∃ p ci cs', nat? a off = some p ∧ decCI a p = some ci ∧ decCIs a dn (off + 1) k = some cs' ∧
       cs = ci :: cs' := by
   obtain ⟨ci, cs', h0, hs, rfl⟩ := mapM_range_succ h
   simp only [Nat.add_zero] at h0
@@ -88,7 +88,7 @@ theorem decCV_type {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q
   exact ⟨w, hw, hl, rfl⟩
 
 theorem decCI_walk {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {ci : IConstantInfo}
-    (h : decCI a dn p = some ci) :
+    (h : decCI a p = some ci) :
     ∃ cv kw w, ci.toConstantVal = cv ∧ a[p]? = some kw ∧ a[p + 4]? = some w ∧
       w.toNat < 2 ^ 32 ∧ cv.type = decE w ∧
       ((kw = 5 ∧ ∃ mi rp ow cw rules, ci = .recInfo cv mi rp rules ∧ a[p + 7]? = some ow ∧

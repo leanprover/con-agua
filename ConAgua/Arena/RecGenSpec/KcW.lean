@@ -220,10 +220,10 @@ section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem tcpPW_ok (k : Nat) (m m' : Mem) (a : AState) (pfo pfl e z : Word) (pfvs : List EIdx)
-    (h : tcpPW k m pfo pfl e = some (z, m')) (hS : StageR dn vis fe m a)
+    (h : tcpPW k m pfo pfl e = some (z, m')) (hS : StageR vis fe m a)
     (hpf : decHL m pfo.toNat pfl.toNat = some pfvs) (hpb : pfo.toNat + pfl.toNat ≤ iwTop m) (he : H e)
     (hP : PosMR m) :
-    ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE z, a') ∧ H z ∧ StageR dn vis fe m' a' ∧
+    ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE z, a') ∧ H z ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ PosMR m' := by
   unfold tcpPW at h
   -- the openers' offset as recorded: `0` for an empty slice
@@ -253,13 +253,13 @@ theorem tcpPW_ok (k : Nat) (m m' : Mem) (a : AState) (pfo pfl e z : Word) (pfvs 
 
 theorem ckgW_ok (k : Nat) :
     ∀ (m0 m m' : Mem) (a : AState) (po pl dO dL q j : Word) (pfvs ds acc : List EIdx),
-    ckgW k m po pl dO dL q j = some m' → StageR dn vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat →
+    ckgW k m po pl dO dL q j = some m' → StageR vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat →
     q.toNat + dL.toNat ≤ iwTop m → decHL m0 po.toNat pl.toNat = some pfvs →
     po.toNat + pl.toNat ≤ iwTop m0 → decHL m0 dO.toNat dL.toNat = some ds →
     (∀ i < dL.toNat, dO.toNat + i < iwTop m0) → j.toNat ≤ dL.toNat →
     decHL m q.toNat j.toNat = some acc → PosMR m →
     ∃ ys a', ((ds.drop j.toNat).mapM (ConRon.Arena.targetCanonParams pfvs)).run a = .ok (ys, a') ∧
-      decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
+      decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR vis fe m' a' ∧ IWGrow m0 m' ∧
       iwTop m ≤ iwTop m' ∧ PosMR m' := by
   induction k with
   | zero => intro m0 m m' a po pl dO dL q j pfvs ds acc h; simp [ckgW] at h
@@ -312,13 +312,13 @@ theorem ckgW_ok (k : Nat) :
 /-- **`class_key_canon`'s model simulates `classKeyCanon`**: the key decoded below the tops, the
 canonical parameters a slice below the top. -/
 theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List Word) (pfvs : List EIdx)
-    (ck : ClassKey) (h : kcW k m po pl key = some (r, m')) (hS : StageR dn vis fe m a)
+    (ck : ClassKey) (h : kcW k m po pl key = some (r, m')) (hS : StageR vis fe m a)
     (hpf : decHL m po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop m)
     (hk : DecB (fun m => decCK m key.toNat) m ck) (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.classKeyCanon pfvs ck).run a = .ok (x, a') ∧ DecB (fun m => decCK m (r.headD 0).toNat) m' x ∧
       (r.headD 0).toNat + 4 ≤ iwTop m' ∧
       (rdW (m'.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (m'.arr64 IW) (r.headD 0 + 3)).toNat ≤ iwTop m' ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' := by
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hk
   obtain ⟨hcH, hcd, huH, hud, hds, hdsb, hk4⟩ := pos2_nk_fields hnk htop

@@ -97,8 +97,8 @@ theorem decCNSB_decCNS {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
 theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
-    (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR vis fe m a) (hx : PSlR f xs o l m) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       DecB (fun m => decAt m (fun o l => decPL m (f m) o l) (r.headD 0).toNat) m' xs := by
   obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage hW hS rfl
   refine ⟨hS', hg, ?_⟩
@@ -121,7 +121,7 @@ theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
 theorem installRec2PSlB {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
-    (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
+    (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR vis fe m a) (hx : PSlR f xs o l m) :
     DecB (fun m => decAt m (fun o l => decPLB m (f m) o l) (r.headD 0).toNat) m' xs := by
   obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage hW hS rfl
   subst hr

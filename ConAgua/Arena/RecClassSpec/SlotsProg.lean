@@ -43,9 +43,9 @@ open L.Arena
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
-theorem simInternFVar (hS : StageR dn vis fe m a) (u : Word) {ty : Word} (hty : H ty) :
+theorem simInternFVar (hS : StageR vis fe m a) (u : Word) {ty : Word} (hty : H ty) :
     RSim (fvinternW m u ty) (internFVarE u.toNat (decI ty)) a
-      (fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ x = decE b.1) := by
+      (fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ x = decE b.1) := by
   rintro ⟨r, m'⟩ h
   obtain ⟨a', hrun, hS', hg⟩ := internFVar_stage hS u ty hty h
   exact ⟨decE r, a', hrun, hS', hg, rfl⟩

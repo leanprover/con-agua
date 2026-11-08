@@ -134,7 +134,7 @@ theorem tdec_split {A E : Array Word} :
 
 /-- The tables list's length is the count `CTL[133]`. -/
 theorem EnvR.tables_length {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
-    (h : EnvR dn m vis fe) : fe.env.tables.length = (rdW (m.arr64 CTL) 133).toNat := by
+    (h : EnvR m vis fe) : fe.env.tables.length = (rdW (m.arr64 CTL) 133).toNat := by
   have := h.tables
   rw [envTables_eq] at this
   exact tdec_length _ _ this

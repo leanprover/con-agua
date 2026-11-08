@@ -53,8 +53,8 @@ theorem DmProg2.cvProg (hD : DmProg2 p) : NatCvProg p :=
   hD.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg
 
 theorem bct_ref (hD : DmProg6 p) (nm : Word) :
-    CallRef p "bool_ctor_typed" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
-      (boolCtorTyped fe (decI nm)) (KeepPost dn vis fe decW0B) := by
+    CallRef p "bool_ctor_typed" [vis, nm] (fun m a => StageR vis fe m a ∧ H nm)
+      (boolCtorTyped fe (decI nm)) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hn⟩ hcall => ?_
   have hw := callW_model (M := fun mq => dmBctW p (k + 1) mq vis nm)
     (bct_specW p hD.lBoolCtorTyped (k + 1) · vis nm) hcall
@@ -100,8 +100,8 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
 
 @[refines ConRon.Arena.boolCtorTyped]
 theorem boolCtorTyped_refines (hD : DmProg6 p) (nm : Word) :
-    RefAM p "bool_ctor_typed" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
-      (boolCtorTyped fe (decI nm)) (KeepPost dn vis fe decW0B) :=
+    RefAM p "bool_ctor_typed" [vis, nm] (fun m a => StageR vis fe m a ∧ H nm)
+      (boolCtorTyped fe (decI nm)) (KeepPost vis fe decW0B) :=
   (bct_ref hD nm).refAM
 
 /-! ## `div_mod_pin_guard` -/
@@ -114,8 +114,8 @@ l_model tps_specW (p : Prog) (hp : p.lookup "type_pin_stored" = some typePinStor
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem internSort_ref (hM : MasterProg p) (u : Word) (hu : H u) :
-    CallRef p "intern_sort" [u] (StageR dn vis fe) (internE (.sort (decI u)))
-      (KeepPost dn vis fe decW0E) := by
+    CallRef p "intern_sort" [u] (StageR vis fe) (internE (.sort (decI u)))
+      (KeepPost vis fe decW0E) := by
   refine CallRef.of_triple fun n s₀ a₀ hS => ?_
   refine triple_post (internSort_spec p hM.lSortFind hM.lSortPush hM.lInternSort n s₀ u) ?_
   rintro r s' ⟨hl, hI⟩
@@ -123,8 +123,8 @@ theorem internSort_ref (hM : MasterProg p) (u : Word) (hu : H u) :
   exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, consInternM_lt sortCS_wf hS.check.arena.base.sort hI, rfl⟩
 
 theorem tps_ref (hD : DmProg6 p) (nm : Word) :
-    CallRef p "type_pin_stored" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
-      (typePinStored fe (decI nm)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "type_pin_stored" [vis, nm] (fun m a => StageR vis fe m a ∧ H nm)
+      (typePinStored fe (decI nm)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hn⟩ hcall => ?_
   have hw := callW_model (M := fun mq => dmTpsW p (k + 1) mq vis nm)
     (tps_specW p hD.lTypePinStored (k + 1) · vis nm) hcall
@@ -163,8 +163,8 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
 
 @[refines ConRon.Arena.typePinStored]
 theorem typePinStored_refines (hD : DmProg6 p) (nm : Word) :
-    RefAM p "type_pin_stored" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
-      (typePinStored fe (decI nm)) (KeepPost dn vis fe decW0E) :=
+    RefAM p "type_pin_stored" [vis, nm] (fun m a => StageR vis fe m a ∧ H nm)
+      (typePinStored fe (decI nm)) (KeepPost vis fe decW0E) :=
   (tps_ref hD nm).refAM
 
 set_option maxHeartbeats 1600000 in

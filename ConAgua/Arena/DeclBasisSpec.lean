@@ -151,10 +151,10 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem ofReduceOp_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
     (hp : p.lookup "of_reduce_op" = some ofReduceOpL) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis w : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) (hw : w.toNat < 2 ^ 32) :
+    (hS : StageR vis fe s₀.mem a₀) (hw : w.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "of_reduce_op" [w]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ofReduceOp (decI w)) a₀ ∧
-      KeepPost dn vis fe decW0N s₀.mem s'.mem (AM.st (ofReduceOp (decI w)) a₀) r
+      KeepPost vis fe decW0N s₀.mem s'.mem (AM.st (ofReduceOp (decI w)) a₀) r
         (AM.res (ofReduceOp (decI w)) a₀); ⊤⦄ := by
   refine triple_post (oro_specW p hpa hp n s₀ w) ?_
   rintro r s' ⟨hl, hm⟩
@@ -200,14 +200,14 @@ theorem truncM_erecP (m : Mem) : ArrExt (erA (truncM m)) (erecP m) := by
 over the result word, the growth. -/
 structure IbdPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : Word) (m' : Mem) (fe' : IFEnv)
     (a' : AState) : Prop where
-  stage : StageR dn r fe' m' a'
+  stage : StageR r fe' m' a'
   grow : IWGrow m m'
 
 /-- **`install_basis_decl` refines `installBasisDecl`, both outcomes**: a duplicate declaration
 rejects (`env_find` hits), else the push. -/
 theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} (n : Nat) {m : Mem} {c : Word} {ci : IConstantInfo}
-    (hS : StageR dn vis fe m a) (hci : decCI (erecP m) dn c.toNat = some ci) :
+    (hS : StageR vis fe m a) (hci : decCI (erecP m) c.toNat = some ci) :
     RefE True (installBasisDeclE p n m vis c) (installBasisDecl fe ci) a
       (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
   obtain ⟨w, hw1, hwl, hname⟩ := decCI_name hci
@@ -242,11 +242,11 @@ theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Nam
 /-- The basis list's decoding: an `IW` slice of constant-record pointers. -/
 def basisDec (dn : NIdx → Option ConLeche.Name) (o l : Nat) (m : Mem) :
     Option (List IConstantInfo) :=
-  decPL m (fun q => decCI (erA m) dn q) o l
+  decPL m (fun q => decCI (erA m) q) o l
 
 theorem basisDec_mono (dn : NIdx → Option ConLeche.Name) (o l : Nat) :
     OMono (basisDec dn o l) :=
-  OMono.decPL (f := fun m q => decCI (erA m) dn q) (fun _ => ⟨fun _ _ _ he h => he.2.decCI h⟩) o l
+  OMono.decPL (f := fun m q => decCI (erA m) q) (fun _ => ⟨fun _ _ _ he h => he.2.decCI h⟩) o l
 
 /-- **The model of `install_basis_decls(vis, o, l)`, both outcomes** (the recursion is the
 model's own; `install_basis_decl` by its unified model). -/
@@ -263,7 +263,7 @@ fuel (the recursion is the model's): the head by `ibd_ref`, the rest by the indu
 hypothesis. -/
 theorem ibds_ref {p : Prog} (hB : BasisProg p) (dn : NIdx → Option ConLeche.Name) :
     ∀ (n : Nat) {m : Mem} {vis : Word} {fe : IFEnv} {a : AState} {o l : Word}
-      {cis : List IConstantInfo}, StageR dn vis fe m a → DecB (basisDec dn o.toNat l.toNat) m cis →
+      {cis : List IConstantInfo}, StageR vis fe m a → DecB (basisDec dn o.toNat l.toNat) m cis →
       RefE True (installBasisDeclsE p n m vis o l) (installBasisDecls fe cis) a
         (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
   intro n
@@ -288,7 +288,7 @@ theorem ibds_ref {p : Prog} (hB : BasisProg p) (dn : NIdx → Option ConLeche.Na
   obtain ⟨v, hv, hci⟩ := decPL_head hD'
   have hext := (IWGrow.refl m).truncExt
   have hvm : iwN m o.toNat = some v := hext.1.nat? hv
-  have hci' : decCI (erecP m) dn v = some ci := ArrExt.decCI (truncM_erecP m) hci
+  have hci' : decCI (erecP m) v = some ci := ArrExt.decCI (truncM_erecP m) hci
   obtain ⟨w0, hw0, rfl⟩ : ∃ w0, (iwA m)[o.toNat]? = some w0 ∧ w0.toNat = v := by
     simp only [iwN, nat?, Option.map_eq_some_iff] at hvm; exact hvm
   have ew : rdW (m.arr64 IW) o = w0 := by simp [rdW, iwA] at hw0 ⊢; simp [hw0]
@@ -317,10 +317,10 @@ local notation "V" => ConLeche.CheckMode.verified
 @[refines ConRon.Arena.installBasisDecl]
 theorem installBasisDecl_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word) (ci : IConstantInfo)
-    (hS : StageR dn vis fe s₀.mem a₀) (hci : decCI (erecP s₀.mem) dn c.toNat = some ci) :
+    (hS : StageR vis fe s₀.mem a₀) (hci : decCI (erecP s₀.mem) c.toNat = some ci) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_basis_decl" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installBasisDecl fe ci) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (installBasisDecl fe ci) a₀) s'.mem
+      StageR (r.headD 0) (AM.res (installBasisDecl fe ci) a₀) s'.mem
         (AM.st (installBasisDecl fe ci) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (installBasisDecl_specE p hp n s₀ vis c) (ibd_ref hp n hS hci)) ?_
   rintro r s' ⟨hl, fe', a', hrun, hR⟩
@@ -332,10 +332,10 @@ constant-record pointers decoded below the tops; sorry-free). -/
 @[refines ConRon.Arena.installBasisDecls]
 theorem installBasisDecls_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis o l : Word) (cis : List IConstantInfo)
-    (hS : StageR dn vis fe s₀.mem a₀) (hD : DecB (basisDec dn o.toNat l.toNat) s₀.mem cis) :
+    (hS : StageR vis fe s₀.mem a₀) (hD : DecB (basisDec dn o.toNat l.toNat) s₀.mem cis) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_basis_decls" [vis, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installBasisDecls fe cis) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (installBasisDecls fe cis) a₀) s'.mem
+      StageR (r.headD 0) (AM.res (installBasisDecls fe cis) a₀) s'.mem
         (AM.st (installBasisDecls fe cis) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (installBasisDecls_specE p hp n s₀ vis o l)
     (ibds_ref hp dn n hS hD)) ?_

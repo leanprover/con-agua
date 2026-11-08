@@ -54,10 +54,10 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem fp_call {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k ca cb id : Word} {r : List Word}
     (hc : callW p n "find_pinned" [vis, nm, k, ca, cb, id] m = some (r, m'))
-    (hS : StageR dn vis fe m a) (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4 ∨ k = 5)
+    (hS : StageR vis fe m a) (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4 ∨ k = 5)
     (hid : id.toNat < 8) :
     ∃ b a', (clausePT fe (decI nm) k ca cb (romPinT id.toNat)).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (fp_specW p h n ⟨m, Locals.init []⟩ vis nm k ca cb id) hc
   rw [hs'] at hW
@@ -81,10 +81,10 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word}
     {r : List Word} {cv : IConstantVal}
     (hW : famW p n m vis q s1 s2 s3 i1 i2 i3 c2 c3 cvid = some (r, m'))
-    (hS : StageR dn vis fe m a) (hq : decCV (erecP m) q.toNat = some cv)
+    (hS : StageR vis fe m a) (hq : decCV (erecP m) q.toNat = some cv)
     (h1 : i1.toNat < 8) (h2 : i2.toNat < 8) (h3 : i3.toNat < 8) (hcv : cvid.toNat < 10) :
     ∃ b a', (famT fe cv s1 s2 s3 i1 i2 i3 c2 c3 cvid).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
   cases n with
   | zero => simp [famW] at hW
   | succ n =>
@@ -172,10 +172,10 @@ theorem fam_call {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word}
     {r : List Word} {cv : IConstantVal}
     (hc : callW p n "std_ax_family" [vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid] m = some (r, m'))
-    (hS : StageR dn vis fe m a) (hq : decCV (erecP m) q.toNat = some cv)
+    (hS : StageR vis fe m a) (hq : decCV (erecP m) q.toNat = some cv)
     (h1 : i1.toNat < 8) (h2 : i2.toNat < 8) (h3 : i3.toNat < 8) (hcv : cvid.toNat < 10) :
     ∃ b a', (famT fe cv s1 s2 s3 i1 i2 i3 c2 c3 cvid).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (fam_specW p h n ⟨m, Locals.init []⟩ vis q s1 s2 s3 i1 i2 i3 c2 c3 cvid) hc
   rw [hs'] at hW
@@ -184,9 +184,9 @@ theorem fam_call {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name
 /-- **`std_axiom_ok(vis, q)` refines `stdAxiomOk`** at the model level. -/
 theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q : Word} {r : List Word}
-    {cv : IConstantVal} (hW : stdW p n m vis q = some (r, m')) (hS : StageR dn vis fe m a)
+    {cv : IConstantVal} (hW : stdW p n m vis q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) :
-    ∃ b a', (stdAxiomOk fe cv).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ b a', (stdAxiomOk fe cv).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0B m' r b := by
   obtain ⟨⟨wn, hwn, hwnl, hname⟩, -, -⟩ := decCV_words hq
   have ewn : rdW (m.arr64 EREC) q = wn := rdW_of_get? rfl (erecP_get hwn)
@@ -272,8 +272,8 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
 theorem stdAxiomOk_refines (p : Prog) (h : StdProg2 p) (dn : NIdx → Option ConLeche.Name)
     (hdn : DnInj dn) (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal) :
     RefAM p "std_axiom_ok" [vis, q]
-      (fun m a => StageR dn vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
-      (stdAxiomOk fe cv) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
+      (stdAxiomOk fe cv) (KeepPost vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, hq⟩
   refine triple_post (std_specW p h n s₀ vis q) ?_
   rintro r s' ⟨hl, hm⟩

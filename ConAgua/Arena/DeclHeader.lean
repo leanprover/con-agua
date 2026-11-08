@@ -89,7 +89,7 @@ theorem rowCW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
 
 /-- **A miss of `env_find` is a miss of `find?`**. -/
 theorem envFindW_miss {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
-    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR dn m vis fe)
+    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR m vis fe)
     (hw : w.toNat < 2 ^ 32) (h0 : r.headD 0 = 0) : m1 = m ∧ fe.find? (decI w) = none := by
   unfold envFindW at h
   by_cases ht : 2 < tagW w
@@ -117,7 +117,7 @@ theorem envFindW_miss {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 
 /-- **A hit of `env_find` is a hit of `find?`**. -/
 theorem envFindW_hitSome {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
-    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR dn m vis fe)
+    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR m vis fe)
     (hw : w.toNat < 2 ^ 32) (h0 : r.headD 0 ≠ 0) : (fe.find? (decI w)).isSome = true := by
   unfold envFindW at h
   by_cases ht : 2 < tagW w

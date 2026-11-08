@@ -99,7 +99,7 @@ theorem rdW_ext' {a b : Array Word} (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) {
 /-- **An inductive record's parameter count and constructors**: `nparams` at `q + 17`, the
 constructor slice at `q + 18`, `q + 19`. -/
 theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a dn q.toNat = some (.indInfo cv caps))
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a q.toNat = some (.indInfo cv caps))
     (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) :
     caps.nparams = (rdW b (q + 17)).toNat ∧ caps.ctors.length = (rdW b (q + 19)).toNat ∧
     ∀ c, caps.ctors = [c] → c = decI (rdW b (rdW b (q + 18))) ∧ HW (rdW b (rdW b (q + 18))) := by
@@ -144,10 +144,10 @@ decodes. -/
 theorem envFind_callE {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
     (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
     {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv} {w : Word}
-    (hE : EnvR dn m vis fe) (hw : HW w) {r : List Word}
+    (hE : EnvR m vis fe) (hw : HW w) {r : List Word}
     (hc : callE p n "env_find" [w, vis] m = .ok (r, m')) :
     m' = m ∧ fe.find? (decI w) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
-      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) := by
+      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
   obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callE
     (envFind_refines p hx hg hp n ⟨m, Locals.init []⟩ vis w hE hw) hc
   obtain ⟨t₂, ht₂, -, -, hfound⟩ := triple_of_callE
@@ -168,7 +168,7 @@ def ctorFieldsGt (fe : IFEnv) (c : NIdx) (i : Nat) : Bool :=
 theorem pisl_first {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : Mem} {T : NIdx}
     {f q tn : Word} {i : Nat} (hsz : (m.arr64 EREC).size < 2 ^ 63)
     (hf : fe.find? T = decFound dn m f q)
-    (hs : f ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci) :
+    (hs : f ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) :
     (¬ (f ≠ 0 ∧ rdW (m.arr64 EREC) q = 3 ∧ rdW (m.arr64 EREC) (q + 19) = 1 ∧
         rdW (m.arr64 EREC) (q + 17) < tn) →
       projIndexedStructLike fe T T i tn.toNat = false) ∧
@@ -223,7 +223,7 @@ count at `q + 6`. -/
 theorem ctorFieldsGt_eq {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : NIdx}
     {f q iw : Word} (hsz : (m.arr64 EREC).size < 2 ^ 63)
     (hf : fe.find? c = decFound dn m f q)
-    (hs : f ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci) :
+    (hs : f ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) :
     ctorFieldsGt fe c iw.toNat = decide (f ≠ 0 ∧ rdW (m.arr64 EREC) q = 4 ∧
       iw < rdW (m.arr64 EREC) (q + 6)) := by
   by_cases f0 : f = 0

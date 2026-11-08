@@ -49,9 +49,9 @@ structure ToiProg (p : Prog) : Prop where
 /-- `inst_pis_with` from a stable decoding of the arguments. -/
 theorem instW_okB {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {n : Nat}
     {m m' : Mem} {a : AState} {ao al e : Word} {args : List EIdx} {r : List Word}
-    (h : instW n m ao al e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e)
+    (h : instW n m ao al e = some (r, m')) (hS : StageR vis fe m a) (he : H e)
     (hdec : DecB (fun m => decHL m ao.toNat al.toNat) m args) (hb : ao.toNat + al.toNat < 2 ^ 64) :
-    ∃ x a', (ConRon.Arena.instPisWith args (decI e)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.instPisWith args (decI e)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x := by
   have hds : decHL m ao.toNat al.toNat = some args :=
     (OMono.decHL ao.toNat al.toNat).mono _ _ _ (IWGrow.refl m).truncExt hdec

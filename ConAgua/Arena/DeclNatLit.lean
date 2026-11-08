@@ -36,7 +36,7 @@ def ciTag : IConstantInfo → Nat
   | .ctorInfo .. => 4 | .recInfo .. => 5
 
 theorem decCI_tag {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a dn p = some ci) :
+    {ci : IConstantInfo} (h : decCI a p = some ci) :
     ∃ w, a[p]? = some w ∧ w.toNat = ciTag ci := by
   unfold decCI at h
   cases hk : nat? a p with
@@ -103,14 +103,14 @@ theorem natCvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC
 
 /-- A word read of the record's tag. -/
 theorem tagWord {m : Mem} {q : Word} {ci : IConstantInfo} {dn : NIdx → Option ConLeche.Name}
-    (hsz : (m.arr64 EREC).size < 2 ^ 64) (h : decCI (erecP m) dn q.toNat = some ci) :
+    (hsz : (m.arr64 EREC).size < 2 ^ 64) (h : decCI (erecP m) q.toNat = some ci) :
     (rdW (m.arr64 EREC) q).toNat = ciTag ci := by
   obtain ⟨w, hw, ht⟩ := decCI_tag h
   rw [rdW_erec_of hsz hw, ht]
 
 /-- The record's constant value decodes at `q + 1`. -/
 theorem ciCv_decodes {m : Mem} {q : Word} {ci : IConstantInfo} {cv : IConstantVal}
-    {dn : NIdx → Option ConLeche.Name} (h : decCI (erecP m) dn q.toNat = some ci)
+    {dn : NIdx → Option ConLeche.Name} (h : decCI (erecP m) q.toNat = some ci)
     (hcv : ci.toConstantVal = cv) : decCV (erecP m) (q.toNat + 1) = some cv :=
   hcv ▸ ciD_cv h
 
@@ -158,8 +158,8 @@ theorem natIndOk_specW (p : Prog) (hp : p.lookup "nat_ind_ok" = some natIndOkL) 
 
 theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantInfo) :
     CallRef p "nat_ind_ok" [found, q]
-      (fun m a => StageR dn vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR dn m found q o)
-      (natIndOk o) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR dn m found q o)
+      (natIndOk o) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, h0, hfd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natIndOkW p k mm found q) (natIndOk_specW p hN.lNatIndOk k · found q) hc
   unfold natIndOkW at hw
@@ -254,8 +254,8 @@ theorem pinNat_call {p : Prog} (hN : NatLitProg p) {k : Nat} {m m1 : Mem} {r1 : 
 
 theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantInfo) :
     CallRef p "nat_zero_ok" [found, q]
-      (fun m a => StageR dn vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR dn m found q o)
-      (natZeroOk o) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR dn m found q o)
+      (natZeroOk o) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, h0, hfd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natZeroOkW p k mm found q) (natZeroOk_specW p hN.lNatZeroOk k · found q) hc
   unfold natZeroOkW at hw
@@ -363,8 +363,8 @@ theorem natSuccOk_nonctor {ci : IConstantInfo} (h : ciTag ci ≠ 4) : natSuccOk 
 
 theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantInfo) :
     CallRef p "nat_succ_ok" [found, q]
-      (fun m a => StageR dn vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR dn m found q o)
-      (natSuccOk o) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR dn m found q o)
+      (natSuccOk o) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, h0, hfd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natSuccOkW p k mm found q) (natSuccOk_specW p hN.lNatSuccOk k · found q) hc
   unfold natSuccOkW at hw
@@ -499,8 +499,8 @@ theorem pinAt_call {p : Prog} (hp : p.lookup "pin_at" = some pinAtL) {k : Nat} {
   exact ⟨hm, h0, hr⟩
 
 theorem natLitSupported_ref (hN : NatLitProg p) :
-    CallRef p "nat_lit_supported" [vis] (StageR dn vis fe) (natLitSupported fe)
-      (KeepPost dn vis fe decW0B) := by
+    CallRef p "nat_lit_supported" [vis] (StageR vis fe) (natLitSupported fe)
+      (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
   have hw := callW_model (M := fun mm => natLitSupportedW p k mm vis) (natLitSupported_specW p hN.lNatLitSupported k · vis) hc
   unfold natLitSupportedW at hw
@@ -593,8 +593,8 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
 
 @[refines ConRon.Arena.natLitSupported]
 theorem natLitSupported_refines (hN : NatLitProg p) :
-    RefAM p "nat_lit_supported" [vis] (StageR dn vis fe) (natLitSupported fe)
-      (KeepPost dn vis fe decW0B) :=
+    RefAM p "nat_lit_supported" [vis] (StageR vis fe) (natLitSupported fe)
+      (KeepPost vis fe decW0B) :=
   (natLitSupported_ref hN).refAM
 
 end lit

@@ -48,8 +48,8 @@ theorem sortsDec_mono (q : Nat) : OMono (fun m => sortsDec m q) :=
 /-- **A `rec2` record under the stage relation**, its two words read below the new top. -/
 theorem sumRec2 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a0 : AState} {x y : Word} {r : List Word} (h : recW m 2 [x, y] = some (r, m'))
-    (hS : StageR dn vis fe m a0) :
-    StageR dn vis fe m' a0 ∧ IWGrow m m' ∧ iwN (truncM m') (r.headD 0).toNat = some x.toNat ∧
+    (hS : StageR vis fe m a0) :
+    StageR vis fe m' a0 ∧ IWGrow m m' ∧ iwN (truncM m') (r.headD 0).toNat = some x.toNat ∧
       iwN (truncM m') ((r.headD 0).toNat + 1) = some y.toNat := by
   obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage h hS rfl
   subst hr

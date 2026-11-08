@@ -91,8 +91,8 @@ theorem icbcW_ok (p : Prog) (hRp : RecProg p) (hci : p.lookup "ctor_info_rec" = 
     (nP : Word) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (vis : Word) (fe : IFEnv) (o l : Word)
       (css : List (List (IConstantVal × Nat))) (r : List Word),
-    icbcW p n m nP o l vis = some (r, m') → StageR dn vis fe m a → PSlR decCNS css o l m →
-    StageR dn (r.headD 0) (ConRon.Arena.consBlockCtors nP.toNat css fe) m' a ∧ IWGrow m m' := by
+    icbcW p n m nP o l vis = some (r, m') → StageR vis fe m a → PSlR decCNS css o l m →
+    StageR (r.headD 0) (ConRon.Arena.consBlockCtors nP.toNat css fe) m' a ∧ IWGrow m m' := by
   induction n with
   | zero => intro m m' a vis fe o l css r h; rw [icbcW_zero] at h; cases h
   | succ n ih =>
@@ -140,10 +140,10 @@ theorem consBlockCtors_refines (p : Prog) (hRp : RecProg p)
     (hcs : p.lookup "cons_sum_ctors" = some consSumCtorsL)
     (hp : p.lookup "cons_block_ctors" = some consBlockCtors) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (nP o l vis : Word)
-    (css : List (List (IConstantVal × Nat))) (hS : StageR dn vis fe s₀.mem a₀)
+    (css : List (List (IConstantVal × Nat))) (hS : StageR vis fe s₀.mem a₀)
     (hcss : PSlR decCNS css o l s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_ctors" [nP, o, l, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn (r.headD 0) (ConRon.Arena.consBlockCtors nP.toNat css fe) s'.mem a₀ ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR (r.headD 0) (ConRon.Arena.consBlockCtors nP.toNat css fe) s'.mem a₀ ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ :=
   triple_post (icbc_spec p hp n s₀ nP o l vis) fun r _ ⟨hl, hm⟩ =>
     ⟨hl, icbcW_ok p hRp hci hcs dn nP n _ _ a₀ vis fe o l css r hm hS hcss⟩

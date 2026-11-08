@@ -236,7 +236,7 @@ variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche
 def TestRef (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb : Word)
     (c : FnName) (C : Option IConstantInfo → AM Bool) : Prop :=
   ∀ {m m' : Mem} {a : AState} {M : ModeMaps} {r : List Word} {found q : Word},
-    CoreS dn m a vis fe M eb → (found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci) →
+    CoreS dn m a vis fe M eb → (found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) →
     (∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci) →
     callW p n c [found, q] m = some (r, m') →
     CoreRef (C (decFound dn m found q)) a decBool dn m vis fe M eb r m'

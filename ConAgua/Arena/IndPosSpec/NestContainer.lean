@@ -54,10 +54,10 @@ include hl
 `nest_ctor_entry`; L aborts where a constructor's parameter and field counts' sum wraps). -/
 @[refines ConRon.Arena.nestContainer]
 theorem nestContainer_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis C : Word) (hC : H C) (hS : StageR dn vis fe s₀.mem a₀) :
+    (fe : IFEnv) (vis C : Word) (hC : H C) (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_container" [vis, C]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestContainer fe (decI C)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestContainer fe (decI C)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestContainer fe (decI C)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ NcOut s'.mem r (AM.res (ConRon.Arena.nestContainer fe (decI C)) a₀); ⊤⦄ := by
   refine triple_post (nt_spec p hl k s₀ vis C) ?_
   rintro r s' ⟨hlc, hm⟩

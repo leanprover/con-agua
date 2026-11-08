@@ -171,7 +171,7 @@ theorem holds_decCaps {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : Nat} {
     (hC : Holds SC (fun _ => False) (fun m => (hlist? (erA m) (c + 13) : Option (List NIdx))) m
       ic.ctors) :
     Holds (fun i => (c ≤ i ∧ i < c + 8) ∨ i = c + 12 ∨ SA i ∨ SC i ∨ (wtag.toNat = 1 ∧ SZ i))
-      (fun _ => False) (fun m => decCaps (erA m) dn c) m ic := by
+      (fun _ => False) (fun m => decCaps (erA m) c) m ic := by
   intro m' hE hI
   have g : ∀ i, (c ≤ i ∧ i < c + 8) → (erA m')[i]? = (erA m)[i]? := fun i hi => hE i (.inl hi)
   have e0 := (g c (by omega)).trans h0
@@ -244,7 +244,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
       EKeep (fun i => c.toNat ≤ i ∧ i < c.toNat + 15) m m' ∧ erTop m ≤ erTop m' ∧
       m'.arr64 IW = m.arr64 IW ∧
       Holds (fun i => (c.toNat ≤ i ∧ i < c.toNat + 15) ∨ (erTop m ≤ i ∧ i < erTop m'))
-        (fun _ => False) (fun m => decCaps (erA m) dn c.toNat) m' ic := by
+        (fun _ => False) (fun m => decCaps (erA m) c.toNat) m' ic := by
   simp only [capsFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
   obtain ⟨⟨⟨⟨⟨⟨⟨hfn, hfa⟩, hfc⟩, hep⟩, hef⟩, hup⟩, hnp⟩, hfz⟩ := hfit
   have hd' := hd.trans (encCaps_eq caps rest)

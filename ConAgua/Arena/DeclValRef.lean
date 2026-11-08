@@ -81,7 +81,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-! ## The census theorems -/
 
 theorem decls_decCI_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {cv : IConstantVal}
-    {v : EIdx} {hh : ConLeche.ReducibilityHint} (h : decCI a dn q = some (.defnInfo cv v hh)) :
+    {v : EIdx} {hh : ConLeche.ReducibilityHint} (h : decCI a q = some (.defnInfo cv v hh)) :
     decCV a (q + 1) = some cv ∧ hd? a (q + 5) = some v := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, -, h⟩ := h
@@ -91,7 +91,7 @@ theorem decls_decCI_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {
 
 theorem decCI_cvTA {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
     {ci : IConstantInfo} {cv : IConstantVal}
-    (h : decCI a dn q = some ci) (hk : ci = .thmInfo cv ∨ ci = .axiomInfo cv) :
+    (h : decCI a q = some ci) (hk : ci = .thmInfo cv ∨ ci = .axiomInfo cv) :
     decCV a (q + 1) = some cv := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, -, h⟩ := h

@@ -86,7 +86,7 @@ theorem rrnF_spec (p : Prog) (hp : RrnF p) (n : Nat) (s₀ : St) (args : List Wo
 /-- **`reserved_rec_name`'s model refines `reservedRecName`** (replaces
 `IndStubs.reservedRecName_spec`). -/
 theorem rrnF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Word) (hn : H n) :
-    RelW rrnF [n] (StageR dn vis fe) (reservedRecName (decI n)) (KeepPost dn vis fe decW0B) :=
+    RelW rrnF [n] (StageR vis fe) (reservedRecName (decI n)) (KeepPost vis fe decW0B) :=
   relW_callF (L.Stubs.reservedRecName_refines (p := rrnProg) (by constructor <;> rfl) dn vis fe n hn)
 
 /-! ## `rec_rule_bits` (lane `tails`' `recRuleBits_refines`) -/
@@ -117,8 +117,8 @@ theorem rrbF_spec (p : Prog) (hp : RrbF p) (n : Nat) (s₀ : St) (args : List Wo
 /-- **`rec_rule_bits`' model refines `recRuleBits`** (replaces `IndStubs.recRuleBits_spec`). -/
 theorem rrbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c : Word) (hc : H c)
     (rl : IRecRule) (hrl : rl.ctor = decI c) :
-    RelW rrbF [vis, c] (StageR dn vis fe) (recRuleBits fe rl)
-      (KeepPost dn vis fe (fun _ r (x : IRecRule) =>
+    RelW rrbF [vis, c] (StageR vis fe) (recRuleBits fe rl)
+      (KeepPost vis fe (fun _ r (x : IRecRule) =>
         x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) :=
   relW_callF (L.Stubs.recRuleBits_refines (p := rrbProg) (by constructor <;> rfl) dn vis fe c hc rl hrl)
 

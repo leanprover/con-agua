@@ -51,11 +51,11 @@ theorem flushCaches_run (a : AState) :
 @[refines ConRon.Arena.flushCaches]
 theorem flushCaches_refinesC (p : Prog) (hp : FlushProg p) (a₀ : AState) (n : Nat) (s₀ : St)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (hC : CheckR dn s₀.mem a₀ vis fe) :
+    (hC : CheckR s₀.mem a₀ vis fe) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "flush_caches" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok flushCaches a₀ ∧
-      CheckR dn s'.mem (AM.st flushCaches a₀) vis fe; ⊤⦄ := by
+      CheckR s'.mem (AM.st flushCaches a₀) vis fe; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hok, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (flushCaches_spec p hp n s₀)

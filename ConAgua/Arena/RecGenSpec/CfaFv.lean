@@ -161,10 +161,10 @@ include P
 
 /-- The datum variable `i`: `exprGetD`. -/
 theorem cfaFv_ok {k : Nat} {m m0 : Mem} {a : AState} {i : Word} {r0 : List Word}
-    (h : cfaFv p k m fvo fvl i = some (r0, m0)) (hS : StageR dn vis fe m a)
+    (h : cfaFv p k m fvo fvl i = some (r0, m0)) (hS : StageR vis fe m a)
     (hfv : decHL m fvo.toNat fvl.toNat = some fvs) (hfvb : fvo.toNat + fvl.toNat < 2 ^ 64) (hP : RcMR m) :
     ∃ a0, (ConRon.Arena.exprGetD fvs i.toNat).run a = .ok (decI (r0.headD 0), a0) ∧ H (r0.headD 0) ∧
-      StageR dn vis fe m0 a0 ∧ IWGrow m m0 ∧ RcMR m0 := by
+      StageR vis fe m0 a0 ∧ IWGrow m m0 ∧ RcMR m0 := by
   by_cases hi : i < fvl
   · rw [cfaFv_in (h := hi)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h

@@ -70,9 +70,9 @@ theorem erToIwW_size {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
 /-- `cv_lps` under the stage relation: the level parameters as a fresh `IW` slice. -/
 theorem cvLpsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
-    (h : L.Arena.cvLpsW n m q = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : L.Arena.cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r cv.levelParams ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r cv.levelParams ∧
       (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   cases n with
   | zero => simp [L.Arena.cvLpsW] at h
@@ -159,13 +159,13 @@ theorem canonCtx_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (cp cq
 
 theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {cp cq : Word} {r : List Word} {cv cv' : IConstantVal}
-    (h : ctxW k m cp cq = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : ctxW k m cp cq = some (r, m')) (hS : StageR vis fe m a)
     (hcv : decCV (erecP m) cp.toNat = some cv) (hcv' : decCV (erecP m) cq.toNat = some cv')
     (hP : PoolSmall m) (hL : LitInj a) :
     ∃ (cs : List NIdx) (a' : AState) (po pl qo ql co cl : Word),
       r = [po, pl, qo, ql, co, cl] ∧
       (ConRon.Arena.canonNames cv.levelParams.length).run a = .ok (cs, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a' ∧
       CtxR m' po pl qo ql co cl cv.levelParams cv'.levelParams cs := by
   cases k with
   | zero => simp [ctxW] at h
@@ -281,11 +281,11 @@ theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC).s
 set_option maxRecDepth 100000 in
 theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {q r : Word} {x : Word} {cv cv' : IConstantVal}
-    (h : cvceW k m q r = some (x, m')) (hS : StageR dn vis fe m a)
+    (h : cvceW k m q r = some (x, m')) (hS : StageR vis fe m a)
     (hcv : decCV (erecP m) q.toNat = some cv) (hcv' : decCV (erecP m) r.toNat = some cv')
     (hP : PoolSmall m) (hL : LitInj a) :
     ∃ (b : Bool) (a' : AState), (cv.canonEq cv').run a = .ok (b, a') ∧ x = (if b then 1 else 0) ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a' := by
   cases k with
   | zero => simp [cvceW] at h
   | succ k =>
@@ -354,7 +354,7 @@ theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
 theorem cvCanonEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (q r : Word) (cv cv' : IConstantVal) :
     RefAM p "cv_canon_eq" [q, r]
-      (fun m a => StageR dn vis fe m a ∧ decCV (erecP m) q.toNat = some cv ∧
+      (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv ∧
         decCV (erecP m) r.toNat = some cv' ∧ PoolSmall m ∧ LitInj a)
       (cv.canonEq cv') (CPostL dn vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, hcv, hcv', hP, hL⟩

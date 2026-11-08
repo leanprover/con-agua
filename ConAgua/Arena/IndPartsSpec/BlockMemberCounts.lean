@@ -30,14 +30,14 @@ both decoded below the tops; the result a number slice decoded below the tops (`
 theorem blockMemberCounts_refines (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd k nC no nl ro rl cto ctl : Word)
     (names : List NIdx) (cvTs : List IConstantVal) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
-    (hS : StageR dn vis fe s₀.mem a₀) (hts : PSlR decCVp cvTs cto ctl s₀.mem)
+    (hS : StageR vis fe s₀.mem a₀) (hts : PSlR decCVp cvTs cto ctl s₀.mem)
     (hrs : PSlR decSR rs ro rl s₀.mem) (hnm : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names)
     (hnb : no.toNat + nl.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_member_counts" [nPd, k, nC, no, nl, ro, rl, cto, ctl]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀ ∧
       NsR (AM.res (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀) r s'.mem ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (bmc_spec p hP n s₀ nPd k nC no nl ro rl cto ctl) ?_
   rintro r s' ⟨hl, hm⟩

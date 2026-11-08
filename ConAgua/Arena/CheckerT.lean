@@ -108,7 +108,7 @@ def IndArmSpec (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
     (∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x) → BlockLpsDnA dn block →
     IndMemos m → callW p n "check_ind_decl" [vis, o, l, w] m = some (r, m') →
     ∃ fe' a', (checkDecl V pins fe (.indDecl block nP)).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m'
+      StageR (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m'
 
 /-- The program hypotheses phase A under `StageT` takes beyond `DeclCallees`: the core's entry
 points (`KnotStageProg`), the leaves' and the loop's write sets, and for the inductive records the

@@ -189,11 +189,11 @@ theorem partsEView_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
 /-- **`pi_doms_mention_any`'s model refines `piDomsMentionAny`.** -/
 theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (f e : Word) (mp : Std.HashMap EIdx Bool),
-    StageR dn vis fe m a → H e → DecB (fun m => decHL m no.toNat nl.toNat) m names →
+    StageR vis fe m a → H e → DecB (fun m => decHL m no.toNat nl.toNat) m names →
     no.toNat + nl.toNat ≤ iwTop m → maMR m mp →
     Sim (pdmW n m no nl f e) (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a
       (fun r b m' a' => r = [if b then 1 else 0] ∧ a' = a ∧ (∃ mp', maMR m' mp') ∧
-        StageR dn vis fe m' a ∧ IWGrow m m') := by
+        StageR vis fe m' a ∧ IWGrow m m') := by
   induction n with
   | zero => intro m a f e mp _ _ _ _ _ r m' h; simp [pdmW] at h
   | succ n ih =>
@@ -263,14 +263,14 @@ the names a handle slice below the top; any well-formed `mentions_any` memo on e
 theorem piDomsMentionAny_refines (p : Prog) (hM : MaProg p)
     (hp : p.lookup "pi_doms_mention_any" = some piDomsMentionAny) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (no nl f e : Word) (names : List NIdx)
-    (mp : Std.HashMap EIdx Bool) (hS : StageR dn vis fe s₀.mem a₀) (he : H e)
+    (mp : Std.HashMap EIdx Bool) (hS : StageR vis fe s₀.mem a₀) (he : H e)
     (hns : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names) (hnb : no.toNat + nl.toNat ≤ iwTop s₀.mem)
     (hmp : maMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_doms_mention_any" [no, nl, f, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ ∧
       r = [if AM.res (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ then 1 else 0] ∧
       AM.st (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ = a₀ ∧
-      (∃ mp', maMR s'.mem mp') ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ :=
+      (∃ mp', maMR s'.mem mp') ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ :=
   triple_post (pdm_spec p hM hp n s₀ no nl f e) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hr, hst, hM', hS', hg⟩ := Sim.run (pdmW_sim n s₀.mem a₀ f e mp hS he hns hnb hmp) hm
     ⟨hl, hok, hr, hst, hM', by rw [← hst] at hS'; rw [hst] at hS'; exact hS', hg⟩
@@ -351,13 +351,13 @@ theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_an
 /-- The post of the memo walks: the result a `Bool` word, the twin's state kept, a memo left. -/
 def RawR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m : Mem) (a : AState) :
     List Word → Bool → Mem → AState → Prop :=
-  fun r b m' a' => r = [if b then 1 else 0] ∧ a' = a ∧ (∃ mp', maMR m' mp') ∧ StageR dn vis fe m' a ∧ IWGrow m m'
+  fun r b m' a' => r = [if b then 1 else 0] ∧ a' = a ∧ (∃ mp', maMR m' mp') ∧ StageR vis fe m' a ∧ IWGrow m m'
 
 /-- **One element of an `anyM`** (`brrK`): the element's test, then, if it fails, the rest. -/
 theorem brrK_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat}
     {rest : Mem → Option (List Word × Mem)} {mo : Option (List Word × Mem)} {hd tl : AM Bool} {m : Mem}
     {a : AState} (h1 : Sim mo hd a (RawR (dn := dn) (vis := vis) (fe := fe) m a))
-    (h2 : ∀ m1 mp1, StageR dn vis fe m1 a → IWGrow m m1 → maMR m1 mp1 →
+    (h2 : ∀ m1 mp1, StageR vis fe m1 a → IWGrow m m1 → maMR m1 mp1 →
       Sim (rest m1) tl a (RawR (dn := dn) (vis := vis) (fe := fe) m1 a)) :
     Sim (brrK n rest mo) (do let b ← hd; if b then pure true else tl) a
       (RawR (dn := dn) (vis := vis) (fe := fe) m a) := by
@@ -380,7 +380,7 @@ theorem brrK_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
 theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (coff clen : Word) (cs : List (IConstantVal × Nat))
     (mp : Std.HashMap EIdx Bool),
-    StageR dn vis fe m a → DecB (fun m => decPL m (decCN m) coff.toNat clen.toNat) m cs →
+    StageR vis fe m a → DecB (fun m => decPL m (decCN m) coff.toNat clen.toNat) m cs →
     (clen = 0 ∨ coff.toNat + clen.toNat ≤ iwTop m) → DecB (fun m => decHL m no.toNat nl.toNat) m names →
     no.toNat + nl.toNat ≤ iwTop m → maMR m mp →
     Sim (brmW n m no nl coff clen)
@@ -413,7 +413,7 @@ theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
 theorem brgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (moff mlen : Word) (ms : List MemberShape)
     (mp : Std.HashMap EIdx Bool),
-    StageR dn vis fe m a → DecB (fun m => decPL m (decMS m) moff.toNat mlen.toNat) m ms →
+    StageR vis fe m a → DecB (fun m => decPL m (decMS m) moff.toNat mlen.toNat) m ms →
     (mlen = 0 ∨ moff.toNat + mlen.toNat ≤ iwTop m) → DecB (fun m => decHL m no.toNat nl.toNat) m names →
     no.toNat + nl.toNat ≤ iwTop m → maMR m mp →
     Sim (brgoW n m no nl moff mlen)
@@ -486,7 +486,7 @@ theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc"
     (hg : p.lookup "block_raw_rec_go" = some blockRawRecGo)
     (hp : p.lookup "block_raw_rec" = some blockRawRec) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q : Word) (bs : BlockShape)
-    (mp : Std.HashMap EIdx Bool) (hS : StageR dn vis fe s₀.mem a₀)
+    (mp : Std.HashMap EIdx Bool) (hS : StageR vis fe s₀.mem a₀)
     (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
     (hsrc : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → o + l ≤ iwTop s₀.mem)
     (hmp : maMR s₀.mem mp) :
@@ -494,7 +494,7 @@ theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc"
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockRawRec ⟨bs⟩) a₀ ∧
       AM.st (ConRon.Arena.blockRawRec ⟨bs⟩) a₀ = a₀ ∧
       r = [if AM.res (ConRon.Arena.blockRawRec ⟨bs⟩) a₀ then 1 else 0] ∧
-      (∃ mp', maMR s'.mem mp') ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      (∃ mp', maMR s'.mem mp') ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (brr_spec p hM ha hc hn hpd hm hg hp n s₀ q) ?_
   rintro r s' ⟨hl, hm'⟩
   have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
@@ -530,7 +530,7 @@ theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc"
   have hroom := memberNamesW_room h1 hsz
   have hk : bs.k = l.toNat := by rw [BlockShape.k, decPL_length _ hdm']
   obtain ⟨hlr, -, -⟩ := partsIwRd hlw (show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega)
-  have hS1 : StageR dn vis fe m1 a₀ := stage_frame_iw hS hf1 (by
+  have hS1 : StageR vis fe m1 a₀ := stage_frame_iw hS hf1 (by
     rw [← ht1, hk]; rw [hlr, ofNat_toNat_word] at hroom; simp only [iwTop] at hroom ⊢; omega)
   subst hr1
   simp only [List.headD_cons, List.tail_cons] at hm'

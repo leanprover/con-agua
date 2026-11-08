@@ -91,7 +91,7 @@ structure CstProg (p : Prog) : Prop where
 /-- The post of `check_block_tele`: the checked former below the tops, its result sort a handle. -/
 def TeleOut (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)
     (x : IConstantVal × LIdx) (m' : Mem) (a' : AState) : Prop :=
-  StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decCVp m' (r.headD 0).toNat = some x.1 ∧
+  StageR vis fe m' a' ∧ IWGrow m m' ∧ decCVp m' (r.headD 0).toNat = some x.1 ∧
     CVExt m' (r.headD 0).toNat ∧ H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = x.2
 
 /-- What a member record must satisfy: decoded below the tops, its former's constant record

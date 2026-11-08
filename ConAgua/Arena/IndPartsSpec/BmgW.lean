@@ -215,11 +215,11 @@ def bmfPred (names : List NIdx) (mm : Nat) (q : IConstantVal × Nat × Nat × Li
 theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl mm : Word}
     {names : List NIdx} (n : Nat) :
     ∀ (m : Mem) (a : AState) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × List IRecRule)),
-    StageR dn vis fe m a → PSlR decSR rs ro rl m →
+    StageR vis fe m a → PSlR decSR rs ro rl m →
     DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
     Sim (bmfW n m no nl ro rl mm) (rs.findM? (bmfPred names mm.toNat)) a
       (fun r x m' a' => r = encONN (x.map fun q => (q.2.1, q.2.2.1)) ∧
-        (∀ q, x = some q → q.2.1 < 2 ^ 64 ∧ q.2.2.1 < 2 ^ 64) ∧ StageR dn vis fe m' a' ∧
+        (∀ q, x = some q → q.2.1 < 2 ^ 64 ∧ q.2.2.1 < 2 ^ 64) ∧ StageR vis fe m' a' ∧
         IWGrow m m') := by
   induction n with
   | zero => intro m a ro rl rs _ _ _ _ r m' e; rw [bmfW.eq_1] at e; cases e
@@ -247,7 +247,7 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     simp only [bmfPred, bind_assoc, pure_bind]
     have hnames : decHL m no.toNat nl.toNat = some names := hnm.get (OMono.decHL _ _)
     refine Sim.bindK (bmfW.k_rec_target_of.none ..) (fun _ _ => by rw [bmfW.k_rec_target_of.eq_2])
-      (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1)
+      (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR vis fe m1 a1 ∧ IWGrow m m1)
       ?_ ?_
     · intro r1 m1 e
       obtain ⟨t, a1, hrun, hr, hS1, hg1⟩ := recTW_ok n dn fe vis m m1 a no nl _ _ r1 names e hS htyl
@@ -367,7 +367,7 @@ theorem NsR_three {x : Option (List Nat)} {r : List Word} {m : Mem} (h : NsR x r
     NsR x [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] m := by cases x <;> exact h
 
 theorem stageR_ptop {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) : PTop m := ⟨hS.iw.iw, hS.iw.iwSize, hS.iw.ctl⟩
+    (hS : StageR vis fe m a) : PTop m := ⟨hS.iw.iw, hS.iw.iwSize, hS.iw.ctl⟩
 
 /-- **`block_member_counts_go`'s model refines `blockMemberCounts?` from member `idx`.** -/
 theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
@@ -375,12 +375,12 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32) (h4 : rl.toNat < 2 ^ 32)
     (n : Nat) :
     ∀ (m : Mem) (a : AState) (cto ctl idx : Word) (cvTs : List IConstantVal),
-    StageR dn vis fe m a → PSlR decCVp cvTs cto ctl m → PSlR decSR rs ro rl m →
+    StageR vis fe m a → PSlR decCVp cvTs cto ctl m → PSlR decSR rs ro rl m →
     DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
     idx.toNat + ctl.toNat ≤ iwTop m →
     Sim (bmgW n m nPd k nC no nl ro rl cto ctl idx)
       (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs idx.toNat cvTs) a
-      (fun r x m' a' => NsR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => NsR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   induction n with
   | zero => intro m a cto ctl idx cvTs _ _ _ _ _ _ r m' e; simp [bmgW] at e
   | succ n ih =>
@@ -418,7 +418,7 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     generalize hE : encONN (x.map fun q => (q.2.1, q.2.2.1)) = E at h5 h6
     refine Sim.bindK (by simp [bmgK2]) (fun _ _ => by rw [bmgK2])
       (Q := fun r2 x2 m2 a2 => a2 = a1 ∧ r2 = encONN x2 ∧ (∀ p q, x2 = some (p, q) → q < 2 ^ 64) ∧
-        StageR dn vis fe m2 a1 ∧ IWGrow m1 m2) ?_ ?_
+        StageR vis fe m2 a1 ∧ IWGrow m1 m2) ?_ ?_
     · revert hE
       cases x with
       | none =>

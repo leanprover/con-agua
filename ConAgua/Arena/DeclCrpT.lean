@@ -224,7 +224,7 @@ theorem defeq_check {env : ConLeche.Env} {fe : IFEnv} {a a' : AState} {d : Nat} 
 pushed view `vis2`, `StageC` at the pre-insertion view `vis`, the growth. -/
 structure CrpPost (dn : NIdx → Option ConLeche.Name) (vis vis2 : Word) (fe2 : IFEnv)
     (env : ConLeche.Env) (m m' : Mem) (a' : AState) : Prop where
-  stage2 : StageR dn vis2 fe2 m' a'
+  stage2 : StageR vis2 fe2 m' a'
   stageC : StageC dn vis (fe2.restrictTo vis.toNat) env m' a'
   grow : IWGrow m m'
 
@@ -240,7 +240,7 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
     (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word}
     {fe2 : IFEnv} {env env2 : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem}
     {c v : Word} {nm : ConLeche.Name} {x : ConLeche.Expr}
-    (hS : StageR dn vis2 fe2 m a)
+    (hS : StageR vis2 fe2 m a)
     (hck : CheckOK V env (fe2.restrictTo vis.toNat) a) (henv : ConLeche.EnvWF env)
     (hok2 : StepOK env2 fe2 a) (hmem : TwinMem dn m a) (hflag : pinW m 0 ≠ 0)
     (hnm : denoteN a.store.ns (decI c) = some nm) (hvx : denoteE a.store (decI v) = some x)

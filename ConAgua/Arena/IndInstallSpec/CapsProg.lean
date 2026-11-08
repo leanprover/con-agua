@@ -47,7 +47,7 @@ def ShapeSrc (m : Mem) (q : Word) : Prop :=
 agrees with the record pool below its top (where `cons_block_inds` copies them). -/
 def CapsAt (dn : NIdx → Option ConLeche.Name) (m : Mem) (q : Nat) (c : IIndCaps) : Prop :=
   q + 15 ≤ iwTop m ∧ ∀ (a : Array Word) (e : Nat), (∀ i < 15, a[e + i]? = (iwA m)[q + i]?) →
-    (∀ i < erTop m, a[i]? = (erA m)[i]?) → decCaps a dn e = some c
+    (∀ i < erTop m, a[i]? = (erA m)[i]?) → decCaps a e = some c
 
 theorem CapsAt.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {q : Nat} {c : IIndCaps}
     (h : CapsAt dn m q c) (hg : IWGrow m m') : CapsAt dn m' q c := by

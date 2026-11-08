@@ -34,9 +34,9 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 /-- **`bvar_b` under the stage relation at the twin's `coreWalkFuel`**, at any exec fuel (the L
 fuel word `CWF` is `coreWalkFuel`: `bvbW_okF`'s first alternative). -/
-theorem bvbW_stageC {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (n : Nat)
+theorem bvbW_stageC {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (n : Nat)
     (h x : Word) (hh : H h) (hb : bvbW n m h CWF = some (x, m')) :
-    ∃ a', (bvarB coreWalkFuel (decE h)).run a = .ok (x.toNat, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ a', (bvarB coreWalkFuel (decE h)).run a = .ok (x.toNat, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       MFr [] [] m m' := by
   obtain ⟨a', hrun, hD⟩ := bvbW_okF n coreWalkFuel m m' a hS.check.arena h CWF x hh (.inl (Nat.le_of_eq CWF_eq)) hb
   have hfr : BbFrame m m' := by

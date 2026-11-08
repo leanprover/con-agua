@@ -755,7 +755,7 @@ theorem paramSort_run (hS : CoreS dn m a vis fe M eb) {pn : Word} (hpn : HW pn)
 /-- **The common prefix of the three tests refines the twins'**, given the tail `k` from the
 sort on. -/
 theorem listPre_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
     {K2 : Word → Option (List Word × Mem) → Option (Word × Mem)}
     {k : IConstantVal → LIdx → EIdx → AM Bool}
@@ -804,7 +804,7 @@ theorem listPre_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 /-- **`list_ty_ok` refines `listTyOk`.** -/
 @[refines ConRon.Arena.listTyOk]
 theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
     (h : callW p n "list_ty_ok" [found, q] m = some (r, m')) :
     CoreRef (listTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
@@ -831,7 +831,7 @@ theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 /-- **`list_nil_ty_ok` refines `listNilTyOk`.** -/
 @[refines ConRon.Arena.listNilTyOk]
 theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
     (h : callW p n "list_nil_ty_ok" [found, q] m = some (r, m')) :
     CoreRef (listNilTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
@@ -894,7 +894,7 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 /-- **`list_cons_ty_ok` refines `listConsTyOk`.** -/
 @[refines ConRon.Arena.listConsTyOk]
 theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
-    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
     (h : callW p n "list_cons_ty_ok" [found, q] m = some (r, m')) :
     CoreRef (listConsTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by

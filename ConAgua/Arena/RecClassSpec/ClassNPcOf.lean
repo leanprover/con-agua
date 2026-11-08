@@ -69,8 +69,8 @@ theorem BSOK.grow {m m' : Mem} {p : Nat} {bs : BlockShape} (h : BSOK m p bs) (hg
 /-- `block_shape_member_names` under the stage relation. -/
 theorem memberNamesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockShape}
-    (h : memberNamesW n m p = some (r, m')) (hS : StageR dn vis fe m a) (hb : BSOK m p.toNat bs) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, UInt64.ofNat bs.k] ∧
+    (h : memberNamesW n m p = some (r, m')) (hS : StageR vis fe m a) (hb : BSOK m p.toNat bs) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, UInt64.ofNat bs.k] ∧
     decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.memberNames ∧
     (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   have ht := hb.ptop
@@ -117,10 +117,10 @@ theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
 /-- **`env_find` is `find?`**: the memory unchanged, the result decoded by `decFound`, a found row
 decoding. -/
 theorem envFindW_found {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
-    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR dn m vis fe)
+    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR m vis fe)
     (hw : w.toNat < 2 ^ 32) :
     m1 = m ∧ fe.find? (decI w) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
-      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) := by
+      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
   unfold envFindW at h
   obtain ⟨ht, h⟩ := of_ite_none h
   have ht2 : tagW w ≤ 2 := by
@@ -150,7 +150,7 @@ theorem envFindW_found {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
 
 /-- An `indInfo` record's `nparams` word, and no other kind is one. -/
 theorem decCI_ind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a dn p = some ci) :
+    {ci : IConstantInfo} (h : decCI a p = some ci) :
     ∃ k, nat? a p = some k ∧
       ((k = 3 ∧ ∃ cv caps, ci = .indInfo cv caps ∧ nat? a (p + 17) = some caps.nparams) ∨
        (k ≠ 3 ∧ ∀ cv caps, ci ≠ .indInfo cv caps)) := by
@@ -265,9 +265,9 @@ theorem npc_other {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : ¬ bs.memberNam
 /-- **`class_n_pc_of` computes `classNPcOf`** (a pure twin), under the stage relation. -/
 theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {p i : Word} {r : List Word} {bs : BlockShape}
-    (h : npcW n m p vis i = some (r, m')) (hS : StageR dn vis fe m a) (hb : BSOK m p.toNat bs)
+    (h : npcW n m p vis i = some (r, m')) (hS : StageR vis fe m a) (hb : BSOK m p.toNat bs)
     (hi : H i) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))] ∧
       ConRon.Arena.classNPcOf bs fe (decI i) < 2 ^ 64 := by
   rcases n with _ | n
@@ -347,9 +347,9 @@ theorem classNPcOf_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hg : p.lookup "env_row_get" = some envRowGetL) (hef : p.lookup "env_find" = some envFindL)
     (hp : p.lookup "class_n_pc_of" = some classNPcOf) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q i : Word) (bs : BlockShape)
-    (hS : StageR dn vis fe s₀.mem a₀) (hb : BSOK s₀.mem q.toNat bs) (hi : H i) :
+    (hS : StageR vis fe s₀.mem a₀) (hb : BSOK s₀.mem q.toNat bs) (hi : H i) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_n_pc_of" [q, vis, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))]; ⊤⦄ :=
   triple_post (classNPcOf_spec p ha hmc hmn hct hx hg hef hp n s₀ q vis i) fun _ _ ⟨hl, hw⟩ =>
     have h := npcW_ok hw hS hb hi

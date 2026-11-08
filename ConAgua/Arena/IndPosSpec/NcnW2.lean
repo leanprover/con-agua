@@ -47,7 +47,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv closed nf : Word) (c : NestCtx)
     (prog : List NestHole) (ds : List EIdx) (cvv : IConstantVal) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (h : ncnW k m ctx po pl us dO dL cv closed = some (nf, m')) (hS : StageR dn vis fe m a)
+    (h : ncnW k m ctx po pl us dO dL cv closed = some (nf, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hs : HSl m po.toNat pl.toNat prog)
     (hb : c.nP + c.names.length + pl.toNat < 2 ^ 64) (hus : H us)
     (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m)

@@ -59,7 +59,7 @@ theorem declAt_of_F {D P : Array Word} {i : Nat} {d : IDeclaration} (h : L.Front
 pending checks, and the declaration records. -/
 structure LoopR (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState)
     (vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (ds : Array IDeclaration) : Prop where
-  check : CheckR dn m a vis fe
+  check : CheckR m a vis fe
   pend : PendR m pend
   decls : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds
   /-- The work pool and the record pool are in bounds (lane `induct`'s `IWOK`): the callees of

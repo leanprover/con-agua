@@ -80,8 +80,8 @@ the `IW` list, decoded in the record pool below its new top. -/
 theorem efW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (n : Nat)
     {m m' : Mem} {o l : Word} {r : List Word} {kk : IdxKind} {xs : List (Idx kk)}
     (h : efW n m o l = some (r, m'))
-    (hS : StageR dn vis fe m a) (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧ (r.headD 0).toNat = erTop m ∧
+    (hS : StageR vis fe m a) (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧ (r.headD 0).toNat = erTop m ∧
       hslice? (erecP m') (r.headD 0).toNat l.toNat = some xs ∧ erTop m' = erTop m + l.toNat := by
   unfold efW at h
   obtain ⟨q, m1, hal, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
@@ -286,9 +286,9 @@ set_option maxRecDepth 4000 in
 plain fields, the NESTED fire at the given record-pool slices. -/
 theorem rmRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m1 : Mem} {q old flo fll fpo fpl : Word} {rl : IRecRule} {lvls : List LIdx} {pins : List EIdx}
-    (h : erAllocW m 11 = some (q, m1)) (hS : StageR dn vis fe m a) (hold : rlDec m old.toNat = some rl)
+    (h : erAllocW m 11 = some (q, m1)) (hS : StageR vis fe m a) (hold : rlDec m old.toNat = some rl)
     (hl : hslice? (erecP m) flo.toNat fll.toNat = some lvls) (hp : hslice? (erecP m) fpo.toNat fpl.toNat = some pins) :
-    StageR dn vis fe (rmMem m1 q old flo fll fpo fpl) a ∧ IWGrow m (rmMem m1 q old flo fll fpo fpl) ∧
+    StageR vis fe (rmMem m1 q old flo fll fpo fpl) a ∧ IWGrow m (rmMem m1 q old flo fll fpo fpl) ∧
       MFr [] [] m (rmMem m1 q old flo fll fpo fpl) ∧
       rlDec (rmMem m1 q old flo fll fpo fpl) q.toNat = some { rl with fire := .nested lvls pins } := by
   -- the old record lies below the record pool's top
@@ -341,10 +341,10 @@ theorem rmRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
 /-- A rule pointer consed onto a rule-pointer slice (`sl_cons`). -/
 theorem consW_rl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {rules : List IRecRule} {rl : IRecRule}
-    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a) (hb : o.toNat + l.toNat ≤ iwTop m)
+    (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a) (hb : o.toNat + l.toNat ≤ iwTop m)
     (hd : decPL m (rlDec m) o.toNat l.toNat = some rules) (hx : rlDec m x.toNat = some rl) :
     decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some (rl :: rules) ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ StageR vis fe m' a ∧ IWGrow m m' ∧
       MFr [] [] m m' := by
   rw [decPL_eq_bind] at hd
   rcases hps : decNL m o.toNat l.toNat with _ | ps <;> rw [hps] at hd
@@ -376,12 +376,12 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : ASt
 
 theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r : List Word}
     {rules : List IRecRule} {lvls : List LIdx} {pins : List EIdx},
-    tsrmW n m ro rl flo fll fpo fpl = some (r, m') → StageR dn vis fe m a →
+    tsrmW n m ro rl flo fll fpo fpl = some (r, m') → StageR vis fe m a →
     decPL m (rlDec m) ro.toNat rl.toNat = some rules → ro.toNat + rl.toNat ≤ iwTop m →
     hslice? (erecP m) flo.toNat fll.toNat = some lvls → hslice? (erecP m) fpo.toNat fpl.toNat = some pins →
     decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (rules.map fun rl => { rl with fire := .nested lvls pins }) ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a ∧ IWGrow m m' ∧
       MFr [] [] m m' := by
   induction n with
   | zero => intro m m' ro rl flo fll fpo fpl r rules lvls pins h; simp [tsrmW] at h
@@ -495,7 +495,7 @@ theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r
 /-! ## `tgt_stored_rules` -/
 
 theorem rcPoolSmall {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (h : StageR dn vis fe m a) : PoolSmall m := by
+    (h : StageR vis fe m a) : PoolSmall m := by
   have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega
 
@@ -544,12 +544,12 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {r : List Word}
     {cvv : IConstantVal} {TM : TargetMajor} {rhss : List EIdx}
-    (h : tsrW n m vis cv rP M rhso rhsl = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : tsrW n m vis cv rP M rhso rhsl = some (r, m')) (hS : StageR vis fe m a)
     (hM : DecB (fun m => decTM m M.toNat) m TM) (hrh : DecB (fun m => decHL m rhso.toNat rhsl.toNat) m rhss)
     (hA : AbsOK m) :
     ∃ rules a', (ConRon.Arena.tgtStoredRules fe cvv rP.toNat TM rhss).run a = .ok (rules, a') ∧
       decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some rules ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       AbsOK m' := by
   obtain _ | n := n
   · simp [tsrW] at h

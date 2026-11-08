@@ -44,19 +44,19 @@ section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem eftF_ok (n : Nat) {m m' : Mem} {a : AState} {e : Word} {r : List Word}
-    (h : eftF n m e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e) (hP : RcMR m) :
+    (h : eftF n m e = some (r, m')) (hS : StageR vis fe m a) (he : H e) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.eraseFVarTys (decE e)).run a = .ok (decE (r.headD 0), a') ∧ H (r.headD 0) ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   cases n with
   | zero => simp [eftF] at h
   | succ n => exact eftW_ok dn fe vis n h hS he hP
 
 theorem eeW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {o l : Word} {r : List Word} {xs : List EIdx},
-    eeW n m o l = some (r, m') → StageR dn vis fe m a → HSl0 m o l xs → RcMR m →
+    eeW n m o l = some (r, m') → StageR vis fe m a → HSl0 m o l xs → RcMR m →
     ∃ ys a', (xs.mapM fun b => ConRon.Arena.eraseFVarTys b).run a = .ok (ys, a') ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some ys ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   induction n with
   | zero => intro m m' a o l r xs h; simp [eeW] at h
   | succ n ih =>

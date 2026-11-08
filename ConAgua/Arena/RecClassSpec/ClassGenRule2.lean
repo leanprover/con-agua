@@ -30,7 +30,7 @@ the classes of the recursors and the generated constants decoded below the tops)
 @[refines ConRon.Arena.classGenRule]
 theorem classGenRule_refines (p : Prog) (hp : RuProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g rco rcl cgo cgl rlvls c x : Word) (G : ClassGen)
-    (X : ClassCtor) (recCls : List Nat) (cvGs : List IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
+    (X : ClassCtor) (recCls : List Nat) (cvGs : List IConstantVal) (hS : StageR vis fe s₀.mem a₀)
     (hG : DecB (fun m => decCG m g.toNat) s₀.mem G) (hns : G.nP + G.slots.length < 2 ^ 64)
     (hX : DecB (fun m => decCC m x.toNat) s₀.mem X) (hrl : H rlvls)
     (hrc : DecB (fun m => decNL m rco.toNat rcl.toNat) s₀.mem recCls) (hrcb : rco.toNat + rcl.toNat < 2 ^ 64)

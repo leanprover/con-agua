@@ -31,10 +31,10 @@ helper `indproofs3-rec`'s refinement.) -/
 def ConsRecsTFSim (p : Prog) : Prop :=
   ∀ (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis vis2 pp : Word) (fe : IFEnv) (m : Mem) (a : AState)
     (bs : BlockShape) (rr : List Word) (outs : List (IConstantVal × TargetMajor × List EIdx)),
-    StageR dn vis fe m a → DecB (fun m => decBS m pp.toNat) m bs → decRRS m rr outs → HbMemo m → AbsOK m →
+    StageR vis fe m a → DecB (fun m => decBS m pp.toNat) m bs → decRRS m rr outs → HbMemo m → AbsOK m →
     Sim (callW p n "cons_block_recs_tf" [vis2, pp, 0, rr.headD 0, rr.tail.headD 0, vis] m)
       (ConRon.Arena.consBlockRecsTF vis2.toNat bs 0 outs fe) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m')
+      (fun r x m' a' => StageR (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m')
 
 /-- Replace the model by one that returns whatever it returns. -/
 theorem _root_.L.Arena.Sim.of_model {β α : Type} {mo mo' : Option (β × Mem)} {op : AM α} {a : AState}

@@ -83,8 +83,8 @@ l_model natAp1_specW (p : Prog) (hp : p.lookup "nat_ap1" = some natAp1L)
   grind [arena_grind] bind ntBW
 
 theorem natAp1_ref (hN : NatEqProg p) (nm a : Word) :
-    CallRef p "nat_ap1" [nm, a] (fun m s => StageR dn vis fe m s ∧ H nm ∧ H a)
-      (natAp1 (decI nm) (decE a)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "nat_ap1" [nm, a] (fun m s => StageR vis fe m s ∧ H nm ∧ H a)
+      (natAp1 (decI nm) (decE a)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mm => natAp1W p (k + 1) mm nm a) (fun k s₀ => natAp1_specW p hN.lNatAp1 (k + 1) s₀ nm a)
     fun k m s ⟨hS, hn, ha⟩ => ?_
   rw [natAp1W.arm1]
@@ -100,8 +100,8 @@ l_model natAp2_specW (p : Prog) (hp : p.lookup "nat_ap2" = some natAp2L)
   grind [arena_grind] bind ntBW
 
 theorem natAp2_ref (hN : NatEqProg p) (nm a b : Word) :
-    CallRef p "nat_ap2" [nm, a, b] (fun m s => StageR dn vis fe m s ∧ H nm ∧ H a ∧ H b)
-      (natAp2 (decI nm) (decE a) (decE b)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "nat_ap2" [nm, a, b] (fun m s => StageR vis fe m s ∧ H nm ∧ H a ∧ H b)
+      (natAp2 (decI nm) (decE a) (decE b)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mm => natAp2W p (k + 1) mm nm a b) (fun k s₀ => natAp2_specW p hN.lNatAp2 (k + 1) s₀ nm a b)
     fun k m s ⟨hS, hn, ha, hb⟩ => ?_
   rw [natAp2W.arm1]
@@ -112,14 +112,14 @@ theorem natAp2_ref (hN : NatEqProg p) (nm a b : Word) :
 
 @[refines ConRon.Arena.natAp1]
 theorem natAp1_refines (hN : NatEqProg p) (nm a : Word) :
-    RefAM p "nat_ap1" [nm, a] (fun m s => StageR dn vis fe m s ∧ H nm ∧ H a)
-      (natAp1 (decI nm) (decE a)) (KeepPost dn vis fe decW0E) :=
+    RefAM p "nat_ap1" [nm, a] (fun m s => StageR vis fe m s ∧ H nm ∧ H a)
+      (natAp1 (decI nm) (decE a)) (KeepPost vis fe decW0E) :=
   (natAp1_ref hN nm a).refAM
 
 @[refines ConRon.Arena.natAp2]
 theorem natAp2_refines (hN : NatEqProg p) (nm a b : Word) :
-    RefAM p "nat_ap2" [nm, a, b] (fun m s => StageR dn vis fe m s ∧ H nm ∧ H a ∧ H b)
-      (natAp2 (decI nm) (decE a) (decE b)) (KeepPost dn vis fe decW0E) :=
+    RefAM p "nat_ap2" [nm, a, b] (fun m s => StageR vis fe m s ∧ H nm ∧ H a ∧ H b)
+      (natAp2 (decI nm) (decE a) (decE b)) (KeepPost vis fe decW0E) :=
   (natAp2_ref hN nm a b).refAM
 
 /-- A twin-free callee (`FRef`) as a model-only `Sim` step. -/
@@ -178,8 +178,8 @@ theorem RecsAt.snoc {m m1 : Mem} {ws : List Word} {ps : List (EIdx × EIdx)} {w 
 /-- **One `rec2` of an equation list**: the record joins the list. -/
 theorem recs_step (hN : NatEqProg p) {n : Nat} {m m0 : Mem} {s : AState} {ws : List Word}
     {ps : List (EIdx × EIdx)} {a b : Word} {γ α : Type} {body : List Word → Mem → Option (γ × Mem)}
-    {op : AM α} {R : γ → α → Mem → AState → Prop} (hS : StageR dn vis fe m s) (hG : IWGrow m0 m)
-    (hR : RecsAt m ws ps) (ha : H a) (hb : H b) (h2 : ∀ r m1, StageR dn vis fe m1 s → IWGrow m0 m1 →
+    {op : AM α} {R : γ → α → Mem → AState → Prop} (hS : StageR vis fe m s) (hG : IWGrow m0 m)
+    (hR : RecsAt m ws ps) (ha : H a) (hb : H b) (h2 : ∀ r m1, StageR vis fe m1 s → IWGrow m0 m1 →
       RecsAt m1 (ws ++ [r.headD 0]) (ps ++ [(decE a, decE b)]) → Sim (body r m1) op s R) :
     Sim (ntBW (callW p n "rec2" [a, b] m) body) op s R :=
   (rec2_fref p hN.lIwAlloc hN.lRec2 a b).simB hS.iw fun r m1 hR1 =>
@@ -188,10 +188,10 @@ theorem recs_step (hN : NatEqProg p) {n : Nat} {m m0 : Mem} {s : AState} {ws : L
 /-- **Emitting an equation list**: the record pointers `ws`, written into a fresh slice. -/
 theorem emit_sim (hal : p.lookup "iw_alloc" = some iwAlloc) {n : Nat} {m m0 : Mem} {s : AState}
     {ws : List Word} {ps : List (EIdx × EIdx)} {N : Word} {body : List Word → Mem → Option (List Word × Mem)}
-    (hS : StageR dn vis fe m s) (hG : IWGrow m0 m) (hR : RecsAt m ws ps) (hN : N.toNat = ws.length)
+    (hS : StageR vis fe m s) (hG : IWGrow m0 m) (hR : RecsAt m ws ps) (hN : N.toNat = ws.length)
     (hb : ∀ rq mq, body rq mq = some ([rq.headD 0, N], wrIW mq (rq.headD 0) ws)) :
     Sim (ntBW (callW p n "iw_alloc" [N] m) body) (pure ps) s
-      (fun r x m' a' => KeepPost dn vis fe decEqRL m0 m' a' r x) :=
+      (fun r x m' a' => KeepPost vis fe decEqRL m0 m' a' r x) :=
   (iwAlloc_fref p hal N).simB hS.iw fun rq mq ⟨hq0, hmq, _, hroom, _⟩ => by
     rw [hb]; refine Sim.ret ?_
     obtain ⟨hqq, hKp, hroom', htop', hget⟩ := recPost_wr m ws N hN hS.iw (by simpa [iwTop, hN] using hroom)
@@ -214,8 +214,8 @@ l_model natEqList2_specW (p : Prog) (hp : p.lookup "nat_eq_list2" = some natEqLi
   grind [arena_grind] bind ntBW
 
 theorem natEqList2_ref (hN : NatEqProg p) (a1 b1 a2 b2 : Word) :
-    CallRef p "nat_eq_list2" [a1, b1, a2, b2] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2)
-      (pure [(decE a1, decE b1), (decE a2, decE b2)] : AM (List (EIdx × EIdx))) (KeepPost dn vis fe decEqRL) := by
+    CallRef p "nat_eq_list2" [a1, b1, a2, b2] (fun m s => StageR vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2)
+      (pure [(decE a1, decE b1), (decE a2, decE b2)] : AM (List (EIdx × EIdx))) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqList2W p (k + 1) mm a1 b1 a2 b2)
     (fun k s₀ => natEqList2_specW p hN.lNatEqList2 (k + 1) s₀ a1 b1 a2 b2) fun k m s ⟨hS, ha1, hb1, ha2, hb2⟩ => ?_
   rw [natEqList2W.arm1]
@@ -230,8 +230,8 @@ l_model natEqList3_specW (p : Prog) (hp : p.lookup "nat_eq_list3" = some natEqLi
   grind [arena_grind] bind ntBW
 
 theorem natEqList3_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 : Word) :
-    CallRef p "nat_eq_list3" [a1, b1, a2, b2, a3, b3] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2 ∧ H a3 ∧ H b3)
-      (pure [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3)] : AM (List (EIdx × EIdx))) (KeepPost dn vis fe decEqRL) := by
+    CallRef p "nat_eq_list3" [a1, b1, a2, b2, a3, b3] (fun m s => StageR vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2 ∧ H a3 ∧ H b3)
+      (pure [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3)] : AM (List (EIdx × EIdx))) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqList3W p (k + 1) mm a1 b1 a2 b2 a3 b3)
     (fun k s₀ => natEqList3_specW p hN.lNatEqList3 (k + 1) s₀ a1 b1 a2 b2 a3 b3) fun k m s ⟨hS, ha1, hb1, ha2, hb2, ha3, hb3⟩ => ?_
   rw [natEqList3W.arm1]
@@ -247,8 +247,8 @@ l_model natEqList4_specW (p : Prog) (hp : p.lookup "nat_eq_list4" = some natEqLi
   grind [arena_grind] bind ntBW
 
 theorem natEqList4_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 a4 b4 : Word) :
-    CallRef p "nat_eq_list4" [a1, b1, a2, b2, a3, b3, a4, b4] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2 ∧ H a3 ∧ H b3 ∧ H a4 ∧ H b4)
-      (pure [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3), (decE a4, decE b4)] : AM (List (EIdx × EIdx))) (KeepPost dn vis fe decEqRL) := by
+    CallRef p "nat_eq_list4" [a1, b1, a2, b2, a3, b3, a4, b4] (fun m s => StageR vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2 ∧ H a3 ∧ H b3 ∧ H a4 ∧ H b4)
+      (pure [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3), (decE a4, decE b4)] : AM (List (EIdx × EIdx))) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqList4W p (k + 1) mm a1 b1 a2 b2 a3 b3 a4 b4)
     (fun k s₀ => natEqList4_specW p hN.lNatEqList4 (k + 1) s₀ a1 b1 a2 b2 a3 b3 a4 b4) fun k m s ⟨hS, ha1, hb1, ha2, hb2, ha3, hb3, ha4, hb4⟩ => ?_
   rw [natEqList4W.arm1]
@@ -277,8 +277,8 @@ l_model natEqPr_specW (p : Prog) (hp : p.lookup "nat_eq_pr" = some natEqPr)
   grind [arena_grind] bind ntBW
 
 theorem natEqPr_ref (hN : NatEqProg p) (c z x sx : Word) :
-    CallRef p "nat_eq_pr" [c, z, x, sx] (fun m s => StageR dn vis fe m s ∧ H c ∧ H z ∧ H x ∧ H sx)
-      (natEqPrT (decI c) (decE z) (decE x) (decE sx)) (KeepPost dn vis fe decEqRL) := by
+    CallRef p "nat_eq_pr" [c, z, x, sx] (fun m s => StageR vis fe m s ∧ H c ∧ H z ∧ H x ∧ H sx)
+      (natEqPrT (decI c) (decE z) (decE x) (decE sx)) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqPrW p (k + 1) mm c z x sx) (fun k s₀ => natEqPr_specW p hN.lNatEqPr (k + 1) s₀ c z x sx)
     fun k m s ⟨hS, h_c, h_z, h_x, h_sx⟩ => ?_
   rw [natEqPrW.arm1]; unfold natEqPrT
@@ -304,8 +304,8 @@ l_model natEqUn_specW (p : Prog) (hp : p.lookup "nat_eq_un" = some natEqUn)
   grind [arena_grind] bind ntBW
 
 theorem natEqUn_ref (hN : NatEqProg p) (c x y z sy w : Word) :
-    CallRef p "nat_eq_un" [c, x, y, z, sy, w] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H w)
-      (natEqUnT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI w)) (KeepPost dn vis fe decEqRL) := by
+    CallRef p "nat_eq_un" [c, x, y, z, sy, w] (fun m s => StageR vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H w)
+      (natEqUnT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI w)) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqUnW p (k + 1) mm c x y z sy w) (fun k s₀ => natEqUn_specW p hN.lNatEqUn (k + 1) s₀ c x y z sy w)
     fun k m s ⟨hS, h_c, h_x, h_y, h_z, h_sy, h_w⟩ => ?_
   rw [natEqUnW.arm1]; unfold natEqUnT
@@ -335,8 +335,8 @@ l_model natEqMu_specW (p : Prog) (hp : p.lookup "nat_eq_mu" = some natEqMu)
   grind [arena_grind] bind ntBW
 
 theorem natEqMu_ref (hN : NatEqProg p) (c x y z sy ad : Word) :
-    CallRef p "nat_eq_mu" [c, x, y, z, sy, ad] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H ad)
-      (natEqMuT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI ad)) (KeepPost dn vis fe decEqRL) := by
+    CallRef p "nat_eq_mu" [c, x, y, z, sy, ad] (fun m s => StageR vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H ad)
+      (natEqMuT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI ad)) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqMuW p (k + 1) mm c x y z sy ad) (fun k s₀ => natEqMu_specW p hN.lNatEqMu (k + 1) s₀ c x y z sy ad)
     fun k m s ⟨hS, h_c, h_x, h_y, h_z, h_sy, h_ad⟩ => ?_
   rw [natEqMuW.arm1]; unfold natEqMuT
@@ -367,8 +367,8 @@ l_model natEqPo_specW (p : Prog) (hp : p.lookup "nat_eq_po" = some natEqPo)
   grind [arena_grind] bind ntBW
 
 theorem natEqPo_ref (hN : NatEqProg p) (c x y z sy sN mu : Word) :
-    CallRef p "nat_eq_po" [c, x, y, z, sy, sN, mu] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H sN ∧ H mu)
-      (natEqPoT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI sN) (decI mu)) (KeepPost dn vis fe decEqRL) := by
+    CallRef p "nat_eq_po" [c, x, y, z, sy, sN, mu] (fun m s => StageR vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H sN ∧ H mu)
+      (natEqPoT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI sN) (decI mu)) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqPoW p (k + 1) mm c x y z sy sN mu) (fun k s₀ => natEqPo_specW p hN.lNatEqPo (k + 1) s₀ c x y z sy sN mu)
     fun k m s ⟨hS, h_c, h_x, h_y, h_z, h_sy, h_sN, h_mu⟩ => ?_
   rw [natEqPoW.arm1]; unfold natEqPoT
@@ -401,8 +401,8 @@ l_model natEqBe_specW (p : Prog) (hp : p.lookup "nat_eq_be" = some natEqBe)
   grind [arena_grind] bind ntBW
 
 theorem natEqBe_ref (hN : NatEqProg p) (c x y z sx sy bT bF : Word) :
-    CallRef p "nat_eq_be" [c, x, y, z, sx, sy, bT, bF] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sx ∧ H sy ∧ H bT ∧ H bF)
-      (natEqBeT (decI c) (decE x) (decE y) (decE z) (decE sx) (decE sy) (decE bT) (decE bF)) (KeepPost dn vis fe decEqRL) := by
+    CallRef p "nat_eq_be" [c, x, y, z, sx, sy, bT, bF] (fun m s => StageR vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sx ∧ H sy ∧ H bT ∧ H bF)
+      (natEqBeT (decI c) (decE x) (decE y) (decE z) (decE sx) (decE sy) (decE bT) (decE bF)) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqBeW p (k + 1) mm c x y z sx sy bT bF) (fun k s₀ => natEqBe_specW p hN.lNatEqBe (k + 1) s₀ c x y z sx sy bT bF)
     fun k m s ⟨hS, h_c, h_x, h_y, h_z, h_sx, h_sy, h_bT, h_bF⟩ => ?_
   rw [natEqBeW.arm1]; unfold natEqBeT
@@ -434,8 +434,8 @@ l_model natEqBl_specW (p : Prog) (hp : p.lookup "nat_eq_bl" = some natEqBl)
   grind [arena_grind] bind ntBW
 
 theorem natEqBl_ref (hN : NatEqProg p) (c x y z sx sy bT bF : Word) :
-    CallRef p "nat_eq_bl" [c, x, y, z, sx, sy, bT, bF] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sx ∧ H sy ∧ H bT ∧ H bF)
-      (natEqBlT (decI c) (decE x) (decE y) (decE z) (decE sx) (decE sy) (decE bT) (decE bF)) (KeepPost dn vis fe decEqRL) := by
+    CallRef p "nat_eq_bl" [c, x, y, z, sx, sy, bT, bF] (fun m s => StageR vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sx ∧ H sy ∧ H bT ∧ H bF)
+      (natEqBlT (decI c) (decE x) (decE y) (decE z) (decE sx) (decE sy) (decE bT) (decE bF)) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqBlW p (k + 1) mm c x y z sx sy bT bF) (fun k s₀ => natEqBl_specW p hN.lNatEqBl (k + 1) s₀ c x y z sx sy bT bF)
     fun k m s ⟨hS, h_c, h_x, h_y, h_z, h_sx, h_sy, h_bT, h_bF⟩ => ?_
   rw [natEqBlW.arm1]; unfold natEqBlT

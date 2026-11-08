@@ -76,7 +76,7 @@ theorem step_pmemo : (∀ b ∈ stepA, b.arr < 146 ∨ 149 < b.arr) ∧
 
 theorem LoopR.of_step {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis vis' : Word} {fe fe' : IFEnv}
     {pend : Array PendingCheck} {ds : Array IDeclaration} (h : LoopR pins dn m a vis fe pend ds)
-    (hS : L.Ind.StageR dn vis' fe' m' a') (hf : MemFrame stepA stepC m m')
+    (hS : L.Ind.StageR vis' fe' m' a') (hf : MemFrame stepA stepC m m')
     (hx : ArrExt (erecP m) (erecP m')) : LoopR pins dn m' a' vis' fe' pend ds := by
   have hP : m'.arr64 PEND = m.arr64 PEND := hf.arr _ step_keeps.1 (by decide)
   have hD1 : m'.arr64 DECL = m.arr64 DECL := hf.arr _ step_keeps.2.1 (by decide)

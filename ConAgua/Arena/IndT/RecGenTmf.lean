@@ -118,7 +118,7 @@ major's record at the result word, the stage, the growth, `PosMR`, `AbsOK`. -/
 structure TmoPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (w : Word)
     (m' : Mem) (x : TargetMajor) (a' : AState) : Prop where
   dec : DecB (fun m => decTM m w.toNat) m' x
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   pos : PosMR m'
   abs : AbsOK m'
@@ -142,7 +142,7 @@ theorem trans (h₁ : TmAt dn vis fe env m₀ a₀ m₁ a₁) (h₂ : TmAt dn vi
   ⟨h₂.stage, h₂.abs, h₂.pos, h₁.grow.trans h₂.grow, h₁.ext.trans h₂.ext⟩
 
 /-- A step that con-ron calls a `PStep`. -/
-theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR dn vis fe m a) (hA : AbsOK m)
+theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR vis fe m a) (hA : AbsOK m)
     (hg : IWGrow m₀ m) (hP : PosMR m) (hp : PStep a₀ a) : TmAt dn vis fe env m₀ a₀ m a :=
   ⟨h.of_pstep hS hA hp, hA, hP, hg, hp.ext⟩
 
@@ -247,7 +247,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
     (hLC : LvlCacheProg p) {env : ConLeche.Env} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) {m : Mem} {a : AState}
     {pp pfo pfl I us ao al mno mnl : Word} {bs : BlockShape} {pfvs args : List EIdx} {ws : List Word}
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hq9 : pp.toNat + 9 ≤ iwTop m)
+    (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hq9 : pp.toNat + 9 ≤ iwTop m)
     (hws : SlR m mno mnl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hwsb : ∀ i < mnl.toNat, mno.toNat + i < iwTop m) (hnames : ws.map (fun w => (decI w : NIdx)) = bs.memberNames)
     (hag : DecB (fun m => decHL m ao.toNat al.toNat) m args) (hagb : ao.toNat + al.toNat ≤ iwTop m)
@@ -379,7 +379,7 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
     (n : Nat) {m : Mem} {a : AState}
     {pp cao cal pfo pfl fvo fvl ao al x y : Word} {bs : BlockShape}
     {css : List (List (IConstantVal × Nat))} {pfvs fvs args : List EIdx}
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
+    (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hcss : PSlR decCNS css cao cal m) (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs)
     (hfv : DecB (fun m => decHL m fvo.toNat fvl.toNat) m fvs) (hfvb : fvo.toNat + fvl.toNat ≤ iwTop m)
     (hag : DecB (fun m => decHL m ao.toNat al.toNat) m args) (hagb : ao.toNat + al.toNat ≤ iwTop m)
@@ -414,7 +414,7 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
     obtain ⟨o, l, -, hl', hg'⟩ := decAt_some (decBS_some hqd).1
     have := iwN_rdW hl' (by omega); rw [BlockShape.k, decPL_length _ hg']; exact this.2
   rw [UInt64.toNat_ofNat_of_lt' hkb] at hroom
-  have hS4 : StageR dn vis fe s4.mem a := stage_frame_iw hS hf4 (by
+  have hS4 : StageR vis fe s4.mem a := stage_frame_iw hS hf4 (by
     rw [← ht4]; simp only [iwTop] at hroom ⊢; omega)
   have k4 := TmAt.pstep hC hS4 (memberNamesW_afr (hs4' ▸ hW4) hA) hg4 (hPm.fr (MFr.of_iw hf4))
     (PStep.refl hC.check.state)
@@ -461,7 +461,7 @@ theorem tmf_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
     (n : Nat) {m : Mem} {a : AState}
     {pp cao cal pfo pfl fvo fvl mty : Word} {bs : BlockShape}
     {css : List (List (IConstantVal × Nat))} {pfvs fvs : List EIdx}
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
+    (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hcss : PSlR decCNS css cao cal m) (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs)
     (hfv : DecB (fun m => decHL m fvo.toNat fvl.toNat) m fvs) (hfvb : fvo.toNat + fvl.toNat ≤ iwTop m)
     (hmty : H mty) (hPm : PosMR m)

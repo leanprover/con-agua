@@ -136,11 +136,11 @@ theorem decPL_head {m : Mem} {α : Type} {f : Nat → Option α} {o k : Nat} {x 
 
 theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m0 m m' : Mem) (a : AState) (ro rl : Word) (r : List Word) (recs : List RecShape),
-    recUW n m ro rl = some (r, m') → IWGrow m0 m → StageR dn vis fe m a →
+    recUW n m ro rl = some (r, m') → IWGrow m0 m → StageR vis fe m a →
     (∀ m'', IWGrow m0 m'' → decPL m'' (decRS m'') ro.toNat rl.toNat = some recs) →
     ro.toNat + rl.toNat < 2 ^ 64 →
     ∃ b a', (ConRon.Arena.blockRecNamesUnreserved recs).run a = .ok (b, a') ∧
-      r = [if b then 1 else 0] ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      r = [if b then 1 else 0] ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   induction n with
   | zero => intro dn fe vis m0 m m' a ro rl r recs h; simp [recUW] at h
   | succ n ih =>
@@ -216,14 +216,14 @@ record lies below the pool's top). -/
 theorem blockRecNamesUnreserved_refines (p : Prog)
     (hp : p.lookup "block_rec_names_unreserved" = some blockRecNamesUnreserved) (hrrn : RrnF p)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-    (vis ro rl : Word) (recs : List RecShape) (hS : StageR dn vis fe s₀.mem a₀)
+    (vis ro rl : Word) (recs : List RecShape) (hS : StageR vis fe s₀.mem a₀)
     (hstab : ∀ m'', IWGrow s₀.mem m'' → decPL m'' (decRS m'') ro.toNat rl.toNat = some recs)
     (hb : ro.toNat + rl.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_names_unreserved" [ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.blockRecNamesUnreserved recs) a₀ ∧
       r = [if AM.res (ConRon.Arena.blockRecNamesUnreserved recs) a₀ then 1 else 0] ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockRecNamesUnreserved recs) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.blockRecNamesUnreserved recs) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (blockRecNamesUnreserved_spec p hp hrrn n s₀ ro rl) ?_
   rintro r s' ⟨hl, hm⟩
@@ -237,7 +237,7 @@ theorem blockRecNamesUnreserved_refines (p : Prog)
 /-- A block: an `EREC` slice of constant-record pointers, decoded. -/
 def decEBlk (dn : NIdx → Option ConLeche.Name) (m : Mem) (off cnt : Nat) :
     Option (List IConstantInfo) :=
-  (List.range cnt).mapM fun j => do decCI (erA m) dn (← nat? (erA m) (off + j))
+  (List.range cnt).mapM fun j => do decCI (erA m) (← nat? (erA m) (off + j))
 
 /-! ## `block_shape_with_sort` -/
 
@@ -445,8 +445,8 @@ theorem wsWrites_frame (m : Mem) (q p s f : Word) : MemFrame [IW] [] m (wsWrites
 
 /-- Writing a fresh record above the top (given the pool's sizes) keeps the stage relation. -/
 theorem stage_frame_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} (hS : StageR dn vis fe m a) (hf : MemFrame [IW] [200] m m')
-    (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR dn vis fe m' a := by
+    {a : AState} (hS : StageR vis fe m a) (hf : MemFrame [IW] [200] m m')
+    (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR vis fe m' a := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
@@ -474,14 +474,14 @@ theorem lvlEq_prop {m : Mem} {r2 : List Word} {f : Word} {x2 : Option Bool}
 
 theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (p s : Word) (r : List Word) (bs : BlockShape)
-    (h : wsC cR n m p s = some (r, m')) (hS : StageR dn vis fe m a) (hs : s.toNat < 2 ^ 32)
+    (h : wsC cR n m p s = some (r, m')) (hS : StageR vis fe m a) (hs : s.toNat < 2 ^ 32)
     (hstab : ∀ m'', IWGrow m m'' → decBS m'' p.toNat = some bs) (hp : p.toNat + 9 ≤ iwTop m)
     (hlvl : ∀ (k : Nat) (r2 : List Word) (m2 : Mem), pinW m 0 ≠ 0 →
       cR k "lvl_eq_c" [s, pinW m 53] m = some (r2, m2) →
       ∃ x2 a2, (lvlEq? (decI s) (decI (pinW m 53))).run a = .ok (x2, a2) ∧
-        StageR dn vis fe m2 a2 ∧ IWGrow m m2 ∧ decLvlEq m2 r2 x2) :
+        StageR vis fe m2 a2 ∧ IWGrow m m2 ∧ decLvlEq m2 r2 x2) :
     ∃ bs' a' q, (BlockShape.withSort bs (decI s)).run a = .ok (bs', a') ∧ r = [q] ∧
-      decBS m' q.toNat = some bs' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      decBS m' q.toNat = some bs' ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       q.toNat + 9 ≤ iwTop m' ∧
       (∀ j, j < 9 → j ≠ 6 → j ≠ 8 → (m'.arr64 IW)[q.toNat + j]? = (m'.arr64 IW)[p.toNat + j]?) ∧
       (DecB (fun m => decBS m p.toNat) m bs → DecB (fun m => decBS m q.toNat) m' bs') := by

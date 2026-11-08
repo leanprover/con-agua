@@ -29,9 +29,9 @@ open L.Arena
 
 theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
-    fdrW n m v o l = some (r, m') → StageR dn v fe m a → decHL m o.toNat l.toNat = some xs →
+    fdrW n m v o l = some (r, m') → StageR v fe m a → decHL m o.toNat l.toNat = some xs →
     o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m → AbsOK m →
-    ∃ b a', (fieldDomsResolve fe xs).run a = .ok (b, a') ∧ KeepPost dn v fe decW0B m m' a' r b ∧
+    ∃ b a', (fieldDomsResolve fe xs).run a = .ok (b, a') ∧ KeepPost v fe decW0B m m' a' r b ∧
       AbsOK m' := by
   induction n with
   | zero => intro m m' a v o l xs r h; simp [fdrW] at h
@@ -86,9 +86,9 @@ theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
 
 theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
-    iarW n m v o l = some (r, m') → StageR dn v fe m a → decHL m o.toNat l.toNat = some xs →
+    iarW n m v o l = some (r, m') → StageR v fe m a → decHL m o.toNat l.toNat = some xs →
     o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m → AbsOK m →
-    ∃ b a', (idxArgsResolve fe xs).run a = .ok (b, a') ∧ KeepPost dn v fe decW0B m m' a' r b ∧
+    ∃ b a', (idxArgsResolve fe xs).run a = .ok (b, a') ∧ KeepPost v fe decW0B m m' a' r b ∧
       AbsOK m' := by
   induction n with
   | zero => intro m m' a v o l xs r h; simp [iarW] at h
@@ -144,11 +144,11 @@ theorem fieldDomsResolve_refines (p : Prog)
     (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (hftd : FtdF p) (hcr : CrfF p) (n : Nat)
     (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
-    (hS : StageR dn vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
+    (hS : StageR vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
     (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "field_doms_resolve" [vis0, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (fieldDomsResolve fe₀ xs) a₀ ∧
-      KeepPost dn vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (fieldDomsResolve fe₀ xs) a₀) r
+      KeepPost vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (fieldDomsResolve fe₀ xs) a₀) r
         (AM.res (fieldDomsResolve fe₀ xs) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (fdrW_spec p hp hftd hcr n s₀ vis0 o l) ?_
   rintro r s' ⟨hl, hm⟩
@@ -163,11 +163,11 @@ at the view `vis0` of the pre-block environment `fe₀`. -/
 theorem idxArgsResolve_refines (p : Prog)
     (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (hcr : CrfF p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
-    (hS : StageR dn vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
+    (hS : StageR vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
     (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_args_resolve" [vis0, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (idxArgsResolve fe₀ xs) a₀ ∧
-      KeepPost dn vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (idxArgsResolve fe₀ xs) a₀) r
+      KeepPost vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (idxArgsResolve fe₀ xs) a₀) r
         (AM.res (idxArgsResolve fe₀ xs) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (iarW_spec p hp hcr n s₀ vis0 o l) ?_
   rintro r s' ⟨hl, hm⟩

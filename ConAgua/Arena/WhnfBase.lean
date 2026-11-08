@@ -23,7 +23,7 @@ Everything the L code of `whnfCore`/`whnf` and their arms (`WhnfSpine.lean`, `Wh
 **Arguments.** The twin's bodies take `mode : CheckMode`, the knot record `r : CoreFnsA`, the
 environment view `fe : IFEnv` and `depth : Nat`. In L: a mode word (`decMode`: `0` verified, `1`
 trusted, `2` verified-eager, `3` trusted-eager; bit 0 is "trusted", bit 1 "eager"), the view word
-`vis` (`EnvR dn m vis fe`), the depth word; the record is the program itself (the knot's slots
+`vis` (`EnvR m vis fe`), the depth word; the record is the program itself (the knot's slots
 are L functions, `whnf_core`, `whnf`, `infer`, `infer_io`, `defeq`), tied at the twin's knot
 `coreKnot mode fe id F` for every `F` at or above the L fuel (the `GoOK` shape of `WalkRefine`).
 
@@ -494,7 +494,7 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   arena : ArenaD m a
   core : CoreRM m a.caches M eb
   pins : PinsFull m a.pins
-  env : EnvR dn m vis fe
+  env : EnvR m vis fe
   /-- The twin's readback caches hold readbacks (L has no readback; the twin computes on them). -/
   readL : ReadLCOK a
   readLs : ReadLsCOK a

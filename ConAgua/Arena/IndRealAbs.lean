@@ -365,9 +365,9 @@ well-formed `abstract1` memo** (replaces `IndStubs.abstract1Fast_spec`); the mem
 after. -/
 theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e d k : Word)
     (he : H e) :
-    RelW abF [CWF, e, d, k] (fun m a => StageR dn vis fe m a ∧ AbsOK m)
+    RelW abF [CWF, e, d, k] (fun m a => StageR vis fe m a ∧ AbsOK m)
       (abstract1Fast CWF.toNat (decI e) d.toNat k.toNat)
-      (fun m m' a r x => KeepPost dn vis fe decW0E m m' a r x ∧ AbsOK m') := by
+      (fun m m' a r x => KeepPost vis fe decW0E m m' a r x ∧ AbsOK m') := by
   intro m m' a r h ⟨hS, ⟨mp, hmp⟩, hI1, hCr, hIl, hWk⟩
   have hfr := abF_frame h
   obtain ⟨n, hc⟩ := callF_run h

@@ -38,9 +38,9 @@ open L.Arena
 theorem clsConsW {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
-    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
       MFr [] [] m m' := by
   obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf h hS hxs.bound hxs.dec hy
   exact ⟨hS', hg, ⟨hd, Nat.le_of_eq htop⟩, consW_mfr h⟩
@@ -49,9 +49,9 @@ theorem clsConsW {α : Type} {f : Mem → Nat → Option α}
 theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
-    (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
       MFr [] [] m m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (slCons_specW p hP.rx.ha hP.copy hP.cons n _ x o l) h
@@ -72,7 +72,7 @@ l_model ckkE_spec (p : Prog) (hP : KeysProg p)
 slice `[r₀, r₁]`, the stage invariant, the growth, the frame. -/
 structure CkkPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)
     (m' : Mem) (ks : List ClassKey) (a' : AState) : Prop where
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   keys : PSlR decCK ks (r.headD 0) (r.tail.headD 0) m'
   pos : PosMR m'
@@ -82,7 +82,7 @@ structure CkkPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 theorem ckk_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (nP po pl : Word) (pfvs : List EIdx) (n : Nat) :
     ∀ (m : Mem) (a : AState) (ko kl : Word) (ks : List ClassKey),
-    StageR dn vis fe m a → DecB (fun m => decHL m po.toNat pl.toNat) m pfvs →
+    StageR vis fe m a → DecB (fun m => decHL m po.toNat pl.toNat) m pfvs →
     po.toNat + pl.toNat ≤ iwTop m → PSlR decCK ks ko kl m → PosMR m →
     RefE (closedNV p _root_.L.Checker.nvFns = true) (ckkE p n m nP po pl ko kl)
       (ks.mapM (ConRon.Arena.classKeyOf nP.toNat pfvs)) a

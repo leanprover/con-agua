@@ -29,7 +29,7 @@ refinement, under the walk memos, kept after; the class generator decoded below 
 @[refines ConRon.Arena.ClassGen.major]
 theorem classGenMajor_refines (p : Prog) (hp : MjProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g c d : Word) (G : ClassGen)
-    (hS : StageR dn vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
+    (hS : StageR vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
     (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_major" [g, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.major G c.toNat d.toNat) a₀ ∧
@@ -43,7 +43,7 @@ theorem classGenMajor_refines (p : Prog) (hp : MjProg p) (n : Nat) (s₀ : St) (
 @[refines ConRon.Arena.ClassGen.motiveTy]
 theorem classGenMotiveTy_refines (p : Prog) (hp : MtProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g c d : Word) (G : ClassGen)
-    (hS : StageR dn vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G) (hA : AbsOK s₀.mem) :
+    (hS : StageR vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_motive_ty" [g, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a₀ ∧
       KP dn vis fe s₀.mem decOE (r, s'.mem) (AM.st (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a₀)

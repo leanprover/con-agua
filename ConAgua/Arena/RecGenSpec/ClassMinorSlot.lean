@@ -129,11 +129,11 @@ theorem leafAt_spec (p : Prog) (hp : p.lookup "class_leaf_at" = some classLeafAt
     finish (gen := 20) [leafAtW, rdW_eq]
 
 theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
-    (a : AState) (Mp leaf : Word) (bigM : TargetMajor) (r : List Word) (hS : StageR dn vis fe m a)
+    (a : AState) (Mp leaf : Word) (bigM : TargetMajor) (r : List Word) (hS : StageR vis fe m a)
     (hl : H leaf) (hM : decTM m Mp.toNat = some bigM) (hMt : Mp.toNat < iwTop m)
     (h : leafAtW m Mp leaf = some (r, m')) :
     ∃ b a', (ConRon.Arena.classLeafAt bigM (decI leaf)).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧ (r.headD 0).toNat ≤ 1 := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧ (r.headD 0).toNat ≤ 1 := by
   simp only [leafAtW] at h
   rcases hs : gafF m [CWF, leaf] with _ | ⟨r1, m1⟩ <;> simp only [hs, reduceCtorEq] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF leaf hl m m1 a r1 hs hS
@@ -206,11 +206,11 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
 theorem classLeafAt_refines (p : Prog) (hp : p.lookup "class_leaf_at" = some classLeafAtL)
     (hv : p.lookup "e_view" = some eView) (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (Mp leaf : Word) (bigM : TargetMajor)
-    (hS : StageR dn vis fe s₀.mem a₀) (hl : H leaf) (hM : decTM s₀.mem Mp.toNat = some bigM)
+    (hS : StageR vis fe s₀.mem a₀) (hl : H leaf) (hM : decTM s₀.mem Mp.toNat = some bigM)
     (hMt : Mp.toNat < iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_leaf_at" [Mp, leaf]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       ((r.headD 0 != 0) = AM.res (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀ ∧ (r.headD 0).toNat ≤ 1);
       ⊤⦄ := by

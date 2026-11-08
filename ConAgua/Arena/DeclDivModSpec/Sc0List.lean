@@ -49,9 +49,9 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 set_option maxHeartbeats 1600000 in
 theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
     CallRef p "div_mod_cert_applied" [pr, ho, hl]
-      (fun m s => StageR dn vis fe m s ∧ H pr ∧ decHL m ho.toNat hl.toNat = some hyps ∧
+      (fun m s => StageR vis fe m s ∧ H pr ∧ decHL m ho.toNat hl.toNat = some hyps ∧
         ho.toNat + hl.toNat ≤ iwTop m)
-      (divModCertApplied (decE pr) hyps) (KeepPost dn vis fe decW0E) := by
+      (divModCertApplied (decE pr) hyps) (KeepPost vis fe decW0E) := by
   refine CallRef.of_sim (M := fun k mq => appliedW p (k + 1) mq pr ho hl)
     (fun k s₀ => applied_specW p hD.lDivModCertApplied (k + 1) s₀ pr ho hl) fun k m s ⟨hS, hpr, hd, hb⟩ => ?_
   rw [appliedW.arm1]; unfold divModCertApplied
@@ -97,10 +97,10 @@ l_model sc0List_specW (p : Prog) (hp : p.lookup "subst_const0_list" = some subst
 
 theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (hn : H nm) (hr : H r) :
     ∀ (hyps : List EIdx) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
-      StageR dn vis fe m a → decHL m o.toNat l.toNat = some hyps → o.toNat + l.toNat ≤ iwTop m →
+      StageR vis fe m a → decHL m o.toNat l.toNat = some hyps → o.toNat + l.toNat ≤ iwTop m →
       callW p k "subst_const0_list" [nm, r, o, l] m = some (res, m') →
       ∃ x a', (substConst0List (decI nm) (decE r) hyps).run a = .ok (x, a') ∧
-        KeepPost dn vis fe (decRL (fun m => decHL m) 0) m m' a' res x := by
+        KeepPost vis fe (decRL (fun m => decHL m) 0) m m' a' res x := by
   intro hyps
   induction hyps with
   | nil =>

@@ -62,7 +62,7 @@ growth, the kinds a slice stable above `m`'s top, `nest_occ`'s memo relation at 
 write set outside the other walk memos, the abstraction memo's frame. -/
 structure CfgPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)
     (m' : Mem) (ks : List ClassField) (a' : AState) : Prop where
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   kinds : SPLA (iwTop m) decCF m' (r.headD 0).toNat (r.tail.headD 0).toNat ks
   nomr : ∃ mp, noMR m' mp
@@ -77,12 +77,12 @@ variable {p : Prog}
 theorem cfgTailE {G : Prop} {n : Nat} {m m2 m5 : Mem} {a2 : AState} {k : Word} {ws r5 : List Word}
     {y : ClassField} {mp : Std.HashMap EIdx Bool} {mo ml io il i fo fl : Word}
     {opR : AM (List ClassField)}
-    (hS2 : StageR dn vis fe m2 a2) (hg2 : IWGrow m m2) (hM2 : noMR m2 mp)
+    (hS2 : StageR vis fe m2 a2) (hg2 : IWGrow m m2) (hM2 : noMR m2 mp)
     (hf2 : MFr [NOM] [204, 205] m m2) (hA2 : AFr m m2) (hk : k.toNat = ws.length)
     (hy : ∀ m'', (∀ j (hj : j < ws.length), iwN m'' ((rdW (m2.arr64 CTL) 200).toNat + j) = some (ws[j]'hj).toNat) →
       decCF m'' (rdW (m2.arr64 CTL) 200).toNat = some y)
     (h5 : recW m2 k ws = some (r5, m5))
-    (hrest : StageR dn vis fe m5 a2 → IWGrow m2 m5 → noMR m5 mp →
+    (hrest : StageR vis fe m5 a2 → IWGrow m2 m5 → noMR m5 mp →
       RefE G (cfgE p n m5 mo ml io il (i + 1) (fo + 1) (fl - 1)) opR a2
         (fun v ks a' => CfgPost dn vis fe m5 v.1 v.2 ks a')) :
     RefE G (cfgE.j1 p n mo ml io il i fo fl (r5.headD 0) m5) (do let r ← opR; pure (y :: r)) a2
@@ -115,7 +115,7 @@ cons; the one reject site (neither kind) is the twin's `fail`. -/
 theorem cfg_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     ∀ {m : Mem} {a : AState} {mo ml io il i fo fl : Word} {fs : List EIdx}
     {mp0 : Std.HashMap EIdx Bool},
-    StageR dn vis fe m a →
+    StageR vis fe m a →
     decHL m mo.toNat ml.toNat = some bsh.memberNames → mo.toNat + ml.toNat ≤ iwTop m →
     StabD (fun m => decPL m (decNN m) io.toNat il.toNat) m ihs → io.toNat + il.toNat < 2 ^ 64 →
     decHL m fo.toNat fl.toNat = some fs → fo.toNat + fl.toNat ≤ iwTop m →
@@ -169,7 +169,7 @@ theorem cfg_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
   · rw [liftE_none, cfgE.k_class_fields_of_hits.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   obtain ⟨hcnt, hcls⟩ := cfhW_ok n m2 io il i hc cls ihs h3 (hih m2 hg12) hib hS2.iw.iwSize
-  have hrest : ∀ m5, StageR dn vis fe m5 a1 → IWGrow m2 m5 → noMR m5 ∅ →
+  have hrest : ∀ m5, StageR vis fe m5 a1 → IWGrow m2 m5 → noMR m5 ∅ →
       RefE (closedNV p _root_.L.Checker.nvFns = true) (cfgE p n m5 mo ml io il (i + 1) (fo + 1) (fl - 1))
         (ConRon.Arena.classFieldsOf bsh ihs (i.toNat + 1) fs') a1
         (fun v ks a' => CfgPost dn vis fe m5 v.1 v.2 ks a') := by
@@ -257,7 +257,7 @@ variable {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
 (`block_shape_member_names`, outside the verdict closure), then `class_fields_of_go` (`cfg_ref`) in
 tail position. -/
 theorem cfo_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) {m : Mem} {a : AState}
-    {q io il i fo fl : Word} {fs : List EIdx} {mp0 : Std.HashMap EIdx Bool} (hS : StageR dn vis fe m a)
+    {q io il i fo fl : Word} {fs : List EIdx} {mp0 : Std.HashMap EIdx Bool} (hS : StageR vis fe m a)
     (hb : BSOK m q.toNat bsh) (hih : StabD (fun m => decPL m (decNN m) io.toNat il.toNat) m ihs)
     (hib : io.toNat + il.toNat < 2 ^ 64) (hfs : decHL m fo.toNat fl.toNat = some fs)
     (hfb : fo.toNat + fl.toNat ≤ iwTop m) (hi : i.toNat + fl.toNat < 2 ^ 64) (hM : noMR m mp0) :
@@ -287,7 +287,7 @@ needed before and holds after (at some map). -/
 theorem classFieldsOf_refines (hp : CfoProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (q io il i fo fl : Word) (bsh : BlockShape)
     (ihs : List (Nat × Nat)) (fs : List EIdx) (mp0 : Std.HashMap EIdx Bool)
-    (hS : StageR dn vis fe s₀.mem a₀) (hb : BSOK s₀.mem q.toNat bsh)
+    (hS : StageR vis fe s₀.mem a₀) (hb : BSOK s₀.mem q.toNat bsh)
     (hih : StabD (fun m => decPL m (decNN m) io.toNat il.toNat) s₀.mem ihs) (hib : io.toNat + il.toNat < 2 ^ 64)
     (hfs : decHL s₀.mem fo.toNat fl.toNat = some fs) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem)
     (hi : i.toNat + fl.toNat < 2 ^ 64) (hM : noMR s₀.mem mp0) :

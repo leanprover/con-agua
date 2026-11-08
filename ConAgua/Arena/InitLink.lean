@@ -141,14 +141,14 @@ theorem ienvEmpty_refines (dn : NIdx → Option ConLeche.Name) (sz : TieredArray
 /-- **`mkIFEnv IEnv.empty` is the zeroed environment index** (view word `0`): rows empty, count `0`. -/
 @[refines ConRon.Arena.mkIFEnv]
 theorem mkIFEnv_empty_refines (dn : NIdx → Option ConLeche.Name) (sz : TieredArray → Nat) :
-    EnvR dn (initMem sz) 0 (mkIFEnv IEnv.empty) :=
+    EnvR (initMem sz) 0 (mkIFEnv IEnv.empty) :=
   EnvR.init (initMem_row sz) (initMem_rd sz _ _) (initMem_tbl sz) (initMem_tcnt sz)
 
 /-- **The index build from the empty list** (`mkIFEnvGo []`): its counter is the view word `0` and
 its table the empty index of zeroed memory. -/
 @[refines ConRon.Arena.mkIFEnvGo]
 theorem mkIFEnvGo_empty_refines (dn : NIdx → Option ConLeche.Name) (sz : TieredArray → Nat) :
-    EnvR dn (initMem sz) (UInt64.ofNat (mkIFEnvGo IEnv.empty.consts).1)
+    EnvR (initMem sz) (UInt64.ofNat (mkIFEnvGo IEnv.empty.consts).1)
       ⟨IEnv.empty, (mkIFEnvGo IEnv.empty.consts).2, (mkIFEnvGo IEnv.empty.consts).1,
         mkIFEnvTblsGo IEnv.empty.tables⟩ :=
   EnvR.init (initMem_row sz) (initMem_rd sz _ _) (initMem_tbl sz) (initMem_tcnt sz)
@@ -157,7 +157,7 @@ theorem mkIFEnvGo_empty_refines (dn : NIdx → Option ConLeche.Name) (sz : Tiere
 record under, and what `decCI` reads (`IConstantInfo.name`, pure on the twin's side). -/
 @[refines ConRon.Arena.IConstantInfo.name]
 theorem iConstantInfo_name_refines {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a dn p = some ci) :
+    {ci : IConstantInfo} (h : decCI a p = some ci) :
     ∃ w, a[p + 1]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w :=
   decCI_name h
 

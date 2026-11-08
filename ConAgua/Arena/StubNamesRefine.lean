@@ -468,8 +468,8 @@ the twin's state are unchanged, and the word is `1` exactly when the twin answer
 @[refines ConRon.Arena.reservedRecName]
 theorem reservedRecName_refines {p : Prog} (hP : RrnProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (x : Word) (hx : H x) :
-    RefAM p "reserved_rec_name" [x] (StageR dn vis fe) (reservedRecName (decI x))
-      (KeepPost dn vis fe decW0B) := by
+    RefAM p "reserved_rec_name" [x] (StageR vis fe) (reservedRecName (decI x))
+      (KeepPost vis fe decW0B) := by
   refine CallRef.refAM (CallRef.of_succ fun k m a r m' hS hc => ?_)
   obtain ⟨s', rfl, -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (rrn_spec p hP.rrn hP.rc hP.rf hP.lg hP.pr hP.pin k _ x) hc

@@ -49,7 +49,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 /-- **`StageC` across a leaf whose twin op is a `CoreStep`** (`StageC.of_leaf` for twin ops that
 read through the walks' memos: con-ron gives `CheckOK` after rather than `IStepS`). -/
 theorem StageC.of_core {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR dn vis fe m' a') (hf : MemFrame leafA leafC m m') (hc : CoreStep V env fe a a') :
+    (hS : StageR vis fe m' a') (hf : MemFrame leafA leafC m m') (hc : CoreStep V env fe a a') :
     StageC dn vis fe env m' a' :=
   ⟨hS, hc.ok,
     ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,

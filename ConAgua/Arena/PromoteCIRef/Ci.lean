@@ -644,7 +644,7 @@ theorem ind_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
       (fun (x : IConstantVal × IIndCaps) a' pm' => ∃ (a1 : AState) (pm1 : PMemo),
         (promoteCV pm f.toNat cv).run a = .ok ((pm1, x.1), a1) ∧
         (promoteCaps pm1 f.toNat caps).run a1 = .ok ((pm', x.2), a'))
-      (fun x M d => decCV (erecP M) (d + 1) = some x.1 ∧ decCaps (erecP M) dn (d + 5) = some x.2) := by
+      (fun x M d => decCV (erecP M) (d + 1) = some x.1 ∧ decCaps (erecP M) (d + 5) = some x.2) := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>
@@ -1033,7 +1033,7 @@ theorem decCV_bound {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a 
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
 theorem decCaps_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
-    {caps : IIndCaps} (h : decCaps a dn q = some caps) : q + 14 < a.size := by
+    {caps : IIndCaps} (h : decCaps a q = some caps) : q + 14 < a.size := by
   obtain ⟨-, -, hc, -⟩ := decCaps_words h
   obtain ⟨o, c, -, hc1, -⟩ := hlist?_unfold hc
   obtain ⟨w, hw, -⟩ := nat?_get hc1
@@ -1101,7 +1101,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     ∃ a' pm' ci', (promoteCI pm f.toNat ci).run a = .ok ((pm', ci'), a') ∧ ArenaD m' a' ∧
       PMemoR m' pm' ∧ cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧
       ErecGrow m m' ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧ erecTop m ≤ (r.headD 0).toNat ∧
-      (r.headD 0).toNat < erecTop m' ∧ decCI (erecP m') dn (r.headD 0).toNat = some ci' := by
+      (r.headD 0).toNat < erecTop m' ∧ decCI (erecP m') (r.headD 0).toNat = some ci' := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>

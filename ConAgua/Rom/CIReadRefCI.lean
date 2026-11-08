@@ -139,7 +139,7 @@ def CIPost (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (a₀ : AState) (T 
     (r.tail.headD 0).toNat = q.toNat + (encCI seen c).1.length ∧
     EKeep (fun _ => False) m m' ∧ (r.headD 0).toNat = erTop m ∧ m'.arr64 IW = m.arr64 IW ∧
     Holds (fun i => erTop m ≤ i ∧ i < erTop m') (fun _ => False)
-      (fun m => decCI (erA m) dn (r.headD 0).toNat) m' ici
+      (fun m => decCI (erA m) (r.headD 0).toNat) m' ici
 
 section kinds
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)

@@ -229,8 +229,8 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
     exact tdec_mono hg₂₃.ext _ _ (fun i _ => by
       rw [hfr₃.1 ETAB (fun h => absurd (pnew_arrs' _ h) (by decide))
         (by decide)]) h0
-  have hE₃ : EnvR dn m₃ vis ⟨⟨Lc' ++ B, tables⟩, eraseInstalled idx Lc, vis.toNat, tbls⟩ :=
-    (show EnvR dn m₂ vis ⟨⟨consts, tables⟩, eraseInstalled idx Lc, vis.toNat, tbls⟩ from hE₂).promoted
+  have hE₃ : EnvR m₃ vis ⟨⟨Lc' ++ B, tables⟩, eraseInstalled idx Lc, vis.toNat, tbls⟩ :=
+    (show EnvR m₂ vis ⟨⟨consts, tables⟩, eraseInstalled idx Lc, vis.toNat, tbls⟩ from hE₂).promoted
       hEC₃rows (fun w hw => hfr₃.1 _ (fun h => by
         have h' := pnew_arrs' _ h; rw [tblArr_arr] at h'
         rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] at h' <;> revert h' <;> decide)

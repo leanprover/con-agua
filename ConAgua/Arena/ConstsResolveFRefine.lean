@@ -267,7 +267,7 @@ theorem envFindW_01 {m m1 : Mem} {w vis : Word} {r : List Word} (h : envFindW m 
 /-- **`env_find(w, vis)` as a call**: memory unchanged, and the word says whether `w` has a row in
 the environment. -/
 theorem envFind_callW {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
-    (hE : EnvR dn m vis fe) (hw : w.toNat < 2 ^ 32)
+    (hE : EnvR m vis fe) (hw : w.toNat < 2 ^ 32)
     (hc : callW p n "env_find" [w, vis] m = some (r, m')) :
     m' = m ∧ r.headD 0 = if (fe.find? (decI w)).isSome then 1 else 0 := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -290,7 +290,7 @@ theorem ite_beq0 (c : Bool) : ((if c = true then (1 : Word) else 0) == 0) = !c :
 /-- **`pin_found(vis, i)`**: memory unchanged, the flag set, `i < 51`, and the word says whether
 pin `i`'s name has a row. -/
 theorem pf_callW {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {a : AState}
-    (hS : StageR dn vis fe m a) (hc : callW p n "pin_found" [vis, i] m = some (r, m')) :
+    (hS : StageR vis fe m a) (hc : callW p n "pin_found" [vis, i] m = some (r, m')) :
     m' = m ∧ pinW m 0 ≠ 0 ∧ i.toNat < 51 ∧
       r.headD 0 = (if (fe.find? (decI (pinW m (1 + i.toNat)))).isSome then 1 else 0) ∧
       (r.headD 0 == 0) = !(fe.find? (decI (pinW m (1 + i.toNat)))).isSome := by
@@ -325,7 +325,7 @@ def pinsFound (fe : IFEnv) (m : Mem) (ks : List Word) : Bool :=
 
 /-- **`cr_lit_pins`' chain**: the memory unchanged, the flag set, and the answer is `0` iff a zero
 was seen before or a pin of `k₀ :: ks` has no row. -/
-theorem clpL_callW {n : Nat} {m : Mem} {a : AState} (hS : StageR dn vis fe m a) :
+theorem clpL_callW {n : Nat} {m : Mem} {a : AState} (hS : StageR vis fe m a) :
     ∀ (ks : List Word) (z : Bool) (k₀ : Word) (r : List Word) (m' : Mem),
     clpL p n vis z ks (callW p n "pin_found" [vis, k₀] m) = some (r, m') →
     m' = m ∧ pinW m 0 ≠ 0 ∧

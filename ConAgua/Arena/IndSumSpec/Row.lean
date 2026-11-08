@@ -69,9 +69,9 @@ end spec
 
 theorem plgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (o l : Word) (lps : List NIdx) (r : List Word),
-    plgW k m o l = some (r, m') → StageR dn vis fe m a → decHL m o.toNat l.toNat = some lps →
+    plgW k m o l = some (r, m') → StageR vis fe m a → decHL m o.toNat l.toNat = some lps →
     o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
-    ∃ us a', (paramLevels.go lps).run a = .ok (us, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ us a', (paramLevels.go lps).run a = .ok (us, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some us ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   induction k with
@@ -122,12 +122,12 @@ include ha hc hsc hg hpf hpp hip hp
 /-- **`param_levels_go` refines `paramLevels.go`** under the stage relation. -/
 @[refines ConRon.Arena.paramLevels.go]
 theorem paramLevelsGo_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (o l : Word) (lps : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (vis : Word) (fe : IFEnv) (o l : Word) (lps : List NIdx) (hS : StageR vis fe s₀.mem a₀)
     (hd : decHL s₀.mem o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat < 2 ^ 64)
     (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "param_levels_go" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (paramLevels.go lps) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (paramLevels.go lps) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (paramLevels.go lps) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat = some (AM.res (paramLevels.go lps) a₀) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop s'.mem; ⊤⦄ := by
   refine triple_post (plgW_spec p ha hc hsc hg hpf hpp hip hp k s₀ o l) ?_
@@ -266,13 +266,13 @@ theorem getDW_handle {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)}
 theorem colW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (uo ul so sl z j k acc : Word) (r : List Word)
       (used : List Bool) (sorts : List LIdx),
-    colW n m uo ul so sl z j k acc = some (r, m') → StageR dn vis fe m a →
+    colW n m uo ul so sl z j k acc = some (r, m') → StageR vis fe m a →
     decBL m uo.toNat ul.toNat = some used → decHL m so.toNat sl.toNat = some sorts →
     uo.toNat + ul.toNat < 2 ^ 64 → so.toNat + sl.toNat < 2 ^ 64 →
     uo.toNat + ul.toNat ≤ iwTop m → so.toNat + sl.toNat ≤ iwTop m →
     H z → H acc → j.toNat + k.toNat < 2 ^ 64 →
     ∃ x a', (structProjGuards.col sorts (decI z) used j.toNat k.toNat (decI acc)).run a =
-        .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ H (r.headD 0) ∧ decI (r.headD 0) = x := by
+        .ok (x, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ H (r.headD 0) ∧ decI (r.headD 0) = x := by
   induction n with
   | zero => intro m m' a uo ul so sl z j k acc r used sorts h; simp [colW] at h
   | succ n ih =>
@@ -339,7 +339,7 @@ theorem structProjGuardsCol_refines (p : Prog) (hgd : p.lookup "sl_getd" = some 
     (hp : p.lookup "struct_proj_guards_col" = some structProjGuardsColL) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (uo ul so sl z j k acc : Word) (used : List Bool) (sorts : List LIdx)
-    (hS : StageR dn vis fe s₀.mem a₀) (hu : decBL s₀.mem uo.toNat ul.toNat = some used)
+    (hS : StageR vis fe s₀.mem a₀) (hu : decBL s₀.mem uo.toNat ul.toNat = some used)
     (hs : decHL s₀.mem so.toNat sl.toNat = some sorts)
     (hub : uo.toNat + ul.toNat < 2 ^ 64) (hsb : so.toNat + sl.toNat < 2 ^ 64)
     (hut : uo.toNat + ul.toNat ≤ iwTop s₀.mem) (hst : so.toNat + sl.toNat ≤ iwTop s₀.mem)
@@ -347,7 +347,7 @@ theorem structProjGuardsCol_refines (p : Prog) (hgd : p.lookup "sl_getd" = some 
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_guards_col" [uo, ul, so, sl, z, j, k, acc]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (structProjGuards.col sorts (decI z) used j.toNat k.toNat (decI acc)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (structProjGuards.col sorts (decI z) used j.toNat k.toNat (decI acc)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (structProjGuards.col sorts (decI z) used j.toNat k.toNat (decI acc)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ H (r.headD 0) ∧
       decI (r.headD 0) = AM.res (structProjGuards.col sorts (decI z) used j.toNat k.toNat (decI acc)) a₀; ⊤⦄ := by
   refine triple_post (colW_spec p hgd hmf hmp him hp n s₀ uo ul so sl z j k acc) ?_
@@ -406,13 +406,13 @@ end spec
 theorem rowW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (uo ul so sl z i k : Word) (r : List Word)
       (used : List Bool) (sorts : List LIdx),
-    rowW n m uo ul so sl z i k = some (r, m') → StageR dn vis fe m a →
+    rowW n m uo ul so sl z i k = some (r, m') → StageR vis fe m a →
     decBL m uo.toNat ul.toNat = some used → decHL m so.toNat sl.toNat = some sorts →
     uo.toNat + ul.toNat < 2 ^ 64 → so.toNat + sl.toNat < 2 ^ 64 →
     uo.toNat + ul.toNat ≤ iwTop m → so.toNat + sl.toNat ≤ iwTop m →
     H z → i.toNat + k.toNat < 2 ^ 64 →
     ∃ gs a', (structProjGuards.row sorts (decI z) used i.toNat k.toNat).run a = .ok (gs, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some gs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   induction n with
@@ -472,7 +472,7 @@ theorem structProjGuardsRow_refines (p : Prog) (hgd : p.lookup "sl_getd" = some 
     (hp : p.lookup "struct_proj_guards_row" = some structProjGuardsRowL) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (uo ul so sl z i k : Word) (used : List Bool) (sorts : List LIdx)
-    (hS : StageR dn vis fe s₀.mem a₀) (hu : decBL s₀.mem uo.toNat ul.toNat = some used)
+    (hS : StageR vis fe s₀.mem a₀) (hu : decBL s₀.mem uo.toNat ul.toNat = some used)
     (hs : decHL s₀.mem so.toNat sl.toNat = some sorts)
     (hub : uo.toNat + ul.toNat < 2 ^ 64) (hsb : so.toNat + sl.toNat < 2 ^ 64)
     (hut : uo.toNat + ul.toNat ≤ iwTop s₀.mem) (hst : so.toNat + sl.toNat ≤ iwTop s₀.mem)
@@ -480,7 +480,7 @@ theorem structProjGuardsRow_refines (p : Prog) (hgd : p.lookup "sl_getd" = some 
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_guards_row" [uo, ul, so, sl, z, i, k]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (structProjGuards.row sorts (decI z) used i.toNat k.toNat) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (structProjGuards.row sorts (decI z) used i.toNat k.toNat) a₀) ∧
+      StageR vis fe s'.mem (AM.st (structProjGuards.row sorts (decI z) used i.toNat k.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (structProjGuards.row sorts (decI z) used i.toNat k.toNat) a₀) ∧
@@ -496,10 +496,10 @@ theorem structProjGuardsRow_refines (p : Prog) (hgd : p.lookup "sl_getd" = some 
 
 theorem psGoW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r : List Word),
-    psGoW n m o nP N k = some (r, m') → StageR dn vis fe m a →
+    psGoW n m o nP N k = some (r, m') → StageR vis fe m a →
     o.toNat + nP.toNat < 2 ^ 64 → k.toNat + N.toNat ≤ nP.toNat →
     ∃ xs a', (structPsAt.go o.toNat nP.toNat N.toNat k.toNat).run a = .ok (xs, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   induction n with
@@ -550,9 +550,9 @@ theorem psGoW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
 
 theorem psAtW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat)
     (m m' : Mem) (a : AState) (o nP : Word) (r : List Word)
-    (h : psAtW n m o nP = some (r, m')) (hS : StageR dn vis fe m a) (hon : o.toNat + nP.toNat < 2 ^ 64) :
+    (h : psAtW n m o nP = some (r, m')) (hS : StageR vis fe m a) (hon : o.toNat + nP.toNat < 2 ^ 64) :
     ∃ xs a', (structPsAt o.toNat nP.toNat).run a = .ok (xs, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   cases n with

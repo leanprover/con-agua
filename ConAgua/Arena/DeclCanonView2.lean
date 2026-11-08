@@ -238,8 +238,8 @@ def PoolSmall (m : Mem) : Prop := pcap m < 2 ^ 64
 
 theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {us : Word} {r : List Word} (h : viewLsW n m us = some (r, m'))
-    (hS : StageR dn vis fe m a) (hu : us.toNat < 2 ^ 32) (hP : PoolSmall m) :
-    ∃ ids : List LIdx, (viewLs (decI us)).run a = .ok (ids, a) ∧ StageR dn vis fe m' a ∧
+    (hS : StageR vis fe m a) (hu : us.toNat < 2 ^ 32) (hP : PoolSmall m) :
+    ∃ ids : List LIdx, (viewLs (decI us)).run a = .ok (ids, a) ∧ StageR vis fe m' a ∧
       IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r ids ∧ PoolSmall m' := by
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   have hR := hS.check.arena.base
@@ -291,7 +291,7 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     rw [e1]
     exact hslice_sliceL (.inr (by rw [vpool_size]; omega)) hsl
   have hroom2 : iwTop m2 ≤ (m2.arr64 IW).size := by rw [htop', hS2]; omega
-  have hSt : StageR dn vis fe m2 a := by
+  have hSt : StageR vis fe m2 a := by
     refine ⟨CheckR.frame_iw hfr hS.check, hroom2, ?_, ?_, ?_, ?_⟩
     · have h129 : rdW (m2.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl 129 (by simp)
       have hE2 : m2.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)

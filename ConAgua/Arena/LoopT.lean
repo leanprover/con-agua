@@ -491,7 +491,7 @@ theorem LoopT.of_core {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl _ coreLoopC_129
   have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ coreLoopC_200
   obtain ⟨hCR, hT⟩ := hC.checkR
-  have hS : StageR dn vis fe m' a' :=
+  have hS : StageR vis fe m' a' :=
     ⟨hCR, IWOK.frame hfr coreLoopA_iw coreLoopA_erec coreLoopC_129 coreLoopC_200 hL.loop.iw⟩
   have hst : MemFrame stepA stepC m m' :=
     hfr.mono (fun b hb => (List.mem_filter.mp hb).1) (fun x hx => (List.mem_filter.mp hx).1)

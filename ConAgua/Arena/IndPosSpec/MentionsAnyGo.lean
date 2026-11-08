@@ -47,12 +47,12 @@ include hf hpw hsf hsp his hff hfp hif hp
 @[refines ConRon.Arena.nestCanonSub]
 theorem nestCanonSub_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl us nn c v : Word) (names : List NIdx) (hc : H c) (hus : H us) (hv : H v)
-    (hS : StageR dn vis fe s₀.mem a₀) (hdec : decHL s₀.mem no.toNat nl.toNat = some names)
+    (hS : StageR vis fe s₀.mem a₀) (hdec : decHL s₀.mem no.toNat nl.toNat = some names)
     (hb : no.toNat + nl.toNat < 2 ^ 64) (hnn : nn.toNat + names.length < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_canon_sub" [no, nl, us, nn, c, v]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decOE s'.mem r (AM.res (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀); ⊤⦄ := by
   refine triple_post (nestCanonSub_spec p hf hpw hsf hsp his hff hfp hif hp n s₀ no nl us nn c v) ?_
@@ -442,7 +442,7 @@ the twin's. -/
 @[refines ConRon.Arena.mentionsAnyGo]
 theorem mentionsAnyGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl f h : Word) (ws : List Word) (mp : Std.HashMap EIdx Bool) (hh : H h)
-    (hS : StageR dn vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
+    (hS : StageR vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hM : maMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "mentions_any_go" [no, nl, f, h]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -452,7 +452,7 @@ theorem mentionsAnyGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
         (AM.res (ConRon.Arena.mentionsAnyGo (ws.map (fun w => (decI w : NIdx))) mp f.toNat (decE h)) a₀).1 ∧
       maMR s'.mem
         (AM.res (ConRon.Arena.mentionsAnyGo (ws.map (fun w => (decI w : NIdx))) mp f.toNat (decE h)) a₀).2 ∧
-      StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post ((maGo_spec p hv hc hf hput hgo hnode n).1 s₀ no nl f h) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := maGoOK n _ _ a₀ no nl f h _ ws mp hm hS.check.arena.base hh hws hwlt hM

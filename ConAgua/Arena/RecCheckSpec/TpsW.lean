@@ -108,11 +108,11 @@ def splitOk (p : BlockShape) (block : List IConstantInfo) : Bool :=
 below the tops. -/
 theorem tpsW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} (m : Mem) (a : AState) (pp k recl bo bl : Word) (bs : BlockShape) (blk : List IConstantInfo)
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs)
+    (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs)
     (hblk : DecB (fun m => decEBlk dn m bo.toNat bl.toNat) m blk) (hk : k.toNat = bs.k)
     (hrl : recl.toNat = bs.recs.length) :
     Sim (tpsW p (n + 1) m pp k recl bo bl) (pure (splitOk bs blk)) a
-      (fun r b m' a' => r.headD 0 = (if b then 1 else 0) ∧ a' = a ∧ StageR dn vis fe m' a ∧ IWGrow m m') := by
+      (fun r b m' a' => r.headD 0 = (if b then 1 else 0) ∧ a' = a ∧ StageR vis fe m' a ∧ IWGrow m m') := by
   have hT : ∀ m : Mem, iwTop m < 2 ^ 64 := fun m => (rdW (m.arr64 CTL) 200).toNat_lt
   unfold tpsW
   refine Sim.mstep (K := tpsK0 p (n + 1) pp k recl) rfl (fun _ _ => rfl) fun rs m1 h1 => ?_

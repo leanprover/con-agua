@@ -117,7 +117,7 @@ structure DvCtx (p : Prog) : Prop where
 extended environment `fe'` (the twin's result), the core's memos, the growth. -/
 structure DvPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (fe' : IFEnv) (w : Word × Mem)
     (y : IFEnv) (a' : AState) : Prop where
-  stage : StageR dn w.1 fe' w.2 a'
+  stage : StageR w.1 fe' w.2 a'
   memos : CoreMemos w.2
   grow : IWGrow m w.2
   res : y = fe'
@@ -176,7 +176,7 @@ theorem dvo_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word} {cv : IConstantVal} {v : EIdx}
     {ci : IConstantInfo} {k : Word} (msg : String) (hk : (Err.abort k).cls = twinCls (.invalid msg))
     (hS : StageT dn vis fe m a)
-    (hci : decCI (erecP m) dn c.toNat = some ci) (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
+    (hci : decCI (erecP m) c.toNat = some ci) (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
     (hv : hd? (erecP m) (c.toNat + 5) = some v)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (DvCtx p) (dvoE k p n m vis c) (dvT fe cv v ci msg) a
@@ -243,7 +243,7 @@ theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word} {cv : IConstantVal} {v : EIdx}
     {ci : IConstantInfo} (msg : String) (hS : StageT dn vis fe m a)
-    (hci : decCI (erecP m) dn c.toNat = some ci) (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
+    (hci : decCI (erecP m) c.toNat = some ci) (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
     (hv : hd? (erecP m) (c.toNat + 5) = some v)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (DvCtx p) (checkDefnValE p n m vis c) (dvT fe cv v ci msg) a
@@ -255,7 +255,7 @@ theorem ov_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word} {cv : IConstantVal} {v : EIdx}
     {ci : IConstantInfo} (msg : String) (hS : StageT dn vis fe m a)
-    (hci : decCI (erecP m) dn c.toNat = some ci) (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
+    (hci : decCI (erecP m) c.toNat = some ci) (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
     (hv : hd? (erecP m) (c.toNat + 5) = some v)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (DvCtx p) (checkOpaqueValE p n m vis c) (dvT fe cv v ci msg) a
@@ -268,7 +268,7 @@ theorem defnvE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : Apd
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word} {cv : IConstantVal} {v : EIdx}
     (hh : ConLeche.ReducibilityHint) (hS : StageT dn vis fe m a)
-    (hc : decCI (erecP m) dn c.toNat = some (.defnInfo cv v hh))
+    (hc : decCI (erecP m) c.toNat = some (.defnInfo cv v hh))
     (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
     (hv : hd? (erecP m) (c.toNat + 5) = some v)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m)
@@ -283,7 +283,7 @@ theorem opaquevE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : A
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word} {cv : IConstantVal} {v : EIdx}
     (hS : StageT dn vis fe m a)
-    (hc : decCI (erecP m) dn c.toNat = some (.axiomInfo cv))
+    (hc : decCI (erecP m) c.toNat = some (.axiomInfo cv))
     (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
     (hv : hd? (erecP m) (c.toNat + 5) = some v)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m)

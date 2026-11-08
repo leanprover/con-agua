@@ -107,11 +107,11 @@ theorem stateOK_of_sp {a a' : AState} (h : ConRon.Bridge.StateOK a) (e : sp a' =
 twin state stays as it was, `AbsOK` holds after (the walk's memo is the core's `wscopedBFast`
 memo, `apdMR_ws`; the rest is framed). -/
 theorem apdF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (o l e : Word) (he : H e) (lps : List NIdx) (hS : StageR dn vis fe m a)
+    {a : AState} (o l e : Word) (he : H e) (lps : List NIdx) (hS : StageR vis fe m a)
     (hA : AbsOK m) (hok : ConRon.Bridge.StateOK a) (hdec : decHL m o.toNat l.toNat = some lps)
     (hks : ∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks) :
     Sim (apdF m [o, l, e]) (allLevelParamsDefined lps (decI e)) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x ∧ AbsOK m' ∧
+      (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x ∧ AbsOK m' ∧
         sp a' = sp a) := by
   intro r m' h
   obtain ⟨ks, hks⟩ := hks
@@ -140,11 +140,11 @@ theorem apdF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 /-- `apdF_simR` at the program's own call (`realCall p`'s reading). -/
 theorem apdCall_simR {p : Prog} (hp : ApdF p) (k : Nat) {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} (o l e : Word) (he : H e) (lps : List NIdx)
-    (hS : StageR dn vis fe m a) (hA : AbsOK m) (hok : ConRon.Bridge.StateOK a)
+    (hS : StageR vis fe m a) (hA : AbsOK m) (hok : ConRon.Bridge.StateOK a)
     (hdec : decHL m o.toNat l.toNat = some lps)
     (hks : ∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks) :
     Sim (realCall p k "all_level_params_defined" [o, l, e] m) (allLevelParamsDefined lps (decI e)) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x ∧ AbsOK m' ∧
+      (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x ∧ AbsOK m' ∧
         sp a' = sp a) :=
   fun r m' h => apdF_simR o l e he lps hS hA hok hdec hks r m' (apdF_of_callW hp h)
 
@@ -152,9 +152,9 @@ theorem apdCall_simR {p : Prog} (hp : ApdF p) (k : Nat) {dn : NIdx → Option Co
 
 /-- `has_fvar_fast` (`hffF_ok`), the twin's store, caches and pins kept. -/
 theorem hffF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (f e : Word) (he : H e) (hS : StageR dn vis fe m a) :
+    {a : AState} (f e : Word) (he : H e) (hS : StageR vis fe m a) :
     Sim (hffF m [f, e]) (hasFvarFast f.toNat (decI e)) a
-      (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x) ∧ sp a' = sp a) := by
+      (fun r x m' a' => (StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x) ∧ sp a' = sp a) := by
   intro r m' h
   obtain ⟨x, a', hrun, hK⟩ := hffF_ok dn vis fe f e he m m' a r h hS
   obtain ⟨X, rfl⟩ := memos_only_of_sp (Keeps.bind (keeps_fvarB_sp _ _) fun _ => Keeps.pure _) x a' hrun
@@ -162,9 +162,9 @@ theorem hffF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 /-- `loose_bvars_bounded_fast` (`lbbF_ok`), the twin's store, caches and pins kept. -/
 theorem lbbF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (f k e : Word) (he : H e) (hS : StageR dn vis fe m a) :
+    {a : AState} (f k e : Word) (he : H e) (hS : StageR vis fe m a) :
     Sim (lbbF m [f, k, e]) (looseBVarsBoundedFast f.toNat k.toNat (decI e)) a
-      (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x) ∧ sp a' = sp a) := by
+      (fun r x m' a' => (StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x) ∧ sp a' = sp a) := by
   intro r m' h
   obtain ⟨x, a', hrun, hK⟩ := lbbF_ok dn vis fe f k e he m m' a r h hS
   obtain ⟨X, rfl⟩ := memos_only_of_sp (Keeps.bind (keeps_bvarB_sp _ _) fun _ => Keeps.pure _) x a' hrun
@@ -172,9 +172,9 @@ theorem lbbF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 /-- `consts_resolve_ffast` (`constsResolveFFast_keepsSt`), the twin state kept, `AbsOK` after. -/
 theorem crfF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (e : Word) (he : H e) (hS : StageR dn vis fe m a) (hA : AbsOK m) :
+    {a : AState} (e : Word) (he : H e) (hS : StageR vis fe m a) (hA : AbsOK m) :
     Sim (crfF m [vis, e]) (constsResolveFFast fe (decI e)) a
-      (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x) ∧ AbsOK m' ∧
+      (fun r x m' a' => (StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x) ∧ AbsOK m' ∧
         sp a' = sp a) := by
   intro r m' h
   obtain ⟨hAb, hI1, hCr, hIl, hWk⟩ := hA
@@ -202,12 +202,12 @@ read back; the twin's store, caches and pins are kept. -/
 theorem sctW_okR {p : Prog} (hp : ApdF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} (nP lo ll : Word) (lps : List NIdx) (hnP : nP.toNat + 1 < 2 ^ 64) (n : Nat) :
     ∀ (m : Mem) (a : AState) (bO bL : Word) (bs : List EIdx),
-    StageR dn vis fe m a → ConRon.Bridge.StateOK a →
+    StageR vis fe m a → ConRon.Bridge.StateOK a →
     (∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks) →
     decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
     decHL m bO.toNat bL.toNat = some bs → bO.toNat + bL.toNat ≤ iwTop m → AbsOK m →
     Sim (sctW (realCall p) n m vis nP lo ll bO bL) (bs.allM (scopeT fe lps nP.toNat)) a
-      (fun r b m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧
+      (fun r b m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧
         (r.headD 0).toNat ≤ 1 ∧ AbsOK m' ∧ sp a' = sp a) := by
   induction n with
   | zero => intro m a bO bL bs _ _ _ _ _ _ _ _; exact Sim.of_none
@@ -301,7 +301,7 @@ theorem names_ext {st st' : EStore} (hx : ConRon.Arena.Ext st st') {lps : List N
 
 /-- `find_table` as a callee: the memory is unchanged, the row word decodes the twin's lookup. -/
 theorem findTable_call {p : Prog} (hP : TblProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {n : Nat} {m m' : Mem} {w : Word} {r : List Word} (hE : EnvR dn m vis fe)
+    {fe : IFEnv} {n : Nat} {m m' : Mem} {w : Word} {r : List Word} (hE : EnvR m vis fe)
     (hw : w.toNat < 2 ^ 32) (hc : callW p n "find_table" [vis, w] m = some (r, m')) :
     m' = m ∧ fe.findTable? (decI w) = tblOut m (r.headD 0) := by
   obtain ⟨s', hs', h1, -, h3, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -344,9 +344,9 @@ theorem envPushTable_mem (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
 the pool unchanged, the walk memos and the frame below the stage's kept. -/
 theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {t : IProjTable}
-    (hS : StageR dn vis fe m a) (ht : decTbl (erecP m) q.toNat = some t)
+    (hS : StageR vis fe m a) (ht : decTbl (erecP m) q.toNat = some t)
     (hc : callW p n "env_push_table" [q] m = some (r, m')) :
-    StageR dn vis (fe.pushTable t) m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ AFr m m' := by
+    StageR vis (fe.pushTable t) m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ AFr m m' := by
   obtain ⟨s', hs', -, hE'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envPushTable_refines p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ vis q t hS.check.env ht) hc
   obtain ⟨s'', hs'', hM, hw, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -359,7 +359,7 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
     refine (((MemFrame.set64 m ETAB (by decide) _ _).mono (by simp) (by simp)).trans
       ((MemFrame.setCtl _ 133 _).mono (by simp) (by simp))).trans
       ((tblSet_frame _ _ _ hw).mono (fun b hb => List.mem_cons_of_mem _ hb) (by simp))
-  have hC : CheckR dn m' a vis (fe.pushTable t) :=
+  have hC : CheckR m' a vis (fe.pushTable t) :=
     ⟨⟨ArenaR.frame (fun b hb => by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
           rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
@@ -401,7 +401,7 @@ the stage at the returned view `w`, the growth, the frame (no memo touched), `Ab
 run a `PStep`. -/
 structure TblPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (w : Word) (x : IFEnv)
     (m' : Mem) (a' : AState) : Prop where
-  stage : StageR dn w x m' a'
+  stage : StageR w x m' a'
   grow : IWGrow m m'
   frame : MFr [] [] m m'
   abs : AbsOK m'
@@ -416,7 +416,7 @@ its own `fail R_PROJECTION_TABLE_TAKEN` (`G` is `True`); the twin's run is a `PS
 theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (p : Prog)
     (hP : TblProg p) (hp : ApdF p)
     (n : Nat) (m : Mem) (a : AState) (T C lo ll nP nF rs go gl cvCaw : Word) (lps : List NIdx)
-    (guards : List LIdx) (cvCa : IConstantVal) (hS : StageR dn vis fe m a) (hT : H T) (hC : H C)
+    (guards : List LIdx) (cvCa : IConstantVal) (hS : StageR vis fe m a) (hT : H T) (hC : H C)
     (hrs : H rs) (hnP : nP.toNat + 1 < 2 ^ 64)
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
     (hgs : decHL m go.toNat gl.toNat = some guards) (hgb : go.toNat + gl.toNat ≤ iwTop m)
@@ -591,7 +591,7 @@ theorem checkStructProjTable_refinesC (p : Prog) (hP : TblProg p) (hp : ApdF p) 
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (checkStructProjTable (decI T) (decI C) lps nP.toNat nF.toNat (decI rs) guards
         cvCa fe) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (checkStructProjTable (decI T) (decI C) lps nP.toNat nF.toNat
+      StageR (r.headD 0) (AM.res (checkStructProjTable (decI T) (decI C) lps nP.toNat nF.toNat
         (decI rs) guards cvCa fe) a₀) s'.mem (AM.st (checkStructProjTable (decI T) (decI C)
           lps nP.toNat nF.toNat (decI rs) guards cvCa fe) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem ∧
@@ -626,7 +626,7 @@ l_model ctbE_spec (p : Prog) (ht : TblProg p) (h1 : p.lookup "check_block_tables
 the returned view `w`, the growth, the `hb` memo, `AbsOK`, the twin's run a `PStep`. -/
 structure TabPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (w : Word) (x : IFEnv)
     (m' : Mem) (a' : AState) : Prop where
-  stage : StageR dn w x m' a'
+  stage : StageR w x m' a'
   grow : IWGrow m m'
   memo : HbMemo m'
   abs : AbsOK m'
@@ -641,7 +641,7 @@ theorem cto_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) (hn : n ≤
     {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} {pp ms co so : Word} {bs : BlockShape} {msh : MemberShape}
     {cA : IConstantVal} {nF : Nat} {sorts : List LIdx}
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
+    (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hms : DecB (fun m => decMS m ms.toNat) m msh) (hcs : PSlR decCN [(cA, nF)] co 1 m)
     (hss : PSlR decIS [sorts] so 1 m) (hM : HbMemo m) (hA : AbsOK m)
     (hkeep : ∀ f ∈ tablesKeepCallees, AbsKeep p f)
@@ -773,7 +773,7 @@ theorem ctb_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (dn : NIdx → Option
     (bs : BlockShape) (n : Nat) (hn : n ≤ 2 ^ 62) :
     ∀ (m : Mem) (a : AState) (vis : Word) (fe : IFEnv) (mo ml co cl so sl : Word) (mss : List MemberShape)
       (css : List (List (IConstantVal × Nat))) (sss : List (List (List LIdx))),
-    StageR dn vis fe m a → DecB (fun m => decBS m pp.toNat) m bs →
+    StageR vis fe m a → DecB (fun m => decBS m pp.toNat) m bs →
     ShapeSrc m pp → PSlR decMS mss mo ml m → PSlR decCNS css co cl m → PSlR decISS sss so sl m → HbMemo m →
     AbsOK m → (∀ f ∈ tablesKeepCallees, AbsKeep p f) →
     ConRon.Bridge.StateOK a → ConRon.Bridge.PinsOK a →

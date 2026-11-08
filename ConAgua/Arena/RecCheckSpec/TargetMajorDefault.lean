@@ -88,10 +88,10 @@ and `mk_target_major`). -/
 theorem targetMajorDefault_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hpw : p.lookup "pin_word" = some pinWordL) (hm : p.lookup "mk_target_major" = some mkTargetMajor)
     (hp : p.lookup "target_major_default" = some targetMajorDefault) (hna : NaF p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hS : StageR dn vis fe s₀.mem a₀) :
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_major_default" []
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok ConRon.Arena.targetMajorDefault a₀ ∧
-      StageR dn vis fe s'.mem (AM.st ConRon.Arena.targetMajorDefault a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st ConRon.Arena.targetMajorDefault a₀) ∧ IWGrow s₀.mem s'.mem ∧
       decTM s'.mem (r.headD 0).toNat = some (AM.res ConRon.Arena.targetMajorDefault a₀); ⊤⦄ := by
   refine triple_post (targetMajorDefault_spec p ha hpw hm hp hna n s₀) ?_
   rintro r s' ⟨hl, hw⟩

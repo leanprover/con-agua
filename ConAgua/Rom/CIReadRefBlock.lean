@@ -35,7 +35,7 @@ theorem iw_set_ne (m : Mem) (j w : Word) (i : Nat) (hi : i ≠ j.toNat) :
 def BlkAt (dn : NIdx → Option ConLeche.Name) (SE : Nat → Prop) (m : Mem) (i : Nat)
     (ci : IConstantInfo) : Prop :=
   ∃ w : Word, (iwA m)[i]? = some w ∧
-    Holds SE (fun _ => False) (fun m => decCI (erA m) dn w.toNat) m ci
+    Holds SE (fun _ => False) (fun m => decCI (erA m) w.toNat) m ci
 
 /-- The `sortZ` names of a block's constants. -/
 def blkZ : List ConLeche.ConstantInfo → List ConLeche.Name

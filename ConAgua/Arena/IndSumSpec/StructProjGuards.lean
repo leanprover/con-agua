@@ -123,10 +123,10 @@ theorem decBL_of_bnums {m : Mem} {o l : Nat} {bs : List Bool}
 theorem spgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     (m : Mem) (a : AState) (cty nP nF so sl : Word) (sorts : List LIdx)
     (mp : Std.HashMap (EIdx × Nat) Bool) (hc' : H cty)
-    (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64) (hS : StageR dn vis fe m a) (hM : hbMR m mp)
+    (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64) (hS : StageR vis fe m a) (hM : hbMR m mp)
     (hs : decHL m so.toNat sl.toNat = some sorts) (hst : so.toNat + sl.toNat ≤ iwTop m) :
     Sim (spgW n m cty nP nF so sl) (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a
-      (fun r gs m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      (fun r gs m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
         decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some gs ∧
         (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m') := by
   unfold spgW
@@ -145,7 +145,7 @@ theorem spgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       intro x hx; simp [hbSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [hbSch])
   refine Sim.bindK rfl (fun _ _ => rfl)
     (Q := fun u bs m2 a2 => decNL m2 (u.headD 0).toNat (u.tail.headD 0).toNat = some (bnums bs) ∧
-      u.tail.headD 0 = nF ∧ (u.headD 0).toNat + nF.toNat = iwTop m2 ∧ StageR dn vis fe m2 a2 ∧
+      u.tail.headD 0 = nF ∧ (u.headD 0).toNat + nF.toNat = iwTop m2 ∧ StageR vis fe m2 a2 ∧
       IWGrow m m2) ?_ fun u bs m2 a2 ⟨hd, hl, ht, hS2, hg2⟩ => ?_
   · intro u m2 e
     obtain ⟨bs, mp', a', hrun, hdec, hlen, htop, -, hS', hg⟩ :=
@@ -191,11 +191,11 @@ memo (any well-formed one: the walk clears it). -/
 theorem structProjGuards_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis cty nP nF so sl : Word) (sorts : List LIdx) (mp : Std.HashMap (EIdx × Nat) Bool)
     (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
-    (hS : StageR dn vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp)
+    (hS : StageR vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp)
     (hs : decHL s₀.mem so.toNat sl.toNat = some sorts) (hsbd : so.toNat + sl.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_proj_guards" [cty, nP, nF, so, sl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a₀) ∧
+      StageR vis fe s'.mem (AM.st (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a₀); ⊤⦄ := by

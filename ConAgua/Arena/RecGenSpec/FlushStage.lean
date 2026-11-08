@@ -29,10 +29,10 @@ open L.Arena
 
 /-- `flush_caches()` under the stage relation. -/
 theorem flush_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (h : StageR dn vis fe m a) (hok : FlushOK m) :
-    StageR dn vis fe (flushMem m) { a with caches := Caches.empty } ∧ IWGrow m (flushMem m) := by
+    {a : AState} (h : StageR vis fe m a) (hok : FlushOK m) :
+    StageR vis fe (flushMem m) { a with caches := Caches.empty } ∧ IWGrow m (flushMem m) := by
   have hf := flushMem_frame m
-  have hC : CheckR dn (flushMem m) { a with caches := Caches.empty } vis fe :=
+  have hC : CheckR (flushMem m) { a with caches := Caches.empty } vis fe :=
     ⟨ArenaD.caches_irrel _ ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ hf _ h.check.arena.base,
       DerR.frameM [] _ _ _ hf (by simp) _ h.check.arena.der⟩,
     h.check.core.flush hok,
@@ -54,9 +54,9 @@ theorem flush_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
 /-- `cv_lps(q)` under the stage relation: the level parameters, a slice below the top. -/
 theorem cvLpsA_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
-    (h : L.Arena.cvLpsW n m q = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : L.Arena.cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erA m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq

@@ -410,11 +410,11 @@ theorem TaIn.grow {m m1 : Mem} {no nl ho hl : Word} {names : List NIdx} {holes :
 /-- The post of the `ta` walk from `m`: the result decoded, the stage kept, the memo related. -/
 abbrev TaQ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m : Mem) (r : Word)
     (x : EIdx × Std.HashMap EIdx EIdx) (m' : Mem) (a' : AState) : Prop :=
-  x.1 = decE r ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ taMR m' x.2
+  x.1 = decE r ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ taMR m' x.2
 
 def TaGoOK (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) : Prop :=
   ∀ (m : Mem) (a : AState) (no nl lvls ho hl f h : Word) (names : List NIdx) (holes : List EIdx)
-    (mp : Std.HashMap EIdx EIdx), StageR dn vis fe m a → H h → H lvls →
+    (mp : Std.HashMap EIdx EIdx), StageR vis fe m a → H h → H lvls →
     TaIn m no nl ho hl names holes → taMR m mp →
     Sim (taGoW n m no nl lvls ho hl f h)
       (ConRon.Arena.targetAbsGo names (decI lvls) holes mp f.toNat (decE h)) a (TaQ dn fe vis m)
@@ -430,11 +430,11 @@ theorem taBin_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
     (ih : TaGoOK dn fe vis k) (g : Word)
     (mkW : Mem → Word → Word → Option (Word × Mem)) (iop : EIdx → EIdx → AM EIdx)
     (hmk : ∀ m a2 x2, rpMkW m g a2 x2 0 0 0 = mkW m a2 x2)
-    (hst : ∀ (m m' : Mem) (a : AState) (u v r : Word), StageR dn vis fe m a → mkW m u v = some (r, m') →
-      ∃ a', (iop (decE u) (decE v)).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m')
+    (hst : ∀ (m m' : Mem) (a : AState) (u v r : Word), StageR vis fe m a → mkW m u v = some (r, m') →
+      ∃ a', (iop (decE u) (decE v)).run a = .ok (decE r, a') ∧ StageR vis fe m' a' ∧ IWGrow m m')
     (hlow : ∀ (m m' : Mem) (u v r : Word), mkW m u v = some (r, m') → LowFr m m')
     (m : Mem) (a : AState) (no nl lvls ho hl f1 x y : Word) (names : List NIdx) (holes : List EIdx)
-    (mp : Std.HashMap EIdx EIdx) (hS : StageR dn vis fe m a) (hx : H x) (hy : H y) (hlv : H lvls)
+    (mp : Std.HashMap EIdx EIdx) (hS : StageR vis fe m a) (hx : H x) (hy : H y) (hlv : H lvls)
     (hI : TaIn m no nl ho hl names holes) (hM : taMR m mp) :
     Sim (taB1 k no nl lvls ho hl f1 g y (taGoW k m no nl lvls ho hl f1 x)) (do
         let (t2, mm) ← ConRon.Arena.targetAbsGo names (decI lvls) holes mp f1.toNat (decE x)
@@ -455,7 +455,7 @@ theorem taBin_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
 theorem taLet_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : TaGoOK dn fe vis k)
     (m : Mem) (a : AState) (no nl lvls ho hl f1 x y z : Word) (names : List NIdx) (holes : List EIdx)
-    (mp : Std.HashMap EIdx EIdx) (hS : StageR dn vis fe m a) (hx : H x) (hy : H y) (hz : H z) (hlv : H lvls)
+    (mp : Std.HashMap EIdx EIdx) (hS : StageR vis fe m a) (hx : H x) (hy : H y) (hz : H z) (hlv : H lvls)
     (hI : TaIn m no nl ho hl names holes) (hM : taMR m mp) :
     Sim (taL1 k no nl lvls ho hl f1 y z (taGoW k m no nl lvls ho hl f1 x)) (do
         let (t2, mm) ← ConRon.Arena.targetAbsGo names (decI lvls) holes mp f1.toNat (decE x)
@@ -482,7 +482,7 @@ theorem taLet_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
 theorem taProj_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : TaGoOK dn fe vis k)
     (m : Mem) (a : AState) (no nl lvls ho hl f1 x y z : Word) (names : List NIdx) (holes : List EIdx)
-    (mp : Std.HashMap EIdx EIdx) (hS : StageR dn vis fe m a) (hz : H z) (hlv : H lvls)
+    (mp : Std.HashMap EIdx EIdx) (hS : StageR vis fe m a) (hz : H z) (hlv : H lvls)
     (hI : TaIn m no nl ho hl names holes) (hM : taMR m mp) :
     Sim (taP1 x y (taGoW k m no nl lvls ho hl f1 z)) (do
         let (x2, mm) ← ConRon.Arena.targetAbsGo names (decI lvls) holes mp f1.toNat (decE z)
@@ -499,7 +499,7 @@ theorem taProj_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 theorem taNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : TaGoOK dn fe vis k) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v) (hnv : NodeVr v)
     (m : Mem) (a : AState) (no nl lvls ho hl f1 h : Word) (names : List NIdx) (holes : List EIdx)
-    (mp : Std.HashMap EIdx EIdx) (hS : StageR dn vis fe m a) (hlv : H lvls)
+    (mp : Std.HashMap EIdx EIdx) (hS : StageR vis fe m a) (hlv : H lvls)
     (hI : TaIn m no nl ho hl names holes) (hM : taMR m mp) :
     Sim (taNodeW (k + 1) m no nl lvls ho hl f1 (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
       (vl.tail.tail.tail.headD 0)) (taArm names (decI lvls) holes mp f1.toNat (decE h) v) a
@@ -557,7 +557,7 @@ theorem taGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
     (hF : f.toNat = F + 1) (hf0 : f ≠ 0) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v)
     (hnv : NodeVr v) (hv : a.store.view (decE h) = some v) (hvl : vl ≠ [])
     (hgs : vl.headD 0 = 4 ∨ vl.headD 0 = 5 ∨ vl.headD 0 = 6 ∨ vl.headD 0 = 7 ∨ vl.headD 0 = 9)
-    (hS : StageR dn vis fe m a) (hh : H h) (hlv : H lvls)
+    (hS : StageR vis fe m a) (hh : H h) (hlv : H lvls)
     (hI : TaIn m no nl ho hl names holes) (hM : taMR m mp) :
     Sim (taG1 j m no nl lvls ho hl f h vl)
       (ConRon.Arena.targetAbsGo names (decI lvls) holes mp (F + 1) (decE h)) a (TaQ dn fe vis m) := by
@@ -638,11 +638,11 @@ theorem taGoOK (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n
 theorem taAW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl lvls ho hl e r : Word) (names : List NIdx) (holes : List EIdx)
     (mp0 : Std.HashMap EIdx EIdx)
-    (hb : taAW n m no nl lvls ho hl e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e) (hlv : H lvls)
+    (hb : taAW n m no nl lvls ho hl e = some (r, m')) (hS : StageR vis fe m a) (he : H e) (hlv : H lvls)
     (hdec : decHL m no.toNat nl.toNat = some names) (hit : no.toNat + nl.toNat ≤ iwTop m)
     (hho : decHL m ho.toNat hl.toNat = some holes) (hht : ho.toNat + hl.toNat ≤ iwTop m) (hM : taMR m mp0) :
     ∃ a' mp1, (ConRon.Arena.targetAbs names (decI lvls) holes (decE e)).run a = .ok (decE r, a') ∧
-      taMR m' mp1 ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      taMR m' mp1 ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   by_cases h0 : rdW (m.arr64 CTL) taSch.cs + 2 = 0
   · simp [taAW, h0] at hb
   rw [taAW_eq n m no nl lvls ho hl e h0] at hb

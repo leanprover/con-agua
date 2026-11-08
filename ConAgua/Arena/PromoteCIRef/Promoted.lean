@@ -30,12 +30,12 @@ theorem rowSet_frame (m : Mem) (w c q : Word) (_ht : rowTag w ≤ 2) :
 /-- **`EnvR` after a promotion**: the rows (constant and table) are untouched, the pool grew, the
 constants and tables lists are the promoted ones. -/
 theorem EnvR.promoted {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (h : EnvR dn m vis fe)
+    (h : EnvR m vis fe)
     (he : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 135 ∨ 140 ≤ b) → m'.arr64 b = m.arr64 b)
     (htr : ∀ w, rowTag w ≤ 2 → m'.arr64 (tblArr w) = m.arr64 (tblArr w))
     (hg : ErecGrow m m') (consts' : List IConstantInfo) (tables' : List IProjTable)
     (hcons : envConsts dn m' = some consts') (htabs : envTables m' = some tables') :
-    EnvR dn m' vis ⟨⟨consts', tables'⟩, fe.idx, fe.visibleBelow, fe.tbls⟩ := by
+    EnvR m' vis ⟨⟨consts', tables'⟩, fe.idx, fe.visibleBelow, fe.tbls⟩ := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
     · rw [he _ (rowArr_ge _) (rowArr_lt _) (rowArr_lt_or _)]

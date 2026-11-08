@@ -206,7 +206,7 @@ theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
 
 theorem LoopR.of_lo {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration} {C : List Word}
-    (h : LoopR pins dn m a vis fe pend ds) (hC' : CheckR dn m' a' vis fe) (hf : MemFrame scrArrs C m m')
+    (h : LoopR pins dn m a vis fe pend ds) (hC' : CheckR m' a' vis fe) (hf : MemFrame scrArrs C m m')
     (hC : ∀ x ∈ C, x.toNat < 128) : LoopR pins dn m' a' vis fe pend ds := by
   have h1 : m'.arr64 DECL = m.arr64 DECL := hf.arr _ (by decide) (by decide)
   have h2 : m'.arr64 DLP = m.arr64 DLP := hf.arr _ (by decide) (by decide)

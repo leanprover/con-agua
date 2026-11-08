@@ -70,7 +70,7 @@ include ha hl hk hng hnp hip hf hput hgo hnode hcl hra hp
 variables, then rewrite the applications (result `[1, e]`, or `[0, 0]` for `none`). -/
 @[refines ConRon.Arena.nestCanonCrest]
 theorem nestCanonCrest_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis no nl us nn cty : Word) (names : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (fe : IFEnv) (vis no nl us nn cty : Word) (names : List NIdx) (hS : StageR vis fe s₀.mem a₀)
     (hcty : H cty) (hus : H us) (hdec : decHL s₀.mem no.toNat nl.toNat = some names)
     (hno : no.toNat + nl.toNat < 2 ^ 64) (hit : no.toNat + nl.toNat ≤ iwTop s₀.mem)
     (hnn : nn.toNat + names.length < 2 ^ 64)
@@ -78,7 +78,7 @@ theorem nestCanonCrest_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "nest_canon_crest" [no, nl, us, nn, cty]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decOE s'.mem r (AM.res (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀) ∧
       ∃ mp, rpMR s'.mem mp; ⊤⦄ := by
@@ -105,7 +105,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : Word) (r : List Word)
     (names : List NIdx) (ds holes : List EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (h : pcrW k m no nl us dO dL hO hL cty = some (r, m')) (hS : StageR dn vis fe m a) (hcty : H cty)
+    (h : pcrW k m no nl us dO dL hO hL cty = some (r, m')) (hS : StageR vis fe m a) (hcty : H cty)
     (hus : H us) (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop m) (hnn : dL.toNat + names.length < 2 ^ 64)
     (mp0 : Std.HashMap EIdx EIdx) (hMr : rpMR m mp0)
@@ -166,7 +166,7 @@ include L
 @[refines ConRon.Arena.nestCrest]
 theorem nestCrest_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis no nl us dO dL hO hL cty : Word) (names : List NIdx) (ds holes : List EIdx)
-    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hS : StageR dn vis fe s₀.mem a₀) (hcty : H cty)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hS : StageR vis fe s₀.mem a₀) (hcty : H cty)
     (hus : H us) (hdec : decHL s₀.mem no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop s₀.mem) (hnn : dL.toNat + names.length < 2 ^ 64)
     (mp0 : Std.HashMap EIdx EIdx) (hMr : rpMR s₀.mem mp0)
@@ -505,9 +505,9 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {m0 : Mem} (ko nF cl : Word) (ks : List NestFieldKind) (hcl : H cl)
     (hks : decKL (truncM m0) ko.toNat nF.toNat = some ks) :
     ∀ (n : Nat) (m m' : Mem) (a : AState) (i : Word) (r : List Word),
-    u4W n m ko nF cl i = some (r, m') → StageR dn vis fe m a → IWGrow m0 m → i.toNat ≤ nF.toNat → PosMR m →
+    u4W n m ko nF cl i = some (r, m') → StageR vis fe m a → IWGrow m0 m → i.toNat ≤ nF.toNat → PosMR m →
     ∃ b a', ((List.range' i.toNat (nF.toNat - i.toNat)).anyM (u4F ks (decI cl))).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
   intro n
   obtain ⟨hkl, hkw⟩ := decKL_get hks
   induction n with
@@ -584,10 +584,10 @@ open L.Arena
 
 theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m m' : Mem} {a : AState} {ctx hi cur : Word} {c : NestCtx} {r : List Word}
-    (h : roW k m ctx hi cur = some (r, m')) (hS : StageR dn vis fe m a) (hU : UCtx dn vis fe m ctx c)
+    (h : roW k m ctx hi cur = some (r, m')) (hS : StageR vis fe m a) (hU : UCtx dn vis fe m ctx c)
     (hcur : H cur) (hP : PosMR m) :
     ∃ b a', (∀ {β : Type} (K : Bool → AM β), (roK c hi.toNat (decI cur) K).run a = (K b).run a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
   cases k with
   | zero => simp [roW] at h
   | succ k =>

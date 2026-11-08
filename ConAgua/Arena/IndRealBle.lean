@@ -154,10 +154,10 @@ readback cache holding readbacks and the result sort's readback: the memory unch
 verdict a `0`/`1` word, the twin's store unchanged and its cache holding readbacks after. -/
 theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {pp nb : Word}
     {r : List Word} {bs : BlockShape} (h : bleW p n m pp nb = some (r, m'))
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
+    (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hrl : ReadLCOK a) {lv : ConLeche.Level} (hd : denoteL a.store.ls bs.resSort = some lv) :
     ∃ x a', (ConRon.Arena.blockLargeElimAllowed bs (nb != 0)).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ m' = m ∧ decW0B m' r x ∧ a'.store = a.store ∧ ReadLCOK a' := by
+      StageR vis fe m' a' ∧ m' = m ∧ decW0B m' r x ∧ a'.store = a.store ∧ ReadLCOK a' := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hdec, hq9, -⟩ := partsShapeFacts hq hsrc
   obtain ⟨-, -, hrs32, hrse⟩ := partsShapeWords (IWGrow.refl m) hq hq9
@@ -225,12 +225,12 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
 /-- **`block_large_elim_allowed` refines `blockLargeElimAllowed`, as a call**, under `StageR`, the
 readback cache holding readbacks and the result sort's readback. -/
 theorem blockLargeElimAllowed_sim {p : Prog} (P : BleProg p) (n : Nat) {m : Mem} {a : AState}
-    {pp nb : Word} {bs : BlockShape} (hS : StageR dn vis fe m a)
+    {pp nb : Word} {bs : BlockShape} (hS : StageR vis fe m a)
     (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp) (hrl : ReadLCOK a)
     {lv : ConLeche.Level} (hd : denoteL a.store.ls bs.resSort = some lv) :
     Sim (callW p n "block_large_elim_allowed" [pp, nb] m)
       (ConRon.Arena.blockLargeElimAllowed bs (nb != 0)) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ m' = m ∧ decW0B m' r x ∧ a'.store = a.store ∧
+      (fun r x m' a' => StageR vis fe m' a' ∧ m' = m ∧ decW0B m' r x ∧ a'.store = a.store ∧
         ReadLCOK a') := by
   intro r m' e
   rcases n with _ | k

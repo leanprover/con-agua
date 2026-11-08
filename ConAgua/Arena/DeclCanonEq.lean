@@ -335,7 +335,7 @@ theorem slAt_ok {kk : IdxKind} {a : Array Word} (hsz : a.size < 2 ^ 64) {q r i j
 
 theorem capsEqAll_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     (hsz : a.size < 2 ^ 64) {q r : Word} {x y : IIndCaps}
-    (hx : decCaps a dn q.toNat = some x) (hy : decCaps a dn r.toNat = some y) :
+    (hx : decCaps a q.toNat = some x) (hy : decCaps a r.toNat = some y) :
     capsEqAll a q r = decide (x = y) := by
   simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx hy
   obtain ⟨b0, h0, c1, h1, n2, h2, n3, h3, b4, h4, n5, h5, b6, h6, pw, h7, al, h8, n12, h9, ct, h10, ex⟩ := hx
@@ -533,9 +533,9 @@ theorem hintEqB_ok' {a : Array Word} (hsz : a.size < 2 ^ 64) {p q k : Word} {kn 
 
 theorem capsEqAll_ok' {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     (hsz : a.size < 2 ^ 64) {p q k : Word} {kn : Nat} (hk : k.toNat = kn) {x y : IIndCaps}
-    (hx : decCaps a dn (p.toNat + kn) = some x) (hy : decCaps a dn (q.toNat + kn) = some y) :
+    (hx : decCaps a (p.toNat + kn) = some x) (hy : decCaps a (q.toNat + kn) = some y) :
     capsEqAll a (p + k) (q + k) = decide (x = y) := by
-  have b1 : ∀ {r : Word} {z : IIndCaps}, decCaps a dn (r.toNat + kn) = some z →
+  have b1 : ∀ {r : Word} {z : IIndCaps}, decCaps a (r.toNat + kn) = some z →
       a[r.toNat + kn]? ≠ none := by
     intro r z h
     simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
@@ -548,13 +548,13 @@ theorem capsEqAll_ok' {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn
     (by rw [toNat_add_of_get hsz hk hw']; exact hy)
 
 theorem ciD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
-    (h : decCI a dn p = some x) :
+    (h : decCI a p = some x) :
     ∃ wk, a[p]? = some wk ∧
       ((wk.toNat = 0 ∧ ∃ cv, decCV a (p + 1) = some cv ∧ x = .axiomInfo cv) ∨
        (wk.toNat = 1 ∧ ∃ cv v hi, decCV a (p + 1) = some cv ∧ hd? a (p + 5) = some v ∧
           decHint a (p + 6) = some hi ∧ x = .defnInfo cv v hi) ∨
        (wk.toNat = 2 ∧ ∃ cv, decCV a (p + 1) = some cv ∧ x = .thmInfo cv) ∨
-       (wk.toNat = 3 ∧ ∃ cv caps, decCV a (p + 1) = some cv ∧ decCaps a dn (p + 5) = some caps ∧
+       (wk.toNat = 3 ∧ ∃ cv caps, decCV a (p + 1) = some cv ∧ decCaps a (p + 5) = some caps ∧
           x = .indInfo cv caps) ∨
        (wk.toNat = 4 ∧ ∃ cv np nf, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some np ∧
           nat? a (p + 6) = some nf ∧ x = .ctorInfo cv np nf) ∨
@@ -596,7 +596,7 @@ theorem ciD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x :
 /-- **A decoded record's constant value sits at `p + 1`** (every kind holds it inline, the twin's
 pure `toConstantVal`). -/
 theorem ciD_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
-    (h : decCI a dn p = some x) : decCV a (p + 1) = some x.toConstantVal := by
+    (h : decCI a p = some x) : decCV a (p + 1) = some x.toConstantVal := by
   obtain ⟨_, _, hx⟩ := ciD h
   rcases hx with ⟨-, cv, hcv, rfl⟩ | ⟨-, cv, -, -, hcv, -, -, rfl⟩ | ⟨-, cv, hcv, rfl⟩ |
       ⟨-, cv, -, hcv, -, rfl⟩ | ⟨-, cv, -, -, hcv, -, -, rfl⟩ |
@@ -604,7 +604,7 @@ theorem ciD_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {
 
 theorem ciEqB_ok {a : Array Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     (hsz : a.size < 2 ^ 64) {p q : Word} {x y : IConstantInfo}
-    (hx : decCI a dn p.toNat = some x) (hy : decCI a dn q.toNat = some y) :
+    (hx : decCI a p.toNat = some x) (hy : decCI a q.toNat = some y) :
     ciEqB a p q = decide (x = y) := by
   obtain ⟨wk, e, hx⟩ := ciD hx
   obtain ⟨wk', e', hy⟩ := ciD hy
@@ -705,9 +705,9 @@ theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
 /-- **A hit of `env_find` is a hit of `find?`**: the record pointer is the row's, and the lookup
 decodes there. -/
 theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
-    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR dn m vis fe)
+    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR m vis fe)
     (hw : w.toNat < 2 ^ 32) (h0 : r.headD 0 ≠ 0) :
-    m1 = m ∧ r.tail.headD 0 = rowP m w ∧ fe.find? (decI w) = decCI (erecP m) dn (rowP m w).toNat ∧
+    m1 = m ∧ r.tail.headD 0 = rowP m w ∧ fe.find? (decI w) = decCI (erecP m) (rowP m w).toNat ∧
       rowTag w ≤ 2 ∧ rowC m w ≠ 0 := by
   unfold envFindW at h
   obtain ⟨ht, h⟩ := of_ite_none h
@@ -740,8 +740,8 @@ namespace L.Ind
 open L.Arena
 
 theorem envR_row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
-    (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) :
-    rowTag w ≤ 2 → rowC m w ≠ 0 → ∃ ci, decCI (erecP m) dn (rowP m w).toNat = some ci := by
+    (h : EnvR m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) :
+    rowTag w ≤ 2 → rowC m w ≠ 0 → ∃ ci, decCI (erecP m) (rowP m w).toNat = some ci := by
   intro ht h0
   have hk := h.keys (decI w) (by rwa [decI_word_self w hw])
   have hv := h.vals (decI w) (by rwa [decI_word_self w hw])
@@ -756,8 +756,8 @@ theorem envR_row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
 
 /-- A finished call of `find_is`, against the twin's lookup and comparison. -/
 theorem findIsW_ok {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv}
-    {m : Mem} {a : AState} (hS : StageR dn vis fe m a) {nm pin w : Word} (hn : nm.toNat < 2 ^ 32)
-    {c' : IConstantInfo} (hc' : decCI (erA m) dn pin.toNat = some c')
+    {m : Mem} {a : AState} (hS : StageR vis fe m a) {nm pin w : Word} (hn : nm.toNat < 2 ^ 32)
+    {c' : IConstantInfo} (hc' : decCI (erA m) pin.toNat = some c')
     (h : findIsW m nm vis pin = some w) :
     (w != 0) = (fe.find? (decI nm) == some c') ∧ w.toNat ≤ 1 := by
   unfold findIsW at h
@@ -775,7 +775,7 @@ theorem findIsW_ok {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : 
     obtain ⟨-, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.check.env hn h0
     have hsz : (erA m).size < 2 ^ 64 := hS.iw.erSize
     obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env nm hn htag hrc
-    have hci0 : decCI (erA m) dn (rowP m nm).toNat = some ci := ArrExt.decCI (erecP_ext m) hci
+    have hci0 : decCI (erA m) (rowP m nm).toNat = some ci := ArrExt.decCI (erecP_ext m) hci
     have hptr' : rr.tail.headD 0 = rowP m nm := hptr
     rw [hfind, hci]
     have hq := ciEqB_ok hdn hsz (p := rr.tail.headD 0) (q := pin) (x := ci) (y := c')
@@ -791,11 +791,11 @@ theorem findIsW_ok {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : 
 theorem refAM_pure {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
     (pre : Mem → AState → Prop) (x : α) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (dec : Mem → List Word → α → Prop)
-    (hpre : ∀ m a, pre m a → StageR dn vis fe m a)
+    (hpre : ∀ m a, pre m a → StageR vis fe m a)
     (h : ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
       ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
       ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ dec s₀.mem r x; ⊤⦄) :
-    RefAM p f args pre (pure x) (KeepPost dn vis fe dec) := by
+    RefAM p f args pre (pure x) (KeepPost vis fe dec) := by
   intro n s₀ a₀ hp
   refine triple_post (h n s₀ a₀ hp) ?_
   rintro r s' ⟨hl, hm, hd⟩
@@ -811,8 +811,8 @@ include hp
 /-- **`find_is(vis, n, pin)` refines `fe.find? n == some c'`.** -/
 theorem findIs_spec (hdn : DnInj dn) (nm pin : Word) (c' : IConstantInfo) :
     RefAM p "find_is" [vis, nm, pin]
-      (fun m a => StageR dn vis fe m a ∧ H nm ∧ decCI (erA m) dn pin.toNat = some c')
-      (pure (fe.find? (decI nm) == some c') : AM Bool) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ H nm ∧ decCI (erA m) pin.toNat = some c')
+      (pure (fe.find? (decI nm) == some c') : AM Bool) (KeepPost vis fe decW0B) := by
   refine refAM_pure p _ _ _ _ dn vis fe _ (fun m a h => h.1) ?_
   intro n s₀ a₀ ⟨hS, hn, hc'⟩
   refine triple_post (findIs_spec' p hp n s₀ nm vis pin) ?_

@@ -84,12 +84,12 @@ theorem decPW_move {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q d 
 
 theorem decCaps_move {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q d : Nat}
     {caps : IIndCaps} {ec : NIdx} {al cs : List NIdx}
-    (hA : decCaps a dn q = some caps)
+    (hA : decCaps a q = some caps)
     (hw : ∀ i, i < 15 → i ≠ 1 → i ≠ 10 → i ≠ 13 → b[d + i]? = a[q + i]?)
     (hpw : decPW b dn (d + 7) = some caps.sortZ)
     (h1 : hd? b (d + 1) = some ec) (h10 : hlist? b (d + 10) = some al)
     (h13 : hlist? b (d + 13) = some cs) :
-    decCaps b dn d = some { caps with etaCtor := ec, all := al, ctors := cs } := by
+    decCaps b d = some { caps with etaCtor := ec, all := al, ctors := cs } := by
   unfold decCaps at hA ⊢
   simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at hA ⊢
@@ -117,7 +117,7 @@ open scoped Lean.Order
 namespace L.Arena
 
 theorem decCaps_words {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
-    {caps : IIndCaps} (h : decCaps a dn q = some caps) :
+    {caps : IIndCaps} (h : decCaps a q = some caps) :
     hd? a (q + 1) = some caps.etaCtor ∧ hlist? a (q + 10) = some caps.all ∧
       hlist? a (q + 13) = some caps.ctors ∧ decPW a dn (q + 7) = some caps.sortZ := by
   unfold decCaps at h
@@ -164,7 +164,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     ∃ a' pm' caps', (promoteCaps pm f.toNat caps).run a = .ok ((pm', caps'), a') ∧
       ArenaD m' a' ∧ PMemoR m' pm' ∧ cp a' = cp a ∧
       MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ TierKeep m m' ∧ SlotGrow m m' d.toNat (d.toNat + 15) ∧
-      erecTop m' ≤ (m'.arr64 EREC).size ∧ decCaps (erecP m') dn d.toNat = some caps' := by
+      erecTop m' ≤ (m'.arr64 EREC).size ∧ decCaps (erecP m') d.toNat = some caps' := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>

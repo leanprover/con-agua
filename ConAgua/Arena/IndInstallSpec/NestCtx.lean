@@ -61,8 +61,8 @@ theorem nIdxsW_room {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
 /-- **`block_shape_lps`, below the tops** (no global bound on the record pool needed). -/
 theorem lpsW_ok' {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Word} {r : List Word} {bs : BlockShape} (h : lpsW n m q = some (r, m'))
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m q.toNat) m bs) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m q.toNat) m bs) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.lps ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   have hqt : decBS (truncM m) q.toNat = some bs := hq
@@ -100,13 +100,13 @@ theorem lpsW_ok' {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
 below the tops. -/
 theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q fo fl : Word) (bs : BlockShape)
-    (fvsP : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
+    (fvsP : List EIdx) (hS : StageR vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
     (hsrc : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → o + l ≤ iwTop s₀.mem)
     (hf : decHL s₀.mem fo.toNat fl.toNat = some fvsP) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem)
     (r : List Word) (hm : nckW n s₀.mem q fo fl = some (r, s'.mem)) :
     AM.ok (bs.nestCtx fvsP) a₀ ∧
       DecB (fun m => decCtx m (r.headD 0).toNat) s'.mem (AM.res (bs.nestCtx fvsP) a₀) ∧
-      StageR dn vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       CtxIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧ CtxSl s'.mem (r.headD 0).toNat := by
   obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.iw
   have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
@@ -127,7 +127,7 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
   · rw [h1] at hm; cases hm
   rw [h1] at hm; simp only at hm
   obtain ⟨hr1, hd1, hg1, hf1, ht1⟩ := memberNamesW_dec h1 hsz hcl hq' (by omega) hsrc hptr0
-  have hS1 : StageR dn vis fe m1 a₀ := stage_frame_iw hS hf1 (by
+  have hS1 : StageR vis fe m1 a₀ := stage_frame_iw hS hf1 (by
     have := memberNamesW_room h1 hsz; rw [hkw, UInt64.toNat_ofNat_of_lt' hkb] at this
     simp only [iwTop] at this ht1 ⊢; omega)
   -- the level parameters
@@ -146,7 +146,7 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
   obtain ⟨hr3, hd3, hg3, hf3, ht3⟩ := nIdxsW_dec h3 hsz2 hcl2 hq'2 (by have := hg02.iw; omega)
     (partsHsrc_grow hg02 hq9 hsrc) hptr2
   have hkw2 := partsShapeK hq'2 hq92
-  have hS3 : StageR dn vis fe m3 a₀ := stage_frame_iw hS2 hf3 (by
+  have hS3 : StageR vis fe m3 a₀ := stage_frame_iw hS2 hf3 (by
     have := nIdxsW_room h3 hsz2; rw [hkw2, UInt64.toNat_ofNat_of_lt' hkb] at this
     simp only [iwTop] at this ht3 ⊢; omega)
   have hg03 := hg02.trans hg3
@@ -239,13 +239,13 @@ below the tops. -/
 @[refines ConRon.Arena.BlockShape.nestCtx]
 theorem blockShapeNestCtx_refines (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q fo fl : Word) (bs : BlockShape)
-    (fvsP : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
+    (fvsP : List EIdx) (hS : StageR vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
     (hsrc : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → o + l ≤ iwTop s₀.mem)
     (hf : decHL s₀.mem fo.toNat fl.toNat = some fvsP) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_nest_ctx" [q, fo, fl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (bs.nestCtx fvsP) a₀ ∧
       DecB (fun m => decCtx m (r.headD 0).toNat) s'.mem (AM.res (bs.nestCtx fvsP) a₀) ∧
-      StageR dn vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       CtxIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧ CtxSl s'.mem (r.headD 0).toNat; ⊤⦄ :=
   triple_post (nck_spec p hP n s₀ q fo fl) fun r s' ⟨hl, hm⟩ =>
     ⟨hl, nckW_ok n s₀ s' a₀ dn vis fe q fo fl bs fvsP hS hq hsrc hf hfb r hm⟩

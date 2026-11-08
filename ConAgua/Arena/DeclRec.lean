@@ -413,10 +413,10 @@ theorem vgMem_eq (m1 : Mem) (g p vk : Word) (hp : p.toNat + 8 ≤ g.toNat)
 at `p + 1`, its value at `p + 5`, below the top): the stage relation kept, the pool grown. -/
 theorem erecVgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {p vk : Word} {r : List Word} {cv : IConstantVal} {v : EIdx} {k : ValueKind}
-    (h : erecVgW m p vk = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : erecVgW m p vk = some (r, m')) (hS : StageR vis fe m a)
     (hcv : decCV (erecP m) (p.toNat + 1) = some cv) (hv : hd? (erecP m) (p.toNat + 5) = some v)
     (hp : p.toNat + 8 ≤ erTop m) (hk : decVK vk.toNat = some k) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ decVG (erecP m') (r.headD 0).toNat = some ⟨k, cv, v⟩ := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ decVG (erecP m') (r.headD 0).toNat = some ⟨k, cv, v⟩ := by
   simp only [erecVgW] at h
   cases h1 : erAllocW m 6 with
   | none => rw [h1] at h; cases h
@@ -467,9 +467,9 @@ theorem erecVgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
 so the other tiers and the pool stay. -/
 theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {q : Word} {r : List Word} {ci : IConstantInfo}
-    (h : envPushW m vis q = some (r, m')) (hS : StageR dn vis fe m a)
-    (hci : decCI (erecP m) dn q.toNat = some ci) :
-    StageR dn (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' := by
+    (h : envPushW m vis q = some (r, m')) (hS : StageR vis fe m a)
+    (hci : decCI (erecP m) q.toNat = some ci) :
+    StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' := by
   simp only [envPushW] at h
   by_cases hv : vis + 1 = 0
   · rw [ite_eq_left hv] at h; cases h
@@ -522,7 +522,7 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
       ((MemFrame.setCtl _ 128 _).mono (by simp) (by simp))
     intro b hb; simp only [List.mem_singleton] at hb; subst hb
     rcases hmem with e | e | e | e | e | e <;> rw [e] <;> simp
-  have hC : CheckR dn (envPushMem m vis q) a (vis + 1) (fe.push ci) :=
+  have hC : CheckR (envPushMem m vis q) a (vis + 1) (fe.push ci) :=
     ⟨⟨ArenaR.frame (fun b hb => by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
           rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -556,9 +556,9 @@ grown, the kind word `ck`, the record's constant value (whenever the declaration
 one, `CVAt`), its value word, its hint, all of it below the top. -/
 theorem erecCiW_core {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {i ck : Word} {r : List Word} {ds : Array IDeclaration}
-    (h : erecCiW n m i ck = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : erecCiW n m i ck = some (r, m')) (hS : StageR vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ nat? (erecP m') (r.headD 0).toNat = some ck.toNat ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ nat? (erecP m') (r.headD 0).toNat = some ck.toNat ∧
       (∀ cv, CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv →
         decCV (erecP m') ((r.headD 0).toNat + 1) = some cv) ∧
       (hd? (erecP m') ((r.headD 0).toNat + 5) : Option EIdx) =
@@ -673,10 +673,10 @@ constant value at `q + 1`, its value at `q + 5`, all of it below the top. -/
 theorem erecCiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {i ck : Word} {r : List Word} {ds : Array IDeclaration}
     {ci : IConstantInfo}
-    (h : erecCiW n m i ck = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : erecCiW n m i ck = some (r, m')) (hS : StageR vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hci : stepCI ck.toNat ds[i.toNat] = some ci) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ decCI (erecP m') dn (r.headD 0).toNat = some ci ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ decCI (erecP m') (r.headD 0).toNat = some ci ∧
       decCV (erecP m') ((r.headD 0).toNat + 1) = some (stepCV ds[i.toNat]) ∧
       hd? (erecP m') ((r.headD 0).toNat + 5) = some (stepVal ds[i.toNat]) ∧
       (r.headD 0).toNat + 8 ≤ erTop m' := by
@@ -705,11 +705,11 @@ arms' constant record of those kinds). -/
 theorem erecCiW_okA {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {ds : Array IDeclaration}
     {cv : IConstantVal}
-    (h : erecCiW n m i 0 = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : erecCiW n m i 0 = some (r, m')) (hS : StageR vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hcv : CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
-      decCI (erecP m') dn (r.headD 0).toNat = some (.axiomInfo cv) ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
+      decCI (erecP m') (r.headD 0).toNat = some (.axiomInfo cv) ∧
       decCV (erecP m') ((r.headD 0).toNat + 1) = some cv ∧
       (r.headD 0).toNat + 8 ≤ erTop m' := by
   obtain ⟨hS', hG', hk, hcvG, -, -, htop⟩ := erecCiW_core h hS hD hi

@@ -464,7 +464,7 @@ theorem decCV_rd1 {b : Array Word} {q : Word} {cv : IConstantVal} (hsz : b.size 
 
 /-- A recursor record by its kind word `5`. -/
 theorem decCI_rec_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (hsz : b.size < 2 ^ 63) (h : decCI b dn q.toNat = some ci) :
+    {ci : IConstantInfo} (hsz : b.size < 2 ^ 63) (h : decCI b q.toNat = some ci) :
     (rdW b q = 5 → ∃ cv rules, ci = .recInfo cv (rdW b (q + 5)).toNat (rdW b (q + 6)).toNat rules ∧
       decCV b (q.toNat + 1) = some cv ∧
       decRules b (rdW b (q + 7)).toNat (rdW b (q + 8)).toNat = some rules) ∧
@@ -494,7 +494,7 @@ theorem decCI_rec_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
 
 /-- A constructor record by its kind word `4`. -/
 theorem decCI_ctor_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI b dn q.toNat = some ci) (h4 : rdW b q = 4) :
+    {ci : IConstantInfo} (h : decCI b q.toNat = some ci) (h4 : rdW b q = 4) :
     ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV b (q.toNat + 1) = some cv := by
   cases hq : b[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h

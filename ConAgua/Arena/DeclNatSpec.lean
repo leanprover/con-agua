@@ -123,9 +123,9 @@ theorem decHL_words {k : IdxKind} (m : Mem) : ∀ (ws : List Word) (o : Nat),
 
 /-- A freshly written handle slice keeps the stage relation and decodes. -/
 theorem slice_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} {ws : List Word} {q k : Word} (hS : StageR dn vis fe m a)
+    {a : AState} {ws : List Word} {q k : Word} (hS : StageR vis fe m a)
     (hrec : RecPost m m' [q] ws) (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hk : k.toNat = ws.length) :
-    KeepPost dn vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a [q, k]
+    KeepPost vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a [q, k]
       (ws.map (decI : Word → Idx κ)) := by
   obtain ⟨hq, hKeep, hroom, htop, hget⟩ := hrec
   have hq' : q.toNat = iwTop m := by simp only [List.headD_cons] at hq; rw [hq]; rfl
@@ -159,8 +159,8 @@ theorem natOpNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
   simp [natOpNames, StateT.run_bind, pinAt_run hF, exc_ok_bind', StateT.run_map] <;> rfl
 
 theorem natOpNames_ref (hN : NatGateProg p) :
-    CallRef p "nat_op_names" [] (StageR dn vis fe) natOpNames
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
+    CallRef p "nat_op_names" [] (StageR vis fe) natOpNames
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
   have hw := callW_model (M := fun mm => natOpNamesW p k mm) (natOpNames_specW p hN.lNatOpNames hN.lPinAt k ·) hc
   unfold natOpNamesW at hw
@@ -197,8 +197,8 @@ theorem natOpNames_ref (hN : NatGateProg p) :
 
 @[refines ConRon.Arena.natOpNames]
 theorem natOpNames_refines (hN : NatGateProg p) :
-    RefAM p "nat_op_names" [] (StageR dn vis fe) natOpNames
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) :=
+    RefAM p "nat_op_names" [] (StageR vis fe) natOpNames
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) :=
   (natOpNames_ref hN).refAM
 
 def natDivModNamesW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
@@ -222,8 +222,8 @@ theorem natDivModNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
   simp [natDivModNames, StateT.run_bind, pinAt_run hF, exc_ok_bind', StateT.run_map] <;> rfl
 
 theorem natDivModNames_ref (hN : NatGateProg p) :
-    CallRef p "nat_div_mod_names" [] (StageR dn vis fe) natDivModNames
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
+    CallRef p "nat_div_mod_names" [] (StageR vis fe) natDivModNames
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
   have hw := callW_model (M := fun mm => natDivModNamesW p k mm) (natDivModNames_specW p hN.lNatDivModNames hN.lPinAt k ·) hc
   unfold natDivModNamesW at hw
@@ -261,8 +261,8 @@ theorem natDivModNames_ref (hN : NatGateProg p) :
 
 @[refines ConRon.Arena.natDivModNames]
 theorem natDivModNames_refines (hN : NatGateProg p) :
-    RefAM p "nat_div_mod_names" [] (StageR dn vis fe) natDivModNames
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) :=
+    RefAM p "nat_div_mod_names" [] (StageR vis fe) natDivModNames
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) :=
   (natDivModNames_ref hN).refAM
 
 end names
@@ -272,11 +272,11 @@ end names
 /-- A freshly written slice, from the allocation and the words written. -/
 theorem emit_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hal : p.lookup "iw_alloc" = some iwAlloc) {k : Nat} {m mq m' : Mem} {a : AState}
-    {rq r : List Word} {N : Word} {ws : List Word} (hS : StageR dn vis fe m a)
+    {rq r : List Word} {N : Word} {ws : List Word} (hS : StageR vis fe m a)
     (hN : N.toNat = ws.length) (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hq : callW p k "iw_alloc" [N] m = some (rq, mq)) (hr : r = [rq.headD 0, N])
     (hm : m' = wrIW mq (rq.headD 0) ws) :
-    KeepPost dn vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a r
+    KeepPost vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a r
       (ws.map (decI : Word → Idx κ)) := by
   obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hal N k m rq mq hS.iw hq
   have hrec := recPost_wr m ws N hN hS.iw (by simpa [iwTop, hN] using hroom)
@@ -484,7 +484,7 @@ end pins
 
 theorem KeepPost.of_grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {α : Type}
     {dec : Mem → List Word → α → Prop} {m1 m m' : Mem} {a : AState} {r : List Word} {x : α}
-    (h : KeepPost dn vis fe dec m1 m' a r x) (hg : IWGrow m m1) : KeepPost dn vis fe dec m m' a r x :=
+    (h : KeepPost vis fe dec m1 m' a r x) (hg : IWGrow m m1) : KeepPost vis fe dec m m' a r x :=
   ⟨h.1, hg.trans h.2.1, h.2.2⟩
 
 end L.Ind

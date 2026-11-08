@@ -35,8 +35,8 @@ open L.Arena
 reaches the `.indInfo` arm from `nat? a p = some 3` (`Env.lean`'s `decCI_name` destructures the
 same match generically, for the name field). -/
 theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a dn p = some ci) (hk : nat? a p = some 3) :
-    ∃ cv caps, ci = .indInfo cv caps ∧ decCaps a dn (p + 5) = some caps := by
+    {ci : IConstantInfo} (h : decCI a p = some ci) (hk : nat? a p = some 3) :
+    ∃ cv caps, ci = .indInfo cv caps ∧ decCaps a (p + 5) = some caps := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk', h⟩ := h
   have hk3 : k = 3 := Option.some.inj (hk'.symm.trans hk)
@@ -47,7 +47,7 @@ theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : N
 
 /-- The contrapositive: an `indInfo` record's kind word is `3`. -/
 theorem decCI_indInfo_kind {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a dn p = some (.indInfo cv caps)) :
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a p = some (.indInfo cv caps)) :
     nat? a p = some 3 := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
@@ -99,7 +99,7 @@ whose size is nowhere near `2 ^ 64`). -/
 theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
     (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q)
     (hwf : rdW (m.arr64 EREC) q = (3 : Word) →
-      ∃ cv caps, decCI (erecP m) dn q.toNat = some (.indInfo cv caps))
+      ∃ cv caps, decCI (erecP m) q.toNat = some (.indInfo cv caps))
     (hqb : rdW (m.arr64 EREC) q = (3 : Word) → q.toNat + 16 < 2 ^ 64) :
     hslice? (erA m)
         (if found = 0 then (0 : Word) else if rdW (m.arr64 EREC) q = 3 then
@@ -187,7 +187,7 @@ theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? a i = some k) : i < a.si
 
 /-- An `indInfo` record is fully inside the array it decodes from. -/
 theorem decCI_indInfo_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a dn p = some (.indInfo cv caps)) :
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a p = some (.indInfo cv caps)) :
     p + 16 < a.size := by
   obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 h (decCI_indInfo_kind h)
   simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
@@ -197,8 +197,8 @@ theorem decCI_indInfo_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name
   omega
 
 theorem EnvR.row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
-    (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) :
-    rowTag w ≤ 2 → rowC m w ≠ 0 → ∃ ci, decCI (erecP m) dn (rowP m w).toNat = some ci := by
+    (h : EnvR m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) :
+    rowTag w ≤ 2 → rowC m w ≠ 0 → ∃ ci, decCI (erecP m) (rowP m w).toNat = some ci := by
   intro ht h0
   have hk := h.keys (decI w) (by rwa [decI_word_self w hw])
   have hv := h.vals (decI w) (by rwa [decI_word_self w hw])
@@ -553,10 +553,10 @@ theorem rdW_grow {m m' : Mem} (hg : IWGrow m m') {x : Word} (hi : x.toNat < iwTo
 
 theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (dO dl i body : Word) (ds : List EIdx) (r : List Word),
-    closeW n m dO dl i body = some (r, m') → StageR dn vis fe m a → H body →
+    closeW n m dO dl i body = some (r, m') → StageR vis fe m a → H body →
     decHL m dO.toNat dl.toNat = some ds → dO.toNat + dl.toNat < 2 ^ 64 →
     dO.toNat + dl.toNat ≤ iwTop m → i.toNat + dl.toNat < 2 ^ 64 → AbsOK m →
-    ∃ x a', (ConRon.Arena.closeTelescope ds i.toNat (decI body)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.closeTelescope ds i.toNat (decI body)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0E m' r x ∧ AbsOK m' := by
   induction n with
   | zero => intro dn fe vis m m' a dO dl i body ds r h; simp [closeW] at h

@@ -53,7 +53,7 @@ local notation "V" => ConLeche.CheckMode.verified
 structure StageT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) :
     Prop where
   /-- The stage relation (`CheckR ∧ IWOK`). -/
-  stage : StageR dn vis fe m a
+  stage : StageR vis fe m a
   /-- The twin's invariants `CoreS` has beyond `CheckR`. -/
   twin : TwinOK dn m a fe
   /-- The pin table is filled (its flag word). -/
@@ -163,7 +163,7 @@ theorem _root_.L.Arena.TwinOK.frame_iw {m m' : Mem} {a : AState} (hf : MemFrame 
 /-- **`StageT` across a pool writer**: the writer's `StageR` lemma (`allocW_stage`, `consW_stage`,
 `recW_stage`, …) and its frame. -/
 theorem StageT.of_iw {m m' : Mem} {a : AState} (hT : StageT dn vis fe m a)
-    (hS : StageR dn vis fe m' a) (hf : MemFrame [IW] [200] m m') : StageT dn vis fe m' a :=
+    (hS : StageR vis fe m' a) (hf : MemFrame [IW] [200] m m') : StageT dn vis fe m' a :=
   ⟨hS, hT.twin.frame_iw hf, by
     have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (by simp [PINS, IW]) (by decide)
     simp only [pinW, hP]; exact hT.flag⟩

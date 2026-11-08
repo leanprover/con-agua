@@ -189,7 +189,7 @@ theorem ipo_spec (p : Prog) (hps : p.lookup "pi_sort_tele_len" = some L.Front.In
 theorem decEBlk_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat} {blk : List IConstantInfo}
     (h : decEBlk dn m o l = some blk) (j : Nat) (hj : j < l) :
     ∃ q, nat? (erA m) (o + j) = some q ∧
-      decCI (erA m) dn q = some (blk[j]'(by rw [mapM_opt_length _ _ _ h]; simpa using hj)) := by
+      decCI (erA m) q = some (blk[j]'(by rw [mapM_opt_length _ _ _ h]; simpa using hj)) := by
   have := mapM_opt_get _ (List.range l) blk h j (by simpa using hj)
   simp only [List.getElem_range, Option.bind_eq_bind, Option.bind_eq_some_iff] at this
   exact this
@@ -361,7 +361,7 @@ theorem indParamsOk_refines (p : Prog)
     (hps : p.lookup "pi_sort_tele_len" = some L.Front.Ind.piSortTeleLen)
     (hev : p.lookup "e_view" = some eView) (hp : p.lookup "ind_params_ok" = some L.Checker.indParamsOkL)
     (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (np o l : Word) (blk : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
+    (np o l : Word) (blk : List IConstantInfo) (hS : StageR vis fe s₀.mem a₀)
     (hblk : DecB (fun m => decEBlk dn m o.toNat l.toNat) s₀.mem blk) (hb : o.toNat + l.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "ind_params_ok" [np, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ AM.ok (indParamsOk np.toNat blk) a₀ ∧

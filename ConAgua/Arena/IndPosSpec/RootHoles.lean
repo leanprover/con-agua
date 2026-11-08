@@ -34,7 +34,7 @@ open L.Arena
 
 /-- Words written into the pool keep the stage relation. -/
 theorem StageR.wrIW {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} :
-    ∀ {m : Mem}, StageR dn vis fe m a → ∀ (q : Word) (ws : List Word), StageR dn vis fe (wrIW m q ws) a
+    ∀ {m : Mem}, StageR vis fe m a → ∀ (q : Word) (ws : List Word), StageR vis fe (wrIW m q ws) a
   | _, hS, _, [] => hS
   | _, hS, q, x :: ws => StageR.wrIW (hS.set_iw q x) (q + 1) ws
 
@@ -42,8 +42,8 @@ theorem StageR.wrIW {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
 words at the old top, where `ws` is readable. -/
 theorem posRecW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
-    (hS : StageR dn vis fe m a) (hl : ws.length < 2 ^ 64) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ q.toNat = iwTop m ∧ iwTop m' = iwTop m + ws.length ∧
+    (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ q.toNat = iwTop m ∧ iwTop m' = iwTop m + ws.length ∧
       (∀ j < ws.length, (m'.arr64 IW)[q.toNat + j]? = ws[j]?) := by
   simp only [posRecW] at h
   rcases hal : allocW m (UInt64.ofNat ws.length) with _ | ⟨q1, m1⟩ <;> rw [hal] at h; · simp at h
@@ -246,12 +246,12 @@ def rhList (names : List NIdx) (lv : LsIdx) (params : List EIdx) (nP : Nat) : Li
 theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
     (no nl lv po pl nP q : Word) (names : List NIdx) (params : List EIdx) (k : Nat) :
     ∀ (m m' : Mem) (j : Word),
-    rhGoW k m no nl lv po pl nP q j = some m' → StageR dn vis fe m a →
+    rhGoW k m no nl lv po pl nP q j = some m' → StageR vis fe m a →
     decHL m no.toNat nl.toNat = some names → decHL m po.toNat pl.toNat = some params → H lv →
     (∀ i < nl.toNat, no.toNat + i < q.toNat) → (∀ i < pl.toNat, po.toNat + i < q.toNat) →
     q.toNat + nl.toNat ≤ iwTop m → j.toNat ≤ nl.toNat →
     HolesAt m q.toNat j.toNat (rhList names (decI lv) params nP.toNat) (OutR q.toNat nl.toNat (iwTop m)) →
-    StageR dn vis fe m' a ∧ GrowX q.toNat nl.toNat m m' ∧
+    StageR vis fe m' a ∧ GrowX q.toNat nl.toNat m m' ∧
       HolesAt m' q.toNat nl.toNat (rhList names (decI lv) params nP.toNat)
         (OutR q.toNat nl.toNat (iwTop m')) := by
   induction k with
@@ -387,8 +387,8 @@ theorem CtxIn.grow {m m' : Mem} {p : Nat} (hc : CtxIn m p (· < iwTop m)) (h : I
 
 theorem rhW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
     (m m' : Mem) (ctx : Word) (r : List Word) (c : NestCtx) (h : rhW k m ctx = some (r, m'))
-    (hS : StageR dn vis fe m a) (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ (r.tail.headD 0).toNat = c.rootHoles.length ∧
+    (hS : StageR vis fe m a) (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ (r.tail.headD 0).toNat = c.rootHoles.length ∧
       (r.headD 0).toNat + c.rootHoles.length ≤ iwTop m' ∧
       HolesAt m' (r.headD 0).toNat c.rootHoles.length c.rootHoles (· < iwTop m') := by
   have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
@@ -436,10 +436,10 @@ include ha h2 h4 hg hp
 `NestHole` pointers, each decoded below the top. -/
 @[refines ConRon.Arena.NestCtx.rootHoles]
 theorem nestCtxRootHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (hS : StageR dn vis fe s₀.mem a₀)
+    (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (hS : StageR vis fe s₀.mem a₀)
     (hc : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_ctx_root_holes" [ctx]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       (r.tail.headD 0).toNat = c.rootHoles.length ∧
       (r.headD 0).toNat + c.rootHoles.length ≤ iwTop s'.mem ∧
       decPL s'.mem (decNH s'.mem) (r.headD 0).toNat c.rootHoles.length = some c.rootHoles ∧
@@ -454,8 +454,8 @@ end census
 /-! ## `sl_append` over words, under the stage relation -/
 
 theorem StageR.ofCopyW {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} :
-    ∀ (n : Nat) {m m' : Mem} {d s l : Word}, copyW n m d s l = some m' → StageR dn vis fe m a →
-    StageR dn vis fe m' a
+    ∀ (n : Nat) {m m' : Mem} {d s l : Word}, copyW n m d s l = some m' → StageR vis fe m a →
+    StageR vis fe m' a
   | 0, _, _, _, _, _, h, _ => by simp [copyW] at h
   | n + 1, m, m', d, s, l, h, hS => by
     by_cases hl : l = 0
@@ -467,9 +467,9 @@ theorem StageR.ofCopyW {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
 two sources' (any words: pointers too). -/
 theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
-    (h : appendW n m o1 l1 o2 l2 = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : appendW n m o1 l1 o2 l2 = some (r, m')) (hS : StageR vis fe m a)
     (hsrc1 : o1.toNat + l1.toNat ≤ iwTop m) (hsrc2 : o2.toNat + l2.toNat ≤ iwTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ (r.headD 0).toNat = iwTop m ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ (r.headD 0).toNat = iwTop m ∧
       (r.tail.headD 0).toNat = l1.toNat + l2.toNat ∧ iwTop m' = iwTop m + l1.toNat + l2.toNat ∧
       (∀ i < l1.toNat, (m'.arr64 IW)[iwTop m + i]? = (m.arr64 IW)[o1.toNat + i]?) ∧
       (∀ i < l2.toNat, (m'.arr64 IW)[iwTop m + l1.toNat + i]? = (m.arr64 IW)[o2.toNat + i]?) := by
@@ -604,10 +604,10 @@ theorem rdW_of_get' {a : Array Word} {x : Word} {i : Nat} {w : Word} (hx : x.toN
 
 theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
     (m m' : Mem) (ctx po pl i : Word) (r : List Word) (c : NestCtx) (prog : List NestHole)
-    (h : haW k m ctx po pl i = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : haW k m ctx po pl i = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hpr : HSl m po.toNat pl.toNat prog) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ decONH m' r (ConRon.Arena.nestHoleAt c prog i.toNat) := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ decONH m' r (ConRon.Arena.nestHoleAt c prog i.toNat) := by
   have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, -, -, hnP, -, -, -, -, -⟩ := ctx_fields hc hin hsz
   unfold haW at h
@@ -689,10 +689,10 @@ include ha h2 h4 hg hr hc hap hp
 @[refines ConRon.Arena.nestHoleAt]
 theorem nestHoleAt_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx po pl i : Word) (c : NestCtx) (prog : List NestHole)
-    (hS : StageR dn vis fe s₀.mem a₀) (hcx : decCtx s₀.mem ctx.toNat = some c)
+    (hS : StageR vis fe s₀.mem a₀) (hcx : decCtx s₀.mem ctx.toNat = some c)
     (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) (hpr : HSl s₀.mem po.toNat pl.toNat prog) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_hole_at" [ctx, po, pl, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       decONH s'.mem r (ConRon.Arena.nestHoleAt c prog i.toNat); ⊤⦄ := by
   refine triple_post (nestHoleAt_spec p ha h2 h4 hg hr hc hap hp k s₀ ctx po pl i) ?_
   rintro r s' ⟨hl, hm⟩

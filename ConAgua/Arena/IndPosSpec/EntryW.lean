@@ -32,7 +32,7 @@ open L.Arena
 
 theorem blk_k3 {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
     (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q) (h0 : found ≠ 0)
-    (hex : ∃ ci, decCI (erecP m) dn q.toNat = some ci) (hk : rdW (m.arr64 EREC) q = 3) :
+    (hex : ∃ ci, decCI (erecP m) q.toNat = some ci) (hk : rdW (m.arr64 EREC) q = 3) :
     hslice? (erA m) (rdW (m.arr64 EREC) (q + 15)).toNat (rdW (m.arr64 EREC) (q + 16)).toNat =
       some (nestBlockOf fe (decI c)) := by
   obtain ⟨ci, hci⟩ := hex
@@ -93,7 +93,7 @@ theorem erec_hd {m : Mem} {w : Word} {c : Nat} {k : IdxKind} {x : Idx k}
 
 /-- A record's kind word and, for a constructor, its fields. -/
 theorem decCI_kind_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a dn p = some ci) :
+    {ci : IConstantInfo} (h : decCI a p = some ci) :
     ∃ k, nat? a p = some k ∧
       ((k = 4 ∧ ∃ cv nPc nF, ci = .ctorInfo cv nPc nF ∧ decCV a (p + 1) = some cv ∧
           nat? a (p + 5) = some nPc ∧ nat? a (p + 6) = some nF) ∨
@@ -132,10 +132,10 @@ def StripOut (m : Mem) (r : List Word) (ciq : Word) (cv : IConstantVal) (nPc nF 
 
 theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m' : Mem}
     {a : AState} {ciq : Word} {r : List Word} {ci : IConstantInfo}
-    (h : stripW m ciq = some (r, m')) (hS : StageR dn vis fe m a)
-    (hci : decCI (erecP m) dn ciq.toNat = some ci) :
+    (h : stripW m ciq = some (r, m')) (hS : StageR vis fe m a)
+    (hci : decCI (erecP m) ciq.toNat = some ci) :
     (∀ cv nPc nF, ci = .ctorInfo cv nPc nF → nPc + nF < 2 ^ 64 ∧
-      ∃ x a', (stripPis (nPc + nF) cv.type).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+      ∃ x a', (stripPis (nPc + nF) cv.type).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
         IWGrow m m' ∧ StripOut m r ciq cv nPc nF x) ∧
     ((∀ cv nPc nF, ci ≠ .ctorInfo cv nPc nF) → r = [0, 0, 0, 0, 0] ∧ m' = m) := by
   obtain ⟨k, hk, hcases⟩ := decCI_kind_cases hci
@@ -226,9 +226,9 @@ def EntryOut (m' : Mem) (r : List Word) (ciq : Word) : Option (IConstantVal × N
 
 theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m' : Mem}
     {a : AState} {C ciq : Word} {r : List Word} {ci : IConstantInfo} (hC : H C)
-    (h : entryW m C ciq = some (r, m')) (hS : StageR dn vis fe m a)
-    (hci : decCI (erecP m) dn ciq.toNat = some ci) :
-    ∃ x a', (ConRon.Arena.nestCtorEntry (decI C) ci).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    (h : entryW m C ciq = some (r, m')) (hS : StageR vis fe m a)
+    (hci : decCI (erecP m) ciq.toNat = some ci) :
+    ∃ x a', (ConRon.Arena.nestCtorEntry (decI C) ci).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ EntryOut m' r ciq x := by
   unfold entryW at h
   rcases h0 : stripW m ciq with _ | ⟨r0, m0⟩ <;> rw [h0] at h; · simp [entryK1] at h
@@ -326,9 +326,9 @@ theorem nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestRe
         gafF_spec p had n] <;> finish [resHeadW]
 
 theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem) (a : AState)
-    (e : Word) (r : List Word) (he : H e) (h : resHeadW m e = some (r, m')) (hS : StageR dn vis fe m a) :
+    (e : Word) (r : List Word) (he : H e) (h : resHeadW m e = some (r, m')) (hS : StageR vis fe m a) :
     ∃ a', (ConRon.Arena.nestResHead (decI e)).run a = .ok (r.headD 0 != 0, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' := by
   unfold resHeadW at h
   rcases hs : gafF m [CWF, e] with _ | ⟨r1, m1⟩ <;> rw [hs] at h; · simp [resHeadK] at h
   simp only [resHeadK, Option.some.injEq, Prod.mk.injEq] at h

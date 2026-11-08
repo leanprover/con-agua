@@ -58,7 +58,7 @@ theorem ntyT_eq {β : Type} (fe : IFEnv) (key : NestKey) (K : EIdx → AM β) :
 count (`view_ls_len`), `strip_pis`, `cv_lps`, `inst_lp_fast` (its contract `hI`), `inst_pis_with`. -/
 theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} (k : Nat) {m : Mem} {a : AState} {key : Word} {kk : NestKey}
-    (hI : IlpRd (realCall p) dn vis fe (IlpBase m a)) (hS : StageR dn vis fe m a)
+    (hI : IlpRd (realCall p) dn vis fe (IlpBase m a)) (hS : StageR vis fe m a)
     (hk : decNK m key.toNat = some kk) (hkin : NKIn m key.toNat (· < iwTop m)) (hksl : NKSl m key) :
     RefE (closedNV p _root_.L.Checker.nvFns = true) (ntyE p k m vis key) (ntyT fe kk pure) a
       (fun v ty a' => NtyPost dn vis fe kk m a v.1 v.2 ty a') := by

@@ -70,7 +70,7 @@ decoding, the stage invariant, the growth, the frames. -/
 structure TmmPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
     (r : Word) (m' : Mem) (x : TargetMajor) (a' : AState) : Prop where
   dec : DecB (fun m => decTM m r.toNat) m' x
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   pos : PosMR m'
   afr : AFr m m'
@@ -83,7 +83,7 @@ member's and its constructors' reads, `block_shape_lps`, `paramLevels` (`plW_ok`
 prefixes compared (`sl_eq`), the record (`mk_target_major`). -/
 theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao al I us t : Word}
     {bs : BlockShape} {css : List (List (IConstantVal × Nat))} {pfvs fvs args : List EIdx}
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
+    (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hcss : PSlR decCNS css cao cal m) (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs)
     (hfv : DecB (fun m => decHL m fvo.toNat fvl.toNat) m fvs) (hfvb : fvo.toNat + fvl.toNat ≤ iwTop m)
     (hag : DecB (fun m => decHL m ao.toNat al.toNat) m args) (hagb : ao.toNat + al.toNat ≤ iwTop m)
