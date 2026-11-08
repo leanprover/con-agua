@@ -42,7 +42,7 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-open ConRon.Bridge (ListRel)
+open ConRon.Bridge.Frontend (ListRel)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem listRel_drop {α β : Type} {R : α → β → Prop} :
