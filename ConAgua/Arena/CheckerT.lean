@@ -101,7 +101,7 @@ def IndArmSpec (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
   ∀ (pins : List INatOpPinSet) (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState) (vis : Word)
     (fe : IFEnv) (env : ConLeche.Env) (block : List IConstantInfo) (nP : Nat) (o l w : Word)
     (r : List Word), l.toNat = block.length → w.toNat = nP →
-    decCIs (erecP m) dn o.toNat l.toNat = some block → o.toNat + l.toNat ≤ erTop m →
+    decCIsR (erecP m) o.toNat l.toNat = some block → o.toNat + l.toNat ≤ erTop m →
     FrontBlock block → StageT dn vis fe m a → ConRon.Bridge.StateOK a → FoldOK V env fe a →
     (∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x) → BlockLpsDnA dn block →
     IndMemos m → callW p n "check_ind_decl" [vis, o, l, w] m = some (r, m') →
@@ -381,7 +381,7 @@ def IndArmSpecE (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
   ∀ (pins : List INatOpPinSet) (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (vis : Word)
     (fe : IFEnv) (env : ConLeche.Env) (block : List IConstantInfo) (nP : Nat) (o l w : Word),
     l.toNat = block.length → w.toNat = nP →
-    decCIs (erecP m) dn o.toNat l.toNat = some block → o.toNat + l.toNat ≤ erTop m →
+    decCIsR (erecP m) o.toNat l.toNat = some block → o.toNat + l.toNat ≤ erTop m →
     FrontBlock block → StageT dn vis fe m a → ConRon.Bridge.StateOK a → FoldOK V env fe a →
     (∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x) → BlockLpsDnA dn block →
     IndMemos m → ∀ e, callE p n "check_ind_decl" [vis, o, l, w] m = .error e →

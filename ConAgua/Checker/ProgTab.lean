@@ -29,8 +29,12 @@ def checkerTabOf (t : Tab) : Tab :=
   let l := Tab.ofArrs (checkerArrays.ids .byte) (checkerWordRows.map fun d => (d.id, d.tiered)) t.rom t.nres t.ng
   { l with mins := checkerArrays.mins, tbl := checkerArrays.tblArr.map fun x => (x.1, l.tblBase) }
 
--- ronsync2 stage 2: `checkerTab` comes back with `scripts/checker_prog.py`.
--- set_option maxRecDepth 100000 in
--- #guard checkerTab == checkerTabOf (Prog.tab checkerProg)
+set_option maxRecDepth 100000 in
+/-- The checker's table (`checkerTabOf`), as a literal (`tab_lit%`: every per-chunk check of
+`checkerProg_wf` unfolds it). -/
+def checkerTab : Tab :=
+  tab_lit% (checkerTabOf (Prog.tab checkerProg))
+
+#guard checkerTab == checkerTabOf (Prog.tab checkerProg)
 
 end L.Checker

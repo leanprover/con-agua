@@ -36,7 +36,7 @@ theorem erA_truncM (m : Mem) : erA (truncM m) = erecP m := by
 
 /-- **The front's block decoding is the stage's** (`IndArmSpec`'s premise to `cidW_ok`'s). -/
 theorem decB_decEBlk_of_decCIs {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat}
-    {blk : List IConstantInfo} (h : L.Front.decCIs (erecP m) dn o l = some blk) :
+    {blk : List IConstantInfo} (h : L.Front.decCIsR (erecP m) o l = some blk) :
     DecB (fun m => decEBlk dn m o l) m blk := by
   show decEBlk dn (truncM m) o l = some blk
   simp only [decEBlk, erA_truncM]

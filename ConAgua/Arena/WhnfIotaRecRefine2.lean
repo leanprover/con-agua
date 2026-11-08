@@ -48,7 +48,7 @@ theorem fam_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hlps : hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps)
     (hrule : decRule (erecP s₀.mem) rl.toNat = some rule)
-    (hci : decCI (erecP s₀.mem) dn ctorP.toNat = some (.ctorInfo cvj np nf))
+    (hci : decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf))
     (hfe : FireEnv fe lps rule cvj)
     (hsa : SpineR s₀.mem so sn args) (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
     (hmI : (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat)
@@ -123,7 +123,7 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps →
     decRule (erecP s₀.mem) rl.toNat = some rule →
-    decCI (erecP s₀.mem) dn ctorP.toNat = some (.ctorInfo cvj np nf) →
+    decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf) →
     FireEnv fe lps rule cvj →
     SpineR s₀.mem so sn args → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →
@@ -330,7 +330,7 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hlps : hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps)
     (hrule : decRule (erecP s₀.mem) rl.toNat = some rule)
-    (hci : decCI (erecP s₀.mem) dn ctorP.toNat = some (.ctorInfo cvj np nf))
+    (hci : decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf))
     (hfe : FireEnv fe lps rule cvj)
     (hsa : SpineR s₀.mem so sn args) (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
     (hmI : (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat)
@@ -461,7 +461,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
     hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps →
     decRule (erecP s₀.mem) rl.toNat = some rule →
-    decCI (erecP s₀.mem) dn ctorP.toNat = some (.ctorInfo cvj np nf) →
+    decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf) →
     FireEnv fe lps rule cvj →
     SpineR s₀.mem so sn args → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →
@@ -492,7 +492,7 @@ theorem fire_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hlps : hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps)
     (hrule : decRule (erecP s₀.mem) rl.toNat = some rule)
-    (hci : decCI (erecP s₀.mem) dn ctorP.toNat = some (.ctorInfo cvj np nf))
+    (hci : decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf))
     (hfe : FireEnv fe lps rule cvj)
     (hsa : SpineR s₀.mem so sn args) (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
     (hmI : (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat) :
@@ -551,7 +551,7 @@ theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees 
     hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps →
     decRule (erecP s₀.mem) rl.toNat = some rule →
-    decCI (erecP s₀.mem) dn ctorP.toNat = some (.ctorInfo cvj np nf) →
+    decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf) →
     FireEnv fe lps rule cvj →
     SpineR s₀.mem so sn args → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →
@@ -575,7 +575,7 @@ theorem irEnvFind (p : Prog) (hp : IotaProg' p) (n : Nat) (dn : NIdx → Option 
     (r : List Word) (m' : Mem) (h : callW p n "env_find" [w, vis] m = some (r, m')) :
     m' = m ∧ (r.headD 0 = 0 → fe.find? (decI w) = none) ∧
       (r.headD 0 ≠ 0 → ∃ ci, fe.find? (decI w) = some ci ∧
-        decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) := by
+        decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
   obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW
     (envFind_refines p hp.envix hp.envrow hp.envfind n ⟨m, Locals.init []⟩ vis w hE hw) h
   obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW
@@ -723,7 +723,7 @@ def IotaRecFireE (p : Prog) : Prop :=
     hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps →
     decRule (erecP s₀.mem) rl.toNat = some rule →
-    decCI (erecP s₀.mem) dn ctorP.toNat = some (.ctorInfo cvj np nf) →
+    decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf) →
     FireEnv fe lps rule cvj →
     SpineR s₀.mem so sn args → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →

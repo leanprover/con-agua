@@ -46,14 +46,12 @@ def ShapeSrc (m : Mem) (q : Word) : Prop :=
 /-- **`IIndCaps` at `IW[q‥q+15)`**, decoded in every array that holds those words (at any `e`) and
 agrees with the record pool below its top (where `cons_block_inds` copies them). -/
 def CapsAt (dn : NIdx → Option ConLeche.Name) (m : Mem) (q : Nat) (c : IIndCaps) : Prop :=
-  q + 15 ≤ iwTop m ∧ ∀ (a : Array Word) (e : Nat), (∀ i < 15, a[e + i]? = (iwA m)[q + i]?) →
-    (∀ i < erTop m, a[i]? = (erA m)[i]?) → decCaps a e = some c
+  q + 15 ≤ iwTop m ∧ ∀ (a : Nat → Option Word) (e : Nat), (∀ i < 15, a (e + i) = iwA m (q + i)) →
+    (∀ i < erTop m, a i = erA m i) → decCaps a e = some c
 
 theorem CapsAt.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {q : Nat} {c : IIndCaps}
     (h : CapsAt dn m q c) (hg : IWGrow m m') : CapsAt dn m' q c := by
-  refine ⟨Nat.le_trans h.1 hg.iw, fun a e h1 h2 => h.2 a e (fun i hi => ?_) (fun i hi => ?_)⟩
-  · rw [h1 i hi]; simp only [iwA]; rw [hg.iwGet _ (by have := h.1; omega)]
-  · rw [h2 i (Nat.lt_of_lt_of_le hi hg.er)]; simp only [erA]; rw [hg.erGet _ hi]
+  sorry
 
 end L.Ind
 

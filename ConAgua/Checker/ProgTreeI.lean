@@ -11,4 +11,8 @@ meta import ConAgua.Checker.ProgI
 
 namespace L.Checker
 
+open L L.Compiler
+
+prog_tree checkerProgI_wf : checkerProgI
+
 end L.Checker

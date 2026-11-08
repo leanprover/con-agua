@@ -119,7 +119,7 @@ theorem partsCI_fields {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q 
 theorem partsBlk_cons {dn : NIdx → Option ConLeche.Name} {m : Mem} {off L : Nat}
     {blk : List IConstantInfo} (h : DecB (fun m => decEBlk dn m off (L + 1)) m blk) :
     ∃ q x rest, blk = x :: rest ∧ nat? (erA (truncM m)) off = some q ∧
-      decCI (erA (truncM m)) dn q = some x ∧ DecB (fun m => decEBlk dn m (off + 1) L) m rest := by
+      decCI (erA (truncM m)) q = some x ∧ DecB (fun m => decEBlk dn m (off + 1) L) m rest := by
   have h' : decEBlk dn (truncM m) off (L + 1) = some blk := h
   rw [decEBlk_succ] at h'
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h'
@@ -195,7 +195,7 @@ theorem ipBlkHead {dn : NIdx → Option ConLeche.Name} {m : Mem} {off l : Word}
     {blk : List IConstantInfo} (hl : l ≠ 0) (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk) :
     ∃ q x rest, blk = x :: rest ∧ rdW (m.arr64 EREC) off = UInt64.ofNat q ∧ q < 2 ^ 64 ∧
       rdW (m.arr64 EREC) (UInt64.ofNat q) = UInt64.ofNat (ciKind x) ∧
-      decCI (erA (truncM m)) dn q = some x ∧
+      decCI (erA (truncM m)) q = some x ∧
       DecB (fun m => decEBlk dn m (off + 1).toNat (l - 1).toNat) m rest := by
   obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
     ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩

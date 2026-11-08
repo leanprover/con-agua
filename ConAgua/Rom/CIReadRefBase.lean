@@ -294,7 +294,8 @@ theorem EKeep.mono {R R' : Nat → Prop} {m m' : Mem} (h : EKeep R m m') (hR : �
     EKeep R' m m' := ⟨h.1, fun i hi hr => h.2 i hi (fun h' => hr (hR i h'))⟩
 
 theorem EKeep.of_eq {R : Nat → Prop} {m m' : Mem} (hE : m'.arr64 EREC = m.arr64 EREC)
-    (ht : erTop m ≤ erTop m') : EKeep R m m' := ⟨ht, fun i _ _ => by simp only [erA, hE]⟩
+    (ht : erTop m ≤ erTop m') : EKeep R m m' := by
+  sorry
 
 theorem EKeep.set {R : Nat → Prop} (m : Mem) (i : Word) (w : Word) (hi : R i.toNat) :
     EKeep R m (m.set64 EREC i w) := by

@@ -62,7 +62,7 @@ theorem counts_words {arr : Array Word} {q a b : Word} {x y : Nat} (hsz : arr.si
 /-- **The shape tests, failing**: the twin's shape does not match. -/
 theorem fp_fail {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b : Word}
     {ci : IConstantInfo} (hsz : arr.size < 2 ^ 64) (hk : k = 3 ∨ k = 4 ∨ k = 5)
-    (h : decCI arr dn q.toNat = some ci)
+    (h : decCI arr q.toNat = some ci)
     (hf : rdW arr q ≠ k ∨ (k ≠ 3 ∧ (rdW arr (q + 5) ≠ a ∨ rdW arr (q + 6) ≠ b))) :
     fpShape k a b ci = none := by
   obtain ⟨wk, e, hk'⟩ := ciD h
@@ -103,7 +103,7 @@ theorem fp_fail {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
 /-- **The shape tests, passing**: the twin's shape matches. -/
 theorem fp_pass {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b : Word}
     {ci : IConstantInfo} (hsz : arr.size < 2 ^ 64) (hk : k = 3 ∨ k = 4 ∨ k = 5)
-    (h : decCI arr dn q.toNat = some ci) (hkw : rdW arr q = k)
+    (h : decCI arr q.toNat = some ci) (hkw : rdW arr q = k)
     (hc : ¬ (k ≠ 3 ∧ (rdW arr (q + 5) ≠ a ∨ rdW arr (q + 6) ≠ b))) :
     ∃ cv, fpShape k a b ci = some cv := by
   obtain ⟨wk, e, hk'⟩ := ciD h
@@ -130,7 +130,7 @@ theorem fp_pass {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q k a b
 
 /-- A matching shape's constant value decodes where the record does. -/
 theorem fpShape_cv {arr : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {k a b : Word}
-    {ci : IConstantInfo} {cv : IConstantVal} (h : decCI arr dn q = some ci)
+    {ci : IConstantInfo} {cv : IConstantVal} (h : decCI arr q = some ci)
     (hs : fpShape k a b ci = some cv) : decCV arr (q + 1) = some cv := by
   obtain ⟨wk, -, hk'⟩ := ciD h
   rcases hk' with ⟨-, cv', -, rfl⟩ | ⟨-, cv', v, hi, -, -, -, rfl⟩ | ⟨-, cv', -, rfl⟩ |
@@ -244,7 +244,7 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   rw [hptr] at hW
   generalize hq : rowP m1 nm = q at hW hci hfind
   have hsz := hS.iw.erSize
-  have hciA : decCI (m1.arr64 EREC) dn q.toNat = some ci := ArrExt.decCI (erecP_ext m1) hci
+  have hciA : decCI (m1.arr64 EREC) q.toNat = some ci := ArrExt.decCI (erecP_ext m1) hci
   have hbind : (fe.find? (decI nm)).bind (fpShape k ca cb) = fpShape k ca cb ci := by
     rw [hfind, hci]; rfl
   by_cases hfail : rdW (m1.arr64 EREC) q ≠ k ∨

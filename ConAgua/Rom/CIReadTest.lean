@@ -118,7 +118,7 @@ def checks : Except String (List String) := do
   for i in List.range 8 do
     let (r, m') ← callL m "rom_ci" (UInt64.ofNat i)
     let v ← twin a (L.Ind.romCiT i)
-    if decCI (L.Ind.erA m') dn (r.headD 0).toNat != some v then bad := bad ++ [s!"rom_ci({i})"]
+    if decCI (L.Ind.erA m') (r.headD 0).toNat != some v then bad := bad ++ [s!"rom_ci({i})"]
   for i in List.range 10 do
     let (r, m') ← callL m "rom_cv" (UInt64.ofNat i)
     let v ← twin a (L.Ind.romCvT i)

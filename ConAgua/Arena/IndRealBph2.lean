@@ -70,7 +70,7 @@ theorem bphDecEBlk_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat
 /-- A pointer word and the name word of its record, read in the real pools. -/
 theorem bphNameAt {dn : NIdx → Option ConLeche.Name} {m : Mem} {A : Array Word} {base i : Word}
     {v : Nat} {ci : IConstantInfo} (hA : A.size < 2 ^ 64) (hE : (m.arr64 EREC).size < 2 ^ 64)
-    (hv : nat? A (base.toNat + i.toNat) = some v) (hci : decCI (erA (truncM m)) dn v = some ci) :
+    (hv : nat? A (base.toNat + i.toNat) = some v) (hci : decCI (erA (truncM m)) v = some ci) :
     ∃ w, rdW (m.arr64 EREC) (rdW A (base + i) + 1) = w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
   simp only [nat?, Option.map_eq_some_iff] at hv
   obtain ⟨w0, hw0, rfl⟩ := hv
@@ -90,7 +90,7 @@ theorem bphNameAt {dn : NIdx → Option ConLeche.Name} {m : Mem} {A : Array Word
 /-- The pinned block's name word `i`. -/
 theorem bphPinName {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Word}
     {pinned : List IConstantInfo}
-    (hP : decPL (truncM m) (fun q => decCI (erA (truncM m)) dn q) o.toNat l.toNat = some pinned)
+    (hP : decPL (truncM m) (fun q => decCI (erA (truncM m)) q) o.toNat l.toNat = some pinned)
     (hI : (m.arr64 IW).size < 2 ^ 64) (hE : (m.arr64 EREC).size < 2 ^ 64) (i : Word)
     (hi : i.toNat < l.toNat) :
     ∃ w ci, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + i) + 1) = w ∧ w.toNat < 2 ^ 32 ∧
@@ -120,7 +120,7 @@ theorem bphBlkName {dn : NIdx → Option ConLeche.Name} {m : Mem} {bo l : Word}
 /-- **The name pre-filter**: the name words agree pointwise exactly when the member names do. -/
 theorem bphNames_iff {dn : NIdx → Option ConLeche.Name} {m : Mem} {o bo l : Word}
     {pinned blk : List IConstantInfo}
-    (hP : decPL (truncM m) (fun q => decCI (erA (truncM m)) dn q) o.toNat l.toNat = some pinned)
+    (hP : decPL (truncM m) (fun q => decCI (erA (truncM m)) q) o.toNat l.toNat = some pinned)
     (hB : decEBlk dn (truncM m) bo.toNat l.toNat = some blk)
     (hI : (m.arr64 IW).size < 2 ^ 64) (hE : (m.arr64 EREC).size < 2 ^ 64) :
     (∀ i : Word, i < l → rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + i) + 1) =
@@ -210,7 +210,7 @@ decoding of a non-empty block. -/
 theorem bphBlk_erec {dn : NIdx → Option ConLeche.Name} {m : Mem} {bo bl : Word}
     {blk : List IConstantInfo} (hB : decEBlk dn (truncM m) bo.toNat bl.toNat = some blk)
     (hne : bl.toNat ≠ 0) :
-    L.Front.decCIs (erecP m) dn bo.toNat bl.toNat = some blk ∧ bo.toNat + bl.toNat ≤ erTop m := by
+    L.Front.decCIsR (erecP m) bo.toNat bl.toNat = some blk ∧ bo.toNat + bl.toNat ≤ erTop m := by
   refine ⟨mapM_imp _ _ hB fun j _ y hy => ?_, ?_⟩
   · simp only [bind, Option.bind_eq_some_iff] at hy ⊢
     obtain ⟨v, hv, hy⟩ := hy
@@ -271,7 +271,7 @@ theorem bphW_loop1_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.
   have hpne : pinned.length ≠ 0 := by
     rw [denoteCIList_length _ _ hden1]; exact bph_decls_ne _ hkn
   have hB1 : DecB (fun m => decEBlk dn m bo.toNat bl.toNat) m1 blk := DecB.grow (decEBlk_mono dn _ _) hg1 hB
-  have hD1 : decPL (truncM m1) (fun q => decCI (erA (truncM m1)) dn q) (r1.headD 0).toNat
+  have hD1 : decPL (truncM m1) (fun q => decCI (erA (truncM m1)) q) (r1.headD 0).toNat
       (r1.tail.headD 0).toNat = some pinned := hDR1.1
   have hl1 : pinned.length = (r1.tail.headD 0).toNat := decPL_length (truncM m1) hD1
   have hlb : blk.length = bl.toNat := by

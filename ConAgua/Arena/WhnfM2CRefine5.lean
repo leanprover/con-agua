@@ -107,8 +107,8 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N â‰¤ F) (hn62 : N â‰
     (hT : HW T) (hmaj : HW major) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat)
     (cvT : IConstantVal) (caps : IIndCaps) (m : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m a vis fe M eb) (hrl : decRule (erecP m) ro.toNat = some rl)
-    (hcj : decCI (erecP m) dn cvjP.toNat = some (.ctorInfo cvj cnP cnF))
-    (hci : decCI (erecP m) dn indP.toNat = some (.indInfo cvT caps))
+    (hcj : decCI (erecP m) cvjP.toNat = some (.ctorInfo cvj cnP cnF))
+    (hci : decCI (erecP m) indP.toNat = some (.indInfo cvT caps))
     (hfe : âˆƒ c, fe.find? c = some (.indInfo cvT caps)) :
     RefE (M2CCtxE p N) (m2cArmsE p (N + 1) m mode vis d ro cvjP T indP major)
       (m2cArmsT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rl cvj cnP (decI T)
@@ -161,7 +161,7 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N â‰¤ F) (hn62 : N â‰
     (eb mode d ro cvjP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hmaj : HW major) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (hrl : decRule (erecP m) ro.toNat = some rl)
-    (hcj : decCI (erecP m) dn cvjP.toNat = some (.ctorInfo cvj cnP cnF)) :
+    (hcj : decCI (erecP m) cvjP.toNat = some (.ctorInfo cvj cnP cnF)) :
     RefE (M2CCtxE p N) (m2cCtorE p (N + 1) m mode vis d ro cvjP major)
       (m2cCtorT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rl cvj cnP
         (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by

@@ -215,7 +215,7 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
   rw [hptr] at hW
   generalize hq : rowP m1 nm = q at hW hci hfind
   have hsz := hS.iw.erSize
-  have hciA : decCI (m1.arr64 EREC) dn q.toNat = some ci := ArrExt.decCI (erecP_ext m1) hci
+  have hciA : decCI (m1.arr64 EREC) q.toNat = some ci := ArrExt.decCI (erecP_ext m1) hci
   have hbind : (fe.find? (decI nm)).bind (fpcShape k) = fpcShape k ci := by rw [hfind, hci]; rfl
   by_cases hfail : rdW (m1.arr64 EREC) q ≠ k ∨
       (k = 4 ∧ (rdW (m1.arr64 EREC) (q + 5) ≠ 0 ∨ rdW (m1.arr64 EREC) (q + 6) ≠ 0))

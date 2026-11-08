@@ -72,6 +72,10 @@ theorem trunc_congr (P P' : Array Word) (t : Nat) (hs : P'.size = P.size)
 def decCIs (a : Array Word) (off cnt : Nat) : Option (List IConstantInfo) :=
   (List.range cnt).mapM fun j => do L.Arena.decCI (L.Arena.aread a) (← L.Arena.nat? (L.Arena.aread a) (off + j))
 
+/-- `decCIs` over a reader (the record pool's two tiers, `erecP`). -/
+def decCIsR (a : Nat → Option Word) (off cnt : Nat) : Option (List IConstantInfo) :=
+  (List.range cnt).mapM fun j => do L.Arena.decCI a (← L.Arena.nat? a (off + j))
+
 /-- **`DECL` record `i` is the inductive block `block` with `nP` parameters** (`IndApply.lean`):
 kind `6`, its block a slice of the pool `P` (`DLP`) of pointers to `decCI` constant records in
 `P`, all of it below some `t` at most `P`'s top. -/

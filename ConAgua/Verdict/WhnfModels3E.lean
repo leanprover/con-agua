@@ -35,14 +35,12 @@ l_model irFireE_spec (p : Prog) (hf : p.lookup "iota_rec_fire" = some iotaRecFir
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 l_model irFamE_spec (p : Prog) (hf : p.lookup "iota_rec_fam" = some iotaRecFamL)
   fns [hf ↦ irFamE list]
   specs [callW_spec p n "rec_fire_levels", callW_spec p n "iota_case3"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
 l_model pmE_spec (p : Prog) (hf : p.lookup "prepare_major" = some prepareMajorL)
   fns [hf ↦ pmE list]
@@ -58,33 +56,27 @@ l_model lmtcE_spec (p : Prog) (hf : p.lookup "lit_major_to_ctor" = some litMajor
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 l_model irMajorE_spec (p : Prog) (hf : p.lookup "iota_rec_major" = some iotaRecMajorL)
   fns [hf ↦ irMajorE list]
   specs [callW_spec p n "intern_bvar", callW_spec p n "get_app_fn", callW_spec p n "iota_rec_head", callW_spec p n "env_find", callW_spec p n "find_rule"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 l_model irCE_spec (p : Prog) (hf : p.lookup "iota_rec_c" = some iotaRecCL)
     (hm : p.lookup "iota_rec_major" = some iotaRecMajorL)
   fns [hf ↦ irCE list]
   specs [callW_spec p n "env_find", callW_spec p n "ls_node", callW_spec p n "peel_pis", irMajorE_spec p hm n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 l_model irAtE_spec (p : Prog) (hf : p.lookup "iota_rec_at" = some iotaRecAtL)
     (hc : p.lookup "iota_rec_c" = some iotaRecCL) (hm : p.lookup "iota_rec_major" = some iotaRecMajorL)
   fns [hf ↦ irAtE list]
   specs [callW_spec p n "iota_rec_head", irCE_spec p hc hm n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
 end L.Arena

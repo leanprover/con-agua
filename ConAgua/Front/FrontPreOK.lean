@@ -209,9 +209,9 @@ theorem mapM_some_mem {γ α : Type} {f : γ → Option α} :
           exact ⟨y', by simp [hy'], e⟩
 
 /-- A pointer of a decoded block: its slot is in the array, its constant in the block. -/
-theorem decCIs_slot {a : Array Word} {dn : NIdx → Option ConLeche.Name} {off cnt : Nat}
-    {bl : List IConstantInfo} (h : decCIs a dn off cnt = some bl) (j : Nat) (hj : j < cnt) :
-    ∃ w ci, a[off + j]? = some w ∧ decCI a w.toNat = some ci ∧ ci ∈ bl := by
+theorem decCIs_slot {a : Array Word} {off cnt : Nat}
+    {bl : List IConstantInfo} (h : decCIs a off cnt = some bl) (j : Nat) (hj : j < cnt) :
+    ∃ w ci, a[off + j]? = some w ∧ decCI (aread a) w.toNat = some ci ∧ ci ∈ bl := by
   obtain ⟨ci, hci, e⟩ := mapM_some_mem _ _ h j (List.mem_range.mpr hj)
   cases hw : a[off + j]? with
   | none => simp [L.Arena.nat?, hw] at e

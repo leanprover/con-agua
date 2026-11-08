@@ -40,6 +40,14 @@ open L.Front (DECL DLP)
 
 /-! ## The program -/
 
+/-- The lookups the three builders need. -/
+structure RecProg (p : Prog) : Prop where
+  alloc : p.lookup "erec_alloc" = some erecAlloc
+  dlp : p.lookup "dlp_copy" = some dlpCopy
+  ci : p.lookup "erec_ci" = some erecCi
+  rs : p.lookup "env_row_set" = some envRowSetL
+  push : p.lookup "env_push" = some envPushL
+
 /-! ## Word models and their `vcgen` specs -/
 
 /-- The low 32 bits (`dlp_copy`'s and `erec_ci`'s mask). -/

@@ -156,7 +156,7 @@ end model
 /-- A front block's slice does not start at the cut pool's word `0` (its pointer there reads `0`,
 a record of kind `0`, which is no front constant). -/
 theorem front_bo {P : Array Word} {t : Nat} {dn0 : NIdx → Option ConLeche.Name} {bo bl : Nat}
-    {block : List IConstantInfo} (h : decCIs (trunc P t) dn0 bo bl = some block)
+    {block : List IConstantInfo} (h : decCIs (trunc P t) bo bl = some block)
     (hFB : FrontBlock block) : 1 ≤ bo ∨ bl = 0 := by
   rcases bl with _ | k
   · right; rfl
@@ -207,7 +207,7 @@ theorem decRBlk_canon {dn : NIdx → Option ConLeche.Name} {m : Mem} {r : List W
     decPL m (fun q => decCI (erecP m) q) (r.headD 0).toNat (r.tail.headD 0).toNat = some cis ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m := by
   obtain ⟨hD, -⟩ := h
-  have hD' : decPL (truncM m) (fun q => decCI (erA (truncM m)) dn q) (r.headD 0).toNat
+  have hD' : decPL (truncM m) (fun q => decCI (erA (truncM m)) q) (r.headD 0).toNat
       (r.tail.headD 0).toNat = some cis := hD
   have hlen := L.Ind.decPL_length (truncM m) hD'
   refine ⟨mapM_imp _ _ hD' fun j _ y hy => ?_, ?_⟩
@@ -238,7 +238,7 @@ theorem decPL_growAP {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Na
 theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {block : List IConstantInfo}
     (h : erToIwW n m o l = some (r, m')) (hS : StageR vis fe m a)
-    (hd : decCIs (erecP m) dn o.toNat l.toNat = some block) (hb : o.toNat + l.toNat ≤ erTop m) :
+    (hd : decCIsR (erecP m) o.toNat l.toNat = some block) (hb : o.toNat + l.toNat ≤ erTop m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧
       decPL m' (fun q => decCI (erecP m') q) (r.headD 0).toNat l.toNat = some block ∧
       (r.headD 0).toNat + l.toNat ≤ iwTop m' := by

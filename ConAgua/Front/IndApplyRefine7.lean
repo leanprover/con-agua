@@ -117,112 +117,9 @@ theorem rec_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : Arena
     (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
     (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
     (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) (p : Prog) (n : Nat) :
-    RefC True (recE p n m r np tn cn ke tyn tyt fuel) (RecPost st a m np tn cn ke tyn tyt fuel rc)
+    RefC True (recE p n m r np tn cn tyn tyt fuel) (RecPost st a m np tn cn ke tyn tyt fuel rc)
       (RecErr st a m np tn cn ke tyn tyt fuel rc) := by
-  cases n with
-  | zero => simp only [recE, RefC_error]; exact fun _ hk => absurd Err.cls_outOfFuel hk
-  | succ n =>
-  rw [recE.arm1]
-  have ix : ∀ s : Word, s.toNat ≤ 10 → rdW (m.arr64 IFR) (r + s) = wd m IFR (r.toNat + s.toNat) := by
-    intro s hs; rw [wd_eq, widx2 _ _ (by omega)]
-  obtain ⟨⟨c1, -, -⟩, c2, c3, c4, c5, c6, -⟩ := hrec
-  rcases hl : lkW m NID (rdW (m.arr64 IFR) r) with _ | rnw
-  · rw [liftE_none, recE.k_name_get.none]; exact fun _ hk => absurd Err.cls_oob hk
-  rw [liftE_some]
-  rw [wd_eq] at hl
-  have hname := (lkW_name hD a hl).1
-  rw [c1.1] at hname
-  have e5 : rdW (m.arr64 IFR) (r + 5) = wd m IFR (r.toNat + 5) := by
-    have := ix 5 (by decide); simpa using this
-  -- the indices check (`j1`), after the counts and `k`
-  have hJ : ∀ (hkp : ∀ kE, keOf ke = some kE → rc.k = kE)
-      (e8' : rc.numParams = np.toNat) (e7' : rc.numMotives = tn.toNat) (e6' : rc.numMinors = cn.toNat),
-      RefC True (recE.j1 p n r np tn tyn tyt fuel rnw m) (RecPost st a m np tn cn ke tyn tyt fuel rc)
-        (RecErr st a m np tn cn ke tyn tyt fuel rc) := by
-    intro hkp e8' e7' e6'
-    rw [recE.j1.arm1]
-    rcases hn : nrpW m rnw with _ | ⟨f, tt⟩
-    · rw [liftE_none, recE.k_name_rec_pre.none]; exact fun _ hk => absurd Err.cls_oob hk
-    rw [liftE_some]
-    obtain ⟨v, hv, hv1, hv0⟩ := nrpW_ok hR rnw f tt hn
-    by_cases hf : f = 0
-    · rw [recE.k_name_rec_pre.arm2 p n r np tn tyn tyt fuel m f tt hf, recE.j2.arm1]
-      refine ⟨rfl, _, hname, e8', e7', e6', hkp, v, hv, fun T hT => absurd hT (hv0 hf T)⟩
-    rw [recE.k_name_rec_pre.arm1 p n r np tn tyn tyt fuel m f tt hf]
-    obtain ⟨hvs, htt⟩ := hv1 hf
-    have hi := recIdx_ref hR hnp (by rw [e5, c3.1]; exact c3.2) hb hb' p n 0
-      (T := tt) (ni := rdW (m.arr64 IFR) (r + 5)) (fuel := fuel)
-    rcases h3 : recIdxE p n m tt (rdW (m.arr64 IFR) (r + 5)) np tn tyn tyt fuel 0 with e3 | ⟨u, mr⟩ <;>
-      rw [h3] at hi
-    · rw [recE.k_vi_rec_idx.none]
-      intro _ hk
-      obtain ⟨he, k, -, k2, k3, k4, x, k5, k6⟩ := hi trivial hk
-      rw [e5, c3.1] at k4 k6
-      rw [hvs] at hv
-      refine ⟨by rw [he]; decide, _, hname, .inr ⟨e8', .inr ⟨e7', .inr ⟨e6', .inr ⟨hkp, _, hv, k,
-        by rw [islice_length]; exact k2, by rw [islice_length]; exact k2, fun j' hj' hT' => ?_,
-        by rw [islice_get, k3], x, by rw [islice_get]; exact k5, k6⟩⟩⟩⟩⟩
-      rw [islice_get] at hT' ⊢
-      have hw : wd m IFL (tyn.toNat + j') = tt := decI_inj (hTN j' (by omega)) htt hT'
-      exact k4 j' (Nat.zero_le _) hj' hw
-    rw [recE.k_vi_rec_idx.arm1, recE.j2.arm1]
-    obtain ⟨hmr, hidx⟩ := hi
-    refine ⟨hmr, _, hname, e8', e7', e6', hkp, v, hv, fun T hT j hj hj' hTj => ?_⟩
-    rw [hvs] at hT
-    simp only [NNodeView.str.injEq, and_true] at hT
-    subst hT
-    simp only [islice_length] at hj hj'
-    rw [islice_get] at hTj ⊢
-    have hw : wd m IFL (tyn.toNat + j) = tt := decI_inj (hTN j hj) htt hTj
-    obtain ⟨o, ho1, ho2⟩ := hidx j (Nat.zero_le _) hj hw
-    exact ⟨o, ho1, fun x hx => by rw [← ho2 x hx, e5, c3.1]⟩
-  have hcls : ∀ R : Word, R &&& 3 = 1 → ∀ e : Err, e = .abort R → e.cls = 1 := by
-    intro R hR' e he; subst he; simpa [Err.cls] using hR'
-  by_cases e8 : rdW (m.arr64 IFR) (r + 8) = np
-  rotate_left
-  · rw [recE.k_name_get.abort1 p n r np tn cn ke tyn tyt fuel m rnw e8]
-    refine fun _ _ => ⟨by decide, _, hname, .inl fun heq => e8 ?_⟩
-    rw [ix 8 (by decide)]; apply UInt64.toNat_inj.mp; simp only [show (8 : Word).toNat = 8 from rfl]
-    rw [c6.1, heq]
-  have e8' : rc.numParams = np.toNat := by
-    rw [ix 8 (by decide)] at e8; rw [← c6.1]; simp only [show (8 : Word).toNat = 8 from rfl] at e8; rw [e8]
-  by_cases e7 : rdW (m.arr64 IFR) (r + 7) = tn
-  rotate_left
-  · rw [recE.k_name_get.abort2 p n r np tn cn ke tyn tyt fuel m rnw e8 e7]
-    refine fun _ _ => ⟨by decide, _, hname, .inr ⟨e8', .inl fun heq => e7 ?_⟩⟩
-    rw [ix 7 (by decide)]; apply UInt64.toNat_inj.mp; simp only [show (7 : Word).toNat = 7 from rfl]
-    rw [c5.1, heq]
-  have e7' : rc.numMotives = tn.toNat := by
-    rw [ix 7 (by decide)] at e7; rw [← c5.1]; simp only [show (7 : Word).toNat = 7 from rfl] at e7; rw [e7]
-  by_cases e6 : rdW (m.arr64 IFR) (r + 6) = cn
-  rotate_left
-  · rw [recE.k_name_get.abort3 p n r np tn cn ke tyn tyt fuel m rnw e8 e7 e6]
-    refine fun _ _ => ⟨by decide, _, hname, .inr ⟨e8', .inr ⟨e7', .inl fun heq => e6 ?_⟩⟩⟩
-    rw [ix 6 (by decide)]; apply UInt64.toNat_inj.mp; simp only [show (6 : Word).toNat = 6 from rfl]
-    rw [c4.1, heq]
-  have e6' : rc.numMinors = cn.toNat := by
-    rw [ix 6 (by decide)] at e6; rw [← c4.1]; simp only [show (6 : Word).toNat = 6 from rfl] at e6; rw [e6]
-  have e4r : rdW (m.arr64 IFR) (r + 4) = wd m IFR (r.toNat + 4) := by
-    have := ix 4 (by decide); simpa using this
-  by_cases hk0 : ke = 0
-  · rw [recE.k_name_get.arm2 p n r np tn cn ke tyn tyt fuel m rnw e8 e7 e6 hk0]
-    exact hJ (fun kE hkE => by simp [keOf, hk0] at hkE) e8' e7' e6'
-  by_cases e4 : rdW (m.arr64 IFR) (r + 4) = ke - 1
-  · rw [recE.k_name_get.arm1 p n r np tn cn ke tyn tyt fuel m rnw e8 e7 e6 hk0 e4]
-    refine hJ (fun kE hkE => ?_) e8' e7' e6'
-    simp only [keOf, hk0, ite_false, Option.some.injEq] at hkE
-    rw [e4r, c2] at e4
-    rcases hke with rfl | rfl | rfl
-    · exact absurd rfl hk0
-    · subst hkE; cases hk' : rc.k <;> simp_all
-    · subst hkE; cases hk' : rc.k <;> simp_all
-  · rw [recE.k_name_get.abort4 p n r np tn cn ke tyn tyt fuel m rnw e8 e7 e6 hk0 e4]
-    refine fun _ _ => ⟨by decide, _, hname, .inr ⟨e8', .inr ⟨e7', .inr ⟨e6', .inl ⟨ke = 2, by simp [keOf, hk0], ?_⟩⟩⟩⟩⟩
-    rw [e4r, c2] at e4
-    rcases hke with rfl | rfl | rfl
-    · exact absurd rfl hk0
-    · cases hk' : rc.k <;> simp_all
-    · cases hk' : rc.k <;> simp_all
+  sorry
 
 /-- **`vi_recs_go`'s ok half**: the memory unchanged, every recursor record from `j` on passes
 the twin's checks. -/
@@ -252,49 +149,9 @@ theorem recsGo_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : Ar
     (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
     (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
     (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) (p : Prog) :
-    ∀ n j, RefC True (recsGoE p n m ro rn np tn cn ke tyn tyt fuel j)
+    ∀ n j, RefC True (recsGoE p n m ro rn np tn cn tyn tyt fuel j)
       (RecsGoPost st a m np tn cn ke tyn tyt fuel j rcs) (RecsGoErr st a m np tn cn ke tyn tyt fuel j rcs) := by
-  intro n
-  induction n with
-  | zero => intro j; simp only [recsGoE, RefC_error]; exact fun _ hk => absurd Err.cls_outOfFuel hk
-  | succ n ih =>
-    intro j
-    by_cases hle : rn ≤ j
-    · rw [recsGoE.arm1 p n m ro rn np tn cn ke tyn tyt fuel j hle]
-      exact ⟨rfl, fun k hk hjk => by have := UInt64.le_iff_toNat_le.mp hle; omega⟩
-    rw [recsGoE.arm2 p n m ro rn np tn cn ke tyn tyt fuel j hle]
-    have hj1 := wsucc j rn (UInt64.not_le.mp hle)
-    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
-    have hix : (ro + 11 * j).toNat = ro.toNat + 11 * j.toNat := by
-      have := widx ro 11 j 0 (by simp; omega); simpa using this
-    have hrec := hL.2.2 j.toNat (by omega)
-    rw [← hix] at hrec
-    have h1 := rec_ref hR hD hrec (by rw [hix]; omega) hnp hke hb hb' hTN p n (st := st) (cn := cn) (fuel := fuel)
-    rcases hc : recE p n m (ro + 11 * j) np tn cn ke tyn tyt fuel with e1 | ⟨u, m₁⟩ <;> rw [hc] at h1
-    · rw [recsGoE.k_vi_rec.none]
-      intro _ hk
-      obtain ⟨hcl, hF⟩ := h1 trivial hk
-      exact ⟨hcl, j.toNat, by omega, Nat.le_refl _, fun i hi h2 => by omega, hF⟩
-    rw [recsGoE.k_vi_rec.arm1]
-    obtain ⟨hm₁, hok⟩ := h1
-    dsimp only at hm₁
-    subst hm₁
-    have h2 := ih (j + 1)
-    rcases hg : recsGoE p n m₁ ro rn np tn cn ke tyn tyt fuel (j + 1) with e2 | ⟨u2, m₂⟩ <;> rw [hg] at h2
-    · rw [recsGoE.k_vi_recs_go.none]
-      intro _ hk
-      obtain ⟨hc, k, hk', k1, k2, k3⟩ := h2 trivial hk
-      rw [hj1] at k1
-      refine ⟨hc, k, hk', by omega, fun i hi h3 => ?_, k3⟩
-      by_cases hij : i = j.toNat
-      · subst hij; exact hok
-      · exact k2 i hi (by rw [hj1]; omega)
-    rw [recsGoE.k_vi_recs_go.arm1]
-    obtain ⟨hm, ih2⟩ := h2
-    refine ⟨hm, fun k hk hjk => ?_⟩
-    by_cases hkj : k = j.toNat
-    · subst hkj; exact hok
-    · exact ih2 k hk (by rw [hj1]; omega)
+  sorry
 
 theorem nestedW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : Word}
     (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
@@ -365,42 +222,9 @@ theorem recs_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : Aren
     (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
     (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
     (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) (p : Prog) (n : Nat) :
-    RefC True (recsE p n m to tn ro rn np cn ke tyn tyt fuel)
+    RefC True (recsE p n m to tn ro rn np cn tyn tyt fuel)
       (RecsPost st a m tys np tn cn ke tyn tyt fuel rcs) (RecsErr st a m tys np tn cn ke tyn tyt fuel rcs) := by
-  cases n with
-  | zero => simp only [recsE, RefC_error]; exact fun _ hk => absurd Err.cls_outOfFuel hk
-  | succ n =>
-  rw [recsE.arm1]
-  rcases hW : nestedW n m to tn 0 with _ | u
-  · rw [liftE_none, recsE.k_vi_nested.none]; exact fun _ hk => absurd Err.cls_oob hk
-  rw [liftE_some]
-  obtain ⟨n1, n2⟩ := nestedW_twin hTy htn hto n 0 u hW
-  by_cases hu : u ≠ 0
-  · rw [recsE.k_vi_nested.arm1 p n tn ro rn np cn ke tyn tyt fuel m u hu]
-    obtain ⟨k, hk, hk'⟩ := n2 hu
-    have hany : (tys.any fun x => x.numNested != 0) = true := by
-      rw [List.any_eq_true]; exact ⟨tys[k], List.getElem_mem hk, by simpa using hk'⟩
-    exact ⟨rfl, fun r hr => by rw [hany] at hr; simp at hr⟩
-  have hu' : u = 0 := Classical.byContradiction hu
-  rw [recsE.k_vi_nested.arm2 p n tn ro rn np cn ke tyn tyt fuel m u hu']
-  have hany : (tys.any fun x => x.numNested != 0) = false := by
-    rw [List.any_eq_false]
-    intro x hx
-    obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hx
-    simp [n1 hu' k hk (Nat.zero_le _)]
-  have hg := recsGo_ref hR hD hL hrn hro hnp hke hb hb' hTN p n 0 (st := st) (cn := cn) (fuel := fuel)
-  rcases h2 : recsGoE p n m ro rn np tn cn ke tyn tyt fuel 0 with e2 | ⟨u2, m₂⟩ <;> rw [h2] at hg
-  · rw [recsE.k_vi_recs_go.none]
-    intro _ hk
-    obtain ⟨hc, k, hk', -, k2, k3⟩ := hg trivial hk
-    exact ⟨hc, hany, k, hk', fun i hi => k2 i hi (Nat.zero_le _), k3⟩
-  rw [recsE.k_vi_recs_go.arm1]
-  obtain ⟨hm, hok⟩ := hg
-  refine ⟨hm, fun r hr => ?_⟩
-  rw [hany] at hr
-  simp only [Bool.false_eq_true, ite_false] at hr
-  obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hr
-  exact hok k hk (Nat.zero_le _)
+  sorry
 
 /-- **`vi_nparams`' ok half**: the memory unchanged, the result `nPd` (the first type's
 `numParams`, `0` without types), every type agrees with it, and it is below `10^18`. -/

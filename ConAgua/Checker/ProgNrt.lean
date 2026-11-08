@@ -13,4 +13,11 @@ them. -/
 
 namespace L.Checker
 
+open L L.Compiler
+
+-- The result counts of `checkerProgI`'s functions (`Prog.nrt`), as a literal, with
+-- `checkerNrt_eq : Prog.nrt checkerProgI = checkerNrt` (`nrt_lit`): every call site of the compiled
+-- code looks its callee's count up in it (`asm_lit`).
+nrt_lit checkerNrt : checkerProgI
+
 end L.Checker

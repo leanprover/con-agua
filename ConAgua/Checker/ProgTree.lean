@@ -7,6 +7,7 @@ import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
 import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.BvarB
 import all ConAgua.Arena.CheckerL
 import all ConAgua.Arena.ConsLib
@@ -21,7 +22,6 @@ import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.DeclArmsCanon
 import all ConAgua.Arena.DeclArmsNat
 import all ConAgua.Arena.DeclStep
-import all ConAgua.Arena.DefEq
 import all ConAgua.Arena.Env
 import all ConAgua.Arena.ExprMk
 import all ConAgua.Arena.FVarRange
@@ -30,14 +30,15 @@ import all ConAgua.Arena.ForallStore
 import all ConAgua.Arena.Freeze
 import all ConAgua.Arena.HasFvar
 import all ConAgua.Arena.ImaxStore
+import all ConAgua.Arena.IndDeclConsts
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
+import all ConAgua.Arena.IndStream
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.Infer
-import all ConAgua.Arena.InferFieldSort
 import all ConAgua.Arena.Inst1
 import all ConAgua.Arena.Inst1Spec
 import all ConAgua.Arena.InstLP
@@ -79,7 +80,6 @@ import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
 import all ConAgua.Arena.RecGen
@@ -94,9 +94,7 @@ import all ConAgua.Arena.RomPins
 import all ConAgua.Arena.Scratch
 import all ConAgua.Arena.SortStore
 import all ConAgua.Arena.Store
-import all ConAgua.Arena.StrLit
 import all ConAgua.Arena.StripTele
-import all ConAgua.Arena.StubInd
 import all ConAgua.Arena.StubNames
 import all ConAgua.Arena.TeleLift
 import all ConAgua.Arena.Walk
@@ -105,7 +103,6 @@ import all ConAgua.Arena.WalkLift
 import all ConAgua.Arena.WalkScope
 import all ConAgua.Arena.WhnfCore
 import all ConAgua.Arena.WhnfDelta
-import all ConAgua.Arena.WhnfEntry
 import all ConAgua.Arena.WhnfIota
 import all ConAgua.Arena.WhnfIotaRec
 import all ConAgua.Arena.WhnfM2C
@@ -122,7 +119,6 @@ import all ConAgua.Front.ApplyDecl
 import all ConAgua.Front.ApplyExpr
 import all ConAgua.Front.Driver
 import all ConAgua.Front.Fields
-import all ConAgua.Front.FieldsDecl
 import all ConAgua.Front.IdTable
 import all ConAgua.Front.IndApply
 import all ConAgua.Front.IndFields
@@ -152,5 +148,9 @@ distinct), apart from `ProgWf.lean` so that the modules that need only the names
 (`PreludeSimProg.lean`) do not wait for the table and the static check. -/
 
 namespace L.Checker
+
+open L L.Compiler
+
+prog_tree checkerProg_wf : checkerProg
 
 end L.Checker

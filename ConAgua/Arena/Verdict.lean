@@ -165,6 +165,29 @@ theorem ld64_rdW_specE (a : ArrId) (i : Word) (s₀ : St) :
     · simp [StateT.lift, StateT.run, throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at hrun
       subst hrun; rfl
 
+/-- `ld64_rdW_specE` at a tiered array (a load `A⟨t⟩[i]`, `tierA A t`). -/
+theorem ld64_rdW_specT (a : TieredArray) (i : Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ ld64 a i
+    ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i ∧ i.toNat < (s₀.mem.arr64 a).size;
+     fun e => e = .oob⦄ := by
+  apply M.triple_of_run'
+  · intro s r s' hs hrun
+    subst hs
+    simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
+    split at hrun
+    · rename_i h
+      simp only [StateT.run_pure] at hrun
+      obtain ⟨rfl, rfl⟩ := hrun
+      exact ⟨rfl, by simp [rdW, h], h⟩
+    · simp [StateT.lift, StateT.run, throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at hrun
+  · intro s e hs hrun
+    subst hs
+    simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
+    split at hrun
+    · simp [StateT.run, pure, StateT.pure, Except.pure] at hrun
+    · simp [StateT.lift, StateT.run, throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at hrun
+      subst hrun; rfl
+
 /-! ## The error spec of a core function
 
 `CoreSpec` (`WhnfBase.lean`) is the ok refinement of a call; `CoreSpecE` is its error half: a

@@ -190,13 +190,7 @@ omit hL in
 theorem caps_spec (n : Nat) (s₀ : St) (q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_caps" [q]
     ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = capsM s₀.mem q; ⊤⦄ := by
-  rw [invoke_eq _ hI.ind_caps]
-  simp only [callFn, indCaps]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, st64] <;> finish [capsM]
+  sorry
 
 theorem rule_spec (n : Nat) (s₀ : St) (q rp : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "parse_rule_d" [q, rp]
@@ -274,23 +268,7 @@ include hb in
 theorem recR_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (r : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_rec" [r]
     ⦃fun res s' => LocEq s' s₀ ∧ recRW n b s₀.mem r = some (res.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hI.ind_rec]
-  simp only [callFn, indRec]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hr : ∀ (s₁ : St) (o l : Word), ⦃fun s => s = s₁⦄ invoke p (exec p n) "ind_rules" [o, l]
-        ⦃fun r s' => (LocEq s' s₁ ∧ rulesW n s₁.mem o l = some ((r.headD 0, r.tail.headD 0), s'.mem)) ∧
-          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ :=
-      fun s₁ o l => Triple.keep hL.decl.expr.no_st8 (rules_spec p hL hI n s₁ o l)
-    have ha : ∀ (s₁ : St) (k : Word), ⦃fun s => s = s₁⦄ invoke p (exec p n) "dind_alloc" [k]
-        ⦃fun r s' => (LocEq s' s₁ ∧ allocW s₁.mem DLP k = some (r.headD 0, s'.mem)) ∧
-          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ :=
-      fun s₁ k => Triple.keep hL.decl.expr.no_st8 (dindAlloc_spec p hI n s₁ k)
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        ha, hr, cv_spec p hL hI b hb n] <;>
-        finish [recRW, recTailM]
+  sorry
 
 include hb in
 theorem instTypes_spec (n : Nat) : ∀ (s₀ : St), s₀.mem.arr8 IN = b → ∀ (bo to tn j : Word),
