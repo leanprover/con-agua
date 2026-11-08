@@ -42,6 +42,7 @@ section cut
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
   {fe : IFEnv} {a : AState} {v : Word}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **No relation reads a `CTL` word from 256 on**: cutting `CTL` to its seed keeps
 `PhaseBStart`. -/
 theorem PhaseBStart.cut {t : Mem} (h : PhaseBStart pins dn ds fe pend t a v) :
@@ -74,6 +75,7 @@ theorem PhaseBStart.cut {t : Mem} (h : PhaseBStart pins dn ds fe pend t a v) :
     exact ⟨memo, memoRV_frame L.Stubs.crSch L.Stubs.crSch_wf bmKey L.Stubs.CrV [] _ (by simp)
       (hn 158 (by decide)) _ _ hf
       (fun _ _ h => h) memo hm⟩
+-/
 
 end cut
 
@@ -278,6 +280,7 @@ theorem CoreR.fresh {c : Caches} (h : CoreR (cutT m) c) : CoreR (freshMem m) Cac
 
 /-! ### The environment -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem row_fresh (w : Word) (hg : rowTag w ≤ 2) :
     (rowTier w = 0 → rowC (freshMem m) w = rowC (cutT m) w ∧ rowP (freshMem m) w = rowP (cutT m) w) ∧
     (rowTier w ≠ 0 → rowC (freshMem m) w = 0) := by
@@ -297,7 +300,9 @@ theorem row_fresh (w : Word) (hg : rowTag w ≤ 2) :
     have hn : (rowArr w : TieredArray) ∈ freshZ := by
       rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
     refine ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; exact TieredArray.t0_ne (show 140 + rowTag w ≠ (1 : Nat) by omega)) _⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem tblRow_fresh (w : Word) :
     (rowTier w = 0 → tblRow (freshMem m) w = tblRow (cutT m) w) ∧
     (rowTier w ≠ 0 → tblRow (freshMem m) w = 0) := by
@@ -317,7 +322,9 @@ theorem tblRow_fresh (w : Word) :
         rw [ha]; rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] <;> decide
       exact ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; exact tier1_ne_t0 _ _) _⟩
   · simp [hg]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem EnvR.fresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (hk : EnvKeysIn (cutT m) fe) (h : EnvR (cutT m) vis fe) : EnvR (freshMem m) vis fe := by
   have he : erecP (freshMem m) = erecP (cutT m) :=
@@ -354,6 +361,7 @@ theorem EnvR.fresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     exact h.tvals n hn h0
   · rw [← h.tables]
     simp only [envTables, tblCnt, fresh_ctl, he, hET]
+-/
 
 /-! ### The loop's relation -/
 
@@ -369,6 +377,7 @@ section loop
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
   {fe : IFEnv} {a : AState} {v : Word}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem LoopR.fresh (hd : a.store.dropScratch = a.store) (hc : a.caches = Caches.empty)
     (htop : (cutT m).top.toNat < 2 ^ 40) (hk : EnvKeysIn (cutT m) fe)
     (h : LoopR pins (cutT m) a v fe ds) :
@@ -389,6 +398,7 @@ theorem LoopR.fresh (hd : a.store.dropScratch = a.store) (hc : a.caches = Caches
       ⟨by simp only [L.Ind.erTop, fresh_ctl]; exact Nat.le_refl _,
         fun i _ => by rw [fresh_keep m (by decide)]⟩
       (by rw [fresh_ctl]) (by rw [fresh_ctl])
+-/
 
 end loop
 
@@ -417,6 +427,7 @@ theorem LoopMem.fresh {dn : NIdx → Option ConLeche.Name} {a : AState}
 
 /-! ### The twin -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The twin's phase-B invariant does not read the walk memos.** -/
 theorem TwinPend.memos {fe : IFEnv} {pend : List PendingCheck} {a : AState} (h : TwinPend fe pend a)
     (ms : Memos) : TwinPend fe pend { a with memos := ms } := by
@@ -426,6 +437,7 @@ theorem TwinPend.memos {fe : IFEnv} {pend : List PendingCheck} {a : AState} (h :
                  pins := { hok.check.pins with }, ienv := { hok.check.ienv with } }
       envWF := hok.envWF, tblShape := hok.tblShape, persPins := { hok.persPins with }, persEnv := hok.persEnv,
       coh := hok.coh, denote := hok.denote }, hnd, hrel⟩, h.caches, h.off, h.dropped⟩
+-/
 
 /-- A worker with the caches empty and the store its own `dropScratch` is the state with fresh
 walk memos. -/
@@ -439,6 +451,7 @@ section main
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
   {fe : IFEnv} {a : AState} {v : Word}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Step 3**: zeroing `freshZ` after the cut, at the state with fresh walk memos. -/
 theorem PhaseBStart.zeroed (hd : a.store.dropScratch = a.store) (hc : a.caches = Caches.empty)
     (h : PhaseBStart pins dn ds fe pend (cutT m) a v) :
@@ -446,7 +459,9 @@ theorem PhaseBStart.zeroed (hd : a.store.dropScratch = a.store) (hc : a.caches =
   have htop := top_tier0_of h.loop.check h.twin.off
   have hk := envKeysIn_of h.loop.check.arena.base h.twin
   ⟨h.loop.fresh hd hc htop hk, h.mem.fresh, CoreMemos.fresh h.core, h.twin.memos _, CrOK.fresh h.cr⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **What phase A leaves for phase B holds at a thread's fresh worker memory and the twin's
 worker state**, when there is a pending group. -/
 theorem PhaseBStart.fresh (h : PhaseBStart pins dn ds fe pend m a v) (hne : pend.size ≠ 0) :
@@ -454,6 +469,7 @@ theorem PhaseBStart.fresh (h : PhaseBStart pins dn ds fe pend m a v) (hne : pend
   have hp : pend.toList ≠ [] := fun e => hne (by rw [← Array.length_toList, e]; rfl)
   rw [worker_eq (h.twin.dropped hp) (h.twin.caches hp)]
   exact h.trunc'.cut.zeroed (h.twin.dropped hp) (h.twin.caches hp)
+-/
 
 end main
 

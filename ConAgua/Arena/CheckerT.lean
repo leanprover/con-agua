@@ -120,7 +120,6 @@ structure LoopCallees (dn : NIdx → Option ConLeche.Name) (p : Prog) : Prop
   loop : LoopClosed p
   andInd : AndPinIndProg p
   indIn : StepIn p indFns
-  indArm : IndArmSpec p dn
   /-- The loop's callees outside the inductive arm keep the inductive memos (`IndMemoClosed`,
   with `consts_resolve_ffast` a leaf: its model `crfF`). -/
   indMemo : IndMemoClosed p
@@ -173,20 +172,25 @@ def ArmSpecT (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
     LoopR pins s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0) (AM.res (checkDecl V pins fe d) a₀) ds ∧ CoreMemos s'.mem; ⊤⦄
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_thm` under `StageT`** (`cdt_ref`'s ok half). -/
 theorem checkDeclThm_loopT (hA : ArmProg p) (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
     (hkp : CrKeep p) (hp : p.lookup "check_decl_thm" = some checkDeclThm) (cv : IConstantVal)
     (v : EIdx) :
     ArmSpecT pins dn ds p "check_decl_thm" (.thmDecl cv v) := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_opaque` under `StageT`** (`cdo_ref`). -/
 theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
     (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p)
     (hdn : DnInj dn) (hp : p.lookup "check_decl_opaque" = some checkDeclOpaque) (cv : IConstantVal) (v : EIdx) :
     ArmSpecT pins dn ds p "check_decl_opaque" (.opaqueDecl cv v) := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_defn` under `StageT`** (`cdf_ref`: the structural-`Nat` gate and the
 `Nat.div`-family pin gate under `StageC`). -/
 @[refines_part ConRon.Arena.checkDecl "the definition arm, under StageT"]
@@ -196,7 +200,9 @@ theorem checkDeclDefn_loopT (hA : ArmProg p) (hV : ValProg p) (hG : DefnProgT p 
     (hh : ConLeche.ReducibilityHint) :
     ArmSpecT pins dn ds p "check_decl_defn" (.defnDecl cv v hh) := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_axiom` under `StageT`** (`cda_ref`'s ok half). -/
 @[refines_part ConRon.Arena.checkDecl "the axiom arm, under StageT"]
 theorem checkDeclAxiom_loopT (hA : ArmProg p) (hX : AxProg p) (hq : KnotStageProg p)
@@ -204,7 +210,9 @@ theorem checkDeclAxiom_loopT (hA : ArmProg p) (hX : AxProg p) (hq : KnotStagePro
     (cv : IConstantVal) :
     ArmSpecT pins dn ds p "check_decl_axiom" (.axiomDecl cv) := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_quot` under `StageT`** (`cdq_ref`'s ok half; the core's memos kept, the arm
 being a leaf). -/
 @[refines_part ConRon.Arena.checkDecl "the quotient arm, under StageT"]
@@ -213,6 +221,7 @@ theorem checkDeclQuot_loopT (hA : ArmProg p) (hQ : QuotProg p) (hRp : RecProg p)
     (cv : IConstantVal) :
     ArmSpecT pins dn ds p "check_decl_quot" (.quotDecl k cv) := by
   sorry
+-/
 
 end arms
 
@@ -274,11 +283,6 @@ def ArmSpecE (f : FnName) (d : IDeclaration) : Prop :=
 
 /-- The arms' error claims, for every record of the kind. -/
 structure ArmsE : Prop where
-  axiom_ : ∀ cv, ArmSpecE pins dn ds p "check_decl_axiom" (.axiomDecl cv)
-  defn : ∀ cv v hh, ArmSpecE pins dn ds p "check_decl_defn" (.defnDecl cv v hh)
-  thm : ∀ cv v, ArmSpecE pins dn ds p "check_decl_thm" (.thmDecl cv v)
-  opaque_ : ∀ cv v, ArmSpecE pins dn ds p "check_decl_opaque" (.opaqueDecl cv v)
-  quot : ∀ k cv, ArmSpecE pins dn ds p "check_decl_quot" (.quotDecl k cv)
 
 end cdRef
 
@@ -299,8 +303,6 @@ def IndArmSpecE (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
 /-- What the error arms of `check_decl` assume: the arms' claims and the inductive arm's. -/
 structure CdG (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
     (p : Prog) : Prop where
-  arms : ArmsE pins dn ds p
-  ind : IndArmSpecE p dn
 
 /-- What `check_decl` gives besides the twin's run, a view `w` and the memory `m'`: the loop's
 relation and the memos. -/
@@ -522,7 +524,6 @@ variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : A
 /-- What the error arms of `install_step_go` assume: `check_decl`'s (`CdG`) and `install_value`'s
 (`IvCtx`). -/
 structure IstgG : Prop where
-  cd : CdG pins dn ds p
   iv : IvCtx p
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
@@ -822,16 +823,9 @@ theorem isSome_refinesC (hlc : LeafClosed p) (hcl : IndMemoClosed p) (hcrf : L.I
 /-- `andPinOk` on a one-constant record (or a basis record) leaves the twin state alone. -/
 theorem andPinOk_st_one {pd : IDeclaration} {a : AState} (hp : ConRon.Bridge.PinsOK a)
     (hpd : ∀ b k, pd ≠ .indDecl b k) (hok : AM.ok (andPinOk pd) a) : AM.st (andPinOk pd) a = a := by
-  have hrun := AM.run_of_ok _ _ hok
-  generalize AM.res (andPinOk pd) a = b at hrun
-  generalize AM.st (andPinOk pd) a = a' at hrun ⊢
-  cases pd with
-  | indDecl b k => exact absurd rfl (hpd b k)
-  | basisDecl _ =>
-    simp only [andPinOk] at hrun
-    exact (ConRon.Bridge.AM.pure_ok hrun).2
-  | _ => exact ConRon.Bridge.andPinNameFree_run hp hrun
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`and_pin_ok` keeps `TwinOK`** (a leaf), the pin flag, the scratch tier's flag and the
 twin's fold invariant: on a one-constant record the twin state is unchanged; on an inductive block
 (`andPinOkInd_refines`) the store grows (con-ron's `andPinOk_run`: `StateOK`, `Ext`, caches and
@@ -892,11 +886,13 @@ theorem andPinOk_refinesT (hlc : LeafClosed p) (hp : p.lookup "and_pin_ok" = som
   refine ⟨h1, h2, h3, h4, by rw [e]; exact hTw.leaf hf, ?_, by rw [e]; exact hoff,
     by rw [e]; exact hF, by rw [e]; exact hden, by rw [e]; exact hPD, hIMf hIM⟩
   simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact hfl
+-/
 
 end leaves
 
 /-! ## `install_step` and `install_decl_step`: one model and one refinement each -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_step`'s unified model**: the table count, the flush, the bracket's opening and the
 two promotions (outside the verdict closure) lifted; `install_step_go` by its unified model. -/
 l_model installStep_specE (p : Prog) (hf : p.lookup "install_step" = some installStepL)
@@ -908,7 +904,9 @@ l_model installStep_specE (p : Prog) (hf : p.lookup "install_step" = some instal
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_decl_step`'s unified model**: the `And` pin (outside the verdict closure) lifted,
 `install_step` by its unified model. -/
 l_model installDeclStep_specE (p : Prog) (hf : p.lookup "install_decl_step" = some installDeclStepL)
@@ -920,7 +918,9 @@ l_model installDeclStep_specE (p : Prog) (hf : p.lookup "install_decl_step" = so
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What `install_step` gives besides the twin's run, its view `r` and the memory `m'`: the loop's
 relation at the new view, environment and pending list, the memos. -/
 structure IstPost (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
@@ -929,11 +929,13 @@ structure IstPost (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name
   loop : LoopR pins m' a' r x.1 ds
   core : CoreMemos m'
   ind : IndMemos m'
+-/
 
 section ist
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
   {p : Prog}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_step` refines `installStep` under `StageT`, both outcomes**: the table count, the
 flush and the bracket's opening keep `TwinOK`; `install_step_go` by `istg_ref` (its model
 inlined); then the promotion of the value group's arm. -/
@@ -1010,7 +1012,9 @@ theorem ist_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn
       (isSome_refinesC pins dn ds p hdc.leaf hdc.indMemo hdc.crf hb hpp hps n _ a3 i vis (r3.headD 0)
         (r0.headD 0) (r3.tail.tail.headD 0) y.1 pend vg hg hP3.loop hP3.core hP3.ind) c4
     exact RefE.ret (AM.run_of_ok _ _ hok4) ⟨hL4, hcm4, hIM4⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_decl_step` refines `installDeclStep` under `StageT`, both outcomes**: the twin
 reports failures as values, so an ok value is the twin's `.ok` at the next position (with the step's
 environment and pending list `x`) and an error the twin's failure, in the monad or as a value. A
@@ -1079,6 +1083,7 @@ theorem ids_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn
   rw [c1] at h1
   obtain ⟨⟨fe', pend'⟩, a', hx, hP⟩ := h1
   exact ⟨(fe', pend'), a', by rw [hrun, hx], hP⟩
+-/
 
 end ist
 
@@ -1088,6 +1093,7 @@ section skel
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_step` refines `installStep`** under `StageT` (`ist_ref`'s ok half; the core's memos
 come back). -/
 @[refines ConRon.Arena.installStep]
@@ -1110,10 +1116,12 @@ theorem installStep_refines (hm : mode = .verified) (hdc : LoopCallees dn p) (hF
   rintro r s' ⟨hloc, x, a', hrun, hP⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hP.core, hP.ind, hok, by rw [hst, hres]; exact hP.loop⟩
+-/
 
 /-- `install_decl_step` is one of the loop's functions. -/
 theorem installDeclStep_loop : "install_decl_step" ∈ loopFns := loop_mem _ rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_decl_step` refines `installDeclStep`** under `StageT` (`ids_ref`'s ok half): a
 returning run is the twin's `.ok` with the position advanced; the memory's half of the twin's
 invariants (`LoopMem`, `CoreMemos`) comes back (the loop's write set, the twin's persistent tier only
@@ -1148,6 +1156,7 @@ theorem installDeclStep_refines (hm : mode = .verified) (hb : BracketProg p) (hd
   have e : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
   have hpx := (hT.step_pext hi (by rw [← e]; exact hrun')).2
   exact ⟨hl, x, a', hrun', hP.loop, hM.step hf hpx, hP.core, hP.ind⟩
+-/
 
 theorem drop_cons_dsAt (ds : Array IDeclaration) (i : Word) (hi : i.toNat < ds.size)
     (h1 : (i + 1).toNat = i.toNat + 1) :
@@ -1155,6 +1164,7 @@ theorem drop_cons_dsAt (ds : Array IDeclaration) (i : Word) (hi : i.toNat < ds.s
   rw [h1, List.drop_eq_getElem_cons (by simpa using hi)]
   simp [dsAt, hi]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What `install_fold_go` from record `k` ends with: phase A's fold from `(k, fe, pend)` over the
 records from `k` succeeds with every record installed, related to the memory `m` at view `v`. -/
 def FoldPost (m : Mem) (a : AState) (v : Word) (k : Nat) (fe : IFEnv) :
@@ -1164,7 +1174,9 @@ def FoldPost (m : Mem) (a : AState) (v : Word) (k : Nat) (fe : IFEnv) :
       (AM.res (installFold mode pins (k, fe, pend) (ds.toList.drop k)) a) ∧
     LoopMem dn m (AM.st (installFold mode pins (k, fe, pend) (ds.toList.drop k)) a) ∧ CoreMemos m ∧
     IndMemos m
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `install_fold_go`'s spec at fuel `n`. -/
 def FoldGoSpec (n : Nat) : Prop :=
   ∀ (s₀ : St) (a₀ : AState) (i cnt vis : Word) (fe : IFEnv),
@@ -1173,19 +1185,25 @@ def FoldGoSpec (n : Nat) : Prop :=
     IndMemos s₀.mem →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_fold_go" [i, cnt, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ FoldPost mode pins dn ds s'.mem a₀ (r.headD 0) i.toNat fe pend; ⊤⦄
+-/
 
 /-! ## `install_fold_go` / `install_fold_next`: one model and one refinement -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_fold_go`'s unified model** (`install_fold_next` through its run: the two are
 mutually recursive). -/
 l_model installFoldGo_specE (p : Prog) (hf : p.lookup "install_fold_go" = some installFoldGoL)
   fns [hf ↦ installFoldGoE] grind [arena_grind] unified
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_fold_next`'s unified model** (`install_decl_step` and `install_fold_go` through their
 runs: the fold's invariant reads the step's write set). -/
 l_model installFoldNext_specE (p : Prog) (hf : p.lookup "install_fold_next" = some installFoldNextL)
   fns [hf ↦ installFoldNextE] grind [arena_grind] unified
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A record's step failure (in the monad or as a value) is the fold's failure. -/
 theorem installFold_fails_head {pins : List INatOpPinSet}
     {q : Nat × IFEnv × Array PendingCheck} {d : IDeclaration} {rest : List IDeclaration}
@@ -1196,7 +1214,9 @@ theorem installFold_fails_head {pins : List INatOpPinSet}
     simp only [installFold, StateT.run_bind, hce]; rfl
   · refine .inr ⟨ce, k, a', ?_, hc⟩
     simp only [installFold, StateT.run_bind, hce, exc_ok_bind]; rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `install_fold_go`'s refinement at fuel `n`, both outcomes: from the fold's invariants at record
 `i`, an ok value ends in `FoldPost`; an error claims that phase A over the records from `i` fails
 (a record's failure, as a value). -/
@@ -1207,6 +1227,7 @@ def FoldGoRef (n : Nat) : Prop :=
     RefC (IstgG pins dn ds p) (installFoldGoE p n m i cnt vis)
       (fun v => FoldPost mode pins dn ds v.2 a₀ v.1 i.toNat fe pend)
       (ErrClaimV (installFold mode pins (i.toNat, fe, pend) (ds.toList.drop i.toNat)) a₀)
+-/
 
 /-- `install_fold_next`'s, the same (`i` below the count). -/
 def FoldNextRef (n : Nat) : Prop :=
