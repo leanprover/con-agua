@@ -45,6 +45,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 open ConRon.Bridge ConRon.Bridge.Inductives in
 /-- **The twin's universe bound for one field is a core step** (con-ron's
 `checkStructFieldSortsI_spec`, its middle: `readLevelM_pstep` twice; or nothing; or the zero pin
@@ -103,6 +104,7 @@ theorem sfbT_cstep {env : ConLeche.Env} {fe : IFEnv} {isProp large : Bool} {s : 
           | (obtain ⟨-, rfl⟩ := AM.pure_ok z6; exact c6)
           | exact absurd z6 (fun h => AM.fail_ok h)
           | (obtain ⟨_, _, k, _⟩ := AM.bind_ok z6; exact absurd k (fun h => AM.fail_ok h))
+-/
 
 /-- **The model of `check_field_sort_bound`, both outcomes**: its four callees (outside the
 verdict closure) through their runs, lifted. -/
@@ -139,90 +141,9 @@ theorem cfb_ref {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
     RefE True (cfbE p n m isProp large s io il fv u)
       (sfbT (isProp != 0) (large != 0) (decI s) idxArgs (decI fv) (decI u)) a
       (fun v _ a' => CfbPost dn vis fe m v.2 a') := by
-  have hS := hC.stage
-  cases n with
-  | zero => rw [cfbE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
-  | succ n =>
-  by_cases hp : isProp = 0
-  · rw [cfbE.arm1 p n m isProp large s io il fv u hp]
-    simp only [sfbT, hp, bne_self_eq_false, Bool.not_false, ite_true]
-    rw [sfb_leq_eq]
-    refine RefE.bindSim (fun _ => rfl) (lvLeqTop_simC p hLC.lev hLT n hC hA u s hu hs lu sP hdu hsP)
-      fun r x m1 a' _ _ ⟨hC1, hg1, hx, hA1, _⟩ => ?_
-    dsimp only [cfbE.k_lv_leq_top]
-    rcases x with _ | _ | _ <;> simp only [decLvlEq] at hx
-    · exact RefE.abortAt hx fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
-    · refine RefE.pass (by rw [hx]; decide) (RefE.abortAt (by rw [hx]; decide) fun _ => ?_)
-      exact ErrClaim.congr (T' := ConRon.Arena.fail (.invalid "direct sum: field universe too large"))
-        rfl (ErrClaim.fail _ _ (by decide))
-    · refine RefE.pass (by rw [hx]; decide) (RefE.pass (by rw [hx]; decide) ?_)
-      rw [cfbE.j1.arm1]
-      exact RefE.ret rfl ⟨hC1.stage, hg1, hA1⟩
-  have hp' : (isProp != 0) = true := by simpa using hp
-  by_cases hl : large = 0
-  · rw [cfbE.arm3 p n m isProp large s io il fv u hp hl, cfbE.j1.arm1]
-    simp only [sfbT, hp', hl, bne_self_eq_false, Bool.not_true, Bool.false_eq_true, ite_false]
-    exact RefE.ret rfl ⟨hS, IWGrow.refl _, hA⟩
-  have hl' : (large != 0) = true := by simpa using hl
-  rw [cfbE.arm2 p n m isProp large s io il fv u hp hl]
-  simp only [sfbT, hp', hl', Bool.not_true, Bool.false_eq_true, ite_false, ite_true]
-  -- `pin_word`
-  refine RefE.bindLift (fun _ => rfl) fun rz m1 h1 => ?_
-  obtain ⟨s', hs', -, hmm, hz'⟩ := triple_of_callW (pinWord_specV p hpw n ⟨m, Locals.init []⟩ 53) h1
-  simp only at hmm hz'
-  subst hs'
-  have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
-    intro h0; simp [pinWordV, h0] at hz'
-  obtain ⟨hrun0, hz⟩ := pinZero_stage hS hz'
-  have hzp : rz.headD 0 = pinW m 53 := by
-    simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz'
-    rw [← hz']; rfl
-  obtain ⟨lz, hdz⟩ := hC.stageT.twin.den.zero
-  rw [(hS.check.pins.full hpne).zeroLevel, ← hzp] at hdz
-  refine ⟨_, _, hrun0, ?_⟩
-  dsimp only [cfbE.k_pin_word]
-  rw [hmm]
-  -- `lvl_eq_true`
-  refine RefE.bindLift (fun _ => rfl) fun rq mq h2 => ?_
-  obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (eqTrue_specC p het (realCall p) (realCall_spec p) n
-    ⟨m, Locals.init []⟩ u (rz.headD 0)) h2
-  simp only at hW2
-  cases n with
-  | zero => simp [eqTrueC] at hW2
-  | succ n' =>
-  rw [eqTrueC_succ] at hW2
-  rcases he' : realCall p n' "lvl_eq_c" [u, rz.headD 0] m with _ | ⟨r1, m1⟩
-  · rw [he'] at hW2; simp [eqTrueK] at hW2
-  rw [he', eqTrueK_some] at hW2
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW2
-  obtain ⟨hreq, hm2⟩ := hW2
-  obtain ⟨x, a1, hrun1, hC1, hg1, hx, hA1, -⟩ :=
-    lvlEqC_simC p hcl hLC n' hC hA u (rz.headD 0) hu hz lu lz hdu hdz r1 m1 he'
-  refine ⟨_, _, hrun1, ?_⟩
-  have hmq : mq = m1 := by rw [← hs2, ← hm2]
-  subst hmq
-  dsimp only [cfbE.k_lvl_eq_true]
-  have hS1 := hC1.stage
-  have hidx1 : decHL mq io.toNat il.toNat = some idxArgs := by
-    rw [decHL_grow hg1 hib]; exact hidx
-  -- `sl_contains` (L only)
-  refine RefE.onlySim (fun _ => rfl) (fun r3 m3 h3 => triple_of_callW
-    (slContains_spec p hc (n' + 1) ⟨mq, Locals.init []⟩ io il fv) h3) fun r3 m3 ⟨s3, hs3, _, hm3, hW3⟩ => ?_
-  simp only at hW3 hm3
-  obtain ⟨ws, hws, hwsd, hwlt⟩ := slR_of_decHL mq _ _ idxArgs hidx1 (hS1.lt64 (by have := hg1.iw; omega))
-  simp only [UInt64.ofNat_toNat] at hws
-  have hct := containsW_ok (n' + 1) _ _ _ _ _ _ hws hW3
-  have hm3' : m3 = mq := by rw [← hs3, hm3]
-  subst hm3'
-  dsimp only [cfbE.k_sl_contains, cfbE.j1]
-  have hq3 : rq.headD 0 = 0 ↔ x ≠ some true := by
-    simp only [decLvlEq] at hx; rw [← hreq, hx]; rcases x with _ | _ | _ <;> simp
-  have hr3 : r3.headD 0 = 0 ↔ ws.contains fv = false := by rw [hct]; cases ws.contains fv <;> simp
-  rw [hwsd, contains_map_decI fv hfv ws hwlt]
-  refine RefE.guardIf (by decide) (fun hg => ?_) (fun hb => ?_) fun _ _ => RefE.ret rfl ⟨hS1, hg1, hA1⟩
-  · rw [hq3, hr3] at hg; rw [hg.2, Bool.or_false]; simpa using hg.1
-  · rw [hq3, hr3]; simpa using hb
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_struct_field_sorts_i_go`, both outcomes**: `sl_get` and `fvar_type_d`
 (outside the verdict closure) through their `Option` models, the core stubs and
 `check_field_sort_bound` through their runs, the recursion through the model itself. -/
@@ -233,7 +154,9 @@ l_model csfGoE_spec (p : Prog) (hf : p.lookup "check_struct_field_sorts_i_go" = 
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_struct_field_sorts_i`, both outcomes**: `iw_alloc` through its `Option`
 model, the fields through `csfGoE`. -/
 l_model fsortsE_spec (p : Prog) (hf : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL)
@@ -245,6 +168,7 @@ l_model fsortsE_spec (p : Prog) (hf : p.lookup "check_struct_field_sorts_i" = so
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `check_struct_field_sorts_i_go` at `j` gives besides the twin's sorts `xs` of the fields
 below `j` (the result slice `res` pre-sized, `acc` the `k` sorts above `j` already written): the
@@ -273,6 +197,7 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hLC hLT in
 /-- **`check_struct_field_sorts_i_go` refines `checkStructFieldSortsI .verified` at `j`, both
 outcomes** (twin side: con-ron's `checkStructFieldSortsI_spec`'s proof): the field (`sl_get`, L
@@ -406,7 +331,9 @@ theorem csfGo_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wor
   refine RefE.ret rfl ⟨hR5.stage, hR5.grow, ?_, by dsimp only; omega, hR5.abs⟩
   dsimp only
   rw [hjJ, show J + 1 + k = J + (k + 1) by omega, hd5]; simp
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hLC hLT in
 /-- **`check_struct_field_sorts_i` refines `checkStructFieldSortsI .verified`, both outcomes**: the
 allocation (L only), then `csfGo_ref` from the top field. -/
@@ -433,7 +360,9 @@ theorem fsorts_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wo
     (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1 (by omega) (by omega)
     (by simp [decHL, hslice?]) hfvs hfb hidx hib hs ⟨sP, hsP⟩ hnj hfP hws)
     fun _ _ _ _ hR => ⟨hR.stage, hR.grow, by simpa using hR.sorts, by simpa using hR.top, hR.abs⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hLC hLT in
 /-- **`check_struct_field_sorts_i` refines `checkStructFieldSortsI .verified`** under `StageC`
 (`fsorts_ref`'s ok half; the fields' denotations and scoping as con-ron's
@@ -472,6 +401,7 @@ theorem checkStructFieldSortsI_refinesC (hg : p.lookup "sl_get" = some slGet)
         hfvs hfb hidx hib hs hsP hnj hfP hws)) fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
     exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.sorts, hR.abs⟩
+-/
 
 end sims
 

@@ -46,18 +46,22 @@ def decIS (m : Mem) (rp : Nat) : Option (List LIdx) := decAt m (decHL m) rp
 /-- The index binders' slice: the telescope's tail past `nP`, `(0, 0)` when empty. -/
 def idxTail (nP o l : Word) : Word × Word := if nP < l then (o + nP, l - nP) else (0, 0)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- One member's index sorts, as the twin computes them. -/
 def idxOneAM (fe : IFEnv) (bs : BlockShape) (ms : MemberShape) (cvTa : IConstantVal) : AM (List LIdx) := do
   let tq ← unwrapOr (← openPisAtFvarsF (bs.nP + ms.nIdx) cvTa.type 0)
     (.internal "direct rec: type former telescope")
   checkStructFieldSortsI V fe true false bs.resSort bs.nP (tq.1.drop bs.nP) [] ms.nIdx
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem installIdx_cons (fe : IFEnv) (bs : BlockShape) (ms : MemberShape) (rest : List MemberShape)
     (cvTa : IConstantVal) (cvTas : List IConstantVal) :
     ConRon.Arena.checkBlockIdxSorts V fe bs (ms :: rest) (cvTa :: cvTas) =
       (idxOneAM fe bs ms cvTa >>= fun is =>
         ConRon.Arena.checkBlockIdxSorts V fe bs rest cvTas >>= fun rs => pure (is :: rs)) := by
   simp only [ConRon.Arena.checkBlockIdxSorts, idxOneAM, bind_assoc]
+-/
 
 /-- A handle slice whose tail past `k` is taken: `idxTail`'s slice. -/
 theorem installIdxTail {m : Mem} {o l : Word} {xs : List EIdx} {k : Word}
@@ -84,7 +88,6 @@ theorem installIdxTail {m : Mem} {o l : Word} {xs : List EIdx} {k : Word}
 /-- The lookups of `check_block_idx_sorts`. -/
 structure IdxProg (p : Prog) : Prop extends CstProg p where
   rec2 : p.lookup "rec2" = some rec2
-  one : p.lookup "check_block_idx_sorts_one" = some checkBlockIdxSortsOne
   idx : p.lookup "check_block_idx_sorts" = some checkBlockIdxSorts
   sum : SumProg p
 
@@ -121,7 +124,6 @@ structure GrcProg (p : Prog) : Prop where
   ccs : CcsProg p
   csm : p.lookup "class_slot_is_minor" = some classSlotIsMinor
   gmo : p.lookup "gen_rec_check_minor_ok" = some genRecCheckMinorOk
-  cft : CftProg p
   gftc : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC
   sel : SelProg p
   pb : PbProg p
@@ -174,8 +176,6 @@ structure TailProg (p : Prog) : Prop where
   ng : p.lookup "block_nested_bit_go" = some blockNestedBitGo
   nb : p.lookup "block_nested_bit" = some blockNestedBit
   crec : p.lookup "check_block_rec" = some checkBlockRec
-  tailrec : p.lookup "check_block_tail_rec" = some checkBlockTailRec
-  grc : GrcProg p
   tabs : TabsProg p
   tail : p.lookup "check_block_tail" = some checkBlockTail
 

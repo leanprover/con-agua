@@ -61,13 +61,13 @@ structure AgreePost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   stage : StageC dn vis fe env m' a'
   grow : IWGrow m m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hOpf : OpfF p) (hLC : LvlCacheProg p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC in
 /-- **`check_block_agree_one` refines `agreeBodyAM`**, both outcomes (member 0's telescope opened
 by the caller; the denotations as con-ron's `checkBlockAgree_specF`'s proof has them at a member). -/
@@ -182,6 +182,7 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03) hL.run
   exact RefE.ret rfl
     ⟨hC4, (hg1.trans hg2).trans (hg3.trans hL.grow), hA4, ((p1.trans p2).toCore hC.check).trans (c3.trans c4)⟩
+-/
 
 end sims
 

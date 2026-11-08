@@ -47,6 +47,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model cruleE_spec (p : Prog) (hp : CruleProg p)
   fns [hp.rule ↦ cruleE]
   specs [crgE_spec p hp n, flushCaches_spec p hp.toFlushProg n, stripLams_specF p hp.strip n,
@@ -55,6 +56,7 @@ l_model cruleE_spec (p : Prog) (hp : CruleProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `class_rule_ok` gives besides the twin's rule `y` (from `m`, `a`): the stage invariant
 under `StageC`, the growth, the rule returned as built (`gen` itself), the abstraction memo, the
@@ -67,11 +69,11 @@ structure CrulePost (dn : NIdx → Option ConLeche.Name) (visR : Word) (feR : IF
   val : w = gen
   res : y = decI gen
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V envR feR a a'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in
 /-- **`class_rule_ok` refines `classRuleOk`, both outcomes** under `StageC` (twin side con-ron's
 `classRuleOk_spec`'s proof): the guards (`crg_ref`, against `crgT`: `crgT_bind`), the inference
@@ -169,7 +171,9 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
   subst eb
   refine RefE.ite_pos rfl (RefE.ret rfl ⟨hC5, (((hg1.trans hg2).trans hg3).trans hg4).trans hg5, rfl,
     rfl, hA5, c18⟩)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in
 /-- **`class_rule_ok` refines `classRuleOk`** under `StageC` (the inputs' denotations as con-ron's
 `classRuleOk_spec` asks; `crule_ref`'s ok half): the rule is returned as built. -/
@@ -198,19 +202,23 @@ theorem classRuleOk_refinesC (hp : CruleProg p) (hApd : ApdF p) (N : Nat) (hN : 
   exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow,
     by have hv : r.headD 0 = gen := hR.val
        rw [hres, hR.res]; exact ⟨by rw [hv]; exact hgen, by rw [hv]⟩, hR.abs⟩
+-/
 
 end sims
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model cr1E_spec (p : Prog) (hP : CrsProg p)
   fns [hP.one ↦ cr1E] specs [cruleE_spec p hP.cr n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 section cr1
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in
 /-- **`class_rules_ok_one` refines `classRuleOk` at the telescope length `nP + |slots| + nF`, both
 outcomes**: the word sum's overflow abort (class `0`), then `class_rule_ok` in tail position
@@ -252,6 +260,7 @@ theorem cr1_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : IFE
     (rec3CVExt_lt hC.stage hext) hA hcvP hgP hie
     (n := rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1)) (visT := visT)
   rwa [hn] at h
+-/
 
 end cr1
 

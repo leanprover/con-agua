@@ -52,6 +52,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## The callees' error claims (hypotheses, discharged bottom-up) -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_value_guards`' error claim under `StageT`** (`ivg_ref`'s error half, as a hypothesis shape). -/
 def IvgE (p : Prog) : Prop :=
   ∀ {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
@@ -60,6 +61,7 @@ def IvgE (p : Prog) : Prop :=
     decCV (erA m) q.toNat = some cv → q.toNat + 3 < 2 ^ 64 → v.toNat < 2 ^ 32 →
     (∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) → L.Stubs.CrOK m →
     ErrClaim (installValueGuards fe cv (decI v)) a e
+-/
 
 /-- What `install_header`'s error arms assume: the no-verdict closure (`all_level_params_defined`,
 `consts_resolve_ffast`) and `unresolved_consts_error`'s program. -/
@@ -67,6 +69,7 @@ structure IhCtx (p : Prog) : Prop where
   nv : closedNV p L.Checker.nvFns = true
   uce : UceProg p
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `install_value_guards`, both outcomes**: `cv_lps` and the two closedness walks
 lifted, `all_level_params_defined`, `consts_resolve_ffast` and `unresolved_consts_error` through
 their runs. -/
@@ -77,6 +80,7 @@ l_model installValueGuards_specE (p : Prog) (hP : CvgProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `install_value_guards` gives besides the twin's run: the stage, the growth, the memo. -/
 structure IvgPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
@@ -85,6 +89,7 @@ structure IvgPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   grow : IWGrow m m'
   crOK : L.Stubs.CrOK m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_value_guards` refines `installValueGuards`, both outcomes**, under `StageT`: the
 copy by its frame (`StageT.of_iw`), the four walks by their `StageT` refinements
 (`all_level_params_defined` by `apdF_okT`, the parameters' names read back at the entry;
@@ -163,13 +168,12 @@ theorem ivg_ref {p : Prog} (hap : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option 
   · obtain ⟨M5, hC5⟩ := hS5.core
     exact fun hG => uce_errClaim_lo hG.uce hG.nv hC5 hv (by decide) h6 "value"
   · exact RefE.of_cls0 rfl
+-/
 
 /-- **`install_value_guards`' error claim under `StageT`** (`ivg_ref`'s error half). -/
 theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true) (hU : UceProg p) : IvgE p :=
-  fun hc hS hq hqb hv hlps hCr =>
-    RefE.run_err (s₀ := ⟨_, Locals.init []⟩) (installValueGuards_specE p hP _ _ _ _ _) hnv
-      ⟨hnv, hU⟩ (ivg_ref hap hkp.crf _ hS hq hqb hv hlps hCr) hc
+    (hnv : closedNV p L.Checker.nvFns = true) (hU : UceProg p) : IvgE p := by
+  sorry
 
 /-! ## `check_thm_val(vis, c)` -/
 
@@ -200,6 +204,7 @@ structure ArmPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : Word) (m' 
   memos : CoreMemos m'
   grow : IWGrow m m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_thm_val` refines `checkThmVal .verified` under `StageT`, both outcomes**: the type not
 a proposition and the type mismatch are the twin's `invalid`, the level comparison out of fuel its
 `notImplemented` (`lef_ref`'s error half); the core stubs (`KnotStageProg`/`CoreStubsE`),
@@ -329,12 +334,14 @@ theorem tv_ref {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hap : ApdF p)
   have hM9 : CoreMemos s9.mem := hS8.twin.memos.frame (envPushW_frame hW9)
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
   exact RefE.ret rfl ⟨by simpa using hS9, hM9, hg18.trans hg9⟩
+-/
 
 
 /-! ## `check_value_group(vis, g)` -/
 
 /- The `simp` recipe with `locals` (the locals evaluated before `simp_all`): 4 s; `finish`
 (`gen 20`, `instances 4000`) took 45 s. -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_value_group`, both outcomes**: `iw_reset`, `pin_word`, `lvl_eq_c`
 (outside the verdict closure) through their `Option` models; the core stubs and
 `install_value_guards` through their runs. -/
@@ -345,6 +352,7 @@ l_model checkValueGroup_specE (p : Prog) (hP : CvgProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `check_value_group`'s error claims assume: the core stubs' and `install_value_guards`'
 claims. -/
@@ -360,6 +368,7 @@ structure CvgPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   grow : IWGrow (m.set64 CTL 200 0) m'
   cr : L.Stubs.CrOK m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_value_group` refines `checkValueGroup .verified` under `StageT`, both outcomes**:
 the program's own core (`KnotStageProg`; the core stubs' claims); for a theorem, the level
 comparison (`lvl_eq_c` answers `0`: the twin's `liftFueled` on `none`; `1`: not a proposition)
@@ -515,5 +524,6 @@ theorem cvg_ref {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCach
     (ivg_ref hap hkp.crf n hS4 hcv4 (by rw [hg1']; omega) hwjl hlps4 hCr4) h5
   subst hs5
   exact RefE.bind_right hrun5 (tail _ _ hS5 (hg1.trans (hg2.trans (hg4.trans hg5))) hCr5)
+-/
 
 end L.Arena

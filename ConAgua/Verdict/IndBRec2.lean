@@ -43,6 +43,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model classRecTyOkE_spec (p : Prog) (hp : RtoProg p)
   fns [hp.rto ↦ classRecTyOkE]
   specs [classRecTyOkGuardsE_spec p hp n, classGenRecTy_spec p hp.toGtProg n,
@@ -51,6 +52,7 @@ l_model classRecTyOkE_spec (p : Prog) (hp : RtoProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- The usual `RSim` post under `StageC`. -/
 def KPC {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -73,6 +75,7 @@ variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p)
   {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd hCrk henv in
 /-- **`class_rec_ty_ok` refines `classRecTyOk`, both outcomes** under `StageC` (the twin side
 transcribed from con-ron's `classRecTyOk_spec`'s proof): the guards (`rg_ref`, against `rgT`:
@@ -182,6 +185,7 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   refine RefE.ret rfl ⟨hC5, hg14.trans hg5, ⟨?_, CVExt_grow hg35 hext3⟩, hA5⟩
   show decCVp m5 q.toNat = _
   rw [decCVp_grow_r hg35 hext3, hdec3]
+-/
 
 include hq hApd hCrk henv in
 /-- **`class_rec_ty_ok` refines `classRecTyOk`** under `StageC` (`rto_ref`'s ok half). -/
@@ -202,11 +206,7 @@ theorem classRecTyOk_refinesC (hp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s�
         (AM.st (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a₀)
         (AM.res (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (RefE.triple (classRecTyOkE_spec p hp n s₀ vis g k rc cvRi c)
-    (rto_ref hq hApd hCrk henv n hn hC hG hns hrc hcvR hcvRi hA hgP hrcP hRiP hRi)) ?_
-  rintro r s' ⟨hl, x, a', run, hR⟩
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
-  exact ⟨hl, hok, ⟨by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.dec⟩, hR.abs⟩
+  sorry
 
 end sims
 

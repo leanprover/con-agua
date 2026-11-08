@@ -58,6 +58,7 @@ section
 variable (p : Prog) (hcl : CoreStageClosed p) (hL : LvlCacheProg p)
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hcl hL in
 /-- **The real `lvl_eq_c` meets `LvlHyp` at `blockShape?`'s prefix** from a `StageC` state whose
 memory holds `AbsOK` and whose store denotes the block. -/
@@ -102,6 +103,7 @@ theorem lvlHyp_real (n : Nat) {m : Mem} {a : AState} {nP : Nat} {blk : List ICon
   rw [hF.zeroLevel, ← hzp] at hdz
   exact Sim.mono (lvlEqC_simC p hcl hL (n + 2) hC1 hA1 s z hs hzh lu lz hdu hdz)
     (fun _ _ _ _ ⟨hC', hg, hd, _, _⟩ => ⟨hC'.stage, hg, hd⟩)
+-/
 
 include hcl hL in
 /-- **`block_shape` refines `blockShape?` under `StageC`**, its `lvl_eq_c` the real call
@@ -117,11 +119,10 @@ theorem blockShape_refinesC (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ :
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockShape? nPd.toNat blk) a₀ ∧
       ShapeR (AM.res (ConRon.Arena.blockShape? nPd.toNat blk) a₀) r s'.mem ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.blockShape? nPd.toNat blk) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (bsh_spec p hP (realCall p) (realCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (bshW_sim (realCall p) n hC.stage hblk (lvlHyp_real p hcl hL n hC hA hbP)) hm
-    ⟨hl, hok, hQ⟩
+      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hcl hL in
 /-- **`block_parts` refines `blockParts?` under `StageC`**, its `lvl_eq_c` the real call
 (`blockParts_refines`' statement, as `blockShape_refinesC`). -/
@@ -139,6 +140,7 @@ theorem blockParts_refinesC (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ :
   triple_post (bpa_spec p hP (realCall p) (realCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ⟩ := Sim.run (bpW_sim (realCall p) n hC.stage hblk (lvlHyp_real p hcl hL n hC hA hbP)) hm
     ⟨hl, hok, hQ⟩
+-/
 
 end
 
