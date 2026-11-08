@@ -107,6 +107,7 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
 
 /-! ## The stage relation across an environment-index write -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A run that writes only the environment's rows, `ECON` and `CTL[128]`**, relating its
 memory to an environment `fe'` at view `vis'`, keeps the stage relation (at `fe'`) and the pool. -/
 theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe fe' : IFEnv}
@@ -134,6 +135,7 @@ theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word
   · rw [hER]; exact hEs
   · rw [hfr.size CTL]; exact hc
   · exact ⟨by omega, by omega, fun i _ => by rw [hI], fun i _ => by rw [hER]⟩
+-/
 
 /-! ## `env_pop_temp`'s write set -/
 
@@ -143,9 +145,12 @@ def popProg : Prog :=
 
 def popFns : List FnName := popProg.map (·.1)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem popProg_closed : closedA popProg [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] popFns = true := by
   decide +kernel
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem popTemp_frame {p : Prog}     (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
     {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word}
     (h : callW p n "env_pop_temp" vs m = some (r, m')) :
@@ -157,6 +162,7 @@ theorem popTemp_frame {p : Prog}     (hs : p.lookup "env_row_set" = some envRowS
     rcases hf with rfl | rfl | rfl <;> simp only [hx, hs, hpt] <;> rfl
   rw [callW_agree popProg_closed hag n (by simp [popFns, popProg])] at h
   exact (run_memFrame popProg_closed (by simp [popFns, popProg]) (L.Arena.run_of_callW h)).1
+-/
 
 /-! ## `gen_rec_check_pop_all` -/
 
@@ -173,6 +179,7 @@ theorem FA2.getElem {α β : Type} {R : α → β → Prop} :
   | _, _, .cons h hs, 0, _, _ => h
   | _, _, .cons _ hs, i + 1, h1, h2 => FA2.getElem hs i (by simpa using h1) (by simpa using h2)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem papW_ok {p : Prog}     (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (a : AState) (po pl : Word)
     (prevs : List (NIdx × Option (Nat × IConstantInfo))) (k : Nat) :
@@ -250,7 +257,9 @@ theorem papW_ok {p : Prog}     (hs : p.lookup "env_row_set" = some envRowSetL) (
   obtain ⟨hS', hg'⟩ := ih s1.mem m' (r1'.headD 0) v' (j - 1) h hS1 (by omega)
     (SPL.grow ⟨hb, ps, hps, hfa⟩ hg1)
   exact ⟨hS', hg1.trans hg'⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`gen_rec_check_pop_all(vis, prevs.off, prevs.len)` undoes the temporary pushes**, last first:
 the stage relation at the returned view of `prevs.foldr popTemp fe`, the pool unchanged. -/
 theorem genRecCheckPopAll_refines {p : Prog}     (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
@@ -274,5 +283,6 @@ theorem genRecCheckPopAll_refines {p : Prog}     (hs : p.lookup "env_row_set" = 
   have hd : (prevs.drop pl.toNat) = [] := List.drop_eq_nil_of_le (by omega)
   exact ⟨hl, papW_ok hx hs hpt dn fe a po pl prevs (n + 1) s₀.mem _ vis _ pl h1
     (by rw [hd]; exact hS) (Nat.le_refl _) hpv⟩
+-/
 
 end L.Ind

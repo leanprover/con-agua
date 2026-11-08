@@ -18,6 +18,7 @@ open scoped Lean.Order
 
 namespace L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`IotaRecFireE`**: `iota_rec_fire`'s verdicts are `iota_rec_fire2`'s (`fire_ref`'s error
 half). -/
 theorem iotaRecFireE_of (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p) (hw : WhnfCallees p)
@@ -30,5 +31,6 @@ theorem iotaRecFireE_of (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p) (h
       (fire_ref p hp hc hw hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj
         ctorP rl major sn lps rule cvj np nf args hS hm4 hebm hcw hus husj hmaj hlps hrule hci hfe hsa
         hsat hmI)
+-/
 
 end L.Arena
