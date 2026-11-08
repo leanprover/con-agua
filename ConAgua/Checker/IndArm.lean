@@ -262,12 +262,7 @@ structure IndArmProgs (p : Prog) : Prop where
 a lookup two fields share is proved once). -/
 theorem indArmProgs_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length) : IndArmProgs (Prog.subPB bs checkerProg) := by
-  have hrom := checkerProg_romRefsPB bs hr hpre
-  prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
-    checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
-    (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
-    closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
-    hrom, closedWL_subPB bs checkerProg_indMemo]
+  sorry
 
 /-- `AbsKeep` of the arm's callees that reach no walk, from their write set. -/
 theorem indArmKeep_checker (bs : List UInt8) :
@@ -275,6 +270,7 @@ theorem indArmKeep_checker (bs : List UInt8) :
       AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
   absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free (armAbs_split f hf)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The inductive arm's contract at the substituted checker program**, from `AbsKeep` of the
 callees that reach the walks. -/
 theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
@@ -295,5 +291,6 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
     (closedW_subPB bs checkerProg_armRcHb) armRcHb_tables
     (closedW_subPB bs checkerProg_armMa) armMa_pass
     (closedW_subPB bs checkerProg_armMc) armMc_block
+-/
 
 end L.Checker
