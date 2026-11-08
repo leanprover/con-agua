@@ -378,6 +378,7 @@ def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d,
 
 /-- `class_const_ok_lit(cv)`: `litShapeOk (.axiomInfo cv)` — a fresh `axiomInfo` record (kind `0`,
 `cv`'s four words inline) handed to the core's `lit_shape_ok`. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:514-538 ConRon.Arena.classConstOk
 @[no_expose, l_impl ConRon.Arena.classConstOk]
 def classConstOkLit : FunDecl := lfn (cv) locals (q, ez, r) {
   q := call erec_alloc(5);
@@ -419,6 +420,7 @@ def classRecTyOkL : FunDecl := lfn (vis, g, k, rc, cvRi, c)
 
 /-- `class_rec_ty_check(vis, cvRi, cvG)`: the check of a generated recursor type — checked as a
 constant and defeq to the stream's checked type `cvRi`. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:540-547 ConRon.Arena.classRecTyCheck
 @[no_expose, l_impl ConRon.Arena.classRecTyCheck]
 def classRecTyCheckL : FunDecl := lfn (vis, cvRi, cvG) locals (r, eq) {
   r := call class_const_ok(vis, cvG);
@@ -465,6 +467,7 @@ def classRecTysOkL : FunDecl := lfn (vis, g, k, rcsOff, rcsLen, cvsOff, cvsLen, 
 /-- `classRuleCheck` helper: `rbs.allM (fun b => constsResolveFFast feR b && !mentionsAnyConst
 pushed b)` — a λ-domain resolves at the constructors' environment: at `feR`, naming none of the
 pushed recursors. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:581-610 ConRon.Arena.classRuleCheck
 @[no_expose, l_impl ConRon.Arena.classRuleCheck]
 def classRuleCheckDomains : FunDecl := lfn (visR, pO, pL, off, cnt) locals (b, m, r) {
   if cnt == 0 { return 1 };
@@ -478,6 +481,7 @@ def classRuleCheckDomains : FunDecl := lfn (visR, pO, pL, off, cnt) locals (b, m
 
 /-- `class_rule_check_guards(visR, cvR, gen)`: `classRuleCheck`'s first guards: closed, its level
 parameters the recursor's, resolving. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:581-610 ConRon.Arena.classRuleCheck
 @[no_expose, l_impl ConRon.Arena.classRuleCheck]
 def classRuleCheckGuards : FunDecl := lfn (visR, cvR, gen) locals (b, lo, ll, u) {
   b := call loose_bvars_bounded_fast(⟪CWF⟫, 0, gen);
@@ -496,6 +500,7 @@ def classRuleCheckGuards : FunDecl := lfn (visR, cvR, gen) locals (b, lo, ll, u)
 closed, its level parameters the recursor's, resolving and typed at the rule-less recursors'
 environment `feR` (the flush leaving the inference), its λ-telescope `n` long, its λ-domains
 resolving at the constructors' environment (`class_rule_check_domains`). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:581-610 ConRon.Arena.classRuleCheck
 @[no_expose, l_impl ConRon.Arena.classRuleCheck]
 def classRuleCheckL : FunDecl := lfn (visR, pO, pL, cvR, n, gen)
     locals (u, s, f, ok, rbsOff, rbsLen, bodyD, closed) {
@@ -511,6 +516,7 @@ def classRuleCheckL : FunDecl := lfn (visR, pO, pL, cvR, n, gen)
 
 /-- `class_rule_ok(visR, pushed.off, pushed.len, cvR, n, gen)`: one generated rule, installed as
 generated, after its check. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:612-617 ConRon.Arena.classRuleOk
 @[no_expose, l_impl ConRon.Arena.classRuleOk]
 def classRuleOkL : FunDecl := lfn (visR, pO, pL, cvR, n, gen) locals (u) {
   u := call class_rule_check(visR, pO, pL, cvR, n, gen);

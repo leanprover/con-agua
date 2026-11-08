@@ -106,6 +106,7 @@ ctx.hiAt 0))`, short-circuiting. -/
 
 /-- `reduced_former(vis, cv, n)`: a former at its reduced telescope (official's `whnf` loop, `n`
 binders, `whnf_telescope`), closed: a fresh constant value (`{cv with type := ty}`). -/
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:200-208 ConRon.Arena.reducedFormer
 @[no_expose, l_impl ConRon.Arena.reducedFormer]
 def reducedFormerL : FunDecl := lfn (vis, cv, n) locals (bo, bl, s, srt, ty, q) {
   (bo, bl, s) := call whnf_telescope(vis, 0, n, EREC⦃cv + 3⦄, 0, 0);
@@ -119,6 +120,7 @@ def reducedFormerL : FunDecl := lfn (vis, cv, n) locals (bo, bl, s, srt, ty, q) 
 /-- `family_telescope(vis, cv, caps)`: a stored family's type former at its telescope — its stored
 type where that shows one, else its reduct at its parameters and indices (`caps` the family's
 `IIndCaps` in `EREC`: `nparams` at `+ 12`, `nIdx` at `+ 6`). -/
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:210-218 ConRon.Arena.familyTelescope
 @[no_expose, l_impl ConRon.Arena.familyTelescope]
 def familyTelescopeL : FunDecl := lfn (vis, cv, caps) locals (dh, k, cvR) {
   dh := call former_def_headed(cv);
@@ -132,6 +134,7 @@ def familyTelescopeL : FunDecl := lfn (vis, cv, caps) locals (dh, k, cvR) {
 /-- `check_spine_at(vis, d, t, args.off, args.len)`: the arguments of an application against the
 telescope `t` — each argument's type definitionally equal to its binder's domain (at depth `d`),
 the domains instantiated along the spine. -/
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:220-236 ConRon.Arena.checkSpineAt
 @[no_expose, l_impl ConRon.Arena.checkSpineAt]
 def checkSpineAtL : FunDecl := lfn (vis, d, t, ao, al) locals (g, ty, body, z, a, ta, eq, b, u) {
   if al == 0 { return 0 };
@@ -149,6 +152,7 @@ def checkSpineAtL : FunDecl := lfn (vis, d, t, ao, al) locals (g, ty, body, z, a
 /-- `family_key_check(vis, d, c, us, ds.off, ds.len)`: a family at a key, typed (official checks
 every replaced nested application) — a stored family, the levels its own count, the arguments
 against its telescope (`family_telescope`) at the key's levels. -/
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:238-256 ConRon.Arena.familyKeyCheck
 @[no_expose, l_impl ConRon.Arena.familyKeyCheck]
 def familyKeyCheckL : FunDecl := lfn (vis, d, c, us, dO, dL) locals
     (found, q, ok, nl, ty, lo, ll, t, u) {
@@ -748,6 +752,7 @@ def nestPosL : FunDecl :=
 /-- `nestHoles.go`: the member holes, member by member — the member's former (`ctx.formers`, at
 its telescope) instantiated at the canonical parameters, recursively over the names; `(0, _, _)`
 (the twin's `none`) when a member has no former or its type does not bind the parameters. -/
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:1184-1201 ConRon.Arena.nestHoles.go
 @[no_expose, l_impl ConRon.Arena.nestHoles.go]
 def nestHolesGoL : FunDecl := lfn (ctx, mm, off, l, outOff, outLen) locals
     (cv, ok2, t, v, r0, r1, r2) {
@@ -764,6 +769,7 @@ def nestHolesGoL : FunDecl := lfn (ctx, mm, off, l, outOff, outLen) locals
 }
 
 /-- `nest_holes(ctx)`: the member holes (`go 0 ctx.names []`). -/
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:1184-1201 ConRon.Arena.nestHoles
 @[no_expose, l_impl ConRon.Arena.nestHoles]
 def nestHolesL : FunDecl := lfn (ctx) locals (namesOff, namesLen, ok, outOff, outLen) {
   namesOff := IW.u64[ctx];

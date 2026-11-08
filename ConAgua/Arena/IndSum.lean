@@ -60,6 +60,7 @@ last. Self-recursive (lane `indproofs2`: split off `er_from_iw`'s `while` loop f
 binders off `e`, reducing to weak head normal form before each binder and at the end, where it
 must be a sort; binder `i` opened at the free variable `i`, the binders accumulated on the way in
 (`out ++ [dom]`, `sl_snoc`). Returns `(bs.off, bs.len, s)`. -/
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:174-198 ConRon.Arena.whnfTelescope
 @[no_expose, l_impl ConRon.Arena.whnfTelescope]
 def whnfTelescopeL : FunDecl := lfn (vis, i, n, e, oo, ol) locals (e', g, x, y, z, fv, b, no, nl, bo, bl, s) {
   e' := call whnf_top(vis, i, e);
@@ -83,6 +84,7 @@ def whnfTelescopeL : FunDecl := lfn (vis, i, n, e, oo, ol) locals (e', g, x, y, 
 
 /-- `check_sum_tele(n, cvTa0)`: the type former's telescope — `n` Π binders ending in a sort (the
 block's check puts a former at its telescope, `reduce_member`). Returns `(cvTa0, s)`. -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:30-42 ConRon.Arena.checkSumTele
 @[no_expose, l_impl ConRon.Arena.checkSumTele]
 def checkSumTeleL : FunDecl := lfn (n, cvTa0) locals (ok, bso, bsl, body, g, x, y, z) {
   (ok, bso, bsl, body) := call strip_pis(n, EREC⦃cvTa0 + 3⦄);
@@ -98,6 +100,7 @@ def checkSumTeleL : FunDecl := lfn (n, cvTa0) locals (ok, bso, bsl, body, g, x, 
 every field's domain has a sort over the opened constructor telescope, under official's per-field
 universe bound unless the family is propositional; the fields from the last to the first (field
 `j - 1`, then the fields below it), as the twin's recursion. -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:46-69 ConRon.Arena.checkStructFieldSortsI
 @[no_expose, l_impl ConRon.Arena.checkStructFieldSortsI]
 def checkStructFieldSortsIL : FunDecl :=
   lfn (vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen, j)
@@ -224,6 +227,7 @@ def checkSumCtorL : FunDecl :=
 /-- `check_sum_ctors(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvTa,
 ctorsOff, ctorsLen)`: all constructors' types (stage 2), in order (`ctors` a slice of pointers to
 `[cv, nF]`); self-recursive on the slice, as the twin is on the list. -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:128-138 ConRon.Arena.checkSumCtors
 @[no_expose, l_impl ConRon.Arena.checkSumCtors]
 def checkSumCtorsL : FunDecl :=
   lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvTa, ctorsOff, ctorsLen)
@@ -280,6 +284,7 @@ def consSumCtorsL : FunDecl := lfn (nP, ctorsOff, ctorsLen, vis) locals (c, cv, 
 generated right-hand side `j`, `.plain` (each a fresh 11-word `EREC` rule record, `EnvRec.lean`;
 the unread words `0`), stopping at the shorter of the two lists, as the twin's paired match does.
 Returns the rule pointers as an `IW` list. -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:148-154 ConRon.Arena.sumRules
 @[no_expose, l_impl ConRon.Arena.sumRules]
 def sumRulesL : FunDecl := lfn (cO, cL, rO, rL) locals (n, o, z) {
   n := cL;
@@ -291,6 +296,7 @@ def sumRulesL : FunDecl := lfn (cO, cL, rO, rL) locals (n, o, z) {
 
 /-- `sum_rules_go(cO, cL, rO, rL, o)`: the rules of the paired slices `(cO, cL)`, `(rO, rL)`, their
 pointers written at `o, o + 1, …`; stops at the shorter. Self-recursive, as the twin is. -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:148-154 ConRon.Arena.sumRules
 @[no_expose, l_impl ConRon.Arena.sumRules]
 def sumRulesGoL : FunDecl := lfn (cO, cL, rO, rL, o) locals (c, cv, nF, rec, z, ez) {
   if cL == 0 || rL == 0 { return 0 };
@@ -362,6 +368,7 @@ table's checks: the bodies (read off the stored constructor type by substitution
 once (`check_struct_proj_table_scoped`), the structure stored (else an internal error, an `abort`)
 and its table not yet taken. Nothing is pushed: the table is the block's install
 (`block_tables`, `IndDeclConsts.lean`). -/
+-- con-ron: ConRon/Arena/Inductives/StructInstall.lean:43-69 ConRon.Arena.checkStructProjTable
 @[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableL : FunDecl :=
   lfn (T, lpsOff, lpsLen, nP, nF, cvCa, vis)

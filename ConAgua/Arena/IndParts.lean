@@ -242,6 +242,7 @@ def blockShapeWithSort : FunDecl := lfn (p, s) locals (z, eq, isProp, q) {
 
 /-- `block_shape_with_members(p, ms.off, ms.len)`: `{ p with members := ms }`, a fresh 9-word
 record (`checkBlock`'s record update after `reduceMembers`). -/
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:190-217 ConRon.Arena.checkBlock
 @[no_expose, l_impl ConRon.Arena.checkBlock]
 def blockShapeWithMembers : FunDecl := lfn (p, mo, ml) locals (q) {
   q := call iw_alloc(9);
@@ -259,6 +260,7 @@ def blockShapeWithMembers : FunDecl := lfn (p, mo, ml) locals (q) {
 
 /-- `block_shape_formers(p)`: `p.members.map (·.cvT)`, the members' formers at their telescopes,
 a fresh `IW` slice of `EREC` pointers. -/
+-- con-ron: ConRon/Arena/Inductives/BlockShape.lean:106-108 ConRon.Arena.BlockShape.formers
 @[no_expose, l_impl ConRon.Arena.BlockShape.formers]
 def blockShapeFormers : FunDecl := lfn (p) locals (q, u) {
   q := call iw_alloc(IW.u64[p + 1]);
@@ -268,6 +270,7 @@ def blockShapeFormers : FunDecl := lfn (p) locals (q, u) {
 
 /-- `block_shape_declared(p)`: `p.members.map (·.declared)`, the members' formers as declared, a
 fresh `IW` slice of `EREC` pointers. -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:179-194 ConRon.Arena.checkBlockInds
 @[no_expose, l_impl ConRon.Arena.checkBlockInds]
 def blockShapeDeclared : FunDecl := lfn (p) locals (q, u) {
   q := call iw_alloc(IW.u64[p + 1]);
@@ -277,6 +280,7 @@ def blockShapeDeclared : FunDecl := lfn (p) locals (q, u) {
 
 /-- `member_field_copy(d, s, l, k)`: `IW[d + j] := IW[IW[s + j] + k]` for `j < l` (word `k` of
 each member record), recursively. -/
+-- con-ron: ConRon/Arena/Inductives/BlockShape.lean:106-108 ConRon.Arena.BlockShape.formers
 @[no_expose, l_impl ConRon.Arena.BlockShape.formers]
 def memberFieldCopy : FunDecl := lfn (d, s, l, k) locals (u) {
   if l == 0 { return 0 };
@@ -288,6 +292,7 @@ def memberFieldCopy : FunDecl := lfn (d, s, l, k) locals (u) {
 /-- `block_shape_member_ctors(p)`: `p.members.map (·.ctors)`, a fresh `IW` slice of pointers to
 the members' `[ctors.off, ctors.len]` headers (word `2` of each member record: no copy of the
 lists). -/
+-- con-ron: ConRon/Arena/Inductives/BlockShape.lean:110-113 ConRon.Arena.BlockShape.memberCtors
 @[no_expose, l_impl ConRon.Arena.BlockShape.memberCtors]
 def blockShapeMemberCtors : FunDecl := lfn (p) locals (q, u) {
   q := call iw_alloc(IW.u64[p + 1]);
@@ -296,6 +301,7 @@ def blockShapeMemberCtors : FunDecl := lfn (p) locals (q, u) {
 }
 
 /-- `member_ctors_copy(d, s, l)`: `IW[d + j] := IW[s + j] + 2` for `j < l`, recursively. -/
+-- con-ron: ConRon/Arena/Inductives/BlockShape.lean:110-113 ConRon.Arena.BlockShape.memberCtors
 @[no_expose, l_impl ConRon.Arena.BlockShape.memberCtors]
 def memberCtorsCopy : FunDecl := lfn (d, s, l) locals (u) {
   if l == 0 { return 0 };

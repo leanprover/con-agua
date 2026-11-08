@@ -44,6 +44,7 @@ open L.Front (DECL)
 /-! ## The pushes -/
 
 /-- `ifenv_push_all(vis, L.off, L.len)`: push a list of records, head first. -/
+-- con-ron: ConRon/Arena/Install.lean:36-40 ConRon.Arena.IFEnv.pushAll
 @[no_expose, l_impl ConRon.Arena.IFEnv.pushAll]
 def ifenvPushAll : FunDecl := lfn (vis, o, l) locals (v, r) {
   if l == 0 { return vis };
@@ -53,6 +54,7 @@ def ifenvPushAll : FunDecl := lfn (vis, o, l) locals (v, r) {
 }
 
 /-- `ifenv_push_tables(Q.off, Q.len)`: the tables, pushed in order. -/
+-- con-ron: ConRon/Arena/Install.lean:42-46 ConRon.Arena.IFEnv.pushTables
 @[no_expose, l_impl ConRon.Arena.IFEnv.pushTables]
 def ifenvPushTables : FunDecl := lfn (o, l) locals (u) {
   if l == 0 { return 0 };
@@ -63,6 +65,7 @@ def ifenvPushTables : FunDecl := lfn (o, l) locals (u) {
 
 /-- `ifenv_push_delta(vis, L.off, L.len, Q.off, Q.len)`: the environment with a declaration's
 constants and tables pushed, each list oldest first: the constants, then the tables. -/
+-- con-ron: ConRon/Arena/Install.lean:48-53 ConRon.Arena.IFEnv.pushDelta
 @[no_expose, l_impl ConRon.Arena.IFEnv.pushDelta]
 def ifenvPushDelta : FunDecl := lfn (vis, lo, ll, qo, ql) locals (v, u) {
   v := call ifenv_push_all(vis, lo, ll);
@@ -74,6 +77,7 @@ def ifenvPushDelta : FunDecl := lfn (vis, lo, ll, qo, ql) locals (v, u) {
 
 /-- `block_formers_go(p, isRec, d.off, d.len, i)`: the formers as declared from member `i` on,
 each `.indInfo` with its capability record at `isRec`. -/
+-- con-ron: ConRon/Arena/Install.lean:55-59 ConRon.Arena.blockFormers
 @[no_expose, l_impl ConRon.Arena.blockFormers]
 def blockFormersGo : FunDecl := lfn (p, isRec, dO, dL, i) locals (caps, q, ro, rl, o, l) {
   if dL == 0 { return (0, 0) };
@@ -86,6 +90,7 @@ def blockFormersGo : FunDecl := lfn (p, isRec, dO, dL, i) locals (caps, q, ro, r
 
 /-- `block_formers(p, isRec)`: the formers, in block order, as declared, with the capabilities
 their block gives them. -/
+-- con-ron: ConRon/Arena/Install.lean:55-59 ConRon.Arena.blockFormers
 @[no_expose, l_impl ConRon.Arena.blockFormers]
 def blockFormers : FunDecl := lfn (p, isRec) locals (dO, dL, o, l) {
   (dO, dL) := call block_shape_declared(p);
@@ -94,6 +99,7 @@ def blockFormers : FunDecl := lfn (p, isRec) locals (dO, dL, o, l) {
 }
 
 /-- `block_ctors_go(nP, c.off, c.len)`: `.ctorInfo c.1 nP c.2` for each `[cv, nF]`. -/
+-- con-ron: ConRon/Arena/Install.lean:61-64 ConRon.Arena.blockCtors
 @[no_expose, l_impl ConRon.Arena.blockCtors]
 def blockCtorsGo : FunDecl := lfn (nP, co, cl) locals (c, q, ro, rl, o, l) {
   if cl == 0 { return (0, 0) };
@@ -105,6 +111,7 @@ def blockCtorsGo : FunDecl := lfn (nP, co, cl) locals (c, q, ro, rl, o, l) {
 }
 
 /-- `block_ctors(p)`: the constructors of every member, as declared, in block order. -/
+-- con-ron: ConRon/Arena/Install.lean:61-64 ConRon.Arena.blockCtors
 @[no_expose, l_impl ConRon.Arena.blockCtors]
 def blockCtors : FunDecl := lfn (p) locals (co, cl, o, l) {
   (co, cl) := call block_shape_all_ctors(p);
@@ -114,6 +121,7 @@ def blockCtors : FunDecl := lfn (p) locals (co, cl, o, l) {
 
 /-- `expr_drop_vars(n, e)`: `n` variables below a term's own, which do not occur in it, dropped:
 each instantiated at `Sort 0`. -/
+-- con-ron: ConRon/Arena/Install.lean:66-73 ConRon.Arena.exprDropVars
 @[no_expose, l_impl ConRon.Arena.exprDropVars]
 def exprDropVars : FunDecl := lfn (n, e) locals (z, s0, e2, r) {
   if n == 0 { return e };
@@ -126,6 +134,7 @@ def exprDropVars : FunDecl := lfn (n, e) locals (z, s0, e2, r) {
 }
 
 /-- `expr_drop_vars_list(nI, a.off, a.len)`: `as.mapM (exprDropVars nI)`, a fresh `IW` slice. -/
+-- con-ron: ConRon/Arena/Install.lean:75-102 ConRon.Arena.recFire
 @[no_expose, l_impl ConRon.Arena.recFire]
 def exprDropVarsList : FunDecl := lfn (nI, ao, al) locals (x, ro, rl, o, l) {
   if al == 0 { return (0, 0) };
@@ -140,6 +149,7 @@ pins.len)` (`IW` slices): `.plain` (kind `0`) at a member major; at a major outs
 `.nested` (kind `1`) at the levels and parameters of the major's container, read off the major's
 domain (its arguments ending in the `mI - rP` index variables, the parameters moved from under
 the index binders to the rule prefix). -/
+-- con-ron: ConRon/Arena/Install.lean:75-102 ConRon.Arena.recFire
 @[no_expose, l_impl ConRon.Arena.recFire]
 def recFire : FunDecl := lfn (p, rc) locals
     (ok, bo, bl, rest, g, dom, b, z, hd, x, us, lo, ll, ao, al, nI, po, pl) {
@@ -163,6 +173,7 @@ def recFire : FunDecl := lfn (p, rc) locals
 /-- `rules_refire(d, s, cnt, kind, lvls.off, lvls.len, pins.off, pins.len)`: the `cnt` rules of the
 `EREC` run at `s` copied to the run at `d`, each with the given fire (`{ · with fire := f }`; the
 fire's slices in `EREC`). -/
+-- con-ron: ConRon/Arena/Install.lean:104-112 ConRon.Arena.blockRecs
 @[no_expose, l_impl ConRon.Arena.blockRecs]
 def rulesRefire : FunDecl := lfn (d, s, cnt, kind, lo, ll, po, pl) locals (ez, u) {
   if cnt == 0 { return 0 };
@@ -183,6 +194,7 @@ def rulesRefire : FunDecl := lfn (d, s, cnt, kind, lo, ll, po, pl) locals (ez, u
 
 /-- `block_rec(p, rc)`: one recursor's record — the stream's record with its rules' firing mode
 (`rec_fire`, its slices copied into `EREC`). -/
+-- con-ron: ConRon/Arena/Install.lean:104-112 ConRon.Arena.blockRecs
 @[no_expose, l_impl ConRon.Arena.blockRecs]
 def blockRec : FunDecl := lfn (p, rc) locals
     (k, lo, ll, po, pl, elo, ell, epo, epl, cnt, run, u, q) {
@@ -199,6 +211,7 @@ def blockRec : FunDecl := lfn (p, rc) locals
 
 /-- `block_recs(p, recs.off, recs.len)`: the recursors, in block order: each record with its rules'
 firing mode. -/
+-- con-ron: ConRon/Arena/Install.lean:104-112 ConRon.Arena.blockRecs
 @[no_expose, l_impl ConRon.Arena.blockRecs]
 def blockRecs : FunDecl := lfn (p, ro, rl) locals (q, to, tl, o, l) {
   if rl == 0 { return (0, 0) };
@@ -212,6 +225,7 @@ def blockRecs : FunDecl := lfn (p, ro, rl) locals (q, to, tl, o, l) {
 `structName`, lps, `numParams`, `ctor`, `numFields`, `0`, bodies, `0`, `0`; its lists copied into
 `EREC`), `(1, q)`; `(0, 0)` at a member that is not structure-like or whose constructor does not
 read as one. -/
+-- con-ron: ConRon/Arena/Install.lean:114-127 ConRon.Arena.blockTables
 @[no_expose, l_impl ConRon.Arena.blockTables]
 def blockTable : FunDecl := lfn (p, ms) locals
     (c, cv, T, ok, bo, bl, lo, ll, elo, ell, ebo, ebl, q, ez) {
@@ -244,6 +258,7 @@ def blockTable : FunDecl := lfn (p, ms) locals
 
 /-- `block_tables(p, ms.off, ms.len)`: the projection tables, in block order: one per
 structure-like member whose constructor reads as one. -/
+-- con-ron: ConRon/Arena/Install.lean:114-127 ConRon.Arena.blockTables
 @[no_expose, l_impl ConRon.Arena.blockTables]
 def blockTables : FunDecl := lfn (p, mo, ml) locals (ok, q, to, tl, o, l) {
   if ml == 0 { return (0, 0) };
@@ -256,6 +271,7 @@ def blockTables : FunDecl := lfn (p, mo, ml) locals (ok, q, to, tl, o, l) {
 
 /-- `block_constants(p)`: the block's constants, in push order: the formers (at official's
 `is_rec`, `block_is_rec`), the constructors, the recursors. -/
+-- con-ron: ConRon/Arena/Install.lean:129-134 ConRon.Arena.blockConstants
 @[no_expose, l_impl ConRon.Arena.blockConstants]
 def blockConstants : FunDecl := lfn (p) locals (isRec, fo, fl, co, cl, ro, rl, ao, al, bo, bl) {
   isRec := call block_is_rec(p);
@@ -271,6 +287,7 @@ def blockConstants : FunDecl := lfn (p) locals (isRec, fo, fl, co, cl, ro, rl, a
 
 /-- `decl_constants_axiom(q)`: the `.axiomDecl` arm (`q` the record's `axiomInfo`): `Quot.sound`
 installs its pin at the record's names, `sorryAx` nothing, any other axiom itself. -/
+-- con-ron: ConRon/Arena/Install.lean:136-142 ConRon.Arena.declConstantsAxiom
 @[no_expose, l_impl ConRon.Arena.declConstantsAxiom]
 def declConstantsAxiom : FunDecl := lfn (q) locals (qs, sa, r, o, l) {
   qs := call pin_at(4);
@@ -288,6 +305,7 @@ def declConstantsAxiom : FunDecl := lfn (q) locals (qs, sa, r, o, l) {
 /-- `decl_constants_ind(bo, bl, nP)`: the `.indDecl` arm: a block with a pinned block's names
 installs the pin at the names the record declares, a block the recogniser reads its constants,
 any other nothing (it declines). -/
+-- con-ron: ConRon/Arena/Install.lean:144-161 ConRon.Arena.declConstants
 @[no_expose, l_impl ConRon.Arena.declConstants]
 def declConstantsInd : FunDecl := lfn (bo, bl, nP) locals (hit, kind, o, l, ok, p) {
   (hit, kind) := call basis_name_hit(bo, bl);
@@ -303,6 +321,7 @@ def declConstantsInd : FunDecl := lfn (bo, bl, nP) locals (hit, kind, o, l, ok, 
 
 /-- `decl_constants(i)`: the constants `DECL` record `i` installs, in push order (an `IW` slice of
 `EREC` constant records). -/
+-- con-ron: ConRon/Arena/Install.lean:144-161 ConRon.Arena.declConstants
 @[no_expose, l_impl ConRon.Arena.declConstants]
 def declConstants : FunDecl := lfn (i) locals (k, q, w, slot, r, bo, bl, o, l) {
   k := DECL.u64[1 + 8 * i];
@@ -333,6 +352,7 @@ def declConstants : FunDecl := lfn (i) locals (k, q, w, slot, r, bo, bl, o, l) {
 
 /-- `decl_tables(i)`: the projection tables `DECL` record `i` installs: those of a recognised
 inductive block (a pinned block's names install none); none for any other record. -/
+-- con-ron: ConRon/Arena/Install.lean:163-174 ConRon.Arena.declTables
 @[no_expose, l_impl ConRon.Arena.declTables]
 def declTables : FunDecl := lfn (i) locals (bo, bl, hit, kind, ok, p, o, l) {
   if DECL.u64[1 + 8 * i] != 6 { return (0, 0) };

@@ -725,6 +725,7 @@ def auxRuleFire : FunDecl := lfn (M, rP) locals (lo, ll, po, pl) {
 
 /-- `generated_rule_nested(old, flo, fll, fpo, fpl)`: a fresh 11-word rule record, `old`'s fields
 with the NESTED fire at the record-pool slices `(flo, fll)` (levels), `(fpo, fpl)` (pins). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:496-506 ConRon.Arena.generatedRules
 @[no_expose, l_impl ConRon.Arena.generatedRules]
 def generatedRuleNested : FunDecl := lfn (old, flo, fll, fpo, fpl) locals (newp, ez) {
   newp := call erec_alloc(11);
@@ -746,6 +747,7 @@ def generatedRuleNested : FunDecl := lfn (old, flo, fll, fpo, fpl) locals (newp,
 the given NESTED fire (its level and pin slices in `EREC`), as fresh `EREC` records; the twin's
 `rules.map`, a self-recursion consing each new record pointer onto the rest's slice (`sl_cons`,
 D18). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:496-506 ConRon.Arena.generatedRules
 @[no_expose, l_impl ConRon.Arena.generatedRules]
 def generatedRulesRemap : FunDecl := lfn (ro, rl, flo, fll, fpo, fpl) locals (newp, to, tl, qo, ql) {
   if rl == 0 { return (0, 0) };
@@ -760,6 +762,7 @@ def generatedRulesRemap : FunDecl := lfn (ro, rl, flo, fll, fpo, fpl) locals (ne
 (`aux_rule_fire`, its slices in `IW`), its slices copied to `EREC` (`er_from_iw`: a rule record's
 fire slices are read from the record pool, `decRule`), and the rules rebuilt. Reads no
 environment. An `IW` list of `EREC` rule pointers. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:496-506 ConRon.Arena.generatedRules
 @[no_expose, l_impl ConRon.Arena.generatedRules]
 def generatedRules : FunDecl := lfn (rP, M, rhso, rhsl)
     locals (ro, rl, fk, flo, fll, fpo, fpl, elo, ell, epo, epl, no, nl) {
@@ -775,6 +778,7 @@ def generatedRules : FunDecl := lfn (rP, M, rhso, rhsl)
 /-- **`rec_k_expected(p, M)`**: the K flag a recursor of this block has (official's `is_K_target`):
 the block a proposition with one member, the recursor's major that member, with one constructor
 and no fields; an outside major's recursor is never K. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:508-515 ConRon.Arena.recKExpected
 @[no_expose, l_impl ConRon.Arena.recKExpected]
 def recKExpected : FunDecl := lfn (p, M) locals (c) {
   if IW.u64[M + 8] == 0 { return 0 };
@@ -806,6 +810,7 @@ def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, r) {
 }
 
 /-- `rule_copy(b, old)`: the 11 words of the rule record at `old` copied to `EREC[b ‥ b + 11)`. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:523-534 ConRon.Arena.blockRecInfosTF
 @[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def ruleCopy : FunDecl := lfn (b, old) locals (ez) {
   ez := call erec_put(b, EREC⦃old⦄);
@@ -824,6 +829,7 @@ def ruleCopy : FunDecl := lfn (b, old) locals (ez) {
 
 /-- `rules_to_erec_go(base, ro, rl)`: copy the 11-word rule records `IW[ro ‥ ro + rl)` point to into
 the `EREC` run at `base`, first to last; a self-recursion. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:523-534 ConRon.Arena.blockRecInfosTF
 @[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def rulesToErecGo : FunDecl := lfn (base, ro, rl) locals (u) {
   if rl == 0 { return 0 };
@@ -834,6 +840,7 @@ def rulesToErecGo : FunDecl := lfn (base, ro, rl) locals (u) {
 
 /-- Copy an `IW` pointer-list of 11-word rule records into one fresh CONSECUTIVE `EREC` run (a
 recursor record's rules, `decRules`; a capacity abort above `2^32` rules). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:523-534 ConRon.Arena.blockRecInfosTF
 @[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def rulesToErec : FunDecl := lfn (ro, rl) locals (base, u) {
   if 4294967296 <= rl { abort };
@@ -845,6 +852,7 @@ def rulesToErec : FunDecl := lfn (ro, rl) locals (base, u) {
 /-- `rec_info_rec(cv, mI, rP, isK, reo, rel)`: a fresh 10-word `.recInfo` record (kind `5`, `cv`'s
 4 words inline, `major`, `pre`, the rules' run, `isK`); the copied name word a handle (`env_push`
 reads it). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:523-534 ConRon.Arena.blockRecInfosTF
 @[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def recInfoRec : FunDecl := lfn (cv, mI, rP, isK, reo, rel) locals (q, ez) {
   q := call erec_alloc(10);
@@ -866,6 +874,7 @@ def recInfoRec : FunDecl := lfn (cv, mI, rP, isK, reo, rel) locals (q, ez) {
 majors, in push order — each recursor `(cv, M, rhss)` at its record's major index and rule prefix,
 its K flag `rec_k_expected` and its rules at ITS major (`generated_rules`, copied into one run);
 every record built before the first push. An `IW` list of `EREC` record pointers. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:523-534 ConRon.Arena.blockRecInfosTF
 @[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def blockRecInfosTF : FunDecl := lfn (p, m, lo, ll)
     locals (trip, cv, M, mI, rP, ro, rl, reo, rel, isK, q, io, il, o, l) {
