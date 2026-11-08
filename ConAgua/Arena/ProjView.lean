@@ -6,12 +6,10 @@ public import Std.Do.Triple.SpecLemmas
 @[expose] public section
 
 /-!
-# What the twin's `findProj?` and `IProjEntry.fireOk` leave alone (helper `whnf4-leaves`)
+# What the twin's `findProj?` leaves alone (helper `whnf4-leaves`)
 
-Two facts of the twin the projection callers need: `findProj?` (a pure lookup) answers an entry
-only below the table's `numFields` (`findProj?_lt`), and `fireOk` does not change a stored
-expression node's view (`fireOk_store`): it writes the readback and verdict caches only. With them `and_rescue_slots`' loop carries
-"`ust` is a stored `const` node's list" from one slot to the next (`FireOkOK`'s hypothesis).
+`findProj?` (a pure lookup) answers an entry only below the table's `numFields` (`findProj?_lt`).
+(`IProjEntry.fireOk` and its store lemma went with con-leche's task #480.)
 -/
 
 open ConRon.Arena
@@ -172,38 +170,5 @@ theorem lvlEq?_store' {u v : LIdx} {a a' : AState} {o : Option Bool}
           obtain ⟨-, rfl⟩ := h
           exact hs
         · cases h; exact hs
-
-/-- **`fireOk` writes caches only.** -/
-theorem fireOk_store {e : IProjEntry} {us : LsIdx} {a a' : AState} {b : Bool}
-    (h : (e.fireOk us).run a = .ok (b, a')) : a'.store = a.store := by
-  simp only [IProjEntry.fireOk, zeroLevel, StateT.run_bind] at h
-  cases h1 : pinZeroLevel.run a with
-  | error x => rw [h1] at h; cases h
-  | ok p =>
-    rw [h1] at h
-    have s1 := pinZeroLevel_store h1
-    cases h2 : (lvlEq? e.structSort p.1).run p.2 with
-    | error x => simp only [pv_ok_bind, h2] at h; cases h
-    | ok q =>
-      simp only [pv_ok_bind, h2] at h
-      have s2 := (lvlEq?_store' h2).trans s1
-      split at h
-      · cases h; exact s2
-      · simp only [StateT.run_bind] at h
-        cases h3 : (readNamesM e.levelParams).run q.2 with
-        | error x => simp only [h3] at h; cases h
-        | ok r =>
-          simp only [pv_ok_bind, h3] at h
-          cases h4 : (readLevelsM us).run r.2 with
-          | error x => simp only [h4] at h; cases h
-          | ok t =>
-            simp only [pv_ok_bind, h4] at h
-            cases h5 : (readLevelM e.fieldSort).run t.2 with
-            | error x => simp only [h5] at h; cases h
-            | ok w =>
-              simp only [pv_ok_bind, h5] at h
-              cases h
-              exact (readLevelM_store h5).trans ((readLevelsM_store h4).trans
-                ((readNamesM_store h3).trans s2))
 
 end L.Arena

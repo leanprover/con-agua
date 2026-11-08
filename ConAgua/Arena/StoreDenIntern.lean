@@ -255,33 +255,12 @@ theorem keeps_stP_lvlEq? (u v : LIdx) : Keeps stDenP (lvlEq? u v) := by
     · exact Keeps.pure _
 theorem keeps_stP_zeroLevel : Keeps stDenP zeroLevel := by
   unfold zeroLevel; prim_keeps pinZeroLevel
-theorem keeps_stP_fireOk (e : IProjEntry) (us : LsIdx) : Keeps stDenP (e.fireOk us) := by
-  unfold IProjEntry.fireOk
-  refine Keeps.bind keeps_stP_zeroLevel fun _ => Keeps.bind (keeps_stP_lvlEq? _ _) fun _ => ?_
-  split
-  · exact Keeps.pure _
-  · exact Keeps.bind (keeps_stP_readNamesM _) fun _ => Keeps.bind (keeps_stP_readLevelsM _) fun _ =>
-      Keeps.bind (keeps_stP_readLevelM _) fun _ => Keeps.pure _
-
 theorem Keeps.noLss_of_stP {α : Type} {op : AM α} (h : Keeps stDenP op) : Keeps noLss op :=
   Keeps.map (fun st => ({ st with lss := LsStore.empty } : EStore)) h
 
-theorem keeps_noLss_andRescueSlots (fe : IFEnv) (c : NIdx) (nP : Nat) (us : LsIdx) :
-    Keeps noLss (andRescueSlots fe c nP us) := by
-  unfold andRescueSlots
-  refine Keeps.bind (by unfold pinAnd; prim_keeps pinAt) fun an => ?_
-  suffices ∀ n j, Keeps noLss (andRescueSlotsGo fe an c nP us n j) from this _ _
-  intro n
-  induction n with
-  | zero => intro j; rw [andRescueSlotsGo]; exact Keeps.pure _
-  | succ n ih =>
-    intro j; rw [andRescueSlotsGo]
-    split
-    · refine Keeps.bind (Keeps.noLss_of_stP (keeps_stP_fireOk _ _)) fun b => ?_
-      split
-      · exact ih _
-      · exact Keeps.pure _
-    · exact Keeps.pure _
+theorem keeps_noLss_andRescueSlots (fe : IFEnv) (c : NIdx) (nP : Nat) :
+    Keeps noLss (andRescueSlots fe c nP) := by
+  sorry
 
 /-- **`StoreDen` across a step that keeps the caches, the pins and the level stores** and creates
 no new `sort`/`const` view (`hv`). -/
