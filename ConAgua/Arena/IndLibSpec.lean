@@ -435,12 +435,7 @@ open L.Arena
 
 /-! ## Growth -/
 
-theorem IWGrow.refl (m : Mem) : IWGrow m m := ⟨Nat.le_refl _, Nat.le_refl _, fun _ _ => rfl, fun _ _ => rfl⟩
-
-theorem IWGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : IWGrow m₁ m₂) (h₂ : IWGrow m₂ m₃) : IWGrow m₁ m₃ :=
-  ⟨Nat.le_trans h₁.iw h₂.iw, Nat.le_trans h₁.er h₂.er,
-   fun i hi => (h₂.iwGet i (by have := h₁.iw; omega)).trans (h₁.iwGet i hi),
-   fun i hi => (h₂.erGet i (by have := h₁.er; omega)).trans (h₁.erGet i hi)⟩
+-- `IWGrow.refl`, `IWGrow.trans`: `IndIface.lean` (with the tier-1 record pool).
 
 /-- A write to `IW` at or above the top keeps the growth. -/
 theorem IWGrow.set_iw {m m' : Mem} (h : IWGrow m m') (k v : Word) (hk : iwTop m ≤ k.toNat) :
