@@ -76,13 +76,16 @@ theorem setERs_facts {m₀ : Mem} {a₀ a : AState} {T : Nat} {seen : List ConLe
     · simp only [setERs]; rw [hc2]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     · simp only [setERs]; rw [hz2]; exact size_set64 _ _ _ _ _
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem setERs_ne : ∀ (ws : List (Word × Word)) (m : Mem) (i : Nat), (∀ jw ∈ ws, i ≠ jw.1.toNat) →
     (erA (setERs m ws))[i]? = erA m i
   | [], _, _, _ => rfl
   | (j, w) :: t, m, i, h => by
     simp only [setERs]
     rw [setERs_ne t _ i (fun jw hj => h jw (by simp [hj])), er_set_ne _ _ _ _ (h (j, w) (by simp))]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem setERs_get : ∀ (ws : List (Word × Word)) (m : Mem) (j w : Word),
     (ws.map (·.1.toNat)).Nodup → (j, w) ∈ ws → j.toNat < (m.arr64 EREC).size →
     (erA (setERs m ws))[j.toNat]? = some w
@@ -95,6 +98,7 @@ theorem setERs_get : ∀ (ws : List (Word × Word)) (m : Mem) (j w : Word),
       rw [setERs_ne t _ _ (fun jw hjw e' => hnd.1 ⟨jw, hjw, e'.symm⟩)]
       exact er_set_get m j w hj
     · exact setERs_get t _ j w hnd.2 e (by rw [size_set64]; exact hj)
+-/
 
 /-! ## `sortZ` names the store already holds -/
 
@@ -139,12 +143,16 @@ theorem internNameList_dn (dn : NIdx → Option ConLeche.Name) :
 
 /-! ## `decCaps` from its words -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A number word. -/
-theorem nat?_of {a : Array Word} {i : Nat} {w : Word} (h : a[i]? = some w) : nat? a i = some w.toNat := by
+theorem nat?_of {a : Array Word} {i : Nat} {w : Word} (h : a[i]? = some w) : nat? (aread a) i = some w.toNat := by
   simp [nat?, h]
+-/
 
-theorem bool?_of {a : Array Word} {i : Nat} {w : Word} (h : a[i]? = some w) : bool? a i = some (w != 0) := by
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
+theorem bool?_of {a : Array Word} {i : Nat} {w : Word} (h : a[i]? = some w) : bool? (aread a) i = some (w != 0) := by
   simp [bool?, h]
+-/
 
 theorem bw_ne (b : Bool) : (UInt64.ofNat (if b then 1 else 0) != 0) = b := by cases b <;> decide
 
@@ -153,6 +161,7 @@ def szTag : ConLeche.PropWhen → Nat
   | .never => 0
   | .ifAllZero _ => 1
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem holds_decCaps {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : Nat} {SA SC SZ : Nat → Prop}
     (ic : IIndCaps) (ks : List NIdx) (we wct wep wef wul wup wrk wtag wnp : Word)
     (h0 : erA m c = some we) (h1 : erA m (c + 1) = some wct) (h2 : erA m (c + 2) = some wep)
@@ -198,28 +207,35 @@ theorem holds_decCaps {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : Nat} {
   rw [this]
   simp [decCaps, bool?_of e0, hd?, e1, hct, nat?_of e2, nat?_of e3, bool?_of e4, nat?_of e5,
     bool?_of e6, ePW, eA, nat?_of e12, eC]
+-/
 
 /-! ## `rci_caps` -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The capabilities fit their encoding. -/
 def capsFits (c : ConLeche.IndCaps) : Bool :=
   nameFits c.etaCtor && c.all.all nameFits && c.ctors.all nameFits && decide (c.etaParams < 2 ^ 64) &&
     decide (c.etaFields < 2 ^ 64) && decide (c.unitParams < 2 ^ 64) && decide (c.nparams < 2 ^ 64) &&
     (pwNames c.sortZ).all nameFits
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem encCaps_eq (c : ConLeche.IndCaps) (rest : List UInt8) :
     encCaps c ++ rest = bw c.eta ++ (u64B c.etaParams ++ (u64B c.etaFields ++ (bw c.unitlike ++
       (u64B c.unitParams ++ (bw c.ruleK ++ (u64B c.nparams ++ (u64B (szTag c.sortZ) ++
       (encName c.etaCtor ++ (encNameL c.all ++ (encNameL c.ctors ++ (encNameL (pwNames c.sortZ) ++
       rest))))))))))) := by
   cases h : c.sortZ <;> simp [encCaps, h, szTag, pwNames, List.append_assoc]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem encCaps_len (c : ConLeche.IndCaps) :
     (encCaps c).length = 64 + (encName c.etaCtor).length + (encNameL c.all).length +
       (encNameL c.ctors).length + (encNameL (pwNames c.sortZ)).length := by
   have h := congrArg List.length (encCaps_eq c [])
   simp only [List.append_nil, List.length_append, bw, u64B, List.length_cons, List.length_nil] at h
   omega
+-/
 
 theorem ofNat_toNat_lt {n : Nat} (h : n < 2 ^ 64) : (UInt64.ofNat n).toNat = n := by
   rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt h
@@ -228,6 +244,7 @@ section caps
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rci_caps` refines `Frontend.internCaps`**, into the 15 words at `c`. -/
 @[refines_part ConRon.Arena.Frontend.internCaps "sortZ names the store holds"]
 theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
@@ -422,6 +439,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
     · rcases hi with hi | hi
       · left; off_omega
       · right; off_omega
+-/
 
 end caps
 

@@ -231,11 +231,13 @@ def bfW (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl no nl io lo ll s ip : W
     (bctW (n + 1) m cso csl)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `lvl_eq_c`. -/
 def btK3 (_c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bgoK3 (bfW n m nPd cto ctl cso csl rso rsl no nl io lo ll s (if r.headD 0 = 2 then 1 else 0))
+-/
 
 /-- After `pin_word(53)`. -/
 def btK2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : Word) (m : Mem) :
