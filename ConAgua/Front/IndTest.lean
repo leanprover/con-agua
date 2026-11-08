@@ -55,7 +55,7 @@ def unitRun (kr : String) (nf : Nat) : Option Mem :=
 #guard (unitRun "false" 0).map (fun m =>
     let D := m.arr64 DECL
     (dw D 0 0, dw D 0 3, dw D 0 4,
-      ((decCIs (m.arr64 DIND) (fun _ => none) (dw D 0 2).toNat (dw D 0 3).toNat).map
+      ((decCIs (m.arr64 DIND) (dw D 0 2).toNat (dw D 0 3).toNat).map
         (·.map fun
           | .indInfo _ _ => 3 | .ctorInfo _ np nf => 40 + 10 * np + nf
           | .recInfo _ maj pre rs => 500 + 100 * maj + 10 * pre + rs.length | _ => 0)))) ==

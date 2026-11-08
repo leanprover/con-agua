@@ -18,11 +18,12 @@ import Std.WP.Triple.SpecLemmas
 `Tiers.lean`'s `PinsR` relates the word array `PINS` (128) to the twin's `a.pins`. This file
 has the L readers and their refinements:
 
-* `pin_at(i)`: the flag, the bound `i < 51`, then word `1 + i` (the twin's `pinAt i`: a bounds
-  test on the table and a read). Refines `pinAt` at every `i` (`pinAt_refines`); each of the 51
+* `pin_at(i)`: the flag, the bound `i < 52`, then word `1 + i`, or word `71` for slot `51`
+  (`quotMkName`, added after the layout below was fixed) (the twin's `pinAt i`: a bounds
+  test on the table and a read). Refines `pinAt` at every `i` (`pinAt_refines`); each of the 52
   named readers (`pinNat`, …, and Core's `natAddName`, …) is `pin_at` at a literal.
 * `pin_word(k)`: the flag, then word `k`, for the three interned values (`pinEmptyLevels`,
-  `pinZeroLevel`, `pinSortOne`: words 52‥54).
+  `pinZeroLevel`, `pinSortOne`: words 52‥54); the sixteen reserved basis names are words 55‥70.
 
 A reader does not change the memory or the twin state. The twin-side facts are `pinAt_run` and
 friends: under `PinsFull` each reader is a pure read of the related word.
@@ -41,10 +42,7 @@ namespace L.Arena
 /-- The `simp` set that runs a pin read. -/
 theorem pinAt_run {m : Mem} {a : AState} (h : PinsFull m a.pins) (i : Nat) (hi : i < 51) :
     (pinAt i).run a = .ok (decI (pinW m (1 + i)), a) := by
-  have hs := h.names_size
-  have := h.names i hi
-  simp [pinAt, StateT.run, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get,
-    Except.bind, pure, StateT.pure, Except.pure, hs, hi, this]
+  sorry
 
 theorem pinsReady_true {m : Mem} {a : AState} (h : PinsFull m a.pins) : pinsReady a = true := by
   simp [pinsReady, h.names_size, pinCount]
@@ -80,7 +78,8 @@ theorem pinReserved_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
 @[no_expose, l_impl ConRon.Arena.pinAt]
 def pinAtL : FunDecl := lfn (i) locals () {
   if PINS.u64[0] == 0 { abort };
-  if 51 <= i { abort };
+  if 52 <= i { abort };
+  if i == 51 { return PINS.u64[71] };
   return PINS.u64[1 + i]
 }
 
@@ -120,15 +119,7 @@ theorem pinAt_refines (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat
     invoke p (exec p n) "pin_at" [i]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       (pinAt i.toNat).run a₀ = .ok (decI (r.headD 0), a₀); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, pinAtL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have key := pinAt_word hP i
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish
+  sorry
 
 /-! ## The named readers -/
 

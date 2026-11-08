@@ -7,7 +7,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
-import ConAgua.Arena.PromoteNRef
 public import ConAgua.Arena.LevelApd
 import all ConAgua.Arena.InstLP
 

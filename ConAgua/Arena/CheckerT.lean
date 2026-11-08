@@ -12,7 +12,6 @@ public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclCrpT
 import ConAgua.Arena.DeclStepSpec
-import ConAgua.Arena.PromoteCIRef.TdecJoin
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.ScratchRefine
 import ConAgua.Checker.NoVerdictTree

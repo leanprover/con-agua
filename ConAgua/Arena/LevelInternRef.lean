@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.PromoteLRef
 import ConAgua.Arena.MemoTree
 import ConAgua.Front.StateDR
 public import Std.Tactic.BVDecide.Normalize.Prop

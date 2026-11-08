@@ -69,17 +69,15 @@ theorem trunc_congr (P P' : Array Word) (t : Nat) (hs : P'.size = P.size)
     · rw [ite_eq_right ht, ite_eq_right ht]
 
 /-- The constants of a slice of record pointers (lane `pinsenv`'s layout, `decCI`). -/
-def decCIs (a : Array Word) (dn : NIdx → Option ConLeche.Name) (off cnt : Nat) :
-    Option (List IConstantInfo) :=
-  (List.range cnt).mapM fun j => do L.Arena.decCI a (← L.Arena.nat? a (off + j))
+def decCIs (a : Array Word) (off cnt : Nat) : Option (List IConstantInfo) :=
+  (List.range cnt).mapM fun j => do L.Arena.decCI (L.Arena.aread a) (← L.Arena.nat? (L.Arena.aread a) (off + j))
 
 /-- **`DECL` record `i` is the inductive block `block` with `nP` parameters** (`IndApply.lean`):
 kind `6`, its block a slice of the pool `P` (`DLP`) of pointers to `decCI` constant records in
-`P`, all of it below some `t` at most `P`'s top. A block's constants carry no `PropWhen` names
-(`sortZ := ifAllZero []`), so the name decoder is irrelevant (`fun _ => none`). -/
+`P`, all of it below some `t` at most `P`'s top. -/
 def IndDeclAt (D P : Array Word) (i : Nat) (block : List IConstantInfo) (nP : Nat) : Prop :=
   dw D i 0 = 6 ∧ (dw D i 4).toNat = nP ∧ ∃ t, t ≤ (P[0]?.getD 0).toNat ∧
-    decCIs (trunc P t) (fun _ => none) (dw D i 2).toNat (dw D i 3).toNat = some block
+    decCIs (trunc P t) (dw D i 2).toNat (dw D i 3).toNat = some block
 
 /-- The hint of a definition record: kind `q` (`1` abbrev, `2` opaque, else regular), height `h`. -/
 def hintW (q h : Word) : ConLeche.ReducibilityHint :=
