@@ -116,6 +116,21 @@ theorem apdF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       (fun m a => StageT dn vis fe m a ∧ decHL m o.toNat l.toNat = some lps ∧
         ∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
       (allLevelParamsDefined lps (decI e)) (KeepPostT dn vis fe decW0B) := by
-  sorry
+  intro m m' a r h ⟨hT, hdec, ks, hks⟩
+  obtain ⟨n, hc⟩ := callF_run h
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
+  obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (allLevelParamsDefined_spec_raw apdP apdP_prog.eview apdP_prog.lsnode apdP_prog.find
+      apdP_prog.put apdP_prog.clear apdP_prog.lmem apdP_prog.lnode apdP_prog.lapd apdP_prog.ls
+      apdP_prog.go apdP_prog.entry n ⟨m, Locals.init []⟩ o l e) hc
+  subst hs'
+  obtain ⟨b, hrun, hr, hS', hg, mp, hM⟩ := apdEntry_ok (dn := dn) n hT.stage
+    (ApdEnv.of_den hT.twin.den hT.twin.nwf) o l e _ lps ks hks hdec he
+    (apdMR_clear hT.twin.memos.walk) hm
+  have hf := apdF_frame h
+  refine ⟨b, a, ?_, ⟨hS', hT.twin.apd hf hM, ?_⟩, hg, apd_decW0B hr⟩
+  · exact hrun
+  · rw [pinW_frame hf (by decide)]; exact hT.flag
 
 end L.Ind
