@@ -294,19 +294,6 @@ theorem iccW_kind (p : Prog) (hp : IotaProg4 p) (n : Nat) (m : Mem) (indP us w :
     w = 0 ∧ mF = m := by
   sorry
 
-/-- **`iota_ctor_never_prop` refines `iotaCtorNeverProp`.** Statement changes: the L function is
-split (`e_rec_get`, `const_name_of`, `ind_caps_check`), `caps_never_zero`'s statement is corrected
-(`CapsNeverZeroOK`), and the callee fuel is generic (`CoreSpec p n`, as before). -/
-@[refines ConRon.Arena.iotaCtorNeverProp]
-theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb ctorP us : Word) (cvj : IConstantVal) (cnP cnF : Nat),
-    CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj cnP cnF) →
-    CoreSpec p n "iota_ctor_never_prop" [vis, ctorP, us] (iotaCtorNeverProp fe cvj (decI us)) decBool
-      s₀ a₀ dn vis fe MM eb := by
-  sorry
-
 /-! ## `iota_case3(rlk, vis, ctorP, us)` -/
 
 /-- Model of `iota_case3` (callee at fuel `n`). -/

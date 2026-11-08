@@ -167,20 +167,22 @@ theorem ciCanonRec_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p
   sorry
 
 theorem ciD_rec {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {cv : IConstantVal}
-    {mi rp : Nat} {rules : List IRecRule} (h : decCI (aread a) p = some (.recInfo cv mi rp rules)) :
+    {mi rp : Nat} {isK : Bool} {rules : List IRecRule}
+    (h : decCI (aread a) p = some (.recInfo cv mi rp isK rules)) :
     decCV (aread a) (p + 1) = some cv ∧ nat? (aread a) (p + 5) = some mi ∧ nat? (aread a) (p + 6) = some rp ∧
+    bool? (aread a) (p + 9) = some isK ∧
     ∃ o c, nat? (aread a) (p + 7) = some o ∧ nat? (aread a) (p + 8) = some c ∧ decRules (aread a) o c = some rules := by
   sorry
 
 theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {p q x : Word} {cv cv' : IConstantVal} {mi mi' rp rp' : Nat}
-    {rules rules' : List IRecRule}
+    {isK isK' : Bool} {rules rules' : List IRecRule}
     (h : cwW k m p q = some (x, m')) (hS : StageR vis fe m a)
-    (hp : decCI (erecP m) p.toNat = some (.recInfo cv mi rp rules))
-    (hq : decCI (erecP m) q.toNat = some (.recInfo cv' mi' rp' rules'))
+    (hp : decCI (erecP m) p.toNat = some (.recInfo cv mi rp isK rules))
+    (hq : decCI (erecP m) q.toNat = some (.recInfo cv' mi' rp' isK' rules'))
     (hP : PoolSmall m) (hL : LitInj a) :
     ∃ (b : Bool) (a' : AState),
-      (IConstantInfo.canonEq (.recInfo cv mi rp rules) (.recInfo cv' mi' rp' rules')).run a =
+      (IConstantInfo.canonEq (.recInfo cv mi rp isK rules) (.recInfo cv' mi' rp' isK' rules')).run a =
         .ok (b, a') ∧ x = (if b then 1 else 0) ∧ CQ dn vis fe m m' a' := by
   sorry
 

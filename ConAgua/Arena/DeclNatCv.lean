@@ -40,9 +40,6 @@ theorem IWGrow.erec_get {m m' : Mem} (h : IWGrow m m') {i : Nat} {v : Word}
     (hv : erecP m i = some v) : (m'.arr64 EREC)[i]? = some v := by
   sorry
 
-theorem erecP_size_le' (m : Mem) : (erecP m).size ≤ erTop m := by
-  sorry
-
 theorem rdW_erec_of {m : Mem} {q : Word} {w : Word} (_hsz : (m.arr64 EREC).size < 2 ^ 64)
     (h : erecP m (q.toNat) = some w) : rdW (m.arr64 EREC) q = w := by
   sorry

@@ -50,11 +50,11 @@ theorem iwReset_stageT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
 in scope. -/
 theorem thmPrefix_ext {env : ConLeche.Env} {fe : IFEnv} {a a1 a2 : AState} {cv : IConstantVal}
     {cP : ConLeche.ConstantVal} {x1 : EIdx} {x2 : LIdx} (henv : ConLeche.EnvWF env)
-    (hck : ConRon.Bridge.CheckOK V env fe a) (hcv : Frontend.denoteCV a.store cv = some cP)
+    (hck : ConRon.Bridge.CheckOK false env fe a) (hcv : Frontend.denoteCV a.store cv = some cP)
     (hws : ConLeche.Expr.WScoped 0 cP.type)
     (h1 : (inferTypeCore V fe checkFuel 0 cv.type).run a = .ok (x1, a1))
     (h2 : (ensureSortCore V fe checkFuel 0 x1).run a1 = .ok (x2, a2)) :
-    ConRon.Bridge.CheckOK V env fe a2 ∧ Ext a.store a2.store := by
+    ConRon.Bridge.CheckOK false env fe a2 ∧ Ext a.store a2.store := by
   sorry
 
 end L.Arena
