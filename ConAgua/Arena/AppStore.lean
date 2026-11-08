@@ -23,7 +23,7 @@ The arena's `app` constructor is a `Tbl AppNode EIdx UInt64` per tier, `AppNode 
   interleaved: node `i` of tier `t` at `AREC⟨t⟩[i]`. No stored hash: the hash is a
   cheap function of the two handle words. The node count of tier `t` is `CTL[4 + t]`.
 * **Cons table.** Word array `ASLOT`, the cons-table library's layout (`ConsLib.lean`): one table
-  per tier, the key word the key itself (an exact table), linear probing from `homeW`.
+  per tier, one word per slot (the key's hash fragment and the node), linear probing from `homeW`.
 * **The scratch skip.** `internE (.app f a)` does not probe the persistent tier when the scratch
   tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 31 of `f | a`.

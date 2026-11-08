@@ -27,7 +27,7 @@ same width-2, scratch-skipping shape:
   interleaved: node `i` of tier `t` at `CREC⟨t⟩[i]`. No stored hash: the hash is a
   cheap function of the two handle words. The node count of tier `t` is `CTL[18 + t]`.
 * **Cons table.** Word array `CSLOT`, the cons-table library's layout (`ConsLib.lean`): one table
-  per tier, the key word the key itself (an exact table), linear probing from `homeW`.
+  per tier, one word per slot (the key's hash fragment and the node), linear probing from `homeW`.
 * **The scratch skip.** `internE (.const n us)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 31 of `n | us`.
