@@ -83,15 +83,18 @@ namespace L.Ind
 
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_shape_rhss_of` is its model `brhW`** (generated). -/
 l_model brh_spec (p : Prog) (hP : IndPartsProg4 p)
     (hp : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf)
   fns [hp ↦ brhW]
   specs [slCons_specW p hP.alloc hP.copy hP.cons n]
   grind [ind_grind] finish [rdW_eq] gen 20
+-/
 
 /-! ## `block_shape_recs_of` -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_shape_recs_of` is its model `brsW`** (generated). -/
 l_model brs_spec (p : Prog) (hP : IndPartsProg4 p) (h6 : p.lookup "rec6" = some rec6)
     (hr : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf)
@@ -100,6 +103,7 @@ l_model brs_spec (p : Prog) (hP : IndPartsProg4 p) (h6 : p.lookup "rec6" = some 
   specs [recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n, brh_spec p hP hr n,
     rec6_specW p hP.alloc h6 n, slCons_specW p hP.alloc hP.copy hP.cons n]
   grind [ind_grind] finish [rdW_eq] gen 20
+-/
 
 end L.Ind
 
@@ -175,10 +179,12 @@ def bbK12 (n : Nat) (nPd _cto _ctl _cso _csl _rso _rsl _cvT0 cvR0 : Word) (lo ll
   | none => none
   | some (r, m) => bbK13' mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW n m cvR0 lo ll)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_shape_members_of`. -/
 def bbK11 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip (r.headD 0) (r.tail.headD 0) (brsW (n + 1) m no nl rso rsl)
+-/
 
 /-- After `block_groups`. -/
 def bbK10 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -198,9 +204,11 @@ def bbK8 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo l
 section arms
 variable (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (m : Mem) (r : List Word)
   (no nl io lo ll s ip mo ml : Word) (q : Word)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbK11_some : bbK11 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl lo ll s ip (some (r, m)) =
     bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip (r.headD 0) (r.tail.headD 0)
       (brsW (n + 1) m no nl rso rsl) := rfl
+-/
 theorem bbK8_some : bbK8 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (some (r, m)) =
     bbK9 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (r.headD 0) (r.tail.headD 0)
       (plW (n + 1) m lo ll) := rfl

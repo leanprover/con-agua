@@ -194,9 +194,11 @@ def rulesK1 (n : Nat) (vis nP cO cL rO rL k : Word) : Option (Word × Mem) → O
   | some (o, m1) => rulesK2 o k (rgoW n m1 vis nP cO cL rO rL o)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `sum_rules(vis, recName, nP, cO, cL, rO, rL)`** at callee fuel `n`. -/
 def rulesW (n : Nat) (m : Mem) (vis nP cO cL rO rL : Word) : Option (List Word × Mem) :=
   rulesK1 n vis nP cO cL rO rL (if rL < cL then rL else cL) (allocW m (if rL < cL then rL else cL))
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rulesK1_some (n : Nat) (vis nP cO cL rO rL k o : Word) (m1 : Mem) :

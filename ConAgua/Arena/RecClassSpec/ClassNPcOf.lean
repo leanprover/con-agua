@@ -199,6 +199,7 @@ grind_pattern [ind_grind] npcK3_none => npcK3 (some (r3, m3))
 grind_pattern [ind_grind] npcK3_ind => npcK3 (some (r3, m3))
 grind_pattern [ind_grind] npcK3_other => npcK3 (some (r3, m3))
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hmc : p.lookup "member_names_copy" = some memberNamesCopy)
     (hmn : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
@@ -214,6 +215,7 @@ theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       blockShapeMemberNames_spec p ha hmc hmn n, slContains_spec p hct n,
       callW_spec p n "env_find"] <;>
     finish (gen := 20) [rdW_eq]
+-/
 
 theorem npc_mem {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : bs.memberNames.contains i = true) :
     ConRon.Arena.classNPcOf bs fe i = bs.nP := by
@@ -236,6 +238,7 @@ theorem npc_other {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : ¬ bs.memberNam
   | indInfo cv caps => exact absurd rfl (hn cv caps)
   | _ => rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`class_n_pc_of` computes `classNPcOf`** (a pure twin), under the stage relation. -/
 theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {p i : Word} {r : List Word} {bs : BlockShape}
@@ -245,6 +248,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))] ∧
       ConRon.Arena.classNPcOf bs fe (decI i) < 2 ^ 64 := by
   sorry
+-/
 
 /-- **`class_n_pc_of` refines `classNPcOf`** (a pure twin: the result word is its value). -/
 @[refines ConRon.Arena.classNPcOf]

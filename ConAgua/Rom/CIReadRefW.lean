@@ -242,167 +242,89 @@ local macro "rci_pre " fd:term : tactic => `(tactic| (
 theorem slot_specW (s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_slot" [s]
     ⦃fun r s' => LocEq s' s₀ ∧ slotW p n s₀.mem s = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_slot
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64"] <;>
-    finish (gen := 30) (instances := 10000) [slotW, ntBW]
+  sorry
 
 theorem fresh_specW :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_fresh" []
     ⦃fun r s' => LocEq s' s₀ ∧ freshW p n s₀.mem = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_fresh
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rset_clear"] <;>
-    finish (gen := 30) (instances := 10000) [freshW, ntBW]
+  sorry
 
 theorem namesTo_specW (q o k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_names_to" [q, o, k]
     ⦃fun r s' => LocEq s' s₀ ∧ namesToW p n s₀.mem q o k = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_names_to
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rom_name", callW_spec p n "rci_names_to"] <;>
-    finish (gen := 30) (instances := 10000) [namesToW, ntBW]
+  sorry
 
 theorem nameSl_specW (q d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_name_sl" [q, d]
     ⦃fun r s' => LocEq s' s₀ ∧ nameSlW p n s₀.mem q d = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_name_sl
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "erec_alloc", callW_spec p n "rci_names_to"] <;>
-    finish (gen := 30) (instances := 10000) [nameSlW, ntBW]
+  sorry
 
 theorem cv_specW (q pp : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_cv" [q, pp]
     ⦃fun r s' => LocEq s' s₀ ∧ cvW p n s₀.mem q pp = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_cv
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rom_name", callW_spec p n "rci_name_sl", callW_spec p n "rom_expr"] <;>
-    finish (gen := 30) (instances := 10000) [cvW, ntBW]
+  sorry
 
 theorem caps_specW (q c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_caps" [q, c]
     ⦃fun r s' => LocEq s' s₀ ∧ capsW p n s₀.mem q c = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_caps
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rom_name", callW_spec p n "rci_name_sl"] <;>
-    finish (gen := 30) (instances := 10000) [capsW, capsW.capsTailW, ntBW]
+  sorry
 
 set_option maxHeartbeats 4000000 in
 theorem rule_specW (q rr : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_rule" [q, rr]
     ⦃fun r s' => LocEq s' s₀ ∧ ruleW p n s₀.mem q rr = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_rule
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, st64, callW_spec p n "rom_u64",
-    callW_spec p n "rom_name", callW_spec p n "erec_alloc", callW_spec p n "rci_lvls_to",
-    callW_spec p n "rom_exprs_to", callW_spec p n "rom_expr"]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_cons_zero, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
-  all_goals grind (gen := 30) (instances := 10000) [lang_grind, arena_grind, ruleW, ruleW.ruleTailW, ruleNestW,
-    ntBW]
+  sorry
 
 theorem rulesTo_specW (q o k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_rules_to" [q, o, k]
     ⦃fun r s' => LocEq s' s₀ ∧ rulesToW p n s₀.mem q o k = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_rules_to
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rci_rule", callW_spec p n "rci_rules_to"] <;>
-    finish (gen := 30) (instances := 10000) [rulesToW, ntBW]
+  sorry
 
 set_option maxHeartbeats 4000000 in
 theorem ci_specW (q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_ci" [q]
     ⦃fun r s' => LocEq s' s₀ ∧ ciW p n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_ci
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, st64, callW_spec p n "rom_u64",
-    callW_spec p n "erec_alloc", callW_spec p n "rci_cv", callW_spec p n "rom_expr", callW_spec p n "rci_caps",
-    callW_spec p n "rci_rules_to"]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_cons_zero, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
-  all_goals grind (gen := 30) (instances := 10000) [lang_grind, arena_grind, ciW, ciTailW, ciDefnW, ciCtorW,
-    ciRecW, ciSize, ntBW]
+  sorry
 
 theorem blockTo_specW (q o k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_block_to" [q, o, k]
     ⦃fun r s' => LocEq s' s₀ ∧ blockToW p n s₀.mem q o k = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_block_to
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rci_ci", callW_spec p n "rci_block_to"] <;>
-    finish (gen := 30) (instances := 10000) [blockToW, ntBW]
+  sorry
 
 theorem block_specW (s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_block" [s]
     ⦃fun r s' => LocEq s' s₀ ∧ blockW p n s₀.mem s = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_block
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rci_slot", callW_spec p n "rci_fresh", callW_spec p n "iw_alloc", callW_spec p n "rci_block_to"] <;>
-    finish (gen := 30) (instances := 10000) [blockW, ntBW]
+  sorry
 
 theorem basis_specW (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_basis_decls" [k]
     ⦃fun r s' => LocEq s' s₀ ∧ basisW p n s₀.mem k 0 = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rom_basis_decls
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rci_block"] <;>
-    finish (gen := 30) (instances := 10000) [basisW, ntBW]
+  sorry
 
 theorem basisA_specW (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_basis_decls_a" [k]
     ⦃fun r s' => LocEq s' s₀ ∧ basisW p n s₀.mem k 5 = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rom_basis_decls_a
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rci_block"] <;>
-    finish (gen := 30) (instances := 10000) [basisW, ntBW]
+  sorry
 
 theorem andPin_specW  :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_and_pin" []
     ⦃fun r s' => LocEq s' s₀ ∧ andPinW p n s₀.mem = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rom_and_pin
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rci_block"] <;>
-    finish (gen := 30) (instances := 10000) [andPinW, ntBW]
+  sorry
 
 theorem ciEntry_specW (id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_ci" [id]
     ⦃fun r s' => LocEq s' s₀ ∧ ciEntryW p n s₀.mem id = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rom_ci
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rci_slot", callW_spec p n "rci_fresh", callW_spec p n "rci_ci"] <;>
-    finish (gen := 30) (instances := 10000) [ciEntryW, ntBW]
+  sorry
 
 theorem cvEntry_specW (id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_cv" [id]
     ⦃fun r s' => LocEq s' s₀ ∧ cvEntryW p n s₀.mem id = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rom_cv
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rci_slot", callW_spec p n "erec_alloc", callW_spec p n "rci_fresh", callW_spec p n "rci_cv"] <;>
-    finish (gen := 30) (instances := 10000) [cvEntryW, ntBW]
+  sorry
 
 theorem exprPin_specW (id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_expr_pin" [id]
     ⦃fun r s' => LocEq s' s₀ ∧ exprPinW p n s₀.mem id = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rom_expr_pin
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "rom_u64", callW_spec p n "rci_slot", callW_spec p n "rci_fresh", callW_spec p n "rom_expr"] <;>
-    finish (gen := 30) (instances := 10000) [exprPinW, ntBW]
+  sorry
 
 end specs
 

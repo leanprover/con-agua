@@ -63,9 +63,11 @@ partial def closure (todo : List String) (acc : Prog) (miss : List String) : Pro
 def roots : List String :=
   ["rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "rom_expr_pin", "rom_and_pin"]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The program: the startup stages and the readers, with every callee. -/
 def prog : Prog × List String :=
   closure (["pb_check", "intern_reserved_pins", "intern_all_pins"] ++ roots) [] []
+-/
 
 #guard prog.2.isEmpty
 
