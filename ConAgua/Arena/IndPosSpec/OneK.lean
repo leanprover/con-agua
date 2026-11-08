@@ -36,6 +36,7 @@ def posAppT (kb hi : Nat) (w : EIdx) (ns : NestState) : AM (NestFieldKind × EId
   | _ => fail nestNonValid
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nestPos_succ (dep kb : Nat) (e : EIdx) (ns : NestState) :
     ConRon.Arena.nestPos mode fe ctx (fuel + 1) prog dep kb e ns = (do
       let w ← whnf mode fe checkFuel dep e
@@ -45,6 +46,7 @@ theorem nestPos_succ (dep kb : Nat) (e : EIdx) (ns : NestState) :
       else if w.tag == ETag.forallE then posBindT mode fe ctx fuel prog dep kb (ctx.hiAt prog.length) w ns
       else posAppT mode fe ctx fuel prog kb (ctx.hiAt prog.length) w ns) := by
   sorry
+-/
 
 /-- One constructor of `nestCtors` (`nest_ctors_one`), the rest to `K`. -/
 def oneK {β : Type} (root : Bool) (hi : Nat) (us : LsIdx) (ds : List EIdx) (names : List NIdx)

@@ -25,6 +25,7 @@ namespace L.Ind
 
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `nest_holes`' model as a `Sim` (helper `pos`'s `nestHoles_refines`, unpacked). -/
 theorem nhW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) {m : Mem}
     {a : AState} {ctx : Word} {c : NestCtx} (hS : StageR vis fe m a) (hc : decCtx m ctx.toNat = some c)
@@ -43,16 +44,19 @@ theorem nhW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   cases x with
   | none => exact hout
   | some l => obtain ⟨h1, h2, h3⟩ := hout; exact ⟨h1, h2, h3⟩
+-/
 
 /-- After `nest_holes`. -/
 def bncK3 (ctx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => if r.headD 0 = 0 then none else some ([ctx, r.tail.headD 0, r.tail.tail.headD 0], m)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_shape_nest_ctx`. -/
 def bncK2 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bncK3 (r.headD 0) (nhW n m vis (r.headD 0))
+-/
 
 /-- After `open_pis_at_fvars_f`. -/
 def bncK1 (n : Nat) (vis p : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -67,7 +71,9 @@ theorem bncK3_none (h : r.headD 0 = 0) : bncK3 ctx (some (r, m)) = none := by
   simp only [bncK3]; exact ite_eq_left h
 theorem bncK3_some (h : ¬ r.headD 0 = 0) : bncK3 ctx (some (r, m)) =
     some ([ctx, r.tail.headD 0, r.tail.tail.headD 0], m) := by simp only [bncK3]; exact ite_eq_right h
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bncK2_some : bncK2 n vis (some (r, m)) = bncK3 (r.headD 0) (nhW n m vis (r.headD 0)) := rfl
+-/
 theorem bncK1_none (h : r.headD 0 = 0) : bncK1 n vis p (some (r, m)) = none := by
   simp only [bncK1]; exact ite_eq_left h
 theorem bncK1_ov (h : ¬ r.headD 0 = 0)

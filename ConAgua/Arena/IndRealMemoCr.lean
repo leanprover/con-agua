@@ -26,9 +26,12 @@ namespace L.Ind
 
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem crfP_prog : L.Stubs.CrfProg crfP := by
   constructor <;> exact (ProgHas.refl crfP).get _
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`consts_resolve_ffast` refines `constsResolveFFast` under the stage relation and the walk
 memos** (replaces `IndStubs.constsResolveFFast_spec` at the inductive stage's uses); the memos are
 well formed after. -/
@@ -43,5 +46,6 @@ theorem crfF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   exact ⟨x, a', hrun, hK, hAb.frame hfr (by decide) (by decide), hI1.frame hfr (by decide) (by decide),
     hCr', hIl.frame hfr (by decide) (by decide),
     hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
+-/
 
 end L.Ind

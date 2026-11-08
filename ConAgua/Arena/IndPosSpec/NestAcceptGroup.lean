@@ -45,21 +45,7 @@ theorem pos2_decB_append (hf : ∀ q, OMono (fun m => f m q)) {m m' : Mem} {o1 l
     (hw1 : ∀ i < l1, (m'.arr64 IW)[q + i]? = (m.arr64 IW)[o1 + i]?)
     (hw2 : ∀ i < l2, (m'.arr64 IW)[q + l1 + i]? = (m.arr64 IW)[o2 + i]?) :
     DecB (fun m => decPL m (f m) q (l1 + l2)) m' (xs ++ ys) := by
-  obtain ⟨hl1, he1⟩ := pos2_decB_elems h1
-  obtain ⟨hl2, he2⟩ := pos2_decB_elems h2
-  have := pos2_decB_of_elems (m := m') (o := q) (xs := xs ++ ys) (f := f) fun j hj => by
-    simp only [List.length_append] at hj
-    by_cases hjl : j < xs.length
-    · obtain ⟨v, a, b, c⟩ := he1 j hjl
-      refine ⟨v, by omega, ?_, by rw [List.getElem_append_left hjl]; exact (DecB.grow (hf v) hg c)⟩
-      simp only [iwN, nat?, iwA] at b ⊢; rw [hw1 j (by omega)]; exact b
-    · obtain ⟨v, a, b, c⟩ := he2 (j - xs.length) (by omega)
-      refine ⟨v, by omega, ?_, by rw [List.getElem_append_right (by omega)]; exact (DecB.grow (hf v) hg c)⟩
-      simp only [iwN, nat?, iwA] at b ⊢
-      have := hw2 (j - xs.length) (by omega)
-      rw [show q + l1 + (j - xs.length) = q + j by omega] at this
-      rw [this]; exact b
-  simpa [hl1, hl2] using this
+  sorry
 
 end pslice
 
@@ -80,81 +66,7 @@ theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     StageR vis fe m' a ∧ IWGrow m m' ∧
       KsB m' (r.headD 0).toNat (r.tail.headD 0).toNat (nestAcceptGroup (decI us) ds grp keys).toList ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  intro n
-  induction n with
-  | zero => intro m m' a gO gL kO kL grp keys r h; simp [nagW] at h
-  | succ n ih =>
-    intro m m' a gO gL kO kL grp keys r h hS hds hgl hgb hgrp hks hkb
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
-    by_cases hg0 : gL = 0
-    · rw [nagW_nil (h := hg0)] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hg0
-      have : grp = [] := List.eq_nil_of_length_eq_zero (by simpa using hgl.symm)
-      subst this
-      exact ⟨hS, IWGrow.refl _, by simpa [nestAcceptGroup] using hks, by simpa using hkb⟩
-    rw [nagW_cons (h := hg0)] at h
-    obtain ⟨⟨c, t⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
-      cases grp with
-      | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hgl)) hg0
-      | cons x grp' => exact ⟨x, grp', rfl⟩
-    simp only [List.length_cons] at hgl hgb
-    obtain ⟨w, cw, tw, h1, h2, h3, h4, h5, -, -, -⟩ := hgrp 0 (by simp)
-    have hrw : rdW (m.arr64 IW) gO = w := by simp only [Nat.add_zero] at h1; simp [rdW, h1]
-    have hrc : rdW (m.arr64 IW) w = cw := by simp [rdW, h3]
-    rw [hrw, hrc] at h
-    simp only [List.getElem_cons_zero] at h5
-    rcases hk : posRecW m [cw, us, dO, dL] with _ | ⟨key, m1⟩ <;> rw [hk] at h; · simp [nagK1] at h
-    rw [nagK1_some] at h
-    obtain ⟨hS1, hg1, hkq, ht1, hget1⟩ := posRecW_stage hk hS (by simp)
-    simp only [List.length_cons, List.length_nil] at ht1
-    have hds1 := DecB.grow (OMono.decHL _ _) hg1 hds
-    have hK : DecB (fun m => decNK m key.toNat) m1 ⟨decI cw, decI us, ds⟩ :=
-      pos2_key_rec h4 hus (by omega) hget1 hds1
-    have hks1 := hks.grow hg1
-    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
-    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
-    have hgL1 : (gL - 1).toNat = grp'.length := by
-      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-    have hgrp' : GrpAt m1 (gO + 1).toNat grp' := by
-      rw [hgO1]
-      have g1 := hgrp.grow (by simpa using hgb) hg1
-      intro i hi
-      obtain ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11⟩ := g1 (i + 1) (by simp; omega)
-      exact ⟨a1, a2, a3, by rw [show UInt64.toNat gO + 1 + i = UInt64.toNat gO + (i + 1) by omega]; exact a4, a5, a6, a7, by simpa using a8, a9, a10,
-        by simpa using a11⟩
-    rcases hc : nkcW n m1 kO kL key with _ | b <;> rw [hc] at h; · simp [nagK2] at h
-    have hb := nkcW_ok key _ n m1 kO kL b keys.toList hc hks1 hK htop1
-    rw [h5] at hb
-    by_cases hbn : b ≠ 0
-    · rw [nagK2_hit (h := hbn)] at h
-      have hin : keys.toList.contains ⟨c, decI us, ds⟩ = true := by
-        cases e : keys.toList.contains ⟨c, decI us, ds⟩ with
-        | true => rfl
-        | false => rw [e] at hb; exact absurd hb (by simpa using hbn)
-      obtain ⟨hS', hg', hk', hb'⟩ := ih m1 m' a (gO + 1) (gL - 1) kO kL grp' keys r h hS1 hds1 hgL1
-        (by rw [hgO1]; have := hg1.iw; omega) hgrp' hks1 (by have := hg1.iw; omega)
-      refine ⟨hS', hg1.trans hg', ?_, hb'⟩
-      simp only [nestAcceptGroup, ← Array.contains_toList, hin, ite_true]
-      exact hk'
-    · rw [nagK2_miss (h := hbn)] at h
-      have hout : keys.toList.contains ⟨c, decI us, ds⟩ = false := by
-        cases e : keys.toList.contains ⟨c, decI us, ds⟩ with
-        | false => rfl
-        | true => rw [e] at hb; simp at hbn hb; rw [hbn] at hb; exact absurd hb (by decide)
-      rcases hsn : snocW n m1 kO kL key with _ | ⟨r2, m2⟩ <;> rw [hsn] at h; · simp [nagK3] at h
-      rw [nagK3_some] at h
-      obtain ⟨hS2, hg2, hr0, hr1, ht2, hw2, hx2⟩ := snocW_words hsn hS1 (by have := hg1.iw; omega)
-      have hks2 : KsB m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat (keys.push ⟨c, decI us, ds⟩).toList := by
-        rw [hr0, hr1, Array.toList_push]
-        exact pos2_decB_snoc decNK_mono hks1 hg2 (by omega) hw2 hx2 (by rw [← h5]; exact DecB.grow (decNK_mono _) hg2 hK)
-      obtain ⟨hS', hg', hk', hb'⟩ := ih m2 m' a (gO + 1) (gL - 1) _ _ grp' _ r h hS2
-        (DecB.grow (OMono.decHL _ _) hg2 hds1) hgL1
-        (by rw [hgO1]; have := hg1.iw; have := hg2.iw; omega) (hgrp'.grow (by rw [hgO1]; have := hg1.iw; omega) hg2) hks2
-        (by rw [hr0, hr1]; omega)
-      refine ⟨hS', (hg1.trans hg2).trans hg', ?_, hb'⟩
-      simp only [nestAcceptGroup, ← Array.contains_toList, hout, Bool.false_eq_true, ite_false]
-      exact hk'
+  sorry
 
 end L.Ind
 

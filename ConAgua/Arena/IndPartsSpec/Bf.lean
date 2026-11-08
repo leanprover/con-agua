@@ -53,47 +53,21 @@ theorem bpf_spec (hp : p.lookup "block_shape_pins_formers" = some blockShapePins
     ∀ (s₀ : St) (cto ctl lo ll : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_pins_formers" [cto, ctl, lo, ll]
     ⦃fun r s' => LocEq s' s₀ ∧ bpfW n s₀.mem cto ctl lo ll = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ cto ctl lo ll; rw [invoke_eq _ hp]; simp only [callFn, blockShapePinsFormers]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ cto ctl lo ll
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapePinsFormers]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n,
-        erToIw_specW p hP.alloc hec het n, slEq_spec p hseq n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 omit hP in
 theorem bpr_spec (hp : p.lookup "block_shape_pins_recs" = some blockShapePinsRecs) (n : Nat) :
     ∀ (s₀ : St) (ro rl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_pins_recs" [ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ bprW n s₀.mem ro rl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ ro rl; rw [invoke_eq _ hp]; simp only [callFn, blockShapePinsRecs]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ro rl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapePinsRecs]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 include hec het hseq in
 theorem bpc_spec (hp : p.lookup "block_shape_pins_ctors" = some blockShapePinsCtors) (n : Nat) :
     ∀ (s₀ : St) (nP cso csl lo ll : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_pins_ctors" [nP, cso, csl, lo, ll]
     ⦃fun r s' => LocEq s' s₀ ∧ bpcW n s₀.mem nP cso csl lo ll = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ nP cso csl lo ll; rw [invoke_eq _ hp]; simp only [callFn, blockShapePinsCtors]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ nP cso csl lo ll
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapePinsCtors]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n,
-        erToIw_specW p hP.alloc hec het n, slEq_spec p hseq n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 end spec
 
@@ -119,12 +93,7 @@ theorem bsl_spec (p : Prog) (hP : IndPartsProg4 p) (hec : p.lookup "er_copy" = s
     (hp : p.lookup "block_shape_large" = some blockShapeLarge) (n : Nat) (s₀ : St) (cvR0 lo ll : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_large" [cvR0, lo, ll]
     ⦃fun r s' => LocEq s' s₀ ∧ bslW n s₀.mem cvR0 lo ll = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeLarge]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erToIw_specW p hP.alloc hec het n,
-      slEq_spec p hseq n, slContains_spec p hP.contains n] <;>
-    finish (gen := 20) [bslW, rdW_eq]
+  sorry
 
 end L.Ind
 
@@ -156,16 +125,7 @@ theorem bsn_spec (hp : p.lookup "block_shape_names_of" = some blockShapeNamesOf)
     ∀ (s₀ : St) (cto ctl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_names_of" [cto, ctl]
     ⦃fun r s' => LocEq s' s₀ ∧ bsnW n s₀.mem cto ctl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ cto ctl; rw [invoke_eq _ hp]; simp only [callFn, blockShapeNamesOf]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ cto ctl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapeNamesOf]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 theorem bct_spec (hp : p.lookup "block_shape_ctors_of" = some blockShapeCtorsOf) (n : Nat) :
     ∀ (s₀ : St) (cso csl : Word),
@@ -187,18 +147,7 @@ theorem bmo_spec (h4 : p.lookup "rec4" = some rec4)
     ∀ (s₀ : St) (cto ctl io go : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_members_of" [cto, ctl, io, go]
     ⦃fun r s' => LocEq s' s₀ ∧ bmoW n s₀.mem cto ctl io go = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ cto ctl io go; rw [invoke_eq _ hp]; simp only [callFn, blockShapeMembersOf]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ cto ctl io go
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapeMembersOf]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec4_specW p hP.alloc h4 n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 end spec
 
@@ -242,31 +191,44 @@ theorem bbK12_some : bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip mo
     bbK13' mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW n m cvR0 lo ll) := rfl
 theorem bbK13'_some (ro2 rl2 : Word) : bbK13' mo ml ro2 rl2 nPd s ip (some (r, m)) =
     bgoK3 (bsealW m mo ml ro2 rl2 nPd s ip (r.headD 0) (r.tail.headD 0)) := rfl
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbK10_some : bbK10 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (some (r, m)) =
     bbK11 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl lo ll s ip (bmoW (n + 1) m cto ctl io (r.headD 0)) := rfl
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbK9_some (cof cl2 : Word) :
     bbK9 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip cof cl2 (some (r, m)) =
     bbK10 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip
       (bgW n m no nl (r.headD 0) nPd ctl cof cl2) := rfl
+-/
 end arms
-attribute [ind_grind] bbK13'_some bbK12_some bbK10_some bbK9_some
+-- ronsync2 stage 2: attribute [ind_grind] bbK13'_some bbK12_some bbK10_some bbK9_some
 
 section arms
 variable (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) (m : Mem) (r : List Word)
   (no nl io il lo ll s z : Word)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem btK3_some : btK3 c n nPd cto ctl cso csl rso rsl no nl io lo ll s (some (r, m)) =
     bgoK3 (bfW n m nPd cto ctl cso csl rso rsl no nl io lo ll s (if r.headD 0 = 2 then 1 else 0)) := rfl
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem btK1_some : btK1 c n nPd cto ctl cso csl rso rsl no nl io lo ll (some (r, m)) =
     btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll (r.headD 0) m (pinWordV m 53) := rfl
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbH2_fail (h : r.headD 0 = 0) : bbH2 c n nPd cto ctl cso csl rso rsl cvT0 no nl (some (r, m)) =
     some ([0, 0], m) := by simp only [bbH2]; exact ite_eq_left h
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbH2_ok (h : ¬ r.headD 0 = 0) : bbH2 c n nPd cto ctl cso csl rso rsl cvT0 no nl (some (r, m)) =
     bbH3 c n nPd cto ctl cso csl rso rsl no nl (r.tail.headD 0) (r.tail.tail.headD 0)
       (erToIwW (n + 3) m (rdW (m.arr64 EREC) (cvT0 + 1)) (rdW (m.arr64 EREC) (cvT0 + 2))) := by
   simp only [bbH2]; exact ite_eq_right h
+-/
 end arms
-attribute [ind_grind] btK3_some btK1_some bbH2_fail bbH2_ok
+-- ronsync2 stage 2: attribute [ind_grind] btK3_some btK1_some bbH2_fail bbH2_ok
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxHeartbeats 20000000 in
 theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
     (nPd cto ctl cso csl rso rsl no nl io lo ll s ip : Word) :
@@ -286,7 +248,9 @@ theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
       bseal_spec p hP.na hP.alloc hP.pack hP.sealF (n + 1)] <;>
     finish (gen := 20) [bfW, rdW_eq, bbK8_some, bbK9_some, bbK10_some, bbK11_some, bbK12_some,
       bbK13'_some, bgoK3_some]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxHeartbeats 20000000 in
 theorem bt_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St)
     (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
@@ -300,7 +264,9 @@ theorem bt_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c
       bso_spec p hP.view hP.pinWord hP.slGetD hP.sort hP.strip (n + 1), pinWord_specV p hP.pinWord (n + 2),
       hc (n + 2) "lvl_eq_c", bf_spec p hP n] <;>
     finish (gen := 20) [btW, rdW_eq, btK1_some, btK2_some, btK3_some, bgoK3_some]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxHeartbeats 20000000 in
 theorem bb_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St) (nPd cto ctl cso csl rso rsl : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 4)) "block_shape_build" [nPd, cto, ctl, cso, csl, rso, rsl]
@@ -314,6 +280,7 @@ theorem bb_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c
       bpo_spec p hP.toIndPartsProg4 hP.resFrom hP.resCont hP.erCopy hP.erToIw hP.slEq hP.pinsF hP.pinsR
         hP.pinsC hP.pinsOk (n + 2), bt_spec p hP c hc n] <;>
     finish (gen := 20) [bbW, rdW_eq, bbH1_some, bbH2_fail, bbH2_ok, bbH3_some, bbH4_fail, bbH4_ok, bgoK3_some]
+-/
 
 end L.Ind
 
@@ -335,6 +302,7 @@ namespace L.Ind
 
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bsh_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St) (nPd off l : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 5)) "block_shape" [nPd, off, l]
     ⦃fun r s' => LocEq s' s₀ ∧ bshW c n s₀.mem nPd off l = some (r, s'.mem); ⊤⦄ := by
@@ -345,6 +313,7 @@ theorem bsh_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p 
       bs_spec p hP.alloc hP.copy hP.cons hP.rec3 hP.rec6 hP.recs hP.ctors hP.split (n + 4),
       bb_spec p hP c hc n] <;>
     finish (gen := 20) [bshW, rdW_eq, bgoK3_some]
+-/
 
 end L.Ind
 

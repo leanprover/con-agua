@@ -698,16 +698,18 @@ theorem slK1_min (h : ¬ tagW (r1.headD 0) = 2) : slK1 cR n p vis np mo ml d dom
 theorem slK2_some : slK2 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 end arms
 
-grind_pattern [ind_grind] slotW_eq => slotW cR (n + 1) m p vis np mo ml d dom
+-- ronsync2 stage 2: grind_pattern [ind_grind] slotW_eq => slotW cR (n + 1) m p vis np mo ml d dom
 -- ronsync2 stage 2: grind_pattern [ind_grind] slK1_mot => slK1 cR n p vis np mo ml d dom (some (r1, m1))
 -- ronsync2 stage 2: grind_pattern [ind_grind] slK1_min => slK1 cR n p vis np mo ml d dom (some (r1, m1))
 grind_pattern [ind_grind] slK2_some => slK2 (some (r, m))
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem classReadSlot_spec (p : Prog) (hP : SlotProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat)
     (s₀ : St) (q vis np mo ml d dom : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_slot" [q, vis, np, mo, ml, d, dom]
     ⦃fun r s' => LocEq s' s₀ ∧ slotW cR n s₀.mem q vis np mo ml d dom = some (r, s'.mem); ⊤⦄ := by
   sorry
+-/
 
 /-! ## Relational lemmas -/
 
@@ -876,6 +878,7 @@ theorem slotMotW_afr {n : Nat} {m m' : Mem} {p vis dom : Word} {r : List Word}
   afr_auto h [piBW_afrR _ _ _ _ _ _, gafF_afr, gaaF_afr, npcW_afr, recW_afr]
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)
     (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (n : Nat) (m : Mem)
     (a : AState) (p np mo ml d dom : Word) (bs : BlockShape) (motPos : List Nat)
@@ -885,6 +888,7 @@ theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       (ConRon.Arena.classReadSlot bs fe np.toNat motPos d.toNat (decI dom)) a
       (fun b a' x => KP dn vis fe m decSlot b a' x ∧ J b.2) := by
   sorry
+-/
 
 end L.Ind
 
@@ -940,6 +944,7 @@ theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
   sorry
 
 mutual
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `class_read_slots`.** -/
 def slotsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
@@ -950,6 +955,7 @@ def slotsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Wo
     else if eViewW m e = [] then none
     else ssK1 cR N p vis np n mo ml d ((eViewW m e).tail.headD 0) ((eViewW m e).tail.tail.headD 0)
       (slotW cR N m p vis np mo ml d ((eViewW m e).tail.headD 0))
+-/
 
 /-- After `class_read_slot`. -/
 def ssK1 (cR : CallM) (N : Nat) (p vis np n mo ml d dom body : Word) :
@@ -1021,11 +1027,13 @@ theorem slotsW_tag (h : n ≠ 0) (h2 : tagW e ≠ 6) :
 theorem slotsW_nil (h : n ≠ 0) (h2 : ¬ tagW e ≠ 6) (h3 : eViewW m e = []) :
     slotsW cR (N + 1) m p vis np n mo ml d e = none := by
   rw [slotsW, ite_eq_right h, ite_eq_right h2, ite_eq_left h3]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem slotsW_ok (h : n ≠ 0) (h2 : ¬ tagW e ≠ 6) (h3 : eViewW m e ≠ []) :
     slotsW cR (N + 1) m p vis np n mo ml d e =
       ssK1 cR N p vis np n mo ml d ((eViewW m e).tail.headD 0) ((eViewW m e).tail.tail.headD 0)
         (slotW cR N m p vis np mo ml d ((eViewW m e).tail.headD 0)) := by
   rw [slotsW, ite_eq_right h, ite_eq_right h2, ite_eq_right h3]
+-/
 theorem ssK1_fail (h : r1.headD 0 = 0) : ssK1 cR N p vis np n mo ml d dom body (some (r1, m1)) =
     some ([0, 0, 0], m1) := by rw [ssK1, ite_eq_left h]
 theorem ssK1_ok (h : r1.headD 0 ≠ 0) : ssK1 cR N p vis np n mo ml d dom body (some (r1, m1)) =
