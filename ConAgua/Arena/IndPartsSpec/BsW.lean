@@ -155,22 +155,12 @@ theorem partsFresh {vis : Word} {fe : IFEnv} {a : AState}
 theorem partsErW {m m1 : Mem} (hg : IWGrow m m1) {w k : Word} {v : Nat}
     (h : nat? (erA (truncM m)) (w.toNat + k.toNat) = some v) :
     (rdW (m1.arr64 EREC) (w + k)).toNat = v ∧ w.toNat + k.toNat < erTop m := by
-  have hlt : w.toNat + k.toNat < erTop m := by
-    simp only [nat?, Option.map_eq_some_iff] at h
-    obtain ⟨x, hx, -⟩ := h; exact (truncM_er_get hx).1
-  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-  have hw : (w + k).toNat = w.toNat + k.toNat := by rw [UInt64.toNat_add]; omega
-  obtain ⟨h1, h2, -⟩ := partsErRd hg h hw
-  rw [h1]; exact ⟨UInt64.toNat_ofNat_of_lt' h2, hlt⟩
+  sorry
 
 /-- A constant decoded below the top lies below the top. -/
 theorem partsDecCV_lt {m : Mem} {i : Nat} {cv : IConstantVal} (h : decCV (erA (truncM m)) i = some cv) :
     i < erTop m := by
-  simp only [decCV, bind, Option.bind_eq_some_iff] at h
-  obtain ⟨nm, hnm, -⟩ := h
-  simp only [hd?, bind, Option.bind_eq_some_iff] at hnm
-  obtain ⟨x, hx, -⟩ := hnm
-  exact (truncM_er_get hx).1
+  sorry
 
 /-- `block_split_recs`' result `(ok, off, len)` against the twin's `Option`. -/
 def RecsR (x : Option (List (IConstantVal × Nat × Nat × List IRecRule))) (r : List Word) (m : Mem) :

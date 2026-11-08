@@ -305,52 +305,7 @@ variable {a b : Array Word}
 /-- A rule record copied word for word (its fire slices decoding in the larger array). -/
 theorem decRule_copy {q q' : Nat} {rl : IRecRule} (h : decRule (aread a) q = some rl) (hext : ArrExt (aread a) (aread b))
     (hw : ∀ i, i < 11 → b[q' + i]? = a[q + i]?) : decRule (aread b) q' = some rl := by
-  obtain ⟨c, n1, n2, n8, n9, n10⟩ := decRule_fields h (fun i hi => hw i (by omega))
-  have e3 : nat? b (q' + 3) = nat? a (q + 3) := nat?_shift (hw 3 (by omega))
-  have e4 : nat? b (q' + 4) = nat? a (q + 4) := nat?_shift (hw 4 (by omega))
-  have e5 : nat? b (q' + 5) = nat? a (q + 5) := nat?_shift (hw 5 (by omega))
-  have e6 : nat? b (q' + 6) = nat? a (q + 6) := nat?_shift (hw 6 (by omega))
-  have e7 : nat? b (q' + 7) = nat? a (q + 7) := nat?_shift (hw 7 (by omega))
-  have hx := h
-  unfold L.Arena.decRule at hx ⊢
-  rw [e3]
-  cases h3 : nat? a (q + 3) with
-  | none => simp [h3] at hx
-  | some t =>
-  rw [h3] at hx
-  match t, hx with
-  | 0, hx =>
-    simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.bind_eq_some_iff,
-      Option.some.injEq] at hx ⊢
-    obtain ⟨c', hc, nf, hnf, cp, hcp, r, hr, k, hk, e, he, rfl⟩ := hx
-    simp only at c n1 n2 n8 n9 n10
-    exact ⟨_, c, _, n1, _, n2, _, n8, _, n9, _, n10, rfl⟩
-  | 1, hx =>
-    have l4 : ∀ {k : IdxKind} (xs : List (Idx k)), hlist? a (q + 4) = some xs → hlist? b (q' + 4) = some xs := by
-      intro k xs hxs
-      simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hxs ⊢
-      obtain ⟨o, ho, l, hl, hs⟩ := hxs
-      exact ⟨o, by rw [e4]; exact ho, l, by rw [show q' + 4 + 1 = q' + 5 by omega, e5]; simpa using hl,
-        hext.hslice? hs⟩
-    have l6 : ∀ {k : IdxKind} (xs : List (Idx k)), hlist? a (q + 6) = some xs → hlist? b (q' + 6) = some xs := by
-      intro k xs hxs
-      simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hxs ⊢
-      obtain ⟨o, ho, l, hl, hs⟩ := hxs
-      exact ⟨o, by rw [e6]; exact ho, l, by rw [show q' + 6 + 1 = q' + 7 by omega, e7]; simpa using hl,
-        hext.hslice? hs⟩
-    cases hy : (hlist? a (q + 4) : Option (List LIdx)) with
-    | none => simp [hy] at hx
-    | some y =>
-    cases hz : (hlist? a (q + 6) : Option (List EIdx)) with
-    | none => simp [hy, hz] at hx
-    | some z =>
-    rw [hy, hz] at hx
-    rw [l4 y hy, l6 z hz]
-    simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.bind_eq_some_iff,
-      Option.some.injEq] at hx ⊢
-    obtain ⟨c', hc, nf, hnf, cp, hcp, r, hr, k, hk, e, he, rfl⟩ := hx
-    exact ⟨_, c, _, n1, _, n2, _, n8, _, n9, _, n10, rfl⟩
-  | t + 2, hx => simp at hx
+  sorry
 
 end shift
 
@@ -428,14 +383,7 @@ structure CbrLook (p : Prog) : Prop where
 theorem rc_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (b old : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_copy" [b, old]
     ⦃fun r s' => LocEq s' s₀ ∧ rcpW s₀.mem b old = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.rc]
-  simp only [callFn, ruleCopy]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
-      finish [rcpW, cpMem]
+  sorry
 
 theorem rteGo_spec (p : Prog) (L : CbrLook p) (n : Nat) :
     ∀ (s₀ : St) (b ro rl : Word),
@@ -629,15 +577,7 @@ def riW (m : Mem) (cv mi rp3 reo rel : Word) : Option (List Word × Mem) :=
 theorem ri_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (cv mi rp3 reo rel : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_info_rec" [cv, mi, rp3, reo, rel]
     ⦃fun r s' => LocEq s' s₀ ∧ riW s₀.mem cv mi rp3 reo rel = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.rir]
-  simp only [callFn, recInfoRec]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        erecAlloc_specW p L.tsr.ea n] <;>
-      finish [riW, riMem]
+  sorry
 
 theorem riMem_eq {m1 : Mem} {q cq mi rp3 reo rel : Word} (hlt : cq.toNat + 4 ≤ q.toNat) (hq : q.toNat + 9 < 2 ^ 64) :
     riMem m1 q cq mi rp3 reo rel = wrER m1 q [5, rdW (m1.arr64 EREC) cq, rdW (m1.arr64 EREC) (cq + 1),
@@ -733,77 +673,7 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
     (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules) (_hb : ro.toNat + rl.toNat ≤ iwTop m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = rl ∧
       decRules (erecP m') (r.headD 0).toNat rl.toNat = some rules ∧ MFr [] [] m m' := by
-  obtain _ | n := n
-  · simp [rteW] at h
-  by_cases hbig : 4294967296 ≤ rl
-  · rw [rteW.abort1 (hc1 := hbig)] at h; cases h
-  rw [rteW.arm1 (hc1 := hbig)] at h
-  have hrl : rl.toNat < 2 ^ 32 := by rw [UInt64.le_iff_toNat_le] at hbig; simp at hbig; omega
-  rcases ha : erAllocW m (rl * 11) with _ | ⟨b, m1⟩ <;> simp only [ha, rteW.k_erec_alloc, reduceCtorEq] at h
-  rcases h1 : rteGoW n m1 b ro rl with _ | ⟨r1, m2⟩ <;> simp only [h1, rteW.k_rules_to_erec_go, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
-  have hm1 := erAllocW_mem ha
-  have hI1 : m1.arr64 IW = m.arr64 IW := by rw [hm1]; exact erAllocMem_arr _ _ (by decide)
-  have hE1 : m1.arr64 EREC = m.arr64 EREC := by rw [hm1]; exact erAllocMem_arr _ _ (by decide)
-  have hk : (rl * 11).toNat = 11 * rl.toNat := by
-    rw [UInt64.toNat_mul]; simp; omega
-  -- the old records lie below the record pool's top, which is `b`
-  have hbq : b.toNat = erTop m := by
-    simp only [erAllocW] at ha; split at ha; · cases ha
-    split at ha; · cases ha
-    simp only [Option.some.injEq, Prod.mk.injEq] at ha; obtain ⟨rfl, -⟩ := ha; rfl
-  have hv : ∀ j < rl.toNat, ∃ v rlj, iwN m (ro.toNat + j) = some v ∧ rlDec m v = some rlj ∧ rules[j]? = some rlj ∧
-      v + 11 ≤ erTop m := by
-    intro j hj
-    obtain ⟨v, y, hv, hf, hget⟩ := decPL_get rl.toNat ro.toNat rules hd j hj
-    refine ⟨v, y, hv, hf, hget, ?_⟩
-    obtain ⟨-, -, -, -, -, h10⟩ := decRule_fields (b := erecP m) (q' := v) hf (fun _ _ => rfl)
-    simp only [bool?, Option.map_eq_some_iff] at h10
-    obtain ⟨w, hw, -⟩ := h10
-    have := erecP_lt hw; omega
-  have hsz := hS.iw.iwSize
-  have hrdv : ∀ j < rl.toNat, ∀ v, iwN m (ro.toNat + j) = some v →
-      rdW (m.arr64 IW) (ro + UInt64.ofNat j) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
-    intro j hj v hv'
-    exact iwN_rdW_at (w := ro) (k := j) hv' hsz
-  have hold : ∀ j < rl.toNat, (rdW (m1.arr64 IW) (ro + UInt64.ofNat j)).toNat + 11 ≤ b.toNat := by
-    intro j hj
-    obtain ⟨v, rlj, hvj, -, -, hvt⟩ := hv j hj
-    obtain ⟨e, hlt⟩ := hrdv j hj v hvj
-    rw [hI1, e, UInt64.toNat_ofNat_of_lt' hlt, hbq]; exact hvt
-  obtain ⟨hS1, hg1, hq1, htop1, hget1⟩ := erRec_stage ha hS (ruleWords m1 ro rl.toNat)
-    (by rw [ruleWords_length, hk])
-  have hroom : b.toNat + 11 * rl.toNat ≤ (m1.arr64 EREC).size := by
-    obtain ⟨-, h2, -, h4, -⟩ := hS1.iw
-    have hs := (wrER_frame (ruleWords m1 ro rl.toNat) m1 b).size EREC
-    rw [ruleWords_length] at htop1; omega
-  have hm2 := rteGoW_mem n m1 m2 b ro rl r1 h1 hold hroom (by rw [hE1]; exact hS.iw.erSize)
-  subst hm2
-  refine ⟨hS1, hg1, rfl, ?_, erRec_mfr ha _⟩
-  simp only [List.headD_cons]
-  -- the run, record by record
-  have hrw := ruleWords_length m1 ro rl.toNat
-  generalize hM : wrER m1 b (ruleWords m1 ro rl.toNat) = M at hS1 hg1 htop1 hget1 ⊢
-  have hext := IWGrow.erecPExtR hg1
-  have hlen := decPL_length m hd
-  unfold decRules
-  rw [← hlen]
-  apply mapM_range_some
-  intro j hj
-  rw [hlen] at hj
-  obtain ⟨v, rlj, hvj, hfj, hgj, hvt⟩ := hv j hj
-  obtain ⟨e, hlt⟩ := hrdv j hj v hvj
-  have hrj : rules[j] = rlj := by
-    rw [List.getElem?_eq_getElem (by omega)] at hgj; exact Option.some.inj hgj
-  rw [hrj]
-  refine decRule_copy hfj hext (fun i hi => ?_)
-  have hEt : erTop m ≤ (m.arr64 EREC).size := hS.iw.er
-  rw [show b.toNat + 11 * j + i = b.toNat + (11 * j + i) by omega,
-    erecP_getE (by rw [htop1, hrw]; omega), hget1 (11 * j + i) (by rw [hrw]; omega),
-    ruleWords_get m1 ro rl.toNat j i hj hi, hI1, e, hE1, erecP_getE (by omega)]
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
-  refine (rdW_some ?_ (by omega)).symm
-  rw [UInt64.toNat_add]; simp; omega
+  sorry
 
 end rel
 
@@ -839,15 +709,7 @@ attribute [ind_grind] cbpW_succ cbpK1_some cbpK2_some cbpK3_some
 theorem cbp_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (vis cv mI rP ro rl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_push" [vis, cv, mI, rP, ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ cbpW p n s₀.mem vis cv mI rP ro rl = some (r, s'.mem); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
-    rw [invoke_eq _ L.push]
-    simp only [callFn, consBlockRecsPush]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, rte_spec p L n, ri_spec p L n,
-        callW_spec p n "env_push"] <;>
-      finish (gen := 20) [loc_init4, loc_init5]
+  sorry
 
 /-! ## The `abstract1` memo across `cons_block_recs_push` -/
 

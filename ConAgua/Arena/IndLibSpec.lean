@@ -685,4 +685,22 @@ theorem StageR.of_walk {vis : Word} {fe : IFEnv}
     StageR vis fe m' a' ∧ IWGrow m m' :=
   StageR.of_walkM hS hD hf hA hC hk (hS.check.mode.frame hf h01.1 h01.2)
 
+
+/-! ## The tagged record read
+
+`EREC⦃a⦄` reads word `a &&& (2^40 - 1)` of tier `a >>> 40` (`ld64t`): `erRd` is that read as the
+models write it, `erRd_of_erecP` what a decoding (`erA`, `erecP`) says about it. -/
+
+/-- L's tagged read `EREC⦃a⦄`, as a model reads it. -/
+def erRd (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 0xFFFFFFFFFF)
+
+/-- A word the record pool decodes is the word `EREC⦃a⦄` reads, in bounds. -/
+theorem erRd_of_erecP {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) :
+    erRd m a = v ∧ (a &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (a >>> 40))).size := by
+  obtain ⟨hlt, hget⟩ := erecP_rd h
+  exact ⟨by simp [erRd, rdW, hget], hlt⟩
+
+theorem erRd_of_erA {m : Mem} {a v : Word} (h : erA m a.toNat = some v) : erRd m a = v :=
+  (erRd_of_erecP h).1
+
 end L.Ind

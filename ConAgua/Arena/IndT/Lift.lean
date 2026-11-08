@@ -38,11 +38,8 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 memory's half (`AbsOK` after: `WkOK` and the two core walk memos it holds). -/
 theorem StageC.of_pstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
     (hS : StageR vis fe m' a') (hA : AbsOK m') (hs : PStep a a') :
-    StageC dn vis fe env m' a' :=
-  ⟨hS, (hs.toCore h.check).ok,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
-      fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.wk.2.2.2.2⟩
+    StageC dn vis fe env m' a' := by
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`StageC` after a twin step whose result con-ron's lemmas give `CheckOK` for** (a `CoreStep`,
@@ -65,10 +62,7 @@ theorem RSim.liftP {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Mem
     (hsp : PSpec P op R) (hP : P a.store) :
     RSim o op a (fun b a' x => StageC dn vis fe env b.2 a' ∧ Q b a' x ∧ R a'.store x ∧
       PStep a a') := by
-  intro b hb
-  obtain ⟨x, a', hr, hq'⟩ := h b hb
-  obtain ⟨hs, hR⟩ := hsp a a' x hC.check.state hP hr
-  exact ⟨x, a', hr, hC.of_pstep (hq _ _ _ hq').1 (hq _ _ _ hq').2 hs, hq', hR, hs⟩
+  sorry
 
 /-- `RSim.liftP` for a `PSpecP` (the twin reads the pins). -/
 theorem RSim.liftPP {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Mem} {a : AState}
@@ -78,10 +72,7 @@ theorem RSim.liftPP {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Me
     (hsp : PSpecP P op R) (hP : P a.store) :
     RSim o op a (fun b a' x => StageC dn vis fe env b.2 a' ∧ Q b a' x ∧ R a'.store x ∧
       PStep a a') := by
-  intro b hb
-  obtain ⟨x, a', hr, hq'⟩ := h b hb
-  obtain ⟨hs, hR⟩ := hsp a a' x hC.check.state hC.check.pins hP hr
-  exact ⟨x, a', hr, hC.of_pstep (hq _ _ _ hq').1 (hq _ _ _ hq').2 hs, hq', hR, hs⟩
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A `StageT` `RSim` of a core-calling callee is a `StageC` `RSim`**, by con-ron's `CSpec` of

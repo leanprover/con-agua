@@ -144,7 +144,15 @@ open L.Arena
 theorem hslice?_congr {k : IdxKind} (a b : Nat → Option Word) (off off' n : Nat)
     (h : ∀ j < n, a (off + j) = b (off' + j)) :
     (hslice? a off n : Option (List (Idx k))) = hslice? b off' n := by
-  sorry
+  have key : ∀ l : List Nat, (∀ j ∈ l, j < n) →
+      l.mapM (fun j => (hd? a (off + j) : Option (Idx k))) = l.mapM fun j => hd? b (off' + j) := by
+    intro l
+    induction l with
+    | nil => intro _; rfl
+    | cons j js ih =>
+      intro hl
+      simp only [List.mapM_cons, hd?, h j (hl j (by simp)), ih (fun x hx => hl x (by simp [hx]))]
+  exact key _ (fun j hj => List.mem_range.mp hj)
 
 theorem consPre_ctl (m : Mem) (x l : Word) (i : Word) (hi : i ≠ 200) :
     rdW ((consPre m x l).arr64 CTL) i = rdW (m.arr64 CTL) i := by

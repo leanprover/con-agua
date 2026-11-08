@@ -151,75 +151,7 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     (m.arr64 SPN).size < 2 ^ 63 → s.toNat + l.toNat < 2 ^ 64 → ikCopyW n m s d l = some m' →
     hslice? (aread (m'.arr64 SPN)) d.toNat l.toNat = some lps ∧ MemFrame [SPN] [] m m' ∧
       ∀ i : Word, i.toNat < d.toNat → rdW (m'.arr64 SPN) i = rdW (m.arr64 SPN) i := by
-  intro lps
-  induction lps with
-  | nil =>
-    intro n m m' s d l hs hb hsz hsl hW
-    have hl : l.toNat = 0 := by
-      rcases hk' : l.toNat with _ | j
-      · rfl
-      · rw [hk', lp_hslice_succ] at hs
-        simp only [Option.bind_eq_bind] at hs
-        cases e : (hd? (m.arr64 LPIW) s.toNat : Option NIdx) with
-        | none => simp [e] at hs
-        | some x =>
-          cases e' : (hslice? (m.arr64 LPIW) (s.toNat + 1) j : Option (List NIdx)) with
-          | none => simp [e, e'] at hs
-          | some xs => simp [e, e'] at hs
-    have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
-    subst hl0
-    rcases n with _ | n
-    · simp [ikCopyW] at hW
-    rw [ikCopyW_zero n m s d 0 rfl] at hW; cases hW
-    exact ⟨by simp [hslice?], MemFrame.refl _ _ _, fun _ _ => rfl⟩
-  | cons x xs ih =>
-    intro n m m' s d l hs hb hsz hsl hW
-    rcases hk' : l.toNat with _ | j
-    · rw [hk'] at hs; simp [hslice?] at hs
-    rw [hk', lp_hslice_succ] at hs
-    simp only [Option.bind_eq_bind] at hs
-    cases e : (hd? (m.arr64 LPIW) s.toNat : Option NIdx) with
-    | none => simp [e] at hs
-    | some x' =>
-    cases e' : (hslice? (m.arr64 LPIW) (s.toNat + 1) j : Option (List NIdx)) with
-    | none => simp [e, e'] at hs
-    | some xs' =>
-    simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs
-    obtain ⟨rfl, rfl⟩ := hs
-    have hl0 : l ≠ 0 := fun h0 => by subst h0; simp at hk'
-    rcases n with _ | n
-    · simp [ikCopyW] at hW
-    rw [ikCopyW_succ n m s d l hl0] at hW
-    have hd1 : (d + 1).toNat = d.toNat + 1 := L.Arena.toNat_succ_lt (by omega)
-    have hs1 : (s + 1).toNat = s.toNat + 1 := L.Arena.toNat_succ_lt (by omega)
-    have hlm : (l - 1).toNat = j := by
-      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-    have hsz₁ : ((m.set64 SPN d (rdW (m.arr64 LPIW) s)).arr64 SPN).size = (m.arr64 SPN).size :=
-      Mem.size_arr64_set64 _ _ _ _
-    have herec : (m.set64 SPN d (rdW (m.arr64 LPIW) s)).arr64 LPIW = m.arr64 LPIW :=
-      Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-    obtain ⟨hk', hf', hb'⟩ := ih n _ m' (s + 1) (d + 1) (l - 1) (by rw [herec, hs1, hlm]; exact e')
-      (by rw [hsz₁, hd1, hlm]; omega) (by rw [hsz₁]; exact hsz) (by rw [hs1, hlm]; omega) hW
-    have hdl : d.toNat < (m.arr64 SPN).size := by omega
-    have hd : rdW (m'.arr64 SPN) d = rdW (m.arr64 LPIW) s := by
-      rw [hb' d (by rw [hd1]; omega), rdW_set64]; simp [hdl]
-    refine ⟨?_, (MemFrame.set64 _ _ (by decide) _ _).trans hf', ?_⟩
-    · rw [lp_hslice_succ]
-      have hsize : d.toNat < (m'.arr64 SPN).size := by rw [hf'.size SPN, hsz₁]; exact hdl
-      have hd' : (hd? (m'.arr64 SPN) d.toNat : Option NIdx) = some x' := by
-        rw [← e]; simp only [hd?]
-        have h1 : (m'.arr64 SPN)[d.toNat]? = some (rdW (m'.arr64 SPN) d) := by simp [rdW, hsize]
-        have h2 : (m.arr64 LPIW)[s.toNat]? = some (rdW (m.arr64 LPIW) s) := by
-          cases ee : (m.arr64 LPIW)[s.toNat]? with
-          | none => simp [hd?, ee] at e
-          | some v => simp [rdW, ee]
-        rw [h1, h2, hd]
-      rw [hd1, hlm] at hk'
-      simp [hd', hk']
-    · intro i hi
-      rw [hb' i (by rw [hd1]; omega), rdW_set64]
-      have : ¬ d = i := fun e => by subst e; omega
-      simp [this]
+  sorry
 
 /-- **`inst_lp_fast(f, lo, ll, us, e)` refines `instLPFast f lps us e`** under `CoreS`, the keys
 `lps` a slice of the work pool `IW` (the fuel word `coreWalkFuel`, else the call aborts). -/

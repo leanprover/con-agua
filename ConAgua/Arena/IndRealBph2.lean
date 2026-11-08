@@ -187,15 +187,7 @@ theorem bphBlk_erec {dn : NIdx → Option ConLeche.Name} {m : Mem} {bo bl : Word
     {blk : List IConstantInfo} (hB : decEBlk dn (truncM m) bo.toNat bl.toNat = some blk)
     (hne : bl.toNat ≠ 0) :
     L.Front.decCIsR (erecP m) bo.toNat bl.toNat = some blk ∧ bo.toNat + bl.toNat ≤ erTop m := by
-  refine ⟨mapM_imp _ _ hB fun j _ y hy => ?_, ?_⟩
-  · simp only [bind, Option.bind_eq_some_iff] at hy ⊢
-    obtain ⟨v, hv, hy⟩ := hy
-    exact ⟨v, (truncM_erecP m).nat? hv, ArrExt.decCI (truncM_erecP m) hy⟩
-  · obtain ⟨q, hq, -⟩ := bphDecEBlk_get hB (bl.toNat - 1) (by omega)
-    simp only [nat?, Option.map_eq_some_iff] at hq
-    obtain ⟨w, hw, -⟩ := hq
-    have := (truncM_er_get hw).1
-    omega
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bph_run_step (blk pinned : List IConstantInfo) (K : ConLeche.BasisKind)

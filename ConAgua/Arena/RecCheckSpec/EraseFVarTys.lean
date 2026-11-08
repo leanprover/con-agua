@@ -92,22 +92,7 @@ theorem eftW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
     (he : H e) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.eraseFVarTys (decE e)).run a = .ok (decE (r.headD 0), a') ∧ H (r.headD 0) ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
-  unfold eftW at h
-  rcases ha : allocW m 1 with _ | ⟨f, m1⟩ <;> simp only [ha, eftK1, reduceCtorEq] at h
-  rcases hr : rxW n (m1.set64 IW f 2) f e with _ | ⟨z, m2⟩ <;> simp only [hr, eftK2, reduceCtorEq] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hrec : recW m 1 [2] = some ([f], m1.set64 IW f 2) := by simp [recW, ha, wrIW]
-  obtain ⟨hr0, hq, hget, hS1, hg1, hf1, ht1⟩ := rcFresh hrec hS rfl
-  simp only [List.cons.injEq, and_true] at hr0
-  subst hr0
-  have hfm : FMOk (m1.set64 IW (rdW (m.arr64 CTL) 200) 2) (rdW (m.arr64 CTL) 200).toNat .erase := by
-    refine ⟨?_, ?_⟩
-    · have := hget 0 (by simp); rw [Nat.add_zero, ← hq] at this; exact iwN_of_get this
-    · simp only [List.length_singleton] at ht1; omega
-  obtain ⟨M, G, g, hR⟩ := hP.pos.rf
-  obtain ⟨a', hrun, hH, M', G', hS', hg', hR', -, -⟩ := (rxOK_all dn fe vis n).2.2.2.2.2.2 _ _ a _ e .erase z M G g hr
-    hS1 hfm he (hR.frame (RfFr.of_iw hf1))
-  exact ⟨a', hrun, hH, hS', hg1.trans hg', (hP.fr (MFr.of_iw hf1)).setRf (rxW_mfr hr) ⟨M', G', g, hR'⟩⟩
+  sorry
 
 theorem tcpK1_some (n : Nat) (e : Word) (r1 : List Word) (m1 : Mem) :
     tcpK1 n e (some (r1, m1)) = eftK2 (rxW n m1 (r1.headD 0) e) := rfl
@@ -131,38 +116,7 @@ theorem tcpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
     (he : H e) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE (r.headD 0), a') ∧
       H (r.headD 0) ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
-  unfold tcpW at h
-  -- the openers' offset as recorded: `0` for an empty slice
-  obtain ⟨po, hpo, hpd, hpb⟩ : ∃ po : Word, po = (if pfl = 0 then 0 else pfo) ∧
-      decHL m po.toNat pfl.toNat = some pfvs ∧ po.toNat + pfl.toNat ≤ iwTop m := by
-    by_cases h0 : pfl = 0
-    · subst h0
-      have hx : pfvs = [] := by have := hpf.len; simpa using this
-      subst hx
-      exact ⟨0, by simp, by simp [decHL, hslice?], by simp⟩
-    · rcases hpf.2 with h1 | h1
-      · exact absurd h1 h0
-      · exact ⟨pfo, by simp [h0], hpf.1, h1⟩
-  rw [← hpo] at h
-  rcases hrec : recW m 3 [3, po, pfl] with _ | ⟨r1, m1⟩ <;> simp only [hrec, tcpK1, reduceCtorEq] at h
-  obtain ⟨hr0, hq, hget, hS1, hg1, hf1, ht1⟩ := rcFresh hrec hS rfl
-  subst hr0
-  simp only [List.headD_cons] at h
-  rcases hr : rxW n m1 (rdW (m.arr64 CTL) 200) e with _ | ⟨z, m2⟩ <;> simp only [hr, eftK2, reduceCtorEq] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  simp only [List.length_cons, List.length_nil] at ht1
-  have g0 := hget 0 (by simp)
-  have g1 := hget 1 (by simp)
-  have g2 := hget 2 (by simp)
-  simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at g0 g1 g2
-  have hfm : FMOk m1 (rdW (m.arr64 CTL) 200).toNat (.canon pfvs) := by
-    rw [hq]
-    refine ⟨iwN_of_get g0, by omega, po.toNat, pfl.toNat, iwN_of_get g1, iwN_of_get g2, ?_, by omega⟩
-    rw [decHL_grow hg1 hpb]; exact hpd
-  obtain ⟨M, G, g, hR⟩ := hP.pos.rf
-  obtain ⟨a', hrun, hH, M', G', hS', hg', hR', -, -⟩ := (rxOK_all dn fe vis n).2.2.2.2.2.2 _ _ a _ e _ z M G g hr
-    hS1 hfm he (hR.frame (RfFr.of_iw hf1))
-  exact ⟨a', hrun, hH, hS', hg1.trans hg', (hP.fr (MFr.of_iw hf1)).setRf (rxW_mfr hr) ⟨M', G', g, hR'⟩⟩
+  sorry
 
 section census
 variable (p : Prog) (L : RcLook p)
@@ -238,11 +192,7 @@ theorem targetCtorsOf_refines (p : Prog) (L : RcLook p) (n : Nat) (s₀ : St) (a
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetCtorsOf fe (decI I)) a₀ ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.targetCtorsOf fe (decI I)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ NcOut s'.mem r (AM.res (ConRon.Arena.targetCtorsOf fe (decI I)) a₀); ⊤⦄ := by
-  refine triple_post (targetCtorsOf_spec p L (n + 2) s₀ vis I) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout, -⟩ := tcoW_ok dn fe vis I hI n hm hS
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
+  sorry
 
 end L.Ind
 

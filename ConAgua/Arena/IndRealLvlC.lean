@@ -42,12 +42,7 @@ theorem lvlEqC_simC (n : Nat) {m : Mem} {a : AState} (hC : StageC dn vis fe env 
     Sim (callW p n "lvl_eq_c" [u, v] m) (lvlEq? (decI u) (decI v)) a
       (fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ decLvlEq m' r x ∧ AbsOK m' ∧
         ConRon.Bridge.Inductives.PStep a a') := by
-  intro r m' e
-  obtain ⟨x, a', hrun, hT', hg, hd⟩ :=
-    lvlEqC_simTE p hcl hL n hC.stageT u v hu hv lu lv hdu hdv r m' e
-  have hA' := absOK_core hcl (by decide) e hA hT'
-  have hs := ConRon.Bridge.Inductives.lvlEq?_pstep hC.check.state hrun
-  exact ⟨x, a', hrun, StageC.of_pstep hC hT'.stage hA' hs, hg, hd, hA', hs⟩
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hcl hL in

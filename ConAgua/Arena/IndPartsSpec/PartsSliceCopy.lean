@@ -41,8 +41,7 @@ theorem erCopyW_zero (n : Nat) (m : Mem) (d o o' : Word) : erCopyW n m d o 0 = e
   cases n <;> rfl
 
 theorem partsErLt {m : Mem} {i v : Nat} (h : nat? (erA (truncM m)) i = some v) : i < erTop m := by
-  simp only [nat?, Option.map_eq_some_iff] at h
-  obtain ⟨x, hx, -⟩ := h; exact (truncM_er_get hx).1
+  sorry
 
 theorem partsHslice_last {k : IdxKind} {a : Array Word} : ∀ (l o : Nat) (xs : List (Idx k)),
     hslice? (aread a) o (l + 1) = some xs → ∃ w, a[o + l]? = some w

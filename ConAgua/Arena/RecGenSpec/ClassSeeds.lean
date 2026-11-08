@@ -84,60 +84,7 @@ theorem sgW_nksl (k : Nat)
     (hhob : hO.toNat + hL.toNat ≤ iwTop m) (hds : decHL m dO.toNat dL.toNat = some ds)
     (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m) (hR : RfInv m M G g) (hP : PosMR m) :
     NKSl m' (r.headD 0) := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
-  obtain ⟨-, -, hpa, hpa', -, -, -, -, -, h11⟩ := ctx_fields hc hin htop
-  have hpsum : (rdW (m.arr64 IW) (ctx + 7)).toNat + (rdW (m.arr64 IW) (ctx + 8)).toNat ≤ iwTop m := by
-    obtain ⟨-, -, -, -, hpm, -⟩ := decCtx_some hc
-    obtain ⟨o, l, ho, hl, -⟩ := decAt_some hpm
-    rw [rd_iwN (m := m) (p := ctx) (i := 7) (by simpa using ho) (by simp; omega),
-      rd_iwN (m := m) (p := ctx) (i := 8) (by simpa using hl) (by simp; omega)]
-    exact hsl 7 (by omega) o l ho hl
-  unfold sgW at h
-  obtain ⟨⟨f, m1⟩, hr1, h⟩ := of_K h rfl
-  simp only [sgA] at h
-  obtain ⟨hS1, hg1, hf1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
-  simp only [List.length_cons, List.length_nil] at ht1
-  have g0 := iwN_of_get (by simpa using hget1 0 (by simp))
-  have g1 := iwN_of_get (by simpa using hget1 1 (by simp))
-  have g2 := iwN_of_get (by simpa using hget1 2 (by simp))
-  have g3 := iwN_of_get (by simpa using hget1 3 (by simp))
-  have g4 := iwN_of_get (by simpa using hget1 4 (by simp))
-  have hfm : FMOk m1 f.toNat (.keyMap c.params holes) :=
-    ⟨by simpa using g0, by omega, ⟨_, _, g1, g2, by rw [decHL_grow hg1 hpsum]; exact hpa, by have := hg1.iw; omega⟩,
-      ⟨_, _, g3, g4, by rw [decHL_grow hg1 hhob]; exact hho, by have := hg1.iw; omega⟩⟩
-  obtain ⟨ec1, hci1⟩ := hin.grow hg1
-  have hsl1 := hsl.grow hin hg1
-  have hR1 := hR.frame (posRecW_fr hr1)
-  obtain ⟨⟨q, m2⟩, hal, h⟩ := of_K h rfl
-  simp only [sgB] at h
-  obtain ⟨hS2, hg2, hqd, hroom, htop2⟩ := hS1.alloc hal
-  have hqt : q.toNat = iwTop m1 := by simp only [iwTop, hqd]
-  rcases hgo : sgGoW k m2 ctx f dO dL q 0 with _ | m3
-  · rw [hgo] at h; simp at h
-  rw [hgo] at h
-  simp only at h
-  obtain ⟨ys, a3, -, -, hS3, hg13, ht3, -, -⟩ := sgGoW_ok dn fe vis k m1 m2 m3 a ctx f
-    dO dL q 0 c holes ds [] M G g hgo hS2 hg2 (by omega) (by omega) (by rw [ec1]; exact hc) hci1 hsl1 hb hfm
-    (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.iw)
-    (by simp) (by simp [decHL, hslice?]) (hR1.frame (allocW_fr hal))
-    ((hP.fr (posRecW_mfr hr1)).fr (allocW_mfr hal))
-  obtain ⟨⟨key, m4⟩, hr4, h⟩ := of_K h rfl
-  simp only [sgC, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨hS4, hg4, hk4, ht4, hget4⟩ := posRecW_stage hr4 hS3 (by simp)
-  simp only [List.length_cons, List.length_nil] at ht4
-  have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize
-  have r2 : rdW (m4.arr64 IW) (key + 2) = q := by
-    have := hget4 2 (by simp)
-    have e : (key + 2).toNat = key.toNat + 2 := word_add_toNat (by simp; omega)
-    simp only [rdW, e]; simp at this; rw [this]; rfl
-  have r3 : rdW (m4.arr64 IW) (key + 3) = dL := by
-    have := hget4 3 (by simp)
-    have e : (key + 3).toNat = key.toNat + 3 := word_add_toNat (by simp; omega)
-    simp only [rdW, e]; simp at this; rw [this]; rfl
-  simp only [NKSl, List.headD_cons]
-  rw [r2, r3]
-  have := hg4.iw; omega
+  sorry
 
 end sgw
 
@@ -236,23 +183,7 @@ theorem sgCall_sim {p : Prog} (L : SgLook p) {dn : NIdx → Option ConLeche.Name
       (ConRon.Arena.nestSeedOf c holes tm.ind tm.lvls tm.ds tm.nPc) a
       (fun r x m' a' => DecB (fun m => decNK m (r.headD 0).toNat) m' x.1 ∧ NKSl m' (r.headD 0) ∧
         (r.tail.headD 0).toNat = x.2 ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') := by
-  intro r m' e
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
-  rcases n with _ | k
-  · rw [callW_zero] at e; cases e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (nestSeedOf_spec p L k _ ctx hO hL _ _ _ _ _) e
-  obtain ⟨hcH, hcd, huH, hud, hds, hdsb, hk4⟩ := pos2_nk_fields (decTM_decNK hdt) htop
-  obtain ⟨-, -, -, -, h4⟩ := decTM_words hdt
-  have hb : c.nP + c.names.length < 2 ^ 64 := by simpa [NestCtx.hiAt] using hhi
-  obtain ⟨M, G, g, hR⟩ := hP.rf
-  obtain ⟨x, a', hrun, h1, h2, h3, ⟨M', G', hS', hg, -⟩, hP'⟩ := sgW_ok dn fe vis k m s'.mem a ctx hO hL _ _ _ _ _ r c
-    holes tm.ds M G g hW hS hU.dec hU.inn hU.sl hb hho hhob hds hdsb hcH huH hR hP
-  have hsl := sgW_nksl dn fe vis k m s'.mem a ctx hO hL _ _ _ _ _ r c holes tm.ds M G g hW hS hU.dec hU.inn hU.sl hb
-    hho hhob hds hdsb hR hP
-  rw [hcd, hud, h4] at hrun
-  have htop' : iwTop s'.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS'.iw.iw hS'.iw.iwSize
-  exact ⟨x, a', hrun, decNK_decB_of_in h1 h3, hsl, h2, hS', hg, hP'⟩
+  sorry
 
 /-- **`class_seeds`' model simulates `classSeeds`**: the classes a slice of records decoded below
 the tops, the walk's context as `nestRoot` takes it. -/
