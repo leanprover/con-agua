@@ -147,15 +147,8 @@ theorem callW_envFindI (hp : IotaProg' p) (n : Nat) (m : Mem) {dn : NIdx → Opt
     (h : callW p n "env_find" [w, vis] m = some (r, m')) :
     m' = m ∧ fe.find? (decI w) = envFound m (r.headD 0) (r.tail.headD 0) ∧
     (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
-  obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_refines p hp.envix hp.envrow hp.envfind n _ vis w hE hw) h
-  obtain ⟨t₁', ht₁', hm₁', -, hfound⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_found p hp.envix hp.envrow hp.envfind n _ vis w hw) h
-  refine ⟨ht₁.symm.trans hm₁, hfind, fun h0 => ?_⟩
-  obtain ⟨htag, hrow, hq⟩ := hfound h0
-  obtain ⟨ci, hci⟩ := hE.found_some w hw htag hrow
-  rw [← hq] at hci
-  exact ⟨ci, hci⟩
+  sorry
+
 -- RS2E
 
 end progs

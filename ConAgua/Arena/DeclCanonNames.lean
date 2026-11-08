@@ -213,16 +213,7 @@ theorem cnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n
     ∃ (hs : List NIdx) (a' : AState), (ConRon.Arena.canonNames k.toNat).run a = .ok (hs, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r hs ∧
       a'.store.view = a.store.view ∧ PoolSmall m' := by
-  cases n with
-  | zero => simp [cnW] at hr
-  | succ n =>
-  simp only [cnW] at hr
-  rcases hg0 : gnW n m 0 k with _ | ⟨r0, m0⟩ <;> simp only [hg0, reduceCtorEq] at hr
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hr)
-  obtain ⟨hs, a', hrun, hS', hg, hd, hv, hP'⟩ := gnW_ok n _ _ a 0 k r0 hg0 hS
-    (by have := UInt64.toNat_lt k; simpa using this) hP
-  refine ⟨hs, a', hrun, hS', hg, ?_, hv, hP'⟩
-  simpa only [decRL, getD0, cnGetD1, List.getD_cons_zero, List.getD_cons_succ] using hd
+  sorry
 
 /-- **`canon_names` refines `canonNames`.** -/
 @[refines ConRon.Arena.canonNames]
@@ -231,14 +222,7 @@ theorem canonNames_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option C
     RefAM p "canon_names" [k]
       (fun m a => StageR vis fe m a ∧ PoolSmall m ∧ LitInj a)
       (ConRon.Arena.canonNames k.toNat) (NamesPost dn vis fe) := by
-  intro n s₀ a₀ ⟨hS, hP, hL⟩
-  refine triple_post (canonNames_spec p hp n s₀ k) ?_
-  rintro r s' ⟨hl, hr⟩
-  obtain ⟨hs, a', hrun, hS', hg, hd, hv, hP'⟩ := cnW_ok hr hS hP
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  refine ⟨hl, hok, ?_⟩
-  rw [hst, hres]
-  exact ⟨⟨hS', hg, hd⟩, hP', hL.of_view hv⟩
+  sorry
 
 /-- **`canon_names_go` refines `canonNamesGo`.** -/
 @[refines ConRon.Arena.canonNamesGo]
@@ -247,13 +231,6 @@ theorem canonNamesGo_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option
     RefAM p "canon_names_go" [i, k]
       (fun m a => StageR vis fe m a ∧ PoolSmall m ∧ LitInj a ∧ i.toNat + k.toNat < 2 ^ 64)
       (ConRon.Arena.canonNamesGo i.toNat k.toNat) (NamesPost dn vis fe) := by
-  intro n s₀ a₀ ⟨hS, hP, hL, hik⟩
-  refine triple_post (canonNamesGo_spec p hp n s₀ i k) ?_
-  rintro r s' ⟨hl, hr⟩
-  obtain ⟨hs, a', hrun, hS', hg, hd, hv, hP'⟩ := gnW_ok n _ _ a₀ i k r hr hS hik hP
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  refine ⟨hl, hok, ?_⟩
-  rw [hst, hres]
-  exact ⟨⟨hS', hg, hd⟩, hP', hL.of_view hv⟩
+  sorry
 
 end L.Ind

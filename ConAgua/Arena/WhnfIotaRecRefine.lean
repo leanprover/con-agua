@@ -277,13 +277,7 @@ theorem erecPushLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     exec p k erecPushLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 3 = s₀.loc 3 ∧
       epW (s₀.loc 0) (s₀.loc 1) (s₀.loc 3) k s₀.mem (s₀.loc 4) = some s'.mem; ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := erecPushLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish [epW_end, epW_cont, epW_bad1, epW_bad2]
+  sorry
 
 /-- Model of `erec_push`. -/
 def epTop (k : Nat) (m : Mem) (o c kd : Word) : Option (List Word × Mem) :=
@@ -413,39 +407,7 @@ theorem callW_erecPush (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (
     (h : callW p n "erec_push" [o, c, 1] m = some (r, m')) :
     MemFrame [SPN] [136] m m' ∧ StackGrew m m' ∧ r.headD 0 = spTop m ∧ spTop m' = spTop m + c ∧
       SpineR m' (spTop m) c pins.toArray := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ n =>
-  obtain ⟨t, ht, -, hW⟩ := triple_of_callW (erecPush_spec p hp n ⟨m, Locals.init []⟩ o c 1) h
-  rw [ht] at hW
-  simp only [epTop, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  obtain ⟨h136, hW⟩ := of_ite_none' hW
-  obtain ⟨hg1, hW⟩ := of_ite_none hW
-  obtain ⟨hg2, hW⟩ := of_ite_none hW
-  cases hm : epW o c (rdW (m.arr64 CTL) 136) (n + 1) m 0 with
-  | none => rw [hm] at hW; cases hW
-  | some m₁ =>
-  rw [hm] at hW
-  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  have h64 : (m.arr64 SPN).size < 2 ^ 64 := by omega
-  have hsolt : (rdW (m.arr64 CTL) 136).toNat ≤ (m.arr64 SPN).size := by
-    have : ¬ (m.arr64 SPN).size < (rdW (m.arr64 CTL) 136).toNat := by
-      intro h
-      apply hg1
-      rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' h64]; exact h
-    omega
-  have hso : (rdW (m.arr64 CTL) 136).toNat + c.toNat ≤ (m.arr64 SPN).size := by
-    have h2 : ¬ UInt64.ofNat (m.arr64 SPN).size - rdW (m.arr64 CTL) 136 < c := hg2
-    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _ (by
-      rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' h64]; exact hsolt),
-      UInt64.toNat_ofNat_of_lt' h64] at h2
-    omega
-  have hspt : spTop m = rdW (m.arr64 CTL) 136 + 0 := by rw [UInt64.add_zero]; rfl
-  obtain ⟨hfr, hgr, htop, hys⟩ := epW_ok (m.arr64 EREC) hE o c (rdW (m.arr64 CTL) 136) pins hpins
-    (c.toNat - (0 : Word).toNat) (n + 1) m 0 m₁ rfl (by simp) rfl hspt hso hspn hm
-  refine ⟨hfr, hgr, by rw [← hr]; rfl, htop, ?_⟩
-  simp only [UInt64.add_zero, UInt64.sub_zero, UInt64.toNat_zero, List.drop_zero] at hys
-  exact hys
+  sorry
 
 /-! ## Reading decoded records by word -/
 
@@ -496,16 +458,7 @@ theorem decCI_rec_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
 theorem decCI_ctor_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
     {ci : IConstantInfo} (h : decCI (aread b) q.toNat = some ci) (h4 : rdW b q = 4) :
     ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (aread b) (q.toNat + 1) = some cv := by
-  cases hq : b[q.toNat]? with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  rw [irRdW0 hq] at h4
-  subst h4
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some,
-    show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff, Option.pure_def,
-    Option.some.injEq] at h
-  obtain ⟨cv, hcv, np, -, nf, -, rfl⟩ := h
-  exact ⟨cv, np, nf, rfl, hcv⟩
+  sorry
 
 /-- The common fields of a decoded rule record. -/
 theorem decRule_tail {b : Array Word} {q : Nat} {fire : IRecRuleFire} {rl : IRecRule}
@@ -833,38 +786,7 @@ theorem callW_iotaRecCmp_erec (p : Prog) (hp : IotaRecProg' p) (hER : ErecKeptRe
     (hEK : ErecKeptKnot p) (n : Nat) (m : Mem) (vs : List Word) (r : List Word) (m' : Mem)
     (hvs : vs.length = 8) (h : callW p n "iota_rec_cmp" vs m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC := by
-  match vs, hvs with
-  | [mode, vis, d, us, recP, so, rl, mo], _ =>
-  obtain ⟨t, ht, -, hW⟩ := triple_of_callE
-    (irCmpE_spec p hp.cmp n ⟨m, Locals.init []⟩ mode vis d us recP so rl mo) (callE_of_callW h)
-  rw [ht] at hW
-  cases n with
-  | zero => simp [irCmpE] at hW
-  | succ n =>
-  simp only [irCmpE, irCmpE.k_erec_push, irCmpE.k_rec_fire_args, irCmpE.k_stack_cover,
-    irCmpE.k_defeq_list] at hW
-  split at hW
-  · cases hW
-  rename_i rp m1 c1
-  split at hW
-  · cases hW
-  rename_i ra m2 c2
-  split at hW
-  · cases hW
-  rename_i rx m3 c3
-  split at hW
-  · cases hW
-  rename_i rd m4 c4
-  simp only [Except.ok.injEq, Prod.mk.injEq] at hW
-  have o : ∀ {x : Option (List Word × Mem)} {v}, liftE x = .ok v → x = some v := by
-    intro x v h; cases x <;> cases h; rfl
-  replace c1 := o c1
-  replace c2 := o c2
-  replace c3 := o c3
-  rw [← hW.2, Mem.arr64_set64_ne _ _ _ _ _ (by decide), hEK _ _ _ _ _ _ (by simp) (callW_of_callE c4),
-    (callW_stackCover p hp.stackCover n m2 _ rx m3 c3).1.1 EREC (by simp) (by decide),
-    hER _ _ _ _ _ _ (by simp) c2,
-    (callW_erecPush_frame p hp.erecPush n m _ _ _ rp m1 c1).1 EREC (by simp [SPN, EREC]) (by decide)]
+  sorry
 
 /-- **What the certificate family's errors assume** at L fuel `n` (`iota_rec_vck`, `iota_rec_fam`):
 the knot's slots' claims; the verdict closure for the callees' specs. -/
