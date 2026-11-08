@@ -26,6 +26,7 @@ section census
 variable (p : Prog) (L : RxLook p)
 include L
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`replace_fvars` refines `replaceFVars`** (through the `mk_app_n` stub of the hole images): one
 memoised walk in a fresh bank of the banked memo, the caller's banks untouched (the outermost
 call, at generation `0`, clears the memo). -/
@@ -42,7 +43,9 @@ theorem replaceFVars_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
   obtain ⟨a', hrun, hH, hpost⟩ := (rxOK_all dn fe vis n).2.2.2.2.2.2 _ _ a₀ f e fm _ M G g hm hS hfm he hR
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres], hH, by rw [hst]; exact hpost⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`replace_fvars_go` (with `replace_fvars_node`) refines `replaceFVarsGo`**, from a memo whose
 current bank is the twin's (inside a bank: generation `g ≠ 0`). -/
 @[refines ConRon.Arena.replaceFVarsGo]
@@ -62,7 +65,9 @@ theorem replaceFVarsGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
     (rxOK_all dn fe vis n).2.2.2.2.2.1 _ _ a₀ f fu h fm mp _ M G g hm hS hfm hh hR hb hg0
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres], by rw [hst, hres]; exact ⟨M', G', h1, h2, h3, h4, h5, h6⟩⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`fv_map_at` refines `fvMapAt`** (the four maps; the hole images through `mk_app_n`'s stub). -/
 @[refines ConRon.Arena.fvMapAt]
 theorem fvMapAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
@@ -77,7 +82,9 @@ theorem fvMapAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Opt
   obtain ⟨x, a', hrun, hout, hpost⟩ := (rxOK_all dn fe vis n).1 _ _ a₀ f i fm _ _ M G g hm hS hfm hR
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hout, by rw [hst]; exact hpost⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_hole_img` (with its root, frame and `ds` helpers) refines `nestHoleImg`**. -/
 @[refines ConRon.Arena.nestHoleImg]
 theorem nestHoleImg_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
@@ -96,6 +103,7 @@ theorem nestHoleImg_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx →
     hin hs hb hR
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hout, by rw [hst]; exact hpost⟩
+-/
 
 end census
 
