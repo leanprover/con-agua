@@ -238,8 +238,8 @@ theorem CoreMemos.zero {m : Mem} (hsz : 158 ≤ (m.arr64 CTL).size)
 /-- **The declaration loop's relation with the core's invariants**: `LoopR`, the twin's invariants
 `TwinOK` at the loop's environment, and the pin table's flag. -/
 structure LoopT (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState)
-    (vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (ds : Array IDeclaration) : Prop where
-  loop : LoopR pins dn m a vis fe pend ds
+    (vis : Word) (fe : IFEnv) (ds : Array IDeclaration) : Prop where
+  loop : LoopR pins m a vis fe ds
   twin : TwinOK dn m a fe
   flag : pinW m 0 ≠ 0
   /-- The inductive stage's per-call memos (lane `indproofs3`'s request). -/
@@ -249,7 +249,7 @@ structure LoopT (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) 
 
 section rel
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
-  {vis : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
+  {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
 
 /-- **`LoopT` is the stage relation with the twin's invariants** (every `StageT` theorem applies). -/
 theorem LoopT.stageT (h : LoopT pins dn m a vis fe pend ds) : StageT dn vis fe m a :=
@@ -411,7 +411,7 @@ end bracket
 
 /-- **Pushing a pending check keeps `LoopT`.** -/
 theorem LoopT.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
-    {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
+    {a : AState} {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
     (h : LoopT pins dn m a vis fe pend ds) (g i v : Word) (vg : ValueGroup)
     (hg : decVG (erecP m) g.toNat = some vg)
     (hb : 3 * (rdW (m.arr64 CTL) 130).toNat + 2 < (m.arr64 PEND).size)
@@ -445,7 +445,7 @@ theorem TwinOK.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
 
 /-- **`LoopT` at a smaller view.** -/
 theorem LoopT.restrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
-    {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
+    {a : AState} {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
     (h : LoopT pins dn m a vis fe pend ds) (v : Word) (hv : v.toNat ≤ vis.toNat) :
     LoopT pins dn m a v (fe.restrictTo v.toNat) pend ds :=
   ⟨h.loop.restrict v, h.twin.restrict (by rw [h.loop.vis]; exact hv), h.flag, h.memo, h.cr⟩
@@ -480,7 +480,7 @@ theorem coreLoopC_200 : (200 : Word) ∉ coreLoopC := by simp [coreLoopC]
 /-- **After a core call**: the core's own post (`CoreS` after) and its write set give `LoopT` after
 (the same view, environment, pending checks and records), the pools unchanged. -/
 theorem LoopT.of_core {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration} {p : Prog}
+    {fe : IFEnv} {ds : Array IDeclaration} {p : Prog}
     (hcl : CoreLoopClosed p) {f : FnName} (hf : f ∈ stageCoreFns) {n : Nat} {vs : List Word}
     {m m' : Mem} {r : List Word} {a a' : AState} {M : ModeMaps}
     (h : callW p n f vs m = some (r, m')) (hL : LoopT pins dn m a vis fe pend ds)
@@ -506,7 +506,7 @@ theorem LoopT.of_core {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.
 /-- **A core entry point's refinement as a `Sim` under `LoopT`** (the loop-level twin of
 `StageT.sim_core`). -/
 theorem LoopT.sim_core {α : Type} [Inhabited α] {pins : List INatOpPinSet}
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {ds : Array IDeclaration} {p : Prog} (hcl : CoreLoopClosed p) {f : FnName}
     (hf : f ∈ stageCoreFns) {n : Nat} {args : List Word} {T : AM α} {dec : List Word → α}
     {m : Mem} {a : AState} (hL : LoopT pins dn m a vis fe pend ds)
@@ -527,7 +527,7 @@ section entryL
 variable (p : Prog) (hp : KnotEntryProg p) (hw : p.lookup "whnf_top" = some whnfTopL)
   (hK : ∀ n, KnotOK p n) (hcl : CoreLoopClosed p)
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-  {pend : Array PendingCheck} {ds : Array IDeclaration}
+  {ds : Array IDeclaration}
 
 end entryL
 

@@ -40,7 +40,7 @@ open ConRon.Arena
 
 section cut
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
-  {fe : IFEnv} {pend : Array PendingCheck} {a : AState} {v : Word}
+  {fe : IFEnv} {a : AState} {v : Word}
 
 /-- **No relation reads a `CTL` word from 256 on**: cutting `CTL` to its seed keeps
 `PhaseBStart`. -/
@@ -367,12 +367,12 @@ theorem IWOK.fresh (h : L.Ind.IWOK (cutT m)) : L.Ind.IWOK (freshMem m) := by
 
 section loop
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
-  {fe : IFEnv} {pend : Array PendingCheck} {a : AState} {v : Word}
+  {fe : IFEnv} {a : AState} {v : Word}
 
 theorem LoopR.fresh (hd : a.store.dropScratch = a.store) (hc : a.caches = Caches.empty)
     (htop : (cutT m).top.toNat < 2 ^ 40) (hk : EnvKeysIn (cutT m) fe)
-    (h : LoopR pins dn (cutT m) a v fe pend ds) :
-    LoopR pins dn (freshMem m) { a with memos := Memos.empty } v fe pend ds := by
+    (h : LoopR pins (cutT m) a v fe ds) :
+    LoopR pins (freshMem m) { a with memos := Memos.empty } v fe ds := by
   have hf := fresh_frame m
   have he : erecP (freshMem m) = erecP (cutT m) :=
     erecP_congr (fresh_keep m (by decide)) (by rw [fresh_ctl])
@@ -437,7 +437,7 @@ theorem worker_eq {a : AState} (hd : a.store.dropScratch = a.store) (hc : a.cach
 
 section main
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
-  {fe : IFEnv} {pend : Array PendingCheck} {a : AState} {v : Word}
+  {fe : IFEnv} {a : AState} {v : Word}
 
 /-- **Step 3**: zeroing `freshZ` after the cut, at the state with fresh walk memos. -/
 theorem PhaseBStart.zeroed (hd : a.store.dropScratch = a.store) (hc : a.caches = Caches.empty)

@@ -29,9 +29,9 @@ open ConRon.Arena
 /-- **What phase A leaves for phase B** at the twin's phase-A state `a`, the environment `fe`, the
 pending groups `pend` and the final view `v`. -/
 structure PhaseBStart (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
-    (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck) (m : Mem) (a : AState)
+    (ds : Array IDeclaration) (fe : IFEnv) (m : Mem) (a : AState)
     (v : Word) : Prop where
-  loop : LoopR pins dn m a v fe pend ds
+  loop : LoopR pins m a v fe ds
   mem : LoopMem dn m a
   core : CoreMemos m
   twin : TwinPend fe pend.toList a

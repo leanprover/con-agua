@@ -91,7 +91,7 @@ theorem PinSetsR.trunc {m : Mem} {ips : List INatOpPinSet} (h : L.Rom.PinSetsR m
 
 /-! ## The pending checks -/
 
-theorem PendR.trunc {m : Mem} {pend : Array PendingCheck}
+theorem PendR.trunc {m : Mem}
     (h : PendR m pend) : PendR (truncFrozen m) pend := by
   have hp : 3 * pendCount m < 2 ^ 64 := by have := h.bound; omega
   have hc := truncFrozen_ctl m
@@ -305,9 +305,9 @@ theorem CheckR.trunc {dn : NIdx → Option ConLeche.Name} {a : AState} {vis : Wo
     h.env.trunc (nmCnt_le h.arena.base) hk, h.mode.trunc⟩
 
 theorem LoopR.trunc {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {a : AState}
-    {vis : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
-    (hk : EnvKeysIn m fe) (h : LoopR pins dn m a vis fe pend ds) :
-    LoopR pins dn (truncFrozen m) a vis fe pend ds :=
+    {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
+    (hk : EnvKeysIn m fe) (h : LoopR pins m a vis fe ds) :
+    LoopR pins (truncFrozen m) a vis fe ds :=
   ⟨h.check.trunc htop hk, h.pend.trunc, (keepNF_trunc m).declsF h.decls, IWOK.trunc h.iw,
     let ⟨pm, hm⟩ := h.pmemo; ⟨pm, (keepNF_trunc m).pmemoR hm⟩, PinSetsR.trunc h.pinsets⟩
 
@@ -340,7 +340,7 @@ theorem top_tier0_of {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
 /-- **The truncation theorem**: what phase A leaves for phase B survives cutting every frozen
 array to its extent. -/
 theorem PhaseBStart.trunc {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
-    {ds : Array IDeclaration} {fe : IFEnv} {pend : Array PendingCheck} {m : Mem} {a : AState}
+    {ds : Array IDeclaration} {fe : IFEnv} {m : Mem} {a : AState}
     {v : Word} (hk : EnvKeysIn m fe) (h : PhaseBStart pins dn ds fe pend m a v) :
     PhaseBStart pins dn ds fe pend (truncFrozen m) a v :=
   have htop := top_tier0_of h.loop.check h.twin.off
@@ -459,14 +459,14 @@ theorem envKeysIn_of {m : Mem} {a : AState} {fe : IFEnv} {pend : List PendingChe
 
 /-- **The truncation theorem, without hypotheses** (the environment's discharged). -/
 theorem PhaseBStart.trunc' {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
-    {ds : Array IDeclaration} {fe : IFEnv} {pend : Array PendingCheck} {m : Mem} {a : AState}
+    {ds : Array IDeclaration} {fe : IFEnv} {m : Mem} {a : AState}
     {v : Word} (h : PhaseBStart pins dn ds fe pend m a v) :
     PhaseBStart pins dn ds fe pend (truncFrozen m) a v :=
   h.trunc (envKeysIn_of h.loop.check.arena.base h.twin)
 
 /-- `PhaseBStart.trunc'` (the name the lane asked for). -/
 theorem PhaseBStart.trunc'' {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
-    {ds : Array IDeclaration} {fe : IFEnv} {pend : Array PendingCheck} {m : Mem} {a : AState}
+    {ds : Array IDeclaration} {fe : IFEnv} {m : Mem} {a : AState}
     {v : Word} (h : PhaseBStart pins dn ds fe pend m a v) :
     PhaseBStart pins dn ds fe pend (truncFrozen m) a v :=
   h.trunc'

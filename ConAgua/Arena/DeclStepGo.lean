@@ -192,8 +192,8 @@ theorem stepC_200 : (200 : Word) ∈ stepC := by decide +kernel
 
 /-- **`iw_reset` keeps the loop's relation.** -/
 theorem LoopR.reset {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
-    (h : LoopR pins dn m a vis fe pend ds) : LoopR pins dn (m.set64 CTL 200 0) a vis fe pend ds := by
+    {fe : IFEnv} {ds : Array IDeclaration}
+    (h : LoopR pins m a vis fe ds) : LoopR pins (m.set64 CTL 200 0) a vis fe ds := by
   have hf : MemFrame stepA stepC m (m.set64 CTL 200 0) :=
     (MemFrame.setCtl m 200 0).mono (by simp) (by simpa using stepC_200)
   refine h.of_step (iwReset_stage ⟨h.check, h.iw⟩).1 hf ?_

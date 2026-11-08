@@ -48,13 +48,13 @@ theorem checkPendingList_worker_fails {mode : ConLeche.CheckMode} {fe : IFEnv}
 
 section phaseB
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
-  (ds : Array IDeclaration) (p : Prog) (fe : IFEnv) (pend : Array PendingCheck)
+  (ds : Array IDeclaration) (p : Prog) (fe : IFEnv)
 
 /-- `check_pending_go`'s error claim at fuel `n` (the hypotheses of `CPGoSpecT`). -/
 def CPGoSpecE (n : Nat) : Prop :=
   ∀ (m : Mem) (a₀ : AState) (j cnt vis : Word), j.toNat ≤ pend.size → cnt.toNat = pend.size →
     TwinPend fe (pend.toList.drop j.toNat) a₀ →
-    LoopR pins dn m a₀ vis fe pend ds → LoopMem dn m a₀ → CoreMemos m → L.Stubs.CrOK m →
+    LoopR pins m a₀ vis fe ds → LoopMem dn m a₀ → CoreMemos m → L.Stubs.CrOK m →
     ∀ e, callE p n "check_pending_go" [j, cnt, vis] m = .error e →
       ErrClaimV (checkPendingList mode fe (pend.toList.drop j.toNat)) a₀ e
 

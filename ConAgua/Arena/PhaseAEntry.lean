@@ -47,7 +47,7 @@ theorem installFoldGo_phaseA (mode : ConLeche.CheckMode) (pins : List INatOpPinS
     (hR : LoopR pins dn s₀.mem a₀ 0 (mkIFEnv IEnv.empty) #[] ds)
     (hM : LoopMem dn s₀.mem a₀) (hc : CoreMemos s₀.mem) (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_fold_go" [0, cnt, 0]
-    ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (pend : Array PendingCheck) (a' : AState),
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (a' : AState),
       installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList a₀ = .ok (.ok (ds.size, fe, pend), a') ∧
       PhaseBStart pins dn ds fe pend s'.mem a' (r.headD 0); ⊤⦄ := by
   have hsz : ds.size < 2 ^ 63 := by have := hR.decls.dsize; have := hR.decls.room; omega
@@ -77,7 +77,7 @@ theorem installFoldGo_start {p : Prog} {pins : List INatOpPinSet} {ds : Array ID
     (hE : (s₀.mem.arr64 EREC).size < 2 ^ 63) (hS : (s₀.mem.arr64 SPN).size < 2 ^ 63)
     (hB : (s₀.mem.arr64 BSTK).size < 2 ^ 63) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_fold_go" [0, cnt, 0]
-    ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (pend : Array PendingCheck) (a' : AState),
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (a' : AState),
       installFold .verified pins (0, mkIFEnv IEnv.empty, #[]) ds.toList a = .ok (.ok (ds.size, fe, pend), a') ∧
       PhaseBStart pins (dnOf a.store) ds fe pend s'.mem a' (r.headD 0); ⊤⦄ := by
   obtain ⟨hR, hM, hc, hIM⟩ := loop_start (pins := pins) hA hcore hpf hD hPS hiw hz hpin hE hS hB hmode
@@ -87,15 +87,15 @@ theorem installFoldGo_start {p : Prog} {pins : List INatOpPinSet} {ds : Array ID
 
 /-- The number of records at the loop's start is `DECL[0]` (`DeclsF`). -/
 theorem declCount_eq {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
-    {a : AState} {v : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
-    (hR : LoopR pins dn m a v fe pend ds) (h : 0 < (m.arr64 DECL).size) :
+    {a : AState} {v : Word} {fe : IFEnv} {ds : Array IDeclaration}
+    (hR : LoopR pins m a v fe ds) (h : 0 < (m.arr64 DECL).size) :
     ((m.arr64 DECL)[0]).toNat = ds.size := by
   have := hR.decls.count; simpa [h] using this
 
 /-- The number of pending groups is `CTL[130]` (`PendR`). -/
 theorem pendCount_eq {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
-    {a : AState} {v : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
-    (hR : LoopR pins dn m a v fe pend ds) (h : 130 < (m.arr64 CTL).size) :
+    {a : AState} {v : Word} {fe : IFEnv} {ds : Array IDeclaration}
+    (hR : LoopR pins m a v fe ds) (h : 130 < (m.arr64 CTL).size) :
     ((m.arr64 CTL)[130]).toNat = pend.size := by
   have := hR.pend.count; simp only [pendCount] at this
   rwa [rdW_eq _ _ 130 rfl h] at this

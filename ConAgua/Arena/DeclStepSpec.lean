@@ -45,7 +45,7 @@ theorem IWGrow.erecPExt {m m' : Mem} (h : L.Ind.IWGrow m m') : ArrExt (erecP m) 
 
 /-- **The pending checks across a step's callee**: `PEND` and its count unchanged, the records
 only extended. -/
-theorem PendR.ext {m m' : Mem} {pend : Array PendingCheck} (hP : m'.arr64 PEND = m.arr64 PEND)
+theorem PendR.ext {m m' : Mem} (hP : m'.arr64 PEND = m.arr64 PEND)
     (hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130) (hx : ArrExt (erecP m) (erecP m'))
     (h : PendR m pend) : PendR m' pend := by
   refine ⟨by simp only [pendCount, hc]; exact h.count, fun j hj => ?_,
@@ -75,9 +75,9 @@ theorem step_pmemo : (∀ b ∈ stepA, b.arr < 146 ∨ 149 < b.arr) ∧
     rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)]; exact hr
 
 theorem LoopR.of_step {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis vis' : Word} {fe fe' : IFEnv}
-    {pend : Array PendingCheck} {ds : Array IDeclaration} (h : LoopR pins dn m a vis fe pend ds)
+    {ds : Array IDeclaration} (h : LoopR pins m a vis fe ds)
     (hS : L.Ind.StageR vis' fe' m' a') (hf : MemFrame stepA stepC m m')
-    (hx : ArrExt (erecP m) (erecP m')) : LoopR pins dn m' a' vis' fe' pend ds := by
+    (hx : ArrExt (erecP m) (erecP m')) : LoopR pins m' a' vis' fe' ds := by
   have hP : m'.arr64 PEND = m.arr64 PEND := hf.arr _ step_keeps.1 (by decide)
   have hD1 : m'.arr64 DECL = m.arr64 DECL := hf.arr _ step_keeps.2.1 (by decide)
   have hD2 : m'.arr64 DLP = m.arr64 DLP := hf.arr _ step_keeps.2.2.1 (by decide)
