@@ -44,12 +44,15 @@ namespace L.Arena
 
 open ConRon.Bridge (ListRel)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem listRel_drop {α β : Type} {R : α → β → Prop} :
     ∀ (k : Nat) {xs : List α} {ys : List β}, ListRel R xs ys → ListRel R (xs.drop k) (ys.drop k)
   | 0, _, _, h => h
   | _ + 1, _, _, .nil => .nil
   | k + 1, _, _, .cons _ hr => listRel_drop k hr
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `TwinPend` over the groups from `k` on. -/
 theorem TwinPend.drop {fe : IFEnv} {l : List PendingCheck} {a : AState} (h : TwinPend fe l a)
     (k : Nat) : TwinPend fe (l.drop k) a := by
@@ -57,7 +60,9 @@ theorem TwinPend.drop {fe : IFEnv} {l : List PendingCheck} {a : AState} (h : Twi
   exact ⟨⟨env, pendP.drop k, hok, hnd, listRel_drop k hrel⟩,
     fun hne => h.caches fun e => hne (by simp [e]), h.off,
     fun hne => h.dropped fun e => hne (by simp [e])⟩
+-/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section one
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog) (fe : IFEnv) (pend : Array PendingCheck)
@@ -142,6 +147,7 @@ theorem PhaseBStart.oneE (hP : PhaseBProg p)
             cases hW
 
 end one
+-/
 
 end L.Arena
 
@@ -149,6 +155,7 @@ namespace L.Checker
 
 open L L.Arena L.Rom
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section thread
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck) (bs : List UInt8)
@@ -331,6 +338,7 @@ theorem thrCall_nextE (hP : PhaseBProg (Prog.subPB bs checkerProg))
   rw [hs]; exact ThreadRel.next B j hR hfz
 
 end thread
+-/
 
 /-! ## A thread's calls, the last one failing -/
 
@@ -343,6 +351,7 @@ def ThreadFails (B : Array Word) (j : Word) (n : Nat) (e : Err) : Mem → List (
       (∃ rs, L.run checkerProg n' "check" [] (bufMem B r j') = .ok (rs, r')) ∧ BufKept B r' ∧
       ThreadFails B j n e r' cs
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section chain
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck) (bs : List UInt8)
@@ -399,9 +408,11 @@ theorem thread_failsE (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode =
         hR' hI' hk' hrest (fun c hc => hcs c (List.mem_cons_of_mem _ hc)))
 
 end chain
+-/
 
 /-! ## With entry 1 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_pending`'s error claim at the programs phase B runs** (the hypothesis
 `entry2Verdict_of` takes): under the program facts `drv_twinAccepts` has. -/
 def CPVerdict : Prop :=
@@ -409,6 +420,7 @@ def CPVerdict : Prop :=
     bs = romData ++ bs.drop romData.length → L.Ind.DnInj dn → QuotDn dn →
     PhaseBProg (Prog.subPB bs checkerProg) → ∀ pins ds fe pend,
     CPErrT .verified pins dn ds (Prog.subPB bs checkerProg) fe pend
+-/
 
 open ConAgua.Final in
 /-- **A thread's failing call is the twin pool's failure.** Entry 1 (`check` with the mode word
@@ -430,51 +442,6 @@ theorem threads_twinVerdictPooled (hCP : CPVerdict)
     (hcs : ∀ c ∈ cs, c.1 < rs₁.headD 0 - 9223372036854775808)
     (hj : j < rs₁.headD 0 - 9223372036854775808) (hk0 : e.cls ≠ 0) :
     TwinVerdictPooled [b] e.cls := by
-  have hr' : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
-  obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ :=
-    checkA_run b pb sz hin 1 (Or.inl rfl) N₁ hN₁ rs₁ m₁ h₁ hr'
-  have hflag : modeFlag 1 = 1 := rfl
-  rw [hflag] at hok hm₁
-  have hrom : RomOK pb.data.toList := by simpa [RomOK] using hin.2.2.1
-  have hT := twinFold_of_prefix PA.pfx
-  have hdn : L.Ind.DnInj (dnOf PA.sE.store) := dnOf_inj hT.stateOK.wf
-  have hQd : QuotDn (dnOf PA.sE.store) := by
-    obtain ⟨k, hk, hd⟩ := prefix_quotU PA.pfx
-    exact ⟨k, by simp [dnOf, hk, hd]⟩
-  have hLC := checkerProg_loopCalleesPB pb.data.toList hrom hpre (dnOf PA.sE.store) hdn
-    (indArmSpec_checker _ hrom hpre _ hdn) hQd
-  have hTop := checkerProg_loopTopPB pb.data.toList
-  have hPB' : PhaseBProg (Prog.subPB pb.data.toList checkerProg) :=
-    ⟨hTop.bracket, hLC.cvg, hLC.knot, hLC.leaf, hLC.loop, hTop.pc, hTop.pcg, hTop.pcx,
-      hLC.cd.crp.apd, ⟨hLC.indMemo, hLC.crf⟩⟩
-  have hF := parCompactMem_out m v 1
-  rw [← hm₁] at hF
-  have hlt : (m.arr64 OUT).size < 2 ^ 64 := by
-    rw [← hF.size OUT]; exact run_load_size hin.2.2.2 h₁ OUT
-  have hBm : B = bufOf m v := by
-    rw [hB, bufOf, hm₁, (parCompactMem_hdr hok).2.1]
-  have hk : (rs₁.headD 0 - 9223372036854775808).toNat = PA.pend.size := by
-    have hc := hS.loop.pend.count
-    have hlt' : PA.pend.size < 2 ^ 64 := by rw [← hc]; exact UInt64.toNat_lt_size _
-    have e : (9223372036854775808 : Word) + UInt64.ofNat PA.pend.size - 9223372036854775808 =
-        UInt64.ofNat PA.pend.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
-    rw [hres, e, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hlt')]
-  have hcs' : ∀ c ∈ cs, c.1.toNat < PA.pend.size := fun c hc => by
-    have := hcs c hc; rw [UInt64.lt_iff_toNat_lt, hk] at this; exact this
-  have hj' : j.toNat < PA.pend.size := by rw [UInt64.lt_iff_toNat_lt, hk] at hj; exact hj
-  have hz' : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m.arr64 b).size := fun b hb => by
-    rw [hz b hb, hF.size]
-  have hfail := thread_failsE .verified PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend pb.data.toList
-    hPB' rfl (hCP _ _ hrom hpre hdn hQd hPB' _ _ _ _) hS hPB hok hlt r₀ hz' hI j hj' n e hk0 cs
-    (hBm ▸ hruns) hcs'
-  have hsub : ∀ pc ∈ thrGroups PA.pend cs ++ [pdAt PA.pend j], pc ∈ PA.pend.toList := by
-    intro pc hpc
-    rcases List.mem_append.mp hpc with hpc | hpc
-    · obtain ⟨c, hc, rfl⟩ := List.mem_map.mp hpc
-      exact pdAt_mem PA.pend c.1 (hcs' c hc)
-    · rw [List.mem_singleton.mp hpc]; exact pdAt_mem PA.pend j hj'
-  obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
-  exact .inr ⟨PA.pins, PA.sA, PA.sB, PA.sC, PA.sD, PA.sE, PA.sF, PA.pre, PA.rc, PA.ds, PA.ipins, PA.k,
-    PA.fe, PA.pend, _, hA, hBp, hC, hD, hE, PA.fold, hsub, hfail⟩
+  sorry
 
 end L.Checker
