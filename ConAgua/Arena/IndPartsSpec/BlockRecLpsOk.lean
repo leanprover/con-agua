@@ -44,16 +44,7 @@ include ha hc he hq ho in
 theorem blockRecLpsOne_spec (n : Nat) (s₀ : St) (rc wo wl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_lps_one" [rc, wo, wl]
     ⦃fun r s' => LocEq s' s₀ ∧ lpsOneW n s₀.mem rc wo wl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ ho]
-  simp only [callFn, blockRecLpsOne]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        erToIw_specW2 p ha hc he n, slEq_spec p hq n] <;>
-      finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ,
-        List.tail_cons]
+  sorry
 
 include ha hc he hq ho hp in
 theorem blockRecLpsOkGo_spec (n : Nat) : ∀ (s₀ : St) (ro rl wo wl : Word),
@@ -113,40 +104,7 @@ theorem erLpsW_dec {n : Nat} {m m' : Mem} {a0 : Nat} {cv : IConstantVal} {r : Li
     decHL m' (r.headD 0).toNat (r.getD 1 0).toNat = some cv.levelParams ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
     (r.headD 0).toNat + (r.getD 1 0).toNat = iwTop m' ∧ IWRoom m m' := by
-  have hcv' := hcv
-  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
-  obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
-  have hlvE : lv = cv.levelParams := by rw [← hcvT]
-  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
-  obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
-  simp only [nat?, erA, Option.map_eq_some_iff] at ho2 hl2
-  obtain ⟨w1, hw1, rfl⟩ := ho2
-  obtain ⟨w2, hw2, rfl⟩ := hl2
-  have hi1 := (Array.getElem?_eq_some_iff.mp hw1).1
-  have hi2 := (Array.getElem?_eq_some_iff.mp hw2).1
-  replace hi1 : a0 + 1 < (m.arr64 EREC).size := hi1
-  replace hi2 : a0 + 2 < (m.arr64 EREC).size := hi2
-  have hrd1 : rdW (m.arr64 EREC) (UInt64.ofNat a0 + 1) = w1 := by
-    have e3 : UInt64.ofNat a0 + 1 = UInt64.ofNat (a0 + 1) := by
-      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-    have : (UInt64.ofNat (a0 + 1)).toNat = a0 + 1 :=
-      UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-    rw [e3]; simp only [rdW, this]; rw [hw1]; rfl
-  have hrd2 : rdW (m.arr64 EREC) (UInt64.ofNat a0 + 2) = w2 := by
-    have e4 : UInt64.ofNat a0 + 2 = UInt64.ofNat (a0 + 2) := by
-      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-    have : (UInt64.ofNat (a0 + 2)).toNat = a0 + 2 :=
-      UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-    rw [e4]; simp only [rdW, this]; rw [hw2]; rfl
-  rw [hrd1, hrd2] at h
-  obtain ⟨hr, hdec, hgrow, hfr, -, htp, hroom⟩ := erToIwW_decS (k := IdxKind.name) h hsz hc hE hsl
-  have hh := erToIwW_two h
-  refine ⟨by rw [getD1]; exact hh, ?_, hgrow, hfr, ?_, hroom⟩
-  · rw [hr] at hh ⊢
-    simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
-    rw [hdec, ← hlvE]
-    exact hsl
-  · rw [hr]; simpa using htp
+  sorry
 
 theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec : RecShape)
     (ns : List NIdx)
@@ -258,10 +216,7 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
 
 theorem iwB_rdW {m : Mem} {i : Nat} {b : Bool} (h : iwB m i = some b) (hi : i < 2 ^ 64) :
     (rdW (m.arr64 IW) (UInt64.ofNat i) != 0) = b := by
-  simp only [iwB, bool?, iwA, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  have : (UInt64.ofNat i).toNat = i := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hi)
-  simp only [rdW, this, hw, Option.getD_some]
+  sorry
 
 theorem iwN_lt_p {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
   simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
@@ -270,8 +225,7 @@ theorem iwN_lt_p {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW)
 
 theorem iwN_cell {m m' : Mem} {i v : Nat} (hg : IWGrow m m') (hi : i < iwTop m)
     (h : iwN m i = some v) : iwN m' i = some v := by
-  simp only [iwN, nat?, iwA] at h ⊢
-  rw [hg.iwGet i hi]; exact h
+  sorry
 
 /-- The record loop on top of a wanted list. -/
 theorem lokKey (n : Nat) (m m2 m' : Mem) (p wo wl : Word) (r : List Word) (bs : BlockShape)

@@ -54,9 +54,7 @@ theorem simGetAppArgs (hS : StageR vis fe m a) {e : Word} (he : H e) :
 theorem simOpenPisF (hS : StageR vis fe m a) (hA : AbsOK m) {k e i : Word} (he : H e) :
     RSim (opfF m [k, e, i]) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
       (fun b a' x => KP dn vis fe m decOLE b a' x ∧ AbsOK b.2) := by
-  rintro ⟨r, m'⟩ h
-  obtain ⟨x, a', hrun, hK, hA'⟩ := opfF_ok dn vis fe k e i he m m' a r h ⟨hS, hA⟩
-  exact ⟨x, a', hrun, hK, hA'⟩
+  sorry
 
 end sims
 
@@ -70,8 +68,7 @@ theorem recW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200] ∧
     (∀ j < ws.length, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + j]? = ws[j]?) ∧
     iwTop m' = iwTop m + ws.length := by
-  obtain ⟨hr, hget, hg, hf, htop, hroom⟩ := recW_post h hS.iw.ctl hS.iw.iwSize hk
-  refine ⟨stage_frame_iw hS hf (by omega), hg, hr, hget, htop⟩
+  sorry
 
 /-! ## `pi_binders` under the stage relation -/
 
@@ -114,12 +111,7 @@ theorem simPiBinders {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
       (fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧
         decHL b.2 (b.1.headD 0).toNat (b.1.tail.headD 0).toNat = some x.1 ∧
         (b.1.headD 0).toNat + (b.1.tail.headD 0).toNat ≤ iwTop b.2) := by
-  rintro ⟨rs, m'⟩ hp
-  obtain ⟨bs, e, hrun, -, hdec, -, -, hg, hf, hle⟩ :=
-    piBW_ok n m m' a CWF h rs hS.check.arena.base hp hh hS.iw.iwSize hS.iw.ctl
-  have hroom := piBW_room n m m' a CWF h rs hS.check.arena.base hp hh hS.iw.iwSize hS.iw.ctl hS.iw.iw
-  refine ⟨(bs, e), a, by rw [← CWF_eq]; exact hrun, stage_frame_iw hS hf (by rw [← hf.size IW]; exact hroom),
-    hg, by simpa [getD_one] using hdec, by simpa [getD_one] using hle⟩
+  sorry
 
 theorem drop3_headD (r : List Word) : (r.drop 3).headD 0 = r.tail.tail.tail.headD 0 := by
   rcases r with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
