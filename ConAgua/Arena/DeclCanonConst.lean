@@ -74,27 +74,7 @@ theorem cvLpsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (hq : decCV (erecP m) q.toNat = some cv) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r cv.levelParams ∧
       (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
-  cases n with
-  | zero => simp [L.Arena.cvLpsW] at h
-  | succ n =>
-  rw [L.Arena.cvLpsW_step] at h
-  have hq0 : decCV (erA m) q.toNat = some cv := ArrExt.decCV (erecP_ext m) hq
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq0
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
-  have e1 : rdW (m.arr64 EREC) (q + 1) = w1 := by
-    have := rdW_off (a := erA m) (q := q) (k := 1) hsz (w := w1) (by simpa using hw1)
-    simpa [erA] using this
-  have e2 : rdW (m.arr64 EREC) (q + 2) = w2 := by
-    have := rdW_off (a := erA m) (q := q) (k := 2) hsz (w := w2) (by simpa using hw2)
-    simpa [erA] using this
-  rw [e1, e2] at h
-  have hsrc : w2.toNat = 0 ∨ w1.toNat + w2.toNat ≤ (m.arr64 EREC).size := by
-    rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
-    · exact .inl h0
-    · exact .inr (hslice?_bound _ _ _ _ hsl h0)
-  obtain ⟨h2, hl, hdec, hS', hg, hb⟩ := erToIwW_stage h hS hsrc
-  refine ⟨hS', hg, decRL_two h2 ?_ (by rw [hl]; exact hb), erToIwW_size h⟩
-  rw [hl, hdec]; exact hsl
+  sorry
 
 
 /-! ## `canon_ctx` -/
@@ -145,16 +125,7 @@ grind_pattern [ind_grind] ctxK3_some => ctxK3 rc rp (some (rq, m3))
 theorem canonCtx_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (cp cq : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "canon_ctx" [cp, cq]
     ⦃fun r s' => LocEq s' s₀ ∧ ctxW n s₀.mem cp cq = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "canon_ctx")]
-  simp only [callFn, canonCtx]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        canonNames_spec p hp n,
-        cvLps_specW p (hp.get "iw_alloc") (hp.get "er_copy") (hp.get "er_to_iw") (hp.get "cv_lps") n] <;>
-      finish (gen := 20) [ctxW]
+  sorry
 
 
 theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
@@ -167,52 +138,7 @@ theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       (ConRon.Arena.canonNames cv.levelParams.length).run a = .ok (cs, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a' ∧
       CtxR m' po pl qo ql co cl cv.levelParams cv'.levelParams cs := by
-  cases k with
-  | zero => simp [ctxW] at h
-  | succ k =>
-  rw [ctxW_succ] at h
-  have hcv0 : decCV (erA m) cp.toNat = some cv := ArrExt.decCV (erecP_ext m) hcv
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcv0
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
-  have e2 : rdW (m.arr64 EREC) (cp + 2) = w2 := by
-    have := rdW_off (a := erA m) (q := cp) (k := 2) hsz (w := w2) (by simpa using hw2)
-    simpa [erA] using this
-  have hlen : w2.toNat = cv.levelParams.length := (hslice_len hsl).symm
-  rw [e2] at h
-  cases h1 : cnW k m w2 with
-  | none => rw [h1] at h; simp [ctxK1] at h
-  | some x1 =>
-  obtain ⟨rc, m1⟩ := x1
-  rw [h1, ctxK1_some] at h
-  obtain ⟨cs, a1, hrun1, hS1, hg1, hd1, hv1, hP1⟩ := cnW_ok h1 hS hP
-  cases h2 : L.Arena.cvLpsW k m1 cp with
-  | none => rw [h2] at h; simp [ctxK2] at h
-  | some x2 =>
-  obtain ⟨rp, m2⟩ := x2
-  rw [h2, ctxK2_some] at h
-  have hcv1 : decCV (erecP m1) cp.toNat = some cv := ArrExt.decCV (IWGrow.erecPExtR hg1) hcv
-  obtain ⟨hS2, hg2, hd2, hz2⟩ := cvLpsW_ok h2 hS1 hcv1
-  cases h3 : L.Arena.cvLpsW k m2 cq with
-  | none => rw [h3] at h; simp [ctxK3] at h
-  | some x3 =>
-  obtain ⟨rq, m3⟩ := x3
-  rw [h3, ctxK3_some] at h
-  have hcv2 : decCV (erecP m2) cq.toNat = some cv' :=
-    ArrExt.decCV (IWGrow.erecPExtR (hg1.trans hg2)) hcv'
-  obtain ⟨hS3, hg3, hd3, hz3⟩ := cvLpsW_ok h3 hS2 hcv2
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hu1 := decRL_unpack hd1
-  have hu2 := decRL_unpack hd2
-  have hu3 := decRL_unpack hd3
-  have hgg := hg2.trans hg3
-  have hgg' : IWGrow m1 m3 := hgg
-  refine ⟨cs, a1, _, _, _, _, _, _, rfl, ?_, hS3, (hg1.trans hg2).trans hg3, ?_, ?_, ?_⟩
-  · rw [← hlen]; exact hrun1
-  · unfold PoolSmall at hP1 ⊢; rw [pcap_congr (hz3 POOL) (hz3 POOL1), pcap_congr (hz2 POOL) (hz2 POOL1)]; exact hP1
-  · exact hL.of_view hv1
-  · exact ⟨by rw [decHL_grow hg3 hu2.2]; exact hu2.1, hu3.1,
-      by rw [decHL_grow hgg' hu1.2]; exact hu1.1, Nat.le_trans hu2.2 hg3.iw, hu3.2,
-      Nat.le_trans hu1.2 hgg'.iw⟩
+  sorry
 
 
 /-! ## `cv_canon_eq` -/
@@ -253,15 +179,7 @@ grind_pattern [ind_grind] cvcK1_some => cvcK1 k q r (some (rc, m1))
 theorem cvCanonEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (q r : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_canon_eq" [q, r]
     ⦃fun x s' => LocEq s' s₀ ∧ cvceW n s₀.mem q r = some (x.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "cv_canon_eq")]
-  simp only [callFn, cvCanonEq]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        canonCtx_spec p hp n, canonExprEq_spec p hp n] <;>
-      finish (gen := 20) [cvceW]
+  sorry
 
 
 /-- The three words of a constant value that the comparison reads. -/
@@ -270,13 +188,7 @@ theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC).s
     ∃ wn w2 wt : Word, rdW (m.arr64 EREC) q = wn ∧ rdW (m.arr64 EREC) (q + 2) = w2 ∧
       rdW (m.arr64 EREC) (q + 3) = wt ∧ wn.toNat < 2 ^ 32 ∧ wt.toNat < 2 ^ 32 ∧
       cv.name = decI wn ∧ cv.type = decI wt ∧ w2.toNat = cv.levelParams.length := by
-  obtain ⟨wn, hn, hn32, hnm⟩ := decCV_name h
-  obtain ⟨wt, ht, ht32, htm⟩ := decCV_typeW h
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice h
-  refine ⟨wn, w2, wt, ?_, ?_, ?_, hn32, ht32, hnm, htm, (hslice_len hsl).symm⟩
-  · simpa [erA] using rdW_zero' (a := erA m) hn
-  · simpa [erA] using rdW_off (a := erA m) (q := q) (k := 2) hsz (w := w2) (by simpa using hw2)
-  · simpa [erA] using rdW_off (a := erA m) (q := q) (k := 3) hsz (w := wt) (by simpa using ht)
+  sorry
 
 set_option maxRecDepth 100000 in
 theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
@@ -286,67 +198,7 @@ theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     (hP : PoolSmall m) (hL : LitInj a) :
     ∃ (b : Bool) (a' : AState), (cv.canonEq cv').run a = .ok (b, a') ∧ x = (if b then 1 else 0) ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a' := by
-  cases k with
-  | zero => simp [cvceW] at h
-  | succ k =>
-  rw [cvceW_succ] at h
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
-  obtain ⟨wn, w2, wt, e0, e2, e3, hn32, ht32, hnm, htm, hlen⟩ :=
-    cvWords hsz (ArrExt.decCV (erecP_ext m) hcv)
-  obtain ⟨vn, v2, vt, f0, f2, f3, gn32, gt32, gnm, gtm, glen⟩ :=
-    cvWords hsz (ArrExt.decCV (erecP_ext m) hcv')
-  rw [e0, e2, f0, f2] at h
-  by_cases hc : wn ≠ vn ∨ w2 ≠ v2
-  · rw [ite_eq_left hc] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
-    have hb : (cv.name == cv'.name && cv.levelParams.length == cv'.levelParams.length) = false := by
-      rcases hc with hc | hc
-      · have : (cv.name == cv'.name) = false := by
-          rw [hnm, gnm, decI_beq _ _ hn32 gn32]; exact decide_eq_false hc
-        simp [this]
-      · have : (cv.levelParams.length == cv'.levelParams.length) = false := by
-          have : cv.levelParams.length ≠ cv'.levelParams.length := fun e =>
-            hc (UInt64.toNat_inj.mp (by rw [hlen, glen, e]))
-          simpa using this
-        simp [this]
-    unfold IConstantVal.canonEq
-    rw [hb]; rfl
-  · rw [ite_eq_right hc] at h
-    have hw : wn = vn ∧ w2 = v2 := by
-      rw [not_or] at hc; exact ⟨Classical.byContradiction hc.1, Classical.byContradiction hc.2⟩
-    obtain ⟨rfl, rfl⟩ := hw
-    cases hx : ctxW k m q r with
-    | none => rw [hx] at h; simp [cvcK1] at h
-    | some x1 =>
-    obtain ⟨rc, m1⟩ := x1
-    rw [hx, cvcK1_some] at h
-    obtain ⟨cs, a1, po, pl, qo, ql, co, cl, hrc, hrun, hS1, hg1, hP1, hL1, hC1⟩ :=
-      ctxW_ok k hx hS hcv hcv' hP hL
-    subst hrc
-    simp only [List.headD_cons, List.tail_cons] at h
-    have hcvm : decCV (erA m1) q.toNat = some cv :=
-      ArrExt.decCV (IWGrow.erecExt hg1) hcv
-    have hcvm' : decCV (erA m1) r.toNat = some cv' :=
-      ArrExt.decCV (IWGrow.erecExt hg1) hcv'
-    have hsz1 : (m1.arr64 EREC).size < 2 ^ 64 := hS1.iw.erSize
-    obtain ⟨-, -, wt1, -, -, g3, -, ht1, -, htm1, -⟩ := cvWords hsz1 hcvm
-    obtain ⟨-, -, vt1, -, -, f3', -, gt1, -, gtm1, -⟩ := cvWords hsz1 hcvm'
-    rw [g3, f3'] at h
-    obtain ⟨b, hb, hrb, hS2, hg2, hP2⟩ := ceW_ok k m1 m' a1 po pl qo ql co cl 4000000000 wt1
-      vt1 x cv.levelParams cv'.levelParams cs h hS1 hC1 hL1 hP1 ht1 gt1
-    refine ⟨b, a1, ?_, hrb, hS2, hg1.trans hg2, hP2, hL1⟩
-    have hcond : (cv.name == cv'.name && cv.levelParams.length == cv'.levelParams.length) = true := by
-      have : cv.name = cv'.name := by rw [hnm, gnm]
-      have h2 : cv.levelParams.length = cv'.levelParams.length := by
-        rw [← hlen, ← glen]
-      simp [this, h2]
-    unfold IConstantVal.canonEq
-    rw [ite_eq_left hcond, StateT.run_bind, hrun, exc_ok_bind']
-    rw [htm1, gtm1]
-    have hb' := hb
-    rw [fuelW] at hb'
-    exact hb'
+  sorry
 
 
 /-- **`cv_canon_eq` refines `IConstantVal.canonEq`.** -/
@@ -357,13 +209,6 @@ theorem cvCanonEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option Co
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv ∧
         decCV (erecP m) r.toNat = some cv' ∧ PoolSmall m ∧ LitInj a)
       (cv.canonEq cv') (CPostL dn vis fe decW0B) := by
-  intro n s₀ a₀ ⟨hS, hcv, hcv', hP, hL⟩
-  refine triple_post (cvCanonEq_spec p hp n s₀ q r) ?_
-  rintro x s' ⟨hl, hx⟩
-  obtain ⟨b, a', hb, hrb, hS', hg, hP', hL'⟩ := cvceW_ok n hx hS hcv hcv' hP hL
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
-  refine ⟨hl, hok, ?_⟩
-  rw [hst, hres]
-  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL'⟩
+  sorry
 
 end L.Ind

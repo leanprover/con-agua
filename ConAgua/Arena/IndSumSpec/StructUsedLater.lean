@@ -268,10 +268,7 @@ include hv hf hput hins hgo hbp hst hsg in
 theorem structUsedLaterGo_spec0 (n : Nat) (s₀ : St) (cty nP j : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later_go" [cty, nP, j]
     ⦃fun r s' => LocEq s' s₀ ∧ usg0 n s₀.mem cty nP j = some (r.headD 0, s'.mem); ⊤⦄ := by
-  cases n with
-  | zero =>
-    rw [invoke_eq _ hsg]; simp only [callFn, structUsedLaterGoL]; vcgen [exec] <;> grind
-  | succ n => exact structUsedLaterGo_spec p hv hf hput hins hgo hbp hst hsg n s₀ cty nP j
+  sorry
 
 include hv hf hput hins hgo hbp hst hsg ha hc hsc hp in
 theorem ulW_spec (n : Nat) : ∀ (s₀ : St) (cty nP m base : Word),

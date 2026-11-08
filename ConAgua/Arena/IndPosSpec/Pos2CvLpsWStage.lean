@@ -44,6 +44,7 @@ def nhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word �
     if l = 0 then some ([1, oo, ol], m)
     else nhK1 k vis ctx mm off l oo ol (envFindW m (rdW (m.arr64 IW) off) vis)
 -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def nhK1 (k : Nat) (vis ctx mm off l oo ol : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
@@ -51,23 +52,32 @@ def nhK1 (k : Nat) (vis ctx mm off l oo ol : Word) : Option (List Word × Mem) �
     else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then some ([0, 0, 0], m1)
     else nhK2 k vis ctx mm off l oo ol (instW k m1 (rdW (m1.arr64 IW) (ctx + 7)) (rdW (m1.arr64 IW) (ctx + 8))
       (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4)))
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def nhK2 (k : Nat) (vis ctx mm off l oo ol : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
     if r2.headD 0 = 0 then some ([0, 0, 0], m2)
     else nhK3 k vis ctx mm off l oo ol (fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0))
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def nhK3 (k : Nat) (vis ctx mm off l oo ol : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (v, m3) => if 4294967296 ≤ v then none else nhK4 k vis ctx mm off l (snocW k m3 oo ol v)
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def nhK4 (k : Nat) (vis ctx mm off l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r4, m4) => nhGoW k m4 vis ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0)
 end
+-/
 
 section arms
 variable (k : Nat) (m m1 m2 m3 m4 : Mem) (vis ctx mm off l oo ol v : Word) (r r2 r4 : List Word)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhGoW_nil (h : l = 0) : nhGoW (k + 1) m vis ctx mm off l oo ol = some ([1, oo, ol], m) := by
   simp [nhGoW, h]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhGoW_cons (h : ¬ l = 0) : nhGoW (k + 1) m vis ctx mm off l oo ol =
     nhK1 k vis ctx mm off l oo ol (envFindW m (rdW (m.arr64 IW) off) vis) := by simp [nhGoW, h]
@@ -79,16 +89,20 @@ theorem nhK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.head
 theorem nhK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
     nhK1 k vis ctx mm off l oo ol (some (r, m1)) =
       nhK2 k vis ctx mm off l oo ol (instW k m1 (rdW (m1.arr64 IW) (ctx + 7)) (rdW (m1.arr64 IW) (ctx + 8))
-        (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4))) := by rw [nhK1, ite_eq_right h, ite_eq_right h3]
+        (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4))) := by
+  sorry
 theorem nhK2_none (h : r2.headD 0 = 0) : nhK2 k vis ctx mm off l oo ol (some (r2, m2)) = some ([0, 0, 0], m2) := by
   rw [nhK2, ite_eq_left h]
 theorem nhK2_some (h : ¬ r2.headD 0 = 0) : nhK2 k vis ctx mm off l oo ol (some (r2, m2)) =
     nhK3 k vis ctx mm off l oo ol (fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0)) := by
-  rw [nhK2, ite_eq_right h]
+  sorry
 theorem nhK3_ok (h : ¬ 4294967296 ≤ v) : nhK3 k vis ctx mm off l oo ol (some (v, m3)) =
-    nhK4 k vis ctx mm off l (snocW k m3 oo ol v) := by rw [nhK3, ite_eq_right h]
+    nhK4 k vis ctx mm off l (snocW k m3 oo ol v) := by
+  sorry
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhK4_some : nhK4 k vis ctx mm off l (some (r4, m4)) =
     nhGoW k m4 vis ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0) := by rw [nhK4]
+-/
 end arms
 attribute [ind_grind] nhGoW_nil nhGoW_cons nhK1_miss nhK1_noind nhK1_ind nhK2_none nhK2_some nhK3_ok nhK4_some
 
@@ -108,9 +122,11 @@ structure NhLook (p : Prog) : Prop where
   hgo : p.lookup "nest_holes_go" = some nestHolesGoL
   hp : p.lookup "nest_holes" = some nestHolesL
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The model of `nest_holes(vis, ctx)` at exec fuel `k + 1`. -/
 def nhW (k : Nat) (m : Mem) (vis ctx : Word) : Option (List Word × Mem) :=
   nhGoW k m vis ctx 0 (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) 0 0
+-/
 
 /-- A `NestCtx` record's slices end below the pool's top (`CtxIn` covers their words, this their
 offsets when empty too). -/

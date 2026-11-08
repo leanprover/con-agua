@@ -331,6 +331,7 @@ def projAtT (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) : AM 
     else fail (.notImplemented "projection without a native entry")
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`inferProj` at a hit** is `projAtT` from the state after the lookup. -/
 theorem inferProj_hit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat) (pe : EIdx)
     (a a₁ a₂ : AState) (it te hh : EIdx) (T : NIdx) (us : LsIdx) (entry : IProjEntry)
@@ -340,6 +341,7 @@ theorem inferProj_hit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat
     (h4 : fe.findProj? T i = some entry) :
     (inferProj r fe d sn i pe).run a = (projAtT sn T us entry te pe).run a₂ := by
   sorry
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The test's run is the twin's three readbacks** (`fieldSortZeroT`, `Knot.lean`). -/
@@ -453,12 +455,15 @@ theorem ErrClaim.of_error {α : Type} {T : AM α} {a : AState} {e : Err} {ce : C
     (h : T.run a = .error ce) (hk : e.cls = twinCls ce) : ErrClaim T a e :=
   fun _ => ⟨ce, h, hk.symm⟩
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem projAtT_errT (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) (a : AState)
     (xs : List EIdx) (hxs : (getAppArgs coreWalkFuel te).run a = .ok (xs, a)) (hT : (T != sn) = true) :
     (projAtT sn T us entry te pe).run a =
       .error (.invalid "invalid projection: the node names another structure") := by
   simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, hT, ↓reduceIte]; rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem projAtT_errNP (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) (a : AState)
     (xs : List EIdx) (hxs : (getAppArgs coreWalkFuel te).run a = .ok (xs, a)) (hT : T = sn)
     (hl : (xs.length != entry.numParams) = true) :
@@ -466,7 +471,9 @@ theorem projAtT_errNP (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : E
   subst hT
   simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, Bool.false_eq_true,
     ↓reduceIte, hl]; rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem projAtT_errLP (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) (a : AState)
     (xs : List EIdx) (l : Nat) (hxs : (getAppArgs coreWalkFuel te).run a = .ok (xs, a)) (hT : T = sn)
     (hlen : xs.length = entry.numParams) (hvl : a.store.lss.viewLen us = some l)
@@ -476,6 +483,7 @@ theorem projAtT_errLP (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : E
   subst hT
   simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, Bool.false_eq_true,
     ↓reduceIte, hlen, bne_self_eq_false, ip_viewLsLen_run, hvl, hl]; rfl
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`infer_proj_at` refines `projAtT`, both outcomes** (`inferProj` past the table lookup) at the
