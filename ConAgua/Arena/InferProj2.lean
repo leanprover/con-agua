@@ -85,7 +85,7 @@ theorem inferProj_miss (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Na
     view_run _ _ _ hv, h4, h5]
   rfl
 
-theorem rdW_ext' {a b : Array Word} (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) {q : Word} {k : Nat}
+theorem rdW_ext' {a b : Array Word} (hab : ArrExt (aread a) (aread b)) (hsz : b.size < 2 ^ 63) {q : Word} {k : Nat}
     (hk : k < 64) {w : Word} (ha : a[q.toNat + k]? = some w) : rdW b (q + UInt64.ofNat k) = w := by
   have hb := hab _ _ ha
   have hlt : q.toNat + k < b.size := by
@@ -99,8 +99,8 @@ theorem rdW_ext' {a b : Array Word} (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) {
 /-- **An inductive record's parameter count and constructors**: `nparams` at `q + 17`, the
 constructor slice at `q + 18`, `q + 19`. -/
 theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a q.toNat = some (.indInfo cv caps))
-    (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) :
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) q.toNat = some (.indInfo cv caps))
+    (hab : ArrExt (aread a) (aread b)) (hsz : b.size < 2 ^ 63) :
     caps.nparams = (rdW b (q + 17)).toNat ∧ caps.ctors.length = (rdW b (q + 19)).toNat ∧
     ∀ c, caps.ctors = [c] → c = decI (rdW b (rdW b (q + 18))) ∧ HW (rdW b (rdW b (q + 18))) := by
   cases hq : a[q.toNat]? with

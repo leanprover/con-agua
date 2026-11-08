@@ -45,8 +45,8 @@ namespace L.Arena
 
 /-- A decoded handle list at words `q + j`, `q + j + 1`: the slice those two words name. -/
 theorem hlist_words {k : IdxKind} {a : Array Word} {q : Word} {j : Nat} {l : List (Idx k)}
-    (hsz : a.size < 2 ^ 63) (hj : j < 15) (h : hlist? a (q.toNat + j) = some l) :
-    hslice? a (rdW a (q + UInt64.ofNat j)).toNat (rdW a (q + UInt64.ofNat (j + 1))).toNat = some l := by
+    (hsz : a.size < 2 ^ 63) (hj : j < 15) (h : hlist? (aread a) (q.toNat + j) = some l) :
+    hslice? (aread a) (rdW a (q + UInt64.ofNat j)).toNat (rdW a (q + UInt64.ofNat (j + 1))).toNat = some l := by
   simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at h
   obtain ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩ := h
   have r1 : rdW a (q + UInt64.ofNat j) = wo := rdW_ext (fun _ _ h => h) hsz (by omega) hwo
@@ -56,7 +56,7 @@ theorem hlist_words {k : IdxKind} {a : Array Word} {q : Word} {j : Nat} {l : Lis
 
 /-- A decoded handle at word `q + j`. -/
 theorem hd_word {k : IdxKind} {a : Array Word} {q : Word} {j : Nat} {x : Idx k}
-    (hsz : a.size < 2 ^ 63) (hj : j < 16) (h : hd? a (q.toNat + j) = some x) :
+    (hsz : a.size < 2 ^ 63) (hj : j < 16) (h : hd? (aread a) (q.toNat + j) = some x) :
     HW (rdW a (q + UInt64.ofNat j)) ∧ x = decI (rdW a (q + UInt64.ofNat j)) := by
   obtain ⟨w, hw, hw32, rfl⟩ := hd?_eq h
   rw [rdW_ext (fun _ _ h => h) hsz hj hw]
@@ -66,11 +66,11 @@ theorem hd_word {k : IdxKind} {a : Array Word} {q : Word} {j : Nat} {x : Idx k}
 (words `q + 3`, `q + 4`), the structure's sort (`q + 8`), the bodies' slice (`q + 9`, `q + 10`),
 the guards' slice (`q + 11`, `q + 12`). -/
 theorem decTbl_fields {a : Array Word} {q : Word} {tbl : IProjTable}
-    (h : decTbl a q.toNat = some tbl) (hsz : a.size < 2 ^ 63) :
-    hslice? a (rdW a (q + 3)).toNat (rdW a (q + 4)).toNat = some tbl.levelParams ∧
+    (h : decTbl (aread a) q.toNat = some tbl) (hsz : a.size < 2 ^ 63) :
+    hslice? (aread a) (rdW a (q + 3)).toNat (rdW a (q + 4)).toNat = some tbl.levelParams ∧
     HW (rdW a (q + 8)) ∧ tbl.structSort = decI (rdW a (q + 8)) ∧
-    hslice? a (rdW a (q + 9)).toNat (rdW a (q + 10)).toNat = some tbl.bodies.toList ∧
-    hslice? a (rdW a (q + 11)).toNat (rdW a (q + 12)).toNat = some tbl.guards := by
+    hslice? (aread a) (rdW a (q + 9)).toNat (rdW a (q + 10)).toNat = some tbl.bodies.toList ∧
+    hslice? (aread a) (rdW a (q + 11)).toNat (rdW a (q + 12)).toNat = some tbl.guards := by
   simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h
   obtain ⟨sn, -, lps, hlps, np, -, ct, -, nf, -, ss, hss, bd, hbd, gd, hgd, hc⟩ := h
@@ -84,7 +84,7 @@ def sliceAt (a : Array Word) (o c i : Word) : Word := if i < c then rdW a (o + i
 
 /-- **`sliceAt` decodes to `getD … default`.** -/
 theorem sliceAt_dec {k : IdxKind} {a : Array Word} {o c : Word} {l : List (Idx k)}
-    (hsz : a.size < 2 ^ 63) (h : hslice? a o.toNat c.toNat = some l) (i : Word) :
+    (hsz : a.size < 2 ^ 63) (h : hslice? (aread a) o.toNat c.toNat = some l) (i : Word) :
     HW (sliceAt a o c i) ∧ (decI (sliceAt a o c i) : Idx k) = l.getD i.toNat default := by
   obtain ⟨hl, hg⟩ := hslice?_get h
   unfold sliceAt

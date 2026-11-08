@@ -295,7 +295,7 @@ theorem erecPush_spec (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (k
 
 /-- Element `j` of a decoded handle slice. -/
 theorem hslice?_at {k : IdxKind} {a : Array Word} {o c : Nat} {l : List (Idx k)}
-    (h : hslice? a o c = some l) (j : Nat) (hj : j < c) :
+    (h : hslice? (aread a) o c = some l) (j : Nat) (hj : j < c) :
     ∃ w, a[o + j]? = some w ∧ w.toNat < 2 ^ 32 ∧ l[j]? = some (decI w) := by
   obtain ⟨hl, hg⟩ := mapM_option_get _ _ _ h
   have := hg j (by simpa using hj)
@@ -306,7 +306,7 @@ theorem hslice?_at {k : IdxKind} {a : Array Word} {o c : Nat} {l : List (Idx k)}
 
 /-- **The `erec_push` loop** pushes the rest of the slice. -/
 theorem epW_ok (E : Array Word) (hE : E.size < 2 ^ 63) (o c so : Word) (pins : List EIdx)
-    (hpins : hslice? E o.toNat c.toNat = some pins) :
+    (hpins : hslice? (aread E) o.toNat c.toNat = some pins) :
     ∀ (K k : Nat) (m : Mem) (j : Word) (m' : Mem), c.toNat - j.toNat = K → j.toNat ≤ c.toNat →
       m.arr64 EREC = E → spTop m = so + j → so.toNat + c.toNat ≤ (m.arr64 SPN).size →
       (m.arr64 SPN).size < 2 ^ 63 → epW o c so k m j = some m' →
@@ -443,9 +443,9 @@ theorem irRdW0 {b : Array Word} {q : Word} {w : Word} (hb : b[q.toNat]? = some w
 
 /-- The words of a `ConstantVal` decoded at `q + 1`. -/
 theorem decCV_rd1 {b : Array Word} {q : Word} {cv : IConstantVal} (hsz : b.size < 2 ^ 63)
-    (h : decCV b (q.toNat + 1) = some cv) :
+    (h : decCV (aread b) (q.toNat + 1) = some cv) :
     HW (rdW b (q + 1)) ∧ cv.name = decI (rdW b (q + 1)) ∧
-      hslice? b (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams ∧
+      hslice? (aread b) (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams ∧
       cv.levelParams.length = (rdW b (q + 3)).toNat ∧
       HW (rdW b (q + 4)) ∧ cv.type = decI (rdW b (q + 4)) := by
   simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
@@ -464,10 +464,10 @@ theorem decCV_rd1 {b : Array Word} {q : Word} {cv : IConstantVal} (hsz : b.size 
 
 /-- A recursor record by its kind word `5`. -/
 theorem decCI_rec_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (hsz : b.size < 2 ^ 63) (h : decCI b q.toNat = some ci) :
+    {ci : IConstantInfo} (hsz : b.size < 2 ^ 63) (h : decCI (aread b) q.toNat = some ci) :
     (rdW b q = 5 → ∃ cv rules, ci = .recInfo cv (rdW b (q + 5)).toNat (rdW b (q + 6)).toNat rules ∧
-      decCV b (q.toNat + 1) = some cv ∧
-      decRules b (rdW b (q + 7)).toNat (rdW b (q + 8)).toNat = some rules) ∧
+      decCV (aread b) (q.toNat + 1) = some cv ∧
+      decRules (aread b) (rdW b (q + 7)).toNat (rdW b (q + 8)).toNat = some rules) ∧
     (rdW b q ≠ 5 → ∀ cv mI rP rules, ci ≠ .recInfo cv mI rP rules) := by
   cases hq : b[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h
@@ -494,8 +494,8 @@ theorem decCI_rec_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
 
 /-- A constructor record by its kind word `4`. -/
 theorem decCI_ctor_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI b q.toNat = some ci) (h4 : rdW b q = 4) :
-    ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV b (q.toNat + 1) = some cv := by
+    {ci : IConstantInfo} (h : decCI (aread b) q.toNat = some ci) (h4 : rdW b q = 4) :
+    ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (aread b) (q.toNat + 1) = some cv := by
   cases hq : b[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
@@ -509,24 +509,24 @@ theorem decCI_ctor_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
 
 /-- The common fields of a decoded rule record. -/
 theorem decRule_tail {b : Array Word} {q : Nat} {fire : IRecRuleFire} {rl : IRecRule}
-    (h : ((hd? b q).bind fun c => (nat? b (q + 1)).bind fun nf => (nat? b (q + 2)).bind fun cp =>
-      (hd? b (q + 8)).bind fun rhs => (bool? b (q + 9)).bind fun k => (bool? b (q + 10)).bind
+    (h : ((hd? (aread b) q).bind fun c => (nat? (aread b) (q + 1)).bind fun nf => (nat? (aread b) (q + 2)).bind fun cp =>
+      (hd? (aread b) (q + 8)).bind fun rhs => (bool? (aread b) (q + 9)).bind fun k => (bool? (aread b) (q + 10)).bind
         fun eta => pure (IRecRule.mk c nf cp fire rhs k eta)) = some rl) :
-    rl.fire = fire ∧ hd? b q = some rl.ctor ∧ nat? b (q + 1) = some rl.nfields ∧
-      nat? b (q + 2) = some rl.ctorParams ∧ hd? b (q + 8) = some rl.rhs ∧
-      bool? b (q + 9) = some rl.k := by
+    rl.fire = fire ∧ hd? (aread b) q = some rl.ctor ∧ nat? (aread b) (q + 1) = some rl.nfields ∧
+      nat? (aread b) (q + 2) = some rl.ctorParams ∧ hd? (aread b) (q + 8) = some rl.rhs ∧
+      bool? (aread b) (q + 9) = some rl.k := by
   simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
   obtain ⟨c, hc, nf, hnf, cp, hcp, rhs, hrhs, k, hk, eta, -, rfl⟩ := h
   exact ⟨rfl, hc, hnf, hcp, hrhs, hk⟩
 
 /-- The words of a rule record. -/
 theorem decRule_rd {b : Array Word} {q : Word} {rl : IRecRule} (hsz : b.size < 2 ^ 63)
-    (h : decRule b q.toNat = some rl) :
+    (h : decRule (aread b) q.toNat = some rl) :
     HW (rdW b q) ∧ rl.ctor = decI (rdW b q) ∧ rl.nfields = (rdW b (q + 1)).toNat ∧
       rl.ctorParams = (rdW b (q + 2)).toNat ∧
       (rdW b (q + 3) ≠ 1 → rl.fire = .plain) ∧
       (rdW b (q + 3) = 1 → ∃ lv pins, rl.fire = .nested lv pins ∧
-        hslice? b (rdW b (q + 6)).toNat (rdW b (q + 7)).toNat = some pins) ∧
+        hslice? (aread b) (rdW b (q + 6)).toNat (rdW b (q + 7)).toNat = some pins) ∧
       HW (rdW b (q + 8)) ∧ rl.rhs = decI (rdW b (q + 8)) ∧ rl.k = (rdW b (q + 9) != 0) := by
   simp only [decRule, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨kd, hkd, h⟩ := h

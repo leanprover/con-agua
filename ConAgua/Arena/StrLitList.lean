@@ -127,7 +127,7 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
 /-! ## The level-parameter slice -/
 
 theorem lp_one {e : Array Word} {c : List Word} {lps : List NIdx}
-    (hsl : hslice? e (c.headD 0).toNat (c.tail.headD 0).toNat = some lps) (h1 : c.tail.headD 0 = 1) :
+    (hsl : hslice? (aread e) (c.headD 0).toNat (c.tail.headD 0).toNat = some lps) (h1 : c.tail.headD 0 = 1) :
     lps = [decI (rdW e (c.headD 0))] ∧ HW (rdW e (c.headD 0)) := by
   rw [h1] at hsl
   simp only [hslice?, hd?, show (1 : Word).toNat = 1 from rfl, List.range_one, List.mapM_cons,

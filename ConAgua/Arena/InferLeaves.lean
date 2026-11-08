@@ -627,8 +627,8 @@ theorem inferBody_const (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
 
 /-- A decoded constant record has its `ConstantVal` at `q + 1`. -/
 theorem decCI_cvA {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b) :
-    decCV b (q.toNat + 1) = some ci.toConstantVal := by
+    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b)) :
+    decCV (aread b) (q.toNat + 1) = some ci.toConstantVal := by
   cases hq : a[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
@@ -657,15 +657,15 @@ theorem mapM_len {α β : Type} (f : α → Option β) :
     simp [mapM_len f l ys hys]
 
 theorem hslice?_length {k : IdxKind} {b : Array Word} {o c : Nat} {xs : List (Idx k)}
-    (h : hslice? b o c = some xs) : xs.length = c := by
+    (h : hslice? (aread b) o c = some xs) : xs.length = c := by
   unfold hslice? at h; simpa using mapM_len _ _ _ h
 
 /-- The words of a decoded `ConstantVal` at `q + 1`: name, level-parameter slice, type. -/
 theorem infer_decCV_words {b : Array Word} {q : Word} {cv : IConstantVal}
-    (h : decCV b (q.toNat + 1) = some cv) (hsz : b.size < 2 ^ 63) :
+    (h : decCV (aread b) (q.toNat + 1) = some cv) (hsz : b.size < 2 ^ 63) :
     HW (rdW b (q + 1)) ∧ cv.name = decI (rdW b (q + 1)) ∧ HW (rdW b (q + 4)) ∧
       cv.type = decI (rdW b (q + 4)) ∧
-      hslice? b (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
+      hslice? (aread b) (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h
   obtain ⟨nm, hn, ls, hl, ty, ht, rfl⟩ := h

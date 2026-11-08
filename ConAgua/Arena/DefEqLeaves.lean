@@ -488,7 +488,7 @@ theorem mapM_length {β : Type} {f : Nat → Option β} :
     simp [mapM_length hys]
 
 /-- Word `q + k` of an extension, read off the decoded array. -/
-theorem rdW_ext {a b : Array Word} (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) {q : Word} {k : Nat}
+theorem rdW_ext {a b : Array Word} (hab : ArrExt (aread a) (aread b)) (hsz : b.size < 2 ^ 63) {q : Word} {k : Nat}
     (hk : k < 16) {w : Word} (ha : a[q.toNat + k]? = some w) : rdW b (q + UInt64.ofNat k) = w := by
   have hb := hab _ _ ha
   have hlt : q.toNat + k < b.size := by
@@ -502,7 +502,7 @@ theorem rdW_ext {a b : Array Word} (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) {q
 /-- The kind word of a decoded constant record says whether it is a definition; a definition's
 level-parameter count is word `q + 3`, its hint words `q + 6`, `q + 7`. -/
 theorem decCI_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
     (hsz : b.size < 2 ^ 63) :
     (rdW b q = 1 → ∃ cv v, ci = .defnInfo cv v (decHintW (rdW b (q + 6)) (rdW b (q + 7))) ∧
       cv.levelParams.length = (rdW b (q + 3)).toNat ∧ (rdW b (q + 6)).toNat ≤ 2) ∧

@@ -311,7 +311,7 @@ Each runs `lv_zero` above the current heap top and puts the top back (`lv_zero_c
 `StubInd.lean`). -/
 
 /-- `lv_never(l)`: `(zeronessOf l).isNever`. -/
--- con-leche: ConLeche/Kernel/PropWhen.lean:53-55 ConLeche.PropWhen.isNever
+-- con-leche: ConLeche/Kernel/PropWhen.lean:52-55 ConLeche.PropWhen.isNever
 @[no_expose] def lvNever : FunDecl := lfn (l) locals (t0, z) {
   t0 := CTL.u64[192];
   z := call lv_zero(l);

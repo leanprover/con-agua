@@ -30,9 +30,9 @@ namespace L.Arena
 
 /-- **A constructor record's level parameters**: the slice at `p + 2`, `p + 3`. -/
 theorem decCI_ctorLp {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {cv : IConstantVal} {np nf : Nat} (h : decCI a q.toNat = some (.ctorInfo cv np nf))
-    (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) :
-    hslice? a (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
+    {cv : IConstantVal} {np nf : Nat} (h : decCI (aread a) q.toNat = some (.ctorInfo cv np nf))
+    (hab : ArrExt (aread a) (aread b)) (hsz : b.size < 2 ^ 63) :
+    hslice? (aread a) (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
   cases hq : a[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
@@ -63,8 +63,8 @@ structure IndRecR (b : Array Word) (a : Array Word) (q : Word) (cv : IConstantVa
   unitParams : caps.unitParams = (rdW b (q + 10)).toNat
 
 theorem decCI_indCaps {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a q.toNat = some (.indInfo cv caps))
-    (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) : IndRecR b a q cv caps := by
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) q.toNat = some (.indInfo cv caps))
+    (hab : ArrExt (aread a) (aread b)) (hsz : b.size < 2 ^ 63) : IndRecR b a q cv caps := by
   cases hq : a[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h
   | some w =>

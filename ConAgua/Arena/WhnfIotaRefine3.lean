@@ -210,7 +210,7 @@ theorem andRescueSlotsGo_cont_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust 
   simp only [andRescueSlotsGo, h, StateT.run_bind, hb, except_ok_bind, hc, ite_true]
   exact hr
 
-theorem decTbl_bound (a : Array Word) (q : Nat) (tbl : IProjTable) (h : decTbl a q = some tbl) :
+theorem decTbl_bound (a : Array Word) (q : Nat) (tbl : IProjTable) (h : decTbl (aread a) q = some tbl) :
     q + 12 < a.size := by
   simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h

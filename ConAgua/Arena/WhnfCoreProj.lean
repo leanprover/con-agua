@@ -152,7 +152,7 @@ theorem mapM_option_length {α β : Type} (f : α → Option β) :
     simp [ih ys hys]
 
 theorem hslice?_length {k : IdxKind} {a : Array Word} {off cnt : Nat} {l : List (Idx k)}
-    (h : hslice? a off cnt = some l) : l.length = cnt := by
+    (h : hslice? (aread a) off cnt = some l) : l.length = cnt := by
   sorry
 
 theorem add_toNat_of_lt (q : Word) (c : Nat) (hc : c < 2 ^ 63) (h : q.toNat + c < 2 ^ 63) :

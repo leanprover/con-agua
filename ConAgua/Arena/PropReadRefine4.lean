@@ -34,7 +34,7 @@ theorem pr_run_of_ok {α : Type} [Inhabited α] {x : AM α} {a : AState} (h : AM
 
 /-- **A projection table's body at field `i`**: the words `head_proof_proj` reads are the
 handle of `tbl.bodies.getD i default`. -/
-theorem decTbl_body {E : Array Word} {q : Word} {tbl : IProjTable} (h : decTbl E q.toNat = some tbl)
+theorem decTbl_body {E : Array Word} {q : Word} {tbl : IProjTable} (h : decTbl (aread E) q.toNat = some tbl)
     (hsz : E.size < 2 ^ 63) (i : Word) :
     HW (if i < rdW E (q + 10) then rdW E (rdW E (q + 9) + i) else 0) ∧
       decE (if i < rdW E (q + 10) then rdW E (rdW E (q + 9) + i) else 0) =

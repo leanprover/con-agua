@@ -61,8 +61,8 @@ theorem stackPut_core {m₀ m₁ : Mem} {a : AState} {b h : Word} (hS : CoreS dn
 
 /-- A handle word of a record-pool slice. -/
 theorem hslice_cons {k : IdxKind} {b : Array Word} {o : Word} {j : Nat} {x : Idx k}
-    {xs : List (Idx k)} (h : hslice? b o.toNat (j + 1) = some (x :: xs)) :
-    ∃ w : Word, HW w ∧ x = decI w ∧ rdW b o = w ∧ hslice? b (o.toNat + 1) j = some xs := by
+    {xs : List (Idx k)} (h : hslice? (aread b) o.toNat (j + 1) = some (x :: xs)) :
+    ∃ w : Word, HW w ∧ x = decI w ∧ rdW b o = w ∧ hslice? (aread b) (o.toNat + 1) j = some xs := by
   rw [lp_hslice_succ] at h
   simp only [Option.bind_eq_bind] at h
   cases e : (hd? b o.toNat : Option (Idx k)) with
@@ -84,7 +84,7 @@ theorem hslice_cons {k : IdxKind} {b : Array Word} {o : Word} {j : Nat} {x : Idx
 
 /-- An empty slice. -/
 theorem hslice_nil {k : IdxKind} {b : Array Word} {o l : Word}
-    (h : hslice? b o.toNat l.toNat = some ([] : List (Idx k))) : l = 0 := by
+    (h : hslice? (aread b) o.toNat l.toNat = some ([] : List (Idx k))) : l = 0 := by
   rcases hk : l.toNat with _ | j
   · exact UInt64.toNat_inj.mp (by simpa using hk)
   · rw [hk, lp_hslice_succ] at h

@@ -28,7 +28,7 @@ namespace L.Arena
 /-! ## Record words -/
 
 /-- A rule record's `ctor`, `k` and `eta` words. -/
-theorem decRule_words (a : Array Word) (q : Nat) (rl : IRecRule) (h : decRule a q = some rl) :
+theorem decRule_words (a : Array Word) (q : Nat) (rl : IRecRule) (h : decRule (aread a) q = some rl) :
     (∃ w, a[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ rl.ctor = decI w) ∧
     (∃ w, a[q + 9]? = some w ∧ rl.k = (w != 0)) ∧ ∃ w, a[q + 10]? = some w ∧ rl.eta = (w != 0) := by
   simp only [decRule, hd?, nat?, bool?, Option.bind_eq_bind] at h
@@ -43,7 +43,7 @@ theorem decRule_words (a : Array Word) (q : Nat) (rl : IRecRule) (h : decRule a 
 
 /-- A constructor record's kind, level-parameter count, type and parameter count words. -/
 theorem decCI_ctor_words (b : Array Word) (dn : NIdx → Option ConLeche.Name) (q : Nat)
-    (cv : IConstantVal) (nP nF : Nat) (h : decCI b q = some (.ctorInfo cv nP nF)) :
+    (cv : IConstantVal) (nP nF : Nat) (h : decCI (aread b) q = some (.ctorInfo cv nP nF)) :
     (∃ w, b[q]? = some w ∧ w = 4) ∧ (∃ w, b[q + 3]? = some w ∧ cv.levelParams.length = w.toNat) ∧
     (∃ w, b[q + 4]? = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w) ∧
     (∃ w, b[q + 5]? = some w ∧ nP = w.toNat) := by
@@ -74,7 +74,7 @@ theorem decCI_ctor_words (b : Array Word) (dn : NIdx → Option ConLeche.Name) (
 
 /-- The kind word of a decoded record says whether it is an inductive or a constructor. -/
 theorem decCI_kind34 (b : Array Word) (dn : NIdx → Option ConLeche.Name) (q : Nat)
-    (ci : IConstantInfo) (h : decCI b q = some ci) :
+    (ci : IConstantInfo) (h : decCI (aread b) q = some ci) :
     ∃ w, b[q]? = some w ∧ ((∃ cv caps, ci = .indInfo cv caps) ↔ w = 3) ∧
       ((∃ cv nP nF, ci = .ctorInfo cv nP nF) ↔ w = 4) := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
