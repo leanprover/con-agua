@@ -30,7 +30,24 @@ theorem decCI_ind_eta (b : Array Word) (dn : NIdx → Option ConLeche.Name) (q :
     ∃ w6 w7 w8 : Word, b[q+6]? = some w6 ∧ w6.toNat < 2 ^ 32 ∧ caps.etaCtor = decI w6 ∧
       b[q+7]? = some w7 ∧ caps.etaParams = w7.toNat ∧ b[q+8]? = some w8 ∧
       caps.etaFields = w8.toNat := by
-  sorry
+  have hk := L.Ind.decCI_indInfo_kind h
+  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨k, hk', h⟩ := h
+  have hk3 : k = 3 := Option.some.inj (hk'.symm.trans hk)
+  subst hk3
+  simp only [Option.bind_eq_some_iff, Option.some.injEq, IConstantInfo.indInfo.injEq] at h
+  obtain ⟨cv', hcv, caps', hcaps, hc1, hc2⟩ := h
+  subst hc1; subst hc2
+  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
+  obtain ⟨a0, -, a1, h1, a2, h2, a3, h3, a4, -, a5, -, a6, -, a7, -, a8, -, a9, -, a10, -, hfin⟩ :=
+    hcaps
+  obtain ⟨w6, e6, l6, rfl⟩ := hd?_eq h1
+  obtain ⟨w7, e7, rfl⟩ := nat?_some h2
+  obtain ⟨w8, e8, rfl⟩ := nat?_some h3
+  have hc := (Option.some.inj hfin).symm
+  subst hc
+  exact ⟨w6, w7, w8, by simpa [Nat.add_assoc] using e6, l6, rfl, by simpa [Nat.add_assoc] using e7,
+    rfl, by simpa [Nat.add_assoc] using e8, rfl⟩
 
 section etaarm
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hE : ErecKeptKnot p)
@@ -174,7 +191,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
     refine GrowRef.of_run ?_ hA7 (decH_of _ _ hr) (resH_of_m2c _ _ hr hh6)
     rw [hpre, decBool_t_m2c g7]; rfl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 include hE in
 /-- **`m2c_eta` refines `m2cEtaT`, both outcomes** (`indP` the family's record; the errors are
 `m2c_pre`'s). -/
@@ -300,7 +317,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   rw [res4] at hrun4
   refine RefE.ret (by rw [hstep, ite_eq_left hcond, hec, hef]; exact hrun4)
     ⟨CoreAfterG.compK (hK1.trans hK3) (hSt1.toGrew.trans (hg2.trans hSt3.toGrew)) hA4, rfl, hr4⟩
--/
+-- RS2E
 
 end etaarm
 

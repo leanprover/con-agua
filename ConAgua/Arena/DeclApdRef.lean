@@ -88,7 +88,14 @@ theorem nmsR_congr {N : Word → ConLeche.Name → Prop} {m m' : Mem} {A : ArrId
 
 theorem hd_word {a : Array Word} {i : Nat} {x : NIdx} (h : hd? (aread a) i = some x) :
     ∃ w, a[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  sorry
+  unfold hd? at h
+  cases e : a[i]? with
+  | none => simp [e] at h
+  | some w =>
+    by_cases hw : w.toNat < 2 ^ 32
+    · simp [e, hw] at h
+      exact ⟨w, rfl, hw, h⟩
+    · simp [e, hw] at h
 
 /-- A decoded slice of `IW` handles with names is an `NmsR`. -/
 theorem nmsR_of_slice {m : Mem} {ns : NStore} (hsz : (m.arr64 IW).size < 2 ^ 64) :
@@ -607,7 +614,34 @@ theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     (hb : apdEntryW n m o l e = some (r, m')) :
     ∃ b, (ConRon.Arena.allLevelParamsDefined lps (decE e)).run a = .ok (b, a) ∧
       r = (if b then 1 else 0) ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ ∃ mp, apdMR m' mp := by
-  sorry
+  unfold apdEntryW at hb
+  obtain ⟨h0, hb⟩ := of_ite_none hb
+  have hf0 : MemFrame [] [apdSch.cs, apdSch.cs + 1] m (mclearG apdSch m) := mclearG_frame apdSch m
+  have hM0 := hM h0
+  have hA0 : ArenaR (mclearG apdSch m) a :=
+    ArenaR.frame (A := []) (C := [apdSch.cs, apdSch.cs + 1]) (fun b hb => by simp at hb)
+      (fun x hx => by
+        simp at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
+      hS.check.arena.base
+  have hsz := hS.iw.iwSize
+  have hps0 : NmsR (nameN a.store.lss.ls.ns) m IW o l ks :=
+    nmsR_of_slice hsz _ o l lps ks rfl hdec hks
+  have hps : NmsR (nameN a.store.lss.ls.ns) (mclearG apdSch m) IW o l ks :=
+    nmsR_congr (hf0.arr IW (by simp) (by decide)) hps0
+  obtain ⟨b, mp1, hrun, hr, hM1, hfr1⟩ := apdGoOK env n _ _ o l _ e r _ ks hA0 hps he hM0 hb
+  have hfall : MemFrame [APDM] [apdSch.cs, apdSch.cs + 1] m m' :=
+    (hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp))
+  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp at hx; rcases hx with rfl | rfl <;> decide) (by decide)
+    (by simp)
+  refine ⟨b, ?_, hr, hS', hg, _, hM1⟩
+  have hrn := readNames_run a lps ks hks
+  simp only [ConRon.Arena.allLevelParamsDefined]
+  have hcw : (UInt64.toNat 4000000000) = coreWalkFuel := CWF_eq
+  rw [hcw] at hrun
+  generalize coreWalkFuel = F at hrun ⊢
+  rw [StateT.run_bind, hrn, except_ok_bind, StateT.run_bind, hrun, except_ok_bind]
+  rfl
 
 /-- What the refinement needs of a program: the walk's functions and its callees. -/
 structure ApdProg (p : Prog) : Prop where
@@ -640,7 +674,14 @@ theorem alpdGo_refines (p : Prog) (hp : ApdProg p) (n : Nat) (s₀ : St) (a₀ :
         then 1 else 0) ∧
       apdMR s'.mem (AM.res (ConRon.Arena.allLevelParamsDefinedGo ks mp f.toNat (decE h)) a₀).2 ∧
       StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  sorry
+  refine triple_post (apdGo_spec p hp.eview hp.lsnode hp.find hp.put hp.lmem hp.lnode hp.lapd hp.ls
+    hp.go n s₀ o l f h) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := apdGoOK env n _ _ o l f h _ mp ks hS.check.arena.base hps hh hM hm
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp at hx; rcases hx with rfl | rfl <;> decide) (by decide) (by decide)
+  refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
 
 /-! ## The census theorem -/
 
@@ -660,6 +701,21 @@ theorem allLevelParamsDefined_refines (p : Prog) (hp : ApdProg p) (dn : NIdx →
       (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some lps ∧ ApdEnv a ∧
         (∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks) ∧ ∃ mp0, apdMR m mp0)
       (ConRon.Arena.allLevelParamsDefined lps (decI e)) (KeepPost vis fe decW0B) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hdec, env, ⟨ks, hks⟩, mp0, hM⟩
+  cases n with
+  | zero =>
+    rw [invoke_eq _ hp.entry]; simp only [callFn, allLevelParamsDefinedL]; vcgen [exec] <;> grind
+  | succ n =>
+    refine triple_post (allLevelParamsDefined_spec_raw p hp.eview hp.lsnode hp.find hp.put hp.clear
+      hp.lmem hp.lnode hp.lapd hp.ls hp.go hp.entry n s₀ o l e) ?_
+    rintro r s' ⟨hloc, hm⟩
+    obtain ⟨b, hrun, hr, hS', hg, -⟩ := apdEntry_ok n hS env o l e _ lps ks hks hdec he
+      (memoRV_clear apdSch apdSch_wf bmKey apdVR _ mp0 hM) hm
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+    refine ⟨hloc, hok, ?_⟩
+    change KeepPost dn vis fe decW0B _ _ (AM.st (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀) r
+      (AM.res (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀)
+    rw [hst, hres]
+    exact ⟨hS', hg, apd_decW0B hr⟩
 
 end L.Ind

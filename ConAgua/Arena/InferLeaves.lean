@@ -491,14 +491,16 @@ def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
 theorem inferBody_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
     (l : ConLeche.Literal) (hv : a.store.view e = some (.lit l)) :
     (inferBody r fe d e).run a = (inferLitT fe l).run a := by
-  sorry
+  simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+  cases l <;> rfl
 
 /-- `inferBodyIO`'s `.lit` arm is `inferLitT`. -/
 @[refines_part ConRon.Arena.inferBodyIO "lit"]
 theorem inferBodyIO_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
     (l : ConLeche.Literal) (hv : a.store.view e = some (.lit l)) :
     (inferBodyIO r fe d e).run a = (inferLitT fe l).run a := by
-  sorry
+  simp only [inferBodyIO, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+  cases l <;> rfl
 
 /-- The callees of `infer_lit` with no proof yet (lane `whnf`'s `sorry`s and stubs): their specs. -/
 structure InferLitCallees (p : Prog) : Prop where
@@ -554,7 +556,39 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     (he : HW e) (hg : tagW e = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
     RefE (closedNV p L.Checker.nvFns = true) (ilE p (n + 1) s₀.mem vis e) (inferLitT fe l) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  simp only [ilE]
+  refine RefE.abort0 (by rfl) fun h1 => ?_
+  refine RefE.abort0 (by rfl) fun h2 => ?_
+  obtain ⟨k, hk, hrel⟩ := view_lit_f s₀.mem a₀ hS.arena.base e he ⟨h1, UInt64.not_le.mp h2⟩ hg
+  rw [hv] at hk
+  have hl : l = k.l := by simpa using hk
+  subst hl
+  obtain ⟨l⟩ := k
+  by_cases h3 : tfld s₀.mem LIT (tierW e) (idxW e) 0 = 0
+  · rw [ite_eq_left h3]
+    cases l with
+    | strVal str => simp [RecRel, StrRec, h3] at hrel
+    | natVal N =>
+    simp only [inferLitT]
+    refine RefE.bind_callW (fun _ => rfl) (hc.natLitSup n s₀ a₀ dn vis fe M eb hS)
+      fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+    dsimp only [ilE.k_nat_lit_supported]
+    refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
+      (fun hb => by simpa [decBool] using hb)
+      fun _ _ => ?_
+    exact il_arm p hp hc n 1 (by decide) hS₁
+  · rw [ite_eq_right h3]
+    cases l with
+    | natVal N => simp [RecRel, NatRec, h3] at hrel
+    | strVal str =>
+    simp only [inferLitT]
+    refine RefE.bind_callW (fun _ => rfl) (hc.strLitSup n s₀ a₀ dn vis fe M eb hS)
+      fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+    dsimp only [ilE.k_str_lit_supported]
+    refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
+      (fun hb => by simpa [decBool] using hb)
+      fun _ _ => ?_
+    exact il_arm p hp hc n 5 (by decide) hS₁
 
 /-- **`infer_lit(vis, e)` refines the `.lit` clauses** (`il_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBody "lit (inferLitT)"]
@@ -594,7 +628,23 @@ theorem inferBody_const (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
 theorem decCI_cvA {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
     {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b)) :
     decCV (aread b) (q.toNat + 1) = some ci.toConstantVal := by
-  sorry
+  cases hq : a[q.toNat]? with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | k
+  all_goals (rw [hk] at h; simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h)
+  all_goals first
+    | (simp at h; done)
+    | ((first
+        | obtain ⟨cv, hcv, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
+       exact hab.decCV hcv)
 
 theorem mapM_len {α β : Type} (f : α → Option β) :
     ∀ (l : List α) (xs : List β), l.mapM f = some xs → xs.length = l.length
@@ -615,7 +665,27 @@ theorem infer_decCV_words {b : Array Word} {q : Word} {cv : IConstantVal}
     HW (rdW b (q + 1)) ∧ cv.name = decI (rdW b (q + 1)) ∧ HW (rdW b (q + 4)) ∧
       cv.type = decI (rdW b (q + 4)) ∧
       hslice? (aread b) (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
-  sorry
+  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨nm, hn, ls, hl, ty, ht, rfl⟩ := h
+  obtain ⟨w1, hw1, hl1, rfl⟩ := hd?_eq hn
+  obtain ⟨w4, hw4, hl4, rfl⟩ := hd?_eq ht
+  have hlt : q.toNat + 1 + 3 < b.size := by
+    rcases Nat.lt_or_ge (q.toNat + 1 + 3) b.size with h' | h'
+    · exact h'
+    · simp [Array.getElem?_eq_none h'] at hw4
+  have hq : q.toNat < 2 ^ 63 := by omega
+  have r1 : rdW b (q + 1) = w1 := by simp (disch := omega) only [rdW, off_toNat, hw1]; rfl
+  have r4 : rdW b (q + 4) = w4 := by
+    simp (disch := omega) only [rdW, off_toNat]; rw [show q.toNat + 4 = q.toNat + 1 + 3 by omega, hw4]; rfl
+  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hl
+  obtain ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩ := hl
+  have r2 : rdW b (q + 2) = wo := by
+    simp (disch := omega) only [rdW, off_toNat]; rw [show q.toNat + 2 = q.toNat + 1 + 1 by omega, hwo]; rfl
+  have r3 : rdW b (q + 3) = wc := by
+    simp (disch := omega) only [rdW, off_toNat]; rw [show q.toNat + 3 = q.toNat + 1 + 1 + 1 by omega, hwc]; rfl
+  rw [r1, r2, r3, r4]
+  exact ⟨hl1, rfl, hl4, rfl, hs⟩
 
 theorem viewLs_run (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss.view h = some ids) :
     (viewLs h).run a = .ok (ids, a) := by

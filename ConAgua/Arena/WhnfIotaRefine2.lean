@@ -401,7 +401,18 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
 `ProjCallees`'s two fields). -/
 theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hfp : FindProjOK p) (hpf : ProjFound p) :
     TowerSlotsAllOK p := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb T nF hS hT
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (towerSlotsAll_spec p hp.towerSlotsAll (n + 1) s₀ vis T nF) fun r s' ⟨hloc, hW⟩ =>
+    ⟨hloc, ?_⟩
+  rw [tsW.arm1] at hW
+  obtain ⟨hca, hres, hL1⟩ := tsW_ok p hfp hpf dn vis fe eb T nF hT (nF.toNat - (0 : Word).toNat) (n + 1)
+    s₀.mem a₀ MM 0 r s'.mem rfl (by simp) hS hW
+  refine ⟨by unfold AM.ok; exact trivial, hca, ?_, hL1⟩
+  · show towerSlotsAll fe (decI T) nF.toNat = decBool r
+    simpa [towerSlotsAll] using hres
 
 /-! ## `inst_spine(ao, an, t, e)` -/
 
@@ -518,7 +529,26 @@ theorem instSpine_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p) :
     an.toNat ≤ t.toNat + 1 →
     CoreSpec p n "inst_spine" [ao, an, t, e] (instSpine coreWalkFuel args.toList t.toNat (decE e))
       decH s₀ a₀ dn vis fe MM eb := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb ao an t e args hS he hsp htop ht
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (instSpine_spec p hp.instSpine (n + 1) s₀ ao an t e) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
+    ?_⟩
+  rw [isW.arm1] at hW
+  cases hL : isW.loop1 p (n + 1) s₀.mem ao an t e 0 with
+  | none => rw [hL, isW.k_loop1.none] at hW; cases hW
+  | some q =>
+  obtain ⟨e', m'⟩ := q
+  rw [hL, isW.k_loop1.arm1] at hW
+  obtain ⟨he', hm'⟩ := Prod.mk.inj (Option.some.inj hW)
+  subst he' hm'
+  obtain ⟨hok, hca, hres, hr⟩ := isW_ok p hi1 dn vis fe eb ao an args
+    (an.toNat - (0 : Word).toNat) (n + 1) s₀.mem a₀ MM t e 0 t.toNat (r.headD 0) s'.mem rfl (by simp)
+    (by simpa using ht) (fun _ => rfl) hS he hsp htop hL
+  refine ⟨hok, ?_, ?_, hr⟩
+  · simpa using hca
+  · simpa [decH] using hres
 
 /-! ## `inst_spine_pins(po, pl, us, ao, an, rP, pvo, pvc)` -/
 
@@ -788,6 +818,54 @@ theorem instSpinePins_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p
         (AM.st (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀) vis fe MM eb ∧
       ∃ xs, AM.res (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb po pl us ao an rP pvo pvc lps args pins hS hus hlps hsa hsp hat hpt
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (instSpinePins_spec p hp.instSpinePins n s₀ po pl us ao an rP pvo pvc) fun r
+    s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  simp only [ispTop] at hW
+  obtain ⟨h136, hW⟩ := of_ite_none' hW
+  obtain ⟨hg1, hW⟩ := of_ite_none hW
+  obtain ⟨hg2, hW⟩ := of_ite_none hW
+  cases hm : ispW p po pl us ao (ispLen an rP) rP pvo pvc (rdW (s₀.mem.arr64 CTL) 136) (n + 1) s₀.mem 0 with
+  | none => rw [hm] at hW; cases hW
+  | some m' =>
+  rw [hm] at hW
+  obtain ⟨hr, hmm⟩ := Prod.mk.inj (Option.some.inj hW)
+  have hspn := hS.spn
+  have h64 : (s₀.mem.arr64 SPN).size < 2 ^ 64 := by omega
+  have hsolt : (rdW (s₀.mem.arr64 CTL) 136).toNat ≤ (s₀.mem.arr64 SPN).size := by
+    have : ¬ (s₀.mem.arr64 SPN).size < (rdW (s₀.mem.arr64 CTL) 136).toNat := by
+      intro h
+      apply hg1
+      rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' h64]; exact h
+    omega
+  have hso : (rdW (s₀.mem.arr64 CTL) 136).toNat + pvc.toNat ≤ (s₀.mem.arr64 SPN).size := by
+    have h2 : ¬ UInt64.ofNat (s₀.mem.arr64 SPN).size - rdW (s₀.mem.arr64 CTL) 136 < pvc := hg2
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _ (by
+      rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' h64]; exact hsolt),
+      UInt64.toNat_ofNat_of_lt' h64] at h2
+    omega
+  have hspt : spTop s₀.mem = rdW (s₀.mem.arr64 CTL) 136 + 0 := by
+    rw [UInt64.add_zero]; rfl
+  obtain ⟨hla, hlr⟩ := ispLen_le an rP
+  obtain ⟨ys, hok, hca, hres, hys⟩ := ispW_ok p hp hc hw hE dn vis fe eb po pl us ao (ispLen an rP) rP
+    pvo pvc (rdW (s₀.mem.arr64 CTL) 136) hus lps (args.toList.take (ispLen an rP).toNat).toArray pins
+    (pvc.toNat - (0 : Word).toNat) (n + 1) s₀.mem a₀ MM 0
+    m' rfl (by simp) hS hlps hspt hso
+    (by rw [← show (spTop s₀.mem) = rdW (s₀.mem.arr64 CTL) 136 from rfl]; omega)
+    (by rw [← show (spTop s₀.mem) = rdW (s₀.mem.arr64 CTL) 136 from rfl]; exact hpt) hlr
+    (hsa.take _ hla) hsp hm
+  rw [List.toList_toArray, ispLen_take an rP args.toList (by simp [hsa.size]),
+    instSpinePins_take] at hok hca hres
+  have hr1 : r.headD 0 = rdW (s₀.mem.arr64 CTL) 136 := by
+    have := congrArg (fun l => l.headD 0) hr.symm; simpa using this
+  have hr2 : r.tail.headD 0 = pvc := by
+    have := congrArg (fun l => l.tail.headD 0) hr.symm; simpa using this
+  refine ⟨hok, ?_, ys, hres, ?_⟩
+  · simpa [← hmm] using hca
+  · rw [hr1, hr2, ← hmm]
+    simpa using hys
 
 end L.Arena

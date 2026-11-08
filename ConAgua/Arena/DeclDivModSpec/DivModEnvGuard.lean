@@ -48,8 +48,8 @@ theorem DmProg7.ty (hD : DmProg7 p) : NatTyProg p := hD.toDmProg6.toDmProg5.toDm
 @[refines ConRon.Arena.divModEnvGuard]
 theorem divModEnvGuard_refines (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
     RefAM p "div_mod_env_guard" [vis, c] (fun m s => StageR vis fe m s ∧ H c)
-      (divModEnvGuard fe (decI c)) (KeepPost vis fe decW0B) := by
-  sorry
+      (divModEnvGuard fe (decI c)) (KeepPost vis fe decW0B) :=
+  (eg_ref hD hdn c).refAM
 
 end envguard
 

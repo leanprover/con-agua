@@ -253,7 +253,9 @@ theorem knot_defeq_missE (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv)
     (a : AState) (hm : a.caches.defeqC[(x, y)]? = none) {e : Err}
     (h : ErrClaim (defeqBody mode eager (coreKnot mode eager fe id F) fe d x y) a e) :
     ErrClaim ((coreKnot mode eager fe id (F + 1)).defeq d x y) a e := by
-  sorry
+  refine ErrClaim.of_run_eq (fun ce hce => ?_) h
+  simp [coreKnot, hm, StateT.run_bind, hce]
+  rfl
 
 /-- `infer_body`'s error claim (the error half of `InferBodySpec`). -/
 def InferBodySpecE (p : Prog) (n : Nat) : Prop :=
@@ -286,13 +288,13 @@ theorem knot_infer_missE (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv)
     (hm : a.caches.inferC[e]? = none) (ce : CheckError)
     (hb : (inferBody (coreKnot mode eager fe id F) fe d e).run a = .error ce) :
     ((coreKnot mode eager fe id (F + 1)).infer d e).run a = .error ce := by
-  sorry
+  simp [coreKnot, hm, StateT.run_bind, hb]; rfl
 
 theorem knot_inferIO_missE (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F d : Nat) (e : EIdx)
     (a : AState) (hm : a.caches.inferIOC[e]? = none) (ce : CheckError)
     (hb : (inferBodyIO (CoreFnsA.ioView (coreKnot mode eager fe id F)) fe d e).run a = .error ce) :
     ((coreKnot mode eager fe id (F + 1)).inferIO d e).run a = .error ce := by
-  sorry
+  simp [coreKnot, hm, StateT.run_bind, hb]; rfl
 
 /-- **The `infer` slot's model, both outcomes** (the memo's probes and put lifted, `infer_body`
 through its run). -/

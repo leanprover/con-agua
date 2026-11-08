@@ -50,7 +50,14 @@ theorem pinAt_specW (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) 
     (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ pinAtW s₀.mem i = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, pinAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [pinAtW, pinW_eq, rdW_eq]
 
 /-- **A pin read is the twin's** (`pinAt`), the memory unchanged. -/
 theorem pinAtW_ok {m m' : Mem} {a : AState} {i : Word} {r : List Word}
@@ -168,7 +175,7 @@ structure BasisProg (p : Prog) : Prop where
 section models
 variable (p : Prog)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `install_basis_decl(vis, c)`, both outcomes**: `env_find`, `env_push`
 (outside the verdict closure) through their `Option` models. -/
 l_model installBasisDecl_specE (p : Prog) (hB : BasisProg p)
@@ -178,7 +185,7 @@ l_model installBasisDecl_specE (p : Prog) (hB : BasisProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
+-- RS2E
 
 end models
 
@@ -186,7 +193,9 @@ end models
 
 /-- The cut record pool is the record pool below its top. -/
 theorem truncM_erecP (m : Mem) : ArrExt (erA (truncM m)) (erecP m) := by
-  sorry
+  intro i v h
+  obtain ⟨hi, hv⟩ := truncM_er_get h
+  rw [erecP_getE hi]; exact hv
 
 /-- What `install_basis_decl` gives besides the twin's environment `fe'` (from `m`): the stage
 over the result word, the growth. -/
@@ -195,7 +204,7 @@ structure IbdPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : Word) (m' 
   stage : StageR r fe' m' a'
   grow : IWGrow m m'
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_basis_decl` refines `installBasisDecl`, both outcomes**: a duplicate declaration
 rejects (`env_find` hits), else the push. -/
 theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -231,7 +240,7 @@ theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Nam
   refine RefE.ret ?_ ⟨by simpa using hS2, hg2⟩
   simp [installBasisDecl, hname, hfind, StateT.run_pure]
   rfl
--/
+-- RS2E
 
 /-- The basis list's decoding: an `IW` slice of constant-record pointers. -/
 def basisDec (dn : NIdx → Option ConLeche.Name) (o l : Nat) (m : Mem) :
@@ -242,7 +251,7 @@ theorem basisDec_mono (dn : NIdx → Option ConLeche.Name) (o l : Nat) :
     OMono (basisDec dn o l) :=
   OMono.decPL (f := fun m q => decCI (erA m) q) (fun _ => ⟨fun _ _ _ he h => he.2.decCI h⟩) o l
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `install_basis_decls(vis, o, l)`, both outcomes** (the recursion is the
 model's own; `install_basis_decl` by its unified model). -/
 l_model installBasisDecls_specE (p : Prog) (hB : BasisProg p)
@@ -252,9 +261,9 @@ l_model installBasisDecls_specE (p : Prog) (hB : BasisProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_basis_decls` refines `installBasisDecls`, both outcomes**, by induction on the
 fuel (the recursion is the model's): the head by `ibd_ref`, the rest by the induction
 hypothesis. -/
@@ -307,11 +316,11 @@ theorem ibds_ref {p : Prog} (hB : BasisProg p) (dn : NIdx → Option ConLeche.Na
     rw [ho1, hl1]; exact decPL_tail hD'
   exact (ih hR1.stage (DecB.grow (basisDec_mono dn _ _) hR1.grow hDt)).mono
     fun _ _ _ hR => ⟨hR.stage, hR1.grow.trans hR.grow⟩
--/
+-- RS2E
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_basis_decl(vis, c)` refines `installBasisDecl`** (sorry-free). -/
 @[refines ConRon.Arena.installBasisDecl]
 theorem installBasisDecl_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -325,9 +334,9 @@ theorem installBasisDecl_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ :
   rintro r s' ⟨hl, fe', a', hrun, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hR.stage, hR.grow⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_basis_decls(vis, o, l)` refines `installBasisDecls`** (an `IW` slice of
 constant-record pointers decoded below the tops; sorry-free). -/
 @[refines ConRon.Arena.installBasisDecls]
@@ -343,6 +352,6 @@ theorem installBasisDecls_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ 
   rintro r s' ⟨hl, fe', a', hrun, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hR.stage, hR.grow⟩
--/
+-- RS2E
 
 end L.Arena

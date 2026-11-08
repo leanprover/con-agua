@@ -134,7 +134,8 @@ theorem callF_spec {ctl : ArrId} {p P : Prog} {A : List TieredArray} {C : List W
     (hq : closedW ctl P A C fs = true) (hp : ∀ g ∈ fs, p.lookup g = P.lookup g) {f : FnName}
     (hf : f ∈ fs) (n : Nat) (s₀ : St) (vs : List Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs
-    ⦃fun r s' => LocEq s' s₀ ∧ callF P f s₀.mem vs = some (r, s'.mem); ⊤⦄ := by
-  sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ callF P f s₀.mem vs = some (r, s'.mem); ⊤⦄ :=
+  triple_post (callW_spec p n f vs s₀) fun _ _ ⟨hl, hc⟩ =>
+    ⟨hl, callF_of_callW (by rw [← callW_agree hq hp n hf]; exact hc)⟩
 
 end L.Arena

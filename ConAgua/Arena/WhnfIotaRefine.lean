@@ -507,7 +507,47 @@ theorem constTyAt_run_miss (cv : IConstantVal) (us : LsIdx) (a a₁ : AState) (r
 /-- **`const_ty_at` refines `constTyAt`** (`inst_lp` as the hypothesis `InstLPOK`). -/
 theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     ConstTyAtOK p := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb nn po pl ty us lps hS hnn hty hus hlps
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (constTyAt_spec p hp n s₀ nn po pl ty us) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  simp only [ctaW] at hW
+  obtain ⟨h0, hW⟩ := of_ite_none hW
+  have hf := memoRV_findP hS.core.ct nn us hnn hus h0
+  by_cases h1 : (mfindG ctSch s₀.mem nn us).headD 0 ≠ 0
+  · rw [ite_eq_left h1] at hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨hv, hv32⟩ := hf.1 h1
+    have hrun1 := constTyAt_run_hit ⟨decI nn, lps, decE ty⟩ (decI us) a₀ _ hv
+    refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
+    · simp only [decH]; rw [← hr]
+    · unfold ResH HW; rw [← hr]; exact hv32
+  rw [ite_eq_right h1] at hW
+  have hmiss := hf.2 (by simpa using h1)
+  rcases hc : callW p n "inst_lp" [po, pl, us, ty] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc, reduceCtorEq] at hW
+  obtain ⟨hok, ⟨M', hS₁, hK, hSt⟩, hres, hr₁⟩ :=
+    CoreSpec.of_callW (hlp n s₀ a₀ dn vis fe MM eb po pl us ty lps hS hty hus hlps) hc
+  have hrunI := AM.run_of_ok _ _ hok
+  have hrun2 := constTyAt_run_miss ⟨decI nn, lps, decE ty⟩ (decI us) a₀ _ _ hmiss hrunI
+  rw [hres] at hrun2
+  obtain ⟨h2, hW⟩ := of_ite_none hW
+  cases hp : mputG ctSch m₁ nn us (r₁.headD 0) ((mfindG ctSch m₁ nn us).headD 0)
+      ((mfindG ctSch m₁ nn us).tail.headD 0) with
+  | none => rw [hp] at hW; cases hW
+  | some m₂ =>
+  rw [hp] at hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+  have hs : msetG ctSch m₁ nn us (r₁.headD 0) = some m₂ := by rw [msetG_eq _ _ _ _ _ h2]; exact hp
+  have hwv : HW (r₁.headD 0) := hr₁
+  have hcore := hS₁.core.setCt nn us (r₁.headD 0) hnn hus hwv hs
+  obtain ⟨hS₂, hSt₂⟩ := CoreS.setMemo ctSch _ hS₁
+    (msetG_frame ctSch (coreSch_wf _ _ (by decide) (by decide)) _ _ _ _ _ hs)
+    (by decide) (by decide) (by decide) (by decide) hcore rfl rfl
+  refine CoreRef.of_run hrun2 (hm ▸ ⟨M', hS₂, hK, hSt.trans hSt₂⟩) ?_ ?_
+  · simp only [decH]; rw [← hr]
+  · unfold ResH HW; rw [← hr]; exact hwv
 
 theorem ruleRhsAt_run_hit (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx) (a : AState)
     (r : EIdx) (h : a.caches.ruleRhsC[(rec, ctor, us)]? = some r) :
@@ -525,7 +565,53 @@ theorem ruleRhsAt_run_miss (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us 
 /-- **`rule_rhs_at` refines `ruleRhsAt`** (`inst_lp` as the hypothesis `InstLPOK`). -/
 theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     RuleRhsAtOK p := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb rec ctor po pl rhs us lps hS hrec hctor hrhs hus hlps
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (ruleRhsAt_spec p hp n s₀ rec ctor po pl rhs us) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
+    ?_⟩
+  have hdk := rrKey_dk rec ctor us hctor hus
+  simp only [rraW] at hW
+  obtain ⟨h0, hW⟩ := of_ite_none hW
+  have hf := memoRV_findR hS.core.rr rec (ctor ||| (us <<< 32)) hrec h0
+  rw [hdk] at hf
+  by_cases h1 : (mfindG rrSch s₀.mem rec (ctor ||| (us <<< 32))).headD 0 ≠ 0
+  · rw [ite_eq_left h1] at hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨hv, hv32⟩ := hf.1 h1
+    have hrun1 := ruleRhsAt_run_hit (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ hv
+    refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
+    · simp only [decH]; rw [← hr]
+    · unfold ResH HW; rw [← hr]; exact hv32
+  rw [ite_eq_right h1] at hW
+  have hmiss := hf.2 (by simpa using h1)
+  rcases hc : callW p n "inst_lp" [po, pl, us, rhs] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc, reduceCtorEq] at hW
+  obtain ⟨hok, ⟨M', hS₁, hK, hSt⟩, hres, hr₁⟩ :=
+    CoreSpec.of_callW (hlp n s₀ a₀ dn vis fe MM eb po pl us rhs lps hS hrhs hus hlps) hc
+  have hrunI := AM.run_of_ok _ _ hok
+  have hrun2 := ruleRhsAt_run_miss (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ _ hmiss hrunI
+  rw [hres] at hrun2
+  obtain ⟨h2, hW⟩ := of_ite_none hW
+  cases hp : mputG rrSch m₁ rec (ctor ||| (us <<< 32)) (r₁.headD 0)
+      ((mfindG rrSch m₁ rec (ctor ||| (us <<< 32))).headD 0)
+      ((mfindG rrSch m₁ rec (ctor ||| (us <<< 32))).tail.headD 0) with
+  | none => rw [hp] at hW; cases hW
+  | some m₂ =>
+  rw [hp] at hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+  have hs : msetG rrSch m₁ rec (ctor ||| (us <<< 32)) (r₁.headD 0) = some m₂ := by
+    rw [msetG_eq _ _ _ _ _ h2]; exact hp
+  have hwv : HW (r₁.headD 0) := hr₁
+  have hcore := hS₁.core.setRr rec (ctor ||| (us <<< 32)) (r₁.headD 0) hrec hwv hs
+  rw [hdk] at hcore
+  obtain ⟨hS₂, hSt₂⟩ := CoreS.setMemo rrSch _ hS₁
+    (msetG_frame rrSch (coreSch_wf _ _ (by decide) (by decide)) _ _ _ _ _ hs)
+    (by decide) (by decide) (by decide) (by decide) hcore rfl rfl
+  refine CoreRef.of_run hrun2 (hm ▸ ⟨M', hS₂, hK, hSt.trans hSt₂⟩) ?_ ?_
+  · simp only [decH]; rw [← hr]
+  · unfold ResH HW; rw [← hr]; exact hwv
 
 /-! ## `pi_residual(e, ao, an)` -/
 
@@ -715,6 +801,16 @@ theorem piResidual_refines (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p) :
     HW e → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p n "pi_residual" [e, ao, an] (piResidual (decE e) args.toList) decOptR s₀ a₀ dn vis fe
       MM eb ResW := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb e ao an args hS he hsp htop
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (piResidual_spec p hp.piResidual n s₀ e ao an) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
+    ?_⟩
+  obtain ⟨hok, hca, hres, hL1, hL2⟩ := pirW_ok p hi1 dn vis fe eb ao an args
+    (an.toNat - (0 : Word).toNat) (n + 1) s₀.mem a₀ MM e 0 r s'.mem rfl (by simp) hS he hsp htop hW
+  refine ⟨hok, ?_, ?_, ⟨hL1, hL2⟩⟩
+  · simpa using hca
+  · simpa using hres
 
 end L.Arena

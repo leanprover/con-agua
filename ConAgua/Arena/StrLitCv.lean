@@ -35,7 +35,11 @@ theorem strCv_spec (p : Prog) (hp : p.lookup "str_cv" = some strCvL) (n : Nat) (
     (q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "str_cv" [q]
     ⦃fun r s' => LocEq s' s₀ ∧ strCvW s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, strCvL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+    finish [strCvW]
 
 section calls
 variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
@@ -52,7 +56,14 @@ theorem cv_call (hS : CoreS dn m a vis fe M eb) {q : Word} {ci : IConstantInfo}
         some ci.toConstantVal.levelParams ∧
       ci.toConstantVal.levelParams.length = (r.tail.headD 0).toNat ∧
       ci.toConstantVal.type = decI (r.tail.tail.headD 0) ∧ HW (r.tail.tail.headD 0) := by
-  sorry
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (strCv_spec p hp.strCv n _ q) h
+  simp only [strCvW, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, hm⟩ := hW
+  obtain ⟨hsl, hlen, hty, hhw⟩ := decCV_rd (erecP_ext m) hS.erec (L.Ind.ciD_cv hci)
+  exact ⟨hm.symm, hsl, hlen, hty, hhw⟩
 
 end calls
 

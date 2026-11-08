@@ -45,7 +45,23 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
     (hmode : ModeOK m') :
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       a'.store.view = a.store.view ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
-  sorry
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf
+    (fun b hb => by have := hA b hb; omega) a hS.check.arena.der
+  have hcs := AM.st_proto L op key tag wide pf d err a hrun hok
+  have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
+    rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
+    · exact ⟨hD₁, rfl⟩
+    · exact ⟨(hset t).1 hD₁, (hset t).2⟩
+    · exact ⟨(hsetS t).1 hD₁, (hsetS t).2⟩
+  have hrun' := AM.run_of_ok op a hok
+  rw [hres] at hrun'
+  obtain ⟨h1, h2⟩ := StageR.of_walkM hS ⟨hR, hDk.1⟩ hf
+    (fun b hb => by have := hA b hb; simp only [InStoreTier]; omega) hC hDk.2 hmode
+  have hvw : (AM.st op a).store.view = a.store.view := by
+    rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
+    · exact (hv t).1
+    · exact (hv t).2
+  exact ⟨_, hrun', h1, h2, hvw, hf.size⟩
 
 theorem internNAnon_stage (hS : StageR vis fe m a) (hI : nainternW m = some (r, m')) :
     ∃ a', (internNNode .anonymous).run a = .ok (decI r, a') ∧ StageR vis fe m' a' ∧

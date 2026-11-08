@@ -189,7 +189,7 @@ theorem instSpinePins_refines :
   instSpinePins_refines' p hq.body.iota (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
     (ErecKeptInst.of_closed hq.hcl)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in
 @[refines ConRon.Arena.recFireArgs]
 theorem recFireArgs_refines :
@@ -210,7 +210,7 @@ theorem recFireArgs_refines :
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
   recFireArgs_refines' p hq.body.iota (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
     (ErecKeptInst.of_closed hq.hcl)
--/
+-- RS2E
 
 include hq in
 @[refines ConRon.Arena.andRescueSlots]
@@ -240,7 +240,7 @@ theorem majorToCtor_refines : MajorToCtorOK p :=
   majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
     (ErecKeptKnot.of_closed hq.hcl) (KnotAllProg.projC hq)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in
 @[refines ConRon.Arena.prepareMajor]
 theorem prepareMajor_refines :
@@ -254,7 +254,7 @@ theorem prepareMajor_refines :
         (decE major)) decH s₀ a₀ dn vis fe MM eb :=
   prepareMajor_refines' p hq.m2c.toIotaProg4 (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
     (majorToCtor_refines hq) (ErecKeptKnot.of_closed hq.hcl)
--/
+-- RS2E
 
 include hq in
 /-- **`iota_rec_at` refines `iotaRecAt`** (the statement is `WhnfCore.lean`'s `IotaRecAtOK`, what
