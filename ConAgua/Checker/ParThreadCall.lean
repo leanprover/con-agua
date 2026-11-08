@@ -218,8 +218,10 @@ theorem thrS_cases {b : TieredArray} (h : thrS b = true) :
     (∃ k, ∃ hk : k < frozen.length, 1 ≤ k ∧ b = frozen[k].1) ∨ b ∈ parOwnedL := by
   sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem seedMem_of_ne {w : Mem} (h : w.glob INIT ≠ 0) : seedMem w = w := by
   simp only [seedMem, ite_eq_right h]
+-/
 
 theorem truncList_bytes (m₀ : Mem) : ∀ (zs : List (ArrId × Fz)) (m : Mem),
     (truncList m₀ m zs).bytes = m.bytes
