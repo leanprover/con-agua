@@ -8,6 +8,8 @@ public import ConAgua.Arena.IndPos2
 public import ConAgua.Arena.RecClass
 public import ConAgua.Arena.RecGen
 public import ConAgua.Arena.RecCheck
+public import ConAgua.Arena.IndStream
+public import ConAgua.Arena.IndDeclConsts
 
 @[expose] public section
 
@@ -24,6 +26,6 @@ namespace L.Ind
 
 def indProg : Prog :=
   indPartsFns ++ indInstallFns ++ indSumFns ++ indPosFns ++ indPos2Fns ++ recClassFns ++
-    recGenFns ++ recCheckFns ++ libFns ++ stubFns ++ masterFns
+    recGenFns ++ recCheckFns ++ indStreamFns ++ indDeclConstsFns ++ libFns ++ stubFns ++ masterFns
 
 end L.Ind
