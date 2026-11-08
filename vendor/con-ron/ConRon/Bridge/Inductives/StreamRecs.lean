@@ -315,7 +315,7 @@ theorem recTyCheck_spec (fe : IFEnv) (hk : CoreSpec Arena.checkFuel) (henv : Env
   obtain ⟨b1, s1, k1, z1⟩ := AM.bind_ok hrun
   obtain ⟨p1, rfl⟩ := streamClosed_run hok.state hs hg k1
   obtain ⟨hcl, z2⟩ := AM.dunless_ok AM.Never.fail_any z1
-  replace z2 := AM.pure_bind_ok z2
+  try replace z2 := AM.pure_bind_ok z2  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hfs : sP.hasFvar = false := by
     simp only [Bool.and_eq_true, Bool.not_eq_true'] at hcl; exact hcl.1.2
   have hfg : gP.hasFvar = false := by
@@ -327,7 +327,7 @@ theorem recTyCheck_spec (fe : IFEnv) (hk : CoreSpec Arena.checkFuel) (henv : Env
   obtain ⟨h2st, h2c, h2p, rfl⟩ := allLevelParamsDefined_run p1.ok
     (denoteNList_ext p1.ext.lss.ls.ns _ _ hlps) (denote_ext hs p1.ext) k2
   obtain ⟨hlp, z4⟩ := AM.dunless_ok AM.Never.fail_any z3
-  replace z4 := AM.pure_bind_ok z4
+  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have p2 : PStep s1 s2 := PStep.of_caches ⟨by rw [h2st]; exact p1.ok.wf⟩
     (by rw [h2st]; exact Ext.refl _) h2c h2p
   have c2 := (p1.trans p2).toCore hok
@@ -335,7 +335,7 @@ theorem recTyCheck_spec (fe : IFEnv) (hk : CoreSpec Arena.checkFuel) (henv : Env
   obtain ⟨b3, s3, k3, z5⟩ := AM.bind_ok z4
   obtain ⟨p3, rfl⟩ := constsResolveFFast_pstep c2.ok.toR (denote_ext hs c2.ext) k3
   obtain ⟨hcr, z6⟩ := AM.dunless_ok (AM.Never.bind fun _ => AM.Never.fail_any) z5
-  replace z6 := AM.pure_bind_ok z6
+  try replace z6 := AM.pure_bind_ok z6  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have c3 := c2.trans (p3.toCore c2.ok)
   -- a type
   obtain ⟨st, s4, k4, z7⟩ := AM.bind_ok z6
@@ -374,7 +374,7 @@ theorem ruleAgree_spec (fe : IFEnv) (hk : CoreSpec Arena.checkFuel) (henv : EnvW
   obtain ⟨b1, s1, k1, z1⟩ := AM.bind_ok hrun
   obtain ⟨p1, rfl⟩ := streamClosed_run hok.state hs hg k1
   obtain ⟨hcl, z2⟩ := AM.dunless_ok AM.Never.fail_any z1
-  replace z2 := AM.pure_bind_ok z2
+  try replace z2 := AM.pure_bind_ok z2  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hfs : sP.hasFvar = false := by
     simp only [Bool.and_eq_true, Bool.not_eq_true'] at hcl; exact hcl.1.2
   have hfg : gP.hasFvar = false := by
@@ -385,14 +385,14 @@ theorem ruleAgree_spec (fe : IFEnv) (hk : CoreSpec Arena.checkFuel) (henv : EnvW
   obtain ⟨h2st, h2c, h2p, rfl⟩ := allLevelParamsDefined_run p1.ok
     (denoteNList_ext p1.ext.lss.ls.ns _ _ hlps) (denote_ext hs p1.ext) k2
   obtain ⟨hlp, z4⟩ := AM.dunless_ok AM.Never.fail_any z3
-  replace z4 := AM.pure_bind_ok z4
+  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have p2 : PStep s1 s2 := PStep.of_caches ⟨by rw [h2st]; exact p1.ok.wf⟩
     (by rw [h2st]; exact Ext.refl _) h2c h2p
   have c2 := (p1.trans p2).toCore hok
   obtain ⟨b3, s3, k3, z5⟩ := AM.bind_ok z4
   obtain ⟨p3, rfl⟩ := constsResolveFFast_pstep c2.ok.toR (denote_ext hs c2.ext) k3
   obtain ⟨hcr, z6⟩ := AM.dunless_ok (AM.Never.bind fun _ => AM.Never.fail_any) z5
-  replace z6 := AM.pure_bind_ok z6
+  try replace z6 := AM.pure_bind_ok z6  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have c3 := c2.trans (p3.toCore c2.ok)
   obtain ⟨ts, s4, k4, z7⟩ := AM.bind_ok z6
   obtain ⟨c4, tsP, htsP, hwts, hF4⟩ := infer_crun hk henv c3.ok (denote_ext hs c3.ext) hws k4
@@ -404,7 +404,7 @@ theorem ruleAgree_spec (fe : IFEnv) (hk : CoreSpec Arena.checkFuel) (henv : EnvW
   obtain ⟨c6, hF6⟩ := defeq_crun (hk.knot env fe henv) c5.ok (denote_ext htsP c5.ext) htgP
     hwts hwtg k6
   obtain ⟨hv1, z10⟩ := AM.dunless_ok AM.Never.fail_any z9
-  replace z10 := AM.pure_bind_ok z10
+  try replace z10 := AM.pure_bind_ok z10  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have c16 := c15.trans c6
   obtain ⟨v2, s7, k7, z11⟩ := AM.bind_ok z10
   obtain ⟨c7, hF7⟩ := defeq_crun (hk.knot env fe henv) c6.ok (denote_ext hs c16.ext)
@@ -753,7 +753,7 @@ theorem streamRecCheck_spec (fe : IFEnv) (hk : CoreSpec Arena.checkFuel) (henv :
   obtain ⟨b3, s3, k3, z3⟩ := AM.bind_ok z2
   obtain ⟨p3, rfl⟩ := streamNestedOk_run p2.ok (denote_ext (denoteCV_type hcv) p2.ext) hfire k3
   obtain ⟨hn, z4⟩ := AM.dunless_ok AM.Never.fail_any z3
-  replace z4 := AM.pure_bind_ok z4
+  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have c3 := (p2.trans p3).toCore hok
   obtain ⟨c4, _, -, hF4⟩ := streamRecCompare_spec fe hk henv rc rcP g gP s3 s' r c3.ok
     ⟨dRec_ext c3.ext _ _ hrc, dRecOut_ext c3.ext _ _ hg⟩ z4

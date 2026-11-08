@@ -2337,12 +2337,12 @@ theorem classConstOk_spec {env : Env} (fe : IFEnv)
       t.pins = s2.pins ∧ r = ConLeche.litShapeOk (.axiomInfo cP))
     rfl gL (litShapeOk_run s2 (.axiomInfo cv) (.axiomInfo cP) c2.ok hciA)
   obtain ⟨hshape, r4⟩ := AM.dunless_ok AM.Never.fail_any rL
-  replace r4 := AM.pure_bind_ok r4
+  try replace r4 := AM.pure_bind_ok r4  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hshapeP : ConLeche.litShapeOk (.axiomInfo cP) = true := by rw [← hbl]; exact hshape
   have c3 : CoreStep env fe s₀ s3 := c2.trans ⟨hck3, hxL, hpL⟩
   -- 4. the duplicate-universe-parameter guard
   obtain ⟨hnod, r6⟩ := AM.dunless_ok AM.Never.fail_any r4
-  replace r6 := AM.pure_bind_ok r6
+  try replace r6 := AM.pure_bind_ok r6  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hnodP : ConLeche.Name.nodup cP.levelParams = true := by
     rw [← nameNodup_spec c3.ok.state.wf cv.levelParams cP.levelParams
       (denoteNList_ext c3.ext.lss.ls.ns _ _ hlps)]
@@ -2351,7 +2351,7 @@ theorem classConstOk_spec {env : Env} (fe : IFEnv)
   obtain ⟨b5, s5, k5, r7⟩ := AM.bind_ok r6
   obtain ⟨p5, rfl⟩ := RC.looseBVarsBoundedFast_pstep c3.ok.state (denote_ext hty c3.ext) k5
   obtain ⟨hlbb, r8⟩ := AM.dunless_ok AM.Never.fail_any r7
-  replace r8 := AM.pure_bind_ok r8
+  try replace r8 := AM.pure_bind_ok r8  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   -- 6. the free-variable guard
   have hx35 := c3.ext.trans p5.ext
   obtain ⟨b6, s6, k6, r9⟩ := AM.bind_ok r8
