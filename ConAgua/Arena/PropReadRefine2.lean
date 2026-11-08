@@ -28,7 +28,7 @@ open ConLeche (Name Level PropWhen)
 
 /-- A decoded definition record: its value is word `q + 5`. -/
 theorem decCI_defnV {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt a b)
     (hsz : b.size < 2 ^ 63) (h1 : rdW b q = 1) :
     ∃ cv hint, ci = .defnInfo cv (decE (rdW b (q + 5))) hint ∧ HW (rdW b (q + 5)) := by
   cases hq : a[q.toNat]? with
@@ -47,7 +47,7 @@ theorem decCI_defnV {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
 
 /-- A decoded record whose kind word is not `1` is not a definition. -/
 theorem decCI_not_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt a b)
     (hsz : b.size < 2 ^ 63) (h1 : rdW b q ≠ 1) : ∀ cv v hint, ci ≠ .defnInfo cv v hint :=
   (decCI_defn h hab hsz).2 h1
 

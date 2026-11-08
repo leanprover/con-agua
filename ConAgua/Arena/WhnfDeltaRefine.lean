@@ -42,7 +42,7 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-theorem decCV_words {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+theorem decCV_words {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
     (∃ w, a[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ cv.name = decI w) ∧
     (∃ w, a[q + 2]? = some w ∧ cv.levelParams.length = w.toNat) ∧
     (∃ w, a[q + 3]? = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w) := by
@@ -67,8 +67,8 @@ theorem rdW_off {b : Array Word} {q c : Word} {i : Nat} {w : Word} (hb : b[i]? =
 
 /-- Shape of a record whose `decCV` succeeds at `q + 1`, read at the words `q + 2`, `q + 3`, `q + 4`. -/
 theorem decCV_rd {a b : Array Word} {q : Word} {cv : IConstantVal} (hab : ArrExt a b)
-    (hsz : b.size < 2 ^ 63) (h : decCV a (q.toNat + 1) = some cv) :
-    hslice? b (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams ∧
+    (hsz : b.size < 2 ^ 63) (h : decCV (aread a) (q.toNat + 1) = some cv) :
+    hslice? (aread b) (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams ∧
     cv.levelParams.length = (rdW b (q + 3)).toNat ∧
     cv.type = decI (rdW b (q + 4)) ∧ (rdW b (q + 4)).toNat < 2 ^ 32 := by
   obtain ⟨-, ⟨w3, hw3, hlen⟩, ⟨w4, hw4, hl4, hty⟩⟩ := decCV_words h
@@ -92,14 +92,14 @@ theorem decCV_rd {a b : Array Word} {q : Word} {cv : IConstantVal} (hab : ArrExt
 
 /-- The kind word of a decoded record, and what each kind decodes to. -/
 theorem decCI_split {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt a b)
     (hsz : b.size < 2 ^ 63) :
-    (rdW b q = 1 → ∃ cv v hint, ci = .defnInfo cv v hint ∧ decCV a (q.toNat + 1) = some cv ∧
+    (rdW b q = 1 → ∃ cv v hint, ci = .defnInfo cv v hint ∧ decCV (aread a) (q.toNat + 1) = some cv ∧
       v = decI (rdW b (q + 5)) ∧ (rdW b (q + 5)).toNat < 2 ^ 32) ∧
     (rdW b q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) ∧
-    (rdW b q = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV a (q.toNat + 1) = some cv) ∧
+    (rdW b q = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV (aread a) (q.toNat + 1) = some cv) ∧
     (rdW b q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) ∧
-    (rdW b q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV a (q.toNat + 1) = some cv) ∧
+    (rdW b q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (aread a) (q.toNat + 1) = some cv) ∧
     (rdW b q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
   cases hq : a[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h

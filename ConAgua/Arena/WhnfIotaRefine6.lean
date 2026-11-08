@@ -144,17 +144,17 @@ theorem iotaCtorNeverProp_spec (p : Prog)
 
 /-! ## The record of an inductive -/
 
-theorem nat?_some {a : Array Word} {i k : Nat} (h : nat? a i = some k) :
+theorem nat?_some {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) :
     ∃ w, a[i]? = some w ∧ w.toNat = k := by
   simp only [nat?, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, hk⟩ := h
   exact ⟨w, hw, hk⟩
 
-theorem nat?_of {a : Array Word} {i : Nat} {w : Word} (h : a[i]? = some w) : nat? a i = some w.toNat := by
+theorem nat?_of {a : Array Word} {i : Nat} {w : Word} (h : a[i]? = some w) : nat? (aread a) i = some w.toNat := by
   simp [nat?, h]
 
-theorem hlist?_slice {a : Array Word} {i : Nat} {l : List NIdx} (h : hlist? a i = some l) :
-    ∃ o c : Word, a[i]? = some o ∧ a[i+1]? = some c ∧ hslice? a o.toNat c.toNat = some l := by
+theorem hlist?_slice {a : Array Word} {i : Nat} {l : List NIdx} (h : hlist? (aread a) i = some l) :
+    ∃ o c : Word, a[i]? = some o ∧ a[i+1]? = some c ∧ hslice? (aread a) o.toNat c.toNat = some l := by
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨o, ho, c, hc, hs⟩ := h
   obtain ⟨wo, hwo, rfl⟩ := nat?_some ho
@@ -175,9 +175,9 @@ theorem decPW_ww {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
   · rw [hs] at h; simp at h
 
 theorem decCI_ind_fields (b : Array Word) (dn : NIdx → Option ConLeche.Name) (q : Nat)
-    (cv : IConstantVal) (caps : IIndCaps) (h : decCI b q = some (.indInfo cv caps)) :
+    (cv : IConstantVal) (caps : IIndCaps) (h : decCI (aread b) q = some (.indInfo cv caps)) :
     ∃ po pc swd so sc : Word, b[q+2]? = some po ∧ b[q+3]? = some pc ∧
-      hslice? b po.toNat pc.toNat = some cv.levelParams ∧ b[q+12]? = some swd ∧
+      hslice? (aread b) po.toNat pc.toNat = some cv.levelParams ∧ b[q+12]? = some swd ∧
       b[q+13]? = some so ∧ b[q+14]? = some sc ∧ decPWw b dn swd so sc = some caps.sortZ := by
   have hk := L.Ind.decCI_indInfo_kind h
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h

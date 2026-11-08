@@ -36,7 +36,7 @@ namespace L.Arena
 
 /-! ## Decoding rule records -/
 
-theorem decRule_fields (a : Array Word) (q : Nat) (rl : IRecRule) (h : decRule a q = some rl) :
+theorem decRule_fields (a : Array Word) (q : Nat) (rl : IRecRule) (h : decRule (aread a) q = some rl) :
     (∃ w, a[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ rl.ctor = decI w) ∧
     ∃ w, a[q + 9]? = some w ∧ rl.k = (w != 0) := by
   simp only [decRule, hd?, nat?, bool?, Option.bind_eq_bind] at h
@@ -66,15 +66,15 @@ theorem mapM_option_get {α β : Type} (f : α → Option β) : ∀ (l : List α
     | succ j => simpa using h2 j (by simpa using hj)
 
 theorem decRules_get (a : Array Word) (off cnt : Nat) (rs : List IRecRule)
-    (h : decRules a off cnt = some rs) :
-    rs.length = cnt ∧ ∀ j, j < cnt → decRule a (off + 11 * j) = rs[j]? := by
+    (h : decRules (aread a) off cnt = some rs) :
+    rs.length = cnt ∧ ∀ j, j < cnt → decRule (aread a) (off + 11 * j) = rs[j]? := by
   obtain ⟨h1, h2⟩ := mapM_option_get _ _ _ h
   simp at h1
   exact ⟨h1, fun j hj => by have := h2 j (by simpa using hj); simpa [List.getElem_range] using this⟩
 
 /-- The model's index arithmetic does not wrap on a decoded record. -/
 theorem rule_idx (a : Array Word) (ro i : Word) (rl : IRecRule)
-    (hsz : a.size < 2 ^ 64) (h : decRule a (ro.toNat + 11 * i.toNat) = some rl) :
+    (hsz : a.size < 2 ^ 64) (h : decRule (aread a) (ro.toNat + 11 * i.toNat) = some rl) :
     (ro + 11 * i).toNat = ro.toNat + 11 * i.toNat ∧ ro.toNat + 11 * i.toNat < a.size := by
   obtain ⟨⟨w, hw, _⟩, _⟩ := decRule_fields a _ rl h
   have hlt : ro.toNat + 11 * i.toNat < a.size := by
@@ -133,10 +133,10 @@ theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k
 
 /-- Rule `i` of a decoded slice, as the model reads it. -/
 theorem frN_at (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc : Word) (rules : List IRecRule)
-    (hget : ∀ j, j < rc.toNat → decRule E (ro.toNat + 11 * j) = rules[j]?) (i : Nat) (hi : i < rc.toNat)
+    (hget : ∀ j, j < rc.toNat → decRule (aread E) (ro.toNat + 11 * j) = rules[j]?) (i : Nat) (hi : i < rc.toNat)
     (hlen : rules.length = rc.toNat) :
     ∃ rl w, rules.drop i = rl :: rules.drop (i + 1) ∧ rdW E (ro + 11 * UInt64.ofNat i) = w ∧
-      w.toNat < 2 ^ 32 ∧ rl.ctor = decI w ∧ decRule E (ro + 11 * UInt64.ofNat i).toNat = some rl := by
+      w.toNat < 2 ^ 32 ∧ rl.ctor = decI w ∧ decRule (aread E) (ro + 11 * UInt64.ofNat i).toNat = some rl := by
   have hi' : (UInt64.ofNat i).toNat = i := by have := rc.toNat_lt; simp; omega
   obtain ⟨rl, hrl⟩ : ∃ rl, rules[i]? = some rl := ⟨rules[i], List.getElem?_eq_getElem (by omega)⟩
   have hdr := hget i hi
@@ -150,9 +150,9 @@ theorem frN_at (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc : Word) (rules : 
 /-- **The scan model computes `findRule`**, by the model's own induction. -/
 theorem frN_rel (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc c : Word) (hc : HW c)
     (rules : List IRecRule) (hlen : rules.length = rc.toNat)
-    (hget : ∀ j, j < rc.toNat → decRule E (ro.toNat + 11 * j) = rules[j]?) (i : Nat) :
+    (hget : ∀ j, j < rc.toNat → decRule (aread E) (ro.toNat + 11 * j) = rules[j]?) (i : Nat) :
     findRule (rules.drop i) (decI c) =
-      (if (frN E ro rc c i).headD 0 = 0 then none else decRule E ((frN E ro rc c i).tail.headD 0).toNat) := by
+      (if (frN E ro rc c i).headD 0 = 0 then none else decRule (aread E) ((frN E ro rc c i).tail.headD 0).toNat) := by
   fun_induction frN E ro rc c i with
   | case3 i hi => simp [List.drop_eq_nil_of_le (show rules.length ≤ i by omega), findRule]
   | case1 i hi hEq =>

@@ -64,7 +64,7 @@ theorem envFind_specWP (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
 
 /-! ## `find_proj` -/
 
-theorem decTbl_numFields {a : Array Word} {q : Nat} {tbl : IProjTable} (h : decTbl a q = some tbl) :
+theorem decTbl_numFields {a : Array Word} {q : Nat} {tbl : IProjTable} (h : decTbl (aread a) q = some tbl) :
     ∃ w, a[q + 7]? = some w ∧ tbl.numFields = w.toNat := by
   cases h7 : nat? a (q + 7) with
   | none => simp [decTbl, h7] at h

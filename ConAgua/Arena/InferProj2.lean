@@ -99,7 +99,7 @@ theorem rdW_ext' {a b : Array Word} (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) {
 /-- **An inductive record's parameter count and constructors**: `nparams` at `q + 17`, the
 constructor slice at `q + 18`, `q + 19`. -/
 theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a q.toNat = some (.indInfo cv caps))
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) q.toNat = some (.indInfo cv caps))
     (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) :
     caps.nparams = (rdW b (q + 17)).toNat ∧ caps.ctors.length = (rdW b (q + 19)).toNat ∧
     ∀ c, caps.ctors = [c] → c = decI (rdW b (rdW b (q + 18))) ∧ HW (rdW b (rdW b (q + 18))) := by

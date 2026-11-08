@@ -71,7 +71,7 @@ theorem mapM_get {α β : Type} {f : α → Option β} :
 
 /-- A decoded handle slice: its length, and each element a word below `2^32`. -/
 theorem hslice?_get {k : IdxKind} {a : Array Word} {o n : Nat} {l : List (Idx k)}
-    (h : hslice? a o n = some l) :
+    (h : hslice? (aread a) o n = some l) :
     l.length = n ∧ ∀ j, j < n → ∃ w, a[o + j]? = some w ∧ w.toNat < 2 ^ 32 ∧ l[j]? = some (decI w) := by
   obtain ⟨hl, hg⟩ := mapM_get h
   simp only [List.length_range] at hl

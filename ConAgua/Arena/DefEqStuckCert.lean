@@ -37,7 +37,7 @@ theorem erecP_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : Me
 
 /-- The kind word of a decoded record says whether it is an inductive. -/
 theorem decCI_indK {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a b)
+    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt a b)
     (hsz : b.size < 2 ^ 63) :
     (rdW b q = 3 → ∃ cv caps, ci = .indInfo cv caps) ∧
     (rdW b q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by

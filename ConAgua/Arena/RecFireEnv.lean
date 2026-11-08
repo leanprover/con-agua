@@ -21,8 +21,8 @@ namespace L.Arena
 
 /-- A constructor record's `ConstantVal`. -/
 theorem decCI_ctorInfo_cv {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
-    {cvj : IConstantVal} {np nf : Nat} (h : decCI b q = some (.ctorInfo cvj np nf)) :
-    decCV b (q + 1) = some cvj := by
+    {cvj : IConstantVal} {np nf : Nat} (h : decCI (aread b) q = some (.ctorInfo cvj np nf)) :
+    decCV (aread b) (q + 1) = some cvj := by
   cases hq : b[q]? with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
@@ -35,10 +35,10 @@ theorem decCI_ctorInfo_cv {b : Array Word} {dn : NIdx → Option ConLeche.Name} 
 /-- **A rule record's fire datum at its words**: kind `0` plain, else nested with its levels the
 slice at words 4, 5. -/
 theorem decRule_fireE {b : Array Word} {q : Word} {rl : IRecRule} (hsz : b.size < 2 ^ 63)
-    (h : decRule b q.toNat = some rl) :
+    (h : decRule (aread b) q.toNat = some rl) :
     (rdW b (q + 3) = 0 ∧ rl.fire = .plain) ∨
     (rdW b (q + 3) ≠ 0 ∧ ∃ lvls pins, rl.fire = .nested lvls pins ∧
-      hslice? b (rdW b (q + 4)).toNat (rdW b (q + 5)).toNat = some lvls) := by
+      hslice? (aread b) (rdW b (q + 4)).toNat (rdW b (q + 5)).toNat = some lvls) := by
   simp only [decRule, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨kd, hkd, h⟩ := h
   simp only [nat?, Option.map_eq_some_iff] at hkd
