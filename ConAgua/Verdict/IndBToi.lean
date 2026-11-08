@@ -47,6 +47,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model toiE_spec (p : Prog) (P : ToiProg p)
   fns [P.toi ↦ toiE]
   specs [callW_spec p n "env_find", erToIw_specW p P.alloc P.copy P.eti n,
@@ -56,6 +57,7 @@ l_model toiE_spec (p : Prog) (P : ToiProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `target_outside_inst` gives besides the twin's `(index count, sort)` `x` (from `m`): the
 result words, the stage invariant, the growth, the frames. -/
@@ -71,6 +73,7 @@ section sims
 variable {p : Prog} (P : ToiProg p) (hIlpf : IlpfF p)
   {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include P hIlpf in
 /-- **`target_outside_inst` refines `targetOutsideInst`, both outcomes** (`inst_lp_fast` through
 its stub contract at the `StageC` start, `IlpRd.realC`). -/
@@ -207,6 +210,7 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
   cases v with
   | sort u => exact absurd hvr.1 h2
   | _ => exact fun _ => ErrClaim.fail _ _ (by decide)
+-/
 
 end sims
 

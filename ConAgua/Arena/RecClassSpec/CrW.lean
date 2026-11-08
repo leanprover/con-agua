@@ -1052,8 +1052,10 @@ theorem slotsW_ok (h : n ≠ 0) (h2 : ¬ tagW e ≠ 6) (h3 : eViewW m e ≠ []) 
         (slotW cR N m p vis np mo ml d ((eViewW m e).tail.headD 0)) := by
   rw [slotsW, ite_eq_right h, ite_eq_right h2, ite_eq_right h3]
 -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ssK1_fail (h : r1.headD 0 = 0) : ssK1 cR N p vis np n mo ml d dom body (some (r1, m1)) =
     some ([0, 0, 0], m1) := by rw [ssK1, ite_eq_left h]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ssK1_ok (h : r1.headD 0 ≠ 0) : ssK1 cR N p vis np n mo ml d dom body (some (r1, m1)) =
     ssK1b (nextW cR N m1 p vis np n mo ml d dom body (r1.tail.headD 0)) := by rw [ssK1, ite_eq_right h]
@@ -1102,8 +1104,8 @@ end arms
 -- ronsync2 stage 2: grind_pattern [ind_grind] slotsW_tag => slotsW cR (N + 1) m p vis np n mo ml d e
 -- ronsync2 stage 2: grind_pattern [ind_grind] slotsW_nil => slotsW cR (N + 1) m p vis np n mo ml d e
 -- ronsync2 stage 2: grind_pattern [ind_grind] slotsW_ok => slotsW cR (N + 1) m p vis np n mo ml d e
-grind_pattern [ind_grind] ssK1_fail => ssK1 cR N p vis np n mo ml d dom body (some (r1, m1))
-grind_pattern [ind_grind] ssK1_ok => ssK1 cR N p vis np n mo ml d dom body (some (r1, m1))
+-- ronsync2 stage 2: grind_pattern [ind_grind] ssK1_fail => ssK1 cR N p vis np n mo ml d dom body (some (r1, m1))
+-- ronsync2 stage 2: grind_pattern [ind_grind] ssK1_ok => ssK1 cR N p vis np n mo ml d dom body (some (r1, m1))
 grind_pattern [ind_grind] ssK1b_some => ssK1b (some (r1, m1))
 -- ronsync2 stage 2: grind_pattern [ind_grind] nextW_mot => nextW cR (N + 1) m p vis np n mo ml d dom body slot
 -- ronsync2 stage 2: grind_pattern [ind_grind] nextW_min => nextW cR (N + 1) m p vis np n mo ml d dom body slot

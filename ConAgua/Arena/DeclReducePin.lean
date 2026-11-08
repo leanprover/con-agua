@@ -32,16 +32,22 @@ namespace L.Arena
 
 open L.Ind
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The stage relation at another view of the same environment. -/
 theorem StageR.restrict {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (h : StageR vis fe m a) (k : Word) :
     StageR k (fe.restrictTo k.toNat) m a :=
   ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo k, h.check.mode⟩, h.iw⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem IFEnv.restrictTo_restrictTo (fe : IFEnv) (j k : Nat) :
     (fe.restrictTo j).restrictTo k = fe.restrictTo k := rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem IFEnv.restrictTo_self (fe : IFEnv) : fe.restrictTo fe.visibleBelow = fe := rfl
+-/
 
 /-! ## The model -/
 

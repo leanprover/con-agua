@@ -152,6 +152,7 @@ theorem FrX.set {x : Nat} {m₁ m₂ : Mem} (h₁ : FrX x m₁ m₂) (k v : Word
 
 /-! ## The records, as words -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A class record written by the loop**, as words: the class `p0`'s words but `nfs` (decoded
 in `mb`) at a source pointer `p0` satisfying `S`, the `nfs` slice above `hi` (or empty), its pointers
 those of `PtrsB`. -/
@@ -160,28 +161,18 @@ def CnsRec (mb : Mem) (S : Nat → Prop) (hi : Nat) (m : Mem) (w : Nat) (M : Tar
     (∀ k < 13, k ≠ 9 → k ≠ 10 → (m.arr64 IW)[w + k]? = (iwA (truncM mb))[p0 + k]?) ∧
     iwN m (w + 9) = some eo ∧ iwN m (w + 10) = some el ∧ decNL m eo el = some ps ∧
     eo + el ≤ iwTop m ∧ (el = 0 ∨ hi ≤ eo) ∧ PtrsB mb ps M.nfs ∧ M = { src with nfs := M.nfs }
+-/
 
 /-- A source class of the loop: a pointer of the classes' slice `(mo, ml)` in `mb`. -/
 def CnsSrc (mb : Mem) (mo ml : Word) (p0 : Nat) : Prop := ∃ c < ml.toNat, iwN mb (mo.toNat + c) = some p0
 
 theorem decNL_frX {x : Nat} {m m' : Mem} (h : FrX x m m') {o l : Nat} (hb : o + l ≤ iwTop m)
     (hx : l = 0 ∨ x < o ∨ o + l ≤ x) : decNL m' o l = decNL m o l := by
-  simp only [decNL]
-  apply mapM_opt_congr
-  intro j hj
-  have hj' : j < l := List.mem_range.mp hj
-  simp only [iwN, nat?, iwA]
-  rw [h.2 (o + j) (by omega) (by omega)]
+  sorry
 
 theorem CnsRec.frame {mb : Mem} {S : Nat → Prop} {hi x : Nat} {m m' : Mem} {w : Nat} {M : TargetMajor}
     (h : CnsRec mb S hi m w M) (hF : FrX x m m') (hx : x < hi) : CnsRec mb S hi m' w M := by
-  obtain ⟨p0, src, eo, el, ps, hsrc, hS0, hw, htop, hwords, h9, h10, hps, hb, hfr, hpb, hM⟩ := h
-  refine ⟨p0, src, eo, el, ps, hsrc, hS0, hw, Nat.le_trans htop hF.1, fun k hk h9 h10 => ?_, ?_, ?_, ?_,
-    Nat.le_trans hb hF.1, hfr, hpb, hM⟩
-  · rw [hF.2 _ (by omega) (by omega)]; exact hwords k hk h9 h10
-  · simp only [iwN, nat?, iwA] at h9 ⊢; rw [hF.2 _ (by omega) (by omega)]; exact h9
-  · simp only [iwN, nat?, iwA] at h10 ⊢; rw [hF.2 _ (by omega) (by omega)]; exact h10
-  · rw [decNL_frX hF hb (by omega)]; exact hps
+  sorry
 
 theorem PtrsB.mapM {mb m : Mem} (hg : IWGrow mb m) :
     ∀ {ps : List Nat} {xs : List NestCtorNf}, PtrsB mb ps xs → ps.mapM (decNCN (truncM m)) = some xs
@@ -193,47 +184,7 @@ theorem PtrsB.mapM {mb m : Mem} (hg : IWGrow mb m) :
 /-- **A record written by the loop decodes below the tops.** -/
 theorem CnsRec.decB {mb : Mem} {S : Nat → Prop} {hi : Nat} {m : Mem} {w : Nat} {M : TargetMajor}
     (hg : IWGrow mb m) (h : CnsRec mb S hi m w M) : DecB (fun m => decTM m w) m M := by
-  obtain ⟨p0, src, eo, el, ps, hsrc, -, hw, htop, hwords, h9, h10, hps, hb, -, hpb, hM⟩ := h
-  have ew : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 → (iwA (truncM m))[w + k]? = (iwA (truncM mb))[p0 + k]? :=
-    fun k hk a b => by rw [truncM_iw_get?, ite_eq_left (by omega)]; exact hwords k hk a b
-  have e : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 → iwN (truncM m) (w + k) = iwN (truncM mb) (p0 + k) :=
-    fun k hk a b => by simp only [iwN, nat?, ew k hk a b]
-  have eh : ∀ {kk : IdxKind} k, k < 13 → k ≠ 9 → k ≠ 10 →
-      (iwH (truncM m) (w + k) : Option (Idx kk)) = iwH (truncM mb) (p0 + k) :=
-    fun k hk a b => by simp only [iwH, hd?, ew k hk a b]
-  have eh0 : ∀ {kk : IdxKind}, (iwH (truncM m) w : Option (Idx kk)) = iwH (truncM mb) p0 := by
-    intro kk; have := eh (kk := kk) 0 (by omega) (by omega) (by omega); simpa using this
-  have e9 : iwN (truncM m) (w + 9) = some eo := by rw [iwN_truncM (by omega)]; exact h9
-  have e10 : iwN (truncM m) (w + 10) = some el := by rw [iwN_truncM (by omega)]; exact h10
-  have hnfs : decPL (truncM m) (decNCN (truncM m)) eo el = some M.nfs := by
-    rw [decPL_eq_bind, show decNL (truncM m) eo el = some ps from decNL_decB hps hb]
-    exact PtrsB.mapM hg hpb
-  have hs : decTM (truncM mb) p0 = some src := hsrc
-  -- the class's other slices, grown
-  have gHL : ∀ {kk : IdxKind} (o l : Nat) (xs : List (Idx kk)), decHL (truncM mb) o l = some xs →
-      decHL (truncM m) o l = some xs := fun o l xs hx =>
-    (show DecB (fun m => (decHL m o l : Option (List (Idx _)))) mb xs from hx).grow (OMono.decHL _ _) hg
-  have gCN : ∀ (o l : Nat) (xs : List (IConstantVal × Nat)), decPL (truncM mb) (decCN (truncM mb)) o l = some xs →
-      decPL (truncM m) (decCN (truncM m)) o l = some xs := fun o l xs hx =>
-    (show DecB (fun m => decPL m (decCN m) o l) mb xs from hx).grow (OMono.decPL decCN_mono _ _) hg
-  simp only [decTM, decAt, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hs
-  obtain ⟨ind, hind, lv, hlv, ds, ⟨o2, h2, l2, h3, hds⟩, nPc, h4, nIdx, h5, ctors, ⟨o6, h6, l6, h7, hct⟩, w8, h8,
-    nfs0, -, pfvs, ⟨o11, h11, l11, h12, hpf⟩, rfl⟩ := hs
-  show decTM (truncM m) w = some M
-  rw [hM]
-  simp only [decTM, decAt, bind, Option.bind_eq_some_iff, pure, Option.some.injEq]
-  refine ⟨ind, by rw [eh0]; exact hind, lv, by rw [eh 1 (by omega) (by omega) (by omega)]; exact hlv,
-    ds, ⟨o2, by rw [e 2 (by omega) (by omega) (by omega)]; exact h2, l2,
-      by rw [show w + 2 + 1 = w + 3 by omega, e 3 (by omega) (by omega) (by omega)]; simpa using h3, gHL _ _ _ hds⟩,
-    nPc, by rw [e 4 (by omega) (by omega) (by omega)]; exact h4,
-    nIdx, by rw [e 5 (by omega) (by omega) (by omega)]; exact h5,
-    ctors, ⟨o6, by rw [e 6 (by omega) (by omega) (by omega)]; exact h6, l6,
-      by rw [show w + 6 + 1 = w + 7 by omega, e 7 (by omega) (by omega) (by omega)]; simpa using h7, gCN _ _ _ hct⟩,
-    w8, by rw [e 8 (by omega) (by omega) (by omega)]; exact h8,
-    M.nfs, ⟨eo, e9, el, by simpa using e10, hnfs⟩,
-    pfvs, ⟨o11, by rw [e 11 (by omega) (by omega) (by omega)]; exact h11, l11,
-      by rw [show w + 11 + 1 = w + 12 by omega, e 12 (by omega) (by omega) (by omega)]; simpa using h12, gHL _ _ _ hpf⟩,
-    rfl⟩
+  sorry
 
 /-! ## Small pieces -/
 

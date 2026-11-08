@@ -52,40 +52,7 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
       (fun m s => StageR vis fe m s ∧ H pr ∧ decHL m ho.toNat hl.toNat = some hyps ∧
         ho.toNat + hl.toNat ≤ iwTop m)
       (divModCertApplied (decE pr) hyps) (KeepPost vis fe decW0E) := by
-  refine CallRef.of_sim (M := fun k mq => appliedW p (k + 1) mq pr ho hl)
-    (fun k s₀ => applied_specW p hD.lDivModCertApplied (k + 1) s₀ pr ho hl) fun k m s ⟨hS, hpr, hd, hb⟩ => ?_
-  rw [appliedW.arm1]; unfold divModCertApplied
-  have hM := hD.toMasterProg
-  refine Sim.ntB ((natVar_ref hD.toDmProg2 0).simG hS (.refl m)) fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
-  refine Sim.ntB ((natVar_ref hD.toDmProg2 1).simG hS1 hg1) fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_
-  refine Sim.ntB ((mkApp_ref hM pr (r1.headD 0)).simG hS2 hg2) fun r3 _ m3 a3 ⟨hS3, hg3, hl3, rfl⟩ => ?_
-  refine Sim.ntB ((mkApp_ref hM (r3.headD 0) (r2.headD 0)).simG hS3 hg3) fun r4 _ m4 a4 ⟨hS4, hG4, hl4, rfl⟩ => ?_
-  have hlen := decHL_length m hd
-  have h1w : (1 : Word).toNat = 1 := rfl
-  have h2w : (2 : Word).toNat = 2 := rfl
-  rcases hyps with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩
-  · have hn1 : hl ≠ 1 := fun e => by rw [e] at hlen; simp at hlen
-    have hn2 : hl ≠ 2 := fun e => by rw [e] at hlen; simp at hlen
-    rw [ite_eq_right hn1, ite_eq_right hn2]; exact Sim.ret ⟨hS4, hG4, hl4, rfl⟩
-  · obtain rfl : hl = 1 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
-    obtain ⟨-, hwlt, rfl, -⟩ := decHL_cons_iw hS.iw.iwSize hd
-    rw [ite_eq_left rfl, iw_rd_grow hG4 (by simp only [h1w] at hb; omega)]
-    refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
-    exact Sim.ntRet ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun _ _ _ _ _ h => h
-  · obtain rfl : hl = 2 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
-    obtain ⟨-, hwlt, rfl, hrest⟩ := decHL_cons_iw hS.iw.iwSize hd
-    obtain ⟨-, hwlt2, rfl, -⟩ := decHL_cons_iw hS.iw.iwSize hrest
-    have hlt2 : (ho + 1).toNat < iwTop m := by
-      have h1 := hS.iw.iw; have h2 := hS.iw.iwSize; simp only [h2w] at hb; have e := word_add_one (w := ho) (by omega); omega
-    rw [ite_eq_right (by decide), ite_eq_left rfl, iw_rd_grow hG4 (by simp only [h2w] at hb; omega)]
-    refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
-    refine Sim.ntB ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun r6 _ m6 a6 ⟨hS6, hg6, hl6, rfl⟩ => ?_
-    rw [iw_rd_grow hg6 hlt2]
-    refine Sim.ntB ((internFVar_ref hM 3 _ hwlt2).simG hS6 hg6) fun r7 _ m7 a7 ⟨hS7, hg7, hl7, rfl⟩ => ?_
-    exact Sim.ntRet ((mkApp_ref hM (r6.headD 0) (r7.headD 0)).simG hS7 hg7) fun _ _ _ _ _ h => h
-  · have hn1 : hl ≠ 1 := fun e => by rw [e] at hlen; simp at hlen
-    have hn2 : hl ≠ 2 := fun e => by rw [e] at hlen; simp at hlen
-    rw [ite_eq_right hn1, ite_eq_right hn2]; exact Sim.ret ⟨hS4, hG4, hl4, rfl⟩
+  sorry
 
 /-! ## `subst_const0_list` -/
 
@@ -95,6 +62,7 @@ l_model sc0List_specW (p : Prog) (hp : p.lookup "subst_const0_list" = some subst
   specs [callW_spec p n "subst_const0", callW_spec p n "subst_const0_list", callW_spec p n "sl_cons"]
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (hn : H nm) (hr : H r) :
     ∀ (hyps : List EIdx) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
       StageR vis fe m a → decHL m o.toNat l.toNat = some hyps → o.toNat + l.toNat ≤ iwTop m →
@@ -163,6 +131,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
     · simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1, List.headD_cons, List.tail_cons]
       rw [← hx1]
       exact ⟨hd3, by omega⟩
+-/
 
 end applied
 

@@ -87,7 +87,9 @@ def sctW (c : CallM) : Nat → Mem → Word → Word → Word → Word → Word 
 section arms
 variable (c : CallM) (rest : Mem → Option (List Word × Mem)) (n : Nat) (m : Mem)
   (vis nP lo ll bO bL b r1 r2 r3 : Word) (r : List Word)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sctW_nil (h : bL = 0) : sctW c (n + 1) m vis nP lo ll bO bL = some ([1], m) := by simp [sctW, h]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sctW_cons (h : bL ≠ 0) : sctW c (n + 1) m vis nP lo ll bO bL =
     sctK1 c n (fun m' => sctW c n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
