@@ -34,7 +34,6 @@ structure PhaseBStart (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.
   loop : LoopR pins m a v fe ds
   mem : LoopMem dn m a
   core : CoreMemos m
-  twin : TwinPend fe pend.toList a
   cr : L.Stubs.CrOK m
 
 /-- The extent of frozen image `z` in memory `m` (what `fz_i` computes, locals irrelevant). -/

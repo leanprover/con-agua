@@ -50,13 +50,13 @@ l_model checkConstantVal_specE (p : Prog) (hp : ValProg p)
 /-- **The model of `check_defn_val`, both outcomes**: its callees through their runs. -/
 l_model checkDefnVal_specE (p : Prog) (hp : ValProg p)
   fns [hp.dv ↦ checkDefnValE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  extra [ld64_rdW_specT, ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
 
 /-- **The model of `check_opaque_val`, both outcomes**: its callees through their runs. -/
 l_model checkOpaqueVal_specE (p : Prog) (hp : ValProg p)
   fns [hp.ov ↦ checkOpaqueValE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  extra [ld64_rdW_specT, ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
 
 /-- What `check_constant_val` gives besides the twin's run: the stage, the growth, the memos; the

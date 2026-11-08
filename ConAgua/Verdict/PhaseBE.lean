@@ -28,6 +28,7 @@ open ConRon.Bridge (FoldOK PExt PendRel ListRel)
 
 /-! ## The twin side -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Phase B's failure on the worker is its failure on the state**, when the caches are empty
 (the error half of `checkPendingList_worker_ok`; `checkPending_worker`). -/
 theorem checkPendingList_worker_fails {mode : ConLeche.CheckMode} {fe : IFEnv}
@@ -45,11 +46,13 @@ theorem checkPendingList_worker_fails {mode : ConLeche.CheckMode} {fe : IFEnv}
       simp only [checkPendingList]; rw [hpc]
     unfold TwinFailsV at h ⊢
     rw [e]; exact h
+-/
 
 section phaseB
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog) (fe : IFEnv)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `check_pending_go`'s error claim at fuel `n` (the hypotheses of `CPGoSpecT`). -/
 def CPGoSpecE (n : Nat) : Prop :=
   ∀ (m : Mem) (a₀ : AState) (j cnt vis : Word), j.toNat ≤ pend.size → cnt.toNat = pend.size →
@@ -57,7 +60,9 @@ def CPGoSpecE (n : Nat) : Prop :=
     LoopR pins m a₀ vis fe ds → LoopMem dn m a₀ → CoreMemos m → L.Stubs.CrOK m →
     ∀ e, callE p n "check_pending_go" [j, cnt, vis] m = .error e →
       ErrClaimV (checkPendingList mode fe (pend.toList.drop j.toNat)) a₀ e
+-/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section cp
 variable (hP : PhaseBProg p) (hm : mode = .verified)
 include hP hm
@@ -74,6 +79,7 @@ theorem checkPendingGo_refinesE (hE : CpG p) (n : Nat)
       ((cp_ref mode pins dn ds p fe pend hP hm n hn).1 m a₀ j cnt vis hj hc hT hR hM hcm hCr) he
 
 end cp
+-/
 end phaseB
 
 end L.Arena
