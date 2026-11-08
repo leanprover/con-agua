@@ -42,6 +42,15 @@ Bumps since (DESIGN.md has the details):
   taking upstream and re-applying the same three toolchain patterns (`try replace … :=
   AM.pure_bind_ok …`, `dsimp +instances only [IFEnv.restrictTo]` after the `restrictTo` simp).
 
+* 2026-11-08: con-ron `97eead2d` → `01ecb31c`, con-leche `0d2f467b` → `210a580e` (con-ron
+  tasks #139–#148, con-leche tasks #366–#491: the install phase goes, stored recursors checked
+  against generated ones, the `eager` flag, the `.olean` reader, key-free cons tables).
+  `con-leche/0001` lost its `Verify/Cached/ParInstall.lean` hunk (file gone); `0002`/`0003`
+  re-made at the new signatures (`eager` beside `mode`); `con-ron/0002` re-made over the new
+  `Bridge` (upstream no longer needs its `Checker/{Arms,Hyp,Split}` hunks; new sites in
+  `Inductives/{StreamRecs,Positivity}`, `Frontend/Olean/{Closure,MergeAll}`, the `split at h`
+  pattern of the new `do` elaborator).
+
 Patches at the first vendoring:
 
 | patch | what |
