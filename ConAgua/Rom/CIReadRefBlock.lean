@@ -25,11 +25,13 @@ open L.Arena L.Ind
 def IKeep (R : Nat → Prop) (m m' : Mem) : Prop :=
   iwTop m' = iwTop m ∧ ∀ i, i < iwTop m → ¬ R i → iwA m' i = iwA m i
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem iw_set_ne (m : Mem) (j w : Word) (i : Nat) (hi : i ≠ j.toNat) :
     (iwA (m.set64 IW j w))[i]? = iwA m i := by
   simp only [iwA]
   rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp [Ne.symm hi]
+-/
 
 /-- The block's pointer and record at index `j`. -/
 def BlkAt (dn : NIdx → Option ConLeche.Name) (SE : Nat → Prop) (m : Mem) (i : Nat)
@@ -37,15 +39,18 @@ def BlkAt (dn : NIdx → Option ConLeche.Name) (SE : Nat → Prop) (m : Mem) (i 
   ∃ w : Word, iwA m i = some w ∧
     Holds SE (fun _ => False) (fun m => decCI (erA m) w.toNat) m ci
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The `sortZ` names of a block's constants. -/
 def blkZ : List ConLeche.ConstantInfo → List ConLeche.Name
   | [] => []
   | c :: cs => ciZ c ++ blkZ cs
+-/
 
 section block
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rci_block_to` refines `Frontend.internCIList`** at one memo. -/
 @[refines_part ConRon.Arena.Frontend.internCIList "the pinned constants' kinds"]
 theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name) :
@@ -159,6 +164,7 @@ theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option
         obtain ⟨w, hw1, hw2⟩ := hB3 j (by simp at hj; omega)
         refine ⟨w, by rw [ho1] at hw1; rw [← hw1]; congr 1; omega,
           hw2.mono (fun i hi => ⟨by omega, hi.2⟩) (fun _ h => h)⟩
+-/
 
 end block
 
