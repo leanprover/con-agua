@@ -148,6 +148,7 @@ theorem foldStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : I
   exact ⟨hl, fe, pend, a', h1, h2, by rw [hk.arr8]; exact hpb⟩
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The fold's spec at the stages' end `Q7`, in the form `checkA_of_stages` takes. -/
 theorem foldSpec_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) :
     ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
@@ -156,6 +157,7 @@ theorem foldSpec_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : In
         (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
         FoldA b pb (r.headD 0) s'.mem); ⊤⦄ := by
   sorry
+-/
 
 /-! ## The lookups -/
 
