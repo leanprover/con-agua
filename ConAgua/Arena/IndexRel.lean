@@ -39,12 +39,6 @@ structure IndexR (m : Mem) (I : IStreamIndex) : Prop where
   firstsSize : I.firsts.size ≤ (m.arr64 FIRSTS).size
   next : (rdW (m.arr64 CTL) 128).toNat = I.next
 
-/-- Every own row and own table row carries a stamp at most the current one (what lets a stamp
-bump empty the own layer without clearing it). -/
-def OwnBelow (m : Mem) : Prop :=
-  ∀ w, rowTag w ≤ 2 → ((ownRow m w).1 >>> 32).toNat ≤ (stampW m).toNat ∧
-    (rdN (m.arr64 (otxArrT w)) (rowIx w)).toNat ≤ (stampW m).toNat
-
 /-- The own layer is empty. -/
 def OwnEmpty (m : Mem) : Prop := ∀ w, (ownRaw m w).1 = 0 ∧ ownTbl m w = 0
 
@@ -65,11 +59,11 @@ theorem OwnEmpty.of_below {m : Mem} (h : OwnBelow m) (hlt : ∀ w, rowTag w ≤ 
 /-- **The environment at a job's start**: the stream index at the view of position `k`, an empty
 own layer, `vis = 0`. -/
 theorem EnvR.ofIndex {m : Mem} {I : IStreamIndex} {k : Nat} (hI : IndexR m I) (hO : OwnEmpty m)
-    (hs : (stampW m).toNat < 2 ^ 32) (h134 : (rdW (m.arr64 CTL) 134).toNat = I.firsts.getD k I.next)
+    (hB : OwnBelow m) (hs : (stampW m).toNat < 2 ^ 32) (h134 : (rdW (m.arr64 CTL) 134).toNat = I.firsts.getD k I.next)
     (h135 : (rdW (m.arr64 CTL) 135).toNat = k) : EnvR m 0 (I.view k) := by
   refine ⟨fun n => ?_, fun n hn => absurd (hO _).1 hn, fun n hn => absurd (hO _).1 hn,
     fun n _ hn => absurd (hO _).1 hn, fun n => ?_, fun n hn => absurd (hO _).2 hn, ?_, ?_,
-    fun n => hI.base n, fun n => hI.btbl n, hs⟩
+    fun n => hI.base n, fun n => hI.btbl n, hs, hB⟩
   · simp [IStreamIndex.view, ownFind]
   · simp [IStreamIndex.view, (hO _).2]
   · simp only [IStreamIndex.view]; rw [h134]

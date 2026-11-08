@@ -541,6 +541,13 @@ def ownFind (m : Mem) (vis : Word) (w : Word) : Option IConstantInfo :=
   let r := ownRaw m w
   if r.1 ≠ 0 ∧ r.1.toNat - 1 < vis.toNat then decCI (erecP m) r.2.toNat else none
 
+/-- Every own row and own table row carries a stamp at most the current one (what lets a stamp
+bump empty the own layer without clearing it: `record_job`). Every own-row writer stores the
+current stamp (`env_push`, `env_pop_temp`, `tbl_own_set`), so the clause rides along `EnvR`. -/
+def OwnBelow (m : Mem) : Prop :=
+  ∀ w, rowTag w ≤ 2 → ((ownRow m w).1 >>> 32).toNat ≤ (stampW m).toNat ∧
+    (rdN (m.arr64 (tierA (otxArr (rowTag w)) (tierW w))) (rowIx w)).toNat ≤ (stampW m).toNat
+
 /-- **The environment relation** (one view). Every clause is over all names (a row of a word
 of another tag reads as absent: `ownRaw`, `baseRow`, `ownTbl`, `baseTbl`):
 
@@ -549,7 +556,8 @@ of another tag reads as absent: `ownRaw`, `baseRow`, `ownTbl`, `baseTbl`):
   counters are distinct (`uniq`: `popTemp` lowers the view past exactly one row);
 * the own table rows are the twin's `tbls` and decode (`otbl`, `otbl_dec`);
 * the stream index is the twin's `base` (`below`, `belowRec`, `base`, `btbl`);
-* the stamp is below `2^32` (`stamp`: a row word is `stamp · 2^32 + c + 1`). -/
+* the stamp is below `2^32` (`stamp`: a row word is `stamp · 2^32 + c + 1`), and no row carries
+  a later one (`ownBelow`). -/
 structure EnvR (m : Mem) (vis : Word) (fe : IFEnv) : Prop where
   own : ∀ n : NIdx, fe.idx[n]? = ownFind m vis n.word.toUInt64
   own_dec : ∀ n : NIdx, (ownRaw m n.word.toUInt64).1 ≠ 0 →
@@ -576,6 +584,7 @@ structure EnvR (m : Mem) (vis : Word) (fe : IFEnv) : Prop where
        else some ((baseTbl m n.word.toUInt64).1.toNat - 1,
          decTbl (erecP m) (baseTbl m n.word.toUInt64).2.toNat))
   stamp : (stampW m).toNat < 2 ^ 32
+  ownBelow : OwnBelow m
 
 /-- The arrays and globals `EnvR` reads. -/
 def envArrs : List TieredArray :=
@@ -627,7 +636,8 @@ theorem EnvR.congr {m m' : Mem} {vis : Word} {fe : IFEnv}
     fun n => by rw [hot, hP]; exact h.otbl n, fun n => by rw [hot, hP]; exact h.otbl_dec n,
     by rw [hc 134 (by decide)]; exact h.below, by rw [hc 135 (by decide)]; exact h.belowRec,
     fun n => by rw [hb, hP]; exact h.base n, fun n => by rw [hbt, hP]; exact h.btbl n,
-    by rw [hs]; exact h.stamp⟩
+    by rw [hs]; exact h.stamp, fun w hw => by
+      rw [hor, hs, he _ (tierA_otx_mem _ _)]; exact h.ownBelow w hw⟩
 
 /-- **`EnvR` across a frame** that avoids its arrays and control words. -/
 theorem EnvR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {vis : Word} {fe : IFEnv}
@@ -682,7 +692,8 @@ theorem EnvR.growC {m m' : Mem} {vis : Word} {fe : IFEnv}
     simp only [baseTbl, he _ (o4 _).1 (o4 _).2 (tix_mem _)]
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn hq => ?_, fun n => ?_, fun n hn => ?_,
     by rw [hc 134 (by decide) (by decide) (by decide)]; exact h.below, by rw [hc 135 (by decide) (by decide) (by decide)]; exact h.belowRec,
-    fun n => ?_, fun n => ?_, by rw [hs]; exact h.stamp⟩
+    fun n => ?_, fun n => ?_, by rw [hs]; exact h.stamp, fun w hw => by
+      rw [hor, hs, he _ (o2 _ _).1 (o2 _ _).2 (tierA_otx_mem _ _)]; exact h.ownBelow w hw⟩
   · rw [h.own n]; simp only [ownFind, hraw]
     split
     · rename_i c; obtain ⟨ci, hci⟩ := h.own_dec n c.1; rw [hci, hx.decCI hci]
