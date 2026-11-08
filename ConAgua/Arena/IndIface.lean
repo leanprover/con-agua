@@ -56,12 +56,12 @@ other, and the not-yet-translated callees (**stubs**) with their specs (stated, 
 | twin type | words |
 |---|---|
 | `IConstantVal × Nat` (a constructor with its field count) | `[cv, nF]` (`cv` an `EREC` pointer) |
-| `MemberShape` | `[cvT, nIdx, ctors.off, ctors.len]` (ctors: pointers to `[cv, nF]`) |
-| `RecShape` | `[cvR, rP, mI, tgt, rhss.off, rhss.len]` |
-| `BlockShape` (= `BlockParts`) | `[members.off, members.len, recs.off, recs.len, nP, elim, resSort, large, isProp]` |
-| `NestCtx` | `[names.off, names.len, lps.off, lps.len, nP, nIdxs.off, nIdxs.len, params.off, params.len, sort, lvls]` |
+| `MemberShape` | `[cvT, nIdx, ctors.off, ctors.len, declared]` (ctors: pointers to `[cv, nF]`; `cvT` the former at its telescope, `declared` as the stream declares it, both `EREC` pointers) |
+| `RecShape` | `[cvR, rP, mI, tgt, rules.off, rules.len, isK]` (rules: the record's `EREC` slice of 11-word rules) |
+| `BlockShape` | `[members.off, members.len, recs.off, recs.len, nP, elim, resSort, large, isProp]` |
+| `NestCtx` | `[names.off, names.len, lps.off, lps.len, nP, nIdxs.off, nIdxs.len, params.off, params.len, sort, lvls, formers.off, formers.len]` (formers: `EREC` pointers) |
 | `NestKey`, `ClassKey` | `[name, lvls, ds.off, ds.len]` |
-| `NestHole` | `[key, base]` (`key` a `NestKey` pointer) |
+| `NestHole` | `[key, base, nIdx]` (`key` a `NestKey` pointer) |
 | `NestCtorNf` | `[ctor, lvls, ds.off, ds.len, ty]` |
 | `NestState` | `[keys.off, keys.len, active.off, active.len, nfs.off, nfs.len]` (keys/active: `NestKey` pointers; nfs: `NestCtorNf` pointers) |
 | `ClassSlot` | `.motive key`: `[0, key]`; `.minor cls ctor ihs`: `[1, cls, ctor, ihs.off, ihs.len]` (ihs: pointers to `[field, cls]`) |
@@ -71,9 +71,9 @@ other, and the not-yet-translated callees (**stubs**) with their specs (stated, 
 | `ClassCtor` | `[cv, nF, kinds.off, kinds.len, tyD, tyN]` |
 | `ClassGen` | `[nP, params.off, params.len, cls.off, cls.len, formerTys.off, formerTys.len, slots.off, slots.len, ctors.off, ctors.len, elim, pre.off, pre.len]` (ctors: pointers to list headers) |
 | `List α` as an element | a pointer to a 2-word header `[off, len]` |
-| `BlockPass` | `[env1, cvTas.off, cvTas.len, p, ctorsAs.off, ctorsAs.len, sortsss.off, sortsss.len, kinds.off, kinds.len, nfs.off, nfs.len, params.off, params.len, rd, cls.off, cls.len, tbl.off, tbl.len]` |
+| `BlockPass` | `[env1, p, kinds.off, kinds.len, params.off, params.len, rd, cls.off, cls.len, tbl.off, tbl.len]` |
 | `IConstantVal × TargetMajor × List EIdx` | `[cv, M, rhss.off, rhss.len]` |
-| `NIdx × Option (Nat × IConstantInfo)` (a displaced env row) | `[name, c, q]` (the raw row: counter `+ 1` or `0`, record) |
+| `NIdx × Option IConstantInfo` (a displaced env row) | `[name, c, q]` (the own layer's raw row: counter `+ 1` or `0`, record) |
 
 `NestFieldKind` is one word: `.ordinary` `0`, `.recursive t` `1 + 8 t`, `.reflexive t` `2 + 8 t`,
 `.inProgress` `3`, `.nested r` `4 + 8 r` (`r ∈ {0, 1}`). `IIndCaps` and `IRecRule` are `EREC`
@@ -601,6 +601,20 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
   return q
 }
 
+/-- `rec7(a, b, c, d, e, f, g)`. -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
+@[no_expose] def rec7 : FunDecl := lfn (a, b, c, d, e, f, g) locals (q) {
+  q := call iw_alloc(7);
+  IW.u64[q] := a;
+  IW.u64[q + 1] := b;
+  IW.u64[q + 2] := c;
+  IW.u64[q + 3] := d;
+  IW.u64[q + 4] := e;
+  IW.u64[q + 5] := f;
+  IW.u64[q + 6] := g;
+  return q
+}
+
 /-- `cv_new(name, lo, ll, ty)`: a fresh constant value in `EREC` (`lo`, `ll` an `EREC` slice). -/
 -- con-ron: none — constant-value records in `EREC` (the twin's `ConstantVal` structure)
 @[no_expose] def cvNew : FunDecl := lfn (nm, lo, ll, ty) locals (q, ez) {
@@ -726,7 +740,7 @@ def libFns : Prog :=
    ("sl_new1", slNew1), ("sl_append", slAppend), ("sl_snoc", slSnoc), ("sl_cons", slCons),
    ("sl_contains", slContains), ("sl_find", slFind), ("sl_eq", slEq), ("sl_nodup", slNodup),
    ("sl_get", slGet), ("sl_getd", slGetD), ("sl_set_eq", slSetEq),
-   ("rec2", rec2), ("rec3", rec3), ("rec4", rec4), ("rec5", rec5), ("rec6", rec6),
+   ("rec2", rec2), ("rec3", rec3), ("rec4", rec4), ("rec5", rec5), ("rec6", rec6), ("rec7", rec7),
    ("cv_new", cvNew), ("cv_lps", cvLps), ("reserved_contains", reservedContains),
    ("lvl_eq_true", lvlEqTrue), ("lvl_eq_fueled", lvlEqFueled), ("e_view", eView),
    ("view_ls", viewLsL), ("view_ls_len", viewLsLenL)]
@@ -745,7 +759,7 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort (.const 0)⟩
 * `whnf_top(vis, dep, e)` (lane `whnf`'s entry, `WhnfEntry.lean`) → `e'`: `whnf .verified fe checkFuel dep e`.
 * `infer_type_core(vis, dep, e)` → `t`; `ensure_sort_core(vis, dep, t)` → `u` (a level handle);
   `is_def_eq_core(vis, dep, a, b)` → `0`/`1`.
-* `check_constant_val(vis, cv)` → nothing (`cv` an `EREC` pointer).
+* `check_constant_val(vis, cv, allowOp)` → nothing (`cv` an `EREC` pointer).
 * `consts_resolve_ffast(vis, e)` → `0`/`1`.
 * `strip_pis(k, e)` → `(ok, bs.off, bs.len, body)`; `strip_lams(k, e)` the same.
 * `open_pis_at_fvars_f(n, e, i)` → `(ok, fvs.off, fvs.len, body)`.
@@ -764,16 +778,13 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort (.const 0)⟩
 * `name_rec(n)` → `internNNode (.str n "rec")`; `name_rec_i(n, i)` → `internNNode (.str n
   s!"rec_{i}")`; `proj_table_name(T)` → `projTableName T`.
 * `reserved_rec_name(n)` → `0`/`1`.
-* `rec_rule_bits(vis, ctor)` → `(k, eta)` (the two bits `recRuleBits` writes).
-* `basis_pin_hit(off, len)` → `(ok, kind)` (the block's record pointers, an `IW` slice);
-  `check_basis_decl(vis, kind)` → `vis'`; `ind_params_ok(nP, off, len)` → `0`/`1`.
-* `lv_zero_caps(l)` → `(tag, off, len)`: `zeronessOf (← readLevelM l)` as the three words of a
-  `PropWhen` (lane `pinsenv`'s `decPW` layout: `0` `never`, `1` `ifAllZero` with the names an
-  `EREC` slice below the record pool's top; lane `indproofs2`: was written at an `EREC` word `q`
-  inside a record already allocated, which the stage relation cannot follow). -/
+* `basis_name_hit(off, len)` → `(hit, kind)` (the block's record pointers, an `EREC` slice);
+  `check_basis_block(vis, kind, off, len)` → `vis'`; `ind_params_ok(nP, off, len)` → `0`/`1`.
+* `former_def_headed(cv)` → `0`/`1` (`Core.lean`'s `formerDefHeaded`); `lit_shape_ok(q)` → `0`/`1`
+  (`Core.lean`'s `litShapeOk`, `q` a constant record in `EREC`). -/
 def stubFns : Prog :=
   [("whnf_top", stub 3), ("infer_type_core", stub 3), ("ensure_sort_core", stub 3),
-   ("is_def_eq_core", stub 4), ("check_constant_val", stub 2), ("consts_resolve_ffast", stub 2),
+   ("is_def_eq_core", stub 4), ("check_constant_val", stub 3), ("consts_resolve_ffast", stub 2),
    ("strip_pis", stub 2), ("strip_lams", stub 2), ("open_pis_at_fvars_f", stub 3),
    ("get_app_fn_f", stub 2), ("get_app_args_f", stub 2), ("mk_app_n_f", stub 3),
    ("fvar_type_d", stub 1), ("fvar_type_ds", stub 2), ("pi_result_f", stub 2),
@@ -783,8 +794,8 @@ def stubFns : Prog :=
    ("all_level_params_defined", stub 3),
    ("intern_ls_iw", stub 2), ("name_rec", stub 1), ("name_rec_i", stub 2),
    ("proj_table_name", stub 1), ("reserved_rec_name", stub 1),
-   ("rec_rule_bits", stub 2), ("basis_pin_hit", stub 2), ("check_basis_decl", stub 2),
-   ("ind_params_ok", stub 3), ("lv_zero_caps", stub 1)]
+   ("basis_name_hit", stub 2), ("check_basis_block", stub 4),
+   ("ind_params_ok", stub 3), ("former_def_headed", stub 1), ("lit_shape_ok", stub 1)]
 
 /-- The callees that exist on master, as stubs here so that each module's program can be checked
 for closure (`Prog.wf`) on its own: `env_find(w, vis)`, `env_push(vis, q)`,

@@ -380,22 +380,25 @@ def nestCtxHiAt : FunDecl := lfn (ctx, nf) locals () {
   return IW.u64[ctx + 4] + IW.u64[ctx + 1] + nf
 }
 
-/-- `nest_ctx_root_holes_go(namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, j)`: the holes
-`j ..< namesLen`, written at `q + j` (the loop of `NestCtx.rootHoles`, as a recursion). -/
+/-- `nest_ctx_root_holes_go(namesOff, namesLen, lvls, paramsOff, paramsLen, nP, nIdxs.off,
+nIdxs.len, q, j)`: the holes `j ..< namesLen` (member `j`'s index count `nIdxs.getD j 0`), written
+at `q + j` (the loop of `NestCtx.rootHoles`, as a recursion). -/
 -- con-ron: none — the loop of nest_ctx_root_holes as a self-recursive function (proof shape)
 @[no_expose] def nestCtxRootHolesGo : FunDecl :=
-    lfn (namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, j) locals (key, hole, u) {
+    lfn (namesOff, namesLen, lvls, paramsOff, paramsLen, nP, nIO, nIL, q, j) locals (key, ni, hole, u) {
   if j >= namesLen { return 0 };
   key := call rec4(IW.u64[namesOff + j], lvls, paramsOff, paramsLen);
-  hole := call rec2(key, nP);
+  ni := call sl_getd(nIO, nIL, j, 0);
+  hole := call rec3(key, nP, ni);
   IW.u64[q + j] := hole;
-  u := call nest_ctx_root_holes_go(namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, j + 1);
+  u := call nest_ctx_root_holes_go(namesOff, namesLen, lvls, paramsOff, paramsLen, nP, nIO, nIL, q,
+    j + 1);
   return 0
 }
 
-/-- `nest_ctx_root_holes(ctx)`: `NestCtx.rootHoles`, one `NestHole` per member, base `ctx.nP`. -/
+/-- `nest_ctx_root_holes(ctx)`: `NestCtx.rootHoles`, one `NestHole` per member, base `ctx.nP`, its
+index count the member's. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:503-508 ConRon.Arena.NestCtx.rootHoles
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.NestCtx.rootHoles` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.NestCtx.rootHoles]
 def nestCtxRootHoles : FunDecl :=
     lfn (ctx) locals (namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, u) {
@@ -406,7 +409,8 @@ def nestCtxRootHoles : FunDecl :=
   paramsLen := IW.u64[ctx + 8];
   nP := IW.u64[ctx + 4];
   q := call iw_alloc(namesLen);
-  u := call nest_ctx_root_holes_go(namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, 0);
+  u := call nest_ctx_root_holes_go(namesOff, namesLen, lvls, paramsOff, paramsLen, nP,
+    IW.u64[ctx + 5], IW.u64[ctx + 6], q, 0);
   return (q, namesLen)
 }
 

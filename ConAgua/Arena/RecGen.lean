@@ -206,7 +206,6 @@ def classFieldsAgreeL : FunDecl := lfn
 
 /-- `classCtorOf` helper: the entries of `nfs` whose `ctor` is `name`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:423-447 ConRon.Arena.classCtorOf
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classCtorOf` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classCtorOf]
 def classCtorOfNfs : FunDecl := lfn (nfsOff, nfsLen, name) locals (q, j, nf, rp) {
   q := call iw_alloc(nfsLen);
@@ -222,7 +221,6 @@ def classCtorOfNfs : FunDecl := lfn (nfsOff, nfsLen, name) locals (q, j, nf, rp)
 /-- `class_ctor_of(vis, p, ft.off, ft.len, rd, ms.off, ms.len, c, cA)`: class `c`'s constructor
 `cA`, read for the generator. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:423-447 ConRon.Arena.classCtorOf
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classCtorOf` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classCtorOf]
 def classCtorOfL : FunDecl := lfn (vis, p, ftOff, ftLen, rd, msOff, msLen, c, cA)
     locals (m, cv, esOff, esLen, e0, s0, ihsOff, ihsLen, ok, fvsOff, fvsLen, body, kindsOff,
@@ -249,7 +247,6 @@ def classCtorOfL : FunDecl := lfn (vis, p, ftOff, ftLen, rd, msOff, msLen, c, cA
 /-- `class_ctors_of(vis, p, ft.off, ft.len, rd, ms.off, ms.len, c, cAs.off, cAs.len)`: every
 constructor of class `c`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:449-458 ConRon.Arena.classCtorsOf
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classCtorsOf` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classCtorsOf]
 def classCtorsOfL : FunDecl := lfn (vis, p, ftOff, ftLen, rd, msOff, msLen, c, cAsOff, cAsLen)
     locals (q, j, cc) {
@@ -282,24 +279,20 @@ def classesCtorsL : FunDecl := lfn (vis, p, ftOff, ftLen, rd, msOff, msLen)
 
 /-! ## `classMajors`, `classesNfs` -/
 
-/-- `class_majors(vis, p, ctorsAs.off, ctorsAs.len, pfvs.off, pfvs.len, keys.off, keys.len)`: every
-class checked as a major. -/
+/-- `class_majors(vis, p, pfvs.off, pfvs.len, keys.off, keys.len)`: every class checked as a major
+(`target_major_of`, `target_major_pins`), over the block's canonical parameters `pfvs`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:471-483 ConRon.Arena.classMajors
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classMajors` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classMajors]
-def classMajorsL : FunDecl := lfn (vis, p, ctorsAsOff, ctorsAsLen, pfvsOff, pfvsLen, keysOff,
-    keysLen)
+def classMajorsL : FunDecl := lfn (vis, p, pfvsOff, pfvsLen, keysOff, keysLen)
     locals (key, hd, mty, m, r, ro, rl, qo, ql) {
   if keysLen == 0 { return (0, 0) };
   key := IW.u64[keysOff];
   hd := call intern_const(IW.u64[key], IW.u64[key + 1]);
   if 4294967296 <= hd { abort };
   mty := call mk_app_n_f(hd, IW.u64[key + 2], IW.u64[key + 3]);
-  m := call target_major_of(vis, p, ctorsAsOff, ctorsAsLen, pfvsOff, pfvsLen, pfvsOff, pfvsLen,
-    mty);
+  m := call target_major_of(vis, p, pfvsOff, pfvsLen, pfvsOff, pfvsLen, mty);
   r := call target_major_pins(vis, IW.u64[p + 4], m);
-  (ro, rl) := call class_majors(vis, p, ctorsAsOff, ctorsAsLen, pfvsOff, pfvsLen, keysOff + 1,
-    keysLen - 1);
+  (ro, rl) := call class_majors(vis, p, pfvsOff, pfvsLen, keysOff + 1, keysLen - 1);
   (qo, ql) := call sl_cons(m, ro, rl);
   return (qo, ql)
 }
@@ -330,12 +323,12 @@ def classesNfsL : FunDecl := lfn (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, m
 
 /-! ## `classFormerTy`, `classConstOk` -/
 
-/-- `class_former_ty(vis, cvTas.off, cvTas.len, m)`: class `m`'s former type. -/
+/-- `class_former_ty(vis, formers.off, formers.len, m)`: class `m`'s former type — a member's own
+(`formers`, the block's formers at the telescopes the check reads), an outside class's stored
+former at its telescope (`family_telescope`) at the class's levels. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:495-512 ConRon.Arena.classFormerTy
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classFormerTy` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.classFormerTy`, `ConRon.Arena.familyTelescope` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classFormerTy]
-def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t, cvp, f, q, e, lo, ll) {
+def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t, cvp, f, q, e, ty, lo, ll) {
   mem := IW.u64[m + 8];
   if mem != 0 {
     t := mem - 1;
@@ -350,16 +343,15 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
   (f, q) := call env_find(IW.u64[m], vis);
   if f == 0 { abort };
   if EREC⦃q⦄ != 3 { abort };
+  ty := call family_telescope(vis, q + 1, q + 5);
   (lo, ll) := call er_to_iw(EREC⦃q + 2⦄, EREC⦃q + 3⦄);
-  e := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[m + 1], EREC⦃q + 4⦄);
+  e := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[m + 1], ty);
   return e
 }
 
 /-- `class_const_ok_header(vis, q)`: `classConstOk`'s guards, the syntactic checks of a constant
 (the body of lane `decls2`'s `install_header`, whose model `ihW` is this function's). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:514-538 ConRon.Arena.classConstOk
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classConstOk` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.classConstOk`, `ConRon.Arena.litShapeOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classConstOk]
 def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a, u) {
   n := EREC⦃q⦄;
@@ -368,6 +360,8 @@ def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d,
   if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   c := call reserved_contains(n);
   if c != 0 { fail R_RESERVED_BASIS_NAME };
+  c := call class_const_ok_lit(q);
+  if c == 0 { fail R_A_DECLARATION_AT_A };
   (o, l) := call cv_lps(q);
   d := call sl_nodup(o, l);
   if d == 0 { fail R_DUPLICATE_UNIVERSE_PARAMETERS_IN };
@@ -382,10 +376,23 @@ def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d,
   return 0
 }
 
+/-- `class_const_ok_lit(cv)`: `litShapeOk (.axiomInfo cv)` — a fresh `axiomInfo` record (kind `0`,
+`cv`'s four words inline) handed to the core's `lit_shape_ok`. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:514-538 ConRon.Arena.classConstOk
+@[no_expose, l_impl ConRon.Arena.classConstOk]
+def classConstOkLit : FunDecl := lfn (cv) locals (q, ez, r) {
+  q := call erec_alloc(5);
+  ez := call erec_put(q, 0);
+  ez := call erec_put(q + 1, EREC⦃cv⦄);
+  ez := call erec_put(q + 2, EREC⦃cv + 1⦄);
+  ez := call erec_put(q + 3, EREC⦃cv + 2⦄);
+  ez := call erec_put(q + 4, EREC⦃cv + 3⦄);
+  r := call lit_shape_ok(q);
+  return r
+}
+
 /-- `class_const_ok(vis, cv)`: a generated constant, checked (`checkConstantValF`). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:514-538 ConRon.Arena.classConstOk
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classConstOk` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.classConstOk`, `ConRon.Arena.litShapeOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classConstOk]
 def classConstOkL : FunDecl := lfn (vis, cv) locals (u, s) {
   u := call class_const_ok_header(vis, cv);
@@ -399,28 +406,33 @@ def classConstOkL : FunDecl := lfn (vis, cv) locals (u, s) {
 /-- `class_rec_ty_ok(vis, g, k, rc, cvRi, c)`: recursor `c`'s generated type, checked and compared
 with the stream's `cvRi`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:549-567 ConRon.Arena.classRecTyOk
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classRecTyOk` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.classRecTyOk`, `ConRon.Arena.classRecTyCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classRecTyOk]
 def classRecTyOkL : FunDecl := lfn (vis, g, k, rc, cvRi, c)
-    locals (u, ok, gty, cvp, cvG, r, eq) {
+    locals (u, ok, gty, cvp, cvG, r) {
   u := call class_rec_ty_ok_guards(g, k, rc, c);
   (ok, gty) := call class_gen_rec_ty(g, c);
   if ok == 0 { abort };
   cvp := IW.u64[rc];
   cvG := call cv_new(EREC⦃cvp⦄, EREC⦃cvp + 1⦄, EREC⦃cvp + 2⦄, gty);
-  r := call class_const_ok(vis, cvG);
-  eq := call is_def_eq_core(vis, 0, EREC⦃cvRi + 3⦄, gty);
-  if eq == 0 { fail R_GENERATED_RECURSOR_THE_TYPE };
+  r := call class_rec_ty_check(vis, cvRi, cvG);
   return cvG
+}
+
+/-- `class_rec_ty_check(vis, cvRi, cvG)`: the check of a generated recursor type — checked as a
+constant and defeq to the stream's checked type `cvRi`. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:540-547 ConRon.Arena.classRecTyCheck
+@[no_expose, l_impl ConRon.Arena.classRecTyCheck]
+def classRecTyCheckL : FunDecl := lfn (vis, cvRi, cvG) locals (r, eq) {
+  r := call class_const_ok(vis, cvG);
+  eq := call is_def_eq_core(vis, 0, EREC⦃cvRi + 3⦄, EREC⦃cvG + 3⦄);
+  if eq == 0 { fail R_GENERATED_RECURSOR_THE_TYPE };
+  return 0
 }
 
 /-- `class_rec_ty_ok_guards(g, k, rc, c)`: `classRecTyOk`'s guards: the record's member, rule
 prefix and major index are the generated ones (aborts where the twin fails; the word sums must not
 wrap). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:549-567 ConRon.Arena.classRecTyOk
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classRecTyOk` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.classRecTyOk`, `ConRon.Arena.classRecTyCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classRecTyOk]
 def classRecTyOkGuards : FunDecl := lfn (g, k, rc, c) locals (ci, memw, memv) {
   ci := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
@@ -452,26 +464,26 @@ def classRecTysOkL : FunDecl := lfn (vis, g, k, rcsOff, rcsLen, cvsOff, cvsLen, 
 
 /-! ## `classRuleOk`, `classRulesOk`, `classRecsRulesOk` -/
 
-/-- `classRuleOk` helper: `rbs.allM (fun b => constsResolveFFast (feR.restrictTo visT) b)`. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:612-617 ConRon.Arena.classRuleOk
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.classRuleOk`, `ConRon.Arena.classRuleCheck` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classRuleOk` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.classRuleOk]
-def classRuleOkDomains : FunDecl := lfn (visT, off, cnt) locals (b, r) {
+/-- `classRuleCheck` helper: `rbs.allM (fun b => constsResolveFFast feR b && !mentionsAnyConst
+pushed b)` — a λ-domain resolves at the constructors' environment: at `feR`, naming none of the
+pushed recursors. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:581-610 ConRon.Arena.classRuleCheck
+@[no_expose, l_impl ConRon.Arena.classRuleCheck]
+def classRuleCheckDomains : FunDecl := lfn (visR, pO, pL, off, cnt) locals (b, m, r) {
   if cnt == 0 { return 1 };
-  b := call consts_resolve_ffast(visT, IW.u64[off]);
+  b := call consts_resolve_ffast(visR, IW.u64[off]);
   if b == 0 { return 0 };
-  r := call class_rule_ok_domains(visT, off + 1, cnt - 1);
+  m := call mentions_any_const(pO, pL, IW.u64[off]);
+  if m != 0 { return 0 };
+  r := call class_rule_check_domains(visR, pO, pL, off + 1, cnt - 1);
   return r
 }
 
-/-- `class_rule_ok_guards(visR, cvR, gen)`: `classRuleOk`'s first guards: closed, its level
+/-- `class_rule_check_guards(visR, cvR, gen)`: `classRuleCheck`'s first guards: closed, its level
 parameters the recursor's, resolving. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:612-617 ConRon.Arena.classRuleOk
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.classRuleOk`, `ConRon.Arena.classRuleCheck` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classRuleOk` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.classRuleOk]
-def classRuleOkGuards : FunDecl := lfn (visR, cvR, gen) locals (b, lo, ll, u) {
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:581-610 ConRon.Arena.classRuleCheck
+@[no_expose, l_impl ConRon.Arena.classRuleCheck]
+def classRuleCheckGuards : FunDecl := lfn (visR, cvR, gen) locals (b, lo, ll, u) {
   b := call loose_bvars_bounded_fast(⟪CWF⟫, 0, gen);
   if b == 0 { abort };
   b := call has_fvar_fast(⟪CWF⟫, gen);
@@ -484,42 +496,50 @@ def classRuleOkGuards : FunDecl := lfn (visR, cvR, gen) locals (b, lo, ll, u) {
   return 0
 }
 
-/-- `class_rule_ok(visT, visR, cvR, n, gen)`: one generated rule, installed as generated. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:612-617 ConRon.Arena.classRuleOk
--- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.classRuleOk`, `ConRon.Arena.classRuleCheck` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classRuleOk` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.classRuleOk]
-def classRuleOkL : FunDecl := lfn (visT, visR, cvR, n, gen)
+/-- `class_rule_check(visR, pushed.off, pushed.len, cvR, n, gen)`: the check of a generated rule —
+closed, its level parameters the recursor's, resolving and typed at the rule-less recursors'
+environment `feR` (the flush leaving the inference), its λ-telescope `n` long, its λ-domains
+resolving at the constructors' environment (`class_rule_check_domains`). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:581-610 ConRon.Arena.classRuleCheck
+@[no_expose, l_impl ConRon.Arena.classRuleCheck]
+def classRuleCheckL : FunDecl := lfn (visR, pO, pL, cvR, n, gen)
     locals (u, s, f, ok, rbsOff, rbsLen, bodyD, closed) {
-  u := call class_rule_ok_guards(visR, cvR, gen);
+  u := call class_rule_check_guards(visR, cvR, gen);
   s := call infer_type_core(visR, 0, gen);
   f := call flush_caches();
   (ok, rbsOff, rbsLen, bodyD) := call strip_lams(n, gen);
   if ok == 0 { abort };
-  closed := call class_rule_ok_domains(visT, rbsOff, rbsLen);
+  closed := call class_rule_check_domains(visR, pO, pL, rbsOff, rbsLen);
   if closed == 0 { u := call unresolved_consts_error(visR, gen, 4); abort };
+  return 0
+}
+
+/-- `class_rule_ok(visR, pushed.off, pushed.len, cvR, n, gen)`: one generated rule, installed as
+generated, after its check. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:612-617 ConRon.Arena.classRuleOk
+@[no_expose, l_impl ConRon.Arena.classRuleOk]
+def classRuleOkL : FunDecl := lfn (visR, pO, pL, cvR, n, gen) locals (u) {
+  u := call class_rule_check(visR, pO, pL, cvR, n, gen);
   return gen
 }
 
-/-- `class_rules_ok_one(visT, visR, g, cvR, x, gen)`: `classRulesOk`'s rule check at the telescope
+/-- `class_rules_ok_one(visR, pushed.off, pushed.len, g, cvR, x, gen)`: `classRulesOk`'s rule check at the telescope
 length `nP + |slots| + nF` (aborts on a word overflow, a capacity). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:619-633 ConRon.Arena.classRulesOk
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classRulesOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classRulesOk]
-def classRulesOkOne : FunDecl := lfn (visT, visR, g, cvR, x, gen) locals (nn, r) {
+def classRulesOkOne : FunDecl := lfn (visR, pO, pL, g, cvR, x, gen) locals (nn, r) {
   nn := IW.u64[g] + IW.u64[g + 8];
   if nn + IW.u64[x + 1] < nn { abort };
-  r := call class_rule_ok(visT, visR, cvR, nn + IW.u64[x + 1], gen);
+  r := call class_rule_ok(visR, pO, pL, cvR, nn + IW.u64[x + 1], gen);
   return r
 }
 
-/-- `class_rules_ok(visT, visR, g, recCls.off, recCls.len, cvGs.off, cvGs.len, cvR, c, xs.off,
+/-- `class_rules_ok(visR, pushed.off, pushed.len, g, recCls.off, recCls.len, cvGs.off, cvGs.len, cvR, c, xs.off,
 xs.len)`: a recursor's generated rules, one per constructor `xs` (the twin's recursion; the telescope
 length `nP + |slots| + nF` aborts on a word overflow, a capacity). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:619-633 ConRon.Arena.classRulesOk
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classRulesOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classRulesOk]
-def classRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen, cvR, c,
+def classRulesOkL : FunDecl := lfn (visR, pO, pL, g, recClsOff, recClsLen, cvGsOff, cvGsLen, cvR, c,
     xsOff, xsLen)
     locals (x, rlvls, ok, gen, r, lo, ll, ro, rl, qo, ql) {
   if xsLen == 0 { return (0, 0) };
@@ -528,20 +548,19 @@ def classRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff
   rlvls := call param_levels(lo, ll);
   (ok, gen) := call class_gen_rule(g, recClsOff, recClsLen, cvGsOff, cvGsLen, rlvls, c, x);
   if ok == 0 { fail R_GENERATED_RECURSOR_THE_RULE };
-  r := call class_rules_ok_one(visT, visR, g, cvR, x, gen);
-  (ro, rl) := call class_rules_ok(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen, cvR, c,
+  r := call class_rules_ok_one(visR, pO, pL, g, cvR, x, gen);
+  (ro, rl) := call class_rules_ok(visR, pO, pL, g, recClsOff, recClsLen, cvGsOff, cvGsLen, cvR, c,
     xsOff + 1, xsLen - 1);
   (qo, ql) := call sl_cons(r, ro, rl);
   return (qo, ql)
 }
 
-/-- `class_recs_rules_ok_go(visT, visR, g, recCls.off, recCls.len, cvGs.off, cvGs.len, cvs.off,
+/-- `class_recs_rules_ok_go(visR, pushed.off, pushed.len, g, recCls.off, recCls.len, cvGs.off, cvGs.len, cvs.off,
 cvs.len, cs.off, cs.len)`: the twin's recursion over the walked tails `cvs`, `cs` of the whole
 lists `cvGs`, `recCls`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:635-648 ConRon.Arena.classRecsRulesOk
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classRecsRulesOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classRecsRulesOk]
-def classRecsRulesOkGo : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+def classRecsRulesOkGo : FunDecl := lfn (visR, pO, pL, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
     cvsOff, cvsLen, csOff, csLen)
     locals (cvG, c, hdr, xsOff, xsLen, rhssOff, rhssLen, m, rec, ro, rl, qo, ql) {
   if cvsLen == 0 { return (0, 0) };
@@ -555,24 +574,23 @@ def classRecsRulesOkGo : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cv
     xsOff := IW.u64[hdr];
     xsLen := IW.u64[hdr + 1]
   };
-  (rhssOff, rhssLen) := call class_rules_ok(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+  (rhssOff, rhssLen) := call class_rules_ok(visR, pO, pL, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
     cvG, c, xsOff, xsLen);
   m := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
   rec := call rec4(cvG, m, rhssOff, rhssLen);
-  (ro, rl) := call class_recs_rules_ok_go(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+  (ro, rl) := call class_recs_rules_ok_go(visR, pO, pL, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
     cvsOff + 1, cvsLen - 1, csOff + 1, csLen - 1);
   (qo, ql) := call sl_cons(rec, ro, rl);
   return (qo, ql)
 }
 
-/-- `class_recs_rules_ok(visT, visR, g, recCls.off, recCls.len, cvGs.off, cvGs.len)`: every
+/-- `class_recs_rules_ok(visR, pushed.off, pushed.len, g, recCls.off, recCls.len, cvGs.off, cvGs.len)`: every
 recursor's generated rules, with its class (the shorter of `cvGs`/`recCls` decides). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:635-648 ConRon.Arena.classRecsRulesOk
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classRecsRulesOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classRecsRulesOk]
-def classRecsRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen)
+def classRecsRulesOkL : FunDecl := lfn (visR, pO, pL, g, recClsOff, recClsLen, cvGsOff, cvGsLen)
     locals (qo, ql) {
-  (qo, ql) := call class_recs_rules_ok_go(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+  (qo, ql) := call class_recs_rules_ok_go(visR, pO, pL, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
     cvGsOff, cvGsLen, recClsOff, recClsLen);
   return (qo, ql)
 }
@@ -581,13 +599,12 @@ def classRecsRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvG
 
 /-- `class_stream_recs(vis, rcs.off, rcs.len)`: the stream's recursor constants, checked. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:650-657 ConRon.Arena.classStreamRecs
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classStreamRecs` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classStreamRecs]
 def classStreamRecsL : FunDecl := lfn (vis, rcsOff, rcsLen) locals (rc, cv, r, ro, rl, qo, ql) {
   if rcsLen == 0 { return (0, 0) };
   rc := IW.u64[rcsOff];
   cv := IW.u64[rc];
-  r := call check_constant_val(vis, cv);
+  r := call check_constant_val(vis, cv, 0);
   (ro, rl) := call class_stream_recs(vis, rcsOff + 1, rcsLen - 1);
   (qo, ql) := call sl_cons(cv, ro, rl);
   return (qo, ql)
@@ -665,7 +682,6 @@ def classKeyOfL : FunDecl := lfn (nP, paramsOff, paramsLen, k) locals (k2, ok) {
 
 /-- `checkBlockClasses` helper: `ks.mapM (classKeyOf p.nP params)`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:693-712 ConRon.Arena.checkBlockClasses
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockClasses` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockClasses]
 def checkBlockClassesKeys : FunDecl := lfn (nP, paramsOff, paramsLen, ksOff, ksLen)
     locals (k2, ro, rl, qo, ql) {
@@ -679,7 +695,6 @@ def checkBlockClassesKeys : FunDecl := lfn (nP, paramsOff, paramsLen, ksOff, ksL
 /-- `checkBlockClasses` helper: how many classes of `ms` have the member word `w` (`member ==
 some (w - 1)`), as the twin's `(ms.filter (·.member == some t)).length`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:693-712 ConRon.Arena.checkBlockClasses
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockClasses` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockClasses]
 def checkBlockClassesCount : FunDecl := lfn (msOff, msLen, w) locals (r) {
   if msLen == 0 { return 0 };
@@ -691,7 +706,6 @@ def checkBlockClassesCount : FunDecl := lfn (msOff, msLen, w) locals (r) {
 /-- `checkBlockClasses` helper: exactly one class per member `t`, for `t = j, …, k - 1` (the twin's
 `(List.range p.k).all`, as a recursion). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:693-712 ConRon.Arena.checkBlockClasses
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockClasses` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockClasses]
 def checkBlockClassesOnePerMember : FunDecl := lfn (j, k, msOff, msLen) locals (c, r) {
   if k <= j { return 1 };
@@ -701,12 +715,11 @@ def checkBlockClassesOnePerMember : FunDecl := lfn (j, k, msOff, msLen) locals (
   return r
 }
 
-/-- `check_block_classes(vis, p, params.off, params.len, ctorsAs.off, ctorsAs.len)`: the classes,
+/-- `check_block_classes(vis, p, params.off, params.len)`: the classes,
 read and checked, as `(rd, ms.off, ms.len)`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:693-712 ConRon.Arena.checkBlockClasses
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkBlockClasses` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockClasses]
-def checkBlockClassesL : FunDecl := lfn (vis, p, paramsOff, paramsLen, ctorsAsOff, ctorsAsLen)
+def checkBlockClassesL : FunDecl := lfn (vis, p, paramsOff, paramsLen)
     locals (ok, rd, slOff, slLen, ksOff, ksLen, keysOff, keysLen, msOff, msLen, good) {
   (ok, rd) := call class_read(p, vis, IW.u64[p + 4], IW.u64[p + 2], IW.u64[p + 3]);
   if ok == 0 { fail R_GENERATED_RECURSOR_THE_RECURSOR_FAMILY };
@@ -715,8 +728,7 @@ def checkBlockClassesL : FunDecl := lfn (vis, p, paramsOff, paramsLen, ctorsAsOf
   (ksOff, ksLen) := call class_read_classes(slOff, slLen);
   (keysOff, keysLen) := call check_block_classes_keys(IW.u64[p + 4], paramsOff, paramsLen, ksOff,
     ksLen);
-  (msOff, msLen) := call class_majors(vis, p, ctorsAsOff, ctorsAsLen, paramsOff, paramsLen, keysOff,
-    keysLen);
+  (msOff, msLen) := call class_majors(vis, p, paramsOff, paramsLen, keysOff, keysLen);
   good := call check_block_classes_one_per_member(0, IW.u64[p + 1], msOff, msLen);
   if good == 0 { fail R_GENERATED_RECURSOR_THE_RECURSOR };
   return (rd, msOff, msLen)
@@ -724,13 +736,13 @@ def checkBlockClassesL : FunDecl := lfn (vis, p, paramsOff, paramsLen, ctorsAsOf
 
 /-! ## `classFeR` -/
 
-/-- `class_fe_r_rec(cv, mi, rp3)`: the rule-less `.recInfo` record of the constant at `cv` (aborts
+/-- `class_fe_r_rec(cv, mi, rp3)`: the rule-less `.recInfo` record (K flag `false`) of the constant
+at `cv` (aborts
 unless the copied name word is a handle, which `env_push` needs). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:714-731 ConRon.Arena.classFeR
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classFeR` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classFeR]
 def classFeRRec : FunDecl := lfn (cv, mi, rp3) locals (q, ez) {
-  q := call erec_alloc(9);
+  q := call erec_alloc(10);
   ez := call erec_put(q, 5);
   ez := call erec_put(q + 1, EREC⦃cv⦄);
   ez := call erec_put(q + 2, EREC⦃cv + 1⦄);
@@ -740,6 +752,7 @@ def classFeRRec : FunDecl := lfn (cv, mi, rp3) locals (q, ez) {
   ez := call erec_put(q + 6, rp3);
   ez := call erec_put(q + 7, 0);
   ez := call erec_put(q + 8, 0);
+  ez := call erec_put(q + 9, 0);
   if 4294967296 <= EREC⦃q + 1⦄ { abort };
   return q
 }
@@ -748,7 +761,6 @@ def classFeRRec : FunDecl := lfn (cv, mi, rp3) locals (q, ez) {
 recursor `m` (the walked tail `cvs` of `cvGs`, `rcl` entries of `recCls` left), as
 `(vis', prevs.off, prevs.len)`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:714-731 ConRon.Arena.classFeR
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classFeR` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classFeR]
 def classFeRGo : FunDecl := lfn (cvo, cvl, rcl, recsOff, recsLen, vis, m)
     locals (cv, nm, c, q, mi, rp3, rc, kindp, cur, entry, vo, ro, rl, qo, ql) {
@@ -775,7 +787,6 @@ def classFeRGo : FunDecl := lfn (cvo, cvl, rcl, recsOff, recsLen, vis, m)
 /-- `class_fe_r(p, cvGs.off, cvGs.len, recCls.off, recCls.len, vis)`: the rule-less generated
 recursors consed onto the environment, pushed temporarily, as `(vis', prevs.off, prevs.len)`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:714-731 ConRon.Arena.classFeR
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.classFeR` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classFeR]
 def classFeRL : FunDecl := lfn (p, cvGsOff, cvGsLen, recClsOff, recClsLen, vis) locals (v, o, l) {
   (v, o, l) := call class_fe_r_go(cvGsOff, cvGsLen, recClsLen, IW.u64[p + 2], IW.u64[p + 3], vis, 0);
@@ -786,7 +797,6 @@ def classFeRL : FunDecl := lfn (p, cvGsOff, cvGsLen, recClsOff, recClsLen, vis) 
 
 /-- `genRecCheck` helper: `nestedBit || ms.any (·.member.isNone)`'s second disjunct. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:733-788 ConRon.Arena.genRecCheck
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (m, r) {
   if msLen == 0 { return 0 };
@@ -796,9 +806,8 @@ def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (m, r) {
   return r
 }
 
-/-- `genRecCheck` helper: `cvTas.map (·.type)`. -/
+/-- `genRecCheck` helper: `formers.map (·.type)`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:733-788 ConRon.Arena.genRecCheck
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckFormerTys : FunDecl := lfn (cvTasOff, cvTasLen) locals (q, j) {
   q := call iw_alloc(cvTasLen);
@@ -807,9 +816,8 @@ def genRecCheckFormerTys : FunDecl := lfn (cvTasOff, cvTasLen) locals (q, j) {
   return (q, cvTasLen)
 }
 
-/-- `genRecCheck` helper: `ms2.mapM (classFormerTy fe cvTas)`. -/
+/-- `genRecCheck` helper: `ms2.mapM (classFormerTy mode fe formers)`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:733-788 ConRon.Arena.genRecCheck
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckFormerTysC : FunDecl := lfn (vis, cvTasOff, cvTasLen, ms2Off, ms2Len)
     locals (q, j, e) {
@@ -825,7 +833,6 @@ def genRecCheckFormerTysC : FunDecl := lfn (vis, cvTasOff, cvTasLen, ms2Off, ms2
 /-- `genRecCheck` helper: `(rd.slots.filter ClassSlot.isMinor).length == (ctors.map
 List.length).sum` (a sum past `2^64` is above every slot count: `0`). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:733-788 ConRon.Arena.genRecCheck
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckMinorOk : FunDecl := lfn (slotsOff, slotsLen, ctorsOff, ctorsLen)
     locals (j, s, minorCnt, ctorSum, hdr) {
@@ -848,7 +855,6 @@ def genRecCheckMinorOk : FunDecl := lfn (slotsOff, slotsLen, ctorsOff, ctorsLen)
 /-- `genRecCheck` helper: the pop, `prevs.foldr (fun (n, prev) acc => acc.popTemp n prev) feR`, in
 reverse push order. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:733-788 ConRon.Arena.genRecCheck
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckPopAll : FunDecl := lfn (vis, prevsOff, prevsLen) locals (j, e) {
   j := prevsLen;
@@ -864,18 +870,17 @@ def genRecCheckPopAll : FunDecl := lfn (vis, prevsOff, prevsLen) locals (j, e) {
 and constructors, and the generator up to `cvGs` (checked, generated types). Capacity guards first:
 the pool's size `+ 5`, the parameter count plus the member count and plus the slot count are words. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:733-788 ConRon.Arena.genRecCheck
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckPrep : FunDecl := lfn
-    (vis, p, nestedBit, paramsOff, paramsLen, tblOff, tblLen, rd, msOff, msLen, cvTasOff, cvTasLen,
-     blockOff, blockLen)
+    (vis, p, nestedBit, paramsOff, paramsLen, tblOff, tblLen, rd, msOff, msLen, blockOff, blockLen)
     locals
-    (r, cvRisOff, cvRisLen, nb, allowed, ftOff, ftLen, ms2Off, ms2Len, ctorsOff, ctorsLen, minorOk,
+    (cvTasOff, cvTasLen, r, cvRisOff, cvRisLen, nb, allowed, ftOff, ftLen, ms2Off, ms2Len, ctorsOff, ctorsLen, minorOk,
      ftcOff, ftcLen, elim, g, preOk, preOff, preLen, cvGsOff, cvGsLen) {
   if len(IW.u64) + 5 < 5 { abort };
   if IW.u64[p + 4] + IW.u64[p + 1] < IW.u64[p + 4] { abort };
   if IW.u64[p + 4] + IW.u64[rd + 1] < IW.u64[p + 4] { abort };
   r := call target_rec_pins(p, blockOff, blockLen);
+  (cvTasOff, cvTasLen) := call block_shape_formers(p);
   (cvRisOff, cvRisLen) := call class_stream_recs(vis, IW.u64[p + 2], IW.u64[p + 3]);
   if IW.u64[p + 1] == 0 { fail R_GENERATED_RECURSOR_THE };
   if IW.u64[p + 7] != 0 {
@@ -916,22 +921,22 @@ def genRecCheckPrep : FunDecl := lfn
 }
 
 /-- `gen_rec_check(vis, p, nestedBit, params.off, params.len, tbl.off, tbl.len, rd, ms.off, ms.len,
-cvTas.off, cvTas.len, block.off, block.len)`: **the generated recursor stage**, as
-`(vis', out.off, out.len)`. -/
+block.off, block.len)`: **the generated recursor stage**, as `(vis', out.off, out.len)`: the rule-less
+recursors pushed temporarily (`class_fe_r`), the flush entering them, every rule checked (its
+λ-domains naming none of the `pushed` recursors' names), the pushes undone in reverse order and the
+flush leaving them. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:733-788 ConRon.Arena.genRecCheck
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckL : FunDecl := lfn
-    (vis, p, nestedBit, paramsOff, paramsLen, tblOff, tblLen, rd, msOff, msLen, cvTasOff, cvTasLen,
-     blockOff, blockLen)
-    locals (g, cvGsOff, cvGsLen, visT, feR, prevsOff, prevsLen, r, outOff, outLen, fe2) {
+    (vis, p, nestedBit, paramsOff, paramsLen, tblOff, tblLen, rd, msOff, msLen, blockOff, blockLen)
+    locals (g, cvGsOff, cvGsLen, feR, prevsOff, prevsLen, pO, pL, r, outOff, outLen, fe2) {
   (g, cvGsOff, cvGsLen) := call gen_rec_check_prep(vis, p, nestedBit, paramsOff, paramsLen, tblOff,
-    tblLen, rd, msOff, msLen, cvTasOff, cvTasLen, blockOff, blockLen);
-  visT := vis;
+    tblLen, rd, msOff, msLen, blockOff, blockLen);
   (feR, prevsOff, prevsLen) := call class_fe_r(p, cvGsOff, cvGsLen, IW.u64[rd + 2], IW.u64[rd + 3],
     vis);
+  (pO, pL) := call block_shape_names_of(cvGsOff, cvGsLen);
   r := call flush_caches();
-  (outOff, outLen) := call class_recs_rules_ok(visT, feR, g, IW.u64[rd + 2], IW.u64[rd + 3],
+  (outOff, outLen) := call class_recs_rules_ok(feR, pO, pL, g, IW.u64[rd + 2], IW.u64[rd + 3],
     cvGsOff, cvGsLen);
   fe2 := call gen_rec_check_pop_all(feR, prevsOff, prevsLen);
   r := call flush_caches();
@@ -951,10 +956,13 @@ def recGenFns : Prog :=
    ("class_ctor_of", classCtorOfL), ("class_ctors_of", classCtorsOfL),
    ("classes_ctors", classesCtorsL), ("class_majors", classMajorsL),
    ("classes_nfs", classesNfsL), ("class_former_ty", classFormerTyL),
-   ("class_const_ok_header", classConstOkHeader), ("class_const_ok", classConstOkL), ("class_rec_ty_ok", classRecTyOkL),
+   ("class_const_ok_header", classConstOkHeader), ("class_const_ok_lit", classConstOkLit),
+   ("class_const_ok", classConstOkL), ("class_rec_ty_ok", classRecTyOkL),
+   ("class_rec_ty_check", classRecTyCheckL),
    ("class_rec_ty_ok_guards", classRecTyOkGuards),
-   ("class_rec_tys_ok", classRecTysOkL), ("class_rule_ok_domains", classRuleOkDomains),
-   ("class_rule_ok_guards", classRuleOkGuards), ("class_rule_ok", classRuleOkL), ("class_rules_ok", classRulesOkL),
+   ("class_rec_tys_ok", classRecTysOkL), ("class_rule_check_domains", classRuleCheckDomains),
+   ("class_rule_check_guards", classRuleCheckGuards), ("class_rule_check", classRuleCheckL),
+   ("class_rule_ok", classRuleOkL), ("class_rules_ok", classRulesOkL),
    ("class_rules_ok_one", classRulesOkOne),
    ("class_recs_rules_ok", classRecsRulesOkL),
    ("class_recs_rules_ok_go", classRecsRulesOkGo), ("class_stream_recs", classStreamRecsL),
@@ -982,12 +990,15 @@ def recGenFns : Prog :=
 def recGenForeign : Prog :=
   [("nest_occ", stub 5), ("pi_binders", stub 2), ("target_pi_doms_with", stub 3),
    ("target_k53", stub 9), ("target_major_at", stub 3), ("target_ctor_at", stub 2),
-   ("inst_pis_with", stub 3), ("target_major_of", stub 9), ("target_major_pins", stub 3),
+   ("inst_pis_with", stub 3), ("target_major_of", stub 7), ("target_major_pins", stub 3),
    ("target_major_nfs", stub 13), ("class_gen_rec_ty", stub 2), ("class_gen_rule", stub 8),
    ("param_levels", stub 2), ("target_canon_params", stub 3), ("nest_seed_of", stub 8),
    ("class_read", stub 5), ("class_read_classes", stub 2), ("target_rec_pins", stub 3),
    ("block_large_elim_allowed", stub 2), ("struct_elim_level", stub 2),
-   ("class_gen_prefix_binders", stub 1), ("block_shape_member_names", stub 1)]
+   ("class_gen_prefix_binders", stub 1), ("block_shape_member_names", stub 1),
+   ("block_shape_formers", stub 1), ("block_shape_names_of", stub 2), ("family_telescope", stub 3),
+   ("lit_shape_ok", stub 1), ("mentions_any_const", stub 3), ("check_constant_val", stub 3),
+   ("unresolved_consts_error", stub 3)]
 
 /-! ## A pure-enough slice, exercised -/
 
