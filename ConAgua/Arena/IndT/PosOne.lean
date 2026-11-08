@@ -93,6 +93,7 @@ section steps
 variable {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name)
   (vis : Word) (fe : IFEnv) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include L hq hIlpf henv in
 theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe env n) :
     OneRef p dn vis fe env (n + 1) := by
@@ -291,6 +292,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   · simp only [List.headD_cons, List.tail_cons]
     have e : (ns2.ctorNfs.toList ++ [x]).toArray = ns2.ctorNfs.push x := Array.ext' (by simp)
     simpa [e] using hNS3
+-/
 
 end steps
 

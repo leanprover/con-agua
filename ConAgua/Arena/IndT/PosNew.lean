@@ -52,6 +52,7 @@ theorem cfT_pstep {c : NestCtx} {us : LsIdx} {ds : List EIdx} {grp : List (NIdx 
 section steps
 variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in
 /-- **`nest_cont_new` refines `nestContNew`, both outcomes**, at L fuel `n + 1`: the walk stack, the
 group grown (`ngg_ref`), the frame (the block's `FrameRef` at `n`), the
@@ -347,6 +348,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   have hA10 : AbsOK m10 := cfW_afr hcf hA9
   exact RefE.ret hrun10 ⟨hC9.of_pstep hS10 hA10 p10, hg19.trans hg10, by simpa using hk10, by simpa using hns10,
     hP9.fr (cfW_mfr hcf), hA10, (c12.trans c9).trans (p10.toCore hC9.check)⟩
+-/
 
 end steps
 

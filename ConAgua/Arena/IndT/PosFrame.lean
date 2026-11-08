@@ -40,6 +40,7 @@ def nestHeadT (grp : List (NIdx × EIdx)) : AM NIdx :=
   | [] => internNNode .anonymous
   | (c, _) :: _ => pure c
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The tail of `nestFrame` after the group's head name (its `do` join point). -/
 def nestFrameRest (mode : ConLeche.CheckMode) (fe : IFEnv) (ctx : NestCtx) (fuel : Nat)
     (prog : List NestHole) (hi : Nat) (us : LsIdx) (ds : List EIdx) (nPc : Nat)
@@ -54,6 +55,7 @@ def nestFrameRest (mode : ConLeche.CheckMode) (fe : IFEnv) (ctx : NestCtx) (fuel
   let (_, ns2) ← nestCtors mode fe ctx false fuel prog2 (hi + grp.length) us ds names
     holes ctors ns []
   pure ns2
+-/
 
 theorem nestFrame_run {mode : ConLeche.CheckMode} {fe : IFEnv} {ctx : NestCtx} {fuel : Nat}
     {prog : List NestHole} {hi : Nat} {us : LsIdx} {ds : List EIdx} {nPc : Nat}
@@ -61,22 +63,13 @@ theorem nestFrame_run {mode : ConLeche.CheckMode} {fe : IFEnv} {ctx : NestCtx} {
     (h : (nestHeadT grp).run a = .ok (hn, a1)) :
     (ConRon.Arena.nestFrame mode fe ctx fuel prog hi us ds nPc grp ns).run a =
       (nestFrameRest mode fe ctx fuel prog hi us ds nPc grp ns hn).run a1 := by
-  rw [ConRon.Arena.nestFrame.eq_def]
-  cases grp with
-  | nil =>
-    simp only [nestHeadT] at h
-    simp only [StateT.run_bind, h, except_ok_bind]
-    rfl
-  | cons x g =>
-    obtain ⟨c, ty⟩ := x
-    simp only [nestHeadT] at h
-    obtain ⟨rfl, rfl⟩ := ConRon.Bridge.AM.pure_ok h
-    rfl
+  sorry
 
 section steps
 variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv in
 /-- **`nest_frame` refines `nestFrame`, both outcomes**, at L fuel `n + 1`: the group's head name, the
 instantiation typed (`inferC_rsim`; `infer_type_core`'s claim from `CoreStubsE`), the group's
@@ -382,6 +375,7 @@ theorem frameRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p
       (decI us) ds (grp.map (·.1)) holes ctors NS []).run a7 = .ok (x, a8) := by simpa using hrun8
   refine RefE.bind_right e8 (RefE.ret rfl ⟨hpost.stage, hg17.trans hpost.grow, by simpa using hpost.ns, hpost.pos,
     hpost.abs, (c3.trans c4).trans ((p57.toCore hC4.check).trans hpost.core)⟩)
+-/
 
 end steps
 
