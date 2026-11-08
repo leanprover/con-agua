@@ -272,15 +272,17 @@ theorem decNL_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : o + l ≤ iw
 
 /-! ## Constant records are stable under the pool's growth -/
 
-/-- `q`'s constant-value record lies below the `EREC` top (its four words and its level-parameter
-slice). -/
-def CVExt (m : Mem) (q : Nat) : Prop :=
-  q + 4 ≤ erTop m ∧ ∀ o l, nat? (erA m) (q + 1) = some o → nat? (erA m) (q + 2) = some l →
-    o + l ≤ erTop m ∨ l = 0
+/-- `q`'s constant-value record decodes (its four words and its level-parameter slice are all
+defined in the record pool, in either tier), so it stays decoded as the pool grows. -/
+def CVExt (m : Mem) (q : Nat) : Prop := (decCVp m q).isSome
+
+theorem CVExt.of_dec {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv) : CVExt m q := by
+  simp [CVExt, h]
 
 theorem decCVp_grow_r {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) :
     decCVp m' q = decCVp m q := by
-  sorry
+  obtain ⟨cv, hcv⟩ := Option.isSome_iff_exists.mp hq
+  rw [hcv]; exact ArrExt.decCV hg.ext hcv
 
 theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o : Nat),
     decPL m f o l = (decNL m o l).bind (fun ps => ps.mapM f) := by
@@ -301,7 +303,7 @@ theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o :
         | some ps => simp [hf]
 
 theorem CVExt_grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) : CVExt m' q := by
-  sorry
+  simp only [CVExt, decCVp_grow_r hg hq]; exact hq
 
 /-! ## `class_read_classes` (loop rewritten as recursion: the rest, then `sl_cons` at a motive) -/
 
