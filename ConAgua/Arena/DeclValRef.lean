@@ -26,16 +26,6 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- The value checks' common tail: the value's guards, its type against the declared one, the
-push of `ci` (`msg` the twin's error text, never reached on a successful run). -/
-def dvT (fe : IFEnv) (cv : IConstantVal) (v : EIdx) (ci : IConstantInfo) (msg : String) :
-    AM IFEnv := do
-  installValueGuards fe cv v
-  let vtype ← inferTypeCore V fe checkFuel 0 v
-  unless ← isDefEqCore V fe checkFuel 0 vtype cv.type do
-    fail (.invalid msg)
-  pure (fe.push ci)
-
 theorem checkDefnVal_dvT (fe : IFEnv) (cv : IConstantVal) (v : EIdx)
     (h : ConLeche.ReducibilityHint) :
     checkDefnVal V fe cv v h = dvT fe cv v (.defnInfo cv v h) "type mismatch in definition" := rfl

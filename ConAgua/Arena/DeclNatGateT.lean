@@ -423,22 +423,6 @@ theorem dng_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     fun _ _ _ _ ⟨hC6, hg6, hx6⟩ => ⟨stageR_of_restrict hC6.stage hvb, hC6,
       (((((hg1.trans hg2).trans hg3).trans hg4).trans hg5).trans hg6), hx35.trans hx6⟩
 
-/-- **`defn_nat_gate` under `StageC`** from the call's run (`dng_ref`'s ok half). -/
-theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = some defnNatGate)
-    (hc : p.lookup "defn_nat_cert" = some defnNatCert) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    {vis w n : Word} {fe2 : IFEnv} {env env2 : ConLeche.Env} {nm : ConLeche.Name} {k : Nat}
-    (hk : k ≤ 2 ^ 62) {m m' : Mem} {a : AState} {r : List Word} (hn : H n)
-    (hcall : callW p k "defn_nat_gate" [vis, w, n] m = some (r, m'))
-    (hSw : StageR w fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
-    (henv : ConLeche.EnvWF env) (hie : StepOK env2 fe2 a)
-    (hnm : denoteN a.store.ns (decI n) = some nm) :
-    ∃ a', (natGateT (fe2.restrictTo vis.toNat) fe2 (decI n)).run a = .ok ((), a') ∧
-      StageR w fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
-      IWGrow m m' ∧ Ext a.store a'.store := by
-  obtain ⟨s', rfl, -, ⟨⟩, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
-    (defnNatGate_specE p hg hc k _ vis w n) (dng_ref hN hq hcl k hk hn hSw hC henv hie hnm) hcall
-  exact ⟨a', hrun, hR.stageW, hR.stage, hR.grow, hR.ext⟩
-
 end gate
 
 end L.Arena

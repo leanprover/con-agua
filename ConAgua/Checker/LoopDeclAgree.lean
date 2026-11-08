@@ -28,7 +28,7 @@ open L.Arena L.Ind L.Compiler
 
 /-- `cvgFns` but `openFns`, part 0. -/
 def cvgOwn0 : List FnName :=
-  ["check_value_group", "iw_reset", "pin_word", "lvl_eq_c", "lq_find", "lvl_eq_rec", "lvl_eq",
+  ["iw_reset", "pin_word", "lvl_eq_c", "lq_find", "lvl_eq_rec", "lvl_eq",
    "lv_equiv", "lv_eq", "lv_node", "lv_simp", "lh_mk"]
 
 set_option maxRecDepth 100000 in
@@ -46,7 +46,7 @@ theorem checkerProg_cvgOwn1 : ∀ f ∈ cvgOwn1, checkerProg.lookup f = cvgProg.
 
 /-- `cvgFns` but `openFns`, part 2. -/
 def cvgOwn2 : List FnName :=
-  ["lq_put", "install_value_guards", "cv_lps", "er_to_iw", "iw_alloc", "er_copy"]
+  ["lq_put", "cv_lps", "er_to_iw", "iw_alloc", "er_copy"]
 
 set_option maxRecDepth 100000 in
 theorem checkerProg_cvgOwn2 : ∀ f ∈ cvgOwn2, checkerProg.lookup f = cvgProg.lookup f :=
@@ -63,7 +63,7 @@ theorem checkerProg_cvgAgree : ∀ f ∈ cvgFns, f ∉ openFns → checkerProg.l
 
 /-- `ivFns` but `openFns`, part 0. -/
 def ivOwn0 : List FnName :=
-  ["install_value", "erec_ci", "erec_alloc", "dlp_copy", "install_header", "env_find",
+  ["erec_ci", "erec_alloc", "dlp_copy", "env_find",
    "env_row_get", "env_ix", "reserved_contains", "reserved_from", "cv_lps", "er_to_iw"]
 
 set_option maxRecDepth 100000 in
@@ -72,8 +72,8 @@ theorem checkerProg_ivOwn0 : ∀ f ∈ ivOwn0, checkerProg.lookup f = ivProg.loo
 
 /-- `ivFns` but `openFns`, part 1. -/
 def ivOwn1 : List FnName :=
-  ["iw_alloc", "er_copy", "sl_nodup", "sl_contains", "install_value_guards", "env_push",
-   "env_row_set", "erec_vg"]
+  ["iw_alloc", "er_copy", "sl_nodup", "sl_contains", "env_push",
+   "env_row_set"]
 
 set_option maxRecDepth 100000 in
 theorem checkerProg_ivOwn1 : ∀ f ∈ ivOwn1, checkerProg.lookup f = ivProg.lookup f :=

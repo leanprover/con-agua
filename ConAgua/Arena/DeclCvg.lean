@@ -61,10 +61,10 @@ def cvgProg : Prog :=
 
 /-- The functions `check_value_group` reaches. -/
 def cvgFns : List FnName :=
-  ["check_value_group", "iw_reset", "infer_type_core", "ensure_sort_core", "pin_word", "lvl_eq_c",
+  ["iw_reset", "infer_type_core", "ensure_sort_core", "pin_word", "lvl_eq_c",
    "lq_find", "lvl_eq_rec", "lvl_eq", "lv_equiv", "lv_eq", "lv_node", "lv_simp", "lh_mk", "lv_comb",
    "lv_leq", "lv_rest", "lv_imax", "lv_cases", "lv_cases_at", "lv_subsimp", "lv_subst", "lv_imax_l",
-   "lv_dist1", "lv_dist2", "lv_imax_r", "lq_put", "install_value_guards", "cv_lps", "er_to_iw",
+   "lv_dist1", "lv_dist2", "lv_imax_r", "lq_put", "cv_lps", "er_to_iw",
    "iw_alloc", "er_copy", "loose_bvars_bounded_fast", "has_fvar_fast", "all_level_params_defined",
    "consts_resolve_ffast", "is_def_eq_core"]
 
@@ -75,7 +75,7 @@ the ROM readers and the gates' leaves. Their specs come from their own refinemen
 def openFns : List FnName :=
   ["infer_type_core", "ensure_sort_core", "is_def_eq_core", "loose_bvars_bounded_fast",
    "has_fvar_fast", "all_level_params_defined", "nat_lit_supported", "rom_cv",
-   "rom_ci", "rom_expr_pin", "rom_basis_decls", "rom_basis_decls_a", "rom_pin_sets",
+   "rom_ci", "rom_expr_pin", "rom_basis_decls", "rom_pin_sets",
    "consts_resolve_ffast"]
 
 /-- **`fs` lies in a call-closed function set with a step's write set** (`stepA`, `stepC`). -/
@@ -105,13 +105,9 @@ structure CvgProg (p : Prog) : Prop extends TextProg p cvgProg cvgFns where
 section lookups
 variable {p : Prog} (h : CvgProg p)
 include h
-theorem CvgProg.cvg : p.lookup "check_value_group" = some checkValueGroupL :=
-  (h.agree _ (by decide) (by decide)).trans rfl
 theorem CvgProg.reset : p.lookup "iw_reset" = some L.Ind.iwReset :=
   (h.agree _ (by decide) (by decide)).trans rfl
 theorem CvgProg.pin : p.lookup "pin_word" = some pinWordL :=
-  (h.agree _ (by decide) (by decide)).trans rfl
-theorem CvgProg.ivg : p.lookup "install_value_guards" = some installValueGuardsL :=
   (h.agree _ (by decide) (by decide)).trans rfl
 theorem CvgProg.lps : p.lookup "cv_lps" = some L.Ind.cvLps :=
   (h.agree _ (by decide) (by decide)).trans rfl

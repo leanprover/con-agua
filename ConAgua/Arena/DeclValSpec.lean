@@ -46,12 +46,4 @@ structure ValProg (p : Prog) : Prop where
 
 /-! ## Twin equations -/
 
-/-- `checkConstantVal` is `installHeader`, then the type's sort. -/
-theorem checkConstantVal_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (cv : IConstantVal) :
-    checkConstantVal mode fe cv = (do installHeader fe cv
-                                      let st ← inferTypeCore mode fe checkFuel 0 cv.type
-                                      let _ ← ensureSortCore mode fe checkFuel 0 st
-                                      pure ()) := by
-  simp only [checkConstantVal, installHeader, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
-
 end L.Arena

@@ -30,11 +30,6 @@ open L.Arena
 
 /-! ## The twin's values by the stubs' ids -/
 
-/-- `rom_ci(id)`'s constant. -/
-def romCiT : Nat → AM IConstantInfo
-  | 0 => eqA | 1 => natA | 2 => iffA | 3 => iffIntroA | 4 => iffRecA | 5 => nonemptyA
-  | 6 => nonemptyIntroA | _ => nonemptyRecA
-
 /-- `rom_cv(id)`'s constant value. -/
 def romCvT : Nat → AM IConstantVal
   | 0 => propextA | 1 => choiceA | 2 => trueCvA | 3 => trueIntroCvA | 4 => trustCompilerA

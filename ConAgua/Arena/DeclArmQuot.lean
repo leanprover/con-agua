@@ -203,7 +203,6 @@ structure QuotProg (p : Prog) : Prop where
   rom : L.Rom.RomRefs p
   basis : BasisProg p
   qph : p.lookup "quot_pin_hit" = some quotPinHitL
-  cbd : p.lookup "check_basis_decl" = some checkBasisDeclL
   pa : p.lookup "pin_at" = some pinAtL
   cdq : p.lookup "check_decl_quot" = some checkDeclQuot
 
@@ -216,15 +215,6 @@ l_model checkDeclQuot_specE (p : Prog) (hQ : QuotProg p) (hRp : RecProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-theorem checkDecl_quot_shape (pins : List INatOpPinSet) (fe : IFEnv) (k : ConLeche.QuotKind)
-    (cv : IConstantVal) :
-    checkDecl V pins fe (.quotDecl k cv) =
-      (quotPinHit k cv >>= fun b => if b = true then
-        (match k with | .type => checkBasisDecl fe .quotK | _ => pure fe)
-        else fail (.notImplemented (match k with
-          | .sound => "quotient soundness axiom mismatch"
-          | _ => "quotient declaration mismatch"))) := rfl
 
 /-- **`check_decl_quot(i, vis)` refines the quotient arm of `checkDecl`, both outcomes**
 (con-ron's `checkDecl_bridge_quot`): the record against the pinned block's constant at its slot

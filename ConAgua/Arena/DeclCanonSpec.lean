@@ -34,33 +34,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-- The functions of `CanonProg`. -/
-def canonProgFns : Prog :=
-  [("er_sl_eq", L.Ind.erSlEq), ("b_eq", L.Ind.bEq), ("cv_eq", L.Ind.cvEq),
-   ("hint_eq", L.Ind.hintEq), ("pw_eq", L.Ind.pwEq), ("caps_eq", L.Ind.capsEq),
-   ("rule_eq_but_rhs", L.Ind.ruleEqButRhs), ("rules_eq", L.Ind.rulesEq),
-   ("ci_eq", L.Ind.ciEq), ("er_sl_at", L.Ind.erSlAt), ("caps_eq_a", L.Ind.capsEqA),
-   ("caps_eq_b", L.Ind.capsEqB), ("caps_eq_c", L.Ind.capsEqC), ("rule_eq_a", L.Ind.ruleEqA),
-   ("rule_eq_b", L.Ind.ruleEqB), ("ci_eq_rest", L.Ind.ciEqRest),
-   ("canon_ctx", L.Ind.canonCtx), ("ci_canon_defn", L.Ind.ciCanonDefn),
-   ("ci_canon_rec", L.Ind.ciCanonRec), ("find_is", L.Ind.findIs), ("env_find", envFindL),
-   ("env_row_get", envRowGetL), ("env_ix", envIxL), ("ci_to_cv", L.Ind.ciToCv),
-   ("intern_zero", internZero), ("zero_find", zeroFind), ("zero_push", zeroPush),
-   ("intern_succ", internSucc), ("succ_find", succFind), ("succ_push", succPush),
-   ("intern_sort", internSort), ("sort_find", sortFind), ("sort_push", sortPush),
-   ("cv_new", cvNew), ("erec_alloc", erecAlloc), ("canon_names_go", L.Ind.canonNamesGo),
-   ("canon_names", L.Ind.canonNames), ("intern_nanon", internNAnon), ("nanon_find", nanonFind),
-   ("nanon_push", nanonPush), ("intern_nnum", internNNum), ("nnum_find", nnumFind),
-   ("nnum_push", nnumPush), ("sl_cons", slCons), ("iw_alloc", iwAlloc), ("iw_copy", iwCopy),
-   ("sl_find", slFind), ("sl_getd", slGetD), ("canon_name_map", L.Ind.canonNameMap),
-   ("canon_level_eq", L.Ind.canonLevelEq), ("lv_node", lvNode),
-   ("canon_level_list_eq", L.Ind.canonLevelListEq), ("canon_levels_eq", L.Ind.canonLevelsEq),
-   ("view_ls", viewLsL), ("ls_node", lsNode), ("pool_copy", poolCopy),
-   ("canon_expr_eq", L.Ind.canonExprEq), ("e_view", eView), ("cv_canon_eq", L.Ind.cvCanonEq),
-   ("cv_lps", cvLps), ("er_to_iw", erToIw), ("er_copy", erCopy),
-   ("canon_rules_eq", L.Ind.canonRulesEq), ("ci_canon_eq", L.Ind.ciCanonEq),
-   ("canon_eq_list", L.Ind.canonEqListL)]
-
 /-- **The lookups of every function the canonical-form chain reaches.** -/
 abbrev CanonProg (p : Prog) : Prop := ProgHas p canonProgFns
 
@@ -287,19 +260,6 @@ theorem hintEq_spec (n : Nat) (s₀ : St) (h : Word) (g : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish (gen := 20) [rdW_eq, hintEqB]
-
-theorem pwEq_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pw_eq" [x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if pwEqB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "pw_eq")]
-  simp only [callFn, pwEq]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erSlEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, pwEqB]
 
 theorem erSlAt_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_at" [x, y, i]

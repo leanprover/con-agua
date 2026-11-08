@@ -57,8 +57,6 @@ gate's `StageC` spec. -/
 structure DefnProgT (p : Prog) (pins : List INatOpPinSet) : Prop where
   df : p.lookup "check_decl_defn" = some checkDeclDefn
   nat : NatSubProg' p
-  natGate : p.lookup "defn_nat_gate" = some defnNatGate
-  natCert : p.lookup "defn_nat_cert" = some defnNatCert
   natIn : StepIn p natGateFns
   div : DivGateSpecC p pins
 

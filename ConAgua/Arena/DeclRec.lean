@@ -45,7 +45,6 @@ structure RecProg (p : Prog) : Prop where
   alloc : p.lookup "erec_alloc" = some erecAlloc
   dlp : p.lookup "dlp_copy" = some dlpCopy
   ci : p.lookup "erec_ci" = some erecCi
-  vg : p.lookup "erec_vg" = some erecVg
   ix : p.lookup "env_ix" = some envIxL
   rs : p.lookup "env_row_set" = some envRowSetL
   push : p.lookup "env_push" = some envPushL
@@ -162,19 +161,6 @@ def erecVgW (m : Mem) (p vk : Word) : Option (List Word × Mem) :=
   match erAllocW m 6 with
   | none => none
   | some (g, m1) => some ([g], vgMem m1 g p vk)
-
-theorem erecVg_specW (p : Prog) (h : RecProg p) (n : Nat) (s₀ : St) (q vk : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_vg" [q, vk]
-    ⦃fun r s' => LocEq s' s₀ ∧ erecVgW s₀.mem q vk = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.vg]
-  simp only [callFn, erecVg]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        erecAlloc_specW p h.alloc n] <;>
-      finish (gen := 20) [erecVgW, vgMem, vgSet]
 
 /-- The second half of `env_push`, after the row write: the slot in `ECON`, the count. -/
 def envPushK (vis q : Word) (m1 : Mem) : Option (List Word × Mem) :=

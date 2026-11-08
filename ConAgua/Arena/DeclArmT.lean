@@ -288,14 +288,6 @@ structure IvCtx (p : Prog) : Prop where
   uce : UceProg p
   ivg : IvgE p
 
-/-- `install_value`'s twin for a record of kind `vk`: the header, the value's guards unless a
-theorem (`vk = 1`), the push. `ivT` of each kind is this (`ivT_eq_core`). -/
-def ivCoreT (fe : IFEnv) (cv : IConstantVal) (v : EIdx) (vk : Word) (ci : IConstantInfo)
-    (k : ValueKind) : AM (IFEnv × Option ValueGroup) := do
-  installHeader fe cv
-  if vk ≠ 1 then installValueGuards fe cv v else pure ()
-  pure (fe.push ci, some ⟨k, cv, v⟩)
-
 /-- What `install_value` gives besides the twin's run: the stage at the extended environment,
 the core's memos, the growth, the value group's record. -/
 structure IvPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (v : List Word × Mem)
