@@ -42,7 +42,18 @@ namespace L.Arena
 /-- The `simp` set that runs a pin read. -/
 theorem pinAt_run {m : Mem} {a : AState} (h : PinsFull m a.pins) (i : Nat) (hi : i < 51) :
     (pinAt i).run a = .ok (decI (pinW m (1 + i)), a) := by
-  sorry
+  have hs := h.names_size
+  have := h.names i hi
+  simp [pinAt, StateT.run, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get,
+    Except.bind, pure, StateT.pure, Except.pure, hs, show i < 52 by omega, this]
+
+/-- Slot `51` (`quotMkName`) reads word `71`. -/
+theorem pinAt_run51 {m : Mem} {a : AState} (h : PinsFull m a.pins) :
+    (pinAt 51).run a = .ok (decI (pinW m 71), a) := by
+  have hs := h.names_size
+  have := h.quotMk
+  simp [pinAt, StateT.run, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get,
+    Except.bind, pure, StateT.pure, Except.pure, hs, this]
 
 theorem pinsReady_true {m : Mem} {a : AState} (h : PinsFull m a.pins) : pinsReady a = true := by
   simp [pinsReady, h.names_size, pinCount]
@@ -110,6 +121,17 @@ theorem pinAt_word {m : Mem} {a : AState} (hP : PinsR m a.pins) (i : Word)
   rw [← pinW_eq m _ hb, h1]
   exact ⟨pinAt_run hF _ hi', hF.names_lt _ hi'⟩
 
+/-- The read `pin_at(51)` makes: word `71`. -/
+theorem pinAt_word51 {m : Mem} {a : AState} (hP : PinsR m a.pins) (i : Word)
+    (h0 : 0 < (m.arr64 PINS).size) (hf : (m.arr64 PINS)[0] ≠ 0) (hi : i = 51)
+    (hb : 71 < (m.arr64 PINS).size) :
+    (pinAt i.toNat).run a = .ok (decI ((m.arr64 PINS)[71]), a) ∧
+      ((m.arr64 PINS)[71]).toNat < 2 ^ 32 := by
+  have hF := hP.full (pinW_zero m h0 hf)
+  subst hi
+  rw [← pinW_eq m _ hb]
+  exact ⟨pinAt_run51 hF, hF.quotMk_lt⟩
+
 /-- **`pin_at` refines `pinAt`**: on a return, the memory is unchanged and the twin's read returns
 the same handle and keeps the state. -/
 @[refines ConRon.Arena.pinAt]
@@ -119,7 +141,16 @@ theorem pinAt_refines (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat
     invoke p (exec p n) "pin_at" [i]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       (pinAt i.toNat).run a₀ = .ok (decI (r.headD 0), a₀); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, pinAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have key := pinAt_word hP i
+    have key51 := pinAt_word51 hP i
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish
 
 /-! ## The named readers -/
 
