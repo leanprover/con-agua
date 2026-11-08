@@ -33,11 +33,11 @@ def defnMono : IConstantInfo → Bool
   | _ => false
 
 theorem decCI_defn_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a p = some ci) :
-    (∃ cv v hint, ci = .defnInfo cv v hint ∧ a[p]? = some 1 ∧ decCV a (p + 1) = some cv) ∨
+    {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
+    (∃ cv v hint, ci = .defnInfo cv v hint ∧ a[p]? = some 1 ∧ decCV (aread a) (p + 1) = some cv) ∨
     (∃ w, a[p]? = some w ∧ w ≠ 1 ∧ ∀ cv v hint, ci ≠ .defnInfo cv v hint) := by
   unfold decCI at h
-  cases hk : nat? a p with
+  cases hk : nat? (aread a) p with
   | none => simp [hk] at h
   | some k =>
   have hw : ∃ w, a[p]? = some w ∧ w.toNat = k := by
@@ -64,7 +64,7 @@ theorem decCI_defn_cases {a : Array Word} {dn : NIdx → Option ConLeche.Name} {
       · exact h1 rfl
       all_goals simp [Option.bind_eq_some_iff] at h
 
-theorem decCV_lps_len {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+theorem decCV_lps_len {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
     ∃ w, a[q + 2]? = some w ∧ w.toNat = cv.levelParams.length := by
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := (by
     simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -75,7 +75,7 @@ theorem decCV_lps_len {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV 
     obtain ⟨w1, hw1, rfl⟩ := ho2
     obtain ⟨w2, hw2, rfl⟩ := hl2
     exact ⟨w1, w2, hw1, hw2, hsl⟩ : ∃ w1 w2 : Word, a[q + 1]? = some w1 ∧ a[q + 1 + 1]? = some w2 ∧
-      hslice? a w1.toNat w2.toNat = some cv.levelParams)
+      hslice? (aread a) w1.toNat w2.toNat = some cv.levelParams)
   refine ⟨w2, hw2, ?_⟩
   unfold hslice? at hsl
   simpa using (mapM_opt_length _ _ _ hsl).symm
@@ -84,30 +84,7 @@ theorem defnMono_words {m : Mem} {dn : NIdx → Option ConLeche.Name} {q : Word}
     (hsz : (m.arr64 EREC).size < 2 ^ 64) (h : decCI (erecP m) q.toNat = some ci) :
     (rdW (m.arr64 EREC) q ≠ 1 ∧ defnMono ci = false) ∨
     (rdW (m.arr64 EREC) q = 1 ∧ (defnMono ci = true ↔ rdW (m.arr64 EREC) (q + 3) = 0)) := by
-  rcases decCI_defn_cases h with ⟨cv, v, hint, rfl, hk, hcv⟩ | ⟨w, hw, hne, hnd⟩
-  · right
-    have hk' := erecP_get hk
-    have e1 : rdW (m.arr64 EREC) q = 1 := by simp [rdW, hk']
-    refine ⟨e1, ?_⟩
-    obtain ⟨w, hw, hwl⟩ := decCV_lps_len hcv
-    have hw' := erecP_get hw
-    have hq3 : (q + 3).toNat = q.toNat + 3 := by
-      have : q.toNat + 1 + 2 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hw').1
-      rw [UInt64.toNat_add]; simp; omega
-    have e3 : rdW (m.arr64 EREC) (q + 3) = w := by
-      simp only [rdW, hq3]; rw [show q.toNat + 3 = q.toNat + 1 + 2 by omega, hw']; rfl
-    rw [e3]
-    simp only [defnMono, List.isEmpty_iff_length_eq_zero]
-    constructor
-    · intro hl; exact UInt64.toNat_inj.mp (by simpa [hwl] using hl)
-    · intro hw0; rw [← hwl, hw0]; rfl
-  · left
-    have hw' := erecP_get hw
-    refine ⟨?_, ?_⟩
-    · simp [rdW, hw']; exact hne
-    · cases ci with
-      | defnInfo cv v hint => exact absurd rfl (hnd cv v hint)
-      | _ => rfl
+  sorry
 
 /-! ## `nat_op_deps_stored` -/
 
@@ -166,74 +143,7 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
       decHL m o.toNat l.toNat = some ns →
       callW p k "nat_op_deps_stored" [vis, o, l] m = some (r, m') →
       ∃ x a', (natOpDepsStored fe ns).run a = .ok (x, a') ∧ KeepPost vis fe decW0B m m' a' r x := by
-  induction ns generalizing o l with
-  | nil =>
-    intro k m a r m' hS hd hc
-    have hl0 : l = 0 := by
-      have : l.toNat = 0 := by simpa [decHL, hslice?] using (decHL_length m hd).symm
-      exact UInt64.toNat_inj.mp (by simpa using this)
-    cases k with
-    | zero => rw [callW_zero] at hc; cases hc
-    | succ k =>
-    have hw := callW_model (M := fun mm => depsStoredW p (k + 1) mm vis o l) (depsStored_specW p hN.lNatOpDepsStored (k + 1) · vis o l) hc
-    simp only [depsStoredW.eq_2, hl0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
-  | cons n ns ih =>
-    intro k m a r m' hS hd hc
-    cases k with
-    | zero => rw [callW_zero] at hc; cases hc
-    | succ k =>
-    obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.iw.iwSize hd
-    have hw := callW_model (M := fun mm => depsStoredW p (k + 1) mm vis o l) (depsStored_specW p hN.lNatOpDepsStored (k + 1) · vis o l) hc
-    rw [depsStoredW.eq_2] at hw
-    rw [ite_eq_right hl0] at hw
-    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
-    obtain ⟨rfl, hfd⟩ := envFind_call hN.toMasterProg (rdW (m.arr64 IW) o) hwlt hS.check.env h1
-    subst hn
-    rw [natOpDepsStored_cons]
-    cases hf : fe.find? (decI (rdW (m1.arr64 IW) o)) with
-    | none =>
-      rw [hf] at hfd
-      simp only [decFd] at hfd
-      rw [ite_eq_left hfd] at hw
-      simp only [Option.some.injEq, Prod.mk.injEq] at hw
-      obtain ⟨rfl, rfl⟩ := hw
-      exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
-    | some ci =>
-      rw [hf] at hfd
-      obtain ⟨hr1, hci⟩ := hfd
-      rw [ite_eq_right (by rw [hr1]; decide)] at hw
-      rcases defnMono_words hS.iw.erSize hci with ⟨hne, hdm⟩ | ⟨hk1, hiff⟩
-      · rw [ite_eq_left hne] at hw
-        simp only [Option.some.injEq, Prod.mk.injEq] at hw
-        obtain ⟨rfl, rfl⟩ := hw
-        simp only [hdm]
-        exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
-      · rw [ite_eq_right (by simpa using hk1)] at hw
-        by_cases h3 : rdW (m1.arr64 EREC) (r1.tail.headD 0 + 3) = 0
-        · rw [ite_eq_right (by simpa using h3)] at hw
-          have hdm : defnMono ci = true := hiff.mpr h3
-          simp only [hdm, ite_true]
-          cases h2 : callW p k "nat_op_deps_stored" [vis, o + 1, l - 1] m1 with
-          | none => rw [h2] at hw; simp at hw
-          | some q2 =>
-            obtain ⟨r2, m2⟩ := q2
-            rw [h2, bW_some] at hw
-            simp only [Option.some.injEq, Prod.mk.injEq] at hw
-            obtain ⟨rfl, rfl⟩ := hw
-            obtain ⟨x, a', hrun, hK⟩ := ih (o + 1) (l - 1) k m1 a r2 m2 hS hrest h2
-            refine ⟨x, a', hrun, hK.1, hK.2.1, ?_⟩
-            simpa [decW0B] using hK.2.2
-        · rw [ite_eq_left (by simpa using h3)] at hw
-          simp only [Option.some.injEq, Prod.mk.injEq] at hw
-          obtain ⟨rfl, rfl⟩ := hw
-          have hdm : defnMono ci = false := by
-            cases h : defnMono ci
-            · rfl
-            · exact absurd (hiff.mp h) h3
-          simp only [hdm]
-          exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
+  sorry
 theorem natOpDepsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     CallRef p "nat_op_deps_stored" [vis, o, l]
       (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some ns)

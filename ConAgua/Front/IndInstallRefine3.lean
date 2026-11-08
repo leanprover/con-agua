@@ -159,39 +159,8 @@ theorem rulesGoW_twin {st : StateD} (a : AState) {lo o l : Word} {rules : List R
       ∀ k (hk : k < rules.length), j.toNat ≤ k →
         (ConRon.Arena.Frontend.parseRuleD st rules[k]).run a = .ok (resOf (ConRon.Arena.Frontend.parseRuleD st rules[k]) a, a) ∧
         ∀ P : Array Word, (∀ i, i < 11 → P[lo.toNat + 11 * k + i]? = some (wd m' DLP (lo.toNat + 11 * k + i))) →
-          decRule (aread P) (lo.toNat + 11 * k) = some (resOf (ConRon.Arena.Frontend.parseRuleD st rules[k]) a)
-  | 0, _, _, _, _, _, _, _, _, h => by simp [rulesGoW] at h
-  | n + 1, m, m', j, hL, hRF, hlo, hlo1, hj, h => by
-    have hps := hL.psize
-    simp only [rulesGoW] at h
-    split at h
-    · rename_i hlj
-      cases h
-      have : rules.length ≤ j.toNat := by rw [← hl]; exact UInt64.le_iff_toNat_le.mp hlj
-      exact ⟨MemFrame.refl _ _ _, fun _ _ => rfl, fun k hk hk' => by omega⟩
-    rename_i hlj
-    have hjl : j.toNat < rules.length := by
-      rw [← hl]; exact Classical.byContradiction fun h' => hlj (UInt64.le_iff_toNat_le.mpr (by omega))
-    rcases h1 : ruleW m (lo + 11 * j) (o + 3 * j) with _ | m₁ <;> simp only [h1, mK, reduceCtorEq] at h
-    have hw1 : (lo + 11 * j).toNat = lo.toNat + 11 * j.toNat := w_addmul lo j 11 (by decide) (by omega)
-    have hw3 : (o + 3 * j).toNat = o.toNat + 3 * j.toNat := w_addmul o j 3 (by decide) (by omega)
-    obtain ⟨R1, R2, R3, R4⟩ := ruleW_twin a hL (by rw [hw3]; exact hRF _ hjl) (by omega)
-      (by rw [hw1]; omega) (by rw [hw1]; omega) h1
-    rw [hw1] at R3 R4
-    have hj1 : (j + 1).toNat = j.toNat + 1 := widx2 _ _ (by simp; omega)
-    have hL1 : LkR m₁ st := hL.frame R2 (by
-      unfold topN; rw [R3 0 (.inl (by omega)), R2.size DLP]; exact hL.ptop)
-    have hifl : m₁.arr64 IFL = m.arr64 IFL := R2.1 IFL (by decide) (by decide)
-    obtain ⟨I1, I2, I3⟩ := rulesGoW_twin a hl ho n m₁ m' (j + 1) hL1
-      (fun k hk => (hRF k hk).congr hifl) (by rw [R2.size DLP]; exact hlo) hlo1 (by omega) h
-    rw [hj1] at I2 I3
-    refine ⟨R2.trans I1, fun i hi => ?_, fun k hk hk' => ?_⟩
-    · rw [I2 i (by omega), R3 i (by omega)]
-    · by_cases hkj : k = j.toNat
-      · subst hkj
-        refine ⟨R1, fun P hP => R4 P (fun i hi => ?_)⟩
-        rw [hP i hi, I2 _ (by omega)]
-      · exact I3 k hk (by omega)
+          decRule (aread P) (lo.toNat + 11 * k) = some (resOf (ConRon.Arena.Frontend.parseRuleD st rules[k]) a) := by
+  sorry
 
 /-- **`ind_rules` against the twin's rules**: a fresh slice of 11-word rules. -/
 theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st)

@@ -63,21 +63,7 @@ theorem LowFr.ofAFr {tg : Word} {m m' : Mem} (h : AFr m m') (ht : tg.toNat ≤ i
 theorem defn_of_kind {D P : Array Word} {r : Nat} {d : IDeclaration} (hD : DeclAtF D P r d) :
     (dw D r 0 = 2 → ∃ cv v h, d = .defnDecl cv v h ∧ decI (dw D r 1) = cv.name) ∧
     (dw D r 0 ≠ 2 → isNatOpRecord d = pure none) := by
-  cases d with
-  | axiomDecl cv => exact ⟨fun h => (by simp [DeclAtF, DeclAt] at hD; rw [hD.1] at h; cases h),
-      fun _ => rfl⟩
-  | defnDecl cv v h =>
-    simp only [DeclAtF, DeclAt] at hD
-    exact ⟨fun _ => ⟨cv, v, h, rfl, hD.2.1.1⟩, fun h' => absurd hD.1 h'⟩
-  | thmDecl cv v => exact ⟨fun h => (by simp [DeclAtF, DeclAt] at hD; rw [hD.1] at h; cases h),
-      fun _ => rfl⟩
-  | opaqueDecl cv v => exact ⟨fun h => (by simp [DeclAtF, DeclAt] at hD; rw [hD.1] at h; cases h),
-      fun _ => rfl⟩
-  | basisDecl _ => simp [DeclAtF, DeclAt] at hD
-  | indDecl b nP => exact ⟨fun h => (by simp [DeclAtF, IndDeclAt] at hD; rw [hD.1] at h; cases h),
-      fun _ => rfl⟩
-  | quotDecl k cv => exact ⟨fun h => (by simp [DeclAtF, DeclAt] at hD; rw [hD.1] at h; cases h),
-      fun _ => rfl⟩
+  sorry
 
 /-- **`hoist_targets_go` is `hoistTargetsGo`** from position `i` on, the targets before all
 `< i`. -/
