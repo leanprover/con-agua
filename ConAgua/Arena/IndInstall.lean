@@ -43,7 +43,7 @@ each tagged `@[l_impl …]`.
   `stream_recs_check(vis, recs.off, recs.len, out.off, out.len)`.
 * `IndDeclConsts`: `block_recs(p, recs.off, recs.len)`, `block_tables(p, ms.off, ms.len)`,
   `ifenv_push_delta(vis, L.off, L.len, Q.off, Q.len) → vis'`.
-* the core tier: `former_def_headed(cv)` (`Core.lean`'s `formerDefHeaded`), the declarations':
+* the core tier: `former_def_headed(ty)` (`Core.lean`'s `formerDefHeaded`), the declarations':
   `check_constant_val(vis, cv, allowOp)`.
 -/
 
@@ -689,7 +689,7 @@ declared type checked, reduced (`reduced_former`) and the two compared, a fresh 
 @[no_expose, l_impl ConRon.Arena.reduceMember]
 def reduceMember : FunDecl := lfn (vis, ms, nP) locals (cvT, dh, dO, dL, hit, u, k, cvR, eq, q) {
   cvT := IW.u64[ms];
-  dh := call former_def_headed(cvT);
+  dh := call former_def_headed(EREC⦃cvT + 3⦄);
   if dh == 0 { return ms };
   (dO, dL) := call declined_at_definition();
   hit := call sl_contains(dO, dL, EREC⦃cvT⦄);

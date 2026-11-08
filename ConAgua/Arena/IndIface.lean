@@ -780,7 +780,7 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort (.const 0)⟩
 * `reserved_rec_name(n)` → `0`/`1`.
 * `basis_name_hit(off, len)` → `(hit, kind)` (the block's record pointers, an `EREC` slice);
   `check_basis_block(vis, kind, off, len)` → `vis'`; `ind_params_ok(nP, off, len)` → `0`/`1`.
-* `former_def_headed(cv)` → `0`/`1` (`Core.lean`'s `formerDefHeaded`); `lit_shape_ok(q)` → `0`/`1`
+* `former_def_headed(ty)` → `0`/`1` (`Core.lean`'s `formerDefHeaded`, at the former's type); `lit_shape_ok(q)` → `0`/`1`
   (`Core.lean`'s `litShapeOk`, `q` a constant record in `EREC`). -/
 def stubFns : Prog :=
   [("whnf_top", stub 3), ("infer_type_core", stub 3), ("ensure_sort_core", stub 3),

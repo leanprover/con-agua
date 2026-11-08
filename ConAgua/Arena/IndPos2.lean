@@ -123,7 +123,7 @@ type where that shows one, else its reduct at its parameters and indices (`caps`
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:210-218 ConRon.Arena.familyTelescope
 @[no_expose, l_impl ConRon.Arena.familyTelescope]
 def familyTelescopeL : FunDecl := lfn (vis, cv, caps) locals (dh, k, cvR) {
-  dh := call former_def_headed(cv);
+  dh := call former_def_headed(EREC⦃cv + 3⦄);
   if dh == 0 { return EREC⦃cv + 3⦄ };
   k := EREC⦃caps + 12⦄ + EREC⦃caps + 6⦄;
   if k < EREC⦃caps + 12⦄ { abort };
