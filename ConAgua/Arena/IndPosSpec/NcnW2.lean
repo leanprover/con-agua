@@ -36,15 +36,12 @@ theorem nestCtorNf_spec (p : Prog) (L : RxLook p) (hp : p.lookup "nest_ctor_nf" 
     (s₀ : St) (ctx po pl us dO dL cv closed : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_ctor_nf" [ctx, po, pl, us, dO, dL, cv, closed]
     ⦃fun r s' => LocEq s' s₀ ∧ ncnW k s₀.mem ctx po pl us dO dL cv closed = some (r.headD 0, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestCtorNfL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      posRec5_specW p L.ha L.h5 k, (rxSpec_all p L k).2.2.2.1, (rxSpec_all p L k).2.2.2.2.2.2.2] <;>
-    finish (gen := 20) [ncnW, rdW_eq]
+  sorry
 
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv closed nf : Word) (c : NestCtx)
     (prog : List NestHole) (ds : List EIdx) (cvv : IConstantVal) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
     (h : ncnW k m ctx po pl us dO dL cv closed = some (nf, m')) (hS : StageR vis fe m a)
@@ -115,6 +112,7 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
       Option.bind_some, ite_true, ite_true]
     rw [show nf.toNat + 2 + 1 = nf.toNat + 3 by omega, hn2', hn3', hn4']
     simp [hqlT, hwnd, hty, decE_eq]
+-/
 
 end rel
 

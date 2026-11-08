@@ -26,16 +26,21 @@ namespace L.Front
 section pre
 variable (D : Array IDeclaration)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem applyLine_pre_ok {st : StateD} {r : LineRec} {a : AState} :
     AM.ok (applyLine (st.pre D) r) a ↔ AM.ok (applyRecord st r) a := by
   simp only [AM.ok, applyLine_pre_run]
   cases (applyRecord st r).run a <;> rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem applyLine_pre_st {st : StateD} {r : LineRec} {a : AState} :
     AM.st (applyLine (st.pre D) r) a = AM.st (applyRecord st r) a := by
   simp only [AM.st, applyLine_pre_run]
   cases (applyRecord st r).run a <;> rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem applyLine_pre_res {st : StateD} {r : LineRec} {a : AState} (h : AM.ok (applyRecord st r) a) :
     AM.res (applyLine (st.pre D) r) a = preL D (AM.res (applyRecord st r) a) := by
   simp only [AM.res, AM.ok, applyLine_pre_run] at h ⊢
@@ -43,6 +48,7 @@ theorem applyLine_pre_res {st : StateD} {r : LineRec} {a : AState} (h : AM.ok (a
   cases (applyRecord st r).run a with
   | error e => simp
   | ok v => intro _; rfl
+-/
 
 /-- The driver's invariant after the prelude: the input is `b`, the memory related to the twin's
 parse state prefixed by `D`, con-ron's bridge invariant of the twin's own. -/

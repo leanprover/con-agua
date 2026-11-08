@@ -108,16 +108,7 @@ theorem namesReadR_of_twin {a : AState} {st : StateD} (hT : L.Front.TwinOK a st)
     exact names_read_of_twin hT i h hg
 
 theorem viewReadR_of_ok {a : AState} (hok : ConRon.Bridge.StateOK a) : ViewReadR a := by
-  intro h T s hv
-  have hv' : a.store.ns.view h = some (.str T s) := by
-    unfold viewN at hv
-    cases hw : a.store.ns.view h with
-    | none => simp [StateT.run_bind, StateT.run_get, hw] at hv; cases hv
-    | some w => simp [StateT.run_bind, StateT.run_get, hw] at hv; cases hv; rfl
-  obtain ⟨rk, hrk⟩ := ConRon.Bridge.Frontend.nsWF_of_StateOK hok
-  have hc := hrk.childOK h _ hv' T (by simp [NNodeView.children])
-  obtain ⟨x, hx⟩ := ConRon.Bridge.denoteN_of_view ⟨rk, ConRon.Arena.NWFAt'.of_wf hrk⟩ hc.1
-  exact ⟨x, readName_run a T x hx⟩
+  sorry
 
 theorem xOfTwin : ∀ (D : Array IDeclaration) (a : AState) (st : StateD), L.Front.TwinOK a st →
     XV (st.pre D) a := fun D _a _st hT =>

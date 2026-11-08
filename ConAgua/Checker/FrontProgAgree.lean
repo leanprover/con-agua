@@ -127,8 +127,10 @@ def frontFns : List FnName :=
    "ind_pi_tele_len", "lv_imax", "pi_sort_tele_len", "lv_cases", "lv_imax_l", "lv_cases_at", "lv_dist1", "lv_dist2", "lv_imax_r", "lv_subsimp", "lv_subst", "sub_rec",
    "sub_bit", "sub_val"]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem checkerProg_frontAgree :
     ∀ f ∈ frontFns, checkerProg.lookup f = L.Front.frontAllProg.lookup f := by
   front_agree
+-/
 
 end L.Checker
