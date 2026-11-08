@@ -82,23 +82,35 @@ theorem nhGoW_nil (h : l = 0) : nhGoW (k + 1) m vis ctx mm off l oo ol = some ([
 theorem nhGoW_cons (h : ¬ l = 0) : nhGoW (k + 1) m vis ctx mm off l oo ol =
     nhK1 k vis ctx mm off l oo ol (envFindW m (rdW (m.arr64 IW) off) vis) := by simp [nhGoW, h]
 -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhK1_miss (h : r.headD 0 = 0) : nhK1 k vis ctx mm off l oo ol (some (r, m1)) = some ([0, 0, 0], m1) := by
   rw [nhK1, ite_eq_left h]
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
     nhK1 k vis ctx mm off l oo ol (some (r, m1)) = some ([0, 0, 0], m1) := by rw [nhK1, ite_eq_right h, ite_eq_left h3]
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
     nhK1 k vis ctx mm off l oo ol (some (r, m1)) =
       nhK2 k vis ctx mm off l oo ol (instW k m1 (rdW (m1.arr64 IW) (ctx + 7)) (rdW (m1.arr64 IW) (ctx + 8))
         (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4))) := by
   sorry
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhK2_none (h : r2.headD 0 = 0) : nhK2 k vis ctx mm off l oo ol (some (r2, m2)) = some ([0, 0, 0], m2) := by
   rw [nhK2, ite_eq_left h]
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhK2_some (h : ¬ r2.headD 0 = 0) : nhK2 k vis ctx mm off l oo ol (some (r2, m2)) =
     nhK3 k vis ctx mm off l oo ol (fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0)) := by
   sorry
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhK3_ok (h : ¬ 4294967296 ≤ v) : nhK3 k vis ctx mm off l oo ol (some (v, m3)) =
     nhK4 k vis ctx mm off l (snocW k m3 oo ol v) := by
   sorry
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhK4_some : nhK4 k vis ctx mm off l (some (r4, m4)) =
     nhGoW k m4 vis ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0) := by rw [nhK4]

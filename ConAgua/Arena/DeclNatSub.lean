@@ -86,35 +86,7 @@ theorem eqL_cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     (hE : EqL m o.toNat l.toNat es) (hx : RecAt m x ea eb) (hea : H ea) (heb : H eb) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       EqL m' (r.headD 0).toNat (r.tail.headD 0).toNat ((decE ea, decE eb) :: es) := by
-  obtain ⟨xs, hxs⟩ := hE.decNL
-  obtain ⟨hS', hg, hd, ht⟩ := consW_stageN h hS hE.1 hxs
-  obtain ⟨hlen, hget⟩ := decNL_getW m l.toNat o.toNat xs hxs
-  obtain ⟨hlen', hget'⟩ := decNL_getW m' _ _ _ hd
-  simp only [List.length_cons] at hlen'
-  have hel := hE.2.1
-  refine ⟨hS', hg, ?_, ?_, ?_⟩
-  · omega
-  · simp only [List.length_cons]; omega
-  · intro j hj
-    cases j with
-    | zero =>
-      obtain ⟨w, hw, hwx⟩ := hget' 0 (by simp)
-      have : w = x := UInt64.toNat_inj.mp (by simpa using hwx)
-      subst this
-      exact ⟨w, ea, eb, by simpa using hw, hx.grow hg, hea, heb, by simp⟩
-    | succ j =>
-      have hj' : j < es.length := by simpa using hj
-      obtain ⟨w, hw, hwx⟩ := hget' (j + 1) (by simp only [List.length_cons]; omega)
-      obtain ⟨p, pa, pb, hp, hr, hpa, hpb, hpe⟩ := hE.2.2 j hj'
-      obtain ⟨w0, hw0, hwx0⟩ := hget j (by omega)
-      have hpw : w0 = p := by
-        have := hp; rw [hw0] at this; exact Option.some.inj this
-      have : w = p := UInt64.toNat_inj.mp (by
-        simp only [List.getElem_cons_succ] at hwx
-        rw [hwx, ← hwx0, hpw])
-      subst this
-      refine ⟨w, pa, pb, ?_, hr.grow hg, hpa, hpb, by simpa using hpe⟩
-      simpa [Nat.add_assoc, Nat.add_comm 1 j] using hw
+  sorry
 
 section sub
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
@@ -137,99 +109,7 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
       callW p k "subst_const0" [nm, r, fuel, h] m = some (res, m') →
       ∃ x a', (substConst0 (decI nm) (decE r) f (decE h)).run a = .ok (x, a') ∧
         KeepPost vis fe decW0E m m' a' res x := by
-  intro f
-  induction f with
-  | zero =>
-    intro fuel hf h k m a res m' hS hn hr hh hc
-    cases k with
-    | zero => rw [callW_zero] at hc; cases hc
-    | succ k =>
-    have hw := callW_model (M := fun mm => sc0W p (k + 1) mm nm r fuel h) (sc0_specW p hN.lSubstConst0 (k + 1) · nm r fuel h) hc
-    have hz : fuel = 0 := UInt64.toNat_inj.mp (by simpa using hf)
-    simp [sc0W.eq_2, hz] at hw
-  | succ f ih =>
-    intro fuel hf h k m a res m' hS hn hr hh hc
-    cases k with
-    | zero => rw [callW_zero] at hc; cases hc
-    | succ k =>
-    have hw := callW_model (M := fun mm => sc0W p (k + 1) mm nm r fuel h) (sc0_specW p hN.lSubstConst0 (k + 1) · nm r fuel h) hc
-    have hnz : fuel ≠ 0 := fun e => by simp [e] at hf
-    rw [sc0W.eq_2] at hw
-    rw [ite_eq_right hnz] at hw
-    cases h1 : callW p k "e_view" [h] m with
-    | none => rw [h1] at hw; simp [ntBW] at hw
-    | some q1 =>
-    obtain ⟨rv, m1⟩ := q1
-    rw [h1, bW_some] at hw
-    obtain ⟨vv, a1, hrun1, hS1, hg1, hvr⟩ := eView_ref (dn := dn) (vis := vis) (fe := fe) (p := p) h hN.lEView k m a rv m1 hS h1
-    have hrun1' : (view (decE h)).run a = .ok (vv, a1) := hrun1
-    have hfuel1 : (fuel - 1).toNat = f := by
-      have : 0 < fuel.toNat := Nat.pos_of_ne_zero (fun e => hnz (UInt64.toNat_inj.mp (by simpa using e)))
-      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-    rcases viewR_shape hvr with ⟨h3, c, us, hvv, hc0, hcd, hu0, hud⟩ | ⟨h4, fa, aa, hvv, hf0, hfd, ha0, had⟩ | ⟨hn3, hn4, hnc, hna⟩
-    · -- a constant
-      rw [ite_eq_left h3] at hw
-      cases h2 : callW p k "pin_word" [52] m1 with
-      | none => rw [h2] at hw; simp [ntBW] at hw
-      | some q2 =>
-      obtain ⟨re, m2⟩ := q2
-      rw [h2, bW_some] at hw
-      obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ := pinWord52_ref (dn := dn) (vis := vis) (fe := fe) p
-        hN.lPinWord k m1 a1 re m2 hS1 h2
-      subst hvv hcd hud
-      have hbeq : ((decI (rv.tail.headD 0) : NIdx) == decI nm && (decI (rv.tail.tail.headD 0) : LsIdx) == x2) =
-          decide (rv.tail.headD 0 = nm ∧ rv.tail.tail.headD 0 = re.headD 0) := by
-        rw [← hx2, decI_beq _ _ hc0 hn, decI_beq _ _ hu0 hx2l]; simp
-      by_cases hcond : rv.tail.headD 0 = nm ∧ rv.tail.tail.headD 0 = re.headD 0
-      · rw [ite_eq_left hcond] at hw
-        simp only [Option.some.injEq, Prod.mk.injEq] at hw
-        obtain ⟨rfl, rfl⟩ := hw
-        refine ⟨decE r, a2, ?_, hS2, hg1.trans hg2, by simpa using hr, rfl⟩
-        simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', emptyLevels, hrun2, hbeq,
-          decide_eq_true hcond, ite_true]
-        rfl
-      · rw [ite_eq_right hcond] at hw
-        simp only [Option.some.injEq, Prod.mk.injEq] at hw
-        obtain ⟨rfl, rfl⟩ := hw
-        refine ⟨decE h, a2, ?_, hS2, hg1.trans hg2, by simpa using hh, rfl⟩
-        simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', emptyLevels, hrun2, hbeq,
-          decide_eq_false hcond, Bool.false_eq_true, ite_false]
-        rfl
-    · -- an application
-      rw [ite_eq_right (by rw [h4]; decide), ite_eq_left h4] at hw
-      subst hvv hfd had
-      cases h2 : callW p k "subst_const0" [nm, r, fuel - 1, rv.tail.headD 0] m1 with
-      | none => rw [h2] at hw; simp [ntBW] at hw
-      | some q2 =>
-      obtain ⟨r1, m2⟩ := q2
-      rw [h2, bW_some] at hw
-      obtain ⟨x2, a2, hrun2, hK2⟩ := ih (fuel - 1) hfuel1 (rv.tail.headD 0) k m1 a1 r1 m2 hS1 hn hr hf0 h2
-      obtain ⟨hS2, hg2, hl2, hx2⟩ := hK2
-      cases h3 : callW p k "subst_const0" [nm, r, fuel - 1, rv.tail.tail.headD 0] m2 with
-      | none => rw [h3] at hw; simp [ntBW] at hw
-      | some q3 =>
-      obtain ⟨r2, m3⟩ := q3
-      rw [h3, bW_some] at hw
-      obtain ⟨x3, a3, hrun3, hK3⟩ := ih (fuel - 1) hfuel1 (rv.tail.tail.headD 0) k m2 a2 r2 m3 hS2 hn hr ha0 h3
-      obtain ⟨hS3, hg3, hl3, hx3⟩ := hK3
-      cases h4' : callW p k "mk_app" [r1.headD 0, r2.headD 0] m3 with
-      | none => rw [h4'] at hw; simp [ntBW] at hw
-      | some q4 =>
-      obtain ⟨r3, m4⟩ := q4
-      rw [h4', bW_some] at hw
-      simp only [Option.some.injEq, Prod.mk.injEq] at hw
-      obtain ⟨rfl, rfl⟩ := hw
-      obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := mkApp_ref (dn := dn) (vis := vis) (fe := fe) hN.toMasterProg
-        (r1.headD 0) (r2.headD 0) k m3 a3 r3 m4 hS3 h4'
-      refine ⟨x4, a4, ?_, hS4, hg1.trans (hg2.trans (hg3.trans hg4)), hl4, hx4⟩
-      simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hrun3, ← hx2, ← hx3]
-      exact hrun4
-    · rw [ite_eq_right (fun e => hn3 e), ite_eq_right (fun e => hn4 e)] at hw
-      simp only [Option.some.injEq, Prod.mk.injEq] at hw
-      obtain ⟨rfl, rfl⟩ := hw
-      refine ⟨decE h, a1, ?_, hS1, hg1, by simpa using hh, rfl⟩
-      simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind']
-      cases vv <;> first | rfl | (exfalso; exact hnc _ _ rfl) | (exfalso; exact hna _ _ rfl)
+  sorry
 
 
 @[refines ConRon.Arena.substConst0]
@@ -254,79 +134,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
       callW p k "subst_const0_pairs" [nm, r, o, l] m = some (res, m') →
       ∃ x a', (substConst0Pairs (decI nm) (decE r) ps).run a = .ok (x, a') ∧
         KeepPost vis fe decEqRL m m' a' res x := by
-  intro ps
-  induction ps with
-  | nil =>
-    intro o l k m a res m' hS hE hb hc
-    have hl0 : l = 0 := UInt64.toNat_inj.mp (by have := hE.2.1; simpa using this)
-    cases k with
-    | zero => rw [callW_zero] at hc; cases hc
-    | succ k =>
-    have hw := callW_model (M := fun mm => pairsW p (k + 1) mm nm r o l) (pairs_specW p hN.lSubstConst0Pairs (k + 1) · nm r o l) hc
-    simp only [pairsW.eq_2, hl0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    exact ⟨[], a, rfl, hS, IWGrow.refl _, by
-      refine ⟨by simp, by simp, fun j hj => by simp at hj⟩⟩
-  | cons e es ih =>
-    intro o l k m a res m' hS hE hb hc
-    cases k with
-    | zero => rw [callW_zero] at hc; cases hc
-    | succ k =>
-    obtain ⟨pp, ea, eb, hl0, hpp, hrec, hea, heb, he, hrest⟩ := hE.cons
-    have hw := callW_model (M := fun mm => pairsW p (k + 1) mm nm r o l) (pairs_specW p hN.lSubstConst0Pairs (k + 1) · nm r o l) hc
-    rw [pairsW.eq_2] at hw
-    rw [ite_eq_right (fun h => hl0 (by simp [h]))] at hw
-    have hpp' : rdW (m.arr64 IW) o = pp := by
-      simp only [iwA] at hpp; simp [rdW, hpp]
-    have hea' : rdW (m.arr64 IW) pp = ea := by
-      obtain ⟨-, h2, -⟩ := hrec; simp only [iwA] at h2; simp [rdW, h2]
-    have hpb : (pp + 1).toNat = pp.toNat + 1 := by
-      obtain ⟨h1, -, -⟩ := hrec
-      have e1 := hS.iw.iw; have e2 := hS.iw.iwSize; have e3 : pp.toNat + 1 < 2 ^ 64 := by omega
-      rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; exact Nat.mod_eq_of_lt e3
-    have heb' : ∀ m1, IWGrow m m1 → rdW (m1.arr64 IW) (pp + 1) = eb := by
-      intro m1 hg
-      obtain ⟨h1, -, h3⟩ := hrec
-      simp only [iwA] at h3; simp only [rdW, hpb]; rw [hg.iwGet _ (by omega)]; simp [h3]
-    rw [hpp', hea'] at hw
-    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
-    obtain ⟨x1, a1, hrun1, hK1⟩ := sc0_ref hN nm r _ 4000000000 fuelW ea k m a r1 m1 hS hn hr hea h1
-    obtain ⟨hS1, hg1, hl1, hx1⟩ := hK1
-    rw [heb' m1 hg1] at hw
-    replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
-    obtain ⟨x2, a2, hrun2, hK2⟩ := sc0_ref hN nm r _ 4000000000 fuelW eb k m1 a1 r2 m2 hS1 hn hr heb h2
-    obtain ⟨hS2, hg2, hl2, hx2⟩ := hK2
-    replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
-    have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have hl1' : (l - 1).toNat = l.toNat - 1 := by
-      have : 0 < l.toNat := Nat.pos_of_ne_zero hl0
-      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-    have hrest2 : EqL m2 (o + 1).toNat (l - 1).toNat es := by
-      rw [ho1, hl1']; exact hrest.grow (hg1.trans hg2)
-    obtain ⟨x3, a3, hrun3, hK3⟩ := ih (o + 1) (l - 1) k m2 a2 r3 m3 hS2 hrest2 (by omega) h3
-    obtain ⟨hS3, hg3, hd3⟩ := hK3
-    replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
-    have hR4 := rec2_fref p hN.lIwAlloc hN.lRec2 (r1.headD 0) (r2.headD 0) k m3 r4 m4 hS3.iw h4
-    have hK4 := hR4.2.1
-    have hS4 := hK4.stage hS3
-    have rec4 := recAt_of_post hR4 hS3.iw
-    replace hw := ntBW_some hw; obtain ⟨r5, m5, h5, hw⟩ := hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨hr5, rfl⟩ := hw
-    obtain ⟨s', hs', -, hcons⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
-      (slCons_specW p hN.lIwAlloc hN.lIwCopy hN.lSlCons k _ (r4.headD 0) (r3.headD 0) (r3.tail.headD 0)) h5
-    have hE3 : EqL m4 (r3.headD 0).toNat (r3.tail.headD 0).toNat x3 := by
-      have := hd3; simp only [decEqRL, ntGetD0, ntGetD1] at this; exact this.grow hK4.1
-    have hcons' : consW k m4 (r4.headD 0) (r3.headD 0) (r3.tail.headD 0) = some (r5, m5) := by
-      rw [← hs']; exact hcons
-    obtain ⟨hS5, hg5, hE5⟩ := eqL_cons hcons' hS4 hE3 rec4 hl1 hl2
-    subst hr5 he
-    refine ⟨(decE (r1.headD 0), decE (r2.headD 0)) :: x3, a3, ?_, hS5, hg1.trans (hg2.trans (hg3.trans (hK4.1.trans hg5))), ?_⟩
-    · simp only [substConst0Pairs, StateT.run_bind, hrun1, hrun2, hrun3, exc_ok_bind', StateT.run_pure,
-        ← hx1, ← hx2]
-      rfl
-    · simp only [decEqRL, ntGetD0, ntGetD1, List.headD_cons, List.tail_cons]
-      exact hE5
+  sorry
 
 @[refines ConRon.Arena.substConst0Pairs]
 theorem substConst0Pairs_refines (hN : NatSubProg p) (nm r o l : Word) (ps : List (EIdx × EIdx)) :

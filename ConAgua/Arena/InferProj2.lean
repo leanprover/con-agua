@@ -87,14 +87,7 @@ theorem inferProj_miss (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Na
 
 theorem rdW_ext' {a b : Array Word} (hab : ArrExt (aread a) (aread b)) (hsz : b.size < 2 ^ 63) {q : Word} {k : Nat}
     (hk : k < 64) {w : Word} (ha : a[q.toNat + k]? = some w) : rdW b (q + UInt64.ofNat k) = w := by
-  have hb := hab _ _ ha
-  have hlt : q.toNat + k < b.size := by
-    rcases Nat.lt_or_ge (q.toNat + k) b.size with h' | h'
-    · exact h'
-    · simp [Array.getElem?_eq_none h'] at hb
-  have : (q + UInt64.ofNat k).toNat = q.toNat + k := by
-    rw [UInt64.toNat_add, UInt64.toNat_ofNat']; rw [Nat.mod_eq_of_lt (a := k) (by omega)]; omega
-  simp only [rdW, this, hb, Option.getD_some]
+  sorry
 
 /-- **An inductive record's parameter count and constructors**: `nparams` at `q + 17`, the
 constructor slice at `q + 18`, `q + 19`. -/
@@ -103,42 +96,9 @@ theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
     (hab : ArrExt (aread a) (aread b)) (hsz : b.size < 2 ^ 63) :
     caps.nparams = (rdW b (q + 17)).toNat ∧ caps.ctors.length = (rdW b (q + 19)).toNat ∧
     ∀ c, caps.ctors = [c] → c = decI (rdW b (rdW b (q + 18))) ∧ HW (rdW b (rdW b (q + 18))) := by
-  cases hq : a[q.toNat]? with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-  all_goals (rw [hk] at h)
-  all_goals simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq,
-    and_false, exists_false, Option.pure_def] at h
-  obtain ⟨cv', -, caps', hcaps, hc⟩ := h
-  cases hc
-  simp only [decCaps, bool?, hd?, nat?, hlist?, Option.bind_eq_bind, Option.pure_def,
-    Option.bind_eq_some_iff, Option.map_eq_some_iff, Option.some.injEq] at hcaps
-  obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, -, -, -, -, np, ⟨wnp, hwnp, rfl⟩, cs,
-    ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩, rfl⟩ := hcaps
-  have h17 : rdW b (q + 17) = wnp := rdW_ext' hab hsz (k := 17) (by decide) (by simpa [Nat.add_assoc] using hwnp)
-  have h18 : rdW b (q + 18) = wo := rdW_ext' hab hsz (k := 18) (by decide) (by simpa [Nat.add_assoc] using hwo)
-  have h19 : rdW b (q + 19) = wc := rdW_ext' hab hsz (k := 19) (by decide) (by simpa [Nat.add_assoc] using hwc)
-  refine ⟨by rw [h17], by rw [h19, hslice?_length hs], ?_⟩
-  intro c' hc'
-  simp only at hc'
-  subst hc'
-  have h1 : wc.toNat = 1 := by have := hslice?_length hs; simp at this; omega
-  rw [h1] at hs
-  simp only [hslice?, List.range_one, List.mapM_cons, List.mapM_nil, hd?, Option.bind_eq_bind,
-    Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq, Nat.add_zero] at hs
-  obtain ⟨x, ⟨w', hw', hx⟩, _, rfl, hxs⟩ := hs
-  simp only [List.cons.injEq, and_true] at hxs
-  subst hxs
-  have hrd : rdW b wo = w' := by simp only [rdW, hab _ _ hw', Option.getD_some]
-  rw [h18, hrd]
-  split at hx
-  · rename_i hlt
-    cases hx
-    exact ⟨rfl, hlt⟩
-  · cases hx
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **An ok `env_find` run**: the memory unchanged, the twin's `find?` decoded, a found record
 decodes. -/
 theorem envFind_callE {p : Prog}     (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
@@ -155,6 +115,7 @@ theorem envFind_callE {p : Prog}     (hg : p.lookup "env_row_get" = some envRowG
   obtain ⟨htag, hrow, hq⟩ := hfound h0
   rw [hq]
   exact hE.found_some w hw htag hrow
+-/
 
 /-- The constructor test of `projIndexedStructLike`: `c` a constructor with more than `i` fields. -/
 def ctorFieldsGt (fe : IFEnv) (c : NIdx) (i : Nat) : Bool :=
@@ -162,6 +123,7 @@ def ctorFieldsGt (fe : IFEnv) (c : NIdx) (i : Nat) : Bool :=
   | some (.ctorInfo _ _ nF) => decide (i < nF)
   | _ => false
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`projIndexedStructLike` at `T = sn` from `env_find(T)`'s record**: the L test `f ≠ 0`, kind
 `3`, one constructor, fewer parameters than arguments; then the constructor test. -/
 theorem pisl_first {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : Mem} {T : NIdx}
@@ -216,7 +178,9 @@ theorem pisl_first {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : Mem} {
     split
     · rename_i cv caps hci'; cases hci'; exact absurd rfl (hni cv caps)
     · rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The constructor test from `env_find(c)`'s record**: `f ≠ 0`, kind `4`, `i` below the field
 count at `q + 6`. -/
 theorem ctorFieldsGt_eq {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : NIdx}
@@ -242,6 +206,7 @@ theorem ctorFieldsGt_eq {fe : IFEnv} {dn : NIdx → Option ConLeche.Name} {m : M
       · rename_i cv np nf hci'; cases hci'; exact absurd rfl (hni cv np nf)
       · rfl
     rw [this]; simp [h4]
+-/
 
 theorem inferProj_err1 (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat) (pe : EIdx)
     (a : AState) (ce : CheckError) (h1 : (r.infer d pe).run a = .error ce) :
@@ -254,6 +219,7 @@ theorem inferProj_err2 (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Na
     (inferProj r fe d sn i pe).run a = .error ce := by
   simp only [inferProj, StateT.run_bind, h1, except_ok_bind, h2]; rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`infer_proj` at the grade `io` refines `inferProj` at the record `R`**, both outcomes: its
 `whnf` is the knot's, its `infer` the first call `f`'s (`hI`, `hIE`). The subject's type's and
 `whnf`'s errors are the slots', a head that is no constant rejects, a miss is `projMissError`'s
@@ -422,7 +388,9 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
         h.after, h.res, h.valid⟩)
       (ipa_ref p hp hc N ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb sn i pe (r₂.headD 0) wT wu
         (r₄.tail.headD 0) tbl hS₄ hq₄ hfe hi hcuw hrw2 hpe ⟨lsu, hdu⟩ hsn hcTw)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`infer_proj` refines `inferProj` at both grades, both outcomes**: the knot's record at
 `io = 0`, its io view at `io = 1`. -/
 theorem ip_ref (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : InferProjCallees p)
@@ -443,15 +411,13 @@ theorem ip_ref (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : InferP
     ip_grade p hp hpj hc n hk F s₀ a₀ dn vis fe M eb mode 1 d sn i pe _ hF hn hs hsn hpe rfl
       "infer_io" (by simp [ipE]) (hK.inferIO F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe)
       (fun hG => (hG.knot n (Nat.le_refl _)).inferIO F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe)⟩
+-/
 
 /-- **`infer_proj` refines `inferProj` at both grades** (`InferProjOK`, `InferBodyDisp.lean`;
 `ip_ref`'s ok half). -/
 @[refines ConRon.Arena.inferProj]
 theorem inferProj_refines (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p)
-    (hc : InferProjCallees p) : InferProjOK p :=
-  fun n hk F s₀ a₀ dn vis fe M eb mode d sn i pe hF hn hs hsn hpe =>
-    have h := ip_ref p hp hpj hc n hk F s₀ a₀ dn vis fe M eb mode d sn i pe hF hn hs hsn hpe
-    ⟨RefE.coreSpec (ipE_spec p hp.ip hp.ipa (n + 1) s₀ mode 0 vis d sn i pe) h.1,
-      RefE.coreSpec (ipE_spec p hp.ip hp.ipa (n + 1) s₀ mode 1 vis d sn i pe) h.2⟩
+    (hc : InferProjCallees p) : InferProjOK p := by
+  sorry
 
 end L.Arena

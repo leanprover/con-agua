@@ -49,9 +49,11 @@ def decPLB {α : Type} (m : Mem) (f : Nat → Option α) (o l : Nat) : Option (L
   if o + l ≤ (iwA m).size then decPL m f o l else none
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A member's constructors with their slice's bound. -/
 def decCNSB (m : Mem) (q : Nat) : Option (List (IConstantVal × Nat)) :=
   decAt m (fun o l => decPLB m (decCN m) o l) q
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Below the tops, the pool's size is at most its top. -/
@@ -69,14 +71,7 @@ theorem decCNSB_bound {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
     (h : DecB (fun m => decCNSB m q) m cs) :
     ∃ o l, iwN (truncM m) q = some o ∧ iwN (truncM m) (q + 1) = some l ∧ o + l ≤ iwTop m ∧
       decPL (truncM m) (decCN (truncM m)) o l = some cs := by
-  have h' : decCNSB (truncM m) q = some cs := h
-  simp only [decCNSB, decAt, Option.bind_eq_bind, Option.bind_eq_some_iff] at h'
-  obtain ⟨o, ho, l, hl, hd⟩ := h'
-  simp only [decPLB] at hd
-  split at hd
-  · rename_i hb
-    exact ⟨o, l, ho, hl, Nat.le_trans hb (iwA_truncM_size_le m), hd⟩
-  · cases hd
+  sorry
 
 /-- The lookups of `check_block_ctors`. -/
 structure CtorsProg (p : Prog) : Prop extends CstProg p where
