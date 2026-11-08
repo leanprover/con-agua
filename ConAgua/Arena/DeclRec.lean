@@ -282,14 +282,8 @@ theorem dlpWords_get (P : Array Word) : ∀ (k : Nat) (s : Word) (j : Nat), j < 
       show s.toNat + 1 + j = s.toNat + (j + 1) by omega]
 
 theorem dlpCopyW_eq : ∀ (n : Nat) (m m' : Mem) (d s l : Word), dlpCopyW n m d s l = some m' →
-    m' = wrER m d (dlpWords (m.arr64 DLP) s l.toNat)
-  | 0, m, m', d, s, l, h => by simp [dlpCopyW] at h
-  | n + 1, m, m', d, s, l, h => by
-    by_cases hl : l = 0
-    · rw [dlpCopyW_nil n m d s l hl] at h; cases h; subst hl; rfl
-    · rw [dlpCopyW_step n m d s l hl] at h
-      have hl1 : l.toNat = (l - 1).toNat + 1 := by
-  sorry
+    m' = wrER m d (dlpWords (m.arr64 DLP) s l.toNat) := by
+  sorry -- stage 3: `dlp_copy` now writes through `erec_put` (`erecPutMem`)
 
 /-- The constant record's words. -/
 def eciWords (D : Array Word) (i kind s ll : Word) : List Word :=
