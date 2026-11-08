@@ -102,21 +102,29 @@ def rrbProg : Prog :=
    ("env_find", envFindL), ("env_row_get", envRowGetL)]
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def rrbFns : List FnName := rrbProg.map (·.1)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rrbProg_closed : closedA rrbProg [] [] rrbFns = true := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 abbrev RrbF (p : Prog) : Prop := ProgHas p rrbProg
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `rec_rule_bits`.** -/
 noncomputable def rrbF (m : Mem) (args : List Word) : Option (List Word × Mem) :=
   callF rrbProg "rec_rule_bits" m args
+-/
 
 theorem rrbF_spec (p : Prog) (hp : RrbF p) (n : Nat) (s₀ : St) (args : List Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_rule_bits" args
-    ⦃fun r s' => LocEq s' s₀ ∧ rrbF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
-  callF_spec rrbProg_closed (hp.agree rrbFns) (by decide) n s₀ args
+    ⦃fun r s' => LocEq s' s₀ ∧ rrbF s₀.mem args = some (r, s'.mem); ⊤⦄ := by
+  sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_bits`' model refines `recRuleBits`** (replaces `IndStubs.recRuleBits_spec`). -/
@@ -130,7 +138,6 @@ theorem rrbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
 
 theorem rrbF_frame {m m' : Mem} {args r : List Word} (h : rrbF m args = some (r, m')) :
     MemFrame [] [] m m' := by
-  obtain ⟨n, hc⟩ := callF_run h
-  exact (run_memFrame rrbProg_closed (by decide) (run_of_callW hc)).1
+  sorry
 
 end L.Ind

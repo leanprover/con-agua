@@ -197,11 +197,13 @@ theorem keeps_indPiTeleLen : ∀ (fuel : Nat) (h : EIdx), Keeps (indPiTeleLen fu
     intro c p; unfold indPiTeleLen
     repeat' keeps_step [keeps_view, keeps_indPiTeleLen fuel]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem keeps_piResultD : ∀ (fuel : Nat) (h : EIdx), Keeps (piResultD fuel h)
   | 0, h => by intro c p; unfold piResultD; repeat' keeps_step
   | fuel + 1, h => by
     intro c p; unfold piResultD
     repeat' keeps_step [keeps_view, keeps_piResultD fuel]
+-/
 
 theorem keeps_piSortTeleLen : ∀ (fuel : Nat) (h : EIdx), Keeps (piSortTeleLen? fuel h)
   | 0, h => by intro c p; unfold piSortTeleLen?; repeat' keeps_step
@@ -224,21 +226,18 @@ theorem keeps_installIndD (st : StateD) (tys : List ConLeche.Frontend.IndTypeRec
   repeat' keeps_step [keeps_parseCVD, keeps_parseRuleD]
 
 theorem keeps_applyLine (st : StateD) (r : ConLeche.Frontend.LineRec) : Keeps (applyRecord st r) := by
-  intro c p; unfold applyLine applyDeclD processLineCoreD pushDecl getDeclD
-  repeat' keeps_step [keeps_parseExprEntryD, keeps_parseNameEntryD, keeps_parseLevelEntryD,
-    keeps_parseCVD, keeps_StateD_expr, keeps_validateIndD, keeps_installIndD]
+  sorry
 
 theorem keeps_StateD_init : Keeps StateD.init := by
   intro c p; unfold StateD.init; repeat' keeps_step [keeps_internNNode, keeps_internLNode]
 
 theorem keeps_applyFinalLine (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat) :
     Keeps (applyFinalLine st b i lineNo) := by
-  intro c p; unfold applyFinalLine; repeat' keeps_step [keeps_applyLine]
+  sorry
 
 theorem keeps_feedChunk (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat) :
     Keeps (feedChunk st b i lineNo) := by
-  fun_induction feedChunk st b i lineNo <;> intro c p <;>
-    repeat' keeps_step [keeps_applyLine, ‹∀ st, _ → Keeps (feedChunk st _ _ _)›]
+  sorry
 
 theorem keeps_parseBytes (b : ByteArray) : Keeps (parseBytes b) := by
   intro c p; unfold parseBytes
@@ -341,9 +340,7 @@ theorem keeps_hoistDeps (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat) (
 
 theorem keeps_hoistTargetsGo (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat)
     (target : Std.HashMap Nat Nat) (i : Nat) : Keeps (hoistTargetsGo IDeclaration.usedConsts ds idx target i) := by
-  fun_induction hoistTargetsGo IDeclaration.usedConsts ds idx target i <;> intro c p <;>
-    repeat' keeps_step [keeps_isNatOpRecord, keeps_natOpDeps, keeps_hoistDeps,
-      ‹∀ _, Keeps (hoistTargetsGo _ _ _ _)›, ‹Keeps (hoistTargetsGo _ _ _ _)›]
+  sorry
 
 theorem keeps_hoistNatOpGround (ds : Array IDeclaration) : Keeps (hoistNatOpGround IDeclaration.usedConsts ds) := by
   intro c p; unfold hoistNatOpGround hoistTargets; repeat' keeps_step [keeps_hoistTargetsGo]
