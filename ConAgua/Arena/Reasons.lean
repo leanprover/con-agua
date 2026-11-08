@@ -332,5 +332,59 @@ abbrev R_USE_OF_THE_SORRYAX_IN_TYPE_OF : L.Word := 630
 abbrev R_USE_OF_THE_SORRYAX_IN_GENERATED : L.Word := 634
 /-- decline: use of the sorryAx axiom in the domains of a generated rule of -/
 abbrev R_USE_OF_THE_SORRYAX_IN_THE : L.Word := 638
+/-- decline: a declaration at a literal's name with another shape -/
+abbrev R_A_DECLARATION_AT : L.Word := 642
+/-- decline: a declaration at a literal's name with another shape () -/
+abbrev R_A_DECLARATION_AT_A : L.Word := 646
+/-- decline: quotient declaration before what it needs -/
+abbrev R_QUOTIENT_DECLARATION_BEFORE : L.Word := 650
+/-- decline: this family stored at a definition -/
+abbrev R_THIS_FAMILY_STORED : L.Word := 654
+/-- reject: a certified Nat operation's name, not a definition: … -/
+abbrev R_A_CERTIFIED_NAT : L.Word := 657
+/-- reject: a family's key is no stored family -/
+abbrev R_A_FAMILY_S : L.Word := 661
+/-- reject: application type mismatch at a family's parameters -/
+abbrev R_APPLICATION_TYPE_MISMATCH_AT : L.Word := 665
+/-- reject: direct rec: a family at a `Bool` constructor's name -/
+abbrev R_DIRECT_REC_A : L.Word := 669
+/-- reject: direct sum: a type former's declared type and its reduct differ -/
+abbrev R_DIRECT_SUM_A : L.Word := 673
+/-- reject: function expected at a family's parameters -/
+abbrev R_FUNCTION_EXPECTED_AT : L.Word := 677
+/-- reject: incorrect number of universe levels at a family's key -/
+abbrev R_INCORRECT_NUMBER_OF_UNIVERSE : L.Word := 681
+/-- reject: projection from a structure whose type reaches no sort -/
+abbrev R_PROJECTION_FROM_A_STRUCTURE : L.Word := 685
+/-- reject: recursor declares k := ; the generated recursor of this block is K-like -/
+abbrev R_RECURSOR_DECLARES_K_THE : L.Word := 689
+/-- reject: reserved basis name: the block is not the pinned one -/
+abbrev R_RESERVED_BASIS_NAME_THE : L.Word := 693
+/-- reject: the recursor 's rule for has a right-hand side that is not closed -/
+abbrev R_THE_RECURSOR_S : L.Word := 697
+/-- reject: the recursor 's rule for has a right-hand side that is not definitionally equal to the generated one -/
+abbrev R_THE_RECURSOR_S_RULE : L.Word := 701
+/-- reject: the recursor 's rule for has a right-hand side whose type is not the generated one's -/
+abbrev R_THE_RECURSOR_S_RULE_FOR : L.Word := 705
+/-- reject: the recursor 's rule for has an undeclared universe parameter -/
+abbrev R_THE_RECURSOR_S_RULE_FOR_HAS : L.Word := 709
+/-- reject: the recursor 's rule for is not the generated one's (constructor , fields) -/
+abbrev R_THE_RECURSOR_S_RULE_FOR_IS : L.Word := 713
+/-- reject: the recursor 's stored type does not apply its major's container at the generated firing data -/
+abbrev R_THE_RECURSOR_S_STORED : L.Word := 717
+/-- reject: the recursor carries more or fewer rules than the generated one ( unmatched) -/
+abbrev R_THE_RECURSOR_CARRIES : L.Word := 721
+/-- reject: the type of the recursor is not closed -/
+abbrev R_THE_TYPE_OF : L.Word := 725
+/-- reject: the type of the recursor is not the generated one: it has fewer than binders -/
+abbrev R_THE_TYPE_OF_THE : L.Word := 729
+/-- reject: the type of the recursor is not the generated one: its body after the major differs -/
+abbrev R_THE_TYPE_OF_THE_RECURSOR : L.Word := 733
+/-- reject: the type of the recursor is not the generated one: the domain of binder differs -/
+abbrev R_THE_TYPE_OF_THE_RECURSOR_IS : L.Word := 737
+/-- reject: two modules store different constants named … -/
+abbrev R_TWO_MODULES_STORE : L.Word := 741
+/-- reject: undeclared universe parameter in the type of the recursor -/
+abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN_THE : L.Word := 745
 
 end L.Arena
