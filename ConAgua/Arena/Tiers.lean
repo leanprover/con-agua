@@ -468,6 +468,37 @@ def erecP (m : Mem) : Nat → Option Word := fun i =>
   if i < 2 ^ 40 then (if i < erecTop m then (m.arr64 EREC)[i]? else none)
   else if i - 2 ^ 40 < erecTop1 m then (m.arr64 (tier1 EREC))[i - 2 ^ 40]? else none
 
+/-- `m'`'s record pool extends `m`'s: both tops only moved up, nothing below them changed. -/
+structure ErecGrow (m m' : Mem) : Prop where
+  top : erecTop m ≤ erecTop m'
+  get : ∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
+  top1 : erecTop1 m ≤ erecTop1 m'
+  get1 : ∀ i < erecTop1 m, (m'.arr64 (tier1 EREC))[i]? = (m.arr64 (tier1 EREC))[i]?
+
+theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP m') := by
+  intro i v hv
+  unfold erecP at hv ⊢
+  by_cases hi : i < 2 ^ 40
+  · simp only [hi, ite_true] at hv ⊢
+    by_cases ht : i < erecTop m
+    · simp only [ht, ite_true] at hv
+      rw [if_pos (Nat.lt_of_lt_of_le ht h.top), h.get i ht]; exact hv
+    · simp [ht] at hv
+  · simp only [hi, ite_false] at hv ⊢
+    by_cases ht : i - 2 ^ 40 < erecTop1 m
+    · simp only [ht, ite_true] at hv
+      rw [if_pos (Nat.lt_of_lt_of_le ht h.top1), h.get1 _ ht]; exact hv
+    · simp [ht] at hv
+
+theorem ErecGrow.refl (m : Mem) : ErecGrow m m :=
+  ⟨Nat.le_refl _, fun _ _ => rfl, Nat.le_refl _, fun _ _ => rfl⟩
+
+theorem ErecGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : ErecGrow m₁ m₂) (h₂ : ErecGrow m₂ m₃) :
+    ErecGrow m₁ m₃ :=
+  ⟨Nat.le_trans h₁.top h₂.top, fun i hi => (h₂.get i (Nat.lt_of_lt_of_le hi h₁.top)).trans (h₁.get i hi),
+   Nat.le_trans h₁.top1 h₂.top1,
+   fun i hi => (h₂.get1 i (Nat.lt_of_lt_of_le hi h₁.top1)).trans (h₁.get1 i hi)⟩
+
 /-- The relation's view of an own row: the decoded constant when the row is the job's and
 below `vis`. -/
 def ownFind (m : Mem) (vis : Word) (w : Word) : Option IConstantInfo :=

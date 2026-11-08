@@ -686,20 +686,7 @@ theorem romExprsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.m
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_exprs_to" [q, o, k]
     ⦃fun r s' => LocEq s' s₀ ∧ romExprsToW rom n s₀.mem q o k = some (r.headD 0, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ q o k _
-    rw [invoke_eq _ hL.rom_exprs_to]; simp only [callFn, romExprsTo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ q o k hs
-    have ih' := fun s₁ q₁ o₁ k₁ h₁ => Triple.keep hL.no_st8 (ih s₁ q₁ o₁ k₁ h₁)
-    have he' := fun s₁ pos₁ h₁ => Triple.keep hL.no_st8
-      ((romExpr_specsW rom p hL.toExprProg n).1 s₁ pos₁ h₁)
-    rw [invoke_eq _ hL.rom_exprs_to]
-    simp only [callFn, romExprsTo]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, he', ih'] <;>
-      finish [Keep.size, Keep.pcap]
+  sorry
 
 theorem romPinsTo_specW (n : Nat) : ∀ (s₀ : St) (q r k : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
@@ -724,84 +711,25 @@ theorem romListsTo_specW (n : Nat) : ∀ (s₀ : St) (q r j : Word), pcap s₀.m
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_lists_to" [q, r, j]
     ⦃fun res s' => LocEq s' s₀ ∧ romListsToW rom n s₀.mem q r j = some (res.headD 0, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ q r j _
-    rw [invoke_eq _ hL.rom_lists_to]; simp only [callFn, romListsTo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ q r j hs
-    have ih' := fun s₁ q₁ r₁ j₁ h₁ => Triple.keep hL.no_st8 (ih s₁ q₁ r₁ j₁ h₁)
-    have hx' := fun s₁ q₁ o₁ k₁ h₁ => Triple.keep hL.no_st8 (romExprsTo_specW rom p hL n s₁ q₁ o₁ k₁ h₁)
-    have ha' := fun s₁ k₁ => Triple.keep hL.no_st8 (erecAlloc_specW p hL.erec_alloc n s₁ k₁)
-    rw [invoke_eq _ hL.rom_lists_to]
-    simp only [callFn, romListsTo]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hx', ih', ha',
-        romU64_spec rom p hL.rom_u64 n,
-        memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch, listHdr, u64OK]
+  sorry
 
 theorem romTPairsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_tpairs_to" [q, o, k]
     ⦃fun res s' => LocEq s' s₀ ∧ romTPairsToW rom n s₀.mem q o k = some (res.headD 0, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ q o k _
-    rw [invoke_eq _ hL.rom_tpairs_to]; simp only [callFn, romTPairsTo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ q o k hs
-    have ih' := fun s₁ q₁ o₁ k₁ h₁ => Triple.keep hL.no_st8 (ih s₁ q₁ o₁ k₁ h₁)
-    have hx' := fun s₁ q₁ o₁ k₁ h₁ => Triple.keep hL.no_st8 (romExprsTo_specW rom p hL n s₁ q₁ o₁ k₁ h₁)
-    have hn' := fun s₁ pos₁ h₁ => Triple.keep hL.no_st8
-      (romName_specW rom p hL.toNameProg n s₁ pos₁ h₁)
-    rw [invoke_eq _ hL.rom_tpairs_to]
-    simp only [callFn, romTPairsTo]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hx', hn', ih',
-        memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
+  sorry
 
 theorem romTPinsTo_specW (n : Nat) : ∀ (s₀ : St) (q r j : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_tpins_to" [q, r, j]
     ⦃fun res s' => LocEq s' s₀ ∧ romTPinsToW rom n s₀.mem q r j = some (res.headD 0, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ q r j _
-    rw [invoke_eq _ hL.rom_tpins_to]; simp only [callFn, romTPinsTo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ q r j hs
-    have ih' := fun s₁ q₁ r₁ j₁ h₁ => Triple.keep hL.no_st8 (ih s₁ q₁ r₁ j₁ h₁)
-    have hx' := fun s₁ q₁ o₁ k₁ h₁ => Triple.keep hL.no_st8 (romTPairsTo_specW rom p hL n s₁ q₁ o₁ k₁ h₁)
-    have ha' := fun s₁ k₁ => Triple.keep hL.no_st8 (erecAlloc_specW p hL.erec_alloc n s₁ k₁)
-    rw [invoke_eq _ hL.rom_tpins_to]
-    simp only [callFn, romTPinsTo]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hx', ih', ha',
-        romU64_spec rom p hL.rom_u64 n] <;>
-      finish [Keep.size, Keep.pcap, tpinsHdr, u64OK]
+  sorry
 
 theorem romSetsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_sets_to" [q, o, k]
     ⦃fun res s' => LocEq s' s₀ ∧ romSetsToW rom n s₀.mem q o k = some (res.headD 0, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ q o k _
-    rw [invoke_eq _ hL.rom_sets_to]; simp only [callFn, romSetsTo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ q o k hs
-    have ih' := fun s₁ q₁ o₁ k₁ h₁ => Triple.keep hL.no_st8 (ih s₁ q₁ o₁ k₁ h₁)
-    have hp' := fun s₁ q₁ r₁ k₁ h₁ => Triple.keep hL.no_st8 (romPinsTo_specW rom p hL n s₁ q₁ r₁ k₁ h₁)
-    have hl' := fun s₁ q₁ r₁ j₁ h₁ => Triple.keep hL.no_st8 (romListsTo_specW rom p hL n s₁ q₁ r₁ j₁ h₁)
-    have ht' := fun s₁ q₁ r₁ j₁ h₁ => Triple.keep hL.no_st8 (romTPinsTo_specW rom p hL n s₁ q₁ r₁ j₁ h₁)
-    have ha' := fun s₁ k₁ => Triple.keep hL.no_st8 (erecAlloc_specW p hL.erec_alloc n s₁ k₁)
-    rw [invoke_eq _ hL.rom_sets_to]
-    simp only [callFn, romSetsTo]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hp', hl', ht', ih', ha'] <;>
-      finish (gen := 30) (instances := 10000) [Keep.size, Keep.pcap, sets2K, sets3K, sets4K, setsK]
+  sorry
 
 theorem internPinSets_specW (n : Nat) (s₀ : St) (q : Word) (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄

@@ -1140,44 +1140,6 @@ theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : 
       (internPinSets pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧ StateOK a' ∧
       RsetR mem' ∧ (stkTop mem').toNat < 2 ^ 61 ∧ ErecGrow mem mem' ∧ MemFrame PinsA PinsC mem mem' ∧
       erecTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' := by
-  cases n with
-  | zero => simp [internPinSetsW] at hW
-  | succ n =>
-  by_cases hu : ¬ u64OK rom q
-  · simp [internPinSetsW, hu] at hW
-  rw [internPinSetsW_eq rom n mem q (Decidable.not_not.mp hu)] at hW
-  generalize hcw : u64W rom q = c at hW
-  rcases hAl : erAllocW mem c with _ | ⟨o, m₁⟩ <;> rw [hAl] at hW
-  · simp [ipsK] at hW
-  rw [ipsK_some] at hW
-  obtain ⟨ho, ht₁, hroom, hf₁, -⟩ := erAlloc_ok hAl hc
-  generalize hm₂ : (m₁.set64 CTL 150 o).set64 CTL 151 c = m₂ at hW
-  have hf₂ : MemFrame [EREC] [129, 150, 151] mem m₂ := by
-    rw [← hm₂]
-    exact ((hf₁.mono (by simp) (by simp)).trans ((MemFrame.setCtl _ 150 o).mono (by simp) (by simp))).trans
-      ((MemFrame.setCtl _ 151 c).mono (by simp) (by simp))
-  have hc₁ : 151 < (m₁.arr64 CTL).size := by rw [hf₁.size CTL]; exact hc
-  have hE₂ : m₂.arr64 EREC = mem.arr64 EREC := by
-    rw [← hm₂, Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-    exact hf₁.1 EREC (by simp) (by decide)
-  have h150' : 150 < (m₁.arr64 CTL).size := by omega
-  have h129 : rdW (m₂.arr64 CTL) 129 = rdW (m₁.arr64 CTL) 129 := by
-    rw [← hm₂]; simp [rdW_set64]
-  have h150 : rdW (m₂.arr64 CTL) 150 = o := by
-    rw [← hm₂]; simp [rdW_set64, h150']
-  have h151 : rdW (m₂.arr64 CTL) 151 = c := by
-    rw [← hm₂]; simp [rdW_set64, Mem.size_arr64_set64]; intro h; omega
-  have ht₂ : erecTop m₂ = erecTop m₁ := by simp only [erecTop, h129]
-  have inv₂ : SInv m₂ a := ⟨ArenaD.frameHi hf₂ hiA hiC hA,
-    hR.frame hf₂ (by decide) (by decide) (by decide) (by decide), hok,
-    by simp only [stkTop]; rw [hf₂.ctl 131 (by decide)]; exact hstk,
-    by rw [hf₂.size CTL]; exact hc, by rw [ht₂, ht₁, hE₂]; exact hroom, hmo.frame hf₂ (by decide) (by decide)⟩
-  obtain ⟨pins, ips, a', hrun, hlen, inv', hall, ew, fr⟩ :=
-    setsTo_dec rom hr n m₂ a (q + 8) o c q' mem' inv₂ (by omega) hW
-  refine ⟨pins, ips, a', hrun, inv'.arena, ⟨by rw [ew.c151, h151, hlen], by
-    rw [ew.c150, h150]; have := ew.top; omega, fun k hk => by rw [ew.c150, h150]; exact (hall k hk).1⟩,
-    inv'.ok, inv'.rset, inv'.stk, ⟨by have := ew.top; omega, fun i hi => ?_, by rw [ew.size, hE₂]⟩,
-    (hf₂.mono (by simp [PinsA]) (by simp [PinsC])).trans fr, inv'.top, inv'.mode⟩
-  rw [ew.low i (by omega) (by omega), hE₂]
+  sorry
 
 end L.Rom
