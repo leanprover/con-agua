@@ -330,10 +330,13 @@ def pinW (m : Mem) (i : Nat) : Word := (m.arr64 PINS)[i]?.getD 0
 
 /-- The filled table: what the flag promises. -/
 structure PinsFull (m : Mem) (p : Pins) : Prop where
-  size : 71 ≤ (m.arr64 PINS).size
-  names_size : p.names.size = 51
+  size : 72 ≤ (m.arr64 PINS).size
+  names_size : p.names.size = 52
   names_lt : ∀ i, i < 51 → (pinW m (1 + i)).toNat < 2 ^ 32
   names : ∀ i (h : i < 51), p.names[i]'(by omega) = decI (pinW m (1 + i))
+  /-- Slot `51` (`quotMkName`) is word `71`, past the reserved names. -/
+  quotMk_lt : (pinW m 71).toNat < 2 ^ 32
+  quotMk : p.names[51]'(by omega) = decI (pinW m 71)
   lv_lt : (pinW m 52).toNat < 2 ^ 32 ∧ (pinW m 53).toNat < 2 ^ 32 ∧ (pinW m 54).toNat < 2 ^ 32
   emptyLevels : p.emptyLevels = decI (pinW m 52)
   zeroLevel : p.zeroLevel = decI (pinW m 53)
@@ -350,7 +353,7 @@ theorem PinsFull.congr {m m' : Mem} {p : Pins} (he : m'.arr64 PINS = m.arr64 PIN
     (h : PinsFull m p) : PinsFull m' p := by
   have hw : ∀ i, pinW m' i = pinW m i := fun i => by simp only [pinW, he]
   exact ⟨he ▸ h.size, h.names_size, fun i hi => hw _ ▸ h.names_lt i hi,
-    fun i hi => hw _ ▸ h.names i hi, by simpa only [hw] using h.lv_lt,
+    fun i hi => hw _ ▸ h.names i hi, hw _ ▸ h.quotMk_lt, hw _ ▸ h.quotMk, by simpa only [hw] using h.lv_lt,
     hw _ ▸ h.emptyLevels, hw _ ▸ h.zeroLevel, hw _ ▸ h.sortOne,
     fun i hi => hw _ ▸ h.reserved_lt i hi, by simpa only [hw] using h.reserved⟩
 

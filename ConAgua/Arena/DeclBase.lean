@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.PromoteMemo
 public import ConAgua.Rom.PinSets
 public import ConAgua.Front.StateDR
 

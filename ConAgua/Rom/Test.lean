@@ -3,7 +3,6 @@ module
 public import ConLeche.Kernel.NatOpPins
 public import ConAgua.Arena.RomPins
 public import ConAgua.Rom.PinRead
-public import ConAgua.Arena.PromoteProg
 public import ConAgua.Arena.LiftSpec
 
 @[expose] public section

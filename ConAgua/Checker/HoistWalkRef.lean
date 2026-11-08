@@ -565,7 +565,7 @@ theorem hoistRulesGo_ok (n : Nat) :
 top, which `trunc` clears, and no pointer `0`). -/
 def BlockAt (m : Mem) (o c q : Word) (cs : List IConstantInfo) : Prop :=
   (∃ t, t ≤ ((m.arr64 DLP)[0]?.getD 0).toNat ∧
-    decCIs (trunc (m.arr64 DLP) t) (fun _ => none) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs) ∧
+    decCIs (trunc (m.arr64 DLP) t) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs) ∧
   o.toNat + c.toNat < 2 ^ 63 ∧ o.toNat ≠ 0 ∧
   (∀ j, q.toNat ≤ j → j < c.toNat → (m.arr64 DLP)[o.toNat + j]?.getD 0 ≠ 0) ∧
   q ≤ c
@@ -573,7 +573,7 @@ def BlockAt (m : Mem) (o c q : Word) (cs : List IConstantInfo) : Prop :=
 /-- `BlockAt` without the bound on `o + c` (the decoding bounds the words read). -/
 def BlockAt' (m : Mem) (o c q : Word) (cs : List IConstantInfo) : Prop :=
   (∃ t, t ≤ ((m.arr64 DLP)[0]?.getD 0).toNat ∧
-    decCIs (trunc (m.arr64 DLP) t) (fun _ => none) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs) ∧
+    decCIs (trunc (m.arr64 DLP) t) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs) ∧
   o.toNat ≠ 0 ∧
   (∀ j, q.toNat ≤ j → j < c.toNat → (m.arr64 DLP)[o.toNat + j]?.getD 0 ≠ 0) ∧
   q ≤ c
