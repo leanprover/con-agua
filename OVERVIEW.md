@@ -672,8 +672,11 @@ stores and their fields are declared in one file,
 A store whose two key fields are handles packs them into one record word.
 
 Each store's **cons table**, the hash map from a node's fields to its handle,
-is con-ron's `HashMap2`: open addressing, linear probing, one table per tier in
-its own word array, growth at load 3/4
+is con-ron's key-free `ConsMap`: open addressing, linear probing, one table per
+tier in its own word array, growth at load 3/4. A slot is one word, the node's
+value (`B + i + 1` for node `i`, below) and a 16-bit fragment of its key's hash;
+the key itself is read from the node's record, and only on a slot whose fragment
+is the query's
 ([the layout](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L221-L230),
 [the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L583-L588)).
 Where con-ron allocates a table of twice the size and frees the old one, L
@@ -694,9 +697,10 @@ larger table costs nothing until it is used. con-ron's tables start empty
 (D42, also verdict-neutral).
 
 The **scratch tier** holds what one declaration's check creates. It is emptied
-in O(1) per table: a scratch slot holds `B + i + 1` for node `i`, and reads as
+in O(1) per table: a scratch slot's value is `B + i + 1` for node `i`, and reads as
 free at or below the slot base `B`, so raising `B` empties every scratch table
-without writing a slot (con-ron's epoch stamps)
+without writing a slot (con-ron's epoch stamps; ours are 15 bits, so every
+32 766 resets the scratch tables are zeroed, D43)
 ([`scratch_reset`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/Scratch.lean#L18-L37)).
 Promotion copies an installed declaration's terms from the scratch tier to the
 persistent one, as con-ron's `promote` does.
