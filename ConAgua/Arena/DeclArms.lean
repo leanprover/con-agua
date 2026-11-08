@@ -93,7 +93,7 @@ returns it unpushed: the arm runs its pinned gates and pushes last. -/
 
 /-- `value_guards(vis, q, v)`: `valueGuards fe cv v` (`q` the constant value): no loose bound
 variable, no free variable, declared universe parameters, resolving constants. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:820-838 ConRon.Arena.valueGuards
+-- con-ron: ConRon/Arena/DeclCheck.lean:822-838 ConRon.Arena.valueGuards
 @[no_expose, l_impl ConRon.Arena.valueGuards]
 def valueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c, u) {
   b := call loose_bvars_bounded_fast(4000000000, 0, v);
