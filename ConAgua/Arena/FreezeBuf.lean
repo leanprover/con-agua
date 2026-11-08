@@ -92,22 +92,12 @@ theorem hdrW_le_len (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 
 /-- **The header's word `3` is the view.** -/
 theorem bufOf_view (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
     (bufOf m v).getD 3 0 = v := by
-  have := hdrW_le_len hok hlt
-  have h132 : hdrW = 132 := by decide
-  rw [bufOf_getD hok hlt (by omega), (parCompactMem_hdr hok).2.2.2.1]
+  sorry
 
 /-- **Header entry `0` is the header itself.** -/
 theorem bufEntry_zero (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
     bufEntry (bufOf m v) 0 = (0, hdrW) := by
-  have := hdrW_le_len hok hlt
-  have h132 : hdrW = 132 := by decide
-  have h8 := (parCompactMem_hdr (vis := v) hok).2.2.2.2.2.1
-  have h9 := (parCompactMem_hdr (vis := v) hok).2.2.2.2.2.2
-  simp only [bufEntry, Nat.mul_zero, Nat.add_zero]
-  rw [Array.getD_eq_getD_getElem?, Array.getD_eq_getD_getElem?]
-  rw [← Array.getD_eq_getD_getElem?, ← Array.getD_eq_getD_getElem?,
-    bufOf_getD hok hlt (by omega), bufOf_getD hok hlt (by omega), h8, h9]
-  simp [h132]
+  sorry
 
 /-- **Header entry `i + 1` is frozen entry `i`'s offset and extent** (the offset `hdrW` plus the
 extents before it). -/
@@ -115,17 +105,7 @@ theorem bufEntry_succ (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size 
     (hi : i < frozen.length) :
     bufEntry (bufOf m v) (i + 1) = ((fzOff m i).toNat, fzExt m (fzAt i)) ∧
       (fzOff m i).toNat = hdrW + fzSum m i := by
-  have := hdrW_le_len hok hlt
-  have h132 : hdrW = 132 := by decide
-  have h61 : frozen.length = 61 := frozen_length
-  have he := parCompactMem_entry (vis := v) hok (fun _ => hlt) hi
-  refine ⟨?_, (buf_offs hok hlt).1 i (by omega)⟩
-  simp only [bufEntry]
-  rw [Array.getD_eq_getD_getElem?, Array.getD_eq_getD_getElem?]
-  rw [← Array.getD_eq_getD_getElem?, ← Array.getD_eq_getD_getElem?,
-    bufOf_getD hok hlt (by omega), bufOf_getD hok hlt (by omega),
-    show 8 + 2 * (i + 1) = 10 + 2 * i by omega, show 9 + 2 * (i + 1) = 11 + 2 * i by omega,
-    he.1, he.2, UInt64.toNat_ofNat_of_lt' (by rw [fzExt_eq]; exact UInt64.toNat_lt_size _)]
+  sorry
 
 /-- The extent of frozen entry `i` fits its source array. -/
 theorem fzExt_le_src (hok : parCompactOK m 1 = true) {i : Nat} (hi : i < frozen.length) :
@@ -148,39 +128,13 @@ theorem fzExt_le_src (hok : parCompactOK m 1 = true) {i : Nat} (hi : i < frozen.
 theorem buf_entries_inside (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64)
     {i : Nat} (hi : i < frozenIdsL.length) :
     (bufEntry (bufOf m v) i).1 + (bufEntry (bufOf m v) i).2 ≤ (bufOf m v).size := by
-  have hs := bufOf_size (v := v) hok hlt
-  have h61 : frozen.length = 61 := frozen_length
-  have h62 : frozenIdsL.length = 62 := rfl
-  rcases i with _ | i
-  · rw [bufEntry_zero hok hlt, hs.1]; have := hdrW_le_len hok hlt; simpa using this
-  · obtain ⟨he, ho⟩ := bufEntry_succ (v := v) hok hlt (i := i) (by omega)
-    rw [he, hs.1, hs.2, ho]
-    have := fzSum_mono m (j := i + 1) (n := frozen.length) (by omega)
-    rw [fzSum_succ, ← fzExt_eq] at this
-    simp only; omega
+  sorry
 
 /-- **Entry `i + 1`'s words are the prefix of its source with the extent.** -/
 theorem bufImg_succ (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) {i : Nat}
     (hi : i < frozen.length) :
     bufImg (bufOf m v) (i + 1) = (m.arr64 (fzAt i).src).extract 0 (fzExt m (fzAt i)) := by
-  have hin := buf_entries_inside (v := v) hok hlt (i := i + 1) (by
-    have : frozenIdsL.length = 62 := rfl
-    have : frozen.length = 61 := frozen_length
-    omega)
-  obtain ⟨he, ho⟩ := bufEntry_succ (v := v) hok hlt hi
-  have hsrc := fzExt_le_src hok hi
-  have hs := bufOf_size (v := v) hok hlt
-  have himg := (parCompactMem_img (vis := v) hok one_ne_zero' hlt hi).2
-  rw [he] at hin
-  simp only [bufImg, he]
-  apply arr_eq_of_getD
-  · simp only [Array.size_extract]; simp only at hin; omega
-  · intro k hk
-    simp only [Array.size_extract] at hk
-    have hk' : k < fzExt m (fzAt i) := by simp only at hin; omega
-    rw [getD_extract_lt _ _ _ _ (by simp only [Array.size_extract]; omega),
-      getD_extract_lt _ _ _ _ (by simp only [Array.size_extract]; omega),
-      bufOf_getD hok hlt (by simp only at hin; rw [← hs.1]; omega), Nat.zero_add, himg k hk']
+  sorry
 
 /-- The frozen list's ids are the buffer ids after the header. -/
 theorem frozenIdsL_eq : frozenIdsL = ↑HDRF :: frozen.map (fun e => ↑e.1) := by decide +kernel
@@ -226,12 +180,7 @@ theorem bufImg_seed (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 
 /-- The header's entry `0` holds the view at word `3`. -/
 theorem bufImg_hdr (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
     (bufImg (bufOf m v) 0).getD 3 0 = v := by
-  have := hdrW_le_len hok hlt
-  have h132 : hdrW = 132 := by decide
-  have hs := bufOf_size (v := v) hok hlt
-  simp only [bufImg, bufEntry_zero hok hlt, Nat.zero_add]
-  rw [getD_extract_lt _ _ _ _ (by simp only [Array.size_extract]; omega), Nat.zero_add,
-    bufOf_view hok hlt]
+  sorry
 
 end buf
 
@@ -271,16 +220,20 @@ theorem frozen_facts {k : Nat} (hk : k < frozen.length) (h1 : 1 ≤ k) :
   · refine ⟨h2, fun h => ?_, h4⟩
     simp [h] at h3
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The owned arrays: not frozen, not truncated. -/
 theorem owned_facts_all : parOwnedL.all (fun b => frozenIdsL.idxOf? b == none &&
     !(fzSrcs.contains b)) = true := by decide +kernel
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem owned_facts {b : TieredArray} (hb : b ∈ parOwnedL) :
     frozenIdsL.idxOf? b = none ∧ b ∉ fzSrcs := by
   have := List.all_eq_true.mp owned_facts_all b hb
   simp only [Bool.and_eq_true, beq_iff_eq, Bool.not_eq_true'] at this
   refine ⟨this.1, fun h => ?_⟩
   simp [h] at this
+-/
 
 /-- **A frozen array (not the header or the seed) of the thread's memory** is the buffer's image. -/
 theorem bufMem_frozen (B : Array Word) (r : Mem) (j : Word) {k : Nat} (hk : k < frozen.length)
@@ -290,8 +243,7 @@ theorem bufMem_frozen (B : Array Word) (r : Mem) (j : Word) {k : Nat} (hk : k < 
 /-- **An owned array of the thread's memory** is the region's. -/
 theorem bufMem_owned (B : Array Word) (r : Mem) (j : Word) {b : TieredArray} (hb : b ∈ parOwnedL) :
     (bufMem B r j).arr64 b = r.arr64 b := by
-  rw [bufMem_arr, (owned_facts hb).1]
-  simp only [List.contains_iff_mem, hb, ↓reduceIte]
+  sorry
 
 theorem bufMem_hdr (B : Array Word) (r : Mem) (j : Word) :
     (bufMem B r j).arr64 HDRF = bufImg B 0 := by

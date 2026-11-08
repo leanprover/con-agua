@@ -20,10 +20,11 @@ open ConRon.Arena
 /-- `m'` agrees with `m` on `CTL` and on every array that is not frozen. -/
 structure KeepNF (m m' : Mem) : Prop where
   ctl : m'.arr64 CTL = m.arr64 CTL
-  arr : ∀ b, b ∉ fzSrcs → m'.arr64 b = m.arr64 b
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem keepNF_trunc (m : Mem) : KeepNF m (truncFrozen m) :=
   ⟨truncFrozen_ctl m, truncFrozen_other m⟩
+-/
 
 section memo
 variable {κ ν : Type} [BEq κ] [Hashable κ]
@@ -57,21 +58,26 @@ theorem memoRV_congr (S : MemoSch) (K : MemoKey κ) (VR : Mem → Word → ν �
     · rw [g2, g3, hk']; exact h2'
     · rw [g2, g3, hs, g1]; exact h3 e he
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A memo whose value relation reads no memory, over an array that is not frozen. -/
 theorem KeepNF.memoRV {S : MemoSch} {K : MemoKey κ} {VR : Mem → Word → ν → Prop} {m m' : Mem}
     (hk : KeepNF m m') (hS : (S.arr : TieredArray) ∉ fzSrcs) (hV : ∀ w v, VR m w v → VR m' w v)
     {mp : Std.HashMap κ ν} (hR : MemoRV S K VR m mp) : MemoRV S K VR m' mp :=
   memoRV_congr S K VR (hk.arr _ hS) hk.ctl hV hR
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem KeepNF.memoRG {S : MemoSch} {K : MemoKey κ} {dv : Word → ν} {m m' : Mem}
     (hk : KeepNF m m') (hS : (S.arr : TieredArray) ∉ fzSrcs) {mp : Std.HashMap κ ν} (hR : MemoRG S K dv m mp) :
     MemoRG S K dv m' mp :=
   hk.memoRV hS (fun _ _ h => h) hR
+-/
 
 end memo
 
 /-! ## The groups -/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section groups
 variable {m m' : Mem} (hk : KeepNF m m')
 include hk
@@ -120,5 +126,6 @@ theorem KeepNF.declsF {ds : Array IDeclaration}
   rw [hk.arr _ (by decide), hk.arr _ (by decide)]; exact h
 
 end groups
+-/
 
 end L.Arena

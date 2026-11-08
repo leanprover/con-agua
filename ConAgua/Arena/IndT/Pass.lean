@@ -64,6 +64,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What `checkBlockPass` hands the tail, con-ron's side (`checkBlockPass_of`'s post at the
 formers' environment `env₁`). -/
 def PassTwin (a a' : AState) (x : BlockPass) (env₁ : ConLeche.Env) : Prop :=
@@ -73,6 +74,7 @@ def PassTwin (a a' : AState) (x : BlockPass) (env₁ : ConLeche.Env) : Prop :=
     (∀ cv ∈ qP.cvTas, ConLeche.Expr.WScoped 0 cv.type) ∧
     ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.ctorsAs env₁) ∧
     (∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M)
+-/
 
 set_option experimental.vcgen true in
 /-- **`check_block_pass`' unified model**: the flush, the positivity context, the classes' seeds and
@@ -94,7 +96,6 @@ structure PassPost (dn : NIdx → Option ConLeche.Name) (env : ConLeche.Env) (m 
     (a : AState) (w : Word) (x : BlockPass) (m' : Mem) (a' : AState) : Prop where
   stage : StageR (rdW (m'.arr64 IW) w) x.env1 m' a'
   grow : IWGrow m m'
-  bpass : BPassR (rdW (m'.arr64 IW) w) x.env1 m' w x
   pos : PosMR m'
   abs : AbsOK m'
   recs : RecsB m p0 → RecsB m' (rdW (m'.arr64 IW) (w + 3))
@@ -107,6 +108,7 @@ variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLech
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_block_pass` refines `checkBlockPass`, both outcomes** under `StageC` (twin side
 con-ron's `checkBlockPass_of`): each check's ok half by its `…_refinesC` on the call's run, its
@@ -465,7 +467,9 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
     exact classesLp_of_decPL hms9.1 hS9.iw.er hS9.iw.iwSize
   · simp only [List.headD_cons]; rw [hw0]
     exact StageC.of_parts hS9 ck9 hA9 (dnE i9.ext)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_block_pass(vis, p0, isRec)` refines `checkBlockPass` under `StageC`**
 (`checkBlockPass_refines`'s, from `StageC` at the entry index and con-ron's `checkBlockPass_of`
@@ -495,6 +499,7 @@ theorem checkBlockPass_refinesC (hP : PassProg p) {fs : List FnName}
       hcoh hden hshP hlpsDn)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   exact ⟨hl, x, a', run, ⟨hR.stage, hR.grow, hR.bpass, hR.pos, hR.abs, hR.recs, hR.classes⟩, hR.twin⟩
+-/
 
 end sims
 

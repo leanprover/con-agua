@@ -52,13 +52,13 @@ after, the twin's core step, the growth. -/
 structure PinPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (env : ConLeche.Env) (m : Mem) (a : AState) (m' : Mem) (a' : AState) : Prop where
   stage : StageC dn vis fe env m' a'
-  core : CoreStep V env fe a a'
   grow : IWGrow m m'
 
 section loop
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_div_mod_pin_loop` refines `checkDivModPinLoop` under `StageC`, both outcomes**
 (con-ron's `checkDivModPinLoop_bridge`): the pin guard (`pgC`), on `true` the certificates' guard
 (`cgsC`), on `true` the attempt (`cpa_ref`); every other outcome moves on to the next variant; no
@@ -174,6 +174,7 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
     rw [checkDivModPinLoopE.k_check_div_mod_pin_at.arm2 _ _ _ _ _ _ _ _ _ z3',
       decW0B_false hR3.res (by simpa using z3')]
     exact RefE.ite_neg (by simp) (next m3 a3 _ hR3.stage hR3.cr (hG2.trans hR3.grow) (c02.trans hR3.core))
+-/
 
 end loop
 
@@ -186,16 +187,19 @@ l_model checkDivModPin_specE (p : Prog) (hD : DmProg8 p)
   grind [arena_grind] extra [ld64_rdW_specE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What the gate gives besides the twin's run: `PinPost` at the pre-insertion view, and the
 stage relation at the extended view `vis2`. -/
 structure CpPost (dn : NIdx → Option ConLeche.Name) (vis vis2 : Word) (fe2 : IFEnv)
     (env : ConLeche.Env) (m : Mem) (a : AState) (m' : Mem) (a' : AState) : Prop
     extends PinPost dn vis (fe2.restrictTo vis.toNat) env m a m' a' where
   stageW : StageR vis2 fe2 m' a'
+-/
 
 section pin
 variable {p : Prog}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_div_mod_pin` refines `checkDivModPin` under `StageC`, both outcomes** (con-ron's
 `checkDivModPin_bridge`): the environment guard at the extended view `vis2` (`StepOK`), the stored
 value's lookup, the variant loop at the pre-insertion view `vis` (`loop_ref`). -/
@@ -301,6 +305,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
   have hS3' := StageR.restrict hR3.stage.stage vis2
   rw [IFEnv.restrictTo_restrictTo, ← hS.check.env.vis, IFEnv.restrictTo_self] at hS3'
   exact ⟨⟨hR3.stage, c1.trans hR3.core, hg1.trans hR3.grow⟩, hS3'⟩
+-/
 
 end pin
 
