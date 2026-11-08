@@ -84,7 +84,7 @@ theorem whnfCoreStepProj_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n
     CoreSpec p (n + 1) "whnf_core_step_proj" [mode, cheap, vis, d, e, sn, i, pe]
       (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  whnfCoreStepProj_refines' p hq.core (KnotAllProg.whnfC hq).strLitSupported
+  whnfCoreStepProj_refines' p hq.core (KnotAllProg.whnfC hq).strLitStored
     (KnotAllProg.whnfC hq).strLitCtor (KnotAllProg.projC hq) hq.core.lsn (erecKept_of hq.hcl) n hk
     F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs he hsn hpe (supKeep_of fe)
 
@@ -110,7 +110,7 @@ theorem projLitToCtor_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     CoreSpec p (n + 1) "proj_lit_to_ctor" [mode, vis, d, h]
       (projLitToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
       MM eb :=
-  projLitToCtor_refines' p hq.core (KnotAllProg.whnfC hq).strLitSupported
+  projLitToCtor_refines' p hq.core (KnotAllProg.whnfC hq).strLitStored
     (KnotAllProg.whnfC hq).strLitCtor n hk F hF hn s₀ a₀ dn vis fe MM eb mode d h hs hh
     (supKeep_of fe)
 

@@ -187,7 +187,7 @@ l_model lazyFoldOk_spec (p : Prog) (hp : DefEqMidProg p)
   grind [arena_grind]
 
 theorem mode_eager_bit (mode : Word) (h : mode < 4) :
-    (decMode mode).eager = decide ((mode >>> 1) &&& 1 ≠ 0) := by
+    decEager mode = decide ((mode >>> 1) &&& 1 ≠ 0) := by
   rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> decide
 
 /-- **`lazy_fold_ok` refines `lazyFoldOk`**, from `has_fvar`'s spec. -/

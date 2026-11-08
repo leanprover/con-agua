@@ -481,7 +481,7 @@ def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
         constE nn
       else fail (.invalid "Nat literal without the Nat basis declarations")
   | .strVal _ => do
-      if ← strLitSupported fe then do
+      if ← strLitStored fe then do
         let sn ← pinString
         constE sn
       else fail (.notImplemented
@@ -508,7 +508,7 @@ structure InferLitCallees (p : Prog) : Prop where
   natLitSup : ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
     CoreSpec p n "nat_lit_supported" [vis] (natLitSupported fe) decBool s₀ a₀ dn vis fe M eb
-  strLitSup : StrLitSupportedOK p
+  strLitSup : StrLitStoredOK p
   constE : ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (eb nm : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW nm →
     CoreSpec p n "const_e" [nm] (constE (decI nm)) decH s₀ a₀ dn vis fe M eb
@@ -517,7 +517,7 @@ structure InferLitCallees (p : Prog) : Prop where
 closure) lifted. -/
 l_model ilE_spec (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
   fns [hf ↦ ilE list]
-  specs [callW_spec p n "nat_lit_supported", callW_spec p n "str_lit_supported",
+  specs [callW_spec p n "nat_lit_supported", callW_spec p n "str_lit_stored",
     callW_spec p n "pin_at", callW_spec p n "const_e"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified

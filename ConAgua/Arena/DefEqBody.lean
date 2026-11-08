@@ -84,7 +84,7 @@ theorem defeqBody_eq (mode : ConLeche.CheckMode) (eager : Bool) (r : CoreFnsA) (
         if sc then pure true else defeqBodyRestT mode eager r fe depth a b) := by rfl
 
 theorem decMode_eager (mode : Word) (h : mode < 4) :
-    (decMode mode).eager = decide ((mode >>> 1) &&& 1 ≠ 0) := by
+    decEager mode = decide ((mode >>> 1) &&& 1 ≠ 0) := by
   rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> decide
 
 theorem depth_lt_of_shr (d : Word) (h : d >>> 63 = 0) : d.toNat < 2 ^ 63 := by
@@ -242,7 +242,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
   by_cases hb : r₁.headD 0 ≠ 0 ∧ ((mode >>> 1) &&& 1 ≠ 0 ∨ r₂.headD 0 = 0)
   · rw [ite_eq_left hb.1, ite_eq_left hb.2]
-    have hcond : (decBool r₁ && ((decMode mode).eager || !decBool r₂)) = true := by
+    have hcond : (decBool r₁ && (decEager mode || !decBool r₂)) = true := by
       rw [decMode_eager mode hs.mode4, decBool_true_of hb.1]
       rcases hb.2 with h | h
       · simp [h]
@@ -265,7 +265,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     · rw [ite_eq_right (fun h => h h1)]
     · rw [ite_eq_left h1, ite_eq_right (fun h => hb ⟨h1, h⟩)]
   rw [hW2]
-  have hcond : (decBool r₁ && ((decMode mode).eager || !decBool r₂)) = false := by
+  have hcond : (decBool r₁ && (decEager mode || !decBool r₂)) = false := by
     rw [decMode_eager mode hs.mode4]
     by_cases h1 : r₁.headD 0 = 0
     · simp [decBool_false_of h1]

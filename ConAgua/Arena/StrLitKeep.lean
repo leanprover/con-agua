@@ -7,7 +7,7 @@ public import ConRon.Bridge.ExprOps.MemoSpecs
 @[expose] public section
 
 /-!
-# `strLitSupported` keeps every stored node's view
+# `strLitStored` keeps every stored node's view
 
 `VMono op`: every successful run of `op` keeps each `view` the store already answers. Closed
 under `pure`, `fail`, `bind`, `if` and `match` (by `split`), with leaves for the pin readers,

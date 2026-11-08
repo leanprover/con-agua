@@ -537,7 +537,7 @@ theorem litMajorToCtor_run_nat (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) 
 
 theorem litMajorToCtor_run_str_unsup (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) (a a₁ : AState)
     (ht : h.tag = ETag.lit) (s : String) (hv : a.store.view h = some (.lit (.strVal s)))
-    (hs : (strLitSupported fe).run a = .ok (false, a₁)) :
+    (hs : (strLitStored fe).run a = .ok (false, a₁)) :
     (litMajorToCtor r fe d h).run a = .ok (h, a₁) := by
   have hv' : (view h).run a = .ok (.lit (.strVal s), a) := by
     simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
@@ -546,7 +546,7 @@ theorem litMajorToCtor_run_str_unsup (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : 
 
 theorem litMajorToCtor_run_str (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) (a a₁ a₂ a₃ : AState)
     (ht : h.tag = ETag.lit) (s : String) (hv : a.store.view h = some (.lit (.strVal s)))
-    (hs : (strLitSupported fe).run a = .ok (true, a₁)) (c res : EIdx)
+    (hs : (strLitStored fe).run a = .ok (true, a₁)) (c res : EIdx)
     (hc : (strLitToConstructor s).run a₁ = .ok (c, a₂)) (hw : (r.whnf d c).run a₂ = .ok (res, a₃)) :
     (litMajorToCtor r fe d h).run a = .ok (res, a₃) := by
   have hv' : (view h).run a = .ok (.lit (.strVal s), a) := by
@@ -573,7 +573,7 @@ theorem CoreRef.of_run_eq {α : Type} [Inhabited α] {T T' : AM α} {a₀ : ASta
 
 theorem litMajorToCtor_err_str (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) (a a₁ a₂ : AState)
     (ht : h.tag = ETag.lit) (s : String) (hv : a.store.view h = some (.lit (.strVal s)))
-    (hs : (strLitSupported fe).run a = .ok (true, a₁)) (c : EIdx)
+    (hs : (strLitStored fe).run a = .ok (true, a₁)) (c : EIdx)
     (hc : (strLitToConstructor s).run a₁ = .ok (c, a₂)) (ce : CheckError)
     (hw : (r.whnf d c).run a₂ = .error ce) :
     (litMajorToCtor r fe d h).run a = .error ce := by
@@ -627,11 +627,11 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
   | strVal str =>
     have hk1 : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 1 := hrel.1
     rw [ite_eq_right (by rw [hk1]; decide)]
-    rcases c1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩
+    rcases c1 : callW p n "str_lit_stored" [vis] s₀.mem with _ | ⟨r₁, m₁⟩
     · rw [liftE_none, lmtcE.k_str_lit_supported.none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some]
     obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, -⟩ := CoreSpec.run
-      (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) c1
+      (hw.strLitStored n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) c1
     simp only [lmtcE.k_str_lit_supported]
     by_cases h0 : r₁.headD 0 = 0
     · rw [ite_eq_left h0]
@@ -643,7 +643,7 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
     rcases c2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩
     · rw [liftE_none, lmtcE.k_str_lit_ctor.none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some]
-    have hviewA : (AM.st (strLitSupported fe) a₀).store.view (decE h) =
+    have hviewA : (AM.st (strLitStored fe) a₀).store.view (decE h) =
         some (.lit (.strVal str)) := hsup fe a₀ (decE h) _ hview
     obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
       (hw.strLitCtor n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb h str hS₁ hh hviewA) c2
@@ -663,7 +663,7 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
 
 /-- **`lit_major_to_ctor` refines `litMajorToCtor`** (`lmtc_ref`'s ok half). Statement changes (the
 knot's `whnf` slot needs them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`; and
-`SupKeep` (`strLitSupported` keeps the store's views: `StrLitKeep.supKeep_of`) as a hypothesis. -/
+`SupKeep` (`strLitStored` keeps the store's views: `StrLitKeep.supKeep_of`) as a hypothesis. -/
 theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →

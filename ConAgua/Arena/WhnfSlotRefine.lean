@@ -26,7 +26,7 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem knot_whnf_miss_err (mode : ConLeche.CheckMode) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx)
+theorem knot_whnf_miss_err (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx)
     (a : AState) (h : whnfStuckTag e = false) (hm : a.caches.whnfC[e]? = none) (ce : CheckError)
     (hb : (whnfBody (coreKnot mode eager fe id F) fe d e).run a = .error ce) :
     ((coreKnot mode eager fe id (F + 1)).whnf d e).run a = .error ce := by
