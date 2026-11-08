@@ -4,6 +4,15 @@ public import ConAgua.Arena.WhnfDeltaRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.PinsNatOp
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.L.LocNF
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.StoreDenIntern
 import all ConAgua.Arena.WhnfDelta
 import all ConAgua.Arena.ConsLib
@@ -149,7 +158,164 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) (r : List Word) (m' : Mem)
     (hcall : callW p n "raw_nat_lit" [h] s₀.mem = some (r, m')) :
     m' = s₀.mem ∧ RawOut s₀.mem a₀ h r := by
-  sorry
+  cases n with
+  | zero => rw [callW_zero] at hcall; cases hcall
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (rawNatLit_spec p hp.toWhnfDeltaProg (n + 1) s₀ h) hcall
+  rw [rawNatLitW.eq_2] at hW
+  by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hsc] at hW; cases hW
+  rw [ite_eq_right hsc] at hW
+  -- the tags whose arm only checks the bound
+  have simple : ∀ (c : TRec) (g : Prop) [Decidable g], g →
+      (g → (tagW h = 0 ∧ c = BVAR) ∨ (tagW h = 1 ∧ c = FVAR) ∨ (tagW h = 2 ∧ c = SORT) ∨
+        (tagW h = 5 ∧ c = LAM) ∨ (tagW h = 6 ∧ c = FORALL) ∨
+        (tagW h = 7 ∧ c = LET) ∨ (tagW h = 9 ∧ c = PROJ)) →
+      (if tcnt s₀.mem c (tierW h) ≤ idxW h then none else
+        some ((0 : Word), (0 : Word), (0 : Word), s₀.mem)) =
+        some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
+      s'.mem = s₀.mem ∧ RawOut s₀.mem a₀ h r := by
+    intro c g _ hg hcg hW'
+    by_cases hb : tcnt s₀.mem c (tierW h) ≤ idxW h
+    · rw [ite_eq_left hb] at hW'; cases hW'
+    rw [ite_eq_right hb] at hW'
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW'
+    obtain ⟨hf, -, -, hm⟩ := hW'
+    exact ⟨hm.symm, rawSimple hC hh c hsc hb (hcg hg) r hf.symm⟩
+  by_cases g0 : tagW h = 0
+  · rw [ite_eq_left g0] at hW
+    obtain ⟨h1, h2⟩ := simple BVAR _ g0 (fun _ => Or.inl ⟨g0, rfl⟩) hW
+    exact ⟨h1, h2⟩
+  rw [ite_eq_right g0] at hW
+  by_cases g1 : tagW h = 1
+  · rw [ite_eq_left g1] at hW
+    obtain ⟨h1, h2⟩ := simple FVAR _ g1 (fun _ => Or.inr (Or.inl ⟨g1, rfl⟩)) hW
+    exact ⟨h1, h2⟩
+  rw [ite_eq_right g1] at hW
+  by_cases g2 : tagW h = 2
+  · rw [ite_eq_left g2] at hW
+    obtain ⟨h1, h2⟩ := simple SORT _ g2 (fun _ => Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
+    exact ⟨h1, h2⟩
+  rw [ite_eq_right g2] at hW
+  by_cases g3 : tagW h = 3
+  · rw [ite_eq_left g3] at hW
+    by_cases hb : tcnt s₀.mem CONST (tierW h) ≤ idxW h
+    · rw [ite_eq_left hb] at hW; cases hW
+    rw [ite_eq_right hb] at hW
+    cases h1 : callW p n "pin_at" [2] s₀.mem with
+    | none => rw [h1, rawNatLitW.k_pin_at.none] at hW; cases hW
+    | some q₁ =>
+    obtain ⟨r₁, m₁⟩ := q₁
+    rw [h1, rawNatLitW.k_pin_at.arm1] at hW
+    obtain ⟨hm1, -, -, hr₁⟩ := callW_pinAt p hp.pinAt n s₀.mem 2 r₁ m₁ h1
+    subst m₁
+    cases h2 : callW p n "pin_word" [52] s₀.mem with
+    | none => rw [h2, rawNatLitW.k_pin_word.none] at hW; cases hW
+    | some q₂ =>
+    obtain ⟨r₂, m₂⟩ := q₂
+    rw [h2] at hW
+    obtain ⟨hm2, -, hr₂⟩ := callW_pinWord p hp.pinWord n s₀.mem 52 r₂ m₂ h2
+    subst m₂
+    simp only [show (2 : Word).toNat = 2 from rfl, show (52 : Word).toNat = 52 from rfl] at hr₁ hr₂
+    have hvOK : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hb⟩
+    obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.base h hh hvOK g3
+    have hrun := rawNatLit_run_const hC.pins hview
+    rw [hn, hu] at hrun
+    have hbool : ((decI (tfld s₀.mem CONST (tierW h) (idxW h) 0) : NIdx) ==
+            decI (pinW s₀.mem 3) &&
+            (decI (tfld s₀.mem CONST (tierW h) (idxW h) 1) : LsIdx) ==
+              decI (pinW s₀.mem 52)) =
+        decide (tfld s₀.mem CONST (tierW h) (idxW h) 0 = r₁.headD 0 ∧
+          tfld s₀.mem CONST (tierW h) (idxW h) 1 = r₂.headD 0) := by
+      rw [decI_beq _ _ hnl (hC.pins.names_lt 2 (by decide)), decI_beq _ _ hul hC.pins.lv_lt.1,
+        Bool.decide_and, hr₁, hr₂]
+    rw [hbool] at hrun
+    by_cases hcond : tfld s₀.mem CONST (tierW h) (idxW h) 0 = r₁.headD 0 ∧
+        tfld s₀.mem CONST (tierW h) (idxW h) 1 = r₂.headD 0
+    · rw [rawNatLitW.k_pin_word.arm1 _ _ _ _ _ _ hcond] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨hf, ho, hcn, hm⟩ := hW
+      have hpv : pv (vpool s₀.mem) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = 0 := by
+        rw [← hcn]; rfl
+      refine ⟨hm.symm, ?_, ?_, ?_⟩
+      · unfold rawDec
+        rw [ite_eq_right (by rw [← hf]; decide), hpv]
+        simpa [hcond] using hrun
+      · unfold ResH HW; rw [← hf]; decide
+      · intro _
+        refine ⟨?_, ?_⟩
+        · rw [← ho, ← hcn, rdW_ctl_top']; exact SliceOK.top0 rfl
+        · intro hpos; rw [← hcn] at hpos; simp at hpos
+    · rw [rawNatLitW.k_pin_word.arm2 _ _ _ _ _ _ hcond] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨hf, ho, hcn, hm⟩ := hW
+      refine ⟨hm.symm, RawOut.none ?_ hf.symm⟩
+      rw [decide_eq_false hcond] at hrun
+      simpa only [Bool.false_eq_true, ↓reduceIte] using hrun
+  rw [ite_eq_right g3] at hW
+  by_cases g4 : tagW h = 4
+  · rw [ite_eq_left g4] at hW
+    by_cases hb : tcnt s₀.mem APP (tierW h) ≤ idxA h
+    · rw [ite_eq_left hb] at hW; cases hW
+    rw [ite_eq_right hb] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hf, -, -, hm⟩ := hW
+    exact ⟨hm.symm, rawSimpleA hC hh hsc hb g4 r hf.symm⟩
+  rw [ite_eq_right g4] at hW
+  by_cases g5 : tagW h = 5
+  · rw [ite_eq_left g5] at hW
+    obtain ⟨h1, h2⟩ := simple LAM _ g5
+      (fun _ => Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩)))) hW
+    exact ⟨h1, h2⟩
+  rw [ite_eq_right g5] at hW
+  by_cases g6 : tagW h = 6
+  · rw [ite_eq_left g6] at hW
+    obtain ⟨h1, h2⟩ := simple FORALL _ g6
+      (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩))))) hW
+    exact ⟨h1, h2⟩
+  rw [ite_eq_right g6] at hW
+  by_cases g7 : tagW h = 7
+  · rw [ite_eq_left g7] at hW
+    obtain ⟨h1, h2⟩ := simple LET _ g7
+      (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩)))))) hW
+    exact ⟨h1, h2⟩
+  rw [ite_eq_right g7] at hW
+  by_cases g8 : tagW h = 8
+  · rw [ite_eq_left g8] at hW
+    by_cases hb : tcnt s₀.mem LIT (tierW h) ≤ idxW h
+    · rw [ite_eq_left hb] at hW; cases hW
+    rw [ite_eq_right hb] at hW
+    have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hb⟩
+    obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.base h hh hvOK g8
+    by_cases hk : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 0
+    · rw [ite_eq_left hk] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨hf, ho, hcn, hm⟩ := hW
+      obtain ⟨N, hview, hnat⟩ := hk0 hk
+      obtain ⟨-, hsl, hnorm, hpv, -⟩ := hnat
+      refine ⟨hm.symm, ?_, ?_, ?_⟩
+      · unfold rawDec
+        rw [ite_eq_right (by rw [← hf]; decide), ← ho, ← hcn, hpv]
+        exact rawNatLit_run_lit hview
+      · unfold ResH HW; rw [← hf]; decide
+      · intro _
+        refine ⟨?_, ?_⟩
+        · rw [← ho, ← hcn]; exact hsl.1
+        · rw [← ho, ← hcn]; exact hnorm
+    · rw [ite_eq_right hk] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨hf, ho, hcn, hm⟩ := hW
+      obtain ⟨s, hview⟩ := hk1 hk
+      exact ⟨hm.symm, RawOut.none (rawNatLit_run_other hview (fun N => nofun) (fun c us => nofun))
+        hf.symm⟩
+  rw [ite_eq_right g8] at hW
+  by_cases g9 : tagW h ≠ 9
+  · rw [ite_eq_left g9] at hW; cases hW
+  rw [ite_eq_right g9] at hW
+  have g9' : tagW h = 9 := by simpa using g9
+  obtain ⟨h1, h2⟩ := simple PROJ _ g9'
+    (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩)))))) hW
+  exact ⟨h1, h2⟩
 
 /-- **`raw_nat_lit` refines `rawNatLit?`**: the result is a flag and the literal's POOL slice
 (`pv`), read-only. -/
@@ -228,8 +394,9 @@ theorem callW_natFrame (hc : closedA p natA natC natFns = true) (f : FnName) (hf
     (invoke_memFrame hc n hf vs ⟨m, Locals.init []⟩) h
   exact hfr.1
 
-theorem natPredLit_inst (hp : WhnfDeltaProg' p) : InternSpec p ArenaD := by
-  sorry
+theorem natPredLit_inst (hp : WhnfDeltaProg' p) : InternSpec p ArenaD :=
+  fun a₀ n s₀ o l hA hq hn hq0 => internLit_refinesD p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind'
+    hp.litPush' hp.internLit a₀ n s₀ o l hA hq hn hq0
 
 /-- The functions of `intern_lit`: they write the `lit` table only, never the pool. -/
 def litFns : List FnName := ["intern_lit", "lit_hash", "limbs_eq", "lit_match", "lit_find", "lit_push"]
@@ -268,7 +435,16 @@ theorem callW_natPredLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
     CoreS dn m' (AM.st (natPredArm (pv (vpool s₀.mem) o.toNat cnt.toNat)) a₀) vis fe MM eb ∧
     AM.res (natPredArm (pv (vpool s₀.mem) o.toNat cnt.toNat)) a₀ = some (decE (r.headD 0)) ∧
     MemFrame natA natC s₀.mem m' ∧ PoolGrew s₀.mem m' := by
-  sorry
+  obtain ⟨s', rfl, -, hok, ⟨hD, hP⟩, hres⟩ := triple_of_callW
+    (natPredLit_refines p (fun m a => ArenaD m a ∧ PoolGrew s₀.mem m) (fun _ _ h => h.1.1.lit.1)
+      (fun m m' a hA hg => ⟨ArenaD.grow m m' hg a hA.1, hA.2.trans (PoolGrew.of_grows hg)⟩)
+      (natPredLit_instP p hp s₀.mem) hp.natLimb' hp.subBorrow'
+      hp.natTrim' hp.natSub hp.predLit n s₀ a₀ ⟨hC.arena, PoolGrew.refl _⟩ o cnt hs hC.mode) h
+  have hfr := callW_natFrame p hp.natClosed "nat_pred_lit" (by decide +kernel) n _ _ _ _ h
+  exact ⟨hok, hC.of_nat hD (Keeps.run (keeps_cpl_natPredArm _) (AM.run_of_ok _ _ hok)) hfr
+    (internE_pure_views (by rintro (⟨_, h⟩ | ⟨_, _, h⟩) <;> cases h) rfl _ (AM.run_of_ok _ _ hok)) hP,
+    hres, hfr,
+    hP⟩
 
 end refs10
 
@@ -313,7 +489,121 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
     (hnorm : Norm (vpool s₀.mem) o.toNat cnt.toNat) :
     CoreSpec p n "nat_lit_to_ctor" [o, cnt]
       (natLitToConstructor (pv (vpool s₀.mem) o.toNat cnt.toNat)) decH s₀ a₀ dn vis fe MM eb := by
-  sorry
+  apply CoreSpec.of_call
+  intro r m' hcall
+  cases n with
+  | zero => rw [callW_zero] at hcall; cases hcall
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natLitToCtor_spec p hp.toWhnfDeltaProg (n + 1) s₀ o cnt) hcall
+  by_cases hc0 : cnt = 0
+  · rw [natLitToCtorW.arm1 _ _ _ _ _ hc0] at hW
+    cases h1 : callW p n "pin_at" [2] s₀.mem with
+    | none => rw [h1, natLitToCtorW.k_pin_at.none] at hW; cases hW
+    | some q₁ =>
+    obtain ⟨r₁, m₁⟩ := q₁
+    rw [h1, natLitToCtorW.k_pin_at.arm1] at hW
+    obtain ⟨hm1, -, -, hr₁⟩ := callW_pinAt p hp.pinAt n s₀.mem 2 r₁ m₁ h1
+    subst m₁
+    have hnt : HW (r₁.headD 0) := by rw [hr₁]; exact hC.pins.names_lt 2 (by decide)
+    cases h2 : callW p n "const_e" [r₁.headD 0] s₀.mem with
+    | none => rw [h2, natLitToCtorW.k_const_e.none] at hW; cases hW
+    | some q₂ =>
+    obtain ⟨r₂, m₂⟩ := q₂
+    rw [h2, natLitToCtorW.k_const_e.arm1] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hok, hS, hres, hfr, hhw⟩ := callW_constE p hp n s₀ a₀ dn vis fe MM eb _ hC hnt r₂ m₂ h2
+    have hr₁' : r₁.headD 0 = pinW s₀.mem 3 := by
+      simp only [show (2 : Word).toNat = 2 from rfl] at hr₁; exact hr₁
+    rw [hr₁'] at hok hS hres
+    have hpv : pv (vpool s₀.mem) o.toNat cnt.toNat = 0 := by subst hc0; rfl
+    rw [hpv]
+    rw [← hm]
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · obtain ⟨hok', -, -⟩ := AM.of_run_ok _ _ _ _ ((natLitToConstructor_zero_run hC.pins).trans
+        (AM.run_of_ok _ _ hok)); exact hok'
+    · obtain ⟨-, hst', -⟩ := AM.of_run_ok _ _ _ _ ((natLitToConstructor_zero_run hC.pins).trans
+        (AM.run_of_ok _ _ hok))
+      rw [hst']; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.of_const_frame hfr⟩
+    · obtain ⟨-, -, hres'⟩ := AM.of_run_ok _ _ _ _ ((natLitToConstructor_zero_run hC.pins).trans
+        (AM.run_of_ok _ _ hok))
+      rw [hres', hres]; simp only [decH, ← hr]
+    · unfold ResH; rw [← hr]; exact hhw
+  rw [natLitToCtorW.arm2 _ _ _ _ _ hc0] at hW
+  have hpos : 0 < cnt.toNat := by
+    rcases Nat.eq_zero_or_pos cnt.toNat with h0 | h0
+    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hc0
+    · exact h0
+  obtain ⟨k, hk⟩ : ∃ k, pv (vpool s₀.mem) o.toNat cnt.toNat = k + 1 :=
+    ⟨pv (vpool s₀.mem) o.toNat cnt.toNat - 1, by have := pv_pos_of_norm _ _ _ hnorm hpos; omega⟩
+  rw [hk]
+  cases h1 : callW p n "pin_at" [3] s₀.mem with
+  | none => rw [h1, natLitToCtorW.k_pin_at_2.none] at hW; cases hW
+  | some q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  rw [h1, natLitToCtorW.k_pin_at_2.arm1] at hW
+  obtain ⟨hm1, -, -, hr₁⟩ := callW_pinAt p hp.pinAt n s₀.mem 3 r₁ m₁ h1
+  subst m₁
+  have hnt : HW (r₁.headD 0) := by rw [hr₁]; exact hC.pins.names_lt 3 (by decide)
+  cases h2 : callW p n "const_e" [r₁.headD 0] s₀.mem with
+  | none => rw [h2, natLitToCtorW.k_const_e_2.none] at hW; cases hW
+  | some q₂ =>
+  obtain ⟨r₂, m₂⟩ := q₂
+  rw [h2, natLitToCtorW.k_const_e_2.arm1] at hW
+  obtain ⟨hok, hS, hres, hfr, hhw⟩ := callW_constE p hp n s₀ a₀ dn vis fe MM eb _ hC hnt r₂ m₂ h2
+  have hr₁' : r₁.headD 0 = pinW s₀.mem 4 := by
+    simp only [show (3 : Word).toNat = 3 from rfl] at hr₁; exact hr₁
+  rw [hr₁'] at hok hS hres
+  have hPool : m₂.arr64 POOL = s₀.mem.arr64 POOL :=
+    hfr.arr_eq POOL (by simp [tier1, CREC, CSLOT, CLP, POOL]) (by decide)
+  have hPool1 : m₂.arr64 POOL1 = s₀.mem.arr64 POOL1 :=
+    hfr.arr_eq POOL1 (by simp [tier1, CREC, CSLOT, CLP, POOL1]) (by decide)
+  have hPt : m₂.ptop0 = s₀.mem.ptop0 :=
+    ptop0_congr (hfr.arr_eq PT0 (by simp [tier1, CREC, CSLOT, CLP, PT0]) (by decide))
+  have hPoolv := vpool_congr hPool hPool1
+  have hPoolc := pcap_congr' hPool hPool1
+  have hTop : m₂.top = s₀.mem.top := by
+    rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr.ctl 0 (by simp)
+  have hs₂ : SliceOK m₂ o cnt := (SliceOK_congr _ _ hTop hPt).mpr hs
+  cases h3 : callW p n "nat_pred_lit" [o, cnt] m₂ with
+  | none => rw [h3, natLitToCtorW.k_nat_pred_lit.none] at hW; cases hW
+  | some q₃ =>
+  obtain ⟨r₃, m₃⟩ := q₃
+  rw [h3, natLitToCtorW.k_nat_pred_lit.arm1] at hW
+  obtain ⟨hok3, hS3, hres3, hfr3, hP3⟩ := callW_natPredLit p hp n ⟨m₂, Locals.init []⟩ _ dn vis fe MM eb o cnt
+    hS hs₂ r₃ m₃ h3
+  rw [hPoolv, hk] at hok3 hS3 hres3
+  cases h4 : callW p n "mk_app" [r₂.headD 0, r₃.headD 0] m₃ with
+  | none => rw [h4, natLitToCtorW.k_const_e.none] at hW; cases hW
+  | some q₄ =>
+  obtain ⟨r₄, m₄⟩ := q₄
+  rw [h4, natLitToCtorW.k_const_e.arm1] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hok4, hD4, hres4, hfr4, hhw4⟩ := callW_mkApp p hp.spine n ⟨m₃, Locals.init []⟩ _ hS3.arena
+    (r₂.headD 0) (r₃.headD 0) r₄ m₄ h4
+  -- the twin runs
+  have e1 : (constE (decI (pinW s₀.mem 4))).run a₀ =
+      .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 4))) a₀) := by
+    rw [AM.run_of_ok _ _ hok, hres]; rfl
+  have e2 : (internE (.lit (.natVal k))).run (AM.st (constE (decI (pinW s₀.mem 4))) a₀) =
+      .ok (decE (r₃.headD 0), AM.st (natPredArm (k + 1)) (AM.st (constE (decI (pinW s₀.mem 4))) a₀)) :=
+    natPredArm_succ_run (by rw [AM.run_of_ok _ _ hok3, hres3])
+  have e3 : (internE (.app (decE (r₂.headD 0)) (decE (r₃.headD 0)))).run
+      (AM.st (natPredArm (k + 1)) (AM.st (constE (decI (pinW s₀.mem 4))) a₀)) =
+      .ok (decE (r₄.headD 0), AM.st (internE (.app (decE (r₂.headD 0)) (decE (r₃.headD 0))))
+        (AM.st (natPredArm (k + 1)) (AM.st (constE (decI (pinW s₀.mem 4))) a₀))) := by
+    rw [AM.run_of_ok _ _ hok4, hres4]
+  have hz := natLitToConstructor_succ_run hC.pins k _ _ _ e1 e2 e3
+  obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
+  refine ⟨hok', ?_, ?_, ?_⟩
+  · rw [hst', ← hm]
+    refine ⟨MM, hS3.of_app hD4 (Keeps.run (keeps_cpl_internApp _ _) (AM.run_of_ok _ _ hok4)) hfr4,
+      KeptAll.refl _ _, ?_⟩
+    exact ((StackKept.of_const_frame hfr).trans (StackKept.of_nat_frame hfr3 hP3)).trans
+      (StackKept.of_app_frame hfr4)
+  · rw [hres', decH, ← hr]
+  · unfold ResH; rw [← hr]; exact hhw4
 
 end refs11
 
@@ -332,25 +622,32 @@ l_model litToCtorIfNat_spec (p : Prog) (hp : WhnfDeltaProg p)
 
 theorem litToCtor_run_notlit (fe : IFEnv) (a : AState) (h : Word) (hh : HW h) (hg : tagW h ≠ 8) :
     (litToCtorIfNat fe (decE h)).run a = .ok (decE h, a) := by
-  sorry
+  have ht : ((decE h).tag == ETag.lit) = false := by rw [decE_lit_tag h hh]; simp [hg]
+  simp [litToCtorIfNat, ht, StateT.run_pure]
+  rfl
 
 theorem litToCtor_run_str (fe : IFEnv) (a : AState) (h : Word) (hh : HW h) (hg : tagW h = 8)
     (s : String) (hv : a.store.view (decE h) = some (.lit (.strVal s))) :
     (litToCtorIfNat fe (decE h)).run a = .ok (decE h, a) := by
-  sorry
+  have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
+  simp [litToCtorIfNat, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+  rfl
 
 theorem litToCtor_run_unsup (fe : IFEnv) (a a₁ : AState) (h : Word) (hh : HW h)
     (hg : tagW h = 8) (N : Nat) (hv : a.store.view (decE h) = some (.lit (.natVal N)))
     (hs : (natLitSupported fe).run a = .ok (false, a₁)) :
     (litToCtorIfNat fe (decE h)).run a = .ok (decE h, a₁) := by
-  sorry
+  have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
+  simp [litToCtorIfNat, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hs]
+  rfl
 
 theorem litToCtor_run_sup (fe : IFEnv) (a a₁ a₂ : AState) (h : Word) (hh : HW h)
     (hg : tagW h = 8) (N : Nat) (hv : a.store.view (decE h) = some (.lit (.natVal N)))
     (hs : (natLitSupported fe).run a = .ok (true, a₁)) (x : EIdx)
     (hc : (natLitToConstructor N).run a₁ = .ok (x, a₂)) :
     (litToCtorIfNat fe (decE h)).run a = .ok (x, a₂) := by
-  sorry
+  have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
+  simp [litToCtorIfNat, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hs, hc]
 
 section refs12
 variable (p : Prog)
@@ -361,7 +658,111 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) :
     CoreSpec p n "lit_to_ctor_if_nat" [vis, h] (litToCtorIfNat fe (decE h)) decH s₀ a₀ dn vis fe MM
       eb := by
-  sorry
+  apply CoreSpec.of_call
+  intro r m' hcall
+  cases n with
+  | zero => rw [callW_zero] at hcall; cases hcall
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (litToCtorIfNat_spec p hp.toWhnfDeltaProg (n + 1) s₀ vis h) hcall
+  rw [litToCtorIfNatW.eq_2] at hW
+  by_cases hg : tagW h ≠ 8
+  · rw [ite_eq_left hg] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [← hm]
+    exact (CRef.pure hC _ (litToCtor_run_notlit fe a₀ h hh hg) (by simp only [decH, ← hr]) (by
+      unfold ResH; rw [← hr]; exact hh)).core
+  rw [ite_eq_right hg] at hW
+  have hg8 : tagW h = 8 := by simpa using hg
+  by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hsc] at hW; cases hW
+  rw [ite_eq_right hsc] at hW
+  by_cases hbd : tcnt s₀.mem LIT (tierW h) ≤ idxW h
+  · rw [ite_eq_left hbd] at hW; cases hW
+  rw [ite_eq_right hbd] at hW
+  have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
+  obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.base h hh hvOK hg8
+  by_cases hk : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 0
+  · rw [ite_eq_left hk] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [← hm]
+    obtain ⟨s, hv⟩ := hk1 hk
+    exact (CRef.pure hC _ (litToCtor_run_str fe a₀ h hh hg8 s hv) (by simp only [decH, ← hr]) (by
+      unfold ResH; rw [← hr]; exact hh)).core
+  rw [ite_eq_right hk] at hW
+  have hk' : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 0 := by simpa using hk
+  obtain ⟨N, hview, hnat⟩ := hk0 hk'
+  obtain ⟨-, hsl, hnorm, hpv, -⟩ := hnat
+  cases h1 : callW p n "nat_lit_supported" [vis] s₀.mem with
+  | none => rw [h1, litToCtorIfNatW.k_nat_lit_supported.none] at hW; cases hW
+  | some q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  rw [h1] at hW
+  obtain ⟨hok1, hS1, hres1, hfr1, hrh1⟩ := callW_natLitSupported p hp n s₀ a₀ dn vis fe MM eb hC r₁ m₁ h1
+  by_cases hs0 : r₁.headD 0 = 0
+  · rw [litToCtorIfNatW.k_nat_lit_supported.arm1 _ _ _ _ _ _ _ hs0] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [← hm]
+    have hsup : (natLitSupported fe).run a₀ = .ok (false, AM.st (natLitSupported fe) a₀) := by
+      have := AM.run_of_ok _ _ hok1
+      rw [hres1] at this
+      have hdb : decBool r₁ = false := by simp only [decBool, hs0]; rfl
+      rwa [hdb] at this
+    have hz := litToCtor_run_unsup fe a₀ _ h hh hg8 N hview hsup
+    obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
+    refine CRef.core (m' := m₁) ⟨hok', by rw [hst']; exact hS1, ?_, hfr1, ?_⟩
+    · rw [hres']; simp only [decH, ← hr]
+    · unfold ResH; rw [← hr]; exact hh
+  rw [litToCtorIfNatW.k_nat_lit_supported.arm2 _ _ _ _ _ _ _ hs0] at hW
+  have hsup : (natLitSupported fe).run a₀ = .ok (true, AM.st (natLitSupported fe) a₀) := by
+    have := AM.run_of_ok _ _ hok1
+    rw [hres1] at this
+    have hdb : decBool r₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hs0
+    rwa [hdb] at this
+  have hE : m₁.arr64 REC = s₀.mem.arr64 REC :=
+    hfr1.arr_eq REC (by simp [tier1, CREC, CSLOT, CLP, REC]) (by decide)
+  have hE' : m₁.arr64 (tier1 REC) = s₀.mem.arr64 (tier1 REC) :=
+    hfr1.arr_eq (tier1 REC) (by simp [tier1, CREC, CSLOT, CLP, REC]) (by decide)
+  have hPool : m₁.arr64 POOL = s₀.mem.arr64 POOL :=
+    hfr1.arr_eq POOL (by simp [tier1, CREC, CSLOT, CLP, POOL]) (by decide)
+  have hPool1 : m₁.arr64 POOL1 = s₀.mem.arr64 POOL1 :=
+    hfr1.arr_eq POOL1 (by simp [tier1, CREC, CSLOT, CLP, POOL1]) (by decide)
+  have hPt : m₁.ptop0 = s₀.mem.ptop0 :=
+    ptop0_congr (hfr1.arr_eq PT0 (by simp [tier1, CREC, CSLOT, CLP, PT0]) (by decide))
+  have hPoolv := vpool_congr hPool hPool1
+  have hPoolc := pcap_congr' hPool hPool1
+  have hTop : m₁.top = s₀.mem.top := by
+    rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.ctl 0 (by simp)
+  simp only [tfld_arr_eq (R := LIT) hE hE'] at hW
+  cases h2 : callW p n "nat_lit_to_ctor" [tfld s₀.mem LIT (tierW h) (idxW h) 1,
+      tfld s₀.mem LIT (tierW h) (idxW h) 2] m₁ with
+  | none => rw [h2, litToCtorIfNatW.k_nat_lit_to_ctor.none] at hW; cases hW
+  | some q₂ =>
+  obtain ⟨r₂, m₂⟩ := q₂
+  rw [h2, litToCtorIfNatW.k_nat_lit_to_ctor.arm1] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  have hs₁ : SliceOK m₁ (tfld s₀.mem LIT (tierW h) (idxW h) 1)
+      (tfld s₀.mem LIT (tierW h) (idxW h) 2) := by
+    exact (SliceOK_congr _ _ hTop hPt).mpr hsl.1
+  have hn₁ : Norm (vpool m₁) (tfld s₀.mem LIT (tierW h) (idxW h) 1).toNat
+      (tfld s₀.mem LIT (tierW h) (idxW h) 2).toNat := by rw [hPoolv]; exact hnorm
+  have hctor := natLitToCtor_refines p hp n ⟨m₁, Locals.init []⟩ _ dn vis fe MM eb _ _ hS1 hs₁ hn₁
+  obtain ⟨hok2, hA2, hres2, hrw2⟩ := CoreSpec.of_callW hctor h2
+  have hc2 := AM.run_of_ok _ _ hok2
+  rw [hres2] at hc2
+  dsimp only at hc2 hA2 hrw2
+  rw [hPoolv, hpv] at hc2
+  rw [hPoolv, hpv] at hA2
+  have hz := litToCtor_run_sup fe a₀ _ _ h hh hg8 N hview hsup _ hc2
+  obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
+  refine ⟨hok', ?_, ?_, ?_⟩
+  · rw [hst', ← hm]
+    exact CoreAfter.comp (KeptAll.refl _ _) (StackKept.of_const_frame hfr1) hA2
+  · rw [hres']; simp only [decH, ← hr]
+  · unfold ResH; rw [← hr]; exact hrw2
 
 end refs12
 
@@ -375,7 +776,52 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     CoreS dn m' { a with caches := { a.caches with
         constValC := a.caches.constValC.insert (decI nm, decI us) (decE x) } } vis fe M eb ∧
       StackKept m m' := by
-  sorry
+  have hf : MemFrame [(CV : TieredArray)] [111] m m' :=
+    msetG_frame cvSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
+  have hq := memoRV_set cvSch (coreSch_wf _ _ (by decide) (by decide)) pairKey VH
+    (fun _ _ _ _ _ h => h) m a.caches.constValC hS.core.cv nm us x ⟨hn, hu⟩ (decE x) ⟨rfl, hx⟩ m' hs
+  have fr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ) (dv : Word → ν)
+      (mp : Std.HashMap κ ν), S.WF → S.arr ≠ CV → S.cs ≠ 111 → MemoRG S K dv m mp →
+      MemoRG S K dv m' mp :=
+    fun S K dv mp hS' h1 h2 hR =>
+      memoRV_frame S hS' K _ [(CV : TieredArray)] [111] (by simpa using h1) (by simpa using h2) m m' hf
+        (fun _ _ h => h) mp hR
+  have mr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
+      {VR : Mem → Word → ν → Prop} {M₀ : Std.HashMap (κ × Word) ν} {t te : Std.HashMap κ ν}, S.WF →
+      VConst VR → S.arr ≠ CV → S.cs ≠ 111 → ModeR S K VR m M₀ eb t te →
+      ModeR S K VR m' M₀ eb t te :=
+    fun hS' hV h1 h2 h => h.frame hS' hV (by simpa using h1) (by simpa using h2) hf
+  have frv : ∀ {κ : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ)
+      (mp : Std.HashMap κ EIdx), S.WF → S.arr ≠ CV → S.cs ≠ 111 → MemoRV S K VH m mp →
+      MemoRV S K VH m' mp :=
+    fun S K mp hS' h1 h2 hR =>
+      memoRV_frame S hS' K _ [(CV : TieredArray)] [111] (by simpa using h1) (by simpa using h2) m m' hf
+        (vh_const m m') mp hR
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by decide) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
+  refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [(CV : TieredArray)] [111] (by decide) (by simp) m m' hf a
+        hS.arena.base), DerR.of_store _ _ _ (DerR.frameM [(CV : TieredArray)] [111] m m' hf (by decide) a hS.arena.der) rfl⟩,
+      ⟨mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wc,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wk,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wh,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.inf,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.io,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vb_const (by decide) (by decide) hS.core.de,
+        hS.core.eb1,
+        frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.ct,
+        hq,
+        frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
+        fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lq,
+        fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lsq⟩,
+      hS.pins.congr (hf.arr PINS (by decide) (by decide)),
+      hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
+        (fun x hx => by simp at hx; subst hx; decide) hf,
+      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
+      (hS.den.frameE (hf.arr EREC (by decide) (by decide))).caches rfl rfl rfl,
+      hS.mode.frame hf (by simp) (by simp)⟩,
+    StackKept.of_frame hf⟩
+
 
 /-- The model of `const_val_at`. -/
 l_model constValAt_spec (p : Prog) (hp : WhnfDeltaProg p)
@@ -408,7 +854,56 @@ theorem callW_constValAt (hp : WhnfDeltaProg p) (hlp : InstLPOK p) (n : Nat) (s�
     (h : callW p n "const_val_at" [nm, po, pl, value, us] s₀.mem = some (r, m')) :
     CoreRef (constValAt (decI nm) lps (decE value) (decI us)) a₀ decH dn s₀.mem vis fe MM eb r m'
       ResH := by
-  sorry
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (constValAt_spec p hp (n + 1) s₀ nm po pl value us) h
+  rw [constValAtW.eq_2] at hW
+  by_cases h0 : mfindG cvSch s₀.mem nm us = []
+  · rw [ite_eq_left h0] at hW; cases hW
+  rw [ite_eq_right h0] at hW
+  have hf := memoRV_findP (k₁ := .name) (k₂ := .levels) hC.core.cv nm us hnm hu h0
+  by_cases h1 : (mfindG cvSch s₀.mem nm us).headD 0 ≠ 0
+  · rw [ite_eq_left h1] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [← hm]
+    obtain ⟨hhit, hbd⟩ := hf.1 h1
+    refine (CRef.pure hC _ (constValAt_run_hit a₀ _ _ _ _ _ hhit) ?_ ?_).core
+    · simp only [decH, ← hr]; rfl
+    · unfold ResH; rw [← hr]; exact hbd
+  rw [ite_eq_right h1] at hW
+  have hmiss := hf.2 (by simpa using h1)
+  cases hcall : callW p n "inst_lp" [po, pl, us, value] s₀.mem with
+  | none => rw [hcall, constValAtW.k_inst_lp.none] at hW; cases hW
+  | some q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  rw [hcall, constValAtW.k_inst_lp.eq_2] at hW
+  obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ :=
+    CoreSpec.of_callW (hlp n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pl us value lps hC hv
+      hu hlps) hcall
+  by_cases hf1 : mfindG cvSch m₁ nm us = []
+  · rw [ite_eq_left hf1] at hW; cases hW
+  rw [ite_eq_right hf1] at hW
+  cases hput : mputG cvSch m₁ nm us (r₁.headD 0) ((mfindG cvSch m₁ nm us).headD 0)
+      ((mfindG cvSch m₁ nm us).tail.headD 0) with
+  | none => rw [hput, constValAtW.k_cv_put.none] at hW; cases hW
+  | some m₂ =>
+  rw [hput, constValAtW.k_cv_put.arm1] at hW
+  have hset : msetG cvSch m₁ nm us (r₁.headD 0) = some m₂ := by
+    unfold msetG; rw [ite_eq_right hf1]; exact hput
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  have hrun := AM.run_of_ok _ _ hok
+  rw [hres] at hrun
+  have hz := constValAt_run_miss a₀ _ (decI nm) lps (decE value) (decI us) _ hmiss hrun
+  obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
+  obtain ⟨hS₂, hSt₂⟩ := hS₁.set_cv nm us (r₁.headD 0) hnm hu hrw hset
+  refine ⟨hok', ?_, ?_, ?_⟩
+  · rw [hst', ← hm]
+    exact ⟨M', hS₂, hK₁, hSt₁.trans hSt₂⟩
+  · rw [hres']; simp only [decH, ← hr]
+  · unfold ResH; rw [← hr]; exact hrw
 
 theorem constValAt_refines' (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
@@ -449,7 +944,14 @@ theorem unfoldDefnAt_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St
     ⦃fun r s' => LocEq s' s₀ ∧
       unfoldDefnAtW p n s₀.mem e nw usw q = some (r.headD 0, r.tail.headD 0, s'.mem) ∧
       ((r.headD 0 ≠ 0) → (136 : Word).toNat < (s'.mem.arr64 CTL).size); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp.unfoldDefnAt]
+  simp only [callFn, unfoldDefnAtL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64,
+      callW_spec p n "const_val_at", callW_spec p n "get_app_args",
+      callW_spec p n "mk_app_n"] <;>
+    finish (gen := 30) [unfoldDefnAtW, tierW, idxW]
 
 /-- The model of `unfold_definition`: `(flag, result, memory)`. -/
 l_model unfoldDefinition_spec (p : Prog) (hp : WhnfDeltaProg p)
@@ -534,7 +1036,134 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     (h : callW p n "unfold_defn_at" [e, nw, usw, q] s₀.mem = some (r, m')) :
     CoreRef (unfoldTailT (decI nw) (decI usw) cv value (decE e)) a₀ decOptR dn s₀.mem vis fe MM eb r
       m' ResW := by
-  sorry
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ n =>
+  obtain ⟨s', rfl, -, hW, h136⟩ := triple_of_callW (unfoldDefnAt_spec p hp.toWhnfDeltaProg n s₀ e nw usw q) h
+  obtain ⟨hdefn, -, -, -, -, -⟩ := decCI_split hci (erecP_ext _) hC.erec
+  obtain ⟨cv', v', hint', hci_eq, hcv, hv', hvl⟩ := hdefn hk1
+  injection hci_eq with hcv_eq hv_eq hh_eq
+  subst hcv_eq hv_eq
+  obtain ⟨hslice, hlen, -, -⟩ := decCV_rd (erecP_ext s₀.mem) hC.erec hcv
+  unfold unfoldDefnAtW at hW
+  by_cases g1 : tagW usw ≠ 0
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
+  have g1' : tagW usw = 0 := by simpa using g1
+  by_cases g2 : tierW usw ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
+  by_cases g3 : tcnt s₀.mem LVLS (tierW usw) ≤ idxW usw
+  · rw [ite_eq_left g3] at hW; cases hW
+  rw [ite_eq_right g3] at hW
+  -- the level list's view
+  have hls : lsNodeW s₀.mem usw = [tfld s₀.mem LVLS (tierW usw) (idxW usw) 0,
+      tfld s₀.mem LVLS (tierW usw) (idxW usw) 1] := by
+    unfold lsNodeW
+    rw [ite_eq_right (by simpa using g1'), ite_eq_right g2, ite_eq_right g3]
+  have hvl' := lsNodeW_viewLen hC.arena.base hus hls
+  rw [LsStore.viewLen_eq_map] at hvl'
+  obtain ⟨l, hview, hllen⟩ : ∃ l, a₀.store.lss.view (decI usw) = some l ∧
+      l.length = (tfld s₀.mem LVLS (tierW usw) (idxW usw) 1).toNat := by
+    cases hv : a₀.store.lss.view (decI usw) with
+    | none => rw [hv] at hvl'; cases hvl'
+    | some l => rw [hv] at hvl'; exact ⟨l, rfl, Option.some.inj hvl'⟩
+  by_cases g4 : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 ≠
+      rdW (s₀.mem.arr64 EREC) (q + 3)
+  · rw [ite_eq_left g4] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr0, hr1, hm⟩ := hW
+    rw [← hm]
+    refine (CRef.pure hC _ (unfoldTail_run_ne hview ?_) ?_ ?_).core
+    · intro hc
+      apply g4
+      apply UInt64.toNat_inj.mp
+      rw [← hllen, hc, hlen]
+    · simp only [decOptR, decOpt, ← hr0]; rfl
+    · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
+  rw [ite_eq_right g4] at hW
+  have g4' : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 =
+      rdW (s₀.mem.arr64 EREC) (q + 3) := by simpa using g4
+  have hleneq : l.length = cv.levelParams.length := by rw [hllen, hlen, g4']
+  -- const_val_at
+  cases h1 : callW p n "const_val_at" [nw, rdW (s₀.mem.arr64 EREC) (q + 2),
+      rdW (s₀.mem.arr64 EREC) (q + 3), rdW (s₀.mem.arr64 EREC) (q + 5), usw] s₀.mem with
+  | none => rw [h1] at hW; cases hW
+  | some q₁ =>
+  obtain ⟨r₃, m₃⟩ := q₁
+  rw [h1] at hW
+  dsimp only at hW
+  obtain ⟨hok1, ⟨M', hS₃, hK₃, hSt₃⟩, hres1, hrh1⟩ := callW_constValAt p hp.toWhnfDeltaProg hlp n s₀ a₀ dn vis
+    fe MM eb nw _ _ _ usw cv.levelParams hC hnw hvl hus hslice r₃ m₃ h1
+  have hv'' : value = decE (rdW (s₀.mem.arr64 EREC) (q + 5)) := hv'
+  rw [← hv''] at hok1 hS₃ hres1
+  have hrun1 := AM.run_of_ok _ _ hok1
+  rw [hres1] at hrun1
+  -- get_app_args
+  cases h2 : callW p n "get_app_args" [e] m₃ with
+  | none => rw [h2] at hW; cases hW
+  | some q₂ =>
+  obtain ⟨r₄, m₄⟩ := q₂
+  rw [h2] at hW
+  dsimp only at hW
+  obtain ⟨t₂, ht₂, -, hfr₂, hgrew, -, -, xs, hxrun, hsp⟩ := triple_of_callW
+    (getAppArgs_refines p hp.spine n ⟨m₃, Locals.init []⟩ _ hS₃.arena.base e he hS₃.spn) h2
+  subst ht₂
+  have hS₄ : CoreS dn t₂.mem _ vis fe M' eb :=
+    hS₃.frame_stk hfr₂ (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
+  -- mk_app_n
+  cases h3 : callW p n "mk_app_n" [r₃.headD 0, r₄.headD 0, r₄.tail.headD 0] t₂.mem with
+  | none => rw [h3] at hW; cases hW
+  | some q₃ =>
+  obtain ⟨r₅, m₅⟩ := q₃
+  rw [h3] at hW
+  dsimp only at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr0, hr1, hm⟩ := hW
+  obtain ⟨hok3, hD3, hres3, hfr3, hhw3⟩ := callW_mkAppN p hp.spine n ⟨t₂.mem, Locals.init []⟩ _
+    hS₄.arena (r₃.headD 0) (r₄.headD 0) (r₄.tail.headD 0) xs.toArray hrh1 hsp r₅ m₅ h3
+  rw [List.toList_toArray] at hok3 hD3 hres3
+  have e0 : (constValAt (decI nw) cv.levelParams value (decI usw)).run a₀ =
+      .ok (decE (r₃.headD 0), AM.st (constValAt (decI nw) cv.levelParams value (decI usw)) a₀) := by
+    rw [hrun1]; rfl
+  have e2 : (mkAppN (decE (r₃.headD 0)) xs).run
+      (AM.st (constValAt (decI nw) cv.levelParams value (decI usw)) a₀) =
+      .ok (decE (r₅.headD 0), AM.st (mkAppN (decE (r₃.headD 0)) xs)
+        (AM.st (constValAt (decI nw) cv.levelParams value (decI usw)) a₀)) := by
+    rw [AM.run_of_ok _ _ hok3, hres3]
+  have hz := unfoldTail_run_ok hview hleneq e0 hxrun e2
+  obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
+  have hcpl : cpl (AM.st (mkAppN (decE (r₃.headD 0)) xs)
+      (AM.st (constValAt (decI nw) cv.levelParams value (decI usw)) a₀)) =
+      cpl (AM.st (constValAt (decI nw) cv.levelParams value (decI usw)) a₀) := by
+    have := Keeps.run (keeps_cpl_mkAppNFrom (decE (r₃.headD 0)) xs.toArray 0)
+      (a := AM.st (constValAt (decI nw) cv.levelParams value (decI usw)) a₀)
+      (by rw [mkAppNFrom_eq_mkAppN, List.toList_toArray]; exact AM.run_of_ok _ _ hok3)
+    simpa using this
+  have hS₅ := hS₄.of_app hD3 hcpl hfr3
+  have hspn5 : m₅.arr64 SPN = t₂.mem.arr64 SPN :=
+    hfr3.1 SPN (by simp [tier1, AREC, ASLOT, ADER, SPN]) (by decide)
+  have hfr6 : MemFrame [SPN] [136] m₅ (m₅.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)) :=
+    (MemFrame.setCtl m₅ 136 _).mono (by simp) (by simp)
+  have hS₆ : CoreS dn (m₅.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)) _ vis fe M' eb :=
+    hS₅.frame_stk hfr6 (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
+  have h136' : (136 : Word).toNat < (m₅.arr64 CTL).size := by
+    have := h136 (by rw [← hr0]; decide)
+    rw [← hm, size_set64] at this; exact this
+  have hStK : StackKept m₃ (m₅.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)) := by
+    apply StackKept.restore _ (by rw [hspn5, hgrew.size])
+      (hgrew.bstk.trans (BKept.of_frame hfr3 (by decide) (by decide)))
+      (hgrew.pool.trans (PoolGrew.of_frame hfr3 (by decide) (by decide))) h136'
+    intro i hi
+    simp only [spW, hspn5]
+    exact hgrew.below i hi
+  refine ⟨hok', ?_, ?_, ?_⟩
+  · rw [hst', ← hm]
+    exact ⟨M', hS₆, hK₃, hSt₃.trans hStK⟩
+  · rw [hres']
+    simp only [decOptR, decOpt, ← hr0, ← hr1]
+    simp
+  · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, hhw3⟩
 
 end refs15
 
@@ -574,7 +1203,99 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
     (eb e : Word) (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (r : List Word) (m' : Mem)
     (h : callW p n "unfold_definition" [vis, e] s₀.mem = some (r, m')) :
     CoreRef (unfoldDefinition fe (decE e)) a₀ decOptR dn s₀.mem vis fe MM eb r m' ResW := by
-  sorry
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (unfoldDefinition_spec p hp.toWhnfDeltaProg (n + 1) s₀ vis e) h
+  rw [unfoldDefinitionW.arm1] at hW
+  cases h1 : callW p n "get_app_fn" [e] s₀.mem with
+  | none => rw [h1, unfoldDefinitionW.k_get_app_fn.none] at hW; cases hW
+  | some q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  rw [h1, unfoldDefinitionW.k_get_app_fn.eq_2] at hW
+  obtain ⟨t₁, ht₁, hm₁, -, hhw1, hgf⟩ := triple_of_callW
+    (getAppFn_refines p hp.spine n s₀ a₀ hC.arena.base e he) h1
+  have hm1 : m₁ = s₀.mem := by rw [← ht₁, hm₁]
+  subst hm1
+  by_cases g0 : tagW (r₁.headD 0) ≠ 3
+  · rw [ite_eq_left g0] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr0, hr1, hm⟩ := hW
+    rw [← hm]
+    have ht : ((decE (r₁.headD 0)).tag == ETag.const) = false := by
+      rw [decE_const_tag _ hhw1]; exact beq_eq_false_iff_ne.mpr g0
+    refine (CRef.pure hC _ (unfoldDef_run_notconst fe _ _ a₀ hgf ht) ?_ ?_).core
+    · simp only [decOptR, decOpt, ← hr0]; rfl
+    · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
+  rw [ite_eq_right g0] at hW
+  have g0' : tagW (r₁.headD 0) = 3 := by simpa using g0
+  have ht : ((decE (r₁.headD 0)).tag == ETag.const) = true := by
+    rw [decE_const_tag _ hhw1]; exact beq_iff_eq.mpr g0'
+  by_cases g1 : tierW (r₁.headD 0) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
+  by_cases g2 : tcnt s₀.mem CONST (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
+  have hvOK : viewOK s₀.mem (r₁.headD 0) CONST := ⟨g1, by simpa using g2⟩
+  obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
+    view_const_words s₀.mem a₀ hC.arena.base (r₁.headD 0) hhw1 hvOK g0'
+  cases h2 : callW p n "env_find" [tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, vis] s₀.mem with
+  | none => rw [h2, unfoldDefinitionW.k_env_find.none] at hW; cases hW
+  | some q₂ =>
+  obtain ⟨r₂, m₂⟩ := q₂
+  rw [h2, unfoldDefinitionW.k_env_find.eq_2] at hW
+  obtain ⟨hm2, hfind, hdec⟩ := callW_envFind p hp n ⟨s₀.mem, Locals.init []⟩ vis _ hC.env hnl r₂ m₂ h2
+  subst hm2
+  by_cases g3 : r₂.headD 0 = 0
+  · rw [ite_eq_left g3] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr0, hr1, hm⟩ := hW
+    rw [← hm]
+    have hnone : fe.find? n_ = none := by
+      rw [hn, hfind]; simp only [decFound, g3, ↓reduceIte]
+    refine (CRef.pure hC _ (unfoldDef_run_nodefn fe _ _ a₀ n_ us_ hgf ht hview
+      (fun cv v hint hh => by rw [hnone] at hh; cases hh)) ?_ ?_).core
+    · simp only [decOptR, decOpt, ← hr0]; rfl
+    · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
+  rw [ite_eq_right g3] at hW
+  obtain ⟨ci, hci⟩ := hdec g3
+  have hfind' : fe.find? n_ = some ci := by
+    rw [hn, hfind]; simp only [decFound, g3, ↓reduceIte]; exact hci
+  obtain ⟨hdefn, hndefn, -, -, -, -⟩ := decCI_split hci (erecP_ext _) hC.erec
+  by_cases g4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 1
+  · rw [ite_eq_left g4] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr0, hr1, hm⟩ := hW
+    rw [← hm]
+    refine (CRef.pure hC _ (unfoldDef_run_nodefn fe _ _ a₀ n_ us_ hgf ht hview
+      (fun cv v hint hh => hndefn g4 cv v hint (by rw [hfind'] at hh; exact Option.some.inj hh))) ?_ ?_).core
+    · simp only [decOptR, decOpt, ← hr0]; rfl
+    · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
+  rw [ite_eq_right g4] at hW
+  have g4' : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 1 := by simpa using g4
+  obtain ⟨cv, value, hint, rfl, hcv, hv', hvl⟩ := hdefn g4'
+  cases h3 : callW p n "unfold_defn_at" [e, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1, r₂.tail.headD 0] s₀.mem with
+  | none => rw [h3, unfoldDefinitionW.k_unfold_defn_at.none] at hW; cases hW
+  | some q₃ =>
+  obtain ⟨r₃, m₃⟩ := q₃
+  rw [h3, unfoldDefinitionW.k_unfold_defn_at.arm1] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr0, hr1, hm⟩ := hW
+  rw [← hm]
+  have hci' : decCI (erecP s₀.mem) (r₂.tail.headD 0).toNat = some (.defnInfo cv value hint) := hci
+  have hcore := callW_unfoldDefnAt p hp hlp n s₀ a₀ dn vis fe MM eb e _ _ (r₂.tail.headD 0) cv value hint
+    hC he hnl hul hci' g4' r₃ m₃ h3
+  have hrun := unfoldDef_run_tail fe (decE e) (decE (r₁.headD 0)) a₀ n_ us_ cv value hint hgf ht hview
+    hfind'
+  rw [hn, hu] at hrun
+  obtain ⟨hok, hst, hres⟩ := AM.congr_run hrun
+  obtain ⟨hok', hA, hres', hrw⟩ := hcore
+  have hf : fe.find? n_ = some (.defnInfo cv value hint) := hfind'
+  refine ⟨by rw [hok]; exact hok', ?_, ?_, ?_⟩
+  · rw [hst]; exact hA
+  · rw [hres, hres']; simp only [decOptR, ← hr0, ← hr1]
+  · unfold ResW at hrw ⊢; rw [← hr0, ← hr1]; exact hrw
 
 /-- **`unfold_definition` refines `unfoldDefinition`**, given the stub `inst_lp`'s spec. -/
 theorem unfoldDefinition_refines' (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
