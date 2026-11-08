@@ -78,7 +78,6 @@ def forallCS : ConsSch where
   fname := "forall_find"
   pname := "forall_push"
   nk := 2
-  exact := true
   kpk := true
   mc := condOf (lblk (t, ty, body, h, n, j, d, v, b) {
     if (FAREC⟨t⟩[v - 1] & 4294967295) == ty && (FAREC⟨t⟩[v - 1] >> 32) == body { skip } })
@@ -86,6 +85,7 @@ def forallCS : ConsSch where
   room := condOf (lblk (t, ty, body, j, c) { if len(FAREC⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ (FAREC⟨t⟩[i] & 4294967295)) * ⟪fnvPrime⟫ ^ (FAREC⟨t⟩[i] >> 32)) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 31) & 1 }))
   mtM m ks t i := famatchW (m.arr64 (tierA FAREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := forallHashW (ks.getD 0 0) (ks.getD 1 0)
@@ -200,9 +200,9 @@ theorem forallOK : ConsOK p forallCS where
   colA := by simp [forallCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [forallCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [forallCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [forallCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, fahash, forallHashW]
 
 theorem fapushOK_eqC (m : Mem) (t : Word) : fapushOK m t = pushOKC forallCS m t := by
   simp only [fapushOK, pushOKC, forallCS, facnt, cntC, ← decide_not, UInt64.not_le]; rfl

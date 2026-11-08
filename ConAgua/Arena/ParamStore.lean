@@ -65,12 +65,12 @@ def paramCS : ConsSch where
   fname := "param_find"
   pname := "param_push"
   nk := 1
-  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) { if PREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) { if len(PREC⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := (⟪fnvBasis⟫ ^ PREC⟨t⟩[i]) * ⟪fnvPrime⟫ })
   skipW := none
   mtM m ks t i := pmatchW (m.arr64 (tierA PREC t)) t i (ks.getD 0 0)
   qhM _ ks := paramHashW (ks.getD 0 0)
@@ -165,9 +165,9 @@ theorem paramOK : ConsOK p paramCS where
   colA := by simp [paramCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [paramCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [paramCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [paramCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, phash, paramHashW]
 
 theorem ppushOK_eqC (m : Mem) (t : Word) : ppushOK m t = pushOKC paramCS m t := by
   simp only [ppushOK, pushOKC, pcnt, cntC, paramCS, ← decide_not, UInt64.not_le]; rfl

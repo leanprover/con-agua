@@ -128,6 +128,7 @@ def nstrCS : ConsSch where
     h := call lit_hash(o, l);
     h := (h ^ q) * ⟪fnvPrime⟫
   }
+  hrec := rhsOf (lblk (t, i, h) { h := NSREC⟨t⟩[i * 4 + 3] })
   skipW := none
   mtM m ks t i := nsmatchW (m.arr64 (tierA NSREC t)) (tpool m) t i (ks.getD 0 0) (ks.getD 1 0)
     (ks.getD 2 0) (ks.getD 3 0)
@@ -212,9 +213,9 @@ theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS wh
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
   ihashG := fun h => by simp [nstrCS] at h
-  qpure := fun _ h => by simp [nstrCS] at h
+  qpure := fun h => by simp [nstrCS] at h
   mloc := fun _ => by simp [nstrCS]
-  exnk := fun h => by simp [nstrCS] at h
+  hrec := fun s => by simp [nstrCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, nshash]
   ihash := by
     intro n s₀
     apply triple_pre_and

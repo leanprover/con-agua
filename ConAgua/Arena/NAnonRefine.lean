@@ -131,17 +131,6 @@ theorem nanonCS_wf : nanonCS.WF where
   colRoom A h := by simp [nanonCS] at h
   room m t h := (napushOK_room m t ((napushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nanonCS]
-  ex _ := {
-    nk := by decide
-    nkw := by decide
-    kpk := fun h => absurd h (by decide)
-    mt := by
-      intro m ks h t i hl
-      obtain rfl := list_zero ks (by simpa [nanonCS] using hl)
-      simp [nanonCS, namatchW, fieldsL]
-    hs := by intro m t i; simp [nanonCS, namatchW, nahash, fieldsL]
-    qh := fun _ _ _ => rfl
-    vs := by intro ks h hl f hf; simp [nanonCS, nkW] at hf }
 
 /-! ## `intern_nanon` refines `internNNode .anonymous` -/
 

@@ -13,8 +13,8 @@ import Std.Tactic.BVDecide.Normalize.Prop
 
 The word-level vocabulary of the cons tables (`ConsLib.lean`): `rdW` (a word, `0` past the end),
 `homeW` (con-ron's `home_index`: the multiply-xor finaliser, then Lemire's range reduction), the
-scratch tier's slot base `CTL[62]` (`SCB`, `baseW`, `slotRd`, `slotV`), the initial slot count
-`SN0`, and `shiftS` (a block spliced into a function with its variables moved past the
+key's fragment `fragW` (con-ron's `frag_of`), the scratch tier's slot base `CTL[62]` (`SCB`,
+`baseW`, `slotRd`, `slotV`), the initial slot count `SN0`, and `shiftS` (a block spliced into a function with its variables moved past the
 function's own). The slot layout and the growth are `ConsLib.lean`'s; their models are
 `SlotGrowSpec.lean`'s.
 -/
@@ -43,10 +43,20 @@ of the product with `n` (Lemire's range reduction) in place of the power-of-two 
 def homeW (h n : Word) : Word :=
   UInt64.ofNat (((h * golden) ^^^ ((h * golden) >>> 32)).toNat * n.toNat / 2 ^ 64)
 
+/-- **The fragment** of a key's hash `h`, kept in a slot's top 16 bits (con-ron's `frag_of`, task
+#148): bits 31–16 of `h * golden`. con-ron takes the top 16 bits, the ones its masked home uses
+least; `homeW` uses the top bits, so these are the low half's upper 16, which no home of a table
+below `2^32` slots uses. -/
+def fragW (h : Word) : Word := ((h * golden) >>> 16) &&& 65535
+
+/-- The value part of a slot word: its low 48 bits (the fragment is above them). -/
+def VMASK : Word := 281474976710655
+
 /-- The `CTL` word of the scratch tier's **slot base** `B` (`scratch_reset` adds `2^32`). A slot of
-tier `t` holds `B t + i + 1` for node `i`, with `B 0 = 0` and `B 1 = CTL[62]`; a slot word at or
-below the base is free. So the scratch tier is emptied by raising its base: every old slot falls
-at or below the new base, and no slot is zeroed. -/
+tier `t` holds the value `B t + i + 1` for node `i` in its low 48 bits (`VMASK`), with `B 0 = 0`
+and `B 1 = CTL[62]` (bits 46–32: the stamp); a slot whose value is at or below the base is free.
+So the scratch tier is emptied by raising its base: every old slot falls at or below the new
+base, and no slot is zeroed. -/
 abbrev SCB : Word := 62
 
 /-- The slot base of tier `t` (`t ≤ 1`): `CTL[62] * t`. -/
@@ -55,27 +65,27 @@ def baseW (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) SCB * t
 /-- A slot word `v` against the base `b`: `0` (free) at or below `b`, else `i + 1`. -/
 def slotRd (v b : Word) : Word := if v ≤ b then 0 else v - b
 
-/-- Slot word `k` of `sl` against the base `b`. -/
-def slotV (sl : Array Word) (b k : Word) : Word := slotRd (rdW sl k) b
+/-- Slot word `k` of `sl` against the base `b`: its value part (`VMASK`) read against `b`. -/
+def slotV (sl : Array Word) (b k : Word) : Word := slotRd (rdW sl k &&& VMASK) b
 
 /-- The mark of a slot waiting to be re-inserted by the in-place growth (`ConsLib.lean`'s
-`kgrowB`): bit 63 of its value word (a live value word, `B t + i + 1`, is below `2^63`). -/
-def MARK : Word := 9223372036854775808
+`kgrowB`): bit 47 of its value (a live value, `B t + i + 1`, is below `2^47`; the fragment is
+above). -/
+def MARK : Word := 140737488355328
 
 /-- The initial slot count of a tier (its count word `0`). -/
 def SN0 : Word := 8
 
-/-- **The slot arrays' minimum length** (`ConsLib.lean`'s layout): the two initial tables of `SN0`
-slots (two words each) on their sides of the middle, tier 0's from word 4 (`[4, 20)` below
-`len / 2`, `[len - 16, len)` from it). The entry stub checks it (`capCond`), the relation needs it
-(`consR_init`), every test memory below uses it. -/
+/-- **The slot arrays' minimum length** (`ConsLib.lean`'s layout): the count and offset words
+and the initial table of `SN0` slots, with room to spare (`2 + SN0 = 10` words suffice). The entry
+stub checks it (`capCond`), the relation needs it (`consR_init`), every test memory below uses
+it. -/
 def consMinWords : Nat := 18
 
 /-- The slot arrays of the `#guard` test memories that intern a few nodes per tier (no growth). -/
 def consTestWords : Nat := 2 * consMinWords
 
-/-- The slot arrays of the test memories whose tier 0 grows once (to `2 SN0` slots at offset
-`8 SN0`, ending at word `4 + 12 SN0` below the middle). -/
+/-- The slot arrays of the test memories whose tier 0 grows once (to `2 SN0` slots in place). -/
 def consGrowWords : Nat := 2 + 12 * 8
 
 /-! ## Tier arrays

@@ -97,16 +97,16 @@ theorem triple_pre_and {α : Type} {x : M α} {s₀ : St} {K : Prop} {Q : α →
 
 /-! ## The probe model -/
 
-/-- The probe of a tier's table (first word `r`, `n` slots, slot base `b`) for the key word `q`
-from slot `j` after `d` steps, for a node match `mt` (not run on an exact table, `ex`):
-`[1, i, j, d]` (node `i` at slot `j`, its key word `q`), `[0, 0, j, d]` (free slot `j`), `[]` (no
-free slot in `n` steps; the find aborts). -/
-def cprobeW (sl : Array Word) (mt : Word → Bool) (ex : Bool) (q b n r j d : Word) : List Word :=
+/-- The probe of a tier's table (first word `r`, `n` slots, slot base `b`) for the fragment `q`
+from slot `j` after `d` steps, for a node match `mt` (run on a live slot with the fragment `q`):
+`[1, i, j, d]` (node `i` at slot `j`), `[0, 0, j, d]` (free slot `j`), `[]` (no free slot in `n`
+steps; the find aborts). -/
+def cprobeW (sl : Array Word) (mt : Word → Bool) (q b n r j d : Word) : List Word :=
   if d < n then
-    if slotV sl b (r + j * 2) = 0 then [0, 0, j, d]
-    else if rdW sl (r + j * 2 + 1) = q ∧ (ex = true ∨ mt (slotV sl b (r + j * 2) - 1) = true) then
-      [1, slotV sl b (r + j * 2) - 1, j, d]
-    else cprobeW sl mt ex q b n r ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (r + j) = 0 then [0, 0, j, d]
+    else if rdW sl (r + j) >>> 48 = q ∧ mt (slotV sl b (r + j) - 1) = true then
+      [1, slotV sl b (r + j) - 1, j, d]
+    else cprobeW sl mt q b n r ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -117,76 +117,49 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl : Array Word) (mt : Word → Bool) (ex : Bool) (q b n r j d : Word)
+variable (sl : Array Word) (mt : Word → Bool) (q b n r j d : Word)
 
-theorem cprobeW_free (hd : d < n) (hv : rdW sl (r + j * 2) ≤ b) :
-    cprobeW sl mt ex q b n r j d = [0, 0, j, d] := by
+theorem cprobeW_free (hd : d < n) (hv : rdW sl (r + j) &&& VMASK ≤ b) :
+    cprobeW sl mt q b n r j d = [0, 0, j, d] := by
   rw [cprobeW]; simp [hd, slotV, slotRd, hv]
 
-theorem cprobeW_hitX (hd : d < n) (hv : ¬ rdW sl (r + j * 2) ≤ b)
-    (hk : rdW sl (r + j * 2 + 1) = q) (he : ex = true) :
-    cprobeW sl mt ex q b n r j d = [1, rdW sl (r + j * 2) - b - 1, j, d] := by
-  have ne : rdW sl (r + j * 2) - b ≠ 0 := fun h => hv (by grind)
-  rw [cprobeW]; simp [hd, slotV, slotRd, hv, ne, hk, he]
-
-theorem cprobeW_hitM (hd : d < n) (hv : ¬ rdW sl (r + j * 2) ≤ b)
-    (hk : rdW sl (r + j * 2 + 1) = q) (hm : mt (rdW sl (r + j * 2) - b - 1) = true) :
-    cprobeW sl mt ex q b n r j d = [1, rdW sl (r + j * 2) - b - 1, j, d] := by
-  have ne : rdW sl (r + j * 2) - b ≠ 0 := fun h => hv (by grind)
+theorem cprobeW_hitM (hd : d < n) (hv : ¬ rdW sl (r + j) &&& VMASK ≤ b)
+    (hk : rdW sl (r + j) >>> 48 = q) (hm : mt ((rdW sl (r + j) &&& VMASK) - b - 1) = true) :
+    cprobeW sl mt q b n r j d = [1, (rdW sl (r + j) &&& VMASK) - b - 1, j, d] := by
+  have ne : (rdW sl (r + j) &&& VMASK) - b ≠ 0 := fun h => hv (by grind)
   rw [cprobeW]; simp [hd, slotV, slotRd, hv, ne, hk, hm]
 
-theorem cprobeW_nextK (j' d' : Word) (hd : d < n) (hv : ¬ rdW sl (r + j * 2) ≤ b)
-    (hk : ¬ rdW sl (r + j * 2 + 1) = q)
+theorem cprobeW_nextK (j' d' : Word) (hd : d < n) (hv : ¬ rdW sl (r + j) &&& VMASK ≤ b)
+    (hk : ¬ rdW sl (r + j) >>> 48 = q)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    cprobeW sl mt ex q b n r j d = cprobeW sl mt ex q b n r j' d' := by
+    cprobeW sl mt q b n r j d = cprobeW sl mt q b n r j' d' := by
   subst hj' hd'
-  have ne : rdW sl (r + j * 2) - b ≠ 0 := fun h => hv (by grind)
+  have ne : (rdW sl (r + j) &&& VMASK) - b ≠ 0 := fun h => hv (by grind)
   rw [cprobeW]; simp [hd, slotV, slotRd, hv, ne, hk]
 
-theorem cprobeW_nextM (j' d' : Word) (hd : d < n) (hv : ¬ rdW sl (r + j * 2) ≤ b)
-    (he : ex = false) (hm : mt (rdW sl (r + j * 2) - b - 1) = false)
+theorem cprobeW_nextM (j' d' : Word) (hd : d < n) (hv : ¬ rdW sl (r + j) &&& VMASK ≤ b)
+    (hm : mt ((rdW sl (r + j) &&& VMASK) - b - 1) = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    cprobeW sl mt ex q b n r j d = cprobeW sl mt ex q b n r j' d' := by
+    cprobeW sl mt q b n r j d = cprobeW sl mt q b n r j' d' := by
   subst hj' hd'
-  have ne : rdW sl (r + j * 2) - b ≠ 0 := fun h => hv (by grind)
-  rw [cprobeW]; simp [hd, slotV, slotRd, hv, ne, he, hm]
+  have ne : (rdW sl (r + j) &&& VMASK) - b ≠ 0 := fun h => hv (by grind)
+  rw [cprobeW]; simp [hd, slotV, slotRd, hv, ne, hm]
 
-theorem cprobeW_end (hd : ¬ d < n) : cprobeW sl mt ex q b n r j d = [] := by
+theorem cprobeW_end (hd : ¬ d < n) : cprobeW sl mt q b n r j d = [] := by
   rw [cprobeW]; simp only [hd, ↓reduceIte]
 
 end probeArms
 
-grind_pattern [arena_grind] cprobeW_free => cprobeW sl mt ex q b n r j d, rdW sl (r + j * 2)
-grind_pattern [arena_grind] cprobeW_hitX =>
-  cprobeW sl mt ex q b n r j d, rdW sl (r + j * 2), rdW sl (r + j * 2 + 1)
-grind_pattern [arena_grind] cprobeW_hitM =>
-  cprobeW sl mt ex q b n r j d, rdW sl (r + j * 2), rdW sl (r + j * 2 + 1)
+grind_pattern [arena_grind] cprobeW_free => cprobeW sl mt q b n r j d, rdW sl (r + j)
+grind_pattern [arena_grind] cprobeW_hitM => cprobeW sl mt q b n r j d, rdW sl (r + j)
 grind_pattern [arena_grind] cprobeW_nextK =>
-  cprobeW sl mt ex q b n r j d, rdW sl (r + j * 2 + 1), cprobeW sl mt ex q b n r j' d'
+  cprobeW sl mt q b n r j d, rdW sl (r + j), cprobeW sl mt q b n r j' d'
 grind_pattern [arena_grind] cprobeW_nextM =>
-  cprobeW sl mt ex q b n r j d, rdW sl (r + j * 2), cprobeW sl mt ex q b n r j' d'
-grind_pattern [arena_grind] cprobeW_end => cprobeW sl mt ex q b n r j d
+  cprobeW sl mt q b n r j d, rdW sl (r + j), cprobeW sl mt q b n r j' d'
+grind_pattern [arena_grind] cprobeW_end => cprobeW sl mt q b n r j d
 
-/-- The key word of a query `ks` with hash `h` (`kwE`): an exact table's key packed into a word,
-else the hash. -/
-def kwQ (C : ConsSch) (ks : List Word) (h : Word) : Word :=
-  if C.exact then
-    match C.nk with
-    | 0 => 0
-    | 1 => ks.getD 0 0
-    | _ => ks.getD 0 0 ||| ks.getD 1 0 <<< 32
-  else h
-
-/-- The key words an exact table's key word packs (`khashB`'s unpacking). -/
-def unpackK : Nat → Word → List Word
-  | 0, _ => []
-  | 1, q => [q]
-  | _, q => [q &&& 4294967295, q >>> 32]
-
-/-- **The growth's hash of a key word** (`khashB`): the key word itself (a fingerprint), or the
-key's hash of the key unpacked from it (exact). -/
-def ghC (C : ConsSch) (m : Mem) (q : Word) : Word :=
-  if C.exact then C.qhM m (unpackK C.nk q) else q
+/-- **The growth's hash of node `i`** of tier `t` (`khashB`), from the node's record (`hrec`). -/
+def ghC (C : ConsSch) (t : Word) (m : Mem) (i : Word) : Word := C.hsM m t i
 
 /-! ## The obligations of an instance -/
 
@@ -226,7 +199,7 @@ def IHashOK : Prop :=
     step p (exec p n) C.ihash
     ⦃fun r s' => r = .normal ∧ s' = s₀.setLoc C.nk (C.qhM s₀.mem (argsOf 0 C.nk s₀)); ⊤⦄
 
-/-- **The key's hash, spliced at `o`** (`ihashAt`, the push's and the growth's recomputation):
+/-- **The key's hash, spliced at `o`** (`ihashAt`, the push's recomputation):
 it sets `o + nk` to `qhM` of the key words `o ‥ o + nk - 1` and changes nothing else. -/
 def IHashAtOK (o : Nat) : Prop :=
   ∀ (n : Nat) (s₀ : St),
@@ -249,16 +222,20 @@ def PreOK : Prop :=
 def SkipOK : Prop :=
   ∀ e, C.skipW = some e → ∀ s : St, Expr.pval s e = C.skM (argsOf 0 C.nk s)
 
+/-- **A node's hash from its record** (`hrec`, the growth's) is `hsM` of the tier (variable `0`)
+and the node (variable `1`). -/
+def HRecOK : Prop := ∀ s : St, Expr.pval s C.hrec = C.hsM s.mem (s.loc 0) (s.loc 1)
+
 /-- **An instance's obligations.** -/
 structure ConsOK : Prop where
   match_ : CMatchOK p C
   ihash : IHashOK p C
-  /-- The push (a fingerprint table without a stored hash) and the growth (an exact table) run
-  `ihash` at `gO + 14`. -/
-  ihashG : C.exact = true ∨ C.np = C.nk → IHashAtOK p C (gO C + 14)
-  /-- A fingerprint table without a stored hash reruns `ihash` after the record is written: its
-  hash reads no memory. -/
-  qpure : C.exact = false → C.np = C.nk → ∀ m m' ks, C.qhM m ks = C.qhM m' ks
+  /-- The push of a table without a stored hash runs `ihash` at `gO + 14`. -/
+  ihashG : C.np = C.nk → IHashAtOK p C (gO C + 14)
+  /-- A table without a stored hash reruns `ihash` after the record is written: its hash reads
+  no memory. -/
+  qpure : C.np = C.nk → ∀ m m' ks, C.qhM m ks = C.qhM m' ks
+  hrec : HRecOK C
   pre : PreOK p C
   colA : ∀ A, C.col = some A → A ≠ C.sa ∧ A ≠ CTL ∧ A ≠ C.ra
   recs : CRecOK C
@@ -266,10 +243,8 @@ structure ConsOK : Prop where
   skips : SkipOK C
   push_np : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk
   arrs : C.ra ≠ CTL ∧ C.sa ≠ CTL ∧ C.ra ≠ C.sa
-  /-- The match's prelude has a local of its own (the find's key word follows it). -/
+  /-- The match's prelude has a local of its own (the find's fragment follows it). -/
   mloc : C.mpre ≠ none → 1 ≤ C.mloc
-  /-- An exact key has at most two words. -/
-  exnk : C.exact = true → C.nk ≤ 2
 
 end obligations
 

@@ -10,10 +10,10 @@ import Std.Tactic.BVDecide.Normalize.Prop
 /-!
 # The store library: the growth keeps the relation (lane kstp)
 
-`SlotGrowSpec.lean`'s `kgrowM` (the KSTP growth of one tier: the doubled table at the tier's other
-offset, zeroed, then every live slot of the old table re-inserted with its key word from the
-home of `G` of the key word), read as the table relation: if `G` of every admissible key word is
-the node's hash (`hGh`), the relation holds after the growth (`storeR_kgrow`).
+`SlotGrowSpec.lean`'s `kgrowM` (the growth of one tier in place: the table doubled, its upper half
+zeroed, then every live slot of the old table re-inserted with its fragment from the home of `G`
+of its node), read as the table relation: if `G` of every node is the node's hash (`hGh`), the
+relation holds after the growth (`storeR_kgrow`).
 -/
 
 open ConRon.Arena
@@ -85,12 +85,11 @@ variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
 variable (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word)
   (KP : Mem → Word → Word → Word → Prop)
 
-/-- **The growth keeps the relation**: if `G` of every key word a slot of tier `t` may hold is the
-node's hash, the memory after `kgrowM` represents the same tables. -/
+/-- **The growth keeps the relation**: if `G` of every node of tier `t` is the node's hash, the
+memory after `kgrowM` represents the same tables. -/
 theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
     (G : Mem → Word → Word) (m m' : Mem) (t : Word) (ht : t ≤ 1)
-    (hGh : ∀ mi : Mem, (∀ a, a ≠ tierA S.sa t → mi.arr64 a = m.arr64 a) →
-      ∀ i K, KP m t i K → G mi K = hs m t i)
+    (hGh : ∀ mi : Mem, (∀ a, a ≠ tierA S.sa t → mi.arr64 a = m.arr64 a) → ∀ i, G mi i = hs m t i)
     (on : Bool) (tbP tbS : Tbl α (Idx k) δ) (hR : StoreR S R hs KP m on tbP tbS)
     (h : kgrowM S.sa G t m = some m') : StoreR S R hs KP m' on tbP tbS := by
   obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1, hG⟩ := hR
@@ -104,11 +103,11 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   try simp only [hsa, hn, ho] at hL hlay hn8 hn8m
   have hlen : (m.len64 sa).toNat = (m.arr64 sa).size := by
     rw [len64_eq, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)]
-  have hroom : ¬ m.len64 sa - 2 < o + n * 2 * 2 := fun hc => by
+  have hroom : ¬ m.len64 sa - 2 < o + n * 2 := fun hc => by
     simp [kgrowM, hsa, hn, ho, hc] at h
-  have e4 : (o + n * 2 * 2).toNat = o.toNat + 4 * n.toNat := by
-    rw [UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_mul]; simp; omega
-  have hroom' : o.toNat + 4 * n.toNat ≤ (m.arr64 sa).size - 2 := by
+  have e4 : (o + n * 2).toNat = o.toNat + 2 * n.toNat := by
+    rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
+  have hroom' : o.toNat + 2 * n.toNat ≤ (m.arr64 sa).size - 2 := by
     have := UInt64.not_lt.mp hroom
     rw [UInt64.le_iff_toNat_le, e4, UInt64.toNat_sub_of_le _ _ (by
       rw [UInt64.le_iff_toNat_le, hlen]; simp; omega), hlen] at this
@@ -119,16 +118,16 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   have e2n : (n * 2).toNat = 2 * n.toNat := by rw [UInt64.toNat_mul]; simp; omega
   -- the memories
   generalize hm1 : m.set64 sa 0 (n * 2 - SN0) = m1 at h
-  generalize hm2 : kzeroW sa (ob + n * 2) (n >>> 2).toNat m1 = m2 at h
+  generalize hm2 : kzeroW sa (ob + n) (n >>> 3).toNat m1 = m2 at h
   generalize hr : ktopW sa G (n * 2) n ob bt n ⟨0, 0, 0, 0⟩ m2 = r at h
   obtain ⟨m4, h4, h5⟩ := Option.bind_eq_some_iff.mp h
   have fr1 : GFr sa m m1 := by rw [← hm1]; exact GFr.set64 _ _ _ _
   have fr2 : GFr sa m1 m2 := by rw [← hm2]; exact kzeroW_fr _ _ _ _
   have fr12 := fr1.trans fr2
   have hsz2 : (m2.arr64 sa).size = (m.arr64 sa).size := fr12.size sa
-  have eob2n : (ob + n * 2).toNat = ob.toNat + 2 * n.toNat := by
-    rw [UInt64.toNat_add, e2n]; omega
-  have eh : (n >>> 2).toNat * 8 = 2 * n.toNat := by rw [UInt64.toNat_shiftRight]; simp; omega
+  have eob2n : (ob + n).toNat = ob.toNat + n.toNat := by
+    rw [UInt64.toNat_add]; omega
+  have eh : (n >>> 3).toNat * 8 = n.toNat := by rw [UInt64.toNat_shiftRight]; simp; omega
   have rd1 : ∀ y : Word, rdW (m1.arr64 sa) y = if y = 0 then n * 2 - SN0 else rdW (m.arr64 sa) y := by
     intro y; rw [← hm1, rdW_set64]
     by_cases hy : y = 0
@@ -137,13 +136,13 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
       simp; intro h'; rw [h'] at this; simp at this
     · simp [hy, Ne.symm hy]
   have rd2 : ∀ y : Word, rdW (m2.arr64 sa) y =
-      if ob.toNat + 2 * n.toNat ≤ y.toNat ∧ y.toNat < ob.toNat + 4 * n.toNat then 0
+      if ob.toNat + n.toNat ≤ y.toNat ∧ y.toNat < ob.toNat + 2 * n.toNat then 0
       else rdW (m1.arr64 sa) y := by
     intro y
     rw [← hm2, kzeroW_rd _ _ _ _ (by rw [eob2n, Nat.mul_comm 8, eh]; omega) y, eob2n,
       Nat.mul_comm 8, eh]
     congr 1; apply propext; omega
-  have r2m : ∀ y : Word, 2 ≤ y.toNat → y.toNat < ob.toNat + 2 * n.toNat →
+  have r2m : ∀ y : Word, 2 ≤ y.toNat → y.toNat < ob.toNat + n.toNat →
       rdW (m2.arr64 sa) y = rdW (m.arr64 sa) y := fun y h1 h2 => by
     rw [rd2, ite_eq_right (by omega), rd1, ite_eq_right (word_ne_of_toNat (by simp; omega))]
   -- the tier and its numbers
@@ -154,14 +153,14 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   generalize htb : (if t = 0 then tbP else tbS) = tb at hTt
   obtain ⟨hc', hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hTt
   have hc27 : (cntW S m t).toNat ≤ 2 ^ 30 := by rw [hc']; exact Nat.le_trans hcap (capS_le _)
-  have hbt63 : bt.toNat + (cntW S m t).toNat + 1 < 2 ^ 63 := by
+  have hbt63 : bt.toNat + (cntW S m t).toNat + 1 < 2 ^ 47 := by
     rw [← hbt]
     rcases le_one_cases t ht with rfl | rfl
     · simp; omega
     · simp; omega
   have hN0 : (0 : Word) < n * 2 := UInt64.lt_iff_toNat_lt.mpr (by rw [e2n]; simp; omega)
   have hnN : n ≤ n * 2 := UInt64.le_iff_toNat_le.mpr (by rw [e2n]; omega)
-  have hNL : ob.toNat + 2 * (n * 2).toNat ≤ (m2.arr64 sa).size := by rw [hsz2, e2n]; omega
+  have hNL : ob.toNat + (n * 2).toNat ≤ (m2.arr64 sa).size := by rw [hsz2, e2n]; omega
   have hL2 : (m2.arr64 sa).size < 2 ^ 61 := by rw [hsz2]; exact hL
   have hob2 : 2 ≤ ob.toNat := by omega
   have hkr : krW S.sa m t = ob := by simp only [krW, ho, hob]
@@ -169,23 +168,23 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   have adr := fun j (hj : j < n * 2) => adr_toNat sa ob (n * 2) m2 hob2 hNL hL2 j hj
   have V2 : ∀ j : Word, j < n * 2 → VW sa ob m2 j = if j < n then VW sa ob m j else 0 := by
     intro j hj
-    have a := (adr j hj).1
+    have a := adr j hj
     have hjN := UInt64.lt_iff_toNat_lt.mp hj; rw [e2n] at hjN
-    simp only [VW]
+    simp only [VW, vwd]
     by_cases hjn : j < n
     · have := UInt64.lt_iff_toNat_lt.mp hjn
       rw [r2m _ (by rw [a]; omega) (by rw [a]; omega)]
       simp only [hjn, ↓reduceIte]
     · have := UInt64.not_lt.mp hjn; have := UInt64.le_iff_toNat_le.mp this
       simp only [hjn, ↓reduceIte]
-      rw [rd2, ite_eq_left ⟨by rw [a]; omega, by rw [a]; omega⟩]
+      rw [rd2, ite_eq_left ⟨by rw [a]; omega, by rw [a]; omega⟩, UInt64.zero_and]
   have K2 : ∀ j : Word, j < n → KW sa ob m2 j = KW sa ob m j := by
     intro j hj
     have hjN : j < n * 2 := UInt64.lt_iff_toNat_lt.mpr (by
       have := UInt64.lt_iff_toNat_lt.mp hj; rw [e2n]; omega)
-    have a := (adr j hjN).2
+    have a := adr j hjN
     have := UInt64.lt_iff_toNat_lt.mp hj
-    simp only [KW]
+    simp only [KW, kwd]
     rw [r2m _ (by rw [a]; omega) (by rw [a]; omega)]
   have V2n : ∀ j : Word, j < n → VW sa ob m2 j = VW sa ob m j := fun j hj => by
     rw [V2 j (UInt64.lt_of_lt_of_le hj hnN), ite_eq_left hj]
@@ -196,8 +195,8 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
     intro j hj hv
     have hjs : j < nSl S m t := by rw [hnS]; exact hj
     have e : slotW S m t j = VW sa ob m j - bt := by
-      have hv' : ¬ rdW (m.arr64 sa) (ob + j * 2) ≤ bt := UInt64.not_le.mpr hv
-      simp only [slotW, slotV, slotRd, baseW, hsa, hkr, hbt, VW, hv', ↓reduceIte]
+      have hv' : ¬ rdW (m.arr64 sa) (ob + j) &&& VMASK ≤ bt := UInt64.not_le.mpr hv
+      simp only [slotW, slotV, slotRd, baseW, hsa, hkr, hbt, VW, vwd, hv', ↓reduceIte]
     have hne : slotW S m t j ≠ 0 := by
       rw [e]; intro h0; have := UInt64.lt_iff_toNat_lt.mp hv; have := congrArg UInt64.toNat h0
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_of_lt hv)] at this; simp at this; omega
@@ -207,7 +206,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
       rw [hc']; omega
     · have := hkp j hjs hne
       rw [e] at this
-      simpa only [slotK, hsa, hkr, KW] using this
+      simpa only [slotK, hsa, hkr, KW, kwd] using this
   have hOld : ∀ j, j < n → VW sa ob m2 j ≤ bt ∨ (LiveU bt (VW sa ob m2 j) ∧
       (VW sa ob m2 j).toNat ≤ bt.toNat + (cntW S m t).toNat ∧
       KP m t (VW sa ob m2 j - bt - 1) (KW sa ob m2 j)) := fun j hj => by
@@ -229,7 +228,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
       rw [hnS] at hjo
       have hx1 : (x + 1).toNat = x.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have sw : slotW S m t jo = slotRd (VW sa ob m jo) bt := by
-        simp only [slotW, slotV, baseW, hsa, hkr, hbt, VW]
+        simp only [slotW, slotV, baseW, hsa, hkr, hbt, VW, vwd]
       rw [sw] at hd1
       unfold slotRd at hd1
       have hv : bt < VW sa ob m jo := by
@@ -241,8 +240,8 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
         rw [← UInt64.sub_add_cancel (VW sa ob m jo) bt, hd1]; grind
       exact ⟨jo, hjo, by rw [V2n jo hjo, hvx]⟩
   -- the sweep, then the two ranges' re-insertions
-  have hGh' : ∀ mi : Mem, GFr sa m2 mi → ∀ x K, KP m t x K → G mi K = hs m t x :=
-    fun mi hmi x K hK => hGh mi (fun a ha => (hmi.1 a ha).trans (fr12.arr a ha)) x K hK
+  have hGh' : ∀ mi : Mem, GFr sa m2 mi → ∀ x, G mi x = hs m t x :=
+    fun mi hmi x => hGh mi (fun a ha => (hmi.1 a ha).trans (fr12.arr a ha)) x
   have hIT := ktopW_inv sa ob (n * 2) n bt (cntW S m t) (KP m t) (hs m t) m2 hob2 hNL hL2 hbt63 hnN hN0
     hOld G hGh' n ⟨0, 0, 0, 0⟩ m2 hI0
   rw [hr] at hIT
@@ -274,8 +273,8 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
     simp only [knW, hsa, w0]; exact UInt64.sub_add_cancel _ _
   have kr' : krW S.sa m' t = ob := by simp only [krW, koW, hsa, w1, hob]
   have sw' : ∀ j, slotW S m' t j = slotRd (VW sa ob m' j) bt := fun j => by
-    simp only [slotW, slotV, kr', baseW, ctl', hsa, hbt, VW]
-  have sk' : ∀ j, slotK S m' t j = KW sa ob m' j := fun j => by simp only [slotK, kr', hsa, KW]
+    simp only [slotW, slotV, kr', baseW, ctl', hsa, hbt, VW, vwd]
+  have sk' : ∀ j, slotK S m' t j = KW sa ob m' j := fun j => by simp only [slotK, kr', hsa, KW, kwd]
   have hn' : nSl S m' t = n * 2 := kn'
   have hsat : ∀ b : TieredArray, b ≠ S.sa → b ≠ tier1 S.sa → b ≠ sa := fun b h1 h2 e => by
     rw [← hsa] at e

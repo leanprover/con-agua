@@ -150,7 +150,7 @@ theorem fzExt_Cmul (m : Mem) (b : ArrId) (k w : Nat) :
   simp only [fzExt, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, Array.getD_eq_getD_getElem?]
 
 theorem fzExt_slot (m : Mem) (sa : ArrId) :
-    fzExt m ⟨sa, fzSlotExt sa⟩ = (2 + 2 * (rdW (m.arr64 sa) 0 + SN0)).toNat := by
+    fzExt m ⟨sa, fzSlotExt sa⟩ = (2 + (rdW (m.arr64 sa) 0 + SN0)).toNat := by
   simp only [fzExt, fzSlotExt, fzC, Expr.pval, BinOp.eval, rd64, rdW, Array.getD_eq_getD_getElem?]
   rfl
 
@@ -171,7 +171,7 @@ theorem truncFrozen_ra (m : Mem) {ra sa : ArrId} {w ca : Nat} (h : (ra, sa, w, c
   rw [this, fzExt_mulC]
 
 theorem truncFrozen_sa (m : Mem) {ra sa : ArrId} {w ca : Nat} (h : (ra, sa, w, ca) ∈ fzStores) :
-    (truncFrozen m).arr64 sa = (m.arr64 sa).extract 0 (2 + 2 * (rdW (m.arr64 sa) 0 + SN0)).toNat := by
+    (truncFrozen m).arr64 sa = (m.arr64 sa).extract 0 (2 + (rdW (m.arr64 sa) 0 + SN0)).toNat := by
   have := truncFrozen_mem m (x := sa) (z := ⟨sa, fzSlotExt sa⟩) (by
     rw [frozen_drop1]
     simp only [List.mem_append, List.mem_flatMap]

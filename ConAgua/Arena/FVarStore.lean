@@ -75,7 +75,6 @@ def fvarCS : ConsSch where
   fname := "fvar_find"
   pname := "fvar_push"
   nk := 2
-  exact := true
   mc := condOf (lblk (t, u, ty, h, n, j, d, v, b) {
     if FVREC⟨t⟩[(v - 1) * 2] == u && FVREC⟨t⟩[(v - 1) * 2 + 1] == ty { skip } })
   np := 2
@@ -83,6 +82,7 @@ def fvarCS : ConsSch where
     if len(FVREC⟨t⟩) >> 1 <= c || len(FVLP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (u, ty, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ ty) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ FVREC⟨t⟩[i * 2]) * ⟪fnvPrime⟫ ^ FVREC⟨t⟩[i * 2 + 1]) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (u, ty, h, sk) { sk := (ty >> 31) & 1 }))
   xloc := 4
   pre := some lpBlkF
@@ -210,9 +210,9 @@ theorem fvarOK : ConsOK p fvarCS where
     simp [fvarCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [fvarCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [fvarCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [fvarCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, fvhash, fvarHashW]
 
 theorem fvpushOK_eqC (m : Mem) (t : Word) : fvpushOK m t = pushOKC fvarCS m t := by
   simp only [fvpushOK, pushOKC, fvarCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

@@ -66,12 +66,12 @@ def bvarCS : ConsSch where
   fname := "bvar_find"
   pname := "bvar_push"
   nk := 1
-  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) { if BREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) { if len(BREC⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := (⟪fnvBasis⟫ ^ BREC⟨t⟩[i]) * ⟪fnvPrime⟫ })
   skipW := none
   mtM m ks t i := bmatchW (m.arr64 (tierA BREC t)) t i (ks.getD 0 0)
   qhM _ ks := bvarHashW (ks.getD 0 0)
@@ -167,9 +167,9 @@ theorem bvarOK : ConsOK p bvarCS where
   colA := by simp [bvarCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [bvarCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [bvarCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [bvarCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, bhash, bvarHashW]
 
 theorem bpushOK_eqC (m : Mem) (t : Word) : bpushOK m t = pushOKC bvarCS m t := by
   simp only [bpushOK, pushOKC, bcnt, cntC, bvarCS, ← decide_not, UInt64.not_le]; rfl
