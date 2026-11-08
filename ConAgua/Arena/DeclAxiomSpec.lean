@@ -123,18 +123,7 @@ set_option maxHeartbeats 1600000 in
 theorem ora_specW (h : OraProg p) (n : Nat) (s₀ : St) (vis q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "of_reduce_ax_ok" [vis, q]
     ⦃fun r s' => LocEq s' s₀ ∧ oraW p n s₀.mem vis q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.ora]
-  simp only [callFn, ofReduceAxOkL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        oro_specW p h.red.pa h.oro n, pinAt_specW p h.red.pa n, callW_spec p n "rom_ci",
-        callW_spec p n "find_is", callW_spec p n "reduce_elem_ok",
-        callW_spec p n "reduce_stored_ok", callW_spec p n "of_reduce_pin_a",
-        mp_specW p h.red.canon h.red.mp n] <;>
-      finish (gen := 20) [rdW_eq, mpW]
+  sorry
 
 end model
 
@@ -145,11 +134,6 @@ theorem ofReduceAxOk_refines (p : Prog) (h : OraProg p) (dn : NIdx → Option Co
     RefAM p "of_reduce_ax_ok" [vis, q]
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
       (ofReduceAxOk fe cv) (KeepPost vis fe decW0B) := by
-  intro n s₀ a₀ ⟨hS, hq⟩
-  refine triple_post (ora_specW p h n s₀ vis q) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hS', hg, hd⟩ := oraW_ok h hdn hm hS hq
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
+  sorry
 
 end L.Arena

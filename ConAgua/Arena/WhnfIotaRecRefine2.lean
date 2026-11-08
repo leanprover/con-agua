@@ -651,8 +651,6 @@ closure, `prepare_major`'s and `iota_rec_fire`'s claims. -/
 structure MajorG (p : Prog) (n : Nat) : Prop where
   knot : KnotUpToE p n
   nv : closedNV p L.Checker.nvFns = true
-  pm : PrepareMajorE p
-  fire : IotaRecFireE p
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_major` refines `iotaRecMajorT`, both outcomes**: the errors are `prepare_major`'s

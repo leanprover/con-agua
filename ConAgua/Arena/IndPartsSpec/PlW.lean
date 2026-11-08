@@ -69,6 +69,7 @@ def ShapeR (x : Option BlockShape) (r : List Word) (m : Mem) : Prop :=
   | none => r.headD 0 = 0
   | some bs => r.headD 0 = 1 ∧ DecB (fun m => decBS m (r.tail.headD 0).toNat) m bs ∧ ShapeSl m (r.tail.headD 0)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A fresh record's words, in the cut pool. -/
 theorem partsFreshGet {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
@@ -79,6 +80,7 @@ theorem partsFreshGet {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   refine ⟨hS', hg, by omega, fun j hj => ?_⟩
   rw [truncM_iw_eq (by omega)]
   simp only [iwA, hget j hj, List.getElem?_eq_getElem hj]
+-/
 
 /-! ## `block_shape_tail` -/
 
@@ -97,6 +99,7 @@ theorem LvlHyp.mono {c : CallM} {n : Nat} {dn : NIdx → Option ConLeche.Name} {
     (hT : ∀ sv a1, T' sv a1 → T sv a1) : LvlHyp c n dn vis fe m' T' :=
   fun sv a1 s z m1 hT' hf1 hS hs hsv hz => h sv a1 s z m1 (hT _ _ hT') (hf.trans hf1) hS hs hsv hz
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The twin's prefix of `buildTwin` up to `lvlEq?`: the counts, the reserved names, the result sort
 `sv` (`LvlHyp`'s `T`). -/
 def TbbT (nP : Nat) (cvT0 : IConstantVal) (cvTs : List IConstantVal) (cs : List (IConstantVal × Nat × Nat))
@@ -106,11 +109,14 @@ def TbbT (nP : Nat) (cvT0 : IConstantVal) (cvTs : List IConstantVal) (cs : List 
       .ok (some nIdxs, a2) ∧
     (reservedBasisNames : AM (List NIdx)).run a2 = .ok (R, a3) ∧
     (bsoTwin nP nIdxs cvT0.type).run a3 = .ok (sv, a1)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The twin's prefix of `blockShape?` up to `lvlEq?`: the split, then `TbbT`. -/
 def TshT (nP : Nat) (blk : List IConstantInfo) (a : AState) (sv : LIdx) (a1 : AState) : Prop :=
   ∃ cvT0 cvTs cs r0 rs, ConRon.Arena.blockSplit blk = some (cvT0 :: cvTs, cs, r0 :: rs) ∧
     TbbT nP cvT0 (cvT0 :: cvTs) cs (r0 :: rs) a sv a1
+-/
 
 end L.Ind
 

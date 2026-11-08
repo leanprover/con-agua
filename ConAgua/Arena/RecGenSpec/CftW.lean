@@ -37,6 +37,7 @@ namespace L.Ind
 
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `class_former_ty`** (its `inst_lp_fast` read through `cR`). -/
 def cftW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
@@ -46,6 +47,7 @@ def cftW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Opti
         some ([rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m)
       else cftK1 (binternW m 0)
     else cftK2 cR N mp (envFindW m (rdW (m.arr64 IW) mp) vis)
+-/
 
 section arms
 variable (cR : CallM) (N : Nat) (m m1 m2 m3 m4 : Mem) (vis o l mp q e : Word) (r2 r3 r4 : List Word)
@@ -56,14 +58,17 @@ theorem cftW_mem (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : rdW (m.arr64 IW) (m
 theorem cftW_out (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : ¬ rdW (m.arr64 IW) (mp + 8) - 1 < l) :
     cftW cR (N + 1) m vis o l mp = cftK1 (binternW m 0) := by
   simp only [cftW]; rw [ite_eq_left h, ite_eq_right h2]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cftW_ext (h : ¬ rdW (m.arr64 IW) (mp + 8) ≠ 0) :
     cftW cR (N + 1) m vis o l mp = cftK2 cR N mp (envFindW m (rdW (m.arr64 IW) mp) vis) := by
   simp only [cftW]; rw [ite_eq_right h]
+-/
 end arms
 
 grind_pattern [ind_grind] cftW_mem => cftW cR (N + 1) m vis o l mp
 grind_pattern [ind_grind] cftW_out => cftW cR (N + 1) m vis o l mp
 grind_pattern [ind_grind] cftW_ext => cftW cR (N + 1) m vis o l mp
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St)
     (vis o l mp : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_former_ty" [vis, o, l, mp]
@@ -78,7 +83,9 @@ theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSp
         internBVar_spec p h.bf h.bp h.ib N, callW_spec p N "env_find",
         erToIw_specW p h.alloc h.copy h.eti N, hcR N "inst_lp_fast"] <;>
       finish (gen := 20) [rdW_eq]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {N : Nat} {m m' : Mem} {o l mp : Word} {r : List Word} {M : TargetMajor} {cvTas : List IConstantVal}
     (cR : CallM) (hI : IlpRd cR dn vis fe (IlpBase m a))
@@ -205,6 +212,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     refine ⟨x, a4, ?_, hS4, hg3.trans hg4, hx4, (erToIwW_afr h3).trans hA4⟩
     simp only [ConRon.Arena.classFormerTy, hmem', hfci]
     exact hrun4
+-/
 
 end L.Ind
 

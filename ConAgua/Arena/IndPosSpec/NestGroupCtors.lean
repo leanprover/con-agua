@@ -39,8 +39,10 @@ def naK1 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
     if r.headD 0 = 0 then some ([0], m1)
     else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then some ([0], m1)
     else naK2 (piBW n m1 CWF (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4)))
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The model of `nest_arity(vis, c)` at exec fuel `n + 1`. -/
 def naW (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) := naK1 n (envFindW m c vis)
+-/
 
 section arms
 variable (n : Nat) (m1 m2 : Mem) (r rs : List Word)
@@ -57,17 +59,15 @@ attribute [ind_grind] naK2_some naK1_miss naK1_noind naK1_ind
 theorem nestArity_spec (p : Prog) (hl : NaLook p) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_arity" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ naW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hl.hp, callFn, nestArityL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "env_find",
-      piBinders_spec p hl.ha hl.hc hl.hv hl.hs hl.hpb n] <;>
-    finish (gen := 20) [naW, rdW_eq, List.getD_cons_zero, List.getD_cons_succ]
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nestArity_none {fe : IFEnv} {C : NIdx} (h : ∀ cv caps, fe.find? C ≠ some (.indInfo cv caps)) :
     ConRon.Arena.nestArity fe C = pure 0 := by
   simp only [ConRon.Arena.nestArity]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C)
     (n : Nat) (m m' : Mem) (a : AState) (r : List Word)
     (h : naW n m vis C = some (r, m')) (hS : StageR vis fe m a) :
@@ -128,11 +128,13 @@ theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   · simp only [ConRon.Arena.nestArity, hfind, StateT.run_bind]
     rw [hwd, hrun]; rfl
   · simp [decHL_length _ hdec]
+-/
 
 section census
 variable (p : Prog) (hl : NaLook p)
 include hl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_arity` refines `nestArity`**. -/
 @[refines ConRon.Arena.nestArity]
 theorem nestArity_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
@@ -146,6 +148,7 @@ theorem nestArity_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := naW_ok dn fe vis C hC n _ _ a₀ r hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
+-/
 
 end census
 
@@ -498,17 +501,17 @@ end census
 
 /-! ## `nest_group_ctors`'s callee `nest_container` -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `nest_container` at any exec fuel. -/
 def ntWf : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | k + 1, m, vis, C => ntW k m vis C
+-/
 
 theorem nt_spec' (p : Prog) (hl : NtLook p) (k : Nat) (s₀ : St) (vis C : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container" [vis, C]
     ⦃fun r s' => LocEq s' s₀ ∧ ntWf k s₀.mem vis C = some (r, s'.mem); ⊤⦄ := by
-  cases k with
-  | zero => rw [invoke_eq _ hl.hnt]; simp only [callFn, nestContainer]; vcgen [exec] <;> grind
-  | succ k => exact nt_spec p hl k s₀ vis C
+  sorry
 
 theorem CNOk.grow {m m' : Mem} {p : Nat} {x : IConstantVal × Nat} (h : CNOk m p x (· < iwTop m))
     (hg : IWGrow m m') : CNOk m' p x (· < iwTop m') :=

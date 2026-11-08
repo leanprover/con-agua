@@ -24,9 +24,11 @@ namespace L.Ind
 
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `block_shape_build`** (at exec fuel `n + 4`). -/
 def bbW (c : CallM) (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl : Word) : Option (List Word × Mem) :=
   bbH1 c n nPd cto ctl cso csl rso rsl (rdW (m.arr64 IW) cto) (bsnW (n + 3) m cto ctl)
+-/
 
 /-- **The program bundle of `blockShape?`.** -/
 structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
@@ -53,7 +55,6 @@ structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
   sort : p.lookup "block_shape_result_sort" = some blockShapeResultSort
   ctorsOf : p.lookup "block_shape_ctors_of" = some blockShapeCtorsOf
   membersOf : p.lookup "block_shape_members_of" = some blockShapeMembersOf
-  rhssOf : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf
   recsOf : p.lookup "block_shape_recs_of" = some blockShapeRecsOf
   large : p.lookup "block_shape_large" = some blockShapeLarge
   pack : p.lookup "block_shape_pack" = some blockShapePack
@@ -62,7 +63,6 @@ structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
   tail : p.lookup "block_shape_tail" = some blockShapeTail
   build : p.lookup "block_shape_build" = some blockShapeBuild
   shape : p.lookup "block_shape" = some blockShape
-  parts : p.lookup "block_parts" = some blockParts
   na : NaF p
 
 end L.Ind

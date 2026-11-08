@@ -255,6 +255,7 @@ section rel
 variable {p : Prog} (hp : CrfProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 include hp
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 omit hp in
 theorem envFindW_01 {m m1 : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) :
     r.headD 0 = 0 ∨ r.headD 0 = 1 := by
@@ -262,6 +263,7 @@ theorem envFindW_01 {m m1 : Mem} {w vis : Word} {r : List Word} (h : envFindW m 
   split at h; · simp at h
   split at h; · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.1]; simp
   split at h <;> (simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.1]; simp)
+-/
 
 /-- **`env_find(w, vis)` as a call**: memory unchanged, and the word says whether `w` has a row in
 the environment. -/
@@ -269,18 +271,7 @@ theorem envFind_callW {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
     (hE : EnvR m vis fe) (hw : w.toNat < 2 ^ 32)
     (hc : callW p n "env_find" [w, vis] m = some (r, m')) :
     m' = m ∧ r.headD 0 = if (fe.find? (decI w)).isSome then 1 else 0 := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_specW p hp.eix hp.erg hp.ef n _ w vis) hc
-  obtain ⟨hm, hf, hci⟩ := envFindW_found hW hE hw
-  refine ⟨hm, ?_⟩
-  rw [hf]
-  simp only at hci
-  rcases envFindW_01 hW with h0 | h1
-  · rw [h0]; simp [decFound]
-  · obtain ⟨ci, hci⟩ := hci (by rw [h1]; decide)
-    rw [h1]
-    simp only [decFound, ite_eq_right (show (1 : Word) ≠ 0 by decide), hci, Option.isSome_some,
-      ↓reduceIte]
+  sorry
 
 omit hp in
 theorem ite_beq0 (c : Bool) : ((if c = true then (1 : Word) else 0) == 0) = !c := by

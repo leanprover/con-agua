@@ -55,6 +55,7 @@ attribute [ind_grind] spgK1_some_zero spgK1_some
 
 /-! ## The spec -/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section spec
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
@@ -85,6 +86,7 @@ theorem spg_spec (n : Nat) (s₀ : St) (cty nP nF so sl : Word) :
     finish (gen := 20) [spgW]
 
 end spec
+-/
 
 /-! ## The relation to the twin -/
 
@@ -118,6 +120,7 @@ theorem decBL_of_bnums {m : Mem} {o l : Nat} {bs : List Bool}
     (h : decNL m o l = some (bnums bs)) : decBL m o l = some bs :=
   mapM_iwB_of_bnums _ _ h
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`struct_proj_guards`' model refines `structProjGuards`** from the stage relation and a related
 `hb` memo, for a sorts slice below the pool's top. -/
 theorem spgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
@@ -164,9 +167,11 @@ theorem spgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     hr hS2 hu (by rw [decHL_grow hg2 hst]; exact hs) (hS2.lt64 (by omega)) (hS2.lt64 hst2) (by omega)
     hst2 hz (by simpa using hS2.lt64 (x := nF.toNat) (by omega))
   exact ⟨gs, a3, by simpa using hrun, hS3, hg2.trans hg3, by simpa using hd3, by simpa using ht3⟩
+-/
 
 /-! ## The census theorem -/
 
+/- ronsync2 stage 2: commented out (a section at a removed L function)
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
@@ -206,6 +211,7 @@ theorem structProjGuards_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NId
   exact ⟨hl, hok, hS', hg, hd⟩
 
 end census
+-/
 
 end L.Ind
 
