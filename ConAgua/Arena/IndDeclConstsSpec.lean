@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.IndDeclConsts
-public import ConAgua.Arena.DeclAndPinIndRef
+public import ConAgua.Arena.DeclAndPinIndDec
+public import ConAgua.Front.StateDR
 public import ConRon.Arena.Install
 public import ConAgua.Arena.LoopT
 public import ConAgua.Rom.CIReadSpec
@@ -15,7 +16,7 @@ public import ConAgua.Rom.CIReadSpec
 every record `i` the front produces (`DeclAtF`), in the stage's shape (`RefAM`, `StageR`,
 `KeepPost`, `IndIface.lean`): the stream index's builder (`idx_add`, `CheckerL.lean`) reads its
 rows off these. The results are `IW` slices of `EREC` record pointers (`decCIL`, `decTblL`), below
-the pool's top; the inductive memos (`IndMemos`) are kept.
+the pool's top; the inductive memos (`IndMemos`) and what the builder reads (`IdxKeep`) are kept.
 -/
 
 open ConRon.Arena
@@ -47,6 +48,13 @@ structure DeclConstsPre (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   dsize : (m.arr64 DECL).size < 2 ^ 63
   psize : (m.arr64 DLP).size < 2 ^ 63
 
+/-- What the stream index's builder keeps across the two: the front's records (`DECL`, `DLP`), the
+first counters (`FIRSTS`), the index rows (arrays 129‥134, both tiers) and the counter `CTL[128]`. -/
+structure IdxKeep (m m' : Mem) : Prop where
+  arr : ∀ b : TieredArray, (b.arr = DECL ∨ b.arr = DLP ∨ b.arr = L.Arena.FIRSTS ∨
+    (129 ≤ b.arr ∧ b.arr ≤ 134)) → m'.arr64 b = m.arr64 b
+  ctl128 : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128
+
 /-- The lookups the two refinements take. -/
 structure DeclConstsProg (p : Prog) : Prop where
   decl_constants : p.lookup "decl_constants" = some declConstants
@@ -63,7 +71,7 @@ theorem declConstants_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → 
     (vis : Word) (fe : IFEnv)
     (i : Word) (d : IDeclaration) :
     RefAM p "decl_constants" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declConstants d)
-      (fun m m' a r x => KeepPost vis fe decCIL m m' a r x ∧ IndMemos m') := by
+      (fun m m' a r x => KeepPost vis fe decCIL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m') := by
   sorry
 
 /-- **`decl_tables(i)` refines `declTables d`**: the projection tables record `i` installs, an
@@ -73,7 +81,7 @@ theorem declTables_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → Opt
     (vis : Word) (fe : IFEnv)
     (i : Word) (d : IDeclaration) :
     RefAM p "decl_tables" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declTables d)
-      (fun m m' a r x => KeepPost vis fe decTblL m m' a r x ∧ IndMemos m') := by
+      (fun m m' a r x => KeepPost vis fe decTblL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m') := by
   sorry
 
 end L.Ind

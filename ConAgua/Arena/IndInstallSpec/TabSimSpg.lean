@@ -245,36 +245,6 @@ theorem spgW_sl0 (n : Nat) (m : Mem) (cty nP nF so : Word) :
     spgW n m cty nP nF so 0 = spgW n m cty nP nF 0 0 := by
   simp only [spgW, spgK1.eq_def, spgK2.eq_def, rowW_sl0]
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`struct_proj_guards` as a `Sim`, keeping its memo well formed.** -/
-theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {vis : Word}
-    {fe : IFEnv} {m : Mem} {a : AState} (cty nP nF so sl : Word) (sorts : List LIdx)
-    (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
-    (hS : StageR vis fe m a) (hM : HbMemo m) (hs : decHL m so.toNat sl.toNat = some sorts)
-    (hst : sl = 0 ∨ so.toNat + sl.toNat ≤ iwTop m) :
-    Sim (callW p (k + 1) "struct_proj_guards" [cty, nP, nF, so, sl] m)
-      (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a
-      (fun r gs m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
-        decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some gs ∧
-        (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ HbMemo m') := by
-  intro r m' e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (spg_spec p hP.tbl.hv hP.hf hP.hput hP.hins hP.hgo hP.hbp hP.hst hP.hsg hP.tbl.ha hP.tbl.hc hP.tbl.hsc hP.hul
-      hP.hgd hP.hmf hP.hmp hP.him hP.hcol hP.hrow hP.hpw hP.hcl hP.hspg k _ cty nP nF so sl) e
-  obtain ⟨mp, hmp⟩ := hM
-  have hM' : HbMemo s'.mem := spgW_hb k hc' hb hS hmp hW
-  rcases hst with h0 | hst
-  · subst h0
-    rw [spgW_sl0] at hW
-    have hs0 : sorts = [] := by simpa [decHL, hslice?] using hs.symm
-    subst hs0
-    obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF 0 0 [] mp hc' hb hS hmp
-      (by simp [decHL, hslice?]) (by simp) r s'.mem hW
-    exact ⟨x, a', h1, hS', hg, hd, ht, hM'⟩
-  · obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF so sl sorts mp hc' hb hS hmp hs hst
-      r s'.mem hW
-    exact ⟨x, a', h1, hS', hg, hd, ht, hM'⟩
--/
 
 end L.Ind
 

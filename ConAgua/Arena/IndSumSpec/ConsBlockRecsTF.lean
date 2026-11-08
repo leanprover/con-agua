@@ -974,24 +974,6 @@ theorem cbrK3_some : cbrK3 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 -- ronsync2 stage 2: attribute [ind_grind] cbrW_nil cbrW_cons cbrK1_some cbrK2_some cbrK3_some
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem cbr_spec (p : Prog) (L : CbrLook p) (n : Nat) :
-    ∀ (s₀ : St) (vis2 pp mm lo ll vis : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_tf" [vis2, pp, mm, lo, ll, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ cbrW p n s₀.mem vis2 pp mm lo ll vis = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis2 pp mm lo ll vis
-    rw [invoke_eq _ L.cbr]; simp only [callFn, consBlockRecsTF]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis2 pp mm lo ll vis
-    rw [invoke_eq _ L.cbr]
-    simp only [callFn, consBlockRecsTF]
-    sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, mj_spec p L.mi n, rp_spec p L.rpa n,
-        tsr_spec p L.tsr n, cbp_spec p L n, ih] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq, loc_init4, loc_init5]
--/
 
 section rel
 variable (dn : NIdx → Option ConLeche.Name)
@@ -1071,28 +1053,6 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
 
 end rel
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`cons_block_recs_tf` (with `cons_block_recs_push`, `rec_info_rec`, `rules_to_erec(_go)`,
-`rule_copy`) refines `consBlockRecsTF`** (through `tgt_stored_rules`' stubs): the shape and the
-family's `rec4` records decoded below the tops; the environment with the recursors at the returned
-view. -/
-@[refines ConRon.Arena.consBlockRecsTF]
-theorem consBlockRecsTF_refines (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis2 pp mm lo ll vis : Word) (bs : BlockShape)
-    (xs : List (IConstantVal × TargetMajor × List EIdx)) (hS : StageR vis fe s₀.mem a₀)
-    (hbs : DecB (fun m => decBS m pp.toNat) s₀.mem bs) (hxs : PSlR decRR xs lo ll s₀.mem)
-    (hml : mm.toNat + ll.toNat < 2 ^ 64) (hA : AbsOK s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_tf" [vis2, pp, mm, lo, ll, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀ ∧
-      StageR (r.headD 0) (AM.res (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀) s'.mem
-        (AM.st (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (cbr_spec p L n s₀ vis2 pp mm lo ll vis) ?_
-  rintro r s' ⟨hl', hm⟩
-  obtain ⟨fe', a', run, hS', hg, hA'⟩ := cbrW_ok dn p L n hm hS hbs hxs hml hA
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
-  exact ⟨hl', hok, by rw [hres, hst]; exact hS', hg, hA'⟩
--/
 
 end L.Ind
 

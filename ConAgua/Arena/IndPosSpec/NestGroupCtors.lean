@@ -56,12 +56,6 @@ theorem naK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.hea
 end arms
 attribute [ind_grind] naK2_some naK1_miss naK1_noind naK1_ind
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nestArity_spec (p : Prog) (hl : NaLook p) (n : Nat) (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_arity" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ naW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  sorry
--/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nestArity_none {fe : IFEnv} {C : NIdx} (h : ∀ cv caps, fe.find? C ≠ some (.indInfo cv caps)) :
@@ -136,21 +130,6 @@ section census
 variable (p : Prog) (hl : NaLook p)
 include hl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`nest_arity` refines `nestArity`**. -/
-@[refines ConRon.Arena.nestArity]
-theorem nestArity_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis C : Word) (hC : H C) (hS : StageR vis fe s₀.mem a₀) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_arity" [vis, C]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestArity fe (decI C)) a₀ ∧
-      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestArity fe (decI C)) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat = AM.res (ConRon.Arena.nestArity fe (decI C)) a₀; ⊤⦄ := by
-  refine triple_post (nestArity_spec p hl n s₀ vis C) ?_
-  rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout⟩ := naW_ok dn fe vis C hC n _ _ a₀ r hm hS
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
--/
 
 end census
 

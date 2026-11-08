@@ -92,15 +92,6 @@ theorem rrnF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
 
 /-! ## `rec_rule_bits` (lane `tails`' `recRuleBits_refines`) -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- `rec_rule_bits` and its callees. -/
-def rrbProg : Prog :=
-  [("rec_rule_bits", L.Stubs.recRuleBitsL), ("rec_rule_k_of", L.Stubs.recRuleKOfL),
-   ("rec_rule_eta_of", L.Stubs.recRuleEtaOfL), ("ctor_family", L.Stubs.ctorFamily),
-   ("er_sl_eq", L.Ind.erSlEq), ("const_name_of", constNameOfL), ("get_app_fn_f", getAppFnFL),
-   ("pi_result_f", piResultFL), ("get_app_fn", getAppFnL), ("pi_result", piResultL),
-   ("env_find", envFindL), ("env_row_get", envRowGetL)]
--/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 def rrbFns : List FnName := rrbProg.map (·.1)
@@ -115,18 +106,7 @@ theorem rrbProg_closed : closedA rrbProg [] [] rrbFns = true := by
 abbrev RrbF (p : Prog) : Prop := ProgHas p rrbProg
 -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The model of `rec_rule_bits`.** -/
-noncomputable def rrbF (m : Mem) (args : List Word) : Option (List Word × Mem) :=
-  callF rrbProg "rec_rule_bits" m args
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem rrbF_spec (p : Prog) (hp : RrbF p) (n : Nat) (s₀ : St) (args : List Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_rule_bits" args
-    ⦃fun r s' => LocEq s' s₀ ∧ rrbF s₀.mem args = some (r, s'.mem); ⊤⦄ := by
-  sorry
--/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_bits`' model refines `recRuleBits`** (replaces `IndStubs.recRuleBits_spec`). -/

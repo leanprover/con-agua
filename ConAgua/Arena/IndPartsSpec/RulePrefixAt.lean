@@ -146,14 +146,20 @@ theorem decRS_some {m : Mem} {p : Nat} {rs : RecShape} (h : decRS m p = some rs)
     iwN m (p + 2) = some rs.mI ∧ iwN m (p + 3) = some rs.tgt ∧
     (∃ o c, iwN m (p + 4) = some o ∧ iwN m (p + 5) = some c ∧ decRules (erA m) o c = some rs.rules) ∧
     iwB m (p + 6) = some rs.isK := by
-  sorry
+  rw [decRS] at h
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, g, hg, r, hr, i, hi, rfl⟩ := h
+  exact ⟨⟨a, ha, hb⟩, hc, hd, he, ⟨f, g, hf, hg, hr⟩, hi⟩
 
 /-- `MemberShape`'s fields: `cvT` is read through the same indirection. -/
 theorem decMS_some {m : Mem} {p : Nat} {ms : MemberShape} (h : decMS m p = some ms) :
     (∃ a, iwN m p = some a ∧ decCVp m a = some ms.cvT) ∧
     (∃ a, iwN m (p + 4) = some a ∧ decCVp m a = some ms.declared) ∧ iwN m (p + 1) = some ms.nIdx ∧
     decAt m (decPL m (decCN m)) (p + 2) = some ms.ctors := by
-  sorry
+  rw [decMS] at h
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, rfl⟩ := h
+  exact ⟨⟨a, ha, hb⟩, ⟨c, hc, hd⟩, he, hf⟩
 
 /-! ## `BlockShape.rulePrefixAt`, `BlockShape.majorIdxAt` -/
 

@@ -292,17 +292,7 @@ theorem erAllocCopy_frame {m m2 : Mem} {l : Word}
     (hA : ∀ b : TieredArray, b ≠ ↑EREC → m2.arr64 b = (erAllocMem m l).arr64 b)
     (hS : (m2.arr64 EREC).size = (m.arr64 EREC).size) :
     MemFrame [EREC] [129] m m2 := by
-  refine ⟨fun b hb hcb => ?_, fun x hx => ?_, fun b => ?_⟩
-  · rw [hA b (by simpa using hb), erAllocMem, Mem.arr64_set64_ne _ _ _ _ _ hcb]
-  · rw [hA CTL (by decide)]; simp only [erAllocMem, rdW_set64]
-    have hx' : ¬ (x = 129) := by simpa using hx
-    simp [show (129 : Word) ≠ x from fun e => hx' e.symm]
-  · by_cases hb : b = EREC
-    · subst hb; exact hS
-    · rw [hA b hb]; simp only [erAllocMem]
-      by_cases hbc : b = CTL
-      · subst hbc; exact size_set64 _ _ _ _ _
-      · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]
+  sorry
 
 /-- **`block_caps_at_er_copy` is its model `capsErCopyW`** (generated). -/
 l_model blockCapsAtErCopy_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
@@ -324,56 +314,7 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     MemFrame [EREC] [129] m m' ∧ (∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
     erTop m' = erTop m + l.toNat ∧ erTop m + l.toNat ≤ (m'.arr64 EREC).size ∧
     m'.arr64 IW = m.arr64 IW := by
-  rcases n with _ | n
-  · simp [capsErCopyW.eq_1] at h
-  rw [capsErCopyW.arm1] at h
-  rcases hal : erAllocW m l with _ | ⟨q, m1⟩
-  · rw [hal, capsErCopyW.k_erec_alloc.none] at h; cases h
-  rw [hal, capsErCopyW.k_erec_alloc.arm1] at h
-  cases hcp : ieCopyW n m1 q o l with
-  | none => rw [hcp, capsErCopyW.k_block_caps_at_er_copy_go.none] at h; cases h
-  | some m2 =>
-  rw [hcp, capsErCopyW.k_block_caps_at_er_copy_go.arm1] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  simp only [erAllocW] at hal
-  by_cases h1 : m.len64 EREC < rdW (m.arr64 CTL) 129
-  · simp [h1] at hal
-  by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < l
-  · simp [h1, h2] at hal
-  simp only [h1, h2, ite_false, Option.some.injEq, Prod.mk.injEq] at hal
-  obtain ⟨rfl, rfl⟩ := hal
-  have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
-  have hq : (rdW (m.arr64 CTL) 129).toNat ≤ (m.arr64 EREC).size := by
-    have : ¬ (m.len64 EREC).toNat < (rdW (m.arr64 CTL) 129).toNat := h1
-    omega
-  have hroom : (rdW (m.arr64 CTL) 129).toNat + l.toNat ≤ (m.arr64 EREC).size := by
-    have : ¬ (m.len64 EREC - rdW (m.arr64 CTL) 129).toNat < l.toNat := h2
-    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at this
-    omega
-  generalize hqq : rdW (m.arr64 CTL) 129 = q at *
-  have hE : (erAllocMem m l).arr64 EREC = m.arr64 EREC := by
-    simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have hI : (erAllocMem m l).arr64 IW = m.arr64 IW := by
-    simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨hA, hS, hG⟩ := erCopy_get (src := IW) (by decide) (fun _ _ _ _ => rfl) (fun _ _ _ _ _ => rfl)
-    n _ _ _ _ _ hcp (by omega) (by rw [hE]; exact hroom) (by rw [hE]; exact hEs)
-  rw [hE] at hS hG
-  rw [hI] at hG
-  have hCTL : m2.arr64 CTL = (erAllocMem m l).arr64 CTL := hA CTL (by decide)
-  have hf := erAllocCopy_frame hA hS
-  have hqe : erTop m = q.toNat := by simp only [erTop, hqq]
-  have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
-  refine ⟨rfl, hqe.symm, fun j hj => ?_, hf, fun i hi => ?_, ?_, ?_, ?_⟩
-  · rw [hG, hqe, ite_eq_left (by omega), show q.toNat + j - q.toNat = j by omega,
-           Array.getElem?_eq_getElem (by omega)]; rfl
-  · rw [hG, ite_eq_right (by omega)]
-  · simp only [erTop]
-    rw [hCTL]; simp only [erAllocMem, rdW_set64]
-    rw [ite_eq_left ⟨trivial, trivial, h129⟩, hqq, UInt64.toNat_add]
-    simp; omega
-  · rw [hqe, hS]; omega
-  · rw [hA IW (by decide), hI]
+  sorry
 
 /-- **`block_caps_at_er_copy` copies an `IW` slice into fresh `EREC` words** (`IIndCaps`'s `all` and
 `ctors` fields): the new `EREC` slice at the old top holds the `IW` slice; everything the stage

@@ -314,39 +314,6 @@ theorem findTable_call {p : Prog} (hP : TblProg p) {vis : Word}
   exact ⟨hs'.symm.trans h1, h3⟩
 -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The memory after `env_push_table(q)`**: the slot and the count (`tblListPush`), then the
-structure's table row. -/
-theorem envPushTable_mem (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
-    (hs : p.lookup "tbl_row_set" = some tblRowSetL)
-    (hp : p.lookup "env_push_table" = some envPushTableL) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "env_push_table" [q]
-    ⦃fun _ s' => s'.mem = tblSet (tblListPush s₀.mem q) (rdN (s₀.mem.arr64 EREC) (q.toNat + 2)) (q + 1) ∧
-      rowTag (rdN (s₀.mem.arr64 EREC) (q.toNat + 2)) ≤ 2 ∧ q.toNat < 2 ^ 32; ⊤⦄ := by
-  have hE2 : ∀ k v, (((s₀.mem.set64 ETAB k q).set64 CTL 133 v).arr64 EREC) = s₀.mem.arr64 EREC := by
-    intro k v; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have hrd : ∀ (h : 133 < (s₀.mem.arr64 CTL).size), rdW (s₀.mem.arr64 CTL) 133 = (s₀.mem.arr64 CTL)[133] :=
-    fun h => rdW_eq _ _ 133 rfl h
-  have hq2 : ¬ (4294967295 : Word) < q → (q + 2).toNat = q.toNat + 2 := by
-    intro h; have : q.toNat ≤ 4294967295 := by
-      have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h); simpa using this
-    rw [UInt64.toNat_add]; simp; omega
-  have hqlt : ¬ (4294967295 : Word) < q → q.toNat < 2 ^ 32 := by
-    intro h; have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h); simp at this; omega
-  have hrdE : ∀ (h : q.toNat + 2 < (s₀.mem.arr64 EREC).size),
-      rdN (s₀.mem.arr64 EREC) (q.toNat + 2) = (s₀.mem.arr64 EREC)[q.toNat + 2] := by
-    intro h; simp [rdN, h]
-  rw [invoke_eq _ hp]
-  simp only [callFn, envPushTableL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        tblRowSet_spec p htx hs n] <;>
-      finish [tblListPush]
--/
 
 /-- **`env_push_table` as a callee of the stage**: the twin's `pushTable` of the record's table,
 the pool unchanged, the walk memos and the frame below the stage's kept. -/
@@ -620,25 +587,7 @@ theorem checkStructProjTable_refinesC (p : Prog) (hP : TblProg p) (hp : ApdF p) 
 
 /-! ## `check_block_tables`, one model and one refinement each -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`check_block_tables_one`'s unified model**: `struct_proj_guards` and `block_shape_lps`
-(outside the verdict closure) lifted, `check_struct_proj_table` through its unified model. -/
-l_model ctoE_spec (p : Prog) (ht : TblProg p) (hf : p.lookup "check_block_tables_one" = some checkBlockTablesOne)
-  fns [hf ↦ ctoE] specs [callW_spec p n "struct_proj_guards", callW_spec p n "block_shape_lps", tblE_spec p ht n]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] heartbeats 1000000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`check_block_tables`' unified model**: every member's table through `ctoE`. -/
-l_model ctbE_spec (p : Prog) (ht : TblProg p) (h1 : p.lookup "check_block_tables_one" = some checkBlockTablesOne)
-  (hf : p.lookup "check_block_tables" = some checkBlockTables)
-  fns [hf ↦ ctbE] specs [ctoE_spec p ht h1 n]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] heartbeats 1000000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
 /-- What a table install gives besides the environment `x` it returns (from `m`, `a`): the stage at
 the returned view `w`, the growth, the `hb` memo, `AbsOK`, the twin's run a `PStep`. -/

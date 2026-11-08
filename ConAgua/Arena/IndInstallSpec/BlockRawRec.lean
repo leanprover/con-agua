@@ -330,7 +330,7 @@ theorem brm_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any
     simp only [callFn, blockIsRecMember]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pdm_spec p hM hpd n, ih] <;>
-      finish (gen := 20) [rdW_eq, CWF]
+      finish (gen := 20) [rdW_eq, CWF, erRd]
 
 theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
     (hm : p.lookup "block_is_rec_member" = some blockIsRecMember)

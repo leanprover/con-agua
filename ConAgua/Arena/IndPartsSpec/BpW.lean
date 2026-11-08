@@ -39,16 +39,6 @@ def PartsR (x : Option BlockParts) (r : List Word) (m : Mem) : Prop :=
       ShapeSl m (r.tail.headD 0)
 -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem bpa_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St) (nPd off l : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 6)) "block_parts" [nPd, off, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ bgoK3 (bshW c n s₀.mem nPd off l) = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hP.parts]
-  simp only [callFn, blockParts]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bsh_spec p hP c hc n] <;>
-    finish (gen := 20) [bgoK3_some]
--/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_parts`' model refines `blockParts?`** (`bshW_sim`). -/

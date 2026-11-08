@@ -182,32 +182,6 @@ grind_pattern [ind_grind] colK_big => colK n uo ul so sl z j k (some (mx, m1))
 grind_pattern [ind_grind] colK_ok => colK n uo ul so sl z j k (some (mx, m1))
 grind_pattern [ind_grind] colK2_some => colK2 (some (r, m2))
 
-/- ronsync2 stage 2: commented out (a section at a removed L function)
-section spec
-variable (p : Prog) (hgd : p.lookup "sl_getd" = some slGetD)
-  (hmf : p.lookup "max_find" = some maxFind) (hmp : p.lookup "max_push" = some maxPush)
-  (him : p.lookup "intern_max" = some internMax)
-  (hp : p.lookup "struct_proj_guards_col" = some structProjGuardsColL)
-include hgd hmf hmp him hp
-
-theorem colW_spec (n : Nat) : ∀ (s₀ : St) (uo ul so sl z j k acc : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_guards_col" [uo, ul, so, sl, z, j, k, acc]
-    ⦃fun r s' => LocEq s' s₀ ∧ colW n s₀.mem uo ul so sl z j k acc = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ uo ul so sl z j k acc; rw [invoke_eq _ hp]; simp only [callFn, structProjGuardsColL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ uo ul so sl z j k acc
-    rw [invoke_eq _ hp]
-    simp only [callFn, structProjGuardsColL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        slGetD_specW p hgd n, internMax_spec p hmf hmp him n, ih] <;>
-      finish (gen := 20)
-
-end spec
--/
 
 /-- A slice of `IW` Booleans (`0` false, any other word true). -/
 def decBL (m : Mem) (o l : Nat) : Option (List Bool) := (List.range l).mapM fun j => iwB m (o + j)
@@ -335,33 +309,6 @@ theorem colW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       exact hrun2
 -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`struct_proj_guards_col` refines `structProjGuards.col`** under the stage relation. -/
-@[refines ConRon.Arena.structProjGuards.col]
-theorem structProjGuardsCol_refines (p : Prog) (hgd : p.lookup "sl_getd" = some slGetD)
-    (hmf : p.lookup "max_find" = some maxFind) (hmp : p.lookup "max_push" = some maxPush)
-    (him : p.lookup "intern_max" = some internMax)
-    (hp : p.lookup "struct_proj_guards_col" = some structProjGuardsColL) (n : Nat) (s₀ : St)
-    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (uo ul so sl z j k acc : Word) (used : List Bool) (sorts : List LIdx)
-    (hS : StageR vis fe s₀.mem a₀) (hu : decBL s₀.mem uo.toNat ul.toNat = some used)
-    (hs : decHL s₀.mem so.toNat sl.toNat = some sorts)
-    (hub : uo.toNat + ul.toNat < 2 ^ 64) (hsb : so.toNat + sl.toNat < 2 ^ 64)
-    (hut : uo.toNat + ul.toNat ≤ iwTop s₀.mem) (hst : so.toNat + sl.toNat ≤ iwTop s₀.mem)
-    (hz : H z) (hacc : H acc) (hjk : j.toNat + k.toNat < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_guards_col" [uo, ul, so, sl, z, j, k, acc]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (structProjGuards.col sorts (decI z) used j.toNat k.toNat (decI acc)) a₀ ∧
-      StageR vis fe s'.mem (AM.st (structProjGuards.col sorts (decI z) used j.toNat k.toNat (decI acc)) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ H (r.headD 0) ∧
-      decI (r.headD 0) = AM.res (structProjGuards.col sorts (decI z) used j.toNat k.toNat (decI acc)) a₀; ⊤⦄ := by
-  refine triple_post (colW_spec p hgd hmf hmp him hp n s₀ uo ul so sl z j k acc) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hH, hx⟩ :=
-    colW_ok dn vis fe n _ _ _ _ _ _ _ _ _ _ _ _ _ _ hm hS hu hs hub hsb hut hst hz hacc hjk
-  obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst']; exact hS', hg, hH, by rw [hres]; exact hx⟩
--/
 
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (uo ul so sl z i k g : Word) (rg rr : List Word)
@@ -380,36 +327,6 @@ grind_pattern [ind_grind] rowW_cons => rowW (n + 1) m uo ul so sl z i k
 grind_pattern [ind_grind] rowK1_some => rowK1 n uo ul so sl z i k (some (rg, m1))
 grind_pattern [ind_grind] rowK2_some => rowK2 n g (some (rr, m2))
 
-/- ronsync2 stage 2: commented out (a section at a removed L function)
-section spec
-variable (p : Prog) (hgd : p.lookup "sl_getd" = some slGetD)
-  (hmf : p.lookup "max_find" = some maxFind) (hmp : p.lookup "max_push" = some maxPush)
-  (him : p.lookup "intern_max" = some internMax)
-  (hcol : p.lookup "struct_proj_guards_col" = some structProjGuardsColL)
-  (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
-  (hp : p.lookup "struct_proj_guards_row" = some structProjGuardsRowL)
-include hgd hmf hmp him hcol ha hc hsc hp
-
-theorem rowW_spec (n : Nat) : ∀ (s₀ : St) (uo ul so sl z i k : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_guards_row" [uo, ul, so, sl, z, i, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ rowW n s₀.mem uo ul so sl z i k = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ uo ul so sl z i k; rw [invoke_eq _ hp]; simp only [callFn, structProjGuardsRowL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ uo ul so sl z i k
-    rw [invoke_eq _ hp]
-    simp only [callFn, structProjGuardsRowL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        iwAlloc_specW p ha n, slGetD_specW p hgd n, colW_spec p hgd hmf hmp him hcol n,
-        slCons_specW p ha hc hsc n, ih] <;>
-      finish (gen := 20)
-
-end spec
--/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rowW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
@@ -471,38 +388,6 @@ theorem rowW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     rfl
 -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`struct_proj_guards_row` refines `structProjGuards.row`** under the stage relation. -/
-@[refines ConRon.Arena.structProjGuards.row]
-theorem structProjGuardsRow_refines (p : Prog) (hgd : p.lookup "sl_getd" = some slGetD)
-    (hmf : p.lookup "max_find" = some maxFind) (hmp : p.lookup "max_push" = some maxPush)
-    (him : p.lookup "intern_max" = some internMax)
-    (hcol : p.lookup "struct_proj_guards_col" = some structProjGuardsColL)
-    (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "struct_proj_guards_row" = some structProjGuardsRowL) (n : Nat) (s₀ : St)
-    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (uo ul so sl z i k : Word) (used : List Bool) (sorts : List LIdx)
-    (hS : StageR vis fe s₀.mem a₀) (hu : decBL s₀.mem uo.toNat ul.toNat = some used)
-    (hs : decHL s₀.mem so.toNat sl.toNat = some sorts)
-    (hub : uo.toNat + ul.toNat < 2 ^ 64) (hsb : so.toNat + sl.toNat < 2 ^ 64)
-    (hut : uo.toNat + ul.toNat ≤ iwTop s₀.mem) (hst : so.toNat + sl.toNat ≤ iwTop s₀.mem)
-    (hz : H z) (hik : i.toNat + k.toNat < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_guards_row" [uo, ul, so, sl, z, i, k]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (structProjGuards.row sorts (decI z) used i.toNat k.toNat) a₀ ∧
-      StageR vis fe s'.mem (AM.st (structProjGuards.row sorts (decI z) used i.toNat k.toNat) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
-        some (AM.res (structProjGuards.row sorts (decI z) used i.toNat k.toNat) a₀) ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop s'.mem; ⊤⦄ := by
-  refine triple_post (rowW_spec p hgd hmf hmp him hcol ha hc hsc hp n s₀ uo ul so sl z i k) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨gs, a', hrun, hS', hg, hd, ht⟩ :=
-    rowW_ok dn vis fe n _ _ _ _ _ _ _ _ _ _ _ _ _ hm hS hu hs hub hsb hut hst hz hik
-  obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst']; exact hS', hg, by rw [hres]; exact hd, ht⟩
--/
 
 /-! ## `struct_ps_at` under the stage relation -/
 
