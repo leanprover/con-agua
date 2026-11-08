@@ -60,9 +60,9 @@ twin's pin reads raise `.internal`. -/
 
 /-- `dlp_copy(d, s, l)`: `EREC[d + j] := DLP[s + j]` cut to 32 bits, for `j < l`. -/
 -- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
-@[no_expose] def dlpCopy : FunDecl := lfn (d, s, l) locals (u) {
+@[no_expose] def dlpCopy : FunDecl := lfn (d, s, l) locals (u, ez) {
   if l == 0 { return 0 };
-  EREC.u64[d] := DLP.u64[s] & 4294967295;
+  ez := call erec_put(d, DLP.u64[s] & 4294967295);
   u := call dlp_copy(d + 1, s + 1, l - 1);
   return 0
 }
@@ -72,22 +72,22 @@ twin's pin reads raise `.internal`. -/
 regular), the height); its universe parameters a fresh `EREC` slice. -/
 -- con-ron: ConRon/Arena/Checker.lean:117-155 ConRon.Arena.installStepGo
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installStepGo` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def erecCi : FunDecl := lfn (i, kind) locals (lo, ll, s, z, p, hq) {
+@[no_expose] def erecCi : FunDecl := lfn (i, kind) locals (lo, ll, s, z, p, hq, ez) {
   lo := DECL.u64[3 + 8 * i];
   ll := DECL.u64[4 + 8 * i];
   s := call erec_alloc(ll);
   z := call dlp_copy(s, 1 + lo, ll);
   p := call erec_alloc(8);
-  EREC.u64[p] := kind;
-  EREC.u64[p + 1] := DECL.u64[2 + 8 * i] & 4294967295;
-  EREC.u64[p + 2] := s;
-  EREC.u64[p + 3] := ll;
-  EREC.u64[p + 4] := DECL.u64[5 + 8 * i] & 4294967295;
-  EREC.u64[p + 5] := DECL.u64[6 + 8 * i] & 4294967295;
+  ez := call erec_put(p, kind);
+  ez := call erec_put(p + 1, DECL.u64[2 + 8 * i] & 4294967295);
+  ez := call erec_put(p + 2, s);
+  ez := call erec_put(p + 3, ll);
+  ez := call erec_put(p + 4, DECL.u64[5 + 8 * i] & 4294967295);
+  ez := call erec_put(p + 5, DECL.u64[6 + 8 * i] & 4294967295);
   hq := DECL.u64[7 + 8 * i];
-  if hq == 1 { EREC.u64[p + 6] := 1 } else if hq == 2 { EREC.u64[p + 6] := 0 } else {
-    EREC.u64[p + 6] := 2 };
-  EREC.u64[p + 7] := DECL.u64[8 + 8 * i];
+  if hq == 1 { ez := call erec_put(p + 6, 1)} else if hq == 2 { ez := call erec_put(p + 6, 0)} else {
+    ez := call erec_put(p + 6, 2)};
+  ez := call erec_put(p + 7, DECL.u64[8 + 8 * i]);
   return p
 }
 
@@ -95,14 +95,14 @@ regular), the height); its universe parameters a fresh `EREC` slice. -/
 defn, `1` thm, `2` opaque): kind, the constant value, the value (`p + 5`). -/
 -- con-ron: ConRon/Arena/Checker.lean:117-155 ConRon.Arena.installStepGo
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installStepGo` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose] def erecVg : FunDecl := lfn (p, vk) locals (g) {
+@[no_expose] def erecVg : FunDecl := lfn (p, vk) locals (g, ez) {
   g := call erec_alloc(6);
-  EREC.u64[g] := vk;
-  EREC.u64[g + 1] := EREC.u64[p + 1];
-  EREC.u64[g + 2] := EREC.u64[p + 2];
-  EREC.u64[g + 3] := EREC.u64[p + 3];
-  EREC.u64[g + 4] := EREC.u64[p + 4];
-  EREC.u64[g + 5] := EREC.u64[p + 5];
+  ez := call erec_put(g, vk);
+  ez := call erec_put(g + 1, EREC⦃p + 1⦄);
+  ez := call erec_put(g + 2, EREC⦃p + 2⦄);
+  ez := call erec_put(g + 3, EREC⦃p + 3⦄);
+  ez := call erec_put(g + 4, EREC⦃p + 4⦄);
+  ez := call erec_put(g + 5, EREC⦃p + 5⦄);
   return g
 }
 
@@ -113,8 +113,8 @@ defn, `1` thm, `2` opaque): kind, the constant value, the value (`p + 5`). -/
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.installHeader` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.installHeader]
 def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a, u) {
-  n := EREC.u64[q];
-  t := EREC.u64[q + 3];
+  n := EREC⦃q⦄;
+  t := EREC⦃q + 3⦄;
   (f, r) := call env_find(n, vis);
   if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   c := call reserved_contains(n);
@@ -156,10 +156,10 @@ def installValueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c, u
 (the pool's top, never a record's or a slice's place: the front writes them at `1 + top`) aborts,
 so that the copy reads only what `IndDeclAt`'s cut pool (`trunc`, word `0` cleared) decodes. -/
 -- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
-@[no_expose] def dindCopy : FunDecl := lfn (d, s, l) locals (u) {
+@[no_expose] def dindCopy : FunDecl := lfn (d, s, l) locals (u, ez) {
   if l == 0 { return 0 };
   if s == 0 { abort };
-  EREC.u64[d] := DIND.u64[s];
+  ez := call erec_put(d, DIND.u64[s]);
   u := call dind_copy(d + 1, s + 1, l - 1);
   return 0
 }
@@ -167,7 +167,7 @@ so that the copy reads only what `IndDeclAt`'s cut pool (`trunc`, word `0` clear
 /-- `ind_rec_copy(s)`: the constant record at `DIND[s]` (kind `3` inductive, 20 words; `4`
 constructor, 7; `5` recursor, 9 and its 11-word rules) copied into `EREC`, its slices too. -/
 -- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
-@[no_expose] def indRecCopy : FunDecl := lfn (s) locals (k, q, z, r, n, p) {
+@[no_expose] def indRecCopy : FunDecl := lfn (s) locals (k, q, z, r, n, p, ez) {
   k := DIND.u64[s];
   q := call erec_alloc(DIND.u64[s + 3]);
   z := call dind_copy(q, DIND.u64[s + 2], DIND.u64[s + 3]);
@@ -180,18 +180,18 @@ constructor, 7; `5` recursor, 9 and its 11-word rules) copied into `EREC`, its s
   } else { abort };
   p := call erec_alloc(n);
   z := call dind_copy(p, s, n);
-  EREC.u64[p + 2] := q;
-  if k == 5 { EREC.u64[p + 7] := r };
+  ez := call erec_put(p + 2, q);
+  if k == 5 { ez := call erec_put(p + 7, r)};
   return p
 }
 
 /-- `ind_copy_go(o, bo, bl)`: the records the pointers `DIND[bo‥bo + bl)` name, copied, their
 `EREC` pointers to `EREC[o‥]`. -/
 -- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
-@[no_expose] def indCopyGo : FunDecl := lfn (o, bo, bl) locals (p, u) {
+@[no_expose] def indCopyGo : FunDecl := lfn (o, bo, bl) locals (p, u, ez) {
   if bl == 0 { return 0 };
   p := call ind_rec_copy(DIND.u64[bo]);
-  EREC.u64[o] := p;
+  ez := call erec_put(o, p);
   u := call ind_copy_go(o + 1, bo + 1, bl - 1);
   return 0
 }
@@ -240,7 +240,7 @@ from the text, `DeclStepSpec.lean`). -/
 @[no_expose] def installValueL : FunDecl := lfn (i, vis, ck, vk) locals (p, z, v, g) {
   p := call erec_ci(i, ck);
   z := call install_header(vis, p + 1);
-  if vk != 1 { z := call install_value_guards(vis, p + 1, EREC.u64[p + 5]) };
+  if vk != 1 { z := call install_value_guards(vis, p + 1, EREC⦃p + 5⦄) };
   v := call env_push(vis, p);
   g := call erec_vg(p, vk);
   return (v, g)
@@ -286,11 +286,11 @@ declared one. The level comparison is lane `whnf`'s cached `lvl_eq_c` (`lvlEq?` 
 @[no_expose, l_impl ConRon.Arena.checkValueGroup]
 def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt, d) {
   z := call iw_reset();
-  t := EREC.u64[g + 4];
-  v := EREC.u64[g + 5];
+  t := EREC⦃g + 4⦄;
+  v := EREC⦃g + 5⦄;
   st := call infer_type_core(vis, 0, t);
   u := call ensure_sort_core(vis, 0, st);
-  if EREC.u64[g] == 1 {
+  if EREC⦃g⦄ == 1 {
     zr := call pin_word(53);
     e := call lvl_eq_c(u, zr);
     if e == 0 { fail R_RESOURCE_LIMIT_FUEL };
@@ -301,8 +301,8 @@ def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt
   vt := call infer_type_core(vis, 0, v);
   d := call is_def_eq_core(vis, 0, vt, t);
   if d == 0 {
-    if EREC.u64[g] == 1 { fail R_TYPE_MISMATCH_IN_THEOREM };
-    if EREC.u64[g] == 2 { fail R_TYPE_MISMATCH_IN_OPAQUE };
+    if EREC⦃g⦄ == 1 { fail R_TYPE_MISMATCH_IN_THEOREM };
+    if EREC⦃g⦄ == 2 { fail R_TYPE_MISMATCH_IN_OPAQUE };
     fail R_TYPE_MISMATCH_IN
   };
   return 0

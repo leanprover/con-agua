@@ -40,9 +40,9 @@ con-ron: ConRon/Arena/Core.lean:1830-1947 ConRon.Arena.majorToCtor -/
   ok := call is_ctor_app(vis, major);
   if ok != 0 { return major };
   if rc != 1 { return major };
-  (f, q) := call env_find(EREC.u64[ro], vis);
+  (f, q) := call env_find(EREC⦃ro⦄, vis);
   if f == 0 { return major };
-  if EREC.u64[q] != 4 { return major };
+  if EREC⦃q⦄ != 4 { return major };
   r := call m2c_ctor(mode, vis, d, ro, q, major);
   return r
 }
@@ -54,13 +54,13 @@ con-ron: ConRon/Arena/Core.lean:1830-1947 ConRon.Arena.majorToCtor -/
 -- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.etaRescueOk`, `ConRon.Arena.formerNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cCtorL : FunDecl := lfn (mode, vis, d, ro, cvjP, major)
     locals (piRes, hh, T, us, f, indP, r) {
-  piRes := call pi_result(EREC.u64[cvjP + 4]);
+  piRes := call pi_result(EREC⦃cvjP + 4⦄);
   hh := call get_app_fn(piRes);
   if ⟦hh⟧.tag != 3 { return major };
   (T, us) := call m2c_const_view(hh);
   (f, indP) := call env_find(T, vis);
   if f == 0 { return major };
-  if EREC.u64[indP] != 3 { return major };
+  if EREC⦃indP⦄ != 3 { return major };
   r := call m2c_arms(mode, vis, d, ro, cvjP, T, indP, major);
   return r
 }
@@ -81,15 +81,15 @@ con-ron: ConRon/Arena/Core.lean:1830-1947 ConRon.Arena.majorToCtor -/
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.etaRescueOk`, `ConRon.Arena.formerNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cArmsL : FunDecl := lfn (mode, vis, d, ro, cvjP, T, indP, major) locals (r) {
-  if EREC.u64[ro + 9] != 0 {
-    r := call m2c_k(mode, vis, d, T, major, EREC.u64[ro], EREC.u64[cvjP + 3], EREC.u64[cvjP + 5]);
+  if EREC⦃ro + 9⦄ != 0 {
+    r := call m2c_k(mode, vis, d, T, major, EREC⦃ro⦄, EREC⦃cvjP + 3⦄, EREC⦃cvjP + 5⦄);
     return r
   };
-  if EREC.u64[ro + 10] != 0 {
+  if EREC⦃ro + 10⦄ != 0 {
     r := call m2c_eta(mode, vis, d, T, indP, major);
     return r
   };
-  r := call m2c_and(mode, vis, d, T, major, EREC.u64[ro], EREC.u64[cvjP + 3], EREC.u64[cvjP + 5]);
+  r := call m2c_and(mode, vis, d, T, major, EREC⦃ro⦄, EREC⦃cvjP + 3⦄, EREC⦃cvjP + 5⦄);
   return r
 }
 
@@ -158,14 +158,14 @@ con-ron: ConRon/Arena/Core.lean:1830-1947 ConRon.Arena.majorToCtor -/
 -- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.etaRescueOk`, `ConRon.Arena.formerNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cEtaL : FunDecl := lfn (mode, vis, d, T, indP, major)
     locals (po, pc, ec, ep, ef, swd, so, sc, f, tmaj, T2, ust, ustl, to, tn, nz, r) {
-  po := EREC.u64[indP + 2];
-  pc := EREC.u64[indP + 3];
-  ec := EREC.u64[indP + 6];
-  ep := EREC.u64[indP + 7];
-  ef := EREC.u64[indP + 8];
-  swd := EREC.u64[indP + 12];
-  so := EREC.u64[indP + 13];
-  sc := EREC.u64[indP + 14];
+  po := EREC⦃indP + 2⦄;
+  pc := EREC⦃indP + 3⦄;
+  ec := EREC⦃indP + 6⦄;
+  ep := EREC⦃indP + 7⦄;
+  ef := EREC⦃indP + 8⦄;
+  swd := EREC⦃indP + 12⦄;
+  so := EREC⦃indP + 13⦄;
+  sc := EREC⦃indP + 14⦄;
   (f, tmaj, T2, ust, ustl) := call m2c_pre(mode, vis, d, major);
   if f == 0 { return major };
   (to, tn) := call get_app_args(tmaj);

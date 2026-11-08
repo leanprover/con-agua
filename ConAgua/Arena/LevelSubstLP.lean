@@ -70,7 +70,7 @@ con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst.go -/
 con-leche: ConLeche/Kernel/Level.lean:215-221 ConLeche.Level.substPW -/
 @[no_expose] def lpSpw : FunDecl := lfn (po, pc, ko, kc, vo, vc) locals (f, v, x, w) {
   if pc == 0 { return 0 };
-  w := EREC.u64[po];
+  w := EREC⦃po⦄;
   (f, v) := call lp_lookup(ko, kc, vo, vc, w);
   if f != 0 { x := call lv_zero(v) } else { x := call lh_push(w); x := 0 };
   if x != 0 { return 1 };

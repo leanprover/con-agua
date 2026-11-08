@@ -161,7 +161,7 @@ declare_arrays checkerArrays
   | /-- The environment index rows of tier-0 `str` names. -/ Arena.EIXS : word := 133
   | /-- The environment index rows of tier-0 `num` names. -/ Arena.EIXN : word := 134
   | /-- The record pointer of every constant, oldest first. -/ Arena.ECON : word := 135
-  | /-- The environment's record pool (`EnvRec.lean`). -/ Arena.EREC : word := 136
+  | /-- The environment's record pool (`EnvRec.lean`; tier 1: a job's own records). -/ Arena.EREC : word tiered := 136
   | /-- The pending checks. -/ Arena.PEND : word := 137
   | /-- The ROM interner's handle stack. -/ Rom.RSTK : word := 138
   | /-- The memo of the ROM expression interner. -/ Rom.RMEMO : word := 139

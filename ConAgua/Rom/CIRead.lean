@@ -45,10 +45,10 @@ needs room above `CTL[131]`; nothing else holds the stack between two ROM reads)
 
 /-- `rci_names_to(q, o, k)`: `k` names to `EREC[o ‥]`; the position after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:271-277 ConRon.Arena.Frontend.internNameList
-@[no_expose] def rciNamesTo : FunDecl := lfn (q, o, k) locals (h, r) {
+@[no_expose] def rciNamesTo : FunDecl := lfn (q, o, k) locals (h, r, ez) {
   if k == 0 { return q };
   (h, q) := call rom_name(q);
-  EREC.u64[o] := h;
+  ez := call erec_put(o, h);
   r := call rci_names_to(q, o + 1, k - 1);
   return r
 }
@@ -56,21 +56,21 @@ needs room above `CTL[131]`; nothing else holds the stack between two ROM reads)
 /-- `rci_name_sl(q, d)`: a name list (count, names) as an `EREC` slice, its offset and length to
 `EREC[d]`, `EREC[d + 1]`; the position after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:271-277 ConRon.Arena.Frontend.internNameList
-@[no_expose] def rciNameSl : FunDecl := lfn (q, d) locals (c, o) {
+@[no_expose] def rciNameSl : FunDecl := lfn (q, d) locals (c, o, ez) {
   c := call rom_u64(q);
   o := call erec_alloc(c);
-  EREC.u64[d] := o;
-  EREC.u64[d + 1] := c;
+  ez := call erec_put(d, o);
+  ez := call erec_put(d + 1, c);
   q := call rci_names_to(q + 8, o, c);
   return q
 }
 
 /-- `rci_lvls_to(q, o, k)`: `k` levels to `EREC[o ‥]`; the position after. -/
 -- con-ron: ConRon/Arena/Monad.lean:528-534 ConRon.Arena.internLevelList
-@[no_expose] def rciLvlsTo : FunDecl := lfn (q, o, k) locals (h, r) {
+@[no_expose] def rciLvlsTo : FunDecl := lfn (q, o, k) locals (h, r, ez) {
   if k == 0 { return q };
   (h, q) := call rom_level(q);
-  EREC.u64[o] := h;
+  ez := call erec_put(o, h);
   r := call rci_lvls_to(q, o + 1, k - 1);
   return r
 }
@@ -79,12 +79,12 @@ needs room above `CTL[131]`; nothing else holds the stack between two ROM reads)
 current memo; the position after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:279-284 ConRon.Arena.Frontend.internCV
 @[no_expose, l_impl ConRon.Arena.Frontend.internCV]
-def rciCv : FunDecl := lfn (q, p) locals (h) {
+def rciCv : FunDecl := lfn (q, p) locals (h, ez) {
   (h, q) := call rom_name(q);
-  EREC.u64[p] := h;
+  ez := call erec_put(p, h);
   q := call rci_name_sl(q, p + 1);
   (h, q) := call rom_expr(q);
-  EREC.u64[p + 3] := h;
+  ez := call erec_put(p + 3, h);
   return q
 }
 
@@ -93,25 +93,25 @@ after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:312-318 ConRon.Arena.Frontend.internCaps
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.internCaps` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.internCaps]
-def rciCaps : FunDecl := lfn (q, c) locals (x, h) {
+def rciCaps : FunDecl := lfn (q, c) locals (x, h, ez) {
   x := call rom_u64(q);
-  EREC.u64[c] := x;
+  ez := call erec_put(c, x);
   x := call rom_u64(q + 8);
-  EREC.u64[c + 2] := x;
+  ez := call erec_put(c + 2, x);
   x := call rom_u64(q + 16);
-  EREC.u64[c + 3] := x;
+  ez := call erec_put(c + 3, x);
   x := call rom_u64(q + 24);
-  EREC.u64[c + 4] := x;
+  ez := call erec_put(c + 4, x);
   x := call rom_u64(q + 32);
-  EREC.u64[c + 5] := x;
+  ez := call erec_put(c + 5, x);
   x := call rom_u64(q + 40);
-  EREC.u64[c + 6] := x;
+  ez := call erec_put(c + 6, x);
   x := call rom_u64(q + 48);
-  EREC.u64[c + 12] := x;
+  ez := call erec_put(c + 12, x);
   x := call rom_u64(q + 56);
-  EREC.u64[c + 7] := x;
+  ez := call erec_put(c + 7, x);
   (h, q) := call rom_name(q + 64);
-  EREC.u64[c + 1] := h;
+  ez := call erec_put(c + 1, h);
   q := call rci_name_sl(q, c + 10);
   q := call rci_name_sl(q, c + 13);
   q := call rci_name_sl(q, c + 8);
@@ -124,38 +124,38 @@ memo; the position after. -/
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.internRule` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:286-292 ConRon.Arena.Frontend.internFire
 @[no_expose, l_impl ConRon.Arena.Frontend.internRule ConRon.Arena.Frontend.internFire]
-def rciRule : FunDecl := lfn (q, r) locals (h, x, f, l, o) {
+def rciRule : FunDecl := lfn (q, r) locals (h, x, f, l, o, ez) {
   (h, q) := call rom_name(q);
-  EREC.u64[r] := h;
+  ez := call erec_put(r, h);
   x := call rom_u64(q);
-  EREC.u64[r + 1] := x;
+  ez := call erec_put(r + 1, x);
   x := call rom_u64(q + 8);
-  EREC.u64[r + 2] := x;
+  ez := call erec_put(r + 2, x);
   x := call rom_u64(q + 16);
-  EREC.u64[r + 9] := x;
+  ez := call erec_put(r + 9, x);
   x := call rom_u64(q + 24);
-  EREC.u64[r + 10] := x;
+  ez := call erec_put(r + 10, x);
   f := call rom_u64(q + 32);
-  EREC.u64[r + 3] := f;
+  ez := call erec_put(r + 3, f);
   q := q + 40;
-  EREC.u64[r + 4] := 0;
-  EREC.u64[r + 5] := 0;
-  EREC.u64[r + 6] := 0;
-  EREC.u64[r + 7] := 0;
+  ez := call erec_put(r + 4, 0);
+  ez := call erec_put(r + 5, 0);
+  ez := call erec_put(r + 6, 0);
+  ez := call erec_put(r + 7, 0);
   if f == 1 {
     l := call rom_u64(q);
     o := call erec_alloc(l);
-    EREC.u64[r + 4] := o;
-    EREC.u64[r + 5] := l;
+    ez := call erec_put(r + 4, o);
+    ez := call erec_put(r + 5, l);
     q := call rci_lvls_to(q + 8, o, l);
     l := call rom_u64(q);
     o := call erec_alloc(l);
-    EREC.u64[r + 6] := o;
-    EREC.u64[r + 7] := l;
+    ez := call erec_put(r + 6, o);
+    ez := call erec_put(r + 7, l);
     q := call rom_exprs_to(q + 8, o, l)
   };
   (h, q) := call rom_expr(q);
-  EREC.u64[r + 8] := h;
+  ez := call erec_put(r + 8, h);
   return q
 }
 
@@ -176,21 +176,21 @@ merge after it). -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:320-342 ConRon.Arena.Frontend.internCI
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.internCI` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.internCI]
-def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o) {
+def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o, ez) {
   k := call rom_u64(q);
   q := q + 8;
   if k == 0 { n := 5 } else if k == 2 { n := 5 } else if k == 1 { n := 8 } else if k == 3 { n := 20 }
   else if k == 4 { n := 7 } else if k == 5 { n := 9 } else { abort };
   p := call erec_alloc(n);
-  EREC.u64[p] := k;
+  ez := call erec_put(p, k);
   q := call rci_cv(q, p + 1);
   if k == 1 {
     (h, q) := call rom_expr(q);
-    EREC.u64[p + 5] := h;
+    ez := call erec_put(p + 5, h);
     x := call rom_u64(q);
-    EREC.u64[p + 6] := x;
+    ez := call erec_put(p + 6, x);
     x := call rom_u64(q + 8);
-    EREC.u64[p + 7] := x;
+    ez := call erec_put(p + 7, x);
     return (p, q + 16)
   };
   if k == 3 {
@@ -199,20 +199,20 @@ def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o) {
   };
   if k == 4 {
     x := call rom_u64(q);
-    EREC.u64[p + 5] := x;
+    ez := call erec_put(p + 5, x);
     x := call rom_u64(q + 8);
-    EREC.u64[p + 6] := x;
+    ez := call erec_put(p + 6, x);
     return (p, q + 16)
   };
   if k == 5 {
     x := call rom_u64(q);
-    EREC.u64[p + 5] := x;
+    ez := call erec_put(p + 5, x);
     x := call rom_u64(q + 8);
-    EREC.u64[p + 6] := x;
+    ez := call erec_put(p + 6, x);
     l := call rom_u64(q + 16);
     o := call erec_alloc(11 * l);
-    EREC.u64[p + 7] := o;
-    EREC.u64[p + 8] := l;
+    ez := call erec_put(p + 7, o);
+    ez := call erec_put(p + 8, l);
     q := call rci_rules_to(q + 24, o, l);
     return (p, q)
   };

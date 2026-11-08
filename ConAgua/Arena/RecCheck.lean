@@ -262,7 +262,7 @@ def targetClassMatch : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl,
 def ctorsHaveName : FunDecl := lfn (co, cl, name) locals (ce, r) {
   if cl == 0 { return 0 };
   ce := IW.u64[co];
-  if EREC.u64[IW.u64[ce]] == name { return 1 };
+  if EREC⦃IW.u64[ce]⦄ == name { return 1 };
   r := call ctors_have_name(co + 1, cl - 1, name);
   return r
 }
@@ -304,10 +304,10 @@ def targetOutsideInst : FunDecl := lfn (vis, I, us, dso, dsl)
     locals (f, q, kind, tl, ok, ty, bso, bsl, body, g, x, y, z, lo, ll) {
   (f, q) := call env_find(I, vis);
   if f == 0 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
-  kind := EREC.u64[q];
+  kind := EREC⦃q⦄;
   if kind != 3 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
-  (lo, ll) := call er_to_iw(EREC.u64[q + 2], EREC.u64[q + 3]);
-  tl := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC.u64[q + 4]);
+  (lo, ll) := call er_to_iw(EREC⦃q + 2⦄, EREC⦃q + 3⦄);
+  tl := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC⦃q + 4⦄);
   (ok, ty) := call inst_pis_with(dso, dsl, tl);
   if ok == 0 { fail R_TARGET_REC_THE_MAJOR_S };
   (bso, bsl, body) := call pi_binders(⟪CWF⟫, ty);
@@ -511,7 +511,7 @@ def ptrNamesCopy : FunDecl := lfn (d, s, l) locals (ptr, cv, u) {
   if l == 0 { return 0 };
   ptr := IW.u64[s];
   cv := IW.u64[ptr];
-  IW.u64[d] := EREC.u64[cv];
+  IW.u64[d] := EREC⦃cv⦄;
   u := call ptr_names_copy(d + 1, s + 1, l - 1);
   return 0
 }
@@ -532,7 +532,7 @@ def ptrListNames : FunDecl := lfn (o, l) locals (go, u) {
 def targetRecPinsNames : FunDecl := lfn (mo, k, reco, recl, auxo, auxl)
     locals (n0, ms0, cvt0, wo, wl, go, gl, ok, nodupo, nodupl) {
   if k == 0 { n0 := call intern_nanon() }
-  else { ms0 := IW.u64[mo]; cvt0 := IW.u64[ms0]; n0 := EREC.u64[cvt0] };
+  else { ms0 := IW.u64[mo]; cvt0 := IW.u64[ms0]; n0 := EREC⦃cvt0⦄ };
   (wo, wl) := call block_rec_want_aux_names(n0, 0, auxl);
   (go, gl) := call ptr_list_names(auxo, auxl);
   ok := call sl_set_eq(wo, wl, go, gl);
@@ -594,10 +594,10 @@ instantiated at the major's levels. -/
 @[no_expose, l_impl ConRon.Arena.targetCtorAt]
 def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r, lo, ll, us) {
   mem := IW.u64[M + 8];
-  if mem != 0 { return EREC.u64[c + 3] };
+  if mem != 0 { return EREC⦃c + 3⦄ };
   us := IW.u64[M + 1];
   (lo, ll) := call cv_lps(c);
-  r := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC.u64[c + 3]);
+  r := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC⦃c + 3⦄);
   return r
 }
 
@@ -742,19 +742,19 @@ NESTED fire at the record-pool slices `(flo, fll)` (levels), `(fpo, fpl)` (pins)
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:503-514 ConRon.Arena.tgtStoredRules
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.tgtStoredRules` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.tgtStoredRules]
-def tgtRuleNested : FunDecl := lfn (old, flo, fll, fpo, fpl) locals (newp) {
+def tgtRuleNested : FunDecl := lfn (old, flo, fll, fpo, fpl) locals (newp, ez) {
   newp := call erec_alloc(11);
-  EREC.u64[newp] := EREC.u64[old];
-  EREC.u64[newp + 1] := EREC.u64[old + 1];
-  EREC.u64[newp + 2] := EREC.u64[old + 2];
-  EREC.u64[newp + 3] := 1;
-  EREC.u64[newp + 4] := flo;
-  EREC.u64[newp + 5] := fll;
-  EREC.u64[newp + 6] := fpo;
-  EREC.u64[newp + 7] := fpl;
-  EREC.u64[newp + 8] := EREC.u64[old + 8];
-  EREC.u64[newp + 9] := EREC.u64[old + 9];
-  EREC.u64[newp + 10] := EREC.u64[old + 10];
+  ez := call erec_put(newp, EREC⦃old⦄);
+  ez := call erec_put(newp + 1, EREC⦃old + 1⦄);
+  ez := call erec_put(newp + 2, EREC⦃old + 2⦄);
+  ez := call erec_put(newp + 3, 1);
+  ez := call erec_put(newp + 4, flo);
+  ez := call erec_put(newp + 5, fll);
+  ez := call erec_put(newp + 6, fpo);
+  ez := call erec_put(newp + 7, fpl);
+  ez := call erec_put(newp + 8, EREC⦃old + 8⦄);
+  ez := call erec_put(newp + 9, EREC⦃old + 9⦄);
+  ez := call erec_put(newp + 10, EREC⦃old + 10⦄);
   return newp
 }
 
@@ -781,7 +781,7 @@ the rules rebuilt. -/
 @[no_expose, l_impl ConRon.Arena.tgtStoredRules]
 def tgtStoredRules : FunDecl := lfn (vis, cv, rP, M, rhso, rhsl)
     locals (ro, rl, fk, flo, fll, fpo, fpl, elo, ell, epo, epl, no, nl) {
-  (ro, rl) := call sum_rules(vis, EREC.u64[cv], IW.u64[M + 4], IW.u64[M + 6], IW.u64[M + 7],
+  (ro, rl) := call sum_rules(vis, EREC⦃cv⦄, IW.u64[M + 4], IW.u64[M + 6], IW.u64[M + 7],
     rhso, rhsl);
   if IW.u64[M + 8] != 0 { return (ro, rl) };
   (fk, flo, fll, fpo, fpl) := call aux_rule_fire(M, rP);
@@ -817,18 +817,18 @@ def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, r) {
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:522-539 ConRon.Arena.consBlockRecsTF
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.consBlockRecsTF` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockRecsTF]
-def ruleCopy : FunDecl := lfn (b, old) locals () {
-  EREC.u64[b] := EREC.u64[old];
-  EREC.u64[b + 1] := EREC.u64[old + 1];
-  EREC.u64[b + 2] := EREC.u64[old + 2];
-  EREC.u64[b + 3] := EREC.u64[old + 3];
-  EREC.u64[b + 4] := EREC.u64[old + 4];
-  EREC.u64[b + 5] := EREC.u64[old + 5];
-  EREC.u64[b + 6] := EREC.u64[old + 6];
-  EREC.u64[b + 7] := EREC.u64[old + 7];
-  EREC.u64[b + 8] := EREC.u64[old + 8];
-  EREC.u64[b + 9] := EREC.u64[old + 9];
-  EREC.u64[b + 10] := EREC.u64[old + 10];
+def ruleCopy : FunDecl := lfn (b, old) locals (ez) {
+  ez := call erec_put(b, EREC⦃old⦄);
+  ez := call erec_put(b + 1, EREC⦃old + 1⦄);
+  ez := call erec_put(b + 2, EREC⦃old + 2⦄);
+  ez := call erec_put(b + 3, EREC⦃old + 3⦄);
+  ez := call erec_put(b + 4, EREC⦃old + 4⦄);
+  ez := call erec_put(b + 5, EREC⦃old + 5⦄);
+  ez := call erec_put(b + 6, EREC⦃old + 6⦄);
+  ez := call erec_put(b + 7, EREC⦃old + 7⦄);
+  ez := call erec_put(b + 8, EREC⦃old + 8⦄);
+  ez := call erec_put(b + 9, EREC⦃old + 9⦄);
+  ez := call erec_put(b + 10, EREC⦃old + 10⦄);
   return 0
 }
 
@@ -861,17 +861,17 @@ inline, `major`, `pre`, the rules' run). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:522-539 ConRon.Arena.consBlockRecsTF
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.consBlockRecsTF` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockRecsTF]
-def recInfoRec : FunDecl := lfn (cv, mI, rP, reo, rel) locals (q) {
+def recInfoRec : FunDecl := lfn (cv, mI, rP, reo, rel) locals (q, ez) {
   q := call erec_alloc(9);
-  EREC.u64[q] := 5;
-  EREC.u64[q + 1] := EREC.u64[cv];
-  EREC.u64[q + 2] := EREC.u64[cv + 1];
-  EREC.u64[q + 3] := EREC.u64[cv + 2];
-  EREC.u64[q + 4] := EREC.u64[cv + 3];
-  EREC.u64[q + 5] := mI;
-  EREC.u64[q + 6] := rP;
-  EREC.u64[q + 7] := reo;
-  EREC.u64[q + 8] := rel;
+  ez := call erec_put(q, 5);
+  ez := call erec_put(q + 1, EREC⦃cv⦄);
+  ez := call erec_put(q + 2, EREC⦃cv + 1⦄);
+  ez := call erec_put(q + 3, EREC⦃cv + 2⦄);
+  ez := call erec_put(q + 4, EREC⦃cv + 3⦄);
+  ez := call erec_put(q + 5, mI);
+  ez := call erec_put(q + 6, rP);
+  ez := call erec_put(q + 7, reo);
+  ez := call erec_put(q + 8, rel);
   return q
 }
 

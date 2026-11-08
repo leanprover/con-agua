@@ -213,7 +213,7 @@ def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Opt
 /-- con-ron: none — the substitution's keys copied onto the spine stack (`lp_lookup`'s key array) -/
 @[no_expose] def ekCopy : FunDecl := lfn (s, d, l) locals (r) {
   if l == 0 { return 0 };
-  SPN.u64[d] := EREC.u64[s];
+  SPN.u64[d] := EREC⦃s⦄;
   r := call ek_copy(s + 1, d + 1, l - 1);
   return r
 }

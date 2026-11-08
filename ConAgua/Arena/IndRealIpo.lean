@@ -44,14 +44,14 @@ open L.Arena
 -- con-ron: none — `indParamsOkL`'s own loop (`rfl`), a named block for the proof
 def ipoLoop : Stmt := lblk (np, o, l, j, p, k, ok, n) {
   for j < l {
-    p := EREC.u64[o + j];
-    k := EREC.u64[p];
+    p := EREC⦃o + j⦄;
+    k := EREC⦃p⦄;
     if k == 3 {
-      (ok, n) := call pi_sort_tele_len(⟪CWF⟫, EREC.u64[p + 4]);
+      (ok, n) := call pi_sort_tele_len(⟪CWF⟫, EREC⦃p + 4⦄);
       if ok != 0 && n < np { return 0 }
     };
     if k == 4 {
-      if EREC.u64[p + 5] != np { return 0 }
+      if EREC⦃p + 5⦄ != np { return 0 }
     }
   }
 }

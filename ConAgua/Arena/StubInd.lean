@@ -33,9 +33,9 @@ open L.Arena L.Ind
 
 /-- `lh_er_copy(d, s, l)`: `EREC[d + j] := LH[s + j]` for `j < l`. -/
 -- con-ron: none — L scratch-array plumbing (the twin's `PropWhen` is a value)
-@[no_expose] def lhErCopy : FunDecl := lfn (d, s, l) locals (u) {
+@[no_expose] def lhErCopy : FunDecl := lfn (d, s, l) locals (u, ez) {
   if l == 0 { return 0 };
-  EREC.u64[d] := LH.u64[s];
+  ez := call erec_put(d, LH.u64[s]);
   u := call lh_er_copy(d + 1, s + 1, l - 1);
   return 0
 }
@@ -70,14 +70,14 @@ sit at offset `0` of `EREC`, so an offset is no sentinel. -/
 @[no_expose] def ctorFamily : FunDecl := lfn (vis, c) locals (f, q, pr, hh, t, f2, q2) {
   (f, q) := call env_find(c, vis);
   if f == 0 { return (0, 0, 0) };
-  if EREC.u64[q] != 4 { return (0, 0, 0) };
-  pr := call pi_result_f(⟪CWF⟫, EREC.u64[q + 4]);
+  if EREC⦃q⦄ != 4 { return (0, 0, 0) };
+  pr := call pi_result_f(⟪CWF⟫, EREC⦃q + 4⦄);
   hh := call get_app_fn_f(⟪CWF⟫, pr);
   if ⟦hh⟧.tag != 3 { return (q, 0, 0) };
   t := call const_name_of(hh);
   (f2, q2) := call env_find(t, vis);
   if f2 == 0 { return (q, 0, 0) };
-  if EREC.u64[q2] != 3 { return (q, 0, 0) };
+  if EREC⦃q2⦄ != 3 { return (q, 0, 0) };
   return (q, q2, 1)
 }
 
@@ -87,7 +87,7 @@ sit at offset `0` of `EREC`, so an offset is no sentinel. -/
 def recRuleKOfL : FunDecl := lfn (vis, c) locals (q, tq, ok) {
   (q, tq, ok) := call ctor_family(vis, c);
   if ok == 0 { return 0 };
-  if EREC.u64[tq + 11] != 0 && EREC.u64[q + 6] == 0 { return 1 };
+  if EREC⦃tq + 11⦄ != 0 && EREC⦃q + 6⦄ == 0 { return 1 };
   return 0
 }
 
@@ -97,9 +97,9 @@ def recRuleKOfL : FunDecl := lfn (vis, c) locals (q, tq, ok) {
 def recRuleEtaOfL : FunDecl := lfn (vis, c) locals (q, tq, ok, r) {
   (q, tq, ok) := call ctor_family(vis, c);
   if ok == 0 { return 0 };
-  if EREC.u64[tq + 5] == 0 { return 0 };
-  if EREC.u64[tq + 6] != c { return 0 };
-  r := call er_sl_eq(EREC.u64[q + 2], EREC.u64[q + 3], EREC.u64[tq + 2], EREC.u64[tq + 3]);
+  if EREC⦃tq + 5⦄ == 0 { return 0 };
+  if EREC⦃tq + 6⦄ != c { return 0 };
+  r := call er_sl_eq(EREC⦃q + 2⦄, EREC⦃q + 3⦄, EREC⦃tq + 2⦄, EREC⦃tq + 3⦄);
   return r
 }
 

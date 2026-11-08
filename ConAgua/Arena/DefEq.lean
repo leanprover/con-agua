@@ -112,9 +112,9 @@ def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
   (t, i) := node CONST⟦hh⟧;
   (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return 0 };
-  if EREC.u64[p] != 1 { return 0 };
+  if EREC⦃p⦄ != 1 { return 0 };
   (lo, l) := call ls_node(CONST⟨t, i⟩.us);
-  return u64(l == EREC.u64[p + 3])
+  return u64(l == EREC⦃p + 3⦄)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:437-448 ConRon.Arena.headHint -/
@@ -125,8 +125,8 @@ def headHintL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p) {
   (t, i) := node CONST⟦hh⟧;
   (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return (0, 0) };
-  if EREC.u64[p] != 1 { return (0, 0) };
-  return (EREC.u64[p + 6], EREC.u64[p + 7])
+  if EREC⦃p⦄ != 1 { return (0, 0) };
+  return (EREC⦃p + 6⦄, EREC⦃p + 7⦄)
 }
 
 /-- `hint_lt(k1, h1, k2, h2)`: `ReducibilityHint.lt` on two `(kind, height)` hints (con-leche's
@@ -162,7 +162,7 @@ def sameConstHeadsL : FunDecl := lfn (a, b) locals (t, i, f1, f2, hh, n1) {
 
 /-- `er_slice_eq`'s loop (named, for its spec). -/
 def erSliceEqLoop : Stmt := lblk (o1, n1, o2, n2, i) {
-  for i < n1 { if EREC.u64[o1 + i] != EREC.u64[o2 + i] { return 0 } }
+  for i < n1 { if EREC⦃o1 + i⦄ != EREC⦃o2 + i⦄ { return 0 } }
 }
 
 /-- `er_slice_eq(o1, n1, o2, n2)`: two `EREC` slices of handles are the same list (the twin's
@@ -907,13 +907,13 @@ def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an,
   (t, i) := node CONST⟦hh⟧;
   (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return 0 };
-  if EREC.u64[p] != 4 { return 0 };
+  if EREC⦃p⦄ != 4 { return 0 };
   top := CTL.u64[136];
   (ao, an) := call get_app_args(a);
   CTL.u64[136] := top;
-  nf := EREC.u64[p + 6];
+  nf := EREC⦃p + 6⦄;
   if an < nf { return 0 };
-  return u64(an - nf == EREC.u64[p + 5])
+  return u64(an - nf == EREC⦃p + 5⦄)
 }
 
 /-- The η certificate's level comparison and the two spine comparisons (`ep` the parameters, `nf`
@@ -944,14 +944,14 @@ moves across an effect. -/
 def structEtaCertGoL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, T, q, us2, ao, an, to, tn)
     locals (eta, ec, ep, nf, lpn, lpo, cpo, cpn, lpe, r1, r2, lo, uslen, slots, r) {
-  eta := EREC.u64[q + 5];
-  ec := EREC.u64[q + 6];
-  ep := EREC.u64[q + 7];
-  nf := EREC.u64[q + 8];
-  lpo := EREC.u64[q + 2];
-  lpn := EREC.u64[q + 3];
-  cpo := EREC.u64[p + 2];
-  cpn := EREC.u64[p + 3];
+  eta := EREC⦃q + 5⦄;
+  ec := EREC⦃q + 6⦄;
+  ep := EREC⦃q + 7⦄;
+  nf := EREC⦃q + 8⦄;
+  lpo := EREC⦃q + 2⦄;
+  lpn := EREC⦃q + 3⦄;
+  cpo := EREC⦃p + 2⦄;
+  cpn := EREC⦃p + 3⦄;
   lpe := call er_slice_eq(cpo, cpn, lpo, lpn);
   r1 := call reserved_contains_w(T);
   r2 := call reserved_contains_w(c);
@@ -982,7 +982,7 @@ def structEtaCertWtbL : FunDecl :=
   us2 := CONST⟨t, i⟩.us;
   (f, q) := call env_find(T, vis);
   if f == 0 { return 0 };
-  if EREC.u64[q] != 3 { return 0 };
+  if EREC⦃q⦄ != 3 { return 0 };
   (to, tn) := call get_app_args(wtb);
   r := call struct_eta_cert_go(mode, vis, d, b, us, c, p, T, q, us2, ao, an, to, tn);
   return r
@@ -999,11 +999,11 @@ def structEtaCertWithL : FunDecl :=
   us := CONST⟨t, i⟩.us;
   (f, p) := call env_find(c, vis);
   if f == 0 { return 0 };
-  if EREC.u64[p] != 4 { return 0 };
+  if EREC⦃p⦄ != 4 { return 0 };
   top := CTL.u64[136];
   (ao, an) := call get_app_args(a);
-  nf := EREC.u64[p + 6];
-  if an < nf || an - nf != EREC.u64[p + 5] {
+  nf := EREC⦃p + 6⦄;
+  if an < nf || an - nf != EREC⦃p + 5⦄ {
     CTL.u64[136] := top;
     return 0
   };
@@ -1049,10 +1049,10 @@ def structUnitHeadL : FunDecl :=
   us2 := CONST⟨t, i⟩.us;
   (f, q) := call env_find(T, vis);
   if f == 0 { return 0 };
-  if EREC.u64[q] != 3 { return 0 };
-  ul := EREC.u64[q + 9];
-  up := EREC.u64[q + 10];
-  lpn := EREC.u64[q + 3];
+  if EREC⦃q⦄ != 3 { return 0 };
+  ul := EREC⦃q + 9⦄;
+  up := EREC⦃q + 10⦄;
+  lpn := EREC⦃q + 3⦄;
   top := CTL.u64[136];
   (to, tn) := call get_app_args(wta);
   CTL.u64[136] := top;

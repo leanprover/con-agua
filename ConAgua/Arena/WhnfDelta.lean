@@ -96,10 +96,10 @@ the expected shape: an `indInfo`, no level parameters, type `Sort 1`. -/
 @[no_expose, l_impl ConRon.Arena.natIndOk]
 def natIndOkL : FunDecl := lfn (found, p) locals (s1) {
   if found == 0 { return 0 };
-  if EREC.u64[p] != 3 { return 0 };
-  if EREC.u64[p + 3] != 0 { return 0 };
+  if EREC⦃p⦄ != 3 { return 0 };
+  if EREC⦃p + 3⦄ != 0 { return 0 };
   s1 := call pin_word(54);
-  return u64(EREC.u64[p + 4] == s1)
+  return u64(EREC⦃p + 4⦄ == s1)
 }
 
 /-- `nat_zero_ok(found, p)`: the stored `Nat.zero` declaration has the expected shape: a `ctorInfo`,
@@ -110,11 +110,11 @@ interning, a divergence of the arena from the twin's state; whnf-delta2 reordere
 @[no_expose, l_impl ConRon.Arena.natZeroOk]
 def natZeroOkL : FunDecl := lfn (found, p) locals (nt, nc) {
   if found == 0 { return 0 };
-  if EREC.u64[p] != 4 { return 0 };
+  if EREC⦃p⦄ != 4 { return 0 };
   nt := call pin_at(1);
   nc := call const_e(nt);
-  if EREC.u64[p + 3] != 0 { return 0 };
-  return u64(EREC.u64[p + 4] == nc)
+  if EREC⦃p + 3⦄ != 0 { return 0 };
+  return u64(EREC⦃p + 4⦄ == nc)
 }
 
 /-- `nat_succ_ok(found, p)`: the stored `Nat.succ` declaration has the expected (annotated) shape: a
@@ -123,11 +123,11 @@ def natZeroOkL : FunDecl := lfn (found, p) locals (nt, nc) {
 @[no_expose, l_impl ConRon.Arena.natSuccOk]
 def natSuccOkL : FunDecl := lfn (found, p) locals (nt, nc, ty, t, i, dom, body) {
   if found == 0 { return 0 };
-  if EREC.u64[p] != 4 { return 0 };
-  if EREC.u64[p + 3] != 0 { return 0 };
+  if EREC⦃p⦄ != 4 { return 0 };
+  if EREC⦃p + 3⦄ != 0 { return 0 };
   nt := call pin_at(1);
   nc := call const_e(nt);
-  ty := EREC.u64[p + 4];
+  ty := EREC⦃p + 4⦄;
   if ⟦ty⟧.tag != 6 { return 0 };
   (t, i) := node FORALL⟦ty⟧;
   dom := FORALL⟨t, i⟩.ty;
@@ -241,7 +241,7 @@ def natBinOpNameL : FunDecl := lfn (c) locals () {
 def natOpStoredL : FunDecl := lfn (vis, c) locals (f, p) {
   (f, p) := call env_find(c, vis);
   if f == 0 { return 0 };
-  return u64(EREC.u64[p] == 1)
+  return u64(EREC⦃p⦄ == 1)
 }
 
 /-- `const_val_at(n, po, pl, value, us)`: a stored definition's value at the universe instantiation
@@ -272,10 +272,10 @@ every unfolding leaked its spine onto the stack: whnf-delta2). -/
   if ⟦us⟧.tag != 0 { abort };
   (tu, iu) := node LVLS⟦us⟧;
   usl := LVLS⟨tu, iu⟩.l;
-  lpl := EREC.u64[p + 3];
+  lpl := EREC⦃p + 3⦄;
   if usl != lpl { return (0, 0) };
-  po := EREC.u64[p + 2];
-  value := EREC.u64[p + 5];
+  po := EREC⦃p + 2⦄;
+  value := EREC⦃p + 5⦄;
   v := call const_val_at(n, po, lpl, value, us);
   top := CTL.u64[136];
   (ao, an) := call get_app_args(e);
@@ -298,7 +298,7 @@ def unfoldDefinitionL : FunDecl :=
   us := CONST⟨t, i⟩.us;
   (found, p) := call env_find(n, vis);
   if found == 0 { return (0, 0) };
-  if EREC.u64[p] != 1 { return (0, 0) };
+  if EREC⦃p⦄ != 1 { return (0, 0) };
   (fl, r) := call unfold_defn_at(e, n, us, p);
   return (fl, r)
 }

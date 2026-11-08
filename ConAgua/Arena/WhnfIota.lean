@@ -62,7 +62,7 @@ def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
   c := CONST⟨t, i⟩.n;
   (flag, q) := call env_find(c, vis);
   if flag == 0 { return 0 };
-  return u64(EREC.u64[q] == 4)
+  return u64(EREC⦃q⦄ == 4)
 }
 
 /-- con-leche: `Core.lean:695-699` `Expr.isStrLit` — the tag, then the literal kind. -/
@@ -80,7 +80,7 @@ Both read only the 11-word rule records at `(ro, rc)` in `EREC`; neither touches
 
 /-- The scan of `find_rule` (a named block, for the proofs). -/
 def findRuleLoop : Stmt := lblk (ro, rc, c, i) {
-  for i < rc { if EREC.u64[ro + 11 * i] == c { return (1, ro + 11 * i) } }
+  for i < rc { if EREC⦃ro + 11 * i⦄ == c { return (1, ro + 11 * i) } }
 }
 
 /-- con-leche: `Core.lean:777-876` (`iotaRec`'s own lookup) `findRule` — the rule whose
@@ -99,7 +99,7 @@ def findRuleL : FunDecl := lfn (ro, rc, c) locals (i) {
 @[no_expose, l_impl ConRon.Arena.recRuleK]
 def recRuleKL : FunDecl := lfn (ro, rc) locals () {
   if rc != 1 { return 0 };
-  return EREC.u64[ro + 9]
+  return EREC⦃ro + 9⦄
 }
 
 /-! ## Reserved names: a small fusion of `reservedBasisNames` and `List.contains`
@@ -125,7 +125,7 @@ are real dispatchers around it, faithful to the twin's own head-symbol/env-looku
 
 /-- A word of the record pool (a one-line reader, so that callers' proofs read it through a call). -/
 -- con-ron: ConRon/Arena/Core.lean:353-370 ConRon.Arena.iotaCtorNeverProp
-@[no_expose] def eRecGetL : FunDecl := lfn (k) locals () { return EREC.u64[k] }
+@[no_expose] def eRecGetL : FunDecl := lfn (k) locals () { return EREC⦃k⦄ }
 
 /-- The head name of a `const` handle (the view checks, then the stored name). -/
 -- con-ron: ConRon/Arena/Core.lean:353-370 ConRon.Arena.iotaCtorNeverProp
@@ -246,9 +246,9 @@ def andRescueLoop : Stmt := lblk (vis, ctor, nP, us, an, j, flag, q, ok) {
     (flag, q) := call find_proj(vis, an, j);
     if flag == 0 { return 0 };
     ok := call fire_ok(q, j, us);
-    if EREC.u64[q + 6] != ctor { return 0 };
-    if EREC.u64[q + 5] != nP { return 0 };
-    if EREC.u64[q + 7] != 2 { return 0 };
+    if EREC⦃q + 6⦄ != ctor { return 0 };
+    if EREC⦃q + 5⦄ != nP { return 0 };
+    if EREC⦃q + 7⦄ != 2 { return 0 };
     if ok == 0 { return 0 };
     j += 1
   }

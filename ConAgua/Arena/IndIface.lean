@@ -368,14 +368,32 @@ def decOE (m : Mem) (r : List Word) : Option EIdx → Prop
   CTL.u64[200] := 0
 }
 
-/-- `erec_alloc(n)`: `n` fresh words of `EREC`, returns their offset. -/
+/-- `erec_alloc(n)`: `n` fresh words of `EREC`, returns their tagged address: tier 0 (below
+`CTL[129]`) while the scratch flag `CTL[1]` is off (the stream index, the pins), tier 1 (below
+`ETOP1`, emptied with the scratch tier) inside a job. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 @[no_expose] def erecAlloc : FunDecl := lfn (n) locals (o) {
-  o := CTL.u64[129];
-  if len(EREC.u64) < o { abort };
-  if len(EREC.u64) - o < n { abort };
-  CTL.u64[129] := o + n;
-  return o
+  if CTL.u64[1] == 0 {
+    o := CTL.u64[129];
+    if len(EREC⟨0⟩) < o { abort };
+    if len(EREC⟨0⟩) - o < n { abort };
+    CTL.u64[129] := o + n;
+    return o
+  };
+  o := ETOP1;
+  if len(EREC⟨1⟩) < o { abort };
+  if len(EREC⟨1⟩) - o < n { abort };
+  ETOP1 := o + n;
+  return 1099511627776 + o
+}
+
+/-- `erec_put(a, v)`: word `v` at the tagged address `a` of `EREC`. -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
+@[no_expose] def erecPut : FunDecl := lfn (a, v) locals (t, i) {
+  t := ⦃a⦄.tier;
+  i := ⦃a⦄.idx;
+  EREC⟨t⟩[i] := v;
+  return 0
 }
 
 /-- `er_to_iw(off, len)`: the `EREC` slice copied into `IW`. -/
@@ -390,7 +408,7 @@ def decOE (m : Mem) (r : List Word) : Option EIdx → Prop
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 @[no_expose] def erCopy : FunDecl := lfn (d, s, l) locals (u) {
   if l == 0 { return 0 };
-  IW.u64[d] := EREC.u64[s];
+  IW.u64[d] := EREC⦃s⦄;
   u := call er_copy(d + 1, s + 1, l - 1);
   return 0
 }
@@ -583,19 +601,19 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
 
 /-- `cv_new(name, lo, ll, ty)`: a fresh constant value in `EREC` (`lo`, `ll` an `EREC` slice). -/
 -- con-ron: none — constant-value records in `EREC` (the twin's `ConstantVal` structure)
-@[no_expose] def cvNew : FunDecl := lfn (nm, lo, ll, ty) locals (q) {
+@[no_expose] def cvNew : FunDecl := lfn (nm, lo, ll, ty) locals (q, ez) {
   q := call erec_alloc(4);
-  EREC.u64[q] := nm;
-  EREC.u64[q + 1] := lo;
-  EREC.u64[q + 2] := ll;
-  EREC.u64[q + 3] := ty;
+  ez := call erec_put(q, nm);
+  ez := call erec_put(q + 1, lo);
+  ez := call erec_put(q + 2, ll);
+  ez := call erec_put(q + 3, ty);
   return q
 }
 
 /-- `cv_lps(cv)`: a constant's level parameters, copied into `IW`. -/
 -- con-ron: none — constant-value records in `EREC` (the twin's `ConstantVal` structure)
 @[no_expose] def cvLps : FunDecl := lfn (q) locals (o, l) {
-  (o, l) := call er_to_iw(EREC.u64[q + 1], EREC.u64[q + 2]);
+  (o, l) := call er_to_iw(EREC⦃q + 1⦄, EREC⦃q + 2⦄);
   return (o, l)
 }
 

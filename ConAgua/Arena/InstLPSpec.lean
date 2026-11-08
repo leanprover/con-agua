@@ -30,7 +30,7 @@ namespace L.Arena
 
 /-! ## `sle_go` / `sls_go`: substitute and intern each element of a slice -/
 
-/-- The element read of `sle_go` (`EREC.u64[o]`) and `sls_go` (the tagged `POOL⦃o⦄`). -/
+/-- The element read of `sle_go` (`EREC⦃o⦄`) and `sls_go` (the tagged `POOL⦃o⦄`). -/
 def elemRd (A : ArrId) (m : Mem) (o : Word) : Word := if A = POOL then prd m o else rdW (m.arr64 A) o
 
 @[arena_grind =] theorem elemRd_pool (m : Mem) (o : Word) : elemRd POOL m o = prd m o := rfl

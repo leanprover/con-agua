@@ -114,7 +114,7 @@ def memberNamesCopy : FunDecl := lfn (d, s, l) locals (m, cv, u) {
   if l == 0 { return 0 };
   m := IW.u64[s];
   cv := IW.u64[m];
-  IW.u64[d] := EREC.u64[cv];
+  IW.u64[d] := EREC⦃cv⦄;
   u := call member_names_copy(d + 1, s + 1, l - 1);
   return 0
 }
@@ -152,7 +152,7 @@ def blockShapeLps : FunDecl := lfn (p) locals (off, l, m, cv, o, pl) {
   if l == 0 { return (0, 0) };
   m := IW.u64[off];
   cv := IW.u64[m];
-  (o, pl) := call er_to_iw(EREC.u64[cv + 1], EREC.u64[cv + 2]);
+  (o, pl) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
   return (o, pl)
 }
 
@@ -257,11 +257,11 @@ twin (the rest first, then `sl_cons`; lane `indproofs2`: was a loop). -/
 @[no_expose, l_impl ConRon.Arena.blockSplitRecs]
 def blockSplitRecs : FunDecl := lfn (off, l) locals (ci, ok, ro, rl, rc, o2, l2) {
   if l == 0 { return (1, 0, 0) };
-  ci := EREC.u64[off];
-  if EREC.u64[ci] != 5 { return (0, 0, 0) };
+  ci := EREC⦃off⦄;
+  if EREC⦃ci⦄ != 5 { return (0, 0, 0) };
   (ok, ro, rl) := call block_split_recs(off + 1, l - 1);
   if ok == 0 { return (0, 0, 0) };
-  rc := call rec5(ci + 1, EREC.u64[ci + 5], EREC.u64[ci + 6], EREC.u64[ci + 7], EREC.u64[ci + 8]);
+  rc := call rec5(ci + 1, EREC⦃ci + 5⦄, EREC⦃ci + 6⦄, EREC⦃ci + 7⦄, EREC⦃ci + 8⦄);
   (o2, l2) := call sl_cons(rc, ro, rl);
   return (1, o2, l2)
 }
@@ -273,15 +273,15 @@ folded into `[cv, nP, nF]`, then `block_split_recs` on the rest (recursive as th
 @[no_expose, l_impl ConRon.Arena.blockSplitCtors]
 def blockSplitCtors : FunDecl := lfn (off, l) locals (ci, ok, co, cl, ro, rl, c, o2, l2) {
   if l == 0 { return (1, 0, 0, 0, 0) };
-  ci := EREC.u64[off];
-  if EREC.u64[ci] != 4 {
+  ci := EREC⦃off⦄;
+  if EREC⦃ci⦄ != 4 {
     (ok, ro, rl) := call block_split_recs(off, l);
     if ok == 0 { return (0, 0, 0, 0, 0) };
     return (1, 0, 0, ro, rl)
   };
   (ok, co, cl, ro, rl) := call block_split_ctors(off + 1, l - 1);
   if ok == 0 { return (0, 0, 0, 0, 0) };
-  c := call rec3(ci + 1, EREC.u64[ci + 5], EREC.u64[ci + 6]);
+  c := call rec3(ci + 1, EREC⦃ci + 5⦄, EREC⦃ci + 6⦄);
   (o2, l2) := call sl_cons(c, co, cl);
   return (1, o2, l2, ro, rl)
 }
@@ -295,8 +295,8 @@ cs.len, rs.off, rs.len]` record. -/
 @[no_expose, l_impl ConRon.Arena.blockSplit]
 def blockSplit : FunDecl := lfn (off, l) locals (ci, ok, q, co, cl, ro, rl, fo, fl, q2) {
   if l == 0 { q := call rec6(0, 0, 0, 0, 0, 0); return (1, q) };
-  ci := EREC.u64[off];
-  if EREC.u64[ci] != 3 {
+  ci := EREC⦃off⦄;
+  if EREC⦃ci⦄ != 3 {
     (ok, co, cl, ro, rl) := call block_split_ctors(off, l);
     if ok == 0 { return (0, 0) };
     q := call rec6(0, 0, co, cl, ro, rl);
@@ -348,7 +348,7 @@ def blockCountsPure : FunDecl := lfn (nPd, k, nC, nR, bl, g, rOk, rMI, rRP) loca
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:241-260 ConRon.Arena.blockCounts?
 @[no_expose, l_impl ConRon.Arena.blockCounts?]
 def blockCountsHead : FunDecl := lfn (cvT) locals (ty, bo, bl, res, g, x, y, z) {
-  ty := EREC.u64[cvT + 3];
+  ty := EREC⦃cvT + 3⦄;
   (bo, bl, res) := call pi_binders(⟪CWF⟫, ty);
   (g, x, y, z) := call e_view(res);
   return (bl, g)
@@ -372,7 +372,7 @@ leading `∀`s off `c.type`, then `member_idx_at` the head of what remains. -/
 def ctorMember : FunDecl := lfn (no, nl, lvls, nP, c) locals (nF, ty, ok, bo, bl, body, hd, rok, ri) {
   nF := IW.u64[c + 1];
   if nP + nF < nP { abort };
-  ty := EREC.u64[IW.u64[c] + 3];
+  ty := EREC⦃IW.u64[c] + 3⦄;
   (ok, bo, bl, body) := call strip_pis(nP + nF, ty);
   if ok == 0 { return (0, 0) };
   hd := call get_app_fn_f(⟪CWF⟫, body);
@@ -427,7 +427,7 @@ wanted `(wo, wl)` (`1`/`0`). -/
 @[no_expose, l_impl ConRon.Arena.blockRecLpsOk]
 def blockRecLpsOne : FunDecl := lfn (rc, wo, wl) locals (cv, rpo, rpl, eqv) {
   cv := IW.u64[rc];
-  (rpo, rpl) := call er_to_iw(EREC.u64[cv + 1], EREC.u64[cv + 2]);
+  (rpo, rpl) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
   eqv := call sl_eq(rpo, rpl, wo, wl);
   return eqv
 }
@@ -467,7 +467,7 @@ def blockRecWant : FunDecl := lfn (mo, ml) locals (m, cv, w, o, l) {
   if ml == 0 { return (0, 0) };
   m := IW.u64[mo];
   cv := IW.u64[m];
-  w := call name_rec(EREC.u64[cv]);
+  w := call name_rec(EREC⦃cv⦄);
   (o, l) := call block_rec_want(mo + 1, ml - 1);
   (o, l) := call sl_cons(w, o, l);
   return (o, l)
@@ -480,7 +480,7 @@ def blockRecGot : FunDecl := lfn (ro, rl) locals (rc, o, l) {
   if rl == 0 { return (0, 0) };
   rc := IW.u64[ro];
   (o, l) := call block_rec_got(ro + 1, rl - 1);
-  (o, l) := call sl_cons(EREC.u64[IW.u64[rc]], o, l);
+  (o, l) := call sl_cons(EREC⦃IW.u64[rc]⦄, o, l);
   return (o, l)
 }
 
@@ -505,7 +505,7 @@ def blockRecNamesUnreserved : FunDecl := lfn (ro, rl) locals (rc, cv, nm, b, r) 
   if rl == 0 { return 1 };
   rc := IW.u64[ro];
   cv := IW.u64[rc];
-  nm := EREC.u64[cv];
+  nm := EREC⦃cv⦄;
   b := call reserved_rec_name(nm);
   if b != 0 { return 0 };
   r := call block_rec_names_unreserved(ro + 1, rl - 1);
@@ -522,7 +522,7 @@ def blockMemberCountsFind : FunDecl := lfn (no, nl, ro, rl, m) locals (e, mI, t,
   if rl == 0 { return (0, 0, 0) };
   e := IW.u64[ro];
   mI := IW.u64[e + 1];
-  t := call rec_target_of(no, nl, mI, EREC.u64[IW.u64[e] + 3]);
+  t := call rec_target_of(no, nl, mI, EREC⦃IW.u64[e] + 3⦄);
   if t == m { return (1, mI, IW.u64[e + 2]) };
   (a, b, c) := call block_member_counts_find(no, nl, ro + 1, rl - 1, m);
   return (a, b, c)
@@ -569,7 +569,7 @@ def blockMemberCounts : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl) lo
 def blockShapeNamesOf : FunDecl := lfn (cto, ctl) locals (o, l) {
   if ctl == 0 { return (0, 0) };
   (o, l) := call block_shape_names_of(cto + 1, ctl - 1);
-  (o, l) := call sl_cons(EREC.u64[IW.u64[cto]], o, l);
+  (o, l) := call sl_cons(EREC⦃IW.u64[cto]⦄, o, l);
   return (o, l)
 }
 
@@ -580,9 +580,9 @@ def blockShapeNamesOf : FunDecl := lfn (cto, ctl) locals (o, l) {
 def blockShapePinsFormers : FunDecl := lfn (cto, ctl, lo, ll) locals (cv, b, plo, pll, eqv, r) {
   if ctl == 0 { return 1 };
   cv := IW.u64[cto];
-  b := call reserved_contains(EREC.u64[cv]);
+  b := call reserved_contains(EREC⦃cv⦄);
   if b != 0 { return 0 };
-  (plo, pll) := call er_to_iw(EREC.u64[cv + 1], EREC.u64[cv + 2]);
+  (plo, pll) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
   eqv := call sl_eq(plo, pll, lo, ll);
   if eqv == 0 { return 0 };
   r := call block_shape_pins_formers(cto + 1, ctl - 1, lo, ll);
@@ -595,7 +595,7 @@ def blockShapePinsFormers : FunDecl := lfn (cto, ctl, lo, ll) locals (cv, b, plo
 @[no_expose, l_impl ConRon.Arena.blockShape?]
 def blockShapePinsRecs : FunDecl := lfn (ro, rl) locals (b, r) {
   if rl == 0 { return 1 };
-  b := call reserved_contains(EREC.u64[IW.u64[IW.u64[ro]]]);
+  b := call reserved_contains(EREC⦃IW.u64[IW.u64[ro]]⦄);
   if b != 0 { return 0 };
   r := call block_shape_pins_recs(ro + 1, rl - 1);
   return r
@@ -610,9 +610,9 @@ def blockShapePinsCtors : FunDecl := lfn (nP, cso, csl, lo, ll) locals (c, cv, b
   c := IW.u64[cso];
   cv := IW.u64[c];
   if IW.u64[c + 1] != nP { return 0 };
-  b := call reserved_contains(EREC.u64[cv]);
+  b := call reserved_contains(EREC⦃cv⦄);
   if b != 0 { return 0 };
-  (plo, pll) := call er_to_iw(EREC.u64[cv + 1], EREC.u64[cv + 2]);
+  (plo, pll) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
   eqv := call sl_eq(plo, pll, lo, ll);
   if eqv == 0 { return 0 };
   r := call block_shape_pins_ctors(nP, cso + 1, csl - 1, lo, ll);
@@ -684,7 +684,7 @@ def blockShapeMembersOf : FunDecl := lfn (cto, ctl, io, go) locals (o, l, hdr, m
 def blockShapeRhssOf : FunDecl := lfn (ro, rl) locals (o, l) {
   if rl == 0 { return (0, 0) };
   (o, l) := call block_shape_rhss_of(ro + 11, rl - 1);
-  (o, l) := call sl_cons(EREC.u64[ro + 8], o, l);
+  (o, l) := call sl_cons(EREC⦃ro + 8⦄, o, l);
   return (o, l)
 }
 
@@ -696,7 +696,7 @@ def blockShapeRhssOf : FunDecl := lfn (ro, rl) locals (o, l) {
 def blockShapeRecsOf : FunDecl := lfn (no, nl, ro, rl) locals (e, tgt, rhso, rhsl, rc, o, l) {
   if rl == 0 { return (0, 0) };
   e := IW.u64[ro];
-  tgt := call rec_target_of(no, nl, IW.u64[e + 1], EREC.u64[IW.u64[e] + 3]);
+  tgt := call rec_target_of(no, nl, IW.u64[e + 1], EREC⦃IW.u64[e] + 3⦄);
   (rhso, rhsl) := call block_shape_rhss_of(IW.u64[e + 3], IW.u64[e + 4]);
   rc := call rec6(IW.u64[e], IW.u64[e + 2], IW.u64[e + 1], tgt, rhso, rhsl);
   (o, l) := call block_shape_recs_of(no, nl, ro + 1, rl - 1);
@@ -710,10 +710,10 @@ anything else (including no level parameters at all): `(0, 0)`. -/
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockShape?` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockShape?]
 def blockShapeLarge : FunDecl := lfn (cvR0, lo, ll) locals (off, cnt, elim, rlo, rll, eqv, has) {
-  off := EREC.u64[cvR0 + 1];
-  cnt := EREC.u64[cvR0 + 2];
+  off := EREC⦃cvR0 + 1⦄;
+  cnt := EREC⦃cvR0 + 2⦄;
   if cnt == 0 { return (0, 0) };
-  elim := EREC.u64[off];
+  elim := EREC⦃off⦄;
   (rlo, rll) := call er_to_iw(off + 1, cnt - 1);
   eqv := call sl_eq(rlo, rll, lo, ll);
   if eqv == 0 { return (0, 0) };
@@ -780,7 +780,7 @@ def blockShapeFin : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, i
 @[no_expose, l_impl ConRon.Arena.blockShape?]
 def blockShapeTail : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll)
     locals (s, z, eq, isProp, ok, q) {
-  s := call block_shape_result_sort(nPd, io, il, EREC.u64[IW.u64[cto] + 3]);
+  s := call block_shape_result_sort(nPd, io, il, EREC⦃IW.u64[cto] + 3⦄);
   z := call pin_word(53);
   eq := call lvl_eq_c(s, z);
   isProp := u64(eq == 2);
@@ -799,7 +799,7 @@ def blockShapeBuild : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
   (no, nl) := call block_shape_names_of(cto, ctl);
   (mcOk, io, il) := call block_member_counts(nPd, ctl, csl, no, nl, rso, rsl, cto, ctl);
   if mcOk == 0 { return (0, 0) };
-  (lo, ll) := call er_to_iw(EREC.u64[cvT0 + 1], EREC.u64[cvT0 + 2]);
+  (lo, ll) := call er_to_iw(EREC⦃cvT0 + 1⦄, EREC⦃cvT0 + 2⦄);
   pinsOk := call block_shape_pins_ok(nPd, cto, ctl, lo, ll, rso, rsl, cso, csl);
   if pinsOk == 0 { return (0, 0) };
   (ok, q) := call block_shape_tail(nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll);
@@ -866,8 +866,8 @@ member skipped. -/
 @[no_expose, l_impl ConRon.Arena.checkShapelessFormers]
 def checkShapelessFormers : FunDecl := lfn (vis, off, cnt) locals (ci, z, r) {
   if cnt == 0 { return 0 };
-  ci := EREC.u64[off];
-  if EREC.u64[ci] == 3 { z := call check_constant_val(vis, ci + 1) };
+  ci := EREC⦃off⦄;
+  if EREC⦃ci⦄ == 3 { z := call check_constant_val(vis, ci + 1) };
   r := call check_shapeless_formers(vis, off + 1, cnt - 1);
   return 0
 }

@@ -174,8 +174,8 @@ def classNPcOf : FunDecl := lfn (p, vis, i) locals (mo, ml, b, found, q, kind) {
   if b == 1 { return IW.u64[p + 4] };
   (found, q) := call env_find(i, vis);
   if found == 0 { return 0 };
-  kind := EREC.u64[q];
-  if kind == 3 { return EREC.u64[q + 17] };
+  kind := EREC⦃q⦄;
+  if kind == 3 { return EREC⦃q + 17⦄ };
   return 0
 }
 
@@ -269,7 +269,7 @@ def classReadRecCls : FunDecl := lfn (nP, mo, ml, ro, rl) locals
   rc := IW.u64[ro];
   mI := IW.u64[rc + 2];
   if mI + 1 == 0 { abort };
-  ty := EREC.u64[IW.u64[rc] + 3];
+  ty := EREC⦃IW.u64[rc] + 3⦄;
   (ok, p, c, concl) := call open_pis_at_fvars_f(mI + 1, ty, 0);
   if ok == 0 { return (0, 0, 0) };
   (ok, p) := call fvar_head(concl);
@@ -323,7 +323,7 @@ def classRead : FunDecl := lfn (p, vis, nP, ro, rl) locals
     (rc0, ty, ok, jo, jl, body, k, so, sl, res) {
   if rl == 0 { return (0, 0) };
   rc0 := IW.u64[ro];
-  ty := EREC.u64[IW.u64[rc0] + 3];
+  ty := EREC⦃IW.u64[rc0] + 3⦄;
   (ok, jo, jl, body) := call open_pis_at_fvars_f(nP, ty, 0);
   if ok == 0 { return (0, 0) };
   k := call class_read_n_slots(IW.u64[rc0 + 1], nP);
@@ -585,7 +585,7 @@ ihs.len)`: the constructor applied, then the conclusion. -/
 def classGenMinorTyConcl : FunDecl := lfn (g, c, x, d, lvls, ds0, dl0, nPc, fo, fl, res, ihso, ihsl)
     locals (rao, ral, cc, capo, capl, r0, r1) {
   (rao, ral) := call get_app_args_f(⟪CWF⟫, res);
-  cc := call intern_const(EREC.u64[IW.u64[x]], lvls);
+  cc := call intern_const(EREC⦃IW.u64[x]⦄, lvls);
   if 4294967296 <= cc { abort };
   (capo, capl) := call sl_append(ds0, dl0, fo, fl);
   cc := call mk_app_n_f(cc, capo, capl);
@@ -640,7 +640,7 @@ slice `(io, il)` named `cName` (`find?`, as a self-recursion). -/
 def classGenPrefixBindersFindCtorGo : FunDecl := lfn (io, il, cName) locals (cp, ok, r) {
   if il == 0 { return (0, 0) };
   cp := IW.u64[io];
-  if EREC.u64[IW.u64[cp]] == cName { return (1, cp) };
+  if EREC⦃IW.u64[cp]⦄ == cName { return (1, cp) };
   (ok, r) := call class_gen_prefix_binders_find_ctor_go(io + 1, il - 1, cName);
   return (ok, r)
 }
@@ -741,7 +741,7 @@ def classRecOf : FunDecl := lfn (rco, rcl, cgo, cgl, t) locals (v, nr, ok, nm) {
   v := 0;
   nr := 0;
   if rcl != 0 { v := IW.u64[rco]; nr := rcl - 1 };
-  if v == t { return (1, EREC.u64[IW.u64[cgo]]) };
+  if v == t { return (1, EREC⦃IW.u64[cgo]⦄) };
   (ok, nm) := call class_rec_of(rco + 1, nr, cgo + 1, cgl - 1, t);
   return (ok, nm)
 }
@@ -858,7 +858,7 @@ class `c` for its constructor `x`. -/
 def classGenRule : FunDecl := lfn (g, rco, rcl, cgo, cgl, rlvls, c, x) locals
     (rP, ok, s, fo, fl, jnk, r0, r1) {
   rP := IW.u64[g + 13];
-  (ok, s) := call class_gen_rule_find_slot(g, c, EREC.u64[IW.u64[x]]);
+  (ok, s) := call class_gen_rule_find_slot(g, c, EREC⦃IW.u64[x]⦄);
   if ok == 0 { return (0, 0) };
   (ok, fo, fl, jnk) := call open_pis_at_fvars_f(IW.u64[x + 1], IW.u64[x + 4], rP);
   if ok == 0 { return (0, 0) };

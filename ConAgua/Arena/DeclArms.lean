@@ -48,7 +48,7 @@ guards), then the type's sort. -/
 -- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.checkConstantVal`, `ConRon.Arena.litShapeOk`, `ConRon.Arena.natOpName`, `ConRon.Arena.strLitStored` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkConstantVal]
 def checkConstantValL : FunDecl := lfn (vis, q) locals (t, z, st, u) {
-  t := EREC.u64[q + 3];
+  t := EREC⦃q + 3⦄;
   z := call install_header(vis, q);
   st := call infer_type_core(vis, 0, t);
   u := call ensure_sort_core(vis, 0, st);
@@ -68,8 +68,8 @@ declared one, the push. -/
 -- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.checkDefnVal`, `ConRon.Arena.valueGuards` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDefnVal]
 def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
-  v := EREC.u64[p + 5];
-  t := EREC.u64[p + 4];
+  v := EREC⦃p + 5⦄;
+  t := EREC⦃p + 4⦄;
   z := call install_value_guards(vis, p + 1, v);
   vt := call infer_type_core(vis, 0, v);
   d := call is_def_eq_core(vis, 0, vt, t);
@@ -85,8 +85,8 @@ stored by its statement. -/
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkThmVal` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkThmVal]
 def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d, w) {
-  v := EREC.u64[p + 5];
-  t := EREC.u64[p + 4];
+  v := EREC⦃p + 5⦄;
+  t := EREC⦃p + 4⦄;
   st := call infer_type_core(vis, 0, t);
   u := call ensure_sort_core(vis, 0, st);
   zr := call pin_word(53);
@@ -107,8 +107,8 @@ def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d,
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkOpaqueVal` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkOpaqueVal]
 def checkOpaqueValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
-  v := EREC.u64[p + 5];
-  t := EREC.u64[p + 4];
+  v := EREC⦃p + 5⦄;
+  t := EREC⦃p + 4⦄;
   z := call install_value_guards(vis, p + 1, v);
   vt := call infer_type_core(vis, 0, v);
   d := call is_def_eq_core(vis, 0, vt, t);
@@ -136,9 +136,9 @@ constant value matches the pin `rom_ci(id)`'s. One clause of `stdAxiomOk`'s chai
 @[no_expose] def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
   (f, r) := call env_find(n, vis);
   if f == 0 { return 0 };
-  if EREC.u64[r] != k { return 0 };
+  if EREC⦃r⦄ != k { return 0 };
   if k != 3 {
-    if EREC.u64[r + 5] != a || EREC.u64[r + 6] != b { return 0 }
+    if EREC⦃r + 5⦄ != a || EREC⦃r + 6⦄ != b { return 0 }
   };
   p := call rom_ci(id);
   q := call ci_to_cv(p);
@@ -177,7 +177,7 @@ the `propext` test). -/
 @[no_expose, l_impl ConRon.Arena.stdAxiomOk]
 def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, nm, en, ea, e, cn) {
   pn := call pin_at(32);
-  nm := EREC.u64[q];
+  nm := EREC⦃q⦄;
   if nm == pn {
     en := call pin_at(0);
     ea := call rom_ci(0);
@@ -203,9 +203,9 @@ One clause of `trustCompilerOk`. -/
 @[no_expose] def findPinnedCv : FunDecl := lfn (vis, n, k, id) locals (f, r, p, e) {
   (f, r) := call env_find(n, vis);
   if f == 0 { return 0 };
-  if EREC.u64[r] != k { return 0 };
+  if EREC⦃r⦄ != k { return 0 };
   if k == 4 {
-    if EREC.u64[r + 5] != 0 || EREC.u64[r + 6] != 0 { return 0 }
+    if EREC⦃r + 5⦄ != 0 || EREC⦃r + 6⦄ != 0 { return 0 }
   };
   p := call rom_cv(id);
   e := call matches_pin(r + 1, p);
@@ -245,7 +245,7 @@ type. -/
 def reduceStoredOkL : FunDecl := lfn (vis, c) locals (f, r, p, e) {
   (f, r) := call env_find(c, vis);
   if f == 0 { return 0 };
-  if EREC.u64[r] != 0 { return 0 };
+  if EREC⦃r⦄ != 0 { return 0 };
   p := call reduce_op_cv_a(c);
   e := call matches_pin(r + 1, p);
   return e
@@ -267,7 +267,7 @@ def reduceElemOkL : FunDecl := lfn (vis, c) locals (rn, nn, f, r, na, e, bn, p) 
   bn := call pin_at(29);
   (f, r) := call env_find(bn, vis);
   if f == 0 { return 0 };
-  if EREC.u64[r] != 3 { return 0 };
+  if EREC⦃r⦄ != 3 { return 0 };
   p := call rom_cv(5);
   e := call matches_pin(r + 1, p);
   return e
@@ -300,7 +300,7 @@ stored reduce opaque, the pin. -/
 -- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.ofReduceAxOk`, `ConRon.Arena.eqStored` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.ofReduceAxOk]
 def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (nm, c, en, ea, e, p) {
-  nm := EREC.u64[q];
+  nm := EREC⦃q⦄;
   c := call of_reduce_op(nm);
   en := call pin_at(0);
   ea := call rom_ci(0);
@@ -387,7 +387,7 @@ def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
 -- con-ron: ConRon/Arena/DeclCheck.lean:891-898 ConRon.Arena.installBasisDecl
 @[no_expose, l_impl ConRon.Arena.installBasisDecl]
 def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
-  n := EREC.u64[p + 1];
+  n := EREC⦃p + 1⦄;
   (f, r) := call env_find(n, vis);
   if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   w := call env_push(vis, p);
@@ -449,7 +449,7 @@ and every other axiom decline; `sorryAx` is skipped. -/
 @[no_expose, l_impl ConRon.Arena.checkDecl]
 def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, o, l, c, e, z, w, a, b) {
   p := call erec_ci(i, 0);
-  n := EREC.u64[p + 1];
+  n := EREC⦃p + 1⦄;
   s := call pin_at(4);
   if n == s {
     (o, l) := call rom_basis_decls(4);
@@ -531,7 +531,7 @@ then the structural-`Nat` gate (`defn_nat_gate`) and the `Nat.div`-family pin ga
 @[no_expose, l_impl ConRon.Arena.checkDecl]
 def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, w) {
   p := call erec_ci(i, 1);
-  n := EREC.u64[p + 1];
+  n := EREC⦃p + 1⦄;
   z := call check_constant_val(vis, p + 1);
   w := call check_defn_val(vis, p);
   z := call defn_nat_gate(vis, w, n);
@@ -559,8 +559,8 @@ def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
 @[no_expose, l_impl ConRon.Arena.checkDecl]
 def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, v, z, w, a, b) {
   p := call erec_ci(i, 0);
-  n := EREC.u64[p + 1];
-  v := EREC.u64[p + 5];
+  n := EREC⦃p + 1⦄;
+  v := EREC⦃p + 5⦄;
   z := call check_constant_val(vis, p + 1);
   w := call check_opaque_val(vis, p);
   a := call pin_at(43);

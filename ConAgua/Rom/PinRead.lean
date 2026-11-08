@@ -151,10 +151,10 @@ the position after. -/
 -- con-ron: ConRon/Arena/Intern.lean:54-56 ConRon.Arena.internExprList
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:263-269 ConRon.Arena.Frontend.internExprList
 @[no_expose, l_impl ConRon.Arena.Frontend.internExprList ConRon.Arena.internExprList]
-def romExprsTo : FunDecl := lfn (q, o, k) locals (h, r) {
+def romExprsTo : FunDecl := lfn (q, o, k) locals (h, r, ez) {
   if k == 0 { return q };
   (h, q) := call rom_expr(q);
-  EREC.u64[o] := h;
+  ez := call erec_put(o, h);
   r := call rom_exprs_to(q, o + 1, k - 1);
   return r
 }
@@ -177,12 +177,12 @@ def romPinsTo : FunDecl := lfn (q, r, k) locals (z) {
 `EREC` slices whose offset and length go to `EREC[r + 8 + 2j]`, `EREC[r + 9 + 2j]`. -/
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:97-118 ConRon.Arena.internPinSet
 @[no_expose, l_impl ConRon.Arena.internPinSet]
-def romListsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
+def romListsTo : FunDecl := lfn (q, r, j) locals (l, o, z, ez) {
   if j == 8 { return q };
   l := call rom_u64(q);
   o := call erec_alloc(l);
-  EREC.u64[r + 8 + 2 * j] := o;
-  EREC.u64[r + 9 + 2 * j] := l;
+  ez := call erec_put(r + 8 + 2 * j, o);
+  ez := call erec_put(r + 9 + 2 * j, l);
   CTL.u64[132] := 0;
   z := call rset_clear();
   q := call rom_exprs_to(q + 8, o, l);
@@ -194,10 +194,10 @@ def romListsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
 `EREC[o + 2i]`, `EREC[o + 2i + 1]`; the position after. -/
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:65-73 ConRon.Arena.internTypePins
 @[no_expose, l_impl ConRon.Arena.internTypePins]
-def romTPairsTo : FunDecl := lfn (q, o, k) locals (h, z) {
+def romTPairsTo : FunDecl := lfn (q, o, k) locals (h, z, ez) {
   if k == 0 { return q };
   (h, q) := call rom_name(q);
-  EREC.u64[o] := h;
+  ez := call erec_put(o, h);
   CTL.u64[132] := 0;
   z := call rset_clear();
   q := call rom_exprs_to(q, o + 1, 1);
@@ -210,13 +210,13 @@ pairs whose offset and length go to `EREC[r + 24 + 2j]`, `EREC[r + 25 + 2j]` (a 
 or more aborts: the slice's size `2 * len` stays in a word). -/
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:75-95 ConRon.Arena.internPinSetTypePins
 @[no_expose, l_impl ConRon.Arena.internPinSetTypePins]
-def romTPinsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
+def romTPinsTo : FunDecl := lfn (q, r, j) locals (l, o, z, ez) {
   if j == 8 { return q };
   l := call rom_u64(q);
   if 4294967296 <= l { abort };
   o := call erec_alloc(2 * l);
-  EREC.u64[r + 24 + 2 * j] := o;
-  EREC.u64[r + 25 + 2 * j] := l;
+  ez := call erec_put(r + 24 + 2 * j, o);
+  ez := call erec_put(r + 25 + 2 * j, l);
   q := call rom_tpairs_to(q + 8, o, l);
   z := call rom_tpins_to(q, r, j + 1);
   return z
@@ -224,13 +224,13 @@ def romTPinsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
 
 /-- `rom_sets_to(q, o, k)`: `k` variants, the pointers to their records to `EREC[o ‥]`. -/
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:120-127 ConRon.Arena.internPinSets
-@[no_expose] def romSetsTo : FunDecl := lfn (q, o, k) locals (r, z) {
+@[no_expose] def romSetsTo : FunDecl := lfn (q, o, k) locals (r, z, ez) {
   if k == 0 { return q };
   r := call erec_alloc(40);
   q := call rom_pins_to(q, r, 0);
   q := call rom_lists_to(q, r, 0);
   q := call rom_tpins_to(q, r, 0);
-  EREC.u64[o] := r;
+  ez := call erec_put(o, r);
   z := call rom_sets_to(q, o + 1, k - 1);
   return z
 }

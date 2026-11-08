@@ -435,11 +435,11 @@ def promoteEL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
 -- con-ron: ConRon/Arena/Promote.lean:207-213 ConRon.Arena.promoteNList
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.promoteNList` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.promoteNList]
-def promoteNListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
+def promoteNListL : FunDecl := lfn (f, o, l, q) locals (x, r, u, ez) {
   if l == 0 { return 0 };
-  x := EREC.u64[o];
+  x := EREC⦃o⦄;
   r := call promote_n(f, x);
-  EREC.u64[q] := r;
+  ez := call erec_put(q, r);
   u := call promote_n_list(f, o + 1, l - 1, q + 1);
   return 0
 }
@@ -448,11 +448,11 @@ def promoteNListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
 -- con-ron: ConRon/Arena/Promote.lean:135-142 ConRon.Arena.promoteLList
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.promoteLList` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.promoteLList]
-def promoteLListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
+def promoteLListL : FunDecl := lfn (f, o, l, q) locals (x, r, u, ez) {
   if l == 0 { return 0 };
-  x := EREC.u64[o];
+  x := EREC⦃o⦄;
   r := call promote_l(f, x);
-  EREC.u64[q] := r;
+  ez := call erec_put(q, r);
   u := call promote_l_list(f, o + 1, l - 1, q + 1);
   return 0
 }
@@ -461,11 +461,11 @@ def promoteLListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
 -- con-ron: ConRon/Arena/Promote.lean:215-222 ConRon.Arena.promoteEList
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.promoteEList` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.promoteEList]
-def promoteEListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
+def promoteEListL : FunDecl := lfn (f, o, l, q) locals (x, r, u, ez) {
   if l == 0 { return 0 };
-  x := EREC.u64[o];
+  x := EREC⦃o⦄;
   r := call promote_e(f, x);
-  EREC.u64[q] := r;
+  ez := call erec_put(q, r);
   u := call promote_e_list(f, o + 1, l - 1, q + 1);
   return 0
 }
@@ -473,84 +473,84 @@ def promoteEListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
 /-- `erec_rd1(s)`: the 1 word(s) at `EREC[s‥s+1)`. -/
 -- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
 @[no_expose] def erecRd1 : FunDecl := lfn (s) locals () {
-  return EREC.u64[s]
+  return EREC⦃s⦄
 }
 
 /-- `erec_rd2(s)`: the 2 word(s) at `EREC[s‥s+2)`. -/
 -- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
 @[no_expose] def erecRd2 : FunDecl := lfn (s) locals () {
-  return (EREC.u64[s], EREC.u64[s + 1])
+  return (EREC⦃s⦄, EREC⦃s + 1⦄)
 }
 
 /-- `erec_rd3(s)`: the 3 word(s) at `EREC[s‥s+3)`. -/
 -- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
 @[no_expose] def erecRd3 : FunDecl := lfn (s) locals () {
-  return (EREC.u64[s], EREC.u64[s + 1], EREC.u64[s + 2])
+  return (EREC⦃s⦄, EREC⦃s + 1⦄, EREC⦃s + 2⦄)
 }
 
 /-- `erec_rd4(s)`: the 4 word(s) at `EREC[s‥s+4)`. -/
 -- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
 @[no_expose] def erecRd4 : FunDecl := lfn (s) locals () {
-  return (EREC.u64[s], EREC.u64[s + 1], EREC.u64[s + 2], EREC.u64[s + 3])
+  return (EREC⦃s⦄, EREC⦃s + 1⦄, EREC⦃s + 2⦄, EREC⦃s + 3⦄)
 }
 
 /-- `erec_rd5(s)`: the 5 word(s) at `EREC[s‥s+5)`. -/
 -- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
 @[no_expose] def erecRd5 : FunDecl := lfn (s) locals () {
-  return (EREC.u64[s], EREC.u64[s + 1], EREC.u64[s + 2], EREC.u64[s + 3], EREC.u64[s + 4])
+  return (EREC⦃s⦄, EREC⦃s + 1⦄, EREC⦃s + 2⦄, EREC⦃s + 3⦄, EREC⦃s + 4⦄)
 }
 
 /-- `erec_wr1(d, ..)`: 1 word(s) written at `EREC[d‥d+1)`. -/
 -- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
-@[no_expose] def erecWr1 : FunDecl := lfn (d, a) locals () {
-  EREC.u64[d] := a;
+@[no_expose] def erecWr1 : FunDecl := lfn (d, a) locals (ez) {
+  ez := call erec_put(d, a);
   return 0
 }
 
 /-- `erec_wr2(d, ..)`: 2 word(s) written at `EREC[d‥d+2)`. -/
 -- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
-@[no_expose] def erecWr2 : FunDecl := lfn (d, a, b) locals () {
-  EREC.u64[d] := a;
-  EREC.u64[d + 1] := b;
+@[no_expose] def erecWr2 : FunDecl := lfn (d, a, b) locals (ez) {
+  ez := call erec_put(d, a);
+  ez := call erec_put(d + 1, b);
   return 0
 }
 
 /-- `erec_wr3(d, ..)`: 3 word(s) written at `EREC[d‥d+3)`. -/
 -- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
-@[no_expose] def erecWr3 : FunDecl := lfn (d, a, b, c) locals () {
-  EREC.u64[d] := a;
-  EREC.u64[d + 1] := b;
-  EREC.u64[d + 2] := c;
+@[no_expose] def erecWr3 : FunDecl := lfn (d, a, b, c) locals (ez) {
+  ez := call erec_put(d, a);
+  ez := call erec_put(d + 1, b);
+  ez := call erec_put(d + 2, c);
   return 0
 }
 
 /-- `erec_wr4(d, ..)`: 4 word(s) written at `EREC[d‥d+4)`. -/
 -- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
-@[no_expose] def erecWr4 : FunDecl := lfn (d, a, b, c, e) locals () {
-  EREC.u64[d] := a;
-  EREC.u64[d + 1] := b;
-  EREC.u64[d + 2] := c;
-  EREC.u64[d + 3] := e;
+@[no_expose] def erecWr4 : FunDecl := lfn (d, a, b, c, e) locals (ez) {
+  ez := call erec_put(d, a);
+  ez := call erec_put(d + 1, b);
+  ez := call erec_put(d + 2, c);
+  ez := call erec_put(d + 3, e);
   return 0
 }
 
 /-- `erec_wr5(d, ..)`: 5 word(s) written at `EREC[d‥d+5)`. -/
 -- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
-@[no_expose] def erecWr5 : FunDecl := lfn (d, a, b, c, e, g) locals () {
-  EREC.u64[d] := a;
-  EREC.u64[d + 1] := b;
-  EREC.u64[d + 2] := c;
-  EREC.u64[d + 3] := e;
-  EREC.u64[d + 4] := g;
+@[no_expose] def erecWr5 : FunDecl := lfn (d, a, b, c, e, g) locals (ez) {
+  ez := call erec_put(d, a);
+  ez := call erec_put(d + 1, b);
+  ez := call erec_put(d + 2, c);
+  ez := call erec_put(d + 3, e);
+  ez := call erec_put(d + 4, g);
   return 0
 }
 
 /-- `erec_cp(d, s, n)`: `EREC[d + j] := EREC[s + j]` for `j < n`, in order. -/
 -- con-ron: none — copies the words of an `EREC` record (the twin's records are values)
-@[no_expose] def erecCp : FunDecl := lfn (d, s, n) locals (x, u) {
+@[no_expose] def erecCp : FunDecl := lfn (d, s, n) locals (x, u, ez) {
   if n == 0 { return 0 };
-  x := EREC.u64[s];
-  EREC.u64[d] := x;
+  x := EREC⦃s⦄;
+  ez := call erec_put(d, x);
   u := call erec_cp(d + 1, s + 1, n - 1);
   return 0
 }
@@ -571,16 +571,16 @@ def promoteEListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
 /-- `cv_rd(s)`: the four words of the constant value at `EREC[s‥s+4)`. -/
 -- con-ron: none — reads an `EREC` record's words (the twin's `IConstantVal` is a value)
 @[no_expose] def cvRd : FunDecl := lfn (s) locals () {
-  return (EREC.u64[s], EREC.u64[s + 1], EREC.u64[s + 2], EREC.u64[s + 3])
+  return (EREC⦃s⦄, EREC⦃s + 1⦄, EREC⦃s + 2⦄, EREC⦃s + 3⦄)
 }
 
 /-- `cv_wr(d, n, q, l, t)`: the four words of a constant value written at `EREC[d‥d+4)`. -/
 -- con-ron: none — writes an `EREC` record's words (the twin's `IConstantVal` is a value)
-@[no_expose] def cvWr : FunDecl := lfn (d, n, q, l, t) locals () {
-  EREC.u64[d] := n;
-  EREC.u64[d + 1] := q;
-  EREC.u64[d + 2] := l;
-  EREC.u64[d + 3] := t;
+@[no_expose] def cvWr : FunDecl := lfn (d, n, q, l, t) locals (ez) {
+  ez := call erec_put(d, n);
+  ez := call erec_put(d + 1, q);
+  ez := call erec_put(d + 2, l);
+  ez := call erec_put(d + 3, t);
   return 0
 }
 
@@ -683,23 +683,23 @@ def promoteRulesL : FunDecl := lfn (f, s, l, d) locals (u) {
 
 /-- `caps_wr(d, c, a, k)`: the three promoted words of a capabilities record written. -/
 -- con-ron: none — writes the words of an `EREC` record (the twin's records are values)
-@[no_expose] def capsWr : FunDecl := lfn (d, c, a, k) locals () {
-  EREC.u64[d + 1] := c;
-  EREC.u64[d + 10] := a;
-  EREC.u64[d + 13] := k;
+@[no_expose] def capsWr : FunDecl := lfn (d, c, a, k) locals (ez) {
+  ez := call erec_put(d + 1, c);
+  ez := call erec_put(d + 10, a);
+  ez := call erec_put(d + 13, k);
   return 0
 }
 
 /-- `proj_wr(d, sn, lp, c, ss, bs, gs)`: the six promoted words of a projection-table record
 written. -/
 -- con-ron: none — writes the words of an `EREC` record (the twin's records are values)
-@[no_expose] def projWr : FunDecl := lfn (d, sn, lp, c, ss, bs, gs) locals () {
-  EREC.u64[d + 2] := sn;
-  EREC.u64[d + 3] := lp;
-  EREC.u64[d + 6] := c;
-  EREC.u64[d + 8] := ss;
-  EREC.u64[d + 9] := bs;
-  EREC.u64[d + 11] := gs;
+@[no_expose] def projWr : FunDecl := lfn (d, sn, lp, c, ss, bs, gs) locals (ez) {
+  ez := call erec_put(d + 2, sn);
+  ez := call erec_put(d + 3, lp);
+  ez := call erec_put(d + 6, c);
+  ez := call erec_put(d + 8, ss);
+  ez := call erec_put(d + 9, bs);
+  ez := call erec_put(d + 11, gs);
   return 0
 }
 
@@ -908,18 +908,18 @@ def promoteProjTablesL : FunDecl := lfn (f, j, k) locals (q, d, u) {
 /-- `vg_rd(g)`: a value group's kind and value words. -/
 -- con-ron: none — reads an `EREC` record's words (the twin's `ValueGroup` is a value)
 @[no_expose] def vgRd : FunDecl := lfn (g) locals () {
-  return (EREC.u64[g], EREC.u64[g + 5])
+  return (EREC⦃g⦄, EREC⦃g + 5⦄)
 }
 
 /-- `vg_wr(d, k, n, q, l, t, x)`: a value group's six words written at `d`. -/
 -- con-ron: none — writes an `EREC` record's words (the twin's `ValueGroup` is a value)
-@[no_expose] def vgWr : FunDecl := lfn (d, k, n, q, l, t, x) locals () {
-  EREC.u64[d] := k;
-  EREC.u64[d + 1] := n;
-  EREC.u64[d + 2] := q;
-  EREC.u64[d + 3] := l;
-  EREC.u64[d + 4] := t;
-  EREC.u64[d + 5] := x;
+@[no_expose] def vgWr : FunDecl := lfn (d, k, n, q, l, t, x) locals (ez) {
+  ez := call erec_put(d, k);
+  ez := call erec_put(d + 1, n);
+  ez := call erec_put(d + 2, q);
+  ez := call erec_put(d + 3, l);
+  ez := call erec_put(d + 4, t);
+  ez := call erec_put(d + 5, x);
   return 0
 }
 

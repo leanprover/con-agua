@@ -252,9 +252,9 @@ con-ron: ConRon/Arena/Core.lean:2382-2415 ConRon.Arena.reduceProjCore -/
   (ao, an) := call get_app_args(e1);
   (lo, usl) := call ls_node(us);
   fok := call fire_ok(q, i, us);
-  np := EREC.u64[q + 5];
-  nf := EREC.u64[q + 7];
-  if k == EREC.u64[q + 6] && i < nf && nf <= an && an - nf == np && usl == EREC.u64[q + 4] && fok != 0 {
+  np := EREC⦃q + 5⦄;
+  nf := EREC⦃q + 7⦄;
+  if k == EREC⦃q + 6⦄ && i < nf && nf <= an && an - nf == np && usl == EREC⦃q + 4⦄ && fok != 0 {
     (st, r) := call reduce_proj_arg(mode, vis, k, ao, an, np + i);
     return (st, r)
   };
@@ -282,8 +282,8 @@ con-ron: ConRon/Arena/Core.lean:2358-2363 ConRon.Arena.teleArityOk -/
 def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
   (f, q) := call env_find(k, vis);
   if f == 0 { return 0 };
-  if EREC.u64[q] != 4 { return 0 };
-  (ok, r) := call peel_pis(an, EREC.u64[q + 4]);
+  if EREC⦃q⦄ != 4 { return 0 };
+  (ok, r) := call peel_pis(an, EREC⦃q + 4⦄);
   return u64(ok != 0)
 }
 

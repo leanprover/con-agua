@@ -42,7 +42,7 @@ def findProjL : FunDecl := lfn (vis, t, i) locals (r, q) {
   r := call find_table(vis, t);
   if r == 0 { return (0, 0) };
   q := r - 1;
-  if i < EREC.u64[q + 7] { return (1, q) };
+  if i < EREC⦃q + 7⦄ { return (1, q) };
   return (0, 0)
 }
 
@@ -53,11 +53,11 @@ universe arguments `us`. -/
 @[no_expose, l_impl ConRon.Arena.IProjEntry.fireOk]
 def fireOkL : FunDecl := lfn (q, i, us) locals (z, ok, fs) {
   z := call pin_word(53);
-  ok := call lvl_eq_c(EREC.u64[q + 8], z);
+  ok := call lvl_eq_c(EREC⦃q + 8⦄, z);
   if ok < 2 { return 1 };
   fs := 0;
-  if i < EREC.u64[q + 12] { fs := EREC.u64[EREC.u64[q + 11] + i] };
-  ok := call field_sort_zero(EREC.u64[q + 3], EREC.u64[q + 4], us, fs);
+  if i < EREC⦃q + 12⦄ { fs := EREC⦃EREC⦃q + 11⦄ + i⦄ };
+  ok := call field_sort_zero(EREC⦃q + 3⦄, EREC⦃q + 4⦄, us, fs);
   return ok
 }
 

@@ -35,7 +35,7 @@ namespace L.Arena
 -- con-ron: ConRon/Arena/Env.lean:168-172 ConRon.Arena.IConstantInfo.toConstantVal
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.IConstantInfo.toConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def strCvL : FunDecl := lfn (p) locals () {
-  return (EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4])
+  return (EREC⦃p + 2⦄, EREC⦃p + 3⦄, EREC⦃p + 4⦄)
 }
 
 /-- `string_ty_ok(found, p)`: no level parameters, type `Sort 1`. -/
@@ -84,7 +84,7 @@ def listTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, pl, so, g, d, b, z
   if found == 0 { return 0 };
   (lo, ll, ty) := call str_cv(p);
   if ll != 1 { return 0 };
-  (pl, so) := call str_param_sort(EREC.u64[lo]);
+  (pl, so) := call str_param_sort(EREC⦃lo⦄);
   if ⟦ty⟧.tag != 6 { return 0 };
   (g, d, b, z) := call e_view(ty);
   if d == so && b == so { return 1 };
@@ -99,7 +99,7 @@ def listNilTyOkL : FunDecl :=
   if found == 0 { return 0 };
   (lo, ll, ty) := call str_cv(p);
   if ll != 1 { return 0 };
-  (pl, so) := call str_param_sort(EREC.u64[lo]);
+  (pl, so) := call str_param_sort(EREC⦃lo⦄);
   ps := call str_ls1(pl);
   li := call pin_at(7);
   if ⟦ty⟧.tag != 6 { return 0 };
@@ -126,7 +126,7 @@ def listConsTyOkL : FunDecl :=
   if found == 0 { return 0 };
   (lo, ll, ty) := call str_cv(p);
   if ll != 1 { return 0 };
-  (pl, so) := call str_param_sort(EREC.u64[lo]);
+  (pl, so) := call str_param_sort(EREC⦃lo⦄);
   ps := call str_ls1(pl);
   li := call pin_at(7);
   b0 := call intern_bvar(0);

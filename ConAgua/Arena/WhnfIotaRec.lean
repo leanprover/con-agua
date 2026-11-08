@@ -40,7 +40,7 @@ namespace L.Arena
 the top raised past it. -/
 def erecPushLoop : Stmt := lblk (o, c, k, so, j) {
   for j < c {
-    SPN.u64[so + j] := EREC.u64[o + j];
+    SPN.u64[so + j] := EREC⦃o + j⦄;
     CTL.u64[136] := so + j + 1
   }
 }
@@ -77,11 +77,11 @@ top is raised over the comparand slice (it lies below it already) and put back a
 @[no_expose] def iotaRecCmpL : FunDecl := lfn (mode, vis, d, us, recP, so, rl, mo)
     locals (top, pvo, ao, an, x, ok) {
   top := CTL.u64[136];
-  pvo := call erec_push(EREC.u64[rl + 6], EREC.u64[rl + 7], EREC.u64[rl + 3]);
-  (ao, an) := call rec_fire_args(EREC.u64[rl + 3], pvo, EREC.u64[rl + 7], EREC.u64[recP + 2],
-    EREC.u64[recP + 3], us, so, EREC.u64[recP + 5] + 1, EREC.u64[recP + 6], EREC.u64[rl + 2]);
+  pvo := call erec_push(EREC⦃rl + 6⦄, EREC⦃rl + 7⦄, EREC⦃rl + 3⦄);
+  (ao, an) := call rec_fire_args(EREC⦃rl + 3⦄, pvo, EREC⦃rl + 7⦄, EREC⦃recP + 2⦄,
+    EREC⦃recP + 3⦄, us, so, EREC⦃recP + 5⦄ + 1, EREC⦃recP + 6⦄, EREC⦃rl + 2⦄);
   x := call stack_cover(ao + an);
-  ok := call defeq_list(mode, vis, d, mo, EREC.u64[rl + 2], ao, an);
+  ok := call defeq_list(mode, vis, d, mo, EREC⦃rl + 2⦄, ao, an);
   CTL.u64[136] := top;
   return ok
 }
@@ -100,15 +100,15 @@ comparands (`lvls_eq_c`; `0`, the twin's fuel exhaustion, is a decline: `abort`)
   if lok == 1 { return 0 };
   ok := call iota_rec_cmp(mode, vis, d, us, recP, so, rl, mo);
   if ok == 0 { return 0 };
-  tyC := call const_ty_at(EREC.u64[ctorP + 1], EREC.u64[ctorP + 2], EREC.u64[ctorP + 3],
-    EREC.u64[ctorP + 4], usj);
+  tyC := call const_ty_at(EREC⦃ctorP + 1⦄, EREC⦃ctorP + 2⦄, EREC⦃ctorP + 3⦄,
+    EREC⦃ctorP + 4⦄, usj);
   ok := call iota_certs_full(mode, vis, d, tyC, mo, mn);
   if ok == 0 { return 0 };
-  ok := call iota_index_ok(mode, vis, d, EREC.u64[recP + 5], EREC.u64[recP + 6],
-    EREC.u64[rl + 2], tyC, mo, mn,
-    so + (EREC.u64[recP + 6] -
-      (EREC.u64[recP + 6] - EREC.u64[recP + 5]) * u64(EREC.u64[recP + 5] <= EREC.u64[recP + 6])),
-    (EREC.u64[recP + 5] - EREC.u64[recP + 6]) * u64(EREC.u64[recP + 6] <= EREC.u64[recP + 5]));
+  ok := call iota_index_ok(mode, vis, d, EREC⦃recP + 5⦄, EREC⦃recP + 6⦄,
+    EREC⦃rl + 2⦄, tyC, mo, mn,
+    so + (EREC⦃recP + 6⦄ -
+      (EREC⦃recP + 6⦄ - EREC⦃recP + 5⦄) * u64(EREC⦃recP + 5⦄ <= EREC⦃recP + 6⦄)),
+    (EREC⦃recP + 5⦄ - EREC⦃recP + 6⦄) * u64(EREC⦃recP + 6⦄ <= EREC⦃recP + 5⦄));
   return ok
 }
 
@@ -119,9 +119,9 @@ comparands (`lvls_eq_c`; `0`, the twin's fuel exhaustion, is a decline: `abort`)
 @[no_expose] def iotaRecFamL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn)
     locals (cmpL, c3, r) {
   if mode & 1 != 0 { return 1 };
-  cmpL := call rec_fire_levels(EREC.u64[rl + 3], EREC.u64[rl + 4], EREC.u64[rl + 5],
-    EREC.u64[recP + 2], EREC.u64[recP + 3], us, EREC.u64[ctorP + 2], EREC.u64[ctorP + 3]);
-  c3 := call iota_case3(EREC.u64[rl + 9], vis, ctorP, cmpL);
+  cmpL := call rec_fire_levels(EREC⦃rl + 3⦄, EREC⦃rl + 4⦄, EREC⦃rl + 5⦄,
+    EREC⦃recP + 2⦄, EREC⦃recP + 3⦄, us, EREC⦃ctorP + 2⦄, EREC⦃ctorP + 3⦄);
+  c3 := call iota_case3(EREC⦃rl + 9⦄, vis, ctorP, cmpL);
   if c3 == 0 { return 1 };
   r := call iota_rec_vck(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL);
   return r
@@ -136,15 +136,15 @@ at `mI + 1`) and the fields. -/
 -- con-ron: CHANGED since 97eead2d — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaCase3At` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def iotaRecFire2L : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl, mo, mn)
     locals (cp, rP, fam, rhs, x) {
-  cp := EREC.u64[rl + 2];
-  rP := EREC.u64[recP + 6];
-  rP := rP - (rP - EREC.u64[recP + 5] - 1) * u64(EREC.u64[recP + 5] < rP);
+  cp := EREC⦃rl + 2⦄;
+  rP := EREC⦃recP + 6⦄;
+  rP := rP - (rP - EREC⦃recP + 5⦄ - 1) * u64(EREC⦃recP + 5⦄ < rP);
   if mn < cp { return (0, 0) };
-  if mn - cp != EREC.u64[rl + 1] { return (0, 0) };
+  if mn - cp != EREC⦃rl + 1⦄ { return (0, 0) };
   fam := call iota_rec_fam(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn);
   if fam == 0 { return (0, 0) };
-  rhs := call rule_rhs_at(c, EREC.u64[rl], EREC.u64[recP + 2], EREC.u64[recP + 3],
-    EREC.u64[rl + 8], us);
+  rhs := call rule_rhs_at(c, EREC⦃rl⦄, EREC⦃recP + 2⦄, EREC⦃recP + 3⦄,
+    EREC⦃rl + 8⦄, us);
   x := call mk_app_n(rhs, so, rP);
   x := call mk_app_n_from(x, mo, mn, cp);
   return (1, x)
@@ -181,15 +181,15 @@ at `mI + 1`) and the fields. -/
 @[no_expose] def iotaRecMajorL : FunDecl := lfn (mode, vis, d, c, us, recP, so, sn)
     locals (b0, major, hh, hf, cj, usj, cf, ctorP, rf, rl, r1, r2) {
   b0 := call intern_bvar(0);
-  major := call prepare_major(mode, vis, d, c, EREC.u64[recP + 7], EREC.u64[recP + 8],
-    SPN.u64[so + EREC.u64[recP + 5]]);
+  major := call prepare_major(mode, vis, d, c, EREC⦃recP + 7⦄, EREC⦃recP + 8⦄,
+    SPN.u64[so + EREC⦃recP + 5⦄]);
   hh := call get_app_fn(major);
   (hf, cj, usj) := call iota_rec_head(hh);
   if hf == 0 { return (0, 0) };
   (cf, ctorP) := call env_find(cj, vis);
   if cf == 0 { return (0, 0) };
-  if EREC.u64[ctorP] != 4 { return (0, 0) };
-  (rf, rl) := call find_rule(EREC.u64[recP + 7], EREC.u64[recP + 8], cj);
+  if EREC⦃ctorP⦄ != 4 { return (0, 0) };
+  (rf, rl) := call find_rule(EREC⦃recP + 7⦄, EREC⦃recP + 8⦄, cj);
   if rf == 0 { return (0, 0) };
   (r1, r2) := call iota_rec_fire(mode, vis, d, c, us, recP, so, usj, ctorP, rl, major);
   return (r1, r2)
@@ -204,12 +204,12 @@ level-list length, its telescope's `sn` binders (`sn - 1` is the major's index).
     locals (flag, recP, uso, usl, pf, pr, r1, r2) {
   (flag, recP) := call env_find(c, vis);
   if flag == 0 { return (0, 0) };
-  if EREC.u64[recP] != 5 { return (0, 0) };
+  if EREC⦃recP⦄ != 5 { return (0, 0) };
   if sn == 0 { return (0, 0) };
-  if sn - 1 != EREC.u64[recP + 5] { return (0, 0) };
+  if sn - 1 != EREC⦃recP + 5⦄ { return (0, 0) };
   (uso, usl) := call ls_node(us);
-  (pf, pr) := call peel_pis(sn, EREC.u64[recP + 4]);
-  if usl != EREC.u64[recP + 3] { return (0, 0) };
+  (pf, pr) := call peel_pis(sn, EREC⦃recP + 4⦄);
+  if usl != EREC⦃recP + 3⦄ { return (0, 0) };
   if pf == 0 { return (0, 0) };
   (r1, r2) := call iota_rec_major(mode, vis, d, c, us, recP, so, sn);
   return (r1, r2)

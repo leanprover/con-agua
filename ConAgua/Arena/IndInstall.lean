@@ -83,9 +83,9 @@ def blockCapsAtErCopy : FunDecl := lfn (o, l) locals (q, u) {
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:46-80 ConRon.Arena.blockCapsAt
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
-def blockCapsAtErCopyGo : FunDecl := lfn (d, s, l) locals (u) {
+def blockCapsAtErCopyGo : FunDecl := lfn (d, s, l) locals (u, ez) {
   if l == 0 { return 0 };
-  EREC.u64[d] := IW.u64[s];
+  ez := call erec_put(d, IW.u64[s]);
   u := call block_caps_at_er_copy_go(d + 1, s + 1, l - 1);
   return 0
 }
@@ -156,7 +156,7 @@ def blockCapsHead : FunDecl := lfn (p, mi) locals (ms) {
 def blockCapsOne : FunDecl := lfn (p, ms, isRec) locals (nIdx, c, nF, isP) {
   nIdx := IW.u64[ms + 1]; c := IW.u64[IW.u64[ms + 2]]; nF := IW.u64[c + 1];
   isP := u64(IW.u64[p + 8] != 0);
-  return (u64(nIdx == 0) & u64(isP == 0) & u64(isRec == 0), EREC.u64[IW.u64[c]], IW.u64[p + 4], nF,
+  return (u64(nIdx == 0) & u64(isP == 0) & u64(isRec == 0), EREC⦃IW.u64[c]⦄, IW.u64[p + 4], nF,
     u64(nIdx == 0) & u64(nF == 0) & u64(isRec == 0), u64(IW.u64[p + 1] == 1) & u64(nF == 0) & isP)
 }
 
@@ -183,7 +183,7 @@ member `ms` mention one of `names` in some binder domain of its telescope? -/
 @[no_expose, l_impl ConRon.Arena.blockRawRec]
 def blockRawRecMember : FunDecl := lfn (namesO, namesL, coff, clen) locals (b, r) {
   if clen == 0 { return 0 };
-  b := call pi_doms_mention_any(namesO, namesL, ⟪CWF⟫, EREC.u64[IW.u64[IW.u64[coff]] + 3]);
+  b := call pi_doms_mention_any(namesO, namesL, ⟪CWF⟫, EREC⦃IW.u64[IW.u64[coff]] + 3⦄);
   if b != 0 { return 1 };
   r := call block_raw_rec_member(namesO, namesL, coff + 1, clen - 1);
   return r
@@ -228,7 +228,7 @@ def checkBlockTele : FunDecl := lfn (vis, nP, ms) locals
   if k < nP { abort };
   z := call check_constant_val(vis, cvT);
   (cvTa, s) := call check_sum_tele(vis, cvT, k, cvT);
-  (ok, bsOff, bsLen, body) := call strip_pis(k, EREC.u64[cvTa + 3]);
+  (ok, bsOff, bsLen, body) := call strip_pis(k, EREC⦃cvTa + 3⦄);
   if ok == 0 { abort };
   srt := call intern_sort(s);
   if body == srt { return (cvTa, s) };
@@ -276,7 +276,7 @@ sort. -/
 @[no_expose, l_impl ConRon.Arena.checkBlockAgree]
 def checkBlockAgreeOne : FunDecl := lfn (vis, nP, fvs0O, fvs0L, s0, cvTa, s) locals
     (ok, fvsO, fvsL, body, domsO, domsL, u, eq) {
-  (ok, fvsO, fvsL, body) := call open_pis_at_fvars_f(nP, EREC.u64[cvTa + 3], 0);
+  (ok, fvsO, fvsL, body) := call open_pis_at_fvars_f(nP, EREC⦃cvTa + 3⦄, 0);
   if ok == 0 { fail R_PARAMETERS_OF_ALL };
   if fvsL != fvs0L { fail R_PARAMETERS_OF_ALL };
   (domsO, domsL) := call fvar_type_ds(fvs0O, fvs0L);
@@ -296,7 +296,7 @@ opening differs). -/
 def checkBlockAgree : FunDecl := lfn (vis, nP, cvTa0, s0, restO, restL) locals
     (ok0, fvs0O, fvs0L, body0, rp, u) {
   if restL == 0 { return 0 };
-  (ok0, fvs0O, fvs0L, body0) := call open_pis_at_fvars_f(nP, EREC.u64[cvTa0 + 3], 0);
+  (ok0, fvs0O, fvs0L, body0) := call open_pis_at_fvars_f(nP, EREC⦃cvTa0 + 3⦄, 0);
   if ok0 == 0 { abort };
   rp := IW.u64[restO];
   u := call check_block_agree_one(vis, nP, fvs0O, fvs0L, s0, IW.u64[rp], IW.u64[rp + 1]);
@@ -328,7 +328,7 @@ allocation, five words at a time. -/
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def indInfoRec : FunDecl := lfn (cv, caps) locals (q, u) {
   q := call erec_alloc(20);
-  u := call er_put5(q, 3, EREC.u64[cv], EREC.u64[cv + 1], EREC.u64[cv + 2], EREC.u64[cv + 3]);
+  u := call er_put5(q, 3, EREC⦃cv⦄, EREC⦃cv + 1⦄, EREC⦃cv + 2⦄, EREC⦃cv + 3⦄);
   u := call er_put5(q + 5, IW.u64[caps], IW.u64[caps + 1], IW.u64[caps + 2], IW.u64[caps + 3],
     IW.u64[caps + 4]);
   u := call er_put5(q + 10, IW.u64[caps + 5], IW.u64[caps + 6], IW.u64[caps + 7], IW.u64[caps + 8],
@@ -342,9 +342,9 @@ def indInfoRec : FunDecl := lfn (cv, caps) locals (q, u) {
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:169-177 ConRon.Arena.consBlockInds
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.consBlockInds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
-def erPut5 : FunDecl := lfn (d, a, b, c, e, f) locals () {
-  EREC.u64[d] := a; EREC.u64[d + 1] := b; EREC.u64[d + 2] := c; EREC.u64[d + 3] := e;
-  EREC.u64[d + 4] := f;
+def erPut5 : FunDecl := lfn (d, a, b, c, e, f) locals (ez) {
+  ez := call erec_put(d, a); ez := call erec_put(d + 1, b); ez := call erec_put(d + 2, c); ez := call erec_put(d + 3, e);
+  ez := call erec_put(d + 4, f);
   return 0
 }
 
@@ -428,7 +428,7 @@ def checkBlockCtorsOne : FunDecl := lfn (vis0, vis, p, lpsO, lpsL, ms, cvTa) loc
   cvT := IW.u64[ms];
   nIdx := IW.u64[ms + 1];
   coff := IW.u64[ms + 2]; clen := IW.u64[ms + 3];
-  (csO, csL, ssO, ssL) := call check_sum_ctors(vis0, vis, EREC.u64[cvT], lpsO, lpsL,
+  (csO, csL, ssO, ssL) := call check_sum_ctors(vis0, vis, EREC⦃cvT⦄, lpsO, lpsL,
     IW.u64[p + 4], nIdx, IW.u64[p + 6], IW.u64[p + 8], IW.u64[p + 7], cvTa, coff, clen);
   h1 := call rec2(csO, csL);
   h2 := call rec2(ssO, ssL);
@@ -528,7 +528,7 @@ def blockNestCtx : FunDecl := lfn (vis, p, cvO, cvL) locals
   if cvL == 0 { abort };
   if IW.u64[p + 4] + IW.u64[p + 1] < IW.u64[p + 4] { abort };
   cvTa0 := IW.u64[cvO];
-  (ok, pqO, pqL, body) := call open_pis_at_fvars_f(IW.u64[p + 4], EREC.u64[cvTa0 + 3], 0);
+  (ok, pqO, pqL, body) := call open_pis_at_fvars_f(IW.u64[p + 4], EREC⦃cvTa0 + 3⦄, 0);
   if ok == 0 { abort };
   if pqL + IW.u64[p + 1] < pqL { abort };
   ctx := call block_shape_nest_ctx(p, pqO, pqL);
@@ -611,7 +611,7 @@ def checkBlockIdxSortsOne : FunDecl := lfn (vis, p, ms, cvTa) locals
   nP := IW.u64[p + 4]; ni := IW.u64[ms + 1]; srt := IW.u64[p + 6];
   k := nP + ni;
   if k < nP { abort };
-  (ok, tqO, tqL, body) := call open_pis_at_fvars_f(k, EREC.u64[cvTa + 3], 0);
+  (ok, tqO, tqL, body) := call open_pis_at_fvars_f(k, EREC⦃cvTa + 3⦄, 0);
   if ok == 0 { abort };
   dOff := 0; dLen := 0;
   if nP < tqL { dOff := tqO + nP; dLen := tqL - nP };
@@ -722,9 +722,9 @@ def checkBlockTablesOne : FunDecl := lfn (p, m, csOff, ssOff, vis) locals
   ctorPtr := IW.u64[csOff]; cA := IW.u64[ctorPtr]; nF := IW.u64[ctorPtr + 1];
   sortsPtr := IW.u64[ssOff]; sortsO := IW.u64[sortsPtr]; sortsL := IW.u64[sortsPtr + 1];
   if IW.u64[p + 4] + nF + 1 <= IW.u64[p + 4] { abort };
-  (guardsO, guardsL) := call struct_proj_guards(EREC.u64[cA + 3], IW.u64[p + 4], nF, sortsO, sortsL);
+  (guardsO, guardsL) := call struct_proj_guards(EREC⦃cA + 3⦄, IW.u64[p + 4], nF, sortsO, sortsL);
   (lpsO, lpsL) := call block_shape_lps(p);
-  vis2 := call check_struct_proj_table(EREC.u64[IW.u64[m]], EREC.u64[cA], lpsO, lpsL,
+  vis2 := call check_struct_proj_table(EREC⦃IW.u64[m]⦄, EREC⦃cA⦄, lpsO, lpsL,
     IW.u64[p + 4], nF, IW.u64[p + 6], guardsO, guardsL, cA, vis);
   return vis2
 }

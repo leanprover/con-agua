@@ -65,8 +65,8 @@ def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
     fail R_UNKNOWN_CONSTANT_2
   };
   (lo, l) := call ls_node(us);
-  if l != EREC.u64[p + 3] { fail R_INCORRECT_NUMBER_OF };
-  r := call const_ty_at(EREC.u64[p + 1], EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4], us);
+  if l != EREC⦃p + 3⦄ { fail R_INCORRECT_NUMBER_OF };
+  r := call const_ty_at(EREC⦃p + 1⦄, EREC⦃p + 2⦄, EREC⦃p + 3⦄, EREC⦃p + 4⦄, us);
   return r
 }
 
@@ -379,8 +379,8 @@ stack top, so `pe` is pushed right after it). `q` is the table record, `i` the f
 @[no_expose, l_impl ConRon.Arena.IProjEntry.typeAt]
 def projTypeAtL : FunDecl := lfn (q, i, us, to, tn, pe) locals (body, b, r) {
   body := 0;
-  if i < EREC.u64[q + 10] { body := EREC.u64[EREC.u64[q + 9] + i] };
-  b := call inst_lp(EREC.u64[q + 3], EREC.u64[q + 4], us, body);
+  if i < EREC⦃q + 10⦄ { body := EREC⦃EREC⦃q + 9⦄ + i⦄ };
+  b := call inst_lp(EREC⦃q + 3⦄, EREC⦃q + 4⦄, us, body);
   if len(SPN.u64) <= to + tn { abort };
   SPN.u64[to + tn] := pe;
   CTL.u64[136] := to + tn + 1;
@@ -400,15 +400,15 @@ def inferProjAtL : FunDecl :=
   top := CTL.u64[136];
   (to, tn) := call get_app_args(te);
   if T != sn { fail R_INVALID_PROJECTION_THE };
-  if tn != EREC.u64[q + 5] { fail R_PROJECTION_PARAMETER_MISMATCH };
+  if tn != EREC⦃q + 5⦄ { fail R_PROJECTION_PARAMETER_MISMATCH };
   (lo, usl) := call ls_node(us);
-  if usl != EREC.u64[q + 4] { fail R_PROJECTION_WITHOUT_A };
+  if usl != EREC⦃q + 4⦄ { fail R_PROJECTION_WITHOUT_A };
   z := call pin_word(53);
-  ok := call lvl_eq_c(EREC.u64[q + 8], z);
+  ok := call lvl_eq_c(EREC⦃q + 8⦄, z);
   if 2 <= ok {
     fs := 0;
-    if i < EREC.u64[q + 12] { fs := EREC.u64[EREC.u64[q + 11] + i] };
-    ok := call field_sort_zero(EREC.u64[q + 3], EREC.u64[q + 4], us, fs);
+    if i < EREC⦃q + 12⦄ { fs := EREC⦃EREC⦃q + 11⦄ + i⦄ };
+    ok := call field_sort_zero(EREC⦃q + 3⦄, EREC⦃q + 4⦄, us, fs);
     if ok == 0 { fail R_PROJECTION_FROM_A }
   };
   r := call proj_type_at(q, i, us, to, tn, pe);
@@ -440,9 +440,9 @@ def inferProjL : FunDecl :=
     if cT == sn {
       (to, tn) := call get_app_args(te);
       (f, q) := call env_find(cT, vis);
-      if f != 0 && EREC.u64[q] == 3 && EREC.u64[q + 19] == 1 && EREC.u64[q + 17] < tn {
-        (f, q) := call env_find(EREC.u64[EREC.u64[q + 18]], vis);
-        if f != 0 && EREC.u64[q] == 4 && i < EREC.u64[q + 6] { fail R_PROJECTION_ON_AN }
+      if f != 0 && EREC⦃q⦄ == 3 && EREC⦃q + 19⦄ == 1 && EREC⦃q + 17⦄ < tn {
+        (f, q) := call env_find(EREC⦃EREC⦃q + 18⦄⦄, vis);
+        if f != 0 && EREC⦃q⦄ == 4 && i < EREC⦃q + 6⦄ { fail R_PROJECTION_ON_AN }
       }
     };
     fail R_INVALID_PROJECTION_NOT

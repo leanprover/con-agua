@@ -539,7 +539,7 @@ its row, its slot in `ECON`; returns the new view `vis + 1`. -/
 def envPushL : FunDecl := lfn (vis, q) locals (w, k, z) {
   if vis + 1 == 0 { abort };
   if 4294967295 < q { abort };
-  w := EREC.u64[q + 1];
+  w := EREC⦃q + 1⦄;
   z := call env_row_set(w, vis + 1, q);
   k := CTL.u64[128];
   if k + 1 == 0 { abort };
@@ -1267,7 +1267,7 @@ def envPushTableL : FunDecl := lfn (q) locals (w, k, z) {
   if k + 1 == 0 { abort };
   ETAB.u64[k] := q;
   CTL.u64[133] := k + 1;
-  w := EREC.u64[q + 2];
+  w := EREC⦃q + 2⦄;
   z := call tbl_row_set(w, q + 1);
   return 0
 }

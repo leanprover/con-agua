@@ -51,9 +51,9 @@ while processing (in `IW`) can be stored in a persistent record (in `EREC`). -/
 /-- `er_from_iw_go(q, o, l)`: copy the `IW` slice `(o, l)` to `EREC[q ‥]`, word by word, first to
 last. Self-recursive (lane `indproofs2`: split off `er_from_iw`'s `while` loop for the proof). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-@[no_expose] def erFromIwGo : FunDecl := lfn (q, o, l) locals (z) {
+@[no_expose] def erFromIwGo : FunDecl := lfn (q, o, l) locals (z, ez) {
   if l == 0 { return 0 };
-  EREC.u64[q] := IW.u64[o];
+  ez := call erec_put(q, IW.u64[o]);
   z := call er_from_iw_go(q + 1, o + 1, l - 1);
   return 0
 }
@@ -87,11 +87,11 @@ name and level parameters carry over (`{cv with type := ty}`). Returns `(cvTa, s
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkSumTele.checkSumTeleSlow` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkSumTele.checkSumTeleSlow]
 def checkSumTeleSlowL : FunDecl := lfn (vis, cv, n, cvTa0) locals (bo, bl, s, sortS, ty, cvTaNew, u) {
-  (bo, bl, s) := call whnf_telescope(vis, 0, n, EREC.u64[cvTa0 + 3]);
+  (bo, bl, s) := call whnf_telescope(vis, 0, n, EREC⦃cvTa0 + 3⦄);
   sortS := call intern_sort(s);
   if 4294967296 <= sortS { abort };
   ty := call close_telescope(bo, bl, 0, sortS);
-  cvTaNew := call cv_new(EREC.u64[cv], EREC.u64[cv + 1], EREC.u64[cv + 2], ty);
+  cvTaNew := call cv_new(EREC⦃cv⦄, EREC⦃cv + 1⦄, EREC⦃cv + 2⦄, ty);
   u := call check_constant_val(vis, cvTaNew);
   return (cvTaNew, s)
 }
@@ -102,7 +102,7 @@ telescope of `n` Π binders ending in a sort, else the slow arm. Returns `(cvTa,
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkSumTele` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkSumTele]
 def checkSumTeleL : FunDecl := lfn (vis, cv, n, cvTa0) locals (ok, bso, bsl, body, g, x, y, z, cvTaOut, s) {
-  (ok, bso, bsl, body) := call strip_pis(n, EREC.u64[cvTa0 + 3]);
+  (ok, bso, bsl, body) := call strip_pis(n, EREC⦃cvTa0 + 3⦄);
   if ok == 1 && (⟦body⟧.tag) == 2 {
     (g, x, y, z) := call e_view(body);
     return (cvTa0, x)
@@ -250,13 +250,13 @@ def checkSumCtorL : FunDecl :=
   locals (u1, ok1, bso1, bsl1, cbody, resOk, cqOk, cqOff, cqLen, cqBody, tqOk, tqOff, tqLen, tqBody,
     tdOff, tdLen, u2, sortsOff, sortsLen) {
   u1 := call check_constant_val(vis, cvC);
-  (ok1, bso1, bsl1, cbody) := call strip_pis(nP + nF, EREC.u64[cvC + 3]);
+  (ok1, bso1, bsl1, cbody) := call strip_pis(nP + nF, EREC⦃cvC + 3⦄);
   if ok1 == 0 { fail R_DIRECT_SUM_CONSTRUCTOR_TELESCOPE };
   resOk := call struct_ctor_resid_ok(T, lpsOff, lpsLen, nP, nF, nIdx, cbody);
   if resOk == 0 { fail R_DIRECT_SUM_INVALID };
-  (cqOk, cqOff, cqLen, cqBody) := call open_pis_at_fvars_f(nP, EREC.u64[cvC + 3], 0);
+  (cqOk, cqOff, cqLen, cqBody) := call open_pis_at_fvars_f(nP, EREC⦃cvC + 3⦄, 0);
   if cqOk == 0 { fail R_DIRECT_SUM_CONSTRUCTOR_TELESCOPE };
-  (tqOk, tqOff, tqLen, tqBody) := call open_pis_at_fvars_f(nP, EREC.u64[cvTa + 3], 0);
+  (tqOk, tqOff, tqLen, tqBody) := call open_pis_at_fvars_f(nP, EREC⦃cvTa + 3⦄, 0);
   if tqOk == 0 { fail R_DIRECT_SUM_TYPE };
   (tdOff, tdLen) := call fvar_type_ds(tqOff, tqLen);
   u2 := call check_struct_doms_at(vis, 0, cqOff, cqLen, tdOff, tdLen, nP);
@@ -301,16 +301,16 @@ def checkSumCtorsL : FunDecl :=
 (lane `indproofs2`: `env_push`'s spec needs it; a decoded constant's name always is). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:140-146 ConRon.Arena.consSumCtors
 @[no_expose, l_impl ConRon.Arena.consSumCtors]
-def ctorInfoRecL : FunDecl := lfn (cv, nP, nF) locals (rec) {
+def ctorInfoRecL : FunDecl := lfn (cv, nP, nF) locals (rec, ez) {
   rec := call erec_alloc(7);
-  EREC.u64[rec] := 4;
-  EREC.u64[rec + 1] := EREC.u64[cv];
-  EREC.u64[rec + 2] := EREC.u64[cv + 1];
-  EREC.u64[rec + 3] := EREC.u64[cv + 2];
-  EREC.u64[rec + 4] := EREC.u64[cv + 3];
-  EREC.u64[rec + 5] := nP;
-  EREC.u64[rec + 6] := nF;
-  if 4294967296 <= EREC.u64[rec + 1] { abort };
+  ez := call erec_put(rec, 4);
+  ez := call erec_put(rec + 1, EREC⦃cv⦄);
+  ez := call erec_put(rec + 2, EREC⦃cv + 1⦄);
+  ez := call erec_put(rec + 3, EREC⦃cv + 2⦄);
+  ez := call erec_put(rec + 4, EREC⦃cv + 3⦄);
+  ez := call erec_put(rec + 5, nP);
+  ez := call erec_put(rec + 6, nF);
+  if 4294967296 <= EREC⦃rec + 1⦄ { abort };
   return rec
 }
 
@@ -356,26 +356,26 @@ twin is (lane `indproofs2`: split off `sum_rules`' `while` loop for the proof). 
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.sumRules` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.sumRules]
 def sumRulesGoL : FunDecl :=
-  lfn (vis, nP, cO, cL, rO, rL, o) locals (c, cv, nF, ctorN, rhs, k, eta, rec, z) {
+  lfn (vis, nP, cO, cL, rO, rL, o) locals (c, cv, nF, ctorN, rhs, k, eta, rec, z, ez) {
   if cL == 0 || rL == 0 { return 0 };
   c := IW.u64[cO];
   cv := IW.u64[c];
   nF := IW.u64[c + 1];
-  ctorN := EREC.u64[cv];
+  ctorN := EREC⦃cv⦄;
   rhs := IW.u64[rO];
   (k, eta) := call rec_rule_bits(vis, ctorN);
   rec := call erec_alloc(11);
-  EREC.u64[rec] := ctorN;
-  EREC.u64[rec + 1] := nF;
-  EREC.u64[rec + 2] := nP;
-  EREC.u64[rec + 3] := 0;
-  EREC.u64[rec + 4] := 0;
-  EREC.u64[rec + 5] := 0;
-  EREC.u64[rec + 6] := 0;
-  EREC.u64[rec + 7] := 0;
-  EREC.u64[rec + 8] := rhs;
-  EREC.u64[rec + 9] := k;
-  EREC.u64[rec + 10] := eta;
+  ez := call erec_put(rec, ctorN);
+  ez := call erec_put(rec + 1, nF);
+  ez := call erec_put(rec + 2, nP);
+  ez := call erec_put(rec + 3, 0);
+  ez := call erec_put(rec + 4, 0);
+  ez := call erec_put(rec + 5, 0);
+  ez := call erec_put(rec + 6, 0);
+  ez := call erec_put(rec + 7, 0);
+  ez := call erec_put(rec + 8, rhs);
+  ez := call erec_put(rec + 9, k);
+  ez := call erec_put(rec + 10, eta);
   IW.u64[o] := rec;
   z := call sum_rules_go(vis, nP, cO + 1, cL - 1, rO + 1, rL - 1, o + 1);
   return 0
@@ -411,7 +411,7 @@ that fails any of them. Self-recursive on the slice, as `List.allM` is on the li
 -- con-ron: CHANGED since 97eead2d — `ConRon.Arena.checkStructProjTable` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableScopedL : FunDecl :=
-  lfn (vis, nP, lpsOff, lpsLen, bodiesOff, bodiesLen) locals (b, r1, r2, r3, r4, r) {
+  lfn (vis, nP, lpsOff, lpsLen, bodiesOff, bodiesLen) locals (b, r1, r2, r3, r4, r, ez) {
   if bodiesLen == 0 { return 1 };
   b := IW.u64[bodiesOff];
   r1 := call has_fvar_fast(⟪CWF⟫, b);
@@ -439,7 +439,7 @@ is unchanged and returned. -/
 def checkStructProjTableL : FunDecl :=
   lfn (T, C, lpsOff, lpsLen, nP, nF, resSort, guardsOff, guardsLen, cvCa, vis)
   locals (bOk, bOff, bLen, scopedOk, found, q, r, lo2, ll2, bo2, bl2, go2, gl2, rec, z) {
-  (bOk, bOff, bLen) := call struct_proj_bodies(T, nP, nF, EREC.u64[cvCa + 3]);
+  (bOk, bOff, bLen) := call struct_proj_bodies(T, nP, nF, EREC⦃cvCa + 3⦄);
   if bOk == 0 { abort };
   scopedOk := call check_struct_proj_table_scoped(vis, nP, lpsOff, lpsLen, bOff, bLen);
   if bLen != nF { abort };
@@ -452,19 +452,19 @@ def checkStructProjTableL : FunDecl :=
   (bo2, bl2) := call er_from_iw(bOff, bLen);
   (go2, gl2) := call er_from_iw(guardsOff, guardsLen);
   rec := call erec_alloc(13);
-  EREC.u64[rec] := 6;
-  EREC.u64[rec + 1] := 0;
-  EREC.u64[rec + 2] := T;
-  EREC.u64[rec + 3] := lo2;
-  EREC.u64[rec + 4] := ll2;
-  EREC.u64[rec + 5] := nP;
-  EREC.u64[rec + 6] := C;
-  EREC.u64[rec + 7] := nF;
-  EREC.u64[rec + 8] := resSort;
-  EREC.u64[rec + 9] := bo2;
-  EREC.u64[rec + 10] := bl2;
-  EREC.u64[rec + 11] := go2;
-  EREC.u64[rec + 12] := gl2;
+  ez := call erec_put(rec, 6);
+  ez := call erec_put(rec + 1, 0);
+  ez := call erec_put(rec + 2, T);
+  ez := call erec_put(rec + 3, lo2);
+  ez := call erec_put(rec + 4, ll2);
+  ez := call erec_put(rec + 5, nP);
+  ez := call erec_put(rec + 6, C);
+  ez := call erec_put(rec + 7, nF);
+  ez := call erec_put(rec + 8, resSort);
+  ez := call erec_put(rec + 9, bo2);
+  ez := call erec_put(rec + 10, bl2);
+  ez := call erec_put(rec + 11, go2);
+  ez := call erec_put(rec + 12, gl2);
   z := call env_push_table(rec);
   return vis
 }

@@ -193,8 +193,8 @@ def natOpDepsStoredL : FunDecl := lfn (vis, o, l) locals (f, r, e) {
   if l == 0 { return 1 };
   (f, r) := call env_find(IW.u64[o], vis);
   if f == 0 { return 0 };
-  if EREC.u64[r] != 1 { return 0 };
-  if EREC.u64[r + 3] != 0 { return 0 };
+  if EREC⦃r⦄ != 1 { return 0 };
+  if EREC⦃r + 3⦄ != 0 { return 0 };
   e := call nat_op_deps_stored(vis, o + 1, l - 1);
   return e
 }
@@ -204,10 +204,10 @@ def natOpDepsStoredL : FunDecl := lfn (vis, o, l) locals (f, r, e) {
 @[no_expose, l_impl ConRon.Arena.boolCtorOk]
 def boolCtorOkL : FunDecl := lfn (p) locals (q, n, b) {
   q := call ci_to_cv(p);
-  if EREC.u64[q + 2] != 0 { return 0 };
+  if EREC⦃q + 2⦄ != 0 { return 0 };
   n := call pin_at(29);
   b := call const_e(n);
-  return u64(EREC.u64[q + 3] == b)
+  return u64(EREC⦃q + 3⦄ == b)
 }
 
 /-- `nat_op_bool_ctors(vis)`: the `Bool` constructors' conjunct of `natOpGuard`: `Bool.true` then
@@ -261,8 +261,8 @@ def natOpCodL : FunDecl := lfn (vis, c, e) locals (be, bl, bn, bc, f, r, q, s1, 
     if f == 0 { return 0 };
     q := call ci_to_cv(r);
     s1 := call pin_word(54);
-    if EREC.u64[q + 2] != 0 { return 0 };
-    return u64(EREC.u64[q + 3] == s1)
+    if EREC⦃q + 2⦄ != 0 { return 0 };
+    return u64(EREC⦃q + 3⦄ == s1)
   };
   nn := call pin_at(1);
   nc := call const_e(nn);
@@ -301,9 +301,9 @@ type. -/
 def natOpStoredOkL : FunDecl := lfn (vis, n) locals (f, r, e) {
   (f, r) := call env_find(n, vis);
   if f == 0 { return 0 };
-  if EREC.u64[r] != 1 { return 0 };
-  if EREC.u64[r + 3] != 0 { return 0 };
-  e := call nat_op_ty_pinned(vis, n, EREC.u64[r + 4]);
+  if EREC⦃r⦄ != 1 { return 0 };
+  if EREC⦃r + 3⦄ != 0 { return 0 };
+  e := call nat_op_ty_pinned(vis, n, EREC⦃r + 4⦄);
   return e
 }
 
@@ -500,9 +500,9 @@ pre-insertion view `vis`. Returns `0`. -/
     lfn (vis, w, n) locals (f, r, eo, el, so, sl, ok) {
   (f, r) := call env_find(n, w);
   if f == 0 { abort };
-  if EREC.u64[r] != 1 { abort };
+  if EREC⦃r⦄ != 1 { abort };
   (eo, el) := call nat_op_equations(0, n);
-  (so, sl) := call subst_const0_pairs(n, EREC.u64[r + 5], eo, el);
+  (so, sl) := call subst_const0_pairs(n, EREC⦃r + 5⦄, eo, el);
   ok := call certify_nat_eqs(vis, so, sl);
   if ok == 0 { fail R_NONSTANDARD_STRUCTURAL_NAT };
   return 0
@@ -622,7 +622,7 @@ in the twin's order and only as far as the twin reads them. -/
 @[no_expose, l_impl ConRon.Arena.divModDeclPin]
 def divModDeclPinL : FunDecl := lfn (ps, c) locals (j) {
   j := call div_mod_slot(c);
-  return EREC.u64[ps + j]
+  return EREC⦃ps + j⦄
 }
 
 /-- `div_mod_type_pins(ps, c)`: the variant's type pins of op `c`, the `EREC` slice of pairs. -/
@@ -630,7 +630,7 @@ def divModDeclPinL : FunDecl := lfn (ps, c) locals (j) {
 @[no_expose, l_impl ConRon.Arena.divModTypePins]
 def divModTypePinsL : FunDecl := lfn (ps, c) locals (j) {
   j := call div_mod_slot(c);
-  return (EREC.u64[ps + 24 + 2 * j], EREC.u64[ps + 25 + 2 * j])
+  return (EREC⦃ps + 24 + 2 * j⦄, EREC⦃ps + 25 + 2 * j⦄)
 }
 
 /-- `type_pin_stored(vis, n)`: the stored type of `n`, or `Sort 0` when `n` is absent. -/
@@ -644,7 +644,7 @@ def typePinStoredL : FunDecl := lfn (vis, n) locals (f, r, q, z, s) {
     return s
   };
   q := call ci_to_cv(r);
-  return EREC.u64[q + 3]
+  return EREC⦃q + 3⦄
 }
 
 /-- `div_mod_cert_proofs(ps, c)`: the variant's certificate proofs of op `c`, copied into `IW`. -/
@@ -652,7 +652,7 @@ def typePinStoredL : FunDecl := lfn (vis, n) locals (f, r, q, z, s) {
 @[no_expose, l_impl ConRon.Arena.divModCertProofs]
 def divModCertProofsL : FunDecl := lfn (ps, c) locals (j, o, l) {
   j := call div_mod_slot(c);
-  (o, l) := call er_to_iw(EREC.u64[ps + 8 + 2 * j], EREC.u64[ps + 9 + 2 * j]);
+  (o, l) := call er_to_iw(EREC⦃ps + 8 + 2 * j⦄, EREC⦃ps + 9 + 2 * j⦄);
   return (o, l)
 }
 
@@ -1061,7 +1061,7 @@ def boolCtorTypedL : FunDecl := lfn (vis2, n) locals (f, r, q, bn, bt) {
   q := call ci_to_cv(r);
   bn := call pin_at(29);
   bt := call const_e(bn);
-  return u64(EREC.u64[q + 3] == bt)
+  return u64(EREC⦃q + 3⦄ == bt)
 }
 
 /-- `div_mod_env_guard(vis2, c)`: the dependency guard, the pinned dependencies, the pinned `Eq`
@@ -1125,7 +1125,7 @@ def typePinGuardL : FunDecl := lfn (vis, n, ty) locals (f, r, st, b) {
 @[no_expose, l_impl ConRon.Arena.typePinsGuard]
 def typePinsGuardL : FunDecl := lfn (vis, o, l) locals (e) {
   if l == 0 { return 1 };
-  e := call type_pin_guard(vis, EREC.u64[o], EREC.u64[o + 1]);
+  e := call type_pin_guard(vis, EREC⦃o⦄, EREC⦃o + 1⦄);
   if e == 0 { return 0 };
   e := call type_pins_guard(vis, o + 2, l - 1);
   return e
@@ -1200,8 +1200,8 @@ definitional equality. -/
 @[no_expose, l_impl ConRon.Arena.checkTypePins]
 def checkTypePinsL : FunDecl := lfn (vis, o, l) locals (st, d) {
   if l == 0 { return 1 };
-  st := call type_pin_stored(vis, EREC.u64[o]);
-  d := call is_def_eq_core(vis, 0, st, EREC.u64[o + 1]);
+  st := call type_pin_stored(vis, EREC⦃o⦄);
+  d := call is_def_eq_core(vis, 0, st, EREC⦃o + 1⦄);
   if d == 0 { return 0 };
   d := call check_type_pins(vis, o + 2, l - 1);
   return d
@@ -1265,8 +1265,8 @@ def checkDivModPinL : FunDecl := lfn (po, pl, vis, vis2, c) locals (g, f, r, z) 
   if g == 0 { fail R_UNSUPPORTED_NAT_DIV };
   (f, r) := call env_find(c, vis2);
   if f == 0 { abort };
-  if EREC.u64[r] != 1 { abort };
-  z := call check_div_mod_pin_loop(vis, c, EREC.u64[r + 5], po, pl);
+  if EREC⦃r⦄ != 1 { abort };
+  z := call check_div_mod_pin_loop(vis, c, EREC⦃r + 5⦄, po, pl);
   return 0
 }
 

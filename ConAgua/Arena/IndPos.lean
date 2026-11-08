@@ -298,12 +298,12 @@ def nestKindsFlat : FunDecl := lfn (off, cnt) locals (ok, r) {
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:457-473 ConRon.Arena.nestCtorEntry
 @[no_expose, l_impl ConRon.Arena.nestCtorEntry]
 def nestCtorEntryStrip : FunDecl := lfn (ciq) locals (cv, nPc, nF, ok, bsOff, bsLen, body) {
-  if EREC.u64[ciq] != 4 { return (0, 0, 0, 0, 0) };
+  if EREC⦃ciq⦄ != 4 { return (0, 0, 0, 0, 0) };
   cv := ciq + 1;
-  nPc := EREC.u64[ciq + 5];
-  nF := EREC.u64[ciq + 6];
+  nPc := EREC⦃ciq + 5⦄;
+  nF := EREC⦃ciq + 6⦄;
   if nPc + nF < nPc { abort };
-  (ok, bsOff, bsLen, body) := call strip_pis(nPc + nF, EREC.u64[cv + 3]);
+  (ok, bsOff, bsLen, body) := call strip_pis(nPc + nF, EREC⦃cv + 3⦄);
   if ok == 0 { return (0, 0, 0, 0, 0) };
   return (1, cv, nPc, nF, body)
 }
@@ -329,7 +329,7 @@ of `nest_container_ctors`, as a recursion). -/
 @[no_expose] def nestContainerCtorsGo : FunDecl :=
     lfn (vis, C, ctorsOff, ctorsLen, csOff, outLen, firstNPc) locals (found, ciq, ok, cv, nPc, nF, r1, r2) {
   if ctorsLen == 0 { return (outLen, firstNPc) };
-  (found, ciq) := call env_find(EREC.u64[ctorsOff], vis);
+  (found, ciq) := call env_find(EREC⦃ctorsOff⦄, vis);
   if found != 0 {
     (ok, cv, nPc, nF) := call nest_ctor_entry(C, ciq);
     if ok != 0 {
@@ -362,12 +362,12 @@ def nestContainer : FunDecl :=
     lfn (vis, C) locals (found, q, capsq, ctorsOff, ctorsLen, csOff, csLen, firstNPc) {
   (found, q) := call env_find(C, vis);
   if found == 0 { return (0, 0, 0, 0) };
-  if EREC.u64[q] != 3 { return (0, 0, 0, 0) };
+  if EREC⦃q⦄ != 3 { return (0, 0, 0, 0) };
   capsq := q + 5;
-  ctorsOff := EREC.u64[capsq + 13];
-  ctorsLen := EREC.u64[capsq + 14];
+  ctorsOff := EREC⦃capsq + 13⦄;
+  ctorsLen := EREC⦃capsq + 14⦄;
   (csOff, csLen, firstNPc) := call nest_container_ctors(vis, C, ctorsOff, ctorsLen);
-  if csLen == 0 { return (1, EREC.u64[capsq + 12], csOff, 0) };
+  if csLen == 0 { return (1, EREC⦃capsq + 12⦄, csOff, 0) };
   return (1, firstNPc, csOff, csLen)
 }
 

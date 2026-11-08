@@ -114,15 +114,15 @@ def nestInstTypeTyL : FunDecl := lfn (vis, key) locals
     (found, q, kind, cvC, nl, ok2, bo, bl, bdy, lo, ll, ok3, ty) {
   (found, q) := call env_find(IW.u64[key], vis);
   if found == 0 { abort };
-  kind := EREC.u64[q];
+  kind := EREC⦃q⦄;
   if kind != 3 { abort };
   cvC := q + 1;
   (found, nl) := call view_ls_len(IW.u64[key + 1]);
-  if nl != EREC.u64[cvC + 2] { fail R_NESTED_POSITIVITY_INCORRECT };
-  (ok2, bo, bl, bdy) := call strip_pis(IW.u64[key + 3], EREC.u64[cvC + 3]);
+  if nl != EREC⦃cvC + 2⦄ { fail R_NESTED_POSITIVITY_INCORRECT };
+  (ok2, bo, bl, bdy) := call strip_pis(IW.u64[key + 3], EREC⦃cvC + 3⦄);
   if ok2 == 0 { fail R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE };
   (lo, ll) := call cv_lps(cvC);
-  ty := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[key + 1], EREC.u64[cvC + 3]);
+  ty := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[key + 1], EREC⦃cvC + 3⦄);
   (ok3, ty) := call inst_pis_with(IW.u64[key + 2], IW.u64[key + 3], ty);
   if ok3 == 0 { fail R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE };
   return ty
@@ -165,7 +165,7 @@ def nestCtorNfL : FunDecl := lfn (ctx, progOff, progLen, us, dsOff, dsLen, cv, c
   f := call rec5(0, ctx, progOff, progLen, progLen);
   (ds2Off, ds2Len) := call nest_hole_img_ds(f, dsOff, dsLen);
   ty := call replace_fvars(f, closed);
-  nf := call rec5(EREC.u64[cv], us, ds2Off, ds2Len, ty);
+  nf := call rec5(EREC⦃cv⦄, us, ds2Off, ds2Len, ty);
   return nf
 }
 
@@ -178,9 +178,9 @@ none is recorded. -/
 def nestBlockOfL : FunDecl := lfn (vis, c) locals (found, q, kind) {
   (found, q) := call env_find(c, vis);
   if found == 0 { return (0, 0) };
-  kind := EREC.u64[q];
+  kind := EREC⦃q⦄;
   if kind != 3 { return (0, 0) };
-  return (EREC.u64[q + 15], EREC.u64[q + 16])
+  return (EREC⦃q + 15⦄, EREC⦃q + 16⦄)
 }
 
 /-- `nestFrameMates.go`: the group-mates accumulator, each kept once, recursively (like
@@ -191,12 +191,12 @@ accumulator `out` is `IW`-resident (built by `sl_snoc`). -/
 @[no_expose, l_impl ConRon.Arena.nestFrameMates.go]
 def nestFrameMatesGoL : FunDecl := lfn (c, off, l, outOff, outLen) locals (b, r1, r2) {
   if l == 0 { return (outOff, outLen) };
-  b := call sl_contains(outOff, outLen, EREC.u64[off]);
-  if EREC.u64[off] == c || b != 0 {
+  b := call sl_contains(outOff, outLen, EREC⦃off⦄);
+  if EREC⦃off⦄ == c || b != 0 {
     (r1, r2) := call nest_frame_mates_go(c, off + 1, l - 1, outOff, outLen);
     return (r1, r2)
   };
-  (outOff, outLen) := call sl_snoc(outOff, outLen, EREC.u64[off]);
+  (outOff, outLen) := call sl_snoc(outOff, outLen, EREC⦃off⦄);
   (r1, r2) := call nest_frame_mates_go(c, off + 1, l - 1, outOff, outLen);
   return (r1, r2)
 }
@@ -218,9 +218,9 @@ binder count). -/
 def nestArityL : FunDecl := lfn (vis, c) locals (found, q, kind, ty, bo, bl, bdy) {
   (found, q) := call env_find(c, vis);
   if found == 0 { return 0 };
-  kind := EREC.u64[q];
+  kind := EREC⦃q⦄;
   if kind != 3 { return 0 };
-  ty := EREC.u64[q + 4];
+  ty := EREC⦃q + 4⦄;
   (bo, bl, bdy) := call pi_binders(⟪CWF⟫, ty);
   return bl
 }
@@ -347,7 +347,7 @@ def nestCtorsCrestL : FunDecl :=
   (lo, ll) := call cv_lps(cv);
   nodup := call sl_nodup(lo, ll);
   if nodup == 0 { fail R_NESTED_POSITIVITY_INVALID };
-  cty := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC.u64[cv + 3]);
+  cty := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC⦃cv + 3⦄);
   (ok, cty) := call nest_crest(namesOff, namesLen, us, dsOff, dsLen, holesOff, holesLen, cty);
   if ok == 0 { fail R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE };
   ty := call infer_type_core(vis, hi, cty);
@@ -735,8 +735,8 @@ def nestHolesGoL : FunDecl := lfn (vis, ctx, mm, off, l, outOff, outLen) locals
   if l == 0 { return (1, outOff, outLen) };
   (found, q) := call env_find(IW.u64[off], vis);
   if found == 0 { return (0, 0, 0) };
-  if EREC.u64[q] != 3 { return (0, 0, 0) };
-  (ok2, t) := call inst_pis_with(IW.u64[ctx + 7], IW.u64[ctx + 8], EREC.u64[q + 4]);
+  if EREC⦃q⦄ != 3 { return (0, 0, 0) };
+  (ok2, t) := call inst_pis_with(IW.u64[ctx + 7], IW.u64[ctx + 8], EREC⦃q + 4⦄);
   if ok2 == 0 { return (0, 0, 0) };
   v := call intern_fvar(IW.u64[ctx + 4] + mm, t);
   if 4294967296 <= v { abort };
@@ -761,7 +761,7 @@ def nestHolesL : FunDecl := lfn (vis, ctx) locals (namesOff, namesLen, ok, outOf
 @[no_expose, l_impl ConRon.Arena.nestRootCanon]
 def nestRootCanonL : FunDecl := lfn (ctx, cv) locals (lo, ll, t, ok, e) {
   (lo, ll) := call cv_lps(cv);
-  t := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[ctx + 10], EREC.u64[cv + 3]);
+  t := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[ctx + 10], EREC⦃cv + 3⦄);
   (ok, e) := call nest_canon_crest(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 10],
     IW.u64[ctx + 4], t);
   return (ok, e)
@@ -789,7 +789,7 @@ def piDomsOccL : FunDecl := lfn (namesOff, namesLen, lo, hi, n, e) locals (g, d,
 def nestUniformOkL : FunDecl := lfn (ctx, cv) locals (hi0, occ1, ok, e, occ2) {
   hi0 := call nest_ctx_hi_at(ctx, 0);
   occ1 := call pi_doms_occ(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi0, IW.u64[ctx + 4],
-    EREC.u64[cv + 3]);
+    EREC⦃cv + 3⦄);
   if occ1 != 0 { return 0 };
   (ok, e) := call nest_root_canon(ctx, cv);
   if ok == 0 { return 0 };
