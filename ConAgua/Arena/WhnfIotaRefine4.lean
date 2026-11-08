@@ -389,7 +389,7 @@ def MajorToCtorE (p : Prog) : Prop :=
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
     N ≤ 2 ^ 62 → CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 →
-    HW major → decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
+    HW major → decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules →
     CoreSpecE p (N + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, major]
       (majorToCtor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) s₀ a₀
@@ -431,7 +431,7 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
     (eb mode d rec ro rc me : Word) (rules : List IRecRule) (hm4 : mode < 4)
     (hebm : eb = (mode >>> 1) &&& 1) (hme : HW me) (m3 : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m3 a vis fe M eb)
-    (hrules : decRules (m3.arr64 EREC) ro.toNat rc.toNat = some rules) :
+    (hrules : decRules (erecP m3) ro.toNat rc.toNat = some rules) :
     RefE (PmG p (N + 1)) (pmE.j1 p (N + 1) mode vis d rec ro rc me m3)
       (pmTailT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules (decE me))
       a (CorePost decH dn m3 vis fe M eb ResH) := by
@@ -462,7 +462,7 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
   have e6 : m6.arr64 EREC = m5.arr64 EREC := hE _ _ _ _ _ _ (by simp) (callW_of_callE c6)
   dsimp only [pmE.k_lit_major_to_ctor_2]
   rw [← bind_pure (majorToCtor _ _ _ _ _ _ _)]
-  have hr6 : decRules (m6.arr64 EREC) ro.toNat rc.toNat = some rules := by rw [e6, e5, e4]; exact hrules
+  have hr6 : decRules (erecP m6) ro.toNat rc.toNat = some rules := by rw [e6, e5, e4]; exact hrules
   refine RefE.bind_callE (s₀ := ⟨m6, Locals.init []⟩) (fun _ => rfl)
     (hmtc N (hk.mono (Nat.le_succ N)) F (by omega) _ _ dn vis fe M6 eb mode d rec ro rc _ rules
       (by omega) hS6 hm4 hebm h6.resOk hr6)
@@ -477,7 +477,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
-    (hmaj : HW major) (hr : decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules) :
+    (hmaj : HW major) (hr : decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules) :
     RefE (PmG p n) (pmE p (n + 1) s₀.mem mode vis d rec ro rc major)
       (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) a₀ (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
@@ -529,7 +529,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
     refine RefE.bind_callW (fun _ => rfl) (isStrLit_refines p hp.isStrLit (N + 1) s₀ a₀
       dn vis fe MM eb major hS hmaj) fun r2 m2 c2 h2 => RefE.after_core (w := id) h2 fun M2 hS2 _ => ?_
     dsimp only [pmE.k_is_str_lit]
-    have hrules2 : decRules (m2.arr64 EREC) ro.toNat rc.toNat = some rules := by
+    have hrules2 : decRules (erecP m2) ro.toNat rc.toNat = some rules := by
       rw [hE _ _ _ _ _ _ (by simp) c2]; exact hr
     by_cases hs2 : r2.headD 0 ≠ 0
     · rw [ite_eq_left hs2, decBool_t_m2c (by simpa using hs2)]
@@ -544,7 +544,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
         (fun hG => hG.m2c N (hk.mono (Nat.le_succ N)) (hG.knot.mono (Nat.le_succ N)) F (by omega) _ _
           dn vis fe M2 eb mode d rec ro rc major rules (by omega) hS2 hm4 hebm hmaj hrules2)
         fun r3 m3 c3 h3 => RefE.after_core (w := id) h3 fun M3 hS3 _ => ?_
-      have hrules3 : decRules (m3.arr64 EREC) ro.toNat rc.toNat = some rules := by
+      have hrules3 : decRules (erecP m3) ro.toNat rc.toNat = some rules := by
         rw [hE _ _ _ _ _ _ (by simp) (callW_of_callE c3)]; exact hrules2
       dsimp only [pmE.k_major_to_ctor_2]
       exact pmTail_ref p hp hc hw hsup hmtc hE N hk F hnF hn62 dn vis fe eb mode d rec ro rc
@@ -558,7 +558,7 @@ theorem prepareMajor_refines' :
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
     CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW major →
-    decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
+    decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules →
     CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, ro, rc, major]
       (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) decH s₀ a₀ dn vis fe MM eb :=

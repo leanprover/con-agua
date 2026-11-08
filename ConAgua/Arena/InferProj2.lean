@@ -322,7 +322,7 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
   dsimp only [ipE.k_find_proj]
   have h₄ := CoreSpec.of_callW (hc.findProj n ⟨m₃, Locals.init []⟩ _ dn vis fe M₂ eb wT i hS₂ hcTw) hc4
   have hrun4 : fe.findProj? (decI wT) i.toNat =
-      decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat := h₄.res
+      decEntry (erecP m₃) (r₄.headD 0) (r₄.tail.headD 0) i.toNat := h₄.res
   obtain ⟨-, ⟨M₄, hS₄, hK₄, hSt₄⟩, -, -⟩ := h₄
   have hE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hc.erec n "find_proj" _ m₃ r₄ m₄ (Or.inl rfl) hc4
   by_cases g4 : r₄.headD 0 = 0
@@ -406,11 +406,11 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
   · -- a hit: `infer_proj_at`
     rw [ite_eq_right g4]
     obtain ⟨tbl, hdt, hfe⟩ := hc.projFound n m₃ _ dn vis fe M₂ eb wT i r₄ m₄ hS₂ hc4 g4
-    have hde : decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat =
+    have hde : decEntry (erecP m₃) (r₄.headD 0) (r₄.tail.headD 0) i.toNat =
         some (tbl.entry i.toNat) := by
       unfold decEntry; rw [ite_eq_right g4, hdt]; rfl
     rw [hde] at hrun4
-    have hq₄ : decTbl (m₄.arr64 EREC) (r₄.tail.headD 0).toNat = some tbl := by rw [hE₄]; exact hdt
+    have hq₄ : decTbl (erecP m₄) (r₄.tail.headD 0).toNat = some tbl := by rw [hE₄]; exact hdt
     have hi : i.toNat < tbl.numFields := findProj?_lt hrun4
     cases n with
     | zero => exact RefE.of_cls0 (by simp)

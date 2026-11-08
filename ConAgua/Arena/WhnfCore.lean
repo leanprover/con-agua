@@ -317,7 +317,6 @@ structure WhnfCoreProg (p : Prog) : Prop where
   wcp : p.lookup "wc_put" = some (memoPutG wcSch)
   wkf : p.lookup "wk_find" = some (memoFindG wkSch)
   wkp : p.lookup "wk_put" = some (memoPutG wkSch)
-  envix : p.lookup "env_ix" = some envIxL
   envrow : p.lookup "env_row_get" = some envRowGetL
   envfind : p.lookup "env_find" = some envFindL
   bvf : p.lookup "bvar_find" = some bvarFind
@@ -334,7 +333,7 @@ def Inst1OK (p : Prog) : Prop :=
       s₀ a₀ dn vis fe M eb
 
 /-- The projection entry at field `i` of the table record at `q`, if any. -/
-def decEntry (a : Array Word) (f q : Word) (i : Nat) : Option IProjEntry :=
+def decEntry (a : Nat → Option Word) (f q : Word) (i : Nat) : Option IProjEntry :=
   if f = 0 then none else (decTbl a q.toNat).map (·.entry i)
 
 /-- `find_proj(vis, T, i)` refines `fe.findProj? T i`: `(0, _)` none, `(1, q)` the table record. -/
@@ -342,7 +341,7 @@ def FindProjOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb T i : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW T →
     CoreSpec p n "find_proj" [vis, T, i] (pure (fe.findProj? (decI T) i.toNat))
-      (fun r => decEntry (s₀.mem.arr64 EREC) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
+      (fun r => decEntry (erecP s₀.mem) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
       M eb
 
 /-- `iota_rec_at(mode, vis, d, hd, so, sn)` refines `iotaRecAt` (`WhnfIota.lean`). -/
@@ -372,7 +371,7 @@ def ProjFound (p : Prog) : Prop :=
   ∀ (n : Nat) (m : Mem) (a : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb T i : Word) (r : List Word) (m' : Mem), CoreS dn m a vis fe M eb →
     callW p n "find_proj" [vis, T, i] m = some (r, m') → r.headD 0 ≠ 0 →
-    ∃ tbl : IProjTable, decTbl (m.arr64 EREC) (r.tail.headD 0).toNat = some tbl ∧
+    ∃ tbl : IProjTable, decTbl (erecP m) (r.tail.headD 0).toNat = some tbl ∧
       ∃ c, fe.findTable? c = some tbl
 
 /-- **The projection-table callee** (`find_proj`) and their record-pool facts: what

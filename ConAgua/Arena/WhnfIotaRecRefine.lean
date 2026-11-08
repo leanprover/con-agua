@@ -391,7 +391,7 @@ only the stack and its top written. -/
 theorem callW_erecPush (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (n : Nat) (m : Mem)
     (o c : Word) (pins : List EIdx) (hE : (m.arr64 EREC).size < 2 ^ 63)
     (hspn : (m.arr64 SPN).size < 2 ^ 63)
-    (hpins : hslice? (m.arr64 EREC) o.toNat c.toNat = some pins) (r : List Word) (m' : Mem)
+    (hpins : hslice? (erecP m) o.toNat c.toNat = some pins) (r : List Word) (m' : Mem)
     (h : callW p n "erec_push" [o, c, 1] m = some (r, m')) :
     MemFrame [SPN] [136] m m' ∧ StackGrew m m' ∧ r.headD 0 = spTop m ∧ spTop m' = spTop m + c ∧
       SpineR m' (spTop m) c pins.toArray := by
@@ -652,9 +652,9 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (eb mode d us recP so rl mo mn sn : Word) (lps : List NIdx) (rule : IRecRule)
     (args margs : Array EIdx) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hm4 : mode < 4)
     (hebm : eb = (mode >>> 1) &&& 1) (hus : HW us)
-    (hlps : hslice? (s₀.mem.arr64 EREC) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
+    (hlps : hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps)
-    (hrule : decRule (s₀.mem.arr64 EREC) rl.toNat = some rule)
+    (hrule : decRule (erecP s₀.mem) rl.toNat = some rule)
     (hsa : SpineR s₀.mem so sn args) (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
     (hmI : (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat)
     (hsm : SpineR s₀.mem mo mn margs) (hsmt : mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat)
@@ -768,9 +768,9 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     (MM : ModeMaps) (eb mode d us recP so rl mo mn sn : Word) (lps : List NIdx) (rule : IRecRule)
     (args margs : Array EIdx),
     CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW us →
-    hslice? (s₀.mem.arr64 EREC) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
+    hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps →
-    decRule (s₀.mem.arr64 EREC) rl.toNat = some rule →
+    decRule (erecP s₀.mem) rl.toNat = some rule →
     SpineR s₀.mem so sn args → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →
     SpineR s₀.mem mo mn margs → mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat →
@@ -972,10 +972,10 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (rule : IRecRule) (cvj : IConstantVal) (args margs : Array EIdx)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hus : HW us) (husj : HW usj) (hcmpL : HW cmpL)
-    (hlps : hslice? (s₀.mem.arr64 EREC) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
+    (hlps : hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps)
-    (hrule : decRule (s₀.mem.arr64 EREC) rl.toNat = some rule)
-    (hcv : decCV (s₀.mem.arr64 EREC) (ctorP.toNat + 1) = some cvj)
+    (hrule : decRule (erecP s₀.mem) rl.toNat = some rule)
+    (hcv : decCV (erecP s₀.mem) (ctorP.toNat + 1) = some cvj)
     (hsa : SpineR s₀.mem so sn args) (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
     (hmI : (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat)
     (hsm : SpineR s₀.mem mo mn margs) (hsmt : mo + mn = spTop s₀.mem)
@@ -1115,10 +1115,10 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     (rule : IRecRule) (cvj : IConstantVal) (args margs : Array EIdx),
     CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW us → HW usj →
     HW cmpL →
-    hslice? (s₀.mem.arr64 EREC) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
+    hslice? (erecP s₀.mem) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
       (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps →
-    decRule (s₀.mem.arr64 EREC) rl.toNat = some rule →
-    decCV (s₀.mem.arr64 EREC) (ctorP.toNat + 1) = some cvj →
+    decRule (erecP s₀.mem) rl.toNat = some rule →
+    decCV (erecP s₀.mem) (ctorP.toNat + 1) = some cvj →
     SpineR s₀.mem so sn args → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →
     SpineR s₀.mem mo mn margs → mo + mn = spTop s₀.mem → rule.ctorParams ≤ mn.toNat →

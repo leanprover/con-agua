@@ -52,7 +52,7 @@ theorem cv_call (hS : CoreS dn m a vis fe M eb) {q : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) q.toNat = some ci)
     (h : callW p n "str_cv" [q] m = some (r, m')) :
     m' = m ∧
-      hslice? (m.arr64 EREC) (r.headD 0).toNat (r.tail.headD 0).toNat =
+      hslice? (erecP m) (r.headD 0).toNat (r.tail.headD 0).toNat =
         some ci.toConstantVal.levelParams ∧
       ci.toConstantVal.levelParams.length = (r.tail.headD 0).toNat ∧
       ci.toConstantVal.type = decI (r.tail.tail.headD 0) ∧ HW (r.tail.tail.headD 0) := by

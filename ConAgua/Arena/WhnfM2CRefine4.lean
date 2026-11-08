@@ -199,7 +199,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     (eb mode d T indP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hT : HW T) (hmaj : HW major) (cvT : IConstantVal) (caps : IIndCaps) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
-    (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps))
+    (hci : decCI (erecP m) dn indP.toNat = some (.indInfo cvT caps))
     (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) :
     RefE (M2CCtxE p N) (m2cEtaE p (N + 1) m mode vis d T indP major)
       (m2cEtaT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a

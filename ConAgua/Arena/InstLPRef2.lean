@@ -74,10 +74,10 @@ theorem ReadNCOK.of_ls {a a' : AState} (hc : ReadNCOK a) (hls : a'.store.lss.ls 
 `EREC` name slice `(qo, qc)`), else nested (the stored levels the `EREC` slice `(fvo, fvc)`). -/
 def FireR (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (cvjLps : List NIdx) :
     Prop :=
-  (fk = 0 ∧ rl.fire = .plain ∧ hslice? (m.arr64 EREC) qo.toNat qc.toNat = some cvjLps ∧
+  (fk = 0 ∧ rl.fire = .plain ∧ hslice? (erecP m) qo.toNat qc.toNat = some cvjLps ∧
       qo.toNat + qc.toNat < 2 ^ 64 ∧ ∀ q ∈ cvjLps, ∃ nm, denoteN a.store.lss.ls.ns q = some nm) ∨
     (fk ≠ 0 ∧ ∃ lvls pins, rl.fire = .nested lvls pins ∧
-      hslice? (m.arr64 EREC) fvo.toNat fvc.toNat = some lvls ∧ fvo.toNat + fvc.toNat < 2 ^ 64 ∧
+      hslice? (erecP m) fvo.toNat fvc.toNat = some lvls ∧ fvo.toNat + fvc.toNat < 2 ^ 64 ∧
       ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L)
 
 /-- What `rec_fire_levels` writes. -/
@@ -176,7 +176,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     (vs : List Level) (hA : ArenaD m a) (hmode : ModeOK m) (hwf : StoreWF a.store) (hnc : ReadNCOK a) (hlc : ReadLCOK a)
     (hlsc : ReadLsCOK a) (hsz : (m.arr64 SPN).size < 2 ^ 63) (hctl : 136 < (m.arr64 CTL).size)
     (hus : us.toNat < 2 ^ 32) (hdus : denoteLs a.store.lss (decI us) = some vs)
-    (hlps : hslice? (m.arr64 EREC) po.toNat pc.toNat = some lps) (hpb : po.toNat + pc.toNat < 2 ^ 64)
+    (hlps : hslice? (erecP m) po.toNat pc.toNat = some lps) (hpb : po.toNat + pc.toNat < 2 ^ 64)
     (hks : lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
     (hfire : FireR m a fk fvo fvc qo qc rl cvjLps)
     (hW : recFireLevelsW p n m fk fvo fvc po pc us qo qc = some (r, m')) :
@@ -306,7 +306,7 @@ theorem capsNeverZeroW_run (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so 
     (hwf : NStoreWF a.store.lss.ls.ns) (hnc : ReadNCOK a) (hlsc : ReadLsCOK a)
     (hus : us.toNat < 2 ^ 32) (hsz : (m.arr64 SPN).size < 2 ^ 63)
     (hdl : denoteLs a.store.lss (decI us) = some vs)
-    (hlps : hslice? (m.arr64 EREC) po.toNat pc.toNat = some lps) (hpb : po.toNat + pc.toNat < 2 ^ 64)
+    (hlps : hslice? (erecP m) po.toNat pc.toNat = some lps) (hpb : po.toNat + pc.toNat < 2 ^ 64)
     (hks : lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
     (hp : PWR (nameN a.store.lss.ls.ns) m EREC swd so sc caps.sortZ)
     (hW : capsNeverZeroW n m po pc us swd so sc = some (x, m')) :

@@ -29,6 +29,7 @@ stack `BSTK`** (array 145, top `CTL[137]`, lane `defeq`; outside every tier of `
 -/
 
 open ConRon.Arena
+open L.Ind (IW)
 
 
 namespace L.Arena

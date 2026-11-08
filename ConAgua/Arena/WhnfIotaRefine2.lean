@@ -378,7 +378,7 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
     obtain ⟨-, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
       (hfp k ⟨m, Locals.init []⟩ a dn vis fe M eb T j hS hT) hc
     have hfx : fe.findProj? (decI T) j.toNat =
-        decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat := hres
+        decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) j.toNat := hres
     by_cases h0 : r₁.headD 0 = 0
     · rw [tsW.loop1.arm1 (hc1 := hlt), hc, tsW.k_find_proj.arm1 (hc1 := h0)] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
@@ -788,7 +788,7 @@ theorem ispW_ok (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCal
     (eb po pl us ao an rP pvo pvc so : Word) (hus : HW us) (lps : List NIdx) (args pins : Array EIdx) :
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (m' : Mem),
       pvc.toNat - j.toNat = K → j.toNat ≤ pvc.toNat → CoreS dn m a vis fe M eb →
-      hslice? (m.arr64 EREC) po.toNat pl.toNat = some lps →
+      hslice? (erecP m) po.toNat pl.toNat = some lps →
       spTop m = so + j → so.toNat + pvc.toNat ≤ (m.arr64 SPN).size →
       ao.toNat + an.toNat ≤ so.toNat → pvo.toNat + pvc.toNat ≤ so.toNat →
       an.toNat ≤ rP.toNat → SpineR m ao an args → SpineR m pvo pvc pins →
@@ -854,7 +854,7 @@ theorem ispW_ok (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCal
       (hw.instLP k ⟨m, Locals.init []⟩ a dn vis fe M eb po pl us _ lps hS hpinw hus hlps) hc1
     have hSt₁ : StackKept m m₁ := hSt₁
     have hEr1 : m₁.arr64 EREC = m.arr64 EREC := hE k "inst_lp" _ m r₁ m₁ (Or.inl rfl) hc1
-    have hlps₁ : hslice? (m₁.arr64 EREC) po.toNat pl.toNat = some lps := by rw [hEr1]; exact hlps
+    have hlps₁ : hslice? (erecP m₁) po.toNat pl.toNat = some lps := by rw [hEr1]; exact hlps
     have htopm : (so.toNat + j.toNat) ≤ (spTop m).toNat := by rw [htop, hsoj]; exact Nat.le_refl _
     have hsa₁ : SpineR m₁ ao an args := hsa.keep hSt₁.size hSt₁.below (by omega) hspn
     have hat₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by
@@ -958,7 +958,7 @@ theorem instSpinePins_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb po pl us ao an rP pvo pvc : Word) (lps : List NIdx) (args pins : Array EIdx),
     CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps → SpineR s₀.mem ao an args →
+    hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps → SpineR s₀.mem ao an args →
     SpineR s₀.mem pvo pvc pins → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
     pvo.toNat + pvc.toNat ≤ (spTop s₀.mem).toNat →
     ⦃fun s => s = s₀⦄

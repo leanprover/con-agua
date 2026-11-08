@@ -106,9 +106,9 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (eb mode d ro cvjP T indP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hT : HW T) (hmaj : HW major) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat)
     (cvT : IConstantVal) (caps : IIndCaps) (m : Mem) (a : AState) (M : ModeMaps)
-    (hS : CoreS dn m a vis fe M eb) (hrl : decRule (m.arr64 EREC) ro.toNat = some rl)
-    (hcj : decCI (m.arr64 EREC) dn cvjP.toNat = some (.ctorInfo cvj cnP cnF))
-    (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps))
+    (hS : CoreS dn m a vis fe M eb) (hrl : decRule (erecP m) ro.toNat = some rl)
+    (hcj : decCI (erecP m) dn cvjP.toNat = some (.ctorInfo cvj cnP cnF))
+    (hci : decCI (erecP m) dn indP.toNat = some (.indInfo cvT caps))
     (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) :
     RefE (M2CCtxE p N) (m2cArmsE p (N + 1) m mode vis d ro cvjP T indP major)
       (m2cArmsT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rl cvj cnP (decI T)
@@ -160,8 +160,8 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (eb mode d ro cvjP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hmaj : HW major) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat) (m : Mem) (a : AState)
-    (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (hrl : decRule (m.arr64 EREC) ro.toNat = some rl)
-    (hcj : decCI (m.arr64 EREC) dn cvjP.toNat = some (.ctorInfo cvj cnP cnF)) :
+    (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (hrl : decRule (erecP m) ro.toNat = some rl)
+    (hcj : decCI (erecP m) dn cvjP.toNat = some (.ctorInfo cvj cnP cnF)) :
     RefE (M2CCtxE p N) (m2cCtorE p (N + 1) m mode vis d ro cvjP major)
       (m2cCtorT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rl cvj cnP
         (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
@@ -251,7 +251,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (eb mode d ro rc major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hmaj : HW major) (rules : List IRecRule) (m : Mem) (a : AState) (M : ModeMaps)
-    (hS : CoreS dn m a vis fe M eb) (hr : decRules (m.arr64 EREC) ro.toNat rc.toNat = some rules) :
+    (hS : CoreS dn m a vis fe M eb) (hr : decRules (erecP m) ro.toNat rc.toNat = some rules) :
     RefE (M2CCtxE p N) (m2cHeadE p (N + 1) m mode vis d ro rc major)
       (m2cHeadT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat rules
         (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
@@ -298,7 +298,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   obtain ⟨rl, rfl⟩ : ∃ rl, rules = [rl] := by
     match rules, hlen with
     | [x], _ => exact ⟨x, rfl⟩
-  have hrl : decRule (m.arr64 EREC) ro.toNat = some rl := by
+  have hrl : decRule (erecP m) ro.toNat = some rl := by
     have := hget 0 (by decide); simpa using this
   obtain ⟨⟨w0, e0, l0, hctor⟩, -, -⟩ := decRule_words _ _ _ hrl
   have r0 : rdW (m1.arr64 EREC) ro = w0 := by rw [e1]; simp only [rdW, e0]; rfl
@@ -339,7 +339,7 @@ theorem mtc_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb mode d rec ro rc major : Word)
     (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (hmaj : HW major) (rules : List IRecRule)
     (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
-    (hr : decRules (m.arr64 EREC) ro.toNat rc.toNat = some rules) :
+    (hr : decRules (erecP m) ro.toNat rc.toNat = some rules) :
     RefE (M2CCtxE p n) (mtcE p (n + 1) m mode vis d rec ro rc major)
       (majorToCtor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) a (CorePost decH dn m vis fe M eb ResH) := by

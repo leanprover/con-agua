@@ -139,7 +139,7 @@ theorem constValAt_refines (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb nm po pl value us : Word) (lps : List NIdx)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hnm : HW nm) (hv : HW value) (hu : HW us)
-    (hlps : hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps) :
+    (hlps : hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps) :
     CoreSpec p n "const_val_at" [nm, po, pl, value, us]
       (constValAt (decI nm) lps (decE value) (decI us)) decH s₀ a₀ dn vis fe MM eb :=
   constValAt_refines' p hq.delta.toWhnfDeltaProg n s₀ a₀ dn vis fe MM eb nm po pl value us lps hC
@@ -175,7 +175,7 @@ theorem instSpinePins_refines :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb po pl us ao an rP pvo pvc : Word) (lps : List NIdx) (args pins : Array EIdx),
     CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps → SpineR s₀.mem ao an args →
+    hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps → SpineR s₀.mem ao an args →
     SpineR s₀.mem pvo pvc pins → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
     pvo.toNat + pvc.toNat ≤ (spTop s₀.mem).toNat →
     ⦃fun s => s = s₀⦄
@@ -195,7 +195,7 @@ theorem recFireArgs_refines :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao an rP ctorParams : Word) (rl : IRecRule)
     (lps : List NIdx) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps → SpineR s₀.mem ao an args →
+    hslice? (erecP s₀.mem) po.toNat pc.toNat = some lps → SpineR s₀.mem ao an args →
     (fireKind = 1 → ∃ lvls pins, rl.fire = .nested lvls pins ∧ SpineR s₀.mem pvo pvc pins.toArray) →
     (fireKind ≠ 1 → rl.fire = .plain) → rl.ctorParams = ctorParams.toNat →
     ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
@@ -245,7 +245,7 @@ theorem prepareMajor_refines :
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
     CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW major →
-    decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
+    decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules →
     CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, ro, rc, major]
       (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) decH s₀ a₀ dn vis fe MM eb :=

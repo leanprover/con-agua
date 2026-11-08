@@ -58,7 +58,7 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao an rP ctorParams : Word) (rl : IRecRule)
     (lps : List NIdx) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps → SpineR s₀.mem ao an args →
+    hslice? (erecP s₀.mem) po.toNat pc.toNat = some lps → SpineR s₀.mem ao an args →
     (fireKind = 1 → ∃ lvls pins, rl.fire = .nested lvls pins ∧ SpineR s₀.mem pvo pvc pins.toArray) →
     (fireKind ≠ 1 → rl.fire = .plain) → rl.ctorParams = ctorParams.toNat →
     ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
@@ -264,11 +264,11 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
       (hcc.findProj k ⟨m, Locals.init []⟩ a dn vis fe M eb anW j hS hanW) hc1
     have hSt₁ : StackKept m m₁ := hSt₁
     have hrunF : fe.findProj? (decI anW) j.toNat =
-        decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat := hres1
+        decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) j.toNat := hres1
     by_cases h0 : r₁.headD 0 = 0
     · simp only [iotaArW, hlt, ↓reduceIte, hc1, h0] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-      have hnone : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat = none := by
+      have hnone : decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) j.toNat = none := by
         simp only [decEntry, h0, ↓reduceIte]
       rw [hnone] at hrunF
       refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_none_run fe (decI anW) (decI ctor) nP.toNat (decI us)
@@ -276,7 +276,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
       · simp [decBool]
     obtain ⟨tbl, htbl, hfe⟩ := hcc.projFound k m a dn vis fe M eb anW j r₁ m₁ hS hc1 h0
     have hEr1 : m₁.arr64 EREC = m.arr64 EREC := hcc.erec k "find_proj" _ m r₁ m₁ (Or.inl rfl) hc1
-    have hsome : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat =
+    have hsome : decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) j.toNat =
         some (tbl.entry j.toNat) := by
       simp only [decEntry, ite_eq_right h0, htbl, Option.map_some]
     rw [hsome] at hrunF

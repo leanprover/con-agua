@@ -839,7 +839,7 @@ def FireCore (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (c
 parameters are `lps`), and a constructor of the environment. State-free, so it passes down the
 ι block's calls; the readbacks follow at any state from `StoreDen` (`constLps`, `recRules`). -/
 def FireEnv (fe : IFEnv) (lps : List NIdx) (rule : IRecRule) (cvj : IConstantVal) : Prop :=
-  (∃ c cv mI rP rules, fe.find? c = some (.recInfo cv mI rP rules) ∧ cv.levelParams = lps ∧
+  (∃ c cv mI rP isK rules, fe.find? c = some (.recInfo cv mI rP isK rules) ∧ cv.levelParams = lps ∧
       rule ∈ rules) ∧
     ∃ c np nf, fe.find? c = some (.ctorInfo cvj np nf)
 

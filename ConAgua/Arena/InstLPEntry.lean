@@ -227,7 +227,7 @@ end core
 /-- **`ek_copy` copies a handle slice**: the record pool's slice `(s, l)` lands on the stack at `d`,
 below `d` nothing changes. -/
 theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Word),
-    hslice? (m.arr64 EREC) s.toNat l.toNat = some lps → d.toNat + l.toNat ≤ (m.arr64 SPN).size →
+    hslice? (erecP m) s.toNat l.toNat = some lps → d.toNat + l.toNat ≤ (m.arr64 SPN).size →
     (m.arr64 SPN).size < 2 ^ 63 → s.toNat + l.toNat < 2 ^ 64 → ekCopyW n m s d l = some m' →
     hslice? (m'.arr64 SPN) d.toNat l.toNat = some lps ∧ MemFrame [SPN] [] m m' ∧
       ∀ i : Word, i.toNat < d.toNat → rdW (m'.arr64 SPN) i = rdW (m.arr64 SPN) i := by
@@ -240,10 +240,10 @@ theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
       · rfl
       · rw [hk', lp_hslice_succ] at hs
         simp only [Option.bind_eq_bind] at hs
-        cases e : (hd? (m.arr64 EREC) s.toNat : Option NIdx) with
+        cases e : (hd? (erecP m) s.toNat : Option NIdx) with
         | none => simp [e] at hs
         | some x =>
-          cases e' : (hslice? (m.arr64 EREC) (s.toNat + 1) j : Option (List NIdx)) with
+          cases e' : (hslice? (erecP m) (s.toNat + 1) j : Option (List NIdx)) with
           | none | some xs => simp [e, e'] at hs
     have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
     subst hl0
@@ -258,10 +258,10 @@ theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     · rw [hk'] at hs; simp [hslice?] at hs
     rw [hk', lp_hslice_succ] at hs
     simp only [Option.bind_eq_bind] at hs
-    cases e : (hd? (m.arr64 EREC) s.toNat : Option NIdx) with
+    cases e : (hd? (erecP m) s.toNat : Option NIdx) with
     | none => simp [e] at hs
     | some x' =>
-    cases e' : (hslice? (m.arr64 EREC) (s.toNat + 1) j : Option (List NIdx)) with
+    cases e' : (hslice? (erecP m) (s.toNat + 1) j : Option (List NIdx)) with
     | none => simp [e, e'] at hs
     | some xs' =>
     simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs
