@@ -28,7 +28,7 @@ open L.Arena
 
 /-- **`sl_cons` of a pointer onto a pointer slice decoded below the tops.** -/
 theorem partsConsPL {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q))
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
     (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hb : o.toNat + l.toNat ≤ iwTop m)

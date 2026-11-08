@@ -41,7 +41,7 @@ end model
 /-- An ordinary field's record: tag `0`. A recursive field's: tag `1`, its class and telescope
 length. -/
 theorem iwN_lt_size {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
   obtain ⟨x, hx, -⟩ := h
   exact (Array.getElem?_eq_some_iff.mp hx).1
 

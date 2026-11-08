@@ -201,7 +201,7 @@ theorem partsFilter_step (names : List NIdx) (lvls : LsIdx) (nP mm : Nat) (c0 : 
   congr 1; funext x; cases x <;> simp [optEq]
 
 /-- **`block_groups_one`'s model refines the twin's `filterM`** (one member's group). -/
-theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl lvls nP mm : Word}
+theorem bgoW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP mm : Word}
     {names : List NIdx} (hlv : H lvls) (n : Nat) :
     ∀ (m : Mem) (a : AState) (co cl : Word) (cs : List (IConstantVal × Nat)),
     StageR vis fe m a → PSlR decCN cs co cl m →
@@ -300,7 +300,7 @@ l_model bgg_spec (p : Prog) (hP : IndPartsProg p) (hv : p.lookup "e_view" = some
   grind [ind_grind] finish [rdW_eq] gen 20
 
 /-- A fresh group header over a constructor slice decoded below the tops. -/
-theorem partsGH {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem partsGH {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {g0 g1 h0 : Word} {gs : List (IConstantVal × Nat)}
     (h : posRecW m [g0, g1] = some (h0, m')) (hS : StageR vis fe m a) (hg : PSlR decCN gs g0 g1 m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ DecB (fun m => decGH m h0.toNat) m' gs := by
@@ -314,7 +314,7 @@ theorem partsGH {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   exact hd
 
 /-- **`block_groups_go`'s model refines the twin's `mapM` over members `mm, …, k - 1`.** -/
-theorem bggW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl lvls nP co cl k : Word}
+theorem bggW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP co cl k : Word}
     {names : List NIdx} {cs : List (IConstantVal × Nat)} (hlv : H lvls) (n : Nat) :
     ∀ (m : Mem) (a : AState) (mm : Word),
     StageR vis fe m a → PSlR decCN cs co cl m →
@@ -386,7 +386,7 @@ theorem bg_spec (p : Prog) (hP : IndPartsProg p) (hv : p.lookup "e_view" = some 
     finish (gen := 20) [bgW]
 
 /-- **`block_groups`' model refines `blockGroups`.** -/
-theorem bgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl lvls nP k co cl : Word}
+theorem bgW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP k co cl : Word}
     {names : List NIdx} {cs : List (IConstantVal × Nat)} (hlv : H lvls) (n : Nat) {m : Mem} {a : AState}
     (hS : StageR vis fe m a) (hcs : PSlR decCN cs co cl m)
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m names) (hnb : no.toNat + nl.toNat ≤ iwTop m) :
@@ -572,7 +572,7 @@ theorem brg_spec (hp : p.lookup "block_rec_got" = some blockRecGot) (n : Nat) :
 end spec
 
 /-- **`block_rec_got`'s model**: the recursors' names. -/
-theorem brgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem brgW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (ro rl : Word) (recs : List RecShape) (r : List Word),
     brgW n m ro rl = some (r, m') → StageR vis fe m a → PSlR decRS recs ro rl m →
     StageR vis fe m' a ∧ IWGrow m m' ∧

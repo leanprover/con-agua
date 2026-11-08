@@ -33,13 +33,13 @@ namespace L.Ind
 open L.Arena
 
 /-- Words written into the pool keep the stage relation. -/
-theorem StageR.wrIW {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} :
+theorem StageR.wrIW {vis : Word} {fe : IFEnv} {a : AState} :
     ∀ {m : Mem}, StageR vis fe m a → ∀ (q : Word) (ws : List Word), StageR vis fe (wrIW m q ws) a := by
   sorry
 
 /-- **A record write under the stage relation**: the relation kept, the pool grown by `|ws|`
 words at the old top, where `ws` is readable. -/
-theorem posRecW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem posRecW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
     (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ q.toNat = iwTop m ∧ iwTop m' = iwTop m + ws.length ∧
@@ -83,18 +83,18 @@ theorem RdS.set {m : Mem} {P : Nat → Prop} (x v : Word) (hx : ¬ P x.toNat) : 
   simp only [this, ite_false]
 
 theorem iwN_agree {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {i : Nat} (hi : P i) : iwN m' i = iwN m i := by
-  simp only [iwN, nat?, iwA]; rw [h i hi]
+  simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [h i hi]
 
 theorem iwH_agree {k : IdxKind} {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {i : Nat} (hi : P i) :
     (iwH m' i : Option (Idx k)) = iwH m i := by
-  simp only [iwH, hd?, iwA]; rw [h i hi]
+  simp only [iwH, hd?, iwA, aread_apply, aread_apply]; rw [h i hi]
 
 theorem decHL_agree {k : IdxKind} {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {o l : Nat}
     (hi : ∀ j < l, P (o + j)) : (decHL m' o l : Option (List (Idx k))) = decHL m o l := by
   simp only [decHL, hslice?]
   apply mapM_opt_congr
   intro j hj
-  simp only [hd?, iwA, h (o + j) (hi j (List.mem_range.mp hj))]
+  simp only [hd?, iwA, aread_apply, h (o + j) (hi j (List.mem_range.mp hj))]
 
 theorem NKIn.agree {m m' : Mem} {P : Nat → Prop} {k : Nat} (hk : NKIn m k P) (h : RdS m m' P) :
     decNK m' k = decNK m k ∧ NKIn m' k P := by
@@ -230,14 +230,14 @@ theorem HolesAt.decPL {m : Mem} {q : Nat} {hs : List NestHole} {P : Nat → Prop
     (h : HolesAt m q hs.length hs P) : decPL m (decNH m) q hs.length = some hs :=
   decPL_of_get _ hs q fun j hj => by
     obtain ⟨w, hw, hd, -⟩ := h j hj
-    refine ⟨w.toNat, by simp [iwN, nat?, iwA, hw], ?_⟩
+    refine ⟨w.toNat, by simp [iwN, nat?, iwA, aread_apply, hw], ?_⟩
     rw [hd]; exact List.getElem?_eq_getElem hj
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem decNH_of_words {m : Mem} {w : Nat} {k b : Word} {key : NestKey}
     (h0 : (m.arr64 IW)[w]? = some k) (h1 : (m.arr64 IW)[w + 1]? = some b)
     (hk : decNK m k.toNat = some key) : decNH m w = some ⟨key, b.toNat⟩ := by
-  simp [decNH, iwN, nat?, iwA, h0, h1, hk]
+  simp [decNH, iwN, nat?, iwA, aread_apply, h0, h1, hk]
 -/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
@@ -373,14 +373,14 @@ end census
 
 /-! ## `sl_append` over words, under the stage relation -/
 
-theorem StageR.ofCopyW {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} :
+theorem StageR.ofCopyW {vis : Word} {fe : IFEnv} {a : AState} :
     ∀ (n : Nat) {m m' : Mem} {d s l : Word}, copyW n m d s l = some m' → StageR vis fe m a →
     StageR vis fe m' a := by
   sorry
 
 /-- **`sl_append` keeps the stage relation**: the pool grew by the new slice, whose words are the
 two sources' (any words: pointers too). -/
-theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem appendW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
     (h : appendW n m o1 l1 o2 l2 = some (r, m')) (hS : StageR vis fe m a)
     (hsrc1 : o1.toNat + l1.toNat ≤ iwTop m) (hsrc2 : o2.toNat + l2.toNat ≤ iwTop m) :

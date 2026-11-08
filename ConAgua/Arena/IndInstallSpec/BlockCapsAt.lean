@@ -70,7 +70,7 @@ theorem posInit_dec {m : Mem} (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.
       rw [this]
       have : j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5 := by omega
       rcases this with rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
-    simp only [decNS, decAt, decPL, iwN, nat?, iwA]
+    simp only [decNS, decAt, decPL, iwN, nat?, iwA, aread_apply, aread_apply]
     have e0 := e 0 (by omega)
     have e1 := e 1 (by omega)
     have e2 := e 2 (by omega)
@@ -207,7 +207,7 @@ theorem ctorNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
       have hnmj : (cvs.map (·.name))[j]'(by simpa [hlen] using hj) = nm := by
         simp [List.getElem_map, hnmE]
       rw [hnmj]
-      simp only [iwH, hd?, iwA, hGj]
+      simp only [iwH, hd?, iwA, aread_apply, hGj]
       simp [hwl', hnm'])
     simpa [hlen] using this
   · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_

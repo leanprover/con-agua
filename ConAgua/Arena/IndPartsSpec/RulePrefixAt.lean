@@ -379,7 +379,7 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
         have hv3 : v + 3 < 2 ^ 64 := by
           obtain ⟨_, _, _, hl3, _⟩ := decAt_some (decMS_some hms0).2.2
           have : v + 2 + 1 < (m.arr64 IW).size := by
-            simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hl3
+            simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hl3
             obtain ⟨w, hw, -⟩ := hl3
             exact (Array.getElem?_eq_some_iff.mp hw).1
           omega
@@ -764,7 +764,7 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
       have e4 : UInt64.ofNat v + 1 = UInt64.ofNat (v + 1) := by
         apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
       rw [e4, hn'] at hGj
-      simp only [iwN, nat?, iwA]
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply]
       rw [hGj]
       have hy' : bs.members[j]'(by omega) = y := by
         simpa [List.getElem?_eq_getElem (show j < bs.members.length by omega)] using hget

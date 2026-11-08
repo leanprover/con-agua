@@ -118,17 +118,17 @@ theorem decHL_write {k : IdxKind} (m : Mem) (q i v : Word) (ws : List (Idx k))
     rw [← h]; simp only [decHL]
     apply hslice?_congr
     intro j hj
-    simp only [iwA, set64IW_get]
+    simp only [iwA, aread_apply, set64IW_get]
     rw [ite_eq_right (by omega)]
   have h2 : (hslice? (iwA (m.set64 IW (q + i) v)) (q.toNat + i.toNat) 1 : Option (List (Idx k))) =
       some [decI v] := by
     rw [hslice?_succ]
     have : (hd? (iwA (m.set64 IW (q + i) v)) (q.toNat + i.toNat) : Option (Idx k)) = some (decI v) := by
-      simp [hd?, iwA, set64IW_get, hqi, hb, hv]
+      simp [hd?, iwA, aread_apply, set64IW_get, hqi, hb, hv]
     rw [this]; simp [hslice?]
   rw [h1, h2]; simp
 
-theorem StageR.alloc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem StageR.alloc {vis : Word} {fe : IFEnv} {a : AState}
     {m m1 : Mem} {k q : Word} (hS : StageR vis fe m a) (h : allocW m k = some (q, m1)) :
     StageR vis fe m1 a ∧ IWGrow m m1 ∧ q = rdW (m.arr64 CTL) 200 ∧ q.toNat + k.toNat ≤ (m.arr64 IW).size ∧
       iwTop m1 = q.toNat + k.toNat := by

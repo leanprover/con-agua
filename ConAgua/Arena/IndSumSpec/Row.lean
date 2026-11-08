@@ -218,7 +218,7 @@ theorem decBL_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : o + l ≤ iw
   apply mapM_opt_congr
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
-  simp only [iwB, bool?, iwA]
+  simp only [iwB, bool?, iwA, aread_apply, aread_apply]
   rw [hg.iwGet (o + j) (by omega)]
 
 /-- `sl_getd(o, l, j, 0)` of a Boolean slice is the twin's `getD j false`. -/
@@ -235,7 +235,7 @@ theorem getDW_bool {m : Mem} {o l : Word} {bs : List Bool} (h : decBL m o.toNat 
     rw [ite_eq_right hj]
     have hget := mapM_opt_get (fun i => iwB m (o.toNat + i)) (List.range l.toNat) bs h j.toNat
       (by simpa using hjl)
-    simp only [List.getElem_range, iwB, bool?, iwA] at hget
+    simp only [List.getElem_range, iwB, bool?, iwA, aread_apply, aread_apply] at hget
     have hoj : (o + j).toNat = o.toNat + j.toNat := by rw [UInt64.toNat_add]; omega
     rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by omega)]
     simp only [rdW, hoj]

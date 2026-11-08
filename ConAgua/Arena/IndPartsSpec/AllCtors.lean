@@ -39,7 +39,7 @@ theorem decPL_words {m : Mem} {α : Type} {f : Nat → Option α} :
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨v, hv, x, hx, ys, hys, rfl⟩ := h
     obtain ⟨ws, hlen, hcells, hmap⟩ := decPL_words l (o + 1) ys hys
-    simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hv
+    simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hv
     obtain ⟨w, hw, rfl⟩ := hv
     refine ⟨w :: ws, by simp [hlen], fun j hj => ?_, ?_⟩
     · cases j with
@@ -67,7 +67,7 @@ theorem decPL_of_words {m : Mem} {α : Type} {f : Nat → Option α} :
     rw [List.length_cons, decPL_succ]
     have hw : iwN m o = some w.toNat := by
       have := hc 0 (by simp)
-      simp only [iwN, nat?, iwA, Option.map_eq_some_iff]
+      simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff]
       exact ⟨w, by simpa using this, rfl⟩
     rw [hw]
     simp only [bind, Option.bind_some, hx, ih, pure]
@@ -134,7 +134,7 @@ theorem iwGrow_of_copy {m0 m m1 : Mem} (hg : IWGrow m0 m) (hA : ∀ b : TieredAr
 
 theorem iwN_eq_agree {m m0 : Mem} {q i : Nat} (hag : ∀ j, j < q → (m.arr64 IW)[j]? = (m0.arr64 IW)[j]?)
     (hi : i < q) : iwN m i = iwN m0 i := by
-  simp only [iwN, nat?, iwA]
+  simp only [iwN, nat?, iwA, aread_apply, aread_apply]
   rw [hag i hi]
 
 /-- A read of the cut pool: below the top, and the pool's own. -/
@@ -365,7 +365,7 @@ theorem acW_ok (n : Nat) (m m2 : Mem) (p : Word) (r : List Word) (bs : BlockShap
       simp only [UInt64.toNat_zero, Nat.add_zero] at this
       have hlt : q.toNat + j < iwTop m2' := by rw [← htop2, hT, ← hwl]; omega
       have e := truncM_iw_eq (m := m2') hlt
-      simp only [iwA] at e
+      simp only [iwA, aread_apply, aread_apply] at e
       rw [e]; exact this)
     (acMapGrow hg2 hwm)
   rw [hwl, ← hT] at this

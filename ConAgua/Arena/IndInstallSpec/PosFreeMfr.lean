@@ -68,7 +68,7 @@ theorem PosMR.ofClosed {p : Prog} {fs : List FnName} (hcl : closedA p posFreeA p
   hM.mfr (posFree_mfr (run_memFrame hcl hf (run_of_callW h)).1) (by simp [PosAv, MAM, NOM, DPM, RAM, HBM, RFM, TAM, MCM])
 
 /-- **`flush_caches()` as a `Sim`**, keeping the stage relation and the `hb` memo. -/
-theorem tailSimFlush {p : Prog} (hF : FlushProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
+theorem tailSimFlush {p : Prog} (hF : FlushProg p) (n : Nat)
     {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} (hS : StageR vis fe m a) (hM : HbMemo m) :
     Sim (callW p n "flush_caches" [] m) flushCaches a
       (fun _ _ m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ HbMemo m') := by
@@ -84,9 +84,9 @@ theorem BPassB.grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (h : BPassB m q) :
   refine ⟨Nat.le_trans h.1 hg.iw, fun i hi o l h1 h2 => ?_⟩
   have hi' : i + 1 < 19 := by simp at hi; omega
   have e1 : iwN m' (q + i) = iwN m (q + i) := by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet _ (by have := h.1; omega)]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by have := h.1; omega)]
   have e2 : iwN m' (q + i + 1) = iwN m (q + i + 1) := by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet _ (by have := h.1; omega)]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by have := h.1; omega)]
   rw [e1] at h1; rw [e2] at h2
   exact Nat.le_trans (h.2 i hi o l h1 h2) hg.iw
 

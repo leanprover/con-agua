@@ -130,11 +130,11 @@ theorem installRec2Tele {p : Prog} (hP : InstProg p) (n : Nat) {dn : NIdx → Op
     show decTele (truncM s'.mem) _ = some x
     have e0 : iwN (truncM s'.mem) (rdW (m1.arr64 CTL) 200).toNat = some (r1.headD 0).toNat := by
       rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
-      simp [iwN, nat?, iwA, this]
+      simp [iwN, nat?, iwA, aread_apply, this]
     have e1 : (iwH (truncM s'.mem) ((rdW (m1.arr64 CTL) 200).toNat + 1) : Option LIdx) = some x.2 := by
       rw [iwH_truncM hq1]; have h1 := hget 1 (by simp)
       simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at h1
-      simp only [iwH, hd?, iwA, h1, Option.bind_eq_bind, Option.bind_some]
+      simp only [iwH, hd?, iwA, aread_apply, h1, Option.bind_eq_bind, Option.bind_some]
       rw [ite_eq_left hs32, hsd]
     have e2 : decCVp (truncM s'.mem) (r1.headD 0).toNat = some x.1 :=
       (installCvDecB hcv hcx).grow (OMono.decCVp _) hg2

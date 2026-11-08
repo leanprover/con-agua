@@ -381,7 +381,7 @@ def PdRes (m' : Mem) (r : List Word) : Option (List EIdx) → Prop
 
 /-! ## `er_to_iw` and `cv_lps` under the stage relation -/
 
-theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem erToIwW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {k : IdxKind}
     (h : erToIwW n m o l = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
@@ -454,7 +454,7 @@ theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
         erToIw_specW2 p ha hc he n] <;>
       finish (gen := 20) [cvLpsW, rdW_eq]
 
-theorem cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
     (h : cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
     (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64)

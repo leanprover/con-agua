@@ -339,7 +339,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     simp only [Nat.add_zero, List.getElem_cons_zero] at hw hcvv
     have hrw : rdW (m.arr64 IW) o = w := by simp [rdW, hw]
     obtain ⟨q, hq, rfl⟩ : ∃ q : Word, (m.arr64 IW)[w.toNat]? = some q ∧ q.toNat = qn := by
-      simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hqn; exact hqn
+      simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hqn; exact hqn
     have hrq : rdW (m.arr64 IW) w = q := by simp [rdW, hq]
     rw [hrw, hrq] at h
     rcases hnu : nuWf cR k m ctx q with _ | ⟨r1, m1⟩ <;> rw [hnu] at h; · simp [ucK] at h

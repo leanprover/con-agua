@@ -42,7 +42,7 @@ theorem rec2IwH_trunc {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : iwH (tr
   obtain ⟨w, hw, hl, hx⟩ := hd?_some h
   obtain ⟨hi, hw'⟩ := truncM_iw_get hw
   refine ⟨hi, ?_⟩
-  simp only [iwH, hd?, iwA] at hw' ⊢
+  simp only [iwH, hd?, iwA, aread_apply, aread_apply] at hw' ⊢
   simp [hw', hl, hx]
 
 /-- The fields of a class generator decoded below the tops. -/

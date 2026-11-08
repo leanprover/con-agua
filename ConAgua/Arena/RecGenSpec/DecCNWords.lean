@@ -142,10 +142,10 @@ theorem decNL_write (m : Mem) (o j : Nat) (w v : Word) (ps : List Nat) (hw : w.t
     apply mapM_opt_congr
     intro i hi
     have hi' : i < j := List.mem_range.mp hi
-    simp only [iwN, nat?, iwA, set64IW_get]
+    simp only [iwN, nat?, iwA, aread_apply, set64IW_get]
     rw [ite_eq_right (by omega)]
   rw [e1, h]
-  simp [iwN, nat?, iwA, set64IW_get, hw, hsz]
+  simp [iwN, nat?, iwA, aread_apply, set64IW_get, hw, hsz]
 
 /-! ## `class_ctors_of`: the relational side -/
 

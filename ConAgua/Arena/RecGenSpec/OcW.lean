@@ -206,7 +206,7 @@ theorem csAt_decB {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} (h : CsA
       have : erecTop m = erTop m := rfl
       omega
     rw [truncM_er_eq hi]; rw [erecP_getE hi] at hv; exact hv
-  refine ⟨w.toNat, by rw [iwN_truncM (by omega)]; simp [iwN, nat?, iwA, hw], ?_⟩
+  refine ⟨w.toNat, by rw [iwN_truncM (by omega)]; simp [iwN, nat?, iwA, aread_apply, hw], ?_⟩
   simp only [decCN, decCVp, bind, Option.bind, iwN_truncM h0, iwN_truncM h1, hq, hn, hE.decCV hcv]
   rfl
 

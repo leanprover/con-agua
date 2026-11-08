@@ -71,7 +71,7 @@ theorem rec3CG_parts {m : Mem} {g : Nat} {G : ClassGen} (h : DecB (fun m => decC
     (rec2IwN_trunc h10).2, hc⟩
 
 /-- `CVExt` bounds the record's address. -/
-theorem rec3CVExt_lt {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+theorem rec3CVExt_lt {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     {q : Nat} (hS : StageR vis fe m a) (h : CVExt m q) : q + 3 < 2 ^ 64 := by
   obtain ⟨-, hE1, -, hEs, -⟩ := hS.iw
   have := h.1
@@ -159,7 +159,7 @@ theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
         ((rdW (m1.arr64 CTL) 200).toNat + k) =
         some (([ra.headD 0, ls, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : List Word)[k]'(by simpa using hk)).toNat := by
     intro k hk
-    simp only [iwN, nat?, iwA, hget k (by simpa using hk)]
+    simp only [iwN, nat?, iwA, aread_apply, hget k (by simpa using hk)]
     rw [List.getElem?_eq_getElem (by simp; omega)]; rfl
   have htop' : iwTop (wrIW (allocMem m1 13) (rdW (m1.arr64 CTL) 200)
       [ra.headD 0, ls, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) = (rdW (m1.arr64 CTL) 200).toNat + 13 := by
@@ -224,7 +224,7 @@ theorem rec3Rec4_decB {m m' : Mem} {cvw mw ro rl : Word} {q : Nat} {cv : IConsta
   have hw : ∀ j (hj : j < 4), iwN (truncM m') (q + j) = some ([cvw, mw, ro, rl][j]'(by simpa using hj)).toNat :=
     fun j hj => by
       rw [iwN_truncM (by omega)]
-      simp only [iwN, nat?, iwA, hget j hj]
+      simp only [iwN, nat?, iwA, aread_apply, hget j hj]
       rw [List.getElem?_eq_getElem (by simp; omega)]; rfl
   have h0 := hw 0 (by omega)
   have h1 := hw 1 (by omega)
@@ -287,7 +287,7 @@ structure CrrProg (p : Prog) : Prop where
 /-! ## The relational lemma -/
 
 /-- The constructors of class `c`, as `class_recs_rules_ok_go` reads them. -/
-theorem rec3CtorsAt {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+theorem rec3CtorsAt {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     {g c : Word} {G : ClassGen} (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G) :
     DecB (fun m' => decPL m' (decCC m') (crrXs m g c).1.toNat (crrXs m g c).2.toNat) m (G.ctors.getD c.toNat []) := by
   have hsz := hS.iw.iwSize

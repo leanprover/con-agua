@@ -153,7 +153,7 @@ theorem ciRecMem_eq {m1 : Mem} {q cq nP nF : Word} (hlt : cq.toNat + 4 ≤ q.toN
 
 /-- **`ctor_info_rec` under the stage relation**: a fresh `.ctorInfo` record of the constant at `cq`
 (decoded in the record pool below its top), the stage relation kept. -/
-theorem ciRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem ciRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cq nP nF q : Word} {cv : IConstantVal} (h : ciRecW m cq nP nF = some (q, m'))
     (hS : StageR vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
@@ -238,7 +238,7 @@ theorem rdW_of_iwN_truncM {m : Mem} {o : Word} {v : Nat} (h : iwN (truncM m) o.t
 
 /-- **`cons_sum_ctors`' model refines `consSumCtors`**: the view returned relates the environment
 with the constructors pushed. -/
-theorem cscW_ok (p : Prog) (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} (k : Nat) :
+theorem cscW_ok (p : Prog) (hRp : RecProg p) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (vis : Word) (fe : IFEnv) (nP o l : Word) (cs : List (IConstantVal × Nat))
       (r : List Word),
     cscW p k m nP o l vis = some (r, m') → StageR vis fe m a →

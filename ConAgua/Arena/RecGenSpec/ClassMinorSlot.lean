@@ -234,7 +234,7 @@ theorem RecsOK_grow {m m' : Mem} (hg : IWGrow m m') {ro rl : Nat} {cvs : List IC
   refine ⟨Nat.le_trans h1 hg.iw, h2, fun j hj => ?_⟩
   obtain ⟨p0, q, cv, hp0, hp1, hq, hcv, hext, hcvs⟩ := h3 j hj
   have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet i hi]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet i hi]
   refine ⟨p0, q, cv, ?_, Nat.le_trans hp1 hg.iw, ?_, ?_, CVExt_grow hg hext, hcvs⟩
   · rw [hiw _ (by omega)]; exact hp0
   · rw [hiw _ (by omega)]; exact hq

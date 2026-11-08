@@ -395,7 +395,7 @@ theorem wsWrites_get : WsP m q p s f 9 (wsWrites m q p s f) := by
 end wsget
 
 theorem iwN_congr {m : Mem} {i j : Nat} (h : (m.arr64 IW)[i]? = (m.arr64 IW)[j]?) :
-    iwN m i = iwN m j := by simp only [iwN, nat?, iwA, h]
+    iwN m i = iwN m j := by simp only [iwN, nat?, iwA, aread_apply, h]
 
 theorem decAt_congr {m : Mem} {α : Type} (g : Nat → Nat → Option (List α)) {i j : Nat}
     (h0 : (m.arr64 IW)[i]? = (m.arr64 IW)[j]?) (h1 : (m.arr64 IW)[i + 1]? = (m.arr64 IW)[j + 1]?) :
@@ -422,17 +422,17 @@ theorem decBS_ws {m : Mem} {q p : Nat} {s f : Word} {bs : BlockShape}
   simp only [Option.bind_some]
   rw [iwN_congr c4, h3]
   simp only [Option.bind_some]
-  have e5 : iwH m (q + 5) = (iwH m (p + 5) : Option NIdx) := by simp only [iwH, hd?, iwA, c5]
+  have e5 : iwH m (q + 5) = (iwH m (p + 5) : Option NIdx) := by simp only [iwH, hd?, iwA, aread_apply, c5]
   rw [e5, h4]
   simp only [Option.bind_some]
   have e6 : iwH m (q + 6) = (some (decI s) : Option LIdx) := by
-    simp only [iwH, hd?, iwA, c6]; simp; omega
+    simp only [iwH, hd?, iwA, aread_apply, c6]; simp; omega
   rw [e6]
   simp only [Option.bind_some]
-  have e7 : iwB m (q + 7) = iwB m (p + 7) := by simp only [iwB, bool?, iwA, c7]
+  have e7 : iwB m (q + 7) = iwB m (p + 7) := by simp only [iwB, bool?, iwA, aread_apply, c7]
   rw [e7, h6]
   simp only [Option.bind_some]
-  have e8 : iwB m (q + 8) = some (f != 0) := by simp only [iwB, bool?, iwA, c8]; rfl
+  have e8 : iwB m (q + 8) = some (f != 0) := by simp only [iwB, bool?, iwA, aread_apply, c8]; rfl
   rw [e8]
   rfl
 
@@ -444,7 +444,7 @@ theorem wsWrites_frame (m : Mem) (q p s f : Word) : MemFrame [IW] [] m (wsWrites
     (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)
 
 /-- Writing a fresh record above the top (given the pool's sizes) keeps the stage relation. -/
-theorem stage_frame_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem stage_frame_iw {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} (hS : StageR vis fe m a) (hf : MemFrame [IW] [200] m m')
     (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR vis fe m' a := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
@@ -577,13 +577,13 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
       intro j hj h6 h8
       have e1 := truncM_iw_eq (m := m') (i := q.toNat + j) (by omega)
       have e2 := truncM_iw_eq (m := m') (i := p.toNat + j) (hpT j hj)
-      simp only [iwA] at e1 e2
+      simp only [iwA, aread_apply, aread_apply] at e1 e2
       rw [e1, e2]; exact hcell j hj h6 h8
     have c6T : ((truncM m').arr64 IW)[q.toNat + 6]? = some s := by
-      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 6) (by omega); simp only [iwA] at e1
+      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 6) (by omega); simp only [iwA, aread_apply, aread_apply] at e1
       rw [e1]; exact c6
     have c8T : ((truncM m').arr64 IW)[q.toNat + 8]? = some f := by
-      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 8) (by omega); simp only [iwA] at e1
+      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 8) (by omega); simp only [iwA, aread_apply, aread_apply] at e1
       rw [e1]; exact c8
     show decBS (truncM m') q.toNat = some _
     have := decBS_ws hpd hs (by simpa using cT 0 (by omega) (by omega) (by omega))

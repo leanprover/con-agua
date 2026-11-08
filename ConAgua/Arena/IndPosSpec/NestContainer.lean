@@ -34,7 +34,7 @@ theorem CsAt.decPL {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} {P : Na
     (h : CsAt m o xs P) : decPL m (decCN m) o xs.length = some xs :=
   decPL_of_get _ xs o fun j hj => by
     obtain ⟨w, hw, hc⟩ := h j hj
-    exact ⟨w.toNat, by simp [iwN, nat?, iwA, hw], hc.dec⟩
+    exact ⟨w.toNat, by simp [iwN, nat?, iwA, aread_apply, hw], hc.dec⟩
 
 /-- `NcOut` survives the pool's growth. -/
 theorem NcOut.grow {m m' : Mem} {r : List Word} {x : Option (Nat × List (IConstantVal × Nat))}

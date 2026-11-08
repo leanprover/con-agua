@@ -151,7 +151,7 @@ theorem decRS_lt (m : Mem) (pp : Nat) (x : RecShape) (h : decRS (truncM m) pp = 
   obtain ⟨⟨a, ha, -⟩, -⟩ := decRS_some h; exact partsIwLt ha
 
 /-- From `n₀` on: the wanted names, the stream's, the set test, the duplicate test. -/
-theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {vis : Word}
     {fe : IFEnv} (bs : BlockShape) (reco recl auxo auxl n0 : Word) (x : NIdx) (hn0 : H n0)
     (hx : decI n0 = x) :
     ∀ (m : Mem) (a : AState), StageR vis fe m a → PSlR0 decRS bs.recs reco recl m →

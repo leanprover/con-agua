@@ -89,7 +89,7 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
   refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
   · rw [hl1, decNL_succ]
     have h0 : iwN m' q.toNat = some x.toNat := by
-      simp [iwN, nat?, iwA, hget]
+      simp [iwN, nat?, iwA, aread_apply, hget]
     rw [h0]
     have : decNL m' (q.toNat + 1) l.toNat = some xs := by
       rw [← hxs]
@@ -97,7 +97,7 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
       apply mapM_opt_congr
       intro j hj
       have hj' : j < l.toNat := List.mem_range.mp hj
-      simp only [iwN, nat?, iwA, hget]
+      simp only [iwN, nat?, iwA, aread_apply, hget]
       rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       have : o.toNat + (q.toNat + 1 + j - (q.toNat + 1)) = o.toNat + j := by omega
       simp
@@ -189,7 +189,7 @@ theorem consW_roomN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
 
 /-- **`sl_cons` keeps the stage relation**: the pool grew by the new slice, which decodes to
 `x :: xs`. -/
-theorem consW_stageN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem consW_stageN {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List Nat}
     (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : o.toNat + l.toNat ≤ iwTop m)
@@ -266,7 +266,7 @@ theorem decNL_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : o + l ≤ iw
   apply mapM_opt_congr
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
-  simp only [iwN, nat?, iwA]
+  simp only [iwN, nat?, iwA, aread_apply, aread_apply]
   rw [hg.iwGet (o + j) (by omega)]
 
 /-! ## Constant records are stable under the pool's growth -/
@@ -341,9 +341,9 @@ theorem decCK_grow {m m' : Mem} (hg : IWGrow m m') {k : Nat} (hk : CKExt m k) :
     decCK m' k = decCK m k := by
   obtain ⟨h1, h2⟩ := hk
   have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet i hi]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet i hi]
   have hh : ∀ {kk : IdxKind} i, i < iwTop m → (iwH m' i : Option (Idx kk)) = iwH m i :=
-    fun i hi => by simp only [iwH, hd?, iwA]; rw [hg.iwGet i hi]
+    fun i hi => by simp only [iwH, hd?, iwA, aread_apply, aread_apply]; rw [hg.iwGet i hi]
   simp only [decCK]
   rw [hh k (by omega), hh (k + 1) (by omega)]
   have hat : decAt m' (decHL (k := IdxKind.expr) m') (k + 2) = decAt m (decHL (k := IdxKind.expr) m) (k + 2) := by
@@ -372,7 +372,7 @@ theorem mapM_decCK_grow {m m' : Mem} (hg : IWGrow m m') :
 theorem CKExt_grow {m m' : Mem} (hg : IWGrow m m') {k : Nat} (hk : CKExt m k) : CKExt m' k := by
   obtain ⟨h1, h2⟩ := hk
   have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet i hi]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet i hi]
   refine ⟨Nat.le_trans h1 hg.iw, fun o l ho hl => ?_⟩
   rw [hiw (k + 2) (by omega)] at ho
   rw [hiw (k + 3) (by omega)] at hl

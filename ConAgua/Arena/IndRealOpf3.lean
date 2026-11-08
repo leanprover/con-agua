@@ -382,7 +382,7 @@ theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : 
   obtain ⟨hd1, hd2⟩ := hdec
   refine ⟨?_, ?_⟩
   · simp only [List.getD_eq_getElem?_getD] at hd1 ⊢
-    simpa [decHL, iwA, hI4] using hd1
+    simpa [decHL, iwA, aread_apply, hI4] using hd1
   · simp only [List.getD_cons_succ, List.getD_cons_zero] at hd2 ⊢
     rw [ht4]; exact hd2
 

@@ -42,7 +42,7 @@ theorem iwN_lt_of_stab {m : Mem} {i v : Nat} (hsz : (m.arr64 IW).size < 2 ^ 64)
   obtain ⟨w, hw, hwv⟩ := iwN_set_word hv
   refine word_lt_of_stab hsz hw fun m' hg => ?_
   have h' := hdet m' hg
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h'
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h'
   obtain ⟨w', hw', e⟩ := h'
   rw [hw']; congr 1; apply UInt64.toNat_inj.mp; rw [e, hwv]
 
@@ -60,7 +60,7 @@ theorem ptr_lt_of_stab {α : Type} {f : Mem → Option α} {m : Mem} {x : α} {i
 
 /-- A read at index `2^64 - 1` (or any index past the array) fails. -/
 theorem iwN_huge {m : Mem} (hsz : (m.arr64 IW).size < 2 ^ 64) : iwN m (2 ^ 64 - 1) = none := by
-  simp only [iwN, nat?, iwA, Option.map_eq_none_iff]
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_none_iff]
   exact Array.getElem?_eq_none (by omega)
 
 /-- A pointer slice read in the cut pools: the slots below the top, each pointer's decoding the
@@ -170,14 +170,14 @@ theorem stab_decCS_decB {m : Mem} {sp : Nat} {s : ClassSlot} (h : StabD (fun m =
     obtain ⟨-, -, -, h3⟩ := decCS_minor_eq e
     obtain ⟨o', l', ho', hl', hd'⟩ := decAt_some h3
     have e3 : iwN m' (sp + 3) = iwN m (sp + 3) := by
-      simp only [iwN, nat?, iwA]; rw [hoth _ (by omega)]
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hoth _ (by omega)]
     have e4 : iwN m' (sp + 3 + 1) = iwN m (sp + 4) := by
-      simp only [iwN, nat?, iwA]; rw [hoth _ (by omega)]
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hoth _ (by omega)]
     rw [e3, ho3] at ho'; rw [e4, hl3] at hl'
     cases ho'; cases hl'
     obtain ⟨q', hq', hf⟩ := decPL_getH m' hd' j hj
     have : q' = 2 ^ 64 - 1 := by
-      simp only [iwN, nat?, iwA, hset, Option.map_some, Option.some.injEq] at hq'
+      simp only [iwN, nat?, iwA, aread_apply, hset, Option.map_some, Option.some.injEq] at hq'
       rw [← hq']; rfl
     subst this
     simp only [decNN, bind, Option.bind_eq_some_iff] at hf
@@ -252,13 +252,13 @@ theorem stab_decCR_decB {m : Mem} {p : Nat} {rd : ClassRead} (h : StabD (fun m =
     refine ptr_lt_of_stab h hsz (iwN_lt hq) fun hge m' hset hoth hsz' => fun e => ?_
     obtain ⟨g1, -⟩ := decCR_eq e
     obtain ⟨o', l', ho', hl', hd'⟩ := decAt_some g1
-    have e0 : iwN m' p = iwN m p := by simp only [iwN, nat?, iwA]; rw [hoth _ (by omega)]
-    have e1 : iwN m' (p + 1) = iwN m (p + 1) := by simp only [iwN, nat?, iwA]; rw [hoth _ (by omega)]
+    have e0 : iwN m' p = iwN m p := by simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hoth _ (by omega)]
+    have e1 : iwN m' (p + 1) = iwN m (p + 1) := by simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hoth _ (by omega)]
     rw [e0, hso] at ho'; rw [e1, hsl] at hl'
     cases ho'; cases hl'
     obtain ⟨q', hq', hf⟩ := decPL_getH m' hd' j hj
     have : q' = 2 ^ 64 - 1 := by
-      simp only [iwN, nat?, iwA, hset, Option.map_some, Option.some.injEq] at hq'
+      simp only [iwN, nat?, iwA, aread_apply, hset, Option.map_some, Option.some.injEq] at hq'
       rw [← hq']; rfl
     subst this
     rw [← hsz'] at hsz

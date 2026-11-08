@@ -34,7 +34,7 @@ open L.Arena
 /-- **A decoded record at kind word `3` is `indInfo`**, with its caps: `decCI`'s match only
 reaches the `.indInfo` arm from `nat? a p = some 3` (`Env.lean`'s `decCI_name` destructures the
 same match generically, for the name field). -/
-theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_kind3 {a : Array Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) p = some ci) (hk : nat? (aread a) p = some 3) :
     ∃ cv caps, ci = .indInfo cv caps ∧ decCaps (aread a) (p + 5) = some caps := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
@@ -46,7 +46,7 @@ theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : N
   exact ⟨cv, caps, rfl, hcaps⟩
 
 /-- The contrapositive: an `indInfo` record's kind word is `3`. -/
-theorem decCI_indInfo_kind {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_indInfo_kind {a : Array Word} {p : Nat}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) p = some (.indInfo cv caps)) :
     nat? (aread a) p = some 3 := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
@@ -188,7 +188,7 @@ theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : 
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
 /-- An `indInfo` record is fully inside the array it decodes from. -/
-theorem decCI_indInfo_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+theorem decCI_indInfo_bound {a : Array Word} {p : Nat}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) p = some (.indInfo cv caps)) :
     p + 16 < a.size := by
   obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 h (decCI_indInfo_kind h)
@@ -199,7 +199,7 @@ theorem decCI_indInfo_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name
   omega
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem EnvR.row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+theorem EnvR.row_dec {m : Mem} {vis : Word} {fe : IFEnv}
     (h : EnvR m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) :
     rowTag w ≤ 2 → rowC m w ≠ 0 → ∃ ci, decCI (erecP m) (rowP m w).toNat = some ci := by
   intro ht h0

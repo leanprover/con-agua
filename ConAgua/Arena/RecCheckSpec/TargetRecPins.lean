@@ -37,7 +37,7 @@ open L.Arena
 
 /-- **`block_rec_lps_ok` under the stage relation**: no hypothesis beyond the shape decoded below
 the tops. -/
-theorem lokW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem lokW_stage {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Word} {r : List Word} {bs : BlockShape} (h : lokW n m q = some (r, m'))
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m q.toNat) m bs) :
     r = [if ConRon.Arena.blockRecLpsOk bs then 1 else 0] ∧ StageR vis fe m' a ∧ IWGrow m m' := by

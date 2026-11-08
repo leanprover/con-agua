@@ -174,7 +174,7 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
         simp [rdW, this, hw']
       rw [hrd] at hGj
       simp only [List.getElem_map]
-      simp only [iwH, hd?, iwA, hGj]
+      simp only [iwH, hd?, iwA, aread_apply, hGj]
       simp [hwl', hnm'])
     simpa [hlen] using this
   · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_
@@ -264,7 +264,7 @@ theorem tmMem_dec (m : Mem) (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word)
   have r11 := hrd 11 (by simp)
   have r12 := hrd 12 (by simp)
   simp only [List.getElem?_cons_zero, List.getElem?_cons_succ] at r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12
-  simp only [decTM, bind, pure, iwH, hd?, iwN, nat?, decAt, iwA, Nat.add_zero] at *
+  simp only [decTM, bind, pure, iwH, hd?, iwN, nat?, decAt, iwA, aread_apply, Nat.add_zero] at *
   simp [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, h0, h1, hds, hct, hnf, hpf]
 
 /-! ## `target_major_default` -/
@@ -436,7 +436,7 @@ theorem plnW_stage {α : Type} {f : Mem → Nat → Option α} (cvOf : α → IC
     (hf : ∀ q, OMono (fun m => f m q))
     (hcv : ∀ m pp x, f m pp = some x → ∃ a, iwN m pp = some a ∧ decCVp m a = some (cvOf x))
     (hfb : ∀ m pp x, f (truncM m) pp = some x → pp < iwTop m)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
     (h : ptrNamesW n m o l = some (r, m')) (hS : StageR vis fe m a) (hx : PSlR0 f xs o l m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, l] ∧

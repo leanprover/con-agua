@@ -672,7 +672,7 @@ theorem rec_iwN_stab {m m' : Mem} {ws : List Word} {q : Word} (hq : q = rdW (m.a
   subst hq
   have hlt : (rdW (m.arr64 CTL) 200).toNat + j < iwTop m' := by rw [htop]; simp [iwTop]; omega
   refine StabD.of_eq (fun m'' hg => iwN_grow hg hlt) ?_
-  simp only [iwN, nat?, iwA, hget j hj, List.getElem?_eq_getElem hj, Option.map_some]
+  simp only [iwN, nat?, iwA, aread_apply, hget j hj, List.getElem?_eq_getElem hj, Option.map_some]
 
 theorem decNN_stab {m : Mem} {q x y : Nat} (h1 : StabD (fun m => iwN m q) m x)
     (h2 : StabD (fun m => iwN m (q + 1)) m y) : StabD (fun m => decNN m q) m (x, y) := by
@@ -793,7 +793,7 @@ theorem rec_iwH_stab {kk : IdxKind} {m m' : Mem} {ws : List Word} {q : Word} (hq
   subst hq
   have hlt : (rdW (m.arr64 CTL) 200).toNat + j < iwTop m' := by rw [htop]; simp [iwTop]; omega
   refine StabD.of_eq (fun m'' hg => iwH_grow hg hlt) ?_
-  simp [iwH, hd?, iwA, hget j hj, List.getElem?_eq_getElem hj, hw]
+  simp [iwH, hd?, iwA, aread_apply, hget j hj, List.getElem?_eq_getElem hj, hw]
 
 theorem decCS_minor_stab {m : Mem} {q c o l : Nat} {cn : NIdx} {ihs : List (Nat × Nat)}
     (h0 : StabD (fun m => iwN m q) m 1) (h1 : StabD (fun m => iwN m (q + 1)) m c)
@@ -1350,7 +1350,7 @@ theorem snocW_room {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
   rw [← htop, ← hq]; exact hroom
 
 /-- `class_read_slots_snoc` under the stage relation. -/
-theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem motSnocW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {N : Nat} {m m' : Mem} {mo ml np d : Word} {r : List Word} {xs : List Nat}
     (h : motSnocW N m mo ml np d = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : mo.toNat + ml.toNat ≤ iwTop m) (hxs : decNL m mo.toNat ml.toNat = some xs) :

@@ -531,7 +531,7 @@ def truncM (m : Mem) : Mem :=
 /-- A word of the cut `IW`: the pool's word below the top. -/
 theorem truncM_iw_get? (m : Mem) (i : Nat) :
     iwA (truncM m) i = if i < iwTop m then iwA m i else none := by
-  simp only [iwA, truncM, Mem.arr64, ite_true, Array.getElem?_extract]
+  simp only [iwA, aread_apply, truncM, Mem.arr64, ite_true, Array.getElem?_extract]
   split <;> simp_all <;> omega
 
 theorem truncM_er_get? (m : Mem) (i : Nat) :
@@ -564,7 +564,7 @@ theorem truncM_er_eq {m : Mem} {i : Nat} (hi : i < erTop m) :
 theorem IWGrow.truncExt {m m' : Mem} (hg : IWGrow m m') : PoolExt (truncM m) m' := by
   refine ⟨fun i v h => ?_, fun i v h => ?_⟩
   · obtain ⟨hi, hv⟩ := truncM_iw_get h
-    simp only [iwA] at hv ⊢; rw [hg.iwGet i hi]; exact hv
+    simp only [iwA, aread_apply, aread_apply] at hv ⊢; rw [hg.iwGet i hi]; exact hv
   · obtain ⟨hi, hv⟩ := truncM_er_get h
     simp only [erA] at hv ⊢; rw [hg.erGet i hi]; exact hv
 
@@ -586,7 +586,7 @@ theorem DecB.grow (hf : OMono f) (hg : IWGrow m m') (h : DecB f m x) : DecB f m'
   refine hf.mono _ _ _ ⟨fun i v hv => ?_, fun i v hv => ?_⟩ h
   · obtain ⟨hi, hv'⟩ := truncM_iw_get hv
     rw [truncM_iw_eq (Nat.lt_of_lt_of_le hi hg.iw)]
-    simp only [iwA] at hv' ⊢; rw [hg.iwGet i hi]; exact hv'
+    simp only [iwA, aread_apply, aread_apply] at hv' ⊢; rw [hg.iwGet i hi]; exact hv'
   · obtain ⟨hi, hv'⟩ := truncM_er_get hv
     rw [truncM_er_eq (Nat.lt_of_lt_of_le hi hg.er)]
     simp only [erA] at hv' ⊢; rw [hg.erGet i hi]; exact hv'

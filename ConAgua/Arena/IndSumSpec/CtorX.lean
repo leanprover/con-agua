@@ -46,7 +46,7 @@ theorem sortsDec_mono (q : Nat) : OMono (fun m => sortsDec m q) :=
   OMono.decAt (fun o l => OMono.decHL o l) q
 
 /-- **A `rec2` record under the stage relation**, its two words read below the new top. -/
-theorem sumRec2 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem sumRec2 {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a0 : AState} {x y : Word} {r : List Word} (h : recW m 2 [x, y] = some (r, m'))
     (hS : StageR vis fe m a0) :
     StageR vis fe m' a0 ∧ IWGrow m m' ∧ iwN (truncM m') (r.headD 0).toNat = some x.toNat ∧
@@ -56,10 +56,10 @@ theorem sumRec2 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   have hT : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
   refine ⟨hS', hg, ?_, ?_⟩
   · rw [List.headD_cons, iwN_truncM (by simp at htop; omega)]
-    simp only [iwN, nat?, iwA]; rw [show (rdW (m.arr64 CTL) 200).toNat = (rdW (m.arr64 CTL) 200).toNat + 0 from rfl,
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [show (rdW (m.arr64 CTL) 200).toNat = (rdW (m.arr64 CTL) 200).toNat + 0 from rfl,
       hget 0 (by simp)]; rfl
   · rw [List.headD_cons, iwN_truncM (by simp at htop; omega)]
-    simp only [iwN, nat?, iwA]; rw [hget 1 (by simp)]; rfl
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hget 1 (by simp)]; rfl
 
 /-- The `[cv, nF]` record of a constructor, decoded below the top. -/
 theorem sumDecCN_of {m : Mem} {q cvw nF : Nat} {cv : IConstantVal}

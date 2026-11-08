@@ -222,7 +222,7 @@ theorem decHL_grow3 {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
   apply mapM_opt_congr3
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
-  simp only [hd?, iwA]
+  simp only [hd?, iwA, aread_apply, aread_apply]
   rw [hg.iwGet (o + j) (by omega)]
 
 /-- A returning `e_view` of a `const` handle. -/

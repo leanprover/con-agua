@@ -28,7 +28,7 @@ open L.Arena
 
 /-- **`sl_snoc` keeps the stage relation**: the pool grew by the new slice, whose words are the
 source's and `x` (any words: pointers too). -/
-theorem snocW_words {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem snocW_words {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
     (h : snocW n m o l x = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : o.toNat + l.toNat ≤ iwTop m) :

@@ -49,7 +49,7 @@ structure PosBlkProg (p : Prog) : Prop where
 
 /-! ## The fresh `NestState` -/
 
-theorem pos3_init {p : Prog} (hP : PosBlkProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem pos3_init {p : Prog} (hP : PosBlkProg p) {n : Nat} {vis : Word}
     {fe : IFEnv} {a : AState} {m m' : Mem} {r : List Word}
     (h : callW p n "check_block_positivity_init" [] m = some (r, m')) (hS : StageR vis fe m a) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ NSB m' (r.headD 0) {} := by

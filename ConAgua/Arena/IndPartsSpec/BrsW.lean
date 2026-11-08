@@ -110,7 +110,7 @@ theorem partsResCont {m : Mem} {a : AState} {n : Nat} {x b : Word} (hx : x.toNat
 /-! ## The pins: relations -/
 
 /-- **A constant's level parameters compared with `lps`** (`er_to_iw`, then `sl_eq`). -/
-theorem partsLpsEq {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem partsLpsEq {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m1 : Mem} {q : Nat} {cv : IConstantVal} {rp : List Word} {lo ll e : Word} {lps : List NIdx}
     (h : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat q + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat q + 2)) =
       some (rp, m1))
@@ -141,7 +141,7 @@ theorem ipIte01_eq {c : Bool} {b : Word} (h : b = if c then 1 else 0) : b = 0 �
   subst h; cases c <;> simp
 
 /-- **`block_shape_pins_formers`**: no former's name reserved, every former at `lps`. -/
-theorem bpfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
+theorem bpfW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
     {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
     ∀ (m m' : Mem) (cto ctl : Word) (cvTs : List IConstantVal) (r : List Word),
     bpfW n m cto ctl lo ll = some (r, m') → StageR vis fe m a → PSlR decCVp cvTs cto ctl m →
@@ -192,7 +192,7 @@ theorem bpfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [hr2]; simp only [List.all_cons, hcn, heq, Bool.not_false, Bool.true_and]; rfl
 
 /-- **`block_shape_pins_recs`**: no recursor's name reserved. -/
-theorem bprW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem bprW_ok {vis : Word} {fe : IFEnv} {a : AState}
     {R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
     ∀ (m m' : Mem) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × List IRecRule)) (r : List Word),
     bprW n m ro rl = some (r, m') → StageR vis fe m a → PSlR decSR rs ro rl m →
@@ -233,7 +233,7 @@ theorem bprW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [hr2]; simp only [List.all_cons, hcn, Bool.not_false, Bool.true_and]; rfl
 
 /-- **`block_shape_pins_ctors`**: every constructor at `nP` and `lps`, no name reserved. -/
-theorem bpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
+theorem bpcW_ok {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
     {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
     ∀ (m m' : Mem) (cso csl : Word) (cs : List (IConstantVal × Nat × Nat)) (r : List Word),
     bpcW n m nP cso csl lo ll = some (r, m') → StageR vis fe m a → PSlR decSC cs cso csl m →
@@ -311,7 +311,7 @@ theorem partsW01 {r : List Word} {b : Bool} (h : r = [if b then 1 else 0]) : (r.
   subst h; cases b <;> simp
 
 /-- **`block_shape_pins_ok`**: the three pins, the twin's conjunction. -/
-theorem bpoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem bpoW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word} {cvTs : List IConstantVal}
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)} {cs : List (IConstantVal × Nat × Nat)}
     {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a))
@@ -370,7 +370,7 @@ def LargeR : Option NIdx → List Word → Prop
   | some e, r => r.headD 0 = 1 ∧ H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = e
 
 /-- **`block_shape_large`**: the twin's eliminator choice. -/
-theorem bslW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {cvR0 lo ll : Word} {r : List Word} {cv : IConstantVal} {lps : List NIdx}
     (h : bslW n m cvR0 lo ll = some (r, m')) (hS : StageR vis fe m a)
     (hcv : DecB (fun m => decCVp m cvR0.toNat) m cv)
@@ -480,7 +480,7 @@ open L.Arena
 /-! ## The relations -/
 
 /-- **`block_shape_names_of`**: the formers' names. -/
-theorem bsnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem bsnW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (cto ctl : Word) (cvTs : List IConstantVal) (r : List Word),
     bsnW n m cto ctl = some (r, m') → StageR vis fe m a → PSlR decCVp cvTs cto ctl m →
     StageR vis fe m' a ∧ IWGrow m m' ∧
@@ -540,7 +540,7 @@ theorem partsRule_rhs {a : Array Word} {q : Nat} {x : IRecRule} (h : decRule (ar
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_shape_rhss_of`**: the rules' right-hand sides (`EREC` 11-word records). -/
-theorem brhW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem brhW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (ro rl : Word) (rules : List IRecRule) (r : List Word),
     brhW n m ro rl = some (r, m') → StageR vis fe m a →
     DecB (fun m => decRules (erA m) ro.toNat rl.toNat) m rules →
@@ -595,7 +595,7 @@ theorem brhW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 -/
 
 /-- A fresh record's `IW` word `j`, decoded below the new top. -/
-theorem partsFreshN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem partsFreshN {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
     (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
@@ -604,7 +604,7 @@ theorem partsFreshN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   exact ⟨h1, h2, h5⟩
 
 /-- **`block_shape_ctors_of`**: the constructors as `[cv, nF]`. -/
-theorem bctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem bctW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (cso csl : Word) (cs : List (IConstantVal × Nat × Nat)) (r : List Word),
     bctW n m cso csl = some (r, m') → StageR vis fe m a → PSlR decSC cs cso csl m →
     StageR vis fe m' a ∧ IWGrow m m' ∧
@@ -676,7 +676,7 @@ theorem partsNL_cons {ns : List Nat} {o l : Word} {m : Mem} (h : DecB (fun m => 
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_shape_members_of`**: the members, the twin's `zip`s. -/
-theorem bmoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem bmoW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (cto ctl io go : Word) (cvTs : List IConstantVal) (ns : List Nat)
       (gss : List (List (IConstantVal × Nat))) (r : List Word),
     bmoW n m cto ctl io go = some (r, m') → StageR vis fe m a → PSlR decCVp cvTs cto ctl m →
@@ -1057,7 +1057,7 @@ theorem tailJP_eq {X : Type} (nP : Nat) (nIdxs : List Nat) (ty : EIdx) (jp : LId
     cases v <;> simp
 
 /-- **The packed `BlockShape` record, decoded.** -/
-theorem partsPack {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem partsPack {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {q mo ml ro rl nP elim s lg ip : Word} {ms : List MemberShape} {recs : List RecShape}
     (h : posRecW m [mo, ml, ro, rl, nP, elim, s, lg, ip] = some (q, m')) (hS : StageR vis fe m a)
     (hms : PSlR decMS ms mo ml m) (hrs : PSlR decRS recs ro rl m) (he : H elim) (hs : H s) :
@@ -1216,7 +1216,7 @@ theorem blockGroups_length {names : List NIdx} {lvls : LsIdx} {nP k : Nat} {cs :
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_shape_fin`'s model refines `finRest`.** -/
-theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
+theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     {nPd cto ctl cso csl rso rsl no nl io lo ll s ip : Word} {cvTs : List IConstantVal} {nIdxs : List Nat}
     {lps : List NIdx} {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)} {sv : LIdx} {isProp : Bool}
@@ -1391,7 +1391,7 @@ theorem bmc_length {nPd k nC : Nat} {names : List NIdx} {rs : List (IConstantVal
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `block_member_counts`' model as a `Sim` (from `blockMemberCounts_refines`' proof). -/
-theorem bmcW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
+theorem bmcW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     {nPd k nC no nl ro rl cto ctl : Word} {names : List NIdx} {cvTs : List IConstantVal}
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
     (hS : StageR vis fe m a) (hts : PSlR decCVp cvTs cto ctl m)

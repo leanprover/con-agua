@@ -353,7 +353,7 @@ theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_an
 -/
 
 /-- The post of the memo walks: the result a `Bool` word, the twin's state kept, a memo left. -/
-def RawR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m : Mem) (a : AState) :
+def RawR {vis : Word} {fe : IFEnv} (m : Mem) (a : AState) :
     List Word → Bool → Mem → AState → Prop :=
   fun r b m' a' => r = [if b then 1 else 0] ∧ a' = a ∧ (∃ mp', maMR m' mp') ∧ StageR vis fe m' a ∧ IWGrow m m'
 

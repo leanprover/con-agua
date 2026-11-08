@@ -232,7 +232,7 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
     have hds' := hds
     simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
     obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
-    obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
+    obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA, aread_apply, aread_apply] using hx)
     have hsz := hS.iw.iwSize
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
       word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; omega)

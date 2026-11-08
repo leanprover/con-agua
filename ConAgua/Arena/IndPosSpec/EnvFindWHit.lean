@@ -83,7 +83,7 @@ theorem posRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w �
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A hit of `env_find` is a `find?`** of the record it points to. -/
-theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
+theorem envFindW_hit {vis : Word} {fe : IFEnv} {m m1 : Mem}
     {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR m vis fe)
     (hw : w.toNat < 2 ^ 32) (h0 : r.headD 0 ≠ 0) :
     m1 = m ∧ fe.find? (decI w) = decCI (erecP m) (r.tail.headD 0).toNat ∧
@@ -133,7 +133,7 @@ def CsAt (m : Mem) (o : Nat) (xs : List (IConstantVal × Nat)) (P : Nat → Prop
   ∀ i (hi : i < xs.length), ∃ w : Word, (m.arr64 IW)[o + i]? = some w ∧ CNOk m w.toNat xs[i] P
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem decCI_idx {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {ci : IConstantInfo}
+theorem decCI_idx {a : Array Word} {p : Nat} {ci : IConstantInfo}
     (h : decCI (aread a) p = some ci) : p < a.size := by
   simp only [decCI, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, -⟩ := h

@@ -25,7 +25,7 @@ open L.Arena
 
 /-! ## `nest_holes(_go)` refines `nestHoles(.go)` -/
 
-theorem snocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem snocW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} (h : snocW n m o l x = some (r, m'))
     (hS : StageR vis fe m a) : StageR vis fe m' a := by
   simp only [snocW] at h

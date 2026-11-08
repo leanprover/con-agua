@@ -567,7 +567,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have hol : o.toNat + l.toNat < 2 ^ 64 := by
     rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
     · rw [h0]; exact Nat.lt_of_lt_of_le (UInt64.toNat_lt o) (by omega)
-    · have := hb h0; simp only [iwA] at this; omega
+    · have := hb h0; simp only [iwA, aread_apply, aread_apply] at this; omega
   obtain ⟨hg, hf₂, -, hsl₂⟩ := iwpW_ok hpool n m₁ m₂ o m.top l (callW_ip rfl h2) g0 (Nat.le_refl _) h41
     (by rw [htier₁]; exact hroom) hol
   rw [hiw₁] at hsl₂
@@ -585,7 +585,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   simp only at hs₃ hI
   rw [hs₃] at hI
   obtain ⟨ok, hA₃, res, hf₃⟩ := L.Front.internLs_D m₂ a hA₂ (r₃.headD 0) m₃ m.top l hsl₂'
-    us (by rw [hsl₂]; simpa [iwA] using hsl) (ModeOK.slice0 hmo₂ hsl₂') hI
+    us (by rw [hsl₂]; simpa [iwA, aread_apply, aread_apply] using hsl) (ModeOK.slice0 hmo₂ hsl₂') hI
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
   obtain ⟨hca, hpi, -⟩ := internLsNode_keep _ _ _ _ hrun

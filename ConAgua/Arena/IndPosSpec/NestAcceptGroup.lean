@@ -52,10 +52,10 @@ theorem pos2_decB_append (hf : ∀ q, OMono (fun m => f m q)) {m m' : Mem} {o1 l
     by_cases hjl : j < xs.length
     · obtain ⟨v, a, b, c⟩ := he1 j hjl
       refine ⟨v, by omega, ?_, by rw [List.getElem_append_left hjl]; exact (DecB.grow (hf v) hg c)⟩
-      simp only [iwN, nat?, iwA] at b ⊢; rw [hw1 j (by omega)]; exact b
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply] at b ⊢; rw [hw1 j (by omega)]; exact b
     · obtain ⟨v, a, b, c⟩ := he2 (j - xs.length) (by omega)
       refine ⟨v, by omega, ?_, by rw [List.getElem_append_right (by omega)]; exact (DecB.grow (hf v) hg c)⟩
-      simp only [iwN, nat?, iwA] at b ⊢
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply] at b ⊢
       have := hw2 (j - xs.length) (by omega)
       rw [show q + l1 + (j - xs.length) = q + j by omega] at this
       rw [this]; exact b

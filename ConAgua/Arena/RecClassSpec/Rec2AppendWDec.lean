@@ -33,7 +33,7 @@ theorem rec2AppendW_norm (n : Nat) (m : Mem) (o1 o2 l2 : Word) :
 
 /-- `sl_append` of a slice decoded below the tops (possibly empty, at any offset) and a slice
 below the top. -/
-theorem rec2AppendW_dec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem rec2AppendW_dec {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word} {xs ys : List EIdx}
     (h : appendW n m o1 l1 o2 l2 = some (r, m')) (hS : StageR vis fe m a)
     (h1 : DecB (fun m => (decHL m o1.toNat l1.toNat : Option (List EIdx))) m xs)

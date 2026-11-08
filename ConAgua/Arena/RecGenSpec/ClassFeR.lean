@@ -282,7 +282,7 @@ theorem cfrMem_eq {m1 : Mem} {q cq mi rp3 : Word} (hlt : cq.toNat + 4 ≤ q.toNa
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`class_fe_r_rec` under the stage relation**: a fresh rule-less `.recInfo` record of the constant
 at `cq`. -/
-theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem cfrRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cq mi rp3 q : Word} {cv : IConstantVal} (h : cfrRecW m cq mi rp3 = some (q, m'))
     (hS : StageR vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
@@ -518,7 +518,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
     have g0 := hget3 0 (by simp); have g1 := hget3 1 (by simp); have g2 := hget3 2 (by simp)
     simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at g0 g1 g2
     refine ⟨decI w, ?_, rowC m w, g1, rowP m w, g2, _, rec3PrevD_grow hg03 hprev, by rw [hwnm]⟩
-    simp only [iwH, hd?, iwA, g0]; simp [hwH]
+    simp only [iwH, hd?, iwA, aread_apply, g0]; simp [hwH]
   have hentS := rec3DecPrev_stab hent (by
     have := htop3; simp only [List.length_cons, List.length_nil, iwTop] at this
     rw [hre]; simp only [List.headD_cons, iwTop]; omega)

@@ -58,10 +58,10 @@ theorem sumDecPL_write {α : Type} (m : Mem) (f : Nat → Option α) (o j : Nat)
     apply mapM_congr_of
     intro i hi
     have hi' : i < j := List.mem_range.mp hi
-    simp only [iwN, nat?, iwA, set64IW_get]
+    simp only [iwN, nat?, iwA, aread_apply, set64IW_get]
     rw [ite_eq_right (by omega)]
   rw [e1, h]
-  simp [iwN, nat?, iwA, set64IW_get, hw, hsz, hx]
+  simp [iwN, nat?, iwA, aread_apply, set64IW_get, hw, hsz, hx]
 
 /-- **A model step that only reshapes the result words** (`K (some (r, m)) = some (f r, m)`). -/
 theorem sumSim_map {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {f : β → γ}
@@ -91,7 +91,7 @@ theorem sumDecPL_grow {α : Type} {m m' : Mem} {f f' : Nat → Option α} (hg : 
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h ⊢
     obtain ⟨v, hv, x, hfx, xs', hxs, rfl⟩ := h
     refine ⟨v, ?_, x, hf v x hfx, xs', ih (o + 1) xs' (by omega) hxs, rfl⟩
-    simp only [iwN, nat?, iwA] at hv ⊢
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply] at hv ⊢
     rw [hg.iwGet o (by omega)]; exact hv
 
 /-- A handle at the head of a slice decoded below the top, as the model reads it. -/
@@ -408,7 +408,7 @@ theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`sum_rules`' model refines `sumRules`**: the rules in a fresh `IW` slice of `EREC` rule
 pointers. -/
-theorem rulesW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (recName : NIdx)
+theorem rulesW_ok {vis : Word} {fe : IFEnv} (recName : NIdx)
     (n : Nat) (m : Mem) (a : AState) (nP cO cL rO rL : Word) (cs : List (IConstantVal × Nat))
     (rhss : List EIdx) (hS : StageR vis fe m a)
     (hcs : DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m cs)

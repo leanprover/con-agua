@@ -733,7 +733,7 @@ theorem ihNPc_word {m : Mem} {g t : Word} {cls : List TargetMajor}
 
 theorem iwH_lt {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : iwH m i = some x) :
     i < (m.arr64 IW).size := by
-  simp only [iwH, hd?, iwA] at h
+  simp only [iwH, hd?, iwA, aread_apply, aread_apply] at h
   cases hw : (m.arr64 IW)[i]? with
   | none => simp [hw] at h
   | some w => exact (Array.getElem?_eq_some_iff.mp hw).1

@@ -92,7 +92,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- A pointer consed onto a pointer slice decoded below the tops (`sl_cons`). -/
 theorem consW_pslr {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q))
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
     (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a) (hxs : PSlR f xs o l m)
     (hy : DecB (fun m => f m x.toNat) m y) :
@@ -126,7 +126,7 @@ open L.Arena
 
 /-- **`block_rec_split_own_aux`'s model is the twin's two `filter`s** (as slices of `RecShape`
 pointers decoded below the tops). -/
-theorem soaW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem soaW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (reco recl k : Word) (recs : List RecShape) (r : List Word),
     soaW n m reco recl k = some (r, m') → StageR vis fe m a → PSlR decRS recs reco recl m →
     StageR vis fe m' a ∧ IWGrow m m' ∧
@@ -212,7 +212,7 @@ open L.Arena
 /-! ## The relational lemma -/
 
 /-- `block_rec_split_own_aux` at a slice below the top unless empty. -/
-theorem soaW_ok0 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
+theorem soaW_ok0 {vis : Word} {fe : IFEnv} (n : Nat)
     {m m' : Mem} {a : AState} {reco recl k : Word} {recs : List RecShape} {r : List Word}
     (h : soaW (n + 1) m reco recl k = some (r, m')) (hS : StageR vis fe m a)
     (hrs : PSlR0 decRS recs reco recl m) :

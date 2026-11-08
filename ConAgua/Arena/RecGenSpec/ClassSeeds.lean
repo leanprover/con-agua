@@ -161,7 +161,7 @@ theorem NKSl.grow' {m m' : Mem} {key : Word} {nk : NestKey} (h : NKSl m key)
   exact Nat.le_trans h hg.iw
 
 /-- **`sl_cons` of a seed record onto the seeds' slice.** -/
-theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {vis : Word}
     {fe : IFEnv} {a : AState} {m m' : Mem} {x o l : Word} {r : List Word} {seeds : List (NestKey × Nat)}
     {sd : NestKey × Nat} {key nPc : Word}
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR vis fe m a)
@@ -186,7 +186,7 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
       w.toNat = (x.toNat :: ps)[j]'(by have := decNL_length m hps; simp; omega) := by
     intro j hj
     have := decNL_at hdn j (by omega)
-    simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at this
+    simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at this
     obtain ⟨w, hw, hwe⟩ := this
     exact ⟨w, hw, hwe⟩
   intro i hi

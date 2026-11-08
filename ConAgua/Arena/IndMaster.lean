@@ -176,7 +176,7 @@ theorem consW_room {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
 
 /-- **`sl_cons` keeps the stage relation**: the pool grew by the new slice, which decodes to
 `x :: xs`. -/
-theorem consW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem consW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {k : IdxKind} {xs : List (Idx k)}
     (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : o.toNat + l.toNat ≤ iwTop m) (hx : x.toNat < 2 ^ 32)
@@ -281,7 +281,7 @@ end levels
 
 /-! ## `iw_alloc` under the stage relation -/
 
-theorem allocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem allocW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m1 : Mem} {k q : Word} (h : allocW m k = some (q, m1)) (hS : StageR vis fe m a) :
     StageR vis fe m1 a ∧ IWGrow m m1 ∧ q.toNat = iwTop m ∧ iwTop m1 = iwTop m + k.toNat := by
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
@@ -365,7 +365,7 @@ theorem wrER_get : ∀ (ws : List Word) (m : Mem) (q : Word) (i : Nat),
 
 /-- **A writer of `EREC` above its top and of `CTL[129]` keeps the stage relation** (lane
 `decls`' `EnvR.grow`), given the records below the old top unchanged and the new top in range. -/
-theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem StageR.erec {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} (hS : StageR vis fe m a) (hf : MemFrame [EREC] [129] m m')
     (hlow : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
     (htop : erTop m ≤ erTop m') (hroom : erTop m' ≤ (m'.arr64 EREC).size) :
@@ -396,7 +396,7 @@ theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
 /-- **A record allocated in `EREC` and written**: `erec_alloc(ws.length)` then `ws` at the
 returned pointer keeps the stage relation; the words are readable there, the top moved by the
 record's length. -/
-theorem erRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem erRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) (hS : StageR vis fe m a)
     (ws : List Word) (hk : k.toNat = ws.length) :
     StageR vis fe (wrER m1 q ws) a ∧ IWGrow m (wrER m1 q ws) ∧ q.toNat = erTop m ∧
@@ -526,7 +526,7 @@ theorem cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
 
 /-- **`cv_new` with the name and level parameters of the record at `cq`** keeps the stage
 relation and decodes as `{cv with type := ty}`. -/
-theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cq ty q : Word} {cv : IConstantVal}
     (h : cvNewW m (rdW (m.arr64 EREC) cq) (rdW (m.arr64 EREC) (cq + 1)) (rdW (m.arr64 EREC) (cq + 2)) ty
       = some (q, m'))

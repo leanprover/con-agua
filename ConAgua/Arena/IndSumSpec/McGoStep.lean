@@ -915,7 +915,7 @@ theorem hbFast_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Nat.reduceEqDiff, reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, ind_grind]
 
-theorem hbFastW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
+theorem hbFastW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (i e r : Word) (mp0 : Std.HashMap (EIdx × Nat) Bool)
     (hh : H e) (hS : StageR vis fe m a) (hM : hbMR m mp0)
     (hm : hbFastW n m i e = some (r, m')) :

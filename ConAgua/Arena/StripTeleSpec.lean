@@ -212,7 +212,7 @@ theorem viewBind_run_s (h : EIdx) (a : AState) :
     (viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
 
 
-theorem StageR.set_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+theorem StageR.set_iw {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) (p x : Word) : StageR vis fe (m.set64 IW p x) a := by
   have hf := set64IW_frame m p x
   have hC : (m.set64 IW p x).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
@@ -228,7 +228,7 @@ theorem StageR.set_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   · rw [hC]; exact h5
 
 /-- Putting the pool's top back to `o ≤` the top keeps the stage relation. -/
-theorem StageR.set_top {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+theorem StageR.set_top {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (hS : StageR vis fe m a) (o : Word) (ho : o.toNat ≤ iwTop m) :
     StageR vis fe (m.set64 CTL 200 o) a ∧ iwTop (m.set64 CTL 200 o) = o.toNat := by
   have hf : MemFrame [IW] [200] m (m.set64 CTL 200 o) :=
@@ -385,7 +385,7 @@ theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
       simp only [decHL] at hdec
       have hon : o.toNat + n.toNat = q.toNat := by omega
       rw [hon, show q.toNat + 1 = o.toNat + (n.toNat + 1) by omega, hdec]
-      simp only [hd?, iwA, hat, Option.bind_eq_bind, Option.bind]
+      simp only [hd?, iwA, aread_apply, hat, Option.bind_eq_bind, Option.bind]
       rw [ite_eq_left hty]; rfl
 
 end loop

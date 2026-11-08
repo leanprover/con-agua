@@ -172,7 +172,7 @@ theorem decNL_frX {x : Nat} {m m' : Mem} (h : FrX x m m') {o l : Nat} (hb : o + 
   apply mapM_opt_congr
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
-  simp only [iwN, nat?, iwA]
+  simp only [iwN, nat?, iwA, aread_apply, aread_apply]
   rw [h.2 (o + j) (by omega) (by omega)]
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)

@@ -94,8 +94,8 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
     have e3 := hcell 3 (by decide) (by decide) (by decide)
     have hp2 : iwN s'.mem (pp.toNat + 2) = iwN m (pp.toNat + 2) := iwN_grow hg (by omega)
     have hp3 : iwN s'.mem (pp.toNat + 3) = iwN m (pp.toNat + 3) := iwN_grow hg (by omega)
-    have g2 : iwN s'.mem (q.toNat + 2) = iwN s'.mem (pp.toNat + 2) := by simp only [iwN, nat?, iwA, e2]
-    have g3 : iwN s'.mem (q.toNat + 3) = iwN s'.mem (pp.toNat + 3) := by simp only [iwN, nat?, iwA, e3]
+    have g2 : iwN s'.mem (q.toNat + 2) = iwN s'.mem (pp.toNat + 2) := by simp only [iwN, nat?, iwA, aread_apply, e2]
+    have g3 : iwN s'.mem (q.toNat + 3) = iwN s'.mem (pp.toNat + 3) := by simp only [iwN, nat?, iwA, aread_apply, e3]
     rw [g2, hp2] at h1; rw [g3, hp3] at h2
     exact Nat.le_trans (hrb o l h1 h2) hg.iw
   intro o l h1 h2
@@ -105,8 +105,8 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
   simp only [Nat.add_zero] at e0
   have hp0 : iwN s'.mem pp.toNat = iwN m pp.toNat := iwN_grow hg (by omega)
   have hp1 : iwN s'.mem (pp.toNat + 1) = iwN m (pp.toNat + 1) := iwN_grow hg (by omega)
-  have g0 : iwN s'.mem q.toNat = iwN s'.mem pp.toNat := by simp only [iwN, nat?, iwA, e0]
-  have g1 : iwN s'.mem (q.toNat + 1) = iwN s'.mem (pp.toNat + 1) := by simp only [iwN, nat?, iwA, e1]
+  have g0 : iwN s'.mem q.toNat = iwN s'.mem pp.toNat := by simp only [iwN, nat?, iwA, aread_apply, e0]
+  have g1 : iwN s'.mem (q.toNat + 1) = iwN s'.mem (pp.toNat + 1) := by simp only [iwN, nat?, iwA, aread_apply, e1]
   rw [g0, hp0] at h1; rw [g1, hp1] at h2
   exact Nat.le_trans (hsrc o l h1 h2) hg.iw
 

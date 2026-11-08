@@ -30,7 +30,7 @@ open L.Arena
 /-! ## `pi_binders` under the stage relation -/
 
 /-- **`pi_binders` keeps the stage relation** (it only conses into the pool). -/
-theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem piBW_stage {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : List Word),
     piBW n m fuel h = some (rs, m') → StageR vis fe m a → H h → StageR vis fe m' a := by
   induction n with
@@ -64,7 +64,7 @@ theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     exact (consW_stage hcons hS1 hle1 hty2 hdec1).1
 
 /-- `pi_binders` at `CWF` from the stage relation: the twin's run, the stage relation kept. -/
-theorem piBW_cwf {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
+theorem piBW_cwf {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
     {a : AState} {h : Word} {rs : List Word} (hpb : piBW n m CWF h = some (rs, m'))
     (hS : StageR vis fe m a) (hh : H h) :
     ∃ bs e, (ConRon.Arena.piBinders coreWalkFuel (decI h)).run a = .ok ((bs, e), a) ∧
@@ -118,7 +118,7 @@ theorem nestCtxHiAt_specE (p : Prog) (hp : p.lookup "nest_ctx_hi_at" = some nest
 theorem rd_iwH0E {k : IdxKind} {m : Mem} {o : Word} {x : Idx k} (h : iwH m o.toNat = some x) :
     H (rdW (m.arr64 IW) o) ∧ decI (rdW (m.arr64 IW) o) = x := by
   obtain ⟨w, hw, hl, hx⟩ := hd?_some h
-  simp only [iwA] at hw
+  simp only [iwA, aread_apply, aread_apply] at hw
   simp only [rdW, hw, Option.getD_some]
   exact ⟨hl, hx.symm⟩
 

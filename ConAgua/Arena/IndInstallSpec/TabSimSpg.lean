@@ -61,7 +61,7 @@ namespace L.Ind
 open L.Arena
 
 /-- **`struct_proj_guards` leaves the `hb` memo well formed** (its walk's memo after the clear). -/
-theorem spgW_hb {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem}
+theorem spgW_hb {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem}
     {a : AState} {cty nP nF so sl : Word} {r : List Word} {mp : Std.HashMap (EIdx × Nat) Bool}
     (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
     (hS : StageR vis fe m a) (hM : hbMR m mp) (h : spgW n m cty nP nF so sl = some (r, m')) :
@@ -247,7 +247,7 @@ theorem spgW_sl0 (n : Nat) (m : Mem) (cty nP nF so : Word) :
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`struct_proj_guards` as a `Sim`, keeping its memo well formed.** -/
-theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} (cty nP nF so sl : Word) (sorts : List LIdx)
     (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
     (hS : StageR vis fe m a) (hM : HbMemo m) (hs : decHL m so.toNat sl.toNat = some sorts)

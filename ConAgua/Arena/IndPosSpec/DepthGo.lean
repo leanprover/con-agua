@@ -776,7 +776,7 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
       have hqi : (q + i).toNat = q.toNat + i.toNat := by
         rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
       have hdec2 : decHL m2 q.toNat i.toNat = some ws := by
-        rw [← hdec]; simp only [decHL, iwA, hI2]
+        rw [← hdec]; simp only [decHL, iwA, aread_apply, hI2]
       have hdec3 := decHL_write m2 q i v ws hvlt (by rw [hI2]; exact hsz) (by rw [hI2]; omega) hdec2
       have hS3 := hS2.set_iw (q + i) v
       have hi1 : (i + 1).toNat = i.toNat + 1 := toNat_add_one' (by omega)

@@ -214,13 +214,13 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
   refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
   · simp only [decHL, hl1, hslice?_succ]
     have h0 : (hd? (iwA m') q.toNat : Option (Idx k)) = some (decI x) := by
-      simp [hd?, iwA, hget, hx]
+      simp [hd?, iwA, aread_apply, hget, hx]
     rw [h0]
     have : (hslice? (iwA m') (q.toNat + 1) l.toNat : Option (List (Idx k))) = some xs := by
       rw [← hxs]; simp only [decHL]
       apply hslice?_congr
       intro j hj
-      simp only [iwA, hget]
+      simp only [iwA, aread_apply, hget]
       rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       congr 1; omega
     simp [this]

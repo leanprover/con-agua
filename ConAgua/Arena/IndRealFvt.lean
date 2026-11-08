@@ -53,7 +53,7 @@ open L.Arena
 
 /-- The stage relation across a writer above array 136 and `CTL[129]` that leaves the pool alone
 (`IndPosSpec/MatesW`'s `StageR.frame_hi`, which sits above this file). -/
-theorem stageR_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem stageR_hi {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {A : List TieredArray} {C : List Word} (hS : StageR vis fe m a) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr)) (hC : ∀ x ∈ C, 130 ≤ x.toNat ∧ x.toNat ≠ 133) (hA2 : (IW : TieredArray) ∉ A) (hC2 : (200 : Word) ∉ C) :
     StageR vis fe m' a ∧ IWGrow m m' := by
@@ -652,7 +652,7 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     simp only [iwTop, rdW_set64]; simp
   refine ⟨xs, a, by rw [CWF_eq]; exact hrun, hS4, hg1.trans (hg3.trans hg4), ?_⟩
   refine ⟨?_, ?_⟩
-  · rw [← hdec.1]; simp only [decHL, iwA, hI4]
+  · rw [← hdec.1]; simp only [decHL, iwA, aread_apply, hI4]
   · rw [ht4]; exact hdec.2
 
 end L.Ind

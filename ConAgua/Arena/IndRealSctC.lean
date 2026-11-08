@@ -104,7 +104,7 @@ theorem stateOK_of_sp {a a' : AState} (h : ConRon.Bridge.StateOK a) (e : sp a' =
 /-- **`all_level_params_defined`'s model under `StageR`, `AbsOK` and the twin's `StateOK`**: the
 twin state stays as it was, `AbsOK` holds after (the walk's memo is the core's `wscopedBFast`
 memo, `apdMR_ws`; the rest is framed). -/
-theorem apdF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+theorem apdF_simR {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (o l e : Word) (he : H e) (lps : List NIdx) (hS : StageR vis fe m a)
     (hA : AbsOK m) (hok : ConRon.Bridge.StateOK a) (hdec : decHL m o.toNat l.toNat = some lps)
     (hks : ∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks) :
@@ -136,7 +136,7 @@ theorem apdF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   · exact memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf ml hlsb
 
 /-- `apdF_simR` at the program's own call (`realCall p`'s reading). -/
-theorem apdCall_simR {p : Prog} (hp : ApdF p) (k : Nat) {dn : NIdx → Option ConLeche.Name}
+theorem apdCall_simR {p : Prog} (hp : ApdF p) (k : Nat)
     {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} (o l e : Word) (he : H e) (lps : List NIdx)
     (hS : StageR vis fe m a) (hA : AbsOK m) (hok : ConRon.Bridge.StateOK a)
     (hdec : decHL m o.toNat l.toNat = some lps)
@@ -305,7 +305,7 @@ theorem names_ext {st st' : EStore} (hx : ConRon.Arena.Ext st st') {lps : List N
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `find_table` as a callee: the memory is unchanged, the row word decodes the twin's lookup. -/
-theorem findTable_call {p : Prog} (hP : TblProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem findTable_call {p : Prog} (hP : TblProg p) {vis : Word}
     {fe : IFEnv} {n : Nat} {m m' : Mem} {w : Word} {r : List Word} (hE : EnvR m vis fe)
     (hw : w.toNat < 2 ^ 32) (hc : callW p n "find_table" [vis, w] m = some (r, m')) :
     m' = m ∧ fe.findTable? (decI w) = tblOut m (r.headD 0) := by
@@ -350,7 +350,7 @@ theorem envPushTable_mem (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
 
 /-- **`env_push_table` as a callee of the stage**: the twin's `pushTable` of the record's table,
 the pool unchanged, the walk memos and the frame below the stage's kept. -/
-theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem envPushTable_stage {p : Prog} (hP : TblProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {t : IProjTable}
     (hS : StageR vis fe m a) (ht : decTbl (erecP m) q.toNat = some t)
     (hc : callW p n "env_push_table" [q] m = some (r, m')) :

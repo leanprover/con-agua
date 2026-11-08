@@ -71,7 +71,7 @@ def ShapeR (x : Option BlockShape) (r : List Word) (m : Mem) : Prop :=
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A fresh record's words, in the cut pool. -/
-theorem partsFreshGet {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem partsFreshGet {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
     (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ q.toNat + ws.length = iwTop m' ∧
@@ -79,7 +79,7 @@ theorem partsFreshGet {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   obtain ⟨hS', hg, hq, htop, hget⟩ := posRecW_stage h hS hl
   refine ⟨hS', hg, by omega, fun j hj => ?_⟩
   rw [truncM_iw_eq (by omega)]
-  simp only [iwA, hget j hj, List.getElem?_eq_getElem hj]
+  simp only [iwA, aread_apply, hget j hj, List.getElem?_eq_getElem hj]
 -/
 
 /-! ## `block_shape_tail` -/

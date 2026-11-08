@@ -211,7 +211,7 @@ theorem rec2Count_succ (sl : List ClassSlot) (s : Nat) (hs : s < sl.length) :
   cases h : rec2IsMot sl[s] <;> simp [List.filter, h]
 
 /-- The common tail of a slot: the rest of the walk, then the cons. -/
-theorem pfTail {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem} {a1 : AState}
+theorem pfTail {vis : Word} {fe : IFEnv} {m m1 : Mem} {a1 : AState}
     (n : Nat) (ty : Word) (hty : H ty) (_hS1 : StageR vis fe m1 a1) (hg1 : IWGrow m m1)
     (rest : Option (List Word × Mem)) (opR : AM (Option (List EIdx)))
     (hrest : RSim rest opR a1

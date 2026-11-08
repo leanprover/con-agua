@@ -86,7 +86,7 @@ theorem ciKind_w (x : IConstantInfo) (k : Nat) (hk : k < 7) :
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A decoded constant record's kind and the fields the split reads.** -/
-theorem partsCI_fields {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
+theorem partsCI_fields {a : Array Word} {q : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) q = some ci) :
     nat? (aread a) q = some (ciKind ci) ∧
     (match ci with
@@ -147,7 +147,7 @@ theorem partsErRd {m m' : Mem} (hg : IWGrow m m') {i v : Nat} (h : nat? (erA (tr
   simp
 
 /-- **A fresh record, read back below the new top.** -/
-theorem partsFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem partsFresh {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
     (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ q.toNat = iwTop m ∧ q.toNat + ws.length = iwTop m' ∧
@@ -155,7 +155,7 @@ theorem partsFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   obtain ⟨hS', hg, hq, htop, hget⟩ := posRecW_stage h hS hl
   refine ⟨hS', hg, hq, by omega, fun j hj => ?_⟩
   rw [iwN_truncM (by omega)]
-  simp only [iwN, nat?, iwA, hget j hj, List.getElem?_eq_getElem hj, Option.map_some]
+  simp only [iwN, nat?, iwA, aread_apply, hget j hj, List.getElem?_eq_getElem hj, Option.map_some]
 
 /-- A word `w + k` of the record pool, read below the top in any memory the pools grew into. -/
 theorem partsErW {m m1 : Mem} (hg : IWGrow m m1) {w k : Word} {v : Nat}
@@ -401,7 +401,7 @@ theorem partsWadd {q : Word} {i : Nat} (h : q.toNat + i < 2 ^ 64) :
   exact Nat.mod_eq_of_lt h
 
 /-- The 6-word record written by `rec6`. -/
-theorem partsRec6 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem partsRec6 {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {q b0 b1 b2 b3 b4 b5 : Word} {ts : List IConstantVal}
     {cs : List (IConstantVal × Nat × Nat)} {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
     (h : posRecW m [b0, b1, b2, b3, b4, b5] = some (q, m')) (hS : StageR vis fe m a)

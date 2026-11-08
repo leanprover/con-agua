@@ -750,10 +750,10 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
     rw [hr2]
     have hw0 : iwN s2.mem (rdW (s1.mem.arr64 CTL) 200).toNat = some (r1.headD 0).toNat := by
       have e0 := hget2 0 (by simp); rw [Nat.add_zero] at e0
-      simp only [iwN, nat?, iwA, e0]; rfl
+      simp only [iwN, nat?, iwA, aread_apply, e0]; rfl
     have hw1 : iwN s2.mem ((rdW (s1.mem.arr64 CTL) 200).toNat + 1) = some (r1.tail.headD 0).toNat := by
       have e1 := hget2 1 (by simp)
-      simp only [iwN, nat?, iwA, e1]; rfl
+      simp only [iwN, nat?, iwA, aread_apply, e1]; rfl
     have ht2' : iwTop s2.mem = iwTop s1.mem + 2 := by simpa using ht2
     exact stabA_decLH hw0 hw1 (Nat.le_trans hb0 hg1.iw) (by rw [ht2']; exact Nat.le_refl _)
       ((hd1.mono (by omega)).grow (AgreeA.of_grow hg2))

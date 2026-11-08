@@ -66,7 +66,7 @@ theorem KlB.snoc {m m' : Mem} {o l q : Nat} {ks : List NestFieldKind} {w : Word}
     obtain ⟨w', hw', -⟩ := hg' j hj'
     obtain ⟨hi, -⟩ := truncM_iw_get hw'
     rw [truncM_iw_eq (m := m') (by omega), truncM_iw_eq hi]
-    simp only [iwA]; rw [hw j hj']
+    simp only [iwA, aread_apply, aread_apply]; rw [hw j hj']
   rw [e1]
   have e2 : (iwA (truncM m'))[q + l]? = some w := by rw [truncM_iw_eq hq]; exact hx
   simp [e2, hk]

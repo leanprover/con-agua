@@ -60,7 +60,7 @@ theorem selm_spec (p : Prog) (hp : p.lookup "struct_elim_level" = some structEli
 /-- **`struct_elim_level(elim, large)` refines `structElimLevel` under the stage relation**, its
 result a handle. -/
 theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (a : AState)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (elim large : Word)
+    {vis : Word} {fe : IFEnv} (elim large : Word)
     (hS : StageR vis fe s₀.mem a) (he : elim.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_elim_level" [elim, large]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ a', (ConRon.Arena.structElimLevel (decI elim) (large != 0)).run a =
@@ -110,7 +110,7 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A run that writes only the environment's rows, `ECON` and `CTL[128]`**, relating its
 memory to an environment `fe'` at view `vis'`, keeps the stage relation (at `fe'`) and the pool. -/
-theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe fe' : IFEnv}
+theorem StageR.of_envFrame {vis vis' : Word} {fe fe' : IFEnv}
     {a : AState} {m m' : Mem} (hS : StageR vis fe m a)
     (hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] m m') (hE : EnvR m' vis' fe') :
     StageR vis' fe' m' a ∧ IWGrow m m' := by
@@ -215,7 +215,7 @@ theorem papW_ok {p : Prog}     (hs : p.lookup "env_row_set" = some envRowSetL) (
   obtain ⟨-, hget⟩ := decNL_getW m pl.toNat po.toNat ps hps
   obtain ⟨w, hw, hwv⟩ := hget i hil
   have hrd1 : rdW (m.arr64 IW) (po + (j - 1)) = w := by
-    simp only [rdW, hpoi]; simp only [iwA] at hw; rw [hw]; rfl
+    simp only [rdW, hpoi]; simp only [iwA, aread_apply, aread_apply] at hw; rw [hw]; rfl
   have hst := FA2.getElem hfa i hil (by omega)
   have hdp : decPrev dn m ps[i] = some prevs[i] := hst.get
   simp only [decPrev, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdp
@@ -228,15 +228,15 @@ theorem papW_ok {p : Prog}     (hs : p.lookup "env_row_set" = some envRowSetL) (
   rename_i hwn32
   simp only [Option.some.injEq] at hnm
   have hq0 : ps[i] < (m.arr64 IW).size := by
-    have := (Array.getElem?_eq_some_iff.mp (by simpa [iwA] using hwn)).1; exact this
+    have := (Array.getElem?_eq_some_iff.mp (by simpa [iwA, aread_apply, aread_apply] using hwn)).1; exact this
   have hq2 : ps[i] + 2 < (m.arr64 IW).size := by
-    have := (Array.getElem?_eq_some_iff.mp (by simpa [iwA] using hq)).1; exact this
+    have := (Array.getElem?_eq_some_iff.mp (by simpa [iwA, aread_apply, aread_apply] using hq)).1; exact this
   have e0 : w.toNat = ps[i] := hwv
   have e1 : (w + 1).toNat = ps[i] + 1 := by rw [UInt64.toNat_add, e0]; simp; omega
   have e2 : (w + 2).toNat = ps[i] + 2 := by rw [UInt64.toNat_add, e0]; simp; omega
-  have r0 : rdW (m.arr64 IW) w = wn := by simp only [rdW, e0]; simp only [iwA] at hwn; rw [hwn]; rfl
-  have r1 : rdW (m.arr64 IW) (w + 1) = c := by simp only [rdW, e1]; simp only [iwA] at hc; rw [hc]; rfl
-  have r2 : rdW (m.arr64 IW) (w + 2) = q := by simp only [rdW, e2]; simp only [iwA] at hq; rw [hq]; rfl
+  have r0 : rdW (m.arr64 IW) w = wn := by simp only [rdW, e0]; simp only [iwA, aread_apply, aread_apply] at hwn; rw [hwn]; rfl
+  have r1 : rdW (m.arr64 IW) (w + 1) = c := by simp only [rdW, e1]; simp only [iwA, aread_apply, aread_apply] at hc; rw [hc]; rfl
+  have r2 : rdW (m.arr64 IW) (w + 2) = q := by simp only [rdW, e2]; simp only [iwA, aread_apply, aread_apply] at hq; rw [hq]; rfl
   rw [papW.loop1.arm1 (hc1 := h0), hrd1, r0, r1, r2] at h
   cases c1 : callW p k "env_pop_temp" [vis, wn, c, q] m with
   | none => rw [c1, papW.k_env_pop_temp.none] at h; cases h

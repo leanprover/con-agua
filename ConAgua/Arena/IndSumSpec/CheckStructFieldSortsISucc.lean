@@ -120,9 +120,9 @@ theorem sumDecHL_write_front {k : IdxKind} (m : Mem) (o kk : Nat) (w v : Word) (
   simp only [decHL, hslice?_succ] at h ⊢
   have e1 : (hslice? (iwA (m.set64 IW w v)) (o + 1) kk : Option (List (Idx k))) =
       hslice? (iwA m) (o + 1) kk :=
-    hslice?_congr _ _ _ _ _ fun i _ => by simp only [iwA, set64IW_get]; rw [ite_eq_right (by omega)]
+    hslice?_congr _ _ _ _ _ fun i _ => by simp only [iwA, aread_apply, set64IW_get]; rw [ite_eq_right (by omega)]
   have e0 : (hd? (iwA (m.set64 IW w v)) o : Option (Idx k)) = some (decI v) := by
-    simp [hd?, iwA, set64IW_get, hw, hsz, hv]
+    simp [hd?, iwA, aread_apply, set64IW_get, hw, hsz, hv]
   rw [e1, e0, h]; rfl
 
 theorem sum_toNat_add {a b : Word} (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by

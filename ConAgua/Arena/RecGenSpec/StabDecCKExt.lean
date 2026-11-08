@@ -39,7 +39,7 @@ theorem perturb {m : Mem} {i : Nat} (hi : iwTop m ≤ i) (hil : i < (m.arr64 IW)
 
 theorem iwN_set_word {m : Mem} {i : Nat} {v : Nat} (h : iwN m i = some v) :
     ∃ w : Word, (m.arr64 IW)[i]? = some w ∧ w.toNat = v := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, rfl⟩ := h; exact ⟨w, hw, rfl⟩
 
 theorem word_succ_ne (w : Word) : (w + 1).toNat ≠ w.toNat := by
@@ -70,7 +70,7 @@ theorem stab_decCK_ext {m : Mem} {k : Nat} {ck : ClassKey} (h : StabD (fun m => 
     obtain ⟨hg, hset, hother⟩ := perturb hge hil hsz (w + 1)
     obtain ⟨-, -, o', l', ho', hl', hds', -, -, -, -⟩ := hgetN (h _ hg)
     have e : iwN (m.set64 IW (UInt64.ofNat (k + 3)) (w + 1)) (k + 3) = some (w + 1).toNat := by
-      simp only [iwN, nat?, iwA]; rw [hset]; rfl
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hset]; rfl
     rw [e] at hl'; cases hl'
     have e1 := decHL_length _ hds; have e2 := decHL_length _ hds'
     exact word_succ_ne w (by omega)
@@ -85,19 +85,19 @@ theorem stab_decCK_ext {m : Mem} {k : Nat} {ck : ClassKey} (h : StabD (fun m => 
   have hlast := decHL_getI hds (l - 1) (by omega)
   rw [show o + (l - 1) = o + l - 1 by omega] at hlast
   obtain ⟨w, hw, hwH, hwd⟩ := hd?_some hlast
-  simp only [iwA] at hw
+  simp only [iwA, aread_apply, aread_apply] at hw
   have hil := (Array.getElem?_eq_some_iff.mp hw).1
   obtain ⟨hg, hset, hother⟩ := perturb hge hil hsz (w + 1)
   obtain ⟨-, -, o', l', ho', hl', hds', -, -, -, -⟩ := hgetN (h _ hg)
   have e2 : iwN (m.set64 IW (UInt64.ofNat (o + l - 1)) (w + 1)) (k + 2) = some o := by
-    simp only [iwN, nat?, iwA]; rw [hother _ (by omega)]; simpa [iwN, nat?, iwA] using ho
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hother _ (by omega)]; simpa [iwN, nat?, iwA, aread_apply, aread_apply] using ho
   have e3 : iwN (m.set64 IW (UInt64.ofNat (o + l - 1)) (w + 1)) (k + 3) = some l := by
-    simp only [iwN, nat?, iwA]; rw [hother _ (by omega)]; simpa [iwN, nat?, iwA] using hl
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hother _ (by omega)]; simpa [iwN, nat?, iwA, aread_apply, aread_apply] using hl
   rw [e2] at ho'; rw [e3] at hl'; cases ho'; cases hl'
   have hlast' := decHL_getI hds' (l - 1) (by omega)
   rw [show o + (l - 1) = o + l - 1 by omega] at hlast'
   obtain ⟨w', hw', hwH', hwd'⟩ := hd?_some hlast'
-  simp only [iwA] at hw'
+  simp only [iwA, aread_apply, aread_apply] at hw'
   rw [hset] at hw'; cases hw'
   have : (decI w : EIdx) = decI (w + 1) := by
     first | exact hwd.symm.trans hwd' | exact hwd.trans hwd'.symm | exact hwd.symm.trans hwd'.symm | exact hwd.trans hwd'
@@ -139,10 +139,10 @@ theorem stab_decCS_ext {m : Mem} {sp : Nat} {slot : ClassSlot} (h : StabD (fun m
       have hil := (Array.getElem?_eq_some_iff.mp hw).1
       obtain ⟨hg, hset, hother⟩ := perturb hge hil hsz (UInt64.ofNat (2 ^ 64 - 1))
       have ht' : iwN (m.set64 IW (UInt64.ofNat (sp + 1)) (UInt64.ofNat (2 ^ 64 - 1))) sp = some 0 := by
-        simp only [iwN, nat?, iwA]; rw [hother _ (by omega)]; simpa [iwN, nat?, iwA] using ht
+        simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hother _ (by omega)]; simpa [iwN, nat?, iwA, aread_apply, aread_apply] using ht
       rcases decCS_some_cases (h _ hg) with ⟨-, kp', k', hkp', hk', -⟩ | ⟨ht'', -⟩
       · have e : iwN (m.set64 IW (UInt64.ofNat (sp + 1)) (UInt64.ofNat (2 ^ 64 - 1))) (sp + 1) =
-            some (2 ^ 64 - 1) := by simp only [iwN, nat?, iwA]; rw [hset]; rfl
+            some (2 ^ 64 - 1) := by simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hset]; rfl
         rw [e] at hkp'; cases hkp'
         have h1 := decCK_lt_size hk'
         have h2 : ((m.set64 IW (UInt64.ofNat (sp + 1)) (UInt64.ofNat (2 ^ 64 - 1))).arr64 IW).size =
@@ -153,12 +153,12 @@ theorem stab_decCS_ext {m : Mem} {sp : Nat} {slot : ClassSlot} (h : StabD (fun m
       have hil := (Array.getElem?_eq_some_iff.mp hw).1
       obtain ⟨hg, hset, hother⟩ := perturb hge hil hsz (w + 1)
       have ht' : iwN (m.set64 IW (UInt64.ofNat (sp + 1)) (w + 1)) sp = some 1 := by
-        simp only [iwN, nat?, iwA]; rw [hother _ (by omega)]; simpa [iwN, nat?, iwA] using ht
+        simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hother _ (by omega)]; simpa [iwN, nat?, iwA, aread_apply, aread_apply] using ht
       have h1 := h _ hg
       rcases decCS_some_cases h1 with ⟨ht'', -⟩ | ⟨-, c', hc', cc', ihs', heq⟩
       · rw [ht'] at ht''; cases ht''
       · have e : iwN (m.set64 IW (UInt64.ofNat (sp + 1)) (w + 1)) (sp + 1) = some (w + 1).toNat := by
-          simp only [iwN, nat?, iwA]; rw [hset]; rfl
+          simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hset]; rfl
         rw [e] at hc'; cases hc'
         simp only [ClassSlot.minor.injEq] at heq
         exact word_succ_ne w heq.1.symm

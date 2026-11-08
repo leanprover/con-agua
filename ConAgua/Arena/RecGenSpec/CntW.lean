@@ -36,7 +36,7 @@ open L.Arena
 
 /-- **`sl_cons` of a decoded record onto a decoded slice** (its model's run), with its frame. -/
 theorem clsConsW {α : Type} {f : Mem → Nat → Option α}
-    (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (hf : ∀ q, OMono (fun m => f m q)) {vis : Word} {fe : IFEnv}
     {a : AState} {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
     (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
@@ -47,7 +47,7 @@ theorem clsConsW {α : Type} {f : Mem → Nat → Option α}
 
 /-- **`sl_cons` of a decoded record onto a decoded slice**, with its frame. -/
 theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
-    (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (hf : ∀ q, OMono (fun m => f m q)) {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :

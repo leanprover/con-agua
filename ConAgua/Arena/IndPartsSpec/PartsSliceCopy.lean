@@ -66,7 +66,7 @@ theorem partsErToIw_zero (n : Nat) (m : Mem) (o : Word) : erToIwW n m o 0 = erTo
   · simp only; rw [erCopyW_zero _ _ _ o 0]
 
 /-- **`er_to_iw` of an `EREC` handle slice decoded below the tops.** -/
-theorem partsSliceCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem partsSliceCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {o l : Word} {r : List Word} {xs : List NIdx} (h : erToIwW n m o l = some (r, m'))
     (hS : StageR vis fe m a) (hs : hslice? (erA (truncM m)) o.toNat l.toNat = some xs) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
@@ -104,7 +104,7 @@ theorem partsSliceCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     exact hdl _ h (by omega) hs'
 
 /-- `er_to_iw` of a constant's level-parameter slice (decoded below the tops), as a handle slice. -/
-theorem partsLpsCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem partsLpsCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Nat} {cv : IConstantVal} {r : List Word}
     (h : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat q + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat q + 2)) =
       some (r, m'))

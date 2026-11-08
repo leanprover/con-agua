@@ -260,8 +260,8 @@ theorem slR_of_decHL {k : IdxKind} (m : Mem) : ∀ (n off : Nat) (ns : List (Idx
       | some xs =>
         simp [hx, hxs] at h
         obtain ⟨ws, hws, rfl, hlt⟩ := ih (off + 1) xs hxs (by omega)
-        simp only [hd?] at hx
-        cases hw : (iwA m)[off]? with
+        simp only [hd?, iwA, aread_apply] at hx
+        cases hw : (m.arr64 IW)[off]? with
         | none => simp [hw] at hx
         | some w =>
           simp only [hw] at hx
@@ -270,7 +270,7 @@ theorem slR_of_decHL {k : IdxKind} (m : Mem) : ∀ (n off : Nat) (ns : List (Idx
             subst h
             refine ⟨w :: ws, ?_, by simp [hx], ?_⟩
             · have e1 : rdW (m.arr64 IW) (UInt64.ofNat off) = w := by
-                simp only [rdW, iwA] at hw ⊢
+                simp only [rdW] at hw ⊢
                 have : (UInt64.ofNat off).toNat = off := by simp; omega
                 rw [this, hw]; rfl
               have e2 : UInt64.ofNat off + 1 = UInt64.ofNat (off + 1) := by
@@ -412,7 +412,7 @@ open L.Arena
 /-! ## Frames: the pool's writers keep the checker state -/
 
 /-- **A writer of `IW` and `CTL[200]` keeps `CheckR`.** -/
-theorem CheckR.frame_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+theorem CheckR.frame_iw {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} (hf : MemFrame [IW] [200] m m') (h : CheckR m a vis fe) : CheckR m' a vis fe :=
   ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; decide)
       (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf h.arena.base,
@@ -488,7 +488,7 @@ variable {m : Mem}
 
 theorem iwN_rdW {i v : Nat} (h : iwN m i = some v) (hi : i < 2 ^ 64) :
     rdW (m.arr64 IW) (UInt64.ofNat i) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, rfl⟩ := h
   have : (UInt64.ofNat i).toNat = i := by simp; omega
   simp only [rdW, this, hw, Option.getD_some]
@@ -496,7 +496,7 @@ theorem iwN_rdW {i v : Nat} (h : iwN m i = some v) (hi : i < 2 ^ 64) :
 
 theorem iwH_rdW {k : IdxKind} {i : Nat} {x : Idx k} (h : iwH m i = some x) (hi : i < 2 ^ 64) :
     ∃ w, rdW (m.arr64 IW) (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  simp only [iwH, hd?, iwA] at h
+  simp only [iwH, hd?, iwA, aread_apply, aread_apply] at h
   cases hw : (m.arr64 IW)[i]? with
   | none => simp [hw] at h
   | some w =>
@@ -656,7 +656,7 @@ open L.Arena
 /-- **A writer below array 64 and `CTL[64]` (an interning, a `mk_*`, a walk) keeps the stage
 relation**, given its `ArenaD` after and the twin keeping caches and pins; the pool is
 untouched, so it only grew. -/
-theorem StageR.of_walkM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem StageR.of_walkM {vis : Word} {fe : IFEnv}
     {m m' : Mem} {a a' : AState} {A : List TieredArray} {C : List Word}
     (hS : StageR vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
@@ -677,7 +677,7 @@ theorem StageR.of_walkM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
     · simp only [erTop, h129]; exact Nat.le_refl _
 
 /-- `StageR.of_walkM` for a walk that keeps `CTL[0]` and `CTL[1]`. -/
-theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem StageR.of_walk {vis : Word} {fe : IFEnv}
     {m m' : Mem} {a a' : AState} {A : List TieredArray} {C : List Word}
     (hS : StageR vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)

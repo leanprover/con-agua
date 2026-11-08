@@ -253,7 +253,7 @@ def ESl (m : Mem) (o l : Word) (xs : List NIdx) : Prop :=
 theorem CapsWords.grow {m m' : Mem} {q : Nat} {ws : List Word} (h : CapsWords m q ws)
     (hg : IWGrow m m') : CapsWords m' q ws :=
   ⟨Nat.le_trans h.1 hg.iw, fun i hi => by
-    simp only [iwA]; rw [hg.iwGet _ (by have := h.1; omega)]; exact h.2 i hi⟩
+    simp only [iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by have := h.1; omega)]; exact h.2 i hi⟩
 
 theorem installHslice_ext {a b : Array Word} {o l : Nat} {xs : List NIdx}
     (he : ∀ j < l, b[o + j]? = a[o + j]?) (h : hslice? (aread a) o l = some xs) : hslice? (aread b) o l = some xs := by
@@ -288,7 +288,7 @@ theorem ctorNamesW_room {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     simp only [iwTop]; rw [hq] at hr; exact hr
 
 /-- An `EREC` copy of an `IW` handle slice, under the stage relation. -/
-theorem installErCopy {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
+theorem installErCopy {p : Prog} (hP : CapsProg p) {n : Nat}
     {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState} {o l : Word} {r : List Word} {xs : List NIdx}
     (h : callW p n "block_caps_at_er_copy" [o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
@@ -306,7 +306,7 @@ theorem installErCopy {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Opti
   rw [htq]
   exact installHslice_copy (a := iwA m) (o := o.toNat) (fun j hj => hcp j hj) hd
 
-theorem installRec5 {dn : NIdx → Option ConLeche.Name}
+theorem installRec5
     {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState} {ws r : List Word}
     (h : recW m 5 ws = some (r, m')) (hS : StageR vis fe m a) (hl : ws.length = 5) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200] ∧
@@ -317,7 +317,7 @@ theorem installRec5 {dn : NIdx → Option ConLeche.Name}
 
 /-- **`block_caps_fin`'s record**: the stage relation kept, the 15 words at the returned pointer,
 the member names and the ctor names as `EREC` slices below the record pool's top. -/
-theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
+theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
     {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState}
     {pp coff clen w0 w1 w2 w3 w4 w6 z0 z1 z2 : Word} {r : List Word} {bs : BlockShape}
     {cs : List (IConstantVal × Nat)}
@@ -638,7 +638,7 @@ theorem icaW_simG {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option C
     obtain ⟨w8, hw8, hw8p⟩ := hpr'
     obtain ⟨-, hw8i⟩ := truncM_iw_get hw8
     have h8 : (pp + 8).toNat = pp.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-    have hrw8 : rdW (m.arr64 IW) (pp + 8) = w8 := rdW_of_get? h8.symm (by simpa [iwA] using hw8i)
+    have hrw8 : rdW (m.arr64 IW) (pp + 8) = w8 := rdW_of_get? h8.symm (by simpa [iwA, aread_apply, aread_apply] using hw8i)
     have hcb1 : co.toNat + (1 : Word).toNat ≤ iwTop m := hcb.resolve_left (by decide)
     refine hlz (capsOne m pp (UInt64.ofNat v) isRec) [c] co 1 _ ⟨by rw [← hcs]; exact hcd, hcb1⟩
       (by simp only [capsOne, List.headD_cons, List.tail_cons, hw2, hwc, hwcv]; exact hn32)
@@ -891,7 +891,7 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
       have gen : ∀ w : Word, w.toNat = caps.toNat + i →
           (iirWs m cv caps)[5 + i]? = some (rdW (m.arr64 IW) w) →
           (iirWs m cv caps)[5 + i]? = (iwA m)[caps.toNat + i]? := fun w hw h => by
-        rw [h, ← hw]; simp only [iwA, rdW]; rw [Array.getElem?_eq_getElem (by omega)]; simp
+        rw [h, ← hw]; simp only [iwA, aread_apply, rdW]; rw [Array.getElem?_eq_getElem (by omega)]; simp
       rcases i with _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | i
       all_goals first
         | omega

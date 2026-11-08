@@ -320,7 +320,7 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
 /-! ## Reading decoded words without side conditions on the index -/
 
 theorem iwN_idx {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, -⟩ := h
   exact (Array.getElem?_eq_some_iff.mp hw).1
 

@@ -67,7 +67,7 @@ theorem bphDecEBlk_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat
 /-! ## The name words -/
 
 /-- A pointer word and the name word of its record, read in the real pools. -/
-theorem bphNameAt {dn : NIdx → Option ConLeche.Name} {m : Mem} {A : Array Word} {base i : Word}
+theorem bphNameAt {m : Mem} {A : Array Word} {base i : Word}
     {v : Nat} {ci : IConstantInfo} (hA : A.size < 2 ^ 64) (hE : (m.arr64 EREC).size < 2 ^ 64)
     (hv : nat? (aread A) (base.toNat + i.toNat) = some v) (hci : decCI (erA (truncM m)) v = some ci) :
     ∃ w, rdW (m.arr64 EREC) (rdW A (base + i) + 1) = w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
@@ -87,7 +87,7 @@ theorem bphNameAt {dn : NIdx → Option ConLeche.Name} {m : Mem} {A : Array Word
   rw [e1]; simp [rdW, h1, hwn']
 
 /-- The pinned block's name word `i`. -/
-theorem bphPinName {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Word}
+theorem bphPinName {m : Mem} {o l : Word}
     {pinned : List IConstantInfo}
     (hP : decPL (truncM m) (fun q => decCI (erA (truncM m)) q) o.toNat l.toNat = some pinned)
     (hI : (m.arr64 IW).size < 2 ^ 64) (hE : (m.arr64 EREC).size < 2 ^ 64) (i : Word)

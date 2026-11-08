@@ -64,7 +64,7 @@ end sims
 
 /-- **A fresh record keeps the stage relation**: the pointer is the old top, the words are
 there, the pool grew. -/
-theorem recW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem recW_stage {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m'))
     (hS : StageR vis fe m a) (hk : k.toNat = ws.length) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200] ∧
@@ -108,7 +108,7 @@ theorem piBW_room (n : Nat) (m m' : Mem) (a : AState) (fuel h : Word) (rs : List
   exact consW_room hcons hsz1 hc1 hle1 hty2 hdec1
 
 /-- `pi_binders` as a simulation: the twin keeps its state, the binders a slice below the top. -/
-theorem simPiBinders {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+theorem simPiBinders {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (n : Nat) (hS : StageR vis fe m a) {h : Word} (hh : H h) :
     RSim (piBW n m CWF h) (ConRon.Arena.piBinders coreWalkFuel (decI h)) a
       (fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧

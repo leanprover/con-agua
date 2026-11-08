@@ -349,14 +349,14 @@ theorem snocW_dec {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : Li
       rw [← hxs]; simp only [decHL]
       apply hslice?_congr
       intro j hj
-      simp only [iwA, hget]
+      simp only [iwA, aread_apply, hget]
       rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       congr 1; omega
     have h2 : (hslice? (iwA (m2.set64 IW (q + l) x)) (q.toNat + l.toNat) 1 :
         Option (List EIdx)) = some [decI x] := by
       rw [hslice?_succ]
       have : (hd? (iwA (m2.set64 IW (q + l) x)) (q.toNat + l.toNat) : Option EIdx) =
-          some (decI x) := by simp [hd?, iwA, hget, hx]
+          some (decI x) := by simp [hd?, iwA, aread_apply, hget, hx]
       rw [this]; simp [hslice?]
     rw [h1, h2]; simp
   · refine iwGrow_of_frame hfr' (N := l + 1) ?_ ?_ hsz ?_
@@ -469,7 +469,7 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
       rw [← hxs]; simp only [decHL]
       apply hslice?_congr
       intro j hj
-      simp only [iwA, hget]
+      simp only [iwA, aread_apply, hget]
       rw [ite_eq_left (by omega)]
       congr 1; omega
     have h2 : (hslice? (iwA m3) (q.toNat + l1.toNat) l2.toNat : Option (List EIdx)) =
@@ -477,7 +477,7 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
       rw [← hys]; simp only [decHL]
       apply hslice?_congr
       intro j hj
-      simp only [iwA, hget]
+      simp only [iwA, aread_apply, hget]
       rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       congr 1; omega
     rw [h1, h2]; simp
@@ -654,7 +654,7 @@ theorem erToIwW_dec {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List 
   · simp only [decHL]
     apply hslice?_congr
     intro j hj
-    simp only [iwA, erA, hG]
+    simp only [iwA, aread_apply, erA, hG]
     rw [ite_eq_left (by omega)]
     congr 1; omega
   · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_

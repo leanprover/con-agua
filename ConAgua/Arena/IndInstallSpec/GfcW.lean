@@ -118,7 +118,7 @@ end rel
 /-- **`gen_rec_check_former_tys` is `cvTas.map (·.type)`**, a fresh slice. -/
 theorem genRecCheckFormerTys_refines {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "gen_rec_check_former_tys" = some genRecCheckFormerTys) (n : Nat) (s₀ : St) (a : AState)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (cO cL : Word) (cvTas : List IConstantVal)
+    {vis : Word} {fe : IFEnv} (cO cL : Word) (cvTas : List IConstantVal)
     (hS : StageR vis fe s₀.mem a) (hcv : PSlR decCVp cvTas cO cL s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_former_tys" [cO, cL]
     ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a ∧ IWGrow s₀.mem s'.mem ∧ MFr [] [] s₀.mem s'.mem ∧

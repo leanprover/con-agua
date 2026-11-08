@@ -94,7 +94,7 @@ theorem AgreeA.trans {b : Nat} {m₁ m₂ m₃ : Mem} (h₁ : AgreeA b m₁ m₂
 
 theorem AgreeA.iwN {b : Nat} {m m' : Mem} (h : AgreeA b m m') {i : Nat} (hb : b ≤ i) (hi : i < iwTop m) :
     iwN m' i = iwN m i := by
-  simp only [L.Ind.iwN, nat?, iwA]; rw [h.2.2.1 i hb hi]
+  simp only [L.Ind.iwN, nat?, iwA, aread_apply, aread_apply]; rw [h.2.2.1 i hb hi]
 
 /-- `f` decodes `x` in every memory agreeing with `m` from `b` on. -/
 def StabA {α : Type} (b : Nat) (f : Mem → Option α) (m : Mem) (x : α) : Prop :=

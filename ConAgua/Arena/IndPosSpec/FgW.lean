@@ -110,7 +110,7 @@ namespace L.Ind
 open L.Arena
 
 /-- `nest_frame_mates_go` keeps the stage relation (it writes `IW` by `sl_snoc` only). -/
-theorem matesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) :
+theorem matesW_stage {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) :
     ∀ (m m' : Mem) (c off l oO oL : Word) (r : List Word),
     matesW n m c off l oO oL = some (r, m') → StageR vis fe m a → StageR vis fe m' a := by
   induction n with
@@ -213,8 +213,8 @@ theorem pos2_hole_rec {m' : Mem} {p key hi : Word} {K : NestKey}
     decNH m' p.toNat = some ⟨K, hi.toNat⟩ ∧ NHIn m' p.toNat (· < iwTop m') := by
   have g0 : (m'.arr64 IW)[p.toNat]? = some key := by simpa using hget 0 (by simp)
   have g1 : (m'.arr64 IW)[p.toNat + 1]? = some hi := by simpa using hget 1 (by simp)
-  have e0 : iwN m' p.toNat = some key.toNat := by simp [iwN, nat?, iwA, g0]
-  have e1 : iwN m' (p.toNat + 1) = some hi.toNat := by simp [iwN, nat?, iwA, g1]
+  have e0 : iwN m' p.toNat = some key.toNat := by simp [iwN, nat?, iwA, aread_apply, g0]
+  have e1 : iwN m' (p.toNat + 1) = some hi.toNat := by simp [iwN, nat?, iwA, aread_apply, g1]
   refine ⟨by simp [decNH, e0, e1, hK], by omega, by omega, fun k hk => ?_⟩
   rw [e0] at hk; cases hk; exact hKin
 -/

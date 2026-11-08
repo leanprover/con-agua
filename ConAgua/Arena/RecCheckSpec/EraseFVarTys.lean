@@ -72,7 +72,7 @@ theorem eraseFVarTys_spec (p : Prog) (L : RxLook p) (hp : p.lookup "erase_fvar_t
     finish (gen := 20) [eftW]
 
 /-- A fresh `FvMap` record of words `ws` (`recW`): what `replace_fvars` needs of it, and the frames. -/
-theorem rcFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem} {a : AState}
+theorem rcFresh {vis : Word} {fe : IFEnv} {m m1 : Mem} {a : AState}
     {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m1)) (hS : StageR vis fe m a)
     (hk : k.toNat = ws.length) :
     r = [rdW (m.arr64 CTL) 200] ∧ (rdW (m.arr64 CTL) 200).toNat = iwTop m ∧

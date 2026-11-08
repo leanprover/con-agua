@@ -207,7 +207,7 @@ end spec
 theorem decNK_decB_of_in {m : Mem} {k : Nat} {nk : NestKey} (h : decNK m k = some nk)
     (hin : NKIn m k (· < iwTop m)) : DecB (fun m => decNK m k) m nk := by
   show decNK (truncM m) k = some nk
-  rw [(hin.agree (m' := truncM m) (fun i hi => by simpa [iwA] using truncM_iw_eq hi)).1]; exact h
+  rw [(hin.agree (m' := truncM m) (fun i hi => by simpa [iwA, aread_apply, aread_apply] using truncM_iw_eq hi)).1]; exact h
 
 theorem decCK_decB_of_nk {m : Mem} {k : Nat} {nk : NestKey} (h : DecB (fun m => decNK m k) m nk) :
     DecB (fun m => decCK m k) m (ckOfNk nk) := by

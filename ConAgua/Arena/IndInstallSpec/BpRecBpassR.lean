@@ -105,7 +105,7 @@ theorem bpMem_eq (m : Mem) (q w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 
 /-- **`check_block_pass_rec`'s run**: a fresh 19-word record at the old top, the stage relation
 and the walk memos kept, the pool grown. -/
 theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {m m' : Mem}
+    {vis : Word} {fe : IFEnv} {a : AState} {m m' : Mem}
     {r : List Word} {w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 : Word}
     (h : icprW p n m w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 = some (r, m'))
     (hS : StageR vis fe m a) (hP : PosMR m) :
@@ -166,7 +166,7 @@ theorem bpRec_bpassR {m : Mem} {q : Word} {fe : IFEnv}
       some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17,
         w18][j]'(by simpa using _hj)).toNat := fun j _hj => by
     rw [iwN_truncM (by omega)]
-    simp only [iwN, nat?, iwA, hget j _hj]
+    simp only [iwN, nat?, iwA, aread_apply, hget j _hj]
     rw [List.getElem?_eq_getElem (by simp; omega)]; rfl
   have hwm : ∀ j (_hj : j < 19), iwN m (q.toNat + j) =
       some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17,

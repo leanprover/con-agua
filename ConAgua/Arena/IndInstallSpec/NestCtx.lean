@@ -59,7 +59,7 @@ theorem nIdxsW_room {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     simp only [iwTop]; rw [hq] at hr; exact hr
 
 /-- **`block_shape_lps`, below the tops** (no global bound on the record pool needed). -/
-theorem lpsW_ok' {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem lpsW_ok' {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Word} {r : List Word} {bs : BlockShape} (h : lpsW n m q = some (r, m'))
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m q.toNat) m bs) :
     StageR vis fe m' a ∧ IWGrow m m' ∧

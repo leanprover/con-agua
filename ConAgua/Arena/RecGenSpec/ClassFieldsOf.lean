@@ -61,7 +61,7 @@ theorem AgreeA.mono {b b' : Nat} {m m' : Mem} (hb : b ≤ b') (h : AgreeA b m m'
 
 theorem AgreeA.iwH {k : IdxKind} {b : Nat} {m m' : Mem} (h : AgreeA b m m') {i : Nat} (hb : b ≤ i)
     (hi : i < iwTop m) : (iwH m' i : Option (Idx k)) = iwH m i := by
-  simp only [L.Ind.iwH, hd?, iwA]; rw [h.2.2.1 i hb hi]
+  simp only [L.Ind.iwH, hd?, iwA, aread_apply, aread_apply]; rw [h.2.2.1 i hb hi]
 
 namespace StabA
 variable {α : Type} {b : Nat} {f : Mem → Option α} {m m' : Mem} {x : α}
@@ -102,7 +102,7 @@ theorem toSPL (h : SPLA b dec m o l xs) : SPL dec m o l xs := by
 
 /-- `sl_cons` of a pointer decoding stably above `b` onto a slice stable above `b`, at a top from
 `b` on. -/
-theorem cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem cons {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {x ow lw : Word} {r : List Word} {y : α} (h : consW n m x ow lw = some (r, m'))
     (hS : StageR vis fe m a) (hl : SPLA b dec m ow.toNat lw.toNat xs) (hbt : b ≤ iwTop m)
     (hy : StabA b (fun m => dec m x.toNat) m y) :
@@ -131,7 +131,7 @@ theorem rec2RecW_decCF_A {m m' : Mem} {k : Word} {ws r : List Word} {y : ClassFi
   have hlt : (rdW (m.arr64 CTL) 200).toNat + j < iwTop m' := by rw [htop]; simp [iwTop]; omega
   simp only [List.headD_cons]
   rw [hA.iwN (by simp only [iwTop] at hb; omega) hlt]
-  simp only [L.Ind.iwN, nat?, iwA, hget j hj, List.getElem?_eq_getElem hj, Option.map_some]
+  simp only [L.Ind.iwN, nat?, iwA, aread_apply, hget j hj, List.getElem?_eq_getElem hj, Option.map_some]
 
 /-- The post of `class_fields_of(_go)`: the stage relation, growth, the fields' kinds a stable slice,
 `nest_occ`'s memo relation at some map, and the write set outside the other walk memos (lane
@@ -179,7 +179,7 @@ theorem rec6_decCC {m m' : Mem} {q : Word} {cvw nFw ko kl tyD tyN : Word} {cv : 
   have hw : ∀ j (hj : j < 6), iwN m'' (q.toNat + j) =
       some ([cvw, nFw, ko, kl, tyD, tyN][j]'(by simpa using hj)).toNat := fun j hj => by
     rw [hA.iwN (by omega) (by omega)]
-    simp only [iwN, nat?, iwA]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]
     rw [hget j hj, List.getElem?_eq_getElem (by simp; omega)]; rfl
   have h0 := hw 0 (by omega)
   have h1 := hw 1 (by omega)
@@ -187,12 +187,12 @@ theorem rec6_decCC {m m' : Mem} {q : Word} {cvw nFw ko kl tyD tyN : Word} {cv : 
   have h3 := hw 3 (by omega)
   have hhD : (iwH m'' (q.toNat + 4) : Option EIdx) = some (decI tyD) := by
     rw [hA.iwH (by omega) (by omega)]
-    simp only [iwH, hd?, iwA]
+    simp only [iwH, hd?, iwA, aread_apply, aread_apply]
     rw [hget 4 (by omega)]
     simp [hD]
   have hhN : (iwH m'' (q.toNat + 5) : Option EIdx) = some (decI tyN) := by
     rw [hA.iwH (by omega) (by omega)]
-    simp only [iwH, hd?, iwA]
+    simp only [iwH, hd?, iwA, aread_apply, aread_apply]
     rw [hget 5 (by omega)]
     simp [hN]
   simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at h0 h1 h2 h3

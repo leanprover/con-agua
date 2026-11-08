@@ -105,7 +105,7 @@ theorem decCNSB_decCNS {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
 
 /-- **A `rec2` header `[off, len]` of a slice decoded below the tops**, decoded below the tops. -/
 theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
-    (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (hf : ∀ q, OMono (fun m => f m q)) {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
     (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR vis fe m a) (hx : PSlR f xs o l m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
@@ -117,11 +117,11 @@ theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
   have hq1 : (rdW (m.arr64 CTL) 200).toNat + 1 < iwTop m' := by rw [htop]; simp [iwTop]
   have w0 : iwN (truncM m') (rdW (m.arr64 CTL) 200).toNat = some o.toNat := by
     rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
-    simp [iwN, nat?, iwA, this]
+    simp [iwN, nat?, iwA, aread_apply, this]
   have w1 : iwN (truncM m') ((rdW (m.arr64 CTL) 200).toNat + 1) = some l.toNat := by
     rw [iwN_truncM hq1]; have := hget 1 (by simp)
     simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
-    simp [iwN, nat?, iwA, this]
+    simp [iwN, nat?, iwA, aread_apply, this]
   have hd := hx.dec.grow (OMono.decPL hf _ _) hg
   show decAt (truncM m') _ _ = some xs
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some]
@@ -130,7 +130,7 @@ theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A `rec2` header `[off, len]` of a slice below the tops**, decoded with its bound. -/
 theorem installRec2PSlB {α : Type} {f : Mem → Nat → Option α}
-    (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (hf : ∀ q, OMono (fun m => f m q)) {vis : Word} {fe : IFEnv}
     {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
     (hW : recW m 2 [o, l] = some (r, m')) (hS : StageR vis fe m a) (hx : PSlR f xs o l m) :
     DecB (fun m => decAt m (fun o l => decPLB m (f m) o l) (r.headD 0).toNat) m' xs := by
@@ -140,11 +140,11 @@ theorem installRec2PSlB {α : Type} {f : Mem → Nat → Option α}
   have hq1 : (rdW (m.arr64 CTL) 200).toNat + 1 < iwTop m' := by rw [htop]; simp [iwTop]
   have w0 : iwN (truncM m') (rdW (m.arr64 CTL) 200).toNat = some o.toNat := by
     rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
-    simp [iwN, nat?, iwA, this]
+    simp [iwN, nat?, iwA, aread_apply, this]
   have w1 : iwN (truncM m') ((rdW (m.arr64 CTL) 200).toNat + 1) = some l.toNat := by
     rw [iwN_truncM hq1]; have := hget 1 (by simp)
     simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
-    simp [iwN, nat?, iwA, this]
+    simp [iwN, nat?, iwA, aread_apply, this]
   have hd := hx.dec.grow (OMono.decPL hf _ _) hg
   show decAt (truncM m') _ _ = some xs
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some, decPLB]

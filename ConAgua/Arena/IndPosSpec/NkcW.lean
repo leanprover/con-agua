@@ -274,7 +274,7 @@ theorem nkcW_ok (k : Word) (K : NestKey) : ∀ (n : Nat) (m : Mem) (o l r : Word
     rw [hl'] at hks
     obtain ⟨v, K0, ks', rfl, hoi, hv, hK0, hks'⟩ := hks.cons
     have hrd : (rdW (m.arr64 IW) o).toNat = v := by
-      simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hv
+      simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hv
       obtain ⟨w, hw, rfl⟩ := hv; simp [rdW, hw]
     rcases he : nkeWf n m (rdW (m.arr64 IW) o) k with _ | r0 <;> rw [he] at h; · simp [nkcK] at h
     have hr0 := nkeWf_ok he (by rw [hrd]; exact hK0) hK htop
@@ -341,10 +341,10 @@ theorem pos2_decB_snoc (hf : ∀ q, OMono (fun m => f m q)) {m m' : Mem} {o l q 
     by_cases hjl : j < xs.length
     · obtain ⟨v, h1, h2, h3⟩ := he j hjl
       refine ⟨v, by omega, ?_, by rw [List.getElem_append_left hjl]; exact (DecB.grow (hf v) hg h3)⟩
-      simp only [iwN, nat?, iwA] at h2 ⊢; rw [hw j (by omega)]; exact h2
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply] at h2 ⊢; rw [hw j (by omega)]; exact h2
     · have hj' : j = xs.length := by omega
       subst hj'
-      refine ⟨w.toNat, by omega, by simp [iwN, nat?, iwA, hl, hx], ?_⟩
+      refine ⟨w.toNat, by omega, by simp [iwN, nat?, iwA, aread_apply, hl, hx], ?_⟩
       simpa using hxd
   simpa [hl] using this
 

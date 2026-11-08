@@ -56,7 +56,7 @@ theorem iwGrow_truncM (m : Mem) : IWGrow m (truncM m) := by
     simp [CTL, IW, EREC]
   refine ⟨by simp only [iwTop, hc]; exact Nat.le_refl _, by simp only [erTop, hc]; exact Nat.le_refl _,
     fun i hi => ?_, fun i hi => ?_⟩
-  · have := truncM_iw_eq (m := m) hi; simpa [iwA] using this
+  · have := truncM_iw_eq (m := m) hi; simpa [iwA, aread_apply, aread_apply] using this
   · have := truncM_er_eq (m := m) hi; simpa [erA] using this
 
 theorem StabD.decB {α : Type} {f : Mem → Option α} {m : Mem} {x : α} (h : StabD f m x) : DecB f m x :=
@@ -100,9 +100,9 @@ theorem classesLp_of_cnsRec {mb mF : Mem} {mo ml qr : Word} {hi : Nat} {ws : Lis
   have w6 := hwords 6 (by omega) (by omega) (by omega)
   have w7 := hwords 7 (by omega) (by omega) (by omega)
   have ho' : iwN (truncM mb) (p0 + 6) = some o := by
-    simp only [iwN, nat?] at ho ⊢; rw [← w6]; simpa [iwA] using ho
+    simp only [iwN, nat?] at ho ⊢; rw [← w6]; simpa [iwA, aread_apply, aread_apply] using ho
   have hl' : iwN (truncM mb) (p0 + 7) = some l := by
-    simp only [iwN, nat?] at hl ⊢; rw [← w7]; simpa [iwA] using hl
+    simp only [iwN, nat?] at hl ⊢; rw [← w7]; simpa [iwA, aread_apply, aread_apply] using hl
   have hs : decTM (truncM mb) p0 = some src := hsrc
   simp only [decTM, bind, Option.bind_eq_some_iff, pure] at hs
   obtain ⟨_, -, _, -, _, -, _, -, _, -, cts, hct, -⟩ := hs
@@ -236,7 +236,7 @@ theorem cgRec_decB {m : Mem} {g : Word}
       some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using _hj)) := by
     intro j _hj
     rw [truncM_iw_eq (by omega)]
-    simp only [iwA, hget j _hj]
+    simp only [iwA, aread_apply, hget j _hj]
     rw [List.getElem?_eq_getElem (by simp; omega)]
   have hw : ∀ j (_hj : j < 14), iwN (truncM m) (g.toNat + j) =
       some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using _hj)).toNat := by
@@ -361,7 +361,7 @@ theorem decHL_set_out {k : IdxKind} {m : Mem} {x v : Word} {o l : Nat} (h : o + 
   apply mapM_opt_congr
   intro j hj
   have : j < l := List.mem_range.mp hj
-  simp only [hd?, iwA]
+  simp only [hd?, iwA, aread_apply, aread_apply]
   rw [set64IW_get, ite_eq_right (by omega)]
 
 -- ==== S41F.lean
@@ -411,7 +411,7 @@ theorem installIwH {k : IdxKind} {m : Mem} {w : Word} {i : Nat} {x : Idx k}
   simp only [iwH, hd?, bind, Option.bind_eq_some_iff] at h
   obtain ⟨v, hv, hx⟩ := h
   obtain ⟨hi, hv'⟩ := truncM_iw_get hv
-  simp only [iwA] at hv'
+  simp only [iwA, aread_apply, aread_apply] at hv'
   have hlt : w.toNat + i < (m.arr64 IW).size := (Array.getElem?_eq_some_iff.mp hv').1
   have he : (w + UInt64.ofNat i).toNat = w.toNat + i := by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (show i < 2 ^ 64 by omega)]; exact Nat.mod_eq_of_lt (by omega)

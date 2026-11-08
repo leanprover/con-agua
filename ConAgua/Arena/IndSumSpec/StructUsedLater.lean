@@ -325,7 +325,7 @@ end ulspec
 -/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
+theorem ulW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (cty nP n base : Word) (r : List Word)
       (mp : Std.HashMap (EIdx × Nat) Bool),
     nP.toNat + base.toNat + n.toNat + 1 < 2 ^ 64 → H cty →
