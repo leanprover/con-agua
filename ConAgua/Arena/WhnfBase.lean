@@ -22,10 +22,11 @@ Everything the L code of `whnfCore`/`whnf` and their arms (`WhnfSpine.lean`, `Wh
 
 **Arguments.** The twin's bodies take `mode : CheckMode`, the knot record `r : CoreFnsA`, the
 environment view `fe : IFEnv` and `depth : Nat`. In L: a mode word (`decMode`: `0` verified, `1`
-trusted, `2` verified-eager, `3` trusted-eager; bit 0 is "trusted", bit 1 "eager"), the view word
+trusted, `2` verified-eager, `3` trusted-eager; bit 0 is "trusted" (`decMode`), bit 1 the
+twin's `eager` beside the mode (`decEager`)), the view word
 `vis` (`EnvR m vis fe`), the depth word; the record is the program itself (the knot's slots
 are L functions, `whnf_core`, `whnf`, `infer`, `infer_io`, `defeq`), tied at the twin's knot
-`coreKnot mode fe id F` for every `F` at or above the L fuel (the `GoOK` shape of `WalkRefine`).
+`coreKnot mode eager fe id F` for every `F` at or above the L fuel (the `GoOK` shape of `WalkRefine`).
 
 **The spine stack.** The twin's `Array EIdx`/`List EIdx` values (spines, accumulators, rule
 arguments) live in the word array `SPN` (144) as slices `(off, cnt)`; `CTL[136]` is the top.
@@ -53,8 +54,10 @@ namespace L.Arena
 
 /-- The mode word. -/
 def decMode (w : Word) : ConLeche.CheckMode :=
-  if w = 0 then .verified else if w = 1 then .trusted else if w = 2 then .verifiedEager
-  else .trustedEager
+  if w &&& 1 = 0 then .verified else .trusted
+
+/-- The mode word's eager bit (the twin's `eager : Bool` beside `mode`, con-leche #452). -/
+def decEager (w : Word) : Bool := (w >>> 1) &&& 1 != 0
 
 /-- A handle word (an index `< 2^32` of any kind). -/
 def HW (w : Word) : Prop := w.toNat < 2 ^ 32
@@ -536,7 +539,7 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
     hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide))
       (by decide)),
-    hS.env.frame (aA 129 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
+    hS.env.frame (fun _ _ => sorry) (fun _ _ => sorry) hf,
     hS.readL, hS.readLs, hS.nwf, hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
     hmem, hf.size BSTK ▸ hS.bstk,
     hS.den.frameE (hf.arr EREC (fun h => absurd (hA _ h) (by decide))
@@ -758,7 +761,7 @@ def WhnfCoreSlot (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode cheap d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW e →
     CoreSpec p n "whnf_core" [mode, cheap, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) decH s₀ a₀ dn vis
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) decH s₀ a₀ dn vis
       fe M eb
 
 /-- `whnf(mode, vis, d, e)` refines the knot's `whnf` slot. -/
@@ -766,21 +769,21 @@ def WhnfSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "whnf" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnf d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `infer(mode, vis, d, e)` refines the knot's full-grade `infer` slot (phase 7). -/
 def InferSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "infer" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).infer d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
+      ((coreKnot (decMode mode) (decEager mode) fe id F).infer d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `infer_io(mode, vis, d, e)` refines the knot's io-grade `inferIO` slot (phase 7). -/
 def InferIOSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "infer_io" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
+      ((coreKnot (decMode mode) (decEager mode) fe id F).inferIO d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `defeq(mode, vis, d, a, b)` refines the knot's `defeq` slot (phase 6). -/
 def DefeqSlot (p : Prog) (n : Nat) : Prop :=
@@ -788,7 +791,7 @@ def DefeqSlot (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW x →
     HW y →
     CoreSpec p n "defeq" [mode, vis, d, x, y]
-      ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
+      ((coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
       M eb
 
 /-- **The knot at L fuel `n`**: every slot. -/
@@ -827,7 +830,7 @@ parameters a slice of the environment's record pool (`EREC`). -/
 def InstLPOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb po pl us e : Word) (lps : List NIdx), CoreS dn s₀.mem a₀ vis fe M eb →
-    HW e → HW us → hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps →
+    HW e → HW us → hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps →
     CoreSpec p n "inst_lp" [po, pl, us, e]
       (instLPFast coreWalkFuel lps (decI us) (decE e)) decH s₀ a₀ dn vis fe M eb
 
@@ -839,11 +842,11 @@ def StrLitCtorOK (p : Prog) : Prop :=
     a₀.store.view (decE h) = some (.lit (.strVal s)) →
     CoreSpec p n "str_lit_ctor" [h] (strLitToConstructor s) decH s₀ a₀ dn vis fe M eb
 
-/-- `str_lit_supported(vis)` refines `strLitSupported fe`. -/
-def StrLitSupportedOK (p : Prog) : Prop :=
+/-- `str_lit_stored(vis)` refines `strLitStored fe`. -/
+def StrLitStoredOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
-    CoreSpec p n "str_lit_supported" [vis] (strLitSupported fe) decBool s₀ a₀ dn vis fe M eb
+    CoreSpec p n "str_lit_stored" [vis] (strLitStored fe) decBool s₀ a₀ dn vis fe M eb
 
 /-- **The stub callees.** (It held the knot's `infer`/`infer_io`/`defeq` slot steps too; no proof
 used them, and lane `defeq`'s knot proves those steps from facts that themselves come from proofs
@@ -852,13 +855,13 @@ structure WhnfCallees (p : Prog) : Prop where
   instList : InstListOK p
   instLP : InstLPOK p
   strLitCtor : StrLitCtorOK p
-  strLitSupported : StrLitSupportedOK p
+  strLitStored : StrLitStoredOK p
 
-/-- **`strLitSupported` keeps every stored node's view** (it reads the pins and the environment
-and interns the nodes it compares against, which only adds nodes). `StrLitSupportedOK` says
+/-- **`strLitStored` keeps every stored node's view** (it reads the pins and the environment,
+which changes no node). `StrLitStoredOK` says
 nothing about the store; `proj_lit_to_ctor` carries a `view` fact across the call. -/
 def SupKeep (fe : IFEnv) : Prop :=
   ∀ (a : AState) (h : EIdx) (w : ENodeView), a.store.view h = some w →
-    (AM.st (strLitSupported fe) a).store.view h = some w
+    (AM.st (strLitStored fe) a).store.view h = some w
 
 end L.Arena
