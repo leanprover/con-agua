@@ -14,10 +14,12 @@ import Std.Tactic.BVDecide.Normalize.Prop
 
 `ConsLib.lean`'s slot arrays (KSTP on tiered arrays, lane tierswitch): tier `t`'s own array
 `tierA sa t` holds its slot count less `SN0` in word `0`, its table's offset `o` in word `1`, and
-the table from word `2 + o`; slot `j` is the value word `r + 2 j` and the key word after it. This file has the
-layout's reads (`knW`, `koW`, `krW`) and the models of the growth block `kgrowB` (`kgrowM`): each
-loop a function of the memory and its variables that returns `none` where the L code aborts.
-`G m q` stands for the hash the growth computes from a key word `q` (`ConsLibSpec.lean`'s `ghC`).
+the table from word `2 + o`; slot `j` is word `r + j`, its value (`vwd`, the low 48 bits) and the
+key's fragment (`kwd`, the top 16; `pk` packs them). This file has the layout's reads (`knW`,
+`koW`, `krW`) and the models of the growth block `kgrowB` (`kgrowM`): each loop a function of the
+memory and its variables that returns `none` where the L code aborts. `G m i` stands for the hash
+the growth computes for node `i` (the value `bt + i + 1`; from the node's record,
+`ConsLibSpecBase.lean`'s `ghC`).
 
 The table relation's side (the growth re-registers every live slot, so every node is found again)
 is `StoreLib.lean`'s `storeR_kgrow`.
@@ -41,6 +43,17 @@ def koW (sa : ArrId) (m : Mem) (t : Word) : Word := rdW (m.arr64 (tierA sa t)) 1
 
 /-- The first word of tier `t`'s table: `2 + o`. -/
 def krW (sa : ArrId) (m : Mem) (t : Word) : Word := koW sa m t + 2
+
+/-! ## Slot words -/
+
+/-- The value of slot word `x` of `sl`: its low 48 bits. -/
+def vwd (sl : Array Word) (x : Word) : Word := rdW sl x &&& VMASK
+
+/-- The fragment of slot word `x` of `sl`: its top 16 bits. -/
+def kwd (sl : Array Word) (x : Word) : Word := rdW sl x >>> 48
+
+/-- A slot word: the value `v` (below `2^48`) and the fragment `q` (below `2^16`). -/
+def pk (v q : Word) : Word := v ||| q <<< 48
 
 /-! ## The growth's loops -/
 
@@ -71,7 +84,7 @@ def kdefR (n i : Word) (k : MkR) : MkR :=
 unmarked slots, without wrapping: the first slot that is not live unmarked, or the top one (`j <
 N` holds on every call from the sweep, it only makes the model terminate). -/
 def kupW (sl : Array Word) (ob N bt j : Word) : Word :=
-  if j < N ∧ bt < rdW sl (ob + j * 2) ∧ rdW sl (ob + j * 2) < MARK ∧ j + 1 < N then
+  if j < N ∧ bt < vwd sl (ob + j) ∧ vwd sl (ob + j) < MARK ∧ j + 1 < N then
     kupW sl ob N bt (j + 1)
   else j
 termination_by N.toNat - j.toNat
@@ -81,37 +94,38 @@ decreasing_by
   have : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   omega
 
-/-- The new home of slot `i`'s entry: the home of `G` of its key word in the doubled table. -/
-def kjW (sa : TieredArray) (G : Mem → Word → Word) (N ob i : Word) (m : Mem) : Word :=
-  homeW (G m (rdW (m.arr64 sa) (ob + i * 2 + 1))) N
+/-- The new home of slot `i`'s entry: the home of `G` of its node in the doubled table. -/
+def kjW (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i : Word) (m : Mem) : Word :=
+  homeW (G m (vwd (m.arr64 sa) (ob + i) - bt - 1)) N
 
 /-- Where the sweep's step at slot `i` ends: above `i`, the probe's slot; else the home. -/
 def ktgW (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i : Word) (m : Mem) : Word :=
-  if i < kjW sa G N ob i m then kupW (m.arr64 sa) ob N bt (kjW sa G N ob i m) else kjW sa G N ob i m
+  if i < kjW sa G N ob bt i m then kupW (m.arr64 sa) ob N bt (kjW sa G N ob bt i m)
+  else kjW sa G N ob bt i m
 
 /-- The value word the step tests (`x`): the probe's slot's, or slot `i`'s own. -/
 def kxW (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i : Word) (m : Mem) : Word :=
-  if i < kjW sa G N ob i m then rdW (m.arr64 sa) (ob + ktgW sa G N ob bt i m * 2)
-  else rdW (m.arr64 sa) (ob + i * 2)
+  if i < kjW sa G N ob bt i m then vwd (m.arr64 sa) (ob + ktgW sa G N ob bt i m)
+  else vwd (m.arr64 sa) (ob + i)
 
-/-- The placement (`ktopQ`) of slot `i`'s entry (value word `v`, key word `q`) after the probe
-ended at slot `j` with value word `x`: moved to the free slot `j`, kept at `j = i`, or marked
-and recorded in a range. -/
+/-- The placement (`ktopQ`) of slot `i`'s entry (value `v`, fragment `q`) after the probe ended
+at slot `j` with value `x`: moved to the free slot `j`, kept at `j = i`, or marked and recorded
+in a range. -/
 def ktopQW (sa : TieredArray) (n ob bt i j x v q : Word) (k : MkR) (m : Mem) : Mem × MkR :=
-  if x ≤ bt then (((m.set64 sa (ob + j * 2) v).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) 0, k)
+  if x ≤ bt then ((m.set64 sa (ob + j) (pk v q)).set64 sa (ob + i) 0, k)
   else if j = i then (m, k)
-  else (m.set64 sa (ob + i * 2) (v + MARK), kdefR n i k)
+  else (m.set64 sa (ob + i) (pk (v + MARK) q), kdefR n i k)
 
 /-- The step at the live slot `i` (`ktopB`). -/
 def ktopBW (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR) (m : Mem) :
     Mem × MkR :=
-  ktopQW sa n ob bt i (ktgW sa G N ob bt i m) (kxW sa G N ob bt i m) (rdW (m.arr64 sa) (ob + i * 2))
-    (rdW (m.arr64 sa) (ob + i * 2 + 1)) k m
+  ktopQW sa n ob bt i (ktgW sa G N ob bt i m) (kxW sa G N ob bt i m) (vwd (m.arr64 sa) (ob + i))
+    (kwd (m.arr64 sa) (ob + i)) k m
 
 /-- The sweep's step at slot `i`: only a live slot is touched. -/
 def ktopS (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR) (m : Mem) :
     Mem × MkR :=
-  if bt < rdW (m.arr64 sa) (ob + i * 2) then ktopBW sa G N n ob bt i k m else (m, k)
+  if bt < vwd (m.arr64 sa) (ob + i) then ktopBW sa G N n ob bt i k m else (m, k)
 
 /-- **The top-down sweep** (`ktopL`) over the slots `H - 1 ‥ 0`. -/
 def ktopW (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt H : Word) (k : MkR) (m : Mem) :
@@ -128,7 +142,7 @@ decreasing_by
 after `d` steps, past the live unmarked slots, the first slot that is `i`, free or marked
 (`none`: the abort after `N` steps). -/
 def kprobeW (sl : Array Word) (ob N i bt j d : Word) : Option Word :=
-  if j ≠ i ∧ bt < rdW sl (ob + j * 2) ∧ rdW sl (ob + j * 2) < MARK then
+  if j ≠ i ∧ bt < vwd sl (ob + j) ∧ vwd sl (ob + j) < MARK then
     if N ≤ d then none
     else kprobeW sl ob N i bt ((j + 1) * (if j + 1 < N then 1 else 0)) (d + 1)
   else some j
@@ -140,32 +154,30 @@ decreasing_by
   have : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   omega
 
-/-- The placement of slot `i`'s entry (value word `v`, key word `q`, unmarked) at slot `j`
-(`kplaceB`): the memory and the next value word to re-insert (`0`: none). -/
+/-- The placement of slot `i`'s entry (value `v`, fragment `q`, unmarked) at slot `j`
+(`kplaceB`): the memory and the next value to re-insert (`0`: none). -/
 def kplaceW (sa : TieredArray) (ob i j v q : Word) (m : Mem) : Mem × Word :=
-  if j = i then (m.set64 sa (ob + i * 2) v, 0)
-  else if MARK ≤ rdW (m.arr64 sa) (ob + j * 2) then
-    ((((m.set64 sa (ob + j * 2) v).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2)
-      (rdW (m.arr64 sa) (ob + j * 2))).set64 sa (ob + i * 2 + 1) (rdW (m.arr64 sa) (ob + j * 2 + 1)),
-      rdW (m.arr64 sa) (ob + j * 2))
+  if j = i then (m.set64 sa (ob + i) (pk v q), 0)
+  else if MARK ≤ vwd (m.arr64 sa) (ob + j) then
+    ((m.set64 sa (ob + j) (pk v q)).set64 sa (ob + i) (rdW (m.arr64 sa) (ob + j)),
+      vwd (m.arr64 sa) (ob + j))
   else
-    (((m.set64 sa (ob + j * 2) v).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) 0, 0)
+    ((m.set64 sa (ob + j) (pk v q)).set64 sa (ob + i) 0, 0)
 
-/-- The re-insertions at slot `i` (`kinnerL`): while the value word `v` is marked, spend one of
-the budget `e`, probe from the home of `G` of slot `i`'s key word, place. The memory and the
-budget left; `none` where L aborts. -/
+/-- The re-insertions at slot `i` (`kinnerL`): while the value `v` is marked, spend one of the
+budget `e`, probe from the home of `G` of its node, place it with slot `i`'s fragment.
+The memory and the budget left; `none` where L aborts. -/
 def kinnerW (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i : Word) (e v : Word) (m : Mem) :
     Option (Mem × Word) :=
   if MARK ≤ v then
     if e = 0 then none
     else
-      match kprobeW (m.arr64 sa) ob N i bt
-          (homeW (G m (rdW (m.arr64 sa) (ob + i * 2 + 1))) N) 0 with
+      match kprobeW (m.arr64 sa) ob N i bt (homeW (G m (v - MARK - bt - 1)) N) 0 with
       | none => none
       | some j =>
         kinnerW sa G N ob bt i (e - 1)
-          (kplaceW sa ob i j (v - MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).2
-          (kplaceW sa ob i j (v - MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).1
+          (kplaceW sa ob i j (v - MARK) (kwd (m.arr64 sa) (ob + i)) m).2
+          (kplaceW sa ob i j (v - MARK) (kwd (m.arr64 sa) (ob + i)) m).1
   else some (m, e)
 termination_by e.toNat
 decreasing_by
@@ -175,7 +187,7 @@ decreasing_by
 /-- The re-insertion loop (`krehashL`): slots `i ‥ n - 1` of the old half, the budget `e`. -/
 def krehashW (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i e : Word) (m : Mem) : Option Mem :=
   if i < n then
-    match kinnerW sa G N ob bt i e (rdW (m.arr64 sa) (ob + i * 2)) m with
+    match kinnerW sa G N ob bt i e (vwd (m.arr64 sa) (ob + i)) m with
     | none => none
     | some (m', e') => krehashW sa G N n ob bt (i + 1) e' m'
   else some m
@@ -187,9 +199,9 @@ decreasing_by
   omega
 
 /-- The memory after the growth's head and zero loop: the count word, the upper half zeroed
-(`2 n` words from `ob + 2 n`). -/
+(`n` words from `ob + n`). -/
 def kzM (sa : ArrId) (t : Word) (m : Mem) : Mem :=
-  kzeroW (tierA sa t) (koW sa m t + 2 + knW sa m t * 2) (knW sa m t >>> 2).toNat
+  kzeroW (tierA sa t) (koW sa m t + 2 + knW sa m t) (knW sa m t >>> 3).toNat
     (m.set64 (tierA sa t) 0 (knW sa m t * 2 - SN0))
 
 /-- The sweep of the growth, from the memory `kzM`. -/
@@ -202,7 +214,7 @@ aborts. The table (`n` slots from word `ob = o + 2`) doubles where it is: the co
 upper half zeroed, the top-down sweep, then the marked entries re-inserted over the two mark
 ranges. -/
 def kgrowM (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m : Mem) : Option Mem :=
-  if m.len64 (tierA sa t) - 2 < koW sa m t + knW sa m t * 2 * 2 then none
+  if m.len64 (tierA sa t) - 2 < koW sa m t + knW sa m t * 2 then none
   else
     (krehashW (tierA sa t) G (knW sa m t * 2) (ktopM sa G t m).2.a1 (koW sa m t + 2)
       (rdW (m.arr64 CTL) SCB * t) (ktopM sa G t m).2.a0 (knW sa m t) (ktopM sa G t m).1).bind
@@ -242,7 +254,7 @@ theorem ktopBW_fr (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : 
     (m : Mem) : GFr sa m (ktopBW sa G N n ob bt i k m).1 := by
   unfold ktopBW ktopQW
   split
-  · exact ((GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)
+  · exact (GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)
   split
   · exact GFr.refl _ _
   · exact GFr.set64 _ _ _ _
@@ -265,9 +277,8 @@ theorem kplaceW_fr (sa : TieredArray) (ob i j v q : Word) (m : Mem) : GFr sa m (
   split
   · exact GFr.set64 _ _ _ _
   split
-  · exact (((GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)).trans
-      (GFr.set64 _ _ _ _)
-  · exact ((GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)
+  · exact (GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)
+  · exact (GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)
 
 theorem kinnerW_fr (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i e v : Word) (m m' : Mem)
     (e' : Word) (h : kinnerW sa G N ob bt i e v m = some (m', e')) : GFr sa m m' := by

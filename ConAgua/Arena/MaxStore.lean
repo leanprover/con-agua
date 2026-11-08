@@ -73,7 +73,6 @@ def maxCS : ConsSch where
   fname := "max_find"
   pname := "max_push"
   nk := 2
-  exact := true
   kpk := true
   mc := condOf (lblk (t, u, v, h, n, j, d, w, b) {
     if (MREC⟨t⟩[w - 1] & 4294967295) == u && (MREC⟨t⟩[w - 1] >> 32) == v { skip } })
@@ -82,6 +81,7 @@ def maxCS : ConsSch where
     if len(MREC⟨t⟩) <= c || len(MHP⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ (MREC⟨t⟩[i] & 4294967295)) * ⟪fnvPrime⟫ ^ (MREC⟨t⟩[i] >> 32)) * ⟪fnvPrime⟫ })
   skipW := none
   xloc := 5
   pre := some mPre

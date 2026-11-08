@@ -73,7 +73,6 @@ def succCS : ConsSch where
   fname := "succ_find"
   pname := "succ_push"
   nk := 1
-  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
     if SREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
@@ -81,6 +80,7 @@ def succCS : ConsSch where
     if len(SREC⟨t⟩) <= c || len(SHP⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := (⟪fnvBasis⟫ ^ SREC⟨t⟩[i]) * ⟪fnvPrime⟫ })
   skipW := none
   xloc := 4
   pre := some sPre

@@ -123,6 +123,7 @@ def lsCS : ConsSch where
     if len(LSREC⟨t⟩) < (c + 1) * 3 || len(LSHP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2, .var 3]
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
+  hrec := rhsOf (lblk (t, i, h) { h := LSREC⟨t⟩[i * 3 + 2] })
   skipW := none
   xloc := 7
   pre := some lsPre

@@ -30,7 +30,7 @@ namespace L.Arena
 
 `kgrowBlk C` (`kgrowB` with its variables renamed by `gmap`): its loops' specs, then the block's,
 against `SlotGrowSpec.lean`'s models. Variables (`gO` + …): `n2` 0, `n` 1, `H` 2, `Q` 3, `ob` 4,
-`nb` 5, `x` 6, `e` 7, `v` 8, `q` 9, `h` 10, `j` 11, `d` 12, `bt` 13, the `ihash` block from 14. -/
+`nb` 5, `x` 6, `e` 7, `v` 8, `q` 9, `h` 10, `j` 11, `d` 12, `bt` 13, the node of `khashB` at 14. -/
 
 theorem gmap_lit (C : ConsSch) (k : Nat) (h : k ≠ 0) : gmap C k = gO C + (k - 1) := by
   simp [gmap, h]
@@ -165,49 +165,43 @@ theorem mapS_seqs (f : Var → Var) (t : Stmt) :
   | [] => rfl
   | s :: l => by simp [seqs, mapS, mapS_seqs f t l]
 
-theorem gmap_ihash (C : ConsSch) : mapS (gmap C) (ihashAt C 15) = ihashAt C (gO C + 14) :=
-  mapS_shiftS _ 15 (gO C + 14) (fun x => by
-    have h1 : ∀ y : Nat, y + 15 ≠ 0 := fun y => by omega
-    have h2 : ∀ y : Nat, y + 15 - 1 = y + 14 := fun y => by omega
-    simp only [gmap, h1, ite_false]; rw [h2]; ac_rfl) C.ihash
+/-- An expression renamed by `f`: the expression in the state whose locals are read through `f`. -/
+theorem pval_mapE (f : Var → Var) (s : St) :
+    ∀ e, Expr.pval s (mapE f e) = Expr.pval ⟨s.mem, fun x => s.loc (f x)⟩ e
+  | .const _ => rfl
+  | .var x => rfl
+  | .bin op a b => by simp only [mapE, Expr.pval, pval_mapE f s a, pval_mapE f s b]
+  | .ld8 a i => by simp only [mapE, Expr.pval, pval_mapE f s i]
+  | .ld64 a i => by simp only [mapE, Expr.pval, pval_mapE f s i]
+  | .len8 _ => rfl
+  | .len64 _ => rfl
+  | .cmpw c a b => by simp only [mapE, Expr.pval, pval_mapE f s a, pval_mapE f s b]
+  | .ldc d i => by simp only [mapE, Expr.pval, pval_mapE f s i]
+  | .glob _ => rfl
+  | .ld64t a t i => by simp only [mapE, Expr.pval, pval_mapE f s t, pval_mapE f s i]
+  | .len64t a t => by simp only [mapE, Expr.pval, pval_mapE f s t]
+  | .ld8x8 b i => by simp only [mapE, Expr.pval, pval_mapE f s i]
+  | .ld32t a t i => by simp only [mapE, Expr.pval, pval_mapE f s t, pval_mapE f s i]
+  | .ld32h a t i _ => by simp only [mapE, Expr.pval, pval_mapE f s t, pval_mapE f s i]
 
-/-- **The growth's hash** (`khashB`, renamed): `h` (`gO + 10`) becomes `ghC` of the key word `q`
-(`gO + 9`); the variables below `gO + 14` but `h` are kept. -/
+/-- **The growth's hash** (`khashB`, renamed): `h` (`gO + 10`) becomes `ghC` of the node of the
+value `v` (`gO + 8`) against the base `bt` (`gO + 13`); the variables below `gO + 14` but `h` are
+kept. -/
 theorem khash_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mapS (gmap C) (khashB C))
     ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧
       (∀ z, z < gO C + 14 → z ≠ gO C + 10 → s'.loc z = s₀.loc z) ∧
       (∀ z, gO C + 17 ≤ z → s'.loc z = s₀.loc z) ∧
-      s'.loc (gO C + 10) = ghC C s₀.mem (s₀.loc (gO C + 9)); ⊤⦄ := by
+      s'.loc (gO C + 10) =
+        ghC C (s₀.loc 0) s₀.mem (s₀.loc (gO C + 8) - s₀.loc (gO C + 13) - 1); ⊤⦄ := by
+  have hH := hO.hrec
   unfold khashB
-  cases hx : C.exact with
-  | false =>
-    simp (disch := decide) only [Bool.false_eq_true, ↓reduceIte, mapS, mapE, gmap_lit, Nat.reduceSub]
-    vcgen [step, evalE_spec, setLoc]
-    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, Expr.pval] at *)
-    all_goals grind [ghC]
-  | true =>
-    have hnk := hO.exnk hx
-    have hI := hO.ihashG (.inl hx)
-    simp only [↓reduceIte, mapS_seqs, mapS, gmap_ihash]
-    rcases (by omega : C.nk = 0 ∨ C.nk = 1 ∨ C.nk = 2) with hn | hn | hn
-    · simp (disch := decide) only [hn, seqs, List.map, mapE, gmap_lit, Nat.reduceSub,
-        Nat.add_zero]
-      vcgen [step, evalE_spec, setLoc, hI n]
-      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, Expr.pval, ] at *)
-      all_goals (simp only [hn, ghC, hx, ↓reduceIte, unpackK, argsOf_zero] at *)
-      all_goals grind
-    · simp (disch := decide) only [hn, seqs, List.map, mapS, mapE, gmap_lit, Nat.reduceSub]
-      vcgen [step, evalE_spec, setLoc, hI n]
-      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, Expr.pval, ] at *)
-      all_goals (simp only [hn, ghC, hx, ↓reduceIte, unpackK, argsOf_one, St.setLoc_loc] at *)
-      all_goals grind
-    · simp (disch := decide) only [hn, seqs, List.map, mapS, mapE, gmap_lit, Nat.reduceSub]
-      vcgen [step, evalE_spec, setLoc, hI n]
-      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, Expr.pval, BinOp.eval, ] at *)
-      all_goals (simp only [hn, ghC, hx, ↓reduceIte, unpackK, argsOf_two, St.setLoc_loc] at *)
-      all_goals grind
+  simp (disch := decide) only [mapS, mapE, gmap_lit, Nat.reduceSub]
+  vcgen [step, evalE_spec, setLoc]
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, Expr.pval, BinOp.eval,
+    pval_mapE, hH, hrm, gmap_lit, gmap_zero, Nat.reduceSub, ↓reduceIte] at *)
+  all_goals grind [ghC]
 
 theorem homeW_eq (h n : Word) :
     UInt64.ofNat (((h * golden) ^^^ ((h * golden) >>> 32)).toNat * n.toNat / 2 ^ 64) = homeW h n :=
@@ -262,14 +256,14 @@ grind_pattern [lang_grind] Keep3.loc => Keep3 x y z s s', s'.loc w
 /-! ### The re-insertion's probe -/
 
 theorem kprobeW_stop (sl : Array Word) (ob N i bt j d : Word)
-    (hc : ¬ (j ≠ i ∧ bt < rdW sl (ob + j * 2) ∧ rdW sl (ob + j * 2) < MARK)) :
+    (hc : ¬ (j ≠ i ∧ bt < rdW sl (ob + j) &&& VMASK ∧ rdW sl (ob + j) &&& VMASK < MARK)) :
     kprobeW sl ob N i bt j d = some j := by
-  rw [kprobeW]; simp only [hc, ↓reduceIte]
+  rw [kprobeW]; simp only [vwd, hc, ↓reduceIte]
 
 theorem kprobeW_next (sl : Array Word) (ob N i bt j d : Word)
-    (hc : j ≠ i ∧ bt < rdW sl (ob + j * 2) ∧ rdW sl (ob + j * 2) < MARK) (hd : ¬ N ≤ d) :
+    (hc : j ≠ i ∧ bt < rdW sl (ob + j) &&& VMASK ∧ rdW sl (ob + j) &&& VMASK < MARK) (hd : ¬ N ≤ d) :
     kprobeW sl ob N i bt j d = kprobeW sl ob N i bt ((j + 1) * (if j + 1 < N then 1 else 0)) (d + 1) := by
-  rw [kprobeW]; simp only [hc, hd, ne_eq, not_false_eq_true, and_self, ↓reduceIte]
+  rw [kprobeW]; simp only [vwd, hc, hd, ne_eq, not_false_eq_true, and_self, ↓reduceIte]
 
 theorem kprobeL_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -303,7 +297,7 @@ theorem kprobeL_step_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
 /-! ### Taking and placing an entry -/
 
 /-- **Take the marked entry** of slot `H`: the budget `e` was not `0` and drops by one, `v`
-unmarked, `q` its key word, `j` the home of its hash in the doubled table, `d = 0`. -/
+unmarked, `q` its fragment, `j` the home of its node's hash in the doubled table, `d = 0`. -/
 theorem kpickB_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mapS (gmap C) (kpickB C))
@@ -314,8 +308,9 @@ theorem kpickB_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ :
       ¬ s₀.loc (gO C + 7) = 0 ∧ s'.loc (gO C + 7) = s₀.loc (gO C + 7) - 1 ∧
       s'.loc (gO C + 8) = s₀.loc (gO C + 8) - MARK ∧
       s'.loc (gO C + 9) = rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
-        (s₀.loc (gO C + 4) + s₀.loc (gO C + 2) * 2 + 1) ∧
-      s'.loc (gO C + 11) = homeW (ghC C s₀.mem (s'.loc (gO C + 9))) (s₀.loc (gO C)) ∧
+        (s₀.loc (gO C + 4) + s₀.loc (gO C + 2)) >>> 48 ∧
+      s'.loc (gO C + 11) = homeW (ghC C (s₀.loc 0) s₀.mem
+        (s'.loc (gO C + 8) - s₀.loc (gO C + 13) - 1)) (s₀.loc (gO C)) ∧
       s'.loc (gO C + 12) = 0; ⊤⦄ := by
   unfold kpickB
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero,
@@ -325,7 +320,7 @@ theorem kpickB_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ :
     Expr.pval, Cond.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, beq_iff_eq, rd64_rdWC, zero_eq_addlit, homeW_eq, ↓reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, lt_ne_addlit]
 
-/-- **Place the entry** at slot `j` (`kplaceW`): the memory and the next value word `v`. -/
+/-- **Place the entry** at slot `j` (`kplaceW`): the memory and the next value `v`. -/
 theorem kplaceB_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mapS (gmap C) (kplaceB C))
@@ -340,7 +335,7 @@ theorem kplaceB_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, st64]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff, beq_iff_eq, rd64_rdWC, zero_eq_addlit, ↓reduceIte] at *)
-  all_goals grind [lang_grind, arena_grind, Keep3, kplaceW]
+  all_goals grind [lang_grind, arena_grind, Keep3, kplaceW, vwd, pk]
 
 /-! ### The re-insertion loops -/
 
@@ -357,18 +352,18 @@ theorem kinnerW_done (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i e
 
 theorem kinnerW_more (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i e v : Word) (m : Mem)
     (hv : MARK ≤ v) (he : ¬ e = 0) (j : Word)
-    (hj : kprobeW (m.arr64 sa) ob N i bt (homeW (G m (rdW (m.arr64 sa) (ob + i * 2 + 1))) N) 0 = some j) :
+    (hj : kprobeW (m.arr64 sa) ob N i bt (homeW (G m (v - MARK - bt - 1)) N) 0 = some j) :
     kinnerW sa G N ob bt i e v m =
       kinnerW sa G N ob bt i (e - 1)
-        (kplaceW sa ob i j (v - MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).2
-        (kplaceW sa ob i j (v - MARK) (rdW (m.arr64 sa) (ob + i * 2 + 1)) m).1 := by
-  rw [kinnerW]; simp only [hv, he, hj, ↓reduceIte]
+        (kplaceW sa ob i j (v - MARK) (rdW (m.arr64 sa) (ob + i) >>> 48) m).2
+        (kplaceW sa ob i j (v - MARK) (rdW (m.arr64 sa) (ob + i) >>> 48) m).1 := by
+  rw [kinnerW]; simp only [kwd, hv, he, hj, ↓reduceIte]
 
 theorem kinnerL_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n (mapS (gmap C) (kinnerL C))
     ⦃fun r s' => r = .normal ∧ KeepR C s₀ s' ∧ s'.loc (gO C + 2) = s₀.loc (gO C + 2) ∧
-      kinnerW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 4))
+      kinnerW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 4))
         (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (s₀.loc (gO C + 7)) (s₀.loc (gO C + 8)) s₀.mem =
         some (s'.mem, s'.loc (gO C + 7)); ⊤⦄ := by
   induction n generalizing s₀ with
@@ -388,7 +383,7 @@ theorem kinnerL_step_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mapS (gmap C) (kinnerL C))
     ⦃fun r s' => r = .normal ∧ KeepR C s₀ s' ∧ s'.loc (gO C + 2) = s₀.loc (gO C + 2) ∧
-      kinnerW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 4))
+      kinnerW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 4))
         (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (s₀.loc (gO C + 7)) (s₀.loc (gO C + 8)) s₀.mem =
         some (s'.mem, s'.loc (gO C + 7)); ⊤⦄ :=
   Triple.step_exec (kinnerL_spec p C hO (n + 1) s₀)
@@ -399,9 +394,9 @@ theorem krehashW_done (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt 
 
 theorem krehashW_step (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i e : Word) (m m' : Mem)
     (e' : Word) (hi : i < n)
-    (h : kinnerW sa G N ob bt i e (rdW (m.arr64 sa) (ob + i * 2)) m = some (m', e')) :
+    (h : kinnerW sa G N ob bt i e (rdW (m.arr64 sa) (ob + i) &&& VMASK) m = some (m', e')) :
     krehashW sa G N n ob bt i e m = krehashW sa G N n ob bt (i + 1) e' m' := by
-  rw [krehashW]; simp [hi, h]
+  rw [krehashW]; simp [hi, vwd, h]
 
 /-- **The re-insertion loop** over the slots `H ‥ u - 1` (`u` a mark range's end, from
 `gO + 17` on). -/
@@ -410,7 +405,7 @@ theorem krehashL_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (u : Var) (hu :
     ⦃fun s => s = s₀⦄
     exec p n (mapS (gmap C) (krehashL C u))
     ⦃fun r s' => r = .normal ∧ KeepR C s₀ s' ∧
-      krehashW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gmap C u)) (s₀.loc (gO C + 4))
+      krehashW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gmap C u)) (s₀.loc (gO C + 4))
         (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (s₀.loc (gO C + 7)) s₀.mem = some s'.mem; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -430,7 +425,7 @@ theorem krehashL_step_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (u : Var)
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mapS (gmap C) (krehashL C u))
     ⦃fun r s' => r = .normal ∧ KeepR C s₀ s' ∧
-      krehashW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gmap C u)) (s₀.loc (gO C + 4))
+      krehashW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gmap C u)) (s₀.loc (gO C + 4))
         (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (s₀.loc (gO C + 7)) s₀.mem = some s'.mem; ⊤⦄ :=
   Triple.step_exec (krehashL_spec p C hO u hu (n + 1) s₀)
 
@@ -459,26 +454,26 @@ theorem mkOf_setLoc (C : ConsSch) (s : St) (z : Nat) (v : Word) (hz : z < gO C +
   simp only [h1, h2, h3, h4, ↓reduceIte]
 
 theorem kupW_stop (sl : Array Word) (ob N bt j : Word)
-    (hc : ¬ (j < N ∧ bt < rdW sl (ob + j * 2) ∧ rdW sl (ob + j * 2) < MARK ∧ j + 1 < N)) :
+    (hc : ¬ (j < N ∧ bt < rdW sl (ob + j) &&& VMASK ∧ rdW sl (ob + j) &&& VMASK < MARK ∧ j + 1 < N)) :
     kupW sl ob N bt j = j := by
-  rw [kupW]; simp only [hc, ↓reduceIte]
+  rw [kupW]; simp only [vwd, hc, ↓reduceIte]
 
 theorem kupW_next (sl : Array Word) (ob N bt j : Word)
-    (hc : j < N ∧ bt < rdW sl (ob + j * 2) ∧ rdW sl (ob + j * 2) < MARK ∧ j + 1 < N) :
+    (hc : j < N ∧ bt < rdW sl (ob + j) &&& VMASK ∧ rdW sl (ob + j) &&& VMASK < MARK ∧ j + 1 < N) :
     kupW sl ob N bt j = kupW sl ob N bt (j + 1) := by
-  rw [kupW]; simp only [hc, and_self, ↓reduceIte]
+  rw [kupW]; simp only [vwd, hc, and_self, ↓reduceIte]
 
 /-- **The sweep's probe loop**: from `j < N` with `x` slot `j`'s value word, it ends at `kupW`'s
 slot, `x` that slot's value word. -/
 theorem kupLoop_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s₀.loc (gO C + 6) = rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
-      (s₀.loc (gO C + 4) + s₀.loc (gO C + 11) * 2) ∧ s₀.loc (gO C + 11) < s₀.loc (gO C)⦄
+      (s₀.loc (gO C + 4) + s₀.loc (gO C + 11)) &&& VMASK ∧ s₀.loc (gO C + 11) < s₀.loc (gO C)⦄
     exec p n (mapS (gmap C) (kupLoop C))
     ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ Keep2 (gO C + 6) (gO C + 11) s₀ s' ∧
       s'.loc (gO C + 11) = kupW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0))) (s₀.loc (gO C + 4))
         (s₀.loc (gO C)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 11)) ∧
       s'.loc (gO C + 6) = rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
-        (s₀.loc (gO C + 4) + s'.loc (gO C + 11) * 2); ⊤⦄ := by
+        (s₀.loc (gO C + 4) + s'.loc (gO C + 11)) &&& VMASK; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -493,13 +488,13 @@ theorem kupLoop_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
 
 theorem kupLoop_step_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s₀.loc (gO C + 6) = rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
-      (s₀.loc (gO C + 4) + s₀.loc (gO C + 11) * 2) ∧ s₀.loc (gO C + 11) < s₀.loc (gO C)⦄
+      (s₀.loc (gO C + 4) + s₀.loc (gO C + 11)) &&& VMASK ∧ s₀.loc (gO C + 11) < s₀.loc (gO C)⦄
     step p (exec p n) (mapS (gmap C) (kupLoop C))
     ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ Keep2 (gO C + 6) (gO C + 11) s₀ s' ∧
       s'.loc (gO C + 11) = kupW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0))) (s₀.loc (gO C + 4))
         (s₀.loc (gO C)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 11)) ∧
       s'.loc (gO C + 6) = rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
-        (s₀.loc (gO C + 4) + s'.loc (gO C + 11) * 2); ⊤⦄ :=
+        (s₀.loc (gO C + 4) + s'.loc (gO C + 11)) &&& VMASK; ⊤⦄ :=
   Triple.step_exec (kupLoop_spec p C (n + 1) s₀)
 
 /-- **The sweep's probe** from `j < N`. -/
@@ -510,7 +505,7 @@ theorem kupL_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
       s'.loc (gO C + 11) = kupW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0))) (s₀.loc (gO C + 4))
         (s₀.loc (gO C)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 11)) ∧
       s'.loc (gO C + 6) = rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
-        (s₀.loc (gO C + 4) + s'.loc (gO C + 11) * 2); ⊤⦄ := by
+        (s₀.loc (gO C + 4) + s'.loc (gO C + 11)) &&& VMASK; ⊤⦄ := by
   unfold kupL
   simp (disch := decide) only [mapS, mapE, gmap_lit, gmap_zero, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, kupLoop_step_spec p C n]
@@ -545,20 +540,20 @@ theorem homeW_lt_of_gt (h N i : Word) (hi : i < homeW h N) : homeW h N < N := by
       Nat.div_lt_of_lt_mul (Nat.mul_lt_mul_of_pos_right hx (by omega))
     rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)]; exact this
 
-/-- **The sweep step's probe** (`ktopP`) at slot `H` (value word `v`): `j` and `x` are `ktgW` and
-`kxW` of the growth's hash, `q` the key word. -/
+/-- **The sweep step's probe** (`ktopP`) at slot `H` (value `v`): `j` and `x` are `ktgW` and
+`kxW` of the growth's hash, `q` the fragment. -/
 theorem ktopP_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s₀.loc (gO C + 8) = rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
-      (s₀.loc (gO C + 4) + s₀.loc (gO C + 2) * 2)⦄
+      (s₀.loc (gO C + 4) + s₀.loc (gO C + 2)) &&& VMASK⦄
     step p (exec p n) (mapS (gmap C) (ktopP C))
     ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧
       (∀ z, z ≠ gO C + 6 → z ≠ gO C + 9 → z ≠ gO C + 10 → z ≠ gO C + 11 →
         (z < gO C + 14 ∨ gO C + 17 ≤ z) → s'.loc z = s₀.loc z) ∧
       s'.loc (gO C + 9) = rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
-        (s₀.loc (gO C + 4) + s₀.loc (gO C + 2) * 2 + 1) ∧
-      s'.loc (gO C + 11) = ktgW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 4))
+        (s₀.loc (gO C + 4) + s₀.loc (gO C + 2)) >>> 48 ∧
+      s'.loc (gO C + 11) = ktgW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 4))
         (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) s₀.mem ∧
-      s'.loc (gO C + 6) = kxW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 4))
+      s'.loc (gO C + 6) = kxW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 4))
         (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) s₀.mem; ⊤⦄ := by
   unfold ktopP
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub, Nat.add_zero]
@@ -566,7 +561,7 @@ theorem ktopP_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : 
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, zero_eq_addlit,
     homeW_eq, ↓reduceIte] at *)
-  all_goals grind [lang_grind, arena_grind, lt_ne_addlit, Keep2, ktgW, kxW, kjW, homeW_lt_of_gt]
+  all_goals grind [lang_grind, arena_grind, lt_ne_addlit, Keep2, ktgW, kxW, kjW, vwd, homeW_lt_of_gt]
 
 /-- **The sweep step's placement** (`ktopQ`): `ktopQW` of `j x v q`. -/
 theorem ktopQ_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
@@ -585,19 +580,19 @@ theorem ktopQ_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   all_goals (simp (disch := decide) only [BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval,
     bne_iff_ne, ne_eq] at *)
-  all_goals grind [lang_grind, arena_grind, KeepMk, mkOf, ktopQW]
+  all_goals grind [lang_grind, arena_grind, KeepMk, mkOf, ktopQW, pk]
 
 /-- **The sweep's step at a live slot** (`ktopB`): `ktopBW`. -/
 theorem ktopB_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s₀.loc (gO C + 8) = rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
-      (s₀.loc (gO C + 4) + s₀.loc (gO C + 2) * 2)⦄
+      (s₀.loc (gO C + 4) + s₀.loc (gO C + 2)) &&& VMASK⦄
     step p (exec p n) (mapS (gmap C) (ktopB C))
     ⦃fun r s' => r = .normal ∧
       (∀ z, z ≠ gO C + 6 → z ≠ gO C + 9 → z ≠ gO C + 10 → z ≠ gO C + 11 →
         (z < gO C + 14 ∨ gO C + 21 ≤ z) → s'.loc z = s₀.loc z) ∧
-      s'.mem = (ktopBW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      s'.mem = (ktopBW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem).1 ∧
-      mkOf C s' = (ktopBW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      mkOf C s' = (ktopBW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem).2; ⊤⦄ := by
   apply triple_pre_and; intro hv
   unfold ktopB
@@ -615,12 +610,12 @@ theorem ktopB_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : 
       refine kk (gO C + i) ?_ ?_ ?_ ?_ ?_ <;> omega
   have mk1 : mkOf C s₁ = mkOf C s₀ := by
     simp only [mkOf, ek 17 (by simp), ek 18 (by simp), ek 19 (by simp), ek 20 (by simp)]
-  have hB : ktopBW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+  have hB : ktopBW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
       (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem =
       ktopQW (tierA C.sa (s₁.loc 0)) (s₁.loc (gO C + 1)) (s₁.loc (gO C + 4))
         (s₁.loc (gO C + 13)) (s₁.loc (gO C + 2)) (s₁.loc (gO C + 11)) (s₁.loc (gO C + 6))
         (s₁.loc (gO C + 8)) (s₁.loc (gO C + 9)) (mkOf C s₁) s₁.mem := by
-    rw [ktopBW, j1, x1, q1, mk1, m1, e0, ek 1 (by simp), ek 4 (by simp), ek 13 (by simp),
+    rw [ktopBW, vwd, kwd, j1, x1, q1, mk1, m1, e0, ek 1 (by simp), ek 4 (by simp), ek 13 (by simp),
       ek 2 (by simp), ek 8 (by simp), hv]
   refine ⟨hr, fun z h6 h9 h10 h11 hz => ?_, by rw [hB]; exact m2, by rw [hB]; exact mk2⟩
   rw [k2 z (by omega)]
@@ -636,12 +631,13 @@ theorem ktopW_step (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt H :
   rw [ktopW]; simp [h]
 
 theorem ktopS_live (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR) (m : Mem)
-    (h : bt < rdW (m.arr64 sa) (ob + i * 2)) : ktopS sa G N n ob bt i k m = ktopBW sa G N n ob bt i k m := by
-  rw [ktopS]; simp [h]
+    (h : bt < rdW (m.arr64 sa) (ob + i) &&& VMASK) :
+    ktopS sa G N n ob bt i k m = ktopBW sa G N n ob bt i k m := by
+  rw [ktopS]; simp [vwd, h]
 
 theorem ktopS_dead (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR) (m : Mem)
-    (h : ¬ bt < rdW (m.arr64 sa) (ob + i * 2)) : ktopS sa G N n ob bt i k m = (m, k) := by
-  rw [ktopS]; simp [h]
+    (h : ¬ bt < rdW (m.arr64 sa) (ob + i) &&& VMASK) : ktopS sa G N n ob bt i k m = (m, k) := by
+  rw [ktopS]; simp [vwd, h]
 
 /-- The variables the sweep keeps: the push's (below `gO`), `n2 n ob bt`. -/
 def KeepT (C : ConsSch) (s s' : St) : Prop :=
@@ -665,9 +661,9 @@ theorem ktopBody_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mapS (gmap C) (ktopBody C))
     ⦃fun r s' => r = .normal ∧ KeepT C s₀ s' ∧ s'.loc (gO C + 2) = s₀.loc (gO C + 2) - 1 ∧
-      s'.mem = (ktopS (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      s'.mem = (ktopS (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2) - 1) (mkOf C s₀) s₀.mem).1 ∧
-      mkOf C s' = (ktopS (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      mkOf C s' = (ktopS (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2) - 1) (mkOf C s₀) s₀.mem).2; ⊤⦄ := by
   unfold ktopBody
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub]
@@ -691,7 +687,7 @@ theorem ktopBody_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
     rw [ktopS_live _ _ _ _ _ _ _ _ _ hc]; exact hp.2.2
   case vc6 =>
     exact keepT_of C s₀ _ (rdW (s₀.mem.arr64 (tierA C.sa (s₀.loc 0)))
-      (s₀.loc (gO C + 4) + (s₀.loc (gO C + 2) - 1) * 2)) (s₀.loc (gO C + 2) - 1)
+      (s₀.loc (gO C + 4) + (s₀.loc (gO C + 2) - 1)) &&& VMASK) (s₀.loc (gO C + 2) - 1)
       (fun z _ _ _ _ _ => by simp only [St.setLoc_loc])
   case vc8 =>
     rename_i hc
@@ -703,19 +699,19 @@ theorem ktopBody_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
 /-- One sweep step, then the sweep from there: the sweep from the start. -/
 theorem ktopW_cons (C : ConsSch) (s₀ s₁ s₂ : St) (hH : ¬ s₀.loc (gO C + 2) = 0)
     (k1 : KeepT C s₀ s₁) (h1 : s₁.loc (gO C + 2) = s₀.loc (gO C + 2) - 1)
-    (m1 : s₁.mem = (ktopS (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+    (m1 : s₁.mem = (ktopS (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2) - 1) (mkOf C s₀) s₀.mem).1)
-    (r1 : mkOf C s₁ = (ktopS (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+    (r1 : mkOf C s₁ = (ktopS (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2) - 1) (mkOf C s₀) s₀.mem).2)
     (k2 : KeepT C s₁ s₂)
-    (m2 : s₂.mem = (ktopW (tierA C.sa (s₁.loc 0)) (ghC C) (s₁.loc (gO C)) (s₁.loc (gO C + 1))
+    (m2 : s₂.mem = (ktopW (tierA C.sa (s₁.loc 0)) (ghC C (s₁.loc 0)) (s₁.loc (gO C)) (s₁.loc (gO C + 1))
         (s₁.loc (gO C + 4)) (s₁.loc (gO C + 13)) (s₁.loc (gO C + 2)) (mkOf C s₁) s₁.mem).1)
-    (r2 : mkOf C s₂ = (ktopW (tierA C.sa (s₁.loc 0)) (ghC C) (s₁.loc (gO C)) (s₁.loc (gO C + 1))
+    (r2 : mkOf C s₂ = (ktopW (tierA C.sa (s₁.loc 0)) (ghC C (s₁.loc 0)) (s₁.loc (gO C)) (s₁.loc (gO C + 1))
         (s₁.loc (gO C + 4)) (s₁.loc (gO C + 13)) (s₁.loc (gO C + 2)) (mkOf C s₁) s₁.mem).2) :
     KeepT C s₀ s₂ ∧
-      s₂.mem = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      s₂.mem = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem).1 ∧
-      mkOf C s₂ = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      mkOf C s₂ = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem).2 := by
   obtain ⟨a0, a1, a2, a3, a4⟩ := k1
   obtain ⟨b0, b1, b2, b3, b4⟩ := k2
@@ -730,9 +726,9 @@ theorem ktopL_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : 
     ⦃fun s => s = s₀⦄
     exec p n (mapS (gmap C) (ktopL C))
     ⦃fun r s' => r = .normal ∧ KeepT C s₀ s' ∧
-      s'.mem = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      s'.mem = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem).1 ∧
-      mkOf C s' = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      mkOf C s' = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem).2; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -761,9 +757,9 @@ theorem ktopL_step_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s�
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mapS (gmap C) (ktopL C))
     ⦃fun r s' => r = .normal ∧ KeepT C s₀ s' ∧
-      s'.mem = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      s'.mem = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem).1 ∧
-      mkOf C s' = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      mkOf C s' = (ktopW (tierA C.sa (s₀.loc 0)) (ghC C (s₀.loc 0)) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem).2; ⊤⦄ :=
   Triple.step_exec (ktopL_spec p C hO (n + 1) s₀)
 
@@ -789,7 +785,7 @@ theorem kgrowH1_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
 theorem kgrowH2_spec (p : Prog) (C : ConsSch) (n : Nat) (s₁ : St) :
     ⦃fun s => s = s₁⦄
     step p (exec p n) (mapS (gmap C) (kgrowH2 C))
-    ⦃fun r s' => r = .normal ∧ ¬ s₁.loc (gO C + 3) < s₁.loc (gO C + 5) + s₁.loc (gO C) * 2 ∧
+    ⦃fun r s' => r = .normal ∧ ¬ s₁.loc (gO C + 3) < s₁.loc (gO C + 5) + s₁.loc (gO C) ∧
       s'.mem = s₁.mem.set64 (tierA C.sa (s₁.loc 0)) 0 (s₁.loc (gO C) - SN0) ∧ s'.loc = s₁.loc; ⊤⦄ := by
   unfold kgrowH2
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub,
@@ -803,8 +799,8 @@ theorem kgrowH3_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
     ⦃fun s => s = s₂⦄
     step p (exec p n) (mapS (gmap C) kgrowH3)
     ⦃fun r s' => r = .normal ∧ s'.mem = s₂.mem ∧ Keep2 (gO C + 6) (gO C + 7) s₂ s' ∧
-      s'.loc (gO C + 6) = s₂.loc (gO C + 4) + s₂.loc (gO C + 1) * 2 ∧
-      s'.loc (gO C + 7) = s₂.loc (gO C + 1) >>> 2; ⊤⦄ := by
+      s'.loc (gO C + 6) = s₂.loc (gO C + 4) + s₂.loc (gO C + 1) ∧
+      s'.loc (gO C + 7) = s₂.loc (gO C + 1) >>> 3; ⊤⦄ := by
   unfold kgrowH3
   simp (disch := decide) only [mapS, mapE, gmap_lit, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc]
@@ -858,13 +854,13 @@ theorem kgrowH_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     step p (exec p n) (mapS (gmap C) (kgrowH C))
     ⦃fun r s' => r = .normal ∧ KeepLo (gO C) s₀ s' ∧
       ¬ s₀.mem.len64 (tierA C.sa (s₀.loc 0)) - 2 <
-        koW C.sa s₀.mem (s₀.loc 0) + knW C.sa s₀.mem (s₀.loc 0) * 2 * 2 ∧
+        koW C.sa s₀.mem (s₀.loc 0) + knW C.sa s₀.mem (s₀.loc 0) * 2 ∧
       s'.mem = s₀.mem.set64 (tierA C.sa (s₀.loc 0)) 0 (knW C.sa s₀.mem (s₀.loc 0) * 2 - SN0) ∧
       s'.loc (gO C) = knW C.sa s₀.mem (s₀.loc 0) * 2 ∧
       s'.loc (gO C + 1) = knW C.sa s₀.mem (s₀.loc 0) ∧
       s'.loc (gO C + 4) = koW C.sa s₀.mem (s₀.loc 0) + 2 ∧
-      s'.loc (gO C + 6) = koW C.sa s₀.mem (s₀.loc 0) + 2 + knW C.sa s₀.mem (s₀.loc 0) * 2 ∧
-      s'.loc (gO C + 7) = knW C.sa s₀.mem (s₀.loc 0) >>> 2; ⊤⦄ := by
+      s'.loc (gO C + 6) = koW C.sa s₀.mem (s₀.loc 0) + 2 + knW C.sa s₀.mem (s₀.loc 0) ∧
+      s'.loc (gO C + 7) = knW C.sa s₀.mem (s₀.loc 0) >>> 3; ⊤⦄ := by
   unfold kgrowH
   simp only [mapS]
   refine triple_seq _ (kgrowH1_spec p C n s₀) (fun s₁ h₁ => ?_)
@@ -896,7 +892,7 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
     ⦃fun s => s = s₀⦄
     step p (exec p n) (kgrowBlk C)
     ⦃fun r s' => r = .normal ∧ KeepLo (gO C) s₀ s' ∧
-      kgrowM C.sa (ghC C) (s₀.loc 0) s₀.mem = some s'.mem; ⊤⦄ := by
+      kgrowM C.sa (ghC C (s₀.loc 0)) (s₀.loc 0) s₀.mem = some s'.mem; ⊤⦄ := by
   have hsc : ∀ t, tierA C.sa t ≠ CTL := fun t =>
     (ne_tierA (Ne.symm hO.arrs.2.1) t).symm
   have h0 := zero_lt_gO C
@@ -951,7 +947,7 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
   have s5m : s₅.mem = kzM C.sa (s₀.loc 0) s₀.mem := by
     rw [m5, m4, s3_0, b6, b7, m3]; rfl
   -- the sweep
-  have hT : ktopM C.sa (ghC C) (s₀.loc 0) s₀.mem = (s₆.mem, mkOf C s₆) := by
+  have hT : ktopM C.sa (ghC C (s₀.loc 0)) (s₀.loc 0) s₀.mem = (s₆.mem, mkOf C s₆) := by
     rw [m6, mk6, s5_0, s5N, s5n, s5o, s5b, s5H, mk5, s5m]; rfl
   -- the first range
   have s7v : ∀ i : Nat, i = 0 ∨ i = 1 ∨ i = 4 ∨ i = 13 ∨ i = 18 ∨ i = 19 ∨ i = 20 →

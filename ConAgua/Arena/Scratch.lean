@@ -21,15 +21,16 @@ import Std.WP.Triple.SpecLemmas
 con-ron's arena brackets every declaration check with `enterScratch` (open the scratch tier of all
 four stores, clear the walk memos) and `dropScratch` (`flushCaches`, then close the scratch tier
 and truncate it). In L the 19 tables keep their scratch tier as tier 1 of their slot and record
-arrays (`StoreLib.lean`); a slot of tier 1 holds `B + i + 1` for node `i`, with the **slot base**
-`B = CTL[62]` (`SCB`), and reads free at or below `B` (`slotV`). So emptying the scratch tier of
-every table is O(1) per table:
+arrays (`StoreLib.lean`); a slot of tier 1 holds the value `B + i + 1` for node `i` (and the key's
+fragment above it), with the **slot base** `B = CTL[62]` (`SCB`), and reads free at or below `B`
+(`slotV`). So emptying the scratch tier of every table is O(1) per table:
 
 * `scratch_reset(f)`: `B += 2^32`, the scratch flag `CTL[1] := f`, and the 19 tier-1 node
-  counts `CTL[ca + 1] := 0`. Every old scratch slot holds at most `B + 2^27` and reads free
-  against the new base; no slot is written. Once every `2^30` resets (`B ≥ 2^62`) the base wraps:
-  the 19 scratch slot tables are zeroed and `B` restarts at `0` (con-ron's `clear` at
-  `EPOCH_MAX`), so `B < 2^62 + 2^32` always holds.
+  counts `CTL[ca + 1] := 0`. Every old scratch slot's value is at most `B + 2^30` and reads free
+  against the new base; no slot is written. Once every 32 766 resets (`B ≥ SCBLIM = 2^47 - 2^33`:
+  the stamp `B / 2^32` has 15 bits, bit 47 being the growth's mark) the base wraps: the 19 scratch
+  slot tables are zeroed and `B` restarts at `0` (con-ron's `ConsMap::clear` at `EPOCH_MAX`), so
+  `B < 2^47 - 2^32` always holds.
 * `scratch_enter()`: `scratch_reset(1)` and the four walk memos' `clear` (epoch bumps).
 * `scratch_drop()`: `flush_caches()` (`CoreCaches.lean`, the per-declaration caches), then
   `scratch_reset(0)`.
@@ -73,11 +74,12 @@ theorem resetMemA_eq (m : Mem) (f : Word) :
 
 /-! ## The slot base's wrap (lane epochwrap; con-ron's `HashMap2::clear` at `EPOCH_MAX`)
 
-The slot base `B` rises by `2^32` per reset. At `B ≥ 2^62` (`SCBLIM`, after `2^30` resets)
-`scratch_reset` vacates the scratch tier's slot tables, zeroing the `2 n` words of each of the 19
+The slot base `B` rises by `2^32` per reset. At `B ≥ 2^47 - 2^33` (`SCBLIM`, after 32 766 resets)
+`scratch_reset` vacates the scratch tier's slot tables, zeroing the `n` words of each of the 19
 tables' tier-1 table (the growth's zero loop `kzeroLs`), and restarts `B` at `0`, as con-ron's
-`clear` vacates its slots and restarts the epoch at `1` when the epoch reaches `EPOCH_MAX`. Only
-the slot tables carry `B`: the memos have their own stamps. -/
+`ConsMap::clear` vacates its slots and restarts the epoch at `1` when its 16-bit epoch reaches
+`EPOCH_MAX` (ours has 15 bits, D61). Only the slot tables carry `B`: the memos have their own
+stamps. -/
 
 /-- The 19 tables' slot arrays (tier 0's ids; the wrap vacates tier 1, `tier1 sa`). -/
 def scrSlots : List ArrId := [SLOT, ASLOT, SSLOT, ZSLOT, MSLOT, ISLOT, PSLOT, SOSLOT, CSLOT,
@@ -95,15 +97,15 @@ theorem slot1Arrs_eq : slot1Arrs = scrSlots.map (tierA · 1) := rfl
 tables' slot arrays. -/
 def scrArrs : List TieredArray := ↑PT0 :: slot1Arrs
 
-/-- The slot base's limit: at `B ≥ 2^62` the scratch tables are vacated and `B` restarts. -/
-def SCBLIM : Word := 4611686018427387904
+/-- The slot base's limit: at `B ≥ 2^47 - 2^33` the scratch tables are vacated and `B` restarts. -/
+def SCBLIM : Word := 140728898420736
 
-/-- Vacate tier 1 of slot array `sa`: the `2 n` words of its table (`n` slots from word `2 + o`),
-`n / 4` steps of the growth's zero loop. Template variables as `kgrowB`. -/
+/-- Vacate tier 1 of slot array `sa`: the `n` words of its table (`n` slots from word `2 + o`),
+`n / 8` steps of the growth's zero loop. Template variables as `kgrowB`. -/
 def vacB (sa : ArrId) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   t := 1;
   x := sa⟨t⟩[1] + 2;
-  e := (sa⟨t⟩[0] + ⟪SN0⟫) >> 2;
+  e := (sa⟨t⟩[0] + ⟪SN0⟫) >> 3;
   ⟪kzeroLs sa⟫
 }
 
@@ -117,7 +119,7 @@ def scrVac : Stmt := mapS (· + 1) (vacS scrSlots)
 
 /-- The memory after vacating tier 1 of slot array `sa`. -/
 def vacW (sa : ArrId) (m : Mem) : Mem :=
-  kzeroW (tierA sa 1) (koW sa m 1 + 2) (knW sa m 1 >>> 2).toNat m
+  kzeroW (tierA sa 1) (koW sa m 1 + 2) (knW sa m 1 >>> 3).toNat m
 
 /-- The memory after vacating tier 1 of the slot arrays `l`, in order. -/
 def vacL : List ArrId → Mem → Mem

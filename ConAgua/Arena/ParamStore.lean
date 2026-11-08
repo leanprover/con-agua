@@ -65,12 +65,12 @@ def paramCS : ConsSch where
   fname := "param_find"
   pname := "param_push"
   nk := 1
-  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) { if PREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) { if len(PREC⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := (⟪fnvBasis⟫ ^ PREC⟨t⟩[i]) * ⟪fnvPrime⟫ })
   skipW := none
   mtM m ks t i := pmatchW (m.arr64 (tierA PREC t)) t i (ks.getD 0 0)
   qhM _ ks := paramHashW (ks.getD 0 0)

@@ -75,7 +75,6 @@ def fvarCS : ConsSch where
   fname := "fvar_find"
   pname := "fvar_push"
   nk := 2
-  exact := true
   mc := condOf (lblk (t, u, ty, h, n, j, d, v, b) {
     if FVREC⟨t⟩[(v - 1) * 2] == u && FVREC⟨t⟩[(v - 1) * 2 + 1] == ty { skip } })
   np := 2
@@ -83,6 +82,7 @@ def fvarCS : ConsSch where
     if len(FVREC⟨t⟩) >> 1 <= c || len(FVLP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (u, ty, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ ty) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ FVREC⟨t⟩[i * 2]) * ⟪fnvPrime⟫ ^ FVREC⟨t⟩[i * 2 + 1]) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (u, ty, h, sk) { sk := (ty >> 31) & 1 }))
   xloc := 4
   pre := some lpBlkF

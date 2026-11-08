@@ -80,6 +80,7 @@ def letCS : ConsSch where
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32)), .var 3]
   ihash := lblk (ty, val, body, h) {
     h := (((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ val) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := (((⟪fnvBasis⟫ ^ (LEREC⟨t⟩[i * 2] & 4294967295)) * ⟪fnvPrime⟫ ^ (LEREC⟨t⟩[i * 2] >> 32)) * ⟪fnvPrime⟫ ^ LEREC⟨t⟩[i * 2 + 1]) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (ty, val, body, h, sk) { sk := ((ty | val | body) >> 31) & 1 }))
   mtM m ks t i := lematchW (m.arr64 (tierA LEREC t)) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM _ ks := letHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)

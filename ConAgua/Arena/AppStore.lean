@@ -72,7 +72,6 @@ def appCS : ConsSch where
   fname := "app_find"
   pname := "app_push"
   nk := 2
-  exact := true
   kpk := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
     if (AREC⟨t⟩[v - 1] & 4294967295) == f && (AREC⟨t⟩[v - 1] >> 32) == a { skip } })
@@ -80,6 +79,7 @@ def appCS : ConsSch where
   room := condOf (lblk (t, f, a, j, c) { if len(AREC⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ (AREC⟨t⟩[i] & 4294967295)) * ⟪fnvPrime⟫ ^ (AREC⟨t⟩[i] >> 32)) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 31) & 1 }))
   mtM m ks t i := amatchW (m.arr64 (tierA AREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := appHashW (ks.getD 0 0) (ks.getD 1 0)

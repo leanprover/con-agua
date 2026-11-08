@@ -75,7 +75,6 @@ def constCS : ConsSch where
   fname := "const_find"
   pname := "const_push"
   nk := 2
-  exact := true
   kpk := true
   mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
     if (CREC⟨t⟩[v - 1] & 4294967295) == f && (CREC⟨t⟩[v - 1] >> 32) == a { skip } })
@@ -84,6 +83,7 @@ def constCS : ConsSch where
     if len(CREC⟨t⟩) <= c || len(CLP⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ (CREC⟨t⟩[i] & 4294967295)) * ⟪fnvPrime⟫ ^ (CREC⟨t⟩[i] >> 32)) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 31) & 1 }))
   xloc := 4
   pre := some lsBlkC

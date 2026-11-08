@@ -341,6 +341,7 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   room := condOf (lblk (t, o, l, h, j, c) { if len(REC⟨t⟩) >> 2 <= c { skip } })
   recW := [.const kd, .var 1, .var 2, .var 3]
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
+  hrec := rhsOf (lblk (t, i, h) { h := REC⟨t⟩[i * 4 + 3] })
   skipW := none
   mtM m ks t i := mt (m.arr64 (tierA REC t)) (tpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM m ks := hashN (tpool m) (ks.getD 0 0).toNat (ks.getD 1 0).toNat

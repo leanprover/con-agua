@@ -67,12 +67,12 @@ def nanonCS : ConsSch where
   fname := "nanon_find"
   pname := "nanon_push"
   nk := 0
-  exact := true
   mc := condOf (lblk (t, h, n, j, d, v, b) { if 0 == 0 { skip } })
   np := 0
   room := condOf (lblk (t, j, c) { if len(NAREC⟨t⟩) <= c { skip } })
   recW := [.const 0]
   ihash := lblk (h) { h := ⟪nahashW⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ⟪nahashW⟫ })
   skipW := none
   mtM m _ t i := namatchW (m.arr64 (tierA NAREC t)) t i
   qhM _ _ := nahashW

@@ -66,12 +66,12 @@ def bvarCS : ConsSch where
   fname := "bvar_find"
   pname := "bvar_push"
   nk := 1
-  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) { if BREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) { if len(BREC⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := (⟪fnvBasis⟫ ^ BREC⟨t⟩[i]) * ⟪fnvPrime⟫ })
   skipW := none
   mtM m ks t i := bmatchW (m.arr64 (tierA BREC t)) t i (ks.getD 0 0)
   qhM _ ks := bvarHashW (ks.getD 0 0)

@@ -31,14 +31,14 @@ con-ron's `HashMap2::with_capacity` (`ron/hashmap2.rs`): an empty map sized up f
 the first inserts do not grow it. The caller picks `n` (the checker sizes the parse's large
 tables from the input length, `Checker/Presize.lean`). The template writes only the count word:
 if tier 0's table is still the fresh one (count word `0`), `n` is a multiple of `8`, at least
-`SN0` and leaves room for `n` slots at offset `0` (`2 n + 2` words), the count word becomes
+`SN0` and leaves room for `n` slots at offset `0` (`n + 2` words), the count word becomes
 `n - SN0`; otherwise nothing changes. On an all-zero slot array the result is an empty table of
 `n` slots (`consR_initN`): its slots are the array's zeros, so nothing is
 zeroed and no page is touched up front. -/
 
 -- con-ron: none — `HashMap2::with_capacity` (`ron/hashmap2.rs`); con-ron's tables start empty (D42)
 @[no_expose] def consPresizeG (C : ConsSch) : FunDecl := lfn (n) {
-  if n & 7 == 0 && 8 <= n && n <= 1152921504606846976 && n * 2 + 2 <= len(C.sa⟨0⟩) &&
+  if n & 7 == 0 && 8 <= n && n <= 1152921504606846976 && n + 2 <= len(C.sa⟨0⟩) &&
       C.sa⟨0⟩[0] == 0 {
     C.sa⟨0⟩[0] := n - ⟪SN0⟫
   };
@@ -49,7 +49,7 @@ zeroed and no page is touched up front. -/
 slots at offset `0`, and tier 0's count word still `0`. -/
 def psOK (C : ConsSch) (n : Word) (m : Mem) : Bool :=
   n &&& 7 == 0 && 8 ≤ n && n ≤ 1152921504606846976 &&
-    n * 2 + 2 ≤ UInt64.ofNat (m.arr64 (tierA C.sa 0)).size && rdW (m.arr64 (tierA C.sa 0)) 0 == 0
+    n + 2 ≤ UInt64.ofNat (m.arr64 (tierA C.sa 0)).size && rdW (m.arr64 (tierA C.sa 0)) 0 == 0
 
 /-- **The memory after `X_presize(n)`**. -/
 def psMem (C : ConsSch) (n : Word) (m : Mem) : Mem :=

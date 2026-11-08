@@ -15,10 +15,11 @@ con-ron's arena keeps each node constructor in a `Tbl α ι δ` per tier: an arr
 cons `Std.HashMap` (con-ron's Rust: `HashMap2`, open addressing). Its L twin is the same for every
 constructor up to a **cons schema** `ConsSch`: the record array (`w` words per node, one tiered
 array per tier as con-ron's: node `i` of tier `t` at `ra⟨t⟩[i * w ..]`), the slot array (one
-tiered array per tier, slot `j` a value word, `0` free or `B t + i + 1` node `i`, and a key word; linear probing from
-`homeW`; grown by `kgrowB`; the layout below), the node counts at `CTL[ca + t]`, the handle bases, and the table's own pieces as L
-fragments: the match of a node against the key, the room test of the push, the record words, the
-key hash and the scratch skip of `intern_X`.
+tiered array per tier, slot `j` one word: the key's hash fragment and the value, `0` free or
+`B t + i + 1` node `i`; con-ron's key-free `ConsMap`; linear probing from `homeW`; grown by
+`kgrowB`; the layout below), the node counts at `CTL[ca + t]`, the handle bases, and the table's
+own pieces as L fragments: the match of a node against the key, the room test of the push, the
+record words, the key hash, a node's hash from its record and the scratch skip of `intern_X`.
 
 The L code is **generic in the schema**: `consFindG C`, `consPushG C`, `consInternG C` are Lean
 functions producing the table's `X_find`, `X_push`, `intern_X` (as `MemoLib`'s templates: L names
@@ -168,8 +169,9 @@ Fragments (in the variables of the module doc):
   locals of its own after `b`) and the condition `mc` on node `v - 1`;
 * `np` record inputs of the push (the key, and for some tables the hash), the room test `room`
   (the push aborts if it holds), the record words `rec`;
-* `ihash`: `h :=` the key's hash, in `intern_X`; `skip`: the scratch-skip word (`some`: the
-  persistent probe is skipped when the scratch tier is open and the word is not `0`). -/
+* `ihash`: `h :=` the key's hash, in `intern_X`; `hrec`: the hash of node `i` (variable `1`) of
+  tier `t` (variable `0`) from its record, in the growth; `skip`: the scratch-skip word (`some`:
+  the persistent probe is skipped when the scratch tier is open and the word is not `0`). -/
 structure ConsSch where
   ra : ArrId
   sa : ArrId
@@ -192,6 +194,7 @@ structure ConsSch where
   room : Cond
   recW : List Expr
   ihash : Stmt
+  hrec : Expr
   skipW : Option Expr
   /-- Models (`ConsLibSpec.lean` states each fragment's obligation against them): the match of
   node `i` of tier `t` against the key, the key's hash, a node's hash (the growth's), the record
@@ -211,41 +214,32 @@ structure ConsSch where
   colM : Mem → List Word → Word := fun _ _ => 0
   /-- What the find's match and `ihash` may assume of the key (e.g. a pool slice in bounds). -/
   keyOK : Mem → List Word → Prop := fun _ _ => True
-  /-- The slot's key word is the key itself (`nk ≤ 2`, a two-word key's words below `2^32`,
-  which `intern_X` checks): a probe compares it and reads no record. -/
-  exact : Bool := false
   /-- A packed record (lane memlay): the two key words share record word `0` (the first in bits
-  0–31, the second in bits 32–63). -/
+  0–31, the second in bits 32–63; `intern_X` checks that both are below `2^32`). -/
   kpk : Bool := false
 
 /-! ## The slot layout (KSTP)
 
 Each tier has its own slot array `sa⟨t⟩` (lane tierswitch; con-ron's per-tier tables). Its words
 `0` and `1` hold `n - SN0` (`n` the slot count, a multiple of 8) and `o`, the table's offset (`0`:
-nothing writes it); the table starts at word `r = 2 + o`. Slot `j` is the two words `r + 2 j` (the
-value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). The table grows at load
-3/4 (con-ron's `HashMap2`) and **in place** (lane memlay): it doubles where it is (`kgrowB`), so no
-old copy of it stays resident, and the growth aborts if the array cannot hold the doubled table.
-A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
-array's first words.
+nothing writes it); the table starts at word `r = 2 + o`. Slot `j` is word `r + j`, con-ron's
+key-free `CSlot` (task #148): bits 63–48 the fragment of the key's hash (`fragW`), bits 47–0 the
+value: `0` free, `B t + i + 1` node `i` (bits 46–32 the scratch tier's stamp `B / 2^32`, bit 47
+the growth's mark). A value at or below the tier's base `B t` is free. The key is node `i`'s
+record: a probe runs the match only on a live slot whose fragment is the key's. The table grows at
+load 3/4 (con-ron's `HashMap2`) and **in place** (lane memlay): it doubles where it is
+(`kgrowB`), so no old copy of it stays resident, and the growth aborts if the array cannot hold
+the doubled table. A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run
+touches only the array's first words. -/
 
-The key word (`kwE`): for an `exact` table the key itself (no key word: `0`; one: the word; two:
-`k₁ | k₂ << 32`, both below `2^32`), so a probe that meets it has found the node and reads no
-record; otherwise the key's hash, a fingerprint: only a slot with the same hash runs the match. -/
-
-/-- The key word of a find (`t`, key `1 ‥ nk`, hash `1 + nk`). -/
-def kwE (C : ConsSch) : Expr :=
-  if C.exact then
-    match C.nk with
-    | 0 => .const 0
-    | 1 => .var 1
-    | _ => .bin .or (.var 1) (.bin .shl (.var 2) (.const 32))
-  else .var (1 + C.nk)
+/-- The fragment of the hash `e` (`fragW`): bits 31–16 of `e * golden`. -/
+def fragE (e : Expr) : Expr :=
+  .bin .and (.bin .shr (.bin .mul e (.const golden)) (.const 16)) (.const 65535)
 
 /-! ## `X_find(t, k₁ … k_nk, h)`: the probe -/
 
 /-- The template's find variables `t h n j d v b` (`lvF`), then, past the match's own locals,
-`q r x` (the key word, the region's first word, the probed slot's first word). -/
+`q r x` (the key's fragment, the table's first word, the probed slot's word). -/
 def fvF (C : ConsSch) (x : Var) : Var :=
   if x = 0 then 0 else if x < 7 then x + C.nk else x + C.nk + C.mloc
 
@@ -254,38 +248,38 @@ def kfHead (sa : ArrId) : Stmt := lblk (t, h, n, j, d, v, b, q, r, x) {
   x := sa⟨t⟩[1];
   r := x + 2;
   b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n)
+  x := h * ⟪golden⟫;
+  j := mulhi(x ^ (x >> 32), n);
+  q := (x >> 16) & 65535
 }
 def kfLoad (sa : ArrId) : Stmt := lblk (t, h, n, j, d, v, b, q, r, x) {
-  x := r + j * 2;
-  v := sa⟨t⟩[x];
+  x := sa⟨t⟩[r + j];
+  v := x & ⟪VMASK⟫;
   if v <= b { return (0, 0, j, d) };
   v := v - b
 }
-def kfKey (sa : ArrId) : Cond :=
-  condOf (lblk (t, h, n, j, d, v, b, q, r, x) { if sa⟨t⟩[x + 1] == q { skip } })
+def kfKey : Cond :=
+  condOf (lblk (t, h, n, j, d, v, b, q, r, x) { if x >> 48 == q { skip } })
 def cfHit : Stmt := lblk (t, h, n, j, d, v, b) { return (1, v - 1, j, d) }
 def cfAdv : Stmt := lblk (t, h, n, j, d, v, b) {
   j := (j + 1) * u64(j + 1 < n);
   d += 1
 }
 
-/-- The match of a slot whose key word is the key's: the hit (exact), or the instance's match. -/
+/-- The match of a slot whose fragment is the key's: the instance's match on its node. -/
 def kfMatch (C : ConsSch) : Stmt :=
-  if C.exact then mapS (lvF C.nk) cfHit
-  else seqO C.mpre (.ite C.mc (mapS (lvF C.nk) cfHit) .skip)
+  seqO C.mpre (.ite C.mc (mapS (lvF C.nk) cfHit) .skip)
 
 /-- The probe loop. -/
 def cfLoop (C : ConsSch) : Stmt :=
   .while (.cmp .ult (.var (4 + C.nk)) (.var (2 + C.nk)))
     (.seq (mapS (fvF C) (kfLoad C.sa))
-      (.seq (.ite (mapC (fvF C) (kfKey C.sa)) (kfMatch C) .skip) (mapS (lvF C.nk) cfAdv)))
+      (.seq (.ite (mapC (fvF C) kfKey) (kfMatch C) .skip) (mapS (lvF C.nk) cfAdv)))
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 @[no_expose] def consFindG (C : ConsSch) : FunDecl :=
   { nparams := 2 + C.nk, nlocals := 10 + C.nk + C.mloc,
-    body := .seq (mapS (fvF C) (kfHead C.sa))
-      (.seq (.set (7 + C.nk + C.mloc) (kwE C)) (.seq (cfLoop C) (.abort (.const 0)))) }
+    body := .seq (mapS (fvF C) (kfHead C.sa)) (.seq (cfLoop C) (.abort (.const 0))) }
 
 /-! ## `X_push(t, k₁ … k_np, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -315,39 +309,36 @@ def cpWr (C : ConsSch) : Nat → List Expr → Stmt → Stmt
 `o ‥ o + nk - 1`, the hash at `o + nk`). -/
 def ihashAt (C : ConsSch) (o : Nat) : Stmt := shiftS o C.ihash
 
-/-- `q :=` the key word, in the push (`q` at `gO + 2`; the key is the push's inputs `1 ‥ nk`,
-the hash input `1 + nk` if the record stores it, else recomputed from the key). -/
+/-- `q :=` the fragment of the key's hash, in the push (`q` at `gO + 2`; the key is the push's
+inputs `1 ‥ nk`; the hash is the input `1 + nk` if the record stores it, else recomputed from the
+key, as con-ron's `ConsMap::insert_at` recomputes it from the row). -/
 def cpKey (C : ConsSch) : Stmt :=
-  if C.exact then .set (gO C + 2) (kwE C)
-  else if C.nk < C.np then .set (gO C + 2) (.var (1 + C.nk))
+  if C.nk < C.np then .set (gO C + 2) (fragE (.var (1 + C.nk)))
   else seqs ((List.range C.nk).map fun i => .set (gO C + 14 + i) (.var (1 + i)))
-    (.seq (ihashAt C (gO C + 14)) (.set (gO C + 2) (.var (gO C + 14 + C.nk))))
+    (.seq (ihashAt C (gO C + 14)) (.set (gO C + 2) (fragE (.var (gO C + 14 + C.nk)))))
 
-/-- The slot write: value and key word at slot `j` of tier `t`'s table (`r` at `gO + 3`; the slot
+/-- The slot write: the value and the fragment at slot `j` of tier `t` (`r` at `gO + 3`; the slot
 count's word `g` at `gO + 1`). -/
 def cpSlot (C : ConsSch) : Stmt :=
   mapS (fun x => if x < 4 then (lvF C.np x) else gO C + (x - 3))
     (lblk (t, j, c, k, g, q, r) {
       r := C.sa⟨t⟩[1] + 2;
-      C.sa⟨t⟩[r + j * 2] := CTL.u64[62] * t + c + 1;
-      C.sa⟨t⟩[r + j * 2 + 1] := q })
+      C.sa⟨t⟩[r + j] := (CTL.u64[62] * t + c + 1) | (q << 48) })
 
 def cpCnt (C : ConsSch) : Stmt :=
   mapS (lvF C.np) (lblk (t, j, c, k) { CTL.u64[⟪C.ca⟫ + (t & 1)] := c + 1 })
 
 /-! ### The growth (in place, the pushing tier only) -/
 
-/-- The growth's hash of the key word `q`: `q` itself (fingerprint), or `ihash` of the key
-unpacked from it (exact). Template variables as `kgrowB`; the `ihash` block at `15`. -/
+/-- The renaming of `hrec`'s variables into the growth's: the tier `0` stays, the node `1` is
+`15`. -/
+def hrm (x : Var) : Var := if x = 0 then 0 else 15
+
+/-- The growth's hash of the live entry with value word `v` (unmarked): its node `v - bt - 1`'s
+hash, recomputed from its record (`hrec`; con-ron's `move_slots` rehashes `rows[s.h.row()].0`).
+Template variables as `kgrowB`; the node at `15`. -/
 def khashB (C : ConsSch) : Stmt :=
-  if C.exact then
-    seqs ((match C.nk with
-      | 0 => []
-      | 1 => [.set 15 (.var 10)]
-      | _ => [.set 15 (.bin .and (.var 10) (.const 4294967295)),
-              .set 16 (.bin .shr (.var 10) (.const 32))]))
-      (.seq (ihashAt C 15) (.set 11 (.var (15 + C.nk))))
-  else .set 11 (.var 10)
+  .seq (.set 15 (.bin .sub (.bin .sub (.var 9) (.var 14)) (.const 1))) (.set 11 (mapE hrm C.hrec))
 
 /-- The zero loop of slot array `sa`: `e` steps of eight zero words from `x` of tier `t`.
 Template variables `t n2 n H Q ob nb x e v q h j d bt` (`kgrowB`; also `scratch_reset`'s wrap,
@@ -376,14 +367,14 @@ def kgrowH1 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h,
 
 /-- The room check (the doubled table in place) and the new count word. -/
 def kgrowH2 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  if Q < nb + n2 * 2 { abort };
+  if Q < nb + n2 { abort };
   C.sa⟨t⟩[0] := n2 - ⟪SN0⟫
 }
 
-/-- The zero loop's start (the new upper half, `2 n` words after the old table) and count. -/
+/-- The zero loop's start (the new upper half, `n` words after the old table) and count. -/
 def kgrowH3 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  x := ob + n * 2;
-  e := n >> 2
+  x := ob + n;
+  e := n >> 3
 }
 
 /-- The sweep's start: the slot base `bt`, the two mark ranges empty, the cursor `H = n` (the
@@ -415,20 +406,20 @@ slots, without wrapping (it stops at the top slot `n2 - 1`). -/
 def kupLoop (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
   while bt < x && x < ⟪MARK⟫ && j + 1 < n2 {
     j += 1;
-    x := C.sa⟨t⟩[ob + j * 2]
+    x := C.sa⟨t⟩[ob + j] & ⟪VMASK⟫
   }
 }
 
 /-- The sweep's probe from slot `j`; `x` the value word of the slot it stops at. -/
 def kupL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
-  x := C.sa⟨t⟩[ob + j * 2];
+  x := C.sa⟨t⟩[ob + j] & ⟪VMASK⟫;
   ⟪kupLoop C⟫
 }
 
-/-- The live entry of slot `H` (value word `v`): its key word `q`, its new home `j`; above `H`,
+/-- The live entry of slot `H` (value word `v`): its fragment `q`, its new home `j`; above `H`,
 the probe from there (`x` the value word it stops at); otherwise `x = v`. -/
 def ktopP (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
-  q := C.sa⟨t⟩[ob + H * 2 + 1];
+  q := C.sa⟨t⟩[ob + H] >> 48;
   ⟪khashB C⟫;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n2);
   if H < j { ⟪kupL C⟫ } else { x := v }
@@ -439,12 +430,11 @@ def ktopP (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j
 the mark and joins a range. -/
 def ktopQ (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
   if x <= bt {
-    C.sa⟨t⟩[ob + j * 2] := v;
-    C.sa⟨t⟩[ob + j * 2 + 1] := q;
-    C.sa⟨t⟩[ob + H * 2] := 0
+    C.sa⟨t⟩[ob + j] := v | (q << 48);
+    C.sa⟨t⟩[ob + H] := 0
   } else {
     if j != H {
-      C.sa⟨t⟩[ob + H * 2] := v + ⟪MARK⟫;
+      C.sa⟨t⟩[ob + H] := (v + ⟪MARK⟫) | (q << 48);
       ⟪kdefB⟫
     }
   }
@@ -459,7 +449,7 @@ def ktopB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j
 /-- The sweep's step: the next slot down, `H - 1`, handled if live. -/
 def ktopBody (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
   H -= 1;
-  v := C.sa⟨t⟩[ob + H * 2];
+  v := C.sa⟨t⟩[ob + H] & ⟪VMASK⟫;
   if bt < v { ⟪ktopB C⟫ }
 }
 
@@ -481,13 +471,13 @@ def kgrowH6 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15
   e := n
 }
 
-/-- Take the marked entry in slot `H` (value `v`): spend one of the budget, unmark it, hash its
-key word `q`, and start the probe at the home of the hash in the doubled table. -/
+/-- Take the marked entry in slot `H` (value `v`): spend one of the budget, unmark it, read its
+fragment `q`, hash its node, and start the probe at the home of the hash in the doubled table. -/
 def kpickB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   if e == 0 { abort };
   e -= 1;
   v := v - ⟪MARK⟫;
-  q := C.sa⟨t⟩[ob + H * 2 + 1];
+  q := C.sa⟨t⟩[ob + H] >> 48;
   ⟪khashB C⟫;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n2);
   d := 0
@@ -496,7 +486,7 @@ def kpickB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, 
 /-- The probe: past the live unmarked slots, to slot `H` itself, a free slot or a marked one
 (aborting after `n2` steps). -/
 def kprobeL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  while j != H && bt < C.sa⟨t⟩[ob + j * 2] && C.sa⟨t⟩[ob + j * 2] < ⟪MARK⟫ {
+  while j != H && bt < (C.sa⟨t⟩[ob + j] & ⟪VMASK⟫) && (C.sa⟨t⟩[ob + j] & ⟪VMASK⟫) < ⟪MARK⟫ {
     if d >= n2 { abort };
     j := (j + 1) * u64(j + 1 < n2);
     d += 1
@@ -507,19 +497,16 @@ def kprobeL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h,
 becomes free; at a marked slot the two swap, and the displaced marked entry is next (`v`). -/
 def kplaceB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   if j == H {
-    C.sa⟨t⟩[ob + H * 2] := v;
+    C.sa⟨t⟩[ob + H] := v | (q << 48);
     v := 0
   } else {
-    nb := C.sa⟨t⟩[ob + j * 2];
-    x := C.sa⟨t⟩[ob + j * 2 + 1];
-    C.sa⟨t⟩[ob + j * 2] := v;
-    C.sa⟨t⟩[ob + j * 2 + 1] := q;
-    if ⟪MARK⟫ <= nb {
-      C.sa⟨t⟩[ob + H * 2] := nb;
-      C.sa⟨t⟩[ob + H * 2 + 1] := x;
-      v := nb
+    nb := C.sa⟨t⟩[ob + j];
+    C.sa⟨t⟩[ob + j] := v | (q << 48);
+    if ⟪MARK⟫ <= (nb & ⟪VMASK⟫) {
+      C.sa⟨t⟩[ob + H] := nb;
+      v := nb & ⟪VMASK⟫
     } else {
-      C.sa⟨t⟩[ob + H * 2] := 0;
+      C.sa⟨t⟩[ob + H] := 0;
       v := 0
     }
   }
@@ -536,7 +523,7 @@ def kinnerL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h,
 
 /-- The re-insertion of one slot `H`. -/
 def krehashS (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  v := C.sa⟨t⟩[ob + H * 2];
+  v := C.sa⟨t⟩[ob + H] & ⟪VMASK⟫;
   ⟪kinnerL C⟫
 }
 
@@ -641,9 +628,10 @@ def ciScr (C : ConsSch) : Stmt :=
 def ciEnd (C : ConsSch) : Stmt :=
   .seq (ciPush C 0) (.ret [.bin .add (.const C.P) (.var (3 + C.nk))])
 
-/-- An exact two-word key: abort unless both words are below `2^32` (the key word packs them). -/
+/-- A packed record's key: abort unless both words are below `2^32` (record word `0` packs them). -/
 def ciChk (C : ConsSch) : List Stmt :=
-  if C.exact ∧ C.nk = 2 then
+  if C.kpk then
+
     [.ite (.cmp .ne (.bin .shr (.bin .or (.var 0) (.var 1)) (.const 32)) (.const 0)) (.abort (.const R_CAP_KEY)) .skip]
   else []
 

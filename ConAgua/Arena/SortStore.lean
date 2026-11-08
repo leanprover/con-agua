@@ -73,7 +73,6 @@ def sortCS : ConsSch where
   fname := "sort_find"
   pname := "sort_push"
   nk := 1
-  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
     if SOREC⟨t⟩[(v - 1)] == u { skip } })
   np := 1
@@ -81,6 +80,7 @@ def sortCS : ConsSch where
     if len(SOREC⟨t⟩) <= c || len(SOLP⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := (⟪fnvBasis⟫ ^ SOREC⟨t⟩[i]) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (u, h, sk) { sk := (u >> 31) & 1 }))
   xloc := 4
   pre := some soPre

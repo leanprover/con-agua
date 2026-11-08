@@ -32,7 +32,7 @@ namespace L.Arena
 
 /-- The find's probe from its state `s` (the loop's variables). -/
 abbrev fprobe (C : ConsSch) (s : St) : List Word :=
-  cprobeW (s.mem.arr64 (tierA C.sa (s.loc 0))) (C.mtM s.mem (fkeys C s) (s.loc 0)) C.exact
+  cprobeW (s.mem.arr64 (tierA C.sa (s.loc 0))) (C.mtM s.mem (fkeys C s) (s.loc 0))
     (s.loc (7 + C.nk + C.mloc)) (s.loc (6 + C.nk)) (s.loc (2 + C.nk)) (s.loc (8 + C.nk + C.mloc))
     (s.loc (3 + C.nk)) (s.loc (4 + C.nk))
 
@@ -65,33 +65,15 @@ def CfLoopSpec (p : Prog) (C : ConsSch) (n : Nat) : Prop :=
 
 /-! The induction step, one theorem per shape of the match (elaborated in parallel). -/
 
-theorem cfLoop_succ_exact (p : Prog) (C : ConsSch) (n : Nat) (ih : CfLoopSpec p C n)
-    (hx : C.exact = true) : CfLoopSpec p C (n + 1) := by
-  intro s₀
-  unfold CfLoopSpec at ih
-  rw [exec, step_while (w := cfLoop C) rfl]
-  simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf, hx, ↓reduceIte, List.map,
-    mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT, Nat.reduceEqDiff]
-  vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, ih]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
-    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
-    Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide),
-    argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add1 1 C.nk 4 (by decide),
-    argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add1 1 C.nk 5 (by decide),
-    argsOf_setLoc_add 1 C.nk 5 (by decide), argsOf_setLoc_addc 1 C.nk 9 C.mloc (by decide),
-    argsOf_setLoc_addc0 1 C.nk 9 C.mloc (by decide), addc_eq_add, add_eq_addc,
-    lit_eq_addc, ↓reduceIte] at *)
-  all_goals grind [lang_grind, arena_grind]
-
 theorem cfLoop_succ_none (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat)
-    (ih : CfLoopSpec p C n) (hx : C.exact = false) (hm : C.mpre = none) :
+    (ih : CfLoopSpec p C n) (hm : C.mpre = none) :
     CfLoopSpec p C (n + 1) := by
   intro s₀
   unfold CfLoopSpec at ih
   rw [exec, step_while (w := cfLoop C) rfl]
   unfold CMatchOK at hM
   simp only [hm] at hM
-  simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf, hx, Bool.false_eq_true,
+  simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf,
     ↓reduceIte, seqO, hm, List.map, mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT,
     Nat.reduceEqDiff]
   vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, ih]
@@ -106,14 +88,14 @@ theorem cfLoop_succ_none (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat)
   all_goals grind [lang_grind, arena_grind]
 
 theorem cfLoop_succ_some (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat)
-    (ih : CfLoopSpec p C n) (hx : C.exact = false) (b : Stmt) (hm : C.mpre = some b)
+    (ih : CfLoopSpec p C n) (b : Stmt) (hm : C.mpre = some b)
     (hml : 1 ≤ C.mloc) : CfLoopSpec p C (n + 1) := by
   intro s₀
   unfold CfLoopSpec at ih
   rw [exec, step_while (w := cfLoop C) rfl]
   unfold CMatchOK at hM
   simp only [hm] at hM
-  simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf, hx, Bool.false_eq_true,
+  simp only [kfLoad, kfKey, kfMatch, cfHit, cfAdv, condOf,
     ↓reduceIte, seqO, hm, List.map, mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT,
     Nat.reduceEqDiff]
   vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, hM n, ih]
@@ -138,12 +120,9 @@ theorem cfLoop_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (hml : C.mpre �
   induction n with
   | zero => intro s₀; vcgen [exec] <;> grind
   | succ n ih =>
-    cases hx : C.exact with
-    | true => exact cfLoop_succ_exact p C n ih hx
-    | false =>
     cases hm : C.mpre with
-    | none => exact cfLoop_succ_none p C hM n ih hx hm
-    | some b => exact cfLoop_succ_some p C hM n ih hx b hm (hml (by simp [hm]))
+    | none => exact cfLoop_succ_none p C hM n ih hm
+    | some b => exact cfLoop_succ_some p C hM n ih b hm (hml (by simp [hm]))
 
 theorem cfLoop_step_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     (hml : C.mpre ≠ none → 1 ≤ C.mloc) (n : Nat) (s₀ : St) :
@@ -216,19 +195,6 @@ theorem argsL_key (t h : Word) (ks : List Word) (k : Nat) (hks : ks.length = k) 
   have := argsL_eq [t] (ks ++ [h]) [] (k + 1) (by simp [hks])
   simpa using this
 
-theorem kwE_pval (C : ConsSch) (s : St) :
-    Expr.pval s (kwE C) = kwQ C (argsOf 1 C.nk s) (s.loc (1 + C.nk)) := by
-  unfold kwE kwQ
-  cases hx : C.exact
-  · simp [Expr.pval]
-  · simp only [↓reduceIte]
-    rcases hn : C.nk with _ | _ | nk
-    · rfl
-    · simp [Expr.pval, argsOf]
-    · have h0 : 0 < nk + 1 + 1 := by omega
-      have h1 : 1 < nk + 1 + 1 := by omega
-      simp [Expr.pval, argsOf, BinOp.eval, List.getD_eq_getElem?_getD, h0, h1]
-
 /-- **`X_find(t, k, h)`** returns the probe of tier `t` from the home slot of `h` (for any
 argument list: `t`, the key, `h` and the initial step count are its words `0`, `1 ‥ nk`,
 `nk + 1`, `nk + 4`). -/
@@ -240,7 +206,7 @@ theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = cprobeW (s₀.mem.arr64 (tierA C.sa (Locals.init vs 0)))
         (C.mtM s₀.mem (argsL 1 (C.nk + 1) vs) (Locals.init vs 0))
-        C.exact (kwQ C (argsL 1 C.nk vs) (Locals.init vs (1 + C.nk)))
+        (fragW (Locals.init vs (1 + C.nk)))
         (baseW s₀.mem (Locals.init vs 0)) (knW C.sa s₀.mem (Locals.init vs 0))
         (krW C.sa s₀.mem (Locals.init vs 0))
         (homeW (Locals.init vs (1 + C.nk)) (knW C.sa s₀.mem (Locals.init vs 0)))
@@ -261,10 +227,10 @@ theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
         argsOf_setLoc_addc0 1 C.nk 7 C.mloc (by decide), argsOf_setLoc_addc 1 C.nk 8 C.mloc (by decide),
         argsOf_setLoc_addc0 1 C.nk 8 C.mloc (by decide), argsOf_setLoc_addc 1 C.nk 9 C.mloc (by decide),
         argsOf_setLoc_addc0 1 C.nk 9 C.mloc (by decide), addc_eq_add, add_eq_addc,
-        lit_eq_addc, kwE_pval,
+        lit_eq_addc,
         zero_ne_add 2 C.nk (by decide), zero_ne_add 3 C.nk (by decide), zero_ne_add 6 C.nk (by decide), argsOf_mk,
         ↓reduceIte] at *)
-    all_goals grind [lang_grind, arena_grind, knW, koW, krW, homeW, baseW]
+    all_goals grind [lang_grind, arena_grind, knW, koW, krW, homeW, baseW, fragW]
 
 /-- `X_find(t, k, h)` at a key of `nk` words. -/
 theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
@@ -274,7 +240,7 @@ theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) C.fname (t :: (ks ++ [h]))
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = cprobeW (s₀.mem.arr64 (tierA C.sa t)) (C.mtM s₀.mem (ks ++ [h]) t) C.exact (kwQ C ks h)
+      r = cprobeW (s₀.mem.arr64 (tierA C.sa t)) (C.mtM s₀.mem (ks ++ [h]) t) (fragW h)
         (baseW s₀.mem t) (knW C.sa s₀.mem t) (krW C.sa s₀.mem t) (homeW h (knW C.sa s₀.mem t)) 0; ⊤⦄ := by
   have ek := argsL_key t h ks C.nk hks
   have ek' := argsL_app t ks [h] C.nk hks

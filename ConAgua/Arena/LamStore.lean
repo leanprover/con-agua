@@ -78,7 +78,6 @@ def lamCS : ConsSch where
   fname := "lam_find"
   pname := "lam_push"
   nk := 2
-  exact := true
   kpk := true
   mc := condOf (lblk (t, ty, body, h, n, j, d, v, b) {
     if (LAREC⟨t⟩[v - 1] & 4294967295) == ty && (LAREC⟨t⟩[v - 1] >> 32) == body { skip } })
@@ -86,6 +85,7 @@ def lamCS : ConsSch where
   room := condOf (lblk (t, ty, body, j, c) { if len(LAREC⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := ((⟪fnvBasis⟫ ^ (LAREC⟨t⟩[i] & 4294967295)) * ⟪fnvPrime⟫ ^ (LAREC⟨t⟩[i] >> 32)) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 31) & 1 }))
   mtM m ks t i := lamatchW (m.arr64 (tierA LAREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := lamHashW (ks.getD 0 0) (ks.getD 1 0)

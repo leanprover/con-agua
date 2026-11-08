@@ -84,6 +84,7 @@ def projCS : ConsSch where
   recW := [.bin .or (.var 1) (.bin .shl (.var 3) (.const 32)), .var 2]
   ihash := lblk (n, u, e, h) {
     h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫ }
+  hrec := rhsOf (lblk (t, i, h) { h := (((⟪fnvBasis⟫ ^ (PJREC⟨t⟩[i * 2] & 4294967295)) * ⟪fnvPrime⟫ ^ PJREC⟨t⟩[i * 2 + 1]) * ⟪fnvPrime⟫ ^ (PJREC⟨t⟩[i * 2] >> 32)) * ⟪fnvPrime⟫ })
   skipW := some (rhsOf (lblk (n, u, e, h, sk) { sk := ((n | e) >> 31) & 1 }))
   mtM m ks t i := pjmatchW (m.arr64 (tierA PJREC t)) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM _ ks := projHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
