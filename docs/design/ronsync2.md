@@ -39,9 +39,54 @@ CONFLICT, con-ron 0001 applies.
    Final statements; by file across helpers.
 4. **Gates, perf, landing.**
 
-## 4. Progress log
+## 4. The L design (stage 2)
+
+* **`EREC` is tiered** (`Layout.lean`): tier 0 the stream index's and the pins' records, tier 1 a
+  job's own (a block's pushes, a gate's temporary record), dropped with the scratch tier
+  (`record_job` empties the tier-1 top `CTL[130]`). A record address is tier-tagged (bit 40, as the
+  pool's slices); reads are `EREC⦃a⦄`, writes `erec_put(a, v)`, `erec_alloc(n)` picks the tier by
+  the scratch flag. Why: a block job pushes constants, and in the threaded mode tier 0 is the frozen
+  buffer (read-only, shared); a per-worker copy of the base records would be ~42 MB per worker on
+  `Init`. The decoders read a **reader** `Nat → Option Word` (`erecP m` joins both tiers as one
+  address space, `aread a` for an array), so a decoding below both tops survives both growths.
+* **Record layouts** (`EnvRec.lean`): offsets kept stable; `recInfo` gains `isK` at `p + 9` (10
+  words); a rule's `ctorParams`/`k`/`eta` words and the caps' `sortZ`, the tables' `structSort`/
+  `guards` words are no longer read (a compaction is left for later: it would move every reader's
+  offsets in this sync); the caps' `nIdx` takes the old `ruleK` word. `decCI`/`decCaps` lost `dn`
+  (no `PropWhen` names any more), and with them `StageR`, `KeepPost`, `CheckR`, `EnvR`.
+* **The environment** (`Env.lean`): a job's own layer over the frozen stream index, the twin's
+  `IFEnv = ⟨own idx, own tbls, base⟩`. The stream index (`EIX*`, `TIX*`, untiered: the stream's names
+  are persistent) is written by `build_index` only; its view is two control words, `CTL[134]`
+  (`below`) and `CTL[135]` (`belowRec`), set by the job. The own layer (`OIX*`, `OTX*`, tiered by the
+  name's tier, worker-owned) carries the job's stamp `CTL[133]` in each row, so a job starts empty
+  without clearing; its view is `vis` (the push count), as before, so the API (`env_find(w, vis)`,
+  `env_push`, `env_row_get` = the own raw row, `env_pop_temp`, `find_table`) kept its shape. The
+  twin's "an empty own index is not hashed into" is `vis = 0`. `IEnv`'s lists are not represented
+  (nothing reads them). Control words rather than globals so that `MemFrame`'s `CTL` clause covers
+  them (a process-rule deviation: the frame machinery has no globals).
+* **The pins**: slot 51 (`quotMkName`, new upstream) is `PINS[71]`, past the reserved names, so no
+  other slot moves; `PINS` is 72 words.
+* **The ROM's structured constants** (`Rom/CIEnc.lean`, `Rom/CIRead.lean`): no annotated basis
+  blocks (`declsA`) and no `eqA` (both gone upstream); caps with `nIdx`, rules with the `levels`
+  fire, recursors with `isK`; 25 slots.
+* **The frontend**: `front_line(i, first)` applies `lineRecPlaced` (#488: the header only first, no
+  record first, no blank line); the parse no longer checks a recursor's `k` (the block's check
+  does: `streamKCheck`), and the recursor record carries it.
+* **The check phase** (`CheckerL.lean`, `Entry.lean`, `Freeze.lean`): entry 1 runs the stages and
+  `build_index`, entry 2 runs the jobs `PLO‥PHI-1` (`check_jobs`, `record_job`); the frozen buffer
+  holds the stream index, `FIRSTS` and the front's `DECL`/`DLP` (a job reads its record), and no
+  `PEND`; the harness's job count is the number of records.
+* **The harness**: a failed final flush of the verdict is status 3 (#490). #450's command line is
+  con-ron's own CLI; `main.c` is a different, minimal harness (`checker [--jobs=N] FILE`), so
+  nothing of it applies.
+
+## 5. Progress log
 
 * 2026-11-08 15:27 start. Bump run (`_tmp/ronsync2/bump.log`); con-leche 0001 re-applied without
   its `ParInstall.lean` hunk (file gone); 0002/0003 re-made at the new signatures (`eager`);
   con-ron 0002 re-applied without `Split.lean` (gone), conflicts taken from upstream, the
   toolchain fixes re-done where the build fails (helper ronsync2-vendor).
+* 15:40–16:20: foundation (EREC tiering, layouts, environment, pins, ROM, frontend #488, the check
+  phase, `Final/Twin.lean`'s statements). Helpers: ronsync2-vendor (done: Theorem 1 builds on our
+  toolchain, `con-ron/0002` re-made), ronsync2-kf (#148), ronsync2-core (the core tier),
+  ronsync2-ind (the inductive stage, `Install.lean`), ronsync2-decl (the declaration arms, Basis).
