@@ -182,6 +182,97 @@ theorem IndexR.insertConst {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
   · simp only [Mem.arr64_set64_same, rdW_set!, a1 (CTL : TieredArray) (by decide)]
     simp only [show (128 : Word).toNat = 128 from rfl, hc, and_self, ite_true]; exact hnx1
 
+/-- **One step of `insertTables`** (`idx_tables`' loop body): the table record at `q` (its
+structure `w`) of record position `r`: its base table row written if it has none. -/
+theorem IndexR.insertTable {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Word}
+    {tb : IProjTable} (htb : decTbl (erecP m) q.toNat = some tb) {w : Word}
+    (hw : erecP m (q.toNat + 2) = some w) {r : Word} (hr : r.toNat + 1 < 2 ^ 64)
+    (hset : (baseTbl m w).1 = 0 → rowTag w ≤ 2 ∧ rowTier w = 0 ∧
+      rowIx w + 1 < (m.arr64 (tixArr (rowTag w))).size) :
+    IndexR (if (baseTbl m w).1 = 0 then baseTblSet m w (r + 1) q else m)
+      { I with base := { I.base with tbls := I.base.tbls.insertIfNew tb.structName (r.toNat, tb) } } := by
+  obtain ⟨w', hw', hw32, hname⟩ := decTbl_name htb
+  rw [hw] at hw'; cases hw'
+  have hr1 : (r + 1).toNat = r.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  generalize hm1 : (if (baseTbl m w).1 = 0 then baseTblSet m w (r + 1) q else m) = m1
+  have a1 : ∀ b : TieredArray, b.arr ≠ 129 ∧ b.arr ≠ 130 ∧ b.arr ≠ 131 → m1.arr64 b = m.arr64 b := by
+    intro b hb; rw [← hm1]; split
+    · exact baseTblSet_arr_of (tix_ne hb)
+    · rfl
+  have hctl : ∀ x : Word, rdW (m1.arr64 CTL) x = rdW (m.arr64 CTL) x := fun x => by
+    rw [a1 (CTL : TieredArray) (by decide)]
+  have hP : erecP m1 = erecP m :=
+    erecP_congr' (a1 _ (by decide)) (a1 _ (by decide)) (hctl 129) (hctl 130)
+  have hbr : ∀ x : Word, baseRow m1 x = baseRow m x := by
+    intro x; have := eixArr_arr (rowTag x)
+    simp only [baseRow, a1 (eixArr (rowTag x) : TieredArray) (by omega)]
+  have hname' : ∀ n : NIdx, (tb.structName == n) = decide (n.word.toUInt64 = w) := by
+    intro n; rw [hname, nidx_beq, decI_word_self w hw32]
+  have hmem : tb.structName ∈ I.base.tbls ↔ (baseTbl m w).1 ≠ 0 := by
+    have hb := h.btbl (decI w); rw [decI_word_self w hw32] at hb
+    rw [hname, Std.HashMap.mem_iff_isSome_getElem?]
+    cases e : I.base.tbls[(decI w : NIdx)]? with
+    | none => rw [e] at hb; by_cases b0 : (baseTbl m w).1 = 0 <;> simp_all
+    | some y => rw [e] at hb; by_cases b0 : (baseTbl m w).1 = 0 <;> simp_all
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_⟩
+  · simp only [hbr, hP]; exact h.base n
+  · simp only [Std.HashMap.getElem?_insertIfNew, hname', hmem, hP]
+    by_cases e : n.word.toUInt64 = w
+    · by_cases b0 : (baseTbl m w).1 = 0
+      · obtain ⟨t1, t2, t3⟩ := hset b0
+        have : m1 = baseTblSet m w (r + 1) q := by rw [← hm1, if_pos b0]
+        rw [this, e, baseTbl_baseTblSet_self t1 t2 t3]
+        have hne : r + 1 ≠ 0 := fun z => by rw [z] at hr1; simp at hr1
+        simp [b0, hne, hr1, htb]
+      · have : m1 = m := by rw [← hm1, if_neg b0]
+        rw [this, e]; simp only [b0, ne_eq, not_false_eq_true, not_true_eq_false, and_false,
+          decide_true, true_and, ite_false]
+        have := h.btbl n; rw [e, if_neg b0] at this; exact this
+    · have hb1 : baseTbl m1 n.word.toUInt64 = baseTbl m n.word.toUInt64 := by
+        rw [← hm1]; split
+        · rename_i b0; obtain ⟨t1, t2, -⟩ := hset b0
+          exact baseTbl_baseTblSet_other hw32 (nidx_word_lt32 n) t1 t2 e
+        · rfl
+      simp only [e, decide_false, Bool.false_eq_true, false_and, ite_false, hb1]
+      exact h.btbl n
+  · rw [a1 _ (by decide)]; exact h.firsts i hi
+  · rw [a1 _ (by decide)]; exact h.firstsSize
+  · rw [hctl]; exact h.next
+
+/-- **A record's first counter** (`idx_add`'s `FIRSTS[k] := CTL[128]`, `k` the number of records
+so far): `firsts` gains the next counter. -/
+theorem IndexR.pushFirst {m : Mem} {I : IStreamIndex} (h : IndexR m I)
+    (hk : I.firsts.size < (m.arr64 FIRSTS).size) (hk64 : I.firsts.size < 2 ^ 64) :
+    IndexR (m.set64 FIRSTS (UInt64.ofNat I.firsts.size) (rdW (m.arr64 CTL) 128))
+      { I with firsts := I.firsts.push I.next } := by
+  have a1 : ∀ b : TieredArray, b ≠ FIRSTS → (m.set64 FIRSTS (UInt64.ofNat I.firsts.size)
+      (rdW (m.arr64 CTL) 128)).arr64 b = m.arr64 b := fun b hb => Mem.arr64_set64_ne _ _ _ _ _ hb
+  have hctl : ∀ x : Word, rdW ((m.set64 FIRSTS (UInt64.ofNat I.firsts.size)
+      (rdW (m.arr64 CTL) 128)).arr64 CTL) x = rdW (m.arr64 CTL) x := fun x => by
+    rw [a1 _ (by decide)]
+  have hP : erecP (m.set64 FIRSTS (UInt64.ofNat I.firsts.size) (rdW (m.arr64 CTL) 128)) = erecP m :=
+    erecP_congr' (a1 _ (by decide)) (a1 _ (by decide)) (hctl 129) (hctl 130)
+  have hbr : ∀ x : Word, baseRow (m.set64 FIRSTS (UInt64.ofNat I.firsts.size)
+      (rdW (m.arr64 CTL) 128)) x = baseRow m x := by
+    intro x; simp only [baseRow, a1 (eixArr (rowTag x) : TieredArray) (by unfold eixArr; split <;> (try split) <;> decide)]
+  have hbt : ∀ x : Word, baseTbl (m.set64 FIRSTS (UInt64.ofNat I.firsts.size)
+      (rdW (m.arr64 CTL) 128)) x = baseTbl m x := by
+    intro x; simp only [baseTbl, a1 (tixArr (rowTag x) : TieredArray) (by unfold tixArr; split <;> (try split) <;> decide)]
+  have hsz : (UInt64.ofNat I.firsts.size).toNat = I.firsts.size := by simp; omega
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_⟩
+  · simp only [hbr, hP]; exact h.base n
+  · simp only [hbt, hP]; exact h.btbl n
+  · simp only [Array.size_push] at hi
+    have hi64 : (UInt64.ofNat i).toNat = i := by simp; omega
+    rw [Mem.arr64_set64_same, rdW_set!, hsz, hi64]
+    by_cases e : I.firsts.size = i
+    · subst e; simp only [hk, and_self, ite_true, Array.getElem_push_eq]; exact h.next
+    · have hi' : i < I.firsts.size := by omega
+      rw [if_neg (fun c => e c.1), Array.getElem_push_lt hi']
+      exact h.firsts i hi'
+  · rw [Mem.size_arr64_set64]; simp; omega
+  · rw [hctl]; exact h.next
+
 end rel
 
 end L.Arena
