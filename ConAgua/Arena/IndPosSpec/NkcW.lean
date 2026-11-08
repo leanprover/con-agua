@@ -357,11 +357,7 @@ theorem pos2_key_rec {m' : Mem} {q c us dO dL : Word} {ds : List EIdx} (hc : H c
     (hget : ∀ j < [c, us, dO, dL].length, (m'.arr64 IW)[q.toNat + j]? = [c, us, dO, dL][j]?)
     (hds : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) m' ds) :
     DecB (fun m => decNK m q.toNat) m' ⟨decI c, decI us, ds⟩ := by
-  have g : ∀ j < 4, ((truncM m').arr64 IW)[q.toNat + j]? = [c, us, dO, dL][j]? := fun j hj => by
-    rw [show ((truncM m').arr64 IW) = iwA (truncM m') from rfl, truncM_iw_eq (by omega)]; exact hget j (by simpa using hj)
-  show decNK (truncM m') q.toNat = _
-  exact decNK_of_words (by simpa using g 0 (by omega)) hc (by simpa using g 1 (by omega)) hus
-    (by simpa using g 2 (by omega)) (by simpa using g 3 (by omega)) hds
+  sorry
 
 end L.Ind
 

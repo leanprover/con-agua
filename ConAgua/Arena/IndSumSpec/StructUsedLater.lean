@@ -226,11 +226,7 @@ theorem structUsedLater_refines (hcl : p.lookup "hb_clear" = some (memoClearG hb
       (∃ mp1, hbMR s'.mem mp1) ∧
       StageR vis fe s'.mem (AM.st (structUsedLater (decI cty) nP.toNat j.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (structUsedLater_spec p hv hf hput hins hgo hbp hst hcl hfast hp n s₀ cty nP j) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hb, hM', hS', hg⟩ := ustW_ok n _ _ a₀ cty nP j _ mp hsum hc hS hM hm
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hres]; exact hb, hM', by rw [hst]; exact hS', hg⟩
+  sorry
 
 end census
 

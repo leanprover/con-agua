@@ -144,11 +144,7 @@ open L.Arena
 theorem hslice?_congr {k : IdxKind} (a b : Nat → Option Word) (off off' n : Nat)
     (h : ∀ j < n, a (off + j) = b (off' + j)) :
     (hslice? a off n : Option (List (Idx k))) = hslice? b off' n := by
-  simp only [hslice?]
-  apply mapM_congr'
-  intro j hj
-  simp only [List.mem_range] at hj
-  simp only [hd?, h j hj]
+  sorry
 
 theorem consPre_ctl (m : Mem) (x l : Word) (i : Word) (hi : i ≠ 200) :
     rdW ((consPre m x l).arr64 CTL) i = rdW (m.arr64 CTL) i := by

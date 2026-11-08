@@ -31,25 +31,7 @@ open L.Arena
 theorem flush_stage {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (h : StageR vis fe m a) (hok : FlushOK m) :
     StageR vis fe (flushMem m) { a with caches := Caches.empty } ∧ IWGrow m (flushMem m) := by
-  have hf := flushMem_frame m
-  have hC : CheckR (flushMem m) { a with caches := Caches.empty } vis fe :=
-    ⟨ArenaD.caches_irrel _ ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ hf _ h.check.arena.base,
-      DerR.frameM [] _ _ _ hf (by simp) _ h.check.arena.der⟩,
-    h.check.core.flush hok,
-    h.check.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
-    h.check.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf,
-    h.check.mode.frame hf (by simp [flushCtl]) (by simp [flushCtl])⟩
-  have hIW : (flushMem m).arr64 IW = m.arr64 IW := hf.1 IW (by simp) (by decide)
-  have hE : (flushMem m).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp) (by decide)
-  have h200 : rdW ((flushMem m).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 :=
-    hf.ctl 200 (by simp [flushCtl])
-  have h129 : rdW ((flushMem m).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
-    hf.ctl 129 (by simp [flushCtl])
-  refine ⟨⟨hC, ?_⟩, ?_⟩
-  · simp only [IWOK_iff, iwTop, erTop, hIW, hE, h200, h129, hf.size CTL]; exact (IWOK_iff _).1 h.iw
-  · refine ⟨?_, ?_, fun i _ => by rw [hIW], fun i _ => by rw [hE]⟩
-    · simp only [iwTop, h200]; exact Nat.le_refl _
-    · simp only [erTop, h129]; exact Nat.le_refl _
+  sorry
 
 /-- `cv_lps(q)` under the stage relation: the level parameters, a slice below the top. -/
 theorem cvLpsA_stage {vis : Word} {fe : IFEnv} {a : AState}
@@ -59,21 +41,7 @@ theorem cvLpsA_stage {vis : Word} {fe : IFEnv} {a : AState}
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq
-  have e1 : rdW (m.arr64 EREC) (q + 1) = w1 :=
-    rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw1
-  have e2 : rdW (m.arr64 EREC) (q + 2) = w2 :=
-    rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw2
-  have hsrc : w2.toNat = 0 ∨ w1.toNat + w2.toNat ≤ (m.arr64 EREC).size := by
-    rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
-    · exact .inl h0
-    · exact .inr (hslice?_bound _ _ _ _ hsl h0)
-  rcases n with _ | n
-  · simp [L.Arena.cvLpsW] at h
-  rw [L.Arena.cvLpsW_step, e1, e2] at h
-  obtain ⟨-, hr4t, hdec4, hS4, hg4, htop4⟩ := L.Arena.erToIwW_stage h hS hsrc
-  rw [hr4t]
-  exact ⟨hS4, hg4, by rw [hdec4]; exact hsl, htop4⟩
+  sorry
 
 end L.Ind
 

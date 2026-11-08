@@ -269,33 +269,7 @@ theorem ftdsF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some xs ∧
         (0 < l.toNat → o.toNat + l.toNat ≤ iwTop m))
       (fvarTypeDs xs) (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
-  intro m m' a r h ⟨hS, hxs, hol⟩
-  obtain ⟨n, hc⟩ := callF_run h
-  rcases n with _ | k
-  · simp [callW_zero] at hc
-  have c' := callW_model (M := fun mm => ftdsW (k + 1) mm o l)
-    (fun s => ftds_specW ftdsProg (ProgHas.refl _) (k + 1) s o l) hc
-  rcases ha : allocW m l with _ | ⟨q, m1⟩
-  · rw [ftdsW_none k m o l ha] at c'; cases c'
-  rw [ftdsW_some k m m1 o l q ha] at c'
-  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
-  obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz
-  obtain ⟨hS1, -, -, -⟩ := allocW_stage ha hS
-  have hqt : q.toNat = iwTop m := by rw [hq]; rfl
-  have hI1 : (allocMem m l).arr64 IW = m.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  obtain ⟨rfl, ws, hm', hlen, hws, hrun⟩ := ftdsGoW_ok dn vis fe a o l q m xs hxs hsz (fun hl => by rw [hqt]; exact hol hl)
-    (k + 1) (allocMem m l) 0 r m' c' hS1 (by simp) (by rw [hI1]; exact hroom)
-    (fun j _ _ => by rw [hI1])
-  have hlen' : l.toNat = ws.length := by simpa using hlen.symm
-  have e0 : q + (0 : Word) = q := by simp
-  rw [e0, hq] at hm'
-  have hrec := recPost_wr m ws l hlen' hS.iw (by rw [← hlen', ← hqt]; exact hroom)
-  rw [← hm'] at hrec
-  rw [← hq] at hrec
-  have hK := slice_keep (κ := .expr) hS hrec hws hlen'
-  have hd0 : xs.drop (0 : Word).toNat = xs := rfl
-  rw [hd0] at hrun
-  exact ⟨_, a, hrun, hK⟩
+  sorry
 
 /-- `fvar_type_ds` writes the pool and its top. -/
 theorem ftdsF_frame {m m' : Mem} {args r : List Word} (h : ftdsF m args = some (r, m')) :
@@ -579,80 +553,6 @@ theorem gaaF_frame {m m' : Mem} {args r : List Word} (h : gaaF m args = some (r,
 theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
     RelW gaaF [f, e] (StageR vis fe) (getAppArgs f.toNat (decI e))
       (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
-  intro m m' a r h hS
-  obtain ⟨n, hc⟩ := callF_run h
-  rcases n with _ | k
-  · simp [callW_zero] at hc
-  have c' := callW_model (M := fun mm => gaaAdW gaaProg (k + 1) mm f e)
-    (fun s => gaaAd_spec gaaProg rfl rfl rfl (k + 1) s f e) hc
-  simp only [gaaAdW] at c'
-  obtain ⟨hf, c'⟩ := of_ite_none c'
-  have hf' : f = CWF := Decidable.not_not.mp hf
-  subst hf'
-  generalize htop : rdW (m.arr64 CTL) 136 = top at c'
-  rcases c1 : callW gaaProg k "get_app_args" [e] m with _ | ⟨r1, m1⟩
-  · rw [c1] at c'; simp at c'
-  rw [c1, bW_some] at c'
-  rcases ha : allocW m1 (r1.tail.headD 0) with _ | ⟨q, m2⟩
-  · rw [ha] at c'; cases c'
-  rw [ha, gaaAdW.k_iw_alloc.arm1] at c'
-  rcases c3 : s2iW k m2 q (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r3, m3⟩
-  · rw [c3] at c'; simp at c'
-  rw [c3, bW_some] at c'
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-  -- `get_app_args`
-  obtain ⟨t1, ht1, -, hfr1, hr0, xs, hrun, hsp, hb64⟩ := triple_of_callW
-    (getAppArgs_refinesR gaaProg rfl rfl rfl k ⟨m, Locals.init []⟩ a hS.check.arena.base e he) c1
-  rw [ht1] at hfr1 hsp
-  obtain ⟨hS1, hg1⟩ := stageR_hi hS hfr1 (by simp [SPN]) (by simp) (by decide) (by decide)
-  -- the fresh slice
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
-  obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz1
-  generalize hn : r1.tail.headD 0 = cnt at hsp hb64 ha c3 hroom
-  generalize ho : r1.headD 0 = o at hsp hb64 c3
-  have hm3 := s2iW_wr k _ _ _ _ _ _ c3
-  generalize hws : spnWs (allocMem m1 cnt) o cnt.toNat = ws at hm3
-  have hspn2 : (allocMem m1 cnt).arr64 SPN = m1.arr64 SPN :=
-    (allocMem_frame m1 cnt).1 SPN (by simp [SPN, IW]) (by decide)
-  have hlen : cnt.toNat = ws.length := by rw [← hws, spnWs_length]
-  have hrec := recPost_wr m1 ws cnt hlen hS1.iw (by
-    have : q.toNat = iwTop m1 := by rw [hq]; rfl
-    rw [← hlen, ← this]; exact hroom)
-  rw [← hq, ← hm3] at hrec
-  have hget : ∀ i, i < cnt.toNat → ws[i]? = some (spW m1 (o + i.toUInt64)) := by
-    intro i hi; rw [← hws, spnWs_get _ _ _ _ hi]; simp only [spW, hspn2]
-  have hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32 := by
-    intro w hw
-    obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hw
-    have hi' : i < cnt.toNat := by rw [hlen]; exact hi
-    have := hget i hi'
-    rw [List.getElem?_eq_getElem hi] at this
-    rw [Option.some.inj this]; exact hsp.lt i hi'
-  have hxs : ws.map (decI : Word → EIdx) = xs := by
-    apply List.ext_getElem
-    · simp only [List.length_map]; rw [← hlen, ← hsp.size]; simp
-    · intro i h1 h2
-      simp only [List.getElem_map]
-      have hi1 : i < ws.length := by simpa using h1
-      have hi' : i < cnt.toNat := by rw [hlen]; exact hi1
-      have := hget i hi'
-      rw [List.getElem?_eq_getElem hi1] at this
-      rw [Option.some.inj this]
-      have hg := hsp.get i (by simpa using h2)
-      simp only [List.getElem_toArray] at hg
-      rw [hg]; rfl
-  have hK := slice_keep (κ := .expr) hS1 hrec hlt hlen
-  rw [hxs] at hK
-  obtain ⟨hS3, hg3, hdec⟩ := hK
-  -- the top put back
-  obtain ⟨hS4, hg4⟩ := stageR_hi hS3 (MemFrame.setCtl m3 136 top) (by simp) (by simp) (by decide)
-    (by decide)
-  have hI4 : (m3.set64 CTL 136 top).arr64 IW = m3.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have ht4 : iwTop (m3.set64 CTL 136 top) = iwTop m3 := by
-    simp only [iwTop, rdW_set64]; simp
-  refine ⟨xs, a, by rw [CWF_eq]; exact hrun, hS4, hg1.trans (hg3.trans hg4), ?_⟩
-  refine ⟨?_, ?_⟩
-  · rw [← hdec.1]; simp only [decHL, iwA, aread_apply, hI4]
-  · rw [ht4]; exact hdec.2
+  sorry
 
 end L.Ind

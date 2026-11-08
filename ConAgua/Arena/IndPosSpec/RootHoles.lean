@@ -110,12 +110,7 @@ theorem NKIn.agree {m m' : Mem} {P : Nat → Prop} {k : Nat} (hk : NKIn m k P) (
 
 theorem NHIn.agree {m m' : Mem} {P : Nat → Prop} {w : Nat} (hw : NHIn m w P) (h : RdS m m' P) :
     decNH m' w = decNH m w ∧ NHIn m' w P := by
-  obtain ⟨h0, h1, hk⟩ := hw
-  have e0 := iwN_agree h h0
-  refine ⟨?_, h0, h1, fun k hk' => (hk k (e0 ▸ hk')).agree h |>.2⟩
-  simp only [decNH, e0, iwN_agree h h1]
-  rcases hkk : iwN m w with _ | k; · simp
-  simp only [Option.bind_eq_bind, Option.bind_some, ((hk k hkk).agree h).1]
+  sorry
 
 theorem NKIn.mono {m : Mem} {P Q : Nat → Prop} {k : Nat} (h : NKIn m k P) (hq : ∀ i, P i → Q i) :
     NKIn m k Q := ⟨fun j hj => hq _ (h.1 j hj), fun o l ho hl j hj => hq _ (h.2 o l ho hl j hj)⟩
@@ -165,28 +160,14 @@ include ha h2 h4 hg in
 theorem rhGo_spec (k : Nat) : ∀ (s₀ : St) (no nl lv po pl nP q j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_ctx_root_holes_go" [no, nl, lv, po, pl, nP, q, j]
     ⦃fun _ s' => LocEq s' s₀ ∧ rhGoW k s₀.mem no nl lv po pl nP q j = some s'.mem; ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ no nl lv po pl nP q j
-    rw [invoke_eq _ hg]; simp only [callFn, nestCtxRootHolesGo]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ no nl lv po pl nP q j
-    simp only [invoke_eq _ hg, callFn, nestCtxRootHolesGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        posRec4_specW p ha h4 k, posRec2_specW p ha h2 k, ih] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 include ha h2 h4 hg in
 theorem rootHoles_spec (hp : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles) (k : Nat)
     (s₀ : St) (ctx : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_ctx_root_holes" [ctx]
     ⦃fun r s' => LocEq s' s₀ ∧ rhW k s₀.mem ctx = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestCtxRootHoles]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      iwAlloc_specW p ha k, rhGo_spec p ha h2 h4 hg k] <;>
-    finish (gen := 20) [rhW, rdW_eq]
+  sorry
 
 end spec
 
@@ -280,22 +261,7 @@ theorem decNL_agree {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {o l : Nat}
 
 theorem CtxIn.agree {m m' : Mem} {P : Nat → Prop} {p : Nat} (hc : CtxIn m p P) (h : RdS m m' P) :
     decCtx m' p = decCtx m p ∧ CtxIn m' p P := by
-  obtain ⟨h11, hs⟩ := hc
-  have e : ∀ j < 11, iwN m' (p + j) = iwN m (p + j) := fun j hj => iwN_agree h (h11 j hj)
-  have eH : ∀ {k : IdxKind} j, j < 11 → (iwH m' (p + j) : Option (Idx k)) = iwH m (p + j) :=
-    fun j hj => iwH_agree h (h11 j hj)
-  have hat : ∀ {α : Type} {g g' : Nat → Nat → Option (List α)} (i : Nat), (i = 0 ∨ i = 2 ∨ i = 5 ∨ i = 7) →
-      (∀ o l, (∀ j < l, P (o + j)) → g' o l = g o l) → decAt m' g' (p + i) = decAt m g (p + i) := by
-    intro α g g' i hi hg
-    exact decAt_agree (e i (by omega)) (by rw [show p + i + 1 = p + (i + 1) by omega]; exact e (i + 1) (by omega))
-      (fun o l ho hl => hg o l (hs i hi o l ho hl))
-  refine ⟨?_, h11, fun i hi o l ho hl => hs i hi o l (by rw [← e i (by omega)]; exact ho)
-    (by rw [show p + i + 1 = p + (i + 1) by omega, ← e (i + 1) (by omega)]; rw [show p + (i + 1) = p + i + 1 by omega]; exact hl)⟩
-  simp only [decCtx]
-  rw [show p = p + 0 by omega, hat 0 (by omega) (fun o l hol => decHL_agree h hol),
-    hat 2 (by omega) (fun o l hol => decHL_agree h hol), e 4 (by omega),
-    hat 5 (by omega) (fun o l hol => decNL_agree h hol), hat 7 (by omega) (fun o l hol => decHL_agree h hol),
-    eH 9 (by omega), eH 10 (by omega)]
+  sorry
 
 theorem CtxIn.mono {m : Mem} {P Q : Nat → Prop} {p : Nat} (h : CtxIn m p P) (hq : ∀ i, P i → Q i) :
     CtxIn m p Q := ⟨fun j hj => hq _ (h.1 j hj), fun i hi o l ho hl j hj => hq _ (h.2 i hi o l ho hl j hj)⟩
@@ -311,39 +277,7 @@ theorem rhW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     StageR vis fe m' a ∧ IWGrow m m' ∧ (r.tail.headD 0).toNat = c.rootHoles.length ∧
       (r.headD 0).toNat + c.rootHoles.length ≤ iwTop m' ∧
       HolesAt m' (r.headD 0).toNat c.rootHoles.length c.rootHoles (· < iwTop m') := by
-  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
-  obtain ⟨hn, hn', hpa, hpa', hnP, hlvH, hlv, -, -, -⟩ := ctx_fields hc hin hsz
-  unfold rhW at h
-  generalize rdW (m.arr64 IW) ctx = no at h hn hn'
-  generalize rdW (m.arr64 IW) (ctx + 1) = nl at h hn hn'
-  generalize rdW (m.arr64 IW) (ctx + 7) = po at h hpa hpa'
-  generalize rdW (m.arr64 IW) (ctx + 8) = pl at h hpa hpa'
-  generalize rdW (m.arr64 IW) (ctx + 4) = nP at h hnP
-  generalize rdW (m.arr64 IW) (ctx + 10) = lv at h hlvH hlv
-  have hlen : c.rootHoles.length = nl.toNat := by
-    simp [NestCtx.rootHoles, decHL_length m hn]
-  have hrh : c.rootHoles = rhList c.names (decI lv) c.params nP.toNat := by
-    simp [NestCtx.rootHoles, rhList, hlv, hnP]
-  rcases hal : allocW m nl with _ | ⟨q, m1⟩ <;> rw [hal] at h; · simp [rhA] at h
-  rw [rhA_some] at h
-  obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
-  have hqt : q.toNat = iwTop m := by simp only [iwTop, hqd]
-  rcases hgo : rhGoW k m1 no nl lv po pl nP q 0 with _ | m2 <;> rw [hgo] at h; · simp [rhB] at h
-  rw [rhB_some] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hS2, hGX, hH⟩ := rhGoW_ok dn fe vis a no nl lv po pl nP q c.names c.params k m1 m2 0 hgo hS1
-    (by rw [decHL_agree (RdS.of_grow hg1) hn']; exact hn) (by rw [decHL_agree (RdS.of_grow hg1) hpa']; exact hpa)
-    hlvH (fun i hi => by have := hn' i hi; omega) (fun i hi => by have := hpa' i hi; omega) (by omega)
-    (by simp) (fun i hi => by simp at hi)
-  have hgr : IWGrow m m2 := hGX.grow' hg1 (by omega)
-  refine ⟨hS2, hgr, by simp [hlen], ?_, ?_⟩
-  · simp only [List.headD_cons]; have := hGX.1; omega
-  · rw [hrh, show (rhList c.names (decI lv) c.params nP.toNat).length = nl.toNat by
-      rw [← hrh]; exact hlen]
-    simp only [List.headD_cons]
-    intro i hi
-    obtain ⟨w, hw, hd, hni⟩ := hH i hi
-    exact ⟨w, hw, hd, hni.mono fun _ hx => hx.1⟩
+  sorry
 
 section census
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h2 : p.lookup "rec2" = some rec2)

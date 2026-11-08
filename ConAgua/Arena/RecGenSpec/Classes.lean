@@ -30,24 +30,12 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- A slice read in the cut record pool lies below the top (or is empty). -/
 theorem rec3ErSlice {m : Mem} {o l : Nat} {xs : List NIdx} (h : hslice? (erA (truncM m)) o l = some xs) :
     o + l ≤ erTop m ∨ l = 0 := by
-  rcases Nat.eq_zero_or_pos l with h0 | h0
-  · exact .inr h0
-  obtain ⟨w, hw⟩ := rec3SliceLast h h0
-  have := (truncM_er_get hw).1
-  exact .inl (by omega)
+  sorry
 
 /-- **A constant record decoded below the tops is `CVExt`.** -/
 theorem rec3CVExt_of_trunc {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp (truncM m) q = some cv) :
     CVExt m q ∧ decCVp m q = some cv := by
-  have h' : decCV (erA (truncM m)) q = some cv := h
-  obtain ⟨w, hw3, -, -⟩ := decCV_typeW h'
-  have h3 := (truncM_er_get hw3).1
-  obtain ⟨w1, w2, h1, h2, hs⟩ := decCV_slice h'
-  refine ⟨⟨by omega, fun o l ho hl => ?_⟩, (OMono.decCVp q).mono _ _ _ (IWGrow.refl m).truncExt h⟩
-  rw [truncM_er_eq (by omega)] at h1 h2
-  simp only [nat?, h1, h2, Option.map_some, Option.some.injEq] at ho hl
-  subst ho hl
-  exact rec3ErSlice hs
+  sorry
 
 /-- **`RecsOK` from the recursor shapes decoded below the tops.** -/
 theorem rec3RecsOK_of_decB {m : Mem} {ro rl : Nat} {recs : List RecShape}

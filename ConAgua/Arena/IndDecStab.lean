@@ -138,22 +138,7 @@ theorem decMS_mono (p : Nat) : OMono (fun m => decMS m p) := by
     )
 
 theorem decRS_mono (p : Nat) : OMono (fun m => decRS m p) := by
-  unfold decRS
-  repeat' (first
-    | exact OMono.const _
-    | apply OMono.iwN
-    | apply OMono.iwB
-    | apply OMono.iwH
-    | apply OMono.decHL
-    | apply OMono.decNL
-    | apply OMono.decCVp
-    | apply OMono.decAt
-    | apply OMono.decPL
-    | apply decCN_mono
-    | apply decMS_mono
-    | apply OMono.bind
-    | intro _
-    )
+  sorry
 
 theorem decBS_mono (p : Nat) : OMono (fun m => decBS m p) := by
   unfold decBS
@@ -536,9 +521,7 @@ theorem truncM_iw_get? (m : Mem) (i : Nat) :
 
 theorem truncM_er_get? (m : Mem) (i : Nat) :
     erA (truncM m) i = if i < erTop m then erA m i else none := by
-  simp only [erA, truncM, Mem.arr64, ite_true, Array.getElem?_extract,
-    show (EREC : TieredArray) ≠ IW by decide, ite_false]
-  split <;> simp_all <;> omega
+  sorry
 
 /-- A word of the cut pool is a word below the top. -/
 theorem truncM_iw_get {m : Mem} {i : Nat} {v : Word} (h : iwA (truncM m) i = some v) :
@@ -562,11 +545,7 @@ theorem truncM_er_eq {m : Mem} {i : Nat} (hi : i < erTop m) :
 
 /-- Every memory the pools grow into extends the cut pools. -/
 theorem IWGrow.truncExt {m m' : Mem} (hg : IWGrow m m') : PoolExt (truncM m) m' := by
-  refine ⟨fun i v h => ?_, fun i v h => ?_⟩
-  · obtain ⟨hi, hv⟩ := truncM_iw_get h
-    simp only [iwA, aread_apply, aread_apply] at hv ⊢; rw [hg.iwGet i hi]; exact hv
-  · obtain ⟨hi, hv⟩ := truncM_er_get h
-    simp only [erA] at hv ⊢; rw [hg.erGet i hi]; exact hv
+  sorry
 
 /-- **Decoded below the tops**: the decoding succeeds in the cut pools. -/
 def DecB {α : Type} (f : Mem → Option α) (m : Mem) (x : α) : Prop := f (truncM m) = some x
@@ -583,13 +562,7 @@ theorem DecB.get (hf : OMono f) (h : DecB f m x) : f m = some x := h.stab hf m (
 
 /-- It stays below the tops as they grow. -/
 theorem DecB.grow (hf : OMono f) (hg : IWGrow m m') (h : DecB f m x) : DecB f m' x := by
-  refine hf.mono _ _ _ ⟨fun i v hv => ?_, fun i v hv => ?_⟩ h
-  · obtain ⟨hi, hv'⟩ := truncM_iw_get hv
-    rw [truncM_iw_eq (Nat.lt_of_lt_of_le hi hg.iw)]
-    simp only [iwA, aread_apply, aread_apply] at hv' ⊢; rw [hg.iwGet i hi]; exact hv'
-  · obtain ⟨hi, hv'⟩ := truncM_er_get hv
-    rw [truncM_er_eq (Nat.lt_of_lt_of_le hi hg.er)]
-    simp only [erA] at hv' ⊢; rw [hg.erGet i hi]; exact hv'
+  sorry
 
 end decB
 

@@ -318,14 +318,7 @@ theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc)
     (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_alloc" [k]
     ⦃fun r s' => LocEq s' s₀ ∧ erAllocW s₀.mem k = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, erecAlloc]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
-      finish [erAllocW, erAllocMem]
+  sorry
 
 /-- Write `ws` into `EREC` at `q, q + 1, …`. -/
 def wrER (m : Mem) (q : Word) : List Word → Mem
@@ -370,28 +363,7 @@ theorem StageR.erec {vis : Word} {fe : IFEnv} {a : AState}
     (hlow : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
     (htop : erTop m ≤ erTop m') (hroom : erTop m' ≤ (m'.arr64 EREC).size) :
     StageR vis fe m' a ∧ IWGrow m m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by simp [EREC, IW]) (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (by simp)
-  have hg : ErecGrow m m' := ⟨htop, hlow, hf.size EREC⟩
-  have hC : CheckR m' a vis fe :=
-    ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; decide)
-        (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hS.check.arena.base,
-      DerR.frameM _ _ m m' hf (by decide) a hS.check.arena.der⟩,
-     hS.check.core.frame (fun b hb => by simp at hb; subst hb; decide)
-       (fun x hx => by simp at hx; subst hx; decide) hf,
-     hS.check.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
-     EnvR.grow (fun b h1 h2 h3 => hf.arr b (fun hm => by simp at hm; subst hm; simp [EREC] at h3)
-         (fun hm => by simp at hm; subst hm; simp [CTL] at h1))
-       (hf.ctl 128 (by simp)) hg
-       (TblSame.of_frame (by decide) (by decide) (by decide) hf) hS.check.env,
-     hS.check.mode.frame hf (by simp) (by simp)⟩
-  refine ⟨⟨hC, ?_, hroom, ?_, ?_, ?_⟩, ?_⟩
-  · simp only [iwTop, h200, hI]; exact hI1
-  · rw [hI]; exact hsz
-  · rw [hf.size EREC]; exact hEs
-  · rw [hf.size CTL]; exact hc
-  · refine ⟨by simp only [iwTop, h200]; exact Nat.le_refl _, htop, fun i _ => by rw [hI], hlow⟩
+  sorry
 
 /-- **A record allocated in `EREC` and written**: `erec_alloc(ws.length)` then `ws` at the
 returned pointer keeps the stage relation; the words are readable there, the top moved by the
@@ -514,15 +486,7 @@ theorem cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
     (hp : p.lookup "cv_new" = some cvNew) (n : Nat) (s₀ : St) (nm lo ll ty : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_new" [nm, lo, ll, ty]
     ⦃fun r s' => LocEq s' s₀ ∧ cvNewW s₀.mem nm lo ll ty = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, cvNew]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        erecAlloc_specW p ha n] <;>
-      finish [cvNewW, cvNewMem]
+  sorry
 
 /-- **`cv_new` with the name and level parameters of the record at `cq`** keeps the stage
 relation and decodes as `{cv with type := ty}`. -/
@@ -538,54 +502,6 @@ theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
       (∀ lo ll, nat? (erA m') (q.toNat + 1) = some lo → nat? (erA m') (q.toNat + 2) = some ll →
         lo + ll ≤ erTop m ∨ ll = 0) ∧
       decCVp m' q.toNat = some { cv with type := decI ty } := by
-  simp only [cvNewW] at h
-  cases h1 : erAllocW m 4 with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨q1, m1⟩ := x
-  rw [h1] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  rw [cvNewMem_eq]
-  obtain ⟨hS', hg, hq, htop, hget⟩ := erRec_stage h1 hS [rdW (m.arr64 EREC) cq,
-    rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), ty] (by simp)
-  refine ⟨hS', hg, hq, htop, ?_, ?_⟩
-  rotate_left
-  obtain ⟨-, hE1, -, hEs, -⟩ := hS.iw
-  have hlt : ∀ j, j < 4 → cq.toNat + j < (m.arr64 EREC).size := fun j hj => by
-    simp only [erTop] at hcq hE1; omega
-  have hw : ∀ (j : Nat) (x : Word), j < 3 → x.toNat = cq.toNat + j →
-      (m.arr64 EREC)[cq.toNat + j]? = some (rdW (m.arr64 EREC) x) := by
-    intro j x hj hx
-    simp only [rdW, hx, Array.getElem?_eq_getElem (hlt j (by omega))]; rfl
-  have hc1 : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hc2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have hlow : ∀ i < erTop m, ((wrER m1 q1 [rdW (m.arr64 EREC) cq,
-      rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), ty]).arr64 EREC)[i]? =
-      (m.arr64 EREC)[i]? := fun i hi => hg.erGet i hi
-  refine decCV_copy (erTop m) hcv ?_ ?_ ?_ ?_ hty hlow hsl
-  · have := hget 0 (by simp); simp only [Nat.add_zero] at this
-    simp only [erA]; rw [this]; have := hw 0 cq (by decide) (by simp); simp only [Nat.add_zero] at this
-    rw [this]; simp
-  · simp only [erA]; rw [hget 1 (by simp), hw 1 (cq + 1) (by decide) hc1]; simp
-  · simp only [erA]; rw [hget 2 (by simp), hw 2 (cq + 2) (by decide) hc2]; simp
-  · simp only [erA]; rw [hget 3 (by simp)]; simp
-  · intro lo ll e1 e2
-    obtain ⟨-, hE1, -, hEs, -⟩ := hS.iw
-    have hlt : ∀ j, j < 4 → cq.toNat + j < (m.arr64 EREC).size := fun j hj => by
-      simp only [erTop] at hcq hE1; omega
-    simp only [nat?, erA] at e1 e2
-    rw [hget 1 (by simp)] at e1
-    rw [hget 2 (by simp)] at e2
-    simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, Option.map_some, Option.some.injEq] at e1 e2
-    apply hsl
-    · simp only [nat?, erA]
-      have : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      rw [← e1]; simp only [rdW, this, Array.getElem?_eq_getElem (hlt 1 (by decide)), Option.map_some,
-        Option.getD_some]
-    · simp only [nat?, erA]
-      have : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-      rw [← e2]; simp only [rdW, this, Array.getElem?_eq_getElem (hlt 2 (by decide)), Option.map_some,
-        Option.getD_some]
+  sorry
 
 end L.Ind

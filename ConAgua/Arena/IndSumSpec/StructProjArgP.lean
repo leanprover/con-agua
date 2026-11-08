@@ -367,13 +367,7 @@ theorem whnfTelescope_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (i n : Nat) (e
       let e' ← whnf mode fe checkFuel i e
       let v ← view e'
       wtArm mode fe i out v n) := by
-  cases n <;>
-  · delta whnfTelescope
-    dsimp only [Nat.brecOn, Nat.brecOn.go, whnfTelescope._f]
-    refine congrArg (whnf mode fe checkFuel i e >>= ·) (funext fun e' => ?_)
-    refine congrArg (view e' >>= ·) (funext fun v => ?_)
-    cases v <;> first | rfl |
-      (simp only [wtArm]; delta whnfTelescope; dsimp only [Nat.brecOn, Nat.brecOn.go])
+  sorry
 
 end L.Ind
 

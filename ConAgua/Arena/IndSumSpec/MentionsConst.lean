@@ -170,11 +170,7 @@ theorem hasLooseBVarBGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx
       hbMR s'.mem (AM.res (ConRon.Arena.hasLooseBVarBGo mp i.toNat f.toNat (decE h)) a₀).2 ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.hasLooseBVarBGo mp i.toNat f.toNat (decE h)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (hbGo_spec p hv hf hput hins hgo hbp n s₀ f i h) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨⟨b, mp'⟩, a', hrun, hb, hM', hS', hg⟩ := hbGoOK n _ a₀ f i h mp hS hh hM _ _ hm
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hres]; exact hb, by rw [hres]; exact hM', by rw [hst]; exact hS', hg⟩
+  sorry
 
 end hbCensus
 

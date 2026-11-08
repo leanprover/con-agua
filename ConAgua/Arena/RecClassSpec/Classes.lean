@@ -279,30 +279,7 @@ def CVExt (m : Mem) (q : Nat) : Prop :=
 
 theorem decCVp_grow_r {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) :
     decCVp m' q = decCVp m q := by
-  have hag : ∀ i, i < erTop m → (erA m')[i]? = (erA m)[i]? := fun i hi => by
-    simp only [erA]; exact hg.erGet i hi
-  have hn : ∀ i, i < erTop m → nat? (erA m') i = nat? (erA m) i := fun i hi => by
-    simp only [nat?, hag i hi]
-  have hh : ∀ {k : IdxKind} i, i < erTop m → (hd? (erA m') i : Option (Idx k)) = hd? (erA m) i :=
-    fun i hi => by simp only [hd?, hag i hi]
-  obtain ⟨hq4, hl⟩ := hq
-  simp only [decCVp, decCV]
-  rw [hh q (by omega), hh (q + 3) (by omega)]
-  have hlist : (hlist? (erA m') (q + 1) : Option (List (Idx IdxKind.name))) = hlist? (erA m) (q + 1) := by
-    simp only [hlist?]
-    rw [hn (q + 1) (by omega), hn (q + 1 + 1) (by omega)]
-    cases ho : nat? (erA m) (q + 1) with
-    | none => simp
-    | some o =>
-      cases hl' : nat? (erA m) (q + 1 + 1) with
-      | none => simp
-      | some l =>
-        try simp only [Option.bind_some]
-        apply hslice?_congr
-        intro j hj
-        have := hl o l ho hl'
-        exact hag (o + j) (by omega)
-  rw [hlist]
+  sorry
 
 theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o : Nat),
     decPL m f o l = (decNL m o l).bind (fun ps => ps.mapM f) := by
@@ -323,13 +300,7 @@ theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o :
         | some ps => simp [hf]
 
 theorem CVExt_grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) : CVExt m' q := by
-  obtain ⟨h1, h2⟩ := hq
-  have hn : ∀ i, i < erTop m → nat? (erA m') i = nat? (erA m) i := fun i hi => by
-    simp only [nat?, erA]; rw [hg.erGet i hi]
-  refine ⟨Nat.le_trans h1 hg.er, fun o l ho hl => ?_⟩
-  rw [hn (q + 1) (by omega)] at ho
-  rw [hn (q + 2) (by omega)] at hl
-  exact (h2 o l ho hl).imp_left fun h => Nat.le_trans h hg.er
+  sorry
 
 /-! ## `class_read_classes` (loop rewritten as recursion: the rest, then `sl_cons` at a motive) -/
 

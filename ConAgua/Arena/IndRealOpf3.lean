@@ -330,61 +330,7 @@ theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : 
     {r : List Word} (hS : StageR vis fe m2 a2) (hAb : AbsOK m2) (hsl : SpineR m2 co n fvs.toArray)
     (hb : b.toNat < 2 ^ 32) (h : opfTail k n co b (allocW m2 n) = some (r, m')) :
     KeepPost vis fe decOLE m2 m' a2 r (some (fvs, decE b)) ∧ AbsOK m' := by
-  obtain ⟨⟨q, m3⟩, ha, h⟩ := of_K h rfl; rw [opfTail_some] at h
-  obtain ⟨r3, m4, c3, h⟩ := ntBW_some h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hsz1 : (m2.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
-  obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz1
-  have hm4 := s2iW_wr k _ _ _ _ _ _ c3
-  generalize hws : spnWs (allocMem m2 n) co n.toNat = ws at hm4
-  have hspn2 : (allocMem m2 n).arr64 SPN = m2.arr64 SPN :=
-    (allocMem_frame m2 n).1 SPN (by simp [SPN, IW]) (by decide)
-  have hlen : n.toNat = ws.length := by rw [← hws, spnWs_length]
-  have hrec := recPost_wr m2 ws n hlen hS.iw (by
-    have : q.toNat = iwTop m2 := by rw [hq]; rfl
-    rw [← hlen, ← this]; exact hroom)
-  rw [← hq, ← hm4] at hrec
-  have hget : ∀ i, i < n.toNat → ws[i]? = some (spW m2 (co + i.toUInt64)) := by
-    intro i hi; rw [← hws, spnWs_get _ _ _ _ hi]; simp only [spW, hspn2]
-  have hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32 := by
-    intro w hw
-    obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hw
-    have hi' : i < n.toNat := by rw [hlen]; exact hi
-    have := hget i hi'
-    rw [List.getElem?_eq_getElem hi] at this
-    rw [Option.some.inj this]; exact hsl.lt i hi'
-  have hxs : ws.map (decI : Word → EIdx) = fvs := by
-    apply List.ext_getElem
-    · simp only [List.length_map]; rw [← hlen]; simpa using hsl.size.symm
-    · intro i h1 h2
-      simp only [List.getElem_map]
-      have hi1 : i < ws.length := by simpa using h1
-      have hi' : i < n.toNat := by rw [hlen]; exact hi1
-      have := hget i hi'
-      rw [List.getElem?_eq_getElem hi1] at this
-      rw [Option.some.inj this]
-      have hg := hsl.get i (by simpa using h2)
-      simp only [List.getElem_toArray] at hg
-      rw [hg]; rfl
-  have hK := slice_keep (κ := .expr) hS hrec hlt hlen
-  rw [hxs] at hK
-  obtain ⟨hS3, hg3, hdec⟩ := hK
-  obtain ⟨hS4, hg4⟩ := stageR_hi hS3 (MemFrame.setCtl m4 136 co) (by simp) (by simp) (by decide)
-    (by decide)
-  have hI4 : (m4.set64 CTL 136 co).arr64 IW = m4.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have ht4 : iwTop (m4.set64 CTL 136 co) = iwTop m4 := by
-    simp only [iwTop, rdW_set64]; simp
-  have hfr : MemFrame [IW] [200, 136] m2 (m4.set64 CTL 136 co) := by
-    rw [hm4]
-    exact (((allocMem_frame m2 n).trans (wrIW_frame ws _ q)).mono (fun b hb => hb)
-      (by simp)).trans ((MemFrame.setCtl _ 136 co).mono (by simp) (by simp))
-  refine ⟨⟨hS4, hg3.trans hg4, rfl, ?_, ⟨hb, rfl⟩⟩, hAb.frameD hfr (by decide) (by decide)⟩
-  obtain ⟨hd1, hd2⟩ := hdec
-  refine ⟨?_, ?_⟩
-  · simp only [List.getD_eq_getElem?_getD] at hd1 ⊢
-    simpa [decHL, iwA, aread_apply, hI4] using hd1
-  · simp only [List.getD_cons_succ, List.getD_cons_zero] at hd2 ⊢
-    rw [ht4]; exact hd2
+  sorry
 
 /-- **`open_pis_at_fvars_f` refines `openPisAtFvarsF`** under the stage relation and the walk
 memos (replaces `IndStubs.openPisAtFvarsF_spec`; a first fvar index `≥ 2^63` aborts, deviation

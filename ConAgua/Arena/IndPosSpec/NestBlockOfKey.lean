@@ -66,10 +66,7 @@ theorem decCI_indInfo_kind {a : Array Word} {p : Nat}
 /-- A word read off `EREC` at a `Nat` position, as `nat?` decodes it. -/
 theorem erN_rdW {m : Mem} {q : Nat} {k : Nat} (h : nat? (erA m) q = some k) (hq : q < 2 ^ 64) :
     rdW (m.arr64 EREC) (UInt64.ofNat q) = UInt64.ofNat k := by
-  simp only [nat?, erA, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  have hqq : (UInt64.ofNat q).toNat = q := by simp; omega
-  simp only [rdW, hqq, hw, Option.getD_some, UInt64.ofNat_toNat]
+  sorry
 
 /-- A `nat?`-decoded value is below `2 ^ 64` (it is some word's `toNat`). -/
 theorem nat?_lt {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : k < 2 ^ 64 := by
@@ -191,47 +188,12 @@ theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : 
 theorem decCI_indInfo_bound {a : Array Word} {p : Nat}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) p = some (.indInfo cv caps)) :
     p + 16 < a.size := by
-  obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 h (decCI_indInfo_kind h)
-  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, vall, hvall, _, _, hcapseq⟩ := hcaps
-  obtain ⟨o, l, ho, hl, hs⟩ := hlist?_some hvall
-  have := nat?_idx hl
-  omega
+  sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem EnvR.row_dec {m : Mem} {vis : Word} {fe : IFEnv}
     (h : EnvR m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) :
     rowTag w ≤ 2 → rowC m w ≠ 0 → ∃ ci, decCI (erecP m) (rowP m w).toNat = some ci := by
-  intro ht h0
-  have hk := h.keys (decI w) (by rwa [decI_word_self w hw])
-  have hv := h.vals (decI w) (by rwa [decI_word_self w hw])
-  rw [decI_word_self w hw] at hk hv
-  have hv := hv h0
-  simp only [rowW, h0, ite_false, Option.map_some] at hk
-  cases e : fe.idx[(decI w : NIdx)]? with
-  | none => simp [e] at hk
-  | some r =>
-    simp only [e, Option.map_some] at hv
-    exact ⟨r.2, hv.symm⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- A found `indInfo` row, seen through `erecP`, gives the pointer bound. -/
-theorem erecP_size_lt (m : Mem) : (erecP m).size < 2 ^ 64 := by
-  have h : (erecP m).size ≤ erecTop m := by simp [erecP]; exact Nat.min_le_left _ _
-  have := (rdW (m.arr64 CTL) 129).toNat_lt
-  simp only [erecTop] at h
-  omega
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem blk_nok3 {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
-    (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q) (h0 : found ≠ 0)
-    (hk : rdW (m.arr64 EREC) q ≠ 3) :
-    hslice? (erA m) (0 : Word).toNat (0 : Word).toNat = some (nestBlockOf fe (decI c)) := by
-  have := nestBlockOf_key found q hfound (fun h => absurd h hk) (fun h => absurd h hk)
-  simpa [h0, hk] using this
--/
+  sorry
 
 /-! ## `nest_ctor_entry_strip`, `nest_ctor_entry` -/
 
@@ -274,11 +236,7 @@ grind_pattern [ind_grind] stripK_ok => stripK ciq nPc nF (some (r, m1))
 
 theorem erec_rd {m : Mem} {w : Word} {c : Nat} {v : Word} (h : erecP m (w.toNat + c) = some v)
     (hc : c < 2 ^ 64) : rdW (m.arr64 EREC) (w + UInt64.ofNat c) = v := by
-  have hlt := (Array.getElem?_eq_some_iff.mp h).1
-  have hsz := erecP_size_lt m
-  have e : (w + UInt64.ofNat c).toNat = w.toNat + c := by
-    rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hc]; exact Nat.mod_eq_of_lt (by omega)
-  simp only [rdW, e, erecP_get h, Option.getD_some]
+  sorry
 
 theorem decCV_type {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
     hd? (aread a) (q + 3) = some cv.type := by

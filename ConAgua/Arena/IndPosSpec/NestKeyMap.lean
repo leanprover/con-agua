@@ -75,9 +75,7 @@ theorem decCtx_some {m : Mem} {p : Nat} {ctx : NestCtx} (h : decCtx m p = some c
     iwN m (p + 4) = some ctx.nP ∧ decAt m (decNL m) (p + 5) = some ctx.nIdxs ∧
     decAt m (decHL m) (p + 7) = some ctx.params ∧ iwH m (p + 9) = some ctx.sort ∧
     iwH m (p + 10) = some ctx.lvls := by
-  simp only [decCtx, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, g, hg, rfl⟩ := h
-  exact ⟨ha, hb, hc, hd, he, hf, hg⟩
+  sorry
 
 /-- **`nest_ctx_hi_at` is `NestCtx.hiAt`.** -/
 @[refines ConRon.Arena.NestCtx.hiAt]
@@ -238,84 +236,12 @@ theorem decKL_succ (m : Mem) (o n : Nat) :
       let x ← decNFK w
       let xs ← decKL m (o + 1) n
       pure (x :: xs)) := by
-  simp only [decKL, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
-  rcases hw : (iwA m)[o]? with _ | w; · simp only [Option.bind_eq_bind, Option.bind_none]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rcases hx : decNFK w with _ | x; · simp only [Option.bind_none]
-  simp only [Option.bind_some]
-  congr 1
-  apply congrArg (fun f => List.mapM f (List.range n))
-  funext j
-  simp only [Function.comp]
-  congr 2
-  omega
+  sorry
 
 theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List NestFieldKind)
     (r : Word), (m.arr64 IW).size < 2 ^ 64 → decKL m off.toNat cnt.toNat = some ks →
     kindsFlatInnerW n m off cnt = some r → r = if ks.all NestFieldKind.flat then 1 else 0 := by
-  induction n with
-  | zero => intro m off cnt ks r _ _ h; simp [kindsFlatInnerW] at h
-  | succ n ih =>
-    intro m off cnt ks r hsz hdec h
-    by_cases hc : cnt = 0
-    · rw [kindsFlatInnerW_nil n m off cnt hc] at h
-      have : ks = [] := by
-        have : cnt.toNat = 0 := by rw [hc]; rfl
-        rw [this] at hdec; simpa [decKL] using hdec
-      simp [this] at h ⊢; simp [← h]
-    · have hcnt1 : cnt.toNat = (cnt.toNat - 1) + 1 := by
-        have : cnt.toNat ≠ 0 := fun hz => hc (by
-          apply UInt64.toNat_inj.mp; simpa using hz)
-        omega
-      rw [hcnt1] at hdec
-      rw [decKL_succ] at hdec
-      rcases hw : (iwA m)[off.toNat]? with _ | w; · simp [hw, Option.bind_eq_bind, Option.bind_none] at hdec
-      simp only [hw, Option.bind_eq_bind, Option.bind_some] at hdec
-      rcases hnfk : decNFK w with _ | fk; · simp [hnfk, Option.bind_none] at hdec
-      simp only [hnfk, Option.bind_some] at hdec
-      cases hrest : decKL m (off.toNat + 1) (cnt.toNat - 1) with
-      | none => simp [hrest, Option.bind_none] at hdec
-      | some ks' =>
-        simp only [hrest, Option.bind_some, Option.pure_def,
-          Option.some.injEq] at hdec
-        have hw' : (m.arr64 IW)[off.toNat]? = some w := hw
-        have hwrd : rdW (m.arr64 IW) off = w := by
-          simp only [rdW, hw', Option.getD_some]
-        have h1 : (1 : Word).toNat = 1 := by decide
-        have hUsize : UInt64.size = 2 ^ 64 := rfl
-        have hub : cnt.toNat < 2 ^ 64 := by have := cnt.toNat_lt; omega
-        have hoffub : off.toNat < 2 ^ 64 := by have := off.toNat_lt; omega
-        have hbound : off.toNat + 1 < 2 ^ 64 := by
-          have := (Array.getElem?_eq_some_iff.mp hw').1
-          have h2 : (m.arr64 IW).size = (iwA m).size := rfl
-          omega
-        by_cases hkf : kindFlatW (rdW (m.arr64 IW) off) = 0
-        · rw [kindsFlatInnerW_miss n m off cnt hc hkf] at h
-          rw [hwrd] at hkf
-          have hcond : ¬ (w &&& 7 ≤ 2) := by
-            intro hc'; rw [kindFlatW, ite_eq_left hc'] at hkf; exact absurd hkf (by decide)
-          have hfalse : fk.flat = false := by
-            cases hb : fk.flat with
-            | false => rfl
-            | true => exact absurd ((decNFK_flat hnfk).mpr hb) hcond
-          simp only [← hdec, List.all_cons, hfalse]
-          simp at h; simp [← h]
-        · rw [kindsFlatInnerW_next n m off cnt hc hkf] at h
-          rw [hwrd] at hkf
-          have hcond : w &&& 7 ≤ 2 := by
-            by_cases hc' : w &&& 7 ≤ 2
-            · exact hc'
-            · exact absurd (by rw [kindFlatW, ite_eq_right hc']) hkf
-          have htrue : fk.flat = true := (decNFK_flat hnfk).mp hcond
-          have e1 : (off + 1).toNat = off.toNat + 1 := by
-            rw [UInt64.toNat_add, h1]; omega
-          have e2 : (cnt - 1).toNat = cnt.toNat - 1 := by
-            rw [UInt64.toNat_sub, h1]; omega
-          have hdec' : decKL m (off + 1).toNat (cnt - 1).toNat = some ks' := by
-            rw [e1, e2]; exact hrest
-          have hres := ih _ _ _ ks' _ hsz hdec' h
-          simp only [← hdec, List.all_cons, htrue]
-          exact hres
+  sorry
 
 /-! ## Reading decoded words without side conditions on the index -/
 

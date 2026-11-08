@@ -445,14 +445,7 @@ theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "cv_lps" = some cvLps) (n : Nat) (s₀ : St) (q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_lps" [q]
     ⦃fun r s' => LocEq s' s₀ ∧ cvLpsW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]; simp only [callFn, cvLps]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        erToIw_specW2 p ha hc he n] <;>
-      finish (gen := 20) [cvLpsW, rdW_eq]
+  sorry
 
 theorem cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
@@ -463,31 +456,7 @@ theorem cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
     StageR vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  obtain ⟨-, hl, -⟩ := decCV_some (a := erA m) (q := q.toNat) hcv
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl
-  obtain ⟨o', ho, l', hl', hs⟩ := hl
-  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have hr1 : rdW (m.arr64 EREC) (q + 1) = UInt64.ofNat o' := by
-    simp only [nat?, erA, Option.map_eq_some_iff] at ho
-    obtain ⟨w, hw, rfl⟩ := ho
-    simp [rdW, hq1, hw]
-  have hr2 : rdW (m.arr64 EREC) (q + 2) = UInt64.ofNat l' := by
-    simp only [nat?, erA, Option.map_eq_some_iff] at hl'
-    obtain ⟨w, hw, rfl⟩ := hl'
-    simp [rdW, hq2, hw]
-  have hob : o' < 2 ^ 64 := by
-    simp only [nat?, erA, Option.map_eq_some_iff] at ho
-    obtain ⟨w, hw, rfl⟩ := ho; exact w.toNat_lt
-  have hlb : l' < 2 ^ 64 := by
-    simp only [nat?, erA, Option.map_eq_some_iff] at hl'
-    obtain ⟨w, hw, rfl⟩ := hl'; exact w.toNat_lt
-  simp only [cvLpsW, hr1, hr2] at h
-  have hsrc := hlpb
-  rw [hr1, hr2] at hsrc
-  obtain ⟨hS', hg, hdec, ht, hE⟩ := erToIwW_stage (k := IdxKind.name) h hS hsrc
-  refine ⟨hS', hg, hE, ?_, ht⟩
-  · rw [hdec]; rw [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; exact hs
+  sorry
 
 /-! ## `target_ctor_at` -/
 

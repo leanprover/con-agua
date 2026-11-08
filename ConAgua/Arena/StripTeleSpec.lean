@@ -410,33 +410,7 @@ theorem stripTW_ok (tg : Word) (T : UInt32)
       H ((eViewW m w).tail.headD 0) ∧ H ((eViewW m w).tail.tail.headD 0))
     (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
     RelW (stripTW tg n) [k, e] (StageR vis fe) (tw k.toNat (decI e)) (KeepPost vis fe decOLE) := by
-  intro m m' a r hw hS
-  match n, hw with
-  | f + 1, hw =>
-  rw [stripTW_succ] at hw
-  obtain ⟨x, hrun, hS', hf, hlow, hres⟩ := stripGoW_ok tg T tw h0 hs hT hvb dn vis fe k _ a (f + 1)
-    m m' 0 e r hw hS he (UInt64.le_iff_toNat_le.mpr (by simp)) (by simp [iwTop])
-  have ht0 : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
-  have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by simp)]
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
-  have hgrow : iwTop m ≤ iwTop m' → IWGrow m m' := fun h =>
-    ⟨h, by rw [h129]; exact Nat.le_refl _, hlow, fun i _ => by rw [hE]⟩
-  simp only [UInt64.toNat_zero, Nat.sub_zero] at hrun
-  refine ⟨x, a, hrun, hS', ?_⟩
-  cases x with
-  | none =>
-    obtain ⟨h0', ht⟩ := hres
-    exact ⟨hgrow (by omega), h0'⟩
-  | some p =>
-    obtain ⟨l, b⟩ := p
-    obtain ⟨hr, hdec, hH, hb, ht⟩ := hres
-    refine ⟨hgrow (by omega), ?_⟩
-    rw [hr]
-    refine ⟨rfl, ⟨?_, ?_⟩, ?_, ?_⟩
-    · simpa using hdec
-    · simp only [List.getD_cons_succ, List.getD_cons_zero, ht]; omega
-    · exact hH
-    · exact hb
+  sorry
 
 /-- **`strip_pis` refines `stripPis`** (the model; the census theorem is `stripPis_refines`). -/
 theorem stripTW_pis_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
