@@ -90,6 +90,10 @@ structure StoreDen (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (
   recRules : ∀ (c : NIdx) (cv : IConstantVal) (mI rP : Nat) (isK : Bool) (rules : List IRecRule),
     fe.find? c = some (.recInfo cv mI rP isK rules) → ∀ r ∈ rules, ∀ lvls pins,
     r.fire = .nested lvls pins → ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L
+  /-- A stored recursor's level-firing rules' levels read back (`rec_fire_levels`, fire kind 2). -/
+  recLevels : ∀ (c : NIdx) (cv : IConstantVal) (mI rP : Nat) (isK : Bool) (rules : List IRecRule),
+    fe.find? c = some (.recInfo cv mI rP isK rules) → ∀ r ∈ rules, ∀ lvls,
+    r.fire = .levels lvls → ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L
 
 /-! ## Keeping `StoreDen` -/
 
@@ -262,7 +266,9 @@ theorem StoreDen.mono {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
     fun c ci hf => ?_, fun q tbl ht => ?_, hlv, hlsa, fun k x e => hN _ _ (h.dnN k x e),
     fun c cv mI rP isK rules hf r hr lvls pins hfi u hu =>
-      (h.recRules c cv mI rP isK rules hf r hr lvls pins hfi u hu).elim fun L hL => ⟨L, hx.ls.lvl _ _ hL⟩⟩
+      (h.recRules c cv mI rP isK rules hf r hr lvls pins hfi u hu).elim fun L hL => ⟨L, hx.ls.lvl _ _ hL⟩,
+    fun c cv mI rP isK rules hf r hr lvls hfi u hu =>
+      (h.recLevels c cv mI rP isK rules hf r hr lvls hfi u hu).elim fun L hL => ⟨L, hx.ls.lvl _ _ hL⟩⟩
   · obtain ⟨l, hl⟩ := h.sort x u (hs x u hv); exact ⟨l, hx.ls.lvl _ _ hl⟩
   · rcases hc x c us hv with h' | ⟨l, hl⟩
     · obtain ⟨l, hl⟩ := h.constLs x c us h'; exact ⟨l, hx.lst _ _ hl⟩
@@ -299,7 +305,7 @@ included, the twin unchanged. -/
 theorem StoreDen.mem {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
     (h : StoreDen dn m a fe) (m' : Mem) : StoreDen dn m' a fe :=
   ⟨h.sort, h.constLs, h.zero, h.emptyLs, h.readN, h.constLps, h.proj, h.lvlAll, h.lsAll, h.dnN,
-    h.recRules⟩
+    h.recRules, h.recLevels⟩
 
 /-- `StoreDen` across a memory step that keeps `EREC` (the twin unchanged; `StoreDen.mem` without
 the hypothesis). -/
