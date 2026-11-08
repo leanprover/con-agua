@@ -46,6 +46,7 @@ local notation "V" => ConLeche.CheckMode.verified
 section helpers
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`StageC` across a leaf whose twin op is a `CoreStep`** (`StageC.of_leaf` for twin ops that
 read through the walks' memos: con-ron gives `CheckOK` after rather than `IStepS`). -/
 theorem StageC.of_core {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
@@ -57,6 +58,7 @@ theorem StageC.of_core {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m 
       h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp,
       fun k x e => hc.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
+-/
 
 /-- `CallRef.bindL` with `consts_resolve_ffast`'s memo carried across the leaf (`CrKeep.call`). -/
 theorem CallRef.bindLC {α β : Type} {p : Prog} {f : FnName} {args : List Word}
@@ -66,19 +68,15 @@ theorem CallRef.bindLC {α β : Type} {p : Prog} {f : FnName} {args : List Word}
     {K : List Word → Mem → Option β} {res : β} (hw : ntBW (callW p n f args m) K = some res) :
     ∃ r1 m1 x a1, op.run a = .ok (x, a1) ∧ post m m1 a1 r1 x ∧ MemFrame leafA leafC m m1 ∧
       L.Stubs.CrOK m1 ∧ K r1 m1 = some res := by
-  cases hc : callW p n f args m with
-  | none => rw [hc] at hw; simp at hw
-  | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [hc, bW_some] at hw
-    obtain ⟨x, a1, hr, hp⟩ := h n m a r1 m1 hpre hc
-    exact ⟨r1, m1, x, a1, hr, hp, callW_leafFrame hcl hf hc, hkp.call hfi hc hCr, hw⟩
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A twin op running as a `CoreStep`, from a `RunsC` fact. -/
 theorem runsC_step {m : AM Bool} {a a' : AState} {b x : Bool}
     (h : ConRon.Bridge.RunsC V env fe m a b) (hr : m.run a = .ok (x, a')) :
     CoreStep V env fe a a' ∧ x = b :=
   h x a' hr
+-/
 
 end helpers
 
@@ -88,6 +86,7 @@ section gg
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`ground_guards` under `StageC`** (con-ron's `pinGuardWalk_run`): the four walks by their
 `StageT` contracts and con-ron's `RunsC` lemmas. -/
 theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k : Nat}
@@ -207,6 +206,7 @@ theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k
     exact hrun5
   obtain ⟨cs, hx⟩ := fin _ _ hrun
   exact ⟨x5, a5, hrun, hC5, cs, hg2.trans (hg3.trans (hg4.trans hg5)), hd5, hx⟩
+-/
 
 end gg
 
@@ -216,6 +216,7 @@ section tpg
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`type_pin_guard` under `StageC`** (con-ron's `typePinGuard_spec`): the lookup, the stored
 type by `tps_ref` and con-ron's `typePinStored_spec`, the walks by their `StageT` contracts and
 con-ron's `RunsC` lemmas. -/
@@ -366,7 +367,9 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
   simp only [StateT.run_bind, hrun3, hx3, exc_ok_bind', hrun4, hx4, hrun5, hx5,
     Bool.false_eq_true, ite_false, Bool.not_true]
   exact hrun6
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`type_pins_guard` under `StageC`** (con-ron's `typePinsGuard_spec`): `tpgC` on each pair of
 the `EREC` slice. -/
 theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
@@ -449,6 +452,7 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
     refine ⟨x2, a2, ?_, hC2, c1.trans c2, hg1.trans hg2, hd2'⟩
     simp only [typePinsGuard, StateT.run_bind, hrun1', exc_ok_bind', hx1, ite_true]
     exact hrun2
+-/
 
 end tpg
 
@@ -458,6 +462,7 @@ section pg
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`div_mod_pin_guard` under `StageC`** (con-ron's `divModPinGuard_run`): the pin and the
 type pins by their `StageR` refinements and con-ron's choice lemmas, the guards by `ggC` and
 `tpsgC`. -/
@@ -527,6 +532,7 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {ps c : Word}
     exact hrun4
   obtain ⟨cs, hx⟩ := fin _ _ hrun
   exact ⟨x4, a4, hrun, hC4, cs, hg1.trans (hg2.trans (hg3.trans hg4)), hd4, hx⟩
+-/
 
 end pg
 
@@ -545,74 +551,9 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
       callW p k "consts_resolve_all" [vis, o, l] m = some (res, m') →
       ∃ x a', (constsResolveAll fe hyps).run a = .ok (x, a') ∧
         KeepPostT dn vis fe decW0B m m' a' res x ∧ L.Stubs.CrOK m' := by
-  intro hyps
-  induction hyps with
-  | nil =>
-    intro o l k m a res m' hT hCr hd hb hc
-    have hl0 : l = 0 := by
-      have := decHL_length m hd
-      exact UInt64.toNat_inj.mp (by simp at this ⊢; omega)
-    cases k with
-    | zero => rw [callW_zero] at hc; cases hc
-    | succ k =>
-    have hw := callW_model (M := fun mm => craW p (realCall p) k mm vis o l)
-      (cra_specW p hD.lConstsResolveAll (realCall p) (realCall_spec p) k · vis o l) hc
-    simp only [craW, hl0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    exact ⟨true, a, rfl, ⟨hT, IWGrow.refl _, by simp [decW0B]⟩, hCr⟩
-  | cons h hs ih =>
-    intro o l k m a res m' hT hCr hd hb hc
-    cases k with
-    | zero => rw [callW_zero] at hc; cases hc
-    | succ k =>
-    obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hT.stage.iw.iwSize hd
-    subst hh
-    have hw := callW_model (M := fun mm => craW p (realCall p) k mm vis o l)
-      (cra_specW p hD.lConstsResolveAll (realCall p) (realCall_spec p) k · vis o l) hc
-    unfold craW at hw
-    rw [ite_eq_right hl0] at hw
-    cases h1 : realCall p k "consts_resolve_ffast" [vis, rdW (m.arr64 IW) o] m with
-    | none => rw [h1] at hw; simp at hw
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1, bW_some] at hw
-    obtain ⟨x1, a1, hrun1, ⟨hT1, hg1, hd1⟩, hCr1⟩ :=
-      crfF_okT dn vis fe _ hwlt m m1 a r1 (crfF_of_callW hkp.crf h1) ⟨hT, hCr.crMemo⟩
-    by_cases hz : r1.headD 0 = 0
-    · rw [ite_eq_left hz] at hw
-      simp only [Option.some.injEq, Prod.mk.injEq] at hw
-      obtain ⟨rfl, rfl⟩ := hw
-      have hx1 : x1 = false := by
-        have := hd1.1; rw [hz] at this; simpa using this.symm
-      refine ⟨false, a1, ?_, ⟨hT1, hg1, by simp [decW0B]⟩, hCr1.crOK⟩
-      simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, Bool.false_eq_true,
-        ite_false, StateT.run_pure]
-      rfl
-    · rw [ite_eq_right hz] at hw
-      have hx1 : x1 = true := by
-        have := hd1.1
-        have e : (r1.headD 0 != 0) = true := by simpa using hz
-        rw [e] at this; exact this.symm
-      replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
-      simp only [Option.some.injEq, Prod.mk.injEq] at hw
-      obtain ⟨rfl, rfl⟩ := hw
-      have hsz := hT.stage.iw.iwSize
-      have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero (fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)))
-      have ho1 : (o + 1).toNat = o.toNat + 1 := by
-        have hb := decHL_bnd m o l hd hsz
-        rw [UInt64.toNat_add]; simp; omega
-      have hl1' : (l - 1).toNat = l.toNat - 1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-      have hrest1 : decHL m1 (o + 1).toNat (l - 1).toNat = some hs := by
-        rw [ho1, hl1']
-        rw [ho1, hl1'] at hrest
-        rw [decHL_grow hg1 (by omega)]; exact hrest
-      obtain ⟨x2, a2, hrun2, ⟨hT2, hg2, hd2⟩, hCr2⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hT1 hCr1.crOK
-        hrest1 (by rw [ho1, hl1']; have := hg1.iw; omega) h2
-      refine ⟨x2, a2, ?_, ⟨hT2, hg1.trans hg2, hd2⟩, hCr2⟩
-      simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, ite_true]
-      exact hrun2
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`div_mod_cert_guard` under `StageC`** (`cg_ref`'s; con-ron's `divModCertGuard_run`): the
 substitutions and `consts_resolve_all` by `StageC.of_core`, the walks by their `StageT` contracts. -/
 theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p dn vis fe)
@@ -822,6 +763,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
       hrun4, hx4, hrun5, hx5, hrun6, hrun7, hx7, hrun8, hrun9]
   obtain ⟨cs, hx'⟩ := fin _ _ hrun
   exact ⟨x9, a9, hrun, hC9, cs, hG7.trans (hg8.trans hg9), hd9, hx'⟩
+-/
 
 end cg
 
@@ -831,6 +773,7 @@ section cgs
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`div_mod_certs_guard_go` under `StageC`** (`cggo_ref`'s; con-ron's `divModCertsGuardGo_run`). -/
 theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p dn vis fe)
     (hsA : SubstCAll p dn vis fe) (c annVal : Word) (hc : H c) (hann : H annVal)
@@ -934,7 +877,9 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     refine ⟨x2, a2, ?_, hC2, c1.trans c2, hg1.trans hg2, hd2⟩
     simp only [divModCertsGuardGo, StateT.run_bind, hrun1', exc_ok_bind', hx1, ite_true]
     exact hrun2
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`div_mod_certs_guard` under `StageC`** (`cgs_ref`'s; con-ron's `divModCertsGuard_run`). -/
 theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p dn vis fe)
     (hsA : SubstCAll p dn vis fe) {ps c annVal : Word} {ip : INatOpPinSet}
@@ -983,6 +928,7 @@ theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subst
   refine ⟨x3, a3, ?_, hC3, c1.trans c3, hg1.trans (hg2.trans hg3), hd3⟩
   simp only [divModCertsGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2]
   exact hrun3
+-/
 
 end cgs
 

@@ -74,11 +74,13 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`cons_block_recs_tf` as the tail needs it**, from its refinement. -/
 theorem consRecsTFSim_of {p : Prog} (L : CbrLook p) {fs : List FnName}
     (hcl : closedA p hbFreeA hbFreeC fs = true) (hf : "cons_block_recs_tf" ∈ fs) :
     ConsRecsTFSim p := by
   sorry
+-/
 
 end L.Ind
 
