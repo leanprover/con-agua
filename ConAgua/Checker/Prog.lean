@@ -151,7 +151,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1763 functions, 2 of them stubs.
+1764 functions, 1 of them stubs.
 -/
 
 namespace L.Checker
@@ -159,7 +159,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- The called functions with no L code yet (each aborts). -/
-def checkerStubs : List String := ["lv_always_zero", "lv_zero_where_zero"]
+def checkerStubs : List String := ["lh_contains"]
 
 /-- The frontend functions `builtin_prelude` runs on the prelude's bytes (96; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
@@ -1389,6 +1389,7 @@ def checkerProg : Prog := [
   ("lsq_clear", L.Arena.memoClearG L.Arena.lsqSch),
   ("lsq_find", L.Arena.memoFindG L.Arena.lsqSch),
   ("lsq_put", L.Arena.memoPutG L.Arena.lsqSch),
+  ("lv_always_zero", L.Arena.lvAlwaysZero),
   ("lv_apd", L.Arena.lvApd),
   ("lv_cases", L.Arena.lvCases),
   ("lv_cases_at", L.Arena.lvCasesAt),
@@ -1416,6 +1417,7 @@ def checkerProg : Prog := [
   ("lv_subsimp", L.Arena.lvSubsimp),
   ("lv_subst", L.Arena.lvSubst),
   ("lv_zero", L.Arena.lvZero),
+  ("lv_zero_where_zero", L.Arena.lvZeroWhereZero),
   ("lvl_eq", L.Arena.lvlEqL),
   ("lvl_eq_c", L.Arena.lvlEqCL),
   ("lvl_eq_fueled", L.Ind.lvlEqFueled),
@@ -2169,7 +2171,6 @@ def checkerProg : Prog := [
   ("pre_utf8_char", preFn preTree (L.Scan.Utf8.utf8Char)),
   ("pre_utf8_valid", preFn preTree (L.Scan.Str.utf8Valid)),
   ("pre_value_at", preFn preTree (L.Scan.Key.valueAt)),
-  ("lv_always_zero", abortStub 1),
-  ("lv_zero_where_zero", abortStub 2)]
+  ("lh_contains", abortStub 3)]
 
 end L.Checker
