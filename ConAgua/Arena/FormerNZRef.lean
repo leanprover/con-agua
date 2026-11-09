@@ -3,6 +3,9 @@ module
 public import ConAgua.Arena.FormerSortRef
 public import ConAgua.Arena.LevelZero
 public import ConAgua.Arena.LevelSubstL
+public import ConAgua.Arena.PropReadW
+import ConAgua.Arena.ErecRd
+import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.LevelArena
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.PropReadRefine
@@ -200,5 +203,112 @@ theorem frz_ok {p : Prog} (hpr : p.lookup "pi_result" = some piResultL)
         (rdW (m2.arr64 CTL) 192).toNat - (rdW (m1.arr64 CTL) 192).toNat := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa [htop] using ht)]
     simp only [htop] at ht ⊢; omega
+
+/-- **`former_never_zero`'s model**: `former_z`, `ls_node`, `lv_spw` lifted, the heap top put back. -/
+l_model fnzW_spec (p : Prog) (hf : p.lookup "former_never_zero" = some formerNeverZeroL)
+  fns [hf ↦ fnzW] specs [callW_spec p n "former_z", callW_spec p n "ls_node", callW_spec p n "lv_spw"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- An `indInfo` record's constant value decodes at `q + 1`. -/
+theorem decCI_ind_cv' {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
+    (h : decCI R q = some (.indInfo cv caps)) : decCV R (q + 1) = some cv := by
+  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨k, -, h⟩ := h
+  rcases k with _ | _ | _ | _ | _ | _ | k <;>
+    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, and_false, exists_false] at h
+  obtain ⟨cv', hcv, caps', -, he⟩ := h
+  cases he; exact hcv
+
+/-- **`former_never_zero` refines `formerNeverZero`** (the heap top put back): the datum of
+`former_z` substituted (`lv_spw`, the keys the family's level parameters, the values `us`). -/
+theorem fnz_ok {p : Prog} (hpp : PropReadProg p) (hpr : p.lookup "pi_result" = some piResultL)
+    (hfr : p.lookup "former_res_sort" = some formerResSortL) (hfz : p.lookup "former_z" = some formerZL)
+    {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
+    {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {q us : Word} {cvT : IConstantVal}
+    {caps : IIndCaps} (hci : decCI (erecP m) q.toNat = some (.indInfo cvT caps))
+    (hks : ∃ ks, cvT.levelParams.mapM (denoteN a.store.ns) = some ks) (hus : HW us)
+    (hlsd : ∃ ls, denoteLs a.store.lss (decI us) = some ls) {w : Word}
+    (h : fnzW p n m q us = some (w, m')) :
+    ∃ a', (ConRon.Arena.formerNeverZero cvT (decI us)).run a = .ok (w != 0, a') ∧ CoreS dn m' a' vis fe M eb ∧
+      StackKept m m' ∧ HW w := by
+  rcases n with _ | n
+  · simp [fnzW] at h
+  rw [fnzW.arm1] at h
+  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (decCI_ind_cv' hci)
+  change fnzW.k_former_z p n us (erRdT m (q + 2)) (erRdT m (q + 3)) (rdW (m.arr64 CTL) 192)
+    (callW p n "former_z" [erRdT m (q + 4)] m) = some (w, m') at h
+  rcases c1 : callW p n "former_z" [erRdT m (q + 4)] m with _ | ⟨r1, m1⟩
+  · rw [c1, fnzW.k_former_z.none] at h; cases h
+  rw [c1, fnzW.k_former_z.arm1] at h
+  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (frzW_spec p hfz n ⟨m, Locals.init []⟩ _) c1
+  rw [hs1] at hW1
+  obtain ⟨pw, a1, hrun1, hst1, hS1, hK1, he1, hpwr, hb1⟩ :=
+    frz_ok hpr hfr (hpp.get "lv_node") (hpp.get "lh_push") (hpp.get "lv_zero") hS hty32 hty hW1
+  -- the values
+  obtain ⟨vs, hv⟩ := hlsd
+  obtain ⟨ids, hvw, hdl⟩ := denoteLs_view a (decI us) vs hv
+  have hR1 := hS1.arena.base
+  rw [← hst1] at hvw hdl
+  obtain ⟨e2, t2, s2⟩ := lsNodeW_store hR1 hus hvw
+  rcases c2 : callW p n "ls_node" [us] m1 with _ | ⟨r2, m2⟩
+  · rw [c2, fnzW.k_ls_node.none] at h; cases h
+  obtain ⟨t, ht, hts, -, hr2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (lsNode_spec p (hpp.get "ls_node") n _ us) c2
+  have hm2 : m1 = m2 := by rw [← ht, hts]
+  subst hm2
+  rw [e2] at hr2
+  subst hr2
+  rw [c2] at h
+  -- the twin
+  obtain ⟨ks, hk⟩ := hks
+  rw [← hst1] at hk
+  obtain ⟨X, hX, hcX⟩ := pr_readNamesM_run cvT.levelParams a1 ks hk hS1.den.readN
+  obtain ⟨Y, hY, hcY⟩ := readLevelsM_run' { a1 with caches := { a1.caches with readNC := X } }
+    (decI us) vs (by rw [← hst1] at hv; exact hv) (by exact hS1.readLs)
+  have hrun : ∀ b, (ConLeche.Level.substPW ks vs pw).isNever = b →
+      (ConRon.Arena.formerNeverZero cvT (decI us)).run a =
+        .ok (b, { a1 with caches := { a1.caches with readNC := X, readLsC := Y } }) := by
+    intro b hb
+    simp only [ConRon.Arena.formerNeverZero, StateT.run_bind, hrun1, except_ok_bind, hX, hY, hb]
+    rfl
+  have hS1' := CoreS.readCaches hS1 X Y (by exact hcY) hcX
+  have he1' : erecP m1 = erecP m := erecP_frame he1.memFrame (by decide) (by decide) (by decide) (by decide)
+  rcases hpwr with ⟨hw0, rfl⟩ | ⟨hw0, ps, rfl, hnm⟩
+  · rw [fnzW.k_ls_node.arm1 _ _ _ _ _ _ _ _ _ _ hw0] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨hS', hK'⟩ := hS1'.frame ((MemFrame.setCtl m1 192 (rdW (m.arr64 CTL) 192)).mono
+      (A' := [LH]) (C' := [192]) (by simp) (by simp))
+      (fun b hb => by simp at hb; subst hb; decide) (fun x hx => by simp at hx; subst hx; decide)
+    exact ⟨_, hrun true rfl, hS', hK1.trans hK', by unfold HW; decide⟩
+  · rw [fnzW.k_ls_node.arm2 _ _ _ _ _ _ _ _ _ _ hw0] at h
+    simp only [List.headD_cons, List.tail_cons] at h
+    have hN := nameN_rel _ hS1.nwf
+    have hvs := (lvsR_of_slice hR1 ids vs _ _ s2 (by have := m1.top.toNat_lt; have := hR1.lit.1.top41; omega)
+      hdl).toAR
+    have hkr : NmsK (nameN a1.store.lss.ls.ns) m1 (keyT EREC) (erRdT m (q + 2)) (erRdT m (q + 3)) ks :=
+      nmsAR_of_hslice _ _ _ cvT.levelParams ks _ _ rfl (by rw [he1']; exact hl) hk
+    rcases c3 : callW p n "lv_spw" [r1.tail.headD 0, r1.tail.tail.headD 0, erRdT m (q + 2),
+        erRdT m (q + 3), tfld m1 LVLS (tierW us) (idxW us) 0, tfld m1 LVLS (tierW us) (idxW us) 1] m1
+      with _ | ⟨r3, m3⟩
+    · rw [c3, fnzW.k_lv_spw.none] at h; cases h
+    rw [c3, fnzW.k_lv_spw.arm1] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨t3, ht3, -, hz⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+      (lvSpw_spec EREC POOL LH p (hpp.get "lv_lookup") (hpp.get "lv_node") (hpp.get "lh_push")
+        (hpp.get "lv_zero") (hpp.get "lv_spw") n ⟨m1, Locals.init []⟩ _ _ _ _ _ _) c3
+    rw [ht3] at hz
+    obtain ⟨he3, hZ⟩ := spwW_ok_lh hN (keyT_heap (by decide)) (by decide) ks vs n _ _ _ _ _ _ _ _ _ _
+      (by rw [hst1]; exact hnm) (by simpa using hb1) hkr hvs hz
+    obtain ⟨hS3, hK3⟩ := hS1'.frame (he3.memFrame.trans ((MemFrame.setCtl m3 192 (rdW (m.arr64 CTL) 192)).mono
+      (A' := [LH]) (C' := [192]) (by simp) (by simp)))
+      (fun b hb => by simp at hb; subst hb; decide) (fun x hx => by simp at hx; subst hx; decide)
+    have hsub : ConLeche.Level.substPW ks vs (.ifAllZero ps) = PropWhen.bindZ.go (spwF ks vs) ps := rfl
+    rcases hZ with ⟨hx, hpw⟩ | ⟨hx, qs, hpw, -⟩
+    · rw [hx]; exact ⟨_, hrun true (by rw [hsub, hpw]; rfl), hS3, hK1.trans hK3, by unfold HW; decide⟩
+    · rw [hx]; exact ⟨_, hrun false (by rw [hsub, hpw]; rfl), hS3, hK1.trans hK3, by unfold HW; decide⟩
 
 end L.Arena
