@@ -74,6 +74,35 @@ theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
       · cases hk
   · rw [pinW_frame hF (by simp), pinW_frame h.frame (by simp [biA])]; exact h7.pin0
 
+/-- **The jobs' memory half after the index build**, before the flush, at the index state. -/
+theorem FoldAt.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (h : FoldAt b pb sz PA m₇ m) : JobM PA.ipins (dnOf PA.sE.store) PA.ds PA.I m PA.sF := by
+  have hB := h.build
+  have hS := hB.stage
+  have hF : MemFrame [] [] m m := MemFrame.refl _ _ _
+  have hA0 := loArr_nil
+  have hC0 : LoCtl [] := fun _ h => absurd h (by simp)
+  have h7 := h.r7
+  have hcaps := h7.since.caps
+  have hsz : ∀ t, (m.arr64 t).size = ((ConAgua.Final.loadMem b pb sz).arr64 t).size :=
+    fun t => by rw [h.frame.size, h7.since.frame.size]
+  have hx := PA.twin.1
+  refine ⟨hS.check.arena, hS.check.core, hS.check.pins, hS.check.mode,
+    hB.idx, hS.check.env.ownBelow, hS.check.env.stamp, hB.decls, hS.iw, ?_,
+    PinSetsR.grow h7.pinSets h.grow.grow (h.frame.ctl _ (not_mem_biC (by decide)))
+      (h.frame.ctl _ (not_mem_biC (by decide))), ?_, ?_, hB.memos, h.fsize⟩
+  · rw [h.grow.ctl130]; exact h7.c130
+  · refine ⟨?_, ?_, ?_, h.grow.memos ?_, fun k x hk => ?_⟩
+    · rw [hsz]; have := hcaps.2.2.2.2.2.2.1; omega
+    · rw [hsz]; have := (hcaps.1 SPN (by decide)).1; omega
+    · rw [hsz]; have := (hcaps.1 BSTK (by decide)).1; omega
+    · exact since_coreMemos h7.since (by rw [h7.since.frame.size]; have := hcaps.2.1; simp only [ctlMin] at this; omega)
+    · simp only [dnOf] at hk
+      split at hk
+      · exact ConRon.Bridge.denoteN_ext hk hx
+      · cases hk
+  · rw [pinW_frame h.frame (by simp [biA])]; exact h7.pin0
+
 /-- **`JobR` across a memory with the same word arrays** (the globals, the byte arrays). -/
 theorem _root_.L.Arena.JobR.frame0 {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     {ds : Array IDeclaration} {I : IStreamIndex} {M M' : Mem} {a : AState}
