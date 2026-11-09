@@ -616,7 +616,7 @@ structure RulesAtSim (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop wher
     StageR vis fe m₀ a₀ → StageT dn vis fe m a → ConRon.Bridge.StateOK a →
     ConRon.Bridge.ReadOK a → IWGrow m₁ m₀ → MemFrame quotA quotC m₀ m → IWGrow m₀ m →
     erTopOf m₀ d ≤ erOff d → erOff d + 11 * rl.toNat ≤ erTopOf m d → d.toNat < 2 ^ 41 →
-    hslice? (erecP m) ko.toNat kc.toNat = some lpsH → H us →
+    hslice? (erecP m₀) ko.toNat kc.toNat = some lpsH → H us →
     ConRon.Arena.Frontend.denoteNList a.store.ns lpsH = some lpsT →
     ConRon.Arena.Frontend.denoteNList a.store.ns ps = some psv →
     denoteLs a.store.lss (decI us) = some (psv.map ConLeche.Level.param) →
@@ -892,9 +892,9 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     have hqf6 := callW_quotFrame hP.quot (by decide) h6
     have rd6 : ∀ x : Word, rdW (m6.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRdT m6 x :=
       fun _ => rfl
-    have hcv6 : decCV (erecP m6) (c.toNat + 1) = some cv :=
-      ArrExt.decCV (hpre5.grow.trans hg6).ext (decCI_cvA hci)
-    obtain ⟨hlps6, -⟩ := decCV_rd (erRdOK m6) hcv6
+    have hcv5 : decCV (erecP m5) (c.toNat + 1) = some cv := ArrExt.decCV hpre5.grow.ext (decCI_cvA hci)
+    obtain ⟨hlps6, -⟩ := decCV_rd (R := erecP m5) (rd := erRdT m6)
+      ⟨fun a v h => erRdT_of _ _ (hg6.ext _ _ h), fun _ _ h => erecP_lt64 h⟩ hcv5
     simp only [rd6, show c + 7 = c + UInt64.ofNat 7 from rfl,
       hsrc m6 (hpre5.grow.trans hg6) 7 w7 hw7] at hW
     -- `rules_at_lps_go`

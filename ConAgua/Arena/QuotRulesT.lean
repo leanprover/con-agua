@@ -10,6 +10,7 @@ import ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.LevelInternRef
 import ConAgua.Arena.RecFireEnv
 import ConAgua.Arena.WhnfIotaRecRefine
+import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.TwinStep
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Checker.Canon
@@ -188,17 +189,17 @@ theorem decRule_atLps {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} 
     simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_some] at h ⊢
     match t, h with
     | 0, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+      simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
       obtain ⟨_, -, _, -, _, -, rfl⟩ := h
       exact tail _
     | 1, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+      simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
       obtain ⟨y, hy, z, hz, _, -, _, -, _, -, rfl⟩ := h
       have hnl : ∀ lv, IRecRuleFire.nested y z ≠ .levels lv := fun _ e => by cases e
       simp only [hlistc 4 (by simp) hnl y hy, hlistc 6 (by simp) hnl z hz, Option.bind_some]
       exact tail _
     | 2, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+      simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
       obtain ⟨y, hy, _, -, _, -, _, -, rfl⟩ := h
       obtain ⟨e4, hsl⟩ := hlv y rfl
       simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hy
@@ -310,12 +311,12 @@ theorem erAllocW_mem {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m'))
     split at h; · cases h
     split at h; · cases h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2, erAllocMem, if_pos c]
+    rw [← h.2, erAllocMem, ite_eq_left c]
   · simp only [c, ↓reduceIte] at h
     split at h; · cases h
     split at h; · cases h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2, erAllocMem, if_neg c]
+    rw [← h.2, erAllocMem, ite_eq_right c]
 
 theorem erTopOf_put (m : Mem) (a v x : Word) : erTopOf (erecPutMem m a v) x = erTopOf m x := by
   simp only [erTopOf, erecTop, erecTop1, erecPutMem_ctl]
@@ -529,8 +530,8 @@ theorem region_none {X : Mem} {d : Word} {j : Nat} (ht : erTopOf X d ≤ erOff d
   unfold erTopOf at ht
   simp only [erecP, hlt, ↓reduceIte, h1, h2]
   by_cases hA : d.toNat / 2 ^ 40 % 2 = 0
-  · simp only [hA, ↓reduceIte] at ht ⊢; rw [if_neg (by omega)]
-  · simp only [hA, ↓reduceIte] at ht ⊢; rw [if_neg (by omega)]
+  · simp only [hA, ↓reduceIte] at ht ⊢; rw [ite_eq_right (by omega)]
+  · simp only [hA, ↓reduceIte] at ht ⊢; rw [ite_eq_right (by omega)]
 
 /-- The cells below a tier's top are defined. -/
 theorem region_def {X : Mem} (hI : IWOK X) {d : Word} {j : Nat} (ht : erOff d + j < erTopOf X d)
@@ -545,9 +546,9 @@ theorem region_def {X : Mem} (hI : IWOK X) {d : Word} {j : Nat} (ht : erOff d + 
   simp only [erecP, hlt, ↓reduceIte, h1, h2]
   by_cases hA : d.toNat / 2 ^ 40 % 2 = 0
   · simp only [hA, ↓reduceIte] at ht htop ⊢
-    rw [if_pos ht, Array.getElem?_eq_getElem (by omega)]; simp
+    rw [ite_eq_left ht, Array.getElem?_eq_getElem (by omega)]; simp
   · simp only [hA, ↓reduceIte] at ht htop ⊢
-    rw [if_pos ht, Array.getElem?_eq_getElem (by omega)]; simp
+    rw [ite_eq_left ht, Array.getElem?_eq_getElem (by omega)]; simp
 
 /-- A cell the base does not define is above its top: readers agreeing above it agree there. -/
 theorem agree_cell {m₀ M Y : Mem} (hI : IWOK m₀) {c : Nat} (hc : erecP m₀ c = none)
@@ -839,6 +840,40 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
       have htail := hdec3 Y hY hA
       rw [ed11] at htail
       simp only [hhead, htail, Option.bind_eq_bind, Option.bind_some, Option.pure_def]
+
+/-- **`StageT` across the name readback cache's write.** -/
+theorem StageT.readNC {m : Mem} {a : AState} (hT : StageT dn vis fe m a) (X : Std.HashMap NIdx ConLeche.Name)
+    (hc : ReadNCOK { a with caches := { a.caches with readNC := X } }) :
+    StageT dn vis fe m { a with caches := { a.caches with readNC := X } } := by
+  obtain ⟨M, hC⟩ := hT.core
+  obtain ⟨hCR, hTw⟩ := (hC.withReadNC X hc).checkR
+  exact ⟨⟨hCR, hT.stage.iw⟩, hTw, hT.flag⟩
+
+/-- **`RulesAtSim` holds**: the twin's two name readbacks (the caches only), then `rulesGo_sim`. -/
+theorem rulesAtSim_of {p : Prog} (hP : RulesProg p) : RulesAtSim p dn := by
+  refine ⟨?_⟩
+  intro n vis fe m₁ m₀ m a₀ a ko kc us o rl d lpsH ps rules Rs lpsT psv h₀ hT hok hr hg₁₀ hf hg hd0
+    hdt hd41 hl hus hlT hps hus' hrs hRs res m' h
+  obtain ⟨X, hX, hcX⟩ := pr_readNamesM_run lpsH a lpsT (denoteNList_mapM hlT) hT.twin.den.readN
+  obtain ⟨hst1, -⟩ := ConRon.Bridge.readNamesM_run hok hr hX
+  obtain ⟨Y, hY, hcY⟩ := pr_readNamesM_run ps { a with caches := { a.caches with readNC := X } } psv
+    (denoteNList_mapM hps) hcX
+  obtain ⟨hst2, -⟩ := ConRon.Bridge.readNamesM_run hst1.ok hst1.read hY
+  have hT2 := (hT.readNC X hcX).readNC Y hcY
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (rulesAtLpsGo_specW p hP.rulesGo n _ ko kc us o rl d) h
+  obtain ⟨rs', a', hrun, hT', hg', hf', -, -, -, -, hdec⟩ :=
+    rulesGo_sim hP h₀ hg₁₀ hl hus rl.toNat n m _ o rl d rules Rs res s'.mem rfl hT2 hst2.ok hst2.read
+      hf hg hd0 hdt hd41 hlT hus' hrs hRs hW
+  refine ⟨rs', a', ?_, hT', hg', hf', hdec⟩
+  simp only [StateT.run_bind, hX, except_ok_bind, hY, hrun]
+
+/-- **The simulations `check_quot_record` takes**, from the program's lookups, the quotient
+block reader's refinement, the leaves' write set and `QuotDn`. -/
+theorem quotSims_of'' {p : Prog} (hP : RulesProg p) (hp : p.lookup "quot_pin" = some quotPin)
+    (hRom : ∀ vis fe, L.Rom.RomQuotRef p dn vis fe) (hcl : LeafClosed p) (hq : QuotDn dn) :
+    QuotSims p dn :=
+  quotSims_of' hP.toCiProg hp hRom hcl hq (rulesAtSim_of hP)
 
 end stage
 
