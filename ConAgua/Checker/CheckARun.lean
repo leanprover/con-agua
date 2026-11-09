@@ -20,6 +20,7 @@ import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.RomProg
 import ConAgua.Checker.RomProgInit
 public import ConAgua.Arena.LoopStart
+public import ConAgua.Arena.Jobs
 
 @[expose] public section
 
