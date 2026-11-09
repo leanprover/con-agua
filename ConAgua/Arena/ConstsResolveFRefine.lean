@@ -278,7 +278,8 @@ theorem ite_beq0 (c : Bool) : ((if c = true then (1 : Word) else 0) == 0) = !c :
 /-- **`pin_found(vis, i)`**: memory unchanged, the flag set, `i < 51`, and the word says whether
 pin `i`'s name has a row. -/
 theorem pf_callW {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {a : AState}
-    (hS : StageR vis fe m a) (hc : callW p n "pin_found" [vis, i] m = some (r, m')) :
+    (hS : StageR vis fe m a) (hc : callW p n "pin_found" [vis, i] m = some (r, m'))
+    (h51 : i ≠ 51) :
     m' = m ∧ pinW m 0 ≠ 0 ∧ i.toNat < 51 ∧
       r.headD 0 = (if (fe.find? (decI (pinW m (1 + i.toNat)))).isSome then 1 else 0) ∧
       (r.headD 0 == 0) = !(fe.find? (decI (pinW m (1 + i.toNat)))).isSome := by
@@ -292,7 +293,7 @@ theorem pf_callW {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {a : AState}
   | some q =>
   obtain ⟨r1, m1⟩ := q
   rw [h1, bW_some] at hW
-  obtain ⟨rfl, h0, hi, hr1⟩ := pinAt_model hp.pin h1 rfl
+  obtain ⟨rfl, h0, hi, hr1⟩ := pinAt_model hp.pin h1 rfl h51
   cases h2 : callW p n "env_find" [r1.headD 0, vis] m1 with
   | none => rw [h2] at hW; cases hW
   | some q =>
@@ -316,30 +317,30 @@ was seen before or a pin of `k₀ :: ks` has no row. -/
 theorem clpL_callW {n : Nat} {m : Mem} {a : AState} (hS : StageR vis fe m a) :
     ∀ (ks : List Word) (z : Bool) (k₀ : Word) (r : List Word) (m' : Mem),
     clpL p n vis z ks (callW p n "pin_found" [vis, k₀] m) = some (r, m') →
-    m' = m ∧ pinW m 0 ≠ 0 ∧
+    (∀ k ∈ k₀ :: ks, k ≠ 51) → m' = m ∧ pinW m 0 ≠ 0 ∧
       r = [if z || !pinsFound fe m (k₀ :: ks) then 0 else 1] := by
   intro ks
   induction ks with
   | nil =>
-    intro z k₀ r m' h
+    intro z k₀ r m' h h51
     cases hc : callW p n "pin_found" [vis, k₀] m with
     | none => rw [hc, clpL_none] at h; cases h
     | some q =>
     obtain ⟨r0, m0⟩ := q
     rw [hc, clpL_nil, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨rfl, h0, -, -, hz⟩ := pf_callW hp hS hc
+    obtain ⟨rfl, h0, -, -, hz⟩ := pf_callW hp hS hc (h51 _ (by simp))
     refine ⟨rfl, h0, ?_⟩
     simp only [pinsFound, List.all_cons, List.all_nil, Bool.and_true, hz]
   | cons k ks ih =>
-    intro z k₀ r m' h
+    intro z k₀ r m' h h51
     cases hc : callW p n "pin_found" [vis, k₀] m with
     | none => rw [hc, clpL_none] at h; cases h
     | some q =>
     obtain ⟨r0, m0⟩ := q
     rw [hc, clpL_cons] at h
-    obtain ⟨rfl, h0, -, -, hz⟩ := pf_callW hp hS hc
-    obtain ⟨rfl, -, hr⟩ := ih _ k r m' h
+    obtain ⟨rfl, h0, -, -, hz⟩ := pf_callW hp hS hc (h51 _ (by simp))
+    obtain ⟨rfl, -, hr⟩ := ih _ k r m' h (fun x hx => h51 x (by simp_all))
     refine ⟨rfl, h0, ?_⟩
     rw [hr]
     simp only [pinsFound, List.all_cons, hz, Bool.not_and, Bool.or_assoc]

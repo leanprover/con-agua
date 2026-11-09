@@ -47,59 +47,47 @@ structure NatGateProg (p : Prog) : Prop extends MasterProg p where
 
 /-! ## `pin_at` as a model -/
 
-def pinAtW (m : Mem) (i : Word) : Option (List Word × Mem) :=
-  if pinW m 0 = 0 then none else if 51 ≤ i then none else some ([rdW (m.arr64 PINS) (1 + i)], m)
-
-theorem pinAt_specW (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St)
-    (i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ pinAtW s₀.mem i = some (r, s'.mem); ⊤⦄ := by
-  sorry
-
-/-- A returning `pin_at(i)`: memory unchanged, flag set, `i < 51`, the word of slot `j = 1 + i`. -/
-theorem pinAt_model {p : Prog} (hp : p.lookup "pin_at" = some pinAtL) {n : Nat} {m m' : Mem}
-    {i : Word} {r : List Word} (h : callW p n "pin_at" [i] m = some (r, m')) {j : Nat}
-    (hj : 1 + i.toNat = j) : m' = m ∧ pinW m 0 ≠ 0 ∧ i.toNat < 51 ∧ r.headD 0 = pinW m j := by
-  obtain ⟨s', rfl, -, hmod⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (pinAt_specW p hp n _ i) h
-  change pinAtW m i = some (r, s'.mem) at hmod
-  unfold pinAtW at hmod
-  by_cases h0 : pinW m 0 = 0
-  · simp [h0] at hmod
-  rw [ite_eq_right h0] at hmod
-  by_cases h1 : 51 ≤ i
-  · simp [h1] at hmod
-  rw [ite_eq_right h1] at hmod
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmod
-  obtain ⟨rfl, hm⟩ := hmod
-  have hi : i.toNat < 51 := by
-    have : ¬ (51 : Word).toNat ≤ i.toNat := fun e => h1 (UInt64.le_iff_toNat_le.mpr e)
-    simpa using this
-  refine ⟨hm.symm, h0, hi, ?_⟩
-  have e1 : (1 + i).toNat = 1 + i.toNat := by rw [UInt64.toNat_add]; simp; omega
-  simp [rdW, pinW, e1, hj]
-
-/-- `pin_at(i)` as a pure read: the memory is unchanged, and the word is slot `1 + i`. -/
-theorem pinAt_pure (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
+/-- `pin_at(i)` as a pure read, for a slot other than `51` (whose word is `PINS[71]`): the memory
+is unchanged, and the word is slot `1 + i`. -/
+theorem pinAt_pure (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word)
+    (h51 : i ≠ 51 := by decide) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ pinW s₀.mem 0 ≠ 0 ∧ i.toNat < 51 ∧
       r = [pinW s₀.mem (1 + i.toNat)] ∧ s'.mem = s₀.mem; ⊤⦄ := by
-  refine triple_post (pinAt_specW p hp n s₀ i) ?_
-  rintro r s' ⟨hl, hm⟩
-  unfold pinAtW at hm
-  by_cases h0 : pinW s₀.mem 0 = 0
-  · simp [h0] at hm
-  rw [ite_eq_right h0] at hm
-  by_cases h1 : 51 ≤ i
-  · simp [h1] at hm
-  rw [ite_eq_right h1] at hm
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, hm⟩ := hm
-  have hi : i.toNat < 51 := by
-    have : ¬ (51 : Word).toNat ≤ i.toNat := fun e => h1 (UInt64.le_iff_toNat_le.mpr e)
-    simpa using this
-  have e1 : (1 + i).toNat = 1 + i.toNat := by rw [UInt64.toNat_add]; simp; omega
-  exact ⟨hl, h0, hi, by simp [rdW, pinW, e1], hm.symm⟩
+  rw [invoke_eq _ hp]
+  simp only [callFn, pinAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have h51' : i.toNat ≠ 51 := fun e => h51 (UInt64.toNat_inj.mp (by simpa using e))
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [pinW_eq, rdW_eq]
+
+/-- `pin_at(i)` as a pure read at any slot (the vcgen form: slot `51`'s word is `PINS[71]`). -/
+theorem pinAt_any (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
+    ⦃fun r s' => LocEq s' s₀ ∧ pinW s₀.mem 0 ≠ 0 ∧ i.toNat < 52 ∧
+      r = [pinW s₀.mem (if i = 51 then 71 else 1 + i.toNat)] ∧ s'.mem = s₀.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, pinAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [pinW_eq, rdW_eq]
+
+/-- A returning `pin_at(i)`, `i ≠ 51`: memory unchanged, flag set, `i < 51`, the word of slot
+`j = 1 + i`. -/
+theorem pinAt_model {p : Prog} (hp : p.lookup "pin_at" = some pinAtL) {n : Nat} {m m' : Mem}
+    {i : Word} {r : List Word} (h : callW p n "pin_at" [i] m = some (r, m')) {j : Nat}
+    (hj : 1 + i.toNat = j) (h51 : i ≠ 51 := by decide) :
+    m' = m ∧ pinW m 0 ≠ 0 ∧ i.toNat < 51 ∧ r.headD 0 = pinW m j := by
+  obtain ⟨s', rfl, -, h0, hi, rfl, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pinAt_pure p hp n _ i h51) h
+  exact ⟨hm, h0, hi, by simp [hj]⟩
+
 
 theorem decHL_words {k : IdxKind} (m : Mem) : ∀ (ws : List Word) (o : Nat),
     (∀ w ∈ ws, w.toNat < 2 ^ 32) → (∀ j < ws.length, iwA m (o + j) = ws[j]?) →
@@ -144,7 +132,7 @@ theorem natOpNames_specW (p : Prog) (hp : p.lookup "nat_op_names" = some natOpNa
   simp only [callFn, natOpNamesL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_pure p hpin n, callW_spec p n "iw_alloc"] <;>
+      pinAt_any p hpin n, callW_spec p n "iw_alloc"] <;>
     finish (gen := 20) [natOpNamesW, ntBW]
 
 theorem natOpNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
@@ -207,7 +195,7 @@ theorem natDivModNames_specW (p : Prog) (hp : p.lookup "nat_div_mod_names" = som
   simp only [callFn, natDivModNamesL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_pure p hpin n, callW_spec p n "iw_alloc"] <;>
+      pinAt_any p hpin n, callW_spec p n "iw_alloc"] <;>
     finish (gen := 20) [natDivModNamesW, ntBW]
 
 theorem natDivModNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
@@ -293,7 +281,7 @@ theorem natOpPinsA_specW (p : Prog) (hp : p.lookup "nat_op_pins_a" = some natOpP
   | succ n =>
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_pure p hpin n] <;>
+      pinAt_any p hpin n] <;>
     finish (gen := 20) [natOpPinsAW]
 
 theorem natOpPinsA_fref (hp : p.lookup "nat_op_pins_a" = some natOpPinsAL)
@@ -328,7 +316,7 @@ theorem natOpPinsB_specW (p : Prog) (hp : p.lookup "nat_op_pins_b" = some natOpP
   | succ n =>
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_pure p hpin n] <;>
+      pinAt_any p hpin n] <;>
     finish (gen := 20) [natOpPinsBW]
 
 theorem natOpPinsB_fref (hp : p.lookup "nat_op_pins_b" = some natOpPinsBL)
@@ -363,7 +351,7 @@ theorem natOpPinsC_specW (p : Prog) (hp : p.lookup "nat_op_pins_c" = some natOpP
   | succ n =>
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_pure p hpin n] <;>
+      pinAt_any p hpin n] <;>
     finish (gen := 20) [natOpPinsCW]
 
 theorem natOpPinsC_fref (hp : p.lookup "nat_op_pins_c" = some natOpPinsCL)

@@ -182,12 +182,12 @@ theorem clp_callW {n : Nat} {m m' : Mem} {a : AState} {s : Word} {r : List Word}
   unfold clpW at hW
   by_cases h0 : s = 0
   · rw [ite_eq_left h0] at hW
-    obtain ⟨rfl, hf, rfl⟩ := clpL_callW hp hS _ _ _ _ _ hW
+    obtain ⟨rfl, hf, rfl⟩ := clpL_callW hp hS _ _ _ _ _ hW (by simp)
     refine ⟨rfl, hf, ?_⟩
     simp only [ite_eq_left h0, Bool.false_or, List.headD_cons]
     exact ite_not _
   · rw [ite_eq_right h0] at hW
-    obtain ⟨rfl, hf, rfl⟩ := clpL_callW hp hS _ _ _ _ _ hW
+    obtain ⟨rfl, hf, rfl⟩ := clpL_callW hp hS _ _ _ _ _ hW (by simp)
     refine ⟨rfl, hf, ?_⟩
     simp only [ite_eq_right h0, Bool.false_or, List.headD_cons]
     exact ite_not _
