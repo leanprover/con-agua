@@ -44,10 +44,10 @@ open L.Arena
 /-! ## The write set -/
 
 /-- The arrays the closure may write: none of the front's records, the pins and the stream
-index's rows (128‥134), the core's walk memos (48‥55, 151‥158), the inductive memos (201‥208). -/
+index's rows (128‥134), the core's walk memos (48‥54, 151‥158), the inductive memos (201‥208). -/
 def dcArrOk (b : TieredArray) : Bool :=
   !(b.arr == L.Front.DECL || b.arr == L.Front.DLP || b.arr == L.Arena.FIRSTS ||
-    (48 ≤ b.arr && b.arr ≤ 55) || (128 ≤ b.arr && b.arr ≤ 134) || (151 ≤ b.arr && b.arr ≤ 158) ||
+    (48 ≤ b.arr && b.arr ≤ 54) || (128 ≤ b.arr && b.arr ≤ 134) || (151 ≤ b.arr && b.arr ≤ 158) ||
     (201 ≤ b.arr && b.arr ≤ 208))
 
 /-- The `CTL` words the closure may write: none of the scratch flag (1), the memos' (48, 50,
