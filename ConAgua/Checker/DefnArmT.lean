@@ -190,12 +190,13 @@ theorem checkerProg_defnArmPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop ro
 /-- **The definition arm's contract at the substituted checker program** (`checkerProg_cdProgPB`'s
 `hdf`). -/
 theorem checkerProg_defnLoopPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
-    {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name) {ds : Array IDeclaration} :
+    {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+    {ds : Array IDeclaration} :
     ∀ cv v hh, ArmSpecT pins dn ds (Prog.subPB bs checkerProg) "check_decl_defn"
       (.defnDecl cv v hh) :=
   checkDeclDefn_loopT (checkerProg_defnArmPB bs hr hpre) (checkerProg_knotStagePB bs)
     (checkerProg_leafClosedPB bs) (checkerProg_apdPB bs) (checkerProg_crKeepPB bs)
-    (checkerProg_crfPB bs) (checkerProg_ccvSimsPB bs dn) (checkerProg_armStepPB bs (by decide))
+    (checkerProg_crfPB bs) (checkerProg_ccvSimsPB bs dn) hdn (checkerProg_armStepPB bs (by decide))
     (checkerProg_indMemoPB bs) (checkerProg_indLeavesPB bs)
 
 end defn

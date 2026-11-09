@@ -62,12 +62,12 @@ def defnCallFns : List FnName :=
     "check_structural_nat_pin", "nat_div_mod_names"]
 
 /-- The definition arm's program facts under `StageT`: its text, the constant and value checks',
-the structural gate's (`SnpProg`), the pin gate's (`DmProg10`). -/
+the structural gate's (`SnpProg`), the pin gate's (`CdmpProg`). -/
 structure DefnProgT (p : Prog) : Prop where
   df : p.lookup "check_decl_defn" = some checkDeclDefn
   ccv : CcvProg p
   snp : SnpProg p
-  dm : DmProg10 p
+  dm : CdmpProg p
   /-- the arm's callees keep the memory outside a step's write set (the pin variants' header) -/
   step : StepIn p defnCallFns
 
@@ -102,8 +102,8 @@ check with a certified operation's name allowed (`ccv_ref`, `allow = 1`), the de
 `natDivModNames` member, each handing back an index with `fe`'s view; the push last. -/
 theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {dn : NIdx → Option ConLeche.Name}
-    (hC : CcvSims p dn) {vis : Word} {fe : IFEnv} {env : ConLeche.Env} {a : AState} {n : Nat}
-    (hn : n ≤ 2 ^ 62) {m : Mem} {i : Word} {ds : Array IDeclaration} {pins : List INatOpPinSet}
+    (hC : CcvSims p dn) (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
+    {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {i : Word} {ds : Array IDeclaration} {pins : List INatOpPinSet}
     {pinsP : List ConLeche.NatOpPinSet} {cv : IConstantVal} {v : EIdx}
     {hh : ConLeche.ReducibilityHint} {c : ConLeche.ConstantVal} {x : ConLeche.Expr}
     (hS : StageT dn vis fe m a) (hPS : PinSetsR m pins)
@@ -254,17 +254,24 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
       (Q := fun r m' => callW p n "rom_pin_sets" [] m6 = some (r, m')) (fun _ _ h => h)
       fun r0 m0 h0 => ?_
     rw [checkDeclDefnE.k_rom_pin_sets.arm1]
+    obtain ⟨hS0, hg0, -, hI0⟩ := romPinSets_ref hX.dm.toDmProg10 hC6.stage hPS6 h0
+    have hC0 := StageC.of_frame hC6 hS0 hC6.check (callW_leafFrame hcl (leaf_mem _ (by decide)) h0)
+      (Ext.refl _)
+    have hCr0 := hkp.call (im_mem _ rfl) h0 hCr6
+    have hg70 : IWGrow m7 m0 := hg76.trans hg0
     have hok2 := hok7.toStepOK.push hok7.check.state hciD7 hsh2 hcw2
-    refine RefE.bindE (fun _ => checkDeclDefnE.k_check_div_mod_pin.none ..) (fun hG => hG.core)
-      (cdmp_ref hX.dm hq hcl hkp n hn' hwnl hC6 hok7.envWF
-        (ArrExt.decCI (IWGrow.erecPExt hg76) hci7) hcin hok2 hnm7 hPS6 hPD7 hCr6 h0)
-      fun ⟨r8, m8⟩ fe8 a8 hrun8 hQ8 => ?_
+    refine RefE.bindRun (s₀ := ⟨m0, Locals.init []⟩)
+      (fun _ => checkDeclDefnE.k_check_div_mod_pin.none ..)
+      (cdmp_specE p hX.dm n _ (r0.headD 0) (r0.tail.headD 0) vis q wn) (fun hG => hG.nv)
+      (fun hG => hG.core)
+      (cdmp_ref hX.dm hq hcl hkp hdn n hn' hwnl hC0 hok7.envWF
+        (ArrExt.decCI (IWGrow.erecPExt hg70) hci7) hcin hok2 hnm7 hI0 hPD7 hCr0)
+      fun r8 s8 fe8 a8 h8 _ hrun8 hQ8 => ?_
     rw [checkDeclDefnE.k_check_div_mod_pin.arm1]
     dsimp only at hQ8
     rw [hQ8.ret]
-    have hg68 : IWGrow m6 m8 := hQ8.grow
-    exact final fe8 m8 a8 hQ8.stage (ArrExt.decCI (IWGrow.erecPExt (hg76.trans hg68)) hci7)
-      (hg7.trans (hg76.trans hg68))
+    exact final fe8 s8.mem a8 hQ8.stage
+      (ArrExt.decCI (IWGrow.erecPExt (hg70.trans hQ8.grow)) hci7) (hg7.trans (hg70.trans hQ8.grow))
   -- the structural gate's names
   refine RefE.bindSim (fun _ => checkDeclDefnE.k_nat_op_names.none ..)
     (natOpNames_ref hG n s4.mem a4 · · hT4.stage ·) fun r5 ns m5 a5 h5 hrun5 ⟨hS5, hg5, hd5⟩ => ?_

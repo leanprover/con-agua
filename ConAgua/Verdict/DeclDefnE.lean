@@ -35,7 +35,7 @@ variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : A
 /-- **`check_decl_defn`'s error claim under `StageT`** (`cdf_ref`'s error half). -/
 theorem checkDeclDefn_errT {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p)
     (hcl : LeafClosed p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p)
-    (hC : CcvSims p dn) (hG : VerdictCtxU p) (cv : IConstantVal) (v : EIdx)
+    (hC : CcvSims p dn) (hdn : DnInj dn) (hG : VerdictCtxU p) (cv : IConstantVal) (v : EIdx)
     (hh : ConLeche.ReducibilityHint) :
     ArmSpecE pins dn ds p "check_decl_defn" (.defnDecl cv v hh) := by
   intro n hn m a vis fe i hi hd _ hR hS hF hden hPD hIM e hc
@@ -50,7 +50,7 @@ theorem checkDeclDefn_errT {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p)
   obtain ⟨env, hF⟩ := hF
   obtain ⟨pinsP, hPD⟩ := hPD
   exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclDefn_specE p hX n _ i vis) hG.nv hG
-    (cdf_ref hX hq hcl hap hkp hcrf hC hn hS hR.pinsets hR.decls hi hd' hF hcv hx hPD hIM.cr) hc
+    (cdf_ref hX hq hcl hap hkp hcrf hC hdn hn hS hR.pinsets hR.decls hi hd' hF hcv hx hPD hIM.cr) hc
 
 end defn
 
