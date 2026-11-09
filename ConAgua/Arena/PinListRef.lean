@@ -13,6 +13,7 @@ import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.DeclCvg
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
+import ConRon.Bridge.Specs
 
 @[expose] public section
 
@@ -342,5 +343,95 @@ theorem pinCopiesOkW_ok (hP : PinListLProg p) : ∀ (n : Nat) (m m' : Mem) (a : 
   exact ⟨b, a', by rw [hstep]; exact hrun, hT', hg3.trans hg', hok', hr', hx3.trans hx', by simpa using hb'⟩
 
 end copies
+
+
+/-! ## `pin_link_ok`: the renaming on handles is con-leche's on names -/
+
+/-- con-leche's `Level.subst` of a parameter at `.param` values, as a renaming of names (the
+handle side's `canonNameMap`, on names). -/
+def cnmN (ks vs : List ConLeche.Name) (n : ConLeche.Name) : ConLeche.Name :=
+  match ks.findIdx? (fun k => k == n) with
+  | some i => vs.getD i n
+  | none => n
+
+theorem subst_go_param : ∀ (ks vs : List ConLeche.Name) (n : ConLeche.Name),
+    ConLeche.Level.subst.go ks (vs.map .param) n = .param (cnmN ks vs n)
+  | [], vs, n => by simp [ConLeche.Level.subst.go, cnmN]
+  | k :: ks, [], n => by
+    simp only [List.map_nil, ConLeche.Level.subst.go, cnmN]
+    split <;> simp
+  | k :: ks, v :: vs, n => by
+    simp only [List.map_cons, ConLeche.Level.subst.go]
+    by_cases hk : k = n
+    · subst hk; simp [cnmN, List.findIdx?_cons]
+    · rw [if_neg hk, subst_go_param ks vs n]
+      have hb : (k == n) = false := by simpa using hk
+      simp only [cnmN, List.findIdx?_cons, hb]
+      cases ks.findIdx? (fun k => k == n) <;> simp
+
+theorem canonNameMap_cnm {ns : ConRon.Arena.NStore} (hns : ConRon.Arena.NStoreWF ns)
+    {ps cs : List NIdx} {psN csN : List ConLeche.Name}
+    (hp : Frontend.denoteNList ns ps = some psN) (hc : Frontend.denoteNList ns cs = some csN)
+    {n : NIdx} {nm : ConLeche.Name} (hn : ConRon.Arena.denoteN ns n = some nm) :
+    ConRon.Arena.denoteN ns (ConRon.Arena.canonNameMap ps cs n) = some (cnmN psN csN nm) := by
+  have hfi := ConRon.Bridge.canonFindIdx_denote hns ps psN hp n nm hn
+  simp only [ConRon.Arena.canonNameMap, cnmN, hfi]
+  cases psN.findIdx? (fun p => p == nm) with
+  | none => exact hn
+  | some i =>
+    have hlen := ConRon.Bridge.denoteNList_length cs csN hc
+    by_cases hi : i < cs.length
+    · obtain ⟨hx, hd⟩ := ConRon.Bridge.denoteNList_get cs csN hc i hi
+      simp only [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi,
+        List.getElem?_eq_getElem hx, Option.getD_some]
+      exact hd
+    · have h1 : cs[i]? = none := List.getElem?_eq_none (by omega)
+      have h2 : csN[i]? = none := List.getElem?_eq_none (by omega)
+      simp only [List.getD_eq_getElem?_getD, h1, h2, Option.getD_none]
+      exact hn
+
+theorem denoteNList_map_cnm {ns : ConRon.Arena.NStore} (hns : ConRon.Arena.NStoreWF ns)
+    {ps cs : List NIdx} {psN csN : List ConLeche.Name}
+    (hp : Frontend.denoteNList ns ps = some psN) (hc : Frontend.denoteNList ns cs = some csN) :
+    ∀ (xs : List NIdx) (xsN : List ConLeche.Name), Frontend.denoteNList ns xs = some xsN →
+      Frontend.denoteNList ns (xs.map (ConRon.Arena.canonNameMap ps cs)) = some (xsN.map (cnmN psN csN))
+  | [], xsN, h => by simp [Frontend.denoteNList] at h ⊢; exact h
+  | x :: xs, xsN, h => by
+    cases hx : ConRon.Arena.denoteN ns x with
+    | none => simp [Frontend.denoteNList, hx] at h
+    | some nm =>
+      cases hxs : Frontend.denoteNList ns xs with
+      | none => simp [Frontend.denoteNList, hx, hxs] at h
+      | some ys =>
+        simp only [Frontend.denoteNList, hx, hxs, Option.some.injEq] at h
+        subst h
+        have := denoteNList_map_cnm hns hp hc xs ys hxs
+        simp only [List.map_cons, Frontend.denoteNList, canonNameMap_cnm hns hp hc hx, this]
+
+/-- **con-leche's `pinLinkOk` on the read-back names is the renaming test on handles.** -/
+theorem pinLinkOk_handles {st : EStore} (hwf : StoreWF st) {R Rp C Cp : List NIdx}
+    {RT RpT CT CpT : List ConLeche.Name}
+    (hR : Frontend.denoteNList st.ns R = some RT) (hRp : Frontend.denoteNList st.ns Rp = some RpT)
+    (hC : Frontend.denoteNList st.ns C = some CT) (hCp : Frontend.denoteNList st.ns Cp = some CpT) :
+    ConLeche.pinLinkOk RT RpT CT CpT = decide (C = Cp.map (ConRon.Arena.canonNameMap Rp R)) := by
+  obtain ⟨rk, hrk⟩ := hwf
+  have hns : ConRon.Arena.NStoreWF st.ns := hrk.nsWF
+  have hm := denoteNList_map_cnm hns hRp hR Cp CpT hCp
+  have e1 : (CpT.map fun p => ConLeche.Level.subst RpT (RT.map ConLeche.Level.param) (.param p)) =
+      (CpT.map (cnmN RpT RT)).map ConLeche.Level.param := by
+    simp only [List.map_map]
+    congr 1; funext p
+    simp [ConLeche.Level.subst, subst_go_param]
+  rw [ConLeche.pinLinkOk, e1]
+  rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff]
+  constructor
+  · intro h
+    have h' : CT = CpT.map (cnmN RpT RT) :=
+      (List.map_inj_right (fun a b e => by cases e; rfl)).mp h
+    rw [h'] at hC
+    exact ConRon.Bridge.denoteNList_inj ⟨rk, hrk⟩ _ _ _ hC hm
+  · intro h
+    rw [h, hm] at hC
+    cases hC; rfl
 
 end L.Ind
