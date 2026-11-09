@@ -186,7 +186,9 @@ end stages
 
 /-- **The twin's pool rejects or declines `chunks`**: the pipeline fails before the jobs
 (`TwinVerdict`), or the stages and the stream index ran ok and some worker's list of jobs (record
-positions) fails from the index state's worker with an error of class `c`. -/
+positions) fails from the index state's worker with an error of class `c`, or some record before
+the list's jobs does not pass on its own (the approved weakening: "the job fails with class `c`,
+or some record below is rejected"). -/
 def TwinVerdictPooled (chunks : List ByteArray) (c : L.Word) : Prop :=
   TwinVerdict chunks c ∨
   ∃ (pins : List NatOpPinSet) (sA sB sC sD sE sF : AState) (pre : PreludeIx) (r : ParseResultD)
@@ -198,7 +200,40 @@ def TwinVerdictPooled (chunks : List ByteArray) (c : L.Word) : Prop :=
     internAllPins pins sD = .ok (ipins, sE) ∧
     buildIndex ds sE = .ok (.ok I, sF) ∧
     (∀ t ∈ w, t < ds.size) ∧
-    TwinFailsV (checkJobList .verified ipins I ds w) sF.worker c
+    (TwinFailsV (checkJobList .verified ipins I ds w) sF.worker c ∨
+      ∃ i, (∀ t ∈ w, i < t) ∧
+        ¬ ∃ s', checkJobList .verified ipins I ds [i] sF.worker = .ok (.ok (), s'))
+
+/-- **Record `i`'s job passes on its own**: at every run of the stages and the stream index, the
+twin's job of record `i` from the index state's worker accepts. -/
+def TwinJobPasses (chunks : List ByteArray) (i : Nat) : Prop :=
+  ∀ (pins : List NatOpPinSet) (sA sB sC sD sE sF : AState) (pre : PreludeIx) (r : ParseResultD)
+    (ds : Array IDeclaration) (ipins : List INatOpPinSet) (I : IStreamIndex),
+    internReservedPins (AState.init EStore.empty) = .ok ((), sA) →
+    builtinPreludeE sA = .ok (.ok pre, sB) →
+    parseChunks chunks sB = .ok (.ok r, sC) →
+    preparePrelude pre r.decls sC = .ok (ds, sD) →
+    internAllPins pins sD = .ok (ipins, sE) →
+    buildIndex ds sE = .ok (.ok I, sF) →
+    ∃ s', checkJobList .verified ipins I ds [i] sF.worker = .ok (.ok (), s')
+
+/-- A record below `j` that does not pass on its own gives the pool's weakened verdict (with the
+list `[j]`, `j` a record). -/
+theorem TwinVerdictPooled.of_not_passes {chunks : List ByteArray} {c : L.Word} {j : Nat}
+    (hj : ∀ (pins : List NatOpPinSet) (sA sB sC sD sE sF : AState) (pre : PreludeIx)
+      (r : ParseResultD) (ds : Array IDeclaration) (ipins : List INatOpPinSet) (I : IStreamIndex),
+      internReservedPins (AState.init EStore.empty) = .ok ((), sA) →
+      builtinPreludeE sA = .ok (.ok pre, sB) →
+      parseChunks chunks sB = .ok (.ok r, sC) →
+      preparePrelude pre r.decls sC = .ok (ds, sD) →
+      internAllPins pins sD = .ok (ipins, sE) →
+      buildIndex ds sE = .ok (.ok I, sF) → j < ds.size)
+    {i : Nat} (hij : i < j) (h : ¬ TwinJobPasses chunks i) : TwinVerdictPooled chunks c := by
+  simp only [TwinJobPasses, Classical.not_forall] at h
+  obtain ⟨pins, sA, sB, sC, sD, sE, sF, pre, r, ds, ipins, I, hA, hB, hC, hD, hE, hF, hn⟩ := h
+  exact .inr ⟨pins, sA, sB, sC, sD, sE, sF, pre, r, ds, ipins, I, [j], hA, hB, hC, hD, hE, hF,
+    by simpa using hj pins sA sB sC sD sE sF pre r ds ipins I hA hB hC hD hE hF,
+    .inr ⟨i, by simpa using hij, hn⟩⟩
 
 theorem TwinVerdict.pooled {chunks : List ByteArray} {c : L.Word} (h : TwinVerdict chunks c) :
     TwinVerdictPooled chunks c := .inl h

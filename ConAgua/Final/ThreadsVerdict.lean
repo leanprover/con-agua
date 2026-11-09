@@ -9,6 +9,7 @@ import ConAgua.Checker.ProgWf
 import ConAgua.Final.BufAbi
 import ConAgua.Final.BufChain
 import ConAgua.Final.DrvFinal
+import ConAgua.Checker.CheckARun
 public import ConAgua.Compiler.Main
 import all ConAgua.Checker.Entry
 
@@ -102,8 +103,9 @@ def ThreadsFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (
 /-- **A thread's failing call, at the L level**: entry 1 (`check` with the mode word `1`)
 returned `2^63 + k`, the buffer `B` is `OUT`'s first `len` words, a thread with a fresh region
 `r₀` ran its calls `cs` (`ThreadFails`: each accepting call's run returned and left the buffer in
-place) and its next call, on the claimed index `j`, failed with `e` of class other than `0`: the
-twin's pool fails with that class. -/
+place) and its next call, on the claimed index `j`, failed with `e` of class other than `0`, and
+every record below `j` passes on its own (`TwinJobPasses`): the twin's pool fails with that
+class. -/
 def ThreadEVerdict : Prop :=
   ∀ (b pb : ByteArray) (sz : TieredArray → Nat), InputsOK b pb sz →
     ∀ (N₁ : Nat), N₁ < 2 ^ 62 → ∀ (rs₁ : List Word) (m₁ : Mem),
@@ -113,7 +115,7 @@ def ThreadEVerdict : Prop :=
     ∀ (r₀ : Mem), (∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m₁.arr64 b).size) → r₀.glob INIT = 0 →
     ∀ (j : Word) (cs : List (Word × Nat × Mem)) (n : Nat) (e : Err), ThreadFails B j n e r₀ cs →
     (∀ c ∈ cs, c.1 < rs₁.headD 0 - 9223372036854775808) → j < rs₁.headD 0 - 9223372036854775808 →
-    e.cls ≠ 0 → TwinVerdictPooled [b] e.cls
+    e.cls ≠ 0 → (∀ i < j.toNat, TwinJobPasses [b] i) → TwinVerdictPooled [b] e.cls
 
 /-- **The threaded harness's verdict claims** (the L-level obligations): entry 1's
 (`Entry1Verdict`, as in `SeqVerdicts`) and a thread's failing call (`ThreadEVerdict`). -/
@@ -288,9 +290,35 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     obtain ⟨rs, h1, -, h3, -⟩ := hrun i' hi
     exact ⟨⟨rs, h1⟩, bufKept_of_memRel h3 hent' (hR.kept i' hi)⟩) he i 0 (by omega)
   rw [h0] at hruns
+  -- a record below `j` that does not pass: the weakened verdict
+  have hr₁ : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
+  obtain ⟨PA, m₇, m, hF, -, -, hres⟩ := checkA_run b pb _ hin 1 (Or.inl rfl) abiFuel hN rs₁ m₁ h₁ hr₁
+  have hsz : PA.ds.size < 2 ^ 63 := by
+    have := hF.build.decls.room; have := hF.build.decls.dsize; omega
+  have hj : ((t.dm i).regs.rdx).toNat < PA.ds.size := by
+    have hc := hR.claimed i (Nat.le_refl _)
+    rw [hrax₁, hres] at hc
+    have e : (9223372036854775808 : Word) + UInt64.ofNat PA.ds.size - 9223372036854775808 =
+        UInt64.ofNat PA.ds.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
+    rw [e, UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)] at hc
+    exact hc
+  by_cases hpass : ∀ i' < ((t.dm i).regs.rdx).toNat, TwinJobPasses [b] i'
+  rotate_left
+  · simp only [Classical.not_forall] at hpass
+    obtain ⟨i', hi', hn⟩ := hpass
+    refine TwinVerdictPooled.of_not_passes (j := ((t.dm i).regs.rdx).toNat) ?_ hi' hn
+    intro pins sA sB sC sD sE sF pre r ds ipins I hA' hB' hC' hD' _ _
+    obtain ⟨hA, hB, hC, hD, -⟩ := PA.pfx
+    rw [hA] at hA'; injection hA' with hA'; obtain ⟨-, rfl⟩ := Prod.mk.inj hA'
+    rw [hB] at hB'; injection hB' with hB'; obtain ⟨hB1, rfl⟩ := Prod.mk.inj hB'
+    injection hB1 with hB1; subst hB1
+    rw [hC] at hC'; injection hC' with hC'; obtain ⟨hC1, rfl⟩ := Prod.mk.inj hC'
+    injection hC1 with hC1; subst hC1
+    rw [hD] at hD'; injection hD' with hD'; obtain ⟨rfl, rfl⟩ := Prod.mk.inj hD'
+    exact hj
   refine hV b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem checkerTab)
     (fun a ha => ?_) rfl _ _ abiFuel e hruns (fun c hc => ?_)
-    (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk
+    (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk hpass
   · have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
     simp only [abiLayout_tab]
