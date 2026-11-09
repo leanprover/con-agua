@@ -74,7 +74,7 @@ theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 def lvlA : List TieredArray := stepA.filter fun b => b ≠ IW ∧ b ≠ EREC
 
 /-- The `CTL` words `lvl_eq_c` may write: all a step may, but the pools' tops. -/
-def lvlC : List Word := stepC.filter fun x => x ≠ 129 ∧ x ≠ 200
+def lvlC : List Word := stepC.filter fun x => x ≠ 129 ∧ x ≠ 130 ∧ x ≠ 200
 
 /-- The functions `lvl_eq_c` reaches. -/
 def lvlFns : List FnName :=

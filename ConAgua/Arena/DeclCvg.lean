@@ -48,9 +48,10 @@ def stepA : List TieredArray :=
   checkerWordArrays.filter fun b => b ≠ DECL ∧ b ≠ DLP ∧ (b.arr < 146 ∨ 149 < b.arr)
 
 /-- The `CTL` words a step may write: all but the pending checks' count, the promotion memos'
-words and the pin variant list's header (`CTL[150]`, `CTL[151]`, lane `romload`). -/
+words and the pin variant list's header (`CTL[150]`, `CTL[151]`, lane `romload`); the tier-1
+record top `CTL[130]` is written (`erec_alloc` inside a job). -/
 def stepC : List Word :=
-  ((List.range 1024).filter fun x => x ≠ 130 ∧ x ≠ 150 ∧ x ≠ 151 ∧ (x < 140 ∨ 147 < x)).map
+  ((List.range 1024).filter fun x => x ≠ 150 ∧ x ≠ 151 ∧ (x < 140 ∨ 147 < x)).map
     UInt64.ofNat
 
 /-- `check_value_group`'s text: this lane's functions, lane `induct`'s library and stubs, and the
