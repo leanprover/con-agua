@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.QuotRecW
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.IndTwin
+public import ConAgua.Arena.StageC
 public import ConRon.Bridge.Checker.Basis
 import ConAgua.Arena.RefWalk
 import all ConAgua.Arena.BasisL
@@ -160,17 +161,49 @@ theorem callW_quotPredsOk {p : Prog} (hP : QuotRecProg p) {vis : Word} {fe : IFE
     (quotPredsOk_specW p hP.qpo n _ vis _) h
   exact quotPredsOkW_ok hP.basis hP.pa k hS hW
 
+/-- `install_basis_decl`'s run keeps the core's memos: its callees `env_find`, `env_push` are
+leaves. -/
+theorem ibdE_memos {p : Prog} (hcl : LeafClosed p) {n : Nat} {m m' : Mem} {vis c r : Word}
+    (h : installBasisDeclE p n m vis c = .ok (r, m')) (hM : CoreMemos m) : CoreMemos m' := by
+  have hlf : ∀ {f : FnName}, f ∈ leafFns → ∀ {k : Nat} {args : List Word} {x y : Mem}
+      {rx : List Word}, callW p k f args x = some (rx, y) → CoreMemos x → CoreMemos y :=
+    fun {_} hf {_ _ _ _ _} hc hM => hM.frame (callW_leafFrame hcl hf hc) leafA_memo leafC_memo leafA_walk
+      leafC_walk leafA_lp leafC_lp
+  cases n with
+  | zero => rw [installBasisDeclE.eq_1] at h; cases h
+  | succ n =>
+  rw [installBasisDeclE.arm1] at h
+  generalize hw : rdW _ _ = w at h
+  rcases h1 : callW p n "env_find" [w, vis] m with _ | ⟨r1, m1⟩
+  · rw [h1, liftE_none, installBasisDeclE.k_env_find.none] at h; cases h
+  rw [h1, liftE_some] at h
+  by_cases hb : r1.headD 0 = 0
+  · rw [installBasisDeclE.k_env_find.arm1 p _ _ _ _ _ hb] at h
+    rcases h2 : callW p n "env_push" [vis, c] m1 with _ | ⟨r2, m2⟩
+    · rw [h2, liftE_none, installBasisDeclE.k_env_push.none] at h; cases h
+    rw [h2, liftE_some, installBasisDeclE.k_env_push.arm1] at h
+    cases h
+    exact hlf (by decide) h2 (hlf (by decide) h1 hM)
+  · rw [installBasisDeclE.k_env_find.abort1 p _ _ _ _ _ hb] at h; cases h
+
+/-- What `check_quot_record` gives besides the twin's environment: `install_basis_decl`'s post and
+the core's memos. -/
+structure CqrPost (m : Mem) (r : Word) (m' : Mem) (fe' : IFEnv) (a' : AState) : Prop where
+  stage : StageR r fe' m' a'
+  grow : IWGrow m m'
+  memos : CoreMemos m'
+
 /-- **`check_quot_record(vis, k.slot, q)` refines `checkQuotRecord fe k cv`, both outcomes**, under
 `StageT`: the pin match (`quot_pin_hit`), the slot's predecessors (`quot_preds_ok`), the install
 of the pin at the record's names (`quot_at`, `install_basis_decl`). -/
-theorem cqr_ref {p : Prog} (hP : QuotRecProg p) {dn : NIdx → Option ConLeche.Name}
+theorem cqr_ref {p : Prog} (hP : QuotRecProg p) (hcl : LeafClosed p) {dn : NIdx → Option ConLeche.Name}
     (hQ : QuotSims p dn) {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem} {q : Word}
     {cv : IConstantVal} {c : ConLeche.ConstantVal} (k : ConLeche.QuotKind) (hS : StageT dn vis fe m a)
     (hok : ConRon.Bridge.StateOK a) (hr : ConRon.Bridge.ReadOK a)
     (hq : decCV (erecP m) q.toNat = some cv)
     (hden : ConRon.Arena.Frontend.denoteCV a.store cv = some c) :
     RefE True (checkQuotRecordE p n m vis (UInt64.ofNat k.slot) q) (ConRon.Arena.checkQuotRecord fe k cv) a
-      (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
+      (fun v fe' a' => CqrPost m v.1 v.2 fe' a') := by
   cases n with
   | zero => exact RefE.of_cls0 (by simp)
   | succ n =>
@@ -193,7 +226,7 @@ theorem cqr_ref {p : Prog} (hP : QuotRecProg p) {dn : NIdx → Option ConLeche.N
   have hb : b = true := by simp_all
   subst hb
   rw [checkQuotRecordE.k_quot_pin_hit.arm1 p _ _ _ _ _ _ h0]
-  simp only [ite_true, pure_bind, Bool.not_true]
+  simp only [ite_true, Bool.not_true]
   refine RefE.onlySim (fun _ => checkQuotRecordE.k_quot_preds_ok.none ..)
     (Q := fun r2 m2 => m1 = m2 ∧ (ConRon.Arena.quotPredsOk fe k).run a1 = .ok ((r2.headD 0 != 0), a1))
     (fun r m2 h => let ⟨e, h'⟩ := callW_quotPredsOk hP k hS1.stage h; ⟨e.symm, h'⟩) fun r2 m2 ⟨hm2, hrun2⟩ => ?_
@@ -211,6 +244,10 @@ theorem cqr_ref {p : Prog} (hP : QuotRecProg p) {dn : NIdx → Option ConLeche.N
       (ConRon.Bridge.denoteCV_ext hden hst1.ext) r m3 h) fun r3 m3 ⟨ci, a3, hrun3, hS3, hg3, hci⟩ => ?_
   rw [checkQuotRecordE.k_quot_at.arm1]
   refine RefE.bind_right hrun3 ?_
-  exact RefE.weakenP (ibd_ref (dn := dn) hP.basis n hS3.stage hci) (fun v fe' a' hp => ⟨hp.stage, hg1.trans (hg3.trans hp.grow)⟩)
+  rcases e : installBasisDeclE p n m3 vis (r3.headD 0) with e | v
+  · have := ibd_ref (dn := dn) hP.basis n hS3.stage hci; rw [e] at this; exact this
+  have := ibd_ref (dn := dn) hP.basis n hS3.stage hci; rw [e] at this
+  obtain ⟨y, a', h1, h2⟩ := this
+  exact ⟨y, a', h1, h2.stage, hg1.trans (hg3.trans h2.grow), ibdE_memos hcl e hS3.twin.memos⟩
 
 end L.Ind
