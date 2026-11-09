@@ -53,7 +53,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## The loop's refinement -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What `classes_nfs`' loop gives besides the twin's records `rest` (from cursor `j`, the records
 `acc` before it; the classes' slice `(mo, ml)` and the inputs in `mb`, the result slots at `qr`):
 the stage, the growth from `mb`, the result slots below the top, the memos, `AbsOK`, and the
@@ -68,7 +67,6 @@ structure CnsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   abs : AbsOK m'
   recs : ∃ ws', decNL m' qr.toNat ml.toNat = some ws' ∧
     FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m') ws' (acc ++ rest)
--/
 
 section loop
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -78,7 +76,6 @@ variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLech
   {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
 include hkp henv P
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`classes_nfs`' loop refines `classesNfs`, both outcomes** (twin side: con-ron's `classesNfs_spec`'s
 list induction): per class `target_major_nfs` (`tmn_ref` through its run; on an ok run con-ron's
 `targetMajorNfs_spec` for the extension), `iw_alloc` and the record's copy (L only, class `0` on
@@ -156,7 +153,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   obtain ⟨hes, hC1, hg1, hP1, hA1, hptrs⟩ := hR1
   obtain ⟨hfr, pse, hpse, hpseb⟩ := hptrs mb tps (by rw [decNL_grow hg htbl.bound]; exact htps) htpb
   dsimp only at hes hC1 hg1 hP1 hA1 hfr hpse
-  obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core)
     henv bs pP formerTys _ formerTysP _ _ _ _ _ _ _ hformer hscp tbl tblP a a1 es hC.check
     ⟨hsh, hftP, hpfvsP, hlvls, hdsP, hctorsP, htblP⟩ run1
   have hS1 := hC1.stage
@@ -324,7 +321,6 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   rw [hj1] at this
   exact RefE.tailMap_pure (k := id) (f := id) (fun _ => rfl) (fun _ => rfl) id
     (fun _ _ _ hR => ⟨hR.stage, hR.grow, hR.top, hR.rc, hR.abs, by simpa using hR.recs⟩) this
--/
 
 end loop
 
