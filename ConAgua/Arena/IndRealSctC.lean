@@ -12,7 +12,8 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.NestCtx
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
-public import ConAgua.Arena.IndInstallSpec.SpgWZero
+public import ConAgua.Arena.IndSumSpec.StructProjGuards
+public import ConRon.Arena.Inductives.BlockTail
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
 public import ConAgua.Arena.IndRealApdT
 import ConRon.Bridge.Inductives.BlockTail
