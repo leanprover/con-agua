@@ -148,12 +148,6 @@ set_option maxRecDepth 8192 in
 theorem erecKept_of {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) : ErecKept p :=
   fun _ _ _ _ _ _ hf h => callW_erec_closedT hcl (by subst hf; decide) h
 
-set_option maxRecDepth 8192 in
-/-- `ErecKeptProj` (`lvl_eq_c`) from the core's write set. -/
-theorem erecKeptProj_of {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
-    ErecKeptProj p :=
-  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by subst hf; decide) h
-
 /-- `BStkCap` is `CoreS.bstk` (lane `whnf2`'s landing 1). -/
 theorem bstkCap_of : BStkCap := fun _ _ _ _ _ _ _ hS => hS.bstk
 
@@ -253,10 +247,16 @@ theorem KnotAllProg.lit : InferLitCallees p :=
     fun n s₀ a₀ dn vis fe M eb nm hS hnm => constE_refines p hq.delta n s₀ a₀ dn vis fe M eb nm hS hnm⟩
 
 include hq in
+/-- **`infer_proj`'s callees** (`proj_guard_rows`: `pgrOK_of`). -/
+theorem KnotAllProg.projCallees : InferProjCallees p :=
+  ⟨coreDen_of, findProj_refines p hq.projp, projFound p hq.projp, erecKept_of hq.hcl, hq.instLP,
+    ErecPKept.of_closed hq.hcl, pgrOK_of p hq.proj, hq.walks.iotaInst1OK, hq.prop⟩
+
+include hq in
 theorem KnotAllProg.inferC : InferCallees p :=
   ⟨hq.walks.inst1OK, hq.walks.instListOK, (KnotAllProg.defeq hq).abstract1, (KnotAllProg.defeq hq).abstractRange,
     KnotAllProg.constTy hq, hq.lit, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
-    inferProj_refines p hq.proj hq.projp ⟨coreDen_of, (findProj_refines p hq.projp), (projFound p hq.projp), erecKept_of hq.hcl, hq.instLP, erecKeptProj_of hq.hcl⟩⟩
+    inferProj_refines p hq.proj hq.projp (KnotAllProg.projCallees hq)⟩
 
 /-- **The knot at fuel `0`**: every L call at fuel `0` fails. -/
 theorem knot_zero (p : Prog) : KnotOK p 0 where

@@ -20,7 +20,7 @@ namespace L.Arena
 
 section prep
 variable (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p) (hw : WhnfCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p) (hE : ErecKeptKnot p)
+  (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p) (hE : ErecKeptRec p)
   (hnv : closedNV p L.Checker.nvFns = true) (hM : MajorToCtorE p)
 
 include hp hc hw hsup hmtc hE hnv hM in

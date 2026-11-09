@@ -161,7 +161,7 @@ def BncRefS : Prop :=
         (decHL rm.2 (rm.1.tail.headD 0).toNat (rm.1.tail.tail.headD 0).toNat : Option (List EIdx)) =
           some x.2 ∧
         (rm.1.tail.headD 0).toNat + (rm.1.tail.tail.headD 0).toNat ≤ iwTop rm.2 ∧
-        x.1.hiAt 0 < 2 ^ 64)
+        x.1.hiAt 0 < 2 ^ 64 ∧ x.1.params.length + x.1.names.length < 2 ^ 64)
 
 /-- **`check_block_classes(vis, p, params.off, params.len)`'s contract**: `checkBlockClasses`,
 both outcomes, from `BkSt` and con-ron's `checkBlockClasses_spec` preconditions; the class read
@@ -393,7 +393,7 @@ theorem pass_ref (R : PassRefs G p dn) (hGnv : G → closedNV p _root_.L.Checker
   refine RefE.bindE (fun _ => icpE.k_block_nest_ctx.none ..) id
     (R.bnc n (by omega) _ fe1 env₁ m3 a3 _ bs1 p₁P hB3 henv₁ hq3 hsl3 hsh3 hT)
     fun ⟨r4, m4⟩ ⟨c, holes⟩ a4 hrun4 h4 => ?_
-  obtain ⟨hB4, hg4, hctx4, hU4, hho4, hhob4, hhi4⟩ := h4
+  obtain ⟨hB4, hg4, hctx4, hU4, hho4, hhob4, hhi4, -⟩ := h4
   rw [icpE.k_block_nest_ctx.arm1]
   obtain ⟨c4, ⟨ctxP, holesP⟩, ⟨hctx, hholes, hctxOk, hhw, hpar, hlen, hnh, hnP⟩, hF4⟩ :=
     ConRon.Bridge.Inductives.blockNestCtx_spec fe1 henv₁ bs1 p₁P hT a3 a4 _ hB3.c.check hsh3 hrun4
