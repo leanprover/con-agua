@@ -13,6 +13,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.DeclArms
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 
@@ -203,5 +204,51 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
       simp only [fpShape, true_and]; constructor
       · intro hh; split at hh <;> simp_all
       · rintro ⟨hxy, rfl⟩; simp [hxy]
+
+/-! ## `eq_stored(vis)` -/
+
+/-- **The model of `eq_stored(vis)`.** -/
+l_model eqs_specW (p : Prog) (hp : p.lookup "eq_stored" = some eqStoredL)
+  (hpa : p.lookup "pin_at" = some pinAtL)
+  fns [hp ↦ eqsW list]
+  specs [pinAt_specW p hpa n, callW_spec p n "env_find"]
+  grind [arena_grind]
+
+/-- **`eq_stored(vis)` refines `eqStored`**: the memory and the twin unchanged. -/
+theorem eqs_call {p : Prog} (h : RedProg p) (hp : p.lookup "eq_stored" = some eqStoredL)
+    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {r : List Word}
+    (hc : callW p n "eq_stored" [vis] m = some (r, m')) (hS : StageR vis fe m a) :
+    m' = m ∧ (eqStored fe).run a = .ok ((r.headD 0 != 0), a) ∧ (r.headD 0).toNat ≤ 1 := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (eqs_specW p hp h.pa n _ vis) hc
+  generalize s'.mem = m' at hW
+  cases n with
+  | zero => simp [eqsW.eq_1] at hW
+  | succ n =>
+  rw [eqsW.arm1] at hW
+  rcases h1 : pinAtW m 0 with _ | ⟨r1, m1⟩
+  · rw [h1, eqsW.k_pin_at.none] at hW; cases hW
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
+  subst m1 r1
+  rw [h1, eqsW.k_pin_at.arm1] at hW
+  simp only [List.headD_cons] at hW
+  rcases h2 : callW p n "env_find" [pinW m (1 + (0 : Word).toNat), vis] m with _ | ⟨r2, m2⟩
+  · rw [h2, eqsW.k_env_find.none] at hW; cases hW
+  rw [h2, eqsW.k_env_find.arm1] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨hm2, hr2⟩ := envFind_callR h h2
+  subst m2 r2
+  refine ⟨rfl, ?_, ?_⟩
+  · have hpe : pinEq.run a = .ok (decI (pinW m (1 + (0 : Word).toNat)), a) := by
+      simpa [pinEq, show PIN_EQ = (0 : Word).toNat from rfl] using hrun1
+    simp only [eqStored, StateT.run_bind, hpe, exc_ok_bind']
+    show Except.ok _ = Except.ok _
+    by_cases h0 : (findRes m vis (pinW m (1 + (0 : Word).toNat))).headD 0 = 0
+    · rw [findRes_miss hS.check.env hl1 h0, h0]; rfl
+    · obtain ⟨e, ci, hci⟩ := findRes_hit hS.check.env hl1 h0
+      rw [e, hci]; simpa [List.headD] using h0
+  · simp only [findRes]; split
+    · simp
+    · split <;> simp
 
 end L.Arena
