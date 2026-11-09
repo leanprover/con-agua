@@ -283,20 +283,12 @@ theorem indArmKeep_checker (bs : List UInt8) :
       AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
   absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free (armAbs_split f hf)
 
-/-- **`check_block`'s callees' contracts at the substituted checker program.** -/
-theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) :
-    ∀ dn, DnInj dn → CbRefs (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
-  intro dn _
-  have look : CbLook (Prog.subPB bs checkerProg) := by prog_bundle []
-  -- ronsync2 p3e: the callees' contracts (IndT/BlockC) at the checker, still to prove
-  exact ⟨look, sorry, sorry, sorry, sorry, sorry, sorry, sorry, sorry, sorry, sorry⟩
-
-/-- **`check_block`'s contract at the substituted checker program** (`blockRefS_of`). -/
-theorem blockRefS_checker (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) :
+/-- **`check_block`'s contract at the substituted checker program** (`blockRefS_of`), from its
+callees' contracts (`Checker/BlockRefsProg`'s `cbRefs_checker`, from the caller). -/
+theorem blockRefS_checker (bs : List UInt8)
+    (hR : ∀ dn, DnInj dn → CbRefs (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn) :
     ∀ dn, DnInj dn → BlockRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
-  fun dn hdn => blockRefS_of (cbRefs_checker bs hr hpre dn hdn) fun hG => hG.nv
+  fun dn hdn => blockRefS_of (hR dn hdn) fun hG => hG.nv
 
 /-- **The inductive arm's contract at the substituted checker program**, from the contracts of
 its two returning callees (`check_basis_block`'s `CbbRef` from the caller:
@@ -307,12 +299,13 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length)
     (hCS : ∀ dn, CcvSims (Prog.subPB bs checkerProg) dn)
     (hB : BasisRefs (Prog.subPB bs checkerProg))
-    (hcb : ∀ dn, DnInj dn → CbbRef (Prog.subPB bs checkerProg) dn) :
+    (hcb : ∀ dn, DnInj dn → CbbRef (Prog.subPB bs checkerProg) dn)
+    (hR : ∀ dn, DnInj dn → CbRefs (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn) :
     ∀ dn, DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn := by
   have H := indArmProgs_checker bs hr hpre
   have hV : CcvProg (Prog.subPB bs checkerProg) := by prog_bundle [H.v, H.cid.basis]
   have hcrf : CrfF (Prog.subPB bs checkerProg) := by prog_bundle []
   exact indArmSpec_of hV H.kp H.apd H.crk hcrf ⟨H.cid, hB, checkerProg_coreStagePB bs, H.lc⟩ hCS hcb
-    (blockRefS_checker bs hr hpre) (closedW_subPB bs checkerProg_armCid) armCid_frame
+    (blockRefS_checker bs hR) (closedW_subPB bs checkerProg_armCid) armCid_frame
 
 end L.Checker
