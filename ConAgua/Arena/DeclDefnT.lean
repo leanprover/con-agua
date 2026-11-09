@@ -102,7 +102,7 @@ check with a certified operation's name allowed (`ccv_ref`, `allow = 1`), the de
 `natDivModNames` member, each handing back an index with `fe`'s view; the push last. -/
 theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {dn : NIdx → Option ConLeche.Name}
-    (hC : CcvSims p dn) (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
+    (hC : CcvSims p dn) {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
     {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {i : Word} {ds : Array IDeclaration} {pins : List INatOpPinSet}
     {pinsP : List ConLeche.NatOpPinSet} {cv : IConstantVal} {v : EIdx}
     {hh : ConLeche.ReducibilityHint} {c : ConLeche.ConstantVal} {x : ConLeche.Expr}
@@ -264,7 +264,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
       (fun _ => checkDeclDefnE.k_check_div_mod_pin.none ..)
       (cdmp_specE p hX.dm n _ (r0.headD 0) (r0.tail.headD 0) vis q wn) (fun hG => hG.nv)
       (fun hG => hG.core)
-      (cdmp_ref hX.dm hq hcl hkp hdn n hn' hwnl hC0 hok7.envWF
+      (cdmp_ref hX.dm hq hcl hkp hcrf n hn' hwnl hC0 hok7.envWF
         (ArrExt.decCI (IWGrow.erecPExt hg70) hci7) hcin hok2 hnm7 hI0 hPD7 hCr0)
       fun r8 s8 fe8 a8 h8 _ hrun8 hQ8 => ?_
     rw [checkDeclDefnE.k_check_div_mod_pin.arm1]

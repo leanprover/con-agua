@@ -63,7 +63,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 (con-ron's `checkDivModPinLoop_bridge`): the pin guard (`pgC`), on `true` the certificates' guard
 (`cgsC`), on `true` the attempt (`cpa_ref`); every other outcome moves on to the next variant; no
 variant left is the twin's `fail`. -/
-theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p)
+theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p)
     (hs0 : SubstC0 p vis fe) (hsA : SubstCAll p vis fe) (henv : ConLeche.EnvWF env)
     (c value : Word) (hc : H c) (hval : H value) {nm : ConLeche.Name} {v : ConLeche.Expr}
     (hwsv : ConLeche.Expr.WScoped 0 v) :
@@ -134,7 +134,7 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
     -- the pin guard
     refine RefE.onlySim (fun _ => checkDivModPinLoopE.k_div_mod_pin_guard.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
     obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1, hx1v⟩ :=
-      pgC hD.toDmProg7.toDmProg6 hcl hkp h1 hC hc hP hq0 hn hCr
+      pgC hD.toDmProg7.toDmProg6 hcl hkp hcrf h1 hC hc hP hq0 hn hCr
     have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
     refine RefE.bind_right hrun1 ?_
     by_cases z1 : r1.headD 0 = 0
@@ -148,7 +148,7 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
     have hq1 := (ConRon.Bridge.PinsDenote.mono c1.ext [ip] [psP] ⟨hq0, trivial⟩).1
     refine RefE.onlySim (fun _ => checkDivModPinLoopE.k_div_mod_certs_guard.none ..) (fun _ _ h => h) fun r2 m2 h2 => ?_
     obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2⟩ :=
-      cgsC hD.toDmProg7.toDmProg6 hcl hkp hs0 hsA h2 hC1 hc hval (PinSetR.grow hP hg1) hq1
+      cgsC hD.toDmProg7.toDmProg6 hcl hkp hcrf hs0 hsA h2 hC1 hc hval (PinSetR.grow hP hg1) hq1
         (ConRon.Bridge.denoteN_ext hn c1.ext) (ConRon.Bridge.denote_ext hv c1.ext) hCr1
     have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
     have hG2 : IWGrow m m2 := hg1.trans hg2
@@ -160,7 +160,7 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
     rw [checkDivModPinLoopE.k_div_mod_certs_guard.arm1 _ _ _ _ _ _ _ _ _ _ z2, decW0B_true hd2 z2]
     refine RefE.ite_pos rfl ?_
     -- the attempt
-    have h3R := cpa_ref hD hq hcl hkp hs0 hsA henv hk' hC2 hc hval (PinSetR.grow hP hG2)
+    have h3R := cpa_ref hD hq hcl hkp hcrf hs0 hsA henv hk' hC2 hc hval (PinSetR.grow hP hG2)
       (ConRon.Bridge.PinsDenote.mono c02.ext [ip] [psP] ⟨hq0, trivial⟩).1
       (ConRon.Bridge.denoteN_ext hn c02.ext) (ConRon.Bridge.denote_ext hv c02.ext) hwsv
       (by rw [← hx1v, hx1]) hCr2

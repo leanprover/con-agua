@@ -227,7 +227,7 @@ records from the job relation (`LoopR.pinsets`). -/
 @[refines_part ConRon.Arena.checkDecl "the definition arm, under StageT"]
 theorem checkDeclDefn_loopT {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p)
     (hcl : LeafClosed p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p)
-    (hC : CcvSims p dn) (hdn : DnInj dn) (hin : StepIn p ["check_decl_defn"])
+    (hC : CcvSims p dn) (hin : StepIn p ["check_decl_defn"])
     (hIc : IndMemoClosed p) (hIl : IndLeaves p) (cv : IConstantVal) (v : EIdx)
     (hh : ConLeche.ReducibilityHint) :
     ArmSpecT pins dn ds p "check_decl_defn" (.defnDecl cv v hh) := by
@@ -246,7 +246,7 @@ theorem checkDeclDefn_loopT {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p)
   intro s r s' hs hrun
   obtain ⟨hloc, fe', a', hrun', hP⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (RefE.triple (checkDeclDefn_specE p hX n s₀ i vis)
-      (cdf_ref hX hq hcl hap hkp hcrf hC hdn hn hS hR.pinsets hR.decls hi hd' hF hc hx hPD hIM.cr))
+      (cdf_ref hX hq hcl hap hkp hcrf hC hn hS hR.pinsets hR.decls hi hd' hF hc hx hPD hIM.cr))
   obtain ⟨-, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (callW_spec p n "check_decl_defn" [i, vis] s₀)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun

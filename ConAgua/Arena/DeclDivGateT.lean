@@ -87,7 +87,7 @@ variable {p : Prog}
 /-- **`check_div_mod_pin_at_fe2` refines `checkDivModPinAtFe2`, both outcomes**: the environment
 guard (`divModEnvGuard_refines`) at the pushed view, then the stored definition's value word. -/
 theorem cdmpFe2_ref (hD : DmProg7 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hF2 : Fe2Closed p)
-    {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {w n : Word} {fe2 : IFEnv} (k : Nat)
+    {w n : Word} {fe2 : IFEnv} (k : Nat)
     {m : Mem} {a : AState} (hn : H n) (hS : StageR w fe2 m a) :
     RefE True (cdmpFe2E p k m w n) (checkDivModPinAtFe2 fe2 (decI n)) a
       (fun v x a' => SnpFe2Post w fe2 m v.2 v.1 x a' ∧ (L.Stubs.CrOK m → L.Stubs.CrOK v.2)) := by
@@ -98,7 +98,7 @@ theorem cdmpFe2_ref (hD : DmProg7 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hF2 
   have hM := hD.toDmProg6.toDmProg5.toMasterProg
   simp only [checkDivModPinAtFe2]
   refine RefE.bindSim (fun _ => rfl)
-    ((CallRef.of_refAM (divModEnvGuard_refines (vis := w) (fe := fe2) hD hdn n)) k m a · · ⟨hS, hn⟩ ·)
+    ((CallRef.of_refAM (divModEnvGuard_refines (vis := w) (fe := fe2) hD n)) k m a · · ⟨hS, hn⟩ ·)
     fun r1 x1 m1 a1 h1 hrun1 ⟨hS1, hg1, hd1⟩ => ?_
   have hfr := callW_leafFrame hcl (leaf_mem _ (by decide)) h1
   have hown := callW_fe2_ownC hF2 (by simp [fe2Fns]) h1
@@ -140,7 +140,7 @@ and the stored value at the pushed view (`cdmpFe2_ref`), the pop (`pushPop_stage
 variant loop (`loop_ref`) at `vis` over the ROM's variant records (the `IW` slice `po`, `pl` of
 `rom_pin_sets()`, their twin denotations `PinsDenote`). -/
 theorem cdmp_ref (hD : CdmpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+    (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {dn : NIdx → Option ConLeche.Name}
     {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinSet} {vis pw n po pl : Word}
     {fe : IFEnv} {env env2 : ConLeche.Env} {nm : ConLeche.Name} {ci : IConstantInfo} (k : Nat)
     (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} (hn : H n) (hC : StageC dn vis fe env m a)
@@ -174,7 +174,7 @@ theorem cdmp_ref (hD : CdmpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   have hf2 := callW_leafFrame hcl (leaf_mem _ (by decide)) h2
   -- the reads at the pushed view
   refine RefE.bindE (fun _ => rfl) (fun _ => trivial)
-    (cdmpFe2_ref hD.toDmProg7 hcl hkp hD.snp.fe2 hdn k hn hS2)
+    (cdmpFe2_ref hD.toDmProg7 hcl hkp hD.snp.fe2 k hn hS2)
     fun ⟨v3, m3⟩ y3 a3 hrun3 ⟨hQ3, hcr3⟩ => ?_
   rw [cdmpE.k_check_div_mod_pin_at_fe2.arm1]
   dsimp only at hQ3 hcr3
@@ -197,7 +197,7 @@ theorem cdmp_ref (hD : CdmpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   -- the variant loop
   rw [← hQ3.dec]
   refine RefE.bindE (fun _ => rfl) id
-    (loop_ref hD.toDmProg8 hq hcl hkp (substC0_ofN hN.toNatSubProg _ _) (substCAll_of hN _ _)
+    (loop_ref hD.toDmProg8 hq hcl hkp hcrf (substC0_ofN hN.toNatSubProg _ _) (substCAll_of hN _ _)
       henv n v3 hn hQ3.hw hws pins pinsP po pl [] k hk' m4 a3 hC4 hCr4 (hI.grow hg04)
       (ConRon.Bridge.PinsDenote.mono hx3 _ _ hPD) (ConRon.Bridge.denoteN_ext hnm hx3)
       (by rw [hQ3.dec]; exact hv3))
