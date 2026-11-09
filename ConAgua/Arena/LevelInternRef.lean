@@ -155,7 +155,17 @@ theorem ViewsKept.trans {m₁ m₂ m₃ : Mem} (h₁ : ViewsKept m₁ m₂) (h�
 
 theorem viewsKept_of {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m' a')
     (hk : LKeep a a') (hf : MemFrame lvArrs lvCtl m m') : ViewsKept m m' := by
-  sorry
+  intro q hq
+  by_cases hb : q >>> 32 = 0
+  · have hh : q.toNat < 2 ^ 32 := by
+      have := congrArg UInt64.toNat hb
+      simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow] at this
+      have := q.toNat_lt; omega
+    obtain ⟨v, hv⟩ := lvNodeW_view hR hh hq
+    rw [lvNodeW_store hR hh hv, lvNodeW_store hR' hh (hk.1 _ _ hv)]
+  · have hLH : m'.arr64 LH = m.arr64 LH := hf.arr LH (by simp [tier1, lvArrs, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]) (by decide)
+    have h192 : rdW (m'.arr64 CTL) 192 = rdW (m.arr64 CTL) 192 := hf.ctl 192 (by simp [lvCtl])
+    rw [lvNodeW_heap m' q hb, lvNodeW_heap m q hb, hLH, h192]
 
 /-! ## The refinement -/
 
