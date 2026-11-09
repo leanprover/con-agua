@@ -89,7 +89,7 @@ theorem iwLt {m : Mem} {o w : Word} {v : Nat} (h : iwN (truncM m) (o.toNat + w.t
   obtain ⟨hlt, -⟩ := acTr h
   rw [UInt64.toNat_add]; omega
 
-theorem drop3_headD (r : List Word) : (r.drop 3).headD 0 = r.tail.tail.tail.headD 0 := by
+theorem dcDrop3_headD (r : List Word) : (r.drop 3).headD 0 = r.tail.tail.tail.headD 0 := by
   rcases r with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
 
 /-- **`rec_fire` refines `recFire`** (its model, from the stage relation): the fire's kind and
@@ -149,7 +149,7 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
     rw [e1]; rfl
   obtain ⟨hd10, -, hd1e⟩ := hd1
   obtain ⟨hew32, hewd⟩ := hd1e
-  rw [drop3_headD] at hew32 hewd
+  rw [dcDrop3_headD] at hew32 hewd
   have hne0 : ¬ r1.headD 0 = 0 := by rw [hd10]; decide
   simp only [rfW.k_strip_pis, hne0, ↓reduceIte] at h
   generalize hew : r1.tail.tail.tail.headD 0 = ew at h hew32 hewd

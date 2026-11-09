@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.CheckerT
+public import ConAgua.Arena.DeclCrpT
 import all ConAgua.Arena.DeclStep
 import ConAgua.Arena.QuotRulesT
 import ConAgua.Checker.QuotFns
@@ -184,6 +185,37 @@ theorem checkDeclThm_loopT {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p)
     (callW_spec p n "check_decl_thm" [i, vis] s₀)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (hin.memFrame n (f := "check_decl_thm") (by simp) [i, vis] s₀)
+  subst hs
+  obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  refine ⟨hloc, hok', ?_, hP.memos, callW_indMemos hIc hIl (im_mem _ rfl) hW hIM, hP.grow⟩
+  rw [hst, hres]
+  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+
+/-- **`check_decl_opaque` under `StageT`** (`cdo_ref`'s ok half), as the theorem arm. -/
+@[refines_part ConRon.Arena.checkDecl "the opaque arm, under StageT"]
+theorem checkDeclOpaque_loopT {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p)
+    (hcl : LeafClosed p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p)
+    (hC : CcvSims p dn) (hin : StepIn p ["check_decl_opaque"]) (hIc : IndMemoClosed p)
+    (hIl : IndLeaves p) (cv : IConstantVal) (v : EIdx) :
+    ArmSpecT pins dn ds p "check_decl_opaque" (.opaqueDecl cv v) := by
+  intro n hn s₀ a₀ vis fe i hi hd hok hR hS hF hden _ hIM
+  have hd' : ds[i.toNat] = .opaqueDecl cv v := by
+    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
+  obtain ⟨y, hy⟩ := hden
+  simp only [Frontend.denoteDecl] at hy
+  obtain ⟨c, hc⟩ : ∃ c, Frontend.denoteCV a₀.store cv = some c := by
+    revert hy; cases Frontend.denoteCV a₀.store cv <;> simp
+  obtain ⟨x, hx⟩ : ∃ x, denoteE a₀.store v = some x := by
+    revert hy; rw [hc]; cases denoteE a₀.store v <;> simp
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, fe', a', hrun', hP⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkDeclOpaque_specE p hX n s₀ i vis)
+      (cdo_ref (pins := pins) hX hq hcl hap hkp hcrf hC hn hS hR.decls hi hd' hc hx hF hIM.cr))
+  obtain ⟨-, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (callW_spec p n "check_decl_opaque" [i, vis] s₀)
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (hin.memFrame n (f := "check_decl_opaque") (by simp) [i, vis] s₀)
   subst hs
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok', ?_, hP.memos, callW_indMemos hIc hIl (im_mem _ rfl) hW hIM, hP.grow⟩

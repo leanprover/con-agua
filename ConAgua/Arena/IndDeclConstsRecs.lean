@@ -176,7 +176,7 @@ theorem brW_ok {p : Prog} (hP : RecsProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
 
 mutual
 /-- **The model of `block_recs(p, ro, rl)`** at exec fuel `n`. -/
-def brsW (p : Prog) : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+def dbrsW (p : Prog) : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, pp, ro, rl =>
     if rl = 0 then some ([0, 0], m)
@@ -185,23 +185,23 @@ def brsW (p : Prog) : Nat → Mem → Word → Word → Word → Option (List Wo
 def brsK1 (p : Prog) (n : Nat) (pp ro rl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => bfgK3 p n (r.headD 0) (brsW p n m pp (ro + 1) (rl - 1))
+  | some (r, m) => bfgK3 p n (r.headD 0) (dbrsW p n m pp (ro + 1) (rl - 1))
 end
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (pp ro rl : Word) (r : List Word)
-theorem brsW_nil (h : rl = 0) : brsW p (n + 1) m pp ro rl = some ([0, 0], m) := by simp [brsW, h]
-theorem brsW_cons (h : rl ≠ 0) : brsW p (n + 1) m pp ro rl =
-    brsK1 p n pp ro rl (callW p n "block_rec" [pp, rdW (m.arr64 IW) ro] m) := by simp [brsW, h]
+theorem brsW_nil (h : rl = 0) : dbrsW p (n + 1) m pp ro rl = some ([0, 0], m) := by simp [dbrsW, h]
+theorem brsW_cons (h : rl ≠ 0) : dbrsW p (n + 1) m pp ro rl =
+    brsK1 p n pp ro rl (callW p n "block_rec" [pp, rdW (m.arr64 IW) ro] m) := by simp [dbrsW, h]
 theorem brsK1_some : brsK1 p n pp ro rl (some (r, m)) =
-    bfgK3 p n (r.headD 0) (brsW p n m pp (ro + 1) (rl - 1)) := by simp [brsK1]
+    bfgK3 p n (r.headD 0) (dbrsW p n m pp (ro + 1) (rl - 1)) := by simp [brsK1]
 end arms
 attribute [ind_grind] brsW_nil brsW_cons brsK1_some
 
-theorem brs_spec {p : Prog} (hP : RecsProg p) (n : Nat) :
+theorem dbrs_spec {p : Prog} (hP : RecsProg p) (n : Nat) :
     ∀ (s₀ : St) (pp ro rl : Word),
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_recs" [pp, ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ brsW p n s₀.mem pp ro rl = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ dbrsW p n s₀.mem pp ro rl = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ pp ro rl; rw [invoke_eq _ hP.brs]; simp only [callFn, blockRecs]
@@ -227,12 +227,12 @@ theorem brsW_ok {p : Prog} (hP : RecsProg p) (pp : Word) (bs : BlockShape) (vis 
     (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (ro rl : Word) (rcs : List RecShape) (r : List Word),
     StageR vis fe m a → DecB (fun m => decBS m pp.toNat) m bs → PSlR0 decRS rcs ro rl m →
-    brsW p n m pp ro rl = some (r, m') →
+    dbrsW p n m pp ro rl = some (r, m') →
     ∃ cis a', (ConRon.Arena.blockRecs bs rcs).run a = .ok (cis, a') ∧
       decPL m' (decCI (erecP m')) (r.headD 0).toNat (r.tail.headD 0).toNat = some cis ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   induction n with
-  | zero => intro m m' a ro rl rcs r _ _ _ h; simp [brsW] at h
+  | zero => intro m m' a ro rl rcs r _ _ _ h; simp [dbrsW] at h
   | succ n ih =>
   intro m m' a ro rl rcs r hS hq hrcs h
   by_cases hl : rl = 0

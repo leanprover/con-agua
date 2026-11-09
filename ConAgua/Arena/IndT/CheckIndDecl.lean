@@ -87,37 +87,41 @@ theorem blockSplit_formers_mem : ∀ (block : List IConstantInfo) {cvTs cs rs} (
       · simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, -⟩ := h; simp at hm
       · cases h
 
-local syntax "chase " ident ident ident : tactic
+local syntax "chase2 " ident ident : tactic
 macro_rules
-  | `(tactic| chase $y $k $g) => `(tactic| first
+  | `(tactic| chase2 $y $k) => `(tactic| first
       | (obtain ⟨e, -⟩ := AM.pure_ok $y; cases e; exact $k _)
-      | (obtain ⟨_, t, -, y'⟩ := AM.bind_ok $y; chase y' $k $g))
-
-local macro "jp_fin " z:ident k:ident : tactic => `(tactic| (
-  obtain ⟨_, t1, -, y1⟩ := AM.bind_ok $z
-  obtain ⟨_, t2, -, y2⟩ := AM.bind_ok y1
-  obtain ⟨_, t3, -, y3⟩ := AM.bind_ok y2
-  obtain ⟨groups, t4, -, y4⟩ := AM.bind_ok y3
-  split at y4 <;> chase y4 $k groups))
+      | (obtain ⟨_, t, -, y'⟩ := AM.bind_ok $y; chase2 y' $k)
+      | (split at $y:ident <;> chase2 $y $k))
 
 theorem blockShape?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' : AState}
     {bs : BlockShape} (h : ConRon.Arena.blockShape? nPd block s = .ok (some bs, s')) :
     ∀ ms ∈ bs.members, ∃ caps, IConstantInfo.indInfo ms.cvT caps ∈ block := by
-  sorry
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The shape `blockParts?` recognises has the block's formers as its members' formers.** -/
-theorem blockParts?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' : AState}
-    {bs : BlockShape} (h : (ConRon.Arena.blockParts? nPd block).run s = .ok (some ⟨bs⟩, s')) :
-    ∀ ms ∈ bs.members, ∃ caps, IConstantInfo.indInfo ms.cvT caps ∈ block := by
-  obtain ⟨o, s1, h1, h2⟩ := AM.bind_ok h
-  cases o with
-  | none => cases (AM.pure_ok h2).1
-  | some p =>
-    obtain ⟨e, -⟩ := AM.pure_ok h2
-    cases e
-    exact blockShape?_members_mem h1
--/
+  unfold ConRon.Arena.blockShape? at h
+  cases hsp : ConRon.Arena.blockSplit block with
+  | none => rw [hsp] at h; cases (AM.pure_ok h).1
+  | some q =>
+  obtain ⟨cvTs, cs, rs⟩ := q
+  rw [hsp] at h
+  rcases cvTs with _ | ⟨cvT0, cvTs'⟩
+  · cases (AM.pure_ok h).1
+  rcases rs with _ | ⟨⟨cvR0, x1, x2, x3, x4⟩, rs'⟩
+  · cases (AM.pure_ok h).1
+  dsimp only at h
+  obtain ⟨cnt, s1, -, z1⟩ := AM.bind_ok h
+  cases cnt with
+  | none => cases (AM.pure_ok z1).1
+  | some nIdxs =>
+  dsimp only at z1
+  obtain ⟨reserved, s2, -, z2⟩ := AM.bind_ok z1
+  split at z2
+  case isFalse => cases (AM.pure_ok z2).1
+  have key : ∀ groups : List (List (IConstantVal × Nat)), ∀ ms ∈ (((cvT0 :: cvTs').zip nIdxs).zip groups).map
+      (fun a => (⟨a.1.1, a.1.1, a.1.2, a.2⟩ : MemberShape)), ∃ caps, IConstantInfo.indInfo ms.cvT caps ∈ block := by
+    intro groups ms hms
+    obtain ⟨⟨⟨c, n⟩, g⟩, hx, rfl⟩ := List.mem_map.1 hms
+    exact blockSplit_formers_mem block c hsp (List.of_mem_zip (List.of_mem_zip hx).1).1
+  chase2 z2 key
 
 /-- What `check_ind_decl` gives besides the twin's run, a view `w` and the memory `m'` (from `m`):
 the stage, the core's memos, the growth, the inductive arm's memos. -/
