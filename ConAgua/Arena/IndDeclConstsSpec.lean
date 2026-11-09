@@ -6,6 +6,8 @@ public import ConAgua.Front.StateDR
 public import ConRon.Arena.Install
 public import ConAgua.Arena.LoopT
 public import ConAgua.Rom.CIReadSpec
+public import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.TwinStep
 
 @[expose] public section
 
@@ -34,6 +36,16 @@ def decCIL (m : Mem) (r : List Word) (L : List IConstantInfo) : Prop :=
 def decTblL (m : Mem) (r : List Word) (Q : List IProjTable) : Prop :=
   decRL (fun m o l => decPL m (fun q => decTbl (erecP m) q) o l) 0 m r Q
 
+/-- **The twin-side invariants both need and give back**: the twin's invariants beyond `CheckR`
+(`TwinOK`), the pin table filled, the walk memos outside the stage relation (`AbsOK`), and con-ron's
+`CheckOK` at some environment (with `TwinOK`, `StageC`: `block_shape`'s refinement,
+`blockShape_refinesC`, needs it; `struct_proj_bodies`' needs `AbsOK`). -/
+structure DeclTwin (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m : Mem) (a : AState) : Prop where
+  twin : TwinOK dn m a fe
+  pin : pinW m 0 ≠ 0
+  abs : AbsOK m
+  chk : ∃ env, ConRon.Bridge.CheckOK false env fe a
+
 /-- The pre-condition of both: the stage relation, the record `i` the declaration `d` (an
 inductive block of the front's shape), the twin state's invariant, the inductive memos. -/
 structure DeclConstsPre (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (i : Word)
@@ -50,6 +62,8 @@ structure DeclConstsPre (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   /-- The scratch tier is closed (the stream index's build): every record lands in `EREC` tier 0,
   `CTL[130]` stays. -/
   off : a.store.scratchOn = false
+  /-- The twin-side invariants (`DeclTwin`). -/
+  tw : DeclTwin dn fe m a
 
 /-- What the stream index's builder keeps across the two: the front's records (`DECL`, `DLP`), the
 first counters (`FIRSTS`), the index rows (arrays 129‥134, both tiers) and the counters `CTL[128]`, `CTL[130]` and the core's memos. -/
@@ -76,7 +90,8 @@ theorem declConstants_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → 
     (vis : Word) (fe : IFEnv)
     (i : Word) (d : IDeclaration) :
     RefAM p "decl_constants" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declConstants d)
-      (fun m m' a r x => KeepPost vis fe decCIL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m') := by
+      (fun m m' a r x => KeepPost vis fe decCIL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m' ∧
+        DeclTwin dn fe m' a) := by
   sorry
 
 /-- **`decl_tables(i)` refines `declTables d`**: the projection tables record `i` installs, an
@@ -86,7 +101,8 @@ theorem declTables_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → Opt
     (vis : Word) (fe : IFEnv)
     (i : Word) (d : IDeclaration) :
     RefAM p "decl_tables" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declTables d)
-      (fun m m' a r x => KeepPost vis fe decTblL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m') := by
+      (fun m m' a r x => KeepPost vis fe decTblL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m' ∧
+        DeclTwin dn fe m' a) := by
   sorry
 
 end L.Ind

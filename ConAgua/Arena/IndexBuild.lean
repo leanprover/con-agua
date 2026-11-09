@@ -309,8 +309,9 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
   have hpre2 : L.Ind.DeclConstsPre dn 0 (bEnv I.base c r) k d m2 a :=
     ⟨hS2, by rw [eD2, eP2, ← hdk]; exact hR.decls.recs _ hlt,
       fun b nP e => hR.front _ hlt b nP (hdk.trans e), hR.drv.state, hR.quotDn, hM2,
-      by rw [eD2]; exact hR.decls.dsize, by rw [eP2]; exact hR.decls.psize, hR.off⟩
-  obtain ⟨s3, hs3, -, hok3, ⟨hS3, hg3, hL3⟩, hM3, hK3⟩ := triple_of_callW
+      by rw [eD2]; exact hR.decls.dsize, by rw [eP2]; exact hR.decls.psize, hR.off,
+      sorry /- ronsync2 p3y: DeclTwin (a BuildR field to add), until then sorry -/⟩
+  obtain ⟨s3, hs3, -, hok3, ⟨hS3, hg3, hL3⟩, hM3, hK3, -⟩ := triple_of_callW
     (L.Ind.declConstants_refines hP.toDeclConstsProg dn 0 (bEnv I.base c r) k d n
       ⟨m2, Locals.init []⟩ a hpre2) h2
   subst hs3
@@ -355,8 +356,9 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
       k d s4.mem (AM.st (declConstants d) a) :=
     ⟨hS4, by rw [eD4, eP4, ← hdk]; exact hR.decls.recs _ hlt,
       fun b nP e => hR.front _ hlt b nP (hdk.trans e), hdrv3.state, hR.quotDn.ext hx3, hM4,
-      by rw [eD4]; exact hR.decls.dsize, by rw [eP4]; exact hR.decls.psize, hoff3⟩
-  obtain ⟨s5, hs5, -, hok5, ⟨hS5, hg5, hL5⟩, hM5, hK5⟩ := triple_of_callW
+      by rw [eD4]; exact hR.decls.dsize, by rw [eP4]; exact hR.decls.psize, hoff3,
+      sorry /- ronsync2 p3y: DeclTwin (decl_constants' post gives it: hT3), until then sorry -/⟩
+  obtain ⟨s5, hs5, -, hok5, ⟨hS5, hg5, hL5⟩, hM5, hK5, -⟩ := triple_of_callW
     (L.Ind.declTables_refines hP.toDeclConstsProg dn 0 _ k d n ⟨s4.mem, Locals.init []⟩ _ hpre5) h5
   subst hs5
   have hrun5 := AM.run_of_ok _ _ hok5
