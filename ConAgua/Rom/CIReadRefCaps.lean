@@ -71,6 +71,30 @@ theorem putE_some {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat}
     rw [hc, bW_some] at h
     rw [← putCall hL hc]; exact h
 
+theorem rdU_ntBW {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i : Word}
+    {k : Word → Mem → Option (List Word × Mem)} {f : List Word → Mem → Option (List Word × Mem)}
+    {v : List Word × Mem} (h : ntBW (rdU p n m i k) f = some v) : ntBW (k (u64W rom i) m) f = some v := by
+  change ntBW (ntBW (callW p n "rom_u64_c" [i] m) (fun r m' => k (r.headD 0) m')) f = some v at h
+  cases hc : callW p n "rom_u64_c" [i] m with
+  | none => rw [hc] at h; simp at h
+  | some t =>
+    obtain ⟨r, m'⟩ := t
+    rw [hc, bW_some] at h
+    obtain ⟨rfl, rfl⟩ := u64Call hL hc
+    exact h
+
+theorem putE_ntBW {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i w : Word}
+    {k : Mem → Option (List Word × Mem)} {f : List Word → Mem → Option (List Word × Mem)}
+    {v : List Word × Mem} (h : ntBW (putE p n m i w k) f = some v) :
+    ntBW (k (erecPutMem m i w)) f = some v := by
+  change ntBW (ntBW (callW p n "erec_put" [i, w] m) (fun _ m' => k m')) f = some v at h
+  cases hc : callW p n "erec_put" [i, w] m with
+  | none => rw [hc] at h; simp at h
+  | some t =>
+    obtain ⟨r, m'⟩ := t
+    rw [hc, bW_some] at h
+    rw [← putCall hL hc]; exact h
+
 theorem putERs_ne : ∀ (ws : List (Word × Word)) (m : Mem) (i : Nat), (∀ jw ∈ ws, i ≠ jw.1.toNat) →
     i < 2 ^ 41 → (∀ jw ∈ ws, jw.1.toNat < 2 ^ 41) → erA (putERs m ws) i = erA m i
   | [], _, _, _, _, _ => rfl

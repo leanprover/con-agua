@@ -67,6 +67,20 @@ theorem exprCall (e : ConLeche.Expr) (he : exprFits e = true) {n : Nat} {mem mem
   exact ⟨memo', a', hrun, hR, (keeps_internExprGo e memo).run hrun, hM', hlt, hq, hf, hs,
     ((romExprW_topK rom n).1 _ _ _ _ _ hW).mode hA.base.lit.1 hmo⟩
 
+theorem levelCall (x : ConLeche.Level) (hx : levelFits x = true) {n : Nat} {m m' : Mem} {a : AState}
+    {pos : Word} {rest : List UInt8} {r : List Word} (hA : ArenaD m a) (hmo : ModeOK m)
+    (hd : rom.drop pos.toNat = encLevel x ++ rest) (hc : callW p n "rom_level_c" [pos] m = some (r, m')) :
+    ∃ a', (internLevel x).run a = .ok (decI (r.headD 0), a') ∧ ArenaD m' a' ∧ cp a' = cp a ∧
+      (r.headD 0).toNat < 2 ^ 32 ∧ (r.tail.headD 0).toNat = pos.toNat + (encLevel x).length ∧
+      MemFrame StoreA StoreC m m' ∧ ModeOK m' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (triple_renameCalls (g := "rom_level") hL.ren (by decide)
+      (romLevel_specW rom _ hL.via.toLevelProg n _ pos ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)) hc
+  obtain ⟨ok, hR, res, hlt, hq, hf⟩ := romLevelW_ok rom hr x hx n _ a pos rest _ _ _ hA hmo hd hW
+  have hrun := AM.run_of_ok _ _ ok
+  rw [res] at hrun
+  exact ⟨_, hrun, hR, (keeps_internLevel x).run hrun, hlt, hq, hf, (romLevelW_topK hW).mode hA.base.lit.1 hmo⟩
+
 end calls
 
 theorem u64Call {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m m' : Mem}
@@ -208,6 +222,91 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
         rw [ho1, Nat.add_assoc, Nat.add_comm 1 j] at this
         exact this
     · simp only [List.headD_cons]; rw [hq3, hq1]; simp [encNames]; omega
+    · exact ((EKeep.of_eq hE1 (by omega)).trans (EKeep.put _ o _ ⟨Nat.le_refl _, by omega⟩
+        (by omega) (by omega))).trans (hek3.mono fun i hi => ⟨by rw [ho1] at hi; omega, by rw [ho1] at hi; omega⟩)
+/-- **`rci_lvls_to` refines `internLevelList`**, the handles to `EREC[o ‥]`. -/
+@[refines ConRon.Arena.internLevelList]
+theorem lvlsTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo) :
+    ∀ (ns : List ConLeche.Level), ns.all levelFits = true → ∀ (k : Nat) (m : Mem) (a : AState)
+      (q o kw : Word) (rest : List UInt8) (r : List Word) (m' : Mem), RInv m₀ a₀ T m a →
+      MemoR m seen memo → rom.drop q.toNat = encLevelList ns ++ rest → kw.toNat = ns.length →
+      erT m₀ ≤ o.toNat → o.toNat + ns.length ≤ erT m →
+      callW p k "rci_lvls_to" [q, o, kw] m = some (r, m') →
+      ∃ (ws : List Word) (a' : AState), (internLevelList ns).run a = .ok (ws.map decI, a') ∧
+        ws.length = ns.length ∧ (∀ w ∈ ws, w.toNat < 2 ^ 32) ∧
+        (∀ j (hj : j < ws.length), erA m' (o.toNat + j) = some ws[j]) ∧
+        RInv m₀ a₀ T m' a' ∧ MemoR m' seen memo ∧ stkTop m' = stkTop m ∧
+        (r.headD 0).toNat = q.toNat + (encLevelList ns).length ∧
+        EKeep (fun i => o.toNat ≤ i ∧ i < o.toNat + ns.length) m m' ∧ erT m' = erT m ∧
+        m'.arr64 IW = m.arr64 IW := by
+  intro ns
+  induction ns with
+  | nil =>
+    intro _ k m a q o kw rest r m' hI hM hd hk ho hot hc
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    have hw := callW_model (M := fun mq => lvlsToW p k mq q o kw) (lvlsTo_specW rom p hL k · q o kw) hc
+    have hk0 : kw = 0 := by apply UInt64.toNat_inj.mp; simpa using hk
+    simp only [lvlsToW, hk0, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨[], a, rfl, rfl, by simp, by simp, hI, hM, rfl, by simp [encLevelList], EKeep.refl _ _, rfl, rfl⟩
+  | cons x xs ih =>
+    intro hfit k m a q o kw rest r m' hI hM hd hk ho hot hc
+    simp only [List.all_cons, Bool.and_eq_true] at hfit
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    have hw := callW_model (M := fun mq => lvlsToW p k mq q o kw) (lvlsTo_specW rom p hL k · q o kw) hc
+    have hk0 : kw ≠ 0 := fun h => by subst h; simp at hk
+    simp only [lvlsToW, hk0, ite_false] at hw
+    obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+    have hd0 : rom.drop q.toNat = encLevel x ++ (encLevelList xs ++ rest) := by
+      rw [hd, encLevelList, List.append_assoc]
+    obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1, hmo1⟩ := levelCall hL hr x hfit.1 hI.arena hI.mode hd0 h1
+    obtain ⟨hI1, -, -, hIW1, ht1, -, hE1⟩ := hI.expr hA1 hmo1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
+      (fun x hx => by simp [ExprC, RomC, hx])) hk1 (L.Arena.internLevel_ks x _ _ _ hrun1)
+    have hM1 := hM.frameG hf1 (by decide) (by decide)
+    have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
+    have hlen : xs.length + 1 = kw.toNat := by simp [hk]
+    have hlt := hI.er_lt
+    simp only [List.length_cons] at hot
+    obtain ⟨r1', m2, h1', hw⟩ := ntBW_inv hw
+    rw [putCall hL h1'] at hw
+    obtain ⟨hI2, hM2, hs2, ht2, hIW2, hg2, hn2⟩ := putER_facts hI1 hM1 o (r1.headD 0) ho (by omega)
+    have hd1 : rom.drop (r1.tail.headD 0).toNat = encLevelList xs ++ rest :=
+      drop_shift rom q (encLevel x) (encLevelList xs) rest (by rw [hd0, List.append_assoc]) _ hq1
+    have ho1 : (o + 1).toNat = o.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    have hk1' : (kw - 1).toNat = xs.length := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+    obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    obtain ⟨ws, a', hrun2, hwl, hwlt, hwd, hI3, hM3, hs3, hq3, hek3, ht3, hiw3⟩ :=
+      ih hfit.2 k _ a1 _ (o + 1) (kw - 1) rest r2 m3 hI2 hM2 hd1 hk1' (by omega)
+        (by rw [ht2, ht1, ho1]; omega) h2
+    refine ⟨r1.headD 0 :: ws, a', ?_, by simp [hwl], ?_, ?_, hI3, hM3, by rw [hs3, hs2, hs1], ?_, ?_,
+      by rw [ht3, ht2, ht1], by rw [hiw3, hIW2, hIW1]⟩
+    · show (internLevel x >>= fun h => internLevelList xs >>= fun hs => pure (h :: hs)).run a = _
+      rw [run_bind_of _ _ _ _ _ hrun1, run_bind_of _ _ _ _ _ hrun2]; rfl
+    · intro w hw'
+      simp only [List.mem_cons] at hw'
+      rcases hw' with rfl | hw'
+      · exact hlt1
+      · exact hwlt w hw'
+    · intro j hj
+      cases j with
+      | zero =>
+        simp only [Nat.add_zero, List.getElem_cons_zero]
+        rw [hek3.2 o.toNat (by rw [ht2, ht1]; omega) (by rw [ho1]; omega)]
+        exact hg2
+      | succ j =>
+        simp only [List.getElem_cons_succ]
+        have := hwd j (by simp at hj; omega)
+        rw [ho1, Nat.add_assoc, Nat.add_comm 1 j] at this
+        exact this
+    · simp only [List.headD_cons]; rw [hq3, hq1]; simp [encLevelList]; omega
     · exact ((EKeep.of_eq hE1 (by omega)).trans (EKeep.put _ o _ ⟨Nat.le_refl _, by omega⟩
         (by omega) (by omega))).trans (hek3.mono fun i hi => ⟨by rw [ho1] at hi; omega, by rw [ho1] at hi; omega⟩)
 end names

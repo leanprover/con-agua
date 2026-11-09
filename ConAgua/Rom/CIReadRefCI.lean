@@ -35,30 +35,6 @@ def ciFits : ConLeche.ConstantInfo → Bool
       decide (rs.length < 2 ^ 59) && rs.all ruleFits
   | _ => false
 
-theorem rdU_ntBW {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i : Word}
-    {k : Word → Mem → Option (List Word × Mem)} {f : List Word → Mem → Option (List Word × Mem)}
-    {v : List Word × Mem} (h : ntBW (rdU p n m i k) f = some v) : ntBW (k (u64W rom i) m) f = some v := by
-  change ntBW (ntBW (callW p n "rom_u64_c" [i] m) (fun r m' => k (r.headD 0) m')) f = some v at h
-  cases hc : callW p n "rom_u64_c" [i] m with
-  | none => rw [hc] at h; simp at h
-  | some t =>
-    obtain ⟨r, m'⟩ := t
-    rw [hc, bW_some] at h
-    obtain ⟨rfl, rfl⟩ := u64Call hL hc
-    exact h
-
-theorem putE_ntBW {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i w : Word}
-    {k : Mem → Option (List Word × Mem)} {f : List Word → Mem → Option (List Word × Mem)}
-    {v : List Word × Mem} (h : ntBW (putE p n m i w k) f = some v) :
-    ntBW (k (erecPutMem m i w)) f = some v := by
-  change ntBW (ntBW (callW p n "erec_put" [i, w] m) (fun _ m' => k m')) f = some v at h
-  cases hc : callW p n "erec_put" [i, w] m with
-  | none => rw [hc] at h; simp at h
-  | some t =>
-    obtain ⟨r, m'⟩ := t
-    rw [hc, bW_some] at h
-    rw [← putCall hL hc]; exact h
-
 section ci
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
@@ -432,10 +408,14 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat}
     have erules : decRules (erA m'') (r4.headD 0).toNat rs.length = some irs := by
       rw [← hlen3]
       exact holds_mapM_range (g := fun m j => decRule (erA m) ((r4.headD 0).toNat + 11 * j))
-        (SE := fun i => (r4.headD 0).toNat ≤ i ∧ i < (r4.headD 0).toNat + 11 * rs.length)
+        (SE := fun i => ((r4.headD 0).toNat ≤ i ∧ i < (r4.headD 0).toNat + 11 * rs.length) ∨
+          (erT (putERs m5 ws') ≤ i ∧ i < erT m6))
         (SI := fun _ => False) irs
-        (fun j hj => (hH8 j hj).mono (fun i hi => ⟨by omega, by omega⟩) (fun _ h => h)) m''
-        (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
+        (fun j hj => (hH8 j hj).mono (fun i hi => by
+          rcases hi with hi | hi
+          · left; omega
+          · right; exact hi) (fun _ h => h)) m''
+        (fun i hi => h1 i (by rcases hi with hi | hi <;> omega)) (fun _ h => h.elim)
     rw [← hkw] at e9
     simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, bool?_of e9, nat?_of e7, nat?_of e8,
       ofNat_toNat_lt hmI, ofNat_toNat_lt hrP, ofNat_toNat_lt (show rs.length < 2 ^ 64 by omega), bw_ne]
