@@ -44337,6 +44337,17 @@ andq $1, %rcx
 movq 1512(%r15,%rcx,8), %rcx
 cmpq %rcx, %rax
 jbe ca_abort
+movq $576, %rbx
+movq $1099511627776, %rax
+cmpq 2656(%r15), %rax
+jbe ca_abort
+movq $576, %rbx
+movq $1099511627776, %rax
+movq $1, %rcx
+andq $1, %rcx
+movq 2656(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
+jbe ca_abort
 movq $0, %rax
 jmp .Lca_cap_check_0R
 .Lca_cap_check_0Z:
