@@ -18,7 +18,7 @@ import all ConAgua.Arena.DeclArms
 Three twin functions of one shape: read a pin, compare the argument with it, intern one of two
 con-leche values (`if c == pin then A else B`). In L: `pin_at(k)`, then `rom_cv`/`rom_expr_pin` at one
 of two ids. One model (`selW`) and one relational lemma (`selW_ok`) serve all three; through the
-ROM stubs (`DeclRomStubs.lean`), so census `sorry`.
+ROM readers' refinements (`RomRefs`).
 -/
 
 noncomputable section
@@ -176,7 +176,16 @@ theorem reduceOpCvA_refines (hp : p.lookup "reduce_op_cv_a" = some reduceOpCvAL)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (reduceOpCvA (decI c)) a₀ ∧
       KeepPost vis fe decRCV s₀.mem s'.mem (AM.st (reduceOpCvA (decI c)) a₀) r
         (AM.res (reduceOpCvA (decI c)) a₀); ⊤⦄ := by
-  sorry
+  refine triple_post (reduceOpCvA_specW p hpa hp n s₀ c) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hP⟩ := selW_ok (T := romCvT)
+    (fun w hw => hR.cv vis fe w (by rcases hw with rfl | rfl <;> decide)) decRCV_head hm hS hc (by decide)
+  have e : reduceOpCvA (decI c) =
+      (do let y ← pinAt (43 : Word).toNat
+          if (decI c : NIdx) == y then romCvT (6 : Word).toNat else romCvT (7 : Word).toNat) := rfl
+  rw [← e] at hrun
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact hP⟩
 
 /-- **`of_reduce_pin_a(n)` refines `ofReducePinA`** (through `rom_cv`'s stub). -/
 @[refines ConRon.Arena.ofReducePinA]
@@ -185,7 +194,16 @@ theorem ofReducePinA_refines (hp : p.lookup "of_reduce_pin_a" = some ofReducePin
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ofReducePinA (decI c)) a₀ ∧
       KeepPost vis fe decRCV s₀.mem s'.mem (AM.st (ofReducePinA (decI c)) a₀) r
         (AM.res (ofReducePinA (decI c)) a₀); ⊤⦄ := by
-  sorry
+  refine triple_post (ofReducePinA_specW p hpa hp n s₀ c) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hP⟩ := selW_ok (T := romCvT)
+    (fun w hw => hR.cv vis fe w (by rcases hw with rfl | rfl <;> decide)) decRCV_head hm hS hc (by decide)
+  have e : ofReducePinA (decI c) =
+      (do let y ← pinAt (45 : Word).toNat
+          if (decI c : NIdx) == y then romCvT (8 : Word).toNat else romCvT (9 : Word).toNat) := rfl
+  rw [← e] at hrun
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact hP⟩
 
 /-- **`reduce_decl_pin(c)` refines `reduceDeclPin`** (through `rom_expr_pin`'s stub). -/
 @[refines ConRon.Arena.reduceDeclPin]
@@ -194,7 +212,18 @@ theorem reduceDeclPin_refines (hp : p.lookup "reduce_decl_pin" = some reduceDecl
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (reduceDeclPin (decI c)) a₀ ∧
       KeepPost vis fe decW0E s₀.mem s'.mem (AM.st (reduceDeclPin (decI c)) a₀) r
         (AM.res (reduceDeclPin (decI c)) a₀); ⊤⦄ := by
-  sorry
+  refine triple_post (reduceDeclPin_specW p hpa hp n s₀ c) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hP⟩ := selW_ok (T := romExprT)
+    (fun w hw => hR.expr vis fe w (by rcases hw with rfl | rfl <;> decide)) decW0E_head hm hS
+    hc (by decide)
+  have e : reduceDeclPin (decI c) =
+      (do let y ← pinAt (43 : Word).toNat
+          if (decI c : NIdx) == y then romExprT (0 : Word).toNat else romExprT (1 : Word).toNat) :=
+    rfl
+  rw [← e] at hrun
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact hP⟩
 
 end refines
 
@@ -325,7 +354,7 @@ theorem reduceCertVar_eq (c : NIdx) :
     boolName, pinBool, PIN_REDUCE_NAT, PIN_NAT, PIN_BOOL, bind_assoc]
 
 /-- **`reduce_cert_var(c)` refines `reduceCertVar`** (pin reads, `const_e`, `intern_fvar`;
-sorry-free). -/
+proved). -/
 @[refines ConRon.Arena.reduceCertVar]
 theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word)
