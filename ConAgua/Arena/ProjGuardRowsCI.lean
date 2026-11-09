@@ -5,6 +5,8 @@ public import ConAgua.Arena.Keeps
 public import ConAgua.Arena.MemoBank
 public import ConAgua.Arena.DeclLvlStage
 import ConAgua.Arena.CoreRefine
+public import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.IndSumSpec.StructProjArgP
 
 @[expose] public section
 
@@ -214,4 +216,90 @@ theorem ci_structUsedLater (cty : EIdx) (nP j : Nat) : CI (structUsedLater cty n
   · exact ci_hbFast _ _
   · exact CI.pure _
 
+/-! ## The twin ops keep the store, the caches and the pins -/
+
+theorem keepsSp_bvarB (F : Nat) (e : EIdx) : Keeps sp (bvarB F e) := by
+  unfold bvarB
+  refine Keeps.bind (keeps_derivedE _) fun x => ?_
+  by_cases hc : ((ConLeche.bvarOfData x).toNat == ConLeche.satRange) = true
+  · simp only [hc, ↓reduceIte]; exact keeps_bvarBoundMemo F e
+  · simp only [hc, Bool.false_eq_true, ↓reduceIte]; exact Keeps.pure _
+
+theorem keepsSp_hbGo (F : Nat) : ∀ (memo : Std.HashMap (EIdx × Nat) Bool) (i : Nat) (h : EIdx),
+    Keeps sp (hasLooseBVarBGo memo i F h) := by
+  induction F with
+  | zero => intro memo i h; rw [hasLooseBVarBGo]; exact Keeps.fail _
+  | succ F ih =>
+    intro memo i h; rw [hasLooseBVarBGo]
+    refine Keeps.bind (keepsSp_bvarB _ _) fun bb => ?_
+    keeps_auto [] using (ih _), sp_blind
+
+theorem keepsSp_stripPis : ∀ (k : Nat) (h : EIdx), Keeps sp (stripPis k h) := by
+  intro k
+  induction k with
+  | zero => intro h; rw [stripPis]; exact Keeps.pure _
+  | succ k ih =>
+    intro h; rw [stripPis]
+    keeps_auto [] using ih, sp_blind
+
+theorem keepsSp_structUsedLater (cty : EIdx) (nP j : Nat) : Keeps sp (structUsedLater cty nP j) := by
+  unfold structUsedLater
+  refine Keeps.bind (keepsSp_stripPis _ _) fun x => ?_
+  split
+  · unfold hasLooseBVarBFast
+    exact Keeps.bind (keepsSp_hbGo _ _ _ _) fun _ => Keeps.pure _
+  · exact Keeps.pure _
+
 end L.Arena
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `struct_used_later` under `CoreS` -/
+
+theorem ustW_frameU {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP j = some (r, m')) :
+    MemFrame usA usC m m' := by
+  simp only [ustW] at h
+  obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  have h1 : MemFrame usA usC m m1 := (stripF_frame hst).mono (by simp [usA]) (by simp [usC])
+  by_cases hz : rs.headD 0 = 0
+  · rw [ustK1_some_zero hz] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    exact h1
+  rw [ustK1_some_ne hz] at h
+  exact h1.trans ((hbFastW_frame h).mono (by simp [usA, hbWA]) (by simp [usC, hbWC]))
+
+/-- **`struct_used_later`'s model refines `structUsedLater` under `CoreS`**, the pool's `IWOK` and
+the `hb` memo given: the stage refinement `ustW_ok` at the swapped caches (`CoreS.swapCheck`), the
+twin's run back at the real caches (`CI`), `CoreS` after by the frame `usA`/`usC`. -/
+theorem ustW_okC {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} (n : Nat) {m m' : Mem} {a : AState} {cty nP j r : Word}
+    (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty) (hS : CoreS dn m a vis fe M eb)
+    (hI : IWOK m) (hM : ∃ mp, hbMR m mp) (h : ustW n m cty nP j = some (r, m')) :
+    ∃ b a', (structUsedLater (decI cty) nP.toNat j.toNat).run a = .ok (b, a') ∧
+      r = (if b then 1 else 0) ∧ (∃ mp, hbMR m' mp) ∧ CoreS dn m' a' vis fe M eb ∧
+      StackKept m m' ∧ IWOK m' ∧ IWGrow m m' ∧ a'.store = a.store := by
+  obtain ⟨mp, hM⟩ := hM
+  obtain ⟨b, a1, hrun, hb, hM', hS1, hg⟩ := ustW_ok (vis := vis) (fe := fe) n m m'
+    { a with caches := swapC a.caches M } cty nP j r mp hsum hc ⟨hS.swapCheck, hI⟩ hM h
+  have hrun' := (ci_structUsedLater _ _ _).back hrun
+  have hk := (keepsSp_structUsedLater _ _ _).run hrun
+  simp only [sp, Prod.mk.injEq] at hk
+  obtain ⟨hst, -, hpi⟩ := hk
+  have hf := ustW_frameU h
+  have hcpl : cpl { a1 with caches := a.caches } = cpl a := by
+    simp only [cpl, hst, hpi]
+  refine ⟨b, _, hrun', hb, hM', ?_, StackKept.of_frame hf, hS1.iw, hg, hst⟩
+  exact hS.arena_frame (hS1.check.arena.caches_irrel _) hcpl hf
+    (by intro b hb; simp only [usA, List.mem_cons, List.not_mem_nil, or_false] at hb
+        rcases hb with rfl | rfl | rfl <;> decide)
+    (by simp only [usA]; decide)
+    (by intro b hb; simp only [usA, List.mem_cons, List.not_mem_nil, or_false] at hb
+        rcases hb with rfl | rfl | rfl <;> decide)
+    (by intro x hx; simp only [usC, List.mem_cons, List.not_mem_nil, or_false] at hx
+        rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
+    (by intro x hx; simp only [usC, List.mem_cons, List.not_mem_nil, or_false] at hx
+        rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
+
+end L.Ind
