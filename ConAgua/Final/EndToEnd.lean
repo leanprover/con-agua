@@ -149,20 +149,20 @@ theorem checkerFile_no_False (V : Type w) [ConLeche.SetTheory V] [Host] (hCd : L
 /-- **Threaded accept**: if the harness runs as `ThreadsRun` says (entry 1, then `ca_check_b` per
 claimed group index on each thread's own region, every call accepting, every index claimed), the
 twin's pooled pipeline accepts `[b]`. -/
-theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem checkerFile_threads_accept [Host] (V : Type w) [ConLeche.SetTheory V] (hCd : L.Checker.CheckerCd) (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
-  threadsRun_twinAcceptsPooled k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR
+  threadsRun_twinAcceptsPooled V hCd k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR
 
 /-- **The threaded harness's registers**: if the harness runs as `ThreadsRun` says, entry 1 and
 every `ca_check_b` call return with the caller's callee-saved registers intact. -/
-theorem checkerFile_threads_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem checkerFile_threads_regs [Host] (V : Type w) [ConLeche.SetTheory V] (hCd : L.Checker.CheckerCd) (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
     RegsRestored dm₀.regs st₀.data.regs ∧ ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs :=
-  (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).2
+  (threadsRun_twinAcceptsPooled_regs V hCd k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).2
 
 /-- **Threaded reject or decline**: if the harness's run reports a failure with the code `k`
 (`ThreadsFail`: entry 1 returned `rdx = 2`, or a thread's call returned `rdx = 2` after that
@@ -177,7 +177,7 @@ theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile 
 
 /-- **An accepting threaded run has a model** (relative to set theory, as
 `checkerFile_model_exists`). -/
-theorem checkerFile_threads_model (V : Type w) [ConLeche.SetTheory V] [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem checkerFile_threads_model (V : Type w) [ConLeche.SetTheory V] [Host] (hCd : L.Checker.CheckerCd) (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
@@ -187,15 +187,15 @@ theorem checkerFile_threads_model (V : Type w) [ConLeche.SetTheory V] [Host] (k0
       ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
         (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
       Nonempty (ConLeche.Model V env) :=
-  twinAcceptsPooled_model V (checkerFile_threads_accept k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR)
+  twinAcceptsPooled_model V (checkerFile_threads_accept V hCd k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR)
 
 /-- **No threaded run accepts a theorem of type `False`** (relative to set theory). -/
-theorem checkerFile_threads_no_False (V : Type w) [ConLeche.SetTheory V] [Host] (k0 : Nat)
+theorem checkerFile_threads_no_False (V : Type w) [ConLeche.SetTheory V] [Host] (hCd : L.Checker.CheckerCd) (k0 : Nat)
     (hcode : Code checkerFile k0) (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
     (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM) :
     ¬ ThreadsRun b pb dm₀ ra₀ st₀ B ths := fun hR =>
-  twinAcceptsPooled_no_False V hfalse (checkerFile_threads_accept k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR)
+  twinAcceptsPooled_no_False V hfalse (checkerFile_threads_accept V hCd k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR)
 
 -- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 -- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_accepts
