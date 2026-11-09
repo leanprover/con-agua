@@ -46,22 +46,16 @@ def decIS (m : Mem) (rp : Nat) : Option (List LIdx) := decAt m (decHL m) rp
 /-- The index binders' slice: the telescope's tail past `nP`, `(0, 0)` when empty. -/
 def idxTail (nP o l : Word) : Word × Word := if nP < l then (o + nP, l - nP) else (0, 0)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- One member's index sorts, as the twin computes them. -/
-def idxOneAM (fe : IFEnv) (bs : BlockShape) (ms : MemberShape) (cvTa : IConstantVal) : AM (List LIdx) := do
-  let tq ← unwrapOr (← openPisAtFvarsF (bs.nP + ms.nIdx) cvTa.type 0)
+/-- One member's index sorts' check, as the twin runs it. -/
+def idxOneAM (fe : IFEnv) (bs : BlockShape) (ms : MemberShape) : AM Unit := do
+  let tq ← unwrapOr (← openPisAtFvarsF (bs.nP + ms.nIdx) ms.cvT.type 0)
     (.internal "direct rec: type former telescope")
   checkStructFieldSortsI V fe true false bs.resSort bs.nP (tq.1.drop bs.nP) [] ms.nIdx
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem installIdx_cons (fe : IFEnv) (bs : BlockShape) (ms : MemberShape) (rest : List MemberShape)
-    (cvTa : IConstantVal) (cvTas : List IConstantVal) :
-    ConRon.Arena.checkBlockIdxSorts V fe bs (ms :: rest) (cvTa :: cvTas) =
-      (idxOneAM fe bs ms cvTa >>= fun is =>
-        ConRon.Arena.checkBlockIdxSorts V fe bs rest cvTas >>= fun rs => pure (is :: rs)) := by
+theorem installIdx_cons (fe : IFEnv) (bs : BlockShape) (ms : MemberShape) (rest : List MemberShape) :
+    ConRon.Arena.checkBlockIdxSorts V fe bs (ms :: rest) =
+      (idxOneAM fe bs ms >>= fun _ => ConRon.Arena.checkBlockIdxSorts V fe bs rest) := by
   simp only [ConRon.Arena.checkBlockIdxSorts, idxOneAM, bind_assoc]
--/
 
 /-- A handle slice whose tail past `k` is taken: `idxTail`'s slice. -/
 theorem installIdxTail {m : Mem} {o l : Word} {xs : List EIdx} {k : Word}
