@@ -225,6 +225,7 @@ def formerNeverZeroAtL : FunDecl := lfn (mode, vis, p, us)
   pc := EREC⦃p + 3⦄;
   ty := EREC⦃p + 4⦄;
   n := EREC⦃p + 17⦄ + EREC⦃p + 11⦄;
+  if n < EREC⦃p + 17⦄ { abort };
   (f, u) := call former_res_sort(ty);
   if f != 0 { r := call former_never_zero(p, us); return r };
   ity := call inst_lp(po, pc, us, ty);
