@@ -258,7 +258,7 @@ structure IndArmProgs (p : Prog) : Prop where
   apd : ApdF p
   crk : CrKeep p
   ilpf : IlpfF p
-  cid : CidProg2 p
+  cid : CidProg p
 
 /-- **The core's write set with its two leaves at the substituted checker program**
 (`checkerProg_coreStageW`; the leaves' bundles by lookups). -/
@@ -271,8 +271,7 @@ a lookup two fields share is proved once). -/
 theorem indArmProgs_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length) : IndArmProgs (Prog.subPB bs checkerProg) := by
   have hrom := checkerProg_romRefsPB bs hr hpre
-  have hbasis : BasisRefs (Prog.subPB bs checkerProg) := basisRefs_of ⟨by prog_bundle [], hrom⟩
-  prog_bundle [hbasis, checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
+  prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
     checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
     checkerProg_coreStagePB bs,
     closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
@@ -298,15 +297,17 @@ theorem blockRefS_checker (bs : List UInt8) (hr : RomOK bs)
 
 /-- **The inductive arm's contract at the substituted checker program**, from the contracts of
 its two returning callees (`cbbRef_checker`, `blockRefS_checker`); `CcvSims` (its
-`check_shapeless`) from the caller (`Checker/ArmsT`'s `checkerProg_ccvSimsPB`). -/
+`check_shapeless`) and `BasisRefs` from the caller (`Checker/ArmsT`'s `checkerProg_ccvSimsPB`,
+`basisRefs_of (checkerProg_basisLProgPB bs hr hpre)`). -/
 theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length)
-    (hCS : ∀ dn, CcvSims (Prog.subPB bs checkerProg) dn) :
+    (hCS : ∀ dn, CcvSims (Prog.subPB bs checkerProg) dn)
+    (hB : BasisRefs (Prog.subPB bs checkerProg)) :
     ∀ dn, DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn := by
   have H := indArmProgs_checker bs hr hpre
   have hV : CcvProg (Prog.subPB bs checkerProg) := by prog_bundle [H.v, H.cid.basis]
   have hcrf : CrfF (Prog.subPB bs checkerProg) := by prog_bundle []
-  exact indArmSpec_of hV H.kp H.apd H.crk hcrf H.cid hCS (cbbRef_checker bs hr hpre)
+  exact indArmSpec_of hV H.kp H.apd H.crk hcrf ⟨H.cid, hB, checkerProg_coreStagePB bs, H.lc⟩ hCS (cbbRef_checker bs hr hpre)
     (blockRefS_checker bs hr hpre) (closedW_subPB bs checkerProg_armCid) armCid_frame
 
 end L.Checker
