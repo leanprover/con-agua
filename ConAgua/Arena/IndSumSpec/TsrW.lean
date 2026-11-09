@@ -331,40 +331,34 @@ end rel
 
 /-! ## The `abstract1` memo across the rules' writers -/
 
-theorem ruleMem_afr (m : Mem) (q a b c d e f : Word) : AFr m (ruleMem m q a b c d e f) := by
+theorem ruleMem_afr (m : Mem) (q nm nF rO : Word) : AFr m (ruleMem m q nm nF rO) := by
   rw [ruleMem_eq]; exact wrER_afr _ m q
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem rgoW_afr : ∀ (n : Nat) (m m' : Mem) (vis nP cO cL rO rL o : Word) (r : List Word),
-    rgoW n m vis nP cO cL rO rL o = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [rgoW] at h
-  | n + 1, m, m', vis, nP, cO, cL, rO, rL, o, r, h => by
+theorem rgoW_afr : ∀ (n : Nat) (m m' : Mem) (cO cL rO rL o : Word) (r : List Word),
+    rgoW n m cO cL rO rL o = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, h => by simp [rgoW] at h
+  | n + 1, m, m', cO, cL, rO, rL, o, r, h => by
     simp only [rgoW] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
-    · rcases h1 : rrbF m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))] with _ | ⟨kr, m1⟩ <;> simp only [h1, rgoK1, reduceCtorEq] at h
-      rcases h2 : erAllocW m1 11 with _ | ⟨q, m2⟩ <;> simp only [h2, rgoK2, reduceCtorEq] at h
-      cases h3 : rgoW n ((ruleMem m2 q _ _ nP _ (kr.headD 0) (kr.tail.headD 0)).set64 IW o q) vis nP
-          (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) with
+    · rcases h2 : erAllocW m 11 with _ | ⟨q, m2⟩ <;> simp only [h2, rgoK2, reduceCtorEq] at h
+      cases h3 : rgoW n ((ruleMem m2 q _ _ rO).set64 IW o q) (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) with
       | none => rw [h3] at h; cases h
       | some z =>
       obtain ⟨r3, m3⟩ := z
       rw [h3, rgoK3] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-      exact (AFr.of_frame (rrbF_frame h1)).trans ((erAllocW_afr h2).trans
-        (((ruleMem_afr _ _ _ _ _ _ _ _).trans (set64IW_afr _ _ _)).trans (rgoW_afr n _ _ _ _ _ _ _ _ _ _ h3)))
--/
+      exact (erAllocW_afr h2).trans
+        (((ruleMem_afr _ _ _ _ _).trans (set64IW_afr _ _ _)).trans (rgoW_afr n _ _ _ _ _ _ _ _ h3))
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem rulesW_afr {n : Nat} {m m' : Mem} {vis nP cO cL rO rL : Word} {r : List Word}
-    (h : rulesW n m vis nP cO cL rO rL = some (r, m')) : AFr m m' := by
+theorem rulesW_afr {n : Nat} {m m' : Mem} {cO cL rO rL : Word} {r : List Word}
+    (h : rulesW n m cO cL rO rL = some (r, m')) : AFr m m' := by
   simp only [rulesW] at h
   generalize hk : (if rL < cL then rL else cL) = k at h
   rcases h1 : allocW m k with _ | ⟨o, m1⟩ <;> simp only [h1, rulesK1, reduceCtorEq] at h
-  rcases h2 : rgoW n m1 vis nP cO cL rO rL o with _ | ⟨r2, m2⟩ <;> simp only [h2, rulesK2, reduceCtorEq] at h
+  rcases h2 : rgoW n m1 cO cL rO rL o with _ | ⟨r2, m2⟩ <;> simp only [h2, rulesK2, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  exact (allocW_afr h1).trans (rgoW_afr n _ _ _ _ _ _ _ _ _ _ h2)
--/
+  exact (allocW_afr h1).trans (rgoW_afr n _ _ _ _ _ _ _ _ h2)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r : List Word},
