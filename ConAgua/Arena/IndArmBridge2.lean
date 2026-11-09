@@ -21,8 +21,7 @@ namespace L.Ind
 open L.Arena
 
 /-- The cut memory's record pool is the pool below its top. -/
-theorem erA_truncM (m : Mem) : erA (truncM m) = erecP m := by
-  sorry
+theorem erA_truncM (m : Mem) : erA (truncM m) = erecP m := truncM_erA m
 
 /-- **The front's block decoding is the stage's** (`IndArmSpec`'s premise to `cidW_ok`'s). -/
 theorem decB_decEBlk_of_decCIs {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat}
