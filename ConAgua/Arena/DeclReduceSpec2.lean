@@ -136,6 +136,65 @@ theorem decCI_kind3 {a : Nat → Option Word} {p : Nat}
     · exact h0 (UInt64.toNat_inj.mp (by simpa using h1))
     all_goals simp_all
 
+/-- A record of kind word `4` is a `ctorInfo` with its counts at `+5`, `+6`; any other kind word
+is not. -/
+theorem decCI_kind4 {a : Nat → Option Word} {p : Nat}
+    {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
+    (w = 4 → ∃ cv np nf, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some np ∧
+      nat? a (p + 6) = some nf ∧ ci = .ctorInfo cv np nf) ∧
+      (w ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+  obtain ⟨wk, e, hk⟩ := ciD h
+  rw [hw] at e; cases e
+  constructor
+  · intro h0
+    subst h0
+    rcases hk with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨-, cv, np, nf, hcv, h5, h6, rfl⟩ | ⟨h1, -⟩
+    · simp at h1
+    · simp at h1
+    · simp at h1
+    · simp at h1
+    · exact ⟨cv, np, nf, hcv, h5, h6, rfl⟩
+    · simp at h1
+  · intro h0 cv np nf hc
+    subst hc
+    rcases hk with ⟨-, h2⟩ | ⟨-, h2⟩ | ⟨-, h2⟩ | ⟨-, h2⟩ | ⟨h1, -⟩ | ⟨-, h2⟩
+    · simp_all
+    · simp_all
+    · simp_all
+    · simp_all
+    · exact h0 (UInt64.toNat_inj.mp (by simpa using h1))
+    · simp_all
+
+/-- A record of kind word `5` is a `recInfo` with its counts at `+5`, `+6`; any other kind word
+is not. -/
+theorem decCI_kind5 {a : Nat → Option Word} {p : Nat}
+    {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
+    (w = 5 → ∃ cv mi rp k rules, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some mi ∧
+      nat? a (p + 6) = some rp ∧ ci = .recInfo cv mi rp k rules) ∧
+      (w ≠ 5 → ∀ cv mi rp k rules, ci ≠ .recInfo cv mi rp k rules) := by
+  obtain ⟨wk, e, hk⟩ := ciD h
+  rw [hw] at e; cases e
+  constructor
+  · intro h0
+    subst h0
+    rcases hk with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ |
+      ⟨-, cv, mi, rp, o, c, k, rules, hcv, h5, h6, -, -, -, -, rfl⟩
+    · simp at h1
+    · simp at h1
+    · simp at h1
+    · simp at h1
+    · simp at h1
+    · exact ⟨cv, mi, rp, k, rules, hcv, h5, h6, rfl⟩
+  · intro h0 cv mi rp k rules hc
+    subst hc
+    rcases hk with ⟨-, h2⟩ | ⟨-, h2⟩ | ⟨-, h2⟩ | ⟨-, h2⟩ | ⟨-, h2⟩ | ⟨h1, -⟩
+    · simp_all
+    · simp_all
+    · simp_all
+    · simp_all
+    · simp_all
+    · exact h0 (UInt64.toNat_inj.mp (by simpa using h1))
+
 /-! ## `reduce_stored_ok(vis, c)`, `reduce_elem_ok(vis, c)` -/
 
 /-- The lookups of the reduce operations' environment shapes. -/
