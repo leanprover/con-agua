@@ -131,12 +131,10 @@ theorem substConstAll_refines (hN : NatSubAllProg p) (nm r fuel h : Word) :
       (substConstAll (decI nm) (decE r) fuel.toNat (decE h)) (KeepPost vis fe decW0E) := by
   sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`subst_const_all` at the walk fuel**: `DeclDivModSpec/SubstConst0List`'s `SubstCAll`. -/
-theorem substCAll_of (hN : NatSubAllProg p) : ∀ dn vis fe, SubstCAll p dn vis fe := by
-  sorry
-
--/
+theorem substCAll_of (hN : NatSubAllProg p) : ∀ vis fe, SubstCAll p vis fe :=
+  fun _ _ nm r h hn hr hh k m a res m' hS hc =>
+    CallRef.of_refAM (substConstAll_refines hN nm r 4000000000 h) k m a res m' ⟨hS, hn, hr, hh⟩ hc
 
 end suball
 

@@ -26,6 +26,9 @@ public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndT.ArmMemos
 public import ConAgua.Arena.IndT.GenRec2
 public import ConAgua.Arena.IndT.Sum2
+public import ConAgua.Arena.BasisBlockC
+public import ConAgua.Arena.IndArmLps
+public import ConRon.Bridge.Checker.Inv
 import all ConAgua.Arena.IndInstall
 
 @[expose] public section
@@ -75,6 +78,26 @@ structure BlockPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x
   abs : AbsOK m'
   rc : RcMR m'
   ma : ∃ mp, maMR m' mp
+
+/-- **`check_block`'s contract** (what `cid_ref` takes; `block_ref` restated at the new twin, its
+proof to come): on the shape `block_shape` read (`ShapeR`'s `some` case) of a block that denotes,
+from `StageC` at the recogniser's state (whose store extends the fold's, `FoldOK` at `a₀`, the pins
+the same), the arm's memos and the block's level-parameter names, the call refines
+`checkBlock .verified fe block bs`, both outcomes (the error half under `G`). -/
+def BlockRefS (G : Prop) (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis bO bL p0 : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem)
+    (a a₀ : AState) (bs : BlockShape) (bsP : ConLeche.BlockShape) (block : List IConstantInfo)
+    (blockP : List ConLeche.ConstantInfo),
+    StageC dn vis fe env m a → ConRon.Bridge.FoldOK env fe a₀ → ConRon.Arena.Ext a₀.store a.store →
+    a.pins = a₀.pins →
+    DecB (fun m => decBS m p0.toNat) m bs → ShapeSl m p0 →
+    DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block → bO.toNat + bL.toNat ≤ erTop m →
+    Frontend.denoteCIList a.store block = some blockP →
+    ConRon.Bridge.Inductives.dShape a.store bs = some bsP →
+    (∀ ms ∈ bsP.members, ms.declared = ms.cvT) → BlockLpsDn dn block →
+    IndMemos m → AbsOK m →
+    RefE G (callE p n "check_block" [vis, bO, bL, p0] m) (ConRon.Arena.checkBlock V fe block bs) a
+      (fun rm fe' a' => CidPost dn m (rm.1.headD 0) fe' rm.2 a')
 
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)

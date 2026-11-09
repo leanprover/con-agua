@@ -3,6 +3,11 @@ module
 public import ConAgua.Verdict.DivModPinE
 public import ConAgua.Arena.DeclArmDefn
 import ConAgua.Arena.DeclDivGateT1
+import ConAgua.Arena.DeclNatSub
+import ConAgua.Arena.DeclNatGate
+import ConAgua.Arena.DeclNatSubAll
+import ConAgua.Arena.DeclDivModSpec.DmCgW
+public import ConAgua.Arena.DeclNatGateT
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC
@@ -10,6 +15,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Checker.DeclVal
 import all ConAgua.Arena.DeclArms
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 
@@ -27,6 +33,8 @@ carry the guards and the attempt). The definition arm (`cdf_ref`) consumes the h
 call's run: `DivGateSpecC` (with the variant records after and the frame) and `DivGateSpecE`.
 -/
 
+set_option experimental.vcgen true
+
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
@@ -40,105 +48,166 @@ open ConRon.Bridge (CheckOK StepOK PinsDenote CoreStep)
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`defn_div_gate(vis, w, n)` under `StageC`**: from the stage relation at the pushed view `w`
-(extended index `fe2`), `StageC` at the pre-insertion view `vis` (con-ron's `CheckOK` at the
-environment `env` before the push), `env`'s well-formedness, the pushed index's `StepOK` (at
-`env2`), the variant records in memory (`PinSetsR`) and in the twin's store (`PinsDenote`, from
-`TwinFold.pinsD` and `Ext` since), the name's denotation; the gate's run, the stage relation at `w`,
-`StageC` at `vis`, `Ext` of the twin's store, and the frame. -/
-def DivGateSpecC (p : Prog) (pins : List INatOpPinSet) : Prop :=
-  ∀ (dn : NIdx → Option ConLeche.Name), DnInj dn → ∀ (vis w : Word) (fe2 : IFEnv)
-    (env env2 : ConLeche.Env) (n : Word) (nm : ConLeche.Name) (k : Nat), k ≤ 2 ^ 62 →
-    ∀ (m m' : Mem) (a : AState) (r : List Word), n.toNat < 2 ^ 32 →
-    callW p k "defn_div_gate" [vis, w, n] m = some (r, m') →
-    StageR w fe2 m a → StageC dn vis (fe2.restrictTo vis.toNat) env m a →
-    ConLeche.EnvWF env → StepOK env2 fe2 a → PinSetsR m pins →
-    (∃ pinsP, PinsDenote a.store pins pinsP) →
-    denoteN a.store.ns (decI n) = some nm → L.Stubs.CrOK m →
-    ∃ a', (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n)).run a = .ok ((), a') ∧
-      StageR w fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
-      Ext a.store a'.store ∧ IWGrow m m' ∧ PinSetsR m' pins ∧ MemFrame stepA stepC m m'
--/
+/-- `subst_const0` at the walk fuel (`sc0_ref`; DeclCheckLoop's `substC0_of`, there commented out). -/
+theorem substC0_ofN {p : Prog} (hN : NatSubProg p) (vis : Word) (fe : IFEnv) : SubstC0 p vis fe :=
+  fun nm r h hn hr hh k m a res m' hS hc =>
+    sc0_ref hN nm r coreWalkFuel 4000000000 rfl h k m a res m' hS hn hr hh hc
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`defn_div_gate`'s error claim under `StageC`** (the error half of `DivGateSpecC`). -/
-def DivGateSpecE (p : Prog) (pins : List INatOpPinSet) : Prop :=
-  ∀ (dn : NIdx → Option ConLeche.Name), DnInj dn → ∀ (vis w : Word) (fe2 : IFEnv)
-    (env env2 : ConLeche.Env) (n : Word) (nm : ConLeche.Name) (k : Nat), k ≤ 2 ^ 62 →
-    ∀ (m : Mem) (a : AState), n.toNat < 2 ^ 32 →
-    StageR w fe2 m a → StageC dn vis (fe2.restrictTo vis.toNat) env m a →
-    ConLeche.EnvWF env → StepOK env2 fe2 a → PinSetsR m pins →
-    (∃ pinsP, PinsDenote a.store pins pinsP) →
-    denoteN a.store.ns (decI n) = some nm → L.Stubs.CrOK m →
-    ∀ e, callE p k "defn_div_gate" [vis, w, n] m = .error e →
-    ErrClaim (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n)) a e
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-set_option experimental.vcgen true in
-/-- **The model of `defn_div_gate`, both outcomes**: the family's names, the membership and the
-variant records (outside the verdict closure) lifted, `check_div_mod_pin` by its model. -/
-l_model defnDivGate_specE (p : Prog) (hD : DmProg10 p)
-  fns [hD.lDefnDivGate ↦ defnDivGateE]
-  specs [callW_spec p n "nat_div_mod_names", callW_spec p n "sl_contains",
-    callW_spec p n "rom_pin_sets", checkDivModPin_specE p hD.toDmProg8 n]
-  grind [arena_grind] extra [ld64_rdW_specE] unified
+/-- **The model of `check_div_mod_pin_at_fe2`, both outcomes**: the environment guard and
+`env_find` through their `Option` models. -/
+l_model cdmpFe2_specE (p : Prog)
+  (hf : p.lookup "check_div_mod_pin_at_fe2" = some checkDivModPinAtFe2L)
+  fns [hf ↦ cdmpFe2E]
+  specs [callW_spec p n "div_mod_env_guard", callW_spec p n "env_find"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
-/-- What the pin gate gives besides the twin's run (from `m`, `a`): the stage relation at the
-pushed view `w`, `StageC` at the pre-insertion view `vis`, `Ext` of the twin's store, the growth.
-(The variant records after and the frame come from the call's run: `divGateSpecC`.) -/
-structure DgPost (dn : NIdx → Option ConLeche.Name) (vis w : Word) (fe2 : IFEnv)
-    (env : ConLeche.Env) (m : Mem) (a : AState) (m' : Mem) (a' : AState) : Prop where
-  stageW : StageR w fe2 m' a'
-  ext : Ext a.store a'.store
-  grow : IWGrow m m'
+/-- The pin gate's program facts beyond `DmProg10`: the gate's reads at the pushed view, the push
+and the pop (`SnpProg`'s), the walk substitutions. -/
+structure CdmpProg (p : Prog) : Prop extends DmProg10 p where
+  fe2 : p.lookup "check_div_mod_pin_at_fe2" = some checkDivModPinAtFe2L
+  snp : SnpProg p
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`defn_div_gate(vis, w, n)` refines `divGateT` under `StageC`, both outcomes**: from the stage
-relation at the pushed view `w` (extended index `fe2`), `StageC` at the pre-insertion view `vis`
-(con-ron's `CheckOK` at the environment `env` before the push), `env`'s well-formedness, the pushed
-index's `StepOK` (at `env2`), the variant records in memory (`PinSetsR`) and in the twin's store
-(`PinsDenote`), the name's denotation: the family's names, the membership, the variant records,
-the gate (`cp_ref`). -/
-theorem dg_ref {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    (hCl : StepIn p dgFns) (hs0 : ∀ dn vis fe, SubstC0 p dn vis fe)
-    (hsA : ∀ dn vis fe, SubstCAll p dn vis fe) (hkp : CrKeep p) {pins : List INatOpPinSet}
-    {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis w : Word} {fe2 : IFEnv}
-    {env env2 : ConLeche.Env} {n : Word} {nm : ConLeche.Name} {k : Nat} (hk : k ≤ 2 ^ 62)
-    {m : Mem} {a : AState} (hn : n.toNat < 2 ^ 32) (hS : StageR w fe2 m a)
-    (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a) (henv : ConLeche.EnvWF env)
-    (hok2 : StepOK env2 fe2 a) (hP : PinSetsR m pins) (hpd : ∃ pinsP, PinsDenote a.store pins pinsP)
-    (hnm : denoteN a.store.ns (decI n) = some nm) (hCr : L.Stubs.CrOK m) :
-    RefE (CoreStubsE p) (defnDivGateE p k m vis w n)
-      (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n)) a
-      (fun x _ a' => DgPost dn vis w fe2 env m a x.2 a') := by
-  sorry
+/-- **The model of `check_div_mod_pin`, both outcomes**: the leaves through their `Option` models,
+the reads at the pushed view and the variant loop through their models. -/
+l_model cdmp_specE (p : Prog) (hD : CdmpProg p)
+  fns [hD.lCheckDivModPin ↦ cdmpE]
+  specs [callW_spec p n "env_row_get", callW_spec p n "env_push", cdmpFe2_specE p hD.fe2 n,
+    callW_spec p n "env_pop_temp", checkDivModPinLoop_specE p hD.toDmProg8 n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  heartbeats 400000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
--/
+section cdmp
+variable {p : Prog}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`defn_div_gate` under `StageC`** from the call's run (`dg_ref`'s ok half; the variant records
-after and the frame from the gate's write set). -/
-theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    (hCl : StepIn p dgFns) (hs0 : ∀ dn vis fe, SubstC0 p dn vis fe)
-    (hsA : ∀ dn vis fe, SubstCAll p dn vis fe) (hkp : CrKeep p) (pins : List INatOpPinSet) :
-    DivGateSpecC p pins := by
-  sorry
+/-- **`check_div_mod_pin_at_fe2` refines `checkDivModPinAtFe2`, both outcomes**: the environment
+guard (`divModEnvGuard_refines`) at the pushed view, then the stored definition's value word. -/
+theorem cdmpFe2_ref (hD : DmProg7 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hF2 : Fe2Closed p)
+    {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {w n : Word} {fe2 : IFEnv} (k : Nat)
+    {m : Mem} {a : AState} (hn : H n) (hS : StageR w fe2 m a) :
+    RefE True (cdmpFe2E p k m w n) (checkDivModPinAtFe2 fe2 (decI n)) a
+      (fun v x a' => SnpFe2Post w fe2 m v.2 v.1 x a' ∧ (L.Stubs.CrOK m → L.Stubs.CrOK v.2)) := by
+  cases k with
+  | zero => rw [cdmpFe2E.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  rw [cdmpFe2E.arm1]
+  have hM := hD.toDmProg6.toDmProg5.toMasterProg
+  simp only [checkDivModPinAtFe2]
+  refine RefE.bindSim (fun _ => rfl)
+    ((CallRef.of_refAM (divModEnvGuard_refines (vis := w) (fe := fe2) hD hdn n)) k m a · · ⟨hS, hn⟩ ·)
+    fun r1 x1 m1 a1 h1 hrun1 ⟨hS1, hg1, hd1⟩ => ?_
+  have hfr := callW_leafFrame hcl (leaf_mem _ (by decide)) h1
+  have hown := callW_fe2_ownC hF2 (by simp [fe2Fns]) h1
+  refine RefE.ofArms (fun h => cdmpFe2E.k_div_mod_env_guard.abort1 _ _ _ _ _ _ h)
+    (fun h => cdmpFe2E.k_div_mod_env_guard.arm1 _ _ _ _ _ _ h) (RefE.guardIf rfl (decW0B_false hd1)
+      (fun h => Classical.byContradiction fun z => Bool.false_ne_true (h.symm.trans (decW0B_true hd1 z)))
+      fun _ _ => ?_)
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
+  obtain ⟨hm4, hfd⟩ := envFind_call hM n hn hS1.check.env h4
+  subst hm4
+  cases hf : fe2.find? (decI n) with
+  | none =>
+    rw [hf] at hfd
+    have hz : r4.headD 0 = 0 := hfd
+    rw [cdmpFe2E.k_env_find.abort1 p _ _ hz]; exact RefE.of_cls0 rfl
+  | some ci =>
+  rw [hf] at hfd
+  obtain ⟨hf1, hci⟩ := hfd
+  have hnz : r4.headD 0 ≠ 0 := by rw [hf1]; decide
+  by_cases hkk' : ¬ erRd m4 (r4.tail.headD 0) = 1
+  · rw [cdmpFe2E.k_env_find.abort2 p _ _ hnz hkk']; exact RefE.of_cls0 rfl
+  have hkk : erRd m4 (r4.tail.headD 0) = 1 := Classical.not_not.mp hkk'
+  rw [cdmpFe2E.k_env_find.arm1 p _ _ hnz hkk]
+  simp only [erRd_foldN]
+  generalize r4.tail.headD 0 = q at hci hkk ⊢
+  rcases decCI_defn_cases hci with ⟨cv, v, hint, rfl, -, -⟩ | ⟨w1, hw1, hne, -⟩
+  rotate_left
+  · exact absurd hkk (by rw [(erRd_of_erecP hw1).1]; exact hne)
+  obtain ⟨wv, -, hk5, hwl, hwd⟩ := decCI_defn_val hci
+  have hq5 : (q + 5).toNat = q.toNat + 5 := by
+    have := erecP_lt64 hk5; rw [UInt64.toNat_add]; simp; omega
+  have e5 : erRd m4 (q + 5) = wv := (erRd_of_erecP (by rw [hq5]; exact hk5)).1
+  rw [e5]
+  exact RefE.ret rfl ⟨⟨hS1, hg1, hwl, hwd, hfr, hown⟩, hkp.call (im_mem _ rfl) h1⟩
 
--/
+/-- **`check_div_mod_pin(po, pl, vis, p, n)` refines `checkDivModPin` under `StageC`, both
+outcomes** (con-ron's `checkDivModPin_bridge`): the own row read, the push, the environment guard
+and the stored value at the pushed view (`cdmpFe2_ref`), the pop (`pushPop_stage`), then the
+variant loop (`loop_ref`) at `vis` over the ROM's variant records (the `IW` slice `po`, `pl` of
+`rom_pin_sets()`, their twin denotations `PinsDenote`). -/
+theorem cdmp_ref (hD : CdmpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
+    (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+    {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinSet} {vis pw n po pl : Word}
+    {fe : IFEnv} {env env2 : ConLeche.Env} {nm : ConLeche.Name} {ci : IConstantInfo} (k : Nat)
+    (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} (hn : H n) (hC : StageC dn vis fe env m a)
+    (henv : ConLeche.EnvWF env) (hci : decCI (erecP m) pw.toNat = some ci)
+    (hname : ci.name = decI n) (hok2 : StepOK env2 (fe.push ci) a)
+    (hnm : denoteN a.store.ns (decI n) = some nm) (hI : PinsIW m po.toNat pl.toNat pins)
+    (hPD : PinsDenote a.store pins pinsP) (hCr : L.Stubs.CrOK m) :
+    RefE (CoreStubsE p) (cdmpE p k m po pl vis pw n) (checkDivModPin V pins fe ci (decI n)) a
+      (fun v fe' a' => L.Arena.SnpPost dn vis fe env m v.2 v.1 fe' a a') := by
+  cases k with
+  | zero => rw [cdmpE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  have hk' : k ≤ 2 ^ 62 := by omega
+  rw [cdmpE.arm1]
+  have hM := hD.toDmProg9.toDmProg8.toDmProg7.toDmProg6.toDmProg5.toMasterProg
+  have hN : NatSubAllProg p := ⟨hD.snp.toNatSubProg'.toNatSubProg, hD.lSubstConstAll⟩
+  have hsv := ConRon.Bridge.IFEnv.sameView_popTemp fe ci
+  simp only [checkDivModPin]
+  -- the own row the push displaces
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  obtain ⟨s1, hs1, hm1, -, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envRowGet_spec p hM.lEnvRowGet k _ n) h1
+  have hm1' : m1 = m := by rw [← hs1, hm1]
+  subst hm1'
+  rw [cdmpE.k_env_row_get.arm1, hr1]
+  simp only [List.headD_cons, List.tail_cons]
+  -- the push
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r2 m2 h2 => ?_
+  rw [cdmpE.k_env_push.arm1]
+  obtain ⟨hS2, hg2⟩ := envPush_stage hD.snp.rs hD.snp.push h2 hC.stage hci
+  have hf2 := callW_leafFrame hcl (leaf_mem _ (by decide)) h2
+  -- the reads at the pushed view
+  refine RefE.bindE (fun _ => rfl) (fun _ => trivial)
+    (cdmpFe2_ref hD.toDmProg7 hcl hkp hD.snp.fe2 hdn k hn hS2)
+    fun ⟨v3, m3⟩ y3 a3 hrun3 ⟨hQ3, hcr3⟩ => ?_
+  rw [cdmpE.k_check_div_mod_pin_at_fe2.arm1]
+  dsimp only at hQ3 hcr3
+  obtain ⟨hst3, hx3, hc3, hp3, -, cv', v', hint', -, hv3, hws⟩ :=
+    ConRon.Bridge.checkDivModPinAtFe2_bridge hC.check.state hC.check.pins hok2 hnm hrun3
+  -- the pop
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
+  rw [cdmpE.k_env_pop_temp.arm1]
+  obtain ⟨hS4, hg4, hr4⟩ := pushPop_stage hD.snp.rs hD.snp.push hD.snp.pop hC.stage hci hname hn h2
+    hQ3.stage (hg2.trans hQ3.grow) hQ3.own h4
+  have hf4 := callW_leafFrame hcl (leaf_mem _ (by decide)) h4
+  rw [hname] at hS4
+  have hck4 : CheckOK false env ((fe.push ci).popTemp ci.name fe.idx[ci.name]?) a3 :=
+    (hC.check.mono hst3 hx3 hc3 hp3).congr_find hsv.find hsv.tbls hsv.base
+  rw [hname] at hck4 hsv
+  have hf04 := (hf2.trans hQ3.frame).trans hf4
+  have hC4 := StageC.of_frame hC hS4 hck4 hf04 hx3
+  have hCr4 := hkp.call (im_mem _ rfl) h4 (hcr3 (hkp.call (im_mem _ rfl) h2 hCr))
+  have hg04 : IWGrow m1 m4 := (hg2.trans hQ3.grow).trans hg4
+  -- the variant loop
+  rw [← hQ3.dec]
+  refine RefE.bindE (fun _ => rfl) id
+    (loop_ref hD.toDmProg8 hq hcl hkp (substC0_ofN hN.toNatSubProg _ _) (substCAll_of hN _ _)
+      henv n v3 hn hQ3.hw hws pins pinsP po pl [] k hk' m4 a3 hC4 hCr4 (hI.grow hg04)
+      (ConRon.Bridge.PinsDenote.mono hx3 _ _ hPD) (ConRon.Bridge.denoteN_ext hnm hx3)
+      (by rw [hQ3.dec]; exact hv3))
+    fun ⟨z5, m5⟩ u5 a5 hrun5 hQ5 => ?_
+  rw [cdmpE.k_check_div_mod_pin_loop.arm1]
+  dsimp only at hQ5
+  rw [hr4] at hQ5 ⊢
+  exact RefE.ret rfl ⟨hQ5.stage, hg04.trans hQ5.grow, hx3.trans hQ5.ext, rfl, hsv,
+    by rw [hQ5.pins, hp3]⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`defn_div_gate`'s error claim under `StageC`** (`dg_ref`'s error half). -/
-theorem divGateSpecE_of {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    (hCl : StepIn p dgFns) (hs0 : ∀ dn vis fe, SubstC0 p dn vis fe)
-    (hsA : ∀ dn vis fe, SubstCAll p dn vis fe) (hkp : CrKeep p) (hcE : CoreStubsE p)
-    (hnv : closedNV p L.Checker.nvFns = true) (pins : List INatOpPinSet) :
-    DivGateSpecE p pins := by
-  sorry
-
--/
+end cdmp
 
 end L.Ind

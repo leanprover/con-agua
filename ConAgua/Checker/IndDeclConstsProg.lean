@@ -4,6 +4,7 @@ public import ConAgua.Checker.LoopProg
 public import ConAgua.Checker.IndArm
 public import ConAgua.Checker.IndDeclConstsClosed
 public import ConAgua.Arena.IndDeclConstsRef
+public import ConAgua.Checker.ArmsT
 meta import ConAgua.Checker.LoopProg
 meta import ConAgua.Checker.IndArm
 meta import ConAgua.Arena.IndDeclConstsRef
@@ -179,7 +180,7 @@ theorem declConstsProg_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length) :
     DeclConstsProg (Prog.subPB bs checkerProg) := by
   have hrom := checkerProg_romRefsPB bs hr hpre
-  have hbasis : BasisRefs (Prog.subPB bs checkerProg) := basisRefs_of ⟨by prog_bundle [], hrom⟩
+  have hbasis : BasisRefs (Prog.subPB bs checkerProg) := basisRefs_of (checkerProg_basisLProgPB bs hr hpre)
   prog_bundle [checkerProg_coreStagePB bs, checkerProg_dcClosedPB bs, hbasis, hrom]
 
 end L.Checker
