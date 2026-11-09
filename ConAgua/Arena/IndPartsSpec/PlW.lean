@@ -30,7 +30,7 @@ namespace L.Ind
 open L.Arena
 
 /-- `paramLevels` as a `Sim` (from lane `indproofs`' `plgW_ok`, through `intern_ls_iw`). -/
-theorem plW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {k : Nat} {m : Mem}
+theorem plW_sim {vis : Word} {fe : IFEnv} {k : Nat} {m : Mem}
     {a : AState} {o l : Word} {lps : List NIdx} (hS : StageR vis fe m a)
     (hd : decHL m o.toNat l.toNat = some lps) (ht : o.toNat + l.toNat ≤ iwTop m) :
     Sim (plW k m o l) (paramLevels lps) a
@@ -48,7 +48,7 @@ theorem plW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   simp only [plW.plK5, Option.some.injEq, Prod.mk.injEq] at hm
   obtain ⟨rfl, rfl⟩ := hm
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd (by omega) ht
+  obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok (fun _ => none) vis fe k _ _ _ _ _ _ _ h1 hS hd (by omega) ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
     ilF_ok vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
   refine ⟨x, a2, ?_, by simpa using hH, by simpa using hx, hS2, hg1.trans hg2⟩
