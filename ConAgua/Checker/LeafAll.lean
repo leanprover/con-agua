@@ -162,12 +162,12 @@ open L.Arena L.Compiler
 /-- The arrays of `leafA`, as a test. -/
 def leafPa (a : TieredArray) : Bool :=
   checkerWordArrays.contains a && a != PINS && a != ABMEMO && a != ILMEMO && a != LPMEMO &&
-    a != LPLMEMO && a != LPLSMEMO && a != WSM && a != FLM && a != LSM
+    a != LPLMEMO && a != LPLSMEMO && a != WSM && a != FLM && a != LSM && a != L.Ind.HBM
 
 /-- The `CTL` words of `leafC`, as a test. -/
 def leafPc (w : Word) : Bool :=
   decide (w.toNat < 1024) && w.toNat != 48 && w.toNat != 50 && w.toNat != 54 && w.toNat != 56 &&
-    w.toNat != 58 && w.toNat != 152 && w.toNat != 154 && w.toNat != 156
+    w.toNat != 58 && w.toNat != 152 && w.toNat != 154 && w.toNat != 156 && w.toNat != 214
 
 theorem leafPa_mem (a : TieredArray) (h : leafPa a = true) : a ∈ leafA := by
   simp only [leafPa, Bool.and_eq_true, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
@@ -176,7 +176,7 @@ theorem leafPa_mem (a : TieredArray) (h : leafPa a = true) : a ∈ leafA := by
 theorem leafPc_mem (w : Word) (h : leafPc w = true) : w ∈ leafC := by
   simp only [leafPc, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq] at h
   simp only [leafC, List.mem_map, List.mem_filter, List.mem_range]
-  refine ⟨w.toNat, ⟨h.1.1.1.1.1.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩
+  refine ⟨w.toNat, ⟨h.1.1.1.1.1.1.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩
   simp only [decide_eq_true_eq]
   omega
 

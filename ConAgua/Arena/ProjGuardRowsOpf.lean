@@ -352,8 +352,12 @@ theorem opfTail_okC {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {M : M
   have hlen : ws.length = n.toNat := by rw [← hws, spnWs_length]
   have hf1 : MemFrame [IW] [200] m2 (wrIW (allocMem m2 n) q ws) :=
     ((allocMem_frame m2 n).trans (wrIW_frame ws _ q)).mono (by simp) (by simp)
-  have hS3 := hS.frameS hf1 (by intro b hb; simp only [List.mem_singleton] at hb; subst hb; decide)
-    (by intro x hx; simp only [List.mem_singleton] at hx; subst hx; decide)
+  have hiw3 : IWOK (wrIW (allocMem m2 n) q ws) := IWOK.of_iw hf1 hI (by
+    simp only [iwTop]; rw [hf1.size IW, wrIW_ctl]; simp only [allocMem]
+    rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by have := hI.ctl; simp; omega⟩, ← hq]
+    rw [UInt64.toNat_add]; omega)
+  have hS3 := hS.frameS_iw hf1 (by intro b hb; simp only [List.mem_singleton] at hb; subst hb; decide)
+    (by intro x hx; simp only [List.mem_singleton] at hx; subst hx; decide) (hiw := hiw3)
   have hctl3 := hS3.ctl136
   have hS4 := hS3.frame_stk (MemFrame.setCtl _ 136 co) (by simp) (by simp)
   have hc := hI.ctl

@@ -159,7 +159,7 @@ theorem CoreS.readCaches {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASt
     hS.erec, hS.spn, hS.memos, hS.bstk,
     hS.den.mono (LsExt.refl _) rfl rfl (fun k x hk => .inr (hX k x hk)) (fun _ _ hv => hv)
       (fun _ _ _ hv => .inl hv) (hS.den.lvlAll.congr rfl)
-      (hS.den.lsAll.congr rfl), hS.mode⟩
+      (hS.den.lsAll.congr rfl), hS.mode, hS.iw⟩
 
 /-! ## `residual_pw` -/
 

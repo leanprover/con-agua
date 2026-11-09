@@ -83,6 +83,11 @@ structure AbsOK (m : Mem) : Prop where
   il : IlMemo m
   wk : WkOK m
 
+/-- The core's memos from `AbsOK`. ronsync2 p4m (temporary): `AbsOK` does not carry the `hb` memo
+(`CoreMemos.hb`); the stage has to thread it (`HbMemo`). -/
+theorem AbsOK.coreMemos {m : Mem} (hA : AbsOK m) : CoreMemos m :=
+  ⟨hA.il, hA.ab, hA.wk.1, sorry⟩
+
 /-- **The twin side of a stub**: a model run of `f(args)` from a memory satisfying `pre` against
 `a` is a successful twin run of `op` with `post` after. -/
 def RelAM {α : Type} (f : FnName) (args : List Word) (pre : Mem → AState → Prop) (op : AM α)

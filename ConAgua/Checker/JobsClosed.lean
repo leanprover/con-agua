@@ -456,12 +456,12 @@ names_tree cdTree : cdFns
 /-- The arrays of `apA`, as a test. -/
 def apPa (b : TieredArray) : Bool :=
   checkerWordArrays.contains b && b != PINS && b != ABMEMO && b != ILMEMO && b != LPMEMO &&
-    b != LPLMEMO && b != LPLSMEMO && b != WSM && b != FLM && b != LSM && apP b
+    b != LPLMEMO && b != LPLSMEMO && b != WSM && b != FLM && b != LSM && b != L.Ind.HBM && apP b
 
 /-- The `CTL` words of `apC`, as a test. -/
 def apPc (x : Word) : Bool :=
   decide (x.toNat < 1024) && x.toNat != 48 && x.toNat != 50 && x.toNat != 54 && x.toNat != 56 &&
-    x.toNat != 58 && x.toNat != 152 && x.toNat != 154 && x.toNat != 156 && apQ x
+    x.toNat != 58 && x.toNat != 152 && x.toNat != 154 && x.toNat != 156 && x.toNat != 214 && apQ x
 
 /-- The arrays of `cdA`, as a test. -/
 def cdPa (b : TieredArray) : Bool := checkerWordArrays.contains b && !IdxArr b && b != PINS
@@ -477,7 +477,7 @@ theorem apPa_mem (b : TieredArray) (h : apPa b = true) : b ∈ apA := by
 theorem apPc_mem (x : Word) (h : apPc x = true) : x ∈ apC := by
   simp only [apPc, Bool.and_eq_true, bne_iff_ne, ne_eq, decide_eq_true_eq] at h
   simp only [apC, leafC, List.mem_filter, List.mem_map, List.mem_range, decide_eq_true_eq]
-  refine ⟨⟨x.toNat, ⟨h.1.1.1.1.1.1.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩, h.2⟩
+  refine ⟨⟨x.toNat, ⟨h.1.1.1.1.1.1.1.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩, h.2⟩
   omega
 
 theorem cdPa_mem (b : TieredArray) (h : cdPa b = true) : b ∈ cdA := by

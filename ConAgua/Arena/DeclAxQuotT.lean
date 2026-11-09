@@ -68,7 +68,7 @@ theorem erecCiW_memos {n : Nat} {m m' : Mem} {i ck : Word} {r : List Word}
 theorem leaf_memos {p : Prog} (hcl : LeafClosed p) {f : FnName} (hf : f ∈ leafFns) {k : Nat}
     {args : List Word} {x y : Mem} {rx : List Word} (hc : callW p k f args x = some (rx, y))
     (hM : CoreMemos x) : CoreMemos y :=
-  hM.frame (callW_leafFrame hcl hf hc) leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp
+  hM.frame (callW_leafFrame hcl hf hc) leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb
 
 /-- **The model of `check_decl_quot(i, vis)`, both outcomes**: `erec_ci` through its run,
 `check_quot_record` by its unified model. -/

@@ -46,7 +46,7 @@ theorem BkMem.ofEnv {A : List TieredArray} {m m' : Mem} (h : BkMem m) (hf : MemF
       (fun x hx => by simp at hx),
     CoreMemos.frame hf ⟨nm _ (by decide), nm _ (by decide)⟩ (by simp) h.core
       ⟨nm _ (by decide), nm _ (by decide), nm _ (by decide)⟩ (by simp)
-      ⟨nm _ (by decide), nm _ (by decide), nm _ (by decide)⟩ (by simp),
+      ⟨nm _ (by decide), nm _ (by decide), nm _ (by decide)⟩ (by simp) (nm _ (by decide)) (by simp),
     AFr.of_frame hf ?_ (by decide) h.abs⟩
   · subst e; have := hA _ hb; revert this; decide
   · subst e; have := hA _ hb; revert this; decide

@@ -55,7 +55,7 @@ theorem StageC.of_core {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m 
   ⟨hS, hc.ok,
     ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,
       by rw [hf.size]; exact h.mem.bstk,
-      h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp,
+      h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb,
       fun k x e => hc.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
 

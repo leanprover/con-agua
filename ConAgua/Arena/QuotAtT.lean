@@ -83,7 +83,8 @@ theorem StageT.of_pl {m m' : Mem} {a a' : AState} (hT : StageT dn vis fe m a)
       ⟨na _ (by simp [plBad]), na _ (by simp [plBad]), na _ (by simp [plBad])⟩
       ⟨nc _ (by simp [plBadC]), nc _ (by simp [plBadC]), nc _ (by simp [plBadC])⟩
       ⟨na _ (by simp [plBad]), na _ (by simp [plBad]), na _ (by simp [plBad])⟩
-      ⟨nc _ (by simp [plBadC]), nc _ (by simp [plBadC]), nc _ (by simp [plBadC])⟩), ?_⟩
+      ⟨nc _ (by simp [plBadC]), nc _ (by simp [plBadC]), nc _ (by simp [plBadC])⟩
+      (na _ (by simp [plBad])) (nc _ (by simp [plBadC]))), ?_⟩
   have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (na _ (by simp [plBad])) (by decide)
   simp only [pinW, hP]; exact hT.flag
 
@@ -354,7 +355,7 @@ theorem StageT.of_leafI {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
     StageT dn vis fe m' a' := by
   refine ⟨hS, hT.twin.of_istep hs (by rw [hf.size]; exact hT.twin.erec)
     (by rw [hf.size]; exact hT.twin.spn) (by rw [hf.size]; exact hT.twin.bstk)
-    (hT.twin.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp), ?_⟩
+    (hT.twin.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb), ?_⟩
   have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS leafA_pins (by decide)
   simp only [pinW, hP]; exact hT.flag
 

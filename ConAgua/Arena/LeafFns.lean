@@ -11,8 +11,8 @@ meta import ConAgua.Compiler.WriteSetSplit
 # The declaration loop's leaves: the functions that leave the core's memos alone (lane `loopt2`)
 
 `leafFns`: every function of `loopFns` whose call closure stores neither into the pin table nor
-into the core's walk memos (`CoreMemos`: arrays 49, 50, 52‥54, 151‥153 and `CTL` words 48, 50,
-54, 56, 58, 152, 154, 156) nor bytes — the record writers, the environment's index, the ROM
+into the core's walk memos (`CoreMemos`: arrays 49, 50, 52‥54, 151‥153, 207 and `CTL` words 48, 50,
+54, 56, 58, 152, 154, 156, 214) nor bytes — the record writers, the environment's index, the ROM
 readers, the interning functions, … but not the walks or the core. Computed from `checkerProg`'s
 call graph by `scripts/leaf_fns.py` (the decided check in `ConAgua/Checker/LeafAll.lean` fails if
 it is stale). A leaf call keeps `CoreMemos` and the pin flag by its frame (`LeafClosed`), which is
@@ -24,12 +24,12 @@ namespace L.Arena
 /-- The arrays a leaf may write (both tiers): all but the pin table and the core's memos. -/
 def leafA : List TieredArray :=
   checkerWordArrays.filter fun b => b ≠ PINS ∧ b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ LPMEMO ∧
-    b ≠ LPLMEMO ∧ b ≠ LPLSMEMO ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM
+    b ≠ LPLMEMO ∧ b ≠ LPLSMEMO ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM ∧ b ≠ L.Ind.HBM
 
 /-- The `CTL` words a leaf may write: all but the core memos' stamps. -/
 def leafC : List Word :=
   ((List.range 1024).filter fun x => x ≠ 48 ∧ x ≠ 50 ∧ x ≠ 54 ∧ x ≠ 56 ∧ x ≠ 58 ∧ x ≠ 152 ∧
-    x ≠ 154 ∧ x ≠ 156).map UInt64.ofNat
+    x ≠ 154 ∧ x ≠ 156 ∧ x ≠ 214).map UInt64.ofNat
 
 /-- The functions of `loopFns` that leave the pins and the core's memos alone. -/
 def leafFns : List FnName :=
@@ -101,8 +101,7 @@ def leafFns : List FnName :=
    "fvar_type_ds", "gcd_step", "gen_rec_check_any_no_member", "gen_rec_check_former_tys",
    "gen_rec_check_minor_ok", "gen_rec_check_pop_all", "generated_rule_nested",
    "generated_rules_remap", "get_app_args", "get_app_args_f", "get_app_fn", "get_app_fn_f",
-   "get_app_spine", "has_fvar", "has_fvar_fast", "has_loose_b_var_b_fast", "has_loose_b_var_b_go",
-   "has_loose_b_var_b_ins", "has_str_lit_go", "hb_clear", "hb_find", "hb_put", "head_and_args",
+   "get_app_spine", "has_fvar", "has_fvar_fast", "has_str_lit_go", "hb_find", "head_and_args",
    "head_hint", "head_is_proj", "head_proof_const", "head_proof_proj", "head_proof_pw",
    "head_type_const", "head_type_pw", "head_type_res", "hint_eq", "hint_lt", "i1l_app",
    "i1l_clear", "i1l_find", "i1l_forall", "i1l_go", "i1l_lam", "i1l_let", "i1l_proj", "i1l_put",
@@ -152,7 +151,7 @@ def leafFns : List FnName :=
    "nest_accept_group", "nest_block_of", "nest_canon_crest", "nest_canon_sub", "nest_cont_checks",
    "nest_cont_new_active", "nest_cont_new_finish", "nest_cont_params_closed", "nest_container",
    "nest_container_ctors", "nest_container_ctors_go", "nest_crest", "nest_ctor_entry",
-   "nest_ctor_entry_strip", "nest_ctor_nf", "nest_ctors_res_ok", "nest_ctors_u4", "nest_ctx_hi_at",
+   "nest_ctor_entry_strip", "nest_ctor_nf", "nest_ctors_res_ok", "nest_ctx_hi_at",
    "nest_ctx_root_holes", "nest_ctx_root_holes_go", "nest_ds_closed", "nest_ds_closed_go",
    "nest_field_kind_flat", "nest_frame_grp", "nest_frame_holes", "nest_frame_mates",
    "nest_frame_mates_go", "nest_group_ctors", "nest_hole_at", "nest_hole_img", "nest_hole_img_ds",
@@ -167,38 +166,38 @@ def leafFns : List FnName :=
    "param_levels_go", "param_push", "peel_pis", "peel_pis_w", "peel_push", "ph_app", "pi_binders",
    "pi_doms_mention_any", "pi_doms_occ", "pi_residual", "pi_result", "pi_result_f",
    "pi_sort_tele_len", "pin_agrees", "pin_at", "pin_found", "pin_link_go", "pin_link_ok",
-   "pin_range_has", "pin_word", "pool_copy", "pool_room", "proj_cert", "proj_find",
-   "proj_guard_rows_at", "proj_push", "proof_pw", "ptr_list_names", "ptr_names_copy", "quick_sort",
-   "quot_pin", "quot_preds_ok", "ra_clear", "ra_find", "ra_put", "raw_nat_lit", "raw_table",
-   "rci_block", "rci_block_to", "rci_caps", "rci_ci", "rci_cv", "rci_fresh", "rci_lvls_to",
-   "rci_name_sl", "rci_names_to", "rci_rule", "rci_rules_to", "rci_slot", "rec2", "rec3", "rec4",
-   "rec5", "rec6", "rec7", "rec_fire", "rec_fire_levels", "rec_info_rec", "rec_k_expected",
-   "rec_target_of", "reduce_cert_var", "reduce_decl_pin", "reduce_elem_ok", "reduce_op_cv_a",
-   "reduce_proj_arg", "reduce_proj_fire", "reduce_proj_head", "reduce_stored_ok", "replace_apps",
-   "replace_apps_go", "replace_apps_node", "replace_fvars", "replace_fvars_go",
-   "replace_fvars_node", "reserved_contains", "reserved_contains_w", "reserved_from",
-   "reserved_rec_bool", "reserved_rec_name", "residual_pw", "rf_bank_enter", "rf_bank_leave",
-   "rf_clear", "rf_find", "rf_put", "rom_and_pin", "rom_basis_decls", "rom_ci", "rom_cv",
-   "rom_ex_leaf_c", "rom_ex_one_c", "rom_ex_ref_c", "rom_ex_two_c", "rom_expr_c", "rom_expr_pin",
-   "rom_exprs_to_c", "rom_level_c", "rom_levels_c", "rom_lit", "rom_lvls_go_c", "rom_name_c",
-   "rom_pin_sets", "rom_put_c", "rom_u64_c", "rr_clear", "rr_find", "rr_put", "rset_clear",
-   "rset_find", "rset_put", "rule_copy", "rule_eq_a", "rule_eq_b", "rule_eq_but_rhs", "rules_eq",
-   "rules_link_ok", "rules_refire", "rules_to_erec", "rules_to_erec_go", "same_const_heads",
-   "scratch_drop", "scratch_enter", "scratch_reset", "sl_all_in", "sl_append", "sl_cons",
-   "sl_contains", "sl_eq", "sl_find", "sl_get", "sl_getd", "sl_new1", "sl_nodup", "sl_set_eq",
-   "sl_snoc", "sle_go", "slp_go", "sls_go", "sort_find", "sort_push", "spine_head", "spn_get",
-   "spn_ls", "spn_pool", "spn_push", "spn_to_er", "spn_to_iw", "stack_cover", "std_ax_family",
-   "std_axiom_ok", "stk_pool", "stk_push", "stmt1", "str_cons_spine", "str_ctor_pre", "str_cv",
-   "str_lit_ctor", "str_lit_stored", "str_ls1", "str_param_sort", "str_utf8_char", "stream_closed",
+   "pin_range_has", "pin_word", "pool_copy", "pool_room", "proj_cert", "proj_find", "proj_push",
+   "proof_pw", "ptr_list_names", "ptr_names_copy", "quick_sort", "quot_pin", "quot_preds_ok",
+   "ra_clear", "ra_find", "ra_put", "raw_nat_lit", "raw_table", "rci_block", "rci_block_to",
+   "rci_caps", "rci_ci", "rci_cv", "rci_fresh", "rci_lvls_to", "rci_name_sl", "rci_names_to",
+   "rci_rule", "rci_rules_to", "rci_slot", "rec2", "rec3", "rec4", "rec5", "rec6", "rec7",
+   "rec_fire", "rec_fire_levels", "rec_info_rec", "rec_k_expected", "rec_target_of",
+   "reduce_cert_var", "reduce_decl_pin", "reduce_elem_ok", "reduce_op_cv_a", "reduce_proj_arg",
+   "reduce_proj_fire", "reduce_proj_head", "reduce_stored_ok", "replace_apps", "replace_apps_go",
+   "replace_apps_node", "replace_fvars", "replace_fvars_go", "replace_fvars_node",
+   "reserved_contains", "reserved_contains_w", "reserved_from", "reserved_rec_bool",
+   "reserved_rec_name", "residual_pw", "rf_bank_enter", "rf_bank_leave", "rf_clear", "rf_find",
+   "rf_put", "rom_and_pin", "rom_basis_decls", "rom_ci", "rom_cv", "rom_ex_leaf_c", "rom_ex_one_c",
+   "rom_ex_ref_c", "rom_ex_two_c", "rom_expr_c", "rom_expr_pin", "rom_exprs_to_c", "rom_level_c",
+   "rom_levels_c", "rom_lit", "rom_lvls_go_c", "rom_name_c", "rom_pin_sets", "rom_put_c",
+   "rom_u64_c", "rr_clear", "rr_find", "rr_put", "rset_clear", "rset_find", "rset_put",
+   "rule_copy", "rule_eq_a", "rule_eq_b", "rule_eq_but_rhs", "rules_eq", "rules_link_ok",
+   "rules_refire", "rules_to_erec", "rules_to_erec_go", "same_const_heads", "scratch_drop",
+   "scratch_enter", "scratch_reset", "sl_all_in", "sl_append", "sl_cons", "sl_contains", "sl_eq",
+   "sl_find", "sl_get", "sl_getd", "sl_new1", "sl_nodup", "sl_set_eq", "sl_snoc", "sle_go",
+   "slp_go", "sls_go", "sort_find", "sort_push", "spine_head", "spn_get", "spn_ls", "spn_pool",
+   "spn_push", "spn_to_er", "spn_to_iw", "stack_cover", "std_ax_family", "std_axiom_ok",
+   "stk_pool", "stk_push", "stmt1", "str_cons_spine", "str_ctor_pre", "str_cv", "str_lit_ctor",
+   "str_lit_stored", "str_ls1", "str_param_sort", "str_utf8_char", "stream_closed",
    "stream_k_check", "stream_nested_bvars", "stream_nested_dom", "stream_nested_ok",
    "stream_nested_pins", "stream_rules_shape", "string_of_list_ty_ok", "string_ty_ok",
    "strip_lams", "strip_pis", "struct_ctor_resid_ok", "struct_elim_level", "struct_proj_arg_p",
    "struct_proj_bodies", "struct_proj_bodies_go", "struct_proj_ps", "struct_ps_at",
-   "struct_ps_at_go", "struct_used_later", "sub_borrow", "subst_const0", "subst_const0_list",
-   "subst_const0_pairs", "subst_const_all", "subst_pw_at", "succ_find", "succ_push", "sum_rules",
-   "sum_rules_go", "ta_clear", "ta_find", "ta_put", "target_abs", "target_abs_const",
-   "target_abs_go", "target_abs_node", "target_canon_params", "target_ctors_of", "target_holes",
-   "target_k53_tele", "target_major_at", "target_major_default", "target_major_of_member",
+   "struct_ps_at_go", "sub_borrow", "subst_const0", "subst_const0_list", "subst_const0_pairs",
+   "subst_const_all", "subst_pw_at", "succ_find", "succ_push", "sum_rules", "sum_rules_go",
+   "ta_clear", "ta_find", "ta_put", "target_abs", "target_abs_const", "target_abs_go",
+   "target_abs_node", "target_canon_params", "target_ctors_of", "target_holes", "target_k53_tele",
+   "target_major_at", "target_major_default", "target_major_of_member",
    "target_major_of_outside_closed", "target_major_of_outside_occ", "target_pi_doms_with",
    "target_rec_pins", "target_rec_pins_names", "target_rec_pins_split", "tbl_base_get",
    "tbl_own_get", "tbl_own_set", "tower_slots_all", "trust_compiler_ok", "type_pin_guard",
@@ -237,6 +236,15 @@ theorem leafC_walk : (152 : Word) ∉ leafC ∧ (154 : Word) ∉ leafC ∧ (156 
   decide +kernel
 theorem leafC_lp : (54 : Word) ∉ leafC ∧ (56 : Word) ∉ leafC ∧ (58 : Word) ∉ leafC := by
   decide +kernel
+theorem leafA_hb : (L.Ind.HBM : TieredArray) ∉ leafA := fun h => by
+  simp [leafA, List.mem_filter] at h
+theorem leafC_hb : (214 : Word) ∉ leafC := fun h => by
+  simp only [leafC, List.mem_map, List.mem_filter, List.mem_range] at h
+  obtain ⟨x, ⟨hx, hp⟩, e⟩ := h
+  have : x = 214 := by
+    have := congrArg UInt64.toNat e
+    rw [UInt64.toNat_ofNat] at this; simp at this; omega
+  subst this; simp at hp
 
 /-- **The leaves' write set.** -/
 def LeafClosed (p : Prog) : Prop := closedA p leafA leafC leafFns = true

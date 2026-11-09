@@ -47,7 +47,7 @@ theorem StageC.of_pstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
     (hS : StageR vis fe m' a') (hA : AbsOK m') (hs : PStep a a') :
     StageC dn vis fe env m' a' :=
   ⟨hS, (hs.toCore h.check).ok,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, hA.coreMemos,
       fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     hA.wk.2.2.2.2⟩
 
@@ -63,7 +63,7 @@ theorem StageC.of_check {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
     (hS : StageR vis fe m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK false env fe a')
     (hx : ConRon.Arena.Ext a.store a'.store) : StageC dn vis fe env m' a' :=
   ⟨hS, hck,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, hA.coreMemos,
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     hA.wk.2.2.2.2⟩
 

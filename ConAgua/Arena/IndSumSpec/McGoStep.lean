@@ -15,6 +15,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.SimLib
+public import ConAgua.Arena.HbMemoRel
 import all ConAgua.Arena.IndSum
 
 @[expose] public section
@@ -588,16 +589,6 @@ theorem hbGo_spec (n : Nat) : HbGoSpec p n := by
 end hbspec
 
 /-! ## `has_loose_b_var_b_*`: the relation to the twin -/
-
-theorem hbSch_wf : hbSch.WF := ⟨by decide, by decide⟩
-
-/-- A stored value word is exactly the answer's `0`/`1`. -/
-def hbVR (_ : Mem) (w : Word) (v : Bool) : Prop := w = if v then 1 else 0
-
-/-- The memo relation of the `hasLooseBVarB` walk (keys `(node, index)`). -/
-abbrev hbMR (m : Mem) (mp : Std.HashMap (EIdx × Nat) Bool) : Prop := MemoRV hbSch lfKey hbVR m mp
-
-theorem hbVR_stable : VStable hbSch hbVR := fun _ _ _ _ _ h => h
 
 /-- The twin's arms of a node view, with the memo insertion pushed into the branches (as the twin's
 `do` block elaborates). -/

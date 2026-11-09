@@ -67,7 +67,7 @@ theorem CoreS.withReadLC {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASt
     (hc : ReadLCOK { a with caches := { a.caches with readLC := X } }) :
     CoreS dn m { a with caches := { a.caches with readLC := X } } vis fe M eb :=
   ⟨hS.arena.caches_irrel _, hS.core.readLC X, hS.pins, hS.env, hc, hS.readLs, hS.nwf, hS.erec,
-    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode⟩
+    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode, hS.iw⟩
 
 /-- `CoreS` with the level-list readback cache replaced by one that holds readbacks. -/
 theorem CoreS.withReadLsC {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
@@ -76,7 +76,7 @@ theorem CoreS.withReadLsC {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AS
     (hc : ReadLsCOK { a with caches := { a.caches with readLsC := X } }) :
     CoreS dn m { a with caches := { a.caches with readLsC := X } } vis fe M eb :=
   ⟨hS.arena.caches_irrel _, hS.core.readLsC X, hS.pins, hS.env, hS.readL, hc, hS.nwf, hS.erec,
-    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode⟩
+    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode, hS.iw⟩
 
 section
 set_option maxRecDepth 8000
