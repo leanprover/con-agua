@@ -4,7 +4,11 @@ public import ConAgua.Arena.IndT.BlockC
 public import ConAgua.Arena.WhnfSpineRefine
 public import ConAgua.Arena.IndT.Sum1
 public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
+public import ConAgua.Arena.IndCopy
+public import ConAgua.Arena.IndCopy2
+public import ConAgua.Arena.Pins
 import all ConAgua.Arena.IndPos2
+import all ConAgua.Arena.IndInstall
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -28,7 +32,8 @@ import all ConAgua.Arena.WhnfIota
 `formerResSort`/`formerDefHeaded` (`frsW_ok`, `fdhW_ok`: only the flag, the twin's state kept);
 `reduced_former` (`IndPos2.lean`) refining `reducedFormer .verified`, both outcomes (`rf_ref`:
 `whnf_telescope` by `wt_ref`, `intern_sort`, `close_telescope`, `cv_new`; the twin's `CoreStep`
-by con-ron's `reducedFormer_specF`).
+by con-ron's `reducedFormer_specF`); `declined_at_definition` (`dadW_ok`: the five pins as a fresh
+`IW` slice, the twin's list).
 -/
 
 noncomputable section
@@ -235,6 +240,116 @@ theorem rf_ref (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {cvq n : Wor
   rw [hdec6, hd5.2]
 
 end rf
+
+/-! ## `declined_at_definition` -/
+
+set_option experimental.vcgen true in
+/-- **`declined_at_definition`'s model**: `pin_at` and `iw_alloc` lifted. -/
+l_model dadW_spec (p : Prog) (hf : p.lookup "declined_at_definition" = some declinedAtDefinition)
+  fns [hf ↦ dadW] specs [callW_spec p n "pin_at", callW_spec p n "iw_alloc"] grind [arena_grind]
+
+theorem pinAt_callW {p : Prog} (hp : p.lookup "pin_at" = some pinAtL) {n : Nat} {m m' : Mem}
+    {a : AState} (hP : PinsR m a.pins) {i : Word} {r : List Word}
+    (h : callW p n "pin_at" [i] m = some (r, m')) :
+    m' = m ∧ H (r.headD 0) ∧ (pinAt i.toNat).run a = .ok (decI (r.headD 0), a) := by
+  obtain ⟨s', hs', hm, -, hw, hrun⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pinAt_refines p hp n _ a hP i) h
+  exact ⟨hs' ▸ hm, hw, hrun⟩
+
+theorem dadW_ok {p : Prog} (hp : p.lookup "pin_at" = some pinAtL)
+    (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat} {m m' : Mem} {a : AState}
+    (hP : PinsR m a.pins) (hc : 200 < (m.arr64 CTL).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    {r : List Word} (h : dadW p n m = some (r, m')) :
+    ∃ ws : List Word, (ConRon.Arena.declinedAtDefinition).run a = .ok (ws.map decI, a) ∧
+      SlR m' (r.headD 0) (r.tail.headD 0) ws ∧ (∀ w ∈ ws, H w) ∧ IWGrow m m' ∧
+      MemFrame [IW] [200] m m' ∧ (r.headD 0).toNat + 5 = iwTop m' := by
+  rcases n with _ | n
+  · simp [dadW] at h
+  simp only [dadW, dadW.k_pin_at, dadW.k_pin_at_2, dadW.k_pin_at_3, dadW.k_pin_at_4,
+    dadW.k_pin_at_5, dadW.k_iw_alloc] at h
+  rcases c1 : callW p n "pin_at" [6] m with _ | ⟨r1, m1⟩ <;> rw [c1] at h
+  · cases h
+  obtain ⟨hm1, hw1, hr1⟩ := pinAt_callW hp hP c1
+  subst m1
+  dsimp only at h
+  rcases c2 : callW p n "pin_at" [8] m with _ | ⟨r2, m2⟩ <;> rw [c2] at h
+  · cases h
+  obtain ⟨hm2, hw2, hr2⟩ := pinAt_callW hp hP c2
+  subst m2
+  dsimp only at h
+  rcases c3 : callW p n "pin_at" [9] m with _ | ⟨r3, m3⟩ <;> rw [c3] at h
+  · cases h
+  obtain ⟨hm3, hw3, hr3⟩ := pinAt_callW hp hP c3
+  subst m3
+  dsimp only at h
+  rcases c4 : callW p n "pin_at" [12] m with _ | ⟨r4, m4⟩ <;> rw [c4] at h
+  · cases h
+  obtain ⟨hm4, hw4, hr4⟩ := pinAt_callW hp hP c4
+  subst m4
+  dsimp only at h
+  rcases c5 : callW p n "pin_at" [29] m with _ | ⟨r5, m5⟩ <;> rw [c5] at h
+  · cases h
+  obtain ⟨hm5, hw5, hr5⟩ := pinAt_callW hp hP c5
+  subst m5
+  dsimp only at h
+  rcases c6 : callW p n "iw_alloc" [5] m with _ | ⟨r6, m6⟩ <;> rw [c6] at h
+  · cases h
+  obtain ⟨s6, hs6, -, hm6, hq6, hroom⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (iwAlloc_spec p ha n _ 5 hsz) c6
+  simp only at hs6 hm6 hq6 hroom
+  subst hs6
+  rw [hm6] at h
+  dsimp only at h
+  rw [hq6] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hq0 : 200 < (m.arr64 CTL).size := hc
+  generalize hws : [r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0, r5.headD 0] = ws
+  have hwr : ∀ q : Word, ((((((allocMem m 5).set64 IW q (r1.headD 0)).set64 IW (q + 1) (r2.headD 0)).set64 IW
+      (q + 2) (r3.headD 0)).set64 IW (q + 3) (r4.headD 0)).set64 IW (q + 4) (r5.headD 0)) =
+      wrIW (allocMem m 5) q ws := by
+    intro q
+    subst hws; simp [wrIW, UInt64.add_assoc]
+  rw [hwr]
+  have h5 : UInt64.toNat (5 : Word) = 5 := rfl
+  rw [h5] at hroom
+  obtain ⟨hget, hg, hf, htop⟩ := recMem_post m ws 5 (by subst hws; rfl) hc (by subst hws; exact hroom) hsz
+  generalize hq : rdW (m.arr64 CTL) 200 = q at hget hg hf htop hroom ⊢
+  have hrd : ∀ j < 5, rdW ((wrIW (allocMem m 5) q ws).arr64 IW) (q + UInt64.ofNat j) = ws[j]?.getD 0 := by
+    intro j hj
+    unfold rdW
+    rw [show (q + UInt64.ofNat j).toNat = q.toNat + j by
+      rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
+      have := hroom; omega, hget j (by subst hws; simpa using hj)]
+  refine ⟨ws, ?_, ?_, ?_, hg, hf, ?_⟩
+  · unfold ConRon.Arena.declinedAtDefinition ConRon.Arena.pinStringOfList ConRon.Arena.pinListNil
+      ConRon.Arena.pinListCons ConRon.Arena.pinCharOfNat ConRon.Arena.pinBool
+    have e1 : (pinAt PIN_STRING_OF_LIST).run a = .ok (decI (r1.headD 0), a) := hr1
+    have e2 : (pinAt PIN_LIST_NIL).run a = .ok (decI (r2.headD 0), a) := hr2
+    have e3 : (pinAt PIN_LIST_CONS).run a = .ok (decI (r3.headD 0), a) := hr3
+    have e4 : (pinAt PIN_CHAR_OF_NAT).run a = .ok (decI (r4.headD 0), a) := hr4
+    have e5 : (pinAt PIN_BOOL).run a = .ok (decI (r5.headD 0), a) := hr5
+    rw [← hws]
+    simp only [StateT.run_bind, e1, e2, e3, e4, e5, except_ok_bind]
+    rfl
+  · rw [← hws] at hrd ⊢
+    simp only [List.headD_cons, List.tail_cons]
+    generalize wrIW (allocMem m 5) q [r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0, r5.headD 0] = A at hrd ⊢
+    have k0 : rdW (A.arr64 IW) q = r1.headD 0 := by simpa using hrd 0 (by decide)
+    have k1 : rdW (A.arr64 IW) (q + 1) = r2.headD 0 := by simpa using hrd 1 (by decide)
+    have k2 : rdW (A.arr64 IW) (q + 1 + 1) = r3.headD 0 := by
+      rw [UInt64.add_assoc]; simpa using hrd 2 (by decide)
+    have k3 : rdW (A.arr64 IW) (q + 1 + 1 + 1) = r4.headD 0 := by
+      rw [UInt64.add_assoc, UInt64.add_assoc]; simpa using hrd 3 (by decide)
+    have k4 : rdW (A.arr64 IW) (q + 1 + 1 + 1 + 1) = r5.headD 0 := by
+      rw [UInt64.add_assoc, UInt64.add_assoc, UInt64.add_assoc]; simpa using hrd 4 (by decide)
+    rw [← k0, ← k1, ← k2, ← k3, ← k4]
+    exact SlR.cons (by decide) (SlR.cons (by decide) (SlR.cons (by decide) (SlR.cons (by decide)
+      (SlR.cons (by decide) SlR.nil))))
+  · rw [← hws]; simp only [List.mem_cons, List.not_mem_nil, or_false]
+    rintro w (rfl | rfl | rfl | rfl | rfl) <;> assumption
+  · simp only [iwTop, htop, List.headD_cons]
+    rw [UInt64.toNat_add, h5]; omega
 
 end L.Ind
 
