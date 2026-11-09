@@ -283,11 +283,20 @@ theorem indArmKeep_checker (bs : List UInt8) :
       AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
   absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free (armAbs_split f hf)
 
-/-- **`check_block`'s contract at the substituted checker program.** -/
+/-- **`check_block`'s callees' contracts at the substituted checker program.** -/
+theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
+    (hpre : bs = romData ++ bs.drop romData.length) :
+    ∀ dn, DnInj dn → CbRefs (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
+  intro dn _
+  have look : CbLook (Prog.subPB bs checkerProg) := by prog_bundle []
+  -- ronsync2 p3e: the callees' contracts (IndT/BlockC) at the checker, still to prove
+  exact ⟨look, sorry, sorry, sorry, sorry, sorry, sorry, sorry, sorry, sorry, sorry⟩
+
+/-- **`check_block`'s contract at the substituted checker program** (`blockRefS_of`). -/
 theorem blockRefS_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length) :
-    ∀ dn, DnInj dn → BlockRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
-  sorry -- ronsync2 p3e: IndT/Block's block_ref at the new twin (Pass, Tail, …) still to restate
+    ∀ dn, DnInj dn → BlockRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+  fun dn hdn => blockRefS_of (cbRefs_checker bs hr hpre dn hdn) fun hG => hG.nv
 
 /-- **The inductive arm's contract at the substituted checker program**, from the contracts of
 its two returning callees (`check_basis_block`'s `CbbRef` from the caller:

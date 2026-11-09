@@ -123,6 +123,13 @@ theorem blockShape?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' :
     exact blockSplit_formers_mem block c hsp (List.of_mem_zip (List.of_mem_zip hx).1).1
   chase2 z2 key
 
+/-- **The recogniser's parameter count is below `2^64 - 1`** (`block_tables`' `struct_proj_bodies`
+computes `o + nP - 1 - k` in words): `blockCounts?`'s first arm bounds it by the fuel of
+`piBinders`, its other two by a recursor's `rP` (a decoded word). -/
+theorem blockShape?_nP_lt {nPd : Nat} {block : List IConstantInfo} {s s' : AState} {bs : BlockShape}
+    (h : (ConRon.Arena.blockShape? nPd block).run s = .ok (some bs, s')) : bs.nP + 1 < 2 ^ 64 := by
+  sorry -- ronsync2 p3e: the recogniser's nP bound (piBinders' fuel; the recursor's decoded rP)
+
 /-- The program facts `cid_ref` takes beyond `CidProg`: the basis entry points' refinements
 (`basis_name_hit`), the core's write set and the level cache (`block_shape`'s refinement). -/
 structure CidProg2 (p : Prog) : Prop extends CidProg p where
@@ -252,7 +259,7 @@ theorem cid_ref (P : CidProg2 p) {G : Prop} (hGU : G → VerdictCtxU p)
   refine RefE.bindE (fun _ => cidE.k_check_basis_block.none ..) id
     (hbr n (by omega) vis o l _ fe env s4.mem a4 a bs bsP block blockP hC4 hfold
       (hxt1.trans hps4.ext) (by rw [hps4.pins, hp1]) hq4' hsl4 hblk4 hb4 hbP4 hdP
-      (ConLeche.blockShape?_declared hpP) hlpd hIM4 hA4) fun v y a5 _ hR => ?_
+      (ConLeche.blockShape?_declared hpP) hlpd (blockShape?_nP_lt hrun4) hIM4 hA4) fun v y a5 _ hR => ?_
   rw [cidE.k_check_basis_block.arm1]
   exact RefE.ret rfl ((hR.pre hg4).pre hg1)
 
