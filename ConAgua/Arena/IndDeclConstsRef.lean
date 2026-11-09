@@ -677,8 +677,8 @@ theorem daW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
     obtain ⟨hdl, hS3, hg3⟩ := new1W_ci hW3 hS2 (decRCI_get hd2)
     obtain ⟨h03, hX3⟩ := h02.step0 hP.leaf dcF_new1 dc0F_new1 h3 hS3 h02.chk (Ext.refl _)
     refine ⟨[ci], a2, ?_, ⟨hS3, hg2.trans hg3, decCIL_pair hdl⟩, h03, hX2.trans hX3⟩
-    simp only [ConRon.Arena.declConstantsAxiom, StateT.run_bind, hpq, except_ok_bind, hname, hb1,
-      e1, decide_true, ite_true, hrun2, beq_self_eq_true, ↓reduceIte]
+    simp only [ConRon.Arena.declConstantsAxiom, StateT.run_bind, hpq, except_ok_bind, hname,
+      e1, hrun2, beq_self_eq_true, ↓reduceIte]
     rfl
   simp only [e1, ↓reduceIte] at h
   -- `sorryAx`'s pin
@@ -718,6 +718,137 @@ theorem daW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   refine ⟨[.axiomInfo cv], a, ?_, ⟨hS5, hg5, decCIL_pair hdl⟩, h05, hX5⟩
   rw [hrunA (x := []), ite_eq_right e4]
 
+/-! ## `decl_constants` -/
+
+/-- `erec_ci(i, ck)` then `sl_new1`: the one record `installStepGo` pushes. -/
+theorem eciNew1 {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {env : ConLeche.Env} {i ck : Word} {ds : Array IDeclaration} {ci : IConstantInfo}
+    {n : Nat} {m m' : Mem} {a : AState} {r : List Word}
+    (h0 : DcSt dn vis fe env m a) (hD : L.Front.DeclsF (m.arr64 DECL) (m.arr64 DLP) ds)
+    (hi : i.toNat < ds.size) (hci : stepCI ck.toNat ds[i.toNat] = some ci)
+    (h : dcNew1 p n (callW p n "erec_ci" [i, ck] m) = some (r, m')) :
+    KeepPost vis fe decCIL m m' a r [ci] ∧ DcSt dn vis fe env m' a ∧ DcIdx m m' := by
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [dcNew1])
+  rw [dcNew1_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bfgK4])
+  rw [bfgK4_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (erecCi_specW p hP.rcp n _ i ck) h1
+  obtain ⟨hS1, hg1, hci1, -⟩ := erecCiW_ok hW1 h0.stage hD hi hci
+  obtain ⟨h01, hX1⟩ := h0.step0 hP.leaf dcF_eci dc0F_eci h1 hS1 h0.chk (Ext.refl _)
+  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (slNew1_specW p hP.alloc hP.slNew1 n _ _) h2
+  obtain ⟨hdl, hS2, hg2⟩ := new1W_ci hW2 hS1 hci1
+  obtain ⟨h02, hX2⟩ := h01.step0 hP.leaf dcF_new1 dc0F_new1 h2 hS2 h01.chk (Ext.refl _)
+  exact ⟨⟨hS2, hg1.trans hg2, decCIL_pair hdl⟩, h02, hX1.trans hX2⟩
+
+theorem dconW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {env : ConLeche.Env} {i : Word} {d : IDeclaration} {n : Nat} {m m' : Mem}
+    {a : AState} {r : List Word}
+    (hpre : DeclConstsPre dn vis fe i d m a) (h0 : DcSt dn vis fe env m a)
+    (h : dconW p n m i = some (r, m')) :
+    ∃ cis a', (ConRon.Arena.declConstants d).run a = .ok (cis, a') ∧
+      KeepPost vis fe decCIL m m' a' r cis ∧ DcSt dn vis fe env m' a' ∧ DcIdx m m' := by
+  obtain ⟨ds, hD, hi, hdi⟩ := hpre.decls
+  have hi8 : 8 * i.toNat + 9 < 2 ^ 64 := by have := hD.room; have := hD.dsize; omega
+  have ek : rdW (m.arr64 DECL) (1 + 8 * i) = dw (m.arr64 DECL) i.toNat 0 :=
+    rdW_dw _ hi8 (by decide) (by decide)
+  rcases n with _ | n
+  · simp [dconW] at h
+  simp only [dconW] at h
+  rw [ek] at h
+  have hdecl := hpre.decl
+  obtain ⟨dd, hdd⟩ := hpre.den
+  cases d with
+  | defnDecl cv v hint =>
+    obtain ⟨hk, -⟩ := hdecl
+    simp (config := { decide := true }) only [hk, ↓reduceIte] at h
+    exact ⟨_, a, rfl, eciNew1 hP h0 hD hi (by rw [hdi]; rfl) h⟩
+  | thmDecl cv v =>
+    obtain ⟨hk, -⟩ := hdecl
+    simp (config := { decide := true }) only [hk, ↓reduceIte] at h
+    exact ⟨_, a, rfl, eciNew1 hP h0 hD hi (by rw [hdi]; rfl) h⟩
+  | opaqueDecl cv v =>
+    obtain ⟨hk, -⟩ := hdecl
+    simp (config := { decide := true }) only [hk, ↓reduceIte] at h
+    exact ⟨_, a, rfl, eciNew1 hP h0 hD hi (by rw [hdi]; rfl) h⟩
+  | axiomDecl cv =>
+    obtain ⟨hk, hcvA⟩ := hdecl
+    simp (config := { decide := true }) only [hk, ↓reduceIte] at h
+    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hdd
+    obtain ⟨c, hc, -⟩ := hdd
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [dcKa])
+    rw [dcKa_some] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bfgK4])
+    rw [bfgK4_some] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (erecCi_specW p hP.rcp n _ i 0) h1
+    obtain ⟨hS1, hg1, hci1, hcv1, -⟩ := erecCiW_okA hW1 h0.stage hD hi hcvA
+    obtain ⟨h01, hX1⟩ := h0.step0 hP.leaf dcF_eci dc0F_eci h1 hS1 h0.chk (Ext.refl _)
+    obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+      (da_spec p hP.decl_constants_axiom n _ _) h2
+    obtain ⟨cis, a2, hrun2, hK, h02, hX2⟩ := daW_ok hP h01 hpre.quotDn hci1 hcv1 hc hW2
+    exact ⟨cis, a2, hrun2, ⟨hK.1, hg1.trans hK.2.1, decCIL_pair hK.2.2⟩, h02, hX1.trans hX2⟩
+  | quotDecl k cv =>
+    obtain ⟨hk, hcvA, hqk⟩ := hdecl
+    simp (config := { decide := true }) only [hk, ↓reduceIte] at h
+    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hdd
+    obtain ⟨c, hc, -⟩ := hdd
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [dcKq])
+    rw [dcKq_some] at h
+    obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (erecCi_specW p hP.rcp n _ i 0) h1
+    obtain ⟨hS1, hg1, -, hcv1, -⟩ := erecCiW_okA hW1 h0.stage hD hi hcvA
+    obtain ⟨h01, hX1⟩ := h0.step0 hP.leaf dcF_eci dc0F_eci h1 hS1 h0.chk (Ext.refl _)
+    have eD1 : s1.mem.arr64 DECL = m.arr64 DECL := hX1.arr _ (.inl rfl)
+    have ek6 : rdW (m.arr64 DECL) (7 + 8 * i) = dw (m.arr64 DECL) i.toNat 6 :=
+      rdW_dw _ hi8 (by decide) (by decide)
+    rw [eD1, ek6, qSlot_eq, hqk] at h
+    generalize r1.headD 0 = q at hcv1 h
+    obtain ⟨wn, hwn, -, -⟩ := decCV_name hcv1
+    have hqb : q.toNat + 1 < 2 ^ 64 := L.Arena.erecP_lt64 hwn
+    have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [dcNew1])
+    rw [dcNew1_some] at h
+    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgK4])
+    rw [bfgK4_some] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    obtain ⟨ci, a2, hrun2, hS2, hg2, hd2⟩ := hP.basis.quotAt dn vis fe k (q + 1) cv n s1.mem a r2 m2
+      ⟨hS1, h01.chk.state, hpre.quotDn, by rw [hq1]; exact hcv1⟩ h2
+    obtain ⟨hr2, -⟩ := ConRon.Bridge.quotAt_run h01.chk.state h01.chk.readOK hc hrun2
+    obtain ⟨h02, hX2⟩ := h01.step0 hP.leaf dcF_qa dc0F_qa h2 hS2 (hr2.checkOK h01.chk) hr2.ext
+    obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
+      (slNew1_specW p hP.alloc hP.slNew1 n _ _) h3
+    obtain ⟨hdl, hS3, hg3⟩ := new1W_ci hW3 hS2 (decRCI_get hd2)
+    obtain ⟨h03, hX3⟩ := h02.step0 hP.leaf dcF_new1 dc0F_new1 h3 hS3 h02.chk (Ext.refl _)
+    refine ⟨[ci], a2, ?_, ⟨hS3, hg1.trans (hg2.trans hg3), decCIL_pair hdl⟩, h03,
+      hX1.trans (hX2.trans hX3)⟩
+    simp only [ConRon.Arena.declConstants, StateT.run_bind, hrun2, except_ok_bind]
+    rfl
+  | indDecl b nP =>
+    obtain ⟨hk6, hnP, -⟩ := hdecl
+    simp (config := { decide := true }) only [hk6, ↓reduceIte] at h
+    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hdd
+    obtain ⟨bP, hbP, -⟩ := hdd
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [dcKi])
+    rw [dcKi_some] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bfgK4])
+    rw [bfgK4_some] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    obtain ⟨hS1, hg1, -, -, -, hb1, hbt1⟩ := indBlockToErec_ok hP.ibe h1 hpre.stage hpre.decl
+      (hpre.front b nP rfl) hpre.dsize hpre.psize
+    obtain ⟨h01, hX1⟩ := h0.step0 hP.leaf dcF_ibe dc0F_ibe h1 hS1 h0.chk (Ext.refl _)
+    have eD1 : m1.arr64 DECL = m.arr64 DECL := hX1.arr _ (.inl rfl)
+    have ek4 : rdW (m.arr64 DECL) (5 + 8 * i) = dw (m.arr64 DECL) i.toNat 4 :=
+      rdW_dw _ hi8 (by decide) (by decide)
+    rw [eD1, ek4] at h2
+    obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+      (di_spec p hP.decl_constants_ind n _ _ _ _) h2
+    obtain ⟨cis, a2, hrun2, hK, h02, hX2⟩ := diW_ok hP h01 ⟨hb1, hbt1⟩ hbP hnP hW2
+    exact ⟨cis, a2, hrun2, ⟨hK.1, hg1.trans hK.2.1, decCIL_pair hK.2.2⟩, h02, hX1.trans hX2⟩
+
 /-! ## The refinements -/
 
 /-- **`decl_constants(i)` refines `declConstants d`**: the constants record `i` installs, in
@@ -729,7 +860,18 @@ theorem declConstants_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → 
     RefAM p "decl_constants" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declConstants d)
       (fun m m' a r x => KeepPost vis fe decCIL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m' ∧
         DeclTwin dn fe m' a) := by
-  sorry
+  intro n s₀ a₀ hpre
+  obtain ⟨env, h0⟩ := hpre.dcSt
+  refine triple_post (callW_spec p n "decl_constants" [i] s₀) ?_
+  rintro r s' ⟨hloc, hc⟩
+  obtain ⟨s'', hs'', -, hW⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (dcon_spec p hp.decl_constants n _ i) hc
+  rw [hs''] at hW
+  obtain ⟨cis, a', hrun, hK, h1, hX⟩ := dconW_ok hp hpre h0 hW
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  refine ⟨hloc, hok, ?_⟩
+  rw [hst, hres]
+  exact ⟨hK, dc_post h1 hX (flag0_of hpre.stage.check hpre.off)⟩
 
 /-- **`decl_tables(i)` refines `declTables d`**: the projection tables record `i` installs, an
 `IW` slice of `EREC` table records. -/
