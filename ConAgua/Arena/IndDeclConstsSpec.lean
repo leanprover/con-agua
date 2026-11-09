@@ -64,6 +64,11 @@ structure DeclConstsPre (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   off : a.store.scratchOn = false
   /-- The twin-side invariants (`DeclTwin`). -/
   tw : DeclTwin dn fe m a
+  /-- The block's parameter count leaves room for one more (`struct_proj_bodies` computes
+  `o + nP - 1 - k`). -/
+  nPb : ∀ b nP, d = .indDecl b nP → nP + 1 < 2 ^ 64
+  /-- The declaration denotes (`block_shape`'s refinement reads the block's denotation). -/
+  den : ∃ dd, Frontend.denoteDecl a.store d = some dd
 
 /-- What the stream index's builder keeps across the two: the front's records (`DECL`, `DLP`), the
 first counters (`FIRSTS`), the index rows (arrays 129‥134, both tiers) and the counters `CTL[128]`, `CTL[130]` and the core's memos. -/

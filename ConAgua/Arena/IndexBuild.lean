@@ -407,7 +407,8 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
     ⟨hS2, by rw [eD2, eP2, ← hdk]; exact hR.decls.recs _ hlt,
       fun b nP e => hR.front _ hlt b nP (hdk.trans e), hR.drv.state, hR.quotDn, hM2,
       by rw [eD2]; exact hR.decls.dsize, by rw [eP2]; exact hR.decls.psize, hR.off,
-      declTwin_of hT2 hp2 hM2 hR.drv⟩
+      declTwin_of hT2 hp2 hM2 hR.drv,
+      sorry /- ronsync2 p4c: nPb/den -/, ⟨dd, hden⟩⟩
   obtain ⟨s3, hs3, -, hok3, ⟨hS3, hg3, hL3⟩, hM3, hK3, hT3⟩ := triple_of_callW
     (L.Ind.declConstants_refines hP.toDeclConstsProg dn 0 (bEnv I.base 0 0) k d n
       ⟨m2, Locals.init []⟩ a hpre2) h2
@@ -455,7 +456,8 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
       fun b nP e => hR.front _ hlt b nP (hdk.trans e), hdrv3.state, hR.quotDn.ext hx3, hM4,
       by rw [eD4]; exact hR.decls.dsize, by rw [eP4]; exact hR.decls.psize, hoff3,
       declTwin_of ((hT3.twin.frame hf4 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).bEnv0 _)
-        (by rw [pinW_frame hf4 (by decide)]; exact hT3.pin) hM4 hdrv3⟩
+        (by rw [pinW_frame hf4 (by decide)]; exact hT3.pin) hM4 hdrv3,
+      sorry /- ronsync2 p4c: nPb/den -/, ⟨dd, hden3⟩⟩
   obtain ⟨s5, hs5, -, hok5, ⟨hS5, hg5, hL5⟩, hM5, hK5, hT5⟩ := triple_of_callW
     (L.Ind.declTables_refines hP.toDeclConstsProg dn 0 _ k d n ⟨s4.mem, Locals.init []⟩ _ hpre5) h5
   subst hs5
