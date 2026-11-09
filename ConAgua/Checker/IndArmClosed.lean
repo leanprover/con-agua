@@ -179,7 +179,7 @@ open L.Arena L.Ind L.Compiler
 /-! ## The checks -/
 
 prog_all checkerProg_armChk : checkerProg
-  (wsChkM CTL [armPosT, armHbT, armRcT, armTaT, armCidT, armRcHbT, armMaT, armMcT, armAbsT])
+  (wsChkM CTL [armPosT, armHbT, armRcT, armTaT, armCidT, armRcHbT, armMaT, armMcT, armAbsT, armOwnT])
 
 theorem checkerProg_armPosChk :
     ∀ x ∈ checkerProg, wsChkL CTL armPosT.1 armPosT.2.1 armPosT.2.2.1 armPosT.2.2.2 x = true :=
@@ -207,6 +207,9 @@ theorem checkerProg_armMcChk :
   wsChk_of_all checkerProg_armChk (by simp)
 theorem checkerProg_armAbsChk :
     ∀ x ∈ checkerProg, wsChkL CTL armAbsT.1 armAbsT.2.1 armAbsT.2.2.1 armAbsT.2.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
+theorem checkerProg_armOwnChk :
+    ∀ x ∈ checkerProg, wsChkL CTL armOwnT.1 armOwnT.2.1 armOwnT.2.2.1 armOwnT.2.2.2 x = true :=
   wsChk_of_all checkerProg_armChk (by simp)
 
 end L.Checker

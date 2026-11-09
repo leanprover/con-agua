@@ -13,6 +13,17 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.IndT.RecsTemp
+import ConAgua.Arena.RecGenSpec.FlushStage
+import ConAgua.Arena.CoreRefine
+import ConAgua.Arena.ScratchRefine
+import ConAgua.Arena.IndT.GenRec1
+import ConAgua.Arena.IndT.PassCS
+import ConAgua.Arena.IndInstallSpec.PapW
+import ConAgua.Arena.IndInstallSpec.IcvgW
+public import ConAgua.Arena.IndT.IdxSorts
+public import ConAgua.Arena.IndT.GenRec3
+import all ConRon.Bridge.Inductives.BlockTail
 
 @[expose] public section
 
@@ -167,6 +178,218 @@ theorem skc_ref {p : Prog} (hL : CbrLook p) {G : Prop} (pp : Word) (bs : BlockSh
     intro _
     simp only [ConRon.Arena.streamKCheck, hc']
     exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
+
+/-! ## `stream_recs_check`'s contract -/
+
+local notation "V" => ConLeche.CheckMode.verified
+
+/-- **`stream_recs_check(vis, recs.off, recs.len, gs.off, gs.len)`'s contract** (its refinement is
+another worker's): `streamRecsCheck`, both outcomes, from the stage at the generated family's
+environment, the stream's records and the generated ones decoded and denoted (con-ron's
+`streamRecsCheck_spec`'s pre); the post `IisPost`'s (the stage, the pools grown, `AbsOK`, the
+twin's core step). -/
+def StreamRecsRefS (G : Prop) (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState)
+    (ro rl go gl : Word) (rcs : List RecShape) (gs : List (IConstantVal × TargetMajor × List EIdx))
+    (rcsP : List ConLeche.RecShape)
+    (gsP : List (ConLeche.ConstantVal × ConLeche.TargetMajor × List ConLeche.Expr)),
+    StageC dn vis fe env m a → AbsOK m → ConLeche.EnvWF env →
+    PSlR decRS rcs ro rl m → PSlR decRR gs go gl m →
+    rcs.mapM (ConRon.Bridge.Inductives.dRec a.store) = some rcsP →
+    gs.mapM (ConRon.Bridge.Inductives.dRecOut a.store) = some gsP →
+    RefE G (callE p n "stream_recs_check" [vis, ro, rl, go, gl] m)
+      (ConRon.Arena.streamRecsCheck V fe rcs gs) a
+      (fun rm _ a' => IisPost dn vis fe env m a rm.2 a')
+
+/-- The stream's records, a slice below the top (`RecsB`). -/
+theorem recsPSl {m : Mem} {pp : Word} {bs : BlockShape} (hbs : DecB (fun m => decBS m pp.toNat) m bs)
+    (hrb : RecsB m pp) (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    PSlR decRS bs.recs (rdW (m.arr64 IW) (pp + 2)) (rdW (m.arr64 IW) (pp + 3)) m := by
+  have hbs0 : decBS (truncM m) pp.toNat = some bs := hbs
+  obtain ⟨-, hrecs, -⟩ := decBS_some hbs0
+  obtain ⟨o, l, ho, hl, hd⟩ := decAt_some hrecs
+  obtain ⟨-, hom⟩ := rec2IwN_trunc ho
+  obtain ⟨-, hlm⟩ := rec2IwN_trunc hl
+  obtain ⟨e2, t2⟩ := rec2RdN (w := pp) (k := 2) hom hsz
+  obtain ⟨e3, t3⟩ := rec2RdN (w := pp) (k := 3) (by simpa [Nat.add_assoc] using hlm) hsz
+  simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at e2 e3
+  rw [e2, e3]
+  exact ⟨by show decPL (truncM m) _ _ _ = _; rw [t2, t3]; exact hd,
+    by rw [t2, t3]; exact hrb o l hom (by simpa [Nat.add_assoc] using hlm)⟩
+
+/-- `flush_caches()` as a `Sim` keeping the stage, `AbsOK` and the own rows' counters. -/
+theorem flushSimT {p : Prog} (hF : FlushProg p) (n : Nat) {vis : Word} {fe : IFEnv} {m : Mem}
+    {a : AState} (hS : StageR vis fe m a) (hA : AbsOK m) :
+    Sim (callW p n "flush_caches" [] m) ConRon.Arena.flushCaches a
+      (fun _ _ m' a' => a' = { a with caches := Caches.empty } ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
+        AbsOK m' ∧ ownC m' = ownC m) := by
+  intro r m' hc
+  obtain ⟨s', hs', -, hfok, hfm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (flushCaches_spec p hF n _) hc
+  subst hs'
+  obtain ⟨hS', hg⟩ := flush_stage hS hfok
+  refine ⟨(), _, flushCaches_run a, rfl, by rw [hfm]; exact hS', by rw [hfm]; exact hg,
+    by rw [hfm]; exact AFr.of_frame (flushMem_frame _) (by decide) (by decide) hA,
+    by rw [hfm]; exact ownC_frame (flushMem_frame _) (by simp) (by decide)⟩
+
+/-- The lookups of `check_block_tail_stream`'s callees. -/
+structure TsProg (p : Prog) : Prop where
+  look : TsLook p
+  cbr : CbrLook p
+  pu : p.lookup "erec_put" = some erecPut
+  cbrt : CbrtLook p
+  rs : p.lookup "env_row_set" = some envRowSetL
+  push : p.lookup "env_push" = some envPushL
+  rg : p.lookup "env_row_get" = some envRowGetL
+  ia : p.lookup "iw_alloc" = some iwAlloc
+  r3 : p.lookup "rec3" = some rec3
+  cp : p.lookup "iw_copy" = some iwCopy
+  sn : p.lookup "sl_snoc" = some slSnoc
+  ept : p.lookup "env_pop_temp" = some envPopTempL
+  gpa : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll
+  flush : FlushProg p
+
+/-- **`check_block_tail_stream` refines `tailStreamT`, both outcomes** (con-ron's `checkBlockTail_of`
+from "the K flags" to "the flush leaving them"): `stream_k_check` (`skc_ref`), the generated family's
+records (`blockRecInfosTF_refines`), pushed in place (`cbrt_call`; con-ron's `consBlockRecsTemp_ok`),
+a flush, the stream's recursors (the contract), the pops (`genRecCheckPopAll_refines`; con-ron's
+`consBlockRecsTemp_pop`), a flush. -/
+theorem ts_ref {p : Prog} {dn : NIdx → Option ConLeche.Name} {G : Prop} (hG : G → closedNV p _root_.L.Checker.nvFns = true)
+    (P : TsProg p) (hsr : StreamRecsRefS G p dn)
+    (hRc : ∀ f ∈ ["block_rec_infos_tf", "cons_block_recs_temp", "flush_caches", "stream_recs_check",
+      "gen_rec_check_pop_all"], RcKeepF p f)
+    (hAk : AbsKeep p "cons_block_recs_temp") (hAp : AbsKeep p "gen_rec_check_pop_all")
+    (hOwn : OwnKeepF p "stream_recs_check") (n : Nat) (hn : n ≤ 2 ^ 62 + 1)
+    {vis : Word} {fe : IFEnv} {env₂ : ConLeche.Env} {m : Mem} {a : AState} {pp go gl : Word}
+    {bs : BlockShape} {bsP : ConLeche.BlockShape} {gs : List (IConstantVal × TargetMajor × List EIdx)}
+    {gsP : List (ConLeche.ConstantVal × ConLeche.TargetMajor × List ConLeche.Expr)}
+    (hC : StageC dn vis fe env₂ m a) (hA : AbsOK m) (hR : RcMR m)
+    (hrel : ConRon.Bridge.Inductives.EnvRel env₂ fe a.store)
+    (henvG : ConLeche.EnvWF (ConLeche.consBlockRecsT bsP 0 gsP env₂))
+    (hbs : DecB (fun m => decBS m pp.toNat) m bs) (hrb : RecsB m pp) (hp3 : pp.toNat + 3 < iwTop m)
+    (hgs : PSlR decRR gs go gl m) (hsh : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
+    (hgP : gs.mapM (ConRon.Bridge.Inductives.dRecOut a.store) = some gsP) :
+    RefE G (ctsE p n m pp vis go gl) (tailStreamT V bs fe gs) a
+      (fun v fe' a' => TsPost dn env₂ m a v.1 fe' v.2 a') := by
+  rcases n with _ | n
+  · rw [ctsE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  rw [ctsE.arm1]
+  unfold tailStreamT
+  have hsz := hC.stage.iw.iwSize
+  have hrs := recsPSl hbs hrb hsz
+  obtain ⟨-, hrecsP, -⟩ := ConRon.Bridge.Inductives.dShape_inv hsh
+  -- `stream_k_check`
+  refine RefE.bindE (fun _ => ctsE.k_stream_k_check.none ..) id
+    (RefE.ofCallE (s₀ := ⟨m, Locals.init []⟩) (G := G) (skcE_spec p P.look n _ pp _ _ go gl) hG
+      (skc_ref P.cbr pp bs n m a _ _ go gl bs.recs gs hbs hrs hgs hsz)) fun ⟨r1, m1⟩ y a1 hrun1 ⟨s1, hs1, _, ha1, hm1⟩ => ?_
+  simp only at hs1 hm1 ha1
+  subst a1
+  have em1 : m1 = m := by rw [← hs1]; exact hm1
+  subst m1
+  rw [ctsE.k_stream_k_check.arm1]
+  have hsm : s1.mem = m := by simp_all
+  rw [hsm]
+  -- `block_rec_infos_tf`
+  have hml : (0 : Word).toNat + gl.toNat < 2 ^ 64 := by simpa using gl.toNat_lt
+  refine RefE.bindSim (fun _ => ctsE.k_block_rec_infos_tf.none ..)
+    (Q := fun r infos m2 a2 => decPL m2 (decCI (erecP m2)) (r.headD 0).toNat (r.tail.headD 0).toNat = some infos ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m2 ∧ StageR vis fe m2 a2 ∧ IWGrow m m2 ∧ AbsOK m2 ∧
+      callW p n "block_rec_infos_tf" [pp, 0, go, gl] m = some (r, m2))
+    (fun r m2 hc => by
+      obtain ⟨s', hs', -, infos, a2, hrun, hd, hb, hS, hg, hA2⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+        (blockRecInfosTF_refines p P.cbr P.pu n _ a fe vis pp 0 go gl bs gs hC.stage hbs hgs hml hA) hc
+      subst hs'
+      exact ⟨infos, a2, by simpa using hrun, hd, hb, hS, hg, hA2, hc⟩)
+    fun r2 infos m2 a2 _ hrun2 ⟨hd2, hb2, hS2, hg2, hA2, c2⟩ => ?_
+  rw [ctsE.k_block_rec_infos_tf.arm1]
+  obtain ⟨p2, hinfos⟩ := ConRon.Bridge.Inductives.blockRecInfosTF_run bs bsP gs gsP 0 a a2 infos
+    hC.check.state hsh hgP hrun2
+  have hR2 : RcMR m2 := hRc _ (by simp) _ _ _ _ _ c2 hR
+  -- `cons_block_recs_temp` (the twin's pure `consBlockRecsTemp`)
+  refine RefE.onlySim (fun _ => ctsE.k_cons_block_recs_temp.none ..)
+    (Q := fun r m3 => callW p n "cons_block_recs_temp" [r2.headD 0, r2.tail.headD 0, vis, 0, 0] m2 = some (r, m3))
+    (fun r m3 hc => hc) fun r3 m3 c3 => ?_
+  obtain ⟨hS3, hg3, hsp3, cs, hspc3, hPop3⟩ := cbrt_call P.cbrt P.rs P.push P.rg P.ia P.r3 P.cp P.sn c3 hS2 hd2 hb2
+  have hA3 : AbsOK m3 := hAk _ _ _ _ _ c3 hA2
+  have hR3 : RcMR m3 := hRc _ (by simp) _ _ _ _ _ c3 hR2
+  rw [ctsE.k_cons_block_recs_temp.arm1]
+  generalize hX : ConRon.Arena.consBlockRecsTemp infos fe [] = X at hS3 hsp3
+  obtain ⟨news, hn, hpop⟩ := ConRon.Bridge.Inductives.BT.consBlockRecsTemp_pop infos fe []
+  have hienvG := ConRon.Bridge.Inductives.BT.consBlockRecsTemp_ok p2.ok infos _ fe env₂ [] hinfos
+    (hrel.mono p2.ext).ifenv hrel.gate hrel.stored
+  rw [hX] at hn hpop hienvG
+  rw [← ConRon.Bridge.Inductives.consBlockRecsT_eq] at hienvG
+  obtain ⟨feG, prevs⟩ := X
+  simp only [List.nil_append] at hn
+  subst hn
+  dsimp only at hS3 hsp3 hpop hienvG ⊢
+  -- the flush entering it
+  refine RefE.bindSim (fun _ => ctsE.k_flush_caches.none ..) (flushSimT P.flush n hS3 hA3)
+    fun r4 _ m4 a4 c4 hrun4 ⟨ha4, hS4, hg4, hA4, hown4⟩ => ?_
+  have hR4 : RcMR m4 := hRc _ (by simp) _ _ _ _ _ c4 hR3
+  rw [ctsE.k_flush_caches.arm1]
+  obtain ⟨hck4, i4, hst4⟩ := ConRon.Bridge.Inductives.ReadOK.flush
+    (⟨p2.ok, hC.check.pins.mono p2.ext p2.pins, hienvG⟩ : ConRon.Bridge.Inductives.ReadOK _ _ a2) hrun4
+  have hx4 : ConRon.Arena.Ext a.store a4.store := by rw [hst4]; exact p2.ext
+  have hg04 := (hg2.trans hg3).trans hg4
+  have hC4 : StageC dn (r3.headD 0) feG _ m4 a4 := StageC.of_checkE hC hS4 hA4 hck4 hx4
+  -- the stream's recursors
+  have hbs4 := hbs.grow (decBS_mono _) hg04
+  have hrb4 := hrb.grow hg04 hp3
+  refine RefE.bindE (fun _ => ctsE.k_stream_recs_check.none ..) id
+    (RefE.callOk (hsr n (by omega) (r3.headD 0) feG _ m4 a4 _ _ go gl bs.recs gs bsP.recs gsP hC4 hA4 henvG
+      (recsPSl hbs4 hrb4 hS4.iw.iwSize) (hgs.grow (fun q => decRR_mono q) hg04)
+      (ConRon.Bridge.Inductives.dRec_ext.list hx4 _ _ hrecsP)
+      (ConRon.Bridge.Inductives.dRecOut_ext.list hx4 _ _ hgP))
+      (R' := fun rm _ a' => IisPost dn (r3.headD 0) feG _ m4 a4 rm.2 a' ∧ RcMR rm.2 ∧ ownC rm.2 = ownC m4)
+      fun rm _ _ hc h => ⟨h, hRc _ (by simp) _ _ _ _ _ (callW_of_callE hc) hR4,
+        hOwn _ _ _ _ _ (callW_of_callE hc)⟩)
+    fun ⟨r5, m5⟩ _ a5 hrun5 ⟨hP5, hR5, hown5⟩ => ?_
+  rw [ctsE.k_stream_recs_check.arm1]
+  have hS5 := hP5.stage.stage
+  have hg5 := hP5.grow
+  -- the pops (the twin's pure fold)
+  refine RefE.onlySim (fun _ => ctsE.k_gen_rec_check_pop_all.none ..)
+    (Q := fun r m6 => callW p n "gen_rec_check_pop_all" [r3.headD 0, r3.tail.headD 0, r3.tail.tail.headD 0] m5 = some (r, m6))
+    (fun r m6 hc => hc) fun r6 m6 c6 => ?_
+  have hg45 := hg4.trans hg5
+  obtain ⟨s6, hs6, -, hS6, hg6⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
+    (genRecCheckPopAll_refines P.rs P.ept P.gpa n _ a5 (r3.headD 0) feG _ _ prevs cs hS5
+      (hsp3.grow hg45) (hspc3.grow hg45) (by rw [hown5, hown4]; exact hPop3)) c6
+  subst hs6
+  have hA6 : AbsOK s6.mem := hAp _ _ _ _ _ c6 hP5.abs
+  have hR6 : RcMR s6.mem := hRc _ (by simp) _ _ _ _ _ c6 hR5
+  rw [ctsE.k_gen_rec_check_pop_all.arm1]
+  have hx5 : ConRon.Arena.Ext a.store a5.store := hx4.trans hP5.core.ext
+  have hrel₃ : ConRon.Bridge.Inductives.EnvRel env₂
+      (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feG) a5.store :=
+    ConRon.Bridge.Inductives.BT.EnvRel.feq hpop (hrel.mono hx5)
+  -- the flush leaving them
+  refine RefE.bindSim (fun _ => ctsE.k_flush_caches_2.none ..) (flushSimT P.flush n hS6 hA6)
+    fun r7 _ m7 a7 c7 hrun7 ⟨ha7, hS7, hg7, hA7, _⟩ => ?_
+  rw [ctsE.k_flush_caches_2.arm1]
+  obtain ⟨hck7, i7, hst7⟩ := ConRon.Bridge.Inductives.ReadOK.flush
+    (⟨hP5.core.ok.state, hP5.core.ok.pins, hrel₃.ifenv⟩ : ConRon.Bridge.Inductives.ReadOK _ _ a5) hrun7
+  have hx7 : ConRon.Arena.Ext a.store a7.store := by rw [hst7]; exact hx5
+  refine RefE.ret rfl ⟨StageC.of_checkE hC hS7 hA7 hck7 hx7, by rw [hst7]; exact hrel₃,
+    hg04.trans (hg5.trans (hg6.trans hg7)), hA7, hRc _ (by simp) _ _ _ _ _ c7 hR6, ?_⟩
+  exact ((p2.toInst.trans i4).trans (hP5.core.toInst)).trans i7
+
+/-- **`check_block_tail_stream`'s contract** (`TsRefS`): `ts_ref` through the call. -/
+theorem tsRefS_of {p : Prog} {dn : NIdx → Option ConLeche.Name} (P : TsProg p)
+    (hsr : StreamRecsRefS (VerdictCtxU p) p dn)
+    (hRc : ∀ f ∈ ["block_rec_infos_tf", "cons_block_recs_temp", "flush_caches", "stream_recs_check",
+      "gen_rec_check_pop_all"], RcKeepF p f)
+    (hAk : AbsKeep p "cons_block_recs_temp") (hAp : AbsKeep p "gen_rec_check_pop_all")
+    (hOwn : OwnKeepF p "stream_recs_check") : TsRefS (VerdictCtxU p) p dn := by
+  intro n hn vis fe env₂ m a pp go gl bs bsP gs gsP hC hA hR hrel henvG hbs hrb hp3 hgs hsh hgP
+  have h := RefE.ofCallE (s₀ := ⟨m, Locals.init []⟩) (G := VerdictCtxU p) (ctsE_spec p P.look n _ pp vis go gl)
+    (fun (hG : VerdictCtxU p) => hG.nv)
+    (ts_ref (fun (hG : VerdictCtxU p) => hG.nv) P hsr hRc hAk hAp hOwn n (by omega) hC hA hR hrel henvG hbs
+      hrb hp3 hgs hsh hgP)
+  refine RefE.callOk h fun ⟨r, m'⟩ x a' _ hR => ?_
+  obtain ⟨s', hs', -, hR⟩ := hR
+  simp only at hs'; subst hs'
+  exact hR
 
 end L.Ind
 

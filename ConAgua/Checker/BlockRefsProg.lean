@@ -11,6 +11,7 @@ public import ConAgua.Arena.IndT.PassNsd
 public import ConAgua.Arena.IndT.PassBnc
 public import ConAgua.Arena.IndT.Positivity
 public import ConAgua.Arena.IndT.RecGen21
+public import ConAgua.Arena.IndT.TailStream
 import ConAgua.Checker.ArmsT
 import ConAgua.Verdict.PosKnotE
 import ConAgua.Checker.IndArmTrees1
@@ -263,6 +264,66 @@ theorem nsdRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData +
   exact nsdRefS_of L hAP.kp hAP.ilpf hAP.lc hF hFk hWt
     (wmKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
       (mem_of_tree armMcTree.eq (by decide +kernel)) (mem_of_tree armTaTree.eq (by decide +kernel)))
+
+/-! ## The tail's facts -/
+
+/-- **The own rows' counters kept** by a function of `armOwnFns` (`checkerProg_armOwn`). -/
+theorem ownKeep_checker (bs : List UInt8) {f : FnName} (hf : f ∈ armOwnFns) :
+    OwnKeepF (Prog.subPB bs checkerProg) f := by
+  intro n vs m r m' h
+  refine ownC_frame (run_memFrame (closedW_subPB bs checkerProg_armOwn) hf (Arena.run_of_callW h)).1 ?_
+    (by decide +kernel)
+  intro b hb g t he
+  have hn := (List.mem_filter.mp hb).2
+  subst he
+  revert hn
+  unfold tierA oixArr; generalize (t &&& 1 != 0) = c
+  cases c <;> split <;> (try split) <;> decide
+
+/-- **The recursor stage's memos kept** by a function of `armRcFns` (`checkerProg_armRc`). -/
+theorem rcKeep_checker (bs : List UInt8) {f : FnName} (hf : f ∈ armRcFns) :
+    RcKeepF (Prog.subPB bs checkerProg) f := by
+  have hus : UsF (Prog.subPB bs checkerProg) := by prog_bundle []
+  exact fun _ _ _ _ _ h hM => RcMR.ofClosedL (closedWL_subPB bs checkerProg_armRc) hus hf h hM
+
+/-- **A well-formed `MAM` memo kept** by a function of `armMaFns` (`checkerProg_armMa`). -/
+theorem maKeep_checker (bs : List UInt8) {f : FnName} (hf : f ∈ armMaFns) :
+    MaKeepF (Prog.subPB bs checkerProg) f := by
+  have hma : MaProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  exact fun _ _ _ _ _ h hM => maMR.ofClosedL (closedWL_subPB bs checkerProg_armMa) hma hf h hM
+
+/-- `check_block_rec`'s `MaKeepF` callees (`icr_ref`'s `hMa`). -/
+theorem grcMaKeep_checker (bs : List UInt8) :
+    ∀ f ∈ ["gen_rec_check_prep", "class_fe_r", "block_shape_names_of", "flush_caches"],
+      MaKeepF (Prog.subPB bs checkerProg) f := by
+  intro f hf
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
+  rcases hf with rfl | rfl | rfl | rfl <;> exact maKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
+
+set_option maxRecDepth 20000 in
+/-- **`gen_rec_check`'s program bundle** (`GrcProgE`; `CrsProgE.maKeep` by `maKeep_checker`). -/
+theorem grcProgE_checker (bs : List UInt8) : GrcProgE (Prog.subPB bs checkerProg) := by
+  have hmk : ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
+      callW (Prog.subPB bs checkerProg) n "class_gen_rule" vs m = some (r, m') →
+        (∃ mp, maMR m mp) → ∃ mp, maMR m' mp :=
+    maKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
+  prog_bundle [hmk, checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
+    checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs]
+
+set_option maxRecDepth 20000 in
+/-- **`check_block_tail_stream`'s contract at the substituted checker program** (`tsRefS_of`), from
+`stream_recs_check`'s. -/
+theorem tsRefS_checker (bs : List UInt8) (dn : ConRon.Arena.NIdx → Option ConLeche.Name)
+    (hsr : StreamRecsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn) :
+    TsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
+  have P : TsProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  refine tsRefS_of P hsr (fun f hf => rcKeep_checker bs ?_)
+    (absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free
+      (mem_of_tree armAbsTree.eq (by decide +kernel)))
+    (indArmKeep_checker bs _ (by simp [tailKeepCalleesC, grcKeepCalleesC]))
+    (ownKeep_checker bs (mem_of_tree armOwnTree.eq (by decide +kernel)))
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
+  rcases hf with rfl | rfl | rfl | rfl | rfl <;> exact mem_of_tree armRcTree.eq (by decide +kernel)
 
 set_option maxRecDepth 20000 in
 /-- **`check_block`'s callees' contracts at the substituted checker program.** -/
