@@ -192,7 +192,7 @@ def BswmRefS : Prop :=
 
 /-- What `check_block_pass` hands the tail (from `m`, `a`; the record at `w`): the pools grown,
 the twin's step, `BkSt` at the formers' index (whose view is the record's word `0`) and con-ron's
-`checkBlockPass_of` facts there, the record decoded, the recursors' slice below the top. -/
+`checkBlockPass_of` facts there, the record decoded, the shape's (word `1`) recursors' slice below the top. -/
 structure PassOut (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (w : Word)
     (q : BlockPass) (m' : Mem) (a' : AState) : Prop where
   grow : IWGrow m m'
@@ -205,7 +205,7 @@ structure PassOut (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (w
     ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.memberCtors env₁) ∧
     (∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M) ∧ qP.params.length = qP.p.nP
   record : BPassR (rdW (m'.arr64 IW) w) q.env1 m' w q
-  recs : RecsB m' (rdW (m'.arr64 IW) (w + 3))
+  recs : RecsB m' (rdW (m'.arr64 IW) (w + 1))
 
 /-- **`check_block_pass(vis, p, isRec)`'s contract**: `checkBlockPass`, both outcomes, from
 `BkSt` and `checkBlockPass_of`'s preconditions. -/
@@ -233,7 +233,7 @@ def TailRefS : Prop :=
   ∀ (n : Nat) (vis : Word) (env₁ : ConLeche.Env) (m : Mem) (a : AState) (bO bL w : Word)
     (block : List IConstantInfo) (blockP : List ConLeche.ConstantInfo) (q : BlockPass)
     (qP : ConLeche.BlockPass ConLeche.Env),
-    BkSt dn vis q.env1 env₁ m a → BPassR vis q.env1 m w q → RecsB m (rdW (m.arr64 IW) (w + 3)) →
+    BkSt dn vis q.env1 env₁ m a → BPassR vis q.env1 m w q → RecsB m (rdW (m.arr64 IW) (w + 1)) →
     DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block → bO.toNat + bL.toNat ≤ erTop m →
     Frontend.denoteCIList a.store block = some blockP → BlockLpsDn dn block →
     ConRon.Bridge.Inductives.EnvRel env₁ q.env1 a.store → ConLeche.EnvWF env₁ →

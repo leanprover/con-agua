@@ -4,22 +4,16 @@ import ConAgua.Verdict.DeclDefnE
 import ConAgua.Verdict.DeclArmsE
 import ConAgua.Verdict.DeclAxiomE
 import ConAgua.Verdict.DeclQuotE
-import ConAgua.Arena.DeclNatSubAll
-import ConAgua.Arena.StrLitSup
-public import ConAgua.Arena.CheckerT
+public import ConAgua.Arena.Jobs
 
 @[expose] public section
 /-!
-# Phase A's fold: what its error arms assume, from the leaves' claims
+# The jobs: what their error arms assume, from the leaves' claims
 
-`istgG_of`: `IstgG`, what `fold_ref`'s error half (`CheckerT.lean`) assumes, from the program
-hypotheses of the ok refinement (`LoopCallees`) and the claims of what lies outside the
-declaration family:
-
-* `CoreStubsE p`: the core stubs' error claims (`DeclValE.lean`),
-* `IndArmSpecE p dn`: the inductive arm's (`check_ind_decl`),
-* `closedNV p nvFns`: the callees outside the verdict closure claim nothing,
-* `UceLookups p`: `unresolved_consts_error` and its walks at their names (`UnresolvedE.lean`).
+`jobG_of`: `JobG`, what the jobs' error halves (`Arena/Jobs.lean`) assume, from the arms' error
+claims (`armsE_of`, under the hypotheses of the arms' ok refinements and `VerdictCtxU`: the core
+stubs' error claims, `unresolved_consts_error`'s program, the closed no-verdict callees) and the
+inductive arm's (`IndArmSpecE p dn`, `check_ind_decl`).
 -/
 
 set_option experimental.vcgen true
@@ -36,38 +30,23 @@ section top
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
   (p : Prog)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`check_decl`'s arms' error claims** (`ArmsE`), from their theorems. -/
-theorem armsE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hDG : DivGateSpecE p pins)
-    (hnv : closedNV p L.Checker.nvFns = true) (hUL : UceLookups p) : ArmsE pins dn ds p := by
-  have hkp : CrKeep p := ⟨hdc.indMemo, hdc.crf⟩
-  have hap := hdc.cd.crp.apd
-  have hU : UceProg p := ⟨hUL, strLitStored_core p hdc.knot.knot.str⟩
-  have hivE : IvgE p := ivgE_okT hdc.cvg hap hkp hnv hU
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · exact fun cv => checkDeclAxiom_errT pins dn ds hdc.cd.axp hdc.knot hdc.leaf hap hkp hnv hcE hUL hdc.dninj hdc.quotDn cv
-  · exact fun cv v hh => checkDeclDefn_errT pins dn ds hdc.cd.arm hdc.cd.val
-      ⟨hdc.cd.df, hdc.cd.natSub, hdc.cd.natGate, hdc.cd.natCert, hdc.cd.natText,
-        divGateSpecC hdc.cd.dm hdc.knot hdc.leaf hdc.cd.dgClosed (substC0_of hdc.cd.natSub.toNatSubProg)
-          (substCAll_of ⟨hdc.cd.natSub.toNatSubProg, hdc.cd.dm.lSubstConstAll⟩) hkp pins⟩
-      hdc.knot hdc.leaf hdc.loop hap hkp hnv hcE hUL hivE hDG hdc.dninj cv v hh
-  · exact fun cv v => checkDeclThm_errT pins dn ds hdc.cd.val hdc.knot hap hkp hnv hcE hUL hivE
-      hdc.cd.th cv v
-  · exact fun cv v => checkDeclOpaque_errT pins dn ds hdc.cd.val hdc.cd.crp hdc.knot hdc.leaf hdc.loop
-      hap hkp hnv hcE hUL hivE hdc.dninj hdc.cd.op cv v
-  · exact fun k cv => checkDeclQuot_errT pins dn ds hdc.cd.quot hdc.cd.val.rcp hdc.dninj hdc.quotDn hnv k cv
--/
+/-- **`check_decl`'s arms' error claims** (`ArmsE`), from their theorems, under the hypotheses of
+their ok refinements (`checkerProg_cdProgPB`'s) and the verdict context. -/
+theorem armsE_of (hax : AxArmProg p) (hdf : DefnProgT p) (hth : ThmArmProg p)
+    (hop : OpqArmProg p) (hqa : QuotArmProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
+    (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) (hC : CcvSims p dn)
+    (hQs : QuotSims p dn) (hdn : DnInj dn) (hG : VerdictCtxU p) : ArmsE pins dn ds p where
+  axiom_ := checkDeclAxiom_errT pins dn ds hax hq hcl hap hkp hcrf hC hQs hdn hG
+  defn := checkDeclDefn_errT pins dn ds hdf hq hcl hap hkp hcrf hC hG
+  thm := checkDeclThm_errT pins dn ds hth hq hcl hap hkp hcrf hC hG
+  opaque_ := checkDeclOpaque_errT pins dn ds hop hq hcl hap hkp hcrf hC hG
+  quot := checkDeclQuot_errT pins dn ds hqa hQs hG.nv
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **What phase A's fold's error arms assume** (`IstgG`: `check_decl`'s arms' and inductive arm's
-claims, `install_value`'s), from the leaves' error claims: the whole declaration family. -/
-theorem istgG_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : IndArmSpecE p dn)
-    (hDG : DivGateSpecE p pins) (hnv : closedNV p L.Checker.nvFns = true) (hUL : UceLookups p) :
-    IstgG pins dn ds p := by
-  have hU : UceProg p := ⟨hUL, strLitStored_core p hdc.knot.knot.str⟩
-  exact ⟨⟨armsE_of pins dn ds p hdc hcE hDG hnv hUL, hia⟩,
-    ⟨hnv, hU, ivgE_okT hdc.cvg hdc.cd.crp.apd ⟨hdc.indMemo, hdc.crf⟩ hnv hU⟩⟩
--/
+/-- **What the jobs' error claims assume** (`JobG`: `check_decl`'s arms' and the inductive arm's
+claims, the callees outside the verdict closure claiming nothing). -/
+theorem jobG_of (hA : ArmsE pins dn ds p) (hia : IndArmSpecE p dn)
+    (hnv : closedNV p L.Checker.nvFns = true) : JobG pins dn ds p :=
+  ⟨⟨hA, hia⟩, hnv⟩
 
 end top
 

@@ -90,13 +90,13 @@ theorem tailE {β γ : Type} {K : Except Err γ → Except Err β} {x : Except E
 /-- The defeq family's callees outside the verdict closure. -/
 def defeqNVList : List FnName :=
   ["de_find", "de_put", "is_bool_true", "has_fvar", "head_is_proj", "lvls_eq_c", "lvl_eq_c",
-   "pin_word", "pin_at", "str_lit_supported", "str_lit_ctor", "get_app_args", "get_app_fn",
+   "pin_word", "pin_at", "str_lit_ctor", "get_app_args", "get_app_fn",
    "inst_list", "lams_inst", "peel_push", "spine_head", "same_const_heads", "head_hint", "hint_lt",
    "unfoldable_head", "lazy_fold_ok", "is_eager_reduce", "unfold_definition", "lit_eq", "e_view",
    "is_nat_zero", "nat_pred", "lam_pair", "intern_fvar", "inst1", "inst_list"]
 
-theorem defeqNV : ∀ f ∈ defeqNVList, f ∈ L.Checker.nvFns := by
-  sorry
+theorem defeqNV : ∀ f ∈ defeqNVList, f ∈ L.Checker.nvFns :=
+  _root_.L.Checker.nv_sub (by decide +kernel)
 
 /-- A callee of the list fails with class `0`: its failure claims nothing. -/
 theorem ErrClaim.of_nv {α : Type} {T : AM α} {a : AState} {p : Prog}

@@ -295,11 +295,44 @@ theorem slAt_ok {kk : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (h
   rw [erSlAtB_lit hij, e1, e2, e1', e2']
   exact erSlEqB_ok hR hs hs'
 
-theorem capsEqAll_ok {R : Nat → Option Word} {rd : Word → Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+theorem capsEqAll_ok {R : Nat → Option Word} {rd : Word → Word}
     (hR : RdOK R rd) {q r : Word} {x y : IIndCaps}
     (hx : decCaps R q.toNat = some x) (hy : decCaps R r.toNat = some y) :
     capsEqAll rd q r = decide (x = y) := by
-  sorry
+  simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx hy
+  obtain ⟨b0, h0, c1, h1, n2, h2, n3, h3, b4, h4, n5, h5, n6, h6, al, h8, n12, h9, ct, h10, ex⟩ := hx
+  have ex := Option.some.inj ex; subst ex
+  obtain ⟨b0', h0', c1', h1', n2', h2', n3', h3', b4', h4', n5', h5', n6', h6', al', h8', n12',
+    h9', ct', h10', ey⟩ := hy
+  have ey := Option.some.inj ey; subst ey
+  obtain ⟨w0, f0, rfl⟩ := boolW0_ hR h0
+  obtain ⟨w0', f0', rfl⟩ := boolW0_ hR h0'
+  obtain ⟨w1, f1, l1, rfl⟩ := hdW_ (q := q) (k := 1) (kn := 1) hR rfl h1
+  obtain ⟨w1', f1', l1', rfl⟩ := hdW_ (q := r) (k := 1) (kn := 1) hR rfl h1'
+  obtain ⟨w2, f2, rfl⟩ := natW_ (q := q) (k := 2) (kn := 2) hR rfl h2
+  obtain ⟨w2', f2', rfl⟩ := natW_ (q := r) (k := 2) (kn := 2) hR rfl h2'
+  obtain ⟨w3, f3, rfl⟩ := natW_ (q := q) (k := 3) (kn := 3) hR rfl h3
+  obtain ⟨w3', f3', rfl⟩ := natW_ (q := r) (k := 3) (kn := 3) hR rfl h3'
+  obtain ⟨w4, f4, rfl⟩ := boolW_ (q := q) (k := 4) (kn := 4) hR rfl h4
+  obtain ⟨w4', f4', rfl⟩ := boolW_ (q := r) (k := 4) (kn := 4) hR rfl h4'
+  obtain ⟨w5, f5, rfl⟩ := natW_ (q := q) (k := 5) (kn := 5) hR rfl h5
+  obtain ⟨w5', f5', rfl⟩ := natW_ (q := r) (k := 5) (kn := 5) hR rfl h5'
+  obtain ⟨w6, f6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hR rfl h6
+  obtain ⟨w6', f6', rfl⟩ := natW_ (q := r) (k := 6) (kn := 6) hR rfl h6'
+  obtain ⟨w12, f12, rfl⟩ := natW_ (q := q) (k := 12) (kn := 12) hR rfl h9
+  obtain ⟨w12', f12', rfl⟩ := natW_ (q := r) (k := 12) (kn := 12) hR rfl h9'
+  have hal := slAt_ok hR (q := q) (r := r) (i := 10) (j := 11) (kn := 10) rfl rfl rfl h8 h8'
+  have hct := slAt_ok hR (q := q) (r := r) (i := 13) (j := 14) (kn := 13) rfl rfl rfl h10 h10'
+  apply bool_of_iff
+  simp only [capsEqAll, capsEqAB, capsEqBB, capsEqCB, f0, f0', f1, f1', f2, f2', f3, f3', f4, f4', f5,
+    f5', f6, f6', f12, f12', hal, hct, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq,
+    IIndCaps.mk.injEq, fld_nat, decI_inj_iff l1 l1', fld_bool]
+  simp only [and_assoc]
+  constructor
+  · rintro ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10⟩
+    exact ⟨a1, a2, a3, a4, a5, a6, a8, a9, a7, a10⟩
+  · rintro ⟨a1, a2, a3, a4, a5, a6, a8, a9, a7, a10⟩
+    exact ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10⟩
 
 /-! ## Recursor rules -/
 
@@ -313,14 +346,73 @@ theorem ruleFields {R : Nat → Option Word} {rd : Word → Word} {q : Word} {x 
        (w3.toNat = 1 ∧ ∃ (ls : List LIdx) (es : List EIdx), hlist? R (q.toNat + 4) = some ls ∧
           hlist? R (q.toNat + 6) = some es ∧ x.fire = .nested ls es) ∨
        (w3.toNat = 2 ∧ ∃ (ls : List LIdx), hlist? R (q.toNat + 4) = some ls ∧
-          x.fire = .levels ls)) ∧
-      q.toNat + 11 < 2 ^ 64 := by
-  sorry
+          x.fire = .levels ls)) := by
+  unfold decRule at h
+  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
+  obtain ⟨t, h3, h⟩ := h
+  obtain ⟨w3, e3a, rfl⟩ := natD h3
+  have e3 : rd (q + 3) = w3 := rdW_off hR (k := 3) (by simpa using e3a)
+  split at h
+  · rename_i hh
+    simp only [Option.bind_some, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨c, hc, nf, hnf, rhs, hrhs, ex⟩ := h
+    subst ex
+    obtain ⟨w0, e0, h0, rfl⟩ := hdW0_ hR hc
+    obtain ⟨w1, e1, rfl⟩ := natW_ (q := q) (k := 1) (kn := 1) hR rfl hnf
+    obtain ⟨w8, e8, h8, rfl⟩ := hdW_ (q := q) (k := 8) (kn := 8) hR rfl hrhs
+    exact ⟨w0, w1, w3, w8, e0, e1, e3, e8, h0, h8, rfl, rfl, rfl, .inl ⟨hh, rfl⟩⟩
+  · rename_i hh
+    simp only [Option.bind_some, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨ls, hls, es, hes, c, hc, nf, hnf, rhs, hrhs, ex⟩ := h
+    subst ex
+    obtain ⟨w0, e0, h0, rfl⟩ := hdW0_ hR hc
+    obtain ⟨w1, e1, rfl⟩ := natW_ (q := q) (k := 1) (kn := 1) hR rfl hnf
+    obtain ⟨w8, e8, h8, rfl⟩ := hdW_ (q := q) (k := 8) (kn := 8) hR rfl hrhs
+    exact ⟨w0, w1, w3, w8, e0, e1, e3, e8, h0, h8, rfl, rfl, rfl, .inr (.inl ⟨hh, ls, es, hls, hes, rfl⟩)⟩
+  · rename_i hh
+    simp only [Option.bind_some, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨ls, hls, c, hc, nf, hnf, rhs, hrhs, ex⟩ := h
+    subst ex
+    obtain ⟨w0, e0, h0, rfl⟩ := hdW0_ hR hc
+    obtain ⟨w1, e1, rfl⟩ := natW_ (q := q) (k := 1) (kn := 1) hR rfl hnf
+    obtain ⟨w8, e8, h8, rfl⟩ := hdW_ (q := q) (k := 8) (kn := 8) hR rfl hrhs
+    exact ⟨w0, w1, w3, w8, e0, e1, e3, e8, h0, h8, rfl, rfl, rfl, .inr (.inr ⟨hh, ls, hls, rfl⟩)⟩
+  · simp at h
 
 theorem ruleEqButRhsB_ok {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q r : Word} {x y : IRecRule}
     (hx : decRule R q.toNat = some x) (hy : decRule R r.toNat = some y) :
     ruleEqButRhsB rd q r = decide ({ x with rhs := default } = { y with rhs := default }) := by
-  sorry
+  obtain ⟨w0, w1, w3, w8, e0, e1, e3, e8, h0, h8, c0, c1, c8, hf⟩ := ruleFields hR hx
+  obtain ⟨v0, v1, v3, v8, f0, f1, f3, f8, g0, g8, d0, d1, d8, hg⟩ := ruleFields hR hy
+  obtain ⟨c, nf, fire, rhs⟩ := x
+  obtain ⟨c', nf', fire', rhs'⟩ := y
+  simp only at c0 c1 hf d0 d1 hg
+  subst c0 c1 d0 d1
+  have wN : ∀ (w : Word) (k : Nat), k < 2 ^ 64 → w.toNat = k → w = UInt64.ofNat k := fun w k hk h =>
+    UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hk])
+  rcases hf with ⟨k0, rfl⟩ | ⟨k0, ls, es, hls, hes, rfl⟩ | ⟨k0, ls, hls, rfl⟩ <;>
+  rcases hg with ⟨k1, rfl⟩ | ⟨k1, ls', es', hls', hes', rfl⟩ | ⟨k1, ls', hls', rfl⟩ <;>
+  (have a3 := wN _ _ (by decide) k0; have a3' := wN _ _ (by decide) k1; subst a3 a3')
+  all_goals first
+    | (simp [ruleEqButRhsB, ruleEqAB, e3, f3]; done)
+    | skip
+  · apply bool_of_iff
+    simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e3, f0, f1, f3,
+      Bool.and_eq_true, beq_iff_eq, IRecRule.mk.injEq, fld_nat, decI_inj_iff h0 g0]
+    simp
+  · have s1 := slAt_ok hR (q := q) (r := r) (i := 4) (j := 5) (kn := 4) rfl rfl rfl hls hls'
+    have s2 := slAt_ok hR (q := q) (r := r) (i := 6) (j := 7) (kn := 6) rfl rfl rfl hes hes'
+    apply bool_of_iff
+    simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e3, f0, f1, f3,
+      s1, s2, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IRecRule.mk.injEq, fld_nat,
+      decI_inj_iff h0 g0, IRecRuleFire.nested.injEq]
+    simp [and_assoc]
+  · have s1 := slAt_ok hR (q := q) (r := r) (i := 4) (j := 5) (kn := 4) rfl rfl rfl hls hls'
+    apply bool_of_iff
+    simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e3, f0, f1, f3,
+      s1, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IRecRule.mk.injEq, fld_nat,
+      decI_inj_iff h0 g0, IRecRuleFire.levels.injEq]
+    simp [and_assoc]
 
 theorem decRules_succ (R : Nat → Option Word) (o n : Nat) :
     decRules R o (n + 1) = (do
@@ -335,15 +427,65 @@ theorem decRules_succ (R : Nat → Option Word) (o n : Nat) :
   congr 1
   omega
 
+theorem decRule_ctor {R : Nat → Option Word} {q : Nat} {x : IRecRule} (h : decRule R q = some x) :
+    hd? R q = some x.ctor := by
+  unfold decRule at h
+  rcases hk : nat? R (q + 3) with _ | k
+  · simp [hk] at h
+  · rcases k with _ | _ | _ | k <;>
+      simp only [hk, Option.bind_eq_bind, Option.bind_some, Option.bind_eq_some_iff,
+        Option.pure_def, Option.some.injEq] at h
+    all_goals first
+      | (obtain ⟨c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
+      | (obtain ⟨x1, -, c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
+      | (obtain ⟨x1, -, x2, -, c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
+      | (simp at h)
+
 theorem rule_eq_iff (x y : IRecRule) :
     ({ x with rhs := default } = { y with rhs := default } ∧ x.rhs = y.rhs) ↔ x = y := by
-  sorry
+  obtain ⟨c, nf, fire, rhs⟩ := x
+  obtain ⟨c', nf', fire', rhs'⟩ := y
+  simp only [IRecRule.mk.injEq]
+  grind
 
 theorem rulesEqN_ok {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) :
     ∀ (c : Nat) (o1 o2 : Word) (xs ys : List IRecRule),
     decRules R o1.toNat c = some xs → decRules R o2.toNat c = some ys →
     rulesEqN rd c o1 o2 = decide (xs = ys) := by
-  sorry
+  intro c
+  induction c with
+  | zero =>
+    intro o1 o2 xs ys h1 h2
+    simp [decRules] at h1 h2; subst h1; subst h2; simp [rulesEqN]
+  | succ c ih =>
+    intro o1 o2 xs ys h1 h2
+    rw [decRules_succ] at h1 h2
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h1 h2
+    obtain ⟨x, hx, xs', hxs, rfl⟩ := h1
+    obtain ⟨y, hy, ys', hys, rfl⟩ := h2
+    obtain ⟨-, -, -, w8, -, -, -, e8, -, h8, -, -, c8, -⟩ := ruleFields (q := o1) hR hx
+    obtain ⟨-, -, -, v8, -, -, -, f8, -, g8, -, -, d8, -⟩ := ruleFields (q := o2) hR hy
+    have hrest : rulesEqN rd c (o1 + 11) (o2 + 11) = decide (xs' = ys') := by
+      cases c with
+      | zero =>
+        simp [decRules] at hxs hys; subst hxs; subst hys; simp [rulesEqN]
+      | succ c0 =>
+        have g1 := hxs; have g2 := hys
+        rw [decRules_succ] at g1 g2
+        simp only [bind, Option.bind_eq_some_iff] at g1 g2
+        obtain ⟨x1, hx1, -⟩ := g1
+        obtain ⟨y1, hy1, -⟩ := g2
+        obtain ⟨u, hu, -⟩ := hd?_some (decRule_ctor hx1)
+        obtain ⟨u', hu', -⟩ := hd?_some (decRule_ctor hy1)
+        have t1 : (o1 + 11).toNat = o1.toNat + 11 := by
+          have := hR.lt _ _ hu; rw [UInt64.toNat_add]; simp; omega
+        have t2 : (o2 + 11).toNat = o2.toNat + 11 := by
+          have := hR.lt _ _ hu'; rw [UInt64.toNat_add]; simp; omega
+        exact ih (o1 + 11) (o2 + 11) xs' ys' (by rw [t1]; exact hxs) (by rw [t2]; exact hys)
+    rw [rulesEqN_succ, hrest, ruleEqButRhsB_ok hR hx hy, e8, f8]
+    apply bool_of_iff
+    simp only [Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, List.cons.injEq]
+    rw [← rule_eq_iff x y, c8, d8, decI_inj_iff h8 g8]
 
 theorem rulesEqB_ok {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {o1 l1 o2 l2 : Word}
     {xs ys : List IRecRule} (h1 : decRules R o1.toNat l1.toNat = some xs)
@@ -378,11 +520,21 @@ theorem hintEqB_ok' {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R 
   exact hintEqB_ok hR (by rw [toNat_add_of_get hR hk hw]; exact hx)
     (by rw [toNat_add_of_get hR hk hw']; exact hy)
 
-theorem capsEqAll_ok' {R : Nat → Option Word} {rd : Word → Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+theorem capsEqAll_ok' {R : Nat → Option Word} {rd : Word → Word}
     (hR : RdOK R rd) {p q k : Word} {kn : Nat} (hk : k.toNat = kn) {x y : IIndCaps}
     (hx : decCaps R (p.toNat + kn) = some x) (hy : decCaps R (q.toNat + kn) = some y) :
     capsEqAll rd (p + k) (q + k) = decide (x = y) := by
-  sorry
+  have b1 : ∀ {r : Word} {z : IIndCaps}, decCaps R (r.toNat + kn) = some z →
+      ∃ w, R (r.toNat + kn) = some w := by
+    intro r z h
+    simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+    obtain ⟨b, hb, -⟩ := h
+    obtain ⟨w, hw, -⟩ := boolD hb
+    exact ⟨w, hw⟩
+  obtain ⟨w, hw⟩ := b1 hx
+  obtain ⟨w', hw'⟩ := b1 hy
+  exact capsEqAll_ok hR (by rw [toNat_add_of_get hR hk hw]; exact hx)
+    (by rw [toNat_add_of_get hR hk hw']; exact hy)
 
 theorem ciD {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
     (h : decCI R p = some x) :
@@ -446,31 +598,84 @@ theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
     (hR : RdOK R rd) {p q : Word} {x y : IConstantInfo}
     (hx : decCI R p.toNat = some x) (hy : decCI R q.toNat = some y) :
     ciEqB rd p q = decide (x = y) := by
-  sorry
+  obtain ⟨wk, e, hx⟩ := ciD hx
+  obtain ⟨wk', e', hy⟩ := ciD hy
+  have r1 := rdW_zero' hR e
+  have r2 := rdW_zero' hR e'
+  have wl : ∀ (w : Word) (n : Nat) (hn : n < 2 ^ 64), w.toNat = n → w = UInt64.ofNat n := fun w n hn h =>
+    UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hn])
+  rcases hx with ⟨k0, cv, hcv, rfl⟩ | ⟨k0, cv, v, hi, hcv, hv, hhi, rfl⟩ | ⟨k0, cv, hcv, rfl⟩ |
+      ⟨k0, cv, caps, hcv, hcaps, rfl⟩ | ⟨k0, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
+      ⟨k0, cv, mi, rp, o, c, k, rules, hcv, hmi, hrp, ho, hc, hk, hr, rfl⟩ <;>
+  rcases hy with ⟨k1, cv', hcv', rfl⟩ | ⟨k1, cv', v', hi', hcv', hv', hhi', rfl⟩ | ⟨k1, cv', hcv', rfl⟩ |
+      ⟨k1, cv', caps', hcv', hcaps', rfl⟩ | ⟨k1, cv', np', nf', hcv', hnp', hnf', rfl⟩ |
+      ⟨k1, cv', mi', rp', o', c', k', rules', hcv', hmi', hrp', ho', hc', hk', hr', rfl⟩
+  all_goals first
+    | (have hne : wk ≠ wk' := fun h => by have := congrArg UInt64.toNat h; omega
+       simp [ciEqB, r1, r2, hne]; done)
+    | skip
+  · have a1 : wk = 0 := wl wk 0 (by decide) k0
+    have a2 : wk' = 0 := wl wk' 0 (by decide) k1
+    subst a1 a2
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
+    apply bool_of_iff
+    simp only [ciEqB, r1, r2, ciEqRestB]
+    simp [c1]
+  · have a1 : wk = 1 := wl wk 1 (by decide) k0
+    have a2 : wk' = 1 := wl wk' 1 (by decide) k1
+    subst a1 a2
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
+    obtain ⟨w5, f5, u5, rfl⟩ := hdW_ (q := p) (k := 5) (kn := 5) hR rfl hv
+    obtain ⟨v5, g5, t5, rfl⟩ := hdW_ (q := q) (k := 5) (kn := 5) hR rfl hv'
+    have c2 := hintEqB_ok' hR (p := p) (q := q) (k := 6) (kn := 6) rfl hhi hhi'
+    apply bool_of_iff
+    simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, c1, c2]
+    simp [decI_inj_iff u5 t5]
+  · have a1 : wk = 2 := wl wk 2 (by decide) k0
+    have a2 : wk' = 2 := wl wk' 2 (by decide) k1
+    subst a1 a2
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
+    apply bool_of_iff
+    simp only [ciEqB, r1, r2, ciEqRestB]
+    simp [c1]
+  · have a1 : wk = 3 := wl wk 3 (by decide) k0
+    have a2 : wk' = 3 := wl wk' 3 (by decide) k1
+    subst a1 a2
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
+    have c2 := capsEqAll_ok' hR (p := p) (q := q) (k := 5) (kn := 5) rfl hcaps hcaps'
+    apply bool_of_iff
+    simp only [ciEqB, r1, r2, ciEqRestB, c1, c2]
+    simp
+  · have a1 : wk = 4 := wl wk 4 (by decide) k0
+    have a2 : wk' = 4 := wl wk' 4 (by decide) k1
+    subst a1 a2
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
+    obtain ⟨w5, f5, rfl⟩ := natW_ (q := p) (k := 5) (kn := 5) hR rfl hnp
+    obtain ⟨v5, g5, rfl⟩ := natW_ (q := q) (k := 5) (kn := 5) hR rfl hnp'
+    obtain ⟨w6, f6, rfl⟩ := natW_ (q := p) (k := 6) (kn := 6) hR rfl hnf
+    obtain ⟨v6, g6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hR rfl hnf'
+    apply bool_of_iff
+    simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, f6, g6, c1]
+    simp [fld_nat]
+  · have a1 : wk = 5 := wl wk 5 (by decide) k0
+    have a2 : wk' = 5 := wl wk' 5 (by decide) k1
+    subst a1 a2
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
+    obtain ⟨w5, f5, rfl⟩ := natW_ (q := p) (k := 5) (kn := 5) hR rfl hmi
+    obtain ⟨v5, g5, rfl⟩ := natW_ (q := q) (k := 5) (kn := 5) hR rfl hmi'
+    obtain ⟨w6, f6, rfl⟩ := natW_ (q := p) (k := 6) (kn := 6) hR rfl hrp
+    obtain ⟨v6, g6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hR rfl hrp'
+    obtain ⟨w7, f7, rfl⟩ := natW_ (q := p) (k := 7) (kn := 7) hR rfl ho
+    obtain ⟨v7, g7, rfl⟩ := natW_ (q := q) (k := 7) (kn := 7) hR rfl ho'
+    obtain ⟨w8, f8, rfl⟩ := natW_ (q := p) (k := 8) (kn := 8) hR rfl hc
+    obtain ⟨v8, g8, rfl⟩ := natW_ (q := q) (k := 8) (kn := 8) hR rfl hc'
+    obtain ⟨w9, f9, rfl⟩ := boolW_ (q := p) (k := 9) (kn := 9) hR rfl hk
+    obtain ⟨v9, g9, rfl⟩ := boolW_ (q := q) (k := 9) (kn := 9) hR rfl hk'
+    have c2 := rulesEqB_ok hR hr hr'
+    apply bool_of_iff
+    simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, f6, g6, f7, g7, f8, g8, f9, g9, c1, c2]
+    simp [fld_nat, fld_bool, and_assoc]
+    intros; exact And.comm
 
 end L.Ind
 
-namespace L.Arena
-
-open L.Ind
-
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
-theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
-    rowPW m w = rowP m w := by
-  sorry
-
--/
-
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
-/-- **A hit of `env_find` is a hit of `find?`**: the record pointer is the row's, and the lookup
-decodes there. -/
-theorem envFindW_hit {vis : Word} {fe : IFEnv} {m m1 : Mem}
-    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR m vis fe)
-    (hw : w.toNat < 2 ^ 32) (h0 : r.headD 0 ≠ 0) :
-    m1 = m ∧ r.tail.headD 0 = rowP m w ∧ fe.find? (decI w) = decCI (erecP m) (rowP m w).toNat ∧
-      rowTag w ≤ 2 ∧ rowC m w ≠ 0 := by
-  sorry
-
--/
-
-end L.Arena
