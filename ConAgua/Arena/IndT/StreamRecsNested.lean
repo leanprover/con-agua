@@ -291,7 +291,176 @@ theorem snbW_ok (h : SnoProg p) (k : Word) : ∀ (N : Nat) (m m' : Mem) (a : ASt
     simp only [List.mapM_cons, StateT.run_bind, hrun1, except_ok_bind, hrun2]
     rfl
 
+/-- `stream_nested_pins` through its run. -/
+theorem snp_call (h : SnoProg p) {k : Word} {N : Nat} {m m' : Mem} {a : AState} {po pl : Word}
+    {pins : List EIdx} {r : List Word}
+    (hc : callW p N "stream_nested_pins" [k, po, pl] m = some (r, m')) (hS : StageR vis fe m a)
+    (hA : AbsOK m) (hd : decHL m po.toNat pl.toNat = some pins) (hb : po.toNat + pl.toNat ≤ iwTop m) :
+    ∃ ps a', (pins.mapM (liftLooseBVarsFast coreWalkFuel k.toNat 0)).run a = .ok (ps, a') ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some ps ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
+  rcases N with _ | N
+  · rw [callW_zero] at hc; cases hc
+  exact snpW_ok h k (N + 1) m m' a po pl pins r
+    (callW_model (M := fun mm => snpW p (N + 1) mm k po pl) (fun s => snpW_spec p h (N + 1) s k po pl) hc)
+    hS hA hd hb
+
+/-- `stream_nested_bvars` through its run, from `0`. -/
+theorem snb_call (h : SnoProg p) {k : Word} {N : Nat} {m m' : Mem} {a : AState} {r : List Word}
+    (hc : callW p N "stream_nested_bvars" [k, 0] m = some (r, m')) (hS : StageR vis fe m a)
+    (hA : AbsOK m) :
+    ∃ bs a', ((List.range k.toNat).mapM (fun j => internBVarE (k.toNat - 1 - j))).run a = .ok (bs, a') ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
+  rcases N with _ | N
+  · rw [callW_zero] at hc; cases hc
+  have := snbW_ok h k (N + 1) m m' a 0 r
+    (callW_model (M := fun mm => snbW p (N + 1) mm k 0) (fun s => snbW_spec p h (N + 1) s k 0) hc) hS hA
+  simpa [List.range_eq_range'] using this
+
 end lists
+
+/-! ## `stream_nested_dom` -/
+
+section dom
+variable {p : Prog} {vis : Word} {fe : IFEnv}
+
+/-- **`stream_nested_dom` refines con-ron's `streamNestedDom`**: `0` exactly when it is `false`,
+the stage relation, the growth and the memos after. -/
+theorem snd_ok (h : SnoProg p) (k : Word) {N : Nat} {m m' : Mem} {a : AState}
+    {dom lo ll po pl : Word} {lvls : List LIdx} {pins : List EIdx} {r : List Word}
+    (hc : callW p N "stream_nested_dom" [dom, k, lo, ll, po, pl] m = some (r, m'))
+    (hS : StageR vis fe m a) (hA : AbsOK m) (hdom : H dom)
+    (hl : decHL m lo.toNat ll.toNat = some lvls) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
+    (hp : decHL m po.toNat pl.toNat = some pins) (hpb : po.toNat + pl.toNat ≤ iwTop m) :
+    ∃ b a', (streamNestedDom (decI dom) k.toNat lvls pins).run a = .ok (b, a') ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ (r.headD 0 = 0 ↔ b = false) := by
+  obtain ⟨s', rfl, -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (sndW_spec p h N _ dom k lo ll po pl) hc
+  generalize s'.mem = m' at hm
+  generalize r.headD 0 = v at hm ⊢
+  rcases N with _ | N
+  · simp [sndW] at hm
+  rw [sndW.arm1] at hm
+  -- `get_app_fn_f`
+  rcases h1 : callW p N "get_app_fn_f" [CWF, dom] m with _ | ⟨r1, m1⟩ <;> rw [h1] at hm
+  · rw [sndW.k_get_app_fn_f.none] at hm; cases hm
+  obtain ⟨s1, rfl, -, hm1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (gafF_spec p h.sum.ad N _ [CWF, dom]) h1
+  obtain ⟨x1, a1, hr1, hS1, hg1, hx1, hxd⟩ := (sumSim_of_relW (gafF_ok vis fe CWF dom hdom) hS) r1 _ hm1
+  have hA1 : AbsOK s1.mem := AFr.of_frame (gafF_frame hm1) (by decide) (by decide) hA
+  rw [CWF_eq] at hr1
+  subst hxd
+  generalize s1.mem = m1 at *
+  have hR1 : ArenaR m1 a1 := hS1.check.arena.base
+  by_cases hg3 : tagW (r1.headD 0) ≠ 3
+  · rw [sndW.k_get_app_fn_f.arm1 _ _ _ _ _ _ _ _ _ _ hg3] at hm
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+    have ht : ((decI (r1.headD 0) : EIdx).tag == ETag.const) = false :=
+      beq_eq_false_iff_ne.mpr fun h' => hg3 ((decE_tag_const _ hx1).mp h')
+    refine ⟨false, a1, ?_, hS1, hg1, hA1, by simp⟩
+    simp only [ConRon.Arena.streamNestedDom, StateT.run_bind, hr1, except_ok_bind, ht]
+    rfl
+  have hg3 : tagW (r1.headD 0) = 3 := Classical.byContradiction hg3
+  rw [sndW.k_get_app_fn_f.arm2 _ _ _ _ _ _ _ _ _ _ hg3] at hm
+  -- the head's `e_view`
+  rcases h2 : callW p N "e_view" [r1.headD 0] m1 with _ | ⟨r2, m2⟩ <;> rw [h2] at hm
+  · rw [sndW.k_e_view.none] at hm; cases hm
+  obtain ⟨s2, hs2, rfl, hne, hr2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (eView_spec p h.ev N _ (r1.headD 0)) h2
+  rw [← hs2] at hm
+  obtain ⟨hvok, hew⟩ := eViewW_const m1 _ hg3 (hr2 ▸ hne)
+  obtain ⟨-, -, hus⟩ := L.Ind.view_const_f m1 a1 hR1 _ hx1 hvok hg3
+  have hvc : a1.store.viewConst (decI (r1.headD 0)) = _ := viewConst_ok m1 a1 hR1 _ hx1 hvok
+  rw [sndW.k_e_view.arm1] at hm
+  have e2 : r2.tail.tail.headD 0 = tfld m1 CONST (tierW (r1.headD 0)) (idxW (r1.headD 0)) 1 := by
+    rw [hr2, hew]; rfl
+  rw [e2] at hm
+  generalize tfld m1 CONST (tierW (r1.headD 0)) (idxW (r1.headD 0)) 1 = us at hm hus hvc
+  -- `view_ls`
+  rcases h3 : callW p N "view_ls" [us] m1 with _ | ⟨r3, m3⟩ <;> rw [h3] at hm
+  · rw [sndW.k_view_ls.none] at hm; cases hm
+  obtain ⟨s3, rfl, -, hm3⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (viewLs_specW p h.ln h.sum.ha h.pc h.vl N _ us) h3
+  obtain ⟨ids, hr3, hS3, hg3', hd3, -⟩ := viewLsW_ok hm3 hS1 hus (rcPoolSmall hS1)
+  have hA3 := hA1.iw (viewLsW_iwFrame hm3)
+  simp only [decRL, getD_zero, Nat.zero_add, getD_one] at hd3
+  obtain ⟨hd3, hb3⟩ := hd3
+  generalize s3.mem = m3 at *
+  rw [sndW.k_view_ls.arm1] at hm
+  have hg13 := hg1.trans hg3'
+  -- the levels against the firing data's
+  rcases h4 : callW p N "sl_eq" [r3.headD 0, r3.tail.headD 0, lo, ll] m3 with _ | ⟨r4, m4⟩ <;>
+    rw [h4] at hm
+  · rw [sndW.k_sl_eq.none] at hm; cases hm
+  obtain ⟨hm43, he4⟩ := slEq_stepK h.sum hS3 hd3 hb3 (by rw [decHL_grow hg13 hlb]; exact hl)
+    (Nat.le_trans hlb hg13.iw) h4
+  subst m4
+  by_cases hq : r4.headD 0 = 0
+  · rw [sndW.k_sl_eq.arm1 _ _ _ _ _ _ _ _ hq] at hm
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+    have hne' : (ids == lvls) = false := by simpa using he4.mp hq
+    have ht : ((decI (r1.headD 0) : EIdx).tag == ETag.const) = true :=
+      beq_iff_eq.mpr ((decE_tag_const _ hx1).mpr hg3)
+    refine ⟨false, a1, ?_, hS3, hg13, hA3, by simp⟩
+    simp only [ConRon.Arena.streamNestedDom, StateT.run_bind, hr1, except_ok_bind, ht, ↓reduceIte,
+      viewConst_run', hvc, hr3, hne']
+    rfl
+  rw [sndW.k_sl_eq.arm2 _ _ _ _ _ _ _ _ hq] at hm
+  have hids : ids = lvls := Classical.byContradiction fun c => hq (he4.mpr c)
+  -- the major's arguments
+  rcases h5 : callW p N "get_app_args_f" [CWF, dom] m3 with _ | ⟨r5, m5⟩ <;> rw [h5] at hm
+  · rw [sndW.k_get_app_args_f.none] at hm; cases hm
+  obtain ⟨s5, rfl, -, hm5⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+    (gaaF_spec p h.sum.ad N _ [CWF, dom]) h5
+  obtain ⟨args, a5, hr5, hS5, hg5, hxs5, hxb5⟩ :=
+    (sumSim_of_relW (gaaF_ok (fun _ => none) vis fe CWF dom hdom) hS3) r5 _ hm5
+  have hA5 := gaaF_afr hm5 hA3
+  rw [getD_zero, getD_one] at hxs5 hxb5
+  rw [CWF_eq] at hr5
+  generalize s5.mem = m5 at *
+  rw [sndW.k_get_app_args_f.arm1] at hm
+  have hg15 := hg13.trans hg5
+  -- the pins lifted
+  rcases h6 : callW p N "stream_nested_pins" [k, po, pl] m5 with _ | ⟨r6, m6⟩ <;> rw [h6] at hm
+  · rw [sndW.k_stream_nested_pins.none] at hm; cases hm
+  obtain ⟨ps, a6, hr6, hS6, hg6, hA6, hd6, hb6⟩ := snp_call h h6 hS5 hA5
+    (by rw [decHL_grow hg15 hpb]; exact hp) (Nat.le_trans hpb hg15.iw)
+  rw [sndW.k_stream_nested_pins.arm1] at hm
+  -- the index variables
+  rcases h7 : callW p N "stream_nested_bvars" [k, 0] m6 with _ | ⟨r7, m7⟩ <;> rw [h7] at hm
+  · rw [sndW.k_stream_nested_bvars.none] at hm; cases hm
+  obtain ⟨bs, a7, hr7, hS7, hg7, hA7, hd7, hb7⟩ := snb_call h h7 hS6 hA6
+  rw [sndW.k_stream_nested_bvars.arm1] at hm
+  -- `sl_append`
+  rcases h8 : callW p N "sl_append" [r6.headD 0, r6.tail.headD 0, r7.headD 0, r7.tail.headD 0] m7
+    with _ | ⟨r8, m8⟩ <;> rw [h8] at hm
+  · rw [sndW.k_sl_append.none] at hm; cases hm
+  obtain ⟨hS8, hg8, hA8, hd8, hb8⟩ := append_step h.sum h.app hS7 hA7
+    (Nat.le_trans hb6 hg7.iw) hb7 (by rw [decHL_grow hg7 hb6]; exact hd6) hd7 h8
+  rw [sndW.k_sl_append.arm1] at hm
+  have hg58 := (hg6.trans hg7).trans hg8
+  -- the arguments against them
+  rcases h9 : callW p N "sl_eq" [r5.headD 0, r5.tail.headD 0, r8.headD 0, r8.tail.headD 0] m8
+    with _ | ⟨r9, m9⟩ <;> rw [h9] at hm
+  · rw [sndW.k_sl_eq_2.none] at hm; cases hm
+  obtain ⟨hm98, he9⟩ := slEq_stepK h.sum hS8 (by rw [decHL_grow hg58 hxb5]; exact hxs5)
+    (Nat.le_trans hxb5 hg58.iw) hd8 hb8 h9
+  subst m9
+  rw [sndW.k_sl_eq_2.arm1] at hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+  have ht : ((decI (r1.headD 0) : EIdx).tag == ETag.const) = true :=
+    beq_iff_eq.mpr ((decE_tag_const _ hx1).mpr hg3)
+  have hq' : (ids == lvls) = true := by simpa using hids
+  refine ⟨args == ps ++ bs, a7, ?_, hS8, (hg15.trans hg58), hA8, ?_⟩
+  · simp only [ConRon.Arena.streamNestedDom, StateT.run_bind, hr1, except_ok_bind, ht, ↓reduceIte,
+      viewConst_run', hvc, hr3, hq', hr5, hr6, hr7]
+    rfl
+  · rw [he9]; simp
+
+end dom
 
 end L.Ind
 
