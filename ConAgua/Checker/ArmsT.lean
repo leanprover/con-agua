@@ -13,6 +13,7 @@ public import ConAgua.Checker.LoopProgInd
 public import ConAgua.Checker.CrLeaves
 public import ConAgua.Verdict.KnotAllE
 public import ConAgua.Arena.QuotRulesT
+public import ConAgua.Arena.DeclBasisRef
 import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LitClosed
@@ -270,6 +271,12 @@ theorem checkerProg_quotSimsPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop r
     QuotSims (Prog.subPB bs checkerProg) dn :=
   quotSims_of'' (checkerProg_rulesPB bs) (by chk_lk) ((checkerProg_romRefsPB bs hr hpre).quot dn)
     (checkerProg_leafClosedPB bs) hq
+
+/-- **The pinned basis blocks' program facts at the checker** (`basisRefs_of`'s premise; the
+stream index's `DeclConstsProg.basis`). -/
+theorem checkerProg_basisLProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length) :
+    BasisLProg (Prog.subPB bs checkerProg) := by
+  prog_bundle [checkerProg_rulesPB bs, checkerProg_leafClosedPB bs, checkerProg_romRefsPB bs hr hpre]
 
 theorem checkerProg_armStepPB {f : FnName} (hf : f ∈ declLoopFns) :
     StepIn (Prog.subPB bs checkerProg) [f] :=
