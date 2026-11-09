@@ -18,7 +18,8 @@ import all ConRon.Bridge.Inductives.GenRec
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndInstallSpec.GpbWSimF
 import ConAgua.Arena.IndInstallSpec.InstallIwB
-import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+public import ConAgua.Arena.IndPartsSpec.BmgW
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.RecGen19
@@ -89,6 +90,9 @@ structure GrcProgE (p : Prog) : Prop extends GrcProg p where
   rtsE : RtsProgE p
   crrE : CrrProgE p
   cft : CftProg p
+  nck : NckProg p
+  parts4 : IndPartsProg4 p
+  namesOf : p.lookup "block_shape_names_of" = some blockShapeNamesOf
 
 /-- What `gen_rec_check_prep` (and each of its parts) gives besides the generator `G` and the
 recursors' constants `cvGs` (from `m`, `a`; the result `r` the generator's record and the constants'
@@ -108,7 +112,7 @@ structure GrpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   core : ConRon.Bridge.CoreStep env fe a a'
   den : ∃ (gP : ConLeche.ClassGen) (cvGsP : List ConLeche.ConstantVal), dClassGen a'.store G = some gP ∧
     cvGs.mapM (Frontend.denoteCV a'.store) = some cvGsP ∧ (∀ c ∈ cvGsP, env.find? c.name = none) ∧
-    ∀ f : Nat → Nat, ConLeche.EnvWF (ConLeche.consBlockRecsBare pP 0
+    (∀ c ∈ cvGsP, ConLeche.reservedRecName c.name = false) ∧ ∀ f : Nat → Nat, ConLeche.EnvWF (ConLeche.consBlockRecsBare pP 0
       ((cvGsP.zip rdv.recCls).map fun x => (x.1, f x.2)) env)
 
 section parts
@@ -323,13 +327,10 @@ theorem grpC_ref (P : GrcProgE p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
     (ConRon.Bridge.CoreSpec.of_core) henv _ _ bs.k bs.recs pP.recs cvRis cvRisP rdv.recCls hwRis a2 _ _
     hCP.check ⟨hgPd, hrecs2, hcv2⟩ hrun3
   -- the rule-less recursors' environment
-  have henvR : ∀ f : Nat → Nat, ConLeche.EnvWF (ConLeche.consBlockRecsBare pP 0
-      ((cvGsP.zip rdv.recCls).map fun x => (x.1, f x.2)) env) := by
-    obtain ⟨F10, hF10'⟩ := id hF10
-    rw [ConLeche.classRecTysOk_datF] at hF10'
-    obtain ⟨hlenG, hallG⟩ := ConLeche.classRecTysOk_run hF10'
-    intro f
-    have hun : ∀ cv ∈ cvGsP, ConLeche.reservedRecName cv.name = false := by
+  obtain ⟨F10, hF10'⟩ := id hF10
+  rw [ConLeche.classRecTysOk_datF] at hF10'
+  obtain ⟨hlenG, hallG⟩ := ConLeche.classRecTysOk_run hF10'
+  have hun : ∀ cv ∈ cvGsP, ConLeche.reservedRecName cv.name = false := by
       intro cv hcv
       obtain ⟨i, hi⟩ := List.getElem?_of_mem hcv
       have hil : i < pP.recs.length := by
@@ -339,6 +340,9 @@ theorem grpC_ref (P : GrcProgE p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
       obtain rfl := Option.some.inj hcvG
       rw [R.hcvG]
       exact hunR _ (List.getElem_mem hil)
+  have henvR : ∀ f : Nat → Nat, ConLeche.EnvWF (ConLeche.consBlockRecsBare pP 0
+      ((cvGsP.zip rdv.recCls).map fun x => (x.1, f x.2)) env) := by
+    intro f
     refine ConLeche.Cached.envWF_consBlockRecsBare henv (fun c hc => ?_) (fun c hc => ?_)
     · obtain ⟨x, hx, rfl⟩ := List.mem_map.mp hc
       obtain ⟨i, hi⟩ := List.getElem?_of_mem (List.of_mem_zip hx).1
@@ -353,7 +357,7 @@ theorem grpC_ref (P : GrcProgE p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   refine ⟨⟨bs.nP, params, ms2, ftc, rdv.slots, ctors, elim, pre⟩,
     AM.res (ConRon.Arena.classRecTysOk V fe ⟨bs.nP, params, ms2, ftc, rdv.slots, ctors, elim, pre⟩ bs.k bs.recs
       cvRis rdv.recCls) a2, _, fun {β} k => ?_, ⟨hC3, hgP.trans hg3, hG.grow (decCG_mono _) hg3, hns, rfl, ?_, hA3, hP3,
-    c19.trans c10, _, cvGsP, ConRon.Bridge.Inductives.dClassGen_ext c10.ext _ _ hgPd, hcvGs, hfrG, henvR⟩⟩
+    c19.trans c10, _, cvGsP, ConRon.Bridge.Inductives.dClassGen_ext c10.ext _ _ hgPd, hcvGs, hfrG, hun, henvR⟩⟩
   · simp only [grcTwinC, StateT.run_bind, hrun2, except_ok_bind, hrun3]
   · simpa [decCVS] using hd3
 
