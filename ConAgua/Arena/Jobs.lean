@@ -7,6 +7,7 @@ public import ConAgua.Arena.ScratchRefine
 public import ConAgua.Arena.DeclPins
 public import ConRon.Bridge.Checker.Pooled
 import ConAgua.Census.Attr
+import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.WalkScopeRefine
 import ConAgua.Arena.GrindAttr
@@ -801,7 +802,114 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
   rw [hst1] at hJ1 hok1 hd1 hPD1 hF1
   have hx1' : ConRon.Bridge.PExt a.store (EStore.reset a.store true) := hx1
   generalize ha1 : ({ store := EStore.reset a.store true, memos := Memos.empty, caches := a.caches, pins := a.pins } : AState) = a1 at hJ1 hok1 hd1 hPD1 hF1
-  sorry
+  have hpins1 : a1.pins = a.pins := by rw [← ha1]
+  have hx1a : ConRon.Bridge.PExt a.store a1.store := by rw [← ha1]; exact hx1'
+  -- `CTL[130] := 0` (tier 1 is empty already), `iw_reset`
+  have e130 : (enterMem m).set64 CTL 130 0 = enterMem m := by
+    conv => rhs; rw [← set64_rdW_self (enterMem m) CTL 130]
+    rw [hJ1.top1]
+  rw [recordJobE.k_scratch_enter.arm1]
+  rw [e130]
+  rcases c2 : callE p n "iw_reset" [] (enterMem m) with e | ⟨r2, m2⟩
+  · exact fun hG => hnv (_root_.L.Checker.nv_mem (by decide)) hG c2
+  obtain ⟨s2, hs2, -, e2⟩ := triple_of_callW (s₀ := ⟨enterMem m, Locals.init []⟩)
+    (iwReset_specW p hP.iw_reset n ⟨enterMem m, Locals.init []⟩) (callW_of_callE c2)
+  simp only [iwResetW, Option.some.injEq, Prod.mk.injEq] at e2
+  obtain ⟨-, e2⟩ := e2
+  have e2' : m2 = (enterMem m).set64 CTL 200 0 := hs2 ▸ e2.symm
+  clear c2
+  subst e2'
+  -- the stamp bump and the view
+  generalize hm2 : (enterMem m).set64 CTL 200 0 = m2
+  by_cases g1 : 4294967294 ≤ rdW (m2.arr64 CTL) 133
+  · rw [recordJobE.k_iw_reset.abort1 p n k r2 m2 g1]; exact RefE.of_cls0 (by decide)
+  by_cases g2 : (m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).len64 FIRSTS ≤ k
+  · rw [recordJobE.k_iw_reset.abort2 p n k r2 m2 g1 g2]; exact RefE.of_cls0 (by decide)
+  rw [recordJobE.k_iw_reset.arm1 p n k r2 m2 g1 g2]
+  obtain ⟨hS3, htop3⟩ := hJ1.stage hk (by rw [hm2]; exact g1)
+  rw [hm2] at hS3 htop3
+  clear g1 g2
+  rw [show ((m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).set64 CTL 134
+    (rdW ((m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).arr64 FIRSTS) k)).set64 CTL 135 k =
+    jobMem m2 k from rfl]
+  generalize jobMem m2 k = m3 at hS3 htop3 ⊢
+  -- `and_pin_ok`
+  show RefE _ _ ((andPinOk ds[k.toNat] >>= fun b => if b = true then
+      (checkDecl V pins (I.view k.toNat) ds[k.toNat] >>= fun _ => pure ())
+      else fail (.invalid "`And` must be the standard `And`")) >>= fun _ => dropScratch) a1 _
+  rw [bind_assoc]
+  rcases c3 : callE p n "and_pin_ok" [k] m3 with e | ⟨r3, m4⟩
+  · exact fun hG => hnv (_root_.L.Checker.nv_mem (by decide)) hG c3
+  obtain ⟨b, a4, hrun4, hb, hS4, hgr4, hfr4, hok4, hext4, hc4, hpins4, hF4⟩ :=
+    andPin_job hP.andPin hP.rom hP.apW hFD hk hS3 hok1 hF1 hd1 (callW_of_callE c3)
+  refine RefE.bind_right hrun4 ?_
+  by_cases hz : r3.headD 0 = 0
+  · have hbf : b = false := by rw [← hb, hz]; rfl
+    subst hbf
+    rw [recordJobE.k_and_pin_ok.abort1 _ _ _ _ _ hz]
+    exact fun _ => ErrClaim.bind_left
+      (ErrClaim.ite_neg (by simp) (ErrClaim.fail_abort _ _ (by decide)))
+  rw [recordJobE.k_and_pin_ok.arm1 _ _ _ _ _ hz]
+  have hbt : b = true := by rw [← hb]; simpa using hz
+  subst hbt
+  simp only [if_true, bind_assoc, pure_bind]
+  -- `check_decl`
+  have e0 : dsAt ds k = ds[k.toNat] := by simp [dsAt, Array.getD, hk]
+  have hpx4 : ConRon.Bridge.PExt a.store a4.store := hx1a.trans (ConRon.Bridge.PExt.of_ext hext4)
+  have hR4 : LoopR pins m4 a4 0 (I.view k.toNat) ds := ⟨hS4.stage.check, hS4.decls, hS4.stage.iw, hS4.pinsets⟩
+  have hT4 : StageT dn 0 (I.view k.toNat) m4 a4 := ⟨hS4.stage, TwinOK.ofCheck hF4.check hS4.mem, hS4.flag⟩
+  have h1 := cd_ref hP.cd hFD hLD (N := n) (by omega) hk hok4 hR4 hT4 ⟨env, hF4⟩
+    ⟨d, by rw [e0]; exact ConRon.Bridge.denoteDecl_pext (ConRon.Bridge.PExt.of_ext hext4) hpd hd1⟩
+    ⟨pinsP, ConRon.Bridge.PinsDenote.pmono hpx4 pins pinsP hpp hPD⟩ hS4.memos
+  rw [e0] at h1
+  refine RefE.bindRun (K := recordJobE.k_check_decl p n) (fun _ => rfl)
+    (checkDecl_specE p hP.cd.cd.cd n ⟨m4, Locals.init []⟩ k 0) (fun hG => hG.nv) (fun hG => hG.cd) h1 ?_
+  intro r5 s5 y a5 c5 _ hrun5 hP5
+  obtain ⟨F, hF0, hcl⟩ := hP.cdW
+  obtain ⟨s5', hs5', hfr5, -⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+    (invoke_memFrame hcl n hF0 [k, 0] ⟨m4, Locals.init []⟩) (callW_of_callE c5)
+  rw [hs5'] at hfr5
+  -- the twin's record check, accepted
+  have hrc : recordCheck V pins I k.toNat ds[k.toNat] a1 = .ok ((), a5) := by
+    show (andPinOk ds[k.toNat] >>= fun b => if b = true then
+      (checkDecl V pins (I.view k.toNat) ds[k.toNat] >>= fun _ => pure ())
+      else fail (.invalid "`And` must be the standard `And`")).run a1 = _
+    rw [StateT.run_bind, hrun4]
+    show (checkDecl V pins (I.view k.toNat) ds[k.toNat] >>= fun _ => pure ()).run a4 = _
+    rw [StateT.run_bind, hrun5]; rfl
+  obtain ⟨hst5, hext5, hp5, -⟩ := hrec hF1 hPD1 hd1 hrc
+  -- `scratch_drop`
+  rw [recordJobE.k_check_decl.arm1]
+  rcases c6 : callE p n "scratch_drop" [] s5.mem with e | ⟨r6, m6⟩
+  · exact fun hG => hnv (_root_.L.Checker.nv_mem (by decide)) hG c6
+  obtain ⟨s6, hs6, -, -, hC6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+    (scratchDrop_refinesC p hP.br.sd hP.br.sr hP.br.fl a5 n ⟨s5.mem, Locals.init []⟩ dn (r5.headD 0) y
+      hP5.loop.check) (callW_of_callE c6)
+  obtain ⟨s6', hs6', -, -, -, -, -, hm6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+    (scratchDrop_spec p hP.br.sd hP.br.sr hP.br.fl n ⟨s5.mem, Locals.init []⟩) (callW_of_callE c6)
+  rw [hs6] at hC6; rw [hs6'] at hm6
+  have hf56 : MemFrame scrArrs (flushCtl ++ (0 :: resetCtl)) s5.mem m6 := by
+    rw [hm6]
+    exact ((flushMem_frame _).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
+      ((resetMemP_frame _ 0).mono (by simp) (fun x h => List.mem_append_right _ h))
+  obtain ⟨-, hst6, -⟩ := AM.of_run_ok _ _ _ _ (dropScratch_run a5)
+  rw [hst6] at hC6
+  rw [recordJobE.k_scratch_drop.arm1]
+  refine RefE.ret (dropScratch_run a5) ?_
+  have hx6 : ConRon.Bridge.PExt a.store (EStore.reset a5.store false) :=
+    (hx1a.trans (ConRon.Bridge.PExt.of_ext hext5)).trans (ConRon.Bridge.PExt.dropScratch hst5.wf)
+  have hf35 : MemFrame (apA ++ cdA) (apC ++ cdC) m3 s5.mem :=
+    (hfr4.mono (fun _ h => List.mem_append_left _ h) (fun _ h => List.mem_append_left _ h)).trans
+      (hfr5.mono (fun _ h => List.mem_append_right _ h) (fun _ h => List.mem_append_right _ h))
+  have hT5 : TwinMem dn s5.mem ({ store := EStore.reset a5.store false, memos := a5.memos, caches := Caches.empty, pins := a5.pins } : AState) :=
+    ⟨by rw [hfr5.size]; exact hS4.mem.erec, by rw [hfr5.size]; exact hS4.mem.spn,
+      by rw [hfr5.size]; exact hS4.mem.bstk, hP5.core,
+      fun j x e => hx6.lss.ls.ns j x (hdn j x e) (hJ.mem.dnN j x e)⟩
+  refine ⟨⟨JobM.ofDrop hP5.loop hP5.core hP5.ind
+      (by rw [pinW_frame hfr5 cdA_pins]; exact hS4.flag) hT5 hJ.fsize hS3.idx htop3 hf35
+      (hgr4.trans hP5.grow) hC6 hf56, ⟨EStore.dropScratch_wf hst5.wf⟩, rfl, rfl⟩, hx6, ?_⟩
+  show a5.pins = a.pins
+  rw [hp5, hpins1]
 
 /-- **`record_job(k)` refines `recordJob` of record `k`, both outcomes**: from the job relation and
 con-ron's fold invariant at the view of position `k` (as `RecordSpec` takes it), an ok run is the
