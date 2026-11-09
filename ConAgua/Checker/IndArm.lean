@@ -283,12 +283,6 @@ theorem indArmKeep_checker (bs : List UInt8) :
       AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
   absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free (armAbs_split f hf)
 
-/-- **`check_basis_block`'s contract at the substituted checker program.** -/
-theorem cbbRef_checker (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) :
-    ∀ dn, DnInj dn → CbbRef (Prog.subPB bs checkerProg) dn := by
-  sorry -- ronsync2 p3e: Arena/BasisBlockT's cbb_ref at the checker (in progress)
-
 /-- **`check_block`'s contract at the substituted checker program.** -/
 theorem blockRefS_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length) :
@@ -296,18 +290,20 @@ theorem blockRefS_checker (bs : List UInt8) (hr : RomOK bs)
   sorry -- ronsync2 p3e: IndT/Block's block_ref at the new twin (Pass, Tail, …) still to restate
 
 /-- **The inductive arm's contract at the substituted checker program**, from the contracts of
-its two returning callees (`cbbRef_checker`, `blockRefS_checker`); `CcvSims` (its
+its two returning callees (`check_basis_block`'s `CbbRef` from the caller:
+`Checker/BasisBlockProg`'s `cbbRef_checker`; `blockRefS_checker`); `CcvSims` (its
 `check_shapeless`) and `BasisRefs` from the caller (`Checker/ArmsT`'s `checkerProg_ccvSimsPB`,
 `basisRefs_of (checkerProg_basisLProgPB bs hr hpre)`). -/
 theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length)
     (hCS : ∀ dn, CcvSims (Prog.subPB bs checkerProg) dn)
-    (hB : BasisRefs (Prog.subPB bs checkerProg)) :
+    (hB : BasisRefs (Prog.subPB bs checkerProg))
+    (hcb : ∀ dn, DnInj dn → CbbRef (Prog.subPB bs checkerProg) dn) :
     ∀ dn, DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn := by
   have H := indArmProgs_checker bs hr hpre
   have hV : CcvProg (Prog.subPB bs checkerProg) := by prog_bundle [H.v, H.cid.basis]
   have hcrf : CrfF (Prog.subPB bs checkerProg) := by prog_bundle []
-  exact indArmSpec_of hV H.kp H.apd H.crk hcrf ⟨H.cid, hB, checkerProg_coreStagePB bs, H.lc⟩ hCS (cbbRef_checker bs hr hpre)
+  exact indArmSpec_of hV H.kp H.apd H.crk hcrf ⟨H.cid, hB, checkerProg_coreStagePB bs, H.lc⟩ hCS hcb
     (blockRefS_checker bs hr hpre) (closedW_subPB bs checkerProg_armCid) armCid_frame
 
 end L.Checker
