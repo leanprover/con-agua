@@ -14,7 +14,7 @@ import all ConAgua.Arena.DeclArmsCanon
 # Record equalities in L, word models and specs (lane `decls3`, helper `decls3-canon`)
 
 `DeclArmsCanon.lean`'s `er_sl_eq`, `b_eq`, `cv_eq`, `hint_eq`, `pw_eq`, `caps_eq`,
-`rule_eq_but_rhs`, `rules_eq`, `ci_eq`, `find_is`. Their word models are **total
+`rule_eq_but_rhs`, `rules_eq`, `ci_eq`. Their word models are **total
 `Bool` functions of the record pool** `a : Array Word` (the functions read only `EREC`, never write,
 and a slice comparison recurses on its length, not on a fuel): `slEqN`, `erSlEqB`, `cvEqB`, …
 `ciEqB`. Each spec says a returning call answers `if model then 1 else 0` and leaves the memory
@@ -54,7 +54,6 @@ def canonProgFns : Prog :=
    ("canon_ctx", L.Ind.canonCtx),
    ("ci_canon_defn", L.Ind.ciCanonDefn),
    ("ci_canon_rec", L.Ind.ciCanonRec),
-   ("find_is", L.Ind.findIs),
    ("env_find", envFindL),
    ("env_row_get", envRowGetL),
    ("ci_to_cv", L.Ind.ciToCv),

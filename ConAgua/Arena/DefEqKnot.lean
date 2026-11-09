@@ -146,13 +146,13 @@ theorem constLpsDen_of (h : CoreDen) : ConstLpsDen :=
 set_option maxRecDepth 8192 in
 /-- `ErecKept` (`find_proj`) from the core's write set (`CoreErec.lean`). -/
 theorem erecKept_of {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) : ErecKept p :=
-  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by subst hf; decide) h
+  fun _ _ _ _ _ _ hf h => callW_erec_closedT hcl (by subst hf; decide) h
 
 set_option maxRecDepth 8192 in
-/-- `ErecKeptProj` (`lvl_eq_c`, `field_sort_zero`) from the core's write set. -/
+/-- `ErecKeptProj` (`lvl_eq_c`) from the core's write set. -/
 theorem erecKeptProj_of {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
     ErecKeptProj p :=
-  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by rcases hf with rfl | rfl <;> decide) h
+  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by subst hf; decide) h
 
 /-- `BStkCap` is `CoreS.bstk` (lane `whnf2`'s landing 1). -/
 theorem bstkCap_of : BStkCap := fun _ _ _ _ _ _ _ hS => hS.bstk

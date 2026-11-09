@@ -224,8 +224,7 @@ assumption, as `ErecKeptKnot`/`ErecKeptInst`: the record pool grows only when a 
 installed, never during a term check). -/
 def ErecKeptRec (p : Prog) : Prop :=
   ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
-    f ∈ ["rec_fire_levels", "iota_case3", "lvls_eq_c", "rec_fire_args", "const_ty_at",
-      "iota_certs_full"] →
+    f ∈ ["rec_fire_levels", "lvls_eq_c", "rec_fire_args", "const_ty_at", "iota_certs_full"] →
     callW p n f vs m = some (r, m') → m'.arr64 EREC = m.arr64 EREC
 
 set_option maxRecDepth 8192 in
@@ -234,7 +233,7 @@ theorem ErecKeptRec.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC co
     ErecKeptRec p :=
   fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hf
-    rcases hf with rfl | rfl | rfl | rfl | rfl | rfl <;> decide) h
+    rcases hf with rfl | rfl | rfl | rfl | rfl <;> decide) h
 
 /-! ## `erec_push(o, c)` -/
 

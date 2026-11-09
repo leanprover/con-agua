@@ -214,15 +214,6 @@ values agree. -/
   return e
 }
 
-/-- `find_is(vis, n, pin)`: `fe.find? n == some pin` (`pin` a constant record). -/
--- con-ron: none — `fe.find? n == some ci`, the lookup and the derived equality
-@[no_expose] def findIs : FunDecl := lfn (vis, n, pin) locals (f, r, e) {
-  (f, r) := call env_find(n, vis);
-  if f == 0 { return 0 };
-  e := call ci_eq(r, pin);
-  return e
-}
-
 /-! ## `toConstantVal` -/
 
 /-- `ci_to_cv(p)`: `IConstantInfo.toConstantVal` → the constant value pointer: the inline one at
@@ -488,7 +479,7 @@ def declArmsCanonFns : Prog :=
    ("ci_eq", ciEq), ("er_sl_at", erSlAt), ("caps_eq_a", capsEqA),
    ("caps_eq_b", capsEqB), ("caps_eq_c", capsEqC), ("rule_eq_a", ruleEqA), ("rule_eq_b", ruleEqB),
    ("ci_eq_rest", ciEqRest), ("canon_ctx", canonCtx),
-   ("ci_canon_defn", ciCanonDefn), ("ci_canon_rec", ciCanonRec), ("find_is", findIs), ("ci_to_cv", ciToCv),
+   ("ci_canon_defn", ciCanonDefn), ("ci_canon_rec", ciCanonRec), ("ci_to_cv", ciToCv),
    ("canon_names_go", canonNamesGo), ("canon_names", canonNames),
    ("canon_name_map", canonNameMap), ("canon_level_eq", canonLevelEq),
    ("canon_level_list_eq", canonLevelListEq), ("canon_levels_eq", canonLevelsEq),
