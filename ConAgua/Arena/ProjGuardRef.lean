@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.FormerNZRef
 import ConAgua.Arena.ErecRd
+import ConAgua.Arena.KnotMono
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.InferBodyLet
 import ConAgua.Arena.IndView
@@ -83,6 +84,10 @@ l_model lvAzW_spec (p : Prog) (hf : p.lookup "lv_always_zero" = some lvAlwaysZer
 l_model lvZwzW_spec (p : Prog) (hf : p.lookup "lv_zero_where_zero" = some lvZeroWhereZero)
   fns [hf ↦ lvZwzW] specs [callW_spec p n "lv_zero", callW_spec p n "lh_contains"]
   grind [arena_grind] fold [tierW, idxW]
+
+/-- **`lh_contains`' model** (the loop over the heap slice). -/
+l_model lhcW_spec (p : Prog) (hf : p.lookup "lh_contains" = some lhContains)
+  fns [hf ↦ lhcW] grind [arena_grind] fold [tierW, idxW]
 
 /-- **`lv_always_zero` is `ConLeche.Level.isAlwaysZero` under `CoreS`** (the heap top put back). -/
 theorem lvAz_core {p : Prog} (hpn : p.lookup "lv_node" = some lvNode)
@@ -313,11 +318,12 @@ def LKept {α : Type} (op : AM α) : Prop :=
     ∀ h l, denoteL a.store.ls h = some l → denoteL a'.store.ls h = some l
 
 /-- **The knot's `whnf` and `infer_io` runs keep level readbacks** (the twin's store only grows
-across them; no twin fact yet: the knot's `Ext`, as `formerNeverZeroAt_fwd`). -/
+across them, `knot_smono`). -/
 theorem knot_lkept (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F d : Nat) (e : EIdx) :
     LKept ((coreKnot mode eager fe id F).whnf d e) ∧
-      LKept ((coreKnot mode eager fe id F).inferIO d e) := by
-  sorry
+      LKept ((coreKnot mode eager fe id F).inferIO d e) :=
+  ⟨fun _ _ _ h hh l hd => (((knot_smono mode fe F eager).whnf d e).run h).ext.lss.ls.lvl hh l hd,
+    fun _ _ _ h hh l hd => (((knot_smono mode fe F eager).inferIO d e).run h).ext.lss.ls.lvl hh l hd⟩
 
 theorem GsDen.keep {a a' : AState} {gs : Word} {l : ConLeche.Level} (h : GsDen a gs l)
     (hk : ∀ h l, denoteL a.store.ls h = some l → denoteL a'.store.ls h = some l) : GsDen a' gs l :=
@@ -327,6 +333,102 @@ theorem zeroWhereZero_congr {S S' U : ConLeche.Level}
     (h : ConLeche.Level.zeronessOf S = ConLeche.Level.zeronessOf S') :
     ConLeche.Level.zeroWhereZero S U = ConLeche.Level.zeroWhereZero S' U := by
   unfold ConLeche.Level.zeroWhereZero; rw [h]
+
+section
+variable {N : Word → ConLeche.Name → Prop}
+
+/-- **`lh_contains`' loop is `List.contains`** on the names of the heap slice. -/
+theorem lhcLoop_ok (hN : NameRel N) {m : Mem} {e w : Word} {nm : ConLeche.Name} (hw : N w nm) :
+    ∀ (f : Nat) (j k : Word) (ps : List ConLeche.Name) (x : Word) (m' : Mem), NmsR N m LH j k ps →
+      j.toNat + k.toNat < 2 ^ 64 → e = j + k → lhcW.loop1 f m e w j = some (x, m') →
+      m' = m ∧ x = if ps.contains nm then 1 else 0 := by
+  intro f
+  induction f with
+  | zero => intro j k ps x m' _ _ _ h; rw [lhcW.loop1.eq_1] at h; cases h
+  | succ f ih =>
+    intro j k ps x m' hps hov he h
+    cases hps with
+    | nil =>
+      rw [lhcW.loop1.arm3 _ _ _ _ _ (by subst he; simp)] at h
+      cases h; simp
+    | @cons _ _ y ys hk hy hys =>
+      have hk' : k.toNat ≠ 0 := fun h0 => hk (UInt64.toNat_inj.mp (by simpa using h0))
+      have hlt : j < e := by
+        subst he; rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add]; rw [Nat.mod_eq_of_lt hov]; omega
+      by_cases hr : rdW (m.arr64 LH) j = w
+      · rw [lhcW.loop1.arm1 _ _ _ _ _ hlt hr] at h
+        cases h
+        rw [hr] at hy
+        rw [hN.fn _ _ _ hy hw]; simp
+      · rw [lhcW.loop1.arm2 _ _ _ _ _ hlt hr] at h
+        have e1 : (j + 1).toNat = j.toNat + 1 := by
+          rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
+        have e2 : (k - 1).toNat = k.toNat - 1 := by
+          rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+        obtain ⟨rfl, hx⟩ := ih (j + 1) (k - 1) ys x m' hys (by rw [e1, e2]; omega)
+          (by subst he; apply UInt64.toNat_inj.mp; simp only [UInt64.toNat_add, UInt64.toNat_sub_of_le _ _ (show (1 : Word) ≤ k by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega) h
+        refine ⟨rfl, ?_⟩
+        have hne : y ≠ nm := fun h' => hr (hN.inj _ _ _ hy (h' ▸ hw))
+        rw [hx]; simp [List.contains_cons, Ne.symm hne]
+
+theorem lhc_call {p : Prog} (hp : p.lookup "lh_contains" = some lhContains) (hN : NameRel N)
+    {n : Nat} {m m' : Mem} {t0 t1 w : Word} {r : List Word} {ps : List ConLeche.Name} {nm : ConLeche.Name}
+    (hps : NmsR N m LH t0 (t1 - t0) ps) (hov : t0.toNat + (t1 - t0).toNat < 2 ^ 64)
+    (he : t1 = t0 + (t1 - t0)) (hw : N w nm)
+    (h : callW p n "lh_contains" [t0, t1, w] m = some (r, m')) :
+    m' = m ∧ r.headD 0 = if ps.contains nm then 1 else 0 := by
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (lhcW_spec p hp n _ t0 t1 w) h
+  rw [hs'] at hW
+  rcases n with _ | n
+  · rw [lhcW.eq_1] at hW; cases hW
+  rw [lhcW.arm1] at hW
+  exact lhcLoop_ok hN hw _ _ _ _ _ _ hps hov he hW
+
+/-- **`lv_zero_where_zero`'s loop is `qs.all ps.contains`** (the top put back where it fails). -/
+theorem zwzLoop_ok {p : Prog} (hp : p.lookup "lh_contains" = some lhContains) (hN : NameRel N)
+    {m : Mem} {t0 t1 t2 : Word} {ps : List ConLeche.Name}
+    (hps : NmsR N m LH t0 (t1 - t0) ps) (hov0 : t0.toNat + (t1 - t0).toNat < 2 ^ 64)
+    (he0 : t1 = t0 + (t1 - t0)) :
+    ∀ (f : Nat) (j k : Word) (qs : List ConLeche.Name) (sig : Sig) (m' : Mem), NmsR N m LH j k qs →
+      j.toNat + k.toNat < 2 ^ 64 → t2 = j + k → lvZwzW.loop1 p f m t0 t1 t2 j = some (sig, m') →
+      (qs.all ps.contains = true ∧ sig = .normal ∧ m' = m) ∨
+        (qs.all ps.contains = false ∧ sig = .ret [0] ∧ m' = m.set64 CTL 192 t0) := by
+  intro f
+  induction f with
+  | zero => intro j k qs sig m' _ _ _ h; rw [lvZwzW.loop1.eq_1] at h; cases h
+  | succ f ih =>
+    intro j k qs sig m' hqs hov he h
+    rw [lvZwzW.loop1.eq_2] at h
+    cases hqs with
+    | nil =>
+      rw [ite_eq_right (by subst he; simp)] at h
+      cases h; simp
+    | @cons _ _ y ys hk hy hys =>
+      have hk' : k.toNat ≠ 0 := fun h0 => hk (UInt64.toNat_inj.mp (by simpa using h0))
+      have hlt : j < t2 := by
+        subst he; rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add]; rw [Nat.mod_eq_of_lt hov]; omega
+      rw [ite_eq_left hlt] at h
+      rcases hc : callW p f "lh_contains" [t0, t1, rdW (m.arr64 LH) j] m with _ | ⟨r, m₁⟩
+      · rw [hc, lvZwzW.k_lh_contains.none] at h; cases h
+      rw [hc, lvZwzW.k_lh_contains.eq_def] at h
+      simp only at h
+      obtain ⟨rfl, hr⟩ := lhc_call hp hN hps hov0 he0 hy hc
+      by_cases hy' : ps.contains y = true
+      · rw [hr, ite_eq_left hy', ite_eq_right (by decide)] at h
+        have e1 : (j + 1).toNat = j.toNat + 1 := by
+          rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
+        have e2 : (k - 1).toNat = k.toNat - 1 := by
+          rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+        rcases ih (j + 1) (k - 1) ys sig m' hys (by rw [e1, e2]; omega)
+          (by subst he; apply UInt64.toNat_inj.mp; simp only [UInt64.toNat_add, UInt64.toNat_sub_of_le _ _ (show (1 : Word) ≤ k by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega) h
+          with ⟨h1, h2, h3⟩ | ⟨h1, h2, h3⟩
+        · exact .inl ⟨by rw [List.all_cons, hy', h1]; rfl, h2, h3⟩
+        · exact .inr ⟨by rw [List.all_cons, hy', h1]; rfl, h2, h3⟩
+      · rw [hr, ite_eq_right hy', ite_eq_left rfl] at h
+        cases h
+        have hf : ps.contains y = false := by simpa using hy'
+        exact .inr ⟨by rw [List.all_cons, hf]; rfl, rfl, rfl⟩
+end
 
 /-- **`lv_zero_where_zero` is `Level.zeroWhereZero` under `CoreS`** (the heap top put back). -/
 theorem lvZwz_core {p : Prog} (hpn : p.lookup "lv_node" = some lvNode)
@@ -339,7 +441,90 @@ theorem lvZwz_core {p : Prog} (hpn : p.lookup "lv_node" = some lvNode)
     (h : lvZwzW p n m s u = some (w, m')) :
     w = (if ConLeche.Level.zeroWhereZero S U then 1 else 0) ∧ CoreS dn m' a vis fe M eb ∧
       StackKept m m' := by
-  sorry
+  rcases n with _ | n
+  · simp [lvZwzW] at h
+  have hN := nameN_rel _ hS.nwf
+  rw [lvZwzW.arm1] at h
+  rcases hc : callW p n "lv_zero" [s] m with _ | ⟨r₁, m₁⟩
+  · rw [hc, lvZwzW.k_lv_zero.eq_1] at h; cases h
+  rw [hc, lvZwzW.k_lv_zero.eq_2] at h
+  obtain ⟨s₁, hs₁, -, hz₁⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (lvZero_spec p hpn hpp hpz n ⟨m, Locals.init []⟩ s) hc
+  rw [hs₁] at hz₁
+  have hlS := denoteL_lvR hS.arena.base (decI s) S hdS
+  rw [decI_word_self s hs] at hlS
+  have hlU := denoteL_lvR hS.arena.base (decI u) U hdU
+  rw [decI_word_self u hu] at hlU
+  obtain ⟨he₁, hZ₁⟩ := zeroW_ok n _ _ _ _ _ hlS hz₁
+  have hfin : ∀ m₂ : Mem, HeapExt m m₂ → m' = m₂.set64 CTL 192 (rdW (m.arr64 CTL) 192) →
+      CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
+    intro m₂ he hm'
+    subst hm'
+    have hf : MemFrame [LH] [192] m (m₂.set64 CTL 192 (rdW (m.arr64 CTL) 192)) :=
+      he.memFrame.trans ((MemFrame.setCtl m₂ 192 _).mono (by simp) (by simp))
+    exact hS.frame hf (by simp [LH]) (by simp)
+  unfold ConLeche.Level.zeroWhereZero
+  by_cases h1 : r₁.headD 0 ≠ 0
+  · rw [ite_eq_left h1] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    rcases hZ₁ with ⟨_, hx⟩ | ⟨hx, _⟩
+    · rw [hx]; exact ⟨rfl, hfin m₁ he₁ rfl⟩
+    · exact absurd hx h1
+  rw [ite_eq_right h1] at h
+  obtain ⟨ps, hpS, hps⟩ : ∃ ps, S.zeronessOf = .ifAllZero ps ∧
+      NmsR (nameN a.store.lss.ls.ns) m₁ LH (htop m) (htop m₁ - htop m) ps := by
+    rcases hZ₁ with ⟨hx, _⟩ | ⟨_, ps, h2, h3⟩
+    · exact absurd hx (by simp only [ne_eq, Decidable.not_not] at h1; rw [h1]; decide)
+    · exact ⟨ps, h2, h3⟩
+  rcases hc2 : callW p n "lv_zero" [u] m₁ with _ | ⟨r₂, m₂⟩
+  · rw [hc2, lvZwzW.k_lv_zero_2.eq_1] at h; cases h
+  rw [hc2, lvZwzW.k_lv_zero_2.eq_2] at h
+  obtain ⟨s₂, hs₂, -, hz₂⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+    (lvZero_spec p hpn hpp hpz n ⟨m₁, Locals.init []⟩ u) hc2
+  rw [hs₂] at hz₂
+  obtain ⟨he₂, hZ₂⟩ := zeroW_ok n _ _ _ _ _ (hlU.mono he₁) hz₂
+  rw [hpS]
+  have t₁ := he₁.top
+  have t₂ := he₂.top
+  by_cases h2 : r₂.headD 0 ≠ 0
+  · rw [ite_eq_left h2] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    rcases hZ₂ with ⟨_, hx⟩ | ⟨hx, _⟩
+    · rw [hx]; exact ⟨rfl, hfin m₂ (he₁.trans he₂) rfl⟩
+    · exact absurd hx h2
+  rw [ite_eq_right h2] at h
+  obtain ⟨qs, hqU, hqs⟩ : ∃ qs, U.zeronessOf = .ifAllZero qs ∧
+      NmsR (nameN a.store.lss.ls.ns) m₂ LH (htop m₁) (htop m₂ - htop m₁) qs := by
+    rcases hZ₂ with ⟨hx, _⟩ | ⟨_, qs, h2, h3⟩
+    · exact absurd hx (by simp only [ne_eq, Decidable.not_not] at h2; rw [h2]; decide)
+    · exact ⟨qs, h2, h3⟩
+  rw [hqU]
+  have hd₁ : (htop m₁ - htop m).toNat = (htop m₁).toNat - (htop m).toNat := by
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
+  have hd₂ : (htop m₂ - htop m₁).toNat = (htop m₂).toNat - (htop m₁).toNat := by
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
+  have hps₂ := hps.mono_lh he₂ (by rw [hd₁]; omega)
+  have hlt0 := (htop m₁).toNat_lt
+  have hlt2 := (htop m₂).toNat_lt
+  rcases hl : lvZwzW.loop1 p (n + 1) m₂ (rdW (m.arr64 CTL) 192) (rdW (m₁.arr64 CTL) 192)
+      (rdW (m₂.arr64 CTL) 192) (rdW (m₁.arr64 CTL) 192) with _ | ⟨sig, m₃⟩
+  · rw [hl, lvZwzW.k_loop1.eq_1] at h; cases h
+  rw [hl, lvZwzW.k_loop1.eq_2] at h
+  rcases zwzLoop_ok hpc hN (t2 := htop m₂) hps₂ (by rw [hd₁]; omega)
+      (by rw [UInt64.add_comm, UInt64.sub_add_cancel]) (n + 1) _ _ qs sig m₃ hqs (by rw [hd₂]; omega)
+      (by rw [UInt64.add_comm, UInt64.sub_add_cancel]) hl with ⟨ha, hsg, hm3⟩ | ⟨ha, hsg, hm3⟩
+  · subst hsg
+    rw [hm3, if_pos rfl] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact ⟨by simp [ha], hfin m₂ (he₁.trans he₂) rfl⟩
+  · subst hsg
+    rw [hm3, if_neg (by simp)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact ⟨by simp [ha, Sig.retVal, Sig.retOr], hfin m₂ (he₁.trans he₂) rfl⟩
 
 /-- **The guard rows on the stack**: row `i` at `ro + 2 i` (its depth) and `ro + 2 i + 1` (its
 term). -/

@@ -33,8 +33,7 @@ tree and **intern the result** (`internLevel`). L has no trees: lane `levels`' `
 The keys and values arrays of lane `levels`' generic functions are fixed here, under this
 family's own names (`LevelSubstLP.lean`): `lp_lookup` (keys on the spine stack, copied there by
 `keys_push`, so that lane `induct`'s `IW` slices and the record pool's slices are served by one
-function; values in the pool), `lp_substl`, `lp_spw` (a datum's names in `EREC`),
-`lp_substpw`.
+function; values in the pool) and `lp_substl`.
 -/
 
 open ConRon.Arena
