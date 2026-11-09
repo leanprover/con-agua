@@ -38,7 +38,20 @@ namespace L.Arena
 
 theorem decRule_fields (a : Array Word) (q : Nat) (rl : IRecRule) (h : decRule (aread a) q = some rl) :
     ∃ w, a[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ rl.ctor = decI w := by
-  sorry
+  have hc : hd? (aread a) q = some rl.ctor := by
+    unfold decRule at h
+    rcases hk : nat? (aread a) (q + 3) with _ | k
+    · simp [hk] at h
+    · rcases k with _ | _ | _ | k <;>
+        simp only [hk, Option.bind_eq_bind, Option.bind_some, Option.bind_eq_some_iff,
+          Option.pure_def, Option.some.injEq] at h
+      all_goals first
+        | (obtain ⟨c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
+        | (obtain ⟨x1, -, c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
+        | (obtain ⟨x1, -, x2, -, c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
+        | (simp at h)
+  obtain ⟨w, hw, h32, he⟩ := hd?_some hc
+  exact ⟨w, by simpa [aread_apply] using hw, h32, he⟩
 
 theorem mapM_option_get {α β : Type} (f : α → Option β) : ∀ (l : List α) (rs : List β),
     l.mapM f = some rs → rs.length = l.length ∧ ∀ j (hj : j < l.length), f l[j] = rs[j]? := by
