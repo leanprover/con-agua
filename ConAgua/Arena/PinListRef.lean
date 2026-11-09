@@ -18,6 +18,7 @@ import ConAgua.Arena.DeclCanonLvl
 import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.TwinStep
 import ConAgua.Arena.IndexLoops
+import ConAgua.Arena.DeclCanonRules
 public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 
 @[expose] public section

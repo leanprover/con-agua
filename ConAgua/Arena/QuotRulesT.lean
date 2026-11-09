@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.QuotCiT
 public import ConAgua.Arena.InstLPSpec
 import ConAgua.Arena.RecFireCore
+import ConAgua.Arena.DeclCanonRules
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.InstLPRef
 import ConAgua.Arena.LevelArena
@@ -74,66 +75,6 @@ theorem decRule_fields' {R : Nat → Option Word} {q : Nat} {rl : IRecRule} (h :
     | 2, h =>
       simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
       obtain ⟨_, -, c, hc, nf, hnf, r, hr, rfl⟩ := h; exact ⟨hc, hnf, hr⟩
-    | _ + 3, h => simp at h
-
-/-- The words a decoded rule reads are there. -/
-theorem decRule_defs {R : Nat → Option Word} {q : Nat} {rl : IRecRule} (h : decRule R q = some rl) :
-    (∃ w, R q = some w) ∧ (∃ w, R (q + 1) = some w) ∧ (∃ w, R (q + 3) = some w) ∧
-      (∃ w, R (q + 8) = some w) ∧
-      (∀ lv, rl.fire = .levels lv → (∃ w, R (q + 4) = some w) ∧ (∃ w, R (q + 5) = some w)) ∧
-      (∀ lv pins, rl.fire = .nested lv pins → (∃ w, R (q + 4) = some w) ∧
-        (∃ w, R (q + 5) = some w) ∧ (∃ w, R (q + 6) = some w) ∧ (∃ w, R (q + 7) = some w)) := by
-  have def_of_nat : ∀ i x, nat? R i = some x → ∃ w, R i = some w := fun i x hx => by
-    simp only [nat?, Option.map_eq_some_iff] at hx; obtain ⟨w, hw, -⟩ := hx; exact ⟨w, hw⟩
-  have def_of_hd : ∀ {k : IdxKind} i (x : Idx k), hd? R i = some x → ∃ w, R i = some w := fun i x hx => by
-    simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx; obtain ⟨w, hw, -⟩ := hx; exact ⟨w, hw⟩
-  have def_of_hl : ∀ {k : IdxKind} i (xs : List (Idx k)), hlist? R i = some xs →
-      (∃ w, R i = some w) ∧ ∃ w, R (i + 1) = some w := fun i xs hx => by
-    simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx
-    obtain ⟨o, ho, c, hc, -⟩ := hx; exact ⟨def_of_nat _ _ ho, def_of_nat _ _ hc⟩
-  obtain ⟨hc, hn, hr⟩ := decRule_fields' h
-  refine ⟨def_of_hd _ _ hc, def_of_nat _ _ hn, ?_, def_of_hd _ _ hr, ?_, ?_⟩
-  · unfold decRule at h
-    cases h3 : nat? R (q + 3) with
-    | none => simp [h3] at h
-    | some t => exact def_of_nat _ _ h3
-  · intro lv hf
-    unfold decRule at h
-    cases h3 : nat? R (q + 3) with
-    | none => simp [h3] at h
-    | some t =>
-    simp only [h3, Option.bind_eq_bind, Option.bind_some] at h
-    match t, h with
-    | 0, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨_, -, _, -, _, -, rfl⟩ := h; cases hf
-    | 1, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨_, -, _, -, _, -, _, -, _, -, rfl⟩ := h; cases hf
-    | 2, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨y, hy, -⟩ := h
-      exact def_of_hl _ _ hy
-    | _ + 3, h => simp at h
-  · intro lv pins hf
-    unfold decRule at h
-    cases h3 : nat? R (q + 3) with
-    | none => simp [h3] at h
-    | some t =>
-    simp only [h3, Option.bind_eq_bind, Option.bind_some] at h
-    match t, h with
-    | 0, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨_, -, _, -, _, -, rfl⟩ := h; cases hf
-    | 1, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨y, hy, z, hz, -⟩ := h
-      obtain ⟨h4, h5⟩ := def_of_hl _ _ hy
-      obtain ⟨h6, h7⟩ := def_of_hl _ _ hz
-      exact ⟨h4, by simpa [Nat.add_assoc] using h5, h6, by simpa [Nat.add_assoc] using h7⟩
-    | 2, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨_, -, _, -, _, -, _, -, rfl⟩ := h; cases hf
     | _ + 3, h => simp at h
 
 /-- **A rule record at new names**: the plain words copied, the right-hand side `x`, a `.levels`
@@ -581,23 +522,6 @@ theorem decRule_levels_w3 {R : Nat → Option Word} {q : Nat} {rl : IRecRule} (h
     obtain ⟨_, -, _, -, _, -, _, -, _, -, rfl⟩ := h; cases hf
   | 2, _ => exact hw 2 h3 rfl
   | _ + 3, h => simp at h
-
-/-- The next rule's records, at the word address. -/
-theorem decRules_shift {R : Nat → Option Word} {o : Word} {k : Nat} {rs : List IRecRule}
-    (h : decRules R (o.toNat + 11) k = some rs) (hR : ∀ i v, R i = some v → i < 2 ^ 64) :
-    decRules R (o + 11).toNat k = some rs := by
-  cases k with
-  | zero => simpa [decRules] using h
-  | succ k =>
-  have h' := h
-  rw [decRules_succ] at h'
-  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h'
-  obtain ⟨r0, hr0, -⟩ := h'
-  obtain ⟨⟨w, hw⟩, -⟩ := decRule_defs hr0
-  have := hR _ _ hw
-  have e : (o + 11).toNat = o.toNat + 11 := by
-    rw [UInt64.toNat_add]; simp only [show (11 : Word).toNat = 11 from rfl]; omega
-  rw [e]; exact h
 
 /-! ## `rules_at_lps_go` -/
 

@@ -23,10 +23,10 @@ relation `StageR = CheckR ∧ IWOK` has all of `CoreS` but the **twin-side invar
 twin's state alone, true of every reachable state) and two size bounds, and the callers do not
 know that the level handles they compare **denote** (the `CoreS.lvl_den` gap of lane `whnf`).
 
-`lvlEqC_stage` is the bridge, sorry-free: from `StageR`, `TwinOK`, a filled pin table and the
+`lvlEqC_stage` is the bridge: from `StageR`, `TwinOK`, a filled pin table and the
 two denotations, a run of `lvl_eq_c` is a run of `lvlEq?`, `StageR` and `TwinOK` hold after it,
 and the pools are untouched (its write set from the text, `lvlText_closed`). What is left for the
-stub spec `lvlEqStub_spec` (`IndStubs.lean`, the one `sorry`) is to carry `TwinOK` in the stage
+stub spec `lvlEqStub_spec` (`IndStubs.lean`) is to carry `TwinOK` in the stage
 relation and the denotation of the compared handles in the callees' posts (DESIGN.md, lane
 `decls3`).
 -/
