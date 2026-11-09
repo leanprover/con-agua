@@ -43,9 +43,10 @@ namespace L.Arena
 
 open L.Front (DECL DLP)
 
-/-- The arrays a step may write: all but the pending checks and the declaration records. -/
+/-- The arrays a step may write: all but the declaration records (the own table rows `OTXA`,
+`OTXS`, `OTXN` included: the inductive arm's table push writes them). -/
 def stepA : List TieredArray :=
-  checkerWordArrays.filter fun b => b ≠ DECL ∧ b ≠ DLP ∧ (b.arr < 146 ∨ 149 < b.arr)
+  checkerWordArrays.filter fun b => b ≠ DECL ∧ b ≠ DLP
 
 /-- The `CTL` words a step may write: all but the pending checks' count, the promotion memos'
 words and the pin variant list's header (`CTL[150]`, `CTL[151]`, lane `romload`); the tier-1
