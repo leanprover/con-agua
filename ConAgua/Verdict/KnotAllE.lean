@@ -293,13 +293,13 @@ theorem checkerProg_lvlText : ∀ f ∈ lvlFns, checkerProg.lookup f = cvgProg.l
 /-- **The knot's program and entry points at `checkerProg`.** -/
 theorem checkerProg_knotTop : KnotTopProg checkerProg := by
   prog_bundle [checkerProg_coreErec, checkerProg_natAgree, checkerProg_lvlText, checkerProg_cvgAgree,
-    checkerProg_ivAgree, checkerProg_armAgree, checkerProg_cvgIn, checkerProg_ivIn, checkerProg_armIn]
+    checkerProg_armAgree, checkerProg_cvgIn, checkerProg_armIn]
 
 /-- **The knot's program and entry points at the substituted checker program** (no ROM facts
 needed: the knot reads no pin data). -/
 theorem checkerProg_knotTopPB (bs : List UInt8) : KnotTopProg (Prog.subPB bs checkerProg) := by
-  prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
-    checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
+  prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_armAgreePB bs,
+    checkerProg_cvgIn.subPB bs, checkerProg_armIn.subPB bs,
     closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs]
 
 /-- **The error knot at `checkerProg`**, every fuel. -/
