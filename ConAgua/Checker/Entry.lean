@@ -75,8 +75,8 @@ def capCond (p : ArrId × Bool) : Cond :=
 def capStep (p : ArrId × Bool) (s : Stmt) : Stmt :=
   .seq (.ite (capCond p) (.abort (.const R_CAP_REGION)) .skip) s
 
-/-- The `CTL`, `DECL`, `DLP` checks, the pool's two tiers (`POOL1` as the tiered access
-`len(POOL⟨1⟩.u64)`), and the return. -/
+/-- The `CTL`, `DECL`, `DLP` checks, the pool's and the record pool's two tiers (tier 1 as the
+tiered access `len(POOL⟨1⟩.u64)`, `len(EREC⟨1⟩.u64)`), and the return. -/
 def capTail : Stmt :=
   .seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) (.abort (.const R_CAP_REGION)) .skip)
     (.seq (.ite (.cmp .eq (.len64 L.Front.DECL) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
@@ -84,14 +84,17 @@ def capTail : Stmt :=
         (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 POOL)) (.abort (.const R_CAP_REGION)) .skip)
           (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64t POOL (.const 1)))
               (.abort (.const R_CAP_REGION)) .skip)
-            (.ret [.const 0])))))
+            (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 EREC)) (.abort (.const R_CAP_REGION)) .skip)
+              (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64t EREC (.const 1)))
+                  (.abort (.const R_CAP_REGION)) .skip)
+                (.ret [.const 0])))))))
 
 /-- The body of `cap_check()`, a fold over the table's word slots (`capSlots`): every word
 array shorter than `2^62` words (handles, offsets and counts are words; `arenaR_init`'s pool
 bound, the inductive lines' scratch arrays), the slot arrays at least `consMinWords` and below
 `2^61` words long (`slotArrs`), `CTL` at least `ctlMin` words, the declaration arrays `DECL` and
-`DLP` not empty (their word `0` is a count, `StateDR`), and the pool's two tiers below `2^40`
-words (lane tierpool: a tagged address's index has 40 bits). -/
+`DLP` not empty (their word `0` is a count, `StateDR`), and the pool's and the record pool's two
+tiers below `2^40` words (lane tierpool: a tagged address's index has 40 bits). -/
 def capCheckBody : Stmt := capSlots.foldr capStep capTail
 
 /-- `cap_check()`: aborts unless the harness's capacities meet `ArenaR`'s minimums (a capacity
