@@ -65,7 +65,8 @@ where
     | none => none
     | some (r, m1) =>
       match posRecW m1 [rdW (m1.arr64 IW) cto, rdW (m1.arr64 IW) io,
-          rdW (m1.arr64 IW) (rdW (m1.arr64 IW) go), rdW (m1.arr64 IW) (rdW (m1.arr64 IW) go + 1)] with
+          rdW (m1.arr64 IW) (rdW (m1.arr64 IW) go), rdW (m1.arr64 IW) (rdW (m1.arr64 IW) go + 1),
+          rdW (m1.arr64 IW) cto] with
       | none => none
       | some (e, m2) => bgoK3 (consW n m2 e (r.headD 0) (r.tail.headD 0))
 
@@ -88,7 +89,8 @@ theorem bmoW_cons (h : ctl ≠ 0) : bmoW (n + 1) m cto ctl io go =
     bmoW.bmoK n cto io go (bmoW n m (cto + 1) (ctl - 1) (io + 1) (go + 1)) := by simp [bmoW, h]
 theorem bmoK_some : bmoW.bmoK n cto io go (some (r, m1)) =
     (match posRecW m1 [rdW (m1.arr64 IW) cto, rdW (m1.arr64 IW) io,
-          rdW (m1.arr64 IW) (rdW (m1.arr64 IW) go), rdW (m1.arr64 IW) (rdW (m1.arr64 IW) go + 1)] with
+          rdW (m1.arr64 IW) (rdW (m1.arr64 IW) go), rdW (m1.arr64 IW) (rdW (m1.arr64 IW) go + 1),
+          rdW (m1.arr64 IW) cto] with
       | none => none
       | some (e, m2) => bgoK3 (consW n m2 e (r.headD 0) (r.tail.headD 0))) := rfl
 end arms
