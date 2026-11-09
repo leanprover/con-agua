@@ -75,7 +75,7 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
     Sim (callW p n "block_shape_with_sort" [pp, s] m) (bs.withSort (decI s)) a
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
         DecB (fun m => decBS m (r.headD 0).toNat) m' x ∧ ShapeSrc m' (r.headD 0) ∧
-        (RecsB m pp → RecsB m' (r.headD 0))) := by
+        (RecsB m pp → RecsB m' (r.headD 0)) ∧ (MsB m pp → MsB m' (r.headD 0))) := by
   intro r m' e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeWithSort_specC p ha hpw hp (realCall p) (realCall_spec p) n _ pp s) e
@@ -90,7 +90,12 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
         obtain ⟨x, a2, hrun2, hC2, hg2, hd2, -, -⟩ :=
           lvlEqC_simC p hcl hLC k hC hA s (pinW m 53) hs hF.lv_lt.2.1 sP lz hsP hdz r2 m2 e2
         exact ⟨x, a2, hrun2, hC2.stage, hg2, hd2⟩)
-  refine ⟨bs', a', hrun, hS', hg, by simpa using hD hq, ?_, fun hrb o l h1 h2 => ?_⟩
+  have hmbC : MsB m pp → MsB s'.mem q := fun hmb => by
+    have e0 := hcell 0 (by decide) (by decide) (by decide)
+    have e1 := hcell 1 (by decide) (by decide) (by decide)
+    simp only [Nat.add_zero] at e0
+    exact hmb.copy hg (by omega) e0 e1
+  refine ⟨bs', a', hrun, hS', hg, by simpa using hD hq, ?_, fun hrb o l h1 h2 => ?_, by simpa using hmbC⟩
   rotate_left
   · simp only [List.headD_cons] at h1 h2
     have e2 := hcell 2 (by decide) (by decide) (by decide)
@@ -134,6 +139,7 @@ structure IndsPost (env : ConLeche.Env) (fe : IFEnv) (pp : Word) (m : Mem) (a : 
   out : IndsOut m r x m' a'
   abs : AbsOK m'
   recs : RecsB m pp → RecsB m' (r.tail.headD 0)
+  msB : MsB m pp → MsB m' (r.tail.headD 0)
   core : ConRon.Bridge.CoreStep env fe a a'
 
 section sims
@@ -233,7 +239,7 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   have hx13 := (k2.trans k3).core.ext
   -- the shape with its sort
   refine RefE.bindLift (fun _ => cbiE.k_block_shape_with_sort.none ..) fun r4 m4 c4 => ?_
-  obtain ⟨p1, a4, hr4, hS4, hg4, hp1, hsrc4, hrb4⟩ := installWithSortSimC hq.closed hLC hP.alloc hP.pinWord
+  obtain ⟨p1, a4, hr4, hS4, hg4, hp1, hsrc4, hrb4, hmb4⟩ := installWithSortSimC hq.closed hLC hP.alloc hP.pinWord
     hP.withSort (k + 1) k3.stage k3.abs (hqd.grow (decBS_mono _) k03.grow)
     (partsHsrc_grow k03.grow hq9 hsrc) hs32 (ConRon.Bridge.denoteL_ext h1b hx13) r4 m4 c4
   have hA4 := hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ c4 k3.abs
@@ -281,7 +287,8 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   exact RefE.ret rfl ⟨⟨hS6, (k04.grow.trans hg5).trans hg6, hp1'.grow (decBS_mono _) hg6,
     partsHsrc_grow hg6 hp9' hsrc5⟩, hA6, fun hrb =>
     ((hrb4 ((hrb.grow (k1.trans k2).grow (by omega)).grow k3.grow
-      (by have := (k1.trans k2).grow.1; omega))).grow (hg5.trans hg6) (by omega)), k04.core⟩
+      (by have := (k1.trans k2).grow.1; omega))).grow (hg5.trans hg6) (by omega)),
+    fun hmb => (hmb4 ((hmb.grow (k1.trans k2).grow).grow k3.grow)).grow (hg5.trans hg6), k04.core⟩
 
 
 include hq henv hV hcr hCS hOpf hLC hApd hCrk in

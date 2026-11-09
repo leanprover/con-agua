@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndDecPLB
 public import ConAgua.Arena.IndPartsSpec.BsoK2
 import ConAgua.Arena.IndPosSpec.RootHoles
 public import ConAgua.Arena.IndRealAbs
@@ -58,10 +59,12 @@ theorem plW_sim {vis : Word} {fe : IFEnv} {k : Nat} {m : Mem}
 /-! ## `block_shape_seal` -/
 
 /-- The shape record's two slices (members at words `0, 1`, recursors at `2, 3`) lie below the
-top (lane `indproofs4`: `ShapeSrc` and `RecsB` for `check_block`). -/
+top (lane `indproofs4`: `ShapeSrc` and `RecsB` for `check_block`), and its members' constructor
+slices are decoded with their bounds (`decMSB`: `block_shape_member_ctors`, `CssAt`). -/
 def ShapeSl (m : Mem) (q : Word) : Prop :=
   (∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m) ∧
-  (∀ o l, iwN m (q.toNat + 2) = some o → iwN m (q.toNat + 3) = some l → o + l ≤ iwTop m)
+  (∀ o l, iwN m (q.toNat + 2) = some o → iwN m (q.toNat + 3) = some l → o + l ≤ iwTop m) ∧
+  MsB m q
 
 /-- `block_shape`'s result `(ok, q)` against the twin's `Option BlockShape`. -/
 def ShapeR (x : Option BlockShape) (r : List Word) (m : Mem) : Prop :=

@@ -75,7 +75,7 @@ theorem indsRefS_of (hq : KnotStageProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS 
   obtain ⟨s', hs', -, hR⟩ := hR
   simp only at hs'; subst hs'
   exact ⟨hR.out, callW_indMemos hCrk.closed hl (im_mem _ rfl) (callW_of_callE hc) hB.ind, hR.abs,
-    hR.out.2.2.2, hR.recs hsl.2⟩
+    hR.out.2.2.2, hR.recs hsl.2.1, hR.msB hsl.2.2⟩
 
 /-- **`check_block_ctors`' contract** (`CtorsRefS`): `ict_ref` through the call, `check_sum_ctors`
 by its contract; the memos by `callW_indMemos`. -/
