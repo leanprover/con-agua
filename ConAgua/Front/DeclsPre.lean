@@ -10,7 +10,7 @@ public import ConRon.Arena.Frontend.ExportC
 con-ron's frontend reads the parse state's tables (`names`, `levels`, `exprs`) and only ever
 pushes to its `decls` (`pushDecl`). So a line applied to a state whose `decls` are prefixed by
 `D` is the line applied to the state without them, with the result prefixed by `D`
-(`applyLine_pre`). The checker parses the stream after the prelude with the prelude's records
+(`applyRecord_pre`). The checker parses the stream after the prelude with the prelude's records
 still in `DECL` (`Checker/Prelude.lean`): its parse state is the twin's prefixed by them.
 -/
 
@@ -75,16 +75,17 @@ theorem processLineCoreD_pre (d : DeclRec) :
     Sum.map_inl, Sum.map_inr, id] <;> congr 1 <;> funext x <;> (try split) <;>
     simp [map_bind, map_pure, Sum.map_inl, Sum.map_inr]
 
-/-- **A line on the prefixed state** is the line on the state, prefixed. -/
-theorem applyLine_pre (r : LineRec) (k : Nat) :
-    applyLine (st.pre D) r k = preL D <$> applyLine st r k := by
-  sorry
+/-- **A record on the prefixed state** is the record on the state, prefixed. -/
+theorem applyRecord_pre (r : LineRec) :
+    applyRecord (st.pre D) r = preL D <$> applyRecord st r := by
+  cases r <;> simp [applyRecord, applyDeclD, parseExprEntryD_pre, parseNameEntryD_pre,
+    parseLevelEntryD_pre, processLineCoreD_pre, map_pure, preL]
 
-theorem applyLine_pre_run (r : LineRec) (k : Nat) (a : AState) :
-    (applyLine (st.pre D) r k).run a =
-      ((applyLine st r k).run a).map fun p => (preL D p.1, p.2) := by
-  rw [applyLine_pre, StateT.run_map]
-  cases (applyLine st r k).run a <;> rfl
+theorem applyRecord_pre_run (r : LineRec) (a : AState) :
+    (applyRecord (st.pre D) r).run a =
+      ((applyRecord st r).run a).map fun p => (preL D p.1, p.2) := by
+  rw [applyRecord_pre, StateT.run_map]
+  cases (applyRecord st r).run a <;> rfl
 
 end
 
