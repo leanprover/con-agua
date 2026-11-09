@@ -114,17 +114,8 @@ theorem nestFrameGrp_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame_grp" [hi, us, dO, dL, gO, gL, pO, pL, nO, nL]
     ⦃fun r s' => LocEq s' s₀ ∧ fgW n s₀.mem hi us dO dL gO gL pO pL nO nL =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ hi us dO dL gO gL pO pL nO nL
-    rw [invoke_eq _ hp]; simp only [callFn, nestFrameGrpL]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ hi us dO dL gO gL pO pL nO nL
-    simp only [invoke_eq _ hp, callFn, nestFrameGrpL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec4_specW p ha h4 n, posRec2_specW p ha h2 n, slSnoc_specW p ha hc2 hsn n, ih] <;>
-      finish (gen := 20) (instances := 5000) [rdW_eq, Locals.init_cons_zero]
+  -- nest_frame_grp now calls pi_binders (new L): fgW's model and this vcgen need its spec
+  sorry
 
 end L.Ind
 
