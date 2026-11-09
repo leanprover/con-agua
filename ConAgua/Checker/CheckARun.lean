@@ -2,14 +2,12 @@ module
 
 public import ConAgua.Checker.ParEntryA
 import ConAgua.Checker.IndArm
-import ConAgua.Arena.PhaseAEntry
 import ConAgua.Checker.LoopStage
 public import ConAgua.Checker.PipeFinal
 import ConAgua.Checker.TwinShapeQuot
 public import ConAgua.Checker.PresizeStage
 meta import ConAgua.Checker.ParEntryA
 meta import ConAgua.Checker.IndArm
-meta import ConAgua.Arena.PhaseAEntry
 meta import ConAgua.Checker.LoopStage
 meta import ConAgua.Checker.PipeFinal
 meta import ConAgua.Checker.TwinShapeQuot
