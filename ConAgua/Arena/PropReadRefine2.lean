@@ -27,17 +27,17 @@ open ConLeche (Name Level PropWhen)
 /-! ## Helpers -/
 
 /-- A decoded definition record: its value is word `q + 5`. -/
-theorem decCI_defnV {a b : Array Word} {q : Word}
-    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
-    (hsz : b.size < 2 ^ 63) (h1 : rdW b q = 1) :
-    ∃ cv hint, ci = .defnInfo cv (decE (rdW b (q + 5))) hint ∧ HW (rdW b (q + 5)) := by
-  sorry
+theorem decCI_defnV {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) (h1 : rd q = 1) :
+    ∃ cv hint, ci = .defnInfo cv (decE (rd (q + 5))) hint ∧ HW (rd (q + 5)) := by
+  obtain ⟨cv, v, hint, rfl, -, rfl, hlt⟩ := (decCI_split hR h).1 h1
+  exact ⟨cv, hint, rfl, hlt⟩
 
 /-- A decoded record whose kind word is not `1` is not a definition. -/
-theorem decCI_not_defn {a b : Array Word} {q : Word}
-    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
-    (hsz : b.size < 2 ^ 63) (h1 : rdW b q ≠ 1) : ∀ cv v hint, ci ≠ .defnInfo cv v hint :=
-  (decCI_defn h hab hsz).2 h1
+theorem decCI_not_defn {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) (h1 : rd q ≠ 1) :
+    ∀ cv v hint, ci ≠ .defnInfo cv v hint :=
+  (decCI_split hR h).2.1 h1
 
 /-- A run of `env_find`: the memory unchanged, the twin's lookup decoded. -/
 theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat}

@@ -18,8 +18,8 @@ import all ConAgua.Arena.WhnfCore
 
 The callW pattern of `WhnfCoreSlot.lean`, one function at a time.
 
-* Environment reads: `env_find`'s flag `≠ 0` means the name has a row (`envFind_found`), and every
-  row decodes (`EnvR.found_some`): the L code may read the record's words where the twin matches
+* Environment reads: `env_find`'s flag `≠ 0` means the name has a record that decodes
+  (`envFind_refines`): the L code may read the record's words where the twin matches
   on the decoded constant (`decCI_ctor`).
 -/
 
@@ -32,15 +32,6 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 /-! ## `env_find`: a found row is a row -/
-
-theorem envFind_found (p : Prog) (hp : p.lookup "env_find" = some envFindL)
-    (n : Nat) (s₀ : St) (vis w : Word) (fe : IFEnv) (hw : w.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "env_find" [w, vis]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
-      (EnvR s₀.mem vis fe → r.headD 0 ≠ 0 →
-        ∃ ci, decCI (erecP s₀.mem) (r.tail.headD 0).toNat = some ci); ⊤⦄ := by
-  sorry
 
 theorem hd?_eq {k : IdxKind} {a : Nat → Option Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
     ∃ w, a i = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w :=

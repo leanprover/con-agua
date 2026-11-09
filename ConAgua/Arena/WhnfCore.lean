@@ -319,6 +319,7 @@ structure WhnfCoreProg (p : Prog) : Prop where
   wkp : p.lookup "wk_put" = some (memoPutG wkSch)
   envrow : p.lookup "env_row_get" = some envRowGetL
   envfind : p.lookup "env_find" = some envFindL
+  baserow : p.lookup "base_row_get" = some baseRowGetL
   bvf : p.lookup "bvar_find" = some bvarFind
   bvp : p.lookup "bvar_push" = some bvarPush
   bvi : p.lookup "intern_bvar" = some internBVar

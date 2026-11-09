@@ -44,22 +44,25 @@ namespace L.Arena
 /-! ## The words of a projection table record -/
 
 /-- A decoded handle list at words `q + j`, `q + j + 1`: the slice those two words name. -/
-theorem hlist_words {k : IdxKind} {a : Array Word} {q : Word} {j : Nat} {l : List (Idx k)}
-    (hsz : a.size < 2 ^ 63) (hj : j < 15) (h : hlist? (aread a) (q.toNat + j) = some l) :
-    hslice? (aread a) (rdW a (q + UInt64.ofNat j)).toNat (rdW a (q + UInt64.ofNat (j + 1))).toNat = some l := by
+theorem hlist_words {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
+    {q : Word} {j : Nat} {l : List (Idx k)}
+    (h : hlist? R (q.toNat + j) = some l) :
+    hslice? R (rd (q + UInt64.ofNat j)).toNat (rd (q + UInt64.ofNat (j + 1))).toNat = some l := by
   simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at h
   obtain ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩ := h
-  have r1 : rdW a (q + UInt64.ofNat j) = wo := rdW_ext (fun _ _ h => h) hsz (by omega) hwo
-  have r2 : rdW a (q + UInt64.ofNat (j + 1)) = wc :=
-    rdW_ext (fun _ _ h => h) hsz (by omega) (by simpa [Nat.add_assoc] using hwc)
+  have hj := hR.lt _ _ hwc
+  have r1 : rd (q + UInt64.ofNat j) = wo := hR.offN hwo (by omega)
+  have r2 : rd (q + UInt64.ofNat (j + 1)) = wc :=
+    hR.offN (by simpa [Nat.add_assoc] using hwc) (by omega)
   rw [r1, r2]; exact hs
 
 /-- A decoded handle at word `q + j`. -/
-theorem hd_word {k : IdxKind} {a : Array Word} {q : Word} {j : Nat} {x : Idx k}
-    (hsz : a.size < 2 ^ 63) (hj : j < 16) (h : hd? (aread a) (q.toNat + j) = some x) :
-    HW (rdW a (q + UInt64.ofNat j)) ∧ x = decI (rdW a (q + UInt64.ofNat j)) := by
+theorem hd_word {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
+    {q : Word} {j : Nat} {x : Idx k} (h : hd? R (q.toNat + j) = some x) :
+    HW (rd (q + UInt64.ofNat j)) ∧ x = decI (rd (q + UInt64.ofNat j)) := by
   obtain ⟨w, hw, hw32, rfl⟩ := hd?_eq h
-  rw [rdW_ext (fun _ _ h => h) hsz hj hw]
+  have hj := hR.lt _ _ hw
+  rw [hR.offN hw (by omega)]
   exact ⟨hw32, rfl⟩
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
