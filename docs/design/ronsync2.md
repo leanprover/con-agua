@@ -199,3 +199,5 @@ verdict its strong form `TwinVerdict [b] c`.
 * Also from stage 3: every `check_b` call (the worker's initialisation, the twin's
   `AState.worker`) flushes the core caches: the index build fills them (`buildIndex` →
   `blockShape?` → `lvlEq?`), and the twin's jobs start from the worker with empty caches.
+* Also from stage 3: `former_never_zero_at` and `proj_guard_sort` abort (class 0) when
+  `nparams + nIdx` wraps 2^64, as `family_telescope` already did (the twin's sum is a `Nat`).
