@@ -90,24 +90,13 @@ theorem liftC_lt : ∀ x ∈ liftC, x.toNat < 64 := by
   intro x hx; simp only [liftC, List.mem_cons, List.not_mem_nil, or_false] at hx
   rcases hx with h | h | h | h | h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide
 
-/-- **`lift_entry` returns a handle word** (below `2^32`). Not proved here: the walk returns its
-input, an interned node or a memo hit, unmasked (`LiftL.lean`), and the lift memo's relation
-(`ArenaD`, `MemoRG decE`) does not bound its value words; `inst_entry` and `abs_entry` mask
-their result (`& 4294967295`) for this. Needs the core area (a bound in `liftEntry_refines`, or
-the mask in `lift_entry`), or a guard `if 4294967296 <= x { abort }` in `stream_nested_pins` as
-`stream_nested_bvars` has. -/
-theorem liftEntry_hw {n : Nat} {m m' : Mem} {a : AState} {h k c f : Word} {r : List Word}
-    (hS : StageR vis fe m a) (hh : H h)
-    (hc : callW p n "lift_entry" [h, k, c, f] m = some (r, m')) : H (r.headD 0) := by
-  sorry
-
 /-- **`lift_entry`'s step**: con-ron's `liftLooseBVarsFast` at the core walk fuel, the stage
 relation, the growth and the memos after. -/
 theorem lift_step (hL : LiftProg p) (he : p.lookup "lift_entry" = some liftEntry) {n : Nat}
     {m m' : Mem} {a : AState} {h k : Word} {r : List Word} (hS : StageR vis fe m a) (hA : AbsOK m)
     (hh : H h) (hc : callW p n "lift_entry" [h, k, 0, CWF] m = some (r, m')) :
     ∃ a', (liftLooseBVarsFast coreWalkFuel k.toNat 0 (decI h)).run a = .ok (decI (r.headD 0), a') ∧
-      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ H (r.headD 0) := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' := by
   have hfr : MemFrame liftA liftC m m' :=
     (run_memFrame (hL.closed he) (by decide) (run_of_callW hc)).1
   rcases n with _ | n
@@ -119,7 +108,7 @@ theorem lift_step (hL : LiftProg p) (he : p.lookup "lift_entry" = some liftEntry
   rw [CWF_eq] at hrun hD hres
   have hcp := (keeps_liftFast _ _ _ _).run hrun
   obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr liftA_tier liftC_lt hcp
-  refine ⟨_, ?_, hS', hg, AFr.of_frame hfr (by decide) (by decide) hA, liftEntry_hw hS hh hc⟩
+  refine ⟨_, ?_, hS', hg, AFr.of_frame hfr (by decide) (by decide) hA⟩
   show (liftLooseBVarsFast coreWalkFuel k.toNat (UInt64.toNat 0) (decE h)).run a =
     .ok (decE (r.headD 0), _)
   rw [hrun, hres]
@@ -215,8 +204,12 @@ theorem snpW_ok (h : SnoProg p) (k : Word) : ∀ (N : Nat) (m m' : Mem) (a : ASt
     rcases h1 : callW p N "lift_entry" [w, k, 0, CWF] m with _ | ⟨r1, m1⟩ <;>
       rw [h1] at hc
     · rw [snpW.k_lift_entry.none] at hc; cases hc
-    rw [snpW.k_lift_entry.arm1] at hc
-    obtain ⟨a1, hrun1, hS1, hg1, hA1, hH1⟩ := lift_step h.lift h.le hS hA hw2 h1
+    by_cases hbig : 4294967296 ≤ r1.headD 0
+    · rw [snpW.k_lift_entry.abort1 _ _ _ _ _ _ _ hbig] at hc; cases hc
+    rw [snpW.k_lift_entry.arm1 _ _ _ _ _ _ _ hbig] at hc
+    have hH1 : H (r1.headD 0) := by
+      have : ¬ (4294967296 : Nat) ≤ (r1.headD 0).toNat := hbig; show _ < _; omega
+    obtain ⟨a1, hrun1, hS1, hg1, hA1⟩ := lift_step h.lift h.le hS hA hw2 h1
     rcases h2 : snpW p N m1 k (po + 1) (pl - 1) with _ | ⟨r2, m2⟩ <;> rw [h2] at hc
     · rw [snpW.k_stream_nested_pins.none] at hc; cases hc
     rw [snpW.k_stream_nested_pins.arm1] at hc
@@ -532,31 +525,35 @@ theorem sno_ok (h : SnoProg p) {N : Nat} {m m' : Mem} {a : AState} {ty mI rP : W
   · rw [snoW.k_e_view.none] at hm; cases hm
   obtain ⟨hm21, -, -, hdomH, -, hvb⟩ := eView_forall_callW h.ev hS1.check.arena.base hbl hg6' h2
   subst hm21
-  rw [snoW.k_e_view.arm1] at hm
+  -- the index count `mI - rP`, saturated like the twin's Nat subtraction
+  obtain ⟨d, hd, hm⟩ : ∃ d : Word, d.toNat = mI.toNat - rP.toNat ∧
+      snoW.j1 p N (r.tail.headD 0) (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0)
+        (r.tail.tail.tail.tail.headD 0) (r2.tail.headD 0) d m2 = some (v, m') := by
+    by_cases hlt : mI < rP
+    · rw [snoW.k_e_view.arm1 _ _ _ _ _ _ _ _ _ _ hlt] at hm
+      exact ⟨0, by have := UInt64.lt_iff_toNat_lt.mp hlt; simp; omega, hm⟩
+    · rw [snoW.k_e_view.arm2 _ _ _ _ _ _ _ _ _ _ hlt] at hm
+      exact ⟨_, UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp hlt), hm⟩
+  rw [snoW.j1] at hm
   have hvb' : a1.store.viewBind rest =
       some (decI (r2.tail.headD 0), decI (r2.tail.tail.headD 0)) := by rw [← hbe]; exact hvb
   have htag : (rest.tag == ETag.forallE) = true := by
     rw [← hbe]; exact beq_iff_eq.mpr ((decE_tag_forallE _ hbl).mpr hg6')
   -- `stream_nested_dom`
-  rcases h3 : callW p N "stream_nested_dom" [r2.tail.headD 0, mI - rP, r.tail.headD 0,
+  rcases h3 : callW p N "stream_nested_dom" [r2.tail.headD 0, d, r.tail.headD 0,
       r.tail.tail.headD 0, r.tail.tail.tail.headD 0, r.tail.tail.tail.tail.headD 0] m2
     with _ | ⟨r3, m3⟩ <;> rw [h3] at hm
   · rw [snoW.k_stream_nested_dom.none] at hm; cases hm
   rw [snoW.k_stream_nested_dom.arm1] at hm
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
-  obtain ⟨b, a3, hr3, hS3, hg3, hA3, hb3⟩ := snd_ok h (mI - rP) h3 hS1 hA1 hdomH
+  obtain ⟨b, a3, hr3, hS3, hg3, hA3, hb3⟩ := snd_ok h d h3 hS1 hA1 hdomH
     (by rw [decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
     (by rw [decHL_grow hg1 hpb]; exact hp) (Nat.le_trans hpb hg1.iw)
   refine ⟨b, a3, ?_, hS3, hg1.trans hg3, hA3, hb3⟩
-  by_cases hle : rP ≤ mI
-  · rw [UInt64.toNat_sub_of_le _ _ hle] at hr3
-    simp only [ConRon.Arena.streamNestedOk, StateT.run_bind, hr1, except_ok_bind, htag, ↓reduceIte,
-      viewBind_run, hvb']
-    exact hr3
-  · -- `mI < rP`: the L code's `mI - rP` wraps (`2^64 - (rP - mI)`), the twin's is `0`. A
-    -- deviation, not provable here: `stream_nested_ok` needs `if mI < rP` (saturating), or the
-    -- callers an invariant `rP ≤ mI` of the recursor records (`decRS` has none).
-    sorry
+  rw [hd] at hr3
+  simp only [ConRon.Arena.streamNestedOk, StateT.run_bind, hr1, except_ok_bind, htag, ↓reduceIte,
+    viewBind_run, hvb']
+  exact hr3
 
 /-- **`stream_nested_ok`'s step** (`SnoSim`, the obligation `sr1_ref` takes): the twin's step
 from con-ron's `streamNestedOk_run`. -/
