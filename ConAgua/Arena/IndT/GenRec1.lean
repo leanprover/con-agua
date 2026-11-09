@@ -49,18 +49,15 @@ theorem StageC.of_checkE {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} 
     hA.wk.2.2.2.2⟩
 -/
 
-/-- What `classes_nfs` gives besides the twin's classes `ys` (from `m`, the classes' slice `(mo, ml)`):
-the result slice, the stage, the growth, the memos, `AbsOK`; and, when the classes' constructor
-records' level-parameter slices are given (`ClassesLp`) and the arrays kept their sizes, those of the
-result's records. -/
+/-- What `classes_nfs` gives besides the twin's classes `ys` (from `m`): the result slice, the stage,
+the growth, the memos, `AbsOK`. -/
 structure CnfsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
-    (m : Mem) (mo ml : Word) (r : List Word) (m' : Mem) (ys : List TargetMajor) (a' : AState) : Prop where
+    (m : Mem) (r : List Word) (m' : Mem) (ys : List TargetMajor) (a' : AState) : Prop where
   slice : PSlR decTM ys (r.headD 0) (r.tail.headD 0) m'
   stage : StageC dn vis fe env m' a'
   grow : IWGrow m m'
   rc : RcMR m'
   abs : AbsOK m'
-  lp : ClassesLp m mo ml → KeepW m m' → ClassesLp m' (r.headD 0) (r.tail.headD 0)
 
 /-- **`classes_nfs` refines `classesNfs`, both outcomes** (under `StageC`, the inputs' denotations and
 scoping as con-ron's `classesNfs_spec` asks): `iw_alloc` (class `0` on failure), then the loop
@@ -80,7 +77,7 @@ theorem cnfs_ref {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
     (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) :
     RefE (VerdictCtx p) (cnfsE p n m vis q fto ftl tblo tbll mo ml)
       (ConRon.Arena.classesNfs V fe bs formerTys tbl ms) a
-      (fun v ys a' => CnfsPost dn vis fe env m mo ml v.1 v.2 ys a') := by
+      (fun v ys a' => CnfsPost dn vis fe env m v.1 v.2 ys a') := by
   sorry
 
 /-- **`classes_nfs` refines `classesNfs`** under `StageC` (`cnfs_ref`'s ok half). -/

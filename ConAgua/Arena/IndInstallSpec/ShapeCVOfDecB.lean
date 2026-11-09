@@ -3,7 +3,11 @@ module
 public import ConAgua.Arena.IndInstallSpec.CbProg
 public import ConAgua.Arena.IndInstallSpec.Frame
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
-public import ConAgua.Arena.IndRealBph2
+public import ConAgua.Arena.DeclCanonSpec
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+public import ConAgua.Rom.CIReadSpec
+public import ConAgua.Arena.WhnfBase
+public import ConAgua.Checker.Entry
 import ConAgua.Arena.RecGenSpec.Classes
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
@@ -76,6 +80,5 @@ structure CidProg (p : Prog) : Prop where
   ipo : p.lookup "ind_params_ok" = some L.Checker.indParamsOkL
   parts : IndPartsProg5 p
   cb : CbProg p
-  bph : BphProg p
 
 end L.Ind
