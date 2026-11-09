@@ -265,7 +265,7 @@ theorem dadW_ok {p : Prog} (hp : p.lookup "pin_at" = some pinAtL)
     {r : List Word} (h : dadW p n m = some (r, m')) :
     ∃ ws : List Word, (ConRon.Arena.declinedAtDefinition).run a = .ok (ws.map decI, a) ∧
       SlR m' (r.headD 0) (r.tail.headD 0) ws ∧ (∀ w ∈ ws, H w) ∧ IWGrow m m' ∧
-      MemFrame [IW] [200] m m' ∧ (r.headD 0).toNat + 5 = iwTop m' := by
+      MemFrame [IW] [200] m m' ∧ (r.headD 0).toNat + 5 = iwTop m' ∧ iwTop m' ≤ (m.arr64 IW).size := by
   rcases n with _ | n
   · simp [dadW] at h
   simp only [dadW, dadW.k_pin_at, dadW.k_pin_at_2, dadW.k_pin_at_3, dadW.k_pin_at_4,
@@ -324,7 +324,7 @@ theorem dadW_ok {p : Prog} (hp : p.lookup "pin_at" = some pinAtL)
     rw [show (q + UInt64.ofNat j).toNat = q.toNat + j by
       rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
       have := hroom; omega, hget j (by subst hws; simpa using hj)]
-  refine ⟨ws, ?_, ?_, ?_, hg, hf, ?_⟩
+  refine ⟨ws, ?_, ?_, ?_, hg, hf, ?_, ?_⟩
   · unfold ConRon.Arena.declinedAtDefinition ConRon.Arena.pinStringOfList ConRon.Arena.pinListNil
       ConRon.Arena.pinListCons ConRon.Arena.pinCharOfNat ConRon.Arena.pinBool
     have e1 : (pinAt PIN_STRING_OF_LIST).run a = .ok (decI (r1.headD 0), a) := hr1
@@ -352,6 +352,8 @@ theorem dadW_ok {p : Prog} (hp : p.lookup "pin_at" = some pinAtL)
   · rw [← hws]; simp only [List.mem_cons, List.not_mem_nil, or_false]
     rintro w (rfl | rfl | rfl | rfl | rfl) <;> assumption
   · simp only [iwTop, htop, List.headD_cons]
+    rw [UInt64.toNat_add, h5]; omega
+  · simp only [iwTop, htop]
     rw [UInt64.toNat_add, h5]; omega
 
 end L.Ind
