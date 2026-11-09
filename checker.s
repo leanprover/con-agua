@@ -168357,9 +168357,9 @@ ret
 ca_f_proj_guard_rows:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $184, %rax
+cmpq $192, %rax
 jb ca_exhausted
-subq $176, %rsp
+subq $184, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
@@ -168457,9 +168457,14 @@ subq $1, %r14
 jb ca_exhausted
 call ca_f_const_ty_at
 movq %rax, 56(%rsp)
-movq 32(%rsp), %rdi
-addq 16(%rsp), %rdi
-addq $1, %rdi
+movq 32(%rsp), %rax
+addq 16(%rsp), %rax
+addq $1, %rax
+movq %rax, 112(%rsp)
+movq 112(%rsp), %rax
+cmpq 32(%rsp), %rax
+jbe ca_error
+movq 112(%rsp), %rdi
 movq 56(%rsp), %r8
 movq $0, %r9
 subq $1, %r14
@@ -168470,46 +168475,46 @@ movq %rdi, 72(%rsp)
 movq %r8, 80(%rsp)
 movq %r9, 88(%rsp)
 cmpq $0, 64(%rsp)
-jne .Lca_proj_guard_rows_222221E
+jne .Lca_proj_guard_rows_22222221E
 movq $0, %rdi
 movq $0, %r8
 movq $0, %rax
 jmp .Lca_proj_guard_rows_0R
-jmp .Lca_proj_guard_rows_222221X
-.Lca_proj_guard_rows_222221E:
-.Lca_proj_guard_rows_222221X:
+jmp .Lca_proj_guard_rows_22222221X
+.Lca_proj_guard_rows_22222221E:
+.Lca_proj_guard_rows_22222221X:
 movq 36736(%r15), %rax
 movq %rax, 96(%rsp)
 movq 48(%rsp), %rax
 addq $4, %rax
 shrq $40, %rax
-movq %rax, 112(%rsp)
+movq %rax, 120(%rsp)
 movq 48(%rsp), %rax
 addq $4, %rax
 movq $1099511627775, %rcx
 andq %rcx, %rax
-movq 112(%rsp), %rdx
+movq 120(%rsp), %rdx
 andq $1, %rdx
 cmpq 2648(%r15,%rdx,8), %rax
 jae ca_error
 movq 1176(%r15,%rdx,8), %rcx
 movq (%rcx,%rax,8), %rax
-movq %rax, 112(%rsp)
-movq 32(%rsp), %rax
 movq %rax, 120(%rsp)
-movq 16(%rsp), %rax
+movq 32(%rsp), %rax
 movq %rax, 128(%rsp)
-movq 72(%rsp), %rax
+movq 16(%rsp), %rax
 movq %rax, 136(%rsp)
-movq 80(%rsp), %rax
+movq 72(%rsp), %rax
 movq %rax, 144(%rsp)
-movq $0, %rax
+movq 80(%rsp), %rax
 movq %rax, 152(%rsp)
-movq 96(%rsp), %rax
-movq %rax, 160(%rsp)
 movq $0, %rax
+movq %rax, 160(%rsp)
+movq 96(%rsp), %rax
 movq %rax, 168(%rsp)
-lea 112(%rsp), %rsi
+movq $0, %rax
+movq %rax, 176(%rsp)
+lea 120(%rsp), %rsi
 subq $1, %r14
 jb ca_exhausted
 call ca_f_proj_guard_rows_at
@@ -168523,7 +168528,7 @@ movq $0, %rax
 movq $0, %rdi
 movq $0, %r8
 .Lca_proj_guard_rows_0R:
-addq $176, %rsp
+addq $184, %rsp
 ret
 ca_f_proj_guard_rows_at:
 movq %rsp, %rax

@@ -898,7 +898,7 @@ structure IotaCallees (p : Prog) : Prop where
   leafGuard : LeafGuardOK p
   litToCtorIfNat : LitToCtorIfNatOK p
 
-/-! ## The statements (`CoreSpec` shape; all `sorry` for now)
+/-! ## The statements (`CoreSpec` shape; proved in `WhnfIotaRefine*.lean`)
 
 A knot-calling function quantifies over the knot fuel `F` (`n ≤ F`) and takes `KnotUpTo p n` for the
 slots one level down, stating its own `CoreSpec` at L-fuel `n + 1`; the rest need only `CoreS`.

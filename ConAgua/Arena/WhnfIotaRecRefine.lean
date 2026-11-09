@@ -13,7 +13,7 @@ public import ConAgua.Arena.IotaCase3Ref
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.WhnfIotaRefine3
+public import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.L.Records
 public import ConAgua.Arena.WhnfIotaRefine2
 public import ConAgua.Arena.WhnfIotaRefine4
@@ -231,10 +231,6 @@ theorem IotaRecProg'.fnzaProg {p : Prog} (hp : IotaRecProg' p) (hilp : InstLPOK 
   ilp := hilp
 
 /-! ## `erec_push(o, c)` -/
-
-/-- The tagged read's bound for word `o + j` (`EREC⦃o + j⦄` in bounds). -/
-abbrev erIn (m : Mem) (x : Word) : Prop :=
-  (x &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (x >>> 40))).size
 
 /-- Model of the `erec_push` loop at L fuel `k`. -/
 def epW (o c so : Word) : Nat → Mem → Word → Option Mem

@@ -56,6 +56,7 @@ structure CrfProg (p : Prog) : Prop where
   isl : p.lookup "is_str_lit" = some isStrLitL
   ef : p.lookup "env_find" = some envFindL
   erg : p.lookup "env_row_get" = some envRowGetL
+  brg : p.lookup "base_row_get" = some baseRowGetL
   pin : p.lookup "pin_at" = some pinAtL
 
 /-! ## The models over the calls, and their specs -/
@@ -255,21 +256,27 @@ section rel
 variable {p : Prog} (hp : CrfProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 include hp
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-omit hp in
-theorem envFindW_01 {m m1 : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) :
-    r.headD 0 = 0 ∨ r.headD 0 = 1 := by
-  sorry
-
--/
-
 /-- **`env_find(w, vis)` as a call**: memory unchanged, and the word says whether `w` has a row in
 the environment. -/
 theorem envFind_callW {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
     (hE : EnvR m vis fe) (hw : w.toNat < 2 ^ 32)
     (hc : callW p n "env_find" [w, vis] m = some (r, m')) :
     m' = m ∧ r.headD 0 = if (fe.find? (decI w)).isSome then 1 else 0 := by
-  sorry
+  obtain ⟨s', hs', h1, -, hR⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envFind_spec p hp.erg hp.brg hp.ef n _ vis w) hc
+  refine ⟨hs'.symm.trans h1, ?_⟩
+  subst hR
+  obtain ⟨hf, hd⟩ := hE.find_res hw
+  rw [hf]
+  by_cases h0 : (findRes m vis w).headD 0 = 0
+  · rw [h0]; simp [envFound]
+  · obtain ⟨ci, hci⟩ := hd h0
+    have h1 : (findRes m vis w).headD 0 = 1 := by
+      unfold findRes at h0 ⊢
+      by_cases a1 : ownHit m vis w <;> by_cases a2 : baseHit m w <;> simp_all
+    have e : envFound m 1 ((findRes m vis w).tail.headD 0) = some ci := by
+      unfold envFound; rw [if_neg (show (1 : Word) ≠ 0 by decide)]; exact hci
+    rw [h1, e]; rfl
 
 omit hp in
 theorem ite_beq0 (c : Bool) : ((if c = true then (1 : Word) else 0) == 0) = !c := by
