@@ -402,7 +402,7 @@ theorem ciD {R : Nat → Option Word} {rd : Word → Word} {p : Nat} {x : IConst
           decRules R o c = some rules ∧ x = .recInfo cv mi rp k rules)) := by
   sorry
 
-theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
     (hR : RdOK R rd) {p q : Word} {x y : IConstantInfo}
     (hx : decCI R p.toNat = some x) (hy : decCI R q.toNat = some y) :
     ciEqB rd p q = decide (x = y) := by
