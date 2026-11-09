@@ -38,7 +38,7 @@ namespace L.Ind
 open L.Arena
 
 /-- The lookups of `block_ctors`. -/
-structure CtorsProg (p : Prog) : Prop extends FormersProg p where
+structure DcCtorsProg (p : Prog) : Prop extends FormersProg p where
   ctorInfo : p.lookup "ctor_info_rec" = some ctorInfoRecL
   numCtors : p.lookup "num_ctors_of" = some numCtorsOf
   ctorsCopy : p.lookup "block_shape_ctors_copy" = some blockShapeCtorsCopy
@@ -94,7 +94,7 @@ theorem bcg_spec (p : Prog) (hp : p.lookup "block_ctors_go" = some blockCtorsGo)
       finish (gen := 20) [rdW_eq]
 
 /-- `ctor_info_rec`'s run, as its model. -/
-theorem ciCall {p : Prog} (hP : CtorsProg p) {n : Nat} {m m' : Mem} {cv nP nF : Word} {r : List Word}
+theorem ciCall {p : Prog} (hP : DcCtorsProg p) {n : Nat} {m m' : Mem} {cv nP nF : Word} {r : List Word}
     (h : callW p n "ctor_info_rec" [cv, nP, nF] m = some (r, m')) : ciRecW m cv nP nF = some (r.headD 0, m') := by
   obtain ⟨s', rfl, -, hK⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (ciRec_specW p hP.erAlloc hP.erPut hP.ctorInfo n _ cv nP nF) h
@@ -106,7 +106,7 @@ def ctorsOf (N : Nat) (cs : List (IConstantVal × Nat)) : List IConstantInfo :=
 
 /-- **`block_ctors_go` refines the constructors' records**: an `IW` slice of `EREC` constant
 records below the pool's top. -/
-theorem bcgW_ok {p : Prog} (hP : CtorsProg p) (nP : Word) (a : AState) (vis : Word) (fe : IFEnv)
+theorem bcgW_ok {p : Prog} (hP : DcCtorsProg p) (nP : Word) (a : AState) (vis : Word) (fe : IFEnv)
     (n : Nat) :
     ∀ (m m' : Mem) (co cl : Word) (cs : List (IConstantVal × Nat)) (r : List Word),
     StageR vis fe m a → PSlR decCN cs co cl m → bcgW p n m nP co cl = some (r, m') →
@@ -154,27 +154,27 @@ theorem bcgW_ok {p : Prog} (hP : CtorsProg p) (nP : Word) (a : AState) (vis : Wo
 /-! ## `block_ctors` -/
 
 /-- After the constructor list: the records. -/
-def bctK (p : Prog) (n : Nat) (pp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def dbctK (p : Prog) (n : Nat) (pp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bfgK4 (callW p n "block_ctors_go" [rdW (m.arr64 IW) (pp + 4), r.headD 0, r.tail.headD 0] m)
 
 /-- **The model of `block_ctors(p)`** at exec fuel `n`. -/
-def bctW (p : Prog) : Nat → Mem → Word → Option (List Word × Mem)
+def dbctW (p : Prog) : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
-  | n + 1, m, pp => bctK p n pp (callW p n "block_shape_all_ctors" [pp] m)
+  | n + 1, m, pp => dbctK p n pp (callW p n "block_shape_all_ctors" [pp] m)
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (pp : Word) (r : List Word)
-theorem bctW_succ : bctW p (n + 1) m pp = bctK p n pp (callW p n "block_shape_all_ctors" [pp] m) := rfl
-theorem bctK_some : bctK p n pp (some (r, m)) =
+theorem dbctW_succ : dbctW p (n + 1) m pp = dbctK p n pp (callW p n "block_shape_all_ctors" [pp] m) := rfl
+theorem dbctK_some : dbctK p n pp (some (r, m)) =
     bfgK4 (callW p n "block_ctors_go" [rdW (m.arr64 IW) (pp + 4), r.headD 0, r.tail.headD 0] m) := rfl
 end arms
-attribute [ind_grind] bctW_succ bctK_some
+attribute [ind_grind] dbctW_succ dbctK_some
 
-theorem bct_spec (p : Prog) (hp : p.lookup "block_ctors" = some blockCtors) (n : Nat)
+theorem dbct_spec (p : Prog) (hp : p.lookup "block_ctors" = some blockCtors) (n : Nat)
     (s₀ : St) (pp : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_ctors" [pp]
-    ⦃fun r s' => LocEq s' s₀ ∧ bctW p n s₀.mem pp = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ dbctW p n s₀.mem pp = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, blockCtors]
   cases n with
@@ -204,18 +204,18 @@ theorem shape_nP {m : Mem} {pp : Word} {bs : BlockShape} (hq : DecB (fun m => de
 
 /-- **`block_ctors` refines `blockCtors`** (pure in the twin): an `IW` slice of `EREC` constant
 records below the pool's top. -/
-theorem bctW_ok {p : Prog} (hP : CtorsProg p) {n : Nat} {m m' : Mem} {pp : Word}
+theorem dbctW_ok {p : Prog} (hP : DcCtorsProg p) {n : Nat} {m m' : Mem} {pp : Word}
     {bs : BlockShape} {r : List Word} {a : AState} {vis : Word} {fe : IFEnv}
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs)
-    (hsrc : ShapeSrc m pp) (h : bctW p n m pp = some (r, m')) :
+    (hsrc : ShapeSrc m pp) (h : dbctW p n m pp = some (r, m')) :
     decPL m' (decCI (erecP m')) (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (ConRon.Arena.blockCtors bs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a ∧ IWGrow m m' := by
   rcases n with _ | n
-  · simp [bctW] at h
-  rw [bctW_succ] at h
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [bctK])
-  rw [bctK_some] at h
+  · simp [dbctW] at h
+  rw [dbctW_succ] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [dbctK])
+  rw [dbctK_some] at h
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bfgK4])
   rw [bfgK4_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

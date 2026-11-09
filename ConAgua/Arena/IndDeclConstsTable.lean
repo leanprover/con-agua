@@ -96,37 +96,37 @@ def btMem (m1 : Mem) (q pp c cv T elo ell ebo ebl : Word) : Mem :=
     (q + 11) 0) (q + 12) 0
 
 /-- After `erec_alloc`: the puts. -/
-def btK5 (pp c cv T elo ell ebo ebl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def dbtK5 (pp c cv T elo ell ebo ebl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([1, r.headD 0], btMem m (r.headD 0) pp c cv T elo ell ebo ebl)
 
 /-- After the bodies' copy: the record. -/
-def btK4 (p : Prog) (n : Nat) (pp c cv T elo ell : Word) :
+def dbtK4 (p : Prog) (n : Nat) (pp c cv T elo ell : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => btK5 pp c cv T elo ell (r.headD 0) (r.tail.headD 0) (callW p n "erec_alloc" [13] m)
+  | some (r, m) => dbtK5 pp c cv T elo ell (r.headD 0) (r.tail.headD 0) (callW p n "erec_alloc" [13] m)
 
 /-- After the level parameters' copy: the bodies'. -/
-def btK3 (p : Prog) (n : Nat) (pp c cv T bo bl : Word) :
+def dbtK3 (p : Prog) (n : Nat) (pp c cv T bo bl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => btK4 p n pp c cv T (r.headD 0) (r.tail.headD 0) (callW p n "er_from_iw" [bo, bl] m)
+  | some (r, m) => dbtK4 p n pp c cv T (r.headD 0) (r.tail.headD 0) (callW p n "er_from_iw" [bo, bl] m)
 
 /-- After `block_shape_lps`: their copy. -/
-def btK2 (p : Prog) (n : Nat) (pp c cv T bo bl : Word) :
+def dbtK2 (p : Prog) (n : Nat) (pp c cv T bo bl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => btK3 p n pp c cv T bo bl (callW p n "er_from_iw" [r.headD 0, r.tail.headD 0] m)
+  | some (r, m) => dbtK3 p n pp c cv T bo bl (callW p n "er_from_iw" [r.headD 0, r.tail.headD 0] m)
 
 /-- After `struct_proj_bodies`. -/
-def btK1 (p : Prog) (n : Nat) (pp c cv T : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def dbtK1 (p : Prog) (n : Nat) (pp c cv T : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some ([0, 0], m)
-    else btK2 p n pp c cv T (r.tail.headD 0) (r.tail.tail.headD 0) (callW p n "block_shape_lps" [pp] m)
+    else dbtK2 p n pp c cv T (r.tail.headD 0) (r.tail.tail.headD 0) (callW p n "block_shape_lps" [pp] m)
 
 /-- **The model of `block_table(p, ms)`** at exec fuel `n`. -/
-def btW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
+def dbtW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, pp, ms =>
     if rdW (m.arr64 IW) (ms + 3) ≠ 1 then some ([0, 0], m)
@@ -135,28 +135,28 @@ def btW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
       let c := rdW (m.arr64 IW) (rdW (m.arr64 IW) (ms + 2))
       let cv := rdW (m.arr64 IW) c
       let T := erRd m (rdW (m.arr64 IW) (ms + 4))
-      btK1 p n pp c cv T (callW p n "struct_proj_bodies"
+      dbtK1 p n pp c cv T (callW p n "struct_proj_bodies"
         [T, rdW (m.arr64 IW) (pp + 4), rdW (m.arr64 IW) (c + 1), erRd m (cv + 3)] m)
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (pp c cv T bo bl elo ell ebo ebl : Word) (r : List Word)
-theorem btK5_some : btK5 pp c cv T elo ell ebo ebl (some (r, m)) =
+theorem dbtK5_some : dbtK5 pp c cv T elo ell ebo ebl (some (r, m)) =
     some ([1, r.headD 0], btMem m (r.headD 0) pp c cv T elo ell ebo ebl) := rfl
-theorem btK4_some : btK4 p n pp c cv T elo ell (some (r, m)) =
-    btK5 pp c cv T elo ell (r.headD 0) (r.tail.headD 0) (callW p n "erec_alloc" [13] m) := rfl
-theorem btK3_some : btK3 p n pp c cv T bo bl (some (r, m)) =
-    btK4 p n pp c cv T (r.headD 0) (r.tail.headD 0) (callW p n "er_from_iw" [bo, bl] m) := rfl
-theorem btK2_some : btK2 p n pp c cv T bo bl (some (r, m)) =
-    btK3 p n pp c cv T bo bl (callW p n "er_from_iw" [r.headD 0, r.tail.headD 0] m) := rfl
-theorem btK1_some : btK1 p n pp c cv T (some (r, m)) =
+theorem dbtK4_some : dbtK4 p n pp c cv T elo ell (some (r, m)) =
+    dbtK5 pp c cv T elo ell (r.headD 0) (r.tail.headD 0) (callW p n "erec_alloc" [13] m) := rfl
+theorem dbtK3_some : dbtK3 p n pp c cv T bo bl (some (r, m)) =
+    dbtK4 p n pp c cv T (r.headD 0) (r.tail.headD 0) (callW p n "er_from_iw" [bo, bl] m) := rfl
+theorem dbtK2_some : dbtK2 p n pp c cv T bo bl (some (r, m)) =
+    dbtK3 p n pp c cv T bo bl (callW p n "er_from_iw" [r.headD 0, r.tail.headD 0] m) := rfl
+theorem dbtK1_some : dbtK1 p n pp c cv T (some (r, m)) =
     if r.headD 0 = 0 then some ([0, 0], m)
-    else btK2 p n pp c cv T (r.tail.headD 0) (r.tail.tail.headD 0) (callW p n "block_shape_lps" [pp] m) := rfl
+    else dbtK2 p n pp c cv T (r.tail.headD 0) (r.tail.tail.headD 0) (callW p n "block_shape_lps" [pp] m) := rfl
 end arms
-attribute [ind_grind] btK5_some btK4_some btK3_some btK2_some btK1_some
+attribute [ind_grind] dbtK5_some dbtK4_some dbtK3_some dbtK2_some dbtK1_some
 
-theorem bt_spec {p : Prog} (hP : TablesProg p) (n : Nat) (s₀ : St) (pp ms : Word) :
+theorem dbt_spec {p : Prog} (hP : TablesProg p) (n : Nat) (s₀ : St) (pp ms : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_table" [pp, ms]
-    ⦃fun r s' => LocEq s' s₀ ∧ btW p n s₀.mem pp ms = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ dbtW p n s₀.mem pp ms = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.bt]
   simp only [callFn, blockTable]
   cases n with
@@ -166,7 +166,7 @@ theorem bt_spec {p : Prog} (hP : TablesProg p) (n : Nat) (s₀ : St) (pp ms : Wo
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         callW_spec p n "struct_proj_bodies", callW_spec p n "block_shape_lps",
         callW_spec p n "er_from_iw", callW_spec p n "erec_alloc", erecPut_specW p hP.erPut n] <;>
-      finish (gen := 40) (instances := 20000) [btW, btMem, erRd, rdW_eq]
+      finish (gen := 40) (instances := 20000) [dbtW, btMem, erRd, rdW_eq]
 
 /-! ## `block_table`: the record -/
 
@@ -195,7 +195,7 @@ theorem btMem_eq {m1 : Mem} {q pp c cv T elo ell ebo ebl : Word} (hfr : ErApart 
     erRd_erecPutMem_ne f1, erRd_erecPutMem_ne f0]
 
 /-- One member's table result: `(0, _)` none, `(1, q)` the table record at `q`. -/
-def TblR (m : Mem) (r : List Word) : Option IProjTable → Prop
+def DcTblR (m : Mem) (r : List Word) : Option IProjTable → Prop
   | none => r.headD 0 = 0
   | some t => r.headD 0 = 1 ∧ decTbl (erecP m) (r.tail.headD 0).toNat = some t
 
@@ -220,18 +220,18 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
     {a : AState} {pp ms : Word} {bs : BlockShape} {mS : MemberShape} {r : List Word}
     (hS : StageR vis fe m a) (hA : AbsOK m) (hq : DecB (fun m => decBS m pp.toNat) m bs)
     (hms : DecB (fun m => decMS m ms.toNat) m mS) (hnP : 1 + bs.nP < 2 ^ 64)
-    (h : btW p n m pp ms = some (r, m')) :
+    (h : dbtW p n m pp ms = some (r, m')) :
     ∃ x a', (tblOne bs mS).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧
-      TblR m' r x := by
+      DcTblR m' r x := by
   rcases n with _ | n
-  · simp [btW] at h
+  · simp [dbtW] at h
   have hms0 : decMS (truncM m) ms.toNat = some mS := hms
   obtain ⟨-, ⟨da, hda, hdecl⟩, hnI, hct⟩ := decMS_some hms0
   obtain ⟨co, cl, hco, hcl, hcs⟩ := decAt_some hct
   have hlen := decPL_length (truncM m) hcs
   obtain ⟨hclW, -⟩ := iwRd (o := ms) (w := 3) (by simpa using hcl)
   obtain ⟨hnIW, -⟩ := iwRd (o := ms) (w := 1) (by simpa using hnI)
-  simp only [btW] at h
+  simp only [dbtW] at h
   -- the declines
   by_cases h3 : rdW (m.arr64 IW) (ms + 3) ≠ 1
   · rw [ite_eq_left h3] at h
@@ -301,7 +301,7 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     omega
   -- `struct_proj_bodies`
-  obtain ⟨⟨r1, m1⟩, hc1, h⟩ := of_K h (by simp [btK1])
+  obtain ⟨⟨r1, m1⟩, hc1, h⟩ := of_K h (by simp [dbtK1])
   rcases n with _ | n
   · exact (callW_zero_false hc1).elim
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -311,7 +311,7 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
   obtain ⟨x, a1, hrun1, hS1, hg1, hdec1, hA1⟩ := spbW_ok (fun _ => none) vis fe (n + 1) m s1.mem a _ _ _ _ r1
     hW1 hS hw3lt (by rw [hnPW]; omega) (UInt64.toNat_lt _) hA
   rw [hnPW, hnFW, ← hname, ← hty0] at hrun1
-  rw [btK1_some] at h
+  rw [dbtK1_some] at h
   cases x with
   | none =>
     have h0 : r1.headD 0 = 0 := hdec1
@@ -325,8 +325,8 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
   rw [ite_eq_right (by rw [h01]; decide)] at h
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   -- `block_shape_lps`
-  obtain ⟨⟨r2, m2⟩, hc2, h⟩ := of_K h (by simp [btK2])
-  rw [btK2_some] at h
+  obtain ⟨⟨r2, m2⟩, hc2, h⟩ := of_K h (by simp [dbtK2])
+  rw [dbtK2_some] at h
   obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (blockShapeLps_spec p hP.alloc hP.tErCopy hP.tErToIw hP.lps (n + 1) _ pp) hc2
   have hq1 : decBS s1.mem pp.toNat = some bs := hq.stab (decBS_mono _) _ hg1
@@ -336,15 +336,15 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
     ⟨CheckR.frame_iw hf2 hS1.check, IWOK.of_iw hf2 hS1.iw (hroom2 hS1.iw.iw)⟩
   have hA2 : AbsOK s2.mem := hA1.iw hf2
   -- the level parameters' copy
-  obtain ⟨⟨r3, m3⟩, hc3, h⟩ := of_K h (by simp [btK3])
-  rw [btK3_some] at h
+  obtain ⟨⟨r3, m3⟩, hc3, h⟩ := of_K h (by simp [dbtK3])
+  rw [dbtK3_some] at h
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (efF_spec p hP.cbr.tsr hP.erPut (n + 1) _ _ _) hc3
   obtain ⟨hS3, hg3, hl3, hsl3⟩ := efF_stage hW3 hS2 hdl2 hlb2
   have hA3 := efF_afr hW3 hA2
   -- the bodies' copy
-  obtain ⟨⟨r4, m4⟩, hc4, h⟩ := of_K h (by simp [btK4])
-  rw [btK4_some] at h
+  obtain ⟨⟨r4, m4⟩, hc4, h⟩ := of_K h (by simp [dbtK4])
+  rw [dbtK4_some] at h
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (efF_spec p hP.cbr.tsr hP.erPut (n + 1) _ _ _) hc4
   have hg13 := hg2.trans hg3
@@ -353,8 +353,8 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
   have hA4 := efF_afr hW4 hA3
   have hg04 : IWGrow m s4.mem := hg1.trans (hg13.trans hg4)
   -- the record
-  obtain ⟨⟨r5, m5⟩, hc5, h⟩ := of_K h (by simp [btK5])
-  rw [btK5_some] at h
+  obtain ⟨⟨r5, m5⟩, hc5, h⟩ := of_K h (by simp [dbtK5])
+  rw [dbtK5_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s5, rfl, -, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (erecAlloc_specW p hP.erAlloc (n + 1) _ 13) hc5
@@ -459,8 +459,8 @@ theorem bts_spec {p : Prog} (hP : TablesProg p) (n : Nat) :
 
 /-- `block_table`'s run, as its model. -/
 theorem btCall {p : Prog} (hP : TablesProg p) {n : Nat} {m m' : Mem} {pp ms : Word} {r : List Word}
-    (h : callW p n "block_table" [pp, ms] m = some (r, m')) : btW p n m pp ms = some (r, m') := by
-  obtain ⟨s', rfl, -, hK⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (bt_spec hP n _ pp ms) h
+    (h : callW p n "block_table" [pp, ms] m = some (r, m')) : dbtW p n m pp ms = some (r, m') := by
+  obtain ⟨s', rfl, -, hK⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (dbt_spec hP n _ pp ms) h
   exact hK
 
 /-- A table record pointer consed onto a slice of `EREC` table records (`sl_cons`). -/

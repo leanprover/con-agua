@@ -209,19 +209,25 @@ structure DcIdx (m₀ m : Mem) : Prop where
   c128 : rdW (m.arr64 CTL) 128 = rdW (m₀.arr64 CTL) 128
   c1 : rdW (m.arr64 CTL) 1 = rdW (m₀.arr64 CTL) 1
   c130 : rdW (m₀.arr64 CTL) 1 = 0 → rdW (m.arr64 CTL) 130 = rdW (m₀.arr64 CTL) 130
+  /-- The pin table. -/
+  pins : m.arr64 PINS = m₀.arr64 PINS
+  /-- Every array's size. -/
+  sz : ∀ b, (m.arr64 b).size = (m₀.arr64 b).size
 
-theorem DcIdx.refl (m : Mem) : DcIdx m m := ⟨fun _ _ => rfl, rfl, rfl, fun _ => rfl⟩
+theorem DcIdx.refl (m : Mem) : DcIdx m m := ⟨fun _ _ => rfl, rfl, rfl, fun _ => rfl, rfl, fun _ => rfl⟩
 
 /-- `DcIdx` across a writer of other arrays and words. -/
 theorem DcIdx.frame {A : List TieredArray} {C : List Word} {m₀ m m' : Mem} (h : DcIdx m₀ m)
     (hf : MemFrame A C m m')
     (hA : ∀ b : TieredArray, (b.arr = L.Front.DECL ∨ b.arr = L.Front.DLP ∨ b.arr = L.Arena.FIRSTS ∨
       (129 ≤ b.arr ∧ b.arr ≤ 134)) → b ∉ A)
-    (h128 : (128 : Word) ∉ C) (h1 : (1 : Word) ∉ C) (h130 : (130 : Word) ∉ C) : DcIdx m₀ m' :=
+    (h128 : (128 : Word) ∉ C) (h1 : (1 : Word) ∉ C) (h130 : (130 : Word) ∉ C)
+    (hP : (PINS : TieredArray) ∉ A) : DcIdx m₀ m' :=
   ⟨fun b hb => by
       rw [hf.arr b (hA b hb) (fun e => by subst e; revert hb; decide)]; exact h.arr b hb,
     by rw [hf.ctl _ h128]; exact h.c128, by rw [hf.ctl _ h1]; exact h.c1,
-    fun h0 => by rw [hf.ctl _ h130]; exact h.c130 h0⟩
+    fun h0 => by rw [hf.ctl _ h130]; exact h.c130 h0,
+    by rw [hf.arr PINS hP (by decide)]; exact h.pins, fun b => (hf.size b).trans (h.sz b)⟩
 
 theorem dcIdx_dcA : ∀ b : TieredArray, (b.arr = L.Front.DECL ∨ b.arr = L.Front.DLP ∨
     b.arr = L.Arena.FIRSTS ∨ (129 ≤ b.arr ∧ b.arr ≤ 134)) → b ∉ dcA := by
@@ -233,6 +239,7 @@ theorem dcIdx_dcA : ∀ b : TieredArray, (b.arr = L.Front.DECL ∨ b.arr = L.Fro
 
 theorem DcIdx.frameDc {m₀ m m' : Mem} (h : DcIdx m₀ m) (hf : MemFrame dcA dcC m m') : DcIdx m₀ m' :=
   h.frame hf dcIdx_dcA (dcC_not (by decide)) (dcC_not (by decide)) (dcC_not (by decide))
+    (dcA_not (by decide))
 
 /-- The arrays `DcMem` reads (its memos, the pins). -/
 def dcMemArrOk (b : TieredArray) : Bool :=
@@ -439,13 +446,15 @@ theorem erecAlloc_mem {p : Prog} (hp : p.lookup "erec_alloc" = some erecAlloc) {
 /-! ## Each leaf keeps the invariants, at any memory -/
 
 /-- The builder's arrays. -/
-abbrev IdxArr (b : TieredArray) : Prop := b.arr = L.Front.DECL ∨ b.arr = L.Front.DLP ∨
+abbrev DcIdxArr (b : TieredArray) : Prop := b.arr = L.Front.DECL ∨ b.arr = L.Front.DLP ∨
   b.arr = L.Arena.FIRSTS ∨ (129 ≤ b.arr ∧ b.arr ≤ 134)
 
-theorem ilpfA_idx : ∀ b ∈ ilpfA, ¬ IdxArr b := by decide +kernel
-theorem i1lA_idx : ∀ b ∈ i1lA, ¬ IdxArr b := by decide +kernel
-theorem ilpfA_stage : ∀ b ∈ ilpfA, b.arr < 201 ∨ 208 < b.arr := by decide +kernel
-theorem ilpfC_stage : ∀ x ∈ ilpfC, x.toNat < 202 ∨ 219 < x.toNat := by simp [ilpfC]
+theorem ilpfA_idx : ∀ b ∈ ilpfA, ¬ DcIdxArr b := by decide +kernel
+theorem i1lA_idx : ∀ b ∈ i1lA, ¬ DcIdxArr b := by decide +kernel
+theorem ilpfA_pins : (PINS : TieredArray) ∉ ilpfA := by decide +kernel
+theorem i1lA_pins : (PINS : TieredArray) ∉ i1lA := by decide +kernel
+theorem dcIlpfA_stage : ∀ b ∈ ilpfA, b.arr < 201 ∨ 208 < b.arr := by decide +kernel
+theorem dcIlpfC_stage : ∀ x ∈ ilpfC, x.toNat < 202 ∨ 219 < x.toNat := by simp [ilpfC]
 theorem i1lA_mem : ∀ b ∈ i1lA, dcMemArrOk b = true := by decide +kernel
 theorem i1lC_mem : ∀ x ∈ i1lC, dcMemCtlOk x.toNat = true := by simp [i1lC, walkC, liftC, dcMemCtlOk]
 
@@ -473,7 +482,7 @@ theorem dcMem_ilp {p : Prog} (hI : IlpfF p) {n : Nat} {vs : List Word} {m m' : M
     (hc : callW p n "inst_lp_core" vs m = some (r, m')) (h : DcMem m) : DcMem m' := by
   have hf := instLPCore_frame hI hc
   obtain ⟨hcore, hst, hcr, ⟨mpa, ha⟩, ⟨mpi, hi⟩, hwk⟩ := h
-  exact ⟨instLPCore_keepCM hI hc hcore, hst.frame hf ilpfA_stage ilpfC_stage,
+  exact ⟨instLPCore_keepCM hI hc hcore, hst.frame hf dcIlpfA_stage dcIlpfC_stage,
     CrOK.frame hcr hf (by decide) (by decide),
     ⟨mpa, memoRG_frame ⟨ABMEMO, 48⟩ ⟨by decide, by decide⟩ lfKey decE _ _ (by decide) (by decide)
       m m' hf mpa ha⟩,
@@ -512,10 +521,12 @@ theorem dcIdx_alloc {p : Prog} (hp : p.lookup "erec_alloc" = some erecAlloc) {n 
   unfold erAllocMem
   split
   · exact h.frame (MemFrame.setCtl _ _ _) (fun _ _ => by simp) (by decide) (by decide) (by decide)
+      (by simp)
   · rename_i h1
     have hf := MemFrame.setCtl m 130 (rdW (m.arr64 CTL) 130 + vs.getD 0 0)
     refine ⟨fun b hb => ?_, by rw [hf.ctl _ (by decide)]; exact h.c128,
-      by rw [hf.ctl _ (by decide)]; exact h.c1, fun h0 => absurd (h.c1.trans h0) h1⟩
+      by rw [hf.ctl _ (by decide)]; exact h.c1, fun h0 => absurd (h.c1.trans h0) h1,
+      by rw [hf.arr PINS (by simp) (by decide)]; exact h.pins, fun b => (hf.size b).trans (h.sz b)⟩
     rw [hf.arr b (by simp) (fun e => by subst e; revert hb; decide)]; exact h.arr b hb
 
 /-! ## The invariants across a call of the closure -/
@@ -539,12 +550,12 @@ theorem dc_keep {p : Prog} (hP : DcLeafProg p) {f : FnName} (hf : f ∈ dcFns) {
   rcases hg with rfl | rfl | rfl | rfl
   · exact ⟨dcMem_ma hP.ma hc hx.1, hx.2.frame (maLeaf_frame hP.ma hc)
       (fun b hb h' => by simp at h'; subst h'; revert hb; decide)
-      (by decide) (by decide) (by decide)⟩
+      (by decide) (by decide) (by decide) (by decide)⟩
   · exact ⟨dcMem_ilp hP.ilpf hc hx.1, hx.2.frame (instLPCore_frame hP.ilpf hc)
-      (fun b hb h' => ilpfA_idx b h' hb) (by decide) (by decide) (by decide)⟩
+      (fun b hb h' => ilpfA_idx b h' hb) (by decide) (by decide) (by decide) ilpfA_pins⟩
   · exact ⟨dcMem_alloc hP.alloc hc hx.1, dcIdx_alloc hP.alloc hc hx.2⟩
   · exact ⟨dcMem_i1 hP.i1 hc hx.1, hx.2.frame (i1lF_call hP.i1 hc) (fun b hb h' => i1lA_idx b h' hb)
-      (by decide) (by decide) (by decide)⟩
+      (by decide) (by decide) (by decide) i1lA_pins⟩
 
 /-- **A call of `dc0Fns` keeps the `instantiate1Lift` memo** too. -/
 theorem dc0_keepI1 {p : Prog} (hP : DcLeafProg p) {f : FnName} (hf : f ∈ dc0Fns) {n : Nat}

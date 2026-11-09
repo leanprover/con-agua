@@ -19,7 +19,7 @@ import all ConAgua.Arena.IndDeclConsts
 # A declaration's constants: a block's (lane `ronsync2`, stage 3)
 
 `block_constants(p)` refines con-ron's `blockConstants` (`Arena/Install.lean`): `block_is_rec`
-(`blockIsRec_refines`), the formers (`bfW_ok`), the constructors (`bctW_ok`), the recursors
+(`blockIsRec_refines`), the formers (`bfW_ok`), the constructors (`dbctW_ok`), the recursors
 (`brsW_ok`), appended (`sl_append`, `appendW_ci`) into an `IW` slice of `EREC` constant records.
 -/
 
@@ -170,7 +170,7 @@ theorem bkW_ok {p : Prog} (hP : BlockProg p) {vis : Word} {fe : IFEnv} {n : Nat}
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bkK2])
   rw [bkK2_some] at h
   obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (bf_spec p hP.bf (n + 1) _ pp (r1.headD 0)) h2
+    (dbf_spec p hP.bf (n + 1) _ pp (r1.headD 0)) h2
   obtain ⟨hd2, hb2, hS2, hg2⟩ := bfW_ok hP.toFormersProg hbw hS1 (hq.grow (decBS_mono _) hg1)
     (partsHsrc_grow hg1 hq9 hsrc) hW2
   have hg02 := hg1.trans hg2
@@ -178,8 +178,8 @@ theorem bkW_ok {p : Prog} (hP : BlockProg p) {vis : Word} {fe : IFEnv} {n : Nat}
   obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bkK3])
   rw [bkK3_some] at h
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (bct_spec p hP.bc (n + 1) _ pp) h3
-  obtain ⟨hd3, hb3, hS3, hg3⟩ := bctW_ok hP.toCtorsProg hS2 (hq.grow (decBS_mono _) hg02)
+    (dbct_spec p hP.bc (n + 1) _ pp) h3
+  obtain ⟨hd3, hb3, hS3, hg3⟩ := dbctW_ok hP.toDcCtorsProg hS2 (hq.grow (decBS_mono _) hg02)
     (partsHsrc_grow hg02 hq9 hsrc) hW3
   have hg03 := hg02.trans hg3
   -- the recursors

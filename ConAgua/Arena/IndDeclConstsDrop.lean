@@ -37,7 +37,7 @@ namespace L.Ind
 open L.Arena
 
 /-- The lookups of `expr_drop_vars(_list)`. -/
-structure DropProg (p : Prog) : Prop extends CtorsProg p where
+structure DropProg (p : Prog) : Prop extends DcCtorsProg p where
   pinWord : p.lookup "pin_word" = some pinWordL
   sortFind : p.lookup "sort_find" = some sortFind
   sortPush : p.lookup "sort_push" = some sortPush
