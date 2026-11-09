@@ -125,6 +125,11 @@ theorem mclearG_bytes (Sch : MemoSch) (m : Mem) : (mclearG Sch m).bytes = m.byte
 theorem flushMem_bytes (m : Mem) : (flushMem m).bytes = m.bytes := by
   simp only [flushMem, flushClears, mclearG_bytes]
 
+theorem mclearG_glob (Sch : MemoSch) (m : Mem) : (mclearG Sch m).glob = m.glob := rfl
+
+theorem flushMem_glob (m : Mem) : (flushMem m).glob = m.glob := by
+  simp only [flushMem, flushClears, mclearG_glob]
+
 theorem callE_of_run {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {s : St} {r : List Word}
     {s' : St} (h : (invoke p (exec p n) f vs).run s = .ok (r, s')) :
     callE p n f vs s.mem = .ok (r, s'.mem) := by
@@ -254,5 +259,48 @@ theorem checkJobs_seqT (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
   have hw2 : (flushMem m₂).words = (flushMem m).words := flushMem_words rfl
   exact checkJobs_seq Vt hF hfok hJP hn hhi (fun a ha => by
     rw [hsX, hA2.1 a ha]; show (flushMem m₂).words a = (flushMem m).words a; rw [hw2]) hrun
+
+theorem checkerProg_flushProg : FlushProg checkerProg := by
+  constructor <;> chk_lk
+
+/-- **Entry 2 in place, `check_b`**: from a memory that agrees with the memory after the index
+build on every array the jobs name, with the range `[0, k)` (`k` the number of records) and an
+empty seed `CTLF`, a run that returns `ACCEPT` means the twin's jobs over every record accept from
+the index state's worker. -/
+theorem checkB_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (hF : FoldAt b pb sz PA m₇ m)
+    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (s₀ : St)
+    (hw : ∀ a, phaseBS a = true → s₀.mem.arr64 a = m.arr64 a)
+    (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
+    ⦃fun r _ => r.headD 0 = ConAgua.Final.ACCEPT →
+      ∃ s'', checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+        .ok (.ok (), s''); ⊤⦄ := by
+  have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
+  have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
+  have hhi'' : s₀.mem.glob ⟨11⟩ = hi := hhi'
+  rw [invoke_eq _ checkerProg_lookup_check_b]
+  simp only [callFn, checkBL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hJ := checkJobs_seqT Vt hF hJP n (by omega) hi hhi
+    have hFl := flushCaches_spec checkerProg checkerProg_flushProg n
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
+    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc,
+      Locals.init_nil, Cmp.eval,
+      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [hl, Mem.copy64_zero] at *)
+    all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
+    all_goals first
+      | (simp_all (config := { decide := true }) [Mem.arr64]; done)
+      | skip
+    all_goals
+      obtain ⟨-, hfx, hm⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
+      first
+        | exact ⟨_, hfx, by rw [St.setLocs_mem']; exact hm, fun a ha => hw a ha⟩
+        | (rw [St.setLocs_mem', hm, flushMem_glob]; simp_all)
 
 end L.Checker
