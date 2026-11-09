@@ -5,6 +5,7 @@ import ConAgua.Arena.IndT.PosApp
 import ConAgua.Arena.IndT.PosCont
 import ConAgua.Arena.IndT.PosCtors
 import ConAgua.Arena.IndT.PosFrame
+public import ConAgua.Arena.IndT.PosFkc
 import ConAgua.Arena.IndT.PosKey
 import ConAgua.Arena.IndT.PosNew
 import ConAgua.Arena.IndT.PosOne
@@ -231,13 +232,15 @@ theorem nbRef_zero : NbRef p dn vis fe env 0 := by
 variable {dn vis fe env} in
 /-- **The block refines con-ron's `nestPos` block, both outcomes**, at every L fuel below `2^62`. -/
 theorem nbRef_all (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
-    (hFt : FtProg p) (henv : ConLeche.EnvWF env) : ∀ n, n ≤ 2 ^ 62 → NbRef p dn vis fe env n
+    (hFt : FtProg p) (hFk : FkcProg p) (henv : ConLeche.EnvWF env) : ∀ n, n ≤ 2 ^ 62 → NbRef p dn vis fe env n
   | 0, _ => nbRef_zero dn vis fe env
   | n + 1, hn => by
-    have ih := nbRef_all L hq hIlpf hLC hFt henv n (by omega)
+    have ih := nbRef_all L hq hIlpf hLC hFt hFk henv n (by omega)
     exact ⟨posRef_step hq dn vis fe henv L n (by omega) ih, bindRef_step p dn vis fe henv L n ih,
       appRef_step p dn vis fe L n ih, contRef_step p dn vis fe L hq hIlpf hLC hFt henv n (by omega) ih,
-      keyRef_step dn vis fe L n ih, sorry, sorry, ctorsRef_step L dn vis fe n ih, sorry,
+      keyRef_step dn vis fe L n ih, newRef_step hq dn vis fe L hIlpf hLC hFt henv n (by omega) ih,
+      frameRef_step hq dn vis fe henv L hFk hIlpf n (by omega) ih,
+      ctorsRef_step L dn vis fe n ih, oneRef_step L hq hIlpf dn vis fe henv n hn ih,
       walkRef_step L dn vis fe henv n ih, fieldsRef_step L dn vis fe henv n ih⟩
 
 end all
