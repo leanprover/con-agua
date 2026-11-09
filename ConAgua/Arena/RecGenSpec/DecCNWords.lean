@@ -78,11 +78,14 @@ local notation "V" => ConLeche.CheckMode.verified
 
 theorem AgreeA.set_iw {b : Nat} (m : Mem) {i : Word} (v : Word) (hi : i.toNat < b) :
     AgreeA b m (m.set64 IW i v) := by
-  refine ⟨by rw [iwTop_set_iw]; exact Nat.le_refl _,
-    by simp only [erTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact Nat.le_refl _,
-    fun j hj _ => ?_, fun j _ => ?_⟩
-  · rw [set64IW_get]; rw [ite_eq_right (by omega)]
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have e0 : (m.set64 IW i v).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have e1 : (m.set64 IW i v).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have eC : (m.set64 IW i v).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  refine ⟨by rw [iwTop_set_iw]; exact Nat.le_refl _, fun j hj _ => ?_,
+    ⟨by simp only [erecTop, eC]; exact Nat.le_refl _, fun j _ => by rw [e0],
+      by simp only [erecTop1, eC]; exact Nat.le_refl _, fun j _ => by rw [e1]⟩⟩
+  rw [set64IW_get]; rw [ite_eq_right (by omega)]
 
 theorem KeepW.of_mfr {S : List TieredArray} {T : List Word} {m m' : Mem} (h : MFr S T m m') : KeepW m m' := by
   obtain ⟨A, C, hf, -, -⟩ := h

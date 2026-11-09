@@ -54,14 +54,14 @@ theorem rec2SimPiBinders (n : Nat) (hS : StageR vis fe m a) {h : Word} (hh : H h
 end sims
 
 theorem AgreeA.refl (b : Nat) (m : Mem) : AgreeA b m m :=
-  ⟨Nat.le_refl _, Nat.le_refl _, fun _ _ _ => rfl, fun _ _ => rfl⟩
+  ⟨Nat.le_refl _, fun _ _ _ => rfl, ErecGrow.refl m⟩
 
 theorem AgreeA.mono {b b' : Nat} {m m' : Mem} (hb : b ≤ b') (h : AgreeA b m m') : AgreeA b' m m' :=
-  ⟨h.1, h.2.1, fun i hb' hi => h.2.2.1 i (Nat.le_trans hb hb') hi, h.2.2.2⟩
+  ⟨h.iw, fun i hb' hi => h.iwGet i (Nat.le_trans hb hb') hi, h.er⟩
 
 theorem AgreeA.iwH {k : IdxKind} {b : Nat} {m m' : Mem} (h : AgreeA b m m') {i : Nat} (hb : b ≤ i)
     (hi : i < iwTop m) : (iwH m' i : Option (Idx k)) = iwH m i := by
-  simp only [L.Ind.iwH, hd?, iwA, aread_apply, aread_apply]; rw [h.2.2.1 i hb hi]
+  simp only [L.Ind.iwH, hd?, iwA, aread_apply, aread_apply]; rw [h.iwGet i hb hi]
 
 namespace StabA
 variable {α : Type} {b : Nat} {f : Mem → Option α} {m m' : Mem} {x : α}
@@ -74,7 +74,10 @@ end StabA
 /-- A constant decoded below the tops is stable above any bound (it lives in `EREC`). -/
 theorem stabA_decCVp {m : Mem} {q : Nat} {x : IConstantVal} (h : DecB (fun m => decCVp m q) m x) (b : Nat) :
     StabA b (fun m => decCVp m q) m x := by
-  sorry
+  intro m' hA
+  have h' : decCV (erA (truncM m)) q = some x := h
+  rw [truncM_erA] at h'
+  exact hA.er.ext.decCV h'
 
 namespace SPLA
 variable {α : Type} {b : Nat} {dec : Mem → Nat → Option α} {m m' : Mem} {o l : Nat} {xs : List α}
@@ -84,7 +87,7 @@ theorem nil (o : Nat) (ho : o ≤ iwTop m) : SPLA b dec m o 0 [] :=
 
 theorem grow (h : SPLA b dec m o l xs) (hA : AgreeA b m m') : SPLA b dec m' o l xs := by
   obtain ⟨h1, h2, ps, hps, hf⟩ := h
-  exact ⟨h1, Nat.le_trans h2 hA.1, ps, by rw [decNL_agree ⟨h1, h2, ps, hps, hf⟩ hA]; exact hps,
+  exact ⟨h1, Nat.le_trans h2 hA.iw, ps, by rw [decNL_agree ⟨h1, h2, ps, hps, hf⟩ hA]; exact hps,
     FA2.imp (fun _ _ hq => hq.grow hA) hf⟩
 
 theorem mono {b' : Nat} (hb : b ≤ b') (h : SPLA b' dec m o l xs) : SPLA b dec m o l xs := by

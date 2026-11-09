@@ -77,24 +77,25 @@ which `IWGrow` does not allow; what is created after the allocation reads only w
 slots. `AgreeA b m m'`: the pools grew and every word from `b` to the old top stayed;
 `StabA b f m x`: `f` decodes `x` in every such memory (and so stably, `StabA.stabD`). -/
 
-/-- The pools grew, keeping every word from `b` to the old top. -/
-def AgreeA (b : Nat) (m m' : Mem) : Prop :=
-  iwTop m ≤ iwTop m' ∧ erTop m ≤ erTop m' ∧
-    (∀ i, b ≤ i → i < iwTop m → (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
-    (∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
+/-- The pools grew, keeping every word from `b` to the old top (the record pool, both tiers, only
+grew). -/
+structure AgreeA (b : Nat) (m m' : Mem) : Prop where
+  iw : iwTop m ≤ iwTop m'
+  iwGet : ∀ i, b ≤ i → i < iwTop m → (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?
+  er : ErecGrow m m'
 
 theorem AgreeA.of_grow {b : Nat} {m m' : Mem} (h : IWGrow m m') : AgreeA b m m' :=
-  ⟨h.iw, h.er, fun i _ hi => h.iwGet i hi, h.erGet⟩
+  ⟨h.iw, fun i _ hi => h.iwGet i hi, h.erecGrow⟩
 
 theorem AgreeA.trans {b : Nat} {m₁ m₂ m₃ : Mem} (h₁ : AgreeA b m₁ m₂) (h₂ : AgreeA b m₂ m₃) :
     AgreeA b m₁ m₃ :=
-  ⟨Nat.le_trans h₁.1 h₂.1, Nat.le_trans h₁.2.1 h₂.2.1,
-    fun i hb hi => (h₂.2.2.1 i hb (Nat.lt_of_lt_of_le hi h₁.1)).trans (h₁.2.2.1 i hb hi),
-    fun i hi => (h₂.2.2.2 i (Nat.lt_of_lt_of_le hi h₁.2.1)).trans (h₁.2.2.2 i hi)⟩
+  ⟨Nat.le_trans h₁.iw h₂.iw,
+    fun i hb hi => (h₂.iwGet i hb (Nat.lt_of_lt_of_le hi h₁.iw)).trans (h₁.iwGet i hb hi),
+    h₁.er.trans h₂.er⟩
 
 theorem AgreeA.iwN {b : Nat} {m m' : Mem} (h : AgreeA b m m') {i : Nat} (hb : b ≤ i) (hi : i < iwTop m) :
     iwN m' i = iwN m i := by
-  simp only [L.Ind.iwN, nat?, iwA, aread_apply, aread_apply]; rw [h.2.2.1 i hb hi]
+  simp only [L.Ind.iwN, nat?, iwA, aread_apply, aread_apply]; rw [h.iwGet i hb hi]
 
 /-- `f` decodes `x` in every memory agreeing with `m` from `b` on. -/
 def StabA {α : Type} (b : Nat) (f : Mem → Option α) (m : Mem) (x : α) : Prop :=
