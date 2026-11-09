@@ -12,6 +12,12 @@ import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Verdict.PosNty
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndT.Sum1
+import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+import ConAgua.Arena.IndPosSpec.EnvFindWHit
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.IndPartsSpec.RecTW
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndRealIlpL
@@ -24,12 +30,12 @@ import all ConAgua.Arena.RecCheck
 /-!
 # `target_outside_inst`: one model and one refinement for both outcomes
 
-`toiE` (`l_model … unified`): every callee is outside the verdict closure, called through its
-`Option` model (`inst_lp_fast` through its run, `callW`, met by its stub contract `IlpRd`), but
-`e_view` (through its run, `callE`: its spec's post is a list, `r ≠ [] ∧ r = eViewW …`).
-`toi_ref` refines `targetOutsideInst` for both outcomes: the four rejects are the twin's `fail`s
-(the structure is not stored or not an inductive; `inst_pis_with` does not bind the parameters;
-the type former does not end in a sort). It is the first step of
+`toiE` (`l_model … unified`): `family_telescope` (in the verdict closure) and `e_view` through their
+calls, every other callee through its `Option` model (`inst_lp_fast` through its run, `callW`, met
+by its stub contract `IlpRd`). `toi_ref` refines `targetOutsideInst` for both outcomes under
+`StageC`: the four rejects are the twin's `fail`s (the structure is not stored or not an inductive;
+`inst_pis_with` does not bind the parameters; the type former does not end in a sort), the
+telescope's errors `ft_ref`'s (under `WtG`). It is the first step of
 `target_major_of_outside_tail`'s refinement (`tmt_ref`).
 -/
 
@@ -58,157 +64,176 @@ l_model toiE_spec (p : Prog) (P : ToiProg p)
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `target_outside_inst` gives besides the twin's `(index count, sort)` `x` (from `m`): the
-result words, the stage invariant, the growth, the frames. -/
+result words, the stage relation, the growth, the abstraction memo, the positivity memos (the core's
+`hb` memo moves inside `family_telescope`). -/
 structure ToiPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
     (r : List Word) (m' : Mem) (x : Nat × LIdx) (a' : AState) : Prop where
   res : ToiR r x
   stage : StageR vis fe m' a'
   grow : IWGrow m m'
-  mfr : MFr [] [] m m'
-  afr : AFr m m'
+  abs : AbsOK m'
+  pos : PosMR m → PosMR m'
 
 section sims
-variable {p : Prog} (P : ToiProg p) (hIlpf : IlpfF p)
+variable {p : Prog} (P : ToiProg p) (hIlpf : IlpfF p) (hq : KnotStageProg p) (hF : FtProg p)
   {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-include P hIlpf in
-/-- **`target_outside_inst` refines `targetOutsideInst`, both outcomes** (`inst_lp_fast` through
-its stub contract at the `StageC` start, `IlpRd.realC`). -/
-theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : List EIdx}
-    (hC : StageC dn vis fe env m a) (hI : H I) (hu : H us)
+include P hIlpf hq hF in
+/-- **`target_outside_inst` refines `targetOutsideInst`, both outcomes** under `StageC`: the stored
+inductive (`env_find`, its kind word), its telescope (`family_telescope`, `ft_ref`), its level
+parameters (`er_to_iw`, `cv_lps`'s reading), `inst_lp_fast` through its stub contract
+(`IlpRd.realC`), `inst_pis_with`, `pi_binders`, the sort (`e_view`); the four rejects are the
+twin's `fail`s, the telescope's errors `ft_ref`'s (under `WtG`). -/
+theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    {I us dso dsl : Word} {ds : List EIdx}
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hI : H I) (hu : H us)
     (hds : DecB (fun m => decHL m dso.toNat dsl.toNat) m ds) (hb : dso.toNat + dsl.toNat < 2 ^ 64) :
-    RefE (closedNV p _root_.L.Checker.nvFns = true) (toiE p n m vis I us dso dsl)
-      (ConRon.Arena.targetOutsideInst fe (decI I) (decI us) ds) a
+    RefE (WtG p) (toiE p n m vis I us dso dsl)
+      (ConRon.Arena.targetOutsideInst V fe (decI I) (decI us) ds) a
       (fun v x a' => ToiPost dn vis fe m v.1 v.2 x a') := by
   cases n with
   | zero => rw [toiE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   have hS := hC.stage
+  have hE := hS.check.env
+  have hR := hS.check.arena.base
   rw [toiE.arm1, ConRon.Arena.targetOutsideInst]
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r2 m2 hef => ?_
-  obtain ⟨hm2, hfind, hdec⟩ := envFindW_found hef hS.check.env hI
-  subst m2
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 hef => ?_
+  obtain ⟨hm1, rfl⟩ : m = m1 ∧ r1 = findRes m vis I := by
+    obtain ⟨s', rfl, h1, -, h3⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (envFind_spec p P.rowGet hF.brg P.find n _ vis I) hef
+    exact ⟨h1.symm, h3⟩
+  subst hm1
   dsimp only [toiE.k_env_find]
-  by_cases hf0 : r2.headD 0 = 0
-  · have hfn : fe.find? (decI I) = none := by rw [hfind, decFound, ite_eq_left hf0]
-    refine RefE.abortAt hf0 ?_
-    simp only [hfn]
+  by_cases hf0 : (findRes m vis I).headD 0 = 0
+  · refine RefE.abortAt hf0 ?_
+    rw [findRes_miss hE hI hf0]
     exact fun _ => ErrClaim.fail _ _ (by decide)
   refine RefE.pass hf0 ?_
-  obtain ⟨ci, hci⟩ := hdec hf0
-  have hfci : fe.find? (decI I) = some ci := by rw [hfind, decFound, ite_eq_right hf0, hci]
-  obtain ⟨kk, hkk, hcase⟩ := decCI_ind_cases hci
-  have hkr := erec_nat (w := r2.tail.headD 0) (c := 0) (by simpa using hkk) (by decide)
-  rw [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at hkr
-  rw [hfci]
-  by_cases hk3 : rdW (m.arr64 EREC) (r2.tail.headD 0) ≠ 3
+  obtain ⟨hfind, ci, hci⟩ := findRes_hit hE hI hf0
+  rw [hci] at hfind
+  generalize (findRes m vis I).tail.headD 0 = q at hfind hci ⊢
+  rw [hfind]
+  obtain ⟨w0, hw0⟩ := decCI_rd hci
+  by_cases hk3 : erRd m q ≠ 3
   · refine RefE.abortAt hk3 ?_
-    have hkind : kk ≠ 3 := by
-      intro hk3'
-      apply hk3
-      rw [hkr.1, hk3']; rfl
-    obtain ⟨-, hno⟩ := hcase.resolve_left (fun ⟨hh, _⟩ => hkind hh)
     cases ci with
-    | indInfo cv caps => exact absurd rfl (hno cv caps)
+    | indInfo cv caps =>
+      exfalso; apply hk3
+      have hk := decCI_indInfo_kind hci
+      rw [(erRd_of_erecP hw0).1]
+      simp only [nat?, hw0, Option.map_some, Option.some.injEq] at hk
+      exact UInt64.toNat_inj.mp (by simpa using hk)
     | _ => exact fun _ => ErrClaim.fail _ _ (by decide)
   refine RefE.pass hk3 ?_
-  have hkind : kk = 3 := by
-    have : rdW (m.arr64 EREC) (r2.tail.headD 0) = 3 := by simpa using hk3
-    rw [hkr.1] at this
-    have := congrArg UInt64.toNat this
-    rwa [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; exact hkr.2)] at this
-  obtain ⟨-, cv, caps, rfl, -⟩ := hcase.resolve_right (fun ⟨hne, _⟩ => hne hkind)
-  dsimp only
-  have hcvP := decCI_ind_cv hci
-  have hcvA : decCV (erA m) ((r2.tail.headD 0).toNat + 1) = some cv :=
-    ArrExt.decCV (IWGrow.erecExt (IWGrow.refl m)) hcvP
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcvA
-  have hqE := (Array.getElem?_eq_some_iff.mp hw2).1
-  have hE64 := hS.iw.erSize
-  have e1 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 2) = w1 :=
-    rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE ⊢; omega) hw1
-  have e2 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 3) = w2 :=
-    rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE ⊢; omega) hw2
-  rw [e1, e2]
-  have hsrc : w2.toNat = 0 ∨ w1.toNat + w2.toNat ≤ (m.arr64 EREC).size := by
-    rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
-    · exact .inl h0
-    · exact .inr (hslice?_bound _ _ _ _ hsl h0)
-  -- `er_to_iw`
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r3 m3 h3 => ?_
+  have hk3' : nat? (erecP m) q.toNat = some 3 := by
+    have h3' : erRd m q = 3 := Decidable.not_not.mp hk3
+    rw [(erRd_of_erecP hw0).1] at h3'
+    simp [nat?, hw0, h3']
+  obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3'
+  have hcv : decCV (erecP m) (q.toNat + 1) = some cv := by
+    simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hci
+    obtain ⟨kd, hkd, hci⟩ := hci
+    rw [hk3'] at hkd; cases hkd
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at hci
+    obtain ⟨cv', h1, _, _, h2⟩ := hci
+    cases h2; exact h1
+  obtain ⟨v16, hv16⟩ := decCI_indInfo_bound hci
+  have hq64 := erecP_lt64 hv16
+  have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+  -- the twin's inductive and its denotation
+  obtain ⟨IP, cc, -, hcc, he⟩ := hC.check.ienv.hit _ _ hfind
+  obtain ⟨cvP, capsP, hcvP, hcapsP, rfl⟩ := ConRon.Bridge.Inductives.denoteCI_indInfo_inv hcc
+  have hws : ConLeche.Expr.WScoped 0 cvP.type :=
+    ConLeche.Expr.WScoped.of_not_hasFvar (henv.consts _ (ConLeche.Env.find?_mem he)).1
+  -- `family_telescope`
+  have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
+    show decCV (erA (truncM m)) _ = _
+    rw [truncM_erA, e1]; exact hcv
+  have hFT := ft_ref hq hF henv n (by omega) (cvq := q + 1) (capsq := q + 5) hC hA hcvB
+    (by rw [e5]; exact hcaps) hcvP hws
+  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hF n _ vis _ _) (fun hG => hG.nv)
+    id hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_
+  dsimp only [toiE.k_family_telescope]
+  obtain ⟨s3', hs3', -, hfx3⟩ := triple_of_callE (ftE_spec p hF n ⟨m, Locals.init []⟩ vis (q + 1) (q + 5)) hc3
+  have hS3 := hP3.stage.stage
+  have hg3 := hP3.grow
+  generalize s3.mem = m3 at hS3 hg3 hP3 hs3' ⊢
+  -- `er_to_iw` (`cv_lps`'s reading)
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 hlp => ?_
   dsimp only [toiE.k_er_to_iw]
-  obtain ⟨-, hr3t, hdec3, hS3, hg3, -⟩ := L.Arena.erToIwW_stage h3 hS hsrc
-  rw [hr3t]
-  have hdecL : decHL m3 (r3.headD 0).toNat w2.toNat = some cv.levelParams := by rw [hdec3]; exact hsl
-  have hcv3 : decCV (erA m3) ((r2.tail.headD 0).toNat + 1) = some cv :=
-    ArrExt.decCV (IWGrow.erecExt hg3) hcvP
-  obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hcv3
-  have hqE3 := (Array.getElem?_eq_some_iff.mp hwt).1
-  have hE364 := hS3.iw.erSize
-  have et : rdW (m3.arr64 EREC) (r2.tail.headD 0 + 4) = wt :=
-    rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
-  rw [et]
+  have hcv3 : decCVp m3 (q + 1).toNat = some cv := by rw [e1]; exact hg3.ext.decCV hcv
+  have hlp' : cvLpsW (n + 1) m3 (q + 1) = some (r4, m4) := by
+    simp only [cvLpsW, Nat.add_sub_cancel]
+    rw [show q + 1 + 1 = q + 2 by rw [UInt64.add_assoc]; rfl,
+      show q + 1 + 2 = q + 3 by rw [UInt64.add_assoc]; rfl]
+    exact hlp
+  obtain ⟨hS4, hg4, -, hdec4, -⟩ := pos2_cvLpsW_stage hlp' hS3 hcv3 (by rw [e1]; omega)
   -- `inst_lp_fast`
-  refine RefE.bindLift (fun _ => rfl) fun r4 m4 h4 => ?_
-  obtain ⟨x4, a4, hrun4, ⟨hS4, hg4, hx4⟩, -, hA4⟩ := (IlpRd.realC hIlpf hC) n CWF (r3.headD 0) w2 us wt
-    cv.levelParams m3 m4 a r4 hu hwtH ⟨rfl, erToIwW_iwFr h3⟩ hS3 hdecL h4
-  rw [CWF_eq, ← hwtE] at hrun4
-  refine ⟨_, _, hrun4, ?_⟩
-  dsimp only [toiE.k_inst_lp_fast]
-  have hg34 := (hg3.trans hg4)
-  -- `inst_pis_with`
   refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
-  obtain ⟨hx4H, rfl⟩ := hx4
-  obtain ⟨x5, a5, hrun5, hS5, hg5, hx5⟩ := instW_okB h5 hS4 hx4H
-    (DecB.grow (OMono.decHL _ _) hg34 hds) hb
+  obtain ⟨tl, a4, hrun5, ⟨hS5, hg5, htlH, htld⟩, ⟨_, _, hfA, hfC, hf5⟩, hA5⟩ :=
+    IlpRd.realC hIlpf hP3.stage n CWF _ _ _ _ cv.levelParams m4 m5 a2 r5 hu hP3.hw
+      ⟨rfl, erToIwW_iwFr hlp⟩ hS4 hdec4 h5
+  rw [CWF_eq, hP3.dec] at hrun5
   refine ⟨_, _, hrun5, ?_⟩
+  dsimp only [toiE.k_inst_lp_fast]
+  have hg35 := (hg4.trans hg5)
+  have hg5' := (hg3.trans hg35)
+  -- `inst_pis_with`
+  refine RefE.bindLift (fun _ => rfl) fun r6 m6 h6 => ?_
+  obtain ⟨x6, a5, hrun6, hS6, hg6, hx6⟩ := instW_okB (dn := dn) h6 hS5 htlH
+    (DecB.grow (OMono.decHL _ _) hg5' hds) hb
+  rw [htld] at hrun6
+  refine ⟨_, _, hrun6, ?_⟩
   dsimp only [toiE.k_inst_pis_with]
-  cases x5 with
-  | none => exact RefE.abortAt hx5 fun _ => ErrClaim.fail _ _ (by decide)
+  cases x6 with
+  | none => exact RefE.abortAt hx6 fun _ => ErrClaim.fail _ _ (by decide)
   | some ty =>
-  obtain ⟨hok, hty⟩ := hx5
+  obtain ⟨hok, hty⟩ := hx6
   refine RefE.pass (by rw [hok]; decide) ?_
   -- `pi_binders`
-  refine RefE.bindLift (fun _ => rfl) fun r6 m6 h6 => ?_
-  obtain ⟨bs, e, hrun6, hdec6, hb6, he6, hS6, hg6, -⟩ := piBW_cwf h6 hS5 hty.1
-  rw [hty.2] at hrun6
-  refine ⟨_, _, hrun6, ?_⟩
+  refine RefE.bindLift (fun _ => rfl) fun r7 m7 h7 => ?_
+  obtain ⟨bs, e, hrun7, hdec7, hb7, he7, hS7, hg7, -⟩ := piBW_cwf h7 hS6 hty.1
+  rw [hty.2] at hrun7
+  refine ⟨_, _, hrun7, ?_⟩
   dsimp only [toiE.k_pi_binders]
-  rw [getD_two] at he6
+  rw [getD_two] at he7
   -- `e_view`
-  refine RefE.bindCall (Q := fun b a' v => b.2 = m6 ∧ a' = a5 ∧ ViewR b.1 v) (fun _ => rfl)
-    (fun hG _ h7 => ErrClaim.of_callE_nv hG (_root_.L.Checker.nv_mem (by decide +kernel)) h7)
-    (fun ⟨r7, m7⟩ h7 => by
-      obtain ⟨s7, hs7, hs7e, hne7, hr7⟩ := triple_of_callW (s₀ := ⟨m6, Locals.init []⟩)
-        (eView_spec p P.v n ⟨m6, Locals.init []⟩ (r6.tail.tail.headD 0)) h7
-      subst hs7e hs7
-      obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.check.arena.base _ (by rw [← hr7]; exact hne7)
-      rw [he6] at hv
-      exact ⟨v, a5, view_run _ _ _ hv, rfl, rfl, hr7 ▸ hvr⟩)
-    fun r7 m7 v a7 _ _ ⟨hm7, ha7, hvr⟩ => ?_
-  subst hm7 ha7
+  refine RefE.bindCall (Q := fun b a' v => b.2 = m7 ∧ a' = a5 ∧ ViewR b.1 v) (fun _ => rfl)
+    (fun hG _ h8 => ErrClaim.of_callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h8)
+    (fun ⟨r8, m8⟩ h8 => by
+      obtain ⟨s8, hs8, hs8e, hne8, hr8⟩ := triple_of_callW (s₀ := ⟨m7, Locals.init []⟩)
+        (eView_spec p P.v n ⟨m7, Locals.init []⟩ (r7.tail.tail.headD 0)) h8
+      subst hs8e hs8
+      obtain ⟨v, hv, hvr⟩ := eViewW_ok m7 a5 hS7.check.arena.base _ (by rw [← hr8]; exact hne8)
+      rw [he7] at hv
+      exact ⟨v, a5, view_run _ _ _ hv, rfl, rfl, hr8 ▸ hvr⟩)
+    fun r8 m8 v a8 _ _ ⟨hm8, ha8, hvr⟩ => ?_
+  subst hm8 ha8
   dsimp only [toiE.k_e_view]
-  by_cases h2 : r7.headD 0 = 2
+  by_cases h2 : r8.headD 0 = 2
   · refine RefE.pass (by simpa using h2) ?_
     cases v
     case sort u =>
       obtain ⟨-, hu1, hu2⟩ := hvr
       rw [getD_one] at hu1 hu2
-      refine RefE.ret rfl ⟨⟨rfl, ?_, hu1, hu2⟩, hS6, hg34.trans (hg5.trans hg6),
-        (((envFindW_mfr hef).trans (erToIwW_mfr h3)).trans ((IlpFr.real hIlpf).mfr h4)).trans
-          ((instW_mfr _ _ _ _ _ _ _ h5).trans (piBW_mfr _ _ _ _ _ _ h6)),
-        (((AFr.iw (erToIwW_iwFr h3)).trans hA4).trans (instW_afr _ _ _ _ _ _ _ h5)).trans
-          (piBW_afr _ _ _ _ _ _ h6)⟩
+      refine RefE.ret rfl ⟨⟨rfl, ?_, hu1, hu2⟩, hS7, ((hg3.trans hg35).trans hg6).trans hg7,
+        ((((AFr.iw (erToIwW_iwFr hlp)).trans hA5).trans (instW_afr _ _ _ _ _ _ _ h6)).trans
+          (piBW_afr _ _ _ _ _ _ h7)) hP3.abs,
+        fun hPm => by
+          have hP3m : PosMR m3 := by
+            rw [← hs3']; exact ftE_pos hq.closed hF hR hcvB hPm hfx3
+          exact hP3m.fr ((((erToIwW_mfr hlp).trans (MFr.of_frame hf5 hfA hfC)).trans
+            (instW_mfr _ _ _ _ _ _ _ h6)).trans (piBW_mfr _ _ _ _ _ _ h7))⟩
       simp only [List.headD_cons]
-      rw [getD_one] at hdec6
-      exact (decHL_length _ hdec6).symm
+      rw [getD_one] at hdec7
+      exact (decHL_length _ hdec7).symm
     all_goals (exfalso; revert hvr; simp only [ViewR, h2]; simp)
   refine RefE.abortAt (by simpa using h2) ?_
   cases v with
   | sort u => exact absurd hvr.1 h2
   | _ => exact fun _ => ErrClaim.fail _ _ (by decide)
--/
 
 end sims
 
