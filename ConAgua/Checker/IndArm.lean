@@ -2,7 +2,7 @@ module
 
 import ConAgua.Checker.LoopProg
 import ConAgua.Checker.IndArmClosed
-import ConAgua.Arena.IndArm
+public import ConAgua.Arena.IndArm
 meta import ConAgua.Checker.LoopProg
 meta import ConAgua.Checker.IndArmClosed
 meta import ConAgua.Arena.IndArm
@@ -28,6 +28,7 @@ import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
 import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.BvarB
 import all ConAgua.Arena.CheckerL
 import all ConAgua.Arena.ConsLib
@@ -143,6 +144,7 @@ import all ConAgua.Checker.Entry
 import all ConAgua.Checker.Hoist
 import all ConAgua.Checker.Prelude
 import all ConAgua.Checker.Presize
+import all ConAgua.Rom.CIConst
 import all ConAgua.Front.Apply
 import all ConAgua.Front.ApplyDecl
 import all ConAgua.Front.ApplyExpr
@@ -256,7 +258,7 @@ structure IndArmProgs (p : Prog) : Prop where
   apd : ApdF p
   crk : CrKeep p
   ilpf : IlpfF p
-  cid : CidProg p
+  cid : CidProg2 p
 
 /-- **The core's write set with its two leaves at the substituted checker program**
 (`checkerProg_coreStageW`; the leaves' bundles by lookups). -/
@@ -269,7 +271,8 @@ a lookup two fields share is proved once). -/
 theorem indArmProgs_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length) : IndArmProgs (Prog.subPB bs checkerProg) := by
   have hrom := checkerProg_romRefsPB bs hr hpre
-  prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
+  have hbasis : BasisRefs (Prog.subPB bs checkerProg) := basisRefs_of ⟨by prog_bundle [], hrom⟩
+  prog_bundle [hbasis, checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
     checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
     checkerProg_coreStagePB bs,
     closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
@@ -281,27 +284,29 @@ theorem indArmKeep_checker (bs : List UInt8) :
       AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
   absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free (armAbs_split f hf)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The inductive arm's contract at the substituted checker program**, from `AbsKeep` of the
-callees that reach the walks. -/
-theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
+/-- **`check_basis_block`'s contract at the substituted checker program.** -/
+theorem cbbRef_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length) :
+    ∀ dn, DnInj dn → CbbRef (Prog.subPB bs checkerProg) dn := by
+  sorry -- ronsync2 p3e: Arena/BasisBlockT's cbb_ref at the checker (in progress)
+
+/-- **`check_block`'s contract at the substituted checker program.** -/
+theorem blockRefS_checker (bs : List UInt8) (hr : RomOK bs)
+    (hpre : bs = romData ++ bs.drop romData.length) :
+    ∀ dn, DnInj dn → BlockRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
+  sorry -- ronsync2 p3e: IndT/Block's block_ref at the new twin (Pass, Tail, …) still to restate
+
+/-- **The inductive arm's contract at the substituted checker program**, from the contracts of
+its two returning callees (`cbbRef_checker`, `blockRefS_checker`); `CcvSims` (its
+`check_shapeless`) from the caller (`Checker/ArmsT`'s `checkerProg_ccvSimsPB`). -/
+theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
+    (hpre : bs = romData ++ bs.drop romData.length)
+    (hCS : ∀ dn, CcvSims (Prog.subPB bs checkerProg) dn) :
     ∀ dn, DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn := by
   have H := indArmProgs_checker bs hr hpre
-  have hk := indArmKeep_checker bs
-  exact indArmSpec_of H.kp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.cid
-    (closedW_subPB bs checkerProg_armPos) armPos_pass armPos_raw
-    (closedW_subPB bs checkerProg_armHb) armHb_tail
-    (closedW_subPB bs checkerProg_armRc) armRc_tail
-    (closedW_subPB bs checkerProg_armTa) armTa_block
-    (closedW_subPB bs checkerProg_armCid) armCid_frame
-    (fun f hf => hk f (by simp [hf]))
-    (fun f hf => hk f (by simp [hf]))
-    (hk _ (by simp))
-    armCid_basis armRc_grc
-    (closedW_subPB bs checkerProg_armRcHb) armRcHb_tables
-    (closedW_subPB bs checkerProg_armMa) armMa_pass
-    (closedW_subPB bs checkerProg_armMc) armMc_block
--/
+  have hV : CcvProg (Prog.subPB bs checkerProg) := by prog_bundle [H.v, H.cid.basis]
+  have hcrf : CrfF (Prog.subPB bs checkerProg) := by prog_bundle []
+  exact indArmSpec_of hV H.kp H.apd H.crk hcrf H.cid hCS (cbbRef_checker bs hr hpre)
+    (blockRefS_checker bs hr hpre) (closedW_subPB bs checkerProg_armCid) armCid_frame
 
 end L.Checker
