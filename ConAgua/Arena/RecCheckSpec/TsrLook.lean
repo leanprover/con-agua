@@ -37,6 +37,9 @@ structure TsrLook (p : Prog) : Prop where
   ef : p.lookup "er_from_iw" = some erFromIw
   ic : p.lookup "iw_copy" = some iwCopy
   sc : p.lookup "sl_cons" = some slCons
+  trn : p.lookup "generated_rule_nested" = some generatedRuleNested
+  tsrm : p.lookup "generated_rules_remap" = some generatedRulesRemap
+  tsr : p.lookup "generated_rules" = some generatedRules
 
 end L.Ind
 

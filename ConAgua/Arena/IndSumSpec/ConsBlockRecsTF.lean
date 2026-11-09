@@ -408,13 +408,6 @@ l_model rte_spec (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some e
 
 /-! ## `rules_to_erec`: the copied run decodes as the rules -/
 
-/-- `x` is at none of the `k` places `q, q + 1, …` (the tagged addresses `erec_put` writes). -/
-def ErApart (q : Word) (k : Nat) (x : Word) : Prop :=
-  ∀ j < k, erTier x ≠ erTier (q + UInt64.ofNat j) ∨ erOff x ≠ erOff (q + UInt64.ofNat j)
-
-theorem ErApart.mono {q x : Word} {k k' : Nat} (h : ErApart q k x) (hk : k' ≤ k) : ErApart q k' x :=
-  fun j hj => h j (by omega)
-
 theorem ofNat_shift (q : Word) (a j : Nat) : q + UInt64.ofNat a + UInt64.ofNat j = q + UInt64.ofNat (a + j) := by
   rw [UInt64.ofNat_add]; ac_rfl
 
