@@ -1,7 +1,13 @@
 module
 
 public import ConAgua.Arena.QuotCiT
+public import ConAgua.Arena.InstLPSpec
 import ConAgua.Arena.RecFireCore
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.InstLPRef
+import ConAgua.Arena.LevelArena
+import ConAgua.Arena.LevelEquiv
+import ConAgua.Arena.LevelInternRef
 import ConAgua.Arena.TwinStep
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Checker.Canon
@@ -276,5 +282,223 @@ theorem j1_inv {p : Prog} (hp : p.lookup "erec_put" = some erecPut) {n : Nat}
   refine ⟨_, _, _, _, _, rfl, rfl, rfl, rfl, rfl, r', ?_⟩
   simp only [wrER, UInt64.add_assoc, UInt64.reduceAdd] at h2 ⊢
   exact h2
+
+/-! ## The program -/
+
+/-- The lookups the rules need beyond `CiProg`. -/
+structure RulesProg (p : Prog) : Prop extends CiProg p where
+  ls : LsProg p
+  fireAt : p.lookup "fire_levels_at" = some fireLevelsAt
+  spnToEr : p.lookup "spn_to_er" = some spnToEr
+  rulesGo : p.lookup "rules_at_lps_go" = some rulesAtLpsGo
+
+set_option maxRecDepth 20000 in
+theorem keysPush_stageCore : "keys_push" ∈ stageCoreFns :=
+  mem_stageCoreFns (List.mem_append_right _ (List.elem_iff.mp (by decide))) (by simp [coreLeafOnly])
+set_option maxRecDepth 20000 in
+theorem sleGo_stageCore : "sle_go" ∈ stageCoreFns :=
+  mem_stageCoreFns (List.mem_append_right _ (List.elem_iff.mp (by decide))) (by simp [coreLeafOnly])
+
+/-! ## Small facts -/
+
+theorem erAllocW_mem {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m')) : m' = erAllocMem m k := by
+  unfold erAllocW at h
+  by_cases c : rdW (m.arr64 CTL) 1 = 0
+  · simp only [c, ↓reduceIte] at h
+    split at h; · cases h
+    split at h; · cases h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    rw [← h.2, erAllocMem, if_pos c]
+  · simp only [c, ↓reduceIte] at h
+    split at h; · cases h
+    split at h; · cases h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    rw [← h.2, erAllocMem, if_neg c]
+
+theorem erTopOf_put (m : Mem) (a v x : Word) : erTopOf (erecPutMem m a v) x = erTopOf m x := by
+  simp only [erTopOf, erecTop, erecTop1, erecPutMem_ctl]
+
+theorem erTopOf_wrER : ∀ (ws : List Word) (m : Mem) (d x : Word), erTopOf (wrER m d ws) x = erTopOf m x
+  | [], _, _, _ => rfl
+  | w :: ws, m, d, x => by rw [wrER_cons, erTopOf_wrER ws, erTopOf_put]
+
+theorem IWGrow.topOf {m m' : Mem} (hg : IWGrow m m') (x : Word) : erTopOf m x ≤ erTopOf m' x := by
+  unfold erTopOf; split
+  · exact hg.er
+  · exact hg.er1
+
+section stage
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`StageT` across the stack top's write** (`CTL[136]`). -/
+theorem StageT.ctl136 {m : Mem} {a : AState} (hT : StageT dn vis fe m a) (b : Word) :
+    StageT dn vis fe (m.set64 CTL 136 b) a ∧ IWGrow m (m.set64 CTL 136 b) := by
+  have hfr := MemFrame.setCtl m 136 b
+  obtain ⟨M, hC⟩ := hT.core
+  have hC' := hC.frame_stk hfr (by simp) (by simp)
+  have hI : (m.set64 CTL 136 b).arr64 IW = m.arr64 IW := hfr.arr _ (by simp) (by decide)
+  have hE' : (m.set64 CTL 136 b).arr64 EREC = m.arr64 EREC := hfr.arr _ (by simp) (by decide)
+  have hE1' : (m.set64 CTL 136 b).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hfr.arr _ (by simp) (by decide)
+  have hP' : (m.set64 CTL 136 b).arr64 PINS = m.arr64 PINS := hfr.arr _ (by simp) (by decide)
+  have h129' := hfr.ctl 129 (by decide)
+  have h130' := hfr.ctl 130 (by decide)
+  have h200' := hfr.ctl 200 (by decide)
+  obtain ⟨hCR, hTw⟩ := hC'.checkR
+  refine ⟨⟨⟨hCR, IWOK.frame hfr (by simp) (by simp) (by decide) (by decide) hT.stage.iw⟩, hTw,
+    by simp only [pinW, hP']; exact hT.flag⟩, ?_⟩
+  exact ⟨by simp [iwTop, h200'], by simp [erTop, h129'], fun i _ => by rw [hI], fun i _ => by rw [hE'],
+    by simp [erecTop1, h130'], fun i _ => by rw [hE1']⟩
+
+/-! ## `fire_levels_at` -/
+
+/-- **`fire_levels_at(fo, fl, ko, kc, us)` refines `substLevelsAt`** under `StageT`: the
+levels of the slice `(fo, fl)` substituted (keys the names of `(ko, kc)`, values `us`), as a fresh
+slice above `m`'s top; `StageT` after. -/
+theorem fireStep {p : Prog} (hP : RulesProg p) {n : Nat} {m m' : Mem} {a : AState}
+    {fo fl ko kc us : Word} {r : List Word} {lvls : List LIdx} {lpsH : List NIdx}
+    {lpsT : List ConLeche.Name} {usT : List ConLeche.Level}
+    (hT : StageT dn vis fe m a) (hus : H us)
+    (hl : hslice? (erecP m) ko.toNat kc.toNat = some lpsH)
+    (hks : lpsH.mapM (denoteN a.store.ns) = some lpsT)
+    (husT : denoteLs a.store.lss (decI us) = some usT)
+    (hlv : hslice? (erecP m) fo.toNat fl.toNat = some lvls)
+    (hd : ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L)
+    (h : callW p n "fire_levels_at" [fo, fl, ko, kc, us] m = some (r, m')) :
+    ∃ hs a', (substLevelsAt lpsT usT lvls).run a = .ok (hs, a') ∧ StageT dn vis fe m' a' ∧
+      IWGrow m m' ∧ MemFrame quotA quotC m m' ∧ erTopOf m (r.headD 0) ≤ erOff (r.headD 0) ∧
+      erOff (r.headD 0) + fl.toNat ≤ erTopOf m' (r.headD 0) ∧ (r.headD 0).toNat < 2 ^ 41 ∧
+      hs.length = fl.toNat ∧
+      ∀ j < fl.toNat, erecP m' ((r.headD 0).toNat + j) = (lsWords hs)[j]? := by
+  have hqf := callW_quotFrame hP.quot (by decide) h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (fireLevelsAt_specW p hP.fireAt n _ fo fl ko kc us) h
+  cases n with
+  | zero => simp [fireLevelsAtW] at hW
+  | succ n =>
+  simp only [fireLevelsAtW] at hW
+  obtain ⟨M, hC⟩ := hT.core
+  -- `ls_node`
+  cases h1 : callW p n "ls_node" [us] m with
+  | none => rw [h1] at hW; simp [fireLevelsAtW.k_ls_node.none] at hW
+  | some x1 =>
+  obtain ⟨vs', mx⟩ := x1
+  rw [h1, fireLevelsAtW.k_ls_node.arm1] at hW
+  obtain ⟨s₁, hs₁m, hs₁, -, hv'⟩ :=
+    triple_of_callW (lsNode_spec p hP.ls.ls_node n ⟨m, Locals.init []⟩ us) h1
+  have hmx : mx = m := by rw [← hs₁m, hs₁]
+  subst hmx
+  obtain ⟨ids, hvw, hdl'⟩ := denoteLs_view a (decI us) usT husT
+  obtain ⟨e₁, t₁, sl₁⟩ := lsNodeW_store hC.arena.base hus hvw
+  rw [hv', e₁] at hW
+  simp only [List.headD_cons, List.tail_cons] at hW
+  -- `keys_push`
+  cases h2 : callW p n "keys_push" [ko, kc] mx with
+  | none => rw [h2] at hW; simp [fireLevelsAtW.k_keys_push.none] at hW
+  | some x2 =>
+  obtain ⟨bs, m₁⟩ := x2
+  rw [h2] at hW
+  obtain ⟨s₂, hs₂m, -, hW₂⟩ :=
+    triple_of_callW (keysPush_spec p hP.ls.toLvSubProg n ⟨mx, Locals.init []⟩ ko kc) h2
+  rw [hs₂m] at hW₂
+  obtain ⟨hb, hks₁, hf₁, htop₁, hroom, -⟩ :=
+    keysPushW_ok n mx m₁ ko kc (bs.headD 0) lpsH hl hC.spn hC.ctl136 hW₂
+  have hk₁ := lp_nmsR_of_hslice a.store.lss.ls.ns m₁ SPN lpsH lpsT (bs.headD 0) kc hks₁
+    (by have := hC.spn; omega) hks
+  have hC₁ := hC.frame_stk hf₁ (by simp) (by simp)
+  obtain ⟨hT₁, hg₁⟩ := StageT.of_core hP.core keysPush_stageCore h2 hT hC₁
+  have herec₁ : erecP m₁ = erecP mx := erecP_frame hf₁ (by decide) (by decide) (by decide) (by decide)
+  have hpool₁ : m₁.arr64 POOL = mx.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
+  have hpool₁' : m₁.arr64 POOL1 = mx.arr64 POOL1 := hf₁.1 POOL1 (by simp [SPN, POOL1]) (by decide)
+  have hpool₁v := vpool_congr hpool₁ hpool₁'
+  have htopm₁ : m₁.top = mx.top := by simp only [top_rdW]; exact hf₁.ctl 0 (by simp)
+  have hsz₁ : (m₁.arr64 SPN).size = (mx.arr64 SPN).size := hf₁.size SPN
+  have hspn := hC.spn
+  have hlen : (m₁.len64 SPN).toNat = (mx.arr64 SPN).size := by
+    rw [← hsz₁]; exact L.Front.toNat_ofNat_size _ (by rw [hsz₁]; exact hspn)
+  have hE : ILWEnv m₁ a (bs.headD 0) kc (tfld mx LVLS (tierW us) (idxW us) 0)
+      (tfld mx LVLS (tierW us) (idxW us) 1) lpsT ids usT :=
+    ⟨hk₁, by omega, by rw [hpool₁v]; exact sl₁, by rw [htopm₁]; exact t₁, hdl'⟩
+  have hsp : rdW (m₁.arr64 CTL) 136 = spTop m₁ := rfl
+  by_cases u1 : m₁.len64 SPN < spTop m₁
+  · rw [fireLevelsAtW.k_keys_push.abort1 _ _ _ _ _ _ _ _ _ (by rw [hsp]; exact u1)] at hW; cases hW
+  by_cases u2 : m₁.len64 SPN - spTop m₁ < fl
+  · rw [fireLevelsAtW.k_keys_push.abort2 _ _ _ _ _ _ _ _ _ (by rw [hsp]; exact u1)
+      (by rw [hsp]; exact u2)] at hW; cases hW
+  rw [fireLevelsAtW.k_keys_push.arm1 _ _ _ _ _ _ _ _ _ (by rw [hsp]; exact u1)
+    (by rw [hsp]; exact u2), hsp] at hW
+  have u2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u2)
+  rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp u1), hlen] at u2'
+  have u1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u1)
+  rw [hlen] at u1'
+  -- `sle_go`
+  cases h3 : callW p n "sle_go" [fo, fl, spTop m₁, bs.headD 0, kc, tfld mx LVLS (tierW us) (idxW us) 0,
+      tfld mx LVLS (tierW us) (idxW us) 1] m₁ with
+  | none => rw [h3] at hW; simp [fireLevelsAtW.k_sle_go.none] at hW
+  | some x3 =>
+  obtain ⟨xs, m₂⟩ := x3
+  rw [h3, fireLevelsAtW.k_sle_go.arm1] at hW
+  obtain ⟨s₃, hs₃m, -, hW₃⟩ :=
+    triple_of_callW (sleGo_spec p hP.ls n ⟨m₁, Locals.init []⟩ _ _ _ _ _ _ _) h3
+  rw [hs₃m] at hW₃
+  obtain ⟨hs, a₃, hrun₂, hC₃, -, -, hsl₂, -, -⟩ :=
+    sleElemW_core lvls n m₁ m₂ _ fo fl (spTop m₁) hC₁ hE (by rw [herec₁]; exact hlv) hd
+      (Nat.le_refl _) (by rw [hsz₁]; omega) hW₃
+  obtain ⟨hT₃, hg₃⟩ := StageT.of_core hP.core sleGo_stageCore h3 hT₁ hC₃
+  have hlen₂ : hs.length = fl.toNat := by
+    have := congrArg List.length hsl₂; simp [sliceL_length, lsWords] at this; omega
+  -- `erec_alloc(fl)`
+  cases h4 : callW p n "erec_alloc" [fl] m₂ with
+  | none => rw [h4] at hW; simp [fireLevelsAtW.k_erec_alloc.none] at hW
+  | some x4 =>
+  obtain ⟨r4, m₄⟩ := x4
+  rw [h4, fireLevelsAtW.k_erec_alloc.arm1] at hW
+  have hA4 := callW_erecAlloc hP.erAlloc h4
+  obtain ⟨hT₄, hg₄, hoff₄, htop₄, hd41⟩ := erAlloc_stageT hA4 hT₃
+  have hqf4 := callW_quotFrame hP.quot (by decide) h4
+  have hspn4 : m₄.arr64 SPN = m₂.arr64 SPN := by
+    rw [erAllocW_mem hA4]; exact erAllocMem_arr _ _ (by decide)
+  -- `spn_to_er(d, c, fl)`
+  cases h5 : callW p n "spn_to_er" [r4.headD 0, spTop m₁, fl] m₄ with
+  | none => rw [h5] at hW; simp [fireLevelsAtW.k_spn_to_er.none] at hW
+  | some x5 =>
+  obtain ⟨r5, m₅⟩ := x5
+  rw [h5, fireLevelsAtW.k_spn_to_er.arm1, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, hm'⟩ := hW
+  obtain ⟨s₅, rfl, -, hW₅⟩ := triple_of_callW (s₀ := ⟨m₄, Locals.init []⟩)
+    (spnToEr_specW p hP.spnToEr n _ _ _ _) h5
+  have e5 := spnToErW_eq hP.erPut fl.toNat n m₄ _ _ fl _ _ rfl hW₅
+  generalize hws : (List.range fl.toNat).map (fun j => rdW (m₄.arr64 SPN) (spTop m₁ + UInt64.ofNat j)) = ws
+    at e5
+  have hwsl : ws = lsWords hs := by
+    rw [← hws, ← hsl₂, hspn4]
+    apply List.ext_getElem (by simp [sliceL_length])
+    intro j h1 h2
+    simp only [List.getElem_map, List.getElem_range, sliceL, List.getElem_ofFn, rdW]
+    congr 2
+    simp only [List.length_map, List.length_range] at h1
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat']
+    have := hT₃.twin.spn
+    omega
+  have hcap4 := hT₄.stage.iw.topOf (r4.headD 0)
+  obtain ⟨hS₅, hg₅, hf₅, hrd₅, -⟩ := wrER_fresh hT₃.stage ws m₄ _ (r4.headD 0) hT₄.stage hqf4 hg₄
+    (by rw [hoff₄]; exact Nat.le_refl _) (by rw [htop₄, hoff₄, hwsl]; simp [lsWords, hlen₂]) hd41
+  rw [← e5] at hS₅ hg₅ hrd₅
+  have hT₅ : StageT dn vis fe s₅.mem a₃ := by rw [e5] at hS₅ ⊢; exact StageT.of_wrER hT₄ hS₅
+  obtain ⟨hT₆, hg₆⟩ := hT₅.ctl136 (bs.headD 0)
+  have hfr6 := MemFrame.setCtl s₅.mem 136 (bs.headD 0)
+  have herec6 : erecP (s₅.mem.set64 CTL 136 (bs.headD 0)) = erecP s₅.mem :=
+    erecP_frame hfr6 (by simp) (by simp) (by decide) (by decide)
+  have htop6 : ∀ x, erTopOf (s₅.mem.set64 CTL 136 (bs.headD 0)) x = erTopOf s₅.mem x := fun x => by
+    simp only [erTopOf, erecTop, erecTop1, hfr6.ctl 129 (by decide), hfr6.ctl 130 (by decide)]
+  have htop5 : erTopOf s₅.mem (r4.headD 0) = erTopOf m₄ (r4.headD 0) := by rw [e5, erTopOf_wrER]
+  rw [← hm']
+  simp only [List.headD_cons]
+  refine ⟨hs, a₃, hrun₂, hT₆, hg₁.trans (hg₃.trans (hg₅.trans hg₆)), hm' ▸ hqf, ?_, ?_, hd41, hlen₂, ?_⟩
+  · rw [hoff₄]; exact (hg₁.trans hg₃).topOf _
+  · rw [htop6, htop5, htop₄, hoff₄]; exact Nat.le_refl _
+  · intro j hj
+    rw [herec6, hrd₅ j (by rw [hwsl]; simp [lsWords, hlen₂]; exact hj), hwsl]
+
+end stage
 
 end L.Ind
