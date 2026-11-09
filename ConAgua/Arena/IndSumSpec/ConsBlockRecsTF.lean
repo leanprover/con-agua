@@ -58,22 +58,17 @@ def sctK3 (rest : Mem → Option (List Word × Mem)) (nP b r1 r2 : Word) :
   | none => none
   | some (r3, m) => sctK4 rest r1 r2 (r3.headD 0)
       (lbbF m [CWF, nP + 1, b])
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `all_level_params_defined`. -/
 def sctK2 (rest : Mem → Option (List Word × Mem)) (vis nP b r1 : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m) => sctK3 rest nP b r1 (r2.headD 0) (crfF m [vis, b])
--/
 /-- After `has_fvar_fast`. -/
 def sctK1 (c : CallM) (n : Nat) (rest : Mem → Option (List Word × Mem)) (vis nP lo ll b : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m) => sctK2 rest vis nP b (r1.headD 0) (c n "all_level_params_defined" [lo, ll, b] m)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_struct_proj_table_scoped(vis, nP, lo, ll, bO, bL)`** at exec fuel `n`,
 reading `all_level_params_defined` through `c` (`stubCall`: the stub contract; `realCall p`: the
 program's own call, `IndRealSctC.lean`). -/
@@ -83,19 +78,14 @@ def sctW (c : CallM) : Nat → Mem → Word → Word → Word → Word → Word 
     if bL = 0 then some ([1], m)
     else sctK1 c n (fun m' => sctW c n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
       (hffF m [CWF, rdW (m.arr64 IW) bO])
--/
 
 section arms
 variable (c : CallM) (rest : Mem → Option (List Word × Mem)) (n : Nat) (m : Mem)
   (vis nP lo ll bO bL b r1 r2 r3 : Word) (r : List Word)
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sctW_nil (h : bL = 0) : sctW c (n + 1) m vis nP lo ll bO bL = some ([1], m) := by simp [sctW, h]
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sctW_cons (h : bL ≠ 0) : sctW c (n + 1) m vis nP lo ll bO bL =
     sctK1 c n (fun m' => sctW c n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
       (hffF m [CWF, rdW (m.arr64 IW) bO]) := by simp [sctW, h]
--/
 theorem sctK5_some : sctK5 (some (r, m)) = some ([r.headD 0], m) := rfl
 theorem sctK4_yes (h : r1 = 0 ∧ r2 = 1 ∧ r3 = 1 ∧ r.headD 0 = 1) :
     sctK4 rest r1 r2 r3 (some (r, m)) = sctK5 (rest m) := by simp only [sctK4]; rw [ite_eq_left h]
@@ -103,18 +93,13 @@ theorem sctK4_no (h : ¬ (r1 = 0 ∧ r2 = 1 ∧ r3 = 1 ∧ r.headD 0 = 1)) :
     sctK4 rest r1 r2 r3 (some (r, m)) = some ([0], m) := by simp only [sctK4]; rw [ite_eq_right h]
 theorem sctK3_some : sctK3 rest nP b r1 r2 (some (r, m)) =
     sctK4 rest r1 r2 (r.headD 0) (lbbF m [CWF, nP + 1, b]) := rfl
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sctK2_some : sctK2 rest vis nP b r1 (some (r, m)) =
     sctK3 rest nP b r1 (r.headD 0) (crfF m [vis, b]) := rfl
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sctK1_some : sctK1 c n rest vis nP lo ll b (some (r, m)) =
     sctK2 rest vis nP b (r.headD 0) (c n "all_level_params_defined" [lo, ll, b] m) := rfl
--/
 end arms
--- ronsync2 stage 2: attribute [ind_grind] sctW_nil sctW_cons sctK5_some sctK4_yes sctK4_no sctK3_some sctK2_some sctK1_some
+attribute [ind_grind] sctW_nil sctW_cons sctK5_some sctK4_yes sctK4_no sctK3_some sctK2_some sctK1_some
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sctW_spec (p : Prog) (hb : BvbProg p) (hf : HfF p) (hcr : CrfF p)
     (hp : p.lookup "check_struct_proj_table_scoped" = some checkStructProjTableScopedL)
     (c : CallM) (hc : CallSpec p c) (n : Nat) : ∀ (s₀ : St) (vis nP lo ll bO bL : Word),
@@ -133,7 +118,6 @@ theorem sctW_spec (p : Prog) (hb : BvbProg p) (hf : HfF p) (hcr : CrfF p)
         hffF_spec p hf n, hc n "all_level_params_defined",
         crfF_spec p hcr n, lbbF_spec p hb n, ih] <;>
       finish (gen := 30) (instances := 5000) [rdW_eq]
--/
 
 /-- The twin's per-body scoping test (`checkStructProjTable`'s `allM` body, verbatim). -/
 def scopeT (fe : IFEnv) (lps : List NIdx) (nP : Nat) (b : EIdx) : AM Bool := do
