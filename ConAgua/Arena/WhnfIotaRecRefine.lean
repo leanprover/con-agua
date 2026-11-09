@@ -232,14 +232,18 @@ theorem IotaRecProg'.fnzaProg {p : Prog} (hp : IotaRecProg' p) (hilp : InstLPOK 
 
 /-! ## `erec_push(o, c)` -/
 
+/-- The tagged read's bound for word `o + j` (`EREC⦃o + j⦄` in bounds). -/
+abbrev erIn (m : Mem) (x : Word) : Prop :=
+  (x &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (x >>> 40))).size
+
 /-- Model of the `erec_push` loop at L fuel `k`. -/
 def epW (o c so : Word) : Nat → Mem → Word → Option Mem
   | 0, _, _ => none
   | k + 1, m, j =>
     if j < c then
-      if h : (o + j).toNat < (m.arr64 EREC).size then
+      if erIn m (o + j) then
         if (so + j).toNat < (m.arr64 SPN).size ∧ (136 : Word).toNat < (m.arr64 CTL).size then
-          epW o c so k ((m.set64 SPN (so + j) (m.arr64 EREC)[(o + j).toNat]).set64 CTL 136 (so + j + 1))
+          epW o c so k ((m.set64 SPN (so + j) (erRdT m (o + j))).set64 CTL 136 (so + j + 1))
             (j + 1)
         else none
       else none
@@ -250,29 +254,36 @@ theorem epW_end (o c so : Word) (k : Nat) (m : Mem) (j : Word) (h : ¬ j < c) :
   simp only [epW, h, ↓reduceIte]
 
 theorem epW_cont (o c so : Word) (k : Nat) (m : Mem) (j : Word) (h : j < c)
-    (h1 : (o + j).toNat < (m.arr64 EREC).size)
+    (h1 : erIn m (o + j))
     (h2 : (so + j).toNat < (m.arr64 SPN).size ∧ (136 : Word).toNat < (m.arr64 CTL).size) :
     epW o c so (k + 1) m j =
-      epW o c so k ((m.set64 SPN (so + j) (m.arr64 EREC)[(o + j).toNat]).set64 CTL 136 (so + j + 1))
+      epW o c so k ((m.set64 SPN (so + j) (erRdT m (o + j))).set64 CTL 136 (so + j + 1))
         (j + 1) := by
-  simp only [epW, h, ↓reduceIte, h1, ↓reduceDIte, h2, and_self]
+  simp only [epW, h, ↓reduceIte, h1, h2, and_self]
 
 theorem epW_bad1 (o c so : Word) (k : Nat) (m : Mem) (j : Word) (h : j < c)
-    (h1 : ¬ (o + j).toNat < (m.arr64 EREC).size) : epW o c so (k + 1) m j = none := by
-  simp only [epW, h, ↓reduceIte, h1, ↓reduceDIte]
+    (h1 : ¬ erIn m (o + j)) : epW o c so (k + 1) m j = none := by
+  simp only [epW, h, ↓reduceIte, h1]
 
 theorem epW_bad2 (o c so : Word) (k : Nat) (m : Mem) (j : Word) (h : j < c)
-    (h1 : (o + j).toNat < (m.arr64 EREC).size)
+    (h1 : erIn m (o + j))
     (h2 : ¬ ((so + j).toNat < (m.arr64 SPN).size ∧ (136 : Word).toNat < (m.arr64 CTL).size)) :
     epW o c so (k + 1) m j = none := by
-  simp only [epW, h, ↓reduceIte, h1, ↓reduceDIte, h2]
+  simp only [epW, h, ↓reduceIte, h1, h2]
 
 theorem erecPushLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p k erecPushLoop
     ⦃fun r s' => r = .normal ∧ s'.loc 3 = s₀.loc 3 ∧
       epW (s₀.loc 0) (s₀.loc 1) (s₀.loc 3) k s₀.mem (s₀.loc 4) = some s'.mem; ⊤⦄ := by
-  sorry
+  induction k generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ k ih =>
+    rw [exec, step_while (w := erecPushLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        st64, evalE_tld, tld, ih] <;>
+      finish [epW_end, epW_cont, epW_bad1, epW_bad2]
 
 /-- Model of `erec_push`. -/
 def epTop (k : Nat) (m : Mem) (o c kd : Word) : Option (List Word × Mem) :=
@@ -311,11 +322,22 @@ theorem hslice?_at {k : IdxKind} {a : Array Word} {o c : Nat} {l : List (Idx k)}
     rw [this]; exact List.getElem?_eq_getElem _)
   exact ⟨w, hw, hw32, by rw [← hx]; exact List.getElem?_eq_getElem _⟩
 
+/-- Element `j` of a decoded handle slice (any reader). -/
+theorem hslice?_atR {k : IdxKind} {R : Nat → Option Word} {o c : Nat} {l : List (Idx k)}
+    (h : hslice? R o c = some l) (j : Nat) (hj : j < c) :
+    ∃ w, R (o + j) = some w ∧ w.toNat < 2 ^ 32 ∧ l[j]? = some (decI w) := by
+  obtain ⟨hl, hg⟩ := mapM_option_get _ _ _ h
+  have := hg j (by simpa using hj)
+  simp only [List.getElem_range] at this
+  obtain ⟨w, hw, hw32, hx⟩ := hd?_some (k := k) (x := l[j]'(by simp at hl; omega)) (by
+    rw [this]; exact List.getElem?_eq_getElem _)
+  exact ⟨w, hw, hw32, by rw [← hx]; exact List.getElem?_eq_getElem _⟩
+
 /-- **The `erec_push` loop** pushes the rest of the slice. -/
-theorem epW_ok (E : Array Word) (hE : E.size < 2 ^ 63) (o c so : Word) (pins : List EIdx)
-    (hpins : hslice? (aread E) o.toNat c.toNat = some pins) :
+theorem epW_ok (P : Nat → Option Word) (o c so : Word) (pins : List EIdx)
+    (hpins : hslice? P o.toNat c.toNat = some pins) :
     ∀ (K k : Nat) (m : Mem) (j : Word) (m' : Mem), c.toNat - j.toNat = K → j.toNat ≤ c.toNat →
-      m.arr64 EREC = E → spTop m = so + j → so.toNat + c.toNat ≤ (m.arr64 SPN).size →
+      erecP m = P → spTop m = so + j → so.toNat + c.toNat ≤ (m.arr64 SPN).size →
       (m.arr64 SPN).size < 2 ^ 63 → epW o c so k m j = some m' →
       MemFrame [SPN] [136] m m' ∧ StackGrew m m' ∧ spTop m' = so + c ∧
         SpineR m' (so + j) (c - j) (pins.drop j.toNat).toArray := by
@@ -334,7 +356,7 @@ theorem epW_ok (E : Array Word) (hE : E.size < 2 ^ 63) (o c so : Word) (pins : L
     cases hL
     subst hjc
     have hdrop : pins.drop j.toNat = [] := by
-      apply List.drop_eq_nil_of_le; rw [hslice?_length hpins]; omega
+      apply List.drop_eq_nil_of_le; rw [hslice?_lenR hpins]; omega
     rw [hdrop, UInt64.sub_self]
     refine ⟨MemFrame.refl _ _ _, (StackKept.refl _).toGrew, htop, SpineR.nil_at m _ ?_⟩
     rw [UInt64.toNat_add]; simp; omega
@@ -347,15 +369,14 @@ theorem epW_ok (E : Array Word) (hE : E.size < 2 ^ 63) (o c so : Word) (pins : L
     cases k with
     | zero => simp [epW] at hL
     | succ k =>
-    obtain ⟨w, hw, hw32, hpw⟩ := hslice?_at hpins j.toNat hlt'
+    obtain ⟨w, hw, hw32, hpw⟩ := hslice?_atR hpins j.toNat hlt'
+    rw [← hEm] at hw
     have hoj : (o + j).toNat = o.toNat + j.toNat := by
-      have := (Array.getElem?_eq_some_iff.mp hw).1
+      have := erecP_lt64 hw
       rw [UInt64.toNat_add]; simp; omega
-    have h1 : (o + j).toNat < (m.arr64 EREC).size := by
-      rw [hoj, hEm]; exact (Array.getElem?_eq_some_iff.mp hw).1
-    have hval : (m.arr64 EREC)[(o + j).toNat] = w := by
-      have := (Array.getElem?_eq_some_iff.mp hw).2
-      simp only [hEm, hoj]; exact this
+    rw [← hoj] at hw
+    have h1 : erIn m (o + j) := (erecP_tagRead hw).1
+    have hval : erRdT m (o + j) = w := erRdT_of _ _ hw
     have hsoj : (so + j).toNat = so.toNat + j.toNat := by
       rw [UInt64.toNat_add]; simp; omega
     by_cases hgn : ¬ ((so + j).toNat < (m.arr64 SPN).size ∧ (136 : Word).toNat < (m.arr64 CTL).size)
@@ -364,16 +385,16 @@ theorem epW_ok (E : Array Word) (hE : E.size < 2 ^ 63) (o c so : Word) (pins : L
     rw [epW_cont o c so k m j hlt h1 hg, hval] at hL
     obtain ⟨hfr, hsp3, hgrew, hslot, hsz3⟩ := push_step m (so + j) w hg.1 hg.2 htop (by omega)
     have hj1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat c j hlt
-    have hEm3 : ((m.set64 SPN (so + j) w).set64 CTL 136 (so + j + 1)).arr64 EREC = E := by
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide), hEm]
+    have hEm3 : erecP ((m.set64 SPN (so + j) w).set64 CTL 136 (so + j + 1)) = P := by
+      rw [erecP_frame hfr (by decide) (by decide) (by decide) (by decide), hEm]
     obtain ⟨hfr4, hgr4, htop4, hys⟩ := ih k _ (j + 1) m' (by omega) (by omega) hEm3
       (by rw [hsp3, UInt64.add_assoc]) (by rw [hsz3]; exact hso) (by rw [hsz3]; exact hspn) hL
     refine ⟨hfr.trans hfr4, hgrew.trans hgr4, htop4, ?_⟩
     have hdrop : pins.drop j.toNat = decE w :: pins.drop (j.toNat + 1) := by
-      rw [List.drop_eq_getElem_cons (by rw [hslice?_length hpins]; exact hlt')]
+      rw [List.drop_eq_getElem_cons (by rw [hslice?_lenR hpins]; exact hlt')]
       congr 1
       have := hpw
-      rw [List.getElem?_eq_getElem (by rw [hslice?_length hpins]; exact hlt')] at this
+      rw [List.getElem?_eq_getElem (by rw [hslice?_lenR hpins]; exact hlt')] at this
       exact Option.some.inj this
     have e1 : c - j = (c - (j + 1)) + 1 := by
       apply UInt64.toNat_inj.mp
@@ -396,13 +417,45 @@ theorem epW_ok (E : Array Word) (hE : E.size < 2 ^ 63) (o c so : Word) (pins : L
 /-- **`erec_push` as a run**: the slice is on the stack at the old top, the top raised past it,
 only the stack and its top written. -/
 theorem callW_erecPush (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (n : Nat) (m : Mem)
-    (o c : Word) (pins : List EIdx) (hE : (m.arr64 EREC).size < 2 ^ 63)
+    (o c : Word) (pins : List EIdx)
     (hspn : (m.arr64 SPN).size < 2 ^ 63)
     (hpins : hslice? (erecP m) o.toNat c.toNat = some pins) (r : List Word) (m' : Mem)
     (h : callW p n "erec_push" [o, c, 1] m = some (r, m')) :
     MemFrame [SPN] [136] m m' ∧ StackGrew m m' ∧ r.headD 0 = spTop m ∧ spTop m' = spTop m + c ∧
       SpineR m' (spTop m) c pins.toArray := by
-  sorry
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ n =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callW (erecPush_spec p hp n ⟨m, Locals.init []⟩ o c 1) h
+  rw [ht] at hW
+  simp only [epTop, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  obtain ⟨h136, hW⟩ := of_ite_none' hW
+  obtain ⟨hg1, hW⟩ := of_ite_none hW
+  obtain ⟨hg2, hW⟩ := of_ite_none hW
+  cases hm : epW o c (rdW (m.arr64 CTL) 136) (n + 1) m 0 with
+  | none => rw [hm] at hW; cases hW
+  | some m₁ =>
+  rw [hm] at hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  have h64 : (m.arr64 SPN).size < 2 ^ 64 := by omega
+  have hsolt : (rdW (m.arr64 CTL) 136).toNat ≤ (m.arr64 SPN).size := by
+    have : ¬ (m.arr64 SPN).size < (rdW (m.arr64 CTL) 136).toNat := by
+      intro h
+      apply hg1
+      rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' h64]; exact h
+    omega
+  have hso : (rdW (m.arr64 CTL) 136).toNat + c.toNat ≤ (m.arr64 SPN).size := by
+    have h2 : ¬ UInt64.ofNat (m.arr64 SPN).size - rdW (m.arr64 CTL) 136 < c := hg2
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _ (by
+      rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' h64]; exact hsolt),
+      UInt64.toNat_ofNat_of_lt' h64] at h2
+    omega
+  have hspt : spTop m = rdW (m.arr64 CTL) 136 + 0 := by rw [UInt64.add_zero]; rfl
+  obtain ⟨hfr, hgr, htop, hys⟩ := epW_ok (erecP m) o c (rdW (m.arr64 CTL) 136) pins hpins
+    (c.toNat - (0 : Word).toNat) (n + 1) m 0 m₁ rfl (by simp) rfl hspt hso hspn hm
+  refine ⟨hfr, hgr, by rw [← hr]; rfl, htop, ?_⟩
+  simp only [UInt64.add_zero, UInt64.sub_zero, UInt64.toNat_zero, List.drop_zero] at hys
+  exact hys
 
 /-! ## Reading decoded records by word -/
 
@@ -738,12 +791,12 @@ theorem epW_frame (o c so : Word) : ∀ (k : Nat) (m : Mem) (j : Word) (m' : Mem
   | succ k ih =>
     intro m j m' h
     by_cases hj : j < c
-    · by_cases h1 : (o + j).toNat < (m.arr64 EREC).size
+    · by_cases h1 : erIn m (o + j)
       · by_cases h2 : (so + j).toNat < (m.arr64 SPN).size ∧ (136 : Word).toNat < (m.arr64 CTL).size
         · rw [epW_cont o c so k m j hj h1 h2] at h
-          have f1 : MemFrame [SPN] [136] m (m.set64 SPN (so + j) (m.arr64 EREC)[(o + j).toNat]) :=
+          have f1 : MemFrame [SPN] [136] m (m.set64 SPN (so + j) (erRdT m (o + j))) :=
             (MemFrame.set64 m SPN (by decide) _ _).mono (fun b hb => hb) (fun x hx => by simp at hx)
-          have f2 := (MemFrame.setCtl (m.set64 SPN (so + j) (m.arr64 EREC)[(o + j).toNat]) 136
+          have f2 := (MemFrame.setCtl (m.set64 SPN (so + j) (erRdT m (o + j))) 136
             (so + j + 1)).mono (A' := [SPN]) (fun b hb => by simp at hb) (fun x hx => hx)
           exact (f1.trans f2).trans (ih _ _ _ h)
         · rw [epW_bad2 o c so k m j hj h1 h2] at h; cases h
