@@ -7,6 +7,10 @@ meta import ConAgua.Checker.PhaseBReads
 meta import ConAgua.Arena.LevelIntern
 meta import ConAgua.Arena.LevelSubstLP
 import all ConAgua.Arena.Abs1
+import all ConAgua.Arena.BasisL
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.IndStream
+import all ConAgua.Rom.CIConst
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
@@ -171,5 +175,13 @@ def thrS (a : TieredArray) : Bool :=
 theorem thrS_iff (a : TieredArray) : thrS a = true ↔
     a ≠ HDRF ∧ a ≠ CTLF ∧ (a ∈ frozenIdsL ∨ a ∈ parOwnedL) := by
   simp [thrS, and_assoc]
+
+/-- Every function of the checker passes the thread's per-function read check. -/
+prog_all checkerProg_thrReadsChk : checkerProg (rdChk thrS (fun _ => false) phaseBJobTree)
+
+/-- **The jobs' read set, for a thread**: the call closure of `check_jobs` names only word arrays
+of `thrS`, no byte array, and calls only into itself. -/
+theorem checkerProg_thrReads : readsIn checkerProg thrS (fun _ => false) phaseBJobFns = true :=
+  readsIn_of_all phaseBJobTree.eq checkerProg_thrReadsChk
 
 end L.Checker
