@@ -13,9 +13,12 @@ import ConAgua.Checker.LoopProg
 import ConAgua.Verdict.KnotAllE
 import ConAgua.Verdict.DeclTopE
 import ConAgua.Verdict.ThreadsE
+import ConAgua.Verdict.CheckBE
 import ConAgua.Checker.DefnArmT
 import ConAgua.Checker.BlockRefsProg
 import ConAgua.Final.DrvFinal
+import ConAgua.Verdict.FrontStageE
+import ConAgua.Checker.VerdictEntry1
 public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 public import ConAgua.Arena.IndInstallSpec.OfClosed
@@ -94,9 +97,6 @@ theorem indArmSpecE_checker (bs : List UInt8) (hr : RomOK bs)
     (blockRefS_checker bs hR) (closedW_subPB bs checkerProg_armCid) armCid_frame
     ⟨⟨hnv, checkerProg_coreStubsEPB bs⟩, hU⟩
 
-/-- **The sequential driver's verdict claims**, without hypotheses. -/
-theorem seqVerdicts_proved : SeqVerdicts checkerProg := by
-  sorry
 
 /-- **The jobs' error claims at the programs phase B runs** (`JobG`: `check_decl`'s arms' claims,
 `armsE_of`, and the inductive arm's, `indArmSpecE_checker`), at every phase A. -/
@@ -124,9 +124,15 @@ at `check_decl`'s program facts (`checkerCd_proved`) and the jobs' error claims 
 theorem threadEVerdict_proved : ThreadEVerdict.{u} :=
   fun Vt _ => threads_twinVerdictPooled Vt checkerCd_proved jobG_checker
 
+/-- **The sequential driver's verdict claims**, relative to set theory (as the accept theorems):
+entry 1's from its stages' error specs, entry 2's from the jobs' (`entry2Verdict_of`). -/
+theorem seqVerdicts_proved (V : Type u) [ConLeche.SetTheory V] : SeqVerdicts checkerProg where
+  entry1 := entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE⟩
+  entry2 := entry2Verdict_of V checkerCd_proved jobG_checker
+
 /-- **The threaded harness's verdict claims**, without hypotheses. -/
 theorem threadVerdicts_proved : ThreadVerdicts.{u} where
-  entry1 := sorry
+  entry1 := entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE⟩
   thr := threadEVerdict_proved
 
 -- ronsync2 stage 2: /--
