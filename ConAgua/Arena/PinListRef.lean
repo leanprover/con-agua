@@ -246,4 +246,101 @@ theorem pinCopyOk_sim (hP : PinListLProg p) (n : Nat) {m : Mem} {a : AState} {c 
 
 end copy
 
+
+/-! ## `pin_copies_ok` -/
+
+theorem CmpPost.refl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+    {a : AState} {r : List Word} {b : Bool} (hT : StageT dn vis fe m a)
+    (hok : ConRon.Bridge.StateOK a) (hr : ConRon.Bridge.ReadOK a) (hb : r.headD 0 ≠ 0 ↔ b = true) :
+    CmpPost dn vis fe m a r b m a := ⟨hT, IWGrow.refl m, hok, hr, Ext.refl _, hb⟩
+
+theorem slice_len {m : Mem} {o l : Word} {xs : List IConstantInfo} (h : PSlR ciF xs o l m) :
+    xs.length = l.toNat := L.Ind.decPL_length (truncM m) h.dec
+
+section copies
+variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`pin_copies_ok(co, cl, po, pl)` refines `pinCopiesOk cs ps`**, pair by pair. -/
+theorem pinCopiesOkW_ok (hP : PinListLProg p) : ∀ (n : Nat) (m m' : Mem) (a : AState)
+    (co cl po pl : Word) (cs ps : List IConstantInfo) (r : List Word),
+    StageT dn vis fe m a → ConRon.Bridge.StateOK a → ConRon.Bridge.ReadOK a →
+    PSlR ciF cs co cl m → PSlR ciF ps po pl m →
+    (∃ B, Frontend.denoteCIList a.store cs = some B) →
+    (∃ P, Frontend.denoteCIList a.store ps = some P) →
+    pinCopiesOkW p n m co cl po pl = some (r, m') →
+    ∃ b a', (ConRon.Arena.pinCopiesOk cs ps).run a = .ok (b, a') ∧
+      CmpPost dn vis fe m a [r.headD 0] b m' a' := by
+  intro n
+  induction n with
+  | zero => intro m m' a co cl po pl cs ps r _ _ _ _ _ _ _ h; simp [pinCopiesOkW] at h
+  | succ n ih =>
+  intro m m' a co cl po pl cs ps r hT hok hr hC hPs hdC hdP h
+  have hsz := hT.stage.iw.iwSize
+  have hlc := slice_len hC
+  have hlp := slice_len hPs
+  rw [pinCopiesOkW.eq_2] at h
+  by_cases h1 : cl = 0 ∧ pl = 0
+  · rw [if_pos h1] at h; cases h
+    obtain ⟨rfl, rfl⟩ := h1
+    have e1 : cs = [] := List.eq_nil_of_length_eq_zero (by rw [hlc]; rfl)
+    have e2 : ps = [] := List.eq_nil_of_length_eq_zero (by rw [hlp]; rfl)
+    subst e1 e2
+    exact ⟨true, a, rfl, CmpPost.refl hT hok hr (by simp)⟩
+  rw [if_neg h1] at h
+  by_cases h2 : cl = 0 ∨ pl = 0
+  · rw [if_pos h2] at h; cases h
+    have hrun : (ConRon.Arena.pinCopiesOk cs ps).run a = .ok (false, a) := by
+      rcases h2 with rfl | rfl
+      · have e1 : cs = [] := List.eq_nil_of_length_eq_zero (by rw [hlc]; rfl)
+        subst e1
+        cases ps with
+        | nil => exact absurd ⟨rfl, UInt64.toNat_inj.mp (by simpa using hlp.symm)⟩ h1
+        | cons _ _ => rfl
+      · have e2 : ps = [] := List.eq_nil_of_length_eq_zero (by rw [hlp]; rfl)
+        subst e2
+        cases cs with
+        | nil => exact absurd ⟨UInt64.toNat_inj.mp (by simpa using hlc.symm), rfl⟩ h1
+        | cons _ _ => rfl
+    exact ⟨false, a, hrun, CmpPost.refl hT hok hr (by simp)⟩
+  rw [if_neg h2] at h
+  have hcl : cl ≠ 0 := fun e => h2 (Or.inl e)
+  have hpl : pl ≠ 0 := fun e => h2 (Or.inr e)
+  obtain ⟨c, cs', rfl, hc, hC'⟩ := hC.uncons hcl hsz
+  obtain ⟨q, ps', rfl, hq, hP'⟩ := hPs.uncons hpl hsz
+  rw [decB_ciF] at hc hq
+  obtain ⟨B, hB⟩ := hdC
+  obtain ⟨PP, hPP⟩ := hdP
+  obtain ⟨dc, dcs, hdc, hdcs, -⟩ := ConRon.Bridge.denoteCIList_cons hB
+  obtain ⟨dq, dqs, hdq, hdqs, -⟩ := ConRon.Bridge.denoteCIList_cons hPP
+  cases h3 : callW p n "pin_copy_ok" [rdW (m.arr64 IW) co, rdW (m.arr64 IW) po] m with
+  | none => rw [h3] at h; simp [pinCopiesOkW.k_pin_copy_ok] at h
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  rw [h3, pinCopiesOkW.k_pin_copy_ok.eq_2] at h
+  obtain ⟨b3, a3, hrun3, hT3, hg3, hok3, hr3, hx3, hb3⟩ :=
+    pinCopyOk_sim hP n hT hok hr hc hq hdc hdq r3 m3 h3
+  have hstep : (ConRon.Arena.pinCopiesOk (c :: cs') (q :: ps')).run a =
+      (if b3 then ConRon.Arena.pinCopiesOk cs' ps' else pure false).run a3 := by
+    simp only [ConRon.Arena.pinCopiesOk, StateT.run_bind, hrun3, exb]
+  by_cases h0 : r3.headD 0 = 0
+  · rw [if_pos h0] at h; cases h
+    have : b3 = false := by cases b3 <;> simp_all
+    subst this
+    exact ⟨false, a3, by rw [hstep]; rfl, hT3, hg3, hok3, hr3, hx3, by simp⟩
+  rw [if_neg h0] at h
+  have : b3 = true := hb3.mp h0
+  subst this
+  cases h4 : pinCopiesOkW p n m3 (co + 1) (cl - 1) (po + 1) (pl - 1) with
+  | none => rw [h4] at h; simp [pinCopiesOkW.k_pin_copies_ok] at h
+  | some x4 =>
+  obtain ⟨r4, m4⟩ := x4
+  rw [h4, pinCopiesOkW.k_pin_copies_ok.eq_2] at h
+  cases h
+  obtain ⟨b, a', hrun, hT', hg', hok', hr', hx', hb'⟩ :=
+    ih m3 _ a3 _ _ _ _ cs' ps' r4 hT3 hok3 hr3 (hC'.grow ciF_mono hg3) (hP'.grow ciF_mono hg3)
+      ⟨_, ConRon.Bridge.denoteCIList_mono hx3 _ _ hdcs⟩ ⟨_, ConRon.Bridge.denoteCIList_mono hx3 _ _ hdqs⟩ h4
+  exact ⟨b, a', by rw [hstep]; exact hrun, hT', hg3.trans hg', hok', hr', hx3.trans hx', by simpa using hb'⟩
+
+end copies
+
 end L.Ind
