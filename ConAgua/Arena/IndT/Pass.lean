@@ -27,7 +27,8 @@ public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 public import ConAgua.Arena.IndInstallSpec.CbProg
 public import ConAgua.Arena.IndInstallSpec.Icvg
 public import ConAgua.Arena.IndRealIlpL
-public import ConAgua.Arena.IndRealLvlZ
+public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndT.KeepC
 public import ConAgua.Arena.IndT.Sum2
 public import ConRon.Bridge.Inductives.BlockTail
@@ -121,8 +122,7 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
     (hcx : ShapeCV m p0) (hb : (isRec != 0) = b) (hPm : PosMR m) (hA : AbsOK m)
     (hk : ∀ f ∈ passKeepCalleesC, AbsKeep p f)
     (hcoh : ConRon.Bridge.IFEnvCoh fe) (hden : ConRon.Bridge.denoteFEnv a.store fe = some env)
-    {shP : ConLeche.BlockShape} (hshP : ConRon.Bridge.Inductives.dShape a.store bs = some shP)
-    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
+    {shP : ConLeche.BlockShape} (hshP : ConRon.Bridge.Inductives.dShape a.store bs = some shP) :
     RefE (CtsG p) (icpE p N m vis p0 isRec) (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b) a
       (fun v x a' => PassPost dn env m p0 a v.1 x v.2 a') := by
   rcases N with _ | F
@@ -140,7 +140,7 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
   refine RefE.bindRunLe hle (s₀ := ⟨m, Locals.init []⟩) (fun _ => icpE.k_check_block_inds.none ..)
     (cbiE_spec p hP.inds (n + 3) ⟨m, Locals.init []⟩ vis p0 isRec) (fun hG => hG.nv) id
     (cbi_ref hkp henv hV hOpf hLC hApd hCrk hP.inds (n + 2) (by omega) hC hq hsrc hcx hb hA
-      (fun f hf => hk f (List.mem_append_left _ (List.mem_append_right _ hf))) hshP hden hcoh hlpsDn)
+      (fun f hf => hk f (List.mem_append_left _ (List.mem_append_right _ hf))) hshP hden hcoh)
     fun r1 s1 ⟨fe1, cvTas, bs1⟩ a1 c1 _ hrun1 ⟨⟨hS1, hg1, hcv1, hbs1, hsrc1⟩, hA1, hrb1, _⟩ => ?_
   rw [icpE.k_check_block_inds.arm1]
   obtain ⟨k1, ⟨env₁, cvTasP, p₁P⟩, ⟨hrel1, hOKS1, hcvs, hsh1, hT⟩, hF1⟩ :=
@@ -483,8 +483,7 @@ theorem checkBlockPass_refinesC (hP : PassProg p) {fs : List FnName}
     (hsrc : ShapeSrc s₀.mem p0) (hcx : ShapeCV s₀.mem p0) (hb : (isRec != 0) = b)
     (hPm : PosMR s₀.mem) (hA : AbsOK s₀.mem) (hk : ∀ f ∈ passKeepCalleesC, AbsKeep p f)
     (hcoh : ConRon.Bridge.IFEnvCoh fe) (hden : ConRon.Bridge.denoteFEnv a₀.store fe = some env)
-    {shP : ConLeche.BlockShape} (hshP : ConRon.Bridge.Inductives.dShape a₀.store bs = some shP)
-    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
+    {shP : ConLeche.BlockShape} (hshP : ConRon.Bridge.Inductives.dShape a₀.store bs = some shP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 4)) "check_block_pass" [vis, p0, isRec]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b).run a₀ = .ok (x, a') ∧
       (StageR (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
@@ -495,7 +494,7 @@ theorem checkBlockPass_refinesC (hP : PassProg p) {fs : List FnName}
       ⊤⦄ := by
   refine triple_post (RefE.triple (icpE_spec p hP (n + 4) s₀ vis p0 isRec)
     (pass_ref hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hP hcl hfs (n + 4) hn hC hq hsrc hcx hb hPm hA hk
-      hcoh hden hshP hlpsDn)) ?_
+      hcoh hden hshP)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   exact ⟨hl, x, a', run, ⟨hR.stage, hR.grow, hR.bpass, hR.pos, hR.abs, hR.recs, hR.classes⟩, hR.twin⟩
 -/
