@@ -186,10 +186,9 @@ PLAN.md, "Bumping the twin", step 3 a–d, in short:
    kind of work it is: `statement` = the statement still fails, `no base proof` = new or renamed
    (add a `rename` rule), otherwise a real re-proof.
 
-Cost: about 3 lean runs per file (one per rung whose candidate differs, plus the final check),
-each 1–90 s.
-On the final statements: 1.8 lean runs per file on average, 65 CPU-min for 511 files, 33 minutes of
-wall time at two jobs, peak 2.7 GB per lean process.
+Cost: one lean run per rung whose candidate differs, plus the first elaboration and the final
+check, each 1–90 s. On the final statements: 1.8 lean runs per file on average, 65 CPU-min for
+511 files, 33 minutes of wall time at two jobs, peak 2.7 GB per lean process.
 
 ## 4. PLAN.md
 

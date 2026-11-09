@@ -185,7 +185,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
      report's last list) is ported or recorded in `docs/not-needed.md`/`docs/deviations.md`.
      a. **Interface first, one owner** (the lead, before any fan-out): every invariant,
         encoding and reader/writer API the change touches (an `IWOK`, a record pool's reader),
-        with its frame lemmas and its `grind`/`spec` attributes, in one file per invariant or
+        with its frame lemmas and its `grind` attributes, in one file per invariant or
         encoding. One name per fact: a helper that needs a new shared lemma asks the owner,
         who adds it there. Outside its own file an invariant is never built or destructured
         positionally: use field names, an `of_frame` lemma with defaulted side conditions, or
