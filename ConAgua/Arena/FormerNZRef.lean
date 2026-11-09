@@ -4,6 +4,10 @@ public import ConAgua.Arena.FormerSortRef
 public import ConAgua.Arena.LevelZero
 import ConAgua.Arena.LevelArena
 import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.PropReadRefine
+import ConAgua.Arena.IndView
+import ConAgua.Arena.WhnfSpineRefine
+import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -57,5 +61,61 @@ theorem lvNever_core {p : Prog} (hpn : p.lookup "lv_node" = some lvNode)
   rcases hZ with ⟨hx, hpw⟩ | ⟨hx, ps, hpw, -⟩
   · rw [hx, hpw]; simp [PropWhen.isNever]
   · rw [hx, hpw]; simp [PropWhen.isNever]
+
+/-- **`former_res_sort`'s model**: `pi_result` lifted. -/
+l_model frsV_spec (p : Prog) (hf : p.lookup "former_res_sort" = some formerResSortL)
+  fns [hf ↦ frsV] specs [callW_spec p n "pi_result"] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+
+/-- **`former_res_sort` refines `formerResSort`**, the found sort's word included (the twin's
+state kept). -/
+theorem frsV_ok {p : Prog} (hpr : p.lookup "pi_result" = some piResultL) {n : Nat} {m m' : Mem}
+    {a : AState} {ty : Word} {r : List Word} (hR : ArenaR m a) (hty : HW ty)
+    (h : frsV p n m ty = some (r, m')) :
+    m' = m ∧ (ConRon.Arena.formerResSort (decE ty)).run a = .ok (decOS r, a) ∧ OkOS r := by
+  rcases n with _ | n
+  · simp [frsV] at h
+  rw [frsV.arm1] at h
+  rcases hc : callW p n "pi_result" [ty] m with _ | ⟨r1, m1⟩
+  · rw [hc] at h; simp [frsV.k_pi_result] at h
+  rw [hc] at h
+  obtain ⟨s', hs', hm, -, hw, hrun⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (piResult_refines' p hpr n _ a hR ty hty) hc
+  simp only at hm
+  subst hs'
+  rw [hm] at h
+  have hrun' : (ConRon.Arena.formerResSort (decE ty)).run a =
+      (if ((decE (r1.headD 0)).tag == ETag.sort) = true then
+        (do match ← viewSort (decE (r1.headD 0)) with
+          | none => failDanglingE
+          | some s => pure (some s) : AM (Option LIdx)).run a
+      else .ok (none, a)) := by
+    simp only [ConRon.Arena.formerResSort, StateT.run_bind, hrun, except_ok_bind]
+    split <;> rfl
+  rw [decE_tag_sort_beq (hh := hw)] at hrun'
+  simp only [frsV.k_pi_result] at h
+  by_cases ht : tagW (r1.headD 0) = 2
+  · rw [ite_eq_right (by simpa using ht)] at h
+    split at h
+    · cases h
+    rename_i h1
+    split at h
+    · cases h
+    rename_i h2
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have hv := pr_viewSort_ok m a hR (r1.headD 0) hw ⟨h1, by have := UInt64.not_le.mp h2; exact this⟩ ht
+    obtain ⟨-, hu⟩ := L.Ind.view_sort_f m a hR (r1.headD 0) hw ⟨h1, UInt64.not_le.mp h2⟩ ht
+    refine ⟨rfl, ?_, fun _ => hu⟩
+    rw [hrun', ite_eq_left (by simpa using ht)]
+    simp only [StateT.run_bind]
+    rw [viewSort_run' hv]
+    simp [decOS]; rfl
+  · rw [ite_eq_left (by simpa using ht)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨rfl, ?_, by simp [OkOS]⟩
+    rw [hrun', ite_eq_right (by simpa using ht)]
+    simp [decOS]
 
 end L.Arena
