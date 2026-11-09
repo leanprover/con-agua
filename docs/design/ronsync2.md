@@ -165,7 +165,7 @@ pool.
    reported by one thread at `k` says only "rejected" when another record below `k` is rejected.
    It also gains the set theory.
 
-4. **The pool's claims** (pending the user's approval; the coordinator asked 2026-11-09): the
+4. **The pool's claims** (approved by the user, 2026-11-09): the
    harness model `ThreadsRun` (`Final/ThreadsFinal`) gains a field `incr`: each thread's claimed
    job indices are strictly increasing, and `threadsRun_twinAcceptsPooled(_regs)` a matching
    `Pairwise (· < ·)` hypothesis on each thread's claims. Why: con-ron's `PooledAccepts` (and its
@@ -173,7 +173,10 @@ pool.
    jobs. It is one more trusted fact about `main.c`, which claims with
    `__atomic_fetch_add(&g_next, 1)` on one counter. Before/after texts: in the report.
 
-The final texts are given in the report when the theorems are proved.
+The final texts are given in the report when the theorems are proved. Possible follow-up (not
+done): `main.c` reports the failing group with the smallest index and every lower group has been
+checked and accepted when the threads are joined, so one more harness fact would give the threaded
+verdict its strong form `TwinVerdict [b] c`.
 * Stage 3 findings that changed L (2026-11-09): `cap_check` also bounds both `EREC` tiers by 2^40
   words (the tagged addresses need it; never fires); the pinned `And` block is no longer cached by
   `rom_fill`: the twin interns `andPinDecls` only at use, in the scratch tier (and only for a
