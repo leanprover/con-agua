@@ -694,7 +694,116 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (iotaRecCmpT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat np rule lps (decI us)
         args.toList (erRdT s₀.mem (recP + 6)).toNat margs.toList) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
-  sorry
+  simp only [irCmpE]
+  cases n with
+  | zero => rw [callW_zero, liftE_none]; exact RefE.of_cls0 rfl
+  | succ N =>
+  have hk' : KnotUpTo p N := hk.mono (Nat.le_succ N)
+  have hspn := hS.spn
+  obtain ⟨-, -, -, hfpl, hfne, hflv, -, -⟩ := decRule_rd (erRdOK s₀.mem) hrule
+  have hk4 : erRdT s₀.mem ctorP = 4 := Classical.byContradiction fun h =>
+    (decCI_ctorR (erRdOK s₀.mem) hci).2 h _ _ _ rfl
+  have hcpw : np = (erRdT s₀.mem (ctorP + 5)).toNat := by
+    obtain ⟨cv', he⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 hk4
+    cases he; rfl
+  subst hcpw
+  unfold iotaRecCmpT
+  -- the pins
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun rp m1 c1 => ?_
+  change callW p (N + 1) "erec_push" [erRdT s₀.mem (rl + 6), erRdT s₀.mem (rl + 7),
+    erRdT s₀.mem (rl + 3)] s₀.mem = some (rp, m1) at c1
+  dsimp only [irCmpE.k_erec_push]
+  have P1 : MemFrame [SPN] [136] s₀.mem m1 ∧ StackGrew s₀.mem m1 ∧
+      (erRdT s₀.mem (rl + 3) = 1 → rp.headD 0 = spTop s₀.mem ∧
+        ∃ lv pins, rule.fire = .nested lv pins ∧
+          SpineR m1 (rp.headD 0) (erRdT s₀.mem (rl + 7)) pins.toArray ∧
+          (rp.headD 0).toNat + (erRdT s₀.mem (rl + 7)).toNat ≤ (spTop m1).toNat) := by
+    by_cases hk1 : erRdT s₀.mem (rl + 3) = 1
+    · obtain ⟨lv, pins, hfire, hpins⟩ := hfne hk1
+      rw [hk1] at c1
+      obtain ⟨fr, gr, hr0, ht1, hsp⟩ := callW_erecPush p hp.erecPush (N + 1) s₀.mem _ _ pins
+        hspn hpins rp m1 c1
+      refine ⟨fr, gr, fun _ => ⟨hr0, lv, pins, hfire, by rw [hr0]; exact hsp, ?_⟩⟩
+      have hb := hsp.bound
+      have hsz := fr.size SPN
+      rw [hr0, ht1, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
+      exact Nat.le_refl _
+    · obtain ⟨-, rfl⟩ := callW_erecPush_no p hp.erecPush (N + 1) s₀.mem _ _ _ hk1 rp m1 c1
+      exact ⟨MemFrame.refl _ _ _, (StackKept.refl _).toGrew, fun h => absurd h hk1⟩
+  obtain ⟨fr1, gr1, hpush⟩ := P1
+  have hS1 : CoreS dn m1 a₀ vis fe MM eb := hS.frame_stk fr1 (by simp) (by simp)
+  have eT1 : erRdT m1 = erRdT s₀.mem := erRdT_frame fr1 (by decide) (by decide)
+  have eP1 : erecP m1 = erecP s₀.mem := erecP_frame fr1 (by decide) (by decide) (by decide) (by decide)
+  have k1a : m1.arr64 EREC = s₀.mem.arr64 EREC := fr1.arr _ (by decide) (by decide)
+  have k1b : m1.arr64 (tier1 EREC) = s₀.mem.arr64 (tier1 EREC) := fr1.arr _ (by decide) (by decide)
+  simp only [erRdT_congr k1a k1b]
+  -- the comparands
+  have hsa1 : SpineR m1 so sn args := hsa.keep gr1.size gr1.below hsat hspn
+  have hsn : erRdT s₀.mem (recP + 5) + 1 = sn := by
+    apply UInt64.toNat_inj.mp
+    have := sn.toNat_lt
+    rw [UInt64.toNat_add]; simp; omega
+  refine RefE.bindLift (fun _ => rfl) fun ra m2 c2 => ?_
+  have htop1 : (spTop s₀.mem).toNat ≤ (spTop m1).toNat := gr1.1
+  obtain ⟨t2, ht2, -, ok2, ⟨M2, hS2, hK2, gr2⟩, xs, res2, hxs⟩ := triple_of_callW
+    (recFireArgs_refines' p hp.toIotaProg' hc hw hEI (N + 1) ⟨m1, Locals.init []⟩ a₀ dn vis fe MM eb
+      (erRdT s₀.mem (rl + 3)) (rp.headD 0) (erRdT s₀.mem (rl + 7)) (erRdT s₀.mem (recP + 2))
+      (erRdT s₀.mem (recP + 3)) us so
+      (erRdT s₀.mem (recP + 5) + 1) (erRdT s₀.mem (recP + 6)) (erRdT s₀.mem (ctorP + 5)) rule lps args
+      hS1 hus (by rw [eP1]; exact hlps) (by rw [hsn]; exact hsa1)
+      (fun h => let ⟨_, lv, pins, hf, hsp, _⟩ := hpush h; ⟨lv, pins, hf, hsp⟩)
+      hflv hfpl
+      (by rw [hsn]; show so.toNat + sn.toNat ≤ (spTop m1).toNat; omega)
+      (fun h => let ⟨_, _, _, _, _, hb⟩ := hpush h; hb)) c2
+  rw [ht2] at hS2 gr2 hxs
+  have k2 := erecKeep_trans (hER.all (by simp [iotaKeptFns]) c2) ⟨k1a, k1b, eT1, eP1⟩
+  have hrunA := AM.run_of_ok _ _ ok2
+  rw [res2] at hrunA
+  refine ⟨_, _, hrunA, ?_⟩
+  dsimp only [irCmpE.k_rec_fire_args]
+  -- the cover
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun rx m3 c3 => ?_
+  dsimp only [irCmpE.k_stack_cover]
+  obtain ⟨fr3, gr3, hcov⟩ := callW_stackCover p hp.stackCover (N + 1) m2 _ rx m3 c3
+  have hS3 : CoreS dn m3 _ vis fe M2 eb := hS2.frame_stk fr3 (by simp) (by simp)
+  have k3a : m3.arr64 EREC = s₀.mem.arr64 EREC := (fr3.arr _ (by decide) (by decide)).trans k2.1
+  have k3b : m3.arr64 (tier1 EREC) = s₀.mem.arr64 (tier1 EREC) :=
+    (fr3.arr _ (by decide) (by decide)).trans k2.2.1
+  simp only [erRdT_congr k3a k3b]
+  have hxs3 : SpineR m3 (ra.headD 0) (ra.tail.headD 0) xs.toArray := SpineR.of_spn_core hxs
+    (by rw [fr3.1 SPN (by simp) (by decide)])
+  have hxb := hxs.bound
+  have hsz2 : (m2.arr64 SPN).size = (s₀.mem.arr64 SPN).size := gr2.size.trans gr1.size
+  have hxt : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ (spTop m3).toNat := by
+    have h1 : (ra.headD 0 + ra.tail.headD 0).toNat = (ra.headD 0).toNat + (ra.tail.headD 0).toNat := by
+      rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
+    have h2 := UInt64.le_iff_toNat_le.mp hcov
+    omega
+  -- the comparison
+  have hgr13 : StackGrew s₀.mem m3 := gr1.trans (gr2.trans gr3)
+  have hsm3 : SpineR m3 mo mn margs := hsm.keep hgr13.size hgr13.below hsmt hspn
+  have hcpm' : (erRdT s₀.mem (ctorP + 5)).toNat ≤ mn.toNat := hcpm
+  have hmt3 : mo.toNat + mn.toNat ≤ (spTop m3).toNat := by
+    have := UInt64.le_iff_toNat_le.mp hgr13.1; omega
+  have hsl := (hsm3.take _ hcpm').toN
+  have hta : erRdT s₀.mem (ctorP + 5) ≠ 0 →
+      mo.toNat + (erRdT s₀.mem (ctorP + 5)).toNat ≤ (spTop m3).toNat := fun _ => by
+    omega
+  have hD := defeqList_ref p N hk' F (by omega) (by omega) ⟨m3, Locals.init []⟩ _ dn vis fe M2 eb mode d
+    mo (erRdT s₀.mem (ctorP + 5)) (ra.headD 0) (ra.tail.headD 0)
+    (margs.toList.take (erRdT s₀.mem (ctorP + 5)).toNat).toArray xs.toArray hS3 hm4 hebm hsl hxs3.toN hta
+    (fun _ => hxt)
+  simp only at hD
+  rw [← bind_pure (defEqList _ _ _ _ _)]
+  refine RefE.bindRun (s₀ := ⟨m3, Locals.init []⟩) (fun _ => rfl)
+    (defeqList_specE p hp.defeqList (N + 1) ⟨m3, Locals.init []⟩ mode vis d mo
+      (erRdT s₀.mem (ctorP + 5)) (ra.headD 0)
+      (ra.tail.headD 0)) (fun _ => trivial) (fun hG => hG.mono (Nat.le_succ N)) hD
+    fun rd s4 _ a4 _ _ _ ⟨⟨M4, hS4, hK4, hSt4⟩, hr4, hv4⟩ => ?_
+  dsimp only [irCmpE.k_defeq_list]
+  exact RefE.ret rfl ⟨⟨M4, hS4.frame_stk (MemFrame.setCtl _ 136 _) (by simp) (by simp),
+    hK2.trans hK4, StackKept.restoreG' (hgr13.trans hSt4.toGrew)⟩, hr4, hv4⟩
+
 
 /-! ## `iota_rec_vck(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL)` -/
 
@@ -859,6 +968,129 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
         (erRdT s₀.mem (recP + 5)).toNat (erRdT s₀.mem (recP + 6)).toNat np lps
         (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL)) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
-  sorry
+  simp only [vckE]
+  have hspn := hS.spn
+  have hk4 : erRdT s₀.mem ctorP = 4 := Classical.byContradiction fun h =>
+    (decCI_ctorR (erRdOK s₀.mem) hci).2 h _ _ _ rfl
+  obtain ⟨_, _, _, e4, hcv⟩ := (decCI_split (erRdOK s₀.mem) hci).2.2.2.2.1 hk4
+  cases e4
+  have hcpw : np = (erRdT s₀.mem (ctorP + 5)).toNat := by
+    obtain ⟨cv', he⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 hk4
+    cases he; rfl
+  subst hcpw
+  obtain ⟨hnn, hname, hlpsj, -, hty, htype⟩ := decCV_rd1 (erRdOK s₀.mem) hcv
+  have hmsz : (mo + mn).toNat = mo.toNat + mn.toNat := by
+    have := hsm.bound; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
+  rw [iotaRecVckT_eq]
+  -- the levels
+  refine RefE.bindLift (fun _ => rfl) fun rq m1 c1 => ?_
+  have hn2 : 2 ≤ n := by
+    rcases Nat.lt_or_ge n 2 with h | h
+    · rw [lvlsEqC_small p hp.lvl.cs n h] at c1; cases c1
+    · exact h
+  obtain ⟨N, rfl⟩ : ∃ N, n = N + 2 := ⟨n - 2, by omega⟩
+  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, hr1⟩ := CoreSpec.run
+    (lvlsEqC_refines p hp.lvl N ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS usj cmpL husj
+      hcmpL) c1
+  have k1 := hER.all (by simp [iotaKeptFns]) c1
+  refine ⟨_, _, hrun1, ?_⟩
+  dsimp only [vckE.k_lvls_eq_c]
+  by_cases q0 : rq.headD 0 = 0
+  · refine RefE.abortAt q0 fun _ => ?_
+    rw [show decO (rq.headD 0) = none by rw [q0]; rfl]
+    exact ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
+  refine RefE.pass q0 ?_
+  rw [show decO (rq.headD 0) = some (rq.headD 0 != 1) by
+    unfold decO; rw [ite_eq_right q0]; split <;> grind]
+  refine RefE.bind_right (liftFueled_run_some _ _ _) ?_
+  refine RefE.retIf (by simp) (by simp) (fun _ => ⟨⟨M1, hS1, hK1, hSt1⟩, rfl, by show HW (0 : Word); unfold HW; decide⟩)
+    fun q1 _ => ?_
+  -- the parameters
+  have hsa1 : SpineR m1 so sn args := hsa.keep hSt1.size hSt1.below hsat hspn
+  have hsm1 : SpineR m1 mo mn margs := hsm.keep hSt1.size hSt1.below (by rw [← hsmt]; omega) hspn
+  have hcmpR := irCmp_ref p hp hc hw hEI hER (N + 1) (hk.mono (by omega)) F (by omega)
+    (by omega) ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d us recP so ctorP rl mo mn sn lps rule
+    cvj (erRdT s₀.mem (ctorP + 5)).toNat nf args margs hS1 hm4 hebm hus
+  rw [k1.2.2.1, k1.2.2.2] at hcmpR
+  refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩) (fun _ => rfl)
+    (irCmpE_spec p hp.cmp (N + 2) ⟨m1, Locals.init []⟩ mode vis d us recP so ctorP rl mo) (fun hG => hG.nv)
+    (fun hG => hG.knot.mono (by omega)) (hcmpR hlps hrule hci hsa1 (by rw [hSt1.1]; exact hsat) hmI hsm1
+      (by rw [hSt1.1, ← hsmt]; omega) hcpm) fun rc s2 _ a2 c2 _ _ ⟨⟨M2, hS2, hK2, hSt2⟩, hr2, _⟩ => ?_
+  dsimp only [vckE.k_iota_rec_cmp]
+  have k2 := erecKeep_trans (hER.all (by simp [iotaKeptFns]) (callW_of_callE c2)) k1
+  have hSt12 := hSt1.trans hSt2
+  subst hr2
+  refine RefE.retIf decBool_f_m2c (fun h => by simpa [decBool] using h)
+    (fun _ => ⟨⟨M2, hS2, hK1.trans hK2, hSt12⟩, rfl, by show HW (0 : Word); unfold HW; decide⟩) fun g0 _ => ?_
+  -- the constructor's type
+  simp only [erRdT_congr k2.1 k2.2.1]
+  refine RefE.bindLift (fun _ => rfl) fun rt m3 c3 => ?_
+  obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
+    (constTyAt_refines' p hp.toIotaProg' hw.instLP (N + 2) ⟨s2.mem, Locals.init []⟩ _ dn vis fe M2 eb
+      (erRdT s₀.mem (ctorP + 1)) (erRdT s₀.mem (ctorP + 2)) (erRdT s₀.mem (ctorP + 3)) (erRdT s₀.mem (ctorP + 4)) usj
+      cvj.levelParams hS2 hnn hty husj (by rw [k2.2.2.2]; exact hlpsj)) c3
+  have hcvj : (⟨decI (erRdT s₀.mem (ctorP + 1)), cvj.levelParams, decE (erRdT s₀.mem (ctorP + 4))⟩ : IConstantVal) =
+      cvj := by
+    cases cvj; simp only at hname htype ⊢; rw [hname, htype]; rfl
+  rw [hcvj] at ok3 res3 hS3
+  have hrun3 := AM.run_of_ok _ _ ok3
+  rw [res3] at hrun3
+  have k3 := erecKeep_trans (hER.all (by simp [iotaKeptFns]) c3) k2
+  have hSt13 := hSt12.trans hSt3
+  refine ⟨_, _, hrun3, ?_⟩
+  dsimp only [vckE.k_const_ty_at]
+  -- the telescope
+  have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.size hSt13.below (by rw [← hsmt]; omega) hspn
+  refine RefE.bindRun (s₀ := ⟨m3, Locals.init []⟩) (fun _ => rfl)
+    ((icfE_spec p hp.toIotaProg4 (N + 2)).2.2.2.2 ⟨m3, Locals.init []⟩ mode vis d (rt.headD 0) mo mn)
+    (fun hG => hG.nv) (fun hG => hG.knot.mono (by omega))
+    (icfTop_ref p hp.toIotaProg4 hw.instList (N + 1) (hk.mono (by omega)) F (by omega)
+      (by omega) ⟨m3, Locals.init []⟩ _ dn vis fe M3 eb mode d (rt.headD 0) mo mn margs hS3 hm4 hebm hr3
+      hsm3 (by rw [hSt13.1]; exact hsmt)) fun rf s4 _ a4 c4 _ _ ⟨⟨M4, hS4, hK4, hSt4⟩, hr4, _⟩ => ?_
+  dsimp only [vckE.k_iota_certs_full]
+  have k4 := erecKeep_trans (hER.all (by simp [iotaKeptFns]) (callW_of_callE c4)) k3
+  have hSt14 := hSt13.trans hSt4
+  subst hr4
+  refine RefE.retIf decBool_f_m2c (fun h => by simpa [decBool] using h)
+    (fun _ => ⟨⟨M4, hS4, hK1.trans (hK2.trans (hK3.trans hK4)), hSt14⟩, rfl,
+      by show HW (0 : Word); unfold HW; decide⟩) fun f0 _ => ?_
+  -- the indices
+  simp only [erRdT_congr k4.1 k4.2.1]
+  have hsa4 : SpineR s4.mem so sn args := hsa.keep hSt14.size hSt14.below hsat hspn
+  have hsm4 : SpineR s4.mem mo mn margs := hsm.keep hSt14.size hSt14.below (by rw [← hsmt]; omega) hspn
+  have hmIs : (erRdT s₀.mem (recP + 5)).toNat ≤ sn.toNat := by omega
+  have hoff := ixOff_toNat (erRdT s₀.mem (recP + 5)) (erRdT s₀.mem (recP + 6))
+  have hidx := SpineR.slice hsa4 (erRdT s₀.mem (recP + 6) - ixLen (erRdT s₀.mem (recP + 6)) (erRdT s₀.mem (recP + 5)))
+    (erRdT s₀.mem (recP + 5)) (by rw [hoff]; omega) hmIs (by rw [hSt14.size]; exact hspn)
+  have hl : UInt64.ofNat ((erRdT s₀.mem (recP + 5)).toNat -
+      (erRdT s₀.mem (recP + 6) - ixLen (erRdT s₀.mem (recP + 6)) (erRdT s₀.mem (recP + 5))).toNat) =
+      ixLen (erRdT s₀.mem (recP + 5)) (erRdT s₀.mem (recP + 6)) := by
+    rw [hoff, ixLen_eq]; congr 1; omega
+  rw [hl, hoff, take_drop_min_le] at hidx
+  have hsat' := hsa.bound
+  have hxo : (so + (erRdT s₀.mem (recP + 6) - ixLen (erRdT s₀.mem (recP + 6)) (erRdT s₀.mem (recP + 5)))).toNat +
+      (ixLen (erRdT s₀.mem (recP + 5)) (erRdT s₀.mem (recP + 6))).toNat ≤ (spTop s4.mem).toNat := by
+    have htq : (spTop ({ mem := s₀.mem, loc := Locals.init [] } : St).mem).toNat =
+        (spTop s₀.mem).toNat := rfl
+    rw [hSt14.1, UInt64.toNat_add, hoff, Nat.mod_eq_of_lt (by omega), ixLen_eq, UInt64.toNat_ofNat',
+      Nat.mod_eq_of_lt (by omega)]
+    omega
+  have hioR := io_ref p hp.toIotaProg' hc.inst1 (N + 1) (hk.mono (by omega)) F (by omega) (by omega)
+      ⟨s4.mem, Locals.init []⟩ _ dn vis fe M4 eb mode d (erRdT s₀.mem (recP + 5)) (erRdT s₀.mem (recP + 6))
+      (erRdT s₀.mem (ctorP + 5)) (rt.headD 0) mo mn
+      (so + (erRdT s₀.mem (recP + 6) - ixLen (erRdT s₀.mem (recP + 6)) (erRdT s₀.mem (recP + 5))))
+      (ixLen (erRdT s₀.mem (recP + 5)) (erRdT s₀.mem (recP + 6))) margs _ hS4 hm4 hebm hr3 hsm4 hidx
+      (by rw [hSt14.1, ← hsmt]; omega) hxo
+  rw [← bind_pure (iotaIndexOk _ _ _ _ _ _ _ _ _)]
+  refine RefE.bindRun (s₀ := ⟨s4.mem, Locals.init []⟩) (fun _ => rfl)
+    (ioE_spec p hp.toIotaProg'.iotaIndexOk hp.toIotaProg'.defeqList (N + 2) ⟨s4.mem, Locals.init []⟩
+      mode vis d (erRdT s₀.mem (recP + 5)) (erRdT s₀.mem (recP + 6)) (erRdT s₀.mem (ctorP + 5)) (rt.headD 0) mo mn
+      (so + (erRdT s₀.mem (recP + 6) - ixLen (erRdT s₀.mem (recP + 6)) (erRdT s₀.mem (recP + 5))))
+      (ixLen (erRdT s₀.mem (recP + 5)) (erRdT s₀.mem (recP + 6))))
+    (fun hG => hG.nv) (fun hG => hG.knot.mono (by omega)) hioR
+    fun ri s5 _ a5 _ _ _ ⟨⟨M5, hS5, hK5, hSt5⟩, hr5, hv5⟩ => ?_
+  exact RefE.ret rfl ⟨⟨M5, hS5, hK1.trans (hK2.trans (hK3.trans (hK4.trans hK5))), hSt14.trans hSt5⟩,
+    by rw [hr5]; simp only [decBool, List.headD_cons], hv5⟩
+
 
 end L.Arena
