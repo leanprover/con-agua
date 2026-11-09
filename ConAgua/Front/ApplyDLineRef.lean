@@ -225,6 +225,8 @@ structure ApplyDLinePost (st : StateD) (a : AState) (r : LineRec) (m m' : Mem) :
   arena : ArenaD m' a
   mode : ModeOK m → ModeOK m'
   grow : DGrow m m'
+  /-- The line is a declaration record. -/
+  decl : ∃ d, r = .decl d
 
 /-- **`apply_dline` refines con-ron's `applyLine` on a declaration line, both outcomes**: the
 record is con-leche's (`declLine_link`); an inductive block is `apply_ind`'s (`applyInd_ref`), any
@@ -236,7 +238,8 @@ theorem applyDLine_ref {p : Prog} (hF : DeclFieldLookups p) (hDL : DeclLookups p
     (hm : m.arr8 IN = b.data) (hA : ArenaD m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a)
     {j : USize} {r : LineRec} {e' : USize} (hloop : scanLineLoop b j true 0 0 .absent = .ok r e') :
     RefC (ApplyDLineG p b st a j.toUInt64 r) (applyDLineE p n m j.toUInt64)
-      (fun x => ApplyDLinePost st a r m x.2) (VerdictClaimR (applyRecord st r) a) := by
+      (fun x => ApplyDLinePost st a r m x.2)
+      (fun e => e.cls ≠ 0 → (∃ d, r = .decl d) ∧ VerdictClaimR (applyRecord st r) a e) := by
   cases n with
   | zero => simp only [applyDLineE, RefC_error]; exact fun _ hk => absurd Err.cls_outOfFuel hk
   | succ n =>
@@ -264,9 +267,9 @@ theorem applyDLine_ref {p : Prog} (hF : DeclFieldLookups p) (hDL : DeclLookups p
       simp only [DFld.enc, List.headD_cons, List.tail_cons, hv]
       have hI := L.Front.Ind.applyInd_ref hAL hFI hII h64 hsize n hm hA hD hok hscan
       rcases h2 : L.Front.Ind.applyIndE p n m v.toUInt64 with e2 | ⟨z, m₂⟩
-      · rw [h2] at hI; exact fun hG => hI hG.ind
+      · rw [h2] at hI; exact fun hG _ => ⟨⟨_, rfl⟩, hI hG.ind⟩
       rw [h2] at hI
-      exact ⟨hI.twin, hI.arena, hI.mode, hI.grow⟩
+      exact ⟨hI.twin, hI.arena, hI.mode, hI.grow, ⟨_, rfl⟩⟩
     | ax _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
     | defn _ _ _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
     | thm _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
@@ -278,8 +281,8 @@ theorem applyDLine_ref {p : Prog} (hF : DeclFieldLookups p) (hDL : DeclLookups p
   have hR := applyDecl_ref hDL hsize n hm hA hD hX (p := p) (a := a)
   rcases h2 : applyDeclE p n m f.pl f.name f.lps f.type f.value f.hk f.hn f.flag with e2 | ⟨z, m₂⟩
   · rw [h2] at hR
-    exact fun hG => hR ⟨hG.ind.nv, by rw [← hf]; exact hG.safe (by rw [hf]; exact h0) d rfl⟩
+    exact fun hG _ => ⟨⟨d, rfl⟩, hR ⟨hG.ind.nv, by rw [← hf]; exact hG.safe (by rw [hf]; exact h0) d rfl⟩⟩
   rw [h2] at hR
-  exact ⟨hR.twin, hR.arena, hR.mode, hR.grow⟩
+  exact ⟨hR.twin, hR.arena, hR.mode, hR.grow, ⟨d, rfl⟩⟩
 
 end L.Front

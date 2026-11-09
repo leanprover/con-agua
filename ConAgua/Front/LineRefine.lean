@@ -32,10 +32,13 @@ open ConRon.Arena ConRon.Arena.Frontend
 namespace L.Front
 
 /-- **One line, as con-ron applies it**: the scanner reads the record `r` at `i` and the next
-position `q` (the word `nx`), `applyRecord st r` succeeds from `a₀` with the parse state `st'`, and
-the memory `m` is related to the arena state after by `ArenaD` and to `st'` by `StateDR`. -/
-def LineStep (b : ByteArray) (i : USize) (nx : Word) (st : StateD) (a₀ : AState) (m : Mem) : Prop :=
-  ∃ r q st', scanLineFwd b i = .ok r q ∧ q.toUInt64 = nx ∧ AM.ok (applyRecord st r) a₀ ∧
+position `q` (the word `nx`), `r` stands where it may (`lineRecPlaced first`), `applyRecord st r`
+succeeds from `a₀` with the parse state `st'`, and the memory `m` is related to the arena state
+after by `ArenaD` and to `st'` by `StateDR`. -/
+def LineStep (b : ByteArray) (i : USize) (first : Bool) (nx : Word) (st : StateD) (a₀ : AState)
+    (m : Mem) : Prop :=
+  ∃ r q st', scanLineFwd b i = .ok r q ∧ q.toUInt64 = nx ∧ lineRecPlaced first r = true ∧
+    AM.ok (applyRecord st r) a₀ ∧
     AM.res (applyRecord st r) a₀ = .inl st' ∧ ArenaD m (AM.st (applyRecord st r) a₀) ∧ StateDR m st'
 
 /-- The pure arena steps of `applyLine`. -/

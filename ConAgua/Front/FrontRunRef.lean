@@ -94,7 +94,7 @@ parse state (`FrontLinePost`), the input kept, is the twin's step at its own par
 (`recOK_line`) and the twin's records (`applyLine_decls`) after. -/
 theorem lineStep_ok (D : Array IDeclaration) (b : ByteArray) {m m' : Mem} {i : USize} {nx : Word}
     {st : StateD} {a : AState} (hI : FrontInvOK D b m a st) (hk : m'.arr8 IN = m.arr8 IN)
-    (hS : LineStep b i nx (st.pre D) a m') (hg : DGrow m m') (hmo : ModeOK m') :
+    (first : Bool) (hS : LineStep b i first nx (st.pre D) a m') (hg : DGrow m m') (hmo : ModeOK m') :
     LineStepI (FrontInvOK D b) b i nx st a m' := by
   sorry
 
