@@ -28,38 +28,56 @@ open L.Arena
 section shift
 variable {R R' : Nat → Option Word}
 
-theorem nat?_sh {i i' : Nat} (e : R' i' = R i) : nat? R' i' = nat? R i := by simp only [nat?, e]
-theorem bool?_sh {i i' : Nat} (e : R' i' = R i) : bool? R' i' = bool? R i := by simp only [bool?, e]
-theorem hd?_sh {k : IdxKind} {i i' : Nat} (e : R' i' = R i) : (hd? R' i' : Option (Idx k)) = hd? R i := by
-  simp only [hd?, e]
+/-- A word read at `i` is read at `i'` too. -/
+def WAt (R R' : Nat → Option Word) (i i' : Nat) : Prop := ∀ w, R i = some w → R' i' = some w
 
-theorem hlist?_sh {k : IdxKind} {i i' : Nat} {xs : List (Idx k)} (e0 : R' i' = R i)
-    (e1 : R' (i' + 1) = R (i + 1)) (he : ArrExt R R') (hx : hlist? R i = some xs) :
+theorem nat?_sh {i i' : Nat} {x : Nat} (e : WAt R R' i i') (h : nat? R i = some x) :
+    nat? R' i' = some x := by
+  simp only [nat?, Option.map_eq_some_iff] at h ⊢
+  obtain ⟨w, hw, rfl⟩ := h; exact ⟨w, e w hw, rfl⟩
+theorem bool?_sh {i i' : Nat} {x : Bool} (e : WAt R R' i i') (h : bool? R i = some x) :
+    bool? R' i' = some x := by
+  simp only [bool?, Option.map_eq_some_iff] at h ⊢
+  obtain ⟨w, hw, rfl⟩ := h; exact ⟨w, e w hw, rfl⟩
+theorem hd?_sh {k : IdxKind} {i i' : Nat} {x : Idx k} (e : WAt R R' i i') (h : hd? R i = some x) :
+    hd? R' i' = some x := by
+  simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h ⊢
+  obtain ⟨w, hw, h⟩ := h; exact ⟨w, e w hw, h⟩
+
+theorem hlist?_sh {k : IdxKind} {i i' : Nat} {xs : List (Idx k)} (e0 : WAt R R' i i')
+    (e1 : WAt R R' (i + 1) (i' + 1)) (he : ArrExt R R') (hx : hlist? R i = some xs) :
     hlist? R' i' = some xs := by
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
   obtain ⟨o, ho, c, hc, hs⟩ := hx
-  exact ⟨o, by rw [nat?_sh e0]; exact ho, c, by rw [nat?_sh e1]; exact hc, he.hslice? hs⟩
+  exact ⟨o, nat?_sh e0 ho, c, nat?_sh e1 hc, he.hslice? hs⟩
 
 /-- **An inductive's capabilities, copied**: the 15 words at `q'` are those at `q`, the slices they
 point to read on. -/
-theorem decCaps_sh {q q' : Nat} {x : IIndCaps} (hw : ∀ j < 15, R' (q' + j) = R (q + j))
+theorem decCaps_sh {q q' : Nat} {x : IIndCaps} (w : ∀ j < 15, WAt R R' (q + j) (q' + j))
     (he : ArrExt R R') (hx : decCaps R q = some x) : decCaps R' q' = some x := by
-  have w : ∀ j < 15, R' (q' + j) = R (q + j) := hw
-  have w0 : R' q' = R q := by simpa using w 0 (by omega)
+  have w0 : WAt R R' q q' := by simpa using w 0 (by omega)
   simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
   obtain ⟨e1, h1, e2, h2, e3, h3, e4, h4, e5, h5, e6, h6, e7, h7, e9, h9, e10, h10, e11, h11, e⟩ := hx
-  exact ⟨e1, by rw [bool?_sh w0]; exact h1, e2, by rw [hd?_sh (w 1 (by omega))]; exact h2,
-    e3, by rw [nat?_sh (w 2 (by omega))]; exact h3, e4, by rw [nat?_sh (w 3 (by omega))]; exact h4,
-    e5, by rw [bool?_sh (w 4 (by omega))]; exact h5, e6, by rw [nat?_sh (w 5 (by omega))]; exact h6,
-    e7, by rw [nat?_sh (w 6 (by omega))]; exact h7,
+  exact ⟨e1, bool?_sh w0 h1, e2, hd?_sh (w 1 (by omega)) h2,
+    e3, nat?_sh (w 2 (by omega)) h3, e4, nat?_sh (w 3 (by omega)) h4,
+    e5, bool?_sh (w 4 (by omega)) h5, e6, nat?_sh (w 5 (by omega)) h6,
+    e7, nat?_sh (w 6 (by omega)) h7,
     e9, hlist?_sh (w 10 (by omega)) (w 11 (by omega)) he h9,
-    e10, by rw [nat?_sh (w 12 (by omega))]; exact h10,
+    e10, nat?_sh (w 12 (by omega)) h10,
     e11, hlist?_sh (w 13 (by omega)) (w 14 (by omega)) he h11, e⟩
 
 /-- A reducibility hint, copied (its two words). -/
-theorem decHint_sh {q q' : Nat} {x : ConLeche.ReducibilityHint} (e0 : R' q' = R q)
-    (e1 : R' (q' + 1) = R (q + 1)) (hx : decHint R q = some x) : decHint R' q' = some x := by
-  simp only [decHint, nat?_sh e0, nat?_sh e1]; exact hx
+theorem decHint_sh {q q' : Nat} {x : ConLeche.ReducibilityHint} (e0 : WAt R R' q q')
+    (e1 : WAt R R' (q + 1) (q' + 1)) (hx : decHint R q = some x) : decHint R' q' = some x := by
+  simp only [decHint, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
+  obtain ⟨k, hk, e⟩ := hx
+  refine ⟨k, nat?_sh e0 hk, ?_⟩
+  split at e
+  · exact e
+  · exact e
+  · simp only [Option.bind_eq_some_iff, Option.pure_def] at e ⊢
+    obtain ⟨y, hy, e⟩ := e; exact ⟨y, nat?_sh e1 hy, e⟩
+  · exact e
 
 end shift
 
@@ -85,7 +103,8 @@ theorem decCV_move {R R' R₀ : Nat → Option Word} {q : Nat} {cv : IConstantVa
   have w0 : R' q = R q := by simpa using hw 0 (by omega)
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h ⊢
   obtain ⟨nm, hn, ps, hp, t, ht, e⟩ := h
-  refine ⟨nm, by rw [hd?_sh w0]; exact hn, ps, ?_, t, by rw [hd?_sh (hw 3 (by omega))]; exact ht, e⟩
+  refine ⟨nm, hd?_sh (fun _ e => by rw [w0]; exact e) hn, ps, ?_, t,
+    hd?_sh (fun _ e => by rw [hw 3 (by omega)]; exact e) ht, e⟩
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff, nat?, ho, hl, Option.map_some,
     Option.some.injEq, exists_eq_left'] at hp ⊢
   have e1 := he.hslice? h0
@@ -167,26 +186,25 @@ theorem word_ofNat_succ (s : Word) (j : Nat) : s + 1 + UInt64.ofNat j = s + UInt
   rw [UInt64.add_assoc]; congr 1; apply UInt64.toNat_inj.mp
   simp only [UInt64.toNat_add, UInt64.toNat_ofNat', UInt64.toNat_one]; omega
 
-/-- **`er_copy_er(d, s, l)` writes the source words** at `d`, provided no prefix of the copy
-changes a source word it reads later (`hsrc`). -/
+/-- **`er_copy_er(d, s, l)` writes words at `d`**, each the source word as the copy reads it
+(after the words before it). -/
 theorem erCopyErW_eq {p : Prog} (hp : p.lookup "erec_put" = some erecPut) :
     ∀ (k n : Nat) (m : Mem) (d s l : Word) (r : List Word) (m' : Mem), l.toNat = k →
     erCopyErW p n m d s l = some (r, m') →
-    (∀ (ws : List Word) (j : Nat), ws.length ≤ j → j < k →
-      erRdT (wrER m d ws) (s + UInt64.ofNat j) = erRdT m (s + UInt64.ofNat j)) →
-    m' = wrER m d ((List.range k).map fun j => erRdT m (s + UInt64.ofNat j)) := by
+    ∃ ws : List Word, ws.length = k ∧ m' = wrER m d ws ∧
+      ∀ j (hj : j < ws.length), ws[j] = erRdT (wrER m d (ws.take j)) (s + UInt64.ofNat j) := by
   intro k
   induction k with
   | zero =>
-    intro n m d s l r m' hl h _
+    intro n m d s l r m' hl h
     have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
     cases n with
     | zero => rw [erCopyErW.eq_1] at h; cases h
     | succ n =>
     rw [erCopyErW.arm1 p n m d s l hl0, Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2]; rfl
+    exact ⟨[], rfl, h.2.symm, fun j hj => absurd hj (Nat.not_lt_zero _)⟩
   | succ k ih =>
-    intro n m d s l r m' hl h hsrc
+    intro n m d s l r m' hl h
     have hl0 : l ≠ 0 := fun e => by subst e; simp at hl
     cases n with
     | zero => rw [erCopyErW.eq_1] at h; cases h
@@ -207,24 +225,13 @@ theorem erCopyErW_eq {p : Prog} (hp : p.lookup "erec_put" = some erecPut) :
     obtain ⟨-, rfl⟩ := h
     have hl1 : (l - 1).toNat = k := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-    have hx : ∀ (ws : List Word) (j : Nat), ws.length ≤ j → j < k →
-        erRdT (wrER (erecPutMem m d (erRdT m s)) (d + 1) ws) (s + 1 + UInt64.ofNat j) =
-          erRdT m (s + UInt64.ofNat (j + 1)) := fun ws j hw hj => by
-      rw [word_ofNat_succ]
-      exact hsrc (erRdT m s :: ws) (j + 1) (by simp; omega) (by omega)
-    have e := ih n _ (d + 1) (s + 1) (l - 1) r2 m2 hl1 h2 fun ws j hw hj => by
-      rw [hx ws j hw hj, ← hx [] j (by simp) hj]; rfl
-    rw [e, List.range_succ_eq_map, List.map_cons, List.map_map]
-    simp only [wrER]
-    have e0 : s + UInt64.ofNat 0 = s := by simp
-    rw [e0]
-    congr 1
-    apply List.map_congr_left
-    intro j hj
-    simp only [Function.comp_apply]
-    have := hx [] j (by simp) (List.mem_range.mp hj)
-    simp only [wrER] at this
-    rw [this]
+    obtain ⟨ws, hlen, rfl, hws⟩ := ih n _ (d + 1) (s + 1) (l - 1) r2 _ hl1 h2
+    refine ⟨erRdT m s :: ws, by simp [hlen], rfl, fun j hj => ?_⟩
+    cases j with
+    | zero => simp [wrER]
+    | succ j =>
+      simp only [List.getElem_cons_succ, List.take_succ_cons, wrER]
+      rw [hws j (by simpa using hj), word_ofNat_succ]
 
 /-- **`spn_to_er(d, s, l)` writes the stack words** at `d` (the record writes leave `SPN`). -/
 theorem spnToErW_eq {p : Prog} (hp : p.lookup "erec_put" = some erecPut) :
@@ -273,5 +280,248 @@ theorem spnToErW_eq {p : Prog} (hp : p.lookup "erec_put" = some erecPut) :
     congr 2
     funext j
     simp only [Function.comp_apply, word_ofNat_succ]
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+section copyFresh
+variable {vis : Word} {fe : IFEnv}
+
+/-- **`er_copy_er(d, s, l)` into a fresh region**: each word of the base `m₀` at `s` copied to `d`
+(above the base's top), `StageR` and the growth and frame from the base after it, every other
+address as before. -/
+theorem erCopyEr_fresh {p : Prog} (hpc : p.lookup "er_copy_er" = some erCopyEr)
+    (hp : p.lookup "erec_put" = some erecPut) {n : Nat} {m₀ m m' : Mem} {a₀ a : AState}
+    {d s l : Word} {r : List Word} (h₀ : StageR vis fe m₀ a₀) (hS : StageR vis fe m a)
+    (hf : MemFrame quotA quotC m₀ m) (hg : IWGrow m₀ m) (hd0 : erTopOf m₀ d ≤ erOff d)
+    (hdt : erOff d + l.toNat ≤ erTopOf m d) (hd41 : d.toNat < 2 ^ 41)
+    (h : callW p n "er_copy_er" [d, s, l] m = some (r, m')) :
+    StageR vis fe m' a ∧ IWGrow m₀ m' ∧ MemFrame quotA quotC m₀ m' ∧
+      (∀ j < l.toNat, ∀ w, erecP m₀ (s + UInt64.ofNat j).toNat = some w →
+        erecP m' (d.toNat + j) = some w) ∧
+      (∀ i, (∀ j < l.toNat, i % 2 ^ 41 ≠ (d.toNat + j) % 2 ^ 41) → erecP m' i = erecP m i) ∧
+      ∃ ws, m' = wrER m d ws := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (erCopyEr_specW p hpc n _ d s l) h
+  obtain ⟨ws, hlen, e, hws⟩ := erCopyErW_eq hp l.toNat n m d s l r s'.mem rfl hW
+  rw [e]
+  obtain ⟨hS', hg', hf', hrd', hout⟩ := wrER_fresh h₀ ws m a d hS hf hg hd0 (by omega) hd41
+  rw [hlen] at hrd' hout
+  refine ⟨hS', hg', hf', fun j hj w hw => ?_, hout, _, rfl⟩
+  rw [hrd' j hj, List.getElem?_eq_getElem (by omega), hws j (by omega)]
+  have hgj := (wrER_fresh h₀ (ws.take j) m a d hS hf hg hd0 (by simp; omega) hd41).2.1
+  rw [erRdT_of _ _ (hgj.ext _ _ hw)]
+
+end copyFresh
+
+/-! ## `ci_at_lps(c, po, pl)` -/
+
+/-- The lookups `ci_at_lps` needs beyond `QuotAtProg`. -/
+structure CiProg (p : Prog) : Prop extends QuotAtProg p where
+  ciAt : p.lookup "ci_at_lps" = some ciAtLps
+  erCopyEr : p.lookup "er_copy_er" = some erCopyEr
+
+theorem ciJ1_inv {p : Prog} {n : Nat} {c po pl k nn : Word} {m m' : Mem} {res : List Word}
+    (hW : ciAtLpsW.j1 p n c po pl k nn m = some (res, m')) :
+    ∃ r1 m1 r2 m2 r3 m3, callW p n "erec_alloc" [nn] m = some (r1, m1) ∧
+      callW p n "erec_put" [r1.headD 0, k] m1 = some (r2, m2) ∧
+      callW p n "cv_at_lps" [r1.headD 0 + 1, c + 1, po, pl] m2 = some (r3, m3) ∧
+      ciAtLpsW.k_cv_at_lps p n c po pl k (r1.headD 0) (some (r3, m3)) = some (res, m') := by
+  simp only [ciAtLpsW.j1] at hW
+  cases h1 : callW p n "erec_alloc" [nn] m with
+  | none => rw [h1] at hW; simp [ciAtLpsW.k_erec_alloc] at hW
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at hW; simp only [ciAtLpsW.k_erec_alloc] at hW
+  cases h2 : callW p n "erec_put" [r1.headD 0, k] m1 with
+  | none => rw [h2] at hW; simp [ciAtLpsW.k_erec_put] at hW
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2] at hW; simp only [ciAtLpsW.k_erec_put] at hW
+  cases h3 : callW p n "cv_at_lps" [r1.headD 0 + 1, c + 1, po, pl] m2 with
+  | none => rw [h3] at hW; simp [ciAtLpsW.k_cv_at_lps] at hW
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  rw [h3] at hW
+  exact ⟨r1, m1, r2, m2, r3, m3, by first | rfl | exact h1, by first | rfl | exact h2,
+    by first | rfl | exact h3, hW⟩
+
+theorem word_toNat_add {c : Word} {k : Nat} (h : c.toNat + k < 2 ^ 64) :
+    (c + UInt64.ofNat k).toNat = c.toNat + k := by
+  rw [UInt64.toNat_add, UInt64.toNat_ofNat']; omega
+
+/-- The kind word of a constant record. -/
+def ciKind : IConstantInfo → Nat
+  | .axiomInfo .. => 0 | .defnInfo .. => 1 | .thmInfo _ => 2 | .indInfo .. => 3
+  | .ctorInfo .. => 4 | .recInfo .. => 5
+
+theorem decCI_kindW {R : Nat → Option Word} {q : Nat} {ci : IConstantInfo} {w : Word}
+    (h : decCI R q = some ci) (hw : R q = some w) : w.toNat = ciKind ci := by
+  simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  split at h <;> simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
+    reduceCtorEq] at h <;> grind [ciKind]
+
+theorem erecP_lt64 {m : Mem} {i : Nat} {w : Word} (h : erecP m i = some w) : i < 2 ^ 64 := by
+  unfold erecP at h; split at h
+  · assumption
+  · cases h
+
+section ci
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **The copied tail** (`er_copy_er(r + 5, c + 5, l)`) after the record's head. -/
+theorem ciCopy {p : Prog} (hP : CiProg p) {n : Nat} {m m3 m4 : Mem} {a a3 : AState}
+    {r nn k c l : Word} {cv' : IConstantVal} {r4 : List Word} (hT : StageT dn vis fe m a)
+    (hpre : CiPre dn vis fe m m3 a3 r nn k cv') (hl : 5 + l.toNat ≤ nn.toNat)
+    (h : callW p n "er_copy_er" [r + 5, c + 5, l] m3 = some (r4, m4)) :
+    StageT dn vis fe m4 a3 ∧ IWGrow m m4 ∧ erecP m4 r.toNat = some k ∧
+      decCV (erecP m4) (r.toNat + 1) = some cv' ∧
+      ∀ j < l.toNat, WAt (erecP m) (erecP m4) (c.toNat + 5 + j) (r.toNat + 5 + j) := by
+  have hcap := hpre.cap
+  have htop := hpre.top
+  have hbase := hpre.base
+  obtain ⟨e5, eo5, et5⟩ := erAddr (r := r) (c := 5) (by simp; omega) hpre.r41
+  simp only [show (5 : Word).toNat = 5 from rfl] at e5 eo5
+  have hq : erOff r + 5 + l.toNat < 2 ^ 40 := by omega
+  have hr41 := hpre.r41
+  unfold erOff at hq
+  obtain ⟨hS4, hg4, -, hrd4, hout4, ws, rfl⟩ := erCopyEr_fresh hP.erCopyEr hP.erPut hT.stage
+    hpre.stT.stage hpre.fr hpre.grow (by rw [et5, eo5]; omega) (by rw [et5, eo5]; omega)
+    (by rw [e5]; omega) h
+  have hT4 := StageT.of_wrER hpre.stT hS4
+  have hoth : ∀ i, i < 5 → erecP (wrER m3 (r + 5) ws) (r.toNat + i) = erecP m3 (r.toNat + i) :=
+    fun i hi => hout4 _ fun j hj => by rw [e5]; omega
+  refine ⟨hT4, hg4, by simpa using (hoth 0 (by omega)).trans (by simpa using hpre.kw), ?_, ?_⟩
+  · exact hpre.cvR _ (fun j hj => by
+      have := hoth (1 + j) (by omega); rwa [← Nat.add_assoc] at this) hg4.ext
+  · intro j hj w hw
+    rw [show r.toNat + 5 + j = (r + 5).toNat + j by rw [e5]]
+    refine hrd4 j hj w ?_
+    have h5 : (5 : Word).toNat = 5 := rfl
+    have := erecP_lt64 hw
+    rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_ofNat', h5]
+    rw [show (c.toNat + 5) % 2 ^ 64 + j % 2 ^ 64 = c.toNat + 5 + j by omega,
+      Nat.mod_eq_of_lt this]; exact hw
+
+/-- **`ci_at_lps(c, po, pl)` refines `ci.atLps ps`** under `StageT`: the fresh record after it. -/
+theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (n : Nat) {m : Mem} {a : AState} {c po pl : Word}
+    {ci : IConstantInfo} {ps : List NIdx} {psv : List ConLeche.Name} {cc : ConLeche.ConstantInfo}
+    (hT : StageT dn vis fe m a) (hok : ConRon.Bridge.StateOK a) (hr : ConRon.Bridge.ReadOK a)
+    (hci : decCI (erecP m) c.toNat = some ci)
+    (hdc : ConRon.Arena.Frontend.denoteCI a.store ci = some cc)
+    (hps : hslice? (erecP m) po.toNat pl.toNat = some ps)
+    (hden : ConRon.Arena.Frontend.denoteNList a.store.ns ps = some psv) :
+    Sim (callW p n "ci_at_lps" [c, po, pl] m) (ci.atLps ps) a
+      (fun r ci' m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧
+        decCI (erecP m') (r.headD 0).toNat = some ci') := by
+  intro res m' h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (ciAtLps_specW p hP.ciAt n _ c po pl) h
+  cases n with
+  | zero => simp [ciAtLpsW] at hW
+  | succ n =>
+  simp only [ciAtLpsW] at hW
+  -- the kind word
+  have hk0 : ∃ w, erecP m c.toNat = some w := by
+    cases e : erecP m c.toNat with
+    | none => simp [decCI, nat?, e] at hci
+    | some w => exact ⟨w, rfl⟩
+  obtain ⟨w, hw⟩ := hk0
+  have ew : erRdT m c = w := erRdT_of _ _ hw
+  simp only [show rdW (m.arr64 (tierA EREC (c >>> 40))) (c &&& 1099511627775) = erRdT m c from rfl,
+    ew] at hW
+  have hcv := decCI_cvA hci
+  have hkd := decCI_kindW hci hw
+  cases ci with
+  | axiomInfo cv =>
+    obtain rfl : w = 0 := UInt64.toNat_inj.mp hkd
+    simp (config := { decide := true }) only [↓reduceIte] at hW
+    obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
+    simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte, Option.some.injEq,
+      Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
+    refine ⟨.axiomInfo cv', a3, ?_, hpre.stT, hpre.grow, ?_⟩
+    · simp only [IConstantInfo.atLps, StateT.run_bind]
+      rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
+    · simp only [List.headD_cons, decCI, nat?, hpre.kw, Option.map_some, Option.bind_eq_bind,
+        Option.bind_some, hpre.cvR _ (fun _ _ => rfl) hpre.grow.ext]
+      rfl
+  | defnInfo cv v hint => sorry
+  | thmInfo cv =>
+    obtain rfl : w = 2 := UInt64.toNat_inj.mp hkd
+    simp (config := { decide := true }) only [↓reduceIte] at hW
+    obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
+    simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte, Option.some.injEq,
+      Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
+    refine ⟨.thmInfo cv', a3, ?_, hpre.stT, hpre.grow, ?_⟩
+    · simp only [IConstantInfo.atLps, StateT.run_bind]
+      rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
+    · simp only [List.headD_cons, decCI, nat?, hpre.kw, Option.map_some, Option.bind_eq_bind,
+        Option.bind_some, hpre.cvR _ (fun _ _ => rfl) hpre.grow.ext]
+      rfl
+  | indInfo cv caps =>
+    obtain rfl : w = 3 := UInt64.toNat_inj.mp hkd
+    have hci' := hci
+    simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
+      show (3 : Word).toNat = 3 from rfl, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq, IConstantInfo.indInfo.injEq] at hci'
+    obtain ⟨cv0, -, caps0, hcaps, -, rfl⟩ := hci'
+    simp (config := { decide := true }) only [↓reduceIte] at hW
+    obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
+    simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte] at hW
+    cases h4 : callW p n "er_copy_er" [r1.headD 0 + 5, c + 5, 15] m3 with
+    | none => rw [h4] at hW; simp [ciAtLpsW.k_er_copy_er] at hW
+    | some x4 =>
+    obtain ⟨r4, m4⟩ := x4
+    rw [h4] at hW
+    simp only [ciAtLpsW.k_er_copy_er, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
+    obtain ⟨hT4, hg4, hk4, hcv4, hc4⟩ := ciCopy hP hT hpre (l := 15) (by decide) h4
+    refine ⟨.indInfo cv' caps0, a3, ?_, hT4, hg4, ?_⟩
+    · simp only [IConstantInfo.atLps, StateT.run_bind]
+      rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
+    · have hc := decCaps_sh (fun j hj => hc4 j hj) hg4.ext hcaps
+      simp only [List.headD_cons, decCI, nat?, hk4, Option.map_some, Option.bind_eq_bind,
+        Option.bind_some, hcv4, show (3 : Word).toNat = 3 from rfl, hc]
+      rfl
+  | ctorInfo cv np nf =>
+    obtain rfl : w = 4 := UInt64.toNat_inj.mp hkd
+    have hci' := hci
+    simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
+      show (4 : Word).toNat = 4 from rfl, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq, IConstantInfo.ctorInfo.injEq, Option.map_eq_some_iff] at hci'
+    obtain ⟨cv0, -, x5, ⟨w5, hw5, rfl⟩, x6, ⟨w6, hw6, rfl⟩, -, rfl, rfl⟩ := hci'
+    simp (config := { decide := true }) only [↓reduceIte] at hW
+    obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
+    simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte] at hW
+    cases h4 : callW p n "er_copy_er" [r1.headD 0 + 5, c + 5, 2] m3 with
+    | none => rw [h4] at hW; simp [ciAtLpsW.k_er_copy_er] at hW
+    | some x4 =>
+    obtain ⟨r4, m4⟩ := x4
+    rw [h4] at hW
+    simp only [ciAtLpsW.k_er_copy_er, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
+    obtain ⟨hT4, hg4, hk4, hcv4, hc4⟩ := ciCopy hP hT hpre (l := 2) (by decide) h4
+    refine ⟨.ctorInfo cv' w5.toNat w6.toNat, a3, ?_, hT4, hg4, ?_⟩
+    · simp only [IConstantInfo.atLps, StateT.run_bind]
+      rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
+    · have e5 := hc4 0 (by decide) w5 (by simpa using hw5)
+      have e6 := hc4 1 (by decide) w6 hw6
+      simp only [Nat.add_zero] at e5
+      rw [show (r1.headD 0).toNat + 5 + 1 = (r1.headD 0).toNat + 6 by omega] at e6
+      simp only [List.headD_cons, decCI, nat?, hk4, Option.map_some, Option.bind_eq_bind,
+        Option.bind_some, hcv4, show (4 : Word).toNat = 4 from rfl, e5, e6]
+      rfl
+  | recInfo cv mI rP isK rules => sorry
+
+end ci
 
 end L.Ind
