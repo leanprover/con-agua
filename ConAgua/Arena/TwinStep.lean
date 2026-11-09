@@ -37,8 +37,21 @@ section frames
 variable {dn : NIdx → Option ConLeche.Name} {fe : IFEnv}
 
 /-- **`TwinOK` across a writer** that leaves the core memos (arrays 49, 50, 52‥54, 151‥153, `CTL`
-48, 50, 54, 56, 58, 152, 154, 156) alone, `EREC` writers included (no part of `TwinOK` reads the
-records: `StoreDen.mem`); the twin state and the environment unchanged. -/
+48, 50, 54, 56, 58, 152, 154, 156) alone, given the ROM cache after it (`hR`); the twin state and
+the environment unchanged. -/
+theorem TwinOK.frameR {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
+    (hf : MemFrame A C m m') (hA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A)
+    (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C)
+    (hWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A)
+    (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
+    (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
+    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
+    (h : TwinOK dn m a fe) (hR : RomDen m' a) : TwinOK dn m' a fe :=
+  ⟨h.readL, h.readLs, h.nwf, by rw [hf.size]; exact h.erec, by rw [hf.size]; exact h.spn,
+    h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.size]; exact h.bstk, h.den.mem m', hR⟩
+
+/-- **`TwinOK` across a writer** that leaves the core memos and the ROM cache `ROMC` alone and only
+grows the pools (`EREC` writers included: the cache's records are below the tops). -/
 theorem TwinOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
     (hf : MemFrame A C m m') (hA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A)
     (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C)
@@ -46,16 +59,31 @@ theorem TwinOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AS
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
     (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
-    (h : TwinOK dn m a fe) : TwinOK dn m' a fe :=
-  ⟨h.readL, h.readLs, h.nwf, by rw [hf.size]; exact h.erec, by rw [hf.size]; exact h.spn,
-    h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.size]; exact h.bstk, h.den.mem m'⟩
+    (h : TwinOK dn m a fe) (hRC : (L.Rom.ROMC : TieredArray) ∉ A) (hg : L.Ind.IWGrow m m') :
+    TwinOK dn m' a fe :=
+  h.frameR hf hA hC hWA hWC hLA hLC (h.rom.grow (hf.arr _ hRC (by decide)) hg)
+
+/-- **`TwinOK` across a writer that leaves the records alone** (`EREC`, both tiers, and their tops
+`CTL[129]`, `CTL[130]`; the walks): `TwinOK.frame` without the pools' growth (tier 1 of the records, `IW` and tier 1 may change). -/
+theorem TwinOK.frameE {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
+    (hf : MemFrame A C m m') (hA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A)
+    (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C)
+    (hWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A)
+    (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
+    (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
+    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
+    (h : TwinOK dn m a fe) (hRC : (L.Rom.ROMC : TieredArray) ∉ A)
+    (hE : (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A) (hEC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C) :
+    TwinOK dn m' a fe :=
+  h.frameR hf hA hC hWA hWC hLA hLC (h.rom.frame0 (hf.arr _ hRC (by decide)) (hf.arr _ hE.1 (by decide))
+      (hf.ctl _ hEC.1))
 
 /-- `TwinOK` across a writer of `PT0`, tier-1 arrays and `CTL` words below 48 or in 60‥127
 only (the bracket's). -/
 theorem TwinOK.frameLo {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b = PT0 ∨ IsTier1 b)
     (hC : ∀ x ∈ C, x.toNat < 48 ∨ (60 ≤ x.toNat ∧ x.toNat < 128))
-    (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
+    (h : TwinOK dn m a fe) (hg : L.Ind.IWGrow m m') : TwinOK dn m' a fe := by
   have n : ∀ k : Word, 48 ≤ k.toNat → k.toNat < 60 ∨ 128 ≤ k.toNat → k ∉ C := fun k h1 h2 hk => by
     have := hC k hk; omega
   have na : ∀ b : ArrId, b ≠ PT0 → (b : TieredArray) ∉ A := fun b h1 hb => by
@@ -68,6 +96,7 @@ theorem TwinOK.frameLo {A : List TieredArray} {C : List Word} {m m' : Mem} {a : 
     ⟨n 152 (by decide) (by decide), n 154 (by decide) (by decide), n 156 (by decide) (by decide)⟩
     ⟨na 52 (by decide), na 53 (by decide), na 54 (by decide)⟩
     ⟨n 54 (by decide) (by decide), n 56 (by decide) (by decide), n 58 (by decide) (by decide)⟩
+    (na L.Rom.ROMC (by decide)) hg
 
 end frames
 
@@ -94,11 +123,13 @@ structure TwinMem (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) : 
   bstk : (m.arr64 BSTK).size < 2 ^ 63
   memos : CoreMemos m
   dnN : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x
+  /-- The ROM constants' cache (`RomDen.lean`). -/
+  rom : RomDen m a
 
 /-- The memory's half of a `TwinOK`. -/
 theorem TwinOK.mem {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
     (h : TwinOK dn m a fe) : TwinMem dn m a :=
-  ⟨h.erec, h.spn, h.bstk, h.memos, h.den.dnN⟩
+  ⟨h.erec, h.spn, h.bstk, h.memos, h.den.dnN, h.rom⟩
 
 /-- **The memory's half across a step** that grows the name store (every old name keeps its
 readback), keeps the arrays' sizes and the core memos. -/
@@ -106,10 +137,10 @@ theorem TwinMem.step {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (h : TwinMem dn m a)
     (hN : ∀ (k : NIdx) (x : ConLeche.Name), denoteN a.store.ns k = some x →
       denoteN a'.store.ns k = some x)
-    (hsz : ∀ b, (m'.arr64 b).size = (m.arr64 b).size) (hmem : CoreMemos m') :
+    (hsz : ∀ b, (m'.arr64 b).size = (m.arr64 b).size) (hmem : CoreMemos m') (hR : RomDen m' a') :
     TwinMem dn m' a' :=
   ⟨by rw [hsz]; exact h.erec, by rw [hsz]; exact h.spn, by rw [hsz]; exact h.bstk, hmem,
-    fun k x e => hN k x (h.dnN k x e)⟩
+    fun k x e => hN k x (h.dnN k x e), hR⟩
 
 theorem denoteNList_mapM {st : NStore} :
     ∀ {l : List NIdx} {xs : List ConLeche.Name}, ConRon.Arena.Frontend.denoteNList st l = some xs →
@@ -315,7 +346,7 @@ theorem TwinOK.of_check {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
   have hc := hok.caches
   have hp := hok.pins
   have hi := hok.ienv
-  refine ⟨hc.readL, hc.readLs, hw.nsWF, hm.erec, hm.spn, hm.memos, hm.bstk, ?_⟩
+  refine ⟨hc.readL, hc.readLs, hw.nsWF, hm.erec, hm.spn, hm.memos, hm.bstk, ?_, hm.rom⟩
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ⟨_, hp.zeroLevel⟩, ⟨_, hp.emptyLevels⟩, hc.readN,
     fun c ci hf => ?_, fun c tbl hf => ?_, fun u hu => denoteL_of_viewW hL hu,
     fun us hus => ?_, hm.dnN, fun c cv mI rP isK rules hf r hr lvls pins hfi u hu => ?_,
@@ -352,7 +383,8 @@ theorem TwinOK.of_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     {fe : IFEnv} (h : TwinOK dn m a fe) (hwf : StoreWF a'.store) (hx : Ext a.store a'.store)
     (hc : a'.caches = a.caches) (hp : a'.pins = a.pins)
     (hE : (m'.arr64 EREC).size < 2 ^ 63) (hS : (m'.arr64 SPN).size < 2 ^ 63)
-    (hB : (m'.arr64 BSTK).size < 2 ^ 63) (hM : CoreMemos m') : TwinOK dn m' a' fe := by
+    (hB : (m'.arr64 BSTK).size < 2 ^ 63) (hM : CoreMemos m') (hR : RomDen m' a') :
+    TwinOK dn m' a' fe := by
   obtain ⟨rk, hw⟩ := hwf
   have hLs : LsStoreWF a'.store.lss := hw.lss
   have hL : LStoreWF a'.store.ls := hLs.ls
@@ -370,7 +402,7 @@ theorem TwinOK.of_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
       exact ⟨y, hN _ _ hy, ys, ih _ hys, rfl⟩
   have hLv : ∀ u l, denoteL a.store.ls u = some l → denoteL a'.store.ls u = some l :=
     hx.lss.ls.lvl
-  refine ⟨fun k l hk => ?_, fun k l hk => ?_, hw.nsWF, hE, hS, hM, hB, ?_⟩
+  refine ⟨fun k l hk => ?_, fun k l hk => ?_, hw.nsWF, hE, hS, hM, hB, ?_, hR⟩
   · rw [hc] at hk; exact hLv _ _ (h.readL k l hk)
   · rw [hc] at hk; exact hx.lss.lst _ _ (h.readLs k l hk)
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
@@ -401,8 +433,9 @@ a well-formed store: `internName_sstep`, `internExprGo_sstep`, `internCIList_sst
 theorem TwinOK.of_istep {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {fe : IFEnv} (h : TwinOK dn m a fe) (hs : ConRon.Bridge.Frontend.IStepS a a')
     (hE : (m'.arr64 EREC).size < 2 ^ 63) (hS : (m'.arr64 SPN).size < 2 ^ 63)
-    (hB : (m'.arr64 BSTK).size < 2 ^ 63) (hM : CoreMemos m') : TwinOK dn m' a' fe :=
-  h.of_grow hs.ok.wf hs.ext hs.caches hs.pins hE hS hB hM
+    (hB : (m'.arr64 BSTK).size < 2 ^ 63) (hM : CoreMemos m') (hR : RomDen m' a') :
+    TwinOK dn m' a' fe :=
+  h.of_grow hs.ok.wf hs.ext hs.caches hs.pins hE hS hB hM hR
 
 end L.Arena
 
@@ -423,9 +456,9 @@ theorem StageS.of_istep {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
     {m m' : Mem} {a a' : AState} (h : StageS dn vis fe m a) (hS : StageR vis fe m' a')
     (hs : ConRon.Bridge.Frontend.IStepS a a')
     (hsz : ∀ b, (m'.arr64 b).size = (m.arr64 b).size) (hM : CoreMemos m')
-    (hP : pinW m' 0 = pinW m 0) : StageS dn vis fe m' a' :=
+    (hP : pinW m' 0 = pinW m 0) (hR : RomDen m' a') : StageS dn vis fe m' a' :=
   ⟨⟨hS, h.stageT.twin.of_istep hs (by rw [hsz]; exact h.stageT.twin.erec)
-      (by rw [hsz]; exact h.stageT.twin.spn) (by rw [hsz]; exact h.stageT.twin.bstk) hM,
+      (by rw [hsz]; exact h.stageT.twin.spn) (by rw [hsz]; exact h.stageT.twin.bstk) hM hR,
     by rw [hP]; exact h.stageT.flag⟩, hs.ok⟩
 
 /-- **The stage relation with con-ron's check invariant** (`CheckOK` at the denoted environment

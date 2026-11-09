@@ -310,17 +310,17 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     exact hH.decB (fun i hi => hi.2) (fun i hi => by rw [hik4.1, ht3, ← ho3]; omega)
 -/
 
-/-- **`rom_and_pin()` refines `andPinDecls`.** -/
-@[refines ConRon.Arena.andPinDecls]
+/-- **`rom_and_pin_rom()` refines `andPinDecls`** (the startup read of the pinned `And`). -/
+@[refines_part ConRon.Arena.andPinDecls "the startup read of the ROM"]
 theorem romAndPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
-    RomAndPinRef p dn vis fe := by
+    RomRef p "rom_and_pin_rom" [] (StageR vis fe) andPinDecls (KeepPost vis fe (decRBlk dn)) := by
   sorry
 
 /-- The raw basis block of a kind `basisPinHit` tries (`eqK`, `natK`, `emptyK`, `falseK`). -/
 @[refines_part ConRon.Arena.BasisKind.decls "the four kinds basisPinHit tries"]
 theorem romBasisRef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Word)
     (hk : k.toNat < 4) :
-    RomRef p "rom_basis_decls" [k] (StageR vis fe) (BasisKind.decls (basisOfW k.toNat))
+    RomRef p "rom_basis_decls_rom" [k] (StageR vis fe) (BasisKind.decls (basisOfW k.toNat))
       (KeepPost vis fe (decRBlk dn)) := by
   sorry
 
@@ -353,7 +353,9 @@ theorem romBasisARef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
 reads `Quot`'s `sortZ` name `u` back. -/
 @[refines_part ConRon.Arena.BasisKind.decls "the quotient block"]
 theorem romBasisRef_quot (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
-    RomQuotRef p dn vis fe := by
+    RomRef p "rom_basis_decls_rom" [4]
+      (fun m a => StageR vis fe m a ∧ ConRon.Bridge.StateOK a ∧ NamesDn dn a quotNames)
+      (BasisKind.decls (basisOfW 4)) (KeepPost vis fe (decRBlk dn)) := by
   sorry
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
@@ -378,12 +380,5 @@ theorem romBasisARef_quot (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe 
 -/
 
 end entries
-
-/-! ## All six -/
-
-/-- **The readers refine the twin**, for a program reading a buffer that starts with `romData`
-(moved here from `CIReadSpec.lean`). -/
-theorem romRefs_of (p : Prog) (h : RomReady p) : RomRefs p := by
-  sorry
 
 end L.Rom

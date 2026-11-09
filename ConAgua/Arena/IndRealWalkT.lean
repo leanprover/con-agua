@@ -54,7 +54,7 @@ theorem hffF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       (fun r m' e' => hffF_ok dn vis fe f e he m m' a r e' hT.stage)
       (memos_only_of_sp (Keeps.bind (keeps_fvarB_sp _ _) fun _ => Keeps.pure _))
       (fun _ _ e' => hffF_frame e') (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) r _ h
+      (by decide) (by decide) (by decide) (by decide) (by decide) r _ h
 
 /-- **`loose_bvars_bounded_fast` under `StageT`** (replaces
 `IndStubsT.looseBVarsBoundedFastT_spec`). -/
@@ -67,6 +67,6 @@ theorem lbbF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       (fun r m' e' => lbbF_ok dn vis fe f k e he m m' a r e' hT.stage)
       (memos_only_of_sp (Keeps.bind (keeps_bvarB_sp _ _) fun _ => Keeps.pure _))
       (fun _ _ e' => lbbF_frame e') (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) r _ h
+      (by decide) (by decide) (by decide) (by decide) (by decide) r _ h
 
 end L.Ind

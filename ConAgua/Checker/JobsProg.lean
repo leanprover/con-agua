@@ -40,7 +40,7 @@ theorem checkerProg_jobProgPB (bs : List UInt8) (hr : RomOK bs)
     (hcdP : CdProg pins dn ds (Prog.subPB bs checkerProg))
     (hcanon : L.Ind.CanonProg (Prog.subPB bs checkerProg)) :
     JobProg pins dn ds (Prog.subPB bs checkerProg) := by
-  have hrom := checkerProg_romRefsPB bs hr hpre
+  have hrom := checkerProg_romRefsPB bs
   have hap : ∃ F, "and_pin_ok" ∈ F ∧ closedA (Prog.subPB bs checkerProg) apA apC F = true :=
     let ⟨F, h, hc⟩ := checkerProg_apW; ⟨F, h, closedW_subPB bs hc⟩
   have hcd : ∃ F, "check_decl" ∈ F ∧ closedA (Prog.subPB bs checkerProg) cdA cdC F = true :=
