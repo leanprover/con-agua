@@ -78,20 +78,19 @@ structure TmmPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 section sims
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`target_major_of_member` refines `targetMajorOf`'s member branch, both outcomes**: the
-member's and its constructors' reads, `block_shape_lps`, `paramLevels` (`plW_ok`), the parameter
+member's reads (its constructors the member's own), `block_shape_lps`, `paramLevels` (`plW_ok`), the parameter
 prefixes compared (`sl_eq`), the record (`mk_target_major`). -/
-theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao al I us t : Word}
-    {bs : BlockShape} {css : List (List (IConstantVal × Nat))} {pfvs fvs args : List EIdx}
+theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp pfo pfl fvo fvl ao al I us t : Word}
+    {bs : BlockShape} {pfvs fvs args : List EIdx}
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
-    (hcss : PSlR decCNS css cao cal m) (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs)
+    (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs)
     (hfv : DecB (fun m => decHL m fvo.toNat fvl.toNat) m fvs) (hfvb : fvo.toNat + fvl.toNat ≤ iwTop m)
     (hag : DecB (fun m => decHL m ao.toNat al.toNat) m args) (hagb : ao.toNat + al.toNat ≤ iwTop m)
     (hI : H I) (hus : H us) (hPm : PosMR m) :
     RefE (closedNV p _root_.L.Checker.nvFns = true)
-      (tmmE p n m pp cao cal pfo pfl fvo fvl ao al I us t)
-      (tmoMemT bs css pfvs fvs args (decI I) (decI us) t.toNat) a
+      (tmmE p n m pp pfo pfl fvo fvl ao al I us t)
+      (tmoMemT bs pfvs fvs args (decI I) (decI us) t.toNat) a
       (fun v x a' => TmmPost dn vis fe m v.1 v.2 x a') := by
   cases n with
   | zero => rw [tmmE.eq_1]; exact RefE.of_cls0 (by simp)
@@ -106,45 +105,36 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao 
   rw [UInt64.ofNat_toNat] at hw0 hw1
   obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords (IWGrow.refl m) hq hq9
   by_cases h1 : rdW (m.arr64 IW) (pp + 1) ≤ t
-  · rw [tmmE.abort1 p n m pp cao cal pfo pfl fvo fvl ao al I us t h1]; exact RefE.of_cls0 (by decide)
-  by_cases h2 : cal ≤ t
-  · rw [tmmE.abort2 p n m pp cao cal pfo pfl fvo fvl ao al I us t h1 h2]; exact RefE.of_cls0 (by decide)
-  rw [tmmE.arm1 p n m pp cao cal pfo pfl fvo fvl ao al I us t h1 h2]
+  · rw [tmmE.abort1 p n m pp pfo pfl fvo fvl ao al I us t h1]; exact RefE.of_cls0 (by decide)
+  rw [tmmE.arm1 p n m pp pfo pfl fvo fvl ao al I us t h1]
   rw [hw1] at h1
   have htl : t.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h1)
-  have htc : t.toNat < cal.toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h2)
   -- the members
   have hmd' : decPL (truncM m) (decMS (truncM m)) mo.toNat ml.toNat = some bs.members := hmd
   obtain ⟨hlenM, hgetM⟩ := pos2_decPL_trunc hmd'
   obtain ⟨vt, hvt1, hvt2, hvtl, hvt3⟩ := hgetM t.toNat htl
   obtain ⟨rt, -⟩ := tmRdAt (o := mo) (i := t) hvt2 (by omega)
-  obtain ⟨⟨-, -, -⟩, hnit, -⟩ := decMS_some hvt3
+  obtain ⟨-, -, hnit, hctd⟩ := decMS_some hvt3
   obtain ⟨hnit', hnitlt⟩ := iwN_of_trunc hnit
   have hvtb : vt < 2 ^ 64 := iwN_val_lt hvt2
   have rni : rdW (m.arr64 IW) (UInt64.ofNat vt + 1) = UInt64.ofNat (bs.members[t.toNat]'hvtl).nIdx := by
     have := tmRdAt (o := UInt64.ofNat vt) (i := 1) (by rw [UInt64.toNat_ofNat_of_lt' hvtb]; simpa using hnit')
       (by rw [UInt64.toNat_ofNat_of_lt' hvtb]; simp; omega)
     simpa using this.1
-  -- the constructors
-  have hcd : decPL (truncM m) (decCNS (truncM m)) cao.toNat cal.toNat = some css := hcss.dec
-  obtain ⟨hlenC, hgetC⟩ := pos2_decPL_trunc hcd
-  obtain ⟨vc, hvc1, hvc2, hvcl, hvc3⟩ := hgetC t.toNat htc
-  obtain ⟨rc, -⟩ := tmRdAt (o := cao) (i := t) hvc2 (by omega)
-  have hvc3' : decAt (truncM m) (decPL (truncM m) (decCN (truncM m))) vc = some (css[t.toNat]'hvcl) := hvc3
-  obtain ⟨co, cl, hco, hcl, hcsd, -⟩ := partsAt decCN_mono hvc3'
-  have hvcb : vc < 2 ^ 64 := iwN_val_lt hvc2
+  -- the member's constructors
+  obtain ⟨co, cl, hco, hcl, hcsd, -⟩ := partsAt decCN_mono hctd
   obtain ⟨hco', hcolt⟩ := iwN_of_trunc hco
   obtain ⟨hcl', hcllt⟩ := iwN_of_trunc hcl
-  have rco : rdW (m.arr64 IW) (UInt64.ofNat vc) = co := by
-    have := tmRdAt (o := UInt64.ofNat vc) (i := 0) (by rw [UInt64.toNat_ofNat_of_lt' hvcb]; simpa using hco')
-      (by rw [UInt64.toNat_ofNat_of_lt' hvcb]; simp; omega)
+  have rco : rdW (m.arr64 IW) (UInt64.ofNat vt + 2) = co := by
+    have := tmRdAt (o := UInt64.ofNat vt) (i := 2) (by rw [UInt64.toNat_ofNat_of_lt' hvtb]; simpa using hco')
+      (by rw [UInt64.toNat_ofNat_of_lt' hvtb]; simp; omega)
     simpa using this.1
-  have rcl : rdW (m.arr64 IW) (UInt64.ofNat vc + 1) = cl := by
-    have := tmRdAt (o := UInt64.ofNat vc) (i := 1) (by rw [UInt64.toNat_ofNat_of_lt' hvcb]; simpa using hcl')
-      (by rw [UInt64.toNat_ofNat_of_lt' hvcb]; simp; omega)
+  have rcl : rdW (m.arr64 IW) (UInt64.ofNat vt + 3) = cl := by
+    have := tmRdAt (o := UInt64.ofNat vt) (i := 3) (by rw [UInt64.toNat_ofNat_of_lt' hvtb]; simpa using hcl')
+      (by rw [UInt64.toNat_ofNat_of_lt' hvtb]; simp; omega)
     simpa using this.1
-  rw [hw0, rt, rni, rc, rco, rcl, hnpw]
-  simp only [tmoMemT, List.getElem?_eq_getElem hvtl, List.getElem?_eq_getElem hvcl, unwrapOr, pure_bind]
+  rw [hw0, rt, rni, rco, rcl, hnpw]
+  simp only [tmoMemT, List.getElem?_eq_getElem hvtl, unwrapOr, pure_bind]
   -- `block_shape_lps`
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 hl1 => ?_
   dsimp only [tmmE.k_block_shape_lps]
@@ -244,7 +234,6 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao 
   rw [hnpe, UInt64.toNat_ofNat_of_lt' hnidb, ht1] at hdec
   exact RefE.ret rfl ⟨by simpa [decON] using hdec, hS4, hg04,
     ((hPm.fr (lpsW_mfrP hl1)).fr (plW_mfrP hl2)).fr (posRecW_mfr hpr), hafr⟩
--/
 
 end sims
 

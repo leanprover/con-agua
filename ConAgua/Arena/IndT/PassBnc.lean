@@ -86,7 +86,7 @@ theorem bnc_ok {p : Prog} (hP : PosBlkProg p) (hOpf : OpfF p) {dn : NIdx → Opt
       UCtx dn vis fe m' (r.headD 0) x.1 ∧
       (decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat : Option (List EIdx)) = some x.2 ∧
       (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m' ∧
-      x.1.hiAt 0 < 2 ^ 64 := by
+      x.1.hiAt 0 < 2 ^ 64 ∧ x.1.params.length + x.1.names.length < 2 ^ 64 := by
   have hS := hC.stage
   have hsrc := hsl.1
   have hT0 : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -180,12 +180,20 @@ theorem bnc_ok {p : Prog} (hP : PosBlkProg p) (hOpf : OpfF p) {dn : NIdx → Opt
   have hrun3 := partsRunOfOk hok3
   generalize hc : AM.res (bs.nestCtx fvs) a2 = c at hrun3 hd3
   generalize ha3 : AM.st (bs.nestCtx fvs) a2 = a3 at hrun3 hS3
-  have hnc : c.nP = bs.nP ∧ c.names = bs.memberNames := by
+  have hnc : c.nP = bs.nP ∧ c.names = bs.memberNames ∧ c.params = fvs := by
     have h' : (bs.nestCtx fvs) a2 = .ok (c, a3) := hrun3
     unfold ConRon.Arena.BlockShape.nestCtx at h'
     obtain ⟨lv, a', -, h'⟩ := ConRon.Bridge.AM.bind_ok h'
     obtain ⟨rfl, -⟩ := ConRon.Bridge.AM.pure_ok h'
-    exact ⟨rfl, rfl⟩
+    exact ⟨rfl, rfl, rfl⟩
+  have hpn : c.params.length + c.names.length < 2 ^ 64 := by
+    have := partsAddNoOv hov2
+    rw [hkT] at this
+    have := (r2.tail.tail.headD 0 + UInt64.ofNat bs.k : Word).toNat_lt
+    rw [hnc.2.2, hnc.2.1, decHL_length _ hfd]
+    simp only [BlockShape.memberNames, List.length_map]
+    have : bs.k = bs.members.length := rfl
+    omega
   have hhi : c.hiAt 0 < 2 ^ 64 := by
     have := partsAddNoOv hov
     rw [UInt64.toNat_ofNat_of_lt' hnpb, hkT] at this
@@ -223,7 +231,7 @@ theorem bnc_ok {p : Prog} (hP : PosBlkProg p) (hOpf : OpfF p) {dn : NIdx → Opt
   obtain ⟨core, -⟩ := ConRon.Bridge.Inductives.blockNestCtx_spec fe henv bs bsP hT a a4 (c, hs) hC.check hdP hrun
   have hd34 := hd3.grow (decCtx_mono _) hg4
   refine ⟨(c, hs), a4, hrun, hC.of_cstep hS4 hA4 core, hA4, (g12.trans hg3).trans hg4, hd34,
-    ⟨hd34.get (decCtx_mono _), (CtxIn.grow hin3 hg4).2, hsl3.grow hin3 hg4⟩, hd4, hb4, hhi⟩
+    ⟨hd34.get (decCtx_mono _), (CtxIn.grow hin3 hg4).2, hsl3.grow hin3 hg4⟩, hd4, hb4, hhi, hpn⟩
 
 /-- **`block_nest_ctx`'s contract** (`BncRefS`): `bnc_ok` through the call (every error of class
 `0`: `bncE_cls`); the memos by `callW_indMemos` (`block_nest_ctx` is in `imFns`). -/
@@ -237,7 +245,7 @@ theorem bncRefS_of {p : Prog} {dn : NIdx → Option ConLeche.Name} (hP : PosBlkP
         (decHL rm.2 (rm.1.tail.headD 0).toNat (rm.1.tail.tail.headD 0).toNat : Option (List EIdx)) =
           some x.2 ∧
         (rm.1.tail.headD 0).toNat + (rm.1.tail.tail.headD 0).toNat ≤ iwTop rm.2 ∧
-        x.1.hiAt 0 < 2 ^ 64) := by
+        x.1.hiAt 0 < 2 ^ 64 ∧ x.1.params.length + x.1.names.length < 2 ^ 64) := by
     rcases hx : bncE p n m pp with e | ⟨r, m'⟩
     · exact RefE.of_cls0 (bncE_cls hx)
     · exact bnc_ok hP hOpf henv hB.c hB.abs hqd hsl hdP hT hx
@@ -245,9 +253,9 @@ theorem bncRefS_of {p : Prog} {dn : NIdx → Option ConLeche.Name} (hP : PosBlkP
   refine RefE.callOk h2 fun ⟨r, m'⟩ x a' hc hR => ?_
   obtain ⟨s', hs', -, hR⟩ := hR
   simp only at hs'; subst hs'
-  obtain ⟨hC', hA', hg, hd, hU, hho, hhb, hhi⟩ := hR
+  obtain ⟨hC', hA', hg, hd, hU, hho, hhb, hhi, hpn⟩ := hR
   exact ⟨⟨hC', callW_indMemos hCrk.closed hl (im_mem _ rfl) (callW_of_callE hc) hB.ind, hA'⟩, hg, hd, hU,
-    hho, hhb, hhi⟩
+    hho, hhb, hhi, hpn⟩
 
 end L.Ind
 

@@ -1,6 +1,9 @@
 module
 
 import ConAgua.Arena.IndT.PosAll
+public import ConAgua.Arena.IndT.PosFkc
+public import ConAgua.Verdict.PosFt
+public import ConAgua.Verdict.PosE
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.KlB
 public import ConAgua.Arena.IndPosSpec.NbLook
@@ -36,334 +39,146 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 section census
-variable {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n : Nat) (dn : NIdx → Option ConLeche.Name)
+variable {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
+  (hFt : FtProg p) (hFk : FkcProg p) (n : Nat) (dn : NIdx → Option ConLeche.Name)
   (vis : Word) (fe : IFEnv) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-include L hq hIlpf hLC henv
+include L hq hIlpf hLC hFt hFk henv
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestPos]
-theorem nestPos_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb e ns : Word)
-    (c : NestCtx) (prog : List NestHole) (NS : NestState)
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : H e)
-    (h3 : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {eP : ConLeche.Expr} {nsP : ConLeche.NestState}
-    (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (heP : denoteE a₀.store (decI e) = some eP) (hnsP : dState a₀.store NS = some nsP)
-    (hwe : ConLeche.Expr.WScoped dep.toNat eP) :
+theorem nestPos_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb e ns : Word) (c : NestCtx) (prog : List NestHole) (NS : NestState) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (eP : ConLeche.Expr) (nsP : ConLeche.NestState)
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : H e) (h3 : NSB s₀.mem ns NS) (h4 : PosMR s₀.mem) (h5 : AbsOK s₀.mem) (h6 : ConLeche.NestCtxOk ctxP) (h7 : dCtx a₀.store env.find? c = some ctxP) (h8 : dProg a₀.store prog = some progP) (h9 : denoteE a₀.store (decI e) = some eP) (h10 : dState a₀.store NS = some nsP) (h11 : ConLeche.Expr.WScoped dep.toNat eP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos" [vis, ctx, fu, po, pl, dep, kb, e, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ x a', (nestPos V fe c fu.toNat prog dep.toNat kb.toNat (decI e) NS).run a₀ = .ok (x, a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧ H (r.tail.headD 0) ∧
-      decI (r.tail.headD 0) = x.2.1 ∧ NSB s'.mem (r.tail.tail.headD 0) x.2.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (nestPos V fe c fu.toNat prog dep.toNat kb.toNat (decI e) NS).run a₀ = .ok (x, a') ∧
+      PosPost dn vis fe env a₀ s₀.mem r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (npE_spec p L.ppos n s₀ vis ctx fu po pl dep kb e ns)
-    ((nbRef_all L hq hIlpf hLC henv n hn).pos s₀.mem a₀ ctx fu po pl dep kb e ns c prog NS _ _ _ _ h0 h1 h2 h3 hP hA hc hctx hprog heP hnsP hwe)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).pos s₀.mem a₀ ctx fu po pl dep kb e ns c prog NS ctxP progP eP nsP
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.hnf, hR.nf, hR.ns, hR.pos, hR.abs, hR.core⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines_part ConRon.Arena.nestPos "binder arm (nest_pos_bind)"]
-theorem nestPosBind_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb w ns : Word)
-    (c : NestCtx) (prog : List NestHole) (NS : NestState)
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : H w)
-    (h3 : tagW w = 6)
-    (h4 : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {wP : ConLeche.Expr} {nsP : ConLeche.NestState}
-    (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (hwP : denoteE a₀.store (decI w) = some wP) (hnsP : dState a₀.store NS = some nsP)
-    (hww : ConLeche.Expr.WScoped dep.toNat wP) :
+theorem nestPosBind_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb w ns : Word) (c : NestCtx) (prog : List NestHole) (NS : NestState) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (wP : ConLeche.Expr) (nsP : ConLeche.NestState)
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : H w) (h3 : tagW w = 6) (h4 : NSB s₀.mem ns NS) (h5 : PosMR s₀.mem) (h6 : AbsOK s₀.mem) (h7 : ConLeche.NestCtxOk ctxP) (h8 : dCtx a₀.store env.find? c = some ctxP) (h9 : dProg a₀.store prog = some progP) (h10 : denoteE a₀.store (decI w) = some wP) (h11 : dState a₀.store NS = some nsP) (h12 : ConLeche.Expr.WScoped dep.toNat wP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_bind" [vis, ctx, fu, po, pl, dep, kb, w, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ x a', (posBindT V fe c fu.toNat prog dep.toNat kb.toNat (c.hiAt prog.length) (decI w) NS).run a₀ = .ok (x, a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧ H (r.tail.headD 0) ∧
-      decI (r.tail.headD 0) = x.2.1 ∧ NSB s'.mem (r.tail.tail.headD 0) x.2.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (posBindT V fe c fu.toNat prog dep.toNat kb.toNat (c.hiAt prog.length) (decI w) NS).run a₀ = .ok (x, a') ∧
+      PosPost dn vis fe env a₀ s₀.mem r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (npbE_spec p L.pbind n s₀ vis ctx fu po pl dep kb w ns)
-    ((nbRef_all L hq hIlpf hLC henv n hn).bind s₀.mem a₀ ctx fu po pl dep kb w ns c prog NS _ _ _ _ h0 h1 h2 h3 h4 hP hA hc hctx hprog hwP hnsP hww)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).bind s₀.mem a₀ ctx fu po pl dep kb w ns c prog NS ctxP progP wP nsP
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.hnf, hR.nf, hR.ns, hR.pos, hR.abs, hR.core⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines_part ConRon.Arena.nestPos "application arm (nest_pos_app)"]
-theorem nestPosApp_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb hi w ns : Word)
-    (c : NestCtx) (prog : List NestHole) (NS : NestState)
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : hi.toNat = c.hiAt prog.length)
-    (h3 : H w)
-    (h4 : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {wP : ConLeche.Expr} {nsP : ConLeche.NestState}
-    {dep : Nat} (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (hwP : denoteE a₀.store (decI w) = some wP) (hnsP : dState a₀.store NS = some nsP)
-    (hww : ConLeche.Expr.WScoped dep wP) :
+theorem nestPosApp_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb hi w ns : Word) (c : NestCtx) (prog : List NestHole) (NS : NestState) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (wP : ConLeche.Expr) (nsP : ConLeche.NestState) (dep : Nat)
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : hi.toNat = c.hiAt prog.length) (h3 : H w) (h4 : NSB s₀.mem ns NS) (h5 : PosMR s₀.mem) (h6 : AbsOK s₀.mem) (h7 : ConLeche.NestCtxOk ctxP) (h8 : dCtx a₀.store env.find? c = some ctxP) (h9 : dProg a₀.store prog = some progP) (h10 : denoteE a₀.store (decI w) = some wP) (h11 : dState a₀.store NS = some nsP) (h12 : ConLeche.Expr.WScoped dep wP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_app" [vis, ctx, fu, po, pl, kb, hi, w, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ x a', (posAppT V fe c fu.toNat prog kb.toNat hi.toNat (decI w) NS).run a₀ = .ok (x, a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧ x.2.1 = decI w ∧
-      NSB s'.mem (r.tail.headD 0) x.2.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (posAppT V fe c fu.toNat prog kb.toNat hi.toNat (decI w) NS).run a₀ = .ok (x, a') ∧
+      AppPost dn vis fe env a₀ s₀.mem w r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (npaE_spec p L.papp n s₀ vis ctx fu po pl kb hi w ns)
-    ((nbRef_all L hq hIlpf hLC henv n hn).app s₀.mem a₀ ctx fu po pl kb hi w ns c prog NS _ _ _ _ _ h0 h1 h2 h3 h4 hP hA hc hctx hprog hwP hnsP hww)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).app s₀.mem a₀ ctx fu po pl kb hi w ns c prog NS ctxP progP wP nsP dep
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.nf, hR.ns, hR.pos, hR.abs, hR.core⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestCont]
-theorem nestCont_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us aO aL ns : Word)
-    (c : NestCtx) (prog : List NestHole) (args : List EIdx) (NS : NestState)
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : H nn)
-    (h3 : H us)
-    (h4 : decHL s₀.mem aO.toNat aL.toNat = some args)
-    (h5 : aO.toNat + aL.toNat ≤ iwTop s₀.mem)
-    (h6 : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {nP : ConLeche.Name}
-    {usP : List ConLeche.Level} {argsP : List ConLeche.Expr} {nsP : ConLeche.NestState} {dep : Nat}
-    (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (hnP : denoteN a₀.store.ns (decI nn) = some nP) (husP : denoteLs a₀.store.lss (decI us) = some usP)
-    (hargsP : Frontend.denoteEList a₀.store args = some argsP) (hnsP : dState a₀.store NS = some nsP)
-    (hwargs : ∀ x ∈ argsP, ConLeche.Expr.WScoped dep x) :
+theorem nestCont_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us aO aL ns : Word) (c : NestCtx) (prog : List NestHole) (args : List EIdx) (NS : NestState) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (nP : ConLeche.Name) (usP : List ConLeche.Level) (argsP : List ConLeche.Expr) (nsP : ConLeche.NestState) (dep : Nat)
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : H nn) (h3 : H us) (h4 : decHL s₀.mem aO.toNat aL.toNat = some args) (h5 : aO.toNat + aL.toNat ≤ iwTop s₀.mem) (h6 : NSB s₀.mem ns NS) (h7 : PosMR s₀.mem) (h8 : AbsOK s₀.mem) (h9 : ConLeche.NestCtxOk ctxP) (h10 : dCtx a₀.store env.find? c = some ctxP) (h11 : dProg a₀.store prog = some progP) (h12 : denoteN a₀.store.ns (decI nn) = some nP) (h13 : denoteLs a₀.store.lss (decI us) = some usP) (h14 : Frontend.denoteEList a₀.store args = some argsP) (h15 : dState a₀.store NS = some nsP) (h16 : (∀ x ∈ argsP, ConLeche.Expr.WScoped dep x)) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont" [vis, ctx, fu, po, pl, kb, nn, us, aO, aL, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ x a', (nestCont V fe c fu.toNat prog kb.toNat (decI nn) (decI us) args NS).run a₀ = .ok (x, a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧
-      NSB s'.mem (r.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (nestCont V fe c fu.toNat prog kb.toNat (decI nn) (decI us) args NS).run a₀ = .ok (x, a') ∧
+      KindPost dn vis fe env a₀ s₀.mem r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (ncE_spec p L.pcont n s₀ vis ctx fu po pl kb nn us aO aL ns)
-    ((nbRef_all L hq hIlpf hLC henv n hn).cont s₀.mem a₀ ctx fu po pl kb nn us aO aL ns c prog args NS _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 hP hA hc hctx hprog hnP husP hargsP hnsP hwargs)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).cont s₀.mem a₀ ctx fu po pl kb nn us aO aL ns c prog args NS ctxP progP nP usP argsP nsP dep
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.ns, hR.pos, hR.abs, hR.core⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestContKey]
-theorem nestContKey_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
-    (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState)
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : H nn)
-    (h3 : H us)
-    (h4 : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) s₀.mem ds)
-    (h5 : dO.toNat + dL.toNat ≤ iwTop s₀.mem)
-    (h6 : H cty)
-    (h7 : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {nP : ConLeche.Name}
-    {usP : List ConLeche.Level} {dsP : List ConLeche.Expr} {ctyP : ConLeche.Expr} {nsP : ConLeche.NestState}
-    (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (hnP : denoteN a₀.store.ns (decI nn) = some nP) (husP : denoteLs a₀.store.lss (decI us) = some usP)
-    (hdsP : Frontend.denoteEList a₀.store ds = some dsP) (hctyP : denoteE a₀.store (decI cty) = some ctyP)
-    (hnsP : dState a₀.store NS = some nsP)
-    (hwds : ∀ d ∈ dsP, ConLeche.Expr.WScoped (ctxP.hiAt progP.length) d)
-    (hni : ∀ d, (∀ y ∈ dsP, ConLeche.Expr.WScoped d y) → ConLeche.Expr.WScoped d ctyP) :
+theorem nestContKey_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word) (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (nP : ConLeche.Name) (usP : List ConLeche.Level) (dsP : List ConLeche.Expr) (ctyP : ConLeche.Expr) (nsP : ConLeche.NestState)
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : H nn) (h3 : H us) (h4 : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) s₀.mem ds) (h5 : dO.toNat + dL.toNat ≤ iwTop s₀.mem) (h6 : H cty) (h7 : NSB s₀.mem ns NS) (h8 : PosMR s₀.mem) (h9 : AbsOK s₀.mem) (h10 : ConLeche.NestCtxOk ctxP) (h11 : dCtx a₀.store env.find? c = some ctxP) (h12 : dProg a₀.store prog = some progP) (h13 : denoteN a₀.store.ns (decI nn) = some nP) (h14 : denoteLs a₀.store.lss (decI us) = some usP) (h15 : Frontend.denoteEList a₀.store ds = some dsP) (h16 : denoteE a₀.store (decI cty) = some ctyP) (h17 : dState a₀.store NS = some nsP) (h18 : (∀ d ∈ dsP, ConLeche.Expr.WScoped (ctxP.hiAt progP.length) d)) (h19 : (∀ d, (∀ y ∈ dsP, ConLeche.Expr.WScoped d y) → ConLeche.Expr.WScoped d ctyP)) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_key" [vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ x a', (nestContKey V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a₀ = .ok (x, a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧
-      NSB s'.mem (r.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (nestContKey V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a₀ = .ok (x, a') ∧
+      KindPost dn vis fe env a₀ s₀.mem r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (nckE_spec p L.pkey n s₀ vis ctx fu po pl kb nn us dO dL nPc cty ns)
-    ((nbRef_all L hq hIlpf hLC henv n hn).key s₀.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).key s₀.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS ctxP progP nP usP dsP ctyP nsP
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18 h19)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.ns, hR.pos, hR.abs, hR.core⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestContNew]
-theorem nestContNew_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
-    (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState)
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : H nn)
-    (h3 : H us)
-    (h4 : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) s₀.mem ds)
-    (h5 : dO.toNat + dL.toNat ≤ iwTop s₀.mem)
-    (h6 : H cty)
-    (h7 : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {nP : ConLeche.Name}
-    {usP : List ConLeche.Level} {dsP : List ConLeche.Expr} {ctyP : ConLeche.Expr} {nsP : ConLeche.NestState}
-    (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (hnP : denoteN a₀.store.ns (decI nn) = some nP) (husP : denoteLs a₀.store.lss (decI us) = some usP)
-    (hdsP : Frontend.denoteEList a₀.store ds = some dsP) (hctyP : denoteE a₀.store (decI cty) = some ctyP)
-    (hnsP : dState a₀.store NS = some nsP)
-    (hwds : ∀ d ∈ dsP, ConLeche.Expr.WScoped (ctxP.hiAt progP.length) d)
-    (hni : ∀ d, (∀ y ∈ dsP, ConLeche.Expr.WScoped d y) → ConLeche.Expr.WScoped d ctyP) :
+theorem nestContNew_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word) (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (nP : ConLeche.Name) (usP : List ConLeche.Level) (dsP : List ConLeche.Expr) (ctyP : ConLeche.Expr) (nsP : ConLeche.NestState)
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : H nn) (h3 : H us) (h4 : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) s₀.mem ds) (h5 : dO.toNat + dL.toNat ≤ iwTop s₀.mem) (h6 : H cty) (h7 : NSB s₀.mem ns NS) (h8 : PosMR s₀.mem) (h9 : AbsOK s₀.mem) (h10 : ConLeche.NestCtxOk ctxP) (h11 : dCtx a₀.store env.find? c = some ctxP) (h12 : dProg a₀.store prog = some progP) (h13 : denoteN a₀.store.ns (decI nn) = some nP) (h14 : denoteLs a₀.store.lss (decI us) = some usP) (h15 : Frontend.denoteEList a₀.store ds = some dsP) (h16 : denoteE a₀.store (decI cty) = some ctyP) (h17 : dState a₀.store NS = some nsP) (h18 : (∀ d ∈ dsP, ConLeche.Expr.WScoped (ctxP.hiAt progP.length) d)) (h19 : (∀ d, (∀ y ∈ dsP, ConLeche.Expr.WScoped d y) → ConLeche.Expr.WScoped d ctyP)) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_new" [vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ x a', (nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a₀ = .ok (x, a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧
-      NSB s'.mem (r.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a₀ = .ok (x, a') ∧
+      KindPost dn vis fe env a₀ s₀.mem r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (nnewE_spec p L.pnew n s₀ vis ctx fu po pl kb nn us dO dL nPc cty ns)
-    ((nbRef_all L hq hIlpf hLC henv n hn).new s₀.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).new s₀.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS ctxP progP nP usP dsP ctyP nsP
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18 h19)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.ns, hR.pos, hR.abs, hR.core⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestFrame]
-theorem nestFrame_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl hi us dO dL nPc gO gL ns : Word)
-    (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (grp : List (NIdx × EIdx)) (NS : NestState)
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : hi.toNat = c.hiAt prog.length)
-    (h3 : H us)
-    (h4 : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) s₀.mem ds)
-    (h5 : dO.toNat + dL.toNat ≤ iwTop s₀.mem)
-    (h6 : gL.toNat = grp.length)
-    (h7 : gO.toNat + grp.length ≤ iwTop s₀.mem)
-    (h8 : GrpAt s₀.mem gO.toNat grp)
-    (h9 : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {usP : List ConLeche.Level}
-    {dsP : List ConLeche.Expr} {grpP : List (ConLeche.Name × ConLeche.Expr)} {nsP : ConLeche.NestState}
-    (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (husP : denoteLs a₀.store.lss (decI us) = some usP) (hdsP : Frontend.denoteEList a₀.store ds = some dsP)
-    (hgrpP : dGrp a₀.store grp = some grpP) (hnsP : dState a₀.store NS = some nsP)
-    (hwds : ∀ d ∈ dsP, ConLeche.Expr.WScoped hi.toNat d) (hwg : ∀ x ∈ grpP, ConLeche.Expr.WScoped hi.toNat x.2) :
+theorem nestFrame_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl hi us dO dL nPc gO gL ns : Word) (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (grp : List (NIdx × EIdx)) (NS : NestState) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (usP : List ConLeche.Level) (dsP : List ConLeche.Expr) (grpP : List (ConLeche.Name × ConLeche.Expr)) (nsP : ConLeche.NestState)
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : hi.toNat = c.hiAt prog.length) (h3 : H us) (h4 : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) s₀.mem ds) (h5 : dO.toNat + dL.toNat ≤ iwTop s₀.mem) (h6 : gL.toNat = grp.length) (h7 : gO.toNat + grp.length ≤ iwTop s₀.mem) (h8 : GrpAt s₀.mem gO.toNat grp) (h9 : NSB s₀.mem ns NS) (h10 : PosMR s₀.mem) (h11 : AbsOK s₀.mem) (h12 : ConLeche.NestCtxOk ctxP) (h13 : dCtx a₀.store env.find? c = some ctxP) (h14 : dProg a₀.store prog = some progP) (h15 : denoteLs a₀.store.lss (decI us) = some usP) (h16 : Frontend.denoteEList a₀.store ds = some dsP) (h17 : dGrp a₀.store grp = some grpP) (h18 : dState a₀.store NS = some nsP) (h19 : (∀ d ∈ dsP, ConLeche.Expr.WScoped hi.toNat d)) (h20 : (∀ x ∈ grpP, ConLeche.Expr.WScoped hi.toNat x.2)) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame" [vis, ctx, fu, po, pl, hi, us, dO, dL, nPc, gO, gL, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ x a', (nestFrame V fe c fu.toNat prog hi.toNat (decI us) ds nPc.toNat grp NS).run a₀ = .ok (x, a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ NSB s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (nestFrame V fe c fu.toNat prog hi.toNat (decI us) ds nPc.toNat grp NS).run a₀ = .ok (x, a') ∧
+      FramePost dn vis fe env a₀ s₀.mem r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (nfrE_spec p L.pframe n s₀ vis ctx fu po pl hi us dO dL nPc gO gL ns)
-    ((nbRef_all L hq hIlpf hLC henv n hn).frame s₀.mem a₀ ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 hP hA hc hctx hprog husP hdsP hgrpP hnsP hwds hwg)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).frame s₀.mem a₀ ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS ctxP progP usP dsP grpP nsP
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18 h19 h20)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.ns, hR.pos, hR.abs, hR.core⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestCtors]
-theorem nestCtors_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word)
-    (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cs : List (IConstantVal × Nat)) (NS : NestState) (outs : List (List NestFieldKind × EIdx))
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : CtorsCtx s₀.mem us dO dL no nl hO hL ds names holes)
-    (h3 : cL.toNat = cs.length)
-    (h4 : cO.toNat + cs.length ≤ iwTop s₀.mem)
-    (h5 : CsAt s₀.mem cO.toNat cs (· < iwTop s₀.mem))
-    (h6 : NSB s₀.mem ns NS)
-    (h7 : OutsB s₀.mem oO.toNat oL.toNat outs)
-    (h8 : oO.toNat + oL.toNat ≤ iwTop s₀.mem) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {usP : List ConLeche.Level}
-    {dsP : List ConLeche.Expr} {namesP : List ConLeche.Name} {holesP : List ConLeche.Expr}
-    {csP : List (ConLeche.ConstantVal × Nat)} {nsP : ConLeche.NestState}
-    {outsP : List (List ConLeche.NestFieldKind × ConLeche.Expr)}
-    (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (hpre : CtorsPre a₀.store (decI us) ds names holes hi.toNat usP dsP namesP holesP)
-    (hcsP : dCtors a₀.store cs = some csP) (hcsF : ∀ x ∈ csP, x.1.type.hasFvar = false)
-    (hnsP : dState a₀.store NS = some nsP) (houtsP : outs.mapM (dOut a₀.store) = some outsP) :
+theorem nestCtors_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word) (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cs : List (IConstantVal × Nat)) (NS : NestState) (outs : List (List NestFieldKind × EIdx)) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (usP : List ConLeche.Level) (dsP : List ConLeche.Expr) (namesP : List ConLeche.Name) (holesP : List ConLeche.Expr) (csP : List (ConLeche.ConstantVal × Nat)) (nsP : ConLeche.NestState) (outsP : List (List ConLeche.NestFieldKind × ConLeche.Expr))
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : CtorsCtx s₀.mem us dO dL no nl hO hL ds names holes) (h3 : cL.toNat = cs.length) (h4 : cO.toNat + cs.length ≤ iwTop s₀.mem) (h5 : CsAt s₀.mem cO.toNat cs (· < iwTop s₀.mem)) (h6 : NSB s₀.mem ns NS) (h7 : OutsB s₀.mem oO.toNat oL.toNat outs) (h8 : oO.toNat + oL.toNat ≤ iwTop s₀.mem) (h9 : PosMR s₀.mem) (h10 : AbsOK s₀.mem) (h11 : ConLeche.NestCtxOk ctxP) (h12 : dCtx a₀.store env.find? c = some ctxP) (h13 : dProg a₀.store prog = some progP) (h14 : CtorsPre a₀.store (decI us) ds names holes hi.toNat usP dsP namesP holesP) (h15 : dCtors a₀.store cs = some csP) (h16 : (∀ x ∈ csP, x.1.type.hasFvar = false)) (h17 : dState a₀.store NS = some nsP) (h18 : outs.mapM (dOut a₀.store) = some outsP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cO, cL, ns, oO, oL]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ x a', (nestCtors V fe c (decide (root ≠ 0)) fu.toNat prog hi.toNat (decI us) ds names holes cs NS outs).run a₀ = .ok (x, a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
-      OutsB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat x.1 ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ NSB s'.mem (r.tail.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (nestCtors V fe c (decide (root ≠ 0)) fu.toNat prog hi.toNat (decI us) ds names holes cs NS outs).run a₀ = .ok (x, a') ∧
+      CtorsPost dn vis fe env a₀ s₀.mem r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (nctE_spec p L.pctors n s₀ vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL)
-    ((nbRef_all L hq hIlpf hLC henv n hn).ctors s₀.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs _ _ _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 h8 hP hA hc hctx hprog hpre hcsP hcsF hnsP houtsP)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).ctors s₀.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs ctxP progP usP dsP namesP holesP csP nsP outsP
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.outs, hR.outsb, hR.ns, hR.pos, hR.abs, hR.core⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines_part ConRon.Arena.nestCtors "one constructor (nest_ctors_one)"]
-theorem nestCtorsOne_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word)
-    (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cvv : IConstantVal) (NS : NestState)
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : CtorsCtx s₀.mem us dO dL no nl hO hL ds names holes)
-    (h3 : decCV (erecP s₀.mem) cv.toNat = some cvv)
-    (h4 : cv.toNat + 3 < 2 ^ 64)
-    (h5 : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {usP : List ConLeche.Level}
-    {dsP : List ConLeche.Expr} {namesP : List ConLeche.Name} {holesP : List ConLeche.Expr}
-    {cvP : ConLeche.ConstantVal} {nsP : ConLeche.NestState}
-    (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (hpre : CtorsPre a₀.store (decI us) ds names holes hi.toNat usP dsP namesP holesP)
-    (hcvP : Frontend.denoteCV a₀.store cvv = some cvP) (hcl : cvP.type.hasFvar = false)
-    (hnsP : dState a₀.store NS = some nsP) :
+theorem nestCtorsOne_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word) (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cvv : IConstantVal) (NS : NestState) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (usP : List ConLeche.Level) (dsP : List ConLeche.Expr) (namesP : List ConLeche.Name) (holesP : List ConLeche.Expr) (cvP : ConLeche.ConstantVal) (nsP : ConLeche.NestState)
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : CtorsCtx s₀.mem us dO dL no nl hO hL ds names holes) (h3 : decCV (erecP s₀.mem) cv.toNat = some cvv) (h4 : cv.toNat + 3 < 2 ^ 64) (h5 : NSB s₀.mem ns NS) (h6 : PosMR s₀.mem) (h7 : AbsOK s₀.mem) (h8 : ConLeche.NestCtxOk ctxP) (h9 : dCtx a₀.store env.find? c = some ctxP) (h10 : dProg a₀.store prog = some progP) (h11 : CtorsPre a₀.store (decI us) ds names holes hi.toNat usP dsP namesP holesP) (h12 : Frontend.denoteCV a₀.store cvv = some cvP) (h13 : cvP.type.hasFvar = false) (h14 : dState a₀.store NS = some nsP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_one" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cv, nF, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ ks closed NS3 a', (∀ {β : Type} (K : List NestFieldKind × EIdx → NestState → AM β), (oneK V fe c fu.toNat prog (decide (root ≠ 0)) hi.toNat (decI us) ds names holes cvv nF.toNat NS K).run a₀ = (K (ks, closed) NS3).run a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
-      KlB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat ks ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ H (r.tail.tail.headD 0) ∧
-      decI (r.tail.tail.headD 0) = closed ∧ NSB s'.mem (r.tail.tail.tail.headD 0) NS3 ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧
-      ConRon.Bridge.CoreStep V env fe a₀ a' ∧
-      (∃ oP, dOut a'.store (ks, closed) = some oP ∧ ConLeche.Expr.WScoped hi.toNat oP.2) ∧
-      (∃ nsP3, dState a'.store NS3 = some nsP3); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (oneT V fe c fu.toNat prog (decide (root ≠ 0)) hi.toNat (decI us) ds names holes cvv nF.toNat NS).run a₀ = .ok (x, a') ∧
+      OnePost dn vis fe env a₀ s₀.mem hi r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (noE_spec p L.pone n s₀ vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns)
-    ((nbRef_all L hq hIlpf hLC henv n hn).one s₀.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS _ _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 hP hA hc hctx hprog hpre hcvP hcl hnsP)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).one s₀.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS ctxP progP usP dsP namesP holesP cvP nsP
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x.1.1, x.1.2, x.2, a', fun K => by rw [oneK_split]; simp only [StateT.run_bind, hrun]; rfl, hR.stage, hR.grow, hR.kinds, hR.kindsb, hR.hcl, hR.cl, hR.ns, hR.pos, hR.abs, hR.core, hR.out, hR.st⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines_part ConRon.Arena.nestCtors "field walk (nest_ctors_walk)"]
-theorem nestCtorsWalk_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi nF crest ns : Word)
-    (c : NestCtx) (prog : List NestHole) (NS : NestState)
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : H crest)
-    (h3 : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {crestP : ConLeche.Expr} {nsP : ConLeche.NestState}
-    (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (hcrP : denoteE a₀.store (decI crest) = some crestP) (hnsP : dState a₀.store NS = some nsP)
-    (hwc : ConLeche.Expr.WScoped hi.toNat crestP) :
+theorem nestCtorsWalk_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi nF crest ns : Word) (c : NestCtx) (prog : List NestHole) (NS : NestState) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (crestP : ConLeche.Expr) (nsP : ConLeche.NestState)
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : H crest) (h3 : NSB s₀.mem ns NS) (h4 : PosMR s₀.mem) (h5 : AbsOK s₀.mem) (h6 : ConLeche.NestCtxOk ctxP) (h7 : dCtx a₀.store env.find? c = some ctxP) (h8 : dProg a₀.store prog = some progP) (h9 : denoteE a₀.store (decI crest) = some crestP) (h10 : dState a₀.store NS = some nsP) (h11 : ConLeche.Expr.WScoped hi.toNat crestP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_walk" [vis, ctx, root, fu, po, pl, hi, nF, crest, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ ks nds cur ns2 closed a', (∀ {β : Type} (K : List NestFieldKind → List EIdx → EIdx → NestState → EIdx → AM β), (walkK V fe c fu.toNat prog (decide (root ≠ 0)) hi.toNat nF.toNat (decI crest) NS K).run a₀ = (K ks nds cur ns2 closed).run a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
-      KlB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat ks ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ ks.length = nF.toNat ∧
-      H (r.tail.tail.headD 0) ∧ decI (r.tail.tail.headD 0) = cur ∧ H (r.tail.tail.tail.headD 0) ∧
-      decI (r.tail.tail.tail.headD 0) = closed ∧ NSB s'.mem (r.tail.tail.tail.tail.headD 0) ns2 ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧
-      ConRon.Bridge.CoreStep V env fe a₀ a' ∧
-      ∃ ndsP curP nsP2, Frontend.denoteEList a'.store nds = some ndsP ∧ denoteE a'.store cur = some curP ∧
-        dState a'.store ns2 = some nsP2 ∧
-        denoteE a'.store closed = some (ConLeche.closeTelescope ndsP hi.toNat curP) ∧
-        (∀ (i : Nat) (nd : ConLeche.Expr), ndsP[i]? = some nd → ConLeche.Expr.WScoped (hi.toNat + i) nd) ∧
-        ConLeche.Expr.WScoped (hi.toNat + ndsP.length) curP; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (walkT V fe c fu.toNat prog (decide (root ≠ 0)) hi.toNat nF.toNat (decI crest) NS).run a₀ = .ok (x, a') ∧
+      WalkPost dn vis fe env a₀ s₀.mem hi nF r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (nwE_spec p L.pwalk n s₀ vis ctx root fu po pl hi nF crest ns)
-    ((nbRef_all L hq hIlpf hLC henv n hn).walk s₀.mem a₀ ctx root fu po pl hi nF crest ns c prog NS _ _ _ _ h0 h1 h2 h3 hP hA hc hctx hprog hcrP hnsP hwc)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).walk s₀.mem a₀ ctx root fu po pl hi nF crest ns c prog NS ctxP progP crestP nsP
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x.1, x.2.1, x.2.2.1, x.2.2.2.1, x.2.2.2.2, a', fun K => by rw [walkK_split]; simp only [StateT.run_bind, hrun]; rfl, hR.stage, hR.grow, hR.kinds, hR.kindsb, hR.klen, hR.hcur, hR.cur, hR.hcl, hR.cl, hR.ns, hR.pos, hR.abs, hR.core, hR.den⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.nestFields]
-theorem nestFields_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl base nF j cur ns kO kL dO dL : Word)
-    (c : NestCtx) (prog : List NestHole) (NS : NestState) (ks : List NestFieldKind) (nds : List EIdx)
-    (h0 : StageC dn vis fe env s₀.mem a₀)
-    (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
-    (h2 : H cur)
-    (h3 : NSB s₀.mem ns NS)
-    (h4 : KlB s₀.mem kO.toNat kL.toNat ks)
-    (h5 : kO.toNat + kL.toNat ≤ iwTop s₀.mem)
-    (h6 : decHL s₀.mem dO.toNat dL.toNat = some nds)
-    (h7 : dO.toNat + dL.toNat ≤ iwTop s₀.mem) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {curP : ConLeche.Expr}
-    {nsP : ConLeche.NestState} {ndsP : List ConLeche.Expr}
-    (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)
-    (hcurP : denoteE a₀.store (decI cur) = some curP) (hnsP : dState a₀.store NS = some nsP)
-    (hndsP : Frontend.denoteEList a₀.store nds = some ndsP)
-    (hw : ConLeche.Expr.WScoped (base.toNat + j.toNat) curP) :
+theorem nestFields_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx fu po pl base nF j cur ns kO kL dO dL : Word) (c : NestCtx) (prog : List NestHole) (NS : NestState) (ks : List NestFieldKind) (nds : List EIdx) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole) (curP : ConLeche.Expr) (nsP : ConLeche.NestState) (ndsP : List ConLeche.Expr)
+    (h0 : StageC dn vis fe env s₀.mem a₀) (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog) (h2 : H cur) (h3 : NSB s₀.mem ns NS) (h4 : KlB s₀.mem kO.toNat kL.toNat ks) (h5 : kO.toNat + kL.toNat ≤ iwTop s₀.mem) (h6 : decHL s₀.mem dO.toNat dL.toNat = some nds) (h7 : dO.toNat + dL.toNat ≤ iwTop s₀.mem) (h8 : PosMR s₀.mem) (h9 : AbsOK s₀.mem) (h10 : ConLeche.NestCtxOk ctxP) (h11 : dCtx a₀.store env.find? c = some ctxP) (h12 : dProg a₀.store prog = some progP) (h13 : denoteE a₀.store (decI cur) = some curP) (h14 : dState a₀.store NS = some nsP) (h15 : Frontend.denoteEList a₀.store nds = some ndsP) (h16 : ConLeche.Expr.WScoped (base.toNat + j.toNat) curP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_fields" [vis, ctx, fu, po, pl, base, nF, j, cur, ns, kO, kL, dO, dL]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ∃ x a', (nestFields V fe c fu.toNat prog base.toNat nF.toNat j.toNat (decI cur) NS ks nds).run a₀ = .ok (x, a') ∧
-      StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
-      KlB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat x.1 ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧
-      decHL s'.mem (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat = some x.2.1 ∧
-      (r.tail.tail.headD 0).toNat + (r.tail.tail.tail.headD 0).toNat ≤ iwTop s'.mem ∧
-      H (r.tail.tail.tail.tail.headD 0) ∧ decI (r.tail.tail.tail.tail.headD 0) = x.2.2.1 ∧
-      NSB s'.mem (r.tail.tail.tail.tail.tail.headD 0) x.2.2.2 ∧ x.1.length = ks.length + nF.toNat ∧
-      x.2.1.length = nds.length + nF.toNat ∧ (nF.toNat = 0 ∨ base.toNat + j.toNat + nF.toNat < 2 ^ 64) ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (nestFields V fe c fu.toNat prog base.toNat nF.toNat j.toNat (decI cur) NS ks nds).run a₀ = .ok (x, a') ∧
+      FieldsPost dn vis fe env a₀ s₀.mem base nF j ks nds r s'.mem x a'; ⊤⦄ := by
   refine triple_post (RefE.triple (nfE_spec p L.pfields n s₀ vis ctx fu po pl base nF j cur ns kO kL dO dL)
-    ((nbRef_all L hq hIlpf hLC henv n hn).fields s₀.mem a₀ ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 hP hA hc hctx hprog hcurP hnsP hndsP hw)) ?_
+    ((nbRef_all L hq hIlpf hLC hFt hFk henv n hn).fields s₀.mem a₀ ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds ctxP progP curP nsP ndsP
+      h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
-  exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kinds, hR.kindsb, hR.doms, hR.domsb, hR.hcur, hR.cur, hR.ns, hR.kindsl, hR.domsl, hR.nfb, hR.pos, hR.abs, hR.core⟩
--/
+  exact ⟨hlc, x, a', hrun, hR⟩
+
 
 end census
 
 end L.Ind
+
+end

@@ -1,6 +1,9 @@
 module
 
 import ConAgua.Verdict.PosTopE4
+import ConAgua.Arena.IndT.PosAll
+public import ConAgua.Arena.IndT.PosFkc
+public import ConAgua.Verdict.PosFt
 public import ConAgua.Arena.IndPosSpec.NestSeeds
 public import ConAgua.Arena.IndPosSpec.UCtx
 public import ConAgua.Arena.IndPosSpec.UnW2
@@ -33,11 +36,11 @@ local notation "V" => ConLeche.CheckMode.verified
 /-! ## Census -/
 
 section census
-variable {p : Prog} (L : RsLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+variable {p : Prog} (L : RsLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
+  (hFt : FtProg p) (hFk : FkcProg p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word)
   (fe : IFEnv) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-include L hq hIlpf hLC henv
+include L hq hIlpf hLC hFt hFk henv
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_root` refines `nestRoot`** under `StageC` (the knot's core calls; con-ron's
 `nestRoot_spec`'s preconditions). -/
 @[refines ConRon.Arena.nestRoot]
@@ -61,16 +64,14 @@ theorem nestRoot_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx h
       ∃ x a', (nestRoot V fe c holes css NS outss).run a₀ = .ok (x, a') ∧ StageC dn vis fe env s'.mem a' ∧
       IWGrow s₀.mem s'.mem ∧ RootOutsB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat x.1 ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ NSB s'.mem (r.tail.tail.headD 0) x.2 ∧
-      PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+      PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep env fe a₀ a'; ⊤⦄ := by
   refine triple_post (RefE.triple (nrtE_spec p L n s₀ vis ctx hO hL cO cL ns oO oL)
-    (nrt_ref L hq hIlpf hLC dn vis fe henv ctx hO hL c holes hc hholesW hlen hpar n hn s₀.mem a₀ cO cL ns oO oL css
+    (nrt_ref L dn vis fe henv (nbRef_all L.nb hq hIlpf hLC hFt hFk henv) ctx hO hL c holes hc hholesW hlen hpar n hn s₀.mem a₀ cO cL ns oO oL css
       NS outss cssP nsP outssP hC hU hhi hpn hho hhob hcl hcb hcss hns hout houtb hP hA hctx hholesP hcssP hnsP
       houtsP hcF)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.outs, hR.outsb, hR.ns, hR.pos, hR.abs, hR.core⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_seeds` refines `nestSeeds`** under `StageC` (con-ron's `nestSeeds_spec`'s
 preconditions). -/
 @[refines ConRon.Arena.nestSeeds]
@@ -87,13 +88,12 @@ theorem nestSeeds_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx 
     ⦃fun r s' => LocEq s' s₀ ∧
       ∃ x a', (nestSeeds V fe c seeds NS).run a₀ = .ok (x, a') ∧ StageC dn vis fe env s'.mem a' ∧
       IWGrow s₀.mem s'.mem ∧ NSB s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧
-      ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
+      ConRon.Bridge.CoreStep env fe a₀ a'; ⊤⦄ := by
   refine triple_post (RefE.triple (nsdE_spec p L n s₀ vis ctx sO sL ns)
-    (nsd_ref L hq hIlpf hLC dn vis fe henv ctx c hc n hn s₀.mem a₀ sO sL ns seeds NS seedsP nsP hC hU hhi hsl hsd
+    (nsd_ref L hq hIlpf hLC dn vis fe henv hFt (nbRef_all L.nb hq hIlpf hLC hFt hFk henv) ctx c hc n hn s₀.mem a₀ sO sL ns seeds NS seedsP nsP hC hU hhi hsl hsd
       hns hP hA hctx hseedsP hnsP hw)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.ns, hR.pos, hR.abs, hR.core⟩
--/
 
 end census
 
