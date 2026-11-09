@@ -44,6 +44,8 @@ structure FtProg (p : Prog) : Prop extends RfProg p where
   frs : p.lookup "former_res_sort" = some formerResSortL
   fdh : p.lookup "former_def_headed" = some formerDefHeadedL
   ft : p.lookup "family_telescope" = some familyTelescopeL
+  /-- `env_find`'s row reader (`envFind_spec`, for `nest_inst_type_ty`'s lookup). -/
+  brg : p.lookup "base_row_get" = some baseRowGetL
 
 set_option experimental.vcgen true in
 /-- **`family_telescope`'s unified model**: `reduced_former` through its call, `former_def_headed`
