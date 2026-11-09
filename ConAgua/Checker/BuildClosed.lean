@@ -254,6 +254,14 @@ theorem biPc_mem (x : Word) (h : biPc x = true) : x ∈ biC := by
   simp only [Bool.and_eq_true, bne_iff_ne, ne_eq]
   exact ⟨h.1.2, h.2⟩
 
+theorem not_mem_biC {x : Word} (h : x.toNat = 150 ∨ x.toNat = 151) : x ∉ biC := by
+  intro hm
+  simp only [biC, List.mem_map, List.mem_filter, List.mem_range] at hm
+  obtain ⟨y, ⟨hy, hb⟩, rfl⟩ := hm
+  simp only [Bool.and_eq_true, bne_iff_ne, ne_eq] at hb
+  rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)] at h
+  omega
+
 /-- Every function of the checker passes `build_index`'s per-function check. -/
 prog_all checkerProg_biChk : checkerProg (wsChk CTL biPa biPc biTree)
 

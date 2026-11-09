@@ -1,0 +1,77 @@
+module
+
+public import ConAgua.Checker.BuildStage
+public import ConAgua.Arena.JobStart
+import ConAgua.Arena.CoreRefine
+import ConRon.Bridge.Stages
+import ConRon.Bridge.Checker.Install
+
+@[expose] public section
+
+/-!
+# The jobs' start after the index build (stage 3 of lane ronsync2)
+
+`FoldAt.jobR`: after the index build (`FoldAt`, `Checker/BuildStage.lean`) and the worker's
+cache flush (`check_b`'s first call: `flush_caches()`, the L side of `AState.worker`'s empty
+caches), the memory is `JobR` at the index state with its caches emptied, which enters the
+scratch tier as the index state's worker does (`sameEnter_worker`).
+-/
+
+open ConRon.Arena ConRon.Arena.Frontend
+
+namespace L.Checker
+
+open L L.Arena L.Rom
+
+theorem loCtl_flush : LoCtl flushCtl := fun x h => .inr ⟨by have := flushCtl_ge x h; omega, flushCtl_lt x h⟩
+
+theorem loArr_nil : LoArr [] := fun _ h => absurd h (by simp)
+
+/-- The twin's facts of the stages, and the index build's, at a phase A. -/
+theorem PhaseA.twin {b : ByteArray} (PA : PhaseA b) :
+    Ext PA.sE.store PA.sF.store ∧ PA.sF.pins = PA.sE.pins := by
+  obtain ⟨hA, hB, hC, hD, hE⟩ := PA.pfx
+  obtain ⟨hoff, hdrv, -, -, -, hpd, _rc, _preC, -, hden⟩ :=
+    ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
+  obtain ⟨-, hx, hp, -⟩ := ConRon.Bridge.buildIndex_run ConRon.Bridge.constsSpec
+    ConRon.Bridge.tablesSpec hdrv hoff hpd hden PA.idx
+  exact ⟨hx, hp⟩
+
+/-- **The jobs' start**: after the index build and the cache flush, `JobR` at the index state
+with its caches emptied. -/
+theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (h : FoldAt b pb sz PA m₇ m) (hfok : FlushOK m) :
+    JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I (flushMem m) { PA.sF with caches := Caches.empty } := by
+  have hB := h.build
+  have hS := hB.stage
+  have hF := flushMem_frame m
+  have hA0 := loArr_nil
+  have hC0 := loCtl_flush
+  have h7 := h.r7
+  have hcaps := h7.since.caps
+  have hsz : ∀ t, ((flushMem m).arr64 t).size = ((ConAgua.Final.loadMem b pb sz).arr64 t).size :=
+    fun t => by rw [hF.size, h.frame.size, h7.since.frame.size]
+  have hx := PA.twin.1
+  have hD := hS.check.arena.caches_irrel Caches.empty
+  refine ⟨⟨⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ hF _ hD.base,
+      DerR.frameM [] _ _ _ hF (by simp) _ hD.der⟩, hS.check.core.flush hfok,
+    hS.check.pins.frame (fun _ h => absurd h (by simp)) hF, hS.check.mode.frame hF (by decide) (by decide),
+    hB.idx.frameLo hA0 hC0 hF, hS.check.env.ownBelow.frameLo hA0 hC0 hF,
+    by rw [stampW_frameLo hC0 hF]; exact hS.check.env.stamp, declsF_frameLo hA0 hF hB.decls,
+    iwOK_frameLo hA0 hC0 hF hS.iw, ?_, pinSetsR_frameLo hA0 hC0 hF ?_, ?_, ?_,
+    hB.memos.frameLo hA0 hC0 hF, h.fsize⟩, ⟨hB.drv.state.wf⟩, hB.off, rfl⟩
+  · rw [hC0.ctl hF (by decide), h.grow.ctl130]; exact h7.c130
+  · exact PinSetsR.grow h7.pinSets h.grow.grow (h.frame.ctl _ (not_mem_biC (by decide)))
+      (h.frame.ctl _ (not_mem_biC (by decide)))
+  · refine ⟨?_, ?_, ?_, (h.grow.memos ?_).frameLo hA0 hC0 hF, fun k x hk => ?_⟩
+    · rw [hsz]; have := hcaps.2.2.2.2.2.2.1; omega
+    · rw [hsz]; have := (hcaps.1 SPN (by decide)).1; omega
+    · rw [hsz]; have := (hcaps.1 BSTK (by decide)).1; omega
+    · exact since_coreMemos h7.since (by rw [h7.since.frame.size]; have := hcaps.2.1; simp only [ctlMin] at this; omega)
+    · simp only [dnOf] at hk
+      split at hk
+      · exact ConRon.Bridge.denoteN_ext hk hx
+      · cases hk
+  · rw [pinW_frame hF (by simp), pinW_frame h.frame (by simp [biA])]; exact h7.pin0
+
+end L.Checker

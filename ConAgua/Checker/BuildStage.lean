@@ -35,17 +35,17 @@ namespace L.Checker
 open L L.Arena L.Rom
 
 /-- The arrays the index build's start needs zero: the stream index's rows, the own layer (both
-tiers), the inductive memos (`IndMemos.zero`). -/
+tiers), the inductive memos (`IndMemos.zero`), the core's walk memos (`CoreMemos.zero`). -/
 def buildZeroArrs : List TieredArray :=
   tier0s [EIXA, EIXS, EIXN, TIXA, TIXS, TIXN, OIXA, OIXS, OIXN, OTXA, OTXS, OTXN, 51, 155,
-    201, 202, 203, 204, 205, 206, 207, 208] ++
+    201, 202, 203, 204, 205, 206, 207, 208, 49, 50, 52, 53, 54, 151, 152, 153] ++
   tier1s [OIXA, OIXS, OIXN, OTXA, OTXS, OTXN]
 
 /-- The `CTL` words the index build's start needs zero: the index's counter, the stamp, the
 view's bounds, the inductive memos' words. -/
 def buildZeroCtls : List Nat :=
   [128, 133, 134, 135, 52, 158, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214,
-    215, 216, 217, 218, 219]
+    215, 216, 217, 218, 219, 48, 50, 54, 56, 58, 152, 154, 156]
 
 theorem preLoopA_buildZero : buildZeroArrs.all (fun b => !preLoopA.contains b) = true := by
   decide +kernel
@@ -153,6 +153,13 @@ theorem since_indMemos (hctl : 220 ≤ (m.arr64 CTL).size) : IndMemos m :=
         simp only [e] at this
         exact this) j)
     (fun x hx => since_ctl h (by simp only [buildZeroCtls, List.mem_cons]; omega))
+
+theorem since_coreMemos (hctl : 220 ≤ (m.arr64 CTL).size) : CoreMemos m :=
+  CoreMemos.zero (by omega)
+    (fun b hb j => since_rdW h (t := (b : TieredArray)) (by
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide) j)
+    (fun x hx => since_ctl h (by
+      rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide))
 
 end zero
 
