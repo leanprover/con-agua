@@ -659,4 +659,159 @@ theorem cvLps_sim (hP : PinListLProg p) {n : Nat} {m m2 : Mem} {a : AState} {c :
 
 end cvl
 
+/-! ## `rules_link_ok` -/
+
+section rules
+variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`rules_link_ok` refines `rulesLinkOk`**, rule by rule. -/
+theorem rulesLinkOkW_ok (hP : PinListLProg p) {block pins : List IConstantInfo}
+    {bo bl po pl ro rl rpo rpl : Word} {R Rp : List NIdx} :
+    ∀ (n : Nat) (m m' : Mem) (a : AState) (qo ql : Word) (rules : List IRecRule) (r : List Word),
+    StageT dn vis fe m a → ConRon.Bridge.StateOK a → ConRon.Bridge.ReadOK a →
+    PSlR ciF block bo bl m → PSlR ciF pins po pl m → NSl R ro rl m → NSl Rp rpo rpl m →
+    (∃ B, Frontend.denoteCIList a.store block = some B) →
+    (∃ P, Frontend.denoteCIList a.store pins = some P) →
+    (∃ RT, Frontend.denoteNList a.store.ns R = some RT) →
+    (∃ RpT, Frontend.denoteNList a.store.ns Rp = some RpT) →
+    decRules (erecP m) qo.toNat ql.toNat = some rules →
+    rulesLinkOkW p n m bo bl po pl ro rl rpo rpl qo ql = some (r, m') →
+    ∃ b a', (ConRon.Arena.rulesLinkOk block pins R Rp rules).run a = .ok (b, a') ∧
+      CmpPost dn vis fe m a [r.headD 0] b m' a' := by
+  intro n
+  induction n with
+  | zero => intro m m' a qo ql rules r _ _ _ _ _ _ _ _ _ _ _ _ h; simp [rulesLinkOkW] at h
+  | succ n ih =>
+  intro m m' a qo ql rules r hT hok hr hB hPs hR hRp hdB hdP hdR hdRp hrs h
+  have hsz := hT.stage.iw.iwSize
+  rw [rulesLinkOkW.eq_2] at h
+  by_cases hq : ql = 0
+  · rw [if_pos hq] at h; cases h
+    subst hq
+    simp only [decRules, show (0 : Word).toNat = 0 from rfl, List.range_zero, List.mapM_nil,
+      Option.pure_def, Option.some.injEq] at hrs
+    subst hrs
+    exact ⟨true, a, rfl, CmpPost.refl hT hok hr (by simp)⟩
+  rw [if_neg hq] at h
+  obtain ⟨k, hk⟩ : ∃ k, ql.toNat = k + 1 :=
+    ⟨ql.toNat - 1, by have : ql.toNat ≠ 0 := fun e => hq (UInt64.toNat_inj.mp e); omega⟩
+  rw [hk, decRules_succ] at hrs
+  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hrs
+  obtain ⟨rl0, hrl, rls, hrls, rfl⟩ := hrs
+  obtain ⟨wq, hwq, hwqlt, hctor⟩ := hd?_some (decRule_ctor hrl)
+  have hrd : rdW (m.arr64 (tierA EREC (qo >>> 40))) (qo &&& 1099511627775) = wq := erRdT_of qo wq hwq
+  rw [hrd] at h
+  -- `const_named(bo, bl, EREC⦃qo⦄)`
+  cases h1 : callW p n "const_named" [bo, bl, wq] m with
+  | none => rw [h1] at h; simp [rulesLinkOkW.k_const_named] at h
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (constNamed_specW p hP.cn n _ bo bl wq) h1
+  obtain ⟨e1, hn1⟩ := constNamedW_ok hsz hwqlt n bo bl block r1 _ hB hW1
+  rw [h1, rulesLinkOkW.k_const_named.eq_2, e1, hrd] at h
+  -- `const_named(po, pl, EREC⦃qo⦄)`
+  cases h2 : callW p n "const_named" [po, pl, wq] m with
+  | none => rw [h2] at h; simp [rulesLinkOkW.k_const_named_2] at h
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (constNamed_specW p hP.cn n _ po pl wq) h2
+  obtain ⟨e2, hn2⟩ := constNamedW_ok hsz hwqlt n po pl pins r2 _ hPs hW2
+  rw [h2, rulesLinkOkW.k_const_named_2.eq_2, e2] at h
+  by_cases hz : r1.headD 0 = 0 ∨ r2.headD 0 = 0
+  · rw [if_pos hz] at h; cases h
+    refine ⟨false, a, ?_, CmpPost.refl hT hok hr (by simp)⟩
+    simp only [ConRon.Arena.rulesLinkOk, hctor]
+    cases x1 : ConRon.Arena.constNamed? block (decI wq) with
+    | none => rfl
+    | some C =>
+    cases x2 : ConRon.Arena.constNamed? pins (decI wq) with
+    | none => rfl
+    | some Cp =>
+    rw [x1] at hn1; rw [x2] at hn2
+    rcases hz with hz | hz
+    · rw [hn1.1] at hz; cases hz
+    · rw [hn2.1] at hz; cases hz
+  rw [if_neg hz] at h
+  obtain ⟨hz1, hz2⟩ : r1.headD 0 ≠ 0 ∧ r2.headD 0 ≠ 0 := not_or.mp hz
+  obtain ⟨C, x1⟩ : ∃ C, ConRon.Arena.constNamed? block (decI wq) = some C := by
+    cases x1 : ConRon.Arena.constNamed? block (decI wq) with
+    | none => rw [x1] at hn1; exact absurd hn1 hz1
+    | some C => exact ⟨C, rfl⟩
+  obtain ⟨Cp, x2⟩ : ∃ Cp, ConRon.Arena.constNamed? pins (decI wq) = some Cp := by
+    cases x2 : ConRon.Arena.constNamed? pins (decI wq) with
+    | none => rw [x2] at hn2; exact absurd hn2 hz2
+    | some Cp => exact ⟨Cp, rfl⟩
+  rw [x1] at hn1; rw [x2] at hn2
+  -- `cv_lps(c + 1)`, `cv_lps(d + 1)`
+  cases h3 : callW p n "cv_lps" [r1.tail.headD 0 + 1] m with
+  | none => rw [h3] at h; simp [rulesLinkOkW.k_cv_lps] at h
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  obtain ⟨hT3, hg3, he3, -, hN3⟩ := cvLps_sim hP hT hn1.2 h3
+  rw [h3, rulesLinkOkW.k_cv_lps.eq_2] at h
+  cases h4 : callW p n "cv_lps" [r2.tail.headD 0 + 1] m3 with
+  | none => rw [h4] at h; simp [rulesLinkOkW.k_cv_lps_2] at h
+  | some x4 =>
+  obtain ⟨r4, m4⟩ := x4
+  obtain ⟨hT4, hg4, he4, -, hN4⟩ := cvLps_sim hP hT3 (by rw [he3]; exact hn2.2) h4
+  rw [h4, rulesLinkOkW.k_cv_lps_2.eq_2] at h
+  -- `pin_link_ok(ro, rl, rpo, rpl, co, cl, so, sl)`
+  have hg34 := hg3.trans hg4
+  cases h5 : callW p n "pin_link_ok"
+      [ro, rl, rpo, rpl, r3.headD 0, r3.tail.headD 0, r4.headD 0, r4.tail.headD 0] m4 with
+  | none => rw [h5] at h; simp [rulesLinkOkW.k_pin_link_ok] at h
+  | some x5 =>
+  obtain ⟨r5, m5⟩ := x5
+  obtain ⟨s5, rfl, -, hW5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+    (pinLinkOkL_specW p hP.plo n _ ro rl rpo rpl _ _ _ _) h5
+  obtain ⟨e5, hb5⟩ := pinLinkOkW_ok hP hT4.stage.iw.iwSize (hR.grow hg34).dec (hRp.grow hg34).dec
+    (hN3.grow hg4).dec hN4.dec hW5
+  obtain ⟨Bd, hBd⟩ := hdB
+  obtain ⟨Pd, hPd⟩ := hdP
+  obtain ⟨RT, hRT⟩ := hdR
+  obtain ⟨RpT, hRpT⟩ := hdRp
+  obtain ⟨xC, hxC⟩ := constNamed_den block Bd _ C hBd x1
+  obtain ⟨xCp, hxCp⟩ := constNamed_den pins Pd _ Cp hPd x2
+  obtain ⟨a5, hrun5, hT5, hok5, hr5, hx5⟩ := pinLinkOk_twin hT4 hok hr hRT hRpT
+    (ConRon.Bridge.denoteCV_inv (ConRon.Bridge.denoteCI_toConstantVal hxC)).2.1
+    (ConRon.Bridge.denoteCV_inv (ConRon.Bridge.denoteCI_toConstantVal hxCp)).2.1
+  have hstep : (ConRon.Arena.rulesLinkOk block pins R Rp (rl0 :: rls)).run a =
+      (if decide (C.toConstantVal.levelParams =
+          Cp.toConstantVal.levelParams.map (ConRon.Arena.canonNameMap Rp R)) then
+        ConRon.Arena.rulesLinkOk block pins R Rp rls else pure false).run a5 := by
+    simp only [ConRon.Arena.rulesLinkOk, hctor, x1, x2, StateT.run_bind, hrun5, exb]
+  rw [h5, rulesLinkOkW.k_pin_link_ok.eq_2] at h
+  by_cases h0 : r5.headD 0 = 0
+  · rw [if_pos h0] at h; cases h
+    have hf : ¬ C.toConstantVal.levelParams =
+        Cp.toConstantVal.levelParams.map (ConRon.Arena.canonNameMap Rp R) := fun e => hb5.mpr e h0
+    refine ⟨false, a5, by rw [hstep, decide_eq_false hf]; rfl, ?_⟩
+    rw [e5]
+    exact ⟨hT5, hg34, hok5, hr5, hx5, by simp⟩
+  rw [if_neg h0] at h
+  have ht : C.toConstantVal.levelParams =
+      Cp.toConstantVal.levelParams.map (ConRon.Arena.canonNameMap Rp R) := hb5.mp h0
+  rw [e5] at h
+  cases h6 : rulesLinkOkW p n m4 bo bl po pl ro rl rpo rpl (qo + 11) (ql - 1) with
+  | none => rw [h6] at h; simp [rulesLinkOkW.k_rules_link_ok] at h
+  | some x6 =>
+  obtain ⟨r6, m6⟩ := x6
+  rw [h6, rulesLinkOkW.k_rules_link_ok.eq_2] at h
+  cases h
+  have hql : (ql - 1).toNat = k := by
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+  have hrs6 : decRules (erecP m4) (qo + 11).toNat (ql - 1).toNat = some rls := by
+    rw [he4, he3, hql]; exact decRules_shift hrls (erRdOK m).lt
+  obtain ⟨b, a', hrun, hT', hg', hok', hr', hx', hb'⟩ :=
+    ih m4 _ a5 (qo + 11) (ql - 1) rls r6 hT5 hok5 hr5 (hB.grow ciF_mono hg34) (hPs.grow ciF_mono hg34)
+      (hR.grow hg34) (hRp.grow hg34) ⟨_, ConRon.Bridge.denoteCIList_mono hx5 _ _ hBd⟩
+      ⟨_, ConRon.Bridge.denoteCIList_mono hx5 _ _ hPd⟩ ⟨_, ConRon.Bridge.denoteNListE_ext hx5 _ _ hRT⟩
+      ⟨_, ConRon.Bridge.denoteNListE_ext hx5 _ _ hRpT⟩ hrs6 h6
+  refine ⟨b, a', by rw [hstep, decide_eq_true ht]; exact hrun, hT', hg34.trans hg', hok', hr',
+    hx5.trans hx', by simpa using hb'⟩
+
+end rules
+
 end L.Ind
