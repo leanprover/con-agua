@@ -69,16 +69,14 @@ theorem checkMode2_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
       | (simp_all (config := { decide := true }); done)
       | (simp_all [St.setLoc]; done)
 
-/-- **What `check_decl`'s program facts still take** (`checkerProg_cdProgPB`): the value arms'
-claims and the inductive arm's, at every phase A and every pin buffer `pb` that starts with the
+/-- **What `check_decl`'s program facts still take** (`checkerProg_cdProgPB`): the definition
+arm's claim and the inductive arm's, at every phase A and every pin buffer `pb` that starts with the
 ROM, at the program with `pb` substituted. A hypothesis of the final theorems until the core and
 inductive areas prove them. -/
 def CheckerCd : Prop :=
   ∀ (b pb : ByteArray) (PA : PhaseA b), pb.size < 2 ^ 63 → PbPre pb →
     (∀ cv v hh, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
       "check_decl_defn" (.defnDecl cv v hh)) ∧
-    (∀ cv v, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
-      "check_decl_opaque" (.opaqueDecl cv v)) ∧
     IndArmSpec (Prog.subPB pb.data.toList checkerProg) (dnOf PA.sE.store)
 
 /-- The record decoder of a phase A is injective. -/
@@ -97,11 +95,7 @@ theorem jobProg_of_cd (hCd : CheckerCd) {b pb : ByteArray} (PA : PhaseA b) (hpb 
     (hpre : PbPre pb) :
     JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg) :=
   have hr : RomOK pb.data.toList := by simpa [RomOK] using hpb
-<<<<<<< HEAD
-  let ⟨hdf, hop, hind⟩ := hCd b pb PA hpb hpre
-=======
-  let ⟨hdf, _, _, hind⟩ := hCd b pb PA hpb hpre
->>>>>>> ronsync2-p3c
+  let ⟨hdf, hind⟩ := hCd b pb PA hpb hpre
   checkerProg_jobProgPB pb.data.toList hr hpre
     (checkerProg_cdProgPB pb.data.toList hr hpre PA.dnInj PA.quotDn hdf hind)
     (checkerProg_canonPB _)
