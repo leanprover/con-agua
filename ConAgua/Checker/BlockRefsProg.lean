@@ -9,6 +9,7 @@ public import ConAgua.Arena.IndT.BlockRMS
 public import ConAgua.Arena.IndT.PassCS
 public import ConAgua.Arena.IndT.PassNsd
 public import ConAgua.Arena.IndT.PassBnc
+public import ConAgua.Arena.IndT.Positivity
 import ConAgua.Checker.ArmsT
 import ConAgua.Verdict.PosKnotE
 import ConAgua.Checker.IndArmTrees1
@@ -201,6 +202,30 @@ theorem bncRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData +
   exact bncRefS_of hP hAP.opf hAP.crk (checkerProg_indLeavesPB bs)
 
 set_option maxRecDepth 20000 in
+/-- **`check_block_positivity`'s contract at the substituted checker program** (`posRefS_of`;
+`check_abs_ctor_sorts_all` keeps the walk memos by the arm's `armPosFns` closure). -/
+theorem posRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
+    (dn : ConRon.Arena.NIdx → Option ConLeche.Name) :
+    PosRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
+  have hAP := indArmProgs_checker bs hr hpre
+  have hP : PosBlkProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hMc : McLook (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hF : FtProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hFk : FkcProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hus : UsF (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hWt : WhnfTopE (Prog.subPB bs checkerProg) :=
+    whnfTop_stageE (by prog_bundle []) (fun n => (checkerProg_knotTopPB bs).knotOK n) (checkerProg_knotEPB bs)
+  have hmem : "check_abs_ctor_sorts_all" ∈ armPosFns := mem_of_tree armPosTree.eq (by decide +kernel)
+  exact posRefS_of hAP.kp hAP.ilpf hAP.opf hAP.lc hAP.lt hAP.apd hP hMc hF hFk hWt
+    (bncRefS_checker bs hr hpre dn)
+    (fun f hf => indArmKeep_checker bs f (by
+      simp only [posKeepCalleesC, List.mem_cons, List.not_mem_nil, or_false] at hf
+      subst hf; simp [passKeepCalleesC, posKeepCalleesC]))
+    (fun h hM => PosMR.ofClosedL (closedWL_subPB bs checkerProg_armPos) hus hmem h hM)
+    (wmKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
+      (mem_of_tree armMcTree.eq (by decide +kernel)) (mem_of_tree armTaTree.eq (by decide +kernel)))
+
+set_option maxRecDepth 20000 in
 /-- **`nest_seeds`' contract at the substituted checker program** (`nsdRefS_of`). -/
 theorem nsdRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
     (dn : ConRon.Arena.NIdx → Option ConLeche.Name) :
@@ -273,7 +298,8 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
   have hbnc : BncRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     bncRefS_checker bs hr hpre dn
   have hcls : ClsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
-  have hpos : PosRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
+  have hpos : PosRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    posRefS_checker bs hr hpre dn
   have hsd : SeedsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     seedsRefS_checker bs dn
   have hnsd : NsdRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
