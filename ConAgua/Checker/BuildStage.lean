@@ -232,7 +232,7 @@ structure FoldAt (b pb : ByteArray) (sz : TieredArray → Nat) (PA : PhaseA b) (
   r7 : R7 (ConAgua.Final.loadMem b pb sz) m₇ pb PA.ds PA.ipins PA.sE
   build : BuildR (dnOf PA.sE.store) PA.ds 0 0 m PA.sF PA.I
   fsize : PA.I.firsts.size = PA.ds.size
-  grow : RecGrow m₇ m
+  grow : BKeep m₇ m
   frame : MemFrame biA biC m₇ m
   bytes : m.bytes = m₇.bytes
 
