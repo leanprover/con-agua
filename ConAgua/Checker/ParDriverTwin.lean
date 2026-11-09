@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Checker.ParDriverL
 import ConAgua.Checker.CheckARun
+import all ConAgua.Checker.Entry
+import ConAgua.L.Blocks
 import ConAgua.Checker.IndArm
 import ConAgua.Checker.LoopProg
 import ConAgua.Checker.LoopStage
@@ -12,34 +14,99 @@ public import ConAgua.Final.Twin
 @[expose] public section
 
 /-!
-# The sequential driver's two runs give `TwinAccepts` (lane parmode)
+# The sequential driver's two runs give `TwinAccepts` (lane parmode, stage 3 of lane ronsync2)
 
 docs/design/parmode.md, "Redesign". `drv_twinAccepts`: entry 1 (`check` with the mode word `3`,
 from the loaded memory) returning `2^63 + k`, then entry 2 in place (`check` with the mode word `2`
-on a memory `w` that keeps entry 1's final word arrays phase B's loop names, the range `[0, k)`, an
-empty seed, the view in the header) returning `ACCEPT`: the twin's pipeline accepts. Entry 1 is
-`checkA_run` (phase A ends in `PhaseBStart`, the memory is the buffer's `parCompactMem`, with the
-header only), entry 2 `runMode2_agree` (phase B on the worker, through non-interference), and the
-two are `SeqAccepts`, i.e. `TwinAccepts` (`Final/Twin.lean`).
+on a memory `w` that keeps entry 1's final word arrays the jobs name, the range `[0, k)`, an empty
+seed) returning `ACCEPT`: the twin's pipeline accepts. Entry 1 is `checkA_run` (the stages and the
+stream index, `FoldAt`; the memory is the buffer's `parCompactMem`, with the header only), entry 2
+`checkB_seq` (the flush, then the jobs, through non-interference and the pool's induction with one
+worker), and the two are `SeqAccepts`, i.e. `TwinAccepts` (`Final/Twin.lean`). The jobs' program
+facts at the substituted program (`hJ`, `JobProg`) are a hypothesis.
 -/
 
+set_option experimental.vcgen true
+
 open ConRon.Arena ConAgua.Final
+open Std.WP
+open scoped Lean.Order
 
 namespace L.Checker
 
 open L L.Arena L.Rom
 
-/-- **The driver's two runs accept ⇒ the twin accepts.** -/
-theorem drv_twinAccepts (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
+universe w
+
+/-- **Entry 2 in place, `check` with the mode word `2`**: `check_b` (as `checkB_seq`). -/
+theorem checkMode2_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (hF : FoldAt b pb sz PA m₇ m)
+    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (s₀ : St)
+    (hw : ∀ a, phaseBS a = true → s₀.mem.arr64 a = m.arr64 a) (hmode : s₀.mem.glob MODE = 2)
+    (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
+    ⦃fun r _ => r.headD 0 = ACCEPT →
+      ∃ s'', checkJobList .verified PA.ipins PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+        .ok (.ok (), s''); ⊤⦄ := by
+  rw [invoke_eq _ checkerProg_lookup_check']
+  simp only [callFn, checkL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hB := checkB_seq Vt hF hJP n (by omega) hi hhi
+    have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·)]
+    all_goals (try simp only [St.setLoc_loc, St.setLocs_cons,
+      Cmp.eval, reduceIte, beq_iff_eq, Sig.retVal, Sig.retOr, St.setLocs_nil, List.headD_cons] at *)
+    all_goals first
+      | (simp_all (config := { decide := true }); done)
+      | (simp_all [St.setLoc]; done)
+
+/-- **The driver's two runs accept ⇒ the twin accepts**, given the jobs' program facts at every
+accepting phase A. -/
+theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (b pb : ByteArray)
+    (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
+    (hJ : ∀ PA : PhaseA b,
+      JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
     (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
     (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
-    (hctlf : (w.arr64 CTLF).size = 0) (hv : rd64 w HDRF 3 = rd64 m₁ OUT 3)
+    (hctlf : (w.arr64 CTLF).size = 0)
     (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
     TwinAccepts [b] := by
-  sorry
+  have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
+  obtain ⟨PA, m₇, m, hF, -, hm₁, hres⟩ := checkA_run b pb sz hin 3 (Or.inr rfl) N₁ hN₁ rs₁ m₁ h₁ hr
+  have hfr := parCompactMem_out m (modeFlag 3)
+  rw [← hm₁] at hfr
+  have hw' : ∀ a, phaseBS a = true → w.arr64 a = m.arr64 a := fun a ha => by
+    rw [hw a ha, hfr.arr a (fun e => by subst e; revert ha; decide)]
+  have hsz : PA.ds.size < 2 ^ 63 := by
+    have := hF.build.decls.room; have := hF.build.decls.dsize; omega
+  have hk : (rs₁.headD 0 - 9223372036854775808).toNat = PA.ds.size := by
+    have e : (9223372036854775808 : Word) + UInt64.ofNat PA.ds.size - 9223372036854775808 =
+        UInt64.ofNat PA.ds.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
+    rw [hres, e, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
+  obtain ⟨s'', hB⟩ : ∃ s'', checkJobList .verified PA.ipins PA.I PA.ds (List.range PA.ds.size)
+      PA.sF.worker = .ok (.ok (), s'') := by
+    simp only [L.run] at h₂
+    cases e : (invoke checkerProg (exec checkerProg N₂) "check" []).run ⟨w, Locals.init []⟩ with
+    | error _ => rw [e] at h₂; cases h₂
+    | ok x =>
+      obtain ⟨r, s⟩ := x
+      rw [e] at h₂
+      simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at h₂
+      obtain ⟨rfl, -⟩ := h₂
+      exact M.of_run (P := fun x => x = ⟨w, Locals.init []⟩) rfl e
+        (checkMode2_seq Vt hF (hJ PA) N₂ hN₂ _ hk ⟨w, Locals.init []⟩ hw' hmode hlo hhi hctlf) hacc
+  obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
+  exact ⟨PA.pins, PA.sA, PA.sB, PA.sC, PA.sD, PA.sE, PA.sF, PA.pre, PA.rc, PA.ds, PA.ipins, PA.I,
+    hA, hBp, hC, hD, hE, s'', PA.idx, hB⟩
 
 end L.Checker
