@@ -39,7 +39,9 @@ Options:
   --decls FILE      replay mode: exactly the theorems listed (`path name` per line, or
                     `path:name1,name2`), whatever state they are in (to measure the ladder on a
                     finished sync: put back the base's proof and see which rung closes it)
-  --write           write the verified result into the worktree (default: report only)
+  --write           write the verified result into the worktree (default: report only); a
+                    failing proof that no rung closes becomes `sorry` (the base's text stays in
+                    git, the current one in the ticket's file at HEAD)
   --out DIR         report directory (default _tmp/ladder/<worktree name>)
   --jobs N          lean processes at a time (default 2); --threads N each (LEAN_NUM_THREADS, 1)
   --timeout S       per lean run (default 900); --mem-gb G per lean process tree (default 15)

@@ -89,11 +89,81 @@ arms.
 
 ### 2.2 ronsync2's stage-2 tree (`3ac31ede5`)
 
-STAGE2
+There is no commit on ronsync2's branches with the statements fixed and the proofs not yet
+restored: stage 3 restated and re-proved area by area. The nearest is the end of stage 2,
+`3ac31ede5` ("citations exact", 19:57). The three stage-3 helpers branched from it, and p3c's
+first commit is "master's proofs restored where they still check (restore/sorry-out rounds
+1-14)". The whole library builds there with 1398 `sorry`s in 453 files, and 1192 declarations
+are commented out. The ladder ran with `--failing sorry` (the tree builds, so no first
+elaboration) in a scratch worktree at that commit:
+
+| rung | closed | cumulative |
+|---|---:|---:|
+| (i) master | 110 | 110 |
+| (ii) codemod | 15 | 125 |
+| (iii) vocab | 0 | 125 |
+| left | 1148 | |
+
+That is 125 of 1273 sorried theorems (9.8 %): 695 lean runs, 34.7 CPU-min, 17.4 min wall at
+`--jobs 2`, peak 3.3 GB per run. The 1192 commented-out declarations are out of its reach,
+since there is no statement to put a proof under. The first errors of the 1148 left say why
+the number is low: the statements were not fixed at that point.
+
+* 228 "don't know how to synthesize implicit argument `dn`". Stage 2 removed `dn` at the uses
+  with a sed, but left the binders `{dn : NIdx → Option Name}` in the statements.
+* 301 unknown identifiers or constants: callees that stage 2 commented out or deleted, or had
+  not restated yet.
+* 218 application type mismatches and 84 failed rewrites: callee statements that stage 3 changed
+  again (`IWOK`'s nine fields, the readers).
+
+At ronsync2's end (`ronsync2-p3b d41542ea5`, the branch that contains the other helpers'
+work), the 125 closed ones stand as follows:
+* 83 have exactly the ladder's text;
+* 3 have master's proof under a statement that changed again later;
+* 34 have a different proof;
+* 5 are gone.
+
+Of the 1148 left, 293 end with master's proof verbatim. These would have closed once their
+statements and callees were in place.
+
+**Statements first, measured.** The ladder was replayed on the final statements instead. The
+set is every master theorem without `sorry` that stage 2 sorried (1188) or commented out or
+removed (666), and that exists at the end under the same name in the same file: 1854 theorems in
+511 files. It ran in replay mode at `d41542ea5`, in a scratch worktree, `--jobs 2`. 23 files
+(107 theorems) were `blocked`: they import 11 modules of p3b's latest commits that the shared
+cache does not have, and these were not built. The other 1747:
+
+| rung | closed | cumulative |
+|---|---:|---:|
+| (i) master | 645 | 645 |
+| (ii) codemod | 99 | 744 |
+| (iii) vocab (`readers` 93, `readers+` 2) | 95 | 839 |
+| left | 908 | |
+
+**839 of 1747 (48 %) close with no agent**: 919 lean runs, 64.9 CPU-min, 32.7 min wall, peak
+2.7 GB per run. The share is the same for the sorried (535 of 1117) and the commented-out
+(304 of 630) ones. The rules file was written for reproof.md's sample only. A rules file grown
+during the sync would close more.
 
 ### 2.3 What it would have saved
 
-SAVED
+Of the 839 the ladder closes on the final statements, ronsync2 ended with exactly the ladder's
+text for 676 (`closed/` against `d41542ea5`, whitespace-normalised). These are the restore
+rounds: reproof.md §2.1 counts 171 "restored"/"re-proved"/"master proofs restored" commits,
+8.5 agent-hours, plus ~45 restore rounds after the stage-2 comment-out. Another 163 were
+re-proved differently by hand, although the master or codemod text checks. The ladder needs
+33 minutes of wall time at two jobs for all of it.
+
+The two runs together are the case for the protocol's order. With stage 2's statements the
+ladder closes 10 %; with the final ones, 48 %. The difference is the statements stage. That is
+why PLAN.md now puts the statements (b) before the ladder (c), and the shared vocabulary (a)
+before both.
+
+**`--write`, checked.** It ran on three files of the stage-2 tree (`DeclCanonEq`,
+`CIReadRefBase`, `LineRefine`; 28 of 42 closed by master, 14 left at `sorry`). It also ran on
+`DeclNatTy` at the end of the sync, with master's proofs put back into 4 theorems (default
+`--failing elab`: the 4 errors were found, 2 closed by codemod, 2 set to `sorry` with tickets).
+Each file was then built with `scripts/lake build`, and all four built.
 
 ## 3. Using it in the next sync
 
@@ -117,7 +187,9 @@ PLAN.md, "Bumping the twin", step 3 a–d, in short:
    (add a `rename` rule), otherwise a real re-proof.
 
 Cost: about 3 lean runs per file (one per rung whose candidate differs, plus the final check),
-each 1–90 s. COST
+each 1–90 s.
+On the final statements: 1.8 lean runs per file on average, 65 CPU-min for 511 files, 33 minutes of
+wall time at two jobs, peak 2.7 GB per lean process.
 
 ## 4. PLAN.md
 
@@ -203,11 +275,31 @@ Variants, in order: (1) the codemod text with the encoding's set added to `grind
 and `finish [` lists that lack it; (2) the same with the spec list added to `vcgen [`; (3) an
 `obtain ⟨…⟩ := h.ok`/`h.iw` positional destructuring replaced by `have := h.iw` and the
 following `exact hN` lines by `grind [IWOK_iff, ind_grind]`. Measure on reproof.md's sample: in
-the ladder's replay mode (`--decls`, the sample list is in §2.1's run directory
-`_tmp/syncproc/sample.txt`, reproduced in §6) at ronsync2's end, rebased onto the vocabulary
+the ladder's replay mode (`--decls`, the sample list is in §6) at ronsync2's end, rebased onto the vocabulary
 files. The 9 "one vocabulary entry" theorems of reproof.md §3 should close at rung (i)/(ii),
 since their master proofs then find the lemmas through the set; the 4 positional `IWOK` ones
 should close after the destructuring rule. Report the new 19/30/35 line.
 
 **Out of scope there**: the tagged store primitive and sealed tiers (rec. 4) and the lockstep
 tactic (rec. 5).
+
+## 6. The sample list (replay input)
+
+`--decls` input for §2.1, at `ronsync2-p3e-defn 0108e00f1` (and for the rec.-2 lane's
+re-measurement):
+
+```
+ConAgua/Arena/DeclCanonSpec.lean:erSlEqB_step,rulesEqB_step,erSlEq_spec,hintEq_spec,erSlAt_spec,capsEqA_spec,capsEqB_spec,capsEqC_spec,capsEq_spec,ruleEqA_spec,ruleEqB_spec,ruleEqButRhs_spec,rulesEq_spec,ciEqRest_spec
+ConAgua/Arena/DeclDivModSpec/BoolCtorTyped.lean:bct_ref,internSort_ref,tps_ref
+ConAgua/Arena/DeclNatGuard.lean:cvWordsAt,boolCtorOk_ref,pinFind_call,boolCtors_ref,natOpGuard_ref
+ConAgua/Arena/DeclNatLit.lean:decCI_tag,natCvWords,tagWord,natIndOk_specW,natIndOk_ref,natZeroOk_specW,natZeroOk_ref,natSuccOk_specW,natSuccOk_ref,natLitSupported_specW,natLitSupported_ref
+ConAgua/Arena/DeclNatTy.lean:natOpCod_ref,natOpTyPinned_ref,natOpStoredOk_ref,okAll_ref
+ConAgua/Arena/IndInstallSpec/DomsW.lean:decHL_grow
+ConAgua/Arena/IndPartsSpec/BlockRecNameSetOk.lean:ctmW_sim,bgoW_sim,partsGH,bggW_sim,bgW_sim,brwW_cons,brw_spec,brg_spec,brgW_ok,brwW_sim,blockRecNameSetOk_refines
+ConAgua/Arena/IndPartsSpec/MemberNames.lean:nameCopyW_step,memberNamesCopy_spec,memberNamesW_dec,hslice?_bound,erToIwW_decS,lpsW_cons,blockShapeLps_spec,lpsW_dec
+ConAgua/Arena/StripTeleSpec.lean:StageR.set_iw,StageR.set_top,stripGoW_ok,stripTW_ok,stripPis_refines,stripLams_refines
+ConAgua/Checker/PrepRef.lean:pPrepCore_ok
+```
+
+Command: `scripts/reproof-ladder.py --decls LIST --rules scripts/sync-rules/ronsync2.txt --base
+09a78343a` in a worktree at that commit (its imports are in the shared cache).
