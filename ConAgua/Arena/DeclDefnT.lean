@@ -91,7 +91,7 @@ theorem StageT.of_leaf {p : Prog} (hcl : LeafClosed p) {f : FnName} (hf : f ∈ 
     {a : AState} {r : List Word} (hc : callW p k f args m = some (r, m'))
     (hT : StageT dn vis fe m a) (hS : StageR vis fe m' a) : StageT dn vis fe m' a := by
   have hfr := callW_leafFrame hcl hf hc
-  exact ⟨hS, hT.twin.frame hfr leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp,
+  exact ⟨hS, hT.twin.frame hfr leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb,
     by simp only [pinW, hfr.arr PINS leafA_pins (by decide)]; exact hT.flag⟩
 
 /-- **The definition arm refines `checkDecl`, both outcomes**, under `StageT` (con-ron's

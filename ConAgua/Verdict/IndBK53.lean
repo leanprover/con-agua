@@ -70,7 +70,7 @@ theorem StageC.of_cstepE {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe :
     (hS : StageR vis fe m' a') (hA : AbsOK m') (hs : ConRon.Bridge.CoreStep env fe a a') :
     StageC dn vis fe env m' a' :=
   ⟨hS, hs.ok,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, hA.coreMemos,
       fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     hA.wk.2.2.2.2⟩
 

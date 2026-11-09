@@ -263,7 +263,7 @@ theorem DcMem.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : DcM
       ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
       ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩
       ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
-      ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩,
+      ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩ (nA _ (by decide)) (nC _ (by decide)),
     hst.frame hf (fun b hb => ?_) (fun x hx => ?_),
     CrOK.frame hcr hf (nA _ (by decide)) (nC _ (by decide)),
     ⟨mpa, memoRG_frame ⟨ABMEMO, 48⟩ ⟨by decide, by decide⟩ lfKey decE A C (nA _ (by decide))

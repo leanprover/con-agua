@@ -149,7 +149,7 @@ theorem CoreS.set_wc {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
       (hS.den.frameE (hf.arr EREC (by decide) (by decide))).caches rfl rfl rfl,
-      hS.mode.frame hf (by simp) (by simp)⟩,
+      hS.mode.frame hf (by simp) (by simp), hS.iwF hf⟩,
     StackKept.of_frame hf⟩
 
 /-- `whnfCoreCheapC` gains an entry. -/
@@ -200,7 +200,7 @@ theorem CoreS.set_wk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
       (hS.den.frameE (hf.arr EREC (by decide) (by decide))).caches rfl rfl rfl,
-      hS.mode.frame hf (by simp) (by simp)⟩,
+      hS.mode.frame hf (by simp) (by simp), hS.iwF hf⟩,
     StackKept.of_frame hf⟩
 
 /-! ## The twin's slot -/

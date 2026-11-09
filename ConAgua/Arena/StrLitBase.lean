@@ -95,7 +95,8 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
           fun h => absurd (hC _ h) (by decide)⟩
         ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
-          fun h => absurd (hC _ h) (by decide)⟩,
+          fun h => absurd (hC _ h) (by decide)⟩
+        (nA _ (by decide)) (fun h => by have := hC _ h; simp at this),
       hf.size BSTK ▸ hS.bstk,
       hS.den.mono ⟨by rw [hL.ls]; exact LExt.refl _, fun i us h => by
           unfold denoteLs at h ⊢
@@ -106,7 +107,10 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
         (by rw [hL.pins]) (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
         (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
         (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv))
-        (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls])) hlsa, hmode⟩,
+        (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls])) hlsa, hmode,
+      hS.iwF hf (nA _ (by decide)) (fun h => absurd (hA _ h) (by decide))
+        (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)
+        (fun h => by have := hC _ h; simp at this)⟩,
     StackKept.of_frameL hf ⟨nA SPN (by decide), nA BSTK (by decide), hP⟩
       ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hlc hP1 hPT⟩
   · rw [hL.caches]

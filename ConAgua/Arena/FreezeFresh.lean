@@ -270,15 +270,16 @@ theorem CoreMemos.fresh (h : CoreMemos (cutT m)) : CoreMemos (freshMem m) := by
   have hz : ∀ b, b ∈ freshZ → b ≠ CTL → ∀ x, rdW ((freshMem m).arr64 b) x = 0 :=
     fun b hb hc => fresh_zero m hb hc
   have hc := fresh_ctl m
-  obtain ⟨⟨_, h1⟩, ⟨_, h2⟩, ⟨_, h3⟩, ⟨_, h4⟩, ⟨_, h5⟩, ⟨_, h6⟩, ⟨_, h7⟩, ⟨_, h8⟩⟩ := h
+  obtain ⟨⟨_, h1⟩, ⟨_, h2⟩, ⟨⟨_, h3⟩, ⟨_, h4⟩, ⟨_, h5⟩, ⟨_, h6⟩, ⟨_, h7⟩, ⟨_, h8⟩⟩, ⟨_, h9⟩⟩ := h
   exact ⟨⟨_, memoRG_zeros _ _ h1 hc (hz _ (by decide) (by decide))⟩,
     ⟨_, memoRG_zeros _ _ h2 hc (hz _ (by decide) (by decide))⟩,
-    ⟨_, memoRG_zeros _ _ h3 hc (hz _ (by decide) (by decide))⟩,
+    ⟨⟨_, memoRG_zeros _ _ h3 hc (hz _ (by decide) (by decide))⟩,
     ⟨_, memoRG_zeros _ _ h4 hc (hz _ (by decide) (by decide))⟩,
     ⟨_, memoRG_zeros _ _ h5 hc (hz _ (by decide) (by decide))⟩,
     ⟨_, memoRV_zeros _ _ _ h6 hc (hz _ (by decide) (by decide))⟩,
     ⟨_, memoRV_zeros _ _ _ h7 hc (hz _ (by decide) (by decide))⟩,
-    ⟨_, memoRV_zeros _ _ _ h8 hc (hz _ (by decide) (by decide))⟩⟩
+    ⟨_, memoRV_zeros _ _ _ h8 hc (hz _ (by decide) (by decide))⟩⟩,
+    ⟨_, memoRV_zeros _ _ _ h9 hc (hz _ (by decide) (by decide))⟩⟩
 
 theorem CrOK.fresh (h : L.Stubs.CrOK (cutT m)) : L.Stubs.CrOK (freshMem m) := by
   obtain ⟨_, h⟩ := h
@@ -361,7 +362,7 @@ theorem JobM.cut {t : Mem} (h : JobM pins dn ds I t a) : JobM pins dn ds I (ctlC
     ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn, by rw [hf.size]; exact h.mem.bstk,
       h.mem.memos.frame hf ⟨by simp, by simp⟩ ⟨hn 50 (by decide), hn 48 (by decide)⟩ (by simp)
         ⟨hn 152 (by decide), hn 154 (by decide), hn 156 (by decide)⟩ (by simp)
-        ⟨hn 54 (by decide), hn 56 (by decide), hn 58 (by decide)⟩, h.mem.dnN⟩,
+        ⟨hn 54 (by decide), hn 56 (by decide), hn 58 (by decide)⟩ (by simp) (hn 214 (by decide)), h.mem.dnN⟩,
     by rw [pinW_frame hf (by simp)]; exact h.flag,
     h.memos.frame hf (fun b hb => (hA b hb).elim) (fun x hx => by have := hC x hx; omega), h.fsize⟩
 

@@ -140,7 +140,7 @@ theorem CoreS.readLC' {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState
     CoreS dn m { a with caches := { a.caches with readLC := X } } vis fe M eb :=
   ⟨⟨ArenaR.caches_irrel _ hS.arena.base, DerR.of_store _ _ _ hS.arena.der rfl⟩, hS.core.readLC X,
     hS.pins, hS.env, hX, fun h l e => hS.readLs h l e, hS.nwf, hS.erec, hS.spn, hS.memos, hS.bstk,
-    hS.den.caches rfl rfl rfl, hS.mode⟩
+    hS.den.caches rfl rfl rfl, hS.mode, hS.iw⟩
 
 /-- **`former_z` refines `formerZ`** (the twin's state kept): the datum `(kd, o, c)` with the names
 on the heap above the top at entry. -/

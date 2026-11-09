@@ -225,10 +225,10 @@ def plFns : List FnName := [
 /-- The arrays `plFns` never writes: the record pool's tiers, the core memos `TwinOK` reads,
 the pins. -/
 def plBad : List TieredArray :=
-  [EREC, tier1 EREC, ILMEMO, ABMEMO, WSM, FLM, LSM, LPMEMO, LPLMEMO, LPLSMEMO, PINS]
+  [EREC, tier1 EREC, ILMEMO, ABMEMO, WSM, FLM, LSM, LPMEMO, LPLMEMO, LPLSMEMO, PINS, L.Ind.HBM]
 
 /-- The `CTL` words `plFns` never writes: the pool's tops, the core memos' control words. -/
-def plBadC : List Word := [129, 130, 48, 50, 54, 56, 58, 152, 154, 156]
+def plBadC : List Word := [129, 130, 48, 50, 54, 56, 58, 152, 154, 156, 214]
 
 def plA : List TieredArray := checkerWordArrays.filter fun b => b ∉ plBad
 def plC : List Word := ((List.range 256).map Nat.toUInt64).filter fun x => x ∉ plBadC

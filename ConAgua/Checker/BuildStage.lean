@@ -161,9 +161,9 @@ theorem since_indMemos (hctl : 220 ≤ (m.arr64 CTL).size) : IndMemos m :=
 theorem since_coreMemos (hctl : 220 ≤ (m.arr64 CTL).size) : CoreMemos m :=
   CoreMemos.zero (by omega)
     (fun b hb j => since_rdW h (t := (b : TieredArray)) (by
-      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide) j)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide) j)
     (fun x hx => since_ctl h (by
-      rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide))
+      rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide))
 
 end zero
 

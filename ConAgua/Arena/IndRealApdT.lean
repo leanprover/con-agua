@@ -95,9 +95,9 @@ theorem apdMR_clear {m : Mem} (h : WalkMemos m) (h0 : rdW (m.arr64 CTL) apdSch.c
 theorem _root_.L.Arena.TwinOK.apd {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {m m' : Mem}
     {a : AState} (h : TwinOK dn m a fe) (hf : ApdFr m m') {mp : Std.HashMap EIdx Bool}
     (hM : apdMR m' mp) : TwinOK dn m' a fe := by
-  obtain ⟨hIl, hAb, -, ⟨mf, hfl⟩, ⟨ml, hlsb⟩, hLP⟩ := h.memos
+  obtain ⟨hIl, hAb, ⟨-, ⟨mf, hfl⟩, ⟨ml, hlsb⟩, hLP⟩, -⟩ := h.memos
   refine ⟨h.readL, h.readLs, h.nwf, by rw [hf.size]; exact h.erec, by rw [hf.size]; exact h.spn,
-    ⟨?_, ?_, apdMR_ws hM, ⟨mf, ?_⟩, ⟨ml, ?_⟩, hLP.frame hf (by decide) (by decide)⟩,
+    ⟨?_, ?_, ⟨apdMR_ws hM, ⟨mf, ?_⟩, ⟨ml, ?_⟩, hLP.frame hf (by decide) (by decide)⟩, h.memos.hbF hf⟩,
     by rw [hf.size]; exact h.bstk, h.den.mem m'⟩
   · obtain ⟨mp, hm⟩ := hIl
     exact ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey _ _ _ (by decide) (by decide) m m' hf mp hm⟩

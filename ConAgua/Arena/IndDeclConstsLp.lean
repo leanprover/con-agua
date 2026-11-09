@@ -593,7 +593,7 @@ theorem instLPCore_keepCM {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word
       (by decide) (by decide) m m' hf mp hm⟩,
     let ⟨mp, hm⟩ := hM.ab; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE ilpfA ilpfC
       (by decide) (by decide) m m' hf mp hm⟩,
-    instLPCore_keepW hp h hM.walk⟩
+    instLPCore_keepW hp h hM.walk, hM.hbF hf⟩
 
 /-- **`inst_lp_core` keeps `WkOK`**, at any memory and arguments. -/
 theorem instLPCore_keepWk {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word}

@@ -689,6 +689,12 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
     rw [show (0 : Nat) = (0 : Word).toNat from rfl, hrun4]
     rfl
 
+  -- the overflow guard of `proj_guard_rows` (`np + i + 1` does not wrap: `hB`)
+  intro hle
+  have := UInt64.le_iff_toNat_le.mp hle
+  rw [hnp] at hB
+  rw [UInt64.toNat_add, UInt64.toNat_add] at this; simp at this; omega
+
 end
 
 end L.Ind

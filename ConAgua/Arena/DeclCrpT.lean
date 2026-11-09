@@ -423,12 +423,12 @@ theorem TwinOK.leafI {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (hf : MemFrame leafA leafC m m') : TwinOK dn m' a' fe :=
   h.of_istep hs (by rw [hf.size]; exact h.erec) (by rw [hf.size]; exact h.spn)
     (by rw [hf.size]; exact h.bstk)
-    (h.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp)
+    (h.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb)
 
 /-- `TwinOK` across a leaf that leaves the twin alone. -/
 theorem TwinOK.leafSame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {fe : IFEnv}
     (h : TwinOK dn m a fe) (hf : MemFrame leafA leafC m m') : TwinOK dn m' a fe :=
-  h.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp
+  h.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb
 
 theorem pinW_leaf {m m' : Mem} (hf : MemFrame leafA leafC m m') : pinW m' 0 = pinW m 0 := by
   have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS leafA_pins (by decide)

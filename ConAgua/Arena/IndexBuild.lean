@@ -318,11 +318,12 @@ theorem BKeep.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf :
       (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
     (hC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (50 : Word) ∉ C ∧ (48 : Word) ∉ C ∧
       (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C ∧ (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧
-      (58 : Word) ∉ C) : BKeep m m' := by
+      (58 : Word) ∉ C) (hHB : (L.Ind.HBM : TieredArray) ∉ A := by decide)
+    (hHBc : (214 : Word) ∉ C := by first | decide | simp) : BKeep m m' := by
   obtain ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9⟩ := hA
   obtain ⟨c1, c2, c3, c4, c5, c6, c7, c8, c9, c10⟩ := hC
   exact ⟨RecGrow.of_frame hf a1 c1, hf.ctl 130 c2, fun h =>
-    CoreMemos.frame hf ⟨a2, a3⟩ ⟨c3, c4⟩ h ⟨a4, a5, a6⟩ ⟨c5, c6, c7⟩ ⟨a7, a8, a9⟩ ⟨c8, c9, c10⟩⟩
+    CoreMemos.frame hf ⟨a2, a3⟩ ⟨c3, c4⟩ h ⟨a4, a5, a6⟩ ⟨c5, c6, c7⟩ ⟨a7, a8, a9⟩ ⟨c8, c9, c10⟩ hHB hHBc⟩
 
 /-- `decl_constants`/`decl_tables`' post keeps them. -/
 theorem BKeep.of_idx {m m' : Mem} (hg : IWGrow m m') (hK : L.Ind.IdxKeep m m') : BKeep m m' :=
