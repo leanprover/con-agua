@@ -3,6 +3,8 @@ module
 public import ConAgua.Checker.IndDeclConstsProg
 public import ConAgua.Arena.IndT.BlockCS
 public import ConAgua.Arena.IndT.BlockWM
+public import ConAgua.Arena.IndT.BlockPD
+public import ConAgua.Arena.IndT.BlockNames
 meta import ConAgua.Checker.IndDeclConstsProg
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
@@ -177,8 +179,7 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
   have hF : FlushProg (Prog.subPB bs checkerProg) := by prog_bundle []
   have hnv : VerdictCtxU (Prog.subPB bs checkerProg) → closedNV (Prog.subPB bs checkerProg) nvFns = true :=
     fun hG => hG.nv
-  -- ronsync2 p3e: names, reduce_members, block_is_rec, the pass, the tail,
-  -- ifenv_push_delta: their contracts still to prove
+  -- ronsync2 p3e: reduce_members, the pass, the tail: their contracts still to prove
   have hfl : FlushRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     flushRefS_of (dn := dn) hF hnv
   have hbr : BrRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) :=
@@ -188,6 +189,14 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
   have hwl : BswmLook (Prog.subPB bs checkerProg) := by prog_bundle []
   have hwm : BswmRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     bswmRefS_of hwl hnv
-  exact ⟨look, sorry, sorry, hfl, sorry, hwm, sorry, sorry, hbr, hbt, sorry⟩
+  have hpdP : PdProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hpd : PdRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) :=
+    pdRefS_of hpdP hnv
+  have hnP : NamesProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hnm : NamesRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    namesRefS_of hnP hnv
+  have hbir : BirRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    birRefS_of H.toTablesProg.toBlockProg H.leaf hnv
+  exact ⟨look, hnm, sorry, hfl, hbir, hwm, sorry, sorry, hbr, hbt, hpd⟩
 
 end L.Checker
