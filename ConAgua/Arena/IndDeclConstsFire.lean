@@ -65,7 +65,7 @@ l_model rf_spec (p : Prog) (hP : FireProg p)
 
 /-- How a rule fires, as `(kind, lvls.off, lvls.len, pins.off, pins.len)`. -/
 def decRF (m : Mem) (r : List Word) : IRecRuleFire → Prop
-  | .plain => r.headD 0 = 0
+  | .plain => r = [0, 0, 0, 0, 0]
   | .nested lv ps => r.headD 0 = 1 ∧ decRL (fun m => decHL m) 1 m r lv ∧ decRL (fun m => decHL m) 3 m r ps
   | .levels _ => False
 
