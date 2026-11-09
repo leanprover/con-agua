@@ -69,9 +69,117 @@ theorem cbag_ref (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0P
     RefE (VerdictCtx p) (cbagE p n m vis nP c0 s0 o l)
       (ConRon.Arena.checkBlockAgree V fe nP.toNat cv0 (decI s0) rest) a
       (fun v _ a' => AgreePost dn vis fe env m a v.2 a') := by
-  sorry
+  induction n with
+  | zero =>
+    intro m a o l rest cvsP _ _ _ _ _ _ _ _ _
+    rw [cbagE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  | succ n ih =>
+  intro m a o l rest cvsP hC hA hc0 hs0 hrest hc0P hs0P hcvs hws
+  have hS := hC.stage
+  by_cases hl : l = 0
+  · rw [cbagE.arm1 p n m vis nP c0 s0 o l hl]
+    have : rest = [] := by
+      have h := hrest.1; simp only [DecB, hl] at h
+      simpa [decPL] using h.symm
+    subst this
+    exact RefE.ret rfl ⟨hC, IWGrow.refl m, hA, ConRon.Bridge.CoreStep.refl hC.check⟩
+  obtain ⟨q, ⟨cvTa, sx⟩, rest', rfl, hw, hqb, hdx, hrest'⟩ := partsPSl_cons hrest hl
+  obtain ⟨xP, restP, rfl, hx, hrestP⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hcvs
+  obtain ⟨hxcv, hxs⟩ := ConRon.Bridge.Inductives.BI.dCvL_inv hx
+  dsimp only at hxcv hxs
+  have hwx : ConLeche.Expr.WScoped 0 xP.1.type := hws _ List.mem_cons_self
+  rw [cbagE.arm2 p n m vis nP c0 s0 o l hl]
+  rw [installAgree_cons]
+  obtain ⟨hty0, htye0⟩ := partsCVType hc0 (w := c0) rfl
+  have hd0 : denoteE a.store (decI (erRd m (c0 + 3))) = some cv0P.type := by
+    rw [htye0]; exact ConRon.Bridge.denoteCV_type hc0P
+  -- member 0's telescope
+  refine RefE.onlySim (fun _ => cbagE.k_open_pis_at_fvars_f.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  by_cases hr0 : r1.headD 0 = 0
+  · rw [cbagE.k_open_pis_at_fvars_f.abort1 p n vis nP c0 s0 o l r1 m1 hr0]
+    exact RefE.of_cls0 rfl
+  rw [cbagE.k_open_pis_at_fvars_f.arm1 p n vis nP c0 s0 o l r1 m1 hr0]
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hd1, hA1⟩ := opfF_okRA hty0 (callW_opfF hOpf h1) hS hA
+  obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC.check.state hd0 hrun1
+  have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hS1 hA1 p1
+  rw [← htye0]
+  cases x1 with
+  | none => exact absurd hd1 hr0
+  | some fb =>
+  obtain ⟨fvs0, body0⟩ := fb
+  obtain ⟨xs0, b0, hq0, hxs0, -⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho1
+  obtain ⟨h1', hfv, -⟩ := hd1
+  obtain ⟨hfd, hfb⟩ := hfv
+  have g1 : r1.getD 1 0 = r1.tail.headD 0 := by rcases r1 with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
+  have g2 : r1.getD (1 + 1) 0 = r1.tail.tail.headD 0 := by
+    rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
+  rw [g1, g2] at hfd hfb
+  -- the twin's prefix: member 0's telescope opened
+  have hpre : ∀ {β : Type} (k : List EIdx × EIdx → AM β),
+      (openPisAtFvarsF nP.toNat (decI (erRd m (c0 + 3))) 0 >>= fun x =>
+        unwrapOr x (.internal "block: type former telescope") >>= k).run a = (k (fvs0, body0)).run a1 := by
+    intro β k
+    simp only [StateT.run_bind]
+    rw [show (0 : Nat) = UInt64.toNat 0 from rfl, hrun1]
+    rfl
+  refine RefE.of_run_eq (hpre _) ?_
+  -- the member's record words, read in `m1`
+  have hd1x : decTele (truncM m1) q = some (cvTa, sx) := hdx.grow (decTele_mono _) hg1
+  simp only [decTele, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hd1x
+  obtain ⟨c, hc, cvv, hcv, sv, hsv, rfl, rfl⟩ := hd1x
+  have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
+  have hol : o.toNat < iwTop m := by
+    have := hrest.2
+    have : 0 < l.toNat := by
+      rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
+      · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
+      · exact h0
+    omega
+  have hw1 : rdW (m1.arr64 IW) o = UInt64.ofNat q := by
+    rw [← hw]; simp only [rdW]; rw [hg1.iwGet _ hol]
+  rw [hw1]
+  obtain ⟨hwc, hcb, -⟩ := partsIwRd hc (w := UInt64.ofNat q) hq'
+  obtain ⟨-, hsv'⟩ := rec2IwH_trunc hsv
+  obtain ⟨v, hv, hv32, hve⟩ := iwH_rdW_at (w := UInt64.ofNat q) (k := 1) (by rw [hq']; exact hsv')
+    hS1.iw.iwSize
+  rw [show (UInt64.ofNat 1 : Word) = 1 from rfl] at hv
+  rw [hwc, hv]
+  have hc' : (UInt64.ofNat c : Word).toNat = c := UInt64.toNat_ofNat_of_lt' hcb
+  have hty := partsCVType hcv (w := UInt64.ofNat c) hc'
+  rw [← hve]
+  rw [← hve] at hxs
+  have hxcv1 := ConRon.Bridge.denoteCV_ext hxcv p1.ext
+  -- the member's agreements
+  have hr2 := cbao_ref hq henv hOpf hLC hP n (by omega) (m := m1) (a := a1) (nP := nP)
+    (fvs0O := r1.tail.headD 0) (fvs0L := r1.tail.tail.headD 0) (s0 := s0) (cvTa := UInt64.ofNat c) (s := v)
+    hC1 hA1 hty hfd hfb hv32 hs0 (ConRon.Bridge.denoteCV_type hxcv1) hwx hxs0
+    (ConRon.Bridge.Inductives.openers_typeD_WScoped hq0 h0)
+    (ConRon.Bridge.denoteL_ext hxs p1.ext) (ConRon.Bridge.denoteL_ext hs0P p1.ext)
+  rcases h2 : cbaoE p n m1 vis nP (r1.tail.headD 0) (r1.tail.tail.headD 0) s0 (UInt64.ofNat c) v
+    with e2 | ⟨r2, m2⟩
+  · rw [h2] at hr2
+    rw [cbagE.k_check_block_agree_one.none]
+    exact RefE.bind_left hr2
+  rw [h2] at hr2
+  obtain ⟨_, a2, hrun2, ⟨hC2, hg2, hA2, c2⟩⟩ := hr2
+  rw [cbagE.k_check_block_agree_one.arm1]
+  refine RefE.bind_right hrun2 ?_
+  have c02 := (p1.toCore hC.check).trans c2
+  have ih' := ih (by omega) m2 a2 (o + 1) (l - 1) rest' restP hC2 hA2
+    (hc0.grow (OMono.decCVp _) (hg1.trans hg2))
+    hs0 (hrest'.grow decTele_mono (hg1.trans hg2)) (ConRon.Bridge.denoteCV_ext hc0P c02.ext)
+    (ConRon.Bridge.denoteL_ext hs0P c02.ext)
+    (ConRon.Bridge.Inductives.BI.dCvL_ext.list c02.ext _ _ hrestP)
+    (fun y hy => hws y (List.mem_cons_of_mem _ hy))
+  rcases h3 : cbagE p n m2 vis nP c0 s0 (o + 1) (l - 1) with e3 | ⟨r3, m3⟩
+  · rw [h3] at ih'
+    rw [cbagE.k_check_block_agree.none]
+    exact ih'
+  rw [h3] at ih'
+  obtain ⟨_, a3, hrun3, ⟨hC3, hg3, hA3, c3⟩⟩ := ih'
+  rw [cbagE.k_check_block_agree.arm1]
+  exact RefE.ret hrun3 ⟨hC3, (hg1.trans hg2).trans hg3, hA3, c02.trans c3⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC in
 /-- **`check_block_agree` refines `checkBlockAgree`** under `StageC` (the knot's
 `is_def_eq_core`; the denotations as con-ron's `checkBlockAgree_specF` asks): member 0's constant
@@ -98,7 +206,6 @@ theorem checkBlockAgree_refinesC (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62
     fun _ _ ⟨hl, _, _, hrun, hR⟩ =>
       let ⟨hok, hst, _⟩ := AM.of_run_ok _ _ _ _ hrun
       ⟨hl, hok, hst ▸ hR.stage, hR.grow, hR.abs⟩
--/
 
 end sims
 

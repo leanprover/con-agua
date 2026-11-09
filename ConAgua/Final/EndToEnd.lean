@@ -80,7 +80,7 @@ theorem checkerFile_accepts_regs [Host] (V : Type w) [ConLeche.SetTheory V]
       dm (label abiStartL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, hr, h, h2⟩ =>
       ⟨hpc, hr, fun h0 h1 => drvAccepts_twin V b pb h64 (h h0 h1),
-        fun hd hk => drvErr_twin b pb h64 _ seqVerdicts_proved (h2 hd) hk⟩)
+        fun hd hk => drvErr_twin b pb h64 _ (seqVerdicts_proved V) (h2 hd) hk⟩)
     (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
       HDRF CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
       (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
@@ -169,11 +169,11 @@ theorem checkerFile_threads_regs [Host] (V : Type w) [ConLeche.SetTheory V] (k0 
 thread's earlier calls accepted; the hypotheses are listed in `Final/ThreadsVerdict.lean`) whose
 class `k &&& 3` is `1` (reject) or `2` (decline), the twin's pooled pipeline fails on `[b]` with an
 error of that class. -/
-theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem checkerFile_threads_verdict [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
     (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) : TwinVerdictPooled [b] (k &&& 3) :=
-  checkerFile_threads_verdict_of k0 hcode b pb h64 dm₀ ra₀ st₀ k threadVerdicts_proved hF hk
+  checkerFile_threads_verdict_of V k0 hcode b pb h64 dm₀ ra₀ st₀ k threadVerdicts_proved hF hk
 
 /-- **An accepting threaded run has a model** (relative to set theory, as
 `checkerFile_model_exists`). -/
