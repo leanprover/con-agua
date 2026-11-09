@@ -36,20 +36,12 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 structure NatCvProg (p : Prog) : Prop extends NatGateProg p where
   lCanon : CanonProg p
 
-theorem IWGrow.erec_get {m m' : Mem} (h : IWGrow m m') {i : Nat} {v : Word}
-    (hv : erecP m i = some v) : (m'.arr64 EREC)[i]? = some v := by
-  sorry
-
-theorem rdW_erec_of {m : Mem} {q : Word} {w : Word} (_hsz : (m.arr64 EREC).size < 2 ^ 64)
-    (h : erecP m (q.toNat) = some w) : rdW (m.arr64 EREC) q = w := by
-  sorry
-
 theorem ciToCv_ref (hN : NatCvProg p) (q : Word) (ci : IConstantInfo) :
     CallRef p "ci_to_cv" [q]
       (fun m a => StageR vis fe m a ∧ decCI (erecP m) q.toNat = some ci)
       (pure ci.toConstantVal)
-      (KeepPost vis fe (fun m r (cv : IConstantVal) => decCV (erecP m) (r.headD 0).toNat = some cv)) := by
-  sorry
+      (KeepPost vis fe (fun m r (cv : IConstantVal) => decCV (erecP m) (r.headD 0).toNat = some cv)) :=
+  CallRef.of_refAM (ciToCv_refines p hN.lCanon vis fe q ci)
 
 end cvref
 

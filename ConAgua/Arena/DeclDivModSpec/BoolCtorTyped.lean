@@ -5,6 +5,7 @@ public import ConAgua.Arena.DeclDivModSpec.Cons
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclNatGate
 import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
@@ -55,7 +56,48 @@ theorem DmProg2.cvProg (hD : DmProg2 p) : NatCvProg p :=
 theorem bct_ref (hD : DmProg6 p) (nm : Word) :
     CallRef p "bool_ctor_typed" [vis, nm] (fun m a => StageR vis fe m a ∧ H nm)
       (boolCtorTyped fe (decI nm)) (KeepPost vis fe decW0B) := by
-  sorry
+  refine CallRef.of_succ fun k m a r m' ⟨hS, hn⟩ hcall => ?_
+  have hw := callW_model (M := fun mq => dmBctW p (k + 1) mq vis nm)
+    (bct_specW p hD.lBoolCtorTyped (k + 1) · vis nm) hcall
+  rw [dmBctW.arm1] at hw
+  replace hw := ntBW_some hw; obtain ⟨rf, m1, h1, hw⟩ := hw
+  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.check.env h1
+  subst hm1
+  cases hf : fe.find? (decI nm) with
+  | none =>
+    rw [hf] at hfd
+    have hz : rf.headD 0 = 0 := hfd
+    rw [ite_eq_left hz] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨false, a, by simp only [boolCtorTyped, hf]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
+  | some ci =>
+    rw [hf] at hfd
+    obtain ⟨hr1, hci⟩ := hfd
+    rw [ite_eq_right (by rw [hr1]; decide)] at hw
+    obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hcv2⟩, hw⟩ :=
+      (ciToCv_ref hD.toDmProg5.cvProg (rf.tail.headD 0) ci).bind_ ⟨hS, hci⟩ hw
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun2)
+    obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
+      (pinSlot_ref p hD.toDmProg5.lPinAt 29 pinBool rfl).bind_ hS2 hw
+    obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
+      (constE_ref hD.toDmProg5.toMasterProg (r3.headD 0)).bind_ ⟨hS3, hl3⟩ hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    obtain ⟨wt, -, hrd, hwt, hty, hst⟩ := cvWordsAt hcv2
+    have hrd4 := (hst m4 (hg3.trans hg4)).2
+    refine ⟨decide (wt = r4.headD 0), a4, ?_, hS4, hg2.trans (hg3.trans hg4), ?_⟩
+    · have hb := decI_beq (k := IdxKind.expr) _ _ hwt hl4
+      simp only [boolCtorTyped, hf, StateT.run_bind, boolName, hrun3]
+      have hrun4' : (constE (decI (r3.headD 0))).run a3 = .ok (decI (r4.headD 0), a4) := hrun4
+      simp only [hrun4', exc_ok_bind', hty]
+      simp only [hb]
+      try rfl
+    · simp only [erRd_foldN, hrd4]
+      unfold decW0B
+      simp only [List.headD_cons]
+      generalize r4.headD 0 = z
+      by_cases e : wt = z <;> simp [e]
 
 @[refines ConRon.Arena.boolCtorTyped]
 theorem boolCtorTyped_refines (hD : DmProg6 p) (nm : Word) :
@@ -84,7 +126,41 @@ theorem internSort_ref (hM : MasterProg p) (u : Word) (hu : H u) :
 theorem tps_ref (hD : DmProg6 p) (nm : Word) :
     CallRef p "type_pin_stored" [vis, nm] (fun m a => StageR vis fe m a ∧ H nm)
       (typePinStored fe (decI nm)) (KeepPost vis fe decW0E) := by
-  sorry
+  refine CallRef.of_succ fun k m a r m' ⟨hS, hn⟩ hcall => ?_
+  have hw := callW_model (M := fun mq => dmTpsW p (k + 1) mq vis nm)
+    (tps_specW p hD.lTypePinStored (k + 1) · vis nm) hcall
+  rw [dmTpsW.arm1] at hw
+  replace hw := ntBW_some hw; obtain ⟨rf, m1, h1, hw⟩ := hw
+  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.check.env h1
+  subst hm1
+  cases hf : fe.find? (decI nm) with
+  | none =>
+    rw [hf] at hfd
+    have hz : rf.headD 0 = 0 := hfd
+    rw [ite_eq_left hz] at hw
+    obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
+      (pinWord53_ref (vis := vis) (fe := fe) p hD.toDmProg5.toMasterProg.lPinWord).bind_ hS hw
+    obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
+      (internSort_ref hD.toDmProg5.toMasterProg (r2.headD 0) hl2).bind_ hS2 hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    refine ⟨_, a3, ?_, hS3, hg2.trans hg3, hl3, rfl⟩
+    simp only [typePinStored, hf, zeroLevel, StateT.run_bind, hrun2, exc_ok_bind']
+    exact hrun3
+  | some ci =>
+    rw [hf] at hfd
+    obtain ⟨hr1, hci⟩ := hfd
+    rw [ite_eq_right (by rw [hr1]; decide)] at hw
+    obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hcv2⟩, hw⟩ :=
+      (ciToCv_ref hD.toDmProg5.cvProg (rf.tail.headD 0) ci).bind_ ⟨hS, hci⟩ hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    obtain ⟨wt, -, hrd, hwt, hty, -⟩ := cvWordsAt hcv2
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun2)
+    refine ⟨ci.toConstantVal.type, a, ?_, hS2, hg2, ?_⟩
+    · simp only [typePinStored, hf]; rfl
+    · simp only [List.headD_cons, erRd_foldN, hrd, decW0E]
+      exact ⟨hwt, hty.symm⟩
 
 @[refines ConRon.Arena.typePinStored]
 theorem typePinStored_refines (hD : DmProg6 p) (nm : Word) :

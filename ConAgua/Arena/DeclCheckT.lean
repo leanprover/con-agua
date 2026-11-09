@@ -223,6 +223,41 @@ theorem checkDeclOpaque_loopT {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg
   rw [hst, hres]
   exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
 
+/-- **`check_decl_defn` under `StageT`** (`cdf_ref`'s ok half), as the theorem arm; the variant
+records from the job relation (`LoopR.pinsets`). -/
+@[refines_part ConRon.Arena.checkDecl "the definition arm, under StageT"]
+theorem checkDeclDefn_loopT {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p)
+    (hcl : LeafClosed p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p)
+    (hC : CcvSims p dn) (hin : StepIn p ["check_decl_defn"])
+    (hIc : IndMemoClosed p) (hIl : IndLeaves p) (cv : IConstantVal) (v : EIdx)
+    (hh : ConLeche.ReducibilityHint) :
+    ArmSpecT pins dn ds p "check_decl_defn" (.defnDecl cv v hh) := by
+  intro n hn s₀ a₀ vis fe i hi hd _ hR hS hF hden hPD hIM
+  have hd' : ds[i.toNat] = .defnDecl cv v hh := by
+    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
+  obtain ⟨y, hy⟩ := hden
+  obtain ⟨c, x, hc, hx⟩ : ∃ c x, Frontend.denoteCV a₀.store cv = some c ∧
+      denoteE a₀.store v = some x := by
+    simp only [Frontend.denoteDecl] at hy
+    revert hy
+    cases Frontend.denoteCV a₀.store cv <;> cases denoteE a₀.store v <;> simp
+  obtain ⟨env, hF⟩ := hF
+  obtain ⟨pinsP, hPD⟩ := hPD
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, fe', a', hrun', hP⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkDeclDefn_specE p hX n s₀ i vis)
+      (cdf_ref hX hq hcl hap hkp hcrf hC hn hS hR.pinsets hR.decls hi hd' hF hc hx hPD hIM.cr))
+  obtain ⟨-, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (callW_spec p n "check_decl_defn" [i, vis] s₀)
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (hin.memFrame n (f := "check_decl_defn") (by simp) [i, vis] s₀)
+  subst hs
+  obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  refine ⟨hloc, hok', ?_, hP.memos, callW_indMemos hIc hIl (im_mem _ rfl) hW hIM, hP.grow⟩
+  rw [hst, hres]
+  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+
 end armsT
 
 /-! ## The inductive arm's contracts -/
