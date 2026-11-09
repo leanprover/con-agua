@@ -34,8 +34,8 @@ open L.Arena L.Ind
 theorem rdU_some {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i : Word}
     {k : Word → Mem → Option (List Word × Mem)} {v : List Word × Mem} (h : rdU p n m i k = some v) :
     k (u64W rom i) m = some v := by
-  change ntBW (callW p n "rom_u64" [i] m) (fun r m' => k (r.headD 0) m') = some v at h
-  cases hc : callW p n "rom_u64" [i] m with
+  change ntBW (callW p n "rom_u64_c" [i] m) (fun r m' => k (r.headD 0) m') = some v at h
+  cases hc : callW p n "rom_u64_c" [i] m with
   | none => rw [hc] at h; simp at h
   | some t =>
     obtain ⟨r, m'⟩ := t

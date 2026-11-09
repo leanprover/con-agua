@@ -41,7 +41,7 @@ variable (p : Prog) (n : Nat)
 /-- A `rom_u64` read through `callW`. -/
 abbrev rdU (m : Mem) (i : Word) (k : Word → Mem → Option (List Word × Mem)) :
     Option (List Word × Mem) :=
-  ntBW (callW p n "rom_u64" [i] m) fun r m' => k (r.headD 0) m'
+  ntBW (callW p n "rom_u64_c" [i] m) fun r m' => k (r.headD 0) m'
 
 /-- `rci_slot(s)`. -/
 def slotW (m : Mem) (s : Word) : Option (List Word × Mem) :=
@@ -54,7 +54,7 @@ def freshW (m : Mem) : Option (List Word × Mem) :=
 /-- `rci_names_to(q, o, k)`. -/
 def namesToW (m : Mem) (q o k : Word) : Option (List Word × Mem) :=
   if k = 0 then some ([q], m) else
-  ntBW (callW p n "rom_name" [q] m) fun r1 m1 =>
+  ntBW (callW p n "rom_name_c" [q] m) fun r1 m1 =>
   ntBW (callW p n "rci_names_to" [r1.tail.headD 0, o + 1, k - 1] (m1.set64 EREC o (r1.headD 0)))
     fun r2 m2 => some ([r2.headD 0], m2)
 
@@ -68,9 +68,9 @@ def nameSlW (m : Mem) (q d : Word) : Option (List Word × Mem) :=
 
 /-- `rci_cv(q, p)`. -/
 def cvW (m : Mem) (q pp : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "rom_name" [q] m) fun r1 m1 =>
+  ntBW (callW p n "rom_name_c" [q] m) fun r1 m1 =>
   ntBW (callW p n "rci_name_sl" [r1.tail.headD 0, pp + 1] (m1.set64 EREC pp (r1.headD 0))) fun r2 m2 =>
-  ntBW (callW p n "rom_expr" [r2.headD 0] m2) fun r3 m3 =>
+  ntBW (callW p n "rom_expr_c" [r2.headD 0] m2) fun r3 m3 =>
   some ([r3.tail.headD 0], m3.set64 EREC (pp + 3) (r3.headD 0))
 
 /-- `rci_caps(q, c)`: the eight numbers. -/
@@ -87,7 +87,7 @@ def capsW (m : Mem) (q c : Word) : Option (List Word × Mem) :=
 where
   /-- The names. -/
   capsTailW (p : Prog) (n : Nat) (m : Mem) (q c : Word) : Option (List Word × Mem) :=
-    ntBW (callW p n "rom_name" [q + 64] m) fun r1 m1 =>
+    ntBW (callW p n "rom_name_c" [q + 64] m) fun r1 m1 =>
     ntBW (callW p n "rci_name_sl" [r1.tail.headD 0, c + 10] (m1.set64 EREC (c + 1) (r1.headD 0)))
       fun r2 m2 =>
     ntBW (callW p n "rci_name_sl" [r2.headD 0, c + 13] m2) fun r3 m3 =>
@@ -102,13 +102,13 @@ def ruleNestW (m : Mem) (q r : Word) : Option (List Word × Mem) :=
     ((m1.set64 EREC (r + 4) (r1.headD 0)).set64 EREC (r + 5) l1)) fun r2 m2 =>
   rdU p n m2 (r2.headD 0) fun l2 m2' =>
   ntBW (callW p n "erec_alloc" [l2] m2') fun r3 m3 =>
-  ntBW (callW p n "rom_exprs_to" [r2.headD 0 + 8, r3.headD 0, l2]
+  ntBW (callW p n "rom_exprs_to_c" [r2.headD 0 + 8, r3.headD 0, l2]
     ((m3.set64 EREC (r + 6) (r3.headD 0)).set64 EREC (r + 7) l2)) fun r4 m4 =>
   some ([r4.headD 0], m4)
 
 /-- `rci_rule(q, r)`. -/
 def ruleW (m : Mem) (q r : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "rom_name" [q] m) fun r1 m1 =>
+  ntBW (callW p n "rom_name_c" [q] m) fun r1 m1 =>
   rdU p n (m1.set64 EREC r (r1.headD 0)) (r1.tail.headD 0) fun x1 m2 =>
   rdU p n (m2.set64 EREC (r + 1) x1) (r1.tail.headD 0 + 8) fun x2 m3 =>
   rdU p n (m3.set64 EREC (r + 2) x2) (r1.tail.headD 0 + 16) fun x3 m4 =>
@@ -120,7 +120,7 @@ where
   /-- The fire's slices (nested), then the right-hand side. -/
   ruleTailW (p : Prog) (n : Nat) (m : Mem) (q r f : Word) : Option (List Word × Mem) :=
     ntBW (if f = 1 then ruleNestW p n m q r else some ([q], m)) fun r2 m2 =>
-    ntBW (callW p n "rom_expr" [r2.headD 0] m2) fun r3 m3 =>
+    ntBW (callW p n "rom_expr_c" [r2.headD 0] m2) fun r3 m3 =>
     some ([r3.tail.headD 0], m3.set64 EREC (r + 8) (r3.headD 0))
 
 /-- `rci_rules_to(q, o, k)`. -/
@@ -137,7 +137,7 @@ def ciSize (k : Word) : Option Word :=
 
 /-- The definition's parts. -/
 def ciDefnW (m : Mem) (pp q : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "rom_expr" [q] m) fun r1 m1 =>
+  ntBW (callW p n "rom_expr_c" [q] m) fun r1 m1 =>
   rdU p n (m1.set64 EREC (pp + 5) (r1.headD 0)) (r1.tail.headD 0) fun x1 m2 =>
   rdU p n (m2.set64 EREC (pp + 6) x1) (r1.tail.headD 0 + 8) fun x2 m3 =>
   some ([r1.tail.headD 0 + 16], m3.set64 EREC (pp + 7) x2)
@@ -222,7 +222,7 @@ def exprPinW (m : Mem) (id : Word) : Option (List Word × Mem) :=
   if 2 ≤ id then none else
   ntBW (callW p n "rci_slot" [28 + id] m) fun r1 m1 =>
   ntBW (callW p n "rci_fresh" [] m1) fun _ m2 =>
-  ntBW (callW p n "rom_expr" [r1.headD 0] m2) fun r3 m3 => some ([r3.headD 0], m3)
+  ntBW (callW p n "rom_expr_c" [r1.headD 0] m2) fun r3 m3 => some ([r3.headD 0], m3)
 
 end models
 

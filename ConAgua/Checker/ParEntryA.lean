@@ -11,11 +11,11 @@ import all ConAgua.Checker.Entry
 # Entry 1 of the parallel mode: `check` with `MODE` `1` or `3` (lane parmode)
 
 docs/design/parmode.md, "Step 4" (a). `check` with the global `MODE = 1` runs `check_a(1)`, with
-`MODE = 3` `check_a(0)` (`Checker/Entry.lean`): the stages, `rom_fill`, the stream index
+`MODE = 3` `check_a(0)` (`Checker/Entry.lean`): the stages, the stream index
 `build_index(DECL[0])` and `par_compact(c)`, returning `2^63 + DECL[0]`.
 
 * `check_dispatchA`: `check` with `MODE = 1` (`3`) is `check_a(1)` (`check_a(0)`).
-* `checkA_of_stages`: `check_a(c)` composed from the eight stage specs, `rom_fill`'s, a spec of
+* `checkA_of_stages`: `check_a(c)` composed from the eight stage specs, a spec of
   the index build and `par_compact`'s run (`parCompact_spec`, `Arena/FreezeSpec.lean`): on a
   result other than `1` (a line that did not scan), the final memory is `parCompactMem m c` for a
   memory `m` after the index build (`F m`), and the result is `2^63 + DECL[0]`.
@@ -69,13 +69,13 @@ theorem parCompact_stage {p : Prog} (hpc : p.lookup "par_compact" = some parComp
     ⟨hl, by rw [hm]; exact (parCompactMem_out _ _).arr _ (by decide), fun hF => ⟨_, hF, hok, hm⟩⟩
 
 /-- **`check_a(c)` from its stages**: the eight stage specs (the twin's seven and the tables'
-presize), `rom_fill`'s, the stream index's spec from there (with its count `DECL[0]`, keeping
+presize), the stream index's spec from there (with its count `DECL[0]`, keeping
 `DECL`) and `par_compact`; on a result other than `1` (a line that did not scan), the final memory
 is the frozen buffer's after an index build that ended in `F`, and the result is `2^63 + DECL[0]`. -/
 theorem checkA_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
     (hpc : p.lookup "par_compact" = some parCompactL)
     (hfz : ∀ i < frozen.length, p.lookup (fzName i) = some (fzF i))
-    {Q0 Q1 Q2 Q2p Q3 Q4 Q5 Q6 Q7 Q8 : Mem → Prop} {F : Mem → Prop}
+    {Q0 Q1 Q2 Q2p Q3 Q4 Q5 Q6 Q7 : Mem → Prop} {F : Mem → Prop}
     (h1 : StageSpec p "cap_check" Q0 fun _ => Q1)
     (h2 : StageSpec p "pb_check" Q1 fun _ => Q2)
     (h2p : StageSpec p "presize_tables" Q2 fun _ => Q2p)
@@ -84,10 +84,9 @@ theorem checkA_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
     (h5 : StageSpec p "front_run" Q4 fun r m => r.headD 0 = 0 → Q5 m)
     (h6 : StageSpec p "prepare_prelude" Q5 fun _ => Q6)
     (h7 : StageSpec p "intern_all_pins" Q6 fun _ => Q7)
-    (h8 : StageSpec p "rom_fill" Q7 fun _ => Q8)
-    (h9 : ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
+    (h8 : ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
       ⦃fun s => s = s₀⦄ invoke p (exec p n) "build_index" [cnt]
-      ⦃fun _ s' => LocEq s' s₀ ∧ (Q8 s₀.mem →
+      ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 s₀.mem →
         (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
         F s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄)
     (c : Word) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) :
@@ -104,12 +103,12 @@ theorem checkA_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
     have hn' : n ≤ 2 ^ 62 := by omega
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       (h1 n hn' ·), (h2 n hn' ·), (h2p n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·),
-      (h7 n hn' ·), (h8 n hn' ·), (h9 n hn' · ·), (parCompact_stage hpc hfz · F n ·)]
+      (h7 n hn' ·), (h8 n hn' · ·), (parCompact_stage hpc hfz · F n ·)]
     all_goals (try simp only [Sig.retVal, Sig.retOr, St.setLoc_mem, List.headD_cons,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval, ite_true, ite_false, Nat.reduceEqDiff,
       UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
-    all_goals clear h1 h2 h2p h3 h4 h5 h6 h7 h8 h9 hfz hp hpc
-    -- gen/ematch raised: the flag `c` reaches `par_compact` through ten calls' `LocEq`s (depth)
+    all_goals clear h1 h2 h2p h3 h4 h5 h6 h7 h8 hfz hp hpc
+    -- gen/ematch raised: the flag `c` reaches `par_compact` through nine calls' `LocEq`s (depth)
     all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]
 
 end L.Checker

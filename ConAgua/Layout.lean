@@ -171,8 +171,6 @@ declare_arrays checkerArrays
     Arena.OIXA : word tiered := 140
   | /-- A job's own constant rows of `str` names. -/ Arena.OIXS : word tiered := 141
   | /-- A job's own constant rows of `num` names. -/ Arena.OIXN : word tiered := 142
-  | /-- The startup's cache of the ROM's structured constants (`Rom/CIRead.lean`, `rom_fill`). -/
-    Rom.ROMC : word := 149
   | /-- A job's own table rows of `anonymous` names, by the name's tier (`Env.lean`). -/
     Arena.OTXA : word tiered := 146
   | /-- A job's own table rows of `str` names. -/ Arena.OTXS : word tiered := 147

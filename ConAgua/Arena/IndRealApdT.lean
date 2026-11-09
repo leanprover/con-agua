@@ -98,9 +98,7 @@ theorem _root_.L.Arena.TwinOK.apd {dn : NIdx → Option ConLeche.Name} {fe : IFE
   obtain ⟨hIl, hAb, -, ⟨mf, hfl⟩, ⟨ml, hlsb⟩, hLP⟩ := h.memos
   refine ⟨h.readL, h.readLs, h.nwf, by rw [hf.size]; exact h.erec, by rw [hf.size]; exact h.spn,
     ⟨?_, ?_, apdMR_ws hM, ⟨mf, ?_⟩, ⟨ml, ?_⟩, hLP.frame hf (by decide) (by decide)⟩,
-    by rw [hf.size]; exact h.bstk, h.den.mem m',
-    h.rom.frame0 (hf.arr _ (by decide) (by decide)) (hf.arr _ (by decide) (by decide))
-      (hf.ctl _ (by decide))⟩
+    by rw [hf.size]; exact h.bstk, h.den.mem m'⟩
   · obtain ⟨mp, hm⟩ := hIl
     exact ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey _ _ _ (by decide) (by decide) m m' hf mp hm⟩
   · obtain ⟨mp, hm⟩ := hAb
