@@ -182,3 +182,6 @@ The final texts are given in the report when the theorems are proved.
   program's constant ROM data (`romDataLit`, which entry 2 has; it is the pin-data buffer's checked
   content) and intern at use like the twin, instead of a cache whose twin side would need an
   intern-idempotence development.
+* Also from stage 3: `check_b`'s first call (the worker's initialisation, the twin's
+  `AState.worker`) flushes the core caches: the index build fills them (`buildIndex` →
+  `blockShape?` → `lvlEq?`), and the twin's jobs start from the worker with empty caches.
