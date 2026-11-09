@@ -264,7 +264,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
       (fun _ => checkDeclDefnE.k_check_div_mod_pin.none ..)
       (cdmp_specE p hX.dm n _ (r0.headD 0) (r0.tail.headD 0) vis q wn) (fun hG => hG.nv)
       (fun hG => hG.core)
-      (cdmp_ref hX.dm hq hcl hkp hdn n hn' hwnl hC0 hok7.envWF
+      (cdmp_ref hX.dm hq hcl hkp hcrf hdn n hn' hwnl hC0 hok7.envWF
         (ArrExt.decCI (IWGrow.erecPExt hg70) hci7) hcin hok2 hnm7 hI0 hPD7 hCr0)
       fun r8 s8 fe8 a8 h8 _ hrun8 hQ8 => ?_
     rw [checkDeclDefnE.k_check_div_mod_pin.arm1]

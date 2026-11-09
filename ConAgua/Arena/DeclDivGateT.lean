@@ -140,7 +140,7 @@ and the stored value at the pushed view (`cdmpFe2_ref`), the pop (`pushPop_stage
 variant loop (`loop_ref`) at `vis` over the ROM's variant records (the `IW` slice `po`, `pl` of
 `rom_pin_sets()`, their twin denotations `PinsDenote`). -/
 theorem cdmp_ref (hD : CdmpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+    (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinSet} {vis pw n po pl : Word}
     {fe : IFEnv} {env env2 : ConLeche.Env} {nm : ConLeche.Name} {ci : IConstantInfo} (k : Nat)
     (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} (hn : H n) (hC : StageC dn vis fe env m a)
@@ -197,7 +197,7 @@ theorem cdmp_ref (hD : CdmpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   -- the variant loop
   rw [← hQ3.dec]
   refine RefE.bindE (fun _ => rfl) id
-    (loop_ref hD.toDmProg8 hq hcl hkp (substC0_ofN hN.toNatSubProg _ _) (substCAll_of hN _ _)
+    (loop_ref hD.toDmProg8 hq hcl hkp hcrf (substC0_ofN hN.toNatSubProg _ _) (substCAll_of hN _ _)
       henv n v3 hn hQ3.hw hws pins pinsP po pl [] k hk' m4 a3 hC4 hCr4 (hI.grow hg04)
       (ConRon.Bridge.PinsDenote.mono hx3 _ _ hPD) (ConRon.Bridge.denoteN_ext hnm hx3)
       (by rw [hQ3.dec]; exact hv3))
