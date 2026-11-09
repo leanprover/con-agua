@@ -320,13 +320,6 @@ theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
   unfold haW haK1 haK2 at h
   mfr_auto h [rh, appendW_mfr]
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem naW_mfr {k : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : naW k m vis c = some (r, m')) :
-    MFr [] [] m m' := by
-  unfold naW naK1 naK2 at h
-  mfr_auto h [envFindW_mfr, piBW_mfr _ _ _ _ _ _]
--/
-
 theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : MFr [] [] m m' := by
   unfold resHeadW resHeadK at h
   mfr_auto h [MFr.ofStub, MFr.ofI1F, MFr.ofGafF]

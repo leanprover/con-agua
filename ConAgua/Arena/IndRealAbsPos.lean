@@ -420,14 +420,6 @@ theorem haW_afr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
   afr_auto h [rh, appendW_afr]
 
 -- from IndPosSpec/NestCrest
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem naW_afr {k : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : naW k m vis c = some (r, m')) :
-    AFr m m' := by
-  unfold naW naK1 naK2 at h
-  afr_auto h [envFindW_afr, piBW_afr _ _ _ _ _ _]
-
--- from IndPosSpec/NestCrest
--/
 theorem resHeadW_afr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : AFr m m' := by
   unfold resHeadW resHeadK at h
   afr_auto h [stub_afr, i1F_afr, gafF_afr]

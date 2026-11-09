@@ -195,13 +195,6 @@ namespace L.Ind
 
 open L.Arena
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-def naWf : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | k + 1, m, vis, c => naW k m vis c
--/
-
-
 end L.Ind
 
 namespace L.Ind
