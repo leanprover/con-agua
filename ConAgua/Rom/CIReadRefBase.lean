@@ -174,7 +174,7 @@ structure RInv (m₀ : Mem) (a₀ : AState) (T : Nat) (m : Mem) (a : AState) : P
   /-- The scratch flag's test is the entry's: every record is in one tier. -/
   fl : rdW (m.arr64 CTL) 1 = 0 ↔ rdW (m₀.arr64 CTL) 1 = 0
 
-theorem RInv.refl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+theorem RInv.refl {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) : RInv m a (iwTop m) m a :=
   ⟨hS.check.arena, rfl, MemFrame.refl _ _ _, IWGrow.refl m, hS.iw, rfl, hS.check.mode, Iff.rfl⟩
 
