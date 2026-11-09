@@ -368,7 +368,7 @@ theorem opfTail_okC {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {M : M
     rw [UInt64.toNat_add]; omega
   · simp only [List.tail_cons, List.headD_cons]
     rw [hI4, wrIW_get ws _ q _ (by rw [hiw2, hlen]; exact hroom) (by rw [hiw2]; exact hsz1),
-      if_pos ⟨by omega, by rw [hlen, hn]; omega⟩, show q.toNat + j - q.toNat = j by omega,
+      ite_eq_left ⟨by omega, by rw [hlen, hn]; omega⟩, show q.toNat + j - q.toNat = j by omega,
       ← hws, spnWs_get _ _ _ _ (by rw [hn]; exact hj)]
     have hj' : j < fvs.toArray.size := by simpa using hj
     refine ⟨_, rfl, ?_, ?_⟩
@@ -391,7 +391,8 @@ theorem opfF_okC (k e i : Word) (he : H e) {m m' : Mem} {a : AState} {M : ModeMa
     {r : List Word} (h : opfF m [k, e, i] = some (r, m')) (hS : CoreS dn m a vis fe M eb)
     (hI : IWOK m) :
     ∃ x a' M', (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a') ∧
-      CoreS dn m' a' vis fe M' eb ∧ KeptAll M M' eb ∧ StackKept m m' ∧ OpfRes m' r x := by
+      CoreS dn m' a' vis fe M' eb ∧ KeptAll M M' eb ∧ StackKept m m' ∧
+      (spTop m).toNat ≤ (m.arr64 SPN).size ∧ OpfRes m' r x := by
   have hfrA := opfF_frame h
   obtain ⟨N, hc⟩ := callF_run h
   rcases N with _ | K
@@ -417,6 +418,7 @@ theorem opfF_okC (k e i : Word) (he : H e) {m m' : Mem} {a : AState} {M : ModeMa
     have h2 : (((m.arr64 SPN).size : Nat).toUInt64).toNat = (m.arr64 SPN).size := by
       simp [Nat.toUInt64]; omega
     omega
+  have hcob' : (spTop m).toNat ≤ (m.arr64 SPN).size := by simp only [spTop, hco]; exact hcob
   obtain ⟨r1, m1, h1, c'⟩ := ntBW_some c'
   obtain ⟨hI1, -⟩ := iwKeep (run_memFrame opgP_closed (f := "opf_go") (by decide) (run_of_callW h1)).1
     opgA_not opgC_not hI
@@ -439,7 +441,7 @@ theorem opfF_okC (k e i : Word) (he : H e) {m m' : Mem} {a : AState} {M : ModeMa
     obtain ⟨hS', hres, hspn', htop'⟩ := opfTail_okC hS1 hI1 hsl hb c'
     rw [hdb] at hres
     refine ⟨_, _, M1, hrun, hS', hK1, hSK m' (by rw [hspn', hsz1]) htop'
-      (fun w hw => by simp only [spW, hspn'] at *; exact hkb1 w hw) hfrA, hres⟩
+      (fun w hw => by simp only [spW, hspn'] at *; exact hkb1 w hw) hfrA, hcob', hres⟩
   | none =>
     rw [ite_eq_left (show r1.headD 0 = 0 from hO1)] at c'
     have hS1' := hS1.frame_stk (MemFrame.setCtl m1 136 co) (by simp) (by simp)
@@ -470,7 +472,7 @@ theorem opfF_okC (k e i : Word) (he : H e) {m m' : Mem} {a : AState} {M : ModeMa
         hK1.trans hK2, hSK _ (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz2, hsz1'])
           (by rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by simp; omega⟩])
           (fun w hw => by
-            simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hkb12 w hw) hfrA, rfl⟩
+            simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hkb12 w hw) hfrA, hcob', rfl⟩
     | some p =>
       obtain ⟨fvs, b⟩ := p
       obtain ⟨h0, hb, hdb, -, hsl, -⟩ := hO2
@@ -478,7 +480,7 @@ theorem opfF_okC (k e i : Word) (he : H e) {m m' : Mem} {a : AState} {M : ModeMa
       obtain ⟨hS', hres, hspn', htop'⟩ := opfTail_okC hS2 hI2 hsl hb c'
       rw [hdb] at hres
       refine ⟨_, _, M2, hrun, hS', hK1.trans hK2, hSK m' (by rw [hspn', hsz2, hsz1']) htop'
-        (fun w hw => by simp only [spW, hspn'] at *; exact hkb12 w hw) hfrA, hres⟩
+        (fun w hw => by simp only [spW, hspn'] at *; exact hkb12 w hw) hfrA, hcob', hres⟩
 
 end
 
