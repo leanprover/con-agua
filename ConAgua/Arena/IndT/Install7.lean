@@ -75,7 +75,7 @@ def SctsRefS (G : Prop) (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :
     (a : AState) (T lo ll nP nIdx rs isP lg cvq cO cL : Word) (lps : List NIdx) (cvTa : IConstantVal)
     (cs : List (IConstantVal × Nat)) (TP : ConLeche.Name) (lpsP : List ConLeche.Name)
     (rsP : ConLeche.Level) (cvTaP : ConLeche.ConstantVal) (csP : List (ConLeche.ConstantVal × Nat)),
-    StageC dn vis fe env m a → AbsOK m → H T → H rs →
+    StageC dn vis fe env m a → ConLeche.EnvWF env → AbsOK m → H T → H rs →
     decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
     DecB (fun m => decCVp m cvq.toNat) m cvTa →
     DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m cs →
@@ -105,7 +105,7 @@ variable {p : Prog} {G : Prop} {dn : NIdx → Option ConLeche.Name} {vis : Word}
 environment, `vis0 = vis`, as `check_block_pass` calls it; twin side: con-ron's
 `checkBlockCtors_specF`'s proof; induction on the fuel): each member's `check_sum_ctors` by its
 contract (`SctsRefS`), the shape's level parameters (outside the verdict closure) lifted. -/
-theorem ict_ref (hP : CtorsProg p) (hR : SctsRefS G p dn) (pp : Word) (bs : BlockShape)
+theorem ict_ref (hP : CtorsProg p) (hR : SctsRefS G p dn) (henv : ConLeche.EnvWF env) (pp : Word) (bs : BlockShape)
     {bsP : ConLeche.BlockShape} (n : Nat) (hn : n ≤ 2 ^ 62) :
     ∀ (m : Mem) (a : AState) (mo ml : Word) (mss : List MemberShape)
       (mssP : List ConLeche.MemberShape),
@@ -184,7 +184,7 @@ theorem ict_ref (hP : CtorsProg p) (hR : SctsRefS G p dn) (pp : Word) (bs : Bloc
   -- `check_sum_ctors`
   have hR1 := hR n (by omega) vis fe env env₀ m1 a wx (r1.headD 0) (r1.tail.headD 0) (UInt64.ofNat bs.nP)
     (UInt64.ofNat msh.nIdx) (rdW (m1.arr64 IW) (pp + 6)) (rdW (m1.arr64 IW) (pp + 8))
-    (rdW (m1.arr64 IW) (pp + 7)) (UInt64.ofNat cvp) co cl bs.lps msh.cvT msh.ctors _ _ _ _ _ hC1 hA1
+    (rdW (m1.arr64 IW) (pp + 7)) (UInt64.ofNat cvp) co cl bs.lps msh.cvT msh.ctors _ _ _ _ _ hC1 henv hA1
     hwxl hrs32 hd1 hb1 hcvB hcd hTP hlpsP (by rw [hrse]; exact hsP) hcvTP
     (ConLeche.Cached.ws0_hasFvar hws0) hcsP' hok₀
   rw [← hname, hrse, h8, h7, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib] at hR1
@@ -203,7 +203,7 @@ theorem ict_ref (hP : CtorsProg p) (hR : SctsRefS G p dn) (pp : Word) (bs : Bloc
 
 /-- **`check_block_ctors` refines `checkBlockCtors`** under `StageC` (the ok half of `ict_ref`). -/
 @[refines ConRon.Arena.checkBlockCtors]
-theorem checkBlockCtors_refinesC (hP : CtorsProg p) (hR : SctsRefS G p dn) (n : Nat) (hn : n ≤ 2 ^ 62)
+theorem checkBlockCtors_refinesC (hP : CtorsProg p) (hR : SctsRefS G p dn) (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (pp mo ml : Word) (bs : BlockShape) (mss : List MemberShape)
     (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
     (hqd : DecB (fun m => decBS m pp.toNat) s₀.mem bs) (hsrc : ShapeSrc s₀.mem pp)
@@ -217,7 +217,7 @@ theorem checkBlockCtors_refinesC (hP : CtorsProg p) (hR : SctsRefS G p dn) (n : 
       BlkCtorsPost dn vis fe env s₀.mem a₀ s'.mem (AM.st (ConRon.Arena.checkBlockCtors V fe fe bs mss) a₀);
       ⊤⦄ := by
   refine triple_post (RefE.triple (ictE_spec p hP n s₀ vis vis pp mo ml)
-    (ict_ref hP hR pp bs n hn _ a₀ mo ml mss mssP hC hA hqd hsrc hmss hbsP hmssP hws hok₀)) ?_
+    (ict_ref hP hR henv pp bs n hn _ a₀ mo ml mss mssP hC hA hqd hsrc hmss hbsP hmssP hws hok₀)) ?_
   rintro r s' ⟨hl, x, a', run, hR'⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hR'⟩

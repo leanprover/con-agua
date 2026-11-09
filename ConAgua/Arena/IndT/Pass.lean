@@ -136,7 +136,7 @@ words `0, 1`): `checkBlockCtors` at one environment, both outcomes, from `BkSt` 
 def CtorsRefS : Prop :=
   ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis : Word) (fe : IFEnv) (env env₀ : ConLeche.Env) (m : Mem)
     (a : AState) (pp : Word) (bs : BlockShape) (bsP : ConLeche.BlockShape),
-    BkSt dn vis fe env m a → DecB (fun m => decBS m pp.toNat) m bs → ShapeSl m pp →
+    BkSt dn vis fe env m a → ConLeche.EnvWF env → DecB (fun m => decBS m pp.toNat) m bs → ShapeSl m pp →
     ConRon.Bridge.Inductives.dShape a.store bs = some bsP →
     (∀ ms ∈ bsP.members, ConLeche.Expr.WScoped 0 ms.cvT.type) →
     ConRon.Bridge.Inductives.IFEnvOKS env₀ fe a.store →
@@ -200,7 +200,8 @@ def PosRefS : Prop :=
         NSB rm.2 (rm.1.tail.tail.headD 0) x.2)
 
 /-- **`class_seeds(ctx, holes.off, holes.len, ms.off, ms.len)`'s contract**: `classSeeds`, from
-`BkSt`, the context, the holes and the majors; the seeds' slice (`SdRes`). -/
+`BkSt`, the context, the holes and the majors; the stage (its `CheckOK` the composition's, by
+con-ron's `classSeeds_spec`), the memos, the seeds' slice (`SdRes`). -/
 def SeedsRefS : Prop :=
   ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState)
     (ctx hO hL mo ml : Word) (c : NestCtx) (holes : List EIdx) (ms : List TargetMajor),
@@ -208,7 +209,7 @@ def SeedsRefS : Prop :=
     (decHL m hO.toNat hL.toNat : Option (List EIdx)) = some holes →
     hO.toNat + hL.toNat ≤ iwTop m → PSlR decTM ms mo ml m →
     RefE G (callE p n "class_seeds" [ctx, hO, hL, mo, ml] m) (ConRon.Arena.classSeeds c holes ms) a
-      (fun rm x a' => BkSt dn vis fe env rm.2 a' ∧ IWGrow m rm.2 ∧
+      (fun rm x a' => StageR vis fe rm.2 a' ∧ IndMemos rm.2 ∧ AbsOK rm.2 ∧ IWGrow m rm.2 ∧
         SdRes rm.2 (rm.1.headD 0) (rm.1.tail.headD 0) x)
 
 /-- **`nest_seeds(vis, ctx, seeds.off, seeds.len, ns)`'s contract**: `nestSeeds`, both outcomes,
@@ -375,7 +376,7 @@ theorem pass_ref (R : PassRefs G p dn) (hGnv : G → closedNV p _root_.L.Checker
   have hsl2 := hsl1.grow' hq1 h2.grow
   have hsh2 := ConRon.Bridge.Inductives.dShape_ext x12 _ _ hsh1
   refine RefE.bindE (fun _ => icpE.k_check_block_ctors.none ..) id
-    (R.ctors n (by omega) _ fe1 env₁ env₁ m2 a2 _ bs1 p₁P hB2 hq2 hsl2 hsh2 hzT hB2.c.check.ienv.toS)
+    (R.ctors n (by omega) _ fe1 env₁ env₁ m2 a2 _ bs1 p₁P hB2 henv₁ hq2 hsl2 hsh2 hzT hB2.c.check.ienv.toS)
     fun ⟨r3, m3⟩ _ a3 hrun3 h3 => ?_
   obtain ⟨hB3, hg3⟩ := h3
   rw [icpE.k_check_block_ctors.arm1]
@@ -473,14 +474,16 @@ theorem pass_ref (R : PassRefs G p dn) (hGnv : G → closedNV p _root_.L.Checker
     (R.seeds n (by omega) _ fe1 env₁ m6 a6 _ _ _ _ _ c holes ms hB6 hU6 hhi4 hho6
       (Nat.le_trans hhob4 g46.iw) hms6)
     fun ⟨r7, m7⟩ seeds a7 hrun7 h7 => ?_
-  obtain ⟨hB7, hg7, hsd7⟩ := h7
+  obtain ⟨hS7, hI7, hA7, hg7, hsd7⟩ := h7
   rw [icpE.k_class_seeds.arm1]
   have x46 := c5.ext.trans x56
   obtain ⟨p7, hseeds⟩ := ConRon.Bridge.Inductives.classSeeds_spec env₁.find? c ctxP holes holesP ms
     msP a6 a7 seeds hB6.c.check.state hB6.c.check.pins
     ⟨ConRon.Bridge.Inductives.dCtx_ext _ x46 _ _ hctx, ConRon.Bridge.denoteEList_ext x46 _ _ hholes,
       ConRon.Bridge.Inductives.dMajor_ext.list x56 _ _ hmsP⟩ hrun7
-  have x67 := (p7.toCore hB6.c.check).ext
+  have c7 := p7.toCore hB6.c.check
+  have x67 := c7.ext
+  have hB7 : BkSt dn (r1.headD 0) fe1 env₁ m7 a7 := ⟨StageC.ofView hB6.c hS7 hA7 c7.ok x67, hI7, hA7⟩
   -- every outside class, walked from the root frame's state
   have hU7 := hU6.grow hg7
   have hns7 := hns6.grow hg7 (rdW (m6.arr64 CTL) 200).toNat_lt
