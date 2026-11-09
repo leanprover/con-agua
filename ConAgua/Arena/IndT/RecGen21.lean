@@ -113,7 +113,7 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   unfold ConRon.Arena.checkBlockClasses
   refine RefE.bindLift (fun _ => rfl) fun r1 m1 c1 => ?_
   obtain ⟨s1, rfl, -, hok1, ⟨hS1, hg1, hd1⟩, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (classRead_refinesA p hP.read hOpf n _ a dn vis fe pp _ _ _ bs bs.recs hS hA hb hrecs) c1
+    (classRead_refinesA p hP.read hOpf n _ a vis fe pp _ _ _ bs bs.recs hS hA hb hrecs) c1
   simp only at hS1 hg1 hd1 hA1
   have hP1 := PosMR.ofClosed hcl hfr c1 hPm
   rw [hnp, hnpT] at hok1 hS1 hd1

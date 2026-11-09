@@ -507,7 +507,7 @@ theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
 theorem viewFVarIdx_run' (h : EIdx) (a : AState) :
     (ConRon.Arena.viewFVarIdx h).run a = .ok (a.store.viewFVarIdx h, a) := rfl
 
-theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+theorem fvarHeadW_ok (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (e : Word) (he : H e) (r : List Word) (h : fvarHeadW m e = some (r, m'))
     (hS : StageR vis fe m a) :
     ∃ x a', (ConRon.Arena.fvarHead (decI e)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
@@ -575,7 +575,7 @@ theorem fvarHead_refines (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
         | some i => [1, UInt64.ofNat i] | none => [0, 0]); ⊤⦄ := by
   refine triple_post (fvarHead_spec p hp hv had n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hr, -⟩ := fvarHeadW_ok dn vis fe _ _ a₀ e he r hm hS
+  obtain ⟨x, a', hrun, hS', hg, hr, -⟩ := fvarHeadW_ok vis fe _ _ a₀ e he r hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.fvarHead (decI e)) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hr⟩
 

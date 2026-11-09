@@ -48,6 +48,7 @@ structure SlotProg (p : Prog) : Prop where
   mn : p.lookup "block_shape_member_names" = some blockShapeMemberNames
   ct : p.lookup "sl_contains" = some slContains
   g : p.lookup "env_row_get" = some envRowGetL
+  b : p.lookup "base_row_get" = some baseRowGetL
   ef : p.lookup "env_find" = some envFindL
   npc : p.lookup "class_n_pc_of" = some classNPcOf
   smot : p.lookup "class_read_slot_motive" = some classReadSlotMotive
