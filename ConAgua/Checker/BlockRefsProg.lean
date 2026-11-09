@@ -7,6 +7,8 @@ public import ConAgua.Arena.IndT.BlockPD
 public import ConAgua.Arena.IndT.BlockNames
 public import ConAgua.Arena.IndT.BlockRMS
 public import ConAgua.Arena.IndT.PassCS
+public import ConAgua.Arena.IndT.PassNsd
+public import ConAgua.Arena.IndT.PassBnc
 import ConAgua.Checker.ArmsT
 import ConAgua.Verdict.PosKnotE
 import ConAgua.Checker.IndArmTrees1
@@ -190,6 +192,28 @@ theorem seedsRefS_checker (bs : List UInt8) (dn : ConRon.Arena.NIdx → Option C
     (wmKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
       (mem_of_tree armMcTree.eq (by decide +kernel)) (mem_of_tree armTaTree.eq (by decide +kernel)))
 
+/-- **`block_nest_ctx`'s contract at the substituted checker program** (`bncRefS_of`). -/
+theorem bncRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
+    (dn : ConRon.Arena.NIdx → Option ConLeche.Name) :
+    BncRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
+  have hAP := indArmProgs_checker bs hr hpre
+  have hP : PosBlkProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  exact bncRefS_of hP hAP.opf hAP.crk (checkerProg_indLeavesPB bs)
+
+set_option maxRecDepth 20000 in
+/-- **`nest_seeds`' contract at the substituted checker program** (`nsdRefS_of`). -/
+theorem nsdRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
+    (dn : ConRon.Arena.NIdx → Option ConLeche.Name) :
+    NsdRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
+  have hAP := indArmProgs_checker bs hr hpre
+  have L : RsLook (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hF : FtProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hWt : WhnfTopE (Prog.subPB bs checkerProg) :=
+    whnfTop_stageE (by prog_bundle []) (fun n => (checkerProg_knotTopPB bs).knotOK n) (checkerProg_knotEPB bs)
+  exact nsdRefS_of L hAP.kp hAP.ilpf hAP.lc hF hWt
+    (wmKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
+      (mem_of_tree armMcTree.eq (by decide +kernel)) (mem_of_tree armTaTree.eq (by decide +kernel)))
+
 set_option maxRecDepth 20000 in
 /-- **`check_block`'s callees' contracts at the substituted checker program.** -/
 theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
@@ -244,13 +268,15 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
     ctorsRefS_of (by prog_bundle []) hsc hAP.crk (checkerProg_indLeavesPB bs)
   have hpl : PassLook (Prog.subPB bs checkerProg) := by prog_bundle []
   -- ronsync2 p3e: block_nest_ctx, check_block_classes, check_block_positivity, class_seeds,
-  -- nest_seeds: their contracts still to prove (class_seeds done) (Pass.lean's BncRefS … NsdRefS)
-  have hbnc : BncRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
+  -- nest_seeds: their contracts still to prove (class_seeds, nest_seeds done) (Pass.lean's BncRefS … NsdRefS)
+  have hbnc : BncRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    bncRefS_checker bs hr hpre dn
   have hcls : ClsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
   have hpos : PosRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
   have hsd : SeedsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     seedsRefS_checker bs dn
-  have hnsd : NsdRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
+  have hnsd : NsdRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    nsdRefS_checker bs hr hpre dn
   have hpass : PassRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     passRefS_of ⟨hpl, hinds, hct, hbnc, hcls, hpos, hsd, hnsd⟩ hnv
   exact ⟨look, hnm, hrm, hfl, hbir, hwm, hpass, sorry, hbr, hbt, hpd⟩

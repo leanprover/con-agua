@@ -60,6 +60,13 @@ theorem StageC.of_check {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     hA.wk.2.2.2.2⟩
 
+/-- **`StageC` across a twin step con-ron calls a `CoreStep`**, the memory's half from `AbsOK`
+after (`StageC.of_pstep` for a `CSpec`'s step). -/
+theorem StageC.of_cstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
+    (hS : StageR vis fe m' a') (hA : AbsOK m') (hs : ConRon.Bridge.CoreStep env fe a a') :
+    StageC dn vis fe env m' a' :=
+  h.of_check hS hA hs.ok hs.ext
+
 /-- **A `StageR` `RSim` of a core-free callee is a `StageC` `RSim`**, by con-ron's `PSpec` of the
 twin at the inputs' denotation `P`; the post `Q` gives the stage relation and `AbsOK` after. -/
 theorem RSim.liftP {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Mem} {a : AState}

@@ -82221,6 +82221,18 @@ movq 1176(%r15,%rdx,8), %r11
 movq (%r11,%rcx,8), %rcx
 addq %rcx, %rax
 movq %rax, 56(%rsp)
+movq 16(%rsp), %rcx
+addq $17, %rcx
+shrq $40, %rcx
+andq $1, %rcx
+movq 16(%rsp), %rax
+addq $17, %rax
+movq $1099511627775, %rdx
+andq %rdx, %rax
+movq 1176(%r15,%rcx,8), %rdx
+movq (%rdx,%rax,8), %rax
+cmpq 56(%rsp), %rax
+ja ca_error
 movq 48(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
@@ -82228,16 +82240,16 @@ call ca_f_former_res_sort
 movq %rax, 64(%rsp)
 movq %rdi, 72(%rsp)
 cmpq $0, 64(%rsp)
-je .Lca_former_never_zero_at_222221E
+je .Lca_former_never_zero_at_2222221E
 movq 16(%rsp), %rdi
 movq 24(%rsp), %r8
 subq $1, %r14
 jb ca_exhausted
 addq $112, %rsp
 jmp ca_f_former_never_zero
-jmp .Lca_former_never_zero_at_222221X
-.Lca_former_never_zero_at_222221E:
-.Lca_former_never_zero_at_222221X:
+jmp .Lca_former_never_zero_at_2222221X
+.Lca_former_never_zero_at_2222221E:
+.Lca_former_never_zero_at_2222221X:
 movq 32(%rsp), %rdi
 movq 40(%rsp), %r8
 movq 24(%rsp), %r9
@@ -82257,12 +82269,12 @@ call ca_f_former_sort_loop
 movq %rax, 64(%rsp)
 movq %rdi, 72(%rsp)
 cmpq $0, 64(%rsp)
-jne .Lca_former_never_zero_at_222222221E
+jne .Lca_former_never_zero_at_2222222221E
 movq $0, %rax
 jmp .Lca_former_never_zero_at_0R
-jmp .Lca_former_never_zero_at_222222221X
-.Lca_former_never_zero_at_222222221E:
-.Lca_former_never_zero_at_222222221X:
+jmp .Lca_former_never_zero_at_2222222221X
+.Lca_former_never_zero_at_2222222221E:
+.Lca_former_never_zero_at_2222222221X:
 movq 72(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
@@ -168733,6 +168745,18 @@ movq 1176(%r15,%rdx,8), %r11
 movq (%r11,%rcx,8), %rcx
 addq %rcx, %rax
 movq %rax, 56(%rsp)
+movq 16(%rsp), %rcx
+addq $17, %rcx
+shrq $40, %rcx
+andq $1, %rcx
+movq 16(%rsp), %rax
+addq $17, %rax
+movq $1099511627775, %rdx
+andq %rdx, %rax
+movq 1176(%r15,%rcx,8), %rdx
+movq (%rdx,%rax,8), %rax
+cmpq 56(%rsp), %rax
+ja ca_error
 movq 48(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
@@ -168740,39 +168764,39 @@ call ca_f_former_res_sort
 movq %rax, 64(%rsp)
 movq %rdi, 72(%rsp)
 cmpq $0, 64(%rsp)
-je .Lca_proj_guard_sort_222221E
+je .Lca_proj_guard_sort_2222221E
 movq 72(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
 call ca_f_lv_always_zero
 movq %rax, 80(%rsp)
 cmpq $0, 80(%rsp)
-je .Lca_proj_guard_sort_222221421E
+je .Lca_proj_guard_sort_2222221421E
 movq $53, 112(%rsp)
 movq 1120(%r15), %rax
 movq (%rax), %rax
 cmpq $0, %rax
-jne .Lca_proj_guard_sort_2222214214122E
+jne .Lca_proj_guard_sort_22222214214122E
 jmp ca_error
-jmp .Lca_proj_guard_sort_2222214214122X
-.Lca_proj_guard_sort_2222214214122E:
+jmp .Lca_proj_guard_sort_22222214214122X
+.Lca_proj_guard_sort_22222214214122E:
 movq 112(%rsp), %rax
 movq 1120(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 88(%rsp)
-.Lca_proj_guard_sort_2222214214122X:
+.Lca_proj_guard_sort_22222214214122X:
 movq 88(%rsp), %rdi
 movq $1, %rax
 jmp .Lca_proj_guard_sort_0R
-jmp .Lca_proj_guard_sort_222221421X
-.Lca_proj_guard_sort_222221421E:
-.Lca_proj_guard_sort_222221421X:
+jmp .Lca_proj_guard_sort_2222221421X
+.Lca_proj_guard_sort_2222221421E:
+.Lca_proj_guard_sort_2222221421X:
 movq $0, %rdi
 movq $0, %rax
 jmp .Lca_proj_guard_sort_0R
-jmp .Lca_proj_guard_sort_222221X
-.Lca_proj_guard_sort_222221E:
-.Lca_proj_guard_sort_222221X:
+jmp .Lca_proj_guard_sort_2222221X
+.Lca_proj_guard_sort_2222221E:
+.Lca_proj_guard_sort_2222221X:
 movq 32(%rsp), %rdi
 movq 40(%rsp), %r8
 movq 24(%rsp), %r9
@@ -168800,13 +168824,13 @@ jb ca_exhausted
 call ca_f_lv_never
 movq %rax, 104(%rsp)
 cmpq $0, 104(%rsp)
-je .Lca_proj_guard_sort_22222222221E
+je .Lca_proj_guard_sort_222222222221E
 movq $0, %rdi
 movq $0, %rax
 jmp .Lca_proj_guard_sort_0R
-jmp .Lca_proj_guard_sort_22222222221X
-.Lca_proj_guard_sort_22222222221E:
-.Lca_proj_guard_sort_22222222221X:
+jmp .Lca_proj_guard_sort_222222222221X
+.Lca_proj_guard_sort_222222222221E:
+.Lca_proj_guard_sort_222222222221X:
 movq 72(%rsp), %rdi
 movq $1, %rax
 jmp .Lca_proj_guard_sort_0R
