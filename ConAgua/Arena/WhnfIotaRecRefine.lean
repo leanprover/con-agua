@@ -232,10 +232,6 @@ theorem IotaRecProg'.fnzaProg {p : Prog} (hp : IotaRecProg' p) (hilp : InstLPOK 
 
 /-! ## `erec_push(o, c)` -/
 
-/-- The tagged read's bound for word `o + j` (`EREC⦃o + j⦄` in bounds). -/
-abbrev erIn (m : Mem) (x : Word) : Prop :=
-  (x &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (x >>> 40))).size
-
 /-- Model of the `erec_push` loop at L fuel `k`. -/
 def epW (o c so : Word) : Nat → Mem → Word → Option Mem
   | 0, _, _ => none

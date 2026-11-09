@@ -147,9 +147,42 @@ theorem rdW_eq_getElem (a : Array Word) (x : Word) (h : x.toNat < a.size) : rdW 
 def ldE (a : Array Word) (x : Word) : Option Word :=
   if h : x.toNat < a.size then some a[x.toNat] else none
 
--- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
-/-- Model of the `and_rescue_slots` loop at L fuel `k`. -/
-def iotaArW (p : Prog) (vis ctor nP us an : Word) : Nat → Mem → Word → Option (List Word × Mem)
+/-- The tagged read's bound for word `x` (`EREC⦃x⦄` in bounds). -/
+abbrev erIn (m : Mem) (x : Word) : Prop :=
+  (x &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (x >>> 40))).size
+
+/-- A decoded word at `q + k` is what the tagged read at `q + k` reads, in bounds. -/
+theorem erecP_atW {m : Mem} {q : Word} {k : Nat} {w : Word} (h : erecP m (q.toNat + k) = some w)
+    (hk : k < 2 ^ 64) : erIn m (q + UInt64.ofNat k) ∧ erRdT m (q + UInt64.ofNat k) = w := by
+  have e : (q + UInt64.ofNat k).toNat = q.toNat + k := by
+    have := erecP_lt64 h
+    rw [UInt64.toNat_add]; simp only [UInt64.toNat_ofNat']
+    rw [Nat.mod_eq_of_lt hk, Nat.mod_eq_of_lt (by omega)]
+  rw [← e] at h
+  exact ⟨(erecP_tagRead h).1, erRdT_of _ _ h⟩
+
+/-- **A decoded projection table's words** at `q + 5`, `q + 6`, `q + 7`. -/
+theorem decTbl_wordsT {m : Mem} {q : Word} {tbl : IProjTable} (h : decTbl (erecP m) q.toNat = some tbl) :
+    (erIn m (q + 5) ∧ (erRdT m (q + 5)).toNat = tbl.numParams) ∧
+    (erIn m (q + 6) ∧ HW (erRdT m (q + 6)) ∧ tbl.ctor = decI (erRdT m (q + 6))) ∧
+    (erIn m (q + 7) ∧ (erRdT m (q + 7)).toNat = tbl.numFields) := by
+  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨sn, -, lp, -, np, hnp, c, hc, nf, hnf, bd, -, rfl⟩ := h
+  simp only [nat?, Option.map_eq_some_iff] at hnp hnf
+  obtain ⟨w5, hw5, rfl⟩ := hnp
+  obtain ⟨w7, hw7, rfl⟩ := hnf
+  obtain ⟨w6, hw6, h32, rfl⟩ := hd?_some hc
+  obtain ⟨i5, e5⟩ := erecP_atW (k := 5) hw5 (by decide)
+  obtain ⟨i6, e6⟩ := erecP_atW (k := 6) hw6 (by decide)
+  obtain ⟨i7, e7⟩ := erecP_atW (k := 7) hw7 (by decide)
+  exact ⟨⟨i5, by rw [show (q + 5 : Word) = q + UInt64.ofNat 5 from rfl, e5]⟩,
+    ⟨i6, by show HW (erRdT m (q + UInt64.ofNat 6)); rw [e6]; exact h32,
+      by rw [show (q + 6 : Word) = q + UInt64.ofNat 6 from rfl, e6]⟩,
+    ⟨i7, by rw [show (q + 7 : Word) = q + UInt64.ofNat 7 from rfl, e7]⟩⟩
+
+/-- Model of the `and_rescue_slots` loop at L fuel `k` (the table words read tagged). -/
+def iotaArW (p : Prog) (vis ctor nP an : Word) : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
   | k + 1, m, j =>
     if j < 2 then
@@ -157,158 +190,174 @@ def iotaArW (p : Prog) (vis ctor nP us an : Word) : Nat → Mem → Word → Opt
       | none => none
       | some (r₁, m₁) =>
         if r₁.headD 0 = 0 then some ([0], m₁)
-        else match callW p k "fire_ok" [r₁.tail.headD 0, j, us] m₁ with
-          | none => none
-          | some (r₂, m₂) =>
-            match ldE (m₂.arr64 EREC) (r₁.tail.headD 0 + 6) with
-            | none => none
-            | some w₆ =>
-              if w₆ ≠ ctor then some ([0], m₂)
-              else match ldE (m₂.arr64 EREC) (r₁.tail.headD 0 + 5) with
-                | none => none
-                | some w₅ =>
-                  if w₅ ≠ nP then some ([0], m₂)
-                  else match ldE (m₂.arr64 EREC) (r₁.tail.headD 0 + 7) with
-                    | none => none
-                    | some w₇ =>
-                      if w₇ ≠ 2 then some ([0], m₂)
-                      else if r₂.headD 0 = 0 then some ([0], m₂)
-                      else iotaArW p vis ctor nP us an k m₂ (j + 1)
+        else if ¬ erIn m₁ (r₁.tail.headD 0 + 6) then none
+        else if erRdT m₁ (r₁.tail.headD 0 + 6) ≠ ctor then some ([0], m₁)
+        else if ¬ erIn m₁ (r₁.tail.headD 0 + 5) then none
+        else if erRdT m₁ (r₁.tail.headD 0 + 5) ≠ nP then some ([0], m₁)
+        else if ¬ erIn m₁ (r₁.tail.headD 0 + 7) then none
+        else if erRdT m₁ (r₁.tail.headD 0 + 7) ≠ 2 then some ([0], m₁)
+        else iotaArW p vis ctor nP an k m₁ (j + 1)
     else some ([1], m)
--- RS2E
 
--- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p k andRescueLoop
     ⦃fun r s' => r ≠ .brk ∧
-      iotaArW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) k s₀.mem (s₀.loc 5) =
+      iotaArW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) k s₀.mem (s₀.loc 4) =
         some (r.retOr [1], s'.mem); ⊤⦄ := by
-  sorry
--- RS2E
+  induction k generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ k ih =>
+    rw [exec, step_while (w := andRescueLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        ld64_rdT_spec, evalE_tld, tld, callW_spec p k "find_proj", ih] <;>
+      finish (gen := 20) [iotaArW]
 
--- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- Model of `and_rescue_slots`. -/
-def arTop (p : Prog) (k : Nat) (m : Mem) (vis ctor nP us : Word) : Option (List Word × Mem) :=
+def arTop (p : Prog) (k : Nat) (m : Mem) (vis ctor nP : Word) : Option (List Word × Mem) :=
   match callW p k "pin_at" [11] m with
   | none => none
-  | some (r₀, m₀) => iotaArW p vis ctor nP us (r₀.headD 0) (k + 1) m₀ 0
--- RS2E
+  | some (r₀, m₀) => iotaArW p vis ctor nP (r₀.headD 0) (k + 1) m₀ 0
 
--- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 theorem andRescueSlots_spec (p : Prog) (hp : p.lookup "and_rescue_slots" = some andRescueSlotsL)
-    (k : Nat) (s₀ : St) (vis ctor nP us : Word) :
+    (k : Nat) (s₀ : St) (vis ctor nP : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p (k + 1)) "and_rescue_slots" [vis, ctor, nP, us]
-    ⦃fun r s' => LocEq s' s₀ ∧ arTop p k s₀.mem vis ctor nP us = some (r, s'.mem); ⊤⦄ := by
-  sorry
+    invoke p (exec p (k + 1)) "and_rescue_slots" [vis, ctor, nP]
+    ⦃fun r s' => LocEq s' s₀ ∧ arTop p k s₀.mem vis ctor nP = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, andRescueSlotsL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p k "pin_at", fun s₀ => Triple.step_exec (andRescueLoop_spec p (k + 1) s₀)] <;>
+    finish [arTop]
 
--- RS2E
+theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (an : NIdx)
+    (a : AState) (hp : (pinAt PIN_AND).run a = .ok (an, a)) :
+    (andRescueSlots fe ctor nP).run a = .ok (andRescueSlotsGo fe an ctor nP 2 0, a) := by
+  simp only [andRescueSlots, pinAnd, StateT.run_bind, hp, except_ok_bind]; rfl
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
-theorem andRescueSlotsGo_zero_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (j : Nat)
-    (a : AState) : (andRescueSlotsGo fe an ctor nP ust 0 j).run a = .ok (true, a) := by
-  sorry
--/
-
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
-theorem andRescueSlotsGo_none_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (n j : Nat)
-    (a : AState) (h : fe.findProj? an j = none) :
-    (andRescueSlotsGo fe an ctor nP ust (n + 1) j).run a = .ok (false, a) := by
-  sorry
--/
-
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
-theorem andRescueSlotsGo_stop_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (n j : Nat)
-    (a a₂ : AState) (e : IProjEntry) (b : Bool) (h : fe.findProj? an j = some e)
-    (hb : (e.fireOk ust).run a = .ok (b, a₂))
-    (hc : (e.ctor == ctor && e.numParams == nP && e.numFields == 2 && b) = false) :
-    (andRescueSlotsGo fe an ctor nP ust (n + 1) j).run a = .ok (false, a₂) := by
-  sorry
--/
-
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
-theorem andRescueSlotsGo_cont_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (n j : Nat)
-    (a a₂ a₃ : AState) (e : IProjEntry) (b res : Bool)
-    (h : fe.findProj? an j = some e) (hb : (e.fireOk ust).run a = .ok (b, a₂))
-    (hc : (e.ctor == ctor && e.numParams == nP && e.numFields == 2 && b) = true)
-    (hr : (andRescueSlotsGo fe an ctor nP ust n (j + 1)).run a₂ = .ok (res, a₃)) :
-    (andRescueSlotsGo fe an ctor nP ust (n + 1) j).run a = .ok (res, a₃) := by
-  sorry
--/
-
-theorem decTbl_bound (a : Array Word) (q : Nat) (tbl : IProjTable) (h : decTbl (aread a) q = some tbl) :
-    q + 12 < a.size := by
-  sorry
-
-theorem ldE_eq (a : Array Word) (x : Word) (h : x.toNat < a.size) : ldE a x = some (rdW a x) := by
-  simp [ldE, rdW, h]
-
-theorem addW13 (q c : Word) (a : Array Word) (hq : q.toNat + 12 < a.size)
-    (hsz : a.size < 2 ^ 63) (hc : c.toNat ≤ 12) : (q + c).toNat = q.toNat + c.toNat := by
-  rw [UInt64.toNat_add]; simp; omega
-
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- **The `and_rescue_slots` loop refines `andRescueSlotsGo`**. -/
 theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (eb ctor nP us anW : Word) (hctor : HW ctor) (hus : HW us) (hanW : HW anW) :
+    (fe : IFEnv) (eb ctor nP anW : Word) (hctor : HW ctor) (hanW : HW anW) :
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (L : List Word) (m' : Mem),
       j.toNat + K = 2 → CoreS dn m a vis fe M eb →
-      (∃ (h : EIdx) (c : NIdx), a.store.view h = some (.const c (decI us))) →
-      iotaArW p vis ctor nP us anW k m j = some (L, m') →
-      CoreRef (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a decBool
-        dn m vis fe M eb L m' := by
-  sorry
--/
+      iotaArW p vis ctor nP anW k m j = some (L, m') →
+      CoreRef (pure (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat K j.toNat) : AM Bool) a
+        decBool dn m vis fe M eb L m' := by
+  intro K
+  induction K with
+  | zero =>
+    intro k m a M j L m' hK hS hL
+    have hn : ¬ j < 2 := fun h => by
+      have : j.toNat < 2 := h
+      omega
+    cases k with
+    | zero => simp [iotaArW] at hL
+    | succ k =>
+    simp only [iotaArW, hn, ↓reduceIte] at hL
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+    exact CoreRef.of_run rfl ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
+      (by simp [decBool, andRescueSlotsGo]) (by simp [ResH, HW])
+  | succ K ih =>
+    intro k m a M j L m' hK hS hL
+    have hlt : j < 2 := by
+      have : j.toNat < 2 := by omega
+      exact this
+    cases k with
+    | zero => simp [iotaArW] at hL
+    | succ k =>
+    rcases hc1 : callW p k "find_proj" [vis, anW, j] m with _ | ⟨r₁, m₁⟩
+    · simp only [iotaArW, hlt, ↓reduceIte, hc1] at hL; cases hL
+    obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, -⟩ := CoreSpec.of_callW
+      (hcc.findProj k ⟨m, Locals.init []⟩ a dn vis fe M eb anW j hS hanW) hc1
+    change CoreS dn m₁ a vis fe M₁ eb at hS₁
+    have hrunF : fe.findProj? (decI anW) j.toNat =
+        decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) j.toNat := hres1
+    have hgo : ∀ v, andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (K + 1) j.toNat = v →
+        L = [if v then 1 else 0] → m' = m₁ →
+        CoreRef (pure (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (K + 1) j.toNat) : AM Bool) a
+          decBool dn m vis fe M eb L m' := fun v hv hLv hm => by
+      subst hLv hm
+      exact CoreRef.of_run (v := v) (by rw [hv]; rfl) ⟨M₁, hS₁, hK₁, hSt₁⟩ (by cases v <;> rfl)
+        (by cases v <;> simp [ResH, HW])
+    by_cases h0 : r₁.headD 0 = 0
+    · simp only [iotaArW, hlt, ↓reduceIte, hc1, h0] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      have hnone : fe.findProj? (decI anW) j.toNat = none := by
+        rw [hrunF]; simp only [decEntry, h0, ↓reduceIte]
+      exact hgo false (by simp [andRescueSlotsGo, hnone]) rfl rfl
+    obtain ⟨tbl, htbl, -⟩ := hcc.projFound k m a dn vis fe M eb anW j r₁ m₁ hS hc1 h0
+    have k1 := hcc.erec k "find_proj" _ m r₁ m₁ rfl hc1
+    have hsome : fe.findProj? (decI anW) j.toNat = some (tbl.entry j.toNat) := by
+      rw [hrunF]; simp only [decEntry, ite_eq_right h0, htbl, Option.map_some]
+    rw [← k1.2.2.2] at htbl
+    obtain ⟨⟨i5, e5⟩, ⟨i6, w6, e6⟩, ⟨i7, e7⟩⟩ := decTbl_wordsT htbl
+    simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, i6, i5, i7, not_true_eq_false] at hL
+    by_cases c6 : erRdT m₁ (r₁.tail.headD 0 + 6) ≠ ctor
+    · rw [if_pos c6] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      refine hgo false ?_ rfl rfl
+      have : (tbl.ctor == decI ctor) = false := by
+        rw [e6, decI_beq _ _ w6 hctor]; simpa using c6
+      simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
+    rw [if_neg c6] at hL
+    by_cases c5 : erRdT m₁ (r₁.tail.headD 0 + 5) ≠ nP
+    · rw [if_pos c5] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      refine hgo false ?_ rfl rfl
+      have : (tbl.numParams == nP.toNat) = false := by
+        rw [← e5]; simpa using fun e => c5 (UInt64.toNat_inj.mp e)
+      simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
+    rw [if_neg c5] at hL
+    by_cases c7 : erRdT m₁ (r₁.tail.headD 0 + 7) ≠ 2
+    · rw [if_pos c7] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      refine hgo false ?_ rfl rfl
+      have hne : tbl.numFields ≠ 2 := fun e => c7 (UInt64.toNat_inj.mp (by rw [e7, e]; rfl))
+      have : (tbl.numFields == 2) = false := by simpa using hne
+      simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
+    rw [if_neg c7] at hL
+    have hc : (tbl.ctor == decI ctor && tbl.numParams == nP.toNat && tbl.numFields == 2) = true := by
+      rw [e6, ← e5, ← e7, Classical.not_not.mp c6, Classical.not_not.mp c5, Classical.not_not.mp c7]
+      simp
+    have hj1 : (j + 1).toNat = j.toNat + 1 := by
+      rw [UInt64.toNat_add]; have : j.toNat < 2 := hlt; simp; omega
+    obtain ⟨-, ⟨M', hS', hK', hSt'⟩, hresR, hvR⟩ := ih k m₁ a M₁ (j + 1) L m' (by omega) hS₁ hL
+    change CoreS dn m' a vis fe M' eb at hS'
+    refine CoreRef.of_run (v := andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (K + 1) j.toNat)
+      rfl ⟨M', hS', hK₁.trans hK', hSt₁.trans hSt'⟩ ?_ hvR
+    rw [← hresR]
+    show _ = andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat K (j + 1).toNat
+    rw [hj1]
+    simp only [andRescueSlotsGo, hsome, IProjTable.entry]
+    rw [if_pos hc]
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
-theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (ust : LsIdx) (an : NIdx)
-    (a a₁ : AState) (b : Bool) (hp : (pinAt PIN_AND).run a = .ok (an, a))
-    (hr : (andRescueSlotsGo fe an ctor nP ust 2 0).run a = .ok (b, a₁)) :
-    (andRescueSlots fe ctor nP ust).run a = .ok (b, a₁) := by
-  simp only [andRescueSlots, pinAnd, StateT.run_bind, hp, except_ok_bind, hr]
-
-/-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj`, `fire_ok` and their facts as
-`ProjCallees`). -/
+/-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj` and its facts as `ProjCallees`). -/
 theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees p) :
     AndRescueSlotsOK p := by
-  intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus hV
+  intro n s₀ a₀ dn vis fe MM eb ctor nP hS hctor
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
-  refine triple_post (andRescueSlots_spec p hp.andRescueSlots n s₀ vis ctor nP us) fun r s' ⟨hloc,
+  refine triple_post (andRescueSlots_spec p hp.andRescueSlots n s₀ vis ctor nP) fun r s' ⟨hloc,
     hW⟩ => ⟨hloc, ?_⟩
   simp only [arTop] at hW
   rcases hc0 : callW p n "pin_at" [11] s₀.mem with _ | ⟨r₀, m₀⟩ <;>
     simp only [hc0, reduceCtorEq] at hW
   obtain ⟨t₀, ht₀, hm₀, hloc0, hanHW, hpin⟩ := triple_of_callW
     (pinAt_refines p hp.pinat n ⟨s₀.mem, Locals.init []⟩ a₀ ⟨fun _ => hS.pins⟩ 11) hc0
-  have hmm : m₀ = s₀.mem := by rw [← ht₀]; exact hm₀
+  have hmm : s₀.mem = m₀ := by rw [← ht₀, hm₀]
   subst hmm
   have hanW : HW (r₀.headD 0) := hanHW
-  obtain ⟨hok, hca, hres, hL1⟩ := arW_ok p hcc dn vis fe eb ctor nP us (r₀.headD 0) hctor hus hanW 2
-    (n + 1) s₀.mem a₀ MM 0 r s'.mem (by simp) hS hV hW
-  have hrunA := andRescueSlots_run fe (decI ctor) nP.toNat (decI us) (decI (r₀.headD 0)) a₀ _ _
-    (by simpa [PIN_AND] using hpin) (AM.run_of_ok _ _ hok)
+  obtain ⟨-, hca, hres, hL1⟩ := arW_ok p hcc dn vis fe eb ctor nP (r₀.headD 0) hctor hanW 2
+    (n + 1) s₀.mem a₀ MM 0 r s'.mem (by simp) hS hW
+  have hrunA := andRescueSlots_run fe (decI ctor) nP.toNat (decI (r₀.headD 0)) a₀
+    (by simpa [PIN_AND] using hpin)
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunA
   refine ⟨hokF, ?_, ?_, hL1⟩
-  · rw [hstF]; simpa using hca
-  · rw [hresF]; simpa using hres
-
-/-! ## `fab_scope_ok(d, fab, major)` -/
-
-/-- **`fab_scope_ok` is its model `fsW`** (generated). -/
-l_model fabScopeOk_spec (p : Prog) (hp : p.lookup "fab_scope_ok" = some fabScopeOkL)
-  fns [hp ↦ fsW list]
-  specs [callW_spec p n "wscoped_bfast", callW_spec p n "loose_bvars_bounded_fast",
-    callW_spec p n "leaf_guard"]
-  grind [arena_grind]
--/
-
-/-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj` and its facts as `ProjCallees`). -/
-theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees p) :
-    AndRescueSlotsOK p := by
-  sorry
+  · rw [hstF]; exact hca
+  · rw [hresF]; exact hres
 
 
 theorem fabScopeOk_stop1 (d : Nat) (fab major : EIdx) (a a₁ : AState)
