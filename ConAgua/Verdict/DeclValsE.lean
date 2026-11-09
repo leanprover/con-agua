@@ -3,11 +3,13 @@ module
 public import ConAgua.Verdict.DeclHdrE
 public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.DeclValT
 import ConAgua.Arena.IndT.Base
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.DeclValRef
+public import ConAgua.Arena.DeclBasisSpec
 import all ConAgua.Arena.DeclArms
 
 @[expose] public section
@@ -36,16 +38,29 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The model of `check_constant_val`, both outcomes**: `install_header` by its unified model,
-the core stubs through their runs. -/
-l_model checkConstantVal_specE (p : Prog) (hp : ValProg p)
-  fns [hp.ccv ↦ checkConstantValE] specs [installHeader_specE p hp.ih n]
+/-- The lookups `check_constant_val`'s refinement takes. -/
+structure CcvProg (p : Prog) : Prop where
+  val : ValProg p
+  resF : p.lookup "reserved_from" = some reservedFrom
+  resC : p.lookup "reserved_contains" = some reservedContains
+  cont : p.lookup "sl_contains" = some slContains
+  nodup : p.lookup "sl_nodup" = some slNodup
+  basis : BasisProg p
+
+/-- **The model of `check_constant_val`, both outcomes**: the callees outside the verdict closure
+with `Option` models through those models, the gates `all_level_params_defined`,
+`consts_resolve_ffast` and the core through `callE`. -/
+l_model checkConstantVal_specE (p : Prog) (hp : CcvProg p)
+  fns [hp.val.ccv ↦ checkConstantValE]
+  specs [callW_spec p n "env_find", resCont_spec p hp.resF hp.resC n, callW_spec p n "nat_op_name",
+    erecAlloc_specW p hp.val.rcp.alloc n, erecPut_specW p hp.val.rcp.put n,
+    callW_spec p n "lit_shape_ok",
+    cvLps_specW p hp.val.cvg.alloc hp.val.cvg.copy hp.val.cvg.eti hp.val.cvg.lps n,
+    slNodup_spec p hp.cont hp.nodup n, lbbF_spec p hp.val.cvg.bvb n, hffF_spec p hp.val.cvg.hf n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
 /-- **The model of `check_defn_val`, both outcomes**: its callees through their runs. -/
 l_model checkDefnVal_specE (p : Prog) (hp : ValProg p)
