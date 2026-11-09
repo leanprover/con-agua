@@ -216,22 +216,22 @@ def bfK (p : Prog) (n : Nat) (pp isRec : Word) : Option (List Word × Mem) → O
   | some (r, m) => bfgK4 (callW p n "block_formers_go" [pp, isRec, r.headD 0, r.tail.headD 0, 0] m)
 
 /-- **The model of `block_formers(p, isRec)`** at exec fuel `n`. -/
-def bfW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
+def dbfW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, pp, isRec => bfK p n pp isRec (callW p n "block_shape_declared" [pp] m)
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (pp isRec : Word) (r : List Word)
-theorem bfW_succ : bfW p (n + 1) m pp isRec = bfK p n pp isRec (callW p n "block_shape_declared" [pp] m) := rfl
+theorem bfW_succ : dbfW p (n + 1) m pp isRec = bfK p n pp isRec (callW p n "block_shape_declared" [pp] m) := rfl
 theorem bfK_some : bfK p n pp isRec (some (r, m)) =
     bfgK4 (callW p n "block_formers_go" [pp, isRec, r.headD 0, r.tail.headD 0, 0] m) := rfl
 end arms
 attribute [ind_grind] bfW_succ bfK_some
 
-theorem bf_spec (p : Prog) (hp : p.lookup "block_formers" = some blockFormers) (n : Nat)
+theorem dbf_spec (p : Prog) (hp : p.lookup "block_formers" = some blockFormers) (n : Nat)
     (s₀ : St) (pp isRec : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_formers" [pp, isRec]
-    ⦃fun r s' => LocEq s' s₀ ∧ bfW p n s₀.mem pp isRec = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ dbfW p n s₀.mem pp isRec = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, blockFormers]
   cases n with
@@ -247,12 +247,12 @@ constant records below the pool's top. -/
 theorem bfW_ok {p : Prog} (hP : FormersProg p) {n : Nat} {m m' : Mem} {pp isRec : Word}
     {bs : BlockShape} {b : Bool} {r : List Word} {a : AState} {vis : Word} {fe : IFEnv}
     (hb : (isRec != 0) = b) (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs)
-    (hsrc : ShapeSrc m pp) (h : bfW p n m pp isRec = some (r, m')) :
+    (hsrc : ShapeSrc m pp) (h : dbfW p n m pp isRec = some (r, m')) :
     decPL m' (decCI (erecP m')) (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (ConRon.Arena.blockFormers bs b) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a ∧ IWGrow m m' := by
   rcases n with _ | n
-  · simp [bfW] at h
+  · simp [dbfW] at h
   rw [bfW_succ] at h
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [bfK])
   rw [bfK_some] at h

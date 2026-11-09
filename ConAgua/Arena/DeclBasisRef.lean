@@ -51,11 +51,14 @@ def BasisNameHitRef : Prop := ∀ (o l : Word) (block : List IConstantInfo),
     (ConRon.Arena.basisNameHit block) (KeepPost vis fe decHit)
 
 /-- **`basis_at_block(k, o, l)` refines `BasisKind.atBlock (basisOfW k) block`**, for the four
-block kinds `basis_name_hit` returns. -/
+block kinds `basis_name_hit` returns; the result slice lies below the pool's top (`at_block_go`
+returns `(0, 0)` or an `sl_cons` slice), also when it is empty. -/
 def BasisAtBlockRef : Prop := ∀ (k o l : Word) (block : List IConstantInfo), k.toNat < 4 →
   RomRef p "basis_at_block" [k, o, l]
     (fun m a => StageR vis fe m a ∧ ConRon.Bridge.StateOK a ∧ BlockAt o l block m)
-    (ConRon.Arena.BasisKind.atBlock (basisOfW k.toNat) block) (KeepPost vis fe (decRBlk dn))
+    (ConRon.Arena.BasisKind.atBlock (basisOfW k.toNat) block)
+    (fun m m' a r x => KeepPost vis fe (decRBlk dn) m m' a r x ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m')
 
 /-- **`quot_at(k.slot, q)` refines `quotAt k cv`** (`q` an `EREC` constant value), from a
 well-formed twin state that names `Quot`'s `sortZ` names through `dn`. -/

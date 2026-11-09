@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.IndexLoops
-public import ConAgua.Arena.IndDeclConstsSpec
+public import ConAgua.Arena.IndDeclConstsRef
 public import ConAgua.Arena.DeclCvg
 public import ConAgua.Arena.DeclNatBase
 public import ConRon.Bridge.Checker.Index
@@ -408,7 +408,7 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
       fun b nP e => hR.front _ hlt b nP (hdk.trans e), hR.drv.state, hR.quotDn, hM2,
       by rw [eD2]; exact hR.decls.dsize, by rw [eP2]; exact hR.decls.psize, hR.off,
       declTwin_of hT2 hp2 hM2 hR.drv,
-      fun b nP e => by have := hR.decls.npb _ hlt b nP (hdk.trans e); omega, ⟨dd, hden⟩⟩
+      fun b nP e => by have := hR.decls.npb _ hlt b nP (hdk.trans e); omega, ⟨dd, hden⟩, ⟨ds, by rw [eD2, eP2]; exact hR.decls, hlt, hdk⟩⟩
   obtain ⟨s3, hs3, -, hok3, ⟨hS3, hg3, hL3⟩, hM3, hK3, hT3⟩ := triple_of_callW
     (L.Ind.declConstants_refines hP.toDeclConstsProg dn 0 (bEnv I.base 0 0) k d n
       ⟨m2, Locals.init []⟩ a hpre2) h2
@@ -457,7 +457,7 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
       by rw [eD4]; exact hR.decls.dsize, by rw [eP4]; exact hR.decls.psize, hoff3,
       declTwin_of ((hT3.twin.frame hf4 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).bEnv0 _)
         (by rw [pinW_frame hf4 (by decide)]; exact hT3.pin) hM4 hdrv3,
-      fun b nP e => by have := hR.decls.npb _ hlt b nP (hdk.trans e); omega, ⟨dd, hden3⟩⟩
+      fun b nP e => by have := hR.decls.npb _ hlt b nP (hdk.trans e); omega, ⟨dd, hden3⟩, ⟨ds, by rw [eD4, eP4]; exact hR.decls, hlt, hdk⟩⟩
   obtain ⟨s5, hs5, -, hok5, ⟨hS5, hg5, hL5⟩, hM5, hK5, hT5⟩ := triple_of_callW
     (L.Ind.declTables_refines hP.toDeclConstsProg dn 0 _ k d n ⟨s4.mem, Locals.init []⟩ _ hpre5) h5
   subst hs5
