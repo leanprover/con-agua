@@ -165,4 +165,12 @@ pool.
    reported by one thread at `k` says only "rejected" when another record below `k` is rejected.
    It also gains the set theory.
 
+4. **The pool's claims** (pending the user's approval; the coordinator asked 2026-11-09): the
+   harness model `ThreadsRun` (`Final/ThreadsFinal`) gains a field `incr`: each thread's claimed
+   job indices are strictly increasing, and `threadsRun_twinAcceptsPooled(_regs)` a matching
+   `Pairwise (· < ·)` hypothesis on each thread's claims. Why: con-ron's `PooledAccepts` (and its
+   `pooled_fold`) needs each worker's list increasing, since a worker's state carries across its
+   jobs. It is one more trusted fact about `main.c`, which claims with
+   `__atomic_fetch_add(&g_next, 1)` on one counter. Before/after texts: in the report.
+
 The final texts are given in the report when the theorems are proved.
