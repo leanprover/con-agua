@@ -85,7 +85,7 @@ def fzSrcs : List TieredArray := tier0s
    SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
    FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
    FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, PINS, EIXA, EIXS, EIXN, TIXA, TIXS,
-   TIXN, EREC, FIRSTS, L.Rom.ROMC, L.Front.DECL, L.Front.DLP]
+   TIXN, EREC, FIRSTS, L.Front.DECL, L.Front.DLP]
 
 theorem frozen_srcs : (frozen.drop 1).map (fun e => (e.2.src : TieredArray)) = fzSrcs := by decide
 
@@ -125,7 +125,6 @@ theorem frozen_drop1 : frozen.drop 1 =
      (TIXN, ⟨TIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩),
      (EREC, ⟨EREC, fzCtl 129⟩),
      (FIRSTS, ⟨FIRSTS, fzDecl⟩),
-     (L.Rom.ROMC, ⟨L.Rom.ROMC, fzC 31⟩),
      (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDecl)⟩),
      (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩)] := by
   simp only [frozen, List.cons_append, List.drop_succ_cons, List.drop_zero, List.nil_append,
@@ -246,11 +245,6 @@ theorem truncFrozen_firsts (m : Mem) :
     (truncFrozen m).arr64 FIRSTS = (m.arr64 FIRSTS).extract 0 (rdW (m.arr64 L.Front.DECL) 0).toNat := by
   have := truncFrozen_mem m (x := FIRSTS) (z := ⟨FIRSTS, fzDecl⟩) (by rw [frozen_drop1]; simp)
   rw [this]; simp only [fzExt, fzDecl, fzC, Expr.pval, rd64, rdW, Array.getD_eq_getD_getElem?]; rfl
-
-theorem truncFrozen_romc (m : Mem) :
-    (truncFrozen m).arr64 L.Rom.ROMC = (m.arr64 L.Rom.ROMC).extract 0 31 := by
-  have := truncFrozen_mem m (x := L.Rom.ROMC) (z := ⟨L.Rom.ROMC, fzC 31⟩) (by rw [frozen_drop1]; simp)
-  rw [this]; rfl
 
 theorem truncFrozen_decl (m : Mem) : (truncFrozen m).arr64 L.Front.DECL =
     (m.arr64 L.Front.DECL).extract 0 (1 + 8 * rdW (m.arr64 L.Front.DECL) 0).toNat := by

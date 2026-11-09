@@ -138,6 +138,7 @@ import all ConAgua.Front.NatDec
 import all ConAgua.Front.Unescape
 import all ConAgua.L.Examples
 import all ConAgua.Rom.CIRead
+import all ConAgua.Rom.CIConst
 import all ConAgua.Rom.PinRead
 import all ConAgua.Rom.PinReadSpec
 import all ConAgua.Scan.Key

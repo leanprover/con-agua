@@ -130,6 +130,7 @@ public import ConAgua.Front.Unescape
 public import ConAgua.L.Examples
 public import ConAgua.L.Syntax
 public import ConAgua.Layout
+public import ConAgua.Rom.CIConst
 public import ConAgua.Rom.CIRead
 public import ConAgua.Rom.PinRead
 public import ConAgua.Scan.Key
@@ -151,7 +152,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1770 functions, 0 of them stubs.
+1776 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -1024,7 +1025,6 @@ def checkerProg : Prog := [
   ("fz_60", L.Arena.fzF 60),
   ("fz_61", L.Arena.fzF 61),
   ("fz_62", L.Arena.fzF 62),
-  ("fz_63", L.Arena.fzF 63),
   ("fz_7", L.Arena.fzF 7),
   ("fz_8", L.Arena.fzF 8),
   ("fz_9", L.Arena.fzF 9),
@@ -1801,34 +1801,41 @@ def checkerProg : Prog := [
   ("rom_and_pin", L.Rom.romAndPinL),
   ("rom_basis_decls", L.Rom.romBasisDeclsL),
   ("rom_ci", L.Rom.romCiL),
-  ("rom_ci_rom", L.Rom.romCiRomL),
   ("rom_cv", L.Rom.romCvL),
-  ("rom_cv_rom", L.Rom.romCvRomL),
   ("rom_ex_leaf", L.Rom.romExLeaf),
+  ("rom_ex_leaf_c", L.Rom.romExLeafC),
   ("rom_ex_one", L.Rom.romExOne),
+  ("rom_ex_one_c", L.Rom.romExOneC),
   ("rom_ex_ref", L.Rom.romExRef),
+  ("rom_ex_ref_c", L.Rom.romExRefC),
   ("rom_ex_two", L.Rom.romExTwo),
+  ("rom_ex_two_c", L.Rom.romExTwoC),
   ("rom_expr", (L.Rom.romExpr []).toPB),
+  ("rom_expr_c", L.Rom.romExprC),
   ("rom_expr_pin", L.Rom.romExprPinL),
-  ("rom_expr_pin_rom", L.Rom.romExprPinRomL),
   ("rom_exprs_to", L.Rom.romExprsTo),
-  ("rom_fill", L.Rom.romFill),
-  ("rom_fill_block", L.Rom.romFillBlock),
+  ("rom_exprs_to_c", L.Rom.romExprsToC),
   ("rom_items", (L.Rom.romItems []).toPB),
   ("rom_level", (L.Rom.romLevel []).toPB),
+  ("rom_level_c", L.Rom.romLevelC),
   ("rom_levels", L.Rom.romLevels),
+  ("rom_levels_c", L.Rom.romLevelsC),
   ("rom_lists_to", L.Rom.romListsTo),
   ("rom_lit", L.Rom.romLit),
   ("rom_lvls_go", L.Rom.romLvlsGo),
+  ("rom_lvls_go_c", L.Rom.romLvlsGoC),
   ("rom_name", (L.Rom.romName []).toPB),
+  ("rom_name_c", L.Rom.romNameC),
   ("rom_names_to", L.Rom.romNamesTo),
   ("rom_pin_sets", L.Rom.romPinSetsL),
   ("rom_pins_to", L.Rom.romPinsTo),
   ("rom_put", L.Rom.romPutPB),
+  ("rom_put_c", L.Rom.romPutC),
   ("rom_sets_to", L.Rom.romSetsTo),
   ("rom_tpairs_to", L.Rom.romTPairsTo),
   ("rom_tpins_to", L.Rom.romTPinsTo),
   ("rom_u64", L.Rom.romU64PB),
+  ("rom_u64_c", L.Rom.romU64C),
   ("rr_clear", L.Arena.memoClearG L.Arena.rrSch),
   ("rr_find", L.Arena.memoFindG L.Arena.rrSch),
   ("rr_put", L.Arena.memoPutG L.Arena.rrSch),

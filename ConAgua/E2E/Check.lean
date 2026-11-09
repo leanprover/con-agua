@@ -27,7 +27,6 @@ open L
   r := call front_run();
   if r != 0 { return 1 };
   z := call intern_all_pins();
-  z := call rom_fill();
   cnt := L.Front.DECL.u64[0];
   z := call build_index(cnt);
   z := call check_jobs(0, cnt);

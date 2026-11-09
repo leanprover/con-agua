@@ -126,7 +126,6 @@ not scan). -/
   if r != 0 { return 1 };
   z := call prepare_prelude();
   z := call intern_all_pins();
-  z := call rom_fill();
   cnt := L.Front.DECL.u64[0];
   z := call build_index(cnt);
   z := call par_compact(c);

@@ -52,8 +52,8 @@ def ZOKM (dn : NIdx → Option ConLeche.Name) (zs : List ConLeche.Name) (a : ASt
 theorem rdU_ntBW {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i : Word}
     {k : Word → Mem → Option (List Word × Mem)} {f : List Word → Mem → Option (List Word × Mem)}
     {v : List Word × Mem} (h : ntBW (rdU p n m i k) f = some v) : ntBW (k (u64W rom i) m) f = some v := by
-  change ntBW (ntBW (callW p n "rom_u64" [i] m) (fun r m' => k (r.headD 0) m')) f = some v at h
-  cases hc : callW p n "rom_u64" [i] m with
+  change ntBW (ntBW (callW p n "rom_u64_c" [i] m) (fun r m' => k (r.headD 0) m')) f = some v at h
+  cases hc : callW p n "rom_u64_c" [i] m with
   | none => rw [hc] at h; simp at h
   | some t =>
     obtain ⟨r, m'⟩ := t
