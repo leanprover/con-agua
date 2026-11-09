@@ -30,7 +30,8 @@ import all ConAgua.Arena.RecGen
 # `class_rules_ok`: one model and one refinement for both outcomes
 
 `crsE` (`l_model … unified`: `class_rules_ok_one` through its unified model, `cv_lps`,
-`param_levels`, `class_gen_rule` and `sl_cons` lifted) and `crs_ref` under `StageC`; twin side
+`param_levels` and `sl_cons` lifted, `class_gen_rule` through its call, so that `CrsProgE.maKeep`
+carries `mentions_any`'s memo across it) and `crs_ref` under `StageC`; twin side
 con-ron's `classRulesOk_spec`'s proof: `paramLevels` (`paramLevels_spec`, a core-free grower:
 `RSim.liftP` of `plW_sim`), `classGenRule` (`classGenRule_spec`: `RSim.liftPP` of `ruW_sim`; the
 rule `class_gen_rule` omits is the twin's `classGenRule = none` reject), `classRuleOk` (`cr1_ref`),
