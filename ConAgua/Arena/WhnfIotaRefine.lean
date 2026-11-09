@@ -76,45 +76,88 @@ theorem decRules_get (a : Array Word) (off cnt : Nat) (rs : List IRecRule)
   simp at h1
   exact ⟨h1, fun j hj => by have := h2 j (by simpa using hj); simpa [List.getElem_range] using this⟩
 
+/-- A decoded rule's constructor word, read through a reader. -/
+theorem decRule_ctorR {R : Nat → Option Word} {q : Nat} {rl : IRecRule} (h : decRule R q = some rl) :
+    ∃ w, R q = some w ∧ w.toNat < 2 ^ 32 ∧ rl.ctor = decI w := by
+  have hc : hd? R q = some rl.ctor := by
+    unfold decRule at h
+    rcases hk : nat? R (q + 3) with _ | k
+    · simp [hk] at h
+    · rcases k with _ | _ | _ | k <;>
+        simp only [hk, Option.bind_eq_bind, Option.bind_some, Option.bind_eq_some_iff,
+          Option.pure_def, Option.some.injEq] at h
+      all_goals first
+        | (obtain ⟨c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
+        | (obtain ⟨x1, -, c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
+        | (obtain ⟨x1, -, x2, -, c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
+        | (simp at h)
+  exact hd?_some hc
+
+/-- The rules of a decoded slice, one by one (any reader). -/
+theorem decRules_getR {R : Nat → Option Word} (off cnt : Nat) (rs : List IRecRule)
+    (h : decRules R off cnt = some rs) :
+    rs.length = cnt ∧ ∀ j, j < cnt → decRule R (off + 11 * j) = rs[j]? := by
+  obtain ⟨h1, h2⟩ := mapM_option_get _ _ _ h
+  simp at h1
+  exact ⟨h1, fun j hj => by have := h2 j (by simpa using hj); simpa [List.getElem?_range] using this⟩
+
 /-- The model's index arithmetic does not wrap on a decoded record. -/
-theorem rule_idx (a : Array Word) (ro i : Word) (rl : IRecRule)
-    (hsz : a.size < 2 ^ 64) (h : decRule (aread a) (ro.toNat + 11 * i.toNat) = some rl) :
-    (ro + 11 * i).toNat = ro.toNat + 11 * i.toNat ∧ ro.toNat + 11 * i.toNat < a.size := by
-  sorry
+theorem rule_idx {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) (ro i : Word)
+    (rl : IRecRule) (h : decRule R (ro.toNat + 11 * i.toNat) = some rl) :
+    (ro + 11 * i).toNat = ro.toNat + 11 * i.toNat := by
+  obtain ⟨w, hw, -⟩ := decRule_ctorR h
+  have hlt := hR.lt _ _ hw
+  rw [UInt64.toNat_add, UInt64.toNat_mul]
+  simp
+  omega
 
 /-! ## `find_rule(ro, rc, c)` -/
 
 theorem uint64_succ_toNat (n i : Word) (h : i < n) : (i + 1).toNat = i.toNat + 1 :=
   forUp_succ_toNat h
 
-/-- Model of the `find_rule` scan from index `i`, by the `Nat` index (`rdW`: a read past the
-array is `0`; the L code aborts there, so the spec only constrains successful runs). -/
-def frN (E : Array Word) (ro rc c : Word) (i : Nat) : List Word :=
+/-- Model of the `find_rule` scan from index `i`, by the `Nat` index, over the word read `rd`
+(L's tagged read `erRdT m`; the L code aborts on a read past the array, so the spec only constrains
+successful runs). -/
+def frN (rd : Word → Word) (ro rc c : Word) (i : Nat) : List Word :=
   if i < rc.toNat then
-    if rdW E (ro + 11 * UInt64.ofNat i) = c then [1, ro + 11 * UInt64.ofNat i] else frN E ro rc c (i + 1)
+    if rd (ro + 11 * UInt64.ofNat i) = c then [1, ro + 11 * UInt64.ofNat i] else frN rd ro rc c (i + 1)
   else [0, 0]
 termination_by rc.toNat - i
 
-theorem frN_end (E : Array Word) (ro rc c x : Word) (h : ¬ x < rc) : frN E ro rc c x.toNat = [0, 0] := by
+theorem frN_end (rd : Word → Word) (ro rc c x : Word) (h : ¬ x < rc) : frN rd ro rc c x.toNat = [0, 0] := by
   rw [frN, ite_eq_right (fun e => h (UInt64.lt_iff_toNat_lt.mpr e))]
-theorem frN_hit (E : Array Word) (ro rc c x : Word) (h : x < rc) (hc : rdW E (ro + 11 * x) = c) :
-    frN E ro rc c x.toNat = [1, ro + 11 * x] := by
+theorem frN_hit (rd : Word → Word) (ro rc c x : Word) (h : x < rc) (hc : rd (ro + 11 * x) = c) :
+    frN rd ro rc c x.toNat = [1, ro + 11 * x] := by
   rw [frN, ite_eq_left (UInt64.lt_iff_toNat_lt.mp h)]; simp [hc]
-theorem frN_miss (E : Array Word) (ro rc c x : Word) (h : x < rc) (hc : ¬ rdW E (ro + 11 * x) = c) :
-    frN E ro rc c x.toNat = frN E ro rc c (x + 1).toNat := by
+theorem frN_miss (rd : Word → Word) (ro rc c x : Word) (h : x < rc) (hc : ¬ rd (ro + 11 * x) = c) :
+    frN rd ro rc c x.toNat = frN rd ro rc c (x + 1).toNat := by
   rw [frN, ite_eq_left (UInt64.lt_iff_toNat_lt.mp h), forUp_succ_toNat h]; simp [hc]
+
+theorem frN_hitT (m : Mem) (ro rc c x : Word) (h : x < rc)
+    (hc : rdW (m.arr64 (tierA EREC ((ro + 11 * x) >>> 40))) ((ro + 11 * x) &&& 0xFFFFFFFFFF) = c) :
+    frN (erRdT m) ro rc c x.toNat = [1, ro + 11 * x] := frN_hit _ ro rc c x h hc
+theorem frN_missT (m : Mem) (ro rc c x : Word) (h : x < rc)
+    (hc : ¬ rdW (m.arr64 (tierA EREC ((ro + 11 * x) >>> 40))) ((ro + 11 * x) &&& 0xFFFFFFFFFF) = c) :
+    frN (erRdT m) ro rc c x.toNat = frN (erRdT m) ro rc c (x + 1).toNat := frN_miss _ ro rc c x h hc
 
 theorem findRuleLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ True⦄ exec p k findRuleLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      frN (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3).toNat = r.retOr [0, 0]; ⊤⦄ := by
-  sorry
+      frN (erRdT s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3).toNat = r.retOr [0, 0]; ⊤⦄ :=
+  Triple.forUp_pre rfl (fun s => s.mem = s₀.mem ∧ s.loc 0 = s₀.loc 0 ∧ s.loc 1 = s₀.loc 1 ∧
+      s.loc 2 = s₀.loc 2 ∧ frN (erRdT s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s.loc 3).toNat =
+        frN (erRdT s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3).toNat)
+    (fun _ => ⟨rfl, rfl, rfl, rfl, rfl⟩) (by grind [frN_end, Sig.retOr]) (fun k s₁ => by
+      sym only [lang_grind, arena_grind] =>
+        vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64,
+          ld64_rdT_spec, evalE_tld, tld] <;> finish [frN_hitT, frN_missT, LoopPost]) k
 
 theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k : Nat)
     (s₀ : St) (ro rc c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p k) "find_rule" [ro, rc, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ frN (s₀.mem.arr64 EREC) ro rc c 0 = r; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ frN (erRdT s₀.mem) ro rc c 0 = r; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, findRuleL]
   cases k with
@@ -125,42 +168,56 @@ theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k
         fun s₀ => Triple.step_exec (findRuleLoop_spec p (k + 1) s₀)] <;> finish
 
 /-- Rule `i` of a decoded slice, as the model reads it. -/
-theorem frN_at (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc : Word) (rules : List IRecRule)
-    (hget : ∀ j, j < rc.toNat → decRule (aread E) (ro.toNat + 11 * j) = rules[j]?) (i : Nat) (hi : i < rc.toNat)
+theorem frN_at {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) (ro rc : Word)
+    (rules : List IRecRule)
+    (hget : ∀ j, j < rc.toNat → decRule R (ro.toNat + 11 * j) = rules[j]?) (i : Nat) (hi : i < rc.toNat)
     (hlen : rules.length = rc.toNat) :
-    ∃ rl w, rules.drop i = rl :: rules.drop (i + 1) ∧ rdW E (ro + 11 * UInt64.ofNat i) = w ∧
-      w.toNat < 2 ^ 32 ∧ rl.ctor = decI w ∧ decRule (aread E) (ro + 11 * UInt64.ofNat i).toNat = some rl := by
-  sorry
+    ∃ rl w, rules.drop i = rl :: rules.drop (i + 1) ∧ rd (ro + 11 * UInt64.ofNat i) = w ∧
+      w.toNat < 2 ^ 32 ∧ rl.ctor = decI w ∧ decRule R (ro + 11 * UInt64.ofNat i).toNat = some rl := by
+  have hi' : (UInt64.ofNat i).toNat = i := by have := rc.toNat_lt; simp; omega
+  obtain ⟨rl, hrl⟩ : ∃ rl, rules[i]? = some rl := ⟨rules[i], List.getElem?_eq_getElem (by omega)⟩
+  have hdr := hget i hi
+  rw [hrl] at hdr
+  have hw := rule_idx hR ro (UInt64.ofNat i) rl (by rw [hi']; exact hdr)
+  rw [hi'] at hw
+  obtain ⟨w, hwE, hw32, hctor⟩ := decRule_ctorR hdr
+  refine ⟨rl, w, ?_, hR.rd _ _ (by rw [hw]; exact hwE), hw32, hctor, by rw [hw]; exact hdr⟩
+  rw [List.drop_eq_getElem_cons (by omega)]; simp [List.getElem?_eq_some_iff.mp hrl |>.2]
 
 /-- **The scan model computes `findRule`**, by the model's own induction. -/
-theorem frN_rel (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc c : Word) (hc : HW c)
-    (rules : List IRecRule) (hlen : rules.length = rc.toNat)
-    (hget : ∀ j, j < rc.toNat → decRule (aread E) (ro.toNat + 11 * j) = rules[j]?) (i : Nat) :
+theorem frN_rel {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) (ro rc c : Word)
+    (hc : HW c) (rules : List IRecRule) (hlen : rules.length = rc.toNat)
+    (hget : ∀ j, j < rc.toNat → decRule R (ro.toNat + 11 * j) = rules[j]?) (i : Nat) :
     findRule (rules.drop i) (decI c) =
-      (if (frN E ro rc c i).headD 0 = 0 then none else decRule (aread E) ((frN E ro rc c i).tail.headD 0).toNat) := by
-  fun_induction frN E ro rc c i with
+      (if (frN rd ro rc c i).headD 0 = 0 then none else decRule R ((frN rd ro rc c i).tail.headD 0).toNat) := by
+  fun_induction frN rd ro rc c i with
   | case3 i hi => simp [List.drop_eq_nil_of_le (show rules.length ≤ i by omega), findRule]
   | case1 i hi hEq =>
-    obtain ⟨rl, w, hdrop, hr, -, hctor, hdr⟩ := frN_at E hsz ro rc rules hget i hi hlen
+    obtain ⟨rl, w, hdrop, hr, -, hctor, hdr⟩ := frN_at hR ro rc rules hget i hi hlen
     rw [hr] at hEq; subst hEq; simp [hdrop, findRule, hctor] at hdr ⊢; exact hdr.symm
   | case2 i hi hEq ih =>
-    obtain ⟨rl, w, hdrop, hr, hw32, hctor, -⟩ := frN_at E hsz ro rc rules hget i hi hlen
+    obtain ⟨rl, w, hdrop, hr, hw32, hctor, -⟩ := frN_at hR ro rc rules hget i hi hlen
     rw [hr] at hEq
     have hbeq : (rl.ctor == decI c) = false := by rw [hctor, decI_beq _ _ hw32 hc]; simpa using hEq
     rw [hdrop, findRule, hbeq]; simpa using ih
 
-/-- **`find_rule` refines `findRule`.** `HW c` (`decI` truncates) and a size bound on the pool
-(the index arithmetic `ro + 11 * i` does not wrap) are added to the statement. -/
+/-- **`find_rule` refines `findRule`.** `HW c` (`decI` truncates) is added to the statement; the
+rules are decoded at both record tiers (`erecP`), read by L's tagged read. -/
 @[refines ConRon.Arena.findRule]
 theorem findRule_refines (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (n : Nat)
     (s₀ : St) (ro rc c : Word) (rules : List IRecRule) (hc : HW c)
-    (hsz : (s₀.mem.arr64 EREC).size < 2 ^ 64)
     (hr : decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "find_rule" [ro, rc, c]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
       findRule rules (decI c) = decRuleAt s₀.mem (r.headD 0) (r.tail.headD 0); ⊤⦄ := by
-  sorry
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hmem, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (findRule_spec p hp n s₀ ro rc c)
+  obtain ⟨hl, hg⟩ := decRules_getR _ _ _ hr
+  have := frN_rel (erRdOK s₀.mem) ro rc c hc rules hl hg 0
+  refine ⟨hmem, hloc, ?_⟩
+  simpa [decRuleAt, hW] using this
 
 /-! ## `rec_rule_k(ro, rc)` -/
 
@@ -353,12 +410,18 @@ def icaW (p : Prog) (n : Nat) (m : Mem) (vis e : Word) : Option (Word × Mem) :=
       | none => none
       | some (r₂, m₂) =>
         if r₂.headD 0 = 0 then some (0, m₂)
-        else some (if rdW (m₂.arr64 EREC) (r₂.tail.headD 0) = 4 then 1 else 0, m₂)
+        else some (if erRdT m₂ (r₂.tail.headD 0) = 4 then 1 else 0, m₂)
 
 theorem isCtorApp_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (vis e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_ctor_app" [vis, e]
     ⦃fun r s' => LocEq s' s₀ ∧ icaW p n s₀.mem vis e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp.isCtorApp]
+  simp only [callFn, isCtorAppL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
+      evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
+      callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
+    finish [icaW, tierW, idxW]
 
 theorem isCtorApp_run_not (fe : IFEnv) (a : AState) (e h : EIdx)
     (hga : (getAppFn coreWalkFuel e).run a = .ok (h, a)) (ht : h.tag ≠ ETag.const) :
@@ -378,13 +441,99 @@ theorem isCtorApp_run_const (fe : IFEnv) (a : AState) (e h : EIdx)
   | none => rfl
   | some ci => cases ci <;> rfl
 
+/-- **A constructor record's counts** (any reader): kind word `4`, parameters at `q + 5`, fields
+at `q + 6`. -/
+theorem decCI_ctorR {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
+    (rd q = 4 → ∃ cv, ci = .ctorInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat) ∧
+    (rd q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+  cases hq : R q.toNat with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  have hrd : rd q = w := hR.rd _ _ hq
+  rw [hrd]
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  constructor
+  · intro hw; subst hw
+    simp only [show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff, Option.map_eq_some_iff] at h
+    obtain ⟨cv, hcv, np, ⟨w5, hw5, rfl⟩, nf, ⟨w6, hw6, rfl⟩, hc⟩ := h
+    cases hc
+    have h5 : rd (q + 5) = w5 := hR.offN (k := 5) (hk := by decide) hw5
+    have h6 : rd (q + 6) = w6 := hR.offN (k := 6) (hk := by decide) hw6
+    exact ⟨cv, by rw [h5, h6]⟩
+  · intro hw cv np nf hc
+    subst hc
+    have hne : w.toNat ≠ 4 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
+    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
+    all_goals (rw [hk] at h hne; simp [Option.bind_eq_some_iff] at h hne)
+
 /-- **`is_ctor_app` refines `isCtorApp`.** -/
 @[refines ConRon.Arena.isCtorApp]
 theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
     CoreSpec p (n + 1) "is_ctor_app" [vis, e] (isCtorApp fe (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb e hS he
+  refine triple_post (isCtorApp_spec p hp n s₀ vis e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  have hR := hS.arena.base
+  simp only [icaW] at hW
+  rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc, reduceCtorEq] at hW
+  obtain ⟨t₁, ht₁, hm₁, -, hh1, hga⟩ := triple_of_callW
+    (getAppFn_refines' p hp.spine.fn n s₀ a₀ hR e he) hc
+  rw [ht₁] at hm₁
+  subst hm₁
+  by_cases h3 : tagW (r₁.headD 0) ≠ 3
+  · simp only [h3, ↓reduceIte, ne_eq, not_false_eq_true, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    have hrun' := isCtorApp_run_not fe a₀ (decE e) _ hga (fun ht => h3 (by
+      have := (decE_tag_eq _ hh1 3 (by decide)).mp ht; exact this))
+    refine CoreRef.of_pure hS hrun' hm.symm ?_ ?_
+    · simp only [decBool]; rw [← hr]; rfl
+    · unfold ResH HW; rw [← hr]; decide
+  have h3' : tagW (r₁.headD 0) = 3 := by simpa using h3
+  rw [ite_eq_right h3] at hW
+  obtain ⟨hv1, hW⟩ := of_ite_none hW
+  obtain ⟨hv2, hW⟩ := of_ite_none hW
+  have h3 := h3'
+  obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r₁.headD 0) hh1 ⟨hv1, UInt64.not_le.mp hv2⟩ h3
+  generalize tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0 = cw at hvw hn32 hW
+  rcases hc2 : callW p n "env_find" [cw, vis] s₀.mem with _ | ⟨r₂, m₂⟩ <;>
+    simp only [hc2, reduceCtorEq] at hW
+  obtain ⟨t₂, ht₂, hm₂, -, hfind, hdec⟩ := triple_of_callW
+    (envFind_refines p hp.envrow hp.baserow hp.envfind n s₀ vis _ hS.env hn32) hc2
+  rw [ht₂] at hm₂
+  have htag : (decE (r₁.headD 0)).tag = ETag.const := (decE_tag_eq _ hh1 3 (by decide)).mpr h3
+  have hrun1 := isCtorApp_run_const fe a₀ (decE e) _ hga htag _ _ hvw
+  subst hm₂
+  by_cases h0 : r₂.headD 0 = 0
+  · rw [ite_eq_left h0] at hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hnone : fe.find? (decI cw) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
+    rw [hnone] at hrun1
+    refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
+    · simp only [decBool]; rw [← hr]; rfl
+    · unfold ResH HW; rw [← hr]; decide
+  rw [ite_eq_right h0] at hW
+  obtain ⟨ci, hci⟩ := hdec h0
+  have hfind' : fe.find? (decI cw) = some ci := by
+    rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
+  have hctor := decCI_ctorR (erRdOK s₀.mem) hci
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+  rw [hfind'] at hrun1
+  by_cases h4 : erRdT s₀.mem (r₂.tail.headD 0) = 4
+  · obtain ⟨cv, rfl⟩ := hctor.1 h4
+    rw [ite_eq_left h4] at hr
+    refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
+    · simp only [decBool]; rw [← hr]; rfl
+    · unfold ResH HW; rw [← hr]; decide
+  · rw [ite_eq_right h4] at hr
+    refine CoreRef.of_pure (v := false) hS ?_ hm.symm ?_ ?_
+    · rw [hrun1]
+      have := hctor.2 h4
+      cases ci <;> first | rfl | exact absurd rfl (this _ _ _)
+    · simp only [decBool]; rw [← hr]; rfl
+    · unfold ResH HW; rw [← hr]; decide
 
 /-! ## The relation across a memo write (`ct`, `rr`, `cv`: the constant caches)
 
