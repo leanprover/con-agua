@@ -166,4 +166,61 @@ theorem pool_twin (Vt : Type w) [ConLeche.SetTheory Vt] (H : PoolHyps (pins := p
 
 end pool
 
+/-! ## The `check_jobs` loop as a worker -/
+
+/-- **A `record_job(k)` call that returns**, at some fuel. -/
+def RecCall (p : Prog) (k : Nat) (m m' : Mem) : Prop :=
+  ∃ (n : Nat) (r : List Word), n ≤ 2 ^ 62 ∧ callE p n "record_job" [UInt64.ofNat k] m = .ok (r, m')
+
+/-- **A returning `check_jobs` loop is a chain of `record_job` calls** over the jobs `j‥hi - 1`. -/
+theorem checkJobsLoop_chain {p : Prog} {hi : Word} :
+    ∀ (n : Nat), n ≤ 2 ^ 62 + 1 → ∀ (m : Mem) (j : Word) (q : Mem), checkJobsE.loop1 p n m j hi = .ok q →
+      JobChain (RecCall p) m (List.range' j.toNat (hi.toNat - j.toNat)) := by
+  intro n
+  induction n with
+  | zero =>
+    intro _ m j q hq
+    rw [checkJobsE.loop1.eq_1] at hq; cases hq
+  | succ n ih =>
+    intro hn m j q hq
+    by_cases g : j < hi
+    · rw [checkJobsE.loop1.arm1 _ _ _ _ _ g] at hq
+      rw [range'_cons_word g]
+      cases hc : callE p n "record_job" [j] m with
+      | error e => rw [hc, checkJobsE.k_record_job.none] at hq; cases hq
+      | ok q1 =>
+        obtain ⟨r, m₁⟩ := q1
+        rw [hc, checkJobsE.k_record_job.arm1] at hq
+        exact .cons ⟨n, r, by omega, by rw [UInt64.ofNat_toNat]; exact hc⟩ (ih (by omega) m₁ (j + 1) q hq)
+    · have : hi.toNat - j.toNat = 0 := by have : ¬ j.toNat < hi.toNat := g; omega
+      rw [this]
+      exact .nil m
+
+/-- **`record_job` calls as the pool's step**, from the job relation (`JobPost` from `a₀`) and the
+facts `recordJob_ref` takes, at `a₀`. -/
+theorem recCall_step {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinSet}
+    {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {p : Prog} {I : IStreamIndex}
+    (hP : JobProg pins dn ds p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn dn ds) (hdn : DnPers dn)
+    (hrec : RecordSpec pins pinsP) (hpp : PersPinSets pins) (hds : ds.size < 2 ^ 64)
+    {a₀ : AState} (hden : ∀ x ∈ ds.toList, PersDecl x ∧ ∃ d, Frontend.denoteDecl a₀.store x = some d)
+    (hPD : PinsDenote a₀.store pins pinsP) :
+    ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < ds.size), JobPost pins dn ds I a₀ r a →
+      RecCall p k r r' → (∃ env, FoldOK env (I.view k) (AM.st enterScratch a)) →
+      ∃ a', recordJob V pins I k ds[k] a = .ok ((), a') ∧ JobPost pins dn ds I a₀ r' a' := by
+  intro k r r' a hk ⟨hJ, hx, hp⟩ ⟨n, rs, hn, hc⟩ hF
+  have hkw : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt (Nat.lt_trans hk hds)
+  have hden' : ∀ x ∈ ds.toList, PersDecl x ∧ ∃ d, Frontend.denoteDecl a.store x = some d :=
+    fun x hx' => by
+      obtain ⟨h1, d, h2⟩ := hden x hx'
+      exact ⟨h1, d, denoteDecl_pext hx h1 h2⟩
+  have hPD' := PinsDenote.pmono hx pins pinsP hpp hPD
+  have hk' : (UInt64.ofNat k).toNat < ds.size := by rw [hkw]; exact hk
+  have hr := recordJob_ref hP hFD hLD hdn hrec hpp (N := n) hn hk' hJ (by rw [hkw]; exact hF) hden' hPD'
+  rw [hc] at hr
+  obtain ⟨u, a₁, hrun, hJ₁, hx₁, hp₁⟩ := hr
+  refine ⟨a₁, ?_, hJ₁, hx.trans hx₁, hp₁.trans hp⟩
+  have e : recordJob V pins I (UInt64.ofNat k).toNat ds[(UInt64.ofNat k).toNat] = recordJob V pins I k ds[k] := by
+    simp only [hkw]
+  rw [← e]; cases u; exact hrun
+
 end L.Arena
