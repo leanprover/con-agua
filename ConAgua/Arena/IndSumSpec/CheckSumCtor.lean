@@ -108,10 +108,14 @@ theorem checkSumCtor_eq (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx
 -/
 
 /-- A constant's type word, read where the model reads it. -/
-theorem sumTypeWord {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
-    (hsz : (m.arr64 EREC).size < 2 ^ 64) :
-    ∃ w, rdW (m.arr64 EREC) (q + 3) = w ∧ H w ∧ decI w = cv.type := by
-  sorry
+theorem sumTypeWord {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv) :
+    ∃ w, erRd m (q + 3) = w ∧ H w ∧ decI w = cv.type := by
+  have h' := h
+  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h'
+  obtain ⟨nm, -, lps, -, t, ht, rfl⟩ := h'
+  obtain ⟨w, hw, hwl, rfl⟩ := hd?_some ht
+  obtain ⟨e, -⟩ := erRd_add (cq := q) (j := 3) (m := m) hw (by decide)
+  exact ⟨w, e, hwl, rfl⟩
 
 end L.Ind
 

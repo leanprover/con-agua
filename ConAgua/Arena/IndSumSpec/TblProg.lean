@@ -140,6 +140,8 @@ structure TblProg (p : Prog) : Prop where
   hrec : RecProg p
   hi1 : I1lF p
   hipal : IpalF p
+  hcr : CrfF p
+  hft : FindTableProg p
 
 end L.Ind
 
