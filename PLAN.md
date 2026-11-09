@@ -19,7 +19,9 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 - Triples are `Std.WP` (`⦃P⦄ x ⦃Q; E⦄`), not `Std.Do`. `vcgen` reads only `Std.WP`; outside con-leche it needs
   `set_option experimental.vcgen true`.
 - Proofs take the form `sym only [<own grind attr>, …] => vcgen [f, callee specs and IHs as terms] <;> finish`,
-  one per arm or induction case. No custom tactics. Declare the attribute with `register_grind_attr`; in a
+  one per arm or induction case. Prefer existing automation (vcgen, grind, simp sets); a well-designed
+  custom tactic is welcome where it replaces many lines of mechanical proof (not a blunt `repeat try …` of
+  every step). Declare the attribute with `register_grind_attr`; in a
   `module` file this needs `public meta import Lean.Meta.Tactic.Grind.Attr`.
 - Facts are equations about NAMED functions. Postconditions contain no `∃`, no disjunction and no `fun`. The pure
   side's nested `match` must not reach grind: give one guarded equation per reachable arm. Name the blocks between
