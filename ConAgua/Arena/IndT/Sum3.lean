@@ -45,23 +45,22 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 open ConRon.Bridge ConRon.Bridge.Inductives in
 /-- **The twin's universe bound for one field is a core step** (con-ron's
 `checkStructFieldSortsI_spec`, its middle: `readLevelM_pstep` twice; or nothing; or the zero pin
 and `lvlEq?_spec`). -/
 theorem sfbT_cstep {env : ConLeche.Env} {fe : IFEnv} {isProp large : Bool} {s : LIdx}
-    {idxArgs : List EIdx} {fv : EIdx} {u : LIdx} {a a' : AState} (hok : CheckOK V env fe a)
-    (h : (sfbT isProp large s idxArgs fv u).run a = .ok ((), a')) : CoreStep V env fe a a' := by
+    {idxArgs : List EIdx} {fv : EIdx} {u : LIdx} {a a' : AState} (hok : CheckOK false env fe a)
+    (h : (sfbT isProp large s idxArgs fv u).run a = .ok ((), a')) : CoreStep env fe a a' := by
   have h' : sfbT isProp large s idxArgs fv u a = .ok ((), a') := h
   unfold sfbT at h'
   cases isProp with
   | false =>
     simp only [Bool.not_false, ite_true] at h'
     obtain ⟨lu, s5, k5, z5⟩ := AM.bind_ok h'
-    have c5 : CoreStep V env fe a s5 := (readLevelM_pstep hok.state k5).toCore hok
+    have c5 : CoreStep env fe a s5 := (readLevelM_pstep hok.state k5).toCore hok
     obtain ⟨ls, s6, k6, z6⟩ := AM.bind_ok z5
-    have c6 : CoreStep V env fe s5 s6 := (readLevelM_pstep c5.ok.state k6).toCore c5.ok
+    have c6 : CoreStep env fe s5 s6 := (readLevelM_pstep c5.ok.state k6).toCore c5.ok
     obtain ⟨b, s7, k7, z7⟩ := AM.bind_ok z6
     cases hleq : ConLeche.Level.leq lu ls with
     | none =>
@@ -94,7 +93,7 @@ theorem sfbT_cstep {env : ConLeche.Env} {fe : IFEnv} {isProp large : Bool} {s : 
       obtain ⟨vv, s6, k6, z6⟩ := AM.bind_ok z5
       obtain ⟨hok6, hst6, hp6, -⟩ :=
         AM.of_run (P := fun t => t = a) rfl k6 (Core.lvlEq?_spec a u z hok)
-      have c6 : CoreStep V env fe a s6 := ⟨hok6, by rw [hst6]; exact Ext.refl _, hp6⟩
+      have c6 : CoreStep env fe a s6 := ⟨hok6, by rw [hst6]; exact Ext.refl _, hp6⟩
       split at z6
       · first
           | (obtain ⟨-, rfl⟩ := AM.pure_ok z6; exact c6)
@@ -104,7 +103,6 @@ theorem sfbT_cstep {env : ConLeche.Env} {fe : IFEnv} {isProp large : Bool} {s : 
           | (obtain ⟨-, rfl⟩ := AM.pure_ok z6; exact c6)
           | exact absurd z6 (fun h => AM.fail_ok h)
           | (obtain ⟨_, _, k, _⟩ := AM.bind_ok z6; exact absurd k (fun h => AM.fail_ok h))
--/
 
 /-- **The model of `check_field_sort_bound`, both outcomes**: its four callees (outside the
 verdict closure) through their runs, lifted. -/
@@ -225,53 +223,24 @@ theorem cfb_ref {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   · rw [hq3, hr3] at hg; rw [hg.2, Bool.or_false]; simpa using hg.1
   · rw [hq3, hr3]; simpa using hb
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The model of `check_struct_field_sorts_i_go`, both outcomes**: `sl_get` and `fvar_type_d`
+/-- **The model of `check_struct_field_sorts_i`, both outcomes**: `sl_get` and `fvar_type_d`
 (outside the verdict closure) through their `Option` models, the core stubs and
-`check_field_sort_bound` through their runs, the recursion through the model itself. -/
-l_model csfGoE_spec (p : Prog) (hf : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL)
+`check_field_sort_bound` through their runs, the recursion (field `j - 1`, then the fields below)
+through the model itself. -/
+l_model fsortsE_spec (p : Prog) (hf : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL)
     (hftd : FtdF p) (hb : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
-  fns [hf ↦ csfGoE]
+  fns [hf ↦ fsortsE]
   specs [callW_spec p n "sl_get", ftdF_spec0 p hftd n, cfbE_spec p hb n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The model of `check_struct_field_sorts_i`, both outcomes**: `iw_alloc` through its `Option`
-model, the fields through `csfGoE`. -/
-l_model fsortsE_spec (p : Prog) (hf : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL)
-    (hgo : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL)
-    (hia : p.lookup "iw_alloc" = some iwAlloc) (hftd : FtdF p)
-    (hb : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
-  fns [hf ↦ fsortsE]
-  specs [iwAlloc_specW p hia n, csfGoE_spec p hgo hftd hb n]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
-
-/-- What `check_struct_field_sorts_i_go` at `j` gives besides the twin's sorts `xs` of the fields
-below `j` (the result slice `res` pre-sized, `acc` the `k` sorts above `j` already written): the
-stage relation, growth from `m0`, the sorts written in front of `acc`. -/
-structure CsfGoPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
-    (m0 : Mem) (res j : Word) (k : Nat) (acc : List LIdx) (m' : Mem) (xs : List LIdx) (a' : AState) :
-    Prop where
+/-- What `check_struct_field_sorts_i` gives (from `m0`, the memory its slices decode in): the stage
+relation, growth, `AbsOK`. -/
+structure FsortsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
+    (m0 m' : Mem) (a' : AState) : Prop where
   stage : StageC dn vis fe env m' a'
   grow : IWGrow m0 m'
-  sorts : decHL m' res.toNat (j.toNat + k) = some (xs ++ acc)
-  top : res.toNat + j.toNat + k ≤ iwTop m'
-  abs : AbsOK m'
-
-/-- What `check_struct_field_sorts_i` gives besides the twin's sorts `xs`: the stage relation,
-growth, the sorts as the `IW` slice `[r₀, r₁]`. -/
-structure FsortsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
-    (m : Mem) (r : List Word) (m' : Mem) (xs : List LIdx) (a' : AState) : Prop where
-  stage : StageC dn vis fe env m' a'
-  grow : IWGrow m m'
-  sorts : decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs
-  top : (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m'
   abs : AbsOK m'
 
 section sims
@@ -279,7 +248,6 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hLC hLT in
 /-- **`check_struct_field_sorts_i_go` refines `checkStructFieldSortsI .verified` at `j`, both
 outcomes** (twin side: con-ron's `checkStructFieldSortsI_spec`'s proof): the field (`sl_get`, L
@@ -287,40 +255,37 @@ only), `fvarTypeD` (`fvarTypeD_run`: the state unchanged), `inferTypeCore` (`inf
 error by `CoreStubsE`), `ensureSortCore` (`ensureSortC_rsim`; likewise), the universe bound `sfbT`
 (`cfb_ref`, `sfbT_cstep`), the write (L only), the recursion at the
 extended store. -/
-theorem csfGo_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_word" = some pinWordL)
+theorem fsorts_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_word" = some pinWordL)
     (het : p.lookup "lvl_eq_true" = some lvlEqTrue) (hc : p.lookup "sl_contains" = some slContains) (n : Nat) (hn : n ≤ 2 ^ 62) :
-    ∀ (m : Mem) (a : AState) (isProp large s nP fo fl io il res j : Word) (m0 : Mem) (k : Nat)
-      (acc : List LIdx) (fvs idxArgs : List EIdx) (fvsP : List ConLeche.Expr),
-    StageC dn vis fe env m a → AbsOK m → IWGrow m0 m → iwTop m0 ≤ res.toNat →
-    res.toNat + j.toNat + k ≤ iwTop m →
-    decHL m (res.toNat + j.toNat) k = some acc →
+    ∀ (m : Mem) (a : AState) (isProp large s nP fo fl io il j : Word) (m0 : Mem)
+      (fvs idxArgs : List EIdx) (fvsP : List ConLeche.Expr),
+    StageC dn vis fe env m a → AbsOK m → IWGrow m0 m →
     decHL m0 fo.toNat fl.toNat = some fvs → fo.toNat + fl.toNat ≤ iwTop m0 →
     decHL m0 io.toNat il.toNat = some idxArgs → io.toNat + il.toNat ≤ iwTop m0 →
     H s → (∃ sP, denoteL a.store.ls (decI s) = some sP) → nP.toNat + j.toNat < 2 ^ 64 →
     Frontend.denoteEList a.store fvs = some fvsP →
     (∀ i, i < j.toNat → ∀ x, fvsP[i]? = some x →
       ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD) →
-    RefE (VerdictCtx p) (csfGoE p n m vis isProp large s nP fo fl io il res j)
+    RefE (VerdictCtx p) (fsortsE p n m vis isProp large s nP fo fl io il j)
       (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs idxArgs j.toNat) a
-      (fun v xs a' => CsfGoPost dn vis fe env m0 res j k acc v.2 xs a') := by
+      (fun v _ a' => FsortsPost dn vis fe env m0 v.2 a') := by
   induction n with
-  | zero => intros; rw [csfGoE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  | zero => intros; rw [fsortsE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n ih =>
-  intro m a isProp large s nP fo fl io il res j m0 k acc fvs idxArgs fvsP hC hA hg0 hr0 hroom hacc
+  intro m a isProp large s nP fo fl io il j m0 fvs idxArgs fvsP hC hA hg0
     hfvs hfb hidx hib hs hsP hnj hfP hws
   have hS := hC.stage
   by_cases hj : j = 0
   · subst hj
-    rw [csfGoE.arm1 p n m vis isProp large s nP fo fl io il res 0 rfl]
-    simp only [UInt64.toNat_zero, Nat.add_zero] at hacc hroom
-    exact RefE.ret rfl ⟨hC, hg0, by simpa using hacc, by simpa using hroom, hA⟩
-  rw [csfGoE.arm2 p n m vis isProp large s nP fo fl io il res j hj]
+    rw [fsortsE.arm1 p n m vis isProp large s nP fo fl io il 0 rfl]
+    exact RefE.ret rfl ⟨hC, hg0, hA⟩
+  rw [fsortsE.arm2 p n m vis isProp large s nP fo fl io il j hj]
   obtain ⟨J, hjJ⟩ : ∃ J, j.toNat = J + 1 :=
     ⟨j.toNat - 1, by have : j.toNat ≠ 0 := fun e => hj (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   have hJ : (j - 1).toNat = J := by rw [sumToNat_pred hj]; omega
   rw [hjJ, checkStructFieldSortsI_succ]
   -- the field (`sl_get`, L only)
-  refine RefE.onlySim (fun _ => csfGoE.k_sl_get.none ..) (fun r1 m1 h1 =>
+  refine RefE.onlySim (fun _ => fsortsE.k_sl_get.none ..) (fun r1 m1 h1 =>
     triple_of_callW (slGet_specW p hg n ⟨m, Locals.init []⟩ fo fl (j - 1)) h1)
     fun r1 m1 ⟨s1, hs1, _, hm1, hgw⟩ => ?_
   have hl : ¬ fl ≤ j - 1 := by
@@ -339,7 +304,7 @@ theorem csfGo_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wor
     rw [← hgw, efo, hw]
   have hm1' : m = m1 := by rw [← hs1, hm1]
   subst hm1'
-  rw [csfGoE.k_sl_get.arm1]
+  rw [fsortsE.k_sl_get.arm1]
   rw [hr1]
   have hget : fvs[J]? = some (decI w) := by
     rw [List.getElem?_eq_getElem (by rw [decHL_length m hfvs']; exact hJl), hwd]
@@ -349,102 +314,52 @@ theorem csfGo_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wor
   have hdep : (nP + (j - 1)).toNat = nP.toNat + J := by rw [sum_toNat_add (by omega), hJ]
   rw [← hdep]
   -- `fvar_type_d` (outside the verdict closure)
-  refine RefE.bindSim (fun _ => csfGoE.k_fvar_type_d.none ..) (sumSim_of_relW (ftdF_ok dn vis fe w hwl) hS)
+  refine RefE.bindSim (fun _ => fsortsE.k_fvar_type_d.none ..) (sumSim_of_relW (ftdF_ok dn vis fe w hwl) hS)
     fun rt t m1 a1 h2 hrun1 ⟨hS1, hg1, ht1, ht⟩ => ?_
-  rw [csfGoE.k_fvar_type_d.arm1]
+  rw [fsortsE.k_fvar_type_d.arm1]
   have hA1 : AbsOK m1 := ftdF_afr h2 hA
   obtain ⟨ha1, htd⟩ := ConRon.Bridge.Inductives.fvarTypeD_run hC.check.state hda hrun1
   subst a1 ht
   have hC1 : StageC dn vis fe env m1 a := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
   -- `infer_type_core`
-  refine RefE.bindCall (fun _ => csfGoE.k_infer_type_core.none ..)
+  refine RefE.bindCall (fun _ => fsortsE.k_infer_type_core.none ..)
     (fun hV e h3 => hV.core.inferTypeCore n (by omega) hC1.stageT _ _ ht1 e h3)
     (inferC_rsim hq henv n (by omega) hC1 hA1 _ _ ht1 htd (by rw [hdep]; exact hwsa))
     fun ry m2 ty a2 _ hrun2 ⟨hC2, hg2, ⟨hy1, hy⟩, hA2, c2, tyP, htyP, hwty⟩ => ?_
   dsimp only at hC2 hg2 hy1 hy hA2
-  rw [csfGoE.k_infer_type_core.arm1]
+  rw [fsortsE.k_infer_type_core.arm1]
   subst hy
   -- `ensure_sort_core`
-  refine RefE.bindCall (fun _ => csfGoE.k_ensure_sort_core.none ..)
+  refine RefE.bindCall (fun _ => fsortsE.k_ensure_sort_core.none ..)
     (fun hV e h4 => hV.core.ensureSortCore n (by omega) hC2.stageT _ _ hy1 e h4)
     (ensureSortC_rsim hq henv n (by omega) hC2 hA2 _ _ hy1 htyP hwty)
     fun ru m3 u a3 _ hrun3 ⟨hC3, hg3, ⟨hu1, hu⟩, hA3, c3, lu, hdu⟩ => ?_
   dsimp only at hC3 hg3 hu1 hu hA3
-  rw [csfGoE.k_ensure_sort_core.arm1]
+  rw [fsortsE.k_ensure_sort_core.arm1]
   subst hu
   have hg03 := ((hg0.trans hg1).trans hg2).trans hg3
   have hidx3 : decHL m3 io.toNat il.toNat = some idxArgs := by rw [decHL_grow hg03 hib]; exact hidx
   obtain ⟨sP, hsP0⟩ := hsP
   -- `check_field_sort_bound`
-  refine RefE.bindE (fun _ => csfGoE.k_check_field_sort_bound.none ..) (fun _ => trivial) (cfb_ref hq.closed hLC hLT hpw het hc n m3 a3 isProp
+  refine RefE.bindE (fun _ => fsortsE.k_check_field_sort_bound.none ..) (fun _ => trivial) (cfb_ref hq.closed hLC hLT hpw het hc n m3 a3 isProp
     large s io il w (ru.headD 0) idxArgs hC3 hA3 hu1 hs hwl hidx3 (by have := hg03.iw; omega) hdu
     (ConRon.Bridge.denoteL_ext hsP0 (c2.ext.trans c3.ext))) fun ⟨r5, m4⟩ x4 a4 hrun4 ⟨hS4, hg4, hA4⟩ => ?_
   dsimp only at hS4 hg4 hA4
-  rw [csfGoE.k_check_field_sort_bound.arm1]
+  rw [fsortsE.k_check_field_sort_bound.arm1]
   have c4 := sfbT_cstep hC3.check hrun4
   have hC4 : StageC dn vis fe env m4 a4 := hC3.of_check hS4 hA4 c4.ok c4.ext
-  -- the write (L only)
-  have hg14 := ((hg1.trans hg2).trans hg3).trans hg4
-  have hres1 : (res + (j - 1)).toNat = res.toNat + J := by rw [sum_toNat_add (by omega), hJ]
-  have hsz4 : res.toNat + J < (m4.arr64 IW).size := by
-    obtain ⟨h1, -, -, -, -⟩ := hS4.iw; have := hg14.iw; omega
-  have hacc4 : decHL m4 (res.toNat + J + 1) k = some acc := by
-    rw [decHL_grow hg14 (by omega)]; rw [show res.toNat + J + 1 = res.toNat + j.toNat by omega]; exact hacc
-  have hacc' := sumDecHL_write_front m4 _ k _ (ru.headD 0) acc hres1 hsz4 hu1 hacc4
-  have htop' : iwTop (m4.set64 IW (res + (j - 1)) (ru.headD 0)) = iwTop m4 := by
-    simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have hAw := set64IW_afr m4 (res + (j - 1)) (ru.headD 0) hA4
-  have hCw : StageC dn vis fe env (m4.set64 IW (res + (j - 1)) (ru.headD 0)) a4 :=
-    hC4.of_pstep (hS4.set_iw _ _) hAw (PStep.refl hC4.check.state)
   have hx14 := c2.ext.trans (c3.ext.trans c4.ext)
   -- the fields below
-  have hrec := ih (by omega) (m4.set64 IW (res + (j - 1)) (ru.headD 0)) a4 isProp large s nP fo fl io il
-    res (j - 1) m0 (k + 1) (decI (ru.headD 0) :: acc) fvs idxArgs fvsP hCw hAw
-    ((hg03.trans hg4).set_iw _ _ (by omega)) hr0 (by rw [htop', hJ]; have := hg14.iw; omega)
-    (by rw [hJ]; exact hacc') hfvs hfb hidx hib hs ⟨sP, ConRon.Bridge.denoteL_ext hsP0 hx14⟩ (by omega)
+  have hrec := ih (by omega) m4 a4 isProp large s nP fo fl io il (j - 1) m0 fvs idxArgs fvsP hC4 hA4
+    (hg03.trans hg4) hfvs hfb hidx hib hs ⟨sP, ConRon.Bridge.denoteL_ext hsP0 hx14⟩ (by omega)
     (ConRon.Bridge.denoteEList_ext hx14 _ _ hfP) (fun i hi => hws i (by omega))
   rw [hJ] at hrec
-  refine RefE.bindE (fun _ => csfGoE.k_check_struct_field_sorts_i_go.none ..) id hrec fun ⟨w6, m6⟩ xs a5 _ hR5 => ?_
-  rw [csfGoE.k_check_struct_field_sorts_i_go.arm1]
-  have hd5 := hR5.sorts
-  have ht5 := hR5.top
-  dsimp only at hd5 ht5
-  rw [hJ] at hd5 ht5
-  refine RefE.ret rfl ⟨hR5.stage, hR5.grow, ?_, by dsimp only; omega, hR5.abs⟩
-  dsimp only
-  rw [hjJ, show J + 1 + k = J + (k + 1) by omega, hd5]; simp
--/
+  rw [← bind_pure (checkStructFieldSortsI V fe _ _ _ _ _ _ _)]
+  refine RefE.bindE (fun _ => fsortsE.k_check_struct_field_sorts_i.none ..) id hrec
+    fun ⟨w6, m6⟩ _ a5 _ hR5 => ?_
+  rw [fsortsE.k_check_struct_field_sorts_i.arm1]
+  exact RefE.ret rfl hR5
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hq henv hLC hLT in
-/-- **`check_struct_field_sorts_i` refines `checkStructFieldSortsI .verified`, both outcomes**: the
-allocation (L only), then `csfGo_ref` from the top field. -/
-theorem fsorts_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_word" = some pinWordL)
-    (het : p.lookup "lvl_eq_true" = some lvlEqTrue) (hc : p.lookup "sl_contains" = some slContains) (n : Nat) (hn : n ≤ 2 ^ 62)
-    (m : Mem) (a : AState) (isProp large s nP fo fl io il nW : Word) (fvs idxArgs : List EIdx)
-    (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hfvs : decHL m fo.toNat fl.toNat = some fvs)
-    (hfb : fo.toNat + fl.toNat ≤ iwTop m) (hidx : decHL m io.toNat il.toNat = some idxArgs)
-    (hib : io.toNat + il.toNat ≤ iwTop m) (hs : H s) {sP : ConLeche.Level}
-    (hsP : denoteL a.store.ls (decI s) = some sP) (hnj : nP.toNat + nW.toNat < 2 ^ 64)
-    {fvsP : List ConLeche.Expr} (hfP : Frontend.denoteEList a.store fvs = some fvsP)
-    (hws : ∀ i, i < nW.toNat → ∀ x, fvsP[i]? = some x →
-      ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD) :
-    RefE (VerdictCtx p) (fsortsE p (n + 1) m vis isProp large s nP fo fl io il nW)
-      (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs idxArgs nW.toNat) a
-      (fun v xs a' => FsortsPost dn vis fe env m v.1 v.2 xs a') := by
-  rw [fsortsE.arm1]
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun res m1 hal => ?_
-  obtain ⟨hS1, hg1, hrt, ht1⟩ := allocW_stage hal hC.stage
-  have hA1 := allocW_afr hal hA
-  dsimp only [fsortsE.k_iw_alloc]
-  refine RefE.lastE (K := fsortsE.k_check_struct_field_sorts_i_go p nW res) (fun _ => rfl) (fun _ => rfl) id (csfGo_ref hq henv hLC hLT hg hpw het hc n hn m1 a
-    isProp large s nP fo fl io il res nW m 0 [] fvs idxArgs fvsP
-    (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1 (by omega) (by omega)
-    (by simp [decHL, hslice?]) hfvs hfb hidx hib hs ⟨sP, hsP⟩ hnj hfP hws)
-    fun _ _ _ _ hR => ⟨hR.stage, hR.grow, by simpa using hR.sorts, by simpa using hR.top, hR.abs⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hLC hLT in
 /-- **`check_struct_field_sorts_i` refines `checkStructFieldSortsI .verified`** under `StageC`
 (`fsorts_ref`'s ok half; the fields' denotations and scoping as con-ron's
@@ -454,8 +369,6 @@ theorem checkStructFieldSortsI_refinesC (hg : p.lookup "sl_get" = some slGet)
     (hpw : p.lookup "pin_word" = some pinWordL)
     (het : p.lookup "lvl_eq_true" = some lvlEqTrue) (hc : p.lookup "sl_contains" = some slContains)
     (hb : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
-    (hgo : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL)
-    (hia : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL) (hftd : FtdF p)
     (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (isProp large s nP fo fl io il nW : Word)
@@ -467,23 +380,20 @@ theorem checkStructFieldSortsI_refinesC (hg : p.lookup "sl_get" = some slGet)
     (hfP : Frontend.denoteEList a₀.store fvs = some fvsP)
     (hws : ∀ i, i < nW.toNat → ∀ x, fvsP[i]? = some x →
       ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_struct_field_sorts_i"
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_field_sorts_i"
       [vis, isProp, large, s, nP, fo, fl, io, il, nW]
-    ⦃fun r s' => LocEq s' s₀ ∧
+    ⦃fun _ s' => LocEq s' s₀ ∧
       AM.ok (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs idxArgs
         nW.toNat) a₀ ∧
       StageC dn vis fe env s'.mem (AM.st (checkStructFieldSortsI V fe (isProp != 0) (large != 0)
         (decI s) nP.toNat fvs idxArgs nW.toNat) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
-        some (AM.res (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs
-          idxArgs nW.toNat) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
-  triple_post (RefE.triple (fsortsE_spec p hp hgo hia hftd hb (n + 1) s₀ vis isProp large s nP fo fl io il nW)
-      (fsorts_ref hq henv hLC hLT hg hpw het hc n hn _ a₀ isProp large s nP fo fl io il nW fvs idxArgs hC hA
-        hfvs hfb hidx hib hs hsP hnj hfP hws)) fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
-    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-    exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.sorts, hR.abs⟩
--/
+      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
+  triple_post (RefE.triple (fsortsE_spec p hp hftd hb n s₀ vis isProp large s nP fo fl io il nW)
+      (fsorts_ref hq henv hLC hLT hg hpw het hc n hn _ a₀ isProp large s nP fo fl io il nW s₀.mem fvs
+        idxArgs fvsP hC hA (IWGrow.refl _) hfvs hfb hidx hib hs ⟨sP, hsP⟩ hnj hfP hws))
+      fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
+    obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
+    exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.abs⟩
 
 end sims
 
