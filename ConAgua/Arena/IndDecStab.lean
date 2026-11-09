@@ -565,8 +565,8 @@ theorem truncM_iw_eq {m : Mem} {i : Nat} (hi : i < iwTop m) :
 theorem truncM_er_eq {m : Mem} {i : Nat} : erA (truncM m) i = erA m i := by rw [truncM_erA]
 
 /-- The record pool only grew (both tiers). -/
-theorem IWGrow.erExt {m m' : Mem} (hg : IWGrow m m') : ArrExt (erA m) (erA m') := by
-  sorry
+theorem IWGrow.erExt {m m' : Mem} (hg : IWGrow m m') : ArrExt (erA m) (erA m') :=
+  hg.erecGrow.ext
 
 /-- Every memory the pools grow into extends the cut pools. -/
 theorem IWGrow.truncExt {m m' : Mem} (hg : IWGrow m m') : PoolExt (truncM m) m' := by

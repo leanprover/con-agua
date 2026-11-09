@@ -101,7 +101,29 @@ theorem apdF_simR {vis : Word} {fe : IFEnv} {m : Mem}
     Sim (apdF m [o, l, e]) (allLevelParamsDefined lps (decI e)) a
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x ∧ AbsOK m' ∧
         sp a' = sp a) := by
-  sorry
+  intro r m' h
+  obtain ⟨ks, hks⟩ := hks
+  obtain ⟨n, hc⟩ := callF_run h
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
+  obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (allLevelParamsDefined_spec_raw apdP apdP_prog.eview apdP_prog.lsnode apdP_prog.find
+      apdP_prog.put apdP_prog.clear apdP_prog.lmem apdP_prog.lnode apdP_prog.lapd apdP_prog.ls
+      apdP_prog.go apdP_prog.entry n ⟨m, Locals.init []⟩ o l e) hc
+  subst hs'
+  obtain ⟨hAb, hI1, hCr, hIl, hW, hE, hSp, hB, hP⟩ := hA
+  obtain ⟨b, hrun, hr, hS', hg, mp, hM⟩ := apdEntry_ok n hS (ApdEnv.of_state hok) o l e _ lps ks hks
+    hdec he (apdMR_clear hW) hm
+  have hf := apdF_frame h
+  refine ⟨b, a, hrun, hS', hg, apd_decW0B hr, ?_, rfl⟩
+  obtain ⟨-, ⟨mf, hfl⟩, ⟨ml, hlsb⟩, hLP⟩ := hW
+  refine ⟨hAb.frame hf (by decide) (by decide), hI1.frame hf (by decide) (by decide),
+    hCr.frame hf (by decide) (by decide), hIl.frame hf (by decide) (by decide),
+    ⟨apdMR_ws hM, ⟨mf, ?_⟩, ⟨ml, ?_⟩, hLP.frame hf (by decide) (by decide)⟩,
+    by rw [hf.size]; exact hE, by rw [hf.size]; exact hSp, by rw [hf.size]; exact hB,
+    by rw [pinW_frame hf (by decide)]; exact hP⟩
+  · exact memoRG_frame coreFlSch coreFlSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf mf hfl
+  · exact memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf ml hlsb
 
 /-- `apdF_simR` at the program's own call (`realCall p`'s reading). -/
 theorem apdCall_simR {p : Prog} (hp : ApdF p) (k : Nat)

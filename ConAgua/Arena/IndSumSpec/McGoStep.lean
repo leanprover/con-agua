@@ -390,7 +390,7 @@ theorem mcGoOK (n : Nat) : McGoOK n := by
 its write set `stripF_frame`. -/
 
 section hbStubs
-variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+variable (vis : Word) (fe : IFEnv)
 
 /-- **`bvar_b` (lane `exprops4`'s, no longer a stub here) under the stage relation**: its model
 refines `bvarB` at every twin fuel `F ≥ f` or `F + 1 ≥ n`; it writes only the `bvarB` memo (array `BMEMO` = 24,
@@ -688,22 +688,22 @@ theorem hbIns_ok {m m' : Mem} {e i r r' : Word} {b : Bool} {mp : Std.HashMap (EI
     · exact (msetG_frame hbSch hbSch_wf m m2 e i r hm).mono (by simp [hbSch]) (by simp [hbSch])
 
 /-- The post of the `has_loose_b_var_b_go` walk from `m`. -/
-abbrev HbQ (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : Word)
+abbrev HbQ (vis : Word) (fe : IFEnv) (m : Mem) (r : Word)
     (x : Bool × Std.HashMap (EIdx × Nat) Bool) (m' : Mem) (a' : AState) : Prop :=
   r = (if x.1 then 1 else 0) ∧ hbMR m' x.2 ∧ StageR vis fe m' a' ∧ IWGrow m m'
 
 /-- `HbQ` for an arm whose twin result is `ins` of the walk's (the memo insertion). -/
-abbrev HbQi (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+abbrev HbQi (vis : Word) (fe : IFEnv)
     (ins : Bool × Std.HashMap (EIdx × Nat) Bool → Bool × Std.HashMap (EIdx × Nat) Bool) (m : Mem)
     (r : Word) (y : Bool × Std.HashMap (EIdx × Nat) Bool) (m' : Mem) (a' : AState) : Prop :=
-  ∃ x, y = ins x ∧ HbQ dn vis fe m r x m' a'
+  ∃ x, y = ins x ∧ HbQ vis fe m r x m' a'
 
 /-- `HbOK n`: the word model at depth `n` and fuel word `f` refines the twin at fuel `f.toNat`. -/
-def HbOK (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) : Prop :=
+def HbOK (vis : Word) (fe : IFEnv) (n : Nat) : Prop :=
   ∀ (m : Mem) (a : AState) (f i h : Word) (mp : Std.HashMap (EIdx × Nat) Bool),
     StageR vis fe m a → H h → hbMR m mp →
     Sim (hbGoW n m f i h) (ConRon.Arena.hasLooseBVarBGo mp i.toNat f.toNat (decE h)) a
-      (HbQ dn vis fe m)
+      (HbQ vis fe m)
 
 theorem word_toNat_add_one {i : Word} (hi : ¬ 4294967296 ≤ i) : (i + 1).toNat = i.toNat + 1 := by
   have : i.toNat < 4294967296 :=
@@ -738,8 +738,8 @@ theorem hbL2_eq (n : Nat) (f i z : Word) (o : Option (Word × Mem)) :
 
 /-- `or`-shaped arms: the first call, then (on `false`) the second; `ins` is the memo insertion
 that follows (pushed into the branches by the twin's `do`). -/
-theorem hbOr_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
-    (ih : HbOK dn vis fe n) (m : Mem) (a : AState) (i i2 x y f : Word)
+theorem hbOr_ok {vis : Word} {fe : IFEnv} (n : Nat)
+    (ih : HbOK vis fe n) (m : Mem) (a : AState) (i i2 x y f : Word)
     (mp : Std.HashMap (EIdx × Nat) Bool) (hx : H x) (hy : H y)
     (ins : Bool × Std.HashMap (EIdx × Nat) Bool → Bool × Std.HashMap (EIdx × Nat) Bool)
     (hS : StageR vis fe m a) (hM : hbMR m mp) :
@@ -748,7 +748,7 @@ theorem hbOr_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
         | (true, memo) => pure (ins (true, memo))
         | (false, memo) => do
           let r ← ConRon.Arena.hasLooseBVarBGo memo i2.toNat (f - 1).toNat (decE y)
-          pure (ins r) : AM (Bool × Std.HashMap (EIdx × Nat) Bool)) a (HbQi dn vis fe ins m) := by
+          pure (ins r) : AM (Bool × Std.HashMap (EIdx × Nat) Bool)) a (HbQi vis fe ins m) := by
   refine Sim.bindK (by rw [hbO1]) (fun _ _ => rfl) (ih m a _ i x mp hS hx hM) ?_
   rintro r1 ⟨_ | _, mp1⟩ m1 a1 ⟨rfl, hM1, hS1, hg1⟩
   · rw [hbO1_ne (hr := by simp)]
@@ -757,13 +757,13 @@ theorem hbOr_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   · rw [hbO1_one (hr := by simp)]
     exact Sim.ret ⟨_, rfl, rfl, hM1, hS1, hg1⟩
 
-theorem hbNode_arm {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat)
-    (ih : HbOK dn vis fe k) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v) (hnv : HNodeV v)
+theorem hbNode_arm {vis : Word} {fe : IFEnv} (k : Nat)
+    (ih : HbOK vis fe k) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v) (hnv : HNodeV v)
     (m : Mem) (a : AState) (i : Word) (hE : EIdx) (f : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
     (hi : ¬ 4294967296 ≤ i) (hS : StageR vis fe m a) (hM : hbMR m mp) :
     Sim (hbNodeW k f m i (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
       (vl.tail.tail.tail.headD 0)) (hbArm mp i.toNat (f - 1).toNat hE v) a
-      (HbQi dn vis fe (ConRon.Arena.hasLooseBVarBIns hE i.toNat) m) := by
+      (HbQi vis fe (ConRon.Arena.hasLooseBVarBIns hE i.toNat) m) := by
   cases v with
   | app f0 x' =>
     simp only [ViewR, getD1_eq', getD2_eq] at hvr
@@ -797,15 +797,15 @@ theorem hbNode_arm {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     exact Sim.bindRet (ih m a _ i _ mp hS hz hM) fun _ x _ _ h => ⟨x, rfl, h⟩
   | bvar _ | fvar _ _ | sort _ | const _ _ | lit _ => exact False.elim hnv
 
-theorem hbGo_nodeCase {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (j : Nat)
-    (ih : HbOK dn vis fe j) (m : Mem) (a : AState) (i h f : Word)
+theorem hbGo_nodeCase {vis : Word} {fe : IFEnv} (j : Nat)
+    (ih : HbOK vis fe j) (m : Mem) (a : AState) (i h f : Word)
     (mp : Std.HashMap (EIdx × Nat) Bool)
     (vl : List Word) (v : ENodeView) (hvr : ViewR vl v) (hnv : HNodeV v)
     (hv : a.store.view (decE h) = some v) (hvl : vl ≠ [])
     (hg0 : ¬ vl.headD 0 = 0)
     (hgl : ¬ (vl.headD 0 = 1 ∨ vl.headD 0 = 2 ∨ vl.headD 0 = 3 ∨ vl.headD 0 = 8))
     (hS : StageR vis fe m a) (hh : H h) (hM : hbMR m mp) :
-    Sim (hbK2 j f m i h vl) (hbRestT mp i.toNat (f - 1).toNat (decE h)) a (HbQ dn vis fe m) := by
+    Sim (hbK2 j f m i h vl) (hbRestT mp i.toNat (f - 1).toNat (decE h)) a (HbQ vis fe m) := by
   by_cases hi : 4294967296 ≤ i
   · rw [hbK2_big j m f i h vl hvl hg0 hgl hi]; exact Sim.of_none
   rw [hbK2_node j m f i h vl hvl hg0 hgl hi]
@@ -831,12 +831,59 @@ theorem hbGo_nodeCase {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
   exact ⟨by rw [hr']; exact hbb, hM2, hS2, hg1.trans hg2⟩
 
-theorem hbGo_step_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (j : Nat)
-    (ih : ∀ k, k < j + 1 → HbOK dn vis fe k) : HbOK dn vis fe (j + 1) := by
-  sorry
+theorem hbGo_step_ok {vis : Word} {fe : IFEnv} (j : Nat)
+    (ih : ∀ k, k < j + 1 → HbOK vis fe k) : HbOK vis fe (j + 1) := by
+  intro m a f i h mp hS hh hM
+  by_cases hf0 : f = 0
+  · rw [hbGoW_zeroF j m f i h hf0]; exact Sim.of_none
+  have hF : f.toNat = (f - 1).toNat + 1 := by
+    have : f.toNat ≠ 0 := fun e => hf0 (UInt64.toNat_inj.mp (by simpa using e))
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+  rw [hbGoW_succ j m f i h hf0, hF, hasLooseBVarBGo_succ']
+  refine Sim.bindD (by rw [hbK1]) (fun _ _ => rfl) (Sim.ofD fun w m1 hst =>
+    bvbW_stageW vis fe hS j _ (f - 1) (.inl (Nat.le_refl _)) h w hh hst) ?_
+  rintro w m1 a1 ⟨hS1, hg1, hfr⟩
+  have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR _ _ (by simp [hbSch, HBM, BMEMO])
+    (by simp [hbSch]) m m1 hfr (fun _ _ h => h) mp hM
+  by_cases hle : w ≤ i
+  · rw [hbK1_some_le (hle := hle), ite_eq_left (UInt64.le_iff_toNat_le.mp hle)]
+    exact Sim.ret ⟨rfl, hM1, hS1, hg1⟩
+  rw [hbK1_some_gt (hle := hle), ite_eq_right fun c => hle (UInt64.le_iff_toNat_le.mpr c)]
+  cases hvl : eViewW m1 h with
+  | nil => simp only [hbK2, ite_true]; exact Sim.of_none
+  | cons g vt =>
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m1 a1 hS1.check.arena.base h (by rw [hvl]; simp)
+    rw [hvl] at hvr
+    cases v with
+    | bvar i' =>
+      have hg0 : (g :: vt).headD 0 = 0 := by simpa [ViewR] using hvr.1
+      have hi' : ((g :: vt).tail.headD 0).toNat = i' := by rw [← getD1_eq']; exact hvr.2
+      rw [hbK2_bvar j m1 f i h _ (by simp) hg0]
+      unfold hbRestT
+      refine Sim.bind_twin (view_run _ a1 _ hv) (Sim.ret ⟨?_, hM1, hS1, hg1⟩)
+      generalize (g :: vt).tail.headD 0 = xx at hi' ⊢
+      by_cases e : i = xx
+      · have : i.toNat = i' := by rw [← hi', e]
+        simp [e, hi']
+      · have : i.toNat ≠ i' := fun c => e (UInt64.toNat_inj.mp (c.trans hi'.symm))
+        simp [e, this]
+    | fvar _ _ | sort _ | const _ _ | lit _ =>
+      have hg0 : g = 1 ∨ g = 2 ∨ g = 3 ∨ g = 8 := by
+        simp only [ViewR, List.headD_cons] at hvr; first | simp [hvr.1] | simp [hvr]
+      rw [hbK2_leaf j m1 f i h _ (by simp) (by rcases hg0 with e | e | e | e <;> simp [e])
+        (by simpa using hg0)]
+      unfold hbRestT
+      exact Sim.bind_twin (view_run _ a1 _ hv) (Sim.ret ⟨rfl, hM1, hS1, hg1⟩)
+    | app _ _ | lam _ _ | forallE _ _ | letE _ _ _ | proj _ _ _ =>
+      have hgs : g = 4 ∨ g = 5 ∨ g = 6 ∨ g = 7 ∨ g = 9 := by
+        have := hvr.1; simp only [List.headD_cons] at this; simp [this]
+      refine (hbGo_nodeCase j (ih j (by omega)) m1 a1 i h f mp _ _ hvr trivial hv (by simp)
+        (by rcases hgs with e | e | e | e | e <;> simp [e])
+        (by rcases hgs with e | e | e | e | e <;> simp [e]) hS1 hh hM1).mono
+        fun _ _ _ _ ⟨h1, h2, h3, h4⟩ => ⟨h1, h2, h3, hg1.trans h4⟩
 
-theorem hbGoOK {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
-    HbOK dn vis fe n := by
+theorem hbGoOK {vis : Word} {fe : IFEnv} (n : Nat) :
+    HbOK vis fe n := by
   induction n using Nat.strongRecOn with
   | _ n ih =>
     cases n with
@@ -874,7 +921,19 @@ theorem hbFastW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     (hm : hbFastW n m i e = some (r, m')) :
     ∃ b a', (ConRon.Arena.hasLooseBVarBFast i.toNat (decE e)).run a = .ok (b, a') ∧
       r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
-  sorry
+  by_cases h0 : rdW (m.arr64 CTL) hbSch.cs + 2 = 0
+  · simp [hbFastW, h0] at hm
+  rw [hbFastW_eq n _ i e h0] at hm
+  have hf0 := mclearG_frame hbSch m
+  have hM0 := memoRV_clear hbSch hbSch_wf lfKey hbVR m mp0 hM h0
+  have key := StageR.frame_hi hS hf0 (by simp) (by
+      intro x hx; simp [hbSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [hbSch])
+  obtain ⟨⟨b, mp1⟩, a', hrun, hb, hM1, hS1, hg⟩ := hbGoOK n _ a CWF i e ∅ key.1 hh hM0 _ _ hm
+  refine ⟨b, a', ?_, hb, ⟨mp1, hM1⟩, hS1, key.2.trans hg⟩
+  simp only [ConRon.Arena.hasLooseBVarBFast, StateT.run_bind]
+  rw [CWF_eq] at hrun
+  rw [hrun]
+  rfl
 
 end L.Ind
 end

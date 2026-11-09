@@ -31,6 +31,7 @@ structure CapsProg (p : Prog) : Prop where
   erAlloc : p.lookup "erec_alloc" = some erecAlloc
   erCopyGo : p.lookup "block_caps_at_er_copy_go" = some blockCapsAtErCopyGo
   erCopy : p.lookup "block_caps_at_er_copy" = some blockCapsAtErCopy
+  erPut : p.lookup "erec_put" = some erecPut
   ctorNames : p.lookup "block_caps_ctor_names" = some blockCapsCtorNames
   fin : p.lookup "block_caps_fin" = some blockCapsFin
   head : p.lookup "block_caps_head" = some blockCapsHead

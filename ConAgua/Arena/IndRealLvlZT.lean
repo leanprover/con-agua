@@ -63,11 +63,4 @@ theorem hslice_of_nmsR (ns : NStore) {m : Mem} {A : ArrId} {o k : Word} {ps : Li
       simp [hs]; rfl
     · simp only [List.mapM_cons, hd, hm]; rfl
 
-/-- `erec_alloc(k)` unpacked: the old top, the new top `k` further within the array. -/
-theorem lzc_alloc {m m2 : Mem} {k q : Word} (h : erAllocW m k = some (q, m2))
-    (hEs : (m.arr64 EREC).size < 2 ^ 64) (hc : 129 < (m.arr64 CTL).size) :
-    q = rdW (m.arr64 CTL) 129 ∧ m2 = erAllocMem m k ∧ q.toNat + k.toNat ≤ (m.arr64 EREC).size ∧
-      erTop m2 = q.toNat + k.toNat := by
-  sorry
-
 end L.Ind
