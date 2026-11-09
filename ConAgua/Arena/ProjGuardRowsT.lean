@@ -380,4 +380,164 @@ structure PgrProg (p : Prog) : Prop where
   cl : CoreStageClosed p
   constTy : ConstTyAtOK p
 
+theorem pgrT_none (fe : IFEnv) (entry : IProjEntry) (us : LsIdx) (a : AState)
+    (h : fe.find? entry.ctor = none) : (projGuardRows fe entry us).run a = .ok (none, a) := by
+  simp [projGuardRows, h]; rfl
+
+theorem pgrT_some (fe : IFEnv) (entry : IProjEntry) (us : LsIdx) (a a2 a3 : AState) (ci : IConstantInfo)
+    (cty : EIdx) (x : Option (List EIdx × EIdx)) (h : fe.find? entry.ctor = some ci)
+    (h2 : (constTyAt ci.toConstantVal us).run a = .ok (cty, a2))
+    (h3 : (openPisAtFvarsF (entry.numParams + entry.idx + 1) cty 0).run a2 = .ok (x, a3)) :
+    (projGuardRows fe entry us).run a =
+      (match x with
+       | some (fvs, _) => do
+         let rows ← projGuardRowsAt ci.toConstantVal.type entry.numParams entry.idx fvs 0 #[]
+         pure (some rows)
+       | none => pure none : AM (Option (Array (Nat × EIdx)))).run a3 := by
+  simp only [projGuardRows, h, StateT.run_bind, h2, except_ok_bind, h3]
+  rcases x with _ | ⟨fvs, b⟩ <;> rfl
+
+section
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Word}
+
+/-- **`proj_guard_rows` refines `projGuardRows` under `CoreS`** (the pool's `IWOK` and the `hb` memo
+at entry, the parameter count plus field index not wrapping, `constTyAt` keeping level
+readbacks): `env_find`, `const_ty_at` (`ConstTyAtOK`), `open_pis_at_fvars_f` (`opfF_okC`),
+`proj_guard_rows_at` (`pgra_ok`). -/
+theorem pgr_okH (p : Prog) (hP : PgrProg p) (hlk : ∀ cv us, LKept (constTyAt cv us))
+    (n : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (q i us : Word) (tbl : IProjTable)
+    (r : List Word) (hS : CoreS dn m a vis fe M eb) (hI : IWOK m) (hM : ∃ mp, hbMR m mp)
+    (hq : decTbl (erecP m) q.toNat = some tbl) (hus : HW us)
+    (hB : tbl.numParams + i.toNat + 1 < 2 ^ 64)
+    (h : callW p n "proj_guard_rows" [vis, q, i, us] m = some (r, m')) :
+    ∃ y a', (projGuardRows fe (tbl.entry i.toNat) (decI us)).run a = .ok (y, a') ∧
+      CoreAfterG dn m m' a' vis fe M eb ∧
+      (∀ h l, denoteL a.store.ls h = some l → denoteL a'.store.ls h = some l) ∧ PgrRes m m' r y ∧
+      IWOK m' ∧ IWGrow m m' ∧ ∃ mp, hbMR m' mp := by
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pgrW_spec p hP.pgr n _ vis q i us) h
+  rw [hs'] at hW
+  clear h hs'
+  rcases n with _ | n
+  · cases hW
+  obtain ⟨hnp, hct32, hct⟩ := decTbl_npc (erRdOK m) hq
+  simp only [pgrW] at hW
+  rw [erRdT_congr rfl rfl, erRdT_congr rfl rfl] at hW
+  rcases c1 : callW p n "env_find" [erRdT m (q + 6), vis] m with _ | ⟨r1, m1⟩
+  · rw [c1, pgrW.k_env_find.none] at hW; cases hW
+  rw [c1] at hW
+  obtain ⟨s1, hs1, hm1, -, hfind, hdec⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envFind_refines p hP.envRowGet hP.baseRowGet hP.envFind n _ vis _ hS.env hct32) c1
+  have hm1' : m1 = m := hs1 ▸ hm1
+  subst hm1'
+  have hctor : (tbl.entry i.toNat).ctor = decI (erRdT m1 (q + 6)) := hct
+  by_cases g1 : r1.headD 0 = 0
+  · rw [pgrW.k_env_find.arm1 _ _ _ _ _ _ _ g1] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hn : fe.find? (tbl.entry i.toNat).ctor = none := by
+      rw [hctor, hfind]; simp only [envFound, g1, ↓reduceIte]
+    exact ⟨none, a, pgrT_none _ _ _ _ hn, ⟨M, hS, KeptAll.refl _ _, StackGrew.refl _⟩,
+      fun _ _ h => h, rfl, hI, IWGrow.refl _, hM⟩
+  obtain ⟨ci, hci⟩ := hdec g1
+  have hfind' : fe.find? (tbl.entry i.toNat).ctor = some ci := by
+    rw [hctor, hfind]; simp only [envFound, g1, ↓reduceIte]; exact hci
+  rw [pgrW.k_env_find.arm2 _ _ _ _ _ _ _ g1] at hW
+  generalize hc : r1.tail.headD 0 = c at hW hci
+  have hcv := decCI_cvA hci
+  obtain ⟨hlps, -, hty, hty32⟩ := L.Arena.decCV_rd (erRdOK m1) hcv
+  obtain ⟨hnn32, hnn⟩ := decCV_name (erRdOK m1) hcv
+  simp only [erRdT_congr rfl rfl] at hW
+  -- `const_ty_at`
+  rcases c2 : callW p n "const_ty_at" [erRdT m1 (c + 1), erRdT m1 (c + 2), erRdT m1 (c + 3),
+      erRdT m1 (c + 4), us] m1 with _ | ⟨r2, m2⟩
+  · rw [c2, pgrW.k_const_ty_at.none] at hW; cases hW
+  rw [c2, pgrW.k_const_ty_at.arm1] at hW
+  have h2 := CoreSpec.of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (hP.constTy n ⟨m1, Locals.init []⟩ a dn vis fe M eb _ _ _ _ us _ hS hnn32 hty32 hus hlps) c2
+  have hcvE : ci.toConstantVal = ⟨decI (erRdT m1 (c + 1)), ci.toConstantVal.levelParams,
+      decE (erRdT m1 (c + 4))⟩ := by
+    rw [cv_eta ci.toConstantVal, hnn, hty]; rfl
+  have hrun2 : (constTyAt ci.toConstantVal (decI us)).run a =
+      .ok (decE (r2.headD 0), AM.st (constTyAt ci.toConstantVal (decI us)) a) := by
+    rw [hcvE, AM.run_of_ok _ _ h2.run, h2.res]; rfl
+  obtain ⟨M2, hS2, hK2, hSt2⟩ := h2.after
+  rw [← hcvE] at hS2
+  have hr2 : HW (r2.headD 0) := h2.resOk
+  have hfr2 := callW_coreFrame hP.cl (mem_stageCoreFns (List.mem_append_right _ (coreFn_of (by decide))) (by simp [coreLeafOnly])) c2
+  obtain ⟨hI2, hg2⟩ := hfr2.2 hI
+  have hM2 := callW_coreHb hP.cl (mem_stageCoreFns (List.mem_append_right _ (coreFn_of (by decide))) (by simp [coreLeafOnly])) c2 hM
+  generalize ha2 : AM.st (constTyAt ci.toConstantVal (decI us)) a = a2 at hrun2 hS2
+  -- `open_pis_at_fvars_f`
+  rcases c3 : callW p n "open_pis_at_fvars_f" [erRdT m1 (q + 5) + i + 1, r2.headD 0, 0] m2 with
+    _ | ⟨r3, m3⟩
+  · rw [c3, pgrW.k_open_pis_at_fvars_f.none] at hW; cases hW
+  rw [c3] at hW
+  have hopf := callW_opfFC hP.opf c3
+  obtain ⟨x3, a3, M3, hrun3, hS3, hK3, hSt3, htb, hres3⟩ := opfF_okC _ _ _ hr2 hopf hS2 hI2
+  obtain ⟨hI3, hg3⟩ := opfF_grow hopf hI2
+  have hM3 := hbMR_keep (opfF_frame hopf) (by decide) (by decide) hM2
+  have hkp := (keepsW_opfF _ _ _).run hrun3
+  have hk3 : (erRdT m1 (q + 5) + i + 1).toNat = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).idx + 1 := by
+    show _ = tbl.numParams + i.toNat + 1
+    rw [hnp] at hB ⊢
+    rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega
+  rw [hk3] at hrun3
+  have hrunT := pgrT_some fe (tbl.entry i.toNat) (decI us) a a2 a3 ci _ x3 hfind' hrun2 hrun3
+  have hlk2 : ∀ h l, denoteL a.store.ls h = some l → denoteL a2.store.ls h = some l :=
+    fun h l hd => hlk _ _ a _ a2 hrun2 h l hd
+  have hlk3 : a3.store.lss = a2.store.lss := by
+    simp only [cpl, Prod.mk.injEq] at hkp; exact hkp.2.2
+  cases x3 with
+  | none =>
+    have g3 : r3.headD 0 = 0 := hres3
+    rw [pgrW.k_open_pis_at_fvars_f.arm1 _ _ _ _ _ _ _ g3] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    refine ⟨none, a3, by rw [hrunT]; rfl, ⟨M3, hS3, hK2.trans hK3, (hSt2.trans hSt3).toGrew⟩,
+      fun h l hd => by have := hlk2 h l hd; simp only [EStore.ls] at this ⊢; rw [hlk3]; exact this,
+      rfl, hI3, hg2.trans hg3, hM3⟩
+  | some fb =>
+    obtain ⟨fvs, b⟩ := fb
+    obtain ⟨g3, hfn, hsl, -, -⟩ := hres3
+    rw [pgrW.k_open_pis_at_fvars_f.arm2 _ _ _ _ _ _ _ (by rw [g3]; decide)] at hW
+    -- the records are kept across `const_ty_at` and `open_pis_at_fvars_f`
+    have hE0 : m3.arr64 EREC = m1.arr64 EREC :=
+      ((opfF_frame hopf).arr EREC (by decide) (by decide)).trans (hfr2.1.arr EREC coreFrA_erec (by decide))
+    have hE1 : m3.arr64 (tier1 EREC) = m1.arr64 (tier1 EREC) :=
+      ((opfF_frame hopf).arr (tier1 EREC) (by decide) (by decide)).trans
+        (hfr2.1.arr (tier1 EREC) coreFrA_erec1 (by decide))
+    rw [erRdT_congr hE0 hE1] at hW
+    generalize hro : rdW (m3.arr64 CTL) 136 = ro at hW
+    rcases c4 : callW p n "proj_guard_rows_at" [erRdT m1 (c + 4), erRdT m1 (q + 5), i, r3.tail.headD 0,
+        r3.tail.tail.headD 0, 0, ro, 0] m3 with _ | ⟨r4, m4⟩
+    · rw [c4, pgrW.k_proj_guard_rows_at.none] at hW; cases hW
+    rw [c4, pgrW.k_proj_guard_rows_at.arm1] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+      (pgraW_spec p hP.pgra n _ _ _ _ _ _ _ _ _) c4
+    rw [hs4] at hW4
+    have htop3 : spTop m3 = spTop m1 := hSt3.top.trans hSt2.top
+    have hro' : ro = spTop m1 := by rw [← hro, ← htop3]; rfl
+    have hsz31 : (m3.arr64 SPN).size = (m1.arr64 SPN).size := hSt3.size.trans hSt2.size
+    have htb' : (spTop m1).toNat ≤ (m1.arr64 SPN).size := by
+      rw [← hSt2.top, ← hSt2.size]; exact htb
+    obtain ⟨y, a4, M4, hrun4, hS4, hK4, hI4, hg4, hM4, hrows4, hw4, htop4, -, hSt4, hst4⟩ :=
+      pgra_ok p hP.pgra hP.us hP.ftd hP.eView _ _ _ _ _ ro fvs hty32
+        (by rw [← hnp]; exact hB) hfn n m3 m4 a3 M3 0 0 (r4.headD 0) #[] hW4 hS3 hI3 hM3 hsl
+        (by simp) (fun i hi => absurd hi (by simp)) rfl
+        (by rw [hro', htop3]; simp) (by rw [hro', hsz31]; simpa using htb')
+    have hty' : ci.toConstantVal.type = decI (erRdT m1 (c + 4)) := hty
+    refine ⟨some y, a4, ?_, ⟨M4, hS4, hK2.trans (hK3.trans hK4), (hSt2.trans hSt3).toGrew.trans hSt4⟩,
+      fun h l hd => by
+        have := hlk2 h l hd; simp only [EStore.ls] at this ⊢; rw [hst4, hlk3]; exact this,
+      ⟨by simp, by simp [hro'], hw4.symm, by rw [← hro']; exact hrows4,
+        by rw [htop4, ← hro', hw4]; simp⟩, hI4, hg2.trans (hg3.trans hg4), hM4⟩
+    rw [hrunT]
+    simp only [StateT.run_bind, hty']
+    rw [show (tbl.entry i.toNat).numParams = (erRdT m1 (q + 5)).toNat from hnp,
+      show (tbl.entry i.toNat).idx = i.toNat from rfl]
+    rw [show (0 : Nat) = (0 : Word).toNat from rfl, hrun4]
+    rfl
+
+end
+
 end L.Ind
