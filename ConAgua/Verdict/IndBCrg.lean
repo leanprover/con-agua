@@ -13,6 +13,9 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 public import ConRon.Bridge.Inductives.GenRec
 import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndPosSpec.BvbWMfr
+import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
@@ -107,6 +110,15 @@ structure CrgPost (dn : NIdx → Option ConLeche.Name) (visR : Word) (feR : IFEn
   abs : AbsOK m'
   core : ConRon.Bridge.CoreStep envR feR a a'
   closed : genP.hasFvar = false
+  /-- The stage's per-call memos stand (`mentions_any`'s, for the domains' check). -/
+  mfr : MFr [] [] m m'
+
+/-- `cv_lps`'s model writes no stage memo. -/
+theorem cvLpsWA_mfr {n : Nat} {m m' : Mem} {q : Word} {r : List Word}
+    (h : L.Arena.cvLpsW n m q = some (r, m')) : MFr [] [] m m' := by
+  cases n with
+  | zero => simp [L.Arena.cvLpsW] at h
+  | succ n => exact erToIwW_mfr h
 
 /-- **`class_rule_check_guards` refines `classRuleCheck`'s guards (`crgT`), both outcomes**: the walks
 (outside the verdict closure) under `StageC`, `all_level_params_defined` and
@@ -199,7 +211,13 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
   have c14 := c13.trans (p4.toCore c13.ok)
   have hA5 := absOK_crfF h5 hA4 hCr5 hT5
   exact RefE.ret rfl ⟨hC.of_check hT5.stage hA5 c14.ok c14.ext,
-    ((hg12.trans hg3).trans hg4).trans hg5, hA5, c14, by rw [← hfv]⟩
+    ((hg12.trans hg3).trans hg4).trans hg5, hA5, c14, by rw [← hfv],
+    ((((MFr.ofLbbF h1).trans (MFr.ofHffF h2)).trans (cvLpsWA_mfr h3')).trans
+      (MFr.of_frame (apdF_frame (apdF_of_callW hApd (callW_of_callE h4)))
+        (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
+        (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+                              rcases hx with rfl | rfl <;> decide)))).trans
+      (crfF_mfr h5)⟩
 
 end L.Ind
 
