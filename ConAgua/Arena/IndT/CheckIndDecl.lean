@@ -119,16 +119,6 @@ theorem blockParts?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' :
     exact blockShape?_members_mem h1
 -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- `BlockLpsDn` at the members of the shape `blockParts?` recognises. -/
-theorem BlockLpsDn.members {dn : NIdx → Option ConLeche.Name} {block : List IConstantInfo}
-    (hl : BlockLpsDn dn block) {nPd : Nat} {s s' : AState} {bs : BlockShape}
-    (h : (ConRon.Arena.blockParts? nPd block).run s = .ok (some ⟨bs⟩, s')) :
-    ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome := fun ms hms => by
-  obtain ⟨caps, hm⟩ := blockParts?_members_mem h ms hms
-  exact hl ms.cvT caps hm
--/
-
 /-- What `check_ind_decl` gives besides the twin's run, a view `w` and the memory `m'` (from `m`):
 the stage, the core's memos, the growth, the inductive arm's memos. -/
 structure CidPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x : IFEnv) (m' : Mem)
@@ -141,10 +131,10 @@ structure CidPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x :
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
-  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
+  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
+include hkp hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_ind_decl` refines the `.indDecl` arm of `checkDecl`, both outcomes** under `StageT` and
 the twin's fold invariant (`FoldOK`; the inner stages under `StageC`): `basis_pin_hit` (con-ron's
 `basisPinHit_run`: a `PStep`), `check_basis_decl` (its refinement `cbd_ref` on the run, both
@@ -290,10 +280,10 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   rw [cidE.k_block_parts.arm1 _ _ _ _ _ _ _ z4]
   -- `check_block`
   have hT5 := icbE_spec p P.cb n ⟨s4.mem, Locals.init []⟩ vis o l (r4.tail.headD 0)
-  have hR5 := block_ref hkp hfold.envWF hV hOpf hLC hLT hApd hCrk hIlpf hLz P.cb hcl hfs hfr hcl2 hfs2 hclR hfR
+  have hR5 := block_ref hkp hfold.envWF hV hOpf hLC hLT hApd hCrk hIlpf P.cb hcl hfs hfr hcl2 hfs2 hclR hfR
     hclT hfT n (by omega) hC4 hq4 hsl4.1 (shapeCV_of_decB hq4) (hblk1.grow (decEBlk_mono _ _ _) hg4) hP4 hma4
     hA4 hkP hkt hkr hta4 hsl4.2 hfold.coh (ConRon.Bridge.denoteFEnv_mono (x01.trans k4.ext) hfold.denote) hshP
-    (ConRon.Bridge.denoteCIList_mono (x01.trans k4.ext) _ _ hbP) hfRc hclH hfH hclM hfM (hlpd.members hrun4)
+    (ConRon.Bridge.denoteCIList_mono (x01.trans k4.ext) _ _ hbP) hfRc hclH hfH hclM hfM
   dsimp only
   rw [← bind_pure (ConRon.Arena.checkBlock _ _ _ _)]
   refine RefE.bindRun (s₀ := ⟨s4.mem, Locals.init []⟩) (fun _ => cidE.k_check_basis_decl.none ..) hT5
@@ -308,7 +298,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
 -/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
+include hkp hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_ind_decl` refines the `.indDecl` arm of `checkDecl`** under `StageT` and the twin's
 fold invariant: the ok half of `cid_ref`, from the call's run. -/
 @[refines_part ConRon.Arena.checkDecl "the inductive arm (check_ind_decl), under StageC"]
@@ -340,7 +330,7 @@ theorem checkIndDecl_refinesC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
       StageR (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m' := by
   obtain ⟨s', rfl, -, x, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
     (cidE_spec p hV P n _ vis o l w)
-    (cid_ref hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt
+    (cid_ref hkp hV hOpf hLC hLT hApd hCrk hIlpf P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt
       hkr (N := n) (by omega) hdn hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd) h
   exact ⟨x, a', hrun, hR.stage, hR.core, hR.grow, hR.ind⟩
 -/

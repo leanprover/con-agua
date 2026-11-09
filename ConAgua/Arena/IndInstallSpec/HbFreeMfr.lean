@@ -59,9 +59,9 @@ def posFreeC : List Word :=
 
 /-! ## The record's slices -/
 
-/-- **The `BlockPass` record and its eight slices lie below the pool's top.** -/
+/-- **The `BlockPass` record and its four slices lie below the pool's top.** -/
 def BPassB (m : Mem) (q : Nat) : Prop :=
-  q + 19 ≤ iwTop m ∧ ∀ i ∈ [1, 4, 6, 8, 10, 12, 15, 17], ∀ o l, iwN m (q + i) = some o →
+  q + 11 ≤ iwTop m ∧ ∀ i ∈ [2, 4, 7, 9], ∀ o l, iwN m (q + i) = some o →
     iwN m (q + i + 1) = some l → o + l ≤ iwTop m
 
 /-- A word of the pool below the top, read where L reads it. -/

@@ -3,7 +3,6 @@ module
 public import ConAgua.Verdict.IndsE5
 public import ConAgua.Arena.IndT.KeepC
 public import ConAgua.Arena.IndT.Install3
-import ConAgua.Arena.IndRealSortDn
 public import ConAgua.Arena.IndInstallSpec.CbProg
 import ConAgua.Arena.IndInstallSpec.IcvgW
 public import ConAgua.Arena.IndInstallSpec.IndsOut
@@ -17,7 +16,8 @@ import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndInstallSpec.Icvg
-public import ConAgua.Arena.IndRealLvlZ
+public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+public import ConAgua.Arena.IndMaster
 import all ConAgua.Arena.IndInstall
 
 @[expose] public section
@@ -137,10 +137,10 @@ section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p) (hOpf : OpfF p) (hLC : LvlCacheProg p)
-  (hApd : ApdF p) (hCrk : CrKeep p) (hLz : LzcF p)
+  (hApd : ApdF p) (hCrk : CrKeep p)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hq henv hV hOpf hLC hApd hCrk hLz in
+include hq henv hV hOpf hLC hApd hCrk in
 /-- **`check_block_inds` refines `checkBlockInds`, both outcomes** under `StageC` (twin side:
 con-ron's `checkBlockInds_spec`'s proof): member 0's former by `cbt_ref`, the other formers by
 `cbts_ref`, the agreements by `cbag_ref` (their unified models); past them only class-`0` errors. -/
@@ -150,8 +150,7 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
     (hcx : ShapeCV m pp) (hb : (isRec != 0) = b) (hA : AbsOK m)
     (hk : ∀ f ∈ indsKeepCalleesC, AbsKeep p f) {bsP : ConLeche.BlockShape}
     (hbsP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
-    (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe)
-    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
+    (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe) :
     RefE (CtsG p) (cbiE p (n + 1) m vis pp isRec) (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a
       (fun v x a' => IndsPost dn env fe pp m a v.1 x v.2 a') := by
   have hS := hC.stage
@@ -234,8 +233,6 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
     (decI (r1.tail.headD 0)) s0P a3 a4 p1 k3.stage.check
     ⟨ConRon.Bridge.Inductives.dShape_ext k03.core.ext _ _ hbsP, ConRon.Bridge.denoteL_ext h1b hx13⟩ hr4
   have k4 := InsAt.cstep k3.stage hS4 hA4 hg4 c4'
-  have hSortDn : SortDn dn s0P :=
-    sortDn_of_member hm0 hC.mem.dnN (hlpsDn ms0 (by rw [hmeq]; exact List.mem_cons_self ..)) hfk1
   refine ⟨_, _, hr4, ?_⟩
   dsimp only [cbiE.k_block_shape_with_sort]
   -- the formers' constants (L only)
@@ -268,7 +265,7 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
         (ih ys' hys)
   refine RefE.bindLift (fun _ => rfl) fun r6 m6 c6 => ?_
   obtain ⟨s6, rfl, -, hok6, hS6, hg6, -⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
-    (consBlockInds_refinesR p hP.toConsIndsProg hLz (k + 1) ⟨m5, Locals.init []⟩ a4 dn vis fe (r4.headD 0)
+    (consBlockInds_refinesR p hP.toConsIndsProg (k + 1) ⟨m5, Locals.init []⟩ a4 dn vis fe (r4.headD 0)
       isRec (r5.headD 0) (r5.tail.headD 0) 0 p1 b _ hb hS5 k4.stage.lzFacts.1
       (LzFacts.of_stageC k4.stage hp1P hSortDn) hp1' hsrc5 hcvT
       (by have := (r5.tail.headD 0).toNat_lt; simp only [UInt64.toNat_zero, Nat.zero_add]; exact this))
@@ -292,7 +289,7 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
 -/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hq henv hV hOpf hLC hApd hCrk hLz in
+include hq henv hV hOpf hLC hApd hCrk in
 /-- **`check_block_inds` refines `checkBlockInds`** under `StageC` (stage 1; the shape's and the
 environment's denotations as con-ron's `checkBlockInds_spec` asks): the environment with the
 formers pushed at the returned view, the formers' constants and the shape with its sort below the
@@ -304,8 +301,7 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
     (hsrc : ShapeSrc s₀.mem pp) (hcx : ShapeCV s₀.mem pp) (hb : (isRec != 0) = b) (hA : AbsOK s₀.mem)
     (hk : ∀ f ∈ indsKeepCalleesC, AbsKeep p f) {bsP : ConLeche.BlockShape}
     (hbsP : ConRon.Bridge.Inductives.dShape a₀.store bs = some bsP)
-    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe)
-    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
+    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_block_inds" [vis, pp, isRec]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀ ∧
       IndsOut dn s₀.mem r (AM.res (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀) s'.mem
@@ -313,7 +309,7 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
       (RecsB s₀.mem pp → RecsB s'.mem (r.tail.tail.tail.headD 0)) ∧
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀); ⊤⦄ := by
   refine triple_post (RefE.triple (cbiE_spec p hP (n + 1) s₀ vis pp isRec)
-    (cbi_ref hq henv hV hOpf hLC hApd hCrk hLz hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh hlpsDn)) ?_
+    (cbi_ref hq henv hV hOpf hLC hApd hCrk hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hres, hst]; exact hR.out, hR.abs, hR.recs, by rw [hst]; exact hR.core⟩

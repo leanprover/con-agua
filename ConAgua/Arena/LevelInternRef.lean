@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.LevelIntern
 import ConAgua.Arena.MemoTree
+import ConAgua.Arena.ErecRd
 import ConAgua.Front.StateDR
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Arena.Rom
@@ -380,7 +381,61 @@ theorem lp_nmsR_of_hslice (ns : NStore) (m : Mem) (A : ArrId) :
     ∀ (lps : List NIdx) (ks : List Name) (o k : Word),
       hslice? (aread (m.arr64 A)) o.toNat k.toNat = some lps → o.toNat + k.toNat < 2 ^ 64 →
       lps.mapM (denoteN ns) = some ks → NmsR (nameN ns) m A o k ks := by
-  sorry
+  intro lps
+  induction lps with
+  | nil =>
+    intro ks o k hs hb hd
+    simp only [List.mapM_nil, Option.pure_def, Option.some.injEq] at hd; subst hd
+    have hk : k.toNat = 0 := by
+      rcases hk : k.toNat with _ | j
+      · rfl
+      · rw [hk, lp_hslice_succ] at hs
+        simp only [Option.bind_eq_bind] at hs
+        cases e : (hd? (aread (m.arr64 A)) o.toNat : Option NIdx) with
+        | none => simp [e] at hs
+        | some x =>
+          cases e' : (hslice? (aread (m.arr64 A)) (o.toNat + 1) j : Option (List NIdx)) with
+          | none | some xs => simp [e, e'] at hs
+    have : k = 0 := UInt64.toNat_inj.mp (by simpa using hk)
+    subst this; exact .nil
+  | cons x xs ih =>
+    intro ks o k hs hb hd
+    rcases hk : k.toNat with _ | j
+    · rw [hk] at hs; simp [hslice?] at hs
+    rw [hk, lp_hslice_succ] at hs
+    simp only [Option.bind_eq_bind] at hs
+    cases e : (hd? (aread (m.arr64 A)) o.toNat : Option NIdx) with
+    | none => simp [e] at hs
+    | some x' =>
+    cases e' : (hslice? (aread (m.arr64 A)) (o.toNat + 1) j : Option (List NIdx)) with
+    | none => simp [e, e'] at hs
+    | some xs' =>
+    simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs
+    obtain ⟨rfl, rfl⟩ := hs
+    simp only [List.mapM_cons, Option.pure_def, Option.bind_eq_bind] at hd
+    cases d1 : denoteN ns x' with
+    | none => simp [d1] at hd
+    | some nm =>
+    cases d2 : (xs'.mapM (denoteN ns)) with
+    | none => simp [d1, d2] at hd
+    | some nms =>
+    simp only [d1, d2, Option.bind_some, Option.some.injEq] at hd
+    subst hd
+    simp only [hd?, aread_apply] at e
+    cases ew : (m.arr64 A)[o.toNat]? with
+    | none => simp [ew] at e
+    | some w =>
+    simp only [ew] at e
+    by_cases hw : w.toNat < 2 ^ 32
+    · simp [hw] at e
+      subst e
+      have hk0 : k ≠ 0 := fun h0 => by subst h0; simp at hk
+      have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hk1 : (k - 1).toNat = j := by
+        rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+      refine .cons hk0 ⟨by simpa [rdW, ew] using hw, by simpa [rdW, ew] using d1⟩
+        (ih _ (o + 1) (k - 1) (by rw [ho1, hk1]; exact e') (by omega) d2)
+    · simp [hw] at e
 
 /-! ## `lv_sub_int` refines `internLevel (Level.subst ks vs l)` -/
 
@@ -429,51 +484,99 @@ theorem lvSubIntW_ok (n : Nat) (m m' : Mem) (a : AState) (u ko kc vo vc h : Word
 theorem toNat_succ_lt {d : Word} (h : d.toNat + 1 < 2 ^ 64) : (d + 1).toNat = d.toNat + 1 := by
   rw [UInt64.toNat_add]; simp; omega
 
-/-- **`ek_copy` copies a name slice**: the words land on the stack above `d`, below `d` nothing
-changes, only the stack array is written. -/
-theorem ekCopyW_ok {N : Word → Name → Prop} : ∀ (ks : List Name) (n : Nat) (m m' : Mem) (s d l : Word),
-    NmsR N m EREC s l ks → d.toNat + l.toNat ≤ (m.arr64 SPN).size → (m.arr64 SPN).size < 2 ^ 63 →
-    ekCopyW n m s d l = some m' →
-    NmsR N m' SPN d l ks ∧ MemFrame [SPN] [] m m' ∧
+/-- A nonempty record-pool slice starts below `2 ^ 64`. -/
+theorem hslice?_erecP_lt {k : IdxKind} {m : Mem} {o j : Nat} {xs : List (Idx k)}
+    (h : hslice? (erecP m) o (j + 1) = some xs) : o < 2 ^ 64 := by
+  rw [lp_hslice_succ] at h
+  simp only [Option.bind_eq_bind] at h
+  cases e : (hd? (erecP m) o : Option (Idx k)) with
+  | none => simp [e] at h
+  | some x =>
+    simp only [hd?] at e
+    cases ee : erecP m o with
+    | none => simp [ee] at e
+    | some v => exact erecP_lt64 ee
+
+/-- **`ek_copy` copies a handle slice**: the record pool's slice `(s, l)` lands on the stack at `d`,
+below `d` nothing changes. -/
+theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Word),
+    hslice? (erecP m) s.toNat l.toNat = some lps → d.toNat + l.toNat ≤ (m.arr64 SPN).size →
+    (m.arr64 SPN).size < 2 ^ 63 → ekCopyW n m s d l = some m' →
+    hslice? (aread (m'.arr64 SPN)) d.toNat l.toNat = some lps ∧ MemFrame [SPN] [] m m' ∧
       ∀ i : Word, i.toNat < d.toNat → rdW (m'.arr64 SPN) i = rdW (m.arr64 SPN) i := by
-  intro ks
-  induction ks with
+  intro lps
+  induction lps with
   | nil =>
-    intro n m m' s d l hk hb hsz hW
-    cases hk
+    intro n m m' s d l hs hb hsz hW
+    have hl : l.toNat = 0 := by
+      rcases hk' : l.toNat with _ | j
+      · rfl
+      · rw [hk', lp_hslice_succ] at hs
+        simp only [Option.bind_eq_bind] at hs
+        cases e : (hd? (erecP m) s.toNat : Option NIdx) with
+        | none => simp [e] at hs
+        | some x =>
+          cases e' : (hslice? (erecP m) (s.toNat + 1) j : Option (List NIdx)) with
+          | none | some xs => simp [e, e'] at hs
+    have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
+    subst hl0
     cases n with
     | zero => simp [ekCopyW] at hW
     | succ n =>
-      rw [ekCopyW_zero n m s d 0 rfl] at hW; cases hW
-      exact ⟨.nil, MemFrame.refl _ _ _, fun _ _ => rfl⟩
+    rw [ekCopyW_zero n m s d 0 rfl] at hW; cases hW
+    exact ⟨by simp [hslice?], MemFrame.refl _ _ _, fun _ _ => rfl⟩
   | cons x xs ih =>
-    intro n m m' s d l hk hb hsz hW
-    cases hk with
-    | cons hl0 hx hxs =>
+    intro n m m' s d l hs hb hsz hW
+    rcases hk' : l.toNat with _ | j
+    · rw [hk'] at hs; simp [hslice?] at hs
+    rw [hk', lp_hslice_succ] at hs
+    simp only [Option.bind_eq_bind] at hs
+    cases e : (hd? (erecP m) s.toNat : Option NIdx) with
+    | none => simp [e] at hs
+    | some x' =>
+    cases e' : (hslice? (erecP m) (s.toNat + 1) j : Option (List NIdx)) with
+    | none => simp [e, e'] at hs
+    | some xs' =>
+    simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs
+    obtain ⟨rfl, rfl⟩ := hs
+    have hl0 : l ≠ 0 := fun h0 => by subst h0; simp at hk'
     cases n with
     | zero => simp [ekCopyW] at hW
     | succ n =>
     rw [ekCopyW_succ n m s d l hl0] at hW
-    have hl1 : 1 ≤ l.toNat := by
-      rcases Nat.eq_zero_or_pos l.toNat with h | h
-      · exact absurd (UInt64.toNat_inj.mp (by simpa using h)) hl0
-      · omega
     have hd1 : (d + 1).toNat = d.toNat + 1 := toNat_succ_lt (by omega)
-    have hlm : (l - 1).toNat = l.toNat - 1 := by
-      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-    have hsz₁ : ((m.set64 SPN d (rdW (m.arr64 EREC) s)).arr64 SPN).size = (m.arr64 SPN).size :=
+    have hs1e : hslice? (erecP m) (s + 1).toNat j = some xs' := by
+      cases j with
+      | zero => simpa [hslice?] using e'
+      | succ j' => rw [toNat_succ_lt (hslice?_erecP_lt e')]; exact e'
+    have hlm : (l - 1).toNat = j := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+    have hsz₁ : ((m.set64 SPN d (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775))).arr64 SPN).size = (m.arr64 SPN).size :=
       Mem.size_arr64_set64 _ _ _ _
-    obtain ⟨hk', hf', hb'⟩ := ih n _ m' (s + 1) (d + 1) (l - 1)
-      (hxs.of_arr (Mem.arr64_set64_ne _ _ _ _ _ (by decide))) (by rw [hsz₁, hd1, hlm]; omega)
-      (by rw [hsz₁]; exact hsz) hW
+    have herec : erecP (m.set64 SPN d (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775))) = erecP m :=
+      erecP_frame (MemFrame.set64 _ _ (by decide) _ _) (by decide) (by decide) (by decide) (by decide)
+    obtain ⟨hk', hf', hb'⟩ := ih n _ m' (s + 1) (d + 1) (l - 1) (by rw [herec, hlm]; exact hs1e)
+      (by rw [hsz₁, hd1, hlm]; omega) (by rw [hsz₁]; exact hsz) hW
     have hdl : d.toNat < (m.arr64 SPN).size := by omega
-    have hd : rdW (m'.arr64 SPN) d = rdW (m.arr64 EREC) s := by
+    have hd : rdW (m'.arr64 SPN) d = (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775)) := by
       rw [hb' d (by rw [hd1]; omega), rdW_set64]; simp [hdl]
-    refine ⟨.cons hl0 (by rw [hd]; exact hx) hk', (MemFrame.set64 _ _ (by decide) _ _).trans hf', ?_⟩
-    intro i hi
-    rw [hb' i (by rw [hd1]; omega), rdW_set64]
-    have : ¬ d = i := fun e => by subst e; omega
-    simp [this]
+    refine ⟨?_, (MemFrame.set64 _ _ (by decide) _ _).trans hf', ?_⟩
+    · rw [lp_hslice_succ]
+      have hsize : d.toNat < (m'.arr64 SPN).size := by rw [hf'.size SPN, hsz₁]; exact hdl
+      have hd' : (hd? (aread (m'.arr64 SPN)) d.toNat : Option NIdx) = some x' := by
+        rw [← e]; simp only [hd?, aread_apply]
+        have h1 : (m'.arr64 SPN)[d.toNat]? = some (rdW (m'.arr64 SPN) d) := by simp [rdW, hsize]
+        have h2 : erecP m s.toNat = some (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775)) := by
+          cases ee : erecP m s.toNat with
+          | none => simp [hd?, ee] at e
+          | some v => unfold rdW; rw [(erecP_tagRead ee).2]; rfl
+        rw [h1, h2, hd]
+      rw [hd1, hlm] at hk'
+      simp [hd', hk']
+    · intro i hi
+      rw [hb' i (by rw [hd1]; omega), rdW_set64]
+      have : ¬ d = i := fun e => by subst e; omega
+      simp [this]
 
 /-! ## Frames -/
 

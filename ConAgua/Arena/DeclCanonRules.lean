@@ -35,7 +35,7 @@ def cnCrW : Nat → Mem → Word → Word → Word → Word → Word → Word �
     if l1 = 0 ∧ l2 = 0 then some (1, m)
     else if l1 = 0 ∨ l2 = 0 then some (0, m)
     else crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2
-      (if ruleEqButRhsB (m.arr64 EREC) o1 o2 then 1 else 0)
+      (if ruleEqButRhsB (erRdT m) o1 o2 then 1 else 0)
 
 /-- After `rule_eq_but_rhs`. -/
 def crK0 (k : Nat) (m : Mem) (po pl qo ql co cl fuel o1 l1 o2 l2 e : Word) : Option (Word × Mem) :=
@@ -58,7 +58,7 @@ theorem crW_succ : cnCrW (k + 1) m po pl qo ql co cl fuel o1 l1 o2 l2 =
     (if l1 = 0 ∧ l2 = 0 then some (1, m)
     else if l1 = 0 ∨ l2 = 0 then some (0, m)
     else crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2
-      (if ruleEqButRhsB (m.arr64 EREC) o1 o2 then 1 else 0)) := by rw [cnCrW]
+      (if ruleEqButRhsB (erRdT m) o1 o2 then 1 else 0)) := by rw [cnCrW]
 theorem crK0_def : crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2 e =
     (if e = 0 then some (0, m)
     else cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2

@@ -288,7 +288,7 @@ theorem erSlEq_spec' (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (
     ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_eq" [o1, l1, o2, l2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if erSlEqB (s₀.mem.arr64 EREC) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if erSlEqB (erRdT s₀.mem) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
   sorry
 
 section bits

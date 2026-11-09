@@ -12,7 +12,8 @@ public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 public import ConAgua.Arena.IndInstallSpec.OfClosed
 public import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
-public import ConAgua.Arena.IndRealLvlZ
+public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndT.ArmMemos
 public import ConAgua.Arena.IndT.GenRec2
 public import ConAgua.Arena.IndT.Lift
@@ -43,7 +44,7 @@ open L.Arena
 half. -/
 theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
-    (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
+    (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
     (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
     (hfr : "block_raw_rec" ∈ fs) (hcl2 : closedA p hbFreeA hbFreeC fs2 = true)
@@ -65,7 +66,7 @@ theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   subst hw
   exact RefE.run_err (cidE_spec p hV P n ⟨m, Locals.init []⟩ vis o l w) hnv
     ⟨⟨⟨hnv, hkp.toKnotTopProg.coreStubsE hnv⟩, hU⟩, hWt⟩
-    (cid_ref hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr
+    (cid_ref hkp hV hOpf hLC hLT hApd hCrk hIlpf P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr
       (N := n) (by omega) hdn hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc
       hfMc hlpd) hc
 -/
@@ -89,7 +90,7 @@ theorem indArmVerdict_proved : IndArmVerdict := by
     ⟨checkerProg_uceLookupsPB bs, strLitStored_core _ hkp.knot.str⟩
   have hWt : WhnfTopE (Prog.subPB bs checkerProg) :=
     whnfTop_stageE hkp.whnfTop hkp.knotOK (fun n => L.Arena.KnotAllProg.knotE_all hkp.knot hnv n)
-  exact indArmSpecE_of hkp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.lz H.cid
+  exact indArmSpecE_of hkp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.cid
     (closedW_subPB bs checkerProg_armPos) armPos_pass armPos_raw
     (closedW_subPB bs checkerProg_armHb) armHb_tail
     (closedW_subPB bs checkerProg_armRc) armRc_tail

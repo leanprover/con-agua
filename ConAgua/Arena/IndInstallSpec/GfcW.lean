@@ -71,7 +71,52 @@ theorem gftW_ok (p : Prog) (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantV
     decHL m q.toNat j.toNat = some ((cvTas.map (·.type)).take j.toNat) →
     StageR vis fe m' a ∧ IWGrow s0 m' ∧ iwTop m' = iwTop m1 ∧ MFr [] [] m1 m' ∧
       decHL m' q.toNat l.toNat = some (cvTas.map (·.type)) := by
-  sorry
+  induction f with
+  | zero => intro m m' j h; simp [gftW.loop1] at h
+  | succ f ih =>
+  intro m m' j h hS hg ht hfr hjl hacc
+  have hlen : cvTas.length = l.toNat := decPL_length _ hcv.dec
+  have hjl' : j.toNat ≤ l.toNat := UInt64.le_iff_toNat_le.mp hjl
+  by_cases hj : ¬ j < l
+  · rw [gftW.loop1.arm2 (hc1 := hj)] at h
+    cases h
+    have hj' : j.toNat = l.toNat := by
+      have : ¬ j.toNat < l.toNat := fun e => hj (UInt64.lt_iff_toNat_lt.mpr e)
+      omega
+    refine ⟨hS, hg, ht, hfr, ?_⟩
+    rw [← hj', hacc, List.take_of_length_le (by simp; omega)]
+  simp only [Decidable.not_not] at hj
+  rw [gftW.loop1.arm1 (hc1 := hj)] at h
+  have hjn : j.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hj
+  obtain ⟨hI1, hE1, hsz, hEs, -⟩ := hS.iw
+  have hT0 := hcv.bound
+  have hgt : iwTop s0 ≤ iwTop m := hg.iw
+  -- constant `j`
+  have hdm : decPL m (decCVp m) o.toNat l.toNat = some cvTas :=
+    (hcv.grow (fun q => OMono.decCVp q) hg).1.get (OMono.decPL (fun q => OMono.decCVp q) _ _)
+  obtain ⟨v, hv, hcvj⟩ := decPL_getH m hdm j.toNat hjn
+  have hrv : (rdW (m.arr64 IW) (o + j)).toNat = v := rd_iwN hv (by have := (rdW (s0.arr64 CTL) 200).toNat_lt; simp only [iwTop] at hT0; omega)
+  have hv3 : v + 3 < 2 ^ 64 := by
+    simp only [decCVp, decCV, bind, Option.bind_eq_some_iff] at hcvj
+    obtain ⟨_, _, _, _, _, hty, -⟩ := hcvj
+    obtain ⟨w, hw, -⟩ := hd?_some hty
+    have := erecP_lt64 hw; omega
+  obtain ⟨hw32, hty⟩ := decCVp_type (q := rdW (m.arr64 IW) (o + j)) (by rw [hrv]; exact hcvj) (by rw [hrv]; exact hv3)
+  have hrw : rdW (m.arr64 (tierA EREC ((rdW (m.arr64 IW) (o + j) + 3) >>> 40)))
+      ((rdW (m.arr64 IW) (o + j) + 3) &&& 1099511627775) = erRd m (rdW (m.arr64 IW) (o + j) + 3) := rfl
+  rw [hrw] at h
+  generalize erRd m (rdW (m.arr64 IW) (o + j) + 3) = w at h hw32 hty
+  -- the write
+  have hqj : q.toNat + j.toNat < (m.arr64 IW).size := by omega
+  have hdec := decHL_write m q j w _ hw32 hsz hqj hacc
+  have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hqj' : (q + j).toNat = q.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
+  refine ih _ m' (j + 1) h (hS.set_iw _ _) (hg.set_iw _ _ (by rw [hqj']; omega))
+    (by rw [cnsTop_set]; exact ht) (hfr.trans (MFr.set_iw _ _ _)) ?_ ?_
+  · exact UInt64.le_iff_toNat_le.mpr (by rw [hj1]; omega)
+  · rw [hj1, hdec, List.take_add_one, List.getElem?_map, List.getElem?_eq_getElem (by omega)]
+    simpa [decE_eq] using hty
+
 
 end rel
 
@@ -111,9 +156,8 @@ l_model gfc_spec (p : Prog) (hp : p.lookup "gen_rec_check_former_tys_c" = some g
   specs [callW_spec p n "iw_alloc", callW_spec p n "class_former_ty"]
   grind [arena_grind] extra [ld64_rd_spec]
 
-/- ronsync2 stage 2: commented out (a section at a removed L function)
 section rel
-variable {p : Prog} (P : CftProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+variable {p : Prog} (P : CftProg p) (mode : ConLeche.CheckMode) (vis : Word) (fe : IFEnv)
 include P
 
 omit P in
@@ -126,13 +170,13 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
       StageR vis fe m a → M ∈ ms → DecB (fun m => decTM m mp.toNat) m M →
       decPL m (decCVp m) co.toNat cl.toNat = some cvTas → co.toNat + cl.toNat < 2 ^ 64 →
       callW p k "class_former_ty" [vis, co, cl, mp] m = some (r, m1) →
-      ∃ x a1, (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a1) ∧ StageR vis fe m1 a1 ∧
+      ∃ x a1, (ConRon.Arena.classFormerTy mode fe cvTas M).run a = .ok (x, a1) ∧ StageR vis fe m1 a1 ∧
         IWGrow m m1 ∧ decW0E m1 r x ∧ J m1 a1)
     (k : Nat) : ∀ (m m' : Mem) (a : AState) (j : Word) (acc : List EIdx),
     gfcW.loop1 p k m vis co cl mo ml q j = some m' →
     StageR vis fe m a → J m a → IWGrow s0 m → q.toNat + ml.toNat ≤ iwTop m → j ≤ ml →
     decHL m q.toNat j.toNat = some acc →
-    ∃ rest a', ((ms.drop j.toNat).mapM (ConRon.Arena.classFormerTy fe cvTas)).run a = .ok (rest, a') ∧
+    ∃ rest a', ((ms.drop j.toNat).mapM (ConRon.Arena.classFormerTy mode fe cvTas)).run a = .ok (rest, a') ∧
       StageR vis fe m' a' ∧ IWGrow s0 m' ∧ q.toNat + ml.toNat ≤ iwTop m' ∧
       decHL m' q.toNat ml.toNat = some (acc ++ rest) ∧ J m' a' := by
   induction k with
@@ -188,14 +232,12 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   rfl
 
 end rel
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`gen_rec_check_former_tys_c` refines `ms.mapM (classFormerTy fe cvTas)`**: the classes' formers,
 a fresh slice; each `class_former_ty` call by the contract `hcft`, an invariant `J` kept. -/
 theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
     (hp : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC) (n : Nat) (s₀ : St)
-    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cO cL mO mL : Word)
+    (a₀ : AState) (mode : ConLeche.CheckMode) (vis : Word) (fe : IFEnv) (cO cL mO mL : Word)
     (cvTas : List IConstantVal) (ms : List TargetMajor) (hS : StageR vis fe s₀.mem a₀)
     (hcv : PSlR decCVp cvTas cO cL s₀.mem) (hms : PSlR decTM ms mO mL s₀.mem)
     (J : Mem → AState → Prop)
@@ -204,17 +246,17 @@ theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
       StageR vis fe m a → M ∈ ms → DecB (fun m => decTM m mp.toNat) m M →
       decPL m (decCVp m) cO.toNat cL.toNat = some cvTas → cO.toNat + cL.toNat < 2 ^ 64 →
       callW p k "class_former_ty" [vis, cO, cL, mp] m = some (r, m1) →
-      ∃ x a1, (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a1) ∧ StageR vis fe m1 a1 ∧
+      ∃ x a1, (ConRon.Arena.classFormerTy mode fe cvTas M).run a = .ok (x, a1) ∧ StageR vis fe m1 a1 ∧
         IWGrow m m1 ∧ decW0E m1 r x ∧ J m1 a1)
     (hJ : J s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_former_tys_c" [vis, cO, cL, mO, mL]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀ ∧
-      StageR vis fe s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ms.mapM (ConRon.Arena.classFormerTy mode fe cvTas)) a₀ ∧
+      StageR vis fe s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy mode fe cvTas)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
-        some (AM.res (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
+        some (AM.res (ms.mapM (ConRon.Arena.classFormerTy mode fe cvTas)) a₀) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧
-      J s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀); ⊤⦄ := by
+      J s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy mode fe cvTas)) a₀); ⊤⦄ := by
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (gfc_spec p hp (n + 1) s₀ vis cO cL mO mL) ?_
@@ -229,7 +271,7 @@ theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
   obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.alloc n _ mL) c0
   simp only at hs0 hw0; subst hs0
   obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hS
-  obtain ⟨rest, a', run, hSF, hgF, htF, hdF, hJF⟩ := gfcW_ok dn vis fe s₀.mem cO cL mO mL (r0.headD 0) cvTas ms
+  obtain ⟨rest, a', run, hSF, hgF, htF, hdF, hJF⟩ := gfcW_ok mode vis fe s₀.mem cO cL mO mL (r0.headD 0) cvTas ms
     hcv hms hq0 J hJiw hcft (n + 1) s0.mem mF a₀ 0 [] c1 hS0 (hJiw _ _ _ hJ (allocW_iwFrame hw0) hS0) hg0 (by omega)
     UInt64.zero_le (by simp [decHL, hslice?])
   simp only [UInt64.toNat_zero, List.drop_zero, List.nil_append] at run hdF
@@ -237,7 +279,6 @@ theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
   rw [← hmF]
   refine ⟨hl, hok, by rw [hst]; exact hSF, hgF, by simpa [hres] using hdF, ?_, by rw [hst]; exact hJF⟩
   simp only [List.headD_cons, List.tail_cons]; omega
--/
 
 /-! ## `gen_rec_check_minor_ok`: the minor premises against the constructors -/
 

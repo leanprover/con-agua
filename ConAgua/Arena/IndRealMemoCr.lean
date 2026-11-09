@@ -26,26 +26,22 @@ namespace L.Ind
 
 open L.Arena
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem crfP_prog : L.Stubs.CrfProg crfP := by
   constructor <;> exact (ProgHas.refl crfP).get _
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`consts_resolve_ffast` refines `constsResolveFFast` under the stage relation and the walk
 memos** (replaces `IndStubs.constsResolveFFast_spec` at the inductive stage's uses); the memos are
 well formed after. -/
-theorem crfF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e) :
+theorem crfF_ok (vis : Word) (fe : IFEnv) (e : Word) (he : H e) :
     RelW crfF [vis, e] (fun m a => StageR vis fe m a ∧ AbsOK m) (constsResolveFFast fe (decI e))
       (fun m m' a r x => KeepPost vis fe decW0B m m' a r x ∧ AbsOK m') := by
   intro m m' a r h ⟨hS, hAb, hI1, hCr, hIl, hWk⟩
   have hfr := crfF_frame h
   obtain ⟨x, a', hrun, hK, hCr'⟩ := relW_callF (P := crfP)
-    (L.Stubs.constsResolveFFast_refines crfP_prog (dn := dn) (vis := vis) (fe := fe) e he) m m' a r h
+    (L.Stubs.constsResolveFFast_refines crfP_prog (vis := vis) (fe := fe) e he) m m' a r h
     ⟨hS, hCr⟩
   exact ⟨x, a', hrun, hK, hAb.frame hfr (by decide) (by decide), hI1.frame hfr (by decide) (by decide),
     hCr', hIl.frame hfr (by decide) (by decide),
     hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
--/
 
 end L.Ind

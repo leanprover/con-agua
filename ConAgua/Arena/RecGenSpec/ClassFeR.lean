@@ -409,6 +409,122 @@ theorem rec3DecPrev_stab {m : Mem} {p : Nat}
     rec3PrevD_grow hg hpv, rfl⟩
   simp only [iwH, hd?] at hnm ⊢; rw [e _ (by omega)]; exact hnm
 
+/-! ## The temporary pushes' stack (what `gen_rec_check_pop_all` needs) -/
+
+/-- The own row counter of a name (its push's view plus nothing: `0` when it has no own row). -/
+def ownC (m : Mem) (n : NIdx) : Word := (ownRaw m n.word.toUInt64).1
+
+/-- `O` with name `n` set to `c`. -/
+def updC (O : NIdx → Word) (n : NIdx) (c : Word) : NIdx → Word := fun x => if x = n then c else O x
+
+theorem updC_idem (O : NIdx → Word) (n : NIdx) (c d : Word) : updC (updC O n c) n d = updC O n d := by
+  funext x; simp only [updC]; split <;> rfl
+
+theorem updC_self {O : NIdx → Word} {n : NIdx} {c : Word} (h : O n = c) : updC O n c = O := by
+  funext x; simp only [updC]; split
+  · rename_i e; subst e; exact h.symm
+  · rfl
+
+/-- **The temporary pushes as a stack**, newest first: each entry the pushed name and the counter
+its push displaced. The name's row is the newest (its counter the view), the displaced counter is
+a 32-bit word older than the view and no other name's, and putting it back leaves the rest a
+stack at the view below (what `env_pop_temp` needs at each pop). -/
+def PopOK : (NIdx → Word) → Word → List (NIdx × Word) → Prop
+  | _, _, [] => True
+  | O, vis, (n, c) :: rest => O n = vis ∧ vis ≠ 0 ∧ c.toNat < 2 ^ 32 ∧
+      (c ≠ 0 → c.toNat - 1 < vis.toNat - 1) ∧ (c ≠ 0 → ∀ n', n' ≠ n → O n' ≠ c) ∧
+      PopOK (updC O n c) (vis - 1) rest
+
+/-- A displaced row's name and counter (the first two words of `decPrev`'s `rec3`). -/
+def decPrevC (m : Mem) (p : Nat) : Option (NIdx × Word) := do
+  let nm ← (iwH m p : Option NIdx)
+  let c ← iwA m (p + 1)
+  pure (nm, c)
+
+theorem rec3DecPrevC_stab {m : Mem} {p : Nat} {x : NIdx × Word} (h : decPrevC m p = some x)
+    (hp : p + 3 ≤ iwTop m) : StabD (fun m => decPrevC m p) m x := by
+  intro m' hg
+  have e : ∀ i, i < iwTop m → (iwA m') i = (iwA m) i := fun i hi => by
+    simp only [iwA, aread_apply]; exact hg.iwGet i hi
+  simp only [decPrevC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h ⊢
+  obtain ⟨nm, hnm, c, hc, rfl⟩ := h
+  refine ⟨nm, ?_, c, by rw [e _ (by omega)]; exact hc, rfl⟩
+  simp only [iwH, hd?] at hnm ⊢; rw [e _ (by omega)]; exact hnm
+
+theorem ownRaw_fst_lt (m : Mem) (w : Word) : (ownRaw m w).1.toNat < 2 ^ 32 := by
+  unfold ownRaw; split
+  · rw [UInt64.toNat_and]; exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
+  · simp
+
+theorem oix_ne (g : Nat) (t : UInt64) : tierA (oixArr g) t ≠ CTL ∧ tierA (oixArr g) t ≠ IW ∧
+    tierA (oixArr g) t ≠ EREC ∧ tierA (oixArr g) t ≠ tier1 EREC := by
+  unfold tierA oixArr; generalize (t &&& 1 != 0) = b
+  cases b <;> split <;> (try split) <;> decide
+
+/-- `ownC` reads only the own row arrays and the stamp. -/
+theorem ownC_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, ∀ g t, b ≠ tierA (oixArr g) t) (hC : (133 : Word) ∉ C) : ownC m' = ownC m := by
+  have e1 : ∀ g t, m'.arr64 (tierA (oixArr g) t) = m.arr64 (tierA (oixArr g) t) := fun g t =>
+    hf.arr _ (fun h => hA _ h g t rfl) (oix_ne g t).1
+  have e2 : stampW m' = stampW m := hf.ctl 133 hC
+  have e3 : ∀ w, ownRow m' w = ownRow m w := fun w => by simp only [ownRow, e1]
+  funext n
+  simp only [ownC, ownRaw, e2, e3]
+
+theorem ownC_iw {m m' : Mem} (hf : MemFrame [IW] [200] m m') : ownC m' = ownC m :=
+  ownC_frame hf (by simp only [List.mem_singleton]; rintro b rfl g t; exact (oix_ne g t).2.1.symm)
+    (by decide)
+
+theorem ownC_erecPutMem (m : Mem) (a v : Word) : ownC (erecPutMem m a v) = ownC m :=
+  ownC_frame (erecPutMem_frame m a v) (by
+    simp only [List.mem_cons, List.not_mem_nil, or_false]
+    rintro b (rfl | rfl) g t
+    · exact (oix_ne g t).2.2.1.symm
+    · exact (oix_ne g t).2.2.2.symm) (by simp)
+
+theorem ownC_cfrRecW {m m' : Mem} {cq mi rp3 q : Word} (h : cfrRecW m cq mi rp3 = some (q, m')) :
+    ownC m' = ownC m := by
+  rcases h1 : erAllocW m 10 with _ | ⟨q1, m1⟩
+  · simp [cfrRecW, h1] at h
+  have e : cfrRecW m cq mi rp3 = if 4294967296 ≤ erRd (cfrMem m1 q1 cq mi rp3) (q1 + 1)
+      then none else some (q1, cfrMem m1 q1 cq mi rp3) := by simp [cfrRecW, h1]
+  rw [e] at h
+  split at h
+  · cases h
+  obtain ⟨rfl, rfl⟩ : q1 = q ∧ cfrMem m1 q1 cq mi rp3 = m' := by simpa using h
+  have hm1 : m1 = erAllocMem m 10 := by
+    unfold erAllocW at h1; split at h1 <;> (repeat' split at h1) <;> simp_all
+  simp only [cfrMem, ownC_erecPutMem, hm1]
+  unfold erAllocMem; split
+  · exact ownC_frame (MemFrame.setCtl m 129 _) (by simp) (by decide)
+  · exact ownC_frame (MemFrame.setCtl m 130 _) (by simp) (by decide)
+
+/-- **`env_push` at name `ci.name`**: that name's own counter becomes the new view, the others stay. -/
+theorem envPush_ownC {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
+    (hpu : p.lookup "env_push" = some envPushL) {n : Nat} {vis : Word} {fe : IFEnv}
+    {m m' : Mem} {c : Word} {r : List Word} {ci : IConstantInfo}
+    (hc : callW p n "env_push" [vis, c] m = some (r, m')) (hE : EnvR m vis fe)
+    (hci : decCI (erecP m) c.toNat = some ci) :
+    ownC m' = updC (ownC m) ci.name (vis + 1) ∧ r = [vis + 1] ∧ vis.toNat < 4294967294 := by
+  obtain ⟨s', hs', hm, -, hr, hv, ht, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envPush_spec p hrs hpu n ⟨m, Locals.init []⟩ vis c) hc
+  obtain ⟨w, hw, hw32, hnm⟩ := decCI_name hci
+  have hq : (c + 1).toNat = c.toNat + 1 := by
+    have := erecP_lt64 hw; rw [UInt64.toNat_add]; simp; omega
+  have hrd : erecRd m (c + 1) = w := erecRd_of (by rw [hq]; exact hw)
+  simp only [hrd] at hm ht hb
+  refine ⟨?_, hr, hv⟩
+  rw [← hs', hm]
+  have hv1 : (vis + 1).toNat < 2 ^ 32 := by rw [UInt64.toNat_add]; simp; omega
+  funext n'
+  simp only [ownC, updC]
+  split
+  · rename_i e; subst e
+    rw [hnm, decI_word_self w hw32]
+    exact (ownRaw_ownSet_self ht hb hv1 hE.stamp).1
+  · rename_i hne
+    rw [ownRaw_ownSet_other hw32 (L.Arena.nidx_word_lt32 n') ht fun e => hne (by rw [hnm, ← e, decI_word])]
+
 /-! ## `class_fe_r_go`: the relation to the twin -/
 
 /-- The record's major index and rule prefix are the twin's. -/
@@ -436,17 +552,20 @@ theorem rec3FerMiRp {m : Mem} {ro rl M : Word} {P : BlockShape}
 
 theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (vis : Word) (fe : IFEnv) (cvo cvl rcl M : Word) (cvs : List IConstantVal)
-      (rcs : List Nat) (r : List Word),
+      (rcs : List Nat) (r : List Word) (S : List (NIdx × Word)),
     ferW p k m cvo cvl rcl ro rl vis M = some (r, m') → StageR vis fe m a →
     DecB (fun m => decPL m (decRS m) ro.toNat rl.toNat) m P.recs →
     SPL decCVX m cvo.toNat cvl.toNat cvs → rcs.length = rcl.toNat → M.toNat + cvl.toNat < 2 ^ 64 →
+    PopOK (ownC m) vis S →
     StageR (r.headD 0) (ConRon.Arena.classFeR.go P M.toNat (cvs.zip rcs) fe []).1 m' a ∧ IWGrow m m' ∧
       SPL decPrev m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat
-        (ConRon.Arena.classFeR.go P M.toNat (cvs.zip rcs) fe []).2 := by
+        (ConRon.Arena.classFeR.go P M.toNat (cvs.zip rcs) fe []).2 ∧
+      ∃ cs, SPL decPrevC m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat cs ∧
+        PopOK (ownC m') (r.headD 0) (cs.reverse ++ S) := by
   induction k with
-  | zero => intro m m' a vis fe cvo cvl rcl M cvs rcs r h; simp [ferW] at h
+  | zero => intro m m' a vis fe cvo cvl rcl M cvs rcs r S h; simp [ferW] at h
   | succ k ih =>
-  intro m m' a vis fe cvo cvl rcl M cvs rcs r h hS hrecs hcvs hrcs hMb
+  intro m m' a vis fe cvo cvl rcl M cvs rcs r S h hS hrecs hcvs hrcs hMb hPop
   have hsz := hS.iw.iwSize
   by_cases hz : cvl = 0 ∨ rcl = 0
   · have hz' : cvs.zip rcs = [] := by
@@ -459,7 +578,8 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
       · exact ferW_nil2 p k m cvo cvl rcl ro rl vis M hvl (hz.resolve_left hvl)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h); rw [hz']
     exact ⟨by simpa [ConRon.Arena.classFeR.go.eq_1] using hS, IWGrow.refl m,
-      by simpa [ConRon.Arena.classFeR.go.eq_1] using SPL.nil (dec := decPrev) (m := m) 0 (by omega)⟩
+      by simpa [ConRon.Arena.classFeR.go.eq_1] using SPL.nil (dec := decPrev) (m := m) 0 (by omega),
+      [], by simpa using SPL.nil (dec := decPrevC) (m := m) 0 (by omega), by simpa using hPop⟩
   obtain ⟨hvl, hcl⟩ := not_or.mp hz
   obtain ⟨jv, hjv⟩ : ∃ j, cvl.toNat = j + 1 :=
     ⟨cvl.toNat - 1, by have : cvl.toNat ≠ 0 := fun e => hvl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
@@ -484,10 +604,31 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
   obtain ⟨⟨rv, m2⟩, h2, h⟩ := of_K h (by simp only [ferK2])
   rw [ferK2_some] at h
   obtain ⟨hS2, hg2⟩ := envPush_stage hp.rp.rs hp.rp.push h2 hS1 hci
+  obtain ⟨hO2, hrv, hv2⟩ := envPush_ownC hp.rp.rs hp.rp.push h2 hS1.check.env hci
+  have hO1 : ownC m1 = ownC m := ownC_cfrRecW h1
   -- the displaced row
   obtain ⟨⟨re, m3⟩, h3, h⟩ := of_K h (by simp only [ferK3])
   rw [ferK3_some] at h
   obtain ⟨hS3, hg3, hre, hget3, htop3⟩ := recW_stage h3 hS2 rfl
+  have hO3 : ownC m3 = ownC m2 := ownC_iw (recW_post h3 hS2.iw.ctl hS2.iw.iwSize rfl).2.2.2.1
+  -- the stack grows by the push
+  have hcC : (ownRaw m w).1 = ownC m cv.name := by rw [hwnm]; simp only [ownC, decI_word_self w hwH]
+  have hvis1 : (vis + 1).toNat = vis.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hE1 := hS1.check.env
+  have hO2' : ownC m2 = updC (ownC m1) cv.name (vis + 1) := hO2
+  have hcm1 : (ownRaw m1 cv.name.word.toUInt64).1 = (ownRaw m w).1 := by rw [hcC, ← hO1]; rfl
+  have hPop3 : PopOK (ownC m3) (rv.headD 0) ((cv.name, (ownRaw m w).1) :: S) := by
+    rw [hO3, hO2', hO1, hrv, List.headD_cons]
+    refine ⟨by simp [updC], fun e => by have := congrArg UInt64.toNat e; rw [hvis1] at this; simp at this,
+      ownRaw_fst_lt m w, fun hc0 => ?_, fun hc0 n' hn' => ?_, ?_⟩
+    · have := hE1.fresh cv.name (by rw [hcm1]; exact hc0)
+      rw [hcm1] at this; rw [hvis1]; omega
+    · simp only [updC, if_neg hn']
+      intro e
+      have hn1 : (ownRaw m1 n'.word.toUInt64).1 = ownC m n' := by rw [← hO1]; rfl
+      exact hn' (hE1.uniq n' cv.name (by rw [hn1, e]; exact hc0) (by rw [hn1, e, hcm1]))
+    · rw [updC_idem, hcC, updC_self rfl, show vis + 1 - 1 = vis by simp]
+      exact hPop
   have hg03 := (hg1.trans hg2).trans hg3
   have hent : decPrev m3 (re.headD 0).toNat = some (cv.name, fe.idx[cv.name]?) := by
     rw [hre]
@@ -496,6 +637,16 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
     simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at g0 g1 g2
     refine ⟨decI w, ?_, (ownRaw m w).1, by simpa [iwA, aread_apply] using g1, (ownRaw m w).2,
       by simpa [iwA, aread_apply] using g2, _, rec3PrevD_grow hg03 hprev, by rw [hwnm]⟩
+    simp only [iwH, hd?, iwA, aread_apply, g0]; simp [hwH]
+  have hentC : StabD (fun m => decPrevC m (re.headD 0).toNat) m3 (cv.name, (ownRaw m w).1) := by
+    refine rec3DecPrevC_stab ?_ (by
+      have := htop3; simp only [List.length_cons, List.length_nil, iwTop] at this
+      rw [hre]; simp only [List.headD_cons, iwTop]; omega)
+    rw [hre]
+    simp only [List.headD_cons, decPrevC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq]
+    have g0 := hget3 0 (by simp); have g1 := hget3 1 (by simp)
+    simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at g0 g1
+    refine ⟨decI w, ?_, (ownRaw m w).1, by simpa [iwA, aread_apply] using g1, by rw [hwnm]⟩
     simp only [iwH, hd?, iwA, aread_apply, g0]; simp [hwH]
   have hentS := rec3DecPrev_stab hent (by
     have := htop3; simp only [List.length_cons, List.length_nil, iwTop] at this
@@ -507,13 +658,18 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
   have hM1 : (M + 1).toNat = M.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
   rw [ferK4_some] at h
-  obtain ⟨hS4, hg4, hsp4⟩ := ih m3 m4 a (rv.headD 0) _ (cvo + 1) (cvl - 1) (rcl - 1) (M + 1) cvs' rcs' r4 h4 hS3
+  obtain ⟨hS4, hg4, hsp4, cs', hcs4, hPop4⟩ := ih m3 m4 a (rv.headD 0) _ (cvo + 1) (cvl - 1) (rcl - 1) (M + 1)
+    cvs' rcs' r4 _ h4 hS3
     (hrecs.grow (OMono.decPL (fun q => decRS_mono q) _ _) hg03)
-    (by rw [hcvo1, hcvl1, hjv]; exact hcvsT.grow hg03) (by simp at hrcs; omega) (by omega)
+    (by rw [hcvo1, hcvl1, hjv]; exact hcvsT.grow hg03) (by simp at hrcs; omega) (by omega) hPop3
   obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl
   rw [ferK5_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS5, hg5, hsp5⟩ := SPL.cons h5 hS4 hsp4 (hentS.grow hg4)
+  obtain ⟨-, -, hcs5⟩ := SPL.cons h5 hS4 hcs4 (hentC.grow hg4)
+  have hO5 : ownC m5 = ownC m4 := by
+    obtain ⟨hb4, ps4, hps4, -⟩ := id hcs4
+    exact ownC_iw (consW_decN h5 hS4.iw.iwSize hS4.iw.ctl hb4 hps4).2.2.2.1
   have htw : ConRon.Arena.classFeR.go P M.toNat ((cv :: cvs').zip (rc0 :: rcs')) fe [] =
       ((ConRon.Arena.classFeR.go P (M.toNat + 1) (cvs'.zip rcs')
         (fe.push (.recInfo cv (P.majorIdxAt M.toNat) (P.rulePrefixAt M.toNat) false [])) []).1,
@@ -523,11 +679,12 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
     rw [rec3FerGo_acc]; simp
   rw [hM1] at hS4 hS5 hsp5
   rw [htw]
-  refine ⟨by simpa using hS5, (hg03.trans hg4).trans hg5, by simpa using hsp5⟩
+  refine ⟨by simpa using hS5, (hg03.trans hg4).trans hg5, by simpa using hsp5, (cv.name, (ownRaw m w).1) :: cs',
+    by simpa using hcs5, by simpa [hO5] using hPop4⟩
 
 /-- **`class_fe_r` refines `classFeR`**: the rule-less generated recursors pushed (the stage relation
 at the returned view of the twin's environment), the displaced rows a stable slice of `rec3`
-records, in push order. -/
+records, in push order, which pop as a stack (`PopOK`). -/
 @[refines ConRon.Arena.classFeR]
 theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (vis : Word) (fe : IFEnv) (pp cgo cgl rco rcl : Word) (P : BlockShape)
@@ -538,7 +695,9 @@ theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀
     ⦃fun r s' => LocEq s' s₀ ∧ StageR (r.headD 0) (ConRon.Arena.classFeR P cvGs recCls fe).1 s'.mem a₀ ∧
       IWGrow s₀.mem s'.mem ∧
       SPL decPrev s'.mem (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat
-        (ConRon.Arena.classFeR P cvGs recCls fe).2; ⊤⦄ := by
+        (ConRon.Arena.classFeR P cvGs recCls fe).2 ∧
+      ∃ cs, SPL decPrevC s'.mem (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat cs ∧
+        PopOK (ownC s'.mem) (r.headD 0) cs.reverse; ⊤⦄ := by
   refine triple_post (classFeR_spec p hp n s₀ pp cgo cgl rco rcl vis) ?_
   rintro r s' ⟨hl, hm⟩
   cases n with
@@ -559,9 +718,11 @@ theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀
   obtain ⟨e3, t3⟩ := rec2RdN (w := pp) (k := 3) (by simpa using (rec2IwN_trunc hrl).2) hsz
   simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at e2 e3
   rw [e2, e3] at h1
-  obtain ⟨hS1, hg1, hsp1⟩ := ferW_ok p hp P _ _ n _ _ a₀ vis fe cgo cgl rcl 0 cvGs recCls r1 h1 hS
-    (by rw [t2, t3]; exact hrecs) hcg (decNL_length _ (hrc.get (OMono.decNL _ _))) (by simp; exact cgl.toNat_lt)
-  exact ⟨hl, by simpa [ConRon.Arena.classFeR] using hS1, hg1, by simpa [ConRon.Arena.classFeR] using hsp1⟩
+  obtain ⟨hS1, hg1, hsp1, cs, hcs, hPop⟩ := ferW_ok p hp P _ _ n _ _ a₀ vis fe cgo cgl rcl 0 cvGs recCls r1 []
+    h1 hS (by rw [t2, t3]; exact hrecs) hcg (decNL_length _ (hrc.get (OMono.decNL _ _)))
+    (by simp; exact cgl.toNat_lt) trivial
+  exact ⟨hl, by simpa [ConRon.Arena.classFeR] using hS1, hg1, by simpa [ConRon.Arena.classFeR] using hsp1,
+    cs, hcs, by simpa using hPop⟩
 
 end L.Ind
 

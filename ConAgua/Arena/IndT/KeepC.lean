@@ -31,7 +31,7 @@ def grcKeepCalleesC : List FnName :=
     "gen_rec_check_pop_all"]
 
 /-- `check_block_tail`'s `AbsKeep` callees. -/
-def tailKeepCalleesC : List FnName := ["cons_block_ctors", "struct_proj_guards"] ++ grcKeepCalleesC
+def tailKeepCalleesC : List FnName := ["cons_block_ctors"] ++ grcKeepCalleesC
 
 /-- `check_block_pass`' `AbsKeep` callees. -/
 def passKeepCalleesC : List FnName :=

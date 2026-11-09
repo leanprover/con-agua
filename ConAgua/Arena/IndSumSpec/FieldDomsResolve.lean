@@ -27,8 +27,7 @@ open L.Arena
 
 /-! ## The relational lemmas -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
+theorem fdrW_ok (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
     fdrW n m v o l = some (r, m') → StageR v fe m a → decHL m o.toNat l.toNat = some xs →
     o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m → AbsOK m →
@@ -50,11 +49,11 @@ theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
       rw [fdrW_cons n m v o l hl, hw] at h
       obtain ⟨ra, m1, h1, h⟩ := kSome_inv h (by simp [fdrK1]) (fun _ _ => rfl)
       rw [fdrK1_some] at h
-      obtain ⟨t, a1, hrun1, hS1, hg1, ht32, hteq⟩ := ftdF_ok dn v fe w hw32 m m1 a ra h1 hS
+      obtain ⟨t, a1, hrun1, hS1, hg1, ht32, hteq⟩ := ftdF_ok (fun _ => none) v fe w hw32 m m1 a ra h1 hS
       have hA1 := ftdF_afr h1 hA
       obtain ⟨rb, m2, h2, h⟩ := kSome_inv h (by simp [fdrK2]) (fun _ _ => rfl)
       obtain ⟨c, a2, hrun2, ⟨hS2, hg2, hceq, hc1⟩, hA2⟩ :=
-        crfF_ok dn v fe (ra.headD 0) ht32 m1 m2 a1 rb h2 ⟨hS1, hA1⟩
+        crfF_ok v fe (ra.headD 0) ht32 m1 m2 a1 rb h2 ⟨hS1, hA1⟩
       have hrun12 : ∀ (k : Bool → AM Bool),
           (do let t ← fvarTypeD (decI w); let c ← constsResolveFFast fe t; k c).run a = (k c).run a2 := by
         intro k
@@ -84,10 +83,8 @@ theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         have := hrun12 (fun c => if c then fieldDomsResolve fe xs' else pure false)
         simp only [fieldDomsResolve]
         rw [this]; exact hrun3
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
+theorem iarW_ok (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
     iarW n m v o l = some (r, m') → StageR v fe m a → decHL m o.toNat l.toNat = some xs →
     o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m → AbsOK m →
@@ -109,7 +106,7 @@ theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
       rw [iarW_cons n m v o l hl, hw] at h
       obtain ⟨rb, m2, h2, h⟩ := kSome_inv h (by simp [iarK]) (fun _ _ => rfl)
       obtain ⟨c, a2, hrun2, ⟨hS2, hg2, hceq, hc1⟩, hA2⟩ :=
-        crfF_ok dn v fe w hw32 m m2 a rb h2 ⟨hS, hA⟩
+        crfF_ok v fe w hw32 m m2 a rb h2 ⟨hS, hA⟩
       have hrun12 : ∀ (k : Bool → AM Bool),
           (do let c ← constsResolveFFast fe (decI w); k c).run a = (k c).run a2 := by
         intro k
@@ -137,18 +134,16 @@ theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         have := hrun12 (fun c => if c then idxArgsResolve fe xs' else pure false)
         simp only [idxArgsResolve]
         rw [this]; exact hrun3
--/
 
 /-! ## The census theorems -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`field_doms_resolve` refines `fieldDomsResolve`** (through `fvar_type_d`, `consts_resolve_ffast`,
 with the walk memos `AbsOK`), at the view `vis0` of the pre-block environment `fe₀`. -/
 @[refines ConRon.Arena.fieldDomsResolve]
 theorem fieldDomsResolve_refines (p : Prog)
     (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (hftd : FtdF p) (hcr : CrfF p) (n : Nat)
     (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
+    (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
     (hS : StageR vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
     (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "field_doms_resolve" [vis0, o, l]
@@ -157,19 +152,17 @@ theorem fieldDomsResolve_refines (p : Prog)
         (AM.res (fieldDomsResolve fe₀ xs) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (fdrW_spec p hp hftd hcr n s₀ vis0 o l) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hpost, hA'⟩ := fdrW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht hA
+  obtain ⟨b, a', hrun, hpost, hA'⟩ := fdrW_ok fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hpost, hA'⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`idx_args_resolve` refines `idxArgsResolve`** (through `consts_resolve_ffast`, with the walk
 memos `AbsOK`),
 at the view `vis0` of the pre-block environment `fe₀`. -/
 @[refines ConRon.Arena.idxArgsResolve]
 theorem idxArgsResolve_refines (p : Prog)
     (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (hcr : CrfF p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
+    (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
     (hS : StageR vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
     (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_args_resolve" [vis0, o, l]
@@ -178,10 +171,9 @@ theorem idxArgsResolve_refines (p : Prog)
         (AM.res (idxArgsResolve fe₀ xs) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (iarW_spec p hp hcr n s₀ vis0 o l) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hpost, hA'⟩ := iarW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht hA
+  obtain ⟨b, a', hrun, hpost, hA'⟩ := iarW_ok fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hpost, hA'⟩
--/
 
 /-! ## `class_rule_ok_domains` (moved from `RecGenSpec/CfhW.lean`) -/
 

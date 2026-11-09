@@ -33,11 +33,11 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## Frames -/
 
-/-- Across a core call: the stage memos stand (`coreStageA_stage`). -/
+/-- Across a core call: the stage memos stand but the `hb` memo (`CoreFr.mfr`). -/
 theorem MFr.ofCore {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f ∈ stageCoreFns)
     {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word} (h : callW p n f vs m = some (r, m')) :
-    MFr [] [] m m' :=
-  MFr.of_frame (run_memFrame hcl hf (run_of_callW h)).1 coreStageA_stage coreStageC_stage
+    MFr [HBM] [214, 215] m m' :=
+  (callW_coreFrame hcl hf h).mfr
 
 theorem tcpF_afr {n : Nat} {m m' : Mem} {pfo pfl e : Word} {r : List Word}
     (h : tcpF n m pfo pfl e = some (r, m')) : AFr m m' := by

@@ -13,7 +13,7 @@ statement per stub, all unproved). Every callee is now the program's own call (`
 pure model, and the contracts and the `StageR` theorems through them are gone (lane `cleanup`).
 What is left: the opaque word model `stubM` (still named in a few
 models, e.g. `IndPartsSpec/BlockRecNamesUnreserved`'s `wsK2`), `RelAM`, the walk-memo predicates that
-make up `AbsOK`, and the result decoders `pwWords`, `decZC`, `decLvlEq`.
+make up `AbsOK`, and the result decoder `decLvlEq`.
 
 `H w`: a handle word (below `2^32`).
 -/
@@ -89,29 +89,6 @@ def RelAM {α : Type} (f : FnName) (args : List Word) (pre : Mem → AState → 
     (post : Mem → Mem → AState → List Word → α → Prop) : Prop :=
   ∀ (m m' : Mem) (a : AState) (r : List Word), stubM f m args = some (r, m') → pre m a →
     ∃ x a', op.run a = .ok (x, a') ∧ post m m' a' r x
-
-section specs
-variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-
-local notation "V" => ConLeche.CheckMode.verified
-
-/-- A `PropWhen` from its three words (`decPW`'s layout: `0` `never`, `1` `ifAllZero` with the
-names the handle slice `(o, l)` of `a`). -/
-def pwWords (a : Nat → Option Word) (t o l : Word) : Option ConLeche.PropWhen :=
-  match t.toNat with
-  | 0 => some .never
-  | 1 => do
-    let ns : List NIdx ← hslice? a o.toNat l.toNat
-    pure (.ifAllZero (← ns.mapM dn))
-  | _ => none
-
-/-- `lv_zero_caps`' result `(tag, off, len)`: the zero-ness of the level `lv`, decoded in every
-array that agrees with the record pool below its top. -/
-def decZC (m : Mem) (r : List Word) (lv : ConLeche.Level) : Prop :=
-  ∀ a : Nat → Option Word, ArrExt (erA m) a →
-    pwWords dn a (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) = some (ConLeche.Level.zeronessOf lv)
-
-end specs
 
 /-! ## Master callees without a model yet (lane indproofs) -/
 
