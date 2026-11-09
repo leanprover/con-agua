@@ -13,7 +13,7 @@ public import ConAgua.Arena.IotaCase3Ref
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.WhnfIotaRefine3
+public import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.L.Records
 public import ConAgua.Arena.WhnfIotaRefine2
 public import ConAgua.Arena.WhnfIotaRefine4
