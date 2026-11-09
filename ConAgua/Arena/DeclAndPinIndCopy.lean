@@ -29,7 +29,7 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 open L.Front (DECL DLP)
-open L.Ind (erAllocW erecAlloc erecAlloc_specW)
+open L.Ind (erAllocW erecAlloc erecAlloc_specW erecPut erecPutMem erecPut_specW)
 
 /-! ## `dind_copy` -/
 
@@ -39,7 +39,7 @@ def dindCopyW : Nat → Mem → Word → Word → Word → Option Mem
   | n + 1, m, d, s, l =>
     if l = 0 then some m
     else if s = 0 then none
-    else dindCopyW n (m.set64 EREC d (rdW (m.arr64 DLP) s)) (d + 1) (s + 1) (l - 1)
+    else dindCopyW n (erecPutMem m d (rdW (m.arr64 DLP) s)) (d + 1) (s + 1) (l - 1)
 
 section arms
 variable (n : Nat) (m : Mem) (d s l : Word)
@@ -48,7 +48,7 @@ theorem dindCopyW_src (hl : l ≠ 0) (hs : s = 0) : dindCopyW (n + 1) m d s l = 
   simp [dindCopyW, hl, hs]
 theorem dindCopyW_step (hl : l ≠ 0) (hs : s ≠ 0) :
     dindCopyW (n + 1) m d s l =
-      dindCopyW n (m.set64 EREC d (rdW (m.arr64 DLP) s)) (d + 1) (s + 1) (l - 1) := by
+      dindCopyW n (erecPutMem m d (rdW (m.arr64 DLP) s)) (d + 1) (s + 1) (l - 1) := by
   simp [dindCopyW, hl, hs]
 end arms
 
@@ -56,11 +56,20 @@ grind_pattern [ind_grind] dindCopyW_nil => dindCopyW (n + 1) m d s l
 grind_pattern [ind_grind] dindCopyW_src => dindCopyW (n + 1) m d s l
 grind_pattern [ind_grind] dindCopyW_step => dindCopyW (n + 1) m d s l
 
-theorem dindCopy_specW (p : Prog) (hp : p.lookup "dind_copy" = some dindCopy) (n : Nat) :
+theorem dindCopy_specW (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
+    (hp : p.lookup "dind_copy" = some dindCopy) (n : Nat) :
     ∀ (s₀ : St) (d s l : Word),
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "dind_copy" [d, s, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ dindCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, dindCopy]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ d s l
+    rw [invoke_eq _ hp]
+    simp only [callFn, dindCopy]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, erecPut_specW p hpu n, ih] <;>
+      finish (gen := 20)
 
 /-! ## `ind_rec_copy` -/
 
@@ -69,8 +78,8 @@ section irc
 /-- After the record's own copy: the relocated words. -/
 def ircT2 (pp q r k : Word) : Option Mem → Option (Word × Mem)
   | none => none
-  | some m6 => some (pp, if k = 5 then (m6.set64 EREC (pp + 2) q).set64 EREC (pp + 7) r
-      else m6.set64 EREC (pp + 2) q)
+  | some m6 => some (pp, if k = 5 then erecPutMem (erecPutMem m6 (pp + 2) q) (pp + 7) r
+      else erecPutMem m6 (pp + 2) q)
 
 /-- After the record's allocation (`nn` words). -/
 def ircT (n : Nat) (s q r nn k : Word) : Option (Word × Mem) → Option (Word × Mem)
@@ -80,7 +89,7 @@ def ircT (n : Nat) (s q r nn k : Word) : Option (Word × Mem) → Option (Word �
 /-- After a recursor's rule copy. -/
 def ircR2 (n : Nat) (s q r : Word) : Option Mem → Option (Word × Mem)
   | none => none
-  | some m4 => ircT n s q r 9 5 (erAllocW m4 9)
+  | some m4 => ircT n s q r 10 5 (erAllocW m4 10)
 
 /-- After a recursor's rule allocation. -/
 def ircR1 (n : Nat) (s q : Word) : Option (Word × Mem) → Option (Word × Mem)
@@ -125,10 +134,10 @@ theorem ircK2_some : ircK2 n s q k (some m2) =
     else none := rfl
 theorem ircR1_some : ircR1 n s q (some (r, m3)) = ircR2 n s q r
     (dindCopyW n m3 r (rdW (m3.arr64 DLP) (s + 7)) (11 * rdW (m3.arr64 DLP) (s + 8))) := rfl
-theorem ircR2_some : ircR2 n s q r (some m4) = ircT n s q r 9 5 (erAllocW m4 9) := rfl
+theorem ircR2_some : ircR2 n s q r (some m4) = ircT n s q r 10 5 (erAllocW m4 10) := rfl
 theorem ircT_some : ircT n s q r nn k (some (pp, m5)) = ircT2 pp q r k (dindCopyW n m5 pp s nn) := rfl
 theorem ircT2_some : ircT2 pp q r k (some m6) = some (pp, if k = 5 then
-    (m6.set64 EREC (pp + 2) q).set64 EREC (pp + 7) r else m6.set64 EREC (pp + 2) q) := rfl
+    erecPutMem (erecPutMem m6 (pp + 2) q) (pp + 7) r else erecPutMem m6 (pp + 2) q) := rfl
 end arms
 
 grind_pattern [ind_grind] ircW_step => ircW (n + 1) m s
@@ -142,11 +151,20 @@ grind_pattern [ind_grind] ircT2_some => ircT2 pp q r k (some m6)
 end irc
 
 theorem indRecCopy_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hpu : p.lookup "erec_put" = some erecPut)
     (hd : p.lookup "dind_copy" = some dindCopy) (hp : p.lookup "ind_rec_copy" = some indRecCopy)
     (n : Nat) (s₀ : St) (s : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "ind_rec_copy" [s]
     ⦃fun r s' => LocEq s' s₀ ∧ ircW n s₀.mem s = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, indRecCopy]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        erecAlloc_specW p ha n, erecPut_specW p hpu n, dindCopy_specW p hpu hd n] <;>
+      finish (gen := 20) [rdW_eq]
 
 /-! ## `ind_copy_go`, `ind_block_to_erec` -/
 
@@ -154,7 +172,7 @@ theorem indRecCopy_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc
 def icgK (f : Mem → Word → Word → Word → Option Mem) (o bo bl : Word) :
     Option (Word × Mem) → Option Mem
   | none => none
-  | some (p, m1) => f (m1.set64 EREC o p) (o + 1) (bo + 1) (bl - 1)
+  | some (p, m1) => f (erecPutMem m1 o p) (o + 1) (bo + 1) (bl - 1)
 
 /-- **The model of `ind_copy_go(o, bo, bl)`.** -/
 def icgW : Nat → Mem → Word → Word → Word → Option Mem
@@ -168,7 +186,7 @@ theorem icgW_nil (hl : bl = 0) : icgW (n + 1) m o bo bl = some m := by simp [icg
 theorem icgW_step (hl : bl ≠ 0) :
     icgW (n + 1) m o bo bl = icgK (icgW n) o bo bl (ircW n m (rdW (m.arr64 DLP) bo)) := by
   simp [icgW, hl]
-theorem icgK_some : icgK f o bo bl (some (p, m1)) = f (m1.set64 EREC o p) (o + 1) (bo + 1) (bl - 1) :=
+theorem icgK_some : icgK f o bo bl (some (p, m1)) = f (erecPutMem m1 o p) (o + 1) (bo + 1) (bl - 1) :=
   rfl
 end arms
 
@@ -177,12 +195,22 @@ grind_pattern [ind_grind] icgW_step => icgW (n + 1) m o bo bl
 grind_pattern [ind_grind] icgK_some => icgK f o bo bl (some (p, m1))
 
 theorem indCopyGo_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hpu : p.lookup "erec_put" = some erecPut)
     (hd : p.lookup "dind_copy" = some dindCopy) (hr : p.lookup "ind_rec_copy" = some indRecCopy)
     (hp : p.lookup "ind_copy_go" = some indCopyGo) (n : Nat) :
     ∀ (s₀ : St) (o bo bl : Word),
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "ind_copy_go" [o, bo, bl]
     ⦃fun _ s' => LocEq s' s₀ ∧ icgW n s₀.mem o bo bl = some s'.mem; ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ o bo bl; rw [invoke_eq _ hp]; simp only [callFn, indCopyGo]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o bo bl
+    rw [invoke_eq _ hp]
+    simp only [callFn, indCopyGo]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
+        erecPut_specW p hpu n, indRecCopy_specW p ha hpu hd hr n] <;>
+      finish (gen := 20)
 
 /-- **The model of `ind_block_to_erec(i)`.** -/
 def ibeW (n : Nat) (m : Mem) (i : Word) : Option (List Word × Mem) :=
@@ -194,6 +222,7 @@ def ibeW (n : Nat) (m : Mem) (i : Word) : Option (List Word × Mem) :=
     | some m2 => some ([o, rdW (m.arr64 DECL) (4 + 8 * i)], m2)
 
 theorem indBlockToErec_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hpu : p.lookup "erec_put" = some erecPut)
     (hd : p.lookup "dind_copy" = some dindCopy) (hr : p.lookup "ind_rec_copy" = some indRecCopy)
     (hg : p.lookup "ind_copy_go" = some indCopyGo)
     (hp : p.lookup "ind_block_to_erec" = some indBlockToErec) (n : Nat) (s₀ : St) (i : Word) :
@@ -210,7 +239,7 @@ theorem indBlockToErec_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecA
       intro o m1 m2 h1 h2; simp [ibeW, h1, h2]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        erecAlloc_specW p ha n, indCopyGo_specW p ha hd hr hg n] <;>
+        erecAlloc_specW p ha n, indCopyGo_specW p ha hpu hd hr hg n] <;>
       finish (gen := 20)
 
 end L.Arena

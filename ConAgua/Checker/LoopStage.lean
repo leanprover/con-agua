@@ -14,10 +14,9 @@ public import ConAgua.Checker.PipeRest
 /-!
 # The declaration loop's start, from the stages before it (lane `loopt3`)
 
-What phase A's fold takes at its start (`installFoldGo_start`, `Arena/PhaseAEntry.lean`; used by
-entry 1's run, `Checker/CheckARun.lean`, and the driver, `Checker/ParDriverTwin.lean`): the twin's
-fold invariant at the loop's start from the twin's stages before it (`TwinPrefix`,
-`Final/Twin.lean`'s `stages_frame`), the memory facts from `R7`.
+What the declaration loop takes at its start from the stages before it: the front's declarations'
+shape (`frontDecls_of_prefix`, from `TwinPrefix`) and the core tier's memos (`core_of_R7`, from
+`R7`).
 -/
 
 open ConRon.Arena ConRon.Arena.Frontend
@@ -25,43 +24,6 @@ open ConRon.Arena ConRon.Arena.Frontend
 namespace L.Checker
 
 open L.Arena L.Rom
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The fold's start invariant from the twin's stages before the loop** (`stages_frame`). -/
-theorem twinFold_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AState}
-    {rc : ParseResultD} {sC : AState} {ds : Array IDeclaration} {sD : AState}
-    {pins : List ConLeche.NatOpPinSet} {ipins : List INatOpPinSet} {sE : AState}
-    (h : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE) :
-    TwinFold ipins ds (mkIFEnv IEnv.empty) #[] sE := by
-  sorry
-
--/
-
-/-- The `CTL` words `LoopZero` asks zero, as a list. -/
-def loopZeroCtls : List Nat :=
-  [48, 50, 54, 56, 58, 152, 154, 156, 158, 128, 140, 141, 142, 143, 144, 145, 146, 147, 202,
-    203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 52, 133]
-
-theorem loopZeroCtl_mem {x : Nat} (h : loopZeroCtl x) : x ∈ loopZeroCtls := by
-  simp only [loopZeroCtl] at h
-  simp only [loopZeroCtls, List.mem_cons, List.not_mem_nil, or_false]
-  omega
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem preLoopA_loopZeroArrs : loopZeroArrs.all (fun b => !preLoopA.contains b) = true := by
-  sorry
-
--/
-
-theorem preLoopC_loopZeroCtls :
-    (preLoopC.map UInt64.toNat).all (fun x => !loopZeroCtls.contains x) = true := by
-  decide +kernel
-
-/-- **The zeros the loop starts from**: the loaded memory's words (`loadMem_rd`), which no stage
-before the loop writes (`Since.frame`: `preLoopA`, `preLoopC`). -/
-theorem loopZero_of_since {b pb : ByteArray} {sz : TieredArray → Nat} {m : Mem}
-    (h : Since (ConAgua.Final.loadMem b pb sz) m pb) : LoopZero m := by
-  sorry
 
 /-- `FrontDecls` from the twin prefix's shape fact (lane `pipeline`'s `prefix_frontDecls`). -/
 theorem frontDecls_of_prefix {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AState}

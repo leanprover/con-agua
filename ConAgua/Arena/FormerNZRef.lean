@@ -6,6 +6,9 @@ public import ConAgua.Arena.LevelSubstL
 public import ConAgua.Arena.PropReadW
 import ConAgua.Arena.ErecRd
 import ConAgua.Arena.InferFieldSort
+import ConAgua.Checker.NoVerdictTree
+import ConRon.Bridge.Rel
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.LevelArena
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.PropReadRefine
@@ -310,5 +313,182 @@ theorem fnz_ok {p : Prog} (hpp : PropReadProg p) (hpr : p.lookup "pi_result" = s
     rcases hZ with ⟨hx, hpw⟩ | ⟨hx, qs, hpw, -⟩
     · rw [hx]; exact ⟨_, hrun true (by rw [hsub, hpw]; rfl), hS3, hK1.trans hK3, by unfold HW; decide⟩
     · rw [hx]; exact ⟨_, hrun false (by rw [hsub, hpw]; rfl), hS3, hK1.trans hK3, by unfold HW; decide⟩
+
+/-- **`former_never_zero_at`'s unified model** (`former_sort_loop` through its unified model, the
+other callees lifted). -/
+l_model fnzaE_spec (p : Prog) (hf : p.lookup "former_never_zero_at" = some formerNeverZeroAtL)
+  (hs : p.lookup "former_sort_loop" = some formerSortLoopL)
+  fns [hf ↦ fnzaE list]
+  specs [callW_spec p n "former_res_sort", callW_spec p n "former_never_zero", callW_spec p n "inst_lp",
+    fslE_spec p hs n, callW_spec p n "lv_never"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- `formerSortLoop`'s found sort is a sort node of the store it ends at. -/
+theorem fsl_sortView (r : CoreFnsA) : ∀ (n d : Nat) (e : EIdx) (a a' : AState) (s : LIdx),
+    (ConRon.Arena.formerSortLoop r d n e).run a = .ok (some s, a') → ∃ h, a'.store.view h = some (.sort s)
+  | 0, d, e, a, a', s, h => by
+    simp only [ConRon.Arena.formerSortLoop, StateT.run_bind] at h
+    rcases hw : (r.whnf d e).run a with ce | ⟨w, a1⟩ <;> rw [hw] at h
+    · cases h
+    simp only [except_ok_bind] at h
+    split at h
+    · rename_i htg
+      rw [StateT.run_bind, viewSort_run' rfl, except_ok_bind] at h
+      split at h
+      · cases h
+      · rename_i u hu
+        simp only [StateT.run_pure, Prod.mk.injEq, Option.some.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨w, ConRon.Bridge.view_of_viewSort (by simpa using htg) hu⟩
+    · cases h
+  | n + 1, d, e, a, a', s, h => by
+    simp only [ConRon.Arena.formerSortLoop, StateT.run_bind] at h
+    rcases hw : (r.whnf d e).run a with ce | ⟨w, a1⟩ <;> rw [hw] at h
+    · cases h
+    simp only [except_ok_bind] at h
+    split at h
+    · rw [StateT.run_bind, viewBind_runF rfl, except_ok_bind] at h
+      split at h
+      · cases h
+      · rename_i dom b _
+        simp only [StateT.run_bind] at h
+        rcases h1 : (internE (.fvar d dom)).run a1 with ce | ⟨fv, a2⟩ <;> rw [h1] at h
+        · cases h
+        simp only [except_ok_bind] at h
+        rcases h2 : (instantiate1Fast coreWalkFuel b fv 0).run a2 with ce | ⟨b2, a3⟩ <;> rw [h2] at h
+        · cases h
+        simp only [except_ok_bind] at h
+        exact fsl_sortView r n (d + 1) b2 a3 a' s h
+    · cases h
+
+/-- An `indInfo` record's `nIdx` (`q + 11`) and `nparams` (`q + 17`) words. -/
+theorem decCI_ind_n {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI R q.toNat = some (.indInfo cv caps)) :
+    caps.nIdx = (rd (q + 11)).toNat ∧ caps.nparams = (rd (q + 17)).toNat := by
+  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨k, -, h⟩ := h
+  rcases k with _ | _ | _ | _ | _ | _ | k <;>
+    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, and_false, exists_false] at h
+  obtain ⟨cv', -, caps', hcaps, he⟩ := h
+  cases he
+  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, ni, hni, _, _, np, hnp, _, _, hc⟩ := hcaps
+  simp only [Option.some.injEq] at hc
+  subst hc
+  simp only [nat?, Option.map_eq_some_iff] at hni hnp
+  obtain ⟨w1, hw1, rfl⟩ := hni
+  obtain ⟨w2, hw2, rfl⟩ := hnp
+  have e1 : rd (q + 11) = w1 := hR.offN (k := 11) (by simpa [Nat.add_assoc] using hw1) (by decide)
+  have e2 : rd (q + 17) = w2 := hR.offN (k := 17) (by simpa [Nat.add_assoc] using hw2) (by decide)
+  exact ⟨by rw [e1], by rw [e2]⟩
+
+/-- A word sum that does not wrap (the `x + y < x` guard failed) is the sum of the numbers. -/
+theorem toNat_add_of_not_lt' {x y : Word} (h : ¬ x + y < x) : (x + y).toNat = x.toNat + y.toNat := by
+  have hx := x.toNat_lt
+  have hy := y.toNat_lt
+  simp only [UInt64.lt_iff_toNat_lt, UInt64.toNat_add] at h ⊢
+  omega
+
+/-- What `former_never_zero_at`'s refinement needs of a program. -/
+structure FnzaProg (p : Prog) : Prop extends FslProg p where
+  fnza : p.lookup "former_never_zero_at" = some formerNeverZeroAtL
+  pr : p.lookup "pi_result" = some piResultL
+  frs : p.lookup "former_res_sort" = some formerResSortL
+  fz : p.lookup "former_z" = some formerZL
+  fnz : p.lookup "former_never_zero" = some formerNeverZeroL
+  lvn : p.lookup "lv_never" = some lvNever
+  prop : PropReadProg p
+  ilp : InstLPOK p
+
+section fnza
+variable (p : Prog) (hp : FnzaProg p)
+include hp
+
+/-- **`former_never_zero_at` refines `formerNeverZeroAt`, both outcomes**: the errors are
+`former_sort_loop`'s (the `whnf` slot's). -/
+theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb mode : Word)
+    (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (m : Mem) (a : AState) (M : ModeMaps)
+    (q us : Word) (cvT : IConstantVal) (caps : IIndCaps) (hS : CoreS dn m a vis fe M eb)
+    (hci : decCI (erecP m) q.toNat = some (.indInfo cvT caps))
+    (hks : ∃ ks, cvT.levelParams.mapM (denoteN a.store.ns) = some ks) (hus : HW us)
+    (hlsd : ∃ ls, denoteLs a.store.lss (decI us) = some ls) :
+    RefE (KnotUpToE p n) (fnzaE p (n + 1) m mode vis q us)
+      (formerNeverZeroAt (coreKnot (decMode mode) (decEager mode) fe id F) cvT caps (decI us)) a
+      (CorePost decBool dn m vis fe M eb ResH) := by
+  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (decCI_ind_cv' hci)
+  obtain ⟨hni, hnp⟩ := decCI_ind_n (erRdOK m) hci
+  simp only [erRdT] at hl hty hty32 hni hnp
+  rw [fnzaE.eq_2]
+  split
+  · exact RefE.of_cls0 rfl
+  rename_i hov
+  have hn' := toNat_add_of_not_lt' hov
+  unfold ConRon.Arena.formerNeverZeroAt
+  refine RefE.bindLift (fun _ => fnzaE.k_former_res_sort.none ..) fun r1 m1 c1 => ?_
+  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (frsV_spec p hp.frs n ⟨m, Locals.init []⟩ _) c1
+  rw [hs1] at hW1
+  obtain ⟨hm1, hrun1, -, -⟩ := frsV_ok hp.pr hS.arena.base hty32 hW1
+  clear hs1
+  subst hm1
+  refine ⟨_, _, by rw [hty]; exact hrun1, ?_⟩
+  by_cases g1 : r1.headD 0 ≠ 0
+  · rw [fnzaE.k_former_res_sort.arm1 _ _ _ _ _ _ _ _ _ _ _ _ g1]
+    simp only [decOS, show ¬ r1.headD 0 = 0 from g1, ↓reduceIte]
+    rcases c2 : callW p n "former_never_zero" [q, us] m1 with _ | ⟨r2, m2⟩
+    · rw [liftE_none, fnzaE.k_former_never_zero.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some, fnzaE.k_former_never_zero.arm1]
+    obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+      (fnzW_spec p hp.fnz n ⟨m1, Locals.init []⟩ q us) c2
+    rw [hs2] at hW2
+    obtain ⟨a', hrun2, hS2, hK2, hw2⟩ := fnz_ok hp.prop hp.pr hp.frs hp.fz hS hci hks hus hlsd hW2
+    exact RefE.ret hrun2 ⟨⟨M, hS2, KeptAll.refl _ _, hK2⟩, rfl, hw2⟩
+  have g1' : r1.headD 0 = 0 := by simpa using g1
+  rw [fnzaE.k_former_res_sort.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g1']
+  simp only [decOS, g1', ↓reduceIte]
+  rw [hty]
+  refine RefE.bind_callW (s₀ := ⟨m1, Locals.init []⟩) (fun _ => fnzaE.k_inst_lp.none ..)
+    (hp.ilp n ⟨m1, Locals.init []⟩ a dn vis fe M eb _ _ us _ cvT.levelParams hS hty32 hus hl)
+    fun r3 m3 _ h3 => RefE.after_core (w := id) h3 fun M3 hS3 _ => ?_
+  rw [fnzaE.k_inst_lp.arm1]
+  have hf := fsl_ref p hp.toFslProg n F hk hnF hn62 dn vis fe eb mode hm4 hebm n (by omega) m3 _ M3 0
+    (erRdT m1 (q + 17) + erRdT m1 (q + 11)) (r3.headD 0) hS3 h3.resOk
+  rw [hn', ← hni, ← hnp, show ((0 : Word)).toNat = 0 from rfl] at hf
+  refine RefE.bind_coreE (w := id) (fun _ => fnzaE.k_former_sort_loop.none ..) id hf
+    fun r4 m4 _ h4 M4 hS4 _ => ?_
+  by_cases g4 : r4.headD 0 = 0
+  · rw [fnzaE.k_former_sort_loop.arm1 _ _ _ _ g4]
+    simp only [decOS, g4, ↓reduceIte]
+    exact RefE.ret rfl (CorePost.ret hS4 rfl (by unfold ResH HW; decide))
+  rw [fnzaE.k_former_sort_loop.arm2 _ _ _ _ g4]
+  simp only [decOS, g4, ↓reduceIte]
+  have hu : HW (r4.tail.headD 0) := h4.resOk g4
+  have hrun4 := AM.run_of_ok _ _ h4.run
+  rw [h4.res] at hrun4
+  rw [show decOS r4 = some (decI (r4.tail.headD 0)) by simp only [decOS, g4, ↓reduceIte]] at hrun4
+  obtain ⟨hh, hvw⟩ := fsl_sortView _ _ _ _ _ _ _ hrun4
+  obtain ⟨l, hdl⟩ := hS4.den.sort _ _ hvw
+  obtain ⟨X, hX, hXok⟩ := readLevelM_run' _ _ l hdl hS4.readL
+  refine RefE.bind_right hX ?_
+  have hS5 := hS4.readLC' X hXok
+  rcases c5 : callW p n "lv_never" [r4.tail.headD 0] m4 with _ | ⟨r5, m5⟩
+  · rw [liftE_none, fnzaE.k_former_never_zero.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, fnzaE.k_former_never_zero.arm1]
+  obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+    (lvNeverW_spec p hp.lvn n ⟨m4, Locals.init []⟩ _) c5
+  rw [hs5] at hW5
+  obtain ⟨hw5, hS6, hK6⟩ := lvNever_core (hp.prop.get "lv_node") (hp.prop.get "lh_push")
+    (hp.prop.get "lv_zero") hS5 hu hdl hW5
+  refine RefE.ret rfl ⟨⟨M4, hS6, KeptAll.refl _ _, hK6⟩, ?_, ?_⟩
+  · show _ = decBool [r5.headD 0]
+    rw [hw5]; cases (ConLeche.Level.zeronessOf l).isNever <;> rfl
+  · show HW (r5.headD 0)
+    rw [hw5]; split <;> (unfold HW; decide)
+
+end fnza
 
 end L.Arena

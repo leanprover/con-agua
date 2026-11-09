@@ -62,12 +62,11 @@ theorem erA_truncM_a5 (m : Mem) : erA (truncM m) = erecP m := truncM_erA m
 theorem decEBlk_head {dn : NIdx → Option ConLeche.Name} {m : Mem} {off cnt : Word}
     {ci : IConstantInfo} {rest : List IConstantInfo}
     (hd : DecB (fun m => decEBlk dn m off.toNat cnt.toNat) m (ci :: rest))
-    (hlen : cnt.toNat = rest.length + 1) (hb : off.toNat + cnt.toNat ≤ erTop m) :
+    (hlen : cnt.toNat = rest.length + 1) (hb : off.toNat + cnt.toNat < 2 ^ 64) :
     ∃ w : Word, erRd m off = w ∧ decCI (erA m) w.toNat = some ci ∧
       (off + 1).toNat = off.toNat + 1 ∧ (cnt - 1).toNat = rest.length ∧
       DecB (fun m => decEBlk dn m (off + 1).toNat (cnt - 1).toNat) m rest := by
   have hoff : (off + 1).toNat = off.toNat + 1 := by
-    have : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
     rw [UInt64.toNat_add]; simp; omega
   have hcnt : (cnt - 1).toNat = rest.length := by
     have h1 : 1 ≤ cnt.toNat := by omega
@@ -162,7 +161,7 @@ theorem csf_ref (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : Cr
     ∀ (block : List IConstantInfo) (F : Nat), F ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (off cnt : Word),
       StageT dn vis fe m a → ConRon.Bridge.CheckOK false env fe a → L.Stubs.CrOK m →
       DecB (fun m => decEBlk dn m off.toNat cnt.toNat) m block → cnt.toNat = block.length →
-      off.toNat + cnt.toNat ≤ erTop m → (∃ bP, Frontend.denoteCIList a.store block = some bP) →
+      off.toNat + cnt.toNat < 2 ^ 64 → (∃ bP, Frontend.denoteCIList a.store block = some bP) →
       RefE (VerdictCtxU p) (csfE p F m vis off cnt) (ConRon.Arena.checkShapelessFormers V fe block) a
         (fun v _ a' => CsfPost dn vis fe m v.2 a') := by
   intro block
@@ -249,7 +248,7 @@ theorem csl_ref (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : Cr
     (hT : StageT dn vis fe m a) (hck : ConRon.Bridge.CheckOK false env fe a)
     (hd : DecB (fun m => decEBlk dn m o.toNat l.toNat) m block)
     (hCr : L.Stubs.CrOK m) (hbd : ∃ bP, Frontend.denoteCIList a.store block = some bP)
-    (hb : o.toNat + l.toNat ≤ erTop m) :
+    (hb : o.toNat + l.toNat < 2 ^ 64) :
     RefE (VerdictCtxU p) (cslE p F m vis o l) (ConRon.Arena.checkShapeless V fe block) a
       (fun _ _ _ => False) := by
   cases F with

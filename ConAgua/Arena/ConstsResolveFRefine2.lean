@@ -491,7 +491,36 @@ theorem constsResolveFFast_ref (e : Word) (he : H e) :
     CallRef p "consts_resolve_ffast" [vis, e] (fun m a => StageR vis fe m a ∧ CrOK m)
       (constsResolveFFast fe (decI e))
       (fun m m' a r x => KeepPost vis fe decW0B m m' a r x ∧ CrOK m') := by
-  sorry
+  refine CallRef.of_succ fun k m a r m' ⟨hS, memo0, hM0⟩ hc => ?_
+  have hW := callW_model (M := fun mm => crffW p k mm vis e) (crff_spec p hp k · vis e) hc
+  unfold crffW at hW
+  cases h1 : callW p k "crm_clear" [] m with
+  | none => rw [h1] at hW; cases hW
+  | some q =>
+  obtain ⟨rc, mc⟩ := q
+  rw [h1, bW_some] at hW
+  obtain ⟨s', hmc, -, hw, hclr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (memoClearG_spec crSch p "crm_clear" hp.clear k _) h1
+  simp only at hw hclr
+  subst hmc
+  rw [hclr] at hW
+  cases h2 : callW p k "crf_go" [vis, 4000000000, e] (mclearG crSch m) with
+  | none => rw [h2] at hW; cases hW
+  | some q =>
+  obtain ⟨rg, mg⟩ := q
+  rw [h2, bW_some, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, rfl⟩ := hW
+  have hfc : CrFrame m (mclearG crSch m) :=
+    (mclearG_frame crSch m).mono (by simp) (by simp)
+  have hSc := (StageR.crf hS hfc).1
+  have hMc : CrR (mclearG crSch m) ∅ := memoRV_clear crSch crSch_wf bmKey CrV m memo0 hM0 hw
+  obtain ⟨b, memo', hr, hM', hF, hres⟩ := crf_refines (dn := fun _ => none) hp k _ _ a ∅ _ e rg hSc hMc he h2
+  rw [coreWalkFuel_toNat] at hr
+  obtain ⟨hS', hG⟩ := StageR.crf hS (hfc.trans hF)
+  refine ⟨b, a, ?_, ⟨hS', hG, ?_, ?_⟩, memo', hM'⟩
+  · simp only [constsResolveFFast, StateT.run_bind, ← decE_eq, hr, except_ok_bind]; rfl
+  · simp only [List.headD_cons, hres]; cases b <;> rfl
+  · simp only [List.headD_cons, hres]; cases b <;> decide
 
 /-- **`consts_resolve_ffast(vis, e)` refines `constsResolveFFast fe e`**, as a Hoare triple
 (`RefAM`): the census link. -/

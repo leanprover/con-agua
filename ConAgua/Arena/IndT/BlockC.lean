@@ -234,7 +234,7 @@ def TailRefS : Prop :=
     (block : List IConstantInfo) (blockP : List ConLeche.ConstantInfo) (q : BlockPass)
     (qP : ConLeche.BlockPass ConLeche.Env),
     BkSt dn vis q.env1 env₁ m a → BPassR vis q.env1 m w q → RecsB m (rdW (m.arr64 IW) (w + 1)) →
-    DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block → bO.toNat + bL.toNat ≤ erTop m →
+    DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block → bO.toNat + bL.toNat < 2 ^ 64 →
     Frontend.denoteCIList a.store block = some blockP → BlockLpsDn dn block →
     ConRon.Bridge.Inductives.EnvRel env₁ q.env1 a.store → ConLeche.EnvWF env₁ →
     ConRon.Bridge.Inductives.dPass a.store env₁ q = some qP →
@@ -304,7 +304,7 @@ def BlockRefS (G : Prop) (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop 
     StageC dn vis fe env m a → ConRon.Bridge.FoldOK env fe a₀ → ConRon.Arena.Ext a₀.store a.store →
     a.pins = a₀.pins →
     DecB (fun m => decBS m p0.toNat) m bs → ShapeSl m p0 →
-    DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block → bO.toNat + bL.toNat ≤ erTop m →
+    DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block → bO.toNat + bL.toNat < 2 ^ 64 →
     Frontend.denoteCIList a.store block = some blockP →
     ConRon.Bridge.Inductives.dShape a.store bs = some bsP →
     (∀ ms ∈ bsP.members, ms.declared = ms.cvT) → BlockLpsDn dn block → bs.nP + 1 < 2 ^ 64 →
@@ -396,7 +396,7 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
     (hC : StageC dn vis fe env m a) (hfold : ConRon.Bridge.FoldOK env fe a₀)
     (hx : ConRon.Arena.Ext a₀.store a.store)
     (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsl : ShapeSl m p0)
-    (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hbb : bO.toNat + bL.toNat ≤ erTop m)
+    (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hbb : bO.toNat + bL.toNat < 2 ^ 64)
     (hbP : Frontend.denoteCIList a.store block = some blockP)
     (hdP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
     (hd : ∀ ms ∈ bsP.members, ms.declared = ms.cvT) (hlpd : BlockLpsDn dn block)
@@ -473,7 +473,7 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
   have x06 := x05.trans h6.inst
   refine RefE.bindE (fun _ => icbE.k_check_block_tail.none ..) id
     (R.tail n (by omega) _ env₁ m6 a6 bO bL _ block blockP q qP hB6 h6.record h6.recs
-      (hblk.grow (decEBlk_mono _ _ _) g16) (Nat.le_trans hbb g16.er)
+      (hblk.grow (decEBlk_mono _ _ _) g16) hbb
       (ConRon.Bridge.denoteCIList_mono x06.ext _ _ hbP) hlpd hrel6 henv₁ hq6 hT6 henv₂ hMs hpl)
     fun ⟨r7, m7⟩ fe₂ a7 _ h7 => ?_
   rw [icbE.k_check_block_tail.arm1]
