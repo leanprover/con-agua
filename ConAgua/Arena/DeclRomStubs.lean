@@ -61,6 +61,6 @@ def decRBlk (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word)
 
 /-! The specs: `ConAgua/Rom/CIReadSpec.lean` (`RomRefs`, about the real readers of
 `CIRead.lean`; lane `decls4`). The arms take them as a field of their program bundles
-(`RedProg.rom`, `QuotProg.rom`, `DmProg7.lRom`). -/
+(`BasisLProg.rom`, `CbbProg.rom`). -/
 
 end L.Ind

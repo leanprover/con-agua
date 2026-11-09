@@ -7,6 +7,11 @@ import ConAgua.Verdict.IndBSum4
 import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
 import ConAgua.Arena.CrOKFrame
 import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.RecGenSpec.ClassSeeds
+public import ConAgua.Arena.IndT.ArmMemos
+public import ConAgua.Arena.IndInstallSpec.OfClosed
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.RefWalk
 
 @[expose] public section
 
@@ -70,7 +75,7 @@ theorem indsRefS_of (hq : KnotStageProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS 
   obtain ⟨s', hs', -, hR⟩ := hR
   simp only at hs'; subst hs'
   exact ⟨hR.out, callW_indMemos hCrk.closed hl (im_mem _ rfl) (callW_of_callE hc) hB.ind, hR.abs,
-    hR.out.2.2.2, hR.recs hsl.2⟩
+    hR.out.2.2.2, hR.recs hsl.2.1, hR.msB hsl.2.2⟩
 
 /-- **`check_block_ctors`' contract** (`CtorsRefS`): `ict_ref` through the call, `check_sum_ctors`
 by its contract; the memos by `callW_indMemos`. -/
@@ -88,6 +93,40 @@ theorem ctorsRefS_of (hP : CtorsProg p) (hR : SctsRefS (VerdictCtxU p) p dn) (hC
   simp only at hs'; subst hs'
   exact ⟨⟨hR.stage, callW_indMemos hCrk.closed hl (im_mem _ rfl) (callW_of_callE hc) hB.ind, hR.abs⟩,
     hR.grow⟩
+
+/-! ## The memos across a callee writing the positivity memos -/
+
+/-- **The walk memos outside the positivity check's** (`maMR`, `mcMR`, `taMR`) **kept by `f`**
+(at the checker: `armMa`, `armMc`, `armTa`'s write sets). -/
+structure WmKeep (p : Prog) (f : FnName) : Prop where
+  ma : ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem), callW p n f vs m = some (r, m') →
+    (∃ mp, maMR m mp) → ∃ mp, maMR m' mp
+  mc : ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem), callW p n f vs m = some (r, m') →
+    (∃ mp, mcMR m mp) → ∃ mp, mcMR m' mp
+  ta : ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem), callW p n f vs m = some (r, m') →
+    (∃ mp, taMR m mp) → ∃ mp, taMR m' mp
+
+/-- **`IndMemos` across a call keeping the other walk memos**, the positivity memos and `AbsOK`
+(its `I1Memo`, `CrOK`) after it given. -/
+theorem IndMemos.ofCall {p : Prog} {f : FnName} (hK : WmKeep p f) {n : Nat} {vs : List Word} {m : Mem}
+    {r : List Word} {m' : Mem} (h : callW p n f vs m = some (r, m')) (hI : IndMemos m) (hP : PosMR m')
+    (hA : AbsOK m') : IndMemos m' :=
+  ⟨⟨hP, hK.ma _ _ _ _ _ h hI.stage.ma, hK.mc _ _ _ _ _ h hI.stage.mc, hK.ta _ _ _ _ _ h hI.stage.ta⟩,
+    hA.i1, hA.crMemo.crOK⟩
+
+/-- **`class_seeds`' contract** (`SeedsRefS`): `classSeeds_refines` through the call (the twin
+never fails); `AbsOK` by `AbsKeep`, the memos by `IndMemos.ofCall`. -/
+theorem seedsRefS_of (hP : SdProg p) (hk : AbsKeep p "class_seeds") (hW : WmKeep p "class_seeds") :
+    SeedsRefS (VerdictCtxU p) p dn := by
+  intro n hn vis fe env m a ctx hO hL mo ml c holes ms hB hU hhi hho hhob hms
+  refine RefE.onlyCall (K := id) (fun _ => rfl) (fun hG => hG.nv)
+    (_root_.L.Checker.nv_mem (by decide +kernel)) fun r m' hc => ?_
+  obtain ⟨s', hs', -, hok, hS', hg, hsd, hP'⟩ := triple_of_callW
+    (classSeeds_refines hP n ⟨m, Locals.init []⟩ a dn vis fe ctx hO hL mo ml c holes ms hB.c.stage hU hhi hho
+      hhob hms hB.ind.stage.pos) (callW_of_callE hc)
+  subst hs'
+  have hA' := hk _ _ _ _ _ (callW_of_callE hc) hB.abs
+  exact ⟨_, _, AM.run_of_ok _ _ hok, hS', IndMemos.ofCall hW (callW_of_callE hc) hB.ind hP' hA', hA', hg, hsd⟩
 
 end
 

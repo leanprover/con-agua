@@ -6,6 +6,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.DeclRec
+import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPartsSpec.MemberNames
 import Std.WP.Tactic
@@ -74,7 +75,16 @@ theorem cvLpsW_ok {vis : Word} {fe : IFEnv} {a : AState}
     (hq : decCV (erecP m) q.toNat = some cv) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r cv.levelParams ∧
       (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
-  sorry
+  cases n with
+  | zero => simp [L.Arena.cvLpsW] at h
+  | succ n =>
+  rw [L.Arena.cvLpsW_step] at h
+  obtain ⟨hsl, -⟩ := decCV_rdq (erRdOK m) hq
+  have h' : erToIwW n m (erRdT m (q + 1)) (erRdT m (q + 2)) = some (r, m') := h
+  obtain ⟨hS', hg, hdl, htop, -⟩ := erToIwW_stage h' hS hsl
+  have e0 : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
+  have e1 : r.getD 1 0 = r.tail.headD 0 := by rcases r with _ | ⟨_, _ | _⟩ <;> rfl
+  refine ⟨hS', hg, ⟨by rw [e0, e1]; exact hdl, by rw [e0, e1, htop]; exact Nat.le_refl _⟩, erToIwW_size h⟩
 
 /-! ## `canon_ctx` -/
 
@@ -82,7 +92,7 @@ mutual
 /-- **The model of `canon_ctx(cp, cq)`**. -/
 def ctxW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | k + 1, m, cp, cq => ctxK1 k cp cq (cnW k m (rdW (m.arr64 EREC) (cp + 2)))
+  | k + 1, m, cp, cq => ctxK1 k cp cq (cnW k m (erRdT m (cp + 2)))
 
 /-- After `canon_names`. -/
 def ctxK1 (k : Nat) (cp cq : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -104,7 +114,7 @@ end
 
 section arms
 variable (k : Nat) (m m1 m2 m3 : Mem) (cp cq : Word) (rc rp rq : List Word)
-theorem ctxW_succ : ctxW (k + 1) m cp cq = ctxK1 k cp cq (cnW k m (rdW (m.arr64 EREC) (cp + 2))) := by
+theorem ctxW_succ : ctxW (k + 1) m cp cq = ctxK1 k cp cq (cnW k m (erRdT m (cp + 2))) := by
   rw [ctxW]
 theorem ctxK1_some : ctxK1 k cp cq (some (rc, m1)) = ctxK2 k cq rc (L.Arena.cvLpsW k m1 cp) := by
   rw [ctxK1]
@@ -124,7 +134,16 @@ grind_pattern [ind_grind] ctxK3_some => ctxK3 rc rp (some (rq, m3))
 theorem canonCtx_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (cp cq : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "canon_ctx" [cp, cq]
     ⦃fun r s' => LocEq s' s₀ ∧ ctxW n s₀.mem cp cq = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ (hp.get "canon_ctx")]
+  simp only [callFn, canonCtx]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
+        evalE_tagE, evalE_idxAE, evalE_idxGE, canonNames_spec p hp n,
+        cvLps_specW p (hp.get "iw_alloc") (hp.get "er_copy") (hp.get "er_to_iw") (hp.get "cv_lps") n] <;>
+      finish (gen := 20) [ctxW, rdW_eq]
 
 theorem ctxW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {cp cq : Word} {r : List Word} {cv cv' : IConstantVal}
@@ -136,7 +155,47 @@ theorem ctxW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
       (ConRon.Arena.canonNames cv.levelParams.length).run a = .ok (cs, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a' ∧
       CtxR m' po pl qo ql co cl cv.levelParams cv'.levelParams cs := by
-  sorry
+  cases k with
+  | zero => simp [ctxW] at h
+  | succ k =>
+  rw [ctxW_succ] at h
+  obtain ⟨-, hlen0⟩ := decCV_rdq (erRdOK m) hcv
+  generalize erRdT m (cp + 2) = w2 at h hlen0
+  have hlen : w2.toNat = cv.levelParams.length := hlen0.symm
+  cases h1 : cnW k m w2 with
+  | none => rw [h1] at h; simp [ctxK1] at h
+  | some x1 =>
+  obtain ⟨rc, m1⟩ := x1
+  rw [h1, ctxK1_some] at h
+  obtain ⟨cs, a1, hrun1, hS1, hg1, hd1, hv1, hP1⟩ := cnW_ok h1 hS hP
+  cases h2 : L.Arena.cvLpsW k m1 cp with
+  | none => rw [h2] at h; simp [ctxK2] at h
+  | some x2 =>
+  obtain ⟨rp, m2⟩ := x2
+  rw [h2, ctxK2_some] at h
+  have hcv1 : decCV (erecP m1) cp.toNat = some cv := ArrExt.decCV (IWGrow.erecPExtR hg1) hcv
+  obtain ⟨hS2, hg2, hd2, hz2⟩ := cvLpsW_ok h2 hS1 hcv1
+  cases h3 : L.Arena.cvLpsW k m2 cq with
+  | none => rw [h3] at h; simp [ctxK3] at h
+  | some x3 =>
+  obtain ⟨rq, m3⟩ := x3
+  rw [h3, ctxK3_some] at h
+  have hcv2 : decCV (erecP m2) cq.toNat = some cv' :=
+    ArrExt.decCV (IWGrow.erecPExtR (hg1.trans hg2)) hcv'
+  obtain ⟨hS3, hg3, hd3, hz3⟩ := cvLpsW_ok h3 hS2 hcv2
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  have hu1 := decRL_unpack hd1
+  have hu2 := decRL_unpack hd2
+  have hu3 := decRL_unpack hd3
+  have hgg := hg2.trans hg3
+  have hgg' : IWGrow m1 m3 := hgg
+  refine ⟨cs, a1, _, _, _, _, _, _, rfl, ?_, hS3, (hg1.trans hg2).trans hg3, ?_, ?_, ?_⟩
+  · rw [← hlen]; exact hrun1
+  · unfold PoolSmall at hP1 ⊢; rw [pcap_congr (hz3 POOL) (hz3 POOL1), pcap_congr (hz2 POOL) (hz2 POOL1)]; exact hP1
+  · exact hL.of_view hv1
+  · exact ⟨by rw [decHL_grow hg3 hu2.2]; exact hu2.1, hu3.1,
+      by rw [decHL_grow hgg' hu1.2]; exact hu1.1, Nat.le_trans hu2.2 hg3.iw, hu3.2,
+      Nat.le_trans hu1.2 hgg'.iw⟩
 
 /-! ## `cv_canon_eq` -/
 
@@ -145,8 +204,8 @@ mutual
 def cvceW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | k + 1, m, q, r =>
-    if rdW (m.arr64 EREC) q ≠ rdW (m.arr64 EREC) r ∨
-        rdW (m.arr64 EREC) (q + 2) ≠ rdW (m.arr64 EREC) (r + 2) then some (0, m)
+    if erRdT m q ≠ erRdT m r ∨
+        erRdT m (q + 2) ≠ erRdT m (r + 2) then some (0, m)
     else cvcK1 k q r (ctxW k m q r)
 
 /-- After `canon_ctx`. -/
@@ -155,19 +214,19 @@ def cvcK1 (k : Nat) (q r : Word) : Option (List Word × Mem) → Option (Word ×
   | some (rc, m1) =>
     ceW k m1 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
       (rc.tail.tail.tail.tail.headD 0) (rc.tail.tail.tail.tail.tail.headD 0) 4000000000
-      (rdW (m1.arr64 EREC) (q + 3)) (rdW (m1.arr64 EREC) (r + 3))
+      (erRdT m1 (q + 3)) (erRdT m1 (r + 3))
 end
 
 section arms
 variable (k : Nat) (m m1 : Mem) (q r : Word) (rc : List Word)
 theorem cvceW_succ : cvceW (k + 1) m q r =
-    (if rdW (m.arr64 EREC) q ≠ rdW (m.arr64 EREC) r ∨
-        rdW (m.arr64 EREC) (q + 2) ≠ rdW (m.arr64 EREC) (r + 2) then some (0, m)
+    (if erRdT m q ≠ erRdT m r ∨
+        erRdT m (q + 2) ≠ erRdT m (r + 2) then some (0, m)
     else cvcK1 k q r (ctxW k m q r)) := by rw [cvceW]
 theorem cvcK1_some : cvcK1 k q r (some (rc, m1)) =
     ceW k m1 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
       (rc.tail.tail.tail.tail.headD 0) (rc.tail.tail.tail.tail.tail.headD 0) 4000000000
-      (rdW (m1.arr64 EREC) (q + 3)) (rdW (m1.arr64 EREC) (r + 3)) := by rw [cvcK1]
+      (erRdT m1 (q + 3)) (erRdT m1 (r + 3)) := by rw [cvcK1]
 end arms
 
 grind_pattern [ind_grind] cvceW_succ => cvceW (k + 1) m q r
@@ -176,15 +235,24 @@ grind_pattern [ind_grind] cvcK1_some => cvcK1 k q r (some (rc, m1))
 theorem cvCanonEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (q r : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_canon_eq" [q, r]
     ⦃fun x s' => LocEq s' s₀ ∧ cvceW n s₀.mem q r = some (x.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ (hp.get "cv_canon_eq")]
+  simp only [callFn, cvCanonEq]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
+        evalE_tagE, evalE_idxAE, evalE_idxGE, canonCtx_spec p hp n, canonExprEq_spec p hp n] <;>
+      finish (gen := 20) [cvceW, rdW_eq]
 
 /-- The three words of a constant value that the comparison reads. -/
-theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC).size < 2 ^ 64)
-    (h : decCV (erA m) q.toNat = some cv) :
-    ∃ wn w2 wt : Word, rdW (m.arr64 EREC) q = wn ∧ rdW (m.arr64 EREC) (q + 2) = w2 ∧
-      rdW (m.arr64 EREC) (q + 3) = wt ∧ wn.toNat < 2 ^ 32 ∧ wt.toNat < 2 ^ 32 ∧
+theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (h : decCV (erecP m) q.toNat = some cv) :
+    ∃ wn w2 wt : Word, erRdT m q = wn ∧ erRdT m (q + 2) = w2 ∧
+      erRdT m (q + 3) = wt ∧ wn.toNat < 2 ^ 32 ∧ wt.toNat < 2 ^ 32 ∧
       cv.name = decI wn ∧ cv.type = decI wt ∧ w2.toNat = cv.levelParams.length := by
-  sorry
+  obtain ⟨⟨wn, hn, hn32, hnm⟩, ⟨w2, hw2, hlen⟩, ⟨wt, ht, ht32, htm⟩⟩ := decCV_words h
+  exact ⟨wn, w2, wt, erRdT_of q wn hn, (erRdOK m).at 2 rfl hw2, (erRdOK m).at 3 rfl ht, hn32, ht32,
+    hnm, htm, hlen.symm⟩
 
 set_option maxRecDepth 100000 in
 theorem cvceW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
@@ -194,7 +262,63 @@ theorem cvceW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     (hP : PoolSmall m) (hL : LitInj a) :
     ∃ (b : Bool) (a' : AState), (cv.canonEq cv').run a = .ok (b, a') ∧ x = (if b then 1 else 0) ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ PoolSmall m' ∧ LitInj a' := by
-  sorry
+  cases k with
+  | zero => simp [cvceW] at h
+  | succ k =>
+  rw [cvceW_succ] at h
+  obtain ⟨wn, w2, wt, e0, e2, e3, hn32, ht32, hnm, htm, hlen⟩ := cvWords hcv
+  obtain ⟨vn, v2, vt, f0, f2, f3, gn32, gt32, gnm, gtm, glen⟩ := cvWords hcv'
+  rw [e0, e2, f0, f2] at h
+  by_cases hc : wn ≠ vn ∨ w2 ≠ v2
+  · rw [ite_eq_left hc] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
+    have hb : (cv.name == cv'.name && cv.levelParams.length == cv'.levelParams.length) = false := by
+      rcases hc with hc | hc
+      · have : (cv.name == cv'.name) = false := by
+          rw [hnm, gnm, decI_beq _ _ hn32 gn32]; exact decide_eq_false hc
+        simp [this]
+      · have : (cv.levelParams.length == cv'.levelParams.length) = false := by
+          have : cv.levelParams.length ≠ cv'.levelParams.length := fun e =>
+            hc (UInt64.toNat_inj.mp (by rw [hlen, glen, e]))
+          simpa using this
+        simp [this]
+    unfold IConstantVal.canonEq
+    rw [hb]; rfl
+  · rw [ite_eq_right hc] at h
+    have hw : wn = vn ∧ w2 = v2 := by
+      rw [not_or] at hc; exact ⟨Classical.byContradiction hc.1, Classical.byContradiction hc.2⟩
+    obtain ⟨rfl, rfl⟩ := hw
+    cases hx : ctxW k m q r with
+    | none => rw [hx] at h; simp [cvcK1] at h
+    | some x1 =>
+    obtain ⟨rc, m1⟩ := x1
+    rw [hx, cvcK1_some] at h
+    obtain ⟨cs, a1, po, pl, qo, ql, co, cl, hrc, hrun, hS1, hg1, hP1, hL1, hC1⟩ :=
+      ctxW_ok k hx hS hcv hcv' hP hL
+    subst hrc
+    simp only [List.headD_cons, List.tail_cons] at h
+    have hcvm : decCV (erecP m1) q.toNat = some cv :=
+      ArrExt.decCV (IWGrow.erecPExtR hg1) hcv
+    have hcvm' : decCV (erecP m1) r.toNat = some cv' :=
+      ArrExt.decCV (IWGrow.erecPExtR hg1) hcv'
+    obtain ⟨-, -, wt1, -, -, g3, -, ht1, -, htm1, -⟩ := cvWords hcvm
+    obtain ⟨-, -, vt1, -, -, f3', -, gt1, -, gtm1, -⟩ := cvWords hcvm'
+    rw [g3, f3'] at h
+    obtain ⟨b, hb, hrb, hS2, hg2, hP2⟩ := ceW_ok k m1 m' a1 po pl qo ql co cl 4000000000 wt1
+      vt1 x cv.levelParams cv'.levelParams cs h hS1 hC1 hL1 hP1 ht1 gt1
+    refine ⟨b, a1, ?_, hrb, hS2, hg1.trans hg2, hP2, hL1⟩
+    have hcond : (cv.name == cv'.name && cv.levelParams.length == cv'.levelParams.length) = true := by
+      have : cv.name = cv'.name := by rw [hnm, gnm]
+      have h2 : cv.levelParams.length = cv'.levelParams.length := by
+        rw [← hlen, ← glen]
+      simp [this, h2]
+    unfold IConstantVal.canonEq
+    rw [ite_eq_left hcond, StateT.run_bind, hrun, exc_ok_bind']
+    rw [htm1, gtm1]
+    have hb' := hb
+    rw [fuelW] at hb'
+    exact hb'
 
 /-- **`cv_canon_eq` refines `IConstantVal.canonEq`.** -/
 @[refines ConRon.Arena.IConstantVal.canonEq]

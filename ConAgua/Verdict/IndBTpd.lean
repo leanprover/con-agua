@@ -22,6 +22,7 @@ public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.RecCheck
 import all ConAgua.Arena.RecCheck
 
+import ConAgua.Arena.IndSumSpec.StructUsedHb
 @[expose] public section
 
 /-!
@@ -81,12 +82,19 @@ structure TpdPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 structure PdsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
     (m : Mem) (a : AState) (r : Word) (m' : Mem) (c : Bool) (a' : AState) : Prop
     extends TpdPost dn vis fe env m r m' c a' where
+  core : ConRon.Bridge.CoreStep env fe a a'
+
+/-- The recursor check's memos across a core call (its `has_loose_bvar_b` memo by the core's own
+claim, the others by its frame). -/
+theorem RcMR.ofCore {p : Prog} {m m' : Mem} (hP : RcMR m) (hcl : CoreStageClosed p) {f : FnName}
+    (hf : f ∈ stageCoreFns) {n : Nat} {vs : List Word} {r : List Word}
+    (h : callW p n f vs m = some (r, m')) : RcMR m' :=
+  ⟨hP.pos.ofCore hcl hf h, let ⟨mp, hm⟩ := hP.ta; ⟨mp, taMR_mfr (MFr.ofCore hcl hf h) (by decide) (by decide) hm⟩⟩
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv in
 /-- **`target_params_def_eq_step` refines `tpStep`, both outcomes** (twin side: con-ron's
 `targetParamsDefEq_spec`, the `cons` arm): the closedness reads (`tpClosed_pstep`), the canon forms
@@ -131,7 +139,7 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
       (RefE.ret rfl ⟨⟨rfl, hC.of_pstep hS' (hF hA) q, hg, hP', hF hA⟩, q.toCore hC.check⟩))
   -- `bvar_b(a)`
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun b1 m1 h1 => ?_
-  obtain ⟨a1, r1, hS1, hg1, hf1⟩ := bvbW_stageC dn fe vis hS n x b1 hx h1
+  obtain ⟨a1, r1, hS1, hg1, hf1⟩ := bvbW_stageC fe vis hS n x b1 hx h1
   have hP1 := hP.fr hf1
   by_cases hb1 : b1 ≠ 0
   · rw [pdsE.k_bvar_b.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb1]
@@ -143,7 +151,7 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have e1 : (b1.toNat != 0) = false := by simp at hb1; simp [hb1]
   -- `bvar_b(b)`
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun b2 m2 h2 => ?_
-  obtain ⟨a2, r2, hS2, hg2, hf2⟩ := bvbW_stageC dn fe vis hS1 n y b2 hy h2
+  obtain ⟨a2, r2, hS2, hg2, hf2⟩ := bvbW_stageC fe vis hS1 n y b2 hy h2
   have hP2 := hP1.fr hf2
   by_cases hb2 : b2 ≠ 0
   · rw [pdsE.k_bvar_b_2.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb2]
@@ -205,7 +213,7 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   unfold tpRest
   -- the canon form of `x`
   refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
-  obtain ⟨a5, run5, hH5, hS5, hg5, hP5⟩ := tcpF_ok dn fe vis n h5 hC4.stage (hpf.grow hg4') hx hP4
+  obtain ⟨a5, run5, hH5, hS5, hg5, hP5⟩ := tcpF_ok fe vis n h5 hC4.stage (hpf.grow hg4') hx hP4
   refine ⟨_, _, run5, ?_⟩
   dsimp only [pdsE.k_target_canon_params]
   have hA5 := tcpF_afr h5 hA4
@@ -215,7 +223,7 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hg45 := hg4'.trans hg5
   -- its abstraction
   refine RefE.bindLift (fun _ => rfl) fun av m6 h6 => ?_
-  obtain ⟨a6, run6, hS6, hg6, hP6⟩ := taF_ok dn fe vis n h6 hS5 hH5 hlv
+  obtain ⟨a6, run6, hS6, hg6, hP6⟩ := taF_ok fe vis n h6 hS5 hH5 hlv
     (by rw [decHL_grow hg45 hnob]; exact hno) (by have := hg45.iw; omega)
     (by rw [decHL_grow hg45 hhob]; exact hho) (by have := hg45.iw; omega) hP5
   refine ⟨_, _, run6, ?_⟩
@@ -230,7 +238,7 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have q56 := q5.trans q6
   -- the canon form of `y`
   refine RefE.bindLift (fun _ => rfl) fun r7 m7 h7 => ?_
-  obtain ⟨a7, run7, hH7, hS7, hg7, hP7⟩ := tcpF_ok dn fe vis n h7 hS6 (hpf.grow hg46) hy hP6
+  obtain ⟨a7, run7, hH7, hS7, hg7, hP7⟩ := tcpF_ok fe vis n h7 hS6 (hpf.grow hg46) hy hP6
   refine ⟨_, _, run7, ?_⟩
   dsimp only [pdsE.k_target_canon_params_2]
   have hA7 := tcpF_afr h7 hA6
@@ -241,7 +249,7 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hg47 := hg46.trans hg7
   -- its abstraction
   refine RefE.bindLift (fun _ => rfl) fun bv m8 h8 => ?_
-  obtain ⟨a8, run8, hS8, hg8, hP8⟩ := taF_ok dn fe vis n h8 hS7 hH7 hlv
+  obtain ⟨a8, run8, hS8, hg8, hP8⟩ := taF_ok fe vis n h8 hS7 hH7 hlv
     (by rw [decHL_grow hg47 hnob]; exact hno) (by have := hg47.iw; omega)
     (by rw [decHL_grow hg47 hhob]; exact hho) (by have := hg47.iw; omega) hP7
   refine ⟨_, _, run8, ?_⟩
@@ -256,7 +264,7 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have q48 := (q56.trans q7).trans q8
   have hg48 := hg47.trans hg8
   have hR6' := denote_ext hR6 (q7.trans q8).ext
-  have c48 : CoreStep V env fe a a8 := (q.trans q48).toCore hC.check
+  have c48 : CoreStep env fe a a8 := (q.trans q48).toCore hC.check
   refine RefE.split (fun he => by rw [he]; simp) (fun h => decI_inj hav hbv (by simpa [decE_eq] using h))
     (fun he _ => by subst he; exact RefE.ret rfl ⟨⟨rfl, hC8, hg48, hP8, hA8⟩, c48⟩) fun he _ => ?_
   -- the knot: `infer_type_core` twice, then `is_def_eq_core`
@@ -280,11 +288,9 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
       (by rw [← decE_eq]; exact denote_ext hR6' (c9.trans c10).ext)
       (by rw [← decE_eq]; exact denote_ext hR8 (c9.trans c10).ext) hwx hwy _ (callW_of_callE h11)
   exact RefE.ret run11 ⟨⟨by simpa [decBool] using hd11, hC11, ((hg48.trans hg9).trans hg10).trans hg11,
-    ((hP8.fr (MFr.ofCore hq.closed (by decide) (callW_of_callE h9))).fr
-      (MFr.ofCore hq.closed (by decide) (callW_of_callE h10))).fr
-      (MFr.ofCore hq.closed (by decide) (callW_of_callE h11)), hA11⟩,
+    ((hP8.ofCore hq.closed (by decide) (callW_of_callE h9)).ofCore hq.closed (by decide)
+      (callW_of_callE h10)).ofCore hq.closed (by decide) (callW_of_callE h11), hA11⟩,
     ((c48.trans c9).trans c10).trans c11⟩
--/
 
 include hq henv in
 /-- **`target_params_def_eq` refines `targetParamsDefEq`, both outcomes** (twin side: con-ron's
@@ -307,7 +313,64 @@ theorem pde_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
     RefE (VerdictCtx p) (pdeE p n m vis d no nl lvls ho hl pfo pfl ao al bo bl)
       (ConRon.Arena.targetParamsDefEq V fe d.toNat names (decI lvls) holes pfvs as bs) a
       (fun v c a' => TpdPost dn vis fe env m v.1 v.2 c a') := by
-  sorry
+  induction n with
+  | zero => intros; rw [pdeE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ n ih =>
+  intro m a d no nl lvls ho hl pfo pfl ao al bo bl names holes pfvs as bs namesP lvlsP holesP
+    pfvsP asP bsP hC hA hlv hno hnob hho hhob hpf has hbs hP hTA hpfP hasP hbsP habs hpw
+  have hS := hC.stage
+  have hlt : ∀ {x : Nat}, x ≤ iwTop m → x < 2 ^ 64 := fun h => hS.lt64 h
+  by_cases hal : al = 0
+  · rw [pdeE.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hal]
+    subst hal
+    have : as = [] := by have := has.len; simpa using this
+    subst this
+    refine RefE.ret (by rw [tpd_nil]; rfl) ⟨?_, hC, IWGrow.refl _, hP, hA⟩
+    have hbl : bs.length = bl.toNat := hbs.len
+    by_cases hb0 : bl = 0
+    · subst hb0; have : bs = [] := by simpa using hbl
+      subst this; simp
+    · have : bs ≠ [] := fun e => hb0 (UInt64.toNat_inj.mp (by rw [← hbl, e]; rfl))
+      simp [hb0, this]
+  by_cases hbl : bl = 0
+  · rw [pdeE.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hal hbl]
+    subst hbl
+    have : bs = [] := by have := hbs.len; simpa using this
+    subst this
+    obtain ⟨w, as', rfl, -, -, -⟩ := decHL_cons has.1 hal (hlt (has.2.resolve_left hal))
+    exact RefE.ret (by rw [tpd_nilr]; rfl) ⟨rfl, hC, IWGrow.refl _, hP, hA⟩
+  rw [pdeE.arm3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hal hbl]
+  have hasb : ao.toNat + al.toNat ≤ iwTop m := has.2.resolve_left hal
+  have hbsb : bo.toNat + bl.toNat ≤ iwTop m := hbs.2.resolve_left hbl
+  obtain ⟨x, as', rfl, ex, hx, has'⟩ := decHL_cons has.1 hal (hlt hasb)
+  obtain ⟨y, bs', rfl, ey, hy, hbs'⟩ := decHL_cons hbs.1 hbl (hlt hbsb)
+  obtain ⟨xP, asP', hxP, hasP', rfl⟩ := ConRon.Bridge.denoteEList_cons_inv hasP
+  obtain ⟨yP, bsP', hyP, hbsP', rfl⟩ := ConRon.Bridge.denoteEList_cons_inv hbsP
+  rw [ex, ey]
+  obtain ⟨ea1, el1, hal0⟩ := slice_step hal (hlt hasb)
+  obtain ⟨eb1, ebl1, hbl0⟩ := slice_step hbl (hlt hbsb)
+  rw [tpd_cons]
+  simp only [← decE_eq]
+  refine RefE.bindE (fun _ => pdeE.k_target_params_def_eq_step.none ..) id
+    (pds_ref hq henv n (by omega) hC hA hx hy hlv hno hnob hho hhob hpf hP hTA hpfP hxP hyP habs hpw)
+    fun ⟨r1, m1⟩ c a1 _ hR1 => ?_
+  dsimp only at hR1
+  rw [pdeE.k_target_params_def_eq_step.eq_2]
+  refine RefE.retIf (fun hr1 => by rw [← hR1.res, hr1]; rfl) (fun hc => by rw [← hR1.res] at hc; simpa using hc)
+    (fun _ => ⟨rfl, hR1.stage, hR1.grow, hR1.rc, hR1.abs⟩) fun hr1 hc => ?_
+  subst hc
+  have hg1 := hR1.grow
+  have hgo := hg1.iw
+  have h2 := ih (by omega) (m := m1) (ao := ao + 1) (al := al - 1) (bo := bo + 1) (bl := bl - 1)
+    hR1.stage hR1.abs hlv
+    (by rw [decHL_grow hg1 hnob]; exact hno) (by omega)
+    (by rw [decHL_grow hg1 hhob]; exact hho) (by omega)
+    (hpf.grow hg1)
+    (HSl0.of (by rw [decHL_grow hg1 (by rw [ea1, el1]; omega)]; exact has') (by rw [ea1, el1]; omega))
+    (HSl0.of (by rw [decHL_grow hg1 (by rw [eb1, ebl1]; omega)]; exact hbs') (by rw [eb1, ebl1]; omega))
+    hR1.rc (hTA.ext hR1.core.ext) (denoteEList_ext hR1.core.ext _ _ hpfP)
+    (denoteEList_ext hR1.core.ext _ _ hasP') (denoteEList_ext hR1.core.ext _ _ hbsP') habs hpw
+  exact RefE.mono h2 fun _ _ _ hR2 => ⟨hR2.res, hR2.stage, hg1.trans hR2.grow, hR2.rc, hR2.abs⟩
 
 include hq henv in
 /-- **`target_params_def_eq` refines `targetParamsDefEq`** under `StageC` (`pde_ref`'s ok half; the

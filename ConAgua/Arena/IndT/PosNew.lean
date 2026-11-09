@@ -1,7 +1,9 @@
 module
 
 public import ConAgua.Verdict.PosE
+public import ConAgua.Verdict.PosFt
 import ConAgua.Verdict.PosE2
+import ConAgua.Arena.IndT.PosFields
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 import all ConRon.Bridge.Inductives.Positivity
@@ -52,13 +54,12 @@ theorem cfT_pstep {c : NestCtx} {us : LsIdx} {ds : List EIdx} {grp : List (NIdx 
 section steps
 variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in
 /-- **`nest_cont_new` refines `nestContNew`, both outcomes**, at L fuel `n + 1`: the walk stack, the
 group grown (`ngg_ref`), the frame (the block's `FrameRef` at `n`), the
 cache (`cfW_ok`). -/
-theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n : Nat)
-    (ih : NbRef p dn vis fe env n) : NewRef p dn vis fe env (n + 1) := by
+theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hF : FtProg p)
+    (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p dn vis fe env n) : NewRef p dn vis fe env (n + 1) := by
   have hcl : CoreStageClosed p := hq.closed
   have R := L.ct.cr.rx
   intro m a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS ctxP progP nP usP dsP ctyP nsP hC hW hnn hus
@@ -123,7 +124,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   simp only at hfm
   rw [hs2] at hfm
   rw [nnewE.k_nest_frame_mates.arm1]
-  obtain ⟨hS2, hg2, hmd, hmb⟩ := nfmW_ok hfm hS1 hnn
+  obtain ⟨hS2, hg2, hmd, hmb⟩ := nfmW_ok (dn := dn) L.fm hF.brg hfm hS1 hnn
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have hWp2 := hWp.grow hg2
   have hhw : (nhiW m2 ctx (rw.tail.headD 0)).toNat = c.hiAt wp.length := hWp2.hi htop2
@@ -183,18 +184,18 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   have hg24 := hg3.trans hg4
   have hmates := ConRon.Bridge.Inductives.nestFrameMates_rel c1.ok.state c1.ok.ienv ctxP hfind
     (ConRon.Bridge.denoteN_ext hnP p1.ext)
-  have hA4 : AbsOK m4 := new1W_afr hn1 (posRecW_afr hpr (nfmW_afr hfm (nwsW_afr hws hA)))
+  have hA4 : AbsOK m4 := new1W_afr hn1 (posRecW_afr hpr (nfmW_afr L.fm.hg hF.brg L.fm.hf hfm (nwsW_afr hws hA)))
   have hC4 : StageC dn vis fe env m4 a1 := hC.of_pstep hS4 hA4 p1
   have hg14 := hg1.trans (hg2.trans hg24)
-  have hP4 : PosMR m4 := ((((hP.fr (nwsW_mfr hws)).fr (nfmW_mfr hfm)).fr (posRecW_mfr hpr)).fr (new1W_mfr hn1))
+  have hP4 : PosMR m4 := ((((hP.fr (nwsW_mfr hws)).fr (nfmW_mfr L.fm.hg hF.brg L.fm.hf hfm)).fr (posRecW_mfr hpr)).fr (new1W_mfr hn1))
   have hctx1 : dCtx a1.store env.find? c = some ctxP := dCtx_ext _ p1.ext _ _ hctx
   have hmdD : decHL m4 (rm.headD 0).toNat (rm.tail.headD 0).toNat = some (nestFrameMates fe (decI nn)) := by
     rw [decHL_agree (RdS.of_grow hg24) (fun j hj => by omega)]; exact hmd
   have hdsD4 : decHL m4 dO.toNat dL.toNat = some ds := by
     rw [decHL_agree (RdS.of_grow hg14) (fun j hj => by omega)]; exact hdsD
-  have hR5 := ngg_ref L hIlpf hcl hLC dn vis fe ctx _ us dO dL (c.hiAt wp.length) hhw c ds hus a1
+  have hR5 := ngg_ref L hIlpf hq hLC hF dn vis fe henv ctx _ us dO dL (c.hiAt wp.length) hhw c ds hus a1
     (nestFrameMates fe (decI nn)) hc hctx1 (ConRon.Bridge.denoteLs_ext husP p1.ext)
-    (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) hmates (n' + 1) m4 a1 _ _ _ 1
+    (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) hmates (n' + 1) (by omega) m4 a1 _ _ _ 1
     (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] hC4 hA4 (ConRon.Arena.Ext.refl _) (fun _ h => h)
     (hW.u.grow hg14) hdsD4 (by have := hg14.iw; omega) hmdD (fun j hj => by have := hg24.iw; omega) (by simp)
     (by simp only [List.length_cons, List.length_nil]; omega) hgrp0 hP4
@@ -204,7 +205,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
       rm.tail.headD 0, g0.headD 0, 1] m4 with
   | error e5 =>
     rw [nnewE.k_nest_grow_group.none]
-    exact RefE.bind_left fun hG => RefE.run_err hsg hG.nv hG.nv hR5 h5
+    exact RefE.bind_left fun hG => RefE.run_err hsg hG.nv ⟨hG.nv, hG.whnf⟩ hR5 h5
   | ok q5 =>
   obtain ⟨rg, m5⟩ := q5
   rw [nnewE.k_nest_grow_group.arm1]
@@ -212,7 +213,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   dsimp only at hR; rw [hm5] at hR
   obtain ⟨hC5, hg5, hgl5, hgb5, hgrp5, hP5, hA5, -⟩ := hR
   have hS5 := hC5.stage
-  obtain ⟨c2, grpV, ⟨hgrp, hgs⟩, -⟩ := ConRon.Bridge.Inductives.nestGrowGroup_spec hc c (c.hiAt wp.length) (decI us)
+  obtain ⟨c2, grpV, ⟨hgrp, hgs⟩, -⟩ := ConRon.Bridge.Inductives.nestGrowGroup_spec coreSpecV henv hc c (c.hiAt wp.length) (decI us)
     usP ds dsP _ _ [(decI nn, decI cty)] [(nP, ctyP)]
     (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; exact hni)
     a1 a5 grp c1.ok ⟨dCtx_ext _ p1.ext _ _ hctx, ConRon.Bridge.denoteLs_ext husP p1.ext,
@@ -348,7 +349,6 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   have hA10 : AbsOK m10 := cfW_afr hcf hA9
   exact RefE.ret hrun10 ⟨hC9.of_pstep hS10 hA10 p10, hg19.trans hg10, by simpa using hk10, by simpa using hns10,
     hP9.fr (cfW_mfr hcf), hA10, (c12.trans c9).trans (p10.toCore hC9.check)⟩
--/
 
 end steps
 

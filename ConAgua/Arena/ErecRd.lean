@@ -139,6 +139,29 @@ theorem decCV_rd {R : Nat → Option Word} {rd : Word → Word}
   rw [e2, e3]
   exact hs
 
+
+/-- `decCV_rd` at the record's own address: the name slice. -/
+theorem decCV_rdq {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {cv : IConstantVal} (h : decCV R q.toNat = some cv) :
+    hslice? R (rd (q + 1)).toNat (rd (q + 2)).toNat = some cv.levelParams ∧
+      cv.levelParams.length = (rd (q + 2)).toNat := by
+  obtain ⟨-, ⟨w2, hw2, hlen⟩, -⟩ := decCV_words h
+  have e2 : rd (q + 2) = w2 := hR.off hw2 (by simp)
+  refine ⟨?_, by rw [e2]; exact hlen⟩
+  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
+  obtain ⟨n, hn, l, hl, t, ht, hc⟩ := h
+  cases Option.some.inj hc
+  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl
+  obtain ⟨o, ho, c, hc', hs⟩ := hl
+  simp only [nat?, Option.map_eq_some_iff] at ho hc'
+  obtain ⟨w1, hw1, rfl⟩ := ho
+  obtain ⟨w2', hw2', rfl⟩ := hc'
+  have e1 : rd (q + 1) = w1 := hR.off hw1 (by simp)
+  have e2' : w2' = w2 := Option.some.inj (hw2'.symm.trans hw2)
+  subst e2'
+  rw [e1, e2]
+  exact hs
+
 /-- The kind word of a decoded record, and what each kind decodes to. -/
 theorem decCI_split {R : Nat → Option Word} {rd : Word → Word} {q : Word}
     (hR : RdOK R rd)

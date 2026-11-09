@@ -157,7 +157,7 @@ theorem andPinOk_run {D P : Array Word} {i : Nat} {d : IDeclaration} (hd : DeclA
 
 /-- **`and_pin_ok` refines `andPinOk`** on record `i` of the loop's declarations. -/
 @[refines_part ConRon.Arena.andPinOk "one-constant records (the front's record kinds)"]
-theorem andPinOk_refines {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
+theorem andPinOk_refines {pins : List INatOpPinSet} (ds : Array IDeclaration) (p : Prog)
     (hp : p.lookup "and_pin_ok" = some andPinOkL) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
       (i : Word) (_hi : i.toNat < ds.size), (∀ b k, dsAt ds i ≠ .indDecl b k) →

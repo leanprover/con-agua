@@ -46,19 +46,4 @@ theorem push_call {p : Prog} (hRp : RecProg p) {vis : Word}
     StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' :=
   envPush_stage hRp.rs hRp.push hc hS hci
 
-/-- The lookups of the axiom arm. -/
-structure AxProg (p : Prog) : Prop where
-  quot : QuotProg p
-  val : ValProg p
-  std : StdProg2 p
-  tco : TcoProg p
-  ora : OraProg p
-  cda : p.lookup "check_decl_axiom" = some checkDeclAxiom
-
-/-- The calls of the axiom arm other than `erec_ci` and `check_constant_val` (all leaves of the
-declaration loop: `cda_ref` carries the core's memos across them by their frame). -/
-def cdaLeaves : List FnName :=
-  ["rom_basis_decls", "ci_canon_eq", "std_axiom_ok", "env_push", "trust_compiler_ok",
-    "of_reduce_ax_ok"]
-
 end L.Arena

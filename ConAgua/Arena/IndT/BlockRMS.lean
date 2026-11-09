@@ -64,11 +64,11 @@ fuel; twin side as con-ron's `reduceMembers_spec`): the reduced members a slice 
 theorem rms_ref (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
     ∀ (m : Mem) (a : AState) (o l : Word) (mss : List MemberShape)
       (mssP : List ConLeche.MemberShape),
-    BkSt dn vis fe env m a → PSlR decMS mss o l m →
+    BkSt dn vis fe env m a → PSlR decMSB mss o l m →
     mss.mapM (ConRon.Bridge.Inductives.dMember a.store) = some mssP →
     RefE (VerdictCtxU p) (rmsE p n m vis nP o l) (ConRon.Arena.reduceMembers V fe nP.toNat mss) a
       (fun v ms a' => BkGo dn vis fe env m a v.2 a' ∧
-        PSlR decMS ms (v.1.headD 0) (v.1.tail.headD 0) v.2) := by
+        PSlR decMSB ms (v.1.headD 0) (v.1.tail.headD 0) v.2) := by
   induction n with
   | zero => intros; rw [rmsE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n ih =>
@@ -80,7 +80,7 @@ theorem rms_ref (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
       simpa [decPL] using h.symm
     subst this
     exact RefE.ret rfl ⟨⟨hB, IWGrow.refl m, ⟨hB.c.check.state, ConRon.Arena.Ext.refl _, rfl⟩⟩,
-      PSlR.nil decMS m⟩
+      PSlR.nil decMSB m⟩
   obtain ⟨q, x, rest, rfl, hw, hqb, hdx, hrest⟩ := partsPSl_cons hms hl0
   obtain ⟨xP, restP, rfl, hxP, hrestP⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hmssP
   rw [rmsE.arm2 p n m vis nP o l hl0]
@@ -97,10 +97,10 @@ theorem rms_ref (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
   rw [hw1]
   -- `reduce_member`
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  have hdx1 : DecB (fun m => decMS m (UInt64.ofNat q : Word).toNat) m1 x := by
-    rw [hq']; exact hdx.grow (decMS_mono _) h1.grow
+  have hdx1 : DecB (fun m => decMSB m (UInt64.ofNat q : Word).toNat) m1 x := by
+    rw [hq']; exact hdx.grow (decMSB_mono _) h1.grow
   have hxb : (UInt64.ofNat q : Word).toNat + 5 ≤ iwTop m1 := by
-    obtain ⟨-, ⟨a4, ha4, -⟩, -, -⟩ := decMS_some (m := truncM m) hdx
+    obtain ⟨-, ⟨a4, ha4, -⟩, -, -⟩ := decMS_some (m := truncM m) (decMSB_decMS hdx)
     have h4 := (rec2IwN_trunc ha4).1
     have hg := h1.grow.iw
     simp only at hg
@@ -118,7 +118,7 @@ theorem rms_ref (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
   have hi2 : ConRon.Bridge.Inductives.InstStep a a2 := h1.inst.trans hR2.core.toInst
   -- the rest
   refine RefE.bindE (fun _ => rmsE.k_reduce_members.none ..) id
-    (ih (by omega) s2.mem a2 (o + 1) (l - 1) rest restP hB2 (hrest.grow decMS_mono hg2)
+    (ih (by omega) s2.mem a2 (o + 1) (l - 1) rest restP hB2 (hrest.grow decMSB_mono hg2)
       (ConRon.Bridge.Inductives.dMember_ext.list hi2.ext _ _ hrestP))
     fun ⟨r3, m3⟩ xs a3 _ ⟨h3, hsl3⟩ => ?_
   rw [rmsE.k_reduce_members.arm1]
@@ -127,8 +127,8 @@ theorem rms_ref (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
   rw [rmsE.k_sl_cons.arm1]
   obtain ⟨s4, rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (slCons_specW p hP.alloc hP.copy hP.cons n _ _ _ _) h4
-  obtain ⟨hS4, hg4, hd4, htop4⟩ := partsConsPL decMS_mono hW h3.st.c.stage hsl3.bound hsl3.dec
-    (hR2.dec.grow (decMS_mono _) h3.grow)
+  obtain ⟨hS4, hg4, hd4, htop4⟩ := partsConsPL decMSB_mono hW h3.st.c.stage hsl3.bound hsl3.dec
+    (hR2.dec.grow (decMSB_mono _) h3.grow)
   have hM4 := h3.st.mem.ofIW (consW_iwFrame hW)
   exact RefE.ret rfl ⟨⟨⟨h3.st.c.of_pstep hS4 hM4.abs
       (ConRon.Bridge.Inductives.PStep.refl h3.st.c.check.state), hM4.ind, hM4.abs⟩,

@@ -151,7 +151,7 @@ holes' slice. -/
 def BncRefS : Prop :=
   ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState)
     (pp : Word) (bs : BlockShape) (bsP : ConLeche.BlockShape),
-    BkSt dn vis fe env m a → DecB (fun m => decBS m pp.toNat) m bs → ShapeSl m pp →
+    BkSt dn vis fe env m a → ConLeche.EnvWF env → DecB (fun m => decBS m pp.toNat) m bs → ShapeSl m pp →
     ConRon.Bridge.Inductives.dShape a.store bs = some bsP →
     (∀ cv ∈ bsP.formers, ConLeche.Expr.WScoped 0 cv.type) →
     RefE G (callE p n "block_nest_ctx" [pp] m) (ConRon.Arena.blockNestCtx bs) a
@@ -391,7 +391,7 @@ theorem pass_ref (R : PassRefs G p dn) (hGnv : G → closedNV p _root_.L.Checker
   have hsl3 := hsl1.grow' hq1 g13
   have hsh3 := ConRon.Bridge.Inductives.dShape_ext x13 _ _ hsh1
   refine RefE.bindE (fun _ => icpE.k_block_nest_ctx.none ..) id
-    (R.bnc n (by omega) _ fe1 env₁ m3 a3 _ bs1 p₁P hB3 hq3 hsl3 hsh3 hT)
+    (R.bnc n (by omega) _ fe1 env₁ m3 a3 _ bs1 p₁P hB3 henv₁ hq3 hsl3 hsh3 hT)
     fun ⟨r4, m4⟩ ⟨c, holes⟩ a4 hrun4 h4 => ?_
   obtain ⟨hB4, hg4, hctx4, hU4, hho4, hhob4, hhi4⟩ := h4
   rw [icpE.k_block_nest_ctx.arm1]
@@ -542,7 +542,7 @@ theorem pass_ref (R : PassRefs G p dn) (hGnv : G → closedNV p _root_.L.Checker
       (hrd5.grow (decCR_mono _) (hg6.trans g6A))
       (hms5.grow (fun q => decTM_mono q) (hg6.trans g6A))
       (htbl8.grow (fun q => decNCN_mono q) hg10)
-  · simp only [List.headD_cons]; rw [hw1]; exact hslA.2
+  · simp only [List.headD_cons]; rw [hw1]; exact hslA.2.1
 
 /-- **A refinement's post weakened with the twin's whole run at hand.** -/
 theorem RefE.weakenRunP {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a : AState}
