@@ -206,4 +206,53 @@ theorem checkJobs_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
     (fun k hk => ⟨_, List.mem_singleton_self _, List.mem_range.mpr hk⟩)
   exact hacc _ (List.mem_singleton_self _)
 
+/-! ## `check_b` in place -/
+
+theorem mclearG_words {m₁ m₂ : Mem} (he : m₁.words = m₂.words) (Sch : MemoSch) :
+    (mclearG Sch m₁).words = (mclearG Sch m₂).words := by
+  unfold mclearG Mem.set64 Mem.arr64; simp only [he]
+
+theorem flushMem_words {m₁ m₂ : Mem} (he : m₁.words = m₂.words) :
+    (flushMem m₁).words = (flushMem m₂).words := by
+  have g := fun (Sch : MemoSch) {x y : Mem} (hxy : x.words = y.words) => mclearG_words hxy Sch
+  exact g _ (g _ (g _ (g _ (g _ (g _ (g _ (g _ (g _ (g _ (g _ he))))))))))
+
+theorem clearsOK_agree {S : TieredArray → Bool} {S8 : ArrId → Bool} (hc : S CTL = true) :
+    ∀ (l : List MemoSch) {m₁ m₂ : Mem}, Agree S S8 m₁ m₂ → ClearsOK l m₁ → ClearsOK l m₂
+  | [], _, _, _, _ => trivial
+  | Sch :: l, _, _, h, ⟨h1, h2⟩ =>
+    ⟨by rw [← h.1 CTL hc]; exact h1, clearsOK_agree hc l (mclearG_agree h hc Sch) h2⟩
+
+theorem clearsOK_words : ∀ (l : List MemoSch) {m₁ m₂ : Mem}, m₁.words = m₂.words →
+    ClearsOK l m₁ → ClearsOK l m₂
+  | [], _, _, _, _ => trivial
+  | Sch :: l, _, _, he, ⟨h1, h2⟩ =>
+    ⟨by simp only [Mem.arr64, ← he]; exact h1, clearsOK_words l (mclearG_words he Sch) h2⟩
+
+/-- **`check_jobs` after the flush**, as a triple: from a memory that is the flush of one agreeing
+with `m` on every array the jobs name. -/
+theorem checkJobs_seqT (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (hF : FoldAt b pb sz PA m₇ m)
+    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (x y : Word) :
+    ⦃fun s => x = 0 ∧ y = hi ∧ ∃ X, FlushOK X ∧ s.mem = flushMem X ∧
+      ∀ a, phaseBS a = true → X.arr64 a = m.arr64 a⦄
+    invoke checkerProg (exec checkerProg n) "check_jobs" [x, y]
+    ⦃fun _ _ => ∃ s'', checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+      .ok (.ok (), s''); ⊤⦄ := by
+  apply M.triple_of_run
+  rintro s rs s' ⟨rfl, rfl, X, hfx, hsX, hXm⟩ hrun
+  let m₂ : Mem := ⟨m.bytes, m.words, X.glob⟩
+  have hAg : Agree phaseBS (fun _ => false) X m₂ :=
+    ⟨fun a ha => hXm a ha, fun _ h => absurd h (by simp), rfl⟩
+  have hc : phaseBS CTL = true := by decide
+  have hfok : FlushOK m := by
+    rw [flushOK_eq] at hfx ⊢
+    exact clearsOK_words _ (m₁ := m₂) (m₂ := m) rfl (clearsOK_agree hc _ hAg hfx)
+  have hA2 := flushMem_agree hAg hc
+  have hw2 : (flushMem m₂).words = (flushMem m).words := flushMem_words rfl
+  exact checkJobs_seq Vt hF hfok hJP hn hhi (fun a ha => by
+    rw [hsX, hA2.1 a ha]; show (flushMem m₂).words a = (flushMem m).words a; rw [hw2]) hrun
+
 end L.Checker
