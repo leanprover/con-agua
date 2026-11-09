@@ -62,7 +62,10 @@ theorem opfSimRA {p : Prog} (hOpf : OpfF p) {n : Nat} {dn : NIdx → Option ConL
     Sim (callW p n "open_pis_at_fvars_f" [k, e, i] m) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
       (fun r x m' a' => ((StageR vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x) ∧
         (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a')) ∧ AbsOK m') := by
-  sorry
+  intro r m' h
+  obtain ⟨x, a', hrun, ⟨hS', hg, hd⟩, hA'⟩ :=
+    opfF_ok vis fe k e i he m m' a r (callW_opfF hOpf h) ⟨hS, hA⟩
+  exact ⟨x, a', hrun, ⟨⟨hS', hg, hd⟩, hrun⟩, hA'⟩
 
 /-- The same, from the model's run. -/
 theorem opfF_okRA {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {k e i : Word}
@@ -70,7 +73,8 @@ theorem opfF_okRA {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (hS : StageR vis fe m a) (hA : AbsOK m) :
     ∃ x a', (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x ∧ AbsOK m' := by
-  sorry
+  obtain ⟨x, a', hrun, ⟨hS', hg, hd⟩, hA'⟩ := opfF_ok vis fe k e i he m m' a r h ⟨hS, hA⟩
+  exact ⟨x, a', hrun, hS', hg, hd, hA'⟩
 
 set_option experimental.vcgen true in
 /-- **`check_block_doms_at`'s model, both outcomes**: `fvar_type_d` (outside the verdict closure)
@@ -98,47 +102,36 @@ structure InsAt (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   stage : StageC dn vis fe env m a
   abs : AbsOK m
   grow : IWGrow m₀ m
+  core : ConRon.Bridge.CoreStep env fe a₀ a
 
 namespace InsAt
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {m₀ m₁ m : Mem} {a₀ a₁ a : AState}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem refl (h : StageC dn vis fe env m a) (hA : AbsOK m) : InsAt dn vis fe env m a m a :=
   ⟨h, hA, IWGrow.refl _, ConRon.Bridge.CoreStep.refl h.check⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem trans (h₁ : InsAt dn vis fe env m₀ a₀ m₁ a₁) (h₂ : InsAt dn vis fe env m₁ a₁ m a) :
     InsAt dn vis fe env m₀ a₀ m a :=
   ⟨h₂.stage, h₂.abs, h₁.grow.trans h₂.grow, h₁.core.trans h₂.core⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A step that con-ron calls a `PStep`. -/
 theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR vis fe m a) (hA : AbsOK m)
     (hg : IWGrow m₀ m) (hp : PStep a₀ a) : InsAt dn vis fe env m₀ a₀ m a :=
   ⟨h.of_pstep hS hA hp, hA, hg, hp.toCore h.check⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A core step. -/
 theorem cstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR vis fe m a) (hA : AbsOK m)
-    (hg : IWGrow m₀ m) (hc : ConRon.Bridge.CoreStep V env fe a₀ a) : InsAt dn vis fe env m₀ a₀ m a :=
+    (hg : IWGrow m₀ m) (hc : ConRon.Bridge.CoreStep env fe a₀ a) : InsAt dn vis fe env m₀ a₀ m a :=
   ⟨h.of_check hS hA hc.ok hc.ext, hA, hg, hc⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem decHL {k : IdxKind} (h : InsAt dn vis fe env m₀ a₀ m a) {o l : Nat} {xs : List (Idx k)}
     (hd : _root_.L.Ind.decHL m₀ o l = some xs) (hb : o + l ≤ iwTop m₀) :
     _root_.L.Ind.decHL m o l = some xs := by
   rw [decHL_grow h.grow hb]; exact hd
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem top (h : InsAt dn vis fe env m₀ a₀ m a) {x : Nat} (hb : x ≤ iwTop m₀) : x ≤ iwTop m :=
   Nat.le_trans hb h.grow.iw
--/
 
 end InsAt
 
@@ -153,7 +146,6 @@ section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env) {m₀ m : Mem} {a₀ a : AState}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`fvar_type_d`'s step** (the twin state unchanged): the opened variable's annotation. -/
 theorem ftd_step (hftd : FtdF p) {n : Nat} (hk : InsAt dn vis fe env m₀ a₀ m a) {w : Word} (hw : H w)
     {xP : ConLeche.Expr} (hxP : denoteE a.store (decI w) = some xP) :
@@ -167,9 +159,7 @@ theorem ftd_step (hftd : FtdF p) {n : Nat} (hk : InsAt dn vis fe env m₀ a₀ m
     obtain ⟨rfl, hx⟩ := ConRon.Bridge.Inductives.fvarTypeD_run hk.stage.check.state hxP hr
     exact ⟨x, a', hr, InsAt.pstep hk.stage hS (ftdF_afr hW hk.abs) hg (PStep.refl hk.stage.check.state),
       hlt, heq, hx⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv in
 /-- **`is_def_eq_core`'s step** (a unified callee: its errors by the core stubs' claims). -/
 theorem idc_ref {n : Nat} (hn : n ≤ 2 ^ 62) (hk : InsAt dn vis fe env m₀ a₀ m a) {dep x y : Word}
@@ -186,7 +176,6 @@ theorem idc_ref {n : Nat} (hn : n ≤ 2 ^ 62) (hk : InsAt dn vis fe env m₀ a�
   obtain ⟨c, a', hr, hC, hg, hd, hA, hcs⟩ :=
     isDefEqC_rsim hq henv n hn hk.stage hk.abs dep x y hx hy hdx hdy hwx hwy (r, m') (callW_of_callE h)
   exact ⟨c, a', hr, ⟨hC, hA, hg, hcs⟩, by rw [← hd]; simp [decBool]⟩
--/
 
 /-- **`sl_get`** (an L helper, no twin step) on a decoded slice: the memory unchanged, the index in
 range, the word read the element. -/
@@ -222,7 +211,72 @@ theorem cbda_ref (hftd : FtdF p) (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (
     RefE (CoreStubsE p) (cbdaE p n m vis off fo fl dO dl j)
       (ConRon.Arena.checkBlockDomsAt V fe off.toNat fvs doms j.toNat) a
       (fun v _ a' => DomsPost dn vis fe env m v.2 a') := by
-  sorry
+  induction n with
+  | zero => intros; rw [cbdaE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  | succ n ih =>
+  intro m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms hfob hdob hfot hdot hoob hfP hdP hws
+  have hfvl := decHL_length m hfvs
+  have hdol := decHL_length m hdoms
+  by_cases hj : j = 0
+  · subst hj
+    rw [cbdaE.arm1 p n m vis off fo fl dO dl 0 rfl]
+    exact RefE.ret rfl ⟨hC, IWGrow.refl m, hA⟩
+  have hjpos : 1 ≤ j.toNat := Nat.pos_of_ne_zero fun h0 => hj (UInt64.toNat_inj.mp (by simpa using h0))
+  have hj1 : (j - 1).toNat = j.toNat - 1 := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hjpos))]
+    simp
+  by_cases hfl : fl ≤ j - 1
+  · rw [cbdaE.abort1 p n m vis off fo fl dO dl j hj hfl]; exact RefE.of_cls0 rfl
+  by_cases hdl : dl ≤ j - 1
+  · rw [cbdaE.abort2 p n m vis off fo fl dO dl j hj hfl hdl]; exact RefE.of_cls0 rfl
+  rw [cbdaE.arm2 p n m vis off fo fl dO dl j hj hfl hdl]
+  have hjm1f : j.toNat - 1 < fl.toNat := by
+    have : ¬ fl.toNat ≤ (j - 1).toNat := by rw [← UInt64.le_iff_toNat_le]; exact hfl
+    omega
+  have hjm1d : j.toNat - 1 < dl.toNat := by
+    have : ¬ dl.toNat ≤ (j - 1).toNat := by rw [← UInt64.le_iff_toNat_le]; exact hdl
+    omega
+  have hfoeq : fo + (j - 1) = UInt64.ofNat (fo.toNat + (j.toNat - 1)) := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, hj1]; simp
+  have hdoeq : dO + (j - 1) = UInt64.ofNat (dO.toNat + (j.toNat - 1)) := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, hj1]; simp
+  obtain ⟨wa, hwa_eq, hwa_lt, hwa_dec⟩ := decHL_get' hfvs (j.toNat - 1) hjm1f hfob
+  obtain ⟨wb, hwb_eq, hwb_lt, hwb_dec⟩ := decHL_get' hdoms (j.toNat - 1) hjm1d hdob
+  rw [hfoeq, hdoeq, hwa_eq, hwb_eq]
+  have hfvsij : fvs[j.toNat - 1]? = some (decI wa) := by
+    rw [List.getElem?_eq_getElem (by omega : j.toNat - 1 < fvs.length)]
+    exact congrArg some hwa_dec
+  have hdomsij : doms[j.toNat - 1]? = some (decI wb) := by
+    rw [List.getElem?_eq_getElem (by omega : j.toNat - 1 < doms.length)]
+    exact congrArg some hwb_dec
+  obtain ⟨aP, haP, hda⟩ := ConRon.Bridge.ExprOps.denoteEList_getElem? fvs fvsP hfP _ _ hfvsij
+  obtain ⟨bP, hbP, hdb⟩ := ConRon.Bridge.ExprOps.denoteEList_getElem? doms domsP hdP _ _ hdomsij
+  obtain ⟨hwx, hwy⟩ := hws (j.toNat - 1) (by omega) aP bP haP hbP
+  have hdep : (off + (j - 1)).toNat = off.toNat + (j.toNat - 1) := by
+    rw [UInt64.toNat_add, hj1]; exact Nat.mod_eq_of_lt (by omega)
+  rw [show j.toNat = (j.toNat - 1) + 1 by omega]
+  simp only [ConRon.Arena.checkBlockDomsAt, unwrapOr, hfvsij, hdomsij, pure_bind]
+  -- `fvar_type_d`
+  refine RefE.bindSim (fun _ => cbdaE.k_fvar_type_d.none ..)
+    (ftd_step hftd (InsAt.refl hC hA) hwa_lt hda) fun ra x1 m1 a1 _ _ ⟨k1, hw1lt, hw1eq, hdx⟩ => ?_
+  rw [cbdaE.k_fvar_type_d.arm1]
+  -- `is_def_eq_core`
+  refine RefE.bindE (fun _ => cbdaE.k_is_def_eq_core.none ..) id
+    (idc_ref hq henv (by omega) k1 hdep hw1eq hw1lt hwb_lt hdx (ConRon.Bridge.denote_ext hdb k1.core.ext)
+      hwx hwy)
+    fun ⟨rb, m2⟩ c a2 _ ⟨k2, hc⟩ => ?_
+  dsimp only at k2 hc
+  refine RefE.ofArms (fun h => cbdaE.k_is_def_eq_core.abort1 (hc1 := h) ..)
+    (fun h => cbdaE.k_is_def_eq_core.arm1 (hc1 := h) ..)
+    (RefE.guard (by decide) hc.1 hc.2 fun _ _ => ?_)
+  -- the recursion
+  have k12 := k1.trans k2
+  have hrec := ih (by omega) m2 a2 off fo fl dO dl (j - 1) fvs doms fvsP domsP k12.stage k12.abs
+    (k12.decHL hfvs hfot) (k12.decHL hdoms hdot) hfob hdob (by have := k12.grow.iw; omega)
+    (by have := k12.grow.iw; omega) hoob (ConRon.Bridge.denoteEList_ext k12.core.ext _ _ hfP)
+    (ConRon.Bridge.denoteEList_ext k12.core.ext _ _ hdP) (fun i hi => hws i (by omega))
+  rw [hj1] at hrec
+  exact hrec.mono fun _ _ _ h => ⟨h.stage, k12.grow.trans h.grow, h.abs⟩
 
 include hq henv in
 /-- **`check_struct_doms_at` refines `checkStructDomsAt`**, both outcomes (as `cbda_ref`; the
@@ -240,7 +294,59 @@ theorem sds_ref (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : Nat) 
     RefE (CoreStubsE p) (sdomsE p n m vis off fo fl dO dl j)
       (ConRon.Arena.checkStructDomsAt V fe off.toNat fvs doms j.toNat) a
       (fun v _ a' => DomsPost dn vis fe env m v.2 a') := by
-  sorry
+  induction n with
+  | zero => intros; rw [sdomsE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  | succ n ih =>
+  intro m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms hfob hdob hfot hdot hoob hfP hdP hws
+  by_cases hj : j = 0
+  · subst hj
+    rw [sdomsE.arm2 p n m vis off fo fl dO dl 0 rfl]
+    exact RefE.ret rfl ⟨hC, IWGrow.refl m, hA⟩
+  rw [sdomsE.arm1 p n m vis off fo fl dO dl j hj]
+  have hjpos : 1 ≤ j.toNat := Nat.pos_of_ne_zero fun h0 => hj (UInt64.toNat_inj.mp (by simpa using h0))
+  have hj1 : (j - 1).toNat = j.toNat - 1 := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hjpos))]
+    simp
+  -- the two `sl_get`s (L helpers)
+  refine RefE.onlySim (fun _ => sdomsE.k_sl_get.none ..) (slGet_step hg hfvs hfob)
+    fun r1 m1 ⟨e1, hjf, hwa, hfvsij⟩ => ?_
+  subst e1
+  rw [sdomsE.k_sl_get.arm1]
+  refine RefE.onlySim (fun _ => sdomsE.k_sl_get_2.none ..) (slGet_step hg hdoms hdob)
+    fun r2 m2 ⟨e2, hjd, hwb, hdomsij⟩ => ?_
+  subst e2
+  rw [sdomsE.k_sl_get_2.arm1]
+  rw [hj1] at hfvsij hdomsij hjf hjd
+  obtain ⟨aP, haP, hda⟩ := ConRon.Bridge.ExprOps.denoteEList_getElem? fvs fvsP hfP _ _ hfvsij
+  obtain ⟨bP, hbP, hdb⟩ := ConRon.Bridge.ExprOps.denoteEList_getElem? doms domsP hdP _ _ hdomsij
+  obtain ⟨hwx, hwy⟩ := hws (j.toNat - 1) (by omega) aP bP haP hbP
+  have hdep : (off + (j - 1)).toNat = off.toNat + (j.toNat - 1) := by
+    rw [UInt64.toNat_add, hj1]; exact Nat.mod_eq_of_lt (by omega)
+  rw [show j.toNat = (j.toNat - 1) + 1 by omega]
+  simp only [ConRon.Arena.checkStructDomsAt, unwrapOr, hfvsij, hdomsij, pure_bind]
+  -- `fvar_type_d`
+  refine RefE.bindSim (fun _ => sdomsE.k_fvar_type_d.none ..)
+    (ftd_step hftd (InsAt.refl hC hA) hwa hda) fun ra x1 m3 a1 _ _ ⟨k1, hw1lt, hw1eq, hdx⟩ => ?_
+  rw [sdomsE.k_fvar_type_d.arm1]
+  -- `is_def_eq_core`
+  refine RefE.bindE (fun _ => sdomsE.k_is_def_eq_core.none ..) id
+    (idc_ref hq henv (by omega) k1 hdep hw1eq hw1lt hwb hdx (ConRon.Bridge.denote_ext hdb k1.core.ext)
+      hwx hwy)
+    fun ⟨rb, m4⟩ c a2 _ ⟨k2, hc⟩ => ?_
+  dsimp only at k2 hc
+  refine RefE.ofArms (fun h => sdomsE.k_is_def_eq_core.abort1 (hc1 := h) ..)
+    (fun h => sdomsE.k_is_def_eq_core.arm1 (hc1 := h) ..)
+    (RefE.guard (by decide) hc.1 hc.2 fun _ _ => ?_)
+  -- the recursion
+  have k12 := k1.trans k2
+  have hrec := ih (by omega) m4 a2 off fo fl dO dl (j - 1) fvs doms fvsP domsP k12.stage k12.abs
+    (k12.decHL hfvs hfot) (k12.decHL hdoms hdot) hfob hdob (by have := k12.grow.iw; omega)
+    (by have := k12.grow.iw; omega) hoob (ConRon.Bridge.denoteEList_ext k12.core.ext _ _ hfP)
+    (ConRon.Bridge.denoteEList_ext k12.core.ext _ _ hdP) (fun i hi => hws i (by omega))
+  rw [hj1] at hrec
+  exact RefE.lastE (fun _ => sdomsE.k_check_struct_doms_at.none ..)
+    (fun _ => sdomsE.k_check_struct_doms_at.arm1 ..) id hrec fun _ _ _ _ h =>
+    ⟨h.stage, k12.grow.trans h.grow, h.abs⟩
 
 include hq henv in
 /-- **`check_block_doms_at` refines `checkBlockDomsAt .verified`** under `StageC` (`cbda_ref`'s ok
