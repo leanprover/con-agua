@@ -33,16 +33,13 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The core's spec at `.verified` (con-ron's `CoreSpec.of_core`). -/
-theorem coreSpecV : ConRon.Bridge.CoreSpec V checkFuel := ConRon.Bridge.CoreSpec.of_core rfl
--/
+theorem coreSpecV : ConRon.Bridge.CoreSpec checkFuel := ConRon.Bridge.CoreSpec.of_core
 
 section steps
 variable {p : Prog} (L : NbLook p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include L henv in
 theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn vis fe env (n + 1) := by
   have R := L.ct.cr.rx
@@ -54,8 +51,7 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   · rw [nfE.arm1 p n m vis ctx fu po pl base nF j cur ns kO kL dO dL h0]
     subst h0
     exact RefE.ret (y := (ks, nds, decI cur, NS)) (by rw [ConRon.Arena.nestFields.eq_def]; rfl)
-      ⟨hC, IWGrow.refl _, hks, hkb, hnd, hndb, hcur, rfl, hns, by simp, by simp, by simp, hP, hA,
-        ConRon.Bridge.CoreStep.refl hC.check⟩
+      ⟨hC, IWGrow.refl _, hks, hkb, hnd, hndb, hcur, rfl, hns, by simp, by simp, by simp, hP, hA⟩
   obtain ⟨nF', hnF'⟩ : ∃ nF', nF.toNat = nF' + 1 := ⟨nF.toNat - 1, by
     have : nF.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   by_cases h6 : tagW cur ≠ 6
@@ -111,9 +107,9 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   obtain ⟨s2, hs2, -, x1, a1, hrun1, hP1'⟩ := RefE.run_ok (npE_spec p L.ppos n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _)
     hR1 c2
   rw [hs2] at hP1'
-  obtain ⟨hC1, hg1, hk1, hnd1H, hnd1, hns1, hP1, hA1, c1⟩ := hP1'
+  obtain ⟨hC1, hg1, hk1, hnd1H, hnd1, hns1, hP1, hA1⟩ := hP1'
   have hS1 := hC1.stage
-  obtain ⟨-, v1, ⟨-, hnd1P, hns1P, hwnd⟩, -⟩ := ConRon.Bridge.Inductives.nestPos_spec coreSpecV henv hc
+  obtain ⟨c1, v1, ⟨-, hnd1P, hns1P, hwnd⟩, -⟩ := ConRon.Bridge.Inductives.nestPos_spec coreSpecV henv hc
     fu.toNat prog progP (base + j).toNat (0 : Word).toNat (decI d) dP NS nsP (by rw [hbj]; exact hw.1)
     a a1 x1 hC.check ⟨hctx, hprog, hdP, hnsP⟩ hrun1
   refine RefE.bind_right hrun1 ?_
@@ -187,7 +183,6 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   have hA5 : AbsOK m5 := snocW_afr hs2' (snocW_afr hs1 (i1F_afr hin (fvinternW_afr hfv hA1)))
   have p23 := p2.trans p3
   have hC5 : StageC dn vis fe env m5 a3 := hC1.of_pstep hS5 hA5 p23
-  have c3 : ConRon.Bridge.CoreStep V env fe a a3 := c1.trans (p23.toCore hC1.check)
   have hx13 := c1.ext.trans p23.ext
   -- the rest of the fields
   have hbj1 : (base + j + 1).toNat = base.toNat + j.toNat + 1 := by rw [pos2_word_succ hov1, hbj]
@@ -223,13 +218,12 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   obtain ⟨s7, hs7', -, x, a', hrun, hpost⟩ := RefE.run_ok hs7 hR7 c7
   rw [hs7'] at hpost
   refine RefE.ret hrun ⟨hpost.stage, hg15.trans hpost.grow, hpost.kinds, hpost.kindsb, hpost.doms, hpost.domsb,
-    hpost.hcur, hpost.cur, hpost.ns, ?_, ?_, ?_, hpost.pos, hpost.abs, c3.trans hpost.core⟩
+    hpost.hcur, hpost.cur, hpost.ns, ?_, ?_, ?_, hpost.pos, hpost.abs⟩
   · rw [hpost.kindsl]; simp; omega
   · rw [hpost.domsl]; simp; omega
   · right; rcases hpost.nfb with h' | h'
     · rw [hnF1] at h'; subst h'; have := (base + j + 1).toNat_lt; omega
     · rw [hj1, hnF1] at h'; omega
--/
 
 end steps
 

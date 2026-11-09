@@ -76,7 +76,37 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
     (hP : PosMR m) :
     RefE (closedNV p _root_.L.Checker.nvFns = true) (classKeyOfE p n m nP po pl key) (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a
       (fun v x a' => KofPost dn vis fe m v.1 v.2 x a') := by
-  sorry
+  cases n with
+  | zero => rw [classKeyOfE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ n =>
+  rw [classKeyOfE.arm1]
+  unfold ConRon.Arena.classKeyOf
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
+  obtain _ | k := n
+  · simp [kcWf] at h1
+  obtain ⟨x1, a1, hrun1, hd1, hb1, hds1, hS1, hg1, hP1⟩ :=
+    kcW_ok fe vis k m m1 a po pl key r1 pfvs ck h1 hS hpf hpb hk hP
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
+  obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hd1
+  obtain ⟨-, -, -, -, hds, -, -⟩ := pos2_nk_fields hnk htop1
+  refine ⟨_, _, hrun1, ?_⟩
+  dsimp only [classKeyOfE.k_class_key_canon]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
+  obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 h2 hS1
+    hds (by omega) hds1
+  refine ⟨_, _, hrun2, ?_⟩
+  dsimp only [classKeyOfE.k_class_key_of_closed]
+  refine RefE.guard rfl (fun h0 => by rw [← hb2, h0]; rfl)
+    (fun hb => by rw [← hb2] at hb; simpa using hb) fun _ _ => ?_
+  have ek (j : Word) (hj : j.toNat < 4) :
+      rdW (m2.arr64 IW) (r1.headD 0 + j) = rdW (m1.arr64 IW) (r1.headD 0 + j) := by
+    simp only [rdW, word_add_toNat (show (r1.headD 0).toNat + j.toNat < 2 ^ 64 by omega)]
+    rw [hg2.iwGet _ (by omega)]
+  refine RefE.ret rfl ?_
+  dsimp only
+  exact ⟨hd1.grow (decCK_mono _) hg2, by have := hg2.iw; omega,
+    by rw [ek 2 (by decide), ek 3 (by decide)]; have := hg2.iw; omega, hS2, hg1.trans hg2,
+    hP1.fr (ckc2W_mfr _ _ _ _ _ _ _ h2)⟩
 
 /-- **`class_key_of` refines `classKeyOf`** (through `replace_fvars`' and `fvar_b`'s stubs;
 `bvar_b` the master's walk, at exec fuel below `coreWalkFuel`; `kof_ref`'s ok half). -/
@@ -93,7 +123,12 @@ theorem classKeyOf_refines (k : Nat) (s₀ : St) (a₀ : AState)
         iwTop s'.mem ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
-  sorry
+  refine triple_post (RefE.triple (classKeyOfE_spec p L (k + 2) s₀ nP po pl key)
+    (kof_ref (fun _ => none) fe vis (k + 2) hS hpf hpb hk hP)) ?_
+  rintro r s' ⟨hl, x, a', run, hR⟩
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, by rw [hres]; exact hR.key, hR.top, hR.ds, by rw [hst]; exact hR.stage, hR.grow,
+    hR.pos⟩
 
 end kof
 

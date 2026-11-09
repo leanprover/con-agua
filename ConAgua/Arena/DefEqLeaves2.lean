@@ -11,6 +11,7 @@ import ConAgua.Front.Preserve
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.DefEq
 import all ConAgua.Arena.NatArms
+import ConAgua.Arena.ErecRd
 
 @[expose] public section
 
@@ -30,20 +31,82 @@ namespace L.Arena
 
 /-! ## `er_slice_eq` -/
 
+/-- `er_slice_eq`'s loop as a function of a reader `rd` (L's tagged read `EREC⦃·⦄`). -/
+def eqF (rd : Word → Word) (a b l i : Word) : Bool :=
+  if i < l then
+    if rd (a + i) = rd (b + i) then eqF rd a b l (i + 1) else false
+  else true
+termination_by l.toNat - i.toNat
+decreasing_by
+  have : i.toNat < l.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹i < l›
+  have := l.toNat_lt
+  have : (i + 1).toNat = i.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  omega
+
+theorem eqF_end (rd : Word → Word) (a b l i : Word) (h : ¬ i < l) : eqF rd a b l i = true := by
+  rw [eqF]; simp [h]
+
+theorem eqF_ne (rd : Word → Word) (a b l i : Word) (hi : i < l) (hne : rd (a + i) ≠ rd (b + i)) :
+    eqF rd a b l i = false := by
+  rw [eqF]; simp [hi, hne]
+
+theorem eqF_eq (rd : Word → Word) (a b l i i' : Word) (hi : i < l) (hi' : i' = i + 1)
+    (he : rd (a + i) = rd (b + i)) : eqF rd a b l i = eqF rd a b l i' := by
+  subst hi'; rw [eqF]; simp [hi, he]
+
+grind_pattern [arena_grind] eqF_end => eqF rd a b l i
+grind_pattern [arena_grind] eqF_ne => eqF rd a b l i
+grind_pattern [arena_grind] eqF_eq => eqF rd a b l i, eqF rd a b l i'
+
+/-- `eqF` compares the reads at every offset from `i` below `l`. -/
+theorem eqF_iff (rd : Word → Word) (a b l i : Word) :
+    eqF rd a b l i = true ↔
+      ∀ k : Nat, i.toNat ≤ k → k < l.toNat → rd (a + UInt64.ofNat k) = rd (b + UInt64.ofNat k) := by
+  fun_induction eqF rd a b l i with
+  | case1 i hi he ih =>
+    rw [ih]
+    have hlt : i.toNat < l.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hi
+    have e1 : (i + 1).toNat = i.toNat + 1 := by
+      have := l.toNat_lt
+      rw [UInt64.toNat_add]; simp; omega
+    have ei : UInt64.ofNat i.toNat = i := by simp
+    constructor
+    · intro H k hk hkl
+      by_cases hk' : k = i.toNat
+      · subst hk'; rw [ei]; exact he
+      · exact H k (by omega) hkl
+    · intro H k hk hkl; exact H k (by omega) hkl
+  | case2 i hi he =>
+    simp only [Bool.false_eq_true, false_iff]
+    have hlt : i.toNat < l.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hi
+    intro H; exact he (by simpa using H i.toNat (Nat.le_refl _) hlt)
+  | case3 i hi =>
+    simp only [true_iff]
+    intro k hk hkl
+    have : l.toNat ≤ i.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hi
+    omega
+
 theorem erSliceEqLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n erSliceEqLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if eqW (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 2) (s₀.loc 1) (s₀.loc 4)
+      r.retOr [1] = [if eqF (erRdT s₀.mem) (s₀.loc 0) (s₀.loc 2) (s₀.loc 1) (s₀.loc 4)
         then 1 else 0]; ⊤⦄ := by
-  sorry
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := erSliceEqLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64_rdT_spec, ih] <;>
+      finish
 
 theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL) (n : Nat)
     (s₀ : St) (o1 n1 o2 n2 : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (n + 1)) "er_slice_eq" [o1, n1, o2, n2]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
-      r = [if n1 = n2 ∧ eqW (s₀.mem.arr64 EREC) o1 o2 n1 0 = true then 1 else 0]; ⊤⦄ := by
+      r = [if n1 = n2 ∧ eqF (erRdT s₀.mem) o1 o2 n1 0 = true then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, erSliceEqL]
   sym only [lang_grind, arena_grind] =>
@@ -91,7 +154,43 @@ theorem erSliceEq_refines (p : Prog) (hp : p.lookup "er_slice_eq" = some erSlice
     ⦃fun s => s = s₀⦄
     invoke p (exec p (n + 1)) "er_slice_eq" [o1, n1, o2, n2]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ decBool r = decide (l1 = l2) ∧ ResH r; ⊤⦄ := by
-  sorry
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hm, hloc, hr⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (erSliceEq_spec p hp n s₀ o1 n1 o2 n2)
+  subst hs0
+  refine ⟨hm, hloc, ?_, by rw [hr]; unfold ResH; split <;> first | exact hw0 | exact hw1⟩
+  rw [hr, decBool]
+  simp only [List.headD_cons]
+  rw [ite_bne]
+  obtain ⟨hl1, hg1⟩ := hslice?_get h1
+  obtain ⟨hl2, hg2⟩ := hslice?_get h2
+  have hR : RdOK (erecP s.mem) (erRdT s.mem) := erRdOK s.mem
+  congr 1
+  apply propext
+  constructor
+  · rintro ⟨rfl, he⟩
+    rw [eqF_iff] at he
+    apply List.ext_getElem?; intro j
+    by_cases hj : j < n1.toNat
+    · obtain ⟨w1, hw1, -, he1⟩ := hg1 j hj
+      obtain ⟨w2, hw2, -, he2⟩ := hg2 j hj
+      have := he j (by simp) hj
+      rw [hR.offN hw1 (by have := n1.toNat_lt; omega), hR.offN hw2 (by have := n1.toNat_lt; omega)] at this
+      rw [he1, he2, this]
+    · rw [List.getElem?_eq_none (by omega), List.getElem?_eq_none (by omega)]
+  · intro heq
+    subst heq
+    have hn : n1 = n2 := UInt64.toNat_inj.mp (hl1.symm.trans hl2)
+    subst hn
+    refine ⟨rfl, ?_⟩
+    rw [eqF_iff]
+    intro j _ hj
+    obtain ⟨w1, hw1, hl1', he1⟩ := hg1 j hj
+    obtain ⟨w2, hw2, hl2', he2⟩ := hg2 j hj
+    rw [he1] at he2
+    have := decI_inj hl1' hl2' (Option.some.inj he2)
+    rw [hR.offN hw1 (by have := n1.toNat_lt; omega), hR.offN hw2 (by have := n1.toNat_lt; omega), this]
 
 /-! ## `CoreS` across the `Nat` literal arms (`nat_pred_lit`)
 
@@ -122,7 +221,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cplL a' = cplL a)
     (hf : MemFrame A C m m')
     (h128 : ∀ b ∈ A, b.arr < 96 ∨ 128 ≤ b.arr) (hpins : (PINS : TieredArray) ∉ A)
-    (henv : AvoidA 129 144 A)
+    (henv : AvoidA 129 149 A)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)
     (hmA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
@@ -134,7 +233,21 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
       by decide) (hmode : ModeOK m') :
     CoreS dn m' a' vis fe M eb := by
-  sorry
+  simp only [cplL, Prod.mk.injEq] at hcpl
+  obtain ⟨hc, hp, hl⟩ := hcpl
+  refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => not_mem_envArrs (by have := henv b hb; omega))
+      (fun x hx => not_mem_envCtl (by have := hCenv x hx; omega)) hf, ?_, ?_, ?_,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
+      hf.size BSTK ▸ hS.bstk,
+      hS.den.of_arena hS.arena.base hD.base hc hp hl hf hscA hscC, hmode⟩
+  · rw [hc]
+    exact CoreRM.frame (A := A) (C := C)
+      (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
+      (fun x hx => (hC128 x hx).elim (fun h => .inl h) (fun h => .inr h)) hf hS.core
+  · rw [hp]; exact hS.pins.congr (hf.arr PINS hpins (by decide))
+  · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]; exact this
+  · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
+  · rw [hl]; exact hS.nwf
 
 /-- `CoreS`, with the stack as it was in `m₀`. -/
 def CoreK (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word)

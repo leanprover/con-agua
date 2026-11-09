@@ -169,20 +169,14 @@ import all ConAgua.Scan.Values
 
 @[expose] public section
 /-!
-# The verdict claims from the inductive arm's (lane `verdicts-b`, helper `sg`)
+# The verdict glue's program facts (lane `verdicts-b`, helper `sg`)
 
-The top-level glue: the sequential driver's verdict claims (`SeqVerdicts checkerProg`) and the
-threaded harness's (`ThreadVerdicts`) from one hypothesis, the inductive arm's error claim at the
-programs phase A runs (`IndArmVerdict`, the shape `indArmSpec_checker` has on the ok side).
-
-* Entry 1 (`entry1Verdict_of`): the prelude and the frontend by `checker_preludeStageE`,
-  `checker_frontStageE`; the fold by `foldStageE_checker`, the error half of
-  `foldStage_checker`: the run at `checkerProg` is the run at the substituted program
-  (`invoke_subPB`, errors included), where `fold_ref`'s error half at the loop's start
-  (`loop_start`, its `IstgG` by `istgG_of`) gives phase A's failure, and `TwinVerdict.fold` the
-  pipeline's.
-* Entry 2 (`entry2Verdict_of`) and the threads' `CPVerdict`: `check_pending`'s `CpG` at the
-  substituted program (`cpG_proved`; no inductive arm in phase B).
+`checkerProg_uceLookupsPB`: `unresolved_consts_error`'s lookups at the substituted checker program
+(`UceProg`, the verdict context's `VerdictCtxU`). The verdict claims themselves
+(`seqVerdicts_proved`, `threadVerdicts_proved`) are in `Verdict/IndArmTopE.lean`: entry 1 from its
+stages' error specs (`entry1Verdict_of`), entry 2 and the threads' calls from the jobs' error
+claims (`entry2Verdict_of`, `Verdict/CheckBE.lean`; `threads_twinVerdictPooled`,
+`Verdict/ThreadsE.lean`).
 -/
 
 set_option experimental.vcgen true
@@ -195,65 +189,7 @@ namespace L.Checker
 
 open L L.Arena L.Front L.Rom L.Compiler L.Ind ConAgua.Final
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The inductive arm's error claim at the programs phase A runs** (the remaining hypothesis):
-`check_ind_decl`'s claim (`IndArmSpecE`) at the substituted program of any pin-data buffer the
-loader accepts, at any injective name decoder with `Quot`'s name. -/
-def IndArmVerdict : Prop :=
-  ∀ (bs : List UInt8), RomOK bs → bs = romData ++ bs.drop romData.length →
-    ∀ (dn : NIdx → Option ConLeche.Name), DnInj dn → QuotDn dn →
-      IndArmSpecE (Prog.subPB bs checkerProg) dn
--/
-
 theorem checkerProg_uceLookupsPB (bs : List UInt8) : UceLookups (Prog.subPB bs checkerProg) := by
   prog_bundle []
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **Phase A's fold from `R7`, error half** (`foldStage_checker`'s): a failing
-`install_fold_go(0, cnt, 0)` with class `≠ 0` is the twin pipeline's failure. -/
-theorem foldStageE_checker (hia : IndArmVerdict) (b pb : ByteArray) (sz : TieredArray → Nat)
-    (hin : InputsOK b pb sz) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (cnt : Word) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
-    ⦃fun _ s' => LocEq s' s₀; fun e => Q7 b (checkerRels b pb sz) s₀.mem →
-      (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
-      e.cls ≠ 0 → TwinVerdict [b] e.cls⦄ := by
-  sorry
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **Entry 1's verdict claim** from the inductive arm's. -/
-theorem entry1Verdict_of_ind (hia : IndArmVerdict) : Entry1Verdict checkerProg :=
-  entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE,
-    fun b pb sz hin n hn s₀ cnt => foldStageE_checker hia b pb sz hin n hn s₀ cnt⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **What `check_pending`'s error arms assume, at the programs phase B runs**: proved, no
-hypothesis. -/
-theorem cpG_proved (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg)) :
-    CpG (Prog.subPB bs checkerProg) := by
-  have hnv := checkerProg_nvPB bs
-  have hU : UceProg (Prog.subPB bs checkerProg) :=
-    ⟨checkerProg_uceLookupsPB bs, strLitStored_core _ hP.knot.knot.str⟩
-  exact ⟨hnv, checkerProg_coreStubsEPB bs, ivgE_okT hP.cvg hP.apd hP.crk hnv hU⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`check_pending`'s error claim at the programs phase B runs** (`CPVerdict`). -/
-theorem cpVerdict_proved : CPVerdict := fun bs dn _ _ _ _ hP pins ds fe pend =>
-  checkPending_errT .verified pins dn ds _ fe pend hP rfl (cpG_proved bs hP)
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The sequential driver's verdict claims** from the inductive arm's. -/
-theorem seqVerdicts_of (hia : IndArmVerdict) : SeqVerdicts checkerProg := by
-  sorry
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The threaded harness's verdict claims** from the inductive arm's. -/
-theorem threadVerdicts_of (hia : IndArmVerdict) : ThreadVerdicts := by
-  sorry
--/
 
 end L.Checker

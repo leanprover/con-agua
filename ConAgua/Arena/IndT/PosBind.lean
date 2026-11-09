@@ -36,7 +36,6 @@ section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
   (henv : ConLeche.EnvWF env)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include henv in
 theorem bindRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : BindRef p dn vis fe env (n + 1) := by
   intro m a ctx fu po pl dep kb w ns c prog NS ctxP progP wP nsP hC hW hw h6 hns hP hA hc hctx hprog hwP hnsP hww
@@ -183,9 +182,9 @@ theorem bindRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : B
   rw [npbE.k_nest_pos.arm1]
   obtain ⟨s6, hs6, -, x, a4, hrun4, hQ4⟩ := RefE.run_ok hs hR h6c
   rw [hs6] at hQ4
-  obtain ⟨hC4, hg4, hk4, hnbH, hnbd, hns4, hP4, hA4, c4⟩ := hQ4
+  obtain ⟨hC4, hg4, hk4, hnbH, hnbd, hns4, hP4, hA4⟩ := hQ4
   have hS4 := hC4.stage
-  obtain ⟨-, v1, ⟨-, hnbP, -, -⟩, -⟩ := ConRon.Bridge.Inductives.nestPos_spec coreSpecV henv hc
+  obtain ⟨c4, v1, ⟨-, hnbP, -, -⟩, -⟩ := ConRon.Bridge.Inductives.nestPos_spec coreSpecV henv hc
     fu.toNat prog progP (dep + 1).toNat (kb + 1).toNat (decI (rb.headD 0)) _ NS nsP hwb
     a3 a4 x hC3.check ⟨dCtx_ext _ hx03 _ _ hctx, dProg_ext hx03 _ _ hprog, hb2P', dState_ext hx03 _ _ hnsP⟩ hrun4
   rw [pos2_word_succ hd1, pos2_word_succ hk1, hb2d] at hrun4
@@ -236,11 +235,9 @@ theorem bindRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : B
   refine RefE.ret (y := (x.1, decI (rz.headD 0), x.2.2)) (a' := a6) ?_
     ⟨hC4.of_pstep hS6 hA6 (p5.trans p6), ((hg13.trans hg4).trans hg5).trans hg6, by simpa using hk4,
       by simpa using hzH, by simp, by simpa using (hns4.grow (hg5.trans hg6) htop4),
-      (hP4.fr (MFr.ofAbF hab)).fr (mkForallW_mfr hmf), hA6,
-      ((p23.toCore hC.check).trans c4).trans ((p5.trans p6).toCore hC4.check)⟩
+      (hP4.fr (MFr.ofAbF hab)).fr (mkForallW_mfr hmf), hA6⟩
   simp only [StateT.run_bind, e5, except_ok_bind, e6]
   rfl
--/
 
 end steps
 

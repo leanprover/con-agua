@@ -168,12 +168,6 @@ namespace L.Checker
 
 open L L.Rom L.Arena L.Ind L.Compiler ConRon.Arena
 
-/-- **`pin_list_ok` refines `pinListOk`** at the substituted checker program (`BasisL.lean`'s
-comparison; its proof belongs with `basisRefs_of`). -/
-theorem checkerProg_pinListOkPB (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) : PinListOkRef (Prog.subPB bs checkerProg) := by
-  sorry -- ronsync2 p3e: pin_list_ok's refinement (BasisL, with basisRefs_of)
-
 /-- **`CbbProg` at the substituted checker program.** -/
 theorem checkerProg_cbbProgPB (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length) : CbbProg (Prog.subPB bs checkerProg) := by
@@ -181,7 +175,7 @@ theorem checkerProg_cbbProgPB (bs : List UInt8) (hr : RomOK bs)
   have hbasis : BasisRefs (Prog.subPB bs checkerProg) := basisRefs_of (checkerProg_basisLProgPB bs hr hpre)
   have hleaf : DcLeafProg (Prog.subPB bs checkerProg) := (declConstsProg_checker bs hr hpre).leaf
   have hcl : CbbClosed (Prog.subPB bs checkerProg) := closedWL_subPB bs checkerProg_cbbClosed
-  prog_bundle [hrom, hbasis, hleaf, hcl, checkerProg_pinListOkPB bs hr hpre]
+  prog_bundle [hrom, hbasis, hleaf, hcl, checkerProg_pinListOkRefPB (bs := bs) hr hpre]
 
 /-- **`check_basis_block`'s contract at the substituted checker program.** -/
 theorem cbbRef_checker (bs : List UInt8) (hr : RomOK bs)
