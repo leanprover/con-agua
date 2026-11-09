@@ -83,7 +83,13 @@ open L.Arena
 theorem pos2Pin_spec (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ pos2PinW s₀.mem i = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  simp only [invoke_eq _ hp, callFn, pinAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [pos2PinW, pinW_eq, rdW_eq]
 
 end L.Ind
 

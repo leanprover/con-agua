@@ -57,10 +57,6 @@ theorem decCV_new {a a' : Array Word} {N q : Nat} {nm lo ll ty : Word} {lps : Li
     decCV (aread a') q = some ⟨decI nm, lps, decI ty⟩ := by
   sorry
 
-theorem erecP_tagRead {m : Mem} {j : Nat} {w : Word} (h : erecP m j = some w) :
-    (m.arr64 EREC)[j]? = some w := by
-  rw [← erecP_getE (erecP_lt h)]; exact h
-
 theorem ctc_ok {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) {x : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) x.toNat = some ci) :

@@ -132,8 +132,8 @@ theorem eqW_ok (n : Nat) : ∀ (m : Mem) (o1 l1 o2 l2 r : Word) (ws1 ws2 : List 
 def lpsOneW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, rc, wo, wl =>
-    loK1 n wo wl (erToIwW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) rc + 1))
-      (rdW (m.arr64 EREC) (rdW (m.arr64 IW) rc + 2)))
+    loK1 n wo wl (erToIwW n m (erRd m (rdW (m.arr64 IW) rc + 1))
+      (erRd m (rdW (m.arr64 IW) rc + 2)))
 where
   loK1 (n : Nat) (wo wl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
     | none => none
@@ -145,8 +145,8 @@ where
 section armsO
 variable (n : Nat) (m m1 : Mem) (rc wo wl : Word) (rp : List Word) (e : Word)
 theorem lpsOneW_step : lpsOneW (n + 1) m rc wo wl = lpsOneW.loK1 n wo wl
-    (erToIwW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) rc + 1))
-      (rdW (m.arr64 EREC) (rdW (m.arr64 IW) rc + 2))) := by simp [lpsOneW]
+    (erToIwW n m (erRd m (rdW (m.arr64 IW) rc + 1))
+      (erRd m (rdW (m.arr64 IW) rc + 2))) := by simp [lpsOneW]
 theorem loK1_some : lpsOneW.loK1 n wo wl (some (rp, m1)) =
     lpsOneW.loK2 m1 (eqW n m1 (rp.headD 0) (rp.getD 1 0) wo wl) := by simp [lpsOneW.loK1]
 theorem loK2_some : lpsOneW.loK2 m1 (some e) = some ([e], m1) := by simp [lpsOneW.loK2]

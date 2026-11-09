@@ -157,7 +157,7 @@ theorem plW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
-    ilF_ok dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
+    ilF_ok vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
   refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hH, by simpa using hx⟩
   simp only [paramLevels, StateT.run_bind, hrun1]
   exact hrun2

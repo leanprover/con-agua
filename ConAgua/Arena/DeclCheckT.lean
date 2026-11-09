@@ -61,7 +61,8 @@ def ArmSpecT (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
   ⦃fun s => s = s₀⦄ invoke p (exec p n) f [i, vis]
   ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe d) a₀ ∧
     LoopR pins s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0)
-      (AM.res (checkDecl V pins fe d) a₀) ds ∧ CoreMemos s'.mem ∧ IndMemos s'.mem; ⊤⦄
+      (AM.res (checkDecl V pins fe d) a₀) ds ∧ CoreMemos s'.mem ∧ IndMemos s'.mem ∧
+    IWGrow s₀.mem s'.mem; ⊤⦄
 
 /-- **The shape of an arm's error claim** (`ArmSpecT`'s error half): a failing run of the arm on
 record `d` claims the twin's `checkDecl` failure from the same state. -/
@@ -147,11 +148,13 @@ structure CdG (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
 
 /-- What `check_decl` gives besides the twin's run, a view `w` and the memory `m'`: the job
 relation and the memos. -/
-structure CdPost (pins : List INatOpPinSet) (ds : Array IDeclaration) (w : Word) (x : IFEnv)
-    (m' : Mem) (a' : AState) : Prop where
+structure CdPost (pins : List INatOpPinSet) (ds : Array IDeclaration) (m : Mem) (w : Word)
+    (x : IFEnv) (m' : Mem) (a' : AState) : Prop where
   loop : LoopR pins m' a' w x ds
   core : CoreMemos m'
   ind : IndMemos m'
+  /-- `check_decl` only grows the pools. -/
+  grow : IWGrow m m'
 
 section cd
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet)
@@ -170,7 +173,7 @@ def CheckDeclSpecT : Prop :=
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl mode pins fe (dsAt ds i)) a₀ ∧
       LoopR pins s'.mem (AM.st (checkDecl mode pins fe (dsAt ds i)) a₀) (r.headD 0)
         (AM.res (checkDecl mode pins fe (dsAt ds i)) a₀) ds ∧ CoreMemos s'.mem ∧
-      IndMemos s'.mem; ⊤⦄
+      IndMemos s'.mem ∧ IWGrow s₀.mem s'.mem; ⊤⦄
 
 end cd
 
@@ -186,16 +189,16 @@ theorem cd_arm {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option ConLe
     (hF : ∃ env, FoldOK env fe a) (hden : ∃ x, Frontend.denoteDecl a.store d = some x)
     (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hIM : IndMemos m) :
     RefE (CdG pins dn ds p) (checkDeclE.k_check_ind_decl p (callE p n f [i, vis] m))
-      (checkDecl V pins fe d) a (fun v x a' => CdPost pins ds v.1 x v.2 a') := by
+      (checkDecl V pins fe d) a (fun v x a' => CdPost pins ds m v.1 x v.2 a') := by
   rcases c : callE p n f [i, vis] m with e | ⟨r, m'⟩
   · rw [checkDeclE.k_check_ind_decl.none]
     exact fun hG => hE hG n hn m a vis fe i hi hd hok hR hS hF hden hPD hIM e c
   rw [checkDeclE.k_check_ind_decl.arm1]
   have h1 := callW_of_callE c
-  obtain ⟨s', hs', -, hok', hL, hc, hIM'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  obtain ⟨s', hs', -, hok', hL, hc, hIM', hG'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (hA n hn ⟨m, Locals.init []⟩ a vis fe i hi hd hok hR hS hF hden hPD hIM) h1
   subst hs'
-  exact RefE.ret (AM.run_of_ok _ _ hok') ⟨by simpa using hL, hc, hIM'⟩
+  exact RefE.ret (AM.run_of_ok _ _ hok') ⟨by simpa using hL, hc, hIM', by simpa using hG'⟩
 
 /-- **`check_decl` refines `checkDecl` under `StageT`, both outcomes**, for the front's record
 kinds: each arm by its contract (`CdProg.arms`) and its claim (`CdG`), the inductive one by its
@@ -212,7 +215,7 @@ theorem cd_ref {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     (hF : ∃ env, FoldOK env fe a) (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
     (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hIM : IndMemos m) :
     RefE (CdG pins dn ds p) (checkDeclE p N m i vis) (checkDecl V pins fe (dsAt ds i)) a
-      (fun v x a' => CdPost pins ds v.1 x v.2 a') := by
+      (fun v x a' => CdPost pins ds m v.1 x v.2 a') := by
   sorry
 
 /-- **`check_decl` refines `checkDecl` under `StageT`**, for the front's record kinds: the ok
@@ -227,6 +230,6 @@ theorem checkDecl_loopT {pins : List INatOpPinSet} {dn : NIdx → Option ConLech
     (cd_ref hP hFD hLD (by omega) hi hok hR hS hF hden hPD hIM)) ?_
   rintro r s' ⟨hl, x, a', run, hR'⟩
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ run
-  exact ⟨hl, hok', by rw [hst, hres]; exact hR'.loop, hR'.core, hR'.ind⟩
+  exact ⟨hl, hok', by rw [hst, hres]; exact hR'.loop, hR'.core, hR'.ind, hR'.grow⟩
 
 end L.Arena

@@ -157,7 +157,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     rw [nhK1_ind (h := hf0) (h3 := h3)] at h
     generalize r1.tail.headD 0 = ciq at h hfind hci h3 hciq
     have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
-      have : erecP m (ciq.toNat) = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
+      have : erecP m (ciq.toNat) = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega) (by have := hS.iw.er; have := hS.iw.erCap; omega)
       simp only [nat?, this]
       have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
       have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3

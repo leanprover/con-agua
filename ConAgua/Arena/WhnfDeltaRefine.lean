@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.WhnfCoreProj
+public import ConAgua.Arena.ErecRd
 import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -42,20 +43,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-theorem decCV_words {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    (∃ w, a q = some w ∧ w.toNat < 2 ^ 32 ∧ cv.name = decI w) ∧
-    (∃ w, a (q + 2) = some w ∧ cv.levelParams.length = w.toNat) ∧
-    (∃ w, a (q + 3) = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w) := by
-  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
-  obtain ⟨n, hn, l, hl, t, ht, hc⟩ := h
-  cases Option.some.inj hc
-  refine ⟨hd?_eq hn, ?_, hd?_eq ht⟩
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl
-  obtain ⟨o, ho, c, hc', hs⟩ := hl
-  simp only [nat?, Option.map_eq_some_iff] at hc'
-  obtain ⟨w, hw, rfl⟩ := hc'
-  exact ⟨w, hw, by simpa using mapM_option_length _ _ _ hs⟩
-
 /-! ## Environment records: the shape lemmas the nat-literal and delta functions read -/
 
 theorem rdW_off {b : Array Word} {q c : Word} {i : Nat} {w : Word} (hb : b[i]? = some w)
@@ -64,119 +51,6 @@ theorem rdW_off {b : Array Word} {q c : Word} {i : Nat} {w : Word} (hb : b[i]? =
   have : (q + c).toNat = i := by
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; omega
   simp only [rdW, this, hb]; rfl
-
-theorem rd_off {R : Nat → Option Word} {rd : Word → Word}
-    (hrd : ∀ a v, R a.toNat = some v → rd a = v) (h64 : ∀ i v, R i = some v → i < 2 ^ 64)
-    {q c : Word} {i : Nat} {w : Word} (hb : R i = some w) (hi : q.toNat + c.toNat = i) :
-    rd (q + c) = w := by
-  have hlt := h64 _ _ hb
-  have : (q + c).toNat = i := by
-    rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; omega
-  exact hrd _ _ (by rw [this]; exact hb)
-
-/-- Shape of a record whose `decCV` succeeds at `q + 1`, read at the words `q + 2`, `q + 3`, `q + 4`. -/
-theorem decCV_rd {R : Nat → Option Word} {rd : Word → Word}
-    (hrd : ∀ a v, R a.toNat = some v → rd a = v) (h64 : ∀ i v, R i = some v → i < 2 ^ 64)
-    {q : Word} {cv : IConstantVal} (h : decCV R (q.toNat + 1) = some cv) :
-    hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams ∧
-    cv.levelParams.length = (rd (q + 3)).toNat ∧
-    cv.type = decI (rd (q + 4)) ∧ (rd (q + 4)).toNat < 2 ^ 32 := by
-  obtain ⟨-, ⟨w3, hw3, hlen⟩, ⟨w4, hw4, hl4, hty⟩⟩ := decCV_words h
-  have e3 : rd (q + 3) = w3 := rd_off hrd h64 hw3 (by simp <;> omega)
-  have e4 : rd (q + 4) = w4 := rd_off hrd h64 hw4 (by simp <;> omega)
-  refine ⟨?_, by rw [e3]; exact hlen, by rw [e4]; exact hty, by rw [e4]; exact hl4⟩
-  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
-  obtain ⟨n, hn, l, hl, t, ht, hc⟩ := h
-  cases Option.some.inj hc
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl
-  obtain ⟨o, ho, c, hc', hs⟩ := hl
-  simp only [nat?, Option.map_eq_some_iff] at ho hc'
-  obtain ⟨w2, hw2, rfl⟩ := ho
-  obtain ⟨w3', hw3', rfl⟩ := hc'
-  have e2 : rd (q + 2) = w2 := rd_off hrd h64 hw2 (by simp <;> omega)
-  have e3' : w3' = w3 := by
-    have := hw3'.symm.trans hw3; exact Option.some.inj this
-  subst e3'
-  rw [e2, e3]
-  exact hs
-
-/-- The kind word of a decoded record, and what each kind decodes to. -/
-theorem decCI_split {R : Nat → Option Word} {rd : Word → Word} {q : Word}
-    (hrd : ∀ a v, R a.toNat = some v → rd a = v) (h64 : ∀ i v, R i = some v → i < 2 ^ 64)
-    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
-    (rd q = 1 → ∃ cv v hint, ci = .defnInfo cv v hint ∧ decCV R (q.toNat + 1) = some cv ∧
-      v = decI (rd (q + 5)) ∧ (rd (q + 5)).toNat < 2 ^ 32) ∧
-    (rd q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) ∧
-    (rd q = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV R (q.toNat + 1) = some cv) ∧
-    (rd q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) ∧
-    (rd q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV R (q.toNat + 1) = some cv) ∧
-    (rd q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
-  cases hq : R q.toNat with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  have hrdq : rd q = w := hrd _ _ hq
-  rw [hrdq]
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  by_cases w1 : w.toNat = 1
-  · have wv : w = 1 := UInt64.toNat_inj.mp (by rw [w1]; rfl)
-    subst wv
-    simp only [show UInt64.toNat 1 = 1 from rfl, Option.bind_eq_some_iff] at h
-    obtain ⟨cv, hcv, v, hv, hint, -, hc⟩ := h
-    cases hc
-    obtain ⟨vw, hvw, hvl, rfl⟩ := hd?_eq hv
-    have hlt := h64 _ _ hvw
-    have e5n : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
-    have e5 : rd (q + 5) = vw := hrd _ _ (by rw [e5n]; exact hvw)
-    refine ⟨fun _ => ⟨cv, _, _, rfl, hcv, by rw [e5], by rw [e5]; exact hvl⟩, fun hn => absurd rfl hn,
-      fun h3 => absurd h3 (by decide), fun _ _ _ => by simp, fun h4 => absurd h4 (by decide),
-      fun _ _ _ _ => by simp⟩
-  by_cases w3 : w.toNat = 3
-  · have wv : w = 3 := UInt64.toNat_inj.mp (by rw [w3]; rfl)
-    subst wv
-    simp only [show UInt64.toNat 3 = 3 from rfl, Option.bind_eq_some_iff] at h
-    obtain ⟨cv, hcv, caps, -, hc⟩ := h
-    cases hc
-    refine ⟨fun h1 => absurd h1 (by decide), fun _ _ _ _ => by simp, fun _ => ⟨cv, _, rfl, hcv⟩,
-      fun hn => absurd rfl hn, fun h4 => absurd h4 (by decide), fun _ _ _ _ => by simp⟩
-  by_cases w4 : w.toNat = 4
-  · have wv : w = 4 := UInt64.toNat_inj.mp (by rw [w4]; rfl)
-    subst wv
-    simp only [show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff] at h
-    obtain ⟨cv, hcv, np, -, nf, -, hc⟩ := h
-    cases hc
-    refine ⟨fun h1 => absurd h1 (by decide), fun _ _ _ _ => by simp, fun h3 => absurd h3 (by decide),
-      fun _ _ _ => by simp, fun _ => ⟨cv, _, _, rfl, hcv⟩, fun hn => absurd rfl hn⟩
-  have n1 : w ≠ 1 := fun e => w1 (by rw [e]; rfl)
-  have n3 : w ≠ 3 := fun e => w3 (by rw [e]; rfl)
-  have n4 : w ≠ 4 := fun e => w4 (by rw [e]; rfl)
-  refine ⟨fun e => absurd e n1, ?_, fun e => absurd e n3, ?_, fun e => absurd e n4, ?_⟩
-  · intro _ cv v hint hc; subst hc
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h w1 w3 w4; simp [Option.bind_eq_some_iff] at h w1 w3 w4)
-  · intro _ cv v hc; subst hc
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h w1 w3 w4; simp [Option.bind_eq_some_iff] at h w1 w3 w4)
-  · intro _ cv v n hc; subst hc
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h w1 w3 w4; simp [Option.bind_eq_some_iff] at h w1 w3 w4)
-
-/-- The tagged read `EREC⦃a⦄` L makes, as a function of the address. -/
-abbrev erRdT (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 0xFFFFFFFFFF)
-
-theorem erRdT_of {m : Mem} (a v : Word) (h : erecP m a.toNat = some v) : erRdT m a = v := by
-  obtain ⟨-, hget⟩ := erecP_tagRead h
-  simp only [erRdT, rdW, hget, Option.getD_some]
-
-/-- `decCI_split` at the record pool and L's tagged read. -/
-theorem decCI_splitE {m : Mem} {q : Word} {ci : IConstantInfo} (h : decCI (erecP m) q.toNat = some ci) :
-    (erRdT m q = 1 → ∃ cv v hint, ci = .defnInfo cv v hint ∧ decCV (erecP m) (q.toNat + 1) = some cv ∧
-      v = decI (erRdT m (q + 5)) ∧ (erRdT m (q + 5)).toNat < 2 ^ 32) ∧
-    (erRdT m q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) ∧
-    (erRdT m q = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
-    (erRdT m q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) ∧
-    (erRdT m q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
-    (erRdT m q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) :=
-  decCI_split (rd := erRdT m) erRdT_of (fun _ _ hv => erecP_lt64 hv) h
 
 /-! ## Calls of the leaf readers, as facts about their runs -/
 
@@ -522,7 +396,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   obtain ⟨cv, caps, rfl, hcv⟩ := hind (by simpa using hk3)
-  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (rd := erRdT s₀.mem) erRdT_of (fun _ _ hv => erecP_lt64 hv) hcv
+  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
   rw [ite_eq_right hk3] at hW
   by_cases hk4 : erRdT s₀.mem (q + 3) ≠ 0
   · rw [ite_eq_left hk4] at hW
@@ -638,7 +512,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right hk4] at hW
   obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
-  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (rd := erRdT s₀.mem) erRdT_of (fun _ _ hv => erecP_lt64 hv) hcv
+  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
   cases h1 : callW p n "pin_at" [1] s₀.mem with
   | none => rw [h1, natZeroOkW.k_pin_at.none] at hW; cases hW
   | some q₁ =>
@@ -659,9 +533,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hE : ∀ x : Word, rdW (m₂.arr64 (tierA EREC (x >>> 40))) (x &&& 0xFFFFFFFFFF) = erRdT s₀.mem x := by
     have h0 := hfr.arr_eq EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
     have h1 := hfr.arr_eq (tier1 EREC) (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
-    intro x; simp only [erRdT, tierA]; cases ((x >>> 40) &&& 1 != 0)
-    · exact congrArg (rdW · _) h0
-    · exact congrArg (rdW · _) h1
+    exact erRdT_congr h0 h1
   simp only [hE] at hW
   have hrun := AM.run_of_ok _ _ hok
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
@@ -794,7 +666,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right hk4] at hW
   obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
-  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (rd := erRdT s₀.mem) erRdT_of (fun _ _ hv => erecP_lt64 hv) hcv
+  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
   by_cases hk3 : erRdT s₀.mem (q + 3) ≠ 0
   · rw [ite_eq_left hk3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -831,9 +703,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hE : ∀ x : Word, rdW (m₂.arr64 (tierA EREC (x >>> 40))) (x &&& 0xFFFFFFFFFF) = erRdT s₀.mem x := by
     have h0 := hfr.arr_eq EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
     have h1 := hfr.arr_eq (tier1 EREC) (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
-    intro x; simp only [erRdT, tierA]; cases ((x >>> 40) &&& 1 != 0)
-    · exact congrArg (rdW · _) h0
-    · exact congrArg (rdW · _) h1
+    exact erRdT_congr h0 h1
   have hrun := AM.run_of_ok _ _ hok
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by
