@@ -9,6 +9,7 @@ import ConAgua.Checker.LeafAll
 import ConAgua.Checker.LoopAll
 import ConAgua.Checker.RomProgB
 import ConAgua.Rom.CIReadRefs
+import ConAgua.Rom.CacheRef
 public import ConAgua.Arena.LoopStart
 import ConAgua.Checker.IndMemoClosed
 meta import ConAgua.Checker.LoopProgInd
@@ -328,11 +329,13 @@ theorem checkerProg_natAgreePB (bs : List UInt8) :
 theorem checkerProg_romCIProg (bs : List UInt8) : RomCIProg bs (Prog.subPB bs checkerProg) := by
   prog_bundle [checkerProg_itemsProg bs]
 
-/-- **The ROM readers of the substituted program refine the twin**, for a buffer that
-`pb_check` accepts. -/
-theorem checkerProg_romRefsPB (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) : RomRefs (Prog.subPB bs checkerProg) :=
-  romRefs_of _ ⟨bs, _, hr, hpre, checkerProg_romCIProg bs⟩
+theorem checkerProg_romCacheProg (bs : List UInt8) : RomCacheProg (Prog.subPB bs checkerProg) := by
+  prog_bundle []
+
+/-- **The cached ROM readers of the substituted program refine the twin** (they read the cache,
+not the buffer: `bs` is any). -/
+theorem checkerProg_romRefsPB (bs : List UInt8) : RomRefs (Prog.subPB bs checkerProg) :=
+  romRefs_of _ (checkerProg_romCacheProg bs)
 
 /-! ## The loop's program hypotheses -/
 
@@ -343,7 +346,7 @@ theorem checkerProg_loopCalleesPB (bs : List UInt8) (hr : RomOK bs)
     ∀ dn, L.Ind.DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn → QuotDn dn →
       LoopCallees dn (Prog.subPB bs checkerProg) := by
   intro dn hdn harm hq
-  have hrom := checkerProg_romRefsPB bs hr hpre
+  have hrom := checkerProg_romRefsPB bs
   prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
     checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
     checkerProg_natGateIn.subPB bs, checkerProg_dgIn.subPB bs, checkerProg_indIn.subPB bs,

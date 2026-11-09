@@ -151,7 +151,7 @@ theorem TwinOK.ofCheck {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
     exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
   have hc := hok.caches
   have hp := hok.pins
-  refine ⟨hc.readL, hc.readLs, ?_, hm.erec, hm.spn, hm.memos, hm.bstk, ?_⟩
+  refine ⟨hc.readL, hc.readLs, ?_, hm.erec, hm.spn, hm.memos, hm.bstk, ?_, hm.rom⟩
   · exact hL.ns
   refine ⟨fun x u hv => hLA u (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1,
     fun x c us hv => hLsA us (hw.lschildOK x _ hv us (by simp [ENodeView.lschildren])).1,
@@ -372,10 +372,12 @@ theorem IndMemos.frameLo (hA : LoArr A) (hC : LoCtl C) (hf : MemFrame A C m m') 
 
 theorem TwinMem.frameLo {dn : NIdx → Option ConLeche.Name} {a a' : AState} (hA : LoArr A)
     (hC : LoCtl C) (hf : MemFrame A C m m') (h : TwinMem dn m a)
-    (hN : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a'.store.ns k = some x) :
+    (hN : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a'.store.ns k = some x)
+    (hp : persKey a' = persKey a) :
     TwinMem dn m' a' :=
   ⟨by rw [hf.size]; exact h.erec, by rw [hf.size]; exact h.spn, by rw [hf.size]; exact h.bstk,
-    h.memos.frameLo hA hC hf, hN⟩
+    h.memos.frameLo hA hC hf, hN,
+    (h.rom.frame0 (hA.arr hf (by decide)) (hA.arr hf (by decide)) (hC.ctl hf (by decide))).pers hp⟩
 
 end lo
 
@@ -405,7 +407,7 @@ theorem JobR.enter {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
   refine ⟨?_, ?_, ?_, modeOK_enterMem _ h62, hJ.idx.frameLo hA hC hf, hJ.below.frameLo hA hC hf,
     by rw [stampW_frameLo hC hf]; exact hJ.stamp, declsF_frameLo hA hf hJ.decls, iwOK_frameLo hA hC hf hJ.iw,
     by rw [hC.ctl hf (by decide)]; exact hJ.top1, pinSetsR_frameLo hA hC hf hJ.pinsets,
-    hJ.mem.frameLo hA hC hf fun k x e => ?_, by rw [pinW_frame hf (hA.not_hi (by decide))]; exact hJ.flag,
+    hJ.mem.frameLo hA hC hf (fun k x e => ?_) (by rw [enterScratch_st]; rfl), by rw [pinW_frame hf (hA.not_hi (by decide))]; exact hJ.flag,
     hJ.memos.frameLo hA hC hf, hJ.fsize⟩
   · rw [hst]; exact ArenaD.enter _ _ hJ.arena hlo h62 c1 c2 c3 c4 hpt
   · exact hJ.core.frame (.of_low scrArrs_low (by decide))
@@ -539,7 +541,8 @@ theorem JobM.stage {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
       (eC 151 (by decide) (by decide) (by decide) (by decide))
   · exact ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,
       by rw [hf.size]; exact h.mem.bstk, h.mem.memos.frame hf (by simp) (by decide),
-      h.mem.dnN⟩
+      h.mem.dnN, h.mem.rom.frame0 (eA _ (by decide)) (eA _ (by decide))
+        (eC 129 (by decide) (by decide) (by decide) (by decide))⟩
   · exact h.memos.frame hf (by simp) (fun x hx => by rcases hC x hx with rfl|rfl|rfl|rfl <;> decide)
 
 /-! ## The job's write sets
@@ -555,7 +558,7 @@ def IdxArr (b : TieredArray) : Bool :=
 /-- The arrays `and_pin_ok` may write. -/
 def apP (b : TieredArray) : Bool :=
   b != DECL && b != DLP && !IdxArr b && b != ILFM && b != L.Stubs.CRM &&
-    (decide (b.arr < 201) || decide (208 < b.arr))
+    (decide (b.arr < 201) || decide (208 < b.arr)) && b != L.Rom.ROMC
 
 def apA : List TieredArray := leafA.filter apP
 
@@ -567,7 +570,8 @@ def apQ (x : Word) : Bool :=
 def apC : List Word := leafC.filter apQ
 
 /-- The arrays `check_decl` may write. -/
-def cdA : List TieredArray := checkerWordArrays.filter fun b => !IdxArr b && b != PINS
+def cdA : List TieredArray :=
+  checkerWordArrays.filter fun b => !IdxArr b && b != PINS && b != L.Rom.ROMC
 
 /-- The `CTL` words `check_decl` may write. -/
 def cdC : List Word := ((List.range 1024).filter fun x => x != 128).map UInt64.ofNat
@@ -576,14 +580,20 @@ theorem apA_mem {b : TieredArray} (h : b ∈ apA) : b ∈ leafA ∧ apP b = true
 theorem apC_mem {x : Word} (h : x ∈ apC) : x ∈ leafC ∧ apQ x = true := List.mem_filter.mp h
 
 theorem apA_idx {b : TieredArray} (h : b ∈ apA) : IdxArr b = false := by
-  have := (apA_mem h).2; simp only [apP, Bool.and_eq_true, Bool.not_eq_true'] at this; exact this.1.1.1.2
+  have := (apA_mem h).2; simp only [apP, Bool.and_eq_true, Bool.not_eq_true'] at this; exact this.1.1.1.1.2
 
 theorem cdA_idx {b : TieredArray} (h : b ∈ cdA) : IdxArr b = false := by
   have := (List.mem_filter.mp h).2; simp only [Bool.and_eq_true, Bool.not_eq_true'] at this
-  exact this.1
+  exact this.1.1
 
 theorem cdA_pins : (PINS : TieredArray) ∉ cdA := fun h => by
   have := (List.mem_filter.mp h).2; simp at this
+
+theorem cdA_romc : (L.Rom.ROMC : TieredArray) ∉ cdA := fun h => by
+  have := (List.mem_filter.mp h).2; simp at this
+
+theorem apA_romc : (L.Rom.ROMC : TieredArray) ∉ apA := fun h => by
+  have := (apA_mem h).2; simp [apP] at this
 
 theorem apC_128 : (128 : Word) ∉ apC := fun h => by have := (apC_mem h).2; simp [apQ] at this
 
@@ -642,7 +652,8 @@ theorem andPin_job {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
       (hfr.ctl _ (fun h => by have := (apC_mem h).2; simp [apQ] at this))
       (hfr.ctl _ (fun h => by have := (apC_mem h).2; simp [apQ] at this))
   · refine ⟨by rw [hfr.size]; exact hS.mem.erec, by rw [hfr.size]; exact hS.mem.spn,
-      by rw [hfr.size]; exact hS.mem.bstk, ?_, fun j x e => hext.lss.ls.ns j x (hS.mem.dnN j x e)⟩
+      by rw [hfr.size]; exact hS.mem.bstk, ?_, fun j x e => hext.lss.ls.ns j x (hS.mem.dnN j x e),
+      (hS.mem.rom.grow (hfr.arr _ apA_romc (by decide)) hgr).pers sorry⟩ -- ronsync2 p3o: `andPinOk` keeps the persistent tables (scratch tier on)
     have nA := fun {b : TieredArray} (h : b ∉ leafA) => fun hb : b ∈ apA => h (apA_mem hb).1
     have nC := fun {x : Word} (h : x ∉ leafC) => fun hx : x ∈ apC => h (apC_mem hx).1
     exact hS.mem.memos.frame hfr ⟨nA leafA_memo.1, nA leafA_memo.2⟩ ⟨nC leafC_memo.1, nC leafC_memo.2⟩
@@ -654,7 +665,7 @@ theorem andPin_job {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
   · refine hS.memos.frame hfr (fun b hb => ?_) (fun x hx => ?_)
     · have := (apA_mem hb).2; simp only [apP, Bool.and_eq_true, bne_iff_ne, ne_eq, Bool.or_eq_true,
         decide_eq_true_eq] at this
-      exact ⟨this.1.1.2, this.1.2, this.2⟩
+      exact ⟨this.1.1.1.2, this.1.1.2, this.1.2⟩
     · have := (apC_mem hx).2; simp only [apQ, Bool.and_eq_true, bne_iff_ne, ne_eq, Bool.or_eq_true,
         decide_eq_true_eq] at this
       exact ⟨this.1.1.2, this.1.2, this.2⟩
@@ -734,11 +745,13 @@ theorem JobM.ofDrop {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Na
   · have h6 := pinSetsR_frameLo hA hCl hf hR.pinsets
     exact PinSetsR.grow h6 (RecGrow.of_eq (eA7 _ (by decide)) (e7 _ (by decide))) (e7 _ (by decide))
       (e7 _ (by decide))
-  · refine ⟨?_, ?_, ?_, (hcm.frameLo hA hCl hf).frame h7 (by simp) (by decide), hT.dnN⟩ <;>
-      rw [h7.size, hf.size]
-    · exact hT.erec
-    · exact hT.spn
-    · exact hT.bstk
+  · refine ⟨?_, ?_, ?_, (hcm.frameLo hA hCl hf).frame h7 (by simp) (by decide), hT.dnN,
+      hT.rom.frame0 (by rw [eA7 _ (by decide), hA.arr hf (by decide)]) ?_ ?_⟩
+    · rw [h7.size, hf.size]; exact hT.erec
+    · rw [h7.size, hf.size]; exact hT.spn
+    · rw [h7.size, hf.size]; exact hT.bstk
+    · rw [eA7 _ (by decide), hA.arr hf (by decide)]
+    · rw [e7 _ (by decide), hCl.ctl hf (by decide)]
   · rw [pinW_frame h7 (by simp), pinW_frame hf (hA.not_hi (by decide))]; exact hfl
   · exact (hIM.frameLo hA hCl hf).setCtl 130 0 (by decide)
 
@@ -904,7 +917,9 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
   have hT5 : TwinMem dn s5.mem ({ store := EStore.reset a5.store false, memos := a5.memos, caches := Caches.empty, pins := a5.pins } : AState) :=
     ⟨by rw [hfr5.size]; exact hS4.mem.erec, by rw [hfr5.size]; exact hS4.mem.spn,
       by rw [hfr5.size]; exact hS4.mem.bstk, hP5.core,
-      fun j x e => hx6.lss.ls.ns j x (hdn j x e) (hJ.mem.dnN j x e)⟩
+      fun j x e => hx6.lss.ls.ns j x (hdn j x e) (hJ.mem.dnN j x e),
+      (hS4.mem.rom.grow (hfr5.arr _ cdA_romc (by decide)) hP5.grow).pers
+        sorry⟩ -- ronsync2 p3o: `checkDecl` with the scratch tier on keeps the persistent tables
   refine ⟨⟨JobM.ofDrop hP5.loop hP5.core hP5.ind
       (by rw [pinW_frame hfr5 cdA_pins]; exact hS4.flag) hT5 hJ.fsize hS3.idx htop3 hf35
       (hgr4.trans hP5.grow) hC6 hf56, ⟨EStore.dropScratch_wf hst5.wf⟩, rfl, rfl⟩, hx6, ?_⟩
