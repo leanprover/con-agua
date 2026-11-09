@@ -60,7 +60,7 @@ structure NitPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 (`nty_ref`), `pi_binders`, `e_view` and `nest_occ_any` (lifted), the level comparison (`lef_ref`,
 under `StageC` with the context's and key's denotations). -/
 theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
-    (hq : KnotStageProg p) (hF : FtProg p) (hWt : WhnfTopE p)
+    (hq : KnotStageProg p) (hF : FtProg p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
     (k : Nat) (hk62 : k ≤ 2 ^ 62) {m : Mem}
     {a : AState} {ctx hi key : Word} {HI : Nat} {c : NestCtx} {kk : NestKey} {ctxP : ConLeche.NestCtx}
@@ -68,7 +68,7 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
     (hU : UCtx dn vis fe m ctx c) (hk : decNK m key.toNat = some kk) (hkin : NKIn m key.toNat (· < iwTop m))
     (hksl : NKSl m key) (hP : PosMR m) (hctx : dCtx a.store env.find? c = some ctxP)
     (hkey : dKey a.store kk = some keyP) :
-    RefE (closedNV p _root_.L.Checker.nvFns = true) (nitE p k m vis ctx hi key)
+    RefE (WtG p) (nitE p k m vis ctx hi key)
       (ConRon.Arena.nestInstType V fe c HI kk) a (fun v x a' => NitPost dn vis fe m v.1 v.2 x a') := by
   cases k with
   | zero => rw [nitE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
@@ -78,7 +78,7 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
   -- `nest_inst_type_ty`: the twin up to `instPisWith`
   change RefE _ _ (ntyTV fe kk _) _ _
   rw [ntyTV_eq]
-  refine RefE.bindE (fun _ => rfl) id (nty_ref L.ty hq hF hIlpf hWt henv k (by omega) hC hA hk hkin hksl hkey)
+  refine RefE.bindE (fun _ => rfl) id (nty_ref L.ty hq hF hIlpf henv k (by omega) hC hA hk hkin hksl hkey)
     fun ⟨w1, m1⟩ ty a5 _ hN => ?_
   have hS1 := hN.stage.stage
   have hg1 := hN.grow
@@ -147,7 +147,7 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
   rw [← hud', ← hsd]
   -- `lvl_eq_fueled`
   rw [lefT_bind]
-  refine RefE.bindE (fun _ => rfl) (fun hnv => nvAt_of hnv (_root_.L.Checker.nv_mem (by decide +kernel)))
+  refine RefE.bindE (fun _ => rfl) (fun hG => nvAt_of hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)))
     (lef_ref hcl hLC k hC3.stageT huH' hsH hsL hdv) fun ⟨w4, m4⟩ b' a6 _ hRp => ?_
   dsimp only [nitE.k_lvl_eq_fueled]
   have hres := hRp.res

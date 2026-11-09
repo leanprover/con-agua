@@ -122,15 +122,16 @@ structure NtyPostV (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
 
 /-- **`nest_inst_type_ty` refines `ntyTV`, both outcomes**, under `StageC`: the container
 (`env_find`), the level count (`view_ls_len`), `family_telescope` (`ft_ref`), `strip_pis`,
-`cv_lps`, `inst_lp_fast` (its real reading), `inst_pis_with`. -/
+`cv_lps`, `inst_lp_fast` (its real reading), `inst_pis_with`; the errors under `WtG` (the
+no-verdict callees closed, `whnf_top`'s claim). -/
 theorem nty_ref {p : Prog} (hl : NtyLook p) (hq : KnotStageProg p) (hF : FtProg p) (hIlpf : IlpfF p)
-    (hWt : WhnfTopE p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {env : ConLeche.Env} (henv : ConLeche.EnvWF env) (k : Nat) (hk62 : k ≤ 2 ^ 62) {m : Mem}
     {a : AState} {key : Word} {kk : NestKey} {keyP : ConLeche.NestKey}
     (hC : StageC dn vis fe env m a) (hA : AbsOK m)
     (hk : decNK m key.toNat = some kk) (hkin : NKIn m key.toNat (· < iwTop m)) (hksl : NKSl m key)
     (hkey : ConRon.Bridge.Inductives.dKey a.store kk = some keyP) :
-    RefE (closedNV p _root_.L.Checker.nvFns = true) (ntyE p k m vis key) (ntyTV fe kk pure) a
+    RefE (WtG p) (ntyE p k m vis key) (ntyTV fe kk pure) a
       (fun v ty a' => NtyPostV dn vis fe env kk m a v.1 v.2 ty a') := by
   cases k with
   | zero => rw [ntyE.eq_1]; exact RefE.of_cls0 (by simp)
@@ -211,8 +212,8 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) (hq : KnotStageProg p) (hF : FtProg 
     rw [truncM_erA, e1]; exact hcv
   have hFT := ft_ref hq hF henv k (by omega) (cvq := q + 1) (capsq := q + 5) hC hA hcvB
     (by rw [e5]; exact hcaps) hcvP hws
-  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hF k _ vis _ _) id
-    (fun hG => ⟨hG, hWt⟩) hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_
+  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hF k _ vis _ _) (fun hG => hG.nv)
+    id hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_
   dsimp only [ntyE.k_family_telescope]
   obtain ⟨s3', hs3', -, hfx3⟩ := triple_of_callE (ftE_spec p hF k ⟨m, Locals.init []⟩ vis (q + 1) (q + 5)) hc3
   obtain ⟨c2, tyCP, htyCP, -⟩ := ConRon.Bridge.Inductives.familyTelescope_specF ConRon.Bridge.CoreSpec.of_core
