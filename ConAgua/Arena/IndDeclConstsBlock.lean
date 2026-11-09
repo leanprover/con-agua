@@ -197,7 +197,7 @@ theorem bkW_ok {p : Prog} (hP : BlockProg p) {vis : Word} {fe : IFEnv} {n : Nat}
   rw [e2, e3] at h4
   rw [bkK4_some] at h
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (brs_spec hP.toRecsProg (n + 1) _ pp o l) h4
+    (dbrs_spec hP.toRecsProg (n + 1) _ pp o l) h4
   obtain ⟨cis, a4, hrun4, hd4, hb4, hS4, hg4⟩ := brsW_ok hP.toRecsProg pp bs vis fe (n + 1) _ _ a o l bs.recs _
     hS3 (hq.grow (decBS_mono _) hg03) (PSlR0.grow decRS_mono ⟨hdr, hob⟩ hg03) hW4
   -- the appends
