@@ -39,12 +39,12 @@ variable {p : Prog} (hq : KnotStageProg p)
 
 include hq in
 theorem coreC_mfr {n : Nat} {args r : List Word} {m m' : Mem}
-    (h : realCall p n "infer_type_core" args m = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (run_memFrame hq.closed (by decide) (run_of_callW h)).1 coreStageA_stage coreStageC_stage
+    (h : realCall p n "infer_type_core" args m = some (r, m')) : MFr [HBM] [214, 215] m m' :=
+  (callW_coreFrame hq.closed (by decide) h).mfr
 
 include hq in
 theorem tptE_mfr : ∀ (n : Nat) (m m' : Mem) (vis d xo xl v : Word),
-    tptE p n m vis d xo xl = .ok (v, m') → MFr [] [] m m'
+    tptE p n m vis d xo xl = .ok (v, m') → MFr [HBM] [214, 215] m m'
   | 0, _, _, _, _, _, _, _, h => by rw [tptE.eq_def] at h; cases h
   | n + 1, m, m', vis, d, xo, xl, v, h => by
     by_cases hl : xl = 0
@@ -71,7 +71,7 @@ structure TmpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   stage : StageC dn vis fe env m' a'
   grow : IWGrow m m'
   abs : AbsOK m'
-  mfr : MFr [] [] m m'
+  mfr : MFr [HBM] [214, 215] m m'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}

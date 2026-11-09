@@ -38,10 +38,11 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- A core entry point keeps the stage's memos (`coreStageA`/`coreStageC` miss 201‥208). -/
+/-- A core entry point keeps the stage's memos but the `hb` memo (`CoreFr.mfr`). -/
 theorem coreF_mfr {p : Prog} (hq : KnotStageProg p) {f : FnName} (hf : f ∈ stageCoreFns) {n : Nat}
-    {args r : List Word} {m m' : Mem} (h : realCall p n f args m = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (run_memFrame hq.closed hf (run_of_callW h)).1 coreStageA_stage coreStageC_stage
+    {args r : List Word} {m m' : Mem} (h : realCall p n f args m = some (r, m')) :
+    MFr [HBM] [214, 215] m m' :=
+  (callW_coreFrame hq.closed hf h).mfr
 
 section twin
 variable (mode : ConLeche.CheckMode) (fe : IFEnv) (ctx : NestCtx) (fuel : Nat) (prog : List NestHole)

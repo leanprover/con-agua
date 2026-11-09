@@ -5,6 +5,8 @@ public import ConAgua.Arena.IndTwin
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.IndTwin
 public import ConAgua.Compiler.WriteSetSplit
+public import ConAgua.Arena.LeafFrame
+meta import ConAgua.Arena.LeafFrame
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
@@ -154,9 +156,11 @@ import all ConAgua.Scan.Values
 /-!
 # The core leaves the stage's pools and the pins alone (lane `indproofs3`)
 
-`ConAgua/Arena/IndTwin.lean`'s program hypothesis `CoreStageClosed`, for the checker's program:
-every function the stage's core entry points reach (`stageCoreFns`) stores into arrays other than
-`IW`, `EREC`, `PINS`, and into `CTL` words other than `129`, `200`.
+`ConAgua/Arena/IndTwin.lean`'s write set of the core, for the checker's program: every function
+the stage's core entry points reach (`stageCoreFns`) stores into arrays other than `IW`, `EREC`,
+`PINS`, and into `CTL` words other than `129`, `200`, and calls only `stageCoreFns` and the two
+leaves `coreLeaves` (`struct_used_later`, `open_pis_at_fvars_f`; their bundles `UsF`, `OpfF` are
+lookups, at the substituted program in `Checker/IndArm.lean`).
 
 Split into per-chunk kernel checks as `checkerProg_coreErec` (lane `erecfix`,
 `Compiler/WriteSetSplit.lean`): one `decide +kernel` on the whole closure took tens of GB.
@@ -191,12 +195,22 @@ theorem coreStagePc_mem (w : Word) (h : coreStagePc w = true) : w ∈ coreStageC
   simp only [coreStageC, List.mem_map, List.mem_filter, List.mem_range]
   exact ⟨w.toNat, ⟨h.1.1.1.1.1.1, by simp only [decide_eq_true_eq]; omega⟩, UInt64.ofNat_toNat⟩
 
--- ronsync2 stage 2: /-- Every function of the checker passes the stage core's per-function check. -/
--- ronsync2 stage 2: `prog_all` fails on the program generated from the built modules
-theorem checkerProg_stageChk : ∀ x ∈ checkerProg, (wsChk CTL coreStagePa coreStagePc stageCoreTree) x = true := by
-  sorry
+/-- `stageCoreFns` and the leaves, the callee tree of the check. -/
+names_tree stageCoreCallTree : stageCoreFns ++ coreLeaves
 
-theorem checkerProg_coreStage : CoreStageClosed checkerProg :=
-  closedW_of_all stageCoreTree.eq coreStagePa_mem coreStagePc_mem checkerProg_stageChk
+/-- Every function of the checker passes the stage core's per-function check with the leaves. -/
+prog_all checkerProg_stageChk : checkerProg (wsChkL CTL coreStagePa coreStagePc stageCoreTree stageCoreCallTree)
+
+/-- **The core's write set with its leaves**, at the checker's program. -/
+theorem checkerProg_coreStageW : closedAL checkerProg coreStageA coreStageC stageCoreFns coreLeaves = true :=
+  closedWL_of_all stageCoreTree.eq stageCoreCallTree.eq coreStagePa_mem coreStagePc_mem checkerProg_stageChk
+/-- `lvl_eq_c`'s call closure as a tree of name codes. -/
+names_tree lvlCoreTree : lvlCoreFns
+
+/-- Every function of the checker passes `lvl_eq_c`'s per-function check (no leaf). -/
+prog_all checkerProg_lvlChk : checkerProg (wsChk CTL coreStagePa coreStagePc lvlCoreTree)
+
+theorem checkerProg_lvlCoreW : closedA checkerProg coreStageA coreStageC lvlCoreFns = true :=
+  closedW_of_all lvlCoreTree.eq coreStagePa_mem coreStagePc_mem checkerProg_lvlChk
 
 end L.Checker
