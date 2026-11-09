@@ -64,7 +64,7 @@ theorem checkerCd_proved : L.Checker.CheckerCd := fun _ pb PA hpb hpre =>
   ⟨L.Checker.checkerProg_defnLoopPB _ hr hpre,
     L.Checker.indArmSpec_checker _ hr hpre (L.Checker.checkerProg_ccvSimsPB _)
       (L.Ind.basisRefs_of (L.Checker.checkerProg_basisLProgPB _ hr hpre))
-      (fun dn _ => L.Checker.cbbRef_checker _ hr hpre dn) (L.Checker.cbRefs_checker _ hr hpre) _ PA.dnInj⟩
+      (fun dn _ => L.Checker.cbbRef_checker _ hr hpre dn) (L.Checker.cbRefs_checker _ hr hpre (L.Checker.snoSim_checker _)) _ PA.dnInj⟩
 
 /-- **The driver's accept is the twin's**: `DrvAccepts` at the checker's program gives
 `TwinAccepts [b]`. -/

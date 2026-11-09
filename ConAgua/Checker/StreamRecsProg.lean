@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndT.StreamRecsTop
+public import ConAgua.Arena.IndT.StreamRecsNested
 public import ConAgua.Checker.IndDeclConstsProg
 import ConAgua.Checker.ArmsT
 import all ConAgua.Arena.Abs1
@@ -158,7 +159,7 @@ import all ConAgua.Scan.Values
 
 `streamRecsRefS_checker`: `IndT/TailStream`'s `StreamRecsRefS` at `Prog.subPB bs checkerProg`, what
 `Checker/BlockRefsProg`'s `tsRefS_checker` takes, from `streamRecsRefS_of` at the program's
-lookups; `stream_nested_ok`'s step (`SnoSim`) still an argument.
+lookups. `snoSim_checker`: `stream_nested_ok`'s step (`SnoSim`) at it, from `snoSim_of`.
 -/
 
 open L L.Rom L.Arena L.Ind L.Compiler
@@ -173,5 +174,11 @@ theorem streamRecsRefS_checker (bs : List UInt8) (dn : ConRon.Arena.NIdx → Opt
   streamRecsRefS_of (by prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_cvgIn.subPB bs])
     (by prog_bundle []) hSno (checkerProg_knotStagePB bs)
     (checkerProg_apdPB bs) (checkerProg_crfPB bs)
+
+set_option maxRecDepth 20000 in
+/-- **`stream_nested_ok`'s step at the substituted checker program.** -/
+theorem snoSim_checker (bs : List UInt8) (dn : ConRon.Arena.NIdx → Option ConLeche.Name) :
+    SnoSim (Prog.subPB bs checkerProg) dn :=
+  snoSim_of (by prog_bundle [])
 
 end L.Checker

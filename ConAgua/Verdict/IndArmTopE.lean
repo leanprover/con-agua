@@ -117,7 +117,7 @@ theorem jobG_checker (b pb : ByteArray) (PA : PhaseA b) (hpb : pb.size < 2 ^ 63)
       (checkerProg_quotSimsPB _ hr hpre PA.quotDn) PA.dnInj hG)
     (indArmSpecE_checker _ hr hpre (checkerProg_ccvSimsPB _)
       (basisRefs_of (checkerProg_basisLProgPB _ hr hpre)) (fun dn _ => cbbRef_checker _ hr hpre dn)
-      (cbRefs_checker _ hr hpre) _ PA.dnInj) hnv
+      (cbRefs_checker _ hr hpre (snoSim_checker _)) _ PA.dnInj) hnv
 
 /-- **A thread's failing call is the pool's failure** (`ThreadEVerdict`): `threads_twinVerdictPooled`
 at `check_decl`'s program facts (`checkerCd_proved`) and the jobs' error claims (`jobG_checker`). -/
