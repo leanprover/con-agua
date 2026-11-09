@@ -78,7 +78,57 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     (hP : (POOL : TieredArray) ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
     (hP1 : (POOL1 : TieredArray) ∉ A := by decide) (hPT : (PT0 : TieredArray) ∉ A := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
-  sorry
+  have nA : ∀ x : ArrId, ¬ (x < 42 ∨ (54 < x ∧ x < 64)) → (x : TieredArray) ∉ A :=
+    fun x hx h => hx (hA _ h)
+  have hmode : ModeOK m' := by
+    have hfl : m'.flag = m.flag := hlc.flag
+    unfold ModeOK; rw [hf.top_eq hP0, hfl]; exact hS.mode
+  have hD : DerR m' a' := DerR.of_tiers m' a a'
+    (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega) a hS.arena.der) hL.pers hL.scr
+  refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => not_mem_envArrs (by have := hA b hb; omega))
+      (fun x hx => not_mem_envCtl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
+      hS.memos.frame hf ⟨nA _ (by decide), nA _ (by decide)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
+        ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
+          fun h => absurd (hC _ h) (by decide)⟩
+        ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
+          fun h => absurd (hC _ h) (by decide)⟩,
+      hf.size BSTK ▸ hS.bstk,
+      hS.den.mono ⟨by rw [hL.ls]; exact LExt.refl _, fun i us h => by
+          unfold denoteLs at h ⊢
+          revert h
+          cases e : a.store.lss.view i with
+          | none => intro h; cases h
+          | some v => intro h; rw [hL.view i v e, hL.ls]; exact h⟩
+        (by rw [hL.pins]) (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
+        (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
+        (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv))
+        (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls])) hlsa, hmode⟩,
+    StackKept.of_frameL hf ⟨nA SPN (by decide), nA BSTK (by decide), hP⟩
+      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hlc hP1 hPT⟩
+  · rw [hL.caches]
+    exact CoreRM.frame (A := A) (C := C) (fun b hb => by have := hA b hb; omega)
+      (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
+  · rw [hL.pins]
+    exact hS.pins.congr (hf.arr PINS (nA PINS (by decide)) (by decide))
+  · intro h l e
+    rw [hL.caches] at e
+    have := hS.readL h l e
+    simp only [EStore.ls] at this ⊢
+    rw [hL.ls]; exact this
+  · intro h l e
+    rw [hL.caches] at e
+    have h1 := hS.readLs h l e
+    unfold denoteLs at h1 ⊢
+    cases hw : a.store.lss.view h with
+    | none => rw [hw] at h1; cases h1
+    | some us =>
+      rw [hw] at h1
+      rw [hL.view h us hw, hL.ls]; exact h1
+  · rw [hL.ls]; exact hS.nwf
 
 /-! ## The program -/
 

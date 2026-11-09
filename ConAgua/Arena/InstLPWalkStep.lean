@@ -69,7 +69,7 @@ theorem ilw_internE {v : ENodeView} {A : List TieredArray} {C : List Word} (r : 
     (hok : AM.ok (internE v) a) (hD : ArenaD m' (AM.st (internE v) a))
     (hres : AM.res (internE v) a = decE r) (hr : HW r) (hf : MemFrame A C m m')
     (h128 : ∀ b ∈ A, b.arr < 96 ∨ 128 ≤ b.arr := by decide) (hpins : (PINS : TieredArray) ∉ A := by decide)
-    (henv : AvoidA 129 144 A := by decide)
+    (henv : AvoidA 129 149 A := by decide)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat := by simp)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat := by simp)
     (hmA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
