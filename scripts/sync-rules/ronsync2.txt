@@ -1,0 +1,33 @@
+# Re-proof ladder rules of the sync con-ron 97eead2d -> 01ecb31c (lane ronsync2).
+# Format: scripts/reproof-ladder.py, class Rules. Rung (ii) applies [codemod] to the base proof,
+# rung (iii) tries each [vocab ...] section on top of it, in order.
+
+[codemod]
+# decCI/decCaps, StageR, KeepPost, CheckR, EnvR lost their `dn` argument
+sub "\(dn := dn\) " ==> ""
+sub (?<=[\s(])dn (?=\w) ==> ""
+# EREC is read through the two-tier reader
+sub rdW \((\w+(?:\.mem)?)\.arr64 EREC\) ==> erRd \1
+sub \b(\w+)\.set64 EREC\b ==> erecPutMem \1
+# one name for the pool-growth extension
+sub IWGrow\.erecPExtR ==> IWGrow.ext
+
+[vocab readers]
+# the reader lemmas into the simp/vcgen lists (when the file can see them), and into a bare finish
+sub-if aread_apply (simp only \[) ==> "\1aread_apply, "
+sub-if erRd_foldN (simp only \[) ==> "\1erRd_foldN, "
+sub-if ld64_rdT_spec (vcgen \[) ==> "\1ld64_rdT_spec, "
+sub-if evalE_tld (vcgen \[) ==> "\1evalE_tld, "
+sub-if tld (vcgen \[) ==> "\1tld, "
+sub-if evalE_tagE (vcgen \[) ==> "\1evalE_tagE, "
+sub-if evalE_idxAE (vcgen \[) ==> "\1evalE_idxAE, "
+sub-if evalE_idxGE (vcgen \[) ==> "\1evalE_idxGE, "
+sub (finish(?: \(gen := \d+\))?)(?! \[) ==> "\1 [erRd]"
+
+[vocab readers+]
+use readers
+# the tagged-read lemmas into finish lists; the dropped erSize premise; rw -> simp only at a fold
+sub-if erRd (finish(?: \([^)]*\))? \[)([^\]]*)\] ==> "\1\2, erRd]"
+sub-if erRd_get (finish(?: \([^)]*\))? \[)([^\]]*)\] ==> "\1\2, erRd_get]"
+sub " \w+\.iw\.erSize(?= )" ==> ""
+sub-if erRd_foldN \brw \[(?=[^\]]*\]\s*$) ==> "simp only [erRd_foldN, "
