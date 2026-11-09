@@ -238,7 +238,7 @@ include hq in
 @[refines ConRon.Arena.majorToCtor]
 theorem majorToCtor_refines : MajorToCtorOK p :=
   majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
-    (ErecKeptKnot.of_closed hq.hcl) (KnotAllProg.projC hq)
+    (ErecPKept.of_closed hq.hcl) (KnotAllProg.projC hq) hq.prop (KnotAllProg.instLP hq)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in

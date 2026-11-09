@@ -542,7 +542,7 @@ theorem pass_ref (R : PassRefs G p dn) (hGnv : G → closedNV p _root_.L.Checker
       (hrd5.grow (decCR_mono _) (hg6.trans g6A))
       (hms5.grow (fun q => decTM_mono q) (hg6.trans g6A))
       (htbl8.grow (fun q => decNCN_mono q) hg10)
-  · simp only [List.headD_cons]; rw [hw1]; exact hslA.2
+  · simp only [List.headD_cons]; rw [hw1]; exact hslA.2.1
 
 /-- **A refinement's post weakened with the twin's whole run at hand.** -/
 theorem RefE.weakenRunP {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a : AState}

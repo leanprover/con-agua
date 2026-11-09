@@ -611,7 +611,7 @@ theorem bmoW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     DecB (fun m => decNL m io.toNat ctl.toNat) m ns → io.toNat + ctl.toNat ≤ iwTop m →
     PSlR decGH gss go ctl m →
     StageR vis fe m' a ∧ IWGrow m m' ∧
-      PSlR decMS (((cvTs.zip ns).zip gss).map fun a => (⟨a.1.1, a.1.1, a.1.2, a.2⟩ : MemberShape))
+      PSlR decMSB (((cvTs.zip ns).zip gss).map fun a => (⟨a.1.1, a.1.1, a.1.2, a.2⟩ : MemberShape))
         (r.headD 0) (r.tail.headD 0) m' := by
   induction n with
   | zero => intro m m' a cto ctl io go cvTs ns gss r h; simp [bmoW] at h
@@ -629,8 +629,13 @@ theorem bmoW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     have hcl0 : ctl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
     have hd0 : decGH (truncM m) gp = some g := hg0
-    simp only [decGH, decAt, bind, Option.bind_eq_some_iff] at hd0
+    simp only [decGH, decAt, bind, Option.bind_eq_some_iff, decPLB] at hd0
     obtain ⟨goff, hgoff, glen, hglen, hgd⟩ := hd0
+    have hgsz : goff + glen ≤ ((truncM m).arr64 IW).size := by
+      split at hgd
+      · assumption
+      · cases hgd
+    rw [ite_eq_left hgsz] at hgd
     have hgpw : (UInt64.ofNat gp).toNat = gp := UInt64.toNat_ofNat_of_lt' hgpb
     have hgp1 : (UInt64.ofNat gp + 1).toNat = gp + 1 := by
       have := partsIwLt hglen; rw [UInt64.toNat_add, hgpw]; simp; omega
@@ -656,19 +661,22 @@ theorem bmoW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ, UInt64.toNat_ofNat_of_lt' hpb,
       UInt64.toNat_ofNat_of_lt' hn0b, UInt64.toNat_ofNat_of_lt' hgob, UInt64.toNat_ofNat_of_lt' hglb] at g0 g1 g2 g3 g4
     have hg02 := hg1.trans hg2
-    have hdec : DecB (fun m => decMS m e.toNat) m2 ⟨cv, cv, n0, g⟩ := by
+    have hdec0 : DecB (fun m => decMS m e.toNat) m2 ⟨cv, cv, n0, g⟩ := by
       show decMS (truncM m2) e.toNat = _
       have hcv2 : decCVp (truncM m2) pc = some cv := hcv.grow (OMono.decCVp _) hg02
       have hgd2 : decPL (truncM m2) (decCN (truncM m2)) goff glen = some g :=
         (show DecB (fun m => decPL m (decCN m) goff glen) m g from hgd).grow (OMono.decPL decCN_mono _ _) hg02
       simp only [decMS, decAt, g0, g1, g4, hcv2, bind, Option.bind_some, pure, Nat.add_assoc,
         show 2 + 1 = 3 from rfl, g2, g3, hgd2]
+    have hdec : DecB (fun m => decMSB m e.toNat) m2 ⟨cv, cv, n0, g⟩ := by
+      exact decMSB_of hdec0 g2 g3 (le_iwA_truncM_size
+        (Nat.le_trans (Nat.le_trans hgsz (iwA_truncM_size_le m)) hg02.iw) hS2.iw.1)
     rcases h3 : consW n m2 e (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h
     · cases h
     rw [bgoK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hR2 := hR1.grow decMS_mono hg2
-    obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decMS_mono h3 hS2 hR2.2 hR2.1 hdec
+    have hR2 := hR1.grow decMSB_mono hg2
+    obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decMSB_mono h3 hS2 hR2.2 hR2.1 hdec
     exact ⟨hS3, hg02.trans hg3, hd3, Nat.le_of_eq ht3⟩
 
 theorem decSR_fields2 {m : Mem} {p : Nat} {cv : IConstantVal} {mI rP : Nat} {isK : Bool}
@@ -988,10 +996,11 @@ theorem tailJP_eq {X : Type} (nP : Nat) (nIdxs : List Nat) (ty : EIdx) (jp : LId
 theorem partsPack {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {q mo ml ro rl nP elim s lg ip : Word} {ms : List MemberShape} {recs : List RecShape}
     (h : posRecW m [mo, ml, ro, rl, nP, elim, s, lg, ip] = some (q, m')) (hS : StageR vis fe m a)
-    (hms : PSlR decMS ms mo ml m) (hrs : PSlR decRS recs ro rl m) (he : H elim) (hs : H s) :
+    (hmsB : PSlR decMSB ms mo ml m) (hrs : PSlR decRS recs ro rl m) (he : H elim) (hs : H s) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       DecB (fun m => decBS m q.toNat) m' ⟨ms, recs, nP.toNat, decI elim, decI s, lg != 0, ip != 0⟩ ∧
       ShapeSl m' q := by
+  have hms : PSlR decMS ms mo ml m := ⟨decPL_decMSB hmsB.dec, hmsB.bound⟩
   obtain ⟨hS', hg, htq, hget⟩ := partsFreshGet h hS (by simp)
   refine ⟨hS', hg, ?_, ?_⟩
   rotate_left
@@ -1003,9 +1012,14 @@ theorem partsPack {vis : Word} {fe : IFEnv} {a : AState}
     have m0 := gm 0 (by omega); have m1 := gm 1 (by omega); have m2 := gm 2 (by omega)
     have m3 := gm 3 (by omega)
     simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at m0 m1 m2 m3
-    refine ⟨fun o l ho hl => ?_, fun o l ho hl => ?_⟩
+    refine ⟨fun o l ho hl => ?_, fun o l ho hl => ?_, ms, ?_⟩
     · rw [m0] at ho; rw [m1] at hl; cases ho; cases hl; exact Nat.le_trans hms.bound hg.iw
     · rw [m2] at ho; rw [m3] at hl; cases ho; cases hl; exact Nat.le_trans hrs.bound hg.iw
+    · have g0 := hget 0 (by simp); have g1 := hget 1 (by simp)
+      simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at g0 g1
+      show decAt (truncM m') _ q.toNat = some ms
+      simp only [decAt, iwN, nat?, g0, g1, Option.map_some, Option.bind_some, bind]
+      exact (hmsB.grow decMSB_mono hg).1
   have g : ∀ j (hj : j < 9), iwA (truncM m') (q.toNat + j) = some ([mo, ml, ro, rl, nP, elim, s, lg, ip][j]'(by simpa using hj)) :=
     fun j hj => hget j (by simpa using hj)
   have g0 := g 0 (by omega); have g1 := g 1 (by omega); have g2 := g 2 (by omega); have g3 := g 3 (by omega)
@@ -1027,7 +1041,7 @@ theorem partsPack {vis : Word} {fe : IFEnv} {a : AState}
 theorem bsealW_sim {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {mo ml ro2 rl2 nPd s ip lgw elimw : Word} {ms : List MemberShape} {recs : List RecShape}
     {sv : LIdx} {isProp : Bool} {lg : Option NIdx} (hS : StageR vis fe m a)
-    (hms : PSlR decMS ms mo ml m) (hrs : PSlR decRS recs ro2 rl2 m) (hs : H s) (hsv : decI s = sv)
+    (hms : PSlR decMSB ms mo ml m) (hrs : PSlR decRS recs ro2 rl2 m) (hs : H s) (hsv : decI s = sv)
     (hip : (ip != 0) = isProp) (hlg : LargeR lg [lgw, elimw]) :
     Sim (bsealW m mo ml ro2 rl2 nPd s ip lgw elimw)
       (match lg with
@@ -1062,7 +1076,7 @@ theorem bsealW_sim {vis : Word} {fe : IFEnv} {m : Mem}
     · cases e
     rw [bsealW.k_block_shape_pack.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
-    obtain ⟨hS2, hg2, hd2, hsl2⟩ := partsPack h2 hS3 (hms.grow decMS_mono hg3) (hrs.grow decRS_mono hg3) hal hs
+    obtain ⟨hS2, hg2, hd2, hsl2⟩ := partsPack h2 hS3 (hms.grow decMSB_mono hg3) (hrs.grow decRS_mono hg3) hal hs
     refine ⟨some ⟨ms, recs, nPd.toNat, an, sv, false, isProp⟩, a3,
       by simp only [StateT.run_bind, hrun3]; rfl, ⟨rfl, ?_, hsl2⟩, hS2, hg3.trans hg2⟩
     rw [← hae, ← hsv, ← hip]; exact hd2
@@ -1214,7 +1228,7 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     cases hx : largeOf lps r0.1 <;> rw [hx] at hlg <;> exact hlg
   revert r m' e
   show Sim _ _ a5 _
-  refine Sim.k3 (bsealW_sim hS6 (hms.grow decMS_mono (hg5.trans hg6)) (hrsl.grow decRS_mono hg6) hs hsv hip hlg') ?_
+  refine Sim.k3 (bsealW_sim hS6 (hms.grow decMSB_mono (hg5.trans hg6)) (hrsl.grow decRS_mono hg6) hs hsv hip hlg') ?_
   rintro r7 x m7 a7 ⟨hR7, hS7, hg7⟩
   refine ⟨?_, hS7, hg05.trans (hg6.trans hg7)⟩
   cases x with

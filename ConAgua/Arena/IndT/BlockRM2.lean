@@ -79,7 +79,7 @@ structure RmPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   grow : IWGrow m v.2
   abs : AbsOK v.2
   core : ConRon.Bridge.CoreStep env fe a a'
-  dec : DecB (fun m => decMS m v.1.toNat) v.2 ms
+  dec : DecB (fun m => decMSB m v.1.toNat) v.2 ms
   top : v.1.toNat + 5 ≤ iwTop v.2
 
 /-- **A fresh member record** (`rec5`) whose words `1 ‥ 4` are those of the record of `msh` and
@@ -111,6 +111,21 @@ theorem decMS_fresh {m m' : Mem} {ms qn cvpn : Nat} {msh : MemberShape} {cvR : I
   simp only [decMS, decAt, h0, hcv', e4, hd4'', e1, e2, show qn + 2 + 1 = qn + 3 by omega, e3, hpl'',
     bind, Option.bind, pure]
 
+/-- `decMS_fresh` with the constructor slice's bound. -/
+theorem decMSB_fresh {m m' : Mem} {ms qn cvpn : Nat} {msh : MemberShape} {cvR : IConstantVal}
+    (hms : DecB (fun m => decMSB m ms) m msh) (hg : IWGrow m m')
+    (hcv : DecB (fun m => decCVp m cvpn) m' cvR) (h0 : iwN (truncM m') qn = some cvpn)
+    (hk : ∀ k, 1 ≤ k → k ≤ 4 → iwN (truncM m') (qn + k) = iwN (truncM m) (ms + k))
+    (hT : iwTop m' ≤ (m'.arr64 IW).size) :
+    DecB (fun m => decMSB m qn) m' { msh with cvT := cvR } := by
+  have hd := decMSB_some (m := truncM m) hms
+  have h1 := decMS_fresh (m := m) (ms := ms) hd.1 hg hcv h0 hk
+  obtain ⟨o, l, ho, hl, hb, -⟩ := decCNSB_bound (m := m) (q := ms + 2) hd.2
+  have e2 := hk 2 (by omega) (by omega)
+  have e3 := hk 3 (by omega) (by omega)
+  exact decMSB_of h1 (by rw [e2]; exact ho) (by rw [e3, show ms + 3 = ms + 2 + 1 by omega]; exact hl)
+    (le_iwA_truncM_size (Nat.le_trans hb hg.iw) hT)
+
 section rm
 variable {p : Prog} (hV : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
   (hcrf : CrfF p) (hP : RmProg p) (hWt : WhnfTopE p) {dn : NIdx → Option ConLeche.Name}
@@ -119,7 +134,7 @@ variable {p : Prog} (hV : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp 
 include hV hq hap hkp hcrf hP hWt hCS henv in
 theorem rm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {nP ms : Word} {msh : MemberShape}
     {msP : ConLeche.MemberShape} (hC : StageC dn vis fe env m a) (hA : AbsOK m)
-    (hms : DecB (fun m => decMS m ms.toNat) m msh) (hmsb : ms.toNat + 5 ≤ iwTop m)
+    (hmsB : DecB (fun m => decMSB m ms.toNat) m msh) (hmsb : ms.toNat + 5 ≤ iwTop m)
     (hmsP : ConRon.Bridge.Inductives.dMember a.store msh = some msP) :
     RefE (VerdictCtxU p) (rmE p n m vis ms nP) (ConRon.Arena.reduceMember V fe msh nP.toNat) a
       (fun v x a' => RmPost dn vis fe env m a v x a') := by
@@ -128,6 +143,7 @@ theorem rm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {nP ms : Wor
   have hS := hC.stage
   obtain ⟨hcvP, -, -⟩ := ConRon.Bridge.Inductives.dMember_inv hmsP
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  have hms : DecB (fun m => decMS m ms.toNat) m msh := decMSB_decMS hmsB
   obtain ⟨⟨c, hc, hcv⟩, -, hni, -⟩ := decMS_some (m := truncM m) hms
   obtain ⟨hw0, hcb, hmsl⟩ := partsIwRd hc rfl
   have hcvm : decCVp m (UInt64.ofNat c : Word).toNat = some msh.cvT := by
@@ -149,7 +165,7 @@ theorem rm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {nP ms : Wor
   by_cases hz : r1.headD 0 = 0
   · rw [ite_eq_left hz]
     simp only [hz, bne_self_eq_false, Bool.false_eq_true, ite_false]
-    exact RefE.ret rfl ⟨hC, IWGrow.refl m, hA, ConRon.Bridge.CoreStep.refl hC.check, hms, by omega⟩
+    exact RefE.ret rfl ⟨hC, IWGrow.refl m, hA, ConRon.Bridge.CoreStep.refl hC.check, hmsB, by omega⟩
   rw [ite_eq_right hz]
   simp only [bne_iff_ne, ne_eq, hz, not_false_eq_true, ite_true]
   -- `declined_at_definition`
@@ -277,8 +293,8 @@ theorem rm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {nP ms : Wor
   refine RefE.ret rfl ⟨StageC.of_pstep k6.stage hS7 hA7 (ConRon.Bridge.Inductives.PStep.refl k6.stage.check.state),
     hg06.trans hg7, hA7, (c4.trans c5).trans k6.core, ?_, by simp only [List.headD_cons]; omega⟩
   simp only [List.headD_cons]
-  refine decMS_fresh hms (hg06.trans hg7) (cvpn := (r5.headD 0).toNat) ?_ (by simpa using hnew 0 (by omega))
-    fun k hk1 hk4 => ?_
+  refine decMSB_fresh hmsB (hg06.trans hg7) (cvpn := (r5.headD 0).toNat) ?_ (by simpa using hnew 0 (by omega))
+    (fun k hk1 hk4 => ?_) hS7.iw.1
   · exact hcvR5.grow (OMono.decCVp _) (k6.grow.trans hg7)
   · rw [hold k hk1 hk4, hnew k (by omega)]
     rcases (show k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 by omega) with rfl | rfl | rfl | rfl <;> rfl

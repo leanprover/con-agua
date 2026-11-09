@@ -154,12 +154,12 @@ def RmRefS : Prop :=
   ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState)
     (nP mo ml : Word) (mss : List MemberShape) (msP : List ConLeche.MemberShape),
     BkSt dn vis fe env m a → ConLeche.EnvWF env →
-    DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) m mss → mo.toNat + ml.toNat ≤ iwTop m →
+    DecB (fun m => decPL m (decMSB m) mo.toNat ml.toNat) m mss → mo.toNat + ml.toNat ≤ iwTop m →
     mss.mapM (ConRon.Bridge.Inductives.dMember a.store) = some msP →
     RefE G (callE p n "reduce_members" [vis, nP, mo, ml] m)
       (ConRon.Arena.reduceMembers V fe nP.toNat mss) a
       (fun rm ms a' => BkGo dn vis fe env m a rm.2 a' ∧
-        DecB (fun m => decPL m (decMS m) (rm.1.headD 0).toNat (rm.1.tail.headD 0).toNat) rm.2 ms ∧
+        DecB (fun m => decPL m (decMSB m) (rm.1.headD 0).toNat (rm.1.tail.headD 0).toNat) rm.2 ms ∧
         (rm.1.headD 0).toNat + (rm.1.tail.headD 0).toNat ≤ iwTop rm.2)
 
 /-- **`flush_caches()`'s contract** under `BkSt`. -/
@@ -184,7 +184,7 @@ def BswmRefS : Prop :=
   ∀ (n : Nat) (vis : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState) (p0 mo ml : Word)
     (bs : BlockShape) (ms : List MemberShape), BkSt dn vis fe env m a →
     DecB (fun m => decBS m p0.toNat) m bs → ShapeSl m p0 →
-    DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) m ms → mo.toNat + ml.toNat ≤ iwTop m →
+    DecB (fun m => decPL m (decMSB m) mo.toNat ml.toNat) m ms → mo.toNat + ml.toNat ≤ iwTop m →
     RefE G (callE p n "block_shape_with_members" [p0, mo, ml] m) (pure ()) a
       (fun rm _ a' => BkGo dn vis fe env m a rm.2 a' ∧
         DecB (fun m => decBS m (rm.1.headD 0).toNat) rm.2 { bs with members := ms } ∧
@@ -324,11 +324,36 @@ theorem ShapeSl.grow' {m m' : Mem} {p0 : Word} {bs : BlockShape} (h : ShapeSl m 
   obtain ⟨o2, l2, ho2, hl2, -⟩ := partsAt decRS_mono hrc
   have h1 := (acTr hl).1
   have h3 := (acTr hl2).1
-  refine ⟨fun o l ho hl => ?_, fun o l ho hl => ?_⟩
+  obtain ⟨ms, hmsB⟩ := h.2.2
+  refine ⟨fun o l ho hl => ?_, fun o l ho hl => ?_, ms,
+    hmsB.grow (OMono.decAt (fun o l => OMono.decPL decMSB_mono o l) _) hg⟩
   · rw [iwN_grow hg (by omega)] at ho; rw [iwN_grow hg (by omega)] at hl
     exact Nat.le_trans (h.1 o l ho hl) hg.iw
   · rw [iwN_grow hg (by omega)] at ho; rw [iwN_grow hg (by omega)] at hl
-    exact Nat.le_trans (h.2 o l ho hl) hg.iw
+    exact Nat.le_trans (h.2.1 o l ho hl) hg.iw
+
+/-- **The shape's members, decoded with their constructor slices' bounds.** -/
+theorem ShapeSl.membersB {m : Mem} {p0 : Word} {bs : BlockShape} (hq : DecB (fun m => decBS m p0.toNat) m bs)
+    (hsl : ShapeSl m p0) : DecB (fun m => decAt m (decPL m (decMSB m)) p0.toNat) m bs.members := by
+  obtain ⟨ms, hms⟩ := hsl.2.2
+  have hmem := (decBS_some (show decBS (truncM m) p0.toNat = some bs from hq)).1
+  have h1 : decAt (truncM m) (decPL (truncM m) (decMS (truncM m))) p0.toNat = some ms := by
+    have h : decAt (truncM m) (decPL (truncM m) (decMSB (truncM m))) p0.toNat = some ms := hms
+    simp only [decAt, bind, Option.bind_eq_some_iff] at h ⊢
+    obtain ⟨o, ho, l, hl, hd⟩ := h
+    exact ⟨o, ho, l, hl, decPL_decMSB hd⟩
+  rw [hmem] at h1; cases h1; exact hms
+
+/-- `bsAt`'s members, with their constructor slices' bounds. -/
+theorem bsAtB {m : Mem} {p0 : Word} {bs : BlockShape} (hq : DecB (fun m => decBS m p0.toNat) m bs)
+    (hsl : ShapeSl m p0) :
+    DecB (fun m' => decPL m' (decMSB m') (rdW (m.arr64 IW) p0).toNat (rdW (m.arr64 IW) (p0 + 1)).toNat)
+      m bs.members := by
+  obtain ⟨o, l, ho, hl, hdm, -⟩ := partsAt decMSB_mono (ShapeSl.membersB hq hsl)
+  obtain ⟨e0, -⟩ := iwRd (o := p0) (w := 0) (by simpa using ho)
+  obtain ⟨e1, -⟩ := iwRd (o := p0) (w := 1) (by simpa using hl)
+  simp only [UInt64.add_zero] at e0
+  rw [UInt64.toNat_inj.mp e0, UInt64.toNat_inj.mp e1]; exact hdm
 
 /-- **What `check_block` reads off the shape record**: the members' and the recursors' slices
 (words `0‥3`) and the parameter count (word `4`). -/
@@ -418,7 +443,8 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
   rw [icbE.k_check_block_names.arm1]
   have hq1 := hq.grow (decBS_mono _) h1.grow
   have hsl1 := hsl.grow' hq h1.grow
-  obtain ⟨hdm1, hbm1, -, e4⟩ := bsAt hq1 hsl1
+  obtain ⟨-, hbm1, -, e4⟩ := bsAt hq1 hsl1
+  have hdm1 := bsAtB hq1 hsl1
   -- the members at their telescopes
   have hR2 := R.rm n (by omega) vis fe env m1 a1 (rdW (m1.arr64 IW) (p0 + 4)) (rdW (m1.arr64 IW) p0)
     (rdW (m1.arr64 IW) (p0 + 1)) bs.members bsP.members h1.st henv hdm1 hbm1
@@ -453,7 +479,7 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
   have g24 := h3.grow.trans h4.grow
   refine RefE.bindNone (fun _ => icbE.k_block_shape_with_members.none ..) id
     (R.bswm n vis fe env m4 a4 p0 _ _ bs ms h4.st (hq.grow (decBS_mono _) g14) (hsl.grow' hq g14)
-      (hdms.grow (OMono.decPL decMS_mono _ _) g24) (Nat.le_trans hbms g24.iw))
+      (hdms.grow (OMono.decPL decMSB_mono _ _) g24) (Nat.le_trans hbms g24.iw))
     fun ⟨r5, m5⟩ h5 => ?_
   obtain ⟨h5, hq5, hsl5⟩ := h5
   rw [icbE.k_block_shape_with_members.arm1]
