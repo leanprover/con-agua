@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.IndDeclConstsRefire
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 import ConAgua.L.ModelGen
 import ConAgua.Arena.Verdict
 public import ConAgua.Arena.GrindAttr
@@ -225,7 +226,7 @@ pool's top. -/
 theorem brsW_ok {p : Prog} (hP : RecsProg p) (pp : Word) (bs : BlockShape) (vis : Word) (fe : IFEnv)
     (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (ro rl : Word) (rcs : List RecShape) (r : List Word),
-    StageR vis fe m a → DecB (fun m => decBS m pp.toNat) m bs → PSlR decRS rcs ro rl m →
+    StageR vis fe m a → DecB (fun m => decBS m pp.toNat) m bs → PSlR0 decRS rcs ro rl m →
     brsW p n m pp ro rl = some (r, m') →
     ∃ cis a', (ConRon.Arena.blockRecs bs rcs).run a = .ok (cis, a') ∧
       decPL m' (decCI (erecP m')) (r.headD 0).toNat (r.tail.headD 0).toNat = some cis ∧
@@ -242,7 +243,7 @@ theorem brsW_ok {p : Prog} (hP : RecsProg p) (pp : Word) (bs : BlockShape) (vis 
       simpa [decPL] using h.symm
     subst this
     exact ⟨[], a, rfl, by simp [decPL], by simp, hS, IWGrow.refl m⟩
-  obtain ⟨q, rc, rest, rfl, hw, hqb, hdrc, hrest⟩ := partsPSl_cons hrcs hl
+  obtain ⟨q, rc, rest, rfl, hw, hqb, hdrc, hrest⟩ := partsPSl_cons ⟨hrcs.1, hrcs.2.resolve_left hl⟩ hl
   rw [brsW_cons p n m pp ro rl hl, hw] at h
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [brsK1])
@@ -250,7 +251,7 @@ theorem brsW_ok {p : Prog} (hP : RecsProg p) (pp : Word) (bs : BlockShape) (vis 
   obtain ⟨f, a1, hrun1, hS1, hg1, hci⟩ := brW_ok hP hS hq (by rw [hq']; exact hdrc) (brCall hP h1)
   obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgK3])
   obtain ⟨cis, a3, hrun3, hd3, hb3, hS3, hg3⟩ := ih m1 m3 a1 (ro + 1) (rl - 1) rest r3 hS1
-    (hq.grow (decBS_mono _) hg1) (hrest.grow decRS_mono hg1) h3
+    (hq.grow (decBS_mono _) hg1) (PSlR0.grow decRS_mono ⟨hrest.dec, Or.inr hrest.bound⟩ hg1) h3
   rw [bfgK3_some] at h
   obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bfgK4])
   rw [bfgK4_some] at h
