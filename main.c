@@ -13,7 +13,7 @@
      ca_start(in, in_len, pins, pins_len, region, region_len)
 
    with the pin data `pins` built into the binary (below). `ca_start` is the sequential driver:
-   entry 1 (the stages and phase A), then entry 2 over every pending group, on the same region;
+   entry 1 (the stages and the stream index), then entry 2 over every record's job, in place;
    the entry stubs lay out everything else inside the region. The verdict is one line on stdout,
    and the exit status follows the Lean kernel arena's convention (0 accepted, 1 rejected,
    2 declined, 3 error):
@@ -38,7 +38,7 @@
    With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
    `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
    `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. A failing
-   threaded run prints the verdict of the failing group with the smallest index, which is what the
+   threaded run prints the verdict of the failing job with the smallest index, which is what the
    sequential run prints; a reject or decline is covered by `checkerFile_threads_verdict`, under
    the hypotheses `ThreadsFail` (ConAgua/Final/ThreadsVerdict.lean) states about the failing call. */
 #include <errno.h>
@@ -167,32 +167,32 @@ static uint8_t *read_input(const char *path, uint64_t *n) {
 
 /* `--jobs=N` (N > 1), the threaded mode.
 
-   Entry 1 (`ca_start_a`) runs the stages and phase A in the region. On success (rdx = 0,
-   rax = 2^63 + k, k pending groups) it has written the frozen buffer into the array `OUT`, whose
-   word 1 is the buffer's length in words. The buffer stays where it is: the rest of the region is
-   unmapped around it and the buffer is made read-only, so a write to it faults and kills the
-   process, which is never an accept (route A). N threads then each map their own zero region of
-   ca_worker_size bytes and claim group indices from one atomic counter, calling
+   Entry 1 (`ca_start_a`) runs the stages and the stream index in the region. On success
+   (rdx = 0, rax = 2^63 + k for k records, one job each) it has written the frozen buffer into
+   `OUT`, whose word 1 is the buffer's length in words. The buffer stays where it is: the rest of
+   the region is unmapped around it and the buffer is made read-only, so a write to it faults and
+   kills the process, which is never an accept (route A). N threads then each map their own zero
+   region of ca_worker_size bytes and claim job indices from one atomic counter, calling
    `ca_check_b(buf, len, j, region, region_len)` for each claimed j, one call after the other on
    the region as the previous call left it.
 
    Concurrency: the threads share only the read-only buffer, the claim counter (fetch_add hands
-   out each of 0, 1, 2, ... once) and a stop flag that only shortens a failing run. Each thread
-   has its own region and its own result slot; main combines the slots after joining every
-   thread. Accept iff no slot holds a failure: every call that thread made accepted, and the
-   threads drain the counter past k unless one fails. Otherwise the verdict is that of the
-   failing group with the smallest index, as a one-thread run would report it: the indices are
-   claimed in order and a thread finishes the group it holds, so every lower group has been
-   checked, and accepted, when the threads are joined. */
+   out each of 0, 1, 2, ... once, in order, so each thread's claims increase: `ThreadsRun`'s
+   `incr`) and a stop flag that only shortens a failing run. Each thread has its own region and
+   its own result slot; main combines the slots after joining every thread. Accept iff no slot
+   holds a failure: every call that thread made accepted, and the threads drain the counter past
+   k unless one fails. Otherwise the verdict is that of the failing job with the smallest index,
+   as a one-thread run would report it: the indices are claimed in order and a thread finishes
+   the job it holds, so every lower job has been run, and accepted, when the threads are joined. */
 static const uint64_t *g_buf;   /* the frozen buffer */
-static uint64_t g_len, g_k;     /* its length in words; the number of pending groups */
+static uint64_t g_len, g_k;     /* its length in words; the number of jobs (records) */
 static uint64_t g_next;         /* the claim counter */
 static int g_stop;              /* set after a failure: the other threads stop claiming */
 
-/* A thread's result: the first group it saw fail (j = UINT64_MAX: none) and that call's result. */
+/* A thread's result: the first job it saw fail (j = UINT64_MAX: none) and that call's result. */
 typedef struct { uint64_t j; ca_res r; } slot_t;
 
-/* One thread: claims groups until the counter passes k or a call fails. */
+/* One thread: claims jobs until the counter passes k or a call fails. */
 static void *worker(void *arg) {
   slot_t *res = arg;
   uint8_t *region = mmap(0, ca_worker_size, PROT_READ | PROT_WRITE,
@@ -226,7 +226,7 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t in_len, const uint8_t *pins,
   munmap(base, ca_out_off);
   munmap((uint8_t *)out + bytes, ca_region_size - ca_out_off - bytes);
   if (mprotect(out, bytes, PROT_READ) != 0) fail("mprotect", strerror(errno));
-  if (in_mapped) munmap(in, in_len); else free(in);  /* phase B reads no input byte */
+  if (in_mapped) munmap(in, in_len); else free(in);  /* the jobs read no input byte */
   g_buf = out;
   pthread_t *th = calloc(jobs, sizeof *th);
   slot_t *res = calloc(jobs, sizeof *res);
