@@ -34,7 +34,7 @@ namespace L.Arena
 
 l_model reduceNatSuccE_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.reduceNatSucc ↦ reduceNatSuccE list]
-  specs [callW_spec p n "nat_lit_supported", callW_spec p n "pin_at", callW_spec p n "raw_nat_lit",
+  specs [callW_spec p n "nat_lit_stored", callW_spec p n "pin_at", callW_spec p n "raw_nat_lit",
     callW_spec p n "nat_succ_lit"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
@@ -49,7 +49,7 @@ l_model reduceNatOpE_spec (p : Prog) (hp : WhnfDeltaProg p)
 
 l_model reduceNatWfE_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.reduceNatWf ↦ reduceNatWfE list]
-  specs [callW_spec p n "nat_op_is_wf", callW_spec p n "nat_lit_supported", callW_spec p n "raw_nat_lit"]
+  specs [callW_spec p n "nat_op_is_wf", callW_spec p n "nat_lit_stored", callW_spec p n "raw_nat_lit"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -85,7 +85,7 @@ l_model reduceNatE_spec (p : Prog) (hp : WhnfDeltaProg p)
 
 l_model projLitToCtorE_spec (p : Prog) (hf : p.lookup "proj_lit_to_ctor" = some projLitToCtorL)
   fns [hf ↦ projLitToCtorE list]
-  specs [callW_spec p n "str_lit_supported", callW_spec p n "str_lit_ctor"]
+  specs [callW_spec p n "str_lit_stored", callW_spec p n "str_lit_ctor"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]

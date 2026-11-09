@@ -70,7 +70,7 @@ the verdict closure) lifted. -/
 l_model unresolvedConstsErr_specE (p : Prog)
   (hf : p.lookup "unresolved_consts_error" = some unresolvedConstsErrL)
   fns [hf ↦ uceE]
-  specs [callW_spec p n "str_lit_supported", callW_spec p n "has_str_lit_go", callW_spec p n "pin_at",
+  specs [callW_spec p n "str_lit_stored", callW_spec p n "has_str_lit_go", callW_spec p n "pin_at",
     callW_spec p n "ue_mentions_go"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
@@ -782,7 +782,7 @@ structure UceLookups (p : Prog) : Prop where
 structure UceProg (p : Prog) : Prop extends UceLookups p where
 
 /-- The callees of `unresolved_consts_error` outside the verdict closure. -/
-def ueNvList : List FnName := ["pin_at", "ue_mentions_go", "has_str_lit_go", "str_lit_supported"]
+def ueNvList : List FnName := ["pin_at", "ue_mentions_go", "has_str_lit_go", "str_lit_stored"]
 
 theorem ueNv_mem : ∀ f ∈ ueNvList, f ∈ L.Checker.nvFns := by
   sorry
@@ -909,7 +909,7 @@ theorem uce_ref {p : Prog} {n : Nat} {m : Mem} {a : AState} {vis : Word} {fe : I
   rw [ite_eq_left hw]
   obtain ⟨dn, M, eb, hS⟩ := hS hw
   rw [uceE.arm1 p n m vis e w hw] at hW
-  cases h1 : callW p n "str_lit_supported" [vis] m with
+  cases h1 : callW p n "str_lit_stored" [vis] m with
   | none =>
     rw [h1, liftE_none, uceE.k_str_lit_supported.eq_1] at hW; cases hW; exact absurd (by simp) hk
   | some q1 =>

@@ -246,9 +246,11 @@ theorem KnotAllProg.stuck : StuckCallees p := by
   sorry
 
 include hq in
-/-- The literal callees: `nat_lit_supported`, `const_e` (lane `whnf`'s proofs), `str_lit_supported`. -/
-theorem KnotAllProg.lit : InferLitCallees p := by
-  sorry
+/-- The literal callees: `nat_lit_stored`, `const_e` (lane `whnf`'s proofs), `str_lit_stored`. -/
+theorem KnotAllProg.lit : InferLitCallees p :=
+  ⟨fun n s₀ a₀ dn vis fe M eb hS => natLitStored_refines p hq.delta n s₀ a₀ dn vis fe M eb hS,
+    strLitStored_core p hq.str,
+    fun n s₀ a₀ dn vis fe M eb nm hS hnm => constE_refines p hq.delta n s₀ a₀ dn vis fe M eb nm hS hnm⟩
 
 include hq in
 theorem KnotAllProg.inferC : InferCallees p :=
