@@ -93,7 +93,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 
 /-- **`ground_guards` under `StageC`** (con-ron's `pinGuardWalk_run`): the four walks by their
 `StageT` contracts and con-ron's `RunsC` lemmas. -/
-theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {pe : Word} {P : ConLeche.Expr} {k : Nat}
+theorem ggC (hD : DmProg6 p) (hcrf : L.Ind.CrfF p) {pe : Word} {P : ConLeche.Expr} {k : Nat}
     {m m' : Mem} {a : AState} {r : List Word}
     (hcall : callW p k "ground_guards" [vis, pe] m = some (r, m'))
     (hC : StageC dn vis fe env m a) (hl1 : H pe) (hpd : denoteE a.store (decI pe) = some P)
@@ -500,7 +500,7 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.Ind
     rw [hx1]; exact hrun1
   -- the ground guards
   replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
-  obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2, -⟩ := ggC hD hkp hcrf h2 hC1 hl1 hpd hCr1
+  obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2, -⟩ := ggC hD hcrf h2 hC1 hl1 hpd hCr1
   have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
   by_cases z2 : r2.headD 0 = 0
   · rw [ite_eq_left z2] at hw
@@ -546,7 +546,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 
 /-- **`consts_resolve_all` under `StageT`** (`cra_ref`'s, `consts_resolve_ffast` by `crfF_okT`
 with its memo `CrOK` threaded). -/
-theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) :
+theorem cra_refT (hD : DmProg5 p) (hcrf : L.Ind.CrfF p) :
     ∀ (hyps : List EIdx) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
       StageT dn vis fe m a → L.Stubs.CrOK m → decHL m o.toNat l.toNat = some hyps →
       o.toNat + l.toNat ≤ iwTop m →
@@ -781,7 +781,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.Ind
   have hC6 := StageC.of_core hC5 hS6 (callW_leafFrame hcl (leaf_mem _ (by decide)) h6) c6
   -- consts resolve of the hypotheses
   replace hw := ntBW_some hw; obtain ⟨r7, m7, h7, hw⟩ := hw
-  obtain ⟨x7, a7, hrun7, ⟨hT7, hg7, hd7⟩, hCr7⟩ := cra_refT hD hkp hcrf x6 (r6.headD 0) (r6.tail.headD 0)
+  obtain ⟨x7, a7, hrun7, ⟨hT7, hg7, hd7⟩, hCr7⟩ := cra_refT hD hcrf x6 (r6.headD 0) (r6.tail.headD 0)
     k m6 a6 r7 m7 hC6.stageT hCr6 hd6.1 hd6.2 h7
   obtain ⟨c7, -⟩ := runsC_step (ConRon.Bridge.constsResolveAll_runsC _ _ hC6.check hhs) hrun7
   have hC7 := L.Arena.StageC.ofT hT7 c7.ok
