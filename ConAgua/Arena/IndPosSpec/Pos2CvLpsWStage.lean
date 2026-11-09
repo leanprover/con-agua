@@ -35,8 +35,8 @@ theorem pos2_cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
     (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' :=
+  cvLpsW_stage h hS hcv hq
 
 mutual
 def nhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)

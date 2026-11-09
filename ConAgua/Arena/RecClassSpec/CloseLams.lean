@@ -216,9 +216,9 @@ theorem findIdx_toNat (ws : List Word) (x : Word) :
     · simp [h, this, ih]
 
 /-- `decCV`'s fields, read back (the `Env.lean` decoder, over an explicit array). -/
-theorem decCV_some {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
-    hd? (aread a) q = some cv.name ∧ hlist? (aread a) (q + 1) = some cv.levelParams ∧
-      hd? (aread a) (q + 3) = some cv.type := by
+theorem decCV_some {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+    hd? a q = some cv.name ∧ hlist? a (q + 1) = some cv.levelParams ∧
+      hd? a (q + 3) = some cv.type := by
   simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨nm, hnm, l, hl, t, ht, heq⟩ := h
   obtain rfl := (Option.some.injEq _ _).mp heq.symm
