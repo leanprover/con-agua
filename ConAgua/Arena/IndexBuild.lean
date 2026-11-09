@@ -5,6 +5,7 @@ public import ConAgua.Arena.IndDeclConstsSpec
 public import ConAgua.Arena.DeclCvg
 public import ConAgua.Arena.DeclNatBase
 public import ConRon.Bridge.Checker.Index
+public import ConAgua.Arena.DeclPins
 import ConRon.Bridge.Checker.Install
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
@@ -223,6 +224,17 @@ theorem erecP_reset' (m : Mem) : erecP (m.set64 CTL 200 0) = erecP m :=
   erecP_congr' (Mem.arr64_set64_ne _ _ _ _ _ (by decide)) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
     (rdW_set_ctl m 200 0 129 (by decide)) (rdW_set_ctl m 200 0 130 (by decide))
 
+theorem RecGrow.refl (m : Mem) : RecGrow m m := ⟨Nat.le_refl _, fun _ _ => rfl⟩
+
+theorem RecGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : RecGrow m₁ m₂) (h₂ : RecGrow m₂ m₃) : RecGrow m₁ m₃ :=
+  ⟨Nat.le_trans h₁.1 h₂.1, fun i hi => (h₂.2 i (Nat.lt_of_lt_of_le hi h₁.1)).trans (h₁.2 i hi)⟩
+
+/-- A frame outside `EREC` and `CTL[129]` keeps the record pool. -/
+theorem RecGrow.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (EREC : TieredArray) ∉ A) (hC : (129 : Word) ∉ C) : RecGrow m m' :=
+  ⟨by simp only [erTop, hf.ctl 129 hC]; exact Nat.le_refl _,
+    fun _ _ => by rw [hf.arr _ hA (by decide)]⟩
+
 section idx
 variable {p : Prog} (hP : IdxProg p)
 include hP
@@ -235,7 +247,7 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
     {res : List Word} (hR : BuildR dn ds c r m a I) (hk : I.firsts.size = k.toNat)
     (hd : ds[k.toNat]? = some d) (hc : callW p n "idx_add" [k] m = some (res, m')) :
     ∃ I' a', (I.add d).run a = .ok (I', a') ∧ BuildR dn ds c r m' a' I' ∧
-      I'.firsts.size = k.toNat + 1 := by
+      I'.firsts.size = k.toNat + 1 ∧ RecGrow m m' := by
   rcases n with _ | n
   · rw [callW_zero] at hc; cases hc
   have hw := callW_model (M := fun mm => idxAddW p (n + 1) mm k)
@@ -380,12 +392,17 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
   have eF6 : (s6.mem.arr64 FIRSTS).size = (m.arr64 FIRSTS).size := by
     rw [eA6 _ (by decide) (by decide), hK5.arr _ (.inr (.inr (.inl rfl))),
       eA4 _ (by decide) (by decide), hK3.arr _ (.inr (.inr (.inl rfl))), hf12.size, eF]
+  have g1 : RecGrow m m2 :=
+    (RecGrow.of_frame (MemFrame.setCtl m 200 0) (by decide) (by decide)).trans
+      (RecGrow.of_frame hf12 (by decide) (by decide))
+  have hG : RecGrow m s6.mem := ((((g1.trans (L.Arena.IWGrow.recGrow hg3)).trans (RecGrow.of_frame hf4 (by decide) (by decide))).trans
+    (L.Arena.IWGrow.recGrow hg5)).trans (RecGrow.of_frame hf6 (by decide) (by decide)))
   refine ⟨_, _, add_run hrun3 hrun5, ⟨⟨hS5.check.rebase hf6 (fun b hb => List.mem_append_right _ hb)
       (by simp) hI6, IWOK.frame hf6 (by decide) (by decide) (by decide) (by decide) hS5.iw⟩,
     hI6, by rw [eD6, eP6]; exact hR.decls, hR.front, hdrv5, hoff5, fun x hx => ?_,
     (hR.quotDn.ext hx3).ext hx5, hM5.frame hf6
       (fun b hb => by simp [TixA] at hb; rcases hb with rfl | rfl | rfl <;> decide) (by simp), by rw [eF6]; exact hR.fsize⟩,
-    by simp [addRes, hk]⟩
+    by simp [addRes, hk], hG⟩
   obtain ⟨hpx, dx, hdx⟩ := hR.recs x hx
   exact ⟨hpx, dx, ConRon.Bridge.denoteDecl_pext (ConRon.Bridge.PExt.of_ext (hx3.trans hx5)) hpx hdx⟩
 
@@ -398,7 +415,8 @@ theorem idxAdd_refines {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclara
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_add" [k]
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ I' a', (I.add d).run a = .ok (I', a') ∧
       BuildR dn ds c r s'.mem a' I' ∧ I'.firsts.size = k.toNat + 1; ⊤⦄ :=
-  triple_post (callW_spec p n "idx_add" [k] s₀) fun _ _ ⟨hl, hc⟩ => ⟨hl, idxAdd_ref hP hR hk hd hc⟩
+  triple_post (callW_spec p n "idx_add" [k] s₀) fun _ _ ⟨hl, hc⟩ => ⟨hl,
+    let ⟨I', a', h1, h2, h3, _⟩ := idxAdd_ref hP hR hk hd hc; ⟨I', a', h1, h2, h3⟩⟩
 
 /-- `build_index`'s loop from record `k`: `buildIndexGo` over the records from `k` on. -/
 theorem buildIndexLoop_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {c r : Nat}
@@ -407,7 +425,7 @@ theorem buildIndexLoop_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDec
       BuildR dn ds c r m a I → I.firsts.size = k.toNat → k.toNat ≤ ds.size →
       buildIndexW.loop1 p n m cnt k = some m' →
       ∃ I' a', buildIndexGo I k.toNat (ds.toList.drop k.toNat) a = .ok (.ok I', a') ∧
-        BuildR dn ds c r m' a' I' ∧ I'.firsts.size = ds.size := by
+        BuildR dn ds c r m' a' I' ∧ I'.firsts.size = ds.size ∧ RecGrow m m' := by
   intro n
   induction n with
   | zero => intro m m' k a I _ _ _ h; rw [buildIndexW.loop1.eq_1] at h; cases h
@@ -422,12 +440,12 @@ theorem buildIndexLoop_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDec
       obtain ⟨ρ, m₁⟩ := q
       rw [h1, bW_some] at h
       have hd : ds[k.toNat]? = some ds[k.toNat] := Array.getElem?_eq_getElem hlt
-      obtain ⟨I₁, a₁, hrun, hR₁, hk₁⟩ := idxAdd_ref hP hR hk hd h1
+      obtain ⟨I₁, a₁, hrun, hR₁, hk₁, hg₁⟩ := idxAdd_ref hP hR hk hd h1
       have e1 : (k + 1).toNat = k.toNat + 1 := by
         rw [UInt64.toNat_add]; have := UInt64.toNat_lt cnt; simp; omega
-      obtain ⟨I', a', hgo, hR', hk'⟩ := ih m₁ m' (k + 1) a₁ I₁ hR₁ (by rw [e1]; exact hk₁)
+      obtain ⟨I', a', hgo, hR', hk', hg'⟩ := ih m₁ m' (k + 1) a₁ I₁ hR₁ (by rw [e1]; exact hk₁)
         (by rw [e1]; omega) h
-      refine ⟨I', a', ?_, hR', hk'⟩
+      refine ⟨I', a', ?_, hR', hk', hg₁.trans hg'⟩
       rw [e1] at hgo
       rw [List.drop_eq_getElem_cons (by simpa using hlt)]
       have hrun' : I.add ds[k.toNat] a = .ok (I₁, a₁) := hrun
@@ -440,7 +458,7 @@ theorem buildIndexLoop_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDec
       cases h
       have hge : ds.size ≤ k.toNat := by rw [← hcnt]; exact Nat.le_of_not_lt g
       have e : k.toNat = ds.size := by omega
-      refine ⟨I, a, ?_, hR, by rw [hk, e]⟩
+      refine ⟨I, a, ?_, hR, by rw [hk, e], RecGrow.refl _⟩
       rw [e, List.drop_of_length_le (by simp)]
       rfl
 
@@ -452,7 +470,7 @@ theorem buildIndex_refines {dn : NIdx → Option ConLeche.Name} {ds : Array IDec
     (hR : BuildR dn ds c r s₀.mem a {}) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "build_index" [cnt]
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ I a', buildIndex ds a = .ok (.ok I, a') ∧
-      BuildR dn ds c r s'.mem a' I ∧ I.firsts.size = ds.size; ⊤⦄ := by
+      BuildR dn ds c r s'.mem a' I ∧ I.firsts.size = ds.size ∧ RecGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (callW_spec p n "build_index" [cnt] s₀) fun _ s' ⟨hl, hc⟩ => ⟨hl, ?_⟩
   rcases n with _ | n
   · rw [callW_zero] at hc; cases hc

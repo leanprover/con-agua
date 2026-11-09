@@ -158,7 +158,15 @@ theorem sim_cv (cv : ConLeche.ConstantVal) (m : EMemo) :
 def itemsCaps (c : ConLeche.IndCaps) : List Item := .nm c.etaCtor :: (c.all.map .nm ++ c.ctors.map .nm)
 
 theorem sim_caps (c : ConLeche.IndCaps) (m : EMemo) : Sim (internCaps c) m (itemsCaps c) (fun _ => m) := by
-  sorry
+  have h : internCaps c = internName c.etaCtor >>= fun ct => Frontend.internNameList c.all >>= fun all =>
+      Frontend.internNameList c.ctors >>= fun ctors =>
+        pure ⟨c.eta, ct, c.etaParams, c.etaFields, c.unitlike, c.unitParams, all,
+          c.nparams, c.nIdx, ctors⟩ := rfl
+  rw [h]
+  exact (Sim.bind (is := [.nm c.etaCtor]) (js := c.all.map .nm ++ (c.ctors.map .nm ++ [])) (sim_name _ m) fun _ =>
+    Sim.bind (is := c.all.map .nm) (js := c.ctors.map .nm ++ []) (sim_nameList _ m) fun _ =>
+    Sim.bind (is := c.ctors.map .nm) (js := []) (sim_nameList _ m) fun _ => Sim.pure _ _ _ rfl).congr
+    (by simp [itemsCaps])
 
 /-- A firing mode's items. -/
 def itemsFire : ConLeche.RecRuleFire → List Item
@@ -167,13 +175,36 @@ def itemsFire : ConLeche.RecRuleFire → List Item
   | .levels lvls => lvls.map .lv
 
 theorem sim_fire (f : ConLeche.RecRuleFire) (m : EMemo) : Sim (internFire m f) m (itemsFire f) Prod.fst := by
-  sorry
+  cases f with
+  | plain => exact Sim.pure _ _ _ rfl
+  | nested lvls pins =>
+    have h : internFire m (.nested lvls pins) = internLevelList lvls >>= fun hls =>
+        Frontend.internExprList m pins >>= fun r => match r with | (m, hps) => pure (m, .nested hls hps) := rfl
+    rw [h]
+    refine (Sim.bind (is := lvls.map .lv) (js := pins.map .ex) (sim_levelList _ m) fun _ => ?_).congr (by simp [itemsFire])
+    refine (Sim.bind (is := pins.map .ex) (js := []) (sim_exprList _ m) fun r => ?_).congr (by simp)
+    obtain ⟨m₁, _⟩ := r
+    exact Sim.pure _ _ _ rfl
+  | levels lvls =>
+    have h : internFire m (.levels lvls) = internLevelList lvls >>= fun hls => pure (m, .levels hls) := rfl
+    rw [h]
+    exact (Sim.bind (is := lvls.map .lv) (js := []) (sim_levelList _ m) fun _ => Sim.pure _ _ _ rfl).congr
+      (by simp [itemsFire])
 
 /-- A recursor rule's items. -/
 def itemsRule (rl : ConLeche.RecRule) : List Item := .nm rl.ctor :: (itemsFire rl.fire ++ [.ex rl.rhs])
 
 theorem sim_rule (rl : ConLeche.RecRule) (m : EMemo) : Sim (internRule m rl) m (itemsRule rl) Prod.fst := by
-  sorry
+  have h : internRule m rl = internName rl.ctor >>= fun c => internFire m rl.fire >>= fun r => match r with
+      | (m, f) => internExprGo m rl.rhs >>= fun r' => match r' with
+        | (m, rh) => pure (m, ⟨c, rl.nfields, f, rh⟩) := rfl
+  rw [h]
+  refine (Sim.bind (is := [.nm rl.ctor]) (js := itemsFire rl.fire ++ [.ex rl.rhs]) (sim_name _ m) fun _ => ?_).congr (by simp [itemsRule])
+  refine Sim.bind (is := itemsFire rl.fire) (js := [.ex rl.rhs]) (sim_fire _ m) fun r => ?_
+  obtain ⟨m₁, _⟩ := r
+  refine (Sim.bind (is := [.ex rl.rhs]) (js := []) (sim_expr _ m₁) fun r' => ?_).congr (by simp)
+  obtain ⟨m₂, _⟩ := r'
+  exact Sim.pure _ _ _ rfl
 
 /-- A rule list's items. -/
 def itemsRules : List ConLeche.RecRule → List Item
@@ -205,7 +236,48 @@ def itemsCI : ConLeche.ConstantInfo → List Item
 
 theorem sim_ci (ci : ConLeche.ConstantInfo) (m : EMemo) :
     Sim (Frontend.internCI m ci) m (itemsCI ci) Prod.fst := by
-  sorry
+  cases ci with
+  | axiomInfo v =>
+    have h : Frontend.internCI m (.axiomInfo v) = Frontend.internCV m v >>= fun r => match r with
+        | (m, cv) => pure (m, .axiomInfo cv) := rfl
+    rw [h]
+    refine (Sim.bind (is := itemsCV v) (js := []) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
+    obtain ⟨m₁, _⟩ := r; exact Sim.pure _ _ _ rfl
+  | defnInfo v e hh =>
+    have h : Frontend.internCI m (.defnInfo v e hh) = Frontend.internCV m v >>= fun r => match r with
+        | (m, cv) => internExprGo m e >>= fun r' => match r' with | (m, x) => pure (m, .defnInfo cv x hh) := rfl
+    rw [h]
+    refine (Sim.bind (is := itemsCV v) (js := [.ex e]) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
+    obtain ⟨m₁, _⟩ := r
+    refine (Sim.bind (is := [.ex e]) (js := []) (sim_expr e m₁) fun r' => ?_).congr (by simp)
+    obtain ⟨m₂, _⟩ := r'; exact Sim.pure _ _ _ rfl
+  | thmInfo v =>
+    have h : Frontend.internCI m (.thmInfo v) = Frontend.internCV m v >>= fun r => match r with
+        | (m, cv) => pure (m, .thmInfo cv) := rfl
+    rw [h]
+    refine (Sim.bind (is := itemsCV v) (js := []) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
+    obtain ⟨m₁, _⟩ := r; exact Sim.pure _ _ _ rfl
+  | indInfo v c =>
+    have h : Frontend.internCI m (.indInfo v c) = Frontend.internCV m v >>= fun r => match r with
+        | (m, cv) => internCaps c >>= fun caps => pure (m, .indInfo cv caps) := rfl
+    rw [h]
+    refine (Sim.bind (is := itemsCV v) (js := itemsCaps c) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
+    obtain ⟨m₁, _⟩ := r
+    exact (Sim.bind (is := itemsCaps c) (js := []) (sim_caps c m₁) fun _ => Sim.pure _ _ _ rfl).congr (by simp)
+  | ctorInfo v nP nF =>
+    have h : Frontend.internCI m (.ctorInfo v nP nF) = Frontend.internCV m v >>= fun r => match r with
+        | (m, cv) => pure (m, .ctorInfo cv nP nF) := rfl
+    rw [h]
+    refine (Sim.bind (is := itemsCV v) (js := []) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
+    obtain ⟨m₁, _⟩ := r; exact Sim.pure _ _ _ rfl
+  | recInfo v mI rP k rs =>
+    have h : Frontend.internCI m (.recInfo v mI rP k rs) = Frontend.internCV m v >>= fun r => match r with
+        | (m, cv) => internRules m rs >>= fun r' => match r' with | (m, rules) => pure (m, .recInfo cv mI rP k rules) := rfl
+    rw [h]
+    refine (Sim.bind (is := itemsCV v) (js := itemsRules rs) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
+    obtain ⟨m₁, _⟩ := r
+    refine (Sim.bind (is := itemsRules rs) (js := []) (sim_rules rs m₁) fun r' => ?_).congr (by simp)
+    obtain ⟨m₂, _⟩ := r'; exact Sim.pure _ _ _ rfl
 
 /-- A block's items. -/
 def itemsCIs : List ConLeche.ConstantInfo → List Item
@@ -401,14 +473,17 @@ theorem SimN.bind {α β : Type} {x : AM α} {f : α → AM β} {P : AState → 
 theorem SimN.pure {α : Type} (v : α) (P : AState → Prop) : SimN (Pure.pure v : AM α) P :=
   fun _a _ => ⟨v, rfl⟩
 
-theorem simN_pinAt (i : Nat) (hi : i < 51) : SimN (pinAt i) PinsReadyP := by
+theorem simN_pinAt (i : Nat) (hi : i < 52) : SimN (pinAt i) PinsReadyP := by
   intro a hP
   have : i < a.pins.names.size := by simp only [PinsReadyP] at hP; omega
   exact ⟨a.pins.names[i], by simp [pinAt, StateT.run, bind, StateT.bind, get, getThe, MonadStateOf.get,
     StateT.get, Except.bind, pure, StateT.pure, Except.pure, this]⟩
 
 theorem simN_pinReserved : SimN pinReserved PinsReadyP := by
-  sorry
+  intro a hP
+  have : pinsReady a = true := by simp [pinsReady, pinCount, show a.pins.names.size = 52 from hP]
+  exact ⟨a.pins.reserved, by simp [pinReserved, StateT.run, bind, StateT.bind, get, getThe,
+    MonadStateOf.get, StateT.get, Except.bind, pure, StateT.pure, Except.pure, this]⟩
 
 theorem simN_natOpNames : SimN natOpNames PinsReadyP := by
   unfold natOpNames natPredName natAddName natSubName natMulName natPowName natBeqName natBleName
@@ -518,7 +593,29 @@ def itemsAllPins (pins : List ConLeche.NatOpPinSet) : List Item :=
 /-- **The startup walk has the store effect of its items** (at a filled pin table). -/
 theorem simZ_internAllPins (pins : List ConLeche.NatOpPinSet) :
     SimZ (internAllPins pins) (itemsAllPins pins) PinsReadyP := by
-  sorry
+  unfold internAllPins itemsAllPins
+  simp only [seqZ]
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
+  repeat refine SimZ.bind pinsReady_cp (simZ_cv _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_expr _ _) fun _ => ?_
+  refine SimZ.bind pinsReady_cp (simZ_expr _ _) fun _ => ?_
+  refine SimZ.bindN (show SimN reservedBasisNames PinsReadyP from simN_pinReserved) fun _ => ?_
+  refine SimZ.bindN simN_natOpNames fun _ => ?_
+  refine SimZ.bindN simN_natDivModNames fun _ => ?_
+  refine SimZ.bindN simN_reduceOpNames fun _ => ?_
+  refine SimZ.bindN (show SimN pinSorryAx PinsReadyP from simN_pinAt _ (by decide)) fun _ => ?_
+  refine SimZ.bindN (show SimN pinQuotSound PinsReadyP from simN_pinAt _ (by decide)) fun _ => ?_
+  exact simZ_pinSets pins
 
 /-! ## `intern_all_pins()` -/
 

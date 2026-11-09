@@ -57,7 +57,7 @@ def cvW (b : Array UInt8) (m : Mem) (q nm lps ty : Word) : Option Mem :=
 /-- **The model of `ind_caps(q)`**: the fifteen words. -/
 def capsM (m : Mem) (q : Word) : Mem :=
   (((((((((((((((m.set64 DLP q 0).set64 DLP (q + 1) 0).set64 DLP (q + 2) 0).set64 DLP (q + 3) 0)
-    |>.set64 DLP (q + 4) 0).set64 DLP (q + 5) 0).set64 DLP (q + 6) 0).set64 DLP (q + 7) 1)
+    |>.set64 DLP (q + 4) 0).set64 DLP (q + 5) 0).set64 DLP (q + 6) 0).set64 DLP (q + 7) 0)
     |>.set64 DLP (q + 8) 0).set64 DLP (q + 9) 0).set64 DLP (q + 10) 0).set64 DLP (q + 11) 0)
     |>.set64 DLP (q + 12) 0).set64 DLP (q + 13) 0).set64 DLP (q + 14) 0)
 
@@ -104,10 +104,10 @@ def ctorRW (b : Array UInt8) (m : Mem) (c : Word) : Option (Word × Mem) :=
 
 /-- The last four words of a `recInfo` record at `q`. -/
 def recTailM (m : Mem) (q r lo ln : Word) : Mem :=
-  (((m.set64 DLP (q + 5) (rdW (m.arr64 IFR) (r + 8) + rdW (m.arr64 IFR) (r + 7) +
+  ((((m.set64 DLP (q + 5) (rdW (m.arr64 IFR) (r + 8) + rdW (m.arr64 IFR) (r + 7) +
       rdW (m.arr64 IFR) (r + 6) + rdW (m.arr64 IFR) (r + 5))).set64 DLP (q + 6)
       (rdW (m.arr64 IFR) (r + 8) + rdW (m.arr64 IFR) (r + 7) + rdW (m.arr64 IFR) (r + 6))).set64
-    DLP (q + 7) lo).set64 DLP (q + 8) ln
+    DLP (q + 7) lo).set64 DLP (q + 8) ln).set64 DLP (q + 9) (rdW (m.arr64 IFR) (r + 4))
 
 /-- **The model of `ind_rec(r)`**: the record's pointer. -/
 def recRW : Nat → Array UInt8 → Mem → Word → Option (Word × Mem)
@@ -116,7 +116,7 @@ def recRW : Nat → Array UInt8 → Mem → Word → Option (Word × Mem)
     allocK (fun q m₁ => pmK (fun lo ln m₃ => mK (fun m₄ => some (q, recTailM m₄ q r lo ln))
         (cvW b m₃ (q + 1) (rdW (m₃.arr64 IFR) r) (rdW (m₃.arr64 IFR) (r + 1)) (rdW (m₃.arr64 IFR) (r + 2))))
       (rulesW n (m₁.set64 DLP q 5) (rdW (m₁.arr64 IFR) (r + 9)) (rdW (m₁.arr64 IFR) (r + 10))))
-    (allocW m DLP 9)
+    (allocW m DLP 10)
 
 /-- **The model of `inst_types(bo, to, tn, j)`.** -/
 def instTypesW : Nat → Array UInt8 → Mem → Word → Word → Word → Word → Option Mem
@@ -190,7 +190,14 @@ omit hL in
 theorem caps_spec (n : Nat) (s₀ : St) (q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_caps" [q]
     ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = capsM s₀.mem q; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hI.ind_caps]
+  simp only [callFn, indCaps]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, st64] <;> finish [capsM]
+
 
 theorem rule_spec (n : Nat) (s₀ : St) (q rp : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "parse_rule_d" [q, rp]
@@ -268,7 +275,24 @@ include hb in
 theorem recR_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (r : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_rec" [r]
     ⦃fun res s' => LocEq s' s₀ ∧ recRW n b s₀.mem r = some (res.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hI.ind_rec]
+  simp only [callFn, indRec]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hr : ∀ (s₁ : St) (o l : Word), ⦃fun s => s = s₁⦄ invoke p (exec p n) "ind_rules" [o, l]
+        ⦃fun r s' => (LocEq s' s₁ ∧ rulesW n s₁.mem o l = some ((r.headD 0, r.tail.headD 0), s'.mem)) ∧
+          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ :=
+      fun s₁ o l => Triple.keep hL.decl.expr.no_st8 (rules_spec p hL hI n s₁ o l)
+    have ha : ∀ (s₁ : St) (k : Word), ⦃fun s => s = s₁⦄ invoke p (exec p n) "dind_alloc" [k]
+        ⦃fun r s' => (LocEq s' s₁ ∧ allocW s₁.mem DLP k = some (r.headD 0, s'.mem)) ∧
+          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ :=
+      fun s₁ k => Triple.keep hL.decl.expr.no_st8 (dindAlloc_spec p hI n s₁ k)
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        ha, hr, cv_spec p hL hI b hb n] <;>
+        finish [recRW, recTailM]
+
 
 include hb in
 theorem instTypes_spec (n : Nat) : ∀ (s₀ : St), s₀.mem.arr8 IN = b → ∀ (bo to tn j : Word),

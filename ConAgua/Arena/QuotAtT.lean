@@ -11,7 +11,11 @@ public import ConAgua.Arena.DeclCanonEq
 public import ConAgua.Arena.DeclCanonSpec
 public import ConAgua.Arena.DeclCvg
 public import ConAgua.Arena.IndLibSpec
+public import ConAgua.Rom.CIReadSpec
+public import ConAgua.Arena.LeafFns
 import ConAgua.Arena.IlpRd
+import ConAgua.Arena.DeclAndPinIndRef
+import ConAgua.Arena.IndexLoops
 import ConAgua.Arena.IndInstallSpec.NhW
 import all ConAgua.Arena.BasisL
 
@@ -125,8 +129,28 @@ theorem callW_erecPut {p : Prog} (hp : p.lookup "erec_put" = some erecPut) {n : 
 
 theorem word_add21 (d : Word) : d + 2 + 1 = d + 3 := by rw [UInt64.add_assoc]; rfl
 
+theorem c129_coreErecC : (129 : Word) ∉ coreErecC := by
+  intro hmem
+  simp only [coreErecC, List.mem_map, List.mem_filter, List.mem_range] at hmem
+  obtain ⟨x, ⟨hx, hne⟩, e⟩ := hmem
+  have := congrArg UInt64.toNat e
+  simp only [Nat.toUInt64_eq, UInt64.toNat_ofNat', decide_eq_true_eq] at this hne
+  have h129 : (129 : Word).toNat = 129 := rfl
+  have h130 : (130 : Word).toNat = 130 := rfl
+  omega
+theorem c130_coreErecC : (130 : Word) ∉ coreErecC := by
+  intro hmem
+  simp only [coreErecC, List.mem_map, List.mem_filter, List.mem_range] at hmem
+  obtain ⟨x, ⟨hx, hne⟩, e⟩ := hmem
+  have := congrArg UInt64.toNat e
+  simp only [Nat.toUInt64_eq, UInt64.toNat_ofNat', decide_eq_true_eq] at this hne
+  have h129 : (129 : Word).toNat = 129 := rfl
+  have h130 : (130 : Word).toNat = 130 := rfl
+  omega
+
 theorem instLp_core : "inst_lp" ∈ coreFns := List.elem_iff.mp (by decide)
-theorem instLp_stageCore : "inst_lp" ∈ stageCoreFns := List.mem_append_right _ instLp_core
+theorem instLp_stageCore : "inst_lp" ∈ stageCoreFns :=
+  mem_stageCoreFns (List.mem_append_right _ instLp_core) (by simp [coreLeafOnly])
 
 section cv
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -145,7 +169,9 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
     Sim (callW p n "cv_at_lps" [d, c + 1, po, pl] m) (cv.atLps ps) a
       (fun _ cv' m' a' => StageT dn vis fe m' a' ∧ IWGrow m₀ m' ∧ MemFrame quotA quotC m₀ m' ∧
         decCV (erecP m') d.toNat = some cv' ∧
-        (∀ i, (∀ j < 4, i % 2 ^ 41 ≠ (d.toNat + j) % 2 ^ 41) → erecP m' i = erecP m i)) := by
+        (∀ i, (∀ j < 4, i % 2 ^ 41 ≠ (d.toNat + j) % 2 ^ 41) → erecP m' i = erecP m i) ∧
+        erecP m' (d.toNat + 1) = some po ∧ erecP m' (d.toNat + 2) = some pl ∧
+        ∀ x, erTopOf m' x = erTopOf m x) := by
   intro r m' h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (cvAtLps_specW p hP.cvAt n _ d (c + 1) po pl) h
@@ -246,7 +272,8 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
   have e0 : erRdT m (c + 1) = w0 := (erRdOK m).off hw0 (by simp)
   have hrun3 := partsRunOfOk hok3
   rw [hres3] at hrun3
-  refine ⟨⟨cv.name, ps, decH r3⟩, _, ?_, StageT.of_wrER hT3 hSw, hgw, hfw, ?_, fun i hi => ?_⟩
+  refine ⟨⟨cv.name, ps, decH r3⟩, _, ?_, StageT.of_wrER hT3 hSw, hgw, hfw, ?_, fun i hi => ?_,
+    by simpa using hrd 1 (by simp), by simpa using hrd 2 (by simp), fun x => ?_⟩
   · simp only [IConstantVal.atLps, StateT.run_bind, hrun1, ← hus, hty, ← decE_eq, exb, hrun3,
       StateT.run_pure]
     rfl
@@ -254,6 +281,14 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
     rw [e0] at hrd hgw
     exact decCV_of_wr4 hrd hw0l (ArrExt.hslice? hgw.erecGrow.ext hps) hrh3
   · rw [hout i hi, he3, he12]
+  · have hc3 := (run_memFrame hP.coreErec instLp_core (run_of_callW h3)).1
+    have e129 : rdW (s3.mem.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := by
+      rw [hc3.ctl 129 c129_coreErecC, hpf2.ctl 129 (plC_not (by simp [plBadC])),
+        hpf1.ctl 129 (plC_not (by simp [plBadC]))]
+    have e130 : rdW (s3.mem.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := by
+      rw [hc3.ctl 130 c130_coreErecC, hpf2.ctl 130 (plC_not (by simp [plBadC])),
+        hpf1.ctl 130 (plC_not (by simp [plBadC]))]
+    simp only [erTopOf, erecTop, erecTop1, wrER_ctl, e129, e130]
 
 end cv
 
@@ -317,6 +352,84 @@ structure QuotPinSim (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop wher
     Sim (callW p n "quot_pin" [UInt64.ofNat k.slot] m) (ConRon.Arena.quotPin k) a
       (fun r ci m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧
         decCI (erecP m') (r.headD 0).toNat = some ci)
+
+/-- **`Quot`'s `sortZ` name has a handle** under the record pool's name decoder `dn` (a fact about
+the startup store, state-free; the loop threads it from its start). -/
+def QuotDn (dn : NIdx → Option ConLeche.Name) : Prop := ∃ k, dn k = some (.str .anonymous "u")
+
+/-- The quotient readers' precondition from `QuotDn` and the decoder's agreement with the twin's
+name store (`TwinMem.dnN`, i.e. `TwinOK.den.dnN`). -/
+theorem QuotDn.namesDn {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
+    (hq : QuotDn dn) (hT : TwinMem dn m a) : L.Rom.NamesDn dn a L.Rom.quotNames := by
+  intro x hx
+  simp only [L.Rom.quotNames, List.mem_cons, List.not_mem_nil, or_false] at hx
+  subst hx
+  obtain ⟨k, hk⟩ := hq
+  exact ⟨k, hk, hT.dnN k _ hk⟩
+
+/-- **`StageT` across a leaf** whose twin op is an interning step (`IStepS`): its `StageR` post, the
+leaves' frame (the pins and the core memos kept). -/
+theorem StageT.of_leafI {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+    {a a' : AState} (hT : StageT dn vis fe m a) (hS : StageR vis fe m' a')
+    (hs : ConRon.Bridge.Frontend.IStepS a a') (hf : MemFrame leafA leafC m m') :
+    StageT dn vis fe m' a' := by
+  refine ⟨hS, hT.twin.of_istep hs (by rw [hf.size]; exact hT.twin.erec)
+    (by rw [hf.size]; exact hT.twin.spn) (by rw [hf.size]; exact hT.twin.bstk)
+    (hT.twin.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp), ?_⟩
+  have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS leafA_pins (by decide)
+  simp only [pinW, hP]; exact hT.flag
+
+/-- **The slot reader refines `quotPin`**, from the quotient block reader's refinement
+(`RomQuotRef`, `RomRefs.quot`), the leaves' write set (`rom_basis_decls` is a leaf) and `QuotDn`. -/
+theorem quotPinSim_of {p : Prog} {dn : NIdx → Option ConLeche.Name}
+    (hp : p.lookup "quot_pin" = some quotPin) (hR : ∀ vis fe, L.Rom.RomQuotRef p dn vis fe)
+    (hcl : LeafClosed p) (hq : QuotDn dn) : QuotPinSim p dn where
+  qp n vis fe m a k hT hok := by
+    intro r m' h
+    obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (quotPin_specW p hp n _ (UInt64.ofNat k.slot)) h
+    cases n with
+    | zero => simp [quotPinW] at hW
+    | succ n =>
+    simp only [quotPinW] at hW
+    cases h1 : callW p n "rom_basis_decls" [4] m with
+    | none => rw [h1] at hW; simp [quotPinW.k_rom_basis_decls] at hW
+    | some x1 =>
+    obtain ⟨r1, m1⟩ := x1
+    rw [h1] at hW
+    obtain ⟨blk, a1, hrun1, hS1, hg1, hD1⟩ :=
+      hR vis fe n m a r1 m1 ⟨hT.stage, hok, hq.namesDn hT.twin.mem⟩ h1
+    have hrun1' : ConRon.Arena.BasisKind.decls .quotK a = .ok (blk, a1) := hrun1
+    obtain ⟨hs1, hden1⟩ := ConRon.Bridge.BasisKind.decls_run hok hrun1'
+    have hf1 : MemFrame leafA leafC m m1 :=
+      (run_memFrame hcl (leaf_mem _ rfl) (run_of_callW h1)).1
+    have hT1 := hT.of_leafI hS1 hs1 hf1
+    have hlen : blk.length = 5 := by
+      rw [denoteCIList_length _ _ hden1]; decide
+    have hk5 : k.slot < 5 := by cases k <;> decide
+    obtain ⟨hDp, hbd⟩ := decRBlk_canon hD1 (by omega)
+    have hl : (r1.tail.headD 0).toNat = 5 := by rw [← decPL_length m1 hDp, hlen]
+    obtain ⟨v, hv, hx, hci⟩ := decPL_get' hDp k.slot (by omega)
+    simp only [quotPinW.k_rom_basis_decls] at hW
+    have hl5 : r1.tail.headD 0 = 5 := UInt64.toNat_inj.mp (by rw [hl]; rfl)
+    have hks : (UInt64.ofNat k.slot : Word).toNat = k.slot := by
+      rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (by omega)
+    rw [if_neg (by rw [hl5, UInt64.le_iff_toNat_le, hks]; simp; omega), Option.some.injEq,
+      Prod.mk.injEq] at hW
+    obtain ⟨rfl, hm⟩ := hW
+    rw [← hm]
+    obtain ⟨w, hw, rfl⟩ : ∃ w, iwA m1 ((r1.headD 0).toNat + k.slot) = some w ∧ w.toNat = v := by
+      simp only [iwN, nat?, Option.map_eq_some_iff] at hv; exact hv
+    have htop : iwTop m1 < 2 ^ 64 := UInt64.toNat_lt_size _
+    have hidx : (r1.headD 0 + UInt64.ofNat k.slot).toNat = (r1.headD 0).toNat + k.slot := by
+      rw [UInt64.toNat_add, hks]; omega
+    have ew : rdW (m1.arr64 IW) (r1.headD 0 + UInt64.ofNat k.slot) = w := by
+      simp only [iwA, aread_apply] at hw; simp only [rdW, hidx, hw, Option.getD_some]
+    refine ⟨blk[k.slot], a1, ?_, hT1, hg1, by rw [ew]; exact hci⟩
+    have : blk.getD k.slot default = blk[k.slot] := by simp [List.getD, hx]
+    simp only [ConRon.Arena.quotPin, StateT.run_bind]
+    rw [show StateT.run (BasisKind.decls ConLeche.BasisKind.quotK) a = .ok (blk, a1) from hrun1',
+      ← this]; rfl
 
 section qph
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -423,7 +536,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
   | some x5 =>
   obtain ⟨r5, m5⟩ := x5
   rw [h5] at hW; simp only [quotPinHitW.k_cv_at_lps] at hW
-  obtain ⟨cv', a2, hrun2, hT5, hg5, -, hdec5, -⟩ := cvAtLps_sim hP (n0 + 1) hT2.stage hT4 hst1.ok hqf4 hg4
+  obtain ⟨cv', a2, hrun2, hT5, hg5, -, hdec5, -, -, -, -⟩ := cvAtLps_sim hP (n0 + 1) hT2.stage hT4 hst1.ok hqf4 hg4
     (d := r4.headD 0) (c := r1.headD 0) (by rw [hoff4]; exact Nat.le_refl _) (by rw [htop4, hoff4]; simp) hq41
     (ArrExt.decCV (hg2.trans hg4).erecGrow.ext hpcv) (by rw [he2]; exact hsl1)
     (ConRon.Bridge.denoteNListE_ext hst1.ext _ _ (ConRon.Bridge.denoteCV_inv hden).2.1) r5 m5 h5

@@ -50,6 +50,42 @@ l_model cvAtLps_specW (p : Prog) (hp : p.lookup "cv_at_lps" = some cvAtLps)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
 
+/-- **The model of `er_copy_er(d, s, l)`**: the record words copied one by one. -/
+l_model erCopyEr_specW (p : Prog) (hp : p.lookup "er_copy_er" = some erCopyEr)
+  fns [hp ↦ erCopyErW list]
+  specs [callW_spec p n "erec_put"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `spn_to_er(d, s, l)`**: the stack words copied to the record pool. -/
+l_model spnToEr_specW (p : Prog) (hp : p.lookup "spn_to_er" = some spnToEr)
+  fns [hp ↦ spnToErW list]
+  specs [callW_spec p n "erec_put"]
+  grind [arena_grind]
+
+/-- **The model of `fire_levels_at(fo, fl, ko, kc, us)`**. -/
+l_model fireLevelsAt_specW (p : Prog) (hp : p.lookup "fire_levels_at" = some fireLevelsAt)
+  fns [hp ↦ fireLevelsAtW list]
+  specs [callW_spec p n "ls_node", callW_spec p n "keys_push", callW_spec p n "sle_go",
+    callW_spec p n "erec_alloc", callW_spec p n "spn_to_er"]
+  grind [arena_grind]
+
+/-- **The model of `rules_at_lps_go(ko, kc, us, o, l, d)`**. -/
+l_model rulesAtLpsGo_specW (p : Prog) (hp : p.lookup "rules_at_lps_go" = some rulesAtLpsGo)
+  fns [hp ↦ rulesAtLpsGoW list]
+  specs [callW_spec p n "inst_lp", callW_spec p n "fire_levels_at", callW_spec p n "erec_put"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `ci_at_lps(p, po, pl)`**. -/
+l_model ciAtLps_specW (p : Prog) (hp : p.lookup "ci_at_lps" = some ciAtLps)
+  fns [hp ↦ ciAtLpsW list]
+  specs [callW_spec p n "erec_alloc", callW_spec p n "erec_put", callW_spec p n "cv_at_lps",
+    callW_spec p n "er_to_iw", callW_spec p n "param_levels", callW_spec p n "inst_lp",
+    callW_spec p n "er_copy_er", callW_spec p n "rules_at_lps_go"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
 /-- **The model of `quot_pin_hit(k, q)`**. -/
 l_model quotPinHit_specW (p : Prog) (hp : p.lookup "quot_pin_hit" = some quotPinHitL)
   fns [hp ↦ quotPinHitW list]

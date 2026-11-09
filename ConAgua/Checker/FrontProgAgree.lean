@@ -102,7 +102,7 @@ elab "front_agree" : tactic => do
       frontLk pc pf g
       setGoals gs.tail
 
-/-- The functions reachable from `front_run` in `checkerProg` (254). -/
+/-- The functions reachable from `front_run` in `checkerProg` (235). -/
 def frontFns : List FnName :=
   ["front_run", "front_init", "front_line", "line_rec", "intern_nanon", "name_put", "intern_zero", "level_put", "skip_ws", "nanon_find", "nanon_push", "nsp_find",
    "nsp_put", "zero_find", "zero_push", "lsp_find", "lsp_put", "apply_rec", "apply_expr", "apply_dline", "next_member", "slot_nat", "scan_nat_list", "scan_quoted_nat",
@@ -119,18 +119,14 @@ def frontFns : List FnName :=
    "inst_recs", "decl_push", "lp_put", "hex_val", "hex3", "hints_num", "scan_rules", "esc_sur", "lit_hash", "nstr_find", "nstr_push", "der_b",
    "intern_app", "intern_lam", "intern_forall", "intern_letE", "intern_proj", "ls_find", "ls_push", "const_find", "const_push", "dec_chunk", "nat_mad", "lit_find",
    "lit_push", "lit_find_str", "lit_push_str", "d_member", "ind_member", "vi_np_go", "ifl_alloc", "vi_map_go", "vi_listed_go", "ifl_contains", "store_fuel", "vi_order",
-   "vi_k_expected", "vi_recs", "ind_type", "ind_ctor", "ind_rec", "scan_rule", "nstr_match", "app_find", "app_push", "lam_find", "lam_push", "forall_find",
-   "forall_push", "letE_find", "letE_push", "proj_find", "proj_push", "ls_match", "lit_match", "lit_match_str", "hints_val", "str_code", "ind_slot", "ind_num",
-   "ind_bool", "ind_nlist", "ind_list", "fld_put", "ifl_push", "vi_ids_go", "ctl_sum", "vi_order_go", "pi_result_d", "e_view", "lh_mk", "lv_equiv",
-   "vi_nested", "vi_recs_go", "ind_cv", "ind_caps", "ind_rules", "limbs_eq", "match_dlit", "ifl_ids", "ind_size", "fld_alloc", "vi_order_in", "lv_eq",
-   "lv_simp", "lv_leq", "vi_rec", "ind_rules_go", "vi_ctor", "lv_node", "lv_comb", "lv_rest", "name_rec_pre", "vi_rec_idx", "parse_rule_d", "ifl_find_last",
-   "ind_pi_tele_len", "lv_imax", "pi_sort_tele_len", "lv_cases", "lv_imax_l", "lv_cases_at", "lv_dist1", "lv_dist2", "lv_imax_r", "lv_subsimp", "lv_subst", "sub_rec",
-   "sub_bit", "sub_val"]
+   "vi_recs", "ind_type", "ind_ctor", "ind_rec", "scan_rule", "nstr_match", "app_find", "app_push", "lam_find", "lam_push", "forall_find", "forall_push",
+   "letE_find", "letE_push", "proj_find", "proj_push", "ls_match", "lit_match", "lit_match_str", "hints_val", "str_code", "ind_slot", "ind_num", "ind_bool",
+   "ind_nlist", "ind_list", "fld_put", "ifl_push", "vi_ids_go", "ctl_sum", "vi_order_go", "e_view", "vi_nested", "vi_recs_go", "ind_cv", "ind_caps",
+   "ind_rules", "limbs_eq", "match_dlit", "ifl_ids", "ind_size", "fld_alloc", "vi_order_in", "vi_rec", "ind_rules_go", "vi_ctor", "name_rec_pre", "vi_rec_idx",
+   "parse_rule_d", "ifl_find_last", "ind_pi_tele_len", "pi_sort_tele_len", "sub_rec", "sub_bit", "sub_val"]
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem checkerProg_frontAgree :
     ∀ f ∈ frontFns, checkerProg.lookup f = L.Front.frontAllProg.lookup f := by
   front_agree
--/
 
 end L.Checker

@@ -220,6 +220,19 @@ structure SInv (mem : Mem) (a : AState) : Prop where
   /-- The scratch flag is off (the pin sets are built at startup): `erec_alloc` allocates in
   `EREC`'s tier 0. -/
   flag : rdW (mem.arr64 CTL) 1 = 0
+  /-- `EREC`'s tier 0 is addressable by a tagged address (`erec_put` at tier 0). -/
+  cap : (mem.arr64 EREC).size < 2 ^ 40
+
+/-- `erec_put` at an untagged address below `2^40` is a tier-0 store. -/
+theorem erecPutMem_lo (m : Mem) (x v : Word) (h : x.toNat < 2 ^ 40) :
+    erecPutMem m x v = m.set64 EREC x v := by
+  have hb : x.toNat / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h]
+  have hm : x &&& 0xFFFFFFFFFF = x := UInt64.toNat_inj.mp (by rw [mask40_toNat]; exact Nat.mod_eq_of_lt h)
+  unfold erecPutMem; rw [tierA_EREC, if_pos hb, hm]
+
+theorem SInv.lo {mem : Mem} {a : AState} (inv : SInv mem a) {x : Word} (h : x.toNat < erecTop mem)
+    (m : Mem) (v : Word) : erecPutMem m x v = m.set64 EREC x v :=
+  erecPutMem_lo m x v (by have := inv.top; have := inv.cap; omega)
 
 theorem hiA : ∀ b ∈ ([EREC] : List TieredArray), InHigh b := by decide
 theorem hiC : ∀ x ∈ ([129, 150, 151] : List Word), 64 ≤ x.toNat := by simp
@@ -241,7 +254,7 @@ theorem SInv.frameE {mem mem' : Mem} {a : AState} (inv : SInv mem a)
    inv.rset.frame hf (by decide) (by decide) (by decide) (by decide),
    inv.ok, by simp only [stkTop]; rw [hf.ctl 131 (by decide)]; exact inv.stk,
    by rw [hf.size CTL]; exact inv.ctl, ht, inv.mode.frame hf (by decide) (by decide),
-   by rw [hf.ctl 1 (by decide)]; exact inv.flag⟩
+   by rw [hf.ctl 1 (by decide)]; exact inv.flag, by rw [hf.size EREC]; exact inv.cap⟩
 
 /-- The scratch flag word is the twin's `scratchOn` (`ConsR.flag` of the sorts' table): a step
 that keeps `scratchOn` keeps the flag off. -/
@@ -264,7 +277,7 @@ theorem SInv.of_dec {mem mem' : Mem} {a a' : AState} {seen : List ConLeche.Expr}
     (hsc : a'.store.scratchOn = a.store.scratchOn) : SInv mem' a' :=
   ⟨hd.arena, hd.rset, hd.ok, hd.stk, by rw [hf.size CTL]; exact inv.ctl, by
     simp only [erecTop]; rw [hf.ctl 129 (by decide), hf.size EREC]; exact inv.top, hd.mode,
-    flag_of_scratch inv.arena.base hd.arena.base hsc inv.flag⟩
+    flag_of_scratch inv.arena.base hd.arena.base hsc inv.flag, by rw [hf.size EREC]; exact inv.cap⟩
 
 /-- An expression list's interning keeps `scratchOn` (`IStepS.scratch`). -/
 theorem scratch_of_list {es : List ConLeche.Expr} {m m' : EMemo} {hs : List EIdx} {a a' : AState}
@@ -617,16 +630,17 @@ include hr
 `internExprList` on them, their handles in the slice `(o, k)`. -/
 theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLeche.Expr) (m : EMemo)
     (q o k q' : Word) (mem' : Mem), DecInv mem a seen m → o.toNat + k.toNat ≤ erecTop mem →
-    erecTop mem ≤ (mem.arr64 EREC).size → romExprsToW rom n mem q o k = some (q', mem') →
+    erecTop mem ≤ (mem.arr64 EREC).size → (mem.arr64 EREC).size < 2 ^ 40 →
+    romExprsToW rom n mem q o k = some (q', mem') →
     ∃ (es : List ConLeche.Expr) (hs : List EIdx) (m' : EMemo) (a' : AState) (seen' : List ConLeche.Expr),
       (Frontend.internExprList m es).run a = .ok ((m', hs), a') ∧ es.length = k.toNat ∧
       DecInv mem' a' seen' m' ∧ SliceR mem' o k hs ∧ EW o.toNat (o.toNat + k.toNat) mem mem' ∧
       MemFrame PinsA ExprC mem mem' := by
   intro n
   induction n with
-  | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ hW; simp [romExprsToW] at hW
+  | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ hW; simp [romExprsToW] at hW
   | succ n ih =>
-  intro mem a seen m q o k q' mem' inv hb ht hW
+  intro mem a seen m q o k q' mem' inv hb ht hcap hW
   have htl := top_lt mem
   by_cases hk : k = 0
   · subst hk
@@ -649,12 +663,13 @@ theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLec
   have ho1 : (o + 1).toNat = o.toNat + 1 := addN (by simp; omega)
   have ht₁ := expr_top hf₁
   have hs₁ : (m₁.arr64 EREC).size = (mem.arr64 EREC).size := hf₁.size EREC
+  rw [erecPutMem_lo m₁ o h (by omega)] at hW
   have inv₂ := inv₁.frameE (frame_set m₁ o h)
   have ht₂ : erecTop (m₁.set64 EREC o h) = erecTop m₁ := by
     simp only [erecTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hs₂ : ((m₁.set64 EREC o h).arr64 EREC).size = (m₁.arr64 EREC).size := Mem.size_arr64_set64 _ _ _ _
   obtain ⟨es, hs, m', a', seen', hrun₂, hlen, inv', hsl, hew, hfr⟩ :=
-    ih _ a₁ _ m₂ q₁ (o + 1) (k - 1) q' mem' inv₂ (by omega) (by omega) hW
+    ih _ a₁ _ m₂ q₁ (o + 1) (k - 1) q' mem' inv₂ (by omega) (by omega) (by omega) hW
   have h0 : rdW (mem'.arr64 EREC) o = (decI h : EIdx).word.toUInt64 := by
     rw [rdW, hew.low _ (by omega) (by omega), ← rdW, rdW_setE _ _ _ (by omega)]
     exact ((word_decI _ h hlt).mpr rfl).symm
@@ -701,7 +716,8 @@ theorem pinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r k q' : Word) (m
   have hrk : (r + k).toNat = r.toNat + k.toNat := addN (by omega)
   obtain ⟨es₁, hs₁, mm, a₁, seen₁, hrun₁, hlen₁, inv₁, hsl₁, hew₁, hfr₁⟩ :=
     exprsTo_dec rom hr n _ a [] ∅ q (r + k) 1 q₁ m₁ (inv.reset hc)
-      (by rw [resetMem_top]; simp; omega) (by rw [resetMem_top, resetMem_size]; exact inv.top) hX
+      (by rw [resetMem_top]; simp; omega) (by rw [resetMem_top, resetMem_size]; exact inv.top)
+      (by rw [resetMem_size]; exact inv.cap) hX
   obtain ⟨e, rfl⟩ : ∃ e, es₁ = [e] := by
     match es₁, hlen₁ with
     | [e], _ => exact ⟨e, rfl⟩
@@ -771,7 +787,8 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   -- the header
   generalize hmA : m₁.set64 EREC (r + 8 + 2 * j) o = mA
   generalize hmh : mA.set64 EREC (r + 9 + 2 * j) l = mh
-  have hlh : listHdr m₁ r j o l = mh := by rw [← hmh, ← hmA]; rfl
+  have hlh : listHdr m₁ r j o l = mh := by
+    rw [← hmh, ← hmA, listHdr, inv₁.lo (x := r + 8 + 2 * j) (by omega), inv₁.lo (x := r + 9 + 2 * j) (by omega)]
   have hcA : mA.arr64 CTL = m₁.arr64 CTL := by rw [← hmA, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hch : mh.arr64 CTL = mA.arr64 CTL := by rw [← hmh, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hsA : (mA.arr64 EREC).size = (m₁.arr64 EREC).size := by rw [← hmA, Mem.size_arr64_set64]
@@ -794,7 +811,8 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   rw [lists2K_some] at hW
   obtain ⟨es, hs, mm, a₁, seen₁, hrun₁, hlen₁, inv₂, hsl₂, hew₂, hfr₂⟩ :=
     exprsTo_dec rom hr n _ a [] ∅ (q + 8) o l q₁ m₂ (invh.reset hc)
-      (by rw [resetMem_top]; omega) (by rw [resetMem_top, resetMem_size]; exact invh.top) hX
+      (by rw [resetMem_top]; omega) (by rw [resetMem_top, resetMem_size]; exact invh.top)
+      (by rw [resetMem_size]; exact invh.cap) hX
   have hfm : MemFrame PinsA ExprC mh m₂ :=
     ((resetMem_frame mh).mono (fun b hb => by simp [PinsA, hb]) (fun _ h => h)).trans hfr₂
   have inv₂' : SInv m₂ a₁ := invh.of_dec inv₂ hfm (scratch_of_list invh.ok (EMemoOK.empty _) hrun₁)
@@ -883,12 +901,13 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
     ⟨hR1, inv.rset.frameS hf1, hstN.ok, by rw [frame_exprA_stk hf1]; exact inv.stk,
       by rw [hf1.size CTL]; exact inv.ctl, by rw [ht₁, hs₁]; exact inv.top,
       (romNameW_topK hN).mode inv.arena.base.lit.1 inv.mode,
-      flag_of_scratch inv.arena.base hR1.base hstN.scratch inv.flag⟩
+      flag_of_scratch inv.arena.base hR1.base hstN.scratch inv.flag, by rw [hs₁]; exact inv.cap⟩
   -- its handle
-  by_cases hc' : ¬ rclearOK (m₁.set64 EREC o h)
+  by_cases hc' : ¬ rclearOK (erecPutMem m₁ o h)
   · simp [tpK, hc'] at hW
-  have hc₀ : rclearOK (m₁.set64 EREC o h) := Decidable.not_not.mp hc'
+  have hc₀ : rclearOK (erecPutMem m₁ o h) := Decidable.not_not.mp hc'
   rw [tpK_some (hc := hc₀)] at hW
+  rw [inv₁.lo (x := o) (by omega)] at hW hc₀
   generalize hmA : m₁.set64 EREC o h = mA at hW hc₀
   have hc : rclearOK mA := hc₀
   have htA : erecTop mA = erecTop m₁ := by
@@ -902,7 +921,8 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
   rw [tp2K_some] at hW
   obtain ⟨es₁, hs₁', mm, a₁, seen₁, hrun₁, hlen₁, inv₂, hsl₂, hew₂, hfr₂⟩ :=
     exprsTo_dec rom hr n _ _ [] ∅ q₁ (o + 1) 1 q₂ m₂ (invA.reset hc)
-      (by rw [resetMem_top]; simp; omega) (by rw [resetMem_top, resetMem_size]; exact invA.top) hX
+      (by rw [resetMem_top]; simp; omega) (by rw [resetMem_top, resetMem_size]; exact invA.top)
+      (by rw [resetMem_size]; exact invA.cap) hX
   simp only [show (1 : Word).toNat = 1 from rfl, ho1] at hew₂
   obtain ⟨e, rfl⟩ : ∃ e, es₁ = [e] := by
     match es₁, hlen₁ with
@@ -989,7 +1009,8 @@ theorem tpinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   -- the header
   generalize hmA : m₁.set64 EREC (r + 24 + 2 * j) o = mA
   generalize hmh : mA.set64 EREC (r + 25 + 2 * j) l = mh
-  have hlh : tpinsHdr m₁ r j o l = mh := by rw [← hmh, ← hmA]; rfl
+  have hlh : tpinsHdr m₁ r j o l = mh := by
+    rw [← hmh, ← hmA, tpinsHdr, inv₁.lo (x := r + 24 + 2 * j) (by omega), inv₁.lo (x := r + 25 + 2 * j) (by omega)]
   have hcA : mA.arr64 CTL = m₁.arr64 CTL := by rw [← hmA, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hch : mh.arr64 CTL = mA.arr64 CTL := by rw [← hmh, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hsA : (mA.arr64 EREC).size = (m₁.arr64 EREC).size := by rw [← hmA, Mem.size_arr64_set64]
@@ -1124,6 +1145,7 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
     · rw [(hkL j hj).1]; have := (hallL j (by omega)).2; omega
     · have := (hallT j (by omega)).2
       omega
+  rw [inv₃.lo (x := o) (by omega)] at hW
   generalize hm₄ : m₃.set64 EREC o r = m₄ at hW
   have hs₃ : (m₃.arr64 EREC).size = (mem.arr64 EREC).size := by rw [ewT.size, ewL.size, ewP.size, hs₁]
   have hc₄ : m₄.arr64 CTL = m₃.arr64 CTL := by rw [← hm₄, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
@@ -1166,7 +1188,7 @@ frame. -/
 theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : Mem) (a : AState)
     (q q' : Word) (mem' : Mem) (hA : ArenaD mem a) (hmo : ModeOK mem) (hR : RsetR mem) (hok : StateOK a)
     (hstk : (stkTop mem).toNat < 2 ^ 61) (hc : 151 < (mem.arr64 CTL).size)
-    (hfl : rdW (mem.arr64 CTL) 1 = 0)
+    (hfl : rdW (mem.arr64 CTL) 1 = 0) (hcap : (mem.arr64 EREC).size < 2 ^ 40)
     (hW : internPinSetsW rom n mem q = some (q', mem')) :
     ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internPinSets pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧ StateOK a' ∧
@@ -1204,7 +1226,7 @@ theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : 
     hR.frame hf₂ (by decide) (by decide) (by decide) (by decide), hok,
     by simp only [stkTop]; rw [hf₂.ctl 131 (by decide)]; exact hstk,
     by rw [hf₂.size CTL]; exact hc, by rw [ht₂, ht₁, hE₂]; exact hroom, hmo.frame hf₂ (by decide) (by decide),
-    by rw [hf₂.ctl 1 (by decide)]; exact hfl⟩
+    by rw [hf₂.ctl 1 (by decide)]; exact hfl, by rw [hE₂]; exact hcap⟩
   obtain ⟨pins, ips, a', hrun, hlen, inv', hall, ew, fr⟩ :=
     setsTo_dec rom hr n m₂ a (q + 8) o c q' mem' inv₂ (by omega) hW
   have hfr : MemFrame PinsA PinsC mem mem' := (hf₂.mono (by simp [PinsA]) (by simp [PinsC])).trans fr

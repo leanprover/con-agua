@@ -58,7 +58,8 @@ theorem checkerProg_internAllPins_PB (bs : List UInt8) (hr : RomOK bs)
     (n : Nat) (s₀ : St) (a₀ : AState) (hbs : s₀.mem.arr8 PB = bs.toArray) (hA : ArenaD s₀.mem a₀)
     (hmo : ModeOK s₀.mem) (hP : PinsReadyP a₀) (hok : ConRon.Bridge.StateOK a₀) (hpins : ConRon.Bridge.PinsOK a₀)
     (hpp : ConRon.Bridge.PersPins a₀) (hoff : a₀.store.scratchOn = false) (hR : RsetR s₀.mem)
-    (hst : (stkTop s₀.mem).toNat < 2 ^ 61) (hc : 151 < (s₀.mem.arr64 CTL).size) :
+    (hst : (stkTop s₀.mem).toNat < 2 ^ 61) (hc : 151 < (s₀.mem.arr64 CTL).size)
+    (hcap : (s₀.mem.arr64 EREC).size < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke checkerProg (exec checkerProg n) "intern_all_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
@@ -66,6 +67,6 @@ theorem checkerProg_internAllPins_PB (bs : List UInt8) (hr : RomOK bs)
       ConRon.Bridge.StateOK a' ∧ RsetR s'.mem ∧ erecTop s'.mem ≤ (s'.mem.arr64 EREC).size ∧ ModeOK s'.mem ∧
       MemFrame PinsA PinsC s₀.mem s'.mem; ⊤⦄ :=
   internAllPins_PB checkerProg checkerProg_noSt8PB bs (checkerProg_pinProg bs) hr hpre n s₀ a₀ hbs hA hmo
-    hP hok hpins hpp hoff hR hst hc
+    hP hok hpins hpp hoff hR hst hc hcap
 
 end L.Checker
