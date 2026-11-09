@@ -9,6 +9,8 @@ public import ConAgua.Checker.LoopDecl
 public import ConAgua.Checker.QuotFns
 public import ConAgua.Checker.IndMemoClosed
 public import ConAgua.Checker.IndArm
+public import ConAgua.Checker.LoopProgInd
+public import ConAgua.Checker.CrLeaves
 public import ConAgua.Verdict.KnotAllE
 public import ConAgua.Arena.QuotRulesT
 import ConAgua.Checker.LoopProgTac
@@ -232,6 +234,47 @@ theorem checkerProg_quotSimsPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop r
 theorem checkerProg_armStepPB {f : FnName} (hf : f ∈ declLoopFns) :
     StepIn (Prog.subPB bs checkerProg) [f] :=
   StepIn.subPB bs (checkerProg_stepIn fun _ h => by simp only [List.mem_singleton] at h; exact h ▸ hf)
+
+/-! ## `check_decl` -/
+
+theorem checkerProg_indMemoPB : IndMemoClosed (Prog.subPB bs checkerProg) :=
+  closedWL_subPB bs checkerProg_indMemo
+
+theorem checkerProg_apdPB : ApdF (Prog.subPB bs checkerProg) := by prog_bundle []
+theorem checkerProg_crfPB : CrfF (Prog.subPB bs checkerProg) := by prog_bundle []
+theorem checkerProg_crKeepPB : CrKeep (Prog.subPB bs checkerProg) :=
+  ⟨checkerProg_indMemoPB bs, checkerProg_crLeavesPB bs⟩
+theorem checkerProg_ibePB : IbeProg (Prog.subPB bs checkerProg) := by prog_bundle []
+theorem checkerProg_checkDeclPB : CheckDeclProg (Prog.subPB bs checkerProg) := by prog_bundle []
+
+/-- **`check_decl`'s program facts at the substituted checker program**: the axiom and quotient
+arms here, the value arms' contracts and the inductive arm's as premises; the decoder `dn`
+injective (`DnInj`), with `Quot`'s universe name under it (`QuotDn`). -/
+theorem checkerProg_cdProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
+    {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
+    (hdn : DnInj dn) (hq : QuotDn dn)
+    (hdf : ∀ cv v hh, ArmSpecT pins dn ds (Prog.subPB bs checkerProg) "check_decl_defn"
+      (.defnDecl cv v hh))
+    (hth : ∀ cv v, ArmSpecT pins dn ds (Prog.subPB bs checkerProg) "check_decl_thm" (.thmDecl cv v))
+    (hop : ∀ cv v, ArmSpecT pins dn ds (Prog.subPB bs checkerProg) "check_decl_opaque"
+      (.opaqueDecl cv v))
+    (hind : IndArmSpec (Prog.subPB bs checkerProg) dn) :
+    CdProg pins dn ds (Prog.subPB bs checkerProg) where
+  cd := checkerProg_checkDeclPB bs
+  ibe := checkerProg_ibePB bs
+  indIn := StepIn.subPB bs checkerProg_indIn
+  indMemo := checkerProg_indMemoPB bs
+  arms :=
+    { axiom_ := checkDeclAxiom_loopT (checkerProg_axArmPB bs hr hpre) (checkerProg_knotStagePB bs)
+        (checkerProg_leafClosedPB bs) (checkerProg_apdPB bs) (checkerProg_crKeepPB bs)
+        (checkerProg_crfPB bs) (checkerProg_ccvSimsPB bs dn) (checkerProg_quotSimsPB bs hr hpre hq) hdn
+        (checkerProg_armStepPB bs (by decide)) (checkerProg_indMemoPB bs) (checkerProg_indLeavesPB bs)
+      defn := hdf
+      thm := hth
+      opaque_ := hop
+      quot := checkDeclQuot_loopT (checkerProg_quotArmPB bs) (checkerProg_quotSimsPB bs hr hpre hq)
+        (checkerProg_armStepPB bs (by decide)) (checkerProg_indMemoPB bs) (checkerProg_indLeavesPB bs) }
+  ind := hind
 
 end arms
 
