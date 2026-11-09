@@ -78,8 +78,6 @@ def CheckerCd : Prop :=
     (∀ cv v hh, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
       "check_decl_defn" (.defnDecl cv v hh)) ∧
     (∀ cv v, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
-      "check_decl_thm" (.thmDecl cv v)) ∧
-    (∀ cv v, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
       "check_decl_opaque" (.opaqueDecl cv v)) ∧
     IndArmSpec (Prog.subPB pb.data.toList checkerProg) (dnOf PA.sE.store)
 
@@ -99,9 +97,9 @@ theorem jobProg_of_cd (hCd : CheckerCd) {b pb : ByteArray} (PA : PhaseA b) (hpb 
     (hpre : PbPre pb) :
     JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg) :=
   have hr : RomOK pb.data.toList := by simpa [RomOK] using hpb
-  let ⟨hdf, hth, hop, hind⟩ := hCd b pb PA hpb hpre
+  let ⟨hdf, hop, hind⟩ := hCd b pb PA hpb hpre
   checkerProg_jobProgPB pb.data.toList hr hpre
-    (checkerProg_cdProgPB pb.data.toList hr hpre PA.dnInj PA.quotDn hdf hth hop hind)
+    (checkerProg_cdProgPB pb.data.toList hr hpre PA.dnInj PA.quotDn hdf hop hind)
     (checkerProg_canonPB _)
 
 /-- **The driver's two runs accept ⇒ the twin accepts**, given `check_decl`'s program facts

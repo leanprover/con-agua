@@ -490,25 +490,6 @@ def pmK {α : Type} (rest : Word → Word → Mem → Option α) : Option ((Word
 @[arena_grind =] theorem pmK_some {α : Type} (rest : Word → Word → Mem → Option α) (a b : Word)
     (m : Mem) : pmK rest (some ((a, b), m)) = rest a b m := rfl
 
-/-- `vi_k_expected` after `lv_equiv`. -/
-def keK3 (c : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (q, m) => if rdW (m.arr64 IFR) (c + 4) = 0 ∧ q = 2 then some (2, m) else some (1, m)
-
-@[arena_grind =] theorem keK3_none (c : Word) : keK3 c none = none := rfl
-@[arena_grind =] theorem keK3_some (c q : Word) (m : Mem) :
-    keK3 c (some (q, m)) = if rdW (m.arr64 IFR) (c + 4) = 0 ∧ q = 2 then some (2, m) else some (1, m) :=
-  rfl
-
-/-- `vi_k_expected` after `lh_mk`. -/
-def keK2 (n : Nat) (c s : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (z, m) => keK3 c (equivW n m s z)
-
-@[arena_grind =] theorem keK2_none (n : Nat) (c s : Word) : keK2 n c s none = none := rfl
-@[arena_grind =] theorem keK2_some (n : Nat) (c s z : Word) (m : Mem) :
-    keK2 n c s (some (z, m)) = keK3 c (equivW n m s z) := rfl
-
 /-- **The model of `vi_nested(to, tn, j)`.** -/
 def nestedW : Nat → Mem → Word → Word → Word → Option Word
   | 0, _, _, _, _ => none
