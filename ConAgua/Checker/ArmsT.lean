@@ -17,6 +17,7 @@ import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LitClosed
 meta import ConAgua.Checker.LeafAll
+meta import ConAgua.Arena.DeclReduceSpec2
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
@@ -193,6 +194,36 @@ theorem checkerProg_leafClosed : LeafClosed checkerProg :=
 theorem checkerProg_leafClosedPB (bs : List UInt8) : LeafClosed (Prog.subPB bs checkerProg) :=
   closedW_subPB bs checkerProg_leafClosed
 
+/-- `rcvaFns` (the closure of `reduce_op_cv_a`) as a tree of name codes. -/
+names_tree rcvaTree : rcvaFns
+
+/-- The arrays of `rcvaA`, as a test. -/
+def rcvaPa (a : TieredArray) : Bool :=
+  leafPa a && a != OIXA && a != OIXS && a != OIXN && a != tier1 OIXA && a != tier1 OIXS &&
+    a != tier1 OIXN
+
+/-- The `CTL` words of `rcvaC`, as a test. -/
+def rcvaPc (w : Word) : Bool := leafPc w && w != 133
+
+theorem rcvaPa_mem (a : TieredArray) (h : rcvaPa a = true) : a ∈ rcvaA := by
+  simp only [rcvaPa, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
+  simp only [rcvaA, List.mem_filter, decide_eq_true_eq]
+  exact ⟨leafPa_mem a h.1.1.1.1.1.1, h.1.1.1.1.1.2, h.1.1.1.1.2, h.1.1.1.2, h.1.1.2, h.1.2, h.2⟩
+
+theorem rcvaPc_mem (w : Word) (h : rcvaPc w = true) : w ∈ rcvaC := by
+  simp only [rcvaPc, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
+  simp only [rcvaC, List.mem_filter, decide_eq_true_eq]
+  exact ⟨leafPc_mem w h.1, h.2⟩
+
+/-- Every function of the checker passes `reduce_op_cv_a`'s per-function check. -/
+prog_all checkerProg_rcvaChk : checkerProg (wsChk CTL rcvaPa rcvaPc rcvaTree)
+
+theorem checkerProg_rcvaClosed : RcvaClosed checkerProg :=
+  closedW_of_all rcvaTree.eq rcvaPa_mem rcvaPc_mem checkerProg_rcvaChk
+
+theorem checkerProg_rcvaClosedPB (bs : List UInt8) : RcvaClosed (Prog.subPB bs checkerProg) :=
+  closedW_subPB bs checkerProg_rcvaClosed
+
 theorem checkerProg_litShapeClosedPB (bs : List UInt8) :
     LitShapeClosed (Prog.subPB bs checkerProg) :=
   closedW_subPB bs checkerProg_litShapeClosed
@@ -216,6 +247,11 @@ theorem checkerProg_thmArmPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop rom
     ThmArmProg (Prog.subPB bs checkerProg) :=
   ⟨by chk_lk, (checkerProg_axArmPB bs hr hpre).ccv⟩
 
+theorem checkerProg_opqArmPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length) :
+    OpqArmProg (Prog.subPB bs checkerProg) := by
+  have hR := checkerProg_romRefsPB bs hr hpre
+  prog_bundle [checkerProg_cvgAgreePB bs, StepIn.subPB bs checkerProg_cvgIn, hR.ci, hR.cv,
+    hR.expr, hR.basis, hR.quot, hR.andPin, checkerProg_rcvaClosedPB bs]
 theorem checkerProg_quotArmPB : QuotArmProg (Prog.subPB bs checkerProg) := by
   prog_bundle [checkerProg_leafClosedPB bs]
 theorem checkerProg_rulesPB : RulesProg (Prog.subPB bs checkerProg) := by
@@ -259,8 +295,6 @@ theorem checkerProg_cdProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop rom
     (hdn : DnInj dn) (hq : QuotDn dn)
     (hdf : ∀ cv v hh, ArmSpecT pins dn ds (Prog.subPB bs checkerProg) "check_decl_defn"
       (.defnDecl cv v hh))
-    (hop : ∀ cv v, ArmSpecT pins dn ds (Prog.subPB bs checkerProg) "check_decl_opaque"
-      (.opaqueDecl cv v))
     (hind : IndArmSpec (Prog.subPB bs checkerProg) dn) :
     CdProg pins dn ds (Prog.subPB bs checkerProg) where
   cd := checkerProg_checkDeclPB bs
@@ -277,7 +311,10 @@ theorem checkerProg_cdProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop rom
         (checkerProg_leafClosedPB bs) (checkerProg_apdPB bs) (checkerProg_crKeepPB bs)
         (checkerProg_crfPB bs) (checkerProg_ccvSimsPB bs dn) (checkerProg_armStepPB bs (by decide))
         (checkerProg_indMemoPB bs) (checkerProg_indLeavesPB bs)
-      opaque_ := hop
+      opaque_ := checkDeclOpaque_loopT (checkerProg_opqArmPB bs hr hpre) (checkerProg_knotStagePB bs)
+        (checkerProg_leafClosedPB bs) (checkerProg_apdPB bs) (checkerProg_crKeepPB bs)
+        (checkerProg_crfPB bs) (checkerProg_ccvSimsPB bs dn) (checkerProg_armStepPB bs (by decide))
+        (checkerProg_indMemoPB bs) (checkerProg_indLeavesPB bs)
       quot := checkDeclQuot_loopT (checkerProg_quotArmPB bs) (checkerProg_quotSimsPB bs hr hpre hq)
         (checkerProg_armStepPB bs (by decide)) (checkerProg_indMemoPB bs) (checkerProg_indLeavesPB bs) }
   ind := hind

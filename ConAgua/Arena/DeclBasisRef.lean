@@ -3,6 +3,8 @@ module
 public import ConAgua.Arena.BasisL
 public import ConAgua.Rom.CIReadSpec
 public import ConAgua.Front.StateDR
+public import ConAgua.Arena.StageTLift
+public import ConRon.Bridge.Checker.Basis
 
 @[expose] public section
 
@@ -47,30 +49,33 @@ variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
 /-- **`basis_name_hit(o, l)` refines `basisNameHit block`.** -/
 def BasisNameHitRef : Prop := ∀ (o l : Word) (block : List IConstantInfo),
   RomRef p "basis_name_hit" [o, l]
-    (fun m a => StageR vis fe m a ∧ ConRon.Bridge.StateOK a ∧ BlockAt o l block m)
-    (ConRon.Arena.basisNameHit block) (KeepPost vis fe decHit)
+    (fun m a => StageT dn vis fe m a ∧ ConRon.Bridge.StateOK a ∧ ConRon.Bridge.ReadOK a ∧
+      BlockAt o l block m ∧ ∃ bs, Frontend.denoteCIList a.store block = some bs)
+    (ConRon.Arena.basisNameHit block) (KeepPostT dn vis fe decHit)
 
 /-- **`basis_at_block(k, o, l)` refines `BasisKind.atBlock (basisOfW k) block`**, for the four
 block kinds `basis_name_hit` returns; the result slice lies below the pool's top (`at_block_go`
 returns `(0, 0)` or an `sl_cons` slice), also when it is empty. -/
 def BasisAtBlockRef : Prop := ∀ (k o l : Word) (block : List IConstantInfo), k.toNat < 4 →
   RomRef p "basis_at_block" [k, o, l]
-    (fun m a => StageR vis fe m a ∧ ConRon.Bridge.StateOK a ∧ BlockAt o l block m)
+    (fun m a => StageT dn vis fe m a ∧ ConRon.Bridge.StateOK a ∧ ConRon.Bridge.ReadOK a ∧
+      BlockAt o l block m ∧ ∃ bs, Frontend.denoteCIList a.store block = some bs)
     (ConRon.Arena.BasisKind.atBlock (basisOfW k.toNat) block)
-    (fun m m' a r x => KeepPost vis fe (decRBlk dn) m m' a r x ∧
+    (fun m m' a r x => KeepPostT dn vis fe (decRBlk dn) m m' a r x ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m')
 
 /-- **`quot_at(k.slot, q)` refines `quotAt k cv`** (`q` an `EREC` constant value), from a
 well-formed twin state that names `Quot`'s `sortZ` names through `dn`. -/
 def QuotAtRef : Prop := ∀ (k : ConLeche.QuotKind) (q : Word) (cv : IConstantVal),
   RomRef p "quot_at" [UInt64.ofNat k.slot, q]
-    (fun m a => StageR vis fe m a ∧ ConRon.Bridge.StateOK a ∧ NamesDn dn a quotNames ∧
-      decCV (erecP m) q.toNat = some cv)
-    (ConRon.Arena.quotAt k cv) (KeepPost vis fe (decRCI dn))
+    (fun m a => StageT dn vis fe m a ∧ ConRon.Bridge.StateOK a ∧ ConRon.Bridge.ReadOK a ∧
+      NamesDn dn a quotNames ∧ decCV (erecP m) q.toNat = some cv ∧
+      ∃ c, Frontend.denoteCV a.store cv = some c)
+    (ConRon.Arena.quotAt k cv) (KeepPostT dn vis fe (decRCI dn))
 
 /-- The three, at every stage. -/
 structure BasisRefs : Prop where
-  nameHit : ∀ vis fe, BasisNameHitRef p vis fe
+  nameHit : ∀ dn vis fe, BasisNameHitRef p dn vis fe
   atBlock : ∀ dn vis fe, BasisAtBlockRef p dn vis fe
   quotAt : ∀ dn vis fe, QuotAtRef p dn vis fe
 

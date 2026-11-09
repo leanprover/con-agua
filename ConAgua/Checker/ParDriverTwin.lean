@@ -99,9 +99,9 @@ theorem jobProg_of_cd (hCd : CheckerCd) {b pb : ByteArray} (PA : PhaseA b) (hpb 
     (hpre : PbPre pb) :
     JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg) :=
   have hr : RomOK pb.data.toList := by simpa [RomOK] using hpb
-  let ⟨hdf, _, hop, hind⟩ := hCd b pb PA hpb hpre
+  let ⟨hdf, _, _, hind⟩ := hCd b pb PA hpb hpre
   checkerProg_jobProgPB pb.data.toList hr hpre
-    (checkerProg_cdProgPB pb.data.toList hr hpre PA.dnInj PA.quotDn hdf hop hind)
+    (checkerProg_cdProgPB pb.data.toList hr hpre PA.dnInj PA.quotDn hdf hind)
     (checkerProg_canonPB _)
 
 /-- **The driver's two runs accept ⇒ the twin accepts**, given `check_decl`'s program facts
