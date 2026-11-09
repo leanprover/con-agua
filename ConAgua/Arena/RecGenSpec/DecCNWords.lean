@@ -17,7 +17,7 @@ import ConAgua.Arena.RecClassSpec.MjProg
 /-!
 # DecCNWords
 
-`decCN_words`, `CxoProg`, `AgreeA.set_iw`, `KeepW.of_mfr`, `CtorLp.grow`, `FA2.snoc` and the lemmas only they use.
+`CxoProg`, `AgreeA.set_iw`, `KeepW.of_mfr`, `FA2.snoc` and the lemmas only they use.
 -/
 
 section
@@ -35,15 +35,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-- A `[cv, nF]` record decoded below the tops: the constant's pointer, its name word, `nF`. -/
-theorem decCN_words {m : Mem} {cA : Word} {x : IConstantVal × Nat} (h : DecB (fun m => decCN m cA.toNat) m x)
-    (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    ∃ a : Nat, rdW (m.arr64 IW) cA = UInt64.ofNat a ∧ a + 3 < erTop m ∧
-      DecB (fun m => decCVp m a) m x.1 ∧ H (rdW (m.arr64 EREC) (UInt64.ofNat a)) ∧
-      decI (rdW (m.arr64 EREC) (UInt64.ofNat a)) = x.1.name ∧
-      rdW (m.arr64 IW) (cA + 1) = UInt64.ofNat x.2 ∧ x.2 < 2 ^ 64 ∧ cA.toNat + 1 < iwTop m := by
-  sorry
 
 /-! ## The relational side -/
 
@@ -97,20 +88,6 @@ theorem KeepW.of_mfr {S : List TieredArray} {T : List Word} {m m' : Mem} (h : MF
   obtain ⟨A, C, hf, -, -⟩ := h
   exact hf.size
 
-/-- `CtorLp` holds on as the pools grow and keep their sizes. -/
-theorem CtorLp.grow {m m' : Mem} {cA : Word} {x : IConstantVal × Nat} (h : CtorLp m cA)
-    (hcA : DecB (fun m => decCN m cA.toNat) m x) (hsz : (m.arr64 IW).size < 2 ^ 64) (hg : IWGrow m m')
-    (hk : KeepW m m') : CtorLp m' cA := by
-  obtain ⟨a, ha, ha3, -, -, -, -, -, hct⟩ := decCN_words hcA hsz
-  have ha64 : a + 3 < 2 ^ 64 := by have := (rdW (m.arr64 CTL) 129).toNat_lt; simp only [erTop] at ha3; omega
-  have e1 : (UInt64.ofNat a + 1 : Word).toNat = a + 1 := by rw [UInt64.toNat_add]; simp <;> omega
-  have e2 : (UInt64.ofNat a + 2 : Word).toNat = a + 2 := by rw [UInt64.toNat_add]; simp <;> omega
-  simp only [CtorLp] at h ⊢
-  rw [ha] at h
-  rw [rdW_grow hg (by omega), ha]
-  rw [rdW_er_grow hg (by rw [e2]; omega), rdW_er_grow hg (by rw [e1]; omega), hk EREC]
-  exact h
-
 theorem FA2.snoc {α β : Type} {R : α → β → Prop} :
     ∀ {as : List α} {bs : List β} {a : α} {b : β}, FA2 R as bs → R a b → FA2 R (as ++ [a]) (bs ++ [b])
   | _, _, _, _, .nil, h => .cons h .nil
@@ -137,10 +114,6 @@ theorem decNL_write (m : Mem) (o j : Nat) (w v : Word) (ps : List Nat) (hw : w.t
 structure CosProg (p : Prog) : Prop extends CxoProg p where
   cos : p.lookup "class_ctors_of" = some classCtorsOfL
 
-/-- `CtorLp` at every constructor record of a slice. -/
-def CtorsLp (m : Mem) (ao al : Word) : Prop :=
-  ∀ j < al.toNat, CtorLp m (rdW (m.arr64 IW) (ao + UInt64.ofNat j))
-
 /-! ## `classes_ctors`: the relational side -/
 
 /-- A `TargetMajor` decoded below the tops: its constructors' slice (words 6, 7). -/
@@ -155,30 +128,6 @@ theorem decTM_ctors {m : Mem} {v : Nat} {M : TargetMajor} (h : DecB (fun m => de
   obtain ⟨-, ho'⟩ := rec2IwN_trunc ho
   obtain ⟨hlt, hl'⟩ := rec2IwN_trunc hl
   exact ⟨o, l, ho', by simpa [Nat.add_assoc] using hl', by simpa [Nat.add_assoc] using hlt, hd⟩
-
-/-- `CtorsLp` holds on as the pools grow and keep their sizes. -/
-theorem CtorsLp.grow {m m' : Mem} {ao al : Word} {cAs : List (IConstantVal × Nat)} (h : CtorsLp m ao al)
-    (hcAs : DecB (fun m => decPL m (decCN m) ao.toNat al.toNat) m cAs) (hsz : (m.arr64 IW).size < 2 ^ 64)
-    (hg : IWGrow m m') (hk : KeepW m m') : CtorsLp m' ao al := by
-  intro j hj
-  have hcAs0 : decPL (truncM m) (decCN (truncM m)) ao.toNat al.toNat = some cAs := hcAs
-  obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hcAs0 j hj
-  obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
-  have hrd := iwN_rdW_at (w := ao) (k := j) hv0 hsz
-  have hgt : (ao + UInt64.ofNat j).toNat < iwTop m := by
-    rw [UInt64.toNat_add]; simp; have := ao.toNat_lt; omega
-  rw [rdW_grow hg hgt, hrd.1]
-  have := h j hj
-  rw [hrd.1] at this
-  have hdv' : DecB (fun m => decCN m (UInt64.ofNat v : Word).toNat) m (cAs[j]'(by
-      rw [decPL_length _ hcAs0]; exact hj)) := by
-    rw [UInt64.toNat_ofNat_of_lt' hrd.2]; exact hdv
-  exact this.grow hdv' hsz hg hk
-
-/-- `CtorLp` at every constructor record of every class of `(ms.off, ms.len)`. -/
-def ClassesLp (m : Mem) (mo ml : Word) : Prop :=
-  ∀ c < ml.toNat, ∀ v o l, iwN m (mo.toNat + c) = some v → iwN m (v + 6) = some o → iwN m (v + 7) = some l →
-    CtorsLp m (UInt64.ofNat o) (UInt64.ofNat l)
 
 /-- A fresh `[off, len]` header (at or above `b`) of a slice stable above `b`. -/
 theorem stabA_decLH {α : Type} {dec : Mem → Nat → Option α} {m : Mem} {hq o l b : Nat} {xs : List α}

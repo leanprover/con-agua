@@ -13,8 +13,8 @@ import ConAgua.Arena.IndPosSpec.FgW
 /-!
 # BpRecBpassR
 
-`decBPass`, `BPassR` (the 11-word `BlockPass` record), `bpMem_eq`, `icprW_ok`, `bpRec_bpassR`,
-`ctorsLp_of_decPL` and the lemmas only they use.
+`decBPass`, `BPassR` (the 11-word `BlockPass` record), `bpMem_eq`, `icprW_ok`, `bpRec_bpassR`
+and the lemmas only they use.
 -/
 
 section
@@ -190,41 +190,6 @@ theorem bpRec_bpassR {m : Mem} {q : Word} {fe : IFEnv}
     have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hr : rdW (m.arr64 IW) (q + 1) = w1 := by simp only [rdW, hq1, e1]; rfl
     rw [hr]; exact hsrc
-
-/-! ## The classes' constructors' level-parameter slices -/
-
-/-- **A constructor slice decoded below the tops has its constants' level-parameter slices in
-`EREC` or empty** (`CtorsLp`): each constructor's constant record is decoded below the tops
-(`CVExt`). -/
-theorem ctorsLp_of_decPL {m : Mem} {co cl : Nat} {cts : List (IConstantVal × Nat)}
-    (hdc : decPL (truncM m) (decCN (truncM m)) co cl = some cts) (hcob : co < 2 ^ 64) (hclb : cl < 2 ^ 64)
-    (hE : erTop m ≤ (m.arr64 EREC).size) (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    CtorsLp m (UInt64.ofNat co) (UInt64.ofNat cl) := by
-  sorry
-
-theorem iwN_trunc_lt {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) : v < 2 ^ 64 := by
-  have h6 := (rec2IwN_trunc h).2
-  simp only [iwN, nat?, Option.map_eq_some_iff] at h6
-  obtain ⟨w, -, rfl⟩ := h6; exact w.toNat_lt
-
-/-- **A class slice decoded below the tops has its constructors' level-parameter slices in `EREC`
-or empty** (`ClassesLp`). -/
-theorem classesLp_of_decPL {m : Mem} {mo ml : Word} {ms : List TargetMajor}
-    (h : decPL (truncM m) (decTM (truncM m)) mo.toNat ml.toNat = some ms)
-    (hE : erTop m ≤ (m.arr64 EREC).size) (hsz : (m.arr64 IW).size < 2 ^ 64) : ClassesLp m mo ml := by
-  intro c hc v o l hv ho hl
-  obtain ⟨v', hv', htm⟩ := decPL_getH (truncM m) h c hc
-  rw [(rec2IwN_trunc hv').2] at hv
-  cases Option.some.inj hv
-  simp only [decTM, bind, Option.bind_eq_some_iff, pure] at htm
-  obtain ⟨_, -, _, -, _, -, _, -, _, -, cts, hcts, -⟩ := htm
-  obtain ⟨co, cl, hco, hcl, hdc⟩ := decAt_some hcts
-  rw [(rec2IwN_trunc hco).2] at ho
-  rw [show v + 6 + 1 = v + 7 by omega] at hcl
-  rw [(rec2IwN_trunc hcl).2] at hl
-  cases Option.some.inj ho
-  cases Option.some.inj hl
-  exact ctorsLp_of_decPL hdc (iwN_trunc_lt hco) (iwN_trunc_lt hcl) hE hsz
 
 /-- The pass's callees without a walk-memo lemma (and positivity's `check_abs_ctor_sorts_all`). -/
 def passCallees : List FnName :=

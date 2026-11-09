@@ -24,7 +24,7 @@ import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 /-!
 # GpbWSimF
 
-`genRecCheck_split`, `iwGrow_truncM`, `StabD.decB`, `mapM_of_stab`, `spl_decB`, `classesLp_of_cnsRec` and the lemmas only they use.
+`genRecCheck_split`, `iwGrow_truncM`, `StabD.decB`, `mapM_of_stab`, `spl_decB` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -76,47 +76,6 @@ theorem spl_decB {α : Type} {dec : Mem → Nat → Option α} {m : Mem} {o l : 
   show decPL (truncM m) (dec (truncM m)) o l = some xs
   rw [decPL_eq_bind, show decNL (truncM m) o l = some ps from decNL_decB hps hb]
   exact mapM_of_stab hf
-
-/-! ## `ClassesLp` through `classes_nfs` -/
-
-theorem classesLp_of_cnsRec {mb mF : Mem} {mo ml qr : Word} {hi : Nat} {ws : List Nat}
-    {xs : List TargetMajor} (hlp : ClassesLp mb mo ml) (hg : IWGrow mb mF) (hk : KeepW mb mF)
-    (hsz : (mb.arr64 IW).size < 2 ^ 64)
-    (hws : decNL mF qr.toNat ml.toNat = some ws) (hacc : FA2 (CnsRec mb (CnsSrc mb mo ml) hi mF) ws xs) :
-    ClassesLp mF qr ml := by
-  intro c hc v o l hv ho hl
-  have hpl := decNL_length mF hws
-  have hq := mapM_opt_get (fun j => iwN mF (qr.toNat + j)) (List.range ml.toNat) ws hws c (by simpa using hc)
-  simp only [List.getElem_range] at hq
-  rw [hv] at hq
-  have hlen := FA2.length_eq hacc
-  have hR := FA2.get hacc c (by omega) (by omega)
-  simp only [Option.some.injEq] at hq
-  rw [← hq] at hR
-  obtain ⟨p0, src, eo, el, ps, hsrc, ⟨c', hc', hp0⟩, hw, htop, hwords, -⟩ := hR
-  have w6 := hwords 6 (by omega) (by omega) (by omega)
-  have w7 := hwords 7 (by omega) (by omega) (by omega)
-  have ho' : iwN (truncM mb) (p0 + 6) = some o := by
-    simp only [iwN, nat?] at ho ⊢; rw [← w6]; simpa [iwA, aread_apply, aread_apply] using ho
-  have hl' : iwN (truncM mb) (p0 + 7) = some l := by
-    simp only [iwN, nat?] at hl ⊢; rw [← w7]; simpa [iwA, aread_apply, aread_apply] using hl
-  have hs : decTM (truncM mb) p0 = some src := hsrc
-  simp only [decTM, bind, Option.bind_eq_some_iff, pure] at hs
-  obtain ⟨_, -, _, -, _, -, _, -, _, -, cts, hct, -⟩ := hs
-  obtain ⟨o', l', ho'', hl'', hdct⟩ := decAt_some hct
-  rw [ho'] at ho''; rw [show p0 + 6 + 1 = p0 + 7 by omega, hl'] at hl''
-  cases ho''; cases hl''
-  have hol : o < 2 ^ 64 ∧ l < 2 ^ 64 := by
-    simp only [iwN, nat?, Option.map_eq_some_iff] at ho' hl'
-    obtain ⟨w1, -, rfl⟩ := ho'; obtain ⟨w2, -, rfl⟩ := hl'
-    exact ⟨w1.toNat_lt, w2.toNat_lt⟩
-  have h1 := (rec2IwN_trunc ho').2
-  have h2 := (rec2IwN_trunc hl').2
-  have hL := hlp c' hc' p0 o l hp0 h1 h2
-  refine hL.grow (cAs := cts) ?_ hsz hg hk
-  show decPL (truncM mb) (decCN (truncM mb)) _ _ = some cts
-  rw [UInt64.toNat_ofNat_of_lt' hol.1, UInt64.toNat_ofNat_of_lt' hol.2]
-  exact hdct
 
 theorem rcFree_mfr {m m' : Mem} (h : MemFrame rcFreeA rcFreeC m m') :
     MFr [MAM, MCM] [202, 203, 205, 207, 209, 211, 215, 216, 217] m m' := by
@@ -368,36 +327,6 @@ theorem decCC_lh_mono : ∀ q, OMono (fun m => decLH m (decPL m (decCC m)) q) :=
 -- ==== S41G.lean
 /-! ## Part B: the classes, their constructors, the count, the formers, the level -/
 
-theorem ClassesLp.grow {m m' : Mem} {mo ml : Word} {ms : List TargetMajor} (h : ClassesLp m mo ml)
-    (hms : PSlR decTM ms mo ml m) (hg : IWGrow m m') (hk : KeepW m m') (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    ClassesLp m' mo ml := by
-  intro c hc v o l hv ho hl
-  have hms0 : decPL (truncM m) (decTM (truncM m)) mo.toNat ml.toNat = some ms := hms.dec
-  obtain ⟨v', hv', hsrc⟩ := decPL_getH (truncM m) hms0 c hc
-  obtain ⟨hvt, hvm⟩ := rec2IwN_trunc hv'
-  rw [iwN_grow hg hvt, hvm] at hv
-  have e := Option.some.inj hv
-  subst e
-  have hs := hsrc
-  simp only [decTM, bind, Option.bind_eq_some_iff, pure] at hs
-  obtain ⟨_, -, _, -, _, -, _, -, _, -, cts, hct, -⟩ := hs
-  obtain ⟨o', l', ho'', hl'', hdct⟩ := decAt_some hct
-  obtain ⟨h6t, h6⟩ := rec2IwN_trunc ho''
-  obtain ⟨h7t, h7⟩ := rec2IwN_trunc hl''
-  rw [iwN_grow hg h6t, h6] at ho
-  rw [show v' + 6 + 1 = v' + 7 by omega] at h7t h7
-  rw [iwN_grow hg h7t, h7] at hl
-  have e1 := Option.some.inj ho
-  have e2 := Option.some.inj hl
-  subst e1 e2
-  have hol : o' < 2 ^ 64 ∧ l' < 2 ^ 64 := by
-    simp only [iwN, nat?, Option.map_eq_some_iff] at h6 h7
-    obtain ⟨w1, -, rfl⟩ := h6; obtain ⟨w2, -, rfl⟩ := h7
-    exact ⟨w1.toNat_lt, w2.toNat_lt⟩
-  refine (h c hc v' o' l' hvm h6 h7).grow (cAs := cts) ?_ hsz hg hk
-  show decPL (truncM m) (decCN (truncM m)) _ _ = some cts
-  rw [UInt64.toNat_ofNat_of_lt' hol.1, UInt64.toNat_ofNat_of_lt' hol.2]
-  exact hdct
 
 /-- A handle word of a record decoded below the tops, read at its word address. -/
 theorem installIwH {k : IdxKind} {m : Mem} {w : Word} {i : Nat} {x : Idx k}
