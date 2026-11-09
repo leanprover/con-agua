@@ -34,9 +34,9 @@ open L.Arena
 /-- **A decoded record at kind word `3` is `indInfo`**, with its caps: `decCI`'s match only
 reaches the `.indInfo` arm from `nat? a p = some 3` (`Env.lean`'s `decCI_name` destructures the
 same match generically, for the name field). -/
-theorem decCI_kind3 {a : Array Word} {p : Nat}
-    {ci : IConstantInfo} (h : decCI (aread a) p = some ci) (hk : nat? (aread a) p = some 3) :
-    ∃ cv caps, ci = .indInfo cv caps ∧ decCaps (aread a) (p + 5) = some caps := by
+theorem decCI_kind3 {a : Nat → Option Word} {p : Nat}
+    {ci : IConstantInfo} (h : decCI a p = some ci) (hk : nat? a p = some 3) :
+    ∃ cv caps, ci = .indInfo cv caps ∧ decCaps a (p + 5) = some caps := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk', h⟩ := h
   have hk3 : k = 3 := Option.some.inj (hk'.symm.trans hk)
@@ -46,9 +46,9 @@ theorem decCI_kind3 {a : Array Word} {p : Nat}
   exact ⟨cv, caps, rfl, hcaps⟩
 
 /-- The contrapositive: an `indInfo` record's kind word is `3`. -/
-theorem decCI_indInfo_kind {a : Array Word} {p : Nat}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) p = some (.indInfo cv caps)) :
-    nat? (aread a) p = some 3 := by
+theorem decCI_indInfo_kind {a : Nat → Option Word} {p : Nat}
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a p = some (.indInfo cv caps)) :
+    nat? a p = some 3 := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   rw [hk]
@@ -63,120 +63,99 @@ theorem decCI_indInfo_kind {a : Array Word} {p : Nat}
   | 6, h => simp_all []
   | (_ + 7), h => simp_all
 
-/-- A word read off `EREC` at a `Nat` position, as `nat?` decodes it. -/
-theorem erN_rdW {m : Mem} {q : Nat} {k : Nat} (h : nat? (erA m) q = some k) (hq : q < 2 ^ 64) :
-    rdW (m.arr64 EREC) (UInt64.ofNat q) = UInt64.ofNat k := by
-  sorry
+/-- An in-bounds `EREC⦃a⦄` read, as the model's `erRd`. -/
+theorem erRd_get (m : Mem) (a : Word) (h : (a &&& 1099511627775).toNat < (m.arr64 (tierA EREC (a >>> 40))).size) :
+    (m.arr64 (tierA EREC (a >>> 40)))[(a &&& 1099511627775).toNat] = erRd m a := by
+  unfold erRd; rw [rdW_eq _ _ _ rfl h]
+
+/-- A word `EREC⦃q⦄` reads at a `Nat` position, as `nat?` decodes it. -/
+theorem erN_rdW {m : Mem} {q : Nat} {k : Nat} (h : nat? (erA m) q = some k) :
+    erRd m (UInt64.ofNat q) = UInt64.ofNat k := by
+  simp only [nat?, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  have hqq : (UInt64.ofNat q).toNat = q := by have := erecP_lt64 hw; simp; omega
+  rw [erRd_of_erA (by rw [hqq]; exact hw), UInt64.ofNat_toNat]
 
 /-- A `nat?`-decoded value is below `2 ^ 64` (it is some word's `toNat`). -/
-theorem nat?_lt {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : k < 2 ^ 64 := by
+theorem nat?_lt {a : Nat → Option Word} {i k : Nat} (h : nat? a i = some k) : k < 2 ^ 64 := by
   simp only [nat?, Option.map_eq_some_iff] at h
   obtain ⟨w, -, rfl⟩ := h
   exact w.toNat_lt
 
 /-- `hlist?`'s two-word header, unfolded. -/
-theorem hlist?_some {k : IdxKind} {a : Array Word} {i : Nat} {xs : List (Idx k)}
-    (h : hlist? (aread a) i = some xs) :
-    ∃ o l, nat? (aread a) i = some o ∧ nat? (aread a) (i + 1) = some l ∧ hslice? (aread a) o l = some xs := by
+theorem hlist?_some {k : IdxKind} {a : Nat → Option Word} {i : Nat} {xs : List (Idx k)}
+    (h : hlist? a i = some xs) :
+    ∃ o l, nat? a i = some o ∧ nat? a (i + 1) = some l ∧ hslice? a o l = some xs := by
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨o, ho, l, hl, h⟩ := h
   exact ⟨o, l, ho, hl, h⟩
 
 /-! ## `nest_block_of` refines `nestBlockOf`: the pure fact -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **What `nest_block_of` computes, as a function of `env_find`'s result**: the key lemma,
-proved purely over `Mem`/`Word`, outside the L execution.
-
-Two extra hypotheses, beyond `hfound`, are needed and not discharged this round (see the
-report): `hwf` — the found record, if its kind word is `3`, fully decodes as `indInfo` (true for
-any row actually installed through `IFEnv.push`, by `EnvR`'s own `consts` invariant — relating
-that to a *found* row's pointer needs more of `Env.lean`'s machinery than this round reaches) —
-and `hqb`, a slack bound on pointers so `q + 15`/`q + 16` do not wrap (true for any real `EREC`,
-whose size is nowhere near `2 ^ 64`). -/
-theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
-    (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q)
-    (hwf : rdW (m.arr64 EREC) q = (3 : Word) →
-      ∃ cv caps, decCI (erecP m) q.toNat = some (.indInfo cv caps))
-    (hqb : rdW (m.arr64 EREC) q = (3 : Word) → q.toNat + 16 < 2 ^ 64) :
+/-- **What `nest_block_of` computes, as a function of `env_find`'s result** (`envFound`, and a
+found record decodes): the key lemma, proved purely over `Mem`/`Word`, outside the L execution. -/
+theorem nestBlockOf_key {fe : IFEnv} {c : Word} {m : Mem}
+    (found q : Word) (hfound : fe.find? (decI c) = envFound m found q)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) :
     hslice? (erA m)
-        (if found = 0 then (0 : Word) else if rdW (m.arr64 EREC) q = 3 then
-          rdW (m.arr64 EREC) (q + 15) else 0).toNat
-        (if found = 0 then (0 : Word) else if rdW (m.arr64 EREC) q = 3 then
-          rdW (m.arr64 EREC) (q + 16) else 0).toNat
+        (if found = 0 then (0 : Word) else if erRd m q = 3 then erRd m (q + 15) else 0).toNat
+        (if found = 0 then (0 : Word) else if erRd m q = 3 then erRd m (q + 16) else 0).toNat
       = some (nestBlockOf fe (decI c)) := by
   rw [nestBlockOf]
-  unfold decFound at hfound
+  unfold envFound at hfound
   by_cases h0 : found = 0
   · simp only [h0, hfound, ite_true]
     simp [hslice?]
   · simp only [h0, ite_false] at hfound ⊢
-    have hqlt : q.toNat < 2 ^ 64 := q.toNat_lt
-    have hsize : UInt64.size = 2 ^ 64 := rfl
-    by_cases hk3 : rdW (m.arr64 EREC) q = (3 : Word)
-    · obtain ⟨cv, caps, hci0⟩ := hwf hk3
-      have hqb := hqb hk3
-      rw [hci0] at hfound
-      have hci := (erecP_ext m).decCI hci0
+    obtain ⟨ci, hci⟩ := hdec h0
+    rw [hci] at hfound
+    obtain ⟨k, hk⟩ : ∃ k, nat? (erecP m) q.toNat = some k := by
+      simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hci
+      obtain ⟨k, hk, -⟩ := hci
+      exact ⟨k, hk⟩
+    have hrd := erN_rdW (m := m) hk
+    rw [UInt64.ofNat_toNat] at hrd
+    by_cases hk3 : erRd m q = (3 : Word)
+    · have hk3' : k = 3 := by
+        have h1 : UInt64.ofNat k = 3 := by rw [← hrd]; exact hk3
+        have h2 := congrArg UInt64.toNat h1
+        rw [UInt64.toNat_ofNat_of_lt' (nat?_lt hk)] at h2
+        simpa using h2
+      subst hk3'
+      obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk
       simp only [hfound, ite_eq_left hk3]
-      obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 hci (decCI_indInfo_kind hci)
-      obtain rfl : caps = caps' := by
-        have := he.symm; simp only [IConstantInfo.indInfo.injEq] at this; exact this.2.symm
       simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-      obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, vall, hvall, _, _, hcapseq⟩ := hcaps
-      obtain ⟨actors, -, heq⟩ := hcapseq
+      obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, vall, hvall, _, _, _, _, heq⟩ := hcaps
       have hallcaps : caps.all = vall := by
         have h' := Option.some.inj heq; rw [← h']
       obtain ⟨o, l, ho, hl, hslc⟩ := hlist?_some hvall
       have ho' : nat? (erA m) (q.toNat + 15) = some o := by
-        have heq2 : q.toNat + 5 + 10 = q.toNat + 15 := by omega
-        rwa [heq2] at ho
+        rw [show q.toNat + 15 = q.toNat + 5 + 10 by omega]; exact ho
       have hl' : nat? (erA m) (q.toNat + 16) = some l := by
-        have heq2 : q.toNat + 5 + 10 + 1 = q.toNat + 16 := by omega
-        rwa [heq2] at hl
-      have hwo : rdW (m.arr64 EREC) (q + 15) = UInt64.ofNat o := by
-        have e15 : (q + 15 : Word) = UInt64.ofNat (q.toNat + 15) := by
-          apply UInt64.toNat_inj.mp
-          rw [UInt64.toNat_add]
-          have hA : (UInt64.ofNat (q.toNat + 15)).toNat = q.toNat + 15 :=
-            UInt64.toNat_ofNat_of_lt' (by omega)
-          have hB : (15 : Word).toNat = 15 := by decide
-          rw [hA, hB]
-          omega
-        rw [e15]; exact erN_rdW ho' (by omega)
-      have hwl : rdW (m.arr64 EREC) (q + 16) = UInt64.ofNat l := by
-        have e16 : (q + 16 : Word) = UInt64.ofNat (q.toNat + 16) := by
-          apply UInt64.toNat_inj.mp
-          rw [UInt64.toNat_add]
-          have hA : (UInt64.ofNat (q.toNat + 16)).toNat = q.toNat + 16 :=
-            UInt64.toNat_ofNat_of_lt' (by omega)
-          have hB : (16 : Word).toNat = 16 := by decide
-          rw [hA, hB]
-          omega
-        rw [e16]; exact erN_rdW hl' (by omega)
-      rw [hwo, hwl]
+        rw [show q.toNat + 16 = q.toNat + 5 + 10 + 1 by omega]; exact hl
+      have hb : q.toNat + 16 < 2 ^ 64 := by
+        simp only [nat?, Option.map_eq_some_iff] at hl'
+        obtain ⟨w, hw, -⟩ := hl'; exact erecP_lt64 hw
+      have e15 : (q + 15 : Word) = UInt64.ofNat (q.toNat + 15) := by
+        apply UInt64.toNat_inj.mp
+        rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by show _ < 2 ^ 64; omega)]
+        simp; omega
+      have e16 : (q + 16 : Word) = UInt64.ofNat (q.toNat + 16) := by
+        apply UInt64.toNat_inj.mp
+        rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by show _ < 2 ^ 64; omega)]
+        simp; omega
+      rw [e15, e16, erN_rdW ho', erN_rdW hl']
       have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' (nat?_lt ho')
       have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' (nat?_lt hl')
       rw [hoo, hll, hallcaps]
       exact hslc
     · simp only [ite_eq_right hk3]
-      have hnind : ∀ cv caps, fe.find? (decI c) ≠ some (.indInfo cv caps) := by
-        intro cv caps hfc
-        rw [hfound] at hfc
-        have hfc := (erecP_ext m).decCI hfc
-        exact hk3 (by
-          have hk := decCI_indInfo_kind hfc
-          have := erN_rdW hk hqlt
-          rwa [UInt64.ofNat_toNat] at this)
-      rcases hm : fe.find? (decI c) with _ | ci; · simp [hslice?]
       cases ci with
-      | indInfo cv caps => exact absurd hm (hnind cv caps)
-      | axiomInfo _ => simp [hslice?]
-      | defnInfo _ _ _ => simp [hslice?]
-      | thmInfo _ => simp [hslice?]
-      | ctorInfo _ _ _ => simp [hslice?]
-      | recInfo _ _ _ _ => simp [hslice?]
--/
+      | indInfo cv caps =>
+        exfalso; apply hk3
+        have hk' := decCI_indInfo_kind hci
+        rw [hk'] at hk; cases hk; exact hrd
+      | _ => simp [hfound, hslice?]
 
 /-- `nat?` reads inside the array. -/
 theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : i < a.size := by
@@ -184,11 +163,17 @@ theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : 
   obtain ⟨w, hw, -⟩ := h
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
-/-- An `indInfo` record is fully inside the array it decodes from. -/
-theorem decCI_indInfo_bound {a : Array Word} {p : Nat}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI (aread a) p = some (.indInfo cv caps)) :
-    p + 16 < a.size := by
-  sorry
+/-- An `indInfo` record's word `p + 16` (its `all` slice's length) is read. -/
+theorem decCI_indInfo_bound {a : Nat → Option Word} {p : Nat}
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a p = some (.indInfo cv caps)) :
+    ∃ v, a (p + 16) = some v := by
+  obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 h (decCI_indInfo_kind h)
+  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, vall, hvall, _, _, _, _, -⟩ := hcaps
+  obtain ⟨o, l, ho, hl, hs⟩ := hlist?_some hvall
+  simp only [nat?, Option.map_eq_some_iff] at hl
+  obtain ⟨w, hw, -⟩ := hl
+  exact ⟨w, by rw [show p + 16 = p + 5 + 10 + 1 by omega]; exact hw⟩
 
 /-! ## `nest_ctor_entry_strip`, `nest_ctor_entry` -/
 
@@ -199,22 +184,22 @@ def stripK (ciq nPc nF : Word) : Option (List Word × Mem) → Option (List Word
     else some ([1, ciq + 1, nPc, nF, r.tail.tail.tail.headD 0], m1)
 
 def stripW (m : Mem) (ciq : Word) : Option (List Word × Mem) :=
-  if rdW (m.arr64 EREC) ciq ≠ 4 then some ([0, 0, 0, 0, 0], m)
-  else if rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6) < rdW (m.arr64 EREC) (ciq + 5) then none
-  else stripK ciq (rdW (m.arr64 EREC) (ciq + 5)) (rdW (m.arr64 EREC) (ciq + 6))
-    (stripF 6 m [rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6),
-      rdW (m.arr64 EREC) (ciq + 1 + 3)])
+  if erRd m ciq ≠ 4 then some ([0, 0, 0, 0, 0], m)
+  else if erRd m (ciq + 5) + erRd m (ciq + 6) < erRd m (ciq + 5) then none
+  else stripK ciq (erRd m (ciq + 5)) (erRd m (ciq + 6))
+    (stripF 6 m [erRd m (ciq + 5) + erRd m (ciq + 6),
+      erRd m (ciq + 1 + 3)])
 
 section arms
 variable (m m1 : Mem) (ciq nPc nF : Word) (r : List Word)
-theorem stripW_notctor (h : rdW (m.arr64 EREC) ciq ≠ 4) : stripW m ciq = some ([0, 0, 0, 0, 0], m) := by
+theorem stripW_notctor (h : erRd m ciq ≠ 4) : stripW m ciq = some ([0, 0, 0, 0, 0], m) := by
   simp [stripW, h]
-theorem stripW_ctor (h : rdW (m.arr64 EREC) ciq = 4)
-    (h2 : ¬ rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6) < rdW (m.arr64 EREC) (ciq + 5)) :
+theorem stripW_ctor (h : erRd m ciq = 4)
+    (h2 : ¬ erRd m (ciq + 5) + erRd m (ciq + 6) < erRd m (ciq + 5)) :
     stripW m ciq =
-    stripK ciq (rdW (m.arr64 EREC) (ciq + 5)) (rdW (m.arr64 EREC) (ciq + 6))
-    (stripF 6 m [rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6),
-      rdW (m.arr64 EREC) (ciq + 1 + 3)]) := by
+    stripK ciq (erRd m (ciq + 5)) (erRd m (ciq + 6))
+    (stripF 6 m [erRd m (ciq + 5) + erRd m (ciq + 6),
+      erRd m (ciq + 1 + 3)]) := by
   unfold stripW; rw [ite_eq_right (by simp [h]), ite_eq_right h2]
 theorem stripK_fail (h : r.headD 0 = 0) : stripK ciq nPc nF (some (r, m1)) = some ([0, 0, 0, 0, 0], m1) := by
   simp only [stripK]; rw [ite_eq_left h]
@@ -230,11 +215,14 @@ grind_pattern [ind_grind] stripK_ok => stripK ciq nPc nF (some (r, m1))
 /-! ### Reading `EREC` records at a word index -/
 
 theorem erec_rd {m : Mem} {w : Word} {c : Nat} {v : Word} (h : erecP m (w.toNat + c) = some v)
-    (hc : c < 2 ^ 64) : rdW (m.arr64 EREC) (w + UInt64.ofNat c) = v := by
-  sorry
+    (hc : c < 2 ^ 64) : erRd m (w + UInt64.ofNat c) = v := by
+  have hlt := erecP_lt64 h
+  have e : (w + UInt64.ofNat c).toNat = w.toNat + c := by
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hc]; exact Nat.mod_eq_of_lt (by omega)
+  exact (erRd_of_erecP (by rw [e]; exact h)).1
 
-theorem decCV_type {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
-    hd? (aread a) (q + 3) = some cv.type := by
+theorem decCV_type {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+    hd? a (q + 3) = some cv.type := by
   simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨_, _, _, _, _, hd, hq⟩ := h
   rw [← Option.some.inj hq]; exact hd

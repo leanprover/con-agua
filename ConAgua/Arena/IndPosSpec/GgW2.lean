@@ -231,7 +231,7 @@ theorem nestHoleAt_spec' (p : Prog) (L : PfLook p) (k : Nat) (s₀ : St) (ctx po
     ⦃fun r s' => LocEq s' s₀ ∧ haWf k s₀.mem ctx po pl i = some (r, s'.mem); ⊤⦄ := by
   cases k with
   | zero => rw [invoke_eq _ L.hha]; simp only [callFn, nestHoleAt]; vcgen [exec] <;> grind
-  | succ k => exact nestHoleAt_spec p L.ha L.h2 L.h4 L.hrg L.hr L.hc L.hap L.hha k s₀ ctx po pl i
+  | succ k => exact nestHoleAt_spec p L.ha L.h3 L.hsg L.h4 L.hrg L.hr L.hc L.hap L.hha k s₀ ctx po pl i
 
 
 end L.Ind
@@ -309,29 +309,7 @@ namespace L.Ind
 
 open L.Arena
 
-theorem posRec3_eq (m : Mem) (a b c : Word) :
-    (match allocW m 3 with | none => none | some (q, _) => some (q, rec3Mem m a b c)) =
-      posRecW m [a, b, c] := by
-  rw [posRecW_eq m [a, b, c] 3 rfl]
-  cases allocW m 3 with
-  | none => rfl
-  | some pr =>
-    simp only [rec3Mem, wrIW]
-    rw [show rdW (m.arr64 CTL) 200 + 1 + 1 = rdW (m.arr64 CTL) 200 + 2 by
-      rw [UInt64.add_assoc]; rfl]
-
-theorem posRec3_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.lookup "rec3" = some rec3)
-    (n : Nat) (s₀ : St) (a b c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c] = some (r.headD 0, s'.mem); ⊤⦄ := by
-  simp only [← posRec3_eq, invoke_eq _ h3, callFn, rec3]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_specW p ha n] <;>
-      finish [rec3Mem, allocMem, allocW]
+-- `posRec3_eq`, `posRec3_specW`: `CtxFields.lean`.
 
 theorem pos2_getElem_getD (a : Array Word) (i : Nat) (h : i < a.size) : a[i] = a[i]?.getD 0 := by
   simp [h]

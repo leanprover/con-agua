@@ -36,9 +36,9 @@ open L.Arena
 
 /-! ## Decoders of the split's records -/
 
-/-- `blockSplitRecs`'s element `[cv, mI, rP, rules.off, rules.len]`. -/
-def decSR (m : Mem) (p : Nat) : Option (IConstantVal × Nat × Nat × List IRecRule) := do
-  pure (← decCVp m (← iwN m p), ← iwN m (p + 1), ← iwN m (p + 2),
+/-- `blockSplitRecs`'s element `[cv, mI, rP, rules.off, rules.len, isK]`. -/
+def decSR (m : Mem) (p : Nat) : Option (IConstantVal × Nat × Nat × Bool × List IRecRule) := do
+  pure (← decCVp m (← iwN m p), ← iwN m (p + 1), ← iwN m (p + 2), ← iwB m (p + 5),
     ← decRules (erA m) (← iwN m (p + 3)) (← iwN m (p + 4)))
 
 /-- `blockSplitCtors`'s element `[cv, nP, nF]`. -/
@@ -53,6 +53,7 @@ theorem decSR_mono (p : Nat) : OMono (fun m => decSR m p) := by
   repeat' (first
     | exact OMono.const _
     | apply OMono.iwN
+    | apply OMono.iwB
     | apply OMono.decCVp
     | apply partsDecRules_mono
     | apply OMono.bind
@@ -66,6 +67,10 @@ theorem decSC_mono (p : Nat) : OMono (fun m => decSC m p) := by
     | apply OMono.decCVp
     | apply OMono.bind
     | intro _)
+
+/-- A generated model's `EREC⦃a⦄` read, folded to `erRd`. -/
+theorem erRd_fold (m : Mem) (a : Word) :
+    rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 1099511627775) = erRd m a := rfl
 
 /-! ## `rec3` as `posRecW` -/
 

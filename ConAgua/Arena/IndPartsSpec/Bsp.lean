@@ -21,7 +21,7 @@ import all ConAgua.Arena.IndParts
 /-!
 # Bsp
 
-`bslW`, `brh_spec`, `brhW`, `brs_spec`, `brsW`, `packMem` and the lemmas only they use.
+`bslW`, `brs_spec`, `brsW`, `rec7_specW`, `packMem` and the lemmas only they use.
 -/
 
 section
@@ -50,18 +50,18 @@ open L.Arena
 
 /-- **The model of `block_shape_large`.** -/
 def bslW (n : Nat) (m : Mem) (cvR0 lo ll : Word) : Option (List Word × Mem) :=
-  if rdW (m.arr64 EREC) (cvR0 + 2) = 0 then some ([0, 0], m)
-  else match erToIwW n m (rdW (m.arr64 EREC) (cvR0 + 1) + 1) (rdW (m.arr64 EREC) (cvR0 + 2) - 1) with
+  if erRd m (cvR0 + 2) = 0 then some ([0, 0], m)
+  else match erToIwW n m (erRd m (cvR0 + 1) + 1) (erRd m (cvR0 + 2) - 1) with
     | none => none
     | some (rp, m1) =>
       match eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll with
       | none => none
       | some e =>
         if e = 0 then some ([0, 0], m1)
-        else match containsW n m1 lo ll (rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (cvR0 + 1))) with
+        else match containsW n m1 lo ll (erRd m (erRd m (cvR0 + 1))) with
           | none => none
           | some hs => if hs ≠ 0 then some ([0, 0], m1)
-            else some ([1, rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (cvR0 + 1))], m1)
+            else some ([1, erRd m (erRd m (cvR0 + 1))], m1)
 
 end L.Ind
 
@@ -140,6 +140,45 @@ theorem bsp_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
         iwAlloc_specW p ha n] <;>
       finish (gen := 20) [packMem, allocMem, allocW]
 
+/-! ## `rec7` and `block_shape_recs_of` -/
+
+/-- The memory after `rec7`. -/
+def rec7Mem (m : Mem) (a b c d e f g : Word) : Mem :=
+  let q := rdW (m.arr64 CTL) 200
+  (((((((allocMem m 7).set64 IW q a).set64 IW (q + 1) b).set64 IW (q + 2) c).set64 IW (q + 3) d).set64
+    IW (q + 4) e).set64 IW (q + 5) f).set64 IW (q + 6) g
+
+theorem rec7Mem_eq (m : Mem) (a b c d e f g : Word) :
+    rec7Mem m a b c d e f g = wrIW (allocMem m 7) (rdW (m.arr64 CTL) 200) [a, b, c, d, e, f, g] := by
+  simp [rec7Mem, wrIW, UInt64.add_assoc]
+
+theorem partsRec7_eq (m : Mem) (a b c d e f g : Word) :
+    (match allocW m 7 with | none => none | some (q, _) => some (q, rec7Mem m a b c d e f g)) =
+      posRecW m [a, b, c, d, e, f, g] := by
+  rw [posRecW_eq m _ 7 rfl, rec7Mem_eq]; cases allocW m 7 <;> rfl
+
+theorem rec7_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (h7 : p.lookup "rec7" = some rec7) (n : Nat) (s₀ : St) (a b c d e f g : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "rec7" [a, b, c, d, e, f, g]
+    ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c, d, e, f, g] = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [← partsRec7_eq, invoke_eq _ h7]
+  simp only [callFn, rec7]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n] <;>
+      finish (gen := 20) [rec7Mem, allocMem, allocW]
+
+/-- **`block_shape_recs_of` is its model `brsW`** (generated). -/
+l_model brs_spec (p : Prog) (hP : IndPartsProg4 p) (h7 : p.lookup "rec7" = some rec7)
+    (hp : p.lookup "block_shape_recs_of" = some blockShapeRecsOf)
+  fns [hp ↦ brsW]
+  specs [recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n,
+    rec7_specW p hP.alloc h7 n, slCons_specW p hP.alloc hP.copy hP.cons n]
+  grind [ind_grind] finish [rdW_eq] gen 20
+
 /-! ## `block_shape_build`: the model -/
 
 /-- **`block_shape_seal` is its model `bsealW`** (generated). -/
@@ -161,91 +200,68 @@ def bbK12 (n : Nat) (nPd _cto _ctl _cso _csl _rso _rsl _cvT0 cvR0 : Word) (lo ll
   | none => none
   | some (r, m) => bbK13' mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW n m cvR0 lo ll)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_shape_members_of`. -/
 def bbK11 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip (r.headD 0) (r.tail.headD 0) (brsW (n + 1) m no nl rso rsl)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_groups`. -/
 def bbK10 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bbK11 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl lo ll s ip (bmoW (n + 1) m cto ctl io (r.headD 0))
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `param_levels`. -/
 def bbK9 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo ll s ip cof cl2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bbK10 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (bgW n m no nl (r.headD 0) nPd ctl cof cl2)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_shape_ctors_of`. -/
 def bbK8 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bbK9 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (r.headD 0) (r.tail.headD 0) (plW (n + 1) m lo ll)
--/
 
 section arms
 variable (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (m : Mem) (r : List Word)
   (no nl io lo ll s ip mo ml : Word) (q : Word)
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbK11_some : bbK11 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl lo ll s ip (some (r, m)) =
     bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip (r.headD 0) (r.tail.headD 0)
       (brsW (n + 1) m no nl rso rsl) := rfl
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbK8_some : bbK8 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (some (r, m)) =
     bbK9 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (r.headD 0) (r.tail.headD 0)
       (plW (n + 1) m lo ll) := rfl
--/
 end arms
--- ronsync2 stage 2: attribute [ind_grind] bbK11_some bbK8_some
+attribute [ind_grind] bbK11_some bbK8_some
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `block_shape_fin`** (at exec fuel `n + 2`). -/
 def bfW (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl no nl io lo ll s ip : Word) :
     Option (List Word × Mem) :=
   bbK8 n nPd cto ctl cso csl rso rsl 0 (rdW (m.arr64 IW) (rdW (m.arr64 IW) rso)) no nl io lo ll s ip
     (bctW (n + 1) m cso csl)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `lvl_eq_c`. -/
 def btK3 (_c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bgoK3 (bfW n m nPd cto ctl cso csl rso rsl no nl io lo ll s (if r.headD 0 = 2 then 1 else 0))
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `pin_word(53)`. -/
 def btK2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : Word) (m : Mem) :
     Option Word → Option (List Word × Mem)
   | none => none
   | some z => btK3 c n nPd cto ctl cso csl rso rsl no nl io lo ll s (c (n + 2) "lvl_eq_c" [s, z] m)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_shape_result_sort`. -/
 def btK1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll (r.headD 0) m (pinWordV m 53)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `block_shape_tail`** (at exec fuel `n + 3`). -/
 def btW (c : CallM) (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
     Option (List Word × Mem) :=
   btK1 c n nPd cto ctl cso csl rso rsl no nl io lo ll
-    (bsoW m nPd io il (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cto + 3)))
--/
+    (bsoW m nPd io il (erRd m (rdW (m.arr64 IW) cto + 3)))
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_shape_pins_ok`. -/
 def bbH4 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -253,18 +269,14 @@ def bbH4 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il lo ll : 
   | some (r, m) =>
     if r.headD 0 = 0 then some ([0, 0], m)
     else bgoK3 (btW c n m nPd cto ctl cso csl rso rsl no nl io il lo ll)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `er_to_iw`. -/
 def bbH3 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bbH4 c n nPd cto ctl cso csl rso rsl no nl io il (r.headD 0) (r.tail.headD 0)
       (bpoW (n + 2) m nPd cto ctl (r.headD 0) (r.tail.headD 0) rso rsl cso csl)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_member_counts`. -/
 def bbH2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 no nl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -272,45 +284,32 @@ def bbH2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 no nl : Word) :
   | some (r, m) =>
     if r.headD 0 = 0 then some ([0, 0], m)
     else bbH3 c n nPd cto ctl cso csl rso rsl no nl (r.tail.headD 0) (r.tail.tail.headD 0)
-      (erToIwW (n + 3) m (rdW (m.arr64 EREC) (cvT0 + 1)) (rdW (m.arr64 EREC) (cvT0 + 2)))
--/
+      (erToIwW (n + 3) m (erRd m (cvT0 + 1)) (erRd m (cvT0 + 2)))
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_shape_names_of`. -/
 def bbH1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => bbH2 c n nPd cto ctl cso csl rso rsl cvT0 (r.headD 0) (r.tail.headD 0)
       (bmcW (n + 2) m nPd ctl csl (r.headD 0) (r.tail.headD 0) rso rsl cto ctl)
--/
 
 section arms
 variable (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) (m : Mem) (r : List Word)
   (no nl io il lo ll s z : Word)
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem btK2_some : btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll s m (some z) =
     btK3 c n nPd cto ctl cso csl rso rsl no nl io lo ll s (c (n + 2) "lvl_eq_c" [s, z] m) := rfl
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbH4_fail (h : r.headD 0 = 0) : bbH4 c n nPd cto ctl cso csl rso rsl no nl io il lo ll (some (r, m)) =
     some ([0, 0], m) := by simp only [bbH4]; exact ite_eq_left h
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbH4_ok (h : ¬ r.headD 0 = 0) : bbH4 c n nPd cto ctl cso csl rso rsl no nl io il lo ll (some (r, m)) =
     bgoK3 (btW c n m nPd cto ctl cso csl rso rsl no nl io il lo ll) := by simp only [bbH4]; exact ite_eq_right h
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbH3_some : bbH3 c n nPd cto ctl cso csl rso rsl no nl io il (some (r, m)) =
     bbH4 c n nPd cto ctl cso csl rso rsl no nl io il (r.headD 0) (r.tail.headD 0)
       (bpoW (n + 2) m nPd cto ctl (r.headD 0) (r.tail.headD 0) rso rsl cso csl) := rfl
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem bbH1_some : bbH1 c n nPd cto ctl cso csl rso rsl cvT0 (some (r, m)) =
     bbH2 c n nPd cto ctl cso csl rso rsl cvT0 (r.headD 0) (r.tail.headD 0)
       (bmcW (n + 2) m nPd ctl csl (r.headD 0) (r.tail.headD 0) rso rsl cto ctl) := rfl
--/
 end arms
--- ronsync2 stage 2: attribute [ind_grind] btK2_some bbH4_fail bbH4_ok bbH3_some bbH1_some
+attribute [ind_grind] btK2_some bbH4_fail bbH4_ok bbH3_some bbH1_some
 
 end L.Ind
 
