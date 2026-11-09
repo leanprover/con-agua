@@ -80,22 +80,19 @@ theorem decTbl_fields {a : Array Word} {q : Word} {tbl : IProjTable}
 -/
 
 /-- Element `i` of a decoded slice, or `0` past its end, as L reads it (`if i < cnt { a[off + i] }`). -/
-def sliceAt (a : Array Word) (o c i : Word) : Word := if i < c then rdW a (o + i) else 0
+def sliceAt (rd : Word → Word) (o c i : Word) : Word := if i < c then rd (o + i) else 0
 
 /-- **`sliceAt` decodes to `getD … default`.** -/
-theorem sliceAt_dec {k : IdxKind} {a : Array Word} {o c : Word} {l : List (Idx k)}
-    (hsz : a.size < 2 ^ 63) (h : hslice? (aread a) o.toNat c.toNat = some l) (i : Word) :
-    HW (sliceAt a o c i) ∧ (decI (sliceAt a o c i) : Idx k) = l.getD i.toNat default := by
+theorem sliceAt_dec {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
+    {o c : Word} {l : List (Idx k)} (h : hslice? R o.toNat c.toNat = some l) (i : Word) :
+    HW (sliceAt rd o c i) ∧ (decI (sliceAt rd o c i) : Idx k) = l.getD i.toNat default := by
   obtain ⟨hl, hg⟩ := hslice?_get h
   unfold sliceAt
   by_cases hi : i < c
   · rw [ite_eq_left hi]
     have hi' : i.toNat < c.toNat := UInt64.lt_iff_toNat_lt.mp hi
     obtain ⟨w, hw, hw32, hl'⟩ := hg i.toNat hi'
-    have hb : o.toNat + i.toNat < a.size := (Array.getElem?_eq_some_iff.mp hw).1
-    have ho : (o + i).toNat = o.toNat + i.toNat := by
-      rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
-    have hr : rdW a (o + i) = w := by simp only [rdW, ho, hw, Option.getD_some]
+    have hr : rd (o + i) = w := hR.off hw rfl
     rw [hr]
     refine ⟨hw32, ?_⟩
     rw [List.getD_eq_getElem?_getD, hl']; rfl
@@ -129,11 +126,7 @@ def ErecKeptProj (p : Prog) : Prop :=
 
 /-- The body word `proj_type_at` reads: entry `i` of the bodies' slice, or `0`. -/
 def projBodyW (m : Mem) (q i : Word) : Word :=
-  sliceAt (m.arr64 EREC) (rdW (m.arr64 EREC) (q + 9)) (rdW (m.arr64 EREC) (q + 10)) i
-
-/-- The guard word `infer_proj_at` reads: entry `i` of the guards' slice, or `0`. -/
-def guardW (m : Mem) (q i : Word) : Word :=
-  sliceAt (m.arr64 EREC) (rdW (m.arr64 EREC) (q + 11)) (rdW (m.arr64 EREC) (q + 12)) i
+  sliceAt (erRdT m) (erRdT m (q + 9)) (erRdT m (q + 10)) i
 
 /-- `pe` pushed at the top of the slice `(to, tn)`, the top one past it (L's word order). -/
 def ptPush (m : Mem) (to tn pe : Word) : Mem :=

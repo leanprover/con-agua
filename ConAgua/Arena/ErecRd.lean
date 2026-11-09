@@ -67,6 +67,21 @@ theorem erRdT_congr {m m' : Mem} (h0 : m'.arr64 EREC = m.arr64 EREC)
   · exact congrArg (rdW · _) h0
   · exact congrArg (rdW · _) h1
 
+/-- **A frame that keeps both record tiers and the record tops** (`CTL[129]`, `CTL[130]`) keeps
+the decoded records. -/
+theorem erecP_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (EREC : TieredArray) ∉ A) (hA1 : tier1 EREC ∉ A) (hC : (129 : Word) ∉ C)
+    (hC1 : (130 : Word) ∉ C) : erecP m' = erecP m := by
+  funext i
+  simp only [erecP, erecTop, erecTop1, hf.arr _ hA (by decide), hf.arr _ hA1 (by decide),
+    hf.ctl _ hC, hf.ctl _ hC1]
+  rfl
+
+/-- The same frame keeps the tagged reads. -/
+theorem erRdT_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (EREC : TieredArray) ∉ A) (hA1 : tier1 EREC ∉ A) : erRdT m' = erRdT m :=
+  funext (erRdT_congr (hf.arr _ hA (by decide)) (hf.arr _ hA1 (by decide)))
+
 /-- A decoded slice has the slice's length. -/
 theorem hslice?_lenR {k : IdxKind} {R : Nat → Option Word} {o c : Nat} {l : List (Idx k)}
     (h : hslice? R o c = some l) : l.length = c := by
@@ -195,5 +210,25 @@ theorem decCI_splitE {m : Mem} {q : Word} {ci : IConstantInfo} (h : decCI (erecP
     (erRdT m q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) :=
   decCI_split (erRdOK m) h
 
+
+open Std.WP in
+open scoped Lean.Order in
+set_option experimental.vcgen true in
+/-- **A read of any tiered array as a value** (`ld64_rdW_spec` at a computed tier, e.g. the
+tagged read `EREC⦃a⦄` = `ld64 (tierA EREC (a >>> 40)) (a &&& 0xFFFFFFFFFF)`). -/
+theorem ld64_rdT_spec (a : TieredArray) (i : Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ ld64 a i
+    ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i ∧ i.toNat < (s₀.mem.arr64 a).size; ⊤⦄ := by
+  apply L.M.triple_of_run
+  intro s r s' hs hrun
+  subst hs
+  simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
+  split at hrun
+  · rename_i h
+    simp only [pure] at hrun
+    obtain ⟨rfl, rfl⟩ := hrun
+    exact ⟨rfl, by simp [rdW, h], h⟩
+  · simp [throw, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift] at hrun
+    cases hrun
 
 end L.Arena

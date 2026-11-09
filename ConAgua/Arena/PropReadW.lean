@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.PropReadLoops
+public import ConAgua.Arena.ErecRd
+import ConAgua.Arena.LdRd
 import ConAgua.Arena.InferBodySpine
 public import ConAgua.Arena.LevelSubstL
 import ConAgua.Arena.InferBodyIntern
@@ -102,7 +104,7 @@ def propReadProgFns : Prog :=
    ("head_proof_proj", headProofProjL), ("head_proof_pw", headProofPWL), ("proof_pw", proofPWL),
    ("not_proof_fast", notProofFastL), ("is_proof_fast", isProofFastL),
    ("lv_lookup", lvLookupTG EREC POOL), ("lv_spw", lvSpwG LH), ("lv_zero", lvZero),
-   ("lh_push", lhPush), ("lv_node", lvNode), ("ls_node", lsNode), ("e_view", L.Ind.eView), ("env_row_get", envRowGetL), ("env_find", envFindL),
+   ("lh_push", lhPush), ("lv_node", lvNode), ("ls_node", lsNode), ("e_view", L.Ind.eView), ("env_row_get", envRowGetL), ("base_row_get", baseRowGetL), ("env_find", envFindL),
    ("get_app_args", getAppArgsL), ("app_count", appCountL), ("app_fill", appFillL)]
 
 /-- **What the readers need of a program**: their own functions and the callees they share. -/
@@ -134,7 +136,7 @@ def cArmK2 (p : Prog) (n : Nat) (us q : Word) :
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, 0, 0, m)
-    else t3W (callW p n "subst_pw_at" [rdW (m.arr64 EREC) (q + 2), rdW (m.arr64 EREC) (q + 3), us,
+    else t3W (callW p n "subst_pw_at" [erRdT m (q + 2), erRdT m (q + 3), us,
       r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] m)
 
 /-- After `env_find`: the stored constant, the level count, then `sub` at its type. -/
@@ -144,9 +146,9 @@ def cArmK1 (p : Prog) (n : Nat) (us : Word) (sub : Word → Mem → Option (List
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, 0, 0, m)
     else if lsNodeW m us = [] then none
-    else if (lsNodeW m us).tail.headD 0 ≠ rdW (m.arr64 EREC) (r.tail.headD 0 + 3) then
+    else if (lsNodeW m us).tail.headD 0 ≠ erRdT m (r.tail.headD 0 + 3) then
       some (0, 0, 0, m)
-    else cArmK2 p n us (r.tail.headD 0) (sub (rdW (m.arr64 EREC) (r.tail.headD 0 + 4)) m)
+    else cArmK2 p n us (r.tail.headD 0) (sub (erRdT m (r.tail.headD 0 + 4)) m)
 
 theorem headTypeConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
     (vis f k cn us : Word) :
@@ -154,7 +156,14 @@ theorem headTypeConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
     ⦃fun r s' => LocEq s' s₀ ∧ cArmK1 p n us (fun ty m => callW p n "head_type_res" [vis, f, k, ty] m)
       (callW p n "env_find" [cn, vis] s₀.mem) =
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ (hp.get "head_type_const")]
+  simp only [callFn, headTypeConstL]
+  vcgen [evalE_tld, tld, ld64_rdT_spec, evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+      callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "head_type_res",
+      callW_spec p n "subst_pw_at"] <;>
+  simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons, EREC,
+    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Locals.init_cons_zero, Locals.init_cons_succ]
 
 theorem headProofConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
     (vis f cn us : Word) :
@@ -162,7 +171,14 @@ theorem headProofConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : S
     ⦃fun r s' => LocEq s' s₀ ∧ cArmK1 p n us (fun ty m => callW p n "type_sort_pw" [vis, f, ty] m)
       (callW p n "env_find" [cn, vis] s₀.mem) =
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ (hp.get "head_proof_const")]
+  simp only [callFn, headProofConstL]
+  vcgen [evalE_tld, tld, ld64_rdT_spec, evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+      callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "type_sort_pw",
+      callW_spec p n "subst_pw_at"] <;>
+  simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons, EREC,
+    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Locals.init_cons_zero, Locals.init_cons_succ]
 
 /-! ## `head_type_pw(vis, f, root, d, h, k)` -/
 
@@ -247,8 +263,8 @@ def uwsK1 (p : Prog) (n : Nat) (f e : Word) : Option (List Word × Mem) → Opti
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, 0, m)
-    else if rdW (m.arr64 EREC) (r.tail.headD 0) ≠ 1 then some (0, 0, m)
-    else match lamProjW m f 0 (rdW (m.arr64 EREC) (r.tail.headD 0 + 5)) with
+    else if erRdT m (r.tail.headD 0) ≠ 1 then some (0, 0, m)
+    else match lamProjW m f 0 (erRdT m (r.tail.headD 0 + 5)) with
       | none => none
       | some (lf, k, j) =>
         if lf = 0 then some (0, 0, m)
@@ -268,7 +284,14 @@ theorem unwrapStep_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "unwrap_step" [vis, f, e]
     ⦃fun r s' => LocEq s' s₀ ∧ uwsW p n s₀.mem vis f e = some (r.headD 0, r.tail.headD 0, s'.mem);
       ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ (hp.get "unwrap_step")]
+  simp only [callFn, unwrapStepL]
+  vcgen [evalE_tld, tld, ld64_rdT_spec, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
+      appCountAtL_spec p (hp.get "app_count_at") n, callW_spec p n "env_find", lamProjL_spec p (hp.get "lam_proj") n,
+      callW_spec p n "get_app_args", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
+  simp_all [uwsW, uwsK1, uwsK2, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, EREC,
+    SPN, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Locals.init_cons_zero, Locals.init_cons_succ]
 
 /-- After `unwrap_step`: the rest of the steps. -/
 def uidK (p : Prog) (n : Nat) (vis f k e : Word) : Option (List Word × Mem) → Option (Word × Mem)
@@ -333,7 +356,7 @@ theorem peelPisW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vi
 
 /-- The body handle of field `i` of the table record `q` (`0` past the bodies). -/
 def hppB (m : Mem) (q i : Word) : Word :=
-  if i < rdW (m.arr64 EREC) (q + 10) then rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (q + 9) + i) else 0
+  if i < erRdT m (q + 10) then erRdT m (erRdT m (q + 9) + i) else 0
 
 /-- After the body's datum: `never` stays, anything else is unknown. -/
 def hppK2 : Option (List Word × Mem) → Option (Word × Word × Word × Mem)
@@ -352,7 +375,16 @@ theorem headProofProj_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "head_proof_proj" [vis, f, sn, i]
     ⦃fun r s' => LocEq s' s₀ ∧ hppK1 p n vis f i (callW p n "find_proj" [vis, sn, i] s₀.mem) =
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ (hp.get "head_proof_proj")]
+  simp only [callFn, headProofProjL]
+  vcgen [evalE_tld, tld, ld64_rdT_spec, evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+      callW_spec p n "find_proj", callW_spec p n "type_sort_pw"] <;>
+  simp_all [hppK1, hppK2, hppB, erRdT, EREC, LocEq, BinOp.eval, St.setLocs_cons, TieredArray.t0,
+    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Locals.init_cons_zero, Locals.init_cons_succ]
+  all_goals
+    rw [ite_eq_right (by simp only [UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le] at *; omega)]
+    simp_all
 
 /-- **The model of `head_proof_pw`.** -/
 def hpwW (p : Prog) (n : Nat) (m : Mem) (vis f h : Word) : Option (Word × Word × Word × Mem) :=

@@ -206,7 +206,7 @@ def subIntK (n : Nat) : Option (Word × Mem) → Option (Word × Mem)
 /-- **The model of `lv_sub_int`.** -/
 def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _, _, _ => none
-  | n + 1, m, u, ko, kc, vo, vc => subIntK n (substLW SPN POOL n (m.set64 CTL 192 0) u ko kc vo vc)
+  | n + 1, m, u, ko, kc, vo, vc => subIntK n (substLW (keyA SPN) POOL n (m.set64 CTL 192 0) u ko kc vo vc)
 
 /-! ## `keys_push(src, l)`: a record-pool name slice onto the spine stack -/
 
@@ -259,7 +259,7 @@ def keysPushW : Nat → Mem → Word → Word → Option (Word × Mem)
     else kpK (spTop m) pc (ekCopyW n m po (spTop m) pc)
 
 theorem lvSubIntW_succ (n : Nat) (m : Mem) (u ko kc vo vc : Word) :
-    lvSubIntW (n + 1) m u ko kc vo vc = subIntK n (substLW SPN POOL n (m.set64 CTL 192 0) u ko kc vo vc) := by
+    lvSubIntW (n + 1) m u ko kc vo vc = subIntK n (substLW (keyA SPN) POOL n (m.set64 CTL 192 0) u ko kc vo vc) := by
   rw [lvSubIntW]
 attribute [arena_grind =] lvSubIntW_succ
 

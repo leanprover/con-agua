@@ -57,6 +57,12 @@ theorem RdAfter.trans {m₁ m₂ m₃ : Mem} {a₁ a₂ a₃ : AState}
 theorem RdAfter.rel {m m' : Mem} {a a' : AState} (h : RdAfter dn m m' a a' vis fe M eb) :
     CoreS dn m' a' vis fe M eb := h.1
 
+/-- Both record tiers stay: the decoded records and the tagged reads. -/
+theorem RdAfter.erecT {m m' : Mem} {a a' : AState} (h : RdAfter dn m m' a a' vis fe M eb) :
+    erecP m' = erecP m ∧ erRdT m' = erRdT m :=
+  ⟨erecP_frame h.2.2.1 (by simp [EREC, SPN, LH]) (by simp [EREC, SPN, LH, tier1]) (by decide)
+    (by decide), erRdT_frame h.2.2.1 (by simp [EREC, SPN, LH]) (by simp [EREC, SPN, LH, tier1])⟩
+
 theorem RdAfter.erec {m m' : Mem} {a a' : AState} (h : RdAfter dn m m' a a' vis fe M eb) :
     m'.arr64 EREC = m.arr64 EREC :=
   h.2.2.1.1 EREC (by simp [EREC, SPN, LH]) (by decide)
@@ -261,12 +267,12 @@ variable {N : Word → Name → Prop}
 
 /-- **`lv_spw` is `bindZ.go`** with the datum's names on the heap itself (below its top; lane
 `levels`' `spwW_ok` wants them elsewhere): a slice below the top survives the pushes. -/
-theorem spwW_ok_lh (hN : NameRel N) {KA VA : ArrId} (hKA : KA ≠ LH ∧ KA ≠ CTL)
+theorem spwW_ok_lh (hN : NameRel N) {KR : Mem → Word → Word} {VA : ArrId} (hKR : KeyHeap KR)
     (hVA : VA ≠ LH ∧ VA ≠ CTL) (ks : List Name) (vs : List Level)
     (n : Nat) : ∀ (m m' : Mem) (po pc ko kc vo vc x : Word) (ps : List Name),
       NmsR N m LH po pc ps → po.toNat + pc.toNat ≤ (htop m).toNat →
-      NmsR N m KA ko kc ks → LvsAR N m VA vo vc vs →
-      spwW KA VA LH n m po pc ko kc vo vc = some (x, m') →
+      NmsK N m KR ko kc ks → LvsAR N m VA vo vc vs →
+      spwW KR VA LH n m po pc ko kc vo vc = some (x, m') →
       HeapExt m m' ∧ ZR N m' (htop m) (htop m') x (PropWhen.bindZ.go (spwF ks vs) ps) := by
   induction n with
   | zero => intro m m' po pc ko kc vo vc x ps _ _ _ _ h; simp [spwW] at h
@@ -274,18 +280,18 @@ theorem spwW_ok_lh (hN : NameRel N) {KA VA : ArrId} (hKA : KA ≠ LH ∧ KA ≠ 
     intro m m' po pc ko kc vo vc x ps hp hb hk hv h
     cases hp with
     | nil =>
-      rw [spwW_nil KA VA LH n m po 0 ko kc vo vc rfl] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+      rw [spwW_nil KR VA LH n m po 0 ko kc vo vc rfl] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
       exact ⟨HeapExt.refl _, Or.inr ⟨rfl, [], by simp [PropWhen.bindZ.go], by simpa using NmsR.nil⟩⟩
     | @cons _ pk p ps' hp0 hpx hps =>
-      rw [spwW_cons KA VA LH n m po _ ko kc vo vc hp0] at h
+      rw [spwW_cons KR VA LH n m po _ ko kc vo vc hp0] at h
       have hpc1 : 1 ≤ pc.toNat := by
         rcases Nat.eq_zero_or_pos pc.toNat with e | e
         · exact absurd (UInt64.toNat_inj.mp (by simpa using e)) hp0
         · exact e
       have hd : ∃ x₁ m₁, lfK n m (rdW (m.arr64 LH) po)
-          (lookupW KA VA n m ko kc vo vc (rdW (m.arr64 LH) po)) = some (x₁, m₁) ∧
+          (lookupW KR VA n m ko kc vo vc (rdW (m.arr64 LH) po)) = some (x₁, m₁) ∧
           HeapExt m m₁ ∧ ZR N m₁ (htop m) (htop m₁) x₁ (spwF ks vs p) := by
-        cases e : lookupW KA VA n m ko kc vo vc (rdW (m.arr64 LH) po) with
+        cases e : lookupW KR VA n m ko kc vo vc (rdW (m.arr64 LH) po) with
         | none => rw [e] at h; simp [lfK, spK] at h
         | some fv =>
           obtain ⟨f, v⟩ := fv
@@ -324,7 +330,7 @@ theorem spwW_ok_lh (hN : NameRel N) {KA VA : ArrId} (hKA : KA ≠ LH ∧ KA ≠ 
       · rw [spK_zero] at h
         have := he₁.top
         obtain ⟨he₂, hz₂⟩ := ih _ _ _ _ _ _ _ _ _ _ (hps.mono_lh he₁ (by rw [hpo, hpc]; omega))
-          (by rw [hpo, hpc]; omega) (hk.mono he₁ hKA) (hv.mono he₁ hVA) h
+          (by rw [hpo, hpc]; omega) (hk.mono (hKR he₁)) (hv.mono he₁ hVA) h
         refine ⟨he₁.trans he₂, ?_⟩
         have := ZR.inter hs₁ he₁.top rfl he₂ rfl hz₂
         simpa [PropWhen.bindZ.go, hq₁] using this
@@ -347,7 +353,90 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
     (hW : spaW p n m lo lc us k o c = some (k', o', c', m')) :
     ∃ res a', (substPWAt lps (decI us) pw).run a = .ok (res, a') ∧
       RdAfter dn m m' a a' vis fe M eb ∧ PWD (nameN a.store.lss.ls.ns) m' k' o' c' res := by
-  sorry
+  unfold spaW at hW
+  rcases pw with _ | ps
+  · -- `never`: unchanged
+    simp only [PWD] at hd; subst hd
+    simp only [ne_eq, show (1 : Word) ≠ 2 by decide, not_false_eq_true, ↓reduceIte,
+      Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+    exact ⟨some .never, a, by simp [substPWAt]; rfl, RdAfter.refl hS, rfl⟩
+  obtain ⟨rfl, hnm, hb⟩ := hd
+  simp only [ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  by_cases hc0 : c = 0
+  · -- `ifAllZero []`: unchanged
+    simp only [hc0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+    have hps : ps = [] := hnm.nil_iff.mp hc0
+    subst hps
+    refine ⟨some (.ifAllZero []), a, by simp [substPWAt]; rfl, RdAfter.refl hS, ⟨rfl, ?_, ?_⟩⟩
+    · rw [← hc0]; exact hnm
+    · rw [← hc0]; exact hb
+  simp only [hc0, ↓reduceIte] at hW
+  obtain ⟨x₀, ps₀, rfl⟩ : ∃ x xs, ps = x :: xs := by
+    cases ps with
+    | nil => exact absurd (hnm.nil_iff.mpr rfl) hc0
+    | cons x xs => exact ⟨x, xs, rfl⟩
+  have hR := hS.arena.base
+  have hN := nameN_rel _ hS.nwf
+  have hSD := hden dn m a vis fe M eb hS
+  obtain ⟨ks, hk⟩ := hks
+  obtain ⟨vs, hv⟩ := hls
+  -- the arguments' slice
+  obtain ⟨ids, hvw, hdl⟩ := denoteLs_view a (decI us) vs hv
+  obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hR hus hvw
+  rw [e₁] at hW
+  simp only [List.cons_ne_nil, ↓reduceIte, List.headD_cons, List.tail_cons] at hW
+  have htop := m.top.toNat_lt
+  have h41 := hR.lit.1.top41
+  have hvs := (lvsR_of_slice hR ids vs _ _ s₁ (by omega) hdl).toAR
+  -- the keys
+  have hkr : NmsK (nameN a.store.lss.ls.ns) m (keyT EREC) lo lc ks :=
+    nmsAR_of_hslice _ _ lc.toNat lps ks lo lc rfl hl hk
+  -- the run
+  rcases hc : callW p n "lv_spw" [o, c, lo, lc, tfld m LVLS (tierW us) (idxW us) 0,
+      tfld m LVLS (tierW us) (idxW us) 1] m with _ | ⟨r, m₁⟩
+  · rw [hc] at hW; cases hW
+  rw [hc] at hW
+  obtain ⟨t, ht, -, hz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (lvSpw_spec EREC POOL LH p (hp.get "lv_lookup") (hp.get "lv_node") (hp.get "lh_push") (hp.get "lv_zero") (hp.get "lv_spw") n ⟨m, Locals.init []⟩ _ _ _ _ _ _)
+    hc
+  rw [ht] at hz
+  obtain ⟨he, hZ⟩ := spwW_ok_lh hN (keyT_heap (by decide)) (by decide) ks vs n _ _ _ _ _ _ _ _ _ _ hnm hb hkr
+    hvs hz
+  -- the twin
+  obtain ⟨X, hX, hcX⟩ := pr_readNamesM_run lps a ks hk hSD.readN
+  obtain ⟨Y, hY, hcY⟩ := readLevelsM_run' { a with caches := { a.caches with readNC := X } }
+    (decI us) vs hv (by exact hS.readLs)
+  have hrun : (substPWAt lps (decI us) (.ifAllZero (x₀ :: ps₀))).run a =
+      .ok (some (Level.substPW ks vs (.ifAllZero (x₀ :: ps₀))),
+        { a with caches := { a.caches with readNC := X, readLsC := Y } }) := by
+    simp only [substPWAt, StateT.run_bind, hX, except_ok_bind, hY]
+    rfl
+  have hS' : CoreS dn m₁ { a with caches := { a.caches with readNC := X, readLsC := Y } } vis fe
+      M eb := (CoreS.readCaches ((RdAfter.heap hS he).1) X Y (by exact hcY) hcX)
+  have hRd : RdAfter dn m m₁ a { a with caches := { a.caches with readNC := X, readLsC := Y } }
+      vis fe M eb := ⟨hS', (RdAfter.heap hS he).2.1, (RdAfter.heap hS he).2.2.1, rfl⟩
+  simp only [pushedK] at hW
+  rcases hZ with ⟨hx, hpw⟩ | ⟨hx, qs, hpw, hq⟩
+  · simp only [hx, ne_eq, show (1 : Word) ≠ 0 by decide, not_false_eq_true, ↓reduceIte,
+      Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, -, -, rfl⟩ := hW
+    refine ⟨_, _, hrun, hRd, ?_⟩
+    show PWD _ _ _ _ _ (some (Level.substPW ks vs (.ifAllZero (x₀ :: ps₀))))
+    rw [show Level.substPW ks vs (.ifAllZero (x₀ :: ps₀)) =
+      PropWhen.bindZ.go (spwF ks vs) (x₀ :: ps₀) from rfl, hpw]
+    rfl
+  · simp only [hx, ne_eq, not_true_eq_false, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+    refine ⟨_, _, hrun, hRd, ?_⟩
+    show PWD _ _ _ _ _ (some (Level.substPW ks vs (.ifAllZero (x₀ :: ps₀))))
+    rw [show Level.substPW ks vs (.ifAllZero (x₀ :: ps₀)) =
+      PropWhen.bindZ.go (spwF ks vs) (x₀ :: ps₀) from rfl, hpw]
+    refine ⟨rfl, hq, ?_⟩
+    have := he.top
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
+    omega
 
 end spa
 

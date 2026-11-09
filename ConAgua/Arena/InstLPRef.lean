@@ -142,12 +142,12 @@ theorem slpOne_ok (ks : List Name) (vs : List Level) (n : Nat) (m m₁ : Mem) (a
     (ko kc vo vc w h : Word) (nm : Name) (hA : ArenaD m a) (hwf : NStoreWF a.store.lss.ls.ns)
     (hk : NmsR (nameN a.store.lss.ls.ns) m SPN ko kc ks)
     (hv : LvsR (nameN a.store.lss.ls.ns) m vo vc vs) (hn : nameN a.store.lss.ls.ns w nm)
-    (hW : slpOne n m w (lookupW SPN POOL n m ko kc vo vc w) = some (h, m₁)) :
+    (hW : slpOne n m w (lookupW (keyA SPN) POOL n m ko kc vo vc w) = some (h, m₁)) :
     ∃ a₁, (internLevel (Level.subst ks vs (.param nm))).run a = .ok (decI h, a₁) ∧ ArenaD m₁ a₁ ∧
       MemFrame lvArrs lvCtl m m₁ ∧ LKeep a a₁ := by
-  rcases e : lookupW SPN POOL n m ko kc vo vc w with _ | ⟨f, v⟩ <;> rw [e] at hW
+  rcases e : lookupW (keyA SPN) POOL n m ko kc vo vc w with _ | ⟨f, v⟩ <;> rw [e] at hW
   · simp [slpOne] at hW
-  rcases lookupW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ _ _ _ _ hk hv.toAR hn e with ⟨hf, hvl⟩ | ⟨rfl, hgo⟩
+  rcases lookupW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ _ _ _ _ hk.toK hv.toAR hn e with ⟨hf, hvl⟩ | ⟨rfl, hgo⟩
   · rw [slpOne_hit n m w f v hf] at hW
     obtain ⟨a₁, hrun, hA₁, hlt, hfr, hkp, -⟩ := lvInternW_ok _ n m a v h m₁ hA hwf hvl hW
     exact ⟨a₁, by simpa [Level.subst] using hrun, hA₁, hfr, hkp⟩

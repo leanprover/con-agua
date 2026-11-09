@@ -30,10 +30,6 @@ namespace L.Arena
 
 /-! ## Records -/
 
-theorem erecP_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (EREC : TieredArray) ∉ A) (hC : (129 : Word) ∉ C) : erecP m' = erecP m := by
-  sorry
-
 /-- The kind word of a decoded record says whether it is an inductive. -/
 theorem decCI_indK {a b : Array Word} {q : Word}
     {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
