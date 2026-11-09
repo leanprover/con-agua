@@ -240,6 +240,12 @@ l_model fabScopeOk_spec (p : Prog) (hp : p.lookup "fab_scope_ok" = some fabScope
   grind [arena_grind]
 -/
 
+/-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj` and its facts as `ProjCallees`). -/
+theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees p) :
+    AndRescueSlotsOK p := by
+  sorry
+
+
 theorem fabScopeOk_stop1 (d : Nat) (fab major : EIdx) (a a₁ : AState)
     (h : (wscopedBFast coreWalkFuel d fab).run a = .ok (false, a₁)) :
     (fabScopeOk d fab major).run a = .ok (false, a₁) := by

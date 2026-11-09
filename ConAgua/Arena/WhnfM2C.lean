@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.WhnfBase
+public import ConAgua.Arena.WhnfIota
 
 @[expose] public section
 
@@ -226,5 +227,7 @@ structure M2CProg (p : Prog) : Prop where
   eta2 : p.lookup "m2c_eta2" = some m2cEta2L
   and_ : p.lookup "m2c_and" = some m2cAndL
   and2 : p.lookup "m2c_and2" = some m2cAnd2L
+  fnza : p.lookup "former_never_zero_at" = some formerNeverZeroAtL
+  fsl : p.lookup "former_sort_loop" = some formerSortLoopL
 
 end L.Arena
