@@ -701,6 +701,21 @@ theorem allLevelParamsDefined_refines (p : Prog) (hp : ApdProg p) (dn : NIdx →
       (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some lps ∧ ApdEnv a ∧
         (∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks) ∧ ∃ mp0, apdMR m mp0)
       (ConRon.Arena.allLevelParamsDefined lps (decI e)) (KeepPost vis fe decW0B) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hdec, env, ⟨ks, hks⟩, mp0, hM⟩
+  cases n with
+  | zero =>
+    rw [invoke_eq _ hp.entry]; simp only [callFn, allLevelParamsDefinedL]; vcgen [exec] <;> grind
+  | succ n =>
+    refine triple_post (allLevelParamsDefined_spec_raw p hp.eview hp.lsnode hp.find hp.put hp.clear
+      hp.lmem hp.lnode hp.lapd hp.ls hp.go hp.entry n s₀ o l e) ?_
+    rintro r s' ⟨hloc, hm⟩
+    obtain ⟨b, hrun, hr, hS', hg, -⟩ := apdEntry_ok n hS env o l e _ lps ks hks hdec he
+      (memoRV_clear apdSch apdSch_wf bmKey apdVR _ mp0 hM) hm
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+    refine ⟨hloc, hok, ?_⟩
+    change KeepPost vis fe decW0B _ _ (AM.st (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀) r
+      (AM.res (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀)
+    rw [hst, hres]
+    exact ⟨hS', hg, apd_decW0B hr⟩
 
 end L.Ind
