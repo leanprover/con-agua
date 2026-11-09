@@ -207,6 +207,11 @@ theorem checkerProg_armMa : closedAL checkerProg maFreeA maFreeC armMaFns maLeav
   closedWL_of_all armMaTree.eq armMaCallTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armMaChk
 theorem checkerProg_armMc : closedA checkerProg mcFreeA mcFreeC armMcFns = true :=
   closedW_of_all armMcTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armMcChk
+theorem checkerProg_armOwn : closedA checkerProg
+    (checkerWordArrays.filter fun b => decide (b ∉ ([OIXA, OIXS, OIXN, tier1 OIXA, tier1 OIXS, tier1 OIXN] :
+      List TieredArray)))
+    (((List.range 256).filter fun c => decide (c ≠ 133)).map Nat.toUInt64) armOwnFns = true :=
+  closedW_of_all armOwnTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armOwnChk
 theorem checkerProg_armAbs : closedA checkerProg armAbsA armAbsC armAbsFns = true :=
   closedW_of_all armAbsTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armAbsChk
 
