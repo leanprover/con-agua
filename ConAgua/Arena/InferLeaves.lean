@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.KnotSlot
+public import ConAgua.Arena.ErecRd
 import ConAgua.Arena.IndView
 import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.Infer
@@ -591,10 +592,26 @@ theorem inferBody_const (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
   rfl
 
 /-- A decoded constant record has its `ConstantVal` at `q + 1`. -/
-theorem decCI_cvA {a b : Array Word} {q : Word}
-    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b)) :
-    decCV (aread b) (q.toNat + 1) = some ci.toConstantVal := by
-  sorry
+theorem decCI_cvA {R : Nat → Option Word} {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
+    decCV R (q.toNat + 1) = some ci.toConstantVal := by
+  cases hq : R q.toNat with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | k
+  all_goals (rw [hk] at h; simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h)
+  all_goals first
+    | (simp at h; done)
+    | ((first
+        | obtain ⟨cv, hcv, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
+       exact hcv)
 
 theorem mapM_len {α β : Type} (f : α → Option β) :
     ∀ (l : List α) (xs : List β), l.mapM f = some xs → xs.length = l.length
@@ -610,12 +627,15 @@ theorem hslice?_length {k : IdxKind} {b : Array Word} {o c : Nat} {xs : List (Id
   unfold hslice? at h; simpa using mapM_len _ _ _ h
 
 /-- The words of a decoded `ConstantVal` at `q + 1`: name, level-parameter slice, type. -/
-theorem infer_decCV_words {b : Array Word} {q : Word} {cv : IConstantVal}
-    (h : decCV (aread b) (q.toNat + 1) = some cv) (hsz : b.size < 2 ^ 63) :
-    HW (rdW b (q + 1)) ∧ cv.name = decI (rdW b (q + 1)) ∧ HW (rdW b (q + 4)) ∧
-      cv.type = decI (rdW b (q + 4)) ∧
-      hslice? (aread b) (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
-  sorry
+theorem infer_decCV_words {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
+    {q : Word} {cv : IConstantVal} (h : decCV R (q.toNat + 1) = some cv) :
+    HW (rd (q + 1)) ∧ cv.name = decI (rd (q + 1)) ∧ HW (rd (q + 4)) ∧
+      cv.type = decI (rd (q + 4)) ∧
+      hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams := by
+  obtain ⟨⟨w1, hw1, hl1, hn⟩, -, -⟩ := decCV_words h
+  have e1 : rd (q + 1) = w1 := hR.off hw1 (by simp)
+  obtain ⟨hsl, -, hty, hl4⟩ := decCV_rd hR h
+  exact ⟨by rw [e1]; exact hl1, by rw [e1]; exact hn, hl4, hty, hsl⟩
 
 theorem viewLs_run (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss.view h = some ids) :
     (viewLs h).run a = .ok (ids, a) := by

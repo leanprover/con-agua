@@ -338,13 +338,13 @@ theorem lvSubIntW_core {n : Nat} {m m' : Mem} {a : AState} {u ko kc vo vc h : Wo
   have hv := lvsR_of_slice hS₀.arena.base us vs vo vc (by rw [hpool₀v]; exact hE.vals)
     (by have := hE.vtop; omega) hE.vden
   have hk := hE.keys.of_arr (m' := m.set64 CTL 192 0) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
-  cases hSb : substLW SPN POOL n (m.set64 CTL 192 0) u ko kc vo vc with
+  cases hSb : substLW (keyA SPN) POOL n (m.set64 CTL 192 0) u ko kc vo vc with
   | none => rw [hSb] at hW; simp [subIntK] at hW
   | some r =>
   obtain ⟨x, m₁⟩ := r
   rw [hSb, subIntK_some] at hW
-  obtain ⟨he, hx⟩ := substLW_ok (nameN_rel _ hS.nwf) (KA := SPN) (VA := POOL) (by decide) (by decide)
-    ks vs n _ _ _ _ _ _ _ _ _ hl hk hv.toAR hSb
+  obtain ⟨he, hx⟩ := substLW_ok (nameN_rel _ hS.nwf) (KR := keyA SPN) (VA := POOL) (keyA_heap (by decide)) (by decide)
+    ks vs n _ _ _ _ _ _ _ _ _ hl hk.toK hv.toAR hSb
   obtain ⟨hS₁, hk₁⟩ := hS₀.frame he.memFrame (by simp [LH]) (by simp)
   obtain ⟨a', hrun, o⟩ := lvInternW_core _ n m₁ a x h m' hS₁ hx hW
   refine ⟨a', hrun, o.core, hk₀.trans (hk₁.trans o.stack), o.hw, o.den, o.step.grow, o.memos, ?_⟩

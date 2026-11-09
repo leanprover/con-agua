@@ -30,17 +30,28 @@ namespace L.Arena
 
 /-! ## Records -/
 
-theorem erecP_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (EREC : TieredArray) ∉ A) (hC : (129 : Word) ∉ C) : erecP m' = erecP m := by
-  sorry
-
 /-- The kind word of a decoded record says whether it is an inductive. -/
-theorem decCI_indK {a b : Array Word} {q : Word}
-    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
-    (hsz : b.size < 2 ^ 63) :
-    (rdW b q = 3 → ∃ cv caps, ci = .indInfo cv caps) ∧
-    (rdW b q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
-  sorry
+theorem decCI_indK {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
+    (rd q = 3 → ∃ cv caps, ci = .indInfo cv caps) ∧
+    (rd q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
+  cases hq : R q.toNat with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  have hrd : rd q = w := hR.rd _ _ hq
+  rw [hrd]
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  constructor
+  · intro hw; subst hw
+    simp only [show UInt64.toNat 3 = 3 from rfl, Option.bind_eq_some_iff] at h
+    obtain ⟨cv, -, caps, -, hc⟩ := h
+    cases hc
+    exact ⟨cv, caps, rfl⟩
+  · intro hw cv caps hc
+    subst hc
+    have hne : w.toNat ≠ 3 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
+    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
+    all_goals (rw [hk] at h hne; simp [Option.bind_eq_some_iff] at h hne)
 
 /-! ## The twin, after the constructor's spine -/
 
@@ -116,7 +127,75 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
     RefE (SetG p n) (secwtbE p (n + 1) s₀.mem mode vis d b us c pc ao an wtb)
       (setWtbT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
         aargs.toList (decE wtb)) a₀ (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  have hS := hs.rel
+  have hR := hS.arena.base
+  have hl : RefE (SetG p n) (.ok ([0], s₀.mem) : Except Err (List Word × Mem)) (pure false : AM Bool)
+      a₀ (GrowPost decBool dn s₀.mem vis fe M eb ResH) :=
+    RefE.ret rfl (GrowPost.of_core (CorePost.ret hS rfl hw0))
+  simp only [secwtbE]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppFn_callW hq.leaf hR hwtb h)
+    fun r₁ m₁ ⟨e1, hh, hgaf⟩ => ?_
+  subst e1
+  dsimp only [secwtbE.k_get_app_fn]
+  generalize r₁.headD 0 = h at hh hgaf
+  by_cases h3 : tagW h ≠ 3
+  · rw [ite_eq_left h3]
+    exact RefE.of_run_eq (setWtbT_nonconst _ fe _ _ _ _ _ _ _ a₀ _ hgaf
+      (by rw [decE_tag_const_beq _ hh]; simpa using h3)) hl
+  rw [ite_eq_right h3]
+  have h3' : tagW h = 3 := by simpa using h3
+  refine RefE.abort0 (by decide) fun hsc => ?_
+  refine RefE.abort0 (by decide) fun hcc => ?_
+  have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
+  obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3'
+  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3']
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hv
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 1 = us2 at huw hv
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => envFind_callW hq.leaf.core hS.env hnw h)
+    fun r₂ m₂ ⟨e2, hfind, hfound⟩ => ?_
+  subst e2
+  dsimp only [secwtbE.k_env_find]
+  by_cases h0 : r₂.headD 0 = 0
+  · rw [ite_eq_left h0]
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
+    exact RefE.of_run_eq (setWtbT_other _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv
+      (fun cv caps e => by rw [hnone] at e; cases e)) hl
+  rw [ite_eq_right h0]
+  obtain ⟨ci, hci⟩ := hfound h0
+  have hfind' := find_of_found hfind h0 hci
+  have hind := decCI_indK (erRdOK _) hci
+  by_cases h4 : erRdT s₀.mem (r₂.tail.headD 0) ≠ 3
+  · rw [ite_eq_left h4]
+    exact RefE.of_run_eq (setWtbT_other _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv
+      (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e))) hl
+  rw [ite_eq_right h4]
+  obtain ⟨cvT, caps, hci_eq⟩ := hind.1 (by simpa using h4)
+  rw [hci_eq] at hci
+  -- the type's spine
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppArgs_callW hq.leaf.core.spine hS hwtb h)
+    fun r₃ m₃ ⟨hf3, hg3, hr30, htop3, targs, hargs, hsp⟩ => ?_
+  have hS₃ := hS.frame_stk hf3 (by simp) (by simp)
+  have hep : erecP m₃ = erecP s₀.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp [EREC, SPN, tier1]) (by simp)
+    (by simp)
+  simp only [secwtbE.k_get_app_args]
+  refine RefE.of_run_eq (setWtbT_ind _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
+    (by rw [hfind', hci_eq]) targs hargs) ?_
+  have hspn := hS.spn
+  have hb3 := hsp.bound
+  have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hspn
+  have htt : (r₃.headD 0).toNat + (r₃.tail.headD 0).toNat ≤ (spTop m₃).toNat := by
+    have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0) (by omega)
+    rw [htop3, ← hr30]; omega
+  cases n with
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+  | succ n' =>
+  exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ n')) rfl
+    (fun _ _ _ h => ⟨CoreAfterG.compK (KeptAll.refl _ _) hg3 h.after, h.res, h.valid⟩)
+    (secg_ref p hq hi hc n' (hk.mono (by omega)) F ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode d
+      b us c pc k (r₂.tail.headD 0) us2 ao an (r₃.headD 0) (r₃.tail.headD 0) aargs targs.toArray
+      cvc np nf cvT caps (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb hus hcw hnw huw
+      hvus ⟨_, _, hv⟩ (by rw [hep]; exact hcvc) (by rw [hep]; exact hci) (ha.grew hg3 hat hspn) hsp
+      (Nat.le_trans hat (UInt64.le_iff_toNat_le.mp hg3.1)) htt)
 
 /-! ## `struct_eta_cert_with` -/
 
@@ -194,7 +273,88 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
     RefE (SetG p n) (secwE p (n + 1) s₀.mem mode vis d a b wtb)
       (structEtaCertWith (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b) (decE wtb))
       a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  have hS := hs.rel
+  have hR := hS.arena.base
+  have hl : RefE (SetG p n) (.ok ([0], s₀.mem) : Except Err (List Word × Mem)) (pure false : AM Bool)
+      a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := RefE.ret rfl (CorePost.ret hS rfl hw0)
+  simp only [secwE]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppFn_callW hq.leaf hR ha h)
+    fun r₁ m₁ ⟨e1, hh, hgaf⟩ => ?_
+  subst e1
+  dsimp only [secwE.k_get_app_fn]
+  generalize r₁.headD 0 = h at hh hgaf
+  by_cases h3 : tagW h ≠ 3
+  · rw [ite_eq_left h3]
+    exact RefE.of_run_eq (setWith_nonconst _ fe _ _ _ _ a₀ _ hgaf
+      (by rw [decE_tag_const_beq _ hh]; simpa using h3)) hl
+  rw [ite_eq_right h3]
+  have h3' : tagW h = 3 := by simpa using h3
+  refine RefE.abort0 (by decide) fun hsc => ?_
+  refine RefE.abort0 (by decide) fun hcc => ?_
+  have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
+  obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3'
+  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3']
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hv
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 1 = us at huw hv
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => envFind_callW hq.leaf.core hS.env hnw h)
+    fun r₂ m₂ ⟨e2, hfind, hfound⟩ => ?_
+  subst e2
+  dsimp only [secwE.k_env_find]
+  by_cases h0 : r₂.headD 0 = 0
+  · rw [ite_eq_left h0]
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
+    exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
+      (fun cv np nf e => by rw [hnone] at e; cases e)) hl
+  rw [ite_eq_right h0]
+  obtain ⟨ci, hci⟩ := hfound h0
+  have hfind' := find_of_found hfind h0 hci
+  have hctor := decCI_ctorF (erRdOK _) hci
+  by_cases h4 : erRdT s₀.mem (r₂.tail.headD 0) ≠ 4
+  · rw [ite_eq_left h4]
+    exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
+      (fun cv np nf e => hctor.2 h4 cv np nf (by rw [hfind'] at e; exact Option.some.inj e))) hl
+  rw [ite_eq_right h4]
+  obtain ⟨cvc, hci_eq⟩ := hctor.1 (by simpa using h4)
+  rw [hci_eq] at hci
+  -- the constructor's spine
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppArgs_callW hq.leaf.core.spine hS ha h)
+    fun r₃ m₃ ⟨hf3, hg3, hr30, htop3, aargs, hargs, hsp⟩ => ?_
+  have hS₃ := hS.frame_stk hf3 (by simp) (by simp)
+  have hep : erecP m₃ = erecP s₀.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp [EREC, SPN, tier1]) (by simp)
+    (by simp)
+  have herec : ∀ x : Word, rdW (m₃.arr64 (tierA EREC (x >>> 40))) (x &&& 0xFFFFFFFFFF) = erRdT s₀.mem x :=
+    erRdT_congr (hf3.1 EREC (by simp [EREC, SPN]) (by decide))
+      (hf3.1 (tier1 EREC) (by simp [EREC, SPN, tier1]) (by decide))
+  refine RefE.of_run_eq (setWith_ctor _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv cvc _ _
+    (by rw [hfind', hci_eq]) aargs hargs) ?_
+  have hlen : aargs.length = (r₃.tail.headD 0).toNat := by simpa using hsp.size
+  have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hS.spn
+  simp only [secwE.k_get_app_args, herec]
+  by_cases hcnt : ¬ r₃.tail.headD 0 < erRdT s₀.mem (r₂.tail.headD 0 + 6) ∧
+      r₃.tail.headD 0 - erRdT s₀.mem (r₂.tail.headD 0 + 6) =
+        erRdT s₀.mem (r₂.tail.headD 0 + 5)
+  · rw [ite_eq_right (fun h => h.elim hcnt.1 (fun h' => h' hcnt.2))]
+    rw [ite_eq_left (by rw [hlen]; exact (count_iff _ _ _).mpr hcnt)]
+    cases n with
+    | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+    | succ n' =>
+    exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ n')) rfl
+      (fun v _ _ h => (GrowPost.mk (CoreAfterG.compK (KeptAll.refl _ _) hg3 h.after) h.res
+        h.valid).restore _ rfl h.valid)
+      (secwtb_ref p hq hi hc n' (hk.mono (by omega)) F ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode
+        d b us k (r₂.tail.headD 0) (r₃.headD 0) (r₃.tail.headD 0) wtb aargs.toArray cvc _ _
+        (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb huw hnw hwtb ⟨_, _, hv⟩
+        (by rw [hep]; exact hci) hsp (by
+          have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0)
+            (by have := hsp.bound; omega)
+          rw [htop3, ← hr30]; omega))
+  · rw [ite_eq_left (by
+      by_cases hc1 : r₃.tail.headD 0 < erRdT s₀.mem (r₂.tail.headD 0 + 6)
+      · exact .inl hc1
+      · exact .inr (fun e => hcnt ⟨hc1, e⟩))]
+    rw [ite_eq_right (by rw [hlen, count_iff]; exact hcnt)]
+    obtain ⟨hS', hK'⟩ := hS.restoreTop' hf3 hg3
+    exact RefE.ret rfl ⟨⟨M, hS', KeptAll.refl _ _, hK'⟩, rfl, hw0⟩
 
 theorem etaCtorShape_at (p : Prog) (hq : StuckProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)

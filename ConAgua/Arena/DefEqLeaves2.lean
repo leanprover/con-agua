@@ -64,10 +64,21 @@ theorem mapM_get {α β : Type} {f : α → Option β} :
     | succ k => simpa using hg k (by simpa using hk)
 
 /-- A decoded handle slice: its length, and each element a word below `2^32`. -/
-theorem hslice?_get {k : IdxKind} {a : Array Word} {o n : Nat} {l : List (Idx k)}
-    (h : hslice? (aread a) o n = some l) :
-    l.length = n ∧ ∀ j, j < n → ∃ w, a[o + j]? = some w ∧ w.toNat < 2 ^ 32 ∧ l[j]? = some (decI w) := by
-  sorry
+theorem hslice?_get {k : IdxKind} {R : Nat → Option Word} {o n : Nat} {l : List (Idx k)}
+    (h : hslice? R o n = some l) :
+    l.length = n ∧ ∀ j, j < n → ∃ w, R (o + j) = some w ∧ w.toNat < 2 ^ 32 ∧ l[j]? = some (decI w) := by
+  obtain ⟨hl, hg⟩ := mapM_get h
+  simp only [List.length_range] at hl
+  refine ⟨hl, fun j hj => ?_⟩
+  have := hg j (by simpa using hj)
+  simp only [List.getElem_range] at this
+  cases e : R (o + j) with
+  | none => simp [hd?, e] at this; omega
+  | some w =>
+    simp only [hd?, e, Option.bind_eq_bind, Option.bind_some] at this
+    by_cases hw : w.toNat < 2 ^ 32
+    · simp only [hw, ↓reduceIte] at this; exact ⟨w, rfl, hw, this.symm⟩
+    · simp only [hw, ↓reduceIte] at this; have := List.getElem?_eq_none_iff.mp this.symm; omega
 
 /-- **`er_slice_eq` decides the equality of two decoded handle slices of the record pool** (the
 twin's `cvc.levelParams = cvT.levelParams` in `structEtaCertWith`). -/
