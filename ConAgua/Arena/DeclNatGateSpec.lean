@@ -29,11 +29,43 @@ local notation "V" => ConLeche.CheckMode.verified
 section gate
 variable {dn : NIdx → Option ConLeche.Name} {p : Prog}
 
-theorem decCI_defn_val {a : Array Word} {q : Nat}
+theorem decCI_defn_val {rd : Nat → Option Word} {q : Nat}
     {cv : IConstantVal} {v : EIdx} {hint : ConLeche.ReducibilityHint}
-    (h : decCI (aread a) q = some (.defnInfo cv v hint)) :
-    ∃ w, a[q]? = some 1 ∧ a[q + 5]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = v := by
-  sorry
+    (h : decCI rd q = some (.defnInfo cv v hint)) :
+    ∃ w, rd q = some 1 ∧ rd (q + 5) = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = v := by
+  unfold decCI at h
+  cases hk : nat? rd q with
+  | none => simp [hk] at h
+  | some k =>
+  have hw : ∃ w, rd q = some w ∧ w.toNat = k := by
+    simp only [nat?, Option.map_eq_some_iff] at hk
+    obtain ⟨w, hw, hk⟩ := hk; exact ⟨w, hw, hk⟩
+  obtain ⟨w0, hw0, hwk⟩ := hw
+  rw [hk] at h
+  simp only [bind, Option.bind_eq_some_iff] at h
+  obtain ⟨a1, ha1, h⟩ := h
+  cases ha1
+  by_cases h1 : k = 1
+  · subst h1
+    simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨cv', hcv, v', hv, hh, hhint, he⟩ := h
+    cases he
+    have : w0 = 1 := UInt64.toNat_inj.mp (by simpa using hwk)
+    unfold hd? at hv
+    obtain ⟨w, hw, hv⟩ : ∃ w, rd (q + 5) = some w ∧ (if w.toNat < 2 ^ 32 then some (decI w) else none) = some v := by
+      cases hh5 : rd (q + 5) with
+      | none => simp [hh5] at hv
+      | some w => exact ⟨w, rfl, by simpa [hh5] using hv⟩
+    by_cases hl : w.toNat < 2 ^ 32
+    · rw [ite_eq_left hl] at hv
+      cases hv
+      exact ⟨w, by rw [hw0, this], hw, hl, rfl⟩
+    · rw [ite_eq_right hl] at hv; cases hv
+  · exfalso
+    rcases k with _ | _ | _ | _ | _ | _ | _ | k
+    · simp [Option.bind_eq_some_iff] at h
+    · exact h1 rfl
+    all_goals simp [Option.bind_eq_some_iff] at h
 
 theorem erecP_get_rev {m : Mem} {i : Nat} {w : Word} (h : erecP m i = some w) : erecP m i = some w := h
 
