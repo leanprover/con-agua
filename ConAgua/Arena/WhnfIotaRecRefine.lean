@@ -43,103 +43,92 @@ namespace L.Arena
 section twin
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- The parameter comparison. -/
-def iotaRecCmpT (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (args : List EIdx) (rP : Nat)
-    (margs : List EIdx) : AM Bool := do
-  let cmpA ← recFireArgs rl lps us args rP
-  defEqList r fe depth (margs.take rl.ctorParams) cmpA
--/
+/-- The parameter comparison (`cnP` the stored constructor's parameter count). -/
+def iotaRecCmpT (cnP : Nat) (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
+    (rP : Nat) (margs : List EIdx) : AM Bool := do
+  let cmpA ← recFireArgs rl cnP lps us args rP
+  defEqList r fe depth (margs.take cnP) cmpA
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- The checks past `iotaCase3` (the twin's text). -/
-def iotaRecVckT (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx) (usj : LsIdx)
+/-- The checks past `iotaCase3At` (the twin's text). -/
+def iotaRecVckT (mI rP cnP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx) (usj : LsIdx)
     (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) (cmpL : LsIdx) : AM Bool := do
   if ← liftFueled "level comparison" (← lvlsEq? usj cmpL) then do
-    let cmpA ← recFireArgs rl lps us args rP
-    if ← defEqList r fe depth (margs.take rl.ctorParams) cmpA then do
+    let cmpA ← recFireArgs rl cnP lps us args rP
+    if ← defEqList r fe depth (margs.take cnP) cmpA then do
       let tyC ← constTyAt cvj usj
       if ← iotaCertsFull r fe depth tyC margs then
-        iotaIndexOk r fe depth mI rP rl.ctorParams tyC margs ((args.take mI).drop rP)
+        iotaIndexOk r fe depth mI rP cnP tyC margs ((args.take mI).drop rP)
       else pure false
     else pure false
   else pure false
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- The checks past `iotaCase3`, the parameter comparison named. -/
-theorem iotaRecVckT_eq (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
+/-- The checks past `iotaCase3At`, the parameter comparison named. -/
+theorem iotaRecVckT_eq (mI rP cnP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
     (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) (cmpL : LsIdx) :
-    iotaRecVckT r fe depth mI rP lps us args usj cvj rl margs cmpL = (do
+    iotaRecVckT r fe depth mI rP cnP lps us args usj cvj rl margs cmpL = (do
       if ← liftFueled "level comparison" (← lvlsEq? usj cmpL) then do
-        if ← iotaRecCmpT r fe depth rl lps us args rP margs then do
+        if ← iotaRecCmpT r fe depth cnP rl lps us args rP margs then do
           let tyC ← constTyAt cvj usj
           if ← iotaCertsFull r fe depth tyC margs then
-            iotaIndexOk r fe depth mI rP rl.ctorParams tyC margs ((args.take mI).drop rP)
+            iotaIndexOk r fe depth mI rP cnP tyC margs ((args.take mI).drop rP)
           else pure false
         else pure false
       else pure false) := by
   simp only [iotaRecVckT, iotaRecCmpT, bind_assoc]
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- The certificate family. -/
-def iotaRecFamT (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx) (usj : LsIdx)
-    (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) : AM Bool :=
+/-- The certificate family (`isK` the recursor record's). -/
+def iotaRecFamT (isK : Bool) (mI rP cnP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
+    (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) : AM Bool :=
   if mode.verifiedChecks then do
     let cmpL ← recFireLevels rl lps us cvj.levelParams
-    if ← iotaCase3 fe rl cvj cmpL then iotaRecVckT r fe depth mI rP lps us args usj cvj rl margs cmpL
+    if ← iotaCase3At r fe isK cvj cmpL then
+      iotaRecVckT r fe depth mI rP cnP lps us args usj cvj rl margs cmpL
     else pure true
   else pure true
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The fire past the major's arguments. -/
-def iotaRecFire2T (c : NIdx) (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
-    (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) : AM (Option EIdx) :=
-  if margs.length = rl.ctorParams + rl.nfields then do
-    let fam ← iotaRecFamT mode r fe depth mI rP lps us args usj cvj rl margs
+def iotaRecFire2T (c : NIdx) (isK : Bool) (mI rP cnP : Nat) (lps : List NIdx) (us : LsIdx)
+    (args : List EIdx) (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) :
+    AM (Option EIdx) :=
+  if margs.length = cnP + rl.nfields then do
+    let fam ← iotaRecFamT mode r fe depth isK mI rP cnP lps us args usj cvj rl margs
     if fam then do
       let rhs ← ruleRhsAt c rl.ctor lps rl.rhs us
-      let x ← mkAppN rhs (args.take rP ++ margs.drop rl.ctorParams)
+      let x ← mkAppN rhs (args.take rP ++ margs.drop cnP)
       pure (some x)
     else pure none
   else pure none
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The major's arguments, then the fire. -/
-def iotaRecFireT (c : NIdx) (mI rP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
-    (major : EIdx) (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) : AM (Option EIdx) := do
+def iotaRecFireT (c : NIdx) (isK : Bool) (mI rP cnP : Nat) (lps : List NIdx) (us : LsIdx)
+    (args : List EIdx) (major : EIdx) (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) :
+    AM (Option EIdx) := do
   let margs ← getAppArgs coreWalkFuel major
-  iotaRecFire2T mode r fe depth c mI rP lps us args usj cvj rl margs
--/
+  iotaRecFire2T mode r fe depth c isK mI rP cnP lps us args usj cvj rl margs
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The major's preparation, its head's constructor, the rule. -/
-def iotaRecMajorT (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat)
+def iotaRecMajorT (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat) (isK : Bool)
     (rules : List IRecRule) (args : List EIdx) : AM (Option EIdx) := do
   let b0 ← internE (.bvar 0)
-  let major ← prepareMajor mode r fe depth c rules (args.getD mI b0)
+  let major ← prepareMajor mode r fe depth c isK rules (args.getD mI b0)
   let hh ← getAppFn coreWalkFuel major
   if hh.tag == ETag.const then
     match ← view hh with
     | .const cj usj =>
       match fe.find? cj with
-      | some (.ctorInfo cvj _ _) =>
+      | some (.ctorInfo cvj cnP _) =>
         match findRule rules cj with
-        | some rl => iotaRecFireT mode r fe depth c mI rP cv.levelParams us args major usj cvj rl
+        | some rl =>
+          iotaRecFireT mode r fe depth c isK mI rP cnP cv.levelParams us args major usj cvj rl
         | none => pure none
       | _ => pure none
     | _ => pure none
   else pure none
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The recursor's record, the arity, the levels' length, the telescope. -/
 def iotaRecCT (c : NIdx) (us : LsIdx) (sargs : Array EIdx) (n : Nat) : AM (Option EIdx) :=
   match fe.find? c with
-  | some (.recInfo cv mI rP rules) => do
+  | some (.recInfo cv mI rP isK rules) => do
     if n ≠ mI + 1 then pure none
     else do
     let args := (takeEidx sargs n).toList
@@ -148,16 +137,14 @@ def iotaRecCT (c : NIdx) (us : LsIdx) (sargs : Array EIdx) (n : Nat) : AM (Optio
     | some usl =>
     let peeled ← peelPis (mI + 1) cv.type
     if args.length = mI + 1 ∧ usl = cv.levelParams.length ∧ peeled.isSome then
-      iotaRecMajorT mode r fe depth c us cv mI rP rules args
+      iotaRecMajorT mode r fe depth c us cv mI rP isK rules args
     else pure none
   | _ => pure none
--/
 
 theorem ite_bind' {m : Type → Type} [Monad m] {α β : Type} (c : Prop) [Decidable c] (x y : m α)
     (f : α → m β) : (ite c x y >>= f) = ite c (x >>= f) (y >>= f) := by
   split <;> rfl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The twin, put back together.** -/
 theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
     iotaRecAt mode r fe depth hd sargs n =
@@ -176,7 +163,7 @@ theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
       | none => simp only [h]
       | some ci =>
         cases ci <;> simp only [h]
-        rename_i cv mI rP rules
+        rename_i cv mI rP isK rules
         by_cases hn : n ≠ mI + 1
         · rw [ite_eq_left hn, ite_eq_left hn]
         · rw [ite_eq_right hn, ite_eq_right hn]
@@ -207,7 +194,6 @@ theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
               · rw [ite_eq_right ht, ite_eq_right ht]
             · rw [ite_eq_right hc, ite_eq_right hc]
   · rfl
--/
 
 end twin
 
@@ -218,22 +204,6 @@ structure IotaRecProg' (p : Prog) : Prop extends IotaProg4 p, IotaRecProg p wher
   bvf : p.lookup "bvar_find" = some bvarFind
   bvp : p.lookup "bvar_push" = some bvarPush
   bvi : p.lookup "intern_bvar" = some internBVar
-
-/-- **The callees `iota_rec_at`'s pieces read the record pool after leave it alone** (new stub
-assumption, as `ErecKeptKnot`/`ErecKeptInst`: the record pool grows only when a declaration is
-installed, never during a term check). -/
-def ErecKeptRec (p : Prog) : Prop :=
-  ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
-    f ∈ ["rec_fire_levels", "lvls_eq_c", "rec_fire_args", "const_ty_at", "iota_certs_full"] →
-    callW p n f vs m = some (r, m') → m'.arr64 EREC = m.arr64 EREC
-
-set_option maxRecDepth 8192 in
-/-- `ErecKeptRec` from the core's write set (`CoreErec.lean`). -/
-theorem ErecKeptRec.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
-    ErecKeptRec p :=
-  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by
-    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hf
-    rcases hf with rfl | rfl | rfl | rfl | rfl <;> decide) h
 
 /-! ## `erec_push(o, c)` -/
 
