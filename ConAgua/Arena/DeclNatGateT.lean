@@ -316,7 +316,7 @@ structure SnpProg (p : Prog) : Prop extends NatSubProg' p where
 
 /-- What the structural gate gives besides the twin's run (from `m`, `a`): `StageC` at the
 returned index (the push popped), the growth, `Ext` of the twin's store, the view back at `vis`,
-the returned index answering as `fe`. -/
+the returned index answering as `fe`, the pins unchanged. -/
 structure SnpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (env : ConLeche.Env) (m m' : Mem) (r : Word) (fe' : IFEnv) (a a' : AState) : Prop where
   stage : StageC dn vis fe' env m' a'
@@ -324,6 +324,7 @@ structure SnpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   ext : Ext a.store a'.store
   ret : r = vis
   same : ConRon.Bridge.IFEnv.SameView fe' fe
+  pins : a'.pins = a.pins
 
 /-- **`check_structural_nat_pin` refines `checkStructuralNatPin` under `StageC`, both outcomes**
 (con-ron's `checkStructuralNatPin_bridge`): the own row read, the push, the reads at the pushed
@@ -417,7 +418,7 @@ theorem snp_ref (hN : SnpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vi
     (fun e7 => by rw [← hQ7.res.1] at e7; simpa using e7) fun _ _ => ?_
   rw [hr4] at hC7
   exact RefE.ret rfl ⟨hC7, ((((hg2.trans hQ3.grow).trans hg4).trans hg5).trans hg6).trans hQ7.grow,
-    ((hx3.trans hx5).trans hx6).trans hstep7.ext, hr4, hsv⟩
+    ((hx3.trans hx5).trans hx6).trans hstep7.ext, hr4, hsv, by rw [hstep7.pins, hp6, hp5, hp3]⟩
 
 end snp
 
