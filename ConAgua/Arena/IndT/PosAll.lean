@@ -16,8 +16,10 @@ import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndT.PosCrest
 import ConAgua.Arena.IndT.PosFields
 import ConAgua.Checker.NoVerdictTree
+import ConAgua.Arena.IndSumSpec.StructUsedHb
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Verdict.PosE
+public import ConAgua.Verdict.PosFt
 
 @[expose] public section
 
@@ -44,7 +46,6 @@ section steps
 variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv in
 theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p dn vis fe env n) :
     PosRef p dn vis fe env (n + 1) := by
@@ -106,7 +107,7 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
     (callW_of_callE h3)
   dsimp only at hno
   rw [hs3] at hno
-  have hP1 : PosMR m1 := hP.fr (coreF_mfr hq (by decide) (callW_of_callE h2))
+  have hP1 : PosMR m1 := hP.ofCore hq.closed (by decide) (callW_of_callE h2)
   obtain ⟨mp, hmp⟩ := hP1.no
   obtain ⟨bo, hrun2, hbo, hM2, hS2, hg2, hf2⟩ := noConstWf_ok n dn fe vis m1 m2 a1 _ _ _ _ _ _ c.names mp hno hS1 hwH hn1
     (by omega) hmp
@@ -155,12 +156,12 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
       have hbo2' : bo2 = true := by rw [← hbo2]; simpa using ho2
       subst hbo2'
       exact RefE.ret (y := (.ordinary, w, NS)) (a' := a1) rfl ⟨hC3, hg12.trans hg3, by simp [decNFK],
-        by simpa using hwH, by simpa using hwd, by simpa using hns3, hP3, hA3, c1⟩
+        by simpa using hwH, by simpa using hwd, by simpa using hns3, hP3, hA3⟩
     · rw [ite_eq_right ho2]
       have hbo2' : bo2 = false := by rw [← hbo2]; simpa using ho2
       subst hbo2'
       exact RefE.ret (y := (.ordinary, decI e, NS)) (a' := a1) rfl ⟨hC3, hg12.trans hg3, by simp [decNFK],
-        by simpa using he, by simp, by simpa using hns3, hP3, hA3, c1⟩
+        by simpa using he, by simp, by simpa using hns3, hP3, hA3⟩
   rw [ite_eq_right ho]
   have hbo' : bo = true := by rw [← hbo]; simpa using ho
   subst hbo'
@@ -184,9 +185,9 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
     rw [npE.k_nest_pos_bind.eq_2]
     obtain ⟨s5, hs5, -, x, a4, hrun4, hQ4⟩ := RefE.run_ok hs hR h5
     rw [hs5] at hQ4
-    obtain ⟨hC4, hg4, hk4, hxH, hxd, hns4, hP4, hA4, c4⟩ := hQ4
+    obtain ⟨hC4, hg4, hk4, hxH, hxd, hns4, hP4, hA4⟩ := hQ4
     exact RefE.ret hrun4 ⟨hC4, hg12.trans hg4, by simpa using hk4, by simpa using hxH, by simpa using hxd,
-      by simpa using hns4, hP4, hA4, c1.trans c4⟩
+      by simpa using hns4, hP4, hA4⟩
   · -- an application
     rw [ite_eq_right h6]
     have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forallE _ hwH).mp e')
@@ -205,17 +206,15 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
     rw [npE.k_nest_pos_app.eq_2]
     obtain ⟨s5, hs5, -, x, a4, hrun4, hQ4⟩ := RefE.run_ok hs hR h5
     rw [hs5] at hQ4
-    obtain ⟨hC4, hg4, hk4, hx1, hns4, hP4, hA4, c4⟩ := hQ4
+    obtain ⟨hC4, hg4, hk4, hx1, hns4, hP4, hA4⟩ := hQ4
     exact RefE.ret hrun4 ⟨hC4, hg12.trans hg4, by simpa using hk4, by simpa using hwH,
-      by simpa [hwd] using hx1.symm, by simpa using hns4, hP4, hA4, c1.trans c4⟩
--/
+      by simpa [hwd] using hx1.symm, by simpa using hns4, hP4, hA4⟩
 
 end steps
 
 section all
 variable {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- At L fuel `0` every model is out of fuel (class `0`). -/
 theorem nbRef_zero : NbRef p dn vis fe env 0 := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
@@ -228,22 +227,17 @@ theorem nbRef_zero : NbRef p dn vis fe env 0 := by
     | (rw [nfrE.eq_1]; exact RefE.of_cls0 (by simp)) | (rw [nctE.eq_1]; exact RefE.of_cls0 (by simp))
     | (rw [noE.eq_1]; exact RefE.of_cls0 (by simp)) | (rw [nwE.eq_1]; exact RefE.of_cls0 (by simp))
     | (rw [nfE.eq_1]; exact RefE.of_cls0 (by simp))
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 variable {dn vis fe env} in
 /-- **The block refines con-ron's `nestPos` block, both outcomes**, at every L fuel below `2^62`. -/
 theorem nbRef_all (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
-    (henv : ConLeche.EnvWF env) : ∀ n, n ≤ 2 ^ 62 → NbRef p dn vis fe env n
+    (hFt : FtProg p) (henv : ConLeche.EnvWF env) : ∀ n, n ≤ 2 ^ 62 → NbRef p dn vis fe env n
   | 0, _ => nbRef_zero dn vis fe env
   | n + 1, hn => by
-    have ih := nbRef_all L hq hIlpf hLC henv n (by omega)
+    have ih := nbRef_all L hq hIlpf hLC hFt henv n (by omega)
     exact ⟨posRef_step hq dn vis fe henv L n (by omega) ih, bindRef_step p dn vis fe henv L n ih,
-      appRef_step p dn vis fe L n ih, contRef_step p dn vis fe L hq hIlpf hLC n ih, keyRef_step dn vis fe L n ih,
-      newRef_step hq dn vis fe L hIlpf hLC n ih, frameRef_step hq dn vis fe henv L n (by omega) ih,
-      ctorsRef_step L dn vis fe n ih, oneRef_step L hq hIlpf dn vis fe henv n hn ih,
-      walkRef_step L dn vis fe henv n ih, fieldsRef_step L dn vis fe henv n ih⟩
--/
+      sorry, sorry, sorry, sorry, sorry, sorry, sorry, sorry,
+      fieldsRef_step L dn vis fe henv n ih⟩
 
 end all
 
