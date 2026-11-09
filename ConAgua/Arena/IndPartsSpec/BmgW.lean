@@ -208,13 +208,13 @@ theorem partsRecTarget_le {names : List NIdx} {mI : Nat} {ty : EIdx} {a a' : ASt
   · exact Nat.le_of_eq (partsPureRun h)
 
 /-- The `findM?` predicate of `blockMemberCounts?`. -/
-def bmfPred (names : List NIdx) (mm : Nat) (q : IConstantVal × Nat × Nat × List IRecRule) : AM Bool := do
+def bmfPred (names : List NIdx) (mm : Nat) (q : IConstantVal × Nat × Nat × Bool × List IRecRule) : AM Bool := do
   pure ((← ConRon.Arena.recTargetOf names q.2.1 q.1.type) == mm)
 
 /-- **`block_member_counts_find`'s model refines the twin's `findM?`.** -/
 theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl mm : Word}
     {names : List NIdx} (n : Nat) :
-    ∀ (m : Mem) (a : AState) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × List IRecRule)),
+    ∀ (m : Mem) (a : AState) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)),
     StageR vis fe m a → PSlR decSR rs ro rl m →
     DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
     Sim (bmfW n m no nl ro rl mm) (rs.findM? (bmfPred names mm.toNat)) a
@@ -316,7 +316,7 @@ theorem stageR_ptop {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_member_counts_go`'s model refines `blockMemberCounts?` from member `idx`.** -/
 theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
-    {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
+    {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)}
     (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32) (h4 : rl.toNat < 2 ^ 32)
     (n : Nat) :
     ∀ (m : Mem) (a : AState) (cto ctl idx : Word) (cvTs : List IConstantVal),

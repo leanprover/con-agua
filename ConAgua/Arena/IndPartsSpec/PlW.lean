@@ -103,7 +103,7 @@ theorem LvlHyp.mono {c : CallM} {n : Nat} {dn : NIdx → Option ConLeche.Name} {
 /-- The twin's prefix of `buildTwin` up to `lvlEq?`: the counts, the reserved names, the result sort
 `sv` (`LvlHyp`'s `T`). -/
 def TbbT (nP : Nat) (cvT0 : IConstantVal) (cvTs : List IConstantVal) (cs : List (IConstantVal × Nat × Nat))
-    (rs : List (IConstantVal × Nat × Nat × List IRecRule)) (a : AState) (sv : LIdx) (a1 : AState) : Prop :=
+    (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)) (a : AState) (sv : LIdx) (a1 : AState) : Prop :=
   ∃ nIdxs a2 R a3,
     (ConRon.Arena.blockMemberCounts? nP cvTs.length cs.length (cvTs.map (·.name)) rs 0 cvTs).run a =
       .ok (some nIdxs, a2) ∧

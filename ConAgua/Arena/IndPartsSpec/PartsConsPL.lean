@@ -67,7 +67,7 @@ theorem PSlR.nil {α : Type} (f : Mem → Nat → Option α) (m : Mem) : PSlR f 
 
 /-- **`blockSplit`'s record at `q`**: its three slices, decoded below the tops. -/
 def SplitRec (x : List IConstantVal × List (IConstantVal × Nat × Nat) ×
-    List (IConstantVal × Nat × Nat × List IRecRule)) (q : Word) (m : Mem) : Prop :=
+    List (IConstantVal × Nat × Nat × Bool × List IRecRule)) (q : Word) (m : Mem) : Prop :=
   q.toNat + 6 ≤ iwTop m ∧
   PSlR decCVp x.1 (rdW (m.arr64 IW) q) (rdW (m.arr64 IW) (q + 1)) m ∧
   PSlR decSC x.2.1 (rdW (m.arr64 IW) (q + 2)) (rdW (m.arr64 IW) (q + 3)) m ∧
@@ -75,7 +75,7 @@ def SplitRec (x : List IConstantVal × List (IConstantVal × Nat × Nat) ×
 
 /-- `block_split`'s result `(ok, q)` against the twin. -/
 def SplitR (x : Option (List IConstantVal × List (IConstantVal × Nat × Nat) ×
-    List (IConstantVal × Nat × Nat × List IRecRule))) (r : List Word) (m : Mem) : Prop :=
+    List (IConstantVal × Nat × Nat × Bool × List IRecRule))) (r : List Word) (m : Mem) : Prop :=
   match x with
   | none => r.headD 0 = 0
   | some t => r.headD 0 = 1 ∧ SplitRec t (r.tail.headD 0) m

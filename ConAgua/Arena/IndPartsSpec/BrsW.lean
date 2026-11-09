@@ -194,7 +194,7 @@ theorem bpfW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
 /-- **`block_shape_pins_recs`**: no recursor's name reserved. -/
 theorem bprW_ok {vis : Word} {fe : IFEnv} {a : AState}
     {R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
-    ∀ (m m' : Mem) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × List IRecRule)) (r : List Word),
+    ∀ (m m' : Mem) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)) (r : List Word),
     bprW n m ro rl = some (r, m') → StageR vis fe m a → PSlR decSR rs ro rl m →
     m' = m ∧ r = [if rs.all (fun r => !R.contains r.1.name) then 1 else 0] := by
   induction n with
@@ -313,7 +313,7 @@ theorem partsW01 {r : List Word} {b : Bool} (h : r = [if b then 1 else 0]) : (r.
 /-- **`block_shape_pins_ok`**: the three pins, the twin's conjunction. -/
 theorem bpoW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word} {cvTs : List IConstantVal}
-    {rs : List (IConstantVal × Nat × Nat × List IRecRule)} {cs : List (IConstantVal × Nat × Nat)}
+    {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)} {cs : List (IConstantVal × Nat × Nat)}
     {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a))
     (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) (hS : StageR vis fe m a)
     (hts : PSlR decCVp cvTs cto ctl m) (hrs : PSlR decSR rs ro rl m) (hcs : PSlR decSC cs cso csl m)
@@ -675,7 +675,7 @@ theorem decSR_fields2 {m : Mem} {p : Nat} {cv : IConstantVal} {mI rP : Nat} {rul
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The recursor shape of a split recursor (the twin's `rs.mapM` body). -/
-def brsF (names : List NIdx) (r : IConstantVal × Nat × Nat × List IRecRule) : AM RecShape := do
+def brsF (names : List NIdx) (r : IConstantVal × Nat × Nat × Bool × List IRecRule) : AM RecShape := do
   let tgt ← ConRon.Arena.recTargetOf names r.2.1 r.1.type
   pure ⟨r.1, r.2.2.1, r.2.1, tgt, r.2.2.2.map (·.rhs)⟩
 -/
@@ -684,7 +684,7 @@ def brsF (names : List NIdx) (r : IConstantVal × Nat × Nat × List IRecRule) :
 /-- **`block_shape_recs_of`'s model refines the twin's `rs.mapM`.** -/
 theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) :
-    ∀ (m : Mem) (a : AState) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × List IRecRule)),
+    ∀ (m : Mem) (a : AState) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)),
     StageR vis fe m a → PSlR decSR rs ro rl m →
     DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
     Sim (brsW n m no nl ro rl) (rs.mapM (brsF names)) a
@@ -893,7 +893,7 @@ open L.Arena
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 def finJP (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List NIdx)
-    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
+    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
     (cvR0 : IConstantVal) (s : LIdx) : AM (Option BlockShape) := do
   let z ← zeroLevel
   let eq ← lvlEq? s z
@@ -935,14 +935,14 @@ def tailJP {X : Type} (nP : Nat) (nIdxs : List Nat) (ty : EIdx) (jp : LIdx → A
     jp s
 
 def pinsOf (nP : Nat) (R : List NIdx) (lps : List NIdx) (cvTs : List IConstantVal)
-    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × List IRecRule)) : Bool :=
+    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)) : Bool :=
   (cvTs.all fun c => !R.contains c.name && c.levelParams == lps) &&
     (rs.all fun r => !R.contains r.1.name) &&
     (cs.all fun c => c.2.1 == nP && c.1.levelParams == lps && !R.contains c.1.name)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 def buildTwin (nPd : Nat) (cvTs : List IConstantVal) (cvT0 : IConstantVal)
-    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
+    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
     (cvR0 : IConstantVal) : AM (Option BlockShape) := do
   match ← blockMemberCounts? nPd cvTs.length cs.length (cvTs.map (·.name)) rs 0 cvTs with
   | none => pure none
@@ -1054,7 +1054,7 @@ theorem _root_.L.Arena.Sim.withRun {β α : Type} {mo : Option (β × Mem)} {op 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `finJP` after `isProp`. -/
 def finRest (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List NIdx)
-    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
+    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
     (cvR0 : IConstantVal) (s : LIdx) (isProp : Bool) : AM (Option BlockShape) := do
   let ctors : List (IConstantVal × Nat) := cs.map fun c => (c.1, c.2.2)
   let lvls ← paramLevels lps
@@ -1075,7 +1075,7 @@ def finRest (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem finJP_eq (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List NIdx)
-    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
+    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
     (cvR0 : IConstantVal) (s : LIdx) :
     finJP nP cvTs nIdxs lps cs rs cvR0 s = (do
       let z ← zeroLevel
@@ -1110,8 +1110,8 @@ theorem blockGroups_length {names : List NIdx} {lvls : LsIdx} {nP k : Nat} {cs :
 /-- **`block_shape_fin`'s model refines `finRest`.** -/
 theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     {nPd cto ctl cso csl rso rsl no nl io lo ll s ip : Word} {cvTs : List IConstantVal} {nIdxs : List Nat}
-    {lps : List NIdx} {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
-    {rs : List (IConstantVal × Nat × Nat × List IRecRule)} {sv : LIdx} {isProp : Bool}
+    {lps : List NIdx} {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × Bool × List IRecRule}
+    {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)} {sv : LIdx} {isProp : Bool}
     (hS : StageR vis fe m a) (hts : PSlR decCVp cvTs cto ctl m) (hcs : PSlR decSC cs cso csl m)
     (hrs : PSlR decSR (r0 :: rs) rso rsl m)
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m (cvTs.map (·.name))) (hnb : no.toNat + nl.toNat ≤ iwTop m)
@@ -1201,8 +1201,8 @@ theorem _root_.L.Arena.Sim.withEq {β α : Type} {mo : Option (β × Mem)} {op :
 /-- **`block_shape_tail`'s model refines the twin's result sort and the rest (`tailJP`).** -/
 theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem} {a : AState}
     {nPd cto ctl cso csl rso rsl no nl io lo ll : Word} {cvT0 : IConstantVal} {cvTs : List IConstantVal}
-    {nIdxs : List Nat} {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
-    {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
+    {nIdxs : List Nat} {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × Bool × List IRecRule}
+    {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)}
     (hS : StageR vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
     (hrs : PSlR decSR (r0 :: rs) rso rsl m)
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m ((cvT0 :: cvTs).map (·.name)))
@@ -1259,7 +1259,7 @@ theorem partsBindOk {α β : Type} {x : AM α} {f : α → AM β} {a a' : AState
   exact ⟨y, a1, h1, h2⟩
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem bmc_length {nPd k nC : Nat} {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × List IRecRule)} :
+theorem bmc_length {nPd k nC : Nat} {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)} :
     ∀ (cvTs : List IConstantVal) (mm : Nat) (a a' : AState) (ns : List Nat),
     (ConRon.Arena.blockMemberCounts? nPd k nC names rs mm cvTs).run a = .ok (some ns, a') →
     ns.length = cvTs.length
@@ -1285,7 +1285,7 @@ theorem bmc_length {nPd k nC : Nat} {names : List NIdx} {rs : List (IConstantVal
 /-- `block_member_counts`' model as a `Sim` (from `blockMemberCounts_refines`' proof). -/
 theorem bmcW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     {nPd k nC no nl ro rl cto ctl : Word} {names : List NIdx} {cvTs : List IConstantVal}
-    {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
+    {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)}
     (hS : StageR vis fe m a) (hts : PSlR decCVp cvTs cto ctl m)
     (hrs : PSlR decSR rs ro rl m) (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m names)
     (hnb : no.toNat + nl.toNat ≤ iwTop m) :
@@ -1332,8 +1332,8 @@ theorem bpoW_ready {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word
 /-- **`block_shape_build`'s model refines `buildTwin`.** -/
 theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem} {a : AState}
     {nPd cto ctl cso csl rso rsl : Word} {cvT0 : IConstantVal} {cvTs : List IConstantVal}
-    {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
-    {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
+    {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × Bool × List IRecRule}
+    {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)}
     (hS : StageR vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
     (hrs : PSlR decSR (r0 :: rs) rso rsl m)
     (hc : LvlHyp c n dn vis fe m (TbbT nPd.toNat cvT0 (cvT0 :: cvTs) cs (r0 :: rs) a)) :

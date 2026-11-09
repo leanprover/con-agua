@@ -30,7 +30,7 @@ both decoded below the tops; the result a number slice decoded below the tops (`
 @[refines ConRon.Arena.blockMemberCounts?]
 theorem blockMemberCounts_refines (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd k nC no nl ro rl cto ctl : Word)
-    (names : List NIdx) (cvTs : List IConstantVal) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
+    (names : List NIdx) (cvTs : List IConstantVal) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
     (hS : StageR vis fe s₀.mem a₀) (hts : PSlR decCVp cvTs cto ctl s₀.mem)
     (hrs : PSlR decSR rs ro rl s₀.mem) (hnm : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names)
     (hnb : no.toNat + nl.toNat ≤ iwTop s₀.mem) :
