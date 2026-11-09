@@ -66,7 +66,27 @@ theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteAr
     (sz : TieredArray → Nat) (a : AState) :
     RelSpec checkerProg "builtin_prelude" (fun m => R3 (loadMem b pb sz) m pb a) fun _ m =>
       ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ R4 (loadMem b pb sz) m pb pre a' := by
-  sorry
+  intro n _hn s₀ h3
+  refine triple_post (triple_and (triple_and (builtinPrelude_checker h64 a n _hn s₀)
+    (stage_since n (preLoop_mem "builtin_prelude" (by decide +kernel)) s₀))
+    (stageFrame_builtin_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hbp⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
+  have hc := CapsOK.keep h3.since.keep h3.since.caps
+  obtain ⟨st, a', hb, hA, hD, ht, h240, hrk, hmo⟩ := hbp
+    ⟨h3.arena, h3.sdr, h3.twin, Nat.lt_of_lt_of_le (by decide) hc.2.1, h3.mode⟩
+  obtain ⟨hstep, -, -, -⟩ := ConRon.Bridge.Frontend.builtinPreludeE_run h3.twin.ok h3.twin.off
+    h3.twin.pins hb
+  have hpf0 : PinFacts s₀.mem a.pins := ⟨h3.rset, h3.stk, h3.pinsFull, h3.pin0⟩
+  refine ⟨_, a', hb, h3.since.step hk hpf, hA, hD, h240, ?_, ht, ?_, hrk, hmo⟩
+  rotate_left
+  · exact h3.hz.frame hsf (by decide +kernel) (by decide +kernel)
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+  rw [hstep.pins]
+  exact hpf0.frame hsf stageA_builtin_prelude_pins (by decide +kernel) (by decide +kernel)
+    (stageC_builtin_prelude_off _ (by decide)) (stageC_builtin_prelude_off _ (by decide))
+    (stageC_builtin_prelude_off _ (by decide))
 
 /-! ## `front_run` -/
 
@@ -90,7 +110,33 @@ theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArra
     RelSpec checkerProg "front_run" (fun m => R4 (loadMem b pb sz) m pb pre a) fun r m =>
       r.headD 0 = 0 → ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧
         R5 (loadMem b pb sz) m pb pre rc a' := by
-  sorry
+  intro n _hn s₀ h4
+  have hm : s₀.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb sz
+  refine triple_post (triple_and (triple_and (L.Front.frontRunOK_checker pre.decls b h64 hb n s₀ hm
+    a h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok h4.mode)
+    (stage_since n (preLoop_mem "front_run" (by decide +kernel)) s₀))
+    (stageFrame_front_run n s₀)) fun r s' ⟨⟨hpost, hl, hk, hpf⟩, hsf⟩ => ⟨hl, fun h0 => ?_⟩
+  obtain ⟨st, a', hp, hA, hD, hto, hM, hR⟩ := hpost h0
+  have hu : b.size < USize.size := by
+    rw [show USize.size = 2 ^ 64 by simp [USize.size, h64]]; omega
+  have hcp : parseChunks [b] a = .ok (.ok (.ofState st), a') := by
+    have := ConAgua.Front.ChunkBridge.parseChunks_single b hu
+    rw [this]; exact hp
+  obtain ⟨hstep, -, -⟩ := ConRon.Bridge.Frontend.parseChunks_run h4.twin.ok h4.twin.off h4.twin.pins hcp
+  refine ⟨_, a', hcp, ⟨h4.since.step hk hpf, hA, hD.decls, ?_, ?_, ?_, ?_, ?_, hM⟩⟩
+  · rw [hsf.ctl 240 (stageC_front_run_off _ (by decide))]; exact h4.np
+  · rw [hstep.pins]
+    exact h4.pf.frame hsf stageA_front_run_pins (by decide +kernel) (by decide +kernel)
+      (stageC_front_run_off _ (by decide)) (stageC_front_run_off _ (by decide))
+      (stageC_front_run_off _ (by decide))
+  · exact ⟨hto.1, hto.2.1, hto.2.2.1, h4.twin.pers.mono hstep.pins,
+      by simp only [PinsReadyP, hstep.pins]; exact h4.twin.ready⟩
+  · exact h4.hz.frame hsf (by decide +kernel) (by decide +kernel)
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+  · exact fun x hx => hR x (by simpa [ParseResultD.ofState] using hx)
 
 /-! ## `prepare_prelude` -/
 
