@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Checker.ParThreadL
+public import ConAgua.Checker.ParDriverL
 public import ConAgua.Checker.ParThreadReads
 public import ConAgua.Arena.FreezeBuf
 import ConAgua.Checker.CheckARun
