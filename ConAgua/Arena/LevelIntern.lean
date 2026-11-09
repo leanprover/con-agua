@@ -272,8 +272,6 @@ structure LvSubProg (p : Prog) : Prop extends LvInternProg p where
   keys_push : p.lookup "keys_push" = some keysPush
   ek_copy : p.lookup "ek_copy" = some ekCopy
   ls_node : p.lookup "ls_node" = some lsNode
-  lp_substpw : p.lookup "lp_substpw" = some lpSubstPW
-  lp_spw : p.lookup "lp_spw" = some lpSpw
   lv_zero : p.lookup "lv_zero" = some lvZero
   lh_push : p.lookup "lh_push" = some lhPush
 
