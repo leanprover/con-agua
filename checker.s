@@ -47374,15 +47374,15 @@ addq $8, %rdx
 cmpq 16(%rsp), %rcx
 jb .Lca_check_b_1421L
 .Lca_check_b_1421X:
-subq $1, %r14
-jb ca_exhausted
-call ca_f_flush_caches
-movq %rax, (%rsp)
 movq $1, %rax
 movq %rax, 35560(%r15)
 jmp .Lca_check_b_1X
 .Lca_check_b_1E:
 .Lca_check_b_1X:
+subq $1, %r14
+jb ca_exhausted
+call ca_f_flush_caches
+movq %rax, (%rsp)
 cmpq $0, 2432(%r15)
 jbe ca_error
 movq 960(%r15), %rax
