@@ -12,6 +12,8 @@ public import ConAgua.Arena.IndT.PassBnc
 public import ConAgua.Arena.IndT.Positivity
 public import ConAgua.Arena.IndT.RecGen21
 public import ConAgua.Arena.IndT.TailStream
+public import ConAgua.Arena.IndT.TailRef
+public import ConAgua.Checker.StreamRecsProg
 import ConAgua.Checker.ArmsT
 import ConAgua.Verdict.PosKnotE
 import ConAgua.Checker.IndArmTrees1
@@ -326,9 +328,44 @@ theorem tsRefS_checker (bs : List UInt8) (dn : ConRon.Arena.NIdx → Option ConL
   rcases hf with rfl | rfl | rfl | rfl | rfl <;> exact mem_of_tree armRcTree.eq (by decide +kernel)
 
 set_option maxRecDepth 20000 in
-/-- **`check_block`'s callees' contracts at the substituted checker program.** -/
+/-- **`check_block_tail`'s contract at the substituted checker program** (`tailRefS_of`), from
+`stream_nested_ok`'s step (`SnoSim`, through `streamRecsRefS_checker` and `tsRefS_checker`). -/
+theorem tailRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
+    (dn : ConRon.Arena.NIdx → Option ConLeche.Name) (hSno : SnoSim (Prog.subPB bs checkerProg) dn) :
+    TailRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
+  have hAP := indArmProgs_checker bs hr hpre
+  have hP : TailProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hMc : McLook (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hF : FtProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hWt : WhnfTopE (Prog.subPB bs checkerProg) :=
+    whnfTop_stageE (by prog_bundle []) (fun n => (checkerProg_knotTopPB bs).knotOK n) (checkerProg_knotEPB bs)
+  have hfR : ∀ f ∈ grcMemoCallees, RcKeepF (Prog.subPB bs checkerProg) f := by
+    intro f hf
+    simp only [grcMemoCallees, List.mem_cons, List.not_mem_nil, or_false] at hf
+    rcases hf with rfl | rfl <;> exact rcKeep_checker bs (mem_of_tree armRcTree.eq (by decide +kernel))
+  have hRk : ∀ f ∈ tailPreCallees, RcKeepF (Prog.subPB bs checkerProg) f := by
+    intro f hf
+    simp only [tailPreCallees, List.mem_cons, List.not_mem_nil, or_false] at hf
+    rcases hf with rfl | rfl | rfl | rfl <;> exact rcKeep_checker bs (mem_of_tree armRcTree.eq (by decide +kernel))
+  have hMk : ∀ f ∈ tailPreCallees, MaKeepF (Prog.subPB bs checkerProg) f := by
+    intro f hf
+    simp only [tailPreCallees, List.mem_cons, List.not_mem_nil, or_false] at hf
+    rcases hf with rfl | rfl | rfl | rfl <;> exact maKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
+  exact tailRefS_of hAP.kp (checkerProg_thmArmPB bs hr hpre).ccv hAP.apd hAP.crk (checkerProg_crfPB bs)
+    hAP.ilpf hAP.opf hAP.lc hAP.lt hP hMc (grcProgE_checker bs) hF hWt (checkerProg_ccvSimsPB bs dn) hfR
+    (fun f hf => rcKeep_checker bs (armRc_grc f hf)) (grcMaKeep_checker bs)
+    (ownKeep_checker bs (mem_of_tree armOwnTree.eq (by decide +kernel)))
+    (fun f hf => indArmKeep_checker bs f (List.mem_append_left _ (List.mem_append_right _ hf))) hRk hMk
+    (tsRefS_checker bs dn (streamRecsRefS_checker bs dn hSno))
+    (maKeep_checker bs (armMa_pass _ (by simp)))
+    (fun _ _ _ _ _ h hM => mcMR.ofClosed (closedW_subPB bs checkerProg_armMc)
+      (mem_of_tree armMcTree.eq (by decide +kernel)) h hM)
+
+set_option maxRecDepth 20000 in
+/-- **`check_block`'s callees' contracts at the substituted checker program** (from
+`stream_nested_ok`'s step `SnoSim`, the tail's last hypothesis). -/
 theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) :
+    (hpre : bs = romData ++ bs.drop romData.length) (hSno : ∀ dn, SnoSim (Prog.subPB bs checkerProg) dn) :
     ∀ dn, DnInj dn → CbRefs (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
   intro dn _
   have H := declConstsProg_checker bs hr hpre
@@ -336,7 +373,6 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
   have hF : FlushProg (Prog.subPB bs checkerProg) := by prog_bundle []
   have hnv : VerdictCtxU (Prog.subPB bs checkerProg) → closedNV (Prog.subPB bs checkerProg) nvFns = true :=
     fun hG => hG.nv
-  -- ronsync2 p3e: the tail: its contract still to prove
   have hfl : FlushRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     flushRefS_of (dn := dn) hF hnv
   have hbr : BrRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) :=
@@ -392,6 +428,6 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
     nsdRefS_checker bs hr hpre dn
   have hpass : PassRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     passRefS_of ⟨hpl, hinds, hct, hbnc, hcls, hpos, hsd, hnsd⟩ hnv
-  exact ⟨look, hnm, hrm, hfl, hbir, hwm, hpass, sorry, hbr, hbt, hpd⟩
+  exact ⟨look, hnm, hrm, hfl, hbir, hwm, hpass, tailRefS_checker bs hr hpre dn (hSno dn), hbr, hbt, hpd⟩
 
 end L.Checker
