@@ -96,11 +96,6 @@ theorem checkBlockTail_split (mode : ConLeche.CheckMode) (block : List IConstant
 
 /-! ## `check_block_tail_stream`'s contract -/
 
-/-- A callee keeps the recursor stage's memos (`RcMR`: the positivity memos and `TAM`). -/
-def RcKeepF (p : Prog) (f : FnName) : Prop :=
-  ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem), callW p n f vs m = some (r, m') →
-    RcMR m → RcMR m'
-
 /-- What `check_block_tail_stream` gives (from `m`, `a`; at the constructors' environment `env₂`):
 the stage at the returned view of the popped environment, con-ron's `EnvRel` there, the pools
 grown, the memos, the twin's step. -/

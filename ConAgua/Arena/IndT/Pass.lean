@@ -103,14 +103,14 @@ theorem StageC.ofView {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe
 
 /-- What `check_block_pass` gives the memory (from `m`; the record at `w`): the stage at the
 record's view (word `0`), the memos, `AbsOK`, the growth, the record decoded, the shape's (word `1`)
-recursors' slice below the top. -/
+slices below the top (`ShapeSl`). -/
 structure PassMem (m : Mem) (w : Word) (q : BlockPass) (m' : Mem) (a' : AState) : Prop where
   stage : StageR (rdW (m'.arr64 IW) w) q.env1 m' a'
   ind : IndMemos m'
   abs : AbsOK m'
   grow : IWGrow m m'
   record : BPassR (rdW (m'.arr64 IW) w) q.env1 m' w q
-  recs : RecsB m' (rdW (m'.arr64 IW) (w + 1))
+  shape : ShapeSl m' (rdW (m'.arr64 IW) (w + 1))
 
 /-! ## The callees' contracts -/
 
@@ -542,7 +542,7 @@ theorem pass_ref (R : PassRefs G p dn) (hGnv : G → closedNV p _root_.L.Checker
       (hrd5.grow (decCR_mono _) (hg6.trans g6A))
       (hms5.grow (fun q => decTM_mono q) (hg6.trans g6A))
       (htbl8.grow (fun q => decNCN_mono q) hg10)
-  · simp only [List.headD_cons]; rw [hw1]; exact hslA.2.1
+  · simp only [List.headD_cons]; rw [hw1]; exact hslA
 
 /-- **A refinement's post weakened with the twin's whole run at hand.** -/
 theorem RefE.weakenRunP {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a : AState}
@@ -567,7 +567,7 @@ theorem passRefS_of (R : PassRefs G p dn) (hGnv : G → closedNV p _root_.L.Chec
     ConRon.Bridge.Inductives.checkBlockPass_of ConRon.Bridge.CoreSpec.of_core henv hB.c.check hrel
       hdP hdecl hrun
   exact ⟨hM.grow, hi, ⟨env₁, qP, ⟨StageC.ofView hB.c hM.stage hM.abs hck hi.ext, hM.ind, hM.abs⟩,
-    hrel1, henv1, hdq, hT, hcb, hMs, hpl⟩, hM.record, hM.recs⟩
+    hrel1, henv1, hdq, hT, hcb, hMs, hpl⟩, hM.record, hM.shape⟩
 
 end comp
 
