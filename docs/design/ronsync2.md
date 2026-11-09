@@ -173,6 +173,12 @@ pool.
    jobs. It is one more trusted fact about `main.c`, which claims with
    `__atomic_fetch_add(&g_next, 1)` on one counter. Before/after texts: in the report.
 
+   Final form (a11409e06): `TwinVerdictPooled chunks c := TwinVerdict chunks c ∨ ∃ stages w,
+   [the six stage equations] ∧ (∀ t ∈ w, t < ds.size) ∧ (TwinFailsV (checkJobList .verified ipins I
+   ds w) sF.worker c ∨ ∃ i, (∀ t ∈ w, i < t) ∧ ¬ ∃ s', checkJobList .verified ipins I ds [i]
+   sF.worker = .ok (.ok (), s'))`; the per-thread claim `ThreadEVerdict` gains the premise
+   `∀ i < j, TwinJobPasses [b] i` (every record below the failing job passes on its own).
+
 The final texts are given in the report when the theorems are proved. Possible follow-up (not
 done): `main.c` reports the failing group with the smallest index and every lower group has been
 checked and accepted when the threads are joined, so one more harness fact would give the threaded
