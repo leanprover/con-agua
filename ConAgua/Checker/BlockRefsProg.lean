@@ -8,6 +8,7 @@ public import ConAgua.Arena.IndT.BlockNames
 public import ConAgua.Arena.IndT.BlockRMS
 public import ConAgua.Arena.IndT.PassCS
 public import ConAgua.Arena.IndT.PassNsd
+public import ConAgua.Arena.IndT.PassBnc
 import ConAgua.Checker.ArmsT
 import ConAgua.Verdict.PosKnotE
 import ConAgua.Checker.IndArmTrees1
@@ -191,6 +192,14 @@ theorem seedsRefS_checker (bs : List UInt8) (dn : ConRon.Arena.NIdx → Option C
     (wmKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
       (mem_of_tree armMcTree.eq (by decide +kernel)) (mem_of_tree armTaTree.eq (by decide +kernel)))
 
+/-- **`block_nest_ctx`'s contract at the substituted checker program** (`bncRefS_of`). -/
+theorem bncRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
+    (dn : ConRon.Arena.NIdx → Option ConLeche.Name) :
+    BncRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
+  have hAP := indArmProgs_checker bs hr hpre
+  have hP : PosBlkProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  exact bncRefS_of hP hAP.opf hAP.crk (checkerProg_indLeavesPB bs)
+
 set_option maxRecDepth 20000 in
 /-- **`nest_seeds`' contract at the substituted checker program** (`nsdRefS_of`). -/
 theorem nsdRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
@@ -260,7 +269,8 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
   have hpl : PassLook (Prog.subPB bs checkerProg) := by prog_bundle []
   -- ronsync2 p3e: block_nest_ctx, check_block_classes, check_block_positivity, class_seeds,
   -- nest_seeds: their contracts still to prove (class_seeds, nest_seeds done) (Pass.lean's BncRefS … NsdRefS)
-  have hbnc : BncRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
+  have hbnc : BncRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    bncRefS_checker bs hr hpre dn
   have hcls : ClsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
   have hpos : PosRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
   have hsd : SeedsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
