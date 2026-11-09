@@ -7,6 +7,10 @@ public import ConAgua.Arena.IndSumSpec.Row
 public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Checker.Basis
+public import ConAgua.Arena.DeclCanonEq
+public import ConAgua.Arena.DeclCanonSpec
+public import ConAgua.Arena.DeclCvg
+public import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IlpRd
 import ConAgua.Arena.IndInstallSpec.NhW
 import all ConAgua.Arena.BasisL
@@ -51,6 +55,11 @@ structure QuotAtProg (p : Prog) : Prop where
   coreErec : closedA p coreErecA coreErecC coreFns = true
   quot : QuotClosed p
   plc : PlClosed p
+  qph : p.lookup "quot_pin_hit" = some quotPinHitL
+  cvLps : p.lookup "cv_lps" = some cvLps
+  slContains : p.lookup "sl_contains" = some slContains
+  slNodup : p.lookup "sl_nodup" = some slNodup
+  canon : CanonProg p
 
 section
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -247,5 +256,156 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
   · rw [hout i hi, he3, he12]
 
 end cv
+
+/-- `decCV_rd` at the record's own address: the name slice. -/
+theorem decCV_rdq {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {cv : IConstantVal} (h : decCV R q.toNat = some cv) :
+    hslice? R (rd (q + 1)).toNat (rd (q + 2)).toNat = some cv.levelParams ∧
+      cv.levelParams.length = (rd (q + 2)).toNat := by
+  obtain ⟨-, ⟨w2, hw2, hlen⟩, -⟩ := decCV_words h
+  have e2 : rd (q + 2) = w2 := hR.off hw2 (by simp)
+  refine ⟨?_, by rw [e2]; exact hlen⟩
+  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
+  obtain ⟨n, hn, l, hl, t, ht, hc⟩ := h
+  cases Option.some.inj hc
+  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl
+  obtain ⟨o, ho, c, hc', hs⟩ := hl
+  simp only [nat?, Option.map_eq_some_iff] at ho hc'
+  obtain ⟨w1, hw1, rfl⟩ := ho
+  obtain ⟨w2', hw2', rfl⟩ := hc'
+  have e1 : rd (q + 1) = w1 := hR.off hw1 (by simp)
+  have e2' : w2' = w2 := Option.some.inj (hw2'.symm.trans hw2)
+  subst e2'
+  rw [e1, e2]
+  exact hs
+
+section alloc
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`erec_alloc(k)` under `StageT`**: the tops moved, nothing else. -/
+theorem erAlloc_stageT {m m' : Mem} {a : AState} {k q : Word} (h : erAllocW m k = some (q, m'))
+    (hT : StageT dn vis fe m a) :
+    StageT dn vis fe m' a ∧ IWGrow m m' ∧ erOff q = erTopOf m q ∧
+      erTopOf m' q = erTopOf m q + k.toNat ∧ q.toNat < 2 ^ 41 := by
+  obtain ⟨hg, hf, hoff, htop, -, -, hq41, hW⟩ := erAllocW_spec h hT.stage.iw
+  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by simp) (by decide)
+  have hgI : IWGrow m m' := ⟨by simp only [iwTop]; rw [hf.ctl 200 (by decide)]; exact Nat.le_refl _, hg.top,
+    fun i _ => by rw [hI], hg.get, hg.top1, hg.get1⟩
+  have hfe : MemFrame [EREC, tier1 EREC] [129, 130] m m' := hf.mono (by simp) (fun _ h => h)
+  refine ⟨⟨⟨CheckR.erGrow hT.stage.check hfe hg, hW⟩,
+    hT.twin.frame hf (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) hgI, ?_⟩,
+    hgI, hoff, htop, hq41⟩
+  have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (by simp) (by decide)
+  simp only [pinW, hP]; exact hT.flag
+
+theorem callW_erecAlloc {p : Prog} (hp : p.lookup "erec_alloc" = some erecAlloc) {n : Nat} {k : Word}
+    {m m' : Mem} {r : List Word} (h : callW p n "erec_alloc" [k] m = some (r, m')) :
+    erAllocW m k = some (r.headD 0, m') := by
+  obtain ⟨s', rfl, -, h1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (erecAlloc_specW p hp n _ k) h
+  exact h1
+
+end alloc
+
+/-! ## `quot_pin_hit(k, q)` -/
+
+/-- **The pinned quotient package's slot** (`quot_pin(k)`, the reader of the ROM's block 4) under
+`StageT`: the record of the slot after it. The reader's statement is the pipeline's (lane
+`ronsync2`, p3q); taken as a hypothesis here. -/
+structure QuotPinSim (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop where
+  qp : ∀ (n : Nat) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) (k : ConLeche.QuotKind),
+    StageT dn vis fe m a → ConRon.Bridge.StateOK a →
+    Sim (callW p n "quot_pin" [UInt64.ofNat k.slot] m) (ConRon.Arena.quotPin k) a
+      (fun r ci m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧
+        decCI (erecP m') (r.headD 0).toNat = some ci)
+
+section qph
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`quot_pin_hit(k, q)` refines `quotPinHit k cv`**: the slot's pin, `cv`'s names
+(`cv_lps`, `sl_nodup`), their count against the pin's, the pin at them (`erec_alloc`,
+`cv_at_lps`) and the comparison (`cv_eq`). -/
+theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n : Nat) {m : Mem}
+    {a : AState} {q : Word} {cv : IConstantVal} {c : ConLeche.ConstantVal} (k : ConLeche.QuotKind)
+    (hT : StageT dn vis fe m a) (hok : ConRon.Bridge.StateOK a)
+    (hq : decCV (erecP m) q.toNat = some cv)
+    (hden : ConRon.Arena.Frontend.denoteCV a.store cv = some c) :
+    Sim (callW p n "quot_pin_hit" [UInt64.ofNat k.slot, q] m) (ConRon.Arena.quotPinHit k cv) a
+      (fun r b m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 ≠ 0 ↔ b = true)) := by
+  intro r m' h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (quotPinHit_specW p hP.qph n _ (UInt64.ofNat k.slot) q) h
+  cases n with
+  | zero => simp [quotPinHitW] at hW
+  | succ n =>
+  simp only [quotPinHitW] at hW
+  -- `quot_pin(k)`
+  cases h1 : callW p n "quot_pin" [UInt64.ofNat k.slot] m with
+  | none => rw [h1] at hW; simp [quotPinHitW.k_quot_pin] at hW
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at hW; simp only [quotPinHitW.k_quot_pin] at hW
+  obtain ⟨ci, a1, hrun1, hT1, hg1, hci⟩ := hQ.qp n vis fe m a k hT hok r1 m1 h1
+  obtain ⟨hst1, -⟩ := ConRon.Bridge.quotPin_run (s' := a1) hok hrun1
+  have hpcv : decCV (erecP m1) ((r1.headD 0).toNat + 1) = some ci.toConstantVal := decCI_cvA hci
+  have hq1 : decCV (erecP m1) q.toNat = some cv := ArrExt.decCV hg1.erecGrow.ext hq
+  -- `cv_lps(q)`
+  cases h2 : callW p n "cv_lps" [q] m1 with
+  | none => rw [h2] at hW; simp [quotPinHitW.k_cv_lps] at hW
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2] at hW; simp only [quotPinHitW.k_cv_lps] at hW
+  obtain ⟨s2, rfl, -, hW2, hr2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (cvLps_specW p hP.iwAlloc hP.erCopy hP.erToIw hP.cvLps n _ q) h2
+  cases n with
+  | zero => exact absurd hW2 (by simp [L.Arena.cvLpsW])
+  | succ n0 =>
+  rw [L.Arena.cvLpsW_step] at hW2
+  obtain ⟨hsl1, hlen1⟩ := decCV_rdq (erRdOK m1) hq1
+  obtain ⟨hS2, hg2, hdl2, htop2, -⟩ := erToIwW_stage hW2 hT1.stage hsl1
+  have hT2 : StageT dn vis fe s2.mem a1 := StageT.of_iw hT1 hS2 (erToIwW_iwFr hW2)
+  have hf2 := erToIwW_iwFr hW2
+  have hrd2 := erRdT_congr (m := m1) (m' := s2.mem) (hf2.arr _ (by decide) (by decide))
+    (hf2.arr _ (by decide) (by decide))
+  have he2 : erecP s2.mem = erecP m1 := erecP_frame hf2 (by decide) (by decide) (by decide) (by decide)
+  -- `sl_nodup(io, il)`
+  obtain ⟨ws, hws, hwsd, hwH⟩ := slR_of_decHL s2.mem _ _ _ hdl2
+    (by have := (rdW (s2.mem.arr64 CTL) 200).toNat_lt; simp only [iwTop] at htop2; omega)
+  simp only [UInt64.ofNat_toNat] at hws
+  cases h3 : callW p (n0 + 1) "sl_nodup" [r2.headD 0, r2.tail.headD 0] s2.mem with
+  | none => rw [h3] at hW; simp [quotPinHitW.k_sl_nodup] at hW
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  obtain ⟨s3, rfl, -, hm3, hnd⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+    (slNodup_refines p hP.slContains hP.slNodup (n0 + 1) _ _ _ ws hws hwH) h3
+  rw [h3] at hW; simp only [quotPinHitW.k_sl_nodup] at hW
+  simp only [hm3, hrd2] at hW
+  rw [← hwsd] at hnd
+  obtain ⟨-, hplen, -, -⟩ := decCV_rd (erRdOK m1) hpcv
+  have hlen2 : cv.levelParams.length = (r2.tail.headD 0).toNat := hslice?_lenR hdl2
+  have hcond : (r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRdT m1 (r1.headD 0 + 3)) ↔
+      (nameNodup cv.levelParams && cv.levelParams.length == ci.toConstantVal.levelParams.length) = true := by
+    rw [Bool.and_eq_true, ← hnd, beq_iff_eq, hlen2, hplen, bne_iff_ne, ne_eq]
+    exact and_congr_right fun _ => ⟨fun e => by rw [e], fun e => UInt64.toNat_inj.mp e⟩
+  have hrunP : ∀ b a', (ConRon.Arena.quotPinHit k cv).run a = .ok (b, a') ↔
+      (if (nameNodup cv.levelParams && cv.levelParams.length == ci.toConstantVal.levelParams.length)
+        then (do let x ← ci.toConstantVal.atLps cv.levelParams; pure (cv == x) : AM Bool)
+        else pure false).run a1 = .ok (b, a') := by
+    intro b a'
+    simp only [ConRon.Arena.quotPinHit, StateT.run_bind, hrun1, exb]
+  by_cases hc : r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRdT m1 (r1.headD 0 + 3)
+  case neg =>
+    rw [if_neg hc] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    have e2 : s'.mem = s2.mem := by
+      first | exact e.symm.trans hm3 | exact e.trans hm3 | exact e | exact e.symm
+    have hc' := mt hcond.mpr hc
+    refine ⟨false, a1, (hrunP _ _).mpr (by simp [hc']; rfl), ?_, ?_, by simp⟩
+    · rw [e2]; exact hT2
+    · rw [e2]; exact hg1.trans hg2
+  rw [ite_eq_left_iff.mpr (fun h => absurd hc h)] at hW
+  sorry
+
+end qph
 
 end L.Ind
