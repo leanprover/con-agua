@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 public import ConAgua.Arena.IndSumSpec.ColW
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.RecClassSpec.CloseLams
@@ -114,31 +115,151 @@ theorem blockShapeFormers_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAll
         iwAlloc_specW p ha n, memberFieldCopy_spec p hc n] <;>
       finish (gen := 20)
 
-/-- The memory after `block_shape_nest_ctx`'s eleven writes. -/
-def nctxMem (m : Mem) (a b c d e f g h i j k : Word) : Mem :=
-  let q := rdW (m.arr64 CTL) 200
-  (((((((((((allocMem m 11).set64 IW q a).set64 IW (q + 1) b).set64 IW (q + 2) c).set64 IW (q + 3) d).set64
-    IW (q + 4) e).set64 IW (q + 5) f).set64 IW (q + 6) g).set64 IW (q + 7) h).set64 IW (q + 8) i).set64
-    IW (q + 9) j).set64 IW (q + 10) k
+/-- A slice of record pointers below the top is decoded below the tops. -/
+theorem decPLcv_decB {m : Mem} {o l : Nat} {xs : List IConstantVal}
+    (h : decPL m (decCVp m) o l = some xs) (hb : o + l ≤ iwTop m) :
+    DecB (fun m => decPL m (decCVp m) o l) m xs := by
+  show decPL (truncM m) (decCVp (truncM m)) o l = some xs
+  have he : decCVp (truncM m) = decCVp m := by funext q; simp only [decCVp, truncM_erA]
+  rw [he]
+  unfold decPL at *
+  rw [← h]
+  refine mapM_congr_range _ fun j hj => ?_
+  have : j < l := List.mem_range.mp hj
+  rw [iwN_truncM (by omega)]
 
-theorem nctxMem_eq (m : Mem) (a b c d e f g h i j k : Word) :
-    nctxMem m a b c d e f g h i j k =
-      wrIW (allocMem m 11) (rdW (m.arr64 CTL) 200) [a, b, c, d, e, f, g, h, i, j, k] := by
+/-- **`block_shape_formers` is `BlockShape.formers`**: the new `IW` slice holds the members'
+former pointers (word 0 of each member record). -/
+theorem formersW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockShape}
+    (h : formersW n m p = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hq : decBS m p.toNat = some bs)
+    (hpt : p.toNat + 9 ≤ iwTop m)
+    (hsrc : ∀ o l, iwN m p.toNat = some o → iwN m (p.toNat + 1) = some l → o + l ≤ iwTop m)
+    (hptr : ∀ o l j v, iwN m p.toNat = some o → iwN m (p.toNat + 1) = some l → j < l →
+      iwN m (o + j) = some v → v < iwTop m) :
+    r = [rdW (m.arr64 CTL) 200, UInt64.ofNat bs.k] ∧
+    decPL m' (decCVp m') (rdW (m.arr64 CTL) 200).toNat bs.k = some bs.formers ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
+    (rdW (m.arr64 CTL) 200).toNat + bs.k = iwTop m' ∧ iwTop m' ≤ (m.arr64 IW).size := by
+  have htl : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
+  obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).1
+  have hlen := decPL_length m hg
+  have hk : bs.k = l := by rw [BlockShape.k, hlen]
+  obtain ⟨ho', hob⟩ := iwN_rdW ho (by omega)
+  obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
+  have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  have e1' : (p + 1).toNat = p.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  rw [ofNat_toNat_word] at ho'
+  rw [e1] at hl'
+  have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
+  have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
+  have hsrc' := hsrc o l ho hl
+  unfold formersW at h
+  rw [hl'] at h
+  rcases hal : allocW m (UInt64.ofNat l) with _ | ⟨q, m1⟩
+  · simp [hal] at h
+  obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
+  rw [hll] at hroom
+  simp only [hal] at h
+  subst hq' hm1
+  have hIW := allocMem_IW m (UInt64.ofNat l)
+  rw [hIW, ho', hl'] at h
+  rcases hcp : fieldCopyW (n - 1) (allocMem m (UInt64.ofNat l)) (rdW (m.arr64 CTL) 200)
+      (UInt64.ofNat o) (UInt64.ofNat l) 0 with _ | m2
+  · simp [hcp] at h
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
+  have hptr' : ∀ j < (UInt64.ofNat l).toNat,
+      (rdW ((allocMem m (UInt64.ofNat l)).arr64 IW) (UInt64.ofNat ((UInt64.ofNat o).toNat + j)) + 0).toNat
+        < q.toNat := by
+    intro j hj
+    rw [hll] at hj
+    obtain ⟨v, y, hv, -, -⟩ := decPL_get l o bs.members hg j hj
+    have hvb := hptr o l j v ho hl hj hv
+    obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+    rw [hIW, hoo, hv', UInt64.add_zero]
+    simp only [iwTop, hqq] at hvb
+    rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; exact hvb
+  obtain ⟨hA, hS, hG⟩ := fieldCopyW_get (n - 1) 0 _ _ _ _ _ hcp
+    (by rw [hoo, hll]; simp only [iwTop, hqq] at hsrc'; omega)
+    (by rw [hIW, hll]; exact hroom) (by rw [hIW]; exact hsz) hptr'
+  rw [hIW] at hS hG
+  have hfr : MemFrame [IW] [200] m m2 :=
+    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
+  have htop : rdW (m2.arr64 CTL) 200 = q + UInt64.ofNat l := by
+    rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
+  have hsum : (q + UInt64.ofNat l).toNat = q.toNat + l := by
+    rw [UInt64.toNat_add]; simp [hll]; omega
+  have hER : erecP m2 = erecP m := erecP_frame hfr (by decide) (by decide) (by decide) (by decide)
+  have hCV : decCVp m2 = decCVp m := by funext a; simp only [decCVp, erA, hER]
+  have hqt : iwTop m = q.toNat := by simp only [iwTop, hqq]
+  refine ⟨?_, ?_, ?_, hfr, ?_, ?_⟩
+  · have : rdW (m2.arr64 IW) (p + 1) = UInt64.ofNat l := by
+      rw [← hl']; simp only [rdW]; rw [hG, ite_eq_right (by rw [e1']; omega)]
+    rw [this, hk]
+  · rw [hk, hCV]
+    have hxs : bs.formers.length = l := by simp [BlockShape.formers, hlen]
+    have := decPL_of_get (m := m2) (decCVp m) bs.formers q.toNat (fun j hj => by
+      have hj' : j < l := by omega
+      obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l o bs.members hg j hj'
+      obtain ⟨⟨a, hva, hcv⟩, -, -⟩ := decMS_some hy
+      have hGj := hG (q.toNat + j)
+      rw [ite_eq_left (by rw [hll]; omega)] at hGj
+      have e2 : q.toNat + j - q.toNat = j := by omega
+      rw [e2, hoo] at hGj
+      have hvb := hptr o l j v ho hl hj' hv
+      obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+      rw [hv', UInt64.add_zero] at hGj
+      obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
+      rw [hva'] at hGj
+      have hy' : bs.members[j]'(by omega) = y := by
+        simpa [List.getElem?_eq_getElem (show j < bs.members.length by omega)] using hget
+      refine ⟨a, ?_, ?_⟩
+      · simp only [iwN, nat?, iwA, aread_apply, hGj, Option.map_some]
+        rw [UInt64.toNat_ofNat_of_lt' hab]
+      · simp [BlockShape.formers, List.getElem_map, hy', hcv])
+    rw [hxs] at this
+    exact this
+  · refine iwGrow_of_frame hfr (N := UInt64.ofNat l) ?_ ?_ hsz ?_
+    · rw [htop, hqq]
+    · simp only [iwTop, hqq, hll]; omega
+    · intro i hi
+      simp only [iwTop, hqq] at hi
+      rw [hG, ite_eq_right (by omega)]
+  · simp only [iwTop, htop, hsum, hk]
+  · simp only [iwTop, htop, hsum]; omega
+
+/-- The memory after `block_shape_nest_ctx`'s thirteen writes. -/
+def nctxMem (m : Mem) (a b c d e f g h i j k l o : Word) : Mem :=
+  let q := rdW (m.arr64 CTL) 200
+  (((((((((((((allocMem m 13).set64 IW q a).set64 IW (q + 1) b).set64 IW (q + 2) c).set64 IW (q + 3) d).set64
+    IW (q + 4) e).set64 IW (q + 5) f).set64 IW (q + 6) g).set64 IW (q + 7) h).set64 IW (q + 8) i).set64
+    IW (q + 9) j).set64 IW (q + 10) k).set64 IW (q + 11) l).set64 IW (q + 12) o
+
+theorem nctxMem_eq (m : Mem) (a b c d e f g h i j k l o : Word) :
+    nctxMem m a b c d e f g h i j k l o =
+      wrIW (allocMem m 13) (rdW (m.arr64 CTL) 200) [a, b, c, d, e, f, g, h, i, j, k, l, o] := by
   simp [nctxMem, wrIW, UInt64.add_assoc]
 
-theorem partsNctx_eq (m : Mem) (a b c d e f g h i j k : Word) :
-    (match allocW m 11 with | none => none | some (q, _) => some (q, nctxMem m a b c d e f g h i j k)) =
-      posRecW m [a, b, c, d, e, f, g, h, i, j, k] := by
-  rw [posRecW_eq m _ 11 rfl, nctxMem_eq]; cases allocW m 11 <;> rfl
+theorem partsNctx_eq (m : Mem) (a b c d e f g h i j k l o : Word) :
+    (match allocW m 13 with | none => none | some (q, _) => some (q, nctxMem m a b c d e f g h i j k l o)) =
+      posRecW m [a, b, c, d, e, f, g, h, i, j, k, l, o] := by
+  rw [posRecW_eq m _ 13 rfl, nctxMem_eq]; cases allocW m 13 <;> rfl
 
-/-- After `param_levels`: the record. -/
-def nckRec (p fo fl : Word) (r1 r2 r3 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+/-- After `param_levels`: the formers, then the record (`np`, `srt` read before the formers). -/
+def nckRec (n : Nat) (p fo fl : Word) (r1 r2 r3 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r4, m4) =>
-    match allocW m4 11 with
+    match formersW n m4 p with
     | none => none
-    | some (q, _) => some ([q], nctxMem m4 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)
-        (rdW (m4.arr64 IW) (p + 4)) (r3.headD 0) (r3.tail.headD 0) fo fl (rdW (m4.arr64 IW) (p + 6)) (r4.headD 0))
+    | some (r5, m5) =>
+      match allocW m5 13 with
+      | none => none
+      | some (q, _) => some ([q], nctxMem m5 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)
+          (rdW (m4.arr64 IW) (p + 4)) (r3.headD 0) (r3.tail.headD 0) fo fl (rdW (m4.arr64 IW) (p + 6)) (r4.headD 0)
+          (r5.headD 0) (r5.tail.headD 0))
 
 /-- **The model of `block_shape_nest_ctx`** (at exec fuel `n + 1`). -/
 def nckW (n : Nat) (m : Mem) (p fo fl : Word) : Option (List Word × Mem) :=
@@ -150,7 +271,7 @@ def nckW (n : Nat) (m : Mem) (p fo fl : Word) : Option (List Word × Mem) :=
     | some (r2, m2) =>
       match nIdxsW n m2 p with
       | none => none
-      | some (r3, m3) => nckRec p fo fl r1 r2 r3 (plW n m3 (r2.headD 0) (r2.tail.headD 0))
+      | some (r3, m3) => nckRec n p fo fl r1 r2 r3 (plW n m3 (r2.headD 0) (r2.tail.headD 0))
 
 /-- The lookups of `BlockShape.nestCtx` (and `param_levels`). -/
 structure NckProg (p : Prog) : Prop where
@@ -172,6 +293,8 @@ structure NckProg (p : Prog) : Prop where
   nIdxsCopy : p.lookup "n_idxs_copy" = some nIdxsCopy
   nIdxs : p.lookup "block_shape_n_idxs" = some blockShapeNIdxs
   nctx : p.lookup "block_shape_nest_ctx" = some blockShapeNestCtx
+  fieldCopy : p.lookup "member_field_copy" = some memberFieldCopy
+  formers : p.lookup "block_shape_formers" = some blockShapeFormers
 
 /-! ## The shape record's members, below the tops -/
 

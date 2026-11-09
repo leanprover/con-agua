@@ -42,6 +42,26 @@ theorem nIdxsW_afr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
   obtain ⟨-, rfl⟩ := h
   exact (allocW_afr hal).trans (nIdxsCopyW_afr _ _ _ _ _ _ hc)
 
+theorem fieldCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l k : Word), fieldCopyW n m d s l k = some m' →
+    AFr m m'
+  | 0, _, _, _, _, _, _, h => by simp [fieldCopyW] at h
+  | n + 1, m, m', d, s, l, k, h => by
+    by_cases hl : l = 0
+    · rw [fieldCopyW_nil n m d s l k hl] at h; cases h; exact AFr.refl _
+    · rw [fieldCopyW_step n m d s l k hl] at h
+      exact (AFr.set64 _ IW (by decide) (by decide) _ _).trans (fieldCopyW_afr n _ _ _ _ _ _ h)
+
+theorem formersW_afr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
+    (h : formersW n m p = some (r, m')) : AFr m m' := by
+  unfold formersW at h
+  split at h; · cases h
+  rename_i q m1 hal
+  split at h; · cases h
+  rename_i m2 hc
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact (allocW_afr hal).trans (fieldCopyW_afr _ _ _ _ _ _ _ hc)
+
 theorem nckW_afr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word}
     (h : nckW n m p fo fl = some (r, m')) : AFr m m' := by
   unfold nckW at h
@@ -58,16 +78,23 @@ theorem nckW_afr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word}
     obtain ⟨r4, m4⟩ := x
     rw [h4] at h
     simp only [nckRec] at h
-    have hm := partsNctx_eq m4 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)
-      (rdW (m4.arr64 IW) (p + 4)) (r3.headD 0) (r3.tail.headD 0) fo fl (rdW (m4.arr64 IW) (p + 6)) (r4.headD 0)
-    cases ha : allocW m4 11 with
-    | none => rw [ha] at h; cases h
+    cases h5 : formersW n m4 p with
+    | none => rw [h5] at h; cases h
     | some y =>
-      obtain ⟨q, m5⟩ := y
-      rw [ha] at h hm
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨-, rfl⟩ := h
-      exact (f123.trans (plW_afr h4)).trans (posRecW_afr hm.symm)
+      obtain ⟨r5, m5⟩ := y
+      rw [h5] at h
+      simp only at h
+      have hm := partsNctx_eq m5 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)
+        (rdW (m4.arr64 IW) (p + 4)) (r3.headD 0) (r3.tail.headD 0) fo fl (rdW (m4.arr64 IW) (p + 6)) (r4.headD 0)
+        (r5.headD 0) (r5.tail.headD 0)
+      cases ha : allocW m5 13 with
+      | none => rw [ha] at h; cases h
+      | some z =>
+        obtain ⟨q, m6⟩ := z
+        rw [ha] at h hm
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨-, rfl⟩ := h
+        exact ((f123.trans (plW_afr h4)).trans (formersW_afr h5)).trans (posRecW_afr hm.symm)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhGoW_afr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Word) (r : List Word),
