@@ -226,7 +226,7 @@ theorem srk_ref (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
     decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
     Frontend.denoteNList a.store.ns lps = some lpsP →
     decRules (erA m) ro.toNat rl.toNat = some rs → Frontend.denoteRules a.store rs = some rsP →
-    decHL m go.toNat gl.toNat = some gs → go.toNat + gl.toNat ≤ iwTop m →
+    decHL m go.toNat gl.toNat = some gs → (go.toNat + gl.toNat ≤ iwTop m ∨ gl.toNat = 0) →
     Frontend.denoteEList a.store gs = some gsP →
     RefE (VerdictCtxU p) (srkE p N m vis lo ll ro rl go gl)
       (ConRon.Arena.streamRulesCheck V fe lps rs gs) a
@@ -249,6 +249,7 @@ theorem srk_ref (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
   · rw [srkE.abort1 _ _ _ _ _ _ _ _ _ _ h0 h1]; exact RefE.of_cls0 rfl
   have hrl0 : rl.toNat ≠ 0 := fun h => h1 (.inl (UInt64.toNat_inj.mp (by simpa using h)))
   have hgl0 : gl.toNat ≠ 0 := fun h => h1 (.inr (UInt64.toNat_inj.mp (by simpa using h)))
+  replace hgb := hgb.resolve_right hgl0
   obtain ⟨rl', hrl'⟩ : ∃ k, rl.toNat = k + 1 := ⟨rl.toNat - 1, by omega⟩
   obtain ⟨gl', hgl'⟩ : ∃ k, gl.toNat = k + 1 := ⟨gl.toNat - 1, by omega⟩
   rw [hrl', decRules_succ] at hrs
@@ -294,7 +295,7 @@ theorem srk_ref (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
       srkE.j1.eq_1]
     refine RefE.lastE (K := srkE.k_stream_rules_check p) (f := fun v => (0, v.2)) (fun _ => rfl)
       (fun _ => rfl) id (ih (by omega) m a lo ll (ro + 11) (rl - 1) (go + 1) (gl - 1) lps lpsP rs'
-        ysP gs' gsP' hC hA hl hlb hlps hrs'' hysP hgs'' hgb' hgsd) fun _ _ _ _ h => h
+        ysP gs' gsP' hC hA hl hlb hlps hrs'' hysP hgs'' (.inl hgb') hgsd) fun _ _ _ _ h => h
   rw [srkE.arm2 _ _ _ _ _ _ _ _ _ _ h0 h1 (by rw [ew0]; exact heq),
     ite_eq_right (fun h => heq (key.mp h))]
   rw [ew0, hsr]
@@ -310,7 +311,7 @@ theorem srk_ref (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
       (Nat.le_trans hlb hR1.grow.iw)
       (ConRon.Bridge.denoteNList_ext hR1.core.ext.lss.ls.ns _ _ hlps)
       (ArrExt.decRules hR1.grow.ext hrs'') (ConRon.Bridge.denoteRules_ext hR1.core.ext _ _ hysP)
-      (by rw [decHL_grow hR1.grow hgb']; exact hgs'') (Nat.le_trans hgb' hR1.grow.iw)
+      (by rw [decHL_grow hR1.grow hgb']; exact hgs'') (.inl (Nat.le_trans hgb' hR1.grow.iw))
       (ConRon.Bridge.denoteEList_ext hR1.core.ext _ _ hgsd)) fun _ _ _ _ h => hR1.trans h
 
 end sims2
