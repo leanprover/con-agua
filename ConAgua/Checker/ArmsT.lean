@@ -212,6 +212,10 @@ theorem checkerProg_axArmPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romD
   have hR := checkerProg_romRefsPB bs hr hpre
   prog_bundle [checkerProg_cvgAgreePB bs, StepIn.subPB bs checkerProg_cvgIn, hR.ci, hR.cv,
     hR.expr, hR.basis, hR.quot, hR.andPin]
+theorem checkerProg_thmArmPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length) :
+    ThmArmProg (Prog.subPB bs checkerProg) :=
+  ⟨by chk_lk, (checkerProg_axArmPB bs hr hpre).ccv⟩
+
 theorem checkerProg_quotArmPB : QuotArmProg (Prog.subPB bs checkerProg) := by
   prog_bundle [checkerProg_leafClosedPB bs]
 theorem checkerProg_rulesPB : RulesProg (Prog.subPB bs checkerProg) := by
@@ -255,7 +259,6 @@ theorem checkerProg_cdProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop rom
     (hdn : DnInj dn) (hq : QuotDn dn)
     (hdf : ∀ cv v hh, ArmSpecT pins dn ds (Prog.subPB bs checkerProg) "check_decl_defn"
       (.defnDecl cv v hh))
-    (hth : ∀ cv v, ArmSpecT pins dn ds (Prog.subPB bs checkerProg) "check_decl_thm" (.thmDecl cv v))
     (hop : ∀ cv v, ArmSpecT pins dn ds (Prog.subPB bs checkerProg) "check_decl_opaque"
       (.opaqueDecl cv v))
     (hind : IndArmSpec (Prog.subPB bs checkerProg) dn) :
@@ -270,7 +273,10 @@ theorem checkerProg_cdProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop rom
         (checkerProg_crfPB bs) (checkerProg_ccvSimsPB bs dn) (checkerProg_quotSimsPB bs hr hpre hq) hdn
         (checkerProg_armStepPB bs (by decide)) (checkerProg_indMemoPB bs) (checkerProg_indLeavesPB bs)
       defn := hdf
-      thm := hth
+      thm := checkDeclThm_loopT (checkerProg_thmArmPB bs hr hpre) (checkerProg_knotStagePB bs)
+        (checkerProg_leafClosedPB bs) (checkerProg_apdPB bs) (checkerProg_crKeepPB bs)
+        (checkerProg_crfPB bs) (checkerProg_ccvSimsPB bs dn) (checkerProg_armStepPB bs (by decide))
+        (checkerProg_indMemoPB bs) (checkerProg_indLeavesPB bs)
       opaque_ := hop
       quot := checkDeclQuot_loopT (checkerProg_quotArmPB bs) (checkerProg_quotSimsPB bs hr hpre hq)
         (checkerProg_armStepPB bs (by decide)) (checkerProg_indMemoPB bs) (checkerProg_indLeavesPB bs) }
