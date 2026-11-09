@@ -217,7 +217,7 @@ def ivProg : Prog := declStepFns ++ L.Ind.libFns ++ L.Ind.stubFns ++ envProg ++ 
 /-- The functions `install_value` reaches. -/
 def ivFns : List FnName :=
   ["erec_ci", "erec_alloc", "erec_put", "dlp_copy", "env_find",
-   "env_row_get", "env_ix", "reserved_contains", "reserved_from", "cv_lps",
+   "env_row_get", "reserved_contains", "reserved_from", "cv_lps",
    "er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains", "loose_bvars_bounded_fast",
    "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast", "env_push", "env_row_set"]
 
