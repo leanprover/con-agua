@@ -428,7 +428,8 @@ theorem mode_plain (mode : Word) (h : mode < 4) (he : decEager mode = false) :
 theorem knot_defeqE_eager (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F d : Nat) (x y : EIdx)
     (h : eager = true) :
     (coreKnot mode eager fe id (F + 1)).defeqE d x y = (coreKnot mode eager fe id (F + 1)).defeq d x y := by
-  sorry
+  subst h
+  simp [coreKnot, enterEager, leaveEager]
 
 /-- The caches after `enterEager false`: the stored eager set in the six fields, the eager slot
 empty. -/
@@ -527,7 +528,27 @@ theorem knot_defeqE_plainE (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEn
     (hr : ((coreKnot mode true fe id (F + 1)).defeq d x y).run
       { a with caches := enterC a.caches } = .error ce) :
     ((coreKnot mode eager fe id (F + 1)).defeqE d x y).run a = .error ce := by
-  sorry
+  simp only [coreKnot, id] at hr ⊢
+  simp only [enterEager, h, Bool.false_eq_true, ite_false]
+  simp only [StateT.run_bind, StateT.run_get, StateT.run_set, StateT.run_pure, pure_bind] at hr ⊢
+  cases hc : (a.caches.eagerMemos.defeqC)[(x, y)]? with
+  | some w =>
+    simp only [enterC, hc, StateT.run_pure] at hr
+    cases hr
+  | none =>
+    simp only [enterC, hc, StateT.run_bind] at hr
+    cases hb : (defeqBody mode true (coreKnot mode true fe id F) fe d x y).run
+        { a with caches := enterC a.caches } with
+    | error e =>
+      simp only [enterC] at hb; simp only [hb] at hr
+      cases hr
+      simp only [StateT.run_bind, hb]
+      rfl
+    | ok q =>
+      simp only [enterC] at hb
+      simp only [hb, except_ok_bind, defeqSet, StateT.run_bind, StateT.run_get, StateT.run_set,
+        StateT.run_pure, pure_bind] at hr
+      cases hr
 
 /-- **`defeq_e`'s unified model**: the `defeq` slot at the mode word with bit 1 set, through its
 run. -/
