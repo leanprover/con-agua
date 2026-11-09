@@ -70,12 +70,12 @@ theorem checkBlock_refinesC {G : Prop} {p : Prog} {dn : NIdx → Option ConLeche
     (hbP : Frontend.denoteCIList a.store block = some blockP)
     (hdP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
     (hd : ∀ ms ∈ bsP.members, ms.declared = ms.cvT) (hlpd : BlockLpsDn dn block)
-    (hnPb : bs.nP + 1 < 2 ^ 64) (hIM : IndMemos m) (hA : AbsOK m) :
+    (hnPb : bs.nP + 1 < 2 ^ 64) (hIM : IndMemos m) (hA : AbsOK m) (hn : n ≤ 2 ^ 62) :
     ∃ fe' a', (ConRon.Arena.checkBlock V fe block bs).run a = .ok (fe', a') ∧
       CidPost dn m (r.headD 0) fe' m' a' := by
   obtain ⟨s', rfl, -, x, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
     (icbE_spec p R.look n _ vis bO bL p0)
-    (cb_ref R hC hfold hx hq hsl hblk hbb hbP hdP hd hlpd hnPb hIM hA (N := n)) h
+    (cb_ref R hC hfold hx hq hsl hblk hbb hbP hdP hd hlpd hnPb hIM hA hn (N := n)) h
   exact ⟨x, a', hrun, hR⟩
 
 end L.Ind
