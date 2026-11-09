@@ -162,39 +162,29 @@ theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       exact (f123.trans (pos3_plW_mfr h4)).trans (posRecW_mfr hm.symm)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Word) (r : List Word),
-    nhGoW k m vis ctx mm off l oo ol = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [nhGoW] at h
-  | k + 1, m, m', vis, ctx, mm, off, l, oo, ol, r, h => by
+theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (ctx mm off l oo ol : Word) (r : List Word),
+    nhGoW k m ctx mm off l oo ol = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, _, h => by simp [nhGoW] at h
+  | k + 1, m, m', ctx, mm, off, l, oo, ol, r, h => by
     by_cases hl : l = 0
-    · rw [nhGoW_nil k m vis ctx mm off l oo ol hl] at h
+    · rw [nhGoW_nil k m ctx mm off l oo ol hl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       rw [← h.2]; exact MFr.refl _ _ _
-    rw [nhGoW_cons k m vis ctx mm off l oo ol hl] at h
-    rcases h1 : envFindW m (rdW (m.arr64 IW) off) vis with _ | ⟨r1, m1⟩
-    · rw [h1] at h; simp [nhK1] at h
-    rw [h1] at h
-    have f1 := envFindW_mfr h1
-    by_cases hm : r1.headD 0 = 0
-    · rw [nhK1_miss k m1 vis ctx mm off l oo ol r1 hm] at h
+    by_cases h12 : rdW (m.arr64 IW) (ctx + 12) ≤ mm
+    · rw [nhGoW_nof k m ctx mm off l oo ol hl h12] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
-      rw [← h.2]; exact f1
-    by_cases h3 : rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ 3
-    · rw [nhK1_noind k m1 vis ctx mm off l oo ol r1 hm h3] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      rw [← h.2]; exact f1
-    rw [nhK1_ind k m1 vis ctx mm off l oo ol r1 hm h3] at h
-    rcases h2 : instW k m1 (rdW (m1.arr64 IW) (ctx + 7)) (rdW (m1.arr64 IW) (ctx + 8))
-        (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 4)) with _ | ⟨r2, m2⟩
+      rw [← h.2]; exact MFr.refl _ _ _
+    rw [nhGoW_cons k m ctx mm off l oo ol hl h12] at h
+    rcases h2 : instW k m (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8))
+        (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3)) with _ | ⟨r2, m2⟩
     · rw [h2] at h; simp [nhK2] at h
     rw [h2] at h
-    have f2 := f1.trans (instW_mfr k _ _ _ _ _ _ h2)
+    have f2 := instW_mfr k _ _ _ _ _ _ h2
     by_cases h20 : r2.headD 0 = 0
-    · rw [nhK2_none k m2 vis ctx mm off l oo ol r2 h20] at h
+    · rw [nhK2_none k m2 ctx mm off l oo ol r2 h20] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       rw [← h.2]; exact f2
-    rw [nhK2_some k m2 vis ctx mm off l oo ol r2 h20] at h
+    rw [nhK2_some k m2 ctx mm off l oo ol r2 h20] at h
     cases h3' : fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0) with
     | none => rw [h3'] at h; simp [nhK3] at h
     | some x3 =>
@@ -202,13 +192,12 @@ theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Wo
     rw [h3'] at h
     have f3 := f2.trans (fvinternW_mfr h3')
     by_cases hv : 4294967296 ≤ v
-    · rw [nhK3_big k m3 vis ctx mm off l oo ol v hv] at h; cases h
-    rw [nhK3_ok k m3 vis ctx mm off l oo ol v hv] at h
+    · simp [nhK3, hv] at h
+    rw [nhK3_ok k m3 ctx mm off l oo ol v hv] at h
     rcases h4 : snocW k m3 oo ol v with _ | ⟨r4, m4⟩
     · rw [h4] at h; simp [nhK4] at h
     rw [h4, nhK4_some] at h
-    exact (f3.trans (snocW_mfr h4)).trans (pos3_nhGoW_mfr k _ _ _ _ _ _ _ _ _ _ h)
--/
+    exact (f3.trans (snocW_mfr h4)).trans (pos3_nhGoW_mfr k _ _ _ _ _ _ _ _ _ h)
 
 /-! ## `check_abs_ctor_sorts_all` -/
 

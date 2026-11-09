@@ -100,7 +100,6 @@ theorem pos3_iwN_word {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) :
   obtain ⟨hi, hw'⟩ := truncM_iw_get hw
   exact ⟨w, hw', rfl, hi⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`CssAt` from the constructors' decoding with bounds.** -/
 theorem pos3_cssAt {m : Mem} {o l : Word} {css : List (List (IConstantVal × Nat))}
     (h : PSlR decCNSB css o l m) :
@@ -123,7 +122,6 @@ theorem pos3_cssAt {m : Mem} {o l : Word} {css : List (List (IConstantVal × Nat
   obtain ⟨nw, hnw, rfl, hq1⟩ := pos3_iwN_word hnF
   rw [← Option.some.inj hx]
   refine ⟨hq0, hq1, qw.toNat, by simp [iwN, nat?, iwA, aread_apply, hqw], decCVp_truncM hcv, by simp [iwN, nat?, iwA, aread_apply, hnw]⟩
--/
 
 end L.Ind
 
@@ -144,53 +142,6 @@ theorem pos3_consH {p : Prog} (hP : NfsProg p) {n : Nat} {vis : Word}
   obtain ⟨hS', hg, hd, ht⟩ := consW_stage hW hS hb hx hxs
   exact ⟨hS', hg, consW_mfr hW, hd, ht⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`check_block_positivity_nfs_member`'s model: the members' normal forms**, a fresh handle slice. -/
-theorem pnmW_ok {p : Prog} (hP : NfsProg p) {vis : Word} {fe : IFEnv}
-    (n : Nat) : ∀ (m m' : Mem) (a : AState) (o l : Word) (pairs : List (List NestFieldKind × EIdx))
-    (r : List Word), pnmW p n m o l = some (r, m') → StageR vis fe m a → PSlR0 decKE pairs o l m →
-    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
-      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (pairs.map (·.2)) ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  induction n with
-  | zero => intro m m' a o l pairs r h; simp [pnmW.eq_1] at h
-  | succ n ih =>
-  intro m m' a o l pairs r h hS hpr
-  by_cases hl : l = 0
-  · rw [pnmW.arm1 p n m o l hl] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    rw [hpr.nil hl]
-    exact ⟨hS, IWGrow.refl _, MFr.refl _ _ _, by simp [decHL, hslice?], by simp⟩
-  rw [pnmW.arm2 p n m o l hl] at h
-  obtain ⟨q, ⟨ks, e⟩, pairs', rfl, hw, hqb, hdq, hrest⟩ := partsPSl_cons (hpr.pslr hl) hl
-  rw [hw] at h
-  have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  -- the record's handle
-  have hdqT : decKE (truncM m) q = some (ks, e) := hdq
-  simp only [decKE, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
-    Prod.mk.injEq] at hdqT
-  obtain ⟨-, -, ee, hee, -, rfl⟩ := hdqT
-  obtain ⟨heelt, hee'⟩ := rec2IwH_trunc hee
-  obtain ⟨ew, hew, hew32, hewe⟩ := iwH_rdW_at (w := UInt64.ofNat q) (k := 2) (by rw [hq']; exact hee')
-    hS.iw.iwSize
-  rw [show (UInt64.ofNat 2 : Word) = 2 from rfl] at hew
-  -- the rest
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (pnmW.k_check_block_positivity_nfs_member.none ..)
-  rw [pnmW.k_check_block_positivity_nfs_member.arm1] at h
-  obtain ⟨hS1, hg1, hf1, hd1, hb1⟩ := ih m m1 a (o + 1) (l - 1) pairs' r1 h1 hS ⟨hrest.1, Or.inr hrest.2⟩
-  have hTm : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hq2 : (UInt64.ofNat q + 2 : Word).toNat = q + 2 := by
-    rw [UInt64.toNat_add, hq']; simp only [UInt64.reduceToNat]; omega
-  have hew1 : rdW (m1.arr64 IW) (UInt64.ofNat q + 2) = ew := by
-    rw [← hew]; simp only [rdW]
-    rw [hq2, hg1.iwGet _ heelt]
-  rw [hew1] at h
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pnmW.k_sl_cons.arm1] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hS2, hg2, hf2, hd2, hb2⟩ := pos3_consH hP h2 hS1 hb1 hew32 hd1
-  refine ⟨hS2, hg1.trans hg2, hf1.trans hf2, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩
-  simp only [List.headD_cons, List.tail_cons, List.map_cons, hd2, hewe]
--/
 
 /-- **A `rec2` header `[off, len]` of a handle slice below the top**, decoded below the tops. -/
 theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {vis : Word}

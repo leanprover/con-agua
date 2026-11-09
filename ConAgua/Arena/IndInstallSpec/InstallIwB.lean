@@ -43,37 +43,36 @@ A member's constructor slice `(o, l)` decoded below the tops says nothing about 
 the positivity walk (`CssAt`) wants `o + l ≤ iwTop` for every member. `decPLB` carries the bound in
 the decoding (below the tops the pool's size is its top), so it survives `sl_cons` and growth. -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A pointer slice whose end lies within the pool. -/
 def decPLB {α : Type} (m : Mem) (f : Nat → Option α) (o l : Nat) : Option (List α) :=
-  if o + l ≤ (iwA m).size then decPL m f o l else none
--/
+  if o + l ≤ (m.arr64 IW).size then decPL m f o l else none
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A member's constructors with their slice's bound. -/
 def decCNSB (m : Mem) (q : Nat) : Option (List (IConstantVal × Nat)) :=
   decAt m (fun o l => decPLB m (decCN m) o l) q
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Below the tops, the pool's size is at most its top. -/
-theorem iwA_truncM_size_le (m : Mem) : (iwA (truncM m)).size ≤ iwTop m := by
+theorem iwA_truncM_size_le (m : Mem) : ((truncM m).arr64 IW).size ≤ iwTop m := by
   apply Nat.le_of_not_lt
   intro h
   have := truncM_iw_get? m (iwTop m)
   rw [ite_eq_right (Nat.lt_irrefl _)] at this
-  rw [Array.getElem?_eq_getElem h] at this
+  simp only [iwA, aread_apply, Array.getElem?_eq_getElem h] at this
   cases this
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A `[off, len]` member record decoded with its bound: the bound. -/
 theorem decCNSB_bound {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
     (h : DecB (fun m => decCNSB m q) m cs) :
     ∃ o l, iwN (truncM m) q = some o ∧ iwN (truncM m) (q + 1) = some l ∧ o + l ≤ iwTop m ∧
       decPL (truncM m) (decCN (truncM m)) o l = some cs := by
-  sorry
--/
+  have h' : decCNSB (truncM m) q = some cs := h
+  simp only [decCNSB, decAt, Option.bind_eq_bind, Option.bind_eq_some_iff] at h'
+  obtain ⟨o, ho, l, hl, hd⟩ := h'
+  simp only [decPLB] at hd
+  split at hd
+  · rename_i hb
+    exact ⟨o, l, ho, hl, Nat.le_trans hb (iwA_truncM_size_le m), hd⟩
+  · cases hd
 
 /-- The lookups of `check_block_ctors`. -/
 structure CtorsProg (p : Prog) : Prop extends CstProg p where
