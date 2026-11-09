@@ -8,6 +8,11 @@ import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.PreLoopWSBase
 import ConRon.Bridge.Checker.Pool
 import ConRon.Bridge.Stages
+public import ConAgua.Checker.BuildClosed
+public import ConAgua.Checker.PipeFinal
+public meta import ConAgua.Checker.LoopProgTac
+import ConAgua.Checker.LoopProgTac
+import all ConAgua.Arena.CheckerL
 
 @[expose] public section
 
@@ -22,6 +27,8 @@ inductive memos are the loaded memory's zeros, which no stage before the index b
 -/
 
 open ConRon.Arena ConRon.Arena.Frontend
+open Std.WP
+open scoped Lean.Order
 
 namespace L.Checker
 
@@ -180,5 +187,79 @@ theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s,
     subst hx
     exact ⟨k, by simp [dnOf, hk, hd], hd⟩
   · rw [hS.frame.size, loadMem_arr, Array.size_replicate]; exact hsz _
+
+/-! ## The index build at the checker's program -/
+
+theorem checkerProg_idxProg : L.Arena.IdxProg checkerProg where
+  decl_constants := by chk_lk
+  decl_constants_axiom := by chk_lk
+  decl_constants_ind := by chk_lk
+  decl_tables := by chk_lk
+  block_constants := by chk_lk
+  block_tables := by chk_lk
+  idx_add := by chk_lk
+  build_index := by chk_lk
+  idx_consts := by chk_lk
+  idx_tables := by chk_lk
+  base_row_get := by chk_lk
+  base_row_set := by chk_lk
+  tbl_base_get := by chk_lk
+  tbl_base_set := by chk_lk
+  iw_reset := by chk_lk
+
+/-- **The twin's side of entry 1**: the stages before the jobs, the stream index `I` built from
+`sE`, ending in `sF`. -/
+structure PhaseA (b : ByteArray) where
+  pins : List ConLeche.NatOpPinSet
+  sA : AState
+  pre : PreludeIx
+  sB : AState
+  rc : ParseResultD
+  sC : AState
+  ds : Array IDeclaration
+  sD : AState
+  ipins : List INatOpPinSet
+  sE : AState
+  I : IStreamIndex
+  sF : AState
+  pfx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE
+  idx : buildIndex ds sE = .ok (.ok I, sF)
+
+/-- **What the index build leaves**: an accepting twin phase A, the stages' relation `R7` at the
+memory `m₇` before the build, `BuildR` at the built index after it, the record pool's prefix
+kept, and the build's write set (`biA`, `biC`). -/
+def FoldA (b pb : ByteArray) (sz : TieredArray → Nat) (m : Mem) : Prop :=
+  ∃ (PA : PhaseA b) (m₇ : Mem), R7 (ConAgua.Final.loadMem b pb sz) m₇ pb PA.ds PA.ipins PA.sE ∧
+    BuildR (dnOf PA.sE.store) PA.ds 0 0 m PA.sF PA.I ∧ PA.I.firsts.size = PA.ds.size ∧
+    RecGrow m₇ m ∧ MemFrame biA biC m₇ m ∧ m.bytes = m₇.bytes
+
+/-- **The index build from `R7`**, with `cnt` the count `DECL[0]`, in the form
+`checkA_of_stages` takes. -/
+theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hsz : ∀ s, sz s < 2 ^ 64) :
+    ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
+      ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "build_index" [cnt]
+      ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
+        (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
+        FoldA b pb sz s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄ := by
+  intro n _ s₀ cnt
+  apply M.triple_of_run
+  rintro s rs s' rfl hrun
+  obtain ⟨F, hF0, hcl⟩ := checkerProg_biW
+  obtain ⟨hfr, hby⟩ := M.of_run (P := fun x => x = s) rfl hrun (invoke_memFrame hcl n hF0 [cnt] s)
+  obtain ⟨hl, -⟩ := M.of_run (P := fun x => x = s) rfl hrun (callW_spec checkerProg n "build_index" [cnt] s)
+  refine ⟨hl, fun hQ hc => ?_⟩
+  have hD : s'.mem.arr64 L.Front.DECL = s.mem.arr64 L.Front.DECL :=
+    hfr.arr _ (fun h => by simp [biA] at h) (by decide)
+  refine ⟨?_, hD⟩
+  obtain ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hDp, hE, h7⟩ := hQ
+  have hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE := ⟨hA, hB, hC, hDp, hE⟩
+  have hR := buildR_of_R7 hsz hpx h7
+  have hD0 : 0 < (s.mem.arr64 L.Front.DECL).size := by
+    have := h7.since.caps.2.2.1; rw [h7.since.frame.size]; exact this
+  have hcnt : cnt.toNat = ds.size := by
+    rw [hc hD0]; have := h7.decls.count; simpa [hD0] using this
+  obtain ⟨I, a', hI, hR', hsz', hG⟩ := (M.of_run (P := fun x => x = s) rfl hrun
+    (buildIndex_refines checkerProg_idxProg cnt hcnt n s sE hR)).2
+  exact ⟨⟨pins, sA, pre, sB, rc, sC, ds, sD, ipins, sE, I, a', hpx, hI⟩, s.mem, h7, hR', hsz', hG, hfr, hby⟩
 
 end L.Checker

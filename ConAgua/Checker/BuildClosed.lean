@@ -159,7 +159,7 @@ import all ConAgua.Scan.Values
 # The stream index build's write set at the checker's program
 
 `build_index` with its call closure (`biFns`, 351 functions) stores only where `biA`/`biC`
-allow: every word array but `PINS`, every `CTL` word but `150` and `151` (the pin sets' header).
+allow: every word array but `PINS` and `DECL`, every `CTL` word but `150` and `151` (the pin sets' header).
 As `Checker/JobsClosed.lean`: name trees, the store sets as predicates, one kernel check per chunk
 of the program's functions (`prog_all`), composed by `closedW_of_all`.
 -/
@@ -231,21 +231,21 @@ def biFns : List FnName :=
 names_tree biTree : biFns
 
 /-- The arrays `build_index` may write. -/
-def biA : List TieredArray := checkerWordArrays.filter fun b => b != PINS
+def biA : List TieredArray := checkerWordArrays.filter fun b => b != PINS && b != L.Front.DECL
 
 /-- The `CTL` words `build_index` may write. -/
 def biC : List Word := ((List.range 1024).filter fun x => x != 150 && x != 151).map UInt64.ofNat
 
 /-- The arrays of `biA`, as a test. -/
-def biPa (b : TieredArray) : Bool := checkerWordArrays.contains b && b != PINS
+def biPa (b : TieredArray) : Bool := checkerWordArrays.contains b && b != PINS && b != L.Front.DECL
 
 /-- The `CTL` words of `biC`, as a test. -/
 def biPc (x : Word) : Bool := decide (x.toNat < 1024) && x.toNat != 150 && x.toNat != 151
 
 theorem biPa_mem (b : TieredArray) (h : biPa b = true) : b ∈ biA := by
   simp only [biPa, Bool.and_eq_true, List.contains_iff_mem] at h
-  simp only [biA, List.mem_filter]
-  exact ⟨h.1, h.2⟩
+  simp only [biA, List.mem_filter, Bool.and_eq_true]
+  exact ⟨h.1.1, h.1.2, h.2⟩
 
 theorem biPc_mem (x : Word) (h : biPc x = true) : x ∈ biC := by
   simp only [biPc, Bool.and_eq_true, bne_iff_ne, ne_eq, decide_eq_true_eq] at h
