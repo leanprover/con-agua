@@ -4,6 +4,7 @@ public import ConAgua.Verdict.DeclHdrE
 public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
+import ConAgua.Verdict.FrontValidE
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.DeclValT
 import ConAgua.Arena.IndT.Base
@@ -168,47 +169,121 @@ structure CcvPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   crOK : L.Stubs.CrOK m'
   abs : AbsOK m → AbsOK m'
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+/-- The slice words of a decoded constant value. -/
+theorem decCV_sliceW {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV R q = some cv) :
+    ∃ w1 w2, R (q + 1) = some w1 ∧ R (q + 2) = some w2 ∧
+      hslice? R w1.toNat w2.toNat = some cv.levelParams := by
+  simp only [decCV, hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff, nat?,
+    Option.map_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+  obtain ⟨nm, -, ps, ⟨o, ⟨w1, hw1, rfl⟩, l, ⟨w2, hw2, rfl⟩, hs⟩, t, -, rfl⟩ := h
+  exact ⟨w1, w2, hw1, hw2, hs⟩
+
+/-- **The leaves `check_constant_val` takes as hypotheses**: `nat_op_name` (the certified
+operations' pins) and `lit_shape_ok` (the literal types' shape gates) under `StageT`. -/
+structure CcvSims (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop where
+  natOp : ∀ (n : Nat) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) (w : Word),
+    StageR vis fe m a → w.toNat < 2 ^ 32 →
+    Sim (callW p n "nat_op_name" [w] m) (natOpName (decI w)) a
+      (fun r b m' a' => m' = m ∧ a' = a ∧ (r.headD 0 ≠ 0 ↔ b = true))
+  lit : ∀ (n : Nat) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) (c : Word) (ci : IConstantInfo),
+    StageT dn vis fe m a → decCI (erecP m) c.toNat = some ci →
+    Sim (callW p n "lit_shape_ok" [c] m) (litShapeOk ci) a
+      (fun r b m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ (L.Stubs.CrOK m → L.Stubs.CrOK m') ∧
+        AFr m m' ∧ (∀ cv' x, Frontend.denoteCV a.store cv' = some x →
+          Frontend.denoteCV a'.store cv' = some x) ∧ (r.headD 0 ≠ 0 ↔ b = true))
+
 /-- **`check_constant_val` refines `checkConstantVal .verified`, both outcomes**, under `StageT`:
-`install_header` by `ih_ref`, the core stubs by `KnotStageProg` (ok) and `CoreStubsE` (errors). -/
-theorem ccv_ref {p : Prog} (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {q : Word} {cv : IConstantVal}
-    (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
-    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
-    RefE (VerdictCtxU p) (checkConstantValE p n m vis q) (checkConstantVal V fe cv) a
+the duplicate and reserved-name guards, the certified-operation name, the literal shape of a fresh
+`axiomInfo cv` record (`ccv_rec`, `CcvSims.lit`), the universe parameters, the closedness walks,
+the consts-resolve site (`uce_errClaim_lo`), then the type's sort by the core. -/
+theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
+    {dn : NIdx → Option ConLeche.Name} (hC : CcvSims p dn) {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {q allow : Word} {cv : IConstantVal}
+    {c : ConLeche.ConstantVal} (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv)
+    (hqb : q.toNat + 3 < 2 ^ 64) (hden : Frontend.denoteCV a.store cv = some c)
+    (hCr : L.Stubs.CrOK m) :
+    RefE (VerdictCtxU p) (checkConstantValE p n m vis q allow) (checkConstantVal V fe cv (allow != 0)) a
       (fun v _ a' => CcvPost dn vis fe m v.2 a') := by
-  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hqd
-  have et : rdW (m.arr64 EREC) (q + 3) = wt :=
-    rdW_of_get? (k := q.toNat + 3) (toNat_add_small q 3 hqb).symm (erecP_get hwt)
+  obtain ⟨wx, hwx, hwxl, hname⟩ := decCV_name hqd
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceW hqd
+  obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hqd).2.2
+  have ex : rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = wx := by
+    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ hwx
+  have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have et : rdW (m.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wt := by
+    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq3]; exact hwt)
+  have hnm : denoteN a.store.ns cv.name = some c.name := (ConRon.Bridge.denoteCV_inv hden).1
   cases n with
   | zero => rw [checkConstantValE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
   have hn' : n ≤ 2 ^ 62 := by omega
-  rw [checkConstantValE.arm1, et, checkConstantVal_eq, hty]
-  -- `install_header(vis, q)`
-  refine RefE.bindE (fun _ => rfl) (fun hG => ⟨hG.nv, hG.uce⟩) (ih_ref hap hkp.crf n hS hqd hqb hlps hCr)
-    fun ⟨r1, m1⟩ _ a1 _ hP1 => ?_
-  dsimp only [checkConstantValE.k_install_header]
-  -- the type's type
-  refine RefE.bindCall (fun _ => rfl)
-    (fun hG _ h2 => hG.core.inferTypeCore n hn' hP1.stage 0 wt hwtl _ h2)
-    (fun b h2 => hq.inferTypeCore_sim n hn' hP1.stage 0 wt hwtl b.1 b.2 h2)
-    fun r2 m2 x2 a2 h2 _ ⟨hS2, hg2, hx2l, hx2⟩ => ?_
-  dsimp only [checkConstantValE.k_infer_type_core]
-  have hCr2 := hkp.call (im_mem _ rfl) (callW_of_callE h2) hP1.crOK
-  subst hx2
-  -- its sort
-  refine RefE.bindCall (fun _ => rfl)
-    (fun hG _ h3 => hG.core.ensureSortCore n hn' hS2 0 (r2.headD 0) hx2l _ h3)
-    (fun b h3 => hq.ensureSortCore_sim n hn' hS2 0 (r2.headD 0) hx2l b.1 b.2 h3)
-    fun r3 m3 _ a3 h3 _ ⟨hS3, hg3, _⟩ => ?_
-  dsimp only [checkConstantValE.k_ensure_sort_core]
-  refine RefE.ret rfl ⟨hS3, hP1.grow.trans (hg2.trans hg3),
-    hkp.call (im_mem _ rfl) (callW_of_callE h3) hCr2, fun hA => ?_⟩
-  exact absOK_core hq.closed (by decide) (callW_of_callE h3)
-    (absOK_core hq.closed (by decide) (callW_of_callE h2) (hP1.afr hA) hS2) hS3
--/
+  rw [checkConstantValE.arm1, ex, et]
+  simp only [checkConstantVal, fail_bindAM]
+  -- `env_find(x, vis)`
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  obtain ⟨hm1, rfl⟩ := envFind_callB hP.basis hwxl hS.stage.check.env h1
+  subst m1
+  dsimp only [checkConstantValE.k_env_find]
+  refine RefE.guardThen (by rfl)
+    (fun hb1 => by
+      rw [hname]; obtain ⟨e1, ci', e2⟩ := findRes_hit hS.stage.check.env hwxl hb1; rw [e1, e2]; rfl)
+    (fun hb => Classical.byContradiction fun hb1 => by
+      rw [hname, findRes_miss hS.stage.check.env hwxl (by simpa using hb1)] at hb; cases hb)
+    fun hb1 _ => ?_
+  -- `reserved_contains(x)`
+  rcases h2 : resContW n m wx with _ | c2
+  · rw [liftE_none, checkConstantValE.k_reserved_contains.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  by_cases hb2 : c2 ≠ 0
+  · rw [checkConstantValE.k_reserved_contains.abort1 p _ _ _ _ _ _ _ _ hb2]
+    obtain ⟨l, hrunR, hcl⟩ := resContW_hit hb2 h2 hS.stage.check.pins
+    refine RefE.bind_right hrunR (RefE.ite_pos ?_ (fun _ => ErrClaim.fail_abort _ _ rfl))
+    rw [hname]; exact hcl
+  have hc0 : c2 = 0 := by simpa using hb2
+  subst hc0
+  rw [checkConstantValE.k_reserved_contains.arm1 p _ _ _ _ _ _ _ _ rfl]
+  obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl h2 hS.stage.check.pins
+  refine RefE.bind_right hrunR (RefE.ite_neg ?_ ?_)
+  · rw [hname, hcl]; decide
+  -- `nat_op_name(x)`
+  refine RefE.bindSim (fun _ => checkConstantValE.k_nat_op_name.none ..)
+    (hname ▸ hC.natOp n vis fe m a wx hS.stage hwxl) fun r3 x3 m3 a3 h3 hrun3 ⟨hm3, ha3, hx3⟩ => ?_
+  subst m3 a3
+  by_cases hb3 : r3.headD 0 ≠ 0 ∧ allow = 0
+  · rw [checkConstantValE.k_nat_op_name.abort1 p _ _ _ _ _ _ _ _ hb3]
+    have hx : x3 = true := hx3.mp hb3.1
+    subst hx
+    refine RefE.ite_pos (by simp [hb3.2]) fun _ => ?_
+    exact ErrClaim.bind_right (L.Front.Ind.readName_run a _ _ hnm) (ErrClaim.fail_abort _ _ rfl)
+  rw [checkConstantValE.k_nat_op_name.arm1 p _ _ _ _ _ _ _ _ hb3]
+  refine RefE.ite_neg (fun hc => hb3 ?_) ?_
+  · simp only [Bool.and_eq_true, Bool.not_eq_true', bne_eq_false_iff_eq] at hc
+    exact ⟨hx3.mpr hc.1, hc.2⟩
+  -- the fresh `axiomInfo cv` record
+  refine RefE.onlySim (fun _ => checkConstantValE.k_erec_alloc.none ..) (fun _ _ h => h) fun r4 m4 h4 => ?_
+  rw [checkConstantValE.k_erec_alloc.arm1]
+  refine RefE.onlySim (fun _ => checkConstantValE.k_erec_put.none ..) (fun _ _ h => h) fun r5 m5 h5 => ?_
+  rw [checkConstantValE.k_erec_put.arm1]
+  refine RefE.onlySim (fun _ => checkConstantValE.k_erec_put_2.none ..) (fun _ _ h => h) fun r6 m6 h6 => ?_
+  rw [checkConstantValE.k_erec_put_2.arm1]
+  refine RefE.onlySim (fun _ => checkConstantValE.k_erec_put_3.none ..) (fun _ _ h => h) fun r7 m7 h7 => ?_
+  rw [checkConstantValE.k_erec_put_3.arm1]
+  refine RefE.onlySim (fun _ => checkConstantValE.k_erec_put_4.none ..) (fun _ _ h => h) fun r8 m8 h8 => ?_
+  rw [checkConstantValE.k_erec_put_4.arm1]
+  refine RefE.onlySim (fun _ => checkConstantValE.k_erec_put_5.none ..) (fun _ _ h => h) fun r9 m9 h9 => ?_
+  rw [checkConstantValE.k_erec_put_5.arm1]
+  obtain ⟨hT9, hg9, hf9, hci9⟩ := ccv_rec hP.val.rcp hS hqd hqb hwx hwt h4 h5 h6 h7 h8 h9
+  have hCr9 := CrOK.frame hCr hf9 (by decide) (by decide)
+  have hA9 : AFr m m9 := AFr.of_frame hf9
+  -- `lit_shape_ok(a)`
+  refine RefE.bindSim (fun _ => checkConstantValE.k_lit_shape_ok.none ..)
+    (hC.lit n vis fe m9 a _ _ hT9 hci9)
+    fun r10 x10 m10 a10 h10 hrun10 ⟨hT10, hg10, hcr10, hA10, hden10, hx10⟩ => ?_
+  dsimp only [checkConstantValE.k_lit_shape_ok]
+  refine RefE.guardIf rfl (fun hb => by cases hx : x10; rfl; exact absurd (hx10.mpr hx) (by simpa using hb))
+    (fun hb => Classical.byContradiction fun hb' => by have := hx10.mp hb'; simp_all) fun _ _ => ?_
+  sorry
+
 
 /-- What `check_defn_val`'s and `check_opaque_val`'s error arms assume: `env_push` outside the
 verdict closure, the core stubs' and `install_value_guards`' claims. -/
