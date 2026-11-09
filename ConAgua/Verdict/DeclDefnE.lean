@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.CheckerT
+public import ConAgua.Arena.DeclCheckT
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.StrLitSup
 
@@ -10,8 +10,8 @@ import ConAgua.Arena.StrLitSup
 # The verdict claim of the definition arm `check_decl_defn` (lane `verdicts-b`, helper `d`)
 
 From the arm's refinement for both outcomes (`cdf_ref`, `Arena/DeclDefnT.lean`): the constant
-check, the definition check and the two gates' failures claim the twin's `checkDecl` failure. The
-pin gate's error claim (`DivGateSpecE`) is a hypothesis here (`dg_ref`'s error half, `DeclDivGateT.lean`).
+check, the definition check and the two gates' failures claim the twin's `checkDecl` failure,
+under `VerdictCtxU` (the gates' core calls under its `CoreStubsE`).
 -/
 
 set_option experimental.vcgen true
@@ -32,30 +32,25 @@ local notation "V" => ConLeche.CheckMode.verified
 section defn
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_defn`'s error claim under `StageT`** (`cdf_ref`'s error half). -/
-theorem checkDeclDefn_errT {p : Prog} (hA : ArmProg p) (hV : ValProg p)
-    (hG : DefnProgT p pins) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p) (hUL : UceLookups p)
-    (hivE : IvgE p) (hDG : DivGateSpecE p pins) (hdn : DnInj dn)
-    (cv : IConstantVal) (v : EIdx) (hh : ConLeche.ReducibilityHint) :
+theorem checkDeclDefn_errT {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p)
+    (hcl : LeafClosed p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p)
+    (hC : CcvSims p dn) (hG : VerdictCtxU p) (cv : IConstantVal) (v : EIdx)
+    (hh : ConLeche.ReducibilityHint) :
     ArmSpecE pins dn ds p "check_decl_defn" (.defnDecl cv v hh) := by
-  intro n hn m a vis fe pend i hi hd _ hR hS hF hden hPD hCr e hc
+  intro n hn m a vis fe i hi hd _ hR hS hF hden hPD hIM e hc
   have hd' : ds[i.toNat] = .defnDecl cv v hh := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨env, hfold⟩ := hF
-  obtain ⟨x, hx⟩ := hden
-  simp only [Frontend.denoteDecl] at hx
-  split at hx
-  rotate_left
-  · cases hx
-  rename_i c e' hcvd hvd
-  exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclDefn_specE p hG.df n _ i vis) trivial
-    ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitStored_core p hq.knot.str⟩⟩, hivE, hDG⟩
-    (cdf_ref hA hV hG hq hcl hlc hap hkp hdn n hn hS hR.pinsets hR.decls hi hd' hfold hcvd hvd hPD
-      hCr) hc
--/
+  obtain ⟨y, hy⟩ := hden
+  obtain ⟨c, x, hcv, hx⟩ : ∃ c x, Frontend.denoteCV a.store cv = some c ∧
+      denoteE a.store v = some x := by
+    simp only [Frontend.denoteDecl] at hy
+    revert hy
+    cases Frontend.denoteCV a.store cv <;> cases denoteE a.store v <;> simp
+  obtain ⟨env, hF⟩ := hF
+  obtain ⟨pinsP, hPD⟩ := hPD
+  exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclDefn_specE p hX n _ i vis) hG.nv hG
+    (cdf_ref hX hq hcl hap hkp hcrf hC hn hS hR.pinsets hR.decls hi hd' hF hcv hx hPD hIM.cr) hc
 
 end defn
 

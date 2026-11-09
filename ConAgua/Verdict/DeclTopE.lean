@@ -18,7 +18,6 @@ declaration family:
 
 * `CoreStubsE p`: the core stubs' error claims (`DeclValE.lean`),
 * `IndArmSpecE p dn`: the inductive arm's (`check_ind_decl`),
-* `DivGateSpecE p pins`: the definition arm's pin gate (`DeclDefnT.lean`),
 * `closedNV p nvFns`: the callees outside the verdict closure claim nothing,
 * `UceLookups p`: `unresolved_consts_error` and its walks at their names (`UnresolvedE.lean`).
 -/

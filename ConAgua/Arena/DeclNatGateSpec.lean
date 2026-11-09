@@ -8,10 +8,10 @@ public import ConAgua.L.GrindAttr
 @[expose] public section
 
 /-!
-# `defn_nat_gate` refines `natGateT` (lane `decls3`, helper `decls3-nat`)
+# The structural-`Nat` gate's decoding lemmas and text (lane `decls3`, helper `decls3-nat`)
 
-The definition arm's structural-`Nat` gate: `nat_op_names`, `sl_contains`, and for a member the
-guard, the stored dependencies, the stored value's equations certified at the pre-insertion view.
+Lemmas the definition arm's structural-`Nat` gate (`snp_ref`, `DeclNatGateT.lean`) reads its
+records and lists through, and the text it reaches (`natGateFns`).
 -/
 
 set_option experimental.vcgen true
@@ -67,8 +67,6 @@ theorem decCI_defn_val {rd : Nat → Option Word} {q : Nat}
     · exact h1 rfl
     all_goals simp [Option.bind_eq_some_iff] at h
 
-theorem erecP_get_rev {m : Mem} {i : Nat} {w : Word} (h : erecP m i = some w) : erecP m i = some w := h
-
 theorem decEqRL_headD {m : Mem} {r : List Word} {ps : List (EIdx × EIdx)} (h : decEqRL m r ps) :
     EqL m (r.headD 0).toNat (r.tail.headD 0).toNat ps := by
   cases r with
@@ -79,17 +77,6 @@ theorem EqL.lt64 {m : Mem} {o l : Nat} {ps : List (EIdx × EIdx)} (h : EqL m o l
     o + l < 2 ^ 64 := by
   have := h.1; have := hI.iw; have := hI.iwSize; unfold iwTop at *; omega
 
-def natCertT (fe2 feR : IFEnv) (c : NIdx) : AM Unit :=
-  match fe2.find? c with
-  | some (.defnInfo _ value' _) => do
-      let eqs ← natOpEquations 0 c
-      let ok ← certifyNatEqs V feR (← substConst0Pairs c value' eqs)
-      unless ok do
-        fail (.notImplemented
-          "nonstandard structural Nat operation")
-  | _ => fail (.internal
-      "structural Nat operation not stored")
-
 theorem decRL0 {α : Type} {g : Mem → Nat → Nat → Option (List α)} {m : Mem} {r : List Word} {l : List α}
     (h : decRL g 0 m r l) :
     g m (r.headD 0).toNat (r.tail.headD 0).toNat = some l ∧
@@ -97,16 +84,6 @@ theorem decRL0 {α : Type} {g : Mem → Nat → Nat → Option (List α)} {m : M
   cases r with
   | nil => simpa [decRL] using h
   | cons a t => cases t <;> simpa [decRL] using h
-
-theorem natGateT_eq (feR fe2 : IFEnv) (c : NIdx) : natGateT feR fe2 c = (do
-    let ns ← natOpNames
-    if ns.contains c then do
-      let g ← natOpGuard fe2 c
-      let deps ← natOpDeps c
-      unless g && (← natOpStoredOkAll fe2 deps) do
-        fail (.notImplemented "nonstandard structural Nat operation environment")
-      natCertT fe2 feR c
-    else pure ()) := rfl
 
 /-- The text the gate reaches: the functions of `armText` it calls, transitively. -/
 def natGateFns : List FnName :=
