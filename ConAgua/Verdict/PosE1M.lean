@@ -48,15 +48,13 @@ l_model ncE_spec (p : Prog) (hf : p.lookup "nest_cont" = some nestContL)
   fns [hf ↦ ncE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model pfvE_spec (p : Prog) (hL : PfLook p)
   fns [hL.hp ↦ pfvE]
-  specs [nestHoleAt_spec' p hL n, nestOccAny_spec p hL.no hL.hoa n, nestArity_spec' p hL.na n,
+  specs [nestHoleAt_spec' p hL n, nestOccAny_spec p hL.no hL.hoa n,
     nestPosHoleKind_spec p hL.hh hL.hk n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
 l_model nccE_spec (p : Prog) (hL : NbLook p)
   fns [hL.hcc ↦ nccE]
@@ -68,19 +66,16 @@ l_model nccE_spec (p : Prog) (hL : NbLook p)
 
 noncomputable section
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model ntyE_spec (p : Prog) (hL : NtyLook p)
   fns [hL.hp ↦ ntyE]
   specs [callW_spec p n "env_find", callW_spec p n "view_ls_len", stripPis_specF p hL.hst n,
     cvLps_spec p hL.ha hL.hc hL.he hL.hcv n, callW_spec p n "inst_lp_fast",
     instPisWith_spec p hL.hv hL.hip hL.hi1 n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model nitE_spec (p : Prog) (hL : NitLook p)
   fns [hL.hp ↦ nitE]
   specs [ntyE_spec p hL.ty n, piBinders_spec p hL.ty.ha hL.hc2 hL.ty.hv hL.hs hL.hpb n, eView_spec p hL.ty.hv n,
@@ -88,7 +83,6 @@ l_model nitE_spec (p : Prog) (hL : NitLook p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
 end
 
