@@ -119,7 +119,7 @@ memo (`lqSch`); their proofs (`CoreLevels.lean`, `InferFieldSort.lean`) build th
 not export them. -/
 def ErecKeptProj (p : Prog) : Prop :=
   ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
-    (f = "lvl_eq_c" ∨ f = "field_sort_zero") → callW p n f vs m = some (r, m') →
+    f = "lvl_eq_c" → callW p n f vs m = some (r, m') →
     m'.arr64 EREC = m.arr64 EREC
 
 /-! ## `proj_type_at` -/
