@@ -129,6 +129,25 @@ theorem callW_erecPut {p : Prog} (hp : p.lookup "erec_put" = some erecPut) {n : 
 
 theorem word_add21 (d : Word) : d + 2 + 1 = d + 3 := by rw [UInt64.add_assoc]; rfl
 
+theorem c129_coreErecC : (129 : Word) ∉ coreErecC := by
+  intro hmem
+  simp only [coreErecC, List.mem_map, List.mem_filter, List.mem_range] at hmem
+  obtain ⟨x, ⟨hx, hne⟩, e⟩ := hmem
+  have := congrArg UInt64.toNat e
+  simp only [Nat.toUInt64_eq, UInt64.toNat_ofNat', decide_eq_true_eq] at this hne
+  have h129 : (129 : Word).toNat = 129 := rfl
+  have h130 : (130 : Word).toNat = 130 := rfl
+  omega
+theorem c130_coreErecC : (130 : Word) ∉ coreErecC := by
+  intro hmem
+  simp only [coreErecC, List.mem_map, List.mem_filter, List.mem_range] at hmem
+  obtain ⟨x, ⟨hx, hne⟩, e⟩ := hmem
+  have := congrArg UInt64.toNat e
+  simp only [Nat.toUInt64_eq, UInt64.toNat_ofNat', decide_eq_true_eq] at this hne
+  have h129 : (129 : Word).toNat = 129 := rfl
+  have h130 : (130 : Word).toNat = 130 := rfl
+  omega
+
 theorem instLp_core : "inst_lp" ∈ coreFns := List.elem_iff.mp (by decide)
 theorem instLp_stageCore : "inst_lp" ∈ stageCoreFns := List.mem_append_right _ instLp_core
 
@@ -149,7 +168,9 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
     Sim (callW p n "cv_at_lps" [d, c + 1, po, pl] m) (cv.atLps ps) a
       (fun _ cv' m' a' => StageT dn vis fe m' a' ∧ IWGrow m₀ m' ∧ MemFrame quotA quotC m₀ m' ∧
         decCV (erecP m') d.toNat = some cv' ∧
-        (∀ i, (∀ j < 4, i % 2 ^ 41 ≠ (d.toNat + j) % 2 ^ 41) → erecP m' i = erecP m i)) := by
+        (∀ i, (∀ j < 4, i % 2 ^ 41 ≠ (d.toNat + j) % 2 ^ 41) → erecP m' i = erecP m i) ∧
+        erecP m' (d.toNat + 1) = some po ∧ erecP m' (d.toNat + 2) = some pl ∧
+        ∀ x, erTopOf m' x = erTopOf m x) := by
   intro r m' h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (cvAtLps_specW p hP.cvAt n _ d (c + 1) po pl) h
@@ -250,7 +271,8 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
   have e0 : erRdT m (c + 1) = w0 := (erRdOK m).off hw0 (by simp)
   have hrun3 := partsRunOfOk hok3
   rw [hres3] at hrun3
-  refine ⟨⟨cv.name, ps, decH r3⟩, _, ?_, StageT.of_wrER hT3 hSw, hgw, hfw, ?_, fun i hi => ?_⟩
+  refine ⟨⟨cv.name, ps, decH r3⟩, _, ?_, StageT.of_wrER hT3 hSw, hgw, hfw, ?_, fun i hi => ?_,
+    by simpa using hrd 1 (by simp), by simpa using hrd 2 (by simp), fun x => ?_⟩
   · simp only [IConstantVal.atLps, StateT.run_bind, hrun1, ← hus, hty, ← decE_eq, exb, hrun3,
       StateT.run_pure]
     rfl
@@ -258,6 +280,14 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
     rw [e0] at hrd hgw
     exact decCV_of_wr4 hrd hw0l (ArrExt.hslice? hgw.erecGrow.ext hps) hrh3
   · rw [hout i hi, he3, he12]
+  · have hc3 := (run_memFrame hP.coreErec instLp_core (run_of_callW h3)).1
+    have e129 : rdW (s3.mem.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := by
+      rw [hc3.ctl 129 c129_coreErecC, hpf2.ctl 129 (plC_not (by simp [plBadC])),
+        hpf1.ctl 129 (plC_not (by simp [plBadC]))]
+    have e130 : rdW (s3.mem.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := by
+      rw [hc3.ctl 130 c130_coreErecC, hpf2.ctl 130 (plC_not (by simp [plBadC])),
+        hpf1.ctl 130 (plC_not (by simp [plBadC]))]
+    simp only [erTopOf, erecTop, erecTop1, wrER_ctl, e129, e130]
 
 end cv
 
@@ -505,7 +535,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
   | some x5 =>
   obtain ⟨r5, m5⟩ := x5
   rw [h5] at hW; simp only [quotPinHitW.k_cv_at_lps] at hW
-  obtain ⟨cv', a2, hrun2, hT5, hg5, -, hdec5, -⟩ := cvAtLps_sim hP (n0 + 1) hT2.stage hT4 hst1.ok hqf4 hg4
+  obtain ⟨cv', a2, hrun2, hT5, hg5, -, hdec5, -, -, -, -⟩ := cvAtLps_sim hP (n0 + 1) hT2.stage hT4 hst1.ok hqf4 hg4
     (d := r4.headD 0) (c := r1.headD 0) (by rw [hoff4]; exact Nat.le_refl _) (by rw [htop4, hoff4]; simp) hq41
     (ArrExt.decCV (hg2.trans hg4).erecGrow.ext hpcv) (by rw [he2]; exact hsl1)
     (ConRon.Bridge.denoteNListE_ext hst1.ext _ _ (ConRon.Bridge.denoteCV_inv hden).2.1) r5 m5 h5
