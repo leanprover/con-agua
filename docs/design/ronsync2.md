@@ -179,6 +179,11 @@ pool.
    sF.worker = .ok (.ok (), s'))`; the per-thread claim `ThreadEVerdict` gains the premise
    `∀ i < j, TwinJobPasses [b] i` (every record below the failing job passes on its own).
 
+5. **The threaded verdict** (`checkerFile_threads_verdict(_of)`, `threadFail_twin`) also gains
+   `(V : Type w) [ConLeche.SetTheory V]`, for the same reason as item 2 (the fold invariant at a
+   job's view needs the model); its per-thread claim `ThreadEVerdict` quantifies over the set
+   model.
+
 The final texts are given in the report when the theorems are proved. Possible follow-up (not
 done): `main.c` reports the failing group with the smallest index and every lower group has been
 checked and accepted when the threads are joined, so one more harness fact would give the threaded
