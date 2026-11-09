@@ -421,10 +421,28 @@ theorem prepareMajor_nk (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) 
   simp only [prepareMajor, Bool.false_eq_true, ↓reduceIte, pmTailT]
 
 /-- The record pool's decoded view across an ι callee. -/
-theorem ErecKeptRec.erecP {p : Prog} (hE : ErecKeptRec p) {n : Nat} {f : FnName} {vs : List Word}
+theorem ErecKeptRec.erecP_eq {p : Prog} (hE : ErecKeptRec p) {n : Nat} {f : FnName} {vs : List Word}
     {m : Mem} {r : List Word} {m' : Mem} (hf : f ∈ iotaKeptFns := by simp [iotaKeptFns])
     (h : callW p n f vs m = some (r, m')) : erecP m' = erecP m :=
   (hE n f vs m r m' hf h).2.2.2
+
+/-- The record pool (both tiers, the tagged reads, the decoded view) across an ι callee. -/
+theorem ErecKeptRec.all {p : Prog} (hE : ErecKeptRec p) {n : Nat} {f : FnName} {vs : List Word}
+    {m : Mem} {r : List Word} {m' : Mem} (hf : f ∈ iotaKeptFns)
+    (h : callW p n f vs m = some (r, m')) :
+    m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
+      erRdT m' = erRdT m ∧ erecP m' = erecP m :=
+  hE n f vs m r m' hf h
+
+/-- Two such keeps in a row. -/
+theorem erecKeep_trans {m m' m'' : Mem}
+    (h2 : m''.arr64 EREC = m'.arr64 EREC ∧ m''.arr64 (tier1 EREC) = m'.arr64 (tier1 EREC) ∧
+      erRdT m'' = erRdT m' ∧ erecP m'' = erecP m')
+    (h1 : m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
+      erRdT m' = erRdT m ∧ erecP m' = erecP m) :
+    m''.arr64 EREC = m.arr64 EREC ∧ m''.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
+      erRdT m'' = erRdT m ∧ erecP m'' = erecP m :=
+  ⟨h2.1.trans h1.1, h2.2.1.trans h1.2.1, h2.2.2.1.trans h1.2.2.1, h2.2.2.2.trans h1.2.2.2⟩
 
 section pm
 variable (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p) (hw : WhnfCallees p)
@@ -450,7 +468,7 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
   refine RefE.bind_callW (fun _ => rfl) (isCtorApp_refines p hp.toIotaProg' N ⟨m3, Locals.init []⟩ a dn vis
     fe M eb me hS hme) fun r4 m4 c4 h4 => RefE.after_core (w := id) h4 fun M4 hS4 _ => ?_
   dsimp only [pmE.k_is_ctor_app_2]
-  have e4 : erecP m4 = erecP m3 := hE.erecP (by simp [iotaKeptFns]) c4
+  have e4 : erecP m4 = erecP m3 := hE.erecP_eq (by simp [iotaKeptFns]) c4
   by_cases hc4 : r4.headD 0 ≠ 0
   · rw [ite_eq_left hc4, decBool_t_m2c (by simpa using hc4)]
     exact RefE.ret rfl (CorePost.ret hS4 rfl hme)
@@ -461,7 +479,7 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
     (fun (hG : PmG p (N + 1)) => (hG.knot (N + 1) (Nat.le_refl _)).whnf F ⟨m4, Locals.init []⟩ _ dn vis fe M4
       eb mode d me hnF hn62 ⟨hS4, hm4, hebm⟩ hme) fun r5 m5 c5 h5 => RefE.after_core (w := id) h5 fun M5 hS5 _ => ?_
   dsimp only [pmE.k_whnf]
-  have e5 : erecP m5 = erecP m4 := hE.erecP (by simp [iotaKeptFns]) (callW_of_callE c5)
+  have e5 : erecP m5 = erecP m4 := hE.erecP_eq (by simp [iotaKeptFns]) (callW_of_callE c5)
   refine RefE.bind_callE (s₀ := ⟨m5, Locals.init []⟩) (fun _ => rfl)
     (litMajorToCtor_refines' p hp.toIotaProg' hc hw hsup N (hk.mono (Nat.le_succ N)) F (by omega)
       (by omega) _ _ dn vis fe M5 eb mode d _ hS5 hm4 hebm h5.resOk)
@@ -469,7 +487,7 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
       (hG.knot.mono (Nat.le_succ N)) (lmtc_ref p hc hw hsup N (hk.mono (Nat.le_succ N)) F (by omega)
         (by omega) _ _ dn vis fe M5 eb mode d _ hS5 hm4 hebm h5.resOk))
     fun r6 m6 c6 h6 => RefE.after_core (w := id) h6 fun M6 hS6 _ => ?_
-  have e6 : erecP m6 = erecP m5 := hE.erecP (by simp [iotaKeptFns]) (callW_of_callE c6)
+  have e6 : erecP m6 = erecP m5 := hE.erecP_eq (by simp [iotaKeptFns]) (callW_of_callE c6)
   dsimp only [pmE.k_lit_major_to_ctor_2]
   rw [← bind_pure (majorToCtor _ _ _ _ _ _ _ _), ← hKf]
   have hr6 : decRules (erecP m6) ro.toNat rc.toNat = some rules := by rw [e6, e5, e4]; exact hrules
@@ -540,7 +558,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
       dn vis fe MM eb major hS hmaj) fun r2 m2 c2 h2 => RefE.after_core (w := id) h2 fun M2 hS2 _ => ?_
     dsimp only [pmE.k_is_str_lit]
     have hrules2 : decRules (erecP m2) ro.toNat rc.toNat = some rules := by
-      rw [hE.erecP (by simp [iotaKeptFns]) c2]; exact hr
+      rw [hE.erecP_eq (by simp [iotaKeptFns]) c2]; exact hr
     by_cases hs2 : r2.headD 0 ≠ 0
     · rw [ite_eq_left hs2, decBool_t_m2c (by simpa using hs2)]
       simp only [↓reduceIte, pure_bind]
@@ -556,7 +574,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
           dn vis fe M2 eb mode d rec isK ro rc major rules (by omega) hS2 hm4 hebm hmaj hrules2)
         fun r3 m3 c3 h3 => RefE.after_core (w := id) h3 fun M3 hS3 _ => ?_
       have hrules3 : decRules (erecP m3) ro.toNat rc.toNat = some rules := by
-        rw [hE.erecP (by simp [iotaKeptFns]) (callW_of_callE c3)]; exact hrules2
+        rw [hE.erecP_eq (by simp [iotaKeptFns]) (callW_of_callE c3)]; exact hrules2
       dsimp only [pmE.k_major_to_ctor_2]
       exact pmTail_ref p hE N hk F hnF hn62 dn vis fe eb mode d rec isK ro rc
         (r3.headD 0) rules hm4 hK0 hebm h3.resOk m3 _ M3 hS3 hrules3 hp hc hw hsup hmtc
