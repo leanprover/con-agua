@@ -139,13 +139,6 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
 
 /-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
 
-theorem rdW_eq_getElem (a : Array Word) (x : Word) (h : x.toNat < a.size) : rdW a x = a[x.toNat] := by
-  simp [rdW, h]
-
-
-/-- A checked word read, as `ld64`: `none` out of bounds. -/
-def ldE (a : Array Word) (x : Word) : Option Word :=
-  if h : x.toNat < a.size then some a[x.toNat] else none
 
 /-- The tagged read's bound for word `x` (`EREC⦃x⦄` in bounds). -/
 abbrev erIn (m : Mem) (x : Word) : Prop :=
@@ -360,6 +353,15 @@ theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees
   · rw [hresF]; exact hres
 
 
+/-! ## `fab_scope_ok(d, fab, major)` -/
+
+/-- **`fab_scope_ok` is its model `fsW`** (generated). -/
+l_model fabScopeOk_spec (p : Prog) (hp : p.lookup "fab_scope_ok" = some fabScopeOkL)
+  fns [hp ↦ fsW list]
+  specs [callW_spec p n "wscoped_bfast", callW_spec p n "loose_bvars_bounded_fast",
+    callW_spec p n "leaf_guard"]
+  grind [arena_grind]
+
 theorem fabScopeOk_stop1 (d : Nat) (fab major : EIdx) (a a₁ : AState)
     (h : (wscopedBFast coreWalkFuel d fab).run a = .ok (false, a₁)) :
     (fabScopeOk d fab major).run a = .ok (false, a₁) := by
@@ -382,7 +384,56 @@ theorem fabScopeOk_go (d : Nat) (fab major : EIdx) (a a₁ a₂ a₃ : AState) (
 
 /-- **`fab_scope_ok` refines `fabScopeOk`** (the three walks as `IotaCallees`' stubs). -/
 theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) : FabScopeOkOK p := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb d fab major hS hfab hmaj
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (fabScopeOk_spec p hp.fabScopeOk (n + 1) s₀ d fab major) fun r s' ⟨hloc, hW⟩ =>
+    ⟨hloc, ?_⟩
+  simp only [fsW, fsW.k_wscoped_bfast, fsW.k_loose_bvars_bounded_fast, fsW.k_leaf_guard] at hW
+  rcases hc1 : callW p n "wscoped_bfast" [d, fab] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc1, reduceCtorEq] at hW
+  obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
+    (hc.wscopedBFast n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb d fab hS hfab) hc1
+  by_cases h0 : r₁.headD 0 = 0
+  · rw [ite_eq_left h0] at hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    rw [decBool_f_m2c h0] at hrun1
+    have hr0 : r.headD 0 = 0 := by rw [← hr]; rfl
+    refine CoreRef.of_run (fabScopeOk_stop1 d.toNat (decE fab) (decE major) a₀ _ hrun1) ⟨M₁, hS₁,
+      hK₁, hSt₁⟩ ?_ ?_
+    · simp only [decBool]; rw [hr0]; rfl
+    · unfold ResH HW; rw [hr0]; decide
+  rw [ite_eq_right h0] at hW
+  rw [decBool_t_m2c h0] at hrun1
+  rcases hc2 : callW p n "loose_bvars_bounded_fast" [4000000000, 0, fab] m₁ with _ | ⟨r₂, m₂⟩ <;>
+    simp only [hc2, reduceCtorEq] at hW
+  obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
+    (hc.looseBVarsBoundedFast n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb 0 fab hS₁ hfab) hc2
+  have h00 : (0 : Word).toNat = 0 := rfl
+  rw [h00] at hrun2
+  by_cases h20 : r₂.headD 0 = 0
+  · rw [ite_eq_left h20] at hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    rw [decBool_f_m2c h20] at hrun2
+    have hr0 : r.headD 0 = 0 := by rw [← hr]; rfl
+    refine CoreRef.of_run (fabScopeOk_stop2 d.toNat (decE fab) (decE major) a₀ _ _ hrun1 hrun2)
+      ⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩ ?_ ?_
+    · simp only [decBool]; rw [hr0]; rfl
+    · unfold ResH HW; rw [hr0]; decide
+  rw [ite_eq_right h20] at hW
+  rw [decBool_t_m2c h20] at hrun2
+  rcases hc3 : callW p n "leaf_guard" [fab, major] m₂ with _ | ⟨r₃, m₃⟩ <;>
+    simp only [hc3, reduceCtorEq] at hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW
+    (hc.leafGuard n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb fab major hS₂ hfab hmaj) hc3
+  have hrun3 := AM.run_of_ok _ _ hok3
+  have hr3 : r₃.headD 0 = r.headD 0 := by rw [← hr]; rfl
+  refine CoreRef.of_run (fabScopeOk_go d.toNat (decE fab) (decE major) a₀ _ _ _ _ hrun1 hrun2
+    hrun3) ⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩ ?_ ?_
+  · rw [hres3]; simp only [decBool]; rw [hr3]
+  · unfold ResH HW; rw [← hr3]; exact hr₃
 
 /-! ## `lit_major_to_ctor(mode, vis, d, h)` -/
 
@@ -427,15 +478,6 @@ theorem litMajorToCtor_run_str (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) 
     simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
   simp only [litMajorToCtor, ht, beq_self_eq_true, ↓reduceIte, StateT.run_bind, hv', except_ok_bind,
     hs, hc, hw]
-
-theorem ldE_some (a : Array Word) (x w : Word) (h : ldE a x = some w) :
-    x.toNat < a.size ∧ w = rdW a x := by
-  unfold ldE at h
-  split at h
-  · rename_i hb
-    simp only [Option.some.injEq] at h
-    exact ⟨hb, by rw [← h, rdW_eq_getElem a x hb]⟩
-  · cases h
 
 /-- A refinement transports along twins with the same run. -/
 theorem CoreRef.of_run_eq {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} {dec : List Word → α}
