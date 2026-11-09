@@ -144,7 +144,7 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   dsimp only [cbtE.k_check_constant_val]
   obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core
     hC.check henv hcvP hr1
-  have k1 : InsAt dn vis fe env m a s1.mem a1 := ⟨StageC.ofStageT hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
+  have k1 : InsAt dn vis fe env m a s1.mem a1 := ⟨StageC.of_T hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
   have hcA := ConRon.Bridge.denoteCV_ext hcvP c1.ext
   have hw1' : ConLeche.Expr.WScoped 0 msP.cvT.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConLeche.checkConstantVal_typeWF hF₁).1

@@ -264,7 +264,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     subst hx5
     obtain ⟨hck5, hx5', hp5, tpx, htp5, hwstp, -⟩ := infer_check henv hC4.check hap0 hwsA hrun5
     have c5 : CoreStep env fe a4 a5 := ⟨hck5, hx5', hp5⟩
-    have hC5 := L.Arena.StageC.ofT hT5 hck5
+    have hC5 := L.Ind.StageC.of_T hT5 hck5
     have c05 := c04.trans c5
     have hG5 : IWGrow m m5 := hG4.trans hg5
     -- the equation, substituted
@@ -295,7 +295,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     obtain ⟨hck7, hx7', hp7, -⟩ := defeq_check henv hC6.check
       (ConRon.Bridge.denote_ext htp5 hi6.ext) hrhs hwstp hwsR hrun7
     have c7 : CoreStep env fe a6 a7 := ⟨hck7, hx7', hp7⟩
-    have hC7 := L.Arena.StageC.ofT hT7 hck7
+    have hC7 := L.Ind.StageC.of_T hT7 hck7
     have c07 := (c05.trans c6).trans c7
     have hG7 : IWGrow m m7 := hG6.trans hg7
     rw [checkDivModCertsE.k_is_def_eq_core.eq_2]
@@ -408,7 +408,7 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
       (by rw [decI_word]; exact ConRon.Bridge.denote_ext hd2 c1.ext)
       (ConLeche.Expr.WScoped.of_not_hasFvar hq1.1) (ConLeche.Expr.WScoped.of_not_hasFvar hq1.2) hrun2
     have c2 : CoreStep env fe a1 a2 := ⟨hck2, hx2', hp2⟩
-    have hC2 := L.Arena.StageC.ofT hT2 hck2
+    have hC2 := L.Ind.StageC.of_T hT2 hck2
     have hG2 : IWGrow m m2 := hg1.trans hg2
     rw [checkTypePinsE.k_is_def_eq_core.eq_2]
     refine RefE.retIf (fun z2 => hd2' ▸ decBool_f_m2c z2) (fun hb => by simpa [← hd2', decBool] using hb)
@@ -494,7 +494,7 @@ theorem cpv_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
   have hCr2 := hkp.call (im_mem _ rfl) (callW_of_callE h2) hCr1
   obtain ⟨hck2, hx2', hp2, -⟩ := defeq_check henv hC1.check hv hpd hwsv hwsP hrun2
   have c2 : CoreStep env fe a a2 := ⟨hck2, hx2', hp2⟩
-  have hC2 := L.Arena.StageC.ofT hT2 hck2
+  have hC2 := L.Ind.StageC.of_T hT2 hck2
   rw [checkDivModPinValueE.k_is_def_eq_core.eq_2]
   refine RefE.retIf (fun z2 => hd2 ▸ decBool_f_m2c z2) (fun hb => by simpa [← hd2, decBool] using hb)
     (fun _ => ⟨hC2, c2, hg1.trans hg2, by simp [decW0B], hCr2⟩) fun z2 _ => ?_

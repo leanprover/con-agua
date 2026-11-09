@@ -51,12 +51,6 @@ theorem StageC.of_pstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
       fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     hA.wk.2.2.2.2⟩
 
-/-- **`StageC` after a `StageT`-keeping call**, with con-ron's `CheckOK` after it (`StageC.lean`'s
-`StageC.of_T`, outside this area, still commented out). -/
-theorem StageC.ofStageT {m : Mem} {a : AState} (hT : StageT dn vis fe m a)
-    (hck : ConRon.Bridge.CheckOK false env fe a) : StageC dn vis fe env m a :=
-  ⟨hT.stage, hck, hT.twin.mem, hT.flag⟩
-
 /-- **`StageC` after a twin step whose result con-ron's lemmas give `CheckOK` for** (a `CoreStep`,
 a flush, …), the store extended. -/
 theorem StageC.of_check {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
@@ -113,7 +107,7 @@ theorem RSim.liftC {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Mem
   intro b hb
   obtain ⟨x, a', hr, hT, hq⟩ := h b hb
   obtain ⟨hs, hR⟩ := hsp a a' x hC.check hP hr
-  exact ⟨x, a', hr, StageC.ofStageT hT hs.ok, hq, hR, hs⟩
+  exact ⟨x, a', hr, StageC.of_T hT hs.ok, hq, hR, hs⟩
 
 end lift
 
@@ -142,7 +136,7 @@ theorem inferC_rsim (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   obtain ⟨x, a', hr, ⟨hT, hg, hdec⟩, hA'⟩ :=
     RSim.coreAbs hq.closed (by decide) hA (inferT_rsim hq n hn hC.stageT dep e he) b hb
   obtain ⟨hs, w, hw', hsc, -⟩ := infer_crun ConRon.Bridge.CoreSpec.of_core henv hC.check hd hw hr
-  exact ⟨x, a', hr, StageC.ofStageT hT hs.ok, hg, hdec, hA', hs, w, hw', hsc⟩
+  exact ⟨x, a', hr, StageC.of_T hT hs.ok, hg, hdec, hA', hs, w, hw', hsc⟩
 
 open ConRon.Bridge.Inductives (infer_crun ensureSort_crun whnf_crun defeq_crun) in
 include hq henv in
@@ -159,7 +153,7 @@ theorem whnfC_rsim (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   obtain ⟨x, a', hr, ⟨hT, hg, hdec⟩, hA'⟩ :=
     RSim.coreAbs hq.closed (by decide) hA (whnfT_rsim hq n hn hC.stageT dep e he) b hb
   obtain ⟨hs, w, hw', hsc, -⟩ := whnf_crun ConRon.Bridge.CoreSpec.of_core henv hC.check hd hw hr
-  exact ⟨x, a', hr, StageC.ofStageT hT hs.ok, hg, hdec, hA', hs, w, hw', hsc⟩
+  exact ⟨x, a', hr, StageC.of_T hT hs.ok, hg, hdec, hA', hs, w, hw', hsc⟩
 
 open ConRon.Bridge.Inductives (infer_crun ensureSort_crun whnf_crun defeq_crun) in
 include hq henv in
@@ -175,7 +169,7 @@ theorem ensureSortC_rsim (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   obtain ⟨x, a', hr, ⟨hT, hg, hdec⟩, hA'⟩ :=
     RSim.coreAbs hq.closed (by decide) hA (ensureSortT_rsim hq n hn hC.stageT dep t ht) b hb
   obtain ⟨hs, u, hu, -⟩ := ensureSort_crun ConRon.Bridge.CoreSpec.of_core henv hC.check hd hw hr
-  exact ⟨x, a', hr, StageC.ofStageT hT hs.ok, hg, hdec, hA', hs, u, hu⟩
+  exact ⟨x, a', hr, StageC.of_T hT hs.ok, hg, hdec, hA', hs, u, hu⟩
 
 open ConRon.Bridge.Inductives (infer_crun ensureSort_crun whnf_crun defeq_crun) in
 include hq henv in
@@ -194,7 +188,7 @@ theorem isDefEqC_rsim (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     RSim.coreAbs hq.closed (by decide) hA (isDefEqT_rsim hq n hn hC.stageT dep x y hx hy) b hb
   obtain ⟨hs, -⟩ := defeq_crun (ConRon.Bridge.CoreSpec.of_core.knot env fe henv) hC.check hdx hdy
     hwx hwy hr
-  exact ⟨c, a', hr, StageC.ofStageT hT hs.ok, hg, hdec, hA', hs⟩
+  exact ⟨c, a', hr, StageC.of_T hT hs.ok, hg, hdec, hA', hs⟩
 
 end entriesC
 

@@ -13,6 +13,7 @@ import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 import ConAgua.Arena.IndRealAbsT
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndT.Tail
+import ConAgua.Arena.StageC
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Checker.Basis
@@ -399,7 +400,7 @@ theorem cid_ref (P : CidProg2 p) {G : Prop} (hGU : G → VerdictCtxU p)
   have hchk1 := hfold.check.mono hst1 hxt1 hc1 hp1
   obtain ⟨hIM1, hCM1⟩ := armMemos_call hclC (hfC _ (by simp [cidFrameCallees])) c1 hM hCM
   have hA1 : AbsOK m1 := hT1.absOK hIM1.i1 (L.Stubs.CrOK.crMemo hIM1.cr)
-  have hC1 : StageC dn vis fe env m1 a1 := StageC.ofStageT hT1 hchk1
+  have hC1 : StageC dn vis fe env m1 a1 := StageC.of_T hT1 hchk1
   have hbP1 := ConRon.Bridge.denoteCIList_mono hxt1 _ _ hbP
   have hBA1 : BlockAt o l block m1 := blockAt_grow ⟨hdec, hb⟩ hg1
   have hblk1 := hblk.grow (decEBlk_mono _ _ _) hg1

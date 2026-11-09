@@ -126,7 +126,7 @@ theorem ggC (hD : DmProg6 p) (hcrf : L.Ind.CrfF p) {pe : Word} {P : ConLeche.Exp
     lbbF_okT dn vis fe 4000000000 0 pe hl1 m m2 a r2 h2 hC.stageT
   rw [fuelW_eq, h0w] at hrun2
   obtain ⟨c2, -⟩ := runsC_step (ConRon.Bridge.lbbF_runsC hC.check hpd) hrun2
-  have hC2 := L.Arena.StageC.ofT hT2 c2.ok
+  have hC2 := L.Ind.StageC.of_T hT2 c2.ok
   by_cases z2 : r2.headD 0 = 0
   · rw [ite_eq_left z2] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -151,7 +151,7 @@ theorem ggC (hD : DmProg6 p) (hcrf : L.Ind.CrfF p) {pe : Word} {P : ConLeche.Exp
     hffF_okT dn vis fe 4000000000 pe hl1 m2 m3 a2 r3 h3 hC2.stageT
   rw [fuelW_eq] at hrun3
   obtain ⟨c3, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC2.check hpd2) hrun3
-  have hC3 := L.Arena.StageC.ofT hT3 c3.ok
+  have hC3 := L.Ind.StageC.of_T hT3 c3.ok
   by_cases z3 : r3.headD 0 ≠ 0
   · rw [ite_eq_left z3] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -177,7 +177,7 @@ theorem ggC (hD : DmProg6 p) (hcrf : L.Ind.CrfF p) {pe : Word} {P : ConLeche.Exp
   obtain ⟨x4, a4, hrun4, hT4, hg4, hd4⟩ := apdF_okT dn vis fe 0 0 pe
     hl1 [] m3 m4 a3 r4 (apdF_of_callW hD.apd h4) ⟨hC3.stageT, by rw [h0w]; simp [decHL, hslice?], [], rfl⟩
   obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.alpd0_runsC hC3.check hpd3) hrun4
-  have hC4 := L.Arena.StageC.ofT hT4 c4.ok
+  have hC4 := L.Ind.StageC.of_T hT4 c4.ok
   by_cases z4 : r4.headD 0 = 0
   · rw [ite_eq_left z4] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -201,7 +201,7 @@ theorem ggC (hD : DmProg6 p) (hcrf : L.Ind.CrfF p) {pe : Word} {P : ConLeche.Exp
   obtain ⟨x5, a5, hrun5, ⟨hT5, hg5, hd5⟩, -⟩ :=
     crfF_okT dn vis fe pe hl1 m4 m5 a4 r5 (crfF_of_callW hcrf h5) ⟨hC4.stageT, hCr4.crMemo⟩
   obtain ⟨c5, -⟩ := runsC_step (ConRon.Bridge.crF_runsC hC4.check hpd4) hrun5
-  have hC5 := L.Arena.StageC.ofT hT5 c5.ok
+  have hC5 := L.Ind.StageC.of_T hT5 c5.ok
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hrun : (groundGuards fe (decI pe)).run a = .ok (x5, a5) := by
@@ -277,7 +277,7 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.In
     hffF_okT dn vis fe 4000000000 (r2.headD 0) hl2 m2 m3 a2 r3 h3 hC2.stageT
   rw [fuelW_eq] at hrun3
   obtain ⟨c3, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC2.check hd2) hrun3
-  have hC3 := L.Arena.StageC.ofT hT3 c3.ok
+  have hC3 := L.Ind.StageC.of_T hT3 c3.ok
   have c03 := c2.trans c3
   have hrun1 : (typePinGuard fe (decI nw) (decI ty)).run a =
       (do
@@ -310,7 +310,7 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.In
     lbbF_okT dn vis fe 4000000000 0 ty hl1 m3 m4 a3 r4 h4 hC3.stageT
   rw [fuelW_eq, h0w] at hrun4
   obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.lbbF_runsC hC3.check ht3) hrun4
-  have hC4 := L.Arena.StageC.ofT hT4 c4.ok
+  have hC4 := L.Ind.StageC.of_T hT4 c4.ok
   have c04 := c03.trans c4
   by_cases z4 : r4.headD 0 = 0
   · rw [ite_eq_left z4] at hw
@@ -336,7 +336,7 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.In
     hffF_okT dn vis fe 4000000000 ty hl1 m4 m5 a4 r5 h5 hC4.stageT
   rw [fuelW_eq] at hrun5
   obtain ⟨c5, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC4.check ht4) hrun5
-  have hC5 := L.Arena.StageC.ofT hT5 c5.ok
+  have hC5 := L.Ind.StageC.of_T hT5 c5.ok
   have c05 := c04.trans c5
   by_cases z5 : r5.headD 0 ≠ 0
   · rw [ite_eq_left z5] at hw
@@ -361,7 +361,7 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.In
   obtain ⟨x6, a6, hrun6, ⟨hT6, hg6, hd6⟩, -⟩ :=
     crfF_okT dn vis fe ty hl1 m5 m6 a5 r6 (crfF_of_callW hcrf h6) ⟨hC5.stageT, hCr5.crMemo⟩
   obtain ⟨c6, -⟩ := runsC_step (ConRon.Bridge.crF_runsC hC5.check ht5) hrun6
-  have hC6 := L.Arena.StageC.ofT hT6 c6.ok
+  have hC6 := L.Ind.StageC.of_T hT6 c6.ok
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   refine ⟨x6, a6, ?_, hC6, c05.trans c6, hg2.trans (hg3.trans (hg4.trans (hg5.trans hg6))), hd6⟩
@@ -666,7 +666,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.Ind
     lbbF_okT dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a1 r2 h2 hC1.stageT
   rw [fuelW_eq, h0w, hx1] at hrun2
   obtain ⟨c2, -⟩ := runsC_step (ConRon.Bridge.lbbF_runsC hC1.check hpd) hrun2
-  have hC2 := L.Arena.StageC.ofT hT2 c2.ok
+  have hC2 := L.Ind.StageC.of_T hT2 c2.ok
   by_cases z2 : r2.headD 0 = 0
   · rw [ite_eq_left z2] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -692,7 +692,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.Ind
     hffF_okT dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hC2.stageT
   rw [fuelW_eq, hx1] at hrun3
   obtain ⟨c3, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC2.check hpd2) hrun3
-  have hC3 := L.Arena.StageC.ofT hT3 c3.ok
+  have hC3 := L.Ind.StageC.of_T hT3 c3.ok
   by_cases z3 : r3.headD 0 ≠ 0
   · rw [ite_eq_left z3] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -720,7 +720,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.Ind
     hl1 [] m3 m4 a3 r4 (apdF_of_callW hD.apd h4) ⟨hC3.stageT, by rw [h0w]; simp [decHL, hslice?], [], rfl⟩
   rw [hx1] at hrun4
   obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.alpd0_runsC hC3.check hpd3) hrun4
-  have hC4 := L.Arena.StageC.ofT hT4 c4.ok
+  have hC4 := L.Ind.StageC.of_T hT4 c4.ok
   by_cases z4 : r4.headD 0 = 0
   · rw [ite_eq_left z4] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -747,7 +747,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.Ind
     crfF_okT dn vis fe (r1.headD 0) hl1 m4 m5 a4 r5 (crfF_of_callW hcrf h5) ⟨hC4.stageT, hCr4.crMemo⟩
   rw [hx1] at hrun5
   obtain ⟨c5, -⟩ := runsC_step (ConRon.Bridge.crF_runsC hC4.check hpd4) hrun5
-  have hC5 := L.Arena.StageC.ofT hT5 c5.ok
+  have hC5 := L.Ind.StageC.of_T hT5 c5.ok
   have hG5 : IWGrow m m5 := hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5)))
   have c15 := (((c1.trans c2).trans c3).trans c4).trans c5
   by_cases z5 : r5.headD 0 = 0
@@ -784,7 +784,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.Ind
   obtain ⟨x7, a7, hrun7, ⟨hT7, hg7, hd7⟩, hCr7⟩ := cra_refT hD hcrf x6 (r6.headD 0) (r6.tail.headD 0)
     k m6 a6 r7 m7 hC6.stageT hCr6 hd6.1 hd6.2 h7
   obtain ⟨c7, -⟩ := runsC_step (ConRon.Bridge.constsResolveAll_runsC _ _ hC6.check hhs) hrun7
-  have hC7 := L.Arena.StageC.ofT hT7 c7.ok
+  have hC7 := L.Ind.StageC.of_T hT7 c7.ok
   have hG7 : IWGrow m m7 := hG5.trans (hg6.trans hg7)
   by_cases z7 : r7.headD 0 = 0
   · rw [ite_eq_left z7] at hw
@@ -820,7 +820,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.Ind
     crfF_okT dn vis fe (r8.headD 0) hl8 m8 m9 a8 r9 (crfF_of_callW hcrf h9) ⟨hC8.stageT, hCr8.crMemo⟩
   rw [hx8] at hrun9
   obtain ⟨c9, -⟩ := runsC_step (ConRon.Bridge.crF_runsC hC8.check he8) hrun9
-  have hC9 := L.Arena.StageC.ofT hT9 c9.ok
+  have hC9 := L.Ind.StageC.of_T hT9 c9.ok
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hrun : (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =

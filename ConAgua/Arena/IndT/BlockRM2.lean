@@ -213,7 +213,7 @@ theorem rm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {nP ms : Wor
     fun r4 s4 u4 a4 _ _ hr4 hP4 => ?_
   obtain ⟨c4, F₄, hF₄⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core
     hC.check henv hcvP hr4
-  have hC4 : StageC dn vis fe env s4.mem a4 := StageC.ofStageT hP4.stage c4.ok
+  have hC4 : StageC dn vis fe env s4.mem a4 := StageC.of_T hP4.stage c4.ok
   have hA4 : AbsOK s4.mem := hP4.abs hA2
   have hg04 : IWGrow m s4.mem := hg2.trans hP4.grow
   have hws : ConLeche.Expr.WScoped 0 msP.cvT.type :=

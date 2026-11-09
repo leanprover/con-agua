@@ -67,13 +67,6 @@ theorem StageC.of_run {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
 
-/-- **`StageC` after a `StageT`-keeping call**, with con-ron's `CheckOK` after it (StageC.lean's
-`StageC.of_T`, commented out there). -/
-theorem StageC.ofT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {env : ConLeche.Env} {m : Mem} {a : AState} (hT : StageT dn vis fe m a)
-    (hck : ConRon.Bridge.CheckOK false env fe a) : StageC dn vis fe env m a :=
-  ⟨hT.stage, hck, hT.twin.mem, hT.flag⟩
-
 /-! ## `certify_nat_eqs` -/
 
 section cert
@@ -178,7 +171,7 @@ theorem certW_okC (hN : NatEqProg p) (hq : KnotStageProg p) {env : ConLeche.Env}
   obtain ⟨x, a', hrun, hT, hg, hd⟩ := certW_okT hN hq o l ps k hk m a r m' hS.stageT hE hb hc
   obtain ⟨hstep, -⟩ := ConRon.Bridge.certifyNatEqs_bridge ConRon.Bridge.CoreSpec.of_core
     hS.check henv hden hws hrun
-  exact ⟨x, a', hrun, StageC.ofT hT hstep.ok, hg, hd, hstep.ext⟩
+  exact ⟨x, a', hrun, L.Ind.StageC.of_T hT hstep.ok, hg, hd, hstep.ext⟩
 
 end cert
 
@@ -413,7 +406,7 @@ theorem snp_ref (hN : SnpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vi
   dsimp only at hQ7
   obtain ⟨hstep7, -⟩ := ConRon.Bridge.certifyNatEqs_bridge ConRon.Bridge.CoreSpec.of_core
     hC6.check henv hdps (ConRon.Bridge.natOpEqs_wscoped hok2.envWF hfindP) hrun7
-  have hC7 := StageC.ofT hQ7.stage hstep7.ok
+  have hC7 := L.Ind.StageC.of_T hQ7.stage hstep7.ok
   refine RefE.guardIf rfl (fun e7 => by rw [← hQ7.res.1, e7]; rfl)
     (fun e7 => by rw [← hQ7.res.1] at e7; simpa using e7) fun _ _ => ?_
   rw [hr4] at hC7

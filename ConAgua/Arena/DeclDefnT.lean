@@ -5,6 +5,7 @@ public import ConAgua.Arena.DeclAxQuotT
 public import ConAgua.Arena.DeclArmLoop
 public import ConAgua.Arena.DeclDivGateT
 import ConAgua.Arena.DeclArmT
+import ConAgua.Arena.StageC
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.RefWalk
@@ -289,7 +290,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   obtain ⟨rfl, rfl⟩ : ns.contains (decI wn) = b6 ∧ a5 = a6 := by
     simpa [StateT.run, pure, StateT.pure, Except.pure] using hrun6
   have hT6 := StageT.of_leaf hcl (leaf_mem _ (by decide)) h6 hT5 hS6
-  have hC6 := StageC.ofT hT6 hok4.check
+  have hC6 := L.Ind.StageC.of_T hT6 hok4.check
   have hPS6 := L.Arena.PinSetsR.step hPS5 hg6 (hfr (by decide) h6)
   have hCr6 := hkp.call (im_mem _ rfl) h6 hCr5
   have hg46 : IWGrow s4.mem m6 := hg5.trans hg6

@@ -128,7 +128,7 @@ theorem csr_ref (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
   obtain ⟨u, a1, hrun1, hP1⟩ := h1R
   obtain ⟨c1, -⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core
     hC.check henv hcvR hrun1
-  have hC1 : StageC dn vis fe env m1 a1 := StageC.ofStageT hP1.stage c1.ok
+  have hC1 : StageC dn vis fe env m1 a1 := StageC.of_T hP1.stage c1.ok
   have hA1 := hP1.abs hA
   have hg1 := hP1.grow
   refine RefE.bind_right hrun1 ?_

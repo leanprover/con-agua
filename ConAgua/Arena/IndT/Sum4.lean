@@ -254,7 +254,7 @@ theorem ctor_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
     hA.crMemo.crOK) fun ⟨u1, m1⟩ _ a1 hr1 hP1 => ?_
   obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core
     hC.check henv hcvCP hr1
-  have k1 : InsAt dn vis fe env m0 a m1 a1 := ⟨StageC.ofStageT hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
+  have k1 : InsAt dn vis fe env m0 a m1 a1 := ⟨StageC.of_T hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
   have hcA := ConRon.Bridge.denoteCV_ext hcvCP c1.ext
   have hwsA : ConLeche.Expr.WScoped 0 cvCP.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConLeche.checkConstantVal_typeWF hF₁).1
