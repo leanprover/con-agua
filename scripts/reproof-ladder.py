@@ -31,7 +31,7 @@ fails now, so reruns are cheap and idempotent.
 
 Options:
   --base REV        where the old proofs come from (default: merge-base of HEAD and master)
-  --rules FILE      the sync's rules (default: none; see scripts/sync-rules/README)
+  --rules FILE      the sync's rules, scripts/sync-rules/<sync>.txt (format: class Rules below)
   --steps LIST      rungs to run, a subset of master,codemod,vocab (default: all three)
   --failing MODE    elab (default): elaborate each file first, failing = an error or a `sorry` warning
                     inside the theorem; sorry: only theorems whose proof text contains `sorry`
@@ -243,7 +243,9 @@ def has_sorry_token(text, d):
     return False
 
 
-class _LexCache:
+class _LexCache(threading.local):
+    """The last text lexed, per thread."""
+
     def __init__(self):
         self.k, self.v = None, None
 
@@ -370,6 +372,18 @@ def rss_max(pids):
     return best
 
 
+LIVE = set()  # process groups of the running lean processes (killed when the ladder is stopped)
+
+
+def _stop(signum, frame):
+    for g in list(LIVE):
+        try:
+            os.killpg(g, signal.SIGKILL)
+        except OSError:
+            pass
+    sys.exit(f"stopped by signal {signum}")
+
+
 MSG = re.compile(r"^(.*?):(\d+):(\d+): (error|warning|info)(?:\([^)]*\))?: (.*)$")
 BLOCKED = re.compile(r"unknown module prefix|object file .* does not exist|failed to read file|"
                      r"could not find (native implementation|module)|\.olean.* (not found|invalid)")
@@ -398,6 +412,7 @@ class Lean:
         t0 = time.time()
         p = subprocess.Popen(cmd, cwd=self.wt, env=self.env, stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, start_new_session=True)
+        LIVE.add(p.pid)
         chunks = []
         rd = threading.Thread(target=lambda: chunks.append(p.stdout.read()))
         rd.start()
@@ -419,6 +434,7 @@ class Lean:
                 break
             time.sleep(0.25)
         rd.join()
+        LIVE.discard(p.pid)
         dt = time.time() - t0
         with self.lock:
             self.peak = max(self.peak, peak)
@@ -532,6 +548,7 @@ class Ladder:
         self.rules = Rules(a.rules)
         self.base = BaseTree(self.wt, a.base)
         self.lean = Lean(self.wt, a.threads, a.timeout, a.mem_gb)
+        self.lock = threading.Lock()
         hook = a.vocab_hook or self.rules.hook
         self.hook = None
         if hook:
@@ -539,6 +556,7 @@ class Ladder:
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
             self.hook = mod.candidates
+        self.labels = []  # every variant label in ladder order, as rungs() emits them
         self.work = os.path.join(a.out, "work")
         os.makedirs(self.work, exist_ok=True)
 
@@ -557,6 +575,10 @@ class Ladder:
             else:
                 for lab, rs in self.rules.vocab.items():
                     out.append(("vocab", f"vocab:{lab}", Rules.apply(rs, cm, ctx["text"])))
+        with self.lock:
+            for _, lab, _ in out:
+                if lab not in self.labels:
+                    self.labels.append(lab)
         return out
 
     def elab(self, path, txt, tag):
@@ -611,6 +633,7 @@ class Ladder:
         if not failing:
             return R
         cands = {}  # name -> [(rung, label, text)]
+        stmt_bad = set()
         for k in failing:
             d = byname[k]
             line = d.l0 + 1
@@ -625,6 +648,7 @@ class Ladder:
                         _offset(text, m[0], m[1]) < d.assign]
             if stmt_err:
                 R["left"].append((k, line, "statement", first_line(stmt_err[0])))
+                stmt_bad.add(k)
                 continue
             hit = self.base.find(path, k.split("#")[0], self.rules.renames)
             if hit is None:
@@ -650,11 +674,8 @@ class Ladder:
         accepted = {}  # name -> (label, text)
         last_err = {k: (fail_err.get(k) or [None])[0] for k in cands}
         tried = collections.defaultdict(list)
-        labels = []
-        for k, (lst, _) in cands.items():
-            for _, lab, _ in lst:
-                if lab not in labels:
-                    labels.append(lab)
+        labels = sorted({lab for lst, _ in cands.values() for _, lab, _ in lst},
+                        key=self.labels.index)
         dead = False
         for lab in labels:
             todo = {k: next(t for _, l, t in cands[k][0] if l == lab)
@@ -690,7 +711,7 @@ class Ladder:
                     for k in failing:
                         d = byname[k]
                         if k not in accepted and d.kind in PROOF_KW and d.assign is not None \
-                                and not has_sorry_token(text, d) and k in cands:
+                                and not has_sorry_token(text, d) and k not in stmt_bad:
                             repl[k] = stmt_text(text, d).rstrip() + " := by\n  sorry"
                 txt, spans = assemble(text, order, repl)
                 if not self.a.write and forced is not None:
@@ -857,6 +878,8 @@ def main():
         fcntl.flock(lockf, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         sys.exit("a scripts/lake build is running in this worktree; run the ladder after it")
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
     lad = Ladder(a)
     t0 = time.time()
     print(f"ladder: {len(files)} files, base {a.base}, jobs {a.jobs}, out {a.out}", flush=True)
