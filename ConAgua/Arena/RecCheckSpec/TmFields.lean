@@ -122,9 +122,9 @@ theorem tteW_ok (n : Nat) {m m' : Mem} {a : AState} {bso bsl teo tel : Word} {r 
   · simp [tteW] at h
   rw [tteW_succ] at h
   rcases h1 : eeW n m bso bsl with _ | ⟨r1, m1⟩ <;> simp only [h1, tteK1, reduceCtorEq] at h
-  obtain ⟨ys1, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok dn fe vis n h1 hS hbs hP
+  obtain ⟨ys1, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok fe vis n h1 hS hbs hP
   rcases h2 : eeW n m1 teo tel with _ | ⟨r2, m2⟩ <;> simp only [h2, tteK2, reduceCtorEq] at h
-  obtain ⟨ys2, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok dn fe vis n h2 hS1 (htl.grow hg1) hP1
+  obtain ⟨ys2, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok fe vis n h2 hS1 (htl.grow hg1) hP1
   rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e <;> simp only [h3, tteK3, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have he := eqW_dec h3 (by rw [decHL_grow hg2 hb1]; exact hd1) (hS2.lt64 (by have := hg2.iw; omega))
@@ -170,7 +170,7 @@ theorem noF_ok (n : Nat) {m m' : Mem} {a : AState} {no nl e r : Word} {names : L
   obtain ⟨ws, hws, hwm, hwl⟩ := slR_of_decHL m _ _ _ hno (hS.lt64 hnob)
   simp only [UInt64.ofNat_toNat] at hws
   obtain ⟨mp, hM⟩ := hP.pos.no
-  obtain ⟨b, run, hb, hM', hS', hg, hf⟩ := noConstW_ok n dn fe vis m m' a no nl 0 0 e r ws mp h hS he hws hwl hM
+  obtain ⟨b, run, hb, hM', hS', hg, hf⟩ := noConstW_ok n (fun _ => none) fe vis m m' a no nl 0 0 e r ws mp h hS he hws hwl hM
   rw [hwm]
   exact ⟨b, by simpa using run, hb, hS', hg, hP.setNo hf ⟨∅, hM'⟩⟩
 

@@ -343,15 +343,15 @@ namespace L.Ind
 open L.Arena
 
 section sims
-variable {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
 theorem simPiResult (hS : StageR vis fe m a) {e : Word} (he : H e) :
     RSim (pirF m [CWF, e]) (piResult coreWalkFuel (decI e)) a (KP vis fe m decW0E) := by
-  have h := (pirF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
+  have h := (pirF_ok vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 theorem simGetAppFn (hS : StageR vis fe m a) {e : Word} (he : H e) :
     RSim (gafF m [CWF, e]) (getAppFn coreWalkFuel (decI e)) a (KP vis fe m decW0E) := by
-  have h := (gafF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
+  have h := (gafF_ok vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 /-- A reading `cR` of `open_pis_at_fvars_f` with `OpfJ` as a `RSim`: the stub contract's post and
 the invariant `J` after. -/
@@ -1319,7 +1319,7 @@ theorem simInst1 (hS : StageR vis fe m a) {e v : Word} (he : H e) :
     RSim (i1F m [CWF, e, v, 0]) (instantiate1Fast coreWalkFuel (decI e) (decI v) 0)
       a (KP vis fe m decW0E) := by
   rintro ⟨r, m'⟩ hb
-  have h := i1F_ok dn vis fe e v 0 he m m' a r hb hS
+  have h := i1F_ok (fun _ => none) vis fe e v 0 he m m' a r hb hS
   rw [CWF_eq] at h; exact h
 
 end sims

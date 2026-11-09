@@ -143,7 +143,7 @@ theorem stripW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
       rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hP.2, UInt64.toNat_ofNat_of_lt' hF.2]
       exact Nat.mod_eq_of_lt hsum
     obtain ⟨x, a1, hrun, hS1, hg, hdec⟩ :=
-      stripF_pis_ok (fun _ => none) vis fe (UInt64.ofNat nPc + UInt64.ofNat nF) wt hwtlt m m1 a r1 hs hS
+      stripF_pis_ok vis fe (UInt64.ofNat nPc + UInt64.ofNat nF) wt hwtlt m m1 a r1 hs hS
     rw [hk', hwtd] at hrun
     refine ⟨x, a1, hrun, ?_⟩
     by_cases hz : r1.headD 0 = 0
@@ -224,7 +224,7 @@ theorem entryW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
       simp only [List.tail_cons, List.headD_cons] at h
       rcases hg : gafF m0 [CWF, w] with _ | ⟨r2, m2⟩ <;> rw [hg] at h; · simp [entryK2] at h
       obtain ⟨x2, a2, hrun2, hS2, hg2, hlt2, hdec2⟩ :=
-        gafF_ok (fun _ => none) vis fe CWF w hwlt m0 m2 a1 r2 hg hS1
+        gafF_ok vis fe CWF w hwlt m0 m2 a1 r2 hg hS1
       rw [CWF_eq, hwd] at hrun2
       have htagiff := decI_tag_const_beq (r2.headD 0) hlt2
       rw [hdec2] at htagiff
@@ -305,7 +305,7 @@ theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wor
   rcases hs : gafF m [CWF, e] with _ | ⟨r1, m1⟩ <;> rw [hs] at h; · simp [resHeadK] at h
   simp only [resHeadK, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨x, a1, hrun, hS1, hg, hlt, hdec⟩ := gafF_ok dn vis fe CWF e he m m1 a r1 hs hS
+  obtain ⟨x, a1, hrun, hS1, hg, hlt, hdec⟩ := gafF_ok vis fe CWF e he m m1 a r1 hs hS
   refine ⟨a1, ?_, hS1, hg⟩
   rw [CWF_eq] at hrun
   have htag : (x.tag == ETag.fvar) = decide (tagW (r1.headD 0) = 1) := by

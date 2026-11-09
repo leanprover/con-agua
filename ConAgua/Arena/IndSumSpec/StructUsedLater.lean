@@ -115,7 +115,7 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       r = (if b then 1 else 0) ∧ hbMR m' mp' ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   simp only [usgW] at h
   obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
-  obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
+  obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok vis fe (nP + j + 1) cty hc m m1 a rs hst hS
   have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [hbSch, HBM, IW])
     (by simp [hbSch]) m m1 (stripF_frame hst) (fun _ _ h => h) mp hM
   rw [add3_toNat hsum] at hrun
@@ -150,7 +150,7 @@ theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   simp only [ustW] at h
   obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
-  obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
+  obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok vis fe (nP + j + 1) cty hc m m1 a rs hst hS
   have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [hbSch, HBM, IW])
     (by simp [hbSch]) m m1 (stripF_frame hst) (fun _ _ h => h) mp hM
   rw [add3_toNat hsum] at hrun

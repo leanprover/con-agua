@@ -142,7 +142,7 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   rw [e2, e3]
   -- the application
   refine RefE.bindLift (fun _ => clmE.k_mk_app_n_f.none ..) fun r2 m2 h2 => ?_
-  obtain ⟨x, a2, hrun2, hS2, hg2, hmH, rfl⟩ := mknF_ok dn vis fe _ _ _ hr1H nk.ds m1 m2 a1 r2 h2
+  obtain ⟨x, a2, hrun2, hS2, hg2, hmH, rfl⟩ := mknF_ok vis fe _ _ _ hr1H nk.ds m1 m2 a1 r2 h2
     ⟨k1.stage.stage, by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds⟩
   obtain ⟨p2, hmty⟩ := ConRon.Bridge.Inductives.mkAppN_run nk.ds dsP p1.ok hhd
     (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) (show ConRon.Arena.mkAppN (decE r1) nk.ds a1 = _ from hrun2)

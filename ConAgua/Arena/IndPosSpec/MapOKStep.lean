@@ -378,7 +378,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
     rcases hst : mknF m1 [hd, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8)] with _ | ⟨rr, m2⟩ <;> rw [hst] at h; · simp [rtK2] at h
     simp only [rtK2_some, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
-    obtain ⟨x, a2, hr2, hS2, hg2, hx1, hx2⟩ := mknF_ok (fun _ => none) vis fe hd _ _ (lt_of_notbig hdb) c.params m1 m2 a1 rr hst
+    obtain ⟨x, a2, hr2, hS2, hg2, hx1, hx2⟩ := mknF_ok vis fe hd _ _ (lt_of_notbig hdb) c.params m1 m2 a1 rr hst
       ⟨hS1, by simp only [decHL, iwA, aread_apply, hiw]; exact hpa⟩
     refine ⟨some x, a2, ?_, ⟨by simp, by rw [← hx2]; rfl⟩,
       hR.post hS2 (hg1.trans hg2) ((RfFr.of_low (ceinternW_low hci)).trans (RfFr.ofMknF hst))⟩
@@ -585,7 +585,7 @@ theorem frameTail (n : Nat) (hDs : DsOK fe vis n) (mh m' : Mem) (a : AState) (ct
   rcases hst : mknF m4 [hd, q, l3] with _ | ⟨rr, m5⟩ <;> rw [hst] at hk; · simp [frK5] at hk
   simp only [frK5_some, Option.some.injEq, Prod.mk.injEq] at hk
   obtain ⟨rfl, rfl, rfl⟩ := hk
-  obtain ⟨x, a5, hr5, hS5, hg5, hx1, hx2⟩ := mknF_ok (fun _ => none) vis fe hd q l3 (lt_of_notbig hdb) ys m4 m5 a4 rr hst
+  obtain ⟨x, a5, hr5, hS5, hg5, hx1, hx2⟩ := mknF_ok vis fe hd q l3 (lt_of_notbig hdb) ys m4 m5 a4 rr hst
     ⟨hS4, by simp only [decHL, iwA, aread_apply, hiw4]; exact hdec3⟩
   refine ⟨some x, a5, ?_, ⟨by simp, by rw [← hx2]; rfl⟩, ?_⟩
   · simp only [StateT.run_bind]

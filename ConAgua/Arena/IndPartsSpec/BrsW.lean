@@ -835,7 +835,7 @@ theorem bsoW_sim {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
   have hk : (nP + getDW m io il 0 0).toNat = nP.toNat + ns.headD 0 := by
     rw [partsAddNoOv hov, getDW_head hns hb]
   revert r m' e
-  have h1 := partsSimW (stripF_pis_ok (fun _ => none) vis fe (nP + getDW m io il 0 0) ty hty) hS
+  have h1 := partsSimW (stripF_pis_ok vis fe (nP + getDW m io il 0 0) ty hty) hS
   rw [hk] at h1
   unfold bsoTwin
   refine Sim.bindK rfl (fun _ _ => by rw [bsoK1]) h1 ?_

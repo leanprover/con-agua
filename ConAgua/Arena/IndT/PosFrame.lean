@@ -199,7 +199,7 @@ theorem frameRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p
   simp only at hma
   rw [hs3] at hma
   rw [nfrE.k_mk_app_n_f.arm1]
-  obtain ⟨app, a3, hrun3, hS3, hg3, happH, happd⟩ := mknF_ok dn vis fe hc' dO dL hcH ds m2 m3 a2 ra hma
+  obtain ⟨app, a3, hrun3, hS3, hg3, happH, happd⟩ := mknF_ok vis fe hc' dO dL hcH ds m2 m3 a2 ra hma
     ⟨hS2, (hds.grow (OMono.decHL _ _) hg12).get (OMono.decHL _ _)⟩
   obtain ⟨p3, happ⟩ := ConRon.Bridge.Inductives.mkAppN_run ds dsP p2.ok hc2
     (ConRon.Bridge.denoteEList_ext (p1.ext.trans p2.ext) _ _ hdsP) hrun3

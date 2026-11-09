@@ -280,7 +280,7 @@ variable (tg : Word) (T : UInt32)
     (viewBind (decE w)).run a = .ok (some (decE ((eViewW m w).tail.headD 0),
       decE ((eViewW m w).tail.tail.headD 0)), a) ∧
     H ((eViewW m w).tail.headD 0) ∧ H ((eViewW m w).tail.tail.headD 0))
-  (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k o : Word) (a : AState)
+  (vis : Word) (fe : IFEnv) (k o : Word) (a : AState)
 include h0 hs hT hvb
 
 /-- **The loop's model refines the twin's stripper** from count `n`: the twin keeps its state,
@@ -393,12 +393,12 @@ theorem stripTW_ok (tg : Word) (T : UInt32)
       (viewBind (decE w)).run a = .ok (some (decE ((eViewW m w).tail.headD 0),
         decE ((eViewW m w).tail.tail.headD 0)), a) ∧
       H ((eViewW m w).tail.headD 0) ∧ H ((eViewW m w).tail.tail.headD 0))
-    (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
+    (n : Nat) (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
     RelW (stripTW tg n) [k, e] (StageR vis fe) (tw k.toNat (decI e)) (KeepPost vis fe decOLE) := by
   sorry
 
 /-- **`strip_pis` refines `stripPis`** (the model; the census theorem is `stripPis_refines`). -/
-theorem stripTW_pis_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem stripTW_pis_ok (n : Nat) (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
     RelW (stripTW 6 n) [k, e] (StageR vis fe) (stripPis k.toNat (decI e))
       (KeepPost vis fe decOLE) :=
@@ -410,10 +410,10 @@ theorem stripTW_pis_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Wor
       have hvb := viewBind_forall m a hR w hw hvok hg
       rw [hew]
       exact ⟨by rw [viewBind_run_s, hvb]; rfl, h1, h2⟩)
-    n dn vis fe k e he
+    n vis fe k e he
 
 /-- **`strip_lams` refines `stripLams`** (the model). -/
-theorem stripTW_lams_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem stripTW_lams_ok (n : Nat) (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
     RelW (stripTW 5 n) [k, e] (StageR vis fe) (stripLams k.toNat (decI e))
       (KeepPost vis fe decOLE) :=
@@ -425,7 +425,7 @@ theorem stripTW_lams_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Wo
       have hvb := viewBind_lam m a hR w hw hvok hg
       rw [hew]
       exact ⟨by rw [viewBind_run_s, hvb]; rfl, h1, h2⟩)
-    n dn vis fe k e he
+    n vis fe k e he
 
 /-! ## The fuel-free model
 
@@ -485,44 +485,44 @@ theorem stripLams_specF (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e
   triple_post (stripLams_specW p hp n s₀ k e) fun _ _ h => ⟨h.1, stripF_of_TW h.2⟩
 
 /-- **`strip_pis` refines `stripPis`**, the fuel-free model (replaces `IndStubs.stripPis_spec`). -/
-theorem stripF_pis_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem stripF_pis_ok (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
     RelW (stripF 6) [k, e] (StageR vis fe) (stripPis k.toNat (decI e))
       (KeepPost vis fe decOLE) :=
-  stripTW_pis_ok _ dn vis fe k e he
+  stripTW_pis_ok _ vis fe k e he
 
 /-- **`strip_lams` refines `stripLams`**, the fuel-free model (replaces `IndStubs.stripLams_spec`). -/
-theorem stripF_lams_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem stripF_lams_ok (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
     RelW (stripF 5) [k, e] (StageR vis fe) (stripLams k.toNat (decI e))
       (KeepPost vis fe decOLE) :=
-  stripTW_lams_ok _ dn vis fe k e he
+  stripTW_lams_ok _ vis fe k e he
 
 /-! ## The census theorems -/
 
 /-- **`strip_pis` refines `stripPis`** under the stage relation, at every L fuel. -/
 @[refines ConRon.Arena.stripPis]
-theorem stripPis_refines (p : Prog) (hp : StripProg p) (dn : NIdx → Option ConLeche.Name)
+theorem stripPis_refines (p : Prog) (hp : StripProg p)
     (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
     RefAM p "strip_pis" [k, e] (StageR vis fe) (stripPis k.toNat (decI e))
       (KeepPost vis fe decOLE) := by
   intro n s₀ a₀ hS
   refine triple_post (stripPis_specW p hp n s₀ k e) ?_
   rintro r s' ⟨hloc, hw⟩
-  obtain ⟨x, a', hrun, hpost⟩ := stripTW_pis_ok n dn vis fe k e he _ _ _ _ hw hS
+  obtain ⟨x, a', hrun, hpost⟩ := stripTW_pis_ok n vis fe k e he _ _ _ _ hw hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst, hres]; exact hpost⟩
 
 /-- **`strip_lams` refines `stripLams`** under the stage relation, at every L fuel. -/
 @[refines ConRon.Arena.stripLams]
-theorem stripLams_refines (p : Prog) (hp : StripProg p) (dn : NIdx → Option ConLeche.Name)
+theorem stripLams_refines (p : Prog) (hp : StripProg p)
     (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
     RefAM p "strip_lams" [k, e] (StageR vis fe) (stripLams k.toNat (decI e))
       (KeepPost vis fe decOLE) := by
   intro n s₀ a₀ hS
   refine triple_post (stripLams_specW p hp n s₀ k e) ?_
   rintro r s' ⟨hloc, hw⟩
-  obtain ⟨x, a', hrun, hpost⟩ := stripTW_lams_ok n dn vis fe k e he _ _ _ _ hw hS
+  obtain ⟨x, a', hrun, hpost⟩ := stripTW_lams_ok n vis fe k e he _ _ _ _ hw hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst, hres]; exact hpost⟩
 

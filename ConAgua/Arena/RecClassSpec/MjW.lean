@@ -103,7 +103,7 @@ theorem mjtW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 fo fl : Word
     (by rw [decHL_grow hg1 hfb]; exact hifs) (Nat.le_trans hfb hg1.iw)
   rw [mjtW.k_sl_append.arm1]
   refine RSim.bind (K := mjtW.k_mk_app_n_f fo fl) rfl
-    ((mknF_ok (fun _ => none) vis fe hd (r2.headD 0) (r2.tail.headD 0) hH (ds ++ ifs)).sim ⟨hS2, hd2⟩) ?_
+    ((mknF_ok vis fe hd (r2.headD 0) (r2.tail.headD 0) hH (ds ++ ifs)).sim ⟨hS2, hd2⟩) ?_
   rintro ⟨r3, m3⟩ maj a3 - ⟨hS3, hg3, hmaj⟩
   rw [mjtW.k_mk_app_n_f.arm1]
   have hg := hg1.trans (hg2.trans hg3)

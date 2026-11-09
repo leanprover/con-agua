@@ -517,7 +517,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   split at h
   · cases h
   rename_i r1 m1 hs
-  obtain ⟨t, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF e he m m1 a r1 hs hS
+  obtain ⟨t, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok vis fe CWF e he m m1 a r1 hs hS
   rw [CWF_eq] at hrun1
   generalize r1.headD 0 = w at hd1 hd2 h
   by_cases hf : tagW w = 1

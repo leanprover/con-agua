@@ -169,7 +169,7 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   refine RefE.bindLift (fun _ => rfl) fun r3 m3 h3 => ?_
   have hs3 := stripF_of_callW hP.strip h3
   obtain ⟨x3, a3, hr3, hS3, hg3, hd3⟩ :=
-    stripF_pis_ok dn vis fe (nP + UInt64.ofNat msh.nIdx) _ htyl s2.mem m3 a2 r3 hs3 k2.stage.stage
+    stripF_pis_ok vis fe (nP + UInt64.ofNat msh.nIdx) _ htyl s2.mem m3 a2 r3 hs3 k2.stage.stage
   rw [hk, htye] at hr3
   obtain ⟨ha3, -⟩ := ConRon.Bridge.Inductives.stripPis_pstep k2.stage.check.state
     (ConRon.Bridge.denoteCV_type h2a) hr3
