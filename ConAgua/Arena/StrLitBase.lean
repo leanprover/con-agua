@@ -573,6 +573,6 @@ theorem keeps_cpl_constE (x : NIdx) : Keeps cpl (constE x) :=
 theorem zero_den {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {w : Word}
     (hw : w = pinW m (53 : Word).toNat) : ∃ l, denoteL a.store.ls (decI w) = some l := by
-  subst hw; have := hS.den.zero; rw [hS.pins.zeroLevel] at this; exact this
+  subst hw; have := hS.den.zero; rw [hS.pins.zeroLevel] at this; exact ⟨_, this⟩
 
 end L.Arena

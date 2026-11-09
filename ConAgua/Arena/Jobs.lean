@@ -155,7 +155,7 @@ theorem TwinOK.ofCheck {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
   · exact hL.ns
   refine ⟨fun x u hv => hLA u (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1,
     fun x c us hv => hLsA us (hw.lschildOK x _ hv us (by simp [ENodeView.lschildren])).1,
-    ⟨_, hp.zeroLevel⟩, ⟨_, hp.emptyLevels⟩, hc.readN, fun c ci hf => ?_, fun c tbl hf => ?_, hLA,
+    hp.zeroLevel, ⟨_, hp.emptyLevels⟩, hc.readN, fun c ci hf => ?_, fun c tbl hf => ?_, hLA,
     hLsA, hm.dnN, fun c cv mI rP isK rules hf r hr lvls pins hfi u hu => ?_,
     fun c cv mI rP isK rules hf r hr lvls hfi u hu => ?_⟩
   · obtain ⟨-, d, -, hd, -⟩ := hok.ienv.hit c ci hf

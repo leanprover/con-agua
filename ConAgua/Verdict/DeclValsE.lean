@@ -703,7 +703,7 @@ theorem checkThmVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap 
     (d := (0 : Word).toNat) (e := decI (r1.headD 0)) hrun2
   obtain ⟨lu, hdu⟩ := hS2.twin.den.sort _ _ hxs
   rw [← hx2] at hdu
-  obtain ⟨lz, hdz⟩ := hS2.twin.den.zero
+  obtain ⟨lz, hdz⟩ : ∃ l, denoteL _ _ = some l := ⟨_, hS2.twin.den.zero⟩
   rw [hF.zeroLevel] at hdz
   -- the comparison
   rw [← hx2, lefT_bind]

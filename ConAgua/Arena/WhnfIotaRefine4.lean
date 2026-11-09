@@ -75,7 +75,7 @@ theorem CoreS.lvl_den {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) :
     (∀ (e : EIdx) (u : LIdx), a.store.view e = some (.sort u) → ∃ l, denoteL a.store.ls u = some l) ∧
     (∃ l, denoteL a.store.ls a.pins.zeroLevel = some l) :=
-  ⟨fun e u hv => hS.den.sort e u hv, hS.den.zero⟩
+  ⟨fun e u hv => hS.den.sort e u hv, ⟨_, hS.den.zero⟩⟩
 
 /-- **What `proof_irrel` needs of the store** (`CoreS.lvl_den`'s statement, as a named
 hypothesis): a `sort` node's level and the pinned zero level read back. -/
@@ -87,7 +87,7 @@ def LvlDen : Prop :=
 
 /-- `LvlDen` from `CoreDen` (`StoreDen.sort`, `StoreDen.zero`). -/
 theorem LvlDen.of_den (h : CoreDen) : LvlDen :=
-  fun dn m a vis fe M eb hS => ⟨(h dn m a vis fe M eb hS).sort, (h dn m a vis fe M eb hS).zero⟩
+  fun dn m a vis fe M eb hS => ⟨(h dn m a vis fe M eb hS).sort, ⟨_, (h dn m a vis fe M eb hS).zero⟩⟩
 
 /-- `lvl_eq_c` cannot run on fuel below two. -/
 theorem lvlEqC_small (p : Prog) (hp : p.lookup "lvl_eq_c" = some lvlEqCL) (n : Nat) (hn : n < 2)

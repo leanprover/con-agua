@@ -100,7 +100,7 @@ theorem lvlHyp_real (n : Nat) {m : Mem} {a : AState} {nP : Nat} {blk : List ICon
     simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz
     rw [← hz]; rfl
   have hF := hS1.check.pins.full hpne
-  obtain ⟨lz, hdz⟩ := hC1.stageT.twin.den.zero
+  obtain ⟨lz, hdz⟩ : ∃ l, denoteL _ _ = some l := ⟨_, hC1.stageT.twin.den.zero⟩
   rw [hF.zeroLevel, ← hzp] at hdz
   exact Sim.mono (lvlEqC_simC p hcl hL (n + 2) hC1 hA1 s z hs hzh lu lz hdu hdz)
     (fun _ _ _ _ ⟨hC', hg, hd, _, _⟩ => ⟨hC'.stage, hg, hd⟩)

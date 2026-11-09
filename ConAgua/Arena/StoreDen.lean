@@ -65,7 +65,7 @@ structure StoreDen (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (
     ∃ l, denoteL a.store.ls u = some l
   constLs : ∀ (h : EIdx) (c : NIdx) (us : LsIdx), a.store.view h = some (.const c us) →
     ∃ ls, denoteLs a.store.lss us = some ls
-  zero : ∃ l, denoteL a.store.ls a.pins.zeroLevel = some l
+  zero : denoteL a.store.ls a.pins.zeroLevel = some .zero
   /-- The pinned empty level list (`constE`'s). -/
   emptyLs : ∃ ls, denoteLs a.store.lss a.pins.emptyLevels = some ls
   readN : ∀ (h : NIdx) (x : ConLeche.Name), a.caches.readNC[h]? = some x →
@@ -273,7 +273,7 @@ theorem StoreDen.mono {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
   · rcases hc x c us hv with h' | ⟨l, hl⟩
     · obtain ⟨l, hl⟩ := h.constLs x c us h'; exact ⟨l, hx.lst _ _ hl⟩
     · exact ⟨l, hx.lst _ _ hl⟩
-  · obtain ⟨l, hl⟩ := h.zero; exact ⟨l, by rw [hz]; exact hx.ls.lvl _ _ hl⟩
+  · rw [hz]; exact hx.ls.lvl _ _ h.zero
   · obtain ⟨l, hl⟩ := h.emptyLs; exact ⟨l, by rw [hzs]; exact hx.lst _ _ hl⟩
   · rcases hr k x hk with h' | h'
     · exact hN _ _ (h.readN k x h')

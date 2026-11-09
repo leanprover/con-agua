@@ -318,7 +318,7 @@ theorem TwinOK.of_check {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
   have hp := hok.pins
   have hi := hok.ienv
   refine ⟨hc.readL, hc.readLs, hw.nsWF, hm.erec, hm.spn, hm.memos, hm.bstk, ?_⟩
-  refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ⟨_, hp.zeroLevel⟩, ⟨_, hp.emptyLevels⟩, hc.readN,
+  refine ⟨fun x u hv => ?_, fun x c us hv => ?_, hp.zeroLevel, ⟨_, hp.emptyLevels⟩, hc.readN,
     fun c ci hf => ?_, fun c tbl hf => ?_, fun u hu => denoteL_of_viewW hL hu,
     fun us hus => ?_, hm.dnN, fun c cv mI rP isK rules hf r hr lvls pins hfi u hu => ?_,
     fun c cv mI rP isK rules hf r hr lvls hfi u hu => ?_⟩
@@ -385,7 +385,7 @@ theorem TwinOK.of_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hs
     obtain ⟨xs, hxs⟩ := denoteLs_of_viewW hLs hvs
     exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
-  · obtain ⟨l, hl⟩ := h.den.zero; exact ⟨l, by rw [hp]; exact hLv _ _ hl⟩
+  · rw [hp]; exact hLv _ _ h.den.zero
   · obtain ⟨l, hl⟩ := h.den.emptyLs; exact ⟨l, by rw [hp]; exact hx.lss.lst _ _ hl⟩
   · rw [hc] at hk; exact hN _ _ (h.den.readN k x hk)
   · obtain ⟨ks, hks⟩ := h.den.constLps c ci hf; exact ⟨ks, hNs _ _ hks⟩

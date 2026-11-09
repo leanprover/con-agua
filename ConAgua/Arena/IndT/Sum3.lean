@@ -177,7 +177,7 @@ theorem cfb_ref {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   have hzp : rz.headD 0 = pinW m 53 := by
     simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz'
     rw [← hz']; rfl
-  obtain ⟨lz, hdz⟩ := hC.stageT.twin.den.zero
+  obtain ⟨lz, hdz⟩ : ∃ l, denoteL _ _ = some l := ⟨_, hC.stageT.twin.den.zero⟩
   rw [(hS.check.pins.full hpne).zeroLevel, ← hzp] at hdz
   refine ⟨_, _, hrun0, ?_⟩
   dsimp only [cfbE.k_pin_word]

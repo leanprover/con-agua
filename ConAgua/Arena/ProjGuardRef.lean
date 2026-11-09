@@ -155,12 +155,12 @@ theorem PgsPost.comp {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis
     (h : PgsPost dn m₁ vis fe M' eb v y a') : PgsPost dn m₀ vis fe M eb v y a' :=
   ⟨CoreAfter.comp hK hSt h.after, h.res⟩
 
-/-- **The pinned zero level reads back as `ConLeche.Level.zero`** (con-ron's `PinsOK.zeroLevel`; `CoreS`'s
-`StoreDen.zero` only says it reads back). -/
+/-- **The pinned zero level reads back as `ConLeche.Level.zero`** (con-ron's `PinsOK.zeroLevel`,
+`StoreDen.zero`). -/
 theorem zeroPin_den {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) :
     denoteL a.store.ls (decI (rdW (m.arr64 PINS) 53)) = some .zero := by
-  sorry
+  have := hS.den.zero; rw [hS.pins.zeroLevel, pinW_rdW m 53 53 rfl] at this; exact this
 
 /-- `formerSortLoop` reads its record only through `whnf`. -/
 theorem formerSortLoop_congr {R R' : CoreFnsA} (hW : R.whnf = R'.whnf) :
