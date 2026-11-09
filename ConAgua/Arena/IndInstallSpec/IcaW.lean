@@ -686,16 +686,21 @@ open L.Arena
 
 /-- The record's words, read in the memory before the allocation. -/
 def iirWs (m : Mem) (cv caps : Word) : List Word :=
-  [3, rdW (m.arr64 EREC) cv, rdW (m.arr64 EREC) (cv + 1), rdW (m.arr64 EREC) (cv + 2), rdW (m.arr64 EREC) (cv + 3), rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1), rdW (m.arr64 IW) (caps + 2), rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4), rdW (m.arr64 IW) (caps + 5), rdW (m.arr64 IW) (caps + 6), rdW (m.arr64 IW) (caps + 7), rdW (m.arr64 IW) (caps + 8), rdW (m.arr64 IW) (caps + 9), rdW (m.arr64 IW) (caps + 10), rdW (m.arr64 IW) (caps + 11), rdW (m.arr64 IW) (caps + 12), rdW (m.arr64 IW) (caps + 13), rdW (m.arr64 IW) (caps + 14)]
+  [3, erRd m cv, erRd m (cv + 1), erRd m (cv + 2), erRd m (cv + 3), rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1), rdW (m.arr64 IW) (caps + 2), rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4), rdW (m.arr64 IW) (caps + 5), rdW (m.arr64 IW) (caps + 6), rdW (m.arr64 IW) (caps + 7), rdW (m.arr64 IW) (caps + 8), rdW (m.arr64 IW) (caps + 9), rdW (m.arr64 IW) (caps + 10), rdW (m.arr64 IW) (caps + 11), rdW (m.arr64 IW) (caps + 12), rdW (m.arr64 IW) (caps + 13), rdW (m.arr64 IW) (caps + 14)]
 
 /- `(ematch := 8)`: a depth, not a search. With the locals read in one step (`L/LocNF.lean`),
 each of the five stores' addresses meets `wrER`'s in a later E-matching round than before, past
 the default five rounds. -/
-theorem erPut5_spec (p : Prog) (hp : p.lookup "er_put5" = some erPut5) (n : Nat) (s₀ : St)
+theorem erPut5_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
+    (hp : p.lookup "er_put5" = some erPut5) (n : Nat) (s₀ : St)
     (d x0 x1 x2 x3 x4 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "er_put5" [d, x0, x1, x2, x3, x4]
     ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = wrER s₀.mem d [x0, x1, x2, x3, x4]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, erPut5]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, erecPut_specW p hpu n] <;>
+    finish (ematch := 8) [wrER, UInt64.add_assoc]
 
 /-- The model of `ind_info_rec(cv, caps)`. -/
 def iirW (m : Mem) (cv caps : Word) : Option (Word × Mem) :=
@@ -721,8 +726,8 @@ def iirK2 (p : Prog) (n : Nat) (caps q : Word) : Option (List Word × Mem) → O
 /-- After the allocation: the four writes. -/
 def iirK (p : Prog) (n : Nat) (cv caps : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (q, m1) => iirK2 p n caps q (callW p n "er_put5" [q, 3, rdW (m1.arr64 EREC) cv,
-      rdW (m1.arr64 EREC) (cv + 1), rdW (m1.arr64 EREC) (cv + 2), rdW (m1.arr64 EREC) (cv + 3)] m1)
+  | some (q, m1) => iirK2 p n caps q (callW p n "er_put5" [q, 3, erRd m1 cv,
+      erRd m1 (cv + 1), erRd m1 (cv + 2), erRd m1 (cv + 3)] m1)
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (cv caps q : Word) (r : List Word)
@@ -737,8 +742,7 @@ theorem iirK2_some : iirK2 p n caps q (some (r, m)) = iirK3 p n caps q (callW p 
     rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1), rdW (m.arr64 IW) (caps + 2),
     rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4)] m) := rfl
 theorem iirK_some : iirK p n cv caps (some (q, m)) = iirK2 p n caps q (callW p n "er_put5" [q, 3,
-    rdW (m.arr64 EREC) cv, rdW (m.arr64 EREC) (cv + 1), rdW (m.arr64 EREC) (cv + 2),
-    rdW (m.arr64 EREC) (cv + 3)] m) := rfl
+    erRd m cv, erRd m (cv + 1), erRd m (cv + 2), erRd m (cv + 3)] m) := rfl
 end arms
 attribute [ind_grind] iirK5_some iirK4_some iirK3_some iirK2_some iirK_some
 
@@ -746,17 +750,36 @@ theorem iir_specK (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
     (hp : p.lookup "ind_info_rec" = some indInfoRec) (n : Nat) (s₀ : St) (cv caps : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ind_info_rec" [cv, caps]
     ⦃fun r s' => LocEq s' s₀ ∧ iirK p n cv caps (erAllocW s₀.mem 20) = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, indInfoRec]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      erecAlloc_specW p ha n, callW_spec p n "er_put5"] <;>
+    finish (gen := 40) (instances := 20000) [rdW_eq, erRd]
 
 theorem wrER_IW (m : Mem) (q : Word) (ws : List Word) : (wrER m q ws).arr64 IW = m.arr64 IW :=
   (wrER_frame ws m q).1 IW (by simp [EREC, IW]) (by decide)
 
 theorem erAllocW_arr {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) :
-    m1.arr64 IW = m.arr64 IW ∧ m1.arr64 EREC = m.arr64 EREC := by
-  sorry
+    m1.arr64 IW = m.arr64 IW ∧ ∀ x, erRd m1 x = erRd m x := by
+  have hc : ∀ b : TieredArray, b ≠ CTL → m1.arr64 b = m.arr64 b := by
+    intro b hb
+    simp only [erAllocW] at h
+    split at h
+    · split at h; · cases h
+      split at h; · cases h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+      simp only [erAllocMem]; rw [if_pos (by assumption)]; exact Mem.arr64_set64_ne _ _ _ _ _ hb
+    · split at h; · cases h
+      split at h; · cases h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+      simp only [erAllocMem]; rw [if_neg (by assumption)]; exact Mem.arr64_set64_ne _ _ _ _ _ hb
+  refine ⟨hc _ (by decide), fun x => ?_⟩
+  unfold erRd; rw [hc _ (by rw [tierA_EREC]; split <;> decide)]
 
 /-- `ind_info_rec`'s four writes are the record written at once. -/
-theorem iirK_eq {p : Prog} (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m m' : Mem}
+theorem iirK_eq {p : Prog} (hpu : p.lookup "erec_put" = some erecPut)
+    (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m m' : Mem}
     {cv caps : Word} {r : List Word} (h : iirK p (n + 1) cv caps (erAllocW m 20) = some (r, m')) :
     ∃ q, r = [q] ∧ iirW m cv caps = some (q, m') := by
   have put : ∀ (mm : Mem) (d x0 x1 x2 x3 x4 : Word) (rr : List Word) (mm' : Mem),
@@ -764,7 +787,7 @@ theorem iirK_eq {p : Prog} (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m 
       mm' = wrER mm d [x0, x1, x2, x3, x4] := by
     intro mm d x0 x1 x2 x3 x4 rr mm' hc
     obtain ⟨s', rfl, -, h2⟩ := triple_of_callW (s₀ := ⟨mm, Locals.init []⟩)
-      (erPut5_spec p hp n _ d x0 x1 x2 x3 x4) hc
+      (erPut5_spec p hpu hp n _ d x0 x1 x2 x3 x4) hc
     exact h2
   unfold iirW
   rcases h1 : erAllocW m 20 with _ | ⟨q, m1⟩
@@ -787,10 +810,9 @@ theorem iirK_eq {p : Prog} (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m 
   have e5 := put _ _ _ _ _ _ _ _ _ h5
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   refine ⟨q, rfl, ?_⟩
-  rw [hE1] at e2
+  simp only [hE1] at e2
   subst e2 e3 e4 e5
-  have hw : iirWs m cv caps = [3, rdW (m.arr64 EREC) cv, rdW (m.arr64 EREC) (cv + 1),
-      rdW (m.arr64 EREC) (cv + 2), rdW (m.arr64 EREC) (cv + 3)] ++
+  have hw : iirWs m cv caps = [3, erRd m cv, erRd m (cv + 1), erRd m (cv + 2), erRd m (cv + 3)] ++
       ([rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1), rdW (m.arr64 IW) (caps + 2),
         rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4)] ++
       ([rdW (m.arr64 IW) (caps + 5), rdW (m.arr64 IW) (caps + 6), rdW (m.arr64 IW) (caps + 7),
@@ -805,14 +827,73 @@ theorem iirK_eq {p : Prog} (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m 
     show q + 10 + UInt64.ofNat 5 = q + 15 by rw [UInt64.add_assoc]; rfl]
 
 /-- **`ind_info_rec` under the stage relation**: a fresh `.indInfo` record of the constant at `cv`
-(decoded below the tops) and the capability record at `caps`; its name word a handle. -/
+(decoded below the tops) and the capability record at `caps`. -/
 theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cv caps q : Word} {cvv : IConstantVal} {c : IIndCaps}
     (h : iirW m cv caps = some (q, m')) (hS : StageR vis fe m a)
     (hcv : DecB (fun m => decCVp m cv.toNat) m cvv) (hcp : CapsAt dn m caps.toNat c) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
-      decCI (erecP m') q.toNat = some (.indInfo cvv c) ∧ H (rdW (m'.arr64 EREC) (q + 1)) := by
-  sorry
+      decCI (erecP m') q.toNat = some (.indInfo cvv c) := by
+  unfold iirW at h
+  rcases h1 : erAllocW m 20 with _ | ⟨q1, m1⟩
+  · rw [h1] at h; cases h
+  rw [h1] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRec_stage h1 hS (iirWs m cv caps) (by simp [iirWs])
+  have hlen : (iirWs m cv caps).length = 20 := by simp [iirWs]
+  rw [hlen] at hget
+  generalize hM : wrER m1 q1 (iirWs m cv caps) = M at hS' hg hget
+  -- the constant's words
+  have hcvE : decCV (erecP m) cv.toNat = some cvv := decCVp_truncM hcv
+  have hcv0 := hcvE
+  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure] at hcv0
+  obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, -⟩, t, ht, -⟩ := hcv0
+  obtain ⟨w0, hw0, -, -⟩ := hd?_some hnm
+  obtain ⟨w1, hw1, -⟩ : ∃ w, erecP m (cv.toNat + 1) = some w ∧ w.toNat = lo := by
+    simp only [nat?, Option.map_eq_some_iff] at hlo; exact hlo
+  obtain ⟨w2, hw2, -⟩ : ∃ w, erecP m (cv.toNat + 2) = some w ∧ w.toNat = ll := by
+    simp only [nat?, Option.map_eq_some_iff, Nat.add_assoc] at hll; exact hll
+  obtain ⟨w3, hw3, -, -⟩ := hd?_some ht
+  have r0 : erRd m cv = w0 := (erRd_of_erecP (by simpa using hw0)).1
+  obtain ⟨r1, -⟩ := erRd_add (j := 1) (cq := cv) (m := m) hw1 (by decide)
+  obtain ⟨r2, -⟩ := erRd_add (j := 2) (cq := cv) (m := m) hw2 (by decide)
+  obtain ⟨r3, -⟩ := erRd_add (j := 3) (cq := cv) (m := m) hw3 (by decide)
+  simp only [show (UInt64.ofNat 1 : Word) = 1 from rfl, show (UInt64.ofNat 2 : Word) = 2 from rfl,
+    show (UInt64.ofNat 3 : Word) = 3 from rfl] at r1 r2 r3
+  have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cv.toNat + i) := by
+    intro i hi
+    rw [Nat.add_assoc, hget (1 + i) (by omega)]
+    rcases i with _ | _ | _ | _ | i
+    · rw [IWGrow.ext hg _ _ (by simpa using hw0)]; simp [iirWs, r0]
+    · rw [IWGrow.ext hg _ _ hw1]; simp [iirWs, r1]
+    · rw [IWGrow.ext hg _ _ hw2]; simp [iirWs, r2]
+    · rw [IWGrow.ext hg _ _ hw3]; simp [iirWs, r3]
+    · omega
+  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cvv := by
+    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
+      (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
+    exact ArrExt.decCV (IWGrow.ext hg) hcvE
+  -- the capability record's words
+  have hc15 := hcp.1
+  have hcaps : decCaps (erecP M) (q1.toNat + 5) = some c := by
+    refine hcp.2 (erecP M) (q1.toNat + 5) (fun i hi => ?_) (IWGrow.ext hg)
+    rw [show q1.toNat + 5 + i = q1.toNat + (5 + i) by omega, hget (5 + i) (by omega)]
+    have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+    have hIsz : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
+    have gen : ∀ w : Word, w.toNat = caps.toNat + i →
+        (iirWs m cv caps)[5 + i]? = some (rdW (m.arr64 IW) w) →
+        (iirWs m cv caps)[5 + i]? = iwA m (caps.toNat + i) := fun w hw h => by
+      rw [h, ← hw]; simp only [iwA, aread_apply, rdW]; rw [Array.getElem?_eq_getElem (by omega)]; simp
+    rcases i with _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | i
+    all_goals first
+      | omega
+      | exact gen _ rfl rfl
+      | exact gen _ (by rw [UInt64.toNat_add]; simp; omega) rfl
+  have n0 : nat? (erecP M) q1.toNat = some 3 := by
+    have := hget 0 (by decide); simp only [Nat.add_zero] at this
+    simp [nat?, this, iirWs]
+  refine ⟨hS', hg, ?_⟩
+  simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', hcaps, Option.pure_def]
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (p1 isRec o l vis i : Word) (r : List Word)
@@ -831,9 +912,10 @@ theorem installIirRun {p : Prog} (hP : ConsIndsProg p) {n : Nat} {m m' : Mem} {c
     cases h1 : erAllocW m 20 with
     | none => simp only [h1] at hK; cases hK
     | some x => obtain ⟨q, m1⟩ := x; simp only [h1, iirK_some, callW_zero] at hK; cases hK
-  exact iirK_eq hP.put5 hK
+  exact iirK_eq hP.recP.put hP.put5 hK
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L: `consBlockInds` is pure now, caps
+from the twin's `blockCapsAt p₁ i isRec`; the push part is already at `envPush_stage`)
 /-- **`cons_block_inds`' model refines `consBlockInds`**, from a refinement `hLZ` of the
 `lv_zero_caps` call of each member's `block_caps_at` at every state of the loop's invariant `T`
 (`T` holds after it). -/
@@ -878,26 +960,25 @@ theorem icbiW_simG {p : Prog} (hP : ConsIndsProg p) (dn : NIdx → Option ConLec
   rw [hw1] at h2
   obtain ⟨q2, rfl, hW2⟩ := installIirRun hP h2
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  obtain ⟨hS2, hg2, hci, hname⟩ := iirW_stage hW2 hS1 (by rw [hq']; exact hdcv.grow (OMono.decCVp _) hg1) hca
+  obtain ⟨hS2, hg2, hci⟩ := iirW_stage hW2 hS1 (by rw [hq']; exact hdcv.grow (OMono.decCVp _) hg1) hca
   refine Sim.mstep (K := icbiK3 p n p1 isRec o l i) (by simp [icbiK3])
     (fun r m₁ => icbiK3_some p n m₁ p1 isRec o l i r) fun r3 m3 h3 => ?_
   simp only [List.headD_cons] at h3
-  obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-    (envPush_specW p hP.recP n _ vis q2 hname) h3
-  obtain ⟨hS3, hg3⟩ := envPushW_ok hW3 hS2 hci
+  obtain ⟨hS3, hg3⟩ := envPush_stage hP.recP.rs hP.recP.push h3 hS2 hci
   have hg13 := (hg1.trans hg2).trans hg3
   have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hl1 : (l - 1).toNat = l.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
-  have hrec := ih s3.mem a1 (r3.headD 0) (fe.push (.indInfo cv caps)) (o + 1) (l - 1) (i + 1) rest hS3 hT1
+  have hrec := ih m3 a1 (r3.headD 0) (fe.push (.indInfo cv caps)) (o + 1) (l - 1) (i + 1) rest hS3 hT1
     (hq.grow (decBS_mono _) hg13) (partsHsrc_grow hg13 hq9 hsrc)
     (hrest.grow (fun q => OMono.decCVp q) hg13) (by omega)
   rw [hi1] at hrec
   refine Sim.post (K := icbiK4) rfl (fun _ _ => rfl) hrec ?_
   rintro r x m' a' ⟨⟨hS', hg'⟩, hT'⟩
   exact ⟨⟨hS', hg13.trans hg'⟩, hT'⟩
+
 -/
 
 end L.Ind
