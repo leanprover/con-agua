@@ -54,17 +54,16 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem decISS_mono (q : Nat) : OMono (fun m => decISS m q) :=
   OMono.decAt (fun o l => OMono.decPL decIS_mono o l) q
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem iwA_size_mono {m m' : Mem} (he : PoolExt m m') : (iwA m).size ≤ (iwA m').size := by
-  rcases Nat.eq_zero_or_pos (iwA m).size with h0 | h0
+theorem iwA_size_mono {m m' : Mem} (he : PoolExt m m') : (m.arr64 IW).size ≤ (m'.arr64 IW).size := by
+  rcases Nat.eq_zero_or_pos (m.arr64 IW).size with h0 | h0
   · omega
-  · have h1 : iwA m ((iwA m).size - 1) = some ((iwA m)[(iwA m).size - 1]'(by omega)) :=
+  · have h1 : iwA m ((m.arr64 IW).size - 1) = some ((m.arr64 IW)[(m.arr64 IW).size - 1]'(by omega)) :=
       Array.getElem?_eq_getElem _
-    have := (Array.getElem?_eq_some_iff.mp (he.1 _ _ h1)).1
+    have h2 := he.1 _ _ h1
+    simp only [iwA, aread_apply] at h2
+    have := (Array.getElem?_eq_some_iff.mp h2).1
     omega
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem decPLB_omono {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q)) (o l : Nat) :
     OMono (fun m => decPLB m (f m) o l) := by
   refine ⟨fun m m' x he h => ?_⟩
@@ -74,26 +73,21 @@ theorem decPLB_omono {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OM
     rw [ite_eq_left (Nat.le_trans hb (iwA_size_mono he))]
     exact (OMono.decPL hf o l).mono m m' x he h
   · cases h
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem decCNSB_mono (q : Nat) : OMono (fun m => decCNSB m q) :=
   OMono.decAt (fun o l => decPLB_omono decCN_mono o l) q
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- … and at least every bound below the top, when the top lies within the pool. -/
-theorem le_iwA_truncM_size {m : Mem} {k : Nat} (hk : k ≤ iwTop m) (hT : iwTop m ≤ (iwA m).size) :
-    k ≤ (iwA (truncM m)).size := by
+theorem le_iwA_truncM_size {m : Mem} {k : Nat} (hk : k ≤ iwTop m) (hT : iwTop m ≤ (m.arr64 IW).size) :
+    k ≤ ((truncM m).arr64 IW).size := by
   rcases Nat.eq_zero_or_pos k with h0 | h0
   · omega
   · have e := truncM_iw_get? m (k - 1)
-    rw [ite_eq_left (by omega), Array.getElem?_eq_getElem (show k - 1 < (iwA m).size by omega)] at e
+    rw [ite_eq_left (by omega)] at e
+    simp only [iwA, aread_apply, Array.getElem?_eq_getElem (show k - 1 < (m.arr64 IW).size by omega)] at e
     have := (Array.getElem?_eq_some_iff.mp e).1
     omega
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- With the bound dropped. -/
 theorem decCNSB_decCNS {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
     (h : DecB (fun m => decCNSB m q) m cs) : DecB (fun m => decCNS m q) m cs := by
@@ -101,7 +95,6 @@ theorem decCNSB_decCNS {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
   show decAt (truncM m) _ q = some cs
   simp only [decAt, ho, hl, Option.bind_eq_bind, Option.bind_some]
   exact hd
--/
 
 /-- **A `rec2` header `[off, len]` of a slice decoded below the tops**, decoded below the tops. -/
 theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
@@ -127,7 +120,6 @@ theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some]
   exact hd
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A `rec2` header `[off, len]` of a slice below the tops**, decoded with its bound. -/
 theorem installRec2PSlB {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {vis : Word} {fe : IFEnv}
@@ -150,7 +142,6 @@ theorem installRec2PSlB {α : Type} {f : Mem → Nat → Option α}
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some, decPLB]
   rw [ite_eq_left (le_iwA_truncM_size (Nat.le_trans hx.bound hg.iw) hS'.iw.1)]
   exact hd
--/
 
 theorem lpsW_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m q = some (r, m')) :
     AFr m m' := by
@@ -178,7 +169,6 @@ namespace L.Ind
 
 open L.Arena
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The constructors, read by `check_abs_ctor_sorts_all`. -/
 theorem pos3_cns {m : Mem} {o l : Word} {css : List (List (IConstantVal × Nat))}
     (h : PSlR decCNSB css o l m) : PSlR0 decCNS css o l m := by
@@ -187,7 +177,6 @@ theorem pos3_cns {m : Mem} {o l : Word} {css : List (List (IConstantVal × Nat))
   have := pos3_decPL_proj (m := truncM m) (g := decCNS (truncM m)) id
     (fun v x hx => decCNSB_decCNS (m := m) (q := v) hx) h.dec
   rwa [List.map_id] at this
--/
 
 end L.Ind
 

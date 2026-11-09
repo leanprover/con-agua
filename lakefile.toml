@@ -130,7 +130,7 @@ globs = ["ConAgua", "ConAgua.L.ModelGenTest", "ConAgua.Arena.IndPartsSpec.+", "C
   "ConAgua.Arena.IndT.PosCensus",
   "ConAgua.Arena.IndT.PosRoot",
   "ConAgua.Arena.IndT.Positivity",
-  "ConAgua.Arena.IndRealCapsC", "ConAgua.Arena.IndRealBle"]
+  "ConAgua.Arena.IndRealBle"]
 
 # The committed assembler file of the checker (lane asmfile): `ConAguaAsm.Checker` reads it at
 # elaboration time (`include_asm`), so its library `needs` it: the file's content hash is part of

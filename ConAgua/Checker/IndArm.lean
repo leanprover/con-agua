@@ -259,6 +259,12 @@ structure IndArmProgs (p : Prog) : Prop where
   ilpf : IlpfF p
   cid : CidProg p
 
+/-- **The core's write set with its two leaves at the substituted checker program**
+(`checkerProg_coreStageW`; the leaves' bundles by lookups). -/
+theorem checkerProg_coreStagePB (bs : List UInt8) : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg) :=
+  ⟨closedWL_subPB bs checkerProg_coreStageW, by prog_bundle [], by prog_bundle [],
+    closedW_subPB bs checkerProg_lvlCoreW⟩
+
 /-- **The inductive arm's program facts at the substituted checker program** (one `prog_bundle`:
 a lookup two fields share is proved once). -/
 theorem indArmProgs_checker (bs : List UInt8) (hr : RomOK bs)
@@ -266,7 +272,7 @@ theorem indArmProgs_checker (bs : List UInt8) (hr : RomOK bs)
   have hrom := checkerProg_romRefsPB bs hr hpre
   prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
     checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
-    (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
+    checkerProg_coreStagePB bs,
     closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
     hrom, closedWL_subPB bs checkerProg_indMemo, checkerProg_crLeavesPB bs]
 
