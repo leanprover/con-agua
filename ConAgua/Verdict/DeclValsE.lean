@@ -5,6 +5,13 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Verdict.FrontValidE
+import ConAgua.Arena.IlpRd
+import ConAgua.Arena.IndRealWalkT
+import ConAgua.Arena.IndRealApdT
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.DeclCvgT
+import ConAgua.Arena.IndT.WalkC
+import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.DeclValT
 import ConAgua.Arena.IndT.Base
@@ -169,6 +176,15 @@ structure CcvPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   crOK : L.Stubs.CrOK m'
   abs : AbsOK m → AbsOK m'
 
+/-- **`AbsOK` across `consts_resolve_ffast`** (it writes only its own memo), from `StageT` and
+`CrOK` after it. -/
+theorem absOK_crfF' {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+    {args r : List Word} {a' : AState} (h : crfF m args = some (r, m'))
+    (hA : AbsOK m) (hCr : L.Stubs.CrOK m') (hT : StageT dn vis fe m' a') : AbsOK m' :=
+  have hf := L.Ind.crfF_frame h
+  ⟨hT.twin.memos.ab, hA.i1.frame hf (by decide) (by decide), hCr, hT.twin.memos.il,
+    hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
+
 /-- The slice words of a decoded constant value. -/
 theorem decCV_sliceW {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV R q = some cv) :
     ∃ w1 w2, R (q + 1) = some w1 ∧ R (q + 2) = some w2 ∧
@@ -197,6 +213,7 @@ the duplicate and reserved-name guards, the certified-operation name, the litera
 `axiomInfo cv` record (`ccv_rec`, `CcvSims.lit`), the universe parameters, the closedness walks,
 the consts-resolve site (`uce_errClaim_lo`), then the type's sort by the core. -/
 theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
+    (hcrf : L.Ind.CrfF p)
     {dn : NIdx → Option ConLeche.Name} (hC : CcvSims p dn) {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {q allow : Word} {cv : IConstantVal}
     {c : ConLeche.ConstantVal} (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv)
@@ -282,7 +299,108 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
   dsimp only [checkConstantValE.k_lit_shape_ok]
   refine RefE.guardIf rfl (fun hb => by cases hx : x10; rfl; exact absurd (hx10.mpr hx) (by simpa using hb))
     (fun hb => Classical.byContradiction fun hb' => by have := hx10.mp hb'; simp_all) fun _ _ => ?_
-  sorry
+  have hg0 : IWGrow m m10 := hg9.trans hg10
+  have hCr10 := hcr10 hCr9
+  have hden' := hden10 _ _ hden
+  have hlpsN : ∃ ks, cv.levelParams.mapM (denoteN a10.store.ns) = some ks := denoteCV_lps hden'
+  -- `cv_lps(q)`
+  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have e1 : rdW (m10.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = w1 := by
+    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq1]; exact hg0.ext _ _ hw1)
+  have e2 : rdW (m10.arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775) = w2 := by
+    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq2]; exact hg0.ext _ _ hw2)
+  have hsl10 : hslice? (erA m10) w1.toNat w2.toNat = some cv.levelParams := ArrExt.hslice? hg0.ext hsl
+  refine RefE.onlySim (fun _ => checkConstantValE.k_cv_lps.none ..) (fun _ _ h => h) fun r11 m11 h11 => ?_
+  rw [checkConstantValE.k_cv_lps.arm1]
+  cases n with
+  | zero => simp [cvLpsW] at h11
+  | succ n =>
+  rw [cvLpsW_step, e1, e2] at h11
+  obtain ⟨hS11R, hg11, hdec11, htop11, -⟩ := erToIwW_stage h11 hT10.stage hsl10
+  have hT11 := StageT.of_iw hT10 hS11R (erToIwW_iwFr h11)
+  have hCr11 := CrOK.frame hCr10 (erToIwW_iwFr h11) (by decide) (by decide)
+  have hA11 : AFr m m11 := (hA9.trans hA10).trans (erToIwW_afr h11)
+  -- `sl_nodup(o, l)`
+  rcases h12 : nodupW (n + 1) m11 (r11.headD 0) (r11.tail.headD 0) with _ | d
+  · rw [liftE_none, checkConstantValE.k_sl_nodup.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  have htopb : iwTop m11 < 2 ^ 64 := by simp only [iwTop]; exact UInt64.toNat_lt _
+  obtain ⟨ws, hws, hlps, hwsl⟩ := slR_of_decHL m11 _ _ _ hdec11 (by omega)
+  simp only [UInt64.ofNat_toNat] at hws
+  have hd := nodupW_ok _ _ _ _ _ _ hws h12
+  dsimp only [checkConstantValE.k_sl_nodup]
+  refine RefE.guardIf (by rfl)
+    (fun hb5 => by
+      rw [hlps, nameNodup_map ws hwsl]
+      by_cases hn : ws.Nodup
+      · rw [ite_eq_left hn, hb5] at hd; exact absurd hd (by decide)
+      · simp [hn])
+    (fun hnd => Classical.byContradiction fun hb5 => by
+      rw [hlps, nameNodup_map ws hwsl] at hnd
+      by_cases hn : ws.Nodup
+      · simp [hn] at hnd
+      · rw [ite_eq_right hn] at hd; exact hb5 hd) fun _ _ => ?_
+  -- `loose_bvars_bounded_fast(4000000000, 0, t)`
+  rw [hty]
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => lbbF_okT dn vis fe 4000000000 0 wt hwtl m11 m' a10 r h hT11)
+    fun r6 x6 m6 a6 h6 hrun6 ⟨hS6, hg6, hx6, _⟩ => ?_
+  have hCr6 := CrOK.frame hCr11 (lbbF_frame h6) (by decide) (by decide)
+  have hA6 : AFr m m6 := hA11.trans (AFr.of_frame (lbbF_frame h6))
+  dsimp only [checkConstantValE.k_loose_bvars_bounded_fast]
+  refine RefE.guardIf rfl (fun hb6 => by rw [← hx6]; simpa using hb6)
+    (fun hb6 => by rw [← hx6] at hb6; simpa using hb6) fun _ _ => ?_
+  -- `has_fvar_fast(4000000000, t)`
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => hffF_okT dn vis fe 4000000000 wt hwtl m6 m' a6 r h hS6)
+    fun r7 x7 m7 a7 h7 hrun7 ⟨hS7, hg7, hx7, _⟩ => ?_
+  have hCr7 := CrOK.frame hCr6 (hffF_frame h7) (by decide) (by decide)
+  have hA7 : AFr m m7 := hA6.trans (AFr.of_frame (hffF_frame h7))
+  dsimp only [checkConstantValE.k_has_fvar_fast]
+  refine RefE.guardThen rfl (fun hb7 => by rw [← hx7]; simpa using hb7)
+    (fun hb7 => by rw [← hx7] at hb7; simpa using hb7) fun _ _ => ?_
+  -- `all_level_params_defined(o, l, t)`
+  have hdec7 : decHL m7 (r11.headD 0).toNat (r11.tail.headD 0).toNat = some cv.levelParams := by
+    rw [decHL_grow (hg6.trans hg7) (by omega), hdec11]
+  have hst7 : a7.store = a10.store := (hffF_store hrun7).trans (lbbF_store hrun6)
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h8 => nvl hG.nv (by decide +kernel) h8)
+    (fun b h8 => apdF_okT dn vis fe (r11.headD 0) (r11.tail.headD 0) wt hwtl cv.levelParams m7 b.2 a7 b.1
+      (apdF_of_callW hap h8) ⟨hS7, hdec7, by rw [hst7]; exact hlpsN⟩)
+    fun r8 m8 x8 a8 h8 _ ⟨hS8, hg8, hx8, _⟩ => ?_
+  have h8' := apdF_of_callW hap (callW_of_callE h8)
+  have hCr8 := CrOK.frame hCr7 (apdF_frame h8') (by decide) (by decide)
+  have hA8 : AFr m m8 := fun hA => absOK_apdF h8' (hA7 hA) hS8
+  dsimp only [checkConstantValE.k_all_level_params_defined]
+  refine RefE.guardIf rfl (fun hb8 => by rw [← hx8]; simpa using hb8)
+    (fun hb8 => by rw [← hx8] at hb8; simpa using hb8) fun _ _ => ?_
+  -- `consts_resolve_ffast(vis, t)`
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h9 => nvl hG.nv (by decide +kernel) h9)
+    (fun b h9 => crfF_okT dn vis fe wt hwtl m8 b.2 a8 b.1 (crfF_of_callW hcrf h9) ⟨hS8, hCr8.crMemo⟩)
+    fun r9 m9' x9 a9 h9 _ ⟨⟨hS9, hg9', hx9, _⟩, hCr9'⟩ => ?_
+  have hA9' : AFr m m9' := fun hA =>
+    absOK_crfF' (crfF_of_callW hcrf (callW_of_callE h9)) (hA8 hA) hCr9'.crOK hS9
+  dsimp only [checkConstantValE.k_consts_resolve_ffast]
+  refine RefE.splitNot (fun hb9 => by rw [← hx9]; simpa using hb9)
+    (fun hb9 => by rw [← hx9] at hb9; simpa using hb9) (fun _ _ => ?_) fun _ _ => ?_
+  · -- the unresolved constants' error (`unresolvedConstsErrorL` over `strLitStored`)
+    sorry
+  -- the type's type
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h2 => hG.core.inferTypeCore (n + 1) hn' hS9 0 wt hwtl _ h2)
+    (fun b h2 => hq.inferTypeCore_sim (n + 1) hn' hS9 0 wt hwtl b.1 b.2 h2)
+    fun r2 m2 x2 a2 h2 _ ⟨hS2, hg2, hx2l, hx2⟩ => ?_
+  dsimp only [checkConstantValE.k_infer_type_core]
+  have hCr2 := hkp.call (im_mem _ rfl) (callW_of_callE h2) hCr9'.crOK
+  subst hx2
+  -- its sort
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h3 => hG.core.ensureSortCore (n + 1) hn' hS2 0 (r2.headD 0) hx2l _ h3)
+    (fun b h3 => hq.ensureSortCore_sim (n + 1) hn' hS2 0 (r2.headD 0) hx2l b.1 b.2 h3)
+    fun r3 m3 _ a3 h3 _ ⟨hS3, hg3, _⟩ => ?_
+  dsimp only [checkConstantValE.k_ensure_sort_core]
+  refine RefE.ret rfl ⟨hS3, hg0.trans (hg11.trans (hg6.trans (hg7.trans (hg8.trans (hg9'.trans
+    (hg2.trans hg3)))))), hkp.call (im_mem _ rfl) (callW_of_callE h3) hCr2, fun hA => ?_⟩
+  exact absOK_core hq.closed (by decide) (callW_of_callE h3)
+    (absOK_core hq.closed (by decide) (callW_of_callE h2) (hA9' hA) hS2) hS3
 
 
 /-- What `check_defn_val`'s and `check_opaque_val`'s error arms assume: `env_push` outside the
@@ -382,7 +500,7 @@ theorem dvo_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p
   obtain ⟨s1, hs1, -, _, a1, hrun1, hS1, hg1, -⟩ := RefE.run_ok
     (s₀ := ⟨m, Locals.init []⟩)
     (installValueGuards_specE p hp.cvg n _ vis (c + 1) wv)
-    (ivg_ref hap hkp.crf n hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
+    (ivg_ref hap hcrf n hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
       (by rw [hc1]; omega) hwvl hlps hCr) h1
   subst hs1
   dsimp only [dvoE.k_install_value_guards]
