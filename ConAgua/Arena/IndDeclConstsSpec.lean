@@ -47,6 +47,9 @@ structure DeclConstsPre (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   memos : IndMemos m
   dsize : (m.arr64 DECL).size < 2 ^ 63
   psize : (m.arr64 DLP).size < 2 ^ 63
+  /-- The scratch tier is closed (the stream index's build): every record lands in `EREC` tier 0,
+  `CTL[130]` stays. -/
+  off : a.store.scratchOn = false
 
 /-- What the stream index's builder keeps across the two: the front's records (`DECL`, `DLP`), the
 first counters (`FIRSTS`), the index rows (arrays 129‥134, both tiers) and the counters `CTL[128]`, `CTL[130]` and the core's memos. -/
