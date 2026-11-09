@@ -31,7 +31,6 @@ local notation "V" => ConLeche.CheckMode.verified
 section steps
 variable {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_cont_key` refines `nestContKey`, both outcomes**, at L fuel `n + 1`: the key, not in
 progress, the parameters' closedness, then a cache hit or a new frame (the block's `NewRef` at `n`). -/
 theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : KeyRef p dn vis fe env (n + 1) := by
@@ -186,7 +185,6 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
     have hbc : bc = false := by cases bc <;> simp_all
     subst hbc
     exact RefE.ite_neg (by simp) hnew
--/
 
 end steps
 
