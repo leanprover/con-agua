@@ -135,6 +135,77 @@ theorem StageR.putFresh {vis : Word} {fe : IFEnv} {m₀ m : Mem} {a₀ a : AStat
     (erecPutMem_frame m d v).mono (fun _ h => h) (by simp)
   exact ⟨⟨hS.check.erEnv hfe he, IWOK.of_er (erecPutMem_frame m d v) hS.iw⟩, hg', hf'⟩
 
+/-- The top of a tier is inside its array. -/
+theorem IWOK.topOf {m : Mem} (h : IWOK m) (a : Word) : erTopOf m a ≤ (m.arr64 (erTier a)).size ∧
+    (m.arr64 (erTier a)).size < 2 ^ 40 := by
+  unfold erTopOf erTier; split
+  · exact ⟨h.er, h.erCap⟩
+  · exact ⟨h.er1, h.er1Cap⟩
+
+/-- **Words written into the region allocated above a base state's top** (`wrER`, the record's
+`erec_put`s in order): `StageR` kept (`StageR.putFresh` at each), the growth and the frame from the
+base kept, the words read back, every other address as before. -/
+theorem wrER_fresh {vis : Word} {fe : IFEnv} {m₀ : Mem} {a₀ : AState} (h₀ : StageR vis fe m₀ a₀) :
+    ∀ (ws : List Word) (m : Mem) (a : AState) (d : Word), StageR vis fe m a →
+    MemFrame quotA quotC m₀ m → IWGrow m₀ m → erTopOf m₀ d ≤ erOff d →
+    erOff d + ws.length ≤ erTopOf m d → d.toNat < 2 ^ 41 →
+    StageR vis fe (wrER m d ws) a ∧ IWGrow m₀ (wrER m d ws) ∧ MemFrame quotA quotC m₀ (wrER m d ws) ∧
+      (∀ j < ws.length, erecP (wrER m d ws) (d.toNat + j) = ws[j]?) ∧
+      (∀ i, (∀ j < ws.length, i % 2 ^ 41 ≠ (d.toNat + j) % 2 ^ 41) →
+        erecP (wrER m d ws) i = erecP m i)
+  | [], m, a, d, hS, hf, hg, _, _, _ => ⟨hS, hg, hf, fun j hj => by simp at hj, fun i _ => rfl⟩
+  | x :: ws, m, a, d, hS, hf, hg, hd0, hdt, hd41 => by
+    simp only [List.length_cons] at hdt
+    obtain ⟨hS1, hg1, hf1⟩ := StageR.putFresh h₀ hS hf hg hd0 (v := x)
+    have ⟨htop, hcap⟩ := hS.iw.topOf d
+    have hself : erecP (erecPutMem m d x) d.toNat = some x :=
+      erecP_putMem_self (by omega) (by omega)
+    have hc1 := erecPutMem_ctl m d x
+    cases ws with
+    | nil =>
+      refine ⟨hS1, hg1, hf1, fun j hj => ?_, fun i hi => ?_⟩
+      · obtain rfl : j = 0 := by simp at hj; omega
+        simpa [wrER] using hself
+      · exact erecP_putMem_other (by have := hi 0 (by simp); simpa using this)
+    | cons y ws =>
+    simp only [List.length_cons] at hdt
+    have hoff : erOff d + 1 < 2 ^ 40 := by omega
+    have h64 : d.toNat + 1 < 2 ^ 64 := by unfold erOff at hoff; omega
+    obtain ⟨ho, ht⟩ := erOff_succ hoff h64
+    have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hbit : (d + 1).toNat / 2 ^ 40 % 2 = d.toNat / 2 ^ 40 % 2 := by
+      rw [hd1]; unfold erOff at hoff; omega
+    have hT : ∀ m' : Mem, erTopOf m' (d + 1) = erTopOf m' d := fun m' => by
+      simp only [erTopOf, hbit]
+    have hT1 : erTopOf (erecPutMem m d x) d = erTopOf m d := by
+      simp only [erTopOf, erecTop, erecTop1, hc1]
+    obtain ⟨hS2, hg2, hf2, hrd, hout⟩ := wrER_fresh h₀ (y :: ws) _ a (d + 1) hS1 hf1 hg1
+      (by rw [hT, ho]; omega) (by rw [hT, hT1, ho]; simp only [List.length_cons]; omega)
+      (by rw [hd1]; unfold erOff at hoff; omega)
+    have hU : wrER m d (x :: y :: ws) = wrER (erecPutMem m d x) (d + 1) (y :: ws) := rfl
+    have hlt : ∀ j ≤ ws.length + 1, d.toNat + j < 2 ^ 41 := fun j hj => by
+      unfold erOff at hdt; omega
+    refine ⟨hS2, hg2, hf2, fun j hj => ?_, fun i hi => ?_⟩
+    · rw [hU]
+      cases j with
+      | zero =>
+        simp only [Nat.add_zero, List.getElem?_cons_zero]
+        rw [hout _ (fun j hj => by
+          rw [hd1]; simp only [List.length_cons] at hj
+          have h1 := hlt (j + 1) (by omega)
+          have h2 : d.toNat < 2 ^ 41 := hd41
+          rw [Nat.mod_eq_of_lt h2, Nat.mod_eq_of_lt (by omega)]; omega)]
+        exact hself
+      | succ j =>
+        simp only [List.getElem?_cons_succ]
+        have := hrd j (by simp only [List.length_cons] at hj ⊢; omega)
+        rw [hd1, show d.toNat + 1 + j = d.toNat + (j + 1) by omega] at this
+        exact this
+    · rw [hU, hout i (fun j hj => by
+        rw [hd1]; have := hi (j + 1) (by simp only [List.length_cons] at hj ⊢; omega)
+        rwa [show d.toNat + (j + 1) = d.toNat + 1 + j by omega] at this)]
+      exact erecP_putMem_other (by have := hi 0 (by simp); simpa using this)
+
 /-! ## The level-parameter functions leave the records and the core memos alone -/
 
 /-- The call closure of `param_levels` and `er_to_iw` in `checkerProg` (`_tmp/p3r/plfns.lean`). -/

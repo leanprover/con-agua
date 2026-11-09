@@ -1,0 +1,251 @@
+module
+
+public import ConAgua.Arena.QuotRecT
+public import ConAgua.Arena.QuotFns
+public import ConAgua.Arena.IndPartsSpec.PlW
+public import ConAgua.Arena.IndSumSpec.Row
+public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+public import ConAgua.Arena.TwinStep
+public import ConRon.Bridge.Checker.Basis
+import ConAgua.Arena.IlpRd
+import ConAgua.Arena.IndInstallSpec.NhW
+import all ConAgua.Arena.BasisL
+
+@[expose] public section
+
+/-!
+# A pin at a stream's names: `cv_at_lps`, `ci_at_lps`, `quot_pin_hit`, `quot_at` (lane `ronsync2`, stage 3)
+
+`cv_at_lps(d, c + 1, po, pl)` writes `IConstantVal.atLps cv ps` (`cv` the record `c`'s, `ps` the
+`EREC` name slice `(po, pl)`) as the 4 words at `d`, a region its caller allocated: `er_to_iw` and
+`param_levels` (`plW_sim`; the twin's `paramLevels` an interning step, `paramLevels_run`, so
+`TwinOK` by `TwinOK.of_istep`), `inst_lp` under `CoreS` (`InstLPOK`, `StageT.of_core`), then the
+words (`wrER_fresh`: the region above the base state's top, `EnvR` from the base).
+-/
+
+open ConRon.Arena
+
+namespace L.Ind
+
+open L.Arena
+
+/-- The lookups and program facts the pins at a stream's names need. -/
+structure QuotAtProg (p : Prog) : Prop where
+  cvAt : p.lookup "cv_at_lps" = some cvAtLps
+  iwAlloc : p.lookup "iw_alloc" = some iwAlloc
+  erCopy : p.lookup "er_copy" = some erCopy
+  erToIw : p.lookup "er_to_iw" = some erToIw
+  iwCopy : p.lookup "iw_copy" = some iwCopy
+  slCons : p.lookup "sl_cons" = some slCons
+  slGet : p.lookup "sl_get" = some slGet
+  paramFind : p.lookup "param_find" = some paramFind
+  paramPush : p.lookup "param_push" = some paramPush
+  internParam : p.lookup "intern_param" = some internParam
+  plGo : p.lookup "param_levels_go" = some paramLevelsGoL
+  pl : p.lookup "param_levels" = some paramLevelsL
+  il : IlF p
+  erPut : p.lookup "erec_put" = some erecPut
+  erAlloc : p.lookup "erec_alloc" = some erecAlloc
+  instLP : InstLPOK p
+  core : CoreStageClosed p
+  coreErec : closedA p coreErecA coreErecC coreFns = true
+  quot : QuotClosed p
+  plc : PlClosed p
+
+section
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`StageT` across `param_levels`**: its `StageR` post, the twin's interning step, the frame
+(`plFns` leaves the core memos, the pins and the records alone). -/
+theorem StageT.of_pl {m m' : Mem} {a a' : AState} (hT : StageT dn vis fe m a)
+    (hS : StageR vis fe m' a') (hs : ConRon.Bridge.Frontend.IStepS a a')
+    (hf : MemFrame plA plC m m') : StageT dn vis fe m' a' := by
+  have na : ∀ b ∈ plBad, b ∉ plA := fun _ h => plA_not h
+  have nc : ∀ x ∈ plBadC, x ∉ plC := fun _ h => plC_not h
+  refine ⟨hS, hT.twin.of_istep hs (by rw [hf.size]; exact hT.twin.erec)
+    (by rw [hf.size]; exact hT.twin.spn) (by rw [hf.size]; exact hT.twin.bstk)
+    (hT.twin.memos.frame hf ⟨na _ (by simp [plBad]), na _ (by simp [plBad])⟩
+      ⟨nc _ (by simp [plBadC]), nc _ (by simp [plBadC])⟩
+      ⟨na _ (by simp [plBad]), na _ (by simp [plBad]), na _ (by simp [plBad])⟩
+      ⟨nc _ (by simp [plBadC]), nc _ (by simp [plBadC]), nc _ (by simp [plBadC])⟩
+      ⟨na _ (by simp [plBad]), na _ (by simp [plBad]), na _ (by simp [plBad])⟩
+      ⟨nc _ (by simp [plBadC]), nc _ (by simp [plBadC]), nc _ (by simp [plBadC])⟩)
+    (by sorry /- p3q: the ROM cache goes; this argument with it -/), ?_⟩
+  have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (na _ (by simp [plBad])) (by decide)
+  simp only [pinW, hP]; exact hT.flag
+
+/-- **`StageT` across record words** (`wrER`): the `StageR` after it, the twin unchanged. -/
+theorem StageT.of_wrER {m : Mem} {a : AState} {d : Word} {ws : List Word}
+    (hT : StageT dn vis fe m a) (hS : StageR vis fe (wrER m d ws) a) :
+    StageT dn vis fe (wrER m d ws) a := by
+  have hf := (wrER_frame ws m d).mono (C' := [129, 130]) (fun _ h => h) (by simp)
+  refine ⟨hS, hT.twin.frameR hf (by decide) (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by sorry /- p3q: the ROM cache goes; this argument with it -/), ?_⟩
+  have hP : (wrER m d ws).arr64 PINS = m.arr64 PINS := hf.arr PINS (by decide) (by decide)
+  simp only [pinW, hP]; exact hT.flag
+
+end
+
+/-- A constant value from its four words. -/
+theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {w0 w1 w2 w3 : Word} {ps : List NIdx}
+    (h0 : a q = some w0) (h0l : w0.toNat < 2 ^ 32) (h1 : a (q + 1) = some w1)
+    (h2 : a (q + 1 + 1) = some w2) (hs : hslice? a w1.toNat w2.toNat = some ps)
+    (h3 : a (q + 3) = some w3) (h3l : w3.toNat < 2 ^ 32) :
+    decCV a q = some ⟨decI w0, ps, decI w3⟩ := by
+  simp only [decCV, hlist?, hd?, nat?, h0, h0l, h1, h2, hs, h3, h3l, Option.map_some, bind,
+    Option.bind_some, ite_true, pure]
+
+/-- A constant value from its four words, as `wrER` leaves them. -/
+theorem decCV_of_wr4 {a : Nat → Option Word} {q : Nat} {w0 w1 w2 w3 : Word} {ps : List NIdx}
+    (hrd : ∀ j < [w0, w1, w2, w3].length, a (q + j) = [w0, w1, w2, w3][j]?) (h0l : w0.toNat < 2 ^ 32)
+    (hs : hslice? a w1.toNat w2.toNat = some ps) (h3l : w3.toNat < 2 ^ 32) :
+    decCV a q = some ⟨decI w0, ps, decI w3⟩ :=
+  decCV_of_words (by simpa using hrd 0 (by simp)) h0l (by simpa using hrd 1 (by simp))
+    (by simpa [Nat.add_assoc] using hrd 2 (by simp)) hs (by simpa using hrd 3 (by simp)) h3l
+
+theorem word_add11 (c : Word) : c + 1 + 1 = c + 2 := by rw [UInt64.add_assoc]; rfl
+theorem word_add12 (c : Word) : c + 1 + 2 = c + 3 := by rw [UInt64.add_assoc]; rfl
+theorem word_add13 (c : Word) : c + 1 + 3 = c + 4 := by rw [UInt64.add_assoc]; rfl
+
+/-- `erec_put` as a call. -/
+theorem callW_erecPut {p : Prog} (hp : p.lookup "erec_put" = some erecPut) {n : Nat} {a v : Word}
+    {m m' : Mem} {r : List Word} (h : callW p n "erec_put" [a, v] m = some (r, m')) :
+    m' = erecPutMem m a v := by
+  obtain ⟨s', rfl, -, h1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (erecPut_specW p hp n _ a v) h
+  exact h1
+
+theorem word_add21 (d : Word) : d + 2 + 1 = d + 3 := by rw [UInt64.add_assoc]; rfl
+
+theorem instLp_core : "inst_lp" ∈ coreFns := List.elem_iff.mp (by decide)
+theorem instLp_stageCore : "inst_lp" ∈ stageCoreFns := List.mem_append_right _ instLp_core
+
+section cv
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`cv_at_lps(d, c + 1, po, pl)` refines `cv.atLps ps`** (`cv` the record `c`'s constant value,
+`ps` the name slice `(po, pl)` at a base state `m₀` whose top is at or below `d`): `StageT` after,
+the growth and the frame from the base, the written value at `d`, every other address as before. -/
+theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a₀ a : AState}
+    (h₀ : StageR vis fe m₀ a₀) (hT : StageT dn vis fe m a) (hok : ConRon.Bridge.StateOK a)
+    (hf : MemFrame quotA quotC m₀ m) (hg : IWGrow m₀ m)
+    {d c po pl : Word} {cv : IConstantVal} {ps : List NIdx} {psv : List ConLeche.Name}
+    (hd0 : erTopOf m₀ d ≤ erOff d) (hdt : erOff d + 4 ≤ erTopOf m d) (hd41 : d.toNat < 2 ^ 41)
+    (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
+    (hps : hslice? (erecP m₀) po.toNat pl.toNat = some ps)
+    (hden : ConRon.Arena.Frontend.denoteNList a.store.ns ps = some psv) :
+    Sim (callW p n "cv_at_lps" [d, c + 1, po, pl] m) (cv.atLps ps) a
+      (fun _ cv' m' a' => StageT dn vis fe m' a' ∧ IWGrow m₀ m' ∧ MemFrame quotA quotC m₀ m' ∧
+        decCV (erecP m') d.toNat = some cv' ∧
+        (∀ i, (∀ j < 4, i % 2 ^ 41 ≠ (d.toNat + j) % 2 ^ 41) → erecP m' i = erecP m i)) := by
+  intro r m' h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (cvAtLps_specW p hP.cvAt n _ d (c + 1) po pl) h
+  cases n with
+  | zero => simp [cvAtLpsW] at hW
+  | succ n =>
+  simp only [cvAtLpsW] at hW
+  -- `er_to_iw(po, pl)`
+  cases h1 : callW p n "er_to_iw" [po, pl] m with
+  | none => rw [h1] at hW; simp [cvAtLpsW.k_er_to_iw] at hW
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at hW; simp only [cvAtLpsW.k_er_to_iw] at hW
+  have hps' : hslice? (erecP m) po.toNat pl.toNat = some ps := ArrExt.hslice? hg.erecGrow.ext hps
+  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (erToIw_specW p hP.iwAlloc hP.erCopy hP.erToIw n _ po pl) h1
+  obtain ⟨hS1, hg1, hdl1, htop1, -⟩ := erToIwW_stage hW1 hT.stage hps'
+  have hT1 : StageT dn vis fe s1.mem a := StageT.of_iw hT hS1 (erToIwW_iwFr hW1)
+  obtain ⟨hpf1, he1⟩ := callW_plFrame hP.plc (by decide) h1
+  have hqf1 := callW_quotFrame hP.quot (by decide) h1
+  -- `param_levels(io, il)`
+  cases h2 : callW p n "param_levels" [r1.headD 0, r1.tail.headD 0] s1.mem with
+  | none => rw [h2] at hW; simp [cvAtLpsW.k_param_levels] at hW
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2] at hW; simp only [cvAtLpsW.k_param_levels] at hW
+  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (plW_spec p hP.iwAlloc hP.iwCopy hP.slCons hP.slGet hP.paramFind hP.paramPush hP.internParam
+      hP.plGo hP.pl hP.il n _ _ _) h2
+  obtain ⟨us, a1, hrun1, hH, hus, hS2, hg2⟩ := plW_sim (k := n) hS1 hdl1 (by omega) r2 s2.mem hW2
+  obtain ⟨hpf2, he2⟩ := callW_plFrame hP.plc (by decide) h2
+  have hqf2 := callW_quotFrame hP.quot (by decide) h2
+  obtain ⟨hst1, -⟩ := ConRon.Bridge.paramLevels_run hok hden hrun1
+  have hT2 : StageT dn vis fe s2.mem a1 := StageT.of_pl hT1 hS2 hst1 hpf2
+  -- `inst_lp(EREC⦃c + 2⦄, EREC⦃c + 3⦄, us, EREC⦃c + 4⦄)`, the record words unchanged so far
+  have hpf12 := hpf1.trans hpf2
+  have hr2 := erRdT_congr (m := m) (m' := s2.mem) (hpf12.arr _ (plA_not (by simp [plBad])) (by decide))
+    (hpf12.arr _ (plA_not (by simp [plBad])) (by decide))
+  have he12 : erecP s2.mem = erecP m := by rw [he2, he1]
+  simp only [hr2, word_add11, word_add12, word_add13] at hW
+  obtain ⟨hlps, -, hty, hty32⟩ := decCV_rd (erRdOK m) hcv
+  cases h3 : callW p n "inst_lp" [erRdT m (c + 2), erRdT m (c + 3), r2.headD 0, erRdT m (c + 4)] s2.mem with
+  | none => rw [h3] at hW; simp [cvAtLpsW.k_inst_lp] at hW
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  rw [h3] at hW; simp only [cvAtLpsW.k_inst_lp] at hW
+  obtain ⟨M, hC⟩ := hT2.core
+  obtain ⟨s3, rfl, -, hok3, ⟨M', hC', -, -⟩, hres3, hrh3⟩ :=
+    triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+      (hP.instLP n ⟨s2.mem, Locals.init []⟩ a1 dn vis fe M 0 _ _ (r2.headD 0) _ cv.levelParams hC
+        hty32 hH (by rw [he12]; exact hlps)) h3
+  obtain ⟨hT3, hg3⟩ := StageT.of_core hP.core instLp_stageCore h3 hT2 hC'
+  obtain ⟨hE3, hE13, hrd3, he3⟩ := callW_erec_closedT hP.coreErec instLp_core h3
+  have hqf3 := callW_quotFrame hP.quot (by decide) h3
+  have hr3 := erRdT_congr (m := s2.mem) (m' := s3.mem) hE3 hE13
+  simp only [hr3, hr2] at hW
+  -- the four words
+  cases h4 : callW p n "erec_put" [d, erRdT m (c + 1)] s3.mem with
+  | none => rw [h4] at hW; simp [cvAtLpsW.k_erec_put] at hW
+  | some x4 =>
+  obtain ⟨r4, m4⟩ := x4
+  rw [h4] at hW; simp only [cvAtLpsW.k_erec_put] at hW
+  cases h5 : callW p n "erec_put" [d + 1, po] m4 with
+  | none => rw [h5] at hW; simp [cvAtLpsW.k_erec_put_2] at hW
+  | some x5 =>
+  obtain ⟨r5, m5⟩ := x5
+  rw [h5] at hW; simp only [cvAtLpsW.k_erec_put_2] at hW
+  cases h6 : callW p n "erec_put" [d + 2, pl] m5 with
+  | none => rw [h6] at hW; simp [cvAtLpsW.k_erec_put_3] at hW
+  | some x6 =>
+  obtain ⟨r6, m6⟩ := x6
+  rw [h6] at hW; simp only [cvAtLpsW.k_erec_put_3] at hW
+  cases h7 : callW p n "erec_put" [d + 3, r3.headD 0] m6 with
+  | none => rw [h7] at hW; simp [cvAtLpsW.k_erec_put_4] at hW
+  | some x7 =>
+  obtain ⟨r7, m7⟩ := x7
+  rw [h7] at hW; simp only [cvAtLpsW.k_erec_put_4, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨-, rfl⟩ := hW
+  rw [callW_erecPut hP.erPut h4] at h5
+  rw [callW_erecPut hP.erPut h5] at h6
+  rw [callW_erecPut hP.erPut h6] at h7
+  rw [callW_erecPut hP.erPut h7]
+  have hwr : erecPutMem (erecPutMem (erecPutMem (erecPutMem s3.mem d (erRdT m (c + 1))) (d + 1) po)
+      (d + 2) pl) (d + 3) (r3.headD 0) = wrER s3.mem d [erRdT m (c + 1), po, pl, r3.headD 0] := by
+    simp only [wrER, word_add11, word_add21]
+  rw [hwr]
+  -- the region and the words
+  have hg3' : IWGrow m₀ s3.mem := hg.trans (hg1.trans (hg2.trans hg3))
+  have hf3' : MemFrame quotA quotC m₀ s3.mem := ((hf.trans hqf1).trans hqf2).trans hqf3
+  have htop : erTopOf m d ≤ erTopOf s3.mem d := by
+    have hgm := hg1.trans (hg2.trans hg3)
+    unfold erTopOf; split
+    · exact hgm.er
+    · exact hgm.er1
+  obtain ⟨hSw, hgw, hfw, hrd, hout⟩ := wrER_fresh h₀ [erRdT m (c + 1), po, pl, r3.headD 0] s3.mem _ d
+    hT3.stage hf3' hg3' hd0 (by simp only [List.length_cons, List.length_nil]; omega) hd41
+  obtain ⟨⟨w0, hw0, hw0l, hname⟩, -, -⟩ := decCV_words hcv
+  have e0 : erRdT m (c + 1) = w0 := (erRdOK m).off hw0 (by simp)
+  have hrun3 := partsRunOfOk hok3
+  rw [hres3] at hrun3
+  refine ⟨⟨cv.name, ps, decH r3⟩, _, ?_, StageT.of_wrER hT3 hSw, hgw, hfw, ?_, fun i hi => ?_⟩
+  · simp only [IConstantVal.atLps, StateT.run_bind, hrun1, ← hus, hty, ← decE_eq, exb, hrun3,
+      StateT.run_pure]
+    rfl
+  · rw [hname, e0]
+    rw [e0] at hrd hgw
+    exact decCV_of_wr4 hrd hw0l (ArrExt.hslice? hgw.erecGrow.ext hps) hrh3
+  · rw [hout i hi, he3, he12]
+
+end cv
+
+end L.Ind
