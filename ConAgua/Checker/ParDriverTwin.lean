@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Checker.ParDriverL
 import ConAgua.Checker.CheckARun
+public import ConAgua.Checker.JobsProg
 import all ConAgua.Checker.Entry
 import ConAgua.L.Blocks
 import ConAgua.Checker.IndArm
@@ -23,7 +24,8 @@ seed) returning `ACCEPT`: the twin's pipeline accepts. Entry 1 is `checkA_run` (
 stream index, `FoldAt`; the memory is the buffer's `parCompactMem`, with the header only), entry 2
 `checkB_seq` (the flush, then the jobs, through non-interference and the pool's induction with one
 worker), and the two are `SeqAccepts`, i.e. `TwinAccepts` (`Final/Twin.lean`). The jobs' program
-facts at the substituted program (`hJ`, `JobProg`) are a hypothesis.
+facts at the substituted program (`JobProg`) come from `checkerProg_jobProgPB`, with `check_decl`'s
+(`CdProg`, the core area's) a hypothesis (`CheckerCd`).
 -/
 
 set_option experimental.vcgen true
@@ -66,12 +68,24 @@ theorem checkMode2_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
       | (simp_all (config := { decide := true }); done)
       | (simp_all [St.setLoc]; done)
 
-/-- **The driver's two runs accept ⇒ the twin accepts**, given the jobs' program facts at every
-accepting phase A. -/
-theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (b pb : ByteArray)
+/-- **`check_decl`'s program facts at the checker** (`CdProg`, the core area's): at every phase A
+and every pin buffer `pb` that starts with the ROM, at the program with `pb` substituted. A
+hypothesis of the final theorems until the core area proves it. -/
+def CheckerCd : Prop :=
+  ∀ (b pb : ByteArray) (PA : PhaseA b), pb.size < 2 ^ 63 → PbPre pb →
+    CdProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
+
+/-- The jobs' program facts at a phase A, from `CheckerCd`. -/
+theorem jobProg_of_cd (hCd : CheckerCd) {b pb : ByteArray} (PA : PhaseA b) (hpb : pb.size < 2 ^ 63)
+    (hpre : PbPre pb) :
+    JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg) :=
+  checkerProg_jobProgPB pb.data.toList (by simpa [RomOK] using hpb) hpre (hCd b pb PA hpb hpre)
+    (checkerProg_canonPB _)
+
+/-- **The driver's two runs accept ⇒ the twin accepts**, given `check_decl`'s program facts
+(`CheckerCd`). -/
+theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd) (b pb : ByteArray)
     (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
-    (hJ : ∀ PA : PhaseA b,
-      JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
@@ -104,7 +118,7 @@ theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (b pb : ByteArray)
       simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at h₂
       obtain ⟨rfl, -⟩ := h₂
       exact M.of_run (P := fun x => x = ⟨w, Locals.init []⟩) rfl e
-        (checkMode2_seq Vt hF (hJ PA) N₂ hN₂ _ hk ⟨w, Locals.init []⟩ hw' hmode hlo hhi hctlf) hacc
+        (checkMode2_seq Vt hF (jobProg_of_cd hCd PA hin.2.2.1 hF.r7.since.pbpre) N₂ hN₂ _ hk ⟨w, Locals.init []⟩ hw' hmode hlo hhi hctlf) hacc
   obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
   exact ⟨PA.pins, PA.sA, PA.sB, PA.sC, PA.sD, PA.sE, PA.sF, PA.pre, PA.rc, PA.ds, PA.ipins, PA.I,
     hA, hBp, hC, hD, hE, s'', PA.idx, hB⟩
