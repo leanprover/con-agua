@@ -62,14 +62,16 @@ structure HZ (m : Mem) : Prop where
   c75 : rdW (m.arr64 CTL) 75 = 0
   c129 : rdW (m.arr64 CTL) 129 = 0
   c200 : rdW (m.arr64 CTL) 200 = 0
+  c130 : rdW (m.arr64 CTL) 130 = 0
   seen : ∀ j, rdW (m.arr64 HSEEN) j = 0
   nix : ∀ j, rdW (m.arr64 HNIX) j = 0
 
 theorem HZ.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : HZ m) (hf : MemFrame A C m m')
     (h75 : (HSEEN : TieredArray) ∉ A) (h76 : (HNIX : TieredArray) ∉ A) (c73 : (73 : Word) ∉ C) (c75 : (75 : Word) ∉ C)
-    (c129 : (129 : Word) ∉ C) (c200 : (200 : Word) ∉ C) : HZ m' :=
+    (c129 : (129 : Word) ∉ C) (c200 : (200 : Word) ∉ C) (c130 : (130 : Word) ∉ C) : HZ m' :=
   ⟨by rw [hf.ctl _ c73]; exact h.c73, by rw [hf.ctl _ c75]; exact h.c75,
     by rw [hf.ctl _ c129]; exact h.c129, by rw [hf.ctl _ c200]; exact h.c200,
+    by rw [hf.ctl _ c130]; exact h.c130,
     fun j => by rw [hf.arr _ h75 (by decide)]; exact h.seen j,
     fun j => by rw [hf.arr _ h76 (by decide)]; exact h.nix j⟩
 
@@ -180,8 +182,8 @@ theorem irpStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb
     simp only [stkTop] at this ⊢
     rw [this]; exact stkTop_loadMem b pb sz
   · have z := loadMem_rd b pb sz
-    exact HZ.frame ⟨z _ _, z _ _, z _ _, z _ _, z _, z _⟩ hfr (pinA_not (by decide) (by decide))
+    exact HZ.frame ⟨z _ _, z _ _, z _ _, z _ _, z _ _, z _, z _⟩ hfr (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
-      (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
+      (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
 
 end L.Checker

@@ -19,6 +19,15 @@ open L
 
 set_option Elab.async false
 
--- ronsync2 stage 2: the lookups come back with the regenerated `checkerProg`.
+set_option maxRecDepth 100000 in
+theorem checkerProg_hoistProg : HoistProg checkerProg := by
+  unfold HoistProg hoistProg
+  repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_)
+
+set_option maxRecDepth 100000 in
+theorem checkerProg_prepProg : PrepProg checkerProg := by
+  unfold PrepProg preludeProg
+  refine ProgHas.append ?_ checkerProg_hoistProg
+  repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_)
 
 end L.Checker
