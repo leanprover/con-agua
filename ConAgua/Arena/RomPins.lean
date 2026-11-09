@@ -168,7 +168,85 @@ theorem romNamesToW_ok (ns : List ConLeche.Name) (hns : ns.all nameFits = true) 
     (∀ j, j < ns.length → (AM.res (internNameList ns) a)[j]? = some (decI (pinW m' (d.toNat + j))) ∧
       (pinW m' (d.toNat + j)).toNat < 2 ^ 32) ∧
     (∀ i, (i < d.toNat ∨ d.toNat + ns.length ≤ i) → pinW m' i = pinW m i) := by
-  sorry
+  induction ns with
+  | nil =>
+    intro n m a q rest k d r m' hA hmo hd hk hdl hW
+    have hk0 : k = 0 := by simp at hk; exact UInt64.toNat_inj.mp (by simpa using hk)
+    subst hk0
+    cases n with
+    | zero => simp [romNamesToW] at hW
+    | succ n =>
+    rw [romNamesToW_zero] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl⟩ := hW
+    refine ⟨trivial, hA, by simp [encNames], MemFrame.refl _ _ _, rfl, fun j hj => by simp at hj,
+      fun _ _ => rfl⟩
+  | cons x xs ih =>
+    intro n m a q rest k d r m' hA hmo hd hk hdl hW
+    simp only [List.all_cons, Bool.and_eq_true] at hns
+    have hk0 : k ≠ 0 := by intro h; subst h; simp at hk
+    cases n with
+    | zero => simp [romNamesToW] at hW
+    | succ n =>
+    rw [romNamesToW_succ rom n m q k d hk0] at hW
+    have hd' : rom.drop q.toNat = encName x ++ (encNames xs ++ rest) := by
+      rw [hd, encNames, List.append_assoc]
+    cases hN : romNameW rom n m q with
+    | none => rw [hN] at hW; simp [namesToK] at hW
+    | some t =>
+    obtain ⟨h₁, q₁, m₁⟩ := t
+    rw [hN] at hW
+    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romNameW_ok rom hr x hns.1 n m a q _ h₁ q₁ m₁ hA hmo hd' hN
+    simp only [namesToK] at hW
+    split at hW
+    case isFalse => simp at hW
+    rename_i hdlt
+    have hf2 : MemFrame PinA StoreC m₁ (m₁.set64 PINS d h₁) :=
+      (MemFrame.set64 m₁ PINS (by decide) d h₁).mono (by simp [PinA]) (by simp)
+    have hR2 : ArenaD (m₁.set64 PINS d h₁) (AM.st (internName x) a) :=
+      ArenaD.frameHi (MemFrame.set64 m₁ PINS (by decide) d h₁) (by simp [PINS]) (by simp) hR1
+    have hdq : rom.drop q₁.toNat = encNames xs ++ rest :=
+      drop_shift rom q (encName x) (encNames xs) rest (by rw [hd', List.append_assoc]) q₁ hq1
+    have hk1 : (k - 1).toNat = xs.length := by
+      have : 1 ≤ k.toNat := by simp at hk; omega
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using this))]
+      simp at hk ⊢; omega
+    have hd1 : (d + 1).toNat = d.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp at hdl ⊢; omega
+    obtain ⟨ok2, hR3, hr2, hf3, hlen2, hres2, hkeep2⟩ := ih hns.2 n _ _ q₁ rest (k - 1) (d + 1) r m' hR2
+      (((romNameW_topK hN).trans (TopK.of_eq (top_set64_arr _ _ _ _ (by decide)) (pcap_set64 _ _ _ _)
+        (Mem.flag_set64_ne _ _ _ _ (by decide)))).mode hA.1.lit.1 hmo) hdq hk1
+      (by simp at hdl; omega) hW
+    have hX : internNameList (x :: xs) =
+        internName x >>= fun h => internNameList xs >>= fun hs => pure (h :: hs) := rfl
+    have okX : AM.ok (internNameList (x :: xs)) a := by
+      rw [hX, AM.ok_bind, AM.ok_bind]; exact ⟨ok1, ok2, trivial⟩
+    have hok1 : AM.ok (internNameList xs >>= fun hs => pure (AM.res (internName x) a :: hs))
+        (AM.st (internName x) a) := by rw [AM.ok_bind]; exact ⟨ok2, trivial⟩
+    have hst : AM.st (internNameList (x :: xs)) a = AM.st (internNameList xs) (AM.st (internName x) a) := by
+      rw [hX, AM.st_bind _ _ _ (hX ▸ okX), AM.st_bind _ _ _ hok1]; rfl
+    have hres : AM.res (internNameList (x :: xs)) a =
+        AM.res (internName x) a :: AM.res (internNameList xs) (AM.st (internName x) a) := by
+      rw [hX, AM.res_bind _ _ _ ok1, AM.res_bind _ _ _ ok2]; rfl
+    refine ⟨okX, hst ▸ hR3, ?_, (frame_pinA hf1).trans (hf2.trans hf3), by rw [hres]; simp [hlen2], ?_, ?_⟩
+    · rw [hr2, hq1]; simp [encNames]; omega
+    · intro j hj
+      rw [hres]
+      cases j with
+      | zero =>
+        have hp := hkeep2 d.toNat (.inl (by omega))
+        rw [pinW_set _ _ _ _ hdlt] at hp
+        simp only [↓reduceIte] at hp
+        simp only [List.getElem?_cons_zero, Nat.add_zero, hp, res1, true_and]
+        exact hlt1
+      | succ j =>
+        obtain ⟨e1, e2⟩ := hres2 j (by simp at hj; omega)
+        rw [hd1, show d.toNat + 1 + j = d.toNat + (j + 1) by omega] at e1 e2
+        exact ⟨by simpa using e1, e2⟩
+    · intro i hi
+      rw [hkeep2 i (by rw [hd1]; simp at hi; omega), pinW_set _ _ _ _ hdlt]
+      have : i ≠ d.toNat := by simp at hi; omega
+      simp [this, pinW, hf1.1 PINS (by decide) (by decide)]
 
 end namesToRef
 
@@ -224,14 +302,17 @@ def irp3K : Option (Word × Mem) → Option Mem
 def irp2K : Option (Word × Mem) → Option Mem
   | none => none
   | some (_, m₂) => irp3K (lsinternW m₂ 0 0)
-def irp1K (n : Nat) : Option (Word × Mem) → Option Mem
+def irp1bK (n : Nat) : Option (Word × Mem) → Option Mem
   | none => none
   | some (q, m₁) => irp2K (romNamesToW rom n m₁ q 16 55)
+def irp1K (n : Nat) : Option (Word × Mem) → Option Mem
+  | none => none
+  | some (q, m₁) => irp1bK rom n (romNamesToW rom n m₁ q 1 71)
 
 /-- **The model of `intern_reserved_pins`** at L fuel `n`. -/
 def irpW : Nat → Word → Mem → Option Mem
   | 0, _, _ => none
-  | n + 1, off, m => if m.len64 PINS < 71 then none else irp1K rom n (romNamesToW rom n m off 51 1)
+  | n + 1, off, m => if m.len64 PINS < 72 then none else irp1K rom n (romNamesToW rom n m off 51 1)
 
 end irpModel
 
@@ -246,12 +327,13 @@ theorem irp4K_some (h : ¬ 4294967296 ≤ z) : irp4K us (some (z, m)) = irp5K us
 theorem irp3K_some (h : ¬ 4294967296 ≤ us) : irp3K (some (us, m)) = irp4K us (zinternW m) := by
   simp [irp3K, h]
 theorem irp2K_some : irp2K (some (q, m)) = irp3K (lsinternW m 0 0) := by rfl
-theorem irp1K_some : irp1K rom n (some (q, m)) = irp2K (romNamesToW rom n m q 16 55) := by rfl
-theorem irpW_eq (off : Word) (h : ¬ m.len64 PINS < 71) :
+theorem irp1bK_some : irp1bK rom n (some (q, m)) = irp2K (romNamesToW rom n m q 16 55) := by rfl
+theorem irp1K_some : irp1K rom n (some (q, m)) = irp1bK rom n (romNamesToW rom n m q 1 71) := by rfl
+theorem irpW_eq (off : Word) (h : ¬ m.len64 PINS < 72) :
     irpW rom (n + 1) off m = irp1K rom n (romNamesToW rom n m off 51 1) := by simp [irpW, h]
 end irpArms
 
-attribute [arena_grind =] irp6K_some irp5K_some irp4K_some irp3K_some irp2K_some irp1K_some irpW_eq
+attribute [arena_grind =] irp6K_some irp5K_some irp4K_some irp3K_some irp2K_some irp1bK_some irp1K_some irpW_eq
 
 /-- The functions `intern_reserved_pins` calls. -/
 structure IrpProg (rom : List UInt8) (off : Word) (p : Prog) : Prop extends NameProg rom p where
@@ -280,7 +362,20 @@ theorem internReservedPins_specW (n : Nat) (s₀ : St)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_reserved_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ irpW rom n off s₀.mem = some s'.mem; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hL.irp]
+  simp only [callFn, internReservedPinsAt]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hnt := fun s₁ q₁ k₁ d₁ h₁ =>
+      Triple.keep hL.no_st8 (romNamesTo_specW rom p hL.toNameProg hL.rom_names_to n s₁ q₁ k₁ d₁ h₁)
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hnt,
+        internLs_spec p hL.lit_hash hL.limbs_eq hL.ls_match hL.ls_find hL.ls_push hL.intern_ls n,
+        internZero_spec p hL.zero_find hL.zero_push hL.intern_zero n,
+        internSucc_spec p hL.succ_find hL.succ_push hL.intern_succ n,
+        internSort_spec p hL.sort_find hL.sort_push hL.intern_sort n] <;>
+      finish (gen := 20) [Keep.size, Keep.pcap, irpFill, irpW_eq, irp1K_some, irp1bK_some]
 
 end irpSpec
 
@@ -353,11 +448,51 @@ theorem ArenaD.with_pins {m : Mem} {a : AState} (P : Pins) (h : ArenaD m a) :
   obtain ⟨hR, hD⟩ := h
   exact ⟨{ hR with }, { hD with }⟩
 
-theorem pinNames_length : pinNames.length = 51 := by
-  sorry
+theorem pinNames_length : pinNames.length = 52 := by simp [pinNames]
 
-theorem reserved_length : reservedBasisNameValues.length = 16 := by
-  sorry
+theorem reserved_length : reservedBasisNameValues.length = 16 := by simp [reservedBasisNameValues]
+
+theorem irp_run_bind {α β : Type} (x : AM α) (f : α → AM β) (a a' : AState) (v : α)
+    (h : x.run a = .ok (v, a')) : (x >>= f).run a = (f v).run a' := by
+  rw [StateT.run_bind, h]; rfl
+
+theorem internNameList_append_run (xs ys : List ConLeche.Name) : ∀ (a a₁ a₂ : AState) (hs hs' : List NIdx),
+    (internNameList xs).run a = .ok (hs, a₁) → (internNameList ys).run a₁ = .ok (hs', a₂) →
+    (internNameList (xs ++ ys)).run a = .ok (hs ++ hs', a₂) := by
+  induction xs with
+  | nil => intro a a₁ a₂ hs hs' h1 h2; simp only [internNameList] at h1; cases h1; exact h2
+  | cons x xs ih =>
+    intro a a₁ a₂ hs hs' h1 h2
+    simp only [List.cons_append, internNameList] at h1 ⊢
+    cases hx : (internName x).run a with
+    | error e => rw [StateT.run_bind, hx] at h1; cases h1
+    | ok p =>
+      obtain ⟨h, a₀⟩ := p
+      rw [irp_run_bind _ _ _ _ _ hx] at h1
+      cases hr : (internNameList xs).run a₀ with
+      | error e => rw [StateT.run_bind, hr] at h1; cases h1
+      | ok p' =>
+        obtain ⟨hs0, a₀'⟩ := p'
+        rw [irp_run_bind _ _ _ _ _ hr] at h1
+        have e : (pure (h :: hs0) : AM (List NIdx)).run a₀' = .ok (h :: hs0, a₀') := rfl
+        rw [e] at h1
+        simp only [Except.ok.injEq, Prod.mk.injEq] at h1
+        obtain ⟨rfl, rfl⟩ := h1
+        rw [irp_run_bind _ _ _ _ _ hx, irp_run_bind _ _ _ _ _ (ih a₀ _ a₂ hs0 hs' hr h2)]
+        rfl
+
+theorem internNameList_append (xs ys : List ConLeche.Name) (a : AState) (h1 : AM.ok (internNameList xs) a)
+    (h2 : AM.ok (internNameList ys) (AM.st (internNameList xs) a)) :
+    AM.ok (internNameList (xs ++ ys)) a ∧
+      AM.st (internNameList (xs ++ ys)) a = AM.st (internNameList ys) (AM.st (internNameList xs) a) ∧
+      AM.res (internNameList (xs ++ ys)) a =
+        AM.res (internNameList xs) a ++ AM.res (internNameList ys) (AM.st (internNameList xs) a) :=
+  AM.of_run_ok _ _ _ _ (internNameList_append_run xs ys _ _ _ _ _ (AM.run_of_ok _ _ h1) (AM.run_of_ok _ _ h2))
+
+theorem encNames_append (xs ys : List ConLeche.Name) : encNames (xs ++ ys) = encNames xs ++ encNames ys := by
+  induction xs with
+  | nil => rfl
+  | cons x xs ih => simp only [List.cons_append, encNames, ih, List.append_assoc]
 
 section irpRef
 variable (rom : List UInt8) (hr : RomOK rom)
@@ -375,7 +510,208 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
     AM.ok internReservedPins a ∧ ArenaD m' (AM.st internReservedPins a) ∧
     PinsFull m' (AM.st internReservedPins a).pins ∧ pinW m' 0 ≠ 0 ∧ MemFrame PinA StoreC m m' ∧
     ModeOK m' := by
-  sorry
+  cases n with
+  | zero => simp [irpW] at hW
+  | succ n =>
+  simp only [irpW] at hW
+  split at hW
+  case isTrue => simp at hW
+  rename_i hlen
+  have hsplit : pinNames = pinNames.take 51 ++ pinNames.drop 51 := (List.take_append_drop 51 pinNames).symm
+  have hlA : (pinNames.take 51).length = 51 := by simp [pinNames_length]
+  have hlB : (pinNames.drop 51).length = 1 := by simp [pinNames_length]
+  have hfA : (pinNames.take 51).all nameFits = true := by
+    rw [List.all_eq_true] at hf1 ⊢; exact fun x hx => hf1 x (List.mem_of_mem_take hx)
+  have hfB : (pinNames.drop 51).all nameFits = true := by
+    rw [List.all_eq_true] at hf1 ⊢; exact fun x hx => hf1 x (List.mem_of_mem_drop hx)
+  have hd' : rom.drop off.toNat = encNames (pinNames.take 51) ++
+      (encNames (pinNames.drop 51) ++ (encNames reservedBasisNameValues ++ rest)) := by
+    rw [hd]; conv => lhs; rw [hsplit]
+    rw [encNames_append, List.append_assoc]
+  cases h1 : romNamesToW rom n m off 51 1 with
+  | none => rw [h1] at hW; simp [irp1K] at hW
+  | some t =>
+  obtain ⟨q, m₁⟩ := t
+  rw [h1] at hW
+  simp only [irp1K] at hW
+  obtain ⟨ok1, hR1, hq, hf1', hl1, hj1, hk1⟩ := romNamesToW_ok rom hr _ hfA n m a off _ 51 1 q m₁ hA hmo
+    hd' (by simp [hlA]) (by simp [hlA]) h1
+  have hd1 : rom.drop q.toNat = encNames (pinNames.drop 51) ++ (encNames reservedBasisNameValues ++ rest) :=
+    drop_shift rom off (encNames (pinNames.take 51)) (encNames (pinNames.drop 51))
+      (encNames reservedBasisNameValues ++ rest) (by rw [hd', List.append_assoc]) q hq
+  have hmo1 := (romNamesToW_topK rom _ _ _ _ _ _ _ h1).mode hA.base.lit.1 hmo
+  cases h1b : romNamesToW rom n m₁ q 1 71 with
+  | none => rw [h1b] at hW; simp [irp1bK] at hW
+  | some t =>
+  obtain ⟨q₁, m₁b⟩ := t
+  rw [h1b] at hW
+  simp only [irp1bK] at hW
+  obtain ⟨ok1b, hR1b, hq1, hf1b', hl1b, hj1b, hk1b⟩ := romNamesToW_ok rom hr _ hfB n m₁ _ q _ 1 71 q₁ m₁b hR1
+    hmo1 hd1 (by simp [hlB]) (by simp [hlB]) h1b
+  have hd2 : rom.drop q₁.toNat = encNames reservedBasisNameValues ++ rest :=
+    drop_shift rom q (encNames (pinNames.drop 51)) (encNames reservedBasisNameValues) rest
+      (by rw [hd1, List.append_assoc]) q₁ hq1
+  obtain ⟨okP, stP, resP⟩ := internNameList_append _ _ a ok1 ok1b
+  rw [← hsplit] at okP stP resP
+  rw [← stP] at hR1b
+  have hmo1b := ((romNamesToW_topK rom _ _ _ _ _ _ _ h1).trans
+    (romNamesToW_topK rom _ _ _ _ _ _ _ h1b)).mode hA.base.lit.1 hmo
+  cases h2 : romNamesToW rom n m₁b q₁ 16 55 with
+  | none => rw [h2] at hW; simp [irp2K] at hW
+  | some t =>
+  obtain ⟨q₂, m₂⟩ := t
+  rw [h2] at hW
+  simp only [irp2K] at hW
+  obtain ⟨ok2, hR2, -, hf2', hl2, hj2, hk2⟩ := romNamesToW_ok rom hr reservedBasisNameValues hf2 n m₁b _ q₁
+    rest 16 55 q₂ m₂ hR1b hmo1b hd2 (by simp [reserved_length]) (by simp [reserved_length]) h2
+  cases h3 : lsinternW m₂ 0 0 with
+  | none => rw [h3] at hW; simp [irp3K] at hW
+  | some t =>
+  obtain ⟨us, m₃⟩ := t
+  rw [h3] at hW
+  simp only [irp3K] at hW
+  split at hW
+  case isTrue => simp at hW
+  rename_i hus
+  obtain ⟨ok3, hR3, res3, hf3⟩ := L.Front.internLs_D m₂ _ hR2 us m₃ 0 0 (by simp [SliceOK])
+    [] (by simp [sliceL, lsWords]) (fun _ => by decide) h3
+  cases h4 : zinternW m₃ with
+  | none => rw [h4] at hW; simp [irp4K] at hW
+  | some t =>
+  obtain ⟨z, m₄⟩ := t
+  rw [h4] at hW
+  simp only [irp4K] at hW
+  split at hW
+  case isTrue => simp at hW
+  rename_i hz
+  obtain ⟨ok4, hR4, res4, hf4⟩ := L.Front.zero_A m₃ _ hR3 z m₄ h4
+  cases h5 : sinternW m₄ z with
+  | none => rw [h5] at hW; simp [irp5K] at hW
+  | some t =>
+  obtain ⟨o, m₅⟩ := t
+  rw [h5] at hW
+  simp only [irp5K] at hW
+  split at hW
+  case isTrue => simp at hW
+  rename_i ho
+  have hzl : z.toNat < 2 ^ 32 := by simp at hz; exact UInt64.lt_iff_toNat_lt.mp hz
+  obtain ⟨ok5, hR5, res5, hf5⟩ := L.Front.succ_A m₄ _ hR4 o m₅ z hzl h5
+  cases h6 : sointernW m₅ o with
+  | none => rw [h6] at hW; simp [irp6K] at hW
+  | some t =>
+  obtain ⟨s1, m₆⟩ := t
+  rw [h6] at hW
+  simp only [irp6K] at hW
+  split at hW
+  case isTrue => simp at hW
+  rename_i hs1
+  simp only [Option.some.injEq] at hW
+  subst hW
+  have hol : o.toNat < 2 ^ 32 := by simp at ho; exact UInt64.lt_iff_toNat_lt.mp ho
+  obtain ⟨ok6, hR6, res6, hf6⟩ := L.Front.internSort_D m₅ _ hR5 s1 m₆ o hol h6
+  rw [← res4] at ok5 hR5 res5 ok6 hR6 res6
+  rw [← res5] at ok6 hR6 res6
+  have hrun := internReservedPins_run a okP ok2 ok3 _ rfl ok4 ok5 _ rfl ok6
+  obtain ⟨okX, stX, -⟩ := AM.of_run_ok _ _ _ _ hrun
+  have hfS : MemFrame StoreA StoreC m₂ m₆ :=
+    ((frame_store hf3 (by simp [tier1, lsSch, LSREC, LSSLOT, LSHP]) (by simp [lsSch])).trans
+      (frame_store hf4 (by simp [tier1, zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]))).trans
+      ((frame_store hf5 (by simp [tier1, succSch, SREC, SSLOT, SHP]) (by simp [succSch])).trans
+      (frame_store hf6 (by simp [tier1, sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
+  have hsz : (m₆.arr64 PINS).size = (m.arr64 PINS).size := by
+    rw [hfS.size, hf2'.size, hf1b'.size, hf1'.size]
+  have hsz72 : 72 ≤ (m.arr64 PINS).size := by
+    have : ¬ (UInt64.ofNat (m.arr64 PINS).size) < 72 := by simpa [Mem.len64] using hlen
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat', show (72 : UInt64).toNat = 72 from rfl] at this
+    have := Nat.mod_le (m.arr64 PINS).size (2 ^ 64)
+    omega
+  have hpw := fun i => pinW_fill m₆ us z s1 i (by omega)
+  have h26 := fun i => pinW_frame hfS i
+  refine ⟨okX, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [stX]
+    exact ArenaD.with_pins _ (ArenaD.frameHi (irpFill_frame m₆ us z s1) (by simp [PINS]) (by simp) hR6)
+  · rw [stX]
+    simp only [reserved_length, show (55 : UInt64).toNat = 55 from rfl] at hk2
+    simp only [hlB, show (71 : UInt64).toNat = 71 from rfl] at hk1b hj1b hl1b
+    simp only [hlA, show (1 : UInt64).toNat = 1 from rfl] at hl1 hj1
+    have hlo : ∀ i, 1 ≤ i → i < 52 → pinW (irpFill m₆ us z s1) i = pinW m₁ i := fun i h1 h2 => by
+      rw [hpw, h26, hk2 i (.inl (by omega)), hk1b i (.inl (by omega))]
+      have e0 : i ≠ 0 := by omega
+      have e4 : i ≠ 54 := by omega
+      have e3 : i ≠ 53 := by omega
+      have e2 : i ≠ 52 := by omega
+      rw [if_neg e0, if_neg e4, if_neg e3, if_neg e2]
+    have h71 : pinW (irpFill m₆ us z s1) 71 = pinW m₁b 71 := by
+      rw [hpw, h26, hk2 71 (.inr (by omega))]; simp
+    have hhi : ∀ i, 55 ≤ i → pinW (irpFill m₆ us z s1) i = pinW m₂ i := fun i h1 => by
+      rw [hpw, h26]
+      have e0 : i ≠ 0 := by omega
+      have e4 : i ≠ 54 := by omega
+      have e3 : i ≠ 53 := by omega
+      have e2 : i ≠ 52 := by omega
+      rw [if_neg e0, if_neg e4, if_neg e3, if_neg e2]
+    have h52 : pinW (irpFill m₆ us z s1) 52 = us := by rw [hpw]; simp
+    have h53 : pinW (irpFill m₆ us z s1) 53 = z := by rw [hpw]; simp
+    have h54 : pinW (irpFill m₆ us z s1) 54 = s1 := by rw [hpw]; simp
+    simp only [reserved_length, show (55 : UInt64).toNat = 55 from rfl] at hl2 hj2
+    have hget : ∀ i (h : i < 52), (AM.res (internNameList pinNames) a)[i]? =
+        some (decI (if i < 51 then pinW m₁ (1 + i) else pinW m₁b 71)) := fun i h => by
+      rw [resP]
+      by_cases hi : i < 51
+      · rw [List.getElem?_append_left (by omega), if_pos hi]
+        simpa [Nat.add_comm] using (hj1 i hi).1
+      · rw [List.getElem?_append_right (by omega), if_neg hi, hl1, show i - 51 = 0 by omega]
+        simpa using (hj1b 0 (by omega)).1
+    have hlenP : (AM.res (internNameList pinNames) a).length = 52 := by
+      rw [resP, List.length_append, hl1, hl1b]
+    refine { size := ?_, names_size := ?_, names_lt := ?_, names := ?_, quotMk_lt := ?_, quotMk := ?_,
+             lv_lt := ?_, emptyLevels := ?_, zeroLevel := ?_, sortOne := ?_, reserved_lt := ?_,
+             reserved := ?_ }
+    · rw [(irpFill_frame m₆ us z s1).size, hsz]; exact hsz72
+    · simp [hlenP]
+    · intro i hi
+      rw [hlo _ (by omega) (by omega)]
+      simpa [Nat.add_comm] using (hj1 i hi).2
+    · intro i hi
+      rw [hlo _ (by omega) (by omega)]
+      have := hget i (by omega)
+      rw [if_pos hi] at this
+      simp only [List.getElem_toArray]
+      rw [List.getElem?_eq_getElem (by omega)] at this
+      exact Option.some.inj this
+    · rw [h71]; simpa using (hj1b 0 (by omega)).2
+    · rw [h71]
+      have := hget 51 (by omega)
+      rw [if_neg (by omega)] at this
+      simp only [List.getElem_toArray]
+      rw [List.getElem?_eq_getElem (by omega)] at this
+      exact Option.some.inj this
+    · rw [h52, h53, h54]
+      refine ⟨by simp at hus; exact UInt64.lt_iff_toNat_lt.mp hus, hzl, ?_⟩
+      simp at hs1; exact UInt64.lt_iff_toNat_lt.mp hs1
+    · rw [h52]; exact res3
+    · rw [h53]; exact res4.symm ▸ rfl
+    · rw [h54]; exact res6
+    · intro i hi
+      rw [hhi _ (by omega)]
+      exact (hj2 i hi).2
+    · dsimp only
+      apply List.ext_getElem
+      · simp [hl2]
+      · intro i h1 h2
+        simp only [List.getElem_map, List.getElem_range]
+        rw [hhi _ (by omega)]
+        have := (hj2 i (by omega)).1
+        rw [List.getElem?_eq_getElem h1] at this
+        exact Option.some.inj this
+  · rw [hpw]; simp
+  · refine hf1'.trans (hf1b'.trans (hf2'.trans ((frame_pinA hfS).trans ?_)))
+    exact (irpFill_frame m₆ us z s1).mono (by simp [PinA]) (by simp)
+  · exact (((((((romNamesToW_topK rom _ _ _ _ _ _ _ h1).trans (romNamesToW_topK rom _ _ _ _ _ _ _ h1b)).trans
+      (romNamesToW_topK rom _ _ _ _ _ _ _ h2)).trans
+      (cons_topK lsCS_wf (by decide) (by decide) h3)).trans (cons_topK zeroCS_wf (by decide) (by decide) h4)).trans
+      (cons_topK succCS_wf (by decide) (by decide) h5)).trans ((cons_topK sortCS_wf (by decide) (by decide) h6).trans
+      (memFrame_top (irpFill_frame m₆ us z s1) (by simp)))).mode hA.base.lit.1 hmo
 
 end irpRef
 
@@ -393,6 +729,11 @@ theorem internReservedPins_refines (rom : List UInt8) (off : Word) (p : Prog) (h
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok internReservedPins a₀ ∧
       ArenaD s'.mem (AM.st internReservedPins a₀) ∧ PinsFull s'.mem (AM.st internReservedPins a₀).pins ∧
       pinW s'.mem 0 ≠ 0 ∧ MemFrame PinA StoreC s₀.mem s'.mem ∧ ModeOK s'.mem; ⊤⦄ := by
-  sorry
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (internReservedPins_specW rom off p hL n s₀ ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)
+  subst hs
+  exact ⟨hloc, irpW_ok rom hr off rest hd hf1 hf2 n _ a₀ _ hA hmo hW⟩
 
 end L.Rom
