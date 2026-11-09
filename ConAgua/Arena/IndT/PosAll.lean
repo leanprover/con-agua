@@ -237,7 +237,8 @@ theorem nbRef_all (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC :
     have ih := nbRef_all L hq hIlpf hLC hFt henv n (by omega)
     exact ⟨posRef_step hq dn vis fe henv L n (by omega) ih, bindRef_step p dn vis fe henv L n ih,
       appRef_step p dn vis fe L n ih, contRef_step p dn vis fe L hq hIlpf hLC hFt henv n (by omega) ih,
-      keyRef_step dn vis fe L n ih, sorry, sorry, ctorsRef_step L dn vis fe n ih, sorry,
+      keyRef_step dn vis fe L n ih, newRef_step hq dn vis fe L hIlpf hLC hFt henv n (by omega) ih, sorry,
+      ctorsRef_step L dn vis fe n ih, sorry,
       walkRef_step L dn vis fe henv n ih, fieldsRef_step L dn vis fe henv n ih⟩
 
 end all
