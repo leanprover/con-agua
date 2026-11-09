@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.QuotRecW
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.IndTwin
+public import ConRon.Bridge.Checker.Basis
 import ConAgua.Arena.RefWalk
 import all ConAgua.Arena.BasisL
 
@@ -122,11 +123,15 @@ theorem quotPredsOkW_ok {p : Prog} (hB : BasisProg p) (hpa : p.lookup "pin_at" =
 refinements under `StageT`: `quot_pin_hit`, `quot_at`). -/
 structure QuotSims (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop where
   qph : ∀ (n : Nat) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) (q : Word) (cv : IConstantVal)
-    (k : ConLeche.QuotKind), StageT dn vis fe m a → decCV (erecP m) q.toNat = some cv →
+    (c : ConLeche.ConstantVal) (k : ConLeche.QuotKind), StageT dn vis fe m a →
+    ConRon.Bridge.StateOK a → ConRon.Bridge.ReadOK a → decCV (erecP m) q.toNat = some cv →
+    ConRon.Arena.Frontend.denoteCV a.store cv = some c →
     Sim (callW p n "quot_pin_hit" [UInt64.ofNat k.slot, q] m) (ConRon.Arena.quotPinHit k cv) a
       (fun r b m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 ≠ 0 ↔ b = true))
   qat : ∀ (n : Nat) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) (q : Word) (cv : IConstantVal)
-    (k : ConLeche.QuotKind), StageT dn vis fe m a → decCV (erecP m) q.toNat = some cv →
+    (c : ConLeche.ConstantVal) (k : ConLeche.QuotKind), StageT dn vis fe m a →
+    ConRon.Bridge.StateOK a → ConRon.Bridge.ReadOK a → decCV (erecP m) q.toNat = some cv →
+    ConRon.Arena.Frontend.denoteCV a.store cv = some c →
     Sim (callW p n "quot_at" [UInt64.ofNat k.slot, q] m) (ConRon.Arena.quotAt k cv) a
       (fun r ci m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧
         decCI (erecP m') (r.headD 0).toNat = some ci)
@@ -160,17 +165,20 @@ theorem callW_quotPredsOk {p : Prog} (hP : QuotRecProg p) {vis : Word} {fe : IFE
 of the pin at the record's names (`quot_at`, `install_basis_decl`). -/
 theorem cqr_ref {p : Prog} (hP : QuotRecProg p) {dn : NIdx → Option ConLeche.Name}
     (hQ : QuotSims p dn) {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem} {q : Word}
-    {cv : IConstantVal} (k : ConLeche.QuotKind) (hS : StageT dn vis fe m a)
-    (hq : decCV (erecP m) q.toNat = some cv) :
+    {cv : IConstantVal} {c : ConLeche.ConstantVal} (k : ConLeche.QuotKind) (hS : StageT dn vis fe m a)
+    (hok : ConRon.Bridge.StateOK a) (hr : ConRon.Bridge.ReadOK a)
+    (hq : decCV (erecP m) q.toNat = some cv)
+    (hden : ConRon.Arena.Frontend.denoteCV a.store cv = some c) :
     RefE True (checkQuotRecordE p n m vis (UInt64.ofNat k.slot) q) (ConRon.Arena.checkQuotRecord fe k cv) a
       (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
   cases n with
   | zero => exact RefE.of_cls0 (by simp)
   | succ n =>
   simp only [checkQuotRecordE]
-  refine RefE.onlySim (fun _ => checkQuotRecordE.k_quot_pin_hit.none ..) (fun r m1 h => hQ.qph n vis fe m a q cv k hS hq r m1 h)
+  refine RefE.onlySim (fun _ => checkQuotRecordE.k_quot_pin_hit.none ..) (fun r m1 h => hQ.qph n vis fe m a q cv c k hS hok hr hq hden r m1 h)
     fun r1 m1 ⟨b, a1, hrun1, hS1, hg1, hb1⟩ => ?_
   simp only [ConRon.Arena.checkQuotRecord]
+  obtain ⟨hst1, -⟩ := ConRon.Bridge.quotPinHit_run hok hr hden hrun1
   refine RefE.bind_right hrun1 ?_
   by_cases h0 : r1.headD 0 = 0
   · have hb : b = false := by cases b <;> simp_all
@@ -199,7 +207,8 @@ theorem cqr_ref {p : Prog} (hP : QuotRecProg p) {dn : NIdx → Option ConLeche.N
   simp only [bne_iff_ne, ne_eq, h2, not_false_eq_true, decide_true, ite_true, pure_bind]
   have hq1 : decCV (erecP m1) q.toNat = some cv := ArrExt.decCV hg1.ext hq
   refine RefE.onlySim (fun _ => checkQuotRecordE.k_quot_at.none ..)
-    (fun r m3 h => hQ.qat n vis fe m1 a1 q cv k hS1 hq1 r m3 h) fun r3 m3 ⟨ci, a3, hrun3, hS3, hg3, hci⟩ => ?_
+    (fun r m3 h => hQ.qat n vis fe m1 a1 q cv c k hS1 hst1.ok hst1.read hq1
+      (ConRon.Bridge.denoteCV_ext hden hst1.ext) r m3 h) fun r3 m3 ⟨ci, a3, hrun3, hS3, hg3, hci⟩ => ?_
   rw [checkQuotRecordE.k_quot_at.arm1]
   refine RefE.bind_right hrun3 ?_
   exact RefE.weakenP (ibd_ref (dn := dn) hP.basis n hS3.stage hci) (fun v fe' a' hp => ⟨hp.stage, hg1.trans (hg3.trans hp.grow)⟩)

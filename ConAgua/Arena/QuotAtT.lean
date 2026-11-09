@@ -60,6 +60,7 @@ structure QuotAtProg (p : Prog) : Prop where
   slContains : p.lookup "sl_contains" = some slContains
   slNodup : p.lookup "sl_nodup" = some slNodup
   canon : CanonProg p
+  qat : p.lookup "quot_at" = some L.Ind.quotAt
 
 section
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -451,5 +452,69 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
 
 
 end qph
+
+/-! ## `quot_at(k, q)` and the two simulations `check_quot_record` takes -/
+
+/-- **A pin at a stream's names** (`ci_at_lps(c, po, pl)` refines `ci.atLps ps`) under `StageT`:
+the fresh record after it. Open: its six kinds (`cv_at_lps` by `cvAtLps_sim`, a definition's
+value by `inst_lp`, a recursor's rules by `rules_at_lps_go`/`fire_levels_at`). -/
+structure CiAtLpsSim (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop where
+  ci : ∀ (n : Nat) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) (c po pl : Word)
+    (ci : IConstantInfo) (ps : List NIdx) (psv : List ConLeche.Name) (cc : ConLeche.ConstantInfo),
+    StageT dn vis fe m a → ConRon.Bridge.StateOK a → ConRon.Bridge.ReadOK a →
+    decCI (erecP m) c.toNat = some ci → ConRon.Arena.Frontend.denoteCI a.store ci = some cc →
+    hslice? (erecP m) po.toNat pl.toNat = some ps →
+    ConRon.Arena.Frontend.denoteNList a.store.ns ps = some psv →
+    Sim (callW p n "ci_at_lps" [c, po, pl] m) (ci.atLps ps) a
+      (fun r ci' m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧
+        decCI (erecP m') (r.headD 0).toNat = some ci')
+
+section qat
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`quot_at(k, q)` refines `quotAt k cv`**: the slot's pin, then the pin at `cv`'s names. -/
+theorem quotAt_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (hC : CiAtLpsSim p dn)
+    (n : Nat) {m : Mem} {a : AState} {q : Word} {cv : IConstantVal} {c : ConLeche.ConstantVal}
+    (k : ConLeche.QuotKind) (hT : StageT dn vis fe m a) (hok : ConRon.Bridge.StateOK a)
+    (hr : ConRon.Bridge.ReadOK a) (hq : decCV (erecP m) q.toNat = some cv)
+    (hden : ConRon.Arena.Frontend.denoteCV a.store cv = some c) :
+    Sim (callW p n "quot_at" [UInt64.ofNat k.slot, q] m) (ConRon.Arena.quotAt k cv) a
+      (fun r ci m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧
+        decCI (erecP m') (r.headD 0).toNat = some ci) := by
+  intro r m' h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (quotAt_specW p hP.qat n _ (UInt64.ofNat k.slot) q) h
+  cases n with
+  | zero => simp [quotAtW] at hW
+  | succ n =>
+  simp only [quotAtW] at hW
+  cases h1 : callW p n "quot_pin" [UInt64.ofNat k.slot] m with
+  | none => rw [h1] at hW; simp [quotAtW.k_quot_pin] at hW
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at hW; simp only [quotAtW.k_quot_pin] at hW
+  obtain ⟨ci, a1, hrun1, hT1, hg1, hci⟩ := hQ.qp n vis fe m a k hT hok r1 m1 h1
+  obtain ⟨hst1, hpin⟩ := ConRon.Bridge.quotPin_run (s' := a1) hok hrun1
+  have hq1 : decCV (erecP m1) q.toNat = some cv := ArrExt.decCV hg1.erecGrow.ext hq
+  obtain ⟨hsl1, -⟩ := decCV_rdq (erRdOK m1) hq1
+  cases h2 : callW p n "ci_at_lps" [r1.headD 0, erRdT m1 (q + 1), erRdT m1 (q + 2)] m1 with
+  | none => rw [h2] at hW; simp [quotAtW.k_ci_at_lps] at hW
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2] at hW; simp only [quotAtW.k_ci_at_lps, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨ci', a2, hrun2, hT2, hg2, hdec2⟩ := hC.ci n vis fe m1 a1 _ _ _ ci cv.levelParams
+    c.levelParams _ hT1 hst1.ok (ConRon.Bridge.RStep.of_istep hst1 hr).read hci hpin hsl1
+    (ConRon.Bridge.denoteNListE_ext hst1.ext _ _ (ConRon.Bridge.denoteCV_inv hden).2.1) r2 m2 h2
+  obtain ⟨rfl, rfl⟩ := hW
+  refine ⟨ci', a2, ?_, hT2, hg1.trans hg2, hdec2⟩
+  simp only [ConRon.Arena.quotAt, StateT.run_bind, hrun1, exb, hrun2]
+
+/-- **The simulations `check_quot_record` takes**, from the slot reader's and `ci_at_lps`'s. -/
+theorem quotSims_of {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (hC : CiAtLpsSim p dn) :
+    QuotSims p dn :=
+  ⟨fun n _ _ _ _ _ _ _ k hT hok _ hq hden => quotPinHit_sim hP hQ n k hT hok hq hden,
+   fun n _ _ _ _ _ _ _ k hT hok hr hq hden => quotAt_sim hP hQ hC n k hT hok hr hq hden⟩
+
+end qat
 
 end L.Ind
