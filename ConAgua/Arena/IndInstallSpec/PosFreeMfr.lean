@@ -82,7 +82,7 @@ theorem tailSimFlush {p : Prog} (hF : FlushProg p) (n : Nat)
 
 theorem BPassB.grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (h : BPassB m q) : BPassB m' q := by
   refine ⟨Nat.le_trans h.1 hg.iw, fun i hi o l h1 h2 => ?_⟩
-  have hi' : i + 1 < 19 := by simp at hi; omega
+  have hi' : i + 1 < 11 := by simp at hi; omega
   have e1 : iwN m' (q + i) = iwN m (q + i) := by
     simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by have := h.1; omega)]
   have e2 : iwN m' (q + i + 1) = iwN m (q + i + 1) := by

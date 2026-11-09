@@ -81,6 +81,20 @@ theorem decHL_cons {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)}
 /-! ## `field_doms_resolve`, `idx_args_resolve` -/
 
 mutual
+/-- **The model of `field_doms_resolve`.** -/
+def fdrW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, v, o, l =>
+    if l = 0 then some ([1], m)
+    else fdrK1 n v o l (ftdF m [rdW (m.arr64 IW) o])
+/-- After `fvar_type_d`. -/
+def fdrK1 (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (ra, m1) => fdrK2 n v o l (crfF m1 [v, ra.headD 0])
+/-- After `consts_resolve_ffast`. -/
+def fdrK2 (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m2) => if rb.headD 0 = 0 then some ([0], m2) else resK (fdrW n m2 v (o + 1) (l - 1))
 /-- After a recursive call: its first word. -/
 def resK : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -88,6 +102,16 @@ def resK : Option (List Word × Mem) → Option (List Word × Mem)
 end
 
 mutual
+/-- **The model of `idx_args_resolve`.** -/
+def iarW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, v, o, l =>
+    if l = 0 then some ([1], m)
+    else iarK n v o l (crfF m [v, rdW (m.arr64 IW) o])
+/-- After `consts_resolve_ffast`. -/
+def iarK (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m2) => if rb.headD 0 = 0 then some ([0], m2) else resK' (iarW n m2 v (o + 1) (l - 1))
 /-- After a recursive call: its first word. -/
 def resK' : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -96,15 +120,77 @@ end
 
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (v o l : Word) (ra rb r : List Word)
+theorem fdrW_nil (hl : l = 0) : fdrW (n + 1) m v o l = some ([1], m) := by simp [fdrW, hl]
+theorem fdrW_cons (hl : l ≠ 0) :
+    fdrW (n + 1) m v o l = fdrK1 n v o l (ftdF m [rdW (m.arr64 IW) o]) := by
+  simp [fdrW, hl]
+theorem fdrK1_some : fdrK1 n v o l (some (ra, m1)) =
+    fdrK2 n v o l (crfF m1 [v, ra.headD 0]) := by rw [fdrK1]
+theorem fdrK2_no (h : rb.headD 0 = 0) : fdrK2 n v o l (some (rb, m2)) = some ([0], m2) := by
+  rw [fdrK2, ite_eq_left h]
+theorem fdrK2_yes (h : rb.headD 0 ≠ 0) :
+    fdrK2 n v o l (some (rb, m2)) = resK (fdrW n m2 v (o + 1) (l - 1)) := by rw [fdrK2, ite_eq_right h]
 theorem resK_some : resK (some (r, m)) = some ([r.headD 0], m) := rfl
+theorem iarW_nil (hl : l = 0) : iarW (n + 1) m v o l = some ([1], m) := by simp [iarW, hl]
+theorem iarW_cons (hl : l ≠ 0) :
+    iarW (n + 1) m v o l = iarK n v o l (crfF m [v, rdW (m.arr64 IW) o]) := by
+  simp [iarW, hl]
+theorem iarK_no (h : rb.headD 0 = 0) : iarK n v o l (some (rb, m2)) = some ([0], m2) := by
+  rw [iarK, ite_eq_left h]
+theorem iarK_yes (h : rb.headD 0 ≠ 0) :
+    iarK n v o l (some (rb, m2)) = resK' (iarW n m2 v (o + 1) (l - 1)) := by rw [iarK, ite_eq_right h]
 theorem resK'_some : resK' (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 
+grind_pattern [ind_grind] fdrW_nil => fdrW (n + 1) m v o l
+grind_pattern [ind_grind] fdrW_cons => fdrW (n + 1) m v o l
+grind_pattern [ind_grind] fdrK1_some => fdrK1 n v o l (some (ra, m1))
+grind_pattern [ind_grind] fdrK2_no => fdrK2 n v o l (some (rb, m2))
+grind_pattern [ind_grind] fdrK2_yes => fdrK2 n v o l (some (rb, m2))
 grind_pattern [ind_grind] resK_some => resK (some (r, m))
+grind_pattern [ind_grind] iarW_nil => iarW (n + 1) m v o l
+grind_pattern [ind_grind] iarW_cons => iarW (n + 1) m v o l
+grind_pattern [ind_grind] iarK_no => iarK n v o l (some (rb, m2))
+grind_pattern [ind_grind] iarK_yes => iarK n v o l (some (rb, m2))
 grind_pattern [ind_grind] resK'_some => resK' (some (r, m))
 
 section spec
 variable (p : Prog)
+
+theorem fdrW_spec (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (hftd : FtdF p) (hcr : CrfF p)
+    (n : Nat) :
+    ∀ (s₀ : St) (v o l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "field_doms_resolve" [v, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ fdrW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ v o l; rw [invoke_eq _ hp]; simp only [callFn, fieldDomsResolveL]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ v o l
+    rw [invoke_eq _ hp]
+    simp only [callFn, fieldDomsResolveL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        ftdF_spec0 p hftd n, crfF_spec p hcr n, ih] <;>
+      finish (gen := 20)
+
+theorem iarW_spec (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (hcr : CrfF p) (n : Nat) :
+    ∀ (s₀ : St) (v o l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_args_resolve" [v, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ iarW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ v o l; rw [invoke_eq _ hp]; simp only [callFn, idxArgsResolveL]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ v o l
+    rw [invoke_eq _ hp]
+    simp only [callFn, idxArgsResolveL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        crfF_spec p hcr n, ih] <;>
+      finish (gen := 20)
 
 end spec
 

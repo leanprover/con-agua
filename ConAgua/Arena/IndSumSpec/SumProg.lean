@@ -65,11 +65,9 @@ structure SumProg (p : Prog) : Prop where
 
 /-! ## The relation to the twin: pieces -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The twin's tail of `checkSumCtor` (from the opened field telescope on), verbatim. -/
 def cscTailT (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx : Nat) (resSort : LIdx)
-    (isProp large : Bool) (cvCa : IConstantVal) (nF : Nat) (cq : List EIdx × EIdx) :
-    AM (IConstantVal × List LIdx) := do
+    (isProp large : Bool) (nF : Nat) (cq : List EIdx × EIdx) : AM Unit := do
   let xq ← unwrapOr (← openPisAtFvarsF nF cq.2 nP)
     (.notImplemented "direct sum: constructor field telescope")
   let us ← paramLevels lps
@@ -83,10 +81,7 @@ def cscTailT (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx : Nat) (re
     fail (.notImplemented "direct sum: field domain after the block")
   unless ← idxArgsResolve fe₀ idxArgs do
     fail (.invalid "direct sum: index expression mentions the block")
-  let sorts ← checkStructFieldSortsI .verified fe isProp large resSort nP xq.1
-    idxArgs nF
-  pure (cvCa, sorts)
--/
+  checkStructFieldSortsI .verified fe isProp large resSort nP xq.1 idxArgs nF
 
 end L.Ind
 
