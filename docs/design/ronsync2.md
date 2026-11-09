@@ -139,3 +139,30 @@ CONFLICT, con-ron 0001 applies.
   sequential verdict keeps `TwinVerdict [b] c`); the threaded verdict `TwinVerdictPooled` keeps
   job `k`'s failure with class `c` or, weakened, some job below `k` rejected (a failure in another
   thread below `k` leaves no `PrefixOK` at `k`). Before/after texts: §6 (statement changes).
+
+## 6. Statement changes of the final theorems
+
+Approved by the user (via the coordinator, 2026-11-09). Reason: a job is checked at the stream
+index's view of its position, and con-ron's fold invariant there (`FoldOK`, its `envWF`) comes
+only from the model of the accepted prefix (`view_foldOK V`); upstream's own bridge
+(`Arena.pooledAccepts_bridge V`) takes the set theory, and it proves no rejection theorem for the
+pool.
+
+1. **The accept theorems** (`checkerFile_accepts`, `checkerFile_accepts_regs`,
+   `threadsRun_twinAcceptsPooled`, `threadsRun_twinAcceptsPooled_regs`, their copies in
+   `Audit/Final`). Before: `theorem checkerFile_accepts [Host] (k0 : Nat) (hcode : Code
+   checkerFile k0) (b pb : ByteArray) … : Ev (fun st => … (rdx = 0 → rax = ACCEPT → TwinAccepts
+   [b]) ∧ (rdx = 2 → rax &&& 3 ≠ 0 → TwinVerdict [b] (rax &&& 3))) dm (label abiStartL)`. After:
+   the same with `(V : Type w) [ConLeche.SetTheory V]` added before `[Host]` (the conclusion
+   unchanged).
+2. **The sequential verdict** (`checkerFile_verdict_of`): gains `(V : Type w)
+   [ConLeche.SetTheory V]`; its conclusion `TwinVerdict [b] c` is unchanged.
+3. **The threaded verdict** (`TwinVerdictPooled`, used by `checkerFile_threads_verdict_of`).
+   Before: `TwinVerdict chunks c ∨` (the stages and phase A ok, and some worker's list of pending
+   records `w ⊆ pend` fails from the phase-A state's worker with class `c`). After:
+   `TwinVerdict chunks c ∨` (the stages and the stream index ok, and either job `k` fails at the
+   view of `k` with class `c`, or some job `j < k` fails at the view of `j`). Weaker: a failure
+   reported by one thread at `k` says only "rejected" when another record below `k` is rejected.
+   It also gains the set theory.
+
+The final texts are given in the report when the theorems are proved.
