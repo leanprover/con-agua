@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Checker.HoistClosureL
 public import ConAgua.Arena.DeclNatDeps
+import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 
@@ -35,7 +36,15 @@ theorem allocWr_ok {m : Mem} {ws : List Word} {k : Word} (hI : IWOK m) (hk : k.t
       iwTop (wrIW (allocMem m k) (rdW (m.arr64 CTL) 200) ws) = iwTop m + ws.length ∧
       ∀ j < ws.length, rdW ((wrIW (allocMem m k) (rdW (m.arr64 CTL) 200) ws).arr64 IW)
         (rdW (m.arr64 CTL) 200 + UInt64.ofNat j) = ws[j]! := by
-  sorry
+  have hrec := recPost_wr m ws k hk hI hroom
+  have hfr : MemFrame [IW] [200] m (wrIW (allocMem m k) (rdW (m.arr64 CTL) 200) ws) :=
+    (allocMem_frame m k).trans (wrIW_frame ws _ _)
+  obtain ⟨_, hKeep, _, htop, _⟩ := hrec
+  refine ⟨⟨hfr, hKeep.1, IWOK.of_iw hfr hI (by rw [htop, hfr.size IW]; exact hroom)⟩, htop,
+    fun j hj => ?_⟩
+  have := pw_rec hI (recPost_wr m ws k hk hI hroom) j hj
+  simp only [pw] at this
+  rw [this, getElem!_pos ws j hj]
 
 theorem iwTop_lt' (m : Mem) : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
 theorem iwTop_lt_size (m : Mem) : iwTop m < UInt64.size := UInt64.toNat_lt _

@@ -49,7 +49,11 @@ theorem ordR_low {m m' : Mem} {ord : Word} {ds : Array IDeclaration} (B : Nat) (
 /-- An allocation is an `AFr`. -/
 theorem allocW_afr {m m₁ : Mem} {k q : Word} (hw : allocW m k = some (q, m₁)) (hI : IWOK m) :
     AFr m m₁ ∧ q.toNat = iwTop m ∧ iwTop m₁ = iwTop m + k.toNat ∧ iwTop m + k.toNat ≤ (m.arr64 IW).size := by
-  sorry
+  obtain ⟨hq, hm1, hk, hroom, htop⟩ := allocW_post hw hI
+  have hf : MemFrame [IW] [200] m m₁ := by
+    rw [hm1]; exact (MemFrame.setCtl m 200 _).mono (by simp) (by simp)
+  exact ⟨⟨hf, hk.1, IWOK.of_iw hf hI (by rw [htop, hf.size IW]; exact hroom)⟩, by rw [hq]; rfl,
+    htop, hroom⟩
 
 /-- **The hoist on the model**: when `hoist_nat_op_ground(ord, c)` returns `r`, the twin's
 `hoistNatOpGround ds` succeeds in the same state, and the slice `IW[r ‥ r + c)` is its records'

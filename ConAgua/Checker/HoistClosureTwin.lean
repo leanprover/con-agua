@@ -334,6 +334,38 @@ theorem closure_exact (a : AState) (D : Nat → List NIdx) (N : Nat → Prop) (T
     (hj : N j ∨ (T₀[j]?).isSome) (hR : ∀ k : Nat, N k → ReachIn idx i D N j k) :
     ∃ T', (hoistClosure used ds idx i ds.size T₀ [j]).run a = .ok (T', a) ∧
       ∀ k : Nat, T'[k]? = if N k then some i else T₀[k]? := by
-  sorry
+  classical
+  have hp : pend ds N T₀ ≤ ds.size := by
+    unfold pend
+    exact Nat.le_trans (List.length_filter_le _ _) (by simp)
+  obtain ⟨T', hrun, hE, hS, hC, -⟩ := closure_twin used ds idx i a D N T₀ hT₀ hN hcl ds.size T₀ [j]
+    (fun k => Or.inl rfl)
+    (by intro x hx; simp at hx; subst hx; exact hj)
+    (by
+      intro k hk hkT
+      rw [(hN k hk).1] at hkT; cases hkT)
+    hp
+  refine ⟨T', hrun, ?_⟩
+  -- every member reached is marked `i`
+  have key : ∀ x : Nat, ReachIn idx i D N j x → T'[x]? = some i := by
+    intro x hx
+    induction hx with
+    | base hNj =>
+      have hs := hS j (by simp)
+      rcases hE j with e | ⟨-, e⟩
+      · rw [e, (hN j hNj).1] at hs; cases hs
+      · exact e
+    | @step k' m hk' hs hm ih =>
+      have hmS : (T'[m]?).isSome := hC k' (hk'.mem idx i) (by rw [ih]; rfl) m hs
+      rcases hE m with e | ⟨-, e⟩
+      · rw [e, (hN m hm).1] at hmS; cases hmS
+      · exact e
+  intro k
+  by_cases hk : N k
+  · rw [ite_eq_left hk]; exact key k (hR k hk)
+  · rw [ite_eq_right hk]
+    rcases hE k with e | ⟨h, -⟩
+    · exact e
+    · exact absurd h hk
 
 end L.Checker.HoistTwin
