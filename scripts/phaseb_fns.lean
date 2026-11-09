@@ -1,6 +1,6 @@
 import ConAgua.Checker.Prog
 
-/-! Prints the call closure of `check_pending_go` in `L.Checker.checkerProg`, sorted, one name per
+/-! Prints the call closure of `check_b` (entry 2: the jobs over the frozen arrays) in `L.Checker.checkerProg`, sorted, one name per
 line (run by `scripts/phaseb_fns.py`, which writes it into `ConAgua/Checker/PhaseBReads.lean`). -/
 open L
 partial def L.Stmt.callsB : Stmt → List FnName
@@ -17,5 +17,5 @@ partial def cloB (p : Prog) (todo seen : List FnName) : List FnName :=
     | some fd => cloB p (fd.body.callsB ++ r) (f :: seen)
     | none => cloB p r (f :: seen)
 #eval do
-  for f in (cloB L.Checker.checkerProg ["check_pending_go"] []).mergeSort do
+  for f in (cloB L.Checker.checkerProg ["check_b"] []).mergeSort do
     IO.println s!"FN {f}"

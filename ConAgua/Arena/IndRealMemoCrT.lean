@@ -87,7 +87,6 @@ theorem crfF_of_callW {p : Prog} (hp : CrfF p) {n : Nat} {args r : List Word} {m
     crfF m args = some (r, m') :=
   callF_of_callW (by rw [← callW_agree crfP_closed (hp.agree crfPFns) n (by decide)]; exact h)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L; TwinOK.frame changes again with p3a)
 /-- **`consts_resolve_ffast` under `StageT`**, the walk's memo threaded (`crfF_ok` lifted). -/
 theorem crfF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e) :
     RelW crfF [vis, e] (fun m a => StageT dn vis fe m a ∧ CrMemo m) (constsResolveFFast fe (decI e))
@@ -100,6 +99,5 @@ theorem crfF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   subst ha'
   exact ⟨x, _, hrun, ⟨⟨hS', hT.twin.frame hf (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide), by rw [pinW_frame hf (by decide)]; exact hT.flag⟩, hg, hd⟩, hCr'⟩
--/
 
 end L.Ind

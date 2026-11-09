@@ -26,13 +26,17 @@ namespace L.Rom
 
 open L.Arena L.Ind
 
-/-- **The ROM readers over `rom` under their own names**, then `p`: the program in
-which the copies' callees are the generic readers (at `rom := romDataLit`, `RomReady`) (`RomCIProg.romc`). -/
-def Prog.viaC (rom : List UInt8) (p : Prog) : Prog :=
+/-- The ROM readers over `rom` under their own names (a function of `rom`, not a program of the
+checker: these names are the pin-data readers' there). -/
+def romCTabR (rom : List UInt8) : Prog :=
   [("rom_u64", romU64 rom), ("rom_put", romPut rom), ("rom_name", romName rom),
    ("rom_level", romLevel rom), ("rom_levels", romLevels), ("rom_lvls_go", romLvlsGo),
    ("rom_expr", romExpr rom), ("rom_ex_ref", romExRef), ("rom_ex_leaf", romExLeaf),
-   ("rom_ex_one", romExOne), ("rom_ex_two", romExTwo), ("rom_exprs_to", romExprsTo)] ++ p
+   ("rom_ex_one", romExOne), ("rom_ex_two", romExTwo), ("rom_exprs_to", romExprsTo)]
+
+/-- **The ROM readers over `rom` under their own names**, then `p`: the program in which the
+copies' callees are the generic readers (at `rom := romDataLit`, `RomReady`). -/
+def Prog.viaC (rom : List UInt8) (p : Prog) : Prog := romCTabR rom ++ p
 
 /-- The ROM readers over the constant data and the functions they call (closed under the calls of
 `Prog.viaC` at the checker's program). -/
