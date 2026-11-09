@@ -139,6 +139,7 @@ def ruleAgreeL : FunDecl := lfn (vis, lo, ll, s, g) locals (c, u, ts, tg, eq) {
 def streamNestedPins : FunDecl := lfn (n, po, pl) locals (x, ro, rl, o, l) {
   if pl == 0 { return (0, 0) };
   x := call lift_entry(IW.u64[po], n, 0, ⟪CWF⟫);
+  if 4294967296 <= x { abort };
   (ro, rl) := call stream_nested_pins(n, po + 1, pl - 1);
   (o, l) := call sl_cons(x, ro, rl);
   return (o, l)
@@ -185,13 +186,15 @@ index variables; `1` at `.plain` (kind `0`) and `.levels` (kind `2`). -/
 -- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:131-147 ConRon.Arena.streamNestedOk
 @[no_expose, l_impl ConRon.Arena.streamNestedOk]
 def streamNestedOkL : FunDecl := lfn (ty, mI, rP, kind, lo, ll, po, pl)
-    locals (ok, bo, bl, rest, g, dom, b, z, r) {
+    locals (ok, bo, bl, rest, g, dom, b, z, d, r) {
   if kind != 1 { return 1 };
   (ok, bo, bl, rest) := call strip_pis(mI, ty);
   if ok == 0 { return 0 };
   if ⟦rest⟧.tag != 6 { return 0 };
   (g, dom, b, z) := call e_view(rest);
-  r := call stream_nested_dom(dom, mI - rP, lo, ll, po, pl);
+  d := mI - rP;
+  if mI < rP { d := 0 };
+  r := call stream_nested_dom(dom, d, lo, ll, po, pl);
   return r
 }
 
