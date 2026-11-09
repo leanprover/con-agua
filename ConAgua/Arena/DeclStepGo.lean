@@ -168,15 +168,6 @@ theorem pinIn_contains {m : Mem} {p : Pins} (hF : PinsFull m p) {n : Nat} {x k h
   · rintro ⟨j, a, b, e⟩; exact ⟨j, a, by omega, by rw [← rdW_pins m j (by omega)]; exact e⟩
   · rintro ⟨j, a, b, e⟩; exact ⟨j, a, by omega, by rw [rdW_pins m j (by omega)]; exact e⟩
 
-/-! ## The twin's two arms -/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`installStepGo`'s `checkDecl` arm.** -/
-def cdT (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (fe : IFEnv) (d : IDeclaration) :
-    AM (IFEnv × Option ValueGroup) := do
-  pure (← checkDecl mode pins fe d, none)
--/
-
 /-- The pinned definitions' names (`natOpNames ++ natDivModNames`) are the pin table's 15 to 29. -/
 theorem pinnedDefn_contains (m : Mem) (x : NIdx) :
     (((List.range' 15 7).map fun j => (decI (pinW m j) : NIdx)).contains x ||
@@ -193,10 +184,13 @@ structure IstgProg (p : Prog) : Prop where
 theorem stepC_200 : (200 : Word) ∈ stepC := by decide +kernel
 
 /-- **`iw_reset` keeps the loop's relation.** -/
-theorem LoopR.reset {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
+theorem LoopR.reset {pins : List INatOpPinSet} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {ds : Array IDeclaration}
     (h : LoopR pins m a vis fe ds) : LoopR pins (m.set64 CTL 200 0) a vis fe ds := by
-  sorry
+  have hf : MemFrame stepA stepC m (m.set64 CTL 200 0) :=
+    (MemFrame.setCtl m 200 0).mono (by simp) (by simpa using stepC_200)
+  refine h.of_step (iwReset_stage ⟨h.check, h.iw⟩).1 hf ?_
+  rw [erecP_reset]; exact fun _ _ h => h
 
 /-- The constant-record and value-group kinds of `install_value`'s call for a record. -/
 def IvArgs (ck vk : Word) : IDeclaration → Prop
@@ -209,12 +203,12 @@ def IvArgs (ck vk : Word) : IDeclaration → Prop
 
 /-- `install_value`'s text: this lane's functions, lane `induct`'s library and stubs, the
 environment. -/
-def ivProg : Prog := declStepFns ++ L.Ind.libFns ++ L.Ind.stubFns ++ envProg
+def ivProg : Prog := declStepFns ++ L.Ind.libFns ++ L.Ind.stubFns ++ envProg ++ [("erec_put", L.Ind.erecPut)]
 
 /-- The functions `install_value` reaches. -/
 def ivFns : List FnName :=
-  ["erec_ci", "erec_alloc", "dlp_copy", "env_find",
-   "env_row_get", "env_ix", "reserved_contains", "reserved_from", "cv_lps",
+  ["erec_ci", "erec_alloc", "erec_put", "dlp_copy", "env_find",
+   "env_row_get", "reserved_contains", "reserved_from", "cv_lps",
    "er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains", "loose_bvars_bounded_fast",
    "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast", "env_push", "env_row_set"]
 
@@ -228,10 +222,6 @@ variable {p : Prog} (h : IvProg p)
 include h
 theorem IvProg.recP : RecProg p := by
   constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem IvProg.ih : IhProg p := by
-  constructor <;> first | exact h.bvb | exact h.hf | exact (h.agree _ (by decide) (by decide)).trans rfl
--/
 end ivLookups
 
 end L.Arena

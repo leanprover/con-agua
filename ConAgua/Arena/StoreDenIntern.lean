@@ -260,7 +260,8 @@ theorem Keeps.noLss_of_stP {α : Type} {op : AM α} (h : Keeps stDenP op) : Keep
 
 theorem keeps_noLss_andRescueSlots (fe : IFEnv) (c : NIdx) (nP : Nat) :
     Keeps noLss (andRescueSlots fe c nP) := by
-  sorry
+  unfold andRescueSlots
+  exact Keeps.bind (by unfold pinAnd; prim_keeps pinAt) fun _ => Keeps.pure _
 
 /-- **`StoreDen` across a step that keeps the caches, the pins and the level stores** and creates
 no new `sort`/`const` view (`hv`). -/
@@ -310,7 +311,9 @@ theorem StoreDen.of_internSort {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   refine ⟨fun x u' hx => ?_, fun x c us hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls, h.lsAll.congr hl,
     fun k x e => by have := h.dnN k x e; simp only [EStore.ns, hl] at this ⊢; exact this,
     fun c cv mI rP rules hf r hr lvls pins hfi u hu => by
-      rw [hls]; exact h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu⟩
+      rw [hls]; exact h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu,
+    fun c cv mI rP isK rules hf r hr lvls hfi u hu => by
+      rw [hls]; exact h.recLevels c cv mI rP isK rules hf r hr lvls hfi u hu⟩
   · rcases hv x _ (.inl ⟨_, rfl⟩) hx with h' | h'
     · rw [hls]; exact h.sort x u' h'
     · cases h'; rw [hls]; exact hu
@@ -336,7 +339,9 @@ theorem StoreDen.of_internConst {dn : NIdx → Option ConLeche.Name} {m m' : Mem
   refine ⟨fun x u' hx => ?_, fun x c' us' hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls, h.lsAll.congr hl,
     fun k x e => by have := h.dnN k x e; simp only [EStore.ns, hl] at this ⊢; exact this,
     fun c cv mI rP rules hf r hr lvls pins hfi u hu => by
-      rw [hls]; exact h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu⟩
+      rw [hls]; exact h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu,
+    fun c cv mI rP isK rules hf r hr lvls hfi u hu => by
+      rw [hls]; exact h.recLevels c cv mI rP isK rules hf r hr lvls hfi u hu⟩
   · rcases hv x _ (.inl ⟨_, rfl⟩) hx with h' | h'
     · rw [hls]; exact h.sort x u' h'
     · cases h'

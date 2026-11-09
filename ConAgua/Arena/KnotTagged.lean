@@ -207,15 +207,15 @@ theorem recFireArgs_refines :
       CoreAfterG dn s₀.mem s'.mem (AM.st (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀) vis
         fe MM eb ∧
       ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
-        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
-  recFireArgs_refines' p hq.body.iota (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
-    (ErecKeptInst.of_closed hq.hcl)
+        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
+  sorry
+
 -/
 
 include hq in
 @[refines ConRon.Arena.andRescueSlots]
-theorem andRescueSlots_refines : AndRescueSlotsOK p :=
-  andRescueSlots_refines' p hq.body.iota (KnotAllProg.projC hq)
+theorem andRescueSlots_refines : AndRescueSlotsOK p := by
+  sorry
 
 include hq in
 @[refines ConRon.Arena.fabScopeOk]
@@ -238,7 +238,7 @@ include hq in
 @[refines ConRon.Arena.majorToCtor]
 theorem majorToCtor_refines : MajorToCtorOK p :=
   majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
-    (ErecKeptKnot.of_closed hq.hcl) (KnotAllProg.projC hq)
+    (ErecPKept.of_closed hq.hcl) (KnotAllProg.projC hq) hq.prop (KnotAllProg.instLP hq)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in

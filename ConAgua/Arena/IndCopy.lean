@@ -144,7 +144,17 @@ open L.Arena
 theorem hslice?_congr {k : IdxKind} (a b : Nat → Option Word) (off off' n : Nat)
     (h : ∀ j < n, a (off + j) = b (off' + j)) :
     (hslice? a off n : Option (List (Idx k))) = hslice? b off' n := by
-  sorry
+  have key : ∀ l : List Nat, (∀ j ∈ l, j < n) →
+      l.mapM (fun j => (hd? a (off + j) : Option (Idx k))) = l.mapM fun j => hd? b (off' + j) := by
+    intro l
+    induction l with
+    | nil => intro _; rfl
+    | cons j js ih =>
+      intro hl
+      have e : (hd? a (off + j) : Option (Idx k)) = hd? b (off' + j) := by
+        unfold hd?; rw [h j (hl j (by simp))]
+      rw [List.mapM_cons, List.mapM_cons, e, ih (fun x hx => hl x (by simp [hx]))]
+  exact key _ (fun j hj => List.mem_range.mp hj)
 
 theorem consPre_ctl (m : Mem) (x l : Word) (i : Word) (hi : i ≠ 200) :
     rdW ((consPre m x l).arr64 CTL) i = rdW (m.arr64 CTL) i := by
@@ -162,7 +172,85 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
     (hx : x.toNat < 2 ^ 32) (hxs : decHL m o.toNat l.toNat = some xs) :
     decHL m' (rdW (m.arr64 CTL) 200).toNat (l + 1).toNat = some (decI x :: xs) ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + (l + 1) := by
-  sorry
+  generalize hq : rdW (m.arr64 CTL) 200 = q at *
+  have hlm : l.toNat ≠ 2 ^ 64 - 1 := fun h0 => hne (by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp [h0])
+  have hl1 : (l + 1).toNat = l.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp
+    have : l.toNat < 2 ^ 64 := l.toNat_lt
+    omega
+  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  rw [hl1] at hroom
+  -- the memory before the copy
+  have hm1IW : (consPre m x l).arr64 IW = ((m.arr64 IW).set! q.toNat x) := by
+    simp only [consPre, allocMem, hq]
+    rw [Mem.arr64_set64_same, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hm1sz : ((consPre m x l).arr64 IW).size = (m.arr64 IW).size := by rw [hm1IW]; simp
+  obtain ⟨hA, hS, hG⟩ := copyW_get n _ _ _ _ _ h (by rw [hq1]; omega) (by rw [hq1, hm1sz]; omega)
+    (by rw [hm1sz]; exact hsz)
+  have hm1get : ∀ i, ((consPre m x l).arr64 IW)[i]? =
+      if i = q.toNat then some x else (m.arr64 IW)[i]? := by
+    intro i
+    rw [hm1IW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    by_cases hi : q.toNat = i
+    · subst hi; simp [show q.toNat < (m.arr64 IW).size by omega]
+    · simp [hi, Ne.symm hi]
+  have hget : ∀ i, (m'.arr64 IW)[i]? =
+      if i = q.toNat then some x
+      else if q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + l.toNat then (m.arr64 IW)[o.toNat + (i - (q.toNat + 1))]?
+      else (m.arr64 IW)[i]? := by
+    intro i
+    rw [hG i, hq1]
+    by_cases hi : q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + l.toNat
+    · rw [ite_eq_left hi, ite_eq_right (by omega), ite_eq_left hi, hm1get, ite_eq_right (by omega)]
+    · rw [ite_eq_right hi, hm1get]
+      by_cases hiq : i = q.toNat
+      · simp [hiq]
+      · rw [ite_eq_right hiq, ite_eq_right hiq, ite_eq_right hi]
+  -- the other arrays and CTL
+  have hCTL : ∀ i, i ≠ (200 : Word) → rdW (m'.arr64 CTL) i = rdW (m.arr64 CTL) i := by
+    intro i hi
+    rw [hA CTL (by decide)]; exact consPre_ctl m x l i hi
+  have hEREC : m'.arr64 EREC = m.arr64 EREC := by
+    rw [hA EREC (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have htop : rdW (m'.arr64 CTL) 200 = q + (l + 1) := by
+    rw [hA CTL (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64]; simp [hc, hq]
+  have hEREC1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := by
+    rw [hA (tier1 EREC) (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  refine ⟨?_, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
+  · simp only [decHL, hl1, hslice?_succ]
+    have h0 : (hd? (iwA m') q.toNat : Option (Idx k)) = some (decI x) := by
+      simp [hd?, iwA, aread_apply, hget, hx]
+    rw [h0]
+    have : (hslice? (iwA m') (q.toNat + 1) l.toNat : Option (List (Idx k))) = some xs := by
+      rw [← hxs]; simp only [decHL]
+      apply hslice?_congr
+      intro j hj
+      simp only [iwA, aread_apply, hget]
+      rw [ite_eq_right (by omega), ite_eq_left (by omega)]
+      congr 1; omega
+    simp [this]
+  · have : (q + (l + 1)).toNat = q.toNat + (l.toNat + 1) := by
+      rw [UInt64.toNat_add, hl1]; simp; omega
+    simp only [iwTop, htop, this, hq]; omega
+  · simp only [erTop, hCTL 129 (by decide)]; exact Nat.le_refl _
+  · intro i hi
+    simp only [iwTop, hq] at hi
+    rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
+  · intro i _; rw [hEREC]
+  · simp only [erecTop1, hCTL 130 (by decide)]; exact Nat.le_refl _
+  · intro i _; rw [hEREC1]
+  · intro b hb hbc
+    rw [hA b (by simpa using hb)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by simpa using hb), Mem.arr64_set64_ne _ _ _ _ _ hbc]
+  · intro i hi; exact hCTL i (by simpa using hi)
+  · intro b
+    by_cases hb : b = IW
+    · subst hb; rw [hS, hm1sz]
+    · rw [hA b hb]; simp only [consPre, allocMem, size_set64]
 
 end L.Ind
 

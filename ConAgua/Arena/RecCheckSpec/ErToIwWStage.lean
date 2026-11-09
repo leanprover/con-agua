@@ -174,7 +174,37 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ AbsOK m' := by
-  sorry
+  induction n with
+  | zero => intro m m' a rP dso dsl r ds h; simp [aplW] at h
+  | succ n ih =>
+    intro m m' a rP dso dsl r ds h hS hds hb hbt hrP hA
+    by_cases hdsl : dsl = 0
+    · rw [aplW.arm1 n m rP dso dsl hdsl] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      have hz : dsl.toNat = 0 := by rw [hdsl]; rfl
+      rw [hz] at hds
+      simp [decHL, hslice?] at hds
+      subst hds
+      refine ⟨[], a, rfl, hS, IWGrow.refl m, by simp [decHL, hslice?], by simp, hA⟩
+    · rw [aplW.arm2 n m rP dso dsl hdsl] at h
+      obtain ⟨d, ds', w, rfl, hds', hw1, hw2, hw3, hdso1, hdsl1⟩ := rcSl_step hds hdsl hb
+      rw [hw1] at h
+      rcases ha : absPrefW n m rP 0 w with _ | ⟨ra, m1⟩ <;> simp only [ha, aplW.k_abstract_prefix, reduceCtorEq] at h
+      obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12, hA1⟩ := absPrefW_ok dn vis fe n m m1 a rP 0 w ra ha hS hw2
+        (by simpa using hrP) hA
+      simp only [UInt64.toNat_zero] at hrun1
+      rcases hr : aplW n m1 rP (dso + 1) (dsl - 1) with _ | ⟨r2, m2⟩ <;> simp only [hr, aplW.k_abstract_prefix_list, reduceCtorEq] at h
+      have hds1 : decHL m1 (dso + 1).toNat (dsl - 1).toNat = some ds' := by
+        rw [decHL_grow hg1 (by omega)]; exact hds'
+      obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2, hA2⟩ := ih m1 m2 a1 rP (dso + 1) (dsl - 1) r2 ds' hr hS1 hds1
+        (by omega) (by have := hg1.iw; omega) hrP hA1
+      rcases hc : consW n m2 (ra.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, aplW.k_sl_cons, reduceCtorEq] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hd11 hd2
+      refine ⟨x1 :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by rw [← hd12]; simpa using hd3,
+        by simpa using Nat.le_of_eq ht3, hA2.consW hc⟩
+      simp only [ConRon.Arena.abstractPrefixList, StateT.run_bind, ← hw3, hrun1, except_ok_bind, hrun2]
+      rfl
 
 /-! ## `target_holes` (loop rewritten as recursion: first hole, the rest, `sl_cons`) -/
 
@@ -248,7 +278,7 @@ theorem targetHoles_spec (p : Prog) (hff : p.lookup "fvar_find" = some fvarFind)
         internFVar_spec p hff hfp hif n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
 
-theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
+theorem thW_ok (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (tyo tyl base : Word) (r : List Word) (tys : List EIdx),
     thW n m tyo tyl base = some (r, m') → StageR vis fe m a →
     decHL m tyo.toNat tyl.toNat = some tys → tyo.toNat + tyl.toNat < 2 ^ 64 →
@@ -257,7 +287,45 @@ theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  sorry
+  induction n with
+  | zero => intro m m' a tyo tyl base r tys h; simp [thW] at h
+  | succ n ih =>
+    intro m m' a tyo tyl base r tys h hS htys hb hbt hbase
+    by_cases htyl : tyl = 0
+    · rw [thW_nil n m tyo tyl base htyl] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      have hz : tyl.toNat = 0 := by rw [htyl]; rfl
+      rw [hz] at htys
+      simp [decHL, hslice?] at htys
+      subst htys
+      refine ⟨[], a, rfl, hS, IWGrow.refl m, by simp [decHL, hslice?], by simp⟩
+    · rw [thW_cons n m tyo tyl base htyl] at h
+      obtain ⟨ty, tys', w, rfl, htys', hw1, hw2, hw3, htyo1, htyl1⟩ := rcSl_step htys htyl hb
+      have hbase1 : (base + 1).toNat = base.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      rw [hw1] at h
+      rcases hf : fvinternW m base w with _ | ⟨v, m1⟩ <;> rw [hf] at h <;>
+        try (simp only [thK1, reduceCtorEq] at h; done)
+      by_cases hv : 4294967296 ≤ v
+      · rw [thK1_big n m1 tyo tyl base v hv] at h; simp at h
+      rw [thK1_ok n m1 tyo tyl base v hv] at h
+      have hv32 : v.toNat < 2 ^ 32 := by
+        have : ¬ (4294967296 : Nat) ≤ v.toNat := hv
+        omega
+      obtain ⟨a1, hrun1, hS1, hg1⟩ := internFVar_stage hS base w hw2 hf
+      rcases hr : thW n m1 (tyo + 1) (tyl - 1) (base + 1) with _ | ⟨r2, m2⟩ <;> simp only [hr, thK2, reduceCtorEq] at h
+      have htys1 : decHL m1 (tyo + 1).toNat (tyl - 1).toNat = some tys' := by
+        rw [decHL_grow hg1 (by omega)]; exact htys'
+      obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2⟩ := ih m1 m2 a1 (tyo + 1) (tyl - 1) (base + 1) r2 tys' hr hS1
+        htys1 (by omega) (by have := hg1.iw; omega) (by omega)
+      rcases hc : consW n m2 v (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, thK3, reduceCtorEq] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hv32 hd2
+      refine ⟨decE v :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa [decE_eq] using hd3, by simpa using Nat.le_of_eq ht3⟩
+      rw [hbase1] at hrun2
+      simp only [ConRon.Arena.targetHoles, ConRon.Arena.internFVarE, StateT.run_bind]
+      rw [← hw3, show (decI w : EIdx) = decE w from rfl]
+      simp only [hrun1, except_ok_bind, hrun2]
+      rfl
 
 local notation "V" => ConLeche.CheckMode.verified
 
@@ -351,37 +419,77 @@ def PdRes (m' : Mem) (r : List Word) : Option (List EIdx) → Prop
 
 /-! ## `er_to_iw` and `cv_lps` under the stage relation -/
 
-theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {k : IdxKind}
+theorem erToIwW_stage {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {k : IdxKind} {xs : List (Idx k)}
     (h : erToIwW n m o l = some (r, m')) (hS : StageR vis fe m a)
-    (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
+    (hxs : hslice? (erA m) o.toNat l.toNat = some xs) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
-      (decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat : Option (List (Idx k))) =
-        hslice? (erA m) o.toNat l.toNat ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ m'.arr64 EREC = m.arr64 EREC := by
-  sorry
+  have hsz := hS.iw.iwSize
+  obtain ⟨hr, hd, hg, hf, hE, ht⟩ := erToIwW_dec h hsz hS.iw.ctl hxs
+  have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
+    rw [← ht, hf.size IW]
+    simp only [erToIwW] at h
+    cases hal : allocW m l with
+    | none => simp [hal] at h
+    | some qm =>
+      obtain ⟨q, m1⟩ := qm
+      obtain ⟨hq, -, hr2⟩ := allocW_facts hal hsz
+      simp only [hal] at h
+      cases hcp : erCopyW (n - 1) m1 q o l with
+      | none => simp [hcp] at h
+      | some m2 =>
+        simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, -⟩ := h
+        subst hq
+        simpa using hr2
+  subst hr
+  exact ⟨⟨CheckR.frame_iw hf hS.check, hS.iw.of_iw hf hroom⟩, hg, by simpa using hd, by simpa using ht, hE⟩
 
 /-- The model of `cv_lps(q)`. -/
 def cvLpsW (n : Nat) (m : Mem) (q : Word) : Option (List Word × Mem) :=
-  erToIwW (n - 1) m (rdW (m.arr64 EREC) (q + 1)) (rdW (m.arr64 EREC) (q + 2))
+  erToIwW (n - 1) m (erRd m (q + 1)) (erRd m (q + 2))
 
 theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
     (hp : p.lookup "cv_lps" = some cvLps) (n : Nat) (s₀ : St) (q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_lps" [q]
     ⦃fun r s' => LocEq s' s₀ ∧ cvLpsW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]; simp only [callFn, cvLps]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        erToIw_specW2 p ha hc he n] <;>
+      finish (gen := 20) [cvLpsW, rdW_eq, erRd]
 
-theorem cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+/-- A number decoded off the record pool is the word `EREC⦃·⦄` reads there. -/
+theorem erRd_nat {m : Mem} {q : Word} {i v : Nat} (h : nat? (erA m) i = some v) (hi : q.toNat = i) :
+    erRd m q = UInt64.ofNat v ∧ v < 2 ^ 64 := by
+  simp only [nat?, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  exact ⟨by rw [erRd_of_erA (by rw [hi]; exact hw), UInt64.ofNat_toNat], w.toNat_lt⟩
+
+theorem cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
     (h : cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
-    (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64)
-    (hlpb : (rdW (m.arr64 EREC) (q + 2)).toNat = 0 ∨
-      (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size) :
+    (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+  obtain ⟨-, hl, -⟩ := decCV_some (a := erA m) (q := q.toNat) hcv
+  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl
+  obtain ⟨o', ho, l', hl', hs⟩ := hl
+  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  obtain ⟨hr1, hob⟩ := erRd_nat ho hq1
+  obtain ⟨hr2, hlb⟩ := erRd_nat hl' (by rw [hq2])
+  simp only [cvLpsW, hr1, hr2] at h
+  obtain ⟨hS', hg, hdec, ht, hE⟩ := erToIwW_stage h hS
+    (by rw [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; exact hs)
+  exact ⟨hS', hg, hE, hdec, ht⟩
 
 /-! ## `target_ctor_at` -/
 
@@ -394,11 +502,11 @@ def tcK2 : Option (List Word × Mem) → Option (List Word × Mem)
 def tcK1 (cR : CallM) (n : Nat) (us c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
-    tcK2 (cR n "inst_lp_fast" [CWF, r.headD 0, r.tail.headD 0, us, rdW (m1.arr64 EREC) (c + 3)] m1)
+    tcK2 (cR n "inst_lp_fast" [CWF, r.headD 0, r.tail.headD 0, us, erRd m1 (c + 3)] m1)
 
 /-- **The model of `target_ctor_at`** (its `inst_lp_fast` read through `cR`). -/
 def tcW (cR : CallM) (n : Nat) (m : Mem) (M c : Word) : Option (List Word × Mem) :=
-  if rdW (m.arr64 IW) (M + 8) ≠ 0 then some ([rdW (m.arr64 EREC) (c + 3)], m)
+  if rdW (m.arr64 IW) (M + 8) ≠ 0 then some ([erRd m (c + 3)], m)
   else tcK1 cR n (rdW (m.arr64 IW) (M + 1)) c (cvLpsW n m c)
 
 theorem decTM_ds {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :

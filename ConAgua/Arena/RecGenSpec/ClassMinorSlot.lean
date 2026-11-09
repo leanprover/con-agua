@@ -136,7 +136,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧ (r.headD 0).toNat ≤ 1 := by
   simp only [leafAtW] at h
   rcases hs : gafF m [CWF, leaf] with _ | ⟨r1, m1⟩ <;> simp only [hs, reduceCtorEq] at h
-  obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF leaf hl m m1 a r1 hs hS
+  obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok vis fe CWF leaf hl m m1 a r1 hs hS
   rw [CWF_eq] at hrun1
   generalize hw : r1.headD 0 = w at hd1 hd2 h
   have e1 : (decI leaf : EIdx) = decE leaf := rfl
@@ -230,7 +230,15 @@ def RecsOK (m : Mem) (ro rl : Nat) (cvs : List IConstantVal) : Prop :=
 
 theorem RecsOK_grow {m m' : Mem} (hg : IWGrow m m') {ro rl : Nat} {cvs : List IConstantVal}
     (h : RecsOK m ro rl cvs) : RecsOK m' ro rl cvs := by
-  sorry
+  obtain ⟨h1, h2, h3⟩ := h
+  refine ⟨Nat.le_trans h1 hg.iw, h2, fun j hj => ?_⟩
+  obtain ⟨p0, q, cv, hp0, hp1, hq, hcv, hext, hcvs⟩ := h3 j hj
+  have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet i hi]
+  refine ⟨p0, q, cv, ?_, Nat.le_trans hp1 hg.iw, ?_, ?_, CVExt_grow hg hext, hcvs⟩
+  · rw [hiw _ (by omega)]; exact hp0
+  · rw [hiw _ (by omega)]; exact hq
+  · rw [decCVp_grow_r hg hext]; exact hcv
 
 theorem RecsOK_cons {m : Mem} {ro rl : Nat} {cv : IConstantVal} {cvs : List IConstantVal}
     (h : RecsOK m ro (rl + 1) (cv :: cvs)) :

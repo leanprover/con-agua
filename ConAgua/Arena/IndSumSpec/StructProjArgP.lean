@@ -81,6 +81,20 @@ theorem decHL_cons {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)}
 /-! ## `field_doms_resolve`, `idx_args_resolve` -/
 
 mutual
+/-- **The model of `field_doms_resolve`.** -/
+def fdrW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, v, o, l =>
+    if l = 0 then some ([1], m)
+    else fdrK1 n v o l (ftdF m [rdW (m.arr64 IW) o])
+/-- After `fvar_type_d`. -/
+def fdrK1 (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (ra, m1) => fdrK2 n v o l (crfF m1 [v, ra.headD 0])
+/-- After `consts_resolve_ffast`. -/
+def fdrK2 (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m2) => if rb.headD 0 = 0 then some ([0], m2) else resK (fdrW n m2 v (o + 1) (l - 1))
 /-- After a recursive call: its first word. -/
 def resK : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -88,6 +102,16 @@ def resK : Option (List Word × Mem) → Option (List Word × Mem)
 end
 
 mutual
+/-- **The model of `idx_args_resolve`.** -/
+def iarW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, v, o, l =>
+    if l = 0 then some ([1], m)
+    else iarK n v o l (crfF m [v, rdW (m.arr64 IW) o])
+/-- After `consts_resolve_ffast`. -/
+def iarK (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m2) => if rb.headD 0 = 0 then some ([0], m2) else resK' (iarW n m2 v (o + 1) (l - 1))
 /-- After a recursive call: its first word. -/
 def resK' : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -96,15 +120,77 @@ end
 
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (v o l : Word) (ra rb r : List Word)
+theorem fdrW_nil (hl : l = 0) : fdrW (n + 1) m v o l = some ([1], m) := by simp [fdrW, hl]
+theorem fdrW_cons (hl : l ≠ 0) :
+    fdrW (n + 1) m v o l = fdrK1 n v o l (ftdF m [rdW (m.arr64 IW) o]) := by
+  simp [fdrW, hl]
+theorem fdrK1_some : fdrK1 n v o l (some (ra, m1)) =
+    fdrK2 n v o l (crfF m1 [v, ra.headD 0]) := by rw [fdrK1]
+theorem fdrK2_no (h : rb.headD 0 = 0) : fdrK2 n v o l (some (rb, m2)) = some ([0], m2) := by
+  rw [fdrK2, ite_eq_left h]
+theorem fdrK2_yes (h : rb.headD 0 ≠ 0) :
+    fdrK2 n v o l (some (rb, m2)) = resK (fdrW n m2 v (o + 1) (l - 1)) := by rw [fdrK2, ite_eq_right h]
 theorem resK_some : resK (some (r, m)) = some ([r.headD 0], m) := rfl
+theorem iarW_nil (hl : l = 0) : iarW (n + 1) m v o l = some ([1], m) := by simp [iarW, hl]
+theorem iarW_cons (hl : l ≠ 0) :
+    iarW (n + 1) m v o l = iarK n v o l (crfF m [v, rdW (m.arr64 IW) o]) := by
+  simp [iarW, hl]
+theorem iarK_no (h : rb.headD 0 = 0) : iarK n v o l (some (rb, m2)) = some ([0], m2) := by
+  rw [iarK, ite_eq_left h]
+theorem iarK_yes (h : rb.headD 0 ≠ 0) :
+    iarK n v o l (some (rb, m2)) = resK' (iarW n m2 v (o + 1) (l - 1)) := by rw [iarK, ite_eq_right h]
 theorem resK'_some : resK' (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 
+grind_pattern [ind_grind] fdrW_nil => fdrW (n + 1) m v o l
+grind_pattern [ind_grind] fdrW_cons => fdrW (n + 1) m v o l
+grind_pattern [ind_grind] fdrK1_some => fdrK1 n v o l (some (ra, m1))
+grind_pattern [ind_grind] fdrK2_no => fdrK2 n v o l (some (rb, m2))
+grind_pattern [ind_grind] fdrK2_yes => fdrK2 n v o l (some (rb, m2))
 grind_pattern [ind_grind] resK_some => resK (some (r, m))
+grind_pattern [ind_grind] iarW_nil => iarW (n + 1) m v o l
+grind_pattern [ind_grind] iarW_cons => iarW (n + 1) m v o l
+grind_pattern [ind_grind] iarK_no => iarK n v o l (some (rb, m2))
+grind_pattern [ind_grind] iarK_yes => iarK n v o l (some (rb, m2))
 grind_pattern [ind_grind] resK'_some => resK' (some (r, m))
 
 section spec
 variable (p : Prog)
+
+theorem fdrW_spec (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (hftd : FtdF p) (hcr : CrfF p)
+    (n : Nat) :
+    ∀ (s₀ : St) (v o l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "field_doms_resolve" [v, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ fdrW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ v o l; rw [invoke_eq _ hp]; simp only [callFn, fieldDomsResolveL]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ v o l
+    rw [invoke_eq _ hp]
+    simp only [callFn, fieldDomsResolveL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        ftdF_spec0 p hftd n, crfF_spec p hcr n, ih] <;>
+      finish (gen := 20)
+
+theorem iarW_spec (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (hcr : CrfF p) (n : Nat) :
+    ∀ (s₀ : St) (v o l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_args_resolve" [v, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ iarW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ v o l; rw [invoke_eq _ hp]; simp only [callFn, idxArgsResolveL]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ v o l
+    rw [invoke_eq _ hp]
+    simp only [callFn, idxArgsResolveL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        crfF_spec p hcr n, ih] <;>
+      finish (gen := 20)
 
 end spec
 
@@ -177,7 +263,23 @@ theorem structProjArgP_refines (p : Prog) (hd : p.lookup "der_b" = some derB)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjArgP (decI T) j.toNat) a₀ ∧
       StageR vis fe s'.mem (AM.st (structProjArgP (decI T) j.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       AM.res (structProjArgP (decI T) j.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
-  sorry
+  refine triple_post (spaW_spec p hd hpf hpp hib hjf hjp hji hmp hp n s₀ T j) ?_
+  rintro r s' ⟨hl, hm⟩
+  simp only [spaW] at hm
+  obtain ⟨b, m1, h1, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
+  rw [spaK_some] at hm
+  obtain ⟨e, m2, h2, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
+  rw [spaK2_some] at hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+  obtain ⟨a1, hr1, hS1, hg1⟩ := internBVar_stage hS 0 h1
+  obtain ⟨a2, hr2, hS2, hg2⟩ := mkProj_stage hS1 T j b h2
+  have hrun : (structProjArgP (decI T) j.toNat).run a₀ = .ok (decE e, a2) := by
+    simp only [structProjArgP, StateT.run_bind]
+    rw [show (0 : Word).toNat = 0 from rfl] at hr1
+    rw [hr1]
+    exact hr2
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS2, hg1.trans hg2, by rw [hres]; rfl⟩
 
 end L.Ind
 
@@ -277,7 +379,11 @@ theorem structPsAt_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       ArenaR s'.mem (AM.st (structPsAt o.toNat nP.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (structPsAt o.toNat nP.toNat) a₀); ⊤⦄ := by
-  sorry
+  refine triple_post (psAtW_spec p ha hc hsc hpf hpp hib hg hp n s₀ o nP) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨xs, a', hrun, hR', hgr, -, hd, -⟩ := psAtW_ok n _ _ _ _ _ _ hm hR hsz hc2 hon
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hR', hgr, by rw [hres]; exact hd⟩
 
 /-- **`struct_proj_ps` refines `structProjPs`** under `ArenaR`. -/
 @[refines ConRon.Arena.structProjPs]
@@ -295,7 +401,19 @@ theorem structProjPs_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc
       ArenaR s'.mem (AM.st (structProjPs nP.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (structProjPs nP.toNat) a₀); ⊤⦄ := by
-  sorry
+  refine triple_post (projPsW_spec p ha hc hsc hpf hpp hib hg hp hq n s₀ nP) ?_
+  rintro r s' ⟨hl, hm⟩
+  cases n with
+  | zero => cases hm
+  | succ n =>
+  rw [projPsW_succ] at hm
+  obtain ⟨r0, m0, h1, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
+  rw [psK3_some] at hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+  obtain ⟨xs, a', hrun, hR', hgr, -, hd, -⟩ := psAtW_ok n _ _ _ _ _ _ h1 hR hsz hc2 (by simpa using hon)
+  have hrun' : (structProjPs nP.toNat).run a₀ = .ok (xs, a') := by simpa [structProjPs] using hrun
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  exact ⟨hl, hok, by rw [hst]; exact hR', hgr, by rw [hres]; simpa using hd⟩
 
 end L.Ind
 
@@ -309,9 +427,8 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ### The twin, one level unfolded
 
-`whnfTelescope` is structural recursion that matches under a bind, so Lean generates no equation
-lemma for it (PLAN.md's vcgen gaps). `wtArm` is its body after the view, and `whnfTelescope_eq`
-the unfolding, by `Nat.brecOn` and a case split on the view. -/
+`wtArm` is `whnfTelescope`'s body after the view, and `whnfTelescope_eq` the unfolding (its
+equation lemma and a case split on the view). -/
 
 /-- The arms of `whnfTelescope` after the view. -/
 def wtArm (mode : ConLeche.CheckMode) (fe : IFEnv) (i : Nat) (out : List EIdx) :
@@ -335,7 +452,10 @@ theorem whnfTelescope_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (i n : Nat) (e
       let e' ← whnf mode fe checkFuel i e
       let v ← view e'
       wtArm mode fe i out v n) := by
-  sorry
+  rw [whnfTelescope]
+  refine congrArg (whnf mode fe checkFuel i e >>= ·) (funext fun e' => ?_)
+  refine congrArg (view e' >>= ·) (funext fun v => ?_)
+  cases v <;> cases n <;> rfl
 
 end L.Ind
 

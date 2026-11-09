@@ -1,12 +1,14 @@
 module
 
-import ConAgua.Verdict.PhaseBE
 public import ConAgua.Checker.VerdictTop
+public import ConAgua.Verdict.ThreadsE
 import ConAgua.Checker.CheckARun
+import ConAgua.Checker.VerdictEntry1
 import ConAgua.Checker.IndArm
 import ConAgua.Checker.LoopProg
 import ConAgua.Checker.LoopStage
 import ConAgua.Checker.RomProg0
+import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.TwinShapeQuot
 import ConAgua.L.Blocks
 import all ConAgua.Checker.Entry
@@ -14,100 +16,170 @@ import all ConAgua.Checker.Entry
 @[expose] public section
 
 /-!
-# Entry 2's `check_b` fails only where phase B on the worker does (lane verdicts-b, calibration)
+# Entry 2's `check_b` fails only where the twin's jobs do (lane verdicts-b, stage 3 of ronsync2)
 
-The error halves of `ParDriverL.lean`'s `checkPendingGo_agree` and `checkB_agree0`: phase B's
-loop on a memory that agrees with phase A's on what the loop names (`invoke_agree`, the same
-error), the ROM substitution (`invoke_subPB`), the loop's error claim
-(`checkPendingGo_refinesE`) and the worker (`checkPendingList_worker_fails`).
+The error halves of `ParDriverL.lean`'s `checkJobs_seqT`, `checkB_seq` and `ParDriverTwin.lean`'s
+`checkMode2_seq`: `check_jobs(0, k)` on a memory that agrees with the flushed memory after the
+index build on what the jobs name (`invoke_agree`, the same error), the ROM substitution
+(`invoke_subPB`), the loop's error claim (`checkJobs_ref` under `JobG`, con-ron's fold invariant
+at each job's view from the jobs before it, `seq_prefix`) and the worker (`twinFailsV_of_sameEnter`).
+Hence `entry2Verdict_of`: entry 2's verdict claim, given `check_decl`'s program facts and the
+jobs' error claims at every phase A, relative to set theory.
 -/
 
 set_option experimental.vcgen true
 
-open ConRon.Arena
+open ConRon.Arena ConRon.Bridge
 open Std.WP
 open scoped Lean.Order
 
 namespace L.Checker
 
-open L L.Arena
+open L L.Arena L.Rom
 
-/- ronsync2 stage 2: commented out (a section at a removed L function)
-section agree
-variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
-  (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck)
+local notation "VM" => ConLeche.CheckMode.verified
 
-/-- **Phase B's loop, error half of `checkPendingGo_agree`**: a failing `check_pending_go(0, k, v)`
-from a memory that agrees with phase A's on what the loop names claims phase B's failure on the
-worker. -/
-theorem checkPendingGo_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
-    (hm : mode = .verified) (hE : CpG (Prog.subPB bs checkerProg))
-    (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
-    (hPB : m.arr8 L.Rom.PB = bs.toArray)
-    (h : PhaseBStart pins dn ds fe pend m a v) (x y z : Word) :
-    ⦃fun s => x = 0 ∧ y = k ∧ z = v ∧ ∀ b, phaseBS b = true → s.mem.arr64 b = m.arr64 b⦄
-    invoke checkerProg (exec checkerProg n) "check_pending_go" [x, y, z]
-    ⦃fun _ _ => True; ErrClaimV (checkPendingList mode fe pend.toList) a.worker⦄ := by
+universe w
+
+/-- **`check_jobs(0, k)` after the flush, error half of `checkJobs_seqT`**: from a memory that is
+the flush of one agreeing with `m` on every array the jobs name, a failing run claims the twin's
+jobs over every record failing from the index state's worker. -/
+theorem checkJobs_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (hF : FoldAt b pb sz PA m₇ m)
+    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (hJG : JobG PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (x y : Word) :
+    ⦃fun s => x = 0 ∧ y = hi ∧ ∃ X, FlushOK X ∧ s.mem = flushMem X ∧
+      ∀ a, phaseBS a = true → X.arr64 a = m.arr64 a⦄
+    invoke checkerProg (exec checkerProg n) "check_jobs" [x, y]
+    ⦃fun _ _ => True;
+      ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
   apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
-  rintro s e ⟨hx, hy, hz, hw⟩ hrun
-  rw [hx, hy, hz] at hrun
-  let m₂ : Mem := { m with glob := s.mem.glob }
-  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
-  have h₂ := PhaseBStart.frame0 hf h
-  -- the run from the call's own locals
-  have hrun₀ : (invoke checkerProg (exec checkerProg n) "check_pending_go" [0, k, v]).run
-      ⟨s.mem, Locals.init []⟩ = .error e := by
-    rw [invoke_run_loc'] at hrun
-    cases hq : (invoke checkerProg (exec checkerProg n) "check_pending_go" [0, k, v]).run
-      ⟨s.mem, Locals.init []⟩ with
-    | error e' => rw [hq] at hrun; simp [Except.map] at hrun; rw [hrun]
-    | ok q => rw [hq] at hrun; simp [Except.map] at hrun
-  have hAg : Agree phaseBS (fun _ => false) s.mem m₂ :=
-    ⟨fun b hb => hw b hb, fun _ hb => absurd hb (by simp), rfl⟩
-  have hres := L.invoke_agree checkerProg_phaseBReads check_pending_go_mem_phaseBFns n [0, k, v]
-    (s₁ := ⟨s.mem, Locals.init []⟩) (s₂ := ⟨m₂, Locals.init []⟩) hAg rfl
-  rw [hrun₀] at hres
-  have hrun₂ : (invoke checkerProg (exec checkerProg n) "check_pending_go" [0, k, v]).run
-      ⟨m₂, Locals.init []⟩ = .error e := by
-    revert hres
-    cases (invoke checkerProg (exec checkerProg n) "check_pending_go" [0, k, v]).run
-      ⟨m₂, Locals.init []⟩ with
-    | ok q => intro h'; exact h'.elim
-    | error e' => intro h'; cases h'; rfl
-  rw [← L.Rom.invoke_subPB (bs := bs) checkerProg_noSt8PB n _ _ (s := ⟨m₂, Locals.init []⟩) hPB]
-    at hrun₂
-  have hc : callE (Prog.subPB bs checkerProg) n "check_pending_go" [0, k, v] m₂ = .error e := by
-    simp only [callE, hrun₂]
-  intro hk0
-  have := (checkPendingGo_refinesE mode pins dn ds (Prog.subPB bs checkerProg) fe pend hP hm hE n hn)
-    m₂ a 0 k v (by simp) hk (by simpa using h₂.twin) h₂.loop h₂.mem h₂.core h₂.cr e hc hk0
-  simp only [UInt64.toNat_zero, List.drop_zero] at this
-  exact checkPendingList_worker_fails h₂.twin.caches this
+  rintro s e ⟨rfl, hy, X, hfx, hsX, hXm⟩ hrun
+  rw [hy] at hrun
+  let p := Prog.subPB pb.data.toList checkerProg
+  -- the memory: the flush of `m`, with the run's globals
+  let m₂ : Mem := ⟨m.bytes, m.words, X.glob⟩
+  have hAg0 : Agree phaseBS (fun _ => false) X m₂ :=
+    ⟨fun a ha => hXm a ha, fun _ h => absurd h (by simp), rfl⟩
+  have hcC : phaseBS CTL = true := by decide
+  have hfok : FlushOK m := by
+    rw [flushOK_eq] at hfx ⊢
+    exact clearsOK_words _ (m₁ := m₂) (m₂ := m) rfl (clearsOK_agree hcC _ hAg0 hfx)
+  have hA2 := flushMem_agree hAg0 hcC
+  have hw2 : (flushMem m₂).words = (flushMem m).words := flushMem_words rfl
+  have hag : ∀ a, phaseBS a = true → s.mem.arr64 a = (flushMem m).arr64 a := fun a ha => by
+    rw [hsX, hA2.1 a ha]; show (flushMem m₂).words a = (flushMem m).words a; rw [hw2]
+  have hJ0 : JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I (flushMem m)
+      { PA.sF with caches := Caches.empty } := hF.jobR hfok
+  have hby : (flushMem m).bytes = m₇.bytes := by rw [flushMem_bytes, hF.bytes]
+  generalize flushMem m = F at hJ0 hag hby
+  let s₂ : St := ⟨⟨F.bytes, F.words, s.mem.glob⟩, s.loc⟩
+  have hAg : Agree phaseBS (fun _ => false) s.mem s₂.mem :=
+    ⟨fun a ha => hag a ha, fun _ h => absurd h (by simp), rfl⟩
+  have hrun₂ := invoke_agree_err checkerProg_phaseBReads check_jobs_mem_phaseBJobFns hAg rfl hrun
+  have hPB : s₂.mem.arr8 L.Rom.PB = pb.data.toList.toArray := by
+    show F.bytes L.Rom.PB = _
+    rw [hby, ← Mem.arr8, hF.r7.since.keep.arr8]
+    exact loadMem_pb b pb sz
+  rw [← L.Rom.invoke_subPB (bs := pb.data.toList) checkerProg_noSt8PB n _ _ (s := s₂) hPB] at hrun₂
+  have hc := callE_of_run_err hrun₂
+  -- the twin's side
+  let a₀ : AState := { PA.sF with caches := Caches.empty }
+  obtain ⟨pinsP, dsP, hst, hrec, hpp, hden, hPD, hH⟩ := poolHyps_of_phaseA PA
+    (JobRel PA.ipins (dnOf PA.sE.store) PA.ds PA.I a₀) (RecCall p)
+  obtain ⟨hA, hB, hC, hD, hE⟩ := PA.pfx
+  obtain ⟨-, -, -, -, -, hpd, _rc, _preC, -, hden0⟩ :=
+    ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
+  have hFD : FrontDecls PA.ds := frontDecls_of_prefix PA.pfx
+  have hLD : DeclsLpsDn (dnOf PA.sE.store) PA.ds := declsLpsDn_dnOf hpd ⟨_, hden0⟩
+  have hdn : DnPers (dnOf PA.sE.store) := fun k x hk => by
+    simp only [dnOf] at hk; split at hk
+    · assumption
+    · cases hk
+  have hds : PA.ds.size < 2 ^ 64 := by rw [← hhi]; exact UInt64.toNat_lt hi
+  have H := hH (recCall_stepE hJP hFD hLD hdn hrec hpp hds hden hPD)
+  have hJ : JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I s₂.mem a₀ := hJ0.setGlob _
+  have hw0 : WorkerOK PA.sF a₀ := ⟨⟨hst.wf⟩, PExt.of_ext (Ext.refl _), rfl, rfl⟩
+  -- the jobs before a job accepted in order: the fold's prefix, a worker state
+  have hseq : ∀ (c t : Nat) (a a' : AState), WorkerOK PA.sF a →
+      (PrefixOK pinsP dsP t ∧ ((ConLeche.Cached.recsConsts (dsP.take t)).map (·.name)).Nodup) →
+      t + c ≤ PA.ds.size →
+      checkJobList VM PA.ipins PA.I PA.ds (List.range' t c) a = .ok (.ok (), a') →
+      WorkerOK PA.sF a' ∧ PrefixOK pinsP dsP (t + c) ∧
+        ((ConLeche.Cached.recsConsts (dsP.take (t + c))).map (·.name)).Nodup := by
+    intro c
+    induction c with
+    | zero =>
+      intro t a a' hw hP _ hl
+      rw [List.range'_zero] at hl
+      cases hl
+      exact ⟨hw, hP⟩
+    | succ c ih =>
+      intro t a a' hw ⟨hPt, hndt⟩ hle hl
+      have htk : t < PA.ds.size := by omega
+      rw [List.range'_succ] at hl
+      cases hrj : recordJob VM PA.ipins PA.I t PA.ds[t] a with
+      | error ce =>
+        have e1 : (checkJobList VM PA.ipins PA.I PA.ds (t :: List.range' (t + 1) c)) a =
+            .ok (.error (ce, t), AState.abandoned) := by
+          simp only [checkJobList, runJob, Array.getElem?_eq_getElem htk, hrj]
+        rw [show (checkJobList VM PA.ipins PA.I PA.ds (t :: List.range' (t + 1) c)) a = _ from hl] at e1
+        cases e1
+      | ok v =>
+        obtain ⟨u, a₁⟩ := v
+        cases u
+        rw [checkJobList_cons_ok htk hrj] at hl
+        obtain ⟨htk', hdk⟩ := H.hden t htk
+        obtain ⟨hw₁, env', F, hd⟩ := job_spec Vt H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd
+          H.hI H.hpI hw htk htk' hdk hPt hndt hrj
+        have := ih (t + 1) a₁ a' hw₁ (PrefixOK.step H.hpush htk' hPt hd hndt) (by omega) hl
+        rwa [show t + 1 + c = t + (c + 1) by omega] at this
+  have h0 : PrefixOK pinsP dsP 0 ∧ ((ConLeche.Cached.recsConsts (dsP.take 0)).map (·.name)).Nodup := by
+    have h0 : (ConLeche.Cached.recsConsts ([] : List ConLeche.Declaration)).length = 0 := by
+      have := (ConLeche.Cached.buildIndex_spec (#[] : Array ConLeche.Declaration)).next
+      simpa [ConLeche.Cached.buildIndex] using this.symm
+    refine ⟨⟨0, fun _ _ => rfl⟩, ?_⟩
+    rw [List.take_zero, List.eq_nil_of_length_eq_zero h0]
+    exact List.nodup_nil
+  have hden' : ∀ x ∈ PA.ds.toList, PersDecl x ∧ ∃ d, Frontend.denoteDecl a₀.store x = some d := hden
+  have h := checkJobs_ref (I := PA.I) hJP hFD hLD hdn hrec hpp hden' hPD (hi := hi) (j := 0)
+    (by omega) hn ⟨hJ, PExt.of_ext (Ext.refl _), rfl⟩
+    (fun t a' _ h2 h3 => by
+      simp only [UInt64.toNat_zero, Nat.sub_zero] at h3 h2
+      obtain ⟨hw', hP, hnd⟩ := hseq t 0 a₀ a' hw0 h0 (by omega) h3
+      rw [Nat.zero_add] at hP hnd
+      obtain ⟨htk', -⟩ := H.hden t (by omega)
+      exact worker_foldOK Vt H.hpinsOK H.hpersPins H.hI H.hpI htk' hP hnd hw')
+  have h' := RefC.run_err (checkJobs_specE p hJP.check_jobs n ⟨s₂.mem, Locals.init []⟩ 0 hi)
+    (fun e h0 => ErrClaimV.of_cls0 h0) trivial hJG h hc
+  simp only [UInt64.toNat_zero, Nat.sub_zero, hhi, ← List.range_eq_range'] at h'
+  exact fun hk => twinFailsV_of_sameEnter sameEnter_worker.symm (h' hk)
 
-/-- **Entry 2 in place, `check_b`, error half of `checkB_agree0`**: from a memory that agrees with
-phase A's on what phase B's loop names, with the range `[0, k)`, an empty seed `CTLF` and the view
-`v` in the header's word 3, a failing run of class `≠ 0` claims phase B's failure on `a.worker`. -/
-theorem checkB_agree0E (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
-    (hm : mode = .verified) (hE : CpG (Prog.subPB bs checkerProg))
-    (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
-    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (s₀ : St)
-    (hw : ∀ b, phaseBS b = true → s₀.mem.arr64 b = m.arr64 b)
-    (hlo : s₀.mem.glob PLO = 0) (hhi : s₀.mem.glob PHI = k) (hctlf : (s₀.mem.arr64 CTLF).size = 0)
-    (hv : rd64 s₀.mem HDRF 3 = v) :
+/-- **Entry 2 in place, `check_b`, error half of `checkB_seq`.** -/
+theorem checkB_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (hF : FoldAt b pb sz PA m₇ m)
+    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (hJG : JobG PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (s₀ : St)
+    (hw : ∀ a, phaseBS a = true → s₀.mem.arr64 a = m.arr64 a)
+    (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
-    ⦃fun _ _ => True; ErrClaimV (checkPendingList mode fe pend.toList) a.worker⦄ := by
+    ⦃fun _ _ => True;
+      ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
   have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
-  have hhi' : s₀.mem.glob ⟨11⟩ = k := hhi
-  have hv' : ∀ (hb : (3 : Word).toNat < (s₀.mem.arr64 HDRF).size), (s₀.mem.arr64 HDRF)[(3 : Word).toNat] = v := by
-    intro hb; rw [← hv]; unfold rd64; rw [Array.getD, dite_eq_left hb]; rfl
+  have hhi'' : s₀.mem.glob ⟨11⟩ = hi := hhi'
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
   cases n with
   | zero => vcgen [exec] <;> simp [ErrClaimV.of_cls0]
   | succ n =>
-    have hcg' := checkPendingGo_agreeE mode pins dn ds fe pend bs hP hm hE n (by omega) m a v k hk hPB h
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hcg' · · ·)]
+    have hJ := checkJobs_seqE Vt hF hJP hJG n (by omega) hi hhi
+    have hFl := flushCaches_specNV n
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
     all_goals (try simp only [St.setLoc_mem, St.setLoc_loc,
       Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
@@ -115,120 +187,78 @@ theorem checkB_agree0E (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checker
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
     all_goals first
       | exact ErrClaimV.of_cls0 (by decide)
+      | exact ErrClaimV.of_cls0 ‹_›
       | (simp_all (config := { decide := true }) [Mem.arr64]; done)
-      | exact hv' ‹_›
-      | (simp only [Mem.arr64] at *; grind)
+      | skip
+    all_goals first
+      | (obtain ⟨-, hfx, hm⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
+         first
+          | exact ⟨_, hfx, by rw [St.setLocs_mem']; exact hm, fun a ha => hw a ha⟩
+          | (rw [St.setLocs_mem', hm, flushMem_glob]; simp_all; done))
+      | (trace_state; fail "CheckBE.checkB_seqE: no closing tactic applies")
 
-/-- `checkB_agree0E` with the memory facts as the precondition. -/
-theorem checkB_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
-    (hm : mode = .verified) (hE : CpG (Prog.subPB bs checkerProg))
-    (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
-    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) :
-    ⦃fun s => (∀ b, phaseBS b = true → s.mem.arr64 b = m.arr64 b) ∧ s.mem.glob PLO = 0 ∧
-      s.mem.glob PHI = k ∧ (s.mem.arr64 CTLF).size = 0 ∧ rd64 s.mem HDRF 3 = v⦄
-    invoke checkerProg (exec checkerProg n) "check_b" []
-    ⦃fun _ _ => True; ErrClaimV (checkPendingList mode fe pend.toList) a.worker⦄ := by
-  apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
-  intro s₀ e ⟨hw, hlo, hhi, hctlf, hv⟩ hrun
-  exact M.of_run_err (P := fun x => x = s₀) rfl hrun
-    (checkB_agree0E mode pins dn ds fe pend bs hP hm hE n hn m a v k hk hPB h s₀ hw hlo hhi hctlf hv)
-
-/-- **Entry 2 in place, `check` with the mode word `2`, error half of `checkMode2_agree`.** -/
-theorem checkMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
-    (hm : mode = .verified) (hE : CpG (Prog.subPB bs checkerProg))
-    (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
-    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (s₀ : St)
-    (hw : ∀ b, phaseBS b = true → s₀.mem.arr64 b = m.arr64 b) (hmode : s₀.mem.glob MODE = 2)
-    (hlo : s₀.mem.glob PLO = 0) (hhi : s₀.mem.glob PHI = k) (hctlf : (s₀.mem.arr64 CTLF).size = 0)
-    (hv : rd64 s₀.mem HDRF 3 = v) :
+/-- **Entry 2 in place, `check` with the mode word `2`, error half of `checkMode2_seq`.** -/
+theorem checkMode2_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (hF : FoldAt b pb sz PA m₇ m)
+    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (hJG : JobG PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (s₀ : St)
+    (hw : ∀ a, phaseBS a = true → s₀.mem.arr64 a = m.arr64 a) (hmode : s₀.mem.glob MODE = 2)
+    (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
-    ⦃fun _ _ => True; ErrClaimV (checkPendingList mode fe pend.toList) a.worker⦄ := by
+    ⦃fun _ _ => True;
+      ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
   rw [invoke_eq _ checkerProg_lookup_check']
   simp only [callFn, checkL]
   cases n with
   | zero => vcgen [exec] <;> simp [ErrClaimV.of_cls0]
   | succ n =>
-    have hB := checkB_agreeE mode pins dn ds fe pend bs hP hm hE n (by omega) m a v k hk hPB h
+    have hB : ⦃fun s => s.mem = s₀.mem⦄ invoke checkerProg (exec checkerProg n) "check_b" []
+        ⦃fun _ _ => True;
+          ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
+      apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
+      intro s₁ e hs hrun
+      exact M.of_run_err (P := fun x => x = s₁) rfl hrun
+        (checkB_seqE Vt hF hJP hJG n (by omega) hi hhi s₁ (hs ▸ hw) (hs ▸ hlo) (hs ▸ hhi')
+          (hs ▸ hctlf))
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·)]
-    all_goals (try simp only [
-      Cmp.eval, beq_iff_eq] at *)
+    all_goals (try simp only [Cmp.eval, beq_iff_eq] at *)
     all_goals first
       | exact ErrClaimV.of_cls0 (by decide)
       | (simp_all (config := { decide := true }); done)
       | (simp_all [St.setLoc]; done)
+      | (trace_state; fail "CheckBE.checkMode2_seqE: no closing tactic applies")
 
-/-- **Entry 2 in place, as a run, error half of `runMode2_agree`**: `L.run checkerProg n "check" [] w`
-failing with class `≠ 0`, from a memory `w` as `checkMode2_agree` asks, claims phase B's failure on
-the worker. -/
-theorem runMode2_agreeE (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg))
-    (hm : mode = .verified) (hE : CpG (Prog.subPB bs checkerProg))
-    (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (v k : Word) (hk : k.toNat = pend.size)
-    (hPB : m.arr8 L.Rom.PB = bs.toArray) (h : PhaseBStart pins dn ds fe pend m a v) (w : Mem)
-    (hw : ∀ b, phaseBS b = true → w.arr64 b = m.arr64 b) (hmode : w.glob MODE = 2)
-    (hlo : w.glob PLO = 0) (hhi : w.glob PHI = k) (hctlf : (w.arr64 CTLF).size = 0)
-    (hv : rd64 w HDRF 3 = v) {e : Err} (hrun : L.run checkerProg n "check" [] w = .error e) :
-    ErrClaimV (checkPendingList mode fe pend.toList) a.worker e := by
-  simp only [L.run] at hrun
-  cases hq : (invoke checkerProg (exec checkerProg n) "check" []).run ⟨w, Locals.init []⟩ with
-  | ok x => rw [hq] at hrun; cases hrun
-  | error e' =>
-    rw [hq] at hrun
-    simp only [Except.map, Except.error.injEq] at hrun
-    subst hrun
-    exact M.of_run_err (P := fun x => x = ⟨w, Locals.init []⟩) rfl hq
-      (checkMode2_agreeE mode pins dn ds fe pend bs hP hm hE n hn m a v k hk hPB h ⟨w, Locals.init []⟩
-        hw hmode hlo hhi hctlf hv)
-
-end agree
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-open ConAgua.Final L.Rom in
-/-- **Entry 2's verdict claim from what `check_pending`'s error arms assume** (as
-`drv_twinAccepts`, with `runMode2_agreeE` for `runMode2_agree` and `TwinVerdict.phaseB` for the
-accepting pipeline). `hCP` is `CpG` at the programs phase B runs (the no-verdict closure,
-`check_value_group`'s `CvgCtx`); it is discharged bottom-up. -/
-theorem entry2Verdict_of
-    (hCP : ∀ (bs : List UInt8), PhaseBProg (Prog.subPB bs checkerProg) →
-      CpG (Prog.subPB bs checkerProg)) :
+open ConAgua.Final in
+/-- **Entry 2's verdict claim** (`Entry2Verdict`), given `check_decl`'s program facts
+(`CheckerCd`) and the jobs' error claims (`JobG`) at every phase A, relative to set theory: the
+failing run of `check_b` over every record is the twin's jobs failing (`TwinVerdict.jobs`). -/
+theorem entry2Verdict_of (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd)
+    (hJG : ∀ (b pb : ByteArray) (PA : PhaseA b), pb.size < 2 ^ 63 → PbPre pb →
+      JobG PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)) :
     Entry2Verdict checkerProg := by
-  intro b pb sz hin N₁ hN₁ rs₁ m₁ h₁ hge N₂ hN₂ w hw hmode hlo hhi hctlf hv e h₂ hk0
+  intro b pb sz hin N₁ hN₁ rs₁ m₁ h₁ hge N₂ hN₂ w hw hmode hlo hhi hctlf _ e hrun hk
   have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
-  obtain ⟨PA, m, v, hS, hPB, hpre, hok, hm₁, hres⟩ := checkA_run b pb sz hin 3 (Or.inr rfl) N₁ hN₁ rs₁ m₁ h₁ hr
-  have hflag : modeFlag 3 = 0 := rfl
-  rw [hflag] at hok hm₁
-  have hrom : RomOK pb.data.toList := by simpa [RomOK] using hin.2.2.1
-  have hT := twinFold_of_prefix PA.pfx
-  have hdn : L.Ind.DnInj (dnOf PA.sE.store) := dnOf_inj hT.stateOK.wf
-  have hQd : QuotDn (dnOf PA.sE.store) := by
-    obtain ⟨k, hk, hd⟩ := prefix_quotU PA.pfx
-    exact ⟨k, by simp [dnOf, hk, hd]⟩
-  have hLC := checkerProg_loopCalleesPB pb.data.toList hrom hpre (dnOf PA.sE.store) hdn
-    (indArmSpec_checker _ hrom hpre _ hdn) hQd
-  have hTop := checkerProg_loopTopPB pb.data.toList
-  have hPB' : PhaseBProg (Prog.subPB pb.data.toList checkerProg) :=
-    ⟨hTop.bracket, hLC.cvg, hLC.knot, hLC.leaf, hLC.loop, hTop.pc, hTop.pcg, hTop.pcx,
-      hLC.cd.crp.apd, ⟨hLC.indMemo, hLC.crf⟩⟩
-  have hfr := parCompactMem_out m v 0
+  obtain ⟨PA, m₇, m, hF, -, hm₁, hres⟩ := checkA_run b pb sz hin 3 (Or.inr rfl) N₁ hN₁ rs₁ m₁ h₁ hr
+  have hfr := parCompactMem_out m (modeFlag 3)
   rw [← hm₁] at hfr
   have hw' : ∀ a, phaseBS a = true → w.arr64 a = m.arr64 a := fun a ha => by
     rw [hw a ha, hfr.arr a (fun e => by subst e; revert ha; decide)]
-  have h3 := (parCompactMem_hdr (vis := v) hok).2.2.2.1
-  have hv' : rd64 w HDRF 3 = v := by
-    rw [hv, hm₁]; exact h3
-  have hk : (rs₁.headD 0 - 9223372036854775808).toNat = PA.pend.size := by
-    have hc := hS.loop.pend.count
-    have hlt : PA.pend.size < 2 ^ 64 := by rw [← hc]; exact UInt64.toNat_lt_size _
-    have e : (9223372036854775808 : Word) + UInt64.ofNat PA.pend.size - 9223372036854775808 =
-        UInt64.ofNat PA.pend.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
-    rw [hres, e, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hlt)]
-  have hB := runMode2_agreeE .verified PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend
-    pb.data.toList hPB' rfl (hCP _ hPB') N₂ hN₂ m PA.sF v _ hk hPB hS w
-    hw' hmode hlo hhi hctlf hv' h₂ hk0
+  have hsz : PA.ds.size < 2 ^ 63 := by
+    have := hF.build.decls.room; have := hF.build.decls.dsize; omega
+  have hk' : (rs₁.headD 0 - 9223372036854775808).toNat = PA.ds.size := by
+    have e : (9223372036854775808 : Word) + UInt64.ofNat PA.ds.size - 9223372036854775808 =
+        UInt64.ofNat PA.ds.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
+    rw [hres, e, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
+  have hJP := jobProg_of_cd hCd PA hin.2.2.1 hF.r7.since.pbpre
+  have hJG' := hJG b pb PA hin.2.2.1 hF.r7.since.pbpre
+  have hr' := run_err hrun
+  have hc := M.of_run_err (P := fun x => x = ⟨w, Locals.init []⟩) rfl hr'
+    (checkMode2_seqE Vt hF hJP hJG' N₂ hN₂ _ hk' ⟨w, Locals.init []⟩ hw' hmode hlo hhi hctlf)
   obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
-  exact TwinVerdict.phaseB hA hBp hC hD hE PA.fold hB
--/
+  exact TwinVerdict.jobs hA hBp hC hD hE PA.idx (hc hk)
 
 end L.Checker

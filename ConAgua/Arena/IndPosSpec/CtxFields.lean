@@ -57,6 +57,10 @@ theorem posRec2_eq (m : Mem) (a b : Word) :
     (match allocW m 2 with | none => none | some (q, _) => some (q, rec2Mem m a b)) =
       posRecW m [a, b] := by
   rw [posRecW_eq m [a, b] 2 rfl, rec2Mem_eq]
+theorem posRec3_eq (m : Mem) (a b c : Word) :
+    (match allocW m 3 with | none => none | some (q, _) => some (q, rec3Mem m a b c)) =
+      posRecW m [a, b, c] := by
+  rw [posRecW_eq m [a, b, c] 3 rfl, rec3Mem_eq]
 theorem posRec4_eq (m : Mem) (a b c d : Word) :
     (match allocW m 4 with | none => none | some (q, _) => some (q, rec4Mem m a b c d)) =
       posRecW m [a, b, c, d] := by
@@ -85,6 +89,18 @@ theorem posRec2_specW (h2 : p.lookup "rec2" = some rec2) (n : Nat) (s₀ : St) (
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
       finish [rec2Mem, allocMem, allocW]
+
+theorem posRec3_specW (h3 : p.lookup "rec3" = some rec3) (n : Nat) (s₀ : St) (a b c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c] = some (r.headD 0, s'.mem); ⊤⦄ := by
+  simp only [← posRec3_eq, invoke_eq _ h3, callFn, rec3]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n] <;>
+      finish [rec3Mem, allocMem, allocW]
 
 theorem posRec4_specW (h4 : p.lookup "rec4" = some rec4) (n : Nat) (s₀ : St) (a b c d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec4" [a, b, c, d]
@@ -129,21 +145,31 @@ def NKIn (m : Mem) (k : Nat) (P : Nat → Prop) : Prop :=
   (∀ j < 4, P (k + j)) ∧ ∀ o l, iwN m (k + 2) = some o → iwN m (k + 3) = some l → ∀ j < l, P (o + j)
 
 /-- The indices `decNH m w` reads lie in `P`. -/
-def NHIn (m : Mem) (w : Nat) (P : Nat → Prop) : Prop :=
-  P w ∧ P (w + 1) ∧ ∀ k, iwN m w = some k → NKIn m k P
+structure NHIn (m : Mem) (w : Nat) (P : Nat → Prop) : Prop where
+  w0 : P w
+  w1 : P (w + 1)
+  w2 : P (w + 2)
+  key : ∀ k, iwN m w = some k → NKIn m k P
 
 /-! ## Word reads of decoded fields -/
 
 /-- A decoded number at `p + i` is the word L reads there. -/
 theorem rd_iwN {m : Mem} {p i : Word} {v : Nat} (h : iwN m (p.toNat + i.toNat) = some v)
     (hb : p.toNat + i.toNat < 2 ^ 64) : (rdW (m.arr64 IW) (p + i)).toNat = v := by
-  sorry
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  have : (p + i).toNat = p.toNat + i.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt hb
+  simp [rdW, this, hw]
 
 /-- A decoded handle at `p + i` is the word L reads there. -/
 theorem rd_iwH {k : IdxKind} {m : Mem} {p i : Word} {x : Idx k} (h : iwH m (p.toNat + i.toNat) = some x)
     (hb : p.toNat + i.toNat < 2 ^ 64) :
     H (rdW (m.arr64 IW) (p + i)) ∧ decI (rdW (m.arr64 IW) (p + i)) = x := by
-  sorry
+  obtain ⟨w, hw, hl, hx⟩ := hd?_some h
+  have : (p + i).toNat = p.toNat + i.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt hb
+  simp only [iwA, aread_apply, aread_apply] at hw
+  simp only [rdW, this, hw, Option.getD_some]
+  exact ⟨hl, hx.symm⟩
 
 theorem word_add_toNat {a b : Word} (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
   rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
@@ -151,17 +177,19 @@ theorem word_add_toNat {a b : Word} (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).t
 /-! ## `nest_ctx_root_holes(_go)` refines `NestCtx.rootHoles` -/
 
 mutual
-def rhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, no, nl, lv, po, pl, nP, q, j =>
+def rhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+    Option Mem
+  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
+  | k + 1, m, no, nl, lv, po, pl, nP, nio, nil, q, j =>
     if nl ≤ j then some m
-    else rhK1 k no nl lv po pl nP q j (posRecW m [rdW (m.arr64 IW) (no + j), lv, po, pl])
-def rhK1 (k : Nat) (no nl lv po pl nP q j : Word) : Option (Word × Mem) → Option Mem
+    else rhK1 k no nl lv po pl nP nio nil q j (posRecW m [rdW (m.arr64 IW) (no + j), lv, po, pl])
+def rhK1 (k : Nat) (no nl lv po pl nP nio nil q j : Word) : Option (Word × Mem) → Option Mem
   | none => none
-  | some (key, m1) => rhK2 k no nl lv po pl nP q j (posRecW m1 [key, nP])
-def rhK2 (k : Nat) (no nl lv po pl nP q j : Word) : Option (Word × Mem) → Option Mem
+  | some (key, m1) =>
+    rhK2 k no nl lv po pl nP nio nil q j (posRecW m1 [key, nP, getDW m1 nio nil j 0])
+def rhK2 (k : Nat) (no nl lv po pl nP nio nil q j : Word) : Option (Word × Mem) → Option Mem
   | none => none
-  | some (h, m2) => rhGoW k (m2.set64 IW (q + j) h) no nl lv po pl nP q (j + 1)
+  | some (h, m2) => rhGoW k (m2.set64 IW (q + j) h) no nl lv po pl nP nio nil q (j + 1)
 end
 
 def rhB (q nl : Word) : Option Mem → Option (List Word × Mem)
@@ -175,13 +203,15 @@ theorem decNK_of_words {m : Mem} {k : Nat} {c u o l : Word} {ds : List EIdx}
     (h0 : (m.arr64 IW)[k]? = some c) (hc : H c) (h1 : (m.arr64 IW)[k + 1]? = some u) (hu : H u)
     (h2 : (m.arr64 IW)[k + 2]? = some o) (h3 : (m.arr64 IW)[k + 3]? = some l)
     (hs : decHL m o.toNat l.toNat = some ds) : decNK m k = some ⟨decI c, decI u, ds⟩ := by
-  sorry
+  simp only [decNK, decAt, iwH, iwN, nat?, hd?, iwA, aread_apply, h0, h1, h2, h3, hc, hu, Option.map_some,
+    Option.bind_eq_bind, Option.bind_some, ite_true]
+  simp [hs]
 
 /-! ### `NestCtx` records: where their reads lie -/
 
 /-- The indices `decCtx m p` reads lie in `P`. -/
 def CtxIn (m : Mem) (p : Nat) (P : Nat → Prop) : Prop :=
-  (∀ j < 11, P (p + j)) ∧ ∀ i, (i = 0 ∨ i = 2 ∨ i = 5 ∨ i = 7) → ∀ o l, iwN m (p + i) = some o →
+  (∀ j < 13, P (p + j)) ∧ ∀ i, (i = 0 ∨ i = 2 ∨ i = 5 ∨ i = 7 ∨ i = 11) → ∀ o l, iwN m (p + i) = some o →
     iwN m (p + i + 1) = some l → ∀ j < l, P (o + j)
 
 /-- A `NestCtx` record decoded below the top: its fields as the words L reads. -/
@@ -195,7 +225,7 @@ theorem ctx_fields {m : Mem} {p : Word} {c : NestCtx} (hc : decCtx m p.toNat = s
     H (rdW (m.arr64 IW) (p + 10)) ∧ decI (rdW (m.arr64 IW) (p + 10)) = c.lvls ∧
     H (rdW (m.arr64 IW) (p + 9)) ∧ decI (rdW (m.arr64 IW) (p + 9)) = c.sort ∧
     p.toNat + 11 ≤ iwTop m := by
-  obtain ⟨hn, -, hnP, -, hpa, hso, hlv⟩ := decCtx_some hc
+  obtain ⟨hn, -, hnP, -, hpa, hso, hlv, -⟩ := decCtx_some hc
   have h10 := hin.1 10 (by omega)
   obtain ⟨o, l, ho, hl, hd⟩ := decAt_some hn
   obtain ⟨o7, l7, ho7, hl7, hd7⟩ := decAt_some hpa

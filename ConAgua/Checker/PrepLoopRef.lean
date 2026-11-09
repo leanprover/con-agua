@@ -171,13 +171,10 @@ theorem PEnv.frame {m m' : Mem} {a a' : AState} {dsAll : Array IDeclaration} {np
   have htop : iwTop m' = iwTop m := by simp only [iwTop, hctl 200 (by decide)]
   refine ⟨fun x hx => ?_, hE.size, hE.n59, hE.np, hE.rg1, htop ▸ hE.rg2, ?_, hA⟩
   · rw [hf.arr DECL (by decide) (by decide), hf.arr DLP (by decide) (by decide)]; exact hE.recs x hx
-  · obtain ⟨i1, i2, i3, i4, i5⟩ := hE.iwok
-    refine ⟨?_, ?_, ?_, ?_, ?_⟩
-    · rw [htop, hf.size]; exact i1
-    · simp only [erTop, hctl 129 (by decide), hf.size]; exact i2
-    · rw [hf.size]; exact i3
-    · rw [hf.size]; exact i4
-    · rw [hf.size]; exact i5
+  · have h1 := (IWOK_iff m).1 hE.iwok
+    simp only [IWOK_iff, iwTop, erTop, erecTop1, hf.size, hctl 129 (by decide), hctl 130 (by decide),
+      hctl 200 (by decide)] at h1 ⊢
+    exact h1
 
 theorem getIW_set64 (m : Mem) (w v : Word) (x : Nat) :
     ((m.set64 IW w v).arr64 IW)[x]? =

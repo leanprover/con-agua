@@ -146,13 +146,7 @@ theorem constLpsDen_of (h : CoreDen) : ConstLpsDen :=
 set_option maxRecDepth 8192 in
 /-- `ErecKept` (`find_proj`) from the core's write set (`CoreErec.lean`). -/
 theorem erecKept_of {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) : ErecKept p :=
-  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by subst hf; decide) h
-
-set_option maxRecDepth 8192 in
-/-- `ErecKeptProj` (`lvl_eq_c`, `field_sort_zero`) from the core's write set. -/
-theorem erecKeptProj_of {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
-    ErecKeptProj p :=
-  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by rcases hf with rfl | rfl <;> decide) h
+  fun _ _ _ _ _ _ hf h => callW_erec_closedT hcl (by subst hf; decide) h
 
 /-- `BStkCap` is `CoreS.bstk` (lane `whnf2`'s landing 1). -/
 theorem bstkCap_of : BStkCap := fun _ _ _ _ _ _ _ hS => hS.bstk
@@ -166,8 +160,8 @@ theorem KnotAllProg.instLP : InstLPOK p := instLP_refines p hq.ilw
 
 include hq in
 /-- Lane `whnf`'s `WhnfCallees` (four leaves, all proved). -/
-theorem KnotAllProg.whnfC : WhnfCallees p := by
-  sorry
+theorem KnotAllProg.whnfC : WhnfCallees p :=
+  ⟨hq.walks.instListOK, hq.instLP, strLitCtor_core p hq.str, strLitStored_core p hq.str⟩
 
 include hq in
 /-- `find_proj` and its record-pool facts. -/
@@ -192,8 +186,8 @@ include hq in
 `majorToCtor_refines'`: neither takes a slot step of this file). -/
 theorem KnotAllProg.iota (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :=
   iotaRecAt_refines' p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
-    (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq) (ErecKeptKnot.of_closed hq.hcl)
-      (KnotAllProg.projC hq))
+    (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq) (ErecPKept.of_closed hq.hcl)
+      (KnotAllProg.projC hq) hq.prop (instLP_refines p hq.ilw))
     (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl)
     n hk
 
@@ -204,8 +198,11 @@ theorem KnotAllProg.coreC : CoreCallees p :=
 
 include hq in
 /-- `reduce_proj_core` (lane `whnf`'s `reduceProjCore_refines'`). -/
-theorem KnotAllProg.reduceProjCore : ReduceProjCoreH p := by
-  sorry
+theorem KnotAllProg.reduceProjCore : ReduceProjCoreH p :=
+  fun n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc' =>
+    reduceProjCore_refines' p hq.core (strLitStored_core p hq.str) (strLitCtor_core p hq.str)
+      (KnotAllProg.projC hq) hq.core.lsn (erecKept_of hq.hcl) n hk F hF hn s₀ a₀ dn vis fe MM eb
+      mode d sn i c hs hsn hc' (supKeep_of fe)
 
 include hq in
 /-- `unfold_definition` (lane `whnf`'s `unfoldDefinition_refines'`, over `inst_lp`). -/
@@ -242,19 +239,31 @@ theorem KnotAllProg.lazy : LazyCallees p :=
     reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree), StoreDenotes.of_den coreDen_of⟩
 
 include hq in
-theorem KnotAllProg.stuck : StuckCallees p := by
-  sorry
+theorem KnotAllProg.stuck : StuckCallees p :=
+  ⟨KnotAllProg.defeq hq, KnotAllProg.proofIrrel hq, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
+    reservedContainsOK_of p hq.rc,
+    towerSlotsAll_refines' p hq.body.iota (findProj_refines p hq.projp) (projFound p hq.projp),
+    lvlsEqCH_of p hq.lvc, coreDen_of, strLitStored_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
+    lazyDeltaStepH_of p hq.body.lazy (KnotAllProg.lazy hq), KnotAllProg.reduceProjCore hq⟩
 
 include hq in
-/-- The literal callees: `nat_lit_supported`, `const_e` (lane `whnf`'s proofs), `str_lit_supported`. -/
-theorem KnotAllProg.lit : InferLitCallees p := by
-  sorry
+/-- The literal callees: `nat_lit_stored`, `const_e` (lane `whnf`'s proofs), `str_lit_stored`. -/
+theorem KnotAllProg.lit : InferLitCallees p :=
+  ⟨fun n s₀ a₀ dn vis fe M eb hS => natLitStored_refines p hq.delta n s₀ a₀ dn vis fe M eb hS,
+    strLitStored_core p hq.str,
+    fun n s₀ a₀ dn vis fe M eb nm hS hnm => constE_refines p hq.delta n s₀ a₀ dn vis fe M eb nm hS hnm⟩
+
+include hq in
+/-- **`infer_proj`'s callees** (`proj_guard_rows`: `pgrOK_of`). -/
+theorem KnotAllProg.projCallees : InferProjCallees p :=
+  ⟨coreDen_of, findProj_refines p hq.projp, projFound p hq.projp, erecKept_of hq.hcl, hq.instLP,
+    ErecPKept.of_closed hq.hcl, pgrOK_of p hq.proj (KnotAllProg.constTy hq), hq.walks.iotaInst1OK, hq.prop⟩
 
 include hq in
 theorem KnotAllProg.inferC : InferCallees p :=
   ⟨hq.walks.inst1OK, hq.walks.instListOK, (KnotAllProg.defeq hq).abstract1, (KnotAllProg.defeq hq).abstractRange,
     KnotAllProg.constTy hq, hq.lit, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
-    inferProj_refines p hq.proj hq.projp ⟨coreDen_of, (findProj_refines p hq.projp), (projFound p hq.projp), erecKept_of hq.hcl, hq.instLP, erecKeptProj_of hq.hcl⟩⟩
+    inferProj_refines p hq.proj hq.projp (KnotAllProg.projCallees hq)⟩
 
 /-- **The knot at fuel `0`**: every L call at fuel `0` fails. -/
 theorem knot_zero (p : Prog) : KnotOK p 0 where

@@ -81,7 +81,7 @@ theorem slR_of_decNL (m : Mem) : ∀ (n off : Nat) (ns : List Nat),
       simp; omega
 
 theorem iwN_lt {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, -⟩ := h
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
@@ -99,7 +99,7 @@ theorem iwH_off {m : Mem} {k' : IdxKind} {p k : Nat} {x : Idx k'} (h : iwH m (p 
     ∃ w, rdW (m.arr64 IW) (UInt64.ofNat p + UInt64.ofNat k) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
   have e : UInt64.ofNat p + UInt64.ofNat k = UInt64.ofNat (p + k) := by simp [UInt64.ofNat_add]
   have hl : p + k < (m.arr64 IW).size := by
-    simp only [iwH, hd?, iwA] at h
+    simp only [iwH, hd?, iwA, aread_apply, aread_apply] at h
     rcases hw : (m.arr64 IW)[p + k]? with _ | w
     · simp [hw] at h
     · exact (Array.getElem?_eq_some_iff.mp hw).1
@@ -216,9 +216,9 @@ theorem findIdx_toNat (ws : List Word) (x : Word) :
     · simp [h, this, ih]
 
 /-- `decCV`'s fields, read back (the `Env.lean` decoder, over an explicit array). -/
-theorem decCV_some {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
-    hd? (aread a) q = some cv.name ∧ hlist? (aread a) (q + 1) = some cv.levelParams ∧
-      hd? (aread a) (q + 3) = some cv.type := by
+theorem decCV_some {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+    hd? a q = some cv.name ∧ hlist? a (q + 1) = some cv.levelParams ∧
+      hd? a (q + 3) = some cv.type := by
   simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨nm, hnm, l, hl, t, ht, heq⟩ := h
   obtain rfl := (Option.some.injEq _ _).mp heq.symm
@@ -227,8 +227,10 @@ theorem decCV_some {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (ar
 /-- A decoded `EREC` handle, read back as a memory word (`iwH_rdW`'s analogue over `EREC`). -/
 theorem erH_rdW {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : hd? (erA m) i = some x)
     (hi : i < 2 ^ 64) :
-    ∃ w, rdW (m.arr64 EREC) (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  sorry
+    ∃ w, erRd m (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
+  obtain ⟨w, hw, hl, hx⟩ := hd?_some h
+  have hiw : (UInt64.ofNat i).toNat = i := by simp; omega
+  exact ⟨w, erRd_of_erA (by rw [hiw]; exact hw), hl, hx.symm⟩
 
 /-! ## `class_of_motive_var`, model form (for callers) -/
 
@@ -505,7 +507,7 @@ theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
 theorem viewFVarIdx_run' (h : EIdx) (a : AState) :
     (ConRon.Arena.viewFVarIdx h).run a = .ok (a.store.viewFVarIdx h, a) := rfl
 
-theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+theorem fvarHeadW_ok (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (e : Word) (he : H e) (r : List Word) (h : fvarHeadW m e = some (r, m'))
     (hS : StageR vis fe m a) :
     ∃ x a', (ConRon.Arena.fvarHead (decI e)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
@@ -515,7 +517,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   split at h
   · cases h
   rename_i r1 m1 hs
-  obtain ⟨t, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF e he m m1 a r1 hs hS
+  obtain ⟨t, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok vis fe CWF e he m m1 a r1 hs hS
   rw [CWF_eq] at hrun1
   generalize r1.headD 0 = w at hd1 hd2 h
   by_cases hf : tagW w = 1
@@ -573,7 +575,7 @@ theorem fvarHead_refines (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
         | some i => [1, UInt64.ofNat i] | none => [0, 0]); ⊤⦄ := by
   refine triple_post (fvarHead_spec p hp hv had n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hr, -⟩ := fvarHeadW_ok dn vis fe _ _ a₀ e he r hm hS
+  obtain ⟨x, a', hrun, hS', hg, hr, -⟩ := fvarHeadW_ok vis fe _ _ a₀ e he r hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.fvarHead (decI e)) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hr⟩
 
@@ -759,8 +761,7 @@ def classRecOfW : Nat → Mem → Word → Word → Word → Word → Word → O
     if cgl = 0 then some [0, 0]
     else if rcl ≠ 0 ∧ ¬ rco.toNat < (m.arr64 IW).size then none
     else if (if rcl ≠ 0 then rdW (m.arr64 IW) rco else 0) = t then
-      (if cgo.toNat < (m.arr64 IW).size ∧ (rdW (m.arr64 IW) cgo).toNat < (m.arr64 EREC).size
-        then some [1, rdW (m.arr64 EREC) (rdW (m.arr64 IW) cgo)] else none)
+      (if cgo.toNat < (m.arr64 IW).size then some [1, erRd m (rdW (m.arr64 IW) cgo)] else none)
     else croK (classRecOfW n m (rco + 1) (if rcl ≠ 0 then rcl - 1 else 0) (cgo + 1) (cgl - 1) t)
 
 section arms
@@ -773,8 +774,7 @@ theorem classRecOfW_oob (h : cgl ≠ 0) (h1 : rcl ≠ 0) (h2 : ¬ rco.toNat < (m
 theorem classRecOfW_hit (h : cgl ≠ 0) (h1 : rcl ≠ 0 → rco.toNat < (m.arr64 IW).size)
     (h2 : (if rcl ≠ 0 then rdW (m.arr64 IW) rco else 0) = t) :
     classRecOfW (n + 1) m rco rcl cgo cgl t =
-      (if cgo.toNat < (m.arr64 IW).size ∧ (rdW (m.arr64 IW) cgo).toNat < (m.arr64 EREC).size
-        then some [1, rdW (m.arr64 EREC) (rdW (m.arr64 IW) cgo)] else none) := by
+      (if cgo.toNat < (m.arr64 IW).size then some [1, erRd m (rdW (m.arr64 IW) cgo)] else none) := by
   have : ¬ (rcl ≠ 0 ∧ ¬ rco.toNat < (m.arr64 IW).size) := fun ⟨a, b⟩ => b (h1 a)
   simp only [classRecOfW, h, this, h2, ite_false, ite_true]
 theorem classRecOfW_miss (h : cgl ≠ 0) (h1 : rcl ≠ 0 → rco.toNat < (m.arr64 IW).size)

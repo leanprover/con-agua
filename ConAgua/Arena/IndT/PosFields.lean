@@ -33,16 +33,13 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The core's spec at `.verified` (con-ron's `CoreSpec.of_core`). -/
-theorem coreSpecV : ConRon.Bridge.CoreSpec V checkFuel := ConRon.Bridge.CoreSpec.of_core rfl
--/
+theorem coreSpecV : ConRon.Bridge.CoreSpec checkFuel := ConRon.Bridge.CoreSpec.of_core
 
 section steps
 variable {p : Prog} (L : NbLook p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include L henv in
 theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn vis fe env (n + 1) := by
   have R := L.ct.cr.rx
@@ -187,7 +184,7 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   have hA5 : AbsOK m5 := snocW_afr hs2' (snocW_afr hs1 (i1F_afr hin (fvinternW_afr hfv hA1)))
   have p23 := p2.trans p3
   have hC5 : StageC dn vis fe env m5 a3 := hC1.of_pstep hS5 hA5 p23
-  have c3 : ConRon.Bridge.CoreStep V env fe a a3 := c1.trans (p23.toCore hC1.check)
+  have c3 : ConRon.Bridge.CoreStep env fe a a3 := c1.trans (p23.toCore hC1.check)
   have hx13 := c1.ext.trans p23.ext
   -- the rest of the fields
   have hbj1 : (base + j + 1).toNat = base.toNat + j.toNat + 1 := by rw [pos2_word_succ hov1, hbj]
@@ -229,7 +226,6 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   · right; rcases hpost.nfb with h' | h'
     · rw [hnF1] at h'; subst h'; have := (base + j + 1).toNat_lt; omega
     · rw [hj1, hnF1] at h'; omega
--/
 
 end steps
 

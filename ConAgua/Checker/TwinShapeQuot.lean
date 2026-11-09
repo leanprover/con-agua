@@ -5,6 +5,7 @@ public import ConRon.Bridge.Checker.DeclVal
 public import ConRon.Bridge.Frontend.Chunks
 public import ConRon.Bridge.Checker.Basis
 public import ConAgua.Checker.Pipeline
+import ConAgua.Checker.TwinPins
 import ConRon.Bridge.Checker.Pins
 public import ConRon.Bridge.Frontend.Prepare
 import all ConRon.Bridge.Frontend.Prepare
@@ -106,7 +107,8 @@ theorem internAllPins_tail {ps : List NatOpPinSet} {r : List INatOpPinSet}
     (hrun : internAllPins ps s = .ok (r, s')) :
     ∃ u0 : AState, (∃ r0, ConRon.Arena.BasisKind.decls .eqK s = .ok (r0, u0)) ∧
       IStepS s u0 ∧ Ext u0.store s'.store := by
-  sorry
+  obtain ⟨u0, u, hq, h0, h1, hx, -⟩ := TwinCaches.internAllPins_steps hok hpins hoff hrun
+  exact ⟨u0, hq, h0, h1.ext.trans hx⟩
 
 /-- **The walk interns `u`**: a persistent handle denoting `u` at the end of `internAllPins`. -/
 theorem internAllPins_u {ps : List NatOpPinSet} {r : List INatOpPinSet}

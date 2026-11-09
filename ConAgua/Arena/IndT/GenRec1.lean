@@ -36,31 +36,26 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`StageC` at another view and environment**: the stage relation there, `CheckOK` there, the
 memory's half from `AbsOK` and the store's extension. -/
 theorem StageC.of_checkE {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe fe' : IFEnv}
     {env env' : ConLeche.Env} {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR vis' fe' m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK V env' fe' a')
+    (hS : StageR vis' fe' m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK false env' fe' a')
     (hx : ConRon.Arena.Ext a.store a'.store) : StageC dn vis' fe' env' m' a' :=
   ⟨hS, hck,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, hA.coreMemos,
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     hA.wk.2.2.2.2⟩
--/
 
-/-- What `classes_nfs` gives besides the twin's classes `ys` (from `m`, the classes' slice `(mo, ml)`):
-the result slice, the stage, the growth, the memos, `AbsOK`; and, when the classes' constructor
-records' level-parameter slices are given (`ClassesLp`) and the arrays kept their sizes, those of the
-result's records. -/
+/-- What `classes_nfs` gives besides the twin's classes `ys` (from `m`): the result slice, the stage,
+the growth, the memos, `AbsOK`. -/
 structure CnfsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
-    (m : Mem) (mo ml : Word) (r : List Word) (m' : Mem) (ys : List TargetMajor) (a' : AState) : Prop where
+    (m : Mem) (r : List Word) (m' : Mem) (ys : List TargetMajor) (a' : AState) : Prop where
   slice : PSlR decTM ys (r.headD 0) (r.tail.headD 0) m'
   stage : StageC dn vis fe env m' a'
   grow : IWGrow m m'
   rc : RcMR m'
   abs : AbsOK m'
-  lp : ClassesLp m mo ml → KeepW m m' → ClassesLp m' (r.headD 0) (r.tail.headD 0)
 
 /-- **`classes_nfs` refines `classesNfs`, both outcomes** (under `StageC`, the inputs' denotations and
 scoping as con-ron's `classesNfs_spec` asks): `iw_alloc` (class `0` on failure), then the loop
@@ -80,8 +75,29 @@ theorem cnfs_ref {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
     (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) :
     RefE (VerdictCtx p) (cnfsE p n m vis q fto ftl tblo tbll mo ml)
       (ConRon.Arena.classesNfs V fe bs formerTys tbl ms) a
-      (fun v ys a' => CnfsPost dn vis fe env m mo ml v.1 v.2 ys a') := by
-  sorry
+      (fun v ys a' => CnfsPost dn vis fe env m v.1 v.2 ys a') := by
+  rcases n with _ | n
+  · rw [cnfsE_zero]; exact RefE.of_cls0 (by simp)
+  rw [cnfsE_succ]
+  rcases c0 : callW p n "iw_alloc" [ml] m with _ | ⟨r0, m0⟩
+  · rw [cnfsEK1_none]; exact RefE.of_cls0 (by simp)
+  rw [cnfsEK1_some]
+  obtain ⟨s0, rfl, -, hw0⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
+  obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hC.stage
+  have hA0 := allocW_afr hw0 hA
+  have hL := cns_ref hkp henv P dn fe vis q fto ftl tblo tbll mo ml (r0.headD 0) bs formerTys tbl ms m hq0
+    hms htbl hbs hft hftb hformer (n + 1) (by omega) s0.mem a 0 [] [] MsP
+    (hC.of_pstep hS0 hA0 (PStep.refl hC.check.state)) hA0 hg0 (by omega) (hP.fr (allocW_mfr hw0))
+    UInt64.zero_le (by simp [decNL]) FA2.nil hsh hftP htblP (by simpa using hmsP) hMs
+  simp only [UInt64.toNat_zero, List.drop_zero] at hL
+  refine RefE.tailMap_eq (fun _ => rfl) (fun _ => rfl) id rfl (fun mF rest a' hR => ?_) hL
+  obtain ⟨hSF, hgF, htF, hPF, hAF, ws', hws', hacc'⟩ := hR
+  simp only [List.nil_append] at hacc'
+  refine ⟨⟨?_, by simpa using htF⟩, hSF, hgF, hPF, hAF⟩
+  show decPL (truncM mF) (decTM (truncM mF)) _ _ = some rest
+  simp only [List.headD_cons, List.tail_cons]
+  rw [decPL_eq_bind, show decNL (truncM mF) (r0.headD 0).toNat ml.toNat = some ws' from decNL_decB hws' htF]
+  exact cnsRec_mapM hgF hacc'
 
 /-- **`classes_nfs` refines `classesNfs`** under `StageC` (`cnfs_ref`'s ok half). -/
 @[refines ConRon.Arena.classesNfs]

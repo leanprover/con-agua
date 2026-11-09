@@ -3,6 +3,7 @@ module
 import ConRon.Bridge.Checker.Names
 import ConRon.Bridge.Core.Walks.Cached
 public import ConAgua.Arena.RecGenSpec.CruleProg
+public import ConAgua.Arena.IndInstallSpec.PartsAt
 public import ConAgua.Verdict.VCtx
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.WalkC
@@ -12,6 +13,9 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 public import ConRon.Bridge.Inductives.GenRec
 import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndPosSpec.BvbWMfr
+import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
@@ -22,12 +26,12 @@ import all ConAgua.Arena.RecGen
 @[expose] public section
 
 /-!
-# `class_rule_ok_guards`: one model and one refinement for both outcomes
+# `class_rule_check_guards`: one model and one refinement for both outcomes
 
-`class_rule_ok_guards` stands for the guards of the twin's `classRuleOk` (`crgT`: the closedness
+`class_rule_check_guards` stands for the guards of the twin's `classRuleCheck` (`crgT`: the closedness
 guards, the level parameters, the resolution). Its unified model `crgE` lifts the walks outside the
 verdict closure; `crg_ref` refines it against `crgT` under `VerdictCtxU p` (the consts-resolve
-site's `uce_errClaim_hi`). Both halves are read by `class_rule_ok`'s refinement (`crule_ref`), which calls its
+site's `uce_errClaim_hi`). Both halves are read by `class_rule_check`'s refinement (`crule_ref`), which calls its
 unified model directly.
 -/
 
@@ -45,7 +49,23 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+/-- The lookups `class_rule_ok`'s refinement needs (its guards, the check, the domains, the flush,
+`strip_lams`, the walks, `mentions_any_const`). -/
+structure CruleProg (p : Prog) : Prop extends FlushProg p where
+  alloc : p.lookup "iw_alloc" = some iwAlloc
+  copy : p.lookup "er_copy" = some erCopy
+  eti : p.lookup "er_to_iw" = some erToIw
+  lps : p.lookup "cv_lps" = some cvLps
+  dom : p.lookup "class_rule_check_domains" = some classRuleCheckDomains
+  guards : p.lookup "class_rule_check_guards" = some classRuleCheckGuards
+  check : p.lookup "class_rule_check" = some classRuleCheckL
+  rule : p.lookup "class_rule_ok" = some classRuleOkL
+  strip : StripProg p
+  bvb : BvbProg p
+  hf : HfF p
+  hcr : CrfF p
+  ma : MaProg p
+
 l_model crgE_spec (p : Prog) (hp : CruleProg p)
   fns [hp.guards ↦ crgE]
   specs [lbbF_spec p hp.bvb n, hffF_spec p hp.hf n, crfF_spec p hp.hcr n]
@@ -53,9 +73,8 @@ l_model crgE_spec (p : Prog) (hp : CruleProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
-/-- **The twin's guards of `classRuleOk`** (the prefix `class_rule_ok_guards` stands for): the
+/-- **The twin's guards of `classRuleCheck`** (the prefix `class_rule_check_guards` stands for): the
 closedness guards, the level parameters, the resolution. -/
 def crgT (feR : IFEnv) (cv : IConstantVal) (gen : EIdx) : AM Unit := do
   unless ← looseBVarsBoundedFast coreWalkFuel 0 gen do
@@ -81,7 +100,7 @@ theorem crgT_bind {γ : Type} (feR : IFEnv) (cv : IConstantVal) (gen : EIdx) (re
       rest) = crgT feR cv gen >>= fun _ => rest := by
   simp only [crgT, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
 
-/-- What `class_rule_ok_guards` gives besides the twin's guards' run (from `m`, `a`): the stage
+/-- What `class_rule_check_guards` gives besides the twin's guards' run (from `m`, `a`): the stage
 relation, the growth, the abstraction memo, the core step, the rule closed. -/
 structure CrgPost (dn : NIdx → Option ConLeche.Name) (visR : Word) (feR : IFEnv)
     (envR : ConLeche.Env) (m : Mem) (a : AState) (genP : ConLeche.Expr) (m' : Mem) (a' : AState) :
@@ -89,10 +108,19 @@ structure CrgPost (dn : NIdx → Option ConLeche.Name) (visR : Word) (feR : IFEn
   stage : StageC dn visR feR envR m' a'
   grow : IWGrow m m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep envR feR a a'
   closed : genP.hasFvar = false
+  /-- The stage's per-call memos stand (`mentions_any`'s, for the domains' check). -/
+  mfr : MFr [] [] m m'
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`class_rule_ok_guards` refines `classRuleOk`'s guards (`crgT`), both outcomes**: the walks
+/-- `cv_lps`'s model writes no stage memo. -/
+theorem cvLpsWA_mfr {n : Nat} {m m' : Mem} {q : Word} {r : List Word}
+    (h : L.Arena.cvLpsW n m q = some (r, m')) : MFr [] [] m m' := by
+  cases n with
+  | zero => simp [L.Arena.cvLpsW] at h
+  | succ n => exact erToIwW_mfr h
+
+/-- **`class_rule_check_guards` refines `classRuleCheck`'s guards (`crgT`), both outcomes**: the walks
 (outside the verdict closure) under `StageC`, `all_level_params_defined` and
 `consts_resolve_ffast` real (`apdF_okT`, `crfF_okT`); the one site of class `1`/`2` is the
 consts-resolve site, the twin's `fail (← unresolvedConstsError …)` (`uce_errClaim_hi`). -/
@@ -163,7 +191,7 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
     ConRon.Bridge.Inductives.PStep.of_caches ⟨by rw [h3st]; exact p2.ok.wf⟩
       (by rw [h3st]; exact Ext.refl _) h3c h3p
   have c13 := (p12.trans p3).toCore hC.check
-  have hC4 : StageC dn visR feR envR m4 a4 := StageC.of_T hT4 c13.ok
+  have hC4 : StageC dn visR feR envR m4 a4 := hC.of_check hT4.stage hA4 c13.ok c13.ext
   -- `consts_resolve_ffast`, real
   refine RefE.bindSim (fun _ => rfl)
     (fun r m' h => crfF_okT dn visR feR gen hgen m4 m' a4 r h ⟨hC4.stageT, hA4.crMemo⟩)
@@ -181,9 +209,15 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
   obtain ⟨p4, -⟩ := ConRon.Bridge.Inductives.constsResolveFFast_pstep c13.ok.toR
     (ConRon.Bridge.denote_ext hgP c13.ext) hrun5
   have c14 := c13.trans (p4.toCore c13.ok)
-  exact RefE.ret rfl ⟨StageC.of_T hT5 c14.ok,
-    ((hg12.trans hg3).trans hg4).trans hg5, absOK_crfF h5 hA4 hCr5 hT5, c14, by rw [← hfv]⟩
--/
+  have hA5 := absOK_crfF h5 hA4 hCr5 hT5
+  exact RefE.ret rfl ⟨hC.of_check hT5.stage hA5 c14.ok c14.ext,
+    ((hg12.trans hg3).trans hg4).trans hg5, hA5, c14, by rw [← hfv],
+    ((((MFr.ofLbbF h1).trans (MFr.ofHffF h2)).trans (cvLpsWA_mfr h3')).trans
+      (MFr.of_frame (apdF_frame (apdF_of_callW hApd (callW_of_callE h4)))
+        (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
+        (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+                              rcases hx with rfl | rfl <;> decide)))).trans
+      (crfF_mfr h5)⟩
 
 end L.Ind
 

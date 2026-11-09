@@ -107,7 +107,63 @@ theorem post_installIndD (st : StateD) (tys : List IndTypeRec) (cts : List IndCt
 /-- **A line pushes at most one record**, a `GoodDecl` one. -/
 theorem post_applyLine (st : StateD) (r : LineRec) :
     Post (applyRecord st r) (fun x => ∀ st', x = .inl st' → PushedOne st st') := by
-  sorry
+  cases r with
+  | expr i e =>
+    refine Post.bind (Q := fun s => s.decls = st.decls) ?_ fun s hs =>
+      Post.ret (by intro st' h; cases h; exact .inl hs)
+    unfold ConRon.Arena.Frontend.parseExprEntryD
+    refine Post.bind (Post.any _) fun _ _ => ?_
+    cases e <;> dsimp only <;> post_chain
+  | name i n =>
+    refine Post.bind (Q := fun s => s.decls = st.decls) ?_ fun s hs =>
+      Post.ret (by intro st' h; cases h; exact .inl hs)
+    cases n <;> unfold ConRon.Arena.Frontend.parseNameEntryD <;>
+      exact Post.bind (Post.any _) fun _ _ => Post.bind (Post.any _) fun _ _ =>
+        Post.bind (Post.any _) fun _ _ => Post.ret rfl
+  | level i l =>
+    refine Post.bind (Q := fun s => s.decls = st.decls) ?_ fun s hs =>
+      Post.ret (by intro st' h; cases h; exact .inl hs)
+    unfold ConRon.Arena.Frontend.parseLevelEntryD
+    refine Post.bind (Post.any _) fun _ _ => ?_
+    cases l <;> dsimp only <;> post_chain
+  | header => exact Post.ret (by intro st' h; cases h; exact .inl rfl)
+  | blank => exact Post.ret (by intro st' h; cases h; exact .inl rfl)
+  | decl d =>
+    simp only [ConRon.Arena.Frontend.applyRecord, ConRon.Arena.Frontend.applyDeclD]
+    cases d with
+    | ax cv u =>
+      unfold ConRon.Arena.Frontend.processLineCoreD
+      refine Post.bind (Post.any _) fun cvp _ => ?_
+      split
+      · exact Post.ret (by intro st' h; cases h)
+      · exact post_push st _ (by simp [GoodDecl])
+    | defn cv v hints safety =>
+      unfold ConRon.Arena.Frontend.processLineCoreD
+      refine Post.bind (Post.any _) fun cvp _ => ?_
+      split
+      · exact Post.bind (Post.any _) fun _ _ => post_push st _ (by simp [GoodDecl])
+      · exact Post.ret (by intro st' h; cases h)
+    | thm cv v =>
+      unfold ConRon.Arena.Frontend.processLineCoreD
+      exact Post.bind (Post.any _) fun _ _ => Post.bind (Post.any _) fun _ _ => post_push st _ (by simp [GoodDecl])
+    | opaq cv v u =>
+      unfold ConRon.Arena.Frontend.processLineCoreD
+      refine Post.bind (Post.any _) fun cvp _ => ?_
+      split
+      · exact Post.ret (by intro st' h; cases h)
+      · exact Post.bind (Post.any _) fun _ _ => post_push st _ (by simp [GoodDecl])
+    | quot cv k =>
+      unfold ConRon.Arena.Frontend.processLineCoreD
+      refine Post.bind (Post.any _) fun cvp _ => ?_
+      dsimp only
+      split <;> exact Post.bind (Post.any _) fun qk _ => post_push st _ (by simp [GoodDecl])
+    | ind tys cts rcs =>
+      unfold ConRon.Arena.Frontend.processLineCoreD
+      refine Post.bind (Post.any _) fun x _ => ?_
+      split
+      · exact Post.ret (by intro st' h; cases h)
+      · exact Post.bind (post_installIndD st _ _ _ _) fun s hs =>
+          Post.ret (by intro st' h; cases h; exact .inr hs)
 
 theorem applyLine_decls {st st' : StateD} {r : LineRec} {a a' : AState}
     (h : (applyRecord st r).run a = .ok (.inl st', a')) : PushedOne st st' :=
@@ -124,7 +180,13 @@ theorem init_decls {a a₁ : AState} {st₀ : StateD} (h : StateD.init.run a = .
 /-- A record of kind `6` is an inductive block. -/
 theorem kind6 {D P : Array Word} {x : Nat} {d : IDeclaration} (h : DeclAtF D P x d)
     (h6 : dw D x 0 = 6) : ∃ b nP, d = .indDecl b nP ∧ IndDeclAt D P x b nP := by
-  sorry
+  cases d with
+  | indDecl b nP => exact ⟨b, nP, rfl, h⟩
+  | axiomDecl _ => simp only [DeclAtF, DeclAt] at h; rw [h.1] at h6; cases h6
+  | defnDecl _ _ _ => simp only [DeclAtF, DeclAt] at h; rw [h.1] at h6; cases h6
+  | thmDecl _ _ => simp only [DeclAtF, DeclAt] at h; rw [h.1] at h6; cases h6
+  | opaqueDecl _ _ => simp only [DeclAtF, DeclAt] at h; rw [h.1] at h6; cases h6
+  | quotDecl _ _ => simp only [DeclAtF, DeclAt] at h; rw [h.1] at h6; cases h6
 
 theorem mapM_some_mem {γ α : Type} {f : γ → Option α} :
     ∀ (xs : List γ) (ys : List α), xs.mapM f = some ys → ∀ x ∈ xs, ∃ y ∈ ys, f x = some y
@@ -172,8 +234,8 @@ theorem recOK_keep {D P D' P' : Array Word} {ds : Array IDeclaration} (hF : Decl
     rw [hw 1 (by omega), hw 4 (by omega), hw 5 (by omega)]
     exact r1 h0
   · rw [hw 0 (by omega)] at h0
-    obtain ⟨r2a, r2b⟩ := r2 h0
-    refine ⟨by rw [hw 2 (by omega)]; exact r2a, fun j hj => ?_⟩
+    obtain ⟨r2a, r2b, r2c⟩ := r2 h0
+    refine ⟨by rw [hw 2 (by omega)]; exact r2a, fun j hj => ?_, by rw [hw 4 (by omega)]; exact r2c⟩
     rw [hw 3 (by omega)] at hj
     rw [hw 2 (by omega)]
     obtain ⟨b, nP, -, -, -, t, ht, hdec⟩ := kind6 (hF.recs x hx) h0
@@ -189,7 +251,38 @@ theorem recOK_keep {D P D' P' : Array Word} {ds : Array IDeclaration} (hF : Decl
 /-- A new record is `RecOK`. -/
 theorem recOK_new {D P : Array Word} {ds : Array IDeclaration} (hF : DeclsF D P ds) (x : Nat)
     (hx : x < ds.size) (hG : GoodDecl ds[x]) (hN : NewOK D x) : L.Checker.RecOK D P x := by
-  sorry
+  refine ⟨hN.1, fun h0 => ?_⟩
+  have h2 := hN.2 h0
+  have h2' : (dw D x 2).toNat ≠ 0 := fun e => h2 (UInt64.toNat_inj.mp (by simpa using e))
+  refine ⟨h2', fun j hj => ?_, ?_⟩
+  rotate_left
+  · obtain ⟨b, nP, hd, -, h4, -⟩ := kind6 (hF.recs x hx) h0
+    rw [h4]; exact hF.npb x hx b nP hd
+  obtain ⟨b, nP, hd, -, -, t, ht, hdec⟩ := kind6 (hF.recs x hx) h0
+  rw [hd] at hG
+  obtain ⟨w, ci, hwj, hci, hmem⟩ := decCIs_slot hdec j hj
+  have hlt : (dw D x 2).toNat + j < (trunc P t).size := by
+    rcases Nat.lt_or_ge ((dw D x 2).toNat + j) (trunc P t).size with hc | hc
+    · exact hc
+    · rw [Array.getElem?_eq_none hc] at hwj; cases hwj
+  have hts := trunc_size_le P t
+  have hpt := hF.ptop
+  rw [← L.Front.Ind.trunc_get P t _ (by omega) (by omega) (by omega), hwj]
+  intro hw0
+  simp only [Option.getD_some] at hw0
+  subst hw0
+  have h00 : (trunc P t)[0]? = some 0 := by
+    simp only [trunc, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    simp only [Array.size_extract, Array.getElem?_extract]
+    have : 0 < min (t + 1) P.size - 0 := by omega
+    simp only [this, ↓reduceIte]
+  simp only [UInt64.toNat_zero, L.Arena.decCI, L.Arena.nat?, L.Arena.aread_apply, h00, Option.map_some,
+    UInt64.toNat_zero, Option.bind_eq_bind, Option.bind_some] at hci
+  have := hG ci hmem
+  revert hci this
+  cases L.Arena.decCV (L.Arena.aread (trunc P t)) (0 + 1) <;> intro hci <;> simp at hci
+  subst hci
+  simp [GoodCI]
 
 /-- **`RecOK` across a line.** -/
 theorem recOK_line {D : Array IDeclaration} {m m' : Mem} {st st' : StateD}

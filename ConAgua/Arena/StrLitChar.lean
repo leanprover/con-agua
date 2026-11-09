@@ -50,9 +50,9 @@ include hp
 theorem pin_step {β : Type} [Inhabited β] {f : NIdx → AM β} {dec : List Word → β}
     {ok : List Word → Prop} (hS : CoreS dn m a vis fe M eb) {i : Word} {rp : List Word} {mp : Mem}
     (hc : callW p n "pin_at" [i] m = some (rp, mp))
-    (h : CoreRef (f (decI (rp.headD 0))) a dec dn m vis fe M eb r m' ok) :
+    (h : CoreRef (f (decI (rp.headD 0))) a dec dn m vis fe M eb r m' ok) (hi51 : i ≠ 51 := by decide) :
     CoreRef (pinAt i.toNat >>= f) a dec dn m vis fe M eb r m' ok := by
-  obtain ⟨-, -, hi, hr⟩ := callW_pinAt p hp.pinAt n m i rp mp hc
+  obtain ⟨-, -, hi, hr⟩ := callW_pinAt p hp.pinAt n m i rp mp hc hi51
   refine coreRef_congr ?_ h
   rw [StateT.run_bind, pinAt_run hS.pins _ hi, except_ok_bind, hr]
 
@@ -201,18 +201,18 @@ theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hW : (if found = 0 then some (0, m) else K0 (callW p n "str_cv" [q] m)) = some (r.headD 0, m'))
     (htail : ∀ m₁ a₁ M₁ ty, CoreS dn m₁ a₁ vis fe M₁ eb → HW ty → TW m₁ ty = some (r.headD 0, m') →
       CoreRef (T (decI ty)) a₁ decBool dn m₁ vis fe M₁ eb r m') :
-    CoreRef (noLpT T (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
+    CoreRef (noLpT T (envFound m found q)) a decBool dn m vis fe M eb r m' := by
   by_cases hf0 : found = 0
   · rw [ite_eq_left hf0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
-    simp only [decFound, hf0, ↓reduceIte]
+    simp only [envFound, hf0, ↓reduceIte]
     exact cref_run (v := false) rfl (coreAfter_refl hS) (by rw [decBool, ← hr]; rfl)
       (by unfold ResH HW; rw [← hr]; decide)
   rw [ite_eq_right hf0] at hW
   obtain ⟨ci, hci⟩ := hdec hf0
-  rw [show decFound dn m found q = some ci by simp only [decFound, hf0, ↓reduceIte, hci]]
+  rw [show envFound m found q = some ci by simp only [envFound, hf0, ↓reduceIte, hci]]
   rcases h1 : callW p n "str_cv" [q] m with _ | ⟨c, m₁⟩
   · rw [h1, hn] at hW; cases hW
   rw [h1, hK] at hW
@@ -245,7 +245,7 @@ theorem noLp_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 theorem charOfNatTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (h : callW p n "char_of_nat_ty_ok" [found, q] m = some (r, m')) :
-    CoreRef (charOfNatTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
+    CoreRef (charOfNatTyOk (envFound m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
@@ -330,7 +330,7 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
 theorem stringOfListTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (h : callW p n "string_of_list_ty_ok" [found, q] m = some (r, m')) :
-    CoreRef (stringOfListTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
+    CoreRef (stringOfListTyOk (envFound m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>

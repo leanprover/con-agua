@@ -206,7 +206,7 @@ def subIntK (n : Nat) : Option (Word × Mem) → Option (Word × Mem)
 /-- **The model of `lv_sub_int`.** -/
 def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _, _, _ => none
-  | n + 1, m, u, ko, kc, vo, vc => subIntK n (substLW SPN POOL n (m.set64 CTL 192 0) u ko kc vo vc)
+  | n + 1, m, u, ko, kc, vo, vc => subIntK n (substLW (keyA SPN) POOL n (m.set64 CTL 192 0) u ko kc vo vc)
 
 /-! ## `keys_push(src, l)`: a record-pool name slice onto the spine stack -/
 
@@ -222,12 +222,12 @@ def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Opt
 def ekCopyW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, s, d, l =>
-    if l = 0 then some m else ekCopyW n (m.set64 SPN d (rdW (m.arr64 EREC) s)) (s + 1) (d + 1) (l - 1)
+    if l = 0 then some m else ekCopyW n (m.set64 SPN d (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775))) (s + 1) (d + 1) (l - 1)
 
 theorem ekCopyW_zero (n : Nat) (m : Mem) (s d l : Word) (h : l = 0) :
     ekCopyW (n + 1) m s d l = some m := by simp [ekCopyW, h]
 theorem ekCopyW_succ (n : Nat) (m : Mem) (s d l : Word) (h : l ≠ 0) :
-    ekCopyW (n + 1) m s d l = ekCopyW n (m.set64 SPN d (rdW (m.arr64 EREC) s)) (s + 1) (d + 1) (l - 1) := by
+    ekCopyW (n + 1) m s d l = ekCopyW n (m.set64 SPN d (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775))) (s + 1) (d + 1) (l - 1) := by
   simp [ekCopyW, h]
 grind_pattern [arena_grind] ekCopyW_zero => ekCopyW (n + 1) m s d l
 grind_pattern [arena_grind] ekCopyW_succ => ekCopyW (n + 1) m s d l
@@ -259,7 +259,7 @@ def keysPushW : Nat → Mem → Word → Word → Option (Word × Mem)
     else kpK (spTop m) pc (ekCopyW n m po (spTop m) pc)
 
 theorem lvSubIntW_succ (n : Nat) (m : Mem) (u ko kc vo vc : Word) :
-    lvSubIntW (n + 1) m u ko kc vo vc = subIntK n (substLW SPN POOL n (m.set64 CTL 192 0) u ko kc vo vc) := by
+    lvSubIntW (n + 1) m u ko kc vo vc = subIntK n (substLW (keyA SPN) POOL n (m.set64 CTL 192 0) u ko kc vo vc) := by
   rw [lvSubIntW]
 attribute [arena_grind =] lvSubIntW_succ
 
@@ -272,8 +272,6 @@ structure LvSubProg (p : Prog) : Prop extends LvInternProg p where
   keys_push : p.lookup "keys_push" = some keysPush
   ek_copy : p.lookup "ek_copy" = some ekCopy
   ls_node : p.lookup "ls_node" = some lsNode
-  lp_substpw : p.lookup "lp_substpw" = some lpSubstPW
-  lp_spw : p.lookup "lp_spw" = some lpSpw
   lv_zero : p.lookup "lv_zero" = some lvZero
   lh_push : p.lookup "lh_push" = some lhPush
 
@@ -300,7 +298,15 @@ theorem ekCopy_spec (n : Nat) : ∀ (s₀ : St) (s d l : Word),
     ⦃fun st => st = s₀⦄
     invoke p (exec p n) "ek_copy" [s, d, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ ekCopyW n s₀.mem s d l = some s'.mem; ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ s d l; rw [invoke_eq _ hL.ek_copy]; simp only [callFn, ekCopy]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ s d l
+    rw [invoke_eq _ hL.ek_copy]
+    simp only [callFn, ekCopy]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish
 
 theorem keysPush_spec (n : Nat) (s₀ : St) (po pc : Word) :
     ⦃fun s => s = s₀⦄

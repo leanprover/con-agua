@@ -83,14 +83,13 @@ theorem tteW_afr {n : Nat} {m m' : Mem} {bso bsl teo tel : Word} {r : List Word}
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (eeW_afr n h1).trans (eeW_afr n h2)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The telescope check is a twin step con-ron calls a `CoreStep` (two `eraseAll_spec` runs). -/
 theorem tkTele_cstep {fe : IFEnv} {env : ConLeche.Env} {teleW tele : List EIdx}
     {twP tP : List ConLeche.Expr} {s₀ s' : AState}
-    {c : Bool} (hok : ConRon.Bridge.CheckOK V env fe s₀)
+    {c : Bool} (hok : ConRon.Bridge.CheckOK false env fe s₀)
     (hw : Frontend.denoteEList s₀.store teleW = some twP)
     (ht : Frontend.denoteEList s₀.store tele = some tP)
-    (hrun : (tkTele teleW tele).run s₀ = .ok (c, s')) : CoreStep V env fe s₀ s' := by
+    (hrun : (tkTele teleW tele).run s₀ = .ok (c, s')) : CoreStep env fe s₀ s' := by
   have hrun' : (tkTele teleW tele) s₀ = .ok (c, s') := hrun
   simp only [tkTele] at hrun'
   obtain ⟨ew, s1, k1, z1⟩ := ConRon.Bridge.AM.bind_ok hrun'
@@ -101,7 +100,6 @@ theorem tkTele_cstep {fe : IFEnv} {env : ConLeche.Env} {teleW tele : List EIdx}
     ⟨trivial, denoteEList_ext q1.ext _ _ ht⟩ k2
   obtain ⟨-, rfl⟩ := ConRon.Bridge.AM.pure_ok z2
   exact q1.trans q2
--/
 
 
 end L.Ind

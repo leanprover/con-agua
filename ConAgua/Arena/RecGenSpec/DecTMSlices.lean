@@ -90,7 +90,16 @@ theorem instW_ok0 (n : Nat) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {v
     (hS : StageR vis fe m a) (he : H e) (hsl : HSl0 m ao al args) :
     ∃ x a', (ConRon.Arena.instPisWith args (decI e)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x := by
-  sorry
+  rcases hsl.2 with h0 | hb
+  · subst h0
+    have : args = [] := by have := decHL_length _ hsl.1; simpa using this
+    subst this
+    rcases n with _ | n
+    · simp [instW] at h
+    rw [instW_nil (h := rfl)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+    exact ⟨some (decI e), a, rfl, hS, IWGrow.refl _, rfl, he, rfl⟩
+  · exact instW_ok n dn fe vis m m' a ao al e args r h hS he hsl.1 (hS.lt64 hb) hb
 
 end L.Ind
 

@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.WhnfSpine
 public import ConAgua.Arena.Env
+public import ConAgua.Arena.ErecRd
 
 @[expose] public section
 
@@ -319,6 +320,7 @@ structure WhnfCoreProg (p : Prog) : Prop where
   wkp : p.lookup "wk_put" = some (memoPutG wkSch)
   envrow : p.lookup "env_row_get" = some envRowGetL
   envfind : p.lookup "env_find" = some envFindL
+  baserow : p.lookup "base_row_get" = some baseRowGetL
   bvf : p.lookup "bvar_find" = some bvarFind
   bvp : p.lookup "bvar_push" = some bvarPush
   bvi : p.lookup "intern_bvar" = some internBVar
@@ -359,7 +361,8 @@ it. -/
 def ErecKept (p : Prog) : Prop :=
   ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
     f = "find_proj" → callW p n f vs m = some (r, m') →
-    m'.arr64 EREC = m.arr64 EREC
+    m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
+      erRdT m' = erRdT m ∧ erecP m' = erecP m
 
 /-- **`find_proj` answers a table record that decodes** (added for `reduce_proj_core`):
 `FindProjOK` equates the twin's lookup with `decEntry`, which is `none` for a record that does not

@@ -42,19 +42,21 @@ section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
 theorem simFvarTypeD (hS : StageR vis fe m a) {e : Word} (he : H e) :
-    RSim (ftdF m [e]) (fvarTypeD (decI e)) a (KP dn vis fe m decW0E) :=
-  (ftdF_ok dn vis fe e he).sim hS
+    RSim (ftdF m [e]) (fvarTypeD (decI e)) a (KP vis fe m decW0E) :=
+  (ftdF_ok (fun _ => none) vis fe e he).sim hS
 
 theorem simGetAppArgs (hS : StageR vis fe m a) {e : Word} (he : H e) :
     RSim (gaaF m [CWF, e]) (getAppArgs coreWalkFuel (decI e)) a
-      (KP dn vis fe m (decRL (fun m => decHL m) 0)) := by
-  have h := (gaaF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
+      (KP vis fe m (decRL (fun m => decHL m) 0)) := by
+  have h := (gaaF_ok (fun _ => none) vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 /-- `open_pis_at_fvars_f`'s real refinement (`opfF_ok`): the walk memos kept. -/
 theorem simOpenPisF (hS : StageR vis fe m a) (hA : AbsOK m) {k e i : Word} (he : H e) :
     RSim (opfF m [k, e, i]) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
-      (fun b a' x => KP dn vis fe m decOLE b a' x ∧ AbsOK b.2) := by
-  sorry
+      (fun b a' x => KP vis fe m decOLE b a' x ∧ AbsOK b.2) := by
+  rintro ⟨r, m'⟩ h
+  obtain ⟨x, a', hrun, hK, hA'⟩ := opfF_ok vis fe k e i he m m' a r h ⟨hS, hA⟩
+  exact ⟨x, a', hrun, hK, hA'⟩
 
 end sims
 
@@ -62,13 +64,14 @@ end sims
 
 /-- **A fresh record keeps the stage relation**: the pointer is the old top, the words are
 there, the pool grew. -/
-theorem recW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem recW_stage {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m'))
     (hS : StageR vis fe m a) (hk : k.toNat = ws.length) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200] ∧
     (∀ j < ws.length, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + j]? = ws[j]?) ∧
     iwTop m' = iwTop m + ws.length := by
-  sorry
+  obtain ⟨hr, hget, hg, hf, htop, hroom⟩ := recW_post h hS.iw.ctl hS.iw.iwSize hk
+  refine ⟨stage_frame_iw hS hf (by omega), hg, hr, hget, htop⟩
 
 /-! ## `pi_binders` under the stage relation -/
 
@@ -105,13 +108,18 @@ theorem piBW_room (n : Nat) (m m' : Mem) (a : AState) (fuel h : Word) (rs : List
   exact consW_room hcons hsz1 hc1 hle1 hty2 hdec1
 
 /-- `pi_binders` as a simulation: the twin keeps its state, the binders a slice below the top. -/
-theorem simPiBinders {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+theorem simPiBinders {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (n : Nat) (hS : StageR vis fe m a) {h : Word} (hh : H h) :
     RSim (piBW n m CWF h) (ConRon.Arena.piBinders coreWalkFuel (decI h)) a
       (fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧
         decHL b.2 (b.1.headD 0).toNat (b.1.tail.headD 0).toNat = some x.1 ∧
         (b.1.headD 0).toNat + (b.1.tail.headD 0).toNat ≤ iwTop b.2) := by
-  sorry
+  rintro ⟨rs, m'⟩ hp
+  obtain ⟨bs, e, hrun, -, hdec, -, -, hg, hf, hle⟩ :=
+    piBW_ok n m m' a CWF h rs hS.check.arena.base hp hh hS.iw.iwSize hS.iw.ctl
+  have hroom := piBW_room n m m' a CWF h rs hS.check.arena.base hp hh hS.iw.iwSize hS.iw.ctl hS.iw.iw
+  refine ⟨(bs, e), a, by rw [← CWF_eq]; exact hrun, stage_frame_iw hS hf (by rw [← hf.size IW]; exact hroom),
+    hg, by simpa [getD_one] using hdec, by simpa [getD_one] using hle⟩
 
 theorem drop3_headD (r : List Word) : (r.drop 3).headD 0 = r.tail.tail.tail.headD 0 := by
   rcases r with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl

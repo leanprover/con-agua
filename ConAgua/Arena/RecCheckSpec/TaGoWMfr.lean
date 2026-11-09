@@ -129,7 +129,9 @@ theorem tcpF_ok (n : Nat) {m m' : Mem} {a : AState} {pfo pfl e : Word} {pfvs : L
     (he : H e) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE (r.headD 0), a') ∧
       H (r.headD 0) ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
-  sorry
+  cases n with
+  | zero => cases h
+  | succ n => exact tcpW_ok (fun _ => none) fe vis n h hS hpf he hP
 
 theorem taF_ok (n : Nat) {m m' : Mem} {a : AState} {no nl lvls ho hl e r : Word} {names : List NIdx}
     {holes : List EIdx} (h : taF n m no nl lvls ho hl e = some (r, m')) (hS : StageR vis fe m a)
@@ -138,7 +140,13 @@ theorem taF_ok (n : Nat) {m m' : Mem} {a : AState} {no nl lvls ho hl e r : Word}
     (hho : decHL m ho.toNat hl.toNat = some holes) (hht : ho.toNat + hl.toNat ≤ iwTop m) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.targetAbs names (decI lvls) holes (decE e)).run a = .ok (decE r, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
-  sorry
+  cases n with
+  | zero => cases h
+  | succ n =>
+    obtain ⟨mp, hM⟩ := hP.ta
+    obtain ⟨a', mp1, hrun, hM1, hS', hg⟩ :=
+      taAW_ok n (fun _ => none) fe vis m m' a no nl lvls ho hl e r names holes mp h hS he hlv hdec hit hho hht hM
+    exact ⟨a', hrun, hS', hg, hP.setTa (taAW_mfr h) ⟨mp1, hM1⟩⟩
 
 end rel
 

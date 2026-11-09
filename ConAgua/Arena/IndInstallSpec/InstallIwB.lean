@@ -2,13 +2,14 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
 public import ConAgua.Arena.IndSumSpec.SumProg
+public import ConAgua.Arena.IndDecPLB
 
 @[expose] public section
 
 /-!
 # InstallIwB
 
-`installIwB`, `decPLB`, `decCNSB`, `iwA_truncM_size_le`, `decCNSB_bound`, `CtorsProg`.
+`installIwB`, `CtorsProg` (`decPLB`, `decCNSB`: `IndDecPLB`).
 -/
 
 noncomputable section
@@ -29,51 +30,13 @@ theorem installIwB {m : Mem} {w : Word} {k : Nat} {b : Bool} (h : iwB (truncM m)
   simp only [iwB, bool?, Option.map_eq_some_iff] at h
   obtain ⟨x, hx, rfl⟩ := h
   obtain ⟨hi, hx'⟩ := truncM_iw_get hx
-  simp only [iwA] at hx'
+  simp only [iwA, aread_apply, aread_apply] at hx'
   have hlt : w.toNat + k < (m.arr64 IW).size := (Array.getElem?_eq_some_iff.mp hx').1
   have hk : k < 2 ^ 64 := by omega
   have hwk : w.toNat + k < 2 ^ 64 := by omega
   have he : (w + UInt64.ofNat k).toNat = w.toNat + k := by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hk]; exact Nat.mod_eq_of_lt hwk
   rw [rdW_of_get? he.symm hx']
-
-/-! ## Member slices with their bound
-
-A member's constructor slice `(o, l)` decoded below the tops says nothing about `o` when `l = 0`;
-the positivity walk (`CssAt`) wants `o + l ≤ iwTop` for every member. `decPLB` carries the bound in
-the decoding (below the tops the pool's size is its top), so it survives `sl_cons` and growth. -/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- A pointer slice whose end lies within the pool. -/
-def decPLB {α : Type} (m : Mem) (f : Nat → Option α) (o l : Nat) : Option (List α) :=
-  if o + l ≤ (iwA m).size then decPL m f o l else none
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- A member's constructors with their slice's bound. -/
-def decCNSB (m : Mem) (q : Nat) : Option (List (IConstantVal × Nat)) :=
-  decAt m (fun o l => decPLB m (decCN m) o l) q
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- Below the tops, the pool's size is at most its top. -/
-theorem iwA_truncM_size_le (m : Mem) : (iwA (truncM m)).size ≤ iwTop m := by
-  apply Nat.le_of_not_lt
-  intro h
-  have := truncM_iw_get? m (iwTop m)
-  rw [ite_eq_right (Nat.lt_irrefl _)] at this
-  rw [Array.getElem?_eq_getElem h] at this
-  cases this
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- A `[off, len]` member record decoded with its bound: the bound. -/
-theorem decCNSB_bound {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
-    (h : DecB (fun m => decCNSB m q) m cs) :
-    ∃ o l, iwN (truncM m) q = some o ∧ iwN (truncM m) (q + 1) = some l ∧ o + l ≤ iwTop m ∧
-      decPL (truncM m) (decCN (truncM m)) o l = some cs := by
-  sorry
--/
 
 /-- The lookups of `check_block_ctors`. -/
 structure CtorsProg (p : Prog) : Prop extends CstProg p where

@@ -42,40 +42,6 @@ section cut
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
   {fe : IFEnv} {a : AState} {v : Word}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **No relation reads a `CTL` word from 256 on**: cutting `CTL` to its seed keeps
-`PhaseBStart`. -/
-theorem PhaseBStart.cut {t : Mem} (h : PhaseBStart pins dn ds fe pend t a v) :
-    PhaseBStart pins dn ds fe pend (ctlCut t) a v := by
-  have hf := ctlCut_frame t
-  have hC : ∀ x ∈ hiC (t.arr64 CTL).size, 256 ≤ x.toNat := fun _ hx => hiC_ge hx
-  have hn : ∀ k : Nat, k < 256 → (UInt64.ofNat k : Word) ∉ hiC (t.arr64 CTL).size := fun k hk hx => by
-    have := hC _ hx; rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)] at this; omega
-  have he : erecP (ctlCut t) = erecP t :=
-    erecP_congr (hf.arr EREC (by simp) (by decide)) (hf.ctl 129 (hn 129 (by decide)))
-  obtain ⟨hL, hM, hCM, hT, hcr⟩ := h
-  refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, hT, ?_⟩
-  · exact CheckR.frame_hi (A := []) (by simp) (fun x hx => by have := hC x hx; omega) hf hL.check
-  · exact hL.pend.ext (hf.arr PEND (by simp) (by decide)) (hf.ctl 130 (hn 130 (by decide)))
-      (by rw [he]; exact fun _ _ h => h)
-  · rw [hf.arr _ (by simp) (by decide), hf.arr _ (by simp) (by decide)]; exact hL.decls
-  · exact IWOK.frame hf (by simp) (by simp) (hn 129 (by decide)) (hn 200 (by decide)) hL.iw
-  · obtain ⟨pm, hm⟩ := hL.pmemo
-    exact ⟨pm, hm.frame (by simp) (fun x hx => .inr (by have := hC x hx; omega)) hf⟩
-  · exact PinSetsR.grow hL.pinsets
-      ⟨by simp only [L.Ind.erTop, hf.ctl 129 (hn 129 (by decide))]; exact Nat.le_refl _,
-        fun i _ => by rw [hf.arr EREC (by simp) (by decide)]⟩
-      (hf.ctl 150 (hn 150 (by decide))) (hf.ctl 151 (hn 151 (by decide)))
-  · refine ⟨by rw [hf.size]; exact hM.erec, by rw [hf.size]; exact hM.spn,
-      by rw [hf.size]; exact hM.bstk, ?_, hM.dnP⟩
-    simp only [pinW, hf.arr PINS (by simp) (by decide)]; exact hM.flag
-  · exact CoreMemos.frame_hi hf (by simp) (fun x hx => by have := hC x hx; omega) hCM
-      (by simp) (fun x hx => .inr (by have := hC x hx; omega))
-  · obtain ⟨memo, hm⟩ := hcr
-    exact ⟨memo, memoRV_frame L.Stubs.crSch L.Stubs.crSch_wf bmKey L.Stubs.CrV [] _ (by simp)
-      (hn 158 (by decide)) _ _ hf
-      (fun _ _ h => h) memo hm⟩
--/
 
 end cut
 
@@ -280,88 +246,8 @@ theorem CoreR.fresh {c : Caches} (h : CoreR (cutT m) c) : CoreR (freshMem m) Cac
 
 /-! ### The environment -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem row_fresh (w : Word) (hg : rowTag w ≤ 2) :
-    (rowTier w = 0 → rowC (freshMem m) w = rowC (cutT m) w ∧ rowP (freshMem m) w = rowP (cutT m) w) ∧
-    (rowTier w ≠ 0 → rowC (freshMem m) w = 0) := by
-  have ht : rowTier w = 0 ∨ rowTier w = 1 := by simp only [rowTier]; omega
-  have hg3 : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 := by omega
-  unfold rowC rowP
-  simp only [hg, ↓reduceIte]
-  rcases ht with ht | ht
-  · have ha : rowArr w = 132 + rowTag w := by
-      exact rowArr_tier0 hg ht
-    have hn : (rowArr w : TieredArray) ∉ freshZ := by
-      rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
-    rw [fresh_keep m hn]
-    exact ⟨fun _ => ⟨rfl, rfl⟩, fun h => absurd ht h⟩
-  · have ha : rowArr w = 140 + rowTag w := by
-      exact rowArr_tier1 hg ht
-    have hn : (rowArr w : TieredArray) ∈ freshZ := by
-      rw [ha]; rcases hg3 with e | e | e <;> rw [e] <;> decide
-    refine ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; exact TieredArray.t0_ne (show 140 + rowTag w ≠ (1 : Nat) by omega)) _⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem tblRow_fresh (w : Word) :
-    (rowTier w = 0 → tblRow (freshMem m) w = tblRow (cutT m) w) ∧
-    (rowTier w ≠ 0 → tblRow (freshMem m) w = 0) := by
-  have ht : rowTier w = 0 ∨ rowTier w = 1 := by simp only [rowTier]; omega
-  unfold tblRow
-  by_cases hg : rowTag w ≤ 2
-  · have hg3 : rowTag w = 0 ∨ rowTag w = 1 ∨ rowTag w = 2 := by omega
-    simp only [hg, ↓reduceIte]
-    rcases ht with ht | ht
-    · have ha : tblArr w = tixArr (rowTag w) := tblArr_tier0 ht
-      have hn : tblArr w ∉ freshZ := by
-        rw [ha]; rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] <;> decide
-      rw [fresh_keep m hn]
-      exact ⟨fun _ => rfl, fun h => absurd ht h⟩
-    · have ha : tblArr w = tier1 (tixArr (rowTag w)) := tblArr_tier1 ht
-      have hn : tblArr w ∈ freshZ := by
-        rw [ha]; rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] <;> decide
-      exact ⟨fun h => by omega, fun _ => fresh_getD m hn (by rw [ha]; exact tier1_ne_t0 _ _) _⟩
-  · simp [hg]
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem EnvR.fresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    (hk : EnvKeysIn (cutT m) fe) (h : EnvR (cutT m) vis fe) : EnvR (freshMem m) vis fe := by
-  have he : erecP (freshMem m) = erecP (cutT m) :=
-    erecP_congr (fresh_keep m (by decide)) (by rw [fresh_ctl])
-  have hET : (freshMem m).arr64 ETAB = (cutT m).arr64 ETAB := fresh_keep m (by decide)
-  refine ⟨h.vis, fun n hn => ?_, fun n hn h0 => ?_, ?_, fun n hn => ?_, fun n hn h0 => ?_, ?_⟩
-  · by_cases ht : rowTier n.word.toUInt64 = 0
-    · have := (row_fresh (m := m) n.word.toUInt64 hn).1 ht
-      rw [h.keys n hn]; simp only [rowW, this.1, this.2]
-    · have h0 := (row_fresh (m := m) n.word.toUInt64 hn).2 ht
-      have hnone : fe.idx[n]? = none := by
-        cases e : fe.idx[n]? with
-        | none => rfl
-        | some _ => exact absurd (hk.idx n (by simp [e]) hn).1 ht
-      simp only [rowW, h0, ↓reduceIte, hnone, Option.map_none]
-  · have ht : rowTier n.word.toUInt64 = 0 :=
-      Classical.byContradiction fun ht => h0 ((row_fresh (m := m) n.word.toUInt64 hn).2 ht)
-    have := (row_fresh (m := m) n.word.toUInt64 hn).1 ht
-    rw [this.2, he]
-    exact h.vals n hn (by rw [← this.1]; exact h0)
-  · rw [← h.consts]
-    simp only [envConsts, envLen, fresh_ctl, he, fresh_keep m (show (ECON : TieredArray) ∉ freshZ by decide)]
-  · by_cases ht : rowTier n.word.toUInt64 = 0
-    · rw [(tblRow_fresh (m := m) n.word.toUInt64).1 ht]; exact h.tkeys n hn
-    · have hnone : fe.tbls[n]? = none := by
-        cases e : fe.tbls[n]? with
-        | none => rfl
-        | some _ => exact absurd (hk.tbls n (by simp [e]) hn).1 ht
-      rw [(tblRow_fresh (m := m) n.word.toUInt64).2 ht, hnone]; rfl
-  · have ht : rowTier n.word.toUInt64 = 0 :=
-      Classical.byContradiction fun ht => h0 ((tblRow_fresh (m := m) n.word.toUInt64).2 ht)
-    rw [(tblRow_fresh (m := m) n.word.toUInt64).1 ht] at h0 ⊢
-    rw [he]
-    exact h.tvals n hn h0
-  · rw [← h.tables]
-    simp only [envTables, tblCnt, fresh_ctl, he, hET]
--/
 
 /-! ### The loop's relation -/
 
@@ -369,36 +255,14 @@ theorem ModeOK.fresh (h : ModeOK (cutT m)) : ModeOK (freshMem m) :=
   h.frame (fresh_frame m) (by simp) (by simp)
 
 theorem IWOK.fresh (h : L.Ind.IWOK (cutT m)) : L.Ind.IWOK (freshMem m) := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := h
-  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, fresh_ctl, fresh_size] at *
-  exact ⟨h1, h2, h3, h4, h5⟩
+  have h0 := (L.Ind.IWOK_iff _).1 h
+  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, erecTop1, fresh_size, fresh_ctl] at h0 ⊢
+  exact h0
 
 section loop
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
   {fe : IFEnv} {a : AState} {v : Word}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem LoopR.fresh (hd : a.store.dropScratch = a.store) (hc : a.caches = Caches.empty)
-    (htop : (cutT m).top.toNat < 2 ^ 40) (hk : EnvKeysIn (cutT m) fe)
-    (h : LoopR pins (cutT m) a v fe ds) :
-    LoopR pins (freshMem m) { a with memos := Memos.empty } v fe ds := by
-  have hf := fresh_frame m
-  have he : erecP (freshMem m) = erecP (cutT m) :=
-    erecP_congr (fresh_keep m (by decide)) (by rw [fresh_ctl])
-  refine ⟨⟨ArenaD.fresh hd htop h.check.arena, ?_, h.check.pins.frame (by decide) hf,
-      h.check.env.fresh hk, ModeOK.fresh h.check.mode⟩, ?_, ?_, IWOK.fresh h.iw, ?_, ?_⟩
-  · show CoreR (freshMem m) a.caches
-    rw [hc]; exact CoreR.fresh h.check.core
-  · exact h.pend.ext (fresh_keep m (by decide)) (by rw [fresh_ctl])
-      (by rw [he]; exact fun _ _ h => h)
-  · rw [fresh_keep m (by decide), fresh_keep m (by decide)]; exact h.decls
-  · obtain ⟨pm, hm⟩ := h.pmemo
-    exact ⟨pm, hm.frame (by decide) (by simp) hf⟩
-  · exact PinSetsR.grow h.pinsets
-      ⟨by simp only [L.Ind.erTop, fresh_ctl]; exact Nat.le_refl _,
-        fun i _ => by rw [fresh_keep m (by decide)]⟩
-      (by rw [fresh_ctl]) (by rw [fresh_ctl])
--/
 
 end loop
 
@@ -406,15 +270,16 @@ theorem CoreMemos.fresh (h : CoreMemos (cutT m)) : CoreMemos (freshMem m) := by
   have hz : ∀ b, b ∈ freshZ → b ≠ CTL → ∀ x, rdW ((freshMem m).arr64 b) x = 0 :=
     fun b hb hc => fresh_zero m hb hc
   have hc := fresh_ctl m
-  obtain ⟨⟨_, h1⟩, ⟨_, h2⟩, ⟨_, h3⟩, ⟨_, h4⟩, ⟨_, h5⟩, ⟨_, h6⟩, ⟨_, h7⟩, ⟨_, h8⟩⟩ := h
+  obtain ⟨⟨_, h1⟩, ⟨_, h2⟩, ⟨⟨_, h3⟩, ⟨_, h4⟩, ⟨_, h5⟩, ⟨_, h6⟩, ⟨_, h7⟩, ⟨_, h8⟩⟩, ⟨_, h9⟩⟩ := h
   exact ⟨⟨_, memoRG_zeros _ _ h1 hc (hz _ (by decide) (by decide))⟩,
     ⟨_, memoRG_zeros _ _ h2 hc (hz _ (by decide) (by decide))⟩,
-    ⟨_, memoRG_zeros _ _ h3 hc (hz _ (by decide) (by decide))⟩,
+    ⟨⟨_, memoRG_zeros _ _ h3 hc (hz _ (by decide) (by decide))⟩,
     ⟨_, memoRG_zeros _ _ h4 hc (hz _ (by decide) (by decide))⟩,
     ⟨_, memoRG_zeros _ _ h5 hc (hz _ (by decide) (by decide))⟩,
     ⟨_, memoRV_zeros _ _ _ h6 hc (hz _ (by decide) (by decide))⟩,
     ⟨_, memoRV_zeros _ _ _ h7 hc (hz _ (by decide) (by decide))⟩,
-    ⟨_, memoRV_zeros _ _ _ h8 hc (hz _ (by decide) (by decide))⟩⟩
+    ⟨_, memoRV_zeros _ _ _ h8 hc (hz _ (by decide) (by decide))⟩⟩,
+    ⟨_, memoRV_zeros _ _ _ h9 hc (hz _ (by decide) (by decide))⟩⟩
 
 theorem CrOK.fresh (h : L.Stubs.CrOK (cutT m)) : L.Stubs.CrOK (freshMem m) := by
   obtain ⟨_, h⟩ := h
@@ -427,17 +292,6 @@ theorem LoopMem.fresh {dn : NIdx → Option ConLeche.Name} {a : AState}
 
 /-! ### The twin -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The twin's phase-B invariant does not read the walk memos.** -/
-theorem TwinPend.memos {fe : IFEnv} {pend : List PendingCheck} {a : AState} (h : TwinPend fe pend a)
-    (ms : Memos) : TwinPend fe pend { a with memos := ms } := by
-  obtain ⟨env, pendP, hok, hnd, hrel⟩ := h.fold
-  exact ⟨⟨env, pendP,
-    { check := { state := { wf := hok.check.state.wf }, caches := { hok.check.caches with },
-                 pins := { hok.check.pins with }, ienv := { hok.check.ienv with } }
-      envWF := hok.envWF, tblShape := hok.tblShape, persPins := { hok.persPins with }, persEnv := hok.persEnv,
-      coh := hok.coh, denote := hok.denote }, hnd, hrel⟩, h.caches, h.off, h.dropped⟩
--/
 
 /-- A worker with the caches empty and the store its own `dropScratch` is the state with fresh
 walk memos. -/
@@ -445,31 +299,136 @@ theorem worker_eq {a : AState} (hd : a.store.dropScratch = a.store) (hc : a.cach
     a.worker = { a with memos := Memos.empty } := by
   simp only [AState.worker, hd, ← hc]
 
-/-! ## The theorem -/
+/-! ## The store with the scratch flag off -/
+
+theorem nstore_dropScratch_self {st : NStore} (h : NStoreWF st) (ho : st.scratchOn = false) :
+    st.dropScratch = st := by
+  obtain ⟨_, h⟩ := h
+  have e := h.scrOff ho
+  cases st; simp_all [NStore.dropScratch]
+
+theorem lstore_dropScratch_self {st : LStore} (h : LStoreWF st) (ho : st.scratchOn = false) :
+    st.dropScratch = st := by
+  obtain ⟨_, h⟩ := h
+  have e := h.scrOff ho
+  have en := nstore_dropScratch_self h.ns (h.sync ▸ ho)
+  cases st; simp_all [LStore.dropScratch]
+
+theorem lsstore_dropScratch_self {st : LsStore} (h : LsStoreWF st) (ho : st.scratchOn = false) :
+    st.dropScratch = st := by
+  have e := h.scrOff ho
+  have en := lstore_dropScratch_self h.ls (h.sync ▸ ho)
+  cases st; simp_all [LsStore.dropScratch]
+
+/-- **A well-formed store with the scratch flag off is its own `dropScratch`.** -/
+theorem estore_dropScratch_self {st : EStore} (h : StoreWF st) (ho : st.scratchOn = false) :
+    st.dropScratch = st := by
+  obtain ⟨_, h⟩ := h
+  have e := h.scrOff ho
+  have en := lsstore_dropScratch_self h.lss (h.sync ▸ ho)
+  cases st; simp_all [EStore.dropScratch]
+
+/-! ## The jobs' relation at the fresh memory -/
 
 section main
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
-  {fe : IFEnv} {a : AState} {v : Word}
+  {I : IStreamIndex} {a : AState}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **Step 3**: zeroing `freshZ` after the cut, at the state with fresh walk memos. -/
-theorem PhaseBStart.zeroed (hd : a.store.dropScratch = a.store) (hc : a.caches = Caches.empty)
-    (h : PhaseBStart pins dn ds fe pend (cutT m) a v) :
-    PhaseBStart pins dn ds fe pend (freshMem m) { a with memos := Memos.empty } v :=
-  have htop := top_tier0_of h.loop.check h.twin.off
-  have hk := envKeysIn_of h.loop.check.arena.base h.twin
-  ⟨h.loop.fresh hd hc htop hk, h.mem.fresh, CoreMemos.fresh h.core, h.twin.memos _, CrOK.fresh h.cr⟩
--/
+/-- **Cutting `CTL` to its seed keeps the jobs' memory half**: no relation reads a `CTL` word from
+256 on. -/
+theorem JobM.cut {t : Mem} (h : JobM pins dn ds I t a) : JobM pins dn ds I (ctlCut t) a := by
+  have hf := ctlCut_frame t
+  have hC : ∀ x ∈ hiC (t.arr64 CTL).size, 256 ≤ x.toNat := fun _ hx => hiC_ge hx
+  have hn : ∀ k : Nat, k < 256 → (UInt64.ofNat k : Word) ∉ hiC (t.arr64 CTL).size := fun k hk hx => by
+    have := hC _ hx; rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)] at this; omega
+  have hA : ∀ b ∈ ([] : List TieredArray), False := fun _ h => absurd h (by simp)
+  have he : erecP (ctlCut t) = erecP t :=
+    erecP_congr' (hf.arr EREC (by simp) (by decide)) (hf.arr _ (by simp) (by decide))
+      (hf.ctl 129 (hn 129 (by decide))) (hf.ctl 130 (hn 130 (by decide)))
+  exact ⟨⟨ArenaR.frame_ext [] _ (by simp) (fun x hx => by have := hC x hx; omega) _ _ hf _ h.arena.base,
+      DerR.frameM [] _ _ _ hf (by simp) _ h.arena.der⟩,
+    h.core.frame (fun b hb => (hA b hb).elim) (fun x hx => .inr (by have := hC x hx; omega)) hf,
+    h.pinsR.frame (fun b hb => (hA b hb).elim) hf, h.mode.frame hf (hn 0 (by decide)) (hn 1 (by decide)),
+    h.idx.grow (fun b _ hr => hf.arr b (by simp) (fun e => by subst e; revert hr; decide)) (hf.ctl 128 (hn 128 (by decide)))
+      (by rw [he]; exact fun _ _ h => h),
+    h.below.frame (fun b hb => (hA b hb).elim) (hn 133 (by decide)) hf,
+    by simp only [stampW, hf.ctl 133 (hn 133 (by decide))]; exact h.stamp,
+    by rw [hf.arr _ (by simp) (by decide), hf.arr _ (by simp) (by decide)]; exact h.decls,
+    IWOK.frame hf (by simp) (by simp) (hn 129 (by decide)) (hn 200 (by decide)) h.iw (by simp)
+      (hn 130 (by decide)),
+    by rw [hf.ctl 130 (hn 130 (by decide))]; exact h.top1,
+    PinSetsR.grow h.pinsets (RecGrow.of_eq (hf.arr EREC (by simp) (by decide)) (hf.ctl 129 (hn 129 (by decide))))
+      (hf.ctl 150 (hn 150 (by decide))) (hf.ctl 151 (hn 151 (by decide))),
+    ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn, by rw [hf.size]; exact h.mem.bstk,
+      h.mem.memos.frame hf ⟨by simp, by simp⟩ ⟨hn 50 (by decide), hn 48 (by decide)⟩ (by simp)
+        ⟨hn 152 (by decide), hn 154 (by decide), hn 156 (by decide)⟩ (by simp)
+        ⟨hn 54 (by decide), hn 56 (by decide), hn 58 (by decide)⟩ (by simp) (hn 214 (by decide)), h.mem.dnN⟩,
+    by rw [pinW_frame hf (by simp)]; exact h.flag,
+    h.memos.frame hf (fun b hb => (hA b hb).elim) (fun x hx => by have := hC x hx; omega), h.fsize⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **What phase A leaves for phase B holds at a thread's fresh worker memory and the twin's
-worker state**, when there is a pending group. -/
-theorem PhaseBStart.fresh (h : PhaseBStart pins dn ds fe pend m a v) (hne : pend.size ≠ 0) :
-    PhaseBStart pins dn ds fe pend (freshMem m) a.worker v := by
-  have hp : pend.toList ≠ [] := fun e => hne (by rw [← Array.length_toList, e]; rfl)
-  rw [worker_eq (h.twin.dropped hp) (h.twin.caches hp)]
-  exact h.trunc'.cut.zeroed (h.twin.dropped hp) (h.twin.caches hp)
--/
+theorem freshZ_idx : ∀ b ∈ freshZ, ¬ (b.hi = false ∧ ((129 ≤ b.arr ∧ b.arr ≤ 134) ∨ b.arr = 137)) := by
+  decide
+
+theorem OwnBelow.fresh (m : Mem) : OwnBelow (freshMem m) := by
+  intro w hw
+  have hz : ∀ (b : TieredArray), b ∈ envArrs → 140 ≤ b.arr → ∀ i, rdN ((freshMem m).arr64 b) i = 0 :=
+    fun b hb h1 i => fresh_getD m (by revert h1; revert hb; revert b; decide) (fun e => by subst e; revert h1; decide) i
+  have hA : ∀ (t : UInt64), 140 ≤ (tierA (oixArr (rowTag w)) t).arr := fun t => by
+    unfold tierA oixArr; generalize (t &&& 1 != 0) = b
+    cases b <;> split <;> (try split) <;> decide
+  have hB : ∀ (t : UInt64), 140 ≤ (tierA (otxArr (rowTag w)) t).arr := fun t => by
+    unfold tierA otxArr; generalize (t &&& 1 != 0) = b
+    cases b <;> split <;> (try split) <;> decide
+  simp only [ownRow, hz _ (tierA_oix_mem _ _) (hA _), hz _ (tierA_otx_mem _ _) (hB _)]
+  simp
+
+theorem IndMemos.fresh {m : Mem} (h : IndMemos (cutT m)) : IndMemos (freshMem m) := by
+  have hc := fresh_ctl m
+  have hz : ∀ b, b ∈ freshZ → b ≠ CTL → ∀ x, rdW ((freshMem m).arr64 b) x = 0 :=
+    fun b hb hc => fresh_zero m hb hc
+  obtain ⟨⟨⟨⟨a1, h1⟩, ⟨a2, h2⟩, ⟨a3, h3⟩, ⟨a4, h4⟩, ⟨M, G, g, hR, hB, hF⟩⟩, ⟨a5, h5⟩, ⟨a6, h6⟩,
+    ⟨a7, h7⟩⟩, ⟨a8, h8⟩, hcr⟩ := h
+  refine ⟨⟨⟨⟨_, memoRV_zeros _ _ _ h1 hc (hz _ (by decide) (by decide))⟩,
+    ⟨_, memoRV_zeros _ _ _ h2 hc (hz _ (by decide) (by decide))⟩,
+    ⟨_, memoRV_zeros _ _ _ h3 hc (hz _ (by decide) (by decide))⟩,
+    ⟨_, memoRV_zeros _ _ _ h4 hc (hz _ (by decide) (by decide))⟩,
+    ⟨∅, G, g, memoRV_zeros _ _ _ hR hc (hz _ (by decide) (by decide)), ?_, ?_⟩⟩,
+    ⟨_, memoRV_zeros _ _ _ h5 hc (hz _ (by decide) (by decide))⟩,
+    ⟨_, memoRV_zeros _ _ _ h6 hc (hz _ (by decide) (by decide))⟩,
+    ⟨_, memoRV_zeros _ _ _ h7 hc (hz _ (by decide) (by decide))⟩⟩,
+    ⟨_, memoRV_zeros _ _ _ h8 hc (hz _ (by decide) (by decide))⟩, CrOK.fresh hcr⟩
+  · unfold BankW at *; rw [hc]; exact hB
+  · intro x; simp
+
+/-- **The jobs' relation at a thread's fresh memory**: from the memory half at the truncated memory
+(`JobM.trunc`), the store its own `dropScratch` and well formed with the scratch flag off, the jobs'
+relation holds at `freshMem m`, at the state with empty walk memos and caches. -/
+theorem JobM.fresh {m : Mem} (h : JobM pins dn ds I (truncFrozen m) a) (hw : StoreWF a.store)
+    (hoff : a.store.scratchOn = false) :
+    JobR pins dn ds I (freshMem m) { a with memos := Memos.empty, caches := Caches.empty } := by
+  have hd := estore_dropScratch_self hw hoff
+  have hC := h.cut
+  have hf := fresh_frame m
+  have htop : (cutT m).top.toNat < 2 ^ 40 := top_tier0_of hC.arena.base hC.mode hoff
+  have hk : ∀ b, b ∉ freshZ → (freshMem m).arr64 b = (cutT m).arr64 b := fun b hb => fresh_keep m hb
+  have he : erecP (freshMem m) = erecP (cutT m) := by
+    have h1 : erecTop1 (cutT m) = 0 := by simp only [erecTop1, hC.top1]; rfl
+    have h1' : erecTop1 (freshMem m) = 0 := by simp only [erecTop1, fresh_ctl, hC.top1]; rfl
+    have h0 : erecTop (freshMem m) = erecTop (cutT m) := by simp only [erecTop, fresh_ctl]
+    funext i; simp only [erecP, h1, h1', h0, hk EREC (by decide), Nat.not_lt_zero, ↓reduceIte]
+  have hA := (ArenaD.fresh hd htop hC.arena).caches_irrel Caches.empty
+  refine ⟨⟨⟨hA.1, hA.2⟩, CoreR.fresh hC.core, hC.pinsR.frame (by decide) hf, ModeOK.fresh hC.mode,
+    hC.idx.grow (fun b hb hr => hk b (fun hz => freshZ_idx b hz ⟨hb, hr⟩)) (by rw [fresh_ctl])
+      (by rw [he]; exact fun _ _ h => h),
+    OwnBelow.fresh m, by simp only [stampW, fresh_ctl]; exact hC.stamp,
+    by rw [hk _ (by decide), hk _ (by decide)]; exact hC.decls, IWOK.fresh hC.iw,
+    by rw [fresh_ctl]; exact hC.top1,
+    PinSetsR.grow hC.pinsets (RecGrow.of_eq (hk EREC (by decide)) (by rw [fresh_ctl]))
+      (by rw [fresh_ctl]) (by rw [fresh_ctl]),
+    ⟨by rw [fresh_size]; exact hC.mem.erec, by rw [fresh_size]; exact hC.mem.spn,
+      by rw [fresh_size]; exact hC.mem.bstk, CoreMemos.fresh hC.mem.memos, hC.mem.dnN⟩,
+    by simp only [pinW, hk PINS (by decide)]; exact hC.flag, IndMemos.fresh hC.memos, hC.fsize⟩,
+    ⟨hw⟩, hoff, rfl⟩
 
 end main
 

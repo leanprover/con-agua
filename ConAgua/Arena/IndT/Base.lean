@@ -33,7 +33,7 @@ def KPT {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
 
 theorem KPT.kp {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {dec : Mem → List Word → α → Prop} {b : List Word × Mem} {a' : AState} {x : α}
-    (h : KPT dn vis fe m dec b a' x) : KP dn vis fe m dec b a' x := ⟨h.1.stage, h.2⟩
+    (h : KPT dn vis fe m dec b a' x) : KP vis fe m dec b a' x := ⟨h.1.stage, h.2⟩
 
 /-- A `Sim` is a `RSim` of the same model. -/
 theorem _root_.L.Arena.Sim.rsim {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
@@ -43,16 +43,16 @@ theorem _root_.L.Arena.Sim.rsim {β α : Type} {mo : Option (β × Mem)} {op : A
   exact h r m' e
 
 /-- **The walk memos `AbsOK` holds across a core call**: the core keeps `CoreMemos` (in `StageT`
-after), writes neither array 51 nor 155 nor their epochs (`CoreStageClosed`), keeps the sizes and
+after), writes neither array 51 nor 155 nor their epochs (`CoreFr`), keeps the sizes and
 the pin flag. -/
 theorem absOK_core {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f ∈ stageCoreFns)
     {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word} {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {a' : AState} (h : callW p n f vs m = some (r, m'))
     (hA : AbsOK m) (hT : StageT dn vis fe m' a') : AbsOK m' := by
-  obtain ⟨hfr, -⟩ := run_memFrame hcl hf (run_of_callW h)
-  exact ⟨hT.twin.memos.ab, hA.i1.frame hfr coreStageA_51 coreStageC_52,
-    hA.cr.frame hfr coreStageA_155 coreStageC_158, hT.twin.memos.il,
-    hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
+  obtain ⟨hfr, -⟩ := callW_coreFrame hcl hf h
+  exact ⟨hT.twin.memos.ab, hA.i1.frame hfr coreFrA_51 coreFrC_52,
+    hA.cr.frame hfr coreFrA_155 coreFrC_158, hT.twin.memos.il,
+    ⟨hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩, hT.twin.memos.hb⟩
 
 /-- A core call's `RSim` with `AbsOK` added to its post. -/
 theorem RSim.coreAbs {α : Type} {p : Prog} (hcl : CoreStageClosed p) {f : FnName}

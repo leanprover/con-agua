@@ -31,7 +31,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-! ## Callees as runs -/
 
 /-- `intern_sort` as a `Sim` (master's, through its stage lemma). -/
-theorem installSortSim {p : Prog} (hP : CstProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
+theorem installSortSim {p : Prog} (hP : CstProg p) (n : Nat)
     {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} {u : Word} (hS : StageR vis fe m a) (hu : H u) :
     Sim (callW p n "intern_sort" [u] m) (internSortE (decI u)) a
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ decE (r.headD 0) = x ∧ AFr m m') := by

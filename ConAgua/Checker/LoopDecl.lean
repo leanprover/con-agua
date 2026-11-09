@@ -152,6 +152,8 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+import all ConAgua.Rom.CIConst
+import all ConAgua.Arena.BasisL
 
 @[expose] public section
 
@@ -197,7 +199,20 @@ def declExtFns : List FnName :=
    -- lane `stubs`: the callees of `intern_ls_iw` and `consts_resolve_ffast`
    "pool_room", "iw_pool", "crf_go", "cr_leaf", "cr_lit_pins", "pin_found", "crm_find", "crm_put",
    "crm_clear", "is_str_lit",
-   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go"]
+   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go",
+   -- ronsync2: the quotient pins at a stream's names, the core's leaves, the definition arm
+   "char_of_nat_ty_ok", "char_ty_ok", "check_decl_defn", "check_div_mod_pin_at_fe2",
+   "check_quot_record", "check_reduce_pin_pre", "check_structural_nat_pin",
+   "check_structural_nat_pin_at_fe2", "ci_at_lps", "cv_at_lps", "env_pop_temp", "eq_stored",
+   "er_copy_er", "fire_levels_at", "has_loose_b_var_b_fast", "has_loose_b_var_b_go",
+   "has_loose_b_var_b_ins", "hb_clear", "hb_find", "hb_put", "list_cons_ty_ok", "list_nil_ty_ok",
+   "list_ty_ok", "lit_shape_ok", "nat_ind_ok", "nat_op_name", "nat_succ_ok", "nat_zero_ok",
+   "open_pis_at_fvars_f", "param_levels", "param_levels_go", "pin_range_has", "quot_at",
+   "quot_pin", "quot_preds_ok", "rom_ex_leaf_c", "rom_ex_one_c", "rom_ex_ref_c", "rom_ex_two_c",
+   "rom_expr_c", "rom_exprs_to_c", "rom_level_c", "rom_levels_c", "rom_lvls_go_c", "rom_name_c",
+   "rom_put_c", "rom_u64_c", "rules_at_lps_go", "sl_get", "spn_to_er", "spn_to_iw", "str_cv",
+   "str_param_sort", "string_of_list_ty_ok", "string_ty_ok", "strip_pis", "struct_used_later",
+   "value_guards"]
 
 /-- The call-closed superset: the texts' lists, their open callees' callees and the core. -/
 def declLoopFns : List FnName :=
@@ -206,40 +221,34 @@ def declLoopFns : List FnName :=
 /-- `declLoopFns` as a tree of name codes. -/
 names_tree declLoopTree : declLoopFns
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The arrays of `stepA`, as a test. -/
 def stepPa (a : TieredArray) : Bool :=
-  checkerWordArrays.contains a && a != PEND && a != DECL && a != DLP &&
-    (decide (a.arr < 146) || decide (149 < a.arr))
--/
+  checkerWordArrays.contains a && a != DECL && a != DLP
 
 /-- The `CTL` words of `stepC`, as a test. -/
 def stepPc (w : Word) : Bool :=
-  decide (w.toNat < 1024) && w.toNat != 130 && w.toNat != 150 && w.toNat != 151 &&
+  decide (w.toNat < 1024) && w.toNat != 150 && w.toNat != 151 &&
     (decide (w.toNat < 140) || decide (147 < w.toNat))
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem stepPa_mem (a : TieredArray) (h : stepPa a = true) : a ∈ stepA := by
-  simp only [stepPa, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,
-    ne_eq, List.contains_iff_mem] at h
-  simp [stepA, List.mem_filter, h]
--/
+  simp only [stepPa, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq,
+    List.contains_iff_mem] at h
+  simp only [stepA, List.mem_filter, decide_eq_true_eq]
+  exact ⟨h.1.1, h.1.2, h.2⟩
 
 theorem stepPc_mem (w : Word) (h : stepPc w = true) : w ∈ stepC := by
   simp only [stepPc, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,
     ne_eq] at h
   simp only [stepC, List.mem_map, List.mem_filter, List.mem_range]
-  refine ⟨w.toNat, ⟨h.1.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩
+  refine ⟨w.toNat, ⟨h.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩
   simp only [decide_eq_true_eq]
-  exact ⟨h.1.1.1.2, h.1.1.2, h.1.2, h.2⟩
+  exact ⟨h.1.1.2, h.1.2, h.2⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Every function of the checker passes the declaration texts' per-function check. -/
 prog_all checkerProg_declChk : checkerProg (wsChk CTL stepPa stepPc declLoopTree)
--/
 
-theorem checkerProg_declClosed : closedA checkerProg stepA stepC declLoopFns = true := by
-  sorry
+theorem checkerProg_declClosed : closedA checkerProg stepA stepC declLoopFns = true :=
+  closedW_of_all declLoopTree.eq stepPa_mem stepPc_mem checkerProg_declChk
 
 theorem checkerProg_stepIn {fs : List FnName} (h : ∀ f ∈ fs, f ∈ declLoopFns) :
     StepIn checkerProg fs :=

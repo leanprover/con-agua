@@ -33,7 +33,10 @@ def RecAt (m : Mem) (p a b : Word) : Prop :=
 
 theorem RecAt.grow {m m' : Mem} {p a b : Word} (h : RecAt m p a b) (hg : IWGrow m m') :
     RecAt m' p a b := by
-  sorry
+  obtain ⟨h1, h2, h3⟩ := h
+  refine ⟨Nat.le_trans h1 hg.iw, ?_, ?_⟩
+  · simp only [iwA, aread_apply] at h2 ⊢; rw [hg.iwGet _ (by omega)]; exact h2
+  · simp only [iwA, aread_apply] at h3 ⊢; rw [hg.iwGet _ (by omega)]; exact h3
 
 /-- `List (EIdx × EIdx)` as the slice `(o, l)` of pointers to equation records. -/
 def EqL (m : Mem) (o l : Nat) (ps : List (EIdx × EIdx)) : Prop :=
@@ -43,7 +46,11 @@ def EqL (m : Mem) (o l : Nat) (ps : List (EIdx × EIdx)) : Prop :=
 
 theorem EqL.grow {m m' : Mem} {o l : Nat} {ps : List (EIdx × EIdx)} (h : EqL m o l ps)
     (hg : IWGrow m m') : EqL m' o l ps := by
-  sorry
+  obtain ⟨h1, h2, h3⟩ := h
+  refine ⟨Nat.le_trans h1 hg.iw, h2, fun j hj => ?_⟩
+  obtain ⟨p, a, b, hp, hr, ha, hb, he⟩ := h3 j hj
+  refine ⟨p, a, b, ?_, hr.grow hg, ha, hb, he⟩
+  simp only [iwA, aread_apply] at hp ⊢; rw [hg.iwGet _ (by omega)]; exact hp
 
 /-- The post of a function returning an equation list `(o, l)`. -/
 def decEqRL (m : Mem) (r : List Word) (ps : List (EIdx × EIdx)) : Prop :=
@@ -174,8 +181,9 @@ theorem recs_step (hN : NatEqProg p) {n : Nat} {m m0 : Mem} {s : AState} {ws : L
     {op : AM α} {R : γ → α → Mem → AState → Prop} (hS : StageR vis fe m s) (hG : IWGrow m0 m)
     (hR : RecsAt m ws ps) (ha : H a) (hb : H b) (h2 : ∀ r m1, StageR vis fe m1 s → IWGrow m0 m1 →
       RecsAt m1 (ws ++ [r.headD 0]) (ps ++ [(decE a, decE b)]) → Sim (body r m1) op s R) :
-    Sim (ntBW (callW p n "rec2" [a, b] m) body) op s R := by
-  sorry
+    Sim (ntBW (callW p n "rec2" [a, b] m) body) op s R :=
+  (rec2_fref p hN.lIwAlloc hN.lRec2 a b).simB hS.iw fun r m1 hR1 =>
+    h2 r m1 (hR1.2.1.stage hS) (hG.trans hR1.2.1.1) (hR.snoc hR1.2.1.1 (recAt_of_post hR1 hS.iw) ha hb)
 
 /-- **Emitting an equation list**: the record pointers `ws`, written into a fresh slice. -/
 theorem emit_sim (hal : p.lookup "iw_alloc" = some iwAlloc) {n : Nat} {m m0 : Mem} {s : AState}
@@ -183,8 +191,21 @@ theorem emit_sim (hal : p.lookup "iw_alloc" = some iwAlloc) {n : Nat} {m m0 : Me
     (hS : StageR vis fe m s) (hG : IWGrow m0 m) (hR : RecsAt m ws ps) (hN : N.toNat = ws.length)
     (hb : ∀ rq mq, body rq mq = some ([rq.headD 0, N], wrIW mq (rq.headD 0) ws)) :
     Sim (ntBW (callW p n "iw_alloc" [N] m) body) (pure ps) s
-      (fun r x m' a' => KeepPost vis fe decEqRL m0 m' a' r x) := by
-  sorry
+      (fun r x m' a' => KeepPost vis fe decEqRL m0 m' a' r x) :=
+  (iwAlloc_fref p hal N).simB hS.iw fun rq mq ⟨hq0, hmq, _, hroom, _⟩ => by
+    rw [hb]; refine Sim.ret ?_
+    obtain ⟨hqq, hKp, hroom', htop', hget⟩ := recPost_wr m ws N hN hS.iw (by simpa [iwTop, hN] using hroom)
+    subst hmq; rw [hq0]
+    have hq' : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
+    have hl := hR.1
+    refine ⟨hKp.stage hS, hG.trans hKp.1, ?_⟩
+    simp only [decEqRL, EqL, List.getD_cons_zero, List.getD_cons_succ, hq', hN]
+    refine ⟨by omega, hR.1.symm, fun j hj => ?_⟩
+    obtain ⟨x, y, hr', hx, hy, he⟩ := hR.2 j (by omega)
+    refine ⟨ws[j]'(by omega), x, y, ?_, hr'.grow hKp.1, hx, hy, (List.getElem?_eq_some_iff.mp he).2⟩
+    simp only [iwA, aread_apply]
+    rw [hget j (by omega)]
+    simp [List.getElem?_eq_getElem (show j < ws.length by omega)]
 
 /-- **`nat_eq_list2` is its model `natEqList2W`** (generated). -/
 l_model natEqList2_specW (p : Prog) (hp : p.lookup "nat_eq_list2" = some natEqList2)

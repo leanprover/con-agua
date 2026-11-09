@@ -31,7 +31,8 @@ local notation "V" => ConLeche.CheckMode.verified
 the tops. -/
 theorem installCvDecB {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv)
     (hx : CVExt m q) : DecB (fun m => decCVp m q) m cv := by
-  sorry
+  show decCVp (truncM m) q = some cv
+  unfold decCVp; rw [truncM_erA]; exact h
 
 /-! ## The lookups of `check_sum_tele` -/
 

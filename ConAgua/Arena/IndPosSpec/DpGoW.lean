@@ -110,13 +110,41 @@ theorem decHL_write {k : IdxKind} (m : Mem) (q i v : Word) (ws : List (Idx k))
     (hv : v.toNat < 2 ^ 32) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hb : q.toNat + i.toNat < (m.arr64 IW).size) (h : decHL m q.toNat i.toNat = some ws) :
     decHL (m.set64 IW (q + i) v) q.toNat (i.toNat + 1) = some (ws ++ [decI v]) := by
-  sorry
+  have hqi : (q + i).toNat = q.toNat + i.toNat := by
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  simp only [decHL]
+  rw [hslice?_add]
+  have h1 : (hslice? (iwA (m.set64 IW (q + i) v)) q.toNat i.toNat : Option (List (Idx k))) = some ws := by
+    rw [← h]; simp only [decHL]
+    apply hslice?_congr
+    intro j hj
+    simp only [iwA, aread_apply, set64IW_get]
+    rw [ite_eq_right (by omega)]
+  have h2 : (hslice? (iwA (m.set64 IW (q + i) v)) (q.toNat + i.toNat) 1 : Option (List (Idx k))) =
+      some [decI v] := by
+    rw [hslice?_succ]
+    have : (hd? (iwA (m.set64 IW (q + i) v)) (q.toNat + i.toNat) : Option (Idx k)) = some (decI v) := by
+      simp [hd?, iwA, aread_apply, set64IW_get, hqi, hb, hv]
+    rw [this]; simp [hslice?]
+  rw [h1, h2]; simp
 
-theorem StageR.alloc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem StageR.alloc {vis : Word} {fe : IFEnv} {a : AState}
     {m m1 : Mem} {k q : Word} (hS : StageR vis fe m a) (h : allocW m k = some (q, m1)) :
     StageR vis fe m1 a ∧ IWGrow m m1 ∧ q = rdW (m.arr64 CTL) 200 ∧ q.toNat + k.toNat ≤ (m.arr64 IW).size ∧
       iwTop m1 = q.toNat + k.toNat := by
-  sorry
+  have h1 := hS.iw.iw
+  have h3 := hS.iw.iwSize
+  have h5 := hS.iw.ctl
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts h h3
+  subst hm1
+  have hf := allocMem_frame m k
+  have hqi : q.toNat = iwTop m := by simp only [iwTop, hq]
+  have htop : iwTop (allocMem m k) = q.toNat + k.toNat := by
+    simp only [iwTop, allocMem_top m k h5, ← hq]
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  refine ⟨⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw ?_⟩, allocMem_grow m k (by omega) h5, hq,
+    hroom, htop⟩
+  rw [htop, hf.size IW]; exact hroom
 
 /-! ## `nest_canon_crest` -/
 

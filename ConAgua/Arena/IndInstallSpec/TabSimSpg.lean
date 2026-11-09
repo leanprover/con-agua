@@ -3,7 +3,9 @@ module
 public import ConAgua.Arena.IndInstallSpec.TabsProg
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Arena.IndSumSpec.StructProjBodies
-public import ConAgua.Arena.IndSumSpec.StructProjGuards
+public import ConAgua.Arena.IndSumSpec.Row
+public import ConAgua.Arena.IndSumSpec.StructUsedLater
+public import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
@@ -15,7 +17,7 @@ public import ConAgua.Arena.IndPartsSpec.MemberNames
 /-!
 # TabSimSpg
 
-`binternW_mfr`, `minternW_mfr`, `mkProjW_mfr`, `erAllocW_mfr`, `set64ER_mfr`, `colW_mfr` and the lemmas only they use.
+`binternW_mfr`, `minternW_mfr`, `mkProjW_mfr`, `erAllocW_mfr`, `set64ER_mfr` and the lemmas only they use.
 -/
 
 section
@@ -35,38 +37,14 @@ theorem minternW_mfr {m m' : Mem} {u v r : Word} (h : minternW m u v = some (r, 
 theorem mkProjW_mfr {m m' : Mem} {a b c r : Word} (h : mkProjW m a b c = some (r, m')) : MFr [] [] m m' :=
   MFr.of_low (mkProjW_low h)
 theorem erAllocW_mfr {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m')) : MFr [] [] m m' := by
-  rw [erAllocW_mem h]; exact MFr.of_frame (MemFrame.setCtl m 129 _) (by simp) (by simp)
+  have hm : m' = erAllocMem m k := by
+    unfold erAllocW at h; split at h <;> (repeat' split at h) <;> simp_all
+  subst hm; unfold erAllocMem; split
+  · exact MFr.of_frame (MemFrame.setCtl m 129 _) (by simp) (by simp)
+  · exact MFr.of_frame (MemFrame.setCtl m 130 _) (by simp) (by simp)
+
 theorem set64ER_mfr (m : Mem) (k v : Word) : MFr [] [] m (m.set64 EREC k v) :=
   MFr.of_frame (MemFrame.set64 m EREC (by decide) k v) (by simp [EREC]) (by simp)
-
-/-! ## `struct_proj_guards` -/
-
-theorem colW_mfr : ∀ (n : Nat) (m m' : Mem) (uo ul so sl z j k acc : Word) (r : List Word),
-    colW n m uo ul so sl z j k acc = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, _, h => by simp [colW] at h
-  | n + 1, m, m', uo, ul, so, sl, z, j, k, acc, r, h => by
-    simp only [colW, colK.eq_def, colK2.eq_def] at h
-    mfr_auto h [colW_mfr n _ _ _ _ _ _ _ _ _ _ _, minternW_mfr]
-
-theorem rowW_mfr : ∀ (n : Nat) (m m' : Mem) (uo ul so sl z i k : Word) (r : List Word),
-    rowW n m uo ul so sl z i k = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [rowW] at h
-  | n + 1, m, m', uo, ul, so, sl, z, i, k, r, h => by
-    simp only [rowW, rowK1.eq_def, rowK2.eq_def, plK0.eq_def, plK3.eq_def] at h
-    mfr_auto h [rowW_mfr n _ _ _ _ _ _ _ _ _ _, colW_mfr n _ _ _ _ _ _ _ _ _ _ _, allocW_mfr, consW_mfr]
-
-end L.Ind
-
-namespace L.Ind
-open L.Arena
-
-/-- **`struct_proj_guards` leaves the `hb` memo well formed** (its walk's memo after the clear). -/
-theorem spgW_hb {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem}
-    {a : AState} {cty nP nF so sl : Word} {r : List Word} {mp : Std.HashMap (EIdx × Nat) Bool}
-    (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
-    (hS : StageR vis fe m a) (hM : hbMR m mp) (h : spgW n m cty nP nF so sl = some (r, m')) :
-    ∃ mp', hbMR m' mp' := by
-  sorry
 
 /-! ## `check_struct_proj_table` -/
 
@@ -127,14 +105,11 @@ theorem spbW_mfr {k : Nat} {m m' : Mem} {T nP nF cty : Word} {r : List Word}
     simp only [spbW, spbK1.eq_def, spbK2.eq_def, spbK3.eq_def] at h
     mfr_auto h [projPsW_mfr, ipalF_mfr, pbW_mfr _ _ _ _ _ _ _ _]
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem crfF_mfr {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (crfF_frame h)
     (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
     (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `sctW`'s frame, from its reading `c` of `all_level_params_defined`'s (`sctW_mfr_stub`: the stub's). -/
 theorem sctW_mfr {c : CallM}
     (hc : ∀ (k : Nat) (args : List Word) (m m' : Mem) (r : List Word),
@@ -145,7 +120,6 @@ theorem sctW_mfr {c : CallM}
   | n + 1, m, m', vis, nP, lo, ll, bO, bL, r, h => by
     simp only [sctW, sctK1.eq_def, sctK2.eq_def, sctK3.eq_def, sctK4.eq_def, sctK5.eq_def] at h
     mfr_auto h [sctW_mfr hc n _ _ _ _ _ _ _ _ _, hc _ _ _ _ _, crfF_mfr, MFr.ofHffF, MFr.ofLbbF]
--/
 
 theorem efgW_mfr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     efgW n m q o l = some (r, m') → MFr [] [] m m'
@@ -154,7 +128,7 @@ theorem efgW_mfr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     simp only [efgW, efgK.eq_def] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-    · refine MFr.trans (set64ER_mfr m q (rdW (m.arr64 IW) o)) ?_
+    · refine MFr.trans (MFr.of_frame (erecPutMem_frame m q (rdW (m.arr64 IW) o)) (by simp [EREC]) (by simp)) ?_
       mfr_auto h [efgW_mfr n _ _ _ _ _ _]
 
 theorem efW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m o l = some (r, m')) :
@@ -164,100 +138,6 @@ theorem efW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m
 
 theorem wrER_mfr (ws : List Word) (m : Mem) (q : Word) : MFr [] [] m (wrER m q ws) :=
   MFr.of_frame (wrER_frame ws m q) (by simp [EREC]) (by simp)
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem envPushW_mfr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m vis q = some (r, m')) :
-    MFr [] [] m m' := by
-  simp only [envPushW] at h
-  split at h; · cases h
-  split at h; · cases h
-  split at h
-  rotate_left; · cases h
-  rename_i hc
-  obtain ⟨ht, -⟩ := hc
-  have hra : (rowArr (rdW (m.arr64 EREC) (q + 1)) : TieredArray) ≠ ↑CTL :=
-    TieredArray.t0_ne (rowArr_ne _ (by decide))
-  have hmem : rowArr (rdW (m.arr64 EREC) (q + 1)) < 201 := by
-    exact Nat.lt_trans (rowArr_lt _) (by decide)
-  have h1 : MFr [] [] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) :=
-    MFr.of_frame ((MemFrame.set64 m _ hra _ _).trans (MemFrame.set64 _ _ hra _ _))
-      (by intro b hb; simp at hb; subst hb; exact .inl hmem) (by simp)
-  refine MFr.trans h1 ?_
-  simp only [envPushK.eq_def] at h
-  split at h; · cases h
-  split at h
-  rotate_left; · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  rw [← h.2]
-  exact MFr.trans (MFr.of_frame (MemFrame.set64 _ ECON (by decide) _ _) (by simp [ECON]) (by simp))
-    (MFr.of_frame (MemFrame.setCtl _ 128 _) (by simp) (by simp))
--/
-
-end L.Ind
-
-end
-
-section
-
-open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
-
-namespace L.Ind
-
-open L.Arena
-
-/-! ## `struct_proj_guards` as a callee -/
-
-theorem getDW_len0 (m : Mem) (o i d : Word) : getDW m o 0 i d = d := by simp [getDW]
-
-theorem colW_sl0 (n : Nat) : ∀ (m : Mem) (uo ul so z j k acc : Word),
-    colW n m uo ul so 0 z j k acc = colW n m uo ul 0 0 z j k acc := by
-  induction n with
-  | zero => intros; simp [colW]
-  | succ n ih => intros; simp only [colW, getDW_len0, colK.eq_def, colK2.eq_def, ih]
-
-theorem rowW_sl0 (n : Nat) : ∀ (m : Mem) (uo ul so z i k : Word),
-    rowW n m uo ul so 0 z i k = rowW n m uo ul 0 0 z i k := by
-  induction n with
-  | zero => intros; simp [rowW]
-  | succ n ih => intros; simp only [rowW, getDW_len0, colW_sl0, rowK1.eq_def, rowK2.eq_def, ih]
-
-/-- With an empty sorts slice the model does not read its offset. -/
-theorem spgW_sl0 (n : Nat) (m : Mem) (cty nP nF so : Word) :
-    spgW n m cty nP nF so 0 = spgW n m cty nP nF 0 0 := by
-  simp only [spgW, spgK1.eq_def, spgK2.eq_def, rowW_sl0]
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`struct_proj_guards` as a `Sim`, keeping its memo well formed.** -/
-theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {m : Mem} {a : AState} (cty nP nF so sl : Word) (sorts : List LIdx)
-    (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
-    (hS : StageR vis fe m a) (hM : HbMemo m) (hs : decHL m so.toNat sl.toNat = some sorts)
-    (hst : sl = 0 ∨ so.toNat + sl.toNat ≤ iwTop m) :
-    Sim (callW p (k + 1) "struct_proj_guards" [cty, nP, nF, so, sl] m)
-      (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a
-      (fun r gs m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
-        decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some gs ∧
-        (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ HbMemo m') := by
-  intro r m' e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (spg_spec p hP.tbl.hv hP.hf hP.hput hP.hins hP.hgo hP.hbp hP.hst hP.hsg hP.tbl.ha hP.tbl.hc hP.tbl.hsc hP.hul
-      hP.hgd hP.hmf hP.hmp hP.him hP.hcol hP.hrow hP.hpw hP.hcl hP.hspg k _ cty nP nF so sl) e
-  obtain ⟨mp, hmp⟩ := hM
-  have hM' : HbMemo s'.mem := spgW_hb k hc' hb hS hmp hW
-  rcases hst with h0 | hst
-  · subst h0
-    rw [spgW_sl0] at hW
-    have hs0 : sorts = [] := by simpa [decHL, hslice?] using hs.symm
-    subst hs0
-    obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF 0 0 [] mp hc' hb hS hmp
-      (by simp [decHL, hslice?]) (by simp) r s'.mem hW
-    exact ⟨x, a', h1, hS', hg, hd, ht, hM'⟩
-  · obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF so sl sorts mp hc' hb hS hmp hs hst
-      r s'.mem hW
-    exact ⟨x, a', h1, hS', hg, hd, ht, hM'⟩
--/
 
 end L.Ind
 

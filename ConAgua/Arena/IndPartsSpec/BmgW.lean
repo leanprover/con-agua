@@ -109,7 +109,7 @@ theorem bcW_ptop {n : Nat} {m m' : Mem} {nPd k nC nR cvT rOk rMI rRP : Word} {r 
   | zero => simp [bchW, bcK] at h
   | succ n =>
   rw [bchW_step] at h
-  rcases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with _ | ⟨rs, m1⟩ <;> rw [hp] at h
+  rcases hp : piBW n m CWF (erRd m (cvT + 3)) with _ | ⟨rs, m1⟩ <;> rw [hp] at h
   · simp [bchW.bchK1, bcK] at h
   rw [bchK1_some] at h
   by_cases hr : eViewW m1 (rs.getD 2 0) = []
@@ -150,14 +150,14 @@ l_model bmf_spec (p : Prog) (hP : IndPartsProg4 p)
   specs [recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n]
   grind [ind_grind] finish [rdW_eq] gen 20
 
-theorem decSR_fields {m : Mem} {p : Nat} {cv : IConstantVal} {mI rP : Nat} {rules : List IRecRule}
-    (h : decSR m p = some (cv, mI, rP, rules)) :
+theorem decSR_fields {m : Mem} {p : Nat} {cv : IConstantVal} {mI rP : Nat} {isK : Bool}
+    {rules : List IRecRule} (h : decSR m p = some (cv, mI, rP, isK, rules)) :
     (∃ cvp, iwN m p = some cvp ∧ decCVp m cvp = some cv) ∧ iwN m (p + 1) = some mI ∧
       iwN m (p + 2) = some rP := by
   simp only [decSR, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, g, hg, heq⟩ := h
+  obtain ⟨a, ha, b, hb, c, hc, d, hd, k, hk, e, he, f, hf, g, hg, heq⟩ := h
   simp only [Prod.mk.injEq] at heq
-  obtain ⟨rfl, rfl, rfl, rfl⟩ := heq
+  obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := heq
   exact ⟨⟨a, ha, hb⟩, hc, hd⟩
 
 /-! ### Twin-side facts -/
@@ -208,20 +208,76 @@ theorem partsRecTarget_le {names : List NIdx} {mI : Nat} {ty : EIdx} {a a' : ASt
   · exact Nat.le_of_eq (partsPureRun h)
 
 /-- The `findM?` predicate of `blockMemberCounts?`. -/
-def bmfPred (names : List NIdx) (mm : Nat) (q : IConstantVal × Nat × Nat × List IRecRule) : AM Bool := do
+def bmfPred (names : List NIdx) (mm : Nat) (q : IConstantVal × Nat × Nat × Bool × List IRecRule) : AM Bool := do
   pure ((← ConRon.Arena.recTargetOf names q.2.1 q.1.type) == mm)
 
 /-- **`block_member_counts_find`'s model refines the twin's `findM?`.** -/
-theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl mm : Word}
+theorem bmfW_sim {vis : Word} {fe : IFEnv} {no nl mm : Word}
     {names : List NIdx} (n : Nat) :
-    ∀ (m : Mem) (a : AState) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × List IRecRule)),
+    ∀ (m : Mem) (a : AState) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)),
     StageR vis fe m a → PSlR decSR rs ro rl m →
     DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
     Sim (bmfW n m no nl ro rl mm) (rs.findM? (bmfPred names mm.toNat)) a
       (fun r x m' a' => r = encONN (x.map fun q => (q.2.1, q.2.2.1)) ∧
         (∀ q, x = some q → q.2.1 < 2 ^ 64 ∧ q.2.2.1 < 2 ^ 64) ∧ StageR vis fe m' a' ∧
         IWGrow m m') := by
-  sorry
+  induction n with
+  | zero => intro m a ro rl rs _ _ _ _ r m' e; rw [bmfW.eq_1] at e; cases e
+  | succ n ih =>
+    intro m a ro rl rs hS hrs hnm hnb
+    by_cases hl : rl = 0
+    · rw [bmfW.arm1 n m no nl ro rl mm hl]
+      subst hl; rw [partsPSl_nil hrs]
+      exact Sim.ret ⟨rfl, by simp, hS, IWGrow.refl _⟩
+    rw [bmfW.arm2 n m no nl ro rl mm hl]
+    obtain ⟨pc, ⟨cv, mI, rP, isK, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
+    obtain ⟨⟨cvp, hcvp, hcv⟩, hmI, hrP⟩ := decSR_fields (show decSR (truncM m) pc = _ from hrs0)
+    have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+    have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
+    have hp1 : (UInt64.ofNat pc + 1).toNat = pc + 1 := by
+      have := partsIwLt hmI; rw [UInt64.toNat_add, hpw]; simp; omega
+    have hp2 : (UInt64.ofNat pc + 2).toNat = pc + 2 := by
+      have := partsIwLt hrP; rw [UInt64.toNat_add, hpw]; simp; omega
+    obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp hpw
+    obtain ⟨hmw, hmb, -⟩ := partsIwRd hmI hp1
+    obtain ⟨hrw, hrb, hrlt⟩ := partsIwRd hrP hp2
+    obtain ⟨htyl, htye⟩ := partsCVType hcv (UInt64.toNat_ofNat_of_lt' hcvb)
+    rw [hw, hcw, hmw]
+    rw [partsFindM_cons]
+    simp only [bmfPred, bind_assoc, pure_bind]
+    have hnames : decHL m no.toNat nl.toNat = some names := hnm.get (OMono.decHL _ _)
+    refine Sim.bindK (bmfW.k_rec_target_of.none ..) (fun _ _ => by rw [bmfW.k_rec_target_of.eq_2])
+      (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR vis fe m1 a1 ∧ IWGrow m m1)
+      ?_ ?_
+    · intro r1 m1 e
+      obtain ⟨t, a1, hrun, hr, hS1, hg1⟩ := recTW_ok n (fun _ => none) fe vis m m1 a no nl _ _ r1 names e hS htyl
+        hnames (by omega) hnb
+      simp only [erRd_fold] at hrun; rw [UInt64.toNat_ofNat_of_lt' hmb, htye] at hrun
+      exact ⟨t, a1, hrun, hr, partsRecTarget_le hrun, hS1, hg1⟩
+    rintro r1 t m1 a1 ⟨rfl, htl, hS1, hg1⟩
+    have hnlen : names.length < 2 ^ 64 := by
+      rw [decHL_length _ hnames]; omega
+    have hcond : (UInt64.ofNat t = mm) ↔ (t == mm.toNat) = true := by
+      simp only [beq_iff_eq]
+      constructor
+      · intro e; rw [← e, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
+      · intro e; rw [e, ofNat_toNat_word]
+    simp only [List.headD_cons]
+    by_cases hc : UInt64.ofNat t = mm
+    · have hb : (t == mm.toNat) = true := hcond.mp hc
+      simp only [hc, hb, ite_true]
+      rw [partsRdIW_grow hg1 (by rw [hp2]; exact hrlt), hrw]
+      exact Sim.ret ⟨rfl, fun q e => by simp only [Option.some.injEq] at e; subst e; exact ⟨hmb, hrb⟩,
+        hS1, hg1⟩
+    · have hb : (t == mm.toNat) = false := by simpa using (fun e => hc (hcond.mpr e))
+      simp only [hc, hb, ite_false, Bool.false_eq_true]
+      refine Sim.congr (op := List.findM? (bmfPred names mm.toNat) rs' >>= pure) ?_ (bind_pure _)
+      refine Sim.bindK rfl (fun _ _ => by rw [bmfW.k_block_member_counts_find])
+        (ih m1 a1 (ro + 1) (rl - 1) rs' hS1 (hrs'.grow decSR_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
+          (Nat.le_trans hnb hg1.iw)) ?_
+      rintro r x m' a' ⟨rfl, hxb, hS', hg'⟩
+      refine Sim.ret ⟨?_, hxb, hS', hg1.trans hg'⟩
+      cases x <;> rfl
 
 /-! ## `block_member_counts_go`, `block_member_counts` -/
 
@@ -310,13 +366,12 @@ def NsR (x : Option (List Nat)) (r : List Word) (m : Mem) : Prop :=
 theorem NsR_three {x : Option (List Nat)} {r : List Word} {m : Mem} (h : NsR x r m) :
     NsR x [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] m := by cases x <;> exact h
 
-theorem stageR_ptop {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+theorem stageR_ptop {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) : PTop m := ⟨hS.iw.iw, hS.iw.iwSize, hS.iw.ctl⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_member_counts_go`'s model refines `blockMemberCounts?` from member `idx`.** -/
-theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
-    {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
+theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
+    {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)}
     (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32) (h4 : rl.toNat < 2 ^ 32)
     (n : Nat) :
     ∀ (m : Mem) (a : AState) (cto ctl idx : Word) (cvTs : List IConstantVal),
@@ -357,9 +412,7 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hb3 : (UInt64.ofNat pc).toNat + 3 < 2 ^ 64 := by
       rw [hpw]
       obtain ⟨w, hw3, -, -⟩ := hd?_some (decCV_type (show decCV (erA (truncM m)) pc = some cv0 from hcv0))
-      have := (truncM_er_get hw3).1
-      have : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-      omega
+      exact erecP_lt64 (truncM_er_get hw3)
     generalize hE : encONN (x.map fun q => (q.2.1, q.2.2.1)) = E at h5 h6
     refine Sim.bindK (by simp [bmgK2]) (fun _ _ => by rw [bmgK2])
       (Q := fun r2 x2 m2 a2 => a2 = a1 ∧ r2 = encONN x2 ∧ (∀ p q, x2 = some (p, q) → q < 2 ^ 64) ∧
@@ -424,7 +477,6 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       simp [encONN, UInt64.toNat_ofNat_of_lt' hc2]
     rw [hc2'] at hd4
     exact decNL_decB hd4 (Nat.le_of_eq ht4)
--/
 
 /-- **The model of `block_member_counts`** (at exec fuel `n + 1`). -/
 def bmcW (n : Nat) (m : Mem) (nPd k nC no nl ro rl cto ctl : Word) : Option (List Word × Mem) :=

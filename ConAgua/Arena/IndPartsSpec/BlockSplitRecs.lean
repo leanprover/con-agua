@@ -31,7 +31,6 @@ theorem decEBlk_mono (dn : NIdx → Option ConLeche.Name) (off l : Nat) :
   OMono.mapM (fun j => OMono.bind (partsErNat_mono (off + j))
     (fun q => (⟨fun _ _ _ he h => he.2.decCI h⟩ : OMono (fun m => decCI (erA m) q)))) _
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_split_recs` refines `blockSplitRecs`**: the block an `EREC` slice of constant records
 decoded below the tops; the result `(ok, off, len)` is the twin's `Option`, the slice of fresh
 `[cv, mI, rP, rules.off, rules.len]` records decoded below the tops. -/
@@ -45,9 +44,7 @@ theorem blockSplitRecs_refines (p : Prog) (hP : IndPartsProg p) (n : Nat) (s₀ 
       RecsR (ConRon.Arena.blockSplitRecs blk) r s'.mem; ⊤⦄ :=
   triple_post (bsr_spec p hP.alloc hP.copy hP.cons hP.rec6 hP.recs n s₀ off l) fun r _ ⟨hl, hm⟩ =>
     ⟨hl, bsrW_ok n _ _ a₀ off l blk r hm hS hblk⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_split_ctors` refines `blockSplitCtors`.** -/
 @[refines ConRon.Arena.blockSplitCtors]
 theorem blockSplitCtors_refines (p : Prog) (hP : IndPartsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -59,9 +56,7 @@ theorem blockSplitCtors_refines (p : Prog) (hP : IndPartsProg p) (n : Nat) (s₀
       CtorsR (ConRon.Arena.blockSplitCtors blk) r s'.mem; ⊤⦄ :=
   triple_post (bsc_spec p hP.alloc hP.copy hP.cons hP.rec6 hP.rec3 hP.recs hP.ctors n s₀ off l)
     fun r _ ⟨hl, hm⟩ => ⟨hl, bscW_ok n _ _ a₀ off l blk r hm hS hblk⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_split` refines `blockSplit`**: the result `(ok, q)`, `q` the 6-word record of the
 formers', constructors' and recursors' slices (`SplitRec`). -/
 @[refines ConRon.Arena.blockSplit]
@@ -74,7 +69,6 @@ theorem blockSplit_refines (p : Prog) (hP : IndPartsProg p) (n : Nat) (s₀ : St
       SplitR (ConRon.Arena.blockSplit blk) r s'.mem; ⊤⦄ :=
   triple_post (bs_spec p hP.alloc hP.copy hP.cons hP.rec3 hP.rec6 hP.recs hP.ctors hP.split
     n s₀ off l) fun r _ ⟨hl, hm⟩ => ⟨hl, bsW_ok n _ _ a₀ off l blk r hm hS hblk⟩
--/
 
 end L.Ind
 

@@ -8,13 +8,12 @@ meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.IndMemoFns
 meta import ConAgua.Arena.LevelIntern
 meta import ConAgua.Arena.LevelSubstLP
-import all ConAgua.Arena.DeclArmsNat
-import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
 import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.BvarB
 import all ConAgua.Arena.CheckerL
 import all ConAgua.Arena.ConsLib
@@ -23,10 +22,12 @@ import all ConAgua.Arena.ConstStore
 import all ConAgua.Arena.ConstsResolveF
 import all ConAgua.Arena.CoreCaches
 import all ConAgua.Arena.CoreLevels
+import all ConAgua.Arena.CoreWalks
 import all ConAgua.Arena.DeclAndPin
 import all ConAgua.Arena.DeclApd
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.DeclArmsCanon
+import all ConAgua.Arena.DeclArmsNat
 import all ConAgua.Arena.DeclStep
 import all ConAgua.Arena.DefEq
 import all ConAgua.Arena.Env
@@ -37,10 +38,13 @@ import all ConAgua.Arena.ForallStore
 import all ConAgua.Arena.Freeze
 import all ConAgua.Arena.HasFvar
 import all ConAgua.Arena.ImaxStore
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
+import all ConAgua.Arena.IndStream
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.Infer
 import all ConAgua.Arena.InferFieldSort
@@ -83,6 +87,7 @@ import all ConAgua.Arena.NatShr
 import all ConAgua.Arena.NatSub
 import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
+import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
@@ -90,6 +95,7 @@ import all ConAgua.Arena.RecClass
 import all ConAgua.Arena.RecGen
 import all ConAgua.Arena.Refine
 import all ConAgua.Arena.Rom
+import all ConAgua.Arena.RomCI
 import all ConAgua.Arena.RomExpr
 import all ConAgua.Arena.RomItems
 import all ConAgua.Arena.RomLevel
@@ -108,6 +114,7 @@ import all ConAgua.Arena.WalkLeaves
 import all ConAgua.Arena.WalkLift
 import all ConAgua.Arena.WalkScope
 import all ConAgua.Arena.WhnfCore
+import all ConAgua.Arena.WhnfCoreApp
 import all ConAgua.Arena.WhnfDelta
 import all ConAgua.Arena.WhnfEntry
 import all ConAgua.Arena.WhnfIota
@@ -136,9 +143,12 @@ import all ConAgua.Front.NatDec
 import all ConAgua.Front.Unescape
 import all ConAgua.L.Examples
 import all ConAgua.Rom.CIRead
+import all ConAgua.Rom.CIConst
 import all ConAgua.Rom.PinRead
+import all ConAgua.Rom.PinReadSpec
 import all ConAgua.Scan.Key
 import all ConAgua.Scan.Leaves
+import all ConAgua.Scan.Line
 import all ConAgua.Scan.Lit
 import all ConAgua.Scan.Member
 import all ConAgua.Scan.Records
@@ -184,5 +194,11 @@ theorem imPc_mem (w : Word) (h : imPc w = true) : w ∈ imC := by
   simp only [imPc, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq, Bool.or_eq_true] at h
   simp only [imC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq]
   exact ⟨w.toNat, ⟨h.1.1.1, h.1.1.2, h.1.2, h.2⟩, UInt64.ofNat_toNat⟩
+
+/-- Every function of the checker passes the per-function check of `imFns`. -/
+prog_all checkerProg_imChk : checkerProg (wsChkL CTL imPa imPc imTree imCallTree)
+
+theorem checkerProg_indMemo : IndMemoClosed checkerProg :=
+  closedWL_of_all imTree.eq imCallTree.eq imPa_mem imPc_mem checkerProg_imChk
 
 end L.Checker

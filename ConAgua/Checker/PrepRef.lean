@@ -139,11 +139,15 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   have hDECL₃ : m₃.arr64 DECL = m.arr64 DECL := hmf₃.arr DECL (by decide) (by decide)
   have hDLP₃ : m₃.arr64 DLP = m.arr64 DLP := hmf₃.arr DLP (by decide) (by decide)
   have hI₃ : IWOK m₃ := by
-    obtain ⟨h1, h2, h3, h4, h5⟩ := hA₂.ok
+    obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hA₂.ok
     have hER : m₃.arr64 EREC = m₂.arr64 EREC := hf₃.1 EREC (by decide) (by decide)
     have h129 : erTop m₃ = erTop m₂ := by simp only [erTop]; rw [hf₃.ctl 129 (by simp)]
     exact ⟨by rw [htop₃, hf₃.size IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hf₃.size IW]; exact h3, by rw [hER]; exact h4, by rw [hf₃.size CTL]; exact h5⟩
+      by rw [hf₃.size IW]; exact h3, by rw [hER]; exact h4, by rw [hf₃.size CTL]; exact h5,
+      by rw [show erecTop1 m₃ = erecTop1 m₂ by simp only [erecTop1]; rw [hf₃.ctl 130 (by simp)],
+        hf₃.1 (tier1 EREC) (by decide) (by decide)]; exact h6,
+      by rw [hf₃.1 (tier1 EREC) (by decide) (by decide)]; exact h7, by rw [hER]; exact h8,
+      by rw [hf₃.1 (tier1 EREC) (by decide) (by decide)]; exact h9⟩
   have hA₃ : ArenaR m₃ a := by
     refine ArenaR.frame_ext [IW] [200]
       (by intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide)
@@ -226,12 +230,16 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   have hP₅ : PinsR m₅ a₁.pins := by
     rw [hpins₁]; exact hP.congr (hmf₅.arr PINS (by decide) (by decide))
   have hI₅ : IWOK m₅ := by
-    obtain ⟨h1, h2, h3, h4, h5⟩ := hE₄.iwok
+    obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hE₄.iwok
     have hER : m₅.arr64 EREC = m₄.arr64 EREC := hmf₅'.1 EREC (by decide) (by decide)
     have h200 : iwTop m₅ = iwTop m₄ := by simp only [iwTop]; rw [hmf₅'.ctl 200 (by simp)]
     have h129 : erTop m₅ = erTop m₄ := by simp only [erTop]; rw [hmf₅'.ctl 129 (by simp)]
     exact ⟨by rw [h200, hmf₅'.size IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hmf₅'.size IW]; exact h3, by rw [hER]; exact h4, by rw [hmf₅'.size CTL]; exact h5⟩
+      by rw [hmf₅'.size IW]; exact h3, by rw [hER]; exact h4, by rw [hmf₅'.size CTL]; exact h5,
+      by rw [show erecTop1 m₅ = erecTop1 m₄ by simp only [erecTop1]; rw [hmf₅'.ctl 130 (by simp)],
+        hmf₅'.1 (tier1 EREC) (by decide) (by decide)]; exact h6,
+      by rw [hmf₅'.1 (tier1 EREC) (by decide) (by decide)]; exact h7, by rw [hER]; exact h8,
+      by rw [hmf₅'.1 (tier1 EREC) (by decide) (by decide)]; exact h9⟩
   have htop₅ : iwTop m₅ = iwTop m₄ := by simp only [iwTop]; rw [hmf₅'.ctl 200 (by simp)]
   have hA₅ : ArenaR m₅ a₁ := by
     refine ArenaR.frame_ext [IW] [] (by
@@ -317,19 +325,24 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
           rcases hb with rfl | rfl <;> decide)
       (by intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; subst hx; decide)
       _ _ hf a₁ hA₆
-  · obtain ⟨h1, h2, h3, h4, h5⟩ := hA₇.ok
+  · obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hA₇.ok
     have hf : MemFrame [IW, DECL] [] m₇ (m₉.set64 DECL 0 c) :=
       hmf₉.trans ((MemFrame.set64 m₉ DECL (by decide) _ _).mono (by simp) (by simp))
     have hER : (m₉.set64 DECL 0 c).arr64 EREC = m₇.arr64 EREC := hf.arr EREC (by decide) (by decide)
     have h200 : iwTop (m₉.set64 DECL 0 c) = iwTop m₇ := by simp only [iwTop]; rw [hf.ctl 200 (by simp)]
     have h129 : erTop (m₉.set64 DECL 0 c) = erTop m₇ := by simp only [erTop]; rw [hf.ctl 129 (by simp)]
     exact ⟨by rw [h200, hf.size IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hf.size IW]; exact h3, by rw [hER]; exact h4, by rw [hf.size CTL]; exact h5⟩
+      by rw [hf.size IW]; exact h3, by rw [hER]; exact h4, by rw [hf.size CTL]; exact h5,
+      by rw [show erecTop1 (m₉.set64 DECL 0 c) = erecTop1 m₇ by simp only [erecTop1]; rw [hf.ctl 130 (by simp)],
+        hf.arr (tier1 EREC) (by decide) (by decide)]; exact h6,
+      by rw [hf.arr (tier1 EREC) (by decide) (by decide)]; exact h7, by rw [hER]; exact h8,
+      by rw [hf.arr (tier1 EREC) (by decide) (by decide)]; exact h9⟩
   · refine hP₆.congr ?_
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hmf₉.1 PINS (by decide) (by decide),
       hA₇.fr.1 PINS (by decide) (by decide)]
   · rw [hfinP, hP₉, hP₆', hDLP₅]
   · rw [hfin]; simp [hD₉s]
+
 
 /-- **`prepare_prelude()` refines `preparePrelude pre ds`**: from the prelude's records followed by
 the stream's in `DECL` (their number in its word `0`, the prelude's in `CTL[240]`), when L returns,

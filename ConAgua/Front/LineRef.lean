@@ -167,18 +167,6 @@ theorem scan_shape (i : USize) {r : LineRec} {q : USize} (hs : scanLineFwd b i =
     subst hrr
     exact ⟨s + 1, e', succ_toUInt64 h64 s, hloop⟩
 
-/-- A blank line, applied: nothing changes. -/
-theorem lineStep_blank (i : USize) {nx : Word} (hf : lineFwdN b.data i.toUInt64 = (1, nx)) (s : Word)
-    (hsd : UInt64.ofNat (skipWsN b.data i.toUInt64.toNat) = s)
-    (hn : ¬ (s < UInt64.ofNat b.data.size ∧ byteW b.data s = 123))
-    {st : StateD} {a : AState} {m : Mem} (hA : ArenaD m a) (hD : StateDR m st) :
-    LineStep b i nx st a m := by
-  obtain ⟨r, q, hsc, hq⟩ := scan_of_fwd b h64 hsize i hf
-  have hr := (scan_shape b h64 hsize i hsc s hsd).1 hn
-  subst hr
-  obtain ⟨h1, h2, h3⟩ := applyLine_pure st a .blank (.inr rfl)
-  exact ⟨.blank, q, st, hsc, hq, h1, h2, by rw [h3]; exact hA, hD⟩
-
 end scan
 
 /-! ## The refinement -/
@@ -189,43 +177,54 @@ structure FrontLineG (p : Prog) (b : ByteArray) (st : StateD) (a : AState) : Pro
   ind : L.Front.Ind.ApplyIndG p st a
   safe : SafeLink b
 
-/-- **A failing line's claim**: con-leche's scan reads a record at `i` and con-ron's `applyLine`
-fails on it with the error's class, in the monad or by its record verdict. -/
-def LineClaim (b : ByteArray) (i : USize) (st : StateD) (a : AState) (e : Err) : Prop :=
-  e.cls ≠ 0 → ∃ r q, scanLineFwd b i = .ok r q ∧ VerdictClaimR (applyRecord st r) a e
+/-- **A failing line's claim**: con-leche's scan reads a record at `i` that stands where it may
+(`lineRecPlaced first`), and con-ron's `applyLine` fails on it with the error's class, in the
+monad or by its record verdict. -/
+def LineClaim (b : ByteArray) (i : USize) (first : Bool) (st : StateD) (a : AState) (e : Err) : Prop :=
+  e.cls ≠ 0 → ∃ r q, scanLineFwd b i = .ok r q ∧ lineRecPlaced first r = true ∧
+    VerdictClaimR (applyRecord st r) a e
 
 /-- What a successful `front_line` from `m` gives: `(0, 0)`, or `(1, next)` for a line con-ron
 applies (`LineStep`); the records' table grows, the mode is kept. -/
-structure FrontLinePost (b : ByteArray) (i : USize) (st : StateD) (a : AState) (m : Mem)
+structure FrontLinePost (b : ByteArray) (i : USize) (first : Bool) (st : StateD) (a : AState) (m : Mem)
     (x : List Word × Mem) : Prop where
-  res : x.1 = [0, 0] ∨ ∃ nx, x.1 = [1, nx] ∧ LineStep b i nx st a x.2
+  res : x.1 = [0, 0] ∨ ∃ nx, x.1 = [1, nx] ∧ LineStep b i first nx st a x.2
   grow : DGrow m x.2
   mode : ModeOK x.2
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+/-- A name, level or header record stands where it may when `first` is "the header". -/
+theorem recR_placed {b : ByteArray} {r : LineRec} {f : Fld} (h : RecR b r f) (first : Bool)
+    (hf : first = decide (f.pl = 7)) : lineRecPlaced first r = true := by
+  subst hf
+  cases r with
+  | name i nr => cases nr <;> simp_all [RecR, PlR, NameR, lineRecPlaced]
+  | level i lr => cases lr <;> simp_all [RecR, PlR, lineRecPlaced]
+  | header => simp_all [RecR, lineRecPlaced]
+  | _ => simp [RecR] at h
+
 open L.Front.LineRec in
 /-- **`front_line` refines con-ron's per-line step, both outcomes**: the scanner's leaves give the
 first non-blank byte, the record and the line's end, which are the validator's `lineFwdN` and so
-con-leche's scan (`scan_of_fwd`, `scan_shape`); a name or level line is `lineRecW_refines`, an
-expression line `applyExprW_refines`, a declaration line `applyDLine_ref` (its failure the
-line's). -/
+con-leche's scan (`scan_of_fwd`, `scan_shape`); a blank line and a misplaced record abort (the
+twin's `.internal`, class `0`); a name or level line is `lineRecW_refines`, an expression line
+`applyExprW_refines`, a declaration line `applyDLine_ref` (its failure the line's). -/
 theorem frontLine_ref {p : Prog} (hP : LineLookups p) {b : ByteArray}
     (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (n : Nat) {m : Mem} {a : AState}
     {st : StateD} (hm : m.arr8 IN = b.data) (hA : ArenaD m a) (hD : StateDR m st)
-    (hok : ConRon.Bridge.StateOK a) (hmode : ModeOK m) (i : USize) (hi : i.toNat ≤ b.size) :
-    RefC (FrontLineG p b st a) (frontLineE p n m i.toUInt64) (FrontLinePost b i st a m)
-      (LineClaim b i st a) := by
+    (hok : ConRon.Bridge.StateOK a) (hmode : ModeOK m) (i : USize) (hi : i.toNat ≤ b.size)
+    (first : Word) :
+    RefC (FrontLineG p b st a) (frontLineE p n m i.toUInt64 first) (FrontLinePost b i (first != 0) st a m)
+      (LineClaim b i (first != 0) st a) := by
   have hb64 : b.data.size < 2 ^ 64 := by have : b.data.size = b.size := rfl; omega
   have hi' : i.toUInt64.toNat ≤ b.data.size := by rw [USize.toNat_toUInt64]; exact hi
   have hsz : m.len8 IN = UInt64.ofNat b.data.size := by unfold Mem.len8; rw [hm]
   have hbyte : ∀ w : Word, ((m.arr8 IN)[w.toNat]?.getD 0).toUInt64 = byteW b.data w := by
     intro w; rw [hm]; simp [byteW, Array.getD_eq_getD_getElem?]
-  have keep : ∀ r, (r = [0, 0] ∨ ∃ nx, r = [1, nx] ∧ LineStep b i nx st a m) →
-      FrontLinePost b i st a m (r, m) := fun r h => ⟨h, (DK.refl m).grow, hmode⟩
+  have keep0 : FrontLinePost b i (first != 0) st a m ([0, 0], m) := ⟨.inl rfl, (DK.refl m).grow, hmode⟩
   cases n with
   | zero => exact fun _ hk => absurd Err.cls_outOfFuel hk
   | succ n =>
-  simp only [frontLineE]
+  rw [frontLineE.arm1]
   -- the first non-blank byte
   rcases h1 : callW p n "skip_ws" [i.toUInt64] m with _ | ⟨r1, m1⟩
   · rw [liftE_none, frontLineE.k_skip_ws.none]; exact fun _ hk => absurd (by simp) hk
@@ -236,21 +235,12 @@ theorem frontLine_ref {p : Prog} (hP : LineLookups p) {b : ByteArray}
   generalize hsd : UInt64.ofNat (skipWsN b.data i.toUInt64.toNat) = s
   have hfwd : lineFwdN b.data i.toUInt64 = lineFwdN.lineFwd2N b.data s := by rw [lineFwdN, hsd]
   by_cases hnl : s < m.len8 IN ∧ ((m.arr8 IN)[s.toNat]?.getD 0).toUInt64 = 10
-  · rw [frontLineE.k_skip_ws.arm1 _ _ [s] m hnl]
-    rw [hsz, hbyte] at hnl
-    refine keep _ (.inr ⟨s + 1, rfl, lineStep_blank b h64 hsize i ?_ s hsd ?_ hA hD⟩)
-    · rw [hfwd]; unfold lineFwdN.lineFwd2N; rw [ite_eq_left hnl]
-    · exact fun h => absurd (hnl.2.symm.trans h.2) (by decide)
+  · rw [frontLineE.k_skip_ws.abort1 _ _ _ [s] m hnl]; exact fun _ hk => absurd (by decide) hk
   by_cases hend : m.len8 IN ≤ s
-  · rw [frontLineE.k_skip_ws.arm2 _ _ [s] m hnl hend]
-    rw [hsz, hbyte] at hnl
-    rw [hsz] at hend
-    refine keep _ (.inr ⟨0, rfl, lineStep_blank b h64 hsize i ?_ s hsd ?_ hA hD⟩)
-    · rw [hfwd]; unfold lineFwdN.lineFwd2N; rw [ite_eq_right hnl, ite_eq_left hend]
-    · exact fun h => absurd h.1 (UInt64.not_lt.mpr hend)
+  · rw [frontLineE.k_skip_ws.abort2 _ _ _ [s] m hnl hend]; exact fun _ hk => absurd (by decide) hk
   by_cases h123 : ((m.arr8 IN)[s.toNat]?.getD 0).toUInt64 ≠ 123
-  · rw [frontLineE.k_skip_ws.arm3 _ _ [s] m hnl hend h123]; exact keep _ (.inl rfl)
-  rw [frontLineE.k_skip_ws.arm4 _ _ [s] m hnl hend (Decidable.not_not.mp h123)]
+  · rw [frontLineE.k_skip_ws.arm1 _ _ _ [s] m hnl hend h123]; exact keep0
+  rw [frontLineE.k_skip_ws.arm2 _ _ _ [s] m hnl hend (Decidable.not_not.mp h123)]
   simp only [List.headD_cons]
   rw [hsz, hbyte] at hnl
   rw [hsz] at hend
@@ -264,8 +254,8 @@ theorem frontLine_ref {p : Prog} (hP : LineLookups p) {b : ByteArray}
   obtain rfl : m = m3 := by rw [← hs3, hsm3]
   generalize hR : lineRecEntryN b.data (s + 1) = R
   by_cases hne : R.e = 0
-  · rw [frontLineE.k_line_rec.arm1 _ _ _ R.enc m hne]; exact keep _ (.inl rfl)
-  rw [frontLineE.k_line_rec.arm2 _ _ _ R.enc m hne]
+  · rw [frontLineE.k_line_rec.arm1 _ _ _ _ R.enc m hne]; exact keep0
+  rw [frontLineE.k_line_rec.arm2 _ _ _ _ R.enc m hne]
   simp only [LRS.enc, List.headD_cons, List.tail_cons]
   -- the end of the line
   rcases h4 : callW p n "skip_ws" [R.e] m with _ | ⟨r4, m4⟩
@@ -283,39 +273,52 @@ theorem frontLine_ref {p : Prog} (hP : LineLookups p) {b : ByteArray}
       ite_eq_right (UInt64.not_le.mpr hlt), ite_eq_right (fun h => h hb), hL, ite_eq_right hne, hQ]
   -- the line scans: its record, applied
   have hj : ∀ nx, lineFwdN b.data i.toUInt64 = (1, nx) →
-      RefC (FrontLineG p b st a) (frontLineE.j1 p n nx s R.f.pl R.f.idx R.f.a R.f.c R.f.d m)
-        (FrontLinePost b i st a m) (LineClaim b i st a) := by
+      RefC (FrontLineG p b st a) (frontLineE.j1 p n first nx s R.f.pl R.f.idx R.f.a R.f.c R.f.d m)
+        (FrontLinePost b i (first != 0) st a m) (LineClaim b i (first != 0) st a) := by
     intro nx hf
     obtain ⟨r, q', hsc, hq'⟩ := scan_of_fwd b h64 hsize i hf
     obtain ⟨j, e', hjs, hloop⟩ := (scan_shape b h64 hsize i hsc s hsd).2 hlt hb
-    have done : ∀ m' st', AM.ok (applyRecord st r) a → AM.res (applyRecord st r) a = .inl st' →
+    have done : ∀ m' st', lineRecPlaced (first != 0) r = true → AM.ok (applyRecord st r) a →
+        AM.res (applyRecord st r) a = .inl st' →
         ArenaD m' (AM.st (applyRecord st r) a) → StateDR m' st' → DGrow m m' → ModeOK m' →
-        FrontLinePost b i st a m ([1, nx], m') := fun m' st' h1 h2 h3 h4 hg hmo =>
-      ⟨.inr ⟨nx, rfl, r, q', st', hsc, hq', h1, h2, h3, h4⟩, hg, hmo⟩
-    simp only [frontLineE.j1]
+        FrontLinePost b i (first != 0) st a m ([1, nx], m') := fun m' st' hpl h1 h2 h3 h4 hg hmo =>
+      ⟨.inr ⟨nx, rfl, r, q', st', hsc, hq', hpl, h1, h2, h3, h4⟩, hg, hmo⟩
+    -- the placement check
+    suffices k : (first != 0) = decide (R.f.pl = 7) →
+        RefC (FrontLineG p b st a) (frontLineE.j2 p n nx s R.f.pl R.f.idx R.f.a R.f.c R.f.d m)
+          (FrontLinePost b i (first != 0) st a m) (LineClaim b i (first != 0) st a) by
+      by_cases hp : R.f.pl = 7 <;> by_cases hf0 : first = 0
+      · rw [frontLineE.j1.abort1 _ _ _ _ _ _ _ _ _ _ _ hp hf0]; exact fun _ hk => absurd (by decide) hk
+      · rw [frontLineE.j1.arm1 _ _ _ _ _ _ _ _ _ _ _ hp hf0]; exact k (by simp [hp, hf0])
+      · rw [frontLineE.j1.arm2 _ _ _ _ _ _ _ _ _ _ _ hp hf0]; exact k (by simp [hp, hf0])
+      · rw [frontLineE.j1.abort2 _ _ _ _ _ _ _ _ _ _ _ hp hf0]; exact fun _ hk => absurd (by decide) hk
+    intro hfp
     by_cases hpl : R.f.pl = 0
     · -- a declaration line
-      rw [ite_eq_left hpl]
+      rw [frontLineE.j2.arm1 _ _ _ _ _ _ _ _ _ _ hpl]
+      have hpd : ∀ d, lineRecPlaced (first != 0) (.decl d) = true := fun d => by
+        rw [hfp, hpl]; rfl
       have hR' := applyDLine_ref hP.dfields hP.apply.decl hP.apply hP.fields hP.install h64 hsize n
         hm hA hD hok hloop (p := p)
       rw [hjs] at hR'
       rcases h5 : applyDLineE p n m (s + 1) with e5 | ⟨z, m5⟩
       · rw [h5] at hR'; rw [frontLineE.k_apply_dline.none]
-        exact fun hG _ => ⟨r, q', hsc, hR' ⟨hG.ind, fun h0 d hd => by
-          rw [← hjs]; exact hG.safe j r e' d hloop (by rw [hjs]; exact h0) hd⟩⟩
-      rw [h5] at hR'; rw [frontLineE.k_apply_dline.arm1]
-      obtain ⟨⟨st', hrun, hD'⟩, hA', hmo, hg⟩ := hR'
-      exact done _ st' (by simp [AM.ok, hrun]) (by simp [AM.res, hrun])
+        intro hG hk
+        obtain ⟨⟨d, hrd⟩, hC⟩ := hR' ⟨hG.ind, fun h0 d hd => by
+          rw [← hjs]; exact hG.safe j r e' d hloop (by rw [hjs]; exact h0) hd⟩ hk
+        exact ⟨r, q', hsc, by rw [hrd]; exact hpd d, hC⟩
+      rw [h5] at hR'; rw [frontLineE.k_apply_dline.arm1, frontLineE.j3.arm1]
+      obtain ⟨⟨st', hrun, hD'⟩, hA', hmo, hg, ⟨d, hrd⟩⟩ := hR'
+      exact done _ st' (by rw [hrd]; exact hpd d) (by simp [AM.ok, hrun]) (by simp [AM.res, hrun])
         (by simp [AM.st, hrun]; exact hA') hD' hg (hmo hmode)
-    rw [ite_eq_right hpl]
     have hF := lineRec_fields b.data (s + 1) (by rw [hR]; exact hne) (by rw [hR]; exact hpl)
     rw [hR] at hF
     by_cases hp7 : R.f.pl ≤ 7
     · -- a name or level line
-      rw [ite_eq_left hp7]
+      rw [frontLineE.j2.arm2 _ _ _ _ _ _ _ _ _ _ hpl hp7]
       rcases h5 : callW p n "apply_rec" [R.f.pl, R.f.idx, R.f.a, R.f.c, R.f.d] m with _ | ⟨r5, m5⟩
       · rw [liftE_none, frontLineE.k_apply_rec.none]; exact fun _ hk => absurd (by simp) hk
-      rw [liftE_some, frontLineE.k_apply_rec.arm1]
+      rw [liftE_some, frontLineE.k_apply_rec.arm1, frontLineE.j3.arm1]
       obtain ⟨s5, rfl, -, hW⟩ := triple_of_callW (applyRec_spec p hP.scan hP.apply.decl.expr.front
         hP.apply_nstr hP.apply_nnum hP.apply_level hP.apply_rec hP.apply_str hP.apply.decl.expr b.data
         n ⟨m, Locals.init []⟩ hm hA.base.lit.1.cap hA.base.lit.1.top _ _ _ _ _) h5
@@ -325,12 +328,12 @@ theorem frontLine_ref {p : Prog} (hP : LineLookups p) {b : ByteArray}
       rw [hfe] at hRec
       obtain ⟨st', h1, h2, h3, h4, h5⟩ :=
         lineRecW_refines b h64 hsize m _ hm a st hA hD hmode R.f r hRec hW
-      exact done _ st' h1 h2 h3 h4 (lineRecW_dk _ _ _ _ _ _ _ _ hW).grow h5
+      exact done _ st' (recR_placed (hRec hpl) _ hfp) h1 h2 h3 h4 (lineRecW_dk _ _ _ _ _ _ _ _ hW).grow h5
     · -- an expression line
-      rw [ite_eq_right hp7]
+      rw [frontLineE.j2.arm3 _ _ _ _ _ _ _ _ _ _ hpl hp7]
       rcases h5 : callW p n "apply_expr" [R.f.pl, R.f.idx, R.f.a, R.f.c, R.f.d] m with _ | ⟨r5, m5⟩
       · rw [liftE_none, frontLineE.k_apply_rec.none]; exact fun _ hk => absurd (by simp) hk
-      rw [liftE_some, frontLineE.k_apply_rec.arm1]
+      rw [liftE_some, frontLineE.k_apply_rec.arm1, frontLineE.j3.arm1]
       obtain ⟨s5, rfl, -, hW⟩ := triple_of_callW (applyExpr_spec p hP.apply.decl.expr b.data hsize
         (hP.scan.get "byte_in") (hP.scan.get "hex_val") (hP.scan.get "hex4") (hP.scan.get "hex3")
         (hP.scan.get "esc_sur") (hP.scan.get "esc_one") (hP.scan.get "utf8_put")
@@ -343,31 +346,39 @@ theorem frontLine_ref {p : Prog} (hP : LineLookups p) {b : ByteArray}
       obtain ⟨hI, hE⟩ := hX
       obtain ⟨hok', hA', hD', hM'⟩ := applyExprW_refines b h64 hsize m _ a st hA hD hmode R.f k er hI hE hW
       obtain ⟨h1, h2, h3⟩ := applyLine_expr st a k er hok'
-      exact done _ _ h1 h2 (by rw [h3]; exact hA') hD' (applyExprW_dk _ _ _ _ _ _ _ _ hW).grow hM'
+      have hpe : lineRecPlaced (first != 0) (.expr k er) = true := by
+        rw [hfp, decide_eq_false (fun h => hp7 (by rw [h]; decide))]; rfl
+      exact done _ _ hpe h1 h2 (by rw [h3]; exact hA') hD' (applyExprW_dk _ _ _ _ _ _ _ _ hW).grow hM'
   by_cases h10 : q < m.len8 IN ∧ ((m.arr8 IN)[q.toNat]?.getD 0).toUInt64 = 10
-  · rw [frontLineE.k_skip_ws_2.arm1 _ _ _ _ _ _ _ _ [q] m h10]
+  · rw [frontLineE.k_skip_ws_2.arm1 _ _ _ _ _ _ _ _ _ [q] m h10]
     rw [hsz, hbyte] at h10
     exact hj _ (by rw [hend2]; unfold lineFwdN.lineEndN; rw [ite_eq_left h10]; rfl)
   by_cases hle : m.len8 IN ≤ q
-  · rw [frontLineE.k_skip_ws_2.arm2 _ _ _ _ _ _ _ _ [q] m h10 hle]
+  · rw [frontLineE.k_skip_ws_2.arm2 _ _ _ _ _ _ _ _ _ [q] m h10 hle]
     rw [hsz, hbyte] at h10
     rw [hsz] at hle
     exact hj _ (by rw [hend2]; unfold lineFwdN.lineEndN; rw [ite_eq_right h10, ite_eq_left hle])
-  rw [frontLineE.k_skip_ws_2.arm3 _ _ _ _ _ _ _ _ [q] m h10 hle]; exact keep _ (.inl rfl)
--/
+  rw [frontLineE.k_skip_ws_2.arm3 _ _ _ _ _ _ _ _ _ [q] m h10 hle]; exact keep0
 
-/-- **`front_line(i)` refines con-ron's per-line step**: when it returns `(1, nx)`, con-leche's
-scanner reads a record at `i` whose next position is `nx`, and con-ron's `applyLine` applies it,
-with `ArenaD` and `StateDR` holding of the memory after (`frontLine_ref`'s ok half). -/
+/-- **`front_line(i, first)` refines con-ron's per-line step**: when it returns `(1, nx)`,
+con-leche's scanner reads a record at `i` whose next position is `nx`, it stands where it may
+(`first`: the line is the first), and con-ron's `applyLine` applies it, with `ArenaD` and
+`StateDR` holding of the memory after (`frontLine_ref`'s ok half). -/
 @[refines ConRon.Arena.Frontend.applyLine]
 theorem frontLine_refines {p : Prog} (hP : LineLookups p) (b : ByteArray)
     (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b.data) (i : USize) (hi : i.toNat ≤ b.size) (a₀ : AState) (st : StateD)
-    (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem st) (hmode : ModeOK s₀.mem)
+    (hm : s₀.mem.arr8 IN = b.data) (i : USize) (hi : i.toNat ≤ b.size) (first : Word) (a₀ : AState)
+    (st : StateD) (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem st) (hmode : ModeOK s₀.mem)
     (hok : ConRon.Bridge.StateOK a₀) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "front_line" [i.toUInt64]
-    ⦃fun r s' => ∀ nx, r = [1, nx] → LineStep b i nx st a₀ s'.mem; ⊤⦄ := by
-  sorry
+    invoke p (exec p n) "front_line" [i.toUInt64, first]
+    ⦃fun r s' => ∀ nx, r = [1, nx] → LineStep b i (first != 0) nx st a₀ s'.mem; ⊤⦄ :=
+  triple_post (RefC.triple (frontLine_specE p hP.front_line hP.apply_dline hP.apply_ind
+      hP.apply.decl.apply_decl hP.apply.decl.decl_kind n s₀ i.toUInt64 first)
+    (frontLine_ref hP h64 hsize n hm hR hD hok hmode i hi first)) fun r _ ⟨_, h⟩ nx hr => by
+    subst hr
+    rcases h.res with h0 | ⟨nx', h1, hS⟩
+    · cases h0
+    · cases h1; exact hS
 
 end L.Front

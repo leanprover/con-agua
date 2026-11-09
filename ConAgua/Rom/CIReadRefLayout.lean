@@ -63,8 +63,8 @@ theorem flatten_take_le (es : List (List UInt8)) (s : Nat) :
         Nat.le_add_right _ _
     _ = es.flatten.length := by rw [← List.length_append, ← List.flatten_append, List.take_append_drop]
 
-theorem ciEntries_len : ciEntries.length = 31 := by
-  sorry
+theorem ciEntries_len : ciEntries.length = 25 := by
+  simp [ciEntries, basisKinds, romCiVals, romCvVals, romExprVals]
 
 theorem ciOff_toNat :
     ciOff.toNat = (encNames pinNames ++ encNames reservedBasisNameValues).length := by
@@ -75,10 +75,39 @@ theorem ciOff_toNat :
 
 /-- **Where slot `s`'s entry is**: from the table word at `ciOff + 8 s`. -/
 theorem slot_pos {rom : List UInt8} (hr : RomOK rom) (rest : List UInt8) (hrom : rom = romData ++ rest)
-    (s : Word) (hs : s.toNat < 31) :
+    (s : Word) (hs : s.toNat < 25) :
     ∃ rest', rom.drop (ciOff + u64W rom (ciOff + 8 * s)).toNat = ciEntries[s.toNat]'(by
       rw [ciEntries_len]; exact hs) ++ rest' := by
-  sorry
+  have hrl := hr; simp only [RomOK] at hrl
+  have hlenD := romData_len
+  have hpre : rom.drop ciOff.toNat = romCIData ++ (encItems [] (itemsAllPins romPins) ++ rest) := by
+    rw [hrom, ciOff_toNat, romData]; simp [List.append_assoc]
+  have hlenR : ciOff.toNat + romCIData.length ≤ rom.length := by
+    rw [hrom, ciOff_toNat]; simp [romData]; omega
+  have hT := ciTable_len (8 * ciSlots) ciEntries
+  rw [ciEntries_len] at hT
+  obtain ⟨tr, htr⟩ := ciTable_drop ciEntries (8 * ciSlots) s.toNat (by rw [ciEntries_len]; exact hs)
+  have hsum := flatten_take_le ciEntries s.toNat
+  have hRD : romCIData.length = 8 * 25 + ciEntries.flatten.length := by
+    simp [romCIData, hT]
+  have h8s : (ciOff + 8 * s).toNat = ciOff.toNat + 8 * s.toNat := by
+    rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
+  have hd1 : rom.drop (ciOff + 8 * s).toNat = u64B (8 * ciSlots + ((ciEntries.take s.toNat).map
+      List.length).sum) ++ (tr ++ (ciEntries.flatten ++ (encItems [] (itemsAllPins romPins) ++ rest))) := by
+    rw [h8s, ← List.drop_drop, hpre, romCIData, List.append_assoc,
+      List.drop_append_of_le_length (by rw [hT]; omega), htr]
+    simp [List.append_assoc]
+  have hN : 8 * ciSlots + ((ciEntries.take s.toNat).map List.length).sum < 2 ^ 64 := by
+    simp only [ciSlots]; omega
+  rw [u64W_of_drop rom _ _ _ hd1 hN hr]
+  have hP : (ciOff + UInt64.ofNat (8 * ciSlots + ((ciEntries.take s.toNat).map List.length).sum)).toNat =
+      ciOff.toNat + 8 * 25 + ((ciEntries.take s.toNat).map List.length).sum := by
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat', Nat.mod_eq_of_lt hN]; simp only [ciSlots]; omega
+  obtain ⟨fr, hfr⟩ := flatten_drop ciEntries s.toNat (by rw [ciEntries_len]; exact hs)
+  refine ⟨fr ++ (encItems [] (itemsAllPins romPins) ++ rest), ?_⟩
+  rw [hP, Nat.add_assoc, ← List.drop_drop, hpre, romCIData, List.append_assoc, ← List.drop_drop,
+    List.drop_left' (by rw [hT])]
+  rw [List.drop_append_of_le_length hsum, hfr, List.append_assoc]
 
 /-! ## `rci_slot`, `rci_fresh` -/
 
@@ -101,7 +130,7 @@ theorem slotCall {n : Nat} {m m' : Mem} {s : Word} {r : List Word}
 theorem freshCall {m₀ : Mem} {a₀ : AState} {T : Nat} {n : Nat} {m m' : Mem} {a : AState} {r : List Word}
     (hI : RInv m₀ a₀ T m a) (hc : callW p n "rci_fresh" [] m = some (r, m')) :
     RInv m₀ a₀ T m' a ∧ MemoR m' [] (∅ : EMemo) ∧ stkTop m' = 0 ∧ m'.arr64 EREC = m.arr64 EREC ∧
-      m'.arr64 IW = m.arr64 IW ∧ erTop m' = erTop m ∧ iwTop m' = iwTop m := by
+      m'.arr64 IW = m.arr64 IW ∧ erT m' = erT m ∧ iwTop m' = iwTop m ∧ erA m' = erA m := by
   cases n with
   | zero => rw [callW_zero] at hc; cases hc
   | succ n =>
@@ -118,14 +147,14 @@ theorem freshCall {m₀ : Mem} {a₀ : AState} {T : Nat} {n : Nat} {m m' : Mem} 
   have hf : MemFrame [] [131, 132, 148, 149] m (resetMem (m.set64 CTL 131 0)) :=
     ((MemFrame.setCtl m 131 0).mono (by simp) (by simp)).trans ((resetMem_frame1 _).mono (by simp)
       (by simp))
-  obtain ⟨hI1, hE, hIW, ht, hi⟩ := hI.expr (ArenaD.frameHi hf (by simp) (by
+  obtain ⟨hI1, hE, -, hIW, ht, hi, hEA⟩ := hI.expr (ArenaD.frameHi hf (by simp) (by
       intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl <;> decide) hI.arena)
     (hI.mode.frame hf (by decide) (by decide))
     (hf.mono (by simp) (by
       intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
-      rcases hx with rfl | rfl | rfl | rfl <;> simp [ExprC, RomC])) rfl
-  refine ⟨hI1, MemoR.fresh _ (by rw [size_set64]; omega), ?_, hE, hIW, ht, hi⟩
+      rcases hx with rfl | rfl | rfl | rfl <;> simp [ExprC, RomC])) rfl rfl
+  refine ⟨hI1, MemoR.fresh _ (by rw [size_set64]; omega), ?_, hE, hIW, ht, hi, hEA⟩
   rw [resetMem_stk]; simp only [stkTop, rdW_set64]; simp; omega
 
 end calls

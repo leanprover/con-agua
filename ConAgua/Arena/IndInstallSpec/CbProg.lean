@@ -37,6 +37,8 @@ structure IndsProg (p : Prog) : Prop extends InstProg p, ConsIndsProg p where
   agreeP : AgreeProg p
   pinWord : p.lookup "pin_word" = some pinWordL
   withSort : p.lookup "block_shape_with_sort" = some blockShapeWithSort
+  fieldCopy : p.lookup "member_field_copy" = some memberFieldCopy
+  declared : p.lookup "block_shape_declared" = some blockShapeDeclared
   inds : p.lookup "check_block_inds" = some checkBlockInds
 
 end L.Ind

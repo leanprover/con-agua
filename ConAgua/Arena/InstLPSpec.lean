@@ -31,10 +31,11 @@ namespace L.Arena
 /-! ## `sle_go` / `sls_go`: substitute and intern each element of a slice -/
 
 /-- The element read of `sle_go` (`EREC⦃o⦄`) and `sls_go` (the tagged `POOL⦃o⦄`). -/
-def elemRd (A : ArrId) (m : Mem) (o : Word) : Word := if A = POOL then prd m o else rdW (m.arr64 A) o
+def elemRd (A : ArrId) (m : Mem) (o : Word) : Word :=
+  if A = POOL then prd m o else rdW (m.arr64 (tierA A (o >>> 40))) (o &&& 1099511627775)
 
 @[arena_grind =] theorem elemRd_pool (m : Mem) (o : Word) : elemRd POOL m o = prd m o := rfl
-@[arena_grind =] theorem elemRd_erec (m : Mem) (o : Word) : elemRd EREC m o = rdW (m.arr64 EREC) o := rfl
+@[arena_grind =] theorem elemRd_erec (m : Mem) (o : Word) : elemRd EREC m o = rdW (m.arr64 (tierA EREC (o >>> 40))) (o &&& 1099511627775) := rfl
 
 section elems
 variable (A : ArrId)
@@ -85,7 +86,8 @@ def slpW : Nat → Mem → Word → Word → Word → Word → Word → Word →
   | n + 1, m, o, l, b, ko, kc, vo, vc =>
     if l = 0 then some m
     else slpK n o l b ko kc vo vc
-      (slpOne n m (rdW (m.arr64 EREC) o) (lookupW SPN POOL n m ko kc vo vc (rdW (m.arr64 EREC) o)))
+      (slpOne n m (rdW (m.arr64 (tierA EREC (o >>> 40))) (o &&& 1099511627775))
+        (lookupW (keyA SPN) POOL n m ko kc vo vc (rdW (m.arr64 (tierA EREC (o >>> 40))) (o &&& 1099511627775))))
 
 /-- After the parameter: check, store, the rest. -/
 def slpK (n : Nat) (o l b ko kc vo vc : Word) : Option (Word × Mem) → Option Mem
@@ -98,7 +100,8 @@ theorem slpW_nil (n : Nat) (m : Mem) (o l b ko kc vo vc : Word) (h : l = 0) :
     slpW (n + 1) m o l b ko kc vo vc = some m := by rw [slpW]; simp [h]
 theorem slpW_cons (n : Nat) (m : Mem) (o l b ko kc vo vc : Word) (h : l ≠ 0) :
     slpW (n + 1) m o l b ko kc vo vc = slpK n o l b ko kc vo vc
-      (slpOne n m (rdW (m.arr64 EREC) o) (lookupW SPN POOL n m ko kc vo vc (rdW (m.arr64 EREC) o))) := by
+      (slpOne n m (rdW (m.arr64 (tierA EREC (o >>> 40))) (o &&& 1099511627775))
+        (lookupW (keyA SPN) POOL n m ko kc vo vc (rdW (m.arr64 (tierA EREC (o >>> 40))) (o &&& 1099511627775)))) := by
   rw [slpW]; simp [h]
 theorem slpK_some (n : Nat) (o l b ko kc vo vc h : Word) (m₁ : Mem) :
     slpK n o l b ko kc vo vc (some (h, m₁)) =
@@ -385,7 +388,16 @@ theorem sleGo_spec (n : Nat) : ∀ (s₀ : St) (o l b ko kc vo vc : Word),
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "sle_go" [o, l, b, ko, kc, vo, vc]
     ⦃fun _ s' => LocEq s' s₀ ∧ slElemW EREC n s₀.mem o l b ko kc vo vc = some s'.mem; ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ o l b ko kc vo vc; rw [invoke_eq _ hL.sle_go]; simp only [callFn, sleGo]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o l b ko kc vo vc
+    rw [invoke_eq _ hL.sle_go]
+    simp only [callFn, sleGo]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        lvSubInt_spec p hL.toLvSubProg n, ih] <;>
+      finish
 
 theorem slsGo_spec (n : Nat) : ∀ (s₀ : St) (o l b ko kc vo vc : Word),
     ⦃fun s => s = s₀⦄
@@ -406,7 +418,17 @@ theorem slpGo_spec (n : Nat) : ∀ (s₀ : St) (o l b ko kc vo vc : Word),
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "slp_go" [o, l, b, ko, kc, vo, vc]
     ⦃fun _ s' => LocEq s' s₀ ∧ slpW n s₀.mem o l b ko kc vo vc = some s'.mem; ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ o l b ko kc vo vc; rw [invoke_eq _ hL.slp_go]; simp only [callFn, slpGo]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o l b ko kc vo vc
+    rw [invoke_eq _ hL.slp_go]
+    simp only [callFn, slpGo]
+    sym only [lang_grind, arena_grind, level_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        lpLookup_spec p hL.lp_lookup n, lvIntern_spec p hL.toLvInternProg n,
+        internParam_spec p hL.param_find hL.param_push hL.intern_param n, ih] <;>
+      finish
 
 theorem spnPool_spec (n : Nat) : ∀ (s₀ : St) (b d l : Word),
     ⦃fun s => s = s₀⦄

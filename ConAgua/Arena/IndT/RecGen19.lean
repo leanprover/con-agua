@@ -2,6 +2,7 @@ module
 
 import ConAgua.Arena.IndT.RecGenTmf
 import ConAgua.Arena.IndT.RecCheckPins
+public import ConAgua.Arena.IndT.PosFkc
 public import ConAgua.Verdict.IndBClm
 import ConAgua.Arena.RecGenSpec.CntW
 import ConRon.Bridge.Inductives.GenRec
@@ -42,18 +43,6 @@ local notation "V" => ConLeche.CheckMode.verified
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`StageC` across a twin step con-ron calls a `CoreStep`**, the memory's half from `AbsOK`
-after (`StageC.of_pstep` for a `CSpec`'s step). -/
-theorem StageC.of_cstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR vis fe m' a') (hA : AbsOK m') (hs : ConRon.Bridge.CoreStep V env fe a a') :
-    StageC dn vis fe env m' a' :=
-  ⟨hS, hs.ok,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
-      fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.wk.2.2.2.2⟩
--/
-
 theorem slConsC_afr {p : Prog} (hP : KeysProg p) {n : Nat} {x o l : Word} {r : List Word} {m m' : Mem}
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) : AFr m m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -72,36 +61,34 @@ structure ClmPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   pos : PosMR m'
   abs : AbsOK m'
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hIlpf hLC henv in
 /-- **`class_majors` refines `classMajors`, both outcomes** (twin side: con-ron's `classMajors_spec`'s
 proof): `intern_const`, `mk_app_n_f` and `sl_cons` lifted (the cap on the head is an abort `0`),
 `target_major_of` is `tmf_ref`, `target_major_pins` `tmp_ref`, the rest the induction hypothesis. -/
-theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
-    (css : List (List (IConstantVal × Nat))) (pfvs : List EIdx) (pP : ConLeche.BlockShape)
-    (cssP : List (List (ConLeche.ConstantVal × Nat))) (pfvsP : List ConLeche.Expr)
+theorem clm_ref (hP : ClmProg p) (hF : FtProg p) (hFk : FkcProg p) (hWt : WhnfTopE p)
+    (pp pfo pfl : Word) (bs : BlockShape) (pfvs : List EIdx) (pP : ConLeche.BlockShape)
+    (pfvsP : List ConLeche.Expr)
     (hpw : ∀ x ∈ pfvsP, ConLeche.Expr.WScoped pP.nP x) (n : Nat) (hn : n ≤ 2 ^ 62) :
     ∀ (m : Mem) (a : AState) (ko kl : Word) (ks : List ClassKey) (ksP : List ConLeche.ClassKey),
     StageC dn vis fe env m a → AbsOK m → DecB (fun m => decBS m pp.toNat) m bs → ShapeSrc m pp →
-    PSlR decCNS css cao cal m → DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs →
+    DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs →
     pfo.toNat + pfl.toNat ≤ iwTop m → PSlR decCK ks ko kl m → PosMR m →
     (∀ key ∈ ksP, ∀ x ∈ key.ds, ∃ D, ConLeche.Expr.WScoped D x) →
     ConRon.Bridge.Inductives.dShape a.store bs = some pP →
-    css.mapM (ConRon.Bridge.Inductives.dCtors a.store) = some cssP →
     Frontend.denoteEList a.store pfvs = some pfvsP →
     ks.mapM (ConRon.Bridge.Inductives.dClassKey a.store) = some ksP →
-    RefE (VerdictCtx p) (clmE p n m vis pp cao cal pfo pfl ko kl) (ConRon.Arena.classMajors V fe bs css pfvs ks) a
+    RefE (VerdictCtx p) (clmE p n m vis pp pfo pfl ko kl) (ConRon.Arena.classMajors V fe bs pfvs ks) a
       (fun v xs a' => ClmPost dn vis fe env m v.1 v.2 xs a') := by
   induction n with
   | zero =>
-    intro m a ko kl ks _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    intros
     rw [clmE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n ih =>
-  intro m a ko kl ks ksP hC hA hq' hsrc hcss hpf hpfb hks hPm hsc hsh hcas hpfP hksP
+  intro m a ko kl ks ksP hC hA hq' hsrc hpf hpfb hks hPm hsc hsh hpfP hksP
   have hS := hC.stage
   have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   by_cases hkl : kl = 0
-  · rw [clmE.arm1 p n m vis pp cao cal pfo pfl ko kl hkl]
+  · rw [clmE.arm1 p n m vis pp pfo pfl ko kl hkl]
     have : ks = [] := by
       have h := hks.1; simp only [DecB, hkl] at h
       simpa [decPL] using h.symm
@@ -109,7 +96,7 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
     exact RefE.ret rfl ⟨hC, IWGrow.refl m, PSlR.nil decTM m, hPm, hA⟩
   obtain ⟨q, k0, ks', rfl, hw, hqb, hdk, hks'⟩ := partsPSl_cons hks hkl
   have hq'' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  rw [clmE.arm2 p n m vis pp cao cal pfo pfl ko kl hkl, hw]
+  rw [clmE.arm2 p n m vis pp pfo pfl ko kl hkl, hw]
   rw [← hq''] at hdk
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hdk
   obtain ⟨hcH, hcd, huH, hud, hds, hdsb, hk4⟩ := pos2_nk_fields hnk hT
@@ -142,7 +129,7 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   rw [e2, e3]
   -- the application
   refine RefE.bindLift (fun _ => clmE.k_mk_app_n_f.none ..) fun r2 m2 h2 => ?_
-  obtain ⟨x, a2, hrun2, hS2, hg2, hmH, rfl⟩ := mknF_ok dn vis fe _ _ _ hr1H nk.ds m1 m2 a1 r2 h2
+  obtain ⟨x, a2, hrun2, hS2, hg2, hmH, rfl⟩ := mknF_ok vis fe _ _ _ hr1H nk.ds m1 m2 a1 r2 h2
     ⟨k1.stage.stage, by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds⟩
   obtain ⟨p2, hmty⟩ := ConRon.Bridge.Inductives.mkAppN_run nk.ds dsP p1.ok hhd
     (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) (show ConRon.Arena.mkAppN (decE r1) nk.ds a1 = _ from hrun2)
@@ -153,15 +140,15 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   have c12 := (p1.trans p2).toCore hC.check
   have hshP2 := ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh
   -- the major
-  refine RefE.bindE (fun _ => clmE.k_target_major_of.none ..) (fun hV => hV.nv) (tmf_ref hP.tmf hIlpf hq.closed hLC n k2.stage.stage
+  refine RefE.bindE (fun _ => clmE.k_target_major_of.none ..) (fun hV => ⟨hV.nv, hWt⟩)
+    (tmf_ref hP.tmf hIlpf hq hF hLC henv n (by omega) k2.stage.stage
     (hq'.grow (decBS_mono _) k02.grow) (partsHsrc_grow k02.grow (partsShapeFacts hq' hsrc).2.1 hsrc)
-    (hcss.grow decCNS_mono k02.grow) (hpf.grow (OMono.decHL _ _) k02.grow) (hpf.grow (OMono.decHL _ _) k02.grow)
+    (hpf.grow (OMono.decHL _ _) k02.grow) (hpf.grow (OMono.decHL _ _) k02.grow)
     (k02.top hpfb) hmH k2.pos k2.stage k2.abs hshP2 hmty) fun ⟨r3, m3⟩ tm a3 hrun3 hR3 => ?_
   rw [clmE.k_target_major_of.arm1]
-  obtain ⟨c3, MP, hm, hF1⟩ := ConRon.Bridge.Inductives.targetMajorOf_spec fe bs pP css cssP pfvs pfvs
-    pfvsP pfvsP _ _ a2 _ _ k2.stage.check
-    ⟨hshP2, ConRon.Bridge.Inductives.dCtors_ext.list c12.ext _ _ hcas,
-      ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP, ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP,
+  obtain ⟨c3, MP, hm, hF1⟩ := ConRon.Bridge.Inductives.targetMajorOf_spec fe ConRon.Bridge.CoreSpec.of_core
+    henv bs pP pfvs pfvs pfvsP pfvsP _ _ a2 _ _ k2.stage.check
+    ⟨hshP2, ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP, ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP,
       hmty⟩ hrun3
   obtain ⟨hMpf, hMmem, hMout⟩ := ConRon.Bridge.Inductives.classMajorOf_shape hF1
   have hdsW : ∀ x ∈ MP.ds, ConLeche.Expr.WScoped pP.nP x := by
@@ -183,21 +170,20 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
     rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb]
   have hrP : (rdW (m3.arr64 IW) (pp + 4)).toNat = pP.nP := hrB.trans hnP
   -- the pins
-  have hR4 := tmp_ref hq henv n (by omega) hC3 hR3.abs hR3.dec hm (fun _ => by rw [hrP]; exact hdsW)
+  have hR4 := tmp_ref hq henv hFk hIlpf hWt n (by omega) hC3 hR3.abs hR3.dec hm (fun _ => by rw [hrP]; exact hdsW)
   rw [hrB] at hR4
   refine RefE.bindE (fun _ => clmE.k_target_major_pins.none ..) id hR4 fun ⟨r4, m4⟩ _ a4 hrun4 hR4 => ?_
   rw [clmE.k_target_major_pins.arm1]
-  obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.targetMajorPins_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.targetMajorPins_spec fe ConRon.Bridge.CoreSpec.of_core
     henv pP.nP tm MP (fun _ => hdsW) a3 a4 () hC3.check hm (by rw [← hnP]; exact hrun4)
   have hg04 := hg03.trans hR4.grow
   have c14 := (c12.trans c3).trans c4
   -- the rest
   refine RefE.bindE (fun _ => clmE.k_class_majors.none ..) id (ih (by omega) m4 a4 (ko + 1) (kl - 1) ks' ksP' hR4.stage hR4.abs
     (hq'.grow (decBS_mono _) hg04) (partsHsrc_grow hg04 (partsShapeFacts hq' hsrc).2.1 hsrc)
-    (hcss.grow decCNS_mono hg04) (hpf.grow (OMono.decHL _ _) hg04) (Nat.le_trans hpfb hg04.iw)
-    (hks'.grow decCK_mono hg04) (hR3.pos.fr hR4.mfr) (fun k hk' => hsc k (List.mem_cons_of_mem _ hk'))
+    (hpf.grow (OMono.decHL _ _) hg04) (Nat.le_trans hpfb hg04.iw)
+    (hks'.grow decCK_mono hg04) (hR4.pos hR3.pos) (fun k hk' => hsc k (List.mem_cons_of_mem _ hk'))
     (ConRon.Bridge.Inductives.dShape_ext c14.ext _ _ hsh)
-    (ConRon.Bridge.Inductives.dCtors_ext.list c14.ext _ _ hcas)
     (ConRon.Bridge.denoteEList_ext c14.ext _ _ hpfP)
     (ConRon.Bridge.Inductives.dClassKey_ext.list c14.ext _ _ hksP')) fun ⟨r5, m5⟩ xs a5 hrun5 hR5 => ?_
   rw [clmE.k_class_majors.arm1]
@@ -208,43 +194,38 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   have hA6 := consW_afr h6 hR5.abs
   exact RefE.ret rfl ⟨hR5.stage.of_pstep hS6 hA6 (PStep.refl hR5.stage.check.state),
     (hg04.trans hR5.grow).trans hg6, by simpa using hd6, hR5.pos.fr hf6, hA6⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hIlpf hLC henv in
 /-- **`class_majors` refines `classMajors`** under `StageC` (the knot's core calls in
 `target_major_pins`; the inputs' denotations as con-ron's `classMajors_spec` asks): the keys a slice
 of `ClassKey` records decoded below the tops; the classes a slice of fresh `TargetMajor` records. -/
 @[refines ConRon.Arena.classMajors]
-theorem classMajors_refinesC (hP : ClmProg p) (n : Nat)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (pp cao cal pfo pfl ko kl : Word)
-    (bs : BlockShape) (css : List (List (IConstantVal × Nat))) (pfvs : List EIdx)
+theorem classMajors_refinesC (hP : ClmProg p) (hF : FtProg p) (hFk : FkcProg p) (hWt : WhnfTopE p) (n : Nat)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (pp pfo pfl ko kl : Word)
+    (bs : BlockShape) (pfvs : List EIdx)
     (ks : List ClassKey) (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
     (hq' : DecB (fun m => decBS m pp.toNat) s₀.mem bs) (hsrc : ShapeSrc s₀.mem pp)
-    (hcss : PSlR decCNS css cao cal s₀.mem)
     (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) s₀.mem pfvs)
     (hpfb : pfo.toNat + pfl.toNat ≤ iwTop s₀.mem) (hks : PSlR decCK ks ko kl s₀.mem)
-    (hPm : PosMR s₀.mem) {pP : ConLeche.BlockShape} {cssP : List (List (ConLeche.ConstantVal × Nat))}
+    (hPm : PosMR s₀.mem) {pP : ConLeche.BlockShape}
     {pfvsP : List ConLeche.Expr} {ksP : List ConLeche.ClassKey}
     (hpw : ∀ x ∈ pfvsP, ConLeche.Expr.WScoped pP.nP x)
     (hsc : ∀ key ∈ ksP, ∀ x ∈ key.ds, ∃ D, ConLeche.Expr.WScoped D x)
     (hsh : ConRon.Bridge.Inductives.dShape a₀.store bs = some pP)
-    (hcas : css.mapM (ConRon.Bridge.Inductives.dCtors a₀.store) = some cssP)
     (hpfP : Frontend.denoteEList a₀.store pfvs = some pfvsP)
     (hksP : ks.mapM (ConRon.Bridge.Inductives.dClassKey a₀.store) = some ksP) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_majors" [vis, pp, cao, cal, pfo, pfl, ko, kl]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classMajors V fe bs css pfvs ks) a₀ ∧
-      StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classMajors V fe bs css pfvs ks) a₀) ∧
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_majors" [vis, pp, pfo, pfl, ko, kl]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classMajors V fe bs pfvs ks) a₀ ∧
+      StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classMajors V fe bs pfvs ks) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
-      PSlR decTM (AM.res (ConRon.Arena.classMajors V fe bs css pfvs ks) a₀) (r.headD 0)
+      PSlR decTM (AM.res (ConRon.Arena.classMajors V fe bs pfvs ks) a₀) (r.headD 0)
         (r.tail.headD 0) s'.mem ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (RefE.triple (clmE_spec p hP n s₀ vis pp cao cal pfo pfl ko kl)
-    (clm_ref hq hIlpf hLC henv hP pp cao cal pfo pfl bs css pfvs pP cssP pfvsP hpw n hn _ a₀ ko kl ks ksP
-      hC hA hq' hsrc hcss hpf hpfb hks hPm hsc hsh hcas hpfP hksP)) ?_
+  refine triple_post (RefE.triple (clmE_spec p hP n s₀ vis pp pfo pfl ko kl)
+    (clm_ref hq hIlpf hLC henv hP hF hFk hWt pp pfo pfl bs pfvs pP pfvsP hpw n hn _ a₀ ko kl ks ksP
+      hC hA hq' hsrc hpf hpfb hks hPm hsc hsh hpfP hksP)) ?_
   rintro r s' ⟨hl', c, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl', hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.dec, hR.pos, hR.abs⟩
--/
 
 end sims
 

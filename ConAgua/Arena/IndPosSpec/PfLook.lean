@@ -88,6 +88,8 @@ open L.Arena
 structure PfLook (p : Prog) : Prop where
   ha : p.lookup "iw_alloc" = some iwAlloc
   h2 : p.lookup "rec2" = some rec2
+  h3 : p.lookup "rec3" = some rec3
+  hsg : p.lookup "sl_getd" = some slGetD
   h4 : p.lookup "rec4" = some rec4
   hrg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo
   hr : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles
@@ -107,7 +109,6 @@ namespace L.Ind
 
 open L.Arena
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The `.fvar` arm of `nestPos`, its result kind to `K` (the twin's text). -/
 def pfK {β : Type} (fe : IFEnv) (ctx : NestCtx) (prog : List NestHole) (kb hi i : Nat) (args : List EIdx)
     (K : NestFieldKind → AM β) : AM β :=
@@ -115,10 +116,7 @@ def pfK {β : Type} (fe : IFEnv) (ctx : NestCtx) (prog : List NestHole) (kb hi i
   | none => fail nestNonValid
   | some h => do
     if ← args.anyM (fun x => ConRon.Arena.nestOcc ctx.names ctx.nP hi x) then fail nestNonValid
-    else do
-      let ar ← ConRon.Arena.nestArity fe h.key.cname
-      if args.length + h.key.ds.length == ar then K (holeKind ctx kb i) else fail nestNonValid
--/
+    else if args.length == h.nIdx then K (holeKind ctx kb i) else fail nestNonValid
 
 end L.Ind
 

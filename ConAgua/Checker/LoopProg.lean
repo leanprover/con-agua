@@ -10,6 +10,7 @@ import ConAgua.Checker.LoopAll
 import ConAgua.Checker.RomProgB
 import ConAgua.Rom.CIReadRefs
 public import ConAgua.Arena.LoopStart
+public import ConAgua.Checker.RomCProg
 import ConAgua.Checker.IndMemoClosed
 meta import ConAgua.Checker.LoopProgInd
 meta import ConAgua.Checker.LoopDeclArm
@@ -25,6 +26,10 @@ meta import ConAgua.Checker.IndMemoClosed
 import ConAgua.Checker.LoopProgTac
 public import ConAgua.Checker.Prog
 public import ConAgua.Rom.Stage
+import all ConAgua.Arena.BasisL
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.IndStream
+import all ConAgua.Rom.CIConst
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
@@ -176,10 +181,10 @@ import all ConAgua.Scan.Values
 
 The ROM readers' refinements (`RomRefs`) hold of a program whose readers read the ROM as constant
 data (`romRefs_of`), not of `checkerProg`, whose readers read the buffer `PB`. As for the ROM
-stages (`Rom/Stage.lean`), the loop is proved at `checkerProg.subPB bs` (`bs` the buffer
-`pb_check` accepted) and carried to `checkerProg` by `triple_subPB`. Here its program hypotheses
-at the substituted program: `LoopCallees` (`checkerProg_loopCalleesPB`) and `LoopTopProg`
-(`checkerProg_loopTopPB`).
+stages (`Rom/Stage.lean`), the check phase is proved at `checkerProg.subPB bs` (`bs` the buffer
+`pb_check` accepted) and carried to `checkerProg` by `triple_subPB`. Here the pieces of its program
+hypotheses at the substituted program (assembled for the jobs in `JobsProg.lean`) and
+`LoopTopProg` (`checkerProg_loopTopPB`).
 
 * Lookups: `prog_bundle` (`LoopProgTac.lean`): a function that reads no pin data is unchanged
   (`lkN`), the seven readers (`pbReadFns`) are their `subPB` (`lkR`).
@@ -269,17 +274,20 @@ def pbReadFns : List FnName :=
 
 names_tree pbReadTree : pbReadFns
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Every function of `checkerProg` but the readers reads no pin data. -/
 prog_all checkerProg_pbFree : checkerProg
   (fun x => (pbReadTree.find (nameCode x.1)).isSome || x.2.body.noPB)
--/
 
 /-- **Off the readers the substituted program is `checkerProg`.** -/
 theorem checkerProg_subPB_lookup (bs : List UInt8) {f : FnName}
     (hf : (pbReadTree.find (nameCode f)).isSome = false) :
     (Prog.subPB bs checkerProg).lookup f = checkerProg.lookup f := by
-  sorry
+  cases e : checkerProg.lookup f with
+  | none => rw [lookup_subPB, e]; rfl
+  | some fd =>
+    have h := checkerProg_pbFree _ (mem_of_lookup e)
+    simp only [hf, Bool.false_or] at h
+    exact lookup_subPB_noPB bs e h
 
 /-- Agreement of the substituted program with a text, off the readers. -/
 theorem agree_subPB (bs : List UInt8) {q : Prog} {fs : List FnName}
@@ -319,42 +327,27 @@ theorem checkerProg_lvlTextPB (bs : List UInt8) :
 theorem checkerProg_natArmPB (bs : List UInt8) :
     ProgHas (Prog.subPB bs checkerProg) natArmProg' := by prog_bundle []
 
+/-- The canonical comparisons' lookups at the substituted checker. -/
+theorem checkerProg_canonPB (bs : List UInt8) : L.Ind.CanonProg (Prog.subPB bs checkerProg) := by
+  prog_bundle []
+
 theorem checkerProg_natAgreePB (bs : List UInt8) :
     ∀ f ∈ natFns, (Prog.subPB bs checkerProg).lookup f = natArmProg'.lookup f :=
   ProgHas.agreeNames (checkerProg_natArmPB bs)
 
 /-! ## The ROM readers -/
 
-theorem checkerProg_romCIProg (bs : List UInt8) : RomCIProg bs (Prog.subPB bs checkerProg) := by
-  prog_bundle [checkerProg_itemsProg bs]
+theorem checkerProg_romCIProg (bs : List UInt8) :
+    RomCIProg romDataLit (Prog.subPB bs checkerProg) := by
+  prog_bundle [checkerProg_romCVia bs, checkerProg_romCRen bs]
 
-/-- **The ROM readers of the substituted program refine the twin**, for a buffer that
-`pb_check` accepts. -/
-theorem checkerProg_romRefsPB (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) : RomRefs (Prog.subPB bs checkerProg) :=
-  romRefs_of _ ⟨bs, _, hr, hpre, checkerProg_romCIProg bs⟩
+/-- **The ROM readers of the substituted program refine the twin** (they read the constant data,
+so any buffer). -/
+theorem checkerProg_romRefsPB (bs : List UInt8) (_hr : RomOK bs)
+    (_hpre : bs = romData ++ bs.drop romData.length) : RomRefs (Prog.subPB bs checkerProg) :=
+  romRefs_of _ (checkerProg_romCIProg bs)
 
 /-! ## The loop's program hypotheses -/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The declaration loop's callees at the substituted checker program.** -/
-theorem checkerProg_loopCalleesPB (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) :
-    ∀ dn, L.Ind.DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn → QuotDn dn →
-      LoopCallees dn (Prog.subPB bs checkerProg) := by
-  intro dn hdn harm hq
-  have hrom := checkerProg_romRefsPB bs hr hpre
-  prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
-    checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
-    checkerProg_natGateIn.subPB bs, checkerProg_dgIn.subPB bs, checkerProg_indIn.subPB bs,
-    (closedW_subPB bs checkerProg_leafClosed : LeafClosed (Prog.subPB bs checkerProg)),
-    (closedW_subPB bs checkerProg_loopClosed : LoopClosed (Prog.subPB bs checkerProg)),
-    (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
-    closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
-    (closedWL_subPB bs checkerProg_indMemo : IndMemoClosed (Prog.subPB bs checkerProg)),
-    (by prog_bundle [] : L.Ind.CrfF (Prog.subPB bs checkerProg)),
-    hdn, harm, hq, hrom]
--/
 
 /-- **The loop's own program hypotheses at the substituted checker program.** -/
 theorem checkerProg_loopTopPB (bs : List UInt8) : LoopTopProg (Prog.subPB bs checkerProg) := by

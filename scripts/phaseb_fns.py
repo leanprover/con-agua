@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate `phaseBFns` in ConAgua/Checker/PhaseBReads.lean: the call closure of `check_pending_go` in
+"""Regenerate `phaseBFns` in ConAgua/Checker/PhaseBReads.lean: the call closure of `check_b` in
 `checkerProg` (lane parmode's read set; `ConAgua/Checker/PhaseBReads.lean` fails when it is stale).
 Needs ConAgua.Checker.Prog built. Usage: scripts/phaseb_fns.py [--check]"""
 import os, re, subprocess, sys

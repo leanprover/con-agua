@@ -5,6 +5,7 @@ public import ConAgua.Checker.HoistOrderRef
 public import ConAgua.Checker.HoistIndexRef
 public import ConAgua.Checker.HoistNatRef
 public import ConAgua.Checker.HoistWalkRef
+import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 
@@ -52,13 +53,8 @@ theorem allocW_afr {m m₁ : Mem} {k q : Word} (hw : allocW m k = some (q, m₁)
   obtain ⟨hq, hm1, hk, hroom, htop⟩ := allocW_post hw hI
   have hf : MemFrame [IW] [200] m m₁ := by
     rw [hm1]; exact (MemFrame.setCtl m 200 _).mono (by simp) (by simp)
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hI
-  have hsz := hf.size
-  have hER : m₁.arr64 EREC = m.arr64 EREC := hf.arr EREC (by decide) (by decide)
-  have h129 : erTop m₁ = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by decide)]
-  refine ⟨⟨hf, hk.1, ?_⟩, by rw [hq]; rfl, htop, hroom⟩
-  exact ⟨by rw [htop, hsz IW]; exact hroom, by rw [h129, hER]; exact h2, by rw [hsz IW]; exact h3,
-    by rw [hER]; exact h4, by rw [hsz CTL]; exact h5⟩
+  exact ⟨⟨hf, hk.1, IWOK.of_iw hf hI (by rw [htop, hf.size IW]; exact hroom)⟩, by rw [hq]; rfl,
+    htop, hroom⟩
 
 /-- **The hoist on the model**: when `hoist_nat_op_ground(ord, c)` returns `r`, the twin's
 `hoistNatOpGround ds` succeeds in the same state, and the slice `IW[r ‥ r + c)` is its records'
@@ -97,12 +93,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   have hf₀₁ : MemFrame [HNIX] [75, 76] m m₁ := (hfc.mono (by simp) (by simp)).trans hf₁
   have hIW₁ : m₁.arr64 IW = m.arr64 IW := hf₀₁.arr IW (by decide) (by decide)
   have htop₁ : iwTop m₁ = iwTop m := by simp only [iwTop]; rw [hf₀₁.ctl 200 (by decide)]
-  have hI₁ : IWOK m₁ := by
-    obtain ⟨h1, h2, h3, h4, h5⟩ := hI
-    have hER : m₁.arr64 EREC = m.arr64 EREC := hf₀₁.arr EREC (by decide) (by decide)
-    have h129 : erTop m₁ = erTop m := by simp only [erTop]; rw [hf₀₁.ctl 129 (by decide)]
-    exact ⟨by rw [htop₁, hIW₁]; exact h1, by rw [h129, hER]; exact h2, by rw [hIW₁]; exact h3,
-      by rw [hER]; exact h4, by rw [hf₀₁.size CTL]; exact h5⟩
+  have hI₁ : IWOK m₁ := IWOK.of_keep hf₀₁ (by decide) (by decide) hI
   -- the targets and the stack
   rcases ha₁ : allocW m₁ cw with _ | ⟨tg, m₂⟩ <;> rw [ha₁] at h
   · simp [hNatOpGroundW.k_iw_alloc.eq_1] at h
@@ -131,12 +122,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       (hf₄.mono (by simp) (by simp))
   have hD₄ : m₄.arr64 DECL = m.arr64 DECL := hfA.arr DECL (by decide) (by decide)
   have hDLP₄ : m₄.arr64 DLP = m.arr64 DLP := hfA.arr DLP (by decide) (by decide)
-  have hI₄ : IWOK m₄ := by
-    obtain ⟨h1, h2, h3, h4, h5⟩ := hA₃.ok
-    have hER : m₄.arr64 EREC = m₃.arr64 EREC := hf₄.1 EREC (by decide) (by decide)
-    have h129 : erTop m₄ = erTop m₃ := by simp only [erTop]; rw [hf₄.ctl 129 (by simp)]
-    exact ⟨by rw [htop₄, hf₄.size IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hf₄.size IW]; exact h3, by rw [hER]; exact h4, by rw [hf₄.size CTL]; exact h5⟩
+  have hI₄ : IWOK m₄ := iwok_frame hf₄ hA₃.ok
   have hA4 : ∀ b ∈ ([IW, HNIX] : List TieredArray), InHigh b := by decide
   have hC4 : ∀ x ∈ ([75, 76, 200] : List Word), 64 ≤ x.toNat := by simp
   have hE₄ : HEnv m₄ a ds (nameIndex ds ∅ 0) ord tg ws cw.toNat := by
@@ -177,7 +163,12 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       rw [hlow₅.fr.1 EREC (by decide) (by decide), hfA.arr EREC (by decide) (by decide)]
     have h129 : erTop m₅ = erTop m := by
       simp only [erTop]; rw [hlow₅.fr.ctl 129 (by decide), hfA.ctl 129 (by decide)]
-    refine ⟨by have := hlow₅.top; omega, by rw [h129]; exact Nat.le_refl _, fun x hx => ?_, fun x _ => by rw [hER]⟩
+    have hER1 : m₅.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := by
+      rw [hlow₅.fr.1 (tier1 EREC) (by decide) (by decide), hfA.arr (tier1 EREC) (by decide) (by decide)]
+    have h130 : erecTop1 m₅ = erecTop1 m := by
+      simp only [erecTop1]; rw [hlow₅.fr.ctl 130 (by decide), hfA.ctl 130 (by decide)]
+    refine ⟨by have := hlow₅.top; omega, by rw [h129]; exact Nat.le_refl _, fun x hx => ?_,
+      fun x _ => by rw [hER], by rw [h130]; exact Nat.le_refl _, fun x _ => by rw [hER1]⟩
     rw [hlow₅.low x (by omega), hlow x (by omega)]
   have hrun0 : (hoistNatOpGround IDeclaration.usedConsts ds).run a =
       ((if T.isEmpty then pure (ds, #[]) else pure (applyHoist ds T) :

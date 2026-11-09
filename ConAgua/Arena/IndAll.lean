@@ -5,7 +5,6 @@ public import ConAgua.Arena.IndArmBridge2
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.IndRealSctC
 public import ConAgua.Arena.IndRealPartsC2
-public import ConAgua.Arena.IndRealSortDn
 public import ConAgua.Arena.IndArmLps
 
 @[expose] public section

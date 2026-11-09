@@ -53,7 +53,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## The loop's refinement -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What `classes_nfs`' loop gives besides the twin's records `rest` (from cursor `j`, the records
 `acc` before it; the classes' slice `(mo, ml)` and the inputs in `mb`, the result slots at `qr`):
 the stage, the growth from `mb`, the result slots below the top, the memos, `AbsOK`, and the
@@ -68,7 +67,6 @@ structure CnsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   abs : AbsOK m'
   recs : ∃ ws', decNL m' qr.toNat ml.toNat = some ws' ∧
     FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m') ws' (acc ++ rest)
--/
 
 section loop
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -78,7 +76,6 @@ variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLech
   {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
 include hkp henv P
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`classes_nfs`' loop refines `classesNfs`, both outcomes** (twin side: con-ron's `classesNfs_spec`'s
 list induction): per class `target_major_nfs` (`tmn_ref` through its run; on an ok run con-ron's
 `targetMajorNfs_spec` for the extension), `iw_alloc` and the record's copy (L only, class `0` on
@@ -124,7 +121,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   obtain ⟨p0, hp0, hsrc⟩ := decPL_getH (truncM mb) hms0 j.toNat hjl
   obtain ⟨hp0t, hp0m⟩ := rec2IwN_trunc hp0
   have hp0m' : iwN m (mo.toNat + j.toNat) = some p0 := by
-    simp only [iwN, nat?, iwA] at hp0m ⊢; rw [hg.iwGet _ hp0t]; exact hp0m
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply] at hp0m ⊢; rw [hg.iwGet _ hp0t]; exact hp0m
   obtain ⟨hrd, hp0b⟩ := iwN_rdW_at (w := mo) (k := j.toNat) hp0m' hsz
   rw [show mo + UInt64.ofNat j.toNat = mo + j by simp] at hrd
   rw [cnsE_step (h := hj), hrd]
@@ -156,7 +153,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   obtain ⟨hes, hC1, hg1, hP1, hA1, hptrs⟩ := hR1
   obtain ⟨hfr, pse, hpse, hpseb⟩ := hptrs mb tps (by rw [decNL_grow hg htbl.bound]; exact htps) htpb
   dsimp only at hes hC1 hg1 hP1 hA1 hfr hpse
-  obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core)
     henv bs pP formerTys _ formerTysP _ _ _ _ _ _ _ hformer hscp tbl tblP a a1 es hC.check
     ⟨hsh, hftP, hpfvsP, hlvls, hdsP, hctorsP, htblP⟩ run1
   have hS1 := hC1.stage
@@ -248,12 +245,12 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     exact hP2.fr (hP3.trans ((((MFr.set_iw _ _ _).trans (MFr.set_iw _ _ _)).trans (MFr.set_iw _ _ _)).trans
       ((MFr.set_iw _ _ _).trans (MFr.set_iw _ _ _))))
   -- the record's words
-  have hsrcw : ∀ t, t < 13 → ∀ v, (iwA (truncM mb))[p0 + t]? = some v →
+  have hsrcw : ∀ t, t < 13 → ∀ v, iwA (truncM mb) (p0 + t) = some v →
       rdW (s2.mem.arr64 IW) (UInt64.ofNat p0 + UInt64.ofNat t) = v := by
     intro t ht v hv
     obtain ⟨hlt, hv'⟩ := truncM_iw_get hv
     have e : (s2.mem.arr64 IW)[p0 + t]? = (mb.arr64 IW)[p0 + t]? := ((hg.trans hg1).trans hg2).iwGet _ hlt
-    simp only [rdW, hmt t ht, e]; simp only [iwA] at hv'; rw [hv']; rfl
+    simp only [rdW, hmt t ht, e]; simp only [iwA, aread_apply, aread_apply] at hv'; rw [hv']; rfl
   have hlow : ∀ i, i < nm.toNat → (mC.arr64 IW)[i]? = (s2.mem.arr64 IW)[i]? := by
     intro i hi
     rw [← hC, set64IW_get, ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get,
@@ -267,7 +264,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     intro t ht
     rw [← hrdC t ht, ← hC, rdW_set_ne (by rw [hmt t ht, hn11]; omega)]
   have hwords : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 →
-      (m4.arr64 IW)[nm.toNat + k]? = (iwA (truncM mb))[p0 + k]? := by
+      (m4.arr64 IW)[nm.toNat + k]? = iwA (truncM mb) (p0 + k) := by
     intro k hk h9 h10
     obtain ⟨v, hv⟩ := decTM_get hsrc k hk
     rw [hv, ← hE, set64IW_get, ite_eq_right (by omega)]
@@ -283,12 +280,12 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     rw [← hC, set64IW_get, ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get,
       ite_eq_right (by omega), g2 k (by simp) (by omega), hsrcw k hk v hv]
   have hw9 : iwN m4 (nm.toNat + 9) = some (r1.headD 0).toNat := by
-    simp only [iwN, nat?, iwA]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]
     rw [← hE, set64IW_get, ite_eq_right (by omega), ← hD, set64IW_get, ite_eq_right (by omega), ← hC, set64IW_get,
       ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_right (by omega), ← hA, set64IW_get, ite_eq_left ⟨by omega, by rw [hn9] at b9; exact b9⟩]
     rfl
   have hw10 : iwN m4 (nm.toNat + 10) = some (r1.tail.headD 0).toNat := by
-    simp only [iwN, nat?, iwA]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]
     rw [← hE, set64IW_get, ite_eq_right (by omega), ← hD, set64IW_get, ite_eq_right (by omega), ← hC, set64IW_get,
       ite_eq_right (by omega), ← hB, set64IW_get, ite_eq_left ⟨by omega, by rw [szA]; rw [hn10] at b10; exact b10⟩]
     rfl
@@ -308,7 +305,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have hws4 : decNL m4 qr.toNat (j + 1).toNat = some (ws ++ [nm.toNat]) := by
     rw [hj1, decNL_snoc, decNL_frX hFr (by omega) (by right; right; omega), hws]
     have : iwN m4 (qr.toNat + j.toNat) = some nm.toNat := by
-      simp only [iwN, nat?, iwA]
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply]
       rw [← hE, set64IW_get, ite_eq_left ⟨hqj.symm, by rw [szD]; rw [hqj] at bq; exact bq⟩]
       rfl
     simp [this]
@@ -324,7 +321,6 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   rw [hj1] at this
   exact RefE.tailMap_pure (k := id) (f := id) (fun _ => rfl) (fun _ => rfl) id
     (fun _ _ _ hR => ⟨hR.stage, hR.grow, hR.top, hR.rc, hR.abs, by simpa using hR.recs⟩) this
--/
 
 end loop
 

@@ -54,7 +54,7 @@ theorem adF_ok {P : Prog} {fF g : FnName} {op : Nat → EIdx → AM EIdx}
     (href : ∀ k s₀ a₀, ArenaR s₀.mem a₀ → ∀ e, HW e → ⦃fun s => s = s₀⦄ invoke P (exec P k) g [e]
       ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ HW (r.headD 0) ∧
         (op coreWalkFuel (decE e)).run a₀ = .ok (decE (r.headD 0), a₀); ⊤⦄)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
+    (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
     RelW (callF P fF) [f, e] (StageR vis fe) (op f.toNat (decI e)) (KeepPost vis fe decW0E) := by
   intro m m' a r h hS
   obtain ⟨n, hc⟩ := callF_run h
@@ -110,9 +110,9 @@ theorem gafF_spec0 (p : Prog) (hp : GafF p) (n : Nat) (s₀ : St) (args : List W
 
 /-- **`get_app_fn_f`'s model refines `getAppFn`** (replaces `IndStubs.getAppFn_spec`): memory and
 twin state unchanged. -/
-theorem gafF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
+theorem gafF_ok (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
     RelW gafF [f, e] (StageR vis fe) (getAppFn f.toNat (decI e)) (KeepPost vis fe decW0E) :=
-  adF_ok (fun k s f e => gafAd_spec gafProg rfl k s f e) (getAppFn_refines' gafProg rfl) dn vis fe f e he
+  adF_ok (fun k s f e => gafAd_spec gafProg rfl k s f e) (getAppFn_refines' gafProg rfl) vis fe f e he
 
 /-- `get_app_fn_f` writes nothing. -/
 theorem gafF_frame {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) :
@@ -159,9 +159,9 @@ theorem pirF_spec0 (p : Prog) (hp : PirF p) (n : Nat) (s₀ : St) (args : List W
 
 /-- **`pi_result_f`'s model refines `piResult`** (replaces `IndStubs.piResult_spec`): memory and
 twin state unchanged. -/
-theorem pirF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
+theorem pirF_ok (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
     RelW pirF [f, e] (StageR vis fe) (piResult f.toNat (decI e)) (KeepPost vis fe decW0E) :=
-  adF_ok (fun k s f e => pirAd_spec pirProg rfl k s f e) (piResult_refines' pirProg rfl) dn vis fe f e he
+  adF_ok (fun k s f e => pirAd_spec pirProg rfl k s f e) (piResult_refines' pirProg rfl) vis fe f e he
 
 /-- `pi_result_f` writes nothing. -/
 theorem pirF_frame {m m' : Mem} {args r : List Word} (h : pirF m args = some (r, m')) :
@@ -304,11 +304,84 @@ theorem mknF_frame {m m' : Mem} {args r : List Word} (h : mknF m args = some (r,
 to the stack top, `mk_app_n` (lane `whnf`'s `mkAppNFromW_ok` under `ArenaD`), the top put back;
 the stage relation across the copy and the top (above array 136, `stageR_hi`) and across
 `mk_app` (the app tables, below 64, `StageR.of_walk`; the twin keeps `cp`). -/
-theorem mknF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f o l : Word) (hf : H f)
+theorem mknF_ok (vis : Word) (fe : IFEnv) (f o l : Word) (hf : H f)
     (xs : List EIdx) :
     RelW mknF [f, o, l] (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
       (mkAppN (decI f) xs) (KeepPost vis fe decW0E) := by
-  sorry
+  intro m m' a r h ⟨hS, hxs⟩
+  obtain ⟨n, hc⟩ := callF_run h
+  rcases n with _ | k
+  · simp [callW_zero] at hc
+  have c' := callW_model (M := fun mm => mknAdW mknProg k mm f o l)
+    (fun s => mknAd_spec mknProg rfl k s f o l) hc
+  simp only [mknAdW] at c'
+  obtain ⟨g1, c'⟩ := of_ite_none c'
+  obtain ⟨g2, c'⟩ := of_ite_none c'
+  generalize htop : rdW (m.arr64 CTL) 136 = top at c' g1 g2
+  cases c1 : callW mknProg k "iw_to_spn" [top, o, l] m with
+  | none => rw [c1] at c'; simp at c'
+  | some q1 =>
+  obtain ⟨r1', m1⟩ := q1
+  rw [c1, bW_some] at c'
+  obtain ⟨⟨r2, m2⟩, c2, c'⟩ := of_K (K := (ntBW · _)) c' rfl; rw [bW_some] at c'
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
+  -- the room: `top + l ≤ len64 SPN ≤ |SPN|`, no wrap
+  have hlen : (m.len64 SPN).toNat ≤ (m.arr64 SPN).size ∧ (m.len64 SPN).toNat < 2 ^ 64 := by
+    refine ⟨?_, UInt64.toNat_lt _⟩
+    show (((m.arr64 SPN).size : Nat).toUInt64).toNat ≤ _
+    simp only [Nat.toUInt64]; exact Nat.mod_le _ _
+  have hroom : top.toNat + l.toNat ≤ (m.len64 SPN).toNat := by
+    have a1 := UInt64.not_lt.mp g1
+    have a2 := UInt64.not_lt.mp g2
+    rw [UInt64.le_iff_toNat_le] at a1
+    rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp g1)] at a2
+    omega
+  -- the copy
+  obtain ⟨t1, ht1, -, hW1⟩ := triple_of_callW (i2s_spec mknProg rfl k ⟨m, Locals.init []⟩ top o l) c1
+  rw [ht1] at hW1
+  obtain ⟨hfr1, hiw1, hget1, -⟩ := i2sW_ok _ m m1 top o l r1' hW1 (by omega) (by omega)
+  have hfrA : MemFrame [SPN] [136] m (m1.set64 CTL 136 (top + l)) :=
+    (hfr1.mono (fun b hb => hb) (fun x hx => by simp at hx)).trans
+      ((MemFrame.setCtl m1 136 _).mono (fun b hb => by simp at hb) (fun x hx => hx))
+  obtain ⟨hS1, hg1⟩ := stageR_hi hS hfrA (by simp [SPN]) (by simp) (by decide) (by decide)
+  have hspn1 : ∀ w, spW (m1.set64 CTL 136 (top + l)) w = spW m1 w := fun w => by
+    simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hsz1 : ((m1.set64 CTL 136 (top + l)).arr64 SPN).size = (m.arr64 SPN).size := hfrA.size SPN
+  have hl : xs.length = l.toNat := decHL_length m hxs
+  have hiwsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
+  have hsp : SpineR (m1.set64 CTL 136 (top + l)) top l xs.toArray := by
+    refine ⟨by simp [hl], by rw [hsz1]; omega, fun i hi => ?_, fun i hi => ?_⟩
+    · obtain ⟨w, hw, hw32, -⟩ := decHL_word hxs hiwsz i hi
+      rw [hspn1, hget1 i hi, hw]; exact hw32
+    · have hi' : i < l.toNat := by simpa [hl] using hi
+      obtain ⟨w, hw, -, hx⟩ := decHL_word hxs hiwsz i hi'
+      rw [hspn1, hget1 i hi', hw]
+      have := List.getElem?_eq_getElem (l := xs) (i := i) (by omega)
+      rw [hx] at this
+      simp only [List.getElem_toArray]
+      exact (Option.some.inj this).symm
+  -- `mk_app_n`
+  obtain ⟨t2, ht2, -, hL⟩ := triple_of_callW
+    (mkAppNL_spec mknProg rfl rfl rfl rfl rfl rfl k ⟨m1.set64 CTL 136 (top + l), Locals.init []⟩
+      f top l) c2
+  rw [ht2] at hL
+  have h0 : (0 : Word).toNat = 0 := rfl
+  obtain ⟨hok, hD2, hres⟩ := mkAppNFromW_ok l.toNat _ a f top l 0 xs.toArray (by rw [h0]; omega)
+    (by rw [h0]; omega) hS1.check.arena hsp (r2.headD 0) m2 hL
+  have hhw := mkAppNFromW_hw l.toNat _ a f top l 0 (by rw [h0]; omega) hS1.check.arena hf _ _ hL
+  have hfr2 := mkAppNFromW_frame l.toNat _ m2 f top l 0 (r2.headD 0) hL
+  have hkeep := keeps_cpl_mkAppNFrom (decE f) xs.toArray 0
+  rw [h0, mkAppNFrom_eq_mkAppN, List.toList_toArray] at hok hD2 hres
+  rw [mkAppNFrom_eq_mkAppN, List.toList_toArray] at hkeep
+  have hrun := AM.run_of_ok _ a hok
+  have hcp : cp (AM.st (mkAppN (decE f) xs) a) = cp a :=
+    congrArg (fun x => (x.1, x.2.1)) (hkeep.run hrun)
+  obtain ⟨hS2, hg2⟩ := StageR.of_walk hS1 hD2 hfr2
+    (fun b hb => by simp only [tier1, List.mem_cons, List.not_mem_nil] at hb; rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | h <;> simp_all [AREC, ASLOT, ADER])
+    (fun x hx => by simp only [List.mem_cons, List.not_mem_nil] at hx; rcases hx with rfl | rfl | h <;> simp_all) hcp
+  -- the top put back
+  obtain ⟨hS3, hg3⟩ := stageR_hi hS2 (MemFrame.setCtl m2 136 top) (by simp) (by simp) (by decide) (by decide)
+  exact ⟨_, _, hrun, hS3, hg1.trans (hg2.trans hg3), hhw, hres.symm⟩
 
 /-! ## The bundle -/
 

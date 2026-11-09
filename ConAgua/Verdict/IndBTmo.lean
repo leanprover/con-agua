@@ -30,16 +30,14 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model tmoE_spec (p : Prog) (P : TmoOProg p)
   fns [P.out ↦ tmoE]
   specs [tmtE_spec p P.tmt n, callW_spec p n "pin_at", callW_spec p n "target_ctors_of",
     callW_spec p n "target_major_of_outside_closed", callW_spec p n "target_major_of_outside_occ"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
 end L.Ind
 

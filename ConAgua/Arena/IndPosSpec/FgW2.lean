@@ -4,6 +4,7 @@ public import ConAgua.Arena.IndPosSpec.CtxFields
 public import ConAgua.Arena.IndPosSpec.GrpAt
 public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.IndPosSpec.MatesW
+public import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -91,7 +92,12 @@ def fgW : Nat → Mem → Word → Word → Word → Word → Word → Word → 
       (posRecW m [rdW (m.arr64 IW) (rdW (m.arr64 IW) gO), us, dO, dL])
 def fgK1 (n : Nat) (hi us dO dL gO gL pO pL nO nL c : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (key, m1) => fgK2 n hi us dO dL gO gL pO pL nO nL c (posRecW m1 [key, hi])
+  | some (key, m1) => fgKb n hi us dO dL gO gL pO pL nO nL c key
+      (piBW n m1 CWF (rdW (m1.arr64 IW) (rdW (m1.arr64 IW) gO + 1)))
+def fgKb (n : Nat) (hi us dO dL gO gL pO pL nO nL c key : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rs, m1) => fgK2 n hi us dO dL gO gL pO pL nO nL c (posRecW m1 [key, hi, rs.getD 1 0])
 def fgK2 (n : Nat) (hi us dO dL gO gL pO pL nO nL c : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (hole, m2) => fgK3 n hi us dO dL gO gL nO nL c (snocW n m2 pO pL hole)
@@ -111,7 +117,10 @@ theorem fgW_cons (h : ¬ gL = 0) : fgW (n + 1) m hi us dO dL gO gL pO pL nO nL =
     fgK1 n hi us dO dL gO gL pO pL nO nL (rdW (m.arr64 IW) (rdW (m.arr64 IW) gO))
       (posRecW m [rdW (m.arr64 IW) (rdW (m.arr64 IW) gO), us, dO, dL]) := by simp [fgW, h]
 theorem fgK1_some : fgK1 n hi us dO dL gO gL pO pL nO nL c (some (key, m1)) =
-    fgK2 n hi us dO dL gO gL pO pL nO nL c (posRecW m1 [key, hi]) := by rw [fgK1]
+    fgKb n hi us dO dL gO gL pO pL nO nL c key
+      (piBW n m1 CWF (rdW (m1.arr64 IW) (rdW (m1.arr64 IW) gO + 1))) := by rw [fgK1]
+theorem fgKb_some : fgKb n hi us dO dL gO gL pO pL nO nL c key (some (r, m1)) =
+    fgK2 n hi us dO dL gO gL pO pL nO nL c (posRecW m1 [key, hi, r.getD 1 0]) := by rw [fgKb]
 theorem fgK2_some : fgK2 n hi us dO dL gO gL pO pL nO nL c (some (key, m1)) =
     fgK3 n hi us dO dL gO gL nO nL c (snocW n m1 pO pL key) := by rw [fgK2]
 theorem fgK3_some : fgK3 n hi us dO dL gO gL nO nL c (some (r, m1)) =
@@ -119,7 +128,7 @@ theorem fgK3_some : fgK3 n hi us dO dL gO gL nO nL c (some (r, m1)) =
 theorem fgK4_some : fgK4 n hi us dO dL gO gL pO pL (some (r, m1)) =
     fgW n m1 hi us dO dL (gO + 1) (gL - 1) pO pL (r.headD 0) (r.tail.headD 0) := by rw [fgK4]
 end arms
-attribute [ind_grind] fgW_nil fgW_cons fgK1_some fgK2_some fgK3_some fgK4_some
+attribute [ind_grind] fgW_nil fgW_cons fgK1_some fgKb_some fgK2_some fgK3_some fgK4_some
 
 end L.Ind
 
@@ -250,7 +259,8 @@ open L.Arena
 import) -/
 
 def pos2PinW (m : Mem) (i : Word) : Option (List Word × Mem) :=
-  if pinW m 0 = 0 then none else if 51 ≤ i then none else some ([rdW (m.arr64 PINS) (1 + i)], m)
+  if pinW m 0 = 0 then none else if 52 ≤ i then none
+  else if i = 51 then some ([rdW (m.arr64 PINS) 71], m) else some ([rdW (m.arr64 PINS) (1 + i)], m)
 
 end L.Ind
 

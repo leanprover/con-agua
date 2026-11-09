@@ -56,11 +56,20 @@ theorem decCIs_succ {a : Array Word} {off k : Nat}
     {cs : List IConstantInfo} (h : decCIs a off (k + 1) = some cs) :
     ∃ p ci cs', nat? (aread a) off = some p ∧ decCI (aread a) p = some ci ∧ decCIs a (off + 1) k = some cs' ∧
       cs = ci :: cs' := by
-  sorry
+  obtain ⟨ci, cs', h0, hs, rfl⟩ := mapM_range_succ h
+  simp only [Nat.add_zero] at h0
+  cases h1 : nat? (aread a) off with
+  | none => simp [h1] at h0
+  | some p =>
+    simp only [h1, Option.bind_eq_bind, Option.bind_some] at h0
+    refine ⟨p, ci, cs', rfl, h0, ?_, rfl⟩
+    simp only [decCIs]
+    rw [← hs]
+    congr 1; funext j; rw [Nat.add_right_comm, Nat.add_assoc]
 
 theorem decCIs_zero {a : Array Word} {off : Nat}
     {cs : List IConstantInfo} (h : decCIs a off 0 = some cs) : cs = [] := by
-  sorry
+  simp [decCIs] at h; exact h
 
 theorem hd?_some {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? (aread a) i = some x) :
     ∃ w, a[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
@@ -85,11 +94,59 @@ theorem decCI_walk {a : Array Word} {p : Nat} {ci : IConstantInfo}
       ((kw = 5 ∧ ∃ mi rp k ow cw rules, ci = .recInfo cv mi rp k rules ∧ a[p + 7]? = some ow ∧
           a[p + 8]? = some cw ∧ decRules (aread a) ow.toNat cw.toNat = some rules) ∨
         (kw ≠ 5 ∧ ∀ v mi rp k rules, ci ≠ .recInfo v mi rp k rules)) := by
-  sorry
+  simp only [decCI, nat?, aread_apply] at h
+  cases hk : a[p]? with
+  | none => simp [nat?, hk] at h
+  | some kw =>
+  simp only [hk, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  have hne : ∀ n, kw.toNat = n → n ≠ 5 → kw ≠ 5 := by
+    intro n hn h5 e; subst e; exact h5 hn.symm
+  generalize hn : kw.toNat = n at h
+  rcases n with _ | _ | _ | _ | _ | _ | n
+  all_goals
+    simp only [Option.pure_def, Option.bind_eq_some_iff] at h
+  · obtain ⟨cv, hcv, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
+  · obtain ⟨cv, hcv, _, _, _, _, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
+  · obtain ⟨cv, hcv, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
+  · obtain ⟨cv, hcv, _, _, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
+  · obtain ⟨cv, hcv, _, _, _, _, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
+  · obtain ⟨cv, hcv, mi, _, rp, _, k, _, off, ho, cnt, hc, rules, hr, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    have h5 : kw = 5 := UInt64.toNat_inj.mp (by rw [hn]; rfl)
+    cases h7 : a[p + 7]? with
+    | none => rw [h7] at ho; cases ho
+    | some ow =>
+    cases h8 : a[p + 8]? with
+    | none => rw [h8] at hc; cases hc
+    | some cw =>
+    rw [h7] at ho; rw [h8] at hc
+    cases Option.some.inj ho; cases Option.some.inj hc
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inl ⟨h5, mi, rp, k, ow, cw, rules, rfl, rfl, rfl, hr⟩⟩
+  · cases h
 
 theorem decRule_rhs {a : Array Word} {q : Nat} {r : IRecRule} (h : decRule (aread a) q = some r) :
     ∃ w, a[q + 8]? = some w ∧ w.toNat < 2 ^ 32 ∧ r.rhs = decE w := by
-  sorry
+  unfold decRule at h
+  simp only [Option.pure_def, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨n0, -, h⟩ := h
+  have fin : ∀ z (hz : hd? (aread a) (q + 8) = some z), r.rhs = z →
+      ∃ w, a[q + 8]? = some w ∧ w.toNat < 2 ^ 32 ∧ r.rhs = decE w := by
+    intro z hz he; obtain ⟨w, hw, hl, rfl⟩ := hd?_some hz; exact ⟨w, hw, hl, he⟩
+  rcases n0 with _ | _ | _ | n0 <;> simp only [Option.bind_eq_some_iff] at h
+  · obtain ⟨_, -, _, -, _, -, z, hz, he⟩ := h; cases Option.some.inj he; exact fin z hz rfl
+  · obtain ⟨_, -, _, -, _, -, _, -, _, -, z, hz, he⟩ := h; cases Option.some.inj he; exact fin z hz rfl
+  · obtain ⟨_, -, _, -, _, -, _, -, z, hz, he⟩ := h; cases Option.some.inj he; exact fin z hz rfl
+  · simp at h
 
 theorem decRules_facts {a : Array Word} {off cnt : Nat} {rules : List IRecRule}
     (h : decRules (aread a) off cnt = some rules) :

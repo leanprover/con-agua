@@ -85,7 +85,31 @@ theorem nsb_rec6 {m' : Mem} {q kO kL aO aL nO nL : Word} {keys act : List NestKe
     (ha : KsB m' aO.toNat aL.toNat act) (hab : aO.toNat + aL.toNat ≤ iwTop m')
     (hn : NfsB m' nO.toNat nL.toNat nfs) (hnb : nO.toNat + nL.toNat ≤ iwTop m') :
     NSB m' q ⟨keys.toArray, act, nfs.toArray⟩ := by
-  sorry
+  have g : ∀ j < 6, iwA (truncM m') (q.toNat + j) = [kO, kL, aO, aL, nO, nL][j]? := fun j hj => by
+    rw [truncM_iw_eq (by omega)]; exact hget j (by simpa using hj)
+  have n0 : iwN (truncM m') q.toNat = some kO.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 0 (by omega))
+  have n1 : iwN (truncM m') (q.toNat + 1) = some kL.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 1 (by omega))
+  have n2 : iwN (truncM m') (q.toNat + 2) = some aO.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 2 (by omega))
+  have n3 : iwN (truncM m') (q.toNat + 2 + 1) = some aL.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 3 (by omega))
+  have n4 : iwN (truncM m') (q.toNat + 4) = some nO.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 4 (by omega))
+  have n5 : iwN (truncM m') (q.toNat + 4 + 1) = some nL.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 5 (by omega))
+  have rq : ∀ i : Word, i.toNat < 6 → rdW (m'.arr64 IW) (q + i) = [kO, kL, aO, aL, nO, nL][i.toNat]?.getD 0 := by
+    intro i hi
+    have : (q + i).toNat = q.toNat + i.toNat := word_add_toNat (by omega)
+    simp only [rdW, this]; rw [hget _ (by simpa using hi)]
+  have r0 : rdW (m'.arr64 IW) q = kO := by simpa using rq 0 (by decide)
+  have r1 : rdW (m'.arr64 IW) (q + 1) = kL := by simpa using rq 1 (by decide)
+  have r2 : rdW (m'.arr64 IW) (q + 2) = aO := by simpa using rq 2 (by decide)
+  have r3 : rdW (m'.arr64 IW) (q + 3) = aL := by simpa using rq 3 (by decide)
+  have r4 : rdW (m'.arr64 IW) (q + 4) = nO := by simpa using rq 4 (by decide)
+  have r5 : rdW (m'.arr64 IW) (q + 5) = nL := by simpa using rq 5 (by decide)
+  refine ⟨?_, by rw [r0, r1]; exact hkb, by rw [r2, r3]; exact hab, by rw [r4, r5]; exact hnb⟩
+  show decNS (truncM m') q.toNat = _
+  have hk' : decPL (truncM m') (decNK (truncM m')) kO.toNat kL.toNat = some keys := hk
+  have ha' : decPL (truncM m') (decNK (truncM m')) aO.toNat aL.toNat = some act := ha
+  have hn' : decPL (truncM m') (decNCN (truncM m')) nO.toNat nL.toNat = some nfs := hn
+  simp only [decNS, decAt, n0, n1, n2, n3, n4, n5, hk', ha', hn', Option.bind_eq_bind, Option.bind_some,
+    Option.pure_def]
 
 end L.Ind
 
@@ -139,20 +163,61 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
     (hns : NSB m ns2 NS2) (hact : KsB m aO.toNat aL.toNat act) (hab : aO.toNat + aL.toNat ≤ iwTop m) :
     ∃ x a', (cfT c (decI us) ds grp NS2 act kb.toNat).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ r.headD 0 = nestedW kb ∧ decNFK (r.headD 0) = some x.1 ∧ NSB m' (r.tail.headD 0) x.2 := by
-  sorry
+  cases k with
+  | zero => simp [cfW] at h
+  | succ k =>
+  simp only [cfW] at h
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
+  have hdsD := hds.get (OMono.decHL _ _)
+  rcases hdc : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [hdc] at h; · simp [cfK1] at h
+  obtain ⟨b, a1, hrun1, hS1, hg1, hr1⟩ := dcWf_ok dn fe vis k m m1 a ctx dO dL c ds r1 hdc hS hU.dec hU.inn hhi hdsD
+    (fun j hj => by omega)
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
+  have hns1 := hns.grow hg1 htop
+  obtain ⟨hp6, hk1, -, hn1⟩ := nsb_words hns1 htop1
+  have hkb1 := hns1.b0
+  -- the keys, cached or not
+  have hkeys : ∃ (rk : List Word) (mk : Mem), cfK1 k us dO dL gO gL ns2 aO aL kb (some (r1, m1)) =
+      cfK2 ns2 aO aL kb (some (rk, mk)) ∧ StageR vis fe mk a1 ∧ IWGrow m1 mk ∧
+      KsB mk (rk.headD 0).toNat (rk.tail.headD 0).toNat
+        (if b then nestAcceptGroup (decI us) ds grp NS2.keys else NS2.keys).toList ∧
+      (rk.headD 0).toNat + (rk.tail.headD 0).toNat ≤ iwTop mk := by
+    cases b with
+    | true =>
+      rw [cfK1_acc (h := by rw [hr1]; decide)]
+      rcases hag : nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1)) with _ | ⟨rk, mk⟩; · rw [cfK1_acc (h := by rw [hr1]; decide), hag] at h; simp [cfK2] at h
+      obtain ⟨h1, h2, h3, h4⟩ := nagW_ok dn vis fe us dO dL ds hus k m1 mk a1 gO gL _ _ grp NS2.keys rk hag hS1
+        (DecB.grow (OMono.decHL _ _) hg1 hds) hgl (by have := hg1.iw; omega) (hgrp.grow hgb hg1) hk1 hkb1
+      exact ⟨rk, mk, rfl, h1, h2, by simpa using h3, h4⟩
+    | false =>
+      rw [cfK1_open (h := by rw [hr1]; decide)]
+      exact ⟨_, m1, rfl, hS1, IWGrow.refl _, by simpa using hk1, by simpa using hkb1⟩
+  obtain ⟨rk, mk, hk, hSk, hgk, hksk, hkbk⟩ := hkeys
+  rw [hk, cfK2_some] at h
+  rcases hq : posRecW mk [rk.headD 0, rk.tail.headD 0, aO, aL, rdW (mk.arr64 IW) (ns2 + 4),
+      rdW (mk.arr64 IW) (ns2 + 5)] with _ | ⟨q, m3⟩; · rw [hq] at h; simp [cfK3] at h
+  rw [hq, cfK3_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨hS3, hg3, hqq, ht3, hget3⟩ := posRecW_stage hq hSk (by simp)
+  simp only [List.length_cons, List.length_nil] at ht3
+  have hg13 := hg1.trans (hgk.trans hg3)
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
+  have hnk := (hns1.grow hgk htop1)
+  obtain ⟨-, -, -, hnk'⟩ := nsb_words hnk (Nat.lt_of_le_of_lt hSk.iw.iw hSk.iw.iwSize)
+  refine ⟨(.nested (kb.toNat != 0), (NestState.mk (if b then nestAcceptGroup (decI us) ds grp NS2.keys
+    else NS2.keys) act NS2.ctorNfs)), a1, ?_, hS3, hg13, rfl, by simpa using decNFK_nestedW kb, ?_⟩
+  · simp only [cfT, StateT.run_bind, hrun1, except_ok_bind]; rfl
+  · have := nsb_rec6 (m' := m3) (q := q) (keys := (if b then nestAcceptGroup (decI us) ds grp NS2.keys
+        else NS2.keys).toList) (act := act) (nfs := NS2.ctorNfs.toList) (by omega) htop3 hget3
+      (hksk.grow hg3) (by have := hg3.iw; omega) ((hact.grow hg1).grow (hgk.trans hg3))
+      (by have := hg13.iw; omega) (hnk'.grow hg3) (by have := hnk.b4; have := hg3.iw; omega)
+    simpa using this
 
 end L.Ind
 
 namespace L.Ind
 
 open L.Arena
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-def naWf : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | k + 1, m, vis, c => naW k m vis c
--/
-
 
 end L.Ind
 

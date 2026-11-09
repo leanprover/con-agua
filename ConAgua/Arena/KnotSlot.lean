@@ -253,7 +253,9 @@ theorem knot_defeq_missE (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv)
     (a : AState) (hm : a.caches.defeqC[(x, y)]? = none) {e : Err}
     (h : ErrClaim (defeqBody mode eager (coreKnot mode eager fe id F) fe d x y) a e) :
     ErrClaim ((coreKnot mode eager fe id (F + 1)).defeq d x y) a e := by
-  sorry
+  refine ErrClaim.of_run_eq (fun ce hce => ?_) h
+  simp [coreKnot, hm, StateT.run_bind, hce]
+  rfl
 
 /-- `infer_body`'s error claim (the error half of `InferBodySpec`). -/
 def InferBodySpecE (p : Prog) (n : Nat) : Prop :=
@@ -286,13 +288,13 @@ theorem knot_infer_missE (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv)
     (hm : a.caches.inferC[e]? = none) (ce : CheckError)
     (hb : (inferBody (coreKnot mode eager fe id F) fe d e).run a = .error ce) :
     ((coreKnot mode eager fe id (F + 1)).infer d e).run a = .error ce := by
-  sorry
+  simp [coreKnot, hm, StateT.run_bind, hb]; rfl
 
 theorem knot_inferIO_missE (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F d : Nat) (e : EIdx)
     (a : AState) (hm : a.caches.inferIOC[e]? = none) (ce : CheckError)
     (hb : (inferBodyIO (CoreFnsA.ioView (coreKnot mode eager fe id F)) fe d e).run a = .error ce) :
     ((coreKnot mode eager fe id (F + 1)).inferIO d e).run a = .error ce := by
-  sorry
+  simp [coreKnot, hm, StateT.run_bind, hb]; rfl
 
 /-- **The `infer` slot's model, both outcomes** (the memo's probes and put lifted, `infer_body`
 through its run). -/
@@ -426,7 +428,8 @@ theorem mode_plain (mode : Word) (h : mode < 4) (he : decEager mode = false) :
 theorem knot_defeqE_eager (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F d : Nat) (x y : EIdx)
     (h : eager = true) :
     (coreKnot mode eager fe id (F + 1)).defeqE d x y = (coreKnot mode eager fe id (F + 1)).defeq d x y := by
-  sorry
+  subst h
+  simp [coreKnot, enterEager, leaveEager]
 
 /-- The caches after `enterEager false`: the stored eager set in the six fields, the eager slot
 empty. -/
@@ -493,7 +496,7 @@ theorem CoreS.enter {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} 
     ⟨hS.core.wc.enter, hS.core.wk.enter, hS.core.wh.enter, hS.core.inf.enter, hS.core.io.enter,
       hS.core.de.enter, by decide, hS.core.ct, hS.core.cv, hS.core.rr, hS.core.lq, hS.core.lsq⟩,
     hS.pins, hS.env, fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf, hS.erec,
-    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode⟩
+    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode, hS.iw⟩
 
 /-- **Leaving the eager tower**: after an eager run that kept the plain banks, the relation at
 `eb = 0` holds on the left caches. -/
@@ -508,7 +511,7 @@ theorem CoreS.leave {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a a₁ 
       hS.core.de.leave h0.de.cur k6, by decide, hS.core.ct, hS.core.cv, hS.core.rr, hS.core.lq,
       hS.core.lsq⟩,
     hS.pins, hS.env, fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf, hS.erec,
-    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode⟩
+    hS.spn, hS.memos, hS.bstk, hS.den.caches rfl rfl rfl, hS.mode, hS.iw⟩
 
 /-- `defeq_e(mode, vis, d, a, b)` refines the knot's eager slot `defeqE`. -/
 def DefeqESlot (p : Prog) (n : Nat) : Prop :=
@@ -525,7 +528,27 @@ theorem knot_defeqE_plainE (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEn
     (hr : ((coreKnot mode true fe id (F + 1)).defeq d x y).run
       { a with caches := enterC a.caches } = .error ce) :
     ((coreKnot mode eager fe id (F + 1)).defeqE d x y).run a = .error ce := by
-  sorry
+  simp only [coreKnot, id] at hr ⊢
+  simp only [enterEager, h, Bool.false_eq_true, ite_false]
+  simp only [StateT.run_bind, StateT.run_get, StateT.run_set, StateT.run_pure, pure_bind] at hr ⊢
+  cases hc : (a.caches.eagerMemos.defeqC)[(x, y)]? with
+  | some w =>
+    simp only [enterC, hc, StateT.run_pure] at hr
+    cases hr
+  | none =>
+    simp only [enterC, hc, StateT.run_bind] at hr
+    cases hb : (defeqBody mode true (coreKnot mode true fe id F) fe d x y).run
+        { a with caches := enterC a.caches } with
+    | error e =>
+      simp only [enterC] at hb; simp only [hb] at hr
+      cases hr
+      simp only [StateT.run_bind, hb]
+      rfl
+    | ok q =>
+      simp only [enterC] at hb
+      simp only [hb, except_ok_bind, defeqSet, StateT.run_bind, StateT.run_get, StateT.run_set,
+        StateT.run_pure, pure_bind] at hr
+      cases hr
 
 /-- **`defeq_e`'s unified model**: the `defeq` slot at the mode word with bit 1 set, through its
 run. -/

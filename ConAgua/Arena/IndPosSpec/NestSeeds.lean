@@ -55,7 +55,16 @@ theorem pos2_outs_rec {m' : Mem} {q o l : Word} {xs : List (List NestFieldKind �
     (hq : q.toNat + 2 ≤ iwTop m')
     (hget : ∀ j < [o, l].length, (m'.arr64 IW)[q.toNat + j]? = [o, l][j]?) (hx : OutsB m' o.toNat l.toNat xs) :
     DecB (fun m => decAt m (fun o l => decPL m (decKE m) o l) q.toNat) m' xs := by
-  sorry
+  have g : ∀ j < 2, iwA (truncM m') (q.toNat + j) = [o, l][j]? := fun j hj => by
+    rw [truncM_iw_eq (by omega)]; exact hget j (by simpa using hj)
+  have n0 : iwN (truncM m') q.toNat = some o.toNat := by
+    simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 0 (by omega))
+  have n1 : iwN (truncM m') (q.toNat + 1) = some l.toNat := by
+    simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 1 (by omega))
+  have hx' : decPL (truncM m') (decKE (truncM m')) o.toNat l.toNat = some xs := hx
+  show decAt (truncM m') _ q.toNat = some xs
+  simp only [decAt, n0, n1, Option.bind_eq_bind, Option.bind_some]
+  exact hx'
 
 /-! ## The seeds -/
 
@@ -105,7 +114,10 @@ theorem nestSeedsFuel_refines (s₀ : St) (a₀ : AState) (dO dL k f : Word) (ds
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_seeds_fuel" [dO, dL, k, f]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ a', ((ds.drop k.toNat).foldlM pos2FuelF f.toNat).run a₀ =
       .ok ((r.headD 0).toNat, a') ∧ StageR vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
-  sorry
+  refine triple_post (nestSeedsFuel_spec L n s₀ dO dL k f) ?_
+  rintro r s' ⟨hlc, hm⟩
+  have := p2sfW_ok (fun _ => none) vis fe dO dL ds s₀.mem hlen hel hb n s₀.mem s'.mem a₀ k f _ hm hS (IWGrow.refl _) hk hP
+  exact ⟨hlc, by simpa using this⟩
 
 end census
 

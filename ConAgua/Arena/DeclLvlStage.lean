@@ -23,10 +23,10 @@ relation `StageR = CheckR ∧ IWOK` has all of `CoreS` but the **twin-side invar
 twin's state alone, true of every reachable state) and two size bounds, and the callers do not
 know that the level handles they compare **denote** (the `CoreS.lvl_den` gap of lane `whnf`).
 
-`lvlEqC_stage` is the bridge, sorry-free: from `StageR`, `TwinOK`, a filled pin table and the
+`lvlEqC_stage` is the bridge: from `StageR`, `TwinOK`, a filled pin table and the
 two denotations, a run of `lvl_eq_c` is a run of `lvlEq?`, `StageR` and `TwinOK` hold after it,
 and the pools are untouched (its write set from the text, `lvlText_closed`). What is left for the
-stub spec `lvlEqStub_spec` (`IndStubs.lean`, the one `sorry`) is to carry `TwinOK` in the stage
+stub spec `lvlEqStub_spec` (`IndStubs.lean`) is to carry `TwinOK` in the stage
 relation and the denotation of the compared handles in the callees' posts (DESIGN.md, lane
 `decls3`).
 -/
@@ -59,7 +59,7 @@ theorem StageR.coreS {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     ∃ M, CoreS dn m a vis fe M 0 := by
   obtain ⟨M, hM⟩ := hS.check.core
   exact ⟨M, ⟨hS.check.arena, hM, hS.check.pins.full hflag, hS.check.env, hT.readL, hT.readLs, hT.nwf, hT.erec,
-    hT.spn, hT.memos, hT.bstk, hT.den, hS.check.mode⟩⟩
+    hT.spn, hT.memos, hT.bstk, hT.den, hS.check.mode, hS.iw⟩⟩
 
 /-- `CoreS` (outside the eager tower) is `CheckR` and the twin invariants. -/
 theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
@@ -74,7 +74,7 @@ theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 def lvlA : List TieredArray := stepA.filter fun b => b ≠ IW ∧ b ≠ EREC
 
 /-- The `CTL` words `lvl_eq_c` may write: all a step may, but the pools' tops. -/
-def lvlC : List Word := stepC.filter fun x => x ≠ 129 ∧ x ≠ 200
+def lvlC : List Word := stepC.filter fun x => x ≠ 129 ∧ x ≠ 130 ∧ x ≠ 200
 
 /-- The functions `lvl_eq_c` reaches. -/
 def lvlFns : List FnName :=

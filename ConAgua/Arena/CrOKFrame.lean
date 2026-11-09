@@ -47,49 +47,81 @@ theorem crOK_wframe : WFrame CTL imA imC (fun m₀ m => L.Stubs.CrOK m₀ → L.
   setG _ _ _ _ h h0 := CrOK.frame (h h0) (A := []) (C := [])
     ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩ (by simp) (by simp)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- Every call of a leaf of `imFns` keeps `CrOK`. -/
-theorem crOK_leaf {p : Prog} (hp : L.Ind.CrfF p) :
-    ∀ g ∈ imLeaves, ∀ n m₀ vs, ⦃fun s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem⦄
-      invoke p (exec p n) g vs ⦃fun _ s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem; ⊤⦄ := by
-  intro g hg n m₀ vs
-  simp only [imLeaves, List.mem_singleton] at hg
-  subst hg
+/-- **The leaves of `imFns` keep `CrOK`** (`consts_resolve_ffast` keeps its memo,
+`struct_used_later` does not write it; their refinements prove it). -/
+def CrLeaves (p : Prog) : Prop :=
+  ∀ g ∈ imLeaves, ∀ n m₀ vs, ⦃fun s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem⦄
+    invoke p (exec p n) g vs ⦃fun _ s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem; ⊤⦄
+
+/-- `consts_resolve_ffast` keeps `CrOK` at any arguments (its model `crfF`, `crfF_keepsCrOK`). -/
+theorem crOK_crf {p : Prog} (hp : L.Ind.CrfF p) (n : Nat) (m₀ : Mem) (vs : List Word) :
+    ⦃fun s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem⦄ invoke p (exec p n) "consts_resolve_ffast" vs
+    ⦃fun _ s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨-, hc⟩ := M.of_run (P := fun t => t = s) rfl hrun (L.Ind.crfF_spec p hp n s vs)
   exact fun h0 => L.Ind.crfF_keepsCrOK hc (hs h0)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+/-- Every word array but the walk memo `CRM`. -/
+def crA : List TieredArray := checkerWordArrays.filter fun b => b ≠ L.Stubs.CRM
+
+/-- Every `CTL` word but the walk memo's epoch `158`. -/
+def crC : List Word := ((List.range 1024).filter fun x => x ≠ 158).map UInt64.ofNat
+
+theorem crm_not_crA : (L.Stubs.CRM : TieredArray) ∉ crA := by
+  simp [crA, List.mem_filter]
+
+theorem c158_not_crC : (158 : Word) ∉ crC := by
+  intro h
+  simp only [crC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at h
+  obtain ⟨n, ⟨h1, h2⟩, e⟩ := h
+  have : (UInt64.ofNat n).toNat = n := by simp; omega
+  rw [e] at this; exact h2 (by rw [← this]; rfl)
+
+/-- A function whose call closure `fs` writes neither `CRM` nor `CTL[158]` keeps `CrOK`. -/
+theorem crOK_frameFn {p : Prog} {fs : List FnName} (hp : closedA p crA crC fs = true) {g : FnName}
+    (hg : g ∈ fs) (n : Nat) (m₀ : Mem) (vs : List Word) :
+    ⦃fun s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem⦄ invoke p (exec p n) g vs
+    ⦃fun _ s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hfr, -⟩ := M.of_run (P := fun t => t = s) rfl hrun (invoke_memFrame hp n hg vs s)
+  exact fun h0 => CrOK.frame (hs h0) hfr crm_not_crA c158_not_crC
+
+/-- **The leaves keep `CrOK`**: `consts_resolve_ffast` by its model, `struct_used_later` by the
+write set of its call closure `fs`. -/
+theorem crLeaves_of {p : Prog} (hp : L.Ind.CrfF p) {fs : List FnName}
+    (hs : closedA p crA crC fs = true) (hg : "struct_used_later" ∈ fs) : CrLeaves p := by
+  intro g hg' n m₀ vs
+  simp only [imLeaves, List.mem_cons, List.not_mem_nil, or_false] at hg'
+  rcases hg' with rfl | rfl
+  · exact crOK_crf hp n m₀ vs
+  · exact crOK_frameFn hs hg n m₀ vs
+
 /-- **A call of a function of `imFns` keeps `CrOK`.** -/
-theorem invoke_crOK {p : Prog} (hcl : IndMemoClosed p) (hp : L.Ind.CrfF p) (n : Nat)
+theorem invoke_crOK {p : Prog} (hcl : IndMemoClosed p) (hl : CrLeaves p) (n : Nat)
     {f : FnName} (hf : f ∈ imFns) (vs : List Word) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs
     ⦃fun _ s => L.Stubs.CrOK s₀.mem → L.Stubs.CrOK s.mem; ⊤⦄ :=
-  invoke_frameL p hcl crOK_wframe (crOK_leaf hp) n f hf vs s₀
--/
+  invoke_frameL p hcl crOK_wframe hl n f hf vs s₀
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The same through `callW`. -/
-theorem callW_crOK {p : Prog} (hcl : IndMemoClosed p) (hp : L.Ind.CrfF p) {n : Nat}
+theorem callW_crOK {p : Prog} (hcl : IndMemoClosed p) (hl : CrLeaves p) {n : Nat}
     {f : FnName} (hf : f ∈ imFns) {vs : List Word} {m m' : Mem} {r : List Word}
     (hc : callW p n f vs m = some (r, m')) (hI : L.Stubs.CrOK m) : L.Stubs.CrOK m' := by
   obtain ⟨s', hs', h⟩ :=
-    triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (invoke_crOK hcl hp n hf vs _) hc
+    triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (invoke_crOK hcl hl n hf vs _) hc
   exact hs' ▸ h hI
--/
 
-/-- **The program bundle of the `CrOK` threading**: `imFns`' write set and the leaf's model. -/
+/-- **The program bundle of the `CrOK` threading**: `imFns`' write set and its leaves. -/
 structure CrKeep (p : Prog) : Prop where
   closed : IndMemoClosed p
+  leaves : CrLeaves p
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `CrOK` across a program call of a function of `imFns`. -/
 theorem CrKeep.call {p : Prog} (hk : CrKeep p) {n : Nat} {f : FnName} (hf : f ∈ imFns)
     {vs : List Word} {m m' : Mem} {r : List Word} (hc : callW p n f vs m = some (r, m'))
     (hI : L.Stubs.CrOK m) : L.Stubs.CrOK m' :=
-  callW_crOK hk.closed hk.crf hf hc hI
--/
+  callW_crOK hk.closed hk.leaves hf hc hI
 
 end L.Arena

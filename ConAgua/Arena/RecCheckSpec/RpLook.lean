@@ -96,7 +96,7 @@ def tpnK0 (p : Prog) (n : Nat) (reco recl auxo auxl : Word) : Option (List Word 
 /-- **The model of `target_rec_pins_names`** (body fuel `n`). -/
 def tpnW (p : Prog) (n : Nat) (m : Mem) (mo k reco recl auxo auxl : Word) : Option (List Word × Mem) :=
   if k = 0 then tpnK0 p n reco recl auxo auxl (callW p n "intern_nanon" [] m)
-  else tpnB p n reco recl auxo auxl (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))) m
+  else tpnB p n reco recl auxo auxl (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))) m
 
 end L.Ind
 

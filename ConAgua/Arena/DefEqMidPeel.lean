@@ -818,7 +818,58 @@ theorem db_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
     RefE (KnotNvG p n) (dbE p (n + 1) s₀.mem mode vis d ty1 body1 ty2 body2)
       (defeqBinders (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE ty1) (decE body1) (decE ty2)
         (decE body2)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  simp only [dbE]
+  unfold defeqBinders
+  cases n with
+  | zero => exact RefE.callE_zero fun _ => rfl
+  | succ n' =>
+  refine RefE.bind_callE (fun _ => rfl) ((hk _ (Nat.le_refl _)).defeq F s₀ a₀ dn vis fe M eb mode d ty1
+    ty2 hF hn hs h1 h2) (fun (hG : KnotNvG p (n' + 1)) => (hG.knot _ (Nat.le_refl _)).defeq F s₀ a₀ dn vis
+      fe M eb mode d ty1 ty2 hF hn hs h1 h2) fun r₁ m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ _ => ?_
+  dsimp only [dbE.k_defeq]
+  by_cases h0 : r₁.headD 0 = 0
+  · rw [ite_eq_left h0, decBool_f h0]
+    exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
+  rw [ite_eq_right h0, decBool_t h0]
+  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+  have hso : rdW (m₁.arr64 CTL) 136 = spTop m₁ := rfl
+  rw [hso]
+  refine RefE.onlySim (fun _ => rfl) (fun r₂ m₂ c2 => peelPush_run hp hS₁ d 0 (spTop m₁) ty2 h2 #[]
+    (fvsR_empty rfl (by simpa using peelPush_bound hp d 0 (spTop m₁) ty2 c2) hS₁.spn)
+    (by rw [toNat_zero_w, Nat.add_zero]; omega) r₂ c2) fun r₂ m₂ ⟨e₂, hx₂⟩ => ?_
+  dsimp only [dbE.k_peel_push]
+  have e0 : d.toNat + (0 : Word).toNat = d.toNat := rfl
+  rw [e0] at e₂
+  rw [UInt64.zero_add] at hx₂
+  have e1 : (16777216 : Word).toNat = peelFuel := by simp [peelFuel]
+  have e2 : (1 : Word).toNat = 1 := rfl
+  have e3 : (#[] : Array EIdx).push (decE (r₂.headD 0)) = #[decE (r₂.headD 0)] := rfl
+  have hdk' : d.toNat + (1 : Word).toNat + (16777216 : Word).toNat < 2 ^ 64 := by
+    rw [e1, e2]; exact hd
+  rcases c3 : callE p (n' + 1) "defeq_peel"
+      [mode, vis, d, 16777216, body1, body2, 1, spTop m₁] m₂ with e | ⟨r₃, m₃⟩
+  · intro hG
+    obtain ⟨M₂, hS₂, -, -⟩ := e₂.2.1
+    refine ErrClaim.bind_right (by rw [AM.run_of_ok _ _ e₂.1, e₂.2.2.1]) ?_
+    have := RefE.run_err (defeqPeel_specE p hp.peel (n' + 1) ⟨m₂, Locals.init []⟩ mode vis d
+        16777216 body1 body2 1 (spTop m₁)) trivial (hG.mono (by omega))
+      (defeqPeel_ref p hp hil n' (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩
+        _ dn vis fe M₂ eb mode d 16777216 body1 body2 1 (spTop m₁) ⟨hS₂, hs.mode4, hs.eb_mode⟩ hb1 hb2
+        _ hx₂ hdk') c3
+    rwa [e1, e2, e3] at this
+  simp only [dbE.k_defeq_peel]
+  have hG : GrowRefP (internFVarE d.toNat (decE ty2) >>= fun fv => defeqPeel (coreKnot (decMode mode)
+      (decEager mode) fe id F) d.toNat peelFuel (decE body1) (decE body2) 1 #[fv]) _ decBool dn m₁ vis fe M₁ eb r₃ m₃ :=
+    growRef_bind e₂ (fun M₂ hS₂ _ => by
+    obtain ⟨t, ht, -, hP⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+      (defeqPeel_refines p hp hil n' (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩
+        _ dn vis fe M₂ eb mode d 16777216 body1 body2 1 (spTop m₁) ⟨hS₂, hs.mode4, hs.eb_mode⟩ hb1 hb2
+        _ hx₂ hdk') (callW_of_callE c3)
+    rw [ht, e1, e2, e3] at hP
+    exact hP)
+  obtain ⟨hok, hA, hres, hr⟩ := hG
+  exact RefE.ret (AM.run_of_ok _ _ hok) (GrowPost.restore (m₀ := m₁) ⟨hA, hres, hr⟩ [r₃.headD 0]
+    (by simp only [decBool, List.headD_cons]) hr)
 
 /-- **`defeq_binders` refines `defeqBinders`** at the knot (`db_ref`'s ok half). -/
 @[refines ConRon.Arena.defeqBinders]

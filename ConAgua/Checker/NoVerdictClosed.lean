@@ -12,6 +12,16 @@ meta import ConAgua.Arena.LevelIntern
 meta import ConAgua.Arena.LevelSubstLP
 import all Init.Data.Repr
 import all ConAgua.Arena.Abs1
+import all ConAgua.Rom.CIConst
+import all ConAgua.Rom.PinReadSpec
+import all ConAgua.Scan.Line
+import all ConAgua.Arena.WhnfCoreApp
+import all ConAgua.Arena.RomCI
+import all ConAgua.Arena.Prelude
+import all ConAgua.Arena.IndStream
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.CoreWalks
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
@@ -209,5 +219,13 @@ theorem closedNV_of_all {p : Prog} {fs : List FnName} {t : NTree} (ht : namesTre
 end L
 
 namespace L.Checker
+
+open L.Compiler
+
+prog_all checkerProg_nvChk : checkerProg (nvChk nvTree)
+
+/-- **The functions outside the verdict closure claim nothing.** -/
+theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
+  closedNV_of_all nvTree.eq checkerProg_nvChk
 
 end L.Checker

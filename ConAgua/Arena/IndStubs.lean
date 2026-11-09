@@ -9,11 +9,11 @@ public import ConAgua.Arena.WhnfBase
 # The inductive stage's shared predicates (lane `induct`; once the stubs' specs)
 
 This file held the stub contracts of the inductive stage's callees (`stubM_spec` and a `RelAM`
-statement per stub, all `sorry`). Every callee is now the program's own call (`realCall`) or a
+statement per stub, all unproved). Every callee is now the program's own call (`realCall`) or a
 pure model, and the contracts and the `StageR` theorems through them are gone (lane `cleanup`).
 What is left: the opaque word model `stubM` (still named in a few
 models, e.g. `IndPartsSpec/BlockRecNamesUnreserved`'s `wsK2`), `RelAM`, the walk-memo predicates that
-make up `AbsOK`, and the result decoders `pwWords`, `decZC`, `decLvlEq`.
+make up `AbsOK`, and the result decoder `decLvlEq`.
 
 `H w`: a handle word (below `2^32`).
 -/
@@ -75,13 +75,19 @@ def WkOK (m : Mem) : Prop :=
 memo well formed in the memory it starts from and leaves it so; `StageR` says nothing about these
 arrays, so the stage's theorems thread it as a hypothesis and a post. (The name is helper `abs`'s,
 from when it held the `abstract1` memo only.) The core's `CoreMemos` holds the first and the last
-(`IndRealAbsT.lean`). -/
+(`IndRealAbsT.lean`). It also carries the core's `hasLooseBVarB` memo (array `HBM`, epoch word
+`CTL[214]`; `CoreMemos.hb`), so that `AbsOK` gives all of `CoreMemos`. -/
 structure AbsOK (m : Mem) : Prop where
   ab : AbMemo m
   i1 : I1Memo m
   cr : CrMemo m
   il : IlMemo m
   wk : WkOK m
+  hb : ∃ mp, hbMR m mp
+
+/-- The core's memos from `AbsOK`. -/
+theorem AbsOK.coreMemos {m : Mem} (hA : AbsOK m) : CoreMemos m :=
+  ⟨hA.il, hA.ab, hA.wk.1, hA.hb⟩
 
 /-- **The twin side of a stub**: a model run of `f(args)` from a memory satisfying `pre` against
 `a` is a successful twin run of `op` with `post` after. -/
@@ -89,29 +95,6 @@ def RelAM {α : Type} (f : FnName) (args : List Word) (pre : Mem → AState → 
     (post : Mem → Mem → AState → List Word → α → Prop) : Prop :=
   ∀ (m m' : Mem) (a : AState) (r : List Word), stubM f m args = some (r, m') → pre m a →
     ∃ x a', op.run a = .ok (x, a') ∧ post m m' a' r x
-
-section specs
-variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-
-local notation "V" => ConLeche.CheckMode.verified
-
-/-- A `PropWhen` from its three words (`decPW`'s layout: `0` `never`, `1` `ifAllZero` with the
-names the handle slice `(o, l)` of `a`). -/
-def pwWords (a : Nat → Option Word) (t o l : Word) : Option ConLeche.PropWhen :=
-  match t.toNat with
-  | 0 => some .never
-  | 1 => do
-    let ns : List NIdx ← hslice? a o.toNat l.toNat
-    pure (.ifAllZero (← ns.mapM dn))
-  | _ => none
-
-/-- `lv_zero_caps`' result `(tag, off, len)`: the zero-ness of the level `lv`, decoded in every
-array that agrees with the record pool below its top. -/
-def decZC (m : Mem) (r : List Word) (lv : ConLeche.Level) : Prop :=
-  ∀ a : Nat → Option Word, (∀ i < erTop m, a i = erA m i) →
-    pwWords dn a (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) = some (ConLeche.Level.zeronessOf lv)
-
-end specs
 
 /-! ## Master callees without a model yet (lane indproofs) -/
 

@@ -119,7 +119,27 @@ theorem installRec2Tele {p : Prog} (hP : InstProg p) (n : Nat) {dn : NIdx → Op
     (h : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] m1 = some (r2, m2)) :
     StageR vis fe m2 a ∧ IWGrow m m2 ∧ DecB (fun m => decTele m (r2.headD 0).toNat) m2 x ∧
       (r2.headD 0).toNat < iwTop m2 := by
-  sorry
+  obtain ⟨hS1, hg1, hcv, hcx, hs32, hsd⟩ := hT
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
+  obtain ⟨hS2, hg2, hr, hget, htop⟩ := recW_stage hW hS1 rfl
+  refine ⟨hS2, hg1.trans hg2, ?_, ?_⟩
+  · subst hr
+    have hq0 : (rdW (m1.arr64 CTL) 200).toNat < iwTop s'.mem := by rw [htop]; simp [iwTop]
+    have hq1 : (rdW (m1.arr64 CTL) 200).toNat + 1 < iwTop s'.mem := by rw [htop]; simp [iwTop]
+    show decTele (truncM s'.mem) _ = some x
+    have e0 : iwN (truncM s'.mem) (rdW (m1.arr64 CTL) 200).toNat = some (r1.headD 0).toNat := by
+      rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
+      simp [iwN, nat?, iwA, aread_apply, this]
+    have e1 : (iwH (truncM s'.mem) ((rdW (m1.arr64 CTL) 200).toNat + 1) : Option LIdx) = some x.2 := by
+      rw [iwH_truncM hq1]; have h1 := hget 1 (by simp)
+      simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at h1
+      simp only [iwH, hd?, iwA, aread_apply, h1, Option.bind_eq_bind, Option.bind_some]
+      rw [ite_eq_left hs32, hsd]
+    have e2 : decCVp (truncM s'.mem) (r1.headD 0).toNat = some x.1 :=
+      (installCvDecB hcv hcx).grow (OMono.decCVp _) hg2
+    simp only [decTele, List.headD_cons, e0, e1, bind, Option.bind_some, e2, pure]
+  · subst hr; rw [htop]; simp [iwTop]
 
 end L.Ind
 

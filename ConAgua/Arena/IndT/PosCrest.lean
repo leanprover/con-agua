@@ -9,6 +9,8 @@ import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.ErecRd
+import ConAgua.Arena.IndSumSpec.StructUsedHb
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndRealIlpL
@@ -38,10 +40,11 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- A core entry point keeps the stage's memos (`coreStageA`/`coreStageC` miss 201‥208). -/
+/-- A core entry point keeps the stage's memos but the `hb` memo (`CoreFr.mfr`). -/
 theorem coreF_mfr {p : Prog} (hq : KnotStageProg p) {f : FnName} (hf : f ∈ stageCoreFns) {n : Nat}
-    {args r : List Word} {m m' : Mem} (h : realCall p n f args m = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_frame (run_memFrame hq.closed hf (run_of_callW h)).1 coreStageA_stage coreStageC_stage
+    {args r : List Word} {m m' : Mem} (h : realCall p n f args m = some (r, m')) :
+    MFr [HBM] [214, 215] m m' :=
+  (callW_coreFrame hq.closed hf h).mfr
 
 section twin
 variable (mode : ConLeche.CheckMode) (fe : IFEnv) (ctx : NestCtx) (fuel : Nat) (prog : List NestHole)
@@ -105,13 +108,13 @@ structure CrestPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   dec : decI w = crest
   pos : PosMR m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
   den : ∃ crestP, denoteE a'.store crest = some crestP ∧ ConLeche.Expr.WScoped hi.toNat crestP
 
 section crest
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
   (fe : IFEnv) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hIlpf henv in
 /-- **`nest_ctors_crest` refines `crestT` (the head of `oneK`), both outcomes**, under `StageC`
 and con-ron's preconditions of the constructor's head (`nestCtors_spec`'s): the level parameters
@@ -161,8 +164,10 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
   have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
-  have hrdt : rdW (m1.arr64 EREC) (cv + 3) = wt := by
-    rw [hE1]; simp only [erA] at hwt; simp [rdW, e3, hwt]
+  have hrdt : rdW (m1.arr64 (tierA EREC ((cv + 3) >>> 40))) (cv + 3 &&& 1099511627775) = wt := by
+    change erRdT m1 (cv + 3) = wt
+    rw [erRdT_frame (erToIwW_iwFr (show erToIwW _ m _ _ = some (r1, m1) from hlp)) (by decide) (by decide)]
+    exact (erRd_of_erecP (a := cv + 3) (by rw [e3]; exact hwt)).1
   rw [hrdt]
   refine RefE.bindLift (fun _ => ncrE.k_inst_lp_fast.none ..) fun r2 m2 hil => ?_
   obtain ⟨cty, a1, hrun1, ⟨hS2, hg2, hcH, hcd⟩, ⟨A2, C2, hA2s, hC2s, hfr2⟩, hAF2⟩ :=
@@ -189,7 +194,7 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hP2 : PosMR m2 := (hP.fr (posmemo_cvLpsW_mfr hlp)).fr (MFr.of_frame hfr2 hA2s hC2s)
   obtain ⟨M, G, g, hR⟩ := hP2.rf
   obtain ⟨mp2, hM2⟩ := hP2.rp
-  obtain ⟨x, a2, hrun2, hx, ⟨M', G', hS3, hg3, hR3, -⟩, hM3⟩ := pcrW_ok dn fe vis k m2 m3 a1 no nl us dO dL hO hL
+  obtain ⟨x, a2, hrun2, hx, ⟨M', G', hS3, hg3, hR3, -⟩, hM3⟩ := pcrW_ok fe vis k m2 m3 a1 no nl us dO dL hO hL
     (r2.headD 0) r3 names ds holes M G g hpc0 hS2 hcH hus
     (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hdec) (by omega)
     (by have := hg12.iw; omega) hnn mp2 hM2
@@ -228,7 +233,7 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   dsimp only at hC4 hg4 htyH htyd hA4
   rw [ncrE.k_infer_type_core.arm1]
   subst htyd
-  have hP4 : PosMR m4 := hP3.fr (coreF_mfr hq (by decide) (callW_of_callE c5))
+  have hP4 : PosMR m4 := hP3.ofCore hq.closed (by decide) (callW_of_callE c5)
   -- its sort
   refine RefE.bindCall (fun _ => ncrE.k_ensure_sort_core.none ..)
     (fun hV e h6 => hV.core.ensureSortCore (k + 1 + 1 + 1) (by omega) hC4.stageT hi _ htyH e h6)
@@ -237,10 +242,9 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   dsimp only at hC5 hg5 hA5
   rw [ncrE.k_ensure_sort_core.arm1]
   exact RefE.ret rfl ⟨hC5, ((hg12.trans hg3).trans hg4).trans hg5, hxH', rfl,
-    hP4.fr (coreF_mfr hq (by decide) (callW_of_callE c6)), hA5,
+    hP4.ofCore hq.closed (by decide) (callW_of_callE c6), hA5,
     ((c1.trans (p2.toCore hC2.check)).trans c4).trans c5',
     crestP, ConRon.Bridge.denote_ext hcrest (c4.ext.trans c5'.ext), hwc⟩
--/
 
 end crest
 

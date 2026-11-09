@@ -497,16 +497,113 @@ theorem internLsIw_specW (p : Prog) (hp : p.lookup "intern_ls_iw" = some L.Stubs
     finish [ilwW]
 
 /-- A decoded handle slice is the words of its list, inside the array. -/
-theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx),
-    hslice? (aread a) o l = some us → sliceL a o l = lsWords us ∧ (0 < l → o + l ≤ a.size) := by
-  sorry
+theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hslice? (aread a) o l = some us →
+    sliceL a o l = lsWords us ∧ (0 < l → o + l ≤ a.size)
+  | 0, o, us, h => by
+    simp [hslice?] at h; subst h; simp [sliceL, lsWords]
+  | l + 1, o, us, h => by
+    rw [hslice?_succ] at h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨x, hx, ys, hys, rfl⟩ := h
+    obtain ⟨ih, hb⟩ := hslice_lsWords l (o + 1) ys hys
+    cases hw : a[o]? with
+    | none => simp [hd?, aread_apply, hw] at hx
+    | some w =>
+    simp only [hd?, aread_apply, hw, bind, Option.bind_some] at hx
+    by_cases hw32 : w.toNat < 2 ^ 32
+    · rw [ite_eq_left hw32] at hx
+      cases hx
+      have ho : o < a.size := (Array.getElem?_eq_some_iff.mp hw).1
+      refine ⟨?_, fun _ => ?_⟩
+      · rw [sliceL_succ, ih, hw]
+        simp only [Option.getD_some, lsWords, List.map_cons, List.cons.injEq, and_true]
+        exact ((word_decI _ w hw32).mpr rfl).symm
+      · rcases Nat.eq_zero_or_pos l with h0 | h0
+        · subst h0; omega
+        · have := hb h0; omega
+    · rw [ite_eq_right hw32] at hx; cases hx
 
 /-- **`intern_ls_iw`'s model refines `internLsNode us`** at the `IW` slice decoding to `us`
 (replaces `IndStubs.internLsIw_spec`). -/
-theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l : Word)
+theorem ilF_ok (vis : Word) (fe : IFEnv) (o l : Word)
     (us : List LIdx) :
     RelW ilF [o, l] (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some us)
       (internLsNode us) (KeepPost vis fe (fun _ r (x : LsIdx) => H (r.headD 0) ∧ decI (r.headD 0) = x)) := by
-  sorry
+  rintro m m' a r hc ⟨hS, hd⟩
+  obtain ⟨n', hc'⟩ := callF_run hc
+  cases n' with
+  | zero => exact (callW_zero_false hc').elim
+  | succ n =>
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (internLsIw_specW ilProg rfl n _ o l) hc'
+  simp only at hs' hW
+  rw [hs'] at hW
+  unfold ilwW at hW
+  rcases h1 : callW ilProg n "pool_room" [l] m with _ | ⟨r₁, m₁⟩
+  · rw [h1] at hW; cases hW
+  rw [h1] at hW
+  simp only at hW
+  have hpool : PoolOK m := hS.check.arena.base.lit.1
+  obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.cap; omega)
+  rw [ho] at hW
+  rcases h2 : callW ilProg n "iw_pool" [o, m.top, l] m₁ with _ | ⟨r₂, m₂⟩
+  · rw [h2] at hW; cases hW
+  rw [h2] at hW
+  simp only at hW
+  rcases h3 : callW ilProg n "intern_ls" [m.top, l] m₂ with _ | ⟨r₃, m₃⟩
+  · rw [h3] at hW; cases hW
+  rw [h3] at hW
+  simp only at hW
+  obtain ⟨c, hW⟩ := of_ite_none hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  have hc0 := hpool.ctl
+  have h41 := hpool.top41
+  have hsz := hpool.small.tier (m.top >>> 40)
+  have hsplit := tag_split m.top
+  have htier := tag_tier_le m.top h41
+  have hne : tierA POOL (m.top >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
+  have htl : (m.top + l).toNat = m.top.toNat + l.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have g0 : Grows m m₁ := by rw [hm₁]; exact grows_raise m l hpool hroom
+  have hiw₁ : m₁.arr64 IW = m.arr64 IW := by rw [hm₁, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have htier₁ : m₁.arr64 (tierA POOL (m.top >>> 40)) = m.arr64 (tierA POOL (m.top >>> 40)) := by
+    rw [hm₁, Mem.arr64_set64_ne _ _ _ _ _ hne]
+  obtain ⟨hsl, hb⟩ := hslice_lsWords l.toNat o.toNat us hd
+  have hIW := hS.iw.iwSize
+  have hol : o.toNat + l.toNat < 2 ^ 64 := by
+    rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
+    · rw [h0]; exact Nat.lt_of_lt_of_le (UInt64.toNat_lt o) (by omega)
+    · have := hb h0; omega
+  obtain ⟨hg, hf₂, -, hsl₂⟩ := iwpW_ok hpool n m₁ m₂ o m.top l (callW_ip rfl h2) g0 (Nat.le_refl _) h41
+    (by rw [htier₁]; exact hroom) hol
+  rw [hiw₁] at hsl₂
+  have htop₂ : m₂.top = m.top + l := by
+    have e := hf₂.ctl 0 (by simp)
+    simp only [top_rdW] at e ⊢
+    rw [e, hm₁]; exact Mem.top_set64 _ _ hc0
+  have hA₂ : ArenaD m₂ a := ArenaD.grow m m₂ hg a hS.check.arena
+  have hmo₂ : ModeOK m₂ := hS.check.mode.grows hg
+  have hsl₂' : SliceOK m₂ m.top l := SliceOK.fresh hg htop₂
+  have hpc₂ : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.cap; omega
+  have hcap₂ : m.top.toNat + l.toNat ≤ pcap m₂ := by have := hsl₂'.le; have := hg.cap; omega
+  obtain ⟨s₃, hs₃, -, hI⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+    (internLs_spec ilProg rfl rfl rfl rfl rfl rfl n _ m.top l hpc₂ hcap₂) h3
+  simp only at hs₃ hI
+  rw [hs₃] at hI
+  obtain ⟨ok, hA₃, res, hf₃⟩ := L.Front.internLs_D m₂ a hA₂ (r₃.headD 0) m₃ m.top l hsl₂'
+    us (by rw [hsl₂]; simpa [iwA] using hsl) (ModeOK.slice0 hmo₂ hsl₂') hI
+  have hrun := AM.run_of_ok _ _ ok
+  rw [res] at hrun
+  obtain ⟨hca, hpi, -⟩ := internLsNode_keep _ _ _ _ hrun
+  have hfr : MemFrame [POOL, POOL1, LSREC, tier1 LSREC, LSSLOT, tier1 LSSLOT, LSHP, tier1 LSHP] [0, 40, 41] m m₃ :=
+    ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
+      (hf₃.mono (by simp [lsSch]) (by simp [lsSch]))
+  obtain ⟨hS', hg'⟩ := StageR.of_walkM hS hA₃ hfr (by simp [tier1, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
+    (by simp only [cp, hca, hpi]) (hmo₂.frame hf₃ (by simp [lsSch]) (by simp [lsSch]))
+  rw [hr] at hrun c
+  refine ⟨_, _, hrun, hS', hg', ?_, rfl⟩
+  have := mt UInt64.le_iff_toNat_le.mpr c
+  have e : (4294967296 : Word).toNat = 4294967296 := rfl
+  rw [e] at this; show (r.headD 0).toNat < 2 ^ 32; omega
 
 end L.Ind

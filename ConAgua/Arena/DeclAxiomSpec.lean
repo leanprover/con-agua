@@ -9,6 +9,9 @@ import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclReduceSpec
 import ConAgua.Arena.WhnfDeltaRefine
 import ConAgua.L.LocNF
+import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclAxiomSpec3
+import all ConAgua.Arena.DeclArmsNat
 import Std.Tactic.BVDecide.Normalize.Bool
 import all ConAgua.Arena.DeclArms
 
@@ -32,108 +35,132 @@ namespace L.Arena
 
 open L.Ind
 
-section model
-variable (p : Prog)
-
-/-- After `of_reduce_pin_a`: the comparison. -/
-def oraK7 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r7, m7) => mpW m7 q (r7.headD 0)
-
-/-- After `reduce_stored_ok`. -/
-def oraK6 (n : Nat) (q nm : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r6, m6) =>
-    if r6.headD 0 = 0 then some ([0], m6) else oraK7 q (callW p n "of_reduce_pin_a" [nm] m6)
-
-/-- After `reduce_elem_ok`. -/
-def oraK5 (n : Nat) (vis q nm c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) =>
-    if r5.headD 0 = 0 then some ([0], m5)
-    else oraK6 p n q nm (callW p n "reduce_stored_ok" [vis, c] m5)
-
-/-- After `find_is`. -/
-def oraK4 (n : Nat) (vis q nm c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) =>
-    if r4.headD 0 = 0 then some ([0], m4)
-    else oraK5 p n vis q nm c (callW p n "reduce_elem_ok" [vis, c] m4)
-
-/-- After `rom_ci(0)`. -/
-def oraK3 (n : Nat) (vis q nm c en : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => oraK4 p n vis q nm c (callW p n "find_is" [vis, en, r3.headD 0] m3)
-
-/-- After the `Eq` pin. -/
-def oraK2 (n : Nat) (vis q nm c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => oraK3 p n vis q nm c (r2.headD 0) (callW p n "rom_ci" [0] m2)
-
-/-- After `of_reduce_op`. -/
-def oraK1 (n : Nat) (vis q nm : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => oraK2 p n vis q nm (r1.headD 0) (pinAtW m1 0)
-
-/-- **The model of `of_reduce_ax_ok(vis, q)`.** -/
-def oraW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, vis, q =>
-    oraK1 p n vis q (rdW (m.arr64 EREC) q) (oroW m (rdW (m.arr64 EREC) q))
-
-section arms
-variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem) (vis q nm c en : Word)
-  (r1 r2 r3 r4 r5 r6 r7 : List Word)
-theorem oraW_step : oraW p (n + 1) m vis q =
-    oraK1 p n vis q (rdW (m.arr64 EREC) q) (oroW m (rdW (m.arr64 EREC) q)) := rfl
-theorem oraK1_some : oraK1 p n vis q nm (some (r1, m1)) =
-    oraK2 p n vis q nm (r1.headD 0) (pinAtW m1 0) := rfl
-theorem oraK2_some : oraK2 p n vis q nm c (some (r2, m2)) =
-    oraK3 p n vis q nm c (r2.headD 0) (callW p n "rom_ci" [0] m2) := rfl
-theorem oraK3_some : oraK3 p n vis q nm c en (some (r3, m3)) =
-    oraK4 p n vis q nm c (callW p n "find_is" [vis, en, r3.headD 0] m3) := rfl
-theorem oraK4_some : oraK4 p n vis q nm c (some (r4, m4)) =
-    if r4.headD 0 = 0 then some ([0], m4)
-    else oraK5 p n vis q nm c (callW p n "reduce_elem_ok" [vis, c] m4) := rfl
-theorem oraK5_some : oraK5 p n vis q nm c (some (r5, m5)) =
-    if r5.headD 0 = 0 then some ([0], m5)
-    else oraK6 p n q nm (callW p n "reduce_stored_ok" [vis, c] m5) := rfl
-theorem oraK6_some : oraK6 p n q nm (some (r6, m6)) =
-    if r6.headD 0 = 0 then some ([0], m6) else oraK7 q (callW p n "of_reduce_pin_a" [nm] m6) := rfl
-theorem oraK7_some : oraK7 q (some (r7, m7)) = mpW m7 q (r7.headD 0) := rfl
-end arms
-
-grind_pattern [ind_grind] oraW_step => oraW p (n + 1) m vis q
-grind_pattern [ind_grind] oraK1_some => oraK1 p n vis q nm (some (r1, m1))
-grind_pattern [ind_grind] oraK2_some => oraK2 p n vis q nm c (some (r2, m2))
-grind_pattern [ind_grind] oraK3_some => oraK3 p n vis q nm c en (some (r3, m3))
-grind_pattern [ind_grind] oraK4_some => oraK4 p n vis q nm c (some (r4, m4))
-grind_pattern [ind_grind] oraK5_some => oraK5 p n vis q nm c (some (r5, m5))
-grind_pattern [ind_grind] oraK6_some => oraK6 p n q nm (some (r6, m6))
-grind_pattern [ind_grind] oraK7_some => oraK7 q (some (r7, m7))
-
 /-- The lookups of `of_reduce_ax_ok`. -/
 structure OraProg (p : Prog) : Prop where
   red : RedProg p
   ora : p.lookup "of_reduce_ax_ok" = some ofReduceAxOkL
   oro : p.lookup "of_reduce_op" = some ofReduceOpL
   orp : p.lookup "of_reduce_pin_a" = some ofReducePinAL
+  eqs : p.lookup "eq_stored" = some eqStoredL
 
-set_option maxHeartbeats 1600000 in
-theorem ora_specW (h : OraProg p) (n : Nat) (s₀ : St) (vis q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "of_reduce_ax_ok" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ oraW p n s₀.mem vis q = some (r, s'.mem); ⊤⦄ := by
-  sorry
+/-- **The model of `of_reduce_ax_ok(vis, q)`.** -/
+l_model ora_specW (p : Prog) (h : OraProg p)
+  fns [h.ora ↦ oraW list]
+  specs [oro_specW p h.red.pa h.oro n, callW_spec p n "eq_stored", callW_spec p n "reduce_elem_ok",
+    callW_spec p n "reduce_stored_ok", callW_spec p n "of_reduce_pin_a",
+    callW_spec p n "matches_pin"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
 
-end model
+/-- **`of_reduce_ax_ok(vis, q)` refines `ofReduceAxOk`** at the model level. -/
+theorem oraW_ok {p : Prog} (h : OraProg p) {vis : Word}
+    {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q : Word} {r : List Word}
+    {cv : IConstantVal} (hW : oraW p n m vis q = some (r, m')) (hS : StageR vis fe m a)
+    (hq : decCV (erecP m) q.toNat = some cv) :
+    ∃ b a', (ofReduceAxOk fe cv).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧
+      IWGrow m m' ∧ decW0B m' r b := by
+  obtain ⟨wn, hwn, hwnl, hname⟩ := decCV_name hq
+  cases n with
+  | zero => simp [oraW.eq_1] at hW
+  | succ n =>
+  rw [oraW.arm1, erecKind hwn] at hW
+  simp only [ofReduceAxOk, hname]
+  -- the operation
+  rcases e1 : oroW m wn with _ | ⟨r1, m1⟩
+  · rw [e1, oraW.k_of_reduce_op.none] at hW; cases hW
+  obtain ⟨hm1, hl1, hrun1⟩ := oroW_ok e1 hS.check.pins hwnl
+  subst m1
+  rw [e1, oraW.k_of_reduce_op.arm1] at hW
+  simp only [StateT.run_bind, hrun1, exc_ok_bind']
+  -- the pinned `Eq`
+  rcases e2 : callW p n "eq_stored" [vis] m with _ | ⟨r2, m2⟩
+  · rw [e2, oraW.k_eq_stored.none] at hW; cases hW
+  obtain ⟨hm2, hrun2, -⟩ := eqs_call h.red h.eqs e2 hS
+  subst m2
+  rw [e2] at hW
+  simp only [hrun2, exc_ok_bind']
+  by_cases z2 : r2.headD 0 = 0
+  · rw [oraW.k_eq_stored.arm1 p n vis q _ _ r2 m z2] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    simp only [z2, bne_self_eq_false, Bool.not_false, ↓reduceIte]
+    exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
+  rw [oraW.k_eq_stored.arm2 p n vis q _ _ r2 m z2] at hW
+  simp only [show (r2.headD 0 != 0) = true by simpa using z2, Bool.not_true,
+    Bool.false_eq_true, ↓reduceIte]
+  -- the element inductive
+  rcases e3 : callW p n "reduce_elem_ok" [vis, r1.headD 0] m with _ | ⟨r3, m3⟩
+  · rw [e3, oraW.k_reduce_elem_ok.none] at hW; cases hW
+  obtain ⟨s3, hs3, -, hok3, hS3, hg3, hd3⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (reduceElemOk_refines p h.red vis fe (r1.headD 0) hl1 n ⟨m, Locals.init []⟩ a hS) e3
+  subst hs3
+  have hrun3 := AM.run_of_ok _ _ hok3
+  rw [e3] at hW
+  simp only [StateT.run_bind, hrun3, exc_ok_bind']
+  generalize AM.res (reduceElemOk fe (decI (r1.headD 0))) a = b3 at hd3
+  generalize AM.st (reduceElemOk fe (decI (r1.headD 0))) a = a3 at hS3
+  by_cases z3 : r3.headD 0 = 0
+  · rw [oraW.k_reduce_elem_ok.arm1 p n vis q _ _ r3 _ z3] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have : b3 = false := by rw [← hd3.1, z3]; rfl
+    subst this
+    exact ⟨false, a3, rfl, hS3, hg3, by simp [decW0B]⟩
+  rw [oraW.k_reduce_elem_ok.arm2 p n vis q _ _ r3 _ z3] at hW
+  have : b3 = true := by rw [← hd3.1]; simpa using z3
+  subst this
+  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+  -- the stored reduce opaque
+  rcases e4 : callW p n "reduce_stored_ok" [vis, r1.headD 0] s3.mem with _ | ⟨r4, m4⟩
+  · rw [e4, oraW.k_reduce_stored_ok.none] at hW; cases hW
+  obtain ⟨s4, hs4, -, hok4, hS4, hg4, hd4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (reduceStoredOk_refines p h.red vis fe (r1.headD 0) hl1 n ⟨s3.mem, Locals.init []⟩ a3 hS3) e4
+  subst hs4
+  have hrun4 := AM.run_of_ok _ _ hok4
+  rw [e4] at hW
+  simp only [StateT.run_bind, hrun4, exc_ok_bind']
+  generalize AM.res (reduceStoredOk fe (decI (r1.headD 0))) a3 = b4 at hd4
+  generalize AM.st (reduceStoredOk fe (decI (r1.headD 0))) a3 = a4 at hS4
+  by_cases z4 : r4.headD 0 = 0
+  · rw [oraW.k_reduce_stored_ok.arm1 p n q _ r4 _ z4] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have : b4 = false := by rw [← hd4.1, z4]; rfl
+    subst this
+    exact ⟨false, a4, rfl, hS4, hg3.trans hg4, by simp [decW0B]⟩
+  rw [oraW.k_reduce_stored_ok.arm2 p n q _ r4 _ z4] at hW
+  have : b4 = true := by rw [← hd4.1]; simpa using z4
+  subst this
+  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+  -- the pin
+  rcases e5 : callW p n "of_reduce_pin_a" [wn] s4.mem with _ | ⟨r5, m5⟩
+  · rw [e5, oraW.k_of_reduce_pin_a.none] at hW; cases hW
+  obtain ⟨s5, hs5, -, hok5, hS5, hg5, hd5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
+    (ofReducePinA_refines (p := p) (hpa := h.red.pa) (n := n) (s₀ := ⟨s4.mem, Locals.init []⟩)
+      (a₀ := a4) (hS := hS4) (hc := hwnl) (hR := h.red.rom) (hp := h.orp)) e5
+  subst hs5
+  have hrun5 := AM.run_of_ok _ _ hok5
+  rw [e5, oraW.k_of_reduce_pin_a.arm1] at hW
+  have hg05 := hg3.trans (hg4.trans hg5)
+  rcases e6 : callW p n "matches_pin" [q, r5.headD 0] s5.mem with _ | ⟨r6, m6⟩
+  · rw [e6, oraW.k_matches_pin.none] at hW; cases hW
+  rw [e6, oraW.k_matches_pin.arm1] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨rfl, hrun6, hd6⟩ := mpW_ok (a := AM.st (ofReducePinA (decI wn)) a4) (mp_callR h.red e6)
+    hS5.iw.erSize (ArrExt.decCV (IWGrow.erecExt hg05) hq) (decRCV_get hd5)
+  refine ⟨_, _, ?_, hS5, hg05, by simpa [decW0B] using hd6⟩
+  simp only [StateT.run_bind, hrun5, exc_ok_bind']
+  exact hrun6
 
-/-- **`of_reduce_ax_ok(vis, q)` refines `ofReduceAxOk`** (through the ROM stubs). -/
+/-- **`of_reduce_ax_ok(vis, q)` refines `ofReduceAxOk`** (through the ROM readers' refinements). -/
 @[refines ConRon.Arena.ofReduceAxOk]
 theorem ofReduceAxOk_refines (p : Prog) (h : OraProg p) (dn : NIdx → Option ConLeche.Name)
     (hdn : DnInj dn) (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal) :
     RefAM p "of_reduce_ax_ok" [vis, q]
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
       (ofReduceAxOk fe cv) (KeepPost vis fe decW0B) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hq⟩
+  refine triple_post (ora_specW p h n s₀ vis q) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨b, a', hrun, hS', hg, hd⟩ := oraW_ok h hm hS hq
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
 
 end L.Arena

@@ -7,6 +7,7 @@ import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
 import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.BvarB
 import all ConAgua.Arena.CheckerL
 import all ConAgua.Arena.ConsLib
@@ -30,14 +31,15 @@ import all ConAgua.Arena.ForallStore
 import all ConAgua.Arena.Freeze
 import all ConAgua.Arena.HasFvar
 import all ConAgua.Arena.ImaxStore
+import all ConAgua.Arena.IndDeclConsts
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
+import all ConAgua.Arena.IndStream
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.Infer
-import all ConAgua.Arena.InferFieldSort
 import all ConAgua.Arena.Inst1
 import all ConAgua.Arena.Inst1Spec
 import all ConAgua.Arena.InstLP
@@ -131,6 +133,7 @@ import all ConAgua.Front.LineRec
 import all ConAgua.Front.NatDec
 import all ConAgua.Front.Unescape
 import all ConAgua.L.Examples
+import all ConAgua.Rom.CIConst
 import all ConAgua.Rom.CIRead
 import all ConAgua.Rom.PinRead
 import all ConAgua.Rom.PinReadSpec
@@ -161,7 +164,7 @@ open scoped Lean.Order
 
 /-! ## `builtin_prelude` -/
 
-/-- The call closure of `builtin_prelude` in `checkerProg` (259 functions). -/
+/-- The call closure of `builtin_prelude` in `checkerProg` (240 functions). -/
 def stageFns_builtin_prelude : List FnName := [
   "app_find", "app_push", "apply_level", "apply_nnum", "apply_nstr", "builtin_prelude",
   "bvar_find", "bvar_push", "const_find", "const_push", "ctl_sum", "decl_code", "decl_kind",
@@ -173,15 +176,13 @@ def stageFns_builtin_prelude : List FnName := [
   "intern_forall", "intern_imax", "intern_lam", "intern_letE", "intern_lit", "intern_lit_str",
   "intern_ls", "intern_max", "intern_nanon", "intern_nnum", "intern_nstr", "intern_param",
   "intern_proj", "intern_sort", "intern_succ", "intern_zero", "lam_find", "lam_push", "letE_find",
-  "letE_push", "level_fresh", "level_get", "level_put", "lh_mk", "lid_sp_clear", "limbs_eq",
-  "lit_find", "lit_find_str", "lit_hash", "lit_match", "lit_match_str", "lit_push", "lit_push_str",
-  "ls_find", "ls_match", "ls_push", "lsp_find", "lsp_put", "lv_cases", "lv_cases_at", "lv_comb",
-  "lv_dist1", "lv_dist2", "lv_eq", "lv_equiv", "lv_imax", "lv_imax_l", "lv_imax_r", "lv_leq",
-  "lv_node", "lv_rest", "lv_simp", "lv_subsimp", "lv_subst", "max_find", "max_push", "mk_app",
-  "mk_forall", "mk_lam", "mk_let", "mk_proj", "name_fresh", "name_get", "name_put", "name_rec_pre",
+  "letE_push", "level_fresh", "level_get", "level_put", "lid_sp_clear", "limbs_eq", "lit_find",
+  "lit_find_str", "lit_hash", "lit_match", "lit_match_str", "lit_push", "lit_push_str", "ls_find",
+  "ls_match", "ls_push", "lsp_find", "lsp_put", "max_find", "max_push", "mk_app", "mk_forall",
+  "mk_lam", "mk_let", "mk_proj", "name_fresh", "name_get", "name_put", "name_rec_pre",
   "nanon_find", "nanon_push", "nat_mad", "nid_sp_clear", "nnum_find", "nnum_push", "node_bin",
   "node_let", "node_proj", "nsp_find", "nsp_put", "nstr_find", "nstr_match", "nstr_push",
-  "param_find", "param_push", "parse_rule_d", "pi_result_d", "pi_sort_tele_len", "pre_apply_decl",
+  "param_find", "param_push", "parse_rule_d", "pi_sort_tele_len", "pre_apply_decl",
   "pre_apply_dline", "pre_apply_expr", "pre_apply_ind", "pre_apply_rec", "pre_apply_str",
   "pre_byte_in", "pre_d_member", "pre_dec_chunk", "pre_decl_cv", "pre_decl_val", "pre_esc_one",
   "pre_esc_sur", "pre_expr_node", "pre_front_line", "pre_front_run", "pre_has_escape", "pre_hex3",
@@ -201,10 +202,10 @@ def stageFns_builtin_prelude : List FnName := [
   "pre_skip_ws", "pre_slot_nat", "pre_str_close", "pre_str_code", "pre_str_put_esc", "pre_sub_rec",
   "pre_sub_val", "pre_u_next", "pre_unescape", "pre_utf8_char", "pre_utf8_valid", "pre_value_at",
   "proj_find", "proj_push", "sort_find", "sort_push", "store_fuel", "sub_bit", "succ_find",
-  "succ_push", "utf8_put", "validate_ind_d", "vi_ctor", "vi_ids_go", "vi_k_expected", "vi_listed",
-  "vi_listed_go", "vi_map", "vi_map_go", "vi_nested", "vi_np_go", "vi_nparams", "vi_order",
-  "vi_order_go", "vi_order_in", "vi_rec", "vi_rec_idx", "vi_recs", "vi_recs_go", "vi_tail",
-  "vi_unsafe", "zero_find", "zero_push"]
+  "succ_push", "utf8_put", "validate_ind_d", "vi_ctor", "vi_ids_go", "vi_listed", "vi_listed_go",
+  "vi_map", "vi_map_go", "vi_nested", "vi_np_go", "vi_nparams", "vi_order", "vi_order_go",
+  "vi_order_in", "vi_rec", "vi_rec_idx", "vi_recs", "vi_recs_go", "vi_tail", "vi_unsafe",
+  "zero_find", "zero_push"]
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_builtin_prelude` store
 into. -/
@@ -214,13 +215,45 @@ def stageA_builtin_prelude : List TieredArray :=
   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC,
   PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
   PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, Front.NID, Front.LID, Front.EID, Front.DECL, Front.DLP,
-  Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, LH] ++
+  Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS] ++
   tier1s [
   POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC,
   PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
   PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, Front.NID, Front.LID, Front.EID]
 
+/-- The `CTL` words the functions of `stageFns_builtin_prelude` store into. -/
+def stageC_builtin_prelude : List Word := [
+  0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 28, 29, 30,
+  31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 64, 65, 66, 67, 68, 69, 70, 71, 72, 240]
+
+names_tree stageTree_builtin_prelude : stageFns_builtin_prelude
+
+prog_all checkerProg_stageChk_builtin_prelude : checkerProg
+  (wsChk CTL (fun a => stageA_builtin_prelude.contains a)
+    (fun w => stageC_builtin_prelude.contains w) stageTree_builtin_prelude)
+
+theorem checkerProg_stageClosed_builtin_prelude :
+    closedA checkerProg stageA_builtin_prelude stageC_builtin_prelude
+      stageFns_builtin_prelude = true :=
+  closedW_of_all stageTree_builtin_prelude.eq (fun _ h => List.contains_iff_mem.mp h)
+    (fun _ h => List.contains_iff_mem.mp h) checkerProg_stageChk_builtin_prelude
+
+/-- **A run of `builtin_prelude` is a frame of its own write set.** -/
+theorem stageFrame_builtin_prelude (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "builtin_prelude" []
+    ⦃fun _ s' =>
+      MemFrame stageA_builtin_prelude stageC_builtin_prelude s₀.mem s'.mem; ⊤⦄ :=
+  memFrame_of_closed checkerProg_stageClosed_builtin_prelude n
+    (mem_of_tree stageTree_builtin_prelude.eq "builtin_prelude" (by decide +kernel)) s₀
+
 theorem stageA_builtin_prelude_pins : (PINS : TieredArray) ∉ stageA_builtin_prelude := by decide +kernel
+
+/-- Of the `CTL` words 131, 132, 148, 149, 150, 151, 240, `builtin_prelude` writes
+240. -/
+theorem stageC_builtin_prelude_off :
+    ∀ w : Word, w.toNat ∈ ([131, 132, 148, 149, 150, 151] : List Nat) →
+      w ∉ stageC_builtin_prelude :=
+  not_mem_of_toNat (by decide +kernel)
 
 end L.Checker

@@ -1,6 +1,10 @@
 module
 
-import ConAgua.Arena.IndRealCapsC
+import ConAgua.Arena.IndInstallSpec.IcaW
+public import ConRon.Bridge.Inductives.Records
+import ConAgua.Arena.IndPosSpec.MatesW
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndInstallSpec.InstallIwB
 import ConAgua.Arena.LevelSimpRel
@@ -43,6 +47,13 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
+
+/-- The stage relation with the level readback cache replaced. -/
+theorem StageR.withReadLC {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} (hS : StageR vis fe m a)
+    (X : Std.HashMap LIdx ConLeche.Level) :
+    StageR vis fe m { a with caches := { a.caches with readLC := X } } :=
+  ⟨⟨hS.check.arena.caches_irrel _, let ⟨M, hM⟩ := hS.check.core; ⟨M, hM.readLC X⟩, hS.check.pins, hS.check.env,
+    hS.check.mode⟩, hS.iw⟩
 
 /-! ## The model -/
 
@@ -251,7 +262,14 @@ theorem blockLargeElimAllowed_simC {p : Prog} (P : BleProg p) (n : Nat) {env : C
       (ConRon.Arena.blockLargeElimAllowed bs (nb != 0)) a
       (fun r x m' a' => StageC dn vis fe env m' a' ∧ m' = m ∧ decW0B m' r x ∧
         ConRon.Bridge.Inductives.PStep a a' ∧ x = ConLeche.blockLargeElimAllowed pP (nb != 0)) := by
-  sorry
+  intro r m' e
+  have hrl : ReadLCOK a := hC.stageT.twin.readL
+  obtain ⟨-, -, -, -, hsP, -, -⟩ := ConRon.Bridge.Inductives.dShape_inv hsh
+  obtain ⟨x, a', hrun, hS', rfl, hd, -, -⟩ :=
+    blockLargeElimAllowed_sim P n hC.stage hq hsrc hrl hsP r m' e
+  obtain ⟨hs, hx⟩ := ConRon.Bridge.Inductives.blockLargeElimAllowed_spec bs pP (nb != 0) a a' x
+    hC.check.state hC.check.caches.readL hsh hrun
+  exact ⟨x, a', hrun, hC.of_pstep hS' hA hs, rfl, hd, hs, hx⟩
 
 end
 

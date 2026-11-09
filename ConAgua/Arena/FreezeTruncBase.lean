@@ -79,68 +79,56 @@ theorem truncList_mem (m₀ : Mem) (x : ArrId) (z : Fz) :
 
 /-! ## `truncFrozen` -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The frozen arrays (sources), as a literal. -/
 def fzSrcs : List TieredArray := tier0s
   [POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
    SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
    FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
    FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, PINS, EIXA, EIXS, EIXN, TIXA, TIXS,
-   TIXN, EREC, PEND]
--/
+   TIXN, EREC, FIRSTS, L.Front.DECL, L.Front.DLP]
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem frozen_srcs : (frozen.drop 1).map (fun e => (e.2.src : TieredArray)) = fzSrcs := by
-  sorry
--/
+theorem frozen_srcs : (frozen.drop 1).map (fun e => (e.2.src : TieredArray)) = fzSrcs := by decide
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem fzSrcs_nodup : fzSrcs.Nodup := by
-  sorry
--/
+theorem fzSrcs_nodup : fzSrcs.Nodup := by decide
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem frozen_pairwise : (frozen.drop 1).Pairwise (fun e e' => e.2.src ≠ e'.2.src) := by
   have := fzSrcs_nodup
   rw [← frozen_srcs, List.Nodup, List.pairwise_map] at this
   exact this.imp fun h e => h (congrArg TieredArray.t0 e)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **An array that is not frozen is unchanged.** -/
 theorem truncFrozen_other (m : Mem) (b : TieredArray) (hb : b ∉ fzSrcs) :
     (truncFrozen m).arr64 b = m.arr64 b :=
   truncList_other m b _ m (fun e he hs => hb (by
     rw [← frozen_srcs, List.mem_map]; exact ⟨e, he, hs⟩))
--/
 
-theorem truncFrozen_ctl (m : Mem) : (truncFrozen m).arr64 CTL = m.arr64 CTL := by
-  sorry
+theorem truncFrozen_ctl (m : Mem) : (truncFrozen m).arr64 CTL = m.arr64 CTL :=
+  truncFrozen_other m CTL (by decide)
 
 /-- **A frozen array is its prefix up to its extent.** -/
 theorem truncFrozen_mem (m : Mem) {x : ArrId} {z : Fz} (h : (x, z) ∈ frozen.drop 1) :
-    (truncFrozen m).arr64 z.src = (m.arr64 z.src).extract 0 (fzExt m z) := by
-  sorry
+    (truncFrozen m).arr64 z.src = (m.arr64 z.src).extract 0 (fzExt m z) :=
+  truncList_mem m x z _ m h frozen_pairwise
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem frozen_drop1 : frozen.drop 1 =
     [(POOL, ⟨POOL, fzCtl 0⟩)] ++
     fzStores.flatMap (fun (ra, sa, w, ca) =>
       [(ra, ⟨ra, .bin .mul (fzCtl ca) (fzC w)⟩), (sa, ⟨sa, fzSlotExt sa⟩)]) ++
     fzPCols.map (fun (c, ca) => (c, ⟨c, fzPExt ca⟩)) ++
     fzCols.map (fun (c, ca) => (c, ⟨c, fzCtl ca⟩)) ++
-    [(PINS, ⟨PINS, fzC 71⟩),
+    [(PINS, ⟨PINS, fzC 72⟩),
      (EIXA, ⟨EIXA, .bin .mul (fzC 2) (fzCtl nanonCS.ca.toNat)⟩),
      (EIXS, ⟨EIXS, .bin .mul (fzC 2) (fzCtl nstrCS.ca.toNat)⟩),
      (EIXN, ⟨EIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩),
-     (TIXA, ⟨TIXA, fzCtl nanonCS.ca.toNat⟩),
-     (TIXS, ⟨TIXS, fzCtl nstrCS.ca.toNat⟩),
-     (TIXN, ⟨TIXN, fzCtl nnumCS.ca.toNat⟩),
+     (TIXA, ⟨TIXA, .bin .mul (fzC 2) (fzCtl nanonCS.ca.toNat)⟩),
+     (TIXS, ⟨TIXS, .bin .mul (fzC 2) (fzCtl nstrCS.ca.toNat)⟩),
+     (TIXN, ⟨TIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩),
      (EREC, ⟨EREC, fzCtl 129⟩),
-     (PEND, ⟨PEND, .bin .mul (fzC 3) (fzCtl 130)⟩)] := by
+     (FIRSTS, ⟨FIRSTS, fzDecl⟩),
+     (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDecl)⟩),
+     (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩)] := by
   simp only [frozen, List.cons_append, List.drop_succ_cons, List.drop_zero, List.nil_append,
     List.append_assoc]
--/
 
 /-! ### The extents -/
 
@@ -172,62 +160,102 @@ theorem fzExt_slot (m : Mem) (sa : ArrId) :
 
 theorem truncFrozen_pool (m : Mem) :
     (truncFrozen m).arr64 POOL = (m.arr64 POOL).extract 0 m.top.toNat := by
-  sorry
+  have := truncFrozen_mem m (x := POOL) (z := ⟨POOL, fzCtl 0⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_ctl]; rfl
 
 theorem truncFrozen_ra (m : Mem) {ra sa : ArrId} {w ca : Nat} (h : (ra, sa, w, ca) ∈ fzStores) :
     (truncFrozen m).arr64 ra = (m.arr64 ra).extract 0
       (rdW (m.arr64 CTL) (UInt64.ofNat ca) * UInt64.ofNat w).toNat := by
-  sorry
+  have := truncFrozen_mem m (x := ra) (z := ⟨ra, .bin .mul (fzCtl ca) (fzC w)⟩) (by
+    rw [frozen_drop1]
+    simp only [List.mem_append, List.mem_flatMap]
+    exact .inl (.inl (.inl (.inr ⟨_, h, by simp⟩))))
+  rw [this, fzExt_mulC]
 
 theorem truncFrozen_sa (m : Mem) {ra sa : ArrId} {w ca : Nat} (h : (ra, sa, w, ca) ∈ fzStores) :
     (truncFrozen m).arr64 sa = (m.arr64 sa).extract 0 (2 + (rdW (m.arr64 sa) 0 + SN0)).toNat := by
-  sorry
+  have := truncFrozen_mem m (x := sa) (z := ⟨sa, fzSlotExt sa⟩) (by
+    rw [frozen_drop1]
+    simp only [List.mem_append, List.mem_flatMap]
+    exact .inl (.inl (.inl (.inr ⟨_, h, by simp⟩))))
+  rw [this, fzExt_slot]
 
 theorem truncFrozen_col (m : Mem) {c : ArrId} {ca : Nat} (h : (c, ca) ∈ fzCols) :
     (truncFrozen m).arr64 c = (m.arr64 c).extract 0 (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat := by
-  sorry
+  have := truncFrozen_mem m (x := c) (z := ⟨c, fzCtl ca⟩) (by
+    rw [frozen_drop1]
+    simp only [List.mem_append, List.mem_map]
+    exact .inl (.inr ⟨_, h, rfl⟩))
+  rw [this, fzExt_ctl]
 
 theorem truncFrozen_pcol (m : Mem) {c : ArrId} {ca : Nat} (h : (c, ca) ∈ fzPCols) :
     (truncFrozen m).arr64 c =
       (m.arr64 c).extract 0 ((rdW (m.arr64 CTL) (UInt64.ofNat ca) + 1) >>> 1).toNat := by
-  sorry
+  have := truncFrozen_mem m (x := c) (z := ⟨c, fzPExt ca⟩) (by
+    rw [frozen_drop1]
+    simp only [List.mem_append, List.mem_map]
+    exact .inl (.inl (.inr ⟨_, h, rfl⟩)))
+  rw [this, fzExt_pext]
 
-theorem truncFrozen_pins (m : Mem) : (truncFrozen m).arr64 PINS = (m.arr64 PINS).extract 0 71 := by
-  sorry
+theorem truncFrozen_pins (m : Mem) : (truncFrozen m).arr64 PINS = (m.arr64 PINS).extract 0 72 := by
+  have := truncFrozen_mem m (x := PINS) (z := ⟨PINS, fzC 72⟩) (by rw [frozen_drop1]; simp)
+  rw [this]; rfl
 
 theorem truncFrozen_eixa (m : Mem) : (truncFrozen m).arr64 EIXA =
     (m.arr64 EIXA).extract 0 (2 * rdW (m.arr64 CTL) (UInt64.ofNat nanonCS.ca.toNat)).toNat := by
-  sorry
+  have := truncFrozen_mem m (x := EIXA)
+    (z := ⟨EIXA, .bin .mul (fzC 2) (fzCtl nanonCS.ca.toNat)⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_Cmul]; rfl
 
 theorem truncFrozen_eixs (m : Mem) : (truncFrozen m).arr64 EIXS =
     (m.arr64 EIXS).extract 0 (2 * rdW (m.arr64 CTL) (UInt64.ofNat nstrCS.ca.toNat)).toNat := by
-  sorry
+  have := truncFrozen_mem m (x := EIXS)
+    (z := ⟨EIXS, .bin .mul (fzC 2) (fzCtl nstrCS.ca.toNat)⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_Cmul]; rfl
 
 theorem truncFrozen_eixn (m : Mem) : (truncFrozen m).arr64 EIXN =
     (m.arr64 EIXN).extract 0 (2 * rdW (m.arr64 CTL) (UInt64.ofNat nnumCS.ca.toNat)).toNat := by
-  sorry
+  have := truncFrozen_mem m (x := EIXN)
+    (z := ⟨EIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_Cmul]; rfl
 
 theorem truncFrozen_tixa (m : Mem) : (truncFrozen m).arr64 TIXA =
-    (m.arr64 TIXA).extract 0 (rdW (m.arr64 CTL) (UInt64.ofNat nanonCS.ca.toNat)).toNat := by
-  sorry
+    (m.arr64 TIXA).extract 0 (2 * rdW (m.arr64 CTL) (UInt64.ofNat nanonCS.ca.toNat)).toNat := by
+  have := truncFrozen_mem m (x := TIXA)
+    (z := ⟨TIXA, .bin .mul (fzC 2) (fzCtl nanonCS.ca.toNat)⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_Cmul]; rfl
 
 theorem truncFrozen_tixs (m : Mem) : (truncFrozen m).arr64 TIXS =
-    (m.arr64 TIXS).extract 0 (rdW (m.arr64 CTL) (UInt64.ofNat nstrCS.ca.toNat)).toNat := by
-  sorry
+    (m.arr64 TIXS).extract 0 (2 * rdW (m.arr64 CTL) (UInt64.ofNat nstrCS.ca.toNat)).toNat := by
+  have := truncFrozen_mem m (x := TIXS)
+    (z := ⟨TIXS, .bin .mul (fzC 2) (fzCtl nstrCS.ca.toNat)⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_Cmul]; rfl
 
 theorem truncFrozen_tixn (m : Mem) : (truncFrozen m).arr64 TIXN =
-    (m.arr64 TIXN).extract 0 (rdW (m.arr64 CTL) (UInt64.ofNat nnumCS.ca.toNat)).toNat := by
-  sorry
+    (m.arr64 TIXN).extract 0 (2 * rdW (m.arr64 CTL) (UInt64.ofNat nnumCS.ca.toNat)).toNat := by
+  have := truncFrozen_mem m (x := TIXN)
+    (z := ⟨TIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_Cmul]; rfl
 
 theorem truncFrozen_erec (m : Mem) : (truncFrozen m).arr64 EREC = (m.arr64 EREC).extract 0 (erecTop m) := by
-  sorry
+  have := truncFrozen_mem m (x := EREC) (z := ⟨EREC, fzCtl 129⟩) (by rw [frozen_drop1]; simp)
+  rw [this, fzExt_ctl]; rfl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem truncFrozen_pend (m : Mem) :
-    (truncFrozen m).arr64 PEND = (m.arr64 PEND).extract 0 (3 * rdW (m.arr64 CTL) 130).toNat := by
-  have := truncFrozen_mem m (x := PEND) (z := ⟨PEND, .bin .mul (fzC 3) (fzCtl 130)⟩)
-    (by rw [frozen_drop1]; simp)
-  rw [this, fzExt_Cmul]; rfl
--/
+theorem truncFrozen_firsts (m : Mem) :
+    (truncFrozen m).arr64 FIRSTS = (m.arr64 FIRSTS).extract 0 (rdW (m.arr64 L.Front.DECL) 0).toNat := by
+  have := truncFrozen_mem m (x := FIRSTS) (z := ⟨FIRSTS, fzDecl⟩) (by rw [frozen_drop1]; simp)
+  rw [this]; simp only [fzExt, fzDecl, fzC, Expr.pval, rd64, rdW, Array.getD_eq_getD_getElem?]; rfl
+
+theorem truncFrozen_decl (m : Mem) : (truncFrozen m).arr64 L.Front.DECL =
+    (m.arr64 L.Front.DECL).extract 0 (1 + 8 * rdW (m.arr64 L.Front.DECL) 0).toNat := by
+  have := truncFrozen_mem m (x := L.Front.DECL)
+    (z := ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDecl)⟩) (by rw [frozen_drop1]; simp)
+  rw [this]; simp only [fzExt, fzDecl, fzC, Expr.pval, BinOp.eval, rd64, rdW, Array.getD_eq_getD_getElem?]; rfl
+
+theorem truncFrozen_dlp (m : Mem) : (truncFrozen m).arr64 L.Front.DLP =
+    (m.arr64 L.Front.DLP).extract 0 (1 + rdW (m.arr64 L.Front.DLP) 0).toNat := by
+  have := truncFrozen_mem m (x := L.Front.DLP)
+    (z := ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩) (by rw [frozen_drop1]; simp)
+  rw [this]; simp only [fzExt, fzC, Expr.pval, BinOp.eval, rd64, rdW, Array.getD_eq_getD_getElem?]; rfl
 
 end L.Arena

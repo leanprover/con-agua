@@ -7,6 +7,8 @@ import ConAgua.Arena.IndPartsSpec.BrsW
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Specs
+import ConRon.Bridge.Inductives.BlockShape
+import ConRon.Bridge.Inductives.Rel
 
 @[expose] public section
 
@@ -58,7 +60,6 @@ section
 variable (p : Prog) (hcl : CoreStageClosed p) (hL : LvlCacheProg p)
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hcl hL in
 /-- **The real `lvl_eq_c` meets `LvlHyp` at `blockShape?`'s prefix** from a `StageC` state whose
 memory holds `AbsOK` and whose store denotes the block. -/
@@ -77,7 +78,7 @@ theorem lvlHyp_real (n : Nat) {m : Mem} {a : AState} {nP : Nat} {blk : List ICon
   have hsp1 := ConRon.Bridge.Inductives.blockMemberCounts?_spec nP (cvT0 :: cvTs).length cs.length
     ((cvT0 :: cvTs).map (·.name)) (cvTsP.map (·.name)) (r0 :: rs) rsP 0 (cvT0 :: cvTs) cvTsP
   have hpre : Frontend.denoteNList a.store.ns ((cvT0 :: cvTs).map (·.name)) = some (cvTsP.map (·.name)) ∧
-      (r0 :: rs).mapM (ConRon.Bridge.Inductives.dRec4 a.store) = some rsP ∧
+      (r0 :: rs).mapM (ConRon.Bridge.Inductives.dRecT a.store) = some rsP ∧
       (cvT0 :: cvTs).mapM (Frontend.denoteCV a.store) = some cvTsP :=
     ⟨ConRon.Bridge.Inductives.cvNames_go hTs, hrs, hTs⟩
   obtain ⟨p1, -⟩ := hsp1 a a2 (some nIdxs) hok hpre hbmc
@@ -99,11 +100,10 @@ theorem lvlHyp_real (n : Nat) {m : Mem} {a : AState} {nP : Nat} {blk : List ICon
     simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz
     rw [← hz]; rfl
   have hF := hS1.check.pins.full hpne
-  obtain ⟨lz, hdz⟩ := hC1.stageT.twin.den.zero
+  obtain ⟨lz, hdz⟩ : ∃ l, denoteL _ _ = some l := ⟨_, hC1.stageT.twin.den.zero⟩
   rw [hF.zeroLevel, ← hzp] at hdz
   exact Sim.mono (lvlEqC_simC p hcl hL (n + 2) hC1 hA1 s z hs hzh lu lz hdu hdz)
     (fun _ _ _ _ ⟨hC', hg, hd, _, _⟩ => ⟨hC'.stage, hg, hd⟩)
--/
 
 include hcl hL in
 /-- **`block_shape` refines `blockShape?` under `StageC`**, its `lvl_eq_c` the real call
@@ -119,28 +119,11 @@ theorem blockShape_refinesC (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ :
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockShape? nPd.toNat blk) a₀ ∧
       ShapeR (AM.res (ConRon.Arena.blockShape? nPd.toNat blk) a₀) r s'.mem ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.blockShape? nPd.toNat blk) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  sorry
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hcl hL in
-/-- **`block_parts` refines `blockParts?` under `StageC`**, its `lvl_eq_c` the real call
-(`blockParts_refines`' statement, as `blockShape_refinesC`). -/
-@[refines ConRon.Arena.blockParts?]
-theorem blockParts_refinesC (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (nPd off l : Word) (blk : List IConstantInfo) {blkP : List ConLeche.ConstantInfo}
-    (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
-    (hbP : Frontend.denoteCIList a₀.store blk = some blkP)
-    (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) s₀.mem blk) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 6)) "block_parts" [nPd, off, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockParts? nPd.toNat blk) a₀ ∧
-      PartsR (AM.res (ConRon.Arena.blockParts? nPd.toNat blk) a₀) r s'.mem ∧
-      StageR vis fe s'.mem (AM.st (ConRon.Arena.blockParts? nPd.toNat blk) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (bpa_spec p hP (realCall p) (realCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (bpW_sim (realCall p) n hC.stage hblk (lvlHyp_real p hcl hL n hC hA hbP)) hm
+  triple_post (bsh_spec p hP (realCall p) (realCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
+    let ⟨hok, hQ⟩ := Sim.run (bshW_sim (realCall p) n hC.stage hblk (lvlHyp_real p hcl hL n hC hA hbP)) hm
     ⟨hl, hok, hQ⟩
--/
+
 
 end
 

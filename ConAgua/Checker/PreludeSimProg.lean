@@ -257,11 +257,8 @@ def simChk (x : FnName × FunDecl) : Bool :=
     (x.2.body.noSt8In && x.2.body.callsIn (fun g => inT preCT g || inT preST g))) &&
   (!inT preST x.1 || (!inT preCT x.1 && x.2.body.noIn && x.2.body.callsIn (inT preST)))
 
--- ronsync2 stage 2: /-- Every function of `checkerProg` passes `simChk`. -/
--- ronsync2 stage 2: `prog_all` fails on the program generated from the built modules (a body
--- breaks `simChk`); back to `prog_all` once the program is complete
-theorem checkerProg_simChk : ∀ x ∈ checkerProg, simChk x = true := by
-  sorry
+/-- Every function of `checkerProg` passes `simChk`. -/
+prog_all checkerProg_simChk : checkerProg simChk
 
 /-! ## The copies' bindings -/
 
@@ -315,9 +312,7 @@ elab "copy_facts " n:ident : command =>
     addDecl (thm name ty chain [])
 
 -- Every copied name and its copy are bound as `preFn` says.
--- ronsync2 stage 2: needs the regenerated `checkerProg`.
-theorem copyAt_all : ∀ f ∈ preNames, CopyAt f := by
-  sorry
+copy_facts copyAt_all
 
 /-! ## The shape -/
 
@@ -336,8 +331,8 @@ theorem lookup_of_mem {p : Prog} (hnd : (p.map (·.1)).Nodup) {f : FnName} {fd :
       rw [this]
       exact ih hnd.2 h
 
-theorem checkerProg_nodup : (checkerProg.map (·.1)).Nodup := by
-  sorry
+theorem checkerProg_nodup : (checkerProg.map (·.1)).Nodup :=
+  (progTree_spec checkerProg_wf.tree_eq).1
 
 theorem mem_of_lookup {p : Prog} {f : FnName} {fd : FunDecl} (h : p.lookup f = some fd) :
     (f, fd) ∈ p := by
@@ -345,8 +340,24 @@ theorem mem_of_lookup {p : Prog} {f : FnName} {fd : FunDecl} (h : p.lookup f = s
   exact hp ▸ List.mem_append_right _ List.mem_cons_self
 
 /-- **The checker program has the simulation's shape**, the shared functions as a name tree. -/
-theorem checkerProg_preSimT : PreSimProg checkerProg preTree (inT preST) := by
-  sorry
+theorem checkerProg_preSimT : PreSimProg checkerProg preTree (inT preST) where
+  defined f hf := by
+    rw [isCopied_preTree, decide_eq_true_eq] at hf
+    obtain ⟨fd, hm, -⟩ := copyAt_all f hf
+    rw [lookup_of_mem checkerProg_nodup hm]; rfl
+  copy f fd hf hl := by
+    have hc := checkerProg_simChk _ (mem_of_lookup hl)
+    simp only [simChk, inT_preCT, hf, Bool.not_true, Bool.false_or, Bool.and_eq_true] at hc
+    rw [isCopied_preTree, decide_eq_true_eq] at hf
+    obtain ⟨fd', hm, hm'⟩ := copyAt_all f hf
+    rw [lookup_of_mem checkerProg_nodup hm] at hl
+    cases hl
+    exact ⟨lookup_of_mem checkerProg_nodup hm', hc.1.1, hc.1.2⟩
+  shared f fd hs hl := by
+    have hc := checkerProg_simChk _ (mem_of_lookup hl)
+    simp only [simChk, hs, Bool.not_true, Bool.false_or, Bool.and_eq_true, Bool.not_eq_true',
+      inT_preCT] at hc
+    exact ⟨hc.2.1.1, hc.2.1.2, hc.2.2⟩
 
 /-- **The checker program has the simulation's shape.** -/
 theorem checkerProg_preSim : PreSimProg checkerProg preTree (fun f => decide (f ∈ preShared)) := by

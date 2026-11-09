@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.ErecRd
 import ConAgua.Arena.InstLPWalkRef3
 import ConAgua.Arena.InstLPKeys
 public import ConAgua.Arena.RecFireCore
@@ -224,19 +225,94 @@ end core
 
 /-! ## `inst_lp`: the keys from the record pool -/
 
-/-- **`ek_copy` copies a handle slice**: the record pool's slice `(s, l)` lands on the stack at `d`,
-below `d` nothing changes. -/
-theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Word),
-    hslice? (erecP m) s.toNat l.toNat = some lps → d.toNat + l.toNat ≤ (m.arr64 SPN).size →
-    (m.arr64 SPN).size < 2 ^ 63 → s.toNat + l.toNat < 2 ^ 64 → ekCopyW n m s d l = some m' →
-    hslice? (aread (m'.arr64 SPN)) d.toNat l.toNat = some lps ∧ MemFrame [SPN] [] m m' ∧
-      ∀ i : Word, i.toNat < d.toNat → rdW (m'.arr64 SPN) i = rdW (m.arr64 SPN) i := by
-  sorry
-
 /-- **`inst_lp(po, pl, us, e)` refines `instLPFast coreWalkFuel lps us e`** under `CoreS`, the keys
 `lps` a slice of the record pool (`InstLPOK`). -/
 @[refines ConRon.Arena.instLPFast]
 theorem instLP_refines (p : Prog) (hp : ILWEntryProg p) : InstLPOK p := by
-  sorry
+  intro n s₀ a₀ dn vis fe M eb po pl us e lps hS he hus hlps
+  apply CoreSpec.of_call
+  intro rs m' hc
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ k =>
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (instLP_spec p hp.all.lev.ilw (k + 1) _ po pl us e) hc
+  rw [hs'] at hW
+  change ilwLPW p (k + 1) s₀.mem po pl us e = some (rs.headD 0, m') at hW
+  rw [ilwLPW.eq_2] at hW
+  generalize s₀.mem = m at hS hlps hW
+  -- `keys_push`
+  cases h1 : callW p k "keys_push" [po, pl] m with
+  | none => rw [h1] at hW; cases hW
+  | some q =>
+  obtain ⟨bs, m₁⟩ := q
+  rw [h1, ilwLPW.k_keys_push.arm1] at hW
+  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (keysPush_spec p hp.all.lev.ls.toLvSubProg k _ po pl) h1
+  rw [hs1] at hW1
+  change keysPushW k m po pl = some (bs.headD 0, m₁) at hW1
+  cases k with
+  | zero => simp [keysPushW] at hW1
+  | succ k =>
+  simp only [keysPushW] at hW1
+  have hsz := hS.spn
+  have hlen : (m.len64 SPN).toNat = (m.arr64 SPN).size := L.Front.toNat_ofNat_size _ (by omega)
+  by_cases t1 : m.len64 SPN < spTop m
+  · simp [t1] at hW1
+  by_cases t2 : m.len64 SPN - spTop m < pl
+  · simp [t1, t2] at hW1
+  simp only [t1, t2, ↓reduceIte] at hW1
+  have t1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t1)
+  have t2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t2)
+  rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
+  rw [hlen] at t1'
+  cases hcp : ekCopyW k m po (spTop m) pl with
+  | none => rw [hcp] at hW1; simp [kpK] at hW1
+  | some mc =>
+  rw [hcp, kpK_some] at hW1
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW1
+  obtain ⟨hb, rfl⟩ := hW1
+  obtain ⟨hsl, hfc, hbc⟩ := ekCopyW_slice lps k m mc po (spTop m) pl hlps (by omega) hsz hcp
+  have hctl := hS.ctl136
+  have hfm : MemFrame [SPN] [136] m (mc.set64 CTL 136 (spTop m + pl)) :=
+    (hfc.mono (by simp) (by simp)).trans ((MemFrame.setCtl _ _ _).mono (by simp) (by simp))
+  have hS₁ : CoreS dn (mc.set64 CTL 136 (spTop m + pl)) a₀ vis fe M eb :=
+    hS.frame_stk hfm (by simp) (by simp)
+  have hspn₁ : (mc.set64 CTL 136 (spTop m + pl)).arr64 SPN = mc.arr64 SPN :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have htop₁ : (spTop (mc.set64 CTL 136 (spTop m + pl))).toNat = (spTop m).toNat + pl.toNat := by
+    have hc' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hfc.size CTL]; simpa using hctl
+    simp only [spTop]; rw [rdW_set64]; simp only [hc', and_self, ↓reduceIte]
+    rw [UInt64.toNat_add]; simp only [spTop] at t1' t2' ⊢; omega
+  -- the core
+  rw [← hb] at hW
+  cases h2 : callW p (k + 1) "inst_lp_core" [spTop m, pl, us, e] (mc.set64 CTL 136 (spTop m + pl)) with
+  | none => rw [h2] at hW; cases hW
+  | some q =>
+  obtain ⟨r2, m₂⟩ := q
+  rw [h2, ilwLPW.k_inst_lp_core.arm1] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, rfl⟩ := hW
+  obtain ⟨hok, ⟨M', hS₂, hK₂, hSt₂⟩, hres, hw⟩ := ilwCore_ok hp k hS₁ he hus (by rw [hspn₁]; exact hsl)
+    (Nat.le_of_eq htop₁.symm) h2
+  -- the stack top put back
+  have hfb : MemFrame [] [136] m₂ (m₂.set64 CTL 136 (spTop m)) := MemFrame.setCtl _ _ _
+  have hS₃ := hS₂.frame_stk hfb (by simp) (by simp)
+  refine ⟨hok, ⟨M', hS₃, hK₂, ?_⟩, by rw [hres]; simp only [decH, hr], by unfold ResH; rw [← hr]; exact hw⟩
+  have hc₂ : (136 : Word).toNat < (m₂.arr64 CTL).size := by simpa using hS₂.ctl136
+  have hspn₃ : (m₂.set64 CTL 136 (spTop m)).arr64 SPN = m₂.arr64 SPN :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  refine ⟨?_, ?_, fun i hi => ?_, (BKept.of_frame hfm (by decide) (by decide)).trans
+      (hSt₂.bstk.trans (BKept.of_frame hfb (by decide) (by decide))),
+    (PoolGrew.of_frame hfm (by decide) (by decide)).trans
+      (hSt₂.pool.trans (PoolGrew.of_frame hfb (by decide) (by decide)))⟩
+  · simp only [spTop]; rw [rdW_set64]; simp only [hc₂, and_self, ↓reduceIte]
+  · rw [hspn₃, hSt₂.size, hspn₁, hfc.size SPN]
+  · have hi' : i.toNat < (spTop m).toNat := UInt64.lt_iff_toNat_lt.mp hi
+    simp only [spW]
+    rw [hspn₃]
+    have := hSt₂.below i (UInt64.lt_iff_toNat_lt.mpr (by rw [htop₁]; omega))
+    simp only [spW] at this
+    rw [this, hspn₁, hbc i hi']
 
 end L.Arena

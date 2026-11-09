@@ -98,7 +98,20 @@ def TwinOK (a : AState) (st : StateD) : Prop :=
 theorem TwinOK.line {a : AState} {st : StateD} (h : TwinOK a st) {r : LineRec} {st' : StateD}
     (h1 : AM.ok (applyRecord st r) a) (h2 : AM.res (applyRecord st r) a = .inl st') :
     TwinOK (AM.st (applyRecord st r) a) st' := by
-  sorry
+  obtain ⟨hok, hoff, hpins, hp, sc, hrel⟩ := h
+  cases hr : (applyRecord st r).run a with
+  | error e => simp [AM.ok, hr] at h1
+  | ok q =>
+    obtain ⟨x, a'⟩ := q
+    have hx : x = .inl st' := by simpa [AM.res, hr] using h2
+    have ha : AM.st (applyRecord st r) a = a' := by simp [AM.st, hr]
+    rw [ha]
+    subst hx
+    obtain ⟨hstep, hpers, y, -, hsum⟩ := ConRon.Bridge.Frontend.applyRecord_run hok hoff hpins hrel hp hr
+    refine ⟨hstep.ok, by rw [hstep.scratch]; exact hoff, hpins.mono hstep.ext hstep.pins, hpers st' rfl, ?_⟩
+    cases y with
+    | inl sc' => exact ⟨sc', hsum⟩
+    | inr w => exact hsum.elim
 
 /-- `StateD.init` establishes `TwinOK`. -/
 theorem TwinOK.init {a a₁ : AState} {st₀ : StateD} (hok : ConRon.Bridge.StateOK a)
