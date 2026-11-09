@@ -3,6 +3,7 @@ module
 public import ConAgua.Checker.ParDriverL
 import ConAgua.Checker.CheckARun
 public import ConAgua.Checker.JobsProg
+public import ConAgua.Checker.ArmsT
 import all ConAgua.Checker.Entry
 import ConAgua.L.Blocks
 import ConAgua.Checker.IndArm
@@ -68,18 +69,39 @@ theorem checkMode2_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
       | (simp_all (config := { decide := true }); done)
       | (simp_all [St.setLoc]; done)
 
-/-- **`check_decl`'s program facts at the checker** (`CdProg`, the core area's): at every phase A
-and every pin buffer `pb` that starts with the ROM, at the program with `pb` substituted. A
-hypothesis of the final theorems until the core area proves it. -/
+/-- **What `check_decl`'s program facts still take** (`checkerProg_cdProgPB`): the value arms'
+claims and the inductive arm's, at every phase A and every pin buffer `pb` that starts with the
+ROM, at the program with `pb` substituted. A hypothesis of the final theorems until the core and
+inductive areas prove them. -/
 def CheckerCd : Prop :=
   ∀ (b pb : ByteArray) (PA : PhaseA b), pb.size < 2 ^ 63 → PbPre pb →
-    CdProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
+    (∀ cv v hh, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
+      "check_decl_defn" (.defnDecl cv v hh)) ∧
+    (∀ cv v, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
+      "check_decl_thm" (.thmDecl cv v)) ∧
+    (∀ cv v, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
+      "check_decl_opaque" (.opaqueDecl cv v)) ∧
+    IndArmSpec (Prog.subPB pb.data.toList checkerProg) (dnOf PA.sE.store)
+
+/-- The record decoder of a phase A is injective. -/
+theorem PhaseA.dnInj {b : ByteArray} (PA : PhaseA b) : L.Ind.DnInj (dnOf PA.sE.store) := by
+  obtain ⟨hA, hB, hC, hD, hE⟩ := PA.pfx
+  obtain ⟨-, hdrv, -⟩ := ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
+  exact dnOf_inj hdrv.state.wf
+
+/-- `Quot`'s universe name has a handle under a phase A's record decoder. -/
+theorem PhaseA.quotDn {b : ByteArray} (PA : PhaseA b) : L.Ind.QuotDn (dnOf PA.sE.store) := by
+  obtain ⟨k, hk, hd⟩ := prefix_quotU PA.pfx
+  exact ⟨k, by simp [dnOf, hk, hd]⟩
 
 /-- The jobs' program facts at a phase A, from `CheckerCd`. -/
 theorem jobProg_of_cd (hCd : CheckerCd) {b pb : ByteArray} (PA : PhaseA b) (hpb : pb.size < 2 ^ 63)
     (hpre : PbPre pb) :
     JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg) :=
-  checkerProg_jobProgPB pb.data.toList (by simpa [RomOK] using hpb) hpre (hCd b pb PA hpb hpre)
+  have hr : RomOK pb.data.toList := by simpa [RomOK] using hpb
+  let ⟨hdf, hth, hop, hind⟩ := hCd b pb PA hpb hpre
+  checkerProg_jobProgPB pb.data.toList hr hpre
+    (checkerProg_cdProgPB pb.data.toList hr hpre PA.dnInj PA.quotDn hdf hth hop hind)
     (checkerProg_canonPB _)
 
 /-- **The driver's two runs accept ⇒ the twin accepts**, given `check_decl`'s program facts
