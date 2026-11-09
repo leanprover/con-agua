@@ -18,27 +18,30 @@ namespace L.Checker
 
 open L.Arena L.Ind L.Compiler
 
-/-- `cidFree`: `cidFrameCallees`, `check_basis_decl`. -/
+/-- `cidFree`: `cidFrameCallees`. -/
 names_tree armCidTree : armCidFns
 def armCidT : ArmTest :=
   (tA fun b => decide ((b.arr < 201 ∨ 208 < b.arr) ∧
     b ≠ ABMEMO ∧ b ≠ ILMEMO ∧ b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ b ≠ PINS ∧ b ≠ WSM ∧ b ≠ FLM ∧ b ≠ LSM ∧
     b ≠ LPMEMO ∧ b ≠ LPLMEMO ∧ b ≠ LPLSMEMO),
   tC fun c => decide ((c < 202 ∨ 219 < c) ∧ c ≠ 48 ∧ c ≠ 50 ∧ c ≠ 52 ∧ c ≠ 158 ∧
-    c ≠ 152 ∧ c ≠ 154 ∧ c ≠ 156 ∧ c ≠ 54 ∧ c ≠ 56 ∧ c ≠ 58), armCidTree)
+    c ≠ 152 ∧ c ≠ 154 ∧ c ≠ 156 ∧ c ≠ 54 ∧ c ≠ 56 ∧ c ≠ 58), armCidTree, armCidTree)
 
 /-- `rcHbFree`: `check_block_tables`. -/
 names_tree armRcHbTree : armRcHbFns
 def armRcHbT : ArmTest := (tA fun b => decide (b ∉ ([NOM, DPM, RAM, RFM, TAM] : List TieredArray)),
-  tC fun c => decide (c ∉ [204, 206, 208, 210, 212, 213, 218, 219]), armRcHbTree)
+  tC fun c => decide (c ∉ [204, 206, 208, 210, 212, 213, 218, 219]), armRcHbTree, armRcHbTree)
 
-/-- `maFree`: `check_block_pass`, `check_block_tail`. -/
+/-- `maFree`: `check_block_pass`, `check_block_tail` (the leaf `mentions_any_const`). -/
 names_tree armMaTree : armMaFns
-def armMaT : ArmTest := (tA fun b => decide (b ≠ MAM), tC fun c => decide (c ≠ 202 ∧ c ≠ 203), armMaTree)
+names_tree armMaCallTree : armMaFns ++ ["mentions_any_const"]
+def armMaT : ArmTest :=
+  (tA fun b => decide (b ≠ MAM), tC fun c => decide (c ≠ 202 ∧ c ≠ 203), armMaTree, armMaCallTree)
 
 /-- `mcFree`: `check_block`. -/
 names_tree armMcTree : armMcFns
-def armMcT : ArmTest := (tA fun b => decide (b ≠ MCM), tC fun c => decide (c ≠ 216 ∧ c ≠ 217), armMcTree)
+def armMcT : ArmTest :=
+  (tA fun b => decide (b ≠ MCM), tC fun c => decide (c ≠ 216 ∧ c ≠ 217), armMcTree, armMcTree)
 
 /-! The walk memos: the `AbsKeep` callees that reach no walk -/
 
@@ -52,6 +55,7 @@ theorem armAbsA_free : memoFreeA armAbsA = true := by decide +kernel
 theorem armAbsC_free : memoFreeC armAbsC = true := by decide +kernel
 
 names_tree armAbsTree : armAbsFns
-def armAbsT : ArmTest := (tA fun b => memoFreeA [b], tC fun c => memoFreeC [c.toUInt64], armAbsTree)
+def armAbsT : ArmTest :=
+  (tA fun b => memoFreeA [b], tC fun c => memoFreeC [c.toUInt64], armAbsTree, armAbsTree)
 
 end L.Checker

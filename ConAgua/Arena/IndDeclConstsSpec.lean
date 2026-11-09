@@ -49,11 +49,13 @@ structure DeclConstsPre (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   psize : (m.arr64 DLP).size < 2 ^ 63
 
 /-- What the stream index's builder keeps across the two: the front's records (`DECL`, `DLP`), the
-first counters (`FIRSTS`), the index rows (arrays 129‥134, both tiers) and the counter `CTL[128]`. -/
+first counters (`FIRSTS`), the index rows (arrays 129‥134, both tiers) and the counters `CTL[128]`, `CTL[130]` and the core's memos. -/
 structure IdxKeep (m m' : Mem) : Prop where
   arr : ∀ b : TieredArray, (b.arr = DECL ∨ b.arr = DLP ∨ b.arr = L.Arena.FIRSTS ∨
     (129 ≤ b.arr ∧ b.arr ≤ 134)) → m'.arr64 b = m.arr64 b
   ctl128 : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128
+  ctl130 : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130
+  memos : CoreMemos m → CoreMemos m'
 
 /-- The lookups the two refinements take. -/
 structure DeclConstsProg (p : Prog) : Prop where
