@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.CheckerT
 import all ConAgua.Arena.DeclStep
+import ConAgua.Arena.QuotCiT
+import ConAgua.Checker.QuotFns
 
 @[expose] public section
 

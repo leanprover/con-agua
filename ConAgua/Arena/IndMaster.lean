@@ -18,7 +18,7 @@ import all ConAgua.Arena.IndIface
 The stage calls master's expression constructors (`intern_bvar`, `intern_fvar`, `intern_sort`,
 `intern_const`, `mk_app`, `mk_lam`, `mk_forall`, `mk_let`, `mk_proj`). Their L side is master's
 word model and spec (`binternW`/`internBVar_spec`, `mkAppW`/`mkApp_spec`, …); this file gives the
-twin side in the stage's shape, sorry-free: from `StageR` a model run is a successful
+twin side in the stage's shape, fully proved: from `StageR` a model run is a successful
 `internE` run, with `StageR` after (the writes are below array 64 and `CTL[64]`, the twin keeps
 caches and pins: `StageR.of_walk`) and the pool only grown. A refinement through these callees
 uses the master spec inside `vcgen` and the `_stage` lemma afterwards, as for a stub's `RelAM`.

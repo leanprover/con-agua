@@ -27,15 +27,11 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- A slice read in the cut record pool lies below the top (or is empty). -/
-theorem rec3ErSlice {m : Mem} {o l : Nat} {xs : List NIdx} (h : hslice? (erA (truncM m)) o l = some xs) :
-    o + l ≤ erTop m ∨ l = 0 := by
-  sorry
-
 /-- **A constant record decoded below the tops is `CVExt`.** -/
 theorem rec3CVExt_of_trunc {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp (truncM m) q = some cv) :
     CVExt m q ∧ decCVp m q = some cv := by
-  sorry
+  have e : decCVp m q = some cv := by simpa only [decCVp, truncM_erA] using h
+  exact ⟨by simp [CVExt, e], e⟩
 
 /-- **`RecsOK` from the recursor shapes decoded below the tops.** -/
 theorem rec3RecsOK_of_decB {m : Mem} {ro rl : Nat} {recs : List RecShape}

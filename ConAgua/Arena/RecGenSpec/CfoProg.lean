@@ -63,7 +63,10 @@ theorem rec2SimNestOcc (hS : StageR vis fe m a) {no nl e : Word} {names : List N
     RSim (noConstWf k m no nl 0 0 e) (ConRon.Arena.nestOcc names 0 0 (decI e)) a
       (fun b a' x => a' = a ∧ (b.1 != 0) = x ∧ noMR b.2 ∅ ∧ StageR vis fe b.2 a ∧ IWGrow m b.2 ∧
         MFr [NOM] [204, 205] m b.2) := by
-  sorry
+  rintro ⟨r, m'⟩ h
+  obtain ⟨x, hrun, hx, hM', hS', hg, hf⟩ := noConstWf_ok k (fun _ => none) fe vis m m' a no nl 0 0 e r names mp0
+    h hS hh hn hnb hM
+  exact ⟨x, a, by simpa [decE_eq] using hrun, rfl, hx, hM', hS', hg, hf⟩
 
 end sims
 
@@ -74,24 +77,25 @@ which `IWGrow` does not allow; what is created after the allocation reads only w
 slots. `AgreeA b m m'`: the pools grew and every word from `b` to the old top stayed;
 `StabA b f m x`: `f` decodes `x` in every such memory (and so stably, `StabA.stabD`). -/
 
-/-- The pools grew, keeping every word from `b` to the old top. -/
-def AgreeA (b : Nat) (m m' : Mem) : Prop :=
-  iwTop m ≤ iwTop m' ∧ erTop m ≤ erTop m' ∧
-    (∀ i, b ≤ i → i < iwTop m → (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
-    (∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
+/-- The pools grew, keeping every word from `b` to the old top (the record pool, both tiers, only
+grew). -/
+structure AgreeA (b : Nat) (m m' : Mem) : Prop where
+  iw : iwTop m ≤ iwTop m'
+  iwGet : ∀ i, b ≤ i → i < iwTop m → (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?
+  er : ErecGrow m m'
 
 theorem AgreeA.of_grow {b : Nat} {m m' : Mem} (h : IWGrow m m') : AgreeA b m m' :=
-  ⟨h.iw, h.er, fun i _ hi => h.iwGet i hi, h.erGet⟩
+  ⟨h.iw, fun i _ hi => h.iwGet i hi, h.erecGrow⟩
 
 theorem AgreeA.trans {b : Nat} {m₁ m₂ m₃ : Mem} (h₁ : AgreeA b m₁ m₂) (h₂ : AgreeA b m₂ m₃) :
     AgreeA b m₁ m₃ :=
-  ⟨Nat.le_trans h₁.1 h₂.1, Nat.le_trans h₁.2.1 h₂.2.1,
-    fun i hb hi => (h₂.2.2.1 i hb (Nat.lt_of_lt_of_le hi h₁.1)).trans (h₁.2.2.1 i hb hi),
-    fun i hi => (h₂.2.2.2 i (Nat.lt_of_lt_of_le hi h₁.2.1)).trans (h₁.2.2.2 i hi)⟩
+  ⟨Nat.le_trans h₁.iw h₂.iw,
+    fun i hb hi => (h₂.iwGet i hb (Nat.lt_of_lt_of_le hi h₁.iw)).trans (h₁.iwGet i hb hi),
+    h₁.er.trans h₂.er⟩
 
 theorem AgreeA.iwN {b : Nat} {m m' : Mem} (h : AgreeA b m m') {i : Nat} (hb : b ≤ i) (hi : i < iwTop m) :
     iwN m' i = iwN m i := by
-  simp only [L.Ind.iwN, nat?, iwA, aread_apply, aread_apply]; rw [h.2.2.1 i hb hi]
+  simp only [L.Ind.iwN, nat?, iwA, aread_apply, aread_apply]; rw [h.iwGet i hb hi]
 
 /-- `f` decodes `x` in every memory agreeing with `m` from `b` on. -/
 def StabA {α : Type} (b : Nat) (f : Mem → Option α) (m : Mem) (x : α) : Prop :=

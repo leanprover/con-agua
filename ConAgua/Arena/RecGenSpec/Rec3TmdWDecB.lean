@@ -126,13 +126,13 @@ theorem rec3DecTM_trunc {m : Mem} {q : Nat} (hq : q + 13 ≤ iwTop m) (h3 : iwN 
   simp [decHL, hslice?, decPL]
 
 /-- **`target_major_default`'s record is decoded below the tops.** -/
-theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem rec3TmdW_decB {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {r : List Word} {tm : TargetMajor} (h : tmdW m = some (r, m')) (hS : StageR vis fe m a)
     (hd : decTM m' (r.headD 0).toNat = some tm) : DecB (fun m => decTM m (r.headD 0).toNat) m' tm := by
   rw [tmdW_eq] at h
   obtain ⟨⟨ra, m1⟩, h1, h⟩ := of_K h rfl
   rw [tmdK1_some] at h
-  obtain ⟨_x1, _a1, _hr1, hS1, _hg1, _hw1, _hl1⟩ := naF_ok dn vis fe m m1 a ra h1 hS
+  obtain ⟨_x1, _a1, _hr1, hS1, _hg1, _hw1, _hl1⟩ := naF_ok (fun _ => none) vis fe m m1 a ra h1 hS
   obtain ⟨ls, hp, h⟩ := of_K h rfl
   rw [tmdK2_some] at h
   obtain ⟨⟨r3, m2⟩, hmk, h⟩ := of_K h rfl
@@ -177,7 +177,39 @@ theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     RSim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a
       (fun b a' tm => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧
         DecB (fun m => decTM m (b.1.headD 0).toNat) b.2 tm) := by
-  sorry
+  have hms0 : decPL m (decTM m) mo.toNat ml.toNat = some ms :=
+    hms.get (OMono.decPL (fun q => decTM_mono q) _ _)
+  have hlen := decPL_length m hms0
+  intro b hb'
+  obtain ⟨tm, a', hrun, hS', hg, hd⟩ := tmaW_sim dn vis fe n m a mo ml c ms hS hms0 hb b hb'
+  refine ⟨tm, a', hrun, hS', hg, ?_⟩
+  rcases n with _ | n
+  · simp [tmaW] at hb'
+  by_cases hcl : c < ml
+  · rw [tmaW_hit n m mo ml c hcl] at hb'
+    cases hb'
+    have hc' : c.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hcl
+    obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hms c.toNat hc'
+    obtain ⟨-, hv'⟩ := rec2IwN_trunc hv
+    have hrd := iwN_rdW_at (w := mo) (k := c.toNat) hv' hS.iw.iwSize
+    have hcw : mo + UInt64.ofNat c.toNat = mo + c := by simp
+    rw [hcw] at hrd
+    have hrun' : ConRon.Arena.targetMajorAt ms c.toNat = pure (ms[c.toNat]'(by omega)) := by
+      simp [ConRon.Arena.targetMajorAt, List.getElem?_eq_getElem (by omega : c.toNat < ms.length)]
+    rw [hrun'] at hrun
+    have hx : ms[c.toNat]'(by omega) = tm := by injection hrun with e; injection e
+    simp only [List.headD_cons]
+    rw [hrd.1, UInt64.toNat_ofNat_of_lt' hrd.2, ← hx]
+    exact (show DecB (fun m => decTM m v) m _ from hdv).grow (decTM_mono _) (IWGrow.refl m)
+  · rw [tmaW_miss n m mo ml c hcl] at hb'
+    obtain ⟨⟨r0, m0⟩, ho, hb'⟩ := of_K hb' rfl
+    rw [tmaK_some] at hb'
+    cases hb'
+    rcases n with _ | n
+    · cases ho
+    simp only [fuelW_succ] at ho
+    simp only [List.headD_cons] at hd ⊢
+    exact rec3TmdW_decB ho hS hd
 
 /-- The slice of results: decoded below the tops, and below the top. -/
 def decRRS (m' : Mem) (r : List Word) (xs : List (IConstantVal × TargetMajor × List EIdx)) : Prop :=
@@ -212,7 +244,9 @@ theorem rec3Rec4_decB {m m' : Mem} {cvw mw ro rl : Word} {q : Nat} {cv : IConsta
 /-- A stable constant record is decoded below the tops. -/
 theorem rec3CVX_decB {m : Mem} {p : Nat} {cv : IConstantVal} (h : StabD (fun m => decCVX m p) m cv) :
     DecB (fun m => decCVp m p) m cv := by
-  sorry
+  obtain ⟨h1, -⟩ := rec3CVX h
+  show decCV (erA (truncM m)) p = some cv
+  rw [truncM_erA]; exact h1
 
 /-- A stable constant slice is decoded below the tops. -/
 theorem rec3SPL_decB {m : Mem} {o l : Nat} {cvs : List IConstantVal} (h : SPL decCVX m o l cvs) :
