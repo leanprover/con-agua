@@ -124,7 +124,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hF 
   simp only at hfm
   rw [hs2] at hfm
   rw [nnewE.k_nest_frame_mates.arm1]
-  obtain ⟨hS2, hg2, hmd, hmb⟩ := nfmW_ok (dn := dn) hfm hS1 hnn
+  obtain ⟨hS2, hg2, hmd, hmb⟩ := nfmW_ok (dn := dn) L.fm hF.brg hfm hS1 hnn
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have hWp2 := hWp.grow hg2
   have hhw : (nhiW m2 ctx (rw.tail.headD 0)).toNat = c.hiAt wp.length := hWp2.hi htop2

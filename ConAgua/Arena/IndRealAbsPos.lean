@@ -270,14 +270,6 @@ theorem nfmW_afr {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
   afr_auto h [nboW_afr hg hb hp, matesW_afr _ _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/FgW
-theorem fgW_afr : ∀ (n : Nat) (m m' : Mem) (hi us dO dL gO gL pO pL nO nL : Word) (r : List Word),
-    fgW n m hi us dO dL gO gL pO pL nO nL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [fgW] at h
-  | n + 1, m, m', hi, us, dO, dL, gO, gL, pO, pL, nO, nL, r, h => by
-    unfold fgW fgK1 fgK2 fgK3 fgK4 at h
-    afr_auto h [posRecW_afr, snocW_afr, fgW_afr n _ _ _ _ _ _ _ _ _ _ _ _ _]
-
--- from IndPosSpec/FgW
 theorem fhW_afr : ∀ (n : Nat) (m m' : Mem) (hi gO gL aO aL : Word) (r : List Word),
     fhW n m hi gO gL aO aL = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, h => by simp [fhW] at h
@@ -312,6 +304,14 @@ theorem piBW_afr : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), p
   | n + 1, m, m', fuel, h, r, hh => by
     simp only [piBW, piBK1, piBK2.eq_def, piBK3.eq_def] at hh
     afr_auto hh [piBW_afr n _ _ _ _ _, consW_afr]
+
+-- from IndPosSpec/FgW
+theorem fgW_afr : ∀ (n : Nat) (m m' : Mem) (hi us dO dL gO gL pO pL nO nL : Word) (r : List Word),
+    fgW n m hi us dO dL gO gL pO pL nO nL = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [fgW] at h
+  | n + 1, m, m', hi, us, dO, dL, gO, gL, pO, pL, nO, nL, r, h => by
+    unfold fgW fgK1 fgKb fgK2 fgK3 fgK4 at h
+    afr_auto h [posRecW_afr, piBW_afr _ _ _ _ _ _, snocW_afr, fgW_afr n _ _ _ _ _ _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/NestCrest
 theorem stripW_afr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq = some (r, m')) : AFr m m' := by
