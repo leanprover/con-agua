@@ -462,6 +462,112 @@ theorem snd_ok (h : SnoProg p) (k : Word) {N : Nat} {m m' : Mem} {a : AState}
 
 end dom
 
+/-! ## `stream_nested_ok` -/
+
+section ok
+variable {p : Prog} {vis : Word} {fe : IFEnv}
+
+theorem getD_succ0 (r : List Word) (i : Nat) : r.getD (i + 1) 0 = r.tail.getD i 0 := by
+  cases r <;> simp
+
+/-- **`stream_nested_ok` refines con-ron's `streamNestedOk`** under the stage relation: `0`
+exactly when it is `false`, the growth and the memos after. -/
+theorem sno_ok (h : SnoProg p) {N : Nat} {m m' : Mem} {a : AState} {ty mI rP : Word}
+    {r : List Word} {f : IRecRuleFire} {r' : List Word}
+    (hc : callW p N "stream_nested_ok" [ty, mI, rP, r.headD 0, r.tail.headD 0, r.tail.tail.headD 0,
+        r.tail.tail.tail.headD 0, r.tail.tail.tail.tail.headD 0] m = some (r', m'))
+    (hS : StageR vis fe m a) (hA : AbsOK m) (hty : H ty) (hf : decFireG m r f) :
+    ∃ b a', (ConRon.Arena.streamNestedOk (decI ty) mI.toNat rP.toNat f).run a = .ok (b, a') ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ (r'.headD 0 = 0 ↔ b = false) := by
+  obtain ⟨s', rfl, -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (snoW_spec p h N _ ty mI rP _ _ _ _ _) hc
+  generalize s'.mem = m' at hm
+  generalize r'.headD 0 = v at hm ⊢
+  rcases N with _ | N
+  · simp [snoW] at hm
+  cases f with
+  | plain =>
+    have hf : r.headD 0 = 0 := hf
+    rw [snoW.arm1 _ _ _ _ _ _ _ _ _ _ _ (by rw [hf]; decide)] at hm
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+    exact ⟨true, a, rfl, hS, IWGrow.refl m, hA, by simp⟩
+  | levels _ => exact absurd hf id
+  | nested lvls pins =>
+  obtain ⟨hk, ⟨hl, hlb⟩, ⟨hp, hpb⟩⟩ := hf
+  simp only [getD_succ0, getD_zero] at hl hlb hp hpb
+  rw [snoW.arm2 _ _ _ _ _ _ _ _ _ _ _ hk] at hm
+  -- `strip_pis`
+  rcases h1 : callW p N "strip_pis" [mI, ty] m with _ | ⟨r1, m1⟩ <;> rw [h1] at hm
+  · rw [snoW.k_strip_pis.none] at hm; cases hm
+  obtain ⟨s1, rfl, -, hm1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (stripPis_specF p h.sum.strip N _ mI ty) h1
+  obtain ⟨o, a1, hr1, hS1, hg1, hdec⟩ := stripF_pis_ok vis fe mI ty hty m _ a r1 hm1 hS
+  have hA1 := stripF_afr hm1 hA
+  generalize s1.mem = m1 at *
+  cases o with
+  | none =>
+    have h0 : r1.headD 0 = 0 := hdec
+    rw [snoW.k_strip_pis.arm1 _ _ _ _ _ _ _ _ _ _ h0] at hm
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+    refine ⟨false, a1, ?_, hS1, hg1, hA1, by simp⟩
+    simp only [ConRon.Arena.streamNestedOk, StateT.run_bind, hr1, except_ok_bind]
+    rfl
+  | some q =>
+  obtain ⟨pre, rest⟩ := q
+  obtain ⟨h1', -, hbl, hbe⟩ := hdec
+  rw [drop3_eq] at hbl hbe
+  have h1ne : r1.headD 0 ≠ 0 := by rw [h1']; decide
+  by_cases hg6 : tagW (r1.tail.tail.tail.headD 0) ≠ 6
+  · rw [snoW.k_strip_pis.arm2 _ _ _ _ _ _ _ _ _ _ h1ne hg6] at hm
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+    have htag : (rest.tag == ETag.forallE) = false := by
+      rw [← hbe]; exact beq_eq_false_iff_ne.mpr fun h' => hg6 ((decE_tag_forallE _ hbl).mp h')
+    refine ⟨false, a1, ?_, hS1, hg1, hA1, by simp⟩
+    simp only [ConRon.Arena.streamNestedOk, StateT.run_bind, hr1, except_ok_bind, htag]
+    rfl
+  have hg6' : tagW (r1.tail.tail.tail.headD 0) = 6 := Classical.byContradiction hg6
+  rw [snoW.k_strip_pis.arm3 _ _ _ _ _ _ _ _ _ _ h1ne hg6'] at hm
+  -- the major's binder
+  rcases h2 : callW p N "e_view" [r1.tail.tail.tail.headD 0] m1 with _ | ⟨r2, m2⟩ <;> rw [h2] at hm
+  · rw [snoW.k_e_view.none] at hm; cases hm
+  obtain ⟨hm21, -, -, hdomH, -, hvb⟩ := eView_forall_callW h.ev hS1.check.arena.base hbl hg6' h2
+  subst hm21
+  rw [snoW.k_e_view.arm1] at hm
+  have hvb' : a1.store.viewBind rest =
+      some (decI (r2.tail.headD 0), decI (r2.tail.tail.headD 0)) := by rw [← hbe]; exact hvb
+  have htag : (rest.tag == ETag.forallE) = true := by
+    rw [← hbe]; exact beq_iff_eq.mpr ((decE_tag_forallE _ hbl).mpr hg6')
+  -- `stream_nested_dom`
+  rcases h3 : callW p N "stream_nested_dom" [r2.tail.headD 0, mI - rP, r.tail.headD 0,
+      r.tail.tail.headD 0, r.tail.tail.tail.headD 0, r.tail.tail.tail.tail.headD 0] m2
+    with _ | ⟨r3, m3⟩ <;> rw [h3] at hm
+  · rw [snoW.k_stream_nested_dom.none] at hm; cases hm
+  rw [snoW.k_stream_nested_dom.arm1] at hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
+  obtain ⟨b, a3, hr3, hS3, hg3, hA3, hb3⟩ := snd_ok h (mI - rP) h3 hS1 hA1 hdomH
+    (by rw [decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
+    (by rw [decHL_grow hg1 hpb]; exact hp) (Nat.le_trans hpb hg1.iw)
+  refine ⟨b, a3, ?_, hS3, hg1.trans hg3, hA3, hb3⟩
+  by_cases hle : rP ≤ mI
+  · rw [UInt64.toNat_sub_of_le _ _ hle] at hr3
+    simp only [ConRon.Arena.streamNestedOk, StateT.run_bind, hr1, except_ok_bind, htag, ↓reduceIte,
+      viewBind_run, hvb']
+    exact hr3
+  · -- `mI < rP`: the L code's `mI - rP` wraps (`2^64 - (rP - mI)`), the twin's is `0`. A
+    -- deviation, not provable here: `stream_nested_ok` needs `if mI < rP` (saturating), or the
+    -- callers an invariant `rP ≤ mI` of the recursor records (`decRS` has none).
+    sorry
+
+/-- **`stream_nested_ok`'s step** (`SnoSim`, the obligation `sr1_ref` takes): the twin's step
+from con-ron's `streamNestedOk_run`. -/
+theorem snoSim_of {dn : NIdx → Option ConLeche.Name} (h : SnoProg p) : SnoSim p dn := by
+  intro n vis fe env m a ty mI rP r f tyP fP hC hA _ hty htyP hf hfP r' m' hc
+  obtain ⟨b, a', hrun, hS', hg, hA', hb⟩ := sno_ok h hc hC.stage hA hty hf
+  obtain ⟨ps, -⟩ := ConRon.Bridge.Inductives.streamNestedOk_run hC.check.state htyP hfP hrun
+  exact ⟨b, a', hrun, ⟨hC.of_pstep hS' hA' ps, hg, hA', ps.toCore hC.check⟩, hb⟩
+
+end ok
+
 end L.Ind
 
 end
