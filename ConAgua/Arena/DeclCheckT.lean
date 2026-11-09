@@ -161,6 +161,35 @@ theorem checkDeclAxiom_loopT {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p
   rw [hst, hres]
   exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
 
+/-- **`check_decl_thm` under `StageT`** (`cdt_ref`'s ok half), as the axiom arm. -/
+@[refines_part ConRon.Arena.checkDecl "the theorem arm, under StageT"]
+theorem checkDeclThm_loopT {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p)
+    (hcl : LeafClosed p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p)
+    (hC : CcvSims p dn) (hin : StepIn p ["check_decl_thm"]) (hIc : IndMemoClosed p)
+    (hIl : IndLeaves p) (cv : IConstantVal) (v : EIdx) :
+    ArmSpecT pins dn ds p "check_decl_thm" (.thmDecl cv v) := by
+  intro n hn s₀ a₀ vis fe i hi hd hok hR hS hF hden _ hIM
+  have hd' : ds[i.toNat] = .thmDecl cv v := by
+    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
+  obtain ⟨x, hx⟩ := hden
+  simp only [Frontend.denoteDecl] at hx
+  obtain ⟨c, hc⟩ : ∃ c, Frontend.denoteCV a₀.store cv = some c := by
+    revert hx; cases Frontend.denoteCV a₀.store cv <;> simp
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, fe', a', hrun', hP⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkDeclThm_specE p hX n s₀ i vis)
+      (cdt_ref (pins := pins) hX hq hcl hap hkp hcrf hC hn hS hR.decls hi hd' hc hF hIM.cr))
+  obtain ⟨-, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (callW_spec p n "check_decl_thm" [i, vis] s₀)
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (hin.memFrame n (f := "check_decl_thm") (by simp) [i, vis] s₀)
+  subst hs
+  obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  refine ⟨hloc, hok', ?_, hP.memos, callW_indMemos hIc hIl (im_mem _ rfl) hW hIM, hP.grow⟩
+  rw [hst, hres]
+  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+
 end armsT
 
 /-! ## The inductive arm's contracts -/
