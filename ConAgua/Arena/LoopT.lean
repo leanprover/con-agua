@@ -16,24 +16,14 @@ public import ConAgua.Arena.IndRealCrF
 @[expose] public section
 
 /-!
-# The declaration loop with the core's invariants: `LoopT` (lane `loopt`)
+# The jobs' memos and the twin side of the scratch bracket (lane `loopt`)
 
-The loop's relation `LoopR` (`DeclBase.lean`) carries the stage relation `StageR = CheckR ∧ IWOK`,
-but not the twin-side invariants the core's refinements need (`TwinOK`, `DeclLvlStage.lean`) nor the
-pin table's flag word, so no stage theorem stated under `StageT` (`IndTwin.lean`) can be called from
-the loop. `LoopT` is `LoopR` with those two parts, by named components, a separate predicate
-(`LoopR` keeps its shape and its uses):
-
-* `loop` — `LoopR`,
-* `twin` — `TwinOK` at the loop's environment,
-* `flag` — the pin table is filled (`pinW m 0 ≠ 0`).
-
-`LoopT.stageT` is the stage relation with the twin's invariants, so every `StageT` theorem applies
-at a state in `LoopT`.
-
-What is here: `LoopT` across the per-declaration bracket's L functions (`flush_caches`,
-`scratch_enter`, the pending push), the view restriction of phase B, and a frame lemma for
-`TwinOK` (a writer that leaves the core's memos, `EREC` and the pins alone keeps it).
+What a job (`record_job`, `Arena/Jobs.lean`) carries beside its relation: the inductive stage's
+per-call memos (`StageMemos`, `IndMemos`) and the core's (`CoreMemos.zero`), each well formed on
+the zeroed memory and kept across the functions that do not write them (frame lemmas, the
+`IndMemoClosed` leaves); and the twin's side of the scratch bracket's opening: `TwinOK` after
+`flushCaches` (`TwinOK.flush`) and after `enterScratch` from a store with the scratch tier off
+(`TwinOK.enter`: every handle keeps its view and its denotation).
 -/
 
 set_option experimental.vcgen true
@@ -219,38 +209,6 @@ theorem CoreMemos.zero {m : Mem} (hsz : 158 ≤ (m.arr64 CTL).size)
     ⟨_, memoRV_zeroAt coreLplSch ilKey _ m (by simp; omega) (hC _ (by simp)) (hA _ (by simp))⟩,
     ⟨_, memoRV_zeroAt coreLplsSch ilKey _ m (by simp; omega) (hC _ (by simp)) (hA _ (by simp))⟩⟩
 
-/-! ## The relation -/
-
-/-- **The declaration loop's relation with the core's invariants**: `LoopR`, the twin's invariants
-`TwinOK` at the loop's environment, and the pin table's flag. -/
-structure LoopT (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState)
-    (vis : Word) (fe : IFEnv) (ds : Array IDeclaration) : Prop where
-  loop : LoopR pins m a vis fe ds
-  twin : TwinOK dn m a fe
-  flag : pinW m 0 ≠ 0
-  /-- The inductive stage's per-call memos (lane `indproofs3`'s request). -/
-  memo : StageMemos m
-  /-- `consts_resolve_ffast`'s walk memo (`CrOK`, lanes `stubs`/`tails`). -/
-  cr : L.Stubs.CrOK m
-
-section rel
-variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
-  {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`LoopT` is the stage relation with the twin's invariants** (every `StageT` theorem applies). -/
-theorem LoopT.stageT (h : LoopT pins dn m a vis fe pend ds) : StageT dn vis fe m a :=
-  ⟨⟨h.loop.check, h.loop.iw⟩, h.twin, h.flag⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- `LoopT` is `CoreS` (at the eager bit `0`). -/
-theorem LoopT.core (h : LoopT pins dn m a vis fe pend ds) : ∃ M, CoreS dn m a vis fe M 0 :=
-  h.stageT.core
--/
-
-end rel
-
 /-! ## The twin's side of the bracket's opening -/
 
 section twin
@@ -387,148 +345,5 @@ theorem TwinOK.enter {m : Mem} {a : AState} (h : TwinOK dn m a fe) (hwf : StoreW
       exact ⟨l, by show denoteLs a.store.enableScratch.lss u = some l; rw [hLs]; exact hl⟩
 
 end twin
-
-/-! ## `LoopT` from `LoopR`, the twin's fold invariant and the memory's half -/
-
-/-! ## `LoopT` across the bracket's L functions -/
-
-section bracket
-variable (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
-  (hb : BracketProg p)
-include hb
-
-end bracket
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **Pushing a pending check keeps `LoopT`.** -/
-theorem LoopT.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
-    {a : AState} {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
-    (h : LoopT pins dn m a vis fe pend ds) (g i v : Word) (vg : ValueGroup)
-    (hg : decVG (erecP m) g.toNat = some vg)
-    (hb : 3 * (rdW (m.arr64 CTL) 130).toNat + 2 < (m.arr64 PEND).size)
-    (hc : 130 < (m.arr64 CTL).size) (h1 : (rdW (m.arr64 CTL) 130).toNat < 2 ^ 62) :
-    LoopT pins dn (pendPushMem m g i v) a vis fe (pend.push ⟨vg, i.toNat, v.toNat⟩) ds := by
-  have hf := pendPushMem_frame m g i v
-  exact ⟨h.loop.pendPush g i v vg hg hb hc h1,
-    h.twin.frame hf ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
-      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩
-      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
-    by rw [pinW_frame hf (by decide)]; exact h.flag,
-    h.memo.frame hf (by simp [PEND]) (by simp), CrOK.frame h.cr hf (by simp [PEND, L.Stubs.CRM]) (by simp)⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`TwinOK` at a smaller view** (phase B checks a group at the view it was installed at): a hit of
-the restricted environment is a hit of the whole one. -/
-theorem TwinOK.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
-    (h : TwinOK dn m a fe) {k : Nat} (hk : k ≤ fe.visibleBelow) : TwinOK dn m a (fe.restrictTo k) :=
-  ⟨h.readL, h.readLs, h.nwf, h.erec, h.spn, h.memos, h.bstk,
-    { h.den with
-      constLps := fun c ci hf => h.den.constLps c ci (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
-      proj := fun c tbl hf => h.den.proj c tbl (by
-        unfold IFEnv.findTable? at hf ⊢
-        split at hf
-        · rename_i hs
-          obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp hs
-          rw [ConRon.Bridge.IFEnv.restrictTo_find?_le hk hx]
-          exact hf
-        · cases hf)
-      recRules := fun c cv mI rP rules hf => h.den.recRules c cv mI rP rules
-        (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf) }⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`LoopT` at a smaller view.** -/
-theorem LoopT.restrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
-    {a : AState} {vis : Word} {fe : IFEnv} {ds : Array IDeclaration}
-    (h : LoopT pins dn m a vis fe pend ds) (v : Word) (hv : v.toNat ≤ vis.toNat) :
-    LoopT pins dn m a v (fe.restrictTo v.toNat) pend ds :=
-  ⟨h.loop.restrict v, h.twin.restrict (by rw [h.loop.vis]; exact hv), h.flag, h.memo, h.cr⟩
--/
-
-/-! ## A core call keeps `LoopT`
-
-The core's write set from the program text, at the loop's granularity: no function the stage's
-core entry points reach writes the pools, the pins, nor anything the loop keeps beside the stage
-(the pending checks, the declaration records, the promotion memos, `CTL[130]`, `CTL[140‥147]`,
-the pin variants' header `CTL[150]`, `CTL[151]`). Decided for the checker's program in
-`ConAgua/Checker/LoopCore.lean`. A core call starts and ends in `CoreS` and writes no `EREC`, so
-`TwinOK` (the projection clause included) comes back with it. -/
-
-/-- The arrays a core function may write, at the loop's granularity. -/
-def coreLoopA : List TieredArray :=
-  stepA.filter fun b =>
-    b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS ∧ (b.arr < 201 ∨ 208 < b.arr) ∧ b ≠ L.Stubs.CRM
-
-/-- The `CTL` words a core function may write, at the loop's granularity. -/
-def coreLoopC : List Word :=
-  stepC.filter fun x => x ≠ 129 ∧ x ≠ 200 ∧ (x.toNat < 202 ∨ 219 < x.toNat) ∧ x ≠ 158
-
-/-- **The program hypothesis**: the core leaves the loop's state alone. -/
-def CoreLoopClosed (p : Prog) : Prop := closedA p coreLoopA coreLoopC stageCoreFns = true
-
-theorem coreLoopA_erec : (EREC : TieredArray) ∉ coreLoopA := by simp [coreLoopA]
-theorem coreLoopA_iw : (IW : TieredArray) ∉ coreLoopA := by simp [coreLoopA]
-theorem coreLoopA_pins : (PINS : TieredArray) ∉ coreLoopA := by simp [coreLoopA]
-theorem coreLoopC_129 : (129 : Word) ∉ coreLoopC := by simp [coreLoopC]
-theorem coreLoopC_200 : (200 : Word) ∉ coreLoopC := by simp [coreLoopC]
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **After a core call**: the core's own post (`CoreS` after) and its write set give `LoopT` after
-(the same view, environment, pending checks and records), the pools unchanged. -/
-theorem LoopT.of_core {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {ds : Array IDeclaration} {p : Prog}
-    (hcl : CoreLoopClosed p) {f : FnName} (hf : f ∈ stageCoreFns) {n : Nat} {vs : List Word}
-    {m m' : Mem} {r : List Word} {a a' : AState} {M : ModeMaps}
-    (h : callW p n f vs m = some (r, m')) (hL : LoopT pins dn m a vis fe pend ds)
-    (hC : CoreS dn m' a' vis fe M 0) : LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' := by
-  obtain ⟨hfr, -⟩ := run_memFrame hcl hf (run_of_callW h)
-  have hI : m'.arr64 IW = m.arr64 IW := hfr.1 _ coreLoopA_iw (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hfr.1 _ coreLoopA_erec (by decide)
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl _ coreLoopC_129
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ coreLoopC_200
-  obtain ⟨hCR, hT⟩ := hC.checkR
-  have hS : StageR vis fe m' a' :=
-    ⟨hCR, IWOK.frame hfr coreLoopA_iw coreLoopA_erec coreLoopC_129 coreLoopC_200 hL.loop.iw⟩
-  have hst : MemFrame stepA stepC m m' :=
-    hfr.mono (fun b hb => (List.mem_filter.mp hb).1) (fun x hx => (List.mem_filter.mp hx).1)
-  refine ⟨⟨hL.loop.of_step hS hst (by rw [erecP_congr hE h129]; exact ArrExt.refl _), hT,
-    by rw [pinW_frame hfr coreLoopA_pins]; exact hL.flag,
-    hL.memo.frame hfr (fun b hb => (List.mem_filter.mp hb).2 |> fun h => by simp at h; exact h.2.2.2.1)
-      (fun x hx => (List.mem_filter.mp hx).2 |> fun h => by simp at h; exact h.2.2.1),
-    CrOK.frame hL.cr hfr (fun hb => by have := (List.mem_filter.mp hb).2; simp at this)
-      (fun hx => by have := (List.mem_filter.mp hx).2; simp at this)⟩, ?_⟩
-  exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **A core entry point's refinement as a `Sim` under `LoopT`** (the loop-level twin of
-`StageT.sim_core`). -/
-theorem LoopT.sim_core {α : Type} [Inhabited α] {pins : List INatOpPinSet}
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {ds : Array IDeclaration} {p : Prog} (hcl : CoreLoopClosed p) {f : FnName}
-    (hf : f ∈ stageCoreFns) {n : Nat} {args : List Word} {T : AM α} {dec : List Word → α}
-    {m : Mem} {a : AState} (hL : LoopT pins dn m a vis fe pend ds)
-    (hspec : ∀ (s₀ : St) (M : ModeMaps), CoreS dn s₀.mem a vis fe M 0 →
-      CoreSpec p n f args T dec s₀ a dn vis fe M 0) :
-    Sim (callW p n f args m) T a (fun r x m' a' => LoopT pins dn m' a' vis fe pend ds ∧
-      IWGrow m m' ∧ dec r = x ∧ ResH r) := by
-  intro r m' e
-  obtain ⟨M, hC⟩ := hL.core
-  obtain ⟨s', rfl, -, hok, ⟨M', hC', -, -⟩, hres, hrh⟩ :=
-    triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (hspec ⟨m, Locals.init []⟩ M hC) e
-  obtain ⟨hT', hg⟩ := LoopT.of_core hcl hf e hL hC'
-  exact ⟨_, _, partsRunOfOk hok, hT', hg, hres.symm, hrh⟩
--/
-
-/-! ### The entry points under `LoopT` -/
-
-section entryL
-variable (p : Prog) (hp : KnotEntryProg p) (hw : p.lookup "whnf_top" = some whnfTopL)
-  (hK : ∀ n, KnotOK p n) (hcl : CoreLoopClosed p)
-variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-  {ds : Array IDeclaration}
-
-end entryL
 
 end L.Arena

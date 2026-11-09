@@ -225,16 +225,18 @@ def recT (st : StateD) (r : IndRecRec) : AM IConstantInfo := do
     (r.numParams + r.numMotives + r.numMinors) rules)
 -/
 
-theorem recTailM_out (m : Mem) (q r lo ln : Word) (hq : q.toNat + 9 < 2 ^ 64) (j : Nat)
-    (hj : j < q.toNat + 5 ∨ q.toNat + 9 ≤ j) : wd (recTailM m q r lo ln) DLP j = wd m DLP j := by
+theorem recTailM_out (m : Mem) (q r lo ln : Word) (hq : q.toNat + 10 < 2 ^ 64) (j : Nat)
+    (hj : j < q.toNat + 5 ∨ q.toNat + 10 ≤ j) : wd (recTailM m q r lo ln) DLP j = wd m DLP j := by
   unfold recTailM
-  rw [wd_set_ne _ DLP (q + 8) _ j (by rw [widx2 q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega),
+  rw [wd_set_ne _ DLP (q + 9) _ j (by rw [widx2 q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega),
+    wd_set_ne _ DLP (q + 8) _ j (by rw [widx2 q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega),
     wd_set_ne _ DLP (q + 7) _ j (by rw [widx2 q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega),
     wd_set_ne _ DLP (q + 6) _ j (by rw [widx2 q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega),
     wd_set_ne _ DLP (q + 5) _ j (by rw [widx2 q 5 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega)]
 
 theorem recTailM_frame (m : Mem) (q r lo ln : Word) : MemFrame [DLP] [] m (recTailM m q r lo ln) := by
   unfold recTailM
+  refine MemFrame.trans ?_ (MemFrame.set64 _ DLP (by decide) _ _)
   refine MemFrame.trans ?_ (MemFrame.set64 _ DLP (by decide) _ _)
   refine MemFrame.trans ?_ (MemFrame.set64 _ DLP (by decide) _ _)
   refine MemFrame.trans ?_ (MemFrame.set64 _ DLP (by decide) _ _)

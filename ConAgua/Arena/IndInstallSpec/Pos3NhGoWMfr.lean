@@ -136,6 +136,26 @@ theorem pos3_plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : pl
         rw [← h.2]
         exact (pos3_plgW_mfr k _ _ _ _ _ hg).trans (MFr.of_frame (ilF_frame hs) (by simp [tier1, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp))
 
+theorem pos3_fieldCopyW_mfr : ∀ (n : Nat) (m m' : Mem) (d s l k : Word), fieldCopyW n m d s l k = some m' →
+    MFr [] [] m m'
+  | 0, _, _, _, _, _, _, h => by simp [fieldCopyW] at h
+  | n + 1, m, m', d, s, l, k, h => by
+    by_cases hl : l = 0
+    · rw [fieldCopyW_nil n m d s l k hl] at h; cases h; exact MFr.refl _ _ _
+    · rw [fieldCopyW_step n m d s l k hl] at h
+      exact (MFr.set_iw _ _ _).trans (pos3_fieldCopyW_mfr n _ _ _ _ _ _ h)
+
+theorem pos3_formersW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
+    (h : formersW n m p = some (r, m')) : MFr [] [] m m' := by
+  unfold formersW at h
+  split at h; · cases h
+  rename_i q m1 hal
+  split at h; · cases h
+  rename_i m2 hc
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact (allocW_mfr hal).trans (pos3_fieldCopyW_mfr _ _ _ _ _ _ _ hc)
+
 theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h : nckW n m p fo fl = some (r, m')) :
     MFr [] [] m m' := by
   unfold nckW at h
@@ -152,15 +172,23 @@ theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h
     obtain ⟨r4, m4⟩ := x
     rw [h4] at h
     simp only [nckRec] at h
-    have hm := partsNctx_eq m4 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)
-      (rdW (m4.arr64 IW) (p + 4)) (r3.headD 0) (r3.tail.headD 0) fo fl (rdW (m4.arr64 IW) (p + 6)) (r4.headD 0)
-    cases ha : allocW m4 11 with
-    | none => rw [ha] at h; cases h
+    cases h5 : formersW n m4 p with
+    | none => rw [h5] at h; cases h
     | some y =>
-      obtain ⟨q, m5⟩ := y
-      rw [ha] at h hm
-      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      exact (f123.trans (pos3_plW_mfr h4)).trans (posRecW_mfr hm.symm)
+      obtain ⟨r5, m5⟩ := y
+      rw [h5] at h
+      simp only at h
+      have hm := partsNctx_eq m5 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)
+        (rdW (m4.arr64 IW) (p + 4)) (r3.headD 0) (r3.tail.headD 0) fo fl (rdW (m4.arr64 IW) (p + 6)) (r4.headD 0)
+        (r5.headD 0) (r5.tail.headD 0)
+      cases ha : allocW m5 13 with
+      | none => rw [ha] at h; cases h
+      | some z =>
+        obtain ⟨q, m6⟩ := z
+        rw [ha] at h hm
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨-, rfl⟩ := h
+        exact ((f123.trans (pos3_plW_mfr h4)).trans (pos3_formersW_mfr h5)).trans (posRecW_mfr hm.symm)
 
 theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (ctx mm off l oo ol : Word) (r : List Word),
     nhGoW k m ctx mm off l oo ol = some (r, m') → MFr [] [] m m'

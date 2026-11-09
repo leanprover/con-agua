@@ -42,6 +42,42 @@ theorem applyFinalLine_tail (st : StateD) (b c : ByteArray) (i j : USize) (n : N
 /-- **One chunk is the wholesale parse**, for a buffer that fits in a machine word. -/
 theorem parseChunks_single (b : ByteArray) (hb : b.size < USize.size) :
     parseChunks [b] = parseBytes b := by
-  sorry
+  funext s
+  have hge : ¬ b.size ≥ USize.size := by omega
+  have hge0 : ¬ 0 + b.size ≥ USize.size := by omega
+  simp only [parseChunks, parseBytes, parseChunksGo, chunkStep, hge, hge0, ite_false,
+    ByteArray.isEmpty, ByteArray.size_empty, beq_self_eq_true, ite_true]
+  simp only [bind, StateT.bind, pure, Except.bind]
+  cases hI : StateD.init s with
+  | error e => rfl
+  | ok p =>
+    obtain ⟨st, s1⟩ := p
+    simp only
+    cases hF : feedChunk st b 0 0 s1 with
+    | error e => rfl
+    | ok q =>
+      obtain ⟨r, s2⟩ := q
+      cases r with
+      | error e => rfl
+      | ok t =>
+        obtain ⟨st2, lineNo, tail⟩ := t
+        simp only [StateT.pure, pure, Except.pure, chunkFinish, ByteArray.isEmpty, ByteArray.size_extract,
+          Nat.min_self]
+        have hu : b.usize.toNat = b.size := by
+          rw [toNat_usize]; exact Nat.mod_eq_of_lt hb
+        by_cases ht : tail < b.usize
+        · have ht' : tail.toNat < b.size := by
+            rw [← hu]; exact USize.lt_iff_toNat_lt.mp ht
+          have hne : (b.size - tail.toNat == 0) = false := by
+            simp only [beq_eq_false_iff_ne]; omega
+          simp only [hne, ht, Bool.false_eq_true, ite_false, ite_true]
+          rw [applyFinalLine_tail st2 (b.extract tail.toNat b.size) b 0 tail lineNo
+            (by rw [tailAt_zero, bytes_extract_tail tail hb])]
+          rfl
+        · have ht' : b.size ≤ tail.toNat := by
+            rw [← hu]; exact Nat.le_of_not_lt (fun h => ht (USize.lt_iff_toNat_lt.mpr h))
+          have he : (b.size - tail.toNat == 0) = true := by
+            simp only [beq_iff_eq]; omega
+          simp only [he, ht, ite_true, ite_false]
 
 end ConAgua.Front.ChunkBridge
