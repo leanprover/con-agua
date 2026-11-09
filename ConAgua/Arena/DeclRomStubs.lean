@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.DeclBasisSpec
-public import ConAgua.Arena.RomDen
 
 @[expose] public section
 
@@ -29,8 +28,20 @@ namespace L.Ind
 
 open L.Arena
 
-/-! The twin's values by the readers' ids (`romCiT`, `romCvT`, `romExprT`, `basisOfW`) are in
-`RomDen.lean`. -/
+/-! ## The twin's values by the stubs' ids -/
+
+/-- `rom_cv(id)`'s constant value. -/
+def romCvT : Nat → AM IConstantVal
+  | 0 => propextA | 1 => choiceA | 2 => trueCvA | 3 => trueIntroCvA | 4 => trustCompilerA
+  | 5 => boolCvA | 6 => reduceNatCvA | 7 => reduceBoolCvA | 8 => ofReduceNatA | _ => ofReduceBoolA
+
+/-- `rom_expr_pin(id)`'s expression. -/
+def romExprT : Nat → AM EIdx
+  | 0 => reduceNatDeclPin | _ => reduceBoolDeclPin
+
+/-- The basis block of `rom_basis_decls(kind)`'s word. -/
+def basisOfW : Nat → ConLeche.BasisKind
+  | 0 => .eqK | 1 => .natK | 2 => .emptyK | 3 => .falseK | _ => .quotK
 
 /-! ## Result decoders (below the tops) -/
 

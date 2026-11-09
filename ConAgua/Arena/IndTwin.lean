@@ -149,7 +149,7 @@ theorem _root_.L.Arena.TwinOK.frame_iw {m m' : Mem} {a : AState} (hf : MemFrame 
   have hB : m'.arr64 BSTK = m.arr64 BSTK := hf.arr BSTK (by simp [BSTK, IW]) (by decide)
   exact ⟨h.readL, h.readLs, h.nwf, by rw [hE]; exact h.erec, by rw [hSp]; exact h.spn,
     h.memos.frame hf (by decide) (by simp) (by decide) (by simp), by rw [hB]; exact h.bstk,
-    h.den.frameE hE, h.rom.frame0 (hf.arr _ (by decide) (by decide)) hE (hf.ctl _ (by decide))⟩
+    h.den.frameE hE⟩
 
 /-- **`StageT` across a pool writer**: the writer's `StageR` lemma (`allocW_stage`, `consW_stage`,
 `recW_stage`, …) and its frame. -/

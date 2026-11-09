@@ -124,8 +124,8 @@ theorem triple_leafMemos {p : Prog} (hL : LeafClosed p) {f : FnName} (hf : f ∈
 
 /-- `TwinOK` across a leaf. -/
 theorem TwinOK.leaf {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {m m' : Mem} {a : AState}
-    (h : TwinOK dn m a fe) (hf : MemFrame leafA leafC m m') (hR : RomDen m' a) : TwinOK dn m' a fe :=
-  h.frameR hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp hR
+    (h : TwinOK dn m a fe) (hf : MemFrame leafA leafC m m') : TwinOK dn m' a fe :=
+  h.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp
 
 /-! ## `check_decl`'s model (its refinement: `DeclCheckT.lean`) -/
 
@@ -571,7 +571,7 @@ theorem andPinOk_refinesT (hlc : LeafClosed p) (hp : p.lookup "and_pin_ok" = som
   refine triple_post (triple_and (andPinOk_refines (pins := pins) dn ds p hp n s₀ a₀ vis fe pend i hi hpd' hR)
     (triple_and (invoke_memFrame hlc n (leaf_mem _ rfl) [i] s₀) hI)) fun r s' ⟨⟨h1, h2, h3, h4⟩, ⟨hf, _⟩, hIMf⟩ => ?_
   have e := andPinOk_st_one hpk hpd' h2
-  refine ⟨h1, h2, h3, h4, by rw [e]; exact hTw.leaf hf sorry, ?_, by rw [e]; exact hoff,
+  refine ⟨h1, h2, h3, h4, by rw [e]; exact hTw.leaf hf, ?_, by rw [e]; exact hoff,
     by rw [e]; exact hF, by rw [e]; exact hden, by rw [e]; exact hPD, hIMf hIM⟩
   simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact hfl
 -/
@@ -832,8 +832,7 @@ theorem installDeclStep_refines (hm : mode = .verified) (hb : BracketProg p) (hd
   subst hm
   have hTw : TwinOK dn s₀.mem a₀ fe := by
     obtain ⟨_, hF, _⟩ := hT.fold
-    exact TwinOK.of_check hF.check ⟨hM.erec, hM.spn, hM.bstk, hc, fun k x e => (hM.dnP k x e).2,
-      sorry⟩ -- ronsync2: the old install fold carries no ROM cache (restated with the jobs)
+    exact TwinOK.of_check hF.check ⟨hM.erec, hM.spn, hM.bstk, hc, fun k x e => (hM.dnP k x e).2⟩
   have h := ids_ref hdc hFD hLD hb hpp hpn hps (N := n) (by omega) hi hT hR hTw hM.flag hIM
   have ht := RefC.triple (installDeclStep_specE p hp hpi hdc.istg hdc.cd.cd n s₀ i vis) h
   apply M.triple_of_run
@@ -991,8 +990,7 @@ theorem fold_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
       intro hE hk0
       have hTw : TwinOK dn m a₀ fe := by
         obtain ⟨_, hF, _⟩ := hT.fold
-        exact TwinOK.of_check hF.check ⟨hM.erec, hM.spn, hM.bstk, hcm, fun k x e => (hM.dnP k x e).2,
-          sorry⟩ -- ronsync2: the old install fold carries no ROM cache (restated with the jobs)
+        exact TwinOK.of_check hF.check ⟨hM.erec, hM.spn, hM.bstk, hcm, fun k x e => (hM.dnP k x e).2⟩
       rw [hd]
       exact installFold_fails_head .verified (RefC.run_err
         (installDeclStep_specE p hpd hpi hdc.istg hdc.cd.cd n ⟨m, Locals.init []⟩ i vis)

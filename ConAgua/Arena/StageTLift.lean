@@ -35,11 +35,11 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 keeps it. -/
 theorem _root_.L.Arena.TwinOK.withMemos {m : Mem} {a : AState} (h : TwinOK dn m a fe) (X : Memos) :
     TwinOK dn m { a with memos := X } fe :=
-  ⟨h.readL, h.readLs, h.nwf, h.erec, h.spn, h.memos, h.bstk, h.den.caches rfl rfl rfl, h.rom.store rfl⟩
+  ⟨h.readL, h.readLs, h.nwf, h.erec, h.spn, h.memos, h.bstk, h.den.caches rfl rfl rfl⟩
 
 /-- **A `StageR` `Sim` is a `StageT` `Sim`** for a callee whose twin op changes at most the per-call
 memos (readers, checks, the walks over `a.memos`) and whose L run leaves the core memos and the
-pins, the records and the ROM cache alone (`hfr`; `TwinOK.frameE`). One line per existing stage theorem. -/
+pins alone (`hfr`; lane `loopt`'s `TwinOK.frame`). One line per existing stage theorem. -/
 theorem StageT.lift_keep {β α : Type} {mo : Option (β × Mem)} {op : AM α} {m : Mem} {a : AState}
     {Q : β → α → Mem → AState → Prop} {A : List TieredArray} {C : List Word}
     (hT : StageT dn vis fe m a)
@@ -50,16 +50,14 @@ theorem StageT.lift_keep {β α : Type} {mo : Option (β × Mem)} {op : AM α} {
     (hWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
     (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
-    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
-    (hRC : (L.Rom.ROMC : TieredArray) ∉ A) (hE : (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A)
-    (hEC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C) :
+    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) :
     Sim mo op a (fun r x m' a' => StageT dn vis fe m' a' ∧ Q r x m' a') := by
   intro r m' e
   obtain ⟨x, a', hrun, hS', hq⟩ := h r m' e
   obtain ⟨X, rfl⟩ := hkeep x a' hrun
   have hf := hfr r m' e
   have hPe : m'.arr64 PINS = m.arr64 PINS := hf.1 PINS hP (by decide)
-  exact ⟨x, _, hrun, ⟨hS', (hT.twin.frameE hf hA hC hWA hWC hLA hLC hRC hE hEC).withMemos X,
+  exact ⟨x, _, hrun, ⟨hS', (hT.twin.frame hf hA hC hWA hWC hLA hLC).withMemos X,
     by simp only [pinW, hPe]; exact hT.flag⟩, hq⟩
 
 end lift

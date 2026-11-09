@@ -38,12 +38,13 @@ include hL hr
 
 theorem nameCall (x : ConLeche.Name) (hx : nameFits x = true) {n : Nat} {m m' : Mem} {a : AState}
     {pos : Word} {rest : List UInt8} {r : List Word} (hA : ArenaD m a) (hmo : ModeOK m)
-    (hd : rom.drop pos.toNat = encName x ++ rest) (hc : callW p n "rom_name" [pos] m = some (r, m')) :
+    (hd : rom.drop pos.toNat = encName x ++ rest) (hc : callW p n "rom_name_c" [pos] m = some (r, m')) :
     ∃ a', (internName x).run a = .ok (decI (r.headD 0), a') ∧ ArenaD m' a' ∧ cp a' = cp a ∧
       (r.headD 0).toNat < 2 ^ 32 ∧ (r.tail.headD 0).toNat = pos.toNat + (encName x).length ∧
       MemFrame StoreA StoreC m m' ∧ ModeOK m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (romName_specW rom p hL.toNameProg n _ pos ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩) hc
+    (triple_renameCalls (g := "rom_name") hL.ren (by decide)
+      (romName_specW rom _ hL.via.toNameProg n _ pos ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)) hc
   obtain ⟨ok, hR, res, hlt, hq, hf⟩ := romNameW_ok rom hr x hx n _ a pos rest _ _ _ hA hmo hd hW
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
@@ -53,13 +54,14 @@ theorem exprCall (e : ConLeche.Expr) (he : exprFits e = true) {n : Nat} {mem mem
     {pos : Word} {rest : List UInt8} {seen : List ConLeche.Expr} {memo : EMemo} {r : List Word}
     (hA : ArenaD mem a) (hmo : ModeOK mem) (hM : MemoR mem seen memo) (hd : rom.drop pos.toNat = (encExprM seen e).1 ++ rest)
     (hst : (stkTop mem).toNat < 2 ^ 61) (hcs : 131 < (mem.arr64 CTL).size)
-    (hc : callW p n "rom_expr" [pos] mem = some (r, mem')) :
+    (hc : callW p n "rom_expr_c" [pos] mem = some (r, mem')) :
     ∃ (memo' : EMemo) (a' : AState), (internExprGo memo e).run a = .ok ((memo', decI (r.headD 0)), a') ∧
       ArenaD mem' a' ∧ cp a' = cp a ∧ MemoR mem' (encExprM seen e).2 memo' ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       (r.tail.headD 0).toNat = pos.toNat + (encExprM seen e).1.length ∧ MemFrame ExprA ExprC mem mem' ∧
       stkTop mem' = stkTop mem ∧ ModeOK mem' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨mem, Locals.init []⟩)
-    ((romExpr_specsW rom p hL.toExprProg n).1 _ pos ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩) hc
+    (triple_renameCalls (g := "rom_expr") hL.ren (by decide)
+      ((romExpr_specsW rom _ hL.via n).1 _ pos ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)) hc
   obtain ⟨memo', a', hrun, hR, hM', hlt, hq, hf, hs, -⟩ :=
     romExprW_ok rom hr e he n _ a pos rest seen memo _ _ _ hA hmo hM hd hst hcs hW
   exact ⟨memo', a', hrun, hR, (keeps_internExprGo e memo).run hrun, hM', hlt, hq, hf, hs,
@@ -68,10 +70,10 @@ theorem exprCall (e : ConLeche.Expr) (he : exprFits e = true) {n : Nat} {mem mem
 end calls
 
 theorem u64Call {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m m' : Mem}
-    {i : Word} {r : List Word} (hc : callW p n "rom_u64" [i] m = some (r, m')) :
+    {i : Word} {r : List Word} (hc : callW p n "rom_u64_c" [i] m = some (r, m')) :
     m' = m ∧ r = [u64W rom i] := by
   obtain ⟨s', rfl, hs, -, hr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (romU64_spec rom p hL.rom_u64 n _ i) hc
+    (triple_renameCalls (g := "rom_u64") hL.ren (by decide) (romU64_spec rom _ hL.via.rom_u64 n _ i)) hc
   exact ⟨by rw [hs], hr⟩
 
 theorem erAllocCall {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m m' : Mem}

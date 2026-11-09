@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.DeclCvg
-public import ConAgua.Arena.RomDen
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.DeclStep
 import all ConAgua.Arena.IndIface
@@ -52,8 +51,6 @@ structure TwinOK (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (fe
   bstk : (m.arr64 BSTK).size < 2 ^ 63
   /-- Stored levels read back (`StoreDen.lean`). -/
   den : StoreDen dn m a fe
-  /-- The ROM constants' cache denotes the twin's interned constants (`RomDen.lean`). -/
-  rom : RomDen m a
 
 /-- The stage relation with the twin invariants and a filled pin table is `CoreS` (outside the
 eager tower). -/
@@ -64,13 +61,12 @@ theorem StageR.coreS {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   exact ⟨M, ⟨hS.check.arena, hM, hS.check.pins.full hflag, hS.check.env, hT.readL, hT.readLs, hT.nwf, hT.erec,
     hT.spn, hT.memos, hT.bstk, hT.den, hS.check.mode⟩⟩
 
-/-- `CoreS` (outside the eager tower) and the ROM cache's denotation are `CheckR` and the twin
-invariants. -/
+/-- `CoreS` (outside the eager tower) is `CheckR` and the twin invariants. -/
 theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} {M : ModeMaps} (hS : CoreS dn m a vis fe M 0) (hR : RomDen m a) :
+    {a : AState} {M : ModeMaps} (hS : CoreS dn m a vis fe M 0) :
     CheckR m a vis fe ∧ TwinOK dn m a fe :=
   ⟨⟨hS.arena, ⟨M, hS.core⟩, ⟨fun _ => hS.pins⟩, hS.env, hS.mode⟩,
-    ⟨hS.readL, hS.readLs, hS.nwf, hS.erec, hS.spn, hS.memos, hS.bstk, hS.den, hR⟩⟩
+    ⟨hS.readL, hS.readLs, hS.nwf, hS.erec, hS.spn, hS.memos, hS.bstk, hS.den⟩⟩
 
 /-! ## `lvl_eq_c`'s write set -/
 
