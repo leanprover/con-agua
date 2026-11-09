@@ -368,7 +368,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   subst hfd
   rw [c1tW.k_expr_get_d.arm1]
   refine RSim.bind (K := fun o => K (fcK (c1tW.k_mk_app_n_f n pvo pvl rlvls _ _ _ _ _ e o))) hK
-    (RSim.withF ((mknF_ok dn vis fe _ _ _ hfH xs).sim ⟨hS4, by rw [decHL_grow hg4 hxb]; exact hxs⟩)
+    (RSim.withF ((mknF_ok (fun _ => none) vis fe _ _ _ hfH xs).sim ⟨hS4, by rw [decHL_grow hg4 hxb]; exact hxs⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r5, m5⟩ fx a5 - ⟨⟨hS5, hg5, hfxH, hfxd⟩, hf5⟩
   dsimp only at hS5 hg5 hfxH hfxd
@@ -402,7 +402,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   rw [c1tW.k_sl_snoc.arm1, hr8]
   simp only [List.headD_cons, List.tail_cons]
   refine RSim.bind (K := fun o => K (fcK (c1tW.k_mk_app_n_f_2 n _ _ e o))) hK
-    (RSim.withF ((mknF_ok dn vis fe _ _ _ hrcH (pvars ++ idx ++ [decI (r5.headD 0)])).sim ⟨hS8, hd8⟩)
+    (RSim.withF ((mknF_ok (fun _ => none) vis fe _ _ _ hrcH (pvars ++ idx ++ [decI (r5.headD 0)])).sim ⟨hS8, hd8⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r9, m9⟩ app a9 - ⟨⟨hS9, hg9, happH, happd⟩, hf9⟩
   dsimp only at hS9 hg9 happH happd
@@ -414,7 +414,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   · intro b hb; simp [c1cW, c1tW.k_class_gen_rule_call1_close, fcK, hK] at hb
   rw [c1cW.arm1]
   refine RSim.bind (K := fun o => K (fcK (c1tW.k_class_gen_rule_call1_close (c1cW.k_fvar_type_ds n e (r9.headD 0) o)))) hK
-    (RSim.withF ((ftdsF_ok dn vis fe _ _ xs).sim
+    (RSim.withF ((ftdsF_ok (fun _ => none) vis fe _ _ xs).sim
       ⟨hS9, by rw [decHL_grow hg29 hxb]; exact hxs, fun _ => Nat.le_trans hxb hg29.iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r10, m10⟩ bs a10 - ⟨⟨hS10, hg10, hbs, hbb⟩, hf10⟩
   dsimp only at hS10 hg10 hbs hbb
@@ -428,7 +428,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
     StageR vis fe b.2 a' ∧ IWGrow m10 b.2 ∧ (b.1.headD 0).toNat < 2 ^ 32 ∧ decI (b.1.headD 0) = x ∧
       AbsOK b.2) ?_ ?_
   · rintro ⟨r11, m11⟩ h11
-    obtain ⟨x, a', hrun, hS', hg, hx1, hx2, hA11⟩ := closeLamsW_ok dn vis fe n m10 m11 a10 _ _ e _ bs r11 h11 hS10
+    obtain ⟨x, a', hrun, hS', hg, hx1, hx2, hA11⟩ := closeLamsW_ok (fun _ => none) vis fe n m10 m11 a10 _ _ e _ bs r11 h11 hS10
       happH hbs (hS10.lt64 hbb) hbb hel (hf10 (hf9 hA8))
     exact ⟨x, a', hrun, hS', hg, hx1, hx2, hA11⟩
   rintro ⟨r11, m11⟩ cll a11 - ⟨hS11, hg11, hcH, hcd, hA11⟩
@@ -546,7 +546,7 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
   refine RSim.bind (K := grcW.k_class_gen_slot_var n g fo fl ihso ihsl) rfl (Q1 := fun b a' x =>
     StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ H (b.1.headD 0) ∧ decE (b.1.headD 0) = x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r, m'⟩ h
-    obtain ⟨x, a', hrun, hS', hg', h1, h2⟩ := slotVarW_ok dn vis fe m m' a g s G r hS hnP hgt hs h
+    obtain ⟨x, a', hrun, hS', hg', h1, h2⟩ := slotVarW_ok (fun _ => none) vis fe m m' a g s G r hS hnP hgt hs h
     exact ⟨x, a', hrun, hS', hg', h1, h2, slotVarW_afr h hA⟩
   rintro ⟨r1, m1⟩ sv a1 - ⟨hS1, hg1, hsvH, hsvd, hA1⟩
   dsimp only at hS1 hg1 hsvH hsvd
@@ -557,13 +557,13 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
     (Nat.le_trans hfb hg1.iw)) (by rw [decHL_grow hg1 hib]; exact hihs) (Nat.le_trans hib hg1.iw)
   rw [grcW.k_sl_append.arm1]
   refine RSim.bind (K := grcW.k_mk_app_n_f n g fo fl) rfl
-    (RSim.withF ((mknF_ok dn vis fe _ _ _ hsvH (fvs ++ ihs)).sim ⟨hS2, hd2⟩) (fun _ hb => mknF_afr hb)) ?_
+    (RSim.withF ((mknF_ok (fun _ => none) vis fe _ _ _ hsvH (fvs ++ ihs)).sim ⟨hS2, hd2⟩) (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r3, m3⟩ body a3 - ⟨⟨hS3, hg3, hbH, hbd⟩, hf3⟩
   dsimp only at hS3 hg3 hbH hbd
   subst hbd
   rw [grcW.k_mk_app_n_f.arm1, rec2MapM_genBinder]
   have hg13 := hg1.trans (hg2.trans hg3)
-  refine RSim.bind (K := grcW.k_fvar_type_ds n g (r3.headD 0)) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ fvs).sim
+  refine RSim.bind (K := grcW.k_fvar_type_ds n g (r3.headD 0)) rfl (RSim.withF ((ftdsF_ok (fun _ => none) vis fe _ _ fvs).sim
       ⟨hS3, by rw [decHL_grow hg13 hfb]; exact hfvs, fun _ => Nat.le_trans hfb hg13.iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r4, m4⟩ fbs a4 - ⟨⟨hS4, hg4, hfbs, hfbb⟩, hf4⟩
   dsimp only at hS4 hg4 hfbs hfbb
@@ -582,7 +582,7 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
     StageR vis fe b.2 a' ∧ IWGrow m5 b.2 ∧ (b.1.headD 0).toNat < 2 ^ 32 ∧ decI (b.1.headD 0) = x ∧
       AbsOK b.2) ?_ ?_
   · rintro ⟨r6, m6⟩ h6
-    obtain ⟨x, a', hrun, hS', hg, hx1, hx2, hA6⟩ := closeLamsW_ok dn vis fe n m5 m6 a4 _ _ 0 _ _ r6 h6 hS5 hbH hd5
+    obtain ⟨x, a', hrun, hS', hg, hx1, hx2, hA6⟩ := closeLamsW_ok (fun _ => none) vis fe n m5 m6 a4 _ _ 0 _ _ r6 h6 hS5 hbH hd5
       (hS5.lt64 hb5) hb5 (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact hS5.lt64 (by omega))
       (appendW_afr h5 (hf4 (hf3 (appendW_afr h2 hA1))))
     exact ⟨x, a', hrun, hS', hg, hx1, hx2, hA6⟩
@@ -728,7 +728,7 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hm25 := hm24.trans hg5
   rcases n with _ | n
   · intro b hb; simp [grcW, rbW.k_class_gen_rule_close, fcK] at hb
-  have hc := grcW_sim (dn := dn) (vis := vis) (fe := fe) n m5 a5 g (UInt64.ofNat s0) _ _ _ _ G fvs ihs hS5
+  have hc := grcW_sim (vis := vis) (fe := fe) n m5 a5 g (UInt64.ofNat s0) _ _ _ _ G fvs ihs hS5
     (hG.grow (decCG_mono _) hg25) (by rw [ts0]; omega)
     (by rw [decHL_grow hm25 hfb]; exact hfvs) (Nat.le_trans hfb hm25.1) hihs hib hA5
   rw [ts0] at hc
