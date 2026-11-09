@@ -149,7 +149,8 @@ theorem c130_coreErecC : (130 : Word) ∉ coreErecC := by
   omega
 
 theorem instLp_core : "inst_lp" ∈ coreFns := List.elem_iff.mp (by decide)
-theorem instLp_stageCore : "inst_lp" ∈ stageCoreFns := List.mem_append_right _ instLp_core
+theorem instLp_stageCore : "inst_lp" ∈ stageCoreFns :=
+  mem_stageCoreFns (List.mem_append_right _ instLp_core) (by simp [coreLeafOnly])
 
 section cv
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
