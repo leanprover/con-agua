@@ -46,15 +46,13 @@ local notation "V" => ConLeche.CheckMode.verified
 section helpers
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`StageC` across a leaf whose twin op is a `CoreStep`** (`StageC.of_leaf` for twin ops that
 read through the walks' memos: con-ron gives `CheckOK` after rather than `IStepS`). -/
 theorem StageC.of_core {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR vis fe m' a') (hf : MemFrame leafA leafC m m') (hc : CoreStep V env fe a a') :
+    (hS : StageR vis fe m' a') (hf : MemFrame leafA leafC m m') (hc : CoreStep env fe a a') :
     StageC dn vis fe env m' a' := by
   sorry
 
--/
 
 /-- `CallRef.bindL` with `consts_resolve_ffast`'s memo carried across the leaf (`CrKeep.call`). -/
 theorem CallRef.bindLC {α β : Type} {p : Prog} {f : FnName} {args : List Word}
@@ -66,14 +64,12 @@ theorem CallRef.bindLC {α β : Type} {p : Prog} {f : FnName} {args : List Word}
       L.Stubs.CrOK m1 ∧ K r1 m1 = some res := by
   sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A twin op running as a `CoreStep`, from a `RunsC` fact. -/
 theorem runsC_step {m : AM Bool} {a a' : AState} {b x : Bool}
-    (h : ConRon.Bridge.RunsC V env fe m a b) (hr : m.run a = .ok (x, a')) :
-    CoreStep V env fe a a' ∧ x = b := by
+    (h : ConRon.Bridge.RunsC env fe m a b) (hr : m.run a = .ok (x, a')) :
+    CoreStep env fe a a' ∧ x = b := by
   sorry
 
--/
 
 end helpers
 
@@ -83,7 +79,6 @@ section gg
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`ground_guards` under `StageC`** (con-ron's `pinGuardWalk_run`): the four walks by their
 `StageT` contracts and con-ron's `RunsC` lemmas. -/
 theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k : Nat}
@@ -92,12 +87,11 @@ theorem ggC (hD : DmProg6 p) (hkp : CrKeep p) {pe : Word} {P : ConLeche.Expr} {k
     (hC : StageC dn vis fe env m a) (hl1 : H pe) (hpd : denoteE a.store (decI pe) = some P)
     (hCr : L.Stubs.CrOK m) :
     ∃ x a', (groundGuards fe (decI pe)).run a = .ok (x, a') ∧ StageC dn vis fe env m' a' ∧
-      CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x ∧
+      CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x ∧
       x = (P.looseBVarsBounded 0 && (!P.hasFvar && (P.allLevelParamsDefined [] &&
         P.constsResolve env))) := by
   sorry
 
--/
 
 end gg
 
@@ -107,7 +101,6 @@ section tpg
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`type_pin_guard` under `StageC`** (con-ron's `typePinGuard_spec`): the lookup, the stored
 type by `tps_ref` and con-ron's `typePinStored_spec`, the walks by their `StageT` contracts and
 con-ron's `RunsC` lemmas. -/
@@ -118,12 +111,10 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
     (hn : denoteN a.store.ns (decI nw) = some nm) (ht : denoteE a.store (decI ty) = some T)
     (hCr : L.Stubs.CrOK m) :
     ∃ x a', (typePinGuard fe (decI nw) (decI ty)).run a = .ok (x, a') ∧
-      StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
+      StageC dn vis fe env m' a' ∧ CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
   sorry
 
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`type_pins_guard` under `StageC`** (con-ron's `typePinsGuard_spec`): `tpgC` on each pair of
 the `EREC` slice. -/
 theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
@@ -133,10 +124,9 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
       ConRon.Bridge.TypePinsDenote a.store tps tpsP →
       callW p k "type_pins_guard" [vis, o, l] m = some (res, m') →
       ∃ x a', (typePinsGuard fe tps).run a = .ok (x, a') ∧ StageC dn vis fe env m' a' ∧
-        CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' res x := by
+        CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' res x := by
   sorry
 
--/
 
 end tpg
 
@@ -146,7 +136,6 @@ section pg
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`div_mod_pin_guard` under `StageC`** (con-ron's `divModPinGuard_run`): the pin and the
 type pins by their `StageR` refinements and con-ron's choice lemmas, the guards by `ggC` and
 `tpsgC`. -/
@@ -157,11 +146,10 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {ps c : Word}
     (hps : PinSetDenote a.store ip psP) (hn : denoteN a.store.ns (decI c) = some nm)
     (hCr : L.Stubs.CrOK m) :
     ∃ x a', (divModPinGuard ip fe (decI c)).run a = .ok (x, a') ∧ StageC dn vis fe env m' a' ∧
-      CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x ∧
+      CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x ∧
       x = ConLeche.divModPinGuard psP env nm := by
   sorry
 
--/
 
 end pg
 
@@ -182,11 +170,10 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
         KeepPostT dn vis fe decW0B m m' a' res x ∧ L.Stubs.CrOK m' := by
   sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`div_mod_cert_guard` under `StageC`** (`cg_ref`'s; con-ron's `divModCertGuard_run`): the
 substitutions and `consts_resolve_all` by `StageC.of_core`, the walks by their `StageT` contracts. -/
-theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p dn vis fe)
-    (hsA : SubstCAll p dn vis fe) {c annVal ho hl eqE proof : Word} {hyps : List EIdx}
+theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p vis fe)
+    (hsA : SubstCAll p vis fe) {c annVal ho hl eqE proof : Word} {hyps : List EIdx}
     {nm : ConLeche.Name} {v ex px : ConLeche.Expr} {hx : List ConLeche.Expr} {k : Nat} {m m' : Mem}
     {a : AState} {r : List Word}
     (hcall : callW p k "div_mod_cert_guard" [vis, c, annVal, ho, hl, eqE, proof] m = some (r, m'))
@@ -196,11 +183,10 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
     (hh : Frontend.denoteEList a.store hyps = some hx) (he : denoteE a.store (decE eqE) = some ex)
     (hpf : denoteE a.store (decE proof) = some px) (hCr : L.Stubs.CrOK m) :
     ∃ x a', (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
-        .ok (x, a') ∧ StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧
+        .ok (x, a') ∧ StageC dn vis fe env m' a' ∧ CoreStep env fe a a' ∧ IWGrow m m' ∧
       decW0B m' r x ∧ x = ConLeche.divModCertGuard env nm v hx ex px := by
   sorry
 
--/
 
 end cg
 
@@ -210,10 +196,9 @@ section cgs
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`div_mod_certs_guard_go` under `StageC`** (`cggo_ref`'s; con-ron's `divModCertsGuardGo_run`). -/
-theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p dn vis fe)
-    (hsA : SubstCAll p dn vis fe) (c annVal : Word) (hc : H c) (hann : H annVal)
+theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p vis fe)
+    (hsA : SubstCAll p vis fe) (c annVal : Word) (hc : H c) (hann : H annVal)
     {nm : ConLeche.Name} {v : ConLeche.Expr} :
     ∀ (ss : List (List EIdx × EIdx)) (xs : List (List ConLeche.Expr × ConLeche.Expr))
       (proofs : List EIdx) (ps : List ConLeche.Expr) (so sl po pl : Word) (k : Nat) (m : Mem)
@@ -224,15 +209,13 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
       Frontend.denoteEList a.store proofs = some ps →
       callW p k "div_mod_certs_guard_go" [vis, c, annVal, so, sl, po, pl] m = some (res, m') →
       ∃ x a', (divModCertsGuardGo fe (decI c) (decE annVal) ss proofs).run a = .ok (x, a') ∧
-        StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' res x := by
+        StageC dn vis fe env m' a' ∧ CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' res x := by
   sorry
 
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`div_mod_certs_guard` under `StageC`** (`cgs_ref`'s; con-ron's `divModCertsGuard_run`). -/
-theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p dn vis fe)
-    (hsA : SubstCAll p dn vis fe) {ps c annVal : Word} {ip : INatOpPinSet}
+theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p vis fe)
+    (hsA : SubstCAll p vis fe) {ps c annVal : Word} {ip : INatOpPinSet}
     {psP : ConLeche.NatOpPinSet} {nm : ConLeche.Name} {v : ConLeche.Expr} {k : Nat} {m m' : Mem}
     {a : AState} {r : List Word}
     (hcall : callW p k "div_mod_certs_guard" [ps, vis, c, annVal] m = some (r, m'))
@@ -240,10 +223,9 @@ theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subst
     (hps : PinSetDenote a.store ip psP) (hn : denoteN a.store.ns (decI c) = some nm)
     (hv : denoteE a.store (decE annVal) = some v) (hCr : L.Stubs.CrOK m) :
     ∃ x a', (divModCertsGuard ip fe (decI c) (decE annVal)).run a = .ok (x, a') ∧
-      StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
+      StageC dn vis fe env m' a' ∧ CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
   sorry
 
--/
 
 end cgs
 

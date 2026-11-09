@@ -49,17 +49,15 @@ open ConRon.Bridge (CheckOK StepOK PinsDenote PinSetDenote CoreStep CoreSpec)
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`infer_type_core`'s twin side** (`defeq_check`'s): con-ron's `KnotSpec.infer` at `checkFuel`. -/
 theorem infer_check {env : ConLeche.Env} {fe : IFEnv} {a a' : AState} {d : Nat} {i t : EIdx}
-    {x : ConLeche.Expr} (henv : ConLeche.EnvWF env) (hck : CheckOK V env fe a)
+    {x : ConLeche.Expr} (henv : ConLeche.EnvWF env) (hck : CheckOK false env fe a)
     (hi : denoteE a.store i = some x) (hws : ConLeche.Expr.WScoped d x)
     (hrun : (inferTypeCore V fe checkFuel d i).run a = .ok (t, a')) :
-    CheckOK V env fe a' ∧ Ext a.store a'.store ∧ a'.pins = a.pins ∧
-      ConRon.Bridge.Core.SimE (ConLeche.inferTypeCore V env) d x a'.store t := by
+    CheckOK false env fe a' ∧ Ext a.store a'.store ∧ a'.pins = a.pins ∧
+      ConRon.Bridge.Core.SimE (ConLeche.inferTypeCore V false env) d x a'.store t := by
   sorry
 
--/
 
 l_model checkDivModCerts_specE (p : Prog)
   (hf : p.lookup "check_div_mod_certs" = some checkDivModCertsL)
@@ -78,6 +76,7 @@ l_model checkDivModCerts_specE (p : Prog)
 structure DmPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
     (m : Mem) (a : AState) (r : Word) (m' : Mem) (x : Bool) (a' : AState) : Prop where
   stage : StageC dn vis fe env m' a'
+  core : CoreStep env fe a a'
   grow : IWGrow m m'
   res : decW0B m' [r] x
   cr : L.Stubs.CrOK m'
@@ -86,11 +85,10 @@ section certs
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_div_mod_certs` refines `checkDivModCerts` under `StageC`, both outcomes** (con-ron's
 `checkDivModCerts_bridge_aux`), by induction on the statements. -/
 theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p)
-    (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe) (henv : ConLeche.EnvWF env)
+    (hs0 : SubstC0 p vis fe) (hsA : SubstCAll p vis fe) (henv : ConLeche.EnvWF env)
     (c annVal : Word) (hc : H c) (hann : H annVal) {nm : ConLeche.Name} {v : ConLeche.Expr}
     (hwsv : ConLeche.Expr.WScoped 0 v) :
     ∀ (ss : List (List EIdx × EIdx)) (xs : List (List ConLeche.Expr × ConLeche.Expr))
@@ -107,7 +105,6 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
         (fun v x a' => DmPost dn vis fe env m a v.1 v.2 x a') := by
   sorry
 
--/
 
 end certs
 
@@ -123,7 +120,6 @@ section typePins
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_type_pins` refines `checkTypePins` under `StageC`, both outcomes** (con-ron's
 `checkTypePins_spec`): per pair the stored type by `tps_ref`, then `is_def_eq_core` by the knot's
 `StageT` sim (its failure by `CoreStubsE`), `CheckOK` after from con-ron's `KnotSpec`; both sides
@@ -158,12 +154,11 @@ section pinValue
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_div_mod_pin_value` refines `checkDivModPinValue` under `StageC`, both outcomes** (the
 second half of con-ron's `checkDivModPinAt_bridge`, which takes the pin guard's `true` for the
 pin's scope). -/
 theorem cpv_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p)
-    (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe) (henv : ConLeche.EnvWF env)
+    (hs0 : SubstC0 p vis fe) (hsA : SubstCAll p vis fe) (henv : ConLeche.EnvWF env)
     {c value ps : Word} {ip : INatOpPinSet} {psP : ConLeche.NatOpPinSet} {nm : ConLeche.Name}
     {v : ConLeche.Expr} {k : Nat} (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState}
     (hC : StageC dn vis fe env m a) (hc : H c) (hval : H value) (hP : PinSetR m ps ip)
@@ -175,7 +170,6 @@ theorem cpv_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
       (fun v x a' => DmPost dn vis fe env m a v.1 v.2 x a') := by
   sorry
 
--/
 
 end pinValue
 
@@ -196,12 +190,11 @@ section pinAt
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_div_mod_pin_at` refines `checkDivModPinAt` under `StageC`, both outcomes** (con-ron's
 `checkDivModPinAt_bridge`, which takes the pin guard's `true` for the type pins' and the pin's
 scope): the type pins (`ctp_ref`), then the value pin and the certificates (`cpv_ref`). -/
 theorem cpa_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p)
-    (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe) (henv : ConLeche.EnvWF env)
+    (hs0 : SubstC0 p vis fe) (hsA : SubstCAll p vis fe) (henv : ConLeche.EnvWF env)
     {c value ps : Word} {ip : INatOpPinSet} {psP : ConLeche.NatOpPinSet} {nm : ConLeche.Name}
     {v : ConLeche.Expr} {k : Nat} (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState}
     (hC : StageC dn vis fe env m a) (hc : H c) (hval : H value) (hP : PinSetR m ps ip)
@@ -240,7 +233,6 @@ theorem cpa_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
     (ConRon.Bridge.denoteN_ext hn hR2.core.ext) (ConRon.Bridge.denote_ext hv hR2.core.ext) hwsv hpg
     hR2.cr).mono ?_
   exact fun _ _ _ hR => ⟨hR.stage, hR2.core.trans hR.core, hg1.trans (hR2.grow.trans hR.grow), hR.res, hR.cr⟩
--/
 
 end pinAt
 
@@ -250,11 +242,10 @@ section okRuns
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_div_mod_certs` under `StageC`** from the call's run (`cm_ref`'s ok half). -/
 @[refines ConRon.Arena.checkDivModCerts]
 theorem cmC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p)
-    (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe) (henv : ConLeche.EnvWF env)
+    (hs0 : SubstC0 p vis fe) (hsA : SubstCAll p vis fe) (henv : ConLeche.EnvWF env)
     (c annVal : Word) (hc : H c) (hann : H annVal) {nm : ConLeche.Name} {v : ConLeche.Expr}
     (hwsv : ConLeche.Expr.WScoped 0 v) {ss : List (List EIdx × EIdx)}
     {xs : List (List ConLeche.Expr × ConLeche.Expr)} {proofs : List EIdx} {ps : List ConLeche.Expr}
@@ -267,16 +258,14 @@ theorem cmC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : 
     (hwq : ∀ q ∈ xs, (∀ h ∈ q.1, ConLeche.Expr.WScoped 2 h) ∧ ConLeche.Expr.WScoped 2 q.2)
     (hcall : callW p k "check_div_mod_certs" [vis, c, annVal, so, sl, po, pl] m = some (res, m')) :
     ∃ x a', (checkDivModCerts V fe (decI c) (decE annVal) ss proofs).run a = .ok (x, a') ∧
-      StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' res x := by
+      StageC dn vis fe env m' a' ∧ CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' res x := by
   sorry
 
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_div_mod_pin_value` under `StageC`** from the call's run (`cpv_ref`'s ok half). -/
 @[refines ConRon.Arena.checkDivModPinValue]
 theorem cpvC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p)
-    (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe) (henv : ConLeche.EnvWF env)
+    (hs0 : SubstC0 p vis fe) (hsA : SubstCAll p vis fe) (henv : ConLeche.EnvWF env)
     {c value ps : Word} {ip : INatOpPinSet} {psP : ConLeche.NatOpPinSet} {nm : ConLeche.Name}
     {v : ConLeche.Expr} {k : Nat} (hk : k ≤ 2 ^ 62) {m m' : Mem} {a : AState} {r : List Word}
     (hcall : callW p k "check_div_mod_pin_value" [vis, c, value, ps] m = some (r, m'))
@@ -285,16 +274,14 @@ theorem cpvC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     (hv : denoteE a.store (decE value) = some v) (hwsv : ConLeche.Expr.WScoped 0 v)
     (hpg : ConLeche.divModPinGuard psP env nm = true) (hCr : L.Stubs.CrOK m) :
     ∃ x a', (checkDivModPinValue V fe (decI c) (decE value) ip).run a = .ok (x, a') ∧
-      StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
+      StageC dn vis fe env m' a' ∧ CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
   sorry
 
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_div_mod_pin_at` under `StageC`** from the call's run (`cpa_ref`'s ok half). -/
 @[refines ConRon.Arena.checkDivModPinAt]
 theorem cpaC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : CrKeep p)
-    (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe) (henv : ConLeche.EnvWF env)
+    (hs0 : SubstC0 p vis fe) (hsA : SubstCAll p vis fe) (henv : ConLeche.EnvWF env)
     {c value ps : Word} {ip : INatOpPinSet} {psP : ConLeche.NatOpPinSet} {nm : ConLeche.Name}
     {v : ConLeche.Expr} {k : Nat} (hk : k ≤ 2 ^ 62) {m m' : Mem} {a : AState} {r : List Word}
     (hcall : callW p k "check_div_mod_pin_at" [vis, c, value, ps] m = some (r, m'))
@@ -303,10 +290,9 @@ theorem cpaC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     (hv : denoteE a.store (decE value) = some v) (hwsv : ConLeche.Expr.WScoped 0 v)
     (hpg : ConLeche.divModPinGuard psP env nm = true) (hCr : L.Stubs.CrOK m) :
     ∃ x a', (checkDivModPinAt V fe (decI c) (decE value) ip).run a = .ok (x, a') ∧
-      StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
+      StageC dn vis fe env m' a' ∧ CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
   sorry
 
--/
 
 end okRuns
 
