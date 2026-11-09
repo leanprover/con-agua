@@ -38,7 +38,7 @@ def tailRcCallees : List FnName :=
 
 /-- The tail's callees with no memo lemma. -/
 def tailCallees : List FnName :=
-  ["check_block_idx_sorts", "cons_block_ctors", "block_nested_bit", "check_block_rec", "cons_block_recs_tf"]
+  ["check_block_idx_sorts", "cons_block_ctors", "block_nested_bit", "check_block_rec"]
 
 theorem tailToNat {q : Word} {k : Nat} (h : q.toNat + k < 2 ^ 64) :
     (q + UInt64.ofNat k).toNat = q.toNat + k := by

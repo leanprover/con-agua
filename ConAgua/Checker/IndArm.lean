@@ -189,20 +189,20 @@ open L L.Rom L.Arena L.Ind L.Compiler
 
 /-! ## The write sets (`Checker/IndArmClosed.lean`'s per-function checks) -/
 
-theorem checkerProg_armPos : closedA checkerProg posFreeA posFreeC armPosFns = true :=
-  closedW_of_all armPosTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armPosChk
-theorem checkerProg_armHb : closedA checkerProg hbFreeA hbFreeC armHbFns = true :=
-  closedW_of_all armHbTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armHbChk
-theorem checkerProg_armRc : closedA checkerProg rcFreeA rcFreeC armRcFns = true :=
-  closedW_of_all armRcTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armRcChk
+theorem checkerProg_armPos : closedAL checkerProg posFreeA posFreeC armPosFns usLeaves = true :=
+  closedWL_of_all armPosTree.eq armPosCallTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armPosChk
+theorem checkerProg_armHb : closedAL checkerProg hbFreeA hbFreeC armHbFns usLeaves = true :=
+  closedWL_of_all armHbTree.eq armHbCallTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armHbChk
+theorem checkerProg_armRc : closedAL checkerProg rcFreeA rcFreeC armRcFns usLeaves = true :=
+  closedWL_of_all armRcTree.eq armRcCallTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armRcChk
 theorem checkerProg_armTa : closedA checkerProg taFreeA taFreeC armTaFns = true :=
   closedW_of_all armTaTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armTaChk
 theorem checkerProg_armCid : closedA checkerProg cidFreeA cidFreeC armCidFns = true :=
   closedW_of_all armCidTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armCidChk
 theorem checkerProg_armRcHb : closedA checkerProg rcHbFreeA rcHbFreeC armRcHbFns = true :=
   closedW_of_all armRcHbTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armRcHbChk
-theorem checkerProg_armMa : closedA checkerProg maFreeA maFreeC armMaFns = true :=
-  closedW_of_all armMaTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armMaChk
+theorem checkerProg_armMa : closedAL checkerProg maFreeA maFreeC armMaFns maLeaves = true :=
+  closedWL_of_all armMaTree.eq armMaCallTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armMaChk
 theorem checkerProg_armMc : closedA checkerProg mcFreeA mcFreeC armMcFns = true :=
   closedW_of_all armMcTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armMcChk
 theorem checkerProg_armAbs : closedA checkerProg armAbsA armAbsC armAbsFns = true :=
@@ -226,22 +226,21 @@ theorem mem_of_tree {fs : List FnName} {t : NTree} (ht : namesTree fs = some t) 
   exact of_decide_eq_true h
 
 theorem armPos_pass : ∀ f ∈ passCallees, f ∈ armPosFns := subset_of_tree armPosTree.eq (by decide +kernel)
-theorem armPos_raw : "block_raw_rec" ∈ armPosFns := mem_of_tree armPosTree.eq (by decide +kernel)
+theorem armPos_raw : "block_is_rec" ∈ armPosFns := mem_of_tree armPosTree.eq (by decide +kernel)
 theorem armHb_tail : ∀ f ∈ tailCallees, f ∈ armHbFns := subset_of_tree armHbTree.eq (by decide +kernel)
 theorem armRc_tail : ∀ f ∈ tailRcCallees, f ∈ armRcFns := subset_of_tree armRcTree.eq (by decide +kernel)
 theorem armTa_block : ∀ f ∈ blockTaCallees, f ∈ armTaFns :=
   subset_of_tree armTaTree.eq (by decide +kernel)
 theorem armCid_frame : ∀ f ∈ cidFrameCallees, f ∈ armCidFns :=
   subset_of_tree armCidTree.eq (by decide +kernel)
-theorem armCid_basis : "check_basis_decl" ∈ armCidFns := mem_of_tree armCidTree.eq (by decide +kernel)
-theorem armRc_grc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ armRcFns :=
+theorem armRc_grc : ∀ f ∈ grcRcCallees, f ∈ armRcFns :=
   subset_of_tree armRcTree.eq (by decide +kernel)
 theorem armRcHb_tables : "check_block_tables" ∈ armRcHbFns :=
   mem_of_tree armRcHbTree.eq (by decide +kernel)
 theorem armMa_pass : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ armMaFns :=
   subset_of_tree armMaTree.eq (by decide +kernel)
 theorem armMc_block : "check_block" ∈ armMcFns := mem_of_tree armMcTree.eq (by decide +kernel)
-theorem armAbs_split : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_raw_rec"],
+theorem armAbs_split : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_is_rec"],
     f ∈ armAbsFns := subset_of_tree armAbsTree.eq (by decide +kernel)
 
 /-! ## The program facts at the substituted checker program -/
@@ -278,7 +277,7 @@ theorem indArmProgs_checker (bs : List UInt8) (hr : RomOK bs)
 
 /-- `AbsKeep` of the arm's callees that reach no walk, from their write set. -/
 theorem indArmKeep_checker (bs : List UInt8) :
-    ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_raw_rec"],
+    ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_is_rec"],
       AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
   absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free (armAbs_split f hf)
 

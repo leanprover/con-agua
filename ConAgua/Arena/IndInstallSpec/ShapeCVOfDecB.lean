@@ -36,7 +36,7 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- The callees of `check_ind_decl` that cross the walk memos by their write set. -/
-def cidFrameCallees : List FnName := ["basis_pin_hit", "block_parts"]
+def cidFrameCallees : List FnName := ["basis_name_hit", "block_shape"]
 
 theorem CidMemos.call {p : Prog} {fs : List FnName} (hcl : closedA p cidFreeA cidFreeC fs = true)
     {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word} {m' : Mem}
