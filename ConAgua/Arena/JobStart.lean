@@ -8,10 +8,9 @@ public import ConAgua.Arena.PoolJobs
 # A worker's start (stage 3 of lane ronsync2)
 
 Every job opens with `enterScratch`, which keeps only the store, the caches and the pins of the
-state it starts from (it resets the scratch tier and the walk memos). So two states that agree on
+state it starts from (it opens a fresh scratch tier and resets the walk memos). So two states that agree on
 those three (`SameEnter`) run every job, and every nonempty list of jobs, alike
-(`recordJob_sameEnter`, `checkJobList_sameEnter`). A worker made from a state with the scratch
-tier closed (`AState.worker`) agrees so with the state with its caches emptied
+(`recordJob_sameEnter`, `checkJobList_sameEnter`). A worker (`AState.worker`) agrees so with the state with its caches emptied
 (`sameEnter_worker`): the jobs' relation need not hold at the worker itself, only at a state that
 enters the scratch tier as it does (`JobRel`, `recCall_stepE`).
 -/
@@ -21,7 +20,8 @@ open ConRon.Arena ConRon.Bridge
 namespace L.Arena
 
 /-- Two states that enter the scratch tier alike. -/
-def SameEnter (a a' : AState) : Prop := a.store = a'.store ∧ a.caches = a'.caches ∧ a.pins = a'.pins
+def SameEnter (a a' : AState) : Prop :=
+  a.store.enableScratch = a'.store.enableScratch ∧ a.caches = a'.caches ∧ a.pins = a'.pins
 
 theorem SameEnter.refl (a : AState) : SameEnter a a := ⟨rfl, rfl, rfl⟩
 
@@ -31,7 +31,7 @@ theorem SameEnter.symm {a a' : AState} (h : SameEnter a a') : SameEnter a' a :=
 theorem SameEnter.st {a a' : AState} (h : SameEnter a a') :
     AM.st enterScratch a = AM.st enterScratch a' := by
   obtain ⟨h1, h2, h3⟩ := h
-  simp only [AM.st, enterScratch_run]
+  simp only [AM.st, enterScratch_run, EStore.reset, ite_true]
   cases a; cases a'; simp_all
 
 theorem recordJob_sameEnter {mode : ConLeche.CheckMode} {pins : List INatOpPinSet}
@@ -63,11 +63,11 @@ theorem checkJobList_sameEnter {mode : ConLeche.CheckMode} {pins : List INatOpPi
       | .error e => .error e)
     rw [hr]
 
-/-- A worker enters the scratch tier as its state with the caches emptied (the scratch tier
-closed). -/
-theorem sameEnter_worker {a : AState} (hd : a.store.dropScratch = a.store) :
-    SameEnter a.worker { a with caches := Caches.empty } :=
-  ⟨by simp [AState.worker, hd], rfl, rfl⟩
+theorem enableScratch_dropScratch (st : EStore) : st.dropScratch.enableScratch = st.enableScratch := rfl
+
+/-- A worker enters the scratch tier as its state with the caches emptied. -/
+theorem sameEnter_worker {a : AState} : SameEnter a.worker { a with caches := Caches.empty } :=
+  ⟨enableScratch_dropScratch a.store, rfl, rfl⟩
 
 /-- An accepting list from one state accepts from a state that enters alike. -/
 theorem checkJobList_ok_of_sameEnter {mode : ConLeche.CheckMode} {pins : List INatOpPinSet}

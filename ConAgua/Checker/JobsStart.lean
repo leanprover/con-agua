@@ -74,4 +74,27 @@ theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
       · cases hk
   · rw [pinW_frame hF (by simp), pinW_frame h.frame (by simp [biA])]; exact h7.pin0
 
+/-- **`JobR` across a memory with the same word arrays** (the globals, the byte arrays). -/
+theorem _root_.L.Arena.JobR.frame0 {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
+    {ds : Array IDeclaration} {I : IStreamIndex} {M M' : Mem} {a : AState}
+    (h : JobR pins dn ds I M a) (hf : MemFrame [] [] M M') : JobR pins dn ds I M' a := by
+  have hA : LoArr [] := loArr_nil
+  have hC : LoCtl [] := fun _ h => absurd h (by simp)
+  refine ⟨⟨⟨ArenaR.frame_ext [] _ (by simp) (by simp) _ _ hf _ h.arena.base,
+      DerR.frameM [] _ _ _ hf (by simp) _ h.arena.der⟩,
+    h.core.frame (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)) hf,
+    h.pinsR.frame (fun _ h => absurd h (by simp)) hf, h.mode.frame hf (by simp) (by simp),
+    h.idx.frameLo hA hC hf, h.below.frameLo hA hC hf,
+    by rw [stampW_frameLo hC hf]; exact h.stamp, declsF_frameLo hA hf h.decls, iwOK_frameLo hA hC hf h.iw,
+    by rw [hC.ctl hf (by decide)]; exact h.top1, pinSetsR_frameLo hA hC hf h.pinsets,
+    h.mem.frameLo hA hC hf fun k x e => ?_, by rw [pinW_frame hf (by simp)]; exact h.flag,
+    h.memos.frameLo hA hC hf, h.fsize⟩, h.state, h.off, h.caches⟩
+  exact h.mem.dnN k x e
+
+/-- `JobR` reads no global. -/
+theorem _root_.L.Arena.JobR.setGlob {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
+    {ds : Array IDeclaration} {I : IStreamIndex} {M : Mem} {a : AState}
+    (h : JobR pins dn ds I M a) (g : GVar → Word) : JobR pins dn ds I ⟨M.bytes, M.words, g⟩ a :=
+  h.frame0 ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
+
 end L.Checker

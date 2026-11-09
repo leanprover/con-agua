@@ -4,6 +4,7 @@ public import ConAgua.Checker.PhaseBReads
 public import ConAgua.Arena.FreezeRel
 public import ConAgua.Checker.JobsStart
 import ConAgua.Checker.RomProg0
+import ConAgua.Checker.RomProgInit
 import ConAgua.Rom.Subst
 import ConRon.Bridge.Checker.Pool
 import ConRon.Bridge.Checker.Hyp
@@ -116,5 +117,93 @@ theorem poolHyps_of_phaseA {b : ByteArray} (PA : PhaseA b) {σ : Type} (Rel : σ
   obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hx''
   obtain ⟨_, hd⟩ := hden' i (by simpa using hi)
   exact ⟨_, by simpa using hd⟩
+
+/-! ## The jobs on the sequential driver's memory -/
+
+theorem mclearG_bytes (Sch : MemoSch) (m : Mem) : (mclearG Sch m).bytes = m.bytes := rfl
+
+theorem flushMem_bytes (m : Mem) : (flushMem m).bytes = m.bytes := by
+  simp only [flushMem, flushClears, mclearG_bytes]
+
+theorem callE_of_run {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {s : St} {r : List Word}
+    {s' : St} (h : (invoke p (exec p n) f vs).run s = .ok (r, s')) :
+    callE p n f vs s.mem = .ok (r, s'.mem) := by
+  rw [invoke_run_loc'] at h
+  simp only [callE]
+  cases hh : (invoke p (exec p n) f vs).run { mem := s.mem, loc := Locals.init [] } with
+  | error e => simp [hh, Except.map] at h
+  | ok q =>
+    simp [hh, Except.map] at h
+    obtain ⟨rfl, rfl⟩ := h
+    rfl
+
+/-- **The sequential driver's jobs**: a returning `check_jobs(0, k)` (`k` the number of records)
+on a memory that agrees with the flushed memory after the index build on every array the jobs
+name means the twin's jobs over every record accept from the index state's worker. -/
+theorem checkJobs_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (hF : FoldAt b pb sz PA m₇ m) (hfok : FlushOK m)
+    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    {n : Nat} (hn : n ≤ 2 ^ 62) {s : St} {hi : Word} (hhi : hi.toNat = PA.ds.size)
+    (hag : ∀ a, phaseBS a = true → s.mem.arr64 a = (flushMem m).arr64 a)
+    {rs : List Word} {s' : St}
+    (hrun : (invoke checkerProg (exec checkerProg n) "check_jobs" [0, hi]).run s = .ok (rs, s')) :
+    ∃ s'', checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+      .ok (.ok (), s'') := by
+  let p := Prog.subPB pb.data.toList checkerProg
+  have hJ0 : JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I (flushMem m) { PA.sF with caches := Caches.empty } :=
+    hF.jobR hfok
+  have hby : (flushMem m).bytes = m₇.bytes := by rw [flushMem_bytes, hF.bytes]
+  generalize flushMem m = F at hJ0 hag hby
+  -- the flushed memory with the run's globals
+  let s₂ : St := ⟨⟨F.bytes, F.words, s.mem.glob⟩, s.loc⟩
+  have hAg : Agree phaseBS (fun _ => false) s.mem s₂.mem :=
+    ⟨fun a ha => hag a ha, fun _ h => absurd h (by simp), rfl⟩
+  obtain ⟨s₂', hrun₂, -, -⟩ :=
+    invoke_agree_ok checkerProg_phaseBReads check_jobs_mem_phaseBJobFns hAg rfl hrun
+  have hPB : s₂.mem.arr8 L.Rom.PB = pb.data.toList.toArray := by
+    show F.bytes L.Rom.PB = _
+    rw [hby, ← Mem.arr8, hF.r7.since.keep.arr8]
+    exact loadMem_pb b pb sz
+  rw [← L.Rom.invoke_subPB (bs := pb.data.toList) checkerProg_noSt8PB n _ _ (s := s₂) hPB] at hrun₂
+  have hc := callE_of_run hrun₂
+  -- the model of `check_jobs`
+  obtain ⟨_s3, -, -, hx⟩ := triple_of_callE
+    (checkJobs_specE p hJP.check_jobs n ⟨s₂.mem, Locals.init []⟩ 0 hi) hc
+  rcases n with _ | n
+  · obtain ⟨e, he, -⟩ := callE_zero p "check_jobs" [0, hi] s₂.mem
+    rw [hc] at he; cases he
+  have hx' : checkJobsE.k_loop1 p (checkJobsE.loop1 p (n + 1) s₂.mem 0 hi) = _ := hx
+  cases hl : checkJobsE.loop1 p (n + 1) s₂.mem 0 hi with
+  | error ε => rw [hl] at hx'; cases hx'
+  | ok q =>
+  have hch := checkJobsLoop_chain (n + 1) (by omega) s₂.mem 0 q hl
+  simp only [UInt64.toNat_zero, Nat.sub_zero, hhi] at hch
+  -- the twin's side
+  obtain ⟨pinsP, dsP, hst, hrec, hpp, hden, hPD, hH⟩ := poolHyps_of_phaseA PA
+    (JobRel PA.ipins (dnOf PA.sE.store) PA.ds PA.I { PA.sF with caches := Caches.empty }) (RecCall p)
+  have hpx := PA.pfx
+  obtain ⟨hA, hB, hC, hD, hE⟩ := hpx
+  obtain ⟨-, -, -, -, -, hpd, _rc, _preC, -, hden0⟩ :=
+    ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
+  have hFD : FrontDecls PA.ds := frontDecls_of_prefix PA.pfx
+  have hLD : DeclsLpsDn (dnOf PA.sE.store) PA.ds := declsLpsDn_dnOf hpd ⟨_, hden0⟩
+  have hdn : DnPers (dnOf PA.sE.store) := fun k x hk => by
+    simp only [dnOf] at hk; split at hk
+    · assumption
+    · cases hk
+  have hds : PA.ds.size < 2 ^ 64 := by rw [← hhi]; exact UInt64.toNat_lt hi
+  have H := hH (recCall_stepE hJP hFD hLD hdn hrec hpp hds hden hPD)
+  have hJ : JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I s₂.mem { PA.sF with caches := Caches.empty } :=
+    hJ0.setGlob _
+  obtain ⟨-, hacc⟩ := pool_twin Vt H hst [(s₂.mem, List.range PA.ds.size)]
+    (fun t ht => by
+      rw [List.mem_singleton] at ht; subst ht
+      exact ⟨_, ⟨hJ, PExt.of_ext (Ext.refl _), rfl⟩, sameEnter_worker.symm⟩)
+    (fun t ht => by rw [List.mem_singleton] at ht; subst ht; rw [List.range_eq_range']; exact hch)
+    (fun t ht => by rw [List.mem_singleton] at ht; subst ht; exact List.pairwise_lt_range)
+    (fun t ht k hk => by rw [List.mem_singleton] at ht; subst ht; exact List.mem_range.mp hk)
+    (fun k hk => ⟨_, List.mem_singleton_self _, List.mem_range.mpr hk⟩)
+  exact hacc _ (List.mem_singleton_self _)
 
 end L.Checker
