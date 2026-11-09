@@ -34,7 +34,23 @@ open ConRon.Arena
 /-! ## The pins -/
 
 theorem PinsR.trunc {m : Mem} {p : Pins} (h : PinsR m p) : PinsR (truncFrozen m) p := by
-  sorry
+  have hw : ∀ i, i < 72 → pinW (truncFrozen m) i = pinW m i := fun i hi => by
+    simp only [pinW, truncFrozen_pins, Array.getElem?_extract, Nat.zero_add, Array.size_extract]
+    by_cases h2 : i < (m.arr64 PINS).size <;> simp [hi, h2, Nat.lt_min]
+  refine ⟨fun h0 => ?_⟩
+  have hf := h.full (by rwa [← hw 0 (by decide)])
+  refine ⟨by rw [truncFrozen_pins, size_extract0]; have := hf.size; omega, hf.names_size,
+    fun i hi => by rw [hw _ (by omega)]; exact hf.names_lt i hi,
+    fun i hi => by rw [hw _ (by omega)]; exact hf.names i hi,
+    by rw [hw _ (by decide)]; exact hf.quotMk_lt, by rw [hw _ (by decide)]; exact hf.quotMk,
+    by rw [hw _ (by decide), hw _ (by decide), hw _ (by decide)]; exact hf.lv_lt,
+    by rw [hw _ (by decide)]; exact hf.emptyLevels, by rw [hw _ (by decide)]; exact hf.zeroLevel,
+    by rw [hw _ (by decide)]; exact hf.sortOne,
+    fun i hi => by rw [hw _ (by omega)]; exact hf.reserved_lt i hi, ?_⟩
+  rw [hf.reserved]
+  apply List.map_congr_left
+  intro i hi
+  rw [hw _ (by simp at hi; omega)]
 
 /-! ## The record pool -/
 
@@ -42,14 +58,35 @@ theorem erecTop_trunc (m : Mem) : erecTop (truncFrozen m) = erecTop m := by
   simp only [erecTop, truncFrozen_ctl]
 
 theorem erecP_trunc (m : Mem) : erecP (truncFrozen m) = erecP m := by
-  sorry
+  funext i
+  have h1 : erecTop1 (truncFrozen m) = erecTop1 m := by simp only [erecTop1, truncFrozen_ctl]
+  have h2 : (truncFrozen m).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
+    truncFrozen_other m _ (by decide)
+  simp only [erecP, erecTop_trunc, h1, h2, truncFrozen_erec]
+  split
+  · split
+    · split
+      · rename_i h3
+        simp only [Array.getElem?_extract, Nat.zero_add]
+        by_cases h4 : i % 2 ^ 40 < (m.arr64 EREC).size <;> simp [h3, h4, Nat.lt_min]
+      · rfl
+    · rfl
+  · rfl
 
 theorem rdW_erec_trunc (m : Mem) {x : Word} (hx : x.toNat < erecTop m) :
     rdW ((truncFrozen m).arr64 EREC) x = rdW (m.arr64 EREC) x := by
   rw [truncFrozen_erec]; exact rdW_extract _ hx
 
 theorem IWOK.trunc {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (truncFrozen m) := by
-  sorry
+  have hI : (truncFrozen m).arr64 L.Ind.IW = m.arr64 L.Ind.IW := truncFrozen_other m _ (by decide)
+  have hE1 : (truncFrozen m).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
+    truncFrozen_other m _ (by decide)
+  have he : ((truncFrozen m).arr64 EREC).size = min (erecTop m) (m.arr64 EREC).size := by
+    rw [truncFrozen_erec, size_extract0]
+  have h0 := (L.Ind.IWOK_iff m).1 h
+  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, erecTop1, hI, hE1, truncFrozen_ctl, he] at h0 ⊢
+  simp only [erecTop] at he ⊢
+  omega
 
 theorem PinSetsR.trunc {m : Mem} {ips : List INatOpPinSet} (h : L.Rom.PinSetsR m ips) :
     L.Rom.PinSetsR (truncFrozen m) ips := by
