@@ -63,6 +63,11 @@ theorem decCI_indInfo_kind {a : Nat → Option Word} {p : Nat}
   | 6, h => simp_all []
   | (_ + 7), h => simp_all
 
+/-- An in-bounds `EREC⦃a⦄` read, as the model's `erRd`. -/
+theorem erRd_get (m : Mem) (a : Word) (h : (a &&& 1099511627775).toNat < (m.arr64 (tierA EREC (a >>> 40))).size) :
+    (m.arr64 (tierA EREC (a >>> 40)))[(a &&& 1099511627775).toNat] = erRd m a := by
+  unfold erRd; rw [rdW_eq _ _ _ rfl h]
+
 /-- A word `EREC⦃q⦄` reads at a `Nat` position, as `nat?` decodes it. -/
 theorem erN_rdW {m : Mem} {q : Nat} {k : Nat} (h : nat? (erA m) q = some k) :
     erRd m (UInt64.ofNat q) = UInt64.ofNat k := by

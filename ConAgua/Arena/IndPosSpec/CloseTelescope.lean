@@ -34,11 +34,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-- An in-bounds `EREC⦃a⦄` read, as the model's `erRd`. -/
-theorem erRd_get (m : Mem) (a : Word) (h : (a &&& 1099511627775).toNat < (m.arr64 (tierA EREC (a >>> 40))).size) :
-    (m.arr64 (tierA EREC (a >>> 40)))[(a &&& 1099511627775).toNat] = erRd m a := by
-  unfold erRd; rw [rdW_eq _ _ _ rfl h]
-
 /-- `nest_block_of`'s three exits, from `nestBlockOf_key`. -/
 theorem blk_none {fe : IFEnv} {c : Word} {m : Mem} (found q : Word)
     (hfound : fe.find? (decI c) = envFound m found q)
