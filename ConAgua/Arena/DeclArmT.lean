@@ -89,7 +89,7 @@ theorem erecCiW_okT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hf := erecCiW_frame h
   refine ⟨⟨hS', hS.twin.frame hf ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
       ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩
-      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
+      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩ (by decide) hg,
     by simp only [pinW, hf.arr PINS (by decide) (by decide)]; exact hS.flag⟩, hg, h1, h2, h3, h4⟩
 
 /-- `lvl_eq_c` at its text (`FireProg.lvlText`). -/

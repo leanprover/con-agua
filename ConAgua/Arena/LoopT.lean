@@ -266,7 +266,7 @@ theorem enterScratch_st (a : AState) :
 /-- **`TwinOK` after emptying the caches** (`flushCaches`): the readback caches hold nothing. -/
 theorem TwinOK.flush {m : Mem} {a : AState} (h : TwinOK dn m a fe) :
     TwinOK dn m { a with caches := Caches.empty } fe := by
-  refine ⟨fun k l hk => ?_, fun k l hk => ?_, h.nwf, h.erec, h.spn, h.memos, h.bstk, ?_⟩
+  refine ⟨fun k l hk => ?_, fun k l hk => ?_, h.nwf, h.erec, h.spn, h.memos, h.bstk, ?_, h.rom.store rfl⟩
   · simp [Caches.empty] at hk
   · simp [Caches.empty] at hk
   · exact h.den.mono (LsExt.refl _) rfl rfl (fun k x hk => by simp [Caches.empty] at hk)
@@ -367,7 +367,7 @@ theorem TwinOK.enter {m : Mem} {a : AState} (h : TwinOK dn m a fe) (hwf : StoreW
                 show denoteL a.store.enableScratch.ls i = some x
                 rw [hL]; exact hd }
       lst := fun i x hd => by rw [hLs]; exact hd }
-  refine ⟨fun k l hk => ?_, fun k l hk => ?_, ?_, h.erec, h.spn, h.memos, h.bstk, ?_⟩
+  refine ⟨fun k l hk => ?_, fun k l hk => ?_, ?_, h.erec, h.spn, h.memos, h.bstk, ?_, h.rom.pers rfl⟩
   · show denoteL a.store.enableScratch.ls k = some l
     rw [hL]; exact h.readL k l hk
   · show denoteLs a.store.enableScratch.lss k = some l
