@@ -231,15 +231,18 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
     (hscA : (SOREC : TieredArray) ∉ A ∧ (CREC : TieredArray) ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
-      by decide) (hmode : ModeOK m') :
+      by decide) (hmode : ModeOK m')
+    (hiwA : (EREC : TieredArray) ∉ A ∧ (tier1 EREC : TieredArray) ∉ A ∧ (L.Ind.HBM : TieredArray) ∉ A := by decide)
+    (hiwC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C ∧ (214 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb := by
   simp only [cplL, Prod.mk.injEq] at hcpl
   obtain ⟨hc, hp, hl⟩ := hcpl
   refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => not_mem_envArrs (by have := henv b hb; omega))
       (fun x hx => not_mem_envCtl (by have := hCenv x hx; omega)) hf, ?_, ?_, ?_,
-      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC hiwA.2.2 hiwC.2.2.2,
       hf.size BSTK ▸ hS.bstk,
-      hS.den.of_arena hS.arena.base hD.base hc hp hl hf hscA hscC, hmode⟩
+      hS.den.of_arena hS.arena.base hD.base hc hp hl hf hscA hscC, hmode,
+      hS.iwF hf hiwA.1 hiwA.2.1 hiwC.1 hiwC.2.1 hiwC.2.2.1⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)
       (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))

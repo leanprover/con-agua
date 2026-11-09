@@ -46,9 +46,10 @@ theorem TwinOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AS
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
     (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
-    (h : TwinOK dn m a fe) : TwinOK dn m' a fe :=
+    (h : TwinOK dn m a fe) (hHB : (L.Ind.HBM : TieredArray) ∉ A := by decide)
+    (hHBc : (214 : Word) ∉ C := by first | decide | simp) : TwinOK dn m' a fe :=
   ⟨h.readL, h.readLs, h.nwf, by rw [hf.size]; exact h.erec, by rw [hf.size]; exact h.spn,
-    h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.size]; exact h.bstk, h.den.mem m'⟩
+    h.memos.frame hf hA hC hWA hWC hLA hLC hHB hHBc, by rw [hf.size]; exact h.bstk, h.den.mem m'⟩
 
 /-- `TwinOK` across a writer of `PT0`, tier-1 arrays and `CTL` words below 48 or in 60‥127
 only (the bracket's). -/
@@ -68,6 +69,7 @@ theorem TwinOK.frameLo {A : List TieredArray} {C : List Word} {m m' : Mem} {a : 
     ⟨n 152 (by decide) (by decide), n 154 (by decide) (by decide), n 156 (by decide) (by decide)⟩
     ⟨na 52 (by decide), na 53 (by decide), na 54 (by decide)⟩
     ⟨n 54 (by decide) (by decide), n 56 (by decide) (by decide), n 58 (by decide) (by decide)⟩
+    (na 207 (by decide)) (n 214 (by decide) (by decide))
 
 end frames
 

@@ -361,7 +361,7 @@ theorem CoreMemos.frameLo (hA : LoArr A) (hC : LoCtl C) (hf : MemFrame A C m m')
     ⟨hC.not_hi (by decide), hC.not_hi (by decide), hC.not_hi (by decide)⟩
     ⟨hA.not_t0 (by decide), hA.not_t0 (by decide), hA.not_t0 (by decide)⟩
     ⟨hC.not_mid (by decide) (by decide), hC.not_mid (by decide) (by decide),
-      hC.not_mid (by decide) (by decide)⟩
+      hC.not_mid (by decide) (by decide)⟩ (hA.not_hi (by decide)) (hC.not_hi (by decide))
 
 theorem IndMemos.frameLo (hA : LoArr A) (hC : LoCtl C) (hf : MemFrame A C m m') (h : IndMemos m) :
     IndMemos m' :=
@@ -649,7 +649,7 @@ theorem andPin_job {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
       ⟨nA leafA_walk.1, nA leafA_walk.2.1, nA leafA_walk.2.2⟩
       ⟨nC leafC_walk.1, nC leafC_walk.2.1, nC leafC_walk.2.2⟩
       ⟨nA leafA_lp.1, nA leafA_lp.2.1, nA leafA_lp.2.2⟩
-      ⟨nC leafC_lp.1, nC leafC_lp.2.1, nC leafC_lp.2.2⟩
+      ⟨nC leafC_lp.1, nC leafC_lp.2.1, nC leafC_lp.2.2⟩ (nA leafA_hb) (nC leafC_hb)
   · rw [pinW_frame hfr (fun h => leafA_pins (apA_mem h).1)]; exact hS.flag
   · refine hS.memos.frame hfr (fun b hb => ?_) (fun x hx => ?_)
     · have := (apA_mem hb).2; simp only [apP, Bool.and_eq_true, bne_iff_ne, ne_eq, Bool.or_eq_true,

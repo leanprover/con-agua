@@ -291,7 +291,7 @@ theorem ustW_okC {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have hcpl : cpl { a1 with caches := a.caches } = cpl a := by
     simp only [cpl, hst, hpi]
   refine ⟨b, _, hrun', hb, hM', ?_, StackKept.of_frame hf, hS1.iw, hg, hst⟩
-  exact hS.arena_frame (hS1.check.arena.caches_irrel _) hcpl hf
+  exact hS.arena_frameHb (hS1.check.arena.caches_irrel _) hcpl hf (hiw := hS1.iw) (hhb := hM')
     (by intro b hb; simp only [usA, List.mem_cons, List.not_mem_nil, or_false] at hb
         rcases hb with rfl | rfl | rfl <;> decide)
     (by simp only [usA]; decide)

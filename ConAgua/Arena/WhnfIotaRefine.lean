@@ -566,7 +566,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         rw [UInt64.toNat_add]; simp; omega
       have h' := congrArg UInt64.toNat h
       simp at h'; omega)
-  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
+  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by
       simp at hb; subst hb; refine ⟨rfl, ?_⟩; simp only; rw [← har]; omega)
       (fun x hx => by
@@ -597,6 +597,14 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega)
+      (fun h => by
+        simp only [List.mem_singleton, TieredArray.t0_inj] at h; have h2' := h2; rw [← h] at h2'
+        exact absurd h2' (by decide))
+      (fun h => by
+        simp at h; have h' := congrArg UInt64.toNat h
+        have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+          rw [UInt64.toNat_add]; simp; omega
+        simp at h'; omega)
   · exact hf.size BSTK ▸ hS.bstk
   · exact (hS.den.frameE (hf.arr EREC (fun h => by
       simp only [List.mem_singleton, TieredArray.t0_inj] at h; have h2' := h2; rw [← h] at h2'
@@ -605,6 +613,15 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
   · have hcs : (S.cs + 1).toNat = S.cs.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; omega
     exact hS.mode.frame hf
+      (fun h => by simp at h; have h' := congrArg UInt64.toNat h; simp at h'; omega)
+      (fun h => by simp at h; have h' := congrArg UInt64.toNat h; simp at h'; omega)
+  · have hcs : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    exact hS.iwF hf (fun h => by
+        simp only [List.mem_singleton, TieredArray.t0_inj] at h; have h2' := h2; rw [← h] at h2'
+        exact absurd h2' (by decide))
+      (fun h => by simp only [List.mem_singleton] at h; exact tier1_ne_t0 _ _ h)
+      (fun h => by simp at h; have h' := congrArg UInt64.toNat h; simp at h'; omega)
       (fun h => by simp at h; have h' := congrArg UInt64.toNat h; simp at h'; omega)
       (fun h => by simp at h; have h' := congrArg UInt64.toNat h; simp at h'; omega)
   · refine StackKept.of_frame_range hf (fun b hb => by

@@ -355,7 +355,7 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     CoreS dn m' a' vis fe M eb :=
   have hk : a'.caches = a.caches ∧ a'.pins = a.pins ∧ a'.store.lss = a.store.lss := by
     simpa only [cpl, Prod.mk.injEq] using hcpl
-  hS.arena_frameD hD hcpl hf
+  hS.arena_frameD hD hcpl hf (hiw := hS.iwF hf) (hhb := hS.memos.hbF hf)
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -712,7 +712,7 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
       (hS.den.frameE (hf.arr EREC (by decide) (by decide))).caches rfl rfl rfl,
-      hS.mode.frame hf (by simp) (by simp)⟩,
+      hS.mode.frame hf (by simp) (by simp), hS.iwF hf⟩,
     StackKept.of_frame hf⟩
 
 

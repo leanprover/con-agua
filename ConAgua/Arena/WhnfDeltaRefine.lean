@@ -109,7 +109,7 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     {n : NIdx} {us : LsIdx} {r : EIdx} (hrun : (internE (.const n us)).run a = .ok (r, a'))
     (hus : ∃ ls, denoteLs a.store.lss us = some ls) :
     CoreS dn m' a' vis fe M eb :=
-  hS.arena_frameD hD hcpl hf
+  hS.arena_frameD hD hcpl hf (hiw := hS.iwF hf) (hhb := hS.memos.hbF hf)
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)

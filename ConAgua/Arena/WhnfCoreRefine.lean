@@ -203,10 +203,14 @@ theorem CoreS.frame_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
     hS.env.frame (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide) hf,
     hS.readL, hS.readLs, hS.nwf, hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
     hS.memos.frame_hi hf (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide)
-      (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide),
+      (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide)
+      (fun h => by have := hA _ h; simp [L.Ind.HBM, SPN] at this) (fun h => by have := hC _ h; simp at this),
     hf.size BSTK ▸ hS.bstk,
     hS.den.frameE (hf.arr EREC (fun h => by have := hA _ h; simp [EREC, SPN] at this) (by decide)),
-    hS.mode.frame hf (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)⟩
+    hS.mode.frame hf (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this),
+    hS.iwF hf (fun h => by have := hA _ h; simp [EREC, SPN] at this)
+      (fun h => by have := hA _ h; simp [SPN] at this) (fun h => by have := hC _ h; simp at this)
+      (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)⟩
 
 theorem SpineR.keep {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
     (hsz : (m'.arr64 SPN).size = (m.arr64 SPN).size)

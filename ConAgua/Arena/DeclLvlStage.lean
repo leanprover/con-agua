@@ -59,7 +59,7 @@ theorem StageR.coreS {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     ∃ M, CoreS dn m a vis fe M 0 := by
   obtain ⟨M, hM⟩ := hS.check.core
   exact ⟨M, ⟨hS.check.arena, hM, hS.check.pins.full hflag, hS.check.env, hT.readL, hT.readLs, hT.nwf, hT.erec,
-    hT.spn, hT.memos, hT.bstk, hT.den, hS.check.mode⟩⟩
+    hT.spn, hT.memos, hT.bstk, hT.den, hS.check.mode, hS.iw⟩⟩
 
 /-- `CoreS` (outside the eager tower) is `CheckR` and the twin invariants. -/
 theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}

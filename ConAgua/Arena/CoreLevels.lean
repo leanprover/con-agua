@@ -329,7 +329,7 @@ theorem CoreS.set_lq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
       (hS.den.frameE (hf.arr EREC (by simp [EREC, LQ]) (by decide))).caches rfl rfl rfl,
-      hS.mode.frame hf (by simp) (by simp)⟩,
+      hS.mode.frame hf (by simp) (by simp), hS.iwF hf⟩,
     StackKept.of_frame hf⟩
 
 end L.Arena
@@ -405,7 +405,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.base, DerR.of_store _ _ _ hS₁.arena.der rfl⟩, hS₁.core.readLC X,
       hS₁.pins,
       hS₁.env, hrl, fun h l e => hS₁.readLs h l e, hS₁.nwf, hS₁.erec, hS₁.spn, hS₁.memos, hS₁.bstk,
-      hS₁.den.caches rfl rfl rfl, hS₁.mode⟩
+      hS₁.den.caches rfl rfl rfl, hS₁.mode, hS₁.iw⟩
   by_cases hz0 : z₁ = 0
   · rw [rcdK_zero _ _ _ _ _ hz0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -552,7 +552,7 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
       (hS.den.frameE (hf.arr EREC (by simp [EREC, LSQ]) (by decide))).caches rfl rfl rfl,
-      hS.mode.frame hf (by simp) (by simp)⟩,
+      hS.mode.frame hf (by simp) (by simp), hS.iwF hf⟩,
     StackKept.of_frame hf⟩
 
 /-- **The model of `lvls_eq_c` refines `lvlsEq?`** under `CoreS`. -/
@@ -618,7 +618,7 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.base, DerR.of_store _ _ _ hS₁.arena.der rfl⟩,
       hS₁.core.readLsC X, hS₁.pins, hS₁.env, fun h l e => hS₁.readL h l e, hrl, hS₁.nwf,
       hS₁.erec, hS₁.spn, hS₁.memos, hS₁.bstk,
-      hS₁.den.caches rfl rfl rfl, hS₁.mode⟩
+      hS₁.den.caches rfl rfl rfl, hS₁.mode, hS₁.iw⟩
   by_cases hz0 : z₁ = 0
   · rw [rcdK_zero _ _ _ _ _ hz0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h

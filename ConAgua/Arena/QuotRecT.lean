@@ -168,7 +168,7 @@ theorem ibdE_memos {p : Prog} (hcl : LeafClosed p) {n : Nat} {m m' : Mem} {vis c
   have hlf : ∀ {f : FnName}, f ∈ leafFns → ∀ {k : Nat} {args : List Word} {x y : Mem}
       {rx : List Word}, callW p k f args x = some (rx, y) → CoreMemos x → CoreMemos y :=
     fun {_} hf {_ _ _ _ _} hc hM => hM.frame (callW_leafFrame hcl hf hc) leafA_memo leafC_memo leafA_walk
-      leafC_walk leafA_lp leafC_lp
+      leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb
   cases n with
   | zero => rw [installBasisDeclE.eq_1] at h; cases h
   | succ n =>

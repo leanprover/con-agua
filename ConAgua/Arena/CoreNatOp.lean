@@ -328,7 +328,7 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
       (fun x c us hv => (hview x _ (.inr ⟨_, _, rfl⟩) hv).imp id (by
         rintro ⟨c', h⟩; cases h; exact hS.den.emptyLs))
       (hS.den.lvlAll.congr (by simp only [EStore.ls, hl])) (hS.den.lsAll.congr hl),
-    hS.mode.poolGrew hP⟩, by simp only [spTop, h136], by rw [hspn],
+    hS.mode.poolGrew hP, hS.iwF hf⟩, by simp only [spTop, h136], by rw [hspn],
     fun i _ => by simp only [spW, hspn], BKept.of_frame hf (by decide) (by decide), hP⟩
   · rw [hc]; exact hS.core.frame (by decide) (.of_lt natC_lt (by decide)) hf
   · rw [hp]; exact hS.pins.congr (hf.arr PINS (by decide) (by decide))

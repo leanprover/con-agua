@@ -63,7 +63,7 @@ theorem StageC.of_run {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   ⟨hS, h.check.mono hok hx hc hp,
     ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,
       by rw [hf.size]; exact h.mem.bstk,
-      h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp,
+      h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb,
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
 
@@ -300,7 +300,7 @@ theorem StageC.of_frame {vis vis' : Word} {fe fe' : IFEnv} {env : ConLeche.Env} 
   ⟨hS, hck,
     ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,
       by rw [hf.size]; exact h.mem.bstk,
-      h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp,
+      h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb,
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
 

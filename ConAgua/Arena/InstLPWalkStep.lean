@@ -82,11 +82,14 @@ theorem ilw_internE {v : ENodeView} {A : List TieredArray} {C : List Word} (r : 
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
     (hSA : (SPN : TieredArray) ∉ A ∧ (BSTK : TieredArray) ∉ A ∧ (POOL : TieredArray) ∉ A := by decide)
     (hSC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
-    (hL : LvlFree C := by lvl_free) (hP1 : (POOL1 : TieredArray) ∉ A := by decide) (hPT : (PT0 : TieredArray) ∉ A := by decide) :
+    (hL : LvlFree C := by lvl_free) (hP1 : (POOL1 : TieredArray) ∉ A := by decide) (hPT : (PT0 : TieredArray) ∉ A := by decide)
+    (hiwA : (EREC : TieredArray) ∉ A ∧ (tier1 EREC : TieredArray) ∉ A ∧ (L.Ind.HBM : TieredArray) ∉ A := by decide)
+    (hiwC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C ∧ (214 : Word) ∉ C := by decide) :
     ILWStep (internE v) a dn m m' vis fe M eb r := by
   have hrun := AM.run_of_ok _ _ hok
   have hk := Keeps.run (keepsW_internE v) hrun
   have hS' := hS.arena_frame hD hk hf h128 hpins henv hC128 hCenv hmA hmC hmWA hmWC hLA hLC hscA hscC hSC.2.2
+    hiwA hiwC
   obtain ⟨hM', hg⟩ := hM.of_internE hok hf hLA hLC
   refine ⟨_, ?_, ⟨M, hS', KeptAll.refl _ _, StackKept.of_frame hf hSA hSC hL hP1 hPT⟩, hM', hg, hr⟩
   rw [hrun, hres]

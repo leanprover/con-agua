@@ -43,7 +43,7 @@ theorem StageC.of_checkE {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} 
     (hS : StageR vis' fe' m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK false env' fe' a')
     (hx : ConRon.Arena.Ext a.store a'.store) : StageC dn vis' fe' env' m' a' :=
   ⟨hS, hck,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, hA.coreMemos,
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     hA.wk.2.2.2.2⟩
 
