@@ -197,14 +197,6 @@ theorem keeps_indPiTeleLen : ∀ (fuel : Nat) (h : EIdx), Keeps (indPiTeleLen fu
     intro c p; unfold indPiTeleLen
     repeat' keeps_step [keeps_view, keeps_indPiTeleLen fuel]
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem keeps_piResultD : ∀ (fuel : Nat) (h : EIdx), Keeps (piResultD fuel h)
-  | 0, h => by intro c p; unfold piResultD; repeat' keeps_step
-  | fuel + 1, h => by
-    intro c p; unfold piResultD
-    repeat' keeps_step [keeps_view, keeps_piResultD fuel]
--/
-
 theorem keeps_piSortTeleLen : ∀ (fuel : Nat) (h : EIdx), Keeps (piSortTeleLen? fuel h)
   | 0, h => by intro c p; unfold piSortTeleLen?; repeat' keeps_step
   | fuel + 1, h => by
@@ -216,7 +208,7 @@ theorem keeps_validateIndD (st : StateD) (tys : List ConLeche.Frontend.IndTypeRe
     Keeps (validateIndD st tys cts rcs) := by
   intro c p; unfold validateIndD getDeclD
   repeat' keeps_step [keeps_StateD_name, keeps_StateD_expr, keeps_storeFuel, keeps_readName,
-    keeps_indPiTeleLen, keeps_piResultD, keeps_view, keeps_readLevel, keeps_viewN,
+    keeps_indPiTeleLen, keeps_view, keeps_readLevel, keeps_viewN,
     keeps_piSortTeleLen]
 
 theorem keeps_installIndD (st : StateD) (tys : List ConLeche.Frontend.IndTypeRec)
