@@ -156,12 +156,12 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
       have hbo2' : bo2 = true := by rw [← hbo2]; simpa using ho2
       subst hbo2'
       exact RefE.ret (y := (.ordinary, w, NS)) (a' := a1) rfl ⟨hC3, hg12.trans hg3, by simp [decNFK],
-        by simpa using hwH, by simpa using hwd, by simpa using hns3, hP3, hA3⟩
+        by simpa using hwH, by simpa using hwd, by simpa using hns3, hP3, hA3, c1⟩
     · rw [ite_eq_right ho2]
       have hbo2' : bo2 = false := by rw [← hbo2]; simpa using ho2
       subst hbo2'
       exact RefE.ret (y := (.ordinary, decI e, NS)) (a' := a1) rfl ⟨hC3, hg12.trans hg3, by simp [decNFK],
-        by simpa using he, by simp, by simpa using hns3, hP3, hA3⟩
+        by simpa using he, by simp, by simpa using hns3, hP3, hA3, c1⟩
   rw [ite_eq_right ho]
   have hbo' : bo = true := by rw [← hbo]; simpa using ho
   subst hbo'
@@ -185,9 +185,9 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
     rw [npE.k_nest_pos_bind.eq_2]
     obtain ⟨s5, hs5, -, x, a4, hrun4, hQ4⟩ := RefE.run_ok hs hR h5
     rw [hs5] at hQ4
-    obtain ⟨hC4, hg4, hk4, hxH, hxd, hns4, hP4, hA4⟩ := hQ4
+    obtain ⟨hC4, hg4, hk4, hxH, hxd, hns4, hP4, hA4, c4⟩ := hQ4
     exact RefE.ret hrun4 ⟨hC4, hg12.trans hg4, by simpa using hk4, by simpa using hxH, by simpa using hxd,
-      by simpa using hns4, hP4, hA4⟩
+      by simpa using hns4, hP4, hA4, c1.trans c4⟩
   · -- an application
     rw [ite_eq_right h6]
     have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forallE _ hwH).mp e')
@@ -206,9 +206,9 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
     rw [npE.k_nest_pos_app.eq_2]
     obtain ⟨s5, hs5, -, x, a4, hrun4, hQ4⟩ := RefE.run_ok hs hR h5
     rw [hs5] at hQ4
-    obtain ⟨hC4, hg4, hk4, hx1, hns4, hP4, hA4⟩ := hQ4
+    obtain ⟨hC4, hg4, hk4, hx1, hns4, hP4, hA4, c4⟩ := hQ4
     exact RefE.ret hrun4 ⟨hC4, hg12.trans hg4, by simpa using hk4, by simpa using hwH,
-      by simpa [hwd] using hx1.symm, by simpa using hns4, hP4, hA4⟩
+      by simpa [hwd] using hx1.symm, by simpa using hns4, hP4, hA4, c1.trans c4⟩
 
 end steps
 
