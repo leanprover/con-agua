@@ -50,7 +50,7 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
     (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m)
     (hcl : H closed) (hcv : decCV (erecP m) cv.toNat = some cvv) (hR : RfInv m M G g) :
     ∃ x a', (ConRon.Arena.nestCtorNf c prog (decI us) ds cvv (decE closed)).run a = .ok (x, a') ∧
-      DecB (fun m => decNCN m nf.toNat) m' x ∧ nf.toNat + 5 ≤ iwTop m' ∧ RxPost dn fe vis m m' a' M G g := by
+      DecB (fun m => decNCN m nf.toNat) m' x ∧ nf.toNat + 5 ≤ iwTop m' ∧ RxPost fe vis m m' a' M G g := by
   unfold ncnW at h
   have hpl : prog.length = pl.toNat := hs.1
   rcases hr1 : posRecW m [0, ctx, po, pl, pl] with _ | ⟨f, m1⟩ <;> rw [hr1] at h; · simp [ncnK1] at h
@@ -69,12 +69,12 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
   have hR1 := hR.frame (posRecW_fr hr1)
   rcases hd : rxDsW k m1 f dO dL with _ | ⟨q, l, m2⟩ <;> rw [hd] at h; · simp [ncnK2] at h
   rw [ncnK2_some] at h
-  obtain ⟨ys, a2, hrun2, hdec2, hq2, M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := (rxOK_all dn fe vis k).2.2.2.1 m1 m2 a f dO dL
+  obtain ⟨ys, a2, hrun2, hdec2, hq2, M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := (rxOK_all fe vis k).2.2.2.1 m1 m2 a f dO dL
     q l _ ds M G g hd hS1 hfm (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds)
     (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.iw) hR1
   rcases hrx : rxW k m2 f closed with _ | ⟨ty, m3⟩ <;> rw [hrx] at h; · simp [ncnK3] at h
   rw [ncnK3_some] at h
-  obtain ⟨a3, hrun3, hty, M3, G3, hS3, hg3, hR3, hk3, hG3⟩ := (rxOK_all dn fe vis k).2.2.2.2.2.2 m2 m3 a2 f closed _
+  obtain ⟨a3, hrun3, hty, M3, G3, hS3, hg3, hR3, hk3, hG3⟩ := (rxOK_all fe vis k).2.2.2.2.2.2 m2 m3 a2 f closed _
     ty M2 G2 g hrx hS2 (hfm.grow hg2) hcl hR2
   obtain ⟨hS4, hg4, hf4, ht4, hget4⟩ := posRecW_stage h hS3 (by simp)
   simp only [List.length_cons, List.length_nil] at ht4
@@ -101,7 +101,7 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
     have hql : decHL m' q.toNat l.toNat = some ys := by rw [decHL_grow (hg3.trans hg4) hq2]; exact hdec2
     have hqlT : decHL (truncM m') q.toNat l.toNat = some ys := by
       rw [decHL_truncM (by have := hg3.iw; have := hg4.iw; omega)]; exact hql
-    have t : ∀ i < 5, (iwA (truncM m'))[nf.toNat + i]? = (m'.arr64 IW)[nf.toNat + i]? := fun i hi => by
+    have t : ∀ i < 5, iwA (truncM m') (nf.toNat + i) = (m'.arr64 IW)[nf.toNat + i]? := fun i hi => by
       rw [truncM_iw_eq (by omega)]; rfl
     have hn0' := t 0 (by omega); have hn1' := t 1 (by omega); have hn2' := t 2 (by omega)
     have hn3' := t 3 (by omega); have hn4' := t 4 (by omega)

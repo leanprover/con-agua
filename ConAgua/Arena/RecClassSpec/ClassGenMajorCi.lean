@@ -51,14 +51,14 @@ theorem rec2ExprGetD_specF (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFin
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   | succ n => exact exprGetD_spec p hpf hpp hib hp n s₀ o l i
 
-theorem rec2SimExprGetD {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+theorem rec2SimExprGetD {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (n : Nat) (hS : StageR vis fe m a) {o l i : Word} {xs : List EIdx}
     (hxs : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat < 2 ^ 64) :
-    RSim (fuelW n (exprGetDW m o l i)) (ConRon.Arena.exprGetD xs i.toNat) a (KP dn vis fe m decW0E) := by
+    RSim (fuelW n (exprGetDW m o l i)) (ConRon.Arena.exprGetD xs i.toNat) a (KP vis fe m decW0E) := by
   rcases n with _ | n
   · exact RSim.none
   rintro ⟨r, m'⟩ h
-  obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := exprGetDW_ok dn vis fe m m' a o l i xs r h hS hxs hb
+  obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := exprGetDW_ok (fun _ => none) vis fe m m' a o l i xs r h hS hxs hb
   exact ⟨x, a', hrun, hS', hg, h1, h2⟩
 
 l_model classGenMajorTail_spec (p : Prog) (h : MjProg p)

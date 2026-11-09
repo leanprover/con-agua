@@ -47,7 +47,9 @@ theorem eftF_ok (n : Nat) {m m' : Mem} {a : AState} {e : Word} {r : List Word}
     (h : eftF n m e = some (r, m')) (hS : StageR vis fe m a) (he : H e) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.eraseFVarTys (decE e)).run a = .ok (decE (r.headD 0), a') ∧ H (r.headD 0) ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
-  sorry
+  cases n with
+  | zero => simp [eftF] at h
+  | succ n => exact eftW_ok (fun _ => none) fe vis n h hS he hP
 
 theorem eeW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {o l : Word} {r : List Word} {xs : List EIdx},
     eeW n m o l = some (r, m') → StageR vis fe m a → HSl0 m o l xs → RcMR m →
@@ -55,7 +57,36 @@ theorem eeW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {o l : Word} {r : List 
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some ys ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
-  sorry
+  induction n with
+  | zero => intro m m' a o l r xs h; simp [eeW] at h
+  | succ n ih =>
+  intro m m' a o l r xs h hS hxs hP
+  by_cases hl : l = 0
+  · rw [eeW_nil (h := hl)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+    subst hl
+    have : xs = [] := by have := hxs.len; simpa using this
+    subst this
+    exact ⟨[], a, rfl, by simp [decHL, hslice?], by simp, hS, IWGrow.refl _, hP⟩
+  rw [eeW_cons (h := hl)] at h
+  have hb : o.toNat + l.toNat ≤ iwTop m := hxs.2.resolve_left hl
+  obtain ⟨w, xs', rfl, ew, hw, hxs'⟩ := decHL_cons hxs.1 hl (hS.lt64 hb)
+  obtain ⟨eo, el, hl0⟩ := slice_step hl (hS.lt64 hb)
+  rw [ew] at h
+  rcases h1 : eftF n m w with _ | ⟨rv, m1⟩ <;> simp only [h1, eeK0, reduceCtorEq] at h
+  obtain ⟨a1, run1, hv, hS1, hg1, hP1⟩ := eftF_ok fe vis n h1 hS hw hP
+  rcases h2 : eeW n m1 (o + 1) (l - 1) with _ | ⟨rr, m2⟩ <;> simp only [h2, eeK1, reduceCtorEq] at h
+  obtain ⟨ys, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := ih h2 hS1
+    (HSl0.of (by rw [decHL_grow hg1 (by rw [eo, el]; omega)]; exact hxs') (by rw [eo, el]; have := hg1.iw; omega)) hP1
+  rcases h3 : consW n m2 (rv.headD 0) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, eeK2, reduceCtorEq] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hv hd2
+  have hf3 := (consW_dec h3 hS2.iw.iwSize hS2.iw.ctl hb2 hv hd2).2.2.2.1
+  refine ⟨decE (rv.headD 0) :: ys, a2, ?_, by rw [decE_eq]; simpa using hd3, Nat.le_of_eq ht3, hS3, (hg1.trans hg2).trans hg3,
+    hP2.fr (MFr.of_iw hf3)⟩
+  rw [List.mapM_cons]
+  simp only [StateT.run_bind, ← decE_eq, run1, except_ok_bind, run2]
+  rfl
 
 end rel
 

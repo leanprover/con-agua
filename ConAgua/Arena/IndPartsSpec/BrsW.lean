@@ -763,7 +763,7 @@ theorem brsW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     have hnlen : names.length < 2 ^ 64 := by rw [decHL_length _ hnames]; omega
     have g0 := hget 0 (by simp); have g1 := hget 1 (by simp); have g2 := hget 2 (by simp)
     have g3 := hget 3 (by simp); have g4 := hget 4 (by simp); have g5 := hget 5 (by simp)
-    have g6 := iwB_of_iwN (hget 6 (by simp))
+    have g6 := iwB_of_iwNW (hget 6 (by simp))
     simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ, UInt64.toNat_ofNat_of_lt' hcvb,
       UInt64.toNat_ofNat_of_lt' hrb, UInt64.toNat_ofNat_of_lt' hmb, UInt64.toNat_ofNat_of_lt' hob,
       UInt64.toNat_ofNat_of_lt' hlb, hkw,
