@@ -9,6 +9,13 @@ public import ConAgua.Arena.DeclAndPinIndCopy2
 public import ConAgua.Arena.DeclRec
 public import ConAgua.Arena.DeclBasisSpec
 public import ConAgua.Arena.IndPosSpec.GgW2
+public import ConAgua.Arena.IndArmBridge2
+public import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+public import ConAgua.Arena.IndDeclConstsSpec
+import ConRon.Bridge.Checker.Basis
+import ConRon.Bridge.Inductives.Install
+import ConLeche.Verify.Inductives.BlockShapeInv
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
@@ -40,7 +47,7 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-open L.Front (DECL DLP)
+open L.Front (DECL DLP dw)
 
 /-! ## The models -/
 
@@ -239,6 +246,289 @@ theorem dt_spec (p : Prog) (hp : p.lookup "decl_tables" = some declTables) (n : 
         callW_spec p n "ind_block_to_erec", callW_spec p n "basis_name_hit",
         callW_spec p n "block_shape", callW_spec p n "block_tables"] <;>
       finish (gen := 20) [rdW_eq]
+
+
+/-! ## The state the arms thread -/
+
+/-- **What the arms keep from call to call**: the stage relation, con-ron's `CheckOK` at `env`, the
+write set's memory invariant (`DcMem`), the `instantiate1Lift` memo, the twin's memory half and the
+pin flag. -/
+structure DcSt (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
+    (m : Mem) (a : AState) : Prop where
+  stage : StageR vis fe m a
+  chk : ConRon.Bridge.CheckOK false env fe a
+  mem : DcMem m
+  i1 : I1Memo m
+  tmem : TwinMem dn m a
+  pin : pinW m 0 ≠ 0
+
+section dcst
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
+
+theorem DcSt.stageC {m : Mem} {a : AState} (h : DcSt dn vis fe env m a) : StageC dn vis fe env m a :=
+  ⟨h.stage, h.chk, h.tmem, h.pin⟩
+
+theorem DcSt.abs {m : Mem} {a : AState} (h : DcSt dn vis fe env m a) : AbsOK m :=
+  ⟨h.mem.ab, h.i1, h.mem.cr, h.mem.il, h.mem.wk⟩
+
+theorem DcIdx.trans {m₀ m₁ m₂ : Mem} (h₁ : DcIdx m₀ m₁) (h₂ : DcIdx m₁ m₂) : DcIdx m₀ m₂ :=
+  ⟨fun b hb => (h₂.arr b hb).trans (h₁.arr b hb), h₂.c128.trans h₁.c128, h₂.c1.trans h₁.c1,
+    fun h0 => (h₂.c130 (h₁.c1.trans h0)).trans (h₁.c130 h0), h₂.pins.trans h₁.pins,
+    fun b => (h₂.sz b).trans (h₁.sz b)⟩
+
+/-- **A call of the write set** keeps `DcSt`, given the twin's side after it. -/
+theorem DcSt.step {p : Prog} (hP : DcLeafProg p) {f : FnName} (hf : f ∈ dcFns) {n : Nat}
+    {vs : List Word} {m m' : Mem} {a a' : AState} {r : List Word}
+    (h : DcSt dn vis fe env m a) (hc : callW p n f vs m = some (r, m'))
+    (hS : StageR vis fe m' a') (hok : ConRon.Bridge.CheckOK false env fe a')
+    (hx : Ext a.store a'.store) (hI : I1Memo m') : DcSt dn vis fe env m' a' ∧ DcIdx m m' := by
+  obtain ⟨hM, hX⟩ := dc_keep hP hf hc h.mem
+  refine ⟨⟨hS, hok, hM, hI, ⟨by rw [hX.sz]; exact h.tmem.erec, by rw [hX.sz]; exact h.tmem.spn,
+    by rw [hX.sz]; exact h.tmem.bstk, hM.core,
+    fun k x hk => ConRon.Bridge.denoteN_ext (h.tmem.dnN k x hk) hx⟩, ?_⟩, hX⟩
+  simp only [pinW, hX.pins]; exact h.pin
+
+/-- The same for a call of `dc0Fns` (the `instantiate1Lift` memo by the write set). -/
+theorem DcSt.step0 {p : Prog} (hP : DcLeafProg p) {f : FnName} (hf : f ∈ dcFns) (hf0 : f ∈ dc0Fns)
+    {n : Nat} {vs : List Word} {m m' : Mem} {a a' : AState} {r : List Word}
+    (h : DcSt dn vis fe env m a) (hc : callW p n f vs m = some (r, m'))
+    (hS : StageR vis fe m' a') (hok : ConRon.Bridge.CheckOK false env fe a')
+    (hx : Ext a.store a'.store) : DcSt dn vis fe env m' a' ∧ DcIdx m m' :=
+  h.step hP hf hc hS hok hx (dc0_keepI1 hP hf0 hc h.i1)
+
+/-- `DcSt` from the pre-condition. -/
+theorem DeclConstsPre.dcSt {i : Word} {d : IDeclaration} {m : Mem} {a : AState}
+    (h : DeclConstsPre dn vis fe i d m a) : ∃ env, DcSt dn vis fe env m a := by
+  obtain ⟨env, hc⟩ := h.tw.chk
+  exact ⟨env, h.stage, hc, ⟨h.tw.twin.memos, h.memos.stage, h.memos.cr, h.tw.abs.ab, h.tw.abs.il,
+    h.tw.abs.wk⟩, h.memos.i1, h.tw.twin.mem, h.tw.pin⟩
+
+/-- The scratch flag `CTL[1]` is off while the twin's scratch tier is closed. -/
+theorem flag0_of {m : Mem} {a : AState} (h : CheckR m a vis fe) (hoff : a.store.scratchOn = false) :
+    rdW (m.arr64 CTL) 1 = 0 := by
+  have hf := h.arena.base.app.flag
+  rw [hoff] at hf
+  simpa using hf
+
+/-- **The frame half of both posts**, from `DcSt` after the run. -/
+theorem dc_post {m m' : Mem} {a' : AState} (h : DcSt dn vis fe env m' a') (hX : DcIdx m m')
+    (hoff : rdW (m.arr64 CTL) 1 = 0) : IndMemos m' ∧ IdxKeep m m' ∧ DeclTwin dn fe m' a' :=
+  ⟨⟨h.mem.stage, h.i1, h.mem.cr⟩, ⟨hX.arr, hX.c128, hX.c130 hoff, fun _ => h.mem.core⟩,
+    ⟨TwinOK.of_check h.chk h.tmem, h.pin, h.abs, ⟨env, h.chk⟩⟩⟩
+
+end dcst
+
+/-! ## The program -/
+
+/-- **The lookups and program facts both refinements take**: the tables' and constants' (and
+their callees'), the pinned basis blocks' refinements (`BasisRefs`), the write set's leaves
+(`DcLeafProg`), `ind_block_to_erec`'s, `block_shape`'s (`IndPartsProg5`, `CoreStageClosed`,
+`LvlCacheProg`), `erec_ci`'s (`RecProg`). -/
+structure DeclConstsProg (p : Prog) : Prop extends TablesProg p where
+  basis : BasisRefs p
+  leaf : DcLeafProg p
+  ibe : IbeProg p
+  parts : IndPartsProg5 p
+  hcl : CoreStageClosed p
+  hL : LvlCacheProg p
+  rcp : RecProg p
+  pinAt : p.lookup "pin_at" = some pinAtL
+  slNew1 : p.lookup "sl_new1" = some slNew1
+  decl_constants : p.lookup "decl_constants" = some declConstants
+  decl_constants_axiom : p.lookup "decl_constants_axiom" = some declConstantsAxiom
+  decl_constants_ind : p.lookup "decl_constants_ind" = some declConstantsInd
+  decl_tables : p.lookup "decl_tables" = some declTables
+
+/-! The callees in the write set. -/
+theorem dcF_ibe : "ind_block_to_erec" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_bnh : "basis_name_hit" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_bsh : "block_shape" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_bts : "block_tables" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_bk : "block_constants" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_bab : "basis_at_block" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_eci : "erec_ci" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_qa : "quot_at" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_new1 : "sl_new1" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_pin : "pin_at" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_dca : "decl_constants_axiom" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_dci : "decl_constants_ind" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dc0F_ibe : "ind_block_to_erec" ∈ dc0Fns := List.elem_iff.mp (by decide)
+theorem dc0F_bnh : "basis_name_hit" ∈ dc0Fns := List.elem_iff.mp (by decide)
+theorem dc0F_bsh : "block_shape" ∈ dc0Fns := List.elem_iff.mp (by decide)
+theorem dc0F_bk : "block_constants" ∈ dc0Fns := List.elem_iff.mp (by decide)
+theorem dc0F_bab : "basis_at_block" ∈ dc0Fns := List.elem_iff.mp (by decide)
+theorem dc0F_eci : "erec_ci" ∈ dc0Fns := List.elem_iff.mp (by decide)
+theorem dc0F_qa : "quot_at" ∈ dc0Fns := List.elem_iff.mp (by decide)
+theorem dc0F_new1 : "sl_new1" ∈ dc0Fns := List.elem_iff.mp (by decide)
+theorem dc0F_pin : "pin_at" ∈ dc0Fns := List.elem_iff.mp (by decide)
+theorem dc0F_dca : "decl_constants_axiom" ∈ dc0Fns := List.elem_iff.mp (by decide)
+theorem dc0F_dci : "decl_constants_ind" ∈ dc0Fns := List.elem_iff.mp (by decide)
+
+theorem decTblL_nil (m : Mem) : decTblL m [0, 0] [] := by simp [decTblL, decRL, decPL]
+theorem decCIL_nil (m : Mem) : decCIL m [0, 0] [] := by simp [decCIL, decRL, decPL]
+
+/-! ## `decl_tables` -/
+
+theorem dtW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {env : ConLeche.Env} {i : Word} {d : IDeclaration} {n : Nat} {m m' : Mem}
+    {a : AState} {r : List Word}
+    (hpre : DeclConstsPre dn vis fe i d m a) (h0 : DcSt dn vis fe env m a)
+    (h : dtW p n m i = some (r, m')) :
+    ∃ ts a', (ConRon.Arena.declTables d).run a = .ok (ts, a') ∧
+      KeepPost vis fe decTblL m m' a' r ts ∧ DcSt dn vis fe env m' a' ∧ DcIdx m m' := by
+  obtain ⟨ds, hD, hi, hdi⟩ := hpre.decls
+  have hi8 : 8 * i.toNat + 9 < 2 ^ 64 := by have := hD.room; have := hD.dsize; omega
+  have ek : rdW (m.arr64 DECL) (1 + 8 * i) = dw (m.arr64 DECL) i.toNat 0 :=
+    rdW_dw _ hi8 (by decide) (by decide)
+  rcases n with _ | n
+  · simp [dtW] at h
+  rw [dtW_succ, ek] at h
+  have hdecl := hpre.decl
+  rcases (Classical.em (∃ b nP, d = .indDecl b nP)).symm with hd | hd
+  · have hk : dw (m.arr64 DECL) i.toNat 0 ≠ 6 := by
+      cases d with
+      | indDecl b nP => exact absurd ⟨b, nP, rfl⟩ hd
+      | _ => simp only [L.Front.DeclAtF, L.Front.DeclAt] at hdecl; rw [hdecl.1]; decide
+    rw [if_neg hk] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨[], a, ?_, ⟨hpre.stage, IWGrow.refl m, decTblL_nil _⟩, h0, DcIdx.refl m⟩
+    cases d with
+    | indDecl b nP => exact absurd ⟨b, nP, rfl⟩ hd
+    | _ => rfl
+  obtain ⟨b, nP, rfl⟩ := hd
+  obtain ⟨hk6, hnP, -⟩ := hdecl
+  rw [if_pos hk6] at h
+  obtain ⟨bP, hbP⟩ : ∃ bP, Frontend.denoteCIList a.store b = some bP := by
+    obtain ⟨dd, hd⟩ := hpre.den
+    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hd
+    obtain ⟨bP, hb, -⟩ := hd
+    exact ⟨bP, hb⟩
+  -- `ind_block_to_erec`
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [dtK1])
+  rw [dtK1_some] at h
+  obtain ⟨hS1, hg1, -, -, -, hb1, hbt1⟩ := indBlockToErec_ok hP.ibe h1 hpre.stage hpre.decl
+    (hpre.front b nP rfl) hpre.dsize hpre.psize
+  obtain ⟨h01, hX1⟩ := h0.step0 hP.leaf dcF_ibe dc0F_ibe h1 hS1 h0.chk (Ext.refl _)
+  -- `basis_name_hit`
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [dtK2])
+  rw [dtK2_some] at h
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := hP.basis.nameHit vis fe _ _ b n m1 a r2 m2
+    ⟨hS1, hpre.ok, hb1, hbt1⟩ h2
+  obtain ⟨hst2, hxt2, hp2, hc2, -, -, -⟩ := ConRon.Bridge.basisNameHit_run hpre.ok hbP hrun2
+  have hchk2 := h01.chk.mono hst2 hxt2 hc2 hp2
+  obtain ⟨h02, hX2⟩ := h01.step0 hP.leaf dcF_bnh dc0F_bnh h2 hS2 hchk2 hxt2
+  have hbP2 := ConRon.Bridge.denoteCIList_mono hxt2 _ _ hbP
+  cases x2 with
+  | some kind =>
+    obtain ⟨e1, -⟩ := hx2
+    rw [e1, if_neg (by decide)] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨[], a2, ?_, ⟨hS2, hg1.trans hg2, decTblL_nil _⟩, h02, hX1.trans hX2⟩
+    simp only [ConRon.Arena.declTables, StateT.run_bind, hrun2, except_ok_bind]
+    rfl
+  | none =>
+  have e0 : r2.headD 0 = 0 := hx2
+  rw [e0, if_pos rfl] at h
+  -- `block_shape`
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [dtK3])
+  rw [dtK3_some] at h
+  have eD : m2.arr64 DECL = m.arr64 DECL := (hX1.trans hX2).arr _ (.inl rfl)
+  have ew : rdW (m2.arr64 DECL) (5 + 8 * i) = dw (m.arr64 DECL) i.toNat 4 := by
+    rw [eD]; exact rdW_dw _ hi8 (by decide) (by decide)
+  rw [ew] at h3
+  have hblk : DecB (fun m => decEBlk dn m (r1.headD 0).toNat (r1.tail.headD 0).toNat) m2 b :=
+    (decB_decEBlk_of_decCIs hb1).grow (decEBlk_mono dn _ _) hg2
+  obtain ⟨s3, hs3, -, hok3, hR3, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
+    (blockShape_refinesC p hP.hcl hP.hL hP.parts n ⟨m2, Locals.init []⟩ a2 _ _ _ b h02.stageC
+      h02.abs hbP2 hblk) (callW_mono h3 (Nat.le_add_right n 5))
+  subst hs3
+  have hrun3 := AM.run_of_ok _ _ hok3
+  rw [hnP] at hrun3 hR3 hS3
+  generalize AM.res (ConRon.Arena.blockShape? nP b) a2 = x3 at hrun3 hR3
+  generalize AM.st (ConRon.Arena.blockShape? nP b) a2 = a3 at hrun3 hS3
+  obtain ⟨hps3, -, hq3⟩ := ConRon.Bridge.Inductives.blockShape?_installS h02.chk hbP2 hrun3
+  obtain ⟨h03, hX3⟩ := h02.step0 hP.leaf dcF_bsh dc0F_bsh h3 hS3
+    (checkOK_of_pstep h02.chk hps3) hps3.ext
+  cases x3 with
+  | none =>
+    have e3 : r3.headD 0 = 0 := hR3
+    rw [e3, if_pos rfl] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨[], a3, ?_, ⟨hS3, hg1.trans (hg2.trans hg3), decTblL_nil _⟩, h03,
+      hX1.trans (hX2.trans hX3)⟩
+    simp only [ConRon.Arena.declTables, StateT.run_bind, hrun2, except_ok_bind, hrun3]
+    rfl
+  | some bs =>
+  obtain ⟨e3, hq, -⟩ := hR3
+  rw [e3, if_neg (by decide)] at h
+  generalize r3.tail.headD 0 = pp at hq h
+  -- the members' slice
+  have hqt : decBS (truncM s3.mem) pp.toNat = some bs := hq
+  obtain ⟨hmem, -⟩ := decBS_some hqt
+  obtain ⟨o, l, ho, hl, hdm, hob⟩ := partsAt decMS_mono hmem
+  obtain ⟨hoW, -⟩ := iwRd (o := pp) (w := 0) (by simpa using ho)
+  obtain ⟨hlW, -⟩ := iwRd (o := pp) (w := 1) (by simpa using hl)
+  have eo : rdW (s3.mem.arr64 IW) pp = o := by
+    have := UInt64.toNat_inj.mp hoW; simpa using this
+  have el : rdW (s3.mem.arr64 IW) (pp + 1) = l := UInt64.toNat_inj.mp hlW
+  rw [eo, el] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bfgK4])
+  rw [bfgK4_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (bts_spec hP.toTablesProg n _ pp o l) h4
+  -- the parameter count
+  simp only [ConRon.Bridge.Inductives.ROp] at hq3
+  obtain ⟨pP, hpP, hdP⟩ := hq3
+  have hbnP : bs.nP = nP := ((ConRon.Bridge.Inductives.dShape_inv hdP).2.2.1).trans
+    (ConLeche.blockShape?_inv hpP).1
+  have hnPb : 1 + bs.nP < 2 ^ 64 := by rw [hbnP]; have := hpre.nPb b nP rfl; omega
+  obtain ⟨ts, a4, hrun4, hd4, hb4, hS4, hg4, hA4⟩ := btsW_ok hP.toTablesProg pp bs vis fe hnPb n
+    s3.mem s4.mem a3 o l bs.members r4 hS3 h03.abs hq ⟨hdm, hob⟩ hW4
+  obtain ⟨hms, -⟩ := ConRon.Bridge.Inductives.dShape_inv hdP
+  obtain ⟨hps4, -, -, -⟩ := ConRon.Bridge.Inductives.blockTables_run bs.members pP.members
+    h03.chk.state hdP hms hrun4
+  obtain ⟨h04, hX4⟩ := h03.step hP.leaf dcF_bts h4 hS4 (checkOK_of_pstep h03.chk hps4)
+    hps4.ext hA4.i1
+  refine ⟨ts, a4, ?_, ⟨hS4, hg1.trans (hg2.trans (hg3.trans hg4)), ?_⟩, h04,
+    hX1.trans (hX2.trans (hX3.trans hX4))⟩
+  · simp only [ConRon.Arena.declTables, StateT.run_bind, hrun2, except_ok_bind, hrun3, hrun4]
+  · exact ⟨by simpa using hd4, by simpa using hb4⟩
+
+/-! ## The refinements -/
+
+/-- **`decl_constants(i)` refines `declConstants d`**: the constants record `i` installs, in
+push order, an `IW` slice of `EREC` constant records. -/
+@[refines ConRon.Arena.declConstants]
+theorem declConstants_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv)
+    (i : Word) (d : IDeclaration) :
+    RefAM p "decl_constants" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declConstants d)
+      (fun m m' a r x => KeepPost vis fe decCIL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m' ∧
+        DeclTwin dn fe m' a) := by
+  sorry
+
+/-- **`decl_tables(i)` refines `declTables d`**: the projection tables record `i` installs, an
+`IW` slice of `EREC` table records. -/
+@[refines ConRon.Arena.declTables]
+theorem declTables_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv)
+    (i : Word) (d : IDeclaration) :
+    RefAM p "decl_tables" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declTables d)
+      (fun m m' a r x => KeepPost vis fe decTblL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m' ∧
+        DeclTwin dn fe m' a) := by
+  intro n s₀ a₀ hpre
+  obtain ⟨env, h0⟩ := hpre.dcSt
+  refine triple_post (callW_spec p n "decl_tables" [i] s₀) ?_
+  rintro r s' ⟨hloc, hc⟩
+  obtain ⟨s'', hs'', -, hW⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (dt_spec p hp.decl_tables n _ i) hc
+  rw [hs''] at hW
+  obtain ⟨ts, a', hrun, hK, h1, hX⟩ := dtW_ok hp hpre h0 hW
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  refine ⟨hloc, hok, ?_⟩
+  rw [hst, hres]
+  exact ⟨hK, dc_post h1 hX (flag0_of hpre.stage.check hpre.off)⟩
 
 end L.Ind
 

@@ -69,6 +69,9 @@ structure DeclConstsPre (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   nPb : ∀ b nP, d = .indDecl b nP → nP + 1 < 2 ^ 64
   /-- The declaration denotes (`block_shape`'s refinement reads the block's denotation). -/
   den : ∃ dd, Frontend.denoteDecl a.store d = some dd
+  /-- The front's records around `i` (`erec_ci` reads them by `DeclsF`). -/
+  decls : ∃ ds : Array IDeclaration, L.Front.DeclsF (m.arr64 DECL) (m.arr64 DLP) ds ∧
+    ∃ h : i.toNat < ds.size, ds[i.toNat] = d
 
 /-- What the stream index's builder keeps across the two: the front's records (`DECL`, `DLP`), the
 first counters (`FIRSTS`), the index rows (arrays 129‥134, both tiers) and the counters `CTL[128]`, `CTL[130]` and the core's memos. -/
@@ -78,36 +81,5 @@ structure IdxKeep (m m' : Mem) : Prop where
   ctl128 : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128
   ctl130 : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130
   memos : CoreMemos m → CoreMemos m'
-
-/-- The lookups the two refinements take. -/
-structure DeclConstsProg (p : Prog) : Prop where
-  decl_constants : p.lookup "decl_constants" = some declConstants
-  decl_constants_axiom : p.lookup "decl_constants_axiom" = some declConstantsAxiom
-  decl_constants_ind : p.lookup "decl_constants_ind" = some declConstantsInd
-  decl_tables : p.lookup "decl_tables" = some declTables
-  block_constants : p.lookup "block_constants" = some blockConstants
-  block_tables : p.lookup "block_tables" = some blockTables
-
-/-- **`decl_constants(i)` refines `declConstants d`**: the constants record `i` installs, in
-push order, an `IW` slice of `EREC` constant records. -/
-@[refines ConRon.Arena.declConstants]
-theorem declConstants_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv)
-    (i : Word) (d : IDeclaration) :
-    RefAM p "decl_constants" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declConstants d)
-      (fun m m' a r x => KeepPost vis fe decCIL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m' ∧
-        DeclTwin dn fe m' a) := by
-  sorry
-
-/-- **`decl_tables(i)` refines `declTables d`**: the projection tables record `i` installs, an
-`IW` slice of `EREC` table records. -/
-@[refines ConRon.Arena.declTables]
-theorem declTables_refines {p : Prog} (hp : DeclConstsProg p) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv)
-    (i : Word) (d : IDeclaration) :
-    RefAM p "decl_tables" [i] (DeclConstsPre dn vis fe i d) (ConRon.Arena.declTables d)
-      (fun m m' a r x => KeepPost vis fe decTblL m m' a r x ∧ IndMemos m' ∧ IdxKeep m m' ∧
-        DeclTwin dn fe m' a) := by
-  sorry
 
 end L.Ind
