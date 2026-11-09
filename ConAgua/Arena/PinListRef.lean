@@ -561,4 +561,102 @@ theorem pinLinkOk_twin {m : Mem} {a : AState} (hT : StageT dn vis fe m a)
 
 end link
 
+/-! ## `const_named`, `cv_lps` -/
+
+/-- What `const_named` returns for `constNamed?`'s answer. -/
+def NamedR (m : Mem) : Option IConstantInfo → List Word → Prop
+  | none, r => r.headD 0 = 0
+  | some ci, r => r.headD 0 = 1 ∧ decCI (erecP m) (r.tail.headD 0).toNat = some ci
+
+/-- **`const_named(o, l, n)` finds `constNamed? cs n`** (pure). -/
+theorem constNamedW_ok {m : Mem} (hsz : (m.arr64 IW).size < 2 ^ 64) {nw : Word}
+    (hnw : nw.toNat < 2 ^ 32) :
+    ∀ (n : Nat) (o l : Word) (cs : List IConstantInfo) (r : List Word) (m' : Mem),
+      PSlR ciF cs o l m → constNamedW n m o l nw = some (r, m') →
+      m' = m ∧ NamedR m (ConRon.Arena.constNamed? cs (decI nw)) r := by
+  intro n
+  induction n with
+  | zero => intro o l cs r m' _ h; simp [constNamedW] at h
+  | succ n ih =>
+  intro o l cs r m' hC h
+  by_cases hl : l = 0
+  · subst hl
+    rw [constNamedW.eq_2, if_pos rfl] at h; cases h
+    have e1 : cs = [] := List.eq_nil_of_length_eq_zero (by rw [slice_len hC]; rfl)
+    subst e1
+    exact ⟨rfl, rfl⟩
+  obtain ⟨c, cs', rfl, hc, hC'⟩ := hC.uncons hl hsz
+  rw [decB_ciF] at hc
+  obtain ⟨w, hw, hwlt, hname⟩ := decCI_name hc
+  have hrd : erRdT m (rdW (m.arr64 IW) o + 1) = w := (erRdOK m).at 1 rfl hw
+  by_cases he : erRdT m (rdW (m.arr64 IW) o + 1) = nw
+  · rw [constNamedW.arm2 n m o l nw hl he] at h; cases h
+    have hb : (c.name == decI nw) = true := by rw [hname, ← hrd, he]; simp
+    refine ⟨rfl, ?_⟩
+    simp only [ConRon.Arena.constNamed?, List.find?_cons, hb]
+    exact ⟨rfl, hc⟩
+  · rw [constNamedW.arm3 n m o l nw hl he] at h
+    cases h1 : constNamedW n m (o + 1) (l - 1) nw with
+    | none => rw [h1] at h; simp [constNamedW.k_const_named] at h
+    | some x1 =>
+    obtain ⟨r1, m1⟩ := x1
+    rw [h1, constNamedW.k_const_named.eq_2] at h; cases h
+    obtain ⟨rfl, hr⟩ := ih _ _ cs' r1 _ hC' h1
+    have hne : (decI w : NIdx) ≠ decI nw := fun e => he (hrd.trans ((decI_inj_iff hwlt hnw).mp e))
+    have hb : (c.name == decI nw) = false := by rw [hname]; simpa using hne
+    refine ⟨rfl, ?_⟩
+    simp only [ConRon.Arena.constNamed?, List.find?_cons, hb]
+    simp only [ConRon.Arena.constNamed?] at hr
+    cases e : List.find? (fun c => c.name == decI nw) cs' <;> rw [e] at hr <;> simpa [NamedR] using hr
+
+/-- A constant `constNamed?` finds in a denoted list is denoted. -/
+theorem constNamed_den {st : EStore} :
+    ∀ (cs : List IConstantInfo) (B : List ConLeche.ConstantInfo) (nm : NIdx) (c : IConstantInfo),
+      Frontend.denoteCIList st cs = some B → ConRon.Arena.constNamed? cs nm = some c →
+      ∃ x, Frontend.denoteCI st c = some x
+  | [], _, _, _, _, h => by simp [ConRon.Arena.constNamed?] at h
+  | y :: ys, B, nm, c, hB, h => by
+    obtain ⟨x, xs, hx, hxs, -⟩ := ConRon.Bridge.denoteCIList_cons hB
+    simp only [ConRon.Arena.constNamed?, List.find?_cons] at h
+    split at h
+    · cases h; exact ⟨x, hx⟩
+    · exact constNamed_den ys xs nm c hxs h
+
+/-- A name slice decoded below the top. -/
+structure NSl (xs : List NIdx) (o l : Word) (m : Mem) : Prop where
+  dec : decHL m o.toNat l.toNat = some xs
+  bound : o.toNat + l.toNat ≤ iwTop m
+
+theorem NSl.grow {xs : List NIdx} {o l : Word} {m m' : Mem} (h : NSl xs o l m) (hg : IWGrow m m') :
+    NSl xs o l m' := ⟨decHL_grow' hg h.bound h.dec, Nat.le_trans h.bound hg.iw⟩
+
+section cvl
+variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`cv_lps(c + 1)`** copies `c`'s names to a fresh `IW` slice; the records are untouched. -/
+theorem cvLps_sim (hP : PinListLProg p) {n : Nat} {m m2 : Mem} {a : AState} {c : Word}
+    {r2 : List Word} {ci : IConstantInfo} (hT : StageT dn vis fe m a)
+    (hci : decCI (erecP m) c.toNat = some ci) (h : callW p n "cv_lps" [c + 1] m = some (r2, m2)) :
+    StageT dn vis fe m2 a ∧ IWGrow m m2 ∧ erecP m2 = erecP m ∧ (∀ x, erRdT m2 x = erRdT m x) ∧
+      NSl ci.toConstantVal.levelParams (r2.headD 0) (r2.tail.headD 0) m2 := by
+  have hQ := hP.basis.rules.toQuotAtProg
+  have hccv : decCV (erecP m) (c.toNat + 1) = some ci.toConstantVal := decCI_cvA hci
+  obtain ⟨hsl, -, -⟩ := L.Arena.decCV_rd (erRdOK m) hccv
+  obtain ⟨s2, rfl, -, hW2, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (cvLps_specW p hQ.iwAlloc hQ.erCopy hQ.erToIw hQ.cvLps n _ (c + 1)) h
+  cases n with
+  | zero => exact absurd hW2 (by simp [L.Arena.cvLpsW])
+  | succ n0 =>
+  rw [L.Arena.cvLpsW_step] at hW2
+  have hW2' : erToIwW n0 m (erRdT m (c + 2)) (erRdT m (c + 3)) = some (r2, s2.mem) := by
+    rw [← word_add11, ← word_add12]; exact hW2
+  obtain ⟨hS2, hg2, hdl2, htop2, -⟩ := erToIwW_stage hW2' hT.stage hsl
+  have hf2 := erToIwW_iwFr hW2'
+  exact ⟨StageT.of_iw hT hS2 hf2, hg2,
+    erecP_frame hf2 (by decide) (by decide) (by decide) (by decide),
+    erRdT_congr (hf2.arr _ (by decide) (by decide)) (hf2.arr _ (by decide) (by decide)),
+    hdl2, Nat.le_of_eq htop2⟩
+
+end cvl
+
 end L.Ind
