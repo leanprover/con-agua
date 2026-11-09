@@ -9,6 +9,7 @@ public import ConAgua.Arena.IndT.BlockRMS
 public import ConAgua.Arena.IndT.PassCS
 import ConAgua.Checker.ArmsT
 import ConAgua.Verdict.PosKnotE
+import ConAgua.Checker.IndArmTrees1
 meta import ConAgua.Checker.IndDeclConstsProg
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
@@ -172,6 +173,23 @@ open L L.Rom L.Arena L.Ind L.Compiler
 
 namespace L.Checker
 
+/-- **The walk memos outside the positivity check's kept** by a function in the arm's `maFree`,
+`mcFree`, `taFree` write sets (`checkerProg_armMa`, `_armMc`, `_armTa`), at the substituted program. -/
+theorem wmKeep_checker (bs : List UInt8) {f : FnName} (ha : f ∈ armMaFns) (hc : f ∈ armMcFns)
+    (ht : f ∈ armTaFns) : WmKeep (Prog.subPB bs checkerProg) f := by
+  have hma : MaProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  exact ⟨fun _ _ _ _ _ h hM => maMR.ofClosedL (closedWL_subPB bs checkerProg_armMa) hma ha h hM,
+    fun _ _ _ _ _ h hM => mcMR.ofClosed (closedW_subPB bs checkerProg_armMc) hc h hM,
+    fun _ _ _ _ _ h hM => taMR.ofClosed (closedW_subPB bs checkerProg_armTa) ht h hM⟩
+
+/-- **`class_seeds`' contract at the substituted checker program** (`seedsRefS_of`). -/
+theorem seedsRefS_checker (bs : List UInt8) (dn : ConRon.Arena.NIdx → Option ConLeche.Name) :
+    SeedsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := by
+  have hP : SdProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  exact seedsRefS_of hP (indArmKeep_checker bs _ (by simp [passKeepCalleesC]))
+    (wmKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
+      (mem_of_tree armMcTree.eq (by decide +kernel)) (mem_of_tree armTaTree.eq (by decide +kernel)))
+
 set_option maxRecDepth 20000 in
 /-- **`check_block`'s callees' contracts at the substituted checker program.** -/
 theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
@@ -226,11 +244,12 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
     ctorsRefS_of (by prog_bundle []) hsc hAP.crk (checkerProg_indLeavesPB bs)
   have hpl : PassLook (Prog.subPB bs checkerProg) := by prog_bundle []
   -- ronsync2 p3e: block_nest_ctx, check_block_classes, check_block_positivity, class_seeds,
-  -- nest_seeds: their contracts still to prove (Pass.lean's BncRefS … NsdRefS)
+  -- nest_seeds: their contracts still to prove (class_seeds done) (Pass.lean's BncRefS … NsdRefS)
   have hbnc : BncRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
   have hcls : ClsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
   have hpos : PosRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
-  have hsd : SeedsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
+  have hsd : SeedsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    seedsRefS_checker bs dn
   have hnsd : NsdRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
   have hpass : PassRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     passRefS_of ⟨hpl, hinds, hct, hbnc, hcls, hpos, hsd, hnsd⟩ hnv
