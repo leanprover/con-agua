@@ -58,9 +58,9 @@ theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k :
       rw [ite_eq_right (by decide), ite_eq_left trivial]
       simp only [Array.getD_eq_getD_getElem?, Array.getElem?_extract]
       by_cases h3 : 3 < (m₁.arr64 OUT).size
-      · have h4 : 3 < min 132 (m₁.arr64 OUT).size := by omega
+      · have h4 : 3 < min 138 (m₁.arr64 OUT).size := by omega
         simp [h4]
-      · have h4 : ¬ 3 < min 132 (m₁.arr64 OUT).size := by omega
+      · have h4 : ¬ 3 < min 138 (m₁.arr64 OUT).size := by omega
         simp [h4, Array.getElem?_eq_none (Nat.le_of_not_lt h3)]
 
 /-- **The verdict theorem for the driver of `checker.s`**: the machine returns to `ra`, and if it
@@ -73,8 +73,11 @@ theorem checkerFile_verdict_of [Host]
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (SeqVerdicts checkerProg → st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
           TwinVerdict [b] (st.data.regs.rax &&& 3)))
-      dm (label abiStartL) := by
-  sorry
+      dm (label abiStartL) :=
+  eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, _, h⟩ => ⟨hpc, fun hV h2 hk => drvErr_twin b pb h64 _ hV (h h2) hk⟩)
+    (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
+      HDRF CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
+      (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
 
 -- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 -- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_verdict_of
