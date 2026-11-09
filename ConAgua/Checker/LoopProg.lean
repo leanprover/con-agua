@@ -10,6 +10,7 @@ import ConAgua.Checker.LoopAll
 import ConAgua.Checker.RomProgB
 import ConAgua.Rom.CIReadRefs
 public import ConAgua.Arena.LoopStart
+public import ConAgua.Checker.RomCProg
 import ConAgua.Checker.IndMemoClosed
 meta import ConAgua.Checker.LoopProgInd
 meta import ConAgua.Checker.LoopDeclArm
@@ -327,11 +328,7 @@ theorem checkerProg_natAgreePB (bs : List UInt8) :
 
 theorem checkerProg_romCIProg (bs : List UInt8) :
     RomCIProg romDataLit (Prog.subPB bs checkerProg) := by
-  -- ronsync2 p3q: the readers over the constant data (`Prog.viaC`, `RenameOK`), to prove
-  have hv : ExprProg romDataLit (Prog.viaC romDataLit (Prog.subPB bs checkerProg)) := sorry
-  have hr : RenameOK romC (Prog.subPB bs checkerProg) (Prog.viaC romDataLit (Prog.subPB bs checkerProg))
-    romCN := sorry
-  prog_bundle [hv, hr]
+  prog_bundle [checkerProg_romCVia bs, checkerProg_romCRen bs]
 
 /-- **The ROM readers of the substituted program refine the twin** (they read the constant data,
 so any buffer). -/

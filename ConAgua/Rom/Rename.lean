@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Rom.CIConst
 public import ConAgua.L.Logic
+public import ConAgua.L.ProgHas
 
 @[expose] public section
 
@@ -75,6 +76,40 @@ theorem exec_renameCalls (h : RenameOK ρ p q N) (n : Nat) :
   induction n with
   | zero => intro _ _; rfl
   | succ n ih => exact step_renameCalls h ih
+
+/-- A statement none of whose calls `ρ` moves is its own renaming. -/
+theorem Stmt.renameCalls_of_calls {ρ : FnName → FnName} :
+    ∀ s : Stmt, (∀ f ∈ s.calls, ρ f = f) → s.renameCalls ρ = s
+  | .seq s t, h => by
+    simp only [Stmt.calls, List.mem_append] at h
+    simp only [Stmt.renameCalls, Stmt.renameCalls_of_calls s (fun f hf => h f (.inl hf)),
+      Stmt.renameCalls_of_calls t (fun f hf => h f (.inr hf))]
+  | .ite c s t, h => by
+    simp only [Stmt.calls, List.mem_append] at h
+    simp only [Stmt.renameCalls, Stmt.renameCalls_of_calls s (fun f hf => h f (.inl hf)),
+      Stmt.renameCalls_of_calls t (fun f hf => h f (.inr hf))]
+  | .while c s, h => by
+    simp only [Stmt.calls] at h
+    simp only [Stmt.renameCalls, Stmt.renameCalls_of_calls s h]
+  | .call xs f args, h => by
+    simp only [Stmt.calls, List.mem_singleton, forall_eq] at h
+    simp only [Stmt.renameCalls, h]
+  | .skip, _ | .set .., _ | .st8 .., _ | .st64 .., _ | .brk, _ | .ret .., _ | .abort .., _
+  | .gset .., _ | .st64t .., _ | .copy64 .., _ | .copy8w .., _ | .scan8 .., _ | .st32t .., _ => rfl
+
+/-- **`RenameOK` from tables**: `T` binds the names of `N` (`q` has `T`), its bodies call names of
+`N` only, and `p` binds each renamed name to the renamed body. -/
+theorem RenameOK.of_tab (T : Prog) (hN : ∀ g ∈ N, (T.lookup g).isSome = true) (hq : ProgHas q T)
+    (hc : ∀ g ∈ N, ∀ B, T.lookup g = some B → ∀ h ∈ B.body.calls, h ∈ N)
+    (hp : ∀ g ∈ N, ∀ B, T.lookup g = some B → p.lookup (ρ g) = some (B.renameCalls ρ)) :
+    RenameOK ρ p q N := by
+  refine ⟨fun g hg => ?_, fun g hg fd hfd => ?_, fun g hg => ?_⟩
+  · obtain ⟨B, hB⟩ := Option.isSome_iff_exists.mp (hN g hg)
+    rw [hq g B hB]; rfl
+  · obtain ⟨B, hB⟩ := Option.isSome_iff_exists.mp (hN g hg)
+    rw [hq g B hB] at hfd; cases hfd; exact hc g hg _ hB
+  · obtain ⟨B, hB⟩ := Option.isSome_iff_exists.mp (hN g hg)
+    rw [hp g hg B hB, hq g B hB]; rfl
 
 /-- Triple transfer: a spec of the original is a spec of the renamed function. -/
 theorem triple_renameCalls (h : RenameOK ρ p q N) {n : Nat} {g : FnName} (hg : g ∈ N)
