@@ -106,16 +106,16 @@ after it, keeping `INIT`. -/
 theorem checkJobs_thrT (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some checkJobsL)
     (hS : RecStep pins dn ds I a₀ (Prog.subPB bs checkerProg)) (hds : ds.size < 2 ^ 63)
     (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (j : Word) (hj : j.toNat < ds.size)
-    (hF : ∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) (g x y : Word) :
-    ⦃fun s => x = j ∧ y = j + 1 ∧ s.mem.glob INIT = g ∧ ∃ Y, FlushOK Y ∧ s.mem = flushMem Y ∧
+    (hF : ∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) (x y : Word) :
+    ⦃fun s => x = j ∧ y = j + 1 ∧ s.mem.glob INIT ≠ 0 ∧ ∃ Y, FlushOK Y ∧ s.mem = flushMem Y ∧
       ThrAt pins dn ds I a₀ bs Y a⦄
     invoke checkerProg (exec checkerProg n) "check_jobs" [x, y]
     ⦃fun _ s' => (∃ a', recordJob VM pins I j.toNat ds[j.toNat] a = .ok ((), a') ∧
-      ThrAt pins dn ds I a₀ bs s'.mem a') ∧ s'.mem.glob INIT = g; ⊤⦄ := by
+      ThrAt pins dn ds I a₀ bs s'.mem a') ∧ s'.mem.glob INIT ≠ 0; ⊤⦄ := by
   apply M.triple_of_run
   rintro s rs s' ⟨hxj, hyj, hg, Y, hfy, hsY, X, hJ, hPB, hYX⟩ hrun
   rw [hxj, hyj] at hrun
-  refine ⟨?_, by rw [← hg]; exact invoke_keepsG checkerProg_phaseBGlobs check_jobs_mem_phaseBJobFns hrun (g := INIT) (by decide)⟩
+  refine ⟨?_, by rw [invoke_keepsG checkerProg_phaseBGlobs check_jobs_mem_phaseBJobFns hrun (g := INIT) (by decide)]; exact hg⟩
   have hc : thrS CTL = true := by decide
   let X₂ : Mem := ⟨X.bytes, X.words, Y.glob⟩
   have hAg0 : Agree thrS (fun _ => false) Y X₂ :=
@@ -162,6 +162,100 @@ theorem checkJobs_thrT (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = 
   have hJ2 : JobRel pins dn ds I a₀ s₂.mem a := ⟨a₁, ⟨(hJR.flush hfx).setGlob _, hx, hp⟩, hSE⟩
   obtain ⟨a', hrec, hJ'⟩ := hS j.toNat s₂.mem s₂'.mem a hj hJ2 hcall hF
   exact ⟨a', hrec, s₂'.mem, hJ', hPB', fun t ht => hAg'.1 t ht⟩
+
+/-- **`check_b`'s first block**: on the first call (`INIT = 0`) the seed `CTLF` copied into `CTL`
+and `INIT := 1`; on later calls nothing. -/
+def seedMem (w : Mem) : Mem :=
+  if w.glob INIT = 0 then (w.copy64 CTL 0 CTLF 0 (w.len64 CTLF).toNat).setG INIT 1 else w
+
+theorem checkerProg_flushProg' : FlushProg checkerProg := by
+  constructor <;> chk_lk
+
+/-- **`check_b` on a thread's memory**: from a memory whose `seedMem` is `ThrAt a`, with the range
+`[j, j + 1)`, a returning call runs record `j`'s job at `a` and leaves a memory `ThrAt` the state
+after it, with `INIT` nonzero. -/
+theorem checkB_thr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some checkJobsL)
+    (hS : RecStep pins dn ds I a₀ (Prog.subPB bs checkerProg)) (hds : ds.size < 2 ^ 63)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (j : Word) (hj : j.toNat < ds.size)
+    (hF : ∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) (s₀ : St)
+    (hR : ThrAt pins dn ds I a₀ bs (seedMem s₀.mem) a)
+    (hlo : s₀.mem.glob PLO = j) (hhi : s₀.mem.glob PHI = j + 1) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
+    ⦃fun _ s' => (∃ a', recordJob VM pins I j.toNat ds[j.toNat] a = .ok ((), a') ∧
+      ThrAt pins dn ds I a₀ bs s'.mem a') ∧ s'.mem.glob INIT ≠ 0; ⊤⦄ := by
+  have hlo' : s₀.mem.glob ⟨9⟩ = j := hlo
+  have hhi' : s₀.mem.glob ⟨11⟩ = j + 1 := hhi
+  have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs
+      { bytes := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).bytes,
+        words := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).words,
+        glob := fun h => if h = ⟨10⟩ then 1
+          else (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).glob h } a := by
+    intro h0; have := hR; simp only [seedMem, ite_eq_left h0] at this; exact this
+  have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs s₀.mem a := by
+    intro h0; have := hR; simp only [seedMem, ite_eq_right h0] at this; exact this
+  rw [invoke_eq _ checkerProg_lookup_check_b]
+  simp only [callFn, checkBL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hJ := checkJobs_thrT hck hS hds n (by omega) a j hj hF
+    have hFl := flushCaches_spec checkerProg checkerProg_flushProg' n
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
+    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc,
+      Locals.init_nil, Cmp.eval,
+      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
+    all_goals first
+      | (simp_all (config := { decide := true }) [Mem.arr64]; done)
+      | skip
+    all_goals first
+      | (obtain ⟨-, hfx, hm⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
+         first
+          | exact ⟨_, hfx, by rw [St.setLocs_mem']; exact hm, hR0 (by simp_all)⟩
+          | exact ⟨_, hfx, by rw [St.setLocs_mem']; exact hm, hR1 (by simp_all)⟩
+          | (rw [St.setLocs_mem', hm, flushMem_glob]; simp_all; done)
+          | (rw [St.setLocs_mem', hm, flushMem_glob]; simp only [Mem.copy64_glob] at *; simp_all; done))
+      | (rw [St.setLocs_mem']; simp_all; done)
+
+/-- **`check` with the mode word `2` on a thread's memory**: `check_b` (as `checkB_thr`). -/
+theorem checkThr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some checkJobsL)
+    (hS : RecStep pins dn ds I a₀ (Prog.subPB bs checkerProg)) (hds : ds.size < 2 ^ 63)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (j : Word) (hj : j.toNat < ds.size)
+    (hF : ∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) (s₀ : St)
+    (hmode : s₀.mem.glob MODE = 2) (hR : ThrAt pins dn ds I a₀ bs (seedMem s₀.mem) a)
+    (hlo : s₀.mem.glob PLO = j) (hhi : s₀.mem.glob PHI = j + 1) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
+    ⦃fun _ s' => (∃ a', recordJob VM pins I j.toNat ds[j.toNat] a = .ok ((), a') ∧
+      ThrAt pins dn ds I a₀ bs s'.mem a') ∧ s'.mem.glob INIT ≠ 0; ⊤⦄ := by
+  rw [invoke_eq _ checkerProg_lookup_check']
+  simp only [callFn, checkL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hB := checkB_thr hck hS hds n (by omega) a j hj hF
+    have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hB · · · ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·)]
+    all_goals (try simp only [St.setLoc_mem, St.setLocs_cons,
+      Cmp.eval, beq_iff_eq, St.setLocs_nil] at *)
+    all_goals first
+      | (simp_all (config := { decide := true }); done)
+      | (simp_all [St.setLoc]; done)
+
+/-- **One call, as a run** (`checkThr`). -/
+theorem runThr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some checkJobsL)
+    (hS : RecStep pins dn ds I a₀ (Prog.subPB bs checkerProg)) (hds : ds.size < 2 ^ 63)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (j : Word) (hj : j.toNat < ds.size)
+    (hF : ∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) (w : Mem)
+    (hmode : w.glob MODE = 2) (hR : ThrAt pins dn ds I a₀ bs (seedMem w) a)
+    (hlo : w.glob PLO = j) (hhi : w.glob PHI = j + 1) {rs : List Word} {w' : Mem}
+    (hrun : L.run checkerProg n "check" [] w = .ok (rs, w')) :
+    (∃ a', recordJob VM pins I j.toNat ds[j.toNat] a = .ok ((), a') ∧
+      ThrAt pins dn ds I a₀ bs w' a') ∧ w'.glob INIT ≠ 0 :=
+  run_post (Q := fun _ m => (∃ a', recordJob VM pins I j.toNat ds[j.toNat] a = .ok ((), a') ∧
+      ThrAt pins dn ds I a₀ bs m a') ∧ m.glob INIT ≠ 0) hrun
+    (checkThr hck hS hds n hn a j hj hF _ hmode hR hlo hhi)
 
 end thread
 
