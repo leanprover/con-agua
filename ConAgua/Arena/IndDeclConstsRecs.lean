@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndDeclConstsRefire
 import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.L.ModelGen
 import ConAgua.Arena.Verdict
 public import ConAgua.Arena.GrindAttr
@@ -169,6 +170,96 @@ theorem brW_ok {p : Prog} (hP : RecsProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   obtain ⟨hS6, hg6, hci⟩ := riRec_stage h hS5 hcv5 hdr5
   refine ⟨f, a1, hrun1, hS6, hg05.trans hg6, ?_⟩
   rw [hci, hmIW, hrPW, hisKW]
+
+/-! ## `block_recs` -/
+
+mutual
+/-- **The model of `block_recs(p, ro, rl)`** at exec fuel `n`. -/
+def brsW (p : Prog) : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, pp, ro, rl =>
+    if rl = 0 then some ([0, 0], m)
+    else brsK1 p n pp ro rl (callW p n "block_rec" [pp, rdW (m.arr64 IW) ro] m)
+/-- After the record: the rest, then the consing. -/
+def brsK1 (p : Prog) (n : Nat) (pp ro rl : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => bfgK3 p n (r.headD 0) (brsW p n m pp (ro + 1) (rl - 1))
+end
+
+section arms
+variable (p : Prog) (n : Nat) (m : Mem) (pp ro rl : Word) (r : List Word)
+theorem brsW_nil (h : rl = 0) : brsW p (n + 1) m pp ro rl = some ([0, 0], m) := by simp [brsW, h]
+theorem brsW_cons (h : rl ≠ 0) : brsW p (n + 1) m pp ro rl =
+    brsK1 p n pp ro rl (callW p n "block_rec" [pp, rdW (m.arr64 IW) ro] m) := by simp [brsW, h]
+theorem brsK1_some : brsK1 p n pp ro rl (some (r, m)) =
+    bfgK3 p n (r.headD 0) (brsW p n m pp (ro + 1) (rl - 1)) := by simp [brsK1]
+end arms
+attribute [ind_grind] brsW_nil brsW_cons brsK1_some
+
+theorem brs_spec {p : Prog} (hP : RecsProg p) (n : Nat) :
+    ∀ (s₀ : St) (pp ro rl : Word),
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_recs" [pp, ro, rl]
+    ⦃fun r s' => LocEq s' s₀ ∧ brsW p n s₀.mem pp ro rl = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ pp ro rl; rw [invoke_eq _ hP.brs]; simp only [callFn, blockRecs]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ pp ro rl
+    rw [invoke_eq _ hP.brs]
+    simp only [callFn, blockRecs]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        callW_spec p n "block_rec", callW_spec p n "sl_cons", ih] <;>
+      finish (gen := 20) [rdW_eq]
+
+/-- `block_rec`'s run, as its model. -/
+theorem brCall {p : Prog} (hP : RecsProg p) {n : Nat} {m m' : Mem} {pp rc : Word} {r : List Word}
+    (h : callW p n "block_rec" [pp, rc] m = some (r, m')) : brW p n m pp rc = some (r.headD 0, m') := by
+  obtain ⟨s', rfl, -, hK⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (br_spec p hP n _ pp rc) h
+  exact hK
+
+/-- **`block_recs` refines `blockRecs`**: an `IW` slice of `EREC` constant records below the
+pool's top. -/
+theorem brsW_ok {p : Prog} (hP : RecsProg p) (pp : Word) (bs : BlockShape) (vis : Word) (fe : IFEnv)
+    (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (ro rl : Word) (rcs : List RecShape) (r : List Word),
+    StageR vis fe m a → DecB (fun m => decBS m pp.toNat) m bs → PSlR decRS rcs ro rl m →
+    brsW p n m pp ro rl = some (r, m') →
+    ∃ cis a', (ConRon.Arena.blockRecs bs rcs).run a = .ok (cis, a') ∧
+      decPL m' (decCI (erecP m')) (r.headD 0).toNat (r.tail.headD 0).toNat = some cis ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
+  induction n with
+  | zero => intro m m' a ro rl rcs r _ _ _ h; simp [brsW] at h
+  | succ n ih =>
+  intro m m' a ro rl rcs r hS hq hrcs h
+  by_cases hl : rl = 0
+  · rw [brsW_nil p n m pp ro rl hl] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    have : rcs = [] := by
+      have h := hrcs.1; simp only [DecB, hl] at h
+      simpa [decPL] using h.symm
+    subst this
+    exact ⟨[], a, rfl, by simp [decPL], by simp, hS, IWGrow.refl m⟩
+  obtain ⟨q, rc, rest, rfl, hw, hqb, hdrc, hrest⟩ := partsPSl_cons hrcs hl
+  rw [brsW_cons p n m pp ro rl hl, hw] at h
+  have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [brsK1])
+  rw [brsK1_some] at h
+  obtain ⟨f, a1, hrun1, hS1, hg1, hci⟩ := brW_ok hP hS hq (by rw [hq']; exact hdrc) (brCall hP h1)
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgK3])
+  obtain ⟨cis, a3, hrun3, hd3, hb3, hS3, hg3⟩ := ih m1 m3 a1 (ro + 1) (rl - 1) rest r3 hS1
+    (hq.grow (decBS_mono _) hg1) (hrest.grow decRS_mono hg1) h3
+  rw [bfgK3_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bfgK4])
+  rw [bfgK4_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨hd5, hb5, hS5, hg5⟩ := consW_ci (consCall hP.toFormersProg h4) hS3 hb3 hd3 (hg3.ext.decCI hci)
+  refine ⟨_ :: cis, a3, ?_, by simpa using hd5, by simp only [List.headD_cons, List.tail_cons]; omega, hS5,
+    hg1.trans (hg3.trans hg5)⟩
+  simp only [ConRon.Arena.blockRecs, StateT.run_bind, hrun1, except_ok_bind, hrun3]
+  rfl
 
 end L.Ind
 
