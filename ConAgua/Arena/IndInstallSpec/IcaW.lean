@@ -222,9 +222,9 @@ open L.Arena
 def CapsWords (m : Mem) (q : Nat) (ws : List Word) : Prop :=
   q + ws.length ≤ iwTop m ∧ ∀ i < ws.length, iwA m (q + i) = ws[i]?
 
-/-- A handle slice of the record pool below its top. -/
+/-- A handle slice of the record pool in use (both tiers, below their tops: `erA`). -/
 def ESl (m : Mem) (o l : Word) (xs : List NIdx) : Prop :=
-  o.toNat + l.toNat ≤ erTop m ∧ hslice? (erA m) o.toNat l.toNat = some xs
+  hslice? (erA m) o.toNat l.toNat = some xs
 
 theorem CapsWords.grow {m m' : Mem} {q : Nat} {ws : List Word} (h : CapsWords m q ws)
     (hg : IWGrow m m') : CapsWords m' q ws :=
@@ -237,7 +237,7 @@ theorem installHslice_ext {a b : Array Word} {o l : Nat} {xs : List NIdx}
 
 theorem ESl.grow {m m' : Mem} {o l : Word} {xs : List NIdx} (h : ESl m o l xs) (hg : IWGrow m m') :
     ESl m' o l xs := by
-  sorry
+  exact hg.erecGrow.ext.hslice? h
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- An `IW` handle slice copied into `EREC` words. -/
@@ -265,7 +265,24 @@ theorem installErCopy {p : Prog} (hP : CapsProg p) {n : Nat}
     (h : callW p n "block_caps_at_er_copy" [o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ ESl m' (r.headD 0) (r.tail.headD 0) xs := by
-  sorry
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (blockCapsAtErCopy_spec p hP.erAlloc hP.erCopyGo hP.erPut hP.erCopy n _ o l) h
+  simp only at hW
+  obtain ⟨q, m1, ha, rfl, hm'⟩ := capsErCopyW_post hW
+  rw [hm']
+  obtain ⟨hS', hg, -, -, -, -, hW3⟩ := erRec_stage ha hS _ (ieWords_length _ _ _).symm
+  refine ⟨hS', hg, ?_⟩
+  simp only [List.headD_cons, List.tail_cons, ESl]
+  have hI := hS.iw.iw
+  rw [← (show hslice? (iwA m) o.toNat l.toNat = some xs from hd)]; unfold hslice?
+  refine mapM_congr_range _ fun j hj => ?_
+  have hj' : j < l.toNat := List.mem_range.mp hj
+  have h3 := hW3 j (by rw [ieWords_length]; exact hj')
+  rw [ieWords_get _ _ _ _ hj'] at h3
+  have hin : o.toNat + j < (m.arr64 IW).size := by omega
+  have hoj : (o + UInt64.ofNat j).toNat = o.toNat + j := by
+    have := hS.iw.iwSize; simp [UInt64.toNat_add, UInt64.toNat_ofNat]; omega
+  simp only [hd?, erA, h3, iwA, aread_apply, rdW, hoj, Array.getElem?_eq_getElem hin, Option.getD_some]
 
 theorem installRec5
     {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState} {ws r : List Word}
