@@ -47,17 +47,15 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model toiE_spec (p : Prog) (P : ToiProg p)
   fns [P.toi ↦ toiE]
-  specs [callW_spec p n "env_find", erToIw_specW p P.alloc P.copy P.eti n,
-    callW_spec p n "inst_lp_fast", instPisWith_spec p P.v P.ipw P.hi1 n,
+  specs [callW_spec p n "env_find",
+    erToIw_specW p P.alloc P.copy P.eti n, callW_spec p n "inst_lp_fast", instPisWith_spec p P.v P.ipw P.hi1 n,
     piBinders_spec p P.alloc P.icopy P.v P.sc P.pb n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
 /-- What `target_outside_inst` gives besides the twin's `(index count, sort)` `x` (from `m`): the
 result words, the stage invariant, the growth, the frames. -/

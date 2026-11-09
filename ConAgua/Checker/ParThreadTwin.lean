@@ -1,6 +1,9 @@
 module
 
 public import ConAgua.Checker.ParThreadCall
+public import ConAgua.Checker.ParDriverTwin
+import ConAgua.Arena.FreezeFresh
+import ConAgua.Checker.RomProgInit
 public import ConAgua.Final.TwinPooled
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.IndArm
@@ -35,7 +38,9 @@ open ConRon.Arena ConAgua.Final
 
 namespace L.Checker
 
-open L L.Arena L.Rom
+open L L.Arena L.Rom ConRon.Bridge
+
+universe w
 
 /-- **The buffer is unchanged** at the end of a call: the final memory's frozen arrays (but the
 header and the seed) are `B`'s images. -/
@@ -50,115 +55,6 @@ def ThreadRuns (B : Array Word) : Mem → List (Word × Nat × Mem) → Prop
   | r, (j, n, r') :: cs => n ≤ 2 ^ 62 ∧
       (∃ rs, L.run checkerProg n "check" [] (bufMem B r j) = .ok (rs, r')) ∧ BufKept B r' ∧
       ThreadRuns B r' cs
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- The group list a thread's calls check. -/
-def thrGroups (pend : Array PendingCheck) (cs : List (Word × Nat × Mem)) : List PendingCheck :=
-  cs.map fun c => pdAt pend c.1
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem checkPendingList_cons_ok {mode : ConLeche.CheckMode} {fe : IFEnv} {pc : PendingCheck}
-    {rest : List PendingCheck} {a : AState} (h : AM.ok (checkPending mode fe pc) a) :
-    checkPendingList mode fe (pc :: rest) a =
-      checkPendingList mode fe rest (AM.st (checkPending mode fe pc) a) := by
-  simp only [AM.ok, AM.st, StateT.run] at h ⊢
-  simp only [checkPendingList]
-  split at h
-  · rename_i x hx
-    obtain ⟨u, a'⟩ := x
-    simp only [hx]
-  · exact h.elim
--/
-
-/- ronsync2 stage 2: commented out (a section at a removed L function)
-section chain
-variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
-  (ds : Array IDeclaration) (fe : IFEnv) (pend : Array PendingCheck) (bs : List UInt8)
-
-/-- **A thread's later calls** accept their groups in order, from a memory `ThreadRel` to `a` with
-`INIT = 1` and the buffer unchanged. -/
-theorem thread_chain (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
-    (hpend : pend.size ≤ 2 ^ 62) {B : Array Word} {v : Word} (hB : (bufImg B 0).getD 3 0 = v) :
-    ∀ (cs : List (Word × Nat × Mem)) (r : Mem) (a : AState),
-      ThreadRel pins dn ds fe pend bs v r a → r.glob INIT = 1 → BufKept B r → ThreadRuns B r cs →
-      (∀ c ∈ cs, c.1.toNat < pend.size) →
-      ∃ s'', checkPendingList mode fe (thrGroups pend cs) a = .ok (.ok (), s'')
-  | [], _, a, _, _, _, _, _ => ⟨a, rfl⟩
-  | (j, n, r') :: cs, r, a, hR, hI, hk, hruns, hj => by
-    obtain ⟨hn, ⟨rs, hrun⟩, hk', hrest⟩ := hruns
-    have hj' : j.toNat < pend.size := hj _ List.mem_cons_self
-    obtain ⟨hok, hR', hI'⟩ := thrCall_next mode pins dn ds fe pend bs hP hm hB hR hI hk j hj'
-      (by omega) n hn hrun
-    simp only [thrGroups, List.map_cons]
-    rw [checkPendingList_cons_ok hok]
-    exact thread_chain hP hm hpend hB cs r' _ hR' hI' hk' hrest
-      (fun c hc => hj c (List.mem_cons_of_mem _ hc))
-
-/-- **A thread's calls accept their groups**, in order, from phase A's worker state: entry 1's
-`PhaseBStart m a v`, the buffer `bufOf m v`, a fresh region memory `r₀` (`INIT = 0`, every owned
-array zero at its size in `m`). -/
-theorem thread_accepts (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
-    {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
-    (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
-    (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (r₀ : Mem)
-    (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m.arr64 b).size) (hI : r₀.glob INIT = 0)
-    (cs : List (Word × Nat × Mem)) (hruns : ThreadRuns (bufOf m v) r₀ cs)
-    (hj : ∀ c ∈ cs, c.1.toNat < pend.size) :
-    ∃ s'', checkPendingList mode fe (thrGroups pend cs) a.worker = .ok (.ok (), s'') := by
-  have hpend : pend.size ≤ 2 ^ 62 := by
-    have := hS.loop.pend.bound; rw [hS.loop.pend.count] at this; exact this
-  match cs, hruns, hj with
-  | [], _, _ => exact ⟨a.worker, rfl⟩
-  | (j, n, r') :: cs, ⟨hn, ⟨rs, hrun⟩, hk', hrest⟩, hj =>
-    have hj' : j.toNat < pend.size := hj _ List.mem_cons_self
-    obtain ⟨hok', hR', hI'⟩ := thrCall_first mode pins dn ds fe pend bs hP hm hS hPB hok hlt r₀ hz
-      hI j hj' (by omega) n hn hrun
-    simp only [thrGroups, List.map_cons]
-    rw [checkPendingList_cons_ok hok']
-    exact thread_chain mode pins dn ds fe pend bs hP hm hpend (bufImg_hdr hok hlt) cs r' _ hR' hI' hk'
-      hrest (fun c hc => hj c (List.mem_cons_of_mem _ hc))
-
-/-- What a thread's harness supplies: a fresh region memory and the calls on it. -/
-def ThreadOK (m : Mem) (B : Array Word) (pend : Array PendingCheck)
-    (t : Mem × List (Word × Nat × Mem)) : Prop :=
-  (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m.arr64 b).size) ∧
-    t.1.glob INIT = 0 ∧ ThreadRuns B t.1 t.2 ∧ ∀ c ∈ t.2, c.1.toNat < pend.size
-
-/-- **The threads give con-ron's pool**: threads whose calls together claim every group index
-below `|pend|` give a family of group lists covering `pend`, drawn from it, each accepted by
-`checkPendingList` from phase A's worker state. -/
-theorem threads_pool (hP : PhaseBProg (Prog.subPB bs checkerProg)) (hm : mode = .verified)
-    {m : Mem} {a : AState} {v : Word} (hS : PhaseBStart pins dn ds fe pend m a v)
-    (hPB : m.arr8 PB = bs.toArray) (hok : parCompactOK m 1 = true)
-    (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (ths : List (Mem × List (Word × Nat × Mem))) (hth : ∀ t ∈ ths, ThreadOK m (bufOf m v) pend t)
-    (hcov : ∀ i < pend.size, ∃ t ∈ ths, ∃ c ∈ t.2, c.1.toNat = i) :
-    (∀ pc ∈ pend.toList, ∃ w ∈ ths.map (thrGroups pend ·.2), pc ∈ w) ∧
-    (∀ w ∈ ths.map (thrGroups pend ·.2), ∀ pc ∈ w, pc ∈ pend.toList) ∧
-    (∀ w ∈ ths.map (thrGroups pend ·.2),
-      ∃ s'', checkPendingList mode fe w a.worker = .ok (.ok (), s'')) := by
-  refine ⟨fun pc hpc => ?_, fun w hw pc hpc => ?_, fun w hw => ?_⟩
-  · obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hpc
-    rw [Array.length_toList] at hi
-    obtain ⟨t, ht, c, hc, hci⟩ := hcov i hi
-    refine ⟨thrGroups pend t.2, List.mem_map_of_mem ht, ?_⟩
-    have : pdAt pend c.1 = pend.toList[i] := by
-      simp [pdAt, hci, Array.getD, hi]
-    rw [← this]
-    exact List.mem_map_of_mem hc
-  · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw
-    obtain ⟨c, hc, rfl⟩ := List.mem_map.mp hpc
-    have hj := (hth t ht).2.2.2 c hc
-    simp only [pdAt, Array.getD, hj, dite_true]
-    exact Array.getElem_mem_toList _
-  · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw
-    obtain ⟨hz, hI, hruns, hj⟩ := hth t ht
-    exact thread_accepts mode pins dn ds fe pend bs hP hm hS hPB hok hlt t.1 hz hI t.2 hruns hj
-
-end chain
--/
 
 /-! ## With entry 1 -/
 
@@ -184,8 +80,9 @@ theorem run_load_size {b pb : ByteArray} {sz : TieredArray → Nat} (hs : ∀ s,
 array zero at its size in entry 1's memory) with its calls (`ThreadRuns`:
 each call's run of `check` on `bufMem B r j` returns, and the buffer is unchanged after it), every
 claimed index below `k`, every index below `k` claimed by some thread, and each thread's claims
-increasing. -/
-theorem threads_twinAcceptsPooled (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
+increasing; given `check_decl`'s program facts (`CheckerCd`). -/
+theorem threads_twinAcceptsPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd)
+    (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
@@ -196,6 +93,112 @@ theorem threads_twinAcceptsPooled (b pb : ByteArray) (sz : TieredArray → Nat) 
     (hcov : ∀ j : Word, j < rs₁.headD 0 - 9223372036854775808 → ∃ t ∈ ths, ∃ c ∈ t.2, c.1 = j)
     (hinc : ∀ t ∈ ths, (t.2.map (·.1)).Pairwise (· < ·)) :
     TwinAcceptsPooled [b] := by
-  sorry
+  have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
+  obtain ⟨PA, m₇, m, hF, hok, hm₁, hres⟩ := checkA_run b pb sz hin 1 (Or.inl rfl) N₁ hN₁ rs₁ m₁ h₁ hr
+  have hflag : modeFlag 1 = 1 := rfl
+  rw [hflag] at hok hm₁
+  have hpb := hin.2.2.1
+  have hJP := jobProg_of_cd hCd PA hpb hF.r7.since.pbpre
+  let bs := pb.data.toList
+  let p := Prog.subPB bs checkerProg
+  -- the buffer and the sizes
+  have hO := parCompactMem_out m 1
+  rw [← hm₁] at hO
+  have hlt : (m.arr64 OUT).size < 2 ^ 64 := by
+    rw [← hO.size OUT]; exact run_load_size hin.2.2.2 h₁ OUT
+  have hBm : B = bufOf m := by
+    rw [hB, bufOf, hm₁, (parCompactMem_hdr hok).2.1]
+  have hsz : PA.ds.size < 2 ^ 63 := by
+    have := hF.build.decls.room; have := hF.build.decls.dsize; omega
+  have hk : (rs₁.headD 0 - 9223372036854775808).toNat = PA.ds.size := by
+    have e : (9223372036854775808 : Word) + UInt64.ofNat PA.ds.size - 9223372036854775808 =
+        UInt64.ofNat PA.ds.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
+    rw [hres, e, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
+  -- the twin's side
+  let a₀ : AState := { PA.sF with caches := Caches.empty }
+  let Rel : Mem → AState → Prop := fun r a =>
+    ∀ j, ThrAt PA.ipins (dnOf PA.sE.store) PA.ds PA.I a₀ bs (seedMem (bufMem B r j)) a
+  let Call : Nat → Mem → Mem → Prop := fun k r r' => ∃ n rs, n ≤ 2 ^ 62 ∧
+    L.run checkerProg n "check" [] (bufMem B r (UInt64.ofNat k)) = .ok (rs, r') ∧ BufKept B r'
+  obtain ⟨pinsP, dsP, hst, hrec, hpp, hden, hPD, hH⟩ := poolHyps_of_phaseA PA Rel Call
+  obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
+  obtain ⟨-, -, -, -, -, hpd, _rc, _preC, -, hden0⟩ :=
+    ConRon.Bridge.stages_frame (chunks := [b]) hA hBp hC hD hE
+  have hFD : FrontDecls PA.ds := frontDecls_of_prefix PA.pfx
+  have hLD : DeclsLpsDn (dnOf PA.sE.store) PA.ds := declsLpsDn_dnOf hpd ⟨_, hden0⟩
+  have hdn : DnPers (dnOf PA.sE.store) := fun k x hk => by
+    simp only [dnOf] at hk; split at hk
+    · assumption
+    · cases hk
+  have hRS : RecStep PA.ipins (dnOf PA.sE.store) PA.ds PA.I a₀ p :=
+    recCall_stepE hJP hFD hLD hdn hrec hpp (by omega) hden hPD
+  have hstep : ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < PA.ds.size), Rel r a → Call k r r' →
+      (∃ env, FoldOK env (PA.I.view k) (AM.st enterScratch a)) →
+      ∃ a', recordJob .verified PA.ipins PA.I k PA.ds[k] a = .ok ((), a') ∧ Rel r' a' := by
+    intro k r r' a hk hR ⟨n, rs, hn, hrun, hkept⟩ hfo
+    have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+    obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI⟩ := runThr hJP.check_jobs hRS hsz n hn a (UInt64.ofNat k)
+      (by rw [hk']; exact hk) (by rw [hk']; exact hfo) _ rfl (hR _) rfl rfl hrun
+    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI hkept t ht).trans (hX t ht)⟩⟩
+    have e : PA.ds[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = PA.ds[k] := by simp only [hk']
+    rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
+  have H := hH hstep
+  -- the threads
+  let ths' : List (Mem × List Nat) := ths.map fun t => (t.1, t.2.map (·.1.toNat))
+  have hstart : ∀ t ∈ ths', Rel t.1 PA.sF.worker := by
+    intro t ht
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    obtain ⟨hz, hI, -, -⟩ := hth t₀ ht₀
+    intro j
+    have hoff := hF.build.off
+    have hw := hF.build.drv.state.wf
+    have hKI := indexKeysIn_of hF.jobM.arena.base H.hI H.hpI
+    have hJR := JobM.fresh (hF.jobM.trunc hoff hKI) hw hoff
+    refine ⟨freshMem m, ⟨_, ⟨hJR, PExt.of_ext (Ext.refl _), rfl⟩, ?_⟩, ?_, ?_⟩
+    · exact ⟨by simp [AState.worker, enableScratch_dropScratch], rfl, rfl⟩
+    · rw [freshMem_arr8]
+      show m.bytes L.Rom.PB = _
+      rw [hF.bytes, ← Mem.arr8, hF.r7.since.keep.arr8]; exact loadMem_pb b pb sz
+    · rw [hBm]
+      exact thr_first hok hlt t₀.1 j (fun b hb => by rw [hz b hb, hO.size]) hI
+  have hchain : ∀ t ∈ ths', JobChain Call t.1 t.2 := by
+    have aux : ∀ (cs : List (Word × Nat × Mem)) (r : Mem), ThreadRuns B r cs →
+        JobChain Call r (cs.map (·.1.toNat)) := by
+      intro cs
+      induction cs with
+      | nil => intro r _; exact .nil _
+      | cons c cs ih =>
+        intro r hruns
+        obtain ⟨j, n, r'⟩ := c
+        obtain ⟨hn, ⟨rs, hrun⟩, hkept, hrest⟩ := hruns
+        exact .cons ⟨n, rs, hn, by rw [UInt64.ofNat_toNat]; exact hrun, hkept⟩ (ih r' hrest)
+    intro t ht
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    exact aux _ _ (hth t₀ ht₀).2.2.1
+  have hinc' : ∀ t ∈ ths', t.2.Pairwise (· < ·) := by
+    intro t ht
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    have := hinc t₀ ht₀
+    rw [List.pairwise_map] at this ⊢
+    exact this.imp fun h => UInt64.lt_iff_toNat_lt.mp h
+  have hrange : ∀ t ∈ ths', ∀ k ∈ t.2, k < PA.ds.size := by
+    intro t ht k hk'
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    obtain ⟨c, hc, rfl⟩ := List.mem_map.mp hk'
+    have := (hth t₀ ht₀).2.2.2 c hc
+    rw [UInt64.lt_iff_toNat_lt, hk] at this
+    exact this
+  have hcov' : ∀ k < PA.ds.size, ∃ t ∈ ths', k ∈ t.2 := by
+    intro k hk'
+    have hk64 : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+    obtain ⟨t, ht, c, hc, hcj⟩ := hcov (UInt64.ofNat k) (by rw [UInt64.lt_iff_toNat_lt, hk, hk64]; exact hk')
+    exact ⟨_, List.mem_map_of_mem ht, List.mem_map.mpr ⟨c, hc, by rw [hcj, hk64]⟩⟩
+  obtain ⟨-, hacc⟩ := pool_twin Vt H hst ths' hstart hchain hinc' hrange hcov'
+  exact ⟨PA.pins, PA.sA, PA.sB, PA.sC, PA.sD, PA.sE, PA.sF, PA.pre, PA.rc, PA.ds, PA.ipins, PA.I,
+    hA, hBp, hC, hD, hE, ths'.map (·.2), PA.idx,
+    fun k hk' => by obtain ⟨t, ht, hkt⟩ := hcov' k hk'; exact ⟨t.2, List.mem_map_of_mem ht, hkt⟩,
+    fun w hw k hkw => by obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw; exact hrange t ht k hkw,
+    fun w hw => by obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw; exact hinc' t ht,
+    fun w hw => by obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw; exact hacc t ht⟩
 
 end L.Checker

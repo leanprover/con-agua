@@ -29,7 +29,17 @@ namespace L.Checker
 /-- **`Entry1StagesE.prelude`'s statement**: `builtinPrelude_ref`'s error half. -/
 theorem checker_preludeStageE : ∀ b pb sz, InputsOK b pb sz →
     StageSpecE checkerProg "builtin_prelude" [] (Q3 b (checkerRels b pb sz)) (TwinVerdict [b]) := by
-  sorry
+  intro b pb sz hin n _hn s₀
+  refine M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr hQ hk => ?_
+  subst hs
+  obtain ⟨sA, hA, h3⟩ := hQ
+  have h3 : R3 (loadMem b pb sz) s.mem pb sA := h3
+  have hc := CapsOK.keep h3.since.keep h3.since.caps
+  exact TwinVerdict.prelude hA (RefC.run_err (builtinPrelude_specE checkerProg checkerProg_builtin n
+      ⟨s.mem, Locals.init []⟩) (fun _ h0 h => absurd h0 h) checkerProg_nv trivial
+    (builtinPrelude_ref hin.1 sA n
+      ⟨h3.arena, h3.sdr, h3.twin, Nat.lt_of_lt_of_le (by decide) hc.2.1, h3.mode⟩)
+    (L.Front.callE_of_run_err (s := s) hr) hk)
 
 /-- **`Entry1StagesE.front`'s statement**: `front_run`'s error half at the checker's program. -/
 theorem checker_frontStageE : ∀ b pb sz, InputsOK b pb sz →
