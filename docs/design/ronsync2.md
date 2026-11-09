@@ -201,3 +201,6 @@ verdict its strong form `TwinVerdict [b] c`.
   `blockShape?` → `lvlEq?`), and the twin's jobs start from the worker with empty caches.
 * Also from stage 3: `former_never_zero_at` and `proj_guard_sort` abort (class 0) when
   `nparams + nIdx` wraps 2^64, as `family_telescope` already did (the twin's sum is a `Nat`).
+* Process note (regeneration): `Checker/SyncFns.lean` is imported by nothing, so after an L change
+  build `ConAgua.Checker.SyncFns` first, then `scripts/checker_prog.py --no-build`; otherwise the
+  dump misses its bindings and functions silently become stubs.
