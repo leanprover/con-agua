@@ -8,6 +8,8 @@ import ConAgua.Arena.InstLPRef
 import ConAgua.Arena.LevelArena
 import ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.LevelInternRef
+import ConAgua.Arena.RecFireEnv
+import ConAgua.Arena.WhnfIotaRecRefine
 import ConAgua.Arena.TwinStep
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Checker.Canon
@@ -498,6 +500,64 @@ theorem fireStep {p : Prog} (hP : RulesProg p) {n : Nat} {m m' : Mem} {a : AStat
   · rw [htop6, htop5, htop₄, hoff₄]; exact Nat.le_refl _
   · intro j hj
     rw [herec6, hrd₅ j (by rw [hwsl]; simp [lsWords, hlen₂]; exact hj), hwsl]
+
+/-! ## Cells of the record pool -/
+
+theorem erecP_alias (X : Mem) {i c : Nat} (hi : i < 2 ^ 64) (hc : c < 2 ^ 64)
+    (h : i % 2 ^ 41 = c % 2 ^ 41) : erecP X i = erecP X c := by
+  have h1 : i / 2 ^ 40 % 2 = c / 2 ^ 40 % 2 := by omega
+  have h2 : i % 2 ^ 40 = c % 2 ^ 40 := by omega
+  simp only [erecP, hi, hc, ↓reduceIte, h1, h2]
+
+/-- A defined cell and an undefined one are different cells. -/
+theorem cell_ne {X : Mem} {i c : Nat} (hi : erecP X i ≠ none) (hc : erecP X c = none)
+    (hc64 : c < 2 ^ 64) : i % 2 ^ 41 ≠ c % 2 ^ 41 := by
+  intro e
+  have hi64 : i < 2 ^ 64 := by
+    cases h : erecP X i with
+    | none => exact absurd h hi
+    | some w => exact L.Ind.erecP_lt64 h
+  exact hi (by rw [erecP_alias X hi64 hc64 e]; exact hc)
+
+/-- The cells at and above a tier's top are undefined. -/
+theorem region_none {X : Mem} {d : Word} {j : Nat} (ht : erTopOf X d ≤ erOff d)
+    (hj : erOff d + j < 2 ^ 40) (hd : d.toNat < 2 ^ 41) : erecP X (d.toNat + j) = none := by
+  unfold erOff at hj ht
+  have hlt : d.toNat + j < 2 ^ 64 := by omega
+  have h1 : (d.toNat + j) / 2 ^ 40 % 2 = d.toNat / 2 ^ 40 % 2 := by omega
+  have h2 : (d.toNat + j) % 2 ^ 40 = d.toNat % 2 ^ 40 + j := by omega
+  unfold erTopOf at ht
+  simp only [erecP, hlt, ↓reduceIte, h1, h2]
+  by_cases hA : d.toNat / 2 ^ 40 % 2 = 0
+  · simp only [hA, ↓reduceIte] at ht ⊢; rw [if_neg (by omega)]
+  · simp only [hA, ↓reduceIte] at ht ⊢; rw [if_neg (by omega)]
+
+/-- The cells below a tier's top are defined. -/
+theorem region_def {X : Mem} (hI : IWOK X) {d : Word} {j : Nat} (ht : erOff d + j < erTopOf X d)
+    (hd : d.toNat < 2 ^ 41) : erecP X (d.toNat + j) ≠ none := by
+  obtain ⟨htop, hcap⟩ := hI.topOf d
+  have hj : erOff d + j < 2 ^ 40 := by omega
+  unfold erOff at ht hj
+  have hlt : d.toNat + j < 2 ^ 64 := by omega
+  have h1 : (d.toNat + j) / 2 ^ 40 % 2 = d.toNat / 2 ^ 40 % 2 := by omega
+  have h2 : (d.toNat + j) % 2 ^ 40 = d.toNat % 2 ^ 40 + j := by omega
+  unfold erTopOf erTier at htop; unfold erTopOf at ht
+  simp only [erecP, hlt, ↓reduceIte, h1, h2]
+  by_cases hA : d.toNat / 2 ^ 40 % 2 = 0
+  · simp only [hA, ↓reduceIte] at ht htop ⊢
+    rw [if_pos ht, Array.getElem?_eq_getElem (by omega)]; simp
+  · simp only [hA, ↓reduceIte] at ht htop ⊢
+    rw [if_pos ht, Array.getElem?_eq_getElem (by omega)]; simp
+
+/-- A cell the base does not define is above its top: readers agreeing above it agree there. -/
+theorem agree_cell {m₀ M Y : Mem} (hI : IWOK m₀) {c : Nat} (hc : erecP m₀ c = none)
+    (hc41 : c < 2 ^ 41) (hA : AgreeAbove m₀ M Y) : erecP Y c = erecP M c := by
+  have e : (UInt64.ofNat c).toNat = c := by simp; omega
+  have := hA (UInt64.ofNat c) (Nat.le_of_not_lt fun hlt => by
+    have hq := region_def (j := 0) hI (d := UInt64.ofNat c) (by simpa using hlt) (by rw [e]; exact hc41)
+    rw [Nat.add_zero, e] at hq
+    exact hq hc)
+  rwa [e] at this
 
 end stage
 
