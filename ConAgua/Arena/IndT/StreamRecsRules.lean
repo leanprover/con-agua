@@ -217,7 +217,7 @@ open ConRon.Bridge (denoteRule_inv) in
 /-- **`stream_rules_check` refines `streamRulesCheck`, both outcomes** (twin side con-ron's
 `streamRulesCheck_spec`): per rule, its right-hand side against the generated one's word, and
 `rule_agree` (`ra_ref`) where they differ; the rest by induction. -/
-theorem srk_ref (hP : StrProg p) (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
+theorem srk_ref (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
     (hApd : ApdF p) (hCrf : CrfF p) (N : Nat) (hN : N ≤ 2 ^ 62) :
     ∀ (m : Mem) (a : AState) (lo ll ro rl go gl : Word) (lps : List NIdx)
       (lpsP : List ConLeche.Name) (rs : List IRecRule) (rsP : List ConLeche.RecRule)
@@ -314,6 +314,38 @@ theorem srk_ref (hP : StrProg p) (hq : KnotStageProg p) (henv : ConLeche.EnvWF e
       (ConRon.Bridge.denoteEList_ext hR1.core.ext _ _ hgsd)) fun _ _ _ _ h => hR1.trans h
 
 end sims2
+set_option experimental.vcgen true in
+/-- **`stream_rec_compare`'s unified model**: `cv_lps` lifted, `rec_ty_check` and
+`stream_rules_check` through their models. -/
+l_model srcE_spec (p : Prog) (hP : StrProg p)
+  fns [hP.src ↦ srcE]
+  specs [cvLps_specW p hP.cvg.alloc hP.cvg.copy hP.cvg.eti hP.cvg.lps n, rtycE_spec p hP.toStrTyProg n,
+    srkE_spec p hP n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+set_option experimental.vcgen true in
+/-- **`stream_rec_check`'s unified model**: `stream_rules_shape` and `stream_rec_compare` through
+their models, `generated_fire` and `stream_nested_ok` lifted. -/
+l_model sr1E_spec (p : Prog) (hP : StrProg p)
+  fns [hP.sr1 ↦ sr1E]
+  specs [srsE_spec p hP n, callW_spec p n "generated_fire", callW_spec p n "stream_nested_ok",
+    srcE_spec p hP n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+set_option experimental.vcgen true in
+/-- **`stream_recs_check`'s unified model**: `stream_rec_check` through its model, the recursion
+through the model. -/
+l_model srscE_spec (p : Prog) (hP : StrProg p)
+  fns [hP.srsc ↦ srscE]
+  specs [sr1E_spec p hP n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
 end L.Ind
 
 end
