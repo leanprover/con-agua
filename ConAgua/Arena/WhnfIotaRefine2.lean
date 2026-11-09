@@ -769,13 +769,41 @@ for `find_proj`/`fire_ok`): `inst_spine_pins` re-reads the level-parameter slice
 def ErecKeptInst (p : Prog) : Prop :=
   ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
     (f = "inst_lp" ∨ f = "inst_spine") → callW p n f vs m = some (r, m') →
-    m'.arr64 EREC = m.arr64 EREC
+    m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
+      erRdT m' = erRdT m ∧ erecP m' = erecP m
 
 set_option maxRecDepth 8192 in
 /-- `ErecKeptInst` from the core's write set (`CoreErec.lean`). -/
 theorem ErecKeptInst.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
     ErecKeptInst p :=
-  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by rcases hf with rfl | rfl <;> decide) h
+  fun _ _ _ _ _ _ hf h => callW_erec_closedT hcl (by rcases hf with rfl | rfl <;> decide) h
+
+/-- The callees the ι pieces read the record pool after (`ErecKeptRec`). -/
+def iotaKeptFns : List FnName :=
+  ["rec_fire_levels", "lvls_eq_c", "rec_fire_args", "const_ty_at", "iota_certs_full",
+   "iota_case3_at", "whnf", "infer_io", "lit_major_to_ctor", "is_ctor_app", "is_str_lit",
+   "major_to_ctor", "prepare_major", "proof_irrel", "defeq_list", "iota_index_ok", "inst_lp",
+   "inst_spine", "get_app_args", "get_app_fn", "rule_rhs_at", "mk_app_n", "mk_app_n_from",
+   "erec_push", "stack_cover", "intern_bvar", "iota_rec_head", "env_find", "find_rule", "ls_node",
+   "peel_pis", "iota_rec_cmp", "iota_rec_vck", "iota_rec_fam", "iota_rec_fire2", "iota_rec_fire",
+   "iota_rec_major", "ctor_family", "former_never_zero_at"]
+
+set_option maxRecDepth 8192 in
+theorem iotaKeptFns_core : ∀ f ∈ iotaKeptFns, f ∈ coreFns := by decide
+
+/-- **The callees the ι pieces read the record pool after leave it alone** (both tiers, the
+tagged reads, the decoders' view; new stub assumption, as `ErecKeptKnot`/`ErecKeptInst`: the record
+pool grows only when a declaration is installed, never during a term check). -/
+def ErecKeptRec (p : Prog) : Prop :=
+  ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
+    f ∈ iotaKeptFns → callW p n f vs m = some (r, m') →
+    m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
+      erRdT m' = erRdT m ∧ erecP m' = erecP m
+
+/-- `ErecKeptRec` from the core's write set (`CoreErec.lean`). -/
+theorem ErecKeptRec.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
+    ErecKeptRec p :=
+  fun _ _ _ _ _ _ hf h => callW_erec_closedT hcl (iotaKeptFns_core _ hf) h
 
 theorem SpineR.nil_at (m : Mem) (off : Word) (h : off.toNat ≤ (m.arr64 SPN).size) :
     SpineR m off 0 #[] :=
