@@ -177,14 +177,34 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   3. **Reconcile, function by function**, in the order that keeps the tree buildable: the
      vendored files (conflicts, toolchain fallout; each edit in a patch,
      `--refresh-patches`), then the L code (data layout and ROM records first when a twin type
-     changed, then the functions), then the proofs (`@[refines]` theorems, then the relations
-     that mention a changed type, then the end-to-end chain). Delete each marker when its item
+     changed, then the functions), then the proofs, in the stages a–d below. Delete each marker when its item
      matches the new twin and its proofs are back; `provenance.py check` lists the markers left
      and the stale `@[refines]` theorems (the staleness ledger). Mirror a redesign exactly: if
      the twin removed a mechanism (a snapshot, a fallback), L removes it too, and the
      deviations it caused move to `## Fixed`. A changed twin definition nothing cites (the
      report's last list) is ported or recorded in `docs/not-needed.md`/`docs/deviations.md`.
-     Split proof work by file across helpers (at most ~3).
+     a. **Interface first, one owner** (the lead, before any fan-out): every invariant,
+        encoding and reader/writer API the change touches (an `IWOK`, a record pool's reader),
+        with its frame lemmas and its `grind` attributes, in one file per invariant or
+        encoding. One name per fact: a helper that needs a new shared lemma asks the owner,
+        who adds it there. Outside its own file an invariant is never built or destructured
+        positionally: use field names, an `of_frame` lemma with defaulted side conditions, or
+        `grind`.
+     b. **Statements first**: restate every theorem the change touches (`@[refines]` theorems,
+        then the relations that mention a changed type, then the end-to-end chain) before
+        re-proving any; delete the theorems about removed functions. Never comment a
+        declaration out, and no "comment out, then restore" rounds: a proof that breaks stays
+        as it is for the ladder, which turns it into `sorry` with a ticket.
+     c. **The re-proof ladder**, before any helper starts: `scripts/reproof-ladder.py --rules
+        scripts/sync-rules/<sync>.txt --write` (the base's proof, then the sync's codemod rules,
+        then its vocabulary; it writes only text that elaborates, leaves the rest at `sorry` and
+        lists it in `_tmp/ladder/<worktree>/tickets.tsv`). Write the rules file as you
+        restate: every mechanical rename or argument change of the sync is one regex rule, and
+        rerun the ladder after each build round of a partial tree (it only looks at what fails).
+     d. **Fan out the tickets** by file (at most ~3 helpers). The brief names the files each
+        helper owns, the shared rules, and the reply address: the lead's agent id. Helpers
+        message only the lead, never the coordinator. A rename of a shared name is the
+        owner's, done once with a rule in the sync's rules file, not in merge fix-ups.
   4. **Gates before landing** (besides `scripts/gates.sh`, which runs everything for a bump): `scripts/provenance.py check --strict`
      (no marker left, every citation exact), `scripts/bump-con-ron.sh --check`, zero `sorry` in
      what the sync touched and the axiom guards (`#guard_msgs in #print axioms`) unchanged,
@@ -216,7 +236,8 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 - **Fan-out.** A lane may hand sub-tasks to helper agents when the split is clean, for example proving theorems
   whose statements are already fixed. Keep it shallow: at most about 3 helpers at a time. Larger independent
   work should become a top-level lane, so the coordinator can see it. Name helper worktrees
-  `<lane>-<suffix>`.
+  `<lane>-<suffix>`. A helper's brief states its reply address (the lead's agent id) and the
+  files it owns; helpers message only their lead, never the coordinator.
 - **Commit work in progress often.** Commit to your own branch at least every ~30 minutes and before every long build, even if it doesn't build yet (WIP commits are fine; squash nothing). Machine restarts and rate limits have lost uncommitted work twice. Landing on master can stay less frequent, but keep landings small: one function family or one fix per landing.
 - **Worktrees and disk:** every worktree carries a ~2.5 GB `.lake` build. A lane keeps at most one worktree of its own plus one per running helper; remove a helper's worktree (`git worktree remove`; the branch may stay) as soon as the helper has landed or stopped, and scratch/base worktrees as soon as their measurement is done. The disk is shared: keep no duplicates or finished intermediates, but there is no fixed size limit.
 - **Waiting on background work:** wait on the job you started (run the job itself with `run_in_background`, or `wait $PID`, or a sentinel/output file it writes at the end). Never wait with `until ! pgrep -f "<pattern>"`: the waiting shell's own command line contains the pattern, so it never ends (and other lanes run the same scripts). Lane tierarr idled 2 h this way (2026-10-24).
