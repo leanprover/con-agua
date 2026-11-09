@@ -172,23 +172,24 @@ names_tree stageCoreTree : stageCoreFns
 /-- The arrays of `coreStageA`, as a test. -/
 def coreStagePa (a : TieredArray) : Bool := checkerWordArrays.contains a && a != ↑EREC &&
   a != ↑IW && a != ↑PINS && a != ↑ILFM && a != ↑Stubs.CRM &&
-  (decide (a.arr < 201) || decide (208 < a.arr))
+  (decide (a.arr < 201) || decide (208 < a.arr)) && a != tier1 EREC
 
 /-- The `CTL` words of `coreStageC`, as a test. -/
 def coreStagePc (w : Word) : Bool := decide (w.toNat < 256) && w.toNat != 129 && w.toNat != 200 &&
-  w.toNat != 52 && w.toNat != 158 && (decide (w.toNat < 202) || decide (219 < w.toNat))
+  w.toNat != 52 && w.toNat != 158 && (decide (w.toNat < 202) || decide (219 < w.toNat)) &&
+  w.toNat != 130
 
 theorem coreStagePa_mem (a : TieredArray) (h : coreStagePa a = true) : a ∈ coreStageA := by
   simp only [coreStagePa, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq, Bool.or_eq_true,
     List.contains_iff_mem] at h
   simp only [coreStageA, List.mem_filter, decide_eq_true_eq]
-  exact ⟨h.1.1.1.1.1.1, h.1.1.1.1.1.2, h.1.1.1.1.2, h.1.1.1.2, h.1.1.2, h.1.2, h.2⟩
+  exact ⟨h.1.1.1.1.1.1.1, h.1.1.1.1.1.1.2, h.1.1.1.1.1.2, h.1.1.1.1.2, h.1.1.1.2, h.1.1.2, h.1.2, h.2⟩
 
 theorem coreStagePc_mem (w : Word) (h : coreStagePc w = true) : w ∈ coreStageC := by
   simp only [coreStagePc, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq] at h
   simp only [Bool.or_eq_true, decide_eq_true_eq] at h
   simp only [coreStageC, List.mem_map, List.mem_filter, List.mem_range]
-  exact ⟨w.toNat, ⟨h.1.1.1.1.1, by simp only [decide_eq_true_eq]; omega⟩, UInt64.ofNat_toNat⟩
+  exact ⟨w.toNat, ⟨h.1.1.1.1.1.1, by simp only [decide_eq_true_eq]; omega⟩, UInt64.ofNat_toNat⟩
 
 -- ronsync2 stage 2: /-- Every function of the checker passes the stage core's per-function check. -/
 -- ronsync2 stage 2: `prog_all` fails on the program generated from the built modules

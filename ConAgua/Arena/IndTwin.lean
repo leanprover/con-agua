@@ -71,12 +71,12 @@ theorem StageT.core {m : Mem} {a : AState} (h : StageT dn vis fe m a) : ∃ M, C
 /-- The arrays a core function may write: every array but the pools, the pins, the walk memos `AbsOK`
 holds beyond `CoreMemos` (51, 155) and the stage memos (201‥208). -/
 def coreStageA : List TieredArray := checkerWordArrays.filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS ∧
-  b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ (b.arr < 201 ∨ 208 < b.arr)
+  b ≠ ILFM ∧ b ≠ Stubs.CRM ∧ (b.arr < 201 ∨ 208 < b.arr) ∧ b ≠ tier1 EREC
 
 /-- The `CTL` words a core function may write: all but the pools' tops, the epochs of the walk memos
 `AbsOK` holds beyond `CoreMemos` (52, 158) and the stage memos' control words (202‥219). -/
 def coreStageC : List Word := ((List.range 256).filter fun x => x ≠ 129 ∧ x ≠ 200 ∧ x ≠ 52 ∧
-  x ≠ 158 ∧ (x < 202 ∨ 219 < x)).map Nat.toUInt64
+  x ≠ 158 ∧ (x < 202 ∨ 219 < x) ∧ x ≠ 130).map Nat.toUInt64
 
 /-- The entry points the stage calls, and everything the core reaches. -/
 def stageCoreFns : List FnName :=
@@ -94,25 +94,28 @@ theorem coreStageA_155 : (Stubs.CRM : TieredArray) ∉ coreStageA := by simp [co
 /-- The core leaves the stage memos alone. -/
 theorem coreStageA_stage : ∀ b ∈ coreStageA, b.arr < 201 ∨ 208 < b.arr := by
   intro b hb; simp only [coreStageA, List.mem_filter, decide_eq_true_eq] at hb
-  exact hb.2.2.2.2.2.2
+  exact hb.2.2.2.2.2.2.1
 theorem coreStageC_52 : (52 : Word) ∉ coreStageC := by decide
 theorem coreStageC_158 : (158 : Word) ∉ coreStageC := by decide
 /-- The core leaves the stage memos' control words alone. -/
 theorem coreStageC_stage : ∀ x ∈ coreStageC, x.toNat < 202 ∨ 219 < x.toNat := by
   intro x hx
   simp only [coreStageC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at hx
-  obtain ⟨c, ⟨hc, -, -, -, -, h⟩, rfl⟩ := hx
+  obtain ⟨c, ⟨hc, -, -, -, -, h, -⟩, rfl⟩ := hx
   have : (Nat.toUInt64 c).toNat = c := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
   rw [this]; exact h
-theorem coreStageC_not {w : Word} (hw : w.toNat < 256) (h1 : w = 129 ∨ w = 200) : w ∉ coreStageC := by
+theorem coreStageC_not {w : Word} (hw : w.toNat < 256) (h1 : w = 129 ∨ w = 200 ∨ w = 130) :
+    w ∉ coreStageC := by
   simp only [coreStageC, List.mem_map, List.mem_filter, List.mem_range, not_exists, not_and]
   intro x hx heq
   obtain ⟨hx, hd⟩ := hx
   have e : x = w.toNat := by rw [← heq]; simp [Nat.toUInt64]; omega
   subst e
-  rcases h1 with rfl | rfl <;> simp at hd
+  rcases h1 with rfl | rfl | rfl <;> simp at hd
 theorem coreStageC_129 : (129 : Word) ∉ coreStageC := coreStageC_not (by decide) (.inl rfl)
-theorem coreStageC_200 : (200 : Word) ∉ coreStageC := coreStageC_not (by decide) (.inr rfl)
+theorem coreStageC_200 : (200 : Word) ∉ coreStageC := coreStageC_not (by decide) (.inr (.inl rfl))
+theorem coreStageC_130 : (130 : Word) ∉ coreStageC := coreStageC_not (by decide) (.inr (.inr rfl))
+theorem coreStageA_erec1 : (tier1 EREC : TieredArray) ∉ coreStageA := by simp [coreStageA]
 
 /-- **After a core call**: the core's own post (`CoreS` at the state after) and the write set give
 `StageT`, with the pools unchanged. -/
@@ -120,7 +123,19 @@ theorem StageT.of_core {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f
     {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word} {a a' : AState} {M : ModeMaps}
     (h : callW p n f vs m = some (r, m')) (hS : StageT dn vis fe m a)
     (hC : CoreS dn m' a' vis fe M 0) : StageT dn vis fe m' a' ∧ IWGrow m m' := by
-  sorry
+  obtain ⟨hfr, -⟩ := run_memFrame hcl hf (run_of_callW h)
+  have hI : m'.arr64 IW = m.arr64 IW := hfr.1 _ coreStageA_iw (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hfr.1 _ coreStageA_erec (by decide)
+  have hE1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hfr.1 _ coreStageA_erec1 (by decide)
+  have hP : m'.arr64 PINS = m.arr64 PINS := hfr.1 _ coreStageA_pins (by decide)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl _ coreStageC_129
+  have h130 : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := hfr.ctl _ coreStageC_130
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ coreStageC_200
+  obtain ⟨hCR, hT⟩ := hC.checkR
+  refine ⟨⟨⟨hCR, IWOK.frame hfr coreStageA_iw coreStageA_erec coreStageC_129 coreStageC_200
+    hS.stage.iw coreStageA_erec1 coreStageC_130⟩, hT, by simp only [pinW, hP]; exact hS.flag⟩, ?_⟩
+  exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE],
+    by simp [erecTop1, h130], fun i _ => by rw [hE1]⟩
 
 /-- **A core entry point's refinement as a `Sim` under `StageT`**: a `CoreSpec` at every state in
 `CoreS` turns a run of the call into the twin's run, `StageT` after, the pools unchanged. -/
@@ -303,7 +318,22 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 `CTL[192]`): the pools and the pins are untouched. -/
 theorem StageT.of_heap {m m' : Mem} {a a' : AState} {M : ModeMaps} (hT : StageT dn vis fe m a)
     (hC : CoreS dn m a' vis fe M 0) (hf : MemFrame [LH] [192] m m') : StageT dn vis fe m' a' ∧ IWGrow m m' := by
-  sorry
+  have hC' := hC.frameSM hf
+    (by intro b hb; simp only [List.mem_singleton] at hb; subst hb; decide)
+    (by intro x hx; simp only [List.mem_singleton] at hx; subst hx; decide)
+    (hC.memos.frame hf (by decide) (by decide) (by decide) (by decide))
+  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by decide) (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by decide) (by decide)
+  have hE1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hf.arr (tier1 EREC) (by decide) (by decide)
+  have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (by decide) (by decide)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by decide)
+  have h130 : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := hf.ctl 130 (by decide)
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (by decide)
+  obtain ⟨hCR, hTw⟩ := hC'.checkR
+  refine ⟨⟨⟨hCR, IWOK.frame hf (by decide) (by decide) (by decide) (by decide) hT.stage.iw⟩, hTw,
+    by simp only [pinW, hP]; exact hT.flag⟩, ?_⟩
+  exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE],
+    by simp [erecTop1, h130], fun i _ => by rw [hE1]⟩
 
 /-- The twin side of `lv_leq_top`: the two readbacks, then `Level.leq`. -/
 def leqTopAM (u v : LIdx) : AM (Option Bool) := do
