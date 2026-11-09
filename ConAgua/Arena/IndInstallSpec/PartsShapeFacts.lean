@@ -9,6 +9,7 @@ public import ConAgua.Arena.IndInstall
 public import ConAgua.Arena.IndPartsSpec.MemberNames
 public import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 public import ConAgua.Arena.IndPosSpec.CtxFields
+import all ConAgua.Arena.IndParts
 
 @[expose] public section
 
@@ -29,6 +30,89 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
+
+/-! ## `block_shape_formers` (`BlockShape.formers`), through `member_field_copy` -/
+
+/-- The model of `member_field_copy(d, s, l, k)`: `IW[d + j] := IW[IW[s + j] + k]`. -/
+def fieldCopyW : Nat → Mem → Word → Word → Word → Word → Option Mem
+  | 0, _, _, _, _, _ => none
+  | n + 1, m, d, s, l, k =>
+    if l = 0 then some m
+    else fieldCopyW n (m.set64 IW d (rdW (m.arr64 IW) (rdW (m.arr64 IW) s + k))) (d + 1) (s + 1) (l - 1) k
+
+section arms
+variable (n : Nat) (m : Mem) (d s l k : Word)
+theorem fieldCopyW_nil (hl : l = 0) : fieldCopyW (n + 1) m d s l k = some m := by
+  simp [fieldCopyW, hl]
+theorem fieldCopyW_step (hl : l ≠ 0) :
+    fieldCopyW (n + 1) m d s l k =
+      fieldCopyW n (m.set64 IW d (rdW (m.arr64 IW) (rdW (m.arr64 IW) s + k))) (d + 1) (s + 1) (l - 1) k := by
+  simp [fieldCopyW, hl]
+end arms
+
+grind_pattern [ind_grind] fieldCopyW_nil => fieldCopyW (n + 1) m d s l k
+grind_pattern [ind_grind] fieldCopyW_step => fieldCopyW (n + 1) m d s l k
+
+theorem memberFieldCopy_spec (p : Prog) (hp : p.lookup "member_field_copy" = some memberFieldCopy)
+    (n : Nat) :
+    ∀ (s₀ : St) (d s l k : Word),
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "member_field_copy" [d, s, l, k]
+    ⦃fun _ s' => LocEq s' s₀ ∧ fieldCopyW n s₀.mem d s l k = some s'.mem; ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ d s l k; rw [invoke_eq _ hp]; simp only [callFn, memberFieldCopy]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ d s l k
+    rw [invoke_eq _ hp]
+    simp only [callFn, memberFieldCopy]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish (gen := 20)
+
+/-- **What `member_field_copy` leaves**: word `k` of each member record, the records below `d`. -/
+theorem fieldCopyW_get (n : Nat) (k : Word) : ∀ (m m' : Mem) (d s l : Word), fieldCopyW n m d s l k = some m' →
+    s.toNat + l.toNat ≤ d.toNat → d.toNat + l.toNat ≤ (m.arr64 IW).size →
+    (m.arr64 IW).size < 2 ^ 64 →
+    (∀ j < l.toNat, (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j)) + k).toNat < d.toNat) →
+    (∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
+    ∀ i, (m'.arr64 IW)[i]? =
+      if d.toNat ≤ i ∧ i < d.toNat + l.toNat
+      then some (rdW (m.arr64 IW) (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) + k))
+      else (m.arr64 IW)[i]? :=
+  ipCopyW_get (fun n m d s l => fieldCopyW n m d s l k) (fun m x => rdW (m.arr64 IW) (x + k))
+    (fun x d => (x + k).toNat < d)
+    (fun _ _ _ _ => by simp [fieldCopyW]) (fieldCopyW_nil · · · · · k) (fieldCopyW_step · · · · · k)
+    (fun m d v x hx => rdW_set64_IW_ne m d v (x + k) (by omega))
+    (fun _ _ h => by omega) n
+
+/-- The model of `block_shape_formers(p)` (its copy at `n - 1`). -/
+def formersW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
+  match allocW m (rdW (m.arr64 IW) (p + 1)) with
+  | none => none
+  | some (q, m1) =>
+    match fieldCopyW (n - 1) m1 q (rdW (m1.arr64 IW) p) (rdW (m1.arr64 IW) (p + 1)) 0 with
+    | none => none
+    | some m2 => some ([q, rdW (m2.arr64 IW) (p + 1)], m2)
+
+theorem blockShapeFormers_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "member_field_copy" = some memberFieldCopy)
+    (hp : p.lookup "block_shape_formers" = some blockShapeFormers) (n : Nat) (s₀ : St) (q : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_formers" [q]
+    ⦃fun r s' => LocEq s' s₀ ∧ formersW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockShapeFormers]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hmod : ∀ a m1 m2, allocW s₀.mem (rdW (s₀.mem.arr64 IW) (q + 1)) = some (a, m1) →
+        fieldCopyW n m1 a (rdW (m1.arr64 IW) q) (rdW (m1.arr64 IW) (q + 1)) 0 = some m2 →
+        formersW (n + 1) s₀.mem q = some ([a, rdW (m2.arr64 IW) (q + 1)], m2) := by
+      intro a m1 m2 h1 h2
+      simp [formersW, h1, h2]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n, memberFieldCopy_spec p hc n] <;>
+      finish (gen := 20)
 
 /-- The memory after `block_shape_nest_ctx`'s eleven writes. -/
 def nctxMem (m : Mem) (a b c d e f g h i j k : Word) : Mem :=
