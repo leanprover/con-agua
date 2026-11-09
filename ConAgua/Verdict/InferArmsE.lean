@@ -61,7 +61,7 @@ theorem ensureSortCore_refinesE (p : Prog) (hp : KnotEntryProg p) (hl : InferLea
 
 /-- **The callees' error claims the inference bodies take** (the error half of `InferCallees`):
 every callee outside the verdict closure claims nothing (`nv`), `infer_proj`'s
-(`inferProj_refinesE'`, `InferLeavesE.lean`). -/
+(`inferProj_refinesE`, `InferProj2.lean`). -/
 structure InferCalleesE (p : Prog) : Prop where
   nv : closedNV p L.Checker.nvFns = true
   proj : InferProjOKE p

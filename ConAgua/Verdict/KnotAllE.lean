@@ -2,6 +2,7 @@ module
 
 import ConAgua.Verdict.InferKnotE
 import ConAgua.Verdict.InferLeavesE
+import ConAgua.Arena.InferProj2
 import ConAgua.Verdict.WhnfKnotE
 public import ConAgua.Checker.LoopDeclArm
 public import ConAgua.Checker.LoopDecl
@@ -178,7 +179,7 @@ import all ConAgua.Scan.Line
 The three families' error halves of the knot's slots one level up, put together:
 
 * the `infer`/`infer_io` slots (`inferSlots_stepE`, `InferKnotE.lean`), over `InferCalleesE`:
-  the verdict closure and `infer_proj`'s claim (`inferProj_refinesE'`);
+  the verdict closure and `infer_proj`'s claim (`inferProj_refinesE`);
 * the `whnf_core`/`whnf` slots (`whnfSlotsE_of`, `WhnfKnotE.lean`);
 * the `defeq` slot (`KnotAllProg.defeqSlotE_all`, `DefEqAllE.lean`), over the whnf family's two
   claims (`DefeqWhnfE`), each from its `Whnf*E.lean` proof.
@@ -203,9 +204,7 @@ variable {p : Prog} (hq : KnotAllProg p) (hnv : closedNV p L.Checker.nvFns = tru
 include hq hnv in
 /-- **The inference bodies' callees' error claims** (`InferCalleesE`). -/
 theorem KnotAllProg.inferCE : InferCalleesE p :=
-  ⟨hnv, inferProj_refinesE' p hq.proj hq.projp
-      ⟨coreDen_of, findProj_refines p hq.projp, projFound p hq.projp, erecKept_of hq.hcl, hq.instLP,
-        erecKeptProj_of hq.hcl⟩ hnv⟩
+  ⟨hnv, inferProj_refinesE p hq.proj hq.projp (KnotAllProg.projCallees hq) hnv⟩
 
 include hq hnv in
 /-- **The whnf family's two error claims the `defeq` family takes** (`DefeqWhnfE`). -/
