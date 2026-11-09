@@ -43,12 +43,12 @@ abbrev loopZeroArr (b : TieredArray) : Prop := b ∈ loopZeroArrs
 -/
 
 /-- The `CTL` words the loop needs zero at its start: the core's memo stamps, the number of
-constants (128), of pending checks (130), the promotion memo's words (140‥147),
+constants (128), the promotion memo's words (140‥147),
 `consts_resolve_ffast`'s stamp (158), the inductive stage's memo words (202‥219),
 `instantiate1Lift`'s stamp (52). -/
 def loopZeroCtl (x : Nat) : Prop :=
   x = 48 ∨ x = 50 ∨ x = 54 ∨ x = 56 ∨ x = 58 ∨ x = 152 ∨ x = 154 ∨ x = 156 ∨ x = 158 ∨
-    x = 128 ∨ x = 130 ∨ (140 ≤ x ∧ x ≤ 147) ∨ (202 ≤ x ∧ x ≤ 219) ∨ x = 52 ∨ x = 133
+    x = 128 ∨ (140 ≤ x ∧ x ≤ 147) ∨ (202 ≤ x ∧ x ≤ 219) ∨ x = 52 ∨ x = 133
 
 /-- **The zeros the loop starts from.** -/
 structure LoopZero (m : Mem) : Prop where
@@ -60,7 +60,7 @@ theorem lz_stage {b : ArrId} (h1 : 201 ≤ b) (h2 : b ≤ 208) : loopZeroArr b :
   sorry
 -/
 theorem lzc_pm {x : Nat} (h1 : 140 ≤ x) (h2 : x ≤ 147) : loopZeroCtl x :=
-  .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
+  .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
 
 namespace LoopZero
 variable {m : Mem} (h : LoopZero m)

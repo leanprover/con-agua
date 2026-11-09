@@ -90,7 +90,73 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     ∃ res a', (hpProjT fe f.toNat (decI sn) i.toNat).run a = .ok (res, a') ∧
       CoreAfter dn m m' a' vis fe M eb ∧
       PWD (nameN a'.store.lss.ls.ns) m' (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) res := by
-  sorry
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (headProofProj_spec p hp n ⟨m, Locals.init []⟩ vis f sn i) hc
+  rw [ht] at hW
+  generalize r.headD 0 = x₀ at hW ⊢
+  generalize r.tail.headD 0 = x₁ at hW ⊢
+  generalize r.tail.tail.headD 0 = x₂ at hW ⊢
+  rcases hc1 : callW p n "find_proj" [vis, sn, i] m with _ | ⟨r₁, m₁⟩ <;> rw [hc1] at hW
+  · cases hW
+  obtain ⟨hok, hafter, hres, -⟩ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (hfp n ⟨m, Locals.init []⟩ a dn vis fe M eb sn i hS hsn) hc1
+  have hfx : fe.findProj? (decI sn) i.toNat =
+      decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) i.toNat := hres
+  replace hafter : CoreAfter dn m m₁ a vis fe M eb := hafter
+  generalize ha₁ : a = a₁ at hafter
+  subst ha₁
+  simp only [hppK1] at hW
+  by_cases h0 : r₁.headD 0 = 0
+  · simp only [h0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+    refine ⟨none, a, ?_, hafter, rfl⟩
+    simp only [hpProjT, hfx, decEntry, h0, ↓reduceIte]
+    rfl
+  simp only [h0, ↓reduceIte] at hW
+  obtain ⟨tbl, htbl, -⟩ := hpf n m a dn vis fe M eb sn i r₁ m₁ hS hc1 h0
+  obtain ⟨-, -, hE, -⟩ := hek n "find_proj" _ m r₁ m₁ rfl hc1
+  obtain ⟨hbw, hbe⟩ := decTbl_body (erRdOK m) htbl i
+  simp only [hppB] at hW
+  rw [hE] at hW
+  generalize (if i < erRdT m (r₁.tail.headD 0 + 10) then
+    erRdT m (erRdT m (r₁.tail.headD 0 + 9) + i) else 0) = b at hW hbw hbe
+  obtain ⟨M₁, hS₁, hK₁, hSt₁⟩ := hafter
+  rcases hc2 : callW p n "type_sort_pw" [vis, f, b] m₁ with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
+  · cases hW
+  obtain ⟨res₂, a₂, hrun₂, hRd₂, hd₂⟩ := tsp_call hp hden hlps hS₁ hf hbw hc2
+  have hentry : decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) i.toNat =
+      some (tbl.entry i.toNat) := by
+    simp only [decEntry, h0, ↓reduceIte, htbl, Option.map_some]
+  have hbody : (tbl.entry i.toNat).body = decE b := hbe.symm
+  have hcalc : ∀ res, (typeSortPW fe f.toNat (decE b)).run a = .ok (res, a₂) →
+      (hpProjT fe f.toNat (decI sn) i.toNat).run a =
+      (match res with
+        | some pw => pure (if pw.isNever then some pw else none)
+        | none => pure none : AM (Option PropWhen)).run a₂ := by
+    intro res h
+    simp only [hpProjT, hfx, hentry, StateT.run_bind, hbody, h, except_ok_bind]
+  have hpre := hcalc res₂ hrun₂
+  clear hcalc
+  have hA : CoreAfter dn m m₂ a₂ vis fe M eb := CoreAfter.comp hK₁ hSt₁ hRd₂.core
+  simp only [hppK2] at hW
+  by_cases h1 : r₂.headD 0 = 1
+  · simp only [h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+    rcases res₂ with _ | _ | ps
+    · simp only [PWD] at hd₂; rw [h1] at hd₂; exact absurd hd₂ (by decide)
+    · exact ⟨some .never, a₂, by rw [hpre]; rfl, hA, rfl⟩
+    · rw [h1] at hd₂; exact absurd hd₂.1 (by decide)
+  simp only [h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+  refine ⟨none, a₂, ?_, hA, rfl⟩
+  rw [hpre]
+  rcases res₂ with _ | _ | ps
+  · rfl
+  · simp only [PWD] at hd₂; exact absurd hd₂ h1
+  · rfl
 
 end hpp
 

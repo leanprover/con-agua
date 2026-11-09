@@ -41,7 +41,7 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb sz)) :
   have hz := loadMem_rd b pb sz
   have hc' : 64 ≤ ((loadMem b pb sz).arr64 CTL).size := by have := hc.2.1; simp [ctlMin] at this; omega
   have hp : ((loadMem b pb sz).arr64 POOL).size < 2 ^ 40 := hc.2.2.2.2.1
-  have hp1 : ((loadMem b pb sz).arr64 POOL1).size < 2 ^ 40 := hc.2.2.2.2.2
+  have hp1 : ((loadMem b pb sz).arr64 POOL1).size < 2 ^ 40 := hc.2.2.2.2.2.1
   have hpc : pcap (loadMem b pb sz) = 2 ^ 41 - 1 := pcap_of_small _ ⟨hp, hp1⟩
   have ht0 : (loadMem b pb sz).top = 0 := by simp only [top_rdW, hz]
   have hpt0 : (loadMem b pb sz).ptop0 = 0 := by
@@ -146,6 +146,6 @@ theorem CapsOK.ctl {m : Mem} (h : CapsOK m) : 151 < (m.arr64 CTL).size := by
 
 theorem CapsOK.pool {m : Mem} (h : CapsOK m) : (m.arr64 POOL).size < 2 ^ 40 := h.2.2.2.2.1
 
-theorem CapsOK.pool1 {m : Mem} (h : CapsOK m) : (m.arr64 POOL1).size < 2 ^ 40 := h.2.2.2.2.2
+theorem CapsOK.pool1 {m : Mem} (h : CapsOK m) : (m.arr64 POOL1).size < 2 ^ 40 := h.2.2.2.2.2.1
 
 end L.Checker

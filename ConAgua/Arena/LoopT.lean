@@ -184,45 +184,24 @@ theorem indMemos_wframe : WFrame CTL imA imC (fun m₀ m => IndMemos m₀ → In
   setG _ _ _ _ h h0 := (h h0).frame (A := []) (C := [])
     ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩ (by simp) (by simp)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- `consts_resolve_ffast` keeps `IndMemos`: it writes only its memo (`crfF_frame`). -/
-theorem IndMemos.crfF {m m' : Mem} {args r : List Word} (h : L.Ind.crfF m args = some (r, m'))
-    (hI : IndMemos m) : IndMemos m' :=
-  have hf := L.Ind.crfF_frame h
-  ⟨hI.stage.frame hf (by decide) (by simp), I1Memo.frame hI.i1 hf (by decide) (by simp),
-    L.Ind.crfF_keepsCrOK h hI.cr⟩
--/
+/-- **The leaves of `imFns` keep `IndMemos`** (`consts_resolve_ffast`, `struct_used_later`: each
+writes the inductive memos only through its own memo, which it keeps; their refinements prove it). -/
+def IndLeaves (p : Prog) : Prop :=
+  ∀ g ∈ imLeaves, ∀ n m₀ vs, ⦃fun s => IndMemos m₀ → IndMemos s.mem⦄ invoke p (exec p n) g vs
+    ⦃fun _ s => IndMemos m₀ → IndMemos s.mem; ⊤⦄
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- Every call of a leaf of `imFns` keeps `IndMemos`. -/
-theorem indMemos_leaf {p : Prog} (hp : L.Ind.CrfF p) :
-    ∀ g ∈ imLeaves, ∀ n m₀ vs, ⦃fun s => IndMemos m₀ → IndMemos s.mem⦄ invoke p (exec p n) g vs
-      ⦃fun _ s => IndMemos m₀ → IndMemos s.mem; ⊤⦄ := by
-  intro g hg n m₀ vs
-  simp only [imLeaves, List.mem_singleton] at hg
-  subst hg
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨-, hc⟩ := M.of_run (P := fun t => t = s) rfl hrun (L.Ind.crfF_spec p hp n s vs)
-  exact fun h0 => (hs h0).crfF hc
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A call of a function of `imFns` keeps `IndMemos`.** -/
-theorem invoke_indMemos {p : Prog} (hcl : IndMemoClosed p) (hp : L.Ind.CrfF p) (n : Nat)
+theorem invoke_indMemos {p : Prog} (hcl : IndMemoClosed p) (hl : IndLeaves p) (n : Nat)
     {f : FnName} (hf : f ∈ imFns) (vs : List Word) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃fun _ s => IndMemos s₀.mem → IndMemos s.mem; ⊤⦄ :=
-  invoke_frameL p hcl indMemos_wframe (indMemos_leaf hp) n f hf vs s₀
--/
+  invoke_frameL p hcl indMemos_wframe hl n f hf vs s₀
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The same through `callW`. -/
-theorem callW_indMemos {p : Prog} (hcl : IndMemoClosed p) (hp : L.Ind.CrfF p) {n : Nat}
+theorem callW_indMemos {p : Prog} (hcl : IndMemoClosed p) (hl : IndLeaves p) {n : Nat}
     {f : FnName} (hf : f ∈ imFns) {vs : List Word} {m m' : Mem} {r : List Word}
     (hc : callW p n f vs m = some (r, m')) (hI : IndMemos m) : IndMemos m' := by
-  obtain ⟨s', hs', h⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (invoke_indMemos hcl hp n hf vs _) hc
+  obtain ⟨s', hs', h⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (invoke_indMemos hcl hl n hf vs _) hc
   exact hs' ▸ h hI
--/
 
 /-- **The zeroed memory has well-formed core memos** (empty, epoch `0`): what `TwinMem` needs of
 the loaded memory at the loop's start (open end 5). -/

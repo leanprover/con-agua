@@ -186,13 +186,15 @@ theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt
     (hc : 151 < (mem.arr64 CTL).size) (hW : internAllPinsW rom n mem = some mem') :
     ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internAllPins pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧
-      StateOK a' ∧ RsetR mem' ∧ erecTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' := by
+      StateOK a' ∧ RsetR mem' ∧ erecTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' ∧
+      MemFrame PinsA PinsC mem mem' := by
   obtain ⟨n', m₁, a₁, v, q', hv, hA1, hz, hs, hf, hS, hmo1⟩ :=
     internAllPinsW_fixed rom hr rest hrom n mem mem' a hA hmo hP hst (by omega) hW
   obtain ⟨hok1, -, -, -, -, -, hoff1, -⟩ := internAllPins_run hok hpins hpp hoff hv
-  obtain ⟨pins, ips, a', hrun, hA', hPS, hok', hR', -, -, -, htop, hmo'⟩ := internPinSetsW_dec rom hr n' m₁ a₁ _ q' mem' hA1
+  obtain ⟨pins, ips, a', hrun, hA', hPS, hok', hR', -, -, hfr, htop, hmo'⟩ := internPinSetsW_dec rom hr n' m₁ a₁ _ q' mem' hA1
     hmo1 (hz hR) hok1 (by rw [hs]; exact hst) (by rw [hf.size]; exact hc) (flag_of_off hA1.base hoff1) hS
-  refine ⟨pins, ips, a', ?_, hA', hPS, hok', hR', htop, hmo'⟩
+  refine ⟨pins, ips, a', ?_, hA', hPS, hok', hR', htop, hmo',
+    (hf.mono (fun b hb => by simp [PinsA, hb]) (fun x hx => by simp [PinsC, hx])).trans hfr⟩
   rw [internAllPins_split, run_bind_of _ _ _ _ _ hv]; exact hrun
 
 /-- **`intern_all_pins` over the pin-data buffer refines `internAllPins P`**, `P` the pin list the
@@ -217,7 +219,8 @@ theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UIn
     invoke P (exec P n) "intern_all_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internAllPins pins).run a₀ = .ok (ips, a') ∧ ArenaD s'.mem a' ∧ PinSetsR s'.mem ips ∧
-      ConRon.Bridge.StateOK a' ∧ RsetR s'.mem ∧ erecTop s'.mem ≤ (s'.mem.arr64 EREC).size ∧ ModeOK s'.mem; ⊤⦄ := by
+      ConRon.Bridge.StateOK a' ∧ RsetR s'.mem ∧ erecTop s'.mem ≤ (s'.mem.arr64 EREC).size ∧ ModeOK s'.mem ∧
+      MemFrame PinsA PinsC s₀.mem s'.mem; ⊤⦄ := by
   refine triple_subPB (bs := bs) hno (fun s hs => hs ▸ hbs) ?_
   apply M.triple_of_run
   intro s r s' hs hrun

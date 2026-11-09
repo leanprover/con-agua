@@ -170,18 +170,27 @@ open L.Arena L.Compiler
 names_tree coreTree : coreFns
 
 /-- The arrays of `coreErecA`, as a test. -/
-def coreErecPa (a : TieredArray) : Bool := checkerWordArrays.contains a && a != EREC
+def coreErecPa (a : TieredArray) : Bool :=
+  checkerWordArrays.contains a && a != EREC && a != tier1 EREC
 
 /-- The `CTL` words of `coreErecC`, as a test. -/
-def coreErecPc (w : Word) : Bool := decide (w.toNat < 256)
+def coreErecPc (w : Word) : Bool := decide (w.toNat < 256) && w != 129 && w != 130
 
 theorem coreErecPa_mem (a : TieredArray) (h : coreErecPa a = true) : a ∈ coreErecA := by
   simp only [coreErecPa, Bool.and_eq_true, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
-  simp [coreErecA, List.mem_filter, h.1, h.2]
+  simp [coreErecA, List.mem_filter, h.1.1, h.1.2, h.2]
 
 theorem coreErecPc_mem (w : Word) (h : coreErecPc w = true) : w ∈ coreErecC := by
-  simp only [coreErecPc, decide_eq_true_eq] at h
-  simp only [coreErecC, List.mem_map, List.mem_range]
-  exact ⟨w.toNat, h, UInt64.ofNat_toNat⟩
+  simp only [coreErecPc, Bool.and_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq] at h
+  obtain ⟨⟨hl, h1⟩, h2⟩ := h
+  simp only [coreErecC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq]
+  refine ⟨w.toNat, ⟨hl, fun e => h1 ?_, fun e => h2 ?_⟩, UInt64.ofNat_toNat⟩ <;>
+    exact UInt64.toNat_inj.mp (by simpa using e)
+
+/-- Every function of the checker passes the core's per-function check. -/
+prog_all checkerProg_coreChk : checkerProg (wsChk CTL coreErecPa coreErecPc coreTree)
+
+theorem checkerProg_coreErec : closedA checkerProg coreErecA coreErecC coreFns = true :=
+  closedW_of_all coreTree.eq coreErecPa_mem coreErecPc_mem checkerProg_coreChk
 
 end L.Checker
