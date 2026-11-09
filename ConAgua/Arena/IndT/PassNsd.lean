@@ -22,13 +22,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-- A refinement under a stronger error assumption `G'` from one under `G`. -/
-theorem RefE.weakenG {α β : Type} {G G' : Prop} {x : Except Err α} {T : AM β} {a : AState}
-    {R : α → β → AState → Prop} (hG : G' → G) (h : RefE G x T a R) : RefE G' x T a R := by
-  cases x with
-  | ok v => exact h
-  | error e => exact fun g => h (hG g)
-
 section
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name}
 

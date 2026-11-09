@@ -108,7 +108,7 @@ theorem csa_ref (hP : FkcProg p) (hGc : G → CoreStubsE p) (d : Word) (n : Nat)
     ∀ (m : Mem) (a : AState) (t ao al : Word) (ds : List EIdx) (dsP : List ConLeche.Expr)
       (tP : ConLeche.Expr),
     StageC dn vis fe env m a → AbsOK m → H t → decHL m ao.toNat al.toNat = some ds →
-    ao.toNat + al.toNat ≤ iwTop m → denoteE a.store (decI t) = some tP →
+    (al = 0 ∨ ao.toNat + al.toNat ≤ iwTop m) → denoteE a.store (decI t) = some tP →
     Frontend.denoteEList a.store ds = some dsP → ConLeche.Expr.WScoped d.toNat tP →
     (∀ x ∈ dsP, ConLeche.Expr.WScoped d.toNat x) →
     RefE G (csaE p n m vis d t ao al) (ConRon.Arena.checkSpineAt V fe d.toNat (decI t) ds) a
@@ -124,6 +124,7 @@ theorem csa_ref (hP : FkcProg p) (hGc : G → CoreStubsE p) (d : Word) (n : Nat)
     have : ds = [] := by subst hl0; simpa [decHL, hslice?] using hds.symm
     subst this
     exact RefE.ret rfl ⟨InsAt.refl hC hA, id⟩
+  replace hdb : ao.toNat + al.toNat ≤ iwTop m := hdb.resolve_left hl0
   obtain ⟨w, xs, rfl, hw0, hwl, hxs⟩ := decHL_cons hds hl0 (by omega)
   have hwH : H w := hwl
   have hal1 : 1 ≤ al.toNat := Nat.pos_of_ne_zero fun h0 => hl0 (UInt64.toNat_inj.mp (by simpa using h0))
@@ -209,7 +210,7 @@ theorem csa_ref (hP : FkcProg p) (hGc : G → CoreStubsE p) (d : Word) (n : Nat)
   have k24 := k23.trans k4
   -- the rest of the spine
   have hR := ih (by omega) m4 a4 (ri.headD 0) (ao + 1) (al - 1) xs asP (bP.instantiate1 aP 0) k24.stage
-    k24.abs hb2H (k24.decHL hxs hb1) (k24.top hb1)
+    k24.abs hb2H (k24.decHL hxs hb1) (.inr (k24.top hb1))
     (by rw [hb2d]; exact h47 _ hb3) (ConRon.Bridge.denoteEList_ext k24.core.ext _ _ hdas)
     (ConLeche.Expr.WScoped.instantiate1_gen hwa 0 hwt.2) (fun x hx => hwds x (List.mem_cons_of_mem _ hx))
   rw [hb2d] at hR
@@ -225,7 +226,7 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
     (hGc : G → CoreStubsE p) (hGw : G → WhnfTopE p) (d : Word) (k : Nat) (hk62 : k ≤ 2 ^ 62) {m : Mem}
     {a : AState} {c us dO dL : Word} {ds : List EIdx} {cP : ConLeche.Name} {usP : List ConLeche.Level}
     {dsP : List ConLeche.Expr} (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hcH : H c) (hlH : H us)
-    (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : dO.toNat + dL.toNat ≤ iwTop m)
+    (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : dL = 0 ∨ dO.toNat + dL.toNat ≤ iwTop m)
     (hcP : denoteN a.store.ns (decI c) = some cP) (husP : denoteLs a.store.lss (decI us) = some usP)
     (hdsP : Frontend.denoteEList a.store ds = some dsP) (hwds : ∀ x ∈ dsP, ConLeche.Expr.WScoped d.toNat x) :
     RefE G (fkcE p k m vis d c us dO dL) (ConRon.Arena.familyKeyCheck V fe d.toNat (decI c) (decI us) ds) a
@@ -365,8 +366,13 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
     exact hP3m.fr ((posmemo_cvLpsW_mfr hlp).trans (MFr.of_frame hf6 hfA hfC))
   -- `check_spine_at`
   have hcsa := csa_ref hq henv hP hGc d k (by omega) m6 a4 (r6.headD 0) dO dL ds dsP _ hC6 hA6' htlH
-    (by rw [decHL_agree (RdS.of_grow hg36) (fun j hj => by omega)]; exact hds)
-    (by have := hg36.iw; omega) (by rw [htld]; exact htl)
+    (by
+      rw [decHL_agree (RdS.of_grow hg36) (fun j hj => by
+        rcases hdsb with h0 | hb
+        · subst h0; simp at hj
+        · omega)]
+      exact hds)
+    (hdsb.imp_right fun hb => by have := hg36.iw; omega) (by rw [htld]; exact htl)
     (ConRon.Bridge.denoteEList_ext c24.ext _ _ hdsP)
     (ConLeche.Expr.WScoped.of_not_hasFvar (by rw [ConLeche.Expr.hasFvar_instantiateLevelParams]; exact hcl))
     hwds

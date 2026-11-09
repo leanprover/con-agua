@@ -143,7 +143,7 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
   -- the family at the key, typed
   have hdsD1 : decHL m1 dO.toNat dL.toNat = some ds := (hds.grow (OMono.decHL _ _) hg1).get (OMono.decHL _ _)
   have hR2 := fkc_ref hq henv (G := NbG p) hFk hIlpf (fun hG => hG.nv) (fun hG => hG.core) (fun hG => hG.whnf)
-    hi n hn hC1 hA1 hrnH hus hdsD1 (by have := hg1.iw; omega) hhn' (ConRon.Bridge.denoteLs_ext husP p1.ext)
+    hi n hn hC1 hA1 hrnH hus hdsD1 (.inr (by have := hg1.iw; omega)) hhn' (ConRon.Bridge.denoteLs_ext husP p1.ext)
     (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) hwds
   have hsp2 := fkcE_spec p hFk n ⟨m1, Locals.init []⟩ vis hi (rn.headD 0) us dO dL
   cases h2 : callE p n "family_key_check" [vis, hi, rn.headD 0, us, dO, dL] m1 with
