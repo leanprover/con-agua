@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.DeclStep
 public import ConAgua.Arena.IndRealWalk
 public import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.ErecRd
 import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -167,10 +168,12 @@ theorem iwReset_specW (p : Prog) (hp : p.lookup "iw_reset" = some iwReset) (n : 
 /-- The model of `cv_lps(q)` (its copy runs at `n - 1`). -/
 def cvLpsW : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
-  | n + 1, m, q => erToIwW n m (rdW (m.arr64 EREC) (q + 1)) (rdW (m.arr64 EREC) (q + 2))
+  | n + 1, m, q => erToIwW n m (rdW (m.arr64 (tierA EREC ((q + 1) >>> 40))) ((q + 1) &&& 1099511627775))
+      (rdW (m.arr64 (tierA EREC ((q + 2) >>> 40))) ((q + 2) &&& 1099511627775))
 
 theorem cvLpsW_step (n : Nat) (m : Mem) (q : Word) :
-    cvLpsW (n + 1) m q = erToIwW n m (rdW (m.arr64 EREC) (q + 1)) (rdW (m.arr64 EREC) (q + 2)) :=
+    cvLpsW (n + 1) m q = erToIwW n m (rdW (m.arr64 (tierA EREC ((q + 1) >>> 40))) ((q + 1) &&& 1099511627775))
+      (rdW (m.arr64 (tierA EREC ((q + 2) >>> 40))) ((q + 2) &&& 1099511627775)) :=
   rfl
 
 grind_pattern [ind_grind] cvLpsW_step => cvLpsW (n + 1) m q
@@ -181,7 +184,15 @@ theorem cvLps_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_lps" [q]
     ⦃fun r s' => LocEq s' s₀ ∧ cvLpsW n s₀.mem q = some (r, s'.mem) ∧
       r = [r.headD 0, r.tail.headD 0]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, cvLps]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        erToIw_specW2 p ha hc he n] <;>
+      finish (gen := 20)
 
 end L.Arena
 
@@ -192,24 +203,6 @@ namespace L.Arena
 open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-- **`er_to_iw` under the stage relation**: the copy decodes as the `EREC` slice, the stage
-relation holds after it, the pool only grew. A zero-length copy needs no source bound. -/
-theorem erToIwW_stage {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erToIwW n m o l = some (r, m'))
-    (hS : StageR vis fe m a) (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
-    r = [r.headD 0, r.tail.headD 0] ∧ r.tail.headD 0 = l ∧
-    (∀ {k : IdxKind}, (decHL m' (r.headD 0).toNat l.toNat : Option (List (Idx k))) =
-      hslice? (erA m) o.toNat l.toNat) ∧
-    StageR vis fe m' a ∧ IWGrow m m' ∧ (r.headD 0).toNat + l.toNat ≤ iwTop m' := by
-  sorry
-
-/-- **`er_to_iw` writes only the pool and its top** (`IW`, `CTL[200]`). -/
-theorem erToIwW_frame {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erToIwW n m o l = some (r, m'))
-    (hS : StageR vis fe m a) (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
-    MemFrame [IW] [200] m m' := by
-  sorry
 
 /-- Destructuring a constant value: its name, its universe-parameter slice, its type. -/
 theorem decCV_slice {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
@@ -240,18 +233,42 @@ theorem decCV_typeW {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (a
   exact hd?_some hty
 
 /-- A grown pool keeps every record of the old one. -/
-theorem IWGrow.erecExt {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erA m') := by
-  sorry
+theorem IWGrow.erecExt {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erA m') :=
+  h.erecGrow.ext
+
+/-- `iw_reset` keeps `IWOK`. -/
+theorem iwOK_reset {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 200 0) := by
+  have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0
+  have hE : (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
+  have hE1 : (m.set64 CTL 200 0).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
+    hf.arr (tier1 EREC) (by simp) (by decide)
+  have h129 : erTop (m.set64 CTL 200 0) = erTop m := by simp only [erTop, hf.ctl 129 (by simp)]
+  have h130 : erecTop1 (m.set64 CTL 200 0) = erecTop1 m := by simp only [erecTop1, hf.ctl 130 (by simp)]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [iwTop, rdW_set64]; split
+    · simp
+    · rw [hf.size IW]; exact h.iw
+  · rw [h129, hE]; exact h.er
+  · rw [hf.size IW]; exact h.iwSize
+  · rw [hE]; exact h.erSize
+  · rw [hf.size CTL]; exact h.ctl
+  · rw [h130, hE1]; exact h.er1
+  · rw [hE1]; exact h.er1Size
+  · rw [hE]; exact h.erCap
+  · rw [hE1]; exact h.er1Cap
 
 /-- The memory after `iw_reset` is in the stage relation. -/
 theorem iwReset_stage {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (hS : StageR vis fe m a) :
     StageR vis fe (m.set64 CTL 200 0) a ∧ m.set64 CTL 200 0 = m.set64 CTL 200 0 ∧
       (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC ∧ erTop (m.set64 CTL 200 0) = erTop m := by
-  sorry
+  have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0
+  have hE : (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
+  have h129 : erTop (m.set64 CTL 200 0) = erTop m := by simp only [erTop, hf.ctl 129 (by simp)]
+  exact ⟨⟨CheckR.frame_hi (by simp) (by simp) hf hS.check, iwOK_reset hS.iw⟩, rfl, hE, h129⟩
 
-theorem erecP_reset (m : Mem) : erecP (m.set64 CTL 200 0) = erecP m := by
-  sorry
+theorem erecP_reset (m : Mem) : erecP (m.set64 CTL 200 0) = erecP m :=
+  erecP_frame (MemFrame.setCtl m 200 0) (by decide) (by decide) (by decide) (by decide)
 
 theorem word_add_toNat (g : Word) (k : Nat) (h : g.toNat + k < 2 ^ 64) :
     (g + UInt64.ofNat k).toNat = g.toNat + k := by
