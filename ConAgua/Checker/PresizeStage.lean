@@ -173,8 +173,9 @@ theorem presizeStage {p : Prog} (hp : p.lookup "presize_tables" = some presizeTa
     (ha : p.lookup "app_presize" = some appPresizeL) (hl : p.lookup "lam_presize" = some lamPresizeL)
     (hf : p.lookup "forall_presize" = some forallPresizeL) :
     StageSpec p "presize_tables" (fun m => m = loadMemM b pb sz w ∧ CapsOK (loadMem b pb sz) ∧ PbPre pb)
-      (fun _ => PsPre b pb sz w) := by
-  sorry
+      (fun _ => PsPre b pb sz w) := fun n _ s₀ =>
+  triple_post (presizeTables_spec p hp h2 ha hl hf n s₀) fun _ _ ⟨hl', a, l, f, e⟩ =>
+    ⟨hl', fun ⟨hm, hc, hpre⟩ => ⟨⟨a, l, f, by rw [e, hm]; rfl⟩, hc, hpre⟩⟩
 
 theorem psAllM_arr8 (a l f : Word) (x : ArrId) :
     (psAllM (loadMemM b pb sz w) a l f).arr8 x = (loadMem b pb sz).arr8 x := by
@@ -187,7 +188,50 @@ theorem irpStage_ps (hpb : pb.size < 2 ^ 63) :
     RelSpec checkerProg "intern_reserved_pins" (PsPre b pb sz w)
       fun _ m => ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧
         R3 (loadMem b pb sz) m pb a' := by
-  sorry
+  intro n _hn s₀ ⟨⟨a, l, f, hm⟩, hc, hpre⟩
+  have hirp := checkerProg_internReservedPins_PB pb.data.toList (by simpa [RomOK] using hpb) hpre n
+    s₀ (AState.init EStore.empty) (by rw [hm, psAllM_arr8]; exact loadMem_pb b pb sz)
+    (by rw [hm]; exact arenaD_ps b pb sz hc a l f w)
+    (by rw [hm]; exact Or.inr (by
+          show (rdW ((psAllM (loadMemM b pb sz w) a l f).arr64 CTL) 0).toNat < 2 ^ 40
+          rw [psAllM_arr_ne _ _ _ _ (by decide) (by decide) (by decide)]
+          show (rdW ((loadMem b pb sz).arr64 CTL) 0).toNat < 2 ^ 40
+          rw [loadMem_rd]; decide))
+  refine triple_post (triple_and hirp (stage_since n (preLoop_mem "intern_reserved_pins"
+    (by decide +kernel)) s₀)) fun _ s' ⟨⟨hl, hok, hA, hfull, hp0, hfr, hmo⟩, _, hk, hpf⟩ => ⟨hl, ?_⟩
+  have hrun := AM.run_of_ok _ _ hok
+  have hrun' : internReservedPins (AState.init EStore.empty) =
+      .ok ((), AM.st internReservedPins (AState.init EStore.empty)) := hrun
+  obtain ⟨hokA, -, hpinsA, hppA, hoffA, -, hcachesA⟩ :=
+    ConRon.Bridge.internReservedPins_run ⟨EStore.empty_wf⟩ rfl hrun'
+  refine ⟨_, hrun', ?_⟩
+  rw [hm] at hk hpf hfr
+  have hk0 : L.Keep (loadMem b pb sz) (psAllM (loadMemM b pb sz w) a l f) :=
+    psAllM_keep (loadMemM b pb sz w) a l f
+  have hf0 : MemFrame [↑ASLOT, ↑LASLOT, ↑FASLOT] [] (loadMem b pb sz)
+      (psAllM (loadMemM b pb sz w) a l f) :=
+    have h := psAllM_frame (loadMemM b pb sz w) a l f
+    ⟨h.arr, h.ctl, h.size⟩
+  have hk' : L.Keep (loadMem b pb sz) s'.mem := hk0.trans hk
+  have hpf' : MemFrame preLoopA preLoopC (loadMem b pb sz) s'.mem :=
+    (hf0.mono (by decide) (by simp)).trans ⟨hpf.arr, hpf.ctl, hpf.size⟩
+  have hfr' : MemFrame PinA StoreC (loadMem b pb sz) s'.mem :=
+    (hf0.mono (by decide) (by simp)).trans ⟨hfr.arr, hfr.ctl, hfr.size⟩
+  refine ⟨⟨hk', hc, by simpa [PbPre] using hpre, hpf'⟩, hA, ?_, ?_, ?_, hfull, hp0,
+    ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_, hmo⟩
+  · exact (stateDR_loadMem b pb sz hc).frame hfr' (pinA_not (by decide) (by decide))
+      (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide))
+      (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide)) pinA_idArrs storeC_idCtl
+  · exact (rsetR_loadMem b pb sz hc).frame hfr' (pinA_not (by decide) (by decide))
+      (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
+  · have := hfr'.ctl 131 (not_mem_storeC _ (by decide))
+    simp only [stkTop] at this ⊢
+    rw [this]; exact stkTop_loadMem b pb sz
+  · have z := loadMem_rd b pb sz
+    exact HZ.frame ⟨z _ _, z _ _, z _ _, z _ _, z _ _, z _, z _⟩ hfr' (pinA_not (by decide) (by decide))
+      (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
+      (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
+
 
 
 end
