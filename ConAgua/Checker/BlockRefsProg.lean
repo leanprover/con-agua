@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Checker.IndDeclConstsProg
 public import ConAgua.Arena.IndT.BlockCS
+public import ConAgua.Arena.IndT.BlockWM
 meta import ConAgua.Checker.IndDeclConstsProg
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
@@ -176,7 +177,7 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
   have hF : FlushProg (Prog.subPB bs checkerProg) := by prog_bundle []
   have hnv : VerdictCtxU (Prog.subPB bs checkerProg) → closedNV (Prog.subPB bs checkerProg) nvFns = true :=
     fun hG => hG.nv
-  -- ronsync2 p3e: names, reduce_members, block_is_rec, block_shape_with_members, the pass, the tail,
+  -- ronsync2 p3e: names, reduce_members, block_is_rec, the pass, the tail,
   -- ifenv_push_delta: their contracts still to prove
   have hfl : FlushRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     flushRefS_of (dn := dn) hF hnv
@@ -184,6 +185,9 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
     brRefS_of H.toTablesProg.toBlockProg.toRecsProg H.leaf hnv
   have hbt : BtRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) :=
     btRefS_of H.toTablesProg H.leaf hnv
-  exact ⟨look, sorry, sorry, hfl, sorry, sorry, sorry, sorry, hbr, hbt, sorry⟩
+  have hwl : BswmLook (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hwm : BswmRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    bswmRefS_of hwl hnv
+  exact ⟨look, sorry, sorry, hfl, sorry, hwm, sorry, sorry, hbr, hbt, sorry⟩
 
 end L.Checker
