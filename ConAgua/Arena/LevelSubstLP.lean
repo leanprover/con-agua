@@ -15,20 +15,17 @@ import Std.WP.Triple.SpecLemmas
 /-!
 # The `instLP` family's own instances of lane `levels`' substitution functions
 
-`LevelSubstL.lean`'s `lv_lookup`, `lv_substl`, `lv_spw`, `lv_substpw` are generic in their arrays
-(the models `lookupW KA VA`, `substLW KA VA`, `spwW KA VA PA`, `substPWW KA VA PA`), but they call
-each other by name, and one name has one body project-wide: lane `defeq2` binds `lv_lookup` to
-`lvLookupG EREC POOL` (`field_sort_zero`, `PropRead`) and `lv_spw` to `lvSpwG LH`. The `instLP`
-family keeps its keys on the spine stack (`keys_push`: the record pool's and lane `induct`'s `IW`
-slices share one walk) and `caps_never_zero`'s datum names in the record pool, so it gets the same
-four functions under its own names, at fixed arrays:
+`LevelSubstL.lean`'s `lv_lookup`, `lv_substl` are generic in their arrays
+(the models `lookupW KA VA`, `substLW KA VA`), but they call each other by name, and one name has
+one body project-wide: lane `defeq2` binds `lv_lookup` to `lvLookupG EREC POOL` (`field_sort_zero`,
+`PropRead`). The `instLP` family keeps its keys on the spine stack (`keys_push`: the record pool's
+and lane `induct`'s `IW` slices share one walk), so it gets the two functions under its own names,
+at fixed arrays:
 
 * `lp_lookup` = `lvLookupG SPN POOL` renamed (model `lookupW (keyA SPN) POOL`);
 * `lp_substl` = `lvSubstL` calling `lp_lookup`/`lp_substl` (model `substLW (keyA SPN) POOL`);
-* `lp_spw` = `lvSpwG EREC` calling `lp_lookup`/`lp_spw` (model `spwW (keyA SPN) POOL EREC`);
-* `lp_substpw` = `lvSubstPW` calling `lp_spw` (model `substPWW (keyA SPN) POOL EREC`).
 
-The models and their refinements (`lookupW_ok`, `substLW_ok`, `spwW_ok`, …) are lane `levels`'
+The models and their refinements (`lookupW_ok`, `substLW_ok`) are lane `levels`'
 generic ones; only the call-level specs are restated here.
 -/
 
@@ -63,26 +60,6 @@ con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst.go -/
   if g == 1 { x := call lh_mk(1, x, 0); return x };
   y := call lp_substl(b, ko, kc, vo, vc);
   x := call lh_mk(g, x, y);
-  return x
-}
-
-/-- `lv_spw` over `lp_lookup`, the datum's names in the record pool.
-con-leche: ConLeche/Kernel/Level.lean:215-221 ConLeche.Level.substPW -/
-@[no_expose] def lpSpw : FunDecl := lfn (po, pc, ko, kc, vo, vc) locals (f, v, x, w) {
-  if pc == 0 { return 0 };
-  w := EREC⦃po⦄;
-  (f, v) := call lp_lookup(ko, kc, vo, vc, w);
-  if f != 0 { x := call lv_zero(v) } else { x := call lh_push(w); x := 0 };
-  if x != 0 { return 1 };
-  x := call lp_spw(po + 1, pc - 1, ko, kc, vo, vc);
-  return x
-}
-
-/-- `lv_substpw` over `lp_spw`.
-con-leche: ConLeche/Kernel/Level.lean:215-221 ConLeche.Level.substPW -/
-@[no_expose] def lpSubstPW : FunDecl := lfn (kd, po, pc, ko, kc, vo, vc) locals (x) {
-  if kd == 0 { return 1 };
-  x := call lp_spw(po, pc, ko, kc, vo, vc);
   return x
 }
 
@@ -121,33 +98,6 @@ theorem lpSubstL_spec (hpn : p.lookup "lv_node" = some lvNode) (hpm : p.lookup "
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvNode_spec p hpn n,
         lhMk_spec p hpm n, lpLookup_spec p hpl n, ih] <;>
       finish (gen := 20)
-
-include hpl in
-theorem lpSpw_spec (hpn : p.lookup "lv_node" = some lvNode) (hpp : p.lookup "lh_push" = some lhPush)
-    (hpz : p.lookup "lv_zero" = some lvZero) (hp : p.lookup "lp_spw" = some lpSpw) (n : Nat) :
-    ∀ (s₀ : St) (po pc ko kc vo vc : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lp_spw" [po, pc, ko, kc, vo, vc]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      spwW (keyA SPN) POOL EREC n s₀.mem po pc ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
-
-include hpl in
-theorem lpSubstPW_spec (hpn : p.lookup "lv_node" = some lvNode)
-    (hpp : p.lookup "lh_push" = some lhPush) (hpz : p.lookup "lv_zero" = some lvZero)
-    (hps : p.lookup "lp_spw" = some lpSpw) (hp : p.lookup "lp_substpw" = some lpSubstPW)
-    (n : Nat) (s₀ : St) (kd po pc ko kc vo vc : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lp_substpw" [kd, po, pc, ko, kc, vo, vc]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      substPWW (keyA SPN) POOL EREC n s₀.mem kd po pc ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, lpSubstPW]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        lpSpw_spec p hpl hpn hpp hpz hps n] <;>
-      finish (gen := 20) [substPWW]
 
 end specs
 

@@ -16,7 +16,7 @@ import ConAgua.Arena.WhnfSlotRefine
 
 Lane `whnf` stated each refinement of the whnf family over callee bundles (`WhnfCallees`,
 `CoreCallees`, `IotaCallees`, `ProjCallees`, `SupKeep`) and tagged a copy that instantiated them
-with `sorry`'d stubs (`whnfCallees_stub`, `coreCallees_stub`, `iotaCallees_stub`,
+with unproved stubs (`whnfCallees_stub`, `coreCallees_stub`, `iotaCallees_stub`,
 `supKeep_twin`). `DefEqKnot.lean` builds every bundle from real proofs under `KnotAllProg p`
 (program lookups only), so the tagged statements are restated here over `KnotAllProg p` and the
 stubs are gone. Each statement is the old one with its program hypotheses (`WhnfCoreProg`,
@@ -189,33 +189,31 @@ theorem instSpinePins_refines :
   instSpinePins_refines' p hq.body.iota (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
     (ErecKeptInst.of_closed hq.hcl)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in
 @[refines ConRon.Arena.recFireArgs]
 theorem recFireArgs_refines :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao an rP ctorParams : Word) (rl : IRecRule)
+    (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao an rP cnP : Word) (rl : IRecRule)
     (lps : List NIdx) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
     hslice? (erecP s₀.mem) po.toNat pc.toNat = some lps → SpineR s₀.mem ao an args →
     (fireKind = 1 → ∃ lvls pins, rl.fire = .nested lvls pins ∧ SpineR s₀.mem pvo pvc pins.toArray) →
-    (fireKind ≠ 1 → rl.fire = .plain) → rl.ctorParams = ctorParams.toNat →
+    (fireKind ≠ 1 → rl.fire = .plain ∨ ∃ lvls, rl.fire = .levels lvls) →
     ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
     (fireKind = 1 → pvo.toNat + pvc.toNat ≤ (spTop s₀.mem).toNat) →
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rec_fire_args" [fireKind, pvo, pvc, po, pc, us, ao, an, rP, ctorParams]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ ∧
-      CoreAfterG dn s₀.mem s'.mem (AM.st (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀) vis
+    invoke p (exec p n) "rec_fire_args" [fireKind, pvo, pvc, po, pc, us, ao, an, rP, cnP]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (recFireArgs rl cnP.toNat lps (decI us) args.toList rP.toNat) a₀ ∧
+      CoreAfterG dn s₀.mem s'.mem (AM.st (recFireArgs rl cnP.toNat lps (decI us) args.toList rP.toNat) a₀) vis
         fe MM eb ∧
-      ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
-        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
-  sorry
-
--/
+      ∃ xs, AM.res (recFireArgs rl cnP.toNat lps (decI us) args.toList rP.toNat) a₀ = xs ∧
+        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
+  recFireArgs_refines' p hq.body.iota (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
+    (ErecKeptInst.of_closed hq.hcl)
 
 include hq in
 @[refines ConRon.Arena.andRescueSlots]
-theorem andRescueSlots_refines : AndRescueSlotsOK p := by
-  sorry
+theorem andRescueSlots_refines : AndRescueSlotsOK p :=
+  andRescueSlots_refines' p hq.body.iota (KnotAllProg.projC hq)
 
 include hq in
 @[refines ConRon.Arena.fabScopeOk]
@@ -240,21 +238,19 @@ theorem majorToCtor_refines : MajorToCtorOK p :=
   majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
     (ErecPKept.of_closed hq.hcl) (KnotAllProg.projC hq) hq.prop (KnotAllProg.instLP hq)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq in
 @[refines ConRon.Arena.prepareMajor]
 theorem prepareMajor_refines :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
+    (MM : ModeMaps) (eb mode d rec isK ro rc major : Word) (rules : List IRecRule),
     CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW major →
     decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules →
-    CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, ro, rc, major]
-      (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules
-        (decE major)) decH s₀ a₀ dn vis fe MM eb :=
+    CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, isK, ro, rc, major]
+      (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec)
+        (isK != 0) rules (decE major)) decH s₀ a₀ dn vis fe MM eb :=
   prepareMajor_refines' p hq.m2c.toIotaProg4 (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
-    (majorToCtor_refines hq) (ErecKeptKnot.of_closed hq.hcl)
--/
+    (majorToCtor_refines hq) (ErecKeptRec.of_closed hq.hcl)
 
 include hq in
 /-- **`iota_rec_at` refines `iotaRecAt`** (the statement is `WhnfCore.lean`'s `IotaRecAtOK`, what
