@@ -44,12 +44,4 @@ structure CheckDeclProg (p : Prog) : Prop where
   op : p.lookup "check_decl_opaque" = some checkDeclOpaque
   qu : p.lookup "check_decl_quot" = some checkDeclQuot
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- `subst_const0` at the walk fuel: helper `decls3-nat`'s `sc0_ref`. -/
-theorem substC0_of {p : Prog} (hN : NatSubProg p) :
-    ∀ dn vis fe, SubstC0 p dn vis fe := by
-  sorry
-
--/
-
 end L.Arena

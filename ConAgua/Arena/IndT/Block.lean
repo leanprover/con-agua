@@ -66,7 +66,7 @@ theorem checkBlock_refinesC {G : Prop} {p : Prog} {dn : NIdx → Option ConLeche
     (hC : StageC dn vis fe env m a) (hfold : ConRon.Bridge.FoldOK env fe a₀)
     (hx : ConRon.Arena.Ext a₀.store a.store)
     (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsl : ShapeSl m p0)
-    (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hbb : bO.toNat + bL.toNat ≤ erTop m)
+    (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hbb : bO.toNat + bL.toNat < 2 ^ 64)
     (hbP : Frontend.denoteCIList a.store block = some blockP)
     (hdP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
     (hd : ∀ ms ∈ bsP.members, ms.declared = ms.cvT) (hlpd : BlockLpsDn dn block)

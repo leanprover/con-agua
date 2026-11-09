@@ -371,7 +371,7 @@ theorem cid_ref (P : CidProg2 p) {G : Prop} (hGU : G → VerdictCtxU p)
     {N : Nat} (hN : N ≤ 2 ^ 62 + 1) {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {o l w : Word} {block : List IConstantInfo} {pins : List INatOpPinSet}
     {env : ConLeche.Env} (hT : StageT dn vis fe m a) (hfold : ConRon.Bridge.FoldOK env fe a)
-    (hdec : L.Front.decCIsR (erecP m) o.toNat l.toNat = some block) (hb : o.toNat + l.toNat ≤ erTop m)
+    (hdec : L.Front.decCIsR (erecP m) o.toNat l.toNat = some block) (hb : o.toNat + l.toNat < 2 ^ 64)
     (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block w.toNat) = some x) (hM : IndMemos m)
     (hlpd : BlockLpsDn dn block) :
     RefE G (cidE p N m vis o l w) (checkDecl V pins fe (.indDecl block w.toNat)) a
@@ -455,7 +455,7 @@ theorem cid_ref (P : CidProg2 p) {G : Prop} (hGU : G → VerdictCtxU p)
   have hC4 : StageC dn vis fe env s4.mem a4 := StageC.of_check hC1 hS4 hA4 hchk4 hps4.ext
   have hbP4 := ConRon.Bridge.denoteCIList_mono hps4.ext _ _ hbP1
   have hblk4 := hblk1.grow (decEBlk_mono _ _ _) hg4
-  have hb4 : o.toNat + l.toNat ≤ erTop s4.mem := Nat.le_trans hBA1.2 hg4.er
+  have hb4 : o.toNat + l.toNat < 2 ^ 64 := hBA1.2
   cases x4 with
   | none =>
     have z4 : r4.headD 0 = 0 := hR4
@@ -491,7 +491,7 @@ theorem checkIndDecl_refinesC (P : CidProg2 p) {G : Prop} (hGU : G → VerdictCt
     {pins : List INatOpPinSet} {env : ConLeche.Env}
     (h : callW p n "check_ind_decl" [vis, o, l, w] m = some (r, m')) (hT : StageT dn vis fe m a)
     (hfold : ConRon.Bridge.FoldOK env fe a)
-    (hdec : L.Front.decCIsR (erecP m) o.toNat l.toNat = some block) (hb : o.toNat + l.toNat ≤ erTop m)
+    (hdec : L.Front.decCIsR (erecP m) o.toNat l.toNat = some block) (hb : o.toNat + l.toNat < 2 ^ 64)
     (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block w.toNat) = some x) (hM : IndMemos m)
     (hlpd : BlockLpsDn dn block) :
     ∃ fe' a', (checkDecl V pins fe (.indDecl block w.toNat)).run a = .ok (fe', a') ∧

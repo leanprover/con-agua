@@ -272,7 +272,7 @@ def IndArmSpec (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
   ∀ (pins : List INatOpPinSet) (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState) (vis : Word)
     (fe : IFEnv) (env : ConLeche.Env) (block : List IConstantInfo) (nP : Nat) (o l w : Word)
     (r : List Word), l.toNat = block.length → w.toNat = nP →
-    L.Front.decCIsR (erecP m) o.toNat l.toNat = some block → o.toNat + l.toNat ≤ erTop m →
+    L.Front.decCIsR (erecP m) o.toNat l.toNat = some block → o.toNat + l.toNat < 2 ^ 64 →
     FrontBlock block → StageT dn vis fe m a → ConRon.Bridge.StateOK a → FoldOK env fe a →
     (∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x) → BlockLpsDnA dn block →
     (∃ pinsP, PinsDenote a.store pins pinsP) →
@@ -286,7 +286,7 @@ def IndArmSpecE (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
   ∀ (pins : List INatOpPinSet) (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (vis : Word)
     (fe : IFEnv) (env : ConLeche.Env) (block : List IConstantInfo) (nP : Nat) (o l w : Word),
     l.toNat = block.length → w.toNat = nP →
-    L.Front.decCIsR (erecP m) o.toNat l.toNat = some block → o.toNat + l.toNat ≤ erTop m →
+    L.Front.decCIsR (erecP m) o.toNat l.toNat = some block → o.toNat + l.toNat < 2 ^ 64 →
     FrontBlock block → StageT dn vis fe m a → ConRon.Bridge.StateOK a → FoldOK env fe a →
     (∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x) → BlockLpsDnA dn block →
     (∃ pinsP, PinsDenote a.store pins pinsP) →
@@ -441,8 +441,8 @@ theorem cd_ref {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
         by rw [pinW_frame hf1 (by decide)]; exact hS.flag⟩
     have hfs1 := (run_memFrame hFcl (hFs _ (by decide)) (run_of_callW c1)).1
     have hIM1 : IndMemos m1 :=
-      hIM.frame hf1 (fun b hb => by simp at hb; subst hb; decide)
-        (fun x hx => by simp at hx; subst hx; decide)
+      hIM.frame hf1 (fun b hb => by simp at hb; rcases hb with rfl | rfl <;> decide)
+        (fun x hx => by simp at hx; rcases hx with rfl | rfl <;> decide)
     have hw : (rdW (m1.arr64 DECL) (5 + 8 * i)).toNat = nP := by
       rw [hf1.1 DECL (by decide) (by decide)]
       have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [hdecl'.1]; decide

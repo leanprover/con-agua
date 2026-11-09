@@ -54,7 +54,7 @@ open L.Arena L.Rom
 /-- **A block at an `EREC` slice** of constant-record pointers `(o, l)`, below the record pool's
 top (`ind_block_to_erec`'s post). -/
 def BlockAt (o l : Word) (block : List IConstantInfo) (m : Mem) : Prop :=
-  L.Front.decCIsR (erecP m) o.toNat l.toNat = some block ∧ o.toNat + l.toNat ≤ erTop m
+  L.Front.decCIsR (erecP m) o.toNat l.toNat = some block ∧ o.toNat + l.toNat < 2 ^ 64
 
 /-- `basis_name_hit`'s result `Option BasisKind` as `(hit, kind)`: the kind a word below `4`
 (`basisOfW`). -/

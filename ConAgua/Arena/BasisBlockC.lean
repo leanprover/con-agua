@@ -49,7 +49,7 @@ theorem CidPost.pre {dn : NIdx → Option ConLeche.Name} {m m₁ m' : Mem} {w : 
 theorem blockAt_grow {o l : Word} {b : List IConstantInfo} {m m' : Mem} (h : BlockAt o l b m)
     (hg : IWGrow m m') : BlockAt o l b m' := by
   have hb := (decB_decEBlk_of_decCIs (dn := fun _ => none) h.1).grow (decEBlk_mono _ _ _) hg
-  exact ⟨hb.get (decEBlk_mono _ _ _), Nat.le_trans h.2 hg.er⟩
+  exact ⟨hb.get (decEBlk_mono _ _ _), h.2⟩
 
 /-- **`check_basis_block`'s contract**: on a block `basis_name_hit` matched at a kind below `4`,
 from `StageC` and the arm's memos, the call refines `checkBasisBlock`, both outcomes (its

@@ -532,7 +532,7 @@ theorem decRCI_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {r : List Word
 theorem BlockAt.grow {o l : Word} {b : List IConstantInfo} {m m' : Mem} (h : BlockAt o l b m)
     (hg : IWGrow m m') : BlockAt o l b m' := by
   have hb := (decB_decEBlk_of_decCIs (dn := fun _ => none) h.1).grow (decEBlk_mono _ _ _) hg
-  exact ⟨hb.get (decEBlk_mono _ _ _), Nat.le_trans h.2 hg.er⟩
+  exact ⟨hb.get (decEBlk_mono _ _ _), h.2⟩
 
 /-- The quotient slot word of a record's kind word. -/
 theorem qSlot_eq (w : Word) : qSlot w = UInt64.ofNat (L.Front.quotW w).slot := by
