@@ -462,12 +462,14 @@ stored constructor does not bind what the entry says. The constructor's type at 
 (`const_ty_at`), opened in one pass (`open_pis_at_fvars_f`). -/
 -- con-ron: ConRon/Arena/Core.lean:2714-2733 ConRon.Arena.projGuardRows
 @[no_expose, l_impl ConRon.Arena.projGuardRows]
-def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, ok, fo, fn, b, ro, rn) {
+def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, ok, fo, fn, b, ro, rn, k) {
   np := EREC⦃q + 5⦄;
   (f, c) := call env_find(EREC⦃q + 6⦄, vis);
   if f == 0 { return (0, 0, 0) };
   cty := call const_ty_at(EREC⦃c + 1⦄, EREC⦃c + 2⦄, EREC⦃c + 3⦄, EREC⦃c + 4⦄, us);
-  (ok, fo, fn, b) := call open_pis_at_fvars_f(np + i + 1, cty, 0);
+  k := np + i + 1;
+  if k <= np { abort };
+  (ok, fo, fn, b) := call open_pis_at_fvars_f(k, cty, 0);
   if ok == 0 { return (0, 0, 0) };
   ro := CTL.u64[136];
   rn := call proj_guard_rows_at(EREC⦃c + 4⦄, np, i, fo, fn, 0, ro, 0);
