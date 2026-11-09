@@ -269,6 +269,9 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 theorem DcSt.stageC {m : Mem} {a : AState} (h : DcSt dn vis fe env m a) : StageC dn vis fe env m a :=
   ⟨h.stage, h.chk, h.tmem, h.pin⟩
 
+theorem DcSt.stageT {m : Mem} {a : AState} (h : DcSt dn vis fe env m a) : StageT dn vis fe m a :=
+  h.stageC.stageT
+
 theorem DcSt.abs {m : Mem} {a : AState} (h : DcSt dn vis fe env m a) : AbsOK m :=
   ⟨h.mem.ab, h.i1, h.mem.cr, h.mem.il, h.mem.wk⟩
 
@@ -413,8 +416,9 @@ theorem dtW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   -- `basis_name_hit`
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [dtK2])
   rw [dtK2_some] at h
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := hP.basis.nameHit vis fe _ _ b n m1 a r2 m2
-    ⟨hS1, hpre.ok, hb1, hbt1⟩ h2
+  obtain ⟨x2, a2, hrun2, hT2, hg2, hx2⟩ := hP.basis.nameHit dn vis fe _ _ b n m1 a r2 m2
+    ⟨h01.stageT, h01.chk.state, h01.chk.readOK, ⟨hb1, hbt1⟩, bP, hbP⟩ h2
+  have hS2 := hT2.stage
   obtain ⟨hst2, hxt2, hp2, hc2, -, -, -⟩ := ConRon.Bridge.basisNameHit_run hpre.ok hbP hrun2
   have hchk2 := h01.chk.mono hst2 hxt2 hc2 hp2
   obtain ⟨h02, hX2⟩ := h01.step0 hP.leaf dcF_bnh dc0F_bnh h2 hS2 hchk2 hxt2
@@ -557,8 +561,9 @@ theorem diW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   -- `basis_name_hit`
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [diK1])
   rw [diK1_some] at h
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := hP.basis.nameHit vis fe bo bl b n m a r2 m2
-    ⟨h0.stage, h0.chk.state, hblk⟩ h2
+  obtain ⟨x2, a2, hrun2, hT2, hg2, hx2⟩ := hP.basis.nameHit dn vis fe bo bl b n m a r2 m2
+    ⟨h0.stageT, h0.chk.state, h0.chk.readOK, hblk, bP, hbP⟩ h2
+  have hS2 := hT2.stage
   obtain ⟨hst2, hxt2, hp2, hc2, -, -, -⟩ := ConRon.Bridge.basisNameHit_run h0.chk.state hbP hrun2
   have hchk2 := h0.chk.mono hst2 hxt2 hc2 hp2
   obtain ⟨h02, hX2⟩ := h0.step0 hP.leaf dcF_bnh dc0F_bnh h2 hS2 hchk2 hxt2
@@ -571,8 +576,9 @@ theorem diW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
     obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgK4])
     rw [bfgK4_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨cis, a3, hrun3, ⟨⟨hS3, hg3, hd3, -⟩, hb3⟩⟩ := hP.basis.atBlock dn vis fe _ bo bl b hk4
-      n m2 a2 r3 m3 ⟨hS2, hst2, hblk2⟩ h3
+    obtain ⟨cis, a3, hrun3, ⟨⟨hT3, hg3, hd3, -⟩, hb3⟩⟩ := hP.basis.atBlock dn vis fe _ bo bl b hk4
+      n m2 a2 r3 m3 ⟨h02.stageT, hst2, hchk2.readOK, hblk2, _, hbP2⟩ h3
+    have hS3 := hT3.stage
     rw [hkind] at hrun3
     obtain ⟨hr3, -⟩ := ConRon.Bridge.BasisKind.atBlock_run hst2 hchk2.readOK hbP2 hrun3
     obtain ⟨h03, hX3⟩ := h02.step0 hP.leaf dcF_bab dc0F_bab h3 hS3 (hr3.checkOK hchk2) hr3.ext
@@ -668,8 +674,9 @@ theorem daW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
     obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgK4])
     rw [bfgK4_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨ci, a2, hrun2, hS2, hg2, hd2⟩ := hP.basis.quotAt dn vis fe .sound (q + 1) cv n m a r2 m2
-      ⟨h0.stage, h0.chk.state, hnd, by rw [hq1]; exact hcv⟩ h2
+    obtain ⟨ci, a2, hrun2, hT2, hg2, hd2⟩ := hP.basis.quotAt dn vis fe .sound (q + 1) cv n m a r2 m2
+      ⟨h0.stageT, h0.chk.state, h0.chk.readOK, hnd, by rw [hq1]; exact hcv, c, hcvd⟩ h2
+    have hS2 := hT2.stage
     obtain ⟨hr2, -⟩ := ConRon.Bridge.quotAt_run h0.chk.state h0.chk.readOK hcvd hrun2
     obtain ⟨h02, hX2⟩ := h0.step0 hP.leaf dcF_qa dc0F_qa h2 hS2 (hr2.checkOK h0.chk) hr2.ext
     obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
@@ -815,8 +822,9 @@ theorem dconW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLec
     obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgK4])
     rw [bfgK4_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨ci, a2, hrun2, hS2, hg2, hd2⟩ := hP.basis.quotAt dn vis fe k (q + 1) cv n s1.mem a r2 m2
-      ⟨hS1, h01.chk.state, hpre.quotDn, by rw [hq1]; exact hcv1⟩ h2
+    obtain ⟨ci, a2, hrun2, hT2, hg2, hd2⟩ := hP.basis.quotAt dn vis fe k (q + 1) cv n s1.mem a r2 m2
+      ⟨h01.stageT, h01.chk.state, h01.chk.readOK, hpre.quotDn, by rw [hq1]; exact hcv1, c, hc⟩ h2
+    have hS2 := hT2.stage
     obtain ⟨hr2, -⟩ := ConRon.Bridge.quotAt_run h01.chk.state h01.chk.readOK hc hrun2
     obtain ⟨h02, hX2⟩ := h01.step0 hP.leaf dcF_qa dc0F_qa h2 hS2 (hr2.checkOK h01.chk) hr2.ext
     obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
