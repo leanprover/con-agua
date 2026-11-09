@@ -104,7 +104,7 @@ theorem fireCore_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IR
     exact .inl ⟨h0, hpl, hlp, hS.den.constLps cj _ hfj⟩
   · refine .inr ⟨h0, lvls, hk, hsl, ?_⟩
     rcases hk with hk | ⟨pins, hn⟩
-    · sorry -- `StoreDen.recRules` covers `.nested` only: needs its `.levels` case
+    · exact hS.den.recLevels c cv mI rP isK rules hf rule hmem lvls hk
     · exact hS.den.recRules c cv mI rP isK rules hf rule hmem lvls pins hn
 
 end L.Arena
