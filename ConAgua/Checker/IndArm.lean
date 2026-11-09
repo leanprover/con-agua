@@ -9,6 +9,7 @@ meta import ConAgua.Arena.IndArm
 import ConAgua.Checker.CoreErec
 import ConAgua.Checker.IndCore
 import ConAgua.Checker.IndMemoClosed
+import ConAgua.Checker.CrLeaves
 import ConAgua.Checker.LoopDecl
 import ConAgua.Checker.LoopProgTac
 public import ConAgua.Arena.CheckerT
@@ -267,7 +268,7 @@ theorem indArmProgs_checker (bs : List UInt8) (hr : RomOK bs)
     checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
     (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
     closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
-    hrom, closedWL_subPB bs checkerProg_indMemo]
+    hrom, closedWL_subPB bs checkerProg_indMemo, checkerProg_crLeavesPB bs]
 
 /-- `AbsKeep` of the arm's callees that reach no walk, from their write set. -/
 theorem indArmKeep_checker (bs : List UInt8) :
