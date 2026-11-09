@@ -519,18 +519,46 @@ theorem matesW_mfr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List
     unfold matesW matesK1 matesK2 matesK3 at h
     mfr_auto h [snocW_mfr, matesW_mfr n _ _ _ _ _ _ _ _]
 
-theorem nboW_mfr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW p n m vis c = some (r, m')) :
-    MFr [] [] m m' := by
-  sorry
+/-- `env_find` reads only. -/
+theorem callW_envFind_mem {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
+    (hb : p.lookup "base_row_get" = some baseRowGetL) (hp : p.lookup "env_find" = some envFindL)
+    {n : Nat} {m m' : Mem} {w vis : Word} {r : List Word}
+    (h : callW p n "env_find" [w, vis] m = some (r, m')) : m' = m := by
+  obtain ⟨s', rfl, hm, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (envFind_spec p hg hb hp n _ vis w) h
+  exact hm
 
-theorem nfmW_mfr {p : Prog} {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) :
+/-- `nest_block_of` reads only. -/
+theorem nboW_mem {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
+    (hb : p.lookup "base_row_get" = some baseRowGetL) (hp : p.lookup "env_find" = some envFindL)
+    {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW p n m vis c = some (r, m')) : m' = m := by
+  rcases n with _ | n
+  · simp [nboW] at h
+  simp only [nboW] at h
+  rcases hc : callW p n "env_find" [c, vis] m with _ | ⟨r1, m1⟩ <;> rw [hc] at h
+  · simp [nboW.k_env_find] at h
+  have e := callW_envFind_mem hg hb hp hc
+  subst e
+  simp only [nboW.k_env_find] at h
+  split at h
+  · cases h; rfl
+  split at h <;> cases h <;> rfl
+
+theorem nboW_mfr {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
+    (hb : p.lookup "base_row_get" = some baseRowGetL) (hp : p.lookup "env_find" = some envFindL)
+    {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW p n m vis c = some (r, m')) :
+    MFr [] [] m m' := by
+  rw [nboW_mem hg hb hp h]; exact MFr.refl _ _ _
+
+theorem nfmW_mfr {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
+    (hb : p.lookup "base_row_get" = some baseRowGetL) (hp : p.lookup "env_find" = some envFindL)
+    {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) :
     MFr [] [] m m' := by
   cases n with
   | zero => simp [nfmW] at h
   | succ n =>
   simp only [nfmW] at h
   unfold nfmK matesK3 at h
-  mfr_auto h [nboW_mfr, matesW_mfr _ _ _ _ _ _ _ _ _]
+  mfr_auto h [nboW_mfr hg hb hp, matesW_mfr _ _ _ _ _ _ _ _ _]
 
 theorem fgW_mfr : ∀ (n : Nat) (m m' : Mem) (hi us dO dL gO gL pO pL nO nL : Word) (r : List Word),
     fgW n m hi us dO dL gO gL pO pL nO nL = some (r, m') → MFr [] [] m m'
