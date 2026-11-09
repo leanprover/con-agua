@@ -240,7 +240,7 @@ theorem nbRef_all (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC :
       appRef_step p dn vis fe L n ih, contRef_step p dn vis fe L hq hIlpf hLC hFt henv n (by omega) ih,
       keyRef_step dn vis fe L n ih, newRef_step hq dn vis fe L hIlpf hLC hFt henv n (by omega) ih,
       frameRef_step hq dn vis fe henv L hFk hIlpf n (by omega) ih,
-      ctorsRef_step L dn vis fe n ih, sorry,
+      ctorsRef_step L dn vis fe n ih, oneRef_step L hq hIlpf dn vis fe henv n hn ih,
       walkRef_step L dn vis fe henv n ih, fieldsRef_step L dn vis fe henv n ih⟩
 
 end all
