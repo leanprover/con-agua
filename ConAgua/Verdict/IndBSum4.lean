@@ -168,6 +168,36 @@ theorem scts_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
       (ConRon.Bridge.Inductives.denoteCtors_ext x1 _ _ hrestP) (hok₀.mono x1))
     fun _ _ _ _ hR4 => ⟨hR4.stage, hg1.trans hR4.grow, hR4.abs, c1.trans hR4.core⟩
 
+include hq henv hOpf hLC hLT hApd hCrk in
+/-- **`check_sum_ctors` refines `checkSumCtors`, both outcomes, through the call** (`scts_ref` read
+through the run; the shape of `IndT/Install7.lean`'s contract `SctsRefS`). -/
+theorem scts_refC (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims p dn)
+    (n : Nat) (hn : n ≤ 2 ^ 62) {env₀ : ConLeche.Env} (m : Mem) (a : AState)
+    (T lo ll nP nIdx rs isP lg cvq cO cL : Word) (lps : List NIdx) (cvTa : IConstantVal)
+    (cs : List (IConstantVal × Nat)) (TP : ConLeche.Name) (lpsP : List ConLeche.Name)
+    (rsP : ConLeche.Level) (cvTaP : ConLeche.ConstantVal) (csP : List (ConLeche.ConstantVal × Nat))
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hT : H T) (hrs : H rs)
+    (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
+    (hta : DecB (fun m => decCVp m cvq.toNat) m cvTa)
+    (hcs : DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m cs)
+    (hTP : denoteN a.store.ns (decI T) = some TP) (hlpsP : Frontend.denoteNList a.store.ns lps = some lpsP)
+    (hrsP : denoteL a.store.ls (decI rs) = some rsP) (hcvTaP : Frontend.denoteCV a.store cvTa = some cvTaP)
+    (hfv : cvTaP.type.hasFvar = false) (hcsP : ConRon.Bridge.Inductives.denoteCtors a.store cs = some csP)
+    (hok₀ : ConRon.Bridge.Inductives.IFEnvOKS env₀ fe a.store) :
+    RefE (VerdictCtxU p) (callE p n "check_sum_ctors" [vis, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvq, cO, cL] m)
+      (checkSumCtors V fe fe (decI T) lps nP.toNat nIdx.toNat (decI rs) (isP != 0) (lg != 0) cvTa cs) a
+      (fun rm _ a' => StageC dn vis fe env rm.2 a' ∧ IWGrow m rm.2 ∧ AbsOK rm.2 ∧
+        ConRon.Bridge.CoreStep env fe a a') := by
+  have hM := scts_ref hq henv hOpf hLC hLT hApd hCrk hP hV hcr hCS T lo ll nP nIdx rs isP lg cvq lps cvTa
+    hT hrs (ConLeche.Expr.WScoped.of_not_hasFvar hfv) n hn m a cO cL cs csP hC hlps hlb hta hcs hA hTP
+    hlpsP hrsP hcvTaP hcsP hok₀
+  have hs := sctsE_spec p hP hV n ⟨m, Locals.init []⟩ vis vis T lo ll nP nIdx rs isP lg cvq cO cL
+  rcases c : callE p n "check_sum_ctors" [vis, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvq, cO, cL] m
+    with e | ⟨r, m'⟩
+  · exact fun hG => RefE.run_err hs hG.nv hG hM c
+  · obtain ⟨s', rfl, -, y, a', hr, hR⟩ := RefE.run_ok hs hM c
+    exact ⟨y, a', hr, hR.stage, hR.grow, hR.abs, hR.core⟩
+
 end sims
 
 end L.Ind
