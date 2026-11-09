@@ -404,7 +404,51 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
     · rw [e2]; exact hT2
     · rw [e2]; exact hg1.trans hg2
   rw [ite_eq_left_iff.mpr (fun h => absurd hc h)] at hW
-  sorry
+  -- `erec_alloc(4)`
+  cases h4 : callW p (n0 + 1) "erec_alloc" [4] s2.mem with
+  | none => rw [h4] at hW; simp [quotPinHitW.k_erec_alloc] at hW
+  | some x4 =>
+  obtain ⟨r4, m4⟩ := x4
+  rw [h4] at hW; simp only [quotPinHitW.k_erec_alloc] at hW
+  have hA := callW_erecAlloc hP.erAlloc h4
+  obtain ⟨hT4, hg4, hoff4, htop4, hq41⟩ := erAlloc_stageT hA hT2
+  obtain ⟨-, hf4, -⟩ := erAllocW_spec hA hT2.stage.iw
+  have hqf4 := callW_quotFrame hP.quot (by decide) h4
+  have hrd4 := erRdT_congr (m := s2.mem) (m' := m4) (hf4.arr _ (by simp) (by decide))
+    (hf4.arr _ (by simp) (by decide))
+  simp only [hrd4, hrd2] at hW
+  -- `cv_at_lps(a, c + 1, EREC⦃q + 1⦄, EREC⦃q + 2⦄)`
+  cases h5 : callW p (n0 + 1) "cv_at_lps" [r4.headD 0, r1.headD 0 + 1, erRdT m1 (q + 1), erRdT m1 (q + 2)] m4 with
+  | none => rw [h5] at hW; simp [quotPinHitW.k_cv_at_lps] at hW
+  | some x5 =>
+  obtain ⟨r5, m5⟩ := x5
+  rw [h5] at hW; simp only [quotPinHitW.k_cv_at_lps] at hW
+  obtain ⟨cv', a2, hrun2, hT5, hg5, -, hdec5, -⟩ := cvAtLps_sim hP (n0 + 1) hT2.stage hT4 hst1.ok hqf4 hg4
+    (d := r4.headD 0) (c := r1.headD 0) (by rw [hoff4]; exact Nat.le_refl _) (by rw [htop4, hoff4]; simp) hq41
+    (ArrExt.decCV (hg2.trans hg4).erecGrow.ext hpcv) (by rw [he2]; exact hsl1)
+    (ConRon.Bridge.denoteNListE_ext hst1.ext _ _ (ConRon.Bridge.denoteCV_inv hden).2.1) r5 m5 h5
+  -- `cv_eq(q, a)`
+  cases h6 : callW p (n0 + 1) "cv_eq" [q, r4.headD 0] m5 with
+  | none => rw [h6] at hW; simp [quotPinHitW.k_cv_eq] at hW
+  | some x6 =>
+  obtain ⟨r6, m6⟩ := x6
+  obtain ⟨s6, rfl, -, hm6, hr6⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
+    (cvEq_spec' p hP.canon (n0 + 1) _ q (r4.headD 0)) h6
+  rw [h6] at hW; simp only [quotPinHitW.k_cv_eq, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, e⟩ := hW
+  have e2 : s'.mem = m5 := by
+    first | exact e.symm.trans hm6 | exact e.trans hm6 | exact (hm6.symm.trans e).symm | exact hm6.symm.trans e
+  have hq5 : decCV (erecP m5) q.toNat = some cv :=
+    ArrExt.decCV hg5.erecGrow.ext (ArrExt.decCV hg2.erecGrow.ext hq1)
+  have hb := cvEqB_ok (erRdOK m5) hq5 hdec5
+  refine ⟨cv == cv', a2, (hrunP _ _).mpr ?_, ?_, ?_, ?_⟩
+  · simp only [hcond.mp hc, ite_true, StateT.run_bind, hrun2, exb, StateT.run_pure]
+    rfl
+  · rw [e2]; exact hT5
+  · rw [e2]; exact hg1.trans (hg2.trans hg5)
+  · simp only [List.headD_cons, hr6, hb, beq_iff_eq]
+    by_cases hcc : cv = cv' <;> simp [hcc]
+
 
 end qph
 
