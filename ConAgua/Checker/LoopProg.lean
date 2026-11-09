@@ -327,6 +327,10 @@ theorem checkerProg_lvlTextPB (bs : List UInt8) :
 theorem checkerProg_natArmPB (bs : List UInt8) :
     ProgHas (Prog.subPB bs checkerProg) natArmProg' := by prog_bundle []
 
+/-- The canonical comparisons' lookups at the substituted checker. -/
+theorem checkerProg_canonPB (bs : List UInt8) : L.Ind.CanonProg (Prog.subPB bs checkerProg) := by
+  prog_bundle []
+
 theorem checkerProg_natAgreePB (bs : List UInt8) :
     ∀ f ∈ natFns, (Prog.subPB bs checkerProg).lookup f = natArmProg'.lookup f :=
   ProgHas.agreeNames (checkerProg_natArmPB bs)

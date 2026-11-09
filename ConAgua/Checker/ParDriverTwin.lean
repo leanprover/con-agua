@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Checker.ParDriverL
 import ConAgua.Checker.CheckARun
+public import ConAgua.Checker.JobsProg
+public import ConAgua.Checker.ArmsT
 import all ConAgua.Checker.Entry
 import ConAgua.L.Blocks
 import ConAgua.Checker.IndArm
@@ -23,7 +25,8 @@ seed) returning `ACCEPT`: the twin's pipeline accepts. Entry 1 is `checkA_run` (
 stream index, `FoldAt`; the memory is the buffer's `parCompactMem`, with the header only), entry 2
 `checkB_seq` (the flush, then the jobs, through non-interference and the pool's induction with one
 worker), and the two are `SeqAccepts`, i.e. `TwinAccepts` (`Final/Twin.lean`). The jobs' program
-facts at the substituted program (`hJ`, `JobProg`) are a hypothesis.
+facts at the substituted program (`JobProg`) come from `checkerProg_jobProgPB`, with `check_decl`'s
+(`CdProg`, the core area's) a hypothesis (`CheckerCd`).
 -/
 
 set_option experimental.vcgen true
@@ -66,12 +69,45 @@ theorem checkMode2_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
       | (simp_all (config := { decide := true }); done)
       | (simp_all [St.setLoc]; done)
 
-/-- **The driver's two runs accept ⇒ the twin accepts**, given the jobs' program facts at every
-accepting phase A. -/
-theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (b pb : ByteArray)
+/-- **What `check_decl`'s program facts still take** (`checkerProg_cdProgPB`): the value arms'
+claims and the inductive arm's, at every phase A and every pin buffer `pb` that starts with the
+ROM, at the program with `pb` substituted. A hypothesis of the final theorems until the core and
+inductive areas prove them. -/
+def CheckerCd : Prop :=
+  ∀ (b pb : ByteArray) (PA : PhaseA b), pb.size < 2 ^ 63 → PbPre pb →
+    (∀ cv v hh, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
+      "check_decl_defn" (.defnDecl cv v hh)) ∧
+    (∀ cv v, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
+      "check_decl_thm" (.thmDecl cv v)) ∧
+    (∀ cv v, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
+      "check_decl_opaque" (.opaqueDecl cv v)) ∧
+    IndArmSpec (Prog.subPB pb.data.toList checkerProg) (dnOf PA.sE.store)
+
+/-- The record decoder of a phase A is injective. -/
+theorem PhaseA.dnInj {b : ByteArray} (PA : PhaseA b) : L.Ind.DnInj (dnOf PA.sE.store) := by
+  obtain ⟨hA, hB, hC, hD, hE⟩ := PA.pfx
+  obtain ⟨-, hdrv, -⟩ := ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
+  exact dnOf_inj hdrv.state.wf
+
+/-- `Quot`'s universe name has a handle under a phase A's record decoder. -/
+theorem PhaseA.quotDn {b : ByteArray} (PA : PhaseA b) : L.Ind.QuotDn (dnOf PA.sE.store) := by
+  obtain ⟨k, hk, hd⟩ := prefix_quotU PA.pfx
+  exact ⟨k, by simp [dnOf, hk, hd]⟩
+
+/-- The jobs' program facts at a phase A, from `CheckerCd`. -/
+theorem jobProg_of_cd (hCd : CheckerCd) {b pb : ByteArray} (PA : PhaseA b) (hpb : pb.size < 2 ^ 63)
+    (hpre : PbPre pb) :
+    JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg) :=
+  have hr : RomOK pb.data.toList := by simpa [RomOK] using hpb
+  let ⟨hdf, hth, hop, hind⟩ := hCd b pb PA hpb hpre
+  checkerProg_jobProgPB pb.data.toList hr hpre
+    (checkerProg_cdProgPB pb.data.toList hr hpre PA.dnInj PA.quotDn hdf hth hop hind)
+    (checkerProg_canonPB _)
+
+/-- **The driver's two runs accept ⇒ the twin accepts**, given `check_decl`'s program facts
+(`CheckerCd`). -/
+theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd) (b pb : ByteArray)
     (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
-    (hJ : ∀ PA : PhaseA b,
-      JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
@@ -104,7 +140,7 @@ theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (b pb : ByteArray)
       simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at h₂
       obtain ⟨rfl, -⟩ := h₂
       exact M.of_run (P := fun x => x = ⟨w, Locals.init []⟩) rfl e
-        (checkMode2_seq Vt hF (hJ PA) N₂ hN₂ _ hk ⟨w, Locals.init []⟩ hw' hmode hlo hhi hctlf) hacc
+        (checkMode2_seq Vt hF (jobProg_of_cd hCd PA hin.2.2.1 hF.r7.since.pbpre) N₂ hN₂ _ hk ⟨w, Locals.init []⟩ hw' hmode hlo hhi hctlf) hacc
   obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
   exact ⟨PA.pins, PA.sA, PA.sB, PA.sC, PA.sD, PA.sE, PA.sF, PA.pre, PA.rc, PA.ds, PA.ipins, PA.I,
     hA, hBp, hC, hD, hE, s'', PA.idx, hB⟩
