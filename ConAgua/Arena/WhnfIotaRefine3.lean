@@ -47,9 +47,34 @@ theorem recFireArgs_nested_eq (rl : IRecRule) (cnP : Nat) (lps : List NIdx) (us 
   simp [recFireArgs, h]
 
 theorem recFireArgs_plain_run (rl : IRecRule) (cnP : Nat) (lps : List NIdx) (us : LsIdx)
-    (args : List EIdx) (rP : Nat) (h : rl.fire = .plain) (a : AState) :
+    (args : List EIdx) (rP : Nat) (h : rl.fire = .plain ∨ ∃ lvls, rl.fire = .levels lvls) (a : AState) :
     (recFireArgs rl cnP lps us args rP).run a = .ok (args.take cnP, a) := by
-  simp [recFireArgs, h]; rfl
+  rcases h with h | ⟨lv, h⟩ <;> simp [recFireArgs, h] <;> rfl
+
+/-- A rule record whose fire kind word is not `1` is not nested. -/
+theorem decRule_notNested {R : Nat → Option Word} {rd : Word → Word} {q : Word} {rl : IRecRule}
+    (hR : RdOK R rd) (h : decRule R q.toNat = some rl) (h1 : rd (q + 3) ≠ 1) :
+    rl.fire = .plain ∨ ∃ lvls, rl.fire = .levels lvls := by
+  simp only [decRule, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨kd, hkd, h⟩ := h
+  simp only [nat?, Option.map_eq_some_iff] at hkd
+  obtain ⟨w3, hw3, rfl⟩ := hkd
+  have e3 : rd (q + 3) = w3 := hR.at 3 rfl hw3
+  rw [e3] at h1
+  have hne : w3.toNat ≠ 1 := fun e => h1 (UInt64.toNat_inj.mp (by rw [e]; rfl))
+  rcases hk : w3.toNat with _ | _ | _ | k
+  · rw [hk] at h
+    simp only [Option.bind_some, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+    obtain ⟨_, _, _, _, _, _, rfl⟩ := h; exact .inl rfl
+  · exact absurd hk hne
+  · rw [hk] at h
+    cases hlv : hlist? (k := .level) R (q.toNat + 4) with
+    | none => rw [hlv] at h; simp at h
+    | some lv =>
+      rw [hlv] at h
+      simp only [Option.bind_some, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+      obtain ⟨_, _, _, _, _, _, rfl⟩ := h; exact .inr ⟨lv, rfl⟩
+  · rw [hk] at h; simp at h
 
 /-- **`rec_fire_args` refines `recFireArgs`.** Statement changes: `CoreAfterG` (the nested arm leaves a
 slice on the stack) and both input slices below the stack top. -/
@@ -60,7 +85,7 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
     (lps : List NIdx) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
     hslice? (erecP s₀.mem) po.toNat pc.toNat = some lps → SpineR s₀.mem ao an args →
     (fireKind = 1 → ∃ lvls pins, rl.fire = .nested lvls pins ∧ SpineR s₀.mem pvo pvc pins.toArray) →
-    (fireKind = 2 → ∃ lvls, rl.fire = .levels lvls) → (fireKind = 0 → rl.fire = .plain) →
+    (fireKind ≠ 1 → rl.fire = .plain ∨ ∃ lvls, rl.fire = .levels lvls) →
     ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
     (fireKind = 1 → pvo.toNat + pvc.toNat ≤ (spTop s₀.mem).toNat) →
     ⦃fun s => s = s₀⦄
@@ -70,7 +95,47 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
         fe MM eb ∧
       ∃ xs, AM.res (recFireArgs rl cnP.toNat lps (decI us) args.toList rP.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
-  sorry
+  intro n s₀ a₀ dn vis fe MM eb fireKind pvo pvc po pc us ao an rP cp rl lps args hS hus hlps hsa hnest
+    hplain hat hpt
+  cases n with
+  | zero => exact invoke_zero_triple
+  | succ n =>
+  refine triple_post (recFireArgs_spec p hp.recFireArgs (n + 1) s₀ fireKind pvo pvc po pc us ao an rP cp)
+    fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  simp only [rfaW, rfaW.k_inst_spine_pins, rfaW.j1] at hW
+  by_cases h1 : fireKind = 1
+  · rw [ite_eq_left h1] at hW
+    obtain ⟨lv, pins, hfire, hsp⟩ := hnest h1
+    rcases hc1 : callW p n "inst_spine_pins" [po, pc, us, ao, an, rP, pvo, pvc] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hc1, reduceCtorEq] at hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨t₁, ht₁, hloc1, hok, hca, xs, hres, hxs⟩ := triple_of_callW
+      (instSpinePins_refines' p hp hc hw hE n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pc us ao an rP
+        pvo pvc lps args pins.toArray hS hus hlps hsa hsp hat (hpt h1)) hc1
+    rw [recFireArgs_nested_eq rl cp.toNat lps (decI us) args.toList rP.toNat lv pins hfire]
+    simp only at hok hca hres
+    simp only [ht₁] at hxs hca
+    rw [← hm]
+    have hr1 : r.headD 0 = r₁.headD 0 := by
+      have := congrArg (fun l => l.headD 0) hr; simpa using this.symm
+    have hr2 : r.tail.headD 0 = r₁.tail.headD 0 := by
+      have := congrArg (fun l => l.tail.headD 0) hr; simpa using this.symm
+    exact ⟨hok, hca, xs, hres, by rw [hr1, hr2]; exact hxs⟩
+  · rw [ite_eq_right h1] at hW
+    have hW' : some ([ao, ispLen cp an], s₀.mem) = some (r, s'.mem) := by
+      rw [← hW]; by_cases ha : an < cp <;> simp [ispLen, ha]
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW')
+    have hfire := hplain h1
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (recFireArgs_plain_run rl cp.toNat lps (decI us) args.toList
+      rP.toNat hfire a₀)
+    have hr1 : r.headD 0 = ao := by
+      have := congrArg (fun l => l.headD 0) hr.symm; simpa using this
+    have hr2 : r.tail.headD 0 = ispLen cp an := by
+      have := congrArg (fun l => l.tail.headD 0) hr.symm; simpa using this
+    refine ⟨hok, ?_, _, hres, ?_⟩
+    · rw [hst, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, (StackKept.refl _).toGrew⟩
+    · rw [hr1, hr2, ← hm, ← ispLen_take' cp an args.toList (by simp [hsa.size])]
+      exact hsa.take _ (ispLen_le cp an).2
 
 /-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
 
