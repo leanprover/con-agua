@@ -192,7 +192,7 @@ def BswmRefS : Prop :=
 
 /-- What `check_block_pass` hands the tail (from `m`, `a`; the record at `w`): the pools grown,
 the twin's step, `BkSt` at the formers' index (whose view is the record's word `0`) and con-ron's
-`checkBlockPass_of` facts there, the record decoded, the shape's (word `1`) recursors' slice below the top. -/
+`checkBlockPass_of` facts there, the record decoded, the shape's (word `1`) slices below the top (`ShapeSl`). -/
 structure PassOut (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (w : Word)
     (q : BlockPass) (m' : Mem) (a' : AState) : Prop where
   grow : IWGrow m m'
@@ -205,7 +205,7 @@ structure PassOut (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (w
     ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.memberCtors env₁) ∧
     (∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M) ∧ qP.params.length = qP.p.nP
   record : BPassR (rdW (m'.arr64 IW) w) q.env1 m' w q
-  recs : RecsB m' (rdW (m'.arr64 IW) (w + 1))
+  shape : ShapeSl m' (rdW (m'.arr64 IW) (w + 1))
 
 /-- **`check_block_pass(vis, p, isRec)`'s contract**: `checkBlockPass`, both outcomes, from
 `BkSt` and `checkBlockPass_of`'s preconditions. -/
@@ -233,7 +233,7 @@ def TailRefS : Prop :=
   ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis : Word) (env₁ : ConLeche.Env) (m : Mem) (a : AState) (bO bL w : Word)
     (block : List IConstantInfo) (blockP : List ConLeche.ConstantInfo) (q : BlockPass)
     (qP : ConLeche.BlockPass ConLeche.Env),
-    BkSt dn vis q.env1 env₁ m a → BPassR vis q.env1 m w q → RecsB m (rdW (m.arr64 IW) (w + 1)) →
+    BkSt dn vis q.env1 env₁ m a → BPassR vis q.env1 m w q → ShapeSl m (rdW (m.arr64 IW) (w + 1)) →
     DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block → bO.toNat + bL.toNat < 2 ^ 64 →
     Frontend.denoteCIList a.store block = some blockP → BlockLpsDn dn block →
     ConRon.Bridge.Inductives.EnvRel env₁ q.env1 a.store → ConLeche.EnvWF env₁ →
@@ -241,6 +241,7 @@ def TailRefS : Prop :=
     (∀ cv ∈ qP.p.formers, ConLeche.Expr.WScoped 0 cv.type) →
     ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.memberCtors env₁) →
     (∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M) → qP.params.length = qP.p.nP →
+    q.p.nP + 1 < 2 ^ 64 →
     RefE G (callE p n "check_block_tail" [bO, bL, w] m) (ConRon.Arena.checkBlockTail V block q) a
       (fun rm fe' a' => TailOut m a (rm.1.headD 0) fe' rm.2 a')
 
@@ -409,6 +410,41 @@ theorem RefE.lastNone {α β ρ : Type} {G G' : Prop} {a : AState} {R : α → �
     (h2 : ∀ v, Q v () a → R (f v) y a) : RefE G (K x) (pure y) a R :=
   RefE.bindNone hK hG h1 fun v hQ => by rw [hK']; exact RefE.ret rfl (h2 v hQ)
 
+/-- **`checkBlockInds` keeps the parameter count** (`withSort` changes the sort alone). -/
+theorem checkBlockInds_nP {mode : ConLeche.CheckMode} {fe : IFEnv} {bs : BlockShape} {isRec : Bool}
+    {s s' : AState} {r : IFEnv × BlockShape}
+    (h : ConRon.Arena.checkBlockInds mode fe bs isRec s = .ok (r, s')) : r.2.nP = bs.nP := by
+  unfold ConRon.Arena.checkBlockInds at h
+  rcases hm : bs.members with _ | ⟨ms₀, rest⟩ <;> simp only [hm] at h
+  · exact nomatch h
+  obtain ⟨⟨_, _⟩, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨p₁, _, hw, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨rfl, -⟩ := ConRon.Bridge.AM.pure_ok h
+  unfold BlockShape.withSort at hw
+  obtain ⟨_, _, -, hw⟩ := ConRon.Bridge.AM.bind_ok hw
+  obtain ⟨_, _, -, hw⟩ := ConRon.Bridge.AM.bind_ok hw
+  obtain ⟨rfl, -⟩ := ConRon.Bridge.AM.pure_ok hw
+  rfl
+
+/-- **`checkBlockPass` keeps the parameter count** (its shape is `checkBlockInds`'). -/
+theorem checkBlockPass_nP {mode : ConLeche.CheckMode} {fe : IFEnv} {bs : BlockShape} {isRec : Bool}
+    {s s' : AState} {q : BlockPass}
+    (h : ConRon.Arena.checkBlockPass mode fe bs isRec s = .ok (q, s')) : q.p.nP = bs.nP := by
+  unfold ConRon.Arena.checkBlockPass at h
+  obtain ⟨⟨fe₁, p₁⟩, _, h1, h⟩ := ConRon.Bridge.AM.bind_ok h
+  have e := checkBlockInds_nP h1
+  obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨⟨_, _⟩, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨⟨_, _⟩, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨⟨_, _⟩, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨rfl, -⟩ := ConRon.Bridge.AM.pure_ok h
+  exact e
+
 section comp
 variable {G : Prop} {p : Prog} {dn : NIdx → Option ConLeche.Name}
 
@@ -491,16 +527,17 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
       (hrel.mono x05.ext) hq5 hsl5
       (ConRon.Bridge.Inductives.BT.dShape_members (ConRon.Bridge.Inductives.dShape_ext x05.ext _ _ hdP)
         (ConRon.Bridge.Inductives.dMember_ext.list x25.ext _ _ hms'))
-      (fun m hm => (hAt m hm).declaredWF) hb4) fun ⟨r6, m6⟩ q a6 _ h6 => ?_
+      (fun m hm => (hAt m hm).declaredWF) hb4) fun ⟨r6, m6⟩ q a6 hrun6 h6 => ?_
   rw [icbE.k_check_block_pass.arm1]
   -- the checks after it
   obtain ⟨env₁, qP, hB6, hrel6, henv₁, hq6, hT6, henv₂, hMs, hpl⟩ := h6.twin
   have g16 := (g14.trans h5.grow).trans h6.grow
   have x06 := x05.trans h6.inst
   refine RefE.bindE (fun _ => icbE.k_check_block_tail.none ..) id
-    (R.tail n (by omega) _ env₁ m6 a6 bO bL _ block blockP q qP hB6 h6.record h6.recs
+    (R.tail n (by omega) _ env₁ m6 a6 bO bL _ block blockP q qP hB6 h6.record h6.shape
       (hblk.grow (decEBlk_mono _ _ _) g16) hbb
-      (ConRon.Bridge.denoteCIList_mono x06.ext _ _ hbP) hlpd hrel6 henv₁ hq6 hT6 henv₂ hMs hpl)
+      (ConRon.Bridge.denoteCIList_mono x06.ext _ _ hbP) hlpd hrel6 henv₁ hq6 hT6 henv₂ hMs hpl
+      (by rw [checkBlockPass_nP hrun6]; exact hnPb))
     fun ⟨r7, m7⟩ fe₂ a7 _ h7 => ?_
   rw [icbE.k_check_block_tail.arm1]
   -- the block's recursors

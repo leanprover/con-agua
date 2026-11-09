@@ -545,14 +545,13 @@ section
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Word}
 
 /-- **`proj_guard_rows` refines `projGuardRows` under `CoreS`** (the pool's `IWOK` and the `hb` memo
-at entry, the parameter count plus field index not wrapping; `constTyAt_lkept` for the level
+at entry; the L code aborts where the parameter count plus field index wraps; `constTyAt_lkept` for the level
 readbacks): `env_find`, `const_ty_at` (`ConstTyAtOK`), `open_pis_at_fvars_f` (`opfF_okC`),
 `proj_guard_rows_at` (`pgra_ok`). -/
 theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
     (n : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (q i us : Word) (tbl : IProjTable)
     (r : List Word) (hS : CoreS dn m a vis fe M eb) (hI : IWOK m) (hM : ∃ mp, hbMR m mp)
     (hq : decTbl (erecP m) q.toNat = some tbl) (hus : HW us)
-    (hB : tbl.numParams + i.toNat + 1 < 2 ^ 64)
     (h : callW p n "proj_guard_rows" [vis, q, i, us] m = some (r, m')) :
     ∃ y a', (projGuardRows fe (tbl.entry i.toNat) (decI us)).run a = .ok (y, a') ∧
       CoreAfterG dn m m' a' vis fe M eb ∧
@@ -595,7 +594,15 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
   rcases c2 : callW p n "const_ty_at" [erRdT m1 (c + 1), erRdT m1 (c + 2), erRdT m1 (c + 3),
       erRdT m1 (c + 4), us] m1 with _ | ⟨r2, m2⟩
   · rw [c2, pgrW.k_const_ty_at.none] at hW; cases hW
-  rw [c2, pgrW.k_const_ty_at.arm1] at hW
+  by_cases gk : erRdT m1 (q + 5) + i + 1 ≤ erRdT m1 (q + 5)
+  · rw [c2, pgrW.k_const_ty_at.abort1 (hc1 := gk)] at hW; cases hW
+  rw [c2, pgrW.k_const_ty_at.arm1 (hc1 := gk)] at hW
+  have hB : tbl.numParams + i.toNat + 1 < 2 ^ 64 := by
+    have hnp' : tbl.numParams = (erRdT m1 (q + 5)).toNat := hnp
+    rw [hnp']
+    simp only [UInt64.le_iff_toNat_le, UInt64.toNat_add] at gk
+    have := (erRdT m1 (q + 5)).toNat_lt; have := i.toNat_lt
+    simp at gk; omega
   have h2 := CoreSpec.of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (hCT n ⟨m1, Locals.init []⟩ a dn vis fe M eb _ _ _ _ us _ hS hnn32 hty32 hus hlps) c2
   have hcvE : ci.toConstantVal = ⟨decI (erRdT m1 (c + 1)), ci.toConstantVal.levelParams,
@@ -681,12 +688,6 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
       show (tbl.entry i.toNat).idx = i.toNat from rfl]
     rw [show (0 : Nat) = (0 : Word).toNat from rfl, hrun4]
     rfl
-
-  -- the overflow guard of `proj_guard_rows` (`np + i + 1` does not wrap: `hB`)
-  intro hle
-  have := UInt64.le_iff_toNat_le.mp hle
-  rw [hnp] at hB
-  rw [UInt64.toNat_add, UInt64.toNat_add] at this; simp at this; omega
 
 end
 

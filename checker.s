@@ -196657,9 +196657,9 @@ ret
 ca_f_stream_nested_ok:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $144, %rax
+cmpq $152, %rax
 jb ca_exhausted
-subq $136, %rsp
+subq $144, %rsp
 movq (%rsi), %rax
 movq %rax, (%rsp)
 movq 8(%rsi), %rax
@@ -196718,21 +196718,30 @@ movq %rax, 96(%rsp)
 movq %rdi, 104(%rsp)
 movq %r8, 112(%rsp)
 movq %r9, 120(%rsp)
+movq 8(%rsp), %rax
+subq 16(%rsp), %rax
+movq %rax, 128(%rsp)
+movq 8(%rsp), %rax
+cmpq 16(%rsp), %rax
+jae .Lca_stream_nested_ok_2222221E
+movq $0, 128(%rsp)
+jmp .Lca_stream_nested_ok_2222221X
+.Lca_stream_nested_ok_2222221E:
+.Lca_stream_nested_ok_2222221X:
 movq 104(%rsp), %rdi
-movq 8(%rsp), %r8
-subq 16(%rsp), %r8
+movq 128(%rsp), %r8
 movq 32(%rsp), %r9
 movq 40(%rsp), %r10
 movq 48(%rsp), %r11
 movq 56(%rsp), %rsi
 subq $1, %r14
 jb ca_exhausted
-addq $136, %rsp
+addq $144, %rsp
 jmp ca_f_stream_nested_dom
 .Lca_stream_nested_ok_0Z:
 movq $0, %rax
 .Lca_stream_nested_ok_0R:
-addq $136, %rsp
+addq $144, %rsp
 ret
 ca_f_stream_nested_pins:
 movq %rsp, %rax
@@ -196763,6 +196772,9 @@ subq $1, %r14
 jb ca_exhausted
 call ca_f_lift_entry
 movq %rax, 24(%rsp)
+movq $4294967296, %rax
+cmpq 24(%rsp), %rax
+jbe ca_error
 movq (%rsp), %rdi
 movq 8(%rsp), %r8
 addq $1, %r8

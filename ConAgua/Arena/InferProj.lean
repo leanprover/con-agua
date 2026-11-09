@@ -486,11 +486,10 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n F
   exact RefE.ret hrun5 ⟨⟨M₅, hS₅.frame_stk (MemFrame.setCtl m₅ 136 _) (by simp) (by simp),
     hK₃.trans hK₅, StackKept.restoreG' hgK⟩, rfl, hrw5⟩
 
-/-- **`proj_guard_rows` refines `projGuardRows`** (`PgrOK`, from `pgr_okH`; open until `CoreS`
-carries the pool's `IWOK` and the `hb` memo and `proj_guard_rows` guards `np + i + 1` against
-wrapping: those three hypotheses of `pgr_okH` are `sorry` here). -/
+/-- **`proj_guard_rows` refines `projGuardRows`** (`PgrOK`, from `pgr_okH`; the pool's `IWOK` and
+the `hb` memo come from `CoreS`). -/
 theorem pgrOK_of (p : Prog) (hp : InferProjProg p) (hct : ConstTyAtOK p) : PgrOK p :=
   fun n _ m m' a _ _ M _ q i us tbl r hS hq _ hus h =>
-    L.Ind.pgr_okH p hp.pgr hct n m m' a M q i us tbl r hS sorry sorry hq hus sorry h
+    L.Ind.pgr_okH p hp.pgr hct n m m' a M q i us tbl r hS hS.iw hS.memos.hb hq hus h
 
 end L.Arena
