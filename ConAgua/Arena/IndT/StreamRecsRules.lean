@@ -6,6 +6,7 @@ import ConAgua.Arena.IndT.Lift
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Inductives.StreamRecs
+import ConRon.Bridge.Checker.Canon
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.DeclCanonRules
 import ConAgua.Arena.IndPosSpec.NestKeyMap
@@ -197,6 +198,122 @@ theorem srs_ref {G : Prop} (N : Nat) : ∀ (m : Mem) (a : AState) (ro rl co cl :
 
 end sims
 
+/-- A handle slice at `l + 1`: its head and its tail. -/
+theorem decHL_succ_inv {m : Mem} {o l : Nat} {xs : List EIdx}
+    (h : decHL m o (l + 1) = some xs) :
+    ∃ x xs', xs = x :: xs' ∧ iwH m o = some x ∧ decHL m (o + 1) l = some xs' := by
+  simp only [decHL] at h
+  rw [hslice?_succ] at h
+  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+  obtain ⟨x, hx, xs', hxs', rfl⟩ := h
+  exact ⟨x, xs', rfl, hx, hxs'⟩
+
+section sims2
+variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+  {env : ConLeche.Env}
+
+open ConRon.Bridge.Inductives.SR (denoteRules_cons_inv denoteRules_nil_inv) in
+open ConRon.Bridge (denoteRule_inv) in
+/-- **`stream_rules_check` refines `streamRulesCheck`, both outcomes** (twin side con-ron's
+`streamRulesCheck_spec`): per rule, its right-hand side against the generated one's word, and
+`rule_agree` (`ra_ref`) where they differ; the rest by induction. -/
+theorem srk_ref (hP : StrProg p) (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
+    (hApd : ApdF p) (hCrf : CrfF p) (N : Nat) (hN : N ≤ 2 ^ 62) :
+    ∀ (m : Mem) (a : AState) (lo ll ro rl go gl : Word) (lps : List NIdx)
+      (lpsP : List ConLeche.Name) (rs : List IRecRule) (rsP : List ConLeche.RecRule)
+      (gs : List EIdx) (gsP : List ConLeche.Expr),
+    StageC dn vis fe env m a → AbsOK m →
+    decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
+    Frontend.denoteNList a.store.ns lps = some lpsP →
+    decRules (erA m) ro.toNat rl.toNat = some rs → Frontend.denoteRules a.store rs = some rsP →
+    decHL m go.toNat gl.toNat = some gs → go.toNat + gl.toNat ≤ iwTop m →
+    Frontend.denoteEList a.store gs = some gsP →
+    RefE (VerdictCtxU p) (srkE p N m vis lo ll ro rl go gl)
+      (ConRon.Arena.streamRulesCheck V fe lps rs gs) a
+      (fun v _ a' => SrPost dn vis fe env m a v.2 a') := by
+  induction N with
+  | zero => intros; rw [srkE.eq_1]; exact RefE.of_cls0 rfl
+  | succ N ih =>
+  intro m a lo ll ro rl go gl lps lpsP rs rsP gs gsP hC hA hl hlb hlps hrs hrsP hg hgb hgsP
+  have hrl := decRules_length hrs
+  have hgl := decHL_length m hg
+  by_cases h0 : rl = 0 ∧ gl = 0
+  · rw [srkE.arm1 _ _ _ _ _ _ _ _ _ _ h0]
+    obtain ⟨e1, e2⟩ := h0
+    subst e1 e2
+    rw [List.eq_nil_of_length_eq_zero (l := rs) (by simpa using hrl),
+      List.eq_nil_of_length_eq_zero (l := gs) (by simpa using hgl),
+      ConRon.Arena.streamRulesCheck.eq_2]
+    exact RefE.ret rfl (SrPost.refl hC hA)
+  by_cases h1 : rl = 0 ∨ gl = 0
+  · rw [srkE.abort1 _ _ _ _ _ _ _ _ _ _ h0 h1]; exact RefE.of_cls0 rfl
+  have hrl0 : rl.toNat ≠ 0 := fun h => h1 (.inl (UInt64.toNat_inj.mp (by simpa using h)))
+  have hgl0 : gl.toNat ≠ 0 := fun h => h1 (.inr (UInt64.toNat_inj.mp (by simpa using h)))
+  obtain ⟨rl', hrl'⟩ : ∃ k, rl.toNat = k + 1 := ⟨rl.toNat - 1, by omega⟩
+  obtain ⟨gl', hgl'⟩ : ∃ k, gl.toNat = k + 1 := ⟨gl.toNat - 1, by omega⟩
+  rw [hrl', decRules_succ] at hrs
+  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hrs
+  obtain ⟨r, hr, rs', hrs', rfl⟩ := hrs
+  have hg' := hg
+  rw [hgl'] at hg'
+  obtain ⟨x, gs', rfl, hx, hgs'⟩ := decHL_succ_inv hg'
+  obtain ⟨y, ysP, rfl, hy, hysP⟩ := denoteRules_cons_inv hrsP
+  obtain ⟨-, -, hyr, -⟩ := denoteRule_inv hy
+  simp only [Frontend.denoteEList] at hgsP
+  rcases hxd : denoteE a.store x with _ | xP
+  · rw [hxd] at hgsP; simp at hgsP
+  rcases hgsd : Frontend.denoteEList a.store gs' with _ | gsP'
+  · rw [hxd, hgsd] at hgsP; simp at hgsP
+  -- the words
+  obtain ⟨-, -, hrh⟩ := decRule_fields hr
+  have hro8 : ro.toNat + 8 < 2 ^ 64 := by
+    obtain ⟨w, hw, -⟩ := hd?_some hrh
+    exact erA_lt hw
+  have e8 : (ro + 8).toNat = ro.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
+  obtain ⟨hsH, hsr⟩ := erRd_hd (a := ro + 8) (by rw [e8]; exact hrh)
+  have hsz : (m.arr64 IW).size < 2 ^ 64 := hC.stage.iw.iwSize
+  obtain ⟨w0, ew0, hw0H, hw0⟩ := decHL_word hg hsz 0 (by omega)
+  rw [show (0 : Nat).toUInt64 = (0 : Word) from rfl, UInt64.add_zero] at ew0
+  simp only [List.getElem?_cons_zero, Option.some.injEq] at hw0
+  subst hw0
+  have hgo1 : (go + 1).toNat = go.toNat + 1 := by
+    have := hC.stage.iw.iw; rw [UInt64.toNat_add]; simp; omega
+  have hgl1 : (gl - 1).toNat = gl' := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+  have hrl1 : (rl - 1).toNat = rl' := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+  have hrs'' : decRules (erA m) (ro + 11).toNat (rl - 1).toNat = some rs' := by
+    rw [hrl1]; exact decRules_shift hrs' (erRdOK m).lt
+  have hgs'' : decHL m (go + 1).toNat (gl - 1).toNat = some gs' := by rw [hgo1, hgl1]; exact hgs'
+  have hgb' : (go + 1).toNat + (gl - 1).toNat ≤ iwTop m := by omega
+  rw [ConRon.Arena.streamRulesCheck.eq_1]
+  have key : (r.rhs == decI w0) = true ↔ erRd m (ro + 8) = w0 := by
+    rw [beq_iff_eq, hsr, decI_inj_iff hsH hw0H]
+  by_cases heq : erRd m (ro + 8) = w0
+  · rw [srkE.arm3 _ _ _ _ _ _ _ _ _ _ h0 h1 (by rw [ew0]; exact heq), ite_eq_left (key.mpr heq),
+      srkE.j1.eq_1]
+    refine RefE.lastE (K := srkE.k_stream_rules_check p) (f := fun v => (0, v.2)) (fun _ => rfl)
+      (fun _ => rfl) id (ih (by omega) m a lo ll (ro + 11) (rl - 1) (go + 1) (gl - 1) lps lpsP rs'
+        ysP gs' gsP' hC hA hl hlb hlps hrs'' hysP hgs'' hgb' hgsd) fun _ _ _ _ h => h
+  rw [srkE.arm2 _ _ _ _ _ _ _ _ _ _ h0 h1 (by rw [ew0]; exact heq),
+    ite_eq_right (fun h => heq (key.mp h))]
+  rw [ew0, hsr]
+  change RefE _ (srkE.k_rule_agree p N vis lo ll ro rl go gl (raE p N m vis lo ll (erRd m (ro + 8)) w0))
+    _ a _
+  refine RefE.bindE (fun _ => srkE.k_rule_agree.none ..) id
+    (ra_ref (s := erRd m (ro + 8)) (g := w0) hq henv hApd hCrf N (by omega) hC hA hsH hw0H hl hlb
+      hlps (by rw [← hsr]; exact hyr) hxd) fun ⟨r1, m1⟩ _ a1 _ hR1 => ?_
+  rw [srkE.k_rule_agree.arm1, srkE.j1.eq_1]
+  refine RefE.lastE (K := srkE.k_stream_rules_check p) (f := fun v => (0, v.2)) (fun _ => rfl)
+    (fun _ => rfl) id (ih (by omega) m1 a1 lo ll (ro + 11) (rl - 1) (go + 1) (gl - 1) lps lpsP rs'
+      ysP gs' gsP' hR1.stage hR1.abs (by rw [decHL_grow hR1.grow hlb]; exact hl)
+      (Nat.le_trans hlb hR1.grow.iw)
+      (ConRon.Bridge.denoteNList_ext hR1.core.ext.lss.ls.ns _ _ hlps)
+      (ArrExt.decRules hR1.grow.ext hrs'') (ConRon.Bridge.denoteRules_ext hR1.core.ext _ _ hysP)
+      (by rw [decHL_grow hR1.grow hgb']; exact hgs'') (Nat.le_trans hgb' hR1.grow.iw)
+      (ConRon.Bridge.denoteEList_ext hR1.core.ext _ _ hgsd)) fun _ _ _ _ h => hR1.trans h
+
+end sims2
 end L.Ind
 
 end
