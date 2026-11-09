@@ -178,5 +178,7 @@ The final texts are given in the report when the theorems are proved.
   words (the tagged addresses need it; never fires); the pinned `And` block is no longer cached by
   `rom_fill`: the twin interns `andPinDecls` only at use, in the scratch tier (and only for a
   block naming `And`), so the cache's records were not the twin's; `rom_and_pin` interns at use
-  as the twin does. The other cached constants are persistent in the twin too (the ROM cache's
-  denotation `RomDen`, a field of `TwinOK`).
+  as the twin does. Then the whole startup cache went (`ROMC`, `rom_fill`): the readers read the
+  program's constant ROM data (`romDataLit`, which entry 2 has; it is the pin-data buffer's checked
+  content) and intern at use like the twin, instead of a cache whose twin side would need an
+  intern-idempotence development.
