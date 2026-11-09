@@ -77,7 +77,43 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
     (h3 : c.readNC = a.caches.readNC) (hA : 96 ≤ A ∧ A < 128 := by decide)
     (hC : 96 ≤ C.toNat ∧ C.toNat < 128 := by decide) :
     CoreS dn m' { a with caches := c } vis fe M' eb ∧ StackKept m m' := by
-  sorry
+  have nA : ∀ b : TieredArray, (b.arr < 96 ∨ 128 ≤ b.arr) → b ∉ ([A] : List TieredArray) := fun b hb h => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h
+    change A < 96 ∨ 128 ≤ A at hb; simp only [ArrId] at hA hb; omega
+  have nC : ∀ x : Word, (x.toNat < 96 ∨ 128 ≤ x.toNat) → x ∉ [C] := fun x hx h => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega
+  have gA : ∀ b ∈ ([A] : List TieredArray), InHigh b := fun b h => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h
+    refine ⟨rfl, ?_⟩; show 64 ≤ A; simp only [ArrId] at hA ⊢; omega
+  have gC : ∀ x ∈ [C], 64 ≤ x.toNat := fun x h => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega
+  have eA : ∀ b ∈ ([A] : List TieredArray), b ∉ envArrs := fun b h => not_mem_envArrs (.inl (by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h
+    show A < 129; simp only [ArrId] at hA ⊢; omega))
+  have eC : ∀ x ∈ [C], x ∉ envCtl := fun x h => not_mem_envCtl (.inl (by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h; subst h; omega))
+  have lf : LvlFree [C] := fun x hx => nC _ (by
+    simp only [lvlCtlW, List.mem_cons, List.not_mem_nil, or_false] at hx
+    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
+  refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [A] [C] gA gC m m' hf a hS.arena.base),
+      DerR.of_store _ _ _ (DerR.frameM [A] [C] m m' hf
+        (fun b hb => by have := gA b hb; simp only [InHigh] at this; omega) a hS.arena.der) rfl⟩,
+      hcore, hS.pins.congr (hf.arr PINS (nA _ (by decide)) (by decide)),
+      hS.env.frame eA eC hf,
+      fun h l e => hS.readL h l (h1 ▸ e), fun h l e => hS.readLs h l (h2 ▸ e), hS.nwf,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
+      hS.memos.frame hf ⟨nA _ (by decide), nA _ (by decide)⟩ ⟨nC _ (by decide), nC _ (by decide)⟩
+        ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
+        ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩
+        ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
+        ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩ (nA _ (by decide)) (nC _ (by decide)),
+      hf.size BSTK ▸ hS.bstk,
+      (hS.den.frameE (hf.arr EREC (nA _ (by decide)) (by decide))).caches rfl rfl h3,
+      hS.mode.frame hf (nC _ (by decide)) (nC _ (by decide)),
+      L.Ind.IWOK.frameC hf (nA _ (by decide)) (nA _ (by decide)) (nC _ (by decide)) (nC _ (by decide))
+        (nC _ (by decide)) hS.iw⟩,
+    StackKept.of_frame hf ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
+      ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩ lf (nA _ (by decide)) (nA _ (by decide))⟩
 
 /-- `whnfC` gains an entry (at `whSch`: array 98, `CTL` 100/101). -/
 theorem CoreS.set_wh {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}

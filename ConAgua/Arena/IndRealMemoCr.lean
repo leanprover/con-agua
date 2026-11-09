@@ -35,13 +35,14 @@ well formed after. -/
 theorem crfF_ok (vis : Word) (fe : IFEnv) (e : Word) (he : H e) :
     RelW crfF [vis, e] (fun m a => StageR vis fe m a ∧ AbsOK m) (constsResolveFFast fe (decI e))
       (fun m m' a r x => KeepPost vis fe decW0B m m' a r x ∧ AbsOK m') := by
-  intro m m' a r h ⟨hS, hAb, hI1, hCr, hIl, hWk⟩
+  intro m m' a r h ⟨hS, hAb, hI1, hCr, hIl, hWk, hHb⟩
   have hfr := crfF_frame h
   obtain ⟨x, a', hrun, hK, hCr'⟩ := relW_callF (P := crfP)
     (L.Stubs.constsResolveFFast_refines crfP_prog (vis := vis) (fe := fe) e he) m m' a r h
     ⟨hS, hCr⟩
   exact ⟨x, a', hrun, hK, hAb.frame hfr (by decide) (by decide), hI1.frame hfr (by decide) (by decide),
     hCr', hIl.frame hfr (by decide) (by decide),
-    hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
+    hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide),
+    hbOK_frame hHb hfr (by decide) (by decide)⟩
 
 end L.Ind

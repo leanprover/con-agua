@@ -190,7 +190,7 @@ theorem absOK_crfF' {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     (hA : AbsOK m) (hCr : L.Stubs.CrOK m') (hT : StageT dn vis fe m' a') : AbsOK m' :=
   have hf := L.Ind.crfF_frame h
   ⟨hT.twin.memos.ab, hA.i1.frame hf (by decide) (by decide), hCr, hT.twin.memos.il,
-    hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
+    ⟨hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩, hT.twin.memos.hb⟩
 
 /-- The slice words of a decoded constant value. -/
 theorem decCV_sliceW {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV R q = some cv) :
@@ -235,8 +235,8 @@ theorem ccvSims_of {p : Prog} (hp : StrLitProg p) (hcl : LitShapeClosed p)
     have hrun := AM.run_of_ok _ _ R.run
     refine ⟨_, _, hrun, hT', hg, fun hCr => CrOK.frame hCr hfr coreStageA_155 coreStageC_158,
       fun hA => ⟨hT'.twin.memos.ab, hA.i1.frame hfr coreStageA_51 coreStageC_52,
-        hA.cr.frame hfr coreStageA_155 coreStageC_158, hT'.twin.memos.il, hT'.twin.memos.walk,
-        hT'.twin.erec, hT'.twin.spn, hT'.twin.bstk, hT'.flag⟩,
+        hA.cr.frame hfr coreStageA_155 coreStageC_158, hT'.twin.memos.il, ⟨hT'.twin.memos.walk,
+        hT'.twin.erec, hT'.twin.spn, hT'.twin.bstk, hT'.flag⟩, hT'.twin.memos.hb⟩,
       fun cv' x hx => ConRon.Bridge.denoteCV_ext hx ((emono_litShapeOk ci).run hrun), ?_⟩
     rw [R.res]; unfold decBool; simp
 

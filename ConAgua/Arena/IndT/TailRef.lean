@@ -326,7 +326,7 @@ theorem tailRefS_of (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : Ft
   simp only at hs'; subst hs'
   have d := callW_of_callE hc
   exact ⟨hR.stage, ⟨⟨⟨hR.rc.pos, hMaT _ _ _ _ _ d hB.ind.stage.ma, hMcT _ _ _ _ _ d hB.ind.stage.mc, hR.rc.ta⟩,
-    hR.abs.i1, hR.abs.cr⟩, ⟨hR.abs.il, hR.abs.ab, hR.abs.wk.1⟩, hR.abs⟩, hR.grow, hR.inst⟩
+    hR.abs.i1, hR.abs.cr⟩, hR.abs.coreMemos, hR.abs⟩, hR.grow, hR.inst⟩
 
 end sims
 

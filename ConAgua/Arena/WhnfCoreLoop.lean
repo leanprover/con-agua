@@ -333,7 +333,100 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     RefE (CoreStepE p n) (whnfCoreE p (n + 1) s₀.mem mode cheap vis d e)
       ((coreKnot (decMode mode) (decEager mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
-  sorry
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hS := hs.rel
+  have heb := hS.core.eb1
+  have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
+  simp only [whnfCoreE]
+  by_cases hst : tagW e ≠ 4 ∧ tagW e ≠ 9 ∧ tagW e ≠ 7 ∧ tagW e ≠ 0
+  · rw [ite_eq_left hst]
+    have ht : whnfCoreStuckTag (decE e) = true := by rw [stuck_iff e he]; simpa using hst
+    exact RefE.ret (knot_whnfCore_stuck _ _ fe F' (cheap != 0) d.toNat _ a₀ ht) (CorePost.ret hS rfl he)
+  rw [ite_eq_right hst]
+  have ht : whnfCoreStuckTag (decE e) = false := by rw [stuck_iff e he]; simpa using hst
+  -- the body's error claim at fuel `n' + 1`
+  have body : ∀ (n' : Nat), n = n' + 1 → ∀ (c : Word) (er : Err),
+      callE p (n' + 1) "whnf_core_loop" [mode, c, vis, d, e] s₀.mem = .error er → CoreStepE p n →
+      ErrClaim (whnfCoreBody (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F') fe (c != 0) d.toNat
+        (decE e)) a₀ er := by
+    intro n' hn' c er h2 hG
+    exact CoreSpecE.of_callE (RefE.coreSpecE (whnfCoreLoop_specE p hp.loop (n' + 1) s₀ mode c vis d e)
+      trivial (fun j hj => hG j (by omega)) (whnfCoreLoop_ref p hp hwc hcc hsup n' (hk.mono (by omega))
+        F' whnfCoreLoopFuel (by omega) (by simp only [whnfCoreLoopFuel]; omega) (by omega) s₀ a₀ dn vis
+        fe MM eb mode c d e hs he)) h2
+  by_cases hc : cheap ≠ 0
+  · rw [ite_eq_left hc]
+    have hcb : (cheap != 0) = true := by simpa using hc
+    rw [hcb]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => callW_memoFind hp.wkf h) fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
+    rw [hkey] at hr
+    subst hm hr
+    have hf := hS.core.wk.findE heb e he hne
+    simp only [whnfCoreE.k_wk_find]
+    by_cases h1' : (mfindG wkSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
+    · rw [ite_eq_left h1']
+      exact RefE.ret (knot_whnfCore_hitK _ _ fe F' d.toNat _ a₀ ht _ (hf.1 h1').1)
+        (CorePost.ret hS rfl (hf.1 h1').2)
+    rw [ite_eq_right h1']
+    have hmiss := hf.2 (by simpa using h1')
+    cases n with
+    | zero => exact RefE.callE_zero (fun _ => rfl)
+    | succ n' =>
+    rcases h2 : callE p (n' + 1) "whnf_core_loop" [mode, 1, vis, d, e] s₀.mem with e2 | ⟨r₂, m₂⟩
+    · exact fun hG => ErrClaim.of_run_eq (fun ce h' => knot_whnfCore_missK_err _ _ fe F' d.toNat _ a₀ ht
+        hmiss ce h') (body n' rfl 1 _ h2 hG)
+    obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
+      (whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s₀ a₀ dn
+        vis fe MM eb mode 1 d e hs he) (callW_of_callE h2)
+    simp only [whnfCoreE.k_whnf_core_loop]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ h3 => ?_
+    simp only [whnfCoreE.k_wk_find_2]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
+    simp only [whnfCoreE.k_wk_put]
+    have hset := callW_memoSet hp.wkf hp.wkp h3 h4
+    rw [hkey] at hset
+    obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wk e (r₂.headD 0) he hrw hset
+    have hb1 : ((1 : Word) != 0) = true := rfl
+    rw [hb1] at hok hres
+    have hrun := knot_whnfCore_missK _ _ fe F' d.toNat _ a₀ ht hmiss _ _ (AM.run_of_ok _ _ hok)
+    rw [hres] at hrun
+    exact RefE.ret hrun ⟨⟨_, hS₂, hK₁.wk _ _, hSt₁.trans hSt₂⟩, rfl, hrw⟩
+  · rw [ite_eq_right hc]
+    have hcb : (cheap != 0) = false := by simpa using hc
+    rw [hcb]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => callW_memoFind hp.wcf h) fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
+    rw [hkey] at hr
+    subst hm hr
+    have hf := hS.core.wc.findE heb e he hne
+    simp only [whnfCoreE.k_wc_find]
+    by_cases h1' : (mfindG wcSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
+    · rw [ite_eq_left h1']
+      exact RefE.ret (knot_whnfCore_hitF _ _ fe F' d.toNat _ a₀ ht _ (hf.1 h1').1)
+        (CorePost.ret hS rfl (hf.1 h1').2)
+    rw [ite_eq_right h1']
+    have hmiss := hf.2 (by simpa using h1')
+    cases n with
+    | zero => exact RefE.callE_zero (fun _ => rfl)
+    | succ n' =>
+    rcases h2 : callE p (n' + 1) "whnf_core_loop" [mode, 0, vis, d, e] s₀.mem with e2 | ⟨r₂, m₂⟩
+    · exact fun hG => ErrClaim.of_run_eq (fun ce h' => knot_whnfCore_missF_err _ _ fe F' d.toNat _ a₀ ht
+        hmiss ce h') (body n' rfl 0 _ h2 hG)
+    obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
+      (whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s₀ a₀ dn
+        vis fe MM eb mode 0 d e hs he) (callW_of_callE h2)
+    simp only [whnfCoreE.k_whnf_core_loop_2]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ h3 => ?_
+    simp only [whnfCoreE.k_wc_find_2]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
+    simp only [whnfCoreE.k_wk_put]
+    have hset := callW_memoSet hp.wcf hp.wcp h3 h4
+    rw [hkey] at hset
+    obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wc e (r₂.headD 0) he hrw hset
+    have hb0 : ((0 : Word) != 0) = false := rfl
+    rw [hb0] at hok hres
+    have hrun := knot_whnfCore_missF _ _ fe F' d.toNat _ a₀ ht hmiss _ _ (AM.run_of_ok _ _ hok)
+    rw [hres] at hrun
+    exact RefE.ret hrun ⟨⟨_, hS₂, hK₁.wc _ _, hSt₁.trans hSt₂⟩, rfl, hrw⟩
 
 include hp hwc hcc hsup in
 /-- **The knot's `whnfCore` slot, one level up** (`core_ref`'s ok half): given the knot at every

@@ -75,18 +75,19 @@ def WkOK (m : Mem) : Prop :=
 memo well formed in the memory it starts from and leaves it so; `StageR` says nothing about these
 arrays, so the stage's theorems thread it as a hypothesis and a post. (The name is helper `abs`'s,
 from when it held the `abstract1` memo only.) The core's `CoreMemos` holds the first and the last
-(`IndRealAbsT.lean`). -/
+(`IndRealAbsT.lean`). It also carries the core's `hasLooseBVarB` memo (array `HBM`, epoch word
+`CTL[214]`; `CoreMemos.hb`), so that `AbsOK` gives all of `CoreMemos`. -/
 structure AbsOK (m : Mem) : Prop where
   ab : AbMemo m
   i1 : I1Memo m
   cr : CrMemo m
   il : IlMemo m
   wk : WkOK m
+  hb : ∃ mp, hbMR m mp
 
-/-- The core's memos from `AbsOK`. ronsync2 p4m (temporary): `AbsOK` does not carry the `hb` memo
-(`CoreMemos.hb`); the stage has to thread it (`HbMemo`). -/
+/-- The core's memos from `AbsOK`. -/
 theorem AbsOK.coreMemos {m : Mem} (hA : AbsOK m) : CoreMemos m :=
-  ⟨hA.il, hA.ab, hA.wk.1, sorry⟩
+  ⟨hA.il, hA.ab, hA.wk.1, hA.hb⟩
 
 /-- **The twin side of a stub**: a model run of `f(args)` from a memory satisfying `pre` against
 `a` is a successful twin run of `op` with `post` after. -/

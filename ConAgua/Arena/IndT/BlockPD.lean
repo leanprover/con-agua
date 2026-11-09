@@ -53,7 +53,7 @@ theorem BkMem.ofEnv {A : List TieredArray} {m m' : Mem} (h : BkMem m) (hf : MemF
   · simp only [memoFreeA, List.all_eq_true, Bool.and_eq_true, bne_iff_ne, ne_eq]
     intro b hb
     have := hA b hb
-    refine ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨?_, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩ <;>
+    refine ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨?_, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩ <;>
       (intro e; subst e; revert this; decide)
 
 /-- **The stage relation across a writer of the environment's rows**, at the environment its

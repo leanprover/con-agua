@@ -52,7 +52,7 @@ theorem absOK_core {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f ∈
   obtain ⟨hfr, -⟩ := callW_coreFrame hcl hf h
   exact ⟨hT.twin.memos.ab, hA.i1.frame hfr coreFrA_51 coreFrC_52,
     hA.cr.frame hfr coreFrA_155 coreFrC_158, hT.twin.memos.il,
-    hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
+    ⟨hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩, hT.twin.memos.hb⟩
 
 /-- A core call's `RSim` with `AbsOK` added to its post. -/
 theorem RSim.coreAbs {α : Type} {p : Prog} (hcl : CoreStageClosed p) {f : FnName}
