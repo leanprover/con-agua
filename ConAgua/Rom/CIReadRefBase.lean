@@ -269,11 +269,35 @@ theorem RInv.putER (h : RInv m₀ a₀ T m a) (i w : Word) (hi : erT m₀ ≤ i.
     simp only [iwTop, erTop, erecTop1, hc, hs]
     exact this
 
+/-- `erec_alloc` moves only the top of the flag's tier. -/
+theorem erAllocW_other {m m' : Mem} {k o : Word} (hw : erAllocW m k = some (o, m')) :
+    (rdW (m.arr64 CTL) 1 = 0 → erecTop1 m' = erecTop1 m) ∧
+      (¬ rdW (m.arr64 CTL) 1 = 0 → erecTop m' = erecTop m) := by
+  unfold erAllocW at hw
+  split at hw
+  · rename_i e
+    dsimp only at hw
+    split at hw; · cases hw
+    split at hw; · cases hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨-, rfl⟩ := hw
+    refine ⟨fun _ => ?_, fun h' => absurd e h'⟩
+    simp only [erAllocMem, e, ite_true, erecTop1, rdW_set64E]; simp
+  · rename_i e
+    dsimp only at hw
+    split at hw; · cases hw
+    split at hw; · cases hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨-, rfl⟩ := hw
+    refine ⟨fun h' => absurd h' e, fun _ => ?_⟩
+    simp only [erAllocMem, e, ite_false, erecTop, rdW_set64E]; simp
+
 /-- `erec_alloc(k)`: the flag tier's top raised by `k`, the address its old top. -/
 theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k = some (o, m')) :
     RInv m₀ a₀ T m' a ∧ o.toNat = erT m ∧ erT m' = erT m + k.toNat ∧
       m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
-      m'.arr64 IW = m.arr64 IW ∧ iwTop m' = iwTop m ∧ ArrExt (erA m) (erA m') := by
+      m'.arr64 IW = m.arr64 IW ∧ iwTop m' = iwTop m ∧ ArrExt (erA m) (erA m') ∧
+      (∀ i, i < erT m → erA m' i = erA m i) := by
   obtain ⟨hg, hf, hoff, htop, -, htier, hlt, hok'⟩ := erAllocW_spec hw h.ok
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
   have hE1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hf.arr (tier1 EREC) (by simp) (by decide)
@@ -290,7 +314,31 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k 
       simp only [this, ite_false, e] at hoff htop ⊢; omega
   refine ⟨⟨ArenaD.frameHi hf (by simp) (by simp) h.arena, h.hcp,
     h.frame.trans (hf.mono (by simp) (by simp [RciC])), h.grow.trans hgI, hok', h200.trans h.top,
-    h.mode.frame hf (by decide) (by decide), by rw [h1]; exact h.fl⟩, hT.1, hT.2, hE, hE1, hI, h200, hg.ext⟩
+    h.mode.frame hf (by decide) (by decide), by rw [h1]; exact h.fl⟩, hT.1, hT.2, hE, hE1, hI, h200, hg.ext,
+    fun i hi => ?_⟩
+  have k1 : erecTop m ≤ erecTop m' := hg.top
+  have k2 : erecTop1 m ≤ erecTop1 m' := hg.top1
+  have hO := erAllocW_other hw
+  have q1 : erecTop m ≤ (m.arr64 EREC).size := h.ok.er
+  have q2 : (m.arr64 EREC).size < 2 ^ 40 := h.ok.erCap
+  have q3 : erecTop1 m ≤ (m.arr64 (tier1 EREC)).size := h.ok.er1
+  have q4 : (m.arr64 (tier1 EREC)).size < 2 ^ 40 := h.ok.er1Cap
+  unfold erT at hi
+  simp only [erA, erecP, hE, hE1]
+  have h64 : i < 2 ^ 64 := by split at hi <;> omega
+  simp only [h64, ite_true]
+  by_cases e : rdW (m.arr64 CTL) 1 = 0
+  · rw [if_pos e] at hi
+    have t0 : i / 2 ^ 40 % 2 = 0 := by omega
+    have i0 : i % 2 ^ 40 = i := by omega
+    simp only [t0, ite_true, i0, if_pos hi, if_pos (Nat.lt_of_lt_of_le hi k1)]
+  · rw [if_neg e] at hi
+    by_cases t : i < 2 ^ 40
+    · have t0 : i / 2 ^ 40 % 2 = 0 := by omega
+      simp only [t0, ite_true, hO.2 e]
+    · have t1 : ¬ i / 2 ^ 40 % 2 = 0 := by omega
+      have i1 : i % 2 ^ 40 < erecTop1 m := by omega
+      simp only [t1, ite_false, if_pos i1, if_pos (Nat.lt_of_lt_of_le i1 k2)]
 
 /-- `iw_alloc(k)`: the pool's top raised by `k`. -/
 theorem RInv.iwAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : allocW m k = some (o, m')) :
@@ -415,27 +463,26 @@ end holds
 
 /-! ## Region keeping -/
 
-/-- The flag tier's records of `m` (between its base and its top) unchanged outside `R`. -/
+/-- `m`'s records below the flag tier's top unchanged outside `R`. -/
 def EKeep (R : Nat → Prop) (m m' : Mem) : Prop :=
-  erT m ≤ erT m' ∧ ∀ i, erB m ≤ i → i < erT m → ¬ R i → erA m' i = erA m i
+  erT m ≤ erT m' ∧ ∀ i, i < erT m → ¬ R i → erA m' i = erA m i
 
-theorem EKeep.refl (R : Nat → Prop) (m : Mem) : EKeep R m m := ⟨Nat.le_refl _, fun _ _ _ _ => rfl⟩
+theorem EKeep.refl (R : Nat → Prop) (m : Mem) : EKeep R m m := ⟨Nat.le_refl _, fun _ _ _ => rfl⟩
 
-theorem EKeep.trans {R : Nat → Prop} {m₁ m₂ m₃ : Mem} (h₁ : EKeep R m₁ m₂) (h₂ : EKeep R m₂ m₃)
-    (hb : erB m₂ = erB m₁) : EKeep R m₁ m₃ :=
-  ⟨Nat.le_trans h₁.1 h₂.1, fun i hb' hi hr =>
-    (h₂.2 i (hb ▸ hb') (Nat.lt_of_lt_of_le hi h₁.1) hr).trans (h₁.2 i hb' hi hr)⟩
+theorem EKeep.trans {R : Nat → Prop} {m₁ m₂ m₃ : Mem} (h₁ : EKeep R m₁ m₂) (h₂ : EKeep R m₂ m₃) :
+    EKeep R m₁ m₃ :=
+  ⟨Nat.le_trans h₁.1 h₂.1, fun i hi hr => (h₂.2 i (Nat.lt_of_lt_of_le hi h₁.1) hr).trans (h₁.2 i hi hr)⟩
 
 theorem EKeep.mono {R R' : Nat → Prop} {m m' : Mem} (h : EKeep R m m') (hR : ∀ i, R i → R' i) :
-    EKeep R' m m' := ⟨h.1, fun i hb hi hr => h.2 i hb hi (fun h' => hr (hR i h'))⟩
+    EKeep R' m m' := ⟨h.1, fun i hi hr => h.2 i hi (fun h' => hr (hR i h'))⟩
 
 theorem EKeep.of_eq {R : Nat → Prop} {m m' : Mem} (hE : erA m' = erA m) (ht : erT m ≤ erT m') :
-    EKeep R m m' := ⟨ht, fun i _ _ _ => by rw [hE]⟩
+    EKeep R m m' := ⟨ht, fun i _ _ => by rw [hE]⟩
 
-/-- A decoding reading words of the flag tier below the top and outside `R` survives. -/
+/-- A decoding reading words below the flag tier's top and outside `R` survives. -/
 theorem Holds.ekeep {α : Type} {SE SI R : Nat → Prop} {f : Mem → Option α} {x : α} {m m' : Mem}
-    (h : Holds SE SI f m x) (hk : EKeep R m m') (hS : ∀ i, SE i → erB m ≤ i ∧ i < erT m ∧ ¬ R i)
+    (h : Holds SE SI f m x) (hk : EKeep R m m') (hS : ∀ i, SE i → i < erT m ∧ ¬ R i)
     (hI : m'.arr64 IW = m.arr64 IW) : Holds SE SI f m' x :=
-  h.keep (fun i hi => hk.2 i (hS i hi).1 (hS i hi).2.1 (hS i hi).2.2) (fun i _ => by simp only [iwA, hI])
+  h.keep (fun i hi => hk.2 i (hS i hi).1 (hS i hi).2) (fun i _ => by simp only [iwA, hI])
 
 end L.Rom

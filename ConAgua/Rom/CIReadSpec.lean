@@ -63,6 +63,7 @@ structure RomCIProg (rom : List UInt8) (p : Prog) : Prop where
   ren : RenameOK romC p (Prog.viaC rom p) romCN
   rset_clear : p.lookup "rset_clear" = some (memoClearG rsetSch)
   erec_alloc : p.lookup "erec_alloc" = some erecAlloc
+  erec_put : p.lookup "erec_put" = some erecPut
   iw_alloc : p.lookup "iw_alloc" = some iwAlloc
   rom_basis_decls : p.lookup "rom_basis_decls" = some romBasisDeclsL
   rom_ci : p.lookup "rom_ci" = some romCiL
