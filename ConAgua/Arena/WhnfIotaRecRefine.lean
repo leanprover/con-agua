@@ -13,7 +13,7 @@ public import ConAgua.Arena.IotaCase3Ref
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.WhnfIotaRefine3
+public import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.L.Records
 public import ConAgua.Arena.WhnfIotaRefine2
 public import ConAgua.Arena.WhnfIotaRefine4
@@ -231,10 +231,6 @@ theorem IotaRecProg'.fnzaProg {p : Prog} (hp : IotaRecProg' p) (hilp : InstLPOK 
   ilp := hilp
 
 /-! ## `erec_push(o, c)` -/
-
-/-- The tagged read's bound for word `o + j` (`EREC⦃o + j⦄` in bounds). -/
-abbrev erIn (m : Mem) (x : Word) : Prop :=
-  (x &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (x >>> 40))).size
 
 /-- Model of the `erec_push` loop at L fuel `k`. -/
 def epW (o c so : Word) : Nat → Mem → Word → Option Mem
@@ -700,7 +696,7 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   | succ N =>
   have hk' : KnotUpTo p N := hk.mono (Nat.le_succ N)
   have hspn := hS.spn
-  obtain ⟨-, -, -, hfpl, hfne, hflv, -, -⟩ := decRule_rd (erRdOK s₀.mem) hrule
+  obtain ⟨-, -, -, -, hfne, -, -, -⟩ := decRule_rd (erRdOK s₀.mem) hrule
   have hk4 : erRdT s₀.mem ctorP = 4 := Classical.byContradiction fun h =>
     (decCI_ctorR (erRdOK s₀.mem) hci).2 h _ _ _ rfl
   have hcpw : np = (erRdT s₀.mem (ctorP + 5)).toNat := by
@@ -752,7 +748,7 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (erRdT s₀.mem (recP + 5) + 1) (erRdT s₀.mem (recP + 6)) (erRdT s₀.mem (ctorP + 5)) rule lps args
       hS1 hus (by rw [eP1]; exact hlps) (by rw [hsn]; exact hsa1)
       (fun h => let ⟨_, lv, pins, hf, hsp, _⟩ := hpush h; ⟨lv, pins, hf, hsp⟩)
-      hflv hfpl
+      (decRule_notNested (erRdOK s₀.mem) hrule)
       (by rw [hsn]; show so.toNat + sn.toNat ≤ (spTop m1).toNat; omega)
       (fun h => let ⟨_, _, _, _, _, hb⟩ := hpush h; hb)) c2
   rw [ht2] at hS2 gr2 hxs
