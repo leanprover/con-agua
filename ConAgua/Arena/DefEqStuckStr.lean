@@ -86,7 +86,99 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
     RefE (StuckG p n) (strE p (n + 1) s₀.mem mode vis d a b side lt fo)
       (stuckStrT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
         (decE fo)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  have hS := hs.rel
+  have hR := hS.arena.base
+  have hirr : ∀ (st : AState) (m : Mem) (M' : ModeMaps), CoreS dn m st vis fe M' eb →
+      RefE (StuckG p n) (strE.j1 p n mode vis d a b m)
+        (stuckIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) st
+        (CorePost decBool dn m vis fe M' eb ResH) := fun st m M' hS' =>
+    si_tail hq hi hc (fun _ => rfl) (fun _ => rfl) n hk F hF hn m st dn vis fe M' eb mode d a b hS'
+      hs.mode4 hs.eb_mode ha hb
+  have hdef : ∀ (st : AState) (m : Mem) (M' : ModeMaps) (x y : Word), CoreS dn m st vis fe M' eb →
+      HW x → HW y →
+      RefE (StuckG p n) (strE.k_defeq p (callE p n "defeq" [mode, vis, d, x, y] m))
+        ((coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE x) (decE y)) st
+        (CorePost decBool dn m vis fe M' eb ResH) := by
+    intro st m M' x y hS' hx hy
+    have hs' : SlotPre ⟨m, Locals.init []⟩ st dn vis fe M' eb mode := ⟨hS', hs.mode4, hs.eb_mode⟩
+    rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
+    exact RefE.bind_callE (fun _ => rfl)
+      ((hk n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn hs' hx hy)
+      (fun (hG : StuckG p n) => (hG.knot n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn
+        hs' hx hy)
+      fun _ _ _ h => RefE.ret rfl ⟨h.after, rfl, h.resOk⟩
+  simp only [strE]
+  refine RefE.abort0 (by rfl) fun h1 => ?_
+  refine RefE.abort0 (by rfl) fun h2 => ?_
+  obtain ⟨kn, hkv, hrec⟩ := view_lit_f s₀.mem a₀ hR lt hlt ⟨h1, by simpa using h2⟩ hg
+  rw [hl] at hkv
+  have hkl : kn.l = l := by cases hkv; rfl
+  obtain ⟨kl⟩ := kn
+  simp only at hkl
+  subst hkl
+  cases kl with
+  | natVal N =>
+    have h0 : tfld s₀.mem LIT (tierW lt) (idxW lt) 0 = 0 := hrec.1
+    rw [ite_eq_right (fun h => absurd (h0 ▸ h.1) (by decide))]
+    exact hirr a₀ s₀.mem M hS
+  | strVal st =>
+    have h0 : tfld s₀.mem LIT (tierW lt) (idxW lt) 0 = 1 := hrec.1
+    rcases (Classical.em (tagW fo = 3)).symm with h3 | h3
+    · rw [ite_eq_right (fun h => h3 h.2)]
+      unfold stuckStrT
+      rw [decE_tag_const_beq _ hfo]
+      simp only [h3, decide_false, Bool.false_eq_true, ↓reduceIte]
+      exact hirr a₀ s₀.mem M hS
+    rw [ite_eq_left ⟨h0, h3⟩]
+    refine RefE.abort0 (by rfl) fun h4 => ?_
+    refine RefE.abort0 (by rfl) fun h5 => ?_
+    obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR fo hfo ⟨h4, by simpa using h5⟩ h3
+    have hct : ((decE fo).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hfo]; simp [h3]
+    generalize tfld s₀.mem CONST (tierW fo) (idxW fo) 0 = co at hnw hv ⊢
+    generalize tfld s₀.mem CONST (tierW fo) (idxW fo) 1 = uo at huw hv ⊢
+    -- the pins
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+      (pinWord_rd p hq.leaf.pinword n ⟨s₀.mem, Locals.init []⟩ 52) h) fun r₁ m₁ ⟨t₁, ht₁, hm₁, _, hr₁⟩ => ?_
+    obtain rfl : m₁ = s₀.mem := by rw [← ht₁]; exact hm₁
+    dsimp only [strE.k_pin_word]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+      (pinAt_rd p hq.leaf.pinat n ⟨s₀.mem, Locals.init []⟩ 6) h) fun r₂ m₂ ⟨t₂, ht₂, hm₂, _, _, hr₂⟩ => ?_
+    obtain rfl : m₂ = s₀.mem := by rw [← ht₂]; exact hm₂
+    dsimp only [strE.k_pin_at]
+    simp (config := {decide := true}) only [↓reduceIte] at hr₂
+    -- `str_lit_stored`
+    refine RefE.of_run_eq (stuckStrT_run _ fe _ _ _ _ st _ a₀ s₀.mem hS.pins _ _ hct hv) ?_
+    refine RefE.bind_callW (fun _ => rfl) (hc.strLitStored n s₀ a₀ dn vis fe M eb hS)
+      fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
+    dsimp only [strE.k_str_lit_stored]
+    have hsl : HW (rdW (s₀.mem.arr64 PINS) (1 + 6)) := by
+      have := hS.pins.names_lt 6 (by decide); rwa [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl] at this
+    have hel : HW (rdW (s₀.mem.arr64 PINS) 52) := by
+      have := hS.pins.lv_lt.1; rwa [pinW_rdW s₀.mem 52 52 rfl] at this
+    simp only [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl, pinW_rdW s₀.mem 52 52 rfl, decI_inj_iff hnw hsl,
+      decI_inj_iff huw hel]
+    rw [hr₁, hr₂]
+    by_cases hcond : co = rdW (s₀.mem.arr64 PINS) (1 + 6) ∧ uo = rdW (s₀.mem.arr64 PINS) 52 ∧
+        r₃.headD 0 ≠ 0
+    · rw [ite_eq_left hcond]
+      obtain ⟨hc₁, hc₂, hc₃⟩ := hcond
+      rw [ite_eq_left ⟨hc₁, hc₂, decBool_true_of hc₃⟩]
+      have hv₃ := hc.supKeep fe a₀ (decE lt) _ hl
+      refine RefE.bind_callW (fun _ => rfl) (hc.strLitCtor n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb lt st hS₃
+        hlt hv₃) fun r₄ m₄ _ h₄ => RefE.after_core (w := id) h₄ fun M₄ hS₄ _ => ?_
+      dsimp only [strE.k_str_lit_ctor]
+      by_cases hsd : side = 0
+      · rw [ite_eq_left hsd]
+        simp only [hsd, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte]
+        exact hdef _ m₄ M₄ _ _ hS₄ h₄.resOk hb
+      · rw [ite_eq_right hsd]
+        have : (side != 0) = true := by simpa using hsd
+        simp only [this, ↓reduceIte]
+        exact hdef _ m₄ M₄ _ _ hS₄ ha h₄.resOk
+    · rw [ite_eq_right hcond]
+      rw [ite_eq_right (fun h => hcond ⟨h.1, h.2.1, fun e => by
+              have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]
+      exact hirr _ m₃ M₃ hS₃
 
 /-- **`stuck_str` refines `stuckStrT`** at the knot (`str_ref`'s ok half). -/
 @[refines_part ConRon.Arena.defeqStuck "the string-literal arms (stuckStrT)"]
