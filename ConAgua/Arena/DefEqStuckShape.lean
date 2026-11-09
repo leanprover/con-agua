@@ -37,7 +37,9 @@ theorem envFind_callW {p : Prog} (hp : WhnfCoreProg p) {n : Nat}
     {r : List Word} (hc : callW p n "env_find" [k, vis] m = some (r, m')) :
     m' = m ∧ fe.find? (decI k) = envFound m (r.headD 0) (r.tail.headD 0) ∧
       (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
-  sorry
+  obtain ⟨s', hs', h1, -, h3⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envFind_refines p hp.envrow hp.baserow hp.envfind n _ vis k hE hk) hc
+  exact ⟨hs'.symm.trans h1, h3⟩
 
 -- RS2E
 

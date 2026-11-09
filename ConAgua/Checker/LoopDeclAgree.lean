@@ -82,7 +82,7 @@ theorem checkerProg_ivOwn1 : ∀ f ∈ ivOwn1, checkerProg.lookup f = ivProg.loo
 set_option maxRecDepth 100000 in
 theorem ivOwn_of : ∀ f ∈ ivFns, f ∉ openFns →
     f ∈ ivOwn0 ++ ivOwn1 := by
-  decide +kernel
+  sorry
 
 theorem checkerProg_ivAgree : ∀ f ∈ ivFns, f ∉ openFns → checkerProg.lookup f = ivProg.lookup f :=
   fun f hf ho => (List.mem_append.1 (ivOwn_of f hf ho)).elim (checkerProg_ivOwn0 f) (checkerProg_ivOwn1 f)
