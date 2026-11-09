@@ -27,9 +27,16 @@ open L.Arena
 /-- A decoded constructor pair's name word. -/
 theorem decCN_nameW {m : Mem} {p : Nat} {x : IConstantVal × Nat} (h : decCN m p = some x)
     (hp : p < 2 ^ 64) :
-    ∃ w, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (UInt64.ofNat p)) = w ∧ w.toNat < 2 ^ 32 ∧
+    ∃ w, erRd m (rdW (m.arr64 IW) (UInt64.ofNat p)) = w ∧ w.toNat < 2 ^ 32 ∧
       x.1.name = decI w := by
-  sorry
+  simp only [decCN, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨q, hq, cv, hcv, nF, -, rfl⟩ := h
+  have hr := iwN_rdW hq hp
+  obtain ⟨w, hw, hw32, hn⟩ := decCV_name hcv
+  refine ⟨w, ?_, hw32, hn⟩
+  rw [hr.1]
+  have : (UInt64.ofNat q).toNat = q := by simp; have := hr.2; omega
+  exact erRd_of_erA (by rw [this]; exact hw)
 
 theorem chnW_ok (n : Nat) : ∀ (m : Mem) (co cl name r : Word) (ctors : List (IConstantVal × Nat)),
     chnW n m co cl name = some r → decPL m (decCN m) co.toNat cl.toNat = some ctors →

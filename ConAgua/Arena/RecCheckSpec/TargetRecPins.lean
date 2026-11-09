@@ -82,7 +82,13 @@ theorem tpn_spec (p : Prog) (hp : p.lookup "target_rec_pins_names" = some target
     (s₀ : St) (mo k reco recl auxo auxl : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "target_rec_pins_names" [mo, k, reco, recl, auxo, auxl]
     ⦃fun r s' => LocEq s' s₀ ∧ tpnW p n s₀.mem mo k reco recl auxo auxl = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, targetRecPinsNames]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "intern_nanon", callW_spec p n "block_rec_want_aux_names",
+      callW_spec p n "ptr_list_names", callW_spec p n "sl_set_eq", callW_spec p n "sl_nodup"] <;>
+    finish (gen := 40) (instances := 20000) [tpnW, tpnB, rdW_eq, erRd]
 
 end L.Ind
 
