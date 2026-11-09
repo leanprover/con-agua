@@ -40,8 +40,6 @@ theorem run_of_callW {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m : Mem
     rw [hq]; simp [Except.map, h.1, h.2]
   · cases h
 
-/-! ## `env_find` as a word model -/
-
 /-! ## `find_proj` -/
 
 theorem decTbl_numFields {R : Nat → Option Word} {q : Nat} {tbl : IProjTable} (h : decTbl R q = some tbl) :
@@ -55,18 +53,6 @@ theorem decTbl_numFields {R : Nat → Option Word} {q : Nat} {tbl : IProjTable} 
     simp only [nat?, Option.map_eq_some_iff] at h7
     obtain ⟨w, hw, rfl⟩ := h7
     exact ⟨w, hw, rfl⟩
-
-theorem rdW_some {a : Array Word} {x : Word} (h : rdW a x ≠ 0) : a[x.toNat]? = some (rdW a x) := by
-  simp only [rdW] at h ⊢
-  cases e : a[x.toNat]? with
-  | none => rw [e] at h; simp at h
-  | some v => rfl
-
-/-- The twin's answer from the table lookup's answer. -/
-def fpRes (o : Option IProjTable) (i : Nat) : Option IProjEntry :=
-  match o with
-  | some tbl => if i < tbl.numFields then some (tbl.entry i) else none
-  | none => none
 
 /-- The model of `find_proj` past `find_table`'s run: `(flag, record, memory)`. -/
 def findProjK (T i : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
