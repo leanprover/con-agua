@@ -113,20 +113,6 @@ theorem triple_and {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {s₀ : St
   M.triple_of_run fun _ _ _ hs hrun =>
     ⟨M.of_run (P := fun s => s = s₀) hs hrun h1, M.of_run (P := fun s => s = s₀) hs hrun h2⟩
 
-/-- **A leaf keeps `CoreMemos`** (its call closure writes no core memo, `LeafClosed`). -/
-theorem triple_leafMemos {p : Prog} (hL : LeafClosed p) {f : FnName} (hf : f ∈ leafFns) {n : Nat}
-    {vs : List Word} {s₀ : St} {Q : List Word → St → Prop}
-    (h : ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃fun r s' => Q r s'; ⊤⦄)
-    (hc : CoreMemos s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃fun r s' => Q r s' ∧ CoreMemos s'.mem; ⊤⦄ :=
-  triple_post (triple_and h (invoke_memFrame hL n hf vs s₀)) fun _ _ ⟨hq, hf', _⟩ =>
-    ⟨hq, hc.frame hf' leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp⟩
-
-/-- `TwinOK` across a leaf. -/
-theorem TwinOK.leaf {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {m m' : Mem} {a : AState}
-    (h : TwinOK dn m a fe) (hf : MemFrame leafA leafC m m') : TwinOK dn m' a fe :=
-  h.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp
-
 /-! ## `check_decl`'s model (its refinement: `DeclCheckT.lean`) -/
 
 /-- **`check_decl`'s unified model**: the inductive branch's block copy (outside the verdict

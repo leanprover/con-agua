@@ -198,7 +198,12 @@ theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre 
   rotate_right
   · rw [hsf.ctl 130 (not_mem_of_toNat (Z := [130]) (by decide +kernel) _ (by decide))]; exact h5.hz.c130
   · refine ⟨by rw [hDs]; have := hc.1 DECL (by decide); omega, by rw [hDLP]; exact h5.decls.psize,
-      by simpa [rdW] using hcnt, ?_, by rw [hDLP]; exact h5.decls.ptop, fun i hi => (hrecs i hi).1⟩
+      by simpa [rdW] using hcnt, ?_, by rw [hDLP]; exact h5.decls.ptop, fun i hi => (hrecs i hi).1,
+      fun i hi b' nP e => by
+        have h1 := (hrecs i hi).1
+        rw [e] at h1
+        obtain ⟨h6, h4, -⟩ := h1
+        rw [← h4]; exact ((hrecs i hi).2.2 h6).2.2⟩
     rw [hDs]; have := h5.decls.room; omega
   · rw [hpins]
     exact h5.pf.frame hsf stageA_prepare_prelude_pins (by decide +kernel) (by decide +kernel)

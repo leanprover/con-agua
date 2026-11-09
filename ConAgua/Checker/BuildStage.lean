@@ -204,22 +204,10 @@ theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s,
 
 /-! ## The index build at the checker's program -/
 
-theorem checkerProg_idxProg : L.Arena.IdxProg checkerProg where
-  decl_constants := by chk_lk
-  decl_constants_axiom := by chk_lk
-  decl_constants_ind := by chk_lk
-  decl_tables := by chk_lk
-  block_constants := by chk_lk
-  block_tables := by chk_lk
-  idx_add := by chk_lk
-  build_index := by chk_lk
-  idx_consts := by chk_lk
-  idx_tables := by chk_lk
-  base_row_get := by chk_lk
-  base_row_set := by chk_lk
-  tbl_base_get := by chk_lk
-  tbl_base_set := by chk_lk
-  iw_reset := by chk_lk
+/-- **The index build's program facts at the substituted checker** (`decl_constants`' callees
+read the ROM: `BasisRefs` needs `RomRefs`, which hold at `Prog.subPB` only). -/
+theorem checkerProg_idxProgPB (bs : List UInt8) : L.Arena.IdxProg (Prog.subPB bs checkerProg) := by
+  sorry /- ronsync2 p4c: IdxProg (DeclConstsProg's new fields: BasisRefs, DcLeafProg, …) at subPB -/
 
 /-- **The twin's side of entry 1**: the stages before the jobs, the stream index `I` built from
 `sE`, ending in `sF`. -/
@@ -279,8 +267,11 @@ theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hsz : 
     have := h7.since.caps.2.2.1; rw [h7.since.frame.size]; exact this
   have hcnt : cnt.toNat = ds.size := by
     rw [hc hD0]; have := h7.decls.count; simpa [hD0] using this
+  have hPB : s.mem.arr8 L.Rom.PB = pb.data.toList.toArray := by
+    rw [h7.since.keep.arr8]; exact loadMem_pb b pb sz
+  rw [← L.Rom.invoke_subPB (bs := pb.data.toList) checkerProg_noSt8PB n _ _ hPB] at hrun
   obtain ⟨I, a', hI, hR', hsz', hG⟩ := (M.of_run (P := fun x => x = s) rfl hrun
-    (buildIndex_refines checkerProg_idxProg cnt hcnt n s sE hR)).2
+    (buildIndex_refines (checkerProg_idxProgPB pb.data.toList) cnt hcnt n s sE hR)).2
   exact ⟨⟨pins, sA, pre, sB, rc, sC, ds, sD, ipins, sE, I, a', hpx, hI⟩, s.mem, ⟨h7, hR', hsz', hG, hfr, hby⟩⟩
 
 end L.Checker

@@ -234,8 +234,8 @@ theorem recOK_keep {D P D' P' : Array Word} {ds : Array IDeclaration} (hF : Decl
     rw [hw 1 (by omega), hw 4 (by omega), hw 5 (by omega)]
     exact r1 h0
   · rw [hw 0 (by omega)] at h0
-    obtain ⟨r2a, r2b⟩ := r2 h0
-    refine ⟨by rw [hw 2 (by omega)]; exact r2a, fun j hj => ?_⟩
+    obtain ⟨r2a, r2b, r2c⟩ := r2 h0
+    refine ⟨by rw [hw 2 (by omega)]; exact r2a, fun j hj => ?_, by rw [hw 4 (by omega)]; exact r2c⟩
     rw [hw 3 (by omega)] at hj
     rw [hw 2 (by omega)]
     obtain ⟨b, nP, -, -, -, t, ht, hdec⟩ := kind6 (hF.recs x hx) h0
@@ -254,7 +254,10 @@ theorem recOK_new {D P : Array Word} {ds : Array IDeclaration} (hF : DeclsF D P 
   refine ⟨hN.1, fun h0 => ?_⟩
   have h2 := hN.2 h0
   have h2' : (dw D x 2).toNat ≠ 0 := fun e => h2 (UInt64.toNat_inj.mp (by simpa using e))
-  refine ⟨h2', fun j hj => ?_⟩
+  refine ⟨h2', fun j hj => ?_, ?_⟩
+  rotate_left
+  · obtain ⟨b, nP, hd, -, h4, -⟩ := kind6 (hF.recs x hx) h0
+    rw [h4]; exact hF.npb x hx b nP hd
   obtain ⟨b, nP, hd, -, -, t, ht, hdec⟩ := kind6 (hF.recs x hx) h0
   rw [hd] at hG
   obtain ⟨w, ci, hwj, hci, hmem⟩ := decCIs_slot hdec j hj

@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Checker.ParDriverL
-import ConAgua.Arena.PhaseBOne
 import ConAgua.Checker.RomProg0
 
 @[expose] public section

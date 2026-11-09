@@ -3,6 +3,7 @@ module
 import ConRon.Bridge.Core.Walks.Cached
 import ConAgua.Arena.IndRealWalkT
 import ConRon.Bridge.Checker.Hyp
+import ConRon.Bridge.Checker.Inv
 public import ConAgua.Arena.IndTwin
 public import ConLeche.Verify.EnvWF
 public import ConLeche.Verify.Shift
@@ -56,6 +57,18 @@ theorem thmPrefix_ext {env : ConLeche.Env} {fe : IFEnv} {a a1 a2 : AState} {cv :
     (h1 : (inferTypeCore V fe checkFuel 0 cv.type).run a = .ok (x1, a1))
     (h2 : (ensureSortCore V fe checkFuel 0 x1).run a1 = .ok (x2, a2)) :
     ConRon.Bridge.CheckOK false env fe a2 ∧ Ext a.store a2.store := by
-  sorry
+  have hcore := ConRon.Bridge.CoreSpec.of_core
+  have hty := (ConRon.Bridge.denoteCV_inv hcv).2.2
+  obtain ⟨hck1, hx1, -, w, hw1, hwsw, -⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a)
+    (Q := fun r t => ConRon.Bridge.CheckOK false env fe t ∧ Ext a.store t.store ∧
+      t.pins = a.pins ∧
+      ConRon.Bridge.Core.SimE (ConLeche.inferTypeCore .verified false env) 0 cP.type t.store r)
+    rfl h1 ((hcore.knot env fe henv).infer a 0 cv.type cP.type hck hty hws)
+  obtain ⟨hck2, hx2, -⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a1)
+    (Q := fun r t => ConRon.Bridge.CheckOK false env fe t ∧ Ext a1.store t.store ∧
+      t.pins = a1.pins ∧
+      ConRon.Bridge.SimL (ConLeche.ensureSortCore .verified false env) 0 w t.store r)
+    rfl h2 (hcore.sort env fe henv a1 0 x1 w hck1 hw1 hwsw)
+  exact ⟨hck2, hx1.trans hx2⟩
 
 end L.Arena

@@ -112,4 +112,38 @@ l_model checkQuotRecord_specE (p : Prog) (hp : p.lookup "check_quot_record" = so
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+/-! ## The pinned basis blocks' entry points (`basis_name_hit`, `basis_at_block`) -/
+
+/-- **The model of `block_names_eq(ao, al, bo, bl)`**: the two `IW` slices' records' names. -/
+l_model blockNamesEq_specW (p : Prog) (hp : p.lookup "block_names_eq" = some blockNamesEq)
+  fns [hp ↦ blockNamesEqW list]
+  specs []
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `basis_name_hit_go(io, il, k)`**. -/
+l_model basisNameHitGo_specW (p : Prog) (hp : p.lookup "basis_name_hit_go" = some basisNameHitGo)
+  fns [hp ↦ basisNameHitGoW list]
+  specs [callW_spec p n "rom_basis_decls", callW_spec p n "block_names_eq"]
+  grind [arena_grind]
+
+/-- **The model of `basis_name_hit(bo, bl)`**. -/
+l_model basisNameHit_specW (p : Prog) (hp : p.lookup "basis_name_hit" = some basisNameHit)
+  fns [hp ↦ basisNameHitW list]
+  specs [callW_spec p n "er_to_iw", callW_spec p n "basis_name_hit_go"]
+  grind [arena_grind]
+
+/-- **The model of `at_block_go(po, pl, co, cl)`**. -/
+l_model atBlockGo_specW (p : Prog) (hp : p.lookup "at_block_go" = some atBlockGo)
+  fns [hp ↦ atBlockGoW list]
+  specs [callW_spec p n "ci_at_lps", callW_spec p n "sl_cons"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `basis_at_block(kind, bo, bl)`**. -/
+l_model basisAtBlock_specW (p : Prog) (hp : p.lookup "basis_at_block" = some basisAtBlock)
+  fns [hp ↦ basisAtBlockW list]
+  specs [callW_spec p n "rom_basis_decls", callW_spec p n "er_to_iw", callW_spec p n "at_block_go"]
+  grind [arena_grind]
+
 end L.Ind
