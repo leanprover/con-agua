@@ -5,6 +5,9 @@ public import ConAgua.Arena.IndT.BlockCS
 public import ConAgua.Arena.IndT.BlockWM
 public import ConAgua.Arena.IndT.BlockPD
 public import ConAgua.Arena.IndT.BlockNames
+public import ConAgua.Arena.IndT.BlockRMS
+import ConAgua.Checker.ArmsT
+import ConAgua.Verdict.PosKnotE
 meta import ConAgua.Checker.IndDeclConstsProg
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
@@ -179,7 +182,7 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
   have hF : FlushProg (Prog.subPB bs checkerProg) := by prog_bundle []
   have hnv : VerdictCtxU (Prog.subPB bs checkerProg) → closedNV (Prog.subPB bs checkerProg) nvFns = true :=
     fun hG => hG.nv
-  -- ronsync2 p3e: reduce_members, the pass, the tail: their contracts still to prove
+  -- ronsync2 p3e: the pass, the tail: their contracts still to prove
   have hfl : FlushRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     flushRefS_of (dn := dn) hF hnv
   have hbr : BrRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) :=
@@ -197,6 +200,13 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
     namesRefS_of hnP hnv
   have hbir : BirRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     birRefS_of H.toTablesProg.toBlockProg H.leaf hnv
-  exact ⟨look, hnm, sorry, hfl, hbir, hwm, sorry, sorry, hbr, hbt, hpd⟩
+  have hrmP : RmsProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hWt : WhnfTopE (Prog.subPB bs checkerProg) :=
+    whnfTop_stageE (by prog_bundle []) (fun n => (checkerProg_knotTopPB bs).knotOK n) (checkerProg_knotEPB bs)
+  have hrm : RmRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    rmRefS_of (checkerProg_thmArmPB bs hr hpre).ccv (checkerProg_knotStagePB bs) (checkerProg_apdPB bs)
+      (checkerProg_crKeepPB bs) (checkerProg_crfPB bs) hrmP hWt (checkerProg_indLeavesPB bs)
+      (checkerProg_ccvSimsPB bs dn)
+  exact ⟨look, hnm, hrm, hfl, hbir, hwm, sorry, sorry, hbr, hbt, hpd⟩
 
 end L.Checker
