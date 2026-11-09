@@ -10,6 +10,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Rel
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.StoreDenIntern
+import ConAgua.Arena.KnotMono
 import ConAgua.Arena.LevelArena
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.PropReadRefine
@@ -404,13 +405,13 @@ structure FnzaProg (p : Prog) : Prop extends FslProg p where
   prop : PropReadProg p
   ilp : InstLPOK p
 
-/-- **`formerNeverZeroAt` keeps the store's `sort`/`const` views** (as `etaFabArgsE_fwd`; the
-`whnf` slot's runs only intern). -/
+/-- **`formerNeverZeroAt` keeps the store's `sort`/`const` views** (the knot only extends the
+store, `knot_smono`). -/
 theorem formerNeverZeroAt_fwd {mode : ConLeche.CheckMode} {eager : Bool} {fe : IFEnv} {F : Nat}
     {cvT : IConstantVal} {caps : IIndCaps} {us : LsIdx} {a a' : AState} {b : Bool}
     (h : (formerNeverZeroAt (coreKnot mode eager fe id F) cvT caps us).run a = .ok (b, a')) :
-    ∀ x w, IsSC w → a.store.view x = some w → a'.store.view x = some w := by
-  sorry
+    ∀ x w, IsSC w → a.store.view x = some w → a'.store.view x = some w :=
+  fun x w _ hv => ((KM.ConRon.Arena.formerNeverZeroAt _ cvT caps us (knot_smono mode fe F eager)).run h).view x w hv
 
 section fnza
 variable (p : Prog) (hp : FnzaProg p)

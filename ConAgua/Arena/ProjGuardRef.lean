@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.FormerNZRef
 import ConAgua.Arena.ErecRd
+import ConAgua.Arena.KnotMono
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.InferBodyLet
 import ConAgua.Arena.IndView
@@ -317,11 +318,12 @@ def LKept {α : Type} (op : AM α) : Prop :=
     ∀ h l, denoteL a.store.ls h = some l → denoteL a'.store.ls h = some l
 
 /-- **The knot's `whnf` and `infer_io` runs keep level readbacks** (the twin's store only grows
-across them; no twin fact yet: the knot's `Ext`, as `formerNeverZeroAt_fwd`). -/
+across them, `knot_smono`). -/
 theorem knot_lkept (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F d : Nat) (e : EIdx) :
     LKept ((coreKnot mode eager fe id F).whnf d e) ∧
-      LKept ((coreKnot mode eager fe id F).inferIO d e) := by
-  sorry
+      LKept ((coreKnot mode eager fe id F).inferIO d e) :=
+  ⟨fun _ _ _ h hh l hd => (((knot_smono mode fe F eager).whnf d e).run h).ext.lss.ls.lvl hh l hd,
+    fun _ _ _ h hh l hd => (((knot_smono mode fe F eager).inferIO d e).run h).ext.lss.ls.lvl hh l hd⟩
 
 theorem GsDen.keep {a a' : AState} {gs : Word} {l : ConLeche.Level} (h : GsDen a gs l)
     (hk : ∀ h l, denoteL a.store.ls h = some l → denoteL a'.store.ls h = some l) : GsDen a' gs l :=
