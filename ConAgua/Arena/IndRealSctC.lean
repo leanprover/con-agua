@@ -81,7 +81,15 @@ open L.Arena
 
 /-- **`ApdEnv` from the store's well-formedness** (`TwinOK.of_check`'s two level fields). -/
 theorem ApdEnv.of_state {a : AState} (hok : ConRon.Bridge.StateOK a) : ApdEnv a := by
-  sorry
+  obtain ⟨rk, hw⟩ := hok.wf
+  have hLs : LsStoreWF a.store.lss := hw.lss
+  have hL : LStoreWF a.store.ls := hLs.ls
+  refine ⟨hw.nsWF, fun x u hv => ?_, fun x c us hv => ?_⟩
+  · exact denoteL_of_viewW hL (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1
+  · have hs := (hw.lschildOK x _ hv us (by simp [ENodeView.lschildren])).1
+    obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hs
+    obtain ⟨xs, hxs⟩ := denoteLs_of_viewW hLs hvs
+    exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
 
 /-- `StateOK` reads the store only. -/
 theorem stateOK_of_sp {a a' : AState} (h : ConRon.Bridge.StateOK a) (e : sp a' = sp a) :
@@ -158,9 +166,8 @@ theorem lbbF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   obtain ⟨X, rfl⟩ := memos_only_of_sp (Keeps.bind (keeps_bvarB_sp _ _) fun _ => Keeps.pure _) x a' hrun
   exact ⟨x, _, hrun, hK, rfl⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `consts_resolve_ffast` (`constsResolveFFast_keepsSt`), the twin state kept, `AbsOK` after. -/
-theorem crfF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+theorem crfF_simR {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (e : Word) (he : H e) (hS : StageR vis fe m a) (hA : AbsOK m) :
     Sim (crfF m [vis, e]) (constsResolveFFast fe (decI e)) a
       (fun r x m' a' => (StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x) ∧ AbsOK m' ∧
@@ -169,13 +176,12 @@ theorem crfF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   obtain ⟨hAb, hI1, hCr, hIl, hWk⟩ := hA
   have hfr := crfF_frame h
   obtain ⟨x, a', hrun, hK, hCr', ha'⟩ := relW_callF (P := crfP)
-    (L.Stubs.constsResolveFFast_keepsSt crfP_prog (dn := dn) (vis := vis) (fe := fe) e he a).refAM
+    (L.Stubs.constsResolveFFast_keepsSt crfP_prog (vis := vis) (fe := fe) e he a).refAM
     m m' a r h ⟨hS, hCr, rfl⟩
   subst ha'
   exact ⟨x, _, hrun, hK, ⟨hAb.frame hfr (by decide) (by decide), hI1.frame hfr (by decide) (by decide),
     hCr', hIl.frame hfr (by decide) (by decide),
     hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩, rfl⟩
--/
 
 /-! ## `check_struct_proj_table_scoped`, the real reading -/
 
@@ -186,7 +192,6 @@ theorem names_of_sp {a a' : AState} {lps : List NIdx} (e : sp a' = sp a)
   simp only [sp, Prod.mk.injEq] at e
   rw [e.1]; exact h
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_struct_proj_table_scoped`'s model (`realCall p`) refines the twin's
 `bodies.toList.allM`** under `StageR`, `AbsOK`, the twin's `StateOK` and the parameters' names
 read back; the twin's store, caches and pins are kept. -/
@@ -264,11 +269,9 @@ theorem sctW_okR {p : Prog} (hp : ApdF p) {dn : NIdx → Option ConLeche.Name} {
       cases a1 <;> cases a2 <;> cases a3 <;> cases a4 <;> simp_all
     simp only [ht]
     exact Sim.ret ⟨hS4, hg14, rfl, by decide, hA4, he14⟩
--/
 
 /-! ## `check_struct_proj_table`, the real reading -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `sctW (realCall p)`'s frame. -/
 theorem sctW_mfr_real {p : Prog} (hp : ApdF p) : ∀ (n : Nat) (m m' : Mem) (vis nP lo ll bO bL : Word)
     (r : List Word), sctW (realCall p) n m vis nP lo ll bO bL = some (r, m') → MFr [] [] m m' :=
@@ -276,7 +279,6 @@ theorem sctW_mfr_real {p : Prog} (hp : ApdF p) : ∀ (n : Nat) (m m' : Mem) (vis
     (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
     (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
                           rcases hx with rfl | rfl <;> decide))
--/
 
 /-- Names read back in a store read back in its extension. -/
 theorem names_ext {st st' : EStore} (hx : ConRon.Arena.Ext st st') {lps : List NIdx}

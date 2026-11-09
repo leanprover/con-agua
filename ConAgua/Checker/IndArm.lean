@@ -17,7 +17,8 @@ public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 public import ConAgua.Arena.IndInstallSpec.OfClosed
 public import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
-public import ConAgua.Arena.IndRealLvlZ
+public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndT.ArmMemos
 public import ConAgua.Arena.IndT.GenRec2
 public import ConAgua.Checker.IndArmTrees2
@@ -262,7 +263,7 @@ structure IndArmProgs (p : Prog) : Prop where
 a lookup two fields share is proved once). -/
 theorem indArmProgs_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length) : IndArmProgs (Prog.subPB bs checkerProg) := by
-  have hrom := checkerProg_romRefsPB bs hr hpre
+  have hrom := checkerProg_romRefsPB bs
   prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
     checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
     (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),

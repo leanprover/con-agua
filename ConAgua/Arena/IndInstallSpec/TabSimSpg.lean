@@ -128,14 +128,11 @@ theorem spbW_mfr {k : Nat} {m m' : Mem} {T nP nF cty : Word} {r : List Word}
     simp only [spbW, spbK1.eq_def, spbK2.eq_def, spbK3.eq_def] at h
     mfr_auto h [projPsW_mfr, ipalF_mfr, pbW_mfr _ _ _ _ _ _ _ _]
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem crfF_mfr {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (crfF_frame h)
     (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
     (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `sctW`'s frame, from its reading `c` of `all_level_params_defined`'s (`sctW_mfr_stub`: the stub's). -/
 theorem sctW_mfr {c : CallM}
     (hc : ∀ (k : Nat) (args : List Word) (m m' : Mem) (r : List Word),
@@ -146,7 +143,6 @@ theorem sctW_mfr {c : CallM}
   | n + 1, m, m', vis, nP, lo, ll, bO, bL, r, h => by
     simp only [sctW, sctK1.eq_def, sctK2.eq_def, sctK3.eq_def, sctK4.eq_def, sctK5.eq_def] at h
     mfr_auto h [sctW_mfr hc n _ _ _ _ _ _ _ _ _, hc _ _ _ _ _, crfF_mfr, MFr.ofHffF, MFr.ofLbbF]
--/
 
 theorem efgW_mfr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     efgW n m q o l = some (r, m') → MFr [] [] m m'
@@ -165,34 +161,6 @@ theorem efW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m
 
 theorem wrER_mfr (ws : List Word) (m : Mem) (q : Word) : MFr [] [] m (wrER m q ws) :=
   MFr.of_frame (wrER_frame ws m q) (by simp [EREC]) (by simp)
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem envPushW_mfr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m vis q = some (r, m')) :
-    MFr [] [] m m' := by
-  simp only [envPushW] at h
-  split at h; · cases h
-  split at h; · cases h
-  split at h
-  rotate_left; · cases h
-  rename_i hc
-  obtain ⟨ht, -⟩ := hc
-  have hra : (rowArr (rdW (m.arr64 EREC) (q + 1)) : TieredArray) ≠ ↑CTL :=
-    TieredArray.t0_ne (rowArr_ne _ (by decide))
-  have hmem : rowArr (rdW (m.arr64 EREC) (q + 1)) < 201 := by
-    exact Nat.lt_trans (rowArr_lt _) (by decide)
-  have h1 : MFr [] [] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) :=
-    MFr.of_frame ((MemFrame.set64 m _ hra _ _).trans (MemFrame.set64 _ _ hra _ _))
-      (by intro b hb; simp at hb; subst hb; exact .inl hmem) (by simp)
-  refine MFr.trans h1 ?_
-  simp only [envPushK.eq_def] at h
-  split at h; · cases h
-  split at h
-  rotate_left; · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  rw [← h.2]
-  exact MFr.trans (MFr.of_frame (MemFrame.set64 _ ECON (by decide) _ _) (by simp [ECON]) (by simp))
-    (MFr.of_frame (MemFrame.setCtl _ 128 _) (by simp) (by simp))
--/
 
 end L.Ind
 

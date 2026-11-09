@@ -119,16 +119,6 @@ theorem blockParts?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' :
     exact blockShape?_members_mem h1
 -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- `BlockLpsDn` at the members of the shape `blockParts?` recognises. -/
-theorem BlockLpsDn.members {dn : NIdx → Option ConLeche.Name} {block : List IConstantInfo}
-    (hl : BlockLpsDn dn block) {nPd : Nat} {s s' : AState} {bs : BlockShape}
-    (h : (ConRon.Arena.blockParts? nPd block).run s = .ok (some ⟨bs⟩, s')) :
-    ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome := fun ms hms => by
-  obtain ⟨caps, hm⟩ := blockParts?_members_mem h ms hms
-  exact hl ms.cvT caps hm
--/
-
 /-- What `check_ind_decl` gives besides the twin's run, a view `w` and the memory `m'` (from `m`):
 the stage, the core's memos, the growth, the inductive arm's memos. -/
 structure CidPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x : IFEnv) (m' : Mem)
@@ -293,7 +283,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   have hR5 := block_ref hkp hfold.envWF hV hOpf hLC hLT hApd hCrk hIlpf P.cb hcl hfs hfr hcl2 hfs2 hclR hfR
     hclT hfT n (by omega) hC4 hq4 hsl4.1 (shapeCV_of_decB hq4) (hblk1.grow (decEBlk_mono _ _ _) hg4) hP4 hma4
     hA4 hkP hkt hkr hta4 hsl4.2 hfold.coh (ConRon.Bridge.denoteFEnv_mono (x01.trans k4.ext) hfold.denote) hshP
-    (ConRon.Bridge.denoteCIList_mono (x01.trans k4.ext) _ _ hbP) hfRc hclH hfH hclM hfM (hlpd.members hrun4)
+    (ConRon.Bridge.denoteCIList_mono (x01.trans k4.ext) _ _ hbP) hfRc hclH hfH hclM hfM
   dsimp only
   rw [← bind_pure (ConRon.Arena.checkBlock _ _ _ _)]
   refine RefE.bindRun (s₀ := ⟨s4.mem, Locals.init []⟩) (fun _ => cidE.k_check_basis_decl.none ..) hT5
