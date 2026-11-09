@@ -79,13 +79,13 @@ class's constructor record. -/
 theorem srs_ref {G : Prop} (N : Nat) : ∀ (m : Mem) (a : AState) (ro rl co cl : Word)
     (rs : List IRecRule) (cs : List (IConstantVal × Nat)),
     (m.arr64 IW).size < 2 ^ 64 → decRules (erA m) ro.toNat rl.toNat = some rs →
-    decPL m (decCN m) co.toNat cl.toNat = some cs → co.toNat + cl.toNat ≤ (m.arr64 IW).size →
+    decPL m (decCN m) co.toNat cl.toNat = some cs →
     RefE G (srsE p N m ro rl co cl) (ConRon.Arena.streamRulesShape rs cs) a
       (fun v _ a' => v.2 = m ∧ a' = a) := by
   induction N with
   | zero => intros; rw [srsE.eq_1]; exact RefE.of_cls0 rfl
   | succ N ih =>
-  intro m a ro rl co cl rs cs hsz hrs hcs hcb
+  intro m a ro rl co cl rs cs hsz hrs hcs
   have hrl := decRules_length hrs
   have hcl := decPL_length m hcs
   by_cases h0 : rl = 0 ∧ cl = 0
@@ -171,11 +171,6 @@ theorem srs_ref {G : Prop} (N : Nat) : ∀ (m : Mem) (a : AState) (ro rl co cl :
       have := key.mp ⟨Classical.not_not.mp h2.1, Classical.not_not.mp h2.2⟩
       rw [h] at this; exact absurd this (by decide)) fun _ _ => ?_
   -- the rest
-  have hcb' : (co + 1).toNat + (cl - 1).toNat ≤ (m.arr64 IW).size := by
-    have e3 : (co + 1).toNat = co.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have e4 : (cl - 1).toNat = cl' := by
-      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-    omega
   have hrs'' : decRules (erA m) (ro + 11).toNat (rl - 1).toNat = some rs' := by
     have e4 : (rl - 1).toNat = rl' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
@@ -193,7 +188,7 @@ theorem srs_ref {G : Prop} (N : Nat) : ∀ (m : Mem) (a : AState) (ro rl co cl :
       rw [show (ro + 11).toNat = ro.toNat + 11 by rw [UInt64.toNat_add]; simp; omega]
       exact hrs'
   exact RefE.lastE (K := srsE.k_stream_rules_shape p) (f := fun v => (0, v.2)) (fun _ => rfl)
-    (fun _ => rfl) id (ih m a (ro + 11) (rl - 1) (co + 1) (cl - 1) rs' cs' hsz hrs'' hcs'' hcb')
+    (fun _ => rfl) id (ih m a (ro + 11) (rl - 1) (co + 1) (cl - 1) rs' cs' hsz hrs'' hcs'')
     fun _ _ _ _ h => h
 
 end sims
