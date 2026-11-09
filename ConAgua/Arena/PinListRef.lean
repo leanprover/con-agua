@@ -14,6 +14,9 @@ import ConAgua.Arena.DeclCvg
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import ConRon.Bridge.Specs
+import ConAgua.Arena.DeclCanonLvl
+import ConAgua.Arena.PropReadRefine
+import ConAgua.Arena.TwinStep
 
 @[expose] public section
 
@@ -433,5 +436,129 @@ theorem pinLinkOk_handles {st : EStore} (hwf : StoreWF st) {R Rp C Cp : List NId
   · intro h
     rw [h, hm] at hC
     cases hC; rfl
+
+/-! ## `pin_link_go`, `pin_link_ok` -/
+
+section link
+variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`pin_link_go` decides the renaming test** on the first `k` names (pure). -/
+theorem pinLinkGoW_ok (hP : PinListLProg p) {m : Mem} {ro rl rpo rpl : Word} {R Rp : List NIdx}
+    (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hR : decHL m ro.toNat rl.toNat = some R) (hRp : decHL m rpo.toNat rpl.toNat = some Rp) :
+    ∀ (n : Nat) (co cpo k : Word) (C Cp : List NIdx) (r : List Word) (m' : Mem),
+      decHL m co.toNat k.toNat = some C → decHL m cpo.toNat k.toNat = some Cp →
+      pinLinkGoW p n m ro rl rpo rpl co cpo k = some (r, m') →
+      m' = m ∧ (r.headD 0 ≠ 0 ↔ C = Cp.map (ConRon.Arena.canonNameMap Rp R)) := by
+  have hc := hP.canon
+  intro n
+  induction n with
+  | zero => intro co cpo k C Cp r m' _ _ h; simp [pinLinkGoW] at h
+  | succ n ih =>
+  intro co cpo k C Cp r m' hC hCp h
+  rw [pinLinkGoW.eq_2] at h
+  by_cases hk : k = 0
+  · rw [if_pos hk] at h; cases h
+    subst hk
+    have e1 : C = [] := by simpa [decHL, hslice?] using hC.symm
+    have e2 : Cp = [] := by simpa [decHL, hslice?] using hCp.symm
+    subst e1 e2
+    exact ⟨rfl, by simp⟩
+  rw [if_neg hk] at h
+  obtain ⟨w, C', rfl, hw, hwlt, hC'⟩ := decHL_cons hC hk (decHL_bnd m co k hC hsz)
+  obtain ⟨v, Cp', rfl, hv, hvlt, hCp'⟩ := decHL_cons hCp hk (decHL_bnd m cpo k hCp hsz)
+  cases h1 : callW p n "canon_name_map" [rpo, rpl, ro, rl, rdW (m.arr64 IW) cpo] m with
+  | none => rw [h1] at h; simp [pinLinkGoW.k_canon_name_map] at h
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  obtain ⟨s1, rfl, -, hm1, hlt1, hd1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (canonNameMap_refines p (hc.get "sl_find") (hc.get "sl_getd") (hc.get "canon_name_map") n _
+      rpo rpl ro rl _ Rp R hRp hR (decHL_bnd m rpo rpl hRp hsz) (decHL_bnd m ro rl hR hsz)
+      (by rw [hv]; exact hvlt)) h1
+  rw [h1, pinLinkGoW.k_canon_name_map.eq_2] at h
+  simp only at hm1
+  rw [hm1, hw] at h
+  rw [hv] at hd1
+  have hiff : (decI w : NIdx) = ConRon.Arena.canonNameMap Rp R (decI v) ↔ w = r1.headD 0 := by
+    rw [← hd1]; exact decI_inj_iff hwlt hlt1
+  by_cases hne : w ≠ r1.headD 0
+  · rw [if_pos hne] at h; cases h
+    refine ⟨rfl, ?_⟩
+    simp only [List.headD_cons, ne_eq, not_true_eq_false, List.map_cons, List.cons.injEq, false_iff,
+      not_and]
+    exact fun e => absurd (hiff.mp e) hne
+  rw [if_neg hne] at h
+  cases h2 : pinLinkGoW p n m ro rl rpo rpl (co + 1) (cpo + 1) (k - 1) with
+  | none => rw [h2] at h; simp [pinLinkGoW.k_pin_link_go] at h
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2, pinLinkGoW.k_pin_link_go.eq_2] at h
+  cases h
+  obtain ⟨rfl, hb⟩ := ih _ _ _ C' Cp' r2 _ hC' hCp' h2
+  refine ⟨rfl, ?_⟩
+  simp only [List.headD_cons, List.map_cons, List.cons.injEq]
+  rw [hb]
+  exact ⟨fun e => ⟨hiff.mpr (Classical.not_not.mp hne), e⟩, fun e => e.2⟩
+
+/-- **`pin_link_ok` decides the renaming test** (pure): the lengths, then `pin_link_go`. -/
+theorem pinLinkOkW_ok (hP : PinListLProg p) {m : Mem} {ro rl rpo rpl : Word} {R Rp : List NIdx}
+    (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hR : decHL m ro.toNat rl.toNat = some R) (hRp : decHL m rpo.toNat rpl.toNat = some Rp)
+    {n : Nat} {co cl cpo cpl : Word} {C Cp : List NIdx} {r : List Word} {m' : Mem}
+    (hC : decHL m co.toNat cl.toNat = some C) (hCp : decHL m cpo.toNat cpl.toNat = some Cp)
+    (h : pinLinkOkLW p n m ro rl rpo rpl co cl cpo cpl = some (r, m')) :
+    m' = m ∧ (r.headD 0 ≠ 0 ↔ C = Cp.map (ConRon.Arena.canonNameMap Rp R)) := by
+  cases n with
+  | zero => simp [pinLinkOkLW] at h
+  | succ n =>
+  by_cases hl : cl = cpl
+  · subst hl
+    rw [pinLinkOkLW.arm2 p n m _ _ _ _ _ _ _ _ rfl] at h
+    cases h1 : callW p n "pin_link_go" [ro, rl, rpo, rpl, co, cpo, cl] m with
+    | none => rw [h1] at h; simp [pinLinkOkLW.k_pin_link_go] at h
+    | some x1 =>
+    obtain ⟨r1, m1⟩ := x1
+    rw [h1, pinLinkOkLW.k_pin_link_go.eq_2] at h
+    cases h
+    obtain ⟨s1, rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (pinLinkGo_specW p hP.plg n _ ro rl rpo rpl co cpo cl) h1
+    obtain ⟨e, hb⟩ := pinLinkGoW_ok hP hsz hR hRp n co cpo cl C Cp r1 _ hC hCp hW
+    exact ⟨e, by simpa using hb⟩
+  · rw [pinLinkOkLW.arm1 p n m _ _ _ _ _ _ _ _ hl] at h
+    cases h
+    refine ⟨rfl, ?_⟩
+    simp only [List.headD_cons, ne_eq, not_true_eq_false, false_iff]
+    intro e
+    apply hl
+    have h1 := decHL_length m hC
+    have h2 := decHL_length m hCp
+    rw [e, List.length_map] at h1
+    exact UInt64.toNat_inj.mp (h1.symm.trans h2)
+
+/-- **The twin's `pinLinkOk` on read-back handles**: its four name readbacks (the caches only),
+the renaming test on handles. -/
+theorem pinLinkOk_twin {m : Mem} {a : AState} (hT : StageT dn vis fe m a)
+    (hok : ConRon.Bridge.StateOK a) (hr : ConRon.Bridge.ReadOK a) {R Rp C Cp : List NIdx}
+    {RT RpT CT CpT : List ConLeche.Name}
+    (hR : Frontend.denoteNList a.store.ns R = some RT) (hRp : Frontend.denoteNList a.store.ns Rp = some RpT)
+    (hC : Frontend.denoteNList a.store.ns C = some CT) (hCp : Frontend.denoteNList a.store.ns Cp = some CpT) :
+    ∃ a', (ConRon.Arena.pinLinkOk R Rp C Cp).run a =
+        .ok (decide (C = Cp.map (ConRon.Arena.canonNameMap Rp R)), a') ∧
+      StageT dn vis fe m a' ∧ ConRon.Bridge.StateOK a' ∧ ConRon.Bridge.ReadOK a' ∧ Ext a.store a'.store := by
+  obtain ⟨X1, h1, hc1⟩ := pr_readNamesM_run R a RT (denoteNList_mapM hR) hT.twin.den.readN
+  obtain ⟨X2, h2, hc2⟩ := pr_readNamesM_run Rp { a with caches := { a.caches with readNC := X1 } } RpT
+    (denoteNList_mapM hRp) hc1
+  obtain ⟨X3, h3, hc3⟩ := pr_readNamesM_run C { a with caches := { a.caches with readNC := X2 } } CT
+    (denoteNList_mapM hC) hc2
+  obtain ⟨X4, h4, hc4⟩ := pr_readNamesM_run Cp { a with caches := { a.caches with readNC := X3 } } CpT
+    (denoteNList_mapM hCp) hc3
+  have hrun : (ConRon.Arena.pinLinkOk R Rp C Cp).run a =
+      .ok (ConLeche.pinLinkOk RT RpT CT CpT, { a with caches := { a.caches with readNC := X4 } }) := by
+    simp only [ConRon.Arena.pinLinkOk, StateT.run_bind, h1, except_ok_bind, h2, h3, h4]; rfl
+  obtain ⟨hs, -⟩ := ConRon.Bridge.pinLinkOk_run hok hr hR hRp hC hCp hrun
+  refine ⟨_, by rw [hrun, pinLinkOk_handles hok.wf hR hRp hC hCp], ?_, hs.ok, hs.read, hs.ext⟩
+  exact (((hT.readNC X1 hc1).readNC X2 hc2).readNC X3 hc3).readNC X4 hc4
+
+end link
 
 end L.Ind
