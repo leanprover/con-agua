@@ -35,7 +35,27 @@ theorem IWGrow.recGrow {m m' : Mem} (h : IWGrow m m') : RecGrow m m' := ⟨h.er,
 /-- `ArrExt` of the record pools in use, at an in-bounds top, is a `RecGrow`. -/
 theorem RecGrow.of_ext {m m' : Mem} (hw : IWOK m) (hx : ArrExt (erecP m) (erecP m')) :
     RecGrow m m' := by
-  sorry
+  have key : ∀ i < erTop m, i < erecTop m' ∧ (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := by
+    intro i hi
+    have h40 : i < 2 ^ 40 := by have := hw.er; have := hw.erCap; omega
+    have hsz : i < (m.arr64 EREC).size := by have := hw.er; omega
+    have hd : i / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h40]
+    have hm : erecP m i = some (m.arr64 EREC)[i] := by
+      unfold erecP
+      rw [if_pos (by omega), if_pos hd, Nat.mod_eq_of_lt h40, if_pos (by exact hi)]
+      simp [hsz]
+    have hm' := hx _ _ hm
+    unfold erecP at hm'
+    rw [if_pos (by omega), if_pos hd, Nat.mod_eq_of_lt h40] at hm'
+    split at hm'
+    · exact ⟨by assumption, by rw [hm']; simp [hsz]⟩
+    · cases hm'
+  refine ⟨?_, fun i hi => (key i hi).2⟩
+  rcases Nat.eq_zero_or_pos (erTop m) with h0 | hpos
+  · omega
+  · have := (key (erTop m - 1) (by omega)).1
+    show erTop m ≤ erecTop m'
+    omega
 
 theorem RecGrow.of_eq {m m' : Mem} (hE : m'.arr64 EREC = m.arr64 EREC)
     (h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) : RecGrow m m' := by

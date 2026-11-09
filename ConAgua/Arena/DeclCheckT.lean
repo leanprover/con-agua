@@ -6,6 +6,7 @@ import all ConAgua.Arena.DeclStep
 import ConAgua.Arena.QuotRulesT
 import ConAgua.Checker.QuotFns
 import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.RefWalk
 
 @[expose] public section
 
@@ -382,7 +383,84 @@ theorem cd_ref {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hIM : IndMemos m) :
     RefE (CdG pins dn ds p) (checkDeclE p N m i vis) (checkDecl V pins fe (dsAt ds i)) a
       (fun v x a' => CdPost pins ds m v.1 x v.2 a') := by
-  sorry
+  have hdecl := hR.decls.recs i.toNat hi
+  have hds : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
+  have hd : ds[i.toNat]? = some ds[i.toNat] := Array.getElem?_eq_getElem hi
+  rw [hds] at hden ⊢
+  have h1 := hR.decls.room
+  have h2 := hR.decls.dsize
+  have hw0 : rdW (m.arr64 DECL) (1 + 8 * i) = dw (m.arr64 DECL) i.toNat 0 :=
+    rdW_dw _ (by omega) (by decide) (by decide)
+  rcases N with _ | n
+  · rw [checkDeclE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  have hn' : n ≤ 2 ^ 62 := by omega
+  generalize hdi : ds[i.toNat] = d at hdecl hd hden
+  cases d with
+  | axiomDecl cv =>
+    rw [checkDeclE.arm2 _ _ _ _ _ (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1])]
+    exact cd_arm (hP.arms.axiom_ cv) (fun hG => hG.arms.axiom_ cv) hn' hi hd hok hR hS hF hden
+      hPD hIM
+  | defnDecl cv v hh =>
+    rw [checkDeclE.arm3 _ _ _ _ _ (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide)
+      (by rw [hw0, hdecl.1])]
+    exact cd_arm (hP.arms.defn cv v hh) (fun hG => hG.arms.defn cv v hh) hn' hi hd hok hR hS hF
+      hden hPD hIM
+  | thmDecl cv v =>
+    rw [checkDeclE.arm4 _ _ _ _ _ (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide)
+      (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1])]
+    exact cd_arm (hP.arms.thm cv v) (fun hG => hG.arms.thm cv v) hn' hi hd hok hR hS hF hden
+      hPD hIM
+  | opaqueDecl cv v =>
+    rw [checkDeclE.arm5 _ _ _ _ _ (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide)
+      (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1])]
+    exact cd_arm (hP.arms.opaque_ cv v) (fun hG => hG.arms.opaque_ cv v) hn' hi hd hok hR hS hF
+      hden hPD hIM
+  | quotDecl k cv =>
+    rw [checkDeclE.arm6 _ _ _ _ _ (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide)
+      (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide)
+      (by rw [hw0, hdecl.1])]
+    exact cd_arm (hP.arms.quot k cv) (fun hG => hG.arms.quot k cv) hn' hi hd hok hR hS hF hden
+      hPD hIM
+  | indDecl block nP =>
+    rw [checkDeclE.arm1 _ _ _ _ _ (by rw [hw0, hdecl.1])]
+    have hdecl' : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP := by
+      have := hR.decls.recs i.toNat hi
+      rw [hdi] at this; exact this
+    have hFB := hFD _ hi _ _ hdi
+    have hlpd := hLD _ hi _ _ hdi
+    have hD : (m.arr64 DECL).size < 2 ^ 63 := hR.decls.dsize
+    have hP' : (m.arr64 DLP).size < 2 ^ 63 := hR.decls.psize
+    obtain ⟨F, hFs, hFcl⟩ := hP.indIn
+    refine RefE.onlySim (fun _ => checkDeclE.k_ind_block_to_erec.none ..) (fun _ _ h => h)
+      fun r1 m1 c1 => ?_
+    rw [checkDeclE.k_ind_block_to_erec.arm1]
+    obtain ⟨hS1, hg1, hf1, -, hl1, hdec1, htop1⟩ :=
+      indBlockToErec_ok hP.ibe c1 hS.stage hdecl' hFB hD hP'
+    have hT1 : StageT dn vis fe m1 a :=
+      ⟨hS1, hS.twin.frame hf1 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide),
+        by rw [pinW_frame hf1 (by decide)]; exact hS.flag⟩
+    have hfs1 := (run_memFrame hFcl (hFs _ (by decide)) (run_of_callW c1)).1
+    have hIM1 : IndMemos m1 :=
+      hIM.frame hf1 (fun b hb => by simp at hb; subst hb; decide)
+        (fun x hx => by simp at hx; subst hx; decide)
+    have hw : (rdW (m1.arr64 DECL) (5 + 8 * i)).toNat = nP := by
+      rw [hf1.1 DECL (by decide) (by decide)]
+      have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [hdecl'.1]; decide
+      rw [rdW_dwI hD h0 rfl (by decide)]
+      exact hdecl'.2.1
+    obtain ⟨env, hFo⟩ := hF
+    rcases c2 : callE p n "check_ind_decl"
+        [vis, r1.headD 0, r1.tail.headD 0, rdW (m1.arr64 DECL) (5 + 8 * i)] m1 with e2 | ⟨r2, m2⟩
+    · rw [checkDeclE.k_check_ind_decl.none]
+      exact fun hG => hG.ind pins n hn' m1 a vis fe env block nP _ _ _ hl1 hw hdec1 htop1 hFB hT1
+        hok hFo hden hlpd hPD hIM1 e2 c2
+    rw [checkDeclE.k_check_ind_decl.arm1]
+    have d2 := callW_of_callE c2
+    obtain ⟨fe', a', hrun, hS2, hcm, hg2, hIM2⟩ := hP.ind pins n hn' m1 m2 a vis fe env block nP
+      _ _ _ r2 hl1 hw hdec1 htop1 hFB hT1 hok hFo hden hlpd hPD hIM1 d2
+    have hfs2 := (run_memFrame hFcl (hFs _ (by decide)) (run_of_callW d2)).1
+    have hL2 := hR.of_step hS2 (hfs1.trans hfs2) (IWGrow.erecPExt (hg1.trans hg2))
+    exact RefE.ret hrun ⟨by simpa using hL2, hcm, hIM2, hg1.trans hg2⟩
 
 /-- **`check_decl` refines `checkDecl` under `StageT`**, for the front's record kinds: the ok
 half of `cd_ref`. -/

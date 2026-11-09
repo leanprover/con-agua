@@ -215,7 +215,25 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
       by decide) (hLv : LvlFree C := by lvl_free) (hP1 : (POOL1 : TieredArray) ∉ A := by decide)
     (hPT : (PT0 : TieredArray) ∉ A := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
-  sorry
+  simp only [cpl, Prod.mk.injEq] at hk
+  obtain ⟨hc, hp, hl⟩ := hk
+  have hspn : m'.arr64 SPN = m.arr64 SPN :=
+    hf.arr SPN (fun h => absurd (hA _ h) (by decide)) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
+    hf.ctl 136 (fun h => absurd (hC _ h) (by decide))
+  refine ⟨⟨hD, ?_, ?_, hS.env.frame (fun b hb => not_mem_envArrs (Or.inl (by have := hA b hb; simp at this; omega)))
+    (fun x hx => not_mem_envCtl (Or.inl (by have := hC x hx; omega))) hf, ?_, ?_, ?_,
+    hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hmem, hf.size BSTK ▸ hS.bstk,
+    hS.den.of_arena hS.arena.base hD.base hc hp hl hf hscA hscC, hS.mode.frame hf hP0 hscC.1⟩,
+    StackKept.of_frame hf
+      ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide), hP⟩
+      ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩ hLv hP1 hPT⟩
+  · rw [hc]; exact hS.core.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf
+  · rw [hp]; exact hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide)) (by decide))
+  · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]
+    exact this
+  · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
+  · rw [hl]; exact hS.nwf
 
 theorem CoreSpec.zeroW {α : Type} [Inhabited α] {p : Prog} {f : FnName} {fd : FunDecl}
     (hf : p.lookup f = some fd) (args : List Word) (T : AM α) (dec : List Word → α) (s₀ : St)

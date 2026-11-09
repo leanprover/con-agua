@@ -294,7 +294,18 @@ theorem decPL_grow {α : Type} {m m' : Mem} {f f' : Nat → Option α} (hg : IWG
     (hf : ∀ q x, f q = some x → f' q = some x) :
     ∀ (c o : Nat) (xs : List α), o + c ≤ iwTop m → decPL m f o c = some xs →
     decPL m' f' o c = some xs := by
-  sorry
+  intro c
+  induction c with
+  | zero => intro o xs _ h; simpa [decPL] using h
+  | succ c ih =>
+    intro o xs hb h
+    rw [decPL_succ] at h ⊢
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h ⊢
+    obtain ⟨v, hv, x, hx, ys, hys, rfl⟩ := h
+    refine ⟨v, ?_, x, hf _ _ hx, ys, ih (o + 1) ys (by omega) hys, rfl⟩
+    simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hv ⊢
+    obtain ⟨w, hw, rfl⟩ := hv
+    exact ⟨w, by rw [hg.iwGet o (by omega)]; exact hw, rfl⟩
 
 theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (o1 l1 o2 l2 x : Word) (xs ys : List IConstantInfo),

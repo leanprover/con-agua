@@ -71,8 +71,7 @@ theorem checkMode2_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
 
 /-- **What `check_decl`'s program facts still take** (`checkerProg_cdProgPB`): the definition
 arm's claim and the inductive arm's, at every phase A and every pin buffer `pb` that starts with the
-ROM, at the program with `pb` substituted. A hypothesis of the final theorems until the core and
-inductive areas prove them. -/
+ROM, at the program with `pb` substituted (`Final/DrvFinal.lean`'s `checkerCd_proved`). -/
 def CheckerCd : Prop :=
   ∀ (b pb : ByteArray) (PA : PhaseA b), pb.size < 2 ^ 63 → PbPre pb →
     (∀ cv v hh, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
