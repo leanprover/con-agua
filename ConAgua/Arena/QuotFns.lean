@@ -26,25 +26,33 @@ namespace L.Ind
 open ConRon.Arena
 open L.Arena
 
-/-- The call closure of `quot_pin_hit` and `quot_at` in `checkerProg`, a literal list (115
+/-- The call closure of `quot_pin_hit` and `quot_at` in `checkerProg`, a literal list (164
 functions; `_tmp/p3r/qfns.lean` prints it). -/
 def quotFns : List FnName := [
-  "app_find", "app_push", "ci_at_lps", "const_find", "const_push", "cv_at_lps", "cv_eq", "cv_lps",
-  "der_b", "ek_copy", "er_copy", "er_copy_er", "er_sl_eq", "er_to_iw", "erec_alloc", "erec_put",
-  "fire_levels_at", "forall_find", "forall_push", "fvar_find", "fvar_push", "ilp_clear",
-  "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find", "ilpl_put", "ilpls_clear", "ilpls_find",
-  "ilpls_put", "imax_find", "imax_push", "inst_lp", "inst_lp_core", "intern_app", "intern_const",
-  "intern_forall", "intern_fvar", "intern_imax", "intern_lam", "intern_letE", "intern_ls",
-  "intern_ls_iw", "intern_max", "intern_param", "intern_proj", "intern_sort", "intern_succ",
-  "intern_zero", "iw_alloc", "iw_copy", "iw_pool", "keys_ok", "keys_push", "lam_find", "lam_push",
-  "letE_find", "letE_push", "lh_mk", "limbs_eq", "lit_hash", "lp_app", "lp_forall", "lp_fvar",
-  "lp_go", "lp_lam", "lp_let", "lp_let_tail", "lp_lookup", "lp_proj", "lp_rb_let", "lp_substl",
-  "ls_find", "ls_match", "ls_node", "ls_push", "lv_intern", "lv_node", "lv_sub_int", "max_find",
-  "max_push", "mk_app", "mk_forall", "mk_lam", "mk_let", "mk_proj", "param_find", "param_levels",
+  "app_find", "app_push", "bvar_find", "bvar_push", "ci_at_lps", "const_find", "const_push",
+  "cv_at_lps", "cv_eq", "cv_lps", "der_b", "ek_copy", "er_copy", "er_copy_er", "er_sl_eq",
+  "er_to_iw", "erec_alloc", "erec_put", "fire_levels_at", "forall_find", "forall_push",
+  "fvar_find", "fvar_push", "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find",
+  "ilpl_put", "ilpls_clear", "ilpls_find", "ilpls_put", "imax_find", "imax_push", "inst_lp",
+  "inst_lp_core", "intern_app", "intern_bvar", "intern_const", "intern_forall", "intern_fvar",
+  "intern_imax", "intern_lam", "intern_letE", "intern_lit", "intern_ls", "intern_ls_iw",
+  "intern_max", "intern_nanon", "intern_nnum", "intern_nstr", "intern_param", "intern_proj",
+  "intern_sort", "intern_succ", "intern_zero", "iw_alloc", "iw_copy", "iw_pool", "keys_ok",
+  "keys_push", "lam_find", "lam_push", "letE_find", "letE_push", "lh_mk", "limbs_eq", "lit_find",
+  "lit_hash", "lit_match", "lit_push", "lp_app", "lp_forall", "lp_fvar", "lp_go", "lp_lam",
+  "lp_let", "lp_let_tail", "lp_lookup", "lp_proj", "lp_rb_let", "lp_substl", "ls_find", "ls_match",
+  "ls_node", "ls_push", "lv_intern", "lv_node", "lv_sub_int", "max_find", "max_push", "memo_get",
+  "memo_push", "mk_app", "mk_forall", "mk_lam", "mk_let", "mk_proj", "nanon_find", "nanon_push",
+  "nnum_find", "nnum_push", "nstr_find", "nstr_match", "nstr_push", "param_find", "param_levels",
   "param_levels_go", "param_push", "pool_room", "proj_find", "proj_push", "quot_at", "quot_pin",
-  "quot_pin_hit", "rom_basis_decls", "rules_at_lps_go", "sl_cons", "sl_contains", "sl_get",
-  "sl_memo", "sl_nodup", "sle_go", "sls_go", "sls_memo", "sort_find", "sort_push", "spn_ls",
-  "spn_pool", "spn_to_er", "succ_find", "succ_push", "zero_find", "zero_push"
+  "quot_pin_hit", "rci_block", "rci_block_to", "rci_caps", "rci_ci", "rci_cv", "rci_fresh",
+  "rci_lvls_to", "rci_name_sl", "rci_names_to", "rci_rule", "rci_rules_to", "rci_slot",
+  "rom_basis_decls", "rom_ex_leaf_c", "rom_ex_one_c", "rom_ex_ref_c", "rom_ex_two_c", "rom_expr_c",
+  "rom_exprs_to_c", "rom_level_c", "rom_levels_c", "rom_lit", "rom_lvls_go_c", "rom_name_c",
+  "rom_put_c", "rom_u64_c", "rset_clear", "rset_find", "rset_put", "rules_at_lps_go", "sl_cons",
+  "sl_contains", "sl_get", "sl_memo", "sl_nodup", "sle_go", "sls_go", "sls_memo", "sort_find",
+  "sort_push", "spn_ls", "spn_pool", "spn_to_er", "stk_pool", "stk_push", "succ_find", "succ_push",
+  "zero_find", "zero_push"
 ]
 
 /-- The arrays `quotFns` may write: the record pool's tiers and every array `EnvR` does not read. -/
@@ -214,10 +222,10 @@ def plFns : List FnName := [
   "iw_pool", "limbs_eq", "lit_hash", "ls_find", "ls_match", "ls_push", "param_find", "param_levels",
   "param_levels_go", "param_push", "pool_room", "sl_cons", "sl_get"]
 
-/-- The arrays `plFns` never writes: the record pool's tiers, the core memos `TwinOK` reads, the ROM
-cache, the pins. -/
+/-- The arrays `plFns` never writes: the record pool's tiers, the core memos `TwinOK` reads,
+the pins. -/
 def plBad : List TieredArray :=
-  [EREC, tier1 EREC, ILMEMO, ABMEMO, WSM, FLM, LSM, LPMEMO, LPLMEMO, LPLSMEMO, L.Rom.ROMC, PINS]
+  [EREC, tier1 EREC, ILMEMO, ABMEMO, WSM, FLM, LSM, LPMEMO, LPLMEMO, LPLSMEMO, PINS]
 
 /-- The `CTL` words `plFns` never writes: the pool's tops, the core memos' control words. -/
 def plBadC : List Word := [129, 130, 48, 50, 54, 56, 58, 152, 154, 156]

@@ -79,8 +79,7 @@ theorem StageT.of_pl {m m' : Mem} {a a' : AState} (hT : StageT dn vis fe m a)
       ⟨na _ (by simp [plBad]), na _ (by simp [plBad]), na _ (by simp [plBad])⟩
       ⟨nc _ (by simp [plBadC]), nc _ (by simp [plBadC]), nc _ (by simp [plBadC])⟩
       ⟨na _ (by simp [plBad]), na _ (by simp [plBad]), na _ (by simp [plBad])⟩
-      ⟨nc _ (by simp [plBadC]), nc _ (by simp [plBadC]), nc _ (by simp [plBadC])⟩)
-    (by sorry /- p3q: the ROM cache goes; this argument with it -/), ?_⟩
+      ⟨nc _ (by simp [plBadC]), nc _ (by simp [plBadC]), nc _ (by simp [plBadC])⟩), ?_⟩
   have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (na _ (by simp [plBad])) (by decide)
   simp only [pinW, hP]; exact hT.flag
 
@@ -89,8 +88,8 @@ theorem StageT.of_wrER {m : Mem} {a : AState} {d : Word} {ws : List Word}
     (hT : StageT dn vis fe m a) (hS : StageR vis fe (wrER m d ws) a) :
     StageT dn vis fe (wrER m d ws) a := by
   have hf := (wrER_frame ws m d).mono (C' := [129, 130]) (fun _ h => h) (by simp)
-  refine ⟨hS, hT.twin.frameR hf (by decide) (by decide) (by decide) (by decide) (by decide)
-    (by decide) (by sorry /- p3q: the ROM cache goes; this argument with it -/), ?_⟩
+  refine ⟨hS, hT.twin.frame hf (by decide) (by decide) (by decide) (by decide) (by decide)
+    (by decide), ?_⟩
   have hP : (wrER m d ws).arr64 PINS = m.arr64 PINS := hf.arr PINS (by decide) (by decide)
   simp only [pinW, hP]; exact hT.flag
 
@@ -294,7 +293,7 @@ theorem erAlloc_stageT {m m' : Mem} {a : AState} {k q : Word} (h : erAllocW m k 
     fun i _ => by rw [hI], hg.get, hg.top1, hg.get1⟩
   have hfe : MemFrame [EREC, tier1 EREC] [129, 130] m m' := hf.mono (by simp) (fun _ h => h)
   refine ⟨⟨⟨CheckR.erGrow hT.stage.check hfe hg, hW⟩,
-    hT.twin.frame hf (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) hgI, ?_⟩,
+    hT.twin.frame hf (by decide) (by decide) (by decide) (by decide) (by decide) (by decide), ?_⟩,
     hgI, hoff, htop, hq41⟩
   have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (by simp) (by decide)
   simp only [pinW, hP]; exact hT.flag
