@@ -1033,6 +1033,66 @@ theorem checkJobsLoop_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatO
       rw [this]
       exact ⟨a, rfl, hR⟩
 
+/-- **An accepted `check_jobs` loop is the twin's list on every prefix whose views hold `FoldOK`**:
+if the loop from job `j` returns, then for every `t` in `j‥hi`, given con-ron's fold invariant at
+the views of the jobs `j‥t - 1` the twin's list reaches, the twin's list over `j‥t - 1` accepts
+with the job relation after it. (The pool's induction over positions, `pooled_fold`, needs the
+prefixes: a job's view holds `FoldOK` once every job below it is accepted.) -/
+theorem checkJobsLoop_pre {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinSet}
+    {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {p : Prog} {I : IStreamIndex}
+    (hP : JobProg pins dn ds p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn dn ds) (hdn : DnPers dn)
+    (hrec : ConRon.Bridge.RecordSpec pins pinsP) (hpp : ConRon.Bridge.PersPinSets pins)
+    {a₀ : AState} (hden : ∀ x ∈ ds.toList, ConRon.Bridge.PersDecl x ∧ ∃ d, Frontend.denoteDecl a₀.store x = some d)
+    (hPD : ConRon.Bridge.PinsDenote a₀.store pins pinsP) {hi : Word} (hhi : hi.toNat ≤ ds.size) :
+    ∀ (n : Nat), n ≤ 2 ^ 62 + 1 → ∀ (m : Mem) (a : AState) (j : Word) (q : Mem),
+      JobPost pins dn ds I a₀ m a → checkJobsE.loop1 p n m j hi = .ok q →
+      ∀ t, j.toNat ≤ t → t ≤ hi.toNat →
+      (∀ (t' : Nat) (a' : AState), j.toNat ≤ t' → t' < t →
+        checkJobList V pins I ds (List.range' j.toNat (t' - j.toNat)) a = .ok (.ok (), a') →
+        ∃ env, ConRon.Bridge.FoldOK env (I.view t') (AM.st enterScratch a')) →
+      ∃ m' a', checkJobList V pins I ds (List.range' j.toNat (t - j.toNat)) a = .ok (.ok (), a') ∧
+        JobPost pins dn ds I a₀ m' a' := by
+  intro n
+  induction n with
+  | zero =>
+    intro _ m a j q _ hq
+    rw [checkJobsE.loop1.eq_1] at hq; cases hq
+  | succ n ih =>
+    intro hn m a j q hR hq t hjt hth hG
+    by_cases ht : t = j.toNat
+    · subst ht; exact ⟨m, a, by simp; rfl, hR⟩
+    have g : j < hi := UInt64.lt_iff_toNat_lt.mpr (by omega)
+    rw [checkJobsE.loop1.arm1 _ _ _ _ _ g] at hq
+    have hjt' : j.toNat < hi.toNat := g
+    have hjk : j.toNat < ds.size := by omega
+    have e1 : (j + 1).toNat = j.toNat + 1 := by
+      rw [UInt64.toNat_add]; have := UInt64.toNat_lt hi; simp; omega
+    obtain ⟨hJ, hx, hp⟩ := hR
+    have hden' : ∀ x ∈ ds.toList, ConRon.Bridge.PersDecl x ∧ ∃ d, Frontend.denoteDecl a.store x = some d :=
+      fun x hx' => by
+        obtain ⟨h1, d, h2⟩ := hden x hx'
+        exact ⟨h1, d, ConRon.Bridge.denoteDecl_pext hx h1 h2⟩
+    have hPD' := ConRon.Bridge.PinsDenote.pmono hx pins pinsP hpp hPD
+    have hF := hG j.toNat a (Nat.le_refl _) (by omega) (by simp; rfl)
+    have hr := recordJob_ref hP hFD hLD hdn hrec hpp (N := n) (by omega) hjk hJ hF hden' hPD'
+    cases hc : callE p n "record_job" [j] m with
+    | error e => rw [hc, checkJobsE.k_record_job.none] at hq; cases hq
+    | ok q1 =>
+      obtain ⟨r, m₁⟩ := q1
+      rw [hc, checkJobsE.k_record_job.arm1] at hq
+      rw [hc] at hr
+      obtain ⟨u, a₁, hrun, hJ₁, hx₁, hp₁⟩ := hr
+      have hrun' : recordJob V pins I j.toNat ds[j.toNat] a = .ok ((), a₁) := by cases u; exact hrun
+      have hcons := fun rest => checkJobList_cons_ok (pins := pins) (I := I) hjk (rest := rest) hrun'
+      have hR₁ : JobPost pins dn ds I a₀ m₁ a₁ := ⟨hJ₁, hx.trans hx₁, hp₁.trans hp⟩
+      obtain ⟨m', a', h1, h2⟩ := ih (by omega) m₁ a₁ (j + 1) q hR₁ hq t (by omega) hth
+        (fun t' a' h1 h2 h3 => hG t' a' (by omega) h2 (by
+          rw [show t' - j.toNat = (t' - (j.toNat + 1)) + 1 by omega, List.range'_succ, hcons, ← e1]
+          exact h3))
+      refine ⟨m', a', ?_, h2⟩
+      rw [show t - j.toNat = (t - (j.toNat + 1)) + 1 by omega, List.range'_succ, hcons, ← e1]
+      exact h1
+
 /-- **`check_jobs(j, hi)` refines `checkJobList` over the jobs `j‥hi - 1`, both outcomes**
 (`checkJobsLoop_ref` through the function's model). -/
 @[refines ConRon.Arena.checkJobList ConRon.Arena.runJob]
