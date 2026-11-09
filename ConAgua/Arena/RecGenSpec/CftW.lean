@@ -10,6 +10,7 @@ import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndPosSpec.EntryW
+import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import ConAgua.Arena.RecSim
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
@@ -22,7 +23,7 @@ import all ConAgua.Arena.RecGen
 /-!
 # CftW
 
-`cftW`, `cftW_mem`, `cftW_out`, `cftW_ext`, `classFormerTy_spec`, `cftW_ok`.
+`cftW`, `cftW_mem`, `cftW_out`, `cftW_ext`, `classFormerTy_spec`, `FtRd`, `cftW_ok`.
 -/
 
 noncomputable section
@@ -37,42 +38,34 @@ namespace L.Ind
 
 open L.Arena
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The model of `class_former_ty`** (its `inst_lp_fast` read through `cR`). -/
+/-- **The model of `class_former_ty`** (its `family_telescope` and `inst_lp_fast` read through `cR`). -/
 def cftW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | N + 1, m, vis, o, l, mp =>
     if rdW (m.arr64 IW) (mp + 8) ≠ 0 then
       if rdW (m.arr64 IW) (mp + 8) - 1 < l then
-        some ([rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m)
+        some ([erRd m (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m)
       else cftK1 (binternW m 0)
-    else cftK2 cR N mp (envFindW m (rdW (m.arr64 IW) mp) vis)
--/
+    else cftK2 cR N vis mp (findRes m vis (rdW (m.arr64 IW) mp)) m
 
 section arms
-variable (cR : CallM) (N : Nat) (m m1 m2 m3 m4 : Mem) (vis o l mp q e : Word) (r2 r3 r4 : List Word)
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+variable (cR : CallM) (N : Nat) (m : Mem) (vis o l mp : Word)
 theorem cftW_mem (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : rdW (m.arr64 IW) (mp + 8) - 1 < l) :
     cftW cR (N + 1) m vis o l mp =
-      some ([rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m) := by
+      some ([erRd m (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m) := by
   simp only [cftW]; rw [ite_eq_left h, ite_eq_left h2]
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cftW_out (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : ¬ rdW (m.arr64 IW) (mp + 8) - 1 < l) :
     cftW cR (N + 1) m vis o l mp = cftK1 (binternW m 0) := by
   simp only [cftW]; rw [ite_eq_left h, ite_eq_right h2]
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cftW_ext (h : ¬ rdW (m.arr64 IW) (mp + 8) ≠ 0) :
-    cftW cR (N + 1) m vis o l mp = cftK2 cR N mp (envFindW m (rdW (m.arr64 IW) mp) vis) := by
+    cftW cR (N + 1) m vis o l mp = cftK2 cR N vis mp (findRes m vis (rdW (m.arr64 IW) mp)) m := by
   simp only [cftW]; rw [ite_eq_right h]
--/
 end arms
 
--- ronsync2 stage 2: grind_pattern [ind_grind] cftW_mem => cftW cR (N + 1) m vis o l mp
--- ronsync2 stage 2: grind_pattern [ind_grind] cftW_out => cftW cR (N + 1) m vis o l mp
--- ronsync2 stage 2: grind_pattern [ind_grind] cftW_ext => cftW cR (N + 1) m vis o l mp
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+grind_pattern [ind_grind] cftW_mem => cftW cR (N + 1) m vis o l mp
+grind_pattern [ind_grind] cftW_out => cftW cR (N + 1) m vis o l mp
+grind_pattern [ind_grind] cftW_ext => cftW cR (N + 1) m vis o l mp
+
 theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St)
     (vis o l mp : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_former_ty" [vis, o, l, mp]
@@ -83,20 +76,44 @@ theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSp
   | zero => vcgen [exec] <;> grind
   | succ N =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        internBVar_spec p h.bf h.bp h.ib N, callW_spec p N "env_find",
-        erToIw_specW p h.alloc h.copy h.eti N, hcR N "inst_lp_fast"] <;>
-      finish (gen := 20) [rdW_eq]
--/
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        internBVar_spec p h.bf h.bp h.ib N, envFind_spec p h.rowGet h.baseGet h.find N,
+        erToIw_specW p h.alloc h.copy h.eti N, hcR N "family_telescope", hcR N "inst_lp_fast"] <;>
+      finish (gen := 20) [rdW_eq, St.setLocs_mem', erRd_get, cftK2]
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+/-! ## The relation to the twin -/
+
+/-- **The contract of a reading of `family_telescope`** at an inductive's record `q` (decoding to
+`.indInfo cv caps`), at call points satisfying `Pre`, which it keeps. -/
+def FtRd (cR : CallM) (mode : ConLeche.CheckMode) (vis : Word) (fe : IFEnv) (Pre : Mem → AState → Prop) : Prop :=
+  ∀ (k : Nat) (q : Word) (cv : IConstantVal) (caps : IIndCaps) (m m' : Mem) (a : AState) (r : List Word),
+    Pre m a → StageR vis fe m a → decCI (erecP m) q.toNat = some (.indInfo cv caps) →
+    cR k "family_telescope" [vis, q + 1, q + 5] m = some (r, m') →
+    ∃ x a', (familyTelescope mode fe cv caps).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
+      decW0E m' r x ∧ AFr m m' ∧ Pre m' a'
+
+/-- The levels' slice of a decoded constant value (any reader). -/
+theorem decCV_sliceR {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+    ∃ w1 w2, a (q + 1) = some w1 ∧ a (q + 2) = some w2 ∧
+      hslice? a w1.toNat w2.toNat = some cv.levelParams := by
+  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨nm, -, lv, hlv, ty, -, rfl⟩ := h
+  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
+  obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
+  simp only [nat?, Option.map_eq_some_iff] at ho2 hl2
+  obtain ⟨w1, hw1, rfl⟩ := ho2
+  obtain ⟨w2, hw2, rfl⟩ := hl2
+  exact ⟨w1, w2, hw1, hw2, hsl⟩
+
 theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {N : Nat} {m m' : Mem} {o l mp : Word} {r : List Word} {M : TargetMajor} {cvTas : List IConstantVal}
-    (cR : CallM) (hI : IlpRd cR dn vis fe (IlpBase m a))
+    (mode : ConLeche.CheckMode) (cR : CallM) {Pre : Mem → AState → Prop} (hI : IlpRd cR dn vis fe Pre)
+    (hF : FtRd cR mode vis fe Pre)
+    (hPre : ∀ m m' a, Pre m a → StageR vis fe m' a → MemFrame [IW] [200] m m' → Pre m' a) (hP : Pre m a)
     (h : cftW cR N m vis o l mp = some (r, m')) (hS : StageR vis fe m a)
     (hM : DecB (fun m => decTM m mp.toNat) m M) (hcv : decPL m (decCVp m) o.toNat l.toNat = some cvTas)
     (hol : o.toNat + l.toNat < 2 ^ 64) :
-    ∃ x a', (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.classFormerTy mode fe cvTas M).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0E m' r x ∧ AFr m m' := by
   cases N with
   | zero => simp [cftW] at h
@@ -129,12 +146,10 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       have hty := decCVp_type (q := UInt64.ofNat v) (by rw [UInt64.toNat_ofNat_of_lt' hv64]; exact hcvv)
         (by
           rw [UInt64.toNat_ofNat_of_lt' hv64]
-          have := hS.iw.erSize
           simp only [decCVp, decCV, bind, Option.bind_eq_some_iff] at hcvv
           obtain ⟨_, _, _, _, _, hty, -⟩ := hcvv
           obtain ⟨w, hw, -⟩ := hd?_some hty
-          have := (Array.getElem?_eq_some_iff.mp hw).1
-          simp only [erA] at this; omega)
+          have := erecP_lt64 hw; omega)
       refine ⟨_, a, ?_, hS, IWGrow.refl m, ⟨hty.1, hty.2⟩, AFr.refl _⟩
       simp only [ConRon.Arena.classFormerTy, hmem', List.getElem?_eq_getElem (by omega : k - 1 < cvTas.length)]
       rfl
@@ -161,62 +176,52 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     obtain ⟨wi, hwi, hwiH, hwiE⟩ := iwH_rdW_at (w := mp) (k := 0) (by simpa using decTM_ind hM0) hsz
     rw [show mp + UInt64.ofNat 0 = mp by simp] at hwi
     rw [hwi] at h
-    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
-    rw [cftK2_some] at h
-    obtain ⟨hm2, hfind, hdec⟩ := envFindW_found h2 hS.check.env hwiH
-    subst m2
+    have hE := hS.check.env
+    unfold cftK2 at h
     obtain ⟨hf0, h⟩ := of_ite_none h
+    obtain ⟨hfind, ci, hci⟩ := findRes_hit hE hwiH hf0
+    have hfci : fe.find? M.ind = some ci := by rw [← hwiE, hfind, hci]
+    generalize findRes m vis wi = r2 at h hf0 hci
     obtain ⟨hk3, h⟩ := of_ite_none h
-    obtain ⟨ci, hci⟩ := hdec hf0
-    have hfci : fe.find? M.ind = some ci := by rw [← hwiE, hfind, decFound, ite_eq_right hf0, hci]
     obtain ⟨kk, hkk, hcase⟩ := decCI_ind_cases hci
-    have hkr := erec_nat (w := r2.tail.headD 0) (c := 0) (by simpa using hkk) (by decide)
+    have hkr := erec_nat (m := m) (w := r2.tail.headD 0) (c := 0) (by simpa using hkk) (by decide)
     rw [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at hkr
     have hkind : kk = 3 := by
-      have := congrArg UInt64.toNat ((show rdW (m.arr64 EREC) (r2.tail.headD 0) = 3 by simpa using hk3).symm.trans hkr.1)
+      have := congrArg UInt64.toNat ((show erRd m (r2.tail.headD 0) = 3 by simpa using hk3).symm.trans hkr.1)
       rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; exact hkr.2)] at this; exact this.symm
     obtain ⟨-, cv, caps, rfl, -⟩ := hcase.resolve_right (fun ⟨hne, _⟩ => hne hkind)
+    -- the telescope
+    obtain ⟨⟨rt, m3⟩, h3, h⟩ := of_K h rfl
+    rw [cftKF_some] at h
+    obtain ⟨x3, a3, hrun3, hS3, hg3, ⟨hx32, hx3⟩, hA3, hP3⟩ := hF N _ cv caps m m3 a rt hP hS hci h3
+    -- the levels
     have hcvP := decCI_ind_cv hci
-    have hcvA : decCV (erA m) ((r2.tail.headD 0).toNat + 1) = some cv :=
-      ArrExt.decCV (IWGrow.erecExt (IWGrow.refl m)) hcvP
-    obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcvA
-    have hqE := (Array.getElem?_eq_some_iff.mp hw2).1
-    have hE64 := hS.iw.erSize
-    have e1 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 2) = w1 :=
-      rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE ⊢; omega) hw1
-    have e2 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 3) = w2 :=
-      rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE ⊢; omega) hw2
+    have hcv3 : decCV (erecP m3) ((r2.tail.headD 0).toNat + 1) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvP
+    obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceR hcv3
+    have hq64 := erecP_lt64 hw2
+    have e1 : erRd m3 (r2.tail.headD 0 + 2) = w1 :=
+      erRd_of_erA (by rw [show (r2.tail.headD 0 + 2).toNat = (r2.tail.headD 0).toNat + 1 + 1 by
+        rw [UInt64.toNat_add, show (2 : Word).toNat = 2 from rfl]; omega]; exact hw1)
+    have e2 : erRd m3 (r2.tail.headD 0 + 3) = w2 :=
+      erRd_of_erA (by rw [show (r2.tail.headD 0 + 3).toNat = (r2.tail.headD 0).toNat + 1 + 2 by
+        rw [UInt64.toNat_add, show (3 : Word).toNat = 3 from rfl]; omega]; exact hw2)
     rw [e1, e2] at h
-    have hsrc : w2.toNat = 0 ∨ w1.toNat + w2.toNat ≤ (m.arr64 EREC).size := by
-      rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
-      · exact .inl h0
-      · exact .inr (hslice?_bound _ _ _ _ hsl h0)
-    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
-    rw [cftK3_some] at h
-    obtain ⟨-, hr3t, hdec3, hS3, hg3, -⟩ := L.Arena.erToIwW_stage h3 hS hsrc
-    rw [hr3t] at h
-    have hdecL : decHL m3 (r3.headD 0).toNat w2.toNat = some cv.levelParams := by rw [hdec3]; exact hsl
-    have hM3 : decTM m3 mp.toNat = some M := hM.stab (decTM_mono _) m3 hg3
-    obtain ⟨wu, hwu, hwuH, hwuE⟩ := iwH_rdW_at (w := mp) (k := 1) (decTM_lvls' hM3) hS3.iw.iwSize
-    rw [show UInt64.ofNat 1 = (1 : Word) from rfl] at hwu
-    have hcv3 : decCV (erA m3) ((r2.tail.headD 0).toNat + 1) = some cv :=
-      ArrExt.decCV (IWGrow.erecExt hg3) hcvP
-    obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hcv3
-    have hqE3 := (Array.getElem?_eq_some_iff.mp hwt).1
-    have hE364 := hS3.iw.erSize
-    have et : rdW (m3.arr64 EREC) (r2.tail.headD 0 + 4) = wt :=
-      rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
-    rw [hwu, et] at h
     obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
+    rw [cftK3_some] at h
+    obtain ⟨hS4, hg4, hdec4, -, -⟩ := erToIwW_stage h4 hS3 (k := .name) (xs := cv.levelParams) hsl
+    have hM4 : decTM m4 mp.toNat = some M := hM.stab (decTM_mono _) m4 (hg3.trans hg4)
+    obtain ⟨wu, hwu, hwuH, hwuE⟩ := iwH_rdW_at (w := mp) (k := 1) (decTM_lvls' hM4) hS4.iw.iwSize
+    rw [show UInt64.ofNat 1 = (1 : Word) from rfl] at hwu
+    rw [hwu] at h
+    obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl
     rw [cftK4_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨x, a4, hrun4, ⟨hS4, hg4, hx4⟩, -, hA4⟩ := hI N CWF (r3.headD 0) w2 wu wt cv.levelParams m3 m4 a r4
-      hwuH hwtH ⟨rfl, erToIwW_iwFr h3⟩ hS3 hdecL h4
-    rw [CWF_eq, hwuE, ← hwtE] at hrun4
-    refine ⟨x, a4, ?_, hS4, hg3.trans hg4, hx4, (erToIwW_afr h3).trans hA4⟩
-    simp only [ConRon.Arena.classFormerTy, hmem', hfci]
-    exact hrun4
--/
+    obtain ⟨x, a5, hrun5, ⟨hS5, hg5, hx5⟩, -, hA5⟩ := hI N CWF (r4.headD 0) (r4.tail.headD 0) wu (rt.headD 0)
+      cv.levelParams m4 m5 a3 r5 hwuH hx32 (hPre _ _ _ hP3 hS4 (erToIwW_iwFr h4)) hS4 hdec4 h5
+    rw [CWF_eq, hwuE, hx3] at hrun5
+    refine ⟨x, a5, ?_, hS5, (hg3.trans hg4).trans hg5, hx5, (hA3.trans (erToIwW_afr h4)).trans hA5⟩
+    simp only [ConRon.Arena.classFormerTy, hmem', hfci, StateT.run_bind, hrun3]
+    exact hrun5
 
 end L.Ind
 
