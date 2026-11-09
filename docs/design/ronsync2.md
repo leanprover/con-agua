@@ -174,3 +174,9 @@ pool.
    `__atomic_fetch_add(&g_next, 1)` on one counter. Before/after texts: in the report.
 
 The final texts are given in the report when the theorems are proved.
+* Stage 3 findings that changed L (2026-11-09): `cap_check` also bounds both `EREC` tiers by 2^40
+  words (the tagged addresses need it; never fires); the pinned `And` block is no longer cached by
+  `rom_fill`: the twin interns `andPinDecls` only at use, in the scratch tier (and only for a
+  block naming `And`), so the cache's records were not the twin's; `rom_and_pin` interns at use
+  as the twin does. The other cached constants are persistent in the twin too (the ROM cache's
+  denotation `RomDen`, a field of `TwinOK`).
