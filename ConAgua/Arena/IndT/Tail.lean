@@ -94,6 +94,44 @@ theorem checkBlockTail_split (mode : ConLeche.CheckMode) (block : List IConstant
       pure fe₃) := by
   simp only [ConRon.Arena.checkBlockTail, tailStreamT, bind_assoc, pure_bind]
 
+/-! ## `check_block_tail_stream`'s contract -/
+
+/-- A callee keeps the recursor stage's memos (`RcMR`: the positivity memos and `TAM`). -/
+def RcKeepF (p : Prog) (f : FnName) : Prop :=
+  ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem), callW p n f vs m = some (r, m') →
+    RcMR m → RcMR m'
+
+/-- What `check_block_tail_stream` gives (from `m`, `a`; at the constructors' environment `env₂`):
+the stage at the returned view of the popped environment, con-ron's `EnvRel` there, the pools
+grown, the memos, the twin's step. -/
+structure TsPost (dn : NIdx → Option ConLeche.Name) (env₂ : ConLeche.Env) (m : Mem) (a : AState)
+    (w : Word) (fe' : IFEnv) (m' : Mem) (a' : AState) : Prop where
+  stage : StageC dn w fe' env₂ m' a'
+  rel : ConRon.Bridge.Inductives.EnvRel env₂ fe' a'.store
+  grow : IWGrow m m'
+  abs : AbsOK m'
+  rc : RcMR m'
+  inst : ConRon.Bridge.Inductives.InstStep a a'
+
+/-- **`check_block_tail_stream(p, fe2b, out.off, out.len)`'s contract**: `tailStreamT`, both
+outcomes, from the stage at the recursor stage's environment `fe` (`EnvRel` to `env₂`, the
+constructors' environment), the shape and the generated family decoded and denoted, and the
+generated family's environment well formed (con-leche's `consBlockRecsT`). -/
+def TsRefS (G : Prop) (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis : Word) (fe : IFEnv) (env₂ : ConLeche.Env) (m : Mem) (a : AState)
+    (pp go gl : Word) (bs : BlockShape) (bsP : ConLeche.BlockShape)
+    (gs : List (IConstantVal × TargetMajor × List EIdx))
+    (gsP : List (ConLeche.ConstantVal × ConLeche.TargetMajor × List ConLeche.Expr)),
+    StageC dn vis fe env₂ m a → AbsOK m → RcMR m →
+    ConRon.Bridge.Inductives.EnvRel env₂ fe a.store →
+    ConLeche.EnvWF (ConLeche.consBlockRecsT bsP 0 gsP env₂) →
+    DecB (fun m => decBS m pp.toNat) m bs → RecsB m pp → pp.toNat + 3 < iwTop m →
+    PSlR decRR gs go gl m →
+    ConRon.Bridge.Inductives.dShape a.store bs = some bsP →
+    gs.mapM (ConRon.Bridge.Inductives.dRecOut a.store) = some gsP →
+    RefE G (callE p n "check_block_tail_stream" [pp, vis, go, gl] m) (tailStreamT V bs fe gs) a
+      (fun rm fe' a' => TsPost dn env₂ m a (rm.1.headD 0) fe' rm.2 a')
+
 /-- What `check_block_tail` gives besides the index `x` it returns, at the view `w` (from `m`): the
 stage, the growth, the `hb` memo, `AbsOK`, the recursor stage's memos. -/
 structure TailPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x : IFEnv) (m' : Mem)
