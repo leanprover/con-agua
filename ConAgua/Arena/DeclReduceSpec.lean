@@ -71,7 +71,7 @@ theorem selW_ok {α : Type} {vis : Word} {fe : IFEnv}
     (hT : ∀ w, (w = i ∨ w = j) →
       L.Rom.RomRef p f [w] (StageR vis fe) (T w.toNat) (KeepPost vis fe dec))
     (hdec : ∀ m r x, dec m r x → dec m [r.headD 0] x)
-    (h : selW p n m c k f i j = some (r, m')) (hS : StageR vis fe m a) (hc : c.toNat < 2 ^ 32) :
+    (h : selW p n m c k f i j = some (r, m')) (hS : StageR vis fe m a) (hc : c.toNat < 2 ^ 32) (hk51 : k ≠ 51) :
     ∃ x a', (do let y ← pinAt k.toNat; if (decI c : NIdx) == y then T i.toNat else T j.toNat).run a =
       .ok (x, a') ∧ KeepPost vis fe dec m m' a' r x := by
   cases n with
@@ -79,7 +79,7 @@ theorem selW_ok {α : Type} {vis : Word} {fe : IFEnv}
   | succ n =>
   simp only [selW] at h
   rcases h1 : pinAtW m k with _ | ⟨r1, m1⟩ <;> simp only [h1, selK, reduceCtorEq] at h
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins hk51
   have e1 : r1.headD 0 = pinW m (1 + k.toNat) := by rw [hr1]; rfl
   have hbeq : ((decI c : NIdx) == decI (pinW m (1 + k.toNat))) = decide (c = pinW m (1 + k.toNat)) :=
     decI_beq c _ hc hl1

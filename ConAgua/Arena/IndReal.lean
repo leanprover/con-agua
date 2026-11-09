@@ -64,13 +64,13 @@ theorem relW_callF {α : Type} [Inhabited α] {P : Prog} {f : FnName} {args : Li
 def rrnProg : Prog :=
   [("reserved_rec_name", L.Stubs.reservedRecNameL), ("reserved_contains", reservedContains),
    ("reserved_from", reservedFrom), ("lit_guard_has", L.Stubs.litGuardHas),
-   ("pin_range_has", L.Stubs.pinRangeHas), ("pin_at", pinAtL)]
+   ("pin_range_has", L.Stubs.pinRangeHas), ("pin_at", pinAtL),
+   ("reserved_rec_bool", L.Stubs.reservedRecBoolL)]
 
 def rrnFns : List FnName := rrnProg.map (·.1)
 
 /-- `reserved_rec_name` writes nothing. -/
-theorem rrnProg_closed : closedA rrnProg [] [] rrnFns = true := by
-  sorry
+theorem rrnProg_closed : closedA rrnProg [] [] rrnFns = true := by decide +kernel
 
 /-- The program bundle. -/
 abbrev RrnF (p : Prog) : Prop := ProgHas p rrnProg
@@ -89,39 +89,5 @@ theorem rrnF_spec (p : Prog) (hp : RrnF p) (n : Nat) (s₀ : St) (args : List Wo
 theorem rrnF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Word) (hn : H n) :
     RelW rrnF [n] (StageR vis fe) (reservedRecName (decI n)) (KeepPost vis fe decW0B) :=
   relW_callF (L.Stubs.reservedRecName_refines (p := rrnProg) (by constructor <;> rfl) dn vis fe n hn)
-
-/-! ## `rec_rule_bits` (lane `tails`' `recRuleBits_refines`) -/
-
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-def rrbFns : List FnName := rrbProg.map (·.1)
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem rrbProg_closed : closedA rrbProg [] [] rrbFns = true := by
-  sorry
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-abbrev RrbF (p : Prog) : Prop := ProgHas p rrbProg
--/
-
-
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`rec_rule_bits`' model refines `recRuleBits`** (replaces `IndStubs.recRuleBits_spec`). -/
-theorem rrbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c : Word) (hc : H c)
-    (rl : IRecRule) (hrl : rl.ctor = decI c) :
-    RelW rrbF [vis, c] (StageR vis fe) (recRuleBits fe rl)
-      (KeepPost vis fe (fun _ r (x : IRecRule) =>
-        x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) :=
-  relW_callF (L.Stubs.recRuleBits_refines (p := rrbProg) (by constructor <;> rfl) dn vis fe c hc rl hrl)
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem rrbF_frame {m m' : Mem} {args r : List Word} (h : rrbF m args = some (r, m')) :
-    MemFrame [] [] m m' := by
-  sorry
--/
 
 end L.Ind

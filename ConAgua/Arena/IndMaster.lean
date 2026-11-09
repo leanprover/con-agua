@@ -593,4 +593,89 @@ theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
     ite_true, Option.map_some, bind, Option.bind_some, pure]
   rw [hs]; rfl
 
+/-! ## `erec_put` and the tagged read; `env_push` under the stage relation -/
+
+/-- `EREC⦃x⦄` across an `erec_put` at another place. -/
+theorem erRd_erecPutMem_ne {m : Mem} {a v x : Word} (h : erTier x ≠ erTier a ∨ erOff x ≠ erOff a) :
+    erRd (erecPutMem m a v) x = erRd m x := by
+  have ht : tierA EREC (x >>> 40) = erTier x := by rw [tierA_EREC]; rfl
+  unfold erRd
+  rw [ht, erecPutMem_arr]
+  split
+  · rename_i e
+    have ho : erOff x ≠ erOff a := by
+      rcases h with h | h
+      · exact absurd e h
+      · exact h
+    simp only [rdW, Array.getElem?_setIfInBounds, mask40_toNat]
+    rw [if_neg (fun h' => ho (by unfold erOff at h' ⊢; omega))]
+  · rfl
+
+/-- **A word of the old pool and a freshly allocated word are at different places.** -/
+theorem erFresh {m m1 : Mem} {k q x : Word} (h : erAllocW m k = some (q, m1)) (hW : IWOK m)
+    {v : Word} (hx : erecP m x.toNat = some v) {j : Nat} (hj : j < k.toNat) :
+    erTier x ≠ erTier (q + UInt64.ofNat j) ∨ erOff x ≠ erOff (q + UInt64.ofNat j) := by
+  obtain ⟨-, -, hoff, htop1, hsz1, -, hq41, -⟩ := erAllocW_spec h hW
+  have hcap : (m.arr64 (erTier q)).size < 2 ^ 40 := by
+    unfold erTier; split
+    · exact hW.erCap
+    · exact hW.er1Cap
+  have hjN : j < 2 ^ 40 := by omega
+  have hqj : (q + UInt64.ofNat j).toNat = q.toNat + j := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hlt : erOff q + j < 2 ^ 40 := by omega
+  have eo : erOff (q + UInt64.ofNat j) = erOff q + j := by unfold erOff at hlt ⊢; rw [hqj]; omega
+  have et : (q + UInt64.ofNat j).toNat / 2 ^ 40 % 2 = q.toNat / 2 ^ 40 % 2 := by
+    rw [hqj]; unfold erOff at hlt; congr 1; omega
+  -- the old word lies below its tier's top
+  have hxl : erOff x < erTopOf m x := by
+    unfold erecP at hx; unfold erOff erTopOf
+    split at hx
+    · split at hx
+      · rename_i t; split at hx
+        · simp only [t, ite_true]; omega
+        · cases hx
+      · rename_i t; split at hx
+        · simp only [t, ite_false]; omega
+        · cases hx
+    · cases hx
+  by_cases e : x.toNat / 2 ^ 40 % 2 = q.toNat / 2 ^ 40 % 2
+  · right
+    have : erTopOf m x = erTopOf m q := by unfold erTopOf; rw [e]
+    rw [eo]; omega
+  · left
+    unfold erTier; rw [et]
+    intro h'
+    split at h' <;> split at h' <;> first | omega | cases h'
+
+/-- `env_row_set`'s two writes stay in the name's own row array. -/
+theorem ownSet_frame (m : Mem) (w c q : Word) : MemFrame [ownArr w] [] m (ownSet m w c q) :=
+  (MemFrame.set64 m _ (Ne.symm (ctl_ne_ownArr w)) _ _).trans
+    (MemFrame.set64 _ _ (Ne.symm (ctl_ne_ownArr w)) _ _)
+
+/-- **A write of an own row** relating the memory to `fe'` at `vis'` keeps the stage relation (at
+`fe'`) and the pools. -/
+theorem StageR.of_own {vis vis' : Word} {fe fe' : IFEnv} {a : AState} {m : Mem} {w c q : Word}
+    (hS : StageR vis fe m a) (hE : EnvR (ownSet m w c q) vis' fe') :
+    StageR vis' fe' (ownSet m w c q) a ∧ IWGrow m (ownSet m w c q) := by
+  have hf := ownSet_frame m w c q
+  have ha := ownArr_arr w
+  have hA : ∀ b ∈ [ownArr w], 140 ≤ b.arr ∧ b.arr ≤ 142 := by
+    intro b hb; simp only [List.mem_singleton] at hb; subst hb; omega
+  have hlow : ∀ y ∈ arenaArrs, y.arr < 64 := by decide
+  have hA3 : (IW : TieredArray) ∉ [ownArr w] ∧ (EREC : TieredArray) ∉ [ownArr w] ∧
+      tier1 EREC ∉ [ownArr w] :=
+    ⟨fun h => by have := hA _ h; revert this; decide, fun h => by have := hA _ h; revert this; decide,
+      fun h => by have := hA _ h; revert this; decide⟩
+  have hC3 : (129 : Word) ∉ ([] : List Word) ∧ (130 : Word) ∉ ([] : List Word) ∧
+      (200 : Word) ∉ ([] : List Word) := by simp
+  refine ⟨⟨⟨⟨ArenaR.frame (fun b hb hm => by have := hlow b hm; have := hA b hb; omega)
+      (fun x hx => by simp at hx) hf hS.check.arena.base,
+      DerR.frameM _ _ m _ hf (fun b hb => by have := hA b hb; omega) a hS.check.arena.der⟩,
+    hS.check.core.frame (fun b hb => .inr (by have := hA b hb; omega)) (fun x hx => by simp at hx) hf,
+    hS.check.pins.frame (fun b hb => .inr (by have := hA b hb; omega)) hf, hE,
+    hS.check.mode.frame hf (by simp) (by simp)⟩, IWOK.of_keep hf hA3 hC3 hS.iw⟩,
+    IWGrow.of_keep hf hA3 hC3⟩
+
 end L.Ind
+
