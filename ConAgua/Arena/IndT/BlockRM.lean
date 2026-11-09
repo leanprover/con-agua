@@ -172,8 +172,11 @@ theorem rf_ref (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {cvq n : Wor
     {cvP : ConLeche.ConstantVal} (hC : StageC dn vis fe env m a) (hA : AbsOK m)
     (hcv : DecB (fun m => decCVp m cvq.toNat) m cv) (hcvP : Frontend.denoteCV a.store cv = some cvP)
     (hws : ConLeche.Expr.WScoped 0 cvP.type) :
-    RefE (WtG p) (rfE p (k + 1) m vis cvq n) (reducedFormer V fe cv n.toNat) a
+    RefE (WtG p) (rfE p k m vis cvq n) (reducedFormer V fe cv n.toNat) a
       (fun v cvR a' => RfPost dn vis fe env m a v cvR a') := by
+  rcases k with _ | k
+  · rw [rfE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  have hk : k ≤ 2 ^ 62 := by omega
   have hS := hC.stage
   obtain ⟨hty32, htye⟩ := partsCVType hcv (w := cvq) rfl
   have hcvm : decCVp m cvq.toNat = some cv := DecB.get (OMono.decCVp _) hcv
