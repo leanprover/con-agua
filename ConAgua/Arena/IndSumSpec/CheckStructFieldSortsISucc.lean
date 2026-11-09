@@ -82,7 +82,6 @@ def sfbT (isProp large : Bool) (s : LIdx) (idxArgs : List EIdx) (fv : EIdx) (u :
       fail (.invalid "direct sum: large eliminator with a non-propositional \
         field outside the indices")
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`checkStructFieldSortsI` at `j + 1`**, its steps named. -/
 theorem checkStructFieldSortsI_succ (fe : IFEnv) (isProp large : Bool) (s : LIdx) (nP : Nat)
     (fvs idxArgs : List EIdx) (j : Nat) :
@@ -92,9 +91,9 @@ theorem checkStructFieldSortsI_succ (fe : IFEnv) (isProp large : Bool) (s : LIdx
       let ty ← inferTypeCore V fe checkFuel (nP + j) t
       let u ← ensureSortCore V fe checkFuel (nP + j) ty
       sfbT isProp large s idxArgs fv u
-      let rest ← checkStructFieldSortsI V fe isProp large s nP fvs idxArgs j
-      pure (rest ++ [u])) := by
-  simp only [checkStructFieldSortsI, sfbT]
+      checkStructFieldSortsI V fe isProp large s nP fvs idxArgs j) := by
+  rw [checkStructFieldSortsI]
+  simp only [sfbT]
   congr; funext fv; congr; funext t; congr; funext ty; congr; funext u
   cases isProp <;> cases large <;>
     simp only [Bool.not_false, Bool.not_true, ite_true, ite_false, Bool.false_eq_true, bind_assoc,
@@ -103,7 +102,6 @@ theorem checkStructFieldSortsI_succ (fe : IFEnv) (isProp large : Bool) (s : LIdx
     | rfl
     | (congr; funext lu; congr; funext ls; congr; funext d; cases d <;> simp; done)
     | (congr; funext z; congr; funext d; by_cases hc : d = some true ∨ fv ∈ idxArgs <;> simp [hc]; done)
--/
 
 theorem sfb_leq_eq (u s : LIdx) (k : Bool → AM Unit) :
     (do let lu ← readLevelM u; let ls ← readLevelM s

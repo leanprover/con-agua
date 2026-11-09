@@ -358,15 +358,15 @@ theorem word_toNat_add {c : Word} {k : Nat} (h : c.toNat + k < 2 ^ 64) :
   rw [UInt64.toNat_add, UInt64.toNat_ofNat']; omega
 
 /-- The kind word of a constant record. -/
-def ciKind : IConstantInfo → Nat
+def ciKindQ : IConstantInfo → Nat
   | .axiomInfo .. => 0 | .defnInfo .. => 1 | .thmInfo _ => 2 | .indInfo .. => 3
   | .ctorInfo .. => 4 | .recInfo .. => 5
 
 theorem decCI_kindW {R : Nat → Option Word} {q : Nat} {ci : IConstantInfo} {w : Word}
-    (h : decCI R q = some ci) (hw : R q = some w) : w.toNat = ciKind ci := by
+    (h : decCI R q = some ci) (hw : R q = some w) : w.toNat = ciKindQ ci := by
   simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
   split at h <;> simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
-    reduceCtorEq] at h <;> grind [ciKind]
+    reduceCtorEq] at h <;> grind [ciKindQ]
 
 theorem erecP_lt64 {m : Mem} {i : Nat} {w : Word} (h : erecP m i = some w) : i < 2 ^ 64 := by
   unfold erecP at h; split at h

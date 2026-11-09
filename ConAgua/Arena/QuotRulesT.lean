@@ -230,12 +230,12 @@ theorem putK {α : Type} {p : Prog} (hp : p.lookup "erec_put" = some erecPut) {n
 theorem wrER_cons (m : Mem) (d x : Word) (ws : List Word) :
     wrER m d (x :: ws) = wrER (erecPutMem m d x) (d + 1) ws := rfl
 
-theorem wrER_append (m : Mem) (d : Word) :
+theorem wrER_snoc (m : Mem) (d : Word) :
     ∀ (ws : List Word) (x : Word), wrER m d (ws ++ [x]) =
       erecPutMem (wrER m d ws) (d + UInt64.ofNat ws.length) x
   | [], x => by simp [wrER]
   | y :: ws, x => by
-    simp only [List.cons_append, wrER_cons, wrER_append _ (d + 1) ws x, List.length_cons]
+    simp only [List.cons_append, wrER_cons, wrER_snoc _ (d + 1) ws x, List.length_cons]
     congr 1
     rw [UInt64.add_assoc]; congr 1; apply UInt64.toNat_inj.mp
     simp only [UInt64.toNat_add, UInt64.toNat_ofNat', UInt64.toNat_one]; omega

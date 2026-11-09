@@ -223,7 +223,7 @@ names_tree declLoopTree : declLoopFns
 
 /-- The arrays of `stepA`, as a test. -/
 def stepPa (a : TieredArray) : Bool :=
-  checkerWordArrays.contains a && a != DECL && a != DLP && (decide (a.arr < 146) || decide (149 < a.arr))
+  checkerWordArrays.contains a && a != DECL && a != DLP
 
 /-- The `CTL` words of `stepC`, as a test. -/
 def stepPc (w : Word) : Bool :=
@@ -234,7 +234,7 @@ theorem stepPa_mem (a : TieredArray) (h : stepPa a = true) : a ∈ stepA := by
   simp only [stepPa, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq,
     List.contains_iff_mem] at h
   simp only [stepA, List.mem_filter, decide_eq_true_eq]
-  exact ⟨h.1.1.1, h.1.1.2, h.1.2, h.2⟩
+  exact ⟨h.1.1, h.1.2, h.2⟩
 
 theorem stepPc_mem (w : Word) (h : stepPc w = true) : w ∈ stepC := by
   simp only [stepPc, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,

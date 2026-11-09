@@ -48,7 +48,6 @@ theorem lvlEqC_simC (n : Nat) {m : Mem} {a : AState} (hC : StageC dn vis fe env 
   have hs := ConRon.Bridge.Inductives.lvlEq?_pstep hC.check.state hrun
   exact ⟨x, a', hrun, StageC.of_pstep hC hT'.stage hA' hs, hg, hd, hA', hs⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hcl hL in
 /-- **`lvls_eq_c` under `StageC`** (replaces `RecCheckSpec/TcmLook.lvlsEqStub_spec` for a caller
 carrying `StageC`, `AbsOK` and the two lists' readbacks): the verdict con-leche's
@@ -59,13 +58,12 @@ theorem lvlsEqC_simC (n : Nat) {m : Mem} {a : AState} (hC : StageC dn vis fe env
     (hvsP : denoteLs a.store.lss (decI vs) = some vsP) :
     Sim (callW p n "lvls_eq_c" [us, vs] m) (lvlsEq? (decI us) (decI vs)) a
       (fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ decLvlEq m' r x ∧ AbsOK m' ∧
-        ConRon.Bridge.CoreStep .verified env fe a a' ∧ x = ConLeche.Level.isEquivList usP vsP) := by
+        ConRon.Bridge.CoreStep env fe a a' ∧ x = ConLeche.Level.isEquivList usP vsP) := by
   intro r m' e
   obtain ⟨x, a', hrun, hT', hg, hd⟩ := lvlsEqC_simT p hcl hL n hC.stageT us vs hu hv r m' e
   have hA' := absOK_core hcl (by decide) e hA hT'
   obtain ⟨c, hx⟩ := ConRon.Bridge.Inductives.RC.lvlsEq?_run hC.check husP hvsP hrun
   exact ⟨x, a', hrun, StageC.of_check hC hT'.stage hA' c.ok c.ext, hg, hd, hA', c, hx⟩
--/
 
 end
 

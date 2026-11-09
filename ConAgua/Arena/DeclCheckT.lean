@@ -2,8 +2,9 @@ module
 
 public import ConAgua.Arena.CheckerT
 import all ConAgua.Arena.DeclStep
-import ConAgua.Arena.QuotCiT
+import ConAgua.Arena.QuotRulesT
 import ConAgua.Checker.QuotFns
+import ConAgua.Arena.DeclStepSpec
 
 @[expose] public section
 
@@ -94,6 +95,42 @@ structure ArmsE (p : Prog) : Prop where
   quot : ∀ k cv, ArmSpecE pins dn ds p "check_decl_quot" (.quotDecl k cv)
 
 end arms
+
+/-! ## The one-constant arms -/
+
+section armsT
+variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
+
+/-- **`check_decl_quot` under `StageT`** (`cdq_ref`'s ok half): the job relation after it by its
+write set, the core's memos from `check_quot_record`, the inductive arm's by `imFns`' frame. -/
+@[refines_part ConRon.Arena.checkDecl "the quotient arm, under StageT"]
+theorem checkDeclQuot_loopT {p : Prog} (hQ : QuotArmProg p) (hQs : QuotSims p dn)
+    (hin : StepIn p ["check_decl_quot"]) (hIc : IndMemoClosed p) (hIl : IndLeaves p)
+    (k : ConLeche.QuotKind) (cv : IConstantVal) :
+    ArmSpecT pins dn ds p "check_decl_quot" (.quotDecl k cv) := by
+  intro n hn s₀ a₀ vis fe i hi hd hok hR hS hF hden _ hIM
+  have hd' : ds[i.toNat] = .quotDecl k cv := by
+    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
+  obtain ⟨x, hx⟩ := hden
+  simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hx
+  obtain ⟨c, hc, -⟩ := hx
+  obtain ⟨env, hF⟩ := hF
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, fe', a', hrun', hP⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkDeclQuot_specE p hQ.cdq hQ.rcp hQ.cqr.cqr hQ.cqr.basis n s₀ i vis)
+      (cdq_ref (pins := pins) hQ hQs n hS hR.decls hi hd' hok hF.check.readOK hc))
+  obtain ⟨-, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (callW_spec p n "check_decl_quot" [i, vis] s₀)
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (hin.memFrame n (f := "check_decl_quot") (by simp) [i, vis] s₀)
+  subst hs
+  obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  refine ⟨hloc, hok', ?_, hP.memos, callW_indMemos hIc hIl (im_mem _ rfl) hW hIM, hP.grow⟩
+  rw [hst, hres]
+  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+
+end armsT
 
 /-! ## The inductive arm's contracts -/
 
