@@ -629,6 +629,95 @@ theorem diW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
     h04, hX2.trans (hX3.trans hX4)⟩
   simp only [ConRon.Arena.declConstants, StateT.run_bind, hrun2, except_ok_bind, hrun3, hrun4]
 
+/-! ## `decl_constants_axiom` -/
+
+theorem daW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {env : ConLeche.Env} {q : Word} {cv : IConstantVal} {c : ConLeche.ConstantVal}
+    {n : Nat} {m m' : Mem} {a : AState} {r : List Word}
+    (h0 : DcSt dn vis fe env m a) (hnd : L.Rom.NamesDn dn a L.Rom.quotNames)
+    (hci : decCI (erecP m) q.toNat = some (.axiomInfo cv))
+    (hcv : decCV (erecP m) (q.toNat + 1) = some cv) (hcvd : Frontend.denoteCV a.store cv = some c)
+    (h : daW p n m q = some (r, m')) :
+    ∃ cis a', (ConRon.Arena.declConstantsAxiom cv).run a = .ok (cis, a') ∧
+      KeepPost vis fe decCIL m m' a' r cis ∧ DcSt dn vis fe env m' a' ∧ DcIdx m m' := by
+  rcases n with _ | n
+  · simp [daW] at h
+  rw [daW_succ] at h
+  obtain ⟨wn, hwn, hwnl, hname⟩ := decCV_name hcv
+  have hqb : q.toNat + 1 < 2 ^ 64 := L.Arena.erecP_lt64 hwn
+  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have ex : ∀ {m₁ : Mem}, erecP m₁ (q.toNat + 1) = some wn → erRd m₁ (q + 1) = wn :=
+    fun h => (erRd_of_erecP (by rw [hq1]; exact h)).1
+  -- `Quot.sound`'s pin
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [daK1])
+  rw [daK1_some] at h
+  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pinAt_specW p hP.pinAt n _ 4) h1
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok hW1 h0.stage.check.pins
+  rw [hm1, hr1] at h
+  simp only [List.headD_cons] at h
+  rw [ex hwn] at h
+  have hpq : ConRon.Arena.pinQuotSound.run a = .ok (decI (pinW m (1 + (4 : Word).toNat)), a) := by
+    simpa [ConRon.Arena.pinQuotSound, show ConRon.Arena.PIN_QUOT_SOUND = (4 : Word).toNat from rfl]
+      using hrun1
+  have hb1 := decI_beq (k := .name) wn _ hwnl hl1
+  by_cases e1 : wn = pinW m (1 + (4 : Word).toNat)
+  · simp only [e1, ↓reduceIte] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [dcNew1])
+    rw [dcNew1_some] at h
+    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgK4])
+    rw [bfgK4_some] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    obtain ⟨ci, a2, hrun2, hS2, hg2, hd2⟩ := hP.basis.quotAt dn vis fe .sound (q + 1) cv n m a r2 m2
+      ⟨h0.stage, h0.chk.state, hnd, by rw [hq1]; exact hcv⟩ h2
+    obtain ⟨hr2, -⟩ := ConRon.Bridge.quotAt_run h0.chk.state h0.chk.readOK hcvd hrun2
+    obtain ⟨h02, hX2⟩ := h0.step0 hP.leaf dcF_qa dc0F_qa h2 hS2 (hr2.checkOK h0.chk) hr2.ext
+    obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
+      (slNew1_specW p hP.alloc hP.slNew1 n _ _) h3
+    obtain ⟨hdl, hS3, hg3⟩ := new1W_ci hW3 hS2 (decRCI_get hd2)
+    obtain ⟨h03, hX3⟩ := h02.step0 hP.leaf dcF_new1 dc0F_new1 h3 hS3 h02.chk (Ext.refl _)
+    refine ⟨[ci], a2, ?_, ⟨hS3, hg2.trans hg3, decCIL_pair hdl⟩, h03, hX2.trans hX3⟩
+    simp only [ConRon.Arena.declConstantsAxiom, StateT.run_bind, hpq, except_ok_bind, hname, hb1,
+      e1, decide_true, ite_true, hrun2, beq_self_eq_true, ↓reduceIte]
+    rfl
+  simp only [e1, ↓reduceIte] at h
+  -- `sorryAx`'s pin
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [daK2])
+  rw [daK2_some] at h
+  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pinAt_specW p hP.pinAt n _ 13) h4
+  obtain ⟨hm4, hr4, hl4, hrun4⟩ := pinAtW_ok hW4 h0.stage.check.pins
+  rw [hm4, hr4] at h
+  simp only [List.headD_cons] at h
+  rw [ex hwn] at h
+  have hps : ConRon.Arena.pinSorryAx.run a = .ok (decI (pinW m (1 + (13 : Word).toNat)), a) := by
+    simpa [ConRon.Arena.pinSorryAx, show ConRon.Arena.PIN_SORRY_AX = (13 : Word).toNat from rfl]
+      using hrun4
+  have hb4 := decI_beq (k := .name) wn _ hwnl hl4
+  have hrunA : ∀ {x : List IConstantInfo}, (ConRon.Arena.declConstantsAxiom cv).run a =
+      (if wn = pinW m (1 + (13 : Word).toNat) then .ok ([], a) else .ok ([.axiomInfo cv], a) :
+        Except _ (List IConstantInfo × AState)) := by
+    intro _
+    simp only [ConRon.Arena.declConstantsAxiom, StateT.run_bind, hpq, except_ok_bind, hname, hb1,
+      e1, decide_false, Bool.false_eq_true, ite_false, hps, hb4]
+    by_cases e : wn = pinW m (1 + (13 : Word).toNat) <;>
+      simp only [e, decide_true, decide_false, ↓reduceIte, Bool.false_eq_true] <;> rfl
+  by_cases e4 : wn = pinW m (1 + (13 : Word).toNat)
+  · simp only [e4, ↓reduceIte] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨[], a, ?_, ⟨h0.stage, IWGrow.refl _, decCIL_nil _⟩, h0, DcIdx.refl _⟩
+    rw [hrunA (x := []), ite_eq_left e4]
+  simp only [e4, ↓reduceIte] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h (by simp [bfgK4])
+  rw [bfgK4_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨s5, rfl, -, hW5⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (slNew1_specW p hP.alloc hP.slNew1 n _ _) h5
+  obtain ⟨hdl, hS5, hg5⟩ := new1W_ci hW5 h0.stage hci
+  obtain ⟨h05, hX5⟩ := h0.step0 hP.leaf dcF_new1 dc0F_new1 h5 hS5 h0.chk (Ext.refl _)
+  refine ⟨[.axiomInfo cv], a, ?_, ⟨hS5, hg5, decCIL_pair hdl⟩, h05, hX5⟩
+  rw [hrunA (x := []), ite_eq_right e4]
+
 /-! ## The refinements -/
 
 /-- **`decl_constants(i)` refines `declConstants d`**: the constants record `i` installs, in
