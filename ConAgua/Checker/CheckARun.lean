@@ -2,14 +2,12 @@ module
 
 public import ConAgua.Checker.ParEntryA
 import ConAgua.Checker.IndArm
-import ConAgua.Arena.PhaseAEntry
 import ConAgua.Checker.LoopStage
 public import ConAgua.Checker.PipeFinal
 import ConAgua.Checker.TwinShapeQuot
 public import ConAgua.Checker.PresizeStage
 meta import ConAgua.Checker.ParEntryA
 meta import ConAgua.Checker.IndArm
-meta import ConAgua.Arena.PhaseAEntry
 meta import ConAgua.Checker.LoopStage
 meta import ConAgua.Checker.PipeFinal
 meta import ConAgua.Checker.TwinShapeQuot
@@ -210,7 +208,7 @@ theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
         ⦃fun r s' => s₁.mem = s₀.mem → c = modeFlag (s₀.mem.glob MODE) → P (r.headD 0) s'.mem; ⊤⦄ := by
       intro s₁ c
       refine triple_post (checkA_of_stages (Q0 := (· = loadMemM b pb sz w)) hla hpc checkerProg_fz
-        s1 s2 s2p s3 s4 s5 s6 s7 (buildStage_checker b pb sz hin.2.2.2) c n hn s₁) ?_
+        s1 s2 s2p s3 s4 s5 s6 s7 (buildStage_checker b pb sz hin.2.2.1 hin.2.2.2) c n hn s₁) ?_
       intro x s' h e ec
       have ec' : c = modeFlag w := by rw [ec, hmode]
       subst ec'
