@@ -11,7 +11,11 @@ public import ConAgua.Arena.DeclCanonEq
 public import ConAgua.Arena.DeclCanonSpec
 public import ConAgua.Arena.DeclCvg
 public import ConAgua.Arena.IndLibSpec
+public import ConAgua.Rom.CIReadSpec
+public import ConAgua.Arena.LeafFns
 import ConAgua.Arena.IlpRd
+import ConAgua.Arena.DeclAndPinIndRef
+import ConAgua.Arena.IndexLoops
 import ConAgua.Arena.IndInstallSpec.NhW
 import all ConAgua.Arena.BasisL
 
@@ -317,6 +321,84 @@ structure QuotPinSim (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop wher
     Sim (callW p n "quot_pin" [UInt64.ofNat k.slot] m) (ConRon.Arena.quotPin k) a
       (fun r ci m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧
         decCI (erecP m') (r.headD 0).toNat = some ci)
+
+/-- **`Quot`'s `sortZ` name has a handle** under the record pool's name decoder `dn` (a fact about
+the startup store, state-free; the loop threads it from its start). -/
+def QuotDn (dn : NIdx → Option ConLeche.Name) : Prop := ∃ k, dn k = some (.str .anonymous "u")
+
+/-- The quotient readers' precondition from `QuotDn` and the decoder's agreement with the twin's
+name store (`TwinMem.dnN`, i.e. `TwinOK.den.dnN`). -/
+theorem QuotDn.namesDn {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
+    (hq : QuotDn dn) (hT : TwinMem dn m a) : L.Rom.NamesDn dn a L.Rom.quotNames := by
+  intro x hx
+  simp only [L.Rom.quotNames, List.mem_cons, List.not_mem_nil, or_false] at hx
+  subst hx
+  obtain ⟨k, hk⟩ := hq
+  exact ⟨k, hk, hT.dnN k _ hk⟩
+
+/-- **`StageT` across a leaf** whose twin op is an interning step (`IStepS`): its `StageR` post, the
+leaves' frame (the pins and the core memos kept). -/
+theorem StageT.of_leafI {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+    {a a' : AState} (hT : StageT dn vis fe m a) (hS : StageR vis fe m' a')
+    (hs : ConRon.Bridge.Frontend.IStepS a a') (hf : MemFrame leafA leafC m m') :
+    StageT dn vis fe m' a' := by
+  refine ⟨hS, hT.twin.of_istep hs (by rw [hf.size]; exact hT.twin.erec)
+    (by rw [hf.size]; exact hT.twin.spn) (by rw [hf.size]; exact hT.twin.bstk)
+    (hT.twin.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp), ?_⟩
+  have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS leafA_pins (by decide)
+  simp only [pinW, hP]; exact hT.flag
+
+/-- **The slot reader refines `quotPin`**, from the quotient block reader's refinement
+(`RomQuotRef`, `RomRefs.quot`), the leaves' write set (`rom_basis_decls` is a leaf) and `QuotDn`. -/
+theorem quotPinSim_of {p : Prog} {dn : NIdx → Option ConLeche.Name}
+    (hp : p.lookup "quot_pin" = some quotPin) (hR : ∀ vis fe, L.Rom.RomQuotRef p dn vis fe)
+    (hcl : LeafClosed p) (hq : QuotDn dn) : QuotPinSim p dn where
+  qp n vis fe m a k hT hok := by
+    intro r m' h
+    obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (quotPin_specW p hp n _ (UInt64.ofNat k.slot)) h
+    cases n with
+    | zero => simp [quotPinW] at hW
+    | succ n =>
+    simp only [quotPinW] at hW
+    cases h1 : callW p n "rom_basis_decls" [4] m with
+    | none => rw [h1] at hW; simp [quotPinW.k_rom_basis_decls] at hW
+    | some x1 =>
+    obtain ⟨r1, m1⟩ := x1
+    rw [h1] at hW
+    obtain ⟨blk, a1, hrun1, hS1, hg1, hD1⟩ :=
+      hR vis fe n m a r1 m1 ⟨hT.stage, hok, hq.namesDn hT.twin.mem⟩ h1
+    have hrun1' : ConRon.Arena.BasisKind.decls .quotK a = .ok (blk, a1) := hrun1
+    obtain ⟨hs1, hden1⟩ := ConRon.Bridge.BasisKind.decls_run hok hrun1'
+    have hf1 : MemFrame leafA leafC m m1 :=
+      (run_memFrame hcl (leaf_mem _ rfl) (run_of_callW h1)).1
+    have hT1 := hT.of_leafI hS1 hs1 hf1
+    have hlen : blk.length = 5 := by
+      rw [denoteCIList_length _ _ hden1]; decide
+    have hk5 : k.slot < 5 := by cases k <;> decide
+    obtain ⟨hDp, hbd⟩ := decRBlk_canon hD1 (by omega)
+    have hl : (r1.tail.headD 0).toNat = 5 := by rw [← decPL_length m1 hDp, hlen]
+    obtain ⟨v, hv, hx, hci⟩ := decPL_get' hDp k.slot (by omega)
+    simp only [quotPinW.k_rom_basis_decls] at hW
+    have hl5 : r1.tail.headD 0 = 5 := UInt64.toNat_inj.mp (by rw [hl]; rfl)
+    have hks : (UInt64.ofNat k.slot : Word).toNat = k.slot := by
+      rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (by omega)
+    rw [if_neg (by rw [hl5, UInt64.le_iff_toNat_le, hks]; simp; omega), Option.some.injEq,
+      Prod.mk.injEq] at hW
+    obtain ⟨rfl, hm⟩ := hW
+    rw [← hm]
+    obtain ⟨w, hw, rfl⟩ : ∃ w, iwA m1 ((r1.headD 0).toNat + k.slot) = some w ∧ w.toNat = v := by
+      simp only [iwN, nat?, Option.map_eq_some_iff] at hv; exact hv
+    have htop : iwTop m1 < 2 ^ 64 := UInt64.toNat_lt_size _
+    have hidx : (r1.headD 0 + UInt64.ofNat k.slot).toNat = (r1.headD 0).toNat + k.slot := by
+      rw [UInt64.toNat_add, hks]; omega
+    have ew : rdW (m1.arr64 IW) (r1.headD 0 + UInt64.ofNat k.slot) = w := by
+      simp only [iwA, aread_apply] at hw; simp only [rdW, hidx, hw, Option.getD_some]
+    refine ⟨blk[k.slot], a1, ?_, hT1, hg1, by rw [ew]; exact hci⟩
+    have : blk.getD k.slot default = blk[k.slot] := by simp [List.getD, hx]
+    simp only [ConRon.Arena.quotPin, StateT.run_bind]
+    rw [show StateT.run (BasisKind.decls ConLeche.BasisKind.quotK) a = .ok (blk, a1) from hrun1',
+      ← this]; rfl
 
 section qph
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
