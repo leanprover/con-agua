@@ -108,7 +108,7 @@ theorem erToIwW_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hsz := hS.iw.iwSize
   have hc := hS.iw.ctl
   have hol : o.toNat + l.toNat ≤ 2 ^ 64 :=
-    Nat.le_trans hB.2 (Nat.le_of_lt (rdW (m.arr64 CTL) 129).toNat_lt)
+    Nat.le_of_lt hB.2
   have hf0 := erToIwW_iwFr h
   simp only [erToIwW] at h
   cases hal : allocW m l with
