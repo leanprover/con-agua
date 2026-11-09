@@ -121,7 +121,7 @@ theorem erToIwW_words {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : M
   have hti : (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m2 := by simp only [iwTop, htop, hsum]
   have hroom' : iwTop m2 ≤ (m2.arr64 IW).size := by rw [← hti, hSz]; exact hroom
   refine ⟨rfl, ⟨CheckR.frame_iw hfr hS.check, hS.iw.of_iw hfr hroom'⟩, hg, hfr, hti, fun i hi => ?_⟩
-  rw [hG, if_pos (by omega), erRd_allocMem]
+  rw [hG, ite_eq_left (by omega), erRd_allocMem]
   congr 3; omega
 
 section divgate
