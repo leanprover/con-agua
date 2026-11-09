@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.ProjGuardRowsOpf
 public import ConAgua.Arena.Verdict
+public import ConAgua.Arena.ProjGuardRef
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -9,6 +10,9 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndRealFvtD
 import ConAgua.Arena.CallF
 import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.ErecRd
+import ConAgua.Arena.InferLeaves
+import ConAgua.Arena.Env
 import all ConAgua.Arena.Infer
 
 @[expose] public section
@@ -296,5 +300,84 @@ theorem pgra_ok (p : Prog) (hf : p.lookup "proj_guard_rows_at" = some projGuardR
     · simp only [Bool.not_eq_true] at hu; subst hu; simp
 
 end
+
+/-! ## `proj_guard_rows` -/
+
+/-- `openPisAtFvarsF` keeps the caches, the pins and the level store. -/
+theorem keepsW_opfGo : ∀ (n : Nat) (acc : Array EIdx) (h : EIdx) (i : Nat),
+    Keeps cpl (openPisAtFvarsFGo acc n h i) := by
+  intro n
+  induction n with
+  | zero => intro acc h i; rw [openPisAtFvarsFGo]
+            exact Keeps.bind (keepsW_instListFast _ _ _ _) fun _ => Keeps.pure _
+  | succ n ih =>
+    intro acc h i; rw [openPisAtFvarsFGo]
+    split
+    · refine Keeps.bind (keeps_view _) fun v => ?_
+      split
+      · exact Keeps.bind (keepsW_instListFast _ _ _ _) fun _ => Keeps.bind (keepsW_internE _) fun _ =>
+          Keeps.bind (ih _ _ _) fun x => by split <;> exact Keeps.pure _
+      · exact Keeps.pure _
+    · exact Keeps.pure _
+
+theorem keepsW_opa : ∀ (n : Nat) (h : EIdx) (i : Nat), Keeps cpl (openPisAtFvars n h i) := by
+  intro n
+  induction n with
+  | zero => intro h i; rw [openPisAtFvars]; exact Keeps.pure _
+  | succ n ih =>
+    intro h i; rw [openPisAtFvars]
+    split
+    · refine Keeps.bind (keeps_view _) fun v => ?_
+      split
+      · exact Keeps.bind (keepsW_internE _) fun _ => Keeps.bind (keepsW_inst1Fast _ _ _ _) fun _ =>
+          Keeps.bind (ih _ _) fun x => by split <;> exact Keeps.pure _
+      · exact Keeps.pure _
+    · exact Keeps.pure _
+
+theorem keepsW_opfF (n : Nat) (e : EIdx) (i : Nat) : Keeps cpl (openPisAtFvarsF n e i) := by
+  unfold openPisAtFvarsF
+  exact Keeps.bind (keepsW_opfGo _ _ _ _) fun x => by split <;> first | exact Keeps.pure _ | exact keepsW_opa _ _ _
+
+/-- A table record's parameter count (word `q + 5`) and constructor (word `q + 6`). -/
+theorem decTbl_npc {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {tbl : IProjTable} (h : decTbl R q.toNat = some tbl) :
+    tbl.numParams = (rd (q + 5)).toNat ∧ HW (rd (q + 6)) ∧ tbl.ctor = decI (rd (q + 6)) := by
+  unfold decTbl at h
+  simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff, Option.some.injEq] at h
+  obtain ⟨sn, -, lp, -, np, hnp, ct, hct, nf, -, bs, -, rfl⟩ := h
+  obtain ⟨w, hw, hw32, rfl⟩ := hd?_eq hct
+  have e : rd (q + 6) = w := hR.offN (k := 6) hw (by decide)
+  simp only [nat?, Option.map_eq_some_iff] at hnp
+  obtain ⟨v, hv, rfl⟩ := hnp
+  have e5 : rd (q + 5) = v := hR.offN (k := 5) hv (by decide)
+  rw [e, e5]
+  exact ⟨rfl, hw32, rfl⟩
+
+/-- A constant record's name (word `q + 1`). -/
+theorem decCV_name {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {cv : IConstantVal} (h : decCV R (q.toNat + 1) = some cv) :
+    HW (rd (q + 1)) ∧ cv.name = decI (rd (q + 1)) := by
+  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨nm, hn, ls, -, ty, -, hc⟩ := h
+  cases hc
+  obtain ⟨w, hw, hl, rfl⟩ := hd?_eq hn
+  have e : rd (q + 1) = w := hR.offN (k := 1) hw (by decide)
+  rw [e]; exact ⟨hl, rfl⟩
+
+theorem cv_eta (cv : IConstantVal) : cv = ⟨cv.name, cv.levelParams, cv.type⟩ := rfl
+
+/-- What `proj_guard_rows`' refinement needs of a program. -/
+structure PgrProg (p : Prog) : Prop where
+  pgr : p.lookup "proj_guard_rows" = some projGuardRowsL
+  pgra : p.lookup "proj_guard_rows_at" = some projGuardRowsAtL
+  envFind : p.lookup "env_find" = some envFindL
+  envRowGet : p.lookup "env_row_get" = some envRowGetL
+  baseRowGet : p.lookup "base_row_get" = some baseRowGetL
+  ftd : p.lookup "fvar_type_d" = some fvarTypeDL
+  eView : p.lookup "e_view" = some eView
+  us : UsF p
+  opf : OpfF p
+  cl : CoreStageClosed p
+  constTy : ConstTyAtOK p
 
 end L.Ind
