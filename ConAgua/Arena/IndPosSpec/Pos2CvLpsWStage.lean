@@ -15,7 +15,7 @@ import ConAgua.Arena.RecClassSpec.CloseLams
 /-!
 # Pos2CvLpsWStage
 
-`pos2_cvLpsW_stage`, `nhGoW`, `nhK1`, `nhK2`, `nhK3`, `nhK4` and the lemmas only they use.
+`pos2_cvLpsW_stage`, `nhGoW`, `nhK2`, `nhK3`, `nhK4` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -35,89 +35,51 @@ theorem pos2_cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
     (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' :=
+  cvLpsW_stage h hS hcv hq
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-def nhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, vis, ctx, mm, off, l, oo, ol =>
+mutual
+def nhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _ => none
+  | k + 1, m, ctx, mm, off, l, oo, ol =>
     if l = 0 then some ([1, oo, ol], m)
-    else nhK1 k vis ctx mm off l oo ol (envFindW m (rdW (m.arr64 IW) off) vis)
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-def nhK1 (k : Nat) (vis ctx mm off l oo ol : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then some ([0, 0, 0], m1)
-    else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then some ([0, 0, 0], m1)
-    else nhK2 k vis ctx mm off l oo ol (instW k m1 (rdW (m1.arr64 IW) (ctx + 7)) (rdW (m1.arr64 IW) (ctx + 8))
-      (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4)))
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-def nhK2 (k : Nat) (vis ctx mm off l oo ol : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+    else if rdW (m.arr64 IW) (ctx + 12) ≤ mm then some ([0, 0, 0], m)
+    else nhK2 k ctx mm off l oo ol (instW k m (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8))
+      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3)))
+def nhK2 (k : Nat) (ctx mm off l oo ol : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
     if r2.headD 0 = 0 then some ([0, 0, 0], m2)
-    else nhK3 k vis ctx mm off l oo ol (fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0))
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-def nhK3 (k : Nat) (vis ctx mm off l oo ol : Word) : Option (Word × Mem) → Option (List Word × Mem)
+    else nhK3 k ctx mm off l oo ol (fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0))
+def nhK3 (k : Nat) (ctx mm off l oo ol : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (v, m3) => if 4294967296 ≤ v then none else nhK4 k vis ctx mm off l (snocW k m3 oo ol v)
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-def nhK4 (k : Nat) (vis ctx mm off l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | some (v, m3) => if 4294967296 ≤ v then none else nhK4 k ctx mm off l (snocW k m3 oo ol v)
+def nhK4 (k : Nat) (ctx mm off l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => nhGoW k m4 vis ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0)
+  | some (r4, m4) => nhGoW k m4 ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0)
 end
--/
 
 section arms
-variable (k : Nat) (m m1 m2 m3 m4 : Mem) (vis ctx mm off l oo ol v : Word) (r r2 r4 : List Word)
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nhGoW_nil (h : l = 0) : nhGoW (k + 1) m vis ctx mm off l oo ol = some ([1, oo, ol], m) := by
+variable (k : Nat) (m m2 m3 m4 : Mem) (ctx mm off l oo ol v : Word) (r2 r4 : List Word)
+theorem nhGoW_nil (h : l = 0) : nhGoW (k + 1) m ctx mm off l oo ol = some ([1, oo, ol], m) := by
   simp [nhGoW, h]
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nhGoW_cons (h : ¬ l = 0) : nhGoW (k + 1) m vis ctx mm off l oo ol =
-    nhK1 k vis ctx mm off l oo ol (envFindW m (rdW (m.arr64 IW) off) vis) := by simp [nhGoW, h]
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nhK1_miss (h : r.headD 0 = 0) : nhK1 k vis ctx mm off l oo ol (some (r, m1)) = some ([0, 0, 0], m1) := by
-  rw [nhK1, ite_eq_left h]
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nhK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
-    nhK1 k vis ctx mm off l oo ol (some (r, m1)) = some ([0, 0, 0], m1) := by rw [nhK1, ite_eq_right h, ite_eq_left h3]
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nhK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
-    nhK1 k vis ctx mm off l oo ol (some (r, m1)) =
-      nhK2 k vis ctx mm off l oo ol (instW k m1 (rdW (m1.arr64 IW) (ctx + 7)) (rdW (m1.arr64 IW) (ctx + 8))
-        (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4))) := by
-  sorry
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nhK2_none (h : r2.headD 0 = 0) : nhK2 k vis ctx mm off l oo ol (some (r2, m2)) = some ([0, 0, 0], m2) := by
+theorem nhGoW_nof (h : ¬ l = 0) (h12 : rdW (m.arr64 IW) (ctx + 12) ≤ mm) :
+    nhGoW (k + 1) m ctx mm off l oo ol = some ([0, 0, 0], m) := by simp [nhGoW, h, h12]
+theorem nhGoW_cons (h : ¬ l = 0) (h12 : ¬ rdW (m.arr64 IW) (ctx + 12) ≤ mm) : nhGoW (k + 1) m ctx mm off l oo ol =
+    nhK2 k ctx mm off l oo ol (instW k m (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8))
+      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3))) := by simp [nhGoW, h, h12]
+theorem nhK2_none (h : r2.headD 0 = 0) : nhK2 k ctx mm off l oo ol (some (r2, m2)) = some ([0, 0, 0], m2) := by
   rw [nhK2, ite_eq_left h]
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nhK2_some (h : ¬ r2.headD 0 = 0) : nhK2 k vis ctx mm off l oo ol (some (r2, m2)) =
-    nhK3 k vis ctx mm off l oo ol (fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0)) := by
-  sorry
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nhK3_ok (h : ¬ 4294967296 ≤ v) : nhK3 k vis ctx mm off l oo ol (some (v, m3)) =
-    nhK4 k vis ctx mm off l (snocW k m3 oo ol v) := by
-  sorry
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nhK4_some : nhK4 k vis ctx mm off l (some (r4, m4)) =
-    nhGoW k m4 vis ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0) := by rw [nhK4]
--/
+theorem nhK2_some (h : ¬ r2.headD 0 = 0) : nhK2 k ctx mm off l oo ol (some (r2, m2)) =
+    nhK3 k ctx mm off l oo ol (fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0)) := by
+  rw [nhK2, ite_eq_right h]
+theorem nhK3_ok (h : ¬ 4294967296 ≤ v) : nhK3 k ctx mm off l oo ol (some (v, m3)) =
+    nhK4 k ctx mm off l (snocW k m3 oo ol v) := by
+  rw [nhK3, if_neg h]
+theorem nhK4_some : nhK4 k ctx mm off l (some (r4, m4)) =
+    nhGoW k m4 ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0) := by rw [nhK4]
 end arms
--- ronsync2 stage 2: attribute [ind_grind] nhGoW_nil nhGoW_cons nhK1_miss nhK1_noind nhK1_ind nhK2_none nhK2_some nhK3_ok nhK4_some
+attribute [ind_grind] nhGoW_nil nhGoW_nof nhGoW_cons nhK2_none nhK2_some nhK3_ok nhK4_some
 
 /-- The lookups of `nest_holes`. -/
 structure NhLook (p : Prog) : Prop where
@@ -127,19 +89,15 @@ structure NhLook (p : Prog) : Prop where
   hsn : p.lookup "sl_snoc" = some slSnoc
   hv : p.lookup "e_view" = some eView
   hip : p.lookup "inst_pis_with" = some instPisWith
-  hg : p.lookup "env_row_get" = some envRowGetL
-  hf : p.lookup "env_find" = some envFindL
   hff : p.lookup "fvar_find" = some fvarFind
   hfp : p.lookup "fvar_push" = some fvarPush
   hif : p.lookup "intern_fvar" = some internFVar
   hgo : p.lookup "nest_holes_go" = some nestHolesGoL
   hp : p.lookup "nest_holes" = some nestHolesL
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- The model of `nest_holes(vis, ctx)` at exec fuel `k + 1`. -/
-def nhW (k : Nat) (m : Mem) (vis ctx : Word) : Option (List Word × Mem) :=
-  nhGoW k m vis ctx 0 (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) 0 0
--/
+/-- The model of `nest_holes(ctx)` at exec fuel `k + 1`. -/
+def nhW (k : Nat) (m : Mem) (ctx : Word) : Option (List Word × Mem) :=
+  nhGoW k m ctx 0 (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) 0 0
 
 /-- A `NestCtx` record's slices end below the pool's top (`CtxIn` covers their words, this their
 offsets when empty too). -/

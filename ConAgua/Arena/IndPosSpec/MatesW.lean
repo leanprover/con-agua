@@ -76,12 +76,12 @@ def matesW : Nat → Mem → Word → Word → Word → Word → Word → Option
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, c, off, l, oO, oL =>
     if l = 0 then some ([oO, oL], m)
-    else matesK1 n m c off l oO oL (containsW n m oO oL (rdW (m.arr64 EREC) off))
+    else matesK1 n m c off l oO oL (containsW n m oO oL (erRd m off))
 def matesK1 (n : Nat) (m : Mem) (c off l oO oL : Word) : Option Word → Option (List Word × Mem)
   | none => none
   | some b =>
-    if rdW (m.arr64 EREC) off = c ∨ b ≠ 0 then matesK3 (matesW n m c (off + 1) (l - 1) oO oL)
-    else matesK2 n c off l (snocW n m oO oL (rdW (m.arr64 EREC) off))
+    if erRd m off = c ∨ b ≠ 0 then matesK3 (matesW n m c (off + 1) (l - 1) oO oL)
+    else matesK2 n c off l (snocW n m oO oL (erRd m off))
 def matesK2 (n : Nat) (c off l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) => matesK3 (matesW n m2 c (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0))

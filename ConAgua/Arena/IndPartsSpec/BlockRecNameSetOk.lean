@@ -370,7 +370,7 @@ def brwW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, mo, ml =>
     if ml = 0 then some ([0, 0], m)
-    else brwK1 n mo ml (nrF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))])
+    else brwK1 n mo ml (nrF m [erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))])
 /-- After `name_rec`. -/
 def brwK1 (n : Nat) (mo ml : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -387,13 +387,13 @@ where
   /-- After the recursive call. -/
   brgK (n : Nat) (rc : Word) : Option (List Word × Mem) → Option (List Word × Mem)
     | none => none
-    | some (r, m1) => bgoK3 (consW n m1 (rdW (m1.arr64 EREC) (rdW (m1.arr64 IW) rc)) (r.headD 0) (r.tail.headD 0))
+    | some (r, m1) => bgoK3 (consW n m1 (erRd m1 (rdW (m1.arr64 IW) rc)) (r.headD 0) (r.tail.headD 0))
 
 section arms
 variable (n : Nat) (m m1 : Mem) (mo ml ro rl rc : Word) (r1 : List Word)
 theorem brwW_nil (h : ml = 0) : brwW (n + 1) m mo ml = some ([0, 0], m) := by simp [brwW, h]
 theorem brwW_cons (h : ml ≠ 0) : brwW (n + 1) m mo ml = brwK1 n mo ml
-    (nrF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))]) := by
+    (nrF m [erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))]) := by
   simp [brwW, h]
 theorem brwK1_some : brwK1 n mo ml (some (r1, m1)) = bggK3 n (r1.headD 0) (brwW n m1 (mo + 1) (ml - 1)) := by
   simp [brwK1]
@@ -401,7 +401,7 @@ theorem brgW_nil (h : rl = 0) : brgW (n + 1) m ro rl = some ([0, 0], m) := by si
 theorem brgW_cons (h : rl ≠ 0) : brgW (n + 1) m ro rl =
     brgW.brgK n (rdW (m.arr64 IW) ro) (brgW n m (ro + 1) (rl - 1)) := by simp [brgW, h]
 theorem brgK_some : brgW.brgK n rc (some (r1, m1)) =
-    bgoK3 (consW n m1 (rdW (m1.arr64 EREC) (rdW (m1.arr64 IW) rc)) (r1.headD 0) (r1.tail.headD 0)) := rfl
+    bgoK3 (consW n m1 (erRd m1 (rdW (m1.arr64 IW) rc)) (r1.headD 0) (r1.tail.headD 0)) := rfl
 end arms
 attribute [ind_grind] brwW_nil brwW_cons brwK1_some brgW_nil brgW_cons brgK_some
 
@@ -450,7 +450,7 @@ theorem brgW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     have hpclt : pc < iwTop m := partsIwLt hca
     rw [partsRdIW_grow hg1 (by rw [UInt64.toNat_ofNat_of_lt' hpb]; exact hpclt), hcw] at h
     obtain ⟨hnl, hne⟩ := partsCVName hg1 (show DecB (fun m => decCVp m ca) m rs0.cvR from hcv) hcab
-    rcases h2 : consW n m1 (rdW (m1.arr64 EREC) (UInt64.ofNat ca)) (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
+    rcases h2 : consW n m1 (erRd m1 (UInt64.ofNat ca)) (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
     rw [bgoK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

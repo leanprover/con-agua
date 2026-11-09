@@ -16,9 +16,9 @@ import all ConAgua.Arena.IndPos2
 @[expose] public section
 
 /-!
-# NestGroupCtors: `ConRon.Arena.nestArity`, `ConRon.Arena.nestGroupCtors`, `ConRon.Arena.nestWalkStack`, `ConRon.Arena.piDomsOcc`
+# NestGroupCtors: `ConRon.Arena.nestGroupCtors`, `ConRon.Arena.nestWalkStack`, `ConRon.Arena.piDomsOcc`
 
-The refinement theorems `nestArity_refines`, `nestWalkStack_refines`, `piDomsOcc_refines` and the lemmas only they use;
+The refinement theorems `nestWalkStack_refines`, `piDomsOcc_refines` and the lemmas only they use;
 `nest_container` at any fuel (`ntWf`) for `nest_group_ctors` (`Verdict/PosNgc.lean`).
 -/
 
@@ -28,112 +28,6 @@ set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
-
-namespace L.Ind
-
-open L.Arena
-
-def naK1 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then some ([0], m1)
-    else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then some ([0], m1)
-    else naK2 (piBW n m1 CWF (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4)))
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- The model of `nest_arity(vis, c)` at exec fuel `n + 1`. -/
-def naW (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) := naK1 n (envFindW m c vis)
--/
-
-section arms
-variable (n : Nat) (m1 m2 : Mem) (r rs : List Word)
-theorem naK2_some : naK2 (some (rs, m2)) = some ([rs.getD 1 0], m2) := rfl
-theorem naK1_miss (h : r.headD 0 = 0) : naK1 n (some (r, m1)) = some ([0], m1) := by rw [naK1, ite_eq_left h]
-theorem naK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
-    naK1 n (some (r, m1)) = some ([0], m1) := by rw [naK1, ite_eq_right h, ite_eq_left h3]
-theorem naK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
-    naK1 n (some (r, m1)) = naK2 (piBW n m1 CWF (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4))) := by
-  rw [naK1, ite_eq_right h, ite_eq_right h3]
-end arms
-attribute [ind_grind] naK2_some naK1_miss naK1_noind naK1_ind
-
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem nestArity_none {fe : IFEnv} {C : NIdx} (h : ∀ cv caps, fe.find? C ≠ some (.indInfo cv caps)) :
-    ConRon.Arena.nestArity fe C = pure 0 := by
-  simp only [ConRon.Arena.nestArity]
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C)
-    (n : Nat) (m m' : Mem) (a : AState) (r : List Word)
-    (h : naW n m vis C = some (r, m')) (hS : StageR vis fe m a) :
-    ∃ x a', (ConRon.Arena.nestArity fe (decI C)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
-      IWGrow m m' ∧ (r.headD 0).toNat = x := by
-  have hE := hS.check.env
-  unfold naW at h
-  rcases hef : envFindW m C vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [naK1] at h
-  have hm1 := envFindW_mem hef
-  rw [hm1] at h hef
-  by_cases hf0 : r1.headD 0 = 0
-  · rw [naK1_miss (h := hf0)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨-, hfind⟩ := envFindW_miss hef hE hC hf0
-    refine ⟨0, a, ?_, hS, IWGrow.refl _, rfl⟩
-    rw [nestArity_none (fun cv caps e => by rw [hfind] at e; cases e)]; rfl
-  obtain ⟨-, hfind, ci, hci⟩ := envFindW_hit hef hE hC hf0
-  rw [hci] at hfind
-  have hciq := decCI_idx hci
-  have hsz := erecP_size_le m
-  by_cases h3 : rdW (m.arr64 EREC) (r1.tail.headD 0) ≠ 3
-  · rw [naK1_noind (h := hf0) (h3 := h3)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨0, a, ?_, hS, IWGrow.refl _, rfl⟩
-    rw [nestArity_none (fun cv caps e => by
-      rw [hfind] at e; cases e
-      have hk := decCI_indInfo_kind hci
-      exact h3 (by
-        have := erecP_rdN hk rfl
-        exact UInt64.toNat_inj.mp (by rw [this]; rfl)))]; rfl
-  rw [naK1_ind (h := hf0) (h3 := h3)] at h
-  generalize r1.tail.headD 0 = ciq at h hfind hci h3 hciq
-  have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
-    have : erecP m (ciq.toNat) = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega) (by have := hS.iw.er; have := hS.iw.erCap; omega)
-    simp only [nat?, this]
-    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
-    have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3
-    simp [rdW, hb] at this ⊢; rw [this]; rfl
-  obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
-  have hb16 := decCI_indInfo_bound hci
-  have hcv : decCV (erecP m) (ciq.toNat + 1) = some cv := by
-    simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hci
-    obtain ⟨k, hk, hci⟩ := hci
-    rw [hk3] at hk; cases hk
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at hci
-    obtain ⟨cv', h1, _, _, h2⟩ := hci
-    cases h2; exact h1
-  obtain ⟨w, hw, hwH, hwd⟩ := hd?_some (decCV_type hcv)
-  have e4 : (ciq + 4).toNat = ciq.toNat + 1 + 3 := by
-    rw [word_add_toNat (by have := hS.iw.er; have := hS.iw.erSize; simp; omega)]; rfl
-  have hrw : rdW (m.arr64 EREC) (ciq + 4) = w := by simp [rdW, e4, erecP_get hw]
-  rw [hrw] at h
-  rcases hpb : piBW n m CWF w with _ | ⟨rs, m2⟩ <;> rw [hpb] at h; · simp [naK2] at h
-  rw [naK2_some] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨bs, e, hrun, hdec, -, -, hS2, hg2, -⟩ := piBW_cwf hpb hS hwH
-  refine ⟨bs.length, a, ?_, hS2, hg2, ?_⟩
-  · simp only [ConRon.Arena.nestArity, hfind, StateT.run_bind]
-    rw [hwd, hrun]; rfl
-  · simp [decHL_length _ hdec]
--/
-
-section census
-variable (p : Prog) (hl : NaLook p)
-include hl
-
-
-end census
-
-end L.Ind
 
 namespace L.Ind
 

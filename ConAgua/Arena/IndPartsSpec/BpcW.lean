@@ -48,13 +48,13 @@ def bpfW : Nat → Mem → Word → Word → Word → Word → Option (List Word
   | n + 1, m, cto, ctl, lo, ll =>
     if ctl = 0 then some ([1], m)
     else bpfK1 n cto ctl lo ll (rdW (m.arr64 IW) cto) m
-      (resContW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cto)))
+      (resContW n m (erRd m (rdW (m.arr64 IW) cto)))
 /-- After `reserved_contains`. -/
 def bpfK1 (n : Nat) (cto ctl lo ll cv : Word) (m : Mem) : Option Word → Option (List Word × Mem)
   | none => none
   | some b =>
     if b ≠ 0 then some ([0], m)
-    else bpfK2 n cto ctl lo ll (erToIwW n m (rdW (m.arr64 EREC) (cv + 1)) (rdW (m.arr64 EREC) (cv + 2)))
+    else bpfK2 n cto ctl lo ll (erToIwW n m (erRd m (cv + 1)) (erRd m (cv + 2)))
 /-- After `er_to_iw`. -/
 def bpfK2 (n : Nat) (cto ctl lo ll : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -70,7 +70,7 @@ def bprW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, ro, rl =>
     if rl = 0 then some ([1], m)
-    else match resContW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))) with
+    else match resContW n m (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))) with
       | none => none
       | some b => if b ≠ 0 then some ([0], m) else pinK4 (bprW n m (ro + 1) (rl - 1))
 
@@ -78,7 +78,7 @@ section arms
 variable (n : Nat) (m : Mem) (ro rl : Word)
 theorem bprW_nil (h : rl = 0) : bprW (n + 1) m ro rl = some ([1], m) := by simp [bprW, h]
 theorem bprW_cons (h : rl ≠ 0) : bprW (n + 1) m ro rl =
-    (match resContW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))) with
+    (match resContW n m (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))) with
       | none => none
       | some b => if b ≠ 0 then some ([0], m) else pinK4 (bprW n m (ro + 1) (rl - 1))) := by
   simp only [bprW]; rw [ite_eq_right h]
@@ -93,13 +93,13 @@ def bpcW : Nat → Mem → Word → Word → Word → Word → Word → Option (
     if csl = 0 then some ([1], m)
     else if rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP then some ([0], m)
     else bpcK1 n nP cso csl lo ll (rdW (m.arr64 IW) (rdW (m.arr64 IW) cso)) m
-      (resContW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cso))))
+      (resContW n m (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) cso))))
 /-- After `reserved_contains`. -/
 def bpcK1 (n : Nat) (nP cso csl lo ll cv : Word) (m : Mem) : Option Word → Option (List Word × Mem)
   | none => none
   | some b =>
     if b ≠ 0 then some ([0], m)
-    else bpcK2 n nP cso csl lo ll (erToIwW n m (rdW (m.arr64 EREC) (cv + 1)) (rdW (m.arr64 EREC) (cv + 2)))
+    else bpcK2 n nP cso csl lo ll (erToIwW n m (erRd m (cv + 1)) (erRd m (cv + 2)))
 /-- After `er_to_iw`. -/
 def bpcK2 (n : Nat) (nP cso csl lo ll : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none

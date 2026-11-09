@@ -24,11 +24,9 @@ namespace L.Ind
 
 open L.Arena
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `block_shape_build`** (at exec fuel `n + 4`). -/
 def bbW (c : CallM) (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl : Word) : Option (List Word × Mem) :=
   bbH1 c n nPd cto ctl cso csl rso rsl (rdW (m.arr64 IW) cto) (bsnW (n + 3) m cto ctl)
--/
 
 /-- **The program bundle of `blockShape?`.** -/
 structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
@@ -40,6 +38,7 @@ structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
   slGetD : p.lookup "sl_getd" = some slGetD
   pinWord : p.lookup "pin_word" = some pinWordL
   rec4 : p.lookup "rec4" = some rec4
+  rec7 : p.lookup "rec7" = some rec7
   slGet : p.lookup "sl_get" = some slGet
   paramFind : p.lookup "param_find" = some paramFind
   paramPush : p.lookup "param_push" = some paramPush
@@ -87,7 +86,6 @@ open L.Arena
 
 /-! ## `block_shape`, `block_parts` -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `block_shape`** (at exec fuel `n + 5`). -/
 def bshW (c : CallM) (n : Nat) (m : Mem) (nPd off l : Word) : Option (List Word × Mem) :=
   match bsW (n + 4) m off l with
@@ -99,7 +97,6 @@ def bshW (c : CallM) (n : Nat) (m : Mem) (nPd off l : Word) : Option (List Word 
     else bgoK3 (bbW c n m1 nPd (rdW (m1.arr64 IW) (r1.tail.headD 0)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 1))
       (rdW (m1.arr64 IW) (r1.tail.headD 0 + 2)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 3))
       (rdW (m1.arr64 IW) (r1.tail.headD 0 + 4)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 5)))
--/
 
 end L.Ind
 

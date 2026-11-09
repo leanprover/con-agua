@@ -88,6 +88,8 @@ open L.Arena
 structure PfLook (p : Prog) : Prop where
   ha : p.lookup "iw_alloc" = some iwAlloc
   h2 : p.lookup "rec2" = some rec2
+  h3 : p.lookup "rec3" = some rec3
+  hsg : p.lookup "sl_getd" = some slGetD
   h4 : p.lookup "rec4" = some rec4
   hrg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo
   hr : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles

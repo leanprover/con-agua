@@ -300,12 +300,12 @@ theorem nwsW_mfr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
   unfold nwsW nwsK at h
   mfr_auto h [dcWf_mfr]
 
-theorem rhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP q j : Word),
-    rhGoW k m no nl lv po pl nP q j = some m' → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h
-  | k + 1, m, m', no, nl, lv, po, pl, nP, q, j, h => by
+theorem rhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP nio nil q j : Word),
+    rhGoW k m no nl lv po pl nP nio nil q j = some m' → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h
+  | k + 1, m, m', no, nl, lv, po, pl, nP, nio, nil, q, j, h => by
     unfold rhGoW rhK1 rhK2 at h
-    mfr_auto h [posRecW_mfr, fun h => (MFr.set_iw _ _ _).trans (rhGoW_mfr k _ _ _ _ _ _ _ _ _ _ h)]
+    mfr_auto h [posRecW_mfr, fun h => (MFr.set_iw _ _ _).trans (rhGoW_mfr k _ _ _ _ _ _ _ _ _ _ _ _ h)]
 
 theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
     (h : haW k m ctx po pl i = some (r, m')) : MFr [] [] m m' := by
@@ -316,16 +316,9 @@ theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
     | succ k =>
     simp only [rhWf] at h
     unfold rhW rhA rhB at h
-    mfr_auto h [allocW_mfr, rhGoW_mfr _ _ _ _ _ _ _ _ _ _ _]
+    mfr_auto h [allocW_mfr, rhGoW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _]
   unfold haW haK1 haK2 at h
   mfr_auto h [rh, appendW_mfr]
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem naW_mfr {k : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : naW k m vis c = some (r, m')) :
-    MFr [] [] m m' := by
-  unfold naW naK1 naK2 at h
-  mfr_auto h [envFindW_mfr, piBW_mfr _ _ _ _ _ _]
--/
 
 theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : MFr [] [] m m' := by
   unfold resHeadW resHeadK at h
@@ -476,8 +469,8 @@ theorem nh_key_words {m : Mem} {p : Word} {hl : NestHole} (hd : decNH m p.toNat 
     H (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) ∧ decI (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) = hl.key.cname ∧
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) p + 3)).toNat = hl.key.ds.length := by
   obtain ⟨k, hk, hK⟩ := decNH_fields hd
-  have hkin := hin.2.2 k hk
-  have hp0 := hin.1
+  have hkin := hin.key k hk
+  have hp0 := hin.w0
   have hk0 := hkin.1 0 (by omega)
   have hklt : k < 2 ^ 64 := by omega
   have hk' : (UInt64.ofNat k : Word).toNat = k := UInt64.toNat_ofNat_of_lt' hklt

@@ -13,7 +13,7 @@ import all ConAgua.Arena.IndPos
 /-!
 # PiBWStage
 
-`piBW_stage`, `piBW_cwf`, `naK2`, `NaLook`, `nhiW`, `nestCtxHiAt_specE` and the lemmas only they use.
+`piBW_stage`, `piBW_cwf`, `NaLook`, `nhiW`, `nestCtxHiAt_specE` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -76,12 +76,7 @@ theorem piBW_cwf {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
   rw [CWF_eq] at hrun
   exact ⟨bs, e, hrun, hdec, hb1, hb2, piBW_stage n m m' a CWF h rs hpb hS hh, hg, hle⟩
 
-/-! ## `nest_arity` refines `nestArity` -/
-
-def naK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rs, m2) => some ([rs.getD 1 0], m2)
-/-- The lookups of `nest_arity`. -/
+/-- The lookups of `pi_binders` and `env_find`. -/
 structure NaLook (p : Prog) : Prop where
   ha : p.lookup "iw_alloc" = some iwAlloc
   hc : p.lookup "iw_copy" = some iwCopy

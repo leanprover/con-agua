@@ -22,7 +22,6 @@ namespace L.Ind
 
 open L.Arena
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_member_counts` refines `blockMemberCounts?`** from member `0` (through
 `rec_target_of`'s and `block_counts`' stubs; the counts and the recursor records' words past
 `2^32` a capacity abort): the formers a slice of constants, the recursors the split's records,
@@ -30,7 +29,7 @@ both decoded below the tops; the result a number slice decoded below the tops (`
 @[refines ConRon.Arena.blockMemberCounts?]
 theorem blockMemberCounts_refines (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd k nC no nl ro rl cto ctl : Word)
-    (names : List NIdx) (cvTs : List IConstantVal) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
+    (names : List NIdx) (cvTs : List IConstantVal) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
     (hS : StageR vis fe s₀.mem a₀) (hts : PSlR decCVp cvTs cto ctl s₀.mem)
     (hrs : PSlR decSR rs ro rl s₀.mem) (hnm : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names)
     (hnb : no.toNat + nl.toNat ≤ iwTop s₀.mem) :
@@ -57,7 +56,6 @@ theorem blockMemberCounts_refines (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨hok, hR, hS', hg'⟩ := Sim.run hsim hb
   exact ⟨hl, hok, NsR_three hR, hS', hg'⟩
--/
 
 end L.Ind
 

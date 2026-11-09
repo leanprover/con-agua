@@ -120,13 +120,13 @@ theorem matesW_stage {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) :
     by_cases hl : l = 0
     · rw [matesW_nil n m c off l oO oL hl] at h; cases h; exact hS
     rw [matesW_cons n m c off l oO oL hl] at h
-    rcases hb : containsW n m oO oL (rdW (m.arr64 EREC) off) with _ | b <;> rw [hb] at h; · simp [matesK1] at h
+    rcases hb : containsW n m oO oL (erRd m off) with _ | b <;> rw [hb] at h; · simp [matesK1] at h
     simp only [matesK1] at h
     split at h
     · cases hr : matesW n m c (off + 1) (l - 1) oO oL with
       | none => rw [hr] at h; simp [matesK3] at h
       | some pr => rw [hr, matesK3_some] at h; cases h; exact ih _ _ _ _ _ _ _ _ hr hS
-    · cases hs : snocW n m oO oL (rdW (m.arr64 EREC) off) with
+    · cases hs : snocW n m oO oL (erRd m off) with
       | none => rw [hs] at h; simp [matesK2] at h
       | some pr =>
         obtain ⟨r2, m2⟩ := pr
