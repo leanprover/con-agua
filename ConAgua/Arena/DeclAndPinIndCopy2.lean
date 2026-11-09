@@ -342,7 +342,24 @@ def RecRob (dn : NIdx → Option ConLeche.Name) (A : Array Word) (lo hi p : Nat)
 theorem decCI_front_kind {T : Array Word} {x : Nat}
     {c : IConstantInfo} (hc : decCI (aread T) x = some c) (hF : FrontCI c) :
     ∃ kk, nat? (aread T) x = some kk ∧ (kk = 3 ∨ kk = 4 ∨ kk = 5) := by
-  sorry
+  unfold decCI at hc
+  cases hk : nat? (aread T) x with
+  | none => simp [hk] at hc
+  | some kk =>
+  refine ⟨kk, rfl, ?_⟩
+  rw [hk] at hc
+  simp only [bind, Option.bind_some] at hc
+  rcases kk with _ | _ | _ | _ | _ | _ | kk
+  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+    obtain ⟨_, -, rfl⟩ := hc; exact hF.elim
+  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+    obtain ⟨_, -, _, -, _, -, rfl⟩ := hc; exact hF.elim
+  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+    obtain ⟨_, -, rfl⟩ := hc; exact hF.elim
+  · simp
+  · simp
+  · simp
+  · simp at hc
 
 /-- The common end of `ind_rec_copy`'s three kinds: the record's copy at the top of `mx`, where
 the level parameters (and a recursor's rules) were already copied. -/

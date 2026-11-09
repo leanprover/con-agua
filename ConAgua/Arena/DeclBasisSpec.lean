@@ -27,10 +27,10 @@ import all ConAgua.Arena.Pins
 # Pin reads, `of_reduce_op`, `install_basis_decl(s)` (lane `decls3`)
 
 * `pin_at(i)` as a word model (`pinAtW`) and its twin read (`pinAtW_ok`).
-* `of_reduce_op(n)` refines `ofReduceOp` (pin reads only; sorry-free).
+* `of_reduce_op(n)` refines `ofReduceOp` (pin reads only).
 * `install_basis_decl(vis, c)` refines `installBasisDecl` (the duplicate check, the push) and
   `install_basis_decls(vis, o, l)` refines `installBasisDecls` (an `IW` slice of constant-record
-  pointers), sorry-free.
+  pointers).
 -/
 
 open ConRon.Arena
@@ -342,7 +342,7 @@ theorem ibds_ref {p : Prog} (hB : BasisProg p) (dn : NIdx → Option ConLeche.Na
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- **`install_basis_decl(vis, c)` refines `installBasisDecl`** (sorry-free). -/
+/-- **`install_basis_decl(vis, c)` refines `installBasisDecl`**. -/
 @[refines ConRon.Arena.installBasisDecl]
 theorem installBasisDecl_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word) (ci : IConstantInfo)
@@ -358,7 +358,7 @@ theorem installBasisDecl_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ :
 
 
 /-- **`install_basis_decls(vis, o, l)` refines `installBasisDecls`** (an `IW` slice of
-constant-record pointers decoded below the tops; sorry-free). -/
+constant-record pointers decoded below the tops). -/
 @[refines ConRon.Arena.installBasisDecls]
 theorem installBasisDecls_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis o l : Word) (cis : List IConstantInfo)
