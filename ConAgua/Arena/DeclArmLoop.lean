@@ -54,7 +54,7 @@ def armText : Prog :=
 
 /-- The functions the theorem arm reaches. -/
 def thmArmFns : List FnName :=
-  ["check_decl_thm", "erec_ci", "erec_alloc", "dlp_copy", "check_constant_val", "env_find", "env_row_get", "env_ix", "reserved_contains", "reserved_from",
+  ["check_decl_thm", "erec_ci", "erec_alloc", "dlp_copy", "check_constant_val", "env_find", "env_row_get", "reserved_contains", "reserved_from",
    "cv_lps", "er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains",
    "loose_bvars_bounded_fast", "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast",
    "infer_type_core", "ensure_sort_core", "check_thm_val", "pin_word", "lvl_eq_fueled", "lvl_eq_c",
@@ -79,7 +79,7 @@ def qaxArmFns : List FnName :=
    "cv_new", "cv_canon_eq", "canon_ctx", "canon_names", "canon_names_go", "intern_nanon",
    "nanon_find", "nanon_push", "intern_nnum", "nnum_find", "nnum_push", "sl_cons", "iw_copy",
    "canon_expr_eq", "e_view", "canon_level_eq", "canon_name_map", "sl_find", "sl_getd",
-   "canon_levels_eq", "view_ls", "ls_node", "pool_copy", "canon_level_list_eq", "find_is", "install_basis_decls", "install_basis_decl", "check_decl_axiom",
+   "canon_levels_eq", "view_ls", "ls_node", "pool_copy", "canon_level_list_eq", "install_basis_decls", "install_basis_decl", "check_decl_axiom",
    "ci_canon_eq", "ci_canon_defn", "ci_canon_rec", "canon_rules_eq", "std_axiom_ok",
    "std_ax_family", "find_pinned", "trust_compiler_ok", "find_pinned_cv", "of_reduce_ax_ok",
    "of_reduce_op", "of_reduce_pin_a"]
