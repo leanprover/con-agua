@@ -34,50 +34,32 @@ namespace L.Ind
 
 open L.Arena
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- `env_find`, with: a found row decodes. -/
-theorem envFind_refines' (p : Prog)     (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
-    (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis w : Word)
-    (hE : EnvR s₀.mem vis fe) (hw : w.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "env_find" [w, vis]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
-      fe.find? (decI w) = decFound dn s₀.mem (r.headD 0) (r.tail.headD 0) ∧
-      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP s₀.mem) (r.tail.headD 0).toNat = some ci); ⊤⦄ := by
-  have key := EnvR.find?_eq hE w hw
-  have key2 := EnvR.row_dec hE w hw
-  simp only [invoke_eq _ hp, callFn, envFindL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
-      finish [decFound]
--/
+/-- An in-bounds `EREC⦃a⦄` read, as the model's `erRd`. -/
+theorem erRd_get (m : Mem) (a : Word) (h : (a &&& 1099511627775).toNat < (m.arr64 (tierA EREC (a >>> 40))).size) :
+    (m.arr64 (tierA EREC (a >>> 40)))[(a &&& 1099511627775).toNat] = erRd m a := by
+  unfold erRd; rw [rdW_eq _ _ _ rfl h]
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem blk_none {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
-    (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q) (h0 : found = 0) :
+/-- `nest_block_of`'s three exits, from `nestBlockOf_key`. -/
+theorem blk_none {fe : IFEnv} {c : Word} {m : Mem} (found q : Word)
+    (hfound : fe.find? (decI c) = envFound m found q)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) (h0 : found = 0) :
     hslice? (erA m) (0 : Word).toNat (0 : Word).toNat = some (nestBlockOf fe (decI c)) := by
-  have : fe.find? (decI c) = none := by rw [hfound]; simp [decFound, h0]
-  simp [nestBlockOf, this, hslice?]
--/
+  have := nestBlockOf_key found q hfound hdec
+  simpa [h0] using this
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem blk_k3' {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
-    (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q) (h0 : found ≠ 0)
-    (hex : ∃ ci, decCI (erecP m) q.toNat = some ci) (hk : rdW (m.arr64 EREC) q = 3)
-    (h15 : (q + 15).toNat < (m.arr64 EREC).size) (h16 : (q + 16).toNat < (m.arr64 EREC).size) :
-    hslice? (erA m) ((m.arr64 EREC)[(q + 15).toNat]'h15).toNat ((m.arr64 EREC)[(q + 16).toNat]'h16).toNat =
-      some (nestBlockOf fe (decI c)) := by
-  have := blk_k3 found q hfound h0 hex hk
-  rwa [rdW_eq _ _ _ rfl h15, rdW_eq _ _ _ rfl h16] at this
--/
+theorem blk_nok3 {fe : IFEnv} {c : Word} {m : Mem} (found q : Word)
+    (hfound : fe.find? (decI c) = envFound m found q)
+    (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) (h0 : found ≠ 0)
+    (hk : erRd m q ≠ 3) :
+    hslice? (erA m) (0 : Word).toNat (0 : Word).toNat = some (nestBlockOf fe (decI c)) := by
+  have := nestBlockOf_key found q hfound hdec
+  simpa [h0, hk] using this
+
 
 section blockof
 variable (p : Prog)     (hg : p.lookup "env_row_get" = some envRowGetL) (hf : p.lookup "env_find" = some envFindL)
-    (hp : p.lookup "nest_block_of" = some nestBlockOfL)
-include hg hf hp
+    (hb : p.lookup "base_row_get" = some baseRowGetL) (hp : p.lookup "nest_block_of" = some nestBlockOfL)
+include hg hf hb hp
 
 /-- **`nest_block_of` refines `nestBlockOf`**: the result is the `IndCaps.all` slice of `EREC`. -/
 @[refines ConRon.Arena.nestBlockOf]
@@ -87,7 +69,14 @@ theorem nestBlockOf_refines (n : Nat) (s₀ : St) {fe : IFEnv}
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
       hslice? (erA s₀.mem) (r.headD 0).toNat (r.tail.headD 0).toNat = some (nestBlockOf fe (decI c));
       ⊤⦄ := by
-  sorry
+  simp only [invoke_eq _ hp, callFn, nestBlockOfL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        envFind_refines p hg hb hf n (fe := fe)] <;>
+        finish (gen := 20) [blk_none, blk_nok3, blk_k3, erRd_get]
 
 end blockof
 
@@ -108,7 +97,11 @@ theorem nestCtorEntry_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       StageR vis fe s'.mem (AM.st (ConRon.Arena.nestCtorEntry (decI C) ci) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       EntryOut s'.mem r ciq (AM.res (ConRon.Arena.nestCtorEntry (decI C) ci) a₀); ⊤⦄ := by
-  sorry
+  refine triple_post (nestCtorEntry_spec p hs hv hp hst had n s₀ C ciq) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := entryW_ok hC hm hS hci
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
 
 end census
 
@@ -243,9 +236,10 @@ variable (p : Prog) (hc : p.lookup "sl_contains" = some slContains) (ha : p.look
   (hcp : p.lookup "iw_copy" = some iwCopy) (hsn : p.lookup "sl_snoc" = some slSnoc)
   (hgo : p.lookup "nest_frame_mates_go" = some nestFrameMatesGoL)
   (hg : p.lookup "env_row_get" = some envRowGetL)
-  (hf : p.lookup "env_find" = some envFindL) (hbo : p.lookup "nest_block_of" = some nestBlockOfL)
+  (hf : p.lookup "env_find" = some envFindL) (hbr : p.lookup "base_row_get" = some baseRowGetL)
+  (hbo : p.lookup "nest_block_of" = some nestBlockOfL)
   (hp : p.lookup "nest_frame_mates" = some nestFrameMatesL)
-include hc ha hcp hsn hgo hg hf hbo hp
+include hc ha hcp hsn hgo hg hf hbr hbo hp
 
 /-- **`nest_frame_mates` refines `nestFrameMates`**. -/
 @[refines ConRon.Arena.nestFrameMates]
@@ -255,7 +249,16 @@ theorem nestFrameMates_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
     ⦃fun r s' => LocEq s' s₀ ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (ConRon.Arena.nestFrameMates fe (decI c)) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  sorry
+  have hOK1 := hS.iw.iw
+  have hOK2 := hS.iw.iwSize
+  have hOK3 := hS.iw.erSize
+  have hOK4 := hS.iw.ctl
+  have hE := hS.check.env
+  simp only [invoke_eq _ hp, callFn, nestFrameMatesL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      nestBlockOf_refines p hg hf hbr hbo n (fe := fe),
+      nestFrameMatesGo_refines p hc ha hcp hsn hgo n (block := ConRon.Arena.nestBlockOf fe (decI c)) (out := [])] <;> finish (gen := 20) [ConRon.Arena.nestFrameMates, decHL_zero_zero]
 
 end census2
 
