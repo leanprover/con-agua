@@ -431,7 +431,6 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
       (fun r hr => hcl' r (by simp [hr]))).mono ?_
     exact fun _ _ _ hR => ⟨hR.stage, (c1.trans c2).trans hR.core, hG2.trans hR.grow, hR.res, hR.cr⟩
 
--- RS2E
 
 end typePins
 

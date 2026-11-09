@@ -5,15 +5,11 @@ public import ConAgua.Arena.CheckerT
 @[expose] public section
 
 /-!
-# The declaration loop's start (lane `loopt3`)
+# The declaration loop's start
 
-What phase A's fold (`installFoldGo_refines`, `CheckerT.lean`; `installFoldGo_start`,
-`PhaseAEntry.lean`) takes of the memory at the loop's start, from
-the facts the stages before it leave (lane `pipeline`'s `R7`): the loop's relation `LoopR` at the
-empty environment with no pending checks, the memory's half of the twin's invariants (`LoopMem`)
-and the core's memos (`CoreMemos`). The loop's memos, the environment's index rows, the pending
-count and the promotion memo are the loaded memory's zeros, which no stage before the loop writes
-(`LoopZero`).
+The record pool's name decoder at the loop's start (`dnOf`, injective under `StoreWF`), the
+records' level-parameter handles having names under it (`declsLpsDn_dnOf`), and the lookups the
+loop's top takes (`LoopTopProg`).
 -/
 
 open ConRon.Arena
@@ -24,82 +20,6 @@ open scoped Lean.Order
 namespace L.Arena
 
 open L.Front (DECL DLP DeclsF)
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- The arrays the loop needs zero at its start: the core's memos (49, 50, 52‥54, 151‥153), the
-environment's index rows (132‥134, 140‥142), the projection-table rows (129‥131, both tiers), the
-promotion memo (146‥149), `consts_resolve_ffast`'s memo (155), the inductive stage's memos
-(201‥208), `instantiate1Lift`'s memo (51). -/
-def loopZeroArrs : List TieredArray :=
-  tier0s [ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, WSM, FLM, LSM, EIXA, EIXS, EIXN, PNM, PLM,
-    PLSM, PEM, Stubs.CRM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM,
-    ILFM, EIXA1, EIXS1, EIXN1, TIXA, TIXS, TIXN] ++
-  tier1s [TIXA, TIXS, TIXN]
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- An array the loop needs zero at its start. -/
-abbrev loopZeroArr (b : TieredArray) : Prop := b ∈ loopZeroArrs
--/
-
-/-- The `CTL` words the loop needs zero at its start: the core's memo stamps, the number of
-constants (128), the promotion memo's words (140‥147),
-`consts_resolve_ffast`'s stamp (158), the inductive stage's memo words (202‥219),
-`instantiate1Lift`'s stamp (52). -/
-def loopZeroCtl (x : Nat) : Prop :=
-  x = 48 ∨ x = 50 ∨ x = 54 ∨ x = 56 ∨ x = 58 ∨ x = 152 ∨ x = 154 ∨ x = 156 ∨ x = 158 ∨
-    x = 128 ∨ (140 ≤ x ∧ x ≤ 147) ∨ (202 ≤ x ∧ x ≤ 219) ∨ x = 52 ∨ x = 133
-
-/-- **The zeros the loop starts from.** -/
-structure LoopZero (m : Mem) : Prop where
-  ctl : 220 ≤ (m.arr64 CTL).size
-  word : ∀ x : Word, loopZeroCtl x.toNat → rdW (m.arr64 CTL) x = 0
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem lz_stage {b : ArrId} (h1 : 201 ≤ b) (h2 : b ≤ 208) : loopZeroArr b := by
-  sorry
--/
-theorem lzc_pm {x : Nat} (h1 : 140 ≤ x) (h2 : x ≤ 147) : loopZeroCtl x :=
-  .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
-
-namespace LoopZero
-variable {m : Mem} (h : LoopZero m)
-include h
-
-theorem coreMemos : CoreMemos m := by
-  sorry
-
-theorem crOK : L.Stubs.CrOK m := by
-  sorry
-
-theorem indMemos : IndMemos m := by
-  sorry
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem pmemo : PMemoR m PMemo.empty := by
-  have hc : ∀ x : Word, 140 ≤ x.toNat → x.toNat ≤ 147 → rdW (m.arr64 CTL) x = 0 :=
-    fun x h1 h2 => h.word x (lzc_pm h1 h2)
-  have hs := h.ctl
-  exact ⟨memoRV_zeroAt _ _ _ m (by simp; omega) (hc _ (by decide) (by decide))
-      (h.arr _ (by decide)),
-    memoRV_zeroAt _ _ _ m (by simp; omega) (hc _ (by decide) (by decide))
-      (h.arr _ (by decide)),
-    memoRV_zeroAt _ _ _ m (by simp; omega) (hc _ (by decide) (by decide))
-      (h.arr _ (by decide)),
-    memoRV_zeroAt _ _ _ m (by simp; omega) (hc _ (by decide) (by decide))
-      (h.arr _ (by decide))⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem pendR : PendR m #[] :=
-  ⟨by simp [pendCount, h.word 130 (by unfold loopZeroCtl; decide)], fun j hj => by simp at hj,
-    by simp [pendCount, h.word 130 (by unfold loopZeroCtl; decide)]⟩
--/
-
-theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR m 0 (mkIFEnv IEnv.empty) := by
-  sorry
-
-end LoopZero
 
 /-- **The record pool's name decoder at the loop's start**: the start store's persistent names
 (the startup interned them with the scratch tier off; the loop's steps only grow the persistent
@@ -176,27 +96,7 @@ theorem declsLpsDn_dnOf {st : EStore} {ds : Array IDeclaration}
   simp only [dnOf, hpk, ite_true]
   exact denoteNList_mem_some h2 k hk
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The loop's relation and the memory's halves at the loop's start**, at the empty environment
-with no pending checks. -/
-theorem loop_start {pins : List INatOpPinSet} {ds : Array IDeclaration} {m : Mem} {a : AState}
-    (hA : ArenaD m a) (hcore : CoreR m a.caches) (hpf : PinsFull m a.pins)
-    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hPS : L.Rom.PinSetsR m pins)
-    (hiw : L.Ind.IWOK m) (hz : LoopZero m) (hpin : pinW m 0 ≠ 0)
-    (hE : (m.arr64 EREC).size < 2 ^ 63) (hS : (m.arr64 SPN).size < 2 ^ 63)
-    (hB : (m.arr64 BSTK).size < 2 ^ 63) (hmode : ModeOK m) :
-    LoopR pins (dnOf a.store) m a 0 (mkIFEnv IEnv.empty) #[] ds ∧
-      LoopMem (dnOf a.store) m a ∧ CoreMemos m ∧ IndMemos m :=
-  ⟨⟨⟨hA, hcore, ⟨fun _ => hpf⟩, hz.envR _, hmode⟩, hz.pendR, hD, hiw, ⟨_, hz.pmemo⟩, hPS⟩,
-    ⟨hE, hS, hB, hpin, fun k x h => by
-      simp only [dnOf] at h
-      split at h
-      · exact ⟨by assumption, h⟩
-      · cases h⟩, hz.coreMemos, hz.indMemos⟩
--/
-
-/-- The lookups the loop's two phases take beyond `LoopCallees` (`installFoldGo_start`,
-`PhaseAEntry.lean`; phase B's `PhaseBProg`), and the bracket. -/
+/-- The lookups the loop's top takes beyond `LoopCallees`: the bracket. -/
 structure LoopTopProg (p : Prog) : Prop where
   bracket : BracketProg p
 
