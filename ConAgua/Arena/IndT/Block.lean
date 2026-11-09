@@ -26,7 +26,7 @@ public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndT.ArmMemos
 public import ConAgua.Arena.IndT.GenRec2
 public import ConAgua.Arena.IndT.Sum2
-public import ConAgua.Arena.BasisBlockT
+public import ConAgua.Arena.BasisBlockC
 public import ConAgua.Arena.IndArmLps
 public import ConRon.Bridge.Checker.Inv
 import all ConAgua.Arena.IndInstall
