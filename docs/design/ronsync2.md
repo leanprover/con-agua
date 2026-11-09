@@ -200,7 +200,8 @@ verdict its strong form `TwinVerdict [b] c`.
   `AState.worker`) flushes the core caches: the index build fills them (`buildIndex` →
   `blockShape?` → `lvlEq?`), and the twin's jobs start from the worker with empty caches.
 * Also from stage 3: `former_never_zero_at` and `proj_guard_sort` abort (class 0) when
-  `nparams + nIdx` wraps 2^64, as `family_telescope` already did (the twin's sum is a `Nat`).
+  `nparams + nIdx` wraps 2^64, and `proj_guard_rows` when `np + i + 1` does, as `family_telescope`
+  already did (the twin's sums are `Nat`s).
 * Process note (regeneration): `Checker/SyncFns.lean` is imported by nothing, so after an L change
   build `ConAgua.Checker.SyncFns` first, then `scripts/checker_prog.py --no-build`; otherwise the
   dump misses its bindings and functions silently become stubs.
