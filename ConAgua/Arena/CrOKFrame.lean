@@ -53,6 +53,51 @@ def CrLeaves (p : Prog) : Prop :=
   ∀ g ∈ imLeaves, ∀ n m₀ vs, ⦃fun s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem⦄
     invoke p (exec p n) g vs ⦃fun _ s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem; ⊤⦄
 
+/-- `consts_resolve_ffast` keeps `CrOK` at any arguments (its model `crfF`, `crfF_keepsCrOK`). -/
+theorem crOK_crf {p : Prog} (hp : L.Ind.CrfF p) (n : Nat) (m₀ : Mem) (vs : List Word) :
+    ⦃fun s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem⦄ invoke p (exec p n) "consts_resolve_ffast" vs
+    ⦃fun _ s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨-, hc⟩ := M.of_run (P := fun t => t = s) rfl hrun (L.Ind.crfF_spec p hp n s vs)
+  exact fun h0 => L.Ind.crfF_keepsCrOK hc (hs h0)
+
+/-- Every word array but the walk memo `CRM`. -/
+def crA : List TieredArray := checkerWordArrays.filter fun b => b ≠ L.Stubs.CRM
+
+/-- Every `CTL` word but the walk memo's epoch `158`. -/
+def crC : List Word := ((List.range 1024).filter fun x => x ≠ 158).map UInt64.ofNat
+
+theorem crm_not_crA : (L.Stubs.CRM : TieredArray) ∉ crA := by
+  simp [crA, List.mem_filter]
+
+theorem c158_not_crC : (158 : Word) ∉ crC := by
+  intro h
+  simp only [crC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at h
+  obtain ⟨n, ⟨h1, h2⟩, e⟩ := h
+  have : (UInt64.ofNat n).toNat = n := by simp; omega
+  rw [e] at this; exact h2 (by rw [← this]; rfl)
+
+/-- A function whose call closure `fs` writes neither `CRM` nor `CTL[158]` keeps `CrOK`. -/
+theorem crOK_frameFn {p : Prog} {fs : List FnName} (hp : closedA p crA crC fs = true) {g : FnName}
+    (hg : g ∈ fs) (n : Nat) (m₀ : Mem) (vs : List Word) :
+    ⦃fun s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem⦄ invoke p (exec p n) g vs
+    ⦃fun _ s => L.Stubs.CrOK m₀ → L.Stubs.CrOK s.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hfr, -⟩ := M.of_run (P := fun t => t = s) rfl hrun (invoke_memFrame hp n hg vs s)
+  exact fun h0 => CrOK.frame (hs h0) hfr crm_not_crA c158_not_crC
+
+/-- **The leaves keep `CrOK`**: `consts_resolve_ffast` by its model, `struct_used_later` by the
+write set of its call closure `fs`. -/
+theorem crLeaves_of {p : Prog} (hp : L.Ind.CrfF p) {fs : List FnName}
+    (hs : closedA p crA crC fs = true) (hg : "struct_used_later" ∈ fs) : CrLeaves p := by
+  intro g hg' n m₀ vs
+  simp only [imLeaves, List.mem_cons, List.not_mem_nil, or_false] at hg'
+  rcases hg' with rfl | rfl
+  · exact crOK_crf hp n m₀ vs
+  · exact crOK_frameFn hs hg n m₀ vs
+
 /-- **A call of a function of `imFns` keeps `CrOK`.** -/
 theorem invoke_crOK {p : Prog} (hcl : IndMemoClosed p) (hl : CrLeaves p) (n : Nat)
     {f : FnName} (hf : f ∈ imFns) (vs : List Word) (s₀ : St) :

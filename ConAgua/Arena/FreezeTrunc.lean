@@ -156,14 +156,15 @@ theorem row_trunc (w : Word) :
   · simp [hg]
 -/
 
-omit hcnt in
-/-- A tier-0 table-row array under the truncation. -/
+/-- A tier-0 table-row array under the truncation (two words per name, as the env index). -/
 theorem tix_trunc (g : Nat) (hg : g ≤ 2) :
-    (truncFrozen m).arr64 (tixArr g) = (m.arr64 (tixArr g)).extract 0 (nmCnt m g) := by
+    (truncFrozen m).arr64 (tixArr g) = (m.arr64 (tixArr g)).extract 0 (2 * nmCnt m g) := by
+  have h2 : ∀ c : Word, c.toNat ≤ 2 ^ 27 → (2 * c).toNat = 2 * c.toNat := fun c hc => by
+    rw [UInt64.toNat_mul]; simp; omega
   rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl
-  · rw [show tixArr 0 = TIXA from rfl, truncFrozen_tixa]; rfl
-  · rw [show tixArr 1 = TIXS from rfl, truncFrozen_tixs]; rfl
-  · rw [show tixArr 2 = TIXN from rfl, truncFrozen_tixn]; rfl
+  · rw [show tixArr 0 = TIXA from rfl, truncFrozen_tixa]; exact congrArg _ (h2 _ (hcnt 0 (by decide)))
+  · rw [show tixArr 1 = TIXS from rfl, truncFrozen_tixs]; exact congrArg _ (h2 _ (hcnt 1 (by decide)))
+  · rw [show tixArr 2 = TIXN from rfl, truncFrozen_tixn]; exact congrArg _ (h2 _ (hcnt 2 (by decide)))
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 omit hcnt in
