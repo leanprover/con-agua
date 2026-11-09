@@ -208,9 +208,10 @@ theorem nsdRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData +
   have hAP := indArmProgs_checker bs hr hpre
   have L : RsLook (Prog.subPB bs checkerProg) := by prog_bundle []
   have hF : FtProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hFk : FkcProg (Prog.subPB bs checkerProg) := by prog_bundle []
   have hWt : WhnfTopE (Prog.subPB bs checkerProg) :=
     whnfTop_stageE (by prog_bundle []) (fun n => (checkerProg_knotTopPB bs).knotOK n) (checkerProg_knotEPB bs)
-  exact nsdRefS_of L hAP.kp hAP.ilpf hAP.lc hF hWt
+  exact nsdRefS_of L hAP.kp hAP.ilpf hAP.lc hF hFk hWt
     (wmKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
       (mem_of_tree armMcTree.eq (by decide +kernel)) (mem_of_tree armTaTree.eq (by decide +kernel)))
 
