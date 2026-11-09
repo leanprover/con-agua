@@ -19,6 +19,10 @@ import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.DeclValRef
 public import ConAgua.Arena.DeclBasisSpec
 public import ConAgua.Arena.QuotAtT
+public import ConAgua.Arena.StrLitShape
+public import ConAgua.Arena.StubNamesRefine
+import ConAgua.Arena.IndRealIlpL
+import ConAgua.Arena.CrOKFrame
 import all ConAgua.Arena.DeclArms
 
 @[expose] public section
@@ -203,10 +207,35 @@ structure CcvSims (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop where
       (fun r b m' a' => m' = m ∧ a' = a ∧ (r.headD 0 ≠ 0 ↔ b = true))
   lit : ∀ (n : Nat) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) (c : Word) (ci : IConstantInfo),
     StageT dn vis fe m a → decCI (erecP m) c.toNat = some ci →
+    (∃ ks, ci.toConstantVal.levelParams.mapM (denoteN a.store.ns) = some ks) →
     Sim (callW p n "lit_shape_ok" [c] m) (litShapeOk ci) a
       (fun r b m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ (L.Stubs.CrOK m → L.Stubs.CrOK m') ∧
         AFr m m' ∧ (∀ cv' x, Frontend.denoteCV a.store cv' = some x →
           Frontend.denoteCV a'.store cv' = some x) ∧ (r.headD 0 ≠ 0 ↔ b = true))
+
+/-- **`CcvSims` from the program**: `nat_op_name` by `natOpName_sim`, `lit_shape_ok` by
+`litShapeOk_call` under `CoreS`, `StageT` after it by the leaves' write set, the store extended
+(`emono_litShapeOk`). -/
+theorem ccvSims_of {p : Prog} (hp : StrLitProg p) (hcl : LitShapeClosed p)
+    (hno : p.lookup "nat_op_name" = some L.Stubs.natOpNameL)
+    (hpr : p.lookup "pin_range_has" = some L.Stubs.pinRangeHas)
+    (dn : NIdx → Option ConLeche.Name) : CcvSims p dn where
+  natOp n _ _ _ _ _ hS hw := L.Stubs.natOpName_sim hno hpr hp.pinAt n hS hw
+  lit n vis fe m a c ci hT hci hlps := by
+    intro r m' h
+    obtain ⟨M, hC⟩ := hT.core
+    have R := litShapeOk_call p hp hC hci hlps h
+    obtain ⟨M', hC', -, -⟩ := R.after
+    have hfr := callW_litShapeFrame hcl (by decide) h
+    obtain ⟨hT', hg⟩ := StageT.of_coreFrame hfr coreStageA_iw coreStageA_erec coreStageA_pins
+      coreStageC_129 coreStageC_200 hT hC' coreStageA_erec1 coreStageC_130
+    have hrun := AM.run_of_ok _ _ R.run
+    refine ⟨_, _, hrun, hT', hg, fun hCr => CrOK.frame hCr hfr coreStageA_155 coreStageC_158,
+      fun hA => ⟨hT'.twin.memos.ab, hA.i1.frame hfr coreStageA_51 coreStageC_52,
+        hA.cr.frame hfr coreStageA_155 coreStageC_158, hT'.twin.memos.il, hT'.twin.memos.walk,
+        hT'.twin.erec, hT'.twin.spn, hT'.twin.bstk, hT'.flag⟩,
+      fun cv' x hx => ConRon.Bridge.denoteCV_ext hx ((emono_litShapeOk ci).run hrun), ?_⟩
+    rw [R.res]; unfold decBool; simp
 
 /-- **`check_constant_val` refines `checkConstantVal .verified`, both outcomes**, under `StageT`:
 the duplicate and reserved-name guards, the certified-operation name, the literal shape of a fresh
@@ -294,7 +323,7 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
   have hA9 : AFr m m9 := AFr.of_frame hf9
   -- `lit_shape_ok(a)`
   refine RefE.bindSim (fun _ => checkConstantValE.k_lit_shape_ok.none ..)
-    (hC.lit n vis fe m9 a _ _ hT9 hci9)
+    (hC.lit n vis fe m9 a _ _ hT9 hci9 (denoteCV_lps hden))
     fun r10 x10 m10 a10 h10 hrun10 ⟨hT10, hg10, hcr10, hA10, hden10, hx10⟩ => ?_
   dsimp only [checkConstantValE.k_lit_shape_ok]
   refine RefE.guardIf rfl (fun hb => by cases hx : x10; rfl; exact absurd (hx10.mpr hx) (by simpa using hb))
