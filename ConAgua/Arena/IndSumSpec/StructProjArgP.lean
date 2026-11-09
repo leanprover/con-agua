@@ -427,9 +427,8 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ### The twin, one level unfolded
 
-`whnfTelescope` is structural recursion that matches under a bind, so Lean generates no equation
-lemma for it (PLAN.md's vcgen gaps). `wtArm` is its body after the view, and `whnfTelescope_eq`
-the unfolding, by `Nat.brecOn` and a case split on the view. -/
+`wtArm` is `whnfTelescope`'s body after the view, and `whnfTelescope_eq` the unfolding (its
+equation lemma and a case split on the view). -/
 
 /-- The arms of `whnfTelescope` after the view. -/
 def wtArm (mode : ConLeche.CheckMode) (fe : IFEnv) (i : Nat) (out : List EIdx) :
@@ -453,7 +452,10 @@ theorem whnfTelescope_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (i n : Nat) (e
       let e' ← whnf mode fe checkFuel i e
       let v ← view e'
       wtArm mode fe i out v n) := by
-  sorry
+  rw [whnfTelescope]
+  refine congrArg (whnf mode fe checkFuel i e >>= ·) (funext fun e' => ?_)
+  refine congrArg (view e' >>= ·) (funext fun v => ?_)
+  cases v <;> cases n <;> rfl
 
 end L.Ind
 
