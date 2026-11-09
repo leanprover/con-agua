@@ -121,7 +121,7 @@ theorem icbcW_ok (p : Prog) (hRp : RecProg p) (hci : p.lookup "ctor_info_rec" = 
   · rw [h1] at h; simp [icbcK1] at h
   rw [h1, icbcK1_some] at h
   obtain ⟨s1, rfl, -, hS1, hg1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (consSumCtors_refines p hRp hci hcs n ⟨m, Locals.init []⟩ a dn fe vis nP _ _ cs hS
+    (consSumCtors_refines p hRp hci hcs n ⟨m, Locals.init []⟩ a fe vis nP _ _ cs hS
       (by rw [UInt64.toNat_ofNat_of_lt' hcob, UInt64.toNat_ofNat_of_lt' hclb]; exact hcsd)) h1
   rcases h2 : icbcW p n s1.mem nP (o + 1) (l - 1) (r1.headD 0) with _ | ⟨r2, m2⟩
   · rw [h2] at h; simp [icbcK2] at h
