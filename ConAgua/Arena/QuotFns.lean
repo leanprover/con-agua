@@ -135,4 +135,40 @@ theorem StageR.putFresh {vis : Word} {fe : IFEnv} {m₀ m : Mem} {a₀ a : AStat
     (erecPutMem_frame m d v).mono (fun _ h => h) (by simp)
   exact ⟨⟨hS.check.erEnv hfe he, IWOK.of_er (erecPutMem_frame m d v) hS.iw⟩, hg', hf'⟩
 
+/-! ## The level-parameter functions leave the records and the core memos alone -/
+
+/-- The call closure of `param_levels` and `er_to_iw` in `checkerProg` (`_tmp/p3r/plfns.lean`). -/
+def plFns : List FnName := [
+  "er_copy", "er_to_iw", "intern_ls", "intern_ls_iw", "intern_param", "iw_alloc", "iw_copy",
+  "iw_pool", "limbs_eq", "lit_hash", "ls_find", "ls_match", "ls_push", "param_find", "param_levels",
+  "param_levels_go", "param_push", "pool_room", "sl_cons", "sl_get"]
+
+/-- The arrays `plFns` never writes: the record pool's tiers, the core memos `TwinOK` reads, the ROM
+cache, the pins. -/
+def plBad : List TieredArray :=
+  [EREC, tier1 EREC, ILMEMO, ABMEMO, WSM, FLM, LSM, LPMEMO, LPLMEMO, LPLSMEMO, L.Rom.ROMC, PINS]
+
+/-- The `CTL` words `plFns` never writes: the pool's tops, the core memos' control words. -/
+def plBadC : List Word := [129, 130, 48, 50, 54, 56, 58, 152, 154, 156]
+
+def plA : List TieredArray := checkerWordArrays.filter fun b => b ∉ plBad
+def plC : List Word := ((List.range 256).map Nat.toUInt64).filter fun x => x ∉ plBadC
+
+/-- **The program hypothesis** for `param_levels`, `er_to_iw`. -/
+def PlClosed (p : Prog) : Prop := closedA p plA plC plFns = true
+
+theorem plA_not {b : TieredArray} (h : b ∈ plBad) : b ∉ plA := by
+  simp only [plA, List.mem_filter, decide_eq_true_eq, not_and]; exact fun _ h2 => h2 h
+
+theorem plC_not {x : Word} (h : x ∈ plBadC) : x ∉ plC := by
+  simp only [plC, List.mem_filter, decide_eq_true_eq, not_and]; exact fun _ h2 => h2 h
+
+/-- A call of `plFns`: its frame, the records unchanged. -/
+theorem callW_plFrame {p : Prog} (hcl : PlClosed p) {f : FnName} (hf : f ∈ plFns) {n : Nat}
+    {vs : List Word} {m : Mem} {r : List Word} {m' : Mem} (h : callW p n f vs m = some (r, m')) :
+    MemFrame plA plC m m' ∧ erecP m' = erecP m := by
+  have hF := (run_memFrame hcl hf (run_of_callW h)).1
+  exact ⟨hF, erecP_frame hF (plA_not (by simp [plBad])) (plA_not (by simp [plBad]))
+    (plC_not (by simp [plBadC])) (plC_not (by simp [plBadC]))⟩
+
 end L.Ind

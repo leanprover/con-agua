@@ -208,4 +208,25 @@ prog_all checkerProg_quotChk : checkerProg (wsChk CTL quotPa quotPc quotTree)
 theorem checkerProg_quotClosed : QuotClosed checkerProg :=
   closedW_of_all quotTree.eq quotPa_mem quotPc_mem checkerProg_quotChk
 
+/-- `plFns` as a tree of name codes. -/
+names_tree plTree : plFns
+
+def plPa (a : TieredArray) : Bool := checkerWordArrays.contains a && !plBad.contains a
+def plPc (w : Word) : Bool := decide (w.toNat < 256) && !plBadC.contains w
+
+theorem plPa_mem (a : TieredArray) (h : plPa a = true) : a ∈ plA := by
+  simp only [plPa, Bool.and_eq_true, Bool.not_eq_true', List.contains_iff_mem] at h
+  simp only [plA, List.mem_filter, decide_eq_true_eq]
+  exact ⟨h.1, by simpa using h.2⟩
+
+theorem plPc_mem (w : Word) (h : plPc w = true) : w ∈ plC := by
+  simp only [plPc, Bool.and_eq_true, decide_eq_true_eq, Bool.not_eq_true'] at h
+  simp only [plC, List.mem_filter, List.mem_map, List.mem_range, decide_eq_true_eq]
+  exact ⟨⟨w.toNat, h.1, UInt64.ofNat_toNat⟩, by simpa using h.2⟩
+
+prog_all checkerProg_plChk : checkerProg (wsChk CTL plPa plPc plTree)
+
+theorem checkerProg_plClosed : PlClosed checkerProg :=
+  closedW_of_all plTree.eq plPa_mem plPc_mem checkerProg_plChk
+
 end L.Checker
