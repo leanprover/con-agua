@@ -62,16 +62,12 @@ section sims
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
 /-- What `check_sum_tele` gives besides the twin's `(cvTa, s)`: the stage, the growth, the
-constant value as a record below `EREC`'s top (its level slice too), the sort as a word, the walk
-memos. -/
+constant value as a record, the sort as a word, the walk memos. -/
 structure CtsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
     (m : Mem) (w : List Word × Mem) (res : IConstantVal × LIdx) (a' : AState) : Prop where
   stage : StageC dn vis fe env w.2 a'
   grow : IWGrow m w.2
   cv : decCVp w.2 (w.1.headD 0).toNat = some res.1
-  top : (w.1.headD 0).toNat + 4 ≤ erTop w.2
-  lps : ∀ lo ll, nat? (erA w.2) ((w.1.headD 0).toNat + 1) = some lo →
-    nat? (erA w.2) ((w.1.headD 0).toNat + 2) = some ll → lo + ll ≤ erTop w.2 ∨ ll = 0
   sort32 : (w.1.tail.headD 0).toNat < 2 ^ 32
   sort : decI (w.1.tail.headD 0) = res.2
   abs : AbsOK w.2
@@ -82,9 +78,7 @@ sort (`viewSort`); every other arm is the twin's reject. Its callees are outside
 closure, so `G` is `True`. -/
 theorem ct_ref (m : Mem) (a : AState) (n cvTa0 : Word) (cvTa : IConstantVal)
     (hC : StageC dn vis fe env m a)
-    (hta : decCVp m cvTa0.toNat = some cvTa) (hta4 : cvTa0.toNat + 4 ≤ erTop m)
-    (hslTa : ∀ lo ll, nat? (erA m) (cvTa0.toNat + 1) = some lo →
-      nat? (erA m) (cvTa0.toNat + 2) = some ll → lo + ll ≤ erTop m ∨ ll = 0) (hA : AbsOK m)
+    (hta : decCVp m cvTa0.toNat = some cvTa) (hA : AbsOK m)
     {cvTaP : ConLeche.ConstantVal} (hcvTaP : Frontend.denoteCV a.store cvTa = some cvTaP) :
     RefE True (ctE p m n cvTa0) (checkSumTele n.toNat cvTa) a
       (fun w res a' => CtsPost dn vis fe env m w res a') := by
@@ -108,10 +102,7 @@ theorem ct_ref (m : Mem) (a : AState) (n cvTa0 : Word) (cvTa : IConstantVal)
   refine ⟨_, _, hrun1, ?_⟩
   have hA1 := stripF_afr h1 hA
   have hC1 : StageC dn vis fe env m1 a := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
-  have hta1 := decCVp_grow hg1 hta4 hslTa hta
-  obtain ⟨w1, w2, hw1, hw2, -⟩ := decCV_sliceW hta
-  have hw1' : erecP m1 (cvTa0.toNat + 1) = some w1 := hg1.ext _ _ hw1
-  have hw2' : erecP m1 (cvTa0.toNat + 2) = some w2 := hg1.ext _ _ hw2
+  have hta1 : decCVp m1 cvTa0.toNat = some cvTa := hg1.erecGrow.ext.decCV hta
   by_cases h0 : r1.headD 0 = 0
   · rw [ctE.k_strip_pis.abort1 _ _ _ _ h0]
     cases x with
@@ -147,12 +138,6 @@ theorem ct_ref (m : Mem) (a : AState) (n cvTa0 : Word) (cvTa : IConstantVal)
       rw [← hbe, ← decE_eq, htag]
       simp only [beq_self_eq_true, ite_true]
       refine RefE.bind_right (viewSort_run hvs) (RefE.ret rfl ⟨hC1, hg1, by simpa using hta1,
-        by simp only [List.headD]; have := hg1.er; omega,
-        fun lo ll e1 e2 => by
-          simp only [List.headD, nat?, erA, hw1', hw2', Option.map_some, Option.some.injEq] at e1 e2 ⊢
-          subst e1 e2
-          have := hslTa w1.toNat w2.toNat (by simp only [nat?, hw1, Option.map_some]) (by simp only [nat?, hw2, Option.map_some])
-          have := hg1.er; omega,
         by simpa [hx1] using hu32, by simpa [hx1] using hu, hA1⟩)
     | _ => simp only [ViewR] at hVR <;> (rw [h2] at hVR) <;> simp at hVR
   rw [ctE.k_strip_pis.abort2 _ _ _ _ h0 ht]
@@ -168,10 +153,7 @@ unchanged, its sort as a word. -/
 @[refines ConRon.Arena.checkSumTele]
 theorem checkSumTele_refinesC (hP : CtProg p) (k : Nat) (s₀ : St) (a₀ : AState)
     (n cvTa0 : Word) (cvTa : IConstantVal) (hC : StageC dn vis fe env s₀.mem a₀)
-    (hta : decCVp s₀.mem cvTa0.toNat = some cvTa) (hta4 : cvTa0.toNat + 4 ≤ erTop s₀.mem)
-    (hslTa : ∀ lo ll, nat? (erA s₀.mem) (cvTa0.toNat + 1) = some lo →
-      nat? (erA s₀.mem) (cvTa0.toNat + 2) = some ll → lo + ll ≤ erTop s₀.mem ∨ ll = 0)
-    (hA : AbsOK s₀.mem) {cvTaP : ConLeche.ConstantVal}
+    (hta : decCVp s₀.mem cvTa0.toNat = some cvTa) (hA : AbsOK s₀.mem) {cvTaP : ConLeche.ConstantVal}
     (hcvTaP : Frontend.denoteCV a₀.store cvTa = some cvTaP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele" [n, cvTa0]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkSumTele n.toNat cvTa) a₀ ∧
@@ -179,16 +161,12 @@ theorem checkSumTele_refinesC (hP : CtProg p) (k : Nat) (s₀ : St) (a₀ : ASta
       IWGrow s₀.mem s'.mem ∧
       decCVp s'.mem (r.headD 0).toNat = some (AM.res (checkSumTele n.toNat cvTa) a₀).1 ∧
       (r.tail.headD 0).toNat < 2 ^ 32 ∧
-      decI (r.tail.headD 0) = (AM.res (checkSumTele n.toNat cvTa) a₀).2 ∧
-      (r.headD 0).toNat + 4 ≤ erTop s'.mem ∧
-      (∀ lo ll, nat? (erA s'.mem) ((r.headD 0).toNat + 1) = some lo →
-        nat? (erA s'.mem) ((r.headD 0).toNat + 2) = some ll → lo + ll ≤ erTop s'.mem ∨ ll = 0) ∧
-      AbsOK s'.mem; ⊤⦄ := by
+      decI (r.tail.headD 0) = (AM.res (checkSumTele n.toNat cvTa) a₀).2 ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (ctE_spec p hP k s₀ n cvTa0)
-    (ct_ref _ a₀ n cvTa0 cvTa hC hta hta4 hslTa hA hcvTaP)) fun _ _ ⟨hl, _, _, hrun, hR⟩ => ?_
+    (ct_ref _ a₀ n cvTa0 cvTa hC hta hA hcvTaP)) fun _ _ ⟨hl, _, _, hrun, hR⟩ => ?_
   obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst']; exact hR.stage, hR.grow, by rw [hres]; exact hR.cv, hR.sort32,
-    by rw [hres]; exact hR.sort, hR.top, hR.lps, hR.abs⟩
+    by rw [hres]; exact hR.sort, hR.abs⟩
 
 end sims
 
