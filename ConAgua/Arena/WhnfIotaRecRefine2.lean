@@ -59,7 +59,57 @@ theorem fam_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
         (erRdT s₀.mem (recP + 5)).toNat (erRdT s₀.mem (recP + 6)).toNat np lps
         (decI us) args.toList (decI usj) cvj rule margs.toList) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
-  sorry
+  simp only [irFamE]
+  have hspn := hS.spn
+  have hfc := fireCore_of hS hrule hci hfe
+  have hld := lpsDen_of hS hfe
+  have hmsz : (mo + mn).toNat = mo.toNat + mn.toNat := by
+    have := hsm.bound; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
+  unfold iotaRecFamT
+  refine RefE.retIf (fun hv => by rw [decMode_verified mode hm4]; simpa using hv)
+    (fun hvc => by rw [decMode_verified mode hm4] at hvc; simpa using hvc)
+    (fun _ => CorePost.ret hS rfl (by show HW (1 : Word); unfold HW; decide)) fun _ _ => ?_
+  -- the comparand levels
+  refine RefE.bindLift (fun _ => rfl) fun rv m1 c1 => ?_
+  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, hr1⟩ := CoreSpec.run
+    (hc.recFireLevels n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb _ _ _ _ _ us _ _ rule lps
+      cvj.levelParams hS hus hlps hld hfc) c1
+  have k1 := hER.all (by simp [iotaKeptFns]) c1
+  refine ⟨_, _, hrun1, ?_⟩
+  simp only [irFamE.k_rec_fire_levels, erRdT_congr k1.1 k1.2.1]
+  cases n with
+  | zero => exact RefE.callE_zero (fun _ => rfl)
+  | succ N =>
+  -- case 3
+  have hci1 : decCI (erecP m1) ctorP.toNat = some (.ctorInfo cvj np nf) := by rw [k1.2.2.2]; exact hci
+  refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩) (fun _ => rfl)
+    (ic3E_spec p hp.iotaCase3At hp.formerNeverZeroAt hp.formerSortLoop (N + 1) ⟨m1, Locals.init []⟩
+      mode vis (erRdT s₀.mem (recP + 9)) ctorP (rv.headD 0))
+    (fun hG => hG.nv) (fun hG => hG.knot.mono (Nat.le_succ _))
+    (ic3_ref p hp.toIotaProg4 (hp.fnzaProg hw.instLP hc.inst1) N F (hk.mono (Nat.le_succ _)) (by omega)
+      (by omega) dn vis fe eb mode hm4 hebm m1 _ M1 _ ctorP _ cvj np nf hS1 hci1 hr1)
+    fun r3 s2 _ a2 c2 _ _ hP => ?_
+  obtain ⟨⟨M2, hS2, hK2, hSt2⟩, hr3, -⟩ := hP
+  have k2 := erecKeep_trans (hER.all (by simp [iotaKeptFns]) (callW_of_callE c2)) k1
+  have hSt12 := hSt1.trans hSt2
+  dsimp only [irFamE.k_iota_case3_at]
+  subst hr3
+  refine RefE.retIf decBool_f_m2c (fun h => by simpa [decBool] using h)
+    (fun _ => ⟨⟨M2, hS2, hK1.trans hK2, hSt12⟩, rfl, by show HW (1 : Word); unfold HW; decide⟩) fun g0 _ => ?_
+  have hsa2 := hsa.keep hSt12.size hSt12.below hsat hspn
+  have hsat2 : so.toNat + sn.toNat ≤ (spTop s2.mem).toNat := by rw [hSt12.1]; exact hsat
+  have hsm2 := hsm.keep hSt12.size hSt12.below (by rw [← hsmt, hmsz]; exact Nat.le_refl _) hspn
+  have hsmt2 : mo + mn = spTop s2.mem := by rw [hSt12.1]; exact hsmt
+  have hvk := vck_ref p hp hc hw hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega)
+    ⟨s2.mem, Locals.init []⟩ _ dn vis fe M2 eb mode d us recP so usj ctorP rl mo mn (rv.headD 0) sn lps rule
+    cvj np nf args margs hS2 hm4 hebm hus husj hr1
+  rw [k2.2.2.1, k2.2.2.2] at hvk
+  rw [← bind_pure (iotaRecVckT _ _ _ _ _ _ _ _ _ _ _ _ _ _)]
+  refine RefE.bindRun (s₀ := ⟨s2.mem, Locals.init []⟩) (fun _ => rfl)
+    (vckE_spec p hp.vck (N + 1) ⟨s2.mem, Locals.init []⟩ mode vis d us recP so usj ctorP rl mo mn (rv.headD 0))
+    (fun hG => hG.nv) (fun hG => hG.mono (by omega)) (hvk hlps hrule hci hsa2 hsat2 hmI hsm2 hsmt2 hcpm)
+    fun rk s3 _ a3 _ _ _ ⟨⟨M3, hS3, hK3, hSt3⟩, hr3, hv3⟩ => ?_
+  exact RefE.ret rfl ⟨⟨M3, hS3, hK1.trans (hK2.trans hK3), hSt12.trans hSt3⟩, hr3, hv3⟩
 
 /-- **`iota_rec_fam` refines the certificate family** (`fam_ref`'s ok half). -/
 theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
@@ -87,20 +137,6 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
       (fam_ref p hp hc hw hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so usj ctorP
         rl mo mn sn lps rule cvj np nf args margs hS hm4 hebm hus husj hlps hrule hci hfe hsa hsat hmI
         hsm hsmt hcpm)
-
-/-! ## The record pool across `iota_rec_vck` and `iota_rec_fam` -/
-
-theorem callW_iotaRecVck_erec (p : Prog) (hp : IotaRecProg' p) (hER : ErecKeptRec p)
-    (hEK : ErecKeptKnot p) (n : Nat) (m : Mem) (vs : List Word) (r : List Word) (m' : Mem)
-    (hvs : vs.length = 12) (h : callW p n "iota_rec_vck" vs m = some (r, m')) :
-    m'.arr64 EREC = m.arr64 EREC := by
-  sorry
-
-theorem callW_iotaRecFam_erec (p : Prog) (hp : IotaRecProg' p) (hER : ErecKeptRec p)
-    (hEK : ErecKeptKnot p) (n : Nat) (m : Mem) (vs : List Word) (r : List Word) (m' : Mem)
-    (hvs : vs.length = 11) (h : callW p n "iota_rec_fam" vs m = some (r, m')) :
-    m'.arr64 EREC = m.arr64 EREC := by
-  sorry
 
 /-! ## `mk_app_n`, `mk_app_n_from` as runs -/
 
