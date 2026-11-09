@@ -7,6 +7,8 @@ import ConAgua.Arena.IndPartsSpec.BrsW
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Specs
+import ConRon.Bridge.Inductives.BlockShape
+import ConRon.Bridge.Inductives.Rel
 
 @[expose] public section
 
@@ -65,10 +67,43 @@ theorem lvlHyp_real (n : Nat) {m : Mem} {a : AState} {nP : Nat} {blk : List ICon
     {blkP : List ConLeche.ConstantInfo} (hC : StageC dn vis fe env m a) (hA : AbsOK m)
     (hb : Frontend.denoteCIList a.store blk = some blkP) :
     LvlHyp (realCall p) n dn vis fe m (TshT nP blk a) := by
-  -- the master proof reads con-ron's `CheckOK` off `StageC` (its `check` field, gone at the sync:
-  -- `TwinStep.StageC`, outside this area) for `blockMemberCounts?_spec`'s and
-  -- `reservedBasisNames_pstep`'s state hypotheses
-  sorry
+  intro sv a1 s z m1 hT hf hS1 hs hsv hz
+  subst hsv
+  obtain ⟨cvT0, cvTs, cs, r0, rs, hsp, nIdxs, a2, R, a3, hbmc, hres, hbso⟩ := hT
+  have hok := hC.check.state
+  have hsp' := ConRon.Bridge.Inductives.blockSplit_spec a.store blk blkP hb
+  rw [hsp] at hsp'
+  obtain ⟨⟨cvTsP, csP, rsP⟩, -, hTs, -, hrs⟩ := hsp'
+  dsimp only at hTs hrs
+  have hsp1 := ConRon.Bridge.Inductives.blockMemberCounts?_spec nP (cvT0 :: cvTs).length cs.length
+    ((cvT0 :: cvTs).map (·.name)) (cvTsP.map (·.name)) (r0 :: rs) rsP 0 (cvT0 :: cvTs) cvTsP
+  have hpre : Frontend.denoteNList a.store.ns ((cvT0 :: cvTs).map (·.name)) = some (cvTsP.map (·.name)) ∧
+      (r0 :: rs).mapM (ConRon.Bridge.Inductives.dRecT a.store) = some rsP ∧
+      (cvT0 :: cvTs).mapM (Frontend.denoteCV a.store) = some cvTsP :=
+    ⟨ConRon.Bridge.Inductives.cvNames_go hTs, hrs, hTs⟩
+  obtain ⟨p1, -⟩ := hsp1 a a2 (some nIdxs) hok hpre hbmc
+  obtain ⟨p2, -⟩ := ConRon.Bridge.Inductives.reservedBasisNames_pstep p1.ok
+    (hC.check.pins.mono p1.ext p1.pins) hres
+  have q := p1.trans p2
+  obtain ⟨cvT0P, -, -, hT0, -⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hTs
+  have hty := ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hT0) q.ext
+  obtain ⟨rfl, hsv⟩ := bsoTwin_run q.ok (hC.check.pins.mono q.ext q.pins) hty hbso
+  have hA1 := hf hA
+  have hC1 : StageC dn vis fe env m1 a1 := StageC.of_pstep hC hS1 hA1 q
+  obtain ⟨lu, hdu⟩ : ∃ l, denoteL a1.store.ls (decI s) = some l := by
+    rcases hsv with ⟨e, hv⟩ | hz0
+    · exact hC1.stageT.twin.den.sort e _ hv
+    · exact ⟨_, hz0⟩
+  have hzh := (pinZero_stage hS1 hz).2
+  have hpne : rdW (m1.arr64 PINS) 0 ≠ 0 := by intro h0; simp [pinWordV, h0] at hz
+  have hzp : z = pinW m1 53 := by
+    simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz
+    rw [← hz]; rfl
+  have hF := hS1.check.pins.full hpne
+  obtain ⟨lz, hdz⟩ := hC1.stageT.twin.den.zero
+  rw [hF.zeroLevel, ← hzp] at hdz
+  exact Sim.mono (lvlEqC_simC p hcl hL (n + 2) hC1 hA1 s z hs hzh lu lz hdu hdz)
+    (fun _ _ _ _ ⟨hC', hg, hd, _, _⟩ => ⟨hC'.stage, hg, hd⟩)
 
 include hcl hL in
 /-- **`block_shape` refines `blockShape?` under `StageC`**, its `lvl_eq_c` the real call

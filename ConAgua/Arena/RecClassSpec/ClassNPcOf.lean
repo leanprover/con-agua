@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.IndPosSpec.EntryW
+import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.RecSim
@@ -100,65 +101,31 @@ theorem memberNamesW_stage {vis : Word} {fe : IFEnv} {a : AState}
   · rw [hr]; simpa [UInt64.toNat_ofNat_of_lt' hk] using hd
   · rw [hr]; simpa [UInt64.toNat_ofNat_of_lt' hk] using htop
 
-/-! ## `env_find` through the rows -/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
-    rowPW m w = rowP m w := by
-  have h1 := tagW_toNat_row w
-  have h2 := ixW_toNat w hw
-  have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
-  have hix : (ixW w + 1).toNat = rowIx w + 1 := by
-    have : (idxW w).toNat < 2 ^ 26 := by
-      rw [idxW_toNat_narrow w (rowTag_narrow ht')]; exact Nat.mod_lt _ (by decide)
-    rw [UInt64.toNat_add, h2]; simp [rowIx]; omega
-  simp only [rowPW, rowP, ht', ite_true, rdW, hix]
-  simp [selArr_rowSelW w ht']
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`env_find` is `find?`**: the memory unchanged, the result decoded by `decFound`, a found row
-decoding. -/
-theorem envFindW_found {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
-    {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR m vis fe)
-    (hw : w.toNat < 2 ^ 32) :
-    m1 = m ∧ fe.find? (decI w) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
-      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
-  unfold envFindW at h
-  obtain ⟨ht, h⟩ := of_ite_none h
-  have ht2 : tagW w ≤ 2 := by
-    have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
-    exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat_row]; exact UInt64.le_iff_toNat_le.mp ht2
-  have key := EnvR.find?_eq hE w hw htag
-  have key2 := EnvR.row_dec hE w hw htag
-  rw [rowCW_eq m w hw ht2, rowPW_eq m w hw ht2] at h
-  by_cases hc : rowC m w = 0
-  · rw [ite_eq_left hc] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    simp [key, hc, decFound]
-  rw [ite_eq_right hc] at h
-  by_cases hv : rowC m w - 1 < vis
-  · rw [ite_eq_left hv] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hc' : (rowC m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
-    have hv' : (rowC m w).toNat - 1 < vis.toNat := by
-      have := UInt64.lt_iff_toNat_lt.mp hv
-      rwa [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))] at this
-    refine ⟨rfl, by simp [key, hc, hv', decFound], fun _ => key2 hc⟩
-  rw [ite_eq_right hv] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hc' : (rowC m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
-  have : ¬ (rowC m w).toNat - 1 < vis.toNat := by
-    intro e; apply hv; rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _
-      (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simpa using e
-  simp [key, hc, this, decFound]
--/
-
 /-- An `indInfo` record's `nparams` word, and no other kind is one. -/
-theorem decCI_ind_cases {a : Array Word} {p : Nat}
-    {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
-    ∃ k, nat? (aread a) p = some k ∧
-      ((k = 3 ∧ ∃ cv caps, ci = .indInfo cv caps ∧ nat? (aread a) (p + 17) = some caps.nparams) ∨
+theorem decCI_ind_cases {a : Nat → Option Word} {p : Nat}
+    {ci : IConstantInfo} (h : decCI a p = some ci) :
+    ∃ k, nat? a p = some k ∧
+      ((k = 3 ∧ ∃ cv caps, ci = .indInfo cv caps ∧ nat? a (p + 17) = some caps.nparams) ∨
        (k ≠ 3 ∧ ∀ cv caps, ci ≠ .indInfo cv caps)) := by
-  sorry
+  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨k, hk, h⟩ := h
+  refine ⟨k, hk, ?_⟩
+  match k, h with
+  | 0, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 1, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 2, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 3, h =>
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨cv, hcv, caps, hcaps, rfl⟩ := h
+    left; refine ⟨rfl, cv, caps, rfl, ?_⟩
+    simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
+      Option.some.injEq] at hcaps
+    obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, np, hnp, _, _, rfl⟩ := hcaps
+    simpa [Nat.add_assoc] using hnp
+  | 4, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 5, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 6, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all []
+  | (_ + 7), h => simp at h
 
 /-! ## `class_n_pc_of` -/
 
@@ -166,69 +133,56 @@ def npcK3 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) =>
     if r3.headD 0 = 0 then some ([0], m3)
-    else if rdW (m3.arr64 EREC) (r3.tail.headD 0) = 3 then
-      some ([rdW (m3.arr64 EREC) (r3.tail.headD 0 + 17)], m3)
+    else if erRd m3 (r3.tail.headD 0) = 3 then
+      some ([erRd m3 (r3.tail.headD 0 + 17)], m3)
     else some ([0], m3)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def npcK2 (m1 : Mem) (p vis i : Word) : Option Word → Option (List Word × Mem)
   | none => none
-  | some b => if b = 1 then some ([rdW (m1.arr64 IW) (p + 4)], m1) else npcK3 (envFindW m1 i vis)
--/
+  | some b => if b = 1 then some ([rdW (m1.arr64 IW) (p + 4)], m1) else npcK3 (some (findRes m1 vis i, m1))
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def npcK1 (n : Nat) (p vis i : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) => npcK2 m1 p vis i (containsW n m1 (r1.headD 0) (r1.tail.headD 0) i)
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `class_n_pc_of`.** -/
 def npcW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, p, vis, i => npcK1 n p vis i (memberNamesW n m p)
--/
 
 section arms
 variable (n : Nat) (m m1 m3 : Mem) (p vis i b : Word) (r1 r3 : List Word)
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem npcW_eq : npcW (n + 1) m p vis i = npcK1 n p vis i (memberNamesW n m p) := rfl
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem npcK1_some : npcK1 n p vis i (some (r1, m1)) =
     npcK2 m1 p vis i (containsW n m1 (r1.headD 0) (r1.tail.headD 0) i) := rfl
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem npcK2_hit (h : b = 1) : npcK2 m1 p vis i (some b) = some ([rdW (m1.arr64 IW) (p + 4)], m1) := by
   rw [npcK2, ite_eq_left h]
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem npcK2_miss (h : b ≠ 1) : npcK2 m1 p vis i (some b) = npcK3 (envFindW m1 i vis) := by
+theorem npcK2_miss (h : b ≠ 1) : npcK2 m1 p vis i (some b) = npcK3 (some (findRes m1 vis i, m1)) := by
   rw [npcK2, ite_eq_right h]
--/
 theorem npcK3_none (h : r3.headD 0 = 0) : npcK3 (some (r3, m3)) = some ([0], m3) := by
   rw [npcK3, ite_eq_left h]
-theorem npcK3_ind (h : r3.headD 0 ≠ 0) (h3 : rdW (m3.arr64 EREC) (r3.tail.headD 0) = 3) :
-    npcK3 (some (r3, m3)) = some ([rdW (m3.arr64 EREC) (r3.tail.headD 0 + 17)], m3) := by
+theorem npcK3_ind (h : r3.headD 0 ≠ 0) (h3 : erRd m3 (r3.tail.headD 0) = 3) :
+    npcK3 (some (r3, m3)) = some ([erRd m3 (r3.tail.headD 0 + 17)], m3) := by
   rw [npcK3, ite_eq_right h, ite_eq_left h3]
-theorem npcK3_other (h : r3.headD 0 ≠ 0) (h3 : rdW (m3.arr64 EREC) (r3.tail.headD 0) ≠ 3) :
+theorem npcK3_other (h : r3.headD 0 ≠ 0) (h3 : erRd m3 (r3.tail.headD 0) ≠ 3) :
     npcK3 (some (r3, m3)) = some ([0], m3) := by
   rw [npcK3, ite_eq_right h, ite_eq_right h3]
 end arms
 
--- ronsync2 stage 2: grind_pattern [ind_grind] npcW_eq => npcW (n + 1) m p vis i
--- ronsync2 stage 2: grind_pattern [ind_grind] npcK1_some => npcK1 n p vis i (some (r1, m1))
--- ronsync2 stage 2: grind_pattern [ind_grind] npcK2_hit => npcK2 m1 p vis i (some b)
--- ronsync2 stage 2: grind_pattern [ind_grind] npcK2_miss => npcK2 m1 p vis i (some b)
+grind_pattern [ind_grind] npcW_eq => npcW (n + 1) m p vis i
+grind_pattern [ind_grind] npcK1_some => npcK1 n p vis i (some (r1, m1))
+grind_pattern [ind_grind] npcK2_hit => npcK2 m1 p vis i (some b)
+grind_pattern [ind_grind] npcK2_miss => npcK2 m1 p vis i (some b)
 grind_pattern [ind_grind] npcK3_none => npcK3 (some (r3, m3))
 grind_pattern [ind_grind] npcK3_ind => npcK3 (some (r3, m3))
 grind_pattern [ind_grind] npcK3_other => npcK3 (some (r3, m3))
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+set_option maxHeartbeats 1000000 in
 theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hmc : p.lookup "member_names_copy" = some memberNamesCopy)
     (hmn : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
-    (hct : p.lookup "sl_contains" = some slContains)     (hg : p.lookup "env_row_get" = some envRowGetL) (hef : p.lookup "env_find" = some envFindL)
+    (hct : p.lookup "sl_contains" = some slContains) (hg : p.lookup "env_row_get" = some envRowGetL)
+    (hb : p.lookup "base_row_get" = some baseRowGetL) (hef : p.lookup "env_find" = some envFindL)
     (hp : p.lookup "class_n_pc_of" = some classNPcOf) (n : Nat) (s₀ : St) (q vis i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_n_pc_of" [q, vis, i]
     ⦃fun r s' => LocEq s' s₀ ∧ npcW n s₀.mem q vis i = some (r, s'.mem); ⊤⦄ := by
@@ -238,9 +192,8 @@ theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       blockShapeMemberNames_spec p ha hmc hmn n, slContains_spec p hct n,
-      callW_spec p n "env_find"] <;>
-    finish (gen := 20) [rdW_eq]
--/
+      envFind_spec p hg hb hef n] <;>
+    finish (gen := 20) [rdW_eq, St.setLocs_mem', erRd_get]
 
 theorem npc_mem {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : bs.memberNames.contains i = true) :
     ConRon.Arena.classNPcOf bs fe i = bs.nP := by
@@ -263,7 +216,6 @@ theorem npc_other {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : ¬ bs.memberNam
   | indInfo cv caps => exact absurd rfl (hn cv caps)
   | _ => rfl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`class_n_pc_of` computes `classNPcOf`** (a pure twin), under the stage relation. -/
 theorem npcW_ok {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {p i : Word} {r : List Word} {bs : BlockShape}
@@ -272,22 +224,86 @@ theorem npcW_ok {vis : Word} {fe : IFEnv} {a : AState}
     StageR vis fe m' a ∧ IWGrow m m' ∧
       r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))] ∧
       ConRon.Arena.classNPcOf bs fe (decI i) < 2 ^ 64 := by
-  sorry
--/
+  rcases n with _ | n
+  · simp [npcW] at h
+  rw [npcW_eq] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+  rw [npcK1_some] at h
+  obtain ⟨hS1, hg1, hr1, hd1, ht1⟩ := memberNamesW_stage h1 hS hb
+  have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
+    have := hS1.iw.iw; have := hS1.iw.iwSize; omega
+  obtain ⟨ws, hws, hnm, hwH⟩ := slR_of_decHL m1 _ _ _ hd1 hb1
+  rw [UInt64.ofNat_toNat, UInt64.ofNat_toNat] at hws
+  rcases h2 : containsW n m1 (r1.headD 0) (r1.tail.headD 0) i with _ | b
+  · rw [h2] at h; simp [npcK2] at h
+  rw [h2] at h
+  have hcb := containsW_ok n m1 _ _ i b ws hws h2
+  have hcon : bs.memberNames.contains (decI i) = ws.contains i := by
+    rw [hnm]; exact contains_map_decI i hi ws hwH
+  have hpt := hb.ptop
+  by_cases hc : ws.contains i = true
+  · rw [ite_eq_left hc] at hcb
+    rw [npcK2_hit (h := hcb)] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    have hnp := (decBS_some hb.dec).2.2.1
+    have hrd := iwN_rdW_at (w := p) (k := 4) hnp hS.iw.iwSize
+    have hpb : p.toNat + 4 < 2 ^ 64 := by have := hS.iw.iw; have := hS.iw.iwSize; omega
+    have e4 : rdW (m1.arr64 IW) (p + 4) = rdW (m.arr64 IW) (p + 4) := by
+      simp only [rdW]
+      rw [show (p + 4).toNat = p.toNat + 4 by rw [UInt64.toNat_add]; simp; omega, hg1.iwGet _ (by omega)]
+    have hm : bs.memberNames.contains (decI i) = true := by rw [hcon]; exact hc
+    rw [npc_mem hm]
+    refine ⟨hS1, hg1, ?_, hrd.2⟩
+    rw [e4, show (4 : Word) = UInt64.ofNat 4 from rfl, hrd.1]
+  rw [ite_eq_right hc] at hcb
+  rw [npcK2_miss (h := by rw [hcb]; decide)] at h
+  have hnc : ¬ bs.memberNames.contains (decI i) = true := by rw [hcon]; exact hc
+  have hE := hS1.check.env
+  by_cases h0 : (findRes m1 vis i).headD 0 = 0
+  · rw [npcK3_none (h := h0)] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    rw [npc_none hnc (findRes_miss hE hi h0)]
+    exact ⟨hS1, hg1, rfl, by decide⟩
+  obtain ⟨hfind, ci, hci⟩ := findRes_hit hE hi h0
+  have hfci : fe.find? (decI i) = some ci := by rw [hfind, hci]
+  generalize findRes m1 vis i = r3 at h h0 hci
+  obtain ⟨k, hk, hcase⟩ := decCI_ind_cases hci
+  have hkr := erec_nat (m := m1) (w := r3.tail.headD 0) (c := 0) (by simpa using hk) (by decide)
+  rw [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at hkr
+  rcases hcase with ⟨rfl, cv, caps, rfl, hnp⟩ | ⟨hk3, hni⟩
+  · rw [npcK3_ind (h := h0) (h3 := by rw [hkr.1]; rfl)] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    have hr17 := erec_nat (m := m1) (w := r3.tail.headD 0) (c := 17) hnp (by decide)
+    rw [npc_ind hnc hfci]
+    refine ⟨hS1, hg1, ?_, hr17.2⟩
+    rw [show (17 : Word) = UInt64.ofNat 17 from rfl, hr17.1]
+  · have hne : erRd m1 (r3.tail.headD 0) ≠ 3 := by
+      rw [hkr.1]; intro e
+      have := congrArg UInt64.toNat e
+      rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; exact hkr.2)] at this
+      exact hk3 this
+    rw [npcK3_other (h := h0) (h3 := hne)] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    rw [npc_other hnc hfci hni]
+    exact ⟨hS1, hg1, rfl, by decide⟩
+
 
 /-- **`class_n_pc_of` refines `classNPcOf`** (a pure twin: the result word is its value). -/
 @[refines ConRon.Arena.classNPcOf]
 theorem classNPcOf_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hmc : p.lookup "member_names_copy" = some memberNamesCopy)
     (hmn : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
-    (hct : p.lookup "sl_contains" = some slContains)     (hg : p.lookup "env_row_get" = some envRowGetL) (hef : p.lookup "env_find" = some envFindL)
+    (hct : p.lookup "sl_contains" = some slContains) (hg : p.lookup "env_row_get" = some envRowGetL)
+    (hb : p.lookup "base_row_get" = some baseRowGetL) (hef : p.lookup "env_find" = some envFindL)
     (hp : p.lookup "class_n_pc_of" = some classNPcOf) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q i : Word) (bs : BlockShape)
-    (hS : StageR vis fe s₀.mem a₀) (hb : BSOK s₀.mem q.toNat bs) (hi : H i) :
+    (vis : Word) (fe : IFEnv) (q i : Word) (bs : BlockShape)
+    (hS : StageR vis fe s₀.mem a₀) (hb' : BSOK s₀.mem q.toNat bs) (hi : H i) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_n_pc_of" [q, vis, i]
     ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
-      r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))]; ⊤⦄ := by
-  sorry
+      r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))]; ⊤⦄ :=
+  triple_post (classNPcOf_spec p ha hmc hmn hct hg hb hef hp n s₀ q vis i) fun _ _ ⟨hl, hw⟩ =>
+    have h := npcW_ok hw hS hb' hi
+    ⟨hl, h.1, h.2.1, h.2.2.1⟩
 
 end L.Ind
 

@@ -376,19 +376,17 @@ end census
 
 /-! ## `nest_group_ctors`'s callee `nest_container` -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `nest_container` at any exec fuel. -/
 def ntWf : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | k + 1, m, vis, C => ntW k m vis C
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nt_spec' (p : Prog) (hl : NtLook p) (k : Nat) (s₀ : St) (vis C : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container" [vis, C]
     ⦃fun r s' => LocEq s' s₀ ∧ ntWf k s₀.mem vis C = some (r, s'.mem); ⊤⦄ := by
-  sorry
--/
+  cases k with
+  | zero => rw [invoke_eq _ hl.hnt]; simp only [callFn, nestContainer]; vcgen [exec] <;> grind
+  | succ k => exact nt_spec p hl k s₀ vis C
 
 theorem CNOk.grow {m m' : Mem} {p : Nat} {x : IConstantVal × Nat} (h : CNOk m p x (· < iwTop m))
     (hg : IWGrow m m') : CNOk m' p x (· < iwTop m') :=

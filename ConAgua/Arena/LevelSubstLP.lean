@@ -23,10 +23,10 @@ family keeps its keys on the spine stack (`keys_push`: the record pool's and lan
 slices share one walk) and `caps_never_zero`'s datum names in the record pool, so it gets the same
 four functions under its own names, at fixed arrays:
 
-* `lp_lookup` = `lvLookupG SPN POOL` renamed (model `lookupW SPN POOL`);
-* `lp_substl` = `lvSubstL` calling `lp_lookup`/`lp_substl` (model `substLW SPN POOL`);
-* `lp_spw` = `lvSpwG EREC` calling `lp_lookup`/`lp_spw` (model `spwW SPN POOL EREC`);
-* `lp_substpw` = `lvSubstPW` calling `lp_spw` (model `substPWW SPN POOL EREC`).
+* `lp_lookup` = `lvLookupG SPN POOL` renamed (model `lookupW (keyA SPN) POOL`);
+* `lp_substl` = `lvSubstL` calling `lp_lookup`/`lp_substl` (model `substLW (keyA SPN) POOL`);
+* `lp_spw` = `lvSpwG EREC` calling `lp_lookup`/`lp_spw` (model `spwW (keyA SPN) POOL EREC`);
+* `lp_substpw` = `lvSubstPW` calling `lp_spw` (model `substPWW (keyA SPN) POOL EREC`).
 
 The models and their refinements (`lookupW_ok`, `substLW_ok`, `spwW_ok`, …) are lane `levels`'
 generic ones; only the call-level specs are restated here.
@@ -93,7 +93,7 @@ include hpl in
 theorem lpLookup_spec (n : Nat) : ∀ (s₀ : St) (ko kc vo vc w : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "lp_lookup" [ko, kc, vo, vc, w]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      lookupW SPN POOL n s₀.mem ko kc vo vc w = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
+      lookupW (keyA SPN) POOL n s₀.mem ko kc vo vc w = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ ko kc vo vc w; rw [invoke_eq _ hpl]; simp only [callFn, lpLookup]; vcgen [exec] <;> grind
@@ -109,7 +109,7 @@ include hpl in
 theorem lpSubstL_spec (hpn : p.lookup "lv_node" = some lvNode) (hpm : p.lookup "lh_mk" = some lhMk)
     (hp : p.lookup "lp_substl" = some lpSubstL) (n : Nat) : ∀ (s₀ : St) (l ko kc vo vc : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "lp_substl" [l, ko, kc, vo, vc]
-    ⦃fun r s' => LocEq s' s₀ ∧ substLW SPN POOL n s₀.mem l ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ substLW (keyA SPN) POOL n s₀.mem l ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ l ko kc vo vc; rw [invoke_eq _ hp]; simp only [callFn, lpSubstL]; vcgen [exec] <;> grind
@@ -128,7 +128,7 @@ theorem lpSpw_spec (hpn : p.lookup "lv_node" = some lvNode) (hpp : p.lookup "lh_
     ∀ (s₀ : St) (po pc ko kc vo vc : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "lp_spw" [po, pc, ko, kc, vo, vc]
     ⦃fun r s' => LocEq s' s₀ ∧
-      spwW SPN POOL EREC n s₀.mem po pc ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
+      spwW (keyA SPN) POOL EREC n s₀.mem po pc ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
   sorry
 
 include hpl in
@@ -138,7 +138,7 @@ theorem lpSubstPW_spec (hpn : p.lookup "lv_node" = some lvNode)
     (n : Nat) (s₀ : St) (kd po pc ko kc vo vc : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "lp_substpw" [kd, po, pc, ko, kc, vo, vc]
     ⦃fun r s' => LocEq s' s₀ ∧
-      substPWW SPN POOL EREC n s₀.mem kd po pc ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
+      substPWW (keyA SPN) POOL EREC n s₀.mem kd po pc ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, lpSubstPW]
   cases n with

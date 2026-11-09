@@ -136,7 +136,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧ (r.headD 0).toNat ≤ 1 := by
   simp only [leafAtW] at h
   rcases hs : gafF m [CWF, leaf] with _ | ⟨r1, m1⟩ <;> simp only [hs, reduceCtorEq] at h
-  obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF leaf hl m m1 a r1 hs hS
+  obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok vis fe CWF leaf hl m m1 a r1 hs hS
   rw [CWF_eq] at hrun1
   generalize hw : r1.headD 0 = w at hd1 hd2 h
   have e1 : (decI leaf : EIdx) = decE leaf := rfl

@@ -411,13 +411,13 @@ theorem lvSubIntW_ok (n : Nat) (m m' : Mem) (a : AState) (u ko kc vo vc h : Word
   have hl : LvR (nameN a.store.lss.ls.ns) (m.set64 CTL 192 0) u L := by
     have := denoteL_lvR hA₀.1 (decI u) L hdu
     rwa [(word_decI _ u hu).mpr rfl] at this
-  cases hS : substLW SPN POOL n (m.set64 CTL 192 0) u ko kc vo vc with
+  cases hS : substLW (keyA SPN) POOL n (m.set64 CTL 192 0) u ko kc vo vc with
   | none => rw [hS] at hW; simp [subIntK] at hW
   | some r =>
   obtain ⟨x, m₁⟩ := r
   rw [hS, subIntK_some] at hW
-  obtain ⟨he, hx⟩ := substLW_ok (nameN_rel _ hwf) (KA := SPN) (VA := POOL) (by decide) (by decide)
-    ks vs n _ _ _ _ _ _ _ _ _ hl hk hv.toAR hS
+  obtain ⟨he, hx⟩ := substLW_ok (nameN_rel _ hwf) (KR := keyA SPN) (VA := POOL) (keyA_heap (by decide)) (by decide)
+    ks vs n _ _ _ _ _ _ _ _ _ hl hk.toK hv.toAR hS
   obtain ⟨a', hrun, hA', hlt, hf, hkp, -⟩ := lvInternW_ok _ n m₁ a x h m' (arenaD_heap hA₀ he) hwf hx hW
   refine ⟨a', hrun, hA', hlt, ?_, hkp⟩
   exact ((reset_frame m).mono (by simp) (by simp)).trans

@@ -37,13 +37,14 @@ theorem imC_spec : ∀ x ∈ imC, x.toNat ≠ 52 ∧ x.toNat ≠ 158 ∧ (x.toNa
   have : (UInt64.ofNat n).toNat = n := by simp; omega
   rw [this]; exact h2
 
-/-- The leaves of `imFns`: `consts_resolve_ffast`, which writes its own memo. -/
-def imLeaves : List FnName := ["consts_resolve_ffast"]
+/-- The leaves of `imFns`: `consts_resolve_ffast` and `struct_used_later` (infer_proj's field check,
+which clears and walks the stage's `hb` memo), each writing its own memo. -/
+def imLeaves : List FnName := ["consts_resolve_ffast", "struct_used_later"]
 
 /-- **The loop's callees outside the inductive arm**: the call closure in the checker's program
 of the declaration arms but the inductive one, `install_value`, `and_pin_ok`, `is_none`,
-`is_some`, `ind_block_to_erec`, `flush_caches` and `scratch_enter`, with `consts_resolve_ffast` a
-leaf (`imLeaves`). It does not contain `check_ind_decl`. -/
+`is_some`, `ind_block_to_erec`, `flush_caches` and `scratch_enter`, with `consts_resolve_ffast` and
+`struct_used_later` leaves (`imLeaves`). It does not contain `check_ind_decl`. -/
 def imFns : List FnName :=
   ["ab_clear", "ab_find", "ab_fvb", "ab_node", "ab_put", "abs_app", "abs_entry", "abs_forall",
    "abs_go", "abs_lam", "abs_let", "abs_proj", "add_carry", "all_level_params_defined", "alpd_go",
@@ -184,7 +185,18 @@ def imFns : List FnName :=
    "whnf_core_app2", "whnf_core_loop", "whnf_core_step", "whnf_core_step_proj", "whnf_loop",
    "whnf_step", "wk_clear", "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node",
    "ws_put", "wscoped_bfast", "zero_find", "zero_push",
-   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go"]
+   "unresolved_consts_error", "has_str_lit_go", "ue_mentions_go",
+    "base_row_get", "check_div_mod_pin_at_fe2", "check_guard_rows", "check_proj_guard",
+    "check_quot_record", "check_reduce_pin_pre", "check_structural_nat_pin",
+    "check_structural_nat_pin_at_fe2", "ci_at_lps", "ctor_family", "cv_at_lps", "env_pop_temp",
+    "eq_stored", "er_copy_er", "erec_put", "eta_rescue_ok", "fire_levels_at", "former_never_zero",
+    "former_never_zero_at", "former_res_sort", "former_sort_loop", "former_z", "fvar_type_d",
+    "iota_case3_at", "lh_contains", "lit_shape_ok", "lv_always_zero", "lv_never",
+    "lv_zero_where_zero", "nat_lit_stored", "nat_op_name", "opa_go", "open_pis_at_fvars_f", "opf_go",
+    "param_levels", "param_levels_go", "pin_range_has", "proj_guard_rows", "proj_guard_rows_at",
+    "proj_guard_sort", "quot_at", "quot_pin", "quot_preds_ok", "raw_table", "rules_at_lps_go",
+    "sl_get", "spn_push", "spn_to_er", "spn_to_iw", "str_lit_stored", "tbl_base_get", "tbl_own_get",
+    "value_guards"]
 
 /-- `imFns` as a tree of name codes. -/
 names_tree imTree : imFns

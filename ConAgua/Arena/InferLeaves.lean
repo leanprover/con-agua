@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.KnotSlot
+public import ConAgua.Arena.ErecRd
 import ConAgua.Arena.IndView
 import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.Infer
@@ -63,6 +64,7 @@ structure InferLeafProg (p : Prog) : Prop where
   pinAt : p.lookup "pin_at" = some pinAtL
   inferConst : p.lookup "infer_const" = some inferConstL
   envrow : p.lookup "env_row_get" = some envRowGetL
+  baserow : p.lookup "base_row_get" = some baseRowGetL
   envfind : p.lookup "env_find" = some envFindL
   lsNode : p.lookup "ls_node" = some lsNode
 
@@ -475,7 +477,7 @@ end lr
 def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
   match l with
   | .natVal _ => do
-      if ← natLitSupported fe then do
+      if ← natLitStored fe then do
         let nn ← pinNat
         constE nn
       else fail (.invalid "Nat literal without the Nat basis declarations")
@@ -491,20 +493,22 @@ def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
 theorem inferBody_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
     (l : ConLeche.Literal) (hv : a.store.view e = some (.lit l)) :
     (inferBody r fe d e).run a = (inferLitT fe l).run a := by
-  sorry
+  simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+  cases l <;> rfl
 
 /-- `inferBodyIO`'s `.lit` arm is `inferLitT`. -/
 @[refines_part ConRon.Arena.inferBodyIO "lit"]
 theorem inferBodyIO_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
     (l : ConLeche.Literal) (hv : a.store.view e = some (.lit l)) :
     (inferBodyIO r fe d e).run a = (inferLitT fe l).run a := by
-  sorry
+  simp only [inferBodyIO, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+  cases l <;> rfl
 
 /-- The callees of `infer_lit` with no proof yet (lane `whnf`'s `sorry`s and stubs): their specs. -/
 structure InferLitCallees (p : Prog) : Prop where
   natLitSup : ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
-    CoreSpec p n "nat_lit_supported" [vis] (natLitSupported fe) decBool s₀ a₀ dn vis fe M eb
+    CoreSpec p n "nat_lit_stored" [vis] (natLitStored fe) decBool s₀ a₀ dn vis fe M eb
   strLitSup : StrLitStoredOK p
   constE : ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (eb nm : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW nm →
@@ -554,7 +558,39 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     (he : HW e) (hg : tagW e = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
     RefE (closedNV p L.Checker.nvFns = true) (ilE p (n + 1) s₀.mem vis e) (inferLitT fe l) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  simp only [ilE]
+  refine RefE.abort0 (by rfl) fun h1 => ?_
+  refine RefE.abort0 (by rfl) fun h2 => ?_
+  obtain ⟨k, hk, hrel⟩ := view_lit_f s₀.mem a₀ hS.arena.base e he ⟨h1, UInt64.not_le.mp h2⟩ hg
+  rw [hv] at hk
+  have hl : l = k.l := by simpa using hk
+  subst hl
+  obtain ⟨l⟩ := k
+  by_cases h3 : tfld s₀.mem LIT (tierW e) (idxW e) 0 = 0
+  · rw [ite_eq_left h3]
+    cases l with
+    | strVal str => simp [RecRel, StrRec, h3] at hrel
+    | natVal N =>
+    simp only [inferLitT]
+    refine RefE.bind_callW (fun _ => rfl) (hc.natLitSup n s₀ a₀ dn vis fe M eb hS)
+      fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+    dsimp only [ilE.k_nat_lit_stored]
+    refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
+      (fun hb => by simpa [decBool] using hb)
+      fun _ _ => ?_
+    exact il_arm p hp hc n 1 (by decide) hS₁
+  · rw [ite_eq_right h3]
+    cases l with
+    | natVal N => simp [RecRel, NatRec, h3] at hrel
+    | strVal str =>
+    simp only [inferLitT]
+    refine RefE.bind_callW (fun _ => rfl) (hc.strLitSup n s₀ a₀ dn vis fe M eb hS)
+      fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+    dsimp only [ilE.k_str_lit_stored]
+    refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
+      (fun hb => by simpa [decBool] using hb)
+      fun _ _ => ?_
+    exact il_arm p hp hc n 5 (by decide) hS₁
 
 /-- **`infer_lit(vis, e)` refines the `.lit` clauses** (`il_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBody "lit (inferLitT)"]
@@ -591,10 +627,26 @@ theorem inferBody_const (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
   rfl
 
 /-- A decoded constant record has its `ConstantVal` at `q + 1`. -/
-theorem decCI_cvA {a b : Array Word} {q : Word}
-    {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b)) :
-    decCV (aread b) (q.toNat + 1) = some ci.toConstantVal := by
-  sorry
+theorem decCI_cvA {R : Nat → Option Word} {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
+    decCV R (q.toNat + 1) = some ci.toConstantVal := by
+  cases hq : R q.toNat with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | k
+  all_goals (rw [hk] at h; simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h)
+  all_goals first
+    | (simp at h; done)
+    | ((first
+        | obtain ⟨cv, hcv, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
+       exact hcv)
 
 theorem mapM_len {α β : Type} (f : α → Option β) :
     ∀ (l : List α) (xs : List β), l.mapM f = some xs → xs.length = l.length
@@ -610,12 +662,15 @@ theorem hslice?_length {k : IdxKind} {b : Array Word} {o c : Nat} {xs : List (Id
   unfold hslice? at h; simpa using mapM_len _ _ _ h
 
 /-- The words of a decoded `ConstantVal` at `q + 1`: name, level-parameter slice, type. -/
-theorem infer_decCV_words {b : Array Word} {q : Word} {cv : IConstantVal}
-    (h : decCV (aread b) (q.toNat + 1) = some cv) (hsz : b.size < 2 ^ 63) :
-    HW (rdW b (q + 1)) ∧ cv.name = decI (rdW b (q + 1)) ∧ HW (rdW b (q + 4)) ∧
-      cv.type = decI (rdW b (q + 4)) ∧
-      hslice? (aread b) (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
-  sorry
+theorem infer_decCV_words {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
+    {q : Word} {cv : IConstantVal} (h : decCV R (q.toNat + 1) = some cv) :
+    HW (rd (q + 1)) ∧ cv.name = decI (rd (q + 1)) ∧ HW (rd (q + 4)) ∧
+      cv.type = decI (rd (q + 4)) ∧
+      hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams := by
+  obtain ⟨⟨w1, hw1, hl1, hn⟩, -, -⟩ := decCV_words h
+  have e1 : rd (q + 1) = w1 := hR.off hw1 (by simp)
+  obtain ⟨hsl, -, hty, hl4⟩ := decCV_rd hR h
+  exact ⟨by rw [e1]; exact hl1, by rw [e1]; exact hn, hl4, hty, hsl⟩
 
 theorem viewLs_run (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss.view h = some ids) :
     (viewLs h).run a = .ok (ids, a) := by
@@ -646,7 +701,65 @@ theorem inferConst_ref (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK p) (
     (hus : HW us) :
     RefE (closedNV p L.Checker.nvFns = true) (inferConstE p (n + 1) s₀.mem vis nm us)
       (inferConstT fe (decI nm) (decI us)) a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  simp only [inferConstE]
+  refine RefE.onlySim (fun _ => rfl) (fun r₁ m₁ c1 => triple_of_callW
+      (envFind_refines p hp.envrow hp.baserow hp.envfind n ⟨s₀.mem, Locals.init []⟩ vis nm hS.env hnm) c1)
+    fun r₁ m₁ ⟨t₁, ht₁, hm₁, _, hfind, hfound⟩ => ?_
+  rw [ht₁] at hm₁
+  subst hm₁
+  dsimp only [inferConstE.k_env_find]
+  by_cases h0 : r₁.headD 0 = 0
+  · -- `unknownConstError`
+    rw [ite_eq_left h0]
+    have hnone : fe.find? (decI nm) = none := by rw [hfind]; simp only [envFound, h0, ite_true]
+    refine RefE.onlySim (fun _ => rfl) (fun r₂ m₂ c2 => triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+      (pinAt_refines p hp.pinAt n ⟨s₀.mem, Locals.init []⟩ a₀ ⟨fun _ => hS.pins⟩ 13) c2)
+      fun r₂ m₂ ⟨t₂, ht₂, hm₂, _, hlt, hpin⟩ => ?_
+    have hue : (unknownConstError (decI nm)).run a₀ = .ok (if nm = r₂.headD 0 then
+        CheckError.notImplemented "use of the sorryAx axiom" else .invalid "unknown constant", a₀) := by
+      have hb := decI_beq (k := .name) nm (r₂.headD 0) hnm hlt
+      simp only [unknownConstError, pinSorryAx, show PIN_SORRY_AX = (13 : Word).toNat from rfl,
+        StateT.run_bind, hpin, except_ok_bind, hb]
+      by_cases he : nm = r₂.headD 0
+      · simp only [he, ↓reduceIte]; rfl
+      · simp only [he, ↓reduceIte]; rfl
+    rw [show inferConstT fe (decI nm) (decI us) = (unknownConstError (decI nm) >>= fun err => fail err) by
+      simp only [inferConstT, hnone]]
+    refine RefE.bind_right hue ?_
+    dsimp only [inferConstE.k_pin_at]
+    by_cases he : nm = r₂.headD 0
+    · rw [ite_eq_left he, ite_eq_left he]; exact fun _ => ErrClaim.fail _ _ rfl
+    · rw [ite_eq_right he, ite_eq_right he]; exact fun _ => ErrClaim.fail _ _ rfl
+  -- found: the level count
+  rw [ite_eq_right h0]
+  obtain ⟨ci, hci⟩ := hfound h0
+  have hfind' : fe.find? (decI nm) = some ci := by
+    rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
+  have hcv := decCI_cvA hci
+  generalize hcvr : ci.toConstantVal = cv at hcv
+  refine RefE.abort0 (by rfl) fun hne => ?_
+  obtain ⟨hw1, hname, hw4, hty, hsl⟩ := infer_decCV_words (erRdOK _) hcv
+  obtain ⟨ids, hv, hlen1, hlen2⟩ := lsNodeW_view hS.arena.base hus hne
+  rw [show inferConstT fe (decI nm) (decI us) = (viewLs (decI us) >>= fun usl =>
+      if (usl.length != cv.levelParams.length) = true then fail (.invalid "incorrect number of universe levels")
+      else constTyAt cv (decI us)) by simp only [inferConstT, hfind', hcvr]]
+  refine RefE.bind_right (viewLs_run _ _ _ hv) ?_
+  refine RefE.guardThen (by rfl)
+    (fun hl => by
+      rw [hslice?_lenR hsl, ← hlen2, ← hlen1]
+      simp only [bne_iff_ne, ne_eq]
+      intro h; exact hl (UInt64.toNat_inj.mp h))
+    (fun hb hl => by
+      rw [hslice?_lenR hsl, show erRdT s₀.mem (r₁.tail.headD 0 + 3) = _ from hl.symm, hlen1, hlen2] at hb
+      simp at hb) fun _ _ => ?_
+  have hcv' : cv = ⟨decI (erRdT s₀.mem (r₁.tail.headD 0 + 1)), cv.levelParams,
+      decE (erRdT s₀.mem (r₁.tail.headD 0 + 4))⟩ := by
+    rw [← hname, decE_eq, ← hty]
+  rw [hcv', ← bind_pure (constTyAt _ _)]
+  refine RefE.bind_callW (fun _ => rfl)
+    (hct n s₀ a₀ dn vis fe M eb _ _ _ _ us cv.levelParams hS hw1 hw4 hus hsl)
+    fun r₃ m₃ _ h₃ => ?_
+  exact RefE.ret rfl ⟨h₃.after, rfl, h₃.resOk⟩
 
 /-- **`infer_const` refines the `.const` clause** (`inferConst_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBody "const (inferConstT)"]

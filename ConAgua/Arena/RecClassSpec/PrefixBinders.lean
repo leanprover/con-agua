@@ -10,6 +10,7 @@ import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.RecClassSpec.MjW
 import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.RecClass
@@ -78,7 +79,52 @@ theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (
     fcgW n m io il cn = some (r, m') → DecB (fun m => decPL m (decCC m) io.toNat il.toNat) m xs → H cn →
     (m.arr64 IW).size < 2 ^ 64 →
     m' = m ∧ FcRes m r (xs.find? (fun x => x.cv.name == decI cn)) := by
-  sorry
+  induction n with
+  | zero => intro m m' io il cn r xs h; simp [fcgW] at h
+  | succ n ih =>
+  intro m m' io il cn r xs h hxs hcn hsz
+  by_cases hl : il = 0
+  · rw [fcgW.arm1 (hc1 := hl)] at h
+    cases h
+    have : xs = [] := by
+      have := decPL_length _ (hxs.get (OMono.decPL (fun q => decCC_mono q) _ _))
+      rw [hl] at this; exact List.eq_nil_of_length_eq_zero (by simpa using this)
+    subst this
+    exact ⟨rfl, rfl⟩
+  have hl0 : il.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
+  obtain ⟨k, hk⟩ : ∃ k, il.toNat = k + 1 := ⟨il.toNat - 1, by omega⟩
+  have hxs' : decPL (truncM m) (decCC (truncM m)) io.toNat (k + 1) = some xs := by rw [← hk]; exact hxs
+  obtain ⟨p, X0, rest, rfl, hp, hX0, hrest⟩ := decPL_cons hxs'
+  obtain ⟨hpt, hpm⟩ := rec2IwN_trunc hp
+  obtain ⟨ep, tp⟩ := rec2RdN (w := io) (k := 0) (by simpa using hpm) hsz
+  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at ep
+  have hX0m : decCC m (UInt64.ofNat p : Word).toNat = some X0 := by
+    rw [tp]; exact (show DecB (fun m => decCC m p) m X0 from hX0).get (decCC_mono _)
+  obtain ⟨w, ew, hwH, hwd⟩ := rec2CCName hX0m hsz
+  by_cases hhit : w = cn
+  · subst hhit
+    rw [fcgW.arm2 (hc1 := hl) (hc2 := by simp only [erRd_fold]; rw [ep, ew])] at h
+    cases h
+    refine ⟨rfl, ?_⟩
+    have : (X0.cv.name == decI w) = true := by rw [← hwd]; simp
+    simp only [List.find?_cons, this]
+    exact ⟨rfl, by rw [ep]; simp only [List.headD_cons, List.tail_cons]; rw [tp]; exact hX0⟩
+  · rw [fcgW.arm3 (hc1 := hl) (hc2 := by simp only [erRd_fold]; rw [ep, ew]; exact hhit)] at h
+    obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
+    rw [fcgW.k_class_gen_prefix_binders_find_ctor_go.arm1] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    have := iwN_lt hpm
+    have hio1 : (io + 1).toNat = io.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hil1 : (il - 1).toNat = k := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+    obtain ⟨hm, hres⟩ := ih m m'' (io + 1) (il - 1) cn r' rest hr (by rw [hio1, hil1]; exact hrest) hcn hsz
+    subst hm
+    refine ⟨rfl, ?_⟩
+    have : (X0.cv.name == decI cn) = false := by
+      rw [← hwd]; simp only [beq_eq_false_iff_ne, ne_eq]
+      exact fun e => hhit (decI_inj hwH hcn e)
+    simp only [List.find?_cons, this]
+    exact hres
 
 theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : ClassGen)
     (h : fcW n m g c cn = some (r, m')) (hG : DecB (fun m => decCG m g.toNat) m G) (hcn : H cn)
@@ -310,8 +356,50 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     (g : Word) (G : ClassGen) (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK m) :
     RSim (gpbW n m g) (ConRon.Arena.ClassGen.prefixBinders G) a
-      (fun b a' x => KP dn vis fe m decIHO b a' x ∧ AbsOK b.2) := by
-  sorry
+      (fun b a' x => KP vis fe m decIHO b a' x ∧ AbsOK b.2) := by
+  rcases n with _ | n
+  · exact RSim.none
+  rw [gpbW.arm1]
+  unfold ConRon.Arena.ClassGen.prefixBinders
+  rw [rec2MapM_genBinder]
+  have hsz := hS.iw.iwSize
+  have hG' : decCG (truncM m) g.toNat = some G := hG
+  simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hG'
+  obtain ⟨nP, hnP, ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, hGe⟩ := hG'
+  obtain ⟨o1, l1, h1, h2, hpd⟩ := decAt_some hps
+  obtain ⟨-, h1m⟩ := rec2IwN_trunc h1
+  obtain ⟨-, h2m⟩ := rec2IwN_trunc h2
+  obtain ⟨e1, t1⟩ := rec2RdN (w := g) (k := 1) h1m hsz
+  obtain ⟨e2, t2⟩ := rec2RdN (w := g) (k := 2) (by simpa [Nat.add_assoc] using h2m) hsz
+  simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl] at e1 e2
+  rw [e1, e2]
+  have hpar : decHL m o1 l1 = some G.params := by
+    rw [← hGe]; exact (show DecB (fun m => (decHL m o1 l1 : Option (List EIdx))) m ps from hpd).get (OMono.decHL _ _)
+  have hpb : 0 < l1 → o1 + l1 ≤ iwTop m := by
+    intro hl
+    have hpd' : decHL (truncM m) o1 l1 = some ps := hpd
+    exact decHL_truncM_bound hpd' (by omega)
+  refine RSim.bind (K := gpbW.k_fvar_type_ds n g) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ G.params).sim
+      ⟨hS, by rw [t1, t2]; exact hpar, by rw [t1, t2]; exact hpb⟩) (fun _ hb => ftdsF_afr hb)) ?_
+  rintro ⟨r1, m1⟩ pbs a1 - ⟨⟨hS1, hg1, hpbs, hpbb⟩, hf1⟩
+  dsimp only at hS1 hg1 hpbs hpbb
+  simp only [getD_zero, Nat.zero_add, getD_one] at hpbs hpbb
+  rw [gpbW.k_fvar_type_ds.arm1]
+  have hps := psW_sim dn vis fe G g hns n m1 a1 0 0 hS1 (hG.grow (decCG_mono _) hg1) (by simp) (by simp)
+    (hf1 hA)
+  simp only [UInt64.toNat_zero, List.drop_zero] at hps
+  refine RSim.bind (K := gpbW.k_class_gen_prefix_binders_slots_go n (r1.headD 0) (r1.tail.headD 0)) rfl hps ?_
+  rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
+  dsimp only at hS2 hg2 ho
+  rcases o with _ | sbs
+  · rw [gpbW.k_class_gen_prefix_binders_slots_go.arm1 (hc1 := ho)]; exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, rfl⟩, hA2⟩
+  obtain ⟨h21, hsb, hsbb⟩ := ho
+  rw [gpbW.k_class_gen_prefix_binders_slots_go.arm2 (hc1 := by rw [h21]; decide)]
+  refine RSim.lstep (K := gpbW.k_sl_append) rfl fun ⟨r3, m3⟩ h3 => ?_
+  obtain ⟨hS3, hg3, hd3, hb3⟩ := rec2AppendW_dec h3 hS2 ((decHL_decB hpbs hpbb).grow (OMono.decHL _ _) hg2) hsb hsbb
+  rw [gpbW.k_sl_append.arm1]
+  exact RSim.pure_some ⟨⟨hS3, hg1.trans (hg2.trans hg3), rfl, by simpa using hd3, by simpa using hb3⟩,
+    appendW_afr h3 hA2⟩
 
 /-- **`class_gen_prefix_binders` refines `ClassGen.prefixBinders`** (through the stubs of
 `class_gen_motive_ty`, `class_gen_minor_ty` and `fvar_type_ds`): the parameters' binders, then
@@ -323,7 +411,7 @@ theorem classGenPrefixBinders_refines (p : Prog) (hp : PbProg p) (n : Nat) (s₀
     (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_prefix_binders" [g]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.prefixBinders G) a₀ ∧
-      KP dn vis fe s₀.mem decIHO (r, s'.mem) (AM.st (ConRon.Arena.ClassGen.prefixBinders G) a₀)
+      KP vis fe s₀.mem decIHO (r, s'.mem) (AM.st (ConRon.Arena.ClassGen.prefixBinders G) a₀)
         (AM.res (ConRon.Arena.ClassGen.prefixBinders G) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (prefixBinders_spec p hp n s₀ g) fun _ _ ⟨hl, hw⟩ =>
     let h := (gpbW_sim dn vis fe n _ a₀ g G hS hG hns hA).am hw

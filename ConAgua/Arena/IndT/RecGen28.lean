@@ -248,7 +248,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     exact hP2.fr (hP3.trans ((((MFr.set_iw _ _ _).trans (MFr.set_iw _ _ _)).trans (MFr.set_iw _ _ _)).trans
       ((MFr.set_iw _ _ _).trans (MFr.set_iw _ _ _))))
   -- the record's words
-  have hsrcw : ∀ t, t < 13 → ∀ v, (iwA (truncM mb))[p0 + t]? = some v →
+  have hsrcw : ∀ t, t < 13 → ∀ v, iwA (truncM mb) (p0 + t) = some v →
       rdW (s2.mem.arr64 IW) (UInt64.ofNat p0 + UInt64.ofNat t) = v := by
     intro t ht v hv
     obtain ⟨hlt, hv'⟩ := truncM_iw_get hv
@@ -267,7 +267,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     intro t ht
     rw [← hrdC t ht, ← hC, rdW_set_ne (by rw [hmt t ht, hn11]; omega)]
   have hwords : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 →
-      (m4.arr64 IW)[nm.toNat + k]? = (iwA (truncM mb))[p0 + k]? := by
+      (m4.arr64 IW)[nm.toNat + k]? = iwA (truncM mb) (p0 + k) := by
     intro k hk h9 h10
     obtain ⟨v, hv⟩ := decTM_get hsrc k hk
     rw [hv, ← hE, set64IW_get, ite_eq_right (by omega)]

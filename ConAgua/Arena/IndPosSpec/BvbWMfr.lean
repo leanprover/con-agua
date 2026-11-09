@@ -14,7 +14,7 @@ public import ConAgua.Arena.IndPosSpec.RxMapW
 /-!
 # BvbWMfr
 
-`hbMR_mfr`, `PosMR`, `posmemo_erCopyW_iw`, `erToIwW_mfr`, `MFr.ofFvbF`, `envFindW_mfr` and the lemmas only they use.
+`hbMR_mfr`, `PosMR`, `posmemo_erCopyW_iw`, `erToIwW_mfr`, `MFr.ofFvbF` and the lemmas only they use.
 -/
 
 section
@@ -69,10 +69,6 @@ theorem MFr.ofFvbF {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r,
   MFr.of_frame (fvbF_frame h)
     (fun b hb => .inl (by simp only [frA, List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
     (fun x hx => .inl (by simp only [frC, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem envFindW_mfr {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :
-    MFr [] [] m m' := by rw [envFindW_mem h]; exact MFr.refl _ _ _
--/
 
 theorem dcGoW_mfr : ∀ (n : Nat) (m m' : Mem) (hi off l : Word) (r : List Word),
     dcGoW n m hi off l = some (r, m') → MFr [] [] m m'

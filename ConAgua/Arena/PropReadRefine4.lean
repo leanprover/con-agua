@@ -34,12 +34,37 @@ theorem pr_run_of_ok {α : Type} [Inhabited α] {x : AM α} {a : AState} (h : AM
 
 /-- **A projection table's body at field `i`**: the words `head_proof_proj` reads are the
 handle of `tbl.bodies.getD i default`. -/
-theorem decTbl_body {E : Array Word} {q : Word} {tbl : IProjTable} (h : decTbl (aread E) q.toNat = some tbl)
-    (hsz : E.size < 2 ^ 63) (i : Word) :
-    HW (if i < rdW E (q + 10) then rdW E (rdW E (q + 9) + i) else 0) ∧
-      decE (if i < rdW E (q + 10) then rdW E (rdW E (q + 9) + i) else 0) =
+theorem decTbl_body {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {tbl : IProjTable} (h : decTbl R q.toNat = some tbl) (i : Word) :
+    HW (if i < rd (q + 10) then rd (rd (q + 9) + i) else 0) ∧
+      decE (if i < rd (q + 10) then rd (rd (q + 9) + i) else 0) =
         tbl.bodies.getD i.toNat default := by
-  sorry
+  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨-, -, -, -, -, -, -, -, -, -, bs, hbs, rfl⟩ := h
+  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
+    Option.map_eq_some_iff] at hbs
+  obtain ⟨off, ⟨wo, hwo, rfl⟩, cnt, ⟨wc, hwc, rfl⟩, hs⟩ := hbs
+  have h9 : rd (q + 9) = wo := hR.offN (k := 9) hwo (by decide)
+  have h10 : rd (q + 10) = wc := hR.offN (k := 10) (by simpa [Nat.add_assoc] using hwc) (by decide)
+  rw [h9, h10]
+  obtain ⟨hlen, hget⟩ := hslice?_get hs
+  by_cases hi : i < wc
+  · have hi' : i.toNat < wc.toNat := UInt64.lt_iff_toNat_lt.mp hi
+    obtain ⟨w, hw, hw32, hl⟩ := hget i.toNat hi'
+    have hrd : rd (wo + i) = w := hR.off hw rfl
+    simp only [hi, ↓reduceIte, hrd]
+    refine ⟨hw32, ?_⟩
+    have hb : i.toNat < bs.length := by omega
+    rw [Array.getD_eq_getD_getElem?]
+    simp only [List.getElem?_toArray, hl, Option.getD_some, decE_eq]
+  · simp only [hi, ↓reduceIte]
+    refine ⟨by unfold HW; decide, ?_⟩
+    have hb : ¬ i.toNat < bs.length := by
+      rw [hlen]; exact fun h => hi (UInt64.lt_iff_toNat_lt.mpr h)
+    rw [Array.getD_eq_getD_getElem?]
+    simp only [List.getElem?_toArray, List.getElem?_eq_none (Nat.le_of_not_lt hb), Option.getD_none]
+    rfl
 
 /-! ## `head_proof_proj` -/
 

@@ -97,18 +97,18 @@ theorem slpOne_core {n : Nat} {m m₁ : Mem} {a : AState} {ko kc vo vc w h : Wor
     {ks : List Name} {us : List LIdx} {vs : List Level}
     (hS : CoreS dn m a vis fe M eb) (hE : ILWEnv m a ko kc vo vc ks us vs)
     (hn : nameN a.store.lss.ls.ns w nm) (hh : h.toNat < 2 ^ 32)
-    (hW : slpOne n m w (lookupW SPN POOL n m ko kc vo vc w) = some (h, m₁)) :
+    (hW : slpOne n m w (lookupW (keyA SPN) POOL n m ko kc vo vc w) = some (h, m₁)) :
     ∃ a₁, (internLevel (Level.subst ks vs (.param nm))).run a = .ok (decI h, a₁) ∧
       LvOut dn vis fe M eb m m₁ a a₁ h := by
   have htop := m.top.toNat_lt
   have h41 := hS.arena.base.lit.1.top41
   have hv := lvsR_of_slice hS.arena.base us vs vo vc hE.vals (by have := hE.vtop; omega) hE.vden
-  cases e : lookupW SPN POOL n m ko kc vo vc w with
+  cases e : lookupW (keyA SPN) POOL n m ko kc vo vc w with
   | none => rw [e] at hW; simp [slpOne] at hW
   | some fv =>
   obtain ⟨f, v⟩ := fv
   rw [e] at hW
-  rcases lookupW_ok (nameN_rel _ hS.nwf) n _ _ _ _ _ _ _ _ _ _ _ hE.keys hv.toAR hn e with
+  rcases lookupW_ok (nameN_rel _ hS.nwf) n _ _ _ _ _ _ _ _ _ _ _ hE.keys.toK hv.toAR hn e with
     ⟨hf, hvl⟩ | ⟨rfl, hgo⟩
   · rw [slpOne_hit n m w f v hf] at hW
     obtain ⟨a₁, hrun, o⟩ := lvInternW_core _ n m a v h m₁ hS hvl hW
