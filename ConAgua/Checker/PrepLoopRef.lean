@@ -167,7 +167,14 @@ theorem PFr.of_frame {ord mk nw : Word} {m m' : Mem} (h : MemFrame [IW] [] m m')
 theorem PEnv.frame {m m' : Mem} {a a' : AState} {dsAll : Array IDeclaration} {np nw ord mk : Word}
     (hE : PEnv m a dsAll np nw ord mk) (hf : PFr ord mk nw m m') (hA : ArenaR m' a') :
     PEnv m' a' dsAll np nw ord mk := by
-  sorry
+  have hctl : ∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x := hf.ctl
+  have htop : iwTop m' = iwTop m := by simp only [iwTop, hctl 200 (by decide)]
+  refine ⟨fun x hx => ?_, hE.size, hE.n59, hE.np, hE.rg1, htop ▸ hE.rg2, ?_, hA⟩
+  · rw [hf.arr DECL (by decide) (by decide), hf.arr DLP (by decide) (by decide)]; exact hE.recs x hx
+  · have h1 := (IWOK_iff m).1 hE.iwok
+    simp only [IWOK_iff, iwTop, erTop, erecTop1, hf.size, hctl 129 (by decide), hctl 130 (by decide),
+      hctl 200 (by decide)] at h1 ⊢
+    exact h1
 
 theorem getIW_set64 (m : Mem) (w v : Word) (x : Nat) :
     ((m.set64 IW w v).arr64 IW)[x]? =

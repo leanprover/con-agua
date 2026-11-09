@@ -802,7 +802,7 @@ theorem hoistDepsOf_ok (n : Nat) :
     obtain ⟨h6, -, t, ht, hdec⟩ := hD
     rw [ite_eq_right (by rw [h6]; decide), ite_eq_right (by rw [h6]; decide),
       ite_eq_right (by rw [h6]; exact fun h => h rfl)] at hb
-    obtain ⟨ho0, hptr⟩ := hok.2 h6
+    obtain ⟨ho0, hptr, -⟩ := hok.2 h6
     have hP : (mclearG hsSch m).arr64 DLP = m.arr64 DLP := hf₀.1 _ (by decide) (by decide)
     have hBA : BlockAt' (mclearG hsSch m) (dw (m.arr64 DECL) r.toNat 2) (dw (m.arr64 DECL) r.toNat 3) 0 b :=
       ⟨⟨t, by rw [hP]; exact ht, by rw [hP]; simpa using hdec⟩, ho0,

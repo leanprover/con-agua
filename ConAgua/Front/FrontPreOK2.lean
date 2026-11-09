@@ -294,7 +294,7 @@ theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups
   have hs2'' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.size IFL, hs1']
   have hIFR2 : topN m₂ IFR < 2 ^ 62 := by unfold topN wd; rw [hifr2]; exact hIFR1
   have hIFL2 : topN m₂ IFL < 2 ^ 62 := by have := V3.2; omega
-  obtain ⟨st', I1, I2, I3, I4⟩ := installW_twin hA2 hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 hW3
+  obtain ⟨st', I1, I2, I3, I4⟩ := installW_twin hA2 hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 (by omega) hW3
   have hk : DK m m₂ := (DK.ofFrame hfr1 (by decide) (by decide)).trans
     (DK.ofFrame hfr2 (by decide) (by decide))
   refine ⟨⟨st', ?_, I3⟩, I2, fun hmo => MemFrame.modeOK I4 (by simp) (by simp)

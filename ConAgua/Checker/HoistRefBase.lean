@@ -61,7 +61,7 @@ clears: `IndDeclAt` would decode another word than L reads), nor point to it. -/
 def RecOK (D P : Array Word) (r : Nat) : Prop :=
   (dw D r 0 ≠ 6 → (dw D r 1).toNat < 2 ^ 32 ∧ (dw D r 4).toNat < 2 ^ 32 ∧ (dw D r 5).toNat < 2 ^ 32) ∧
   (dw D r 0 = 6 → (dw D r 2).toNat ≠ 0 ∧
-    ∀ j < (dw D r 3).toNat, P[(dw D r 2).toNat + j]?.getD 0 ≠ 0)
+    (∀ j < (dw D r 3).toNat, P[(dw D r 2).toNat + j]?.getD 0 ≠ 0) ∧ (dw D r 4).toNat < 2 ^ 63)
 
 /-- **The stream in the order `ord`**: position `k` is the record `IW[ord + k]` of `DECL` (below
 `2 ^ 59`), which represents `ds[k]` (`RecOK`). -/

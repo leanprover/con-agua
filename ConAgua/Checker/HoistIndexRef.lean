@@ -91,7 +91,17 @@ theorem hix_decCV_name {a : Array Word} {q : Nat} {v : IConstantVal} (h : decCV 
 theorem hix_decCI_name {a : Array Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
     ∃ w, a[p + 1]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
-  sorry
+  simp only [decCI, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨t, -, h⟩ := h
+  split at h <;>
+    simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
+      reduceCtorEq] at h
+  · obtain ⟨v, hv, rfl⟩ := h; exact hix_decCV_name hv
+  · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
+  · obtain ⟨v, hv, rfl⟩ := h; exact hix_decCV_name hv
+  · obtain ⟨v, hv, _, _, rfl⟩ := h; exact hix_decCV_name hv
+  · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
+  · obtain ⟨v, hv, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
 
 theorem hix_trunc_get {P : Array Word} {t i : Nat} {v : Word} (h : (trunc P t)[i]? = some v)
     (hi : i ≠ 0) : P[i]? = some v ∧ i ≤ t := by
