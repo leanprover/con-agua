@@ -58,4 +58,11 @@ names_tree armAbsTree : armAbsFns
 def armAbsT : ArmTest :=
   (tA fun b => memoFreeA [b], tC fun c => memoFreeC [c.toUInt64], armAbsTree, armAbsTree)
 
+/-- `ownFree`: `class_recs_rules_ok`, `stream_recs_check`, `flush_caches` (no own-row array, no
+`CTL[133]`: `ownC` kept). -/
+names_tree armOwnTree : armOwnFns
+def armOwnT : ArmTest :=
+  (tA fun b => decide (b ∉ ([OIXA, OIXS, OIXN, tier1 OIXA, tier1 OIXS, tier1 OIXN] : List TieredArray)),
+    tC fun c => decide (c ≠ 133), armOwnTree, armOwnTree)
+
 end L.Checker
