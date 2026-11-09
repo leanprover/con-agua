@@ -1,6 +1,8 @@
 module
 
 import ConAgua.Arena.IndT.RecGen19
+public import ConAgua.Arena.IndT.Pass
+public import ConAgua.Arena.IndT.PassCS
 public import ConAgua.Arena.IndT.PosFkc
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 public import ConAgua.Arena.GrindAttr
@@ -81,9 +83,11 @@ include hq hIlpf hLC henv in
 /-- **`check_block_classes` refines `checkBlockClasses`, both outcomes** under `StageC` (twin side:
 con-ron's `checkBlockClasses_spec`'s proof; the keys by `ckk_ref` through the run, the majors by
 `clm_ref`; the two rejects, `classRead`'s `none` and not one class per member, are the twin's). -/
-theorem cbc_ref (hP : CbcProg p) (hF : FtProg p) (hFk : FkcProg p) (hWt : WhnfTopE p) {fs : List FnName}
-    (hcl : closedA p posFreeA posFreeC fs = true) (hfr : "class_read" ∈ fs)
-    (hfc : "class_read_classes" ∈ fs) (n : Nat)
+theorem cbc_ref (hP : CbcProg p) (hF : FtProg p) (hFk : FkcProg p) (hWt : WhnfTopE p)
+    (hPr : ∀ {k : Nat} {vs : List Word} {m m' : Mem} {r : List Word},
+      callW p k "class_read" vs m = some (r, m') → PosMR m → PosMR m')
+    (hPc : ∀ {k : Nat} {vs : List Word} {m m' : Mem} {r : List Word},
+      callW p k "class_read_classes" vs m = some (r, m') → PosMR m → PosMR m') (n : Nat)
     (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState)
     (pp po pl : Word) (bs : BlockShape)
     (pfvs : List EIdx) (hC : StageC dn vis fe env m a) (hb : BSOK m pp.toNat bs)
@@ -112,7 +116,7 @@ theorem cbc_ref (hP : CbcProg p) (hF : FtProg p) (hFk : FkcProg p) (hWt : WhnfTo
   obtain ⟨s1, rfl, -, hok1, ⟨hS1, hg1, hd1⟩, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (classRead_refinesA p hP.read hOpf n _ a vis fe pp _ _ _ bs bs.recs hS hA hb hrecs) c1
   simp only at hS1 hg1 hd1 hA1
-  have hP1 := PosMR.ofClosed hcl hfr c1 hPm
+  have hP1 := hPr c1 hPm
   rw [hnp, hnpT] at hok1 hS1 hd1
   have hrun1 := AM.run_of_ok _ a hok1
   obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.classRead_spec bs pP env fe bs.nP bs.recs pP.recs a _ _
@@ -150,7 +154,7 @@ theorem cbc_ref (hP : CbcProg p) (hF : FtProg p) (hFk : FkcProg p) (hWt : WhnfTo
       (UInt64.ofNat so) (UInt64.ofNat sl) rd.slots hS1 (by rw [hsoT, hslT]; exact hslots)
       (by rw [hsoT, hslT]; exact hext)) c2
   simp only at hS2 hg2 hcc
-  have hP2 := PosMR.ofClosed hcl hfc c2 hP1
+  have hP2 := hPc c2 hP1
   have hA2 := hk2 n _ s1.mem r2 s2.mem c2 hA1
   have hC2 : StageC dn vis fe env s2.mem a1 := hC1.of_check hS2 hA2 hC1.check (Ext.refl _)
   have hg02 := hg1.trans hg2
@@ -245,7 +249,8 @@ theorem checkBlockClasses_refinesC (hP : CbcProg p) (hF : FtProg p) (hFk : FkcPr
       ConRon.Bridge.CoreStep env fe a₀
         (AM.st (ConRon.Arena.checkBlockClasses V fe bs pfvs) a₀); ⊤⦄ := by
   refine triple_post (RefE.triple (cbcE_spec p hP (n + 1) s₀ vis pp po pl)
-    (cbc_ref hq hIlpf hLC henv hP hF hFk hWt hcl hfr hfc n hn s₀.mem a₀ pp po pl bs pfvs hC hb hsrc hrecs hpf
+    (cbc_ref hq hIlpf hLC henv hP hF hFk hWt (fun h hM => PosMR.ofClosed hcl hfr h hM)
+      (fun h hM => PosMR.ofClosed hcl hfc h hM) n hn s₀.mem a₀ pp po pl bs pfvs hC hb hsrc hrecs hpf
       hpfb hPm hA hOpf hk2 hk3 hpl hpw hshP hpfP)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
@@ -253,6 +258,45 @@ theorem checkBlockClasses_refinesC (hP : CbcProg p) (hF : FtProg p) (hFk : FkcPr
     hR.pos, hR.abs, by rw [hst]; exact hR.core⟩
 
 end sims
+
+/-- The recursors' slice read off the shape record (words `2`, `3`), decoded with its bound. -/
+theorem recsDec_of_shape {m : Mem} {pp : Word} {bs : BlockShape} (hq : DecB (fun m => decBS m pp.toNat) m bs)
+    (hsl : ShapeSl m pp) :
+    RecsDec m (rdW (m.arr64 IW) (pp + 2)) (rdW (m.arr64 IW) (pp + 3)) bs.recs := by
+  obtain ⟨-, -, ⟨hdr, hob⟩, -⟩ := bsAt hq hsl
+  refine ⟨hdr, ?_⟩
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  rcases hob with h0 | hb
+  · rw [h0]; simpa using (rdW (m.arr64 IW) (pp + 2)).toNat_lt
+  · omega
+
+/-- **`check_block_classes`' contract** (`ClsRefS`): `cbc_ref` through the call, from `BkSt` (the
+shape record's facts by `partsShapeFacts`/`bsAt`); the memos by `IndMemos.ofCall`. -/
+theorem clsRefS_of {p : Prog} {dn : NIdx → Option ConLeche.Name} (hq : KnotStageProg p) (hIlpf : IlpfF p)
+    (hLC : LvlCacheProg p) (hP : CbcProg p) (hF : FtProg p) (hFk : FkcProg p) (hWt : WhnfTopE p)
+    (hOpf : OpfF p) (hk2 : AbsKeep p "class_read_classes") (hk3 : AbsKeep p "check_block_classes_keys")
+    (hPr : ∀ {k : Nat} {vs : List Word} {m m' : Mem} {r : List Word},
+      callW p k "class_read" vs m = some (r, m') → PosMR m → PosMR m')
+    (hPc : ∀ {k : Nat} {vs : List Word} {m m' : Mem} {r : List Word},
+      callW p k "class_read_classes" vs m = some (r, m') → PosMR m → PosMR m')
+    (hK : WmKeep p "check_block_classes") : ClsRefS (VerdictCtxU p) p dn := by
+  intro n hn vis fe env m a pp po pl bs bsP params paramsP hB henv hqd hsl hpf hpfb hdP hpP hpl hpw
+  have hR : RefE (VerdictCtx p) (cbcE p n m vis pp po pl) (ConRon.Arena.checkBlockClasses V fe bs params) a
+      (fun v x a' => CbcPost dn vis fe env a v.1 m v.2 x a') := by
+    rcases n with _ | n
+    · rw [cbcE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+    obtain ⟨-, -, hptr⟩ := partsShapeFacts hqd hsl.1
+    exact cbc_ref hq hIlpf hLC henv hP hF hFk hWt hPr hPc n (by omega) m a pp po pl bs params hB.c
+      ⟨hqd, hsl.1, fun o l j v h1 h2 h3 h4 => Nat.lt_of_succ_lt (hptr o l j v h1 h2 h3 h4)⟩ hsl.1
+      (recsDec_of_shape hqd hsl) hpf hpfb hB.ind.stage.pos hB.abs hOpf hk2 hk3 hpl hpw hdP hpP
+  have h := RefE.ofCallE (s₀ := ⟨m, Locals.init []⟩) (G := VerdictCtxU p) (cbcE_spec p hP n _ vis pp po pl)
+    (fun (hG : VerdictCtxU p) => hG.nv)
+    (RefE.weakenG (fun (hG : VerdictCtxU p) => hG.toVerdictCtx) hR)
+  refine RefE.callOk h fun ⟨r, m'⟩ x a' hc hR => ?_
+  obtain ⟨s', hs', -, hR⟩ := hR
+  simp only at hs'; subst hs'
+  exact ⟨⟨hR.stage, IndMemos.ofCall hK (callW_of_callE hc) hB.ind hR.pos hR.abs, hR.abs⟩, hR.grow, hR.cr,
+    hR.majors⟩
 
 end L.Ind
 
