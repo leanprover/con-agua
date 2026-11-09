@@ -53,43 +53,46 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- `StageC` from its parts: the stage relation, con-ron's `CheckOK`, the memory's half from
-`AbsOK`, the name decoder's agreement. -/
-theorem StageC.of_parts {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {env : ConLeche.Env} {m : Mem} {a : AState} (hS : StageR vis fe m a)
-    (hck : ConRon.Bridge.CheckOK V env fe a) (hA : AbsOK m)
-    (hdn : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x) :
-    StageC dn vis fe env m a :=
-  ⟨hS, hck,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩, hdn⟩,
-    hA.wk.2.2.2.2⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
-/-- **`check_block_tail_rec`'s unified model**: the recursor stage and the tables through their runs
-(the ok half reads the calls' memos), the recursors consed (outside the verdict closure) lifted. -/
-l_model ictrE_spec (p : Prog) (hP : TailProg p)
-  fns [hP.tailrec ↦ ictrE] specs [callW_spec p n "cons_block_recs_tf"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-set_option experimental.vcgen true in
-/-- **`check_block_tail`'s unified model**: the index sorts through their run, the constructors consed,
-the flush and the nested bit (outside the verdict closure) lifted, `check_block_tail_rec` by its
-unified model. -/
+/-- **`check_block_tail`'s unified model**: `block_shape_member_ctors`, `cons_block_ctors`, the
+flush and the nested bit (outside the verdict closure) lifted; the index sorts, the recursor stage,
+the stream's checks and the tables through their calls. -/
 l_model ictlE_spec (p : Prog) (hP : TailProg p)
   fns [hP.tail ↦ ictlE]
-  specs [callW_spec p n "cons_block_ctors", callW_spec p n "flush_caches", callW_spec p n "block_nested_bit",
-    ictrE_spec p hP n]
+  specs [callW_spec p n "block_shape_member_ctors", callW_spec p n "cons_block_ctors",
+    callW_spec p n "flush_caches", callW_spec p n "block_nested_bit"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
+
+/-! ## The twin, split at the L calls -/
+
+/-- `checkBlockTail`'s second half (the Rust's `check_block_tail_stream`): the K flags, the generated
+family pushed in place, a flush, the stream's recursors against it, the pops, a flush. -/
+def tailStreamT (mode : ConLeche.CheckMode) (p : BlockShape) (fe₂b : IFEnv)
+    (out : List (IConstantVal × TargetMajor × List EIdx)) : AM IFEnv := do
+  ConRon.Arena.streamKCheck p p.recs out
+  let infos ← ConRon.Arena.blockRecInfosTF p 0 out
+  let (feG, prevs) := ConRon.Arena.consBlockRecsTemp infos fe₂b []
+  ConRon.Arena.flushCaches
+  ConRon.Arena.streamRecsCheck mode feG p.recs out
+  let fe₃ := prevs.foldr (fun (n, prev) acc => acc.popTemp n prev) feG
+  ConRon.Arena.flushCaches
+  pure fe₃
+
+/-- **`checkBlockTail` at `check_block_tail`'s calls.** -/
+theorem checkBlockTail_split (mode : ConLeche.CheckMode) (block : List IConstantInfo) (q : BlockPass) :
+    ConRon.Arena.checkBlockTail mode block q = (do
+      ConRon.Arena.checkBlockIdxSorts mode q.env1 q.p q.p.members
+      let fe₂ := ConRon.Arena.consBlockCtors q.p.nP q.p.memberCtors q.env1
+      ConRon.Arena.flushCaches
+      let nested := ConRon.Arena.blockNestedBit q.p q.kinds
+      let (fe₂b, out) ← ConRon.Arena.checkBlockRec mode fe₂ q.p nested q.params q.tbl q.rd q.cls block
+      let fe₃ ← tailStreamT mode q.p fe₂b out
+      ConRon.Arena.checkBlockTables q.p fe₃ q.p.members
+      pure fe₃) := by
+  simp only [ConRon.Arena.checkBlockTail, tailStreamT, bind_assoc, pure_bind]
 
 /-- What `check_block_tail` gives besides the index `x` it returns, at the view `w` (from `m`): the
 stage, the growth, the `hb` memo, `AbsOK`, the recursor stage's memos. -/
