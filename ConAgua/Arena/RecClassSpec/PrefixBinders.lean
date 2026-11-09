@@ -10,6 +10,7 @@ import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.RecClassSpec.MjW
 import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.RecClass
@@ -102,13 +103,13 @@ theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (
   obtain ⟨w, ew, hwH, hwd⟩ := rec2CCName hX0m hsz
   by_cases hhit : w = cn
   · subst hhit
-    rw [fcgW.arm2 (hc1 := hl) (hc2 := by rw [ep, ew])] at h
+    rw [fcgW.arm2 (hc1 := hl) (hc2 := by simp only [erRd_fold]; rw [ep, ew])] at h
     cases h
     refine ⟨rfl, ?_⟩
     have : (X0.cv.name == decI w) = true := by rw [← hwd]; simp
     simp only [List.find?_cons, this]
     exact ⟨rfl, by rw [ep]; simp only [List.headD_cons, List.tail_cons]; rw [tp]; exact hX0⟩
-  · rw [fcgW.arm3 (hc1 := hl) (hc2 := by rw [ep, ew]; exact hhit)] at h
+  · rw [fcgW.arm3 (hc1 := hl) (hc2 := by simp only [erRd_fold]; rw [ep, ew]; exact hhit)] at h
     obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
     rw [fcgW.k_class_gen_prefix_binders_find_ctor_go.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -377,15 +378,7 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have hpb : 0 < l1 → o1 + l1 ≤ iwTop m := by
     intro hl
     have hpd' : decHL (truncM m) o1 l1 = some ps := hpd
-    have hs : (iwA (truncM m)).size ≤ iwTop m := by
-      apply Nat.le_of_not_lt
-      intro h
-      have := truncM_iw_get? m (iwTop m)
-      rw [ite_eq_right (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
-      cases this
-    rcases decHL_le hpd' with h0 | h0
-    · omega
-    · exact Nat.le_trans h0 hs
+    exact decHL_truncM_bound hpd' (by omega)
   refine RSim.bind (K := gpbW.k_fvar_type_ds n g) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ G.params).sim
       ⟨hS, by rw [t1, t2]; exact hpar, by rw [t1, t2]; exact hpb⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r1, m1⟩ pbs a1 - ⟨⟨hS1, hg1, hpbs, hpbb⟩, hf1⟩
