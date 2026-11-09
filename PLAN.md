@@ -236,7 +236,8 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 - **Fan-out.** A lane may hand sub-tasks to helper agents when the split is clean, for example proving theorems
   whose statements are already fixed. Keep it shallow: at most about 3 helpers at a time. Larger independent
   work should become a top-level lane, so the coordinator can see it. Name helper worktrees
-  `<lane>-<suffix>`.
+  `<lane>-<suffix>`. A helper's brief states its reply address (the lead's agent id) and the
+  files it owns; helpers message only their lead, never the coordinator.
 - **Commit work in progress often.** Commit to your own branch at least every ~30 minutes and before every long build, even if it doesn't build yet (WIP commits are fine; squash nothing). Machine restarts and rate limits have lost uncommitted work twice. Landing on master can stay less frequent, but keep landings small: one function family or one fix per landing.
 - **Worktrees and disk:** every worktree carries a ~2.5 GB `.lake` build. A lane keeps at most one worktree of its own plus one per running helper; remove a helper's worktree (`git worktree remove`; the branch may stay) as soon as the helper has landed or stopped, and scratch/base worktrees as soon as their measurement is done. The disk is shared: keep no duplicates or finished intermediates, but there is no fixed size limit.
 - **Waiting on background work:** wait on the job you started (run the job itself with `run_in_background`, or `wait $PID`, or a sentinel/output file it writes at the end). Never wait with `until ! pgrep -f "<pattern>"`: the waiting shell's own command line contains the pattern, so it never ends (and other lanes run the same scripts). Lane tierarr idled 2 h this way (2026-10-24).
