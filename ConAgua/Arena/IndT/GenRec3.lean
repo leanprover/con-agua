@@ -120,8 +120,8 @@ include hkp henv hV hApd hCrk hCrf hIlpf in
 outcomes**: the capacity guards, the pins (`trp_ref`), the stream's recursor types
 (`classStreamRecs_refinesC` on the run), the family and elimination guards, then the second and
 third parts (`grpB_ref`). -/
-theorem grp_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
-    (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {dn : NIdx → Option ConLeche.Name} (hCs : CcvSims p dn)
+theorem grp_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
+    (hfR : ∀ f ∈ grcMemoCallees, RcKeepF p f) (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {dn : NIdx → Option ConLeche.Name} (hCs : CcvSims p dn)
     {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} {pp nested pO pL tO tL rd mO mL bO bL : Word}
     {bs : BlockShape} {params : List EIdx} {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead}
     {ms : List TargetMajor} {block : List IConstantInfo}
@@ -141,7 +141,7 @@ theorem grp_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
     (hcvTP : bs.formers.mapM (Frontend.denoteCV a.store) = some cvTasP)
     (hblkP : Frontend.denoteCIList a.store block = some blockP)
     (hT : ∀ cv ∈ cvTasP, ConLeche.Expr.WScoped 0 cv.type)
-    (hMsT : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR) :
+    (hMsT : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (hfRc : ∀ f ∈ grcRcCallees, RcKeepF p f) :
     RefC (VerdictCtxU p) (grpE p (n + 1) m vis pp nested pO pL tO tL rd mO mL bO bL)
       (fun v => ∃ G cvGs a', (∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
           (grcTwinA V fe bs (nested != 0) ms block (fun cvRis =>
@@ -241,7 +241,7 @@ theorem grp_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
   have hSF : StageR vis fe mF a1 := stage_frame_iw hS1 hfrF hroomF
   have hAF : AbsOK mF := formersW_afr hfF hA1
   have hC1 : StageC dn vis fe env mF a1 := hC1o.of_pstep hSF hAF (PStep.refl hC1o.check.state)
-  have hPF : RcMR mF := (RcMR.ofClosed hclR (hfR _ (by decide)) (callW_of_callE c1) hP).fr (MFr.of_iw hfrF)
+  have hPF : RcMR mF := (hfR _ (by decide) _ _ _ _ _ (callW_of_callE c1) hP).fr (MFr.of_iw hfrF)
   have hkF := callW_keepW cF
   have hg1o := hg1
   replace hg1 : IWGrow m mF := hg1o.trans hgF
@@ -275,7 +275,7 @@ theorem grp_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
   generalize AM.st (ConRon.Arena.classStreamRecs V fe bs.recs) a1 = a2 at hrun2 hC2 hcvRis c2'
   have hS2 := hC2.stage
   have c12 := c1'.trans c2'
-  have hP2 := RcMR.ofClosed hclR (hfR _ (by decide)) (callW_of_callE c2) hPF
+  have hP2 := hfR _ (by decide) _ _ _ _ _ (callW_of_callE c2) hPF
   have hk2 := callW_keepW (callW_of_callE c2)
   have hg12 := hg1.trans hg2
   -- the family guard
@@ -330,7 +330,7 @@ theorem grp_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
       (ConRon.Bridge.Inductives.dCtorNf_ext.list c4.ext _ _ htblP)
       (ConRon.Bridge.Inductives.dClassRead_ext c4.ext _ _ hrdP)
       (ConRon.Bridge.Inductives.dMajor_ext.list c4.ext _ _ hmsP)
-      (ConRon.Bridge.Inductives.dExt_denoteCV.list c4.ext _ _ hcvTP) hT hMsT hcvRis4 hwRis hunR hclR hfRc) ?_ ?_
+      (ConRon.Bridge.Inductives.dExt_denoteCV.list c4.ext _ _ hcvTP) hT hMsT hcvRis4 hwRis hunR hfRc) ?_ ?_
     · rintro v ⟨G, cvGs, a', hrunB, hR⟩
       exact ⟨G, cvGs, a', fun k => (hrunA _).trans (hrunB k),
         { hR with grow := hg12.trans hR.grow, core := c4.trans hR.core }⟩
@@ -455,8 +455,8 @@ include hkp henv hV hApd hCrk hCrf hIlpf in
 pushed names (`block_shape_names_of`), the flush into the rule-less recursors' environment, the
 rules (`classRecsRulesOk_refinesC` on the run, its claim), the pops and the flush back; the view
 and index handed back with con-ron's `CheckOK` at the entry environment. -/
-theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List FnName}
-    (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat)
+theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
+    (hfR : ∀ f ∈ grcMemoCallees, RcKeepF p f) (n : Nat)
     (hn : n ≤ 2 ^ 62) {dn : NIdx → Option ConLeche.Name} (hCs : CcvSims p dn)
     (hMa : ∀ f ∈ ["gen_rec_check_prep", "class_fe_r", "block_shape_names_of", "flush_caches"], MaKeepF p f)
     (hOwn : OwnKeepF p "class_recs_rules_ok")
@@ -479,7 +479,7 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
     (hmsP : ms.mapM (dMajor a.store) = some MsP)
     (hblkP : Frontend.denoteCIList a.store block = some blockP)
     (hT : ∀ cv ∈ pP.formers, ConLeche.Expr.WScoped 0 cv.type)
-    (hMsT : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR) :
+    (hMsT : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (hfRc : ∀ f ∈ grcRcCallees, RcKeepF p f) :
     RefE (VerdictCtxU p) (gckE p (n + 1) m vis pp nested pO pL tO tL rd mO mL bO bL)
       (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms block) a
       (fun v x a' => GckPost dn env fe a v.1 m v.2 x a') := by
@@ -489,7 +489,7 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
   -- the prep
   rcases n with _ | n
   · exact RefE.callE_zero (fun _ => gckE.k_gen_rec_check_prep.none ..)
-  have hR1 := grp_ref hkp henv hV hApd hCrk hCrf hIlpf P hF hWt hclR hfR n (by omega) hCs hC hbs hrb hpar hparb
+  have hR1 := grp_ref hkp henv hV hApd hCrk hCrf hIlpf P hF hWt hfR n (by omega) hCs hC hbs hrb hpar hparb
     htbl hrd hms hblk hP hA hkeep hsh hparP htblP hrdP hmsP (ConRon.Bridge.Inductives.dShape_formers hsh)
     hblkP hT hMsT hfRc (nested := nested)
   have hs1 := grpE_spec p P.prep (n + 1) ⟨m, Locals.init []⟩ vis pp nested pO pL tO tL rd mO mL bO bL
@@ -526,7 +526,7 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
   obtain ⟨s2, rfl, -, hS2, hg2, hpv2, cs2, hcs2, hpop2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (classFeR_refines p P.cfr (n + 1) _ a1 vis fe pp _ _ _ _ bs cvGs rdv.recCls hS1 (hbs.1.grow (decBS_mono _) hg1)
       hcg1 (hrcD.grow (OMono.decNL _ _) hg1)) c2
-  have hP2 := RcMR.ofClosed hclR (hfRc _ (by decide)) c2 hP1
+  have hP2 := hfRc _ (by decide) _ _ _ _ _ c2 hP1
   have hA2 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c2 hA1
   have hma2 := hMa _ (by simp) _ _ _ _ _ c2 hma1
   -- the twin's pushed index
@@ -567,7 +567,7 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
   rw [gckE.k_flush_caches.arm1]
   obtain ⟨s4, rfl, -, hfok, hfm⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (flushCaches_spec p P.flush (n + 1) _) c4
-  have hP4 := RcMR.ofClosed hclR (hfRc _ (by decide)) c4 hP3
+  have hP4 := hfRc _ (by decide) _ _ _ _ _ c4 hP3
   have hma4 := hMa _ (by simp) _ _ _ _ _ c4 hma3
   obtain ⟨hS4, hg4⟩ := flush_stage hS3 hfok
   rw [← hfm] at hS4 hg4
@@ -608,7 +608,7 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
     (classRecsRulesOk_refinesC hkp hApd P.crrE (n + 1) (by omega) _ _ henvR' (r2.headD 0) _ _ feR
       (cvGs.map (·.name)) (r1.headD 0) _ _ _ _ G rdv.recCls cvGs hC4 hG4 hns1 hrc4 hrcb hcg4
       (hS4.lt64 hcg4.1) hA4 hgP hcvGs hpu4 hpb4 hma4) (callW_of_callE c5)
-  have hP5 := RcMR.ofClosed hclR (hfRc _ (by decide)) (callW_of_callE c5) hP4
+  have hP5 := hfRc _ (by decide) _ _ _ _ _ (callW_of_callE c5) hP4
   have hown5 : ownC s5.mem = ownC s4.mem := hOwn _ _ _ _ _ (callW_of_callE c5)
   have hrun5 := AM.run_of_ok _ _ hok5
   obtain ⟨c12', -⟩ := ConRon.Bridge.Inductives.classRecsRulesOk_spec feR _ _ hdp ConRon.Bridge.CoreSpec.of_core henvR' G gP rdv.recCls cvGs cvGsP cvGs cvGsP
@@ -627,14 +627,14 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
   obtain ⟨s6, rfl, -, hS6, hg6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (genRecCheckPopAll_refines P.ers P.ept P.gpa (n + 1) _ a5 (r2.headD 0) feR _ _ prevs cs2 hC5.stage
       (hpv2.grow hg25) (hcs2.grow hg25) (by rw [hown5, hown4, hown3]; exact hpop2)) c6
-  have hP6 := RcMR.ofClosed hclR (hfRc _ (by decide)) c6 hP5
+  have hP6 := hfRc _ (by decide) _ _ _ _ _ c6 hP5
   have hA6 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c6 hA5
   -- the flush back
   refine RefE.onlySim (fun _ => gckE.k_flush_caches_2.none ..) (fun _ _ h => h) fun r7 m7 c7 => ?_
   rw [gckE.k_flush_caches_2.arm1]
   obtain ⟨s7, rfl, -, hfok7, hfm7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
     (flushCaches_spec p P.flush (n + 1) _) c7
-  have hP7 := RcMR.ofClosed hclR (hfRc _ (by decide)) c7 hP6
+  have hP7 := hfRc _ (by decide) _ _ _ _ _ c7 hP6
   obtain ⟨hS7, hg7⟩ := flush_stage hS6 hfok7
   have hA7 : AbsOK s7.mem := by rw [hfm7]; exact AFr.of_frame (flushMem_frame _) (by decide) (by decide) hA6
   rw [← hfm7] at hS7 hg7
@@ -655,12 +655,12 @@ include hkp henv hV hApd hCrk hCrf hIlpf in
 block.off, block.len)` refines `genRecCheck` under `StageC`** (`gck_ref`'s ok half): after it,
 `StageC` at the returned view and index (con-ron's `CheckOK` at the entry environment). -/
 @[refines ConRon.Arena.genRecCheck]
-theorem genRecCheck_refinesC (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List FnName}
-    (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR)
+theorem genRecCheck_refinesC (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
+    (hfR : ∀ f ∈ grcMemoCallees, RcKeepF p f)
     {dn : NIdx → Option ConLeche.Name} (hCs : CcvSims p dn)
     (hMa : ∀ f ∈ ["gen_rec_check_prep", "class_fe_r", "block_shape_names_of", "flush_caches"], MaKeepF p f)
     (hOwn : OwnKeepF p "class_recs_rules_ok") (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f)
-    (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR) (n : Nat) (hn : n ≤ 2 ^ 62)
+    (hfRc : ∀ f ∈ grcRcCallees, RcKeepF p f) (n : Nat) (hn : n ≤ 2 ^ 62)
     {vis : Word} {fe : IFEnv} {pp nested pO pL tO tL rd mO mL bO bL : Word}
     {bs : BlockShape} {params : List EIdx} {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead}
     {ms : List TargetMajor} {block : List IConstantInfo} (s₀ : St) (a₀ : AState)
@@ -683,19 +683,19 @@ theorem genRecCheck_refinesC (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
       StageC dn (r.headD 0) (AM.res (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms block) a₀).1 env s'.mem (AM.st (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms block) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ decRRS s'.mem r.tail (AM.res (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms block) a₀).2 ∧ AbsOK s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (gckE_spec p P (n + 1) s₀ vis pp nested pO pL tO tL rd mO mL bO bL)
-    (gck_ref hkp henv hV hApd hCrk hCrf hIlpf P hF hWt hclR hfR n hn hCs hMa hOwn hC hbs hrb hpar hparb htbl hrd hms hblk hP hA hma hkeep hgate hsh hparP htblP hrdP hmsP hblkP hT (fun M hM => (hMs M hM).1) hfRc)) ?_
+    (gck_ref hkp henv hV hApd hCrk hCrf hIlpf P hF hWt hfR n hn hCs hMa hOwn hC hbs hrb hpar hparb htbl hrd hms hblk hP hA hma hkeep hgate hsh hparP htblP hrdP hmsP hblkP hT (fun M hM => (hMs M hM).1) hfRc)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hres, hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.rrs, hR.abs, hR.rc⟩
 
 include hkp henv hV hApd hCrk hCrf hIlpf in
 /-- **`check_block_rec` refines `checkBlockRec`, both outcomes** (`gck_ref`, its result repacked). -/
-theorem icr_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List FnName}
-    (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR)
+theorem icr_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
+    (hfR : ∀ f ∈ grcMemoCallees, RcKeepF p f)
     {dn : NIdx → Option ConLeche.Name} (hCs : CcvSims p dn)
     (hMa : ∀ f ∈ ["gen_rec_check_prep", "class_fe_r", "block_shape_names_of", "flush_caches"], MaKeepF p f)
     (hOwn : OwnKeepF p "class_recs_rules_ok") (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f)
-    (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR) (n : Nat) (hn : n ≤ 2 ^ 62)
+    (hfRc : ∀ f ∈ grcRcCallees, RcKeepF p f) (n : Nat) (hn : n ≤ 2 ^ 62)
     {vis : Word} {fe : IFEnv} {pp nested pO pL tO tL rd mO mL bO bL : Word}
     {bs : BlockShape} {params : List EIdx} {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead}
     {ms : List TargetMajor} {block : List IConstantInfo} {m : Mem} {a : AState}
@@ -721,17 +721,17 @@ theorem icr_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List 
     (fun e => icrE.k_gen_rec_check.none p e) (fun v => icrE.k_gen_rec_check.arm1 p v.1 v.2) id rfl
     (fun v x a' h => ⟨h.stage, h.grow, by have := h.rrs; simp only [decRRS] at this ⊢; simpa using this, h.abs,
       h.rc⟩)
-    (gck_ref hkp henv hV hApd hCrk hCrf hIlpf P hF hWt hclR hfR n hn hCs hMa hOwn hC hbs hrb hpar hparb htbl hrd hms hblk hP hA hma hkeep hgate hsh hparP htblP hrdP hmsP hblkP hT (fun M hM => (hMs M hM).1) hfRc)
+    (gck_ref hkp henv hV hApd hCrk hCrf hIlpf P hF hWt hfR n hn hCs hMa hOwn hC hbs hrb hpar hparb htbl hrd hms hblk hP hA hma hkeep hgate hsh hparP htblP hrdP hmsP hblkP hT (fun M hM => (hMs M hM).1) hfRc)
 
 include hkp henv hV hApd hCrk hCrf hIlpf in
 /-- **`check_block_rec` refines `checkBlockRec` under `StageC`** (`icr_ref`'s ok half). -/
 @[refines ConRon.Arena.checkBlockRec]
-theorem checkBlockRec_refinesC (hp : p.lookup "check_block_rec" = some checkBlockRec) (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) {fsR : List FnName}
-    (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR)
+theorem checkBlockRec_refinesC (hp : p.lookup "check_block_rec" = some checkBlockRec) (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
+    (hfR : ∀ f ∈ grcMemoCallees, RcKeepF p f)
     {dn : NIdx → Option ConLeche.Name} (hCs : CcvSims p dn)
     (hMa : ∀ f ∈ ["gen_rec_check_prep", "class_fe_r", "block_shape_names_of", "flush_caches"], MaKeepF p f)
     (hOwn : OwnKeepF p "class_recs_rules_ok") (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f)
-    (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR) (n : Nat) (hn : n ≤ 2 ^ 62)
+    (hfRc : ∀ f ∈ grcRcCallees, RcKeepF p f) (n : Nat) (hn : n ≤ 2 ^ 62)
     {vis : Word} {fe : IFEnv} {pp nested pO pL tO tL rd mO mL bO bL : Word}
     {bs : BlockShape} {params : List EIdx} {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead}
     {ms : List TargetMajor} {block : List IConstantInfo}
@@ -755,7 +755,7 @@ theorem checkBlockRec_refinesC (hp : p.lookup "check_block_rec" = some checkBloc
       StageC dn (r.headD 0) (AM.res (ConRon.Arena.checkBlockRec V fe bs (nested != 0) params tbl rdv ms block) a₀).1 env s'.mem (AM.st (ConRon.Arena.checkBlockRec V fe bs (nested != 0) params tbl rdv ms block) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ decRRS s'.mem r.tail (AM.res (ConRon.Arena.checkBlockRec V fe bs (nested != 0) params tbl rdv ms block) a₀).2 ∧ AbsOK s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (icrE_spec p P hp (n + 2) s₀ vis pp nested pO pL tO tL rd mO mL bO bL)
-    (icr_ref hkp henv hV hApd hCrk hCrf hIlpf P hF hWt hclR hfR hCs hMa hOwn hkeep hfRc n hn hC hbs hrb hpar hparb
+    (icr_ref hkp henv hV hApd hCrk hCrf hIlpf P hF hWt hfR hCs hMa hOwn hkeep hfRc n hn hC hbs hrb hpar hparb
       htbl hrd hms hblk hP hA hma hgate hsh hparP htblP hrdP hmsP hblkP hT hMs)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
