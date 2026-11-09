@@ -144,8 +144,33 @@ theorem spnPushW_ok {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : Ab
       rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 + 1 ∧
       (∀ w : Word, spW m' w = if w = rdW (m.arr64 CTL) 136 then x else spW m w) ∧
       (m'.arr64 SPN).size = (m.arr64 SPN).size := by
-  sorry
-
+  simp only [spnPushW] at h
+  split at h
+  · cases h
+  rename_i hlt
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  have hfr : MemFrame [SPN] [136] m
+      ((m.set64 SPN (rdW (m.arr64 CTL) 136) x).set64 CTL 136 (rdW (m.arr64 CTL) 136 + 1)) :=
+    ((MemFrame.set64 m SPN (by decide) _ _).mono (fun b hb => hb) (by simp)).trans
+      ((MemFrame.setCtl _ 136 _).mono (by simp) (fun c hc => hc))
+  obtain ⟨hS', hg⟩ := stageR_hi hS hfr (by simp [SPN]) (by simp) (by decide) (by decide)
+  have hsz : (rdW (m.arr64 CTL) 136).toNat < (m.arr64 SPN).size := by
+    have : ¬ (((m.arr64 SPN).size : Nat).toUInt64 ≤ rdW (m.arr64 CTL) 136) := hlt
+    rw [UInt64.le_iff_toNat_le] at this
+    have h2 : (((m.arr64 SPN).size : Nat).toUInt64).toNat = (m.arr64 SPN).size % 2 ^ 64 := by
+      simp [Nat.toUInt64]
+    have h3 : (m.arr64 SPN).size < 2 ^ 64 := by have := hAb.wk.2.2.1; omega
+    omega
+  refine ⟨hS', hg, hAb.frameD hfr (by decide) (by decide), hsz, ?_, ?_, hfr.size SPN⟩
+  · have hc := hS.iw.ctl
+    rw [rdW_set64E, Mem.arr64_set64_ne _ _ _ _ _ (by decide),
+      ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
+  · intro w
+    simp only [spW]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64E]
+    by_cases hw : w = rdW (m.arr64 CTL) 136
+    · subst hw; simp [hsz]
+    · simp [hw, Ne.symm hw]
 
 end
 end L.Ind

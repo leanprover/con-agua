@@ -70,9 +70,25 @@ grind_pattern [ind_grind] cftK4_some => cftK4 (some (r4, m4))
 
 /-! ## Relational lemma -/
 
-theorem decCI_ind_cv {a : Array Word} {q : Nat} {cv : IConstantVal}
-    {caps : IIndCaps} (h : decCI (aread a) q = some (.indInfo cv caps)) : decCV (aread a) (q + 1) = some cv := by
-  sorry
+theorem decCI_ind_cv {a : Nat → Option Word} {q : Nat} {cv : IConstantVal}
+    {caps : IIndCaps} (h : decCI a q = some (.indInfo cv caps)) : decCV a (q + 1) = some cv := by
+  cases hq : a q with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
+  all_goals rw [hk] at h
+  all_goals first | (simp [Option.bind_eq_some_iff] at h; done) | skip
+  cases e : decCV a (q + 1) with
+  | none => simp [e] at h
+  | some cv' =>
+    simp only [e, Option.bind_some] at h
+    cases e2 : decCaps a (q + 5) with
+    | none => simp [e2] at h
+    | some c =>
+      simp only [e2, Option.bind_some, Option.pure_def, Option.some.injEq,
+        IConstantInfo.indInfo.injEq] at h
+      rw [h.1]
 
 theorem decTM_lvls' {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
     iwH m (p + 1) = some M.lvls := by

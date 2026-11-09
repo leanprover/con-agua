@@ -34,13 +34,22 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem decCVp_grow {m m' : Mem} (hg : IWGrow m m') {cq : Nat} (hcq : cq + 4 ≤ erTop m)
     (hsl : ∀ lo ll, nat? (erA m) (cq + 1) = some lo → nat? (erA m) (cq + 2) = some ll →
       lo + ll ≤ erTop m ∨ ll = 0) {cv : IConstantVal} (h : decCVp m cq = some cv) :
-    decCVp m' cq = some cv := by
-  sorry
+    decCVp m' cq = some cv :=
+  hg.erecGrow.ext.decCV h
 
 /-- A record's handle field, as the word L reads. -/
 theorem hd?_rdW {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? (aread a) i = some x)
     (hi : i < 2 ^ 64) : ∃ w, rdW a (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  sorry
+  simp only [hd?, aread_apply] at h
+  cases hw : a[i]? with
+  | none => simp [hw] at h
+  | some w =>
+    simp only [hw] at h
+    by_cases hl : w.toNat < 2 ^ 32
+    · simp [hl] at h
+      have hiw : (UInt64.ofNat i).toNat = i := by simp; omega
+      exact ⟨w, by simp [rdW, hiw, hw], hl, h⟩
+    · simp [hl] at h
 
 /-! ## `check_sum_tele` -/
 

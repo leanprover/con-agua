@@ -46,8 +46,16 @@ theorem efgW_mem (n : Nat) : ∀ (m m' : Mem) (q o l : Word) (r ws : List Word),
 /-- Handle words at `q, q + 1, …` decode as the handle list. -/
 theorem sumHslice_of_get {k : IdxKind} {a : Array Word} : ∀ (ws : List Word) (q : Nat),
     (∀ j < ws.length, a[q + j]? = ws[j]?) → (∀ w ∈ ws, H w) →
-    (hslice? (aread a) q ws.length : Option (List (Idx k))) = some (ws.map decI) := by
-  sorry
+    (hslice? (aread a) q ws.length : Option (List (Idx k))) = some (ws.map decI)
+  | [], q, _, _ => by simp [hslice?]
+  | w :: ws, q, h, hw => by
+    simp only [List.length_cons, hslice?_succ, List.map_cons]
+    have h0 : a[q]? = some w := by simpa using h 0 (by simp)
+    have ih := sumHslice_of_get (k := k) ws (q + 1) (fun j hj => by
+      have := h (j + 1) (by simpa using hj); rw [show q + 1 + j = q + (j + 1) by omega]; simpa using this)
+      (fun v hv => hw v (by simp [hv]))
+    have hw0 : H w := hw w (by simp)
+    simp [hd?, aread_apply, h0, hw0, ih]
 
 /-- **`er_from_iw` under the stage relation**: a fresh `EREC` slice (at the old record top) holding
 the `IW` list, decoded in the record pool below its new top. -/

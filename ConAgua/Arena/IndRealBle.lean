@@ -251,7 +251,14 @@ theorem blockLargeElimAllowed_simC {p : Prog} (P : BleProg p) (n : Nat) {env : C
       (ConRon.Arena.blockLargeElimAllowed bs (nb != 0)) a
       (fun r x m' a' => StageC dn vis fe env m' a' ∧ m' = m ∧ decW0B m' r x ∧
         ConRon.Bridge.Inductives.PStep a a' ∧ x = ConLeche.blockLargeElimAllowed pP (nb != 0)) := by
-  sorry
+  intro r m' e
+  obtain ⟨hrl, -, -⟩ := hC.lzFacts
+  obtain ⟨-, -, -, -, hsP, -, -⟩ := ConRon.Bridge.Inductives.dShape_inv hsh
+  obtain ⟨x, a', hrun, hS', rfl, hd, -, -⟩ :=
+    blockLargeElimAllowed_sim P n hC.stage hq hsrc hrl hsP r m' e
+  obtain ⟨hs, hx⟩ := ConRon.Bridge.Inductives.blockLargeElimAllowed_spec bs pP (nb != 0) a a' x
+    hC.check.state hC.check.caches.readL hsh hrun
+  exact ⟨x, a', hrun, hC.of_pstep hS' hA hs, rfl, hd, hs, hx⟩
 
 end
 

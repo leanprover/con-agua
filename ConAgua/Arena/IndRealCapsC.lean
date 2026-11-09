@@ -105,7 +105,71 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR vis fe m a) (hrl : ReadLCO
     Sim (lzcF m [l]) (readLevelM (decI l)) a
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
         decZC (denoteN a.store.lss.ls.ns) m' r x ∧ x = lv ∧ a'.store = a.store ∧ ReadLCOK a') := by
-  sorry
+  intro r m' h
+  obtain ⟨k, hw⟩ := lzcF_lzcW h
+  have hlv := denoteL_lvR hS.check.arena.base (decI l) lv hd
+  rw [word_decI _ _ hl |>.mpr rfl] at hlv
+  obtain ⟨X, hrun, hcX⟩ := readLevelM_run' a (decI l) lv hd hrl
+  have hSX := hS.withReadLC X
+  refine ⟨lv, _, hrun, ?_⟩
+  rcases k with _ | n
+  · simp [lzcW] at hw
+  simp only [lzcW] at hw
+  rcases hz : zeroW n m l with _ | ⟨z, m1⟩
+  · rw [hz] at hw; simp [lzcK1] at hw
+  rw [hz] at hw
+  obtain ⟨he, hZ⟩ := zeroW_ok n m m1 l z lv hlv hz
+  have hfH : ∀ v, MemFrame [LH] [192] m (m1.set64 CTL 192 v) := fun v =>
+    he.memFrame.trans ((MemFrame.setCtl m1 192 v).mono (by simp) (by simp))
+  rcases hZ with ⟨rfl, hpw⟩ | ⟨rfl, ps, hpw, hnm⟩
+  · -- `never`: the heap top restored
+    simp only [lzcK1, ne_eq, show (1 : Word) ≠ 0 by decide, not_false_eq_true, ↓reduceIte,
+      Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    obtain ⟨hS', hg⟩ := hSX.of_lheap (hfH _)
+    refine ⟨hS', hg, fun arr _ => ?_, rfl, rfl, hcX⟩
+    rw [hpw]; rfl
+  -- `ifAllZero ps`: the names copied to a fresh record slice
+  simp only [lzcK1, ne_eq, not_true_eq_false, ↓reduceIte] at hw
+  obtain ⟨hS1, hg1⟩ := hSX.of_lheap he.memFrame
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS1.iw
+  generalize hkk : htop m1 - htop m = kk at hw hnm
+  have htop1 := he.top
+  have hkkN : kk.toNat = (htop m1).toNat - (htop m).toNat := by
+    rw [← hkk, UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
+  rcases ha : erAllocW m1 kk with _ | ⟨q, m2⟩
+  · rw [ha] at hw; simp [lzcK2] at hw
+  rw [ha] at hw
+  simp only [lzcK2] at hw
+  cases hcp : lheCopyW n m2 q (htop m) kk with
+  | none => rw [hcp] at hw; simp [lzcK3] at hw
+  | some m3 =>
+  rw [hcp] at hw
+  simp only [lzcK3, Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hm3 := lheCopyW_wrER n _ _ _ _ _ hcp
+  have hL2 : m2.arr64 LH = m1.arr64 LH := by
+    have e : m2 = erAllocMem m1 kk := by unfold erAllocW at ha; split at ha <;> grind
+    subst e; unfold erAllocMem; split <;> exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  rw [hL2] at hm3; subst hm3
+  -- the record: `erec_alloc` then the `erec_put`s
+  obtain ⟨hS3, hg3, -, -, -, -, hW3⟩ :=
+    erRec_stage ha hS1 (ieWords (m1.arr64 LH) kk.toNat (htop m)) (ieWords_length _ _ _).symm
+  obtain ⟨hS4, hg4⟩ := hS3.of_lheap ((MemFrame.setCtl _ 192 (htop m)).mono (by simp) (by simp))
+  refine ⟨hS4, hg1.trans (hg3.trans hg4), fun arr hagr => ?_, rfl, rfl, hcX⟩
+  have hb64 : (htop m).toNat + kk.toNat < 2 ^ 64 := by have := (htop m1).toNat_lt; omega
+  obtain ⟨lps, hs, hm⟩ := hslice_of_nmsR _ hnm hb64 arr q.toNat
+    (fun j hj => by
+      have h3 := hW3 j (by rw [ieWords_length]; exact hj)
+      rw [ieWords_get _ _ _ _ hj] at h3
+      rw [hagr _ _ (hg4.erecGrow.ext _ _ h3)]
+      have : (htop m + UInt64.ofNat j).toNat = (htop m).toNat + j := by
+        have := hb64; simp [UInt64.toNat_add, UInt64.toNat_ofNat]; omega
+      simp only [rdW, this])
+  rw [hpw]
+  simp only [pwWords, List.headD_cons, List.tail_cons, show (1 : Word).toNat = 1 from rfl, hs,
+    Option.bind_eq_bind, Option.bind_some, hm]
+  rfl
 
 /-- **`lv_zero_caps` under `StageR` and the read-back facts, as a call** in a program with
 `lzcP`. -/

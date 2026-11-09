@@ -240,10 +240,13 @@ theorem mkProjW_afr {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r
   AFr.of_frame (mkProjW_frameA m m' n i e r h)
 
 theorem erAllocW_afr {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m')) : AFr m m' := by
-  sorry
+  have e : m' = erAllocMem m k := by unfold erAllocW at h; split at h <;> grind
+  subst e; unfold erAllocMem; split
+  · exact AFr.of_frame (MemFrame.setCtl m 129 _)
+  · exact AFr.of_frame (MemFrame.setCtl m 130 _)
 
-theorem wrER_afr (ws : List Word) (m : Mem) (q : Word) : AFr m (wrER m q ws) := by
-  sorry
+theorem wrER_afr (ws : List Word) (m : Mem) (q : Word) : AFr m (wrER m q ws) :=
+  AFr.of_frame (wrER_frame ws m q)
 
 theorem cvNewW_afr {m m' : Mem} {nm lo ll ty q : Word} (h : cvNewW m nm lo ll ty = some (q, m')) :
     AFr m m' := by

@@ -63,12 +63,38 @@ theorem stackPut_core {m₀ m₁ : Mem} {a : AState} {b h : Word} (hS : CoreS dn
 theorem hslice_cons {k : IdxKind} {b : Array Word} {o : Word} {j : Nat} {x : Idx k}
     {xs : List (Idx k)} (h : hslice? (aread b) o.toNat (j + 1) = some (x :: xs)) :
     ∃ w : Word, HW w ∧ x = decI w ∧ rdW b o = w ∧ hslice? (aread b) (o.toNat + 1) j = some xs := by
-  sorry
+  rw [lp_hslice_succ] at h
+  simp only [Option.bind_eq_bind] at h
+  cases e : (hd? (aread b) o.toNat : Option (Idx k)) with
+  | none => simp [e] at h
+  | some x' =>
+  cases e' : (hslice? (aread b) (o.toNat + 1) j : Option (List (Idx k))) with
+  | none => simp [e, e'] at h
+  | some xs' =>
+  simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  simp only [hd?, aread_apply] at e
+  cases ew : b[o.toNat]? with
+  | none => simp [ew] at e
+  | some w =>
+  simp only [ew] at e
+  have hw : w.toNat < 2 ^ 32 := Classical.byContradiction fun hw => by simp [hw] at e
+  simp [hw] at e
+  exact ⟨w, hw, e.symm, by simp [rdW, ew], rfl⟩
 
 /-- An empty slice. -/
 theorem hslice_nil {k : IdxKind} {b : Array Word} {o l : Word}
     (h : hslice? (aread b) o.toNat l.toNat = some ([] : List (Idx k))) : l = 0 := by
-  sorry
+  rcases hk : l.toNat with _ | j
+  · exact UInt64.toNat_inj.mp (by simpa using hk)
+  · rw [hk, lp_hslice_succ] at h
+    simp only [Option.bind_eq_bind] at h
+    cases e : (hd? (aread b) o.toNat : Option (Idx k)) with
+    | none => simp [e] at h
+    | some x =>
+      cases e' : (hslice? (aread b) (o.toNat + 1) j : Option (List (Idx k))) with
+      | none => simp [e, e'] at h
+      | some xs => simp [e, e'] at h
 
 /-! ## `sle_go`: a nested rule's stored levels -/
 
