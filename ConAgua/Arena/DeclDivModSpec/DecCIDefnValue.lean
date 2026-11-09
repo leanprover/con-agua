@@ -11,7 +11,7 @@ public import ConAgua.Rom.PinSets
 /-!
 # DecCIDefnValue
 
-`PinsIW`, `PinsIW.grow`, `decCI_defn_value`.
+`PinsIW`, `PinsIW.grow`.
 -/
 
 set_option experimental.vcgen true
@@ -33,12 +33,10 @@ def PinsIW (m : Mem) (o l : Nat) (ips : List INatOpPinSet) : Prop :=
 
 theorem PinsIW.grow {m m' : Mem} {o l : Nat} {ips : List INatOpPinSet} (h : PinsIW m o l ips)
     (hg : IWGrow m m') : PinsIW m' o l ips := by
-  sorry
-
-theorem decCI_defn_value {a : Array Word} {p : Nat}
-    {cv : IConstantVal} {v : EIdx} {hint : ConLeche.ReducibilityHint}
-    (h : decCI (aread a) p = some (.defnInfo cv v hint)) :
-    a[p]? = some 1 ∧ ∃ w, a[p + 5]? = some w ∧ w.toNat < 2 ^ 32 ∧ v = decI w := by
-  sorry
+  obtain ⟨h1, h2, h3⟩ := h
+  refine ⟨Nat.le_trans h1 hg.iw, h2, fun j hj => ?_⟩
+  obtain ⟨ps, hp, hP⟩ := h3 j hj
+  refine ⟨ps, ?_, PinSetR.grow hP hg⟩
+  simp only [iwA, aread_apply] at hp ⊢; rw [hg.iwGet _ (by omega)]; exact hp
 
 end L.Ind
