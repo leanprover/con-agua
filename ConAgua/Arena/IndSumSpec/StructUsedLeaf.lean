@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.LoopT
+public import ConAgua.Arena.IndSumSpec.StructUsedFrame
 import ConAgua.Arena.CrOKFrame
 public import ConAgua.Arena.IndPosSpec.NestCrest
 public import ConAgua.Arena.IndSumSpec.StructUsedLater
@@ -47,57 +48,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-/-! ## The program and its write set -/
-
-/-- `struct_used_later`'s functions and their callees. -/
-def usP : Prog :=
-  [("struct_used_later", structUsedLaterL), ("has_loose_b_var_b_fast", hasLooseBVarBFastL),
-   ("hb_clear", memoClearG hbSch), ("has_loose_b_var_b_go", hasLooseBVarBGoL),
-   ("hb_find", memoFindG hbSch), ("has_loose_b_var_b_ins", hasLooseBVarBInsL),
-   ("hb_put", memoPutG hbSch)] ++ stripProg ++ bvbProg
-
-/-- The functions `struct_used_later` reaches. -/
-def usFns : List FnName :=
-  ["struct_used_later", "has_loose_b_var_b_fast", "hb_clear", "has_loose_b_var_b_go", "hb_find",
-   "has_loose_b_var_b_ins", "hb_put", "strip_pis", "strip_lams", "e_view", "iw_alloc"] ++ bvbFns
-
-/-- The arrays `struct_used_later` writes. -/
-def usA : List TieredArray := [IW, HBM, BMEMO]
-
-/-- The `CTL` words `struct_used_later` writes. -/
-def usC : List Word := [200, 214, 215, 24, 25]
-
-theorem usP_closed : closedA usP usA usC usFns = true := by decide +kernel
-
-/-- The program bundle. -/
-abbrev UsF (p : Prog) : Prop := ProgHas p usP
-
-theorem UsF.closed {p : Prog} (hp : UsF p) : closedA p usA usC usFns = true :=
-  closedW_of_agree usP_closed (hp.agree usFns)
-
-/-! ## The spec at any arguments -/
-
-theorem structUsedLater_specV {p : Prog} (hp : UsF p) (n : Nat) (s₀ : St) (vs : List Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "struct_used_later" vs
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ustW n s₀.mem (vs.getD 0 0) (vs.getD 1 0) (vs.getD 2 0) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have hv : p.lookup "e_view" = some eView := hp.get _
-  have hf : p.lookup "hb_find" = some (memoFindG hbSch) := hp.get _
-  have hput : p.lookup "hb_put" = some (memoPutG hbSch) := hp.get _
-  have hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL := hp.get _
-  have hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL := hp.get _
-  have hbp : BvbProg p := ProgHas.right hp
-  have hst : StripProg p := ProgHas.right (ProgHas.left hp)
-  have hcl : p.lookup "hb_clear" = some (memoClearG hbSch) := hp.get _
-  have hfast : p.lookup "has_loose_b_var_b_fast" = some hasLooseBVarBFastL := hp.get _
-  have hpu : p.lookup "struct_used_later" = some structUsedLaterL := hp.get _
-  rw [invoke_eq _ hpu]
-  simp only [callFn, structUsedLaterL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      stripPis_specF p hst (n + 1), hbFast_spec p hv hf hput hins hgo hbp hcl hfast n] <;>
-    finish [ustW, Locals.init]
 
 /-! ## The `hb` walk keeps its memo at any memory -/
 
