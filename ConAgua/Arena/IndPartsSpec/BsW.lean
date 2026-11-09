@@ -142,7 +142,7 @@ theorem partsErRd {m m' : Mem} (hg : IWGrow m m') {i v : Nat} (h : nat? (erA (tr
   exact ⟨by rw [erRd_of_erA (by rw [hw]; exact hx'), UInt64.ofNat_toNat], x.toNat_lt⟩
 
 /-- A word `IW[i]` read as a number is the same word read as a `Bool`. -/
-theorem iwB_of_iwN {m : Mem} {i : Nat} {x : Word} (h : iwN m i = some x.toNat) : iwB m i = some (x != 0) := by
+theorem iwB_of_iwNW {m : Mem} {i : Nat} {x : Word} (h : iwN m i = some x.toNat) : iwB m i = some (x != 0) := by
   simp only [iwN, nat?, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, e⟩ := h
   have : w = x := UInt64.toNat_inj.mp e
@@ -298,7 +298,7 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
           (show DecB (fun m => decRules (erA m) ro rl) m rules from hrules).grow
             (partsDecRules_mono _ _) hg02
         have g0 := hget 0 (by simp); have g1 := hget 1 (by simp); have g2 := hget 2 (by simp)
-        have g3 := hget 3 (by simp); have g4 := hget 4 (by simp); have g5 := iwB_of_iwN (hget 5 (by simp))
+        have g3 := hget 3 (by simp); have g4 := hget 4 (by simp); have g5 := iwB_of_iwNW (hget 5 (by simp))
         simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero, hq1, w5, w6, w7,
           w8, w9] at g0 g1 g2 g3 g4 g5
         show decSR (truncM m2) rc.toNat = _
