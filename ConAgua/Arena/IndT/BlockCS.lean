@@ -3,6 +3,8 @@ module
 public import ConAgua.Arena.IndT.BlockC
 public import ConAgua.Arena.IndDeclConstsFrame
 public import ConAgua.Arena.IndDeclConstsTable
+public import ConAgua.Arena.IndDeclConstsBlock
+import ConAgua.Arena.IndInstallSpec.BlockRawRec
 public import ConAgua.Arena.CoreCaches
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndRealMemoCrT
@@ -88,6 +90,31 @@ theorem btRefS_of (hP : TablesProg p) (hL : DcLeafProg p)
     hS hM.abs hq hmss hW
   obtain ⟨hDM, -⟩ := dc_keep hL dcF_btsC d hM.dc
   exact ⟨ts, a', hrun, hS', BkMem.ofDc hDM hA'.i1, hg, hd, hb⟩
+
+theorem dcF_bir : "block_is_rec" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dc0F_bir : "block_is_rec" ∈ dc0Fns := List.elem_iff.mp (by decide)
+
+/-- **`block_is_rec`'s contract** (`blockIsRec_refines`: the twin's state kept). -/
+theorem birRefS_of (hP : BlockProg p) (hL : DcLeafProg p)
+    (hGnv : G → closedNV p _root_.L.Checker.nvFns = true) : BirRefS G p dn := by
+  intro n vis fe env m a p0 bs bsP hB hq hsl _
+  rcases c : callE p n "block_is_rec" [p0] m with e | ⟨r, m'⟩
+  · exact fun hG => ErrClaim.of_callE_nv (hGnv hG) (_root_.L.Checker.nv_mem (by decide +kernel)) c
+  have d := callW_of_callE c
+  rcases n with _ | n
+  · rw [callW_zero] at d; cases d
+  obtain ⟨mp, hmp⟩ := hB.ind.stage.ma
+  obtain ⟨s', rfl, -, hok, hst, hr, -, hS', hg⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (blockIsRec_refines p hP.ma hP.alloc hP.memberNamesCopy hP.names hP.pdma hP.birm hP.birg hP.bir n
+      _ a vis fe p0 bs mp hB.c.stage hq hsl.1 hmp) d
+  simp only at hok hst hr hS' hg
+  have hrun := AM.run_of_ok _ _ hok
+  rw [hst] at hrun
+  obtain ⟨hDM, -⟩ := dc_keep hL dcF_bir d hB.mem.dc
+  have hM' := BkMem.ofDc hDM (dc0_keepI1 hL dc0F_bir d hB.ind.i1)
+  refine ⟨_, a, hrun, ⟨⟨StageC.of_check hB.c hS' hM'.abs hB.c.check (ConRon.Arena.Ext.refl _),
+    hM'.ind, hM'.abs⟩, hg, ⟨hB.c.check.state, ConRon.Arena.Ext.refl _, rfl⟩⟩, ?_⟩
+  rw [hr]; cases AM.res (ConRon.Arena.blockIsRec bs) a <;> rfl
 
 end contracts
 
