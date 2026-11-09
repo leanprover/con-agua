@@ -90,13 +90,6 @@ structure TcmPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rc : RcMR m'
   abs : AbsOK m'
 
-/-- The recursor check's memos across a core call (its `has_loose_bvar_b` memo by the core's own
-claim, the others by its frame). -/
-theorem RcMR.ofCore {p : Prog} {m m' : Mem} (hP : RcMR m) (hcl : CoreStageClosed p) {f : FnName}
-    (hf : f ∈ stageCoreFns) {n : Nat} {vs : List Word} {r : List Word}
-    (h : callW p n f vs m = some (r, m')) : RcMR m' :=
-  ⟨hP.pos.ofCore hcl hf h, let ⟨mp, hm⟩ := hP.ta; ⟨mp, taMR_mfr (MFr.ofCore hcl hf h) (by decide) (by decide) hm⟩⟩
-
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)

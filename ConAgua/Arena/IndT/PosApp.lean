@@ -29,22 +29,19 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A hole application's checks (`pfK`) are a pure step. -/
 theorem pfK_pstep {fe : IFEnv} {env : ConLeche.Env} {c : NestCtx} {prog : List NestHole} {kb hi i : Nat}
     {args : List EIdx} {x : NestFieldKind} {a a' : AState} {ctxP : ConLeche.NestCtx}
     {progP : List ConLeche.NestHole} {argsP : List ConLeche.Expr}
     (h : ∀ {β : Type} (K : NestFieldKind → AM β), (pfK fe c prog kb hi i args K).run a = (K x).run a')
-    (hok : ConRon.Bridge.CheckOK V env fe a) (hctx : dCtx a.store env.find? c = some ctxP)
+    (hok : ConRon.Bridge.CheckOK false env fe a) (hctx : dCtx a.store env.find? c = some ctxP)
     (hprog : dProg a.store prog = some progP) (hargs : Frontend.denoteEList a.store args = some argsP) :
     PStep a a' := by
   obtain ⟨hcn, -, hfind, -, -, -⟩ := ConRon.Bridge.Inductives.dCtx_fields hctx
   have h2 : (pfK fe c prog kb hi i args (fun k => (pure k : AM NestFieldKind))) a = .ok (x, a') := h _
   unfold pfK at h2
-  have hrel := ConRon.Bridge.Inductives.nestHoleAt_rel hctx hprog i
   rcases hh : ConRon.Arena.nestHoleAt c prog i with _ | hole; · rw [hh] at h2; exact absurd h2 (fun hc => ConRon.Bridge.AM.fail_ok hc)
-  rw [hh] at h2 hrel
-  obtain ⟨hP, -, hdh⟩ := hrel
+  rw [hh] at h2
   simp only at h2
   obtain ⟨b, s1, h3, h4⟩ := ConRon.Bridge.AM.bind_ok h2
   obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.anyM_E_pstep
@@ -58,21 +55,13 @@ theorem pfK_pstep {fe : IFEnv} {env : ConLeche.Env} {c : NestCtx} {prog : List N
     simp only [↓reduceIte] at h4; exact absurd h4 (fun hc => ConRon.Bridge.AM.fail_ok hc)
   | false =>
   simp only [Bool.false_eq_true, ↓reduceIte] at h4
-  obtain ⟨ar, s2, h5, h6⟩ := ConRon.Bridge.AM.bind_ok h4
-  simp only [ConRon.Bridge.Inductives.dHole, Option.map_eq_some_iff] at hdh
-  obtain ⟨kP, hkP, -⟩ := hdh
-  obtain ⟨hkc, -, -⟩ := ConRon.Bridge.Inductives.dKey_inv hkP
-  obtain ⟨p2, -⟩ := ConRon.Bridge.Inductives.nestArity_spec ctxP hfind hole.key.cname kP.cname s1 s2 ar p1.ok
-    ⟨hok.ienv.toS.mono p1.ext, ConRon.Bridge.denoteN_ext hkc p1.ext⟩ h5
-  split at h6
-  · obtain ⟨-, rfl⟩ := ConRon.Bridge.AM.pure_ok h6; exact p1.trans p2
-  · exact absurd h6 (fun hc => ConRon.Bridge.AM.fail_ok hc)
--/
+  split at h4
+  · obtain ⟨-, rfl⟩ := ConRon.Bridge.AM.pure_ok h4; exact p1
+  · exact absurd h4 (fun hc => ConRon.Bridge.AM.fail_ok hc)
 
 section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : AppRef p dn vis fe env (n + 1) := by
   intro m a ctx fu po pl kb hi w ns c prog NS ctxP progP wP nsP dep hC hW hhi hw hns hP hA hc hctx hprog
     hwP hnsP hww
@@ -237,7 +226,6 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
   | fvar i ty => exact absurd hvr.1 h1v
   | const nn us => exact absurd hvr.1 h3v
   | _ => exact fun _ => ErrClaim.fail _ _ (by decide)
--/
 
 end steps
 

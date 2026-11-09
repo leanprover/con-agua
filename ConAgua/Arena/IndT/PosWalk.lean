@@ -47,7 +47,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
       AbsOK m1 → PStep a a1 →
       RefE (NbG p) (nwE.j1 p n vis ctx po pl hi nF crest ns fu' m1)
         (walkT V fe c fu'.toNat prog false hi.toNat nF.toNat (decI crest) NS) a1
-        (fun v x a' => WalkPost dn vis fe env m hi nF v.1 v.2 x a') := by
+        (fun v x a' => WalkPost dn vis fe env a m hi nF v.1 v.2 x a') := by
     intro fu' m1 a1 hC1 hg1 hP1 hA1 p1
     have hS1 := hC1.stage
     have hctx1 := dCtx_ext _ p1.ext _ _ hctx
@@ -67,9 +67,10 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
     rw [nwE.k_nest_fields.arm1]
     obtain ⟨s2, hs2, -, ⟨ks, nds, cur, ns2⟩, a2, hrun, hpost⟩ := RefE.run_ok hs1 hR1 c1
     rw [hs2] at hpost
-    obtain ⟨hC2, hg2, hK, hKb, hD, hDb, hcH, hcd, hns2, hl1, hl2, hov, hP2, hA2⟩ := hpost
-    dsimp only at hC2 hg2 hK hKb hD hDb hcH hcd hns2 hl1 hl2 hov hP2 hA2
+    obtain ⟨hC2, hg2, hK, hKb, hD, hDb, hcH, hcd, hns2, hl1, hl2, hov, hP2, hA2, c2⟩ := hpost
+    dsimp only at hC2 hg2 hK hKb hD hDb hcH hcd hns2 hl1 hl2 hov hP2 hA2 c2
     have hS2 := hC2.stage
+    have c1 := p1.toCore hC.check
     obtain ⟨-, vf, ⟨-, hnds, hcur, hnsP2, hwnds, hwcur⟩, -⟩ := ConRon.Bridge.Inductives.nestFields_spec
       (ConRon.Bridge.Inductives.nestPos_spec coreSpecV henv hc fu'.toNat) prog progP hi.toNat
       (.invalid "nested positivity") nF.toNat 0 (decI crest) crestP NS nsP [] [] [] (by simpa using hwc)
@@ -101,7 +102,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
     refine RefE.bind_right hrun3 (RefE.ret rfl ⟨hC2.of_pstep hS3 hA3 p3, hg1.trans (hg2.trans hg3), hK.grow hg3,
       by simp only [List.headD_cons, List.tail_cons]; have := hg3.iw; omega, by simpa using hl1, hcH, hcd, hclH,
       hcld, hns2.grow hg3 htop2,
-      hP2.fr (closeW_mfr _ _ _ _ _ _ _ _ hcl), hA3,
+      hP2.fr (closeW_mfr _ _ _ _ _ _ _ _ hcl), hA3, (c1.trans c2).trans (p3.toCore hC2.check),
       vf.2.1, vf.2.2.1, vf.2.2.2, ConRon.Bridge.denoteEList_ext p3.ext _ _ hnds,
       ConRon.Bridge.denote_ext hcur p3.ext, dState_ext p3.ext _ _ hnsP2, hclP,
       fun i nd hi' => by simpa using hwnds i nd hi', by simpa using hwcur⟩)

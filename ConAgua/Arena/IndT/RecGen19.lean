@@ -42,18 +42,6 @@ local notation "V" => ConLeche.CheckMode.verified
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`StageC` across a twin step con-ron calls a `CoreStep`**, the memory's half from `AbsOK`
-after (`StageC.of_pstep` for a `CSpec`'s step). -/
-theorem StageC.of_cstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR vis fe m' a') (hA : AbsOK m') (hs : ConRon.Bridge.CoreStep V env fe a a') :
-    StageC dn vis fe env m' a' :=
-  ⟨hS, hs.ok,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
-      fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.wk.2.2.2.2⟩
--/
-
 theorem slConsC_afr {p : Prog} (hP : KeysProg p) {n : Nat} {x o l : Word} {r : List Word} {m m' : Mem}
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) : AFr m m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

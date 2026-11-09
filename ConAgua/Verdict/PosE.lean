@@ -107,6 +107,7 @@ structure PosPost (r : List Word) (m' : Mem) (x : NestFieldKind × EIdx × NestS
   ns : NSB m' (r.tail.tail.headD 0) x.2.2
   pos : PosMR m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `nest_pos_app` (on `w`) gives besides the twin's `(kind, w, state)`. -/
 structure AppPost (w : Word) (r : List Word) (m' : Mem) (x : NestFieldKind × EIdx × NestState) (a' : AState) :
@@ -118,6 +119,7 @@ structure AppPost (w : Word) (r : List Word) (m' : Mem) (x : NestFieldKind × EI
   ns : NSB m' (r.tail.headD 0) x.2.2
   pos : PosMR m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `nest_cont`, `nest_cont_key` and `nest_cont_new` give besides the twin's `(kind, state)`. -/
 structure KindPost (r : List Word) (m' : Mem) (x : NestFieldKind × NestState) (a' : AState) : Prop where
@@ -127,6 +129,7 @@ structure KindPost (r : List Word) (m' : Mem) (x : NestFieldKind × NestState) (
   ns : NSB m' (r.tail.headD 0) x.2
   pos : PosMR m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `nest_frame` gives besides the twin's state. -/
 structure FramePost (r : List Word) (m' : Mem) (x : NestState) (a' : AState) : Prop where
@@ -135,6 +138,7 @@ structure FramePost (r : List Word) (m' : Mem) (x : NestState) (a' : AState) : P
   ns : NSB m' (r.headD 0) x
   pos : PosMR m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `nest_ctors` gives besides the twin's `(outs, state)`. -/
 structure CtorsPost (r : List Word) (m' : Mem) (x : List (List NestFieldKind × EIdx) × NestState) (a' : AState) :
@@ -146,6 +150,7 @@ structure CtorsPost (r : List Word) (m' : Mem) (x : List (List NestFieldKind × 
   ns : NSB m' (r.tail.tail.headD 0) x.2
   pos : PosMR m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `nest_ctors_one` gives besides the twin's `((kinds, closed), state)`: the continuation's
 inputs denote. -/
@@ -160,6 +165,7 @@ structure OnePost (hi : Word) (r : List Word) (m' : Mem) (x : (List NestFieldKin
   ns : NSB m' (r.tail.tail.tail.headD 0) x.2
   pos : PosMR m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
   out : ∃ oP, dOut a'.store x.1 = some oP ∧ ConLeche.Expr.WScoped hi.toNat oP.2
   st : ∃ nsP3, dState a'.store x.2 = some nsP3
 
@@ -179,6 +185,7 @@ structure WalkPost (hi nF : Word) (r : List Word) (m' : Mem)
   ns : NSB m' (r.tail.tail.tail.tail.headD 0) x.2.2.2.1
   pos : PosMR m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
   den : ∃ ndsP curP nsP2, Frontend.denoteEList a'.store x.2.1 = some ndsP ∧ denoteE a'.store x.2.2.1 = some curP ∧
     dState a'.store x.2.2.2.1 = some nsP2 ∧
     denoteE a'.store x.2.2.2.2 = some (ConLeche.closeTelescope ndsP hi.toNat curP) ∧
@@ -202,6 +209,7 @@ structure FieldsPost (base nF j : Word) (ks : List NestFieldKind) (nds : List EI
   nfb : nF.toNat = 0 ∨ base.toNat + j.toNat + nF.toNat < 2 ^ 64
   pos : PosMR m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 end posts
 
@@ -220,7 +228,7 @@ def PosRef (n : Nat) : Prop :=
     ConLeche.Expr.WScoped dep.toNat eP →
     RefE (NbG p) (npE p n m vis ctx fu po pl dep kb e ns)
       (nestPos V fe c fu.toNat prog dep.toNat kb.toNat (decI e) NS) a
-      (fun v x a' => PosPost dn vis fe env m v.1 v.2 x a')
+      (fun v x a' => PosPost dn vis fe env a m v.1 v.2 x a')
 
 /-- **`nest_pos_bind` refines `posBindT`, both outcomes.** -/
 def BindRef (n : Nat) : Prop :=
@@ -234,7 +242,7 @@ def BindRef (n : Nat) : Prop :=
     ConLeche.Expr.WScoped dep.toNat wP →
     RefE (NbG p) (npbE p n m vis ctx fu po pl dep kb w ns)
       (posBindT V fe c fu.toNat prog dep.toNat kb.toNat (c.hiAt prog.length) (decI w) NS) a
-      (fun v x a' => PosPost dn vis fe env m v.1 v.2 x a')
+      (fun v x a' => PosPost dn vis fe env a m v.1 v.2 x a')
 
 /-- **`nest_pos_app` refines `posAppT`, both outcomes.** -/
 def AppRef (n : Nat) : Prop :=
@@ -248,7 +256,7 @@ def AppRef (n : Nat) : Prop :=
     denoteE a.store (decI w) = some wP → dState a.store NS = some nsP → ConLeche.Expr.WScoped dep wP →
     RefE (NbG p) (npaE p n m vis ctx fu po pl kb hi w ns)
       (posAppT V fe c fu.toNat prog kb.toNat hi.toNat (decI w) NS) a
-      (fun v x a' => AppPost dn vis fe env m w v.1 v.2 x a')
+      (fun v x a' => AppPost dn vis fe env a m w v.1 v.2 x a')
 
 /-- **`nest_cont` refines `nestCont`, both outcomes.** -/
 def ContRef (n : Nat) : Prop :=
@@ -265,7 +273,7 @@ def ContRef (n : Nat) : Prop :=
     (∀ x ∈ argsP, ConLeche.Expr.WScoped dep x) →
     RefE (NbG p) (ncE p n m vis ctx fu po pl kb nn us aO aL ns)
       (nestCont V fe c fu.toNat prog kb.toNat (decI nn) (decI us) args NS) a
-      (fun v x a' => KindPost dn vis fe env m v.1 v.2 x a')
+      (fun v x a' => KindPost dn vis fe env a m v.1 v.2 x a')
 
 /-- **`nest_cont_key` refines `nestContKey`, both outcomes.** -/
 def KeyRef (n : Nat) : Prop :=
@@ -286,7 +294,7 @@ def KeyRef (n : Nat) : Prop :=
     (∀ d, (∀ y ∈ dsP, ConLeche.Expr.WScoped d y) → ConLeche.Expr.WScoped d ctyP) →
     RefE (NbG p) (nckE p n m vis ctx fu po pl kb nn us dO dL nPc cty ns)
       (nestContKey V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS) a
-      (fun v x a' => KindPost dn vis fe env m v.1 v.2 x a')
+      (fun v x a' => KindPost dn vis fe env a m v.1 v.2 x a')
 
 /-- **`nest_cont_new` refines `nestContNew`, both outcomes.** -/
 def NewRef (n : Nat) : Prop :=
@@ -307,7 +315,7 @@ def NewRef (n : Nat) : Prop :=
     (∀ d, (∀ y ∈ dsP, ConLeche.Expr.WScoped d y) → ConLeche.Expr.WScoped d ctyP) →
     RefE (NbG p) (nnewE p n m vis ctx fu po pl kb nn us dO dL nPc cty ns)
       (nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS) a
-      (fun v x a' => KindPost dn vis fe env m v.1 v.2 x a')
+      (fun v x a' => KindPost dn vis fe env a m v.1 v.2 x a')
 
 /-- **`nest_frame` refines `nestFrame`, both outcomes.** -/
 def FrameRef (n : Nat) : Prop :=
@@ -326,7 +334,7 @@ def FrameRef (n : Nat) : Prop :=
     (∀ d ∈ dsP, ConLeche.Expr.WScoped hi.toNat d) → (∀ x ∈ grpP, ConLeche.Expr.WScoped hi.toNat x.2) →
     RefE (NbG p) (nfrE p n m vis ctx fu po pl hi us dO dL nPc gO gL ns)
       (nestFrame V fe c fu.toNat prog hi.toNat (decI us) ds nPc.toNat grp NS) a
-      (fun v x a' => FramePost dn vis fe env m v.1 v.2 x a')
+      (fun v x a' => FramePost dn vis fe env a m v.1 v.2 x a')
 
 /-- **`nest_ctors` refines `nestCtors`, both outcomes.** -/
 def CtorsRef (n : Nat) : Prop :=
@@ -347,7 +355,7 @@ def CtorsRef (n : Nat) : Prop :=
     dState a.store NS = some nsP → outs.mapM (dOut a.store) = some outsP →
     RefE (NbG p) (nctE p n m vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL)
       (nestCtors V fe c (decide (root ≠ 0)) fu.toNat prog hi.toNat (decI us) ds names holes cs NS outs) a
-      (fun v x a' => CtorsPost dn vis fe env m v.1 v.2 x a')
+      (fun v x a' => CtorsPost dn vis fe env a m v.1 v.2 x a')
 
 /-- **`nest_ctors_one` refines `oneT` (`oneK` without its continuation), both outcomes.** -/
 def OneRef (n : Nat) : Prop :=
@@ -365,7 +373,7 @@ def OneRef (n : Nat) : Prop :=
     dState a.store NS = some nsP →
     RefE (NbG p) (noE p n m vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns)
       (oneT V fe c fu.toNat prog (decide (root ≠ 0)) hi.toNat (decI us) ds names holes cvv nF.toNat NS) a
-      (fun v x a' => OnePost dn vis fe env m hi v.1 v.2 x a')
+      (fun v x a' => OnePost dn vis fe env a m hi v.1 v.2 x a')
 
 /-- **`nest_ctors_walk` refines `walkT` (`walkK` without its continuation), both outcomes.** -/
 def WalkRef (n : Nat) : Prop :=
@@ -379,7 +387,7 @@ def WalkRef (n : Nat) : Prop :=
     ConLeche.Expr.WScoped hi.toNat crestP →
     RefE (NbG p) (nwE p n m vis ctx root fu po pl hi nF crest ns)
       (walkT V fe c fu.toNat prog (decide (root ≠ 0)) hi.toNat nF.toNat (decI crest) NS) a
-      (fun v x a' => WalkPost dn vis fe env m hi nF v.1 v.2 x a')
+      (fun v x a' => WalkPost dn vis fe env a m hi nF v.1 v.2 x a')
 
 /-- **`nest_fields` refines `nestFields`, both outcomes.** -/
 def FieldsRef (n : Nat) : Prop :=
@@ -397,7 +405,7 @@ def FieldsRef (n : Nat) : Prop :=
     ConLeche.Expr.WScoped (base.toNat + j.toNat) curP →
     RefE (NbG p) (nfE p n m vis ctx fu po pl base nF j cur ns kO kL dO dL)
       (nestFields V fe c fu.toNat prog base.toNat nF.toNat j.toNat (decI cur) NS ks nds) a
-      (fun v x a' => FieldsPost dn vis fe env m base nF j ks nds v.1 v.2 x a')
+      (fun v x a' => FieldsPost dn vis fe env a m base nF j ks nds v.1 v.2 x a')
 
 /-- **The block's refinements at L fuel `n`.** -/
 structure NbRef (n : Nat) : Prop where
