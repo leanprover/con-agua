@@ -33,7 +33,7 @@ theorem classGenMajor_refines (p : Prog) (hp : MjProg p) (n : Nat) (s₀ : St) (
     (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_major" [g, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.major G c.toNat d.toNat) a₀ ∧
-      KP dn vis fe s₀.mem decOLE (r, s'.mem) (AM.st (ConRon.Arena.ClassGen.major G c.toNat d.toNat) a₀)
+      KP vis fe s₀.mem decOLE (r, s'.mem) (AM.st (ConRon.Arena.ClassGen.major G c.toNat d.toNat) a₀)
         (AM.res (ConRon.Arena.ClassGen.major G c.toNat d.toNat) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (classGenMajor_spec p hp n s₀ g c d) fun _ _ ⟨hl, hw⟩ =>
     ⟨hl, (mjW_sim dn vis fe n _ a₀ g c d G hS hG hA).am hw⟩
@@ -46,7 +46,7 @@ theorem classGenMotiveTy_refines (p : Prog) (hp : MtProg p) (n : Nat) (s₀ : St
     (hS : StageR vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_motive_ty" [g, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a₀ ∧
-      KP dn vis fe s₀.mem decOE (r, s'.mem) (AM.st (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a₀)
+      KP vis fe s₀.mem decOE (r, s'.mem) (AM.st (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a₀)
         (AM.res (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (classGenMotiveTy_spec p hp n s₀ g c d) fun _ _ ⟨hl, hw⟩ =>
     let h := (motW_sim dn vis fe n _ a₀ g c d G hS hG hA).am hw

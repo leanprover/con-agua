@@ -38,7 +38,7 @@ theorem classGenRule_refines (p : Prog) (hp : RuProg p) (n : Nat) (s₀ : St) (a
     (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule" [g, rco, rcl, cgo, cgl, rlvls, c, x]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classGenRule G recCls cvGs (decI rlvls) c.toNat X) a₀ ∧
-      KP dn vis fe s₀.mem decOE (r, s'.mem) (AM.st (ConRon.Arena.classGenRule G recCls cvGs (decI rlvls) c.toNat X) a₀)
+      KP vis fe s₀.mem decOE (r, s'.mem) (AM.st (ConRon.Arena.classGenRule G recCls cvGs (decI rlvls) c.toNat X) a₀)
         (AM.res (ConRon.Arena.classGenRule G recCls cvGs (decI rlvls) c.toNat X) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (classGenRule_spec p hp n s₀ g rco rcl cgo cgl rlvls c x) fun _ _ ⟨hl, hw⟩ =>
     let h := (ruW_sim dn vis fe n _ a₀ g rco rcl cgo cgl rlvls c x G X recCls cvGs hS hG hns hX hrl hrc hrcb hcg hcgb

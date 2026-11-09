@@ -33,7 +33,7 @@ def KPT {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
 
 theorem KPT.kp {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {dec : Mem → List Word → α → Prop} {b : List Word × Mem} {a' : AState} {x : α}
-    (h : KPT dn vis fe m dec b a' x) : KP dn vis fe m dec b a' x := ⟨h.1.stage, h.2⟩
+    (h : KPT dn vis fe m dec b a' x) : KP vis fe m dec b a' x := ⟨h.1.stage, h.2⟩
 
 /-- A `Sim` is a `RSim` of the same model. -/
 theorem _root_.L.Arena.Sim.rsim {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}

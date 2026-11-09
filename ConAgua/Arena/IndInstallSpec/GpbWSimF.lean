@@ -233,7 +233,7 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (g : Word) (G : ClassGen) (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK m) :
     RSim (gpbW n m g) (ConRon.Arena.ClassGen.prefixBinders G) a
-      (fun b a' x => (KP dn vis fe m decIHO b a' x ∧ AbsOK b.2) ∧
+      (fun b a' x => (KP vis fe m decIHO b a' x ∧ AbsOK b.2) ∧
         (∀ pre, x = some pre → iwTop m ≤ (b.1.tail.headD 0).toNat)) := by
   sorry
 

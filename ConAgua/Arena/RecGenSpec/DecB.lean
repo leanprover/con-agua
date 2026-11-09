@@ -158,7 +158,7 @@ in `mb`) at a source pointer `p0` satisfying `S`, the `nfs` slice above `hi` (or
 those of `PtrsB`. -/
 def CnsRec (mb : Mem) (S : Nat → Prop) (hi : Nat) (m : Mem) (w : Nat) (M : TargetMajor) : Prop :=
   ∃ p0 src eo el ps, DecB (fun m => decTM m p0) mb src ∧ S p0 ∧ hi ≤ w ∧ w + 13 ≤ iwTop m ∧
-    (∀ k < 13, k ≠ 9 → k ≠ 10 → (m.arr64 IW)[w + k]? = (iwA (truncM mb))[p0 + k]?) ∧
+    (∀ k < 13, k ≠ 9 → k ≠ 10 → (m.arr64 IW)[w + k]? = iwA (truncM mb) (p0 + k)) ∧
     iwN m (w + 9) = some eo ∧ iwN m (w + 10) = some el ∧ decNL m eo el = some ps ∧
     eo + el ≤ iwTop m ∧ (el = 0 ∨ hi ≤ eo) ∧ PtrsB mb ps M.nfs ∧ M = { src with nfs := M.nfs }
 -/

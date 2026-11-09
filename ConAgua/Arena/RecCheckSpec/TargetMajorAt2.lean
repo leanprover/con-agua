@@ -44,7 +44,7 @@ theorem targetMajorDefault_specF (p : Prog) (ha : p.lookup "iw_alloc" = some iwA
 theorem tmdW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (hS : StageR vis fe m a) :
     RSim (fuelW n (tmdW m)) ConRon.Arena.targetMajorDefault a
-      (KP dn vis fe m (fun m' r x => decTM m' (r.headD 0).toNat = some x)) := by
+      (KP vis fe m (fun m' r x => decTM m' (r.headD 0).toNat = some x)) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>
@@ -100,7 +100,7 @@ def decTM0 (m' : Mem) (r : List Word) (x : TargetMajor) : Prop := decTM m' (r.he
 theorem tmaW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR vis fe m a)
     (hms : decPL m (decTM m) mo.toNat ml.toNat = some ms) (_hb : mo.toNat + ml.toNat < 2 ^ 64) :
-    RSim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a (KP dn vis fe m decTM0) := by
+    RSim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a (KP vis fe m decTM0) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>
@@ -146,7 +146,7 @@ theorem targetMajorAt_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
     (hms : decPL s₀.mem (decTM s₀.mem) mo.toNat ml.toNat = some ms) (hb : mo.toNat + ml.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_major_at" [mo, ml, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetMajorAt ms c.toNat) a₀ ∧
-      KP dn vis fe s₀.mem decTM0 (r, s'.mem) (AM.st (ConRon.Arena.targetMajorAt ms c.toNat) a₀)
+      KP vis fe s₀.mem decTM0 (r, s'.mem) (AM.st (ConRon.Arena.targetMajorAt ms c.toNat) a₀)
         (AM.res (ConRon.Arena.targetMajorAt ms c.toNat) a₀); ⊤⦄ :=
   triple_post (targetMajorAt_spec p ha hpw hm hd hp hna n s₀ mo ml c) fun _ _ ⟨hl, hw⟩ =>
     ⟨hl, (tmaW_sim dn vis fe n _ a₀ mo ml c ms hS hms hb).am hw⟩

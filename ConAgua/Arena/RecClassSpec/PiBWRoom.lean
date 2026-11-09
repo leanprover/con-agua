@@ -42,18 +42,18 @@ section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
 theorem simFvarTypeD (hS : StageR vis fe m a) {e : Word} (he : H e) :
-    RSim (ftdF m [e]) (fvarTypeD (decI e)) a (KP dn vis fe m decW0E) :=
-  (ftdF_ok dn vis fe e he).sim hS
+    RSim (ftdF m [e]) (fvarTypeD (decI e)) a (KP vis fe m decW0E) :=
+  (ftdF_ok (fun _ => none) vis fe e he).sim hS
 
 theorem simGetAppArgs (hS : StageR vis fe m a) {e : Word} (he : H e) :
     RSim (gaaF m [CWF, e]) (getAppArgs coreWalkFuel (decI e)) a
-      (KP dn vis fe m (decRL (fun m => decHL m) 0)) := by
-  have h := (gaaF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
+      (KP vis fe m (decRL (fun m => decHL m) 0)) := by
+  have h := (gaaF_ok (fun _ => none) vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 /-- `open_pis_at_fvars_f`'s real refinement (`opfF_ok`): the walk memos kept. -/
 theorem simOpenPisF (hS : StageR vis fe m a) (hA : AbsOK m) {k e i : Word} (he : H e) :
     RSim (opfF m [k, e, i]) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
-      (fun b a' x => KP dn vis fe m decOLE b a' x ∧ AbsOK b.2) := by
+      (fun b a' x => KP vis fe m decOLE b a' x ∧ AbsOK b.2) := by
   rintro ⟨r, m'⟩ h
   obtain ⟨x, a', hrun, hK, hA'⟩ := opfF_ok vis fe k e i he m m' a r h ⟨hS, hA⟩
   exact ⟨x, a', hrun, hK, hA'⟩
