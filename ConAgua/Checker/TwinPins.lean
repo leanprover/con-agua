@@ -23,7 +23,7 @@ open ConRon.Arena ConRon.Arena.Frontend
 section pins
 open ConLeche ConRon.Bridge
 
-/-- con-ron: ConRon/Bridge/Checker/Pins.lean:642 ConRon.Bridge.internAllPins_run — **the same walk**,
+/-- con-ron: ConRon/Bridge/Checker/Pins.lean:614-724 ConRon.Bridge.internAllPins_run — **the same walk**,
 split after its first block (`Eq`'s): the first block one scratch-agnostic step, the rest of the
 basis and the pinned names one more, ending in the pin sets, which extend the store and leave the
 pin table. -/
@@ -99,7 +99,7 @@ theorem internAllPins_steps {ps : List NatOpPinSet} {r : List INatOpPinSet}
     internPinSets_run a29.ok (by rw [a29.scratch, b1.scratch]; exact hoff) w33
   exact ⟨u0, _, ⟨_, q0⟩, b1, a29, hx', hpe⟩
 
-/-- con-ron: ConRon/Bridge/Checker/Pins.lean:642 ConRon.Bridge.internAllPins_run — the conjunct
+/-- con-ron: ConRon/Bridge/Checker/Pins.lean:614-724 ConRon.Bridge.internAllPins_run — the conjunct
 that lemma does not export: `internAllPins` leaves the pin table (it builds the pin SETS, its
 result). -/
 theorem internAllPins_pins {ps : List NatOpPinSet} {r : List INatOpPinSet}
