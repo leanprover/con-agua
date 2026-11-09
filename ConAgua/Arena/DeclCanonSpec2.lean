@@ -61,7 +61,11 @@ theorem ctc_ok {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) {x : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) x.toNat = some ci) :
     decCV (erecP m) (x + 1).toNat = some ci.toConstantVal := by
-  sorry
+  have hcv := ciD_cv hci
+  obtain ⟨w, hw, -⟩ := decCV_name hcv
+  have hb := erecP_lt64 hw
+  have e : (x + 1).toNat = x.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  rw [e]; exact hcv
 
 section refs
 variable (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)

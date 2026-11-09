@@ -384,7 +384,7 @@ theorem capsEqAll_ok' {R : Nat → Option Word} {rd : Word → Word} {dn : NIdx 
     capsEqAll rd (p + k) (q + k) = decide (x = y) := by
   sorry
 
-theorem ciD {R : Nat → Option Word} {rd : Word → Word} {p : Nat} {x : IConstantInfo}
+theorem ciD {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
     (h : decCI R p = some x) :
     ∃ wk, R p = some wk ∧
       ((wk.toNat = 0 ∧ ∃ cv, decCV R (p + 1) = some cv ∧ x = .axiomInfo cv) ∨
@@ -400,7 +400,47 @@ theorem ciD {R : Nat → Option Word} {rd : Word → Word} {p : Nat} {x : IConst
           nat? R (p + 7) = some o ∧ nat? R (p + 8) = some c ∧
           bool? R (p + 9) = some k ∧
           decRules R o c = some rules ∧ x = .recInfo cv mi rp k rules)) := by
-  sorry
+  unfold decCI at h
+  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
+  obtain ⟨k, hk, h⟩ := h
+  obtain ⟨wk, e, rfl⟩ := natD hk
+  refine ⟨wk, e, ?_⟩
+  split at h
+  · rename_i hh
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨cv, hcv, rfl⟩ := h
+    exact .inl ⟨hh, cv, hcv, rfl⟩
+  · rename_i hh
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨cv, hcv, v, hv, hi, hhi, rfl⟩ := h
+    exact .inr (.inl ⟨hh, cv, v, hi, hcv, hv, hhi, rfl⟩)
+  · rename_i hh
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨cv, hcv, rfl⟩ := h
+    exact .inr (.inr (.inl ⟨hh, cv, hcv, rfl⟩))
+  · rename_i hh
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨cv, hcv, caps, hc, rfl⟩ := h
+    exact .inr (.inr (.inr (.inl ⟨hh, cv, caps, hcv, hc, rfl⟩)))
+  · rename_i hh
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨cv, hcv, np, hnp, nf, hnf, rfl⟩ := h
+    exact .inr (.inr (.inr (.inr (.inl ⟨hh, cv, np, nf, hcv, hnp, hnf, rfl⟩))))
+  · rename_i hh
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨cv, hcv, mi, hmi, rp, hrp, k, hkk, o, ho, c, hc, rules, hr, rfl⟩ := h
+    exact .inr (.inr (.inr (.inr (.inr
+      ⟨hh, cv, mi, rp, o, c, k, rules, hcv, hmi, hrp, ho, hc, hkk, hr, rfl⟩))))
+  · simp at h
+
+/-- **A decoded record's constant value sits at `p + 1`** (every kind holds it inline, the twin's
+pure `toConstantVal`). -/
+theorem ciD_cv {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
+    (h : decCI R p = some x) : decCV R (p + 1) = some x.toConstantVal := by
+  obtain ⟨_, _, hx⟩ := ciD h
+  rcases hx with ⟨-, cv, hcv, rfl⟩ | ⟨-, cv, _, _, hcv, -, -, rfl⟩ | ⟨-, cv, hcv, rfl⟩ |
+    ⟨-, cv, _, hcv, -, rfl⟩ | ⟨-, cv, _, _, hcv, -, -, rfl⟩ |
+    ⟨-, cv, _, _, _, _, _, _, hcv, -, -, -, -, -, -, rfl⟩ <;> exact hcv
 
 theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
     (hR : RdOK R rd) {p q : Word} {x y : IConstantInfo}

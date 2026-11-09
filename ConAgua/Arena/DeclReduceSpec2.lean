@@ -97,7 +97,7 @@ theorem decCI_kind0 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
     (w = 0 → ∃ cv, decCV a (p + 1) = some cv ∧ ci = .axiomInfo cv) ∧
       (w ≠ 0 → ∀ cv, ci ≠ .axiomInfo cv) := by
-  obtain ⟨wk, e, hk⟩ := ciD (rd := id) h
+  obtain ⟨wk, e, hk⟩ := ciD h
   rw [hw] at e; cases e
   constructor
   · intro h0
@@ -116,7 +116,7 @@ theorem decCI_kind3 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
     (w = 3 → ∃ cv caps, decCV a (p + 1) = some cv ∧ ci = .indInfo cv caps) ∧
       (w ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
-  obtain ⟨wk, e, hk⟩ := ciD (rd := id) h
+  obtain ⟨wk, e, hk⟩ := ciD h
   rw [hw] at e; cases e
   constructor
   · intro h0
