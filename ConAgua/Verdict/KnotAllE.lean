@@ -2,6 +2,7 @@ module
 
 import ConAgua.Verdict.InferKnotE
 import ConAgua.Verdict.InferLeavesE
+import ConAgua.Arena.InferProj2
 import ConAgua.Verdict.WhnfKnotE
 public import ConAgua.Checker.LoopDeclArm
 public import ConAgua.Checker.LoopDecl
@@ -18,6 +19,7 @@ import ConAgua.Arena.StrLitCtor
 import ConAgua.Arena.StrLitSup
 import ConAgua.Arena.WhnfProjRefine2
 import ConAgua.Checker.CoreErec
+import ConAgua.Checker.IndCore
 import ConAgua.Checker.LoopDeclAgree
 import ConAgua.Checker.LoopProgTac
 import ConAgua.Verdict.DefEqSlotE
@@ -178,7 +180,7 @@ import all ConAgua.Scan.Line
 The three families' error halves of the knot's slots one level up, put together:
 
 * the `infer`/`infer_io` slots (`inferSlots_stepE`, `InferKnotE.lean`), over `InferCalleesE`:
-  the verdict closure and `infer_proj`'s claim (`inferProj_refinesE'`);
+  the verdict closure and `infer_proj`'s claim (`inferProj_refinesE`);
 * the `whnf_core`/`whnf` slots (`whnfSlotsE_of`, `WhnfKnotE.lean`);
 * the `defeq` slot (`KnotAllProg.defeqSlotE_all`, `DefEqAllE.lean`), over the whnf family's two
   claims (`DefeqWhnfE`), each from its `Whnf*E.lean` proof.
@@ -203,9 +205,7 @@ variable {p : Prog} (hq : KnotAllProg p) (hnv : closedNV p L.Checker.nvFns = tru
 include hq hnv in
 /-- **The inference bodies' callees' error claims** (`InferCalleesE`). -/
 theorem KnotAllProg.inferCE : InferCalleesE p :=
-  ⟨hnv, inferProj_refinesE' p hq.proj hq.projp
-      ⟨coreDen_of, findProj_refines p hq.projp, projFound p hq.projp, erecKept_of hq.hcl, hq.instLP,
-        erecKeptProj_of hq.hcl⟩ hnv⟩
+  ⟨hnv, inferProj_refinesE p hq.proj hq.projp (KnotAllProg.projCallees hq) hnv⟩
 
 include hq hnv in
 /-- **The whnf family's two error claims the `defeq` family takes** (`DefeqWhnfE`). -/
@@ -298,14 +298,16 @@ theorem checkerProg_lvlText : ∀ f ∈ lvlFns, checkerProg.lookup f = cvgProg.l
 /-- **The knot's program and entry points at `checkerProg`.** -/
 theorem checkerProg_knotTop : KnotTopProg checkerProg := by
   prog_bundle [checkerProg_coreErec, checkerProg_natAgree, checkerProg_lvlText, checkerProg_cvgAgree,
-    checkerProg_armAgree, checkerProg_cvgIn, checkerProg_armIn]
+    checkerProg_armAgree, checkerProg_cvgIn, checkerProg_armIn, checkerProg_coreStageW,
+    checkerProg_lvlCoreW]
 
 /-- **The knot's program and entry points at the substituted checker program** (no ROM facts
 needed: the knot reads no pin data). -/
 theorem checkerProg_knotTopPB (bs : List UInt8) : KnotTopProg (Prog.subPB bs checkerProg) := by
   prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_armAgreePB bs,
     checkerProg_cvgIn.subPB bs, checkerProg_armIn.subPB bs,
-    closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs]
+    closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
+    closedWL_subPB bs checkerProg_coreStageW, closedW_subPB bs checkerProg_lvlCoreW]
 
 /-- **The error knot at `checkerProg`**, every fuel. -/
 theorem checkerProg_knotE (n : Nat) : KnotOKE checkerProg n :=
