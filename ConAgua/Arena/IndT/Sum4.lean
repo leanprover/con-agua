@@ -21,6 +21,8 @@ import ConRon.Bridge.Inductives.SumInstall
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndSumSpec.SumProg
 public import ConAgua.Arena.IndT.Install1
+import ConAgua.Arena.IndT.Lift
+import ConLeche.Verify.Denote.IndFrame
 public import ConRon.Bridge.Inductives.Rel
 import all ConAgua.Arena.IndSum
 
@@ -71,25 +73,23 @@ l_model ctlE_spec (p : Prog) (hP : SumProg p)
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_sum_ctor`, both outcomes**: the constant check, the domains and the tail by
 their unified models, the other callees (outside the verdict closure) lifted. -/
-l_model ctorE_spec (p : Prog) (hP : SumProg p) (hV : ValProg p)
+l_model ctorE_spec (p : Prog) (hP : SumProg p) (hV : CcvProg p)
   fns [hP.hctor ↦ ctorE]
   specs [checkConstantVal_specE p hV n, callW_spec p n "strip_pis", callW_spec p n "struct_ctor_resid_ok",
     callW_spec p n "open_pis_at_fvars_f", callW_spec p n "fvar_type_ds", sdomsE_spec p hP.hsd n,
     ctlE_spec p hP n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
--/
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p) (hOpf : OpfF p) (hLC : LvlCacheProg p)
+  (hOpf : OpfF p) (hLC : LvlCacheProg p)
   (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
@@ -212,58 +212,56 @@ theorem ctl_ref (hP : SumProg p) (hcr : CrfF p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62
 the growth, the constant returned unchanged, the sorts as the `IW` slice `r = [cv, o, l]`, `AbsOK`, the
 twin's core step. -/
 structure CtorPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
-    (m : Mem) (a : AState) (cvCw : Word) (cvC : IConstantVal) (r : List Word) (m' : Mem)
-    (x : IConstantVal × List LIdx) (a' : AState) : Prop where
+    (m : Mem) (a : AState) (m' : Mem) (a' : AState) : Prop where
   stage : StageC dn vis fe env m' a'
   grow : IWGrow m m'
-  cvW : r.headD 0 = cvCw
-  cv : x.1 = cvC
-  sorts : decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some x.2
-  sortsB : (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctor` refines `checkSumCtor .verified`, both outcomes** (twin side: con-ron's
 `checkSumCtor_spec`'s proof): the constant check (`ccv_ref`), the constructor's and the type former's
 telescopes, the domains (`sds_ref`) and the tail (`ctl_ref`); the other callees (outside the verdict
 closure) lifted. -/
-theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (a : AState)
-    (vis0 T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
+theorem ctor_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims p dn) (m : Nat)
+    (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (a : AState)
+    (T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
     (cvC cvTa : IConstantVal) (hC : StageC dn vis fe env m0 a) (hT : H T)
     (hlps : decHL m0 lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m0)
     (hcv : DecB (fun m => decCVp m cvCw.toNat) m0 cvC)
     (hta : DecB (fun m => decCVp m cvTaw.toNat) m0 cvTa)
     (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) (hnf : nP.toNat + nF.toNat < 2 ^ 64)
     (hA : AbsOK m0)
-    {env₀ : ConLeche.Env} {TP : ConLeche.Name} {lpsP : List ConLeche.Name} {rsP : ConLeche.Level}
+    {TP : ConLeche.Name} {lpsP : List ConLeche.Name} {rsP : ConLeche.Level}
     {cvCP cvTaP : ConLeche.ConstantVal}
     (hTP : denoteN a.store.ns (decI T) = some TP)
     (hlpsP : Frontend.denoteNList a.store.ns lps = some lpsP)
     (hrsP : denoteL a.store.ls (decI rs) = some rsP)
     (hcvCP : Frontend.denoteCV a.store cvC = some cvCP)
-    (hcvTaP : Frontend.denoteCV a.store cvTa = some cvTaP) (hws : ConLeche.Expr.WScoped 0 cvTaP.type)
-    (hok₀ : ConRon.Bridge.Inductives.IFEnvOKS env₀ (fe.restrictTo vis0.toNat) a.store)
-    (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) :
-    RefE (VerdictCtxU p) (ctorE p (m + 1) m0 vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw)
-      (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
+    (hcvTaP : Frontend.denoteCV a.store cvTa = some cvTaP) (hws : ConLeche.Expr.WScoped 0 cvTaP.type) :
+    RefE (VerdictCtxU p) (ctorE p (m + 1) m0 vis vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw)
+      (checkSumCtor V fe fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
         (isP != 0) (lg != 0) cvC nF.toNat cvTa) a
-      (fun v x a' => CtorPost dn vis fe env m0 a cvCw cvC v.1 v.2 x a') := by
+      (fun v _ a' => CtorPost dn vis fe env m0 a v.2 a') := by
   rw [ctorE.arm1, checkSumCtor_eq]
   obtain ⟨hcvx, -⟩ := rec3CVExt_of_trunc (show decCVp (truncM m0) cvCw.toNat = some cvC from hcv)
-  refine RefE.bindE (fun _ => rfl) id (ccv_ref (n := m) hq hApd hCrk (by omega) hC.stageT
-    (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) (rec3CVExt_lt hC.stage hcvx) (denoteCV_lps hcvCP)
+  have dcv : ∀ m', IWGrow m0 m' → decCVp m' cvCw.toNat = some cvC :=
+    fun m' hg => (rec3CVExt_of_trunc (hcv.stab (OMono.decCVp _) m' hg)).2
+  have dta : ∀ m', IWGrow m0 m' → decCVp m' cvTaw.toNat = some cvTa :=
+    fun m' hg => (rec3CVExt_of_trunc (hta.stab (OMono.decCVp _) m' hg)).2
+  refine RefE.bindE (fun _ => rfl) id (ccv_ref (n := m) (allow := 0) hV hq hApd hCrk hcr hCS (by omega)
+    hC.stageT (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) (rec3CVExt_lt hC.stage hcvx) hcvCP
     hA.crMemo.crOK) fun ⟨u1, m1⟩ _ a1 hr1 hP1 => ?_
-  obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core
     hC.check henv hcvCP hr1
-  have k1 : InsAt dn vis fe env m0 a m1 a1 := ⟨StageC.of_T hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
+  have k1 : InsAt dn vis fe env m0 a m1 a1 := ⟨StageC.ofStageT hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
   have hcA := ConRon.Bridge.denoteCV_ext hcvCP c1.ext
   have hwsA : ConLeche.Expr.WScoped 0 cvCP.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConLeche.checkConstantVal_typeWF hF₁).1
   dsimp only [ctorE.k_check_constant_val]
   -- `strip_pis`
-  obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 k1.grow) k1.stage.stage.iw.erSize
-  rw [hw1]
+  obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (dcv m1 k1.grow)
+  rw [show rdW (m1.arr64 (tierA EREC ((cvCw + 3) >>> 40))) (cvCw + 3 &&& 1099511627775) = w1 from hw1]
   refine RefE.bindSim (fun _ => rfl) (strip_step hP k1 hw1l (sum_toNat_add hnf) hw1d
     (ConRon.Bridge.denoteCV_type hcA)) fun r2 o2 m2 a2 _ _ ⟨k2, ho2, hdo2⟩ => ?_
   dsimp only [ctorE.k_strip_pis]
@@ -278,8 +276,8 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   refine RefE.guard (by decide) hb3.1 hb3.2 fun _ _ => ?_
   have k03 := k02.trans k3
   -- the constructor's opened telescope
-  obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m3 k03.grow) k3.stage.stage.iw.erSize
-  rw [hw3]
+  obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (dcv m3 k03.grow)
+  rw [show rdW (m3.arr64 (tierA EREC ((cvCw + 3) >>> 40))) (cvCw + 3 &&& 1099511627775) = w3 from hw3]
   refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k3 hw3l hw3d
     (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcA) (k2.trans k3).core.ext))
     fun r4 o4 m4 a4 _ _ ⟨k4, ho4, hdo4⟩ => ?_
@@ -288,8 +286,8 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   obtain ⟨hcl, hclb, hcqB, rfl, cfvsP, crestP, hcq, hcfvs, hcrest⟩ := hdo4 _ _ hq4
   have k04 := k03.trans k4
   -- the type former's opened telescope
-  obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (hta.stab (OMono.decCVp _) m4 k04.grow) k4.stage.stage.iw.erSize
-  rw [hw5]
+  obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (dta m4 k04.grow)
+  rw [show rdW (m4.arr64 (tierA EREC ((cvTaw + 3) >>> 40))) (cvTaw + 3 &&& 1099511627775) = w5 from hw5]
   refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k4 hw5l hw5d
     (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcvTaP) k04.core.ext))
     fun r5 o5 m5 a5 _ _ ⟨k5, ho5, hdo5⟩ => ?_
@@ -318,10 +316,10 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
     (k6.stage.stage.lt64 hclb6) (k6.stage.stage.lt64 htdb) hclb6 htdb
     (by simp only [UInt64.toNat_zero, Nat.zero_add]; have := k6.stage.stage.lt64 hclb6; omega)
     hcfvs6 hdoms hws7) fun ⟨u7, m7⟩ _ a7 hr7 hR7 => ?_
-  obtain ⟨c7, -⟩ := ConRon.Bridge.Inductives.checkStructDomsAt_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨c7, -⟩ := ConRon.Bridge.Inductives.checkStructDomsAt_spec fe ConRon.Bridge.CoreSpec.of_core
     henv 0 cl tdoms cfvsP (tfvsP.map ConLeche.Expr.fvarTypeD) nP.toNat
     (fun i hi x y hx hy => hws7 i hi x y hx hy) a6 a7 _ k6.stage.check
-    ⟨hcfvs6, hdoms, ConRon.Bridge.denoteFEnv_mono k06.core.ext hfe⟩ hr7
+    ⟨hcfvs6, hdoms⟩ hr7
   have k07 := k06.trans ⟨hR7.stage, hR7.abs, hR7.grow, c7⟩
   have k47 := k46.trans ⟨hR7.stage, hR7.abs, hR7.grow, c7⟩
   dsimp only [ctorE.k_check_struct_doms_at]
@@ -330,60 +328,48 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
     simpa using (ConLeche.openPisAtFvars_WScoped _ _ _ hcq hwsA).2
   rcases m with _ | m'
   · rw [ctlE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
-  exact RefE.lastE (K := ctorE.k_check_sum_ctor_tail p cvCw) (fun _ => rfl) (fun _ => rfl) (·.toVerdictCtx)
-    (ctl_ref hq henv hOpf hLC hLT hP m' (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC
+  exact RefE.lastE (K := ctorE.k_check_sum_ctor_tail p) (fun _ => rfl) (fun _ => rfl) (·.toVerdictCtx)
+    (ctl_ref hq henv hOpf hLC hLT hP hcr m' (by omega) m7 a7 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl
       k07.stage hT (k07.decHL hlps hlb) (k07.top hlb) (k47.decHL hcl hclb) (k47.top hclb) hcqB hrs hni hnf
       k07.abs (ConRon.Bridge.denoteN_ext hTP k07.core.ext) (ConRon.Bridge.denoteNListE_ext k07.core.ext _ _ hlpsP)
-      (ConRon.Bridge.denoteL_ext hrsP k07.core.ext) (ConRon.Bridge.denote_ext hcrest k47.core.ext) hwsc
-      (hok₀.mono k07.core.ext) (ConRon.Bridge.denoteFEnv_mono k07.core.ext hfe))
-    fun v x a8 _ hR8 => ⟨hR8.stage, k07.grow.trans hR8.grow, rfl, hR8.cv, by simpa using hR8.sorts,
-      by simpa using hR8.sortsB, hR8.abs, k07.core.trans hR8.core⟩
+      (ConRon.Bridge.denoteL_ext hrsP k07.core.ext) (ConRon.Bridge.denote_ext hcrest k47.core.ext) hwsc)
+    fun v x a8 _ hR8 => ⟨hR8.stage, k07.grow.trans hR8.grow, hR8.abs, k07.core.trans hR8.core⟩
 
-include hq henv hV hOpf hLC hLT hApd hCrk in
+include hq henv hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctor` refines `checkSumCtor .verified`** under `StageC` (the knot's core calls;
-the inputs' denotations as con-ron's `checkSumCtor_spec` asks), the pre-block environment the
-restriction of `fe` to the view `vis0`. Returns `cvC` itself and the field sorts as a fresh `IW`
-slice. -/
+the inputs' denotations as con-ron's `checkSumCtor_spec` asks), at the stage's own view: the
+pre-block environment is the one `checkBlockCtors` passes, its `fe₁` twice. -/
 @[refines ConRon.Arena.checkSumCtor]
-theorem checkSumCtor_refinesC (hP : SumProg p) (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
-    (vis0 T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
+theorem checkSumCtor_refinesC (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims p dn)
+    (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
     (cvC cvTa : IConstantVal) (hC : StageC dn vis fe env s₀.mem a₀) (hT : H T)
     (hlps : decHL s₀.mem lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop s₀.mem)
     (hcv : DecB (fun m => decCVp m cvCw.toNat) s₀.mem cvC)
     (hta : DecB (fun m => decCVp m cvTaw.toNat) s₀.mem cvTa)
     (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) (hnf : nP.toNat + nF.toNat < 2 ^ 64)
     (hA : AbsOK s₀.mem)
-    {env₀ : ConLeche.Env} {TP : ConLeche.Name} {lpsP : List ConLeche.Name} {rsP : ConLeche.Level}
+    {TP : ConLeche.Name} {lpsP : List ConLeche.Name} {rsP : ConLeche.Level}
     {cvCP cvTaP : ConLeche.ConstantVal}
     (hTP : denoteN a₀.store.ns (decI T) = some TP)
     (hlpsP : Frontend.denoteNList a₀.store.ns lps = some lpsP)
     (hrsP : denoteL a₀.store.ls (decI rs) = some rsP)
     (hcvCP : Frontend.denoteCV a₀.store cvC = some cvCP)
-    (hcvTaP : Frontend.denoteCV a₀.store cvTa = some cvTaP) (hws : ConLeche.Expr.WScoped 0 cvTaP.type)
-    (hok₀ : ConRon.Bridge.Inductives.IFEnvOKS env₀ (fe.restrictTo vis0.toNat) a₀.store)
-    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) :
+    (hcvTaP : Frontend.denoteCV a₀.store cvTa = some cvTaP) (hws : ConLeche.Expr.WScoped 0 cvTaP.type) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_sum_ctor"
-      [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvCw, nF, cvTaw]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
+      [vis, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvCw, nF, cvTaw]
+    ⦃fun _ s' => LocEq s' s₀ ∧
+      AM.ok (checkSumCtor V fe fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
         (isP != 0) (lg != 0) cvC nF.toNat cvTa) a₀ ∧
-      StageC dn vis fe env s'.mem (AM.st (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps
+      StageC dn vis fe env s'.mem (AM.st (checkSumCtor V fe fe (decI T) lps
         nP.toNat nIdx.toNat (decI rs) (isP != 0) (lg != 0) cvC nF.toNat cvTa) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ r.headD 0 = cvCw ∧
-      (AM.res (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
-        (isP != 0) (lg != 0) cvC nF.toNat cvTa) a₀).1 = cvC ∧
-      decHL s'.mem (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat =
-        some (AM.res (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat
-          (decI rs) (isP != 0) (lg != 0) cvC nF.toNat cvTa) a₀).2 ∧ AbsOK s'.mem; ⊤⦄ :=
-  triple_post (RefE.triple (ctorE_spec p hP hV (n + 1) s₀ vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw)
-      (ctor_ref hq henv hOpf hLC hLT hApd hCrk hP n hn _ a₀ vis0 T lo ll nP nIdx rs isP lg cvCw nF cvTaw lps cvC
-        cvTa hC hT hlps hlb hcv hta hrs hni hnf hA hTP hlpsP hrsP hcvCP hcvTaP hws hok₀ hfe))
+      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
+  triple_post (RefE.triple (ctorE_spec p hP hV (n + 1) s₀ vis vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw)
+      (ctor_ref hq henv hOpf hLC hLT hApd hCrk hP hV hcr hCS n hn _ a₀ T lo ll nP nIdx rs isP lg cvCw nF
+        cvTaw lps cvC cvTa hC hT hlps hlb hcv hta hrs hni hnf hA hTP hlpsP hrsP hcvCP hcvTaP hws))
     fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
-      obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-      exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.cvW, by rw [hres]; exact hR.cv,
-        by rw [hres]; exact hR.sorts, hR.abs⟩
-
--/
+      obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
+      exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.abs⟩
 
 end sims
 
