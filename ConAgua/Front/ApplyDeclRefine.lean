@@ -217,14 +217,49 @@ theorem DeclAt_mono (D D' P P' : Array Word) (i : Nat) (d : IDeclaration)
     (hP : ∀ j, 0 < j → j < 1 + (P[0]?.getD 0).toNat → P'[j]? = P[j]?)
     (htop : (P[0]?.getD 0).toNat ≤ (P'[0]?.getD 0).toNat) (h : DeclAt D P i d) :
     DeclAt D' P' i d := by
-  sorry
+  have hw : ∀ k, k < 8 → dw D' i k = dw D i k := fun k hk => by
+    simp only [dw]; rw [hD _ (by omega) (by omega)]
+  have hcv : ∀ cv, CVAt D P i cv → CVAt D' P' i cv := by
+    intro cv ⟨c1, c2, c3, c4⟩
+    rw [CVAt, hw 1 (by omega), hw 2 (by omega), hw 3 (by omega), hw 4 (by omega)]
+    refine ⟨c1, c2, by omega, ?_⟩
+    rw [sliceL_congr P P' _ _ (fun j hj1 hj2 => hP j (by omega) (by omega))]
+    exact c4
+  cases d with
+  | axiomDecl cv => obtain ⟨h0, h1⟩ := h; exact ⟨by rw [hw 0 (by omega)]; exact h0, hcv cv h1⟩
+  | defnDecl cv v hh =>
+    obtain ⟨h0, h1, h2, h3⟩ := h
+    exact ⟨by rw [hw 0 (by omega)]; exact h0, hcv cv h1, by rw [hw 5 (by omega)]; exact h2,
+      by rw [hw 6 (by omega), hw 7 (by omega)]; exact h3⟩
+  | thmDecl cv v =>
+    obtain ⟨h0, h1, h2⟩ := h
+    exact ⟨by rw [hw 0 (by omega)]; exact h0, hcv cv h1, by rw [hw 5 (by omega)]; exact h2⟩
+  | opaqueDecl cv v =>
+    obtain ⟨h0, h1, h2⟩ := h
+    exact ⟨by rw [hw 0 (by omega)]; exact h0, hcv cv h1, by rw [hw 5 (by omega)]; exact h2⟩
+  | quotDecl kk cv =>
+    obtain ⟨h0, h1, h2⟩ := h
+    exact ⟨by rw [hw 0 (by omega)]; exact h0, hcv cv h1, by rw [hw 6 (by omega)]; exact h2⟩
+  | indDecl _ _ => exact h.elim
+
 
 theorem DeclAtF_mono (D D' P P' : Array Word) (i : Nat) (d : IDeclaration)
     (hD : ∀ j, 0 < j → j < 1 + 8 * i + 8 → D'[j]? = D[j]?)
     (hP : ∀ j, 0 < j → j < 1 + (P[0]?.getD 0).toNat → P'[j]? = P[j]?)
     (htop : (P[0]?.getD 0).toNat ≤ (P'[0]?.getD 0).toNat) (hPs : P'.size = P.size)
     (h : DeclAtF D P i d) : DeclAtF D' P' i d := by
-  sorry
+  cases d with
+  | indDecl b nP =>
+    have hw : ∀ k, k < 8 → dw D' i k = dw D i k := fun k hk => by
+      simp only [dw]; rw [hD _ (by omega) (by omega)]
+    obtain ⟨h0, h4, t, ht, hb⟩ := h
+    refine ⟨by rw [hw 0 (by omega)]; exact h0, by rw [hw 4 (by omega)]; exact h4, t, by omega, ?_⟩
+    rw [hw 2 (by omega), hw 3 (by omega), trunc_congr P P' t hPs (fun j h1 h2 => hP j h1 (by omega))]
+    exact hb
+  | axiomDecl _ | defnDecl _ _ _ | thmDecl _ _ | opaqueDecl _ _ | quotDecl _ _ =>
+    simp only [DeclAtF] at h ⊢
+    exact DeclAt_mono D D' P P' i _ hD hP htop h
+
 
 theorem DeclsF.push (D P D' P' : Array Word) (ds : Array IDeclaration) (x : IDeclaration)
     (h : DeclsF D P ds) (hDs : D'.size = D.size) (hPs : P'.size = P.size)
@@ -413,6 +448,82 @@ theorem declCvW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : State
     (hks : DeclKindOk f.pl f.hk f.hn f.flag k q)
     (h : declCvW b.data m k q f.name f.lps f.type f.value f.hn = some m') :
     ∃ st', applyRecord st (.decl d) = pure (.inl st') ∧ ArenaD m' a₀ ∧ StateDR m' st' := by
-  sorry
+  have hk5 := hks.k5
+  cases d with
+  | ax cv u =>
+    obtain ⟨hpl, hcv, hfl⟩ := hE
+    obtain ⟨cvp, e, hpc, -, hA', hD'⟩ := cv_core b m m' a₀ st hA hD f cv hcv k q hk5 h
+    rcases hks with ⟨-, h0, rfl⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ <;>
+      (try (rw [hpl] at h1; exact absurd h1 (by decide)))
+    have hu : u = false := by cases u <;> simp_all
+    subst hu
+    refine ⟨_, ?_, hA', hD'⟩
+    simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf]
+  | defn cv v hints safety =>
+    obtain ⟨hpl, hcv, hvv, hh, hsf⟩ := hE
+    obtain ⟨cvp, e, hpc, hge, hA', hD'⟩ := cv_core b m m' a₀ st hA hD f cv hcv k q hk5 h
+    rcases hks with ⟨h1, -⟩ | ⟨-, h0, rfl, rfl, hk0, hk3, hkn⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ <;>
+      (try (rw [hpl] at h1; exact absurd h1 (by decide)))
+    have hs := hsf h0
+    subst hs
+    have hg := hge (.inl rfl) v hvv
+    refine ⟨_, ?_, hA', hD'⟩
+    cases hints with
+    | «abbrev» =>
+      simp only [HintsR] at hh
+      simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg, hintW, hh]
+    | «opaque» =>
+      simp only [HintsR] at hh
+      simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg, hintW, hh]
+    | regular n =>
+      obtain ⟨h3, hn⟩ := hh
+      have : f.hn ≠ NONE := fun h' => hkn ⟨h3, h'⟩
+      simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg, hintW, h3,
+        itemR_eq hn this]
+  | thm cv v =>
+    obtain ⟨hpl, hcv, hvv⟩ := hE
+    obtain ⟨cvp, e, hpc, hge, hA', hD'⟩ := cv_core b m m' a₀ st hA hD f cv hcv k q hk5 h
+    rcases hks with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨-, rfl⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ <;>
+      (try (rw [hpl] at h1; exact absurd h1 (by decide)))
+    have hg := hge (.inr (.inl rfl)) v hvv
+    refine ⟨_, ?_, hA', hD'⟩
+    simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg]
+  | opaq cv v u =>
+    obtain ⟨hpl, hcv, hvv, hfl⟩ := hE
+    obtain ⟨cvp, e, hpc, hge, hA', hD'⟩ := cv_core b m m' a₀ st hA hD f cv hcv k q hk5 h
+    rcases hks with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨-, h0, rfl⟩ | ⟨h1, -⟩ <;>
+      (try (rw [hpl] at h1; exact absurd h1 (by decide)))
+    have hu : u = false := by cases u <;> simp_all
+    subst hu
+    have hg := hge (.inr (.inr rfl)) v hvv
+    refine ⟨_, ?_, hA', hD'⟩
+    simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg]
+  | quot cv kind =>
+    obtain ⟨hpl, hcv, hq⟩ := hE
+    obtain ⟨cvp, e, hpc, -, hA', hD'⟩ := cv_core b m m' a₀ st hA hD f cv hcv k q hk5 h
+    rcases hks with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨-, rfl, rfl, hf0, hf4⟩ <;>
+      (try (rw [hpl] at h1; exact absurd h1 (by decide)))
+    obtain ⟨q1, q2, q3, q4⟩ := hq
+    refine ⟨_, ?_, hA', hD'⟩
+    have hf : f.flag = 1 ∨ f.flag = 2 ∨ f.flag = 3 ∨ f.flag = 4 := by
+      have := UInt64.le_iff_toNat_le.mp hf4
+      have h0 : f.flag.toNat ≠ 0 := fun h' => hf0 (UInt64.toNat_inj.mp (by simpa using h'))
+      have : f.flag.toNat = 1 ∨ f.flag.toNat = 2 ∨ f.flag.toNat = 3 ∨ f.flag.toNat = 4 := by
+        simp at this; omega
+      rcases this with h | h | h | h
+      · exact .inl (UInt64.toNat_inj.mp (by simpa using h))
+      · exact .inr (.inl (UInt64.toNat_inj.mp (by simpa using h)))
+      · exact .inr (.inr (.inl (UInt64.toNat_inj.mp (by simpa using h))))
+      · exact .inr (.inr (.inr (UInt64.toNat_inj.mp (by simpa using h))))
+    rcases hf with h' | h' | h' | h'
+    · rw [q1 h']; simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
+    · rw [q2 h']; simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
+    · rw [q3 h']; simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
+    · rw [q4 h']; simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
+  | ind tys cts rcs =>
+    have hpl : f.pl = 25 := hE.1
+    rcases hks with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ <;>
+      (rw [hpl] at h1; exact absurd h1 (by decide))
+
 
 end L.Front

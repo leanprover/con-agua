@@ -21,6 +21,7 @@ import ConAgua.Checker.RomProg
 import ConAgua.Checker.RomProgInit
 public import ConAgua.Arena.LoopStart
 public import ConAgua.Arena.Jobs
+public import ConAgua.Checker.BuildStage
 
 @[expose] public section
 
@@ -31,19 +32,19 @@ docs/design/parmode.md, "Step 4" (a). A run of `check` from the loaded memory wi
 `MODE` set to `1` or `3` (`loadMemM b pb sz w`, what the stubs `ca_start_a`/`ca_start_a0`
 hand it) that returns anything but `1` (a line that did not scan):
 
-* the twin's stages before the loop ran and its phase A accepted (`PhaseA b`: `TwinPrefix` and
-  `installFold … = .ok (.ok (k, fe, pend), sF)`);
-* the memory after the fold, `m`, is `PhaseBStart … m sF v` at the fold's result `v` (the final
-  view), and the final memory is the frozen buffer's, `parCompactMem m v (modeFlag w)`;
-* the result is `2^63 + |pend|`.
+* the twin's stages before the jobs ran and built the stream index (`PhaseA b`: `TwinPrefix` and
+  `buildIndex ds sE = .ok (.ok I, sF)`);
+* the memory after the index build, `m`, is `FoldAt … m` (`Checker/BuildStage.lean`: `BuildR` at
+  `I`, `R7` before the build, the build's write set), and the final memory is the frozen
+  buffer's, `parCompactMem m (modeFlag w)`;
+* the result is `2^63 + |ds|`.
 
 The stages are `stageSpecs_of_rels` at `checkerRels`, except the
 first four, which start from the loaded memory with the mode word set: no relation reads a global
 (`R1`‥`R3` name the loaded memory only through its arrays), so the proofs of `cap_check` and
 `pb_check` are those of `capStage_checker`, `pbStage_checker` at `loadMemM`; the tables' presize
-and `intern_reserved_pins` after it are `presizeStage` and `irpStage_ps` (`PresizeStage.lean`). The fold at the
-substituted program (`triple_subPB`: the ROM readers read the pin-data buffer), from
-`installFoldGo_start`.
+and `intern_reserved_pins` after it are `presizeStage` and `irpStage_ps` (`PresizeStage.lean`). The
+index build is `buildStage_checker` (`BuildStage.lean`).
 -/
 
 open ConRon.Arena ConRon.Arena.Frontend
@@ -74,91 +75,6 @@ theorem pbStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.siz
   refine triple_post (checkerProg_pbCheck_PB pb.data.toList (by simpa [RomOK] using hpb) n s₀
     (by rw [hm]; exact loadMem_pb b pb sz)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, hc, h3⟩
   rw [h2, hm]
-
-/-! ## Phase A's fold at the checker's program -/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The twin's side of entry 1**: the stages before the loop and phase A, with `k` records
-installed, the environment `fe` and the pending groups `pend`, ending in `sF` (lane parallel's
-structure). -/
-structure PhaseA (b : ByteArray) where
-  pins : List ConLeche.NatOpPinSet
-  sA : AState
-  pre : PreludeIx
-  sB : AState
-  rc : ParseResultD
-  sC : AState
-  ds : Array IDeclaration
-  sD : AState
-  ipins : List INatOpPinSet
-  sE : AState
-  k : Nat
-  fe : IFEnv
-  pend : Array PendingCheck
-  sF : AState
-  pfx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE
-  fold : installFold .verified ipins (0, mkIFEnv IEnv.empty, #[]) ds.toList sE =
-    .ok (.ok (k, fe, pend), sF)
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **What phase A's fold leaves at its result `v`**: an accepting twin phase A whose state the
-memory `m` is `PhaseBStart` to, the pin data in place. -/
-def FoldA (b pb : ByteArray) (v : Word) (m : Mem) : Prop :=
-  ∃ PA : PhaseA b, PhaseBStart PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend m PA.sF v ∧
-    m.arr8 PB = pb.data.toList.toArray ∧ PbPre pb
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **The fold from `R7`** (and the twin's stages before the loop), with `cnt` the count
-`DECL[0]`: at the substituted program (`installFoldGo_start`). -/
-theorem foldStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
-    {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
-    {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}
-    {ipins : List INatOpPinSet} {sE : AState} (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
-    (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (cnt : Word)
-    (h7 : R7 (loadMem b pb sz) s₀.mem pb ds ipins sE)
-    (hcnt : ∀ h : 0 < (s₀.mem.arr64 DECL).size, cnt = (s₀.mem.arr64 DECL)[0]) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
-    ⦃fun r s' => LocEq s' s₀ ∧ ∃ (fe : IFEnv) (pend : Array PendingCheck) (sF : AState),
-      installFold .verified ipins (0, mkIFEnv IEnv.empty, #[]) ds.toList sE = .ok (.ok (ds.size, fe, pend), sF) ∧
-      PhaseBStart ipins (dnOf sE.store) ds fe pend s'.mem sF (r.headD 0) ∧
-      s'.mem.arr8 PB = pb.data.toList.toArray; ⊤⦄ := by
-  have hr : RomOK pb.data.toList := by simpa [RomOK] using hin.2.2.1
-  have hT := twinFold_of_prefix hpx
-  have hcore := core_of_R7 hpx h7
-  have hcaps := CapsOK.keep h7.since.keep h7.since.caps
-  have hdn : L.Ind.DnInj (dnOf sE.store) := dnOf_inj hT.stateOK.wf
-  have hQd : QuotDn (dnOf sE.store) := by
-    obtain ⟨k, hk, hd⟩ := prefix_quotU hpx
-    exact ⟨k, by simp [dnOf, hk, hd]⟩
-  have hLC := checkerProg_loopCalleesPB pb.data.toList hr h7.since.pbpre (dnOf sE.store) hdn
-    (indArmSpec_checker _ hr h7.since.pbpre _ hdn) hQd
-  have hpb : s₀.mem.arr8 PB = pb.data.toList.toArray := by
-    rw [h7.since.keep.arr8]; exact loadMem_pb b pb sz
-  have hD0 : 0 < (s₀.mem.arr64 DECL).size := by have := hcaps.2.2.1; simp only [DECL] at this ⊢; omega
-  have hcnt' : cnt.toNat = ds.size := by
-    rw [hcnt hD0]; have := h7.decls.count; simpa [hD0] using this
-  refine triple_post (Triple.keep checkerProg_noSt8 (triple_subPB (bs := pb.data.toList)
-    checkerProg_noSt8PB (fun s hs => hs ▸ hpb)
-    (installFoldGo_start (checkerProg_loopTopPB _) hLC (frontDecls_of_prefix hpx)
-    n hn s₀ cnt hcnt' hT h7.arena hcore h7.pinsFull h7.decls h7.pinSets h7.iw (loopZero_of_since h7.since)
-    h7.pin0 (by have := hcaps.1 EREC (by decide); omega) (by have := hcaps.1 SPN (by decide); omega)
-    (by have := hcaps.1 BSTK (by decide); omega) h7.mode))) ?_
-  rintro r s' ⟨⟨hl, fe, pend, a', h1, h2⟩, hk, -⟩
-  exact ⟨hl, fe, pend, a', h1, h2, by rw [hk.arr8]; exact hpb⟩
--/
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- The fold's spec at the stages' end `Q7`, in the form `checkA_of_stages` takes. -/
-theorem foldSpec_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) :
-    ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
-      ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_fold_go" [0, cnt, 0]
-      ⦃fun r s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
-        (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
-        FoldA b pb (r.headD 0) s'.mem); ⊤⦄ := by
-  sorry
--/
 
 /-! ## The lookups -/
 
@@ -248,21 +164,18 @@ theorem run_post {p : Prog} {N : Nat} {f : FnName} {m m' : Mem} {rs : List Word}
     obtain ⟨rfl, rfl⟩ := hrun
     exact M.of_run (P := fun s => s = _) rfl hr h
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **Entry 1 in L**: a run of `check` from the loaded memory with the mode word `w = 1` (images
 and header) or `w = 3` (the header only) that returns anything but `1` is an accepting twin
-phase A (`PhaseA b`) whose state the memory `m` after the fold is `PhaseBStart` to, at the fold's
-result `v`; the final memory is the frozen buffer's, `parCompactMem m v (modeFlag w)` (in bounds),
-and the result is `2^63 + |pend|`. -/
+phase A (`PhaseA b`: the stages and the stream index) whose relations hold at the memory `m`
+after the index build (`FoldAt`); the final memory is the frozen buffer's,
+`parCompactMem m (modeFlag w)` (in bounds), and the result is `2^63 + |ds|`. -/
 theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) (w : Word)
     (hw : w = 1 ∨ w = 3) (N : Nat) (hN : N < 2 ^ 62) (rs : List Word) (m' : Mem)
     (hrun : L.run checkerProg N "check" [] (loadMemM b pb sz w) = .ok (rs, m'))
     (hr : rs.headD 0 ≠ 1) :
-    ∃ (PA : PhaseA b) (m : Mem) (v : Word),
-      PhaseBStart PA.ipins (dnOf PA.sE.store) PA.ds PA.fe PA.pend m PA.sF v ∧
-      m.arr8 PB = pb.data.toList.toArray ∧ PbPre pb ∧
-      parCompactOK m (modeFlag w) = true ∧ m' = parCompactMem m v (modeFlag w) ∧
-      rs.headD 0 = 9223372036854775808 + UInt64.ofNat PA.pend.size := by
+    ∃ (PA : PhaseA b) (m₇ m : Mem), FoldAt b pb sz PA m₇ m ∧
+      parCompactOK m (modeFlag w) = true ∧ m' = parCompactMem m (modeFlag w) ∧
+      rs.headD 0 = 9223372036854775808 + UInt64.ofNat PA.ds.size := by
   let r := checkerRels b pb sz
   obtain ⟨-, -, -, s4, s5, s6, s7⟩ := stageSpecs_of_rels checkerRels checker_capStage
     checker_pbStage checker_irpStage checker_preludeStage checker_frontStage checker_prepareStage
@@ -280,8 +193,8 @@ theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
   have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
   have hpc : checkerProg.lookup "par_compact" = some parCompactL := by chk_lk
   have hmode : (loadMemM b pb sz w).glob MODE = w := by simp [loadMemM, Mem.setG]
-  let P : Word → Mem → Prop := fun x m'' => x ≠ 1 → PostPC (modeFlag w) (FoldA b pb) m'' ∧
-    ∀ h : 130 < (m''.arr64 CTL).size, x = (9223372036854775808 : Word) + (m''.arr64 CTL)[130]
+  let P : Word → Mem → Prop := fun x m'' => x ≠ 1 → PostPC (modeFlag w) (FoldA b pb sz) m'' ∧
+    ∀ h : 0 < (m''.arr64 L.Front.DECL).size, x = (9223372036854775808 : Word) + (m''.arr64 L.Front.DECL)[0]
   cases N with
   | zero =>
     exfalso
@@ -297,23 +210,24 @@ theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
         ⦃fun r s' => s₁.mem = s₀.mem → c = modeFlag (s₀.mem.glob MODE) → P (r.headD 0) s'.mem; ⊤⦄ := by
       intro s₁ c
       refine triple_post (checkA_of_stages (Q0 := (· = loadMemM b pb sz w)) hla hpc checkerProg_fz
-        s1 s2 s2p s3 s4 s5 s6 s7 (foldSpec_checker b pb sz hin) c n hn s₁) ?_
+        s1 s2 s2p s3 s4 s5 s6 s7 (buildStage_checker b pb sz hin.2.2.2) c n hn s₁) ?_
       intro x s' h e ec
       have ec' : c = modeFlag w := by rw [ec, hmode]
       subst ec'
       exact h e
     have H := run_post (Q := fun x m'' => (s₀.mem.glob MODE = 1 ∨ s₀.mem.glob MODE = 3) →
       P (x.headD 0) m'') hrun (check_dispatchA hlc n s₀ P hA)
-    obtain ⟨⟨m, v, ⟨PA, hS, hpb, hpre⟩, hok, rfl⟩, hval⟩ := H (by rw [hmode]; exact hw) hr
-    refine ⟨PA, m, v, hS, hpb, hpre, hok, rfl, ?_⟩
-    have hF := parCompactMem_out m v (modeFlag w)
-    have h130 : 130 < (m.arr64 CTL).size := by
-      simp only [parCompactOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.2
-    rw [hval (by rw [hF.size]; exact h130)]
-    have hc := pendCount_eq hS.loop h130
-    have e : ((parCompactMem m v (modeFlag w)).arr64 CTL)[130]'(by rw [hF.size]; exact h130) =
-        (m.arr64 CTL)[130] := by simp only [hF.arr CTL (by decide)]
-    rw [e, ← hc, UInt64.ofNat_toNat]
--/
+    obtain ⟨⟨m, ⟨PA, m₇, hF⟩, hok, rfl⟩, hval⟩ := H (by rw [hmode]; exact hw) hr
+    refine ⟨PA, m₇, m, hF, hok, rfl, ?_⟩
+    have hFo := parCompactMem_out m (modeFlag w)
+    have hD0 : 0 < (m.arr64 L.Front.DECL).size := by have := hF.build.decls.room; omega
+    have eD : (parCompactMem m (modeFlag w)).arr64 L.Front.DECL = m.arr64 L.Front.DECL :=
+      hFo.arr _ (by decide)
+    have hD0' : 0 < ((parCompactMem m (modeFlag w)).arr64 L.Front.DECL).size := by rw [eD]; exact hD0
+    have hc := hF.build.decls.count
+    rw [Array.getElem?_eq_getElem hD0, Option.getD_some] at hc
+    have e0 : ((parCompactMem m (modeFlag w)).arr64 L.Front.DECL)[0]'hD0' = (m.arr64 L.Front.DECL)[0] := by
+      simp only [eD]
+    rw [hval hD0', e0, ← hc, UInt64.ofNat_toNat]
 
 end L.Checker

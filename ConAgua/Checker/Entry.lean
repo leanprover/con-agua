@@ -132,9 +132,11 @@ not scan). -/
   return 9223372036854775808 + cnt
 }
 
-/-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
-jobs `PLO‥PHI-1` (`PHI` at most the number of records), in order, from the worker's state, as
-the pool's worker does (`checkJobList`); returns `ACCEPT`. -/
+/-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer; on every call
+the core caches flushed (the worker's empty caches: in place, the index build's level-equality
+entries would remain; between two calls they are empty already, every job ending in
+`scratch_drop`), then the jobs `PLO‥PHI-1` (`PHI` at most the number of records), in order, from
+the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`. -/
 -- con-ron: ConRon/Arena/Checker.lean:64-71 ConRon.Arena.AState.worker
 -- con-ron: ConRon/Arena/Pooled.lean:33-45 ConRon.Arena.PooledAccepts
 @[no_expose] def checkBL : FunDecl := lfn () locals (z, n) {
@@ -143,6 +145,7 @@ the pool's worker does (`checkJobList`); returns `ACCEPT`. -/
     copy!(CTL.u64, 0, CTLF.u64, 0, n);
     INIT := 1
   };
+  z := call flush_caches();
   if L.Front.DECL.u64[0] < PHI { abort };
   if PHI < PLO { abort };
   z := call check_jobs(PLO, PHI);

@@ -24,4 +24,16 @@ namespace L.Checker
 
 open L L.Compiler L.Compiler.Inl
 
+set_option maxRecDepth 100000 in
+idx_lit_eq checkerIdx : checkerProg
+
+inl_round_eq checkerProgI : 80 checkerIdx checkerProg
+
+theorem checkerProgI_inline : inlineProg 80 checkerIdx 1 checkerProg = checkerProgI := by
+  rw [inlineProg, checkerProgI_eq, inlineProg]
+
+theorem checkerProgI_refines : Refines checkerProgI checkerProg where
+  run N f vs m r h hr := inlineProg_run 1 checkerProg checkerIdx_eq N f vs m r (checkerProgI_inline ▸ h) hr
+  lookup f fd h := checkerProgI_inline ▸ inlineProg_lookup 1 checkerProg f fd h
+
 end L.Checker

@@ -256,9 +256,9 @@ theorem natLitSupported_specW (p : Prog) (hp : p.lookup "nat_lit_supported" = so
 /-- A pin read at slot `1 + j`, as a run. -/
 theorem pinAt_call {p : Prog} (hp : p.lookup "pin_at" = some pinAtL) {k : Nat} {m m1 : Mem}
     {i : Word} {j : Nat} (hj : 1 + i.toNat = j) {r1 : List Word}
-    (h : callW p k "pin_at" [i] m = some (r1, m1)) :
+    (h : callW p k "pin_at" [i] m = some (r1, m1)) (h51 : i ≠ 51 := by decide) :
     m1 = m ∧ pinW m 0 ≠ 0 ∧ r1.headD 0 = pinW m j := by
-  obtain ⟨hm, h0, -, hr⟩ := pinAt_model hp h hj
+  obtain ⟨hm, h0, -, hr⟩ := pinAt_model hp h hj h51
   exact ⟨hm, h0, hr⟩
 
 theorem natLitSupported_ref (hN : NatLitProg p) :

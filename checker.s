@@ -47331,7 +47331,7 @@ ret
 ca_f_check_b:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $32, %rax
+cmpq $48, %rax
 jb ca_exhausted
 subq $24, %rsp
 cmpq $0, 35560(%r15)
@@ -47379,6 +47379,10 @@ movq %rax, 35560(%r15)
 jmp .Lca_check_b_1X
 .Lca_check_b_1E:
 .Lca_check_b_1X:
+subq $1, %r14
+jb ca_exhausted
+call ca_f_flush_caches
+movq %rax, (%rsp)
 cmpq $0, 2432(%r15)
 jbe ca_error
 movq 960(%r15), %rax

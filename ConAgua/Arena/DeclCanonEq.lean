@@ -402,12 +402,6 @@ theorem ciD {R : Nat → Option Word} {rd : Word → Word} {p : Nat} {x : IConst
           decRules R o c = some rules ∧ x = .recInfo cv mi rp k rules)) := by
   sorry
 
-/-- **A decoded record's constant value sits at `p + 1`** (every kind holds it inline, the twin's
-pure `toConstantVal`). -/
-theorem ciD_cv {R : Nat → Option Word} {rd : Word → Word} {p : Nat} {x : IConstantInfo}
-    (h : decCI R p = some x) : decCV R (p + 1) = some x.toConstantVal := by
-  sorry
-
 theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     (hR : RdOK R rd) {p q : Word} {x y : IConstantInfo}
     (hx : decCI R p.toNat = some x) (hy : decCI R q.toNat = some y) :

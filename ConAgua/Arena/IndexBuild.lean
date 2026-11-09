@@ -7,6 +7,7 @@ public import ConAgua.Arena.DeclNatBase
 public import ConRon.Bridge.Checker.Index
 public import ConAgua.Arena.DeclPins
 import ConRon.Bridge.Checker.Install
+import ConAgua.Arena.IndRealAbsT
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -99,6 +100,64 @@ def _root_.ConRon.Arena.IFEnv.rebase (fe : IFEnv) (b : IFBase) : IFEnv :=
 
 theorem bEnv_rebase (b b' : IFBase) (c r : Nat) : (bEnv b c r).rebase b' = bEnv b' c r := rfl
 
+/-! ## The twin-side invariants at an environment that sees nothing
+
+The builder runs at `bEnv I.base 0 0`: no constant and no table is visible, as at the driver's
+empty environment (`DriverOK`'s `mkIFEnv IEnv.empty`). The twin-side invariants (`TwinOK`,
+`CheckOK`) read the environment through `find?` and `findTable?` alone. -/
+
+theorem bEnv_find_zero (b : IFBase) (n : NIdx) : (bEnv b 0 0).find? n = none := by
+  simp only [bEnv, IFEnv.find?, IFEnv.lookup, IFBase.find?]
+  simp only [Std.HashMap.isEmpty_empty, if_true]
+  split <;> simp
+
+theorem bEnv_findTable_zero (b : IFBase) (n : NIdx) : (bEnv b 0 0).findTable? n = none := by
+  simp [IFEnv.findTable?, bEnv_find_zero]
+
+theorem emptyEnv_find (n : NIdx) : (mkIFEnv IEnv.empty).find? n = none := by
+  simp [mkIFEnv, IEnv.empty, mkIFEnvGo, IFEnv.find?, IFEnv.lookup, IFBase.find?]
+
+theorem emptyEnv_findTable (n : NIdx) : (mkIFEnv IEnv.empty).findTable? n = none := by
+  simp [IFEnv.findTable?, emptyEnv_find]
+
+theorem _root_.L.Arena.StoreDen.congrFe {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
+    {fe fe' : IFEnv} (hf : ∀ n, fe'.find? n = fe.find? n) (ht : ∀ n, fe'.findTable? n = fe.findTable? n)
+    (h : StoreDen dn m a fe) : StoreDen dn m a fe' :=
+  { h with
+    constLps := fun c ci e => h.constLps c ci ((hf c).symm.trans e)
+    proj := fun c t e => h.proj c t ((ht c).symm.trans e)
+    recRules := fun c cv mI rP isK rules e => h.recRules c cv mI rP isK rules ((hf c).symm.trans e)
+    recLevels := fun c cv mI rP isK rules e => h.recLevels c cv mI rP isK rules ((hf c).symm.trans e) }
+
+theorem _root_.L.Arena.TwinOK.congrFe {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
+    {fe fe' : IFEnv} (hf : ∀ n, fe'.find? n = fe.find? n) (ht : ∀ n, fe'.findTable? n = fe.findTable? n)
+    (h : TwinOK dn m a fe) : TwinOK dn m a fe' :=
+  { h with den := h.den.congrFe hf ht }
+
+theorem checkOK_congrFe {eager : Bool} {env : ConLeche.Env} {a : AState} {fe fe' : IFEnv}
+    (hf : ∀ n, fe'.find? n = fe.find? n) (ht : ∀ n, fe'.findTable? n = fe.findTable? n)
+    (h : ConRon.Bridge.CheckOK eager env fe a) : ConRon.Bridge.CheckOK eager env fe' a :=
+  { h with
+    ienv := ⟨fun n ci e => h.ienv.hit n ci ((hf n).symm.trans e),
+      fun nm c e => let ⟨n, ci, h1, h2, h3⟩ := h.ienv.cover nm c e; ⟨n, ci, h1, (hf n).trans h2, h3⟩,
+      fun n t e => h.ienv.tblHit n t ((ht n).symm.trans e),
+      fun nm pt e => let ⟨n, t, h1, h2, h3⟩ := h.ienv.tblCover nm pt e; ⟨n, t, h1, (ht n).trans h2, h3⟩⟩ }
+
+/-- `TwinOK` from one base layer's empty view to another's. -/
+theorem _root_.L.Arena.TwinOK.bEnv0 {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
+    {b : IFBase} (b' : IFBase) (h : TwinOK dn m a (bEnv b 0 0)) : TwinOK dn m a (bEnv b' 0 0) :=
+  h.congrFe (fun n => by rw [bEnv_find_zero, bEnv_find_zero])
+    (fun n => by rw [bEnv_findTable_zero, bEnv_findTable_zero])
+
+/-- **`DeclTwin` in the builder**: the twin-side invariants at the empty view, from `TwinOK`, the
+pin flag, the inductive memos and the driver's invariant. -/
+theorem declTwin_of {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {b : IFBase}
+    (hT : TwinOK dn m a (bEnv b 0 0)) (hp : pinW m 0 ≠ 0) (hM : IndMemos m)
+    (hd : ConRon.Bridge.DriverOK a) : L.Ind.DeclTwin dn (bEnv b 0 0) m a :=
+  ⟨hT, hp, hT.absOK hM.i1 hM.cr hp, ⟨_, checkOK_congrFe
+    (fun n => by rw [bEnv_find_zero, emptyEnv_find])
+    (fun n => by rw [bEnv_findTable_zero, emptyEnv_findTable]) hd⟩⟩
+
 /-- The stream index's row arrays. -/
 def IdxA : List TieredArray := EixA ++ TixA
 
@@ -172,12 +231,17 @@ structure IdxProg (p : Prog) : Prop extends L.Ind.DeclConstsProg p where
   iw_reset : p.lookup "iw_reset" = some L.Ind.iwReset
 
 /-- **What the builder keeps from record to record**, at the index `I` built so far: the stage
-relation at the index's base layer (bounds `c`, `r`, no own constants), the index rows, the
+relation at the index's base layer's empty view (no constant visible, no own constants), the twin's
+invariants beyond it and the filled pin table, the index rows, the
 front's records `ds`, the twin's driver invariant with the scratch tier closed, every record
 persistent and denoting, `Quot`'s names under `dn`, the inductive memos. -/
-structure BuildR (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (c r : Nat) (m : Mem)
+structure BuildR (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (m : Mem)
     (a : AState) (I : IStreamIndex) : Prop where
-  stage : StageR 0 (bEnv I.base c r) m a
+  stage : StageR 0 (bEnv I.base 0 0) m a
+  /-- The twin's invariants beyond the stage relation (at the empty view). -/
+  twin : TwinOK dn m a (bEnv I.base 0 0)
+  /-- The pin table is filled. -/
+  pin : pinW m 0 ≠ 0
   idx : IndexR m I
   decls : L.Front.DeclsF (m.arr64 L.Front.DECL) (m.arr64 L.Front.DLP) ds
   front : ∀ i (h : i < ds.size) b nP, ds[i] = .indDecl b nP → FrontBlock b
@@ -235,6 +299,35 @@ theorem RecGrow.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf
   ⟨by simp only [erTop, hf.ctl 129 hC]; exact Nat.le_refl _,
     fun _ _ => by rw [hf.arr _ hA (by decide)]⟩
 
+/-- **What the index build keeps** beside `BuildR`: the record pool's prefix, the tier-1 pool's
+top `CTL[130]`, the core's walk memos. -/
+structure BKeep (m m' : Mem) : Prop where
+  grow : RecGrow m m'
+  ctl130 : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130
+  memos : CoreMemos m → CoreMemos m'
+
+theorem BKeep.refl (m : Mem) : BKeep m m := ⟨RecGrow.refl m, rfl, id⟩
+
+theorem BKeep.trans {m₁ m₂ m₃ : Mem} (h₁ : BKeep m₁ m₂) (h₂ : BKeep m₂ m₃) : BKeep m₁ m₃ :=
+  ⟨h₁.grow.trans h₂.grow, h₂.ctl130.trans h₁.ctl130, h₂.memos ∘ h₁.memos⟩
+
+/-- A frame outside the record pool, `CTL[129]`, `CTL[130]` and the core's memos keeps them. -/
+theorem BKeep.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (EREC : TieredArray) ∉ A ∧ (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A ∧
+      (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A ∧
+      (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
+    (hC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (50 : Word) ∉ C ∧ (48 : Word) ∉ C ∧
+      (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C ∧ (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧
+      (58 : Word) ∉ C) : BKeep m m' := by
+  obtain ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9⟩ := hA
+  obtain ⟨c1, c2, c3, c4, c5, c6, c7, c8, c9, c10⟩ := hC
+  exact ⟨RecGrow.of_frame hf a1 c1, hf.ctl 130 c2, fun h =>
+    CoreMemos.frame hf ⟨a2, a3⟩ ⟨c3, c4⟩ h ⟨a4, a5, a6⟩ ⟨c5, c6, c7⟩ ⟨a7, a8, a9⟩ ⟨c8, c9, c10⟩⟩
+
+/-- `decl_constants`/`decl_tables`' post keeps them. -/
+theorem BKeep.of_idx {m m' : Mem} (hg : IWGrow m m') (hK : L.Ind.IdxKeep m m') : BKeep m m' :=
+  ⟨L.Arena.IWGrow.recGrow hg, hK.ctl130, hK.memos⟩
+
 section idx
 variable {p : Prog} (hP : IdxProg p)
 include hP
@@ -242,12 +335,12 @@ include hP
 /-- **`idx_add(k)` refines `IStreamIndex.add` of record `k`**: from the builder's relation at an
 index of `k` records, a returning run is the twin's step, and the relation holds after it at the
 index with record `k` added. -/
-theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {c r : Nat}
+theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} 
     {k : Word} {d : IDeclaration} {n : Nat} {m m' : Mem} {a : AState} {I : IStreamIndex}
-    {res : List Word} (hR : BuildR dn ds c r m a I) (hk : I.firsts.size = k.toNat)
+    {res : List Word} (hR : BuildR dn ds m a I) (hk : I.firsts.size = k.toNat)
     (hd : ds[k.toNat]? = some d) (hc : callW p n "idx_add" [k] m = some (res, m')) :
-    ∃ I' a', (I.add d).run a = .ok (I', a') ∧ BuildR dn ds c r m' a' I' ∧
-      I'.firsts.size = k.toNat + 1 ∧ RecGrow m m' := by
+    ∃ I' a', (I.add d).run a = .ok (I', a') ∧ BuildR dn ds m' a' I' ∧
+      I'.firsts.size = k.toNat + 1 ∧ BKeep m m' := by
   rcases n with _ | n
   · rw [callW_zero] at hc; cases hc
   have hw := callW_model (M := fun mm => idxAddW p (n + 1) mm k)
@@ -282,10 +375,10 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
     have e : (UInt64.ofNat (m.arr64 FIRSTS).size).toNat = (m.arr64 FIRSTS).size := by simp; omega
     omega
   -- the memory after the first counter's write
-  have hS1 : StageR 0 (bEnv I.base c r) (m.set64 CTL 200 0) a := hR.stage.reset
+  have hS1 : StageR 0 (bEnv I.base 0 0) (m.set64 CTL 200 0) a := hR.stage.reset
   generalize hm2 : (m.set64 CTL 200 0).set64 FIRSTS k (rdW ((m.set64 CTL 200 0).arr64 CTL) 128) = m2 at hw
   have hf12 : MemFrame [FIRSTS] [] (m.set64 CTL 200 0) m2 := hm2 ▸ MemFrame.set64 _ FIRSTS (by decide) k _
-  have hS2 : StageR 0 (bEnv I.base c r) m2 a :=
+  have hS2 : StageR 0 (bEnv I.base 0 0) m2 a :=
     ⟨CheckR.frame_hi (fun b hb => by simp at hb; subst hb; decide) (by simp) hf12 hS1.check,
       IWOK.frame hf12 (by decide) (by decide) (by decide) (by decide) hS1.iw⟩
   have hI2 : IndexR m2 { I with firsts := I.firsts.push I.next } := by
@@ -306,13 +399,17 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
   | some q2 =>
   obtain ⟨ρ2, m3⟩ := q2
   rw [h2, bW_some] at hw
-  have hpre2 : L.Ind.DeclConstsPre dn 0 (bEnv I.base c r) k d m2 a :=
+  have hT2 : TwinOK dn m2 a (bEnv I.base 0 0) :=
+    (hR.twin.frame (MemFrame.setCtl m 200 0) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).frame hf12 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  have hp2 : pinW m2 0 ≠ 0 := by
+    rw [pinW_frame hf12 (by decide), pinW_frame (MemFrame.setCtl m 200 0) (by decide)]; exact hR.pin
+  have hpre2 : L.Ind.DeclConstsPre dn 0 (bEnv I.base 0 0) k d m2 a :=
     ⟨hS2, by rw [eD2, eP2, ← hdk]; exact hR.decls.recs _ hlt,
       fun b nP e => hR.front _ hlt b nP (hdk.trans e), hR.drv.state, hR.quotDn, hM2,
       by rw [eD2]; exact hR.decls.dsize, by rw [eP2]; exact hR.decls.psize, hR.off,
-      sorry /- ronsync2 p3y: DeclTwin (a BuildR field to add), until then sorry -/⟩
-  obtain ⟨s3, hs3, -, hok3, ⟨hS3, hg3, hL3⟩, hM3, hK3, -⟩ := triple_of_callW
-    (L.Ind.declConstants_refines hP.toDeclConstsProg dn 0 (bEnv I.base c r) k d n
+      declTwin_of hT2 hp2 hM2 hR.drv⟩
+  obtain ⟨s3, hs3, -, hok3, ⟨hS3, hg3, hL3⟩, hM3, hK3, hT3⟩ := triple_of_callW
+    (L.Ind.declConstants_refines hP.toDeclConstsProg dn 0 (bEnv I.base 0 0) k d n
       ⟨m2, Locals.init []⟩ a hpre2) h2
   subst hs3
   have hrun3 := AM.run_of_ok _ _ hok3
@@ -332,7 +429,7 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
     (idxConsts_spec p hP.idx_consts hP.base_row_get hP.base_row_set n ⟨s3.mem, Locals.init []⟩
       _ _ hI3 hDL (by have := hS3.iw.ctl; simp only at this ⊢; omega) hS3.iw.iwSize) h4
   subst hs4
-  have hS4 : StageR 0 (bEnv (insC { I with firsts := I.firsts.push I.next } (AM.res (declConstants d) a)).base c r) s4.mem
+  have hS4 : StageR 0 (bEnv (insC { I with firsts := I.firsts.push I.next } (AM.res (declConstants d) a)).base 0 0) s4.mem
       (AM.st (declConstants d) a) :=
     ⟨hS3.check.rebase hf4 (fun b hb => List.mem_append_left _ hb) (by simp) hI4,
       IWOK.frame hf4 (by decide) (by decide) (by decide) (by decide) hS3.iw⟩
@@ -352,13 +449,14 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
   | some q5 =>
   obtain ⟨ρ5, m5⟩ := q5
   rw [h5, bW_some] at hw
-  have hpre5 : L.Ind.DeclConstsPre dn 0 (bEnv (insC { I with firsts := I.firsts.push I.next } (AM.res (declConstants d) a)).base c r)
+  have hpre5 : L.Ind.DeclConstsPre dn 0 (bEnv (insC { I with firsts := I.firsts.push I.next } (AM.res (declConstants d) a)).base 0 0)
       k d s4.mem (AM.st (declConstants d) a) :=
     ⟨hS4, by rw [eD4, eP4, ← hdk]; exact hR.decls.recs _ hlt,
       fun b nP e => hR.front _ hlt b nP (hdk.trans e), hdrv3.state, hR.quotDn.ext hx3, hM4,
       by rw [eD4]; exact hR.decls.dsize, by rw [eP4]; exact hR.decls.psize, hoff3,
-      sorry /- ronsync2 p3y: DeclTwin (decl_constants' post gives it: hT3), until then sorry -/⟩
-  obtain ⟨s5, hs5, -, hok5, ⟨hS5, hg5, hL5⟩, hM5, hK5, -⟩ := triple_of_callW
+      declTwin_of ((hT3.twin.frame hf4 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).bEnv0 _)
+        (by rw [pinW_frame hf4 (by decide)]; exact hT3.pin) hM4 hdrv3⟩
+  obtain ⟨s5, hs5, -, hok5, ⟨hS5, hg5, hL5⟩, hM5, hK5, hT5⟩ := triple_of_callW
     (L.Ind.declTables_refines hP.toDeclConstsProg dn 0 _ k d n ⟨s4.mem, Locals.init []⟩ _ hpre5) h5
   subst hs5
   have hrun5 := AM.run_of_ok _ _ hok5
@@ -394,13 +492,15 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
   have eF6 : (s6.mem.arr64 FIRSTS).size = (m.arr64 FIRSTS).size := by
     rw [eA6 _ (by decide) (by decide), hK5.arr _ (.inr (.inr (.inl rfl))),
       eA4 _ (by decide) (by decide), hK3.arr _ (.inr (.inr (.inl rfl))), hf12.size, eF]
-  have g1 : RecGrow m m2 :=
-    (RecGrow.of_frame (MemFrame.setCtl m 200 0) (by decide) (by decide)).trans
-      (RecGrow.of_frame hf12 (by decide) (by decide))
-  have hG : RecGrow m s6.mem := ((((g1.trans (L.Arena.IWGrow.recGrow hg3)).trans (RecGrow.of_frame hf4 (by decide) (by decide))).trans
-    (L.Arena.IWGrow.recGrow hg5)).trans (RecGrow.of_frame hf6 (by decide) (by decide)))
+  have g1 : BKeep m m2 :=
+    (BKeep.of_frame (MemFrame.setCtl m 200 0) (by decide) (by decide)).trans
+      (BKeep.of_frame hf12 (by decide) (by decide))
+  have hG : BKeep m s6.mem := ((((g1.trans (BKeep.of_idx hg3 hK3)).trans
+    (BKeep.of_frame hf4 (by decide) (by decide))).trans
+    (BKeep.of_idx hg5 hK5)).trans (BKeep.of_frame hf6 (by decide) (by decide)))
   refine ⟨_, _, add_run hrun3 hrun5, ⟨⟨hS5.check.rebase hf6 (fun b hb => List.mem_append_right _ hb)
       (by simp) hI6, IWOK.frame hf6 (by decide) (by decide) (by decide) (by decide) hS5.iw⟩,
+    (hT5.twin.frame hf6 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).bEnv0 _, by rw [pinW_frame hf6 (by decide)]; exact hT5.pin,
     hI6, by rw [eD6, eP6]; exact hR.decls, hR.front, hdrv5, hoff5, fun x hx => ?_,
     (hR.quotDn.ext hx3).ext hx5, hM5.frame hf6
       (fun b hb => by simp [TixA] at hb; rcases hb with rfl | rfl | rfl <;> decide) (by simp), by rw [eF6]; exact hR.fsize⟩,
@@ -410,24 +510,24 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
 
 /-- **`idx_add(k)` refines `IStreamIndex.add` of record `k`** (`idxAdd_ref` as a triple). -/
 @[refines ConRon.Arena.IStreamIndex.add]
-theorem idxAdd_refines {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {c r : Nat}
+theorem idxAdd_refines {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} 
     (k : Word) (d : IDeclaration) (n : Nat) (s₀ : St) (a : AState) (I : IStreamIndex)
-    (hR : BuildR dn ds c r s₀.mem a I) (hk : I.firsts.size = k.toNat)
+    (hR : BuildR dn ds s₀.mem a I) (hk : I.firsts.size = k.toNat)
     (hd : ds[k.toNat]? = some d) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_add" [k]
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ I' a', (I.add d).run a = .ok (I', a') ∧
-      BuildR dn ds c r s'.mem a' I' ∧ I'.firsts.size = k.toNat + 1; ⊤⦄ :=
+      BuildR dn ds s'.mem a' I' ∧ I'.firsts.size = k.toNat + 1; ⊤⦄ :=
   triple_post (callW_spec p n "idx_add" [k] s₀) fun _ _ ⟨hl, hc⟩ => ⟨hl,
     let ⟨I', a', h1, h2, h3, _⟩ := idxAdd_ref hP hR hk hd hc; ⟨I', a', h1, h2, h3⟩⟩
 
 /-- `build_index`'s loop from record `k`: `buildIndexGo` over the records from `k` on. -/
-theorem buildIndexLoop_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {c r : Nat}
+theorem buildIndexLoop_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} 
     {cnt : Word} (hcnt : cnt.toNat = ds.size) :
     ∀ (n : Nat) (m m' : Mem) (k : Word) (a : AState) (I : IStreamIndex),
-      BuildR dn ds c r m a I → I.firsts.size = k.toNat → k.toNat ≤ ds.size →
+      BuildR dn ds m a I → I.firsts.size = k.toNat → k.toNat ≤ ds.size →
       buildIndexW.loop1 p n m cnt k = some m' →
       ∃ I' a', buildIndexGo I k.toNat (ds.toList.drop k.toNat) a = .ok (.ok I', a') ∧
-        BuildR dn ds c r m' a' I' ∧ I'.firsts.size = ds.size ∧ RecGrow m m' := by
+        BuildR dn ds m' a' I' ∧ I'.firsts.size = ds.size ∧ BKeep m m' := by
   intro n
   induction n with
   | zero => intro m m' k a I _ _ _ h; rw [buildIndexW.loop1.eq_1] at h; cases h
@@ -460,19 +560,19 @@ theorem buildIndexLoop_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDec
       cases h
       have hge : ds.size ≤ k.toNat := by rw [← hcnt]; exact Nat.le_of_not_lt g
       have e : k.toNat = ds.size := by omega
-      refine ⟨I, a, ?_, hR, by rw [hk, e], RecGrow.refl _⟩
+      refine ⟨I, a, ?_, hR, by rw [hk, e], BKeep.refl _⟩
       rw [e, List.drop_of_length_le (by simp)]
       rfl
 
 /-- **`build_index(cnt)` refines `buildIndex`** over the front's records (`cnt` of them), from the
 builder's relation at the empty index: the twin's index is built, and the relation holds at it. -/
 @[refines ConRon.Arena.buildIndexGo ConRon.Arena.buildIndex]
-theorem buildIndex_refines {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {c r : Nat}
+theorem buildIndex_refines {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} 
     (cnt : Word) (hcnt : cnt.toNat = ds.size) (n : Nat) (s₀ : St) (a : AState)
-    (hR : BuildR dn ds c r s₀.mem a {}) :
+    (hR : BuildR dn ds s₀.mem a {}) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "build_index" [cnt]
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ I a', buildIndex ds a = .ok (.ok I, a') ∧
-      BuildR dn ds c r s'.mem a' I ∧ I.firsts.size = ds.size ∧ RecGrow s₀.mem s'.mem; ⊤⦄ := by
+      BuildR dn ds s'.mem a' I ∧ I.firsts.size = ds.size ∧ BKeep s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (callW_spec p n "build_index" [cnt] s₀) fun _ s' ⟨hl, hc⟩ => ⟨hl, ?_⟩
   rcases n with _ | n
   · rw [callW_zero] at hc; cases hc

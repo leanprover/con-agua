@@ -127,7 +127,7 @@ theorem divModSlot_specW (p : Prog) (hpin : p.lookup "pin_at" = some pinAtL)
   rw [invoke_eq _ hp]
   simp only [callFn, divModSlot]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pinAt_pure p hpin n] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pinAt_any p hpin n] <;>
     finish (gen := 20) [divModSlotW, dmSlotW]
 
 /-- A returning `div_mod_slot` leaves the memory, and returns the slot. -/
