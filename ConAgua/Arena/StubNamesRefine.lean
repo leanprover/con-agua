@@ -47,15 +47,15 @@ def prhW : Nat → Mem → Word → Word → Word → Option Word
   | n + 1, m, x, k, hi =>
     if hi ≤ k then some 0
     else if pinW m 0 = 0 then none
-    else if 51 ≤ k then none
-    else if pinW m (1 + k.toNat) = x then some 1
+    else if 52 ≤ k then none
+    else if pinW m (if k = 51 then 71 else 1 + k.toNat) = x then some 1
     else prhW n m x (k + 1) hi
 
 theorem prhW_step (n : Nat) (m : Mem) (x k hi : Word) : prhW (n + 1) m x k hi =
     if hi ≤ k then some 0
     else if pinW m 0 = 0 then none
-    else if 51 ≤ k then none
-    else if pinW m (1 + k.toNat) = x then some 1
+    else if 52 ≤ k then none
+    else if pinW m (if k = 51 then 71 else 1 + k.toNat) = x then some 1
     else prhW n m x (k + 1) hi := rfl
 
 grind_pattern [ind_grind] prhW_step => prhW (n + 1) m x k hi
@@ -73,7 +73,7 @@ theorem prh_spec (p : Prog) (hp : p.lookup "pin_range_has" = some pinRangeHas)
     rw [invoke_eq _ hp]
     simp only [callFn, pinRangeHas]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_pure p hpin n, ih] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_any p hpin n, ih] <;>
       finish (gen := 20)
 
 /-- **What `pin_range_has` answers**: `1` iff `x` is a pin in slots `k ‥ hi - 1`, else `0`. -/
@@ -94,6 +94,8 @@ theorem prhW_iff (n : Nat) : ∀ (m : Mem) (x k hi r : Word), hi.toNat ≤ 51 �
       have := UInt64.not_le.mp hk; exact UInt64.lt_iff_toNat_lt.mp this
     obtain ⟨h0, h⟩ := of_ite_none h
     obtain ⟨h5, h⟩ := of_ite_none h
+    have hk51 : k ≠ 51 := fun e => by subst e; simp at hk'; omega
+    rw [if_neg hk51] at h
     by_cases he : pinW m (1 + k.toNat) = x
     · rw [ite_eq_left he] at h; cases Option.some.inj h
       refine ⟨by decide, ?_⟩
@@ -127,8 +129,9 @@ def lghW (m : Mem) (x : Word) : Option Word :=
 /-- `pin_at(i)` returns to the caller's exact state. -/
 theorem pinAt_eq (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
-    ⦃fun r s' => s' = s₀ ∧ pinW s₀.mem 0 ≠ 0 ∧ r = [pinW s₀.mem (1 + i.toNat)]; ⊤⦄ := by
-  refine triple_post (pinAt_pure p hp n s₀ i) ?_
+    ⦃fun r s' => s' = s₀ ∧ pinW s₀.mem 0 ≠ 0 ∧
+      r = [pinW s₀.mem (if i = 51 then 71 else 1 + i.toNat)]; ⊤⦄ := by
+  refine triple_post (pinAt_any p hp n s₀ i) ?_
   rintro r ⟨m', l'⟩ ⟨hl, h0, -, hr, hm⟩
   obtain ⟨m, l⟩ := s₀
   simp only [LocEq] at hl
