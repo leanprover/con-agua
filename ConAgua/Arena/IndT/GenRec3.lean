@@ -61,7 +61,11 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- Two indexes that answer alike (con-ron's `GR.FEq`) find alike. -/
 theorem feq_find {x y : IFEnv} (h : ConRon.Bridge.Inductives.GR.FEq x y) : x.find? = y.find? := by
-  sorry
+  funext k
+  have he : x.idx.isEmpty = y.idx.isEmpty := by
+    apply Bool.eq_iff_iff.mpr
+    simp only [Std.HashMap.isEmpty_iff_forall_not_mem, Std.HashMap.mem_iff_isSome_getElem?, h.2.1]
+  simp only [IFEnv.find?, IFEnv.lookup, he, h.2.2.1, h.2.1]
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
