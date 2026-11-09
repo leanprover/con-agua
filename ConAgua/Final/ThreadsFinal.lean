@@ -44,6 +44,9 @@ reports accept and the threads claim every group index, the twin's pooled pipeli
   32-byte stack window).
 * **The claim counter's coverage**: every claimed group index `j` (in `rdx`) is below `k`
   (`k = rax - 2^63` from entry 1), and every index below `k` is claimed by some thread.
+* **The claims increase** in each thread: a thread's later call claims a larger index (`main.c`
+  claims off one monotone counter; con-ron's pool, `PooledAccepts`, has each worker's jobs
+  increasing, since a job's start state is reached through the jobs before it).
 * The verdicts: entry 1 returns `rdx = 0`, `rax ≥ 2^63`; every call returns `rdx = 0`,
   `rax = ACCEPT`.
 -/
@@ -132,6 +135,8 @@ structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Wo
     (t.dm (i + 1)).dmem.get? (A x) = (t.st i).data.dmem.get? (A x)
   claimed : ∀ t ∈ ths, ∀ i < t.n, (t.dm i).regs.rdx < st₀.data.regs.rax - 9223372036854775808
   cover : ∀ j : Word, j < st₀.data.regs.rax - 9223372036854775808 → ∃ t ∈ ths, ∃ i < t.n, (t.dm i).regs.rdx = j
+  /-- the claims increase in each thread (the claim counter is monotone) -/
+  incr : ∀ t ∈ ths, ∀ i j, i < j → j < t.n → (t.dm i).regs.rdx < (t.dm j).regs.rdx
 
 /-! ## Pieces -/
 
