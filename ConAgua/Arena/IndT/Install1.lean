@@ -56,7 +56,7 @@ theorem callW_opfF {p : Prog} (hOpf : OpfF p) {n : Nat} {args r : List Word} {m 
 
 /-- **`open_pis_at_fvars_f`, the real call, as a `Sim`** (the stub contract's `KeepPost`, the
 twin's run, and `AbsOK` after: `opfF_ok`). -/
-theorem opfSimRA {p : Prog} (hOpf : OpfF p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem opfSimRA {p : Prog} (hOpf : OpfF p) {n : Nat} {vis : Word}
     {fe : IFEnv} {k e i : Word} (he : H e) {m : Mem} {a : AState} (hS : StageR vis fe m a)
     (hA : AbsOK m) :
     Sim (callW p n "open_pis_at_fvars_f" [k, e, i] m) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
@@ -68,7 +68,7 @@ theorem opfSimRA {p : Prog} (hOpf : OpfF p) {n : Nat} {dn : NIdx → Option ConL
   exact ⟨x, a', hrun, ⟨⟨hS', hg, hd⟩, hrun⟩, hA'⟩
 
 /-- The same, from the model's run. -/
-theorem opfF_okRA {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {k e i : Word}
+theorem opfF_okRA {vis : Word} {fe : IFEnv} {k e i : Word}
     (he : H e) {m m' : Mem} {a : AState} {r : List Word} (h : opfF m [k, e, i] = some (r, m'))
     (hS : StageR vis fe m a) (hA : AbsOK m) :
     ∃ x a', (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a') ∧
