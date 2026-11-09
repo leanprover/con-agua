@@ -225,13 +225,20 @@ structure PhaseA (b : ByteArray) where
   pfx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE
   idx : buildIndex ds sE = .ok (.ok I, sF)
 
-/-- **What the index build leaves**: an accepting twin phase A, the stages' relation `R7` at the
-memory `m₇` before the build, `BuildR` at the built index after it, the record pool's prefix
-kept, and the build's write set (`biA`, `biC`). -/
+/-- **What the index build leaves**: the stages' relation `R7` at the memory `m₇` before the
+build, `BuildR` at the built index after it, the record pool's prefix kept, and the build's
+write set (`biA`, `biC`). -/
+structure FoldAt (b pb : ByteArray) (sz : TieredArray → Nat) (PA : PhaseA b) (m₇ m : Mem) : Prop where
+  r7 : R7 (ConAgua.Final.loadMem b pb sz) m₇ pb PA.ds PA.ipins PA.sE
+  build : BuildR (dnOf PA.sE.store) PA.ds 0 0 m PA.sF PA.I
+  fsize : PA.I.firsts.size = PA.ds.size
+  grow : RecGrow m₇ m
+  frame : MemFrame biA biC m₇ m
+  bytes : m.bytes = m₇.bytes
+
+/-- `FoldAt` at an accepting twin phase A. -/
 def FoldA (b pb : ByteArray) (sz : TieredArray → Nat) (m : Mem) : Prop :=
-  ∃ (PA : PhaseA b) (m₇ : Mem), R7 (ConAgua.Final.loadMem b pb sz) m₇ pb PA.ds PA.ipins PA.sE ∧
-    BuildR (dnOf PA.sE.store) PA.ds 0 0 m PA.sF PA.I ∧ PA.I.firsts.size = PA.ds.size ∧
-    RecGrow m₇ m ∧ MemFrame biA biC m₇ m ∧ m.bytes = m₇.bytes
+  ∃ (PA : PhaseA b) (m₇ : Mem), FoldAt b pb sz PA m₇ m
 
 /-- **The index build from `R7`**, with `cnt` the count `DECL[0]`, in the form
 `checkA_of_stages` takes. -/
@@ -260,6 +267,6 @@ theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hsz : 
     rw [hc hD0]; have := h7.decls.count; simpa [hD0] using this
   obtain ⟨I, a', hI, hR', hsz', hG⟩ := (M.of_run (P := fun x => x = s) rfl hrun
     (buildIndex_refines checkerProg_idxProg cnt hcnt n s sE hR)).2
-  exact ⟨⟨pins, sA, pre, sB, rc, sC, ds, sD, ipins, sE, I, a', hpx, hI⟩, s.mem, h7, hR', hsz', hG, hfr, hby⟩
+  exact ⟨⟨pins, sA, pre, sB, rc, sC, ds, sD, ipins, sE, I, a', hpx, hI⟩, s.mem, ⟨h7, hR', hsz', hG, hfr, hby⟩⟩
 
 end L.Checker
