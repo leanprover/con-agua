@@ -3,6 +3,10 @@ module
 public import ConAgua.Arena.QuotAtT
 public import ConAgua.Arena.QuotRecW
 import ConAgua.Arena.InferLeaves
+import ConRon.Bridge.Checker.Canon
+import ConAgua.Arena.IlpRd
+import ConAgua.Arena.IndInstallSpec.NhW
+import ConAgua.Arena.DeclAndPinIndRef
 
 @[expose] public section
 
@@ -406,6 +410,150 @@ theorem ciCopy {p : Prog} (hP : CiProg p) {n : Nat} {m m3 m4 : Mem} {a a3 : ASta
     rw [show (c.toNat + 5) % 2 ^ 64 + j % 2 ^ 64 = c.toNat + 5 + j by omega,
       Nat.mod_eq_of_lt this]; exact hw
 
+/-- **`CiPre` across a step that leaves the record pool's words alone** (`er_to_iw`,
+`param_levels`, `inst_lp`). -/
+theorem CiPre.step {m m3 m' : Mem} {a3 a' : AState} {r nn k : Word} {cv' : IConstantVal}
+    (hpre : CiPre dn vis fe m m3 a3 r nn k cv') (hT : StageT dn vis fe m' a') (hg : IWGrow m3 m')
+    (hf : MemFrame quotA quotC m3 m') (he : erecP m' = erecP m3) :
+    CiPre dn vis fe m m' a' r nn k cv' := by
+  have htop : erTopOf m3 r ≤ erTopOf m' r := by
+    unfold erTopOf; split
+    · exact hg.er
+    · exact hg.er1
+  have hcap := (hT.stage.iw.topOf r)
+  refine ⟨hT, hpre.grow.trans hg, hpre.fr.trans hf, hpre.base, by have := hpre.top; omega,
+    by omega, hpre.r41, by rw [he]; exact hpre.kw, fun Y hY hE => hpre.cvR Y ?_ hE⟩
+  intro j hj; rw [hY j hj, he]
+
+/-- **`CiPre` across a word written at `r + j`** (`5 ≤ j < nn`), the twin unchanged. -/
+theorem CiPre.put {m m3 : Mem} {a a3 : AState} {r nn k v : Word} {cv' : IConstantVal}
+    (hT : StageT dn vis fe m a) (hpre : CiPre dn vis fe m m3 a3 r nn k cv') {o : Word}
+    (ho : 5 ≤ o.toNat) (hon : o.toNat < nn.toNat) :
+    CiPre dn vis fe m (erecPutMem m3 (r + o) v) a3 r nn k cv' ∧
+      erecP (erecPutMem m3 (r + o) v) (r.toNat + o.toNat) = some v ∧
+      ∀ i, i % 2 ^ 41 ≠ (r.toNat + o.toNat) % 2 ^ 41 →
+        erecP (erecPutMem m3 (r + o) v) i = erecP m3 i := by
+  have hcap := hpre.cap
+  have htop := hpre.top
+  have hbase := hpre.base
+  have hr41 := hpre.r41
+  obtain ⟨eo, eoo, eto⟩ := erAddr (r := r) (c := o) (by omega) hr41
+  have hq : erOff r + nn.toNat < 2 ^ 40 := by omega
+  unfold erOff at hq
+  obtain ⟨hS, hg, hf⟩ := StageR.putFresh hT.stage hpre.stT.stage hpre.fr hpre.grow (v := v)
+    (d := r + o) (by rw [eto, eoo]; omega)
+  have hT' := StageT.of_wrER (ws := [v]) hpre.stT hS
+  have et : ∀ x, erTopOf (erecPutMem m3 (r + o) v) x = erTopOf m3 x := fun x => by
+    simp only [erTopOf, erecTop, erecTop1, erecPutMem_ctl]
+  have hsz := hpre.stT.stage.iw.topOf (r + o)
+  have hoth : ∀ i, i % 2 ^ 41 ≠ (r.toNat + o.toNat) % 2 ^ 41 →
+      erecP (erecPutMem m3 (r + o) v) i = erecP m3 i := fun i hi =>
+    erecP_putMem_other (by rw [eo]; exact hi)
+  refine ⟨⟨hT', hg, hf, hbase, by rw [et]; exact htop, by rw [et]; exact hcap, hr41, ?_, ?_⟩, ?_,
+    hoth⟩
+  · rw [hoth _ (by omega)]; exact hpre.kw
+  · intro Y hY hE
+    refine hpre.cvR Y (fun j hj => ?_) hE
+    rw [hY j hj, hoth _ (by omega)]
+  · have h1 := hsz.1
+    rw [eto] at h1
+    rw [← eo]; exact erecP_putMem_self (by rw [eoo, eto]; omega) (by rw [eoo]; omega)
+
+/-- **A copied tail** (`er_copy_er(r + o, c + o, l)`, `5 ≤ o`) after the record's head: `CiPre`
+after it, the source words at the copy, every other address as before. -/
+theorem ciCopyO {p : Prog} (hP : CiProg p) {n : Nat} {m m3 m4 : Mem} {a a3 : AState}
+    {r nn k c o l : Word} {cv' : IConstantVal} {r4 : List Word} (hT : StageT dn vis fe m a)
+    (hpre : CiPre dn vis fe m m3 a3 r nn k cv') (ho : 5 ≤ o.toNat)
+    (hl : o.toNat + l.toNat ≤ nn.toNat)
+    (h : callW p n "er_copy_er" [r + o, c + o, l] m3 = some (r4, m4)) :
+    CiPre dn vis fe m m4 a3 r nn k cv' ∧
+      (∀ j < l.toNat, WAt (erecP m) (erecP m4) (c.toNat + o.toNat + j) (r.toNat + o.toNat + j)) ∧
+      ∀ i, (∀ j < l.toNat, i % 2 ^ 41 ≠ (r.toNat + o.toNat + j) % 2 ^ 41) → erecP m4 i = erecP m3 i := by
+  have hcap := hpre.cap
+  have htop := hpre.top
+  have hbase := hpre.base
+  have hr41 := hpre.r41
+  obtain ⟨eo, eoo, eto⟩ := erAddr (r := r) (c := o) (by omega) hr41
+  have hq : erOff r + nn.toNat < 2 ^ 40 := by omega
+  unfold erOff at hq
+  obtain ⟨hS4, hg4, hf4, hrd4, hout4, ws, rfl⟩ := erCopyEr_fresh hP.erCopyEr hP.erPut hT.stage
+    hpre.stT.stage hpre.fr hpre.grow (by rw [eto, eoo]; omega) (by rw [eto, eoo]; omega)
+    (by rw [eo]; omega) h
+  have hT4 := StageT.of_wrER hpre.stT hS4
+  have hoth : ∀ i, i < 5 → erecP (wrER m3 (r + o) ws) (r.toNat + i) = erecP m3 (r.toNat + i) :=
+    fun i hi => hout4 _ fun j hj => by rw [eo]; omega
+  have et : ∀ x, erTopOf (wrER m3 (r + o) ws) x = erTopOf m3 x := fun x => by
+    simp only [erTopOf, erecTop, erecTop1, wrER_ctl]
+  refine ⟨⟨hT4, hg4, hf4, hbase, by rw [et]; exact htop, by rw [et]; exact hcap, hr41,
+    by simpa using (hoth 0 (by omega)).trans (by simpa using hpre.kw), ?_⟩, ?_,
+    fun i hi => hout4 i (by rw [eo]; exact hi)⟩
+  · intro Y hY hE
+    refine hpre.cvR Y (fun j hj => ?_) hE
+    rw [hY j hj]
+    have := hoth (1 + j) (by omega); rwa [← Nat.add_assoc] at this
+  · intro j hj w hw
+    rw [show r.toNat + o.toNat + j = (r + o).toNat + j by rw [eo]]
+    refine hrd4 j hj w ?_
+    have := erecP_lt64 hw
+    rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_ofNat']
+    rw [show (c.toNat + o.toNat) % 2 ^ 64 + j % 2 ^ 64 = c.toNat + o.toNat + j by omega,
+      Nat.mod_eq_of_lt this]; exact hw
+
+/-- **`er_to_iw(po, pl)`, then `param_levels`** under `StageT`, the name slice `(po, pl)` decoded:
+the twin's `paramLevels`, `StageT` after, the record pool's words unchanged. -/
+theorem plStep {p : Prog} (hP : QuotAtProg p) {n : Nat} {m m4 m5 : Mem} {a : AState}
+    {po pl : Word} {r4 r5 : List Word} {ps : List NIdx} {psv : List ConLeche.Name}
+    (hT : StageT dn vis fe m a) (hok : ConRon.Bridge.StateOK a)
+    (hps : hslice? (erecP m) po.toNat pl.toNat = some ps)
+    (hden : ConRon.Arena.Frontend.denoteNList a.store.ns ps = some psv)
+    (h1 : callW p n "er_to_iw" [po, pl] m = some (r4, m4))
+    (h2 : callW p n "param_levels" [r4.headD 0, r4.tail.headD 0] m4 = some (r5, m5)) :
+    ∃ us a5, (paramLevels ps).run a = .ok (us, a5) ∧ StageT dn vis fe m5 a5 ∧ IWGrow m m5 ∧
+      MemFrame quotA quotC m m5 ∧ erecP m5 = erecP m ∧ erRdT m5 = erRdT m ∧
+      H (r5.headD 0) ∧ decI (r5.headD 0) = us ∧ ConRon.Bridge.Frontend.IStepS a a5 := by
+  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (erToIw_specW p hP.iwAlloc hP.erCopy hP.erToIw n _ po pl) h1
+  obtain ⟨hS1, hg1, hdl1, htop1, -⟩ := erToIwW_stage hW1 hT.stage hps
+  have hT1 := StageT.of_iw hT hS1 (erToIwW_iwFr hW1)
+  rw [hs1] at hS1 hg1 hdl1 htop1 hT1
+  obtain ⟨hpf1, he1⟩ := callW_plFrame hP.plc (by decide) h1
+  have hqf1 := callW_quotFrame hP.quot (by decide) h1
+  obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+    (plW_spec p hP.iwAlloc hP.iwCopy hP.slCons hP.slGet hP.paramFind hP.paramPush hP.internParam
+      hP.plGo hP.pl hP.il n _ _ _) h2
+  rw [hs2] at hW2
+  obtain ⟨us, a1, hrun1, hH, hus, hS2, hg2⟩ := plW_sim (k := n) hS1 hdl1 (by omega) r5 m5 hW2
+  obtain ⟨hpf2, he2⟩ := callW_plFrame hP.plc (by decide) h2
+  have hqf2 := callW_quotFrame hP.quot (by decide) h2
+  obtain ⟨hst1, -⟩ := ConRon.Bridge.paramLevels_run hok hden hrun1
+  have hT2 : StageT dn vis fe m5 a1 := StageT.of_pl hT1 hS2 hst1 hpf2
+  have hpf12 := hpf1.trans hpf2
+  have hr2 := erRdT_congr (m := m) (m' := m5) (hpf12.arr _ (plA_not (by simp [plBad])) (by decide))
+    (hpf12.arr _ (plA_not (by simp [plBad])) (by decide))
+  refine ⟨us, a1, hrun1, hT2, hg1.trans hg2, hqf1.trans hqf2, by rw [he2, he1], funext hr2, hH,
+    hus, hst1⟩
+
+/-- **`inst_lp(ko, kc, us, x)`** under `StageT` (through `CoreS`): the twin's `instLPFast`,
+`StageT` after, the record pool unchanged. -/
+theorem instStep {p : Prog} (hP : QuotAtProg p) {n : Nat} {m m' : Mem} {a : AState}
+    {ko kc us x : Word} {r : List Word} {lps : List NIdx}
+    (hT : StageT dn vis fe m a) (hH : H us) (hx : x.toNat < 2 ^ 32)
+    (hl : hslice? (erecP m) ko.toNat kc.toNat = some lps)
+    (h : callW p n "inst_lp" [ko, kc, us, x] m = some (r, m')) :
+    ∃ e a', (instLPFast coreWalkFuel lps (decI us) (decE x)).run a = .ok (e, a') ∧
+      StageT dn vis fe m' a' ∧ IWGrow m m' ∧ MemFrame quotA quotC m m' ∧ erecP m' = erecP m ∧
+      erRdT m' = erRdT m ∧ decH r = e ∧ (r.headD 0).toNat < 2 ^ 32 := by
+  obtain ⟨M, hC⟩ := hT.core
+  obtain ⟨s3, rfl, -, hok3, ⟨M', hC', -, -⟩, hres3, hrh3⟩ :=
+    triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (hP.instLP n ⟨m, Locals.init []⟩ a dn vis fe M 0 _ _ us _ lps hC hx hH hl) h
+  obtain ⟨hT3, hg3⟩ := StageT.of_core hP.core instLp_stageCore h hT hC'
+  obtain ⟨hE3, hE13, hrd3, he3⟩ := callW_erec_closedT hP.coreErec instLp_core h
+  have hqf3 := callW_quotFrame hP.quot (by decide) h
+  have hrun3 := partsRunOfOk hok3
+  rw [hres3] at hrun3
+  exact ⟨_, _, hrun3, hT3, hg3, hqf3, he3, hrd3, rfl, hrh3⟩
+
 /-- **`ci_at_lps(c, po, pl)` refines `ci.atLps ps`** under `StageT`: the fresh record after it. -/
 theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (n : Nat) {m : Mem} {a : AState} {c po pl : Word}
     {ci : IConstantInfo} {ps : List NIdx} {psv : List ConLeche.Name} {cc : ConLeche.ConstantInfo}
@@ -450,7 +598,100 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (n : Nat) {m : Mem} {a : AState} 
     · simp only [List.headD_cons, decCI, nat?, hpre.kw, Option.map_some, Option.bind_eq_bind,
         Option.bind_some, hpre.cvR _ (fun _ _ => rfl) hpre.grow.ext]
       rfl
-  | defnInfo cv v hint => sorry
+  | defnInfo cv v hint =>
+    obtain rfl : w = 1 := UInt64.toNat_inj.mp hkd
+    have hci' := hci
+    simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
+      show (1 : Word).toNat = 1 from rfl, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq, IConstantInfo.defnInfo.injEq] at hci'
+    obtain ⟨cv0, -, v0, hv0, hint0, hhint, -, rfl, rfl⟩ := hci'
+    obtain ⟨cvd, xd, -, hcvd, -⟩ := ConRon.Bridge.denoteCI_defn_inv hdc
+    simp (config := { decide := true }) only [↓reduceIte] at hW
+    obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
+    simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte] at hW
+    obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
+    obtain ⟨hst3, -⟩ := ConRon.Bridge.IConstantVal.atLps_run hok hr hcvd hden hrun
+    -- `er_to_iw`, `param_levels`
+    cases h4 : callW p n "er_to_iw" [po, pl] m3 with
+    | none => rw [h4] at hW; simp [ciAtLpsW.k_er_to_iw] at hW
+    | some x4 =>
+    obtain ⟨r4, m4⟩ := x4
+    rw [h4] at hW; simp only [ciAtLpsW.k_er_to_iw] at hW
+    cases h5 : callW p n "param_levels" [r4.headD 0, r4.tail.headD 0] m4 with
+    | none => rw [h5] at hW; simp [ciAtLpsW.k_param_levels] at hW
+    | some x5 =>
+    obtain ⟨r5, m5⟩ := x5
+    rw [h5] at hW; simp only [ciAtLpsW.k_param_levels] at hW
+    have hden3 := ConRon.Bridge.denoteNListE_ext hst3.ext _ _ hden
+    obtain ⟨us, a5, hrun5, hT5, hg5, hf5, he5, hrd5, hH5, hus5, hst5⟩ :=
+      plStep hP.toQuotAtProg hpre.stT hst3.ok (ArrExt.hslice? hpre.grow.ext hps) hden3 h4 h5
+    have hpre5 := hpre.step hT5 hg5 hf5 he5
+    -- `inst_lp`
+    have hcv5 : decCV (erecP m5) (c.toNat + 1) = some cv :=
+      ArrExt.decCV hpre5.grow.ext (decCI_cvA hci)
+    obtain ⟨hlps, -⟩ := decCV_rd (erRdOK m5) hcv5
+    obtain ⟨wv, hwv, hwv32, rfl⟩ : ∃ wv, erecP m (c.toNat + 5) = some wv ∧ wv.toNat < 2 ^ 32 ∧
+        decI wv = v0 := by
+      simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hv0
+      obtain ⟨wv, hwv, h32⟩ := hv0
+      split at h32
+      · exact ⟨wv, hwv, by assumption, Option.some.inj h32⟩
+      · cases h32
+    have ev : erRdT m5 (c + 5) = wv := erRdT_of _ _ (by
+      have := erecP_lt64 hwv
+      have h5 : (5 : Word).toNat = 5 := rfl
+      rw [UInt64.toNat_add, h5, Nat.mod_eq_of_lt (by omega)]; exact hpre5.grow.ext _ _ hwv)
+    simp only [show ∀ x, rdW (m5.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRdT m5 x
+      from fun _ => rfl, ev] at hW
+    cases h6 : callW p n "inst_lp" [erRdT m5 (c + 2), erRdT m5 (c + 3), r5.headD 0, wv] m5 with
+    | none => rw [h6] at hW; simp [ciAtLpsW.k_inst_lp] at hW
+    | some x6 =>
+    obtain ⟨r6, m6⟩ := x6
+    rw [h6] at hW; simp only [ciAtLpsW.k_inst_lp] at hW
+    obtain ⟨e6, a6, hrun6, hT6, hg6, hf6, he6, -, hdec6, h32⟩ :=
+      instStep hP.toQuotAtProg hT5 hH5 hwv32 hlps h6
+    have hpre6 := hpre5.step hT6 hg6 hf6 he6
+    -- `erec_put(r + 5, v)`, `er_copy_er(r + 6, c + 6, 2)`
+    cases h7 : callW p n "erec_put" [r1.headD 0 + 5, r6.headD 0] m6 with
+    | none => rw [h7] at hW; simp [ciAtLpsW.k_erec_put_2] at hW
+    | some x7 =>
+    obtain ⟨r7, m7⟩ := x7
+    rw [h7] at hW; simp only [ciAtLpsW.k_erec_put_2] at hW
+    rw [callW_erecPut hP.erPut h7] at hW
+    obtain ⟨hpre7, hv7, hout7⟩ := hpre6.put (o := 5) (v := r6.headD 0) hT (by decide) (by decide)
+    cases h8 : callW p n "er_copy_er" [r1.headD 0 + 6, c + 6, 2]
+        (erecPutMem m6 (r1.headD 0 + 5) (r6.headD 0)) with
+    | none => rw [h8] at hW; simp [ciAtLpsW.k_er_copy_er] at hW
+    | some x8 =>
+    obtain ⟨r8, m8⟩ := x8
+    rw [h8] at hW
+    simp only [ciAtLpsW.k_er_copy_er, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨hpre8, hc8, hout8⟩ := ciCopyO hP hT hpre7 (o := 6) (l := 2) (by decide) (by decide) h8
+    refine ⟨.defnInfo cv' e6 hint0, a6, ?_, hpre8.stT, hpre8.grow, ?_⟩
+    · simp only [IConstantInfo.atLps, StateT.run_bind]
+      rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]
+      simp only [exb]
+      rw [show (paramLevels ps).run a3 = .ok (us, a5) from hrun5]
+      simp only [exb]
+      rw [← hus5, ← decE_eq, hrun6]; rfl
+    · have h6 : (6 : Word).toNat = 6 := rfl
+      have h5 : (5 : Word).toNat = 5 := rfl
+      have h2 : (2 : Word).toNat = 2 := rfl
+      simp only [h6, h2] at hc8 hout8
+      simp only [h5] at hv7
+      have hr41 := hpre8.r41
+      have e5 : erecP s'.mem ((r1.headD 0).toNat + 5) = some (r6.headD 0) := by
+        rw [hout8 _ (fun j hj => by omega)]; exact hv7
+      have hd5 : (hd? (erecP s'.mem) ((r1.headD 0).toNat + 5) : Option EIdx) = some e6 := by
+        simp only [hd?, e5, Option.bind_eq_bind, Option.bind_some, h32, ↓reduceIte, ← hdec6, decH,
+          decE_eq]
+      have hh : decHint (erecP s'.mem) ((r1.headD 0).toNat + 6) = some hint0 :=
+        decHint_sh (by simpa using hc8 0 (by decide)) (hc8 1 (by decide)) hhint
+      simp only [List.headD_cons, decCI, nat?, hpre8.kw, Option.map_some, Option.bind_eq_bind,
+        Option.bind_some, hpre8.cvR _ (fun _ _ => rfl) hpre8.grow.ext,
+        show (1 : Word).toNat = 1 from rfl, hd5, hh]
+      rfl
   | thmInfo cv =>
     obtain rfl : w = 2 := UInt64.toNat_inj.mp hkd
     simp (config := { decide := true }) only [↓reduceIte] at hW
