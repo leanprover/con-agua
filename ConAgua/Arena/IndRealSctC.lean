@@ -297,19 +297,6 @@ theorem names_ext {st st' : EStore} (hx : ConRon.Arena.Ext st st') {lps : List N
     obtain ⟨x, hx1, xs, hxs, rfl⟩ := hks
     exact ⟨x, hx.lss.ls.ns k x hx1, xs, ih xs hxs, rfl⟩
 
-/-! ## The environment's table side as callees of the stage -/
-
-
-
-/-- **`env_push_table` as a callee of the stage**: the twin's `pushTable` of the record's table,
-the pool unchanged, the walk memos and the frame below the stage's kept. -/
-theorem envPushTable_stage {p : Prog} (hP : TblProg p) {vis : Word}
-    {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {t : IProjTable}
-    (hS : StageR vis fe m a) (ht : decTbl (erecP m) q.toNat = some t)
-    (hc : callW p n "env_push_table" [q] m = some (r, m')) :
-    StageR vis (fe.pushTable t) m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ AFr m m' := by
-  sorry
-
 /-- **The model of `check_struct_proj_table`, both outcomes**: its callees (outside the verdict
 closure) lifted, `check_struct_proj_table_scoped` reading the real `all_level_params_defined`. -/
 l_model tblE_spec (p : Prog) (hP : TblProg p)

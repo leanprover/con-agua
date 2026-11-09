@@ -7,6 +7,9 @@ import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsCanon
+import ConAgua.L.ModelGen
+import ConAgua.Arena.Verdict
+import ConAgua.Arena.StoreFields
 
 @[expose] public section
 
@@ -409,13 +412,88 @@ theorem ruleEqButRhs_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, ruleEqA_spec p hp n, ruleEqB_spec p hp n, bEq_spec p hp n] <;>
       finish (gen := 20) [rdW_eq, ruleEqButRhsB]
 
-set_option maxHeartbeats 1000000 in
+end specs
+
+set_option experimental.vcgen true in
+/-- **The model of `rules_eq`**. -/
+l_model rulesEq_specW (p : Prog) (hp : p.lookup "rules_eq" = some rulesEq)
+  fns [hp ↦ rulesEqW list]
+  specs [callW_spec p n "rule_eq_but_rhs"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+section specs
+variable (p : Prog) (hp : CanonProg p)
+include hp
+
+/-- `rules_eq`'s model decides `rulesEqB` (memory untouched). -/
+theorem rulesEqW_ok : ∀ (n : Nat) (m : Mem) (o1 l1 o2 l2 : Word) (r : List Word) (m' : Mem),
+    rulesEqW p n m o1 l1 o2 l2 = some (r, m') →
+    m' = m ∧ r.headD 0 = if rulesEqB (erRdT m) o1 l1 o2 l2 then 1 else 0 := by
+  intro n
+  induction n with
+  | zero => intro m o1 l1 o2 l2 r m' h; simp [rulesEqW] at h
+  | succ n ih =>
+  intro m o1 l1 o2 l2 r m' h
+  by_cases hne : l1 ≠ l2
+  · rw [rulesEqW.arm1 p n m o1 l1 o2 l2 hne] at h; cases h
+    have : (l1 == l2) = false := by simpa using hne
+    simp [rulesEqB, this]
+  have he : l1 = l2 := Classical.not_not.mp hne
+  subst he
+  by_cases h0 : l1 = 0
+  · rw [rulesEqW.arm2 p n m o1 l1 o2 l1 rfl h0] at h; cases h
+    subst h0
+    simp [rulesEqB, rulesEqN]
+  rw [rulesEqW.arm3 p n m o1 l1 o2 l1 rfl h0] at h
+  obtain ⟨k, hk⟩ : ∃ k, l1.toNat = k + 1 :=
+    ⟨l1.toNat - 1, by have : l1.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp e); omega⟩
+  have hk1 : (l1 - 1).toNat = k := by
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+  have hB : rulesEqB (erRdT m) o1 l1 o2 l1 = (ruleEqButRhsB (erRdT m) o1 o2 &&
+      erRdT m (o1 + 8) == erRdT m (o2 + 8) &&
+      rulesEqB (erRdT m) (o1 + 11) (l1 - 1) (o2 + 11) (l1 - 1)) := by
+    simp only [rulesEqB, beq_self_eq_true, Bool.true_and, hk, hk1, rulesEqN]
+  cases h1 : callW p n "rule_eq_but_rhs" [o1, o2] m with
+  | none => rw [h1] at h; simp [rulesEqW.k_rule_eq_but_rhs] at h
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  obtain ⟨s1, rfl, -, hm1, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (ruleEqButRhs_spec p hp n _ o1 o2) h1
+  rw [h1] at h
+  simp only at hm1 hr1
+  rw [hm1] at h
+  by_cases hz : r1.headD 0 = 0
+  · rw [rulesEqW.k_rule_eq_but_rhs.arm1 p n _ _ _ _ _ _ hz] at h; cases h
+    have : ruleEqButRhsB (erRdT m) o1 o2 = false := by
+      cases e : ruleEqButRhsB (erRdT m) o1 o2 <;> simp_all
+    simp [hB, this]
+  have ht : ruleEqButRhsB (erRdT m) o1 o2 = true := by
+    cases e : ruleEqButRhsB (erRdT m) o1 o2 <;> simp_all
+  by_cases h8 : erRdT m (o1 + 8) ≠ erRdT m (o2 + 8)
+  · rw [rulesEqW.k_rule_eq_but_rhs.arm2 p n _ _ _ _ _ _ hz h8] at h; cases h
+    have : (erRdT m (o1 + 8) == erRdT m (o2 + 8)) = false := by simpa using h8
+    simp [hB, this]
+  rw [rulesEqW.k_rule_eq_but_rhs.arm3 p n _ _ _ _ _ _ hz (Classical.not_not.mp h8)] at h
+  cases h2 : rulesEqW p n m (o1 + 11) (l1 - 1) (o2 + 11) (l1 - 1) with
+  | none => rw [h2] at h; simp [rulesEqW.k_rules_eq] at h
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2, rulesEqW.k_rules_eq.eq_2] at h; cases h
+  obtain ⟨e2, hr2⟩ := ih _ _ _ _ _ _ _ h2
+  refine ⟨e2, ?_⟩
+  have : (erRdT m (o1 + 8) == erRdT m (o2 + 8)) = true := by simpa using h8
+  simp only [List.headD_cons, hr2, hB, ht, this, Bool.true_and]
+
 theorem rulesEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rules_eq" [o1, l1, o2, l2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if rulesEqB (erRdT s₀.mem) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
-  sorry -- TODO p3p: finish times out at the tiered reads
-
+  intro s₀ o1 l1 o2 l2
+  refine triple_post (rulesEq_specW p (hp.get "rules_eq") n s₀ o1 l1 o2 l2) ?_
+  rintro r s' ⟨hl, hW⟩
+  obtain ⟨e, hr⟩ := rulesEqW_ok p hp n _ _ _ _ _ _ _ hW
+  exact ⟨hl, e, hr⟩
 
 theorem ciEqRest_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_eq_rest" [x, y, k]

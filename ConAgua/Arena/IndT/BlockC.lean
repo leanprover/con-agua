@@ -151,7 +151,7 @@ def NamesRefS : Prop :=
 /-- **`reduce_members(vis, nP, ms.off, ms.len)`'s contract**: `reduceMembers`, both outcomes, the
 reduced members a slice below the top. -/
 def RmRefS : Prop :=
-  ∀ (n : Nat) (vis : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState)
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState)
     (nP mo ml : Word) (mss : List MemberShape) (msP : List ConLeche.MemberShape),
     BkSt dn vis fe env m a → ConLeche.EnvWF env →
     DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) m mss → mo.toNat + ml.toNat ≤ iwTop m →
@@ -210,7 +210,7 @@ structure PassOut (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (w
 /-- **`check_block_pass(vis, p, isRec)`'s contract**: `checkBlockPass`, both outcomes, from
 `BkSt` and `checkBlockPass_of`'s preconditions. -/
 def PassRefS : Prop :=
-  ∀ (n : Nat) (vis : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState) (p1 isRec : Word)
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState) (p1 isRec : Word)
     (bs : BlockShape) (bsP : ConLeche.BlockShape) (b : Bool), BkSt dn vis fe env m a →
     ConLeche.EnvWF env → ConRon.Bridge.Inductives.EnvRel env fe a.store →
     DecB (fun m => decBS m p1.toNat) m bs → ShapeSl m p1 →
@@ -230,7 +230,7 @@ structure TailOut (m : Mem) (a : AState) (w : Word) (fe' : IFEnv) (m' : Mem) (a'
 /-- **`check_block_tail(bo, bl, q)`'s contract**: `checkBlockTail`, both outcomes, from
 `check_block_pass`'s out (`PassOut`'s parts) and the block. -/
 def TailRefS : Prop :=
-  ∀ (n : Nat) (vis : Word) (env₁ : ConLeche.Env) (m : Mem) (a : AState) (bO bL w : Word)
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (vis : Word) (env₁ : ConLeche.Env) (m : Mem) (a : AState) (bO bL w : Word)
     (block : List IConstantInfo) (blockP : List ConLeche.ConstantInfo) (q : BlockPass)
     (qP : ConLeche.BlockPass ConLeche.Env),
     BkSt dn vis q.env1 env₁ m a → BPassR vis q.env1 m w q → RecsB m (rdW (m.arr64 IW) (w + 1)) →
@@ -400,7 +400,7 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
     (hbP : Frontend.denoteCIList a.store block = some blockP)
     (hdP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
     (hd : ∀ ms ∈ bsP.members, ms.declared = ms.cvT) (hlpd : BlockLpsDn dn block)
-    (hnPb : bs.nP + 1 < 2 ^ 64) (hIM : IndMemos m) (hA : AbsOK m) :
+    (hnPb : bs.nP + 1 < 2 ^ 64) (hIM : IndMemos m) (hA : AbsOK m) (hN : N ≤ 2 ^ 62) :
     RefE G (icbE p N m vis bO bL p0) (ConRon.Arena.checkBlock V fe block bs) a
       (fun v fe' a' => CidPost dn m v.1 fe' v.2 a') := by
   rcases N with _ | n
@@ -420,7 +420,7 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
   have hsl1 := hsl.grow' hq h1.grow
   obtain ⟨hdm1, hbm1, -, e4⟩ := bsAt hq1 hsl1
   -- the members at their telescopes
-  have hR2 := R.rm n vis fe env m1 a1 (rdW (m1.arr64 IW) (p0 + 4)) (rdW (m1.arr64 IW) p0)
+  have hR2 := R.rm n (by omega) vis fe env m1 a1 (rdW (m1.arr64 IW) (p0 + 4)) (rdW (m1.arr64 IW) p0)
     (rdW (m1.arr64 IW) (p0 + 1)) bs.members bsP.members h1.st henv hdm1 hbm1
     (ConRon.Bridge.Inductives.dMember_ext.list h1.inst.ext _ _ hms₀)
   rw [e4] at hR2
@@ -461,7 +461,7 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
   have x25 := (h3.inst.trans h4.inst).trans h5.inst
   have x05 := (h1.inst.trans c1.toInst).trans x25
   refine RefE.bindE (fun _ => icbE.k_check_block_pass.none ..) id
-    (R.pass n vis fe env m5 a4 _ _ { bs with members := ms } { bsP with members := msP } b h5.st henv
+    (R.pass n (by omega) vis fe env m5 a4 _ _ { bs with members := ms } { bsP with members := msP } b h5.st henv
       (hrel.mono x05.ext) hq5 hsl5
       (ConRon.Bridge.Inductives.BT.dShape_members (ConRon.Bridge.Inductives.dShape_ext x05.ext _ _ hdP)
         (ConRon.Bridge.Inductives.dMember_ext.list x25.ext _ _ hms'))
@@ -472,7 +472,7 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
   have g16 := (g14.trans h5.grow).trans h6.grow
   have x06 := x05.trans h6.inst
   refine RefE.bindE (fun _ => icbE.k_check_block_tail.none ..) id
-    (R.tail n _ env₁ m6 a6 bO bL _ block blockP q qP hB6 h6.record h6.recs
+    (R.tail n (by omega) _ env₁ m6 a6 bO bL _ block blockP q qP hB6 h6.record h6.recs
       (hblk.grow (decEBlk_mono _ _ _) g16) (Nat.le_trans hbb g16.er)
       (ConRon.Bridge.denoteCIList_mono x06.ext _ _ hbP) hlpd hrel6 henv₁ hq6 hT6 henv₂ hMs hpl)
     fun ⟨r7, m7⟩ fe₂ a7 _ h7 => ?_
@@ -504,10 +504,10 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
 /-- **`check_block`'s contract from its callees'.** -/
 theorem blockRefS_of (R : CbRefs G p dn) (hGnv : G → closedNV p _root_.L.Checker.nvFns = true) :
     BlockRefS G p dn := by
-  intro n _ vis bO bL p0 fe env m a a₀ bs bsP block blockP hC hfold hx _ hq hsl hblk hbb hbP hdP hd
+  intro n hn vis bO bL p0 fe env m a a₀ bs bsP block blockP hC hfold hx _ hq hsl hblk hbb hbP hdP hd
     hlpd hnPb hIM hA
   have h := RefE.ofCallE (s₀ := ⟨m, Locals.init []⟩) (icbE_spec p R.look n _ vis bO bL p0) hGnv
-    (cb_ref R hC hfold hx hq hsl hblk hbb hbP hdP hd hlpd hnPb hIM hA (N := n))
+    (cb_ref R hC hfold hx hq hsl hblk hbb hbP hdP hd hlpd hnPb hIM hA hn (N := n))
   exact RefE.weakenP h fun ⟨r, m'⟩ y a' h => by obtain ⟨s', hs', -, hR⟩ := h; simp only at hs'; subst hs'; exact hR
 
 end comp

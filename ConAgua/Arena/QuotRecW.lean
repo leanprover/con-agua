@@ -146,4 +146,84 @@ l_model basisAtBlock_specW (p : Prog) (hp : p.lookup "basis_at_block" = some bas
   specs [callW_spec p n "rom_basis_decls", callW_spec p n "er_to_iw", callW_spec p n "at_block_go"]
   grind [arena_grind]
 
+
+/-! ## The block's comparison with its pin (`pin_list_ok`) -/
+
+/-- **The model of `pin_agrees`**. -/
+l_model pinAgrees_specW (p : Prog) (hp : p.lookup "pin_agrees" = some pinAgrees)
+  fns [hp ↦ pinAgreesW list]
+  specs [callW_spec p n "cv_eq", callW_spec p n "ci_eq"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `pin_copy_ok`**. -/
+l_model pinCopyOk_specW (p : Prog) (hp : p.lookup "pin_copy_ok" = some pinCopyOk)
+  fns [hp ↦ pinCopyOkW list]
+  specs [callW_spec p n "cv_lps", callW_spec p n "sl_nodup", callW_spec p n "ci_at_lps", callW_spec p n "pin_agrees"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `pin_copies_ok`**. -/
+l_model pinCopiesOk_specW (p : Prog) (hp : p.lookup "pin_copies_ok" = some pinCopiesOk)
+  fns [hp ↦ pinCopiesOkW list]
+  specs [callW_spec p n "pin_copy_ok"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `pin_link_go`**. -/
+l_model pinLinkGo_specW (p : Prog) (hp : p.lookup "pin_link_go" = some pinLinkGo)
+  fns [hp ↦ pinLinkGoW list]
+  specs [callW_spec p n "canon_name_map"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `pin_link_ok`**. -/
+l_model pinLinkOkL_specW (p : Prog) (hp : p.lookup "pin_link_ok" = some L.Ind.pinLinkOk)
+  fns [hp ↦ pinLinkOkLW list]
+  specs [callW_spec p n "pin_link_go"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `const_named`**. -/
+l_model constNamed_specW (p : Prog) (hp : p.lookup "const_named" = some constNamed)
+  fns [hp ↦ constNamedW list]
+  specs []
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `rules_link_ok`**. -/
+l_model rulesLinkOk_specW (p : Prog) (hp : p.lookup "rules_link_ok" = some rulesLinkOk)
+  fns [hp ↦ rulesLinkOkW list]
+  specs [callW_spec p n "const_named", callW_spec p n "cv_lps", callW_spec p n "pin_link_ok"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `block_link_ok_at`**. -/
+l_model blockLinkOkAt_specW (p : Prog) (hp : p.lookup "block_link_ok_at" = some blockLinkOkAt)
+  fns [hp ↦ blockLinkOkAtW list]
+  specs [callW_spec p n "er_sl_eq", callW_spec p n "cv_lps", callW_spec p n "rules_link_ok"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `block_links_ok_go`**. -/
+l_model blockLinksOkGo_specW (p : Prog) (hp : p.lookup "block_links_ok_go" = some blockLinksOkGo)
+  fns [hp ↦ blockLinksOkGoW list]
+  specs [callW_spec p n "block_link_ok_at"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `block_links_ok`**. -/
+l_model blockLinksOk_specW (p : Prog) (hp : p.lookup "block_links_ok" = some blockLinksOk)
+  fns [hp ↦ blockLinksOkW list]
+  specs [callW_spec p n "block_links_ok_go"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
+/-- **The model of `pin_list_ok`**. -/
+l_model pinListOkL_specW (p : Prog) (hp : p.lookup "pin_list_ok" = some L.Ind.pinListOk)
+  fns [hp ↦ pinListOkLW list]
+  specs [callW_spec p n "pin_copies_ok", callW_spec p n "block_links_ok"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+
 end L.Ind

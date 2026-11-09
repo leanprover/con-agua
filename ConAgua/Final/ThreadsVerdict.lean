@@ -53,6 +53,8 @@ loader):
 
 namespace ConAgua.Final
 
+universe u
+
 open L L.Compiler L.Checker L.Arena ConRon.Arena
 
 /-! ## The harness's facts on a failing run -/
@@ -105,9 +107,10 @@ returned `2^63 + k`, the buffer `B` is `OUT`'s first `len` words, a thread with 
 `r₀` ran its calls `cs` (`ThreadFails`: each accepting call's run returned and left the buffer in
 place) and its next call, on the claimed index `j`, failed with `e` of class other than `0`, and
 every record below `j` passes on its own (`TwinJobPasses`): the twin's pool fails with that
-class. -/
+class. Relative to set theory (`[SetTheory Vt]`, as the threaded accept theorems): con-ron's fold
+invariant at a job's view is stated through a model. -/
 def ThreadEVerdict : Prop :=
-  ∀ (b pb : ByteArray) (sz : TieredArray → Nat), InputsOK b pb sz →
+  ∀ (Vt : Type u) [ConLeche.SetTheory Vt] (b pb : ByteArray) (sz : TieredArray → Nat), InputsOK b pb sz →
     ∀ (N₁ : Nat), N₁ < 2 ^ 62 → ∀ (rs₁ : List Word) (m₁ : Mem),
     L.run checkerProg N₁ "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁) →
     9223372036854775808 ≤ (rs₁.headD 0).toNat →
@@ -121,7 +124,7 @@ def ThreadEVerdict : Prop :=
 (`Entry1Verdict`, as in `SeqVerdicts`) and a thread's failing call (`ThreadEVerdict`). -/
 structure ThreadVerdicts : Prop where
   entry1 : Entry1Verdict checkerProg
-  thr : ThreadEVerdict
+  thr : ThreadEVerdict.{u}
 
 /-! ## Pieces -/
 
@@ -181,10 +184,10 @@ theorem entry1Fail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
 
 set_option linter.constructorNameAsVariable false in
 /-- A thread's failing call is the twin pool's failure. -/
-theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem threadFail_twin [Host] (V : Type u) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (t : ThreadM) (i : Nat)
-    (hV : ThreadEVerdict) (hR : ThreadFail b pb dm₀ ra₀ st₀ B t i)
+    (hV : ThreadEVerdict.{u}) (hR : ThreadFail b pb dm₀ ra₀ st₀ B t i)
     (hk : (t.st i).data.regs.rax &&& 3 ≠ 0) :
     TwinVerdictPooled [b] ((t.st i).data.regs.rax &&& 3) := by
   have hc := code_of_checkerFile_par hcode
@@ -316,7 +319,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     injection hC1 with hC1; subst hC1
     rw [hD] at hD'; injection hD' with hD'; obtain ⟨rfl, rfl⟩ := Prod.mk.inj hD'
     exact hj
-  refine hV b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem checkerTab)
+  refine hV V b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem checkerTab)
     (fun a ha => ?_) rfl _ _ abiFuel e hruns (fun c hc => ?_)
     (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk hpass
   · have hl := parOwnedL_dom a ha
@@ -334,14 +337,14 @@ harness's run reports a failure with the code `k` (`ThreadsFail`: entry 1 return
 a thread's call returned `rdx = 2` after its earlier calls accepted) and the class `k &&& 3` is
 `1` (reject) or `2` (decline), the twin's pool on `[b]` fails with that class
 (`TwinVerdictPooled`), given the L-level verdict claims (`ThreadVerdicts`). -/
-theorem checkerFile_threads_verdict_of [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem checkerFile_threads_verdict_of [Host] (V : Type u) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
-    (hV : ThreadVerdicts) (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
+    (hV : ThreadVerdicts.{u}) (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
     TwinVerdictPooled [b] (k &&& 3) := by
   rcases hF with ⟨hE, rfl⟩ | ⟨B, t, i, hT, rfl⟩
   · exact (entry1Fail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ hV.entry1 hE hk).pooled
-  · exact threadFail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ B t i hV.thr hT hk
+  · exact threadFail_twin V k0 hcode b pb h64 dm₀ ra₀ st₀ B t i hV.thr hT hk
 
 -- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_threads_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 -- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_threads_verdict_of
