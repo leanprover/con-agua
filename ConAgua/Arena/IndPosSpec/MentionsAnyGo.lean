@@ -71,7 +71,78 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
     decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (ConRon.Arena.nestFrameMates.go (decI c) block out) ∧
     IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
     (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  sorry
+  induction n with
+  | zero => intro m m' c off l oO oL block out r h; simp [matesW] at h
+  | succ n ih =>
+    intro m m' c off l oO oL block out r h hsz hc200 hEs hc hblock hout hit hb
+    by_cases hl : l = 0
+    · rw [matesW_nil n m c off l oO oL hl] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      have : block = [] := by
+        have h0 : l.toNat = 0 := by rw [hl]; rfl
+        rw [h0] at hblock; simpa [hslice?] using hblock.symm
+      subst this
+      exact ⟨by simpa [ConRon.Arena.nestFrameMates.go] using hout, IWGrow.refl _, rfl, hit⟩
+    · have hl1 : l.toNat = (l.toNat - 1) + 1 := by have := toNat_ne_zero' hl; omega
+      rw [hl1, hslice?_succ] at hblock
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hblock
+      obtain ⟨x, hx, rest, hrest, rfl⟩ := hblock
+      obtain ⟨w0, hw0, hw0lt, hw0d⟩ := hd?_some hx
+      have hrd : erRd m off = w0 := erRd_of_erA hw0
+      obtain ⟨ws, hws, rfl, hwlt⟩ := slR_of_decHL m _ _ out hout hb
+      simp only [UInt64.ofNat_toNat] at hws
+      rw [matesW_cons n m c off l oO oL hl, hrd] at h
+      rcases hcn : containsW n m oO oL w0 with _ | b <;> rw [hcn] at h; · simp [matesK1] at h
+      have hbv := containsW_ok n _ _ _ _ _ _ hws hcn
+      have hl1' : (l - 1).toNat = l.toNat - 1 := toNat_sub_one' hl
+      have hcond : ((decI w0 : NIdx) == decI c || (ws.map (fun w => (decI w : NIdx))).contains (decI w0)) =
+          decide (w0 = c ∨ b ≠ 0) := by
+        rw [decI_beq w0 c hw0lt hc, contains_map_decI w0 hw0lt ws hwlt, hbv]
+        by_cases h1 : w0 = c <;> by_cases h2 : ws.contains w0 = true <;> simp [h1]
+      have hblock' : hslice? (erA m) (off + 1).toNat (l - 1).toNat = some rest := by
+        rw [hl1']
+        rcases Nat.eq_zero_or_pos (l.toNat - 1) with h0 | h0
+        · rw [h0] at hrest ⊢; simpa [hslice?] using hrest
+        · obtain ⟨k, hk⟩ : ∃ k, l.toNat - 1 = k + 1 := ⟨l.toNat - 1 - 1, by omega⟩
+          have hr1 := hrest
+          rw [hk, hslice?_succ] at hr1
+          simp only [bind, Option.bind_eq_some_iff] at hr1
+          obtain ⟨y, hy, -⟩ := hr1
+          obtain ⟨w1, hw1, -⟩ := hd?_some hy
+          have h64 := erecP_lt64 hw1
+          rw [toNat_add_one' (by omega)]; exact hrest
+      subst hw0d
+      by_cases hskip : (w0 = c ∨ b ≠ 0)
+      · have hskip' : erRd m off = c ∨ b ≠ 0 := by rw [hrd]; exact hskip
+        rw [matesK1_skip n m c off l oO oL b hskip'] at h
+        rcases hrec : matesW n m c (off + 1) (l - 1) oO oL with _ | ⟨r3, m3⟩ <;> rw [hrec] at h; · simp [matesK3] at h
+        rw [matesK3_some] at h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+        obtain ⟨hd, hg, hE', htop⟩ := ih m m3 c (off + 1) (l - 1) oO oL rest _ r3 hrec hsz hc200 hEs hc
+          hblock' hout hit hb
+        refine ⟨?_, hg, hE', by simpa using htop⟩
+        rw [ConRon.Arena.nestFrameMates.go.eq_2, ite_eq_left (by rw [hcond]; simpa using hskip)]
+        simpa using hd
+      · have hskip' : ¬ (erRd m off = c ∨ b ≠ 0) := by rw [hrd]; exact hskip
+        rw [matesK1_add n m c off l oO oL b hskip', hrd] at h
+        rcases hsn : snocW n m oO oL w0 with _ | ⟨r2, m2⟩ <;> rw [hsn] at h; · simp [matesK2] at h
+        rw [matesK2_some] at h
+        obtain ⟨hr2, hdec2, hg2, hfr2, hl2, htop2⟩ := snocW_decK hsn hsz hc200 hit hw0lt hout
+        subst hr2
+        simp only [List.headD_cons, List.tail_cons] at h
+        rcases hrec : matesW n m2 c (off + 1) (l - 1) (rdW (m.arr64 CTL) 200) (oL + 1) with _ | ⟨r3, m3⟩ <;> rw [hrec] at h; · simp [matesK3] at h
+        rw [matesK3_some] at h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+        have hE2 : m2.arr64 EREC = m.arr64 EREC := hfr2.1 EREC (by decide) (by decide)
+        have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hfr2.size IW]; exact hsz
+        have hc2 : 200 < (m2.arr64 CTL).size := by rw [hfr2.size CTL]; exact hc200
+        obtain ⟨hd, hg, hE', htop⟩ := ih m2 m3 c (off + 1) (l - 1) _ (oL + 1) rest _ r3 hrec hsz2 hc2
+          (by rw [hE2]; exact hEs) hc (hg2.ext.hslice? hblock') (by simpa using hdec2)
+          (Nat.le_of_eq htop2) (by have : iwTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 200).toNat_lt; omega)
+        refine ⟨?_, hg2.trans hg, hE'.trans hE2, by simpa using htop⟩
+        rw [ConRon.Arena.nestFrameMates.go.eq_2, ite_eq_right (by rw [hcond]; simpa using hskip)]
+        simpa using hd
+
 
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (no nl f f1 h g x y z b1 b2 b3 r : Word) (v fr : List Word)
