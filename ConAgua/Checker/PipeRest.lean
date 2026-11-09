@@ -256,7 +256,7 @@ theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : p
     rw [h6.since.keep.arr8]; exact loadMem_pb b pb sz
   refine triple_post (triple_and (triple_and (checkerProg_internAllPins_PB pb.data.toList
     (by simpa [RomOK] using hpb) h6.since.pbpre n s₀ a hbs h6.arena h6.mode h6.pf.full.names_size hok hpins hpp
-    hoff h6.pf.rset (by rw [h6.pf.stk]; decide) hc.ctl)
+    hoff h6.pf.rset (by rw [h6.pf.stk]; decide) hc.ctl hc.erec)
     (stage_since n (preLoop_mem "intern_all_pins" (by decide +kernel)) s₀))
     (stageFrame_intern_all_pins n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR, htop, hM, hpfr⟩ := hpost

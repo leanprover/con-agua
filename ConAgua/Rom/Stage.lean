@@ -183,7 +183,8 @@ theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt
     (hrom : rom = romData ++ rest) (n : Nat) (mem mem' : Mem) (a : AState) (hA : ArenaD mem a)
     (hmo : ModeOK mem) (hP : PinsReadyP a) (hok : StateOK a) (hpins : PinsOK a) (hpp : PersPins a)
     (hoff : a.store.scratchOn = false) (hR : RsetR mem) (hst : (stkTop mem).toNat < 2 ^ 61)
-    (hc : 151 < (mem.arr64 CTL).size) (hW : internAllPinsW rom n mem = some mem') :
+    (hc : 151 < (mem.arr64 CTL).size) (hcap : (mem.arr64 EREC).size < 2 ^ 40)
+    (hW : internAllPinsW rom n mem = some mem') :
     ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internAllPins pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧
       StateOK a' ∧ RsetR mem' ∧ erecTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' ∧
@@ -192,7 +193,8 @@ theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt
     internAllPinsW_fixed rom hr rest hrom n mem mem' a hA hmo hP hst (by omega) hW
   obtain ⟨hok1, -, -, -, -, -, hoff1, -⟩ := internAllPins_run hok hpins hpp hoff hv
   obtain ⟨pins, ips, a', hrun, hA', hPS, hok', hR', -, -, hfr, htop, hmo'⟩ := internPinSetsW_dec rom hr n' m₁ a₁ _ q' mem' hA1
-    hmo1 (hz hR) hok1 (by rw [hs]; exact hst) (by rw [hf.size]; exact hc) (flag_of_off hA1.base hoff1) hS
+    hmo1 (hz hR) hok1 (by rw [hs]; exact hst) (by rw [hf.size]; exact hc) (flag_of_off hA1.base hoff1)
+    (by rw [hf.size]; exact hcap) hS
   refine ⟨pins, ips, a', ?_, hA', hPS, hok', hR', htop, hmo',
     (hf.mono (fun b hb => by simp [PinsA, hb]) (fun x hx => by simp [PinsC, hx])).trans hfr⟩
   rw [internAllPins_split, run_bind_of _ _ _ _ _ hv]; exact hrun
@@ -214,7 +216,8 @@ theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UIn
     (n : Nat) (s₀ : St) (a₀ : AState) (hbs : s₀.mem.arr8 PB = bs.toArray) (hA : ArenaD s₀.mem a₀)
     (hmo : ModeOK s₀.mem) (hP : PinsReadyP a₀) (hok : ConRon.Bridge.StateOK a₀) (hpins : ConRon.Bridge.PinsOK a₀)
     (hpp : ConRon.Bridge.PersPins a₀) (hoff : a₀.store.scratchOn = false) (hR : RsetR s₀.mem)
-    (hst : (stkTop s₀.mem).toNat < 2 ^ 61) (hc : 151 < (s₀.mem.arr64 CTL).size) :
+    (hst : (stkTop s₀.mem).toNat < 2 ^ 61) (hc : 151 < (s₀.mem.arr64 CTL).size)
+    (hcap : (s₀.mem.arr64 EREC).size < 2 ^ 40) :
     ⦃fun s => s = s₀⦄
     invoke P (exec P n) "intern_all_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
@@ -227,6 +230,6 @@ theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UIn
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (internAllPinsPB_specW bs (Prog.subPB bs P) hL n s₀ ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)
   subst hs
-  exact ⟨hloc, internAllPinsW_dec bs hr _ hpre n _ _ a₀ hA hmo hP hok hpins hpp hoff hR hst hc hW⟩
+  exact ⟨hloc, internAllPinsW_dec bs hr _ hpre n _ _ a₀ hA hmo hP hok hpins hpp hoff hR hst hc hcap hW⟩
 
 end L.Rom
