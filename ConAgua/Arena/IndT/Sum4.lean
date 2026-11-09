@@ -58,7 +58,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 set_option experimental.vcgen true
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_sum_ctor_tail`, both outcomes**: the field sorts by their unified model,
 the other callees (outside the verdict closure) lifted. -/
 l_model ctlE_spec (p : Prog) (hP : SumProg p)
@@ -66,12 +65,11 @@ l_model ctlE_spec (p : Prog) (hP : SumProg p)
   specs [callW_spec p n "open_pis_at_fvars_f", callW_spec p n "param_levels", callW_spec p n "intern_const",
     callW_spec p n "get_app_fn_f", callW_spec p n "get_app_args_f", callW_spec p n "sl_eq",
     callW_spec p n "field_doms_resolve", callW_spec p n "idx_args_resolve",
-    fsortsE_spec p hP.hcfs hP.hcfg hP.ha hP.ad.ftd hP.hfsb n]
+    fsortsE_spec p hP.hcfs hP.ad.ftd hP.hfsb n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_sum_ctor`, both outcomes**: the constant check, the domains and the tail by
@@ -85,6 +83,7 @@ l_model ctorE_spec (p : Prog) (hP : SumProg p) (hV : ValProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
 -/
 
 section sims
@@ -98,39 +97,33 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
 stage, the growth, the constant unchanged, the sorts as the `IW` slice `r = [o, l]`, `AbsOK`, the
 twin's core step. -/
 structure CtlPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
-    (m : Mem) (a : AState) (cvCa : IConstantVal) (r : List Word) (m' : Mem)
-    (x : IConstantVal × List LIdx) (a' : AState) : Prop where
+    (m : Mem) (a : AState) (m' : Mem) (a' : AState) : Prop where
   stage : StageC dn vis fe env m' a'
   grow : IWGrow m m'
-  cv : x.1 = cvCa
-  sorts : decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some x.2
-  sortsB : (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT in
 /-- **`check_sum_ctor_tail` refines the tail of `checkSumCtor .verified` (`cscTailT`), both
 outcomes** (twin side: the tail of con-ron's `checkSumCtor_spec`'s proof): its callees outside the
 verdict closure lifted, the field sorts by `fsorts_ref`. -/
-theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
-    (a : AState) (vis0 T lo ll nP nIdx rs isP lg nF cqO cqL cqB : Word) (lps : List NIdx)
-    (cq1 : List EIdx) (cvCa : IConstantVal) (hC : StageC dn vis fe env m0 a) (hT : H T)
+theorem ctl_ref (hP : SumProg p) (hcr : CrfF p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
+    (a : AState) (T lo ll nP nIdx rs isP lg nF cqO cqL cqB : Word) (lps : List NIdx)
+    (cq1 : List EIdx) (hC : StageC dn vis fe env m0 a) (hT : H T)
     (hlps : decHL m0 lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m0)
     (hcq : decHL m0 cqO.toNat cqL.toNat = some cq1) (hcqb : cqO.toNat + cqL.toNat ≤ iwTop m0)
     (hcqB : H cqB) (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64)
     (hnf : nP.toNat + nF.toNat < 2 ^ 64) (hA : AbsOK m0)
-    {env₀ : ConLeche.Env} {TP : ConLeche.Name} {lpsP : List ConLeche.Name} {rsP : ConLeche.Level}
+    {TP : ConLeche.Name} {lpsP : List ConLeche.Name} {rsP : ConLeche.Level}
     {crestP : ConLeche.Expr}
     (hTP : denoteN a.store.ns (decI T) = some TP)
     (hlpsP : Frontend.denoteNList a.store.ns lps = some lpsP)
     (hrsP : denoteL a.store.ls (decI rs) = some rsP)
-    (hcqBP : denoteE a.store (decI cqB) = some crestP) (hwsc : ConLeche.Expr.WScoped nP.toNat crestP)
-    (hok₀ : ConRon.Bridge.Inductives.IFEnvOKS env₀ (fe.restrictTo vis0.toNat) a.store)
-    (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) :
-    RefE (VerdictCtx p) (ctlE p (m + 1) m0 vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL cqB)
-      (cscTailT (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs) (isP != 0)
-        (lg != 0) cvCa nF.toNat (cq1, decI cqB)) a
-      (fun v x a' => CtlPost dn vis fe env m0 a cvCa v.1 v.2 x a') := by
+    (hcqBP : denoteE a.store (decI cqB) = some crestP) (hwsc : ConLeche.Expr.WScoped nP.toNat crestP) :
+    RefE (VerdictCtx p) (ctlE p (m + 1) m0 vis vis T lo ll nP nIdx rs isP lg nF cqO cqL cqB)
+      (cscTailT fe fe (decI T) lps nP.toNat nIdx.toNat (decI rs) (isP != 0)
+        (lg != 0) nF.toNat (cq1, decI cqB)) a
+      (fun v _ a' => CtlPost dn vis fe env m0 a v.2 a') := by
   rw [ctlE.arm1]; unfold cscTailT
   have k0 := InsAt.refl hC hA
   refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k0 hcqB rfl hcqBP) fun rx o m1 a1 _ _ ⟨k1, ho, hdo⟩ => ?_
@@ -172,8 +165,8 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
     · grind
     · have k16 := k15.trans (InsAt.refl k5.stage k5.abs)
       have hxfvs5 := ConRon.Bridge.denoteEList_ext k15.core.ext _ _ hxfvs
-      refine RefE.bindSim (fun _ => rfl) (fdr_step hP k5 (k15.decHL hxl hxlb) (k15.top hxlb)
-        (hok₀.mono k05.core.ext) hxfvs5) fun r7 b1 m7 a7 _ _ ⟨k7, hb1⟩ => ?_
+      refine RefE.bindSim (fun _ => rfl) (fdr_step hP hcr k5 (k15.decHL hxl hxlb) (k15.top hxlb)
+        hxfvs5) fun r7 b1 m7 a7 _ _ ⟨k7, hb1⟩ => ?_
       dsimp only [ctlE.k_field_doms_resolve]
       refine RefE.guard (by decide) hb1.1 hb1.2 fun _ hb => ?_
       have hao' : (ra.headD 0 + nP).toNat = (ra.headD 0).toNat + nP.toNat :=
@@ -182,8 +175,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
         UInt64.toNat_sub_of_le _ _ hle
       have hdrop := decHL_drop nP.toNat (k7.decHL hargs hab) hle2
       rw [← hao', ← halp] at hdrop
-      refine RefE.bindSim (fun _ => rfl) (iar_step hP k7 hdrop (by rw [hao', halp]; have := k7.grow.iw; omega)
-        (hok₀.mono (k05.trans k7).core.ext)
+      refine RefE.bindSim (fun _ => rfl) (iar_step hP hcr k7 hdrop (by rw [hao', halp]; have := k7.grow.iw; omega)
         (ConRon.Bridge.Inductives.denoteEList_drop (ConRon.Bridge.denoteEList_ext k7.core.ext _ _ hargsP) _))
         fun r8 b2 m8 a8 _ _ ⟨k8, hb2⟩ => ?_
       dsimp only [ctlE.k_idx_args_resolve]
@@ -199,23 +191,22 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
       have hidx8 := ConRon.Bridge.Inductives.denoteEList_drop
         (ConRon.Bridge.denoteEList_ext k58.core.ext _ _ hargsP) nP.toNat
       have k08 := k1.trans k18
-      refine RefE.bindE (fun _ => rfl) id (fsorts_ref hq henv hLC hLT hP.hg hP.hpw hP.het hP.hcn m' (by omega)
-        m8 a8 isP lg rs nP _ _ _ _ nF xl1 (args.drop nP.toNat) k8.stage k8.abs (k18.decHL hxl hxlb)
+      rw [← bind_pure (checkStructFieldSortsI _ _ _ _ _ _ _ _ _)]
+      refine RefE.bindE (fun _ => rfl) id (fsorts_ref hq henv hLC hLT hP.hg hP.hpw hP.het hP.hcn (m' + 1) (by omega)
+        m8 a8 isP lg rs nP _ _ _ _ nF m8 xl1 (args.drop nP.toNat) xfvsP k8.stage k8.abs (IWGrow.refl _)
+        (k18.decHL hxl hxlb)
         (k18.top hxlb) (k8.decHL hdrop (by rw [hao', halp]; have := k7.grow.iw; omega))
         (k8.top (by rw [hao', halp]; have := k7.grow.iw; omega)) hrs
-        (ConRon.Bridge.denoteL_ext hrsP k08.core.ext) hnf hxfvs8 hxpos) fun v sorts a9 hr9 hR9 => ?_
+        ⟨rsP, ConRon.Bridge.denoteL_ext hrsP k08.core.ext⟩ hnf hxfvs8 hxpos) fun v u a9 hr9 hR9 => ?_
       obtain ⟨c9, -⟩ := ConRon.Bridge.Inductives.checkStructFieldSortsI_spec fe
-        (ConRon.Bridge.CoreSpec.of_core rfl) henv (isP != 0) (lg != 0) (decI rs) rsP nP.toNat xl1
-        (args.drop nP.toNat) xfvsP (xrestP.getAppArgs.drop nP.toNat) nF.toNat hxpos a8 a9 sorts k8.stage.check
-        ⟨ConRon.Bridge.denoteL_ext hrsP k08.core.ext, hxfvs8, hidx8,
-          ConRon.Bridge.denoteFEnv_mono k08.core.ext hfe⟩ hr9
-      exact RefE.ret rfl ⟨hR9.stage, k08.grow.trans hR9.grow, rfl, by simpa using hR9.sorts,
-        by simpa using hR9.top, hR9.abs, k08.core.trans c9⟩
+        ConRon.Bridge.CoreSpec.of_core henv (isP != 0) (lg != 0) (decI rs) rsP nP.toNat xl1
+        (args.drop nP.toNat) xfvsP (xrestP.getAppArgs.drop nP.toNat) nF.toNat hxpos a8 a9 u k8.stage.check
+        ⟨ConRon.Bridge.denoteL_ext hrsP k08.core.ext, hxfvs8, hidx8⟩ hr9
+      exact RefE.ret rfl ⟨hR9.stage, k08.grow.trans hR9.grow, hR9.abs, k08.core.trans c9⟩
   · rw [ite_eq_right (by rw [ite_eq_right hle]; decide)]
     dsimp only [ctlE.j1]
     rw [ite_eq_left (Or.inr (Or.inr rfl))]
     exact RefE.twinFail (by decide) (by have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle); grind)
--/
 
 /-- What `check_sum_ctor` gives besides the twin's `(cvCa, sorts)` `x` (from `m`, `a`): the stage,
 the growth, the constant returned unchanged, the sorts as the `IW` slice `r = [cv, o, l]`, `AbsOK`, the
@@ -347,9 +338,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
       (hok₀.mono k07.core.ext) (ConRon.Bridge.denoteFEnv_mono k07.core.ext hfe))
     fun v x a8 _ hR8 => ⟨hR8.stage, k07.grow.trans hR8.grow, rfl, hR8.cv, by simpa using hR8.sorts,
       by simpa using hR8.sortsB, hR8.abs, k07.core.trans hR8.core⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctor` refines `checkSumCtor .verified`** under `StageC` (the knot's core calls;
 the inputs' denotations as con-ron's `checkSumCtor_spec` asks), the pre-block environment the
@@ -393,6 +382,7 @@ theorem checkSumCtor_refinesC (hP : SumProg p) (n : Nat) (hn : n + 1 ≤ 2 ^ 62)
       obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
       exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.cvW, by rw [hres]; exact hR.cv,
         by rw [hres]; exact hR.sorts, hR.abs⟩
+
 -/
 
 end sims
