@@ -256,7 +256,6 @@ structure IndArmProgs (p : Prog) : Prop where
   apd : ApdF p
   crk : CrKeep p
   ilpf : IlpfF p
-  lz : LzcF p
   cid : CidProg p
 
 /-- **The inductive arm's program facts at the substituted checker program** (one `prog_bundle`:
@@ -284,7 +283,7 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
     ∀ dn, DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn := by
   have H := indArmProgs_checker bs hr hpre
   have hk := indArmKeep_checker bs
-  exact indArmSpec_of H.kp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.lz H.cid
+  exact indArmSpec_of H.kp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.cid
     (closedW_subPB bs checkerProg_armPos) armPos_pass armPos_raw
     (closedW_subPB bs checkerProg_armHb) armHb_tail
     (closedW_subPB bs checkerProg_armRc) armRc_tail

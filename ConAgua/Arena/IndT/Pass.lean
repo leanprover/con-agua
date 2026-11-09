@@ -105,10 +105,10 @@ section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
-  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
+  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
+include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_block_pass` refines `checkBlockPass`, both outcomes** under `StageC` (twin side
 con-ron's `checkBlockPass_of`): each check's ok half by its `…_refinesC` on the call's run, its
 error half by its refinement on the run (`RefE.run_err`, `CtsG`); the flush, the positivity
@@ -139,7 +139,7 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
   -- the formers
   refine RefE.bindRunLe hle (s₀ := ⟨m, Locals.init []⟩) (fun _ => icpE.k_check_block_inds.none ..)
     (cbiE_spec p hP.inds (n + 3) ⟨m, Locals.init []⟩ vis p0 isRec) (fun hG => hG.nv) id
-    (cbi_ref hkp henv hV hOpf hLC hApd hCrk hLz hP.inds (n + 2) (by omega) hC hq hsrc hcx hb hA
+    (cbi_ref hkp henv hV hOpf hLC hApd hCrk hP.inds (n + 2) (by omega) hC hq hsrc hcx hb hA
       (fun f hf => hk f (List.mem_append_left _ (List.mem_append_right _ hf))) hshP hden hcoh hlpsDn)
     fun r1 s1 ⟨fe1, cvTas, bs1⟩ a1 c1 _ hrun1 ⟨⟨hS1, hg1, hcv1, hbs1, hsrc1⟩, hA1, hrb1, _⟩ => ?_
   rw [icpE.k_check_block_inds.arm1]
@@ -469,7 +469,7 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
 -/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
+include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_block_pass(vis, p0, isRec)` refines `checkBlockPass` under `StageC`**
 (`checkBlockPass_refines`'s, from `StageC` at the entry index and con-ron's `checkBlockPass_of`
 preconditions): besides `checkBlockPass_refines`' post, `StageC` at the formers' index and
@@ -494,7 +494,7 @@ theorem checkBlockPass_refinesC (hP : PassProg p) {fs : List FnName}
       ∃ env₁, StageC dn (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 env₁ s'.mem a' ∧ PassTwin a₀ a' x env₁;
       ⊤⦄ := by
   refine triple_post (RefE.triple (icpE_spec p hP (n + 4) s₀ vis p0 isRec)
-    (pass_ref hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP hcl hfs (n + 4) hn hC hq hsrc hcx hb hPm hA hk
+    (pass_ref hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hP hcl hfs (n + 4) hn hC hq hsrc hcx hb hPm hA hk
       hcoh hden hshP hlpsDn)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   exact ⟨hl, x, a', run, ⟨hR.stage, hR.grow, hR.bpass, hR.pos, hR.abs, hR.recs, hR.classes⟩, hR.twin⟩
