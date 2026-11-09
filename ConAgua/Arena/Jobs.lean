@@ -177,11 +177,11 @@ theorem TwinOK.ofCheck {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
 
 /-! ## `record_job`'s model -/
 
-/-- **`record_job`'s unified model**: the bracket and the leaves (outside the verdict closure)
-through their runs, `check_decl` by its unified model. -/
+/-- **`record_job`'s unified model**: every callee through its run (the bracket and the leaves are
+outside the verdict closure; `check_decl` is read through its run so that its write set applies to
+the model's memory). -/
 l_model recordJob_specE (p : Prog) (hf : p.lookup "record_job" = some recordJobL)
-    (hcd : p.lookup "check_decl" = some checkDeclL)
-  fns [hf ↦ recordJobE] specs [checkDecl_specE p hcd n]
+  fns [hf ↦ recordJobE]
   grind [arena_grind]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
@@ -452,7 +452,6 @@ structure JobS (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (
   flag : pinW m 0 ≠ 0
   memos : IndMemos m
   idx : IndexR m I
-  top1 : rdW (m.arr64 CTL) 130 = 0
 
 /-- **The job's start**: from the memory's half of the job relation (after the bracket's opening),
 `iw_reset` and the stamp bump (the record's view: `CTL[134]` its first counter from `FIRSTS`,
@@ -462,7 +461,8 @@ theorem JobM.stage {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
     {ds : Array IDeclaration} {I : IStreamIndex} {m : Mem} {a : AState} {k : Word}
     (h : JobM pins dn ds I m a) (hk : k.toNat < ds.size)
     (hst : ¬ 4294967294 ≤ rdW ((m.set64 CTL 200 0).arr64 CTL) 133) :
-    JobS pins dn ds I k.toNat (jobMem (m.set64 CTL 200 0) k) a := by
+    JobS pins dn ds I k.toNat (jobMem (m.set64 CTL 200 0) k) a ∧
+      rdW ((jobMem (m.set64 CTL 200 0) k).arr64 CTL) 130 = 0 := by
   have hsz : 200 < (m.arr64 CTL).size := h.iw.ctl
   generalize hm2 : m.set64 CTL 200 0 = m2 at hst
   have hf2 : MemFrame [] [200] m m2 := hm2 ▸ MemFrame.setCtl m 200 0
@@ -535,8 +535,8 @@ theorem JobM.stage {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
       h.mode.frame hf (by decide) (by decide)⟩
   have hIW : L.Ind.IWOK m3 :=
     IWOK.frame hf3 (by simp) (by simp) (by decide) (by decide) (hm2 ▸ IWOK.reset h.iw) (by simp) (by decide)
-  refine ⟨⟨hCK, hIW⟩, by rw [eA _ (by decide), eA _ (by decide)]; exact h.decls, ?_, ?_,
-    by rw [pinW_frame hf (by simp)]; exact h.flag, ?_, hI3,
+  refine ⟨⟨⟨hCK, hIW⟩, by rw [eA _ (by decide), eA _ (by decide)]; exact h.decls, ?_, ?_,
+    by rw [pinW_frame hf (by simp)]; exact h.flag, ?_, hI3⟩,
     by rw [eC 130 (by decide) (by decide) (by decide) (by decide)]; exact h.top1⟩
   · exact PinSetsR.grow h.pinsets (RecGrow.of_eq (eA _ (by decide))
       (eC 129 (by decide) (by decide) (by decide) (by decide)))
@@ -546,6 +546,124 @@ theorem JobM.stage {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
       by rw [hf.size]; exact h.mem.bstk, h.mem.memos.frame hf (by simp) (by decide),
       h.mem.dnN⟩
   · exact h.memos.frame hf (by simp) (fun x hx => by rcases hC x hx with rfl|rfl|rfl|rfl <;> decide)
+
+/-! ## The job's write sets
+
+`and_pin_ok` (a leaf) leaves the front's records, the stream index, the pin variant list's header
+and the inductive memos alone; `check_decl` leaves the stream index and the pin table alone. Both
+are facts of the program text (`closedA`, by `decide +kernel` at the checker's program). -/
+
+/-- The stream index's arrays: the base rows (`TIX*`, `EIX*`, tier 0) and `FIRSTS`. -/
+def IdxArr (b : TieredArray) : Bool :=
+  b.hi == false && ((decide (129 ≤ b.arr) && decide (b.arr ≤ 134)) || b.arr == 137)
+
+/-- The arrays `and_pin_ok` may write. -/
+def apP (b : TieredArray) : Bool :=
+  b != DECL && b != DLP && !IdxArr b && b != ILFM && b != L.Stubs.CRM &&
+    (decide (b.arr < 201) || decide (208 < b.arr))
+
+def apA : List TieredArray := leafA.filter apP
+
+/-- The `CTL` words `and_pin_ok` may write. -/
+def apQ (x : Word) : Bool :=
+  x != 128 && x != 150 && x != 151 && x.toNat != 52 && x.toNat != 158 &&
+    (decide (x.toNat < 202) || decide (219 < x.toNat))
+
+def apC : List Word := leafC.filter apQ
+
+/-- The arrays `check_decl` may write. -/
+def cdA : List TieredArray := checkerWordArrays.filter fun b => !IdxArr b && b != PINS
+
+/-- The `CTL` words `check_decl` may write. -/
+def cdC : List Word := ((List.range 1024).filter fun x => x != 128).map UInt64.ofNat
+
+theorem apA_mem {b : TieredArray} (h : b ∈ apA) : b ∈ leafA ∧ apP b = true := List.mem_filter.mp h
+theorem apC_mem {x : Word} (h : x ∈ apC) : x ∈ leafC ∧ apQ x = true := List.mem_filter.mp h
+
+theorem apA_idx {b : TieredArray} (h : b ∈ apA) : IdxArr b = false := by
+  have := (apA_mem h).2; simp only [apP, Bool.and_eq_true, Bool.not_eq_true'] at this; exact this.1.1.1.2
+
+theorem cdA_idx {b : TieredArray} (h : b ∈ cdA) : IdxArr b = false := by
+  have := (List.mem_filter.mp h).2; simp only [Bool.and_eq_true, Bool.not_eq_true'] at this
+  exact this.1
+
+theorem cdA_pins : (PINS : TieredArray) ∉ cdA := fun h => by
+  have := (List.mem_filter.mp h).2; simp at this
+
+theorem apC_128 : (128 : Word) ∉ apC := fun h => by have := (apC_mem h).2; simp [apQ] at this
+
+theorem cdC_128 : (128 : Word) ∉ cdC := fun h => by
+  simp only [cdC, List.mem_map, List.mem_filter, List.mem_range] at h
+  obtain ⟨x, ⟨hx, h1⟩, e⟩ := h
+  have : x = 128 := by
+    have := congrArg UInt64.toNat e; simp at this; omega
+  subst this; simp at h1
+
+/-- **The stream index across a writer that leaves its arrays and `CTL[128]` alone** and only
+grows the record pool. -/
+theorem IndexR.frameIdx {A : List TieredArray} {C : List Word} {m m' : Mem} {I : IStreamIndex}
+    (hA : ∀ b ∈ A, IdxArr b = false) (h128 : (128 : Word) ∉ C) (hf : MemFrame A C m m')
+    (hx : ArrExt (erecP m) (erecP m')) (h : IndexR m I) : IndexR m' I :=
+  h.grow (fun b h0 h1 => hf.arr b (fun hb => by
+      have := hA b hb; simp only [IdxArr, h0, beq_self_eq_true, Bool.true_and, Bool.or_eq_false_iff,
+        Bool.and_eq_false_iff, decide_eq_false_iff_not, beq_eq_false_iff_ne] at this
+      omega) (fun e => by subst e; revert h1; decide))
+    (hf.ctl _ h128) hx
+
+/-- **`and_pin_ok(k)` at a job's start**: the twin's `andPinOk` runs to the call's result, the
+store grows (con-ron's `andPinOk_run`), and the job's start relation holds after it (the
+stage relation by the refinement, the rest by the leaf's write set). -/
+theorem andPin_job {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
+    {ds : Array IDeclaration} {p : Prog} {I : IStreamIndex} (hap : AndPinIndProg p)
+    (hrom : ∀ dn vis fe, L.Rom.RomAndPinRef p dn vis fe)
+    (hW : ∃ F, "and_pin_ok" ∈ F ∧ closedA p apA apC F = true) (hFD : FrontDecls ds)
+    {k : Word} (hk : k.toNat < ds.size) {m m' : Mem} {a : AState} {env : ConLeche.Env}
+    {d : ConLeche.Declaration} (hS : JobS pins dn ds I k.toNat m a) (hok : ConRon.Bridge.StateOK a)
+    (hF : ConRon.Bridge.FoldOK env (I.view k.toNat) a)
+    (hd : Frontend.denoteDecl a.store ds[k.toNat] = some d) {n : Nat} {r : List Word}
+    (c : callW p n "and_pin_ok" [k] m = some (r, m')) :
+    ∃ b a', (andPinOk ds[k.toNat]).run a = .ok (b, a') ∧ (r.headD 0 != 0) = b ∧
+      JobS pins dn ds I k.toNat m' a' ∧ L.Ind.IWGrow m m' ∧ MemFrame apA apC m m' ∧
+      ConRon.Bridge.StateOK a' ∧ Ext a.store a'.store ∧ a'.caches = a.caches ∧ a'.pins = a.pins ∧
+      ConRon.Bridge.FoldOK env (I.view k.toNat) a' := by
+  obtain ⟨F, hF0, hcl⟩ := hW
+  have hpre : StageR 0 (I.view k.toNat) m a ∧ L.Front.DeclAtF (m.arr64 DECL) (m.arr64 DLP) k.toNat ds[k.toNat] ∧
+      (∀ b nP, ds[k.toNat] = .indDecl b nP → FrontBlock b) ∧ ConRon.Bridge.StateOK a ∧
+      (m.arr64 DECL).size < 2 ^ 63 ∧ (m.arr64 DLP).size < 2 ^ 63 :=
+    ⟨hS.stage, hS.decls.recs _ hk, fun b nP e => hFD _ hk b nP e, hok, hS.decls.dsize, hS.decls.psize⟩
+  obtain ⟨s1, hs1, -, hok1, hKP, hgr, hdec⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (andPinOkF_refines hap (hrom dn 0 (I.view k.toNat)) k ds[k.toNat] n ⟨m, Locals.init []⟩ a hpre) c
+  obtain ⟨s2, hs2, hfr, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (invoke_memFrame hcl n hF0 [k] ⟨m, Locals.init []⟩) c
+  rw [hs1] at hKP hgr hdec; rw [hs2] at hfr
+  have hrun := AM.run_of_ok _ _ hok1
+  obtain ⟨hok', hext, hc, hpins⟩ := ConRon.Bridge.andPinOk_run hok hF.check.pins hd hrun
+  refine ⟨_, _, hrun, hdec.1, ⟨hKP, ?_, ?_, ?_, ?_, ?_, ?_⟩, hgr, hfr, hok', hext, hc, hpins,
+    hF.step (hF.check.mono hok' hext hc hpins) hpins⟩
+  · rw [hfr.arr _ (fun h => by have := (apA_mem h).2; simp [apP] at this) (by decide),
+      hfr.arr _ (fun h => by have := (apA_mem h).2; simp [apP] at this) (by decide)]
+    exact hS.decls
+  · exact PinSetsR.grow hS.pinsets ⟨hgr.er, hgr.erGet⟩
+      (hfr.ctl _ (fun h => by have := (apC_mem h).2; simp [apQ] at this))
+      (hfr.ctl _ (fun h => by have := (apC_mem h).2; simp [apQ] at this))
+  · refine ⟨by rw [hfr.size]; exact hS.mem.erec, by rw [hfr.size]; exact hS.mem.spn,
+      by rw [hfr.size]; exact hS.mem.bstk, ?_, fun j x e => hext.lss.ls.ns j x (hS.mem.dnN j x e)⟩
+    have nA := fun {b : TieredArray} (h : b ∉ leafA) => fun hb : b ∈ apA => h (apA_mem hb).1
+    have nC := fun {x : Word} (h : x ∉ leafC) => fun hx : x ∈ apC => h (apC_mem hx).1
+    exact hS.mem.memos.frame hfr ⟨nA leafA_memo.1, nA leafA_memo.2⟩ ⟨nC leafC_memo.1, nC leafC_memo.2⟩
+      ⟨nA leafA_walk.1, nA leafA_walk.2.1, nA leafA_walk.2.2⟩
+      ⟨nC leafC_walk.1, nC leafC_walk.2.1, nC leafC_walk.2.2⟩
+      ⟨nA leafA_lp.1, nA leafA_lp.2.1, nA leafA_lp.2.2⟩
+      ⟨nC leafC_lp.1, nC leafC_lp.2.1, nC leafC_lp.2.2⟩
+  · rw [pinW_frame hfr (fun h => leafA_pins (apA_mem h).1)]; exact hS.flag
+  · refine hS.memos.frame hfr (fun b hb => ?_) (fun x hx => ?_)
+    · have := (apA_mem hb).2; simp only [apP, Bool.and_eq_true, bne_iff_ne, ne_eq, Bool.or_eq_true,
+        decide_eq_true_eq] at this
+      exact ⟨this.1.1.2, this.1.2, this.2⟩
+    · have := (apC_mem hx).2; simp only [apQ, Bool.and_eq_true, bne_iff_ne, ne_eq, Bool.or_eq_true,
+        decide_eq_true_eq] at this
+      exact ⟨this.1.1.2, this.1.2, this.2⟩
+  · exact hS.idx.frameIdx (fun b hb => apA_idx hb) apC_128 hfr hgr.ext
 
 /-! ## `record_job` -/
 
