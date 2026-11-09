@@ -9,7 +9,7 @@ import ConAgua.Census.Attr
 # Former stubs: names, level lists, the fvar-range read (lane `stubs`)
 
 L code for callees of the inductive stage that were `abortStub`s in `checkerProg` (their
-`RelAM` contracts are lane `induct`'s, `IndStubs.lean`, still `sorry`):
+`RelAM` contracts are lane `induct`'s, `IndStubs.lean`):
 
 * `fvar_b(f, e)`: the twin's `fvarB fuel e`, which `ab_fvb(e, f)` (`Abs1.lean`) already is; an
   adapter for the argument order of the inductive stage's calls.

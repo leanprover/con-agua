@@ -8,7 +8,7 @@ public import ConAgua.Arena.IndIface
 # Former stubs: the inductive stage's telescopes, zero-ness (lane `stubs`)
 
 L code for callees of the inductive stage that were `abortStub`s in `checkerProg` (their
-`RelAM` contracts are lane `induct`'s, `IndStubs.lean`, still `sorry`):
+`RelAM` contracts are lane `induct`'s, `IndStubs.lean`):
 
 * `lv_zero_caps(l)`: `zeronessOf` of the level `l` as three words (`decPW`'s layout: `0` for
   `never`, `1, off, len` for `ifAllZero` with the names an `EREC` slice): `lv_zero` pushes the
