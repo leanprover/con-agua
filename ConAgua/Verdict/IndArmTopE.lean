@@ -11,6 +11,11 @@ import ConAgua.Checker.BasisBlockProg
 import ConAgua.Checker.ArmsT
 import ConAgua.Checker.LoopProg
 import ConAgua.Verdict.KnotAllE
+import ConAgua.Verdict.DeclTopE
+import ConAgua.Verdict.ThreadsE
+import ConAgua.Checker.DefnArmT
+import ConAgua.Checker.BlockRefsProg
+import ConAgua.Final.DrvFinal
 public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 public import ConAgua.Arena.IndInstallSpec.OfClosed
@@ -66,6 +71,8 @@ end L.Ind
 
 namespace L.Checker
 
+universe u
+
 open L L.Arena L.Front L.Rom L.Compiler L.Ind ConAgua.Final
 
 /-- **The inductive arm's error claim at the substituted checker program** (`indArmSpec_checker`'s
@@ -91,9 +98,36 @@ theorem indArmSpecE_checker (bs : List UInt8) (hr : RomOK bs)
 theorem seqVerdicts_proved : SeqVerdicts checkerProg := by
   sorry
 
+/-- **The jobs' error claims at the programs phase B runs** (`JobG`: `check_decl`'s arms' claims,
+`armsE_of`, and the inductive arm's, `indArmSpecE_checker`), at every phase A. -/
+theorem jobG_checker (b pb : ByteArray) (PA : PhaseA b) (hpb : pb.size < 2 ^ 63) (hpre : PbPre pb) :
+    JobG PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg) := by
+  have hr : RomOK pb.data.toList := by simpa [RomOK] using hpb
+  have H := indArmProgs_checker _ hr hpre
+  have hnv := checkerProg_nvPB pb.data.toList
+  have hU : UceProg (Prog.subPB pb.data.toList checkerProg) :=
+    ⟨checkerProg_uceLookupsPB _, strLitStored_core _ H.kp.knot.str⟩
+  have hG : VerdictCtxU (Prog.subPB pb.data.toList checkerProg) :=
+    ⟨⟨hnv, checkerProg_coreStubsEPB _⟩, hU⟩
+  exact jobG_of _ _ _ _
+    (armsE_of _ _ _ _ (checkerProg_axArmPB _ hr hpre) (checkerProg_defnArmPB _ hr hpre)
+      (checkerProg_thmArmPB _ hr hpre) (checkerProg_opqArmPB _ hr hpre) (checkerProg_quotArmPB _)
+      (checkerProg_knotStagePB _) (checkerProg_leafClosedPB _) (checkerProg_apdPB _)
+      (checkerProg_crKeepPB _) (checkerProg_crfPB _) (checkerProg_ccvSimsPB _ _)
+      (checkerProg_quotSimsPB _ hr hpre PA.quotDn) PA.dnInj hG)
+    (indArmSpecE_checker _ hr hpre (checkerProg_ccvSimsPB _)
+      (basisRefs_of (checkerProg_basisLProgPB _ hr hpre)) (fun dn _ => cbbRef_checker _ hr hpre dn)
+      (cbRefs_checker _ hr hpre) _ PA.dnInj) hnv
+
+/-- **A thread's failing call is the pool's failure** (`ThreadEVerdict`): `threads_twinVerdictPooled`
+at `check_decl`'s program facts (`checkerCd_proved`) and the jobs' error claims (`jobG_checker`). -/
+theorem threadEVerdict_proved : ThreadEVerdict.{u} :=
+  fun Vt _ => threads_twinVerdictPooled Vt checkerCd_proved jobG_checker
+
 /-- **The threaded harness's verdict claims**, without hypotheses. -/
-theorem threadVerdicts_proved : ThreadVerdicts := by
-  sorry
+theorem threadVerdicts_proved : ThreadVerdicts.{u} where
+  entry1 := sorry
+  thr := threadEVerdict_proved
 
 -- ronsync2 stage 2: /--
 -- ronsync2 stage 2: info: 'L.Checker.seqVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]

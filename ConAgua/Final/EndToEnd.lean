@@ -169,11 +169,11 @@ theorem checkerFile_threads_regs [Host] (V : Type w) [ConLeche.SetTheory V] (k0 
 thread's earlier calls accepted; the hypotheses are listed in `Final/ThreadsVerdict.lean`) whose
 class `k &&& 3` is `1` (reject) or `2` (decline), the twin's pooled pipeline fails on `[b]` with an
 error of that class. -/
-theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem checkerFile_threads_verdict [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
     (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) : TwinVerdictPooled [b] (k &&& 3) :=
-  checkerFile_threads_verdict_of k0 hcode b pb h64 dm₀ ra₀ st₀ k threadVerdicts_proved hF hk
+  checkerFile_threads_verdict_of V k0 hcode b pb h64 dm₀ ra₀ st₀ k threadVerdicts_proved hF hk
 
 /-- **An accepting threaded run has a model** (relative to set theory, as
 `checkerFile_model_exists`). -/
