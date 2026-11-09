@@ -355,7 +355,7 @@ theorem decTbl_npc {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R r
   exact ⟨rfl, hw32, rfl⟩
 
 /-- A constant record's name (word `q + 1`). -/
-theorem decCV_name {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+theorem decCV_nameRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {cv : IConstantVal} (h : decCV R (q.toNat + 1) = some cv) :
     HW (rd (q + 1)) ∧ cv.name = decI (rd (q + 1)) := by
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
@@ -379,7 +379,6 @@ structure PgrProg (p : Prog) : Prop where
   us : UsF p
   opf : OpfF p
   cl : CoreStageClosed p
-  constTy : ConstTyAtOK p
 
 
 /-! ## `constTyAt` only extends the store (`EMono`) -/
@@ -549,7 +548,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Wo
 at entry, the parameter count plus field index not wrapping; `constTyAt_lkept` for the level
 readbacks): `env_find`, `const_ty_at` (`ConstTyAtOK`), `open_pis_at_fvars_f` (`opfF_okC`),
 `proj_guard_rows_at` (`pgra_ok`). -/
-theorem pgr_okH (p : Prog) (hP : PgrProg p)
+theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
     (n : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (q i us : Word) (tbl : IProjTable)
     (r : List Word) (hS : CoreS dn m a vis fe M eb) (hI : IWOK m) (hM : ∃ mp, hbMR m mp)
     (hq : decTbl (erecP m) q.toNat = some tbl) (hus : HW us)
@@ -590,7 +589,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p)
   generalize hc : r1.tail.headD 0 = c at hW hci
   have hcv := decCI_cvA hci
   obtain ⟨hlps, -, hty, hty32⟩ := L.Arena.decCV_rd (erRdOK m1) hcv
-  obtain ⟨hnn32, hnn⟩ := decCV_name (erRdOK m1) hcv
+  obtain ⟨hnn32, hnn⟩ := decCV_nameRd (erRdOK m1) hcv
   simp only [erRdT_congr rfl rfl] at hW
   -- `const_ty_at`
   rcases c2 : callW p n "const_ty_at" [erRdT m1 (c + 1), erRdT m1 (c + 2), erRdT m1 (c + 3),
@@ -598,7 +597,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p)
   · rw [c2, pgrW.k_const_ty_at.none] at hW; cases hW
   rw [c2, pgrW.k_const_ty_at.arm1] at hW
   have h2 := CoreSpec.of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (hP.constTy n ⟨m1, Locals.init []⟩ a dn vis fe M eb _ _ _ _ us _ hS hnn32 hty32 hus hlps) c2
+    (hCT n ⟨m1, Locals.init []⟩ a dn vis fe M eb _ _ _ _ us _ hS hnn32 hty32 hus hlps) c2
   have hcvE : ci.toConstantVal = ⟨decI (erRdT m1 (c + 1)), ci.toConstantVal.levelParams,
       decE (erRdT m1 (c + 4))⟩ := by
     rw [cv_eta ci.toConstantVal, hnn, hty]; rfl

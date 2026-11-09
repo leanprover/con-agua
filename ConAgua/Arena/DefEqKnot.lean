@@ -250,7 +250,7 @@ include hq in
 /-- **`infer_proj`'s callees** (`proj_guard_rows`: `pgrOK_of`). -/
 theorem KnotAllProg.projCallees : InferProjCallees p :=
   ⟨coreDen_of, findProj_refines p hq.projp, projFound p hq.projp, erecKept_of hq.hcl, hq.instLP,
-    ErecPKept.of_closed hq.hcl, pgrOK_of p hq.proj, hq.walks.iotaInst1OK, hq.prop⟩
+    ErecPKept.of_closed hq.hcl, pgrOK_of p hq.proj (KnotAllProg.constTy hq), hq.walks.iotaInst1OK, hq.prop⟩
 
 include hq in
 theorem KnotAllProg.inferC : InferCallees p :=

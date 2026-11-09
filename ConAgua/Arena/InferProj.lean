@@ -17,6 +17,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.CoreLevels
 public import ConAgua.Arena.CoreWalks
 public import ConAgua.Arena.DefEqLeaves
+public import ConAgua.Arena.ProjGuardRowsT
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.Infer
 
@@ -131,6 +132,8 @@ structure InferProjProg (p : Prog) : Prop where
   envFind : p.lookup "env_find" = some envFindL
   envRowGet : p.lookup "env_row_get" = some envRowGetL
   baseRowGet : p.lookup "base_row_get" = some baseRowGetL
+  /-- `proj_guard_rows` and its callees (`pgr_okH`). -/
+  pgr : L.Ind.PgrProg p
 
 /-- **The callees of `infer_proj` with no proof here** (each a named hypothesis). -/
 structure InferProjCallees (p : Prog) : Prop where
@@ -483,9 +486,11 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n F
   exact RefE.ret hrun5 ⟨⟨M₅, hS₅.frame_stk (MemFrame.setCtl m₅ 136 _) (by simp) (by simp),
     hK₃.trans hK₅, StackKept.restoreG' hgK⟩, rfl, hrw5⟩
 
-/-- **`proj_guard_rows` refines `projGuardRows`** (`PgrOK`; open: the `CoreS` versions of
-`open_pis_at_fvars_f`, `struct_used_later` and `fvar_type_d`). -/
-theorem pgrOK_of (p : Prog) (hp : InferProjProg p) : PgrOK p := by
-  sorry
+/-- **`proj_guard_rows` refines `projGuardRows`** (`PgrOK`, from `pgr_okH`; open until `CoreS`
+carries the pool's `IWOK` and the `hb` memo and `proj_guard_rows` guards `np + i + 1` against
+wrapping: those three hypotheses of `pgr_okH` are `sorry` here). -/
+theorem pgrOK_of (p : Prog) (hp : InferProjProg p) (hct : ConstTyAtOK p) : PgrOK p :=
+  fun n _ m m' a _ _ M _ q i us tbl r hS hq _ hus h =>
+    L.Ind.pgr_okH p hp.pgr hct n m m' a M q i us tbl r hS sorry sorry hq hus sorry h
 
 end L.Arena
