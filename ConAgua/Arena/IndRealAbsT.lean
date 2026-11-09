@@ -22,7 +22,7 @@ open L.Arena
 
 theorem _root_.L.Arena.TwinOK.absOK {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
     (h : TwinOK dn m a fe) (hi : I1Memo m) (hc : CrMemo m) (hp : pinW m 0 ≠ 0) : AbsOK m :=
-  ⟨h.memos.ab, hi, hc, h.memos.il, h.memos.walk, h.erec, h.spn, h.bstk, hp⟩
+  ⟨h.memos.ab, hi, hc, h.memos.il, ⟨h.memos.walk, h.erec, h.spn, h.bstk, hp⟩, h.memos.hb⟩
 
 theorem StageT.absOK {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (h : StageT dn vis fe m a) (hi : I1Memo m) (hc : CrMemo m) : AbsOK m :=

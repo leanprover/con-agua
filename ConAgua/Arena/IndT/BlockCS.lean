@@ -36,7 +36,7 @@ variable {G : Prop} {p : Prog} {dn : NIdx → Option ConLeche.Name}
 
 /-- `BkMem` from the stream index's memos and `I1Memo`. -/
 theorem BkMem.ofDc {m : Mem} (h : DcMem m) (hi : I1Memo m) : BkMem m :=
-  ⟨⟨h.stage, hi, h.cr⟩, h.core, ⟨h.ab, hi, L.Stubs.CrOK.crMemo h.cr, h.il, h.wk⟩⟩
+  ⟨⟨h.stage, hi, h.cr⟩, h.core, ⟨h.ab, hi, L.Stubs.CrOK.crMemo h.cr, h.il, h.wk, h.core.hb⟩⟩
 
 theorem BkMem.dc {m : Mem} (h : BkMem m) : DcMem m :=
   ⟨h.core, h.ind.stage, h.ind.cr, h.abs.ab, h.abs.il, h.abs.wk⟩

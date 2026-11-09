@@ -273,7 +273,7 @@ theorem DcSt.stageT {m : Mem} {a : AState} (h : DcSt dn vis fe env m a) : StageT
   h.stageC.stageT
 
 theorem DcSt.abs {m : Mem} {a : AState} (h : DcSt dn vis fe env m a) : AbsOK m :=
-  ⟨h.mem.ab, h.i1, h.mem.cr, h.mem.il, h.mem.wk⟩
+  ⟨h.mem.ab, h.i1, h.mem.cr, h.mem.il, h.mem.wk, h.mem.core.hb⟩
 
 theorem DcIdx.trans {m₀ m₁ m₂ : Mem} (h₁ : DcIdx m₀ m₁) (h₂ : DcIdx m₁ m₂) : DcIdx m₀ m₂ :=
   ⟨fun b hb => (h₂.arr b hb).trans (h₁.arr b hb), h₂.c128.trans h₁.c128, h₂.c1.trans h₁.c1,

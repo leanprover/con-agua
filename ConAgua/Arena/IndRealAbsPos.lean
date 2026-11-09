@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndPosSpec.NcnW
 import ConAgua.Arena.IndPosSpec.NestContParamsClosed
+import ConAgua.Arena.IndSumSpec.StructUsedHb
 public import ConAgua.Arena.IndPosSpec.P2ctK1
 public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 public import ConAgua.Arena.IndPosSpec.NestHoles
@@ -418,31 +419,10 @@ theorem resHeadW_afr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e =
   unfold resHeadW resHeadK at h
   afr_auto h [stub_afr, i1F_afr, gafF_afr]
 
--- from IndPosSpec/NestCrest
-theorem hbInsW_afr {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, m')) : AFr m m' := by
-  unfold hbInsW at h
-  rcases hs : msetG hbSch m e i r with _ | m2 <;> rw [hs] at h; · simp at h
-  simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  exact AFr.of_frame (msetG_frame hbSch hbSch_wf m m2 e i r hs)
-
--- from IndPosSpec/NestCrest
-theorem hbGoW_afr : ∀ (n : Nat) (m m' : Mem) (f i h r : Word), hbGoW n m f i h = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, hh => by simp [hbGoW] at hh
-  | n + 1, m, m', f, i, h, r, hh => by
-    have node : ∀ {m m' : Mem} {f i g x y z r : Word}, hbNodeW n f m i g x y z = some (r, m') → AFr m m' := by
-      intro m m' f i g x y z r h
-      unfold hbNodeW hbO1 hbL1 hbL2 at h
-      afr_auto h [hbGoW_afr n _ _ _ _ _ _]
-    unfold hbGoW hbK1 hbK2 hbK3 hbK4 at hh
-    afr_auto hh [bvbW_afr, node, hbInsW_afr]
-
--- from IndPosSpec/NestCrest
-theorem hbFastW_afr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e = some (r, m')) : AFr m m' := by
-  unfold hbFastW at h
-  split at h
-  · simp at h
-  exact AFr.trans (AFr.of_frame (mclearG_frame hbSch m)) (hbGoW_afr _ _ _ _ _ _ _ h)
+/-- The `has_loose_bvar_b` walk keeps `AbsOK`: its write set (`hbFastW_frame`) is the `hb` memo's
+and the `BMEMO` walk's, and it keeps the `hb` memo well formed (`hbFastW_keep`). -/
+theorem hbFastW_afr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e = some (r, m')) : AFr m m' :=
+  fun hA => hA.frameHb (hbFastW_frame h) (by decide) (by decide) (hbFastW_keep h hA.hb)
 
 -- from IndPosSpec/NestCrest
 theorem ncnW_afr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}

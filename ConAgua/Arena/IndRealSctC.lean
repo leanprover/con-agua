@@ -123,7 +123,7 @@ theorem apdF_simR {vis : Word} {fe : IFEnv} {m : Mem}
       apdP_prog.put apdP_prog.clear apdP_prog.lmem apdP_prog.lnode apdP_prog.lapd apdP_prog.ls
       apdP_prog.go apdP_prog.entry n ⟨m, Locals.init []⟩ o l e) hc
   subst hs'
-  obtain ⟨hAb, hI1, hCr, hIl, hW, hE, hSp, hB, hP⟩ := hA
+  obtain ⟨hAb, hI1, hCr, hIl, ⟨hW, hE, hSp, hB, hP⟩, hHb⟩ := hA
   obtain ⟨b, hrun, hr, hS', hg, mp, hM⟩ := apdEntry_ok n hS (ApdEnv.of_state hok) o l e _ lps ks hks
     hdec he (apdMR_clear hW) hm
   have hf := apdF_frame h
@@ -131,9 +131,9 @@ theorem apdF_simR {vis : Word} {fe : IFEnv} {m : Mem}
   obtain ⟨-, ⟨mf, hfl⟩, ⟨ml, hlsb⟩, hLP⟩ := hW
   refine ⟨hAb.frame hf (by decide) (by decide), hI1.frame hf (by decide) (by decide),
     hCr.frame hf (by decide) (by decide), hIl.frame hf (by decide) (by decide),
-    ⟨apdMR_ws hM, ⟨mf, ?_⟩, ⟨ml, ?_⟩, hLP.frame hf (by decide) (by decide)⟩,
+    ⟨⟨apdMR_ws hM, ⟨mf, ?_⟩, ⟨ml, ?_⟩, hLP.frame hf (by decide) (by decide)⟩,
     by rw [hf.size]; exact hE, by rw [hf.size]; exact hSp, by rw [hf.size]; exact hB,
-    by rw [pinW_frame hf (by decide)]; exact hP⟩
+    by rw [pinW_frame hf (by decide)]; exact hP⟩, hbOK_frame hHb hf (by decide) (by decide)⟩
   · exact memoRG_frame coreFlSch coreFlSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf mf hfl
   · exact memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf ml hlsb
 
@@ -177,7 +177,7 @@ theorem crfF_simR {vis : Word} {fe : IFEnv} {m : Mem}
       (fun r x m' a' => (StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x) ∧ AbsOK m' ∧
         sp a' = sp a) := by
   intro r m' h
-  obtain ⟨hAb, hI1, hCr, hIl, hWk⟩ := hA
+  obtain ⟨hAb, hI1, hCr, hIl, hWk, hHb⟩ := hA
   have hfr := crfF_frame h
   obtain ⟨x, a', hrun, hK, hCr', ha'⟩ := relW_callF (P := crfP)
     (L.Stubs.constsResolveFFast_keepsSt crfP_prog (vis := vis) (fe := fe) e he a).refAM
@@ -185,7 +185,8 @@ theorem crfF_simR {vis : Word} {fe : IFEnv} {m : Mem}
   subst ha'
   exact ⟨x, _, hrun, hK, ⟨hAb.frame hfr (by decide) (by decide), hI1.frame hfr (by decide) (by decide),
     hCr', hIl.frame hfr (by decide) (by decide),
-    hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩, rfl⟩
+    hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide),
+    hbOK_frame hHb hfr (by decide) (by decide)⟩, rfl⟩
 
 /-! ## `check_struct_proj_table_scoped`, the real reading -/
 

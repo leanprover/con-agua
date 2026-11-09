@@ -99,7 +99,8 @@ theorem opfIl_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (h
   refine ⟨_, by rw [hrun, hres], hS', hg, ?_, h1, h2, hlt⟩
   exact ⟨hAb.ab.frame hfr (by decide) (by decide), hAb.i1.frame hfr (by decide) (by decide),
     hAb.cr.frame hfr (by decide) (by decide), ⟨_, hA'.2⟩,
-    hAb.wk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
+    hAb.wk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide),
+    hbOK_frame hAb.hb hfr (by decide) (by decide)⟩
 
 /-- **`intern_fvar` under the stage relation and `AbsOK`.** -/
 theorem opfFv_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : AbsOK m)
