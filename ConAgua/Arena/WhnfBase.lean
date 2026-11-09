@@ -520,12 +520,12 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   mode : ModeOK m
 
 /-- **The relation across a writer outside every tier and the spine stack**, the walk memos given
-(`hmem`): arrays `≥ 145` (or the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack,
+(`hmem`): arrays 145 or `≥ 149` (or the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack,
 the level heap, the walk-local memos. -/
 theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 145 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
     (hmem : CoreMemos m') :
     CoreS dn m' a vis fe M eb := by
   have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
@@ -539,7 +539,8 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
     hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide))
       (by decide)),
-    hS.env.frame (fun _ _ => sorry) (fun _ _ => sorry) hf,
+    hS.env.frame (fun b hb => not_mem_envArrs (by have := hA b hb; omega))
+      (fun x hx => not_mem_envCtl (by have := hC x hx; omega)) hf,
     hS.readL, hS.readLs, hS.nwf, hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
     hmem, hf.size BSTK ▸ hS.bstk,
     hS.den.frameE (hf.arr EREC (fun h => absurd (hA _ h) (by decide))
@@ -551,18 +552,18 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
 theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 145 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
     (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
     (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) :
     CoreS dn m' a vis fe M eb :=
   hS.frameSM hf hA hC (hS.memos.frame_hi hf (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) hWA hWC)
 
 /-- **The relation across a writer outside every tier and the stacks**, the walk memos given:
-arrays `≥ 146` (or 64‥95), `CTL` words `≥ 138` (or 64‥95). The stacks and the pool are kept. -/
+arrays `≥ 149` (or 64‥95), `CTL` words `≥ 138` (or 64‥95). The stacks and the pool are kept. -/
 theorem CoreS.frameM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 146 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
     (hmem : CoreMemos m') :
     CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
   refine ⟨hS.frameSM hf (fun b hb => by have := hA b hb; exact ⟨this.1, this.2.1, by omega⟩)
@@ -582,7 +583,7 @@ memos: the level heap (`LH`, `CTL[192]`), say. -/
 theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 146 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
     (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
     (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) :
     CoreS dn m' a vis fe M eb ∧ StackKept m m' :=

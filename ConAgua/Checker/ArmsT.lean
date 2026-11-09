@@ -14,6 +14,7 @@ public import ConAgua.Checker.CrLeaves
 public import ConAgua.Verdict.KnotAllE
 public import ConAgua.Arena.QuotRulesT
 public import ConAgua.Arena.DeclBasisRef
+public import ConAgua.Arena.PinListRef
 import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LitClosed
@@ -277,6 +278,12 @@ stream index's `DeclConstsProg.basis`). -/
 theorem checkerProg_basisLProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length) :
     BasisLProg (Prog.subPB bs checkerProg) := by
   prog_bundle [checkerProg_rulesPB bs, checkerProg_leafClosedPB bs, checkerProg_romRefsPB bs hr hpre]
+
+/-- **`pin_list_ok` refines `pinListOk` at the checker** (`check_basis_block`'s comparison,
+`CbbProg.pl`). -/
+theorem checkerProg_pinListOkRefPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length) :
+    PinListOkRef (Prog.subPB bs checkerProg) :=
+  pinListOkRef_of (by prog_bundle [checkerProg_basisLProgPB bs hr hpre])
 
 theorem checkerProg_armStepPB {f : FnName} (hf : f ∈ declLoopFns) :
     StepIn (Prog.subPB bs checkerProg) [f] :=
