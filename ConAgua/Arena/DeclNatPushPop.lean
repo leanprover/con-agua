@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.PapW
 public import ConAgua.Arena.IndSumSpec.ConsSumCtors
+public import ConAgua.Arena.Frame
 import all ConAgua.Arena.Env
 
 @[expose] public section
@@ -70,5 +71,49 @@ theorem pushPop_stage {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL
   obtain ⟨hS3, hg3⟩ := StageR.of_own hS2 hE3
   rw [hr3, List.headD_cons, show vis + 1 - 1 = vis by simp] at *
   exact ⟨hS3, hg3, rfl⟩
+
+/-! ## The reads at the pushed view keep the own rows -/
+
+/-- The call closure of the two gates' reads at the pushed view (`check_structural_nat_pin_at_fe2`,
+`check_div_mod_pin_at_fe2`) in the checker's program: lookups, pin reads, interning, `IW` slices. -/
+def fe2Fns : List FnName :=
+  ["check_div_mod_pin_at_fe2", "env_find", "base_row_get", "env_row_get", "div_mod_env_guard",
+   "bool_ctor_typed", "const_e", "intern_const", "const_push", "const_find", "pin_word", "pin_at",
+   "ci_to_cv", "eq_stored", "nat_op_stored_ok_all", "nat_op_stored_ok", "nat_op_ty_pinned",
+   "nat_op_cod", "e_view", "nat_op_deps", "iw_alloc", "nat_op_pins", "nat_op_pins_c",
+   "nat_op_pins_b", "nat_op_pins_a", "nat_op_guard", "nat_op_bool_ctors", "bool_ctor_ok",
+   "sl_contains", "nat_div_mod_names", "nat_op_deps_stored", "nat_lit_supported", "nat_succ_ok",
+   "nat_zero_ok", "nat_ind_ok", "check_structural_nat_pin_at_fe2"]
+
+/-- The arrays `fe2Fns` may write: all but the own layer's row arrays. -/
+def fe2A : List TieredArray := checkerWordArrays.filter fun b => b.arr < 140 ∨ 142 < b.arr
+
+/-- The `CTL` words `fe2Fns` may write: all but the stamp (`CTL[133]`). -/
+def fe2C : List Word := ((List.range 1024).filter fun x => x ≠ 133).map UInt64.ofNat
+
+/-- **The program hypothesis**: the reads at the pushed view write no own row. -/
+def Fe2Closed (p : Prog) : Prop := closedA p fe2A fe2C fe2Fns = true
+
+theorem oix_arr (g : Nat) (t : UInt64) :
+    140 ≤ (tierA (oixArr g) t).arr ∧ (tierA (oixArr g) t).arr ≤ 142 := by
+  unfold tierA oixArr; generalize (t &&& 1 != 0) = b
+  cases b <;> split <;> (try split) <;> decide
+
+/-- A call of `fe2Fns` keeps the own rows' counters. -/
+theorem callW_fe2_ownC {p : Prog} (hcl : Fe2Closed p) {f : FnName} (hf : f ∈ fe2Fns) {n : Nat}
+    {args : List Word} {m m' : Mem} {r : List Word} (h : callW p n f args m = some (r, m')) :
+    ownC m' = ownC m := by
+  have hfr := (run_memFrame hcl hf (run_of_callW h)).1
+  refine ownC_frame hfr ?_ (by
+    simp only [fe2C, List.mem_map, List.mem_filter, List.mem_range, not_exists, not_and]
+    intro x hx e
+    have := congrArg UInt64.toNat e
+    simp only [decide_eq_true_eq] at hx
+    simp only [UInt64.toNat_ofNat] at this; simp at this; omega)
+  intro b hb g t e
+  subst e
+  simp only [fe2A, List.mem_filter, decide_eq_true_eq] at hb
+  have := oix_arr g t
+  omega
 
 end L.Ind
