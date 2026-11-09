@@ -118,7 +118,7 @@ theorem checkerFile_drv_accepts_regs [Host] (Vt : Type w) [ConLeche.SetTheory Vt
       HDRF CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
       (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
 
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_drv_accepts_regs
+/-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_drv_accepts_regs
 
 end ConAgua.Final

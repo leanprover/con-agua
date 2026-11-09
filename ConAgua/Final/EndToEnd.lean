@@ -197,23 +197,23 @@ theorem checkerFile_threads_no_False (V : Type w) [ConLeche.SetTheory V] [Host] 
     ¬ ThreadsRun b pb dm₀ ra₀ st₀ B ths := fun hR =>
   twinAcceptsPooled_no_False V hfalse (checkerFile_threads_accept V k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR)
 
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_accepts
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_accepts_regs
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_model_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_model_exists
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_no_False
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_threads_accept
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_threads_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_threads_regs
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_threads_verdict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_threads_verdict
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_threads_model
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_threads_no_False
+/-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_accepts
+/-- info: 'ConAgua.Final.checkerFile_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_accepts_regs
+/-- info: 'ConAgua.Final.checkerFile_model_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_model_exists
+/-- info: 'ConAgua.Final.checkerFile_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_no_False
+/-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_threads_accept
+/-- info: 'ConAgua.Final.checkerFile_threads_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_threads_regs
+/-- info: 'ConAgua.Final.checkerFile_threads_verdict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_threads_verdict
+/-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_threads_model
+/-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_threads_no_False
 
 end ConAgua.Final

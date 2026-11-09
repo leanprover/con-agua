@@ -346,7 +346,7 @@ theorem checkerFile_threads_verdict_of [Host] (V : Type u) [ConLeche.SetTheory V
   · exact (entry1Fail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ hV.entry1 hE hk).pooled
   · exact threadFail_twin V k0 hcode b pb h64 dm₀ ra₀ st₀ B t i hV.thr hT hk
 
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_threads_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_threads_verdict_of
+/-- info: 'ConAgua.Final.checkerFile_threads_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_threads_verdict_of
 
 end ConAgua.Final

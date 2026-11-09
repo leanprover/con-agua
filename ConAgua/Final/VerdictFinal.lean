@@ -79,7 +79,7 @@ theorem checkerFile_verdict_of [Host]
       HDRF CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
       (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
 
--- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
--- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_verdict_of
+/-- info: 'ConAgua.Final.checkerFile_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checkerFile_verdict_of
 
 end ConAgua.Final

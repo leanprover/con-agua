@@ -135,14 +135,14 @@ theorem threadVerdicts_proved : ThreadVerdicts.{u} where
   entry1 := entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE⟩
   thr := threadEVerdict_proved
 
--- ronsync2 stage 2: /--
--- ronsync2 stage 2: info: 'L.Checker.seqVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
--- ronsync2 stage 2: -/
--- ronsync2 stage 2: #guard_msgs in #print axioms seqVerdicts_proved
+/--
+info: 'L.Checker.seqVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in #print axioms seqVerdicts_proved
 
--- ronsync2 stage 2: /--
--- ronsync2 stage 2: info: 'L.Checker.threadVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
--- ronsync2 stage 2: -/
--- ronsync2 stage 2: #guard_msgs in #print axioms threadVerdicts_proved
+/--
+info: 'L.Checker.threadVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in #print axioms threadVerdicts_proved
 
 end L.Checker
