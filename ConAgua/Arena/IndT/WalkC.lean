@@ -32,13 +32,11 @@ theorem absOK_apdF {m m' : Mem} {args r : List Word} {a' : AState} (h : apdF m a
     hA.cr.frame hf (by decide) (by decide), hT.twin.memos.il,
     hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`AbsOK` across `consts_resolve_ffast`**, `StageT` and its memo after it. -/
 theorem absOK_crfF {m m' : Mem} {args r : List Word} {a' : AState} (h : crfF m args = some (r, m'))
     (hA : AbsOK m) (hCr : CrMemo m') (hT : StageT dn vis fe m' a') : AbsOK m' :=
   have hf := crfF_frame h
   ⟨hT.twin.memos.ab, hA.i1.frame hf (by decide) (by decide), hCr, hT.twin.memos.il,
     hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
--/
 
 end L.Ind

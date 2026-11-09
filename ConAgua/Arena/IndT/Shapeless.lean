@@ -58,18 +58,37 @@ l_model cslE_spec (p : Prog) (hV : ValProg p)
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 -/
 
-theorem erA_truncM_a5 (m : Mem) : erA (truncM m) = erecP m := by
-  sorry
+theorem erA_truncM_a5 (m : Mem) : erA (truncM m) = erecP m := truncM_erA m
 
-/-- The head of a decoded block slice. -/
+/-- The head of a decoded block slice (the record word `EREC⦃off⦄` reads, over both tiers). -/
 theorem decEBlk_head {dn : NIdx → Option ConLeche.Name} {m : Mem} {off cnt : Word}
     {ci : IConstantInfo} {rest : List IConstantInfo}
     (hd : DecB (fun m => decEBlk dn m off.toNat cnt.toNat) m (ci :: rest))
     (hlen : cnt.toNat = rest.length + 1) (hb : off.toNat + cnt.toNat ≤ erTop m) :
-    ∃ w : Word, rdW (m.arr64 EREC) off = w ∧ decCI (erecP m) w.toNat = some ci ∧
+    ∃ w : Word, erRd m off = w ∧ decCI (erA m) w.toNat = some ci ∧
       (off + 1).toNat = off.toNat + 1 ∧ (cnt - 1).toNat = rest.length ∧
       DecB (fun m => decEBlk dn m (off + 1).toNat (cnt - 1).toNat) m rest := by
-  sorry
+  have hoff : (off + 1).toNat = off.toNat + 1 := by
+    have : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
+    rw [UInt64.toNat_add]; simp; omega
+  have hcnt : (cnt - 1).toNat = rest.length := by
+    have h1 : 1 ≤ cnt.toNat := by omega
+    have := cnt.toNat_lt
+    rw [UInt64.toNat_sub]
+    simp
+    omega
+  have hd' : decEBlk dn (truncM m) off.toNat (rest.length + 1) = some (ci :: rest) := by
+    rw [← hlen]; exact hd
+  rw [decEBlk_succ] at hd'
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd'
+  obtain ⟨q, hq, x, hx, xs, hxs, heq⟩ := hd'
+  obtain ⟨rfl, rfl⟩ := List.cons.inj heq
+  simp only [nat?, Option.map_eq_some_iff, truncM_erA] at hq
+  obtain ⟨w, hw, rfl⟩ := hq
+  refine ⟨w, erRd_of_erA hw, ?_, hoff, hcnt, ?_⟩
+  · rw [truncM_erA] at hx; exact hx
+  · show decEBlk dn (truncM m) (off + 1).toNat (cnt - 1).toNat = some xs
+    rw [hoff, hcnt]; exact hxs
 
 theorem mapM_denoteN_of {dn : NIdx → Option ConLeche.Name} {ns : ConRon.Arena.NStore}
     (hd : ∀ k x, dn k = some x → denoteN ns k = some x) :
@@ -79,9 +98,6 @@ theorem mapM_denoteN_of {dn : NIdx → Option ConLeche.Name} {ns : ConRon.Arena.
     obtain ⟨x, hx⟩ := Option.isSome_iff_exists.1 (h k (List.mem_cons_self ..))
     obtain ⟨ks, hks⟩ := mapM_denoteN_of hd l (fun k' hk' => h k' (List.mem_cons_of_mem _ hk'))
     exact ⟨x :: ks, by simp [List.mapM_cons, hd k x hx, hks]⟩
-
-theorem erecP_get_lt {m : Mem} {i : Nat} {v : Word} (h : erecP m i = some v) : i < erTop m := by
-  sorry
 
 theorem decCV_bound {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
     ∃ v, a[q + 3]? = some v := by

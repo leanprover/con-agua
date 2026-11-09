@@ -16,22 +16,27 @@ namespace L.Checker
 
 open L.Arena L.Ind L.Compiler
 
-/-- `posFree`: `check_block_pass`' callees and `block_raw_rec`. -/
+/-- `posFree`: `check_block_pass`' callees and `block_is_rec` (the leaf `struct_used_later`). -/
 names_tree armPosTree : armPosFns
+names_tree armPosCallTree : armPosFns ++ ["struct_used_later"]
 def armPosT : ArmTest := (tA fun b => decide (b ∉ ([NOM, DPM, RAM, HBM, RFM] : List TieredArray)),
-  tC fun c => decide (c ∉ [204, 206, 208, 210, 214, 218, 219]), armPosTree)
+  tC fun c => decide (c ∉ [204, 206, 208, 210, 214, 218, 219]), armPosTree, armPosCallTree)
 
-/-- `hbFree`: `tailCallees`. -/
+/-- `hbFree`: `tailCallees` (the leaf `struct_used_later`). -/
 names_tree armHbTree : armHbFns
-def armHbT : ArmTest := (tA fun b => decide (b ≠ HBM), tC fun c => decide (c ≠ 214), armHbTree)
+names_tree armHbCallTree : armHbFns ++ ["struct_used_later"]
+def armHbT : ArmTest :=
+  (tA fun b => decide (b ≠ HBM), tC fun c => decide (c ≠ 214), armHbTree, armHbCallTree)
 
-/-- `rcFree`: `tailRcCallees`, `grcRcCallees`, `cons_block_recs_tf`. -/
+/-- `rcFree`: `tailRcCallees`, `grcRcCallees` (the leaf `struct_used_later`). -/
 names_tree armRcTree : armRcFns
+names_tree armRcCallTree : armRcFns ++ ["struct_used_later"]
 def armRcT : ArmTest := (tA fun b => decide (b ∉ ([NOM, DPM, RAM, HBM, RFM, TAM] : List TieredArray)),
-  tC fun c => decide (c ∉ [204, 206, 208, 210, 212, 213, 214, 218, 219]), armRcTree)
+  tC fun c => decide (c ∉ [204, 206, 208, 210, 212, 213, 214, 218, 219]), armRcTree, armRcCallTree)
 
 /-- `taFree`: `blockTaCallees`. -/
 names_tree armTaTree : armTaFns
-def armTaT : ArmTest := (tA fun b => decide (b ≠ TAM), tC fun c => decide (c ≠ 212 ∧ c ≠ 213), armTaTree)
+def armTaT : ArmTest :=
+  (tA fun b => decide (b ≠ TAM), tC fun c => decide (c ≠ 212 ∧ c ≠ 213), armTaTree, armTaTree)
 
 end L.Checker

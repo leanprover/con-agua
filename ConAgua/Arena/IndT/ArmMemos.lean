@@ -7,6 +7,9 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndPosSpec.CrLook
 import ConAgua.Arena.IndPosSpec.Mfr
 public import ConAgua.Arena.RecCheckSpec.RcLook
+public import ConAgua.Arena.IndInstallSpec.LeafKeep
+public import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+public import ConAgua.Arena.IndInstallSpec.GpbWSimF
 
 @[expose] public section
 
@@ -22,6 +25,9 @@ recursor stage's memos (`RcMR`) are written in `check_block_tail` only by `check
 (`mcMR`) by nothing under `check_ind_decl`.
 -/
 
+
+open Std.WP
+open scoped Lean.Order
 
 namespace L.Ind
 
@@ -114,5 +120,87 @@ theorem armMemos_call {p : Prog} {fs : List FnName} (hcl : closedA p cidFreeA ci
       rw [this]; omega
   exact ⟨hI.frame hfr hA hC', CoreMemos.frame hfr (by decide +kernel) (by decide +kernel) hC
     (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)⟩
+
+
+/-! ## The arms with leaves: `struct_used_later`, `mentions_any_const`
+
+The arms reaching the core (or the positivity check's constructor walk) reach `struct_used_later`,
+whose `hb` walk writes the `hb` memo; the tail reaches `mentions_any_const` (through
+`gen_rec_check`), which writes its own memo. Their write-set facts leave those two out as leaves
+(`closedAL`); the memos survive a leaf call by its own lemma. -/
+
+/-- A triple at a property of the memory gives it across a returning call. -/
+theorem callW_of_triple {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {Q R : Mem → Prop}
+    (ht : ⦃fun s => Q s.mem⦄ invoke p (exec p n) f vs ⦃fun _ s => R s.mem; ⊤⦄)
+    {m m' : Mem} {r : List Word} (h : callW p n f vs m = some (r, m')) (hq : Q m) : R m' := by
+  have h := run_of_callW h
+  simp only [run] at h
+  cases hr : (invoke p (exec p n) f vs).run { mem := m, loc := Locals.init [] } with
+  | error e => simp [hr, Except.map] at h
+  | ok q =>
+    obtain ⟨q, s'⟩ := q
+    simp only [hr, Except.map, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    exact M.of_run (P := fun s => Q s.mem) (Q := fun _ s => R s.mem) hq hr ht
+
+/-- `struct_used_later`'s frame, at any arguments: a core frame. -/
+theorem usLeaf_coreFr {p : Prog} (hus : UsF p) {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word}
+    (h : callW p n "struct_used_later" vs m = some (r, m')) : CoreFr m m' :=
+  callW_of_triple (Q := CoreFr m) (R := CoreFr m) (coreFr_us hus n m vs) h (coreFr_wframe.refl m)
+
+/-- **`struct_used_later` keeps the `hb` memo well formed**, at any arguments. -/
+theorem usLeaf_hb {p : Prog} (hus : UsF p) :
+    ∀ n vs m r m', callW p n "struct_used_later" vs m = some (r, m') → HbMemo m → HbMemo m' :=
+  fun n vs m _ _ h => callW_of_triple (Q := fun s => HbMemo m → HbMemo s) (R := fun s => HbMemo m → HbMemo s)
+    (coreHb_us hus n m vs) h id
+
+/-- **`struct_used_later` keeps the positivity check's memos.** -/
+theorem usLeaf_pos {p : Prog} (hus : UsF p) :
+    ∀ n vs m r m', callW p n "struct_used_later" vs m = some (r, m') → PosMR m → PosMR m' :=
+  fun n vs m r m' h hP => hP.setHb (usLeaf_coreFr hus h).mfr (usLeaf_hb hus n vs m r m' h hP.hb)
+
+/-- **`struct_used_later` keeps the recursor check's memos.** -/
+theorem usLeaf_rc {p : Prog} (hus : UsF p) :
+    ∀ n vs m r m', callW p n "struct_used_later" vs m = some (r, m') → RcMR m → RcMR m' :=
+  fun n vs m r m' h hR =>
+    let ⟨t, ht⟩ := hR.ta
+    ⟨usLeaf_pos hus n vs m r m' h hR.pos, t, taMR_mfr (usLeaf_coreFr hus h).mfr (by decide) (by decide) ht⟩
+
+/-- The leaf of the arms that reach the core. -/
+def usLeaves : List FnName := ["struct_used_later"]
+
+/-- The leaf of the `mentions_any` arm. -/
+def maLeaves : List FnName := ["mentions_any_const"]
+
+theorem HbMemo.ofClosedL {p : Prog} {fs : List FnName} (hcl : closedAL p hbFreeA hbFreeC fs usLeaves = true)
+    (hus : UsF p) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word}
+    {m' : Mem} (h : callW p n f vs m = some (r, m')) (hM : HbMemo m) : HbMemo m' :=
+  callW_keepL hcl (P := HbMemo) (fun _ _ hf ⟨mp, hmp⟩ => ⟨mp, hbMR_mfr (hbFree_mfr hf) (by decide) (by decide) hmp⟩)
+    (fun g hg => by simp only [usLeaves, List.mem_singleton] at hg; subst hg; exact usLeaf_hb hus) hf h hM
+
+theorem PosMR.ofClosedL {p : Prog} {fs : List FnName} (hcl : closedAL p posFreeA posFreeC fs usLeaves = true)
+    (hus : UsF p) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word}
+    {m' : Mem} (h : callW p n f vs m = some (r, m')) (hM : PosMR m) : PosMR m' :=
+  callW_keepL hcl (P := PosMR)
+    (fun _ _ hf hP => hP.mfr (posFree_mfr hf) (by simp [PosAv, MAM, NOM, DPM, RAM, HBM, RFM, TAM, MCM]))
+    (fun g hg => by simp only [usLeaves, List.mem_singleton] at hg; subst hg; exact usLeaf_pos hus) hf h hM
+
+theorem RcMR.ofClosedL {p : Prog} {fs : List FnName} (hcl : closedAL p rcFreeA rcFreeC fs usLeaves = true)
+    (hus : UsF p) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word}
+    {m' : Mem} (h : callW p n f vs m = some (r, m')) (hM : RcMR m) : RcMR m' :=
+  callW_keepL hcl (P := RcMR) (fun _ _ hf hR => by
+      have hfr := rcFree_mfr hf
+      obtain ⟨t, ht⟩ := hR.ta
+      exact ⟨hR.pos.mfr hfr (by simp [PosAv, NOM, DPM, RAM, HBM, RFM, MAM, MCM]), t,
+        taMR_mfr hfr (by decide) (by decide) ht⟩)
+    (fun g hg => by simp only [usLeaves, List.mem_singleton] at hg; subst hg; exact usLeaf_rc hus) hf h hM
+
+theorem maMR.ofClosedL {p : Prog} {fs : List FnName} (hcl : closedAL p maFreeA maFreeC fs maLeaves = true)
+    (hma : MaProg p) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word}
+    {m' : Mem} (h : callW p n f vs m = some (r, m')) (hM : ∃ mp, maMR m mp) : ∃ mp, maMR m' mp :=
+  callW_keepL hcl (P := fun m => ∃ mp, maMR m mp)
+    (fun _ _ hf ⟨mp, hm⟩ => ⟨mp, memoRG_frame maSch maSch_wf bmKey _ maFreeA maFreeC (by decide +kernel)
+      (by decide +kernel) _ _ hf mp hm⟩)
+    (fun g hg => by simp only [maLeaves, List.mem_singleton] at hg; subst hg; exact maLeaf_keep hma) hf h hM
 
 end L.Ind

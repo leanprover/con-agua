@@ -20,10 +20,10 @@ open L.Arena
 
 /-- `check_block_inds`' `AbsKeep` callees. -/
 def indsKeepCalleesC : List FnName :=
-  ["block_shape_with_sort", "check_block_inds_cv_tas", "cons_block_inds"]
+  ["block_shape_with_sort", "cons_block_inds"]
 
 /-- `check_block_positivity`'s `AbsKeep` callees. -/
-def posKeepCalleesC : List FnName := ["check_block_positivity_init", "check_block_positivity_nfs"]
+def posKeepCalleesC : List FnName := ["check_block_positivity_init"]
 
 /-- `gen_rec_check`'s `AbsKeep` callees. -/
 def grcKeepCalleesC : List FnName :=

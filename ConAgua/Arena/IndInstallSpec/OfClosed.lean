@@ -73,6 +73,6 @@ theorem taMR.ofClosed {p : Prog} {fs : List FnName} (hcl : closedA p taFreeA taF
     exact key c hc (by omega)
 
 /-- The callees of `check_block` before the tail that keep `target_abs`' memo by their text. -/
-def blockTaCallees : List FnName := ["block_raw_rec", "check_block_pass"]
+def blockTaCallees : List FnName := ["block_is_rec", "check_block_pass"]
 
 end L.Ind
