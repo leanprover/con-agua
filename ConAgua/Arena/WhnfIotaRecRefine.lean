@@ -412,17 +412,37 @@ theorem decCV_rd1 {R : Nat → Option Word} {rd : Word → Word} {q : Word} {cv 
   rw [e1, e2, e3, e4]
   exact ⟨hl1, rfl, hs, (by simpa using mapM_option_length _ _ _ hs), hl4, rfl⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A recursor record by its kind word `5`. -/
 theorem decCI_rec_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word}
     {ci : IConstantInfo} (hR : RdOK R rd) (h : decCI R q.toNat = some ci) :
-    (rd q = 5 → ∃ cv rules, ci = .recInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat rules ∧
-      decCV R (q.toNat + 1) = some cv ∧
+    (rd q = 5 → ∃ cv rules, ci = .recInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat (rd (q + 9) != 0)
+      rules ∧ decCV R (q.toNat + 1) = some cv ∧
       decRules R (rd (q + 7)).toNat (rd (q + 8)).toNat = some rules) ∧
-    (rd q ≠ 5 → ∀ cv mI rP rules, ci ≠ .recInfo cv mI rP rules) := by
-  sorry
-
--/
+    (rd q ≠ 5 → ∀ cv mI rP isK rules, ci ≠ .recInfo cv mI rP isK rules) := by
+  cases hq : R q.toNat with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  have hrd : rd q = w := hR.rd _ _ hq
+  rw [hrd]
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  constructor
+  · intro hw; subst hw
+    simp only [show UInt64.toNat 5 = 5 from rfl, bool?, Option.bind_eq_some_iff,
+      Option.map_eq_some_iff] at h
+    obtain ⟨cv, hcv, mI, ⟨w5, hw5, rfl⟩, rP, ⟨w6, hw6, rfl⟩, k, ⟨w9, hw9, rfl⟩, o, ⟨w7, hw7, rfl⟩,
+      c, ⟨w8, hw8, rfl⟩, rules, hrules, hc⟩ := h
+    cases hc
+    have h5 : rd (q + 5) = w5 := hR.offN (k := 5) (hk := by decide) hw5
+    have h6 : rd (q + 6) = w6 := hR.offN (k := 6) (hk := by decide) hw6
+    have h7 : rd (q + 7) = w7 := hR.offN (k := 7) (hk := by decide) hw7
+    have h8 : rd (q + 8) = w8 := hR.offN (k := 8) (hk := by decide) hw8
+    have h9 : rd (q + 9) = w9 := hR.offN (k := 9) (hk := by decide) hw9
+    exact ⟨cv, rules, by rw [h5, h6, h9], hcv, by rw [h7, h8]; exact hrules⟩
+  · intro hw cv mI rP isK rules hc
+    subst hc
+    have hne : w.toNat ≠ 5 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
+    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
+    all_goals (rw [hk] at h hne; simp [Option.bind_eq_some_iff] at h hne)
 
 /-- A constructor record by its kind word `4`. -/
 theorem decCI_ctor_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word}
