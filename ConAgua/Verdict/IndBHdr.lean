@@ -27,7 +27,8 @@ import all ConAgua.Arena.RecGen
 `l_model … unified` model lifts the callees outside the verdict closure, and `cch_ref` refines
 `cchT` under `StageT` (`reserved_contains`' hit as in `DeclHdrE.lean`, copied under `ib` names);
 the consts-resolve site calls `unresolved_consts_error` (`uce_errClaim_hi`, so `G` is
-`VerdictCtxU`). `class_const_ok` (`cco_ref`) is the guards through `cch_ref`, then the knot's
+`VerdictCtxU`); the literal-shape guard calls `class_const_ok_lit` (its model `cclLitW`, the fresh
+`axiomInfo` record `ccl_rec`, `ccl_sim` through `CcvSims.lit`). `class_const_ok` (`cco_ref`) is the guards through `cch_ref`, then the knot's
 `infer_type_core` and `ensure_sort_core`; its ok half is `classConstOk_refinesT` and
 `class_rec_ty_ok`'s refinement, its error half the callers' error claims.
 -/
@@ -425,15 +426,11 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-l_model classConstOkE_spec (p : Prog) (h : IhProg p)
-    (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
-    (hf : p.lookup "class_const_ok" = some classConstOkL)
-  fns [hf ↦ classConstOkE] specs [classConstOkHeaderE_spec p h hh n]
+l_model classConstOkE_spec (p : Prog) (h : CchProg p)
+  fns [h.cco ↦ classConstOkE] specs [classConstOkHeaderE_spec p h n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
 
 /-- What `class_const_ok` gives besides the twin's run (from `m`): the stage invariant, the
 growth, the abstraction memo. -/
@@ -444,42 +441,57 @@ structure CcoPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   abs : AbsOK m'
 
 section cco
-variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p)
-  {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+variable {p : Prog} (hP : CchProg p) (hq : KnotStageProg p) (hApd : ApdF p) (hCrf : CrfF p)
+  {dn : NIdx → Option ConLeche.Name} (hC : CcvSims p dn) {vis : Word} {fe : IFEnv}
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hq hApd hCrk in
+include hP hq hApd hCrf hC in
 /-- **`class_const_ok` refines `classConstOk`, both outcomes**: its guards (`cch_ref`, against
 `cchT`: `cchT_bind`), then the knot's `infer_type_core` and `ensure_sort_core` (their ok halves
 `Base.lean`'s, their errors the core stubs' claims). -/
 theorem cco_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q : Word} {cv : IConstantVal}
+    {c : ConLeche.ConstantVal}
     (hS : StageT dn vis fe m a) (hq' : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
-    (hA : AbsOK m) (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) :
+    (hA : AbsOK m) (hden : Frontend.denoteCV a.store cv = some c) :
     RefE (VerdictCtxU p) (classConstOkE p n m vis q) (ConRon.Arena.classConstOk V fe cv) a
       (fun v _ a' => CcoPost dn vis fe m v.2 a') := by
-  sorry
--/
+  cases n with
+  | zero => rw [classConstOkE.eq_1]; exact RefE.of_cls0 rfl
+  | succ n =>
+  rw [classConstOkE.arm1, cchT_bind]
+  refine RefE.bindE (fun _ => rfl) id (cch_ref hP hApd hCrf hC n hS hq' hqb hden hA.cr)
+    fun ⟨r1, m1⟩ _ a1 hrun ⟨hS1, hg1, hA1⟩ => ?_
+  dsimp only [classConstOkE.k_class_const_ok_header]
+  obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hq').2.2
+  have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have et : rdW (m1.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wt := by
+    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq3]; exact hg1.ext _ _ hwt)
+  rw [et, hty]
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n (by omega) hS1 0 wt hwtl _ h2)
+    (RSim.coreAbs hq.closed (by decide) (hA1 hA) (inferT_rsim hq n (by omega) hS1 0 wt hwtl))
+    fun r2 m2 _ a2 _ hrun2 ⟨⟨hS2, hg2, hb2, rfl⟩, hA2⟩ => ?_
+  dsimp only [classConstOkE.k_infer_type_core]
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h3 => hG.core.ensureSortCore n (by omega) hS2 0 (r2.headD 0) hb2 _ h3)
+    (RSim.coreAbs hq.closed (by decide) hA2 (ensureSortT_rsim hq n (by omega) hS2 0 (r2.headD 0) hb2))
+    fun r3 m3 _ a3 _ hrun3 ⟨⟨hS3, hg3, _⟩, hA3⟩ => ?_
+  exact RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, hA3⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hq hApd hCrk in
+include hP hq hApd hCrf hC in
 /-- **`class_const_ok` refines `classConstOk`** under `StageT` (`cco_ref`'s ok half). -/
 @[refines ConRon.Arena.classConstOk]
-theorem classConstOk_refinesT (h : IhProg p)
-    (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
-    (hc : p.lookup "class_const_ok" = some classConstOkL) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
-    (a₀ : AState) (q : Word) (cv : IConstantVal) (hS : StageT dn vis fe s₀.mem a₀)
+theorem classConstOk_refinesT (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
+    (a₀ : AState) (q : Word) (cv : IConstantVal) {c : ConLeche.ConstantVal} (hS : StageT dn vis fe s₀.mem a₀)
     (hq' : decCV (erecP s₀.mem) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
-    (hA : AbsOK s₀.mem) (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks) :
+    (hA : AbsOK s₀.mem) (hden : Frontend.denoteCV a₀.store cv = some c) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_const_ok" [vis, q]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classConstOk V fe cv) a₀ ∧
       KPT dn vis fe s₀.mem decUnit (r, s'.mem) (AM.st (ConRon.Arena.classConstOk V fe cv) a₀)
         (AM.res (ConRon.Arena.classConstOk V fe cv) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (RefE.triple (classConstOkE_spec p h hh hc n s₀ vis q)
-    (cco_ref hq hApd hCrk n hn hS hq' hqb hA hlps)) ?_
+  refine triple_post (RefE.triple (classConstOkE_spec p hP n s₀ vis q)
+    (cco_ref hP hq hApd hCrf hC n hn hS hq' hqb hA hden)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, ⟨by rw [hst]; exact hR.stage, hR.grow, trivial⟩, hR.abs⟩
--/
 
 end cco
 
