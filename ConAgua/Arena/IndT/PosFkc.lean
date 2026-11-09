@@ -17,6 +17,20 @@ import ConAgua.Arena.IndSumSpec.StructUsedHb
 import ConAgua.Arena.IndRealAbs
 import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.ExprOps.Inst1
+import ConAgua.Arena.IlpRdReal
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.EnvFindWHit
+import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.IndPosSpec.InstW
+import ConAgua.Arena.IndPosSpec.BvbWMfr
+import ConRon.Bridge.Inductives.FieldTele
+import ConRon.Bridge.Inductives.PosWalks
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.L.WordOff
+import ConLeche.Verify.Inductives.NestContInv
+import ConLeche.Verify.BridgeDecl
+import ConLeche.Verify.InferLemmas
 import all ConAgua.Arena.IndPos2
 
 @[expose] public section
@@ -201,6 +215,167 @@ theorem csa_ref (hP : FkcProg p) (hGc : G → CoreStubsE p) (d : Word) (n : Nat)
   rw [hb2d] at hR
   exact RefE.lastE (K := csaE.k_check_spine_at p) (f := fun v => (0, v.2)) (fun _ => rfl) (fun _ => rfl) id hR
     fun v _ a5 _ ⟨k5, hP5⟩ => ⟨k24.trans k5, fun hPm => hP5 ((hP3 hPm).fr (MFr.ofI1F hin))⟩
+
+include hq henv in
+/-- **`family_key_check` refines `familyKeyCheck .verified`, both outcomes** (twin side: con-ron's
+`familyKeyCheck_specF`'s proof; `nty_ref`'s first half): the family (`env_find`, a miss or another
+kind the twin's failure), its level count (`view_ls_len`), `family_telescope` (`ft_ref`), `cv_lps`,
+`inst_lp_fast` (its real reading), the arguments (`csa_ref`). -/
+theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _root_.L.Checker.nvFns = true)
+    (hGc : G → CoreStubsE p) (hGw : G → WhnfTopE p) (d : Word) (k : Nat) (hk62 : k ≤ 2 ^ 62) {m : Mem}
+    {a : AState} {c us dO dL : Word} {ds : List EIdx} {cP : ConLeche.Name} {usP : List ConLeche.Level}
+    {dsP : List ConLeche.Expr} (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hcH : H c) (hlH : H us)
+    (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : dO.toNat + dL.toNat ≤ iwTop m)
+    (hcP : denoteN a.store.ns (decI c) = some cP) (husP : denoteLs a.store.lss (decI us) = some usP)
+    (hdsP : Frontend.denoteEList a.store ds = some dsP) (hwds : ∀ x ∈ dsP, ConLeche.Expr.WScoped d.toNat x) :
+    RefE G (fkcE p k m vis d c us dO dL) (ConRon.Arena.familyKeyCheck V fe d.toNat (decI c) (decI us) ds) a
+      (fun v _ a' => InsAt dn vis fe env m a v.2 a' ∧ (PosMR m → PosMR v.2)) := by
+  cases k with
+  | zero => rw [fkcE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  have hS := hC.stage
+  have hE := hS.check.env
+  have hR := hS.check.arena.base
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
+  rw [fkcE.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 hef => ?_
+  obtain ⟨hm1, rfl⟩ := envFind_callB' hP.nty hP.ft hcH hE hef
+  subst m1
+  dsimp only [fkcE.k_env_find]
+  unfold ConRon.Arena.familyKeyCheck
+  by_cases hf0 : (findRes m vis c).headD 0 = 0
+  · refine RefE.abortAt hf0 fun _ => ?_
+    rw [findRes_miss hE hcH hf0]
+    exact ErrClaim.fail _ _ (by decide)
+  refine RefE.pass hf0 ?_
+  obtain ⟨hfind, ci, hci⟩ := findRes_hit hE hcH hf0
+  rw [hci] at hfind
+  generalize (findRes m vis c).tail.headD 0 = q at hfind hci ⊢
+  change RefE _ (if erRd m q ≠ 3 then _ else _) _ _ _
+  by_cases h3 : erRd m q ≠ 3
+  · refine RefE.abortAt h3 fun _ => ?_
+    rw [hfind]
+    cases ci with
+    | indInfo cv caps =>
+      exfalso; apply h3
+      have hk := decCI_indInfo_kind hci
+      obtain ⟨w, hw⟩ := decCI_rd hci
+      simp only [nat?, hw, Option.map_some, Option.some.injEq] at hk
+      rw [(erRd_of_erecP hw).1]
+      exact UInt64.toNat_inj.mp (by simpa using hk)
+    | _ => exact ErrClaim.fail _ _ (by decide)
+  refine RefE.pass h3 ?_
+  have hk3 : nat? (erecP m) q.toNat = some 3 := by
+    obtain ⟨w, hw⟩ := decCI_rd hci
+    have h3' : erRd m q = 3 := Decidable.not_not.mp h3
+    rw [(erRd_of_erecP hw).1] at h3'
+    simp [nat?, hw, h3']
+  obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
+  have hcv : decCV (erecP m) (q.toNat + 1) = some cv := by
+    simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hci
+    obtain ⟨kd, hkd, hci⟩ := hci
+    rw [hk3] at hkd; cases hkd
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at hci
+    obtain ⟨cv', h1, _, _, h2⟩ := hci
+    cases h2; exact h1
+  obtain ⟨v16, hv16⟩ := decCI_indInfo_bound hci
+  have hq64 := erecP_lt64 hv16
+  have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have e12 : (q + 3).toNat = q.toNat + 1 + 1 + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+  obtain ⟨-, hlps, -⟩ := decCV_some hcv
+  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hlps
+  obtain ⟨lo, hlo, ll, hll, hsl⟩ := hlps
+  have hlen : (erRd m (q + 3)).toNat = cv.levelParams.length := by
+    simp only [nat?, Option.map_eq_some_iff] at hll
+    obtain ⟨w, hw, rfl⟩ := hll
+    rw [← e12] at hw
+    rw [(erRd_of_erecP hw).1]
+    simpa using (mapM_opt_length _ _ _ hsl).symm
+  -- the twin's family and its denotation
+  obtain ⟨cc, hcc, he⟩ := ConRon.Bridge.Inductives.find_some_rel hC.check.ienv hcP hfind
+  obtain ⟨cvP, capsP, hcvP, hcapsP, rfl⟩ := ConRon.Bridge.Inductives.denoteCI_indInfo_inv hcc
+  obtain ⟨-, hlpsC, -⟩ := ConRon.Bridge.denoteCV_inv hcvP
+  have hws : ConLeche.Expr.WScoped 0 cvP.type :=
+    ConLeche.Expr.WScoped.of_not_hasFvar (henv.consts _ (ConLeche.Env.find?_mem he)).1
+  rw [hfind]
+  dsimp only
+  -- `view_ls_len`
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
+  obtain ⟨s2, hs2, -, hm2, hln0, hr2⟩ :=
+    triple_of_callW (viewLsLen_specE p hP.nty.hls hP.nty.hvl k ⟨m, Locals.init []⟩ _) h2
+  simp only at hm2
+  rw [hs2] at hm2
+  subst hr2
+  rw [hm2]
+  rcases lsNodeW_cases m us with hln | ⟨o', l', hln⟩
+  · exact absurd hln hln0
+  have hvl := lsNodeW_viewLen hR hlH hln
+  refine ⟨some l'.toNat, a, by simp [ConRon.Arena.viewLsLen, hvl]; rfl, ?_⟩
+  dsimp only [fkcE.k_view_ls_len]
+  simp only [hln, List.tail_cons, List.headD_cons]
+  change RefE _ (if l' ≠ erRd m (q + 3) then _ else _) _ _ _
+  refine RefE.guardThen (by decide) (fun h => by rw [← hlen]; simpa [UInt64.toNat_inj] using h)
+    (fun h => by rw [← hlen] at h; simpa [UInt64.toNat_inj] using h) fun hneq _ => ?_
+  -- `family_telescope`
+  have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
+    show decCV (erA (truncM m)) _ = _
+    rw [truncM_erA, e1]; exact hcv
+  have hFT := ft_ref hq hP.ft henv k (by omega) (cvq := q + 1) (capsq := q + 5) hC hA hcvB
+    (by rw [e5]; exact hcaps) hcvP hws
+  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hP.ft k _ vis _ _) hGnv
+    (fun hG => ⟨hGnv hG, hGw hG⟩) hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_
+  dsimp only [fkcE.k_family_telescope]
+  obtain ⟨s3', hs3', -, hfx3⟩ := triple_of_callE (ftE_spec p hP.ft k ⟨m, Locals.init []⟩ vis (q + 1) (q + 5)) hc3
+  obtain ⟨c2, tyCP, htyCP, hF1⟩ := ConRon.Bridge.Inductives.familyTelescope_specF ConRon.Bridge.CoreSpec.of_core
+    henv cv cvP caps capsP hws a a2 tyC hC.check ⟨hcvP, hcapsP⟩ hr3
+  have hS3 := hP3.stage.stage
+  have hg3 := hP3.grow
+  generalize s3.mem = m3 at hS3 hg3 hP3 hs3' ⊢
+  -- `cv_lps`
+  have hcv4 : decCVp m3 (q + 1).toNat = some cv := by
+    rw [e1]; exact hg3.ext.decCV hcv
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r5 m5 hlp => ?_
+  dsimp only [fkcE.k_cv_lps]
+  obtain ⟨hS5, hg5, -, hdec5, -⟩ := pos2_cvLpsW_stage hlp hS3 hcv4 (by rw [e1]; omega)
+  have hg35 := hg3.trans hg5
+  -- `inst_lp_fast`
+  refine RefE.bindLift (fun _ => rfl) fun r6 m6 hil => ?_
+  obtain ⟨tl, a4, hrun5, ⟨hS6, hg6, htlH, htld⟩, ⟨_, _, hfA, hfC, hf6⟩, hA6⟩ :=
+    IlpRd.realC hIlpf hP3.stage k CWF _ _ _ _ cv.levelParams m5 m6 a2 r6 hlH hP3.hw
+      ⟨rfl, erToIwW_iwFr hlp⟩ hS5 hdec5 hil
+  rw [CWF_eq, hP3.dec] at hrun5
+  refine ⟨_, _, hrun5, ?_⟩
+  dsimp only [fkcE.k_inst_lp_fast]
+  have hg36 := hg35.trans hg6
+  obtain ⟨c4, htl⟩ := ConRon.Bridge.Inductives.instLPFast_cstep c2.ok
+    (ConRon.Bridge.denoteNListE_ext c2.ext _ _ hlpsC) (ConRon.Bridge.denoteLs_ext husP c2.ext) htyCP hrun5
+  have c24 := c2.trans c4
+  have hA6' : AbsOK m6 := ((AFr.iw (erToIwW_iwFr hlp)).trans hA6) hP3.abs
+  have hC6 : StageC dn vis fe env m6 a4 := StageC.of_check hC hS6 hA6' c24.ok c24.ext
+  have hcl : tyCP.hasFvar = false := by
+    obtain ⟨F, hFt⟩ := hF1
+    rw [ConLeche.familyTelescope_datF] at hFt
+    exact ConLeche.familyTelescope_hasFvar
+      (fun _ _ _ hw he => ConLeche.whnf_WScoped henv F hw he) hFt
+      (henv.consts _ (ConLeche.Env.find?_mem he)).1
+  have hP6 : PosMR m → PosMR m6 := fun hPm => by
+    have hP3m : PosMR m3 := by
+      rw [← hs3']; exact ftE_pos hq.closed hP.ft hR hcvB hPm hfx3
+    exact hP3m.fr ((posmemo_cvLpsW_mfr hlp).trans (MFr.of_frame hf6 hfA hfC))
+  -- `check_spine_at`
+  have hcsa := csa_ref hq henv hP hGc d k (by omega) m6 a4 (r6.headD 0) dO dL ds dsP _ hC6 hA6' htlH
+    (by rw [decHL_agree (RdS.of_grow hg36) (fun j hj => by omega)]; exact hds)
+    (by have := hg36.iw; omega) (by rw [htld]; exact htl)
+    (ConRon.Bridge.denoteEList_ext c24.ext _ _ hdsP)
+    (ConLeche.Expr.WScoped.of_not_hasFvar (by rw [ConLeche.Expr.hasFvar_instantiateLevelParams]; exact hcl))
+    hwds
+  rw [htld] at hcsa
+  exact RefE.lastE (K := fkcE.k_check_spine_at p) (f := fun v => (0, v.2)) (fun _ => rfl) (fun _ => rfl) id
+    (RefE.ofCallE (s₀ := ⟨m6, Locals.init []⟩) (csaE_spec p hP k _ vis d _ dO dL) hGnv hcsa)
+    fun v _ a5 _ ⟨s', hs', _, k7, hP7⟩ => by
+      rw [← hs']
+      exact ⟨(InsAt.cstep hC hS6 hA6' hg36 c24).trans k7, fun hPm => hP7 (hP6 hPm)⟩
 
 end sims
 
