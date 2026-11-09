@@ -444,9 +444,12 @@ end sims2
 
 /-! ## `class_rules_ok_one` -/
 
-/-- `CrsProg` with `class_rule_ok`'s lookups. -/
+/-- `CrsProg` with `class_rule_ok`'s lookups, and `class_gen_rule` keeping `mentions_any`'s memo
+(at the checker: a write-set fact, `maMR.ofClosedL`). -/
 structure CrsProgE (p : Prog) : Prop extends CrsProg p where
   cr : CruleProg p
+  maKeep : ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
+    callW p n "class_gen_rule" vs m = some (r, m') → (∃ mp, maMR m mp) → ∃ mp, maMR m' mp
 
 l_model cr1E_spec (p : Prog) (hP : CrsProgE p)
   fns [hP.one ↦ cr1E] specs [cruleE_spec p hP.cr n]
