@@ -268,7 +268,7 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
   rw [← hwd]
   -- `strip_pis` (outside the verdict closure)
   refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
-  obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe n w hw32 m m1 a r1 h1 hS
+  obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripF_pis_ok vis fe n w hw32 m m1 a r1 h1 hS
   obtain ⟨ha1, -⟩ := ConRon.Bridge.Inductives.stripPis_pstep hC.check.state hdw hrun1
   rw [ha1] at hrun1 hS1
   refine ⟨_, _, hrun1, ?_⟩

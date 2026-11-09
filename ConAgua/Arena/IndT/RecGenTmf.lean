@@ -494,7 +494,7 @@ theorem tmf_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   -- the head
   refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   obtain ⟨s2, rfl, -, hs2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩) (gafF_spec p hP.ad n _ [CWF, mty]) h2
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hw32, rfl⟩ := gafF_ok dn vis fe CWF mty hmty s1.mem s2.mem _ r2 hs2 hS1
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hw32, rfl⟩ := gafF_ok vis fe CWF mty hmty s1.mem s2.mem _ r2 hs2 hS1
   rw [CWF_eq] at hrun2
   obtain ⟨rfl, hhd⟩ := ConRon.Bridge.Inductives.getAppFn_run hC.check.state hmtyP hrun2
   refine ⟨_, _, hrun2, ?_⟩

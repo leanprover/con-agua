@@ -100,7 +100,7 @@ theorem stab (h : SPL dec m o l xs) : StabD (fun m => L.Ind.decPL m (dec m) o l)
   fun _ hg => (h.grow hg).decPL
 
 /-- `sl_cons` of a stably decoding pointer onto a stable slice. -/
-theorem cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem cons {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {x o l : Word} {r : List Word} {y : α} (h : consW n m x o l = some (r, m'))
     (hS : StageR vis fe m a) (hl : SPL dec m o.toNat l.toNat xs)
     (hy : StabD (fun m => dec m x.toNat) m y) :

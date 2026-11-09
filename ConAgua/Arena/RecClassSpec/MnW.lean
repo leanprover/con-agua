@@ -352,7 +352,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   subst hfd
   rw [itW.k_expr_get_d.arm1]
   refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_mk_app_n_f n g t _ _ _ _ e o))) hK
-    (RSim.withF ((mknF_ok (fun _ => none) vis fe _ _ _ hfH xs).sim ⟨hS3, by rw [decHL_grow hg3 hxb]; exact hxs⟩)
+    (RSim.withF ((mknF_ok vis fe _ _ _ hfH xs).sim ⟨hS3, by rw [decHL_grow hg3 hxb]; exact hxs⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r4, m4⟩ fx a4 - ⟨⟨hS4, hg4, hfxH, hfxd⟩, hf4⟩
   dsimp only at hS4 hg4 hfxH hfxd
@@ -375,7 +375,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   rw [itW.k_sl_snoc.arm1, hr6]
   simp only [List.headD_cons, List.tail_cons]
   refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_mk_app_n_f_2 n _ _ e o))) hK
-    (RSim.withF ((mknF_ok (fun _ => none) vis fe _ _ _ hmtH (idx ++ [decI (r4.headD 0)])).sim ⟨hS6, hd6⟩)
+    (RSim.withF ((mknF_ok vis fe _ _ _ hmtH (idx ++ [decI (r4.headD 0)])).sim ⟨hS6, hd6⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r7, m7⟩ body a7 - ⟨⟨hS7, hg7, hbH, hbd⟩, hf7⟩
   dsimp only at hS7 hg7 hbH hbd
@@ -665,7 +665,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   rw [c2W.k_sl_snoc.arm1, hr2]
   simp only [List.headD_cons, List.tail_cons]
   refine RSim.bind (K := c2W.k_mk_app_n_f n d fo fl ihso ihsl) rfl
-    (RSim.withF ((mknF_ok (fun _ => none) vis fe _ _ _ hmcH (ra.drop NPC ++ [decI capp])).sim ⟨hS2, hd2⟩)
+    (RSim.withF ((mknF_ok vis fe _ _ _ hmcH (ra.drop NPC ++ [decI capp])).sim ⟨hS2, hd2⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r3, m3⟩ body a3 - ⟨⟨hS3, hg3, hbH, hbd⟩, hf3⟩
   dsimp only at hS3 hg3 hbH hbd
@@ -767,7 +767,7 @@ theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl 
     (by rw [decHL_grow hg12 hfb]; exact hfvs) (Nat.le_trans hfb hg12.iw)
   rw [cW.k_sl_append.arm1]
   refine RSim.bind (K := cW.k_mk_app_n_f n g c d nPc fo fl ihso ihsl (r1.headD 0) (r1.tail.headD 0)) rfl
-    (RSim.withF ((mknF_ok (fun _ => none) vis fe _ _ _ hccH (DS ++ fvs)).sim ⟨hS3, hd3⟩) (fun _ hb => mknF_afr hb)) ?_
+    (RSim.withF ((mknF_ok vis fe _ _ _ hccH (DS ++ fvs)).sim ⟨hS3, hd3⟩) (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r4, m4⟩ capp a4 - ⟨⟨hS4, hg4, hcH, hcd⟩, hf4⟩
   dsimp only at hS4 hg4 hcH hcd
   subst hcd

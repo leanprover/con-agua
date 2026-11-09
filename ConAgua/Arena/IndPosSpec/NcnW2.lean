@@ -36,12 +36,15 @@ theorem nestCtorNf_spec (p : Prog) (L : RxLook p) (hp : p.lookup "nest_ctor_nf" 
     (s₀ : St) (ctx po pl us dO dL cv closed : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_ctor_nf" [ctx, po, pl, us, dO, dL, cv, closed]
     ⦃fun r s' => LocEq s' s₀ ∧ ncnW k s₀.mem ctx po pl us dO dL cv closed = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  simp only [invoke_eq _ hp, callFn, nestCtorNfL]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      posRec5_specW p L.ha L.h5 k, (rxSpec_all p L k).2.2.2.1, (rxSpec_all p L k).2.2.2.2.2.2.2] <;>
+    finish (gen := 20) [ncnW, rdW_eq, erRd_get]
 
 section rel
-variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+variable (fe : IFEnv) (vis : Word)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv closed nf : Word) (c : NestCtx)
     (prog : List NestHole) (ds : List EIdx) (cvv : IConstantVal) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
     (h : ncnW k m ctx po pl us dO dL cv closed = some (nf, m')) (hS : StageR vis fe m a)
@@ -81,10 +84,7 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
   have hg13 := (hg1.trans hg2).trans hg3
   -- the constructor's name, from `EREC`
   obtain ⟨wn, hwn, hwnH, hwnd⟩ := decCV_name hcv
-  have hcvb : cv.toNat < erTop m := by have := (Array.getElem?_eq_some_iff.mp hwn).1; have := erecP_size_le m; omega
-  have hrdn : rdW (m3.arr64 EREC) cv = wn := by
-    have e1 : (m3.arr64 EREC)[cv.toNat]? = (m.arr64 EREC)[cv.toNat]? := hg13.erGet _ hcvb
-    simp [rdW, e1, erecP_get hwn]
+  have hrdn : erRd m3 cv = wn := (erRd_of_erecP (hg13.ext _ _ hwn)).1
   rw [hrdn] at hget4
   refine ⟨⟨cvv.name, decI us, ys, decE ty⟩, a3, ?_, ?_, by omega,
     ⟨M3, G3, hS4, (hg1.trans hg2).trans (hg3.trans hg4), hR3.frame (posRecW_fr h), hk2.trans hk3 hG2,
@@ -112,7 +112,6 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
       Option.bind_some, ite_true, ite_true]
     rw [show nf.toNat + 2 + 1 = nf.toNat + 3 by omega, hn2', hn3', hn4']
     simp [hqlT, hwnd, hty, decE_eq]
--/
 
 end rel
 

@@ -183,7 +183,8 @@ theorem run_load_size {b pb : ByteArray} {sz : TieredArray → Nat} (hs : ∀ s,
 (`len` the header's word `1`); and threads `ths`, each a fresh region memory (`INIT = 0`, every owned
 array zero at its size in entry 1's memory) with its calls (`ThreadRuns`:
 each call's run of `check` on `bufMem B r j` returns, and the buffer is unchanged after it), every
-claimed index below `k`, and every index below `k` claimed by some thread. -/
+claimed index below `k`, every index below `k` claimed by some thread, and each thread's claims
+increasing. -/
 theorem threads_twinAcceptsPooled (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
@@ -192,7 +193,8 @@ theorem threads_twinAcceptsPooled (b pb : ByteArray) (sz : TieredArray → Nat) 
     (ths : List (Mem × List (Word × Nat × Mem)))
     (hth : ∀ t ∈ ths, (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m₁.arr64 b).size) ∧
       t.1.glob INIT = 0 ∧ ThreadRuns B t.1 t.2 ∧ ∀ c ∈ t.2, c.1 < rs₁.headD 0 - 9223372036854775808)
-    (hcov : ∀ j : Word, j < rs₁.headD 0 - 9223372036854775808 → ∃ t ∈ ths, ∃ c ∈ t.2, c.1 = j) :
+    (hcov : ∀ j : Word, j < rs₁.headD 0 - 9223372036854775808 → ∃ t ∈ ths, ∃ c ∈ t.2, c.1 = j)
+    (hinc : ∀ t ∈ ths, (t.2.map (·.1)).Pairwise (· < ·)) :
     TwinAcceptsPooled [b] := by
   sorry
 

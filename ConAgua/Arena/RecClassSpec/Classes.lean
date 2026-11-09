@@ -225,7 +225,7 @@ def crW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word 
     else crK1 cR n nP mo ml ro rl
       (cR n "open_pis_at_fvars_f"
         [rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1,
-         rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m)
+         erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m)
 
 /-- After `open_pis_at_fvars_f`. -/
 def crK1 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)

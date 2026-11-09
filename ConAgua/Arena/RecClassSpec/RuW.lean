@@ -368,7 +368,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   subst hfd
   rw [c1tW.k_expr_get_d.arm1]
   refine RSim.bind (K := fun o => K (fcK (c1tW.k_mk_app_n_f n pvo pvl rlvls _ _ _ _ _ e o))) hK
-    (RSim.withF ((mknF_ok (fun _ => none) vis fe _ _ _ hfH xs).sim ⟨hS4, by rw [decHL_grow hg4 hxb]; exact hxs⟩)
+    (RSim.withF ((mknF_ok vis fe _ _ _ hfH xs).sim ⟨hS4, by rw [decHL_grow hg4 hxb]; exact hxs⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r5, m5⟩ fx a5 - ⟨⟨hS5, hg5, hfxH, hfxd⟩, hf5⟩
   dsimp only at hS5 hg5 hfxH hfxd
@@ -402,7 +402,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   rw [c1tW.k_sl_snoc.arm1, hr8]
   simp only [List.headD_cons, List.tail_cons]
   refine RSim.bind (K := fun o => K (fcK (c1tW.k_mk_app_n_f_2 n _ _ e o))) hK
-    (RSim.withF ((mknF_ok (fun _ => none) vis fe _ _ _ hrcH (pvars ++ idx ++ [decI (r5.headD 0)])).sim ⟨hS8, hd8⟩)
+    (RSim.withF ((mknF_ok vis fe _ _ _ hrcH (pvars ++ idx ++ [decI (r5.headD 0)])).sim ⟨hS8, hd8⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r9, m9⟩ app a9 - ⟨⟨hS9, hg9, happH, happd⟩, hf9⟩
   dsimp only at hS9 hg9 happH happd
@@ -557,7 +557,7 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
     (Nat.le_trans hfb hg1.iw)) (by rw [decHL_grow hg1 hib]; exact hihs) (Nat.le_trans hib hg1.iw)
   rw [grcW.k_sl_append.arm1]
   refine RSim.bind (K := grcW.k_mk_app_n_f n g fo fl) rfl
-    (RSim.withF ((mknF_ok (fun _ => none) vis fe _ _ _ hsvH (fvs ++ ihs)).sim ⟨hS2, hd2⟩) (fun _ hb => mknF_afr hb)) ?_
+    (RSim.withF ((mknF_ok vis fe _ _ _ hsvH (fvs ++ ihs)).sim ⟨hS2, hd2⟩) (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r3, m3⟩ body a3 - ⟨⟨hS3, hg3, hbH, hbd⟩, hf3⟩
   dsimp only at hS3 hg3 hbH hbd
   subst hbd

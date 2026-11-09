@@ -377,7 +377,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
   have hnlw : [UInt64.ofNat names.length] = [nl] := by rw [← hnl, ofNat_toNat_word nl]
   rw [recTW_step] at hrt
   obtain ⟨r1, m1, hra, hrt⟩ := ipK_inv hrt (by simp [recTK1])
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hdec1⟩ := stripF_pis_ok dn vis fe mI ty hty m m1 a r1 hra hS
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hdec1⟩ := stripF_pis_ok vis fe mI ty hty m m1 a r1 hra hS
   have hty' : (decI ty : EIdx) = decE ty := rfl
   cases x1 with
   | none =>
@@ -418,7 +418,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         rw [hdomw]; exact hty2
       obtain ⟨r3, m3, hra3, hrt⟩ := ipK_inv hrt (by simp [recTK3])
       obtain ⟨x3, a3, hrun3, hS3, hg3, hdl3, hdI3⟩ :=
-        gafF_ok dn vis fe CWF _ hdomlt m1 m3 a1 r3 hra3 hS1
+        gafF_ok vis fe CWF _ hdomlt m1 m3 a1 r3 hra3 hS1
       have hR3 : ArenaR m3 a3 := hS3.check.arena.base
       have hvb := viewBind_forall m1 a1 hR1 _ hbl hvok hg6'
       have hrun3' : StateT.run (getAppFn coreWalkFuel (decE

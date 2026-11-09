@@ -67,7 +67,7 @@ theorem partsMemberIdx_lt {names : List NIdx} {lvls : LsIdx} {e : EIdx} {a a' : 
 
 /-- **`ctor_member`'s model refines `ctorMember?`**: the constructor `[cv, nF]` decoded below the
 tops at `c`, the member names a handle slice below the top. -/
-theorem ctmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
+theorem ctmW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
     {a : AState} {no nl lvls nP c : Word} {cv : IConstantVal} {nF : Nat} {names : List NIdx}
     (hS : StageR vis fe m a) (hc : DecB (fun m => decCN m c.toNat) m (cv, nF))
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m names) (hnb : no.toNat + nl.toNat ≤ iwTop m)
@@ -75,7 +75,74 @@ theorem ctmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     Sim (ctmW (n + 1) m no nl lvls nP c) (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a
       (fun r o m' a' => MemIdxOut r o ∧ (∀ i, o = some i → i < names.length) ∧
         StageR vis fe m' a' ∧ IWGrow m m') := by
-  sorry
+  obtain ⟨⟨cvp, hcvp, hcv⟩, hnF⟩ := decCN_some (show decCN (truncM m) c.toNat = some (cv, nF) from hc)
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  obtain ⟨hcw, -, -⟩ := partsIwRd hcvp rfl
+  have hc1lt := partsIwLt hnF
+  have hc1 : (c + 1).toNat = c.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  obtain ⟨hnFw, hnFb, -⟩ := partsIwRd hnF hc1
+  have hcvp64 : (UInt64.ofNat cvp).toNat = cvp := by
+    have := (partsIwRd hcvp rfl).2.1; exact UInt64.toNat_ofNat_of_lt' this
+  obtain ⟨htyl, htye⟩ := partsCVType hcv hcvp64
+  intro r m' hmo
+  rw [ctmW.eq_2] at hmo
+  rw [hcw, hnFw] at hmo
+  split at hmo
+  · cases hmo
+  rename_i hov
+  have hk : (nP + UInt64.ofNat nF).toNat = nP.toNat + nF := by
+    rw [partsAddNoOv hov, UInt64.toNat_ofNat_of_lt' hnFb]
+  revert r m'
+  show Sim _ _ a _
+  have h1 := partsSimW (stripF_pis_ok vis fe (nP + UInt64.ofNat nF)
+    (erRd m (UInt64.ofNat cvp + 3)) htyl) hS
+  rw [hk, htye] at h1
+  refine Sim.bindK (body := fun r m1 => if r.headD 0 = 0 then some ([0, 0], m1)
+      else ctmW.k_get_app_fn_f n no nl lvls (gafF m1 [CWF, r.tail.tail.tail.headD 0]))
+    rfl (fun _ _ => rfl) h1 ?_
+  rintro r1 x1 m1 a1 ⟨hS1, hg1, hd1⟩
+  cases x1 with
+  | none =>
+    have h0 : r1.headD 0 = 0 := hd1
+    simp only [h0, ite_true]
+    exact Sim.ret ⟨rfl, by simp, hS1, hg1⟩
+  | some q =>
+    obtain ⟨l1, e1⟩ := q
+    obtain ⟨h1', -, hbl, hbe⟩ := hd1
+    rw [partsDrop3] at hbl hbe
+    simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
+    have h2 := partsSimW (gafF_ok vis fe CWF _ hbl) hS1
+    rw [CWF_eq, hbe] at h2
+    show Sim (ctmW.k_get_app_fn_f n no nl lvls _) (getAppFn coreWalkFuel e1 >>= fun hd =>
+      ConRon.Arena.memberIdxAt? names (decI lvls) hd) a1 _
+    refine Sim.bindK (K := ctmW.k_get_app_fn_f n no nl lvls) (g := fun hd =>
+      ConRon.Arena.memberIdxAt? names (decI lvls) hd)
+      (body := fun r m2 => ctmW.k_member_idx_at (memWk n m2 no nl lvls (r.headD 0))) rfl (fun _ _ => rfl) h2 ?_
+    rintro r2 x2 m2 a2 ⟨hS2, hg2, hl2, he2⟩
+    have hnames2 : decHL m2 no.toNat nl.toNat = some names :=
+      hnm.stab (OMono.decHL _ _) m2 (hg1.trans hg2)
+    have hb : no.toNat + nl.toNat < 2 ^ 64 := by omega
+    obtain ⟨ws, hws, hnm', hwlt⟩ := slR_of_decHL m2 nl.toNat no.toNat names hnames2 hb
+    rw [ofNat_toNat_word, ofNat_toNat_word] at hws
+    have hlen : ws.length < 2 ^ 64 := by
+      have := decHL_length m2 hnames2; rw [hnm'] at this; simp at this; omega
+    refine Sim.congr (op := ConRon.Arena.memberIdxAt? names (decI lvls) x2 >>= pure) ?_ (bind_pure _)
+    refine Sim.bindK (body := fun r m3 => some ([r.headD 0, r.tail.headD 0], m3)) rfl (fun _ _ => rfl)
+      (Q := fun r o m3 a3 => m3 = m2 ∧ a3 = a2 ∧ MemIdxOut r o ∧ (∀ i, o = some i → i < names.length))
+      ?_ ?_
+    · intro r3 m3 e3
+      cases n with
+      | zero => cases e3
+      | succ n =>
+      obtain ⟨hm3, o, hrun, hout⟩ := memW_ok n m2 m3 a2 no nl lvls (r2.headD 0) r3 ws hS2.check.arena.base hl2
+        hlv hws hwlt hlen e3
+      have hrun' : (ConRon.Arena.memberIdxAt? names (decI lvls) x2).run a2 = .ok (o, a2) := by
+        rw [hnm', ← he2]; exact hrun
+      refine ⟨o, a2, hrun', hm3, rfl, hout, fun i hi => ?_⟩
+      subst hi; exact partsMemberIdx_lt hrun'
+    · rintro r3 o m3 a3 ⟨rfl, rfl, hout, hlt⟩
+      refine Sim.ret ⟨?_, hlt, hS2, hg1.trans hg2⟩
+      cases o <;> simp only [MemIdxOut] at hout ⊢ <;> subst hout <;> rfl
 
 /-! ## `block_groups_one`: the `filterM` -/
 
@@ -142,7 +209,67 @@ theorem bgoW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP mm : Word}
     Sim (bgoW n m no nl lvls nP co cl mm) (cs.filterM (bgPred names (decI lvls) nP.toNat mm.toNat)) a
       (fun r gs m' a' => PSlR decCN gs (r.headD 0) (r.tail.headD 0) m' ∧ StageR vis fe m' a' ∧
         IWGrow m m') := by
-  sorry
+  induction n with
+  | zero => intro m a co cl cs _ _ _ _ r m' e; rw [bgoW.eq_1] at e; cases e
+  | succ n ih =>
+    intro m a co cl cs hS hcs hnm hnb
+    by_cases hl : cl = 0
+    · rw [bgoW.arm1 n m no nl lvls nP co cl mm hl]
+      have : cs = [] := by
+        have := decPL_length _ hcs.1; rw [hl] at this; simpa using this
+      subst this
+      exact Sim.ret ⟨PSlR.nil _ _, hS, IWGrow.refl _⟩
+    obtain ⟨L, hL⟩ : ∃ L, cl.toNat = L + 1 :=
+      ⟨cl.toNat - 1, by have : cl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
+    have hd : decPL (truncM m) (decCN (truncM m)) co.toNat (L + 1) = some cs := by
+      have := hcs.1; rw [hL] at this; exact this
+    obtain ⟨pc, c0, cs', rfl, hpc, hc0, hcs'⟩ := decPL_cons hd
+    obtain ⟨hcw, hpcb, hcolt⟩ := partsIwRd hpc rfl
+    have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+    have hco1 : (co + 1).toNat = co.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hcl1 : (cl - 1).toNat = L := partsPred_of hL
+    have hpcw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpcb
+    have hc0B : DecB (fun m => decCN m (UInt64.ofNat pc).toNat) m c0 := by rw [hpcw]; exact hc0
+    have hrest : PSlR decCN cs' (co + 1) (cl - 1) m :=
+      ⟨by show decPL _ _ _ _ = _; rw [hco1, hcl1]; exact hcs', by rw [hco1, hcl1]; have := hcs.2; omega⟩
+    rw [bgoW.arm2 n m no nl lvls nP co cl mm hl, hcw, partsFilter_step]
+    have hnlen : names.length < 2 ^ 64 := by
+      have := decHL_length _ (show decHL (truncM m) no.toNat nl.toNat = some names from hnm); omega
+    refine Sim.bindK (bgoW.k_ctor_member.none ..) (fun _ _ => bgoW.k_ctor_member.arm1 ..) (Q := fun r o m' a' => MemIdxOut r o ∧ (∀ i, o = some i → i < names.length) ∧
+        StageR vis fe m' a' ∧ IWGrow m m') ?_ ?_
+    · cases n with
+      | zero => exact Sim.of_none
+      | succ n => exact ctmW_sim n hS hc0B hnm hnb hlv
+    rintro r1 o m1 a1 ⟨hout, hlt, hS1, hg1⟩
+    refine Sim.bindK (bgoW.k_block_groups_one.none ..) (fun _ _ => rfl)
+      (ih m1 a1 (co + 1) (cl - 1) cs' hS1 (hrest.grow decCN_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
+        (Nat.le_trans hnb hg1.iw)) ?_
+    rintro r2 gs m2 a2 ⟨hgs, hS2, hg2⟩
+    have hcond : (r1.headD 0 ≠ 0 ∧ r1.tail.headD 0 = mm) ↔
+        (optEq o mm.toNat = true) := by
+      cases o with
+      | none => simp only [MemIdxOut] at hout; subst hout; simp [optEq]
+      | some i =>
+        simp only [MemIdxOut] at hout; subst hout
+        have hi := hlt i rfl
+        have hi' : (UInt64.ofNat i).toNat = i := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+        simp only [List.headD_cons, List.tail_cons, beq_iff_eq, optEq]
+        constructor
+        · rintro ⟨-, rfl⟩; exact hi'.symm
+        · intro e; exact ⟨by decide, by rw [e, ofNat_toNat_word]⟩
+    by_cases hc : r1.headD 0 ≠ 0 ∧ r1.tail.headD 0 = mm
+    · rw [bgoW.k_block_groups_one.arm1 (hc1 := hc), ite_eq_left (hcond.mp hc)]
+      intro r m' e
+      rcases h3 : consW n m2 (UInt64.ofNat pc) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
+      · cases e
+      rw [bgoW.k_sl_cons.arm1, bgoW.j1.arm1] at e
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
+      obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decCN_mono h3 hS2 hgs.bound hgs.dec
+        (hc0B.grow (decCN_mono _) (hg1.trans hg2))
+      exact ⟨c0 :: gs, a2, rfl, ⟨hd3, Nat.le_of_eq ht3⟩, hS3, (hg1.trans hg2).trans hg3⟩
+    · have hb : optEq o mm.toNat = false := by simpa using (mt hcond.mpr hc)
+      rw [bgoW.k_block_groups_one.arm2 (hc1 := hc), bgoW.j1.arm1, ite_eq_right (by rw [hb]; decide)]
+      exact Sim.ret ⟨hgs, hS2, hg1.trans hg2⟩
 
 /-! ## `block_groups_go`, `block_groups` -/
 
@@ -305,8 +432,11 @@ theorem ctorMember_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : S
       AM.ok (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀ ∧
       MemIdxOut r (AM.res (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  sorry
+      IWGrow s₀.mem s'.mem; ⊤⦄ :=
+  triple_post (ctorMember_specK p hP.view hP.find hP.midx hP.cmem hP.strip hP.ad (n + 1) s₀ no nl lvls nP c)
+    fun _ _ ⟨hl, hm⟩ =>
+      let ⟨hok, hQ⟩ := Sim.run (ctmW_sim n hS hc hnm hnb hlv) hm
+      ⟨hl, hok, hQ.1, hQ.2.2.1, hQ.2.2.2⟩
 
 /-- **`block_groups` refines `blockGroups`**: the constructors `[cv, nF]` an `IW` slice decoded
 below the tops, the member names a handle slice below the top; the result a slice of group headers
@@ -413,13 +543,31 @@ theorem brw_spec (hp : p.lookup "block_rec_want" = some blockRecWant) (n : Nat) 
     ∀ (s₀ : St) (mo ml : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_want" [mo, ml]
     ⦃fun r s' => LocEq s' s₀ ∧ brwW n s₀.mem mo ml = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ mo ml; rw [invoke_eq _ hp]; simp only [callFn, blockRecWant]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ mo ml
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockRecWant]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nrF_spec p hP.nr n,
+        slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
+      finish (gen := 20) [rdW_eq, erRd_get]
 
 theorem brg_spec (hp : p.lookup "block_rec_got" = some blockRecGot) (n : Nat) :
     ∀ (s₀ : St) (ro rl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_got" [ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ brgW n s₀.mem ro rl = some (r, s'.mem); ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ ro rl; rw [invoke_eq _ hp]; simp only [callFn, blockRecGot]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ ro rl
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockRecGot]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
+      finish (gen := 20) [rdW_eq, erRd_get]
 
 end spec
 
@@ -460,7 +608,7 @@ theorem brgW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     rw [← hne]; exact hd2
 
 /-- **`block_rec_want`'s model refines the twin's `mapM` of `name_rec`.** -/
-theorem brwW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem brwW_sim {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m : Mem) (a : AState) (mo ml : Word) (ms : List MemberShape),
     StageR vis fe m a →
     DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) m ms ∧ (ml = 0 ∨ mo.toNat + ml.toNat ≤ iwTop m) →
@@ -484,7 +632,7 @@ theorem brwW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [hw, hcw]
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m ca) m ms0.cvT from hcv) hcab
     rw [List.mapM_cons]
-    have h1 := partsSimW (nrF_ok dn vis fe _ hnl) hS
+    have h1 := partsSimW (nrF_ok (fun _ => none) vis fe _ hnl) hS
     rw [hne] at h1
     refine Sim.bindK (by simp [brwK1]) (fun _ _ => by rw [brwK1]) h1 ?_
     rintro r1 x1 m1 a1 ⟨hS1, hg1, hx1l, hx1⟩
@@ -552,7 +700,48 @@ theorem blockRecNameSetOk_refines (p : Prog) (hP : IndPartsProg3 p) (n : Nat) (s
       r = [if AM.res (ConRon.Arena.blockRecNameSetOk ms recs) a₀ then 1 else 0] ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.blockRecNameSetOk ms recs) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  sorry
+  refine triple_post (brn_spec p hP.toIndPartsProg hP.want hP.got hP.contains hP.allIn hP.setEq hP.nameSet
+    n s₀ mo ml ro rl) ?_
+  rintro r s' ⟨hl, hm⟩
+  have hsim : Sim (brnW n s₀.mem mo ml ro rl) (ConRon.Arena.blockRecNameSetOk ms recs) a₀
+      (fun r b m' a' => r = [if b then 1 else 0] ∧ StageR vis fe m' a' ∧ IWGrow s₀.mem m') := by
+    unfold brnW ConRon.Arena.blockRecNameSetOk
+    refine Sim.bindK (K := fun x => match x with
+      | none => none
+      | some (r1, m1) =>
+        match brgW (n + 1) m1 ro rl with
+        | none => none
+        | some (r2, m2) =>
+          match setEqW n m2 (r2.headD 0) (r2.tail.headD 0) (r1.headD 0) (r1.tail.headD 0) with
+          | none => none
+          | some b => some ([b], m2))
+      (body := fun r1 m1 => match brgW (n + 1) m1 ro rl with
+        | none => none
+        | some (r2, m2) =>
+          match setEqW n m2 (r2.headD 0) (r2.tail.headD 0) (r1.headD 0) (r1.tail.headD 0) with
+          | none => none
+          | some b => some ([b], m2)) rfl (fun _ _ => rfl) (brwW_sim (n + 1) _ a₀ mo ml ms hS hms) ?_
+    rintro r1 want m1 a1 ⟨hd1, hb1, hS1, hg1⟩
+    intro r m' e
+    rcases h2 : brgW (n + 1) m1 ro rl with _ | ⟨r2, m2⟩ <;> rw [h2] at e
+    · cases e
+    simp only at e
+    obtain ⟨hS2, hg2, hd2, hb2⟩ := brgW_ok (n + 1) m1 m2 a1 ro rl recs r2 h2 hS1 (hrs.grow decRS_mono hg1)
+    rcases h3 : setEqW n m2 (r2.headD 0) (r2.tail.headD 0) (r1.headD 0) (r1.tail.headD 0) with _ | b <;> rw [h3] at e
+    · cases e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
+    have hT : iwTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 200).toNat_lt
+    have hd1' : decHL m2 (r1.headD 0).toNat (r1.tail.headD 0).toNat = some want := by
+      rw [decHL_grow3 hg2 hb1]; exact hd1
+    obtain ⟨gws, hgs, hgm, hgl⟩ := slR_of_decHL m2 _ _ _ hd2 (by omega)
+    obtain ⟨wws, hws, hwm, hwl⟩ := slR_of_decHL m2 _ _ _ hd1' (by have := hg2.iw; omega)
+    rw [ofNat_toNat_word, ofNat_toNat_word] at hgs hws
+    have hb := setEqW_ok hgs hws h3
+    refine ⟨_, a1, rfl, ?_, hS2, hg1.trans hg2⟩
+    rw [hb, hgm, hwm, partsAll_decI wws gws hwl hgl, partsAll_decI gws wws hgl hwl]
+    simp only [List.length_map]
+  obtain ⟨hok, hr, hS', hg⟩ := Sim.run hsim hm
+  exact ⟨hl, hok, hr, hS', hg⟩
 
 end L.Ind
 

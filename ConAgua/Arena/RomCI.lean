@@ -385,7 +385,7 @@ theorem simZ_exprList (es : List ConLeche.Expr) (P : AState → Prop) :
 /-! ## The pin reads -/
 
 /-- The pin table is filled (what every pin read needs). -/
-def PinsReadyP (a : AState) : Prop := a.pins.names.size = 51
+def PinsReadyP (a : AState) : Prop := a.pins.names.size = 52
 
 theorem pinsReady_cp : CpPred PinsReadyP := fun a a' h hP => by
   have : a'.pins = a.pins := congrArg Prod.snd h
