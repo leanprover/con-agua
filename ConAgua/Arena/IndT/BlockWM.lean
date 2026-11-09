@@ -209,9 +209,10 @@ the old top, the stage kept. -/
 theorem wmW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {p mo ml : Word}
     {r : List Word} {bs : BlockShape} {ms : List MemberShape} (h : wmW n m p mo ml = some (r, m'))
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m p.toNat) m bs) (hsl : ShapeSl m p)
-    (hms : DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) m ms) (hb : mo.toNat + ml.toNat ≤ iwTop m) :
+    (hmsB : DecB (fun m => decPL m (decMSB m) mo.toNat ml.toNat) m ms) (hb : mo.toNat + ml.toNat ≤ iwTop m) :
     ∃ q, r = [q] ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
       DecB (fun m => decBS m q.toNat) m' { bs with members := ms } ∧ ShapeSl m' q := by
+  have hms : DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) m ms := decPL_decMSB hmsB
   cases n with
   | zero => simp [wmW] at h
   | succ n =>
@@ -285,7 +286,7 @@ theorem wmW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {p 
     have := cqT 1 (by omega); simpa [wmWd] using this
   have hdec : DecB (fun m => decBS m q.toNat) m' { bs with members := ms } :=
     decBS_wm (hq.grow (decBS_mono _) hg) (hms.grow (OMono.decPL decMS_mono _ _) hg) c0 c1 cc
-  refine ⟨q, rfl, stage_frame_iw hS hfr2 htop', hg, hfr2, hdec, ?_, ?_⟩
+  refine ⟨q, rfl, stage_frame_iw hS hfr2 htop', hg, hfr2, hdec, ?_, ?_, ms, ?_⟩
   · intro o l ho hl
     have e0 : iwN m' q.toNat = some mo.toNat := by simp [iwN, nat?, (truncM_iw_get c0).2]
     have e1 : iwN m' (q.toNat + 1) = some ml.toNat := by simp [iwN, nat?, (truncM_iw_get c1).2]
@@ -300,7 +301,10 @@ theorem wmW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {p 
     intro o l ho hl
     rw [cm 2 (by omega) (by omega)] at ho
     rw [show q.toNat + 2 + 1 = q.toNat + 3 by omega, cm 3 (by omega) (by omega)] at hl
-    exact (hsl.grow' hq hg).2 o l ho (by simpa [Nat.add_assoc] using hl)
+    exact (hsl.grow' hq hg).2.1 o l ho (by simpa [Nat.add_assoc] using hl)
+  · show decAt (truncM m') _ q.toNat = some ms
+    simp only [decAt, iwN, nat?, c0, c1, Option.map_some, Option.bind_some, bind]
+    exact (hmsB.grow (OMono.decPL decMSB_mono _ _) hg)
 
 
 /-- The lookups `block_shape_with_members` takes. -/

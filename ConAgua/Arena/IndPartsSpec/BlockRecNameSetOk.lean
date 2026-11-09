@@ -3,6 +3,7 @@ module
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 public import ConAgua.Arena.IndPartsSpec.SetEqW
 public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndDecPLB
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -273,11 +274,12 @@ theorem bgoW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP mm : Word}
 
 /-! ## `block_groups_go`, `block_groups` -/
 
-/-- A group header `[off, len]` of a constructor slice. -/
-def decGH (m : Mem) (p : Nat) : Option (List (IConstantVal × Nat)) := decAt m (decPL m (decCN m)) p
+/-- A group header `[off, len]` of a constructor slice, decoded with its bound (`decPLB`: the
+members' constructor slices keep it, `ShapeSl`). -/
+def decGH (m : Mem) (p : Nat) : Option (List (IConstantVal × Nat)) := decAt m (fun o l => decPLB m (decCN m) o l) p
 
 theorem decGH_mono (p : Nat) : OMono (fun m => decGH m p) :=
-  OMono.decAt (fun o l => OMono.decPL decCN_mono o l) p
+  OMono.decAt (fun o l => decPLB_omono decCN_mono o l) p
 
 /-- A cons onto a slice, then the slice (the shared tail of the hand `IndParts` models). -/
 def bggK3 (n : Nat) (h0 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -309,8 +311,9 @@ theorem partsGH {vis : Word} {fe : IFEnv} {a : AState}
   have e0 := hget 0 (by simp); have e1 := hget 1 (by simp)
   simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at e0 e1
   have hd := (hg.grow decCN_mono hgr).1
-  show decAt (truncM m') (decPL (truncM m') (decCN (truncM m'))) h0.toNat = some gs
-  simp only [decAt, e0, e1, Option.bind_some, bind]
+  show decAt (truncM m') (fun o l => decPLB (truncM m') (decCN (truncM m')) o l) h0.toNat = some gs
+  simp only [decAt, e0, e1, Option.bind_some, bind, decPLB]
+  rw [ite_eq_left (le_iwA_truncM_size (Nat.le_trans hg.bound hgr.iw) hS'.iw.1)]
   exact hd
 
 /-- **`block_groups_go`'s model refines the twin's `mapM` over members `mm, …, k - 1`.** -/

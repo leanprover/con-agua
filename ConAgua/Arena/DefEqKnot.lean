@@ -192,8 +192,8 @@ include hq in
 `majorToCtor_refines'`: neither takes a slot step of this file). -/
 theorem KnotAllProg.iota (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :=
   iotaRecAt_refines' p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
-    (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq) (ErecKeptKnot.of_closed hq.hcl)
-      (KnotAllProg.projC hq))
+    (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq) (ErecPKept.of_closed hq.hcl)
+      (KnotAllProg.projC hq) hq.prop (instLP_refines p hq.ilw))
     (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl)
     n hk
 

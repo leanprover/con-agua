@@ -11,7 +11,7 @@ public import ConAgua.Arena.IndInstallSpec.InstallIwB
 /-!
 # InstallRec2PSl
 
-`decIS_mono`, `decISS_mono`, `iwA_size_mono`, `decPLB_omono`, `decCNSB_mono`, `le_iwA_truncM_size` and the lemmas only they use.
+`decIS_mono`, `decISS_mono` and the lemmas only they use.
 -/
 
 section
@@ -53,40 +53,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 theorem decISS_mono (q : Nat) : OMono (fun m => decISS m q) :=
   OMono.decAt (fun o l => OMono.decPL decIS_mono o l) q
-
-theorem iwA_size_mono {m m' : Mem} (he : PoolExt m m') : (m.arr64 IW).size ≤ (m'.arr64 IW).size := by
-  rcases Nat.eq_zero_or_pos (m.arr64 IW).size with h0 | h0
-  · omega
-  · have h1 : iwA m ((m.arr64 IW).size - 1) = some ((m.arr64 IW)[(m.arr64 IW).size - 1]'(by omega)) :=
-      Array.getElem?_eq_getElem _
-    have h2 := he.1 _ _ h1
-    simp only [iwA, aread_apply] at h2
-    have := (Array.getElem?_eq_some_iff.mp h2).1
-    omega
-
-theorem decPLB_omono {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q)) (o l : Nat) :
-    OMono (fun m => decPLB m (f m) o l) := by
-  refine ⟨fun m m' x he h => ?_⟩
-  simp only [decPLB] at h ⊢
-  split at h
-  · rename_i hb
-    rw [ite_eq_left (Nat.le_trans hb (iwA_size_mono he))]
-    exact (OMono.decPL hf o l).mono m m' x he h
-  · cases h
-
-theorem decCNSB_mono (q : Nat) : OMono (fun m => decCNSB m q) :=
-  OMono.decAt (fun o l => decPLB_omono decCN_mono o l) q
-
-/-- … and at least every bound below the top, when the top lies within the pool. -/
-theorem le_iwA_truncM_size {m : Mem} {k : Nat} (hk : k ≤ iwTop m) (hT : iwTop m ≤ (m.arr64 IW).size) :
-    k ≤ ((truncM m).arr64 IW).size := by
-  rcases Nat.eq_zero_or_pos k with h0 | h0
-  · omega
-  · have e := truncM_iw_get? m (k - 1)
-    rw [ite_eq_left (by omega)] at e
-    simp only [iwA, aread_apply, Array.getElem?_eq_getElem (show k - 1 < (m.arr64 IW).size by omega)] at e
-    have := (Array.getElem?_eq_some_iff.mp e).1
-    omega
 
 /-- With the bound dropped. -/
 theorem decCNSB_decCNS {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
