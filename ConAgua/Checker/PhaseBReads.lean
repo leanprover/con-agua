@@ -9,6 +9,10 @@ meta import ConAgua.Compiler.ReadSetSplit
 meta import ConAgua.Arena.LevelIntern
 meta import ConAgua.Arena.LevelSubstLP
 import all ConAgua.Arena.Abs1
+import all ConAgua.Rom.CIConst
+import all ConAgua.Arena.IndStream
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
@@ -153,13 +157,13 @@ import all ConAgua.Scan.Values
 
 `phaseBFns`: every function `check_b` (entry 2, the jobs over the frozen arrays) reaches in `checkerProg`, as a
 literal computed from the program's call graph (1351 names; `scripts/phaseb_fns.py` regenerates
-it, and the check below fails if a callee is missing). None of them names the frozen buffer's
-arrays `OUT`, `HDRF`, `CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`,
-so by `L.invoke_agree` (`L/Agree.lean`) a worker's run of `check_b` is the run on any
-memory that agrees with it on every other word array (docs/design/parmode.md, Step 4 (b2)).
-Also, none of them writes the globals `MODE`, `PLO`, `INIT`, `PHI` (`Arena/Globals.lean`):
-`checkerProg_phaseBGlobs`, so a run of `check_b` keeps them (`check_pending_go_keepsG`,
-by `L.invoke_keepsG`, `L/GKeep.lean`). Per-chunk kernel checks as `LoopAll.lean`.
+it, and the check below fails if a callee is missing). Without `check_b` itself (`phaseBJobFns`,
+the closure of `check_jobs`), none of them names the frozen buffer's arrays `OUT`, `HDRF`,
+`CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`, so by
+`L.invoke_agree` (`L/Agree.lean`) a run of `check_jobs` is the run on any memory that agrees with
+it on every other word array (docs/design/parmode.md, Step 4 (b2)). Also, none of them writes the
+globals `MODE`, `PLO`, `INIT`, `PHI` (`Arena/Globals.lean`): `checkerProg_phaseBGlobs`, by
+`L.invoke_keepsG` (`L/GKeep.lean`). Per-chunk kernel checks as `LoopAll.lean`.
 -/
 
 namespace L.Checker
@@ -435,5 +439,34 @@ theorem check_b_mem_phaseBFns : "check_b" ∈ phaseBFns :=
 
 /-- The globals phase B never writes: `MODE` (8), `PLO` (9), `INIT` (10), `PHI` (11). -/
 def phaseBG (g : GVar) : Bool := g.id == 8 || g.id == 9 || g.id == 10 || g.id == 11
+
+/-- The jobs' closure: `phaseBFns` but `check_b` itself (which reads the seed `CTLF` and writes
+`INIT`); compared by name codes. -/
+def phaseBJobFns : List FnName :=
+  let out := nameCode "check_b"
+  phaseBFns.filter fun f => nameCode f != out
+
+/-- `phaseBJobFns` as a tree of name codes. -/
+names_tree phaseBJobTree : phaseBJobFns
+
+/-- Every function of the checker passes the jobs' per-function read check. -/
+prog_all checkerProg_phaseBReadsChk : checkerProg (rdChk phaseBPa (fun _ => false) phaseBJobTree)
+
+/-- **The jobs' read set**: the call closure of `check_jobs` names only word arrays other than
+`OUT`, `HDRF`, `CTLF`, no byte array, and calls only into itself. -/
+theorem checkerProg_phaseBReads :
+    readsIn checkerProg phaseBPa (fun _ => false) phaseBJobFns = true :=
+  readsIn_of_all phaseBJobTree.eq checkerProg_phaseBReadsChk
+
+theorem check_jobs_mem_phaseBJobFns : "check_jobs" ∈ phaseBJobFns :=
+  of_decide_eq_true ((namesTree_spec phaseBJobTree.eq _).symm.trans (by decide +kernel))
+
+/-- Every function of the checker passes the jobs' per-function kept-globals check. -/
+prog_all checkerProg_phaseBGlobsChk : checkerProg (gsChk phaseBG phaseBJobTree)
+
+/-- **The jobs' kept globals**: the call closure of `check_jobs` writes none of `MODE`, `PLO`,
+`INIT`, `PHI`. -/
+theorem checkerProg_phaseBGlobs : globsIn checkerProg phaseBG phaseBJobFns = true :=
+  globsIn_of_all phaseBJobTree.eq checkerProg_phaseBGlobsChk
 
 end L.Checker

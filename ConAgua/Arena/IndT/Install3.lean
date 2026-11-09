@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndT.Sum2
 import ConAgua.Arena.IndT.Install1
+import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.IndInstallSpec.Cons
 import ConAgua.L.ModelGen
@@ -80,8 +81,7 @@ l_model cbtsE_spec (p : Prog) (h1 : p.lookup "check_block_tele" = some checkBloc
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `check_sum_tele`'s lookups, as its model takes them. -/
-theorem CstProg.ctProg {p : Prog} (hP : CstProg p) : CtProg p := by
-  sorry
+theorem CstProg.ctProg {p : Prog} (hP : CstProg p) : CtProg p := ⟨hP.strip, hP.view, hP.tele⟩
 
 /-- What `check_block_tele` gives besides the checked former and its sort `x` (from `m`, `a`): the
 former's layout (`TeleOutC`), `AbsOK`, the core step. -/
@@ -89,6 +89,7 @@ structure TelePost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     (m : Mem) (a : AState) (r : List Word) (x : IConstantVal × LIdx) (m' : Mem) (a' : AState) : Prop where
   out : TeleOutC dn vis fe env m r x m' a'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `check_block_teles` gives besides the checked formers `x` (from `m`, `a`): the stage, the
 growth, the formers' slice, `AbsOK`, the core step. -/
@@ -98,15 +99,15 @@ structure TelesPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   grow : IWGrow m m'
   teles : PSlR decTele x (r.headD 0) (r.tail.headD 0) m'
   abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p)
+  (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims p dn)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hq henv hV hApd hCrk in
+include hq henv hV hcr hCS hApd hCrk in
 /-- **`check_block_tele` refines `checkBlockTele`, both outcomes** under `StageC` (twin side:
 con-ron's `checkBlockTele_specF`'s proof): `check_constant_val` and `check_sum_tele` through their
 runs (their refinements `ccv_ref`, `ct_ref`), `strip_pis` and `intern_sort` (outside the verdict closure)
@@ -114,15 +115,14 @@ lifted. -/
 theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {nP ms : Word} {msh : MemberShape}
     (hC : StageC dn vis fe env m a) (hms : MemOK m ms.toNat msh) (hA : AbsOK m)
-    {msP : ConLeche.MemberShape} (hmsP : ConRon.Bridge.Inductives.dMember a.store msh = some msP)
-    (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) :
-    RefE (CtsG p) (cbtE p (n + 1) m vis nP ms) (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a
+    {msP : ConLeche.MemberShape} (hmsP : ConRon.Bridge.Inductives.dMember a.store msh = some msP) :
+    RefE (VerdictCtxU p) (cbtE p (n + 1) m vis nP ms) (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a
       (fun v x a' => TelePost dn vis fe env m a v.1 x v.2 a') := by
   have hS := hC.stage
   obtain ⟨hcvP, -, -⟩ := ConRon.Bridge.Inductives.dMember_inv hmsP
   obtain ⟨hmsB, hcx⟩ := hms
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  obtain ⟨⟨c, hc, hcv⟩, hni, -⟩ := decMS_some (m := truncM m) hmsB
+  obtain ⟨⟨c, hc, hcv⟩, -, hni, -⟩ := decMS_some (m := truncM m) hmsB
   obtain ⟨hw0, hcb, hmsl⟩ := partsIwRd hc rfl
   obtain ⟨hw1, hnb, -⟩ := partsIwRd hni (w := ms + 1) (by rw [UInt64.toNat_add]; simp; omega)
   obtain ⟨-, hcN⟩ := rec2IwN_trunc hc
@@ -137,33 +137,32 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
     rw [partsAddNoOv hov, UInt64.toNat_ofNat_of_lt' hnb]
   unfold ConRon.Arena.checkBlockTele
   -- `check_constant_val`
-  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (checkConstantVal_specE p hV n _ vis _)
-    (fun hG => hG.nv) (fun hG => hG.toVerdictCtxU) (ccv_ref hq hApd hCrk hn hC.stageT
-      (rec2DecCV_erecP hcvm hcvx) (rec3CVExt_lt hS hcvx) (denoteCV_lps hcvP) hA.crMemo.crOK)
+  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (checkConstantVal_specE p hV n _ vis _ 0)
+    (fun hG => hG.nv) id (ccv_ref (allow := 0) hV hq hApd hCrk hcr hCS hn hC.stageT
+      (rec2DecCV_erecP hcvm hcvx) (rec3CVExt_lt hS hcvx) hcvP hA.crMemo.crOK)
     fun r1 s1 u1 a1 _ _ hr1 hP1 => ?_
   dsimp only [cbtE.k_check_constant_val]
-  obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core
     hC.check henv hcvP hr1
-  have k1 : InsAt dn vis fe env m a s1.mem a1 := ⟨StageC.of_T hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
+  have k1 : InsAt dn vis fe env m a s1.mem a1 := ⟨StageC.ofStageT hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
   have hcA := ConRon.Bridge.denoteCV_ext hcvP c1.ext
   have hw1' : ConLeche.Expr.WScoped 0 msP.cvT.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConLeche.checkConstantVal_typeWF hF₁).1
   have hcvm1 : decCVp s1.mem (UInt64.ofNat c : Word).toNat = some msh.cvT := by
     rw [hc']; exact DecB.stab (OMono.decCVp _) hcv s1.mem k1.grow
-  have hx1 := CVExt_grow k1.grow hcvx
-  have hfe1 := ConRon.Bridge.denoteFEnv_mono c1.ext hfe
   -- `check_sum_tele`
-  have hR2 := ct_ref hq henv hApd hCrk hP.ctProg.toWtProg n hn s1.mem a1 _ (nP + UInt64.ofNat msh.nIdx) _
-    msh.cvT msh.cvT k1.stage hcvm1 hx1.1 hx1.2 hcvm1 hx1.1 hx1.2 k1.abs hcA hcA hw1' hfe1
+  have hR2 := ct_ref (p := p) (dn := dn) (vis := vis) s1.mem a1 (nP + UInt64.ofNat msh.nIdx) _
+    msh.cvT k1.stage hcvm1 k1.abs hcA
   rw [hk] at hR2
   refine RefE.bindRun (s₀ := ⟨s1.mem, Locals.init []⟩) (fun _ => rfl)
-    (ctE_spec p hV hP.ctProg n _ vis _ _ _) (fun hG => hG.nv) id hR2 fun r2 s2 x2 a2 _ _ hr2 hP2 => ?_
+    (ctE_spec p hP.ctProg n _ _ _) (fun hG => hG.nv) (fun _ => trivial) hR2
+    fun r2 s2 x2 a2 _ _ hr2 hP2 => ?_
   dsimp only [cbtE.k_check_sum_tele]
-  obtain ⟨c2, F₂, cvTaP, sP, -, h2a, h2b⟩ := ConRon.Bridge.Inductives.checkSumTele_spec fe rfl
-    (ConRon.Bridge.CoreSpec.of_core rfl) henv msh.cvT msP.cvT (nP.toNat + msh.nIdx) msh.cvT
-    msP.cvT hw1' a1 a2 _ k1.stage.check ⟨hcA, hcA, hfe1⟩ hr2
-  have k2 : InsAt dn vis fe env s1.mem a1 s2.mem a2 := ⟨hP2.stage, hP2.abs, hP2.grow, c2⟩
-  have hcv2 := installCvDecB hP2.cv ⟨hP2.top, hP2.lps⟩
+  obtain ⟨p2, sP, -, h2a, h2b⟩ := ConRon.Bridge.Inductives.checkSumTele_spec (nP.toNat + msh.nIdx)
+    msh.cvT msP.cvT a1 a2 _ k1.stage.check.state hcA hr2
+  have k2 : InsAt dn vis fe env s1.mem a1 s2.mem a2 :=
+    ⟨hP2.stage, hP2.abs, hP2.grow, p2.toCore k1.stage.check⟩
+  have hcv2 := installCvDecB hP2.cv (CVExt.of_dec hP2.cv)
   obtain ⟨htyl, htye⟩ := partsCVType hcv2 (w := r2.headD 0) rfl
   -- `strip_pis`
   refine RefE.bindLift (fun _ => rfl) fun r3 m3 h3 => ?_
@@ -200,11 +199,9 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   simp only [hb, ite_true]
   have k14 := ((k1.trans k2).trans k3).trans k4
   exact RefE.ret rfl ⟨⟨k4.stage, k14.grow, hcv2.stab (OMono.decCVp _) m4 (k3.trans k4).grow,
-    CVExt_grow (k3.trans k4).grow ⟨hP2.top, hP2.lps⟩, hP2.sort32, hP2.sort⟩, k4.abs, k14.core⟩
--/
+    CVExt_grow (k3.trans k4).grow (CVExt.of_dec hP2.cv), hP2.sort32, hP2.sort⟩, k4.abs, k14.core⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hq henv hV hApd hCrk in
+include hq henv hV hcr hCS hApd hCrk in
 /-- **`check_block_tele` refines `checkBlockTele`** under `StageC` (the knot's core calls; the
 member's denotation as con-ron's `checkBlockTele_specF` asks): the checked former below the tops,
 its result sort a handle. -/
@@ -213,23 +210,20 @@ theorem checkBlockTele_refinesC (hP : CstProg p)
     (hp : p.lookup "check_block_tele" = some checkBlockTele) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (nP ms : Word) (msh : MemberShape)
     (hC : StageC dn vis fe env s₀.mem a₀) (hms : MemOK s₀.mem ms.toNat msh) (hA : AbsOK s₀.mem)
-    {msP : ConLeche.MemberShape} (hmsP : ConRon.Bridge.Inductives.dMember a₀.store msh = some msP)
-    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) :
+    {msP : ConLeche.MemberShape} (hmsP : ConRon.Bridge.Inductives.dMember a₀.store msh = some msP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_block_tele" [vis, nP, ms]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a₀ ∧
       TeleOutC dn vis fe env s₀.mem r (AM.res (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a₀) s'.mem
         (AM.st (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a₀) ∧ AbsOK s'.mem ∧
-      ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a₀);
+      ConRon.Bridge.CoreStep env fe a₀ (AM.st (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a₀);
       ⊤⦄ := by
   refine triple_post (RefE.triple (cbtE_spec p hp (n + 1) s₀ vis nP ms)
-    (cbt_ref hq henv hV hApd hCrk hP n hn hC hms hA hmsP hfe)) ?_
+    (cbt_ref hq henv hV hcr hCS hApd hCrk hP n hn hC hms hA hmsP)) ?_
   rintro _r s' ⟨hl, x, a', hrun, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hR.out, hR.abs, by rw [hst]; exact hR.core⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hq henv hV hApd hCrk in
+include hq henv hV hcr hCS hApd hCrk in
 /-- **`check_block_teles` refines `checkBlockTeles`, both outcomes** under `StageC` (twin side:
 con-ron's `checkBlockTeles_specF`'s proof; induction on the fuel): every member by `cbt_ref`, the
 `rec2`s and `sl_cons`es (outside the verdict closure) lifted. -/
@@ -238,13 +232,12 @@ theorem cbts_ref (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
       (mssP : List ConLeche.MemberShape),
     StageC dn vis fe env m a → MemsOK m o l mss → AbsOK m →
     mss.mapM (ConRon.Bridge.Inductives.dMember a.store) = some mssP →
-    ConRon.Bridge.denoteFEnv a.store fe = some env →
-    RefE (CtsG p) (cbtsE p n m vis nP o l) (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a
+    RefE (VerdictCtxU p) (cbtsE p n m vis nP o l) (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a
       (fun v x a' => TelesPost dn vis fe env m a v.1 x v.2 a') := by
   induction n with
   | zero => intros; rw [cbtsE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n ih =>
-  intro m a o l mss mssP hC hms hA hmssP hfe
+  intro m a o l mss mssP hC hms hA hmssP
   by_cases hl : l = 0
   · rw [cbtsE.arm1 p n m vis nP o l hl]
     have : mss = [] := by
@@ -260,7 +253,7 @@ theorem cbts_ref (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
   · rw [cbtE.eq_1, cbtsE.k_check_block_tele.none]; exact RefE.of_cls0 Err.cls_outOfFuel
   -- the member's former
   refine RefE.bindE (fun _ => cbtsE.k_check_block_tele.none ..) id
-    (cbt_ref hq henv hV hApd hCrk hP.toCstProg k (by omega) hC hmok hA hxP hfe (nP := nP))
+    (cbt_ref hq henv hV hcr hCS hApd hCrk hP.toCstProg k (by omega) hC hmok hA hxP (nP := nP))
     fun ⟨r1, m1⟩ x1 a1 _ hT1 => ?_
   rw [cbtsE.k_check_block_tele.arm1]
   -- `rec2` (L only)
@@ -275,8 +268,7 @@ theorem cbts_ref (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
   -- the other members' formers
   refine RefE.bindE (fun _ => cbtsE.k_check_block_teles.none ..) id
     (ih (by omega) s'.mem a1 (o + 1) (l - 1) rest restP k2.stage (hrest.grow hg2) hA2
-      (ConRon.Bridge.Inductives.dMember_ext.list k2.core.ext _ _ hrestP)
-      (ConRon.Bridge.denoteFEnv_mono k2.core.ext hfe))
+      (ConRon.Bridge.Inductives.dMember_ext.list k2.core.ext _ _ hrestP))
     fun ⟨r3, m3⟩ xs a3 _ hT3 => ?_
   rw [cbtsE.k_check_block_teles.arm1]
   -- `sl_cons` (L only)
@@ -289,10 +281,8 @@ theorem cbts_ref (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
   have hA4 := consW_afr hW hT3.abs
   exact RefE.ret rfl ⟨hT3.stage.of_pstep hS4 hA4 (PStep.refl hT3.stage.check.state),
     k2.grow.trans (hT3.grow.trans hg4), ⟨hd4, Nat.le_of_eq htop4⟩, hA4, k2.core.trans hT3.core⟩
--/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hq henv hV hApd hCrk in
+include hq henv hV hcr hCS hApd hCrk in
 /-- **`check_block_teles` refines `checkBlockTeles`** under `StageC` (the members' denotations as
 con-ron's `checkBlockTeles_specF` asks): the checked formers a slice of `[cvTa, s]` records,
 decoded below the tops. -/
@@ -301,8 +291,7 @@ theorem checkBlockTeles_refinesC (hP : InstProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
     (a₀ : AState) (nP o l : Word)
     (mss : List MemberShape) (hC : StageC dn vis fe env s₀.mem a₀) (hms : MemsOK s₀.mem o l mss)
     (hA : AbsOK s₀.mem) {mssP : List ConLeche.MemberShape}
-    (hmssP : mss.mapM (ConRon.Bridge.Inductives.dMember a₀.store) = some mssP)
-    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) :
+    (hmssP : mss.mapM (ConRon.Bridge.Inductives.dMember a₀.store) = some mssP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_block_teles" [vis, nP, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a₀ ∧
       StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a₀) ∧
@@ -310,11 +299,10 @@ theorem checkBlockTeles_refinesC (hP : InstProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
       PSlR decTele (AM.res (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a₀) (r.headD 0)
         (r.tail.headD 0) s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (cbtsE_spec p hP.bTele hP.bTeles n s₀ vis nP o l)
-    (cbts_ref hq henv hV hApd hCrk hP nP n hn _ a₀ o l mss mssP hC hms hA hmssP hfe)) ?_
+    (cbts_ref hq henv hV hcr hCS hApd hCrk hP nP n hn _ a₀ o l mss mssP hC hms hA hmssP)) ?_
   rintro _r s' ⟨hl, x, a', hrun, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.teles, hR.abs⟩
--/
 
 end sims
 

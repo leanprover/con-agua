@@ -8,6 +8,11 @@ import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.PreLoopWSBase
 import ConRon.Bridge.Checker.Pool
 import ConRon.Bridge.Stages
+public import ConAgua.Checker.BuildClosed
+public import ConAgua.Checker.PipeFinal
+public meta import ConAgua.Checker.LoopProgTac
+import ConAgua.Checker.LoopProgTac
+import all ConAgua.Arena.CheckerL
 
 @[expose] public section
 
@@ -22,23 +27,25 @@ inductive memos are the loaded memory's zeros, which no stage before the index b
 -/
 
 open ConRon.Arena ConRon.Arena.Frontend
+open Std.WP
+open scoped Lean.Order
 
 namespace L.Checker
 
 open L L.Arena L.Rom
 
 /-- The arrays the index build's start needs zero: the stream index's rows, the own layer (both
-tiers), the inductive memos (`IndMemos.zero`). -/
+tiers), the inductive memos (`IndMemos.zero`), the core's walk memos (`CoreMemos.zero`). -/
 def buildZeroArrs : List TieredArray :=
   tier0s [EIXA, EIXS, EIXN, TIXA, TIXS, TIXN, OIXA, OIXS, OIXN, OTXA, OTXS, OTXN, 51, 155,
-    201, 202, 203, 204, 205, 206, 207, 208] ++
+    201, 202, 203, 204, 205, 206, 207, 208, 49, 50, 52, 53, 54, 151, 152, 153] ++
   tier1s [OIXA, OIXS, OIXN, OTXA, OTXS, OTXN]
 
 /-- The `CTL` words the index build's start needs zero: the index's counter, the stamp, the
 view's bounds, the inductive memos' words. -/
 def buildZeroCtls : List Nat :=
   [128, 133, 134, 135, 52, 158, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214,
-    215, 216, 217, 218, 219]
+    215, 216, 217, 218, 219, 48, 50, 54, 56, 58, 152, 154, 156]
 
 theorem preLoopA_buildZero : buildZeroArrs.all (fun b => !preLoopA.contains b) = true := by
   decide +kernel
@@ -147,6 +154,13 @@ theorem since_indMemos (hctl : 220 ≤ (m.arr64 CTL).size) : IndMemos m :=
         exact this) j)
     (fun x hx => since_ctl h (by simp only [buildZeroCtls, List.mem_cons]; omega))
 
+theorem since_coreMemos (hctl : 220 ≤ (m.arr64 CTL).size) : CoreMemos m :=
+  CoreMemos.zero (by omega)
+    (fun b hb j => since_rdW h (t := (b : TieredArray)) (by
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide) j)
+    (fun x hx => since_ctl h (by
+      rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide))
+
 end zero
 
 /-- **The index build's start**: after the stages up to `intern_all_pins`, the memory is
@@ -180,5 +194,86 @@ theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s,
     subst hx
     exact ⟨k, by simp [dnOf, hk, hd], hd⟩
   · rw [hS.frame.size, loadMem_arr, Array.size_replicate]; exact hsz _
+
+/-! ## The index build at the checker's program -/
+
+theorem checkerProg_idxProg : L.Arena.IdxProg checkerProg where
+  decl_constants := by chk_lk
+  decl_constants_axiom := by chk_lk
+  decl_constants_ind := by chk_lk
+  decl_tables := by chk_lk
+  block_constants := by chk_lk
+  block_tables := by chk_lk
+  idx_add := by chk_lk
+  build_index := by chk_lk
+  idx_consts := by chk_lk
+  idx_tables := by chk_lk
+  base_row_get := by chk_lk
+  base_row_set := by chk_lk
+  tbl_base_get := by chk_lk
+  tbl_base_set := by chk_lk
+  iw_reset := by chk_lk
+
+/-- **The twin's side of entry 1**: the stages before the jobs, the stream index `I` built from
+`sE`, ending in `sF`. -/
+structure PhaseA (b : ByteArray) where
+  pins : List ConLeche.NatOpPinSet
+  sA : AState
+  pre : PreludeIx
+  sB : AState
+  rc : ParseResultD
+  sC : AState
+  ds : Array IDeclaration
+  sD : AState
+  ipins : List INatOpPinSet
+  sE : AState
+  I : IStreamIndex
+  sF : AState
+  pfx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE
+  idx : buildIndex ds sE = .ok (.ok I, sF)
+
+/-- **What the index build leaves**: the stages' relation `R7` at the memory `m₇` before the
+build, `BuildR` at the built index after it, the record pool's prefix kept, and the build's
+write set (`biA`, `biC`). -/
+structure FoldAt (b pb : ByteArray) (sz : TieredArray → Nat) (PA : PhaseA b) (m₇ m : Mem) : Prop where
+  r7 : R7 (ConAgua.Final.loadMem b pb sz) m₇ pb PA.ds PA.ipins PA.sE
+  build : BuildR (dnOf PA.sE.store) PA.ds 0 0 m PA.sF PA.I
+  fsize : PA.I.firsts.size = PA.ds.size
+  grow : BKeep m₇ m
+  frame : MemFrame biA biC m₇ m
+  bytes : m.bytes = m₇.bytes
+
+/-- `FoldAt` at an accepting twin phase A. -/
+def FoldA (b pb : ByteArray) (sz : TieredArray → Nat) (m : Mem) : Prop :=
+  ∃ (PA : PhaseA b) (m₇ : Mem), FoldAt b pb sz PA m₇ m
+
+/-- **The index build from `R7`**, with `cnt` the count `DECL[0]`, in the form
+`checkA_of_stages` takes. -/
+theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hsz : ∀ s, sz s < 2 ^ 64) :
+    ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
+      ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "build_index" [cnt]
+      ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
+        (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
+        FoldA b pb sz s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄ := by
+  intro n _ s₀ cnt
+  apply M.triple_of_run
+  rintro s rs s' rfl hrun
+  obtain ⟨F, hF0, hcl⟩ := checkerProg_biW
+  obtain ⟨hfr, hby⟩ := M.of_run (P := fun x => x = s) rfl hrun (invoke_memFrame hcl n hF0 [cnt] s)
+  obtain ⟨hl, -⟩ := M.of_run (P := fun x => x = s) rfl hrun (callW_spec checkerProg n "build_index" [cnt] s)
+  refine ⟨hl, fun hQ hc => ?_⟩
+  have hD : s'.mem.arr64 L.Front.DECL = s.mem.arr64 L.Front.DECL :=
+    hfr.arr _ (fun h => by simp [biA] at h) (by decide)
+  refine ⟨?_, hD⟩
+  obtain ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hDp, hE, h7⟩ := hQ
+  have hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE := ⟨hA, hB, hC, hDp, hE⟩
+  have hR := buildR_of_R7 hsz hpx h7
+  have hD0 : 0 < (s.mem.arr64 L.Front.DECL).size := by
+    have := h7.since.caps.2.2.1; rw [h7.since.frame.size]; exact this
+  have hcnt : cnt.toNat = ds.size := by
+    rw [hc hD0]; have := h7.decls.count; simpa [hD0] using this
+  obtain ⟨I, a', hI, hR', hsz', hG⟩ := (M.of_run (P := fun x => x = s) rfl hrun
+    (buildIndex_refines checkerProg_idxProg cnt hcnt n s sE hR)).2
+  exact ⟨⟨pins, sA, pre, sB, rc, sC, ds, sD, ipins, sE, I, a', hpx, hI⟩, s.mem, ⟨h7, hR', hsz', hG, hfr, hby⟩⟩
 
 end L.Checker
