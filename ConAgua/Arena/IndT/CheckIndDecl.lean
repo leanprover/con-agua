@@ -187,7 +187,7 @@ theorem cid_ref (P : CidProg2 p) {G : Prop} (hGU : G → VerdictCtxU p)
     rw [cidE.k_basis_name_hit.arm1 _ _ _ _ _ _ _ _ (by rw [hz]; decide)]
     dsimp only
     rw [← hkind, ← bind_pure (checkBasisBlock _ _ _)]
-    refine RefE.bindE (fun _ => cidE.k_check_basis_block.none ..) (fun _ => trivial)
+    refine RefE.bindE (fun _ => cidE.k_check_basis_block.none ..) (fun hG => (hGU hG).nv)
       (hcb n vis _ o l fe env m1 a1 block _ hk4 hC1 hBA1 hbP1 hIM1 hA1) fun v y a2 _ hR => ?_
     rw [cidE.k_check_basis_block.arm1]
     exact RefE.ret rfl (hR.pre hg1)

@@ -5,6 +5,7 @@ public import ConAgua.Arena.LoopT
 public import ConAgua.Arena.TwinStep
 public import ConAgua.Arena.Verdict
 public import ConRon.Arena.DeclCheck
+public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.Arena.IndArmBridge2
 public import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 
@@ -52,13 +53,14 @@ theorem blockAt_grow {o l : Word} {b : List IConstantInfo} {m m' : Mem} (h : Blo
 
 /-- **`check_basis_block`'s contract**: on a block `basis_name_hit` matched at a kind below `4`,
 from `StageC` and the arm's memos, the call refines `checkBasisBlock`, both outcomes (its
-errors, the pin mismatch and a duplicate install, are the twin's own: `G` is `True`). -/
+errors, the pin mismatch and a duplicate install, are the twin's own; `G` is the no-verdict
+closure fact the model's spec reads its errors under). -/
 def CbbRef (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
   ∀ (n : Nat) (vis k o l : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState)
     (block : List IConstantInfo) (blockP : List ConLeche.ConstantInfo), k.toNat < 4 →
     StageC dn vis fe env m a → BlockAt o l block m →
     Frontend.denoteCIList a.store block = some blockP → IndMemos m → AbsOK m →
-    RefE True (callE p n "check_basis_block" [vis, k, o, l] m)
+    RefE (closedNV p L.Checker.nvFns = true) (callE p n "check_basis_block" [vis, k, o, l] m)
       (checkBasisBlock fe (basisOfW k.toNat) block) a
       (fun rm fe' a' => CidPost dn m (rm.1.headD 0) fe' rm.2 a')
 
