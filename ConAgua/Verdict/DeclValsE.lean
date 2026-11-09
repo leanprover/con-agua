@@ -382,7 +382,11 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
   refine RefE.splitNot (fun hb9 => by rw [← hx9]; simpa using hb9)
     (fun hb9 => by rw [← hx9] at hb9; simpa using hb9) (fun _ _ => ?_) fun _ _ => ?_
   · -- the unresolved constants' error (`unresolvedConstsErrorL` over `strLitStored`)
-    sorry
+    rcases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 0] m9' with e10 | ⟨r10, m10⟩ <;>
+      dsimp only [checkConstantValE.k_unresolved_consts_error]
+    · obtain ⟨M9, hC9⟩ := hS9.core
+      exact fun hG => uce_errClaim_lo hG.uce hG.nv hC9 hwtl (by decide) h10 "type"
+    · exact RefE.of_cls0 rfl
   -- the type's type
   refine RefE.bindCall (fun _ => rfl)
     (fun hG _ h2 => hG.core.inferTypeCore (n + 1) hn' hS9 0 wt hwtl _ h2)
