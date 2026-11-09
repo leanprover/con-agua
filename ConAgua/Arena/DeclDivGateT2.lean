@@ -259,8 +259,11 @@ theorem cmC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp : 
     (hcall : callW p k "check_div_mod_certs" [vis, c, annVal, so, sl, po, pl] m = some (res, m')) :
     ∃ x a', (checkDivModCerts V fe (decI c) (decE annVal) ss proofs).run a = .ok (x, a') ∧
       StageC dn vis fe env m' a' ∧ CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' res x := by
-  sorry
-
+  obtain ⟨s', rfl, -, x, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
+    (checkDivModCerts_specE p hD.lCheckDivModCerts k _ vis c annVal so sl po pl)
+    (cm_ref hD hq hcl hkp hs0 hsA henv c annVal hc hann hwsv ss xs proofs ps so sl po pl k hk m a
+      hC hCr hs hd hb hn hv hsd hpr hwq) hcall
+  exact ⟨x, a', hrun, hR.stage, hR.core, hR.grow, by simpa [decW0B] using hR.res⟩
 
 /-- **`check_div_mod_pin_value` under `StageC`** from the call's run (`cpv_ref`'s ok half). -/
 @[refines ConRon.Arena.checkDivModPinValue]
@@ -275,8 +278,10 @@ theorem cpvC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     (hpg : ConLeche.divModPinGuard psP env nm = true) (hCr : L.Stubs.CrOK m) :
     ∃ x a', (checkDivModPinValue V fe (decI c) (decE value) ip).run a = .ok (x, a') ∧
       StageC dn vis fe env m' a' ∧ CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
-  sorry
-
+  obtain ⟨s', rfl, -, x, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
+    (checkDivModPinValue_specE p hD.lCheckDivModPinValue hD.lCheckDivModCerts k _ vis c value ps)
+    (cpv_ref hD hq hcl hkp hs0 hsA henv hk hC hc hval hP hps hn hv hwsv hpg hCr) hcall
+  exact ⟨x, a', hrun, hR.stage, hR.core, hR.grow, by simpa [decW0B] using hR.res⟩
 
 /-- **`check_div_mod_pin_at` under `StageC`** from the call's run (`cpa_ref`'s ok half). -/
 @[refines ConRon.Arena.checkDivModPinAt]
@@ -291,8 +296,11 @@ theorem cpaC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp :
     (hpg : ConLeche.divModPinGuard psP env nm = true) (hCr : L.Stubs.CrOK m) :
     ∃ x a', (checkDivModPinAt V fe (decI c) (decE value) ip).run a = .ok (x, a') ∧
       StageC dn vis fe env m' a' ∧ CoreStep env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
-  sorry
-
+  obtain ⟨s', rfl, -, x, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
+    (checkDivModPinAt_specE p hD.lCheckDivModPinAt hD.lCheckTypePins hD.lCheckDivModPinValue
+      hD.lCheckDivModCerts k _ vis c value ps)
+    (cpa_ref hD hq hcl hkp hs0 hsA henv hk hC hc hval hP hps hn hv hwsv hpg hCr) hcall
+  exact ⟨x, a', hrun, hR.stage, hR.core, hR.grow, by simpa [decW0B] using hR.res⟩
 
 end okRuns
 
