@@ -9,6 +9,7 @@ meta import ConAgua.Arena.IndArm
 import ConAgua.Checker.CoreErec
 import ConAgua.Checker.IndCore
 import ConAgua.Checker.IndMemoClosed
+import ConAgua.Checker.CrLeaves
 import ConAgua.Checker.LoopDecl
 import ConAgua.Checker.LoopProgTac
 public import ConAgua.Arena.CheckerT
@@ -255,7 +256,6 @@ structure IndArmProgs (p : Prog) : Prop where
   apd : ApdF p
   crk : CrKeep p
   ilpf : IlpfF p
-  lz : LzcF p
   cid : CidProg p
 
 /-- **The inductive arm's program facts at the substituted checker program** (one `prog_bundle`:
@@ -267,7 +267,7 @@ theorem indArmProgs_checker (bs : List UInt8) (hr : RomOK bs)
     checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
     (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
     closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
-    hrom, closedWL_subPB bs checkerProg_indMemo]
+    hrom, closedWL_subPB bs checkerProg_indMemo, checkerProg_crLeavesPB bs]
 
 /-- `AbsKeep` of the arm's callees that reach no walk, from their write set. -/
 theorem indArmKeep_checker (bs : List UInt8) :
@@ -283,7 +283,7 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
     ∀ dn, DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn := by
   have H := indArmProgs_checker bs hr hpre
   have hk := indArmKeep_checker bs
-  exact indArmSpec_of H.kp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.lz H.cid
+  exact indArmSpec_of H.kp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.cid
     (closedW_subPB bs checkerProg_armPos) armPos_pass armPos_raw
     (closedW_subPB bs checkerProg_armHb) armHb_tail
     (closedW_subPB bs checkerProg_armRc) armRc_tail

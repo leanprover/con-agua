@@ -152,7 +152,7 @@ import all ConAgua.Scan.Values
 # Phase B's read set in the checker's program (lane parmode)
 
 `phaseBFns`: every function `check_pending_go` (phase B's loop) reaches in `checkerProg`, as a
-literal computed from the program's call graph (582 names; `scripts/phaseb_fns.py` regenerates
+literal computed from the program's call graph (580 names; `scripts/phaseb_fns.py` regenerates
 it, and the check below fails if a callee is missing). None of them names the frozen buffer's
 arrays `OUT`, `HDRF`, `CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`,
 so by `L.invoke_agree` (`L/Agree.lean`) a worker's run of `check_pending_go` is the run on any
@@ -218,7 +218,7 @@ def phaseBFns : List FnName :=
    "lh_mk", "lh_push", "limbs_eq", "list_cons_ty_ok", "list_nil_ty_ok", "list_ty_ok", "lit_eq",
    "lit_find", "lit_hash", "lit_major_to_ctor", "lit_match", "lit_push", "lit_to_ctor_if_nat",
    "loose_bvars_bounded_fast", "lp_app", "lp_forall", "lp_fvar", "lp_go", "lp_lam", "lp_let",
-   "lp_let_tail", "lp_lookup", "lp_proj", "lp_rb_let", "lp_spw", "lp_substl", "lp_substpw",
+   "lp_let_tail", "lp_lookup", "lp_proj", "lp_rb_let", "lp_substl",
    "lq_clear", "lq_find", "lq_put", "ls_find", "ls_match", "ls_node", "ls_push", "lsb_clear",
    "lsb_find", "lsb_go", "lsb_node", "lsb_put", "lsq_clear", "lsq_find", "lsq_put", "lv_apd",
    "lv_cases", "lv_cases_at", "lv_comb", "lv_dist1", "lv_dist2", "lv_eq", "lv_equiv", "lv_equivs",

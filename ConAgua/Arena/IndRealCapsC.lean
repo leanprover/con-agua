@@ -30,9 +30,6 @@ store is injective (`denoteN_inj`) and `dn` agrees with it (`TwinMem.dnN`): `dec
 
 * `lzcSimR_of`: the `lv_zero_caps` call of `block_caps_at` at every state of the invariant
   `LzInv st₀` (store `st₀`, `ReadLCOK`), as `icbiW_simG` (`IndInstallSpec/IcaW.lean`) takes it.
-* `consBlockInds_refinesR`: `cons_block_inds` refines `consBlockInds` from the stage relation and
-  the twin's read-back facts (no stub contract): replaces `consBlockInds_refines` for a caller
-  that has them (`ibiW_simC`: from `StageC`, `StageC.lzFacts`).
 -/
 
 
@@ -233,28 +230,5 @@ theorem lzcSimR_of {p : Prog} (hp : LzcF p) {dn : NIdx → Option ConLeche.Name}
   refine Sim.mono (lzc_simR hp k hS hrl _ hrs32 lv hlv) ?_
   rintro r x m' a' ⟨hS', hg, hd, rfl, hst, hrl'⟩
   exact ⟨⟨hS', hg, decZC_toDn hd hF.nwf hF.dnN hz⟩, hst.trans rfl, hrl'⟩
-
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- **`cons_block_inds` refines `consBlockInds`** from the stage relation and the twin's read-back
-facts (`LzFacts` at the entry store, the readback cache holding readbacks; no stub contract):
-`consBlockInds_refines`' post, and the twin's state after it has the entry store and a cache
-holding readbacks. -/
-@[refines ConRon.Arena.consBlockInds]
-theorem consBlockInds_refinesR (p : Prog) (hP : ConsIndsProg p) (hp : LzcF p) (n : Nat) (s₀ : St)
-    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (p1 isRec o l i : Word)
-    (bs : BlockShape) (b : Bool) (cvs : List IConstantVal) (hb : (isRec != 0) = b)
-    (hS : StageR vis fe s₀.mem a₀) (hrl : ReadLCOK a₀) (hF : LzFacts dn a₀.store bs)
-    (hq : DecB (fun m => decBS m p1.toNat) s₀.mem bs)
-    (hsrc : ShapeSrc s₀.mem p1) (hcvs : PSlR decCVp cvs o l s₀.mem) (hil : i.toNat + l.toNat < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_inds" [p1, isRec, o, l, vis, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀ ∧
-      StageR (r.headD 0) (AM.res (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀) s'.mem
-        (AM.st (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀) ∧ IWGrow s₀.mem s'.mem ∧
-      LzInv a₀.store (AM.st (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a₀); ⊤⦄ :=
-  triple_post (icbi_spec p hP.cbi n s₀ p1 isRec o l vis i) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, ⟨hQ, hg⟩, hI⟩ := Sim.run (icbiW_simG hP dn p1 isRec bs b hb (lzcSimR_of hp hF) n _ a₀
-      vis fe o l i cvs hS ⟨rfl, hrl⟩ hq hsrc hcvs hil) hm
-    ⟨hl, hok, hQ, hg, hI⟩
--/
 
 end L.Ind

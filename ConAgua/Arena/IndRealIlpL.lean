@@ -261,7 +261,7 @@ def ilpfP : Prog :=
    ("peel_pis", L.Arena.peelPisL), ("app_count", L.Arena.appCountL),
    ("app_fill", L.Arena.appFillL), ("app_fill_n", L.Arena.appFillNL),
    ("keys_push", L.Arena.keysPush),
-   ("ek_copy", L.Arena.ekCopy), ("lp_substpw", L.Arena.lpSubstPW), ("lp_spw", L.Arena.lpSpw),
+   ("ek_copy", L.Arena.ekCopy),
    ("lv_zero", L.Arena.lvZero), ("lh_push", L.Arena.lhPush), ("sle_go", L.Arena.sleGo),
    ("slp_go", L.Arena.slpGo), ("rec_fire_levels", L.Arena.recFireLevelsL),
    ("inst_lp", L.Arena.instLPL), ("keys_ok", L.Arena.keysOk), ("keys_push_iw", L.Arena.keysPushIW),

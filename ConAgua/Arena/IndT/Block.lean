@@ -79,10 +79,10 @@ section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
-  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
+  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
+include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_block` refines `checkBlock`, both outcomes** under `StageC` (twin side con-ron's
 `checkBlock_bridge_of`): the iw-only steps and the names' checks keep the twin's state; the flush
 (`ReadOK.flush`: `CheckOK` at the cleared caches) and the raw recursion bit (core-free, the state
@@ -277,7 +277,7 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
   have hsrc7 := partsHsrc_grow hg17 hq9 hsrc
   have hcx7 := hcx.grow hg17 hq9 hsrc hptr
   have hT8 := icpE_spec p hP.pass (k + 1) ⟨s7.mem, Locals.init []⟩ vis p0 ([if raw then (1 : Word) else 0].headD 0)
-  have hR8 := pass_ref hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP.pass hcl hfs (k + 1) hn hC7 hq7 hsrc7 hcx7
+  have hR8 := pass_ref hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hP.pass hcl hfs (k + 1) hn hC7 hq7 hsrc7 hcx7
     (isRec := [if raw then (1 : Word) else 0].headD 0) (b := raw) (by cases raw <;> rfl) hP7 hA7 hkP hcoh hden hshP hlpsDn
   refine RefE.bindRun (s₀ := ⟨s7.mem, Locals.init []⟩) (fun _ => icbE.k_check_block_pass.none ..) hT8
     (fun hG => hG.nv) id hR8 fun r8 s8 x8 a8 c8 _ hrun8 hR8' => ?_
@@ -302,7 +302,7 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
 -/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
+include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_block(vis, block.off, block.len, p0)` refines `checkBlock` under `StageC`**
 (`checkBlock_refines`'s, from `StageC` at the entry index and con-ron's `checkBlock_bridge_of`
 preconditions: the environment's coherence and denotation, the shape's and the block's
@@ -337,7 +337,7 @@ theorem checkBlock_refinesC (hP : CbProg p) {fs fs2 : List FnName}
         (AM.st (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem ∧ RcMR s'.mem ∧ (∃ mp, maMR s'.mem mp); ⊤⦄ := by
   refine triple_post (RefE.triple (icbE_spec p hP (n + 5) s₀ vis bO bL p0)
-    (block_ref hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT (n + 5)
+    (block_ref hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT (n + 5)
       (by omega) hC hq hsrc hcx hblk hPm hma hA hkP hkt hkr hta hrb hcoh hden hshP hbP hfRc hclH hfH hclM hfM
       hlpsDn)) ?_
   rintro r s' ⟨hl, x, a', run, hR'⟩

@@ -96,7 +96,7 @@ def armPosFns : List FnName :=
     "reserved_contains_w", "tower_slots_all", "struct_eta_cert_tail", "defeq_lst", "eta_projs",
     "struct_unit_cert", "struct_unit_head", "struct_unit_tail", "stuck_app", "stuck_app_cong",
     "stuck_rest", "eta_cert", "io_neutral", "eta_cert_body", "eta_cert_ty", "de_put", "m2c_eta",
-    "caps_never_zero", "lp_substpw", "lp_spw", "m2c_eta2", "eta_fab_args", "m2c_and",
+    "caps_never_zero", "m2c_eta2", "eta_fab_args", "m2c_and",
     "and_rescue_slots", "m2c_and2", "lit_major_to_ctor", "lit_to_ctor_if_nat", "nat_lit_to_ctor",
     "find_rule", "iota_rec_fire", "iota_rec_fire2", "iota_rec_fam", "rec_fire_levels", "sle_go",
     "slp_go", "iota_case3", "iota_ctor_never_prop", "e_rec_get", "const_name_of", "ind_caps_check",

@@ -38,10 +38,10 @@ theorem absKeep_of_closed {p : Prog} {A : List TieredArray} {C : List Word} {fs 
 section
 variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
-  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
+  (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
+include hkp hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **The inductive arm's contract** from `checkIndDecl_refinesC`, under its program facts. -/
 theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
@@ -60,7 +60,7 @@ theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List Fn
     ∀ dn, DnInj dn → IndArmSpec p dn := by
   intro dn hdn pins n hn m m' a vis fe env block nP o l w r _ hw hdec hb _ hT _ hfold hden hlpd hM hc
   subst hw
-  exact checkIndDecl_refinesC hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP
+  exact checkIndDecl_refinesC hkp hV hOpf hLC hLT hApd hCrk hIlpf P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP
     hkt hkr hn hdn hc hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
 -/
 

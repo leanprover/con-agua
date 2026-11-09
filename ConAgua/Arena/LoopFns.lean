@@ -12,7 +12,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 
 `loopFns`: every function phase A's fold (`install_fold_go`) and phase B (`check_pending_go`)
 reach in the checker's program (the bracket, the arms, the core, the stage), as a literal computed from
-`checkerProg`'s call graph (1424 names; the decided check in `ConAgua/Checker/LoopAll.lean`
+`checkerProg`'s call graph (1422 names; the decided check in `ConAgua/Checker/LoopAll.lean`
 fails if a callee is missing, then recompute it). No function of it writes the pin table or a
 byte array, and every `CTL` word it writes is below 1024 (`LoopClosed`): a step of the loop keeps
 the pin table, so the pin flag, and every array's size.
@@ -180,8 +180,8 @@ def loopFns : List FnName :=
    "list_ty_ok", "lit_eq", "lit_find", "lit_find_str", "lit_guard_has", "lit_hash",
    "lit_major_to_ctor", "lit_match", "lit_match_str", "lit_push", "lit_push_str",
    "lit_to_ctor_if_nat", "loose_bvars_bounded_fast", "lp_app", "lp_forall", "lp_fvar", "lp_go",
-   "lp_lam", "lp_let", "lp_let_tail", "lp_lookup", "lp_proj", "lp_rb_let", "lp_spw", "lp_substl",
-   "lp_substpw", "lq_clear", "lq_find", "lq_put", "ls_find", "ls_match", "ls_node", "ls_push",
+   "lp_lam", "lp_let", "lp_let_tail", "lp_lookup", "lp_proj", "lp_rb_let", "lp_substl",
+   "lq_clear", "lq_find", "lq_put", "ls_find", "ls_match", "ls_node", "ls_push",
    "lsb_clear", "lsb_find", "lsb_go", "lsb_node", "lsb_put", "lsq_clear", "lsq_find", "lsq_put",
    "lv_apd", "lv_cases", "lv_cases_at", "lv_comb", "lv_dist1", "lv_dist2", "lv_eq", "lv_equiv",
    "lv_equivs", "lv_imax", "lv_imax_l", "lv_imax_r", "lv_intern", "lv_leq", "lv_leq_top",

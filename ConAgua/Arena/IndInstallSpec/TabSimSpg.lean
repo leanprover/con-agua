@@ -155,7 +155,7 @@ theorem efgW_mfr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     simp only [efgW, efgK.eq_def] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-    · refine MFr.trans (set64ER_mfr m q (rdW (m.arr64 IW) o)) ?_
+    · refine MFr.trans (MFr.of_frame (erecPutMem_frame m q (rdW (m.arr64 IW) o)) (by simp [EREC]) (by simp)) ?_
       mfr_auto h [efgW_mfr n _ _ _ _ _ _]
 
 theorem efW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m o l = some (r, m')) :
