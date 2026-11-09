@@ -546,7 +546,7 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       rcases hu : ustW n m cl 0 i with _ | ⟨su, m1⟩; · simp only [ustWf] at h; rw [hu] at h; simp [u4K] at h
       simp only [ustWf] at h; rw [hu] at h
       obtain ⟨mp, hmp⟩ := hP.hb
-      obtain ⟨b1, a1, hrun1, hsu, hM1, hS1, hg1⟩ := ustW_ok (dn := dn) n m m1 a cl 0 i su mp
+      obtain ⟨b1, a1, hrun1, hsu, hM1, hS1, hg1⟩ := ustW_ok n m m1 a cl 0 i su mp
         (by have := nF.toNat_lt; simp; omega) hcl hS hmp hu
       have hP1 := hP.setHb (ustW_mfr hu) hM1
       by_cases hs : su ≠ 0
