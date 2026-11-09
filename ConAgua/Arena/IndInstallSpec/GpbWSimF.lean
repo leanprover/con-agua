@@ -79,7 +79,6 @@ theorem spl_decB {α : Type} {dec : Mem → Nat → Option α} {m : Mem} {o l : 
 
 /-! ## `ClassesLp` through `classes_nfs` -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem classesLp_of_cnsRec {mb mF : Mem} {mo ml qr : Word} {hi : Nat} {ws : List Nat}
     {xs : List TargetMajor} (hlp : ClassesLp mb mo ml) (hg : IWGrow mb mF) (hk : KeepW mb mF)
     (hsz : (mb.arr64 IW).size < 2 ^ 64)
@@ -118,7 +117,6 @@ theorem classesLp_of_cnsRec {mb mF : Mem} {mo ml qr : Word} {hi : Nat} {ws : Lis
   show decPL (truncM mb) (decCN (truncM mb)) _ _ = some cts
   rw [UInt64.toNat_ofNat_of_lt' hol.1, UInt64.toNat_ofNat_of_lt' hol.2]
   exact hdct
--/
 
 theorem rcFree_mfr {m m' : Mem} (h : MemFrame rcFreeA rcFreeC m m') :
     MFr [MAM, MCM] [202, 203, 205, 207, 209, 211, 215, 216, 217] m m' := by
