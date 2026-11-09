@@ -8,6 +8,7 @@ public import ConAgua.Arena.DeclValSpec
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.DeclValRef
 
 @[expose] public section
@@ -42,8 +43,8 @@ theorem push_call {p : Prog} (hRp : RecProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
     {ci : IConstantInfo} (hc : callW p n "env_push" [vis, c] m = some (r, m'))
     (hS : StageR vis fe m a) (hci : decCI (erecP m) c.toNat = some ci) :
-    StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' := by
-  sorry
+    StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' :=
+  envPush_stage hRp.rs hRp.push hc hS hci
 
 /-- The lookups of the axiom arm. -/
 structure AxProg (p : Prog) : Prop where

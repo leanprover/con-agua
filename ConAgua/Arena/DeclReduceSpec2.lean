@@ -43,7 +43,7 @@ theorem matchesPin_eq (cv pin : IConstantVal) : cv.matchesPin pin = pure (decide
 
 /-- **The model of `matches_pin`**: `cv_eq`'s word-level comparison; the memory unchanged. -/
 def mpW (m : Mem) (q pin : Word) : Option (List Word × Mem) :=
-  some ([if cvEqB (m.arr64 EREC) q pin then 1 else 0], m)
+  some ([if cvEqB (erRdT m) q pin then 1 else 0], m)
 
 theorem mp_specW (p : Prog) (hC : CanonProg p) (hp : p.lookup "matches_pin" = some matchesPinL)
     (n : Nat) (s₀ : St) (q pin : Word) :
@@ -214,7 +214,7 @@ def reoN3 (r3 : List Word) : Option (List Word × Mem) → Option (List Word × 
   | none => none
   | some (r4, m4) =>
     if r3.headD 0 = 0 then some ([0], m4)
-    else some ([if ciEqB (m4.arr64 EREC) (r3.tail.headD 0) (r4.headD 0) then 1 else 0], m4)
+    else some ([if ciEqB (erRdT m4) (r3.tail.headD 0) (r4.headD 0) then 1 else 0], m4)
 
 /-- `Nat`: after the lookup. -/
 def reoN2 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -263,7 +263,7 @@ theorem reoN1_some : reoN1 p n vis (some (r2, m2)) = reoN2 p n (envFindW m2 (r2.
 theorem reoN2_some : reoN2 p n (some (r3, m3)) = reoN3 r3 (callW p n "rom_ci" [1] m3) := rfl
 theorem reoN3_some : reoN3 r3 (some (r4, m4)) =
     if r3.headD 0 = 0 then some ([0], m4)
-    else some ([if ciEqB (m4.arr64 EREC) (r3.tail.headD 0) (r4.headD 0) then 1 else 0], m4) := rfl
+    else some ([if ciEqB (erRdT m4) (r3.tail.headD 0) (r4.headD 0) then 1 else 0], m4) := rfl
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem reoB1_some : reoB1 p n vis (some (r2, m2)) = reoB2 p n (envFindW m2 (r2.headD 0) vis) := by
   sorry

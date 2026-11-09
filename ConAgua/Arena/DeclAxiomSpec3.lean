@@ -49,6 +49,7 @@ theorem counts_words {arr : Array Word} {q a b : Word} {x y : Nat} (hsz : arr.si
     ((rdW arr (q + 5) ≠ a ∨ rdW arr (q + 6) ≠ b) ↔ ¬ (x = a.toNat ∧ y = b.toNat)) := by
   obtain ⟨w5, e5, rfl⟩ := natD hx
   obtain ⟨w6, e6, rfl⟩ := natD hy
+  simp only [aread_apply] at e5 e6
   have hq5 : (q + 5).toNat = q.toNat + 5 := by
     have := (Array.getElem?_eq_some_iff.mp e5).1; rw [UInt64.toNat_add]; simp; omega
   have hq6 : (q + 6).toNat = q.toNat + 6 := by

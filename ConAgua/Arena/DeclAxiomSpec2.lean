@@ -106,6 +106,7 @@ theorem ctor_counts {a : Array Word} {q : Word} {np nf : Nat} (hsz : a.size < 2 
     ((rdW a (q + 5) ≠ 0 ∨ rdW a (q + 6) ≠ 0) ↔ ¬ (np = 0 ∧ nf = 0)) := by
   obtain ⟨w5, e5, rfl⟩ := natD hnp
   obtain ⟨w6, e6, rfl⟩ := natD hnf
+  simp only [aread_apply] at e5 e6
   have hq5 : (q + 5).toNat = q.toNat + 5 := by
     have := (Array.getElem?_eq_some_iff.mp e5).1; rw [UInt64.toNat_add]; simp; omega
   have hq6 : (q + 6).toNat = q.toNat + 6 := by
