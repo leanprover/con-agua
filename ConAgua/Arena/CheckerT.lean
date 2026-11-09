@@ -806,9 +806,6 @@ theorem installStep_refines (hm : mode = .verified) (hdc : LoopCallees dn p) (hF
   exact ⟨hloc, hP.core, hP.ind, hok, by rw [hst, hres]; exact hP.loop⟩
 -/
 
-/-- `install_decl_step` is one of the loop's functions. -/
-theorem installDeclStep_loop : "install_decl_step" ∈ loopFns := loop_mem _ rfl
-
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_decl_step` refines `installDeclStep`** under `StageT` (`ids_ref`'s ok half): a
 returning run is the twin's `.ok` with the position advanced; the memory's half of the twin's
