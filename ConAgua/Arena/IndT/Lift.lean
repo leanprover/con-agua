@@ -31,6 +31,13 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/-- A refinement under a stronger error assumption `G'` from one under `G`. -/
+theorem RefE.weakenG {α β : Type} {G G' : Prop} {x : Except Err α} {T : AM β} {a : AState}
+    {R : α → β → AState → Prop} (hG : G' → G) (h : RefE G x T a R) : RefE G' x T a R := by
+  cases x with
+  | ok v => exact h
+  | error e => exact fun g => h (hG g)
+
 section lift
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
