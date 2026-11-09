@@ -222,12 +222,12 @@ def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Opt
 def ekCopyW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, s, d, l =>
-    if l = 0 then some m else ekCopyW n (m.set64 SPN d (rdW (m.arr64 EREC) s)) (s + 1) (d + 1) (l - 1)
+    if l = 0 then some m else ekCopyW n (m.set64 SPN d (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775))) (s + 1) (d + 1) (l - 1)
 
 theorem ekCopyW_zero (n : Nat) (m : Mem) (s d l : Word) (h : l = 0) :
     ekCopyW (n + 1) m s d l = some m := by simp [ekCopyW, h]
 theorem ekCopyW_succ (n : Nat) (m : Mem) (s d l : Word) (h : l ≠ 0) :
-    ekCopyW (n + 1) m s d l = ekCopyW n (m.set64 SPN d (rdW (m.arr64 EREC) s)) (s + 1) (d + 1) (l - 1) := by
+    ekCopyW (n + 1) m s d l = ekCopyW n (m.set64 SPN d (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775))) (s + 1) (d + 1) (l - 1) := by
   simp [ekCopyW, h]
 grind_pattern [arena_grind] ekCopyW_zero => ekCopyW (n + 1) m s d l
 grind_pattern [arena_grind] ekCopyW_succ => ekCopyW (n + 1) m s d l
@@ -298,7 +298,15 @@ theorem ekCopy_spec (n : Nat) : ∀ (s₀ : St) (s d l : Word),
     ⦃fun st => st = s₀⦄
     invoke p (exec p n) "ek_copy" [s, d, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ ekCopyW n s₀.mem s d l = some s'.mem; ⊤⦄ := by
-  sorry
+  induction n with
+  | zero => intro s₀ s d l; rw [invoke_eq _ hL.ek_copy]; simp only [callFn, ekCopy]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ s d l
+    rw [invoke_eq _ hL.ek_copy]
+    simp only [callFn, ekCopy]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish
 
 theorem keysPush_spec (n : Nat) (s₀ : St) (po pc : Word) :
     ⦃fun s => s = s₀⦄
