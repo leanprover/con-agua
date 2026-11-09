@@ -6,6 +6,7 @@ public import ConAgua.Arena.IndT.BlockWM
 public import ConAgua.Arena.IndT.BlockPD
 public import ConAgua.Arena.IndT.BlockNames
 public import ConAgua.Arena.IndT.BlockRMS
+public import ConAgua.Arena.IndT.PassCS
 import ConAgua.Checker.ArmsT
 import ConAgua.Verdict.PosKnotE
 meta import ConAgua.Checker.IndDeclConstsProg
@@ -182,7 +183,7 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
   have hF : FlushProg (Prog.subPB bs checkerProg) := by prog_bundle []
   have hnv : VerdictCtxU (Prog.subPB bs checkerProg) → closedNV (Prog.subPB bs checkerProg) nvFns = true :=
     fun hG => hG.nv
-  -- ronsync2 p3e: the pass, the tail: their contracts still to prove
+  -- ronsync2 p3e: the tail: its contract still to prove
   have hfl : FlushRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     flushRefS_of (dn := dn) hF hnv
   have hbr : BrRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) :=
@@ -207,6 +208,32 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
     rmRefS_of (checkerProg_thmArmPB bs hr hpre).ccv (checkerProg_knotStagePB bs) (checkerProg_apdPB bs)
       (checkerProg_crKeepPB bs) (checkerProg_crfPB bs) hrmP hWt (checkerProg_indLeavesPB bs)
       (checkerProg_ccvSimsPB bs dn)
-  exact ⟨look, hnm, hrm, hfl, hbir, hwm, sorry, sorry, hbr, hbt, hpd⟩
+  -- the pass: `passRefS_of` from its callees' contracts
+  have hAP := indArmProgs_checker bs hr hpre
+  have hccv := (checkerProg_thmArmPB bs hr hpre).ccv
+  have hsc : SctsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    sctsRefS_of hAP.kp hAP.opf hAP.lc hAP.lt hAP.apd hAP.crk (by prog_bundle []) hccv
+      (checkerProg_crfPB bs) (checkerProg_ccvSimsPB bs dn)
+  have hinds : IndsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    indsRefS_of hAP.kp hccv (checkerProg_crfPB bs) (checkerProg_ccvSimsPB bs dn) hAP.opf hAP.lc
+      hAP.apd hAP.crk (by prog_bundle [])
+      (fun f hf => indArmKeep_checker bs f (by
+        simp only [indsKeepCalleesC, List.mem_cons, List.not_mem_nil, or_false] at hf
+        rcases hf with rfl | rfl <;>
+          simp [passKeepCalleesC, tailKeepCalleesC, grcKeepCalleesC, indsKeepCalleesC, posKeepCalleesC]))
+      (checkerProg_indLeavesPB bs)
+  have hct : CtorsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    ctorsRefS_of (by prog_bundle []) hsc hAP.crk (checkerProg_indLeavesPB bs)
+  have hpl : PassLook (Prog.subPB bs checkerProg) := by prog_bundle []
+  -- ronsync2 p3e: block_nest_ctx, check_block_classes, check_block_positivity, class_seeds,
+  -- nest_seeds: their contracts still to prove (Pass.lean's BncRefS … NsdRefS)
+  have hbnc : BncRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
+  have hcls : ClsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
+  have hpos : PosRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
+  have hsd : SeedsRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
+  have hnsd : NsdRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn := sorry
+  have hpass : PassRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+    passRefS_of ⟨hpl, hinds, hct, hbnc, hcls, hpos, hsd, hnsd⟩ hnv
+  exact ⟨look, hnm, hrm, hfl, hbir, hwm, hpass, sorry, hbr, hbt, hpd⟩
 
 end L.Checker
