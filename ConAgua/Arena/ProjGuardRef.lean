@@ -7,6 +7,8 @@ import ConAgua.Arena.InferBodyLet
 import ConAgua.Arena.IndView
 import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.WhnfM2CRefine2
+public import ConAgua.Arena.IndIface
+public import ConAgua.Arena.IndSumSpec.McGoStep
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Rel
 import ConAgua.Arena.RefWalk
@@ -683,7 +685,8 @@ def PgrOK (p : Prog) : Prop :=
     HW us → callW p n "proj_guard_rows" [vis, q, i, us] m = some (r, m') →
     ∃ y a', (projGuardRows fe (tbl.entry i.toNat) (decI us)).run a = .ok (y, a') ∧
       CoreAfterG dn m m' a' vis fe M eb ∧
-      (∀ h l, denoteL a.store.ls h = some l → denoteL a'.store.ls h = some l) ∧ PgrRes m m' r y
+      (∀ h l, denoteL a.store.ls h = some l → denoteL a'.store.ls h = some l) ∧ PgrRes m m' r y ∧
+      L.Ind.IWOK m' ∧ L.Ind.IWGrow m m' ∧ ∃ mp, L.Ind.hbMR m' mp
 
 /-- What `check_proj_guard`'s refinement needs of a program. -/
 structure CpgProg (p : Prog) : Prop extends PgsProg p where
@@ -776,7 +779,7 @@ theorem cpg_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   rcases c3 : callW p (n + 1) "proj_guard_rows" [vis, q, i, us] m2 with _ | ⟨r3, m3⟩
   · rw [liftE_none, cpgE.k_proj_guard_rows.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨y3, a3, hrun3, hA3, hL3, hres3⟩ := hpg _ dn m2 m3 a2 vis fe M2 eb q i us tbl r3 hS2
+  obtain ⟨y3, a3, hrun3, hA3, hL3, hres3, -⟩ := hpg _ dn m2 m3 a2 vis fe M2 eb q i us tbl r3 hS2
     (by rw [he2]; exact hq) hfe hus c3
   refine RefE.bind_right hrun3 ?_
   obtain ⟨M3, hS3, hK3, hG3⟩ := hA3
