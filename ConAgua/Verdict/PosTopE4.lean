@@ -156,7 +156,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
     rw [hhi0, husd0] at hRef
     refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => nrtE.k_nest_ctors.none ..)
       (nctE_spec p L.nb.pctors n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (fun _ => True.intro) id
-      hRef fun r1' s2 x1 a1 _ _ hrun1 ⟨hC1, hg1, hO1, hOb1, hns1, hP1, hA1⟩ => ?_
+      hRef fun r1' s2 x1 a1 _ _ hrun1 ⟨hC1, hg1, hO1, hOb1, hns1, hP1, hA1, _⟩ => ?_
     dsimp only at hC1 hg1 hO1 hOb1 hns1 hP1 hA1
     generalize s2.mem = m1 at hC1 hg1 hO1 hOb1 hns1 hP1 hA1 ⊢
     rw [nrtE.k_nest_ctors.arm1]
@@ -361,7 +361,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
       (by rw [hctyd]; exact hni2) (dState_ext hx02 _ _ hnsP) (by simpa using hw _ List.mem_cons_self) hni3
     rw [hnnd', husd', hctyd, hnpc] at hK
     refine RefE.bindE (fun _ => nsdE.k_nest_cont_key.none ..) id hK
-      fun ⟨r3, m3⟩ x3 a3 hrun3 ⟨hC3, hg3, _, hns3, hP3, hA3⟩ => ?_
+      fun ⟨r3, m3⟩ x3 a3 hrun3 ⟨hC3, hg3, _, hns3, hP3, hA3, _⟩ => ?_
     dsimp only at hC3 hg3 hns3 hP3 hA3
     have hg13 := hg12.trans hg3
     have hsO1 : (sO + 1).toNat = sO.toNat + 1 := word_add_toNat (by simp; omega)
