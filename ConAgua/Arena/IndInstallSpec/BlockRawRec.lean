@@ -187,7 +187,7 @@ theorem partsEView_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
   exact absurd rfl hne
 
 /-- **`pi_doms_mention_any`'s model refines `piDomsMentionAny`.** -/
-theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
+theorem pdmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (f e : Word) (mp : Std.HashMap EIdx Bool),
     StageR vis fe m a → H e → DecB (fun m => decHL m no.toNat nl.toNat) m names →
     no.toNat + nl.toNat ≤ iwTop m → maMR m mp →
@@ -234,7 +234,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     cases n with
     | zero => simp [maConstWk] at hma
     | succ n' =>
-    obtain ⟨c, hrun, hbc, hM1, hS1, hg1⟩ := maConstW_ok n' dn fe vis m m1 a no nl _ b ws mp hma hS hty hws hwlt hM
+    obtain ⟨c, hrun, hbc, hM1, hS1, hg1⟩ := maConstW_ok n' (fun _ => none) fe vis m m1 a no nl _ b ws mp hma hS hty hws hwlt hM
     simp only [ConRon.Arena.piDomsMentionAny, htag, ite_true, StateT.run_bind, viewBind_run' _ a, hvb]
     rw [hnm']
     simp only [except_ok_bind, StateT.run_bind, hrun]
@@ -270,8 +270,10 @@ theorem piDomsMentionAny_refines (p : Prog) (hM : MaProg p)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ ∧
       r = [if AM.res (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ then 1 else 0] ∧
       AM.st (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ = a₀ ∧
-      (∃ mp', maMR s'.mem mp') ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  sorry
+      (∃ mp', maMR s'.mem mp') ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ :=
+  triple_post (pdm_spec p hM hp n s₀ no nl f e) fun _ _ ⟨hl, hm⟩ =>
+    let ⟨hok, hr, hst, hM', hS', hg⟩ := Sim.run (pdmW_sim n s₀.mem a₀ f e mp hS he hns hnb hmp) hm
+    ⟨hl, hok, hr, hst, hM', by rw [← hst] at hS'; rw [hst] at hS'; exact hS', hg⟩
 
 /-- After the element's test. -/
 def brrK (_n : Nat) (rest : Mem → Option (List Word × Mem)) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -384,7 +386,28 @@ theorem brmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     Sim (brmW n m no nl coff clen)
       (cs.anyM fun c => ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) a
       (RawR (vis := vis) (fe := fe) m a) := by
-  sorry
+  induction n with
+  | zero => intro m a coff clen cs mp _ _ _ _ _ _ r m' h; simp [brmW] at h
+  | succ n ih =>
+    intro m a coff clen cs mp hS hcs0 hcb hns hnb hM
+    by_cases hl : clen = 0
+    · rw [brmW_nil n m no nl coff clen hl]
+      subst hl
+      have : cs = [] := by have := decPL_length _ hcs0; simpa using this
+      subst this
+      exact Sim.ret ⟨rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
+    rw [brmW_cons n m no nl coff clen hl]
+    have hcs : PSlR decCN cs coff clen m := ⟨hcs0, hcb.resolve_left hl⟩
+    obtain ⟨pc, ⟨cv, nF⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hl
+    obtain ⟨⟨cvp, hcvp, hcv⟩, -⟩ := decCN_some (show decCN (truncM m) pc = some (cv, nF) from hc0)
+    obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp (UInt64.toNat_ofNat_of_lt' hpb)
+    obtain ⟨htyl, htye⟩ := partsCVType hcv (UInt64.toNat_ofNat_of_lt' hcvb)
+    rw [hw, hcw, partsAnyM_cons]
+    have h1 := pdmW_sim (names := names) n m a CWF _ mp hS htyl hns hnb hM
+    rw [CWF_eq, show decE (erRd m (UInt64.ofNat cvp + 3)) = cv.type from htye] at h1
+    exact brrK_sim h1 fun m1 mp1 hS1 hg1 hM1 => ih m1 a (coff + 1) (clen - 1) cs' mp1 hS1
+      (hcs'.grow decCN_mono hg1).1 (Or.inr (hcs'.grow decCN_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1)
+      (Nat.le_trans hnb hg1.iw) hM1
 
 /-- **`block_is_rec_go`'s model refines the members' `anyM`.** -/
 theorem brgoW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
@@ -396,7 +419,35 @@ theorem brgoW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     Sim (brgoW n m no nl moff mlen)
       (ms.anyM fun ms => ms.ctors.anyM fun c => ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) a
       (RawR (vis := vis) (fe := fe) m a) := by
-  sorry
+  induction n with
+  | zero => intro m a moff mlen ms mp _ _ _ _ _ _ r m' h; simp [brgoW] at h
+  | succ n ih =>
+    intro m a moff mlen ms mp hS hms0 hmb hns hnb hM
+    by_cases hl : mlen = 0
+    · rw [brgoW_nil n m no nl moff mlen hl]
+      subst hl
+      have : ms = [] := by have := decPL_length _ hms0; simpa using this
+      subst this
+      exact Sim.ret ⟨rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
+    rw [brgoW_cons n m no nl moff mlen hl]
+    have hms : PSlR decMS ms moff mlen m := ⟨hms0, hmb.resolve_left hl⟩
+    obtain ⟨pc, ms0, ms', rfl, hw, hpb, hm0, hms'⟩ := partsPSl_cons hms hl
+    have hd0 : decMS (truncM m) pc = some ms0 := hm0
+    simp only [decMS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd0
+    obtain ⟨cvp, -, cvT, -, dp, -, decl, -, nIdx, -, ctors, hct, rfl⟩ := hd0
+    obtain ⟨o, l, ho, hl', hdc, hcb⟩ := partsAt decCN_mono hct
+    have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
+    have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+    have hp2 : (UInt64.ofNat pc + 2).toNat = pc + 2 := by
+      have := partsIwLt ho; rw [UInt64.toNat_add, hpw]; simp; omega
+    have hp3 : (UInt64.ofNat pc + 3).toNat = pc + 3 := by
+      have := partsIwLt hl'; rw [UInt64.toNat_add, hpw]; simp; omega
+    obtain ⟨how, -, -⟩ := partsIwRd ho hp2
+    obtain ⟨hlw, -, -⟩ := partsIwRd hl' (by rw [hp3])
+    rw [hw, how, hlw, ofNat_toNat_word, ofNat_toNat_word, partsAnyM_cons]
+    exact brrK_sim (brmW_sim n m a o l ctors mp hS hdc hcb hns hnb hM) fun m1 mp1 hS1 hg1 hM1 =>
+      ih m1 a (moff + 1) (mlen - 1) ms' mp1 hS1 (hms'.grow decMS_mono hg1).1
+        (Or.inr (hms'.grow decMS_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1) (Nat.le_trans hnb hg1.iw) hM1
 
 /-- **The model of `block_is_rec`** (at exec fuel `n + 1`). -/
 def brrW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
