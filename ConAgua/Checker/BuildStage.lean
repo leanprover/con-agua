@@ -171,15 +171,22 @@ theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s,
     {ipins : List INatOpPinSet} {sE : AState} {m : Mem}
     (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
     (h7 : R7 (ConAgua.Final.loadMem b pb sz) m pb ds ipins sE) :
-    BuildR (dnOf sE.store) ds 0 0 m sE {} := by
+    BuildR (dnOf sE.store) ds m sE {} := by
   obtain ⟨hA, hB, hC, hD, hE⟩ := hpx
   obtain ⟨hoff, hdrv, -, -, -, hpd, _rc, _preC, -, hden⟩ := ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
   have hS := h7.since
   have hctl : 220 ≤ (m.arr64 CTL).size := by
     have := hS.caps.2.1
     rw [hS.frame.size]; simp only [ctlMin] at this; omega
+  have sz63 : ∀ t : TieredArray, t ∈ checkerArrays.wordSlots → (m.arr64 t).size < 2 ^ 63 := fun t ht => by
+    rw [hS.frame.size]; have := (hS.caps.1 t ht).1; omega
+  have hT : TwinOK (dnOf sE.store) m sE (bEnv ({} : IStreamIndex).base 0 0) :=
+    TwinOK.of_check (checkOK_congrFe (fun n => by rw [bEnv_find_zero, emptyEnv_find])
+      (fun n => by rw [bEnv_findTable_zero, emptyEnv_findTable]) hdrv)
+      ⟨sz63 _ (by decide), sz63 _ (by decide), sz63 _ (by decide), since_coreMemos hS hctl,
+        fun k x hk => by simp only [dnOf] at hk; split at hk <;> simp_all⟩
   refine ⟨⟨⟨h7.arena, core_of_R7 ⟨hA, hB, hC, hD, hE⟩ h7, ⟨fun _ => h7.pinsFull⟩, since_envR hS, h7.mode⟩,
-    h7.iw⟩, since_indexR hS, h7.decls, ?_, hdrv, hoff, ?_, ?_, since_indMemos hS hctl, ?_⟩
+    h7.iw⟩, hT, h7.pin0, since_indexR hS, h7.decls, ?_, hdrv, hoff, ?_, ?_, since_indMemos hS hctl, ?_⟩
   · intro i hi b' nP e
     exact frontDecls_of_prefix ⟨hA, hB, hC, hD, hE⟩ i hi b' nP e
   · intro x hx
@@ -237,7 +244,7 @@ build, `BuildR` at the built index after it, the record pool's prefix kept, and 
 write set (`biA`, `biC`). -/
 structure FoldAt (b pb : ByteArray) (sz : TieredArray → Nat) (PA : PhaseA b) (m₇ m : Mem) : Prop where
   r7 : R7 (ConAgua.Final.loadMem b pb sz) m₇ pb PA.ds PA.ipins PA.sE
-  build : BuildR (dnOf PA.sE.store) PA.ds 0 0 m PA.sF PA.I
+  build : BuildR (dnOf PA.sE.store) PA.ds m PA.sF PA.I
   fsize : PA.I.firsts.size = PA.ds.size
   grow : BKeep m₇ m
   frame : MemFrame biA biC m₇ m
