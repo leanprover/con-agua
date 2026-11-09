@@ -121,6 +121,8 @@ structure DeclsF (D P : Array Word) (ds : Array IDeclaration) : Prop where
   room : 1 + 8 * ds.size ≤ D.size
   ptop : (P[0]?.getD 0).toNat + 1 ≤ P.size
   recs : ∀ i (h : i < ds.size), DeclAtF D P i ds[i]
+  /-- An inductive block's parameter count is below `2^63` (the parse's numbers are). -/
+  npb : ∀ i (h : i < ds.size) b nP, ds[i] = .indDecl b nP → nP < 2 ^ 63
 
 /-- **The parse state relation**: `NID` represents the name table, `LID` the level table, `EID`
 the expression table, `DECL`/`DLP` the declarations; the inductive lines' scratch arrays `IFR`,

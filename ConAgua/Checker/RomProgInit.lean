@@ -120,7 +120,7 @@ theorem stateDR_loadMem (hc : CapsOK (loadMem b pb sz)) :
   rw [loadMem_arr]
   simp only [Array.size_replicate] at hd hq hd2 hq2
   refine ⟨by simpa using hd2, by simpa using hq2, ?_, ?_, ?_, fun i h => by
-    simp [StateD.blank] at h⟩
+    simp [StateD.blank] at h, fun i h => by simp [StateD.blank] at h⟩
   · rw [Array.getElem?_replicate]; split <;> simp [StateD.blank]
   · simpa [StateD.blank] using hd
   · rw [Array.getElem?_replicate]; split <;> simp <;> omega

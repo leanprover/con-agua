@@ -268,9 +268,16 @@ theorem DeclsF.push (D P D' P' : Array Word) (ds : Array IDeclaration) (x : IDec
     (htop' : (P'[0]?.getD 0).toNat + 1 ≤ P.size)
     (hDo : ∀ j, 0 < j → j < 1 + 8 * ds.size → D'[j]? = D[j]?)
     (hPo : ∀ j, 0 < j → j < 1 + (P[0]?.getD 0).toNat → P'[j]? = P[j]?)
-    (hnew : DeclAtF D' P' ds.size x) : DeclsF D' P' (ds.push x) := by
+    (hnew : DeclAtF D' P' ds.size x) (hnp : ∀ b nP, x = .indDecl b nP → nP < 2 ^ 63) :
+    DeclsF D' P' (ds.push x) := by
   refine ⟨by rw [hDs]; exact h.dsize, by rw [hPs]; exact h.psize, by simpa using hc,
-    by rw [hDs]; simpa using hroom, by rw [hPs]; exact htop', fun i hi => ?_⟩
+    by rw [hDs]; simpa using hroom, by rw [hPs]; exact htop', fun i hi => ?_, fun i hi b nP e => ?_⟩
+  rotate_left
+  · simp only [Array.size_push] at hi
+    rw [Array.getElem_push] at e
+    split at e
+    · exact h.npb i _ b nP e
+    · exact hnp b nP e
   simp only [Array.size_push] at hi
   rw [Array.getElem_push]
   split
@@ -401,6 +408,7 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
       (by rw [hP0, htc, ← hrd]; omega) (by rw [hP0, htc]; omega)
       (fun j hj0 hj => by rw [G5 j hj0 (by rw [hcn']; exact hj), hm'D])
       (fun j hj0 hj => by rw [hm'P]; exact F4 j hj0 (by rw [hrd]; omega)) ?_
+      (fun _ _ e => by unfold declOf at e; repeat (first | (split at e; · cases e) | cases e))
     -- the new record
     have hlist : (sliceL (m'.arr64 DLP) (1 + (rdW (m.arr64 DLP) 0).toNat)
         (lsCntN b.data (f.lps + 1) 0).toNat).map decI = cvp.levelParams := by

@@ -3,6 +3,7 @@ module
 import ConAgua.Arena.Env
 import ConAgua.Arena.DerRel
 public import ConAgua.Arena.Tiers
+public import ConAgua.Arena.IndexRel
 
 @[expose] public section
 
@@ -121,18 +122,30 @@ theorem aStateInit_refines (sz : TieredArray → Nat)
     (pinsEmpty_refines sz).2, fun _ => ⟨rfl, rfl, rfl, rfl⟩⟩
 
 /-- **`mkIFEnv IEnv.empty` is the zeroed environment index** (view word `0`): rows empty, count `0`. -/
-@[refines ConRon.Arena.mkIFEnv]
-theorem mkIFEnv_empty_refines (dn : NIdx → Option ConLeche.Name) (sz : TieredArray → Nat) :
-    EnvR (initMem sz) 0 (mkIFEnv IEnv.empty) := by
-  sorry
+theorem initMem_rdN (sz : TieredArray → Nat) (b : TieredArray) (k : Nat) :
+    rdN ((initMem sz).arr64 b) k = 0 := by
+  simp only [rdN, initMem_arr, Array.getElem?_replicate]; split <;> rfl
 
-/-- **The index build from the empty list** (`mkIFEnvGo []`): its counter is the view word `0` and
-its table the empty index of zeroed memory. -/
+@[refines ConRon.Arena.mkIFEnv]
+theorem mkIFEnv_empty_refines (sz : TieredArray → Nat) :
+    EnvR (initMem sz) 0 (mkIFEnv IEnv.empty) := by
+  have hO : OwnEmpty (initMem sz) := fun w => by
+    simp [ownRaw, ownRow, ownTbl, stampW, initMem_rdN, initMem_rd]
+  have hB : OwnBelow (initMem sz) := fun w _ => by
+    simp [ownRow, stampW, initMem_rdN, initMem_rd]
+  have hI : IndexR (initMem sz) {} :=
+    ⟨fun n => by simp [baseRow, initMem_rdN], fun n => by simp [baseTbl, initMem_rdN],
+      fun i hi => absurd hi (by simp), by simp, by simp [initMem_rd]⟩
+  exact EnvR.ofIndex (k := 0) hI hO hB (by simp [stampW, initMem_rd])
+    (by simp [initMem_rd]) (by simp [initMem_rd])
+
+/-- **The index build from the empty list** (`mkIFEnvGo []`): the view word `0` and the empty
+index of zeroed memory. -/
 @[refines ConRon.Arena.mkIFEnvGo]
-theorem mkIFEnvGo_empty_refines (dn : NIdx → Option ConLeche.Name) (sz : TieredArray → Nat) :
+theorem mkIFEnvGo_empty_refines (sz : TieredArray → Nat) :
     EnvR (initMem sz) 0
-      ⟨IEnv.empty, mkIFEnvGo IEnv.empty.consts, {}, mkIFEnvTblsGo IEnv.empty.tables⟩ := by
-  sorry
+      ⟨IEnv.empty, mkIFEnvGo IEnv.empty.consts, {}, mkIFEnvTblsGo IEnv.empty.tables⟩ :=
+  mkIFEnv_empty_refines sz
 
 /-- **A constant's name is the handle in word `1` of its record**: the key `env_push` files the
 record under, and what `decCI` reads (`IConstantInfo.name`, pure on the twin's side). -/
@@ -140,6 +153,26 @@ record under, and what `decCI` reads (`IConstantInfo.name`, pure on the twin's s
 theorem iConstantInfo_name_refines {a : Array Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
     ∃ w, a[p + 1]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
-  sorry
+  simp only [decCI, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨t, -, h⟩ := h
+  have hcv : ∀ {q : Nat} {v : IConstantVal}, decCV (aread a) q = some v →
+      ∃ w, a[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ v.name = decI w := fun {q v} hv => by
+    simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at hv
+    obtain ⟨n, hn, l, -, t, -, rfl⟩ := hv
+    simp only [hd?, aread_apply, Option.bind_eq_bind, Option.bind_eq_some_iff] at hn
+    obtain ⟨w, hw, hn⟩ := hn
+    split at hn
+    · cases hn; exact ⟨w, hw, by assumption, rfl⟩
+    · cases hn
+  split at h <;>
+    simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
+      reduceCtorEq] at h
+  · obtain ⟨v, hv, rfl⟩ := h; exact hcv hv
+  · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hcv hv
+  · obtain ⟨v, hv, rfl⟩ := h; exact hcv hv
+  · obtain ⟨v, hv, _, _, rfl⟩ := h; exact hcv hv
+  · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hcv hv
+  · obtain ⟨v, hv, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h; exact hcv hv
 
 end L.Arena
