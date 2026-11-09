@@ -419,6 +419,7 @@ def projGuardSortL : FunDecl := lfn (mode, vis, p, us) locals (po, pc, ty, n, f,
   pc := EREC⦃p + 3⦄;
   ty := EREC⦃p + 4⦄;
   n := EREC⦃p + 17⦄ + EREC⦃p + 11⦄;
+  if n < EREC⦃p + 17⦄ { abort };
   (f, u) := call former_res_sort(ty);
   if f != 0 {
     a := call lv_always_zero(u);
