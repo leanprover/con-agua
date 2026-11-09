@@ -602,17 +602,4 @@ syntax (name := smonoTry) "smono_try " ident+ : command
     unless ← liftTermElabM (derive f) do
       logWarningAt id m!"smono_try: no script proves KM.{f}"
 
-/-- `smono_debug f`: the goals `smono_auto` leaves on `KM.f` (unfolding, or functional induction). -/
-syntax (name := smonoDebug) "smono_debug " ident : command
-
-@[command_elab smonoDebug] meta def elabSmonoDebug : CommandElab := fun stx => do
-  let f ← liftCoreM <| realizeGlobalConstNoOverload stx[1]
-  liftTermElabM do
-    let ty ← instantiateMVars (← stmt f)
-    let fid := mkIdent f
-    let tac ← if (← isRec f) then `(tactic| (intros; fun_induction $fid:ident <;> smono_auto; all_goals trace_state; all_goals sorry))
-      else `(tactic| (intros; unfold $fid:ident; smono_auto; trace_state; all_goals sorry))
-    let _ ← elabTermEnsuringType (← `(by $tac:tactic)) ty
-    synthesizeSyntheticMVarsNoPostponing
-
 end KnotMonoTac
