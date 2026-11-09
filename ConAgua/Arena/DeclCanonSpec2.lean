@@ -44,19 +44,6 @@ end specs
 
 /-! ## The relational lemma -/
 
-theorem hslice_agree {kk : IdxKind} {a b : Array Word} {t : Nat} (h : ∀ i < t, b[i]? = a[i]?)
-    {o c : Nat} (hc : o + c ≤ t) : (hslice? (aread b) o c : Option (List (Idx kk))) = hslice? (aread a) o c := by
-  sorry
-
-/-- **A fresh constant value** `⟨nm, lps, ty⟩` written at `q‥q+3` decodes to itself. -/
-theorem decCV_new {a a' : Array Word} {N q : Nat} {nm lo ll ty : Word} {lps : List NIdx}
-    (hnm : nm.toNat < 2 ^ 32) (hty : ty.toNat < 2 ^ 32) (h0 : a'[q]? = some nm)
-    (h1 : a'[q + 1]? = some lo) (h2 : a'[q + 2]? = some ll) (h3 : a'[q + 3]? = some ty)
-    (hs : hslice? (aread a) lo.toNat ll.toNat = some lps) (hlow : ∀ i < N, a'[i]? = a[i]?)
-    (hb : ll.toNat = 0 ∨ lo.toNat + ll.toNat ≤ N) :
-    decCV (aread a') q = some ⟨decI nm, lps, decI ty⟩ := by
-  sorry
-
 theorem ctc_ok {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) {x : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) x.toNat = some ci) :
