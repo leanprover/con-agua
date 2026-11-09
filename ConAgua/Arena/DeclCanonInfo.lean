@@ -55,7 +55,7 @@ mutual
 /-- **The model of `ci_canon_defn(p, q)`**. -/
 def cdW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
-  | k + 1, m, p, q => cdK0 k m p q (if hintEqB (m.arr64 EREC) (p + 6) (q + 6) then 1 else 0)
+  | k + 1, m, p, q => cdK0 k m p q (if hintEqB (erRdT m) (p + 6) (q + 6) then 1 else 0)
 
 /-- After `hint_eq`. -/
 def cdK0 (k : Nat) (m : Mem) (p q e : Word) : Option (Word × Mem) :=
@@ -78,7 +78,7 @@ end
 section arms
 variable (k : Nat) (m m1 m2 : Mem) (p q e : Word) (rc : List Word)
 theorem cdW_succ : cdW (k + 1) m p q =
-    cdK0 k m p q (if hintEqB (m.arr64 EREC) (p + 6) (q + 6) then 1 else 0) := by rw [cdW]
+    cdK0 k m p q (if hintEqB (erRdT m) (p + 6) (q + 6) then 1 else 0) := by rw [cdW]
 theorem cdK0_def : cdK0 k m p q e =
     (if e = 0 then some (0, m) else cdK1 k p q (cvceW k m (p + 1) (q + 1))) := by rw [cdK0]
 theorem cdK1_some : cdK1 k p q (some (e, m1)) =
