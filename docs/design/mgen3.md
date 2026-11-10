@@ -247,3 +247,31 @@ in a join point's body, so `ciPre` needs restating first.
 | `Rom/CIReadRefRule` | 43.0 → 43.1 G | 5.0 → 5.1 | 1119 → 1152 |
 
 Lines: `CIReadRefW` +5 −51, `CIReadRefRule` +24 −19 (**−41**).
+
+### Batch 7: `rci_ci` (lead); `CIReadRefW` all generated
+
+`rci_ci`'s model generated (`pfuel`); gone: the hand `ciW` and its parts `ciTailW`, `ciDefnW`,
+`ciCtorW`, `ciRecW`, the hand spec (`maxHeartbeats 4000000`), and with them the last users of
+the `rdU` abbreviation and its lemmas `rdU_some`, `rdU_ntBW`, `putE_ntBW`. `ciSize` stays: it is
+the refinements' table of record sizes by kind. The generated model reads the kind word and
+dispatches on it to one join point `ciW.j1 … q k size m` (allocation, kind word, constant value,
+then the kind's part inline). So `CIReadRefCI`'s common lemma split in two: `ciHead` (the kind
+word read, the dispatch reduced against `ciSize`: one `by_cases` per kind) and `ciPre`, now over
+the rest of the chain `K` as a parameter: its hypothesis is the join point's body up to the
+constant value, `ntBW (erec_alloc) fun ρ₂ μ₂ => … ntBW (rci_cv …) (K ρ₂)`, and its post
+`K rA r2 m2 = some (r, m')`. A kind lemma unfolds `ciW.j1` in `ciHead`'s result and passes it;
+`K` is found by unification (a pattern: `K` applied to the bound `ρ₂`). The kind lemmas then
+read their part as before, with `u64_some`/`putE_some` for the hand `rdU_ntBW`/`putE_ntBW`.
+
+`rw [ite_eq_left h]` does not find a generated `if (k) = 0 then …` when `h : UInt64.ofNat kn =
+0` is stated by hand (the literal's instance differs; seen before in batch 1's `split`);
+`simp only [h, ↓reduceIte]` does.
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Rom/CIReadRefW` | 70.0 → 51.0 G | 11.6 → 8.2 | 1209 → 1364 |
+| `Rom/CIReadRefCI` | 39.5 → 50.6 G | 4.9 → 6.6 | 1155 → 1127 |
+| `Rom/CIReadRefCaps` | 25.2 → 25.1 G | 3.3 → 3.2 | 1080 → 1074 |
+
+Lines: +102 −189 (**−87**). Over batches 2, 6 and 7 `CIReadRefW` went from 430 to 150 lines and
+100.3 → 51.0 G; all 17 of its functions are generated.
