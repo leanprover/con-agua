@@ -516,7 +516,7 @@ records: one job each, the second half, which entry 2 runs. `check` itself only 
 entry stubs write (§9); a zero region leaves it `0`, and then `check` aborts.
 
 A function closer to the data, which decodes a level-list handle
-([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L293-L298),
+([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L136-L141),
 [the twin's `viewLs`](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Monad.lean#L494-L500)):
 
 ```
@@ -817,13 +817,13 @@ Where L's representation differs from con-ron's beyond layout, it is listed in
 Take `lvl_eq`, the uncached core of the twin's `lvlEq?`:
 
 1. **The L code**, with its citation and census tag
-   ([`lvlEqL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L255-L265)).
+   ([`lvlEqL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L107-L117)).
 2. **A word model and a spec.** The model `lvlEqW` is the L code as a Lean
-   function on `Mem` and words, `none` where L aborts
-   ([`lvlEqW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L250-L253));
-   the spec says a run of the function is the model, proved by
-   `sym … => vcgen […] <;> finish`
-   ([`lvlEq_spec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L267-L279)).
+   function on `Mem` and words, `none` where L aborts; the spec says a run of
+   the function is the model. Both are generated from the `lfn` by `l_model`,
+   which also proves the spec (`vcgen`, then `grind` over the model's
+   equations)
+   ([`lvlEq_spec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L119-L124)).
 3. **The refinement**: under the arena relation, a model that returns `z`
    gives a twin run of `lvlEq? u v` that succeeds with the result `z` encodes,
    and the relation holds again

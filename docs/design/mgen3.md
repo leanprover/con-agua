@@ -275,3 +275,26 @@ read their part as before, with `u64_some`/`putE_some` for the hand `rdU_ntBW`/`
 
 Lines: +102 −189 (**−87**). Over batches 2, 6 and 7 `CIReadRefW` went from 430 to 150 lines and
 100.3 → 51.0 G; all 17 of its functions are generated.
+
+### Batch 8: `Arena/LevelEquiv` (lead)
+
+`lv_leq_top`, `lv_equiv`, `lv_equivs`, `lvl_eq`, `lvls_eq` generated (helper mgen3-decl had left
+them: their models are walked in `LevelEquivRel`, `CoreLevels`, `IndRealLvlT`, outside its
+files). The hand models already had the generator's shape: `evK₁ … evK₅` are
+`equivW.k_lv_eq`, `k_lv_simp`, `k_lv_simp_2`, `k_lv_eq_2`, `k_lv_leq` (their captured words in
+another order), `esK` is `equivsW.k_lv_equiv`, `lvlEqW` is the hand one exactly. So the walks
+only renamed (`evK₁_zero` → `equivW.k_lv_eq.arm2 (hc1 := rfl)`, …); two differences needed a
+step: `lv_equivs`' `some (if ln = k then 2 else 1, m)` is generated as an `if` of two `some`s,
+and `lvls_eq`'s one `∨` guard as two guards (`lvlsEqW.abort1/2`). `ls_node` stays: its model
+`lsNodeW` is a list (`r ≠ [] ∧ r = lsNodeW …`) the callers test against `[]`; the generated one
+would be an `Option`.
+
+| module | instructions | user s |
+|---|---|---|
+| `Arena/LevelEquiv` | 12.2 → 13.5 G | 2.9 → 3.2 |
+| `Arena/LevelEquivRel` | 2.7 → 2.7 G | 0.6 → 0.6 |
+| `Arena/CoreLevels` | 15.0 → 15.0 G | 3.5 → 3.5 |
+| `Arena/IndRealLvlT` | 21.5 → 21.6 G | 3.2 → 3.3 |
+
+Lines: +66 −237 (**−171**). `LevelEquiv` also holds the L code of these functions, so the change
+rebuilt the program modules (`Checker/ProgI*`) once.

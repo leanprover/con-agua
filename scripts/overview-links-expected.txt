@@ -725,13 +725,13 @@
    105    | .ok (.error e, s₁) => .ok (.error e, s₁)
    106    | .error e => .error e
 
-== ConAgua/Arena/LevelEquiv.lean#L293-L298
-   293  /-- con-ron: ConRon/Arena/Monad.lean:494-500 ConRon.Arena.viewLs -/
-   294  @[no_expose] def lsNode : FunDecl := lfn (h) locals (t, i) {
-   295    if ⟦h⟧.tag != 0 { abort };
-   296    (t, i) := node LVLS⟦h⟧;
-   297    return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
-   298  }
+== ConAgua/Arena/LevelEquiv.lean#L136-L141
+   136  /-- con-ron: ConRon/Arena/Monad.lean:494-500 ConRon.Arena.viewLs -/
+   137  @[no_expose] def lsNode : FunDecl := lfn (h) locals (t, i) {
+   138    if ⟦h⟧.tag != 0 { abort };
+   139    (t, i) := node LVLS⟦h⟧;
+   140    return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
+   141  }
 
 == vendor/con-ron/ConRon/Arena/Monad.lean#L494-L500
    494  /-- con-leche: ConLeche/Kernel/Expr.lean:256-375 Expr — decode a
@@ -1571,39 +1571,26 @@
     29    let l := Tab.ofArrs (checkerArrays.ids .byte) (checkerWordRows.map fun d => (d.id, d.tiered)) t.rom t.nres t.ng
     30    { l with mins := checkerArrays.mins, tbl := checkerArrays.tblArr.map fun x => (x.1, l.tblBase) }
 
-== ConAgua/Arena/LevelEquiv.lean#L255-L265
-   255  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
-   256  fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
-   257  function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
-   258  `lvlEq_refines`). -/
-   259  -- con-ron: ConRon/Arena/Core.lean:136-153 ConRon.Arena.lvlEq?
-   260  @[no_expose, l_impl ConRon.Arena.lvlEq?]
-   261  def lvlEqL : FunDecl := lfn (u, v) locals (z) {
-   262    CTL.u64[192] := 0;
-   263    z := call lv_equiv(u, v);
-   264    return z
-   265  }
+== ConAgua/Arena/LevelEquiv.lean#L107-L117
+   107  /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
+   108  fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
+   109  function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
+   110  `lvlEq_refines`). -/
+   111  -- con-ron: ConRon/Arena/Core.lean:136-153 ConRon.Arena.lvlEq?
+   112  @[no_expose, l_impl ConRon.Arena.lvlEq?]
+   113  def lvlEqL : FunDecl := lfn (u, v) locals (z) {
+   114    CTL.u64[192] := 0;
+   115    z := call lv_equiv(u, v);
+   116    return z
+   117  }
 
-== ConAgua/Arena/LevelEquiv.lean#L250-L253
-   250  /-- **The model of `lvl_eq`**: reset the heap, then `lv_equiv`. -/
-   251  def lvlEqW : Nat → Mem → Word → Word → Option (Word × Mem)
-   252    | 0, _, _, _ => none
-   253    | n + 1, m, u, v => equivW n (m.set64 CTL 192 0) u v
-
-== ConAgua/Arena/LevelEquiv.lean#L267-L279
-   267  include hp in
-   268  theorem lvlEq_spec (hpe : p.lookup "lv_equiv" = some lvEquiv) (hpl : p.lookup "lvl_eq" = some lvlEqL)
-   269      (n : Nat) (s₀ : St) (u v : Word) :
-   270      ⦃fun s => s = s₀⦄ invoke p (exec p n) "lvl_eq" [u, v]
-   271      ⦃fun res s' => LocEq s' s₀ ∧ lvlEqW n s₀.mem u v = some (res.headD 0, s'.mem); ⊤⦄ := by
-   272    rw [invoke_eq _ hpl]
-   273    simp only [callFn, lvlEqL]
-   274    cases n with
-   275    | zero => vcgen [exec] <;> grind
-   276    | succ n =>
-   277      sym only [lang_grind, arena_grind, level_grind] =>
-   278        vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
-   279        finish (gen := 20) [lvlEqW]
+== ConAgua/Arena/LevelEquiv.lean#L119-L124
+   119  /-- **`lvl_eq`** (generated): `lvlEqW`, the heap reset, then `lv_equiv`. -/
+   120  l_model lvlEq_spec (p : Prog) (hp : LevelProg p) (hpe : p.lookup "lv_equiv" = some lvEquiv)
+   121      (hpl : p.lookup "lvl_eq" = some lvlEqL)
+   122    fns [hpl ↦ lvlEqW]
+   123    specs [lvEquiv_spec p hp hpe n]
+   124    grind [arena_grind, level_grind]
 
 == ConAgua/Arena/LevelArena.lean#L271-L276
    271  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
