@@ -194,7 +194,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
       (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cEtaE.arm1]
   have hrec := decCI_indCaps (erRdOK m) hci
-  have hlps : cvT.levelParams.length = (erRd m (indP + 3)).toNat := L.Ind.hslice_len hrec.lp
+  have hlps : cvT.levelParams.length = (erRd m (indP + 3)).toNat := hslice?_lenR hrec.lp
   cases N with
   | zero => rw [m2cPreE.eq_1, m2cEtaE.k_m2c_pre.none]; exact RefE.of_cls0 (by simp)
   | succ N' =>

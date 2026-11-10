@@ -1,7 +1,7 @@
 module
 
 import ConAgua.Arena.IndPosSpec.P2sfW
-import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Arena.IWFrame
 public import ConAgua.Arena.IndPosSpec.KlB
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Pos2WfWfSome
@@ -77,7 +77,7 @@ def SeedsAt (m : Mem) (o : Nat) (seeds : List (NestKey × Nat)) : Prop :=
 
 theorem pos2_key_rd {m m' : Mem} (hg : IWGrow m m') (htop : iwTop m < 2 ^ 64) {key : Word}
     (hk : key.toNat + 4 ≤ iwTop m) {j : Nat} (hj : j < 4) : rdW (m'.arr64 IW) (key + UInt64.ofNat j) = rdW (m.arr64 IW) (key + UInt64.ofNat j) := by
-  apply pos2_rd_grow hg
+  apply rdW_iw_grow hg
   have : (UInt64.ofNat j).toNat = j := by simp; omega
   rw [word_add_toNat (by rw [this]; omega), this]; omega
 

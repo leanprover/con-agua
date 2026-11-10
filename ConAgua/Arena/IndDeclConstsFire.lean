@@ -72,10 +72,6 @@ theorem iwRd {m : Mem} {o w : Word} {v : Nat} (h : iwN (truncM m) (o.toNat + w.t
   obtain ⟨x, hx, hxv, -⟩ := rdW_of_iwN_truncM h
   exact ⟨by rw [hx, hxv], hlt⟩
 
-theorem rdWIW_grow {m m' : Mem} (hg : IWGrow m m') {x : Word} (hx : x.toNat < iwTop m) :
-    rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x := by
-  simp only [rdW]; rw [hg.iwGet _ hx]
-
 theorem iwLt {m : Mem} {o w : Word} {v : Nat} (h : iwN (truncM m) (o.toNat + w.toNat) = some v) :
     (o + w).toNat < iwTop m := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -226,8 +222,8 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   simp only [rfW.k_get_app_args_f] at h
   have hg04 : IWGrow m m4 := hg1.trans (hg2.trans (hg3.trans hg4))
   generalize hrPw : rdW (m.arr64 IW) (rc + 1) = rPw at hrPW
-  rw [rdWIW_grow hg04 (iwLt (o := rc) (w := 2) (by simpa using hmI)), hmIw,
-    rdWIW_grow hg04 (iwLt (o := rc) (w := 1) (by simpa using hrP)), hrPw] at h
+  rw [rdW_iw_grow hg04 (iwLt (o := rc) (w := 2) (by simpa using hmI)), hmIw,
+    rdW_iw_grow hg04 (iwLt (o := rc) (w := 1) (by simpa using hrP)), hrPw] at h
   obtain ⟨nIw, hnI, h⟩ : ∃ nIw : Word, nIw.toNat = rs.mI - rs.rP ∧
       rfW.j1 p n (r3.headD 0) (r3.tail.headD 0) (r4.headD 0) (r4.tail.headD 0) nIw m4 = some (r, m') := by
     by_cases hc : mIw < rPw

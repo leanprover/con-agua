@@ -219,7 +219,7 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     (fun _ => ⟨rfl, hC6, hg06, hP6, hA6⟩) fun _ _ => ?_
   have hMk6 : ∀ k : Nat, k ≤ 12 → rdW (m6.arr64 IW) (Mc + UInt64.ofNat k) =
       rdW (m.arr64 IW) (Mc + UInt64.ofNat k) :=
-    fun k hk => rdW_grow hg06 (hMk k hk)
+    fun k hk => rdW_iw_grow hg06 (hMk k hk)
   have e11 := hMk6 11 (by omega); have e12 := hMk6 12 (by omega); have e1 := hMk6 1 (by omega)
   have e2 := hMk6 2 (by omega); have e3 := hMk6 3 (by omega)
   simp only [show UInt64.ofNat 11 = (11 : Word) from rfl, show UInt64.ofNat 12 = (12 : Word) from rfl,

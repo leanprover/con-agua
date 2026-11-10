@@ -81,10 +81,6 @@ def SplitR (x : Option (List IConstantVal × List (IConstantVal × Nat × Nat) �
   | some t => r.headD 0 = 1 ∧ SplitRec t (r.tail.headD 0) m
 
 /-- A word of the pool below the top reads the same after growth. -/
-theorem partsRdIW_grow {m m' : Mem} (hg : IWGrow m m') {w : Word} (hw : w.toNat < iwTop m) :
-    rdW (m'.arr64 IW) w = rdW (m.arr64 IW) w := by
-  simp only [rdW]; rw [hg.iwGet _ hw]
-
 /-! ## The census theorems -/
 
 /-- **The program bundle of the split** (one field per lookup). -/

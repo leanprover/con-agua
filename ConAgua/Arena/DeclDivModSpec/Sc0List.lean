@@ -69,7 +69,7 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
     rw [ite_eq_right hn1, ite_eq_right hn2]; exact Sim.ret ⟨hS4, hG4, hl4, rfl⟩
   · obtain rfl : hl = 1 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
     obtain ⟨-, hwlt, rfl, -⟩ := decHL_cons_iw hS.iw.iwSize hd
-    rw [ite_eq_left rfl, iw_rd_grow hG4 (by simp only [h1w] at hb; omega)]
+    rw [ite_eq_left rfl, rdW_iw_grow hG4 (by simp only [h1w] at hb; omega)]
     refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
     exact Sim.ntRet ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun _ _ _ _ _ h => h
   · obtain rfl : hl = 2 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
@@ -77,10 +77,10 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
     obtain ⟨-, hwlt2, rfl, -⟩ := decHL_cons_iw hS.iw.iwSize hrest
     have hlt2 : (ho + 1).toNat < iwTop m := by
       have h1 := hS.iw.iw; have h2 := hS.iw.iwSize; simp only [h2w] at hb; have e := word_add_one (w := ho) (by omega); omega
-    rw [ite_eq_right (by decide), ite_eq_left rfl, iw_rd_grow hG4 (by simp only [h2w] at hb; omega)]
+    rw [ite_eq_right (by decide), ite_eq_left rfl, rdW_iw_grow hG4 (by simp only [h2w] at hb; omega)]
     refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
     refine Sim.ntB ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun r6 _ m6 a6 ⟨hS6, hg6, hl6, rfl⟩ => ?_
-    rw [iw_rd_grow hg6 hlt2]
+    rw [rdW_iw_grow hg6 hlt2]
     refine Sim.ntB ((internFVar_ref hM 3 _ hwlt2).simG hS6 hg6) fun r7 _ m7 a7 ⟨hS7, hg7, hl7, rfl⟩ => ?_
     exact Sim.ntRet ((mkApp_ref hM (r6.headD 0) (r7.headD 0)).simG hS7 hg7) fun _ _ _ _ _ h => h
   · have hn1 : hl ≠ 1 := fun e => by rw [e] at hlen; simp at hlen

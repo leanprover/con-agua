@@ -430,7 +430,7 @@ theorem erecAlloc_specV (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc)
     all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, Locals.init,
       Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq] at *
     all_goals subst_vars
-    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erAllocW, erAllocMem, ctl_t0', tierA]
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erAllocW, erAllocMem, ctl_t0, tierA]
 
 theorem erecAlloc_mem {p : Prog} (hp : p.lookup "erec_alloc" = some erecAlloc) {n : Nat}
     {vs : List Word} {m m' : Mem} {r : List Word} (hc : callW p n "erec_alloc" vs m = some (r, m')) :

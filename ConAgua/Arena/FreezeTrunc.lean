@@ -95,7 +95,7 @@ theorem PinSetsR.trunc {m : Mem} {ips : List INatOpPinSet} (h : L.Rom.PinSetsR m
     L.Rom.PinSetsR (truncFrozen m) ips := by
   obtain ⟨h1, h2, h3⟩ := h
   have hc := truncFrozen_ctl m
-  have ht := L.Rom.top_lt m
+  have ht := L.Ind.erTop_lt m
   refine ⟨by rw [hc]; exact h1, by rw [hc, erTop_trunc]; exact h2, fun k hk => ?_⟩
   rw [hc, rdW_erec_trunc m (by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; omega)]

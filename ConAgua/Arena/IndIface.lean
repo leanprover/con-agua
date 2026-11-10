@@ -472,8 +472,6 @@ def erAllocW (m : Mem) (k : Word) : Option (Word × Mem) :=
     else if m.len64 (tier1 EREC) - o < k then none
     else some (1099511627776 + o, erAllocMem m k)
 
-theorem ctl_t0' : TieredArray.t0 1 = (CTL : TieredArray) := rfl
-
 theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc) (n : Nat) (s₀ : St)
     (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_alloc" [k]
@@ -488,7 +486,7 @@ theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc)
       St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
       Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
     all_goals subst_vars
-    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erAllocW, erAllocMem, ctl_t0', tierA, Locals.init,
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erAllocW, erAllocMem, ctl_t0, tierA, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ]
 
 theorem erecPut_specW (p : Prog) (hp : p.lookup "erec_put" = some erecPut) (n : Nat) (s₀ : St)

@@ -37,7 +37,7 @@ theorem isCtorApp_coreFn : "is_ctor_app" ∈ coreFns := List.elem_iff.mp (by dec
 /-- A rule record's `ctor` word. -/
 theorem decRule_ctorRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {rl : IRecRule} (h : decRule R q.toNat = some rl) : rl.ctor = decI (rd q) ∧ HW (rd q) := by
-  obtain ⟨w, hw, hl, e⟩ := hd?_eq (L.Ind.decRule_ctor h)
+  obtain ⟨w, hw, hl, e⟩ := hd?_some (L.Ind.decRule_ctor h)
   have e' : rd q = w := hR.rd _ _ hw
   exact ⟨by rw [e', e], by rw [e']; exact hl⟩
 

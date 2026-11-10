@@ -276,10 +276,6 @@ theorem _root_.L.Ind.StageR.reset {vis : Word} {fe : IFEnv} {m : Mem} {a : AStat
   exact IWOK.of_iw ((MemFrame.setCtl m 200 0).mono (by simp) (by simp)) hS.iw
     (by simp [iwTop, rdW_set64, hS.iw.ctl])
 
-theorem erecP_reset' (m : Mem) : erecP (m.set64 CTL 200 0) = erecP m :=
-  erecP_congr' (Mem.arr64_set64_ne _ _ _ _ _ (by decide)) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
-    (rdW_set_ctl m 200 0 129 (by decide)) (rdW_set_ctl m 200 0 130 (by decide))
-
 theorem RecGrow.refl (m : Mem) : RecGrow m m := ⟨Nat.le_refl _, fun _ _ => rfl⟩
 
 theorem RecGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : RecGrow m₁ m₂) (h₂ : RecGrow m₂ m₃) : RecGrow m₁ m₃ :=
@@ -356,7 +352,7 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
   rw [hs1] at e1; subst e1
   have hI1 : IndexR (m.set64 CTL 200 0) I :=
     hR.idx.grow (fun b _ h2 => Mem.arr64_set64_ne _ _ _ _ _ (by rintro rfl; revert h2; decide))
-      (rdW_set_ctl m 200 0 128 (by decide)) (by rw [erecP_reset']; exact fun _ _ h => h)
+      (rdW_set_ctl m 200 0 128 (by decide)) (by rw [erecP_reset]; exact fun _ _ h => h)
   -- the first counter
   split at hw
   · cases hw

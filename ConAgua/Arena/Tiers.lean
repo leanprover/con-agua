@@ -464,6 +464,8 @@ def erecTop1 (m : Mem) : Nat := (rdW (m.arr64 CTL) 130).toNat
 /-- **L's tagged read `EREC⦃a⦄`**, as a function of the address (and as a model reads it). -/
 def erRd (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 0xFFFFFFFFFF)
 
+theorem ctl_t0 : TieredArray.t0 1 = (CTL : TieredArray) := rfl
+
 /-- **The record pool in use**, both tiers as one address space, read exactly as L's tagged
 read `EREC⦃a⦄` reads the word address `a < 2^64`: tier bit 40, offset the low 40 bits (so tier 1
 is at `2^40 + o`), each tier below its top. Every record the relations decode is decoded here, so

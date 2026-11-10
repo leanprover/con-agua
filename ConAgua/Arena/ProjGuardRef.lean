@@ -823,7 +823,7 @@ theorem decTbl_sn {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd
   unfold decTbl at h
   simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff, Option.some.injEq] at h
   obtain ⟨sn, hsn, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h
-  obtain ⟨w, hw, hw32, rfl⟩ := hd?_eq hsn
+  obtain ⟨w, hw, hw32, rfl⟩ := hd?_some hsn
   have e : rd (q + 2) = w := hR.offN (k := 2) hw (by decide)
   rw [e]
   exact ⟨hw32, rfl⟩

@@ -120,7 +120,7 @@ theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtPro
   -- the record's words
   have r : ∀ m', IWGrow m m' → ∀ k, k < 11 → ∀ x : Word, x = w + UInt64.ofNat k →
       rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x :=
-    fun m' hg k hk x hx => partsRdIW_grow hg (by rw [e k hk x hx]; have := hBB.1; omega)
+    fun m' hg k hk x hx => rdW_iw_grow hg (by rw [e k hk x hx]; have := hBB.1; omega)
   obtain ⟨hw1, hpwb⟩ := bpWord hpw (e 1 (by decide) (w + 1) rfl)
   have hkfm : ∀ q, OMono (fun m => decLH m (decPL m (decLH m (decKL m))) q) :=
     fun q => OMono.decAt (fun o l => OMono.decPL (fun q => OMono.decAt (fun o l => decKL_mono o l) q) o l) q

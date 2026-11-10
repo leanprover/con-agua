@@ -372,7 +372,7 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
   have l1 : (cw + 1).toNat < iwTop m := by
     have := (iwRd (o := cw) (w := 1) (by rw [hcwv]; simpa using hnF)).2
     rw [UInt64.toNat_add]; simp at this ⊢; omega
-  rw [hr5, (erRd_of_erecP hwn4).1, hI5, rdWIW_grow hg04 l4, rdWIW_grow hg04 l1]
+  rw [hr5, (erRd_of_erecP hwn4).1, hI5, rdW_iw_grow hg04 l4, rdW_iw_grow hg04 l1]
   obtain ⟨hS6, hg6, -, -, -, -, hget⟩ := erRec_stage hW5 hS4 [6, 0, w0, r3.headD 0, r3.tail.headD 0,
     rdW (m.arr64 IW) (pp + 4), wn, rdW (m.arr64 IW) (cw + 1), 0, r4.headD 0, r4.tail.headD 0, 0, 0] rfl
   have hA6 : AbsOK (wrER s5.mem q [6, 0, w0, r3.headD 0, r3.tail.headD 0,

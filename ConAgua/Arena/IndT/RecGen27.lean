@@ -202,7 +202,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
     have hcm64 : cam < 2 ^ 64 := by
       omega
     have e := hca
-    rw [rdW_grow k1.grow (by omega), hcam] at e
+    rw [rdW_iw_grow k1.grow (by omega), hcam] at e
     have := congrArg UInt64.toNat e
     rwa [UInt64.toNat_ofNat_of_lt' hcm64, hcaT] at this
   subst cam
@@ -466,7 +466,7 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have hajt : (ao + j).toNat = ao.toNat + j.toNat := by
     simp only [iwTop] at hvt; rw [UInt64.toNat_add]; simp <;> omega
   have hrd : rdW (m.arr64 IW) (ao + j) = UInt64.ofNat v := by
-    rw [rdW_grow hg (by rw [hajt]; exact hvt), hrd0.1]
+    rw [rdW_iw_grow hg (by rw [hajt]; exact hvt), hrd0.1]
   rw [hrd]
   have hvT : (UInt64.ofNat v : Word).toNat = v := UInt64.toNat_ofNat_of_lt' hrd0.2
   have hcA0 : DecB (fun m => decCN m (UInt64.ofNat v : Word).toNat) m0 cAs[j.toNat] := by
@@ -682,7 +682,7 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have hnc : mo + UInt64.ofNat c.toNat = mo + c := by simp
   rw [hnc] at hrd0
   have hmc : (mo + c).toNat < iwTop m0 := by rw [UInt64.toNat_add]; simp; omega
-  have hrd : rdW (m.arr64 IW) (mo + c) = UInt64.ofNat v := by rw [rdW_grow hg hmc, hrd0.1]
+  have hrd : rdW (m.arr64 IW) (mo + c) = UInt64.ofNat v := by rw [rdW_iw_grow hg hmc, hrd0.1]
   have hvT : (UInt64.ofNat v : Word).toNat = v := UInt64.toNat_ofNat_of_lt' hrd0.2
   have hTM0 : DecB (fun m => decTM m v) m0 ms[c.toNat] := by rw [← hlen] at hcl; exact hdv
   obtain ⟨o, l, ho, hl, hv7, hcts⟩ := decTM_ctors hTM0
@@ -691,7 +691,7 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   simp only [show UInt64.ofNat 6 = (6 : Word) from rfl, show UInt64.ofNat 7 = (7 : Word) from rfl] at r6 r7
   have hv6t : (UInt64.ofNat v + 6 : Word).toNat < iwTop m0 := by rw [UInt64.toNat_add, hvT]; simp; omega
   have hv7t : (UInt64.ofNat v + 7 : Word).toNat < iwTop m0 := by rw [UInt64.toNat_add, hvT]; simp; omega
-  rw [hrd, rdW_grow hg hv6t, rdW_grow hg hv7t, r6.1, r7.1]
+  rw [hrd, rdW_iw_grow hg hv6t, rdW_iw_grow hg hv7t, r6.1, r7.1]
   have hoT : (UInt64.ofNat o : Word).toNat = o := UInt64.toNat_ofNat_of_lt' r6.2
   have hlT : (UInt64.ofNat l : Word).toNat = l := UInt64.toNat_ofNat_of_lt' r7.2
   have hcts' : DecB (fun m => decPL m (decCN m) (UInt64.ofNat o : Word).toNat (UInt64.ofNat l : Word).toNat) m0

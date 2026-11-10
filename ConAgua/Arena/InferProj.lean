@@ -56,7 +56,7 @@ theorem hlist_words {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word}
 theorem hd_word {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
     {q : Word} {j : Nat} {x : Idx k} (h : hd? R (q.toNat + j) = some x) :
     HW (rd (q + UInt64.ofNat j)) ∧ x = decI (rd (q + UInt64.ofNat j)) := by
-  obtain ⟨w, hw, hw32, rfl⟩ := hd?_eq h
+  obtain ⟨w, hw, hw32, rfl⟩ := hd?_some h
   have hj := hR.lt _ _ hw
   rw [hR.offN hw (by omega)]
   exact ⟨hw32, rfl⟩

@@ -614,8 +614,6 @@ open ConRon.Arena
 def envFound (m : Mem) (f q : Word) : Option IConstantInfo :=
   if f = 0 then none else decCI (erecP m) q.toNat
 
-theorem ctl_t0 : TieredArray.t0 1 = (CTL : TieredArray) := rfl
-
 theorem sub1_lt_iff {c v : Word} (hc : c ≠ 0) : c - 1 < v ↔ c.toNat - 1 < v.toNat := by
   have : c.toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
   rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]

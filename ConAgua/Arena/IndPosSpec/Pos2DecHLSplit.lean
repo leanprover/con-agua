@@ -1,6 +1,6 @@
 module
 
-import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndPosSpec.NkcW
 import ConAgua.Arena.StripTeleSpec
 import ConAgua.Arena.WhnfSpineRefine
@@ -57,7 +57,7 @@ theorem pos2_word_pred {x : Word} (h : x ≠ 0) : (x - 1).toNat = x.toNat - 1 :=
 /-- The words of a `NestState` record, read after the pool grew. -/
 theorem pos2_ns_rd {m m' : Mem} (hg : IWGrow m m') {p : Word} (hp : p.toNat + 6 ≤ iwTop m)
     (htop : iwTop m < 2 ^ 64) (i : Word) (hi : i.toNat < 6) : rdW (m'.arr64 IW) (p + i) = rdW (m.arr64 IW) (p + i) :=
-  pos2_rd_grow hg (by rw [word_add_toNat (by omega)]; omega)
+  rdW_iw_grow hg (by rw [word_add_toNat (by omega)]; omega)
 
 /-- A handle slice split at `k`. -/
 theorem pos2_decHL_split {k : IdxKind} {m : Mem} {o l n : Nat} {xs : List (Idx k)} (h : decHL m o l = some xs)

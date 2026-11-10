@@ -627,7 +627,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {rP M rhso rhsl : Word} {r :
   obtain ⟨hS1, hg1, hd1, hR1, hb1⟩ := rulesW_ok k m _ _ rhso rhsl _ rhss rs m1 h1 hS hctors hrh
   have hA1 := rulesW_afr h1 hA
   have e8' : rdW (m1.arr64 IW) (M + 8) = UInt64.ofNat k8 := by
-    rw [rdW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega), e8]
+    rw [rdW_iw_grow hg1 (by rw [UInt64.toNat_add]; simp; omega), e8]
   by_cases hmem : rdW (m1.arr64 IW) (M + 8) ≠ 0
   · rw [tsrW.k_sum_rules.arm1 (hc1 := hmem)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h

@@ -202,7 +202,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have hn1 := ConRon.Bridge.denoteN_ext hn c1.ext
     have hv1 := ConRon.Bridge.denote_ext hv c1.ext
     -- the substituted proof
-    rw [iw_rd_grow hg1 hpo]
+    rw [rdW_iw_grow hg1 hpo]
     refine RefE.bindLift (fun _ => checkDivModCertsE.k_subst_const_all.none ..) fun r2 m2 h2' => ?_
     rw [checkDivModCertsE.k_subst_const_all.eq_2]
     have hCr2 := hkp.call (im_mem _ rfl) h2' hCr1
@@ -216,7 +216,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have hG2 : IWGrow m m2 := hg1.trans hg2
     refine ⟨_, _, hrun2, ?_⟩
     -- the substituted hypotheses
-    rw [iw_rd_grow hG2 hq0', rq1, iw_rd_grow hG2 hq1, rq2]
+    rw [rdW_iw_grow hG2 hq0', rq1, rdW_iw_grow hG2 hq1, rq2]
     refine RefE.bindLift (fun _ => checkDivModCertsE.k_subst_const0_list.none ..) fun r3 m3 h3' => ?_
     rw [checkDivModCertsE.k_subst_const0_list.eq_2]
     have hdh2 : decHL m2 ho.toNat hl.toNat = some hy := by rw [decHL_grow hG2 hbd]; exact hdh
@@ -266,7 +266,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have c05 := c04.trans c5
     have hG5 : IWGrow m m5 := hG4.trans hg5
     -- the equation, substituted
-    rw [iw_rd_grow hG5 hq2, rq3]
+    rw [rdW_iw_grow hG5 hq2, rq3]
     refine RefE.bindLift (fun _ => checkDivModCertsE.k_subst_const0.none ..) fun r6 m6 h6 => ?_
     rw [checkDivModCertsE.k_subst_const0.arm1]
     have hCr6 := hkp.call (im_mem _ rfl) h6 (hkp.call (im_mem _ rfl) (callW_of_callE h5) hCr4)
@@ -365,7 +365,7 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
     have hlen1 : l.toNat = tps.length + 1 := by simpa using hlen
     simp only [erRd_foldN]
     rw [erRd_lo hC.stage.iw (by omega), v0]
-    have htl := L.Rom.top_lt m
+    have htl := L.Ind.erTop_lt m
     have hD6 := hD.toDmProg7.toDmProg6
     simp only [checkTypePins]
     -- the stored type

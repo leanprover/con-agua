@@ -97,33 +97,30 @@ namespace L.Ind
 
 open L.Arena
 
-theorem posIwN_grow {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) : iwN m' i = iwN m i :=
-  iwN_agree (RdS.of_grow hg) hi
-
 theorem FMOk.grow {m m' : Mem} {f : Nat} {fm : FvMap} (h : FMOk m f fm) (hg : IWGrow m m') : FMOk m' f fm := by
   have ht := hg.iw
   cases fm with
   | holeImg ctx prog n =>
     obtain ⟨h0, hb, ⟨c, hc, hdc, hci⟩, ⟨po, pl, hpo, hpl, hs⟩, hn, hlt⟩ := h
     obtain ⟨e, hci'⟩ := hci.grow hg
-    exact ⟨by rw [posIwN_grow hg (by omega)]; exact h0, by omega,
-      ⟨c, by rw [posIwN_grow hg (by omega)]; exact hc, by rw [e]; exact hdc, hci'⟩,
-      ⟨po, pl, by rw [posIwN_grow hg (by omega)]; exact hpo, by rw [posIwN_grow hg (by omega)]; exact hpl, hs.grow hg⟩,
-      by rw [posIwN_grow hg (by omega)]; exact hn, hlt⟩
+    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega,
+      ⟨c, by rw [iwN_grow hg (by omega)]; exact hc, by rw [e]; exact hdc, hci'⟩,
+      ⟨po, pl, by rw [iwN_grow hg (by omega)]; exact hpo, by rw [iwN_grow hg (by omega)]; exact hpl, hs.grow hg⟩,
+      by rw [iwN_grow hg (by omega)]; exact hn, hlt⟩
   | keyMap ds holes =>
     obtain ⟨h0, hb, ⟨o, l, ho, hl, hd, hol⟩, ⟨o2, l2, ho2, hl2, hd2, hol2⟩⟩ := h
-    exact ⟨by rw [posIwN_grow hg (by omega)]; exact h0, by omega,
-      ⟨o, l, by rw [posIwN_grow hg (by omega)]; exact ho, by rw [posIwN_grow hg (by omega)]; exact hl,
+    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega,
+      ⟨o, l, by rw [iwN_grow hg (by omega)]; exact ho, by rw [iwN_grow hg (by omega)]; exact hl,
         by rw [decHL_grow hg hol]; exact hd, by omega⟩,
-      ⟨o2, l2, by rw [posIwN_grow hg (by omega)]; exact ho2, by rw [posIwN_grow hg (by omega)]; exact hl2,
+      ⟨o2, l2, by rw [iwN_grow hg (by omega)]; exact ho2, by rw [iwN_grow hg (by omega)]; exact hl2,
         by rw [decHL_grow hg hol2]; exact hd2, by omega⟩⟩
   | erase =>
     obtain ⟨h0, hb⟩ := h
-    exact ⟨by rw [posIwN_grow hg (by omega)]; exact h0, by omega⟩
+    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega⟩
   | canon pfvs =>
     obtain ⟨h0, hb, ⟨o, l, ho, hl, hd, hol⟩⟩ := h
-    exact ⟨by rw [posIwN_grow hg (by omega)]; exact h0, by omega,
-      ⟨o, l, by rw [posIwN_grow hg (by omega)]; exact ho, by rw [posIwN_grow hg (by omega)]; exact hl,
+    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega,
+      ⟨o, l, by rw [iwN_grow hg (by omega)]; exact ho, by rw [iwN_grow hg (by omega)]; exact hl,
         by rw [decHL_grow hg hol]; exact hd, by omega⟩⟩
 
 /-! ### The twin's node step, with its arms named -/

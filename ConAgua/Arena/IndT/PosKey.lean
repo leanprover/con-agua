@@ -5,7 +5,7 @@ public import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Snoc
-import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Arena.IWFrame
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPosSpec.CfW
 
@@ -159,7 +159,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
     simp only at hm4 hW4
     rw [hs4] at hm4
     obtain rfl := hm4.symm
-    rw [pos2_rd_grow hg12 (by omega), pos2_ns_rd hg12 hp6 htop 1 (by decide)] at hW4
+    rw [rdW_iw_grow hg12 (by omega), pos2_ns_rd hg12 hp6 htop 1 (by decide)] at hW4
     have hb2 := nkcW_ok (rk.headD 0) _ (n' + 1) m3 _ _ _ NS.keys.toList hW4 (hk0'.grow hg12)
       (hK.grow (decNK_mono _) hg2) (Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize)
     by_cases hb2n : r4.headD 0 ≠ 0

@@ -266,7 +266,7 @@ theorem bmfW_sim {vis : Word} {fe : IFEnv} {no nl mm : Word}
     by_cases hc : UInt64.ofNat t = mm
     · have hb : (t == mm.toNat) = true := hcond.mp hc
       simp only [hc, hb, ite_true]
-      rw [partsRdIW_grow hg1 (by rw [hp2]; exact hrlt), hrw]
+      rw [rdW_iw_grow hg1 (by rw [hp2]; exact hrlt), hrw]
       exact Sim.ret ⟨rfl, fun q e => by simp only [Option.some.injEq] at e; subst e; exact ⟨hmb, hrb⟩,
         hS1, hg1⟩
     · have hb : (t == mm.toNat) = false := by simpa using (fun e => hc (hcond.mpr e))

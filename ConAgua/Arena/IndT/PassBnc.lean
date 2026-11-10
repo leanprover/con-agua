@@ -111,7 +111,7 @@ theorem bnc_ok {p : Prog} (hP : PosBlkProg p) (hOpf : OpfF p) {dn : NIdx → Opt
   have hkT : (UInt64.ofNat bs.k : Word).toNat = bs.k := UInt64.toNat_ofNat_of_lt' hkb
   obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords hg1 hq hq9
   have hk1 : rdW (m1.arr64 IW) (pp + 1) = UInt64.ofNat bs.k := by
-    rw [partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega), hkw]
+    rw [rdW_iw_grow hg1 (by rw [UInt64.toNat_add]; simp; omega), hkw]
   rw [hnpw, hk1] at hx
   by_cases hk0 : (UInt64.ofNat bs.k : Word) = 0
   · simp only [hk0, ite_true] at hx; cases hx
@@ -135,7 +135,7 @@ theorem bnc_ok {p : Prog} (hP : PosBlkProg p) (hOpf : OpfF p) {dn : NIdx → Opt
   obtain ⟨x2, a2, hrun2, ⟨⟨hS2, hg2, hd2⟩, -⟩, hA2⟩ := opfSimRA hOpf htyl hS1 hA1 r2 m2 h2
   rw [htye, UInt64.toNat_ofNat_of_lt' hnpb, show (0 : Word).toNat = 0 from rfl] at hrun2
   have hk2 : rdW (m2.arr64 IW) (pp + 1) = UInt64.ofNat bs.k := by
-    rw [partsRdIW_grow hg2 (by have := hg1.iw; rw [UInt64.toNat_add]; simp; omega), hk1]
+    rw [rdW_iw_grow hg2 (by have := hg1.iw; rw [UInt64.toNat_add]; simp; omega), hk1]
   rw [hk2] at hx
   cases x2 with
   | none =>

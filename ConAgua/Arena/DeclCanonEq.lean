@@ -86,9 +86,6 @@ theorem fld_bool {w w' : Word} : ((w != 0) = (w' != 0)) ↔ bEqB w w' = true := 
 
 /-! ## Slices -/
 
-theorem hslice_len {kk : IdxKind} {R : Nat → Option Word} {o c : Nat} {xs : List (Idx kk)}
-    (h : hslice? R o c = some xs) : xs.length = c := hslice?_lenR h
-
 /-- A slice after its head: empty, or its offset `o + 1` without a wrap. -/
 theorem hslice_shift {kk : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
     {o : Word} {c : Nat} {xs : List (Idx kk)} (h : hslice? R (o.toNat + 1) c = some xs) :
@@ -138,8 +135,8 @@ theorem erSlEqB_ok {kk : IdxKind} {R : Nat → Option Word} {rd : Word → Word}
     {xs ys : List (Idx kk)} (h1 : hslice? R o1.toNat l1.toNat = some xs)
     (h2 : hslice? R o2.toNat l2.toNat = some ys) :
     erSlEqB rd o1 l1 o2 l2 = decide (xs = ys) := by
-  have n1 := hslice_len h1
-  have n2 := hslice_len h2
+  have n1 := hslice?_lenR h1
+  have n2 := hslice?_lenR h2
   by_cases hl : l1 = l2
   · subst hl
     simp only [erSlEqB, beq_self_eq_true, Bool.true_and]

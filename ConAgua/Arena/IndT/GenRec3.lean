@@ -240,9 +240,9 @@ theorem grp_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
   have hrecsP : PSlR decRS bs.recs (rdW (m.arr64 IW) (pp + 2)) (rdW (m.arr64 IW) (pp + 3)) m :=
     bpPSl decRS_mono hrecs hrb (by rw [UInt64.toNat_add]; simp; omega) (by rw [UInt64.toNat_add]; simp; omega)
   have hw2 : rdW (mF.arr64 IW) (pp + 2) = rdW (m.arr64 IW) (pp + 2) :=
-    partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
   have hw3 : rdW (mF.arr64 IW) (pp + 3) = rdW (m.arr64 IW) (pp + 3) :=
-    partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
   rw [hw2, hw3]
   have hrecs1 := hrecsP.grow (fun q => decRS_mono q) hg1
   have hrecs1P := ConRon.Bridge.Inductives.dRec_ext.list c1'.ext _ _ hrecsP0
@@ -271,7 +271,7 @@ theorem grp_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
   have hg12 := hg1.trans hg2
   -- the family guard
   have hk : rdW (s2.mem.arr64 IW) (pp + 1) = UInt64.ofNat bs.k := by
-    rw [partsRdIW_grow hg12 (by rw [UInt64.toNat_add]; simp; omega)]
+    rw [rdW_iw_grow hg12 (by rw [UInt64.toNat_add]; simp; omega)]
     exact partsShapeK (hbs.dec) (by omega)
   by_cases hk0' : rdW (s2.mem.arr64 IW) (pp + 1) = 0
   · rw [grpE.k_class_stream_recs.abort1 p n vis pp nested pO pL tO tL rd mO mL cO cL r2 _ hk0']
@@ -292,7 +292,7 @@ theorem grp_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
     | succ _ => rfl
   -- the elimination guard
   have hL : (rdW (s2.mem.arr64 IW) (pp + 7) != 0) = bs.large := by
-    rw [partsRdIW_grow hg12 (by rw [UInt64.toNat_add]; simp; omega)]
+    rw [rdW_iw_grow hg12 (by rw [UInt64.toNat_add]; simp; omega)]
     exact installIwB (k := 7) hlarge hsz
   -- the rest, from a state `a4` the twin's prep reaches (`hrunA`)
   have fin : ∀ (a4 : AState), StageC dn vis fe env s2.mem a4 → ConRon.Bridge.CoreStep env fe a a4 →
@@ -504,9 +504,9 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
   dsimp only at hC1 hg1 hG1 hcg1 hA1 hP1
   have hS1 := hC1.stage
   have e2 : rdW (m1.arr64 IW) (rd + 2) = rdW (m.arr64 IW) (rd + 2) :=
-    partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
   have e3 : rdW (m1.arr64 IW) (rd + 3) = rdW (m.arr64 IW) (rd + 3) :=
-    partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
   rw [e2, e3]
   refine RefE.of_run_eq (hrunP (grcTwinR V fe bs rdv)) ?_
   -- the pushes
@@ -574,9 +574,9 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
     hC1.of_checkE hS4 hA4 hok11 (ConRon.Arena.Ext.refl _)
   -- the rules
   have e2' : rdW (s4.mem.arr64 IW) (rd + 2) = rdW (m.arr64 IW) (rd + 2) :=
-    partsRdIW_grow hg14 (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hg14 (by rw [UInt64.toNat_add]; simp; omega)
   have e3' : rdW (s4.mem.arr64 IW) (rd + 3) = rdW (m.arr64 IW) (rd + 3) :=
-    partsRdIW_grow hg14 (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hg14 (by rw [UInt64.toNat_add]; simp; omega)
   rw [e2', e3']
   have hcg4 := hcg1.grow (hg2.trans hg24)
   have henvR' := henvR (fun c => c)

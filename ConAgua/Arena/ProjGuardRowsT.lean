@@ -342,7 +342,7 @@ theorem decTbl_npc {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R r
   unfold decTbl at h
   simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff, Option.some.injEq] at h
   obtain ⟨sn, -, lp, -, np, hnp, ct, hct, nf, -, bs, -, rfl⟩ := h
-  obtain ⟨w, hw, hw32, rfl⟩ := hd?_eq hct
+  obtain ⟨w, hw, hw32, rfl⟩ := hd?_some hct
   have e : rd (q + 6) = w := hR.offN (k := 6) hw (by decide)
   simp only [nat?, Option.map_eq_some_iff] at hnp
   obtain ⟨v, hv, rfl⟩ := hnp
@@ -357,7 +357,7 @@ theorem decCV_nameRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨nm, hn, ls, -, ty, -, hc⟩ := h
   cases hc
-  obtain ⟨w, hw, hl, rfl⟩ := hd?_eq hn
+  obtain ⟨w, hw, hl, rfl⟩ := hd?_some hn
   have e : rd (q + 1) = w := hR.offN (k := 1) hw (by decide)
   rw [e]; exact ⟨hl, rfl⟩
 

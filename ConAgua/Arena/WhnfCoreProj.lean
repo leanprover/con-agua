@@ -236,7 +236,7 @@ theorem decTbl_words {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R
   obtain ⟨wnp, hwnp, rfl⟩ := hnp
   obtain ⟨wnf, hwnf, rfl⟩ := hnf
   obtain ⟨wc, hwc, rfl⟩ := hcn
-  obtain ⟨w6, hw6, hw6l, hw6d⟩ := hd?_eq hct
+  obtain ⟨w6, hw6, hw6l, hw6d⟩ := hd?_some hct
   have r4 : rd (q + 4) = wc := hR.offN (k := 4) (by simpa [Nat.add_assoc] using hwc) (by decide)
   have r5 : rd (q + 5) = wnp := hR.offN (k := 5) hwnp (by decide)
   have r6 : rd (q + 6) = w6 := hR.offN (k := 6) hw6 (by decide)

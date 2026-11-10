@@ -279,10 +279,10 @@ theorem grpC_ref (P : GrcProgE p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   -- `class_rec_tys_ok`
   have rP : ∀ k, k < 9 → rdW ((grpPMem s2.mem g o l).arr64 IW) (pp + UInt64.ofNat k) =
       rdW (m.arr64 IW) (pp + UInt64.ofNat k) := fun k hk =>
-    partsRdIW_grow hgP (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hgP (by rw [UInt64.toNat_add]; simp; omega)
   have rR : ∀ k, k < 4 → rdW ((grpPMem s2.mem g o l).arr64 IW) (rd + UInt64.ofNat k) =
       rdW (m.arr64 IW) (rd + UInt64.ofNat k) := fun k hk =>
-    partsRdIW_grow hgP (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hgP (by rw [UInt64.toNat_add]; simp; omega)
   rw [show (s2.mem.set64 IW (g + 12) o).set64 IW (g + 13) l = grpPMem s2.mem g o l from rfl]
   rw [show (pp + 1 : Word) = pp + UInt64.ofNat 1 from rfl, show (pp + 2 : Word) = pp + UInt64.ofNat 2 from rfl,
     show (pp + 3 : Word) = pp + UInt64.ofNat 3 from rfl, show (rd + 2 : Word) = rd + UInt64.ofNat 2 from rfl,
@@ -482,9 +482,9 @@ theorem grpB_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) (n : Nat) (
   have hg13 := hg12.trans hg3
   have hctD := spl_decB hsp3.toSPL
   -- the count
-  have er0 : rdW (s3.mem.arr64 IW) rd = rdW (m.arr64 IW) rd := partsRdIW_grow hg13 (by omega)
+  have er0 : rdW (s3.mem.arr64 IW) rd = rdW (m.arr64 IW) rd := rdW_iw_grow hg13 (by omega)
   have er1 : rdW (s3.mem.arr64 IW) (rd + 1) = rdW (m.arr64 IW) (rd + 1) :=
-    partsRdIW_grow hg13 (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hg13 (by rw [UInt64.toNat_add]; simp; omega)
   rw [er0, er1]
   rcases c4' : callW p n "gen_rec_check_minor_ok" [rdW (m.arr64 IW) rd, rdW (m.arr64 IW) (rd + 1), r3.headD 0,
       r3.tail.headD 0] s3.mem with _ | ⟨r4, m4⟩
@@ -545,9 +545,9 @@ theorem grpB_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) (n : Nat) (
   obtain ⟨hel5, hel5'⟩ := installIwH (i := 5) helimD hsz
   have hL := installIwB (k := 7) hlarge hsz
   have ew5 : rdW (s5.mem.arr64 IW) (pp + 5) = rdW (m.arr64 IW) (pp + UInt64.ofNat 5) :=
-    partsRdIW_grow hg15 (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hg15 (by rw [UInt64.toNat_add]; simp; omega)
   have ew7 : rdW (s5.mem.arr64 IW) (pp + 7) = rdW (m.arr64 IW) (pp + UInt64.ofNat 7) :=
-    partsRdIW_grow hg15 (by rw [UInt64.toNat_add]; simp; omega)
+    rdW_iw_grow hg15 (by rw [UInt64.toNat_add]; simp; omega)
   rw [ew5, ew7]
   rcases c6' : callW p n "struct_elim_level" [rdW (m.arr64 IW) (pp + UInt64.ofNat 5),
       rdW (m.arr64 IW) (pp + UInt64.ofNat 7)] s5.mem with _ | ⟨r6, m6⟩

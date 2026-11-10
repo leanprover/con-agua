@@ -536,7 +536,7 @@ theorem blockIsRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" 
   subst hr1
   simp only [List.headD_cons, List.tail_cons] at hm'
   obtain ⟨how, -, -⟩ := partsIwRd ho rfl
-  rw [partsRdIW_grow hg1 (by omega), partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)] at hm'
+  rw [rdW_iw_grow hg1 (by omega), rdW_iw_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)] at hm'
   have hoW : rdW (s₀.mem.arr64 IW) q = o := by rw [how, ofNat_toNat_word]
   rw [hoW, hlr, ofNat_toNat_word] at hm'
   have hkW : (UInt64.ofNat bs.k).toNat = bs.k := by rw [hk]; simp

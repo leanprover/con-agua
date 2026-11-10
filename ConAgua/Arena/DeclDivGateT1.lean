@@ -416,7 +416,7 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.I
       rw [UInt64.toNat_add]; simp; omega
     simp only [erRd_foldN] at hw
     rw [erRd_lo hC.stage.iw (by omega), erRd_lo hC.stage.iw (by rw [ho1]; omega), v0, v1] at hw
-    have htl := L.Rom.top_lt m
+    have htl := L.Ind.erTop_lt m
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1'⟩ :=
       tpgC hD hcl hkp hcrf h1 hC (dmWord_lt32 _) (dmWord_lt32 _) (by rw [decI_word]; exact hd1)

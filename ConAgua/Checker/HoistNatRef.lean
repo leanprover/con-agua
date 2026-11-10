@@ -49,10 +49,6 @@ theorem iwTop_lt' (m : Mem) : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
 theorem iwTop_lt_size (m : Mem) : iwTop m < UInt64.size := UInt64.toNat_lt _
 
 /-- A read below the old top survives pool growth. -/
-theorem rdW_grow {m m' : Mem} (hg : IWGrow m m') {x : Word} (hx : x.toNat < iwTop m) :
-    rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x := by
-  simp only [rdW, hg.iwGet _ hx]
-
 /-- **`slice_has`**: `w` is among the slice's words. -/
 theorem sliceHas_ok (m : Mem) (o w : Word) : ∀ (ws : List Word) (n : Nat) (l j r : Word),
     l.toNat = j.toNat + ws.length →
@@ -163,7 +159,7 @@ theorem NSl.grow {m m' m'' : Mem} {r ws : List Word} (h : NSl m m' r ws) (hg : I
     UInt64.toNat_ofNat_of_lt' (by have := iwTop_lt_size m'; omega)
   have hadd : (r.headD 0 + UInt64.ofNat j).toNat = (r.headD 0).toNat + j := by
     rw [UInt64.toNat_add, hj64]; have := iwTop_lt' m'; omega
-  rw [rdW_grow hg (by rw [hadd]; omega), hrd j hj]
+  rw [rdW_iw_grow hg (by rw [hadd]; omega), hrd j hj]
 
 /-- The name-list membership test over a slice. -/
 theorem NSl.has {m m' m'' : Mem} {r ws : List Word} (h : NSl m m' r ws) (hg : IWGrow m' m'')

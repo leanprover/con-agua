@@ -85,6 +85,15 @@ theorem IWOK.of_er {m m' : Mem} (hf : MemFrame [EREC, tier1 EREC] [] m m') (h : 
 
 /-! ## `IWGrow` across frames and writers -/
 
+/-- A word of `IW` below the top reads the same after a growth. -/
+theorem rdW_iw_grow {m m' : Mem} (hg : IWGrow m m') {x : Word} (hx : x.toNat < iwTop m) :
+    rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x := by
+  simp only [rdW, hg.iwGet _ hx]
+
+/-- A number of `IW` below the top reads the same after a growth. -/
+theorem iwN_grow {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) : iwN m' i = iwN m i := by
+  simp only [iwN, nat?, iwA, aread_apply]; rw [hg.iwGet i hi]
+
 /-- A write to `IW` at or above the top keeps the growth. -/
 theorem IWGrow.set_iw {m m' : Mem} (h : IWGrow m m') (k v : Word) (hk : iwTop m ≤ k.toNat) :
     IWGrow m (m'.set64 IW k v) := by

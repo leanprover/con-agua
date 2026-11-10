@@ -42,9 +42,6 @@ theorem of_eq (h : ∀ m', IWGrow m m' → f m' = f m) (hf : f m = some x) : Sta
 
 end StabD
 
-theorem iwN_grow {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) : iwN m' i = iwN m i := by
-  simp only [iwN, nat?, iwA, aread_apply]; rw [hg.iwGet i hi]
-
 theorem iwH_grow {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) :
     (iwH m' i : Option (Idx k)) = iwH m i := by
   simp only [iwH, hd?, iwA, aread_apply]; rw [hg.iwGet i hi]

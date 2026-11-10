@@ -523,7 +523,7 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       obtain ⟨hS2, hg2, hd2, ht2⟩ := partsConsPL (fun _ => OMono.decCVp _) h2 hS1 hts1.2 hts1.1 hy
       have hlt1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
       have e : ∀ i, i < 6 → rdW (m2.arr64 IW) (q1 + UInt64.ofNat i) = rdW (m1.arr64 IW) (q1 + UInt64.ofNat i) :=
-        fun i hi => partsRdIW_grow hg2 (by rw [partsWadd (by omega)]; omega)
+        fun i hi => rdW_iw_grow hg2 (by rw [partsWadd (by omega)]; omega)
       have e2 : rdW (m2.arr64 IW) (q1 + 2) = rdW (m1.arr64 IW) (q1 + 2) := e 2 (by omega)
       have e3 : rdW (m2.arr64 IW) (q1 + 3) = rdW (m1.arr64 IW) (q1 + 3) := e 3 (by omega)
       have e4 : rdW (m2.arr64 IW) (q1 + 4) = rdW (m1.arr64 IW) (q1 + 4) := e 4 (by omega)

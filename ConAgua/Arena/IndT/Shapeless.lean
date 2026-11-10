@@ -53,8 +53,6 @@ l_model cslE_spec (p : Prog) (hV : CcvProg p)
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 
-theorem erA_truncM_a5 (m : Mem) : erA (truncM m) = erecP m := truncM_erA m
-
 /-- The head of a decoded block slice (the record word `EREC⦃off⦄` reads, over both tiers). -/
 theorem decEBlk_head {dn : NIdx → Option ConLeche.Name} {m : Mem} {off cnt : Word}
     {ci : IConstantInfo} {rest : List IConstantInfo}
