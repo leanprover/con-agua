@@ -86,3 +86,11 @@ coordinator, with the user): drop rec. 4 for `EREC`; or re-aim it at the route-A
 proved "phase B writes no frozen array" for all 63 arrays, which needs every store library's
 tier to be static in a job, i.e. the mode-tier store of §4 for every tiered store, and a change
 of `ThreadsRun`'s hypotheses).
+
+## Decision (2026-11-10)
+
+Recommendation 4 of `docs/design/reproof.md` is dropped for `EREC`: a job-level tier-0 frame
+theorem would replace no proof, and removing the `mprotect` read-only assumption of the threaded
+mode (option 2 above) is not worth a multi-day lane while that assumption is OS-enforced and a
+violation crashes rather than yields a verdict. The effort goes to converting hand-written models
+to `l_model` instead.
