@@ -42,6 +42,18 @@ theorem rdU_some {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} 
     obtain ⟨rfl, rfl⟩ := u64Call hL hc
     exact h
 
+/-- A `rom_u64` call in a model's `ntBW` chain: the continuation at the word read. -/
+theorem u64_some {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i : Word}
+    {k : List Word → Mem → Option (List Word × Mem)} {v : List Word × Mem}
+    (h : ntBW (callW p n "rom_u64_c" [i] m) k = some v) : k [u64W rom i] m = some v := by
+  cases hc : callW p n "rom_u64_c" [i] m with
+  | none => rw [hc] at h; simp at h
+  | some t =>
+    obtain ⟨r, m'⟩ := t
+    rw [hc, bW_some] at h
+    obtain ⟨rfl, rfl⟩ := u64Call hL hc
+    exact h
+
 theorem u64_at {rom : List UInt8} (hr : RomOK rom) (q k : Word) (pre : List UInt8) (n : Nat)
     (rest : List UInt8) (hd : rom.drop q.toNat = pre ++ (u64B n ++ rest)) (hk : k.toNat = pre.length)
     (hn : n < 2 ^ 64) : u64W rom (q + k) = UInt64.ofNat n := by
@@ -232,10 +244,10 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
   simp only [u64B, List.length_cons, List.length_nil] at hlen
   have hw := callW_model (M := fun mq => capsW p k mq q c) (caps_specW rom p hL k · q c) hc
   unfold capsW at hw
-  replace hw := putE_some hL (rdU_some hL hw); replace hw := putE_some hL (rdU_some hL hw)
-  replace hw := putE_some hL (rdU_some hL hw); replace hw := putE_some hL (rdU_some hL hw)
-  replace hw := putE_some hL (rdU_some hL hw); replace hw := putE_some hL (rdU_some hL hw)
-  replace hw := putE_some hL (rdU_some hL hw)
+  replace hw := putE_some hL (u64_some hL hw); replace hw := putE_some hL (u64_some hL hw)
+  replace hw := putE_some hL (u64_some hL hw); replace hw := putE_some hL (u64_some hL hw)
+  replace hw := putE_some hL (u64_some hL hw); replace hw := putE_some hL (u64_some hL hw)
+  replace hw := putE_some hL (u64_some hL hw)
   have hb : ∀ b : Bool, (if b then 1 else 0) < 2 ^ 64 := fun b => by cases b <;> decide
   have e0 := u64_at hr q 0 [] _ _ (by rw [hd']; rfl) (by simp) (hb caps.eta)
   simp only [UInt64.add_zero] at e0
@@ -257,10 +269,9 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
   clear e0 e1 e2 e3 e4 e5 e6
   generalize hv0 : UInt64.ofNat (if caps.eta then 1 else 0) = v0 at hw
   generalize hv3 : UInt64.ofNat (if caps.unitlike then 1 else 0) = v3 at hw
-  change capsW.capsTailW p k (putERs m [(c, v0), (c + 2, UInt64.ofNat caps.etaParams),
+  change ntBW (callW p k "rom_name_c" [q + 56] (putERs m [(c, v0), (c + 2, UInt64.ofNat caps.etaParams),
     (c + 3, UInt64.ofNat caps.etaFields), (c + 4, v3), (c + 5, UInt64.ofNat caps.unitParams),
-    (c + 6, UInt64.ofNat caps.nIdx), (c + 12, UInt64.ofNat caps.nparams)])
-    q c = some (r, m') at hw
+    (c + 6, UInt64.ofNat caps.nIdx), (c + 12, UInt64.ofNat caps.nparams)])) _ = some (r, m') at hw
   generalize hws : [(c, v0), (c + 2, UInt64.ofNat caps.etaParams),
     (c + 3, UInt64.ofNat caps.etaFields), (c + 4, v3), (c + 5, UInt64.ofNat caps.unitParams),
     (c + 6, UInt64.ofNat caps.nIdx), (c + 12, UInt64.ofNat caps.nparams)] = ws
@@ -276,7 +287,6 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
     refine putERs_get ws m j w hI hwsB ?_ hjw
     rw [← hws]; simp (disch := omega) only [off_toNat, List.map_cons, List.map_nil]; simp
   -- the eta constructor
-  unfold capsW.capsTailW at hw
   have hq56 : (q + 56).toNat = q.toNat + 56 := by rw [UInt64.toNat_add]; simp; off_omega
   obtain ⟨r1, m8, h1, hw⟩ := ntBW_inv hw
   have hdn : rom.drop (q + 56).toNat = encName caps.etaCtor ++ (encNameL caps.all ++
@@ -294,7 +304,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
     (by off_omega)
   -- the two name lists
   cases k with
-  | zero => dsimp only at hw; rw [callW_zero] at hw; simp at hw
+  | zero => rw [callW_zero] at hw; simp at hw
   | succ k =>
   obtain ⟨r2, m10, h2, hw⟩ := ntBW_inv hw
   have hd2 : rom.drop (r1.tail.headD 0).toNat = encNameL caps.all ++ (encNameL caps.ctors ++ rest) :=

@@ -35,18 +35,6 @@ set_option experimental.vcgen true
 namespace L.Front.Ind
 open L.Front
 
-/-- `expr_get` as a table lookup (`lkW`), for the unified models' lifted calls. -/
-theorem exprGetL_spec (p : Prog) (hL : IndApplyLookups p) (n : Nat) (s₀ : St) (i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "expr_get" [i]
-    ⦃fun r s' => s' = s₀ ∧ lkW s₀.mem EID i = some (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨h1, h2, h3⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (exprGet_spec p hL.decl.expr n s₀ i)
-  refine ⟨h1, ?_⟩
-  subst h3; subst h1
-  simp [lkW, h2]
-
 /-! ## The models -/
 
 l_model viUnsafe_specE (p : Prog) (hf : p.lookup "vi_unsafe" = some viUnsafe)
@@ -63,7 +51,7 @@ l_model viCtor_specE (p : Prog) (hL : IndApplyLookups p)
 
 l_model recIdx_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_rec_idx ↦ recIdxE]
-  specs [sortTele_spec p hL n]
+  specs [sortTele_spec p hL.pi_sort_tele_len hL.e_view n]
   grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -235,7 +223,10 @@ theorem findLastW_zero : ∀ (n : Nat) (m : Mem) (o x j f k : Word), findLastW n
     · cases h; exact absurd hf (by decide)
     · rename_i hx
       rw [wd_eq, hoj] at hx
-      have := ih m o x (j - 1) f k h (by rw [hj1]; omega) hf
+      rcases hr : findLastW n m o x (j - 1) with _ | ⟨f', k''⟩ <;>
+        simp only [hr, findLastW.k_ifl_find_last, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have := ih m o x (j - 1) _ _ hr (by rw [hj1]; omega) hf
       rw [hj1] at this
       intro k' hk'
       by_cases hk : k' = j.toNat - 1

@@ -88,3 +88,92 @@ the old time rule rejected or nobody tried).
 **Split.** The lead takes the reach families (`Front/IndApplySpec`, `Rom/CIReadRefW`,
 `Arena/IndIface`'s models) and `Front/ApplyExpr`; three helpers take disjoint groups of the
 low-reach families (§2).
+
+## 2. Measuring
+
+`_tmp/mgen3/measure.sh WORKTREE F.lean…`: `perf stat -e instructions:u` and `/usr/bin/time` around
+`scripts/lake env lean F.lean` with `LEAN_NUM_THREADS=1`; instructions (G), user seconds, peak
+RSS. Before and after on the same worktree, the changed modules and the users that changed.
+
+## 3. Batches
+
+### Batch 1: `Front/IndApplySpec` (lead)
+
+No generator change. Generated now: `store_fuel`, `ind_pi_tele_len`, `pi_sort_tele_len`,
+`name_rec_pre`, `ifl_contains`, `ifl_nodup`, `ifl_find_last`, `vi_map_go`, `vi_map`,
+`vi_listed`, `vi_nested` (11). Their hand models, the continuations `sfK`, `teleK`, `stK`,
+`nodupK`, `restK`, `listedK`, `nrpStr`, the hand `mapW`, and their eleven hand specs are gone;
+`exprGetL_spec` moved here from `Verdict/FrontViE` (it is `nameGetL_spec`'s twin, now needed by
+`vi_map_go`'s generated spec), and `IndRealIpo`'s copy of the `pi_sort_tele_len` spec
+(`sortTele_specI`) is gone: the generated `sortTele_spec` takes just the two lookups it needs.
+
+The refinements changed little: renames (`teleK` → `teleW.k_ind_pi_tele_len`, `stK` →
+`sortTeleW.k_pi_sort_tele_len`, `nodupK` → `nodupW.k_ifl_contains`), the continuation chains
+`storeFuelW.k_ctl_sum{,_2,_3}` walked by their arms, a generated recursive call wrapped in its
+identity continuation (`findLastW.k_ifl_find_last`), `vi_map`/`vi_listed` as flat tuples (so
+`validateE`'s proofs lose their `flat3` steps), and two bridges: `mapLk` (the lookup chosen by
+`f`) and `mapGoW_step` (the two generated arms that call `name_get` / `expr_get` share one
+continuation), and `prd_rdW` (the generated `name_rec_pre` reads the pool by `rdW`; the
+refinement states it with `prd`). `split` does not split the generated `if` on a three-way `∧` in
+`nrpW_ok` (the instances differ from the ones `by_cases` builds); `simp only [hrec, ↓reduceIte]`
+does.
+
+Left in the file: the continuation combinators `lK`, `lkPushK`, `sliceK`, `allocK`, `mK`, `wK`,
+`pmK` and `lkW` (used by `IndApplySpec2` and `IndInstallRefine*`, helper mgen3-consts's files).
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Front/IndApplySpec` | 34.4 → 52.6 G | 8.6 → 8.8 | 1013 → 1056 |
+| `Front/IndApplyRefine` | 23.4 → 28.9 G | 3.5 → 3.4 | 1074 → 1109 |
+| `Front/IndApplyRefine2` | 10.1 → 10.2 G | 2.1 → 1.6 | 943 → 953 |
+| `Front/IndApplyRefine3` | 9.4 → 9.4 G | 1.7 → 1.3 | 935 → 928 |
+| `Front/IndApplyRefine7` | 15.0 → 15.8 G | 3.5 → 2.9 | 996 → 1015 |
+| `Front/IndApplyRefine9` | 31.8 → 31.9 G | 5.3 → 4.3 | 1141 → 1164 |
+| `Verdict/FrontViE` | 25.2 → 25.5 G | 5.9 → 4.5 | 1048 → 1103 |
+| `Arena/IndRealIpo` | 14.6 → 13.3 G | 3.2 → 2.5 | 1028 → 1017 |
+| total | 163.9 → 187.6 G (+14 %) | | |
+
+Lines: 7 files, +137 −413 (**−276**); `IndApplySpec` 519 → 245.
+
+### Batch 2: generator `pfuel`; `Rom/CIReadRefW` (lead)
+
+**Generator: `pfuel`** (`ModelGen.lean`, test `tPf` in `ModelGenTest.lean`). 61 hand-specified
+functions have models in lane whnf's "a call as a function of the memory" style: every callee
+through `callW p n "f"` (its own recursive call too), so the model is not recursive and takes the
+fuel `n` as a parameter, and the spec is at `exec p (n + 1)` with the model at `n`
+(`Rom/CIReadRefW` 15, `PropReadW` 9, `InstLPWalk` 4, `IcaW`, `IndT/BlockPD`, the `IndDeclConsts*`
+files 1–2 each, …). `l_model` could generate their bodies (`specs [callW_spec p n "f", …]` with
+`bind ntBW`, as `DeclNatGate`'s `depsStoredW` does), but only as a fuel-indexed model (`match n
+with | 0 => none | n + 1 => …`), one off from the hand one, so every refinement would have
+shifted its fuel. With `pfuel` (one function that does not call itself as its model) the model
+is the body at `n`, its arms are stated at `n`, and the spec is `∀ s₀ args, ⦃s = s₀⦄ invoke p
+(exec p (n + 1)) "f" args ⦃… fW … n s₀.mem args = some …⦄`, proved by the one step (no
+induction). On `CIReadRefW` the generated model **is** the hand one: `slotG p n m s = slotW p n m s`
+by `rfl` for 15 of its 17 functions.
+
+**`Rom/CIReadRefW`**: `rci_slot`, `rci_fresh`, `rci_names_to`, `rci_lvls_to`, `rci_name_sl`,
+`rci_cv`, `rci_caps`, `rci_rules_to`, `rci_block_to`, `rci_block`, `rom_basis_decls`,
+`rom_and_pin`, `rom_ci`, `rom_cv`, `rom_expr_pin` generated (15 models and specs, same names, same
+statements). The users needed three kinds of edit: a word read through `rom_u64_c` in a generated
+model is a continuation over the result list (`fun ρ μ => … ρ.headD 0 …`), which the hand `rdU`
+abbreviation's lemma `rdU_some` cannot match (its continuation is not a pattern), so a lemma over
+the `ntBW` chain itself, `u64_some` (`k [u64W rom i] m`), and a `simp only [List.headD_cons]`
+after it; `capsW`'s `where` part `capsTailW` is gone, so `CIReadRefCaps` names the rest of the
+chain by `change ntBW (callW p k "rom_name_c" …) _ = …`; one `simp only [putE]` and one `dsimp`
+had nothing left to do. `rci_rule` and `rci_ci` are not converted yet: their hand models are cut
+into named parts (`ruleTailW`, `ruleLvlW`, `rulePinW`, `ciTailW`, `ciDefnW`, …) that the long
+walks in `CIReadRefRule`/`CIReadRefCI` take apart by name; the generated ones are one body with
+join points.
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `L/ModelGenTest` | 83.9 → 84.9 G | 17.6 → 18.0 | 1075 → 1070 |
+| `Rom/CIReadRefW` | 100.3 → 90.3 G | 20.0 → 16.9 | 1178 → 1144 |
+| `Rom/CIReadRefCaps` | 25.1 → 25.3 G | 3.6 → 3.4 | 1034 → 1029 |
+| `Rom/CIReadRefCV` | 7.5 → 7.5 G | 1.1 → 1.0 | 945 → 976 |
+| `Rom/CIReadRefLayout` | 18.8 → 18.8 G | 3.2 → 2.9 | 1465 → 1500 |
+| `Rom/CIReadRefs` | 6.8 → 6.8 G | 1.2 → 1.2 | 946 → 954 |
+
+Lines: `CIReadRefW` +99 −241 (−142), users +22 −12; the generator +38 −5 and its test +30. The
+gate build after the change rebuilt every `l_model` module and none changed (the option is off
+by default).

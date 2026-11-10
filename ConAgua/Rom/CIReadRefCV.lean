@@ -74,7 +74,6 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   obtain ⟨⟨hfn, hfl⟩, hfe⟩ := hfit
   have hw := callW_model (M := fun mq => cvW p k mq q pp) (cv_specW rom p hL k · q pp) hc
   unfold cvW at hw
-  simp only [putE] at hw
   have hlt := hI.er_lt
   -- the name
   obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
