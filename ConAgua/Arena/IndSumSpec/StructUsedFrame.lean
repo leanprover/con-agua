@@ -4,6 +4,7 @@ public import ConAgua.Arena.IndSumSpec.StructUsedLater
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 public import ConAgua.Arena.WriteSets
 import ConAgua.Arena.WalkLiftRefine
+import ConAgua.Arena.DeclBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

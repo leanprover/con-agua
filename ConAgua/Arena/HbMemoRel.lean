@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Arena.IWFrame
 public import ConAgua.Arena.IndIface
 
 @[expose] public section

@@ -8,8 +8,9 @@ refinement theorem changed. Lemmas moved with their names unchanged; two new lem
 ## 1. What moved where
 
 **`ConAgua/Arena/ErecVocab.lean`** (new, 32 declarations): the two-tier record pool. It imports
-`ErecRd` (so `Env`, `Tiers`) and is imported publicly by `IndIface`, so every file that sees `IWOK`
-sees it. Definitions moved in (they could: no cycle): `erA` (`IndIface`), `erTop` (`IndIface`),
+`Tiers` (and the attribute modules) and is imported publicly by `IndIface` in place of `Tiers`, so
+every file that sees `IWOK` sees it; import closures grew only by the new files (`ErecVocab`,
+`ErecGrindAttr`, `IWFrame`) and the grind-attribute modules. Definitions moved in (they could: no cycle): `erA` (`IndIface`), `erTop` (`IndIface`),
 `erRd` (`IndLibSpec`), `erecPutMem`, `erOff`, `erTier`, `erTopOf` (`IndIface`). Lemmas:
 
 | from | lemmas |

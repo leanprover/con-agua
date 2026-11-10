@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.RomExprRef
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.IndCopy2

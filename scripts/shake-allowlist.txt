@@ -135,3 +135,6 @@ ConAgua/Verdict/FrontViE.lean	public import ConAgua.Front.IndApplyRefine3	# the 
 ConAgua/Verdict/KnotAllE.lean	public import ConAgua.Checker.LoopDecl	# names `prog_bundle [...]` reads
 ConAgua/Verdict/KnotAllE.lean	public import ConAgua.Checker.LoopDeclArm	# names `prog_bundle [...]` reads
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
+ConAgua/Arena/HbMemoRel.lean	public import ConAgua.Arena.IWFrame	# the build needs it: re-exports IWFrame (IWOK.frameC moved there from this file) to the importers that use it (WhnfBase, WhnfDeltaSlot)
+ConAgua/Arena/IndSumSpec/StructUsedFrame.lean	import ConAgua.Arena.DeclBase	# the build needs it: allocW_facts (IndCopy2) comes through it
+ConAgua/Rom/CIReadRefBase.lean	public import ConAgua.Arena.IndMaster	# the build needs it: allocW (IndCopy) comes through it
