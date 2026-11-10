@@ -131,7 +131,6 @@ theorem er_put_ne (m : Mem) (i w : Word) (j : Nat) (hj : j ≠ i.toNat) (hj1 : j
 theorem IWGrow.put {m₀ m : Mem} (hg : IWGrow m₀ m) (hok : IWOK m) (i w : Word)
     (hfl : rdW (m.arr64 CTL) 1 = 0 ↔ rdW (m₀.arr64 CTL) 1 = 0) (hi : erT m₀ ≤ i.toNat)
     (hi' : i.toNat < erT m) : IWGrow m₀ (erecPutMem m i w) := by
-  have hc := erecPutMem_ctl m i w
   have k1 : erecTop m ≤ (m.arr64 EREC).size := hok.er
   have k2 : (m.arr64 EREC).size < 2 ^ 40 := hok.erCap
   have k3 : erecTop1 m ≤ (m.arr64 (tier1 EREC)).size := hok.er1
@@ -144,20 +143,10 @@ theorem IWGrow.put {m₀ m : Mem} (hg : IWGrow m₀ m) (hok : IWOK m) (i w : Wor
     by_cases e2 : rdW (m₀.arr64 CTL) 1 = 0
     · rw [ite_eq_left e2] at hi; rw [ite_eq_left (hfl.2 e2)] at hi'; constructor <;> intro <;> omega
     · rw [ite_eq_right e2] at hi; rw [ite_eq_right (fun h' => e2 (hfl.1 h'))] at hi'; constructor <;> intro <;> omega
-  refine ⟨by simp only [iwTop, hc]; exact hg.iw, by simp only [erTop, hc]; exact hg.er,
-    fun j hj => ?_, fun j hj => ?_, by simp only [erecTop1, hc]; exact hg.er1, fun j hj => ?_⟩
-  · rw [erecPutMem_arr, ite_eq_right (by unfold erTier; split <;> decide)]; exact hg.iwGet j hj
-  · rw [erecPutMem_arr]; unfold erTier; split
-    · rename_i e
-      have hj' : j < erecTop m₀ := hj
-      have : ¬ (erOff i = j) := by have := hR.1 e; simp only [erOff]; omega
-      simp [this, hg.erGet j hj]
-    · exact hg.erGet j hj
-  · rw [erecPutMem_arr]; unfold erTier; split
-    · exact hg.er1Get j hj
-    · rename_i e
-      have : ¬ (erOff i = j) := by have := hR.2 e; simp only [erOff]; omega
-      simp [this, hg.er1Get j hj]
+  refine L.Ind.IWGrow.put hg ?_
+  simp only [erTopOf, erOff]; split
+  · rename_i e; exact hR.1 e
+  · rename_i e; exact hR.2 e
 
 /-- **The readers' invariant**, from the entry `m₀`, `a₀`. -/
 structure RInv (m₀ : Mem) (a₀ : AState) (T : Nat) (m : Mem) (a : AState) : Prop where
@@ -261,12 +250,7 @@ theorem RInv.putER (h : RInv m₀ a₀ T m a) (i w : Word) (hi : erT m₀ ≤ i.
     h.hcp, h.frame.trans (hf.mono (by simp [RciA]) (by simp)), IWGrow.put h.grow h.ok i w h.fl hi hi', ?_, h200.trans h.top,
     h.mode.frame hf (by simp) (by simp), by rw [hc]; exact h.fl⟩, er_put_get h.ok i w hb hi',
     fun j hj hj1 => er_put_ne m i w j hj hj1 (by omega), (erT_congr hc).1, hI, h200⟩
-  · have hs : ∀ b, ((erecPutMem m i w).arr64 b).size = (m.arr64 b).size := by
-      intro b; rw [erecPutMem_arr]; split <;> simp
-    have := (IWOK_iff m).1 h.ok
-    rw [IWOK_iff]
-    simp only [iwTop, erTop, erecTop1, hc, hs]
-    exact this
+  · exact IWOK.of_er hf h.ok
 
 /-- `erec_alloc` moves only the top of the flag's tier. -/
 theorem erAllocW_other {m m' : Mem} {k o : Word} (hw : erAllocW m k = some (o, m')) :
@@ -303,7 +287,9 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k 
   have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by simp) (by decide)
   have h200 : iwTop m' = iwTop m := by simp only [iwTop]; rw [hf.ctl 200 (by decide)]
   have h1 : rdW (m'.arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := hf.ctl 1 (by decide)
-  have hgI : IWGrow m m' := ⟨by omega, hg.top, fun j _ => by rw [hI], hg.get, hg.top1, hg.get1⟩
+  have hgI : IWGrow m m' :=
+    { iw := by omega, er := hg.top, iwGet := fun j _ => by rw [hI], erGet := hg.get, er1 := hg.top1
+      er1Get := hg.get1 }
   have hT : o.toNat = erT m ∧ erT m' = erT m + k.toNat := by
     simp only [erOff, erTopOf] at hoff htop
     unfold erT; rw [h1]
@@ -362,38 +348,24 @@ theorem RInv.iwAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : allocW m k = 
     h.frame.trans (hf.mono (by simp [RciA]) (by simp [RciC])), ?_, ?_, by rw [htop, h.top],
     h.mode.frame hf (by decide) (by decide), by rw [h1]; exact h.fl⟩, hqi, htop, hI,
     by simp only [erT, h1, h129, h130], erecP_frame hf (by simp [EREC, IW]) (by simp [EREC, IW]) (by simp) (by simp)⟩
-  · exact h.grow.trans ⟨by rw [htop]; omega, by have : erTop (allocMem m k) = erTop m := h129; omega,
-      fun j _ => by rw [hI], fun j _ => by rw [hE], by rw [h130]; exact Nat.le_refl _, fun j _ => by rw [hE1]⟩
-  · have := (IWOK_iff m).1 h.ok
-    rw [IWOK_iff]
-    rw [htop, hI, show erTop (allocMem m k) = erTop m from h129, hE, hf.size CTL, hE1, h130]
-    exact ⟨by omega, this.2.1, this.2.2.1, this.2.2.2.1, this.2.2.2.2.1, this.2.2.2.2.2⟩
+  · exact h.grow.trans
+      { iw := by rw [htop]; omega, er := by have : erTop (allocMem m k) = erTop m := h129; omega
+        iwGet := fun j _ => by rw [hI], erGet := fun j _ => by rw [hE]
+        er1 := by rw [h130]; exact Nat.le_refl _, er1Get := fun j _ => by rw [hE1] }
+  · exact IWOK.of_iw hf h.ok (by rw [htop, hI]; omega)
 
 /-- A word written in `IW` at an allocated index above the entry's pool top. -/
 theorem RInv.setIW (h : RInv m₀ a₀ T m a) (i w : Word) (hi : iwTop m₀ ≤ i.toNat) :
     RInv m₀ a₀ T (m.set64 IW i w) a ∧ erT (m.set64 IW i w) = erT m ∧ erA (m.set64 IW i w) = erA m := by
   have hf := MemFrame.set64 m IW (by decide) i w
-  have hI : ∀ j, j ≠ i.toNat → ((m.set64 IW i w).arr64 IW)[j]? = (m.arr64 IW)[j]? := by
-    intro j hj
-    rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-    simp [Ne.symm hj]
-  have hE : (m.set64 IW i w).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have hE1 : (m.set64 IW i w).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
-    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hC : (m.set64 IW i w).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have h200 : iwTop (m.set64 IW i w) = iwTop m := by simp only [iwTop, hC]
   refine ⟨⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
     h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_, h200.trans h.top,
     h.mode.frame hf (by simp) (by simp), by rw [hC]; exact h.fl⟩, (erT_congr hC).1,
     erecP_frame hf (by simp [EREC, IW]) (by simp [EREC, IW]) (by simp) (by simp)⟩
-  · obtain ⟨g1, g2, g3, g4, g5, g6⟩ := h.grow
-    exact ⟨h200 ▸ g1, by simp only [erTop, hC] at *; exact g2, fun j hj => by rw [hI j (by omega)]; exact g3 j hj,
-      fun j hj => by rw [hE]; exact g4 j hj, by simp only [erecTop1, hC]; exact g5,
-      fun j hj => by rw [hE1]; exact g6 j hj⟩
-  · have := (IWOK_iff m).1 h.ok
-    rw [IWOK_iff]
-    simp only [erecTop1, iwTop, erTop, hC, hE, hE1, Mem.size_arr64_set64] at this ⊢
-    exact this
+  · exact L.Ind.IWGrow.set_iw h.grow i w hi
+  · exact IWOK.of_iw (hf.mono (by simp) (by simp)) h.ok (by rw [h200, Mem.size_arr64_set64]; exact h.ok.iw)
 
 end steps
 
