@@ -30,7 +30,7 @@ open L.Arena
 
 /-! ## Models -/
 
-l_model nestSeedsFuel_spec (p : Prog) (hL : RsLook p)
+l_model nestSeedsFuel_spec {p : Prog} (hL : RsLook p)
   fns [hL.pfuel ↦ p2sfW list]
   specs [whnfWalkFuel_spec' p hL.nb n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]

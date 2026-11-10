@@ -114,7 +114,7 @@ theorem nestSeedsFuel_refines (s₀ : St) (a₀ : AState) (dO dL k f : Word) (ds
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_seeds_fuel" [dO, dL, k, f]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ a', ((ds.drop k.toNat).foldlM pos2FuelF f.toNat).run a₀ =
       .ok ((r.headD 0).toNat, a') ∧ StageR vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
-  refine triple_post (nestSeedsFuel_spec p L n s₀ dO dL k f) ?_
+  refine triple_post (nestSeedsFuel_spec L n s₀ dO dL k f) ?_
   rintro r s' ⟨hlc, hm⟩
   have := p2sfW_ok (fun _ => none) vis fe dO dL ds s₀.mem hlen hel hb n s₀.mem s'.mem a₀ k f _ hm hS (IWGrow.refl _) hk hP
   exact ⟨hlc, by simpa using this⟩

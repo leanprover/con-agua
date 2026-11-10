@@ -213,7 +213,7 @@ end root
 unified model, `nest_inst_type` through its run. -/
 l_model nsdE_spec (p : Prog) (hL : RsLook p)
   fns [hL.pseeds ↦ nsdE list]
-  specs [nestCtxHiAt_specE p hL.nb.ct.cr.rx.hi n, nestSeedsFuel_spec p hL n, nitE_spec p hL.nb.nit n,
+  specs [nestCtxHiAt_specE p hL.nb.ct.cr.rx.hi n, nestSeedsFuel_spec hL n, nitE_spec p hL.nb.nit n,
     nckE_spec p hL.nb.pkey n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
