@@ -90,13 +90,13 @@ con-ron's own
 ([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L48)).
 Internally, accept is the return word `0x414343455054`, chosen so that no
 status word or unset register reads as accept
-([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L96-L98)).
+([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L97-L99)).
 
 ## 2. What is proven, what is trusted
 
 ### 2.1 The final theorem
 
-[`checkerFile_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L91-L99):
+[`checkerFile_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L95-L103):
 
 ```lean
 theorem checkerFile_accepts [Host] (V : Type w) [ConLeche.SetTheory V]
@@ -137,17 +137,17 @@ phase is
 the stream index (`buildIndex`, which reads every record off once, with no
 inference), then every record's job, in order, on one worker; a job checks its
 record at the index's view of the record's position.
-[`TwinVerdict [b] c`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L61-L62)
+[`TwinVerdict [b] c`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L68-L69)
 is the same pipeline
-([`twinRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L50-L57)), at some pin
+([`twinRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L57-L64)), at some pin
 list, failing with an error of class `c` (`invalid` is `1`, con-ron's exit
 code 1; `notImplemented` is `2`, exit code 2), in the monad or as a reported
 failure of a line or a record. There is no converse: a run that the twin
 rejects may still end in `error` or `exhausted` here.
 
 Two corollaries put this in con-leche's terms
-([`checkerFile_model_exists`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L111-L123),
-[`checkerFile_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L137-L144)):
+([`checkerFile_model_exists`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L115-L127),
+[`checkerFile_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L141-L148)):
 on accept, con-leche's own parser reads `b`, con-leche's pure fold accepts the
 parsed records (prepared with some prelude, at some pin list), and the accepted
 environment has a model in every `ConLeche.SetTheory V`; and a file in
@@ -155,16 +155,16 @@ environment has a model in every `ConLeche.SetTheory V`; and a file in
 capstone, restated on the vendored Theorem 1
 ([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L88-L108)).
 A fourth variant,
-[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L72-L80),
+[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L76-L84),
 adds that the caller's callee-saved registers (System V: `rsp`, `rbp`, `rbx`,
 `r12` to `r15`) are intact on return, on every path
-([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L127-L134)).
+([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L128-L135)).
 The trampoline saves and restores them; nothing is assumed about the registers
 the compiled code uses (§8.1).
 
 **Axioms.** All four, and the five threaded theorems (§9.3), depend on `propext`, `Classical.choice` and `Quot.sound`
 only, pinned by `#guard_msgs`
-([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L200-L217)),
+([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L205-L222)),
 and so do the links of the chain
 ([`ConAgua/Audit/Final.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Audit/Final.lean#L20-L37)).
 No `sorry`, no `native_decide`, no axiom of our own. Every final theorem is
@@ -226,8 +226,8 @@ not accepted
 
 **The threaded mode** (`--jobs=N`, §9.3) has its own theorem, and its harness
 assumptions are the fields of
-[`ThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L142-L168)
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L29-L51)):
+[`ThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L145-L171)
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L32-L54)):
 
 * entry 1 is called as `AbiCall` says, and the harness regains control at each
   call's return address in a state the machine is guaranteed to reach there
@@ -250,8 +250,8 @@ assumptions are the fields of
 
 The threaded verdict theorem (`checkerFile_threads_verdict`) has its own,
 smaller set, the cases of
-[`ThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L64-L103)
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L36-L51)):
+[`ThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L73-L112)
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L44-L60)):
 either entry 1 is called as `AbiCall` says and returns (`FirstReturn`) with
 `rdx = 2`, and the code reported is its `rax`; or, for one thread and one of
 its calls `i`, the facts above hold for that thread's calls up to `i` (entry 1
@@ -428,13 +428,13 @@ The checker mirrors the twin function for function. Each L function has a
 twin function it stands for (a citation line names it, §10.1), and a
 refinement theorem: if the L function returns, the twin function succeeds on a
 related state with a related result
-([`RefAM`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/IndIface.lean#L363-L374),
+([`RefAM`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/IndIface.lean#L362-L373),
 the shape most refinements have). The relations say how L's arrays represent
 the twin's state (§6, §7). The refinements compose along entry 1's stages
 ([the stage specs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L97-L130)) and the stream index's build into
-[`checkA_run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/CheckARun.lean#L170-L176),
+[`checkA_run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/CheckARun.lean#L163-L169),
 and with entry 2's jobs into
-[`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L104-L114):
+[`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L101-L111):
 an entry-1 run of `check` from the loaded memory followed by an entry-2 run on
 the memory it left, the second returning `ACCEPT`, comes from an accepting twin
 pipeline on the same bytes.
@@ -464,7 +464,7 @@ the layout and enters the trampoline, so `compile_correct` gives one L run of
 the program, §8.6); if that returns `2^63 + k`, it calls entry 2 in place, a
 second L run in mode 2 on the memory the first left; if the machine reports
 accept, both L runs did.
-[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L109-L115)
+[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L108-L114)
 composes it with `drv_twinAccepts` for the committed file, and
 `EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 
@@ -877,7 +877,7 @@ from memory related to the twin's state before the stage, a returning call ends
 in memory related to the state after the twin's stage. The stages are proved at
 the checker's program and chained into entry 1's run; the last one, the
 stream index's build, is
-[`buildStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/BuildStage.lean#L252-L258).
+[`buildStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/BuildStage.lean#L251-L257).
 The twin's mutual recursion (whnf, defeq, infer) runs on fuel; the L side
 proves its refinement at every twin fuel at least the L fuel
 ([`InputsOK`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L74-L77) bounds only the sizes; the fuel is free).
@@ -1103,7 +1103,7 @@ Its machine-level theorem
 ([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L181-L191))
 says that an accept means the two L runs accepted, and an error report
 (`rdx = 2`) that one of them failed with the code in `rax`;
-[`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L104-L114)
+[`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L101-L111)
 that two such runs mean `TwinAccepts`; the final theorems (§2.1) compose them
 for the committed file.
 
@@ -1119,23 +1119,23 @@ Accept iff every call accepted; otherwise the verdict is that of the failing
 job with the smallest index, as the sequential run reports it. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.
 
-[`checkerFile_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L152-L155)
+[`checkerFile_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L156-L159)
 covers this mode for the committed file: if the harness behaves as
 `ThreadsRun` says (§2.3), every call accepts and the threads claim every job
 index, each thread in increasing order, then the twin's pipeline accepts `b`
 with the check phase as con-ron's pool
-([`TwinAcceptsPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L34-L43)),
+([`TwinAcceptsPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L38-L47)),
 and the model and no-`False` corollaries follow as in §2.1. Its pieces: entry
 1's run with the frozen buffer it leaves, a fresh worker's start state over the
 buffer and a zero region, and one job per call of entry 2, each a sequential
 L run related to con-ron's worker by non-interference (§7.3).
-[`checkerFile_threads_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L160-L164)
+[`checkerFile_threads_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L164-L168)
 adds that entry 1 and every `ca_check_b` call return with the caller's
 callee-saved registers intact.
-[`checkerFile_threads_verdict`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L172-L175)
+[`checkerFile_threads_verdict`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L177-L180)
 covers a failing run: if the harness behaves as `ThreadsFail` says (§2.3) and
 the reported code has class `1` or `2`, the twin's pool fails
-([`TwinVerdictPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L187-L205)):
+([`TwinVerdictPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L194-L212)):
 the pipeline fails before the jobs with that class (`TwinVerdict`), or the
 stages and the stream index ran ok and either the failing thread's jobs, in the
 order it claimed them, fail from the index state's worker with that class, or
