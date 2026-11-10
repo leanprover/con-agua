@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Arena.IndIface
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
 
 @[expose] public section
 

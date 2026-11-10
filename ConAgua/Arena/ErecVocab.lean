@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.ErecRd
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.ErecGrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

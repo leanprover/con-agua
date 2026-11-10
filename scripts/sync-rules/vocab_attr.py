@@ -12,9 +12,13 @@ order (the ladder keeps the first that elaborates):
             in front of every tactic line that starts with `vcgen` or `sym` (vcgen reads one
             global `@[spec]` set, so a named set is a scoped one: `open scoped S in vcgen [...]`);
   iwok      `sets`, and a positional destructuring of the pool invariant (`obtain ⟨h1, …⟩ := X.iw`
-            / `.ok` / `.iwok`) replaced by `have hIWOK := X.iw`, the anonymous-constructor proof that
-            follows it (`exact ⟨…⟩`, or `refine ⟨?_, …⟩` and its bullets) and every `exact hN` of a
-            destructured name by `IWOK_GRIND` (`IWOK`'s fields by name: ConAgua/Arena/IWFrame.lean).
+            / `.ok` / `.iwok`) replaced by `have hIWOK := X.iw`, each destructured name by its field
+            (`hIWOK.iw`, `hIWOK.er`, …: the k-th name is the k-th field of `IWOK_FIELDS`, so a base
+            proof written when `IWOK` had fewer fields still names the right ones, as long as new
+            fields are appended), and the anonymous-constructor proof of an `IWOK` that follows it
+            (`exact ⟨…⟩`, or `refine ⟨?_, …⟩` and its bullets) by `IWOK_GRIND`;
+  rules:N   then the sync's own `[vocab N]` sections of the rules file, in order (text rules the
+            sync needed besides the sets).
 
 The sets live in ConAgua/Arena/ErecVocab.lean (`arena_grind`, `erec_grind`, `L.Arena.ErecSpec`) and
 ConAgua/Arena/IWFrame.lean (`ind_grind`); a sync that moves another encoding adds its set here.
@@ -25,6 +29,8 @@ SETS = ["arena_grind"]
 SETS_PLUS = ["erec_grind"]
 SPEC_SCOPES = ["L.Arena.ErecSpec"]
 IWOK_GRIND = "grind [IWOK_iff, ind_grind, iwTop, erTop, erecTop1]"
+# `L.Ind.IWOK`'s fields in declaration order (ConAgua/Arena/IndIface.lean)
+IWOK_FIELDS = ["iw", "er", "iwSize", "erSize", "ctl", "er1", "er1Size", "erCap", "er1Cap"]
 
 # a list opener: `grind [`, `grind only [`, `sym only [`, `finish [`, `finish (gen := 20) [`
 LIST = re.compile(r"\b(grind|sym|finish)\b((?:\s+only)?(?:\s*\([^()]*\))*)\s*\[")
@@ -124,8 +130,11 @@ def iwok(text):
                             len(lines[e]) - len(lines[e].lstrip()) == ind:
                         e = _block_end(lines, e, ind)
                 lines[j:e] = [" " * ind + IWOK_GRIND]
-            elif any(re.search(r"\bexact %s\b" % re.escape(n), l) for n in names):
-                lines[j] = re.sub(r"\bexact (%s)\b.*$" % "|".join(map(re.escape, names)), IWOK_GRIND, l)
+            else:
+                for k, n in enumerate(names[:len(IWOK_FIELDS)]):
+                    if n != "_":
+                        lines[j] = re.sub(r"(?<![\w.'])%s(?![\w'₀-₉])" % re.escape(n),
+                                          f"hIWOK.{IWOK_FIELDS[k]}", lines[j])
             j += 1
         i += 1
     return "\n".join(lines) if changed else None
@@ -141,4 +150,7 @@ def candidates(proof, ctx):
     w = iwok(s)
     if w is not None:
         out.append(("iwok", w))
+    rules = ctx.get("rules")
+    for lab, rs in (getattr(rules, "vocab", None) or {}).items():
+        out.append((f"rules:{lab}", type(rules).apply(rs, proof, ctx.get("text", ""))))
     return out
