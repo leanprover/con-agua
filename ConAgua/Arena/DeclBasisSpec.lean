@@ -102,57 +102,48 @@ theorem pinAtW_ok51 {m m' : Mem} {a : AState} {r : List Word}
 
 /-! ## `of_reduce_op(n)` -/
 
-/-- After the `ofReduceNat` pin. -/
-def oroK (n : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => if n = r1.headD 0 then pinAtW m1 43 else pinAtW m1 44
+l_model oro_specW (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
+    (hp : p.lookup "of_reduce_op" = some ofReduceOpL)
+  fns [hp ↦ oroW list]
+  specs [pinAt_specW p hpa n]
+  grind [arena_grind]
 
-/-- **The model of `of_reduce_op(n)`.** -/
-def oroW (m : Mem) (n : Word) : Option (List Word × Mem) := oroK n (pinAtW m 45)
-
-theorem oroK_some (n : Word) (r1 : List Word) (m1 : Mem) :
-    oroK n (some (r1, m1)) = if n = r1.headD 0 then pinAtW m1 43 else pinAtW m1 44 := rfl
-
-grind_pattern [ind_grind] oroK_some => oroK n (some (r1, m1))
-
-theorem oro_specW (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
-    (hp : p.lookup "of_reduce_op" = some ofReduceOpL) (n : Nat) (s₀ : St) (w : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "of_reduce_op" [w]
-    ⦃fun r s' => LocEq s' s₀ ∧ oroW s₀.mem w = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, ofReduceOpL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n] <;>
-      finish (gen := 20) [oroW, pinAtW]
+/-- The last pin read of `of_reduce_op`: its first word. -/
+theorem oroW_k2 {x : Option (List Word × Mem)} {r : List Word} {m' : Mem}
+    (h : oroW.k_pin_at_2 x = some (r, m')) : ∃ r0, x = some (r0, m') ∧ r = [r0.headD 0] := by
+  rcases x with _ | ⟨r0, m0⟩
+  · rw [oroW.k_pin_at_2.none] at h; cases h
+  · rw [oroW.k_pin_at_2.arm1] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    exact ⟨r0, rfl, rfl⟩
 
 theorem oroW_ok {m m' : Mem} {a : AState} {w : Word} {r : List Word}
     (h : oroW m w = some (r, m')) (hP : PinsR m a.pins) (hw : w.toNat < 2 ^ 32) :
     m' = m ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       (ofReduceOp (decI w)).run a = .ok (decI (r.headD 0), a) := by
-  unfold oroW at h
+  rw [oroW.arm1] at h
   cases h1 : pinAtW m 45 with
-  | none => rw [h1] at h; cases h
+  | none => rw [h1, oroW.k_pin_at.none] at h; cases h
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
-  rw [h1, oroK_some] at h
+  rw [h1] at h
   obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hP
   have hbeq : ((decI w : NIdx) == decI (pinW m (1 + (45 : Word).toNat))) =
       decide (w = pinW m (1 + (45 : Word).toNat)) := decI_beq w _ hw hl1
   have e1 : r1.headD 0 = pinW m (1 + (45 : Word).toNat) := by rw [hr1]; rfl
   by_cases he : w = r1.headD 0
-  · rw [ite_eq_left he, hm1] at h
-    obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok h hP
+  · rw [oroW.k_pin_at.arm1 w r1 m1 he, hm1] at h
+    obtain ⟨r0, h2, rfl⟩ := oroW_k2 h
+    obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok h2 hP
     subst hr
     rw [e1] at he
     refine ⟨hm, hl, ?_⟩
     simp only [ofReduceOp, ofReduceNatName, pinOfReduceNat, reduceNatName, pinReduceNat,
       StateT.run_bind, show PIN_OF_REDUCE_NAT = (45 : Word).toNat from rfl, hrun1, exc_ok_bind', he]
     simpa [PIN_REDUCE_NAT, PIN_REDUCE_BOOL] using hrun
-  · rw [ite_eq_right he, hm1] at h
-    obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok h hP
+  · rw [oroW.k_pin_at.arm2 w r1 m1 he, hm1] at h
+    obtain ⟨r0, h2, rfl⟩ := oroW_k2 h
+    obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok h2 hP
     subst hr
     rw [e1] at he
     refine ⟨hm, hl, ?_⟩
