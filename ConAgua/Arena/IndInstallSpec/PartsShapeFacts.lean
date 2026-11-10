@@ -63,34 +63,13 @@ theorem fieldCopyW_get (n : Nat) (k : Word) : ∀ (m m' : Mem) (d s l : Word), f
     (fun m d v x hx => rdW_set64_IW_ne m d v (x + k) (by omega))
     (fun _ _ h => by omega) n
 
-/-- The model of `block_shape_formers(p)` (its copy at `n - 1`). -/
-def formersW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
-  match allocW m (rdW (m.arr64 IW) (p + 1)) with
-  | none => none
-  | some (q, m1) =>
-    match fieldCopyW (n - 1) m1 q (rdW (m1.arr64 IW) p) (rdW (m1.arr64 IW) (p + 1)) 0 with
-    | none => none
-    | some m2 => some ([q, rdW (m2.arr64 IW) (p + 1)], m2)
-
-theorem blockShapeFormers_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+/-- **`block_shape_formers(p)`'s model `formersW`** (generated). -/
+l_model blockShapeFormers_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "member_field_copy" = some memberFieldCopy)
-    (hp : p.lookup "block_shape_formers" = some blockShapeFormers) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_formers" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ formersW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeFormers]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hmod : ∀ a m1 m2, allocW s₀.mem (rdW (s₀.mem.arr64 IW) (q + 1)) = some (a, m1) →
-        fieldCopyW n m1 a (rdW (m1.arr64 IW) q) (rdW (m1.arr64 IW) (q + 1)) 0 = some m2 →
-        formersW (n + 1) s₀.mem q = some ([a, rdW (m2.arr64 IW) (q + 1)], m2) := by
-      intro a m1 m2 h1 h2
-      simp [formersW, h1, h2]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_specW p ha n, memberFieldCopy_spec p hc n] <;>
-      finish (gen := 20)
+    (hp : p.lookup "block_shape_formers" = some blockShapeFormers)
+  fns [hp ↦ formersW list]
+  specs [iwAlloc_specW p ha n, memberFieldCopy_spec p hc n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 /-- A slice of record pointers below the top is decoded below the tops. -/
 theorem decPLcv_decB {m : Mem} {o l : Nat} {xs : List IConstantVal}
@@ -132,20 +111,21 @@ theorem formersW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Blo
   have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
   have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
   have hsrc' := hsrc o l ho hl
-  unfold formersW at h
-  rw [hl'] at h
+  rcases n with _ | n
+  · simp [formersW] at h
+  rw [formersW.arm1, hl'] at h
   rcases hal : allocW m (UInt64.ofNat l) with _ | ⟨q, m1⟩
-  · simp [hal] at h
+  · simp [hal, formersW.k_iw_alloc.none] at h
   obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
   rw [hll] at hroom
-  simp only [hal] at h
+  rw [hal, formersW.k_iw_alloc.arm1] at h
   subst hq' hm1
   have hIW := allocMem_IW m (UInt64.ofNat l)
   rw [hIW, ho', hl'] at h
-  rcases hcp : fieldCopyW (n - 1) (allocMem m (UInt64.ofNat l)) (rdW (m.arr64 CTL) 200)
+  rcases hcp : fieldCopyW n (allocMem m (UInt64.ofNat l)) (rdW (m.arr64 CTL) 200)
       (UInt64.ofNat o) (UInt64.ofNat l) 0 with _ | m2
-  · simp [hcp] at h
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  · simp [hcp, formersW.k_member_field_copy.none] at h
+  simp only [hcp, formersW.k_member_field_copy.arm1, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
   have hptr' : ∀ j < (UInt64.ofNat l).toNat,
@@ -159,7 +139,7 @@ theorem formersW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Blo
     rw [hIW, hoo, hv', UInt64.add_zero]
     simp only [iwTop, hqq] at hvb
     rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; exact hvb
-  obtain ⟨hA, hS, hG⟩ := fieldCopyW_get (n - 1) 0 _ _ _ _ _ hcp
+  obtain ⟨hA, hS, hG⟩ := fieldCopyW_get n 0 _ _ _ _ _ hcp
     (by rw [hoo, hll]; simp only [iwTop, hqq] at hsrc'; omega)
     (by rw [hIW, hll]; exact hroom) (by rw [hIW]; exact hsz) hptr'
   rw [hIW] at hS hG

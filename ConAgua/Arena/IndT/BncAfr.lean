@@ -53,13 +53,14 @@ theorem fieldCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l k : Word), fieldCopyW
 
 theorem formersW_afr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     (h : formersW n m p = some (r, m')) : AFr m m' := by
-  unfold formersW at h
-  split at h; · cases h
-  rename_i q m1 hal
-  split at h; · cases h
-  rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  rcases n with _ | n
+  · simp [formersW] at h
+  rw [formersW.arm1] at h
+  obtain ⟨⟨q, m1⟩, hal, h⟩ := of_K h (formersW.k_iw_alloc.none ..)
+  rw [formersW.k_iw_alloc.arm1] at h
+  obtain ⟨m2, hc, h⟩ := of_K h (formersW.k_member_field_copy.none ..)
+  rw [formersW.k_member_field_copy.arm1] at h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_afr hal).trans (fieldCopyW_afr _ _ _ _ _ _ _ hc)
 
 theorem nckW_afr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word}
