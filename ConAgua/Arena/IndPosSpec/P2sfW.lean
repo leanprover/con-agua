@@ -86,8 +86,8 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
         r.headD 0 = r'.headD 0 := by
       have h2 : p2sfW.j1 n dO dL k (if f < rw.headD 0 then rw.headD 0 else f) m1 = some (r, m') := by
         by_cases hlt : f < rw.headD 0
-        · rw [p2sfW.k_whnf_walk_fuel.arm1 (hc1 := hlt)] at h; rw [if_pos hlt]; exact h
-        · rw [p2sfW.k_whnf_walk_fuel.arm2 (hc1 := hlt)] at h; rw [if_neg hlt]; exact h
+        · rw [p2sfW.k_whnf_walk_fuel.arm1 (hc1 := hlt)] at h; rw [ite_eq_left hlt]; exact h
+        · rw [p2sfW.k_whnf_walk_fuel.arm2 (hc1 := hlt)] at h; rw [ite_eq_right hlt]; exact h
       rw [p2sfW.j1.arm1] at h2
       rcases e : p2sfW n m1 dO dL (k + 1) (if f < rw.headD 0 then rw.headD 0 else f) with _ | ⟨r', m''⟩ <;>
         rw [e] at h2
