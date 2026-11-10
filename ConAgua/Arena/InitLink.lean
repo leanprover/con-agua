@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.DerRel
 public import ConAgua.Arena.Tiers
-public import ConAgua.Arena.IndexRel
 
 @[expose] public section
 
