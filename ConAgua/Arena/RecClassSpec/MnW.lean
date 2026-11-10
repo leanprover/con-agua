@@ -57,7 +57,7 @@ theorem rec2IhParts_specF (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some 
     ⦃fun r s' => LocEq s' s₀ ∧ rec2IhF n s₀.mem g t tele w d = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact classGenIhParts_spec p hp had hopf n s₀ g t tele w d
+  | succ n => exact classGenIhParts_spec p hp had hopf (n + 1) s₀ g t tele w d
 
 l_model classGenMinorTyIh1Close_spec (p : Prog) (h : MnProg p)
   fns [h.icl ↦ iclW list]

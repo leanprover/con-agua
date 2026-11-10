@@ -527,51 +527,12 @@ theorem EStore.viewBind_of_view_forall (st : EStore) (i : EIdx) (ty b : EIdx)
 
 /-! ## `class_gen_ih_parts` (through the `open_pis_at_fvars_f` and `get_app_args` stubs) -/
 
-/-- After `get_app_args`. -/
-def ihK2 (nPc xo xl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) =>
-    if nPc < r.tail.headD 0 then some ([1, xo, xl, r.headD 0 + nPc, r.tail.headD 0 - nPc], m2)
-    else some ([1, xo, xl, r.headD 0, 0], m2)
-
-/-- After `open_pis_at_fvars_f`. -/
-def ihK1 (nPc : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then some ([0, 0, 0, 0, 0], m1)
-    else ihK2 nPc (r.tail.headD 0) (r.tail.tail.headD 0)
-      (gaaF m1 [CWF, r.tail.tail.tail.headD 0])
-
-/-- **The model of `class_gen_ih_parts`.** -/
-def ihW (m : Mem) (g t tele w d : Word) : Option (List Word × Mem) :=
-  ihK1 (if t < rdW (m.arr64 IW) (g + 4) then rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 3) + t) + 4) else 0)
-    (opfF m [tele, w, d])
-
-section arms
-variable (nPc xo xl : Word) (r : List Word) (m1 : Mem)
-theorem ihK2_some : ihK2 nPc xo xl (some (r, m1)) =
-    (if nPc < r.tail.headD 0 then some ([1, xo, xl, r.headD 0 + nPc, r.tail.headD 0 - nPc], m1)
-    else some ([1, xo, xl, r.headD 0, 0], m1)) := rfl
-theorem ihK1_some : ihK1 nPc (some (r, m1)) =
-    (if r.headD 0 = 0 then some ([0, 0, 0, 0, 0], m1)
-    else ihK2 nPc (r.tail.headD 0) (r.tail.tail.headD 0)
-      (gaaF m1 [CWF, r.tail.tail.tail.headD 0])) := rfl
-end arms
-grind_pattern [ind_grind] ihK2_some => ihK2 nPc xo xl (some (r, m1))
-grind_pattern [ind_grind] ihK1_some => ihK1 nPc (some (r, m1))
-
-set_option maxHeartbeats 1600000 in
-theorem classGenIhParts_spec (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some classGenIhParts)
-    (had : AdF p) (hopf : OpfF p) (n : Nat) (s₀ : St) (g t tele w d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_gen_ih_parts" [g, t, tele, w, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ ihW s₀.mem g t tele w d = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]; simp only [callFn, classGenIhParts]
-  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    opfF_spec p hopf n, gaaF_spec p had n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,
-    decide_eq_true_eq] at *)
-  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, ihW]
+/-- **`class_gen_ih_parts` is its model `ihW`** (generated). -/
+l_model classGenIhParts_spec (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some classGenIhParts)
+    (had : AdF p) (hopf : OpfF p)
+  fns [hp ↦ ihW list]
+  specs [opfF_spec p hopf n, gaaF_spec p had n]
+  grind [arena_grind, ind_grind] finish [rdW_eq]
 
 theorem decTM_nPc {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
     iwN m (p + 4) = some M.nPc := by
@@ -671,7 +632,13 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
     (h : ihW m g t tele w d = some (r, m')) :
     ∃ res a', (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat).run a = .ok (res, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ IhRes m' r res ∧ AbsOK m' := by
-  simp only [ihW] at h
+  have hj : ihW m g t tele w d = ihW.j1 tele w d
+      (if t < rdW (m.arr64 IW) (g + 4) then
+        rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 3) + t) + 4) else 0) m := by
+    by_cases ht : t < rdW (m.arr64 IW) (g + 4)
+    · rw [ihW.arm1 _ _ _ _ _ _ ht]; simp [ht]
+    · rw [ihW.arm2 _ _ _ _ _ _ ht]; simp [ht]
+  rw [hj, ihW.j1.arm1] at h
   obtain ⟨hnp0, hnp64⟩ := ihNPc_word (t := t) hcls hsz
   rw [hnp0] at h
   obtain ⟨⟨r1, m1⟩, hs, h⟩ := of_K h rfl
@@ -679,7 +646,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
   cases res1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hdec1
-    rw [ihK1_some, ite_eq_left h0] at h
+    rw [ihW.k_open_pis_at_fvars_f.arm1 _ _ _ h0] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a1, ?_, hS1, hg1, rfl, hA1⟩
     simp only [ConRon.Arena.ClassGen.ihParts, StateT.run_bind]
@@ -689,7 +656,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
     obtain ⟨xs, leaf⟩ := xl
     obtain ⟨h1, hxs, hleaf⟩ := hdec1
     have h0 : r1.headD 0 ≠ 0 := by rw [h1]; decide
-    rw [ihK1_some, ite_eq_right h0] at h
+    rw [ihW.k_open_pis_at_fvars_f.arm2 _ _ _ h0] at h
     have hleaf3 : r1.tail.tail.tail.headD 0 = (r1.drop 3).headD 0 := by
       rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
     rw [hleaf3] at h
@@ -708,7 +675,6 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
     have hxs2 : decHL m2 (r1.tail.headD 0).toNat (r1.tail.tail.headD 0).toNat = some xs := by
       rw [decHL_grow hg2 hxtop']; exact hxs'
     have hlen := decHL_length m2 hdec2'
-    rw [ihK2_some] at h
     have hTW : (UInt64.ofNat N).toNat = N := UInt64.toNat_ofNat_of_lt' hnp64
     have htwin : (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat).run a =
         .ok (some (xs, args.drop N), a2) := by
@@ -733,7 +699,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
       · right; exact h0
       · left; have hsz2 := hS2.iw.iwSize; omega
     by_cases hlt : UInt64.ofNat N < r2.tail.headD 0
-    · rw [ite_eq_left hlt] at h
+    · rw [ihW.k_get_app_args_f.arm1 _ _ _ _ _ hlt, ihW.j2.arm1] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hNl : N < (r2.tail.headD 0).toNat := by
         have := UInt64.lt_iff_toNat_lt.mp hlt
@@ -753,7 +719,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
         rw [hsum, hsub]; exact hdr
       · show (r2.headD 0 + UInt64.ofNat N).toNat + (r2.tail.headD 0 - UInt64.ofNat N).toNat ≤ iwTop m2
         rw [hsum, hsub]; omega
-    · rw [ite_eq_right hlt] at h
+    · rw [ihW.k_get_app_args_f.arm2 _ _ _ _ _ hlt, ihW.j2.arm1] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hNl : (r2.tail.headD 0).toNat ≤ N := by
         have : ¬ (UInt64.ofNat N).toNat < (r2.tail.headD 0).toNat := fun hh =>
