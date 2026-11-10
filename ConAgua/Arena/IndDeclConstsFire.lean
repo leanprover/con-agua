@@ -49,7 +49,7 @@ structure FireProg (p : Prog) : Prop extends DropProg p where
 l_model rf_spec (p : Prog) (hP : FireProg p)
   fns [hP.rf ↦ rfW list]
   specs [stripPis_specF p hP.strip n, eView_spec p hP.view n, gafF_spec p hP.ad n,
-    viewLs_specW p hP.lsNode hP.alloc hP.poolCopy hP.viewLs n, gaaF_spec p hP.ad n, edvl_spec hP.toDropProg n]
+    viewLs_specW p hP.lsNode hP.alloc hP.poolCopy hP.viewLs n, gaaF_spec p hP.ad n, edvl_spec p hP.toDropProg n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000
