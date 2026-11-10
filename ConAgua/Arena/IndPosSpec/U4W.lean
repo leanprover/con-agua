@@ -11,7 +11,7 @@ public import ConAgua.Arena.IndPosSpec.RootHoles
 /-!
 # U4W
 
-`haWf`, `u4W`, `u4K`, `roK1`.
+`u4W`, `u4K`, `roK1`.
 -/
 
 noncomputable section
@@ -30,10 +30,6 @@ end L.Ind
 namespace L.Ind
 
 open L.Arena
-
-def haWf : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | k + 1, m, ctx, po, pl, i => haW k m ctx po pl i
 
 end L.Ind
 

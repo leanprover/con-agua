@@ -297,7 +297,7 @@ theorem rhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP nio nil q j : 
     mfr_auto h [posRecW_mfr, fun h => (MFr.set_iw _ _ _).trans (rhGoW_mfr k _ _ _ _ _ _ _ _ _ _ _ _ h)]
 
 theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
-    (h : haW k m ctx po pl i = some (r, m')) : MFr [] [] m m' := by
+    (h : haWf (k + 1) m ctx po pl i = some (r, m')) : MFr [] [] m m' := by
   have rh : ∀ {m m' : Mem} {ctx : Word} {r : List Word}, rhWf k m ctx = some (r, m') → MFr [] [] m m' := by
     intro m m' ctx r h
     cases k with
@@ -306,7 +306,7 @@ theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
     simp only [rhWf] at h
     unfold rhW rhA rhB at h
     mfr_auto h [allocW_mfr, rhGoW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _]
-  unfold haW haK1 haK2 at h
+  simp only [haWf.eq_2, haWf.k_nest_ctx_root_holes.eq_def, haWf.k_sl_append.eq_def] at h
   mfr_auto h [rh, appendW_mfr]
 
 theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : MFr [] [] m m' := by

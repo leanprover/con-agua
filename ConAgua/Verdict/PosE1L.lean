@@ -88,10 +88,9 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   refine RefE.onlySim (fun _ => pfvE.k_nest_hole_at.none ..) (fun _ _ h => h) fun r1 m1 hha => ?_
   cases k with
-  | zero => simp [haWf] at hha
+  | zero => simp [haWf.eq_1] at hha
   | succ k =>
-  have hha' : haW k m ctx po pl i = some (r1, m1) := by simpa [haWf] using hha
-  obtain ⟨hS1, hg1, hon⟩ := haW_ok k dn fe vis a m m1 ctx po pl i r1 c prog hha' hS hU.dec hU.inn hpr
+  obtain ⟨hS1, hg1, hon⟩ := haW_ok k dn fe vis a m m1 ctx po pl i r1 c prog hha hS hU.dec hU.inn hpr
   unfold pfK
   cases hnh : ConRon.Arena.nestHoleAt c prog i.toNat with
   | none =>
@@ -113,7 +112,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [liftE_some]
   obtain ⟨b, hrunoa, hS2, hg2, hr2, hP2⟩ := noaW_ok dn fe vis _ _ _ _ c.names (k + 1) m1 m2 a aO aL args _ hoa hS1
     hn1 hne1 (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs)
-    (fun j hj => by have := hg1.iw; omega) (hP.fr (haW_mfr hha'))
+    (fun j hj => by have := hg1.iw; omega) (hP.fr (haW_mfr hha))
   rw [hnP1] at hrunoa
   refine RefE.bind_right hrunoa ?_
   rw [pfvE.k_nest_occ_any.eq_2]
@@ -134,7 +133,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   have hU2 := hU1.grow hg2
   have hw := hkW_ok (by simpa [hkWf] using hk) hU2.dec hU2.inn htop2 hhi (nestHoleAt_nP hnh)
   exact RefE.ret rfl ⟨hS2, hg1.trans hg2, by simpa using hw,
-    hP2, (haW_afr hha').trans (noaW_afr _ _ _ _ _ _ _ _ _ _ hoa)⟩
+    hP2, (haW_afr hha).trans (noaW_afr _ _ _ _ _ _ _ _ _ _ hoa)⟩
 
 /-- `nestCont`'s checks between the container and the instantiation's former (`nest_cont_checks`),
 the rest of the twin `REST`. -/

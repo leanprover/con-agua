@@ -240,11 +240,6 @@ def decONH (m : Mem) (r : List Word) : Option NestHole → Prop
   | some h => r.headD 0 = 1 ∧ decNH m (r.tail.headD 0).toNat = some h ∧
       NHIn m (r.tail.headD 0).toNat (· < iwTop m)
 
-def haK2 (idx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if idx < r2.tail.headD 0 then some ([1, rdW (m2.arr64 IW) (r2.headD 0 + idx)], m2)
-    else some ([0, 0], m2)
 end L.Ind
 
 end
