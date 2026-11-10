@@ -318,13 +318,13 @@ theorem fgW_afr : ∀ (n : Nat) (m m' : Mem) (hi us dO dL gO gL pO pL nO nL : Wo
 
 -- from IndPosSpec/NestCrest
 theorem stripW_afr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq = some (r, m')) : AFr m m' := by
-  unfold stripW stripK at h
+  simp only [stripW.eq_1, stripW.k_strip_pis.eq_def] at h
   afr_auto h [stripF_afr]
 
 -- from IndPosSpec/NestCrest
 theorem entryW_afr {m m' : Mem} {C ciq : Word} {r : List Word} (h : entryW m C ciq = some (r, m')) :
     AFr m m' := by
-  unfold entryW entryK1 entryK2 entryK3 at h
+  simp only [entryW.eq_1, entryW.k_nest_ctor_entry_strip.eq_def, entryW.k_get_app_fn_f.eq_def] at h
   afr_auto h [stripW_afr, stub_afr, i1F_afr, gafF_afr]
 
 -- from IndPosSpec/NestCrest
@@ -426,7 +426,7 @@ theorem haW_afr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
 
 -- from IndPosSpec/NestCrest
 theorem resHeadW_afr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : AFr m m' := by
-  unfold resHeadW resHeadK at h
+  simp only [resHeadW.eq_1, resHeadW.k_get_app_fn_f.eq_def] at h
   afr_auto h [stub_afr, i1F_afr, gafF_afr]
 
 /-- The `has_loose_bvar_b` walk keeps `AbsOK`: its write set (`hbFastW_frame`) is the `hb` memo's

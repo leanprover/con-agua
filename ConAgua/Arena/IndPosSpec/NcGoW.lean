@@ -1,6 +1,6 @@
 module
 
-import ConAgua.Arena.IndPosSpec.EntryW
+public import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.IndPosSpec.RootHoles

@@ -251,12 +251,12 @@ theorem closeW_mfr : ∀ (n : Nat) (m m' : Mem) (dO dl i body : Word) (r : List 
     mfr_auto h [closeW_mfr n _ _ _ _ _ _ _, MFr.ofAbF, MFr.ofI1F, mkForallW_mfr]
 
 theorem stripW_mfr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq = some (r, m')) : MFr [] [] m m' := by
-  unfold stripW stripK at h
+  simp only [stripW.eq_1, stripW.k_strip_pis.eq_def] at h
   mfr_auto h [MFr.ofStripF]
 
 theorem entryW_mfr {m m' : Mem} {C ciq : Word} {r : List Word} (h : entryW m C ciq = some (r, m')) :
     MFr [] [] m m' := by
-  unfold entryW entryK1 entryK2 entryK3 at h
+  simp only [entryW.eq_1, entryW.k_nest_ctor_entry_strip.eq_def, entryW.k_get_app_fn_f.eq_def] at h
   mfr_auto h [stripW_mfr, MFr.ofStub, MFr.ofI1F, MFr.ofGafF]
 
 theorem ncGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis C co cl cs ol fp : Word) (r : List Word),
@@ -310,7 +310,7 @@ theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
   mfr_auto h [rh, appendW_mfr]
 
 theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : MFr [] [] m m' := by
-  unfold resHeadW resHeadK at h
+  simp only [resHeadW.eq_1, resHeadW.k_get_app_fn_f.eq_def] at h
   mfr_auto h [MFr.ofStub, MFr.ofI1F, MFr.ofGafF]
 
 /-- The `has_loose_bvar_b` walk's write set among the memos. -/
