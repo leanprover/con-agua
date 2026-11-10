@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.IndPosSpec.InstW
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndPosSpec.PcrK3
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 public import ConAgua.Arena.GrindAttr
@@ -439,14 +440,23 @@ theorem dpGoOK (n : Nat) : DpGoOK n := by
     | zero => intro m m' a f h r mp hb; simp [dpGoW] at hb
     | succ j => exact dpGo_step_ok j (fun k hk => ih k (by omega))
 
-def dpConstW (n : Nat) (m : Mem) (e : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) dpSch.cs + 2 = 0 then none else dpClrK (dpGoW n (mclearG dpSch m) CWF e)
+/-- `depth_go`'s spec as a triple (for `l_model`). -/
+theorem depthGo_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hf : p.lookup "dp_find" = some (memoFindG dpSch)) (hput : p.lookup "dp_put" = some (memoPutG dpSch))
+    (hgo : p.lookup "depth_go" = some depthGo) (hnode : p.lookup "depth_node" = some depthNode) (n : Nat)
+    (s₀ : St) (f h : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "depth_go" [f, h]
+    ⦃fun r s' => LocEq s' s₀ ∧ dpGoW n s₀.mem f h = some (r.headD 0, s'.mem); ⊤⦄ :=
+  (dpGo_spec p hv hf hput hgo hnode n).1 s₀ f h
 
-theorem dpConstW_eq (n : Nat) (m : Mem) (e : Word) (h0 : rdW (m.arr64 CTL) dpSch.cs + 2 ≠ 0) :
-    dpConstW n m e = dpClrK (dpGoW n (mclearG dpSch m) CWF e) := by simp [dpConstW, h0]
-theorem dpClrK_some (r : Word) (m1 : Mem) (h0 : rdW (m1.arr64 CTL) dpSch.cs + 2 ≠ 0) :
-    dpClrK (some (r, m1)) = some (r, mclearG dpSch m1) := by simp [dpClrK, h0]
-attribute [ind_grind] dpConstW_eq dpClrK_some
+/-- **`depth(e)` is its model `dpConstW`** (generated, the fuel a parameter). -/
+l_model depth_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hf : p.lookup "dp_find" = some (memoFindG dpSch)) (hput : p.lookup "dp_put" = some (memoPutG dpSch))
+    (hgo : p.lookup "depth_go" = some depthGo) (hnode : p.lookup "depth_node" = some depthNode)
+    (hcl : p.lookup "dp_clear" = some (memoClearG dpSch)) (hd : p.lookup "depth" = some depth)
+  fns [hd ↦ dpConstW]
+  specs [memoClearG_spec dpSch p _ hcl n, depthGo_spec p hv hf hput hgo hnode n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] pfuel
 
 def wfW (n : Nat) (m : Mem) (e : Word) : Option (Word × Mem) :=
   match dpConstW n m e with
@@ -459,17 +469,6 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hgo : p.lookup "depth_go" = some depthGo) (hnode : p.lookup "depth_node" = some depthNode)
   (hcl : p.lookup "dp_clear" = some (memoClearG dpSch))
   (hd : p.lookup "depth" = some depth)
-
-include hv hf hput hgo hnode hcl hd in
-theorem depth_spec (n : Nat) (s₀ : St) (e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "depth" [e]
-    ⦃fun r s' => LocEq s' s₀ ∧ dpConstW n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have ih := (dpGo_spec p hv hf hput hgo hnode n).1
-  unfold DpGoSpec at ih
-  simp only [invoke_eq _ hd, callFn, depth]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec dpSch p _ hcl n, ih] <;>
-    finish
 
 include hv hf hput hgo hnode hcl hd in
 theorem whnfWalkFuel_spec (hw : p.lookup "whnf_walk_fuel" = some whnfWalkFuel) (n : Nat) (s₀ : St) (e : Word) :
@@ -488,18 +487,18 @@ theorem dpConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     ∃ d, (ConRon.Arena.depth (decE e)).run a = .ok (d, a) ∧ r.toNat = d ∧ dpMR m' ∅ ∧
       StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [DPM] [206, 207] m m' := by
   by_cases h0 : rdW (m.arr64 CTL) dpSch.cs + 2 = 0
-  · simp [dpConstW, h0] at hb
-  rw [dpConstW_eq n m e h0] at hb
+  · rw [dpConstW.abort1 (hc1 := h0)] at hb; cases hb
+  rw [dpConstW.arm1 (hc1 := h0)] at hb
   have hf0 := mclearG_frame dpSch m
   have hM0 := memoRG_clear dpSch dpSch_wf bmKey (fun w : Word => w.toNat) m mp0 hM h0
   have hA0 : ArenaR (mclearG dpSch m) a :=
     ArenaR.frame (A := []) (C := [dpSch.cs, dpSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by simp [dpSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
       hS.check.arena.base
-  rcases hg : dpGoW n (mclearG dpSch m) CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [dpClrK] at hb
+  rcases hg : dpGoW n (mclearG dpSch m) CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · rw [dpConstW.k_depth_go.none] at hb; cases hb
   by_cases h1 : rdW (m1.arr64 CTL) dpSch.cs + 2 = 0
-  · simp [dpClrK, h1] at hb
-  rw [dpClrK_some r1 m1 h1] at hb
+  · rw [dpConstW.k_depth_go.abort1 (hc1 := h1)] at hb; cases hb
+  rw [dpConstW.k_depth_go.arm1 (hc1 := h1)] at hb
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
   obtain ⟨d, mp1, hrun, hbb, hM1, hfr1⟩ := dpGoOK n _ _ a CWF e r1 ∅ hg hA0 he hM0
   rw [CWF_eq] at hrun
@@ -604,30 +603,6 @@ theorem whnfWalkFuel_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
   exact ⟨hl, hok, hst, by rw [hres]; exact hb, hM', hS', hg⟩
 
 end census
-
-theorem phsB_some (q nn : Word) (m2 : Mem) : phsB q nn (some m2) = some ([q, nn], m2) := rfl
-theorem phsA_some (k : Nat) (nn q : Word) (m1 : Mem) : phsA k nn (some (q, m1)) = phsB q nn (phsGoW k m1 q nn 0) := rfl
-attribute [ind_grind] phsB_some phsA_some
-
-section spec2
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hpw : p.lookup "pin_word" = some pinWordL)
-  (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
-  (his : p.lookup "intern_sort" = some internSort)
-  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
-  (hif : p.lookup "intern_fvar" = some internFVar)
-  (hg : p.lookup "nest_phs_go" = some nestPhsGo) (hp : p.lookup "nest_phs" = some nestPhs)
-include ha hpw hsf hsp his hff hfp hif hg hp
-
-theorem nestPhs_spec (k : Nat) (s₀ : St) (nn : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_phs" [nn]
-    ⦃fun r s' => LocEq s' s₀ ∧ phsW k s₀.mem nn = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestPhs]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      iwAlloc_specW p ha k, nestPhsGo_spec p hpw hsf hsp his hff hfp hif hg k] <;>
-    finish (gen := 20) [phsW]
-
-end spec2
 
 /-- The pool outside `[q, q + n)`, its top and size, the constant records: unchanged. -/
 structure KeepIW (q n : Word) (m m' : Mem) : Prop where
@@ -778,12 +753,12 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     ∃ phs a', (ConRon.Arena.nestPhs nn.toNat).run a = .ok (phs, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some phs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  unfold phsW at h
-  rcases hal : allocW m nn with _ | ⟨q, m1⟩ <;> rw [hal] at h; · simp [phsA] at h
-  rw [phsA_some] at h
+  rw [phsW.arm1] at h
+  rcases hal : allocW m nn with _ | ⟨q, m1⟩ <;> rw [hal] at h; · rw [phsW.k_iw_alloc.none] at h; cases h
+  rw [phsW.k_iw_alloc.arm1] at h
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
-  rcases hl : phsGoW k m1 q nn 0 with _ | m2 <;> rw [hl] at h; · simp [phsB] at h
-  rw [phsB_some] at h
+  rcases hl : phsGoW k m1 q nn 0 with _ | m2 <;> rw [hl] at h; · rw [phsW.k_nest_phs_go.none] at h; cases h
+  rw [phsW.k_nest_phs_go.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   have hroom1 : q.toNat + nn.toNat ≤ (m1.arr64 IW).size := by
@@ -941,7 +916,7 @@ theorem phsGoW_mfr (k : Nat) : ∀ (m m' : Mem) (q n i : Word), phsGoW k m q n i
       fun h => (MFr.set_iw _ _ _).trans (ih _ _ _ _ _ h)]
 
 theorem phsW_mfr {k : Nat} {m m' : Mem} {nn : Word} {r : List Word} (h : phsW k m nn = some (r, m')) : MFr [] [] m m' := by
-  simp only [phsW, phsA.eq_def, phsB.eq_def] at h
+  simp only [phsW.arm1, phsW.k_iw_alloc.eq_def, phsW.k_nest_phs_go.eq_def] at h
   mfr_auto h [allocW_mfr, phsGoW_mfr k _ _ _ _ _]
 
 theorem rpGoW_mfr (n : Nat) :
@@ -990,7 +965,7 @@ theorem rpGoW_mfr (n : Nat) :
 
 theorem rpConstW_mfr {n : Nat} {m m' : Mem} {no nl us b nn e r : Word}
     (h : rpConstW n m no nl us b nn e = some (r, m')) : MFr [RAM] [210, 211] m m' := by
-  simp only [rpConstW, rpClrK.eq_def] at h
+  simp only [rpConstW, rpConstW.k_replace_apps_go.eq_def] at h
   split at h; · cases h
   split at h; · cases h
   rename_i hg; split at h; · cases h

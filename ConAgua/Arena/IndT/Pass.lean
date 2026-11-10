@@ -72,15 +72,11 @@ l_model icpE_spec (p : Prog) (hP : PassLook p)
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 set_option experimental.vcgen true in
-/-- `nest_out_kinds(o, l)` returns `(o, l)` and writes nothing. -/
-theorem nok_spec (p : Prog) (hp : p.lookup "nest_out_kinds" = some L.Ind.nestOutKinds) (n : Nat)
-    (s₀ : St) (o l : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "nest_out_kinds" [o, l]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = [o, l]; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, L.Ind.nestOutKinds]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;> finish
+/-- **`nest_out_kinds(o, l)` is its model `nokW`** (generated): it returns `(o, l)` and writes
+nothing. -/
+l_model nok_spec (p : Prog) (hp : p.lookup "nest_out_kinds" = some L.Ind.nestOutKinds)
+  fns [hp ↦ nokW ro list]
+  grind [arena_grind]
 
 /-! ## The state the steps carry -/
 
@@ -275,9 +271,9 @@ theorem nok_callE (hp : p.lookup "nest_out_kinds" = some L.Ind.nestOutKinds) {n 
   rcases n with _ | n
   · obtain ⟨e, he, -⟩ := L.callE_zero p "nest_out_kinds" [o, l] m
     rw [he] at h; cases h
-  obtain ⟨s', hs', hm, hr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (nok_spec p hp n _ o l)
-    (callW_of_callE h)
-  exact ⟨hr, hs' ▸ hm⟩
+  obtain ⟨s', hs', -, hm, hr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (nok_spec p hp (n + 1) _ o l) (callW_of_callE h)
+  exact ⟨(Option.some.inj ((nokW.arm1 _ _ _).symm.trans hr)).symm, hs' ▸ hm⟩
 
 /-- **`check_block_pass_rec` writes only `IW` and the top** (`icprW_ok`'s frame). -/
 theorem icprW_frame {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}

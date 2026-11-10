@@ -145,38 +145,14 @@ l_model rhGo_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.l
 theorem rhGoW.k_nest_ctx_root_holes_go_id (x : Option Mem) : rhGoW.k_nest_ctx_root_holes_go x = x := by
   cases x <;> rfl
 
-def rhA (k : Nat) (ctx no nl lv po pl nP : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m1) => rhB q nl (rhGoW k m1 no nl lv po pl nP (rdW (m1.arr64 IW) (ctx + 5))
-      (rdW (m1.arr64 IW) (ctx + 6)) q 0)
-/-- The model of `nest_ctx_root_holes(ctx)` (its go at `k`). -/
-def rhW (k : Nat) (m : Mem) (ctx : Word) : Option (List Word × Mem) :=
-  rhA k ctx (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 10))
-    (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8)) (rdW (m.arr64 IW) (ctx + 4))
-    (allocW m (rdW (m.arr64 IW) (ctx + 1)))
-theorem rhB_some (q nl : Word) (m2 : Mem) : rhB q nl (some m2) = some ([q, nl], m2) := rfl
-theorem rhA_some (k : Nat) (ctx no nl lv po pl nP q : Word) (m1 : Mem) :
-    rhA k ctx no nl lv po pl nP (some (q, m1)) = rhB q nl (rhGoW k m1 no nl lv po pl nP
-      (rdW (m1.arr64 IW) (ctx + 5)) (rdW (m1.arr64 IW) (ctx + 6)) q 0) := rfl
-attribute [ind_grind] rhB_some rhA_some
-
-section spec
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.lookup "rec3" = some rec3)
-  (h4 : p.lookup "rec4" = some rec4) (hsg : p.lookup "sl_getd" = some slGetD)
-  (hg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo)
-
-include ha h3 h4 hsg hg in
-theorem rootHoles_spec (hp : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles) (k : Nat)
-    (s₀ : St) (ctx : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_ctx_root_holes" [ctx]
-    ⦃fun r s' => LocEq s' s₀ ∧ rhW k s₀.mem ctx = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestCtxRootHoles]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      iwAlloc_specW p ha k, rhGo_spec p ha h3 h4 hsg hg k] <;>
-    finish (gen := 20) [rhW, rdW_eq]
-
-end spec
+/-- **`nest_ctx_root_holes(ctx)` is its model `rhWf`** (generated). -/
+l_model rootHoles_spec' (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.lookup "rec3" = some rec3)
+    (hsg : p.lookup "sl_getd" = some slGetD) (h4 : p.lookup "rec4" = some rec4)
+    (hg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo)
+    (hr : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles)
+  fns [hr ↦ rhWf list]
+  specs [iwAlloc_specW p ha n, rhGo_spec p ha h3 h4 hsg hg n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 /-! ### The relational side -/
 
@@ -458,7 +434,7 @@ theorem CtxIn.grow {m m' : Mem} {p : Nat} (hc : CtxIn m p (· < iwTop m)) (h : I
   ⟨e, hc'.mono fun _ hi => Nat.lt_of_lt_of_le hi h.iw⟩
 
 theorem rhW_ok (k : Nat) (fe : IFEnv) (vis : Word) (a : AState)
-    (m m' : Mem) (ctx : Word) (r : List Word) (c : NestCtx) (h : rhW k m ctx = some (r, m'))
+    (m m' : Mem) (ctx : Word) (r : List Word) (c : NestCtx) (h : rhWf (k + 1) m ctx = some (r, m'))
     (hS : StageR vis fe m a) (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ (r.tail.headD 0).toNat = c.rootHoles.length ∧
       (r.headD 0).toNat + c.rootHoles.length ≤ iwTop m' ∧
@@ -469,7 +445,7 @@ theorem rhW_ok (k : Nat) (fe : IFEnv) (vis : Word) (a : AState)
   obtain ⟨o5, l5, ho5, hl5, hd5⟩ := decAt_some hnI
   have hs5 : ∀ j < l5, o5 + j < iwTop m := hin.2 5 (by omega) o5 l5 ho5 hl5
   have h13 := hin.1
-  unfold rhW at h
+  rw [rhWf.arm1] at h
   generalize rdW (m.arr64 IW) ctx = no at h hn hn'
   generalize rdW (m.arr64 IW) (ctx + 1) = nl at h hn hn'
   generalize rdW (m.arr64 IW) (ctx + 7) = po at h hpa hpa'
@@ -480,8 +456,8 @@ theorem rhW_ok (k : Nat) (fe : IFEnv) (vis : Word) (a : AState)
     simp [NestCtx.rootHoles, decHL_length m hn]
   have hrh : c.rootHoles = rhList c.names (decI lv) c.params nP.toNat c.nIdxs := by
     simp [NestCtx.rootHoles, rhList, hlv, hnP]
-  rcases hal : allocW m nl with _ | ⟨q, m1⟩ <;> rw [hal] at h; · simp [rhA] at h
-  rw [rhA_some] at h
+  rcases hal : allocW m nl with _ | ⟨q, m1⟩ <;> rw [hal] at h; · rw [rhWf.k_iw_alloc.none] at h; cases h
+  rw [rhWf.k_iw_alloc.arm1] at h
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   have hqt : q.toNat = iwTop m := by simp only [iwTop, hqd]
   have e5 : (ctx + 5).toNat = ctx.toNat + 5 := word_add_toNat (by have := h13 5 (by omega); simp; omega)
@@ -497,8 +473,8 @@ theorem rhW_ok (k : Nat) (fe : IFEnv) (vis : Word) (a : AState)
   generalize rdW (m1.arr64 IW) (ctx + 5) = nio at h r5
   generalize rdW (m1.arr64 IW) (ctx + 6) = nil at h r6
   subst r5 r6
-  rcases hgo : rhGoW k m1 no nl lv po pl nP nio nil q 0 with _ | m2 <;> rw [hgo] at h; · simp [rhB] at h
-  rw [rhB_some] at h
+  rcases hgo : rhGoW k m1 no nl lv po pl nP nio nil q 0 with _ | m2 <;> rw [hgo] at h; · rw [rhWf.k_nest_ctx_root_holes_go.none] at h; cases h
+  rw [rhWf.k_nest_ctx_root_holes_go.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS2, hGX, hH⟩ := rhGoW_ok fe vis a no nl lv po pl nP nio nil q c.names c.params c.nIdxs k m1 m2 0
     hgo hS1
@@ -536,7 +512,7 @@ theorem nestCtxRootHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (_dn : NI
       (r.headD 0).toNat + c.rootHoles.length ≤ iwTop s'.mem ∧
       decPL s'.mem (decNH s'.mem) (r.headD 0).toNat c.rootHoles.length = some c.rootHoles ∧
       HolesAt s'.mem (r.headD 0).toNat c.rootHoles.length c.rootHoles (· < iwTop s'.mem); ⊤⦄ := by
-  refine triple_post (rootHoles_spec p ha h3 h4 hsg hg hp k s₀ ctx) ?_
+  refine triple_post (rootHoles_spec' p ha h3 hsg h4 hg hp (k + 1) s₀ ctx) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hS', hg', h1, h2, h3⟩ := rhW_ok k fe vis a₀ _ _ ctx r c hm hS hc hin
   exact ⟨hl, hS', hg', h1, h2, h3.decPL, h3⟩
@@ -638,29 +614,6 @@ theorem HSl.grow {m m' : Mem} {o l : Nat} {hs : List NestHole} (h : HSl m o l hs
   obtain ⟨e, hn'⟩ := hn.grow hg
   exact ⟨w, by rw [hg.iwGet _ (by omega)]; exact hw, by rw [e]; exact hd, hn'⟩
 
-/-- `nest_ctx_root_holes` at any exec fuel. -/
-def rhWf : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | k + 1, m, ctx => rhW k m ctx
-
-section spec
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.lookup "rec3" = some rec3) (hsg : p.lookup "sl_getd" = some slGetD)
-  (h4 : p.lookup "rec4" = some rec4)
-  (hg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo)
-  (hr : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles)
-  (hc : p.lookup "iw_copy" = some iwCopy) (hap : p.lookup "sl_append" = some slAppend)
-  (hp : p.lookup "nest_hole_at" = some nestHoleAt)
-
-include ha h3 hsg h4 hg hr in
-theorem rootHoles_spec' (k : Nat) (s₀ : St) (ctx : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_ctx_root_holes" [ctx]
-    ⦃fun r s' => LocEq s' s₀ ∧ rhWf k s₀.mem ctx = some (r, s'.mem); ⊤⦄ := by
-  cases k with
-  | zero => rw [invoke_eq _ hr]; simp only [callFn, nestCtxRootHoles]; vcgen [exec] <;> grind
-  | succ k => exact rootHoles_spec p ha h3 h4 hsg hg hr k s₀ ctx
-
-end spec
-
 l_model nestHoleAt_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.lookup "rec3" = some rec3)
     (hsg : p.lookup "sl_getd" = some slGetD) (h4 : p.lookup "rec4" = some rec4)
     (hg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo)
@@ -697,10 +650,9 @@ theorem haW_ok (k : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega), hnP]
   generalize rdW (m.arr64 IW) (ctx + 4) = nP at h hidx
   cases k with
-  | zero => simp [rhWf, haWf.k_nest_ctx_root_holes.none] at h
+  | zero => simp [rhWf.eq_1, haWf.k_nest_ctx_root_holes.none] at h
   | succ k =>
-  simp only [rhWf] at h
-  rcases hrh : rhW k m ctx with _ | ⟨r1, m1⟩ <;> rw [hrh] at h; · rw [haWf.k_nest_ctx_root_holes.none] at h; cases h
+  rcases hrh : rhWf (k + 1) m ctx with _ | ⟨r1, m1⟩ <;> rw [hrh] at h; · rw [haWf.k_nest_ctx_root_holes.none] at h; cases h
   rw [haWf.k_nest_ctx_root_holes.arm1] at h
   obtain ⟨hS1, hg1, hl1, hb1, hH1⟩ := rhW_ok k fe vis a m m1 ctx r1 c hrh hS hc hin
   obtain ⟨hplen, hpb, hpH⟩ := hpr

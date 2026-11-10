@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndPosSpec.NestOccGo
 public import ConAgua.Arena.IndPartsSpec.EqW
 
 @[expose] public section

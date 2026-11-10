@@ -103,7 +103,7 @@ def hbWC : List Word := [214, 215, 24, 25]
 
 theorem hbInsW_frame {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, m')) :
     MemFrame hbWA hbWC m m' := by
-  simp only [hbInsW] at h
+  rw [hbInsW_eq] at h
   cases hm : msetG hbSch m e i r with
   | none => rw [hm] at h; simp at h
   | some m2 =>

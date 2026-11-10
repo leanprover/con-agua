@@ -303,40 +303,6 @@ theorem nestWalkStack_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
 
 end census
 
-section arms
-variable (k : Nat) (m m1 : Mem) (no nl lo hi n e r : Word) (v : List Word)
-theorem pdoW_zero (h : n = 0) : pdoW (k + 1) m no nl lo hi n e = some ([0], m) := by simp [pdoW, h]
-theorem pdoW_notpi (h : ¬ n = 0) (h6 : tagW e ≠ 6) : pdoW (k + 1) m no nl lo hi n e = some ([0], m) := by
-  simp [pdoW, h, h6]
-theorem pdoW_empty (h : ¬ n = 0) (h6 : ¬ tagW e ≠ 6) (hv : eViewW m e = []) :
-    pdoW (k + 1) m no nl lo hi n e = none := by
-  simp only [pdoW]; rw [ite_eq_right h, ite_eq_right h6, ite_eq_left hv]
-theorem pdoW_pi (h : ¬ n = 0) (h6 : ¬ tagW e ≠ 6) (hv : eViewW m e ≠ []) : pdoW (k + 1) m no nl lo hi n e =
-    pdoK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0)) := by
-  simp only [pdoW]; rw [ite_eq_right h, ite_eq_right h6, ite_eq_right hv]
-theorem pdoK1_hit (h : r ≠ 0) : pdoK1 k no nl lo hi n v (some (r, m1)) = some ([1], m1) := by
-  rw [pdoK1, ite_eq_left h]
-theorem pdoK1_miss (h : ¬ r ≠ 0) : pdoK1 k no nl lo hi n v (some (r, m1)) =
-    pdoW k m1 no nl lo hi (n - 1) (v.tail.tail.headD 0) := by rw [pdoK1, ite_eq_right h]
-end arms
-attribute [ind_grind] pdoW_zero pdoW_notpi pdoW_empty pdoW_pi pdoK1_hit pdoK1_miss
-
-theorem piDomsOcc_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" = some piDomsOccL)
-    (k : Nat) : ∀ (s₀ : St) (no nl lo hi n e : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "pi_doms_occ" [no, nl, lo, hi, n, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ pdoW k s₀.mem no nl lo hi n e = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ no nl lo hi n e
-    rw [invoke_eq _ hp]; simp only [callFn, piDomsOccL]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ no nl lo hi n e
-    simp only [invoke_eq _ hp, callFn, piDomsOccL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        eView_spec p hl.hv k, nestOcc_spec' p hl k, ih] <;>
-      finish (gen := 20)
-
 theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo hi : Word)
     (names : List NIdx) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (n e : Word) (r : List Word) (mp : Std.HashMap EIdx Bool),
@@ -347,18 +313,18 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ noMR m' mp' ∧
       MFr [NOM] [204, 205] m m' := by
   induction k with
-  | zero => intro m m' a n e r mp h; simp [pdoW] at h
+  | zero => intro m m' a n e r mp h; simp [pdoW.eq_1] at h
   | succ k ih =>
     intro m m' a n e r mp h hS he hn hnb hM
     by_cases h0 : n = 0
-    · rw [pdoW_zero (h := h0)] at h
+    · rw [pdoW.arm1 (hc1 := h0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst h0
       exact ⟨false, a, mp, rfl, hS, IWGrow.refl _, rfl, hM, MFr.refl _ _ _⟩
     have hn0 : n.toNat ≠ 0 := fun e' => h0 (UInt64.toNat_inj.mp (by simpa using e'))
     have hsucc : n.toNat = (n.toNat - 1) + 1 := by omega
     by_cases h6 : tagW e ≠ 6
-    · rw [pdoW_notpi (h := h0) (h6 := h6)] at h
+    · rw [pdoW.arm2 (hc1 := h0) (hc2 := h6)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a, mp, ?_, hS, IWGrow.refl _, rfl, hM, MFr.refl _ _ _⟩
       have htag : ¬ (decE e).tag = ETag.forallE := fun h' => h6 ((decE_tag_forallE e he).mp h')
@@ -367,15 +333,15 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     have hg6 : tagW e = 6 := by simpa using h6
     have hR := hS.check.arena.base
     by_cases hr : eViewW m e = []
-    · rw [pdoW_empty (h := h0) (h6 := h6) (hv := hr)] at h; simp at h
-    rw [pdoW_pi (h := h0) (h6 := h6) (hv := hr)] at h
+    · rw [pdoW.abort1 (hc1 := h0) (hc2 := hg6) (hc3 := hr)] at h; cases h
+    rw [pdoW.arm3 (hc1 := h0) (hc2 := hg6) (hc3 := hr)] at h
     obtain ⟨hvok, hew⟩ := eViewW_forall m e hg6 hr
     obtain ⟨-, hty, hb⟩ := view_forall m a hR e he hvok hg6
     have hvb := viewBind_forall m a hR e he hvok hg6
     simp only [hew, List.tail_cons, List.headD_cons] at h
     generalize hd : tfld m FORALL (tierW e) (idxW e) 0 = d at h hty hvb
     generalize hbd : tfld m FORALL (tierW e) (idxW e) 1 = b at h hb hvb
-    rcases hnc : noConstWf k m no nl lo hi d with _ | ⟨r1, m1⟩ <;> rw [hnc] at h; · simp [pdoK1] at h
+    rcases hnc : noConstWf k m no nl lo hi d with _ | ⟨r1, m1⟩ <;> rw [hnc] at h; · rw [pdoW.k_nest_occ.none] at h; cases h
     have hnb' : no.toNat + nl.toNat < 2 ^ 64 := by
       rcases Nat.eq_zero_or_pos nl.toNat with hz | hz
       · rw [hz]; simpa using no.toNat_lt
@@ -391,22 +357,25 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       simp only [htag, beq_self_eq_true, ite_true, StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
       rfl
     by_cases hr1 : r1 ≠ 0
-    · rw [pdoK1_hit (h := hr1)] at h
+    · rw [pdoW.k_nest_occ.arm1 (hc1 := hr1)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hcT : c = true := by rw [← hc]; simpa using hr1
       subst hcT
       refine ⟨true, a, ∅, ?_, hS1, hg1, rfl, hM1, hf1⟩
       rw [hpre]; simp only [StateT.run_bind, hrun1, except_ok_bind]; rfl
-    · rw [pdoK1_miss (h := hr1)] at h
-      simp only [List.tail_cons, List.headD_cons] at h
+    · rw [pdoW.k_nest_occ.arm2 (hc1 := by simpa using hr1)] at h
       have hcF : c = false := by rw [← hc]; simpa using hr1
       subst hcF
       have hn1 : (n - 1).toNat = n.toNat - 1 :=
         UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
-      obtain ⟨b', a', mp', hrun, hS', hg', hr', hM', hf'⟩ := ih m1 m' a (n - 1) b r ∅ h hS1 hb
+      rcases hrec : pdoW k m1 no nl lo hi (n - 1) b with _ | ⟨r', m''⟩ <;> rw [hrec] at h
+      · rw [pdoW.k_pi_doms_occ.none] at h; cases h
+      rw [pdoW.k_pi_doms_occ.arm1] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨b', a', mp', hrun, hS', hg', hr', hM', hf'⟩ := ih m1 m'' a (n - 1) b r' ∅ hrec hS1 hb
         (by rw [decHL_agree (RdS.of_grow hg1) hnb]; exact hn)
         (fun j hj => Nat.lt_of_lt_of_le (hnb j hj) hg1.iw) hM1
-      refine ⟨b', a', mp', ?_, hS', hg1.trans hg', hr', hM', hf1.trans hf'⟩
+      refine ⟨b', a', mp', ?_, hS', hg1.trans hg', by simpa using hr', hM', hf1.trans hf'⟩
       rw [hpre]; simp only [StateT.run_bind, hrun1, except_ok_bind]
       rw [← hn1]; exact hrun
 

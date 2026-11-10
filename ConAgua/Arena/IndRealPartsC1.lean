@@ -74,14 +74,14 @@ theorem bchW_afr : ∀ {n : Nat} {m m' : Mem} {cvT : Word} {r : List Word},
     bchW n m cvT = some (r, m') → AFr m m'
   | 0, _, _, _, _, h => by simp [bchW] at h
   | n + 1, m, m', cvT, r, h => by
-    simp only [bchW, bchW.bchK1.eq_def, bchW.bchK2.eq_def] at h
+    simp only [bchW, bchW.k_pi_binders.eq_def] at h
     afr_auto h [piBW_afr _ _ _ _ _ _]
 
 theorem bcW_afr : ∀ {n : Nat} {m m' : Mem} {nPd k nC nR cvT rOk rMI rRP : Word} {r : List Word},
     bcW n m nPd k nC nR cvT rOk rMI rRP = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, _, _, _, h => by simp [bcW] at h
   | n + 1, m, m', nPd, k, nC, nR, cvT, rOk, rMI, rRP, r, h => by
-    simp only [bcW, bcK.eq_def] at h
+    simp only [bcW, bcW.k_block_counts_head.eq_def, bcW.k_block_counts_pure.eq_def] at h
     afr_auto h [bchW_afr]
 
 theorem bmfW_afr : ∀ (n : Nat) (m m' : Mem) (no nl ro rl mm : Word) (r : List Word),

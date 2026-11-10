@@ -16,7 +16,7 @@ import all ConAgua.Arena.IndPos2
 /-!
 # FgW2
 
-`nestBlockOf_specW`, `nboW`, `nfmK`, `nfmW`, `nfmK_some`, `FmLook` and the lemmas only they use.
+`nestBlockOf_specW`, `nboW`, `FmLook`, `nestFrameMates_specW` (`nfmW`) and the lemmas only they use.
 -/
 
 noncomputable section
@@ -40,19 +40,6 @@ l_model nestBlockOf_specW (p : Prog)
   specs [callW_spec p n "env_find"]
   grind [ind_grind] finish [rdW_eq] gen 20
 
-def nfmK (n : Nat) (c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => matesK3 (matesW n m1 c (r.headD 0) (r.tail.headD 0) 0 0)
-
-/-- The model of `nest_frame_mates(vis, c)`. -/
-def nfmW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, vis, c => nfmK n c (nboW p n m vis c)
-
-theorem nfmK_some (n : Nat) (c : Word) (r : List Word) (m1 : Mem) :
-    nfmK n c (some (r, m1)) = matesK3 (matesW n m1 c (r.headD 0) (r.tail.headD 0) 0 0) := rfl
-attribute [ind_grind] nfmK_some
-
 /-- The lookups of `nest_frame_mates`. -/
 structure FmLook (p : Prog) : Prop where
   hc : p.lookup "sl_contains" = some slContains
@@ -64,6 +51,12 @@ structure FmLook (p : Prog) : Prop where
   hf : p.lookup "env_find" = some envFindL
   hbo : p.lookup "nest_block_of" = some nestBlockOfL
   hp : p.lookup "nest_frame_mates" = some nestFrameMatesL
+
+/-- **`nest_frame_mates(vis, c)` is its model `nfmW`** (generated). -/
+l_model nestFrameMates_specW (p : Prog) (hL : FmLook p)
+  fns [hL.hp ↦ nfmW list]
+  specs [nestBlockOf_specW p hL.hg hL.hf hL.hbo n, nestFrameMatesGo_spec p hL.hc hL.ha hL.hcp hL.hsn hL.hgo n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 /-! ## `sl_new1` -/
 

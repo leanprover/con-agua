@@ -72,11 +72,11 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
     IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
     (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   induction n with
-  | zero => intro m m' c off l oO oL block out r h; simp [matesW] at h
+  | zero => intro m m' c off l oO oL block out r h; simp [matesW.eq_1] at h
   | succ n ih =>
     intro m m' c off l oO oL block out r h hsz hc200 hEs hc hblock hout hit hb
     by_cases hl : l = 0
-    · rw [matesW_nil n m c off l oO oL hl] at h
+    · rw [matesW.arm1 (hc1 := hl)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : block = [] := by
         have h0 : l.toNat = 0 := by rw [hl]; rfl
@@ -91,8 +91,8 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
       have hrd : erRd m off = w0 := erRd_of_erA hw0
       obtain ⟨ws, hws, rfl, hwlt⟩ := slR_of_decHL m _ _ out hout hb
       simp only [UInt64.ofNat_toNat] at hws
-      rw [matesW_cons n m c off l oO oL hl, hrd] at h
-      rcases hcn : containsW n m oO oL w0 with _ | b <;> rw [hcn] at h; · simp [matesK1] at h
+      rw [matesW.arm2 (hc1 := hl), erRd_foldN, hrd] at h
+      rcases hcn : containsW n m oO oL w0 with _ | b <;> rw [hcn] at h; · rw [matesW.k_sl_contains.none] at h; cases h
       have hbv := containsW_ok n _ _ _ _ _ _ hws hcn
       have hl1' : (l - 1).toNat = l.toNat - 1 := toNat_sub_one' hl
       have hcond : ((decI w0 : NIdx) == decI c || (ws.map (fun w => (decI w : NIdx))).contains (decI w0)) =
@@ -114,9 +114,9 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
       subst hw0d
       by_cases hskip : (w0 = c ∨ b ≠ 0)
       · have hskip' : erRd m off = c ∨ b ≠ 0 := by rw [hrd]; exact hskip
-        rw [matesK1_skip n m c off l oO oL b hskip'] at h
-        rcases hrec : matesW n m c (off + 1) (l - 1) oO oL with _ | ⟨r3, m3⟩ <;> rw [hrec] at h; · simp [matesK3] at h
-        rw [matesK3_some] at h
+        rw [matesW.k_sl_contains.arm1 (hc1 := hskip')] at h
+        rcases hrec : matesW n m c (off + 1) (l - 1) oO oL with _ | ⟨r3, m3⟩ <;> rw [hrec] at h; · rw [matesW.k_nest_frame_mates_go.none] at h; cases h
+        rw [matesW.k_nest_frame_mates_go.arm1] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hd, hg, hE', htop⟩ := ih m m3 c (off + 1) (l - 1) oO oL rest _ r3 hrec hsz hc200 hEs hc
           hblock' hout hit hb
@@ -124,14 +124,14 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
         rw [ConRon.Arena.nestFrameMates.go.eq_2, ite_eq_left (by rw [hcond]; simpa using hskip)]
         simpa using hd
       · have hskip' : ¬ (erRd m off = c ∨ b ≠ 0) := by rw [hrd]; exact hskip
-        rw [matesK1_add n m c off l oO oL b hskip', hrd] at h
-        rcases hsn : snocW n m oO oL w0 with _ | ⟨r2, m2⟩ <;> rw [hsn] at h; · simp [matesK2] at h
-        rw [matesK2_some] at h
+        rw [matesW.k_sl_contains.arm2 (hc1 := hskip'), erRd_foldN, hrd] at h
+        rcases hsn : snocW n m oO oL w0 with _ | ⟨r2, m2⟩ <;> rw [hsn] at h; · rw [matesW.k_sl_snoc.none] at h; cases h
+        rw [matesW.k_sl_snoc.arm1] at h
         obtain ⟨hr2, hdec2, hg2, hfr2, hl2, htop2⟩ := snocW_decK hsn hsz hc200 hit hw0lt hout
         subst hr2
         simp only [List.headD_cons, List.tail_cons] at h
-        rcases hrec : matesW n m2 c (off + 1) (l - 1) (rdW (m.arr64 CTL) 200) (oL + 1) with _ | ⟨r3, m3⟩ <;> rw [hrec] at h; · simp [matesK3] at h
-        rw [matesK3_some] at h
+        rcases hrec : matesW n m2 c (off + 1) (l - 1) (rdW (m.arr64 CTL) 200) (oL + 1) with _ | ⟨r3, m3⟩ <;> rw [hrec] at h; · rw [matesW.k_nest_frame_mates_go.none] at h; cases h
+        rw [matesW.k_nest_frame_mates_go.arm1] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hE2 : m2.arr64 EREC = m.arr64 EREC := hfr2.1 EREC (by decide) (by decide)
         have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hfr2.size IW]; exact hsz

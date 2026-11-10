@@ -54,53 +54,54 @@ theorem taGoW_afr (n : Nat) :
   induction n using Nat.strongRecOn with
   | _ n ih =>
   cases n with
-  | zero => exact ⟨fun _ _ _ _ _ _ _ _ _ _ h => by simp [taGoW] at h,
-      fun _ _ _ _ _ _ _ _ _ _ _ _ _ h => by simp [taNodeW] at h⟩
+  | zero => exact ⟨fun _ _ _ _ _ _ _ _ _ _ h => by simp [taGoW.eq_1] at h,
+      fun _ _ _ _ _ _ _ _ _ _ _ _ _ h => by simp [taNodeW.eq_1] at h⟩
   | succ j =>
   have ihG : ∀ (m m' : Mem) (no nl lvls ho hl f h r : Word), taGoW j m no nl lvls ho hl f h = some (r, m') →
       AFr m m' := (ih j (by omega)).1
   refine ⟨?_, ?_⟩
   · intro m m' no nl lvls ho hl f h r hg
-    by_cases hf : f = 0
-    · rw [taGoW_abort (hf := hf)] at hg; simp at hg
-    rw [taGoW_view (hf := hf)] at hg
-    unfold taG1 at hg
-    split at hg; · simp at hg
-    split at hg
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hg; rw [← hg.2]; exact AFr.refl _
-    split at hg
-    · rw [taCW_same hg]; exact AFr.refl _
-    unfold taG3 at hg
-    split at hg; · simp at hg
-    split at hg
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hg; rw [← hg.2]; exact AFr.refl _
-    cases hn : taNodeW j m no nl lvls ho hl (f - 1) _ _ _ _ with
-    | none => rw [hn] at hg; simp [taG4] at hg
-    | some pr =>
-      obtain ⟨rn, m1⟩ := pr
-      rw [hn, taG4_some] at hg
-      rcases hs : msetG taSch m1 h 0 rn with _ | m2 <;> simp only [hs, taG5, reduceCtorEq] at hg
-      simp only [Option.some.injEq, Prod.mk.injEq] at hg
-      rw [← hg.2]
-      cases j with
-      | zero => simp [taNodeW] at hn
-      | succ i =>
-        exact ((ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ hn).trans
-          (AFr.of_frame (msetG_frame taSch taSch_wf m1 m2 h 0 rn hs))
+    rcases taGoW_some hg with rfl | hc | ⟨rn, m1, hn, hs⟩
+    · exact AFr.refl _
+    · rw [taCW_same hc]; exact AFr.refl _
+    cases j with
+    | zero => rw [taNodeW.eq_1] at hn; cases hn
+    | succ i =>
+      exact ((ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ hn).trans
+        (AFr.of_frame (msetG_frame taSch taSch_wf m1 m' h 0 rn hs))
   · intro m m' no nl lvls ho hl f1 g x y z r hn
-    unfold taNodeW at hn
+    rw [taNodeW.eq_def] at hn
+    simp only at hn
     split at hn
-    · rcases h1 : taGoW j m no nl lvls ho hl f1 x with _ | ⟨a2, m1⟩ <;> simp only [h1, taB1, reduceCtorEq] at hn
-      rcases h2 : taGoW j m1 no nl lvls ho hl f1 y with _ | ⟨x2, m2⟩ <;> simp only [h2, taB2, reduceCtorEq] at hn
-      exact ((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans (rpMkW_afr hn)
+    · obtain ⟨⟨a2, m1⟩, h1, hn⟩ := of_K hn (taNodeW.k_target_abs_go.none ..)
+      rw [taNodeW.k_target_abs_go.arm1] at hn
+      obtain ⟨⟨x2, m2⟩, h2, hn⟩ := of_K hn (taNodeW.k_target_abs_go_2.none _)
+      rw [taNodeW.k_target_abs_go_2.arm1] at hn
+      exact ((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans (mkAppW_afr hn)
     split at hn
-    · rcases h1 : taGoW j m no nl lvls ho hl f1 x with _ | ⟨a2, m1⟩ <;> simp only [h1, taL1, reduceCtorEq] at hn
-      rcases h2 : taGoW j m1 no nl lvls ho hl f1 y with _ | ⟨x2, m2⟩ <;> simp only [h2, taL2, reduceCtorEq] at hn
-      rcases h3 : taGoW j m2 no nl lvls ho hl f1 z with _ | ⟨c2, m3⟩ <;> simp only [h3, taL3, reduceCtorEq] at hn
+    · obtain ⟨⟨a2, m1⟩, h1, hn⟩ := of_K hn (taNodeW.k_target_abs_go_3.none ..)
+      rw [taNodeW.k_target_abs_go_3.arm1] at hn
+      obtain ⟨⟨x2, m2⟩, h2, hn⟩ := of_K hn (taNodeW.k_target_abs_go_4.none _)
+      rw [taNodeW.k_target_abs_go_4.arm1] at hn
+      exact ((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans (mkLamW_afr hn)
+    split at hn
+    · obtain ⟨⟨a2, m1⟩, h1, hn⟩ := of_K hn (taNodeW.k_target_abs_go_5.none ..)
+      rw [taNodeW.k_target_abs_go_5.arm1] at hn
+      obtain ⟨⟨x2, m2⟩, h2, hn⟩ := of_K hn (taNodeW.k_target_abs_go_6.none _)
+      rw [taNodeW.k_target_abs_go_6.arm1] at hn
+      exact ((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans (mkForallW_afr hn)
+    split at hn
+    · obtain ⟨⟨a2, m1⟩, h1, hn⟩ := of_K hn (taNodeW.k_target_abs_go_7.none ..)
+      rw [taNodeW.k_target_abs_go_7.arm1] at hn
+      obtain ⟨⟨x2, m2⟩, h2, hn⟩ := of_K hn (taNodeW.k_target_abs_go_8.none ..)
+      rw [taNodeW.k_target_abs_go_8.arm1] at hn
+      obtain ⟨⟨c2, m3⟩, h3, hn⟩ := of_K hn (taNodeW.k_target_abs_go_9.none ..)
+      rw [taNodeW.k_target_abs_go_9.arm1] at hn
       exact (((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans
-        (ihG _ _ _ _ _ _ _ _ _ _ h3)).trans (rpMkW_afr hn)
-    · rcases h1 : taGoW j m no nl lvls ho hl f1 z with _ | ⟨a2, m1⟩ <;> simp only [h1, taP1, reduceCtorEq] at hn
-      exact (ihG _ _ _ _ _ _ _ _ _ _ h1).trans (rpMkW_afr hn)
+        (ihG _ _ _ _ _ _ _ _ _ _ h3)).trans (mkLetW_afr hn)
+    · obtain ⟨⟨a2, m1⟩, h1, hn⟩ := of_K hn (taNodeW.k_target_abs_go_10.none ..)
+      rw [taNodeW.k_target_abs_go_10.arm1] at hn
+      exact (ihG _ _ _ _ _ _ _ _ _ _ h1).trans (mkProjW_afr hn)
 
 theorem taF_afr {n : Nat} {m m' : Mem} {no nl lvls ho hl e r : Word}
     (h : taF n m no nl lvls ho hl e = some (r, m')) : AFr m m' := by
@@ -109,7 +110,7 @@ theorem taF_afr {n : Nat} {m m' : Mem} {no nl lvls ho hl e r : Word}
   simp only [taF] at h
   by_cases h0 : rdW (m.arr64 CTL) taSch.cs + 2 = 0
   · simp [taAW, h0] at h
-  rw [taAW_eq n m no nl lvls ho hl e h0] at h
+  rw [taAW.arm1 n m no nl lvls ho hl e h0] at h
   exact (AFr.of_frame (mclearG_frame taSch m)).trans ((taGoW_afr n).1 _ _ _ _ _ _ _ _ _ _ h)
 
 /-! ## The closedness reads -/
