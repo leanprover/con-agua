@@ -489,15 +489,17 @@ theorem rgoW_afr : ∀ (n : Nat) (m m' : Mem) (cO cL rO rL o : Word) (r : List W
     rgoW n m cO cL rO rL o = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, h => by simp [rgoW] at h
   | n + 1, m, m', cO, cL, rO, rL, o, r, h => by
-    simp only [rgoW] at h
-    split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
-    · rcases h2 : erAllocW m 11 with _ | ⟨q, m2⟩ <;> simp only [h2, rgoK2, reduceCtorEq] at h
+    by_cases hz : cL = 0 ∨ rL = 0
+    · rw [rgoW.arm1 (hc1 := hz)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
+    · rw [rgoW.arm2 (hc1 := hz)] at h
+      rcases h2 : erAllocW m 11 with _ | ⟨q, m2⟩ <;>
+        simp only [h2, rgoW.k_erec_alloc.none, rgoW.k_erec_alloc_some, reduceCtorEq] at h
       cases h3 : rgoW n ((ruleMem m2 q _ _ rO).set64 IW o q) (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) with
-      | none => rw [h3] at h; cases h
+      | none => rw [h3, rgoW.k_sum_rules_go.none] at h; cases h
       | some z =>
       obtain ⟨r3, m3⟩ := z
-      rw [h3, rgoK3] at h
+      rw [h3, rgoW.k_sum_rules_go.arm1] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
       exact (erAllocW_afr h2).trans
         (((ruleMem_afr _ _ _ _ _).trans (set64IW_afr _ _ _)).trans (rgoW_afr n _ _ _ _ _ _ _ _ h3))

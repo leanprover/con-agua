@@ -17,6 +17,8 @@ public import ConAgua.Arena.IndSum
 public import ConAgua.Arena.SimLib
 import all ConAgua.Arena.IndSum
 public import ConAgua.Arena.StripTeleSpec
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndSumSpec.TblProg
 
 @[expose] public section
 
@@ -139,64 +141,18 @@ theorem ruleMem_eq (m : Mem) (q nm nF rO : Word) :
     show q + 7 + 1 = q + 8 by ac_rfl, show q + 8 + 1 = q + 9 by ac_rfl,
     show q + 9 + 1 = q + 10 by ac_rfl]
 
-/-- After the rest. -/
-def rgoK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m3) => some ([0], m3)
-/-- After `erec_alloc`: the record, its pointer at `o`, then the rest (at the written memory). -/
-def rgoK2 (rest : Mem → Option (List Word × Mem)) (o cv nF rO : Word) :
-    Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m1) => rgoK3 (rest ((ruleMem m1 q (erRd m1 cv) nF rO).set64 IW o q))
-
 /-- **The model of `sum_rules_go(cO, cL, rO, rL, o)`** at exec fuel `n`. -/
-def rgoW : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, cO, cL, rO, rL, o =>
-    if cL = 0 ∨ rL = 0 then some ([0], m)
-    else
-      rgoK2 (fun m' => rgoW n m' (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) o
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) rO
-        (erAllocW m 11)
+l_model rgoW_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hpu : p.lookup "erec_put" = some erecPut) (hp : p.lookup "sum_rules_go" = some sumRulesGoL)
+  fns [hp ↦ rgoW list]
+  specs [erecAlloc_specW p ha n, erecPut_specM p hpu n]
+  grind [arena_grind]
 
-section arms
-variable (n : Nat) (m m1 m3 : Mem) (cO cL rO rL o cv nF q : Word)
-  (r : List Word) (rest : Mem → Option (List Word × Mem))
-theorem rgoW_nil (h : cL = 0 ∨ rL = 0) : rgoW (n + 1) m cO cL rO rL o = some ([0], m) := by
-  simp [rgoW, h]
-theorem rgoW_cons (h : ¬ (cL = 0 ∨ rL = 0)) : rgoW (n + 1) m cO cL rO rL o =
-    rgoK2 (fun m' => rgoW n m' (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) o
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) rO
-      (erAllocW m 11) := by
-  rw [rgoW, ite_eq_right h]
-theorem rgoK2_some : rgoK2 rest o cv nF rO (some (q, m1)) =
-    rgoK3 (rest ((ruleMem m1 q (erRd m1 cv) nF rO).set64 IW o q)) := rfl
-theorem rgoK3_some : rgoK3 (some (r, m3)) = some ([0], m3) := rfl
-end arms
-attribute [ind_grind] rgoW_nil rgoW_cons rgoK2_some rgoK3_some
-
-section spec
-variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
-  (hpu : p.lookup "erec_put" = some erecPut) (hp : p.lookup "sum_rules_go" = some sumRulesGoL)
-include ha hpu hp
-
-theorem rgoW_spec (n : Nat) : ∀ (s₀ : St) (cO cL rO rL o : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "sum_rules_go" [cO, cL, rO, rL, o]
-    ⦃fun r s' => LocEq s' s₀ ∧ rgoW n s₀.mem cO cL rO rL o = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ cO cL rO rL o; rw [invoke_eq _ hp]; simp only [callFn, sumRulesGoL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ cO cL rO rL o
-    rw [invoke_eq _ hp]
-    simp only [callFn, sumRulesGoL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        erecAlloc_specW p ha n, erecPut_specW p hpu n, ih] <;>
-      finish (gen := 30) (instances := 5000) [ruleMem, erRd, rdW_eq]
-
-end spec
+/-- `rgoW`'s record by its memory `ruleMem`. -/
+theorem rgoW.k_erec_alloc_some (n : Nat) (cO cL rO rL o cv nF q : Word) (m1 : Mem) :
+    rgoW.k_erec_alloc n cO cL rO rL o cv nF (some (q, m1)) = rgoW.k_sum_rules_go
+      (rgoW n ((ruleMem m1 q (erRd m1 cv) nF rO).set64 IW o q) (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) := by
+  rw [rgoW.k_erec_alloc.arm1]; rfl
 
 /-! ## `sum_rules`: the word model -/
 
@@ -301,7 +257,7 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
   have hcl := decPL_length (m := truncM m) hcs
   have hrl := decHL_length (truncM m) hrh
   by_cases hz : cL = 0 ∨ rL = 0
-  · rw [rgoW_nil n m cO cL rO rL o hz] at h
+  · rw [rgoW.arm1 n m cO cL rO rL o hz] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have e : sumRules cs rhss = [] := by
       rcases hz with h | h
@@ -310,7 +266,7 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
     rw [e]
     refine ⟨hS, hg0, by simpa using hacc, by simpa using h11, ?_, by simp; omega⟩
     rcases hz with h | h <;> simp [h]
-  rw [rgoW_cons n m cO cL rO rL o hz] at h
+  rw [rgoW.arm2 n m cO cL rO rL o hz] at h
   have hcL : cL ≠ 0 := fun h => hz (.inl h)
   have hrL : rL ≠ 0 := fun h => hz (.inr h)
   obtain ⟨L, hL⟩ : ∃ L, cL.toNat = L + 1 :=
@@ -348,8 +304,8 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
   obtain ⟨wr, hwr, hwrl, hwrd, hrO⟩ := sumRd_of_decHL_truncM (o := rO) (l := rL) (by rw [hR]; exact hrh')
   rw [hw, hw2, hw3] at h
   rcases hal : erAllocW m 11 with _ | ⟨q, m2⟩ <;> rw [hal] at h
-  · cases h
-  rw [rgoK2_some, ruleMem_eq] at h
+  · rw [rgoW.k_erec_alloc.none] at h; cases h
+  rw [rgoW.k_erec_alloc_some, ruleMem_eq] at h
   obtain ⟨-, hf2, -⟩ := erAllocW_spec hal hS.iw
   have hI2 : m2.arr64 IW = m.arr64 IW := hf2.arr IW (by simp) (by decide)
   have hr2 : erRd m2 w2 = erRd m w2 := by
@@ -403,8 +359,8 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
   have hrL1 : (rL - 1).toNat = R := by rw [sumToNat_pred hrL]; omega
   rcases h3 : rgoW n (M.set64 IW o q) (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) with _ | ⟨r3, m3⟩ <;>
     rw [h3] at h
-  · cases h
-  simp only [rgoK3, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [rgoW.k_sum_rules_go.none] at h; cases h
+  simp only [rgoW.k_sum_rules_go.arm1, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS3, hg3, hd3, h113, hl3, ht3⟩ := ih (M.set64 IW o q) (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)
     m0 q0 (j + 1) _ cs rhss r3 m3 h3 hS' hg0' hq0 (by rw [sumToNat_succ hlt]; omega)
     (by rw [sumToNat_succ hlt, hcL1, hrL1, htop']; have := hgM.iw; simp only [Nat.min_def] at hroom ⊢
