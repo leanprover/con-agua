@@ -148,7 +148,7 @@ theorem rpGoW_afr (n : Nat) :
 -- from IndPosSpec/DepthGo
 theorem rpConstW_afr {n : Nat} {m m' : Mem} {no nl us b nn e r : Word}
     (h : rpConstW n m no nl us b nn e = some (r, m')) : AFr m m' := by
-  simp only [rpConstW, rpClrK.eq_def] at h
+  simp only [rpConstW, rpConstW.k_replace_apps_go.eq_def] at h
   split at h; · cases h
   split at h; · cases h
   rename_i hg; split at h; · cases h

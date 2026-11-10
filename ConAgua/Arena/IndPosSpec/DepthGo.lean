@@ -965,7 +965,7 @@ theorem rpGoW_mfr (n : Nat) :
 
 theorem rpConstW_mfr {n : Nat} {m m' : Mem} {no nl us b nn e r : Word}
     (h : rpConstW n m no nl us b nn e = some (r, m')) : MFr [RAM] [210, 211] m m' := by
-  simp only [rpConstW, rpClrK.eq_def] at h
+  simp only [rpConstW, rpConstW.k_replace_apps_go.eq_def] at h
   split at h; · cases h
   split at h; · cases h
   rename_i hg; split at h; · cases h

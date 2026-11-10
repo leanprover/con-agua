@@ -311,35 +311,25 @@ theorem rpGo_spec (n : Nat) : RpGoSpec p n ∧ RpNodeSpec p n := by
 
 end spec
 
-def rpClrK : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (r, m1) => if rdW (m1.arr64 CTL) raSch.cs + 2 = 0 then none else some (r, mclearG raSch m1)
+/-- `replace_apps_go`'s spec as a triple (for `l_model`). -/
+theorem replaceAppsGo_spec (p : Prog) (hl : AhLook p) (hk : MkLook p)
+    (hf : p.lookup "ra_find" = some (memoFindG raSch)) (hput : p.lookup "ra_put" = some (memoPutG raSch))
+    (hgo : p.lookup "replace_apps_go" = some replaceAppsGo)
+    (hnode : p.lookup "replace_apps_node" = some replaceAppsNode) (n : Nat) (s₀ : St) (no nl us b nn f h : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "replace_apps_go" [no, nl, us, b, nn, f, h]
+    ⦃fun r s' => LocEq s' s₀ ∧ rpGoW n s₀.mem no nl us b nn f h = some (r.headD 0, s'.mem); ⊤⦄ :=
+  (rpGo_spec p hl hk hf hput hgo hnode n).1 s₀ no nl us b nn f h
 
-def rpConstW (n : Nat) (m : Mem) (no nl us b nn e : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) raSch.cs + 2 = 0 then none
-  else rpClrK (rpGoW n (mclearG raSch m) no nl us b nn CWF e)
-
-theorem rpConstW_eq (n : Nat) (m : Mem) (no nl us b nn e : Word) (h0 : rdW (m.arr64 CTL) raSch.cs + 2 ≠ 0) :
-    rpConstW n m no nl us b nn e = rpClrK (rpGoW n (mclearG raSch m) no nl us b nn CWF e) := by
-  simp [rpConstW, h0]
-theorem rpClrK_some (r : Word) (m1 : Mem) (h0 : rdW (m1.arr64 CTL) raSch.cs + 2 ≠ 0) :
-    rpClrK (some (r, m1)) = some (r, mclearG raSch m1) := by simp [rpClrK, h0]
-attribute [ind_grind] rpConstW_eq rpClrK_some
-
-theorem replaceApps_spec (p : Prog) (hl : AhLook p) (hk : MkLook p)
+/-- **`replace_apps` is its model `rpConstW`** (generated, the fuel a parameter). -/
+l_model replaceApps_spec (p : Prog) (hl : AhLook p) (hk : MkLook p)
     (hf : p.lookup "ra_find" = some (memoFindG raSch)) (hput : p.lookup "ra_put" = some (memoPutG raSch))
     (hgo : p.lookup "replace_apps_go" = some replaceAppsGo)
     (hnode : p.lookup "replace_apps_node" = some replaceAppsNode)
     (hcl : p.lookup "ra_clear" = some (memoClearG raSch))
-    (hp : p.lookup "replace_apps" = some replaceApps) (n : Nat) (s₀ : St) (no nl us b nn e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "replace_apps" [no, nl, us, b, nn, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ rpConstW n s₀.mem no nl us b nn e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have ih := (rpGo_spec p hl hk hf hput hgo hnode n).1
-  unfold RpGoSpec at ih
-  simp only [invoke_eq _ hp, callFn, replaceApps]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec raSch p _ hcl n, ih] <;>
-    finish
+    (hp : p.lookup "replace_apps" = some replaceApps)
+  fns [hp ↦ rpConstW]
+  specs [memoClearG_spec raSch p _ hcl n, replaceAppsGo_spec p hl hk hf hput hgo hnode n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] pfuel
 
 /-! ### The relational side -/
 
@@ -828,17 +818,17 @@ theorem rpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     ∃ a', (ConRon.Arena.replaceApps names (decI us) b.toNat N (decE e)).run a = .ok (decE r, a') ∧
       rpMR m' ∅ ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   by_cases h0 : rdW (m.arr64 CTL) raSch.cs + 2 = 0
-  · simp [rpConstW, h0] at hb
-  rw [rpConstW_eq n m no nl us b nn e h0] at hb
+  · rw [rpConstW.abort1 (hc1 := h0)] at hb; cases hb
+  rw [rpConstW.arm1 (hc1 := h0)] at hb
   have hf0 := mclearG_frame raSch m
   have hM0 := memoRG_clear raSch raSch_wf bmKey (fun w : Word => decE w) m mp0 hM h0
   obtain ⟨hS0, hg0⟩ := StageR.frame_hi hS hf0 (by intro b hb; simp at hb) (by intro x hx; simp [raSch] at hx; rcases hx with rfl | rfl <;> decide)
     (by simp) (by simp [raSch])
   have hdec0 : decHL (mclearG raSch m) no.toNat nl.toNat = some names := by rw [decHL_grow hg0 hit]; exact hdec
-  rcases hg : rpGoW n (mclearG raSch m) no nl us b nn CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [rpClrK] at hb
+  rcases hg : rpGoW n (mclearG raSch m) no nl us b nn CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · rw [rpConstW.k_replace_apps_go.none] at hb; cases hb
   by_cases h1 : rdW (m1.arr64 CTL) raSch.cs + 2 = 0
-  · simp [rpClrK, h1] at hb
-  rw [rpClrK_some r1 m1 h1] at hb
+  · rw [rpConstW.k_replace_apps_go.abort1 (hc1 := h1)] at hb; cases hb
+  rw [rpConstW.k_replace_apps_go.arm1 (hc1 := h1)] at hb
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
   obtain ⟨a1, mp1, hrun, hS1, hg1, hM1⟩ := rpGoOK dn fe vis n _ _ a no nl us b nn CWF e r1 N names ∅ hg hS0 he hus hdec0
     hno (by have := hg0.iw; omega) hN hnn hbN hM0
