@@ -676,57 +676,17 @@ theorem CoreRM.setRr {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : C
 
 /-! ## `const_ty_at`, `rule_rhs_at`: a memo in front of `inst_lp` -/
 
-/-- Model of `const_ty_at`. -/
-def ctaW (p : Prog) (n : Nat) (m : Mem) (nn po pl ty us : Word) : Option (Word × Mem) :=
-  if mfindG ctSch m nn us = [] then none
-  else if (mfindG ctSch m nn us).headD 0 ≠ 0 then
-    some (mvG ctSch m ((mfindG ctSch m nn us).tail.headD 0), m)
-  else match callW p n "inst_lp" [po, pl, us, ty] m with
-    | none => none
-    | some (r, m₁) =>
-      if mfindG ctSch m₁ nn us = [] then none else
-      match mputG ctSch m₁ nn us (r.headD 0) ((mfindG ctSch m₁ nn us).headD 0)
-          ((mfindG ctSch m₁ nn us).tail.headD 0) with
-      | none => none
-      | some m₂ => some (r.headD 0, m₂)
+/-- **`const_ty_at`'s model `ctaW`** (generated), `inst_lp` through its run. -/
+l_model constTyAt_spec (p : Prog) (hp : IotaProg' p)
+  fns [hp.constTyAt ↦ ctaW]
+  specs [memoFindG_spec ctSch p _ hp.ctf n, memoPutG_spec ctSch p _ hp.ctp n, callW_spec p n "inst_lp"]
+  grind [arena_grind] finish [mvG]
 
-theorem constTyAt_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (nn po pl ty us : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "const_ty_at" [nn, po, pl, ty, us]
-    ⦃fun r s' => LocEq s' s₀ ∧ ctaW p n s₀.mem nn po pl ty us = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.constTyAt]
-  simp only [callFn, constTyAtL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec ctSch p _ hp.ctf n, memoPutG_spec ctSch p _ hp.ctp n,
-      callW_spec p n "inst_lp"] <;>
-    finish [ctaW, mvG]
-
-/-- Model of `rule_rhs_at`. -/
-def rraW (p : Prog) (n : Nat) (m : Mem) (rec ctor po pl rhs us : Word) : Option (Word × Mem) :=
-  if mfindG rrSch m rec (ctor ||| (us <<< 32)) = [] then none
-  else if (mfindG rrSch m rec (ctor ||| (us <<< 32))).headD 0 ≠ 0 then
-    some (mvG rrSch m ((mfindG rrSch m rec (ctor ||| (us <<< 32))).tail.headD 0), m)
-  else match callW p n "inst_lp" [po, pl, us, rhs] m with
-    | none => none
-    | some (r, m₁) =>
-      if mfindG rrSch m₁ rec (ctor ||| (us <<< 32)) = [] then none else
-      match mputG rrSch m₁ rec (ctor ||| (us <<< 32)) (r.headD 0)
-          ((mfindG rrSch m₁ rec (ctor ||| (us <<< 32))).headD 0)
-          ((mfindG rrSch m₁ rec (ctor ||| (us <<< 32))).tail.headD 0) with
-      | none => none
-      | some m₂ => some (r.headD 0, m₂)
-
-theorem ruleRhsAt_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St)
-    (rec ctor po pl rhs us : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rule_rhs_at" [rec, ctor, po, pl, rhs, us]
-    ⦃fun r s' => LocEq s' s₀ ∧ rraW p n s₀.mem rec ctor po pl rhs us = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ruleRhsAt]
-  simp only [callFn, ruleRhsAtL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec rrSch p _ hp.rrf n, memoPutG_spec rrSch p _ hp.rrp n,
-      callW_spec p n "inst_lp"] <;>
-    finish [rraW, mvG]
+/-- **`rule_rhs_at`'s model `rraW`** (generated), `inst_lp` through its run. -/
+l_model ruleRhsAt_spec (p : Prog) (hp : IotaProg' p)
+  fns [hp.ruleRhsAt ↦ rraW]
+  specs [memoFindG_spec rrSch p _ hp.rrf n, memoPutG_spec rrSch p _ hp.rrp n, callW_spec p n "inst_lp"]
+  grind [arena_grind] finish [mvG]
 
 theorem constTyAt_run_hit (cv : IConstantVal) (us : LsIdx) (a : AState) (r : EIdx)
     (h : a.caches.constTyC[(cv.name, us)]? = some r) : (constTyAt cv us).run a = .ok (r, a) := by
@@ -747,8 +707,8 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
-  refine triple_post (constTyAt_spec p hp n s₀ nn po pl ty us) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  simp only [ctaW] at hW
+  refine triple_post (constTyAt_spec p hp (n + 1) s₀ nn po pl ty us) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  rw [ctaW.eq_2] at hW
   obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := memoRV_findP hS.core.ct nn us hnn hus h0
   by_cases h1 : (mfindG ctSch s₀.mem nn us).headD 0 ≠ 0
@@ -757,12 +717,12 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     obtain ⟨hv, hv32⟩ := hf.1 h1
     have hrun1 := constTyAt_run_hit ⟨decI nn, lps, decE ty⟩ (decI us) a₀ _ hv
     refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
-    · simp only [decH]; rw [← hr]
+    · simp only [decH]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; exact hv32
   rw [ite_eq_right h1] at hW
   have hmiss := hf.2 (by simpa using h1)
   rcases hc : callW p n "inst_lp" [po, pl, us, ty] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
-    simp only [hc, reduceCtorEq] at hW
+    simp only [hc, ctaW.k_inst_lp.none, ctaW.k_inst_lp.eq_2, reduceCtorEq] at hW
   obtain ⟨hok, ⟨M', hS₁, hK, hSt⟩, hres, hr₁⟩ :=
     CoreSpec.of_callW (hlp n s₀ a₀ dn vis fe MM eb po pl us ty lps hS hty hus hlps) hc
   have hrunI := AM.run_of_ok _ _ hok
@@ -771,9 +731,9 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   obtain ⟨h2, hW⟩ := of_ite_none hW
   cases hp : mputG ctSch m₁ nn us (r₁.headD 0) ((mfindG ctSch m₁ nn us).headD 0)
       ((mfindG ctSch m₁ nn us).tail.headD 0) with
-  | none => rw [hp] at hW; cases hW
+  | none => rw [hp, ctaW.k_ct_put.none] at hW; cases hW
   | some m₂ =>
-  rw [hp] at hW
+  rw [hp, ctaW.k_ct_put.arm1] at hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hs : msetG ctSch m₁ nn us (r₁.headD 0) = some m₂ := by rw [msetG_eq _ _ _ _ _ h2]; exact hp
   have hwv : HW (r₁.headD 0) := hr₁
@@ -805,10 +765,10 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
-  refine triple_post (ruleRhsAt_spec p hp n s₀ rec ctor po pl rhs us) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
+  refine triple_post (ruleRhsAt_spec p hp (n + 1) s₀ rec ctor po pl rhs us) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
     ?_⟩
   have hdk := rrKey_dk rec ctor us hctor hus
-  simp only [rraW] at hW
+  rw [rraW.eq_2] at hW
   obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := memoRV_findR hS.core.rr rec (ctor ||| (us <<< 32)) hrec h0
   rw [hdk] at hf
@@ -818,12 +778,12 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     obtain ⟨hv, hv32⟩ := hf.1 h1
     have hrun1 := ruleRhsAt_run_hit (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ hv
     refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
-    · simp only [decH]; rw [← hr]
+    · simp only [decH]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; exact hv32
   rw [ite_eq_right h1] at hW
   have hmiss := hf.2 (by simpa using h1)
   rcases hc : callW p n "inst_lp" [po, pl, us, rhs] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
-    simp only [hc, reduceCtorEq] at hW
+    simp only [hc, rraW.k_inst_lp.none, rraW.k_inst_lp.eq_2, reduceCtorEq] at hW
   obtain ⟨hok, ⟨M', hS₁, hK, hSt⟩, hres, hr₁⟩ :=
     CoreSpec.of_callW (hlp n s₀ a₀ dn vis fe MM eb po pl us rhs lps hS hrhs hus hlps) hc
   have hrunI := AM.run_of_ok _ _ hok
@@ -833,9 +793,9 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   cases hp : mputG rrSch m₁ rec (ctor ||| (us <<< 32)) (r₁.headD 0)
       ((mfindG rrSch m₁ rec (ctor ||| (us <<< 32))).headD 0)
       ((mfindG rrSch m₁ rec (ctor ||| (us <<< 32))).tail.headD 0) with
-  | none => rw [hp] at hW; cases hW
+  | none => rw [hp, rraW.k_rr_put.none] at hW; cases hW
   | some m₂ =>
-  rw [hp] at hW
+  rw [hp, rraW.k_rr_put.arm1] at hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hs : msetG rrSch m₁ rec (ctor ||| (us <<< 32)) (r₁.headD 0) = some m₂ := by
     rw [msetG_eq _ _ _ _ _ h2]; exact hp
