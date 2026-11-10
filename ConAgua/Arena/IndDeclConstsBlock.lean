@@ -11,6 +11,8 @@ public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 
+import ConAgua.L.ModelGen
+
 @[expose] public section
 
 /-!
@@ -79,66 +81,12 @@ theorem appendW_ci {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem}
 
 /-! ## `block_constants` -/
 
-/-- After the recursors: the two appends. -/
-def bkK4 (p : Prog) (n : Nat) (fo fl co cl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bkK5 p n (r.headD 0) (r.tail.headD 0) (callW p n "sl_append" [fo, fl, co, cl] m)
-where
-  /-- After the first append. -/
-  bkK5 (p : Prog) (n : Nat) (ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-    | none => none
-    | some (r, m) => bfgK4 (callW p n "sl_append" [r.headD 0, r.tail.headD 0, ro, rl] m)
-
-/-- After the constructors: the recursors. -/
-def bkK3 (p : Prog) (n : Nat) (pp fo fl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bkK4 p n fo fl (r.headD 0) (r.tail.headD 0)
-      (callW p n "block_recs" [pp, rdW (m.arr64 IW) (pp + 2), rdW (m.arr64 IW) (pp + 3)] m)
-
-/-- After the formers: the constructors. -/
-def bkK2 (p : Prog) (n : Nat) (pp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bkK3 p n pp (r.headD 0) (r.tail.headD 0) (callW p n "block_ctors" [pp] m)
-
-/-- After `block_is_rec`: the formers. -/
-def bkK1 (p : Prog) (n : Nat) (pp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bkK2 p n pp (callW p n "block_formers" [pp, r.headD 0] m)
-
 /-- **The model of `block_constants(p)`** at exec fuel `n`. -/
-def bkW (p : Prog) : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, pp => bkK1 p n pp (callW p n "block_is_rec" [pp] m)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (pp fo fl co cl ro rl : Word) (r : List Word)
-theorem bkW_succ : bkW p (n + 1) m pp = bkK1 p n pp (callW p n "block_is_rec" [pp] m) := rfl
-theorem bkK1_some : bkK1 p n pp (some (r, m)) = bkK2 p n pp (callW p n "block_formers" [pp, r.headD 0] m) := rfl
-theorem bkK2_some : bkK2 p n pp (some (r, m)) =
-    bkK3 p n pp (r.headD 0) (r.tail.headD 0) (callW p n "block_ctors" [pp] m) := rfl
-theorem bkK3_some : bkK3 p n pp fo fl (some (r, m)) = bkK4 p n fo fl (r.headD 0) (r.tail.headD 0)
-    (callW p n "block_recs" [pp, rdW (m.arr64 IW) (pp + 2), rdW (m.arr64 IW) (pp + 3)] m) := rfl
-theorem bkK4_some : bkK4 p n fo fl co cl (some (r, m)) =
-    bkK4.bkK5 p n (r.headD 0) (r.tail.headD 0) (callW p n "sl_append" [fo, fl, co, cl] m) := rfl
-theorem bkK5_some : bkK4.bkK5 p n ro rl (some (r, m)) =
-    bfgK4 (callW p n "sl_append" [r.headD 0, r.tail.headD 0, ro, rl] m) := rfl
-end arms
-attribute [ind_grind] bkW_succ bkK1_some bkK2_some bkK3_some bkK4_some bkK5_some
-
-theorem bk_spec (p : Prog) (hp : p.lookup "block_constants" = some blockConstants) (n : Nat)
-    (s₀ : St) (pp : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_constants" [pp]
-    ⦃fun r s' => LocEq s' s₀ ∧ bkW p n s₀.mem pp = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockConstants]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "block_is_rec", callW_spec p n "block_formers", callW_spec p n "block_ctors",
-        callW_spec p n "block_recs", callW_spec p n "sl_append"] <;>
-      finish (gen := 20)
+l_model bk_spec (p : Prog) (hp : p.lookup "block_constants" = some blockConstants)
+  fns [hp ↦ bkW list]
+  specs [callW_spec p n "block_is_rec", callW_spec p n "block_formers", callW_spec p n "block_ctors",
+    callW_spec p n "block_recs", callW_spec p n "sl_append"]
+  grind [arena_grind]
 
 /-- **`block_constants` refines `blockConstants`**: the formers (at `block_is_rec`), the
 constructors and the recursors, an `IW` slice of `EREC` constant records below the pool's top. -/
@@ -151,9 +99,9 @@ theorem bkW_ok {p : Prog} (hP : BlockProg p) {vis : Word} {fe : IFEnv} {n : Nat}
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   rcases n with _ | n
   · simp [bkW] at h
-  rw [bkW_succ] at h
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [bkK1])
-  rw [bkK1_some] at h
+  rw [bkW.arm1] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [bkW.k_block_is_rec.none])
+  rw [bkW.k_block_is_rec.arm1] at h
   rcases n with _ | n
   · exact (callW_zero_false h1).elim
   obtain ⟨s1, rfl, -, hok, hst, hr1, -, hS1, hg1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -165,16 +113,16 @@ theorem bkW_ok {p : Prog} (hP : BlockProg p) {vis : Word} {fe : IFEnv} {n : Nat}
   have hbw : (r1.headD 0 != 0) = b := by subst hr1; cases b <;> rfl
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
   -- the formers
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bkK2])
-  rw [bkK2_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bkW.k_block_formers.none])
+  rw [bkW.k_block_formers.arm1] at h
   obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (dbf_spec p hP.bf (n + 1) _ pp (r1.headD 0)) h2
   obtain ⟨hd2, hb2, hS2, hg2⟩ := bfW_ok hP.toFormersProg hbw hS1 (hq.grow (decBS_mono _) hg1)
     (partsHsrc_grow hg1 hq9 hsrc) hW2
   have hg02 := hg1.trans hg2
   -- the constructors
-  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bkK3])
-  rw [bkK3_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bkW.k_block_ctors.none])
+  rw [bkW.k_block_ctors.arm1] at h
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (dbct_spec p hP.bc (n + 1) _ pp) h3
   obtain ⟨hd3, hb3, hS3, hg3⟩ := dbctW_ok hP.toDcCtorsProg hS2 (hq.grow (decBS_mono _) hg02)
@@ -191,16 +139,16 @@ theorem bkW_ok {p : Prog} (hP : BlockProg p) {vis : Word} {fe : IFEnv} {n : Nat}
     rw [rdW_iw_grow hg03 (by rw [UInt64.toNat_add]; simp at ho2 ⊢; omega)]; exact UInt64.toNat_inj.mp hoW
   have e3 : rdW (s3.mem.arr64 IW) (pp + 3) = l := by
     rw [rdW_iw_grow hg03 (by rw [UInt64.toNat_add]; simp at hl3 ⊢; omega)]; exact UInt64.toNat_inj.mp hlW
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bkK4])
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bkW.k_block_recs.none])
   rw [e2, e3] at h4
-  rw [bkK4_some] at h
+  rw [bkW.k_block_recs.arm1] at h
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (dbrs_spec hP.toRecsProg (n + 1) _ pp o l) h4
   obtain ⟨cis, a4, hrun4, hd4, hb4, hS4, hg4⟩ := brsW_ok hP.toRecsProg pp bs vis fe (n + 1) _ _ a o l bs.recs _
     hS3 (hq.grow (decBS_mono _) hg03) (PSlR0.grow decRS_mono ⟨hdr, hob⟩ hg03) hW4
   -- the appends
-  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h (by simp [bkK4.bkK5])
-  rw [bkK5_some] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h (by simp [bkW.k_sl_append.none])
+  rw [bkW.k_sl_append.arm1] at h
   obtain ⟨s5, rfl, -, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (slAppend_specW p hP.alloc hP.iwCopy hP.slAppend (n + 1) _ _ _ _ _) h5
   have hg24 := hg3.trans hg4
@@ -208,8 +156,8 @@ theorem bkW_ok {p : Prog} (hP : BlockProg p) {vis : Word} {fe : IFEnv} {n : Nat}
   have hb3' : (r3.headD 0).toNat + (r3.tail.headD 0).toNat ≤ iwTop s4.mem := by have := hg4.iw; omega
   obtain ⟨hd5, hb5, hS5, hg5⟩ := appendW_ci hW5 hS4 hb2' hb3'
     (decPL_ci_grow hg24 hb2 hd2) (decPL_ci_grow hg4 hb3 hd3)
-  obtain ⟨⟨r6, m6⟩, h6, h⟩ := of_K h (by simp [bfgK4])
-  rw [bfgK4_some] at h
+  obtain ⟨⟨r6, m6⟩, h6, h⟩ := of_K h (by simp [bkW.k_sl_append_2.none])
+  rw [bkW.k_sl_append_2.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (slAppend_specW p hP.alloc hP.iwCopy hP.slAppend (n + 1) _ _ _ _ _) h6

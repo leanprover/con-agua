@@ -175,6 +175,17 @@ theorem brW_ok {p : Prog} (hP : RecsProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
 
 /-! ## `block_recs` -/
 
+/-- After the consing (`block_recs` keeps a hand model: `dbrs_spec`'s users take the program
+implicitly, and a generated model's program is an explicit binder). -/
+def brsK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
+
+/-- After the rest: the consing. -/
+def brsK2 (p : Prog) (n : Nat) (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => brsK3 (callW p n "sl_cons" [q, r.headD 0, r.tail.headD 0] m)
+
 mutual
 /-- **The model of `block_recs(p, ro, rl)`** at exec fuel `n`. -/
 def dbrsW (p : Prog) : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
@@ -186,7 +197,7 @@ def dbrsW (p : Prog) : Nat → Mem → Word → Word → Word → Option (List W
 def brsK1 (p : Prog) (n : Nat) (pp ro rl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => bfgK3 p n (r.headD 0) (dbrsW p n m pp (ro + 1) (rl - 1))
+  | some (r, m) => brsK2 p n (r.headD 0) (dbrsW p n m pp (ro + 1) (rl - 1))
 end
 
 section arms
@@ -195,9 +206,12 @@ theorem brsW_nil (h : rl = 0) : dbrsW p (n + 1) m pp ro rl = some ([0, 0], m) :=
 theorem brsW_cons (h : rl ≠ 0) : dbrsW p (n + 1) m pp ro rl =
     brsK1 p n pp ro rl (callW p n "block_rec" [pp, rdW (m.arr64 IW) ro] m) := by simp [dbrsW, h]
 theorem brsK1_some : brsK1 p n pp ro rl (some (r, m)) =
-    bfgK3 p n (r.headD 0) (dbrsW p n m pp (ro + 1) (rl - 1)) := by simp [brsK1]
+    brsK2 p n (r.headD 0) (dbrsW p n m pp (ro + 1) (rl - 1)) := by simp [brsK1]
+theorem brsK2_some (q : Word) : brsK2 p n q (some (r, m)) =
+    brsK3 (callW p n "sl_cons" [q, r.headD 0, r.tail.headD 0] m) := rfl
+theorem brsK3_some : brsK3 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 end arms
-attribute [ind_grind] brsW_nil brsW_cons brsK1_some
+attribute [ind_grind] brsW_nil brsW_cons brsK1_some brsK2_some brsK3_some
 
 theorem dbrs_spec {p : Prog} (hP : RecsProg p) (n : Nat) :
     ∀ (s₀ : St) (pp ro rl : Word),
@@ -250,12 +264,12 @@ theorem brsW_ok {p : Prog} (hP : RecsProg p) (pp : Word) (bs : BlockShape) (vis 
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [brsK1])
   rw [brsK1_some] at h
   obtain ⟨f, a1, hrun1, hS1, hg1, hci⟩ := brW_ok hP hS hq (by rw [hq']; exact hdrc) (brCall hP h1)
-  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgK3])
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [brsK2])
   obtain ⟨cis, a3, hrun3, hd3, hb3, hS3, hg3⟩ := ih m1 m3 a1 (ro + 1) (rl - 1) rest r3 hS1
     (hq.grow (decBS_mono _) hg1) (PSlR0.grow decRS_mono ⟨hrest.dec, Or.inr hrest.bound⟩ hg1) h3
-  rw [bfgK3_some] at h
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bfgK4])
-  rw [bfgK4_some] at h
+  rw [brsK2_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [brsK3])
+  rw [brsK3_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hd5, hb5, hS5, hg5⟩ := consW_ci (consCall hP.toFormersProg h4) hS3 hb3 hd3 (hg3.ext.decCI hci)
   refine ⟨_ :: cis, a3, ?_, by simpa using hd5, by simp only [List.headD_cons, List.tail_cons]; omega, hS5,
