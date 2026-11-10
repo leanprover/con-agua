@@ -13,7 +13,7 @@ import all ConAgua.Arena.DeclArmsNat
 /-!
 # DmCgW
 
-`SubstC0`, `applied_specW`, `appliedW`, `rdW_iw_grow`, `word_add_one`, `craW` and the lemmas only they use.
+`SubstC0`, `applied_specW`, `appliedW`, `rdW_iw_grow`, `craW` and the lemmas only they use.
 -/
 
 noncomputable section

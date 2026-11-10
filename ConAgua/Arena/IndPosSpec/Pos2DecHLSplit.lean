@@ -13,7 +13,7 @@ import ConAgua.L.WordOff
 /-!
 # Pos2DecHLSplit
 
-`pos2_forall_view`, `pos2_word_add`, `pos2_word_succ`, `pos2_word_pred`, `pos2_ns_rd`, `pos2_decHL_split` and the lemmas only they use.
+`pos2_forall_view`, `pos2_ns_rd`, `pos2_decHL_split` and the lemmas only they use.
 -/
 
 noncomputable section

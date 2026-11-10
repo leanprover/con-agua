@@ -13,7 +13,7 @@ public import ConAgua.Arena.IndSumSpec.StructProjArgP
 /-!
 # CheckSumCtor
 
-`sumGetD0–2`, the callees of `check_sum_ctor(_tail)` as `Sim`s, `checkSumCtor_eq`, `sumTypeWord`.
+The callees of `check_sum_ctor(_tail)` as `Sim`s, `checkSumCtor_eq`, `sumTypeWord`.
 -/
 
 noncomputable section

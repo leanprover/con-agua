@@ -8,7 +8,7 @@ import ConLeche.Kernel.Env
 /-!
 # ConsRecsTFSimOf
 
-`ConsRecsTFSim`, `_root_.L.Arena.Sim.of_model`, `tailRcCallees`, `tailCallees`, `tailToNat`, `consRecsTFSim_of`.
+`ConsRecsTFSim`, `_root_.L.Arena.Sim.of_model`, `tailRcCallees`, `tailCallees`, `consRecsTFSim_of`.
 -/
 
 section

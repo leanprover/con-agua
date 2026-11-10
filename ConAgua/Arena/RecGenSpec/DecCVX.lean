@@ -7,7 +7,7 @@ public import ConAgua.Arena.RecClassSpec.Classes
 /-!
 # DecCVX
 
-`decCVX`, `rec2ToNat_succ`, `rec2ToNat_pred`.
+`decCVX`, `rec2ToNat_succ`.
 -/
 
 noncomputable section

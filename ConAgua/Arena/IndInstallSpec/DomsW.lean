@@ -12,7 +12,7 @@ import ConAgua.Arena.IndLibSpec
 # DomsW
 
 Slice lemmas: `decHL` along the pool's growth (`decHL_grow`) and its elements as word reads
-(`decHL_getI`, `decHL_get'`), and the `getD` readings `agGetD0–2`.
+(`decHL_getI`, `decHL_get'`).
 -/
 
 section

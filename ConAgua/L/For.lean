@@ -26,7 +26,7 @@ notation writes it). Its rule, proved once:
 * `Triple.forUp_pre`: the same rule for a named loop block, in the shape `⦃s = s₀ ∧ P s⦄ exec p k w
   ⦃Q⦄` of a hand loop spec; it takes the loop's whole body (the step included, post `LoopPost`),
   so that `hw` is `rfl` without restating the body.
-* `forUp_succ_toNat`: the step does not wrap (`j < n`).
+* the step does not wrap (`j < n`): `L.toNat_add_one_of_word_lt` (`L/WordOff.lean`).
 -/
 
 set_option experimental.vcgen true

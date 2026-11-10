@@ -94,7 +94,7 @@ theorem bbNodeA_run (F : Nat) (h : EIdx) (a : AState) (v : ENodeView)
 
 /-! ## The refinement, by induction on the fuel
 
-The counter `c` is the twin's `fuel` exactly (`c.toNat`; `FVarRangeRefine.lean`'s `ctrW_toNat`):
+The counter `c` is the twin's `fuel` exactly (`c.toNat`; `L.toNat_eq_toNat_sub_one_add_one`):
 at `c = 0` the L code aborts where the twin throws. -/
 
 /-- What `bb_go`'s model at L fuel `n` and counter `c` says about the arena walk at `c.toNat`. -/

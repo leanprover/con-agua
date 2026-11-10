@@ -13,7 +13,7 @@ public import ConAgua.Arena.RecSim
 /-!
 # CtorX
 
-`sumAddNoOv`, the decoders `check_sum_ctors`' refinement reads (`sortsDec`,
+The decoders `check_sum_ctors`' refinement reads (`sortsDec`,
 `sumRec2`, `sumDecCN_of`, `sumSortsDec_of`).
 -/
 

@@ -21,8 +21,10 @@ tagged-load spec. A proof outside this file and the definitions' own files
 * `arena_grind` holds the equations over the named reads: `erRd_get`, `aread_apply`,
   `erecPutMem_ctl`. A `sym only [lang_grind, arena_grind, …] => vcgen … <;> finish` proof finds
   them without naming them.
-* `erec_grind` holds `erRd`'s definition (a `finish` that compares a model's `erRd` with the
-  loads `vcgen` leaves): `finish [erec_grind]`. Not in `arena_grind`, and `erRd_foldN` (the
+* `erec_grind` holds `erRd`'s definition (a proof that compares a model's `erRd` with the
+  loads `vcgen` leaves): `sym [erec_grind, …] => …` or `grind [erec_grind]`, at the entry
+  point; a `finish [S]` list ignores attribute sets, so there name the definition, `finish
+  [erRd]` (docs/design/syncvocab.md, "Follow-up: duplicate names"). Not in `arena_grind`, and `erRd_foldN` (the
   reverse equation) in no set: either one in `arena_grind` cost 8–92 % of the instructions of
   modules with many tagged reads (DeclCanonSpec, ClassNPcOf; docs/design/syncvocab.md).
 * `L.Arena.ErecSpec` is the spec set of a tagged load for `vcgen` (`vcgen` reads one global
