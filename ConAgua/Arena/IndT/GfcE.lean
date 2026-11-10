@@ -316,9 +316,7 @@ theorem gfcLoop_ref (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal
   rw [gfcE.loop1.arm1 _ _ _ _ _ _ _ _ _ _ hj]
   have hjn : j.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hj
   have hI1 := hS.iw.iw
-  have hE1 := hS.iw.er
   have hsz := hS.iw.iwSize
-  have hEs := hS.iw.erSize
   have hgt : iwTop s0 ≤ iwTop m := hg.iw
   -- class `j`
   have hmsm := hms.grow (fun q => decTM_mono q) hg
@@ -341,8 +339,7 @@ theorem gfcLoop_ref (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal
   dsimp only at hC1 hg1 hA1 hr1 he1
   generalize s1.mem = m1 at hC1 hg1 hA1 hr1 he1 ⊢
   have hS1 := hC1.stage
-  have hS1' := hS1.iw.iw
-  have hI1' := hS1.iw.er
+  have hI1' := hS1.iw.iw
   have hsz1 := hS1.iw.iwSize
   have hacc1 : decHL m1 q.toNat j.toNat = some acc := by
     rw [decHL_grow hg1 (by omega)]; exact hacc

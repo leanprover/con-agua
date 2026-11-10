@@ -304,10 +304,7 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
       CapsWords m' (r.headD 0).toNat
         [w0, w1, w2, w3, w4, w2, nIdx, 0, 0, 0, aq, al, UInt64.ofNat bs.nP, cq, cl] ∧
       ESl m' aq al bs.memberNames ∧ ESl m' cq cl (cs.map (·.1.name)) := by
-  have hI1 := hS.iw.iw
-  have hE1 := hS.iw.er
   have hsz := hS.iw.iwSize
-  have hEs := hS.iw.erSize
   have hcl := hS.iw.ctl
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hq', hq9, hptr1⟩ := partsShapeFacts hq hsrc
@@ -340,10 +337,7 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
     (by rw [UInt64.toNat_ofNat_of_lt' hkb]; omega)
   -- the ctor names
   have hcs2 := hcs.grow decCN_mono (hg1.trans hg2)
-  have hI2 := hS2.iw.iw
-  have hE2' := hS2.iw.er
   have hsz2 := hS2.iw.iwSize
-  have hEs2 := hS2.iw.erSize
   have hcl2 := hS2.iw.ctl
   obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [icaK4_some] at h
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)

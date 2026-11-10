@@ -200,9 +200,7 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   rw [gfcW.loop1.arm1 (hc1 := hj)] at h
   have hjn : j.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hj
   have hI1 := hS.iw.iw
-  have hE1 := hS.iw.er
   have hsz := hS.iw.iwSize
-  have hEs := hS.iw.erSize
   have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hI1 hsz
   have hgt : iwTop s0 ≤ iwTop m := hg.iw
   -- class `j`
@@ -220,8 +218,7 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   rw [c1, gfcW.k_class_former_ty.arm1] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, ⟨hr1, he1⟩, hJ1⟩ := hcft k m m1 a _ _ r1 hJ hS (List.getElem_mem _) hM hdcv
     (by have := hcvm.2; omega) c1
-  have hS1' := hS1.iw.iw
-  have hI1' := hS1.iw.er
+  have hI1' := hS1.iw.iw
   have hsz1 := hS1.iw.iwSize
   have hacc1 : decHL m1 q.toNat j.toNat = some acc := by
     rw [decHL_grow hg1 (by omega)]; exact hacc

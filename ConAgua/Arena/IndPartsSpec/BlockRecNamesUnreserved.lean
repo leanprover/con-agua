@@ -499,10 +499,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe 
   · simp at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hg12 : IWGrow m m2 := hg2
-  have hI2 := hS2.iw.iw
-  have hE2 := hS2.iw.er
   have hIsz2 := hS2.iw.iwSize
-  have hEsz2 := hS2.iw.erSize
   have hCsz2 := hS2.iw.ctl
   obtain ⟨hq, hm3, hroom⟩ := allocW_facts hal hIsz2
   subst hm3
