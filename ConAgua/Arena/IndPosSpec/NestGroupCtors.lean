@@ -10,6 +10,8 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPosSpec.BvbWMfr
 
 @[expose] public section
 
@@ -39,44 +41,32 @@ theorem nhiW_toNat {m : Mem} {ctx nf : Word} {c : NestCtx} (hc : decCtx m ctx.to
   simp only [nhiW, UInt64.toNat_add, hnP, hl]
   omega
 
-section arms
-variable (n : Nat) (m m1 : Mem) (hi off l : Word) (r : List Word)
-theorem dcGoW_nil (h : l = 0) : dcGoW (n + 1) m hi off l = some ([1], m) := by simp [dcGoW, h]
-theorem dcGoW_cons (h : ¬ l = 0) : dcGoW (n + 1) m hi off l =
-    dcK n hi off l (fvbF m [CWF, rdW (m.arr64 IW) off]) := by simp [dcGoW, h]
-theorem dcK_out (h : hi < r.headD 0) : dcK n hi off l (some (r, m1)) = some ([0], m1) := by
-  rw [dcK, ite_eq_left h]
-theorem dcK_in (h : ¬ hi < r.headD 0) : dcK n hi off l (some (r, m1)) = dcGoW n m1 hi (off + 1) (l - 1) := by
-  rw [dcK, ite_eq_right h]
-end arms
-attribute [ind_grind] dcGoW_nil dcGoW_cons dcK_out dcK_in
+l_model dcGo_spec (p : Prog) (hf : HfF p) (hp : p.lookup "nest_ds_closed_go" = some nestDsClosedGoL)
+  fns [hp ↦ dcGoW list]
+  specs [fvbF_spec p hf n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
-theorem dcGo_spec (p : Prog) (hf : HfF p) (hp : p.lookup "nest_ds_closed_go" = some nestDsClosedGoL) (n : Nat) :
-    ∀ (s₀ : St) (hi off l : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ds_closed_go" [hi, off, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ dcGoW n s₀.mem hi off l = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ hi off l
-    rw [invoke_eq _ hp]; simp only [callFn, nestDsClosedGoL]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ hi off l
-    simp only [invoke_eq _ hp, callFn, nestDsClosedGoL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        fvbF_spec p hf n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-theorem dc_spec (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt)
+l_model dc_spec' (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt)
     (hg : p.lookup "nest_ds_closed_go" = some nestDsClosedGoL)
-    (hp : p.lookup "nest_ds_closed" = some nestDsClosedL) (n : Nat) (s₀ : St) (ctx off l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_ds_closed" [ctx, off, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ dcW n s₀.mem ctx off l = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestDsClosedL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      nestCtxHiAt_specE p hh n, dcGo_spec p hf hg n] <;>
-    finish (gen := 20) [dcW]
+    (hp : p.lookup "nest_ds_closed" = some nestDsClosedL)
+  fns [hp ↦ dcWf list]
+  specs [nestCtxHiAt_specE p hh n, dcGo_spec p hf hg n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
+
+theorem dcGoW_mfr : ∀ (n : Nat) (m m' : Mem) (hi off l : Word) (r : List Word),
+    dcGoW n m hi off l = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, h => by simp [dcGoW.eq_1] at h
+  | n + 1, m, m', hi, off, l, r, h => by
+    simp only [dcGoW.eq_2, dcGoW.k_fvar_b.eq_def, dcGoW.k_nest_ds_closed_go.eq_def] at h
+    mfr_auto h [MFr.ofFvbF, dcGoW_mfr n _ _ _ _ _ _]
+
+theorem dcWf_mfr {n : Nat} {m m' : Mem} {ctx off l : Word} {r : List Word} (h : dcWf n m ctx off l = some (r, m')) :
+    MFr [] [] m m' := by
+  cases n with
+  | zero => simp [dcWf.eq_1] at h
+  | succ n =>
+    simp only [dcWf.eq_2, dcWf.k_nest_ds_closed_go.eq_def] at h
+    mfr_auto h [dcGoW_mfr _ _ _ _ _ _ _]
 
 theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Word) (HI : Nat)
     (hHI : hi.toNat = HI) (n : Nat) :
@@ -86,17 +76,17 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
     ∃ b a', (ds.allM (dsF HI)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       r.headD 0 = (if b then 1 else 0) := by
   induction n with
-  | zero => intro m m' a off l ds r h; simp [dcGoW] at h
+  | zero => intro m m' a off l ds r h; simp [dcGoW.eq_1] at h
   | succ n ih =>
     intro m m' a off l ds r h hS hds hin
     by_cases hl0 : l = 0
-    · rw [dcGoW_nil (h := hl0)] at h
+    · rw [dcGoW.arm1 (hc1 := hl0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : ds = [] := by simpa [decHL, hslice?] using hds.symm
       subst this
       exact ⟨true, a, rfl, hS, IWGrow.refl _, rfl⟩
-    rw [dcGoW_cons (h := hl0)] at h
+    rw [dcGoW.arm2 (hc1 := hl0)] at h
     have hl : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by omega⟩
     have hds' := hds
@@ -108,39 +98,34 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
       word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; omega)
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-    rcases hst : fvbF m [CWF, rdW (m.arr64 IW) off] with _ | ⟨r1, m1⟩ <;> rw [hst] at h; · simp [dcK] at h
+    rcases hst : fvbF m [CWF, rdW (m.arr64 IW) off] with _ | ⟨r1, m1⟩ <;> rw [hst] at h; · rw [dcGoW.k_fvar_b.none] at h; cases h
     obtain ⟨k, a1, hrun1, hS1, hg1, hk⟩ := fvbF_ok dn vis fe CWF _ hxH _ _ a r1 hst hS
     rw [CWF_eq, hxd] at hrun1
     rw [List.allM_cons]
     by_cases hc : hi < r1.headD 0
-    · rw [dcK_out (h := hc)] at h
+    · rw [dcGoW.k_fvar_b.arm1 (hc1 := hc)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hgt : ¬ k ≤ HI := by
         have := UInt64.lt_iff_toNat_lt.mp hc; simp only [decW0Nat] at hk; omega
       refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
       simp only [dsF, StateT.run_bind, hrun1, except_ok_bind, hgt, decide_false]
       rfl
-    · rw [dcK_in (h := hc)] at h
+    · rw [dcGoW.k_fvar_b.arm2 (hc1 := hc)] at h
+      rcases hgo : dcGoW n m1 hi (off + 1) (l - 1) with _ | ⟨r', m''⟩ <;> rw [hgo] at h
+      · rw [dcGoW.k_nest_ds_closed_go.none] at h; cases h
+      rw [dcGoW.k_nest_ds_closed_go.arm1] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hle : k ≤ HI := by
         have : ¬ hi.toNat < (r1.headD 0).toNat := fun e => hc (UInt64.lt_iff_toNat_lt.mpr e)
         simp only [decW0Nat] at hk; omega
       have hRd : RdS m m1 (· < iwTop m) := RdS.of_grow hg1
-      obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m1 m' a1 (off + 1) (l - 1) xs r h hS1
+      obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m1 m'' a1 (off + 1) (l - 1) xs r' hgo hS1
         (by rw [hoff1, hl1, ← hxs, decHL]; exact decHL_agree hRd (fun j hj => by
               have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
         (fun j hj => by rw [hoff1, hl1] at *; have := hin (j + 1) (by omega); have := hg1.iw; omega)
       refine ⟨b, a', ?_, hS', hg1.trans hg', hr⟩
       simp only [dsF, StateT.run_bind, hrun1, except_ok_bind, hle, decide_true]
       exact hrun
-
-theorem dc_spec' (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt)
-    (hg : p.lookup "nest_ds_closed_go" = some nestDsClosedGoL)
-    (hp : p.lookup "nest_ds_closed" = some nestDsClosedL) (n : Nat) (s₀ : St) (ctx off l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ds_closed" [ctx, off, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ dcWf n s₀.mem ctx off l = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  cases n with
-  | zero => rw [invoke_eq _ hp]; simp only [callFn, nestDsClosedL]; vcgen [exec] <;> grind
-  | succ n => exact dc_spec p hf hh hg hp n s₀ ctx off l
 
 /-- `nest_ds_closed` from the stage relation: `ds.allM (fvarB · ≤ ctx.hiAt 0)`. -/
 theorem dcWf_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) (m m' : Mem)
@@ -152,11 +137,16 @@ theorem dcWf_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
     ∃ b a', (ds.allM (dsF (c.hiAt 0))).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       r.headD 0 = (if b then 1 else 0) := by
   cases n with
-  | zero => simp [dcWf] at h
+  | zero => simp [dcWf.eq_1] at h
   | succ n =>
     have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
+    rw [dcWf.arm1] at h
+    rcases hgo : dcGoW n m (nhiW m ctx 0) off l with _ | ⟨r', m''⟩ <;> rw [hgo] at h
+    · rw [dcWf.k_nest_ds_closed_go.none] at h; cases h
+    rw [dcWf.k_nest_ds_closed_go.arm1] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact dcGoW_ok dn fe vis _ _ (by simpa using nhiW_toNat (nf := 0) hc hin hsz (by simpa using hhi)) n
-      m m' a off l ds r h hS hds hdi
+      m _ a off l ds r' hgo hS hds hdi
 
 /-! ## `nest_walk_stack` refines `nestWalkStack` -/
 

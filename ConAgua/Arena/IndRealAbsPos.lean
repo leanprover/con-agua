@@ -358,17 +358,19 @@ theorem ntWf_afr {k : Nat} {m m' : Mem} {vis C : Word} {r : List Word} (h : ntWf
 -- from IndPosSpec/NestCrest
 theorem dcGoW_afr : ∀ (n : Nat) (m m' : Mem) (hi off l : Word) (r : List Word),
     dcGoW n m hi off l = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, h => by simp [dcGoW] at h
+  | 0, _, _, _, _, _, _, h => by simp [dcGoW.eq_1] at h
   | n + 1, m, m', hi, off, l, r, h => by
-    unfold dcGoW dcK at h
+    simp only [dcGoW.eq_2, dcGoW.k_fvar_b.eq_def, dcGoW.k_nest_ds_closed_go.eq_def] at h
     afr_auto h [fvbF_afr, dcGoW_afr n _ _ _ _ _ _]
 
 -- from IndPosSpec/NestCrest
 theorem dcWf_afr {n : Nat} {m m' : Mem} {ctx off l : Word} {r : List Word} (h : dcWf n m ctx off l = some (r, m')) :
     AFr m m' := by
   cases n with
-  | zero => simp [dcWf] at h
-  | succ n => exact dcGoW_afr _ _ _ _ _ _ _ h
+  | zero => simp [dcWf.eq_1] at h
+  | succ n =>
+    simp only [dcWf.eq_2, dcWf.k_nest_ds_closed_go.eq_def] at h
+    afr_auto h [dcGoW_afr _ _ _ _ _ _ _]
 
 -- from IndPosSpec/NestCrest
 theorem cfW_afr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}

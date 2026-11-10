@@ -102,10 +102,10 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
   simp only at hW3
   rw [hs3] at hW3
   cases n with
-  | zero => simp [dcWf] at hW3
+  | zero => simp [dcWf.eq_1] at hW3
   | succ n' =>
   have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
-  obtain ⟨bc, a2, hrun2, hS2, hg2, hr2⟩ := dcWf_ok dn fe vis (n' + 1) m1 m3 a ctx dO dL c ds [r3.headD 0] hW3 hS1
+  obtain ⟨bc, a2, hrun2, hS2, hg2, hr2⟩ := dcWf_ok dn fe vis (n' + 1) m1 m3 a ctx dO dL c ds r3 hW3 hS1
     (hW.grow hg1).u.dec (hW.grow hg1).u.inn hhi0 ((hds.grow (OMono.decHL _ _) hg1).get (OMono.decHL _ _))
     (fun j hj => by have := hg1.iw; omega)
   have hg12 := hg1.trans hg2

@@ -69,19 +69,6 @@ theorem MFr.ofFvbF {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r,
     (fun b hb => .inl (by simp only [frA, List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
     (fun x hx => .inl (by simp only [frC, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
 
-theorem dcGoW_mfr : ∀ (n : Nat) (m m' : Mem) (hi off l : Word) (r : List Word),
-    dcGoW n m hi off l = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, h => by simp [dcGoW] at h
-  | n + 1, m, m', hi, off, l, r, h => by
-    unfold dcGoW dcK at h
-    mfr_auto h [MFr.ofFvbF, dcGoW_mfr n _ _ _ _ _ _]
-
-theorem dcWf_mfr {n : Nat} {m m' : Mem} {ctx off l : Word} {r : List Word} (h : dcWf n m ctx off l = some (r, m')) :
-    MFr [] [] m m' := by
-  cases n with
-  | zero => simp [dcWf] at h
-  | succ n => exact dcGoW_mfr _ _ _ _ _ _ _ h
-
 theorem bvbW_mfr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m h f = some (x, m')) : MFr [] [] m m' := by
   have hfr : BbFrame m m' := by
     match n, hb with
