@@ -4,13 +4,15 @@ public import ConAgua.Arena.IndPosSpec.CtxFields
 public import ConAgua.Arena.IndPosSpec.PiBWStage
 public import ConAgua.Arena.IndSumSpec.StructUsedLater
 public import ConAgua.Arena.IndDecStab
+import ConAgua.L.ModelGen
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 
 /-!
 # PfLook
 
-`NSB`, `NfsB`, `nestedW`, `hkW` and the lemmas only they use.
+`NSB`, `NfsB`, `nestedW` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -56,16 +58,11 @@ open L.Arena
 /-! ## `nest_pos_hole_kind`, `nest_pos_fvar` -/
 
 /-- The model of `nest_pos_hole_kind(ctx, kb, i)` (memory unchanged). -/
-def hkW (m : Mem) (ctx kb i : Word) : Option Word :=
-  if i < nhiW m ctx 0 then
-    (if 1152921504606846976 ≤ i - rdW (m.arr64 IW) (ctx + 4) then none
-     else if kb = 0 then some (1 + 8 * (i - rdW (m.arr64 IW) (ctx + 4)))
-     else some (2 + 8 * (i - rdW (m.arr64 IW) (ctx + 4))))
-  else some 3
-
-def hkWf : Nat → Mem → Word → Word → Word → Option Word
-  | 0, _, _, _, _ => none
-  | _ + 1, m, ctx, kb, i => hkW m ctx kb i
+l_model nestPosHoleKind_spec (p : Prog) (hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt)
+    (hp : p.lookup "nest_pos_hole_kind" = some nestPosHoleKindL)
+  fns [hp ↦ hkW ro]
+  specs [nestCtxHiAt_specE p hh n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 /-- The twin's field kind of a hole `i`. -/
 def holeKind (c : NestCtx) (kb i : Nat) : NestFieldKind :=

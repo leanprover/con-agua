@@ -127,11 +127,11 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   refine RefE.splitNot (fun hne hq => hne (UInt64.toNat_inj.mp (by rw [hni, ← hal]; simpa using hq)))
     (fun hq he => hq (by rw [hal, ← hni, he, beq_self_eq_true])) (fun _ _ _ => ErrClaim.fail _ _ (by decide))
     fun _ _ => ?_
-  rcases hk : hkWf (k + 1) m2 ctx kb i with _ | w
+  rcases hk : hkW m2 ctx kb i with _ | w
   · rw [liftE_none, pfvE.k_nest_pos_hole_kind.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, pfvE.k_nest_pos_hole_kind.arm1]
   have hU2 := hU1.grow hg2
-  have hw := hkW_ok (by simpa [hkWf] using hk) hU2.dec hU2.inn htop2 hhi (nestHoleAt_nP hnh)
+  have hw := hkW_ok hk hU2.dec hU2.inn htop2 hhi (nestHoleAt_nP hnh)
   exact RefE.ret rfl ⟨hS2, hg1.trans hg2, by simpa using hw,
     hP2, (haW_afr hha).trans (noaW_afr _ _ _ _ _ _ _ _ _ _ hoa)⟩
 
