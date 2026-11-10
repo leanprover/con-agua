@@ -2,6 +2,7 @@ module
 
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.CoreWalks
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.StubNames
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
@@ -149,16 +150,10 @@ theorem hffF_frame {m m' : Mem} {args r : List Word} (h : hffF m args = some (r,
   exact (run_memFrame hfProg_closed (by decide) (run_of_callW hc)).1
 
 /-- `fvar_b(f, e)` is `ab_fvb(e, f)`. -/
-theorem fvarBL_spec (p : Prog) (hp : AbsProg p) (hpf : p.lookup "fvar_b" = some L.Stubs.fvarBL)
-    (n : Nat) (s₀ : St) (f e : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "fvar_b" [f, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ fvbW n s₀.mem e f = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hpf]
-  simp only [callFn, L.Stubs.fvarBL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp n] <;>
-    finish
+l_model fvarBL_spec (p : Prog) (hp : AbsProg p) (hpf : p.lookup "fvar_b" = some L.Stubs.fvarBL)
+  fns [hpf ↦ fvbBW]
+  specs [abFvb_spec p hp n]
+  grind [arena_grind] pfuel
 
 /-- **`fvar_b`'s model refines `fvarB` under the stage relation** (replaces
 `IndStubs.fvarB_spec`). -/
@@ -171,7 +166,7 @@ theorem fvbF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (fvarBL_spec hfProg hfProg_abs rfl n _ f e) hc
-  rw [hs'] at hm
+  rw [hs'] at hm; simp only [fvbBW] at hm
   obtain ⟨a', hrun, hD, hfr⟩ := fvbW_okD n m m' a hS.check.arena e f _ he hm
   obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr (lt64A_of_all rfl) (lt64_of_all rfl)
     ((keepsW_fvarB _ _).cp_of_cpl.run hrun)
