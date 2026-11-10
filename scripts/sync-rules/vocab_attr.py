@@ -6,7 +6,9 @@ order (the ladder keeps the first that elaborates):
 
   sets      the encodings' grind sets (`SETS`) added to every `grind [`, `grind only [`, `sym [`,
             `sym only [` and `finish [` list that lacks them, and to a bare `finish`;
-  specs     the same, and the tagged-load spec set (`SPEC_SCOPES`, scoped `@[spec]` sets) opened
+  sets+     the same with the costly sets too (`SETS_PLUS`: definitions unfolded, kept out of the
+            everyday sets because every importer that names those pays for them);
+  specs     `sets+`, and the tagged-load spec set (`SPEC_SCOPES`, scoped `@[spec]` sets) opened
             in front of every tactic line that starts with `vcgen` or `sym` (vcgen reads one
             global `@[spec]` set, so a named set is a scoped one: `open scoped S in vcgen [...]`);
   iwok      `sets`, and a positional destructuring of the pool invariant (`obtain ⟨h1, …⟩ := X.iw`
@@ -14,12 +16,13 @@ order (the ladder keeps the first that elaborates):
             follows it (`exact ⟨…⟩`, or `refine ⟨?_, …⟩` and its bullets) and every `exact hN` of a
             destructured name by `IWOK_GRIND` (`IWOK`'s fields by name: ConAgua/Arena/IWFrame.lean).
 
-The sets live in ConAgua/Arena/ErecVocab.lean (`arena_grind`, `L.Arena.ErecSpec`) and
+The sets live in ConAgua/Arena/ErecVocab.lean (`arena_grind`, `erec_grind`, `L.Arena.ErecSpec`) and
 ConAgua/Arena/IWFrame.lean (`ind_grind`); a sync that moves another encoding adds its set here.
 """
 import re
 
 SETS = ["arena_grind"]
+SETS_PLUS = ["erec_grind"]
 SPEC_SCOPES = ["L.Arena.ErecSpec"]
 IWOK_GRIND = "grind [IWOK_iff, ind_grind, iwTop, erTop, erecTop1]"
 
@@ -132,7 +135,9 @@ def candidates(proof, ctx):
     out = []
     s = add_sets(proof)
     out.append(("sets", s))
-    out.append(("specs", open_specs(s)))
+    s2 = add_sets(s, SETS + SETS_PLUS)
+    out.append(("sets+", s2))
+    out.append(("specs", open_specs(s2)))
     w = iwok(s)
     if w is not None:
         out.append(("iwok", w))

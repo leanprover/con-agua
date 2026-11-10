@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.ErecRd
 import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.ErecGrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 
@@ -17,10 +18,13 @@ tops, and the tagged-load spec. A proof outside this file and the definitions' o
 (`EnvRec`, `Tiers`, `Env`, `ErecRd`) states its facts over these names and does not unfold them.
 
 **Attribute sets.**
-* `arena_grind` holds the equations over the named reads: `erRd` (its definition),
-  `erRd_get`, `erRd_foldN`, `aread_apply`, `erecPutMem_ctl`. A
-  `sym only [lang_grind, arena_grind, …] => vcgen … <;> finish` proof finds them without
-  naming them.
+* `arena_grind` holds the equations over the named reads: `erRd_get`, `aread_apply`,
+  `erecPutMem_ctl`. A `sym only [lang_grind, arena_grind, …] => vcgen … <;> finish` proof finds
+  them without naming them.
+* `erec_grind` holds `erRd`'s definition (a `finish` that compares a model's `erRd` with the
+  loads `vcgen` leaves): `finish [erec_grind]`. Not in `arena_grind`, and `erRd_foldN` (the
+  reverse equation) in no set: either one in `arena_grind` cost 8–92 % of the instructions of
+  modules with many tagged reads (DeclCanonSpec, ClassNPcOf; docs/design/syncvocab.md).
 * `L.Arena.ErecSpec` is the spec set of a tagged load for `vcgen` (`vcgen` reads one global
   `@[spec]` set; a scoped one is a named set): `open scoped L.Arena.ErecSpec in vcgen [...]`,
   or `open scoped L.Arena.ErecSpec in sym only [...] => vcgen ...`, adds `ld64_rdT_spec`,
@@ -295,8 +299,8 @@ end L.Rom
 /-! ## The attribute sets -/
 
 namespace L.Ind
-attribute [arena_grind] erRd
-attribute [arena_grind =] erRd_get erRd_foldN erecPutMem_ctl
+attribute [arena_grind =] erRd_get erecPutMem_ctl
+attribute [erec_grind] erRd
 end L.Ind
 
 attribute [arena_grind =] L.Arena.aread_apply

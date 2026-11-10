@@ -142,6 +142,19 @@ theorem IWGrow.put {m₀ m : Mem} {a v : Word} (hg : IWGrow m₀ m) (h : erTopOf
       simp [erOff, this, hg.er1Get i hi]
 
 
+/-- A frame that grew the pool by `N` words from the old top, leaving everything below as it
+was, is an `IWGrow`. -/
+theorem iwGrow_of_frame {m m' : Mem} {N : Word} (hf : MemFrame [IW] [200] m m')
+    (htop : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + N)
+    (hroom : iwTop m + N.toNat ≤ (m.arr64 IW).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hlow : ∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) : IWGrow m m' := by
+  refine { iw := ?_, er := ?_, iwGet := hlow, erGet := ?_, er1 := ?_, er1Get := ?_ }
+  · simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp only [iwTop] at hroom; omega
+  · simp only [erTop]; rw [hf.ctl 129 (by simp)]; exact Nat.le_refl _
+  · intro i _; rw [hf.arr EREC (by decide) (by decide)]
+  · simp only [erecTop1]; rw [hf.ctl 130 (by simp)]; exact Nat.le_refl _
+  · intro i _; rw [hf.arr (tier1 EREC) (by decide) (by decide)]
+
 /-! ## Reads the invariant decides -/
 
 /-- **`EREC⦃a⦄` below the tier-0 top is the tier-0 word `a`** (the pool is addressable: `IWOK.erCap`),
