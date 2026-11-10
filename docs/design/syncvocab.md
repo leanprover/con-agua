@@ -175,10 +175,26 @@ Sample line (reproof.md §3's 64 theorems, replay mode, base `09a78343a`, ronsyn
 |---|---:|---:|
 | (i) master | 19 | 26 |
 | (ii) codemod | 11 | 11 |
-| (iii) vocab | 5 | SAMPLE_VOCAB |
-| cumulative | 19 / 30 / 35 | SAMPLE_LINE |
+| (iii) vocab | 5 (`readers` 3, `readers+` 2) | 5 (`iwok` 1, then the rules file's `readers` 2, `readers+` 2) |
+| cumulative | 19 / 30 / 35 | **26 / 37 / 42** |
 
-RESULT_PROSE
+**26 / 37 / 42 of 64** (41 %, 58 %, 66 %) against 19 / 30 / 35. Rung (i) gains seven: the
+master proofs of `natIndOk_specW`, `natZeroOk_specW`, `natSuccOk_specW`, `blockShapeLps_spec`,
+`brw_spec`, `brg_spec` and `memberNamesCopy_spec` now find `erRd_get` (and the readers) through
+`arena_grind` with no edit, where ronsync2 pasted `erRd`/`erRd_get` into each `finish` list (and
+the `readers+` text rule broke three of them with `finish [erRd] (gen := 20)`). The `iwok` variant
+closes `StageR.set_iw`. Of reproof's four positional `IWOK` proofs three stay open:
+`StageR.set_top` builds the `IWOK` flattened inside its `StageR` (`⟨⟨check, ?_, …⟩, ht⟩`), which
+no text rule can tell apart from other tuples; `stripTW_ok` builds an `IWGrow` positionally (the
+hook has no `IWGrow` rule); in `pPrepCore_ok` the destructuring is rewritten but `grind` does not
+close the goal in that context (40 facts, frames as `PFr`, not `MemFrame`). Of the other
+"one vocabulary entry" theorems of reproof.md §3, `capsEqB_spec`, `rulesEq_spec` and
+`ciEqRest_spec` were real edits (a callee spec removed, one added, a proof routed through
+`rulesEqW_ok`). Without the rules file's `[vocab]` sections the hook closes 1 at rung (iii)
+(26 / 37 / 38): `bct_ref`, `tps_ref`, `decHL_grow` and `stripGoW_ok` need ronsync2's text rules
+(`aread_apply` into `simp only` lists, `rw` → `simp only` at a fold), which no attribute replaces,
+since `simp only` reads no attribute set. 33 lean runs, 3.9 CPU-min, 2.9 min wall at 4 jobs, peak
+1.3 GB.
 
 ## 6. The next sync's rules file
 
