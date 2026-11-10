@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.IndRealFvt
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import ConAgua.Arena.StageInst1
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
@@ -74,19 +75,10 @@ theorem adF_ok {P : Prog} {fF g : FnName} {op : Nat → EIdx → AM EIdx}
 /-! ## `get_app_fn_f` -/
 
 /-- The adapter `get_app_fn_f(f, e)` over its callee's run. -/
-def gafAdW (p : Prog) (n : Nat) (m : Mem) (f e : Word) : Option (List Word × Mem) :=
-  if f ≠ CWF then none else
-  ntBW (callW p n "get_app_fn" [e] m) fun r m' => some ([r.headD 0], m')
-
-theorem gafAd_spec (p : Prog) (hp : p.lookup "get_app_fn_f" = some getAppFnFL) (n : Nat) (s₀ : St)
-    (f e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "get_app_fn_f" [f, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ gafAdW p n s₀.mem f e = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, getAppFnFL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "get_app_fn"] <;>
-    finish (gen := 20) [gafAdW, ntBW, CWF]
+l_model gafAd_spec (p : Prog) (hp : p.lookup "get_app_fn_f" = some getAppFnFL)
+  fns [hp ↦ gafAdW list]
+  specs [callW_spec p n "get_app_fn"]
+  grind [arena_grind] finish [ntBW, CWF] gen 20 bind ntBW pfuel
 
 /-- `get_app_fn_f` and its callee. -/
 def gafProg : Prog := [("get_app_fn_f", getAppFnFL), ("get_app_fn", getAppFnL)]
@@ -123,19 +115,10 @@ theorem gafF_frame {m m' : Mem} {args r : List Word} (h : gafF m args = some (r,
 /-! ## `pi_result_f` -/
 
 /-- The adapter `pi_result_f(f, e)` over its callee's run. -/
-def pirAdW (p : Prog) (n : Nat) (m : Mem) (f e : Word) : Option (List Word × Mem) :=
-  if f ≠ CWF then none else
-  ntBW (callW p n "pi_result" [e] m) fun r m' => some ([r.headD 0], m')
-
-theorem pirAd_spec (p : Prog) (hp : p.lookup "pi_result_f" = some piResultFL) (n : Nat) (s₀ : St)
-    (f e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pi_result_f" [f, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ pirAdW p n s₀.mem f e = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, piResultFL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "pi_result"] <;>
-    finish (gen := 20) [pirAdW, ntBW, CWF]
+l_model pirAd_spec (p : Prog) (hp : p.lookup "pi_result_f" = some piResultFL)
+  fns [hp ↦ pirAdW list]
+  specs [callW_spec p n "pi_result"]
+  grind [arena_grind] finish [ntBW, CWF] gen 20 bind ntBW pfuel
 
 /-- `pi_result_f` and its callee. -/
 def pirProg : Prog := [("pi_result_f", piResultFL), ("pi_result", piResultL)]
@@ -172,33 +155,9 @@ theorem pirF_frame {m m' : Mem} {args r : List Word} (h : pirF m args = some (r,
 /-! ## `mk_app_n_f` -/
 
 /-- The model of `iw_to_spn(d, s, l)` by L fuel: `SPN[d + j] := IW[s + j]` for `j < l`. -/
-def i2sW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | k + 1, m, d, s, l =>
-    if l = 0 then some ([0], m)
-    else ntBW (i2sW k (m.set64 SPN d (rdW (m.arr64 IW) s)) (d + 1) (s + 1) (l - 1))
-      fun _ m' => some ([0], m')
-
-theorem i2sW_nil (k : Nat) (m : Mem) (d s l : Word) (h : l = 0) :
-    i2sW (k + 1) m d s l = some ([0], m) := by simp [i2sW, h]
-theorem i2sW_cons (k : Nat) (m : Mem) (d s l : Word) (h : l ≠ 0) :
-    i2sW (k + 1) m d s l = ntBW (i2sW k (m.set64 SPN d (rdW (m.arr64 IW) s)) (d + 1) (s + 1) (l - 1))
-      fun _ m' => some ([0], m') := by simp [i2sW, h]
-
-theorem i2s_spec (p : Prog) (hp : p.lookup "iw_to_spn" = some iwToSpnL) (k : Nat) :
-    ∀ (s₀ : St) (d s l : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "iw_to_spn" [d, s, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ i2sW k s₀.mem d s l = some (r, s'.mem); ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, iwToSpnL]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ d s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, iwToSpnL]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20) [i2sW_nil, i2sW_cons, ntBW]
+l_model i2s_spec (p : Prog) (hp : p.lookup "iw_to_spn" = some iwToSpnL)
+  fns [hp ↦ i2sW list]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
 
 theorem word_add_nat_succ (d : Word) (j : Nat) : d + (j + 1).toUInt64 = (d + 1) + j.toUInt64 := by
   apply UInt64.toNat_inj.mp
@@ -219,11 +178,11 @@ theorem i2sW_ok : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
   | succ k ih =>
     intro m m' d s l r h hb hw
     by_cases hl : l = 0
-    · rw [i2sW_nil k m d s l hl] at h
+    · rw [i2sW.arm1 (hc1 := hl)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl
       exact ⟨MemFrame.refl _ _ _, rfl, fun j hj => absurd hj (by simp), fun _ _ => rfl⟩
-    rw [i2sW_cons k m d s l hl] at h
+    rw [i2sW.arm2 (hc1 := hl)] at h
     obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K (K := (ntBW · _)) h rfl; rw [bW_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hl0 : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
@@ -254,24 +213,10 @@ theorem i2sW_ok : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
       intro he; subst he; omega
 
 /-- The adapter `mk_app_n_f(f, off, cnt)` over its callees' runs. -/
-def mknAdW (p : Prog) (n : Nat) (m : Mem) (f off cnt : Word) : Option (List Word × Mem) :=
-  if m.len64 SPN < rdW (m.arr64 CTL) 136 then none else
-  if m.len64 SPN - rdW (m.arr64 CTL) 136 < cnt then none else
-  ntBW (callW p n "iw_to_spn" [rdW (m.arr64 CTL) 136, off, cnt] m) fun _ m1 =>
-  ntBW (callW p n "mk_app_n" [f, rdW (m.arr64 CTL) 136, cnt]
-      (m1.set64 CTL 136 (rdW (m.arr64 CTL) 136 + cnt))) fun r m2 =>
-  some ([r.headD 0], m2.set64 CTL 136 (rdW (m.arr64 CTL) 136))
-
-theorem mknAd_spec (p : Prog) (hp : p.lookup "mk_app_n_f" = some mkAppNFL) (n : Nat) (s₀ : St)
-    (f off cnt : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "mk_app_n_f" [f, off, cnt]
-    ⦃fun r s' => LocEq s' s₀ ∧ mknAdW p n s₀.mem f off cnt = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, mkAppNFL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "iw_to_spn", callW_spec p n "mk_app_n"] <;>
-    finish (gen := 20) [mknAdW, ntBW]
+l_model mknAd_spec (p : Prog) (hp : p.lookup "mk_app_n_f" = some mkAppNFL)
+  fns [hp ↦ mknAdW list]
+  specs [callW_spec p n "iw_to_spn", callW_spec p n "mk_app_n"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW pfuel
 
 /-- `mk_app_n_f` and its callees. -/
 def mknProg : Prog :=

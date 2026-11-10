@@ -4,6 +4,7 @@ public import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.DerRel
@@ -495,35 +496,28 @@ theorem decCV_copy {a a' : Nat → Option Word} {cq q : Nat} {cv : IConstantVal}
 
 /-! ## `cv_new`: a fresh constant-value record -/
 
-/-- The memory after the four writes of `cv_new`. -/
-def cvNewMem (m1 : Mem) (q nm lo ll ty : Word) : Mem :=
-  erecPutMem (erecPutMem (erecPutMem (erecPutMem m1 q nm) (q + 1) lo) (q + 2) ll) (q + 3) ty
-
 /-- The model of `cv_new(nm, lo, ll, ty)`. -/
-def cvNewW (m : Mem) (nm lo ll ty : Word) : Option (Word × Mem) :=
-  match erAllocW m 4 with
-  | none => none
-  | some (q, m1) => some (q, cvNewMem m1 q nm lo ll ty)
+l_model cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hpu : p.lookup "erec_put" = some erecPut) (hp : p.lookup "cv_new" = some cvNew)
+  fns [hp ↦ cvNewW]
+  specs [erecAlloc_specW p ha n, erecPut_specW p hpu n]
+  grind [arena_grind]
 
-theorem cvNewMem_eq (m1 : Mem) (q nm lo ll ty : Word) :
-    cvNewMem m1 q nm lo ll ty = wrER m1 q [nm, lo, ll, ty] := by
-  simp only [cvNewMem, wrER]
-  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl]
-
-theorem cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
-    (hpu : p.lookup "erec_put" = some erecPut)
-    (hp : p.lookup "cv_new" = some cvNew) (n : Nat) (s₀ : St) (nm lo ll ty : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_new" [nm, lo, ll, ty]
-    ⦃fun r s' => LocEq s' s₀ ∧ cvNewW s₀.mem nm lo ll ty = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, cvNew]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        erecAlloc_specW p ha n, erecPut_specW p hpu n] <;>
-      finish [cvNewW, cvNewMem]
+/-- A run of `cv_new`: the allocation and the four writes. -/
+theorem cvNewW_some {m m' : Mem} {nm lo ll ty q : Word} (h : cvNewW m nm lo ll ty = some (q, m')) :
+    ∃ m1, erAllocW m 4 = some (q, m1) ∧ m' = wrER m1 q [nm, lo, ll, ty] := by
+  rcases h1 : erAllocW m 4 with _ | ⟨q1, m1⟩ <;> rw [cvNewW.arm1, h1] at h
+  · cases h
+  simp only [cvNewW.k_erec_alloc] at h
+  split at h; · cases h
+  split at h; · cases h
+  split at h; · cases h
+  split at h; · cases h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  refine ⟨m1, rfl, ?_⟩
+  simp only [wrER]
+  rw [show q1 + 1 + 1 = q1 + 2 by ac_rfl, show q1 + 2 + 1 = q1 + 3 by ac_rfl]
 
 /-- **`cv_new` with the name and level parameters of the record at `cq`** keeps the stage
 relation and decodes as `{cv with type := ty}`. -/
@@ -534,15 +528,7 @@ theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
     StageR vis fe m' a ∧ IWGrow m m' ∧ erOff q = erTopOf m q ∧ erTopOf m' q = erTopOf m q + 4 ∧
       q.toNat < 2 ^ 41 ∧ (q.toNat / 2 ^ 40 % 2 = 0 ↔ rdW (m.arr64 CTL) 1 = 0) ∧
       decCVp m' q.toNat = some { cv with type := decI ty } := by
-  simp only [cvNewW] at h
-  cases h1 : erAllocW m 4 with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨q1, m1⟩ := x
-  rw [h1] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  rw [cvNewMem_eq]
+  obtain ⟨m1, h1, rfl⟩ := cvNewW_some h
   obtain ⟨hS', hg, hq, htop, hq41, htier, hget⟩ := erRec_stage h1 hS
     [erRd m cq, erRd m (cq + 1), erRd m (cq + 2), ty] (by simp)
   refine ⟨hS', hg, hq, htop, hq41, htier, ?_⟩
@@ -564,7 +550,7 @@ theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
   have g3 := hget 3 (by simp)
   simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.add_zero, r0, r1, r2] at g0 g1 g2 g3
   have hlps' : (hslice? (erecP m) w1.toNat w2.toNat : Option (List NIdx)) = some lps := hlps
-  have hs : (hslice? (erecP (wrER m1 q1 [w0, w1, w2, ty])) w1.toNat w2.toNat : Option (List NIdx)) =
+  have hs : (hslice? (erecP (wrER m1 q [w0, w1, w2, ty])) w1.toNat w2.toNat : Option (List NIdx)) =
       some lps := by rw [r0, r1, r2] at hg; exact ArrExt.hslice? (IWGrow.ext hg) hlps'
   rw [r0, r1, r2]
   simp only [decCVp, decCV, hlist?, erA, nat?, hd?, g0, g1, Nat.add_assoc, g2, g3, hw0l, hty,

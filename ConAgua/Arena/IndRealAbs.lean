@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.IndRealSpine
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import ConAgua.Arena.CoreWalks
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndMaster
@@ -291,11 +292,8 @@ theorem wrER_afr (ws : List Word) (m : Mem) (q : Word) : AFr m (wrER m q ws) :=
 
 theorem cvNewW_afr {m m' : Mem} {nm lo ll ty q : Word} (h : cvNewW m nm lo ll ty = some (q, m')) :
     AFr m m' := by
-  simp only [cvNewW] at h
-  split at h; · cases h
-  rename_i q1 m1 h1
-  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  exact (erAllocW_afr h1).trans (by rw [cvNewMem_eq]; exact wrER_afr _ _ _)
+  obtain ⟨m1, h1, rfl⟩ := cvNewW_some h
+  exact (erAllocW_afr h1).trans (wrER_afr _ _ _)
 
 theorem sointernW_afr {m m' : Mem} {u r : Word} (h : sointernW m u = some (r, m')) : AFr m m' :=
   AFr.of_frame (sointernW_frame m u r m' h)
@@ -389,16 +387,10 @@ theorem abF_frame {m m' : Mem} {args r : List Word} (h : abF m args = some (r, m
   exact (run_memFrame abProg_closed (List.mem_cons_self ..) (run_of_callW hc)).1
 
 /-- The adapter forwards to `abs_entry`. -/
-theorem abAdapter_spec (n : Nat) (s₀ : St) (f e d k : Word) :
-    ⦃fun s => s = s₀⦄ invoke abProg (exec abProg (n + 1)) "abstract1_fast" [f, e, d, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ fwd1 (callW abProg n "abs_entry" [e, d, k] s₀.mem) =
-      some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ (show abProg.lookup "abstract1_fast" = some L.Checker.abstract1FastA from rfl)]
-  simp only [callFn, L.Checker.abstract1FastA]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      callW_spec abProg n "abs_entry"] <;>
-    finish [fwd1_some]
+l_model abAdapter_spec (p : Prog) (hp : p.lookup "abstract1_fast" = some L.Checker.abstract1FastA)
+  fns [hp ↦ abAdW list]
+  specs [callW_spec p n "abs_entry"]
+  grind [arena_grind] pfuel
 
 /-- **`abstract1_fast` refines `abstract1Fast coreWalkFuel` under the stage relation and a
 well-formed `abstract1` memo** (replaces `IndStubs.abstract1Fast_spec`); the memo is well formed
@@ -413,9 +405,9 @@ theorem abF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨n, hc⟩ := callF_run h
   rcases n with _ | n
   · rw [callW_zero] at hc; cases hc
-  obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (abAdapter_spec n _ CWF e d k) hc
+  obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (abAdapter_spec abProg rfl n _ CWF e d k) hc
   obtain ⟨⟨rI, mI⟩, hi, hm⟩ := of_K hm rfl
-  simp only [fwd1, Option.some.injEq, Prod.mk.injEq] at hm
+  simp only [abAdW.k_abs_entry, Option.some.injEq, Prod.mk.injEq] at hm
   obtain ⟨rfl, hmI⟩ := hm
   rw [hs'] at hmI
   subst hmI
