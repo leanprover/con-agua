@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndPartsSpec.BpcW
 import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
 import ConAgua.Arena.IndPartsSpec.PlW
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons

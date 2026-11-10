@@ -1,6 +1,8 @@
 module
 
-public import ConAgua.Arena.IndPartsSpec.BpcW
+public import ConAgua.Arena.IndCopy2
+import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.Env
