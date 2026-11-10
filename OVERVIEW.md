@@ -428,7 +428,7 @@ The checker mirrors the twin function for function. Each L function has a
 twin function it stands for (a citation line names it, §10.1), and a
 refinement theorem: if the L function returns, the twin function succeeds on a
 related state with a related result
-([`RefAM`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/IndIface.lean#L359-L370),
+([`RefAM`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/IndIface.lean#L358-L369),
 the shape most refinements have). The relations say how L's arrays represent
 the twin's state (§6, §7). The refinements compose along entry 1's stages
 ([the stage specs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L97-L130)) and the stream index's build into
