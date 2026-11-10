@@ -7,6 +7,8 @@ import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndDeclConstsTable
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.IndDeclConsts
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -112,72 +114,7 @@ theorem envPush_stageE {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSet
   rw [hm] at hE ⊢
   exact ⟨(StageR.of_own hS hE).1, (StageR.of_own hS hE).2, _, _, _, rfl⟩
 
-/-! ## The models -/
-
-mutual
-/-- **The model of `ifenv_push_all(vis, o, l)`** at exec fuel `n`. -/
-def paW (p : Prog) : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, vis, o, l =>
-    if l = 0 then some ([vis], m)
-    else paK1 p n o l (callW p n "env_push" [vis, rdW (m.arr64 IW) o] m)
-def paK1 (p : Prog) (n : Nat) (o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (v, m) => paK2 (paW p n m (v.headD 0) (o + 1) (l - 1))
-def paK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-end
-
-mutual
-/-- **The model of `ifenv_push_tables(o, l)`** at exec fuel `n`. -/
-def ptW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, o, l =>
-    if l = 0 then some ([0], m)
-    else ptK1 p n o l (callW p n "env_push_table" [rdW (m.arr64 IW) o] m)
-def ptK1 (p : Prog) (n : Nat) (o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => ptK2 (ptW p n m (o + 1) (l - 1))
-def ptK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => some ([0], m)
-end
-
-def ipdK2 (v : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => some ([v.headD 0], m)
-
-def ipdK1 (p : Prog) (n : Nat) (qo ql : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (v, m) => ipdK2 v (callW p n "ifenv_push_tables" [qo, ql] m)
-
-/-- **The model of `ifenv_push_delta(vis, lo, ll, qo, ql)`.** -/
-def ipdW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, vis, lo, ll, qo, ql => ipdK1 p n qo ql (callW p n "ifenv_push_all" [vis, lo, ll] m)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (vis o l qo ql : Word) (r : List Word)
-theorem paW_nil (h : l = 0) : paW p (n + 1) m vis o l = some ([vis], m) := by simp [paW, h]
-theorem paW_cons (h : l ≠ 0) : paW p (n + 1) m vis o l =
-    paK1 p n o l (callW p n "env_push" [vis, rdW (m.arr64 IW) o] m) := by simp [paW, h]
-theorem paK1_some : paK1 p n o l (some (r, m)) = paK2 (paW p n m (r.headD 0) (o + 1) (l - 1)) := by
-  simp [paK1]
-theorem paK2_some : paK2 (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem ptW_nil (h : l = 0) : ptW p (n + 1) m o l = some ([0], m) := by simp [ptW, h]
-theorem ptW_cons (h : l ≠ 0) : ptW p (n + 1) m o l =
-    ptK1 p n o l (callW p n "env_push_table" [rdW (m.arr64 IW) o] m) := by simp [ptW, h]
-theorem ptK1_some : ptK1 p n o l (some (r, m)) = ptK2 (ptW p n m (o + 1) (l - 1)) := by simp [ptK1]
-theorem ptK2_some : ptK2 (some (r, m)) = some ([0], m) := rfl
-theorem ipdW_succ : ipdW p (n + 1) m vis o l qo ql =
-    ipdK1 p n qo ql (callW p n "ifenv_push_all" [vis, o, l] m) := rfl
-theorem ipdK1_some : ipdK1 p n qo ql (some (r, m)) =
-    ipdK2 r (callW p n "ifenv_push_tables" [qo, ql] m) := rfl
-theorem ipdK2_some (v : List Word) : ipdK2 v (some (r, m)) = some ([v.headD 0], m) := rfl
-end arms
-attribute [ind_grind] paW_nil paW_cons paK1_some paK2_some ptW_nil ptW_cons ptK1_some ptK2_some ipdW_succ
-  ipdK1_some ipdK2_some
+/-! ## The models (generated) -/
 
 /-- The lookups the pushes take. -/
 structure PdProg (p : Prog) : Prop where
@@ -189,52 +126,23 @@ structure PdProg (p : Prog) : Prop where
   pts : p.lookup "ifenv_push_tables" = some ifenvPushTables
   pd : p.lookup "ifenv_push_delta" = some ifenvPushDelta
 
-theorem pa_spec {p : Prog} (hP : PdProg p) (n : Nat) :
-    ∀ (s₀ : St) (vis o l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "ifenv_push_all" [vis, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ paW p n s₀.mem vis o l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis o l; rw [invoke_eq _ hP.pa]; simp only [callFn, ifenvPushAll]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis o l
-    rw [invoke_eq _ hP.pa]
-    simp only [callFn, ifenvPushAll]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "env_push", ih] <;>
-      finish (gen := 20) [rdW_eq]
+/-- **`ifenv_push_all(vis, o, l)`'s model `paW`.** -/
+l_model pa_spec (p : Prog) (hP : PdProg p)
+  fns [hP.pa ↦ paW list]
+  specs [callW_spec p n "env_push"]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-theorem pt_spec {p : Prog} (hP : PdProg p) (n : Nat) :
-    ∀ (s₀ : St) (o l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "ifenv_push_tables" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ptW p n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ o l; rw [invoke_eq _ hP.pts]; simp only [callFn, ifenvPushTables]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o l
-    rw [invoke_eq _ hP.pts]
-    simp only [callFn, ifenvPushTables]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "env_push_table", ih] <;>
-      finish (gen := 20) [rdW_eq]
+/-- **`ifenv_push_tables(o, l)`'s model `ptW`.** -/
+l_model pt_spec (p : Prog) (hP : PdProg p)
+  fns [hP.pts ↦ ptW list]
+  specs [callW_spec p n "env_push_table"]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-theorem pd_spec {p : Prog} (hP : PdProg p) (n : Nat) (s₀ : St) (vis lo ll qo ql : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "ifenv_push_delta" [vis, lo, ll, qo, ql]
-    ⦃fun r s' => LocEq s' s₀ ∧ ipdW p n s₀.mem vis lo ll qo ql = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hP.pd]
-  simp only [callFn, ifenvPushDelta]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        callW_spec p n "ifenv_push_all", callW_spec p n "ifenv_push_tables"] <;>
-      finish (gen := 20) [rdW_eq]
+/-- **`ifenv_push_delta(vis, lo, ll, qo, ql)`'s model `ipdW`.** -/
+l_model pd_spec (p : Prog) (hP : PdProg p)
+  fns [hP.pd ↦ ipdW list]
+  specs [callW_spec p n "ifenv_push_all", callW_spec p n "ifenv_push_tables"]
+  grind [arena_grind] simp []
 
 /-! ## The models against the twin -/
 
@@ -249,12 +157,12 @@ theorem pa_ok {p : Prog} (hP : PdProg p) {a : AState} (n : Nat) :
   intro m m' vis o l fe cis r h hS hM hd hb
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   by_cases hl : l = 0
-  · rw [paW_nil p n m vis o l hl] at h
+  · rw [paW.arm1 p n m vis o l hl] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : cis = [] := by subst hl; simpa [decPL] using hd.symm
     subst this
     exact ⟨hS, hM, IWGrow.refl m⟩
-  rw [paW_cons p n m vis o l hl] at h
+  rw [paW.arm2 p n m vis o l hl] at h
   obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
     ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   rw [hL] at hd
@@ -268,13 +176,13 @@ theorem pa_ok {p : Prog} (hP : PdProg p) {a : AState} (n : Nat) :
     obtain ⟨w, hw, rfl⟩ := hpv
     simp only [rdW, hw, Option.getD_some]
   rcases h1 : callW p n "env_push" [vis, rdW (m.arr64 IW) o] m with _ | ⟨v, m1⟩
-  · rw [h1] at h; simp [paK1] at h
-  rw [h1, paK1_some] at h
+  · rw [h1, paW.k_env_push.none] at h; cases h
+  rw [h1, paW.k_env_push.arm1] at h
   obtain ⟨hS1, hg1, w, c, q, hm1⟩ := envPush_stageE hP.rs hP.push h1 hS (by rw [hrd]; exact hci)
   have hM1 : BkMem m1 := by rw [hm1]; exact hM.ofEnv (ownSet_frame _ _ _ _) (own_rng _)
   rcases h2 : paW p n m1 (v.headD 0) (o + 1) (l - 1) with _ | ⟨r2, m2⟩
-  · rw [h2] at h; simp [paK2] at h
-  rw [h2, paK2_some] at h
+  · rw [h2, paW.k_ifenv_push_all.none] at h; cases h
+  rw [h2, paW.k_ifenv_push_all.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hl1 : (l - 1).toNat = L := by
@@ -296,12 +204,12 @@ theorem pt_ok {p : Prog} (hP : PdProg p) {a : AState} {vis : Word} (n : Nat) :
   intro m m' o l fe ts r h hS hM hd hb
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   by_cases hl : l = 0
-  · rw [ptW_nil p n m o l hl] at h
+  · rw [ptW.arm1 p n m o l hl] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : ts = [] := by subst hl; simpa [decPL] using hd.symm
     subst this
     exact ⟨hS, hM, IWGrow.refl m⟩
-  rw [ptW_cons p n m o l hl] at h
+  rw [ptW.arm2 p n m o l hl] at h
   obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
     ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   rw [hL] at hd
@@ -315,13 +223,13 @@ theorem pt_ok {p : Prog} (hP : PdProg p) {a : AState} {vis : Word} (n : Nat) :
     obtain ⟨w, hw, rfl⟩ := hpv
     simp only [rdW, hw, Option.getD_some]
   rcases h1 : callW p n "env_push_table" [rdW (m.arr64 IW) o] m with _ | ⟨v, m1⟩
-  · rw [h1] at h; simp [ptK1] at h
-  rw [h1, ptK1_some] at h
+  · rw [h1, ptW.k_env_push_table.none] at h; cases h
+  rw [h1, ptW.k_env_push_table.arm1] at h
   obtain ⟨hS1, hg1, w, c, hm1⟩ := envPushTable_stageE hP.tos hP.pt h1 hS (by rw [hrd]; exact hti)
   have hM1 : BkMem m1 := by rw [hm1]; exact hM.ofEnv (tblSet_frame _ _ _) (otx_rng _)
   rcases h2 : ptW p n m1 (o + 1) (l - 1) with _ | ⟨r2, m2⟩
-  · rw [h2] at h; simp [ptK2] at h
-  rw [h2, ptK2_some] at h
+  · rw [h2, ptW.k_ifenv_push_tables.none] at h; cases h
+  rw [h2, ptW.k_ifenv_push_tables.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hl1 : (l - 1).toNat = L := by
@@ -339,20 +247,20 @@ theorem pdRefS_of {G : Prop} {p : Prog} (hP : PdProg p)
   rcases c : callE p n "ifenv_push_delta" [vis, lo, ll, qo, ql] m with e | ⟨r, m'⟩
   · exact fun hG => ErrClaim.of_callE_nv (hGnv hG) (_root_.L.Checker.nv_mem (by decide +kernel)) c
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (pd_spec hP n _ vis lo ll qo ql) (callW_of_callE c)
+    (pd_spec p hP n _ vis lo ll qo ql) (callW_of_callE c)
   rcases n with _ | n
   · simp [ipdW] at hW
-  rw [ipdW_succ] at hW
+  rw [ipdW.arm1] at hW
   rcases h1 : callW p n "ifenv_push_all" [vis, lo, ll] m with _ | ⟨v, m1⟩
-  · rw [h1] at hW; simp [ipdK1] at hW
-  rw [h1, ipdK1_some] at hW
+  · rw [h1, ipdW.k_ifenv_push_all.none] at hW; cases hW
+  rw [h1, ipdW.k_ifenv_push_all.arm1] at hW
   rcases h2 : callW p n "ifenv_push_tables" [qo, ql] m1 with _ | ⟨u, m2⟩
-  · rw [h2] at hW; simp [ipdK2] at hW
-  rw [h2, ipdK2_some] at hW
+  · rw [h2, ipdW.k_ifenv_push_tables.none] at hW; cases hW
+  rw [h2, ipdW.k_ifenv_push_tables.arm1] at hW
   obtain ⟨rfl, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (pa_spec hP n _ vis lo ll) h1
+  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (pa_spec p hP n _ vis lo ll) h1
   obtain ⟨hS1, hM1, hg1⟩ := pa_ok hP n _ _ _ _ _ fe cis v hW1 hS hM hdc hbc
-  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩) (pt_spec hP n _ qo ql) h2
+  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩) (pt_spec p hP n _ qo ql) h2
   obtain ⟨hS2, hM2, hg2⟩ := pt_ok hP (vis := v.headD 0) n _ _ _ _ _ ts u hW2 hS1 hM1
     (decPL_tbl_grow hg1 hbt hdt) (Nat.le_trans hbt hg1.iw)
   rw [← hm]
