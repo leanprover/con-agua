@@ -160,34 +160,6 @@ l_model classGenMinorTyBody_spec (p : Prog) (h : MnProg p)
     classGenMinorTyIhsGo_spec p h n, classGenMinorTyConcl_spec p h n]
   grind [arena_grind] finish [rdW_eq] gen 20
 
-def cK4 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
-
-def mnK1 (n : Nat) (g c x d : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    cK4 (bW n m1 g c x d (rdW (m1.arr64 IW) (r1.headD 0 + 1)) (rdW (m1.arr64 IW) (r1.headD 0 + 2))
-      (rdW (m1.arr64 IW) (r1.headD 0 + 3)) (rdW (m1.arr64 IW) (r1.headD 0 + 4)))
-
-/-- **The model of `class_gen_minor_ty`.** -/
-def mnW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, g, c, x, d =>
-    mnK1 n g c x d (tmaW n m (rdW (m.arr64 IW) (g + 3)) (rdW (m.arr64 IW) (g + 4)) c)
-
-section arms2
-variable (n : Nat) (m m1 : Mem) (g c x d : Word) (r r1 : List Word)
-theorem cK4_some : cK4 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-theorem mnW_eq : mnW (n + 1) m g c x d =
-    mnK1 n g c x d (tmaW n m (rdW (m.arr64 IW) (g + 3)) (rdW (m.arr64 IW) (g + 4)) c) := rfl
-theorem mnK1_some : mnK1 n g c x d (some (r1, m1)) =
-    cK4 (bW n m1 g c x d (rdW (m1.arr64 IW) (r1.headD 0 + 1)) (rdW (m1.arr64 IW) (r1.headD 0 + 2))
-      (rdW (m1.arr64 IW) (r1.headD 0 + 3)) (rdW (m1.arr64 IW) (r1.headD 0 + 4))) := rfl
-end arms2
-
-attribute [ind_grind] cK4_some mnW_eq mnK1_some
-
 section specs
 variable (p : Prog) (h : MnProg p)
 include h
@@ -205,21 +177,14 @@ theorem classGenMinorCi_spec (n : Nat) (s₀ : St) (ci : Word) :
   all_goals (try simp only [Locals.init, List.getD_cons_zero, BinOp.eval] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
-theorem classGenMinorTy_spec (n : Nat) (s₀ : St) (g c x d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ty" [g, c, x, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ mnW n s₀.mem g c x d = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.mn]
-  simp only [callFn, classGenMinorTy]
-  rcases n with _ | n
-  · vcgen [exec] <;> grind
-  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n, classGenMinorCi_spec p h n,
-    classGenMinorTyBody_spec p h n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init,
-    List.getD_cons_zero, List.getD_cons_succ, BinOp.eval, Nat.reduceEqDiff, reduceIte] at *)
-  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
-
 end specs
+
+/-- **`class_gen_minor_ty` is its model `mnW`** (generated). -/
+l_model classGenMinorTy_spec (p : Prog) (h : MnProg p)
+  fns [h.mn ↦ mnW list]
+  specs [targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n, classGenMinorCi_spec p h n,
+    classGenMinorTyBody_spec p h n]
+  grind [arena_grind, ind_grind] finish [rdW_eq]
 
 /-! ## Relational lemmas: the inductive hypothesis -/
 
@@ -747,7 +712,7 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       (fun b a' x => KP vis fe m decOE b a' x ∧ AbsOK b.2) := by
   rcases n with _ | n
   · exact RSim.none
-  rw [mnW_eq]
+  rw [mnW.arm1]
   unfold ConRon.Arena.ClassGen.minorTy
   have hsz := hS.iw.iwSize
   obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG
@@ -760,12 +725,12 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     by_cases hl : l3 = 0
     · have := iwN_rdW h3 (by omega); omega
     · have := rec2DecB_PL_top hcls hl; omega
-  refine RSim.bind (K := mnK1 n g c x d) rfl (RSim.withF (rec2SimTMA dn vis fe n m a _ _ c G.cls hS
+  refine RSim.bind (K := mnW.k_target_major_at n g c x d) rfl (RSim.withF (rec2SimTMA dn vis fe n m a _ _ c G.cls hS
     (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3)) (fun _ hb => tmaW_afr hb)) ?_
   rintro ⟨r1, m1⟩ tm a1 - ⟨⟨hS1, hg1, hTM, hds⟩, hf1⟩
   have hA1 := hf1 hA
   dsimp only at hS1 hg1 hTM hds
-  rw [mnK1_some]
+  rw [mnW.k_target_major_at.arm1]; simp only [List.headD_cons]
   have hsz1 := hS1.iw.iwSize
   obtain ⟨-, hlv, ⟨o, l, ho, hl, -⟩, hnpc, -⟩ := rec2DecTM_parts hTM
   have hds1 := hds o l ho hl
@@ -778,7 +743,7 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [evl, eo, el, en]
   rw [← to, ← tl] at hds1
   rcases n with _ | n
-  · intro b hb; simp [bW, cK4] at hb
+  · intro b hb; simp [bW, mnW.k_class_gen_minor_ty_body] at hb
   rw [bW.arm1]
   -- the constructor's words
   have hX1 := hX.stab (decCC_mono _) m1 hg1
@@ -789,7 +754,7 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [enF, evD]
   have ho := simOpenPisF (k := UInt64.ofNat X.nF) (i := d) hS1 hA1 hvD
   rw [tnF, dvD] at ho
-  refine RSim.bind (K := fun o => cK4 (bW.k_open_pis_at_fvars_f n g c x d vl _ _ _ o)) rfl ho ?_
+  refine RSim.bind (K := fun o => mnW.k_class_gen_minor_ty_body (bW.k_open_pis_at_fvars_f n g c x d vl _ _ _ o)) rfl ho ?_
   rintro ⟨r2, m2⟩ o2 a2 - ⟨⟨hS2, hg2, ho2⟩, hA2⟩
   dsimp only at hS2 hg2 ho2
   rcases o2 with _ | p2
@@ -805,7 +770,7 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨vN, evN, hvN, dvN⟩ := iwH_rdW_at (w := x) (k := 5) htyN2 hS2.iw.iwSize
   simp only [show UInt64.ofNat 5 = (5 : Word) from rfl] at evN
   rw [evN]
-  refine RSim.bind (K := fun o => cK4 (bW.k_target_pi_doms_with n g c x d vl _ _ _ _ _ _ o)) rfl (Q1 := fun b a' x =>
+  refine RSim.bind (K := fun o => mnW.k_class_gen_minor_ty_body (bW.k_target_pi_doms_with n g c x d vl _ _ _ _ _ _ o)) rfl (Q1 := fun b a' x =>
     StageR vis fe b.2 a' ∧ IWGrow m2 b.2 ∧ PdRes b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r3, m3⟩ h3
     obtain ⟨res', a', hrun, hS', hg, hres⟩ := pdW_ok dn vis fe n m2 m3 a2 _ _ vN r3 fvs h3 hS2 hvN hfvs
@@ -832,7 +797,7 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       match X.kinds.getD i ClassField.ordinary with
       | ClassField.recursive t tele => some (i, t, tele)
       | ClassField.ordinary => none) := rec2Recs_zero X
-  refine RSim.bind (K := fun o => cK4 (bW.k_class_gen_minor_ty_ihs_go n g c x d vl _ _ _ _ _ _ o)) rfl
+  refine RSim.bind (K := fun o => mnW.k_class_gen_minor_ty_body (bW.k_class_gen_minor_ty_ihs_go n g c x d vl _ _ _ _ _ _ o)) rfl
     (hr.symm ▸ hi : RSim _ (ConRon.Arena.ClassGen.minorTy.ihsGo G X d.toNat fvs ws 0 _) a3 _) ?_
   rintro ⟨r4, m4⟩ o4 a4 - ⟨hS4, hg4, ho4, hA4⟩
   dsimp only at hS4 hg4 ho4
@@ -842,15 +807,15 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [bW.k_class_gen_minor_ty_ihs_go.arm2 (hc1 := by rw [h41]; decide)]
   have hg14 := hg13.trans hg4
   rcases n with _ | n
-  · intro b hb; simp [cW, bW.k_class_gen_minor_ty_concl, cK4] at hb
+  · intro b hb; simp [cW, bW.k_class_gen_minor_ty_concl, mnW.k_class_gen_minor_ty_body] at hb
   have hc := cW_sim (vis := vis) (fe := fe) n m4 a4 g c x d vl _ _ _ _ _ _ _ _ G X tm.lvls tm.nPc
     tm.ds fvs ihs hS4 (hG.grow (decCG_mono _) hg14) hns (hX.grow (decCC_mono _) hg14) hrH hvl dvl
     (hds1.grow (OMono.decHL _ _) (hg2.trans (hg3.trans hg4))) tn (by rw [decHL_grow (hg3.trans hg4) hfb]; exact hfvs)
     (Nat.le_trans hfb (hg3.trans hg4).iw) hihs hib hA4
   rw [hrd] at hc
-  refine RSim.bindPure (K := fun o => cK4 (bW.k_class_gen_minor_ty_concl o)) rfl hc ?_
+  refine RSim.bindPure (K := fun o => mnW.k_class_gen_minor_ty_body (bW.k_class_gen_minor_ty_concl o)) rfl hc ?_
   rintro ⟨r5, m5⟩ o5 a5 - ⟨⟨hS5, hg5, ho5⟩, hA5⟩
-  simp only [bW.k_class_gen_minor_ty_concl.arm1, cK4_some]
+  simp only [bW.k_class_gen_minor_ty_concl.arm1, mnW.k_class_gen_minor_ty_body.arm1]
   refine RSim.pure_some ⟨⟨hS5, hg14.trans hg5, ?_⟩, hA5⟩
   cases o5 with
   | none => exact ho5
