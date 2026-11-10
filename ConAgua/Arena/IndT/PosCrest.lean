@@ -164,8 +164,8 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
   have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
   have hrdt : rdW (m1.arr64 (tierA EREC ((cv + 3) >>> 40))) (cv + 3 &&& 1099511627775) = wt := by
-    change erRdT m1 (cv + 3) = wt
-    rw [erRdT_frame (erToIwW_iwFr (show erToIwW _ m _ _ = some (r1, m1) from hlp)) (by decide) (by decide)]
+    change erRd m1 (cv + 3) = wt
+    rw [erRd_frame (erToIwW_iwFr (show erToIwW _ m _ _ = some (r1, m1) from hlp)) (by decide) (by decide)]
     exact (erRd_of_erecP (a := cv + 3) (by rw [e3]; exact hwt)).1
   rw [hrdt]
   refine RefE.bindLift (fun _ => ncrE.k_inst_lp_fast.none ..) fun r2 m2 hil => ?_

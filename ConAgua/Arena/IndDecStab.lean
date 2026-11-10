@@ -540,7 +540,7 @@ theorem truncM_iw_get? (m : Mem) (i : Nat) :
 /-- The cut leaves the record pool. -/
 theorem truncM_erA (m : Mem) : erA (truncM m) = erA m := by
   funext i
-  simp +decide only [erA, erecP, erecTop, erecTop1, truncM, Mem.arr64, ite_false, tier1]
+  simp +decide only [erA, erecP, erTop, erecTop1, truncM, Mem.arr64, ite_false, tier1]
   rfl
 
 theorem truncM_er_get? (m : Mem) (i : Nat) : erA (truncM m) i = erA m i := by

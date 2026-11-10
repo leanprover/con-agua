@@ -61,7 +61,7 @@ def findProjK (T i : Word) (res : Option (List Word × Mem)) : Option (Word × W
   | none => none
   | some (r, m₁) =>
     if r.headD 0 = 0 then some (0, 0, m₁)
-    else if i < erRdT m₁ (r.headD 0 - 1 + 7) then some (1, r.headD 0 - 1, m₁)
+    else if i < erRd m₁ (r.headD 0 - 1 + 7) then some (1, r.headD 0 - 1, m₁)
     else some (0, 0, m₁)
 
 theorem findProj_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (vis T i : Word) :
@@ -115,7 +115,7 @@ theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   have hfT : fe.findTable? (decI T) = some tbl := by rw [hft, tblFound, ite_eq_right h0, htbl]
   rw [← h1] at htbl
   obtain ⟨w, hw7, hnf⟩ := decTbl_numFields htbl
-  have hrd : erRdT s₀.mem (r₁.headD 0 - 1 + 7) = w := (erRdOK s₀.mem).offN (k := 7) hw7 (by decide)
+  have hrd : erRd s₀.mem (r₁.headD 0 - 1 + 7) = w := (erRdOK s₀.mem).offN (k := 7) hw7 (by decide)
   rw [hrd] at hW
   by_cases bi : i < w
   · rw [ite_eq_left bi] at hW

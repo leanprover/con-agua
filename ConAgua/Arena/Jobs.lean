@@ -420,11 +420,6 @@ def jobMem (m₁ : Mem) (k : Word) : Mem :=
   ((m₁.set64 CTL 133 (rdW (m₁.arr64 CTL) 133 + 1)).set64 CTL 134
     (rdW ((m₁.set64 CTL 133 (rdW (m₁.arr64 CTL) 133 + 1)).arr64 FIRSTS) k)).set64 CTL 135 k
 
-/-- `iw_reset` keeps the pool's bounds (its top moves to `0`). -/
-theorem IWOK.reset {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 200 0) :=
-  L.Ind.IWOK.of_iw ((MemFrame.setCtl m 200 0).mono (by simp) (by simp)) h
-    (by simp [iwTop, rdW_set64, h.ctl])
-
 theorem envArrs_ne_ctl : ∀ b ∈ envArrs, b ≠ CTL := by decide
 
 /-- **What a job's callees start from**, at position `k` with the twin's state `a`: the stage
@@ -520,7 +515,7 @@ theorem JobM.stage {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
       h.pinsR.frame (fun b hb => by simp at hb) hf, hE3,
       h.mode.frame hf (by decide) (by decide)⟩
   have hIW : L.Ind.IWOK m3 :=
-    IWOK.frame hf3 (by simp) (by simp) (by decide) (by decide) (hm2 ▸ IWOK.reset h.iw) (by simp) (by decide)
+    IWOK.frame hf3 (by simp) (by simp) (by decide) (by decide) (hm2 ▸ h.iw.reset) (by simp) (by decide)
   refine ⟨⟨⟨hCK, hIW⟩, by rw [eA _ (by decide), eA _ (by decide)]; exact h.decls, ?_, ?_,
     by rw [pinW_frame hf (by simp)]; exact h.flag, ?_, hI3⟩,
     by rw [eC 130 (by decide) (by decide) (by decide) (by decide)]; exact h.top1⟩
@@ -705,7 +700,7 @@ theorem JobM.ofDrop {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Na
   have h129 : rdW ((m₁.set64 CTL 130 0).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := by
     rw [e7 _ (by decide), hCl.ctl hf (by decide)]
   have hgrow : ErecGrow m₀ (m₁.set64 CTL 130 0) :=
-    ⟨by have := hg.er; simp only [L.Ind.erTop] at this; simp only [erecTop, h129]; exact this,
+    ⟨by have := hg.er; simp only [erTop] at this; simp only [erTop, h129]; exact this,
       fun i hi => by rw [hE]; exact hg.erGet i hi,
       by simp [erecTop1, h0], fun i hi => by simp [erecTop1, h0] at hi⟩
   have hI7 : IndexR (m₁.set64 CTL 130 0) I := hI.grow hidx h128 hgrow.ext

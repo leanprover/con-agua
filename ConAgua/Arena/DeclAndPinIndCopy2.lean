@@ -80,7 +80,7 @@ theorem erecP_f {m : Mem} (hW : IWOK m) {y : Nat} (hy : y < fTop m) :
   by_cases hf : flg m = 0
   · have e1 : fB m = 0 := by simp [fB, hf]
     have e2 : fT m = EREC := by simp [fT, hf]
-    have e3 : fTop m = erecTop m := by simp [fTop, fC, hf, erecTop]
+    have e3 : fTop m = erTop m := by simp [fTop, fC, hf, erTop]
     rw [e1, e2, Nat.zero_add, ite_eq_left (by omega), ite_eq_left (by omega), Nat.mod_eq_of_lt hy40,
       ite_eq_left (by omega)]
   · have e1 : fB m = 2 ^ 40 := by simp [fB, hf]
@@ -212,8 +212,8 @@ theorem grow (h : ErW W m m') (hn : ∀ i, i < fTop m → ¬ W i) : ErecGrow m m
       have eC : fC m = 129 := by simp [fC, hf]
       have e130 := h.ctl 130 (by rw [eC]; decide)
       have e1 := h.arr (tier1 EREC) (by rw [eT]; decide) (by decide)
-      have ht' : fTop m' = erecTop m' := by simp [fTop, h.fC_eq, eC, erecTop]
-      have ht0 : fTop m = erecTop m := by simp [fTop, eC, erecTop]
+      have ht' : fTop m' = erTop m' := by simp [fTop, h.fC_eq, eC, erTop]
+      have ht0 : fTop m = erTop m := by simp [fTop, eC, erTop]
       rw [eT] at hg
       exact ⟨by omega, fun i hi => hg i (by omega) (hn i (by omega)),
         by simp [erecTop1, e130], fun i _ => by rw [e1]⟩
@@ -224,7 +224,7 @@ theorem grow (h : ErW W m m') (hn : ∀ i, i < fTop m → ¬ W i) : ErecGrow m m
       have ht' : fTop m' = erecTop1 m' := by simp [fTop, h.fC_eq, eC, erecTop1]
       have ht0 : fTop m = erecTop1 m := by simp [fTop, eC, erecTop1]
       rw [eT] at hg
-      exact ⟨by simp [erecTop, e129], fun i _ => by rw [e0], by omega,
+      exact ⟨by simp [erTop, e129], fun i _ => by rw [e0], by omega,
         fun i hi => hg i (by omega) (hn i (by omega))⟩
   exact ⟨hg',
     { iw := by simp [iwTop, h200]

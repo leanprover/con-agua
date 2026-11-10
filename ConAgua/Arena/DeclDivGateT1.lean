@@ -410,7 +410,7 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.I
     obtain ⟨v0, v1⟩ := hv 0 (by simp)
     simp only [List.getElem_cons_zero, show (2 : Word) * UInt64.ofNat 0 = 0 from rfl,
       UInt64.add_zero] at v0 v1
-    have htl0 := erecTop_lt m
+    have htl0 := erTop_lt m
     have hl' : l.toNat = tps.length + 1 := by simpa using hlen
     have ho1 : (o + 1).toNat = o.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; omega

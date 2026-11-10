@@ -12,9 +12,9 @@ import Std.WP.Triple.SpecLemmas
 # The two-tier record pool: its vocabulary
 
 One file for the facts about the record pool `EREC` (both tiers) that proofs use: the decoder
-reader `erecP` (`Tiers.lean`), the decoders' `erA`, L's tagged read `EREC⦃a⦄` as the models read
-it (`erRd`; `erRdT` in `ErecRd.lean` is the same read), the store `erec_put` (`erecPutMem`), the
-tops, and the tagged-load spec. A proof outside this file and the definitions' own files
+reader `erecP`, L's tagged read `EREC⦃a⦄` (`erRd`) and the tops `erTop`, `erecTop1` (all three
+defined in `Tiers.lean`), the decoders' `erA`, the store `erec_put` (`erecPutMem`), and the
+tagged-load spec. A proof outside this file and the definitions' own files
 (`EnvRec`, `Tiers`, `Env`, `ErecRd`) states its facts over these names and does not unfold them.
 
 **Attribute sets.**
@@ -47,12 +47,6 @@ open L.Arena
 /-- The constant records (both tiers of `EREC`, `erecP`). -/
 def erA (m : Mem) : Nat → Option Word := erecP m
 
-/-- The constant records' top `CTL[129]`. -/
-def erTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 129).toNat
-
-/-- L's tagged read `EREC⦃a⦄`, as a model reads it. -/
-def erRd (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 0xFFFFFFFFFF)
-
 /-- A word the record pool decodes is the word `EREC⦃a⦄` reads, in bounds. -/
 theorem erRd_of_erecP {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) :
     erRd m a = v ∧ (a &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (a >>> 40))).size := by
@@ -71,11 +65,6 @@ theorem erRd_get (m : Mem) (a : Word) (h : (a &&& 1099511627775).toNat < (m.arr6
 
 /-- `EREC⦃a⦄` as the generated models spell it. -/
 theorem erRd_foldN (m : Mem) (a : Word) :
-    rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 1099511627775) = erRd m a := rfl
-
-
-/-- A generated model's `EREC⦃a⦄` read, folded to `erRd`. -/
-theorem erRd_fold (m : Mem) (a : Word) :
     rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 1099511627775) = erRd m a := rfl
 
 
@@ -98,14 +87,7 @@ theorem erRd_natA {m : Mem} {a : Word} {k : Nat} (h : nat? (erA m) a.toNat = som
   rw [erRd_of_erA hw]
 
 
-theorem erRd_of_nat? {m : Mem} {i q : Nat} {x : Word} (h : nat? (erA m) i = some q) (hx : x.toNat = i) :
-    erRd m x = UInt64.ofNat q ∧ q < 2 ^ 64 := by
-  simp only [nat?, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  exact ⟨by rw [erRd_of_erA (by rw [hx]; exact hw)]; simp, w.toNat_lt⟩
-
-
-theorem erecTop_lt (m : Mem) : erecTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
+theorem erTop_lt (m : Mem) : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
 
 
 /-! ## The tagged address and `erec_put` -/
@@ -137,7 +119,7 @@ def erOff (a : Word) : Nat := a.toNat % 2 ^ 40
 def erTier (a : Word) : TieredArray := if a.toNat / 2 ^ 40 % 2 = 0 then (EREC : TieredArray) else tier1 EREC
 
 /-- The top of the tier of a tagged address. -/
-def erTopOf (m : Mem) (a : Word) : Nat := if a.toNat / 2 ^ 40 % 2 = 0 then erecTop m else erecTop1 m
+def erTopOf (m : Mem) (a : Word) : Nat := if a.toNat / 2 ^ 40 % 2 = 0 then erTop m else erecTop1 m
 
 theorem nat_and40 (n : Nat) : n &&& 1099511627775 = n % 1099511627776 :=
   Nat.and_two_pow_sub_one_eq_mod n 40
@@ -161,7 +143,7 @@ theorem erecPutMem_grow {m : Mem} {a v : Word} (h : erTopOf m a ≤ erOff a) :
     ErecGrow m (erecPutMem m a v) := by
   have hc := erecPutMem_ctl m a v
   simp only [erTopOf, erOff] at h
-  refine ⟨by simp [erecTop, hc], fun i hi => ?_, by simp [erecTop1, hc], fun i hi => ?_⟩
+  refine ⟨by simp [erTop, hc], fun i hi => ?_, by simp [erecTop1, hc], fun i hi => ?_⟩
   · rw [erecPutMem_arr]; unfold erTier; split
     · rename_i e; simp only [e, ite_true] at h
       have : ¬ (a.toNat % 2 ^ 40 = i) := by omega
@@ -178,11 +160,11 @@ theorem erecP_putMem_self {m : Mem} {a v : Word} (ht : erOff a < erTopOf m a)
     (hb : erOff a < (m.arr64 (erTier a)).size) :
     erecP (erecPutMem m a v) a.toNat = some v := by
   have hc := erecPutMem_ctl m a v
-  simp only [erecP, a.toNat_lt, ite_true, erecTop, erecTop1, hc, erecPutMem_arr]
+  simp only [erecP, a.toNat_lt, ite_true, erTop, erecTop1, hc, erecPutMem_arr]
   simp only [erTopOf, erOff, erTier] at ht hb ⊢
   split
   · rename_i e; simp only [e, ite_true] at ht hb
-    simp [erecTop] at ht; simp [ht, Array.getElem?_setIfInBounds, hb]
+    simp [erTop] at ht; simp [ht, Array.getElem?_setIfInBounds, hb]
   · rename_i e; simp only [e, ite_false] at ht hb
     simp [erecTop1] at ht; simp [ht, Array.getElem?_setIfInBounds, hb]
 
@@ -192,7 +174,7 @@ theorem erecP_putMem_other {m : Mem} {a v : Word} {i : Nat} (hi : i % 2 ^ 41 ≠
   have hc := erecPutMem_ctl m a v
   have hne : ¬ (i / 2 ^ 40 % 2 = a.toNat / 2 ^ 40 % 2 ∧ i % 2 ^ 40 = a.toNat % 2 ^ 40) := by
     intro ⟨h1, h2⟩; apply hi; omega
-  simp only [erecP, erecTop, erecTop1, hc, erecPutMem_arr, erTier, erOff]
+  simp only [erecP, erTop, erecTop1, hc, erecPutMem_arr, erTier, erOff]
   by_cases t : a.toNat / 2 ^ 40 % 2 = 0 <;> by_cases ti : i / 2 ^ 40 % 2 = 0 <;>
     simp only [t, ti, ite_true, ite_false] <;> simp [Array.getElem?_setIfInBounds] <;>
     first | rfl | (have : a.toNat % 1099511627776 ≠ i % 1099511627776 := by omega
@@ -243,7 +225,7 @@ theorem erecP_getE {m : Mem} {j : Nat} (h : j < erTop m) (h40 : j < 2 ^ 40) :
   have hd : j / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h40]
   have hm : j % 2 ^ 40 = j := Nat.mod_eq_of_lt h40
   simp only [erecP, h64, hd, hm, ite_true]
-  rw [ite_eq_left (by simpa [erecTop, erTop] using h)]
+  rw [ite_eq_left (by simpa [erTop] using h)]
 
 /-- A tier-0 address the record pool decodes is below the tier-0 top. -/
 theorem erecP_lt {m : Mem} {j : Nat} {v : Word} (h : erecP m j = some v) (h40 : j < 2 ^ 40) :
@@ -254,7 +236,7 @@ theorem erecP_lt {m : Mem} {j : Nat} {v : Word} (h : erecP m j = some v) (h40 : 
   simp only [hd, hm, ite_true] at h
   split at h
   · split at h
-    · rename_i hlt; simpa [erecTop, erTop] using hlt
+    · rename_i hlt; simpa [erTop] using hlt
     · cases h
   · cases h
 

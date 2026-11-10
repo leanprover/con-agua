@@ -59,9 +59,9 @@ theorem RdAfter.rel {m m' : Mem} {a a' : AState} (h : RdAfter dn m m' a a' vis f
 
 /-- Both record tiers stay: the decoded records and the tagged reads. -/
 theorem RdAfter.erecT {m m' : Mem} {a a' : AState} (h : RdAfter dn m m' a a' vis fe M eb) :
-    erecP m' = erecP m ∧ erRdT m' = erRdT m :=
+    erecP m' = erecP m ∧ erRd m' = erRd m :=
   ⟨erecP_frame h.2.2.1 (by simp [EREC, SPN, LH]) (by simp [EREC, SPN, LH, tier1]) (by decide)
-    (by decide), erRdT_frame h.2.2.1 (by simp [EREC, SPN, LH]) (by simp [EREC, SPN, LH, tier1])⟩
+    (by decide), erRd_frame h.2.2.1 (by simp [EREC, SPN, LH]) (by simp [EREC, SPN, LH, tier1])⟩
 
 theorem RdAfter.erec {m m' : Mem} {a a' : AState} (h : RdAfter dn m m' a a' vis fe M eb) :
     m'.arr64 EREC = m.arr64 EREC :=

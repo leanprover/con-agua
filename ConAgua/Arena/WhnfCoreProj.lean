@@ -565,12 +565,12 @@ def rpFireW (p : Prog) (n : Nat) (m : Mem) (mode vis e1 q i k us : Word) :
     match callW p n "ls_node" [us] m₁ with
     | none => none
     | some (r₂, m₂) =>
-        if k = erRdT m₂ (q + 6) ∧ i < erRdT m₂ (q + 7) ∧
-            erRdT m₂ (q + 7) ≤ r₁.tail.headD 0 ∧
-            r₁.tail.headD 0 - erRdT m₂ (q + 7) = erRdT m₂ (q + 5) ∧
-            r₂.tail.headD 0 = erRdT m₂ (q + 4) then
+        if k = erRd m₂ (q + 6) ∧ i < erRd m₂ (q + 7) ∧
+            erRd m₂ (q + 7) ≤ r₁.tail.headD 0 ∧
+            r₁.tail.headD 0 - erRd m₂ (q + 7) = erRd m₂ (q + 5) ∧
+            r₂.tail.headD 0 = erRd m₂ (q + 4) then
           match callW p n "reduce_proj_arg" [mode, vis, k, r₁.headD 0, r₁.tail.headD 0,
-              erRdT m₂ (q + 5) + i] m₂ with
+              erRd m₂ (q + 5) + i] m₂ with
           | none => none
           | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄)
         else some (0, 0, m₂)
@@ -589,7 +589,7 @@ theorem rpFire_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
       ld64_rdT_spec, evalE_tld, tld,
       callW_spec p n "get_app_args", callW_spec p n "ls_node",
       callW_spec p n "reduce_proj_arg"] <;>
-  simp_all [-UInt64.toNat_add, rpFireW, erRdT, EREC, BinOp.eval, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
+  simp_all [-UInt64.toNat_add, rpFireW, erRd, EREC, BinOp.eval, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
     St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr] <;>
   (intro h1; first | exact absurd h1 (UInt64.not_lt.mpr ‹_›) | exact absurd h1 (UInt64.not_le.mpr ‹_›))
@@ -695,7 +695,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
     (getAppArgs_spec' p hp.spine n s a₀ hS.arena.base e1 he1 hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop₁ hsp₁
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
-  have hE₁ : erRdT m₁ = erRdT s.mem := erRdT_frame hf₁ (by simp [SPN, EREC]) (by simp [SPN, EREC])
+  have hE₁ : erRd m₁ = erRd s.mem := erRd_frame hf₁ (by simp [SPN, EREC]) (by simp [SPN, EREC])
   -- ls_node
   rcases hc2 : callW p n "ls_node" [us] m₁ with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, reduceCtorEq] at hW
   obtain ⟨t₂, ht₂, ht₂s, hne₂, hr₂⟩ := triple_of_callW (lsNode_spec p hp.lsn n { s with mem := m₁ } us) hc2
@@ -709,17 +709,17 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
   subst hr₂'
   have hvl : a₀.store.lss.viewLen (decI us) = some l₂.toNat :=
     lsNodeW_viewLen hS₁.arena.base hus hl₂
-  obtain ⟨hlp', hnp', hw6', hctor', hnf'⟩ : tbl.levelParams.length = (erRdT m₂ (q + 4)).toNat ∧
-      tbl.numParams = (erRdT m₂ (q + 5)).toNat ∧ HW (erRdT m₂ (q + 6)) ∧
-      tbl.ctor = decI (erRdT m₂ (q + 6)) ∧
-      tbl.numFields = (erRdT m₂ (q + 7)).toNat := by
+  obtain ⟨hlp', hnp', hw6', hctor', hnf'⟩ : tbl.levelParams.length = (erRd m₂ (q + 4)).toNat ∧
+      tbl.numParams = (erRd m₂ (q + 5)).toNat ∧ HW (erRd m₂ (q + 6)) ∧
+      tbl.ctor = decI (erRd m₂ (q + 6)) ∧
+      tbl.numFields = (erRd m₂ (q + 7)).toNat := by
     rw [hE₁]; exact ⟨hlp, hnp, hw6, hctor, hnf⟩
   -- the twin up to the shape test
   have hbnd := hsp₁.bound
   have hlen : xs.length = (r₁.tail.headD 0).toNat := by
     have := hsp₁.size; simpa using this
-  have hcond := fire_cond_iff tbl i k (erRdT m₂ (q + 6)) (erRdT m₂ (q + 5))
-    (erRdT m₂ (q + 7)) (r₁.tail.headD 0) l₂ (erRdT m₂ (q + 4))
+  have hcond := fire_cond_iff tbl i k (erRd m₂ (q + 6)) (erRd m₂ (q + 5))
+    (erRd m₂ (q + 7)) (r₁.tail.headD 0) l₂ (erRd m₂ (q + 4))
     xs.length hk hw6' hctor' hnp' hnf' hlen hlp'
   have hpreP : (decI k = (tbl.entry i.toNat).ctor ∧ i.toNat < (tbl.entry i.toNat).numFields ∧
           xs.length = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).numFields ∧
@@ -738,15 +738,15 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
     intro h
     simp only [rpFireT, StateT.run_bind, hxs, except_ok_bind, viewLsLen_run, hvl]
     rw [ite_eq_right h]
-  by_cases hLc : k = erRdT m₂ (q + 6) ∧ i < erRdT m₂ (q + 7) ∧
-      erRdT m₂ (q + 7) ≤ r₁.tail.headD 0 ∧
-      r₁.tail.headD 0 - erRdT m₂ (q + 7) = erRdT m₂ (q + 5) ∧
-      ([o₂, l₂] : List Word).tail.headD 0 = erRdT m₂ (q + 4)
+  by_cases hLc : k = erRd m₂ (q + 6) ∧ i < erRd m₂ (q + 7) ∧
+      erRd m₂ (q + 7) ≤ r₁.tail.headD 0 ∧
+      r₁.tail.headD 0 - erRd m₂ (q + 7) = erRd m₂ (q + 5) ∧
+      ([o₂, l₂] : List Word).tail.headD 0 = erRd m₂ (q + 4)
   · rw [ite_eq_left hLc] at hW
     have hTc := hcond.mpr hLc
     have hpre := hpreP hTc
     cases hc4 : callW p n "reduce_proj_arg" [mode, vis, k, r₁.headD 0, r₁.tail.headD 0,
-        erRdT m₂ (q + 5) + i] m₂ with
+        erRd m₂ (q + 5) + i] m₂ with
     | none => simp only [hc4] at hW; cases hW
     | some q₄ =>
     obtain ⟨r₄, m₄⟩ := q₄
@@ -762,7 +762,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
       exact Nat.le_refl _
     have hspR : SpineR m₂ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
       hsp₁
-    have hjn : (erRdT m₂ (q + 5) + i).toNat = tbl.numParams + i.toNat := by
+    have hjn : (erRd m₂ (q + 5) + i).toNat = tbl.numParams + i.toNat := by
       have hlt := UInt64.lt_iff_toNat_lt.mp hLc.2.1
       have hle := UInt64.le_iff_toNat_le.mp hLc.2.2.1
       have heq := congrArg UInt64.toNat hLc.2.2.2.1
@@ -771,7 +771,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega), ← hnp']
     have harg := rpArg_refines p hp N { s with mem := m₂ }
       a₀
-      dn vis fe MM eb mode k (r₁.headD 0) (r₁.tail.headD 0) (erRdT m₂ (q + 5) + i)
+      dn vis fe MM eb mode k (r₁.headD 0) (r₁.tail.headD 0) (erRd m₂ (q + 5) + i)
       xs.toArray ⟨hS₁, hs.mode4, hs.eb_mode⟩ hk hspR
     obtain ⟨hok4, ⟨M₄, hS₄, hK₄, hSt₄⟩, hres4, hrw4⟩ := CoreSpec.of_callW harg hc4
     have e1 : xs.toArray.toList = xs := rfl

@@ -42,6 +42,11 @@ theorem IWOK.of_iw {m m' : Mem} (hf : MemFrame [IW] [200] m m') (h : IWOK m)
     hf.ctl 130 (by decide)] at h1 ⊢
   exact ⟨by rw [← hI]; exact hroom, h1.2.1, h1.2.2.1, h1.2.2.2.1, h1.2.2.2.2.1, h1.2.2.2.2.2⟩
 
+/-- `iw_reset` keeps the pool's bounds (its top moves to `0`). -/
+theorem IWOK.reset {m : Mem} (h : IWOK m) : IWOK (m.set64 CTL 200 0) :=
+  IWOK.of_iw ((MemFrame.setCtl m 200 0).mono (by simp) (by simp)) h
+    (by simp [iwTop, rdW_set64, h.ctl])
+
 /-- `IWOK` from a frame that keeps the pool arrays and the tops (`IW`, `EREC` in both tiers,
 `CTL[129]`, `CTL[130]`, `CTL[200]`). -/
 theorem IWOK.of_keep {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
@@ -81,7 +86,7 @@ theorem IWOK.of_er {m m' : Mem} (hf : MemFrame [EREC, tier1 EREC] [] m m') (h : 
 /-! ## `IWGrow` across frames and writers -/
 
 /-- A writer of neither `IW`, `EREC` nor `CTL[129]`, `CTL[200]` keeps the pool's growth. -/
-theorem IWGrow.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem IWGrow.of_keep {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A)
     (hC : (200 : Word) ∉ C ∧ (129 : Word) ∉ C ∧ (130 : Word) ∉ C) : IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW hA.1 (by decide)
@@ -131,7 +136,7 @@ theorem IWGrow.put {m₀ m : Mem} {a v : Word} (hg : IWGrow m₀ m) (h : erTopOf
   · simp only [erTop, hc]; exact hg.er
   · rw [erecPutMem_arr]; unfold erTier; split
     · rename_i e; simp only [e, ite_true] at h
-      have : ¬ (a.toNat % 2 ^ 40 = i) := by have := hg.er; simp only [erTop, erecTop] at *; omega
+      have : ¬ (a.toNat % 2 ^ 40 = i) := by have := hg.er; simp only [erTop] at *; omega
       simp [erOff, this, hg.erGet i hi]
     · simp [hg.erGet i hi]
   · simp only [erecTop1, hc]; exact hg.er1
@@ -159,10 +164,10 @@ theorem iwGrow_of_frame {m m' : Mem} {N : Word} (hf : MemFrame [IW] [200] m m')
 
 /-- **`EREC⦃a⦄` below the tier-0 top is the tier-0 word `a`** (the pool is addressable: `IWOK.erCap`),
 so the ROM's relations (`PinSetR`, `TPinsR`, `SliceR`, over `m.arr64 EREC`) read what L reads. -/
-theorem erRd_lo {m : Mem} (h : IWOK m) {a : Word} (ha : a.toNat < erecTop m) :
+theorem erRd_lo {m : Mem} (h : IWOK m) {a : Word} (ha : a.toNat < erTop m) :
     erRd m a = rdW (m.arr64 EREC) a := by
   have h1 := h.er; have h2 := h.erCap
-  have h40 : a.toNat < 2 ^ 40 := by unfold erTop at h1; unfold erecTop at ha; omega
+  have h40 : a.toNat < 2 ^ 40 := by unfold erTop at h1; unfold erTop at ha; omega
   have e1 : a >>> 40 = 0 := UInt64.toNat_inj.mp (by rw [L.Arena.tag_tier_toNat]; simp; omega)
   have e2 : a &&& 1099511627775 = a :=
     UInt64.toNat_inj.mp (by rw [L.Arena.tag_idx_toNat]; omega)
@@ -224,7 +229,7 @@ theorem IWOK.frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : Mem
   have hR1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hf.arr _ hE1 (by decide)
   have hc : (m'.arr64 CTL).size = (m.arr64 CTL).size := hf.size CTL
   have := (L.Ind.IWOK_iff m).mp h
-  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, erecTop1, hI, hR, hR1, hc, hf.ctl _ h129,
+  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, erTop, erecTop1, hI, hR, hR1, hc, hf.ctl _ h129,
     hf.ctl _ h130, hf.ctl _ h200] at this ⊢
   exact this
 

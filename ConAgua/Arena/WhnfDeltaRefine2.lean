@@ -925,11 +925,11 @@ def unfoldDefnAtW (p : Prog) (n : Nat) (m : Mem) (e nw usw q : Word) : Option (W
   if tagW usw ≠ 0 then none
   else if tierW usw ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if tcnt m LVLS (tierW usw) ≤ idxW usw then none
-  else if tfld m LVLS (tierW usw) (idxW usw) 1 ≠ erRdT m (q + 3) then
+  else if tfld m LVLS (tierW usw) (idxW usw) 1 ≠ erRd m (q + 3) then
     some (0, 0, m)
   else
-  match callW p n "const_val_at" [nw, erRdT m (q + 2), erRdT m (q + 3),
-      erRdT m (q + 5), usw] m with
+  match callW p n "const_val_at" [nw, erRd m (q + 2), erRd m (q + 3),
+      erRd m (q + 5), usw] m with
   | none => none
   | some (r₃, m₃) =>
   match callW p n "get_app_args" [e] m₃ with
@@ -1032,7 +1032,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     (eb e nw usw q : Word) (cv : IConstantVal) (value : EIdx) (hint : ConLeche.ReducibilityHint)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (hnw : HW nw) (hus : HW usw)
     (hci : decCI (erecP s₀.mem) q.toNat = some (.defnInfo cv value hint))
-    (hk1 : erRdT s₀.mem q = 1) (r : List Word) (m' : Mem)
+    (hk1 : erRd s₀.mem q = 1) (r : List Word) (m' : Mem)
     (h : callW p n "unfold_defn_at" [e, nw, usw, q] s₀.mem = some (r, m')) :
     CoreRef (unfoldTailT (decI nw) (decI usw) cv value (decE e)) a₀ decOptR dn s₀.mem vis fe MM eb r
       m' ResW := by
@@ -1069,7 +1069,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     | none => rw [hv] at hvl'; cases hvl'
     | some l => rw [hv] at hvl'; exact ⟨l, rfl, Option.some.inj hvl'⟩
   by_cases g4 : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 ≠
-      erRdT s₀.mem (q + 3)
+      erRd s₀.mem (q + 3)
   · rw [ite_eq_left g4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
@@ -1083,11 +1083,11 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
   rw [ite_eq_right g4] at hW
   have g4' : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 =
-      erRdT s₀.mem (q + 3) := by simpa using g4
+      erRd s₀.mem (q + 3) := by simpa using g4
   have hleneq : l.length = cv.levelParams.length := by rw [hllen, hlen, g4']
   -- const_val_at
-  cases h1 : callW p n "const_val_at" [nw, erRdT s₀.mem (q + 2),
-      erRdT s₀.mem (q + 3), erRdT s₀.mem (q + 5), usw] s₀.mem with
+  cases h1 : callW p n "const_val_at" [nw, erRd s₀.mem (q + 2),
+      erRd s₀.mem (q + 3), erRd s₀.mem (q + 5), usw] s₀.mem with
   | none => rw [h1] at hW; cases hW
   | some q₁ =>
   obtain ⟨r₃, m₃⟩ := q₁
@@ -1095,7 +1095,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
   dsimp only at hW
   obtain ⟨hok1, ⟨M', hS₃, hK₃, hSt₃⟩, hres1, hrh1⟩ := callW_constValAt p hp.toWhnfDeltaProg hlp n s₀ a₀ dn vis
     fe MM eb nw _ _ _ usw cv.levelParams hC hnw hvl hus hslice r₃ m₃ h1
-  have hv'' : value = decE (erRdT s₀.mem (q + 5)) := hv'
+  have hv'' : value = decE (erRd s₀.mem (q + 5)) := hv'
   rw [← hv''] at hok1 hS₃ hres1
   have hrun1 := AM.run_of_ok _ _ hok1
   rw [hres1] at hrun1
@@ -1263,7 +1263,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   have hfind' : fe.find? n_ = some ci := by
     rw [hn, hfind]; simp only [envFound, g3, ↓reduceIte]; exact hci
   obtain ⟨hdefn, hndefn, -, -, -, -⟩ := decCI_split (erRdOK _) hci
-  by_cases g4 : erRdT s₀.mem (r₂.tail.headD 0) ≠ 1
+  by_cases g4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 1
   · rw [ite_eq_left g4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
@@ -1273,7 +1273,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
   rw [ite_eq_right g4] at hW
-  have g4' : erRdT s₀.mem (r₂.tail.headD 0) = 1 := by simpa using g4
+  have g4' : erRd s₀.mem (r₂.tail.headD 0) = 1 := by simpa using g4
   obtain ⟨cv, value, hint, rfl, hcv, hv', hvl⟩ := hdefn g4'
   cases h3 : callW p n "unfold_defn_at" [e, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1, r₂.tail.headD 0] s₀.mem with
   | none => rw [h3, unfoldDefinitionW.k_unfold_defn_at.none] at hW; cases hW

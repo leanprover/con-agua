@@ -456,10 +456,13 @@ def baseTbl (m : Mem) (w : Word) : Word × Word :=
   else (0, 0)
 
 /-- The record pool's tier-0 top, `CTL[129]`. -/
-def erecTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 129).toNat
+def erTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 129).toNat
 
 /-- The record pool's tier-1 top, `CTL[130]`. -/
 def erecTop1 (m : Mem) : Nat := (rdW (m.arr64 CTL) 130).toNat
+
+/-- **L's tagged read `EREC⦃a⦄`**, as a function of the address (and as a model reads it). -/
+def erRd (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 0xFFFFFFFFFF)
 
 /-- **The record pool in use**, both tiers as one address space, read exactly as L's tagged
 read `EREC⦃a⦄` reads the word address `a < 2^64`: tier bit 40, offset the low 40 bits (so tier 1
@@ -468,14 +471,14 @@ a writer above a top (an allocation, `erec_alloc`) keeps them all (`ArrExt`), an
 is the word L reads (`erecP_tagRead`). -/
 def erecP (m : Mem) : Nat → Option Word := fun i =>
   if i < 2 ^ 64 then
-    (if i / 2 ^ 40 % 2 = 0 then (if i % 2 ^ 40 < erecTop m then (m.arr64 EREC)[i % 2 ^ 40]? else none)
+    (if i / 2 ^ 40 % 2 = 0 then (if i % 2 ^ 40 < erTop m then (m.arr64 EREC)[i % 2 ^ 40]? else none)
      else if i % 2 ^ 40 < erecTop1 m then (m.arr64 (tier1 EREC))[i % 2 ^ 40]? else none)
   else none
 
 /-- `m'`'s record pool extends `m`'s: both tops only moved up, nothing below them changed. -/
 structure ErecGrow (m m' : Mem) : Prop where
-  top : erecTop m ≤ erecTop m'
-  get : ∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
+  top : erTop m ≤ erTop m'
+  get : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
   top1 : erecTop1 m ≤ erecTop1 m'
   get1 : ∀ i < erecTop1 m, (m'.arr64 (tier1 EREC))[i]? = (m.arr64 (tier1 EREC))[i]?
 
@@ -486,7 +489,7 @@ theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP 
   · simp only [h64, ite_true] at hv ⊢
     by_cases hi : i / 2 ^ 40 % 2 = 0
     · simp only [hi, ite_true] at hv ⊢
-      by_cases ht : i % 2 ^ 40 < erecTop m
+      by_cases ht : i % 2 ^ 40 < erTop m
       · simp only [ht, ite_true] at hv
         rw [ite_eq_left (Nat.lt_of_lt_of_le ht h.top), h.get _ ht]; exact hv
       · simp [ht] at hv
@@ -616,7 +619,7 @@ theorem EnvR.congr {m m' : Mem} {vis : Word} {fe : IFEnv}
     (h : EnvR m vis fe) : EnvR m' vis fe := by
   have hP : erecP m' = erecP m := by
     funext i
-    simp only [erecP, erecTop, erecTop1, he EREC (by decide), he (tier1 EREC) (by decide),
+    simp only [erecP, erTop, erecTop1, he EREC (by decide), he (tier1 EREC) (by decide),
       hc 129 (by decide), hc 130 (by decide)]
     rfl
   have hs : stampW m' = stampW m := hc 133 (by decide)

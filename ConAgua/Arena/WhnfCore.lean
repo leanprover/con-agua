@@ -362,7 +362,7 @@ def ErecKept (p : Prog) : Prop :=
   ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
     f = "find_proj" → callW p n f vs m = some (r, m') →
     m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
-      erRdT m' = erRdT m ∧ erecP m' = erecP m
+      erRd m' = erRd m ∧ erecP m' = erecP m
 
 /-- **`find_proj` answers a table record that decodes** (added for `reduce_proj_core`):
 `FindProjOK` equates the twin's lookup with `decEntry`, which is `none` for a record that does not

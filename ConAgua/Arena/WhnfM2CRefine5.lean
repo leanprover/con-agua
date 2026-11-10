@@ -216,7 +216,7 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   have hfind' : fe.find? (decI (r3.headD 0)) = some ci := by
     rw [hfind]; simp only [envFound, g4, ↓reduceIte]; exact hciE
   obtain ⟨hind, -⟩ := decCI_kind34' (erRdOK m) hciE
-  by_cases g5 : erRdT m (r4.tail.headD 0) ≠ 3
+  by_cases g5 : erRd m (r4.tail.headD 0) ≠ 3
   · rw [m2cCtorE.k_env_find.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g4 g5]
     refine RefE.ret ?_ hA0
     simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hfind']
@@ -305,7 +305,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   have hfind' : fe.find? rl.ctor = some ci := by
     rw [hctor, hfind]; simp only [envFound, g3, ↓reduceIte]; exact hciE
   obtain ⟨-, hctr⟩ := decCI_kind34' (erRdOK m1) hciE
-  by_cases g4 : erRdT m1 (r2.tail.headD 0) ≠ 4
+  by_cases g4 : erRd m1 (r2.tail.headD 0) ≠ 4
   · rw [m2cHeadE.k_env_find.arm2 _ _ _ _ _ _ _ _ _ _ g3 g4]
     refine RefE.ret ?_ hA1
     rw [hstep]; simp only [hfind']

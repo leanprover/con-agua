@@ -197,7 +197,7 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
       (PgsPost dn m vis fe M eb) := by
   obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (decCI_ind_cv' hci)
   obtain ⟨hni, hnp⟩ := decCI_ind_n (erRdOK m) hci
-  simp only [erRdT] at hl hty hty32 hni hnp
+  simp only [erRd] at hl hty hty32 hni hnp
   rw [pgsE.eq_2]
   split
   · exact RefE.of_cls0 rfl
@@ -257,10 +257,10 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   refine RefE.mono (R := PgsPost dn m3 vis fe M3 eb) ?_ (PgsPost.comp hK3 hSt3)
   rw [pgsE.k_inst_lp.arm1]
   have hf := fsl_ref p hp.toFslProg n F hk hnF hn62 dn vis fe eb mode hm4 hebm n (by omega) m3 _ M3 0
-    (erRdT m1 (q + 17) + erRdT m1 (q + 11)) (r3.headD 0) hS3 h3.resOk
+    (erRd m1 (q + 17) + erRd m1 (q + 11)) (r3.headD 0) hS3 h3.resOk
   rw [hn', ← hni, ← hnp, show ((0 : Word)).toNat = 0 from rfl,
     ← formerSortLoop_congr hRW] at hf
-  rcases hx4 : fslE p n m3 mode vis 0 (erRdT m1 (q + 17) + erRdT m1 (q + 11)) (r3.headD 0) with
+  rcases hx4 : fslE p n m3 mode vis 0 (erRd m1 (q + 17) + erRd m1 (q + 11)) (r3.headD 0) with
     e4 | ⟨r4, m4⟩
   · rw [hx4] at hf; rw [pgsE.k_former_sort_loop.none]
     exact RefE.bind_left fun hg => hf hg
@@ -899,7 +899,7 @@ theorem cpg_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
       (checkProjGuard R fe (tbl.entry i.toNat) (decI us)) a
       (CorePost (fun _ => ()) dn m vis fe M eb (fun _ => True)) := by
   obtain ⟨hsn, hsnd⟩ := decTbl_sn (erRdOK m) hq
-  simp only [erRdT] at hsn hsnd
+  simp only [erRd] at hsn hsnd
   unfold ConRon.Arena.checkProjGuard
   rw [cpgE.eq_2]
   have hsn' : (tbl.entry i.toNat).structName = tbl.structName := rfl
@@ -922,7 +922,7 @@ theorem cpg_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
       some ci := by rw [hfind]; simp only [envFound, g1, ↓reduceIte]; exact hci
   rw [hfind']
   have hK := decCI_indF (erRdOK m1) hci
-  simp only [erRdT] at hK
+  simp only [erRd] at hK
   by_cases g2n : rdW (m1.arr64 (tierA EREC (r1.tail.headD 0 >>> 40))) (r1.tail.headD 0 &&& 1099511627775) ≠ 3
   · have g2 := g2n
     rw [cpgE.k_env_find.eq_2, ite_eq_right g1, ite_eq_left g2]

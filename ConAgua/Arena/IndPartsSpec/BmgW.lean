@@ -252,7 +252,7 @@ theorem bmfW_sim {vis : Word} {fe : IFEnv} {no nl mm : Word}
     · intro r1 m1 e
       obtain ⟨t, a1, hrun, hr, hS1, hg1⟩ := recTW_ok n (fun _ => none) fe vis m m1 a no nl _ _ r1 names e hS htyl
         hnames (by omega) hnb
-      simp only [erRd_fold] at hrun; rw [UInt64.toNat_ofNat_of_lt' hmb, htye] at hrun
+      simp only [erRd_foldN] at hrun; rw [UInt64.toNat_ofNat_of_lt' hmb, htye] at hrun
       exact ⟨t, a1, hrun, hr, partsRecTarget_le hrun, hS1, hg1⟩
     rintro r1 t m1 a1 ⟨rfl, htl, hS1, hg1⟩
     have hnlen : names.length < 2 ^ 64 := by

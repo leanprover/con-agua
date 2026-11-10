@@ -145,19 +145,19 @@ abbrev erIn (m : Mem) (x : Word) : Prop :=
 
 /-- A decoded word at `q + k` is what the tagged read at `q + k` reads, in bounds. -/
 theorem erecP_atW {m : Mem} {q : Word} {k : Nat} {w : Word} (h : erecP m (q.toNat + k) = some w)
-    (hk : k < 2 ^ 64) : erIn m (q + UInt64.ofNat k) ∧ erRdT m (q + UInt64.ofNat k) = w := by
+    (hk : k < 2 ^ 64) : erIn m (q + UInt64.ofNat k) ∧ erRd m (q + UInt64.ofNat k) = w := by
   have e : (q + UInt64.ofNat k).toNat = q.toNat + k := by
     have := erecP_lt64 h
     rw [UInt64.toNat_add]; simp only [UInt64.toNat_ofNat']
     rw [Nat.mod_eq_of_lt hk, Nat.mod_eq_of_lt (by omega)]
   rw [← e] at h
-  exact ⟨(erecP_tagRead h).1, erRdT_of _ _ h⟩
+  exact ⟨(erecP_tagRead h).1, erRd_of _ _ h⟩
 
 /-- **A decoded projection table's words** at `q + 5`, `q + 6`, `q + 7`. -/
 theorem decTbl_wordsT {m : Mem} {q : Word} {tbl : IProjTable} (h : decTbl (erecP m) q.toNat = some tbl) :
-    (erIn m (q + 5) ∧ (erRdT m (q + 5)).toNat = tbl.numParams) ∧
-    (erIn m (q + 6) ∧ HW (erRdT m (q + 6)) ∧ tbl.ctor = decI (erRdT m (q + 6))) ∧
-    (erIn m (q + 7) ∧ (erRdT m (q + 7)).toNat = tbl.numFields) := by
+    (erIn m (q + 5) ∧ (erRd m (q + 5)).toNat = tbl.numParams) ∧
+    (erIn m (q + 6) ∧ HW (erRd m (q + 6)) ∧ tbl.ctor = decI (erRd m (q + 6))) ∧
+    (erIn m (q + 7) ∧ (erRd m (q + 7)).toNat = tbl.numFields) := by
   simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h
   obtain ⟨sn, -, lp, -, np, hnp, c, hc, nf, hnf, bd, -, rfl⟩ := h
@@ -169,7 +169,7 @@ theorem decTbl_wordsT {m : Mem} {q : Word} {tbl : IProjTable} (h : decTbl (erecP
   obtain ⟨i6, e6⟩ := erecP_atW (k := 6) hw6 (by decide)
   obtain ⟨i7, e7⟩ := erecP_atW (k := 7) hw7 (by decide)
   exact ⟨⟨i5, by rw [show (q + 5 : Word) = q + UInt64.ofNat 5 from rfl, e5]⟩,
-    ⟨i6, by show HW (erRdT m (q + UInt64.ofNat 6)); rw [e6]; exact h32,
+    ⟨i6, by show HW (erRd m (q + UInt64.ofNat 6)); rw [e6]; exact h32,
       by rw [show (q + 6 : Word) = q + UInt64.ofNat 6 from rfl, e6]⟩,
     ⟨i7, by rw [show (q + 7 : Word) = q + UInt64.ofNat 7 from rfl, e7]⟩⟩
 
@@ -183,11 +183,11 @@ def iotaArW (p : Prog) (vis ctor nP an : Word) : Nat → Mem → Word → Option
       | some (r₁, m₁) =>
         if r₁.headD 0 = 0 then some ([0], m₁)
         else if ¬ erIn m₁ (r₁.tail.headD 0 + 6) then none
-        else if erRdT m₁ (r₁.tail.headD 0 + 6) ≠ ctor then some ([0], m₁)
+        else if erRd m₁ (r₁.tail.headD 0 + 6) ≠ ctor then some ([0], m₁)
         else if ¬ erIn m₁ (r₁.tail.headD 0 + 5) then none
-        else if erRdT m₁ (r₁.tail.headD 0 + 5) ≠ nP then some ([0], m₁)
+        else if erRd m₁ (r₁.tail.headD 0 + 5) ≠ nP then some ([0], m₁)
         else if ¬ erIn m₁ (r₁.tail.headD 0 + 7) then none
-        else if erRdT m₁ (r₁.tail.headD 0 + 7) ≠ 2 then some ([0], m₁)
+        else if erRd m₁ (r₁.tail.headD 0 + 7) ≠ 2 then some ([0], m₁)
         else iotaArW p vis ctor nP an k m₁ (j + 1)
     else some ([1], m)
 
@@ -286,7 +286,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     rw [← k1.2.2.2] at htbl
     obtain ⟨⟨i5, e5⟩, ⟨i6, w6, e6⟩, ⟨i7, e7⟩⟩ := decTbl_wordsT htbl
     simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, i6, i5, i7, not_true_eq_false] at hL
-    by_cases c6 : erRdT m₁ (r₁.tail.headD 0 + 6) ≠ ctor
+    by_cases c6 : erRd m₁ (r₁.tail.headD 0 + 6) ≠ ctor
     · rw [ite_eq_left c6] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine hgo false ?_ rfl rfl
@@ -294,7 +294,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
         rw [e6, decI_beq _ _ w6 hctor]; simpa using c6
       simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
     rw [ite_eq_right c6] at hL
-    by_cases c5 : erRdT m₁ (r₁.tail.headD 0 + 5) ≠ nP
+    by_cases c5 : erRd m₁ (r₁.tail.headD 0 + 5) ≠ nP
     · rw [ite_eq_left c5] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine hgo false ?_ rfl rfl
@@ -302,7 +302,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
         rw [← e5]; simpa using fun e => c5 (UInt64.toNat_inj.mp e)
       simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
     rw [ite_eq_right c5] at hL
-    by_cases c7 : erRdT m₁ (r₁.tail.headD 0 + 7) ≠ 2
+    by_cases c7 : erRd m₁ (r₁.tail.headD 0 + 7) ≠ 2
     · rw [ite_eq_left c7] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine hgo false ?_ rfl rfl

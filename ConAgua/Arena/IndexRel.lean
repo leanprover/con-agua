@@ -93,7 +93,7 @@ theorem erecP_congr' {m m' : Mem} (h1 : m'.arr64 EREC = m.arr64 EREC)
     (h2 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC))
     (h3 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) (h4 : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130) :
     erecP m' = erecP m := by
-  funext i; simp only [erecP, erecTop, erecTop1, h1, h2, h3, h4]
+  funext i; simp only [erecP, erTop, erecTop1, h1, h2, h3, h4]
   rfl
 
 theorem rdW_set_ctl (m : Mem) (k v x : Word) (h : k ≠ x) :

@@ -185,7 +185,7 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   have hind := decCI_indK (erRdOK _) hci
-  by_cases h4 : erRdT s₀.mem (r₂.tail.headD 0) ≠ 3
+  by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 3
   · rw [ite_eq_left h4]
     exact RefE.ret (suHead_other _ fe _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e)))
@@ -217,20 +217,20 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   obtain ⟨M₅, hS₅, hK₅, hSt₅⟩ : CoreAfter dn s₀.mem m₅ a₀ vis fe M eb := by
     obtain ⟨M', hS', hK', hSt'⟩ := hA₅
     exact ⟨M', hS', hK', hK₃.trans hSt'⟩
-  have hlpT : cvT.levelParams.length = (erRdT s₀.mem (r₂.tail.headD 0 + 3)).toNat :=
+  have hlpT : cvT.levelParams.length = (erRd s₀.mem (r₂.tail.headD 0 + 3)).toNat :=
     hslice?_lenR hIR.lp
   have hiff : (caps.unitlike = true ∧ a₀.pins.reserved.contains (decI k) = false ∧
       targs.length = caps.unitParams ∧ (r₄.tail.headD 0).toNat = cvT.levelParams.length) ↔
-      uhOK (erRdT s₀.mem (r₂.tail.headD 0 + 9)) (erRdT s₀.mem (r₂.tail.headD 0 + 10))
-        (erRdT s₀.mem (r₂.tail.headD 0 + 3)) (r₃.tail.headD 0) (r₄.tail.headD 0) r₅ := by
+      uhOK (erRd s₀.mem (r₂.tail.headD 0 + 9)) (erRd s₀.mem (r₂.tail.headD 0 + 10))
+        (erRd s₀.mem (r₂.tail.headD 0 + 3)) (r₃.tail.headD 0) (r₄.tail.headD 0) r₅ := by
     unfold uhOK
     rw [hIR.unitlike, ← hr₅, hlen, hIR.unitParams, hlpT]
     simp only [decBool, bne_iff_ne, ne_eq, bne_eq_false_iff_eq, UInt64.toNat_inj]
   refine RefE.of_run_eq (suHead_ind _ fe _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
     (by rw [hfind', hci_eq]) targs hargs hS.pins _ hvl) ?_
   dsimp only [suhE.k_reserved_contains_w]
-  by_cases hok : uhOK (erRdT s₀.mem (r₂.tail.headD 0 + 9))
-      (erRdT s₀.mem (r₂.tail.headD 0 + 10)) (erRdT s₀.mem (r₂.tail.headD 0 + 3))
+  by_cases hok : uhOK (erRd s₀.mem (r₂.tail.headD 0 + 9))
+      (erRd s₀.mem (r₂.tail.headD 0 + 10)) (erRd s₀.mem (r₂.tail.headD 0 + 3))
       (r₃.tail.headD 0) (r₄.tail.headD 0) r₅
   · obtain ⟨o1, o2, o3, o4⟩ := hok
     rw [ite_eq_left (hiff.mpr ⟨o1, o2, o3, o4⟩)]
@@ -247,16 +247,16 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
         (pure false : AM Bool) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) :=
       RefE.ret rfl ⟨⟨M₅, hS₅, hK₅, hSt₅⟩, rfl, hw0⟩
     unfold uhOK at hok
-    by_cases o1 : erRdT s₀.mem (r₂.tail.headD 0 + 9) = 0
+    by_cases o1 : erRd s₀.mem (r₂.tail.headD 0 + 9) = 0
     · rw [ite_eq_left o1]; exact hl
     rw [ite_eq_right o1]
     by_cases o2 : r₅.headD 0 ≠ 0
     · rw [ite_eq_left o2]; exact hl
     rw [ite_eq_right o2]
-    by_cases o3 : r₃.tail.headD 0 ≠ erRdT s₀.mem (r₂.tail.headD 0 + 10)
+    by_cases o3 : r₃.tail.headD 0 ≠ erRd s₀.mem (r₂.tail.headD 0 + 10)
     · rw [ite_eq_left o3]; exact hl
     rw [ite_eq_right o3]
-    by_cases o4 : r₄.tail.headD 0 ≠ erRdT s₀.mem (r₂.tail.headD 0 + 3)
+    by_cases o4 : r₄.tail.headD 0 ≠ erRd s₀.mem (r₂.tail.headD 0 + 3)
     · rw [ite_eq_left o4]; exact hl
     exact absurd ⟨o1, by simpa using o2, by simpa using o3, by simpa using o4⟩ hok
 

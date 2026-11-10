@@ -135,7 +135,7 @@ def cArmK2 (p : Prog) (n : Nat) (us q : Word) :
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, 0, 0, m)
-    else t3W (callW p n "subst_pw_at" [erRdT m (q + 2), erRdT m (q + 3), us,
+    else t3W (callW p n "subst_pw_at" [erRd m (q + 2), erRd m (q + 3), us,
       r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] m)
 
 /-- After `env_find`: the stored constant, the level count, then `sub` at its type. -/
@@ -145,9 +145,9 @@ def cArmK1 (p : Prog) (n : Nat) (us : Word) (sub : Word → Mem → Option (List
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, 0, 0, m)
     else if lsNodeW m us = [] then none
-    else if (lsNodeW m us).tail.headD 0 ≠ erRdT m (r.tail.headD 0 + 3) then
+    else if (lsNodeW m us).tail.headD 0 ≠ erRd m (r.tail.headD 0 + 3) then
       some (0, 0, 0, m)
-    else cArmK2 p n us (r.tail.headD 0) (sub (erRdT m (r.tail.headD 0 + 4)) m)
+    else cArmK2 p n us (r.tail.headD 0) (sub (erRd m (r.tail.headD 0 + 4)) m)
 
 theorem headTypeConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
     (vis f k cn us : Word) :
@@ -262,8 +262,8 @@ def uwsK1 (p : Prog) (n : Nat) (f e : Word) : Option (List Word × Mem) → Opti
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, 0, m)
-    else if erRdT m (r.tail.headD 0) ≠ 1 then some (0, 0, m)
-    else match lamProjW m f 0 (erRdT m (r.tail.headD 0 + 5)) with
+    else if erRd m (r.tail.headD 0) ≠ 1 then some (0, 0, m)
+    else match lamProjW m f 0 (erRd m (r.tail.headD 0 + 5)) with
       | none => none
       | some (lf, k, j) =>
         if lf = 0 then some (0, 0, m)
@@ -355,7 +355,7 @@ theorem peelPisW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vi
 
 /-- The body handle of field `i` of the table record `q` (`0` past the bodies). -/
 def hppB (m : Mem) (q i : Word) : Word :=
-  if i < erRdT m (q + 10) then erRdT m (erRdT m (q + 9) + i) else 0
+  if i < erRd m (q + 10) then erRd m (erRd m (q + 9) + i) else 0
 
 /-- After the body's datum: `never` stays, anything else is unknown. -/
 def hppK2 : Option (List Word × Mem) → Option (Word × Word × Word × Mem)
@@ -378,7 +378,7 @@ theorem headProofProj_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
   simp only [callFn, headProofProjL]
   vcgen [evalE_tld, tld, ld64_rdT_spec, evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "find_proj", callW_spec p n "type_sort_pw"] <;>
-  simp_all [hppK1, hppK2, hppB, erRdT, EREC, LocEq, BinOp.eval, St.setLocs_cons,
+  simp_all [hppK1, hppK2, hppB, erRd, EREC, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
   all_goals

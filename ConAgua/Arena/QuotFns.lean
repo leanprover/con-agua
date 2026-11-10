@@ -164,7 +164,7 @@ theorem wrER_fresh {vis : Word} {fe : IFEnv} {m₀ : Mem} {a₀ : AState} (h₀ 
     have hT : ∀ m' : Mem, erTopOf m' (d + 1) = erTopOf m' d := fun m' => by
       simp only [erTopOf, hbit]
     have hT1 : erTopOf (erecPutMem m d x) d = erTopOf m d := by
-      simp only [erTopOf, erecTop, erecTop1, hc1]
+      simp only [erTopOf, erTop, erecTop1, hc1]
     obtain ⟨hS2, hg2, hf2, hrd, hout⟩ := wrER_fresh h₀ (y :: ws) _ a (d + 1) hS1 hf1 hg1
       (by rw [hT, ho]; omega) (by rw [hT, hT1, ho]; simp only [List.length_cons]; omega)
       (by rw [hd1]; unfold erOff at hoff; omega)

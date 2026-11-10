@@ -237,7 +237,7 @@ theorem truncFrozen_tixn (m : Mem) : (truncFrozen m).arr64 TIXN =
     (z := ⟨TIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩) (by rw [frozen_drop1]; simp)
   rw [this, fzExt_Cmul]; rfl
 
-theorem truncFrozen_erec (m : Mem) : (truncFrozen m).arr64 EREC = (m.arr64 EREC).extract 0 (erecTop m) := by
+theorem truncFrozen_erec (m : Mem) : (truncFrozen m).arr64 EREC = (m.arr64 EREC).extract 0 (erTop m) := by
   have := truncFrozen_mem m (x := EREC) (z := ⟨EREC, fzCtl 129⟩) (by rw [frozen_drop1]; simp)
   rw [this, fzExt_ctl]; rfl
 

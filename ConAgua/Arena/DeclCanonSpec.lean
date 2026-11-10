@@ -21,7 +21,7 @@ public import ConAgua.L.ProgHas
 
 `DeclArmsCanon.lean`'s `er_sl_eq`, `b_eq`, `cv_eq`, `hint_eq`, `pw_eq`, `caps_eq`,
 `rule_eq_but_rhs`, `rules_eq`, `ci_eq`. Their word models are **total
-`Bool` functions of the record pool's reader** `a : Word → Word` (at `erRdT m`: the tagged reads `EREC⦃·⦄`; the functions read only `EREC`, never write,
+`Bool` functions of the record pool's reader** `a : Word → Word` (at `erRd m`: the tagged reads `EREC⦃·⦄`; the functions read only `EREC`, never write,
 and a slice comparison recurses on its length, not on a fuel): `slEqN`, `erSlEqB`, `cvEqB`, …
 `ciEqB`. Each spec says a returning call answers `if model then 1 else 0` and leaves the memory
 alone; the relation to decoded records (`DeclCanonEq.lean`) is proved against the models.
@@ -259,7 +259,7 @@ include hp
 theorem erSlEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_eq" [o1, l1, o2, l2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if erSlEqB (erRdT s₀.mem) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if erSlEqB (erRd s₀.mem) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ o1 l1 o2 l2; rw [invoke_eq _ (hp.get "er_sl_eq")]; simp only [callFn, erSlEq]
@@ -288,7 +288,7 @@ set_option maxHeartbeats 1000000 in
 theorem cvEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_eq" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if cvEqB (erRdT s₀.mem) x y then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if cvEqB (erRd s₀.mem) x y then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "cv_eq")]
   simp only [callFn, cvEq]
   cases n with
@@ -301,7 +301,7 @@ theorem cvEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
 theorem hintEq_spec (n : Nat) (s₀ : St) (h : Word) (g : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "hint_eq" [h, g]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if hintEqB (erRdT s₀.mem) h g then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if hintEqB (erRd s₀.mem) h g then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "hint_eq")]
   simp only [callFn, hintEq]
   cases n with
@@ -314,7 +314,7 @@ theorem hintEq_spec (n : Nat) (s₀ : St) (h : Word) (g : Word) :
 theorem erSlAt_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_at" [x, y, i]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if erSlAtB (erRdT s₀.mem) x y i then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if erSlAtB (erRd s₀.mem) x y i then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "er_sl_at")]
   simp only [callFn, erSlAt]
   cases n with
@@ -327,7 +327,7 @@ theorem erSlAt_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (i : Word) :
 theorem capsEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_a" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if capsEqAB (erRdT s₀.mem) x y then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if capsEqAB (erRd s₀.mem) x y then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "caps_eq_a")]
   simp only [callFn, capsEqA]
   cases n with
@@ -340,7 +340,7 @@ theorem capsEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
 theorem capsEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_b" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if capsEqBB (erRdT s₀.mem) x y then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if capsEqBB (erRd s₀.mem) x y then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "caps_eq_b")]
   simp only [callFn, capsEqB]
   cases n with
@@ -353,7 +353,7 @@ theorem capsEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
 theorem capsEqC_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_c" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if capsEqCB (erRdT s₀.mem) x y then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if capsEqCB (erRd s₀.mem) x y then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "caps_eq_c")]
   simp only [callFn, capsEqC]
   cases n with
@@ -366,7 +366,7 @@ theorem capsEqC_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
 theorem capsEq_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if capsEqAll (erRdT s₀.mem) x y then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if capsEqAll (erRd s₀.mem) x y then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "caps_eq")]
   simp only [callFn, capsEq]
   cases n with
@@ -379,7 +379,7 @@ theorem capsEq_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
 theorem ruleEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_a" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if ruleEqAB (erRdT s₀.mem) x y then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if ruleEqAB (erRd s₀.mem) x y then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "rule_eq_a")]
   simp only [callFn, ruleEqA]
   cases n with
@@ -392,7 +392,7 @@ theorem ruleEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
 theorem ruleEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_b" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if ruleEqBB (erRdT s₀.mem) x y then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if ruleEqBB (erRd s₀.mem) x y then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "rule_eq_b")]
   simp only [callFn, ruleEqB]
   cases n with
@@ -405,7 +405,7 @@ theorem ruleEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
 theorem ruleEqButRhs_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_but_rhs" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if ruleEqButRhsB (erRdT s₀.mem) x y then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if ruleEqButRhsB (erRd s₀.mem) x y then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "rule_eq_but_rhs")]
   simp only [callFn, ruleEqButRhs]
   cases n with
@@ -432,7 +432,7 @@ include hp
 /-- `rules_eq`'s model decides `rulesEqB` (memory untouched). -/
 theorem rulesEqW_ok : ∀ (n : Nat) (m : Mem) (o1 l1 o2 l2 : Word) (r : List Word) (m' : Mem),
     rulesEqW p n m o1 l1 o2 l2 = some (r, m') →
-    m' = m ∧ r.headD 0 = if rulesEqB (erRdT m) o1 l1 o2 l2 then 1 else 0 := by
+    m' = m ∧ r.headD 0 = if rulesEqB (erRd m) o1 l1 o2 l2 then 1 else 0 := by
   intro n
   induction n with
   | zero => intro m o1 l1 o2 l2 r m' h; simp [rulesEqW] at h
@@ -453,9 +453,9 @@ theorem rulesEqW_ok : ∀ (n : Nat) (m : Mem) (o1 l1 o2 l2 : Word) (r : List Wor
     ⟨l1.toNat - 1, by have : l1.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp e); omega⟩
   have hk1 : (l1 - 1).toNat = k := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-  have hB : rulesEqB (erRdT m) o1 l1 o2 l1 = (ruleEqButRhsB (erRdT m) o1 o2 &&
-      erRdT m (o1 + 8) == erRdT m (o2 + 8) &&
-      rulesEqB (erRdT m) (o1 + 11) (l1 - 1) (o2 + 11) (l1 - 1)) := by
+  have hB : rulesEqB (erRd m) o1 l1 o2 l1 = (ruleEqButRhsB (erRd m) o1 o2 &&
+      erRd m (o1 + 8) == erRd m (o2 + 8) &&
+      rulesEqB (erRd m) (o1 + 11) (l1 - 1) (o2 + 11) (l1 - 1)) := by
     simp only [rulesEqB, beq_self_eq_true, Bool.true_and, hk, hk1, rulesEqN]
   cases h1 : callW p n "rule_eq_but_rhs" [o1, o2] m with
   | none => rw [h1] at h; simp [rulesEqW.k_rule_eq_but_rhs] at h
@@ -468,14 +468,14 @@ theorem rulesEqW_ok : ∀ (n : Nat) (m : Mem) (o1 l1 o2 l2 : Word) (r : List Wor
   rw [hm1] at h
   by_cases hz : r1.headD 0 = 0
   · rw [rulesEqW.k_rule_eq_but_rhs.arm1 p n _ _ _ _ _ _ hz] at h; cases h
-    have : ruleEqButRhsB (erRdT m) o1 o2 = false := by
-      cases e : ruleEqButRhsB (erRdT m) o1 o2 <;> simp_all
+    have : ruleEqButRhsB (erRd m) o1 o2 = false := by
+      cases e : ruleEqButRhsB (erRd m) o1 o2 <;> simp_all
     simp [hB, this]
-  have ht : ruleEqButRhsB (erRdT m) o1 o2 = true := by
-    cases e : ruleEqButRhsB (erRdT m) o1 o2 <;> simp_all
-  by_cases h8 : erRdT m (o1 + 8) ≠ erRdT m (o2 + 8)
+  have ht : ruleEqButRhsB (erRd m) o1 o2 = true := by
+    cases e : ruleEqButRhsB (erRd m) o1 o2 <;> simp_all
+  by_cases h8 : erRd m (o1 + 8) ≠ erRd m (o2 + 8)
   · rw [rulesEqW.k_rule_eq_but_rhs.arm2 p n _ _ _ _ _ _ hz h8] at h; cases h
-    have : (erRdT m (o1 + 8) == erRdT m (o2 + 8)) = false := by simpa using h8
+    have : (erRd m (o1 + 8) == erRd m (o2 + 8)) = false := by simpa using h8
     simp [hB, this]
   rw [rulesEqW.k_rule_eq_but_rhs.arm3 p n _ _ _ _ _ _ hz (Classical.not_not.mp h8)] at h
   cases h2 : rulesEqW p n m (o1 + 11) (l1 - 1) (o2 + 11) (l1 - 1) with
@@ -485,13 +485,13 @@ theorem rulesEqW_ok : ∀ (n : Nat) (m : Mem) (o1 l1 o2 l2 : Word) (r : List Wor
   rw [h2, rulesEqW.k_rules_eq.eq_2] at h; cases h
   obtain ⟨e2, hr2⟩ := ih _ _ _ _ _ _ _ h2
   refine ⟨e2, ?_⟩
-  have : (erRdT m (o1 + 8) == erRdT m (o2 + 8)) = true := by simpa using h8
+  have : (erRd m (o1 + 8) == erRd m (o2 + 8)) = true := by simpa using h8
   simp only [List.headD_cons, hr2, hB, ht, this, Bool.true_and]
 
 theorem rulesEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rules_eq" [o1, l1, o2, l2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if rulesEqB (erRdT s₀.mem) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if rulesEqB (erRd s₀.mem) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
   intro s₀ o1 l1 o2 l2
   refine triple_post (rulesEq_specW p (hp.get "rules_eq") n s₀ o1 l1 o2 l2) ?_
   rintro r s' ⟨hl, hW⟩
@@ -501,7 +501,7 @@ theorem rulesEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
 theorem ciEqRest_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_eq_rest" [x, y, k]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if ciEqRestB (erRdT s₀.mem) x y k then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if ciEqRestB (erRd s₀.mem) x y k then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "ci_eq_rest")]
   simp only [callFn, ciEqRest]
   cases n with
@@ -514,7 +514,7 @@ theorem ciEqRest_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (k : Word) :
 theorem ciEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_eq" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if ciEqB (erRdT s₀.mem) x y then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if ciEqB (erRd s₀.mem) x y then 1 else 0; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "ci_eq")]
   simp only [callFn, ciEq]
   cases n with

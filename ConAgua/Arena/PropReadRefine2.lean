@@ -159,7 +159,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   simp only [h0, ↓reduceIte] at hW
-  by_cases h1 : erRdT m₂ (r₂.tail.headD 0) = 1
+  by_cases h1 : erRd m₂ (r₂.tail.headD 0) = 1
   rotate_left
   · simp only [h1, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, -, rfl⟩ := hW
@@ -170,7 +170,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
     all_goals first | rfl | exact absurd rfl (hnd cv v hint)
   simp only [h1, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   obtain ⟨cv, hint, hci_eq, hv5⟩ := decCI_defnV (erRdOK _) hci h1
-  generalize erRdT m₂ (r₂.tail.headD 0 + 5) = vw at hci_eq hv5 hW
+  generalize erRd m₂ (r₂.tail.headD 0 + 5) = vw at hci_eq hv5 hW
   rcases hlp : lamProjW m₂ f 0 vw with _ | ⟨lf, k, jj⟩ <;> rw [hlp] at hW
   · cases hW
   simp only at hW

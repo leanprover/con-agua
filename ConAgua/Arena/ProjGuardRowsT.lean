@@ -561,15 +561,15 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
   · cases hW
   obtain ⟨hnp, hct32, hct⟩ := decTbl_npc (erRdOK m) hq
   simp only [pgrW] at hW
-  rw [erRdT_congr rfl rfl, erRdT_congr rfl rfl] at hW
-  rcases c1 : callW p n "env_find" [erRdT m (q + 6), vis] m with _ | ⟨r1, m1⟩
+  rw [erRd_congr rfl rfl, erRd_congr rfl rfl] at hW
+  rcases c1 : callW p n "env_find" [erRd m (q + 6), vis] m with _ | ⟨r1, m1⟩
   · rw [c1, pgrW.k_env_find.none] at hW; cases hW
   rw [c1] at hW
   obtain ⟨s1, hs1, hm1, -, hfind, hdec⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envFind_refines p hP.envRowGet hP.baseRowGet hP.envFind n _ vis _ hS.env hct32) c1
   have hm1' : m1 = m := hs1 ▸ hm1
   subst hm1'
-  have hctor : (tbl.entry i.toNat).ctor = decI (erRdT m1 (q + 6)) := hct
+  have hctor : (tbl.entry i.toNat).ctor = decI (erRd m1 (q + 6)) := hct
   by_cases g1 : r1.headD 0 = 0
   · rw [pgrW.k_env_find.arm1 _ _ _ _ _ _ _ g1] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -585,24 +585,24 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
   have hcv := decCI_cvA hci
   obtain ⟨hlps, -, hty, hty32⟩ := L.Arena.decCV_rd (erRdOK m1) hcv
   obtain ⟨hnn32, hnn⟩ := decCV_nameRd (erRdOK m1) hcv
-  simp only [erRdT_congr rfl rfl] at hW
+  simp only [erRd_congr rfl rfl] at hW
   -- `const_ty_at`
-  rcases c2 : callW p n "const_ty_at" [erRdT m1 (c + 1), erRdT m1 (c + 2), erRdT m1 (c + 3),
-      erRdT m1 (c + 4), us] m1 with _ | ⟨r2, m2⟩
+  rcases c2 : callW p n "const_ty_at" [erRd m1 (c + 1), erRd m1 (c + 2), erRd m1 (c + 3),
+      erRd m1 (c + 4), us] m1 with _ | ⟨r2, m2⟩
   · rw [c2, pgrW.k_const_ty_at.none] at hW; cases hW
-  by_cases gk : erRdT m1 (q + 5) + i + 1 ≤ erRdT m1 (q + 5)
+  by_cases gk : erRd m1 (q + 5) + i + 1 ≤ erRd m1 (q + 5)
   · rw [c2, pgrW.k_const_ty_at.abort1 (hc1 := gk)] at hW; cases hW
   rw [c2, pgrW.k_const_ty_at.arm1 (hc1 := gk)] at hW
   have hB : tbl.numParams + i.toNat + 1 < 2 ^ 64 := by
-    have hnp' : tbl.numParams = (erRdT m1 (q + 5)).toNat := hnp
+    have hnp' : tbl.numParams = (erRd m1 (q + 5)).toNat := hnp
     rw [hnp']
     simp only [UInt64.le_iff_toNat_le, UInt64.toNat_add] at gk
-    have := (erRdT m1 (q + 5)).toNat_lt; have := i.toNat_lt
+    have := (erRd m1 (q + 5)).toNat_lt; have := i.toNat_lt
     simp at gk; omega
   have h2 := CoreSpec.of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (hCT n ⟨m1, Locals.init []⟩ a dn vis fe M eb _ _ _ _ us _ hS hnn32 hty32 hus hlps) c2
-  have hcvE : ci.toConstantVal = ⟨decI (erRdT m1 (c + 1)), ci.toConstantVal.levelParams,
-      decE (erRdT m1 (c + 4))⟩ := by
+  have hcvE : ci.toConstantVal = ⟨decI (erRd m1 (c + 1)), ci.toConstantVal.levelParams,
+      decE (erRd m1 (c + 4))⟩ := by
     rw [cv_eta ci.toConstantVal, hnn, hty]; rfl
   have hrun2 : (constTyAt ci.toConstantVal (decI us)).run a =
       .ok (decE (r2.headD 0), AM.st (constTyAt ci.toConstantVal (decI us)) a) := by
@@ -615,7 +615,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
   have hM2 := callW_coreHb hP.cl (mem_stageCoreFns (List.mem_append_right _ (coreFn_of (by decide))) (by simp [coreLeafOnly])) c2 hM
   generalize ha2 : AM.st (constTyAt ci.toConstantVal (decI us)) a = a2 at hrun2 hS2
   -- `open_pis_at_fvars_f`
-  rcases c3 : callW p n "open_pis_at_fvars_f" [erRdT m1 (q + 5) + i + 1, r2.headD 0, 0] m2 with
+  rcases c3 : callW p n "open_pis_at_fvars_f" [erRd m1 (q + 5) + i + 1, r2.headD 0, 0] m2 with
     _ | ⟨r3, m3⟩
   · rw [c3, pgrW.k_open_pis_at_fvars_f.none] at hW; cases hW
   rw [c3] at hW
@@ -624,7 +624,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
   obtain ⟨hI3, hg3⟩ := opfF_grow hopf hI2
   have hM3 := hbMR_keep (opfF_frame hopf) (by decide) (by decide) hM2
   have hkp := (keepsW_opfF _ _ _).run hrun3
-  have hk3 : (erRdT m1 (q + 5) + i + 1).toNat = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).idx + 1 := by
+  have hk3 : (erRd m1 (q + 5) + i + 1).toNat = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).idx + 1 := by
     show _ = tbl.numParams + i.toNat + 1
     rw [hnp] at hB ⊢
     rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega
@@ -652,9 +652,9 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
     have hE1 : m3.arr64 (tier1 EREC) = m1.arr64 (tier1 EREC) :=
       ((opfF_frame hopf).arr (tier1 EREC) (by decide) (by decide)).trans
         (hfr2.1.arr (tier1 EREC) coreFrA_erec1 (by decide))
-    rw [erRdT_congr hE0 hE1] at hW
+    rw [erRd_congr hE0 hE1] at hW
     generalize hro : rdW (m3.arr64 CTL) 136 = ro at hW
-    rcases c4 : callW p n "proj_guard_rows_at" [erRdT m1 (c + 4), erRdT m1 (q + 5), i, r3.tail.headD 0,
+    rcases c4 : callW p n "proj_guard_rows_at" [erRd m1 (c + 4), erRd m1 (q + 5), i, r3.tail.headD 0,
         r3.tail.tail.headD 0, 0, ro, 0] m3 with _ | ⟨r4, m4⟩
     · rw [c4, pgrW.k_proj_guard_rows_at.none] at hW; cases hW
     rw [c4, pgrW.k_proj_guard_rows_at.arm1] at hW
@@ -672,7 +672,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
         (by rw [← hnp]; exact hB) hfn n m3 m4 a3 M3 0 0 (r4.headD 0) #[] hW4 hS3 hI3 hM3 hsl
         (by simp) (fun i hi => absurd hi (by simp)) rfl
         (by rw [hro', htop3]; simp) (by rw [hro', hsz31]; simpa using htb')
-    have hty' : ci.toConstantVal.type = decI (erRdT m1 (c + 4)) := hty
+    have hty' : ci.toConstantVal.type = decI (erRd m1 (c + 4)) := hty
     refine ⟨some y, a4, ?_, ⟨M4, hS4, hK2.trans (hK3.trans hK4), (hSt2.trans hSt3).toGrew.trans hSt4⟩,
       fun h l hd => by
         have := hlk2 h l hd; simp only [EStore.ls] at this ⊢; rw [hst4, hlk3]; exact this,
@@ -680,7 +680,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
         by rw [htop4, ← hro', hw4]; simp⟩, hI4, hg2.trans (hg3.trans hg4), hM4⟩
     rw [hrunT]
     simp only [StateT.run_bind, hty']
-    rw [show (tbl.entry i.toNat).numParams = (erRdT m1 (q + 5)).toNat from hnp,
+    rw [show (tbl.entry i.toNat).numParams = (erRd m1 (q + 5)).toNat from hnp,
       show (tbl.entry i.toNat).idx = i.toNat from rfl]
     rw [show (0 : Nat) = (0 : Word).toNat from rfl, hrun4]
     rfl

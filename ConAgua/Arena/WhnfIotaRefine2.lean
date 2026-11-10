@@ -770,7 +770,7 @@ def ErecKeptInst (p : Prog) : Prop :=
   ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
     (f = "inst_lp" ∨ f = "inst_spine") → callW p n f vs m = some (r, m') →
     m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
-      erRdT m' = erRdT m ∧ erecP m' = erecP m
+      erRd m' = erRd m ∧ erecP m' = erecP m
 
 set_option maxRecDepth 8192 in
 /-- `ErecKeptInst` from the core's write set (`CoreErec.lean`). -/
@@ -798,7 +798,7 @@ def ErecKeptRec (p : Prog) : Prop :=
   ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
     f ∈ iotaKeptFns → callW p n f vs m = some (r, m') →
     m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
-      erRdT m' = erRdT m ∧ erecP m' = erecP m
+      erRd m' = erRd m ∧ erecP m' = erecP m
 
 /-- `ErecKeptRec` from the core's write set (`CoreErec.lean`). -/
 theorem ErecKeptRec.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :

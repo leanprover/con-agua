@@ -32,7 +32,7 @@ namespace L.Arena
 
 /-- Model of `ctor_family`, its callees through their runs. -/
 def cfamW (p : Prog) (n : Nat) (m : Mem) (vis cq : Word) : Option (List Word × Mem) :=
-  match callW p n "pi_result" [erRdT m (cq + 4)] m with
+  match callW p n "pi_result" [erRd m (cq + 4)] m with
   | none => none
   | some (r₁, m₁) =>
     match callW p n "get_app_fn" [r₁.headD 0] m₁ with
@@ -46,7 +46,7 @@ def cfamW (p : Prog) (n : Nat) (m : Mem) (vis cq : Word) : Option (List Word × 
           | none => none
           | some (r₄, m₄) =>
             if r₄.headD 0 = 0 then some ([0, 0], m₄)
-            else if erRdT m₄ (r₄.tail.headD 0) ≠ 3 then some ([0, 0], m₄)
+            else if erRd m₄ (r₄.tail.headD 0) ≠ 3 then some ([0, 0], m₄)
             else some ([1, r₄.tail.headD 0], m₄)
 
 theorem ctorFamily_spec (p : Prog) (hp : p.lookup "ctor_family" = some ctorFamilyL) (n : Nat)
@@ -81,13 +81,13 @@ theorem cfam_ok (p : Prog) (hp : IotaProg' p) {n : Nat} {dn : NIdx → Option Co
         decCI (erecP m) (r.tail.headD 0).toNat = some (.indInfo cvT caps) ∧
         ∃ T, fe.find? T = some (.indInfo cvT caps)) := by
   have hR := hS.arena.base
-  have h4 : erRdT m cq = 4 := Classical.byContradiction fun h =>
+  have h4 : erRd m cq = 4 := Classical.byContradiction fun h =>
     (decCI_ctorR (erRdOK m) hci).2 h _ _ _ rfl
   obtain ⟨_, _, _, e4, hcv⟩ := (decCI_split (erRdOK m) hci).2.2.2.2.1 h4
   cases e4
   obtain ⟨-, -, hty, hty32⟩ := decCV_rd (erRdOK m) hcv
   unfold cfamW at h
-  rcases c1 : callW p n "pi_result" [erRdT m (cq + 4)] m with _ | ⟨r₁, m₁⟩ <;>
+  rcases c1 : callW p n "pi_result" [erRd m (cq + 4)] m with _ | ⟨r₁, m₁⟩ <;>
     simp only [c1, reduceCtorEq] at h
   obtain ⟨t₁, ht₁, hm₁, -, hw1, hpi⟩ := triple_of_callW
     (piResult_refines' p hp.spine.pires n ⟨m, Locals.init []⟩ a hR _ hty32) c1
@@ -156,7 +156,7 @@ theorem cfam_ok (p : Prog) (hp : IotaProg' p) {n : Nat} {dn : NIdx → Option Co
   have hf' : fe.find? (decI (r₃.headD 0)) = some ci := by
     rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci4
   have hk := decCI_ind_rd (erRdOK m) hci4
-  by_cases k3 : erRdT m (r₄.tail.headD 0) ≠ 3
+  by_cases k3 : erRd m (r₄.tail.headD 0) ≠ 3
   · rw [ite_eq_left k3] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -246,8 +246,8 @@ theorem ic3_ref (p : Prog) (hp : IotaProg4 p) (hz : FnzaProg p) (n F : Nat) (hk 
   subst hol
   refine RefE.bind_right (by rw [viewLsLen_run, hvl]) ?_
   dsimp only
-  have hlen' : (erRdT m (r₁.tail.headD 0 + 3)).toNat = cvT.levelParams.length := hlen.symm
-  by_cases hl : erRdT m (r₁.tail.headD 0 + 3) ≠ l
+  have hlen' : (erRd m (r₁.tail.headD 0 + 3)).toNat = cvT.levelParams.length := hlen.symm
+  by_cases hl : erRd m (r₁.tail.headD 0 + 3) ≠ l
   · rw [ic3E.k_ls_node.arm1 _ _ _ _ _ _ _ _ _ (by simpa using hl)]
     have hb : (cvT.levelParams.length == l.toNat) = false := by
       rw [← hlen']; simpa using fun e => hl (UInt64.toNat_inj.mp e)

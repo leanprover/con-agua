@@ -77,7 +77,7 @@ theorem cvLpsW_ok {vis : Word} {fe : IFEnv} {a : AState}
   | succ n =>
   rw [L.Arena.cvLpsW_step] at h
   obtain ⟨hsl, -⟩ := decCV_rdq (erRdOK m) hq
-  have h' : erToIwW n m (erRdT m (q + 1)) (erRdT m (q + 2)) = some (r, m') := h
+  have h' : erToIwW n m (erRd m (q + 1)) (erRd m (q + 2)) = some (r, m') := h
   obtain ⟨hS', hg, hdl, htop, -⟩ := erToIwW_stage h' hS hsl
   have e0 : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
   have e1 : r.getD 1 0 = r.tail.headD 0 := by rcases r with _ | ⟨_, _ | _⟩ <;> rfl
@@ -89,7 +89,7 @@ mutual
 /-- **The model of `canon_ctx(cp, cq)`**. -/
 def ctxW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | k + 1, m, cp, cq => ctxK1 k cp cq (cnW k m (erRdT m (cp + 2)))
+  | k + 1, m, cp, cq => ctxK1 k cp cq (cnW k m (erRd m (cp + 2)))
 
 /-- After `canon_names`. -/
 def ctxK1 (k : Nat) (cp cq : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -111,7 +111,7 @@ end
 
 section arms
 variable (k : Nat) (m m1 m2 m3 : Mem) (cp cq : Word) (rc rp rq : List Word)
-theorem ctxW_succ : ctxW (k + 1) m cp cq = ctxK1 k cp cq (cnW k m (erRdT m (cp + 2))) := by
+theorem ctxW_succ : ctxW (k + 1) m cp cq = ctxK1 k cp cq (cnW k m (erRd m (cp + 2))) := by
   rw [ctxW]
 theorem ctxK1_some : ctxK1 k cp cq (some (rc, m1)) = ctxK2 k cq rc (L.Arena.cvLpsW k m1 cp) := by
   rw [ctxK1]
@@ -157,7 +157,7 @@ theorem ctxW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
   | succ k =>
   rw [ctxW_succ] at h
   obtain ⟨-, hlen0⟩ := decCV_rdq (erRdOK m) hcv
-  generalize erRdT m (cp + 2) = w2 at h hlen0
+  generalize erRd m (cp + 2) = w2 at h hlen0
   have hlen : w2.toNat = cv.levelParams.length := hlen0.symm
   cases h1 : cnW k m w2 with
   | none => rw [h1] at h; simp [ctxK1] at h
@@ -201,8 +201,8 @@ mutual
 def cvceW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | k + 1, m, q, r =>
-    if erRdT m q ≠ erRdT m r ∨
-        erRdT m (q + 2) ≠ erRdT m (r + 2) then some (0, m)
+    if erRd m q ≠ erRd m r ∨
+        erRd m (q + 2) ≠ erRd m (r + 2) then some (0, m)
     else cvcK1 k q r (ctxW k m q r)
 
 /-- After `canon_ctx`. -/
@@ -211,19 +211,19 @@ def cvcK1 (k : Nat) (q r : Word) : Option (List Word × Mem) → Option (Word ×
   | some (rc, m1) =>
     ceW k m1 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
       (rc.tail.tail.tail.tail.headD 0) (rc.tail.tail.tail.tail.tail.headD 0) 4000000000
-      (erRdT m1 (q + 3)) (erRdT m1 (r + 3))
+      (erRd m1 (q + 3)) (erRd m1 (r + 3))
 end
 
 section arms
 variable (k : Nat) (m m1 : Mem) (q r : Word) (rc : List Word)
 theorem cvceW_succ : cvceW (k + 1) m q r =
-    (if erRdT m q ≠ erRdT m r ∨
-        erRdT m (q + 2) ≠ erRdT m (r + 2) then some (0, m)
+    (if erRd m q ≠ erRd m r ∨
+        erRd m (q + 2) ≠ erRd m (r + 2) then some (0, m)
     else cvcK1 k q r (ctxW k m q r)) := by rw [cvceW]
 theorem cvcK1_some : cvcK1 k q r (some (rc, m1)) =
     ceW k m1 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
       (rc.tail.tail.tail.tail.headD 0) (rc.tail.tail.tail.tail.tail.headD 0) 4000000000
-      (erRdT m1 (q + 3)) (erRdT m1 (r + 3)) := by rw [cvcK1]
+      (erRd m1 (q + 3)) (erRd m1 (r + 3)) := by rw [cvcK1]
 end arms
 
 grind_pattern [ind_grind] cvceW_succ => cvceW (k + 1) m q r
@@ -244,11 +244,11 @@ theorem cvCanonEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (q r 
 
 /-- The three words of a constant value that the comparison reads. -/
 theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (h : decCV (erecP m) q.toNat = some cv) :
-    ∃ wn w2 wt : Word, erRdT m q = wn ∧ erRdT m (q + 2) = w2 ∧
-      erRdT m (q + 3) = wt ∧ wn.toNat < 2 ^ 32 ∧ wt.toNat < 2 ^ 32 ∧
+    ∃ wn w2 wt : Word, erRd m q = wn ∧ erRd m (q + 2) = w2 ∧
+      erRd m (q + 3) = wt ∧ wn.toNat < 2 ^ 32 ∧ wt.toNat < 2 ^ 32 ∧
       cv.name = decI wn ∧ cv.type = decI wt ∧ w2.toNat = cv.levelParams.length := by
   obtain ⟨⟨wn, hn, hn32, hnm⟩, ⟨w2, hw2, hlen⟩, ⟨wt, ht, ht32, htm⟩⟩ := decCV_words h
-  exact ⟨wn, w2, wt, erRdT_of q wn hn, (erRdOK m).at 2 rfl hw2, (erRdOK m).at 3 rfl ht, hn32, ht32,
+  exact ⟨wn, w2, wt, erRd_of q wn hn, (erRdOK m).at 2 rfl hw2, (erRdOK m).at 3 rfl ht, hn32, ht32,
     hnm, htm, hlen.symm⟩
 
 set_option maxRecDepth 100000 in

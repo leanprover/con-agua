@@ -427,17 +427,17 @@ theorem ErecKeptRec.all {p : Prog} (hE : ErecKeptRec p) {n : Nat} {f : FnName} {
     {m : Mem} {r : List Word} {m' : Mem} (hf : f ∈ iotaKeptFns)
     (h : callW p n f vs m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
-      erRdT m' = erRdT m ∧ erecP m' = erecP m :=
+      erRd m' = erRd m ∧ erecP m' = erecP m :=
   hE n f vs m r m' hf h
 
 /-- Two such keeps in a row. -/
 theorem erecKeep_trans {m m' m'' : Mem}
     (h2 : m''.arr64 EREC = m'.arr64 EREC ∧ m''.arr64 (tier1 EREC) = m'.arr64 (tier1 EREC) ∧
-      erRdT m'' = erRdT m' ∧ erecP m'' = erecP m')
+      erRd m'' = erRd m' ∧ erecP m'' = erecP m')
     (h1 : m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
-      erRdT m' = erRdT m ∧ erecP m' = erecP m) :
+      erRd m' = erRd m ∧ erecP m' = erecP m) :
     m''.arr64 EREC = m.arr64 EREC ∧ m''.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
-      erRdT m'' = erRdT m ∧ erecP m'' = erecP m :=
+      erRd m'' = erRd m ∧ erecP m'' = erecP m :=
   ⟨h2.1.trans h1.1, h2.2.1.trans h1.2.1, h2.2.2.1.trans h1.2.2.1, h2.2.2.2.trans h1.2.2.2⟩
 
 section pm

@@ -194,7 +194,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
       (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cEtaE.arm1]
   have hrec := decCI_indCaps (erRdOK m) hci
-  have hlps : cvT.levelParams.length = (erRdT m (indP + 3)).toNat := L.Ind.hslice_len hrec.lp
+  have hlps : cvT.levelParams.length = (erRd m (indP + 3)).toNat := L.Ind.hslice_len hrec.lp
   cases N with
   | zero => rw [m2cPreE.eq_1, m2cEtaE.k_m2c_pre.none]; exact RefE.of_cls0 (by simp)
   | succ N' =>
@@ -245,14 +245,14 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   · rw [m2cEtaE.k_get_app_args.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2]
     exact hmaj' (fun e => g2 ((decI_inj_iff hT2 hT).mp e.1))
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
-  by_cases g3 : r2'.tail.headD 0 ≠ erRdT m (indP + 7)
+  by_cases g3 : r2'.tail.headD 0 ≠ erRd m (indP + 7)
   · rw [m2cEtaE.k_get_app_args.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2' g3]
     exact hmaj' (fun e => g3 (UInt64.toNat_inj.mp (by rw [← hlen, e.2.1, hrec.etaParams])))
-  have g3' : r2'.tail.headD 0 = erRdT m (indP + 7) := by simpa using g3
-  by_cases g4 : L.tail.tail.tail.tail.headD 0 ≠ erRdT m (indP + 3)
+  have g3' : r2'.tail.headD 0 = erRd m (indP + 7) := by simpa using g3
+  by_cases g4 : L.tail.tail.tail.tail.headD 0 ≠ erRd m (indP + 3)
   · rw [m2cEtaE.k_get_app_args.arm3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2' g3' g4]
     exact hmaj' (fun e => g4 (UInt64.toNat_inj.mp (by rw [← hll, e.2.2, hlps])))
-  have g4' : L.tail.tail.tail.tail.headD 0 = erRdT m (indP + 3) := by simpa using g4
+  have g4' : L.tail.tail.tail.tail.headD 0 = erRd m (indP + 3) := by simpa using g4
   rw [m2cEtaE.k_get_app_args.arm4 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2' g3' g4']
   have hcond : (decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = caps.etaParams ∧
       l.length = cvT.levelParams.length :=

@@ -227,7 +227,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
   have hjn : j.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hj
   obtain ⟨q, hq, hci⟩ := decEBlk_get hdec j.toNat hjn
   have hoj : (o + j).toNat = o.toNat + j.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-  obtain ⟨hpw', hqb⟩ := erRd_of_nat? hq hoj
+  obtain ⟨hpw', hqb⟩ := erRd_nat hq hoj
   have hj1n : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hdrop : blk.drop j.toNat = blk[j.toNat]'(by omega) :: blk.drop (j.toNat + 1) :=
     List.drop_eq_getElem_cons (by omega)
@@ -301,7 +301,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
       simp only [nat?, Option.map_eq_some_iff] at hnpc
       obtain ⟨w, hw, -⟩ := hnpc
       exact erecP_lt64 hw
-    obtain ⟨hp5, hnb⟩ := erRd_of_nat? (x := erRd m (o + j) + 5) hnpc
+    obtain ⟨hp5, hnb⟩ := erRd_nat (q := erRd m (o + j) + 5) hnpc
       (by rw [show (5 : Word) = UInt64.ofNat 5 from rfl, hoff 5 hq5b]; simp; omega)
     have hnpcT : (UInt64.ofNat npc : Word).toNat = npc := UInt64.toNat_ofNat_of_lt' hnb
     simp only [indParamsOk, StateT.run_bind]

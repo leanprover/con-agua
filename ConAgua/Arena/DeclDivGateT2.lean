@@ -385,7 +385,7 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
       simp only [show (2 : Word) * UInt64.ofNat 0 = 0 from rfl, UInt64.add_zero] at h1
       have hge := hg1.er
       unfold erTop at hge
-      rw [erRd_lo hC1.stage.iw (by unfold erecTop; rw [h1]; unfold erecTop at hb; omega),
+      rw [erRd_lo hC1.stage.iw (by unfold erTop; rw [h1]; unfold erTop at hb; omega),
         rdW_erec_grow hg1 (by rw [h1]; omega)]
       exact v1
     simp only [erRd_foldN]

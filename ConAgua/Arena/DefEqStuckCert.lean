@@ -164,7 +164,7 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   have hind := decCI_indK (erRdOK _) hci
-  by_cases h4 : erRdT s₀.mem (r₂.tail.headD 0) ≠ 3
+  by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 3
   · rw [ite_eq_left h4]
     exact RefE.of_run_eq (setWtbT_other _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e))) hl
@@ -309,7 +309,7 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   have hctor := decCI_ctorF (erRdOK _) hci
-  by_cases h4 : erRdT s₀.mem (r₂.tail.headD 0) ≠ 4
+  by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 4
   · rw [ite_eq_left h4]
     exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv np nf e => hctor.2 h4 cv np nf (by rw [hfind'] at e; exact Option.some.inj e))) hl
@@ -322,17 +322,17 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   have hS₃ := hS.frame_stk hf3 (by simp) (by simp)
   have hep : erecP m₃ = erecP s₀.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp [EREC, SPN, tier1]) (by simp)
     (by simp)
-  have herec : ∀ x : Word, rdW (m₃.arr64 (tierA EREC (x >>> 40))) (x &&& 0xFFFFFFFFFF) = erRdT s₀.mem x :=
-    erRdT_congr (hf3.1 EREC (by simp [EREC, SPN]) (by decide))
+  have herec : ∀ x : Word, rdW (m₃.arr64 (tierA EREC (x >>> 40))) (x &&& 0xFFFFFFFFFF) = erRd s₀.mem x :=
+    erRd_congr (hf3.1 EREC (by simp [EREC, SPN]) (by decide))
       (hf3.1 (tier1 EREC) (by simp [EREC, SPN, tier1]) (by decide))
   refine RefE.of_run_eq (setWith_ctor _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv cvc _ _
     (by rw [hfind', hci_eq]) aargs hargs) ?_
   have hlen : aargs.length = (r₃.tail.headD 0).toNat := by simpa using hsp.size
   have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hS.spn
   simp only [secwE.k_get_app_args, herec]
-  by_cases hcnt : ¬ r₃.tail.headD 0 < erRdT s₀.mem (r₂.tail.headD 0 + 6) ∧
-      r₃.tail.headD 0 - erRdT s₀.mem (r₂.tail.headD 0 + 6) =
-        erRdT s₀.mem (r₂.tail.headD 0 + 5)
+  by_cases hcnt : ¬ r₃.tail.headD 0 < erRd s₀.mem (r₂.tail.headD 0 + 6) ∧
+      r₃.tail.headD 0 - erRd s₀.mem (r₂.tail.headD 0 + 6) =
+        erRd s₀.mem (r₂.tail.headD 0 + 5)
   · rw [ite_eq_right (fun h => h.elim hcnt.1 (fun h' => h' hcnt.2))]
     rw [ite_eq_left (by rw [hlen]; exact (count_iff _ _ _).mpr hcnt)]
     cases n with
@@ -349,7 +349,7 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
             (by have := hsp.bound; omega)
           rw [htop3, ← hr30]; omega))
   · rw [ite_eq_left (by
-      by_cases hc1 : r₃.tail.headD 0 < erRdT s₀.mem (r₂.tail.headD 0 + 6)
+      by_cases hc1 : r₃.tail.headD 0 < erRd s₀.mem (r₂.tail.headD 0 + 6)
       · exact .inl hc1
       · exact .inr (fun e => hcnt ⟨hc1, e⟩))]
     rw [ite_eq_right (by rw [hlen, count_iff]; exact hcnt)]

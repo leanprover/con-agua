@@ -721,7 +721,7 @@ theorem brsW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
       subst hl; rw [partsPSl_nil hrs]
       exact Sim.ret ⟨PSlR.nil _ _, hS, IWGrow.refl _⟩
     rw [brsW.arm2 n m no nl ro rl hl]
-    simp only [erRd_fold]
+    simp only [erRd_foldN]
     obtain ⟨pc, ⟨cv, mI, rP, isK, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
     obtain ⟨⟨cvp, hcvp, hcv⟩, hmI, hrP⟩ := decSR_fields (show decSR (truncM m) pc = _ from hrs0)
     obtain ⟨ro', rl', hro', hrl', hru, hisK⟩ := decSR_fields2 (show decSR (truncM m) pc = _ from hrs0)

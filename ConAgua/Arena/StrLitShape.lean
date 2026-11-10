@@ -115,12 +115,12 @@ theorem litShapeOk_call (hS : CoreS dn m a vis fe M eb) {c : Word} {ci : IConsta
     (litShapeOk_spec p hp (n + 1) _ c) h
   change litShapeOkW p (n + 1) m c = some (r.headD 0, s'.mem) at hW
   generalize s'.mem = m' at hW ⊢
-  rw [litShapeOkW.eq_2, erRdT_congr rfl rfl] at hW
+  rw [litShapeOkW.eq_2, erRd_congr rfl rfl] at hW
   have hcv := decCI_cvA hci
   obtain ⟨nw, hnw, hnwl, hnm⟩ := decCV_name hcv
   have hc1 : (c + 1).toNat = c.toNat + 1 := by
     have := erecP_lt64 hnw; rw [UInt64.toNat_add]; simp; omega
-  have hrd : erRdT m (c + 1) = nw := erRdT_of _ _ (by rw [hc1]; exact hnw)
+  have hrd : erRd m (c + 1) = nw := erRd_of _ _ (by rw [hc1]; exact hnw)
   rw [hrd] at hW
   have hname : ci.name = decI nw := by rw [ciName_cv, hnm]
   have hdec : (1 : Word) ≠ 0 → ∃ ci', decCI (erecP m) c.toNat = some ci' := fun _ => ⟨ci, hci⟩

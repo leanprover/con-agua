@@ -142,7 +142,7 @@ theorem ccv_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     (by simp; omega) h41
   have hx2 : rdW ((wrER m1 A [0, nw]).arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775)
       = w1 := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq1]; exact hgP2.ext _ _ hw1)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hgP2.ext _ _ hw1)
   have e3 : erecPutMem (erecPutMem m1 A 0) (A + 1) nw = wrER m1 A [0, nw] := rfl
   rw [e3, hx2] at h5 h6 ⊢
   have e4 : erecPutMem (wrER m1 A [0, nw]) (A + 2) w1 = wrER m1 A [0, nw, w1] := by
@@ -152,7 +152,7 @@ theorem ccv_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     (by simp; omega) h41
   have hx3 : rdW ((wrER m1 A [0, nw, w1]).arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775)
       = w2 := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq2]; exact hgP3.ext _ _ hw2)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq2]; exact hgP3.ext _ _ hw2)
   rw [hx3]
   have e6 : erecPutMem (erecPutMem (wrER m1 A [0, nw, w1]) (A + 3) w2) (A + 4) t =
       wrER m1 A [0, nw, w1, w2, t] := by
@@ -259,10 +259,10 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceW hqd
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hqd).2.2
   have ex : rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = wx := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ hwx
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx
   have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   have et : rdW (m.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wt := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq3]; exact hwt)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq3]; exact hwt)
   have hnm : denoteN a.store.ns cv.name = some c.name := (ConRon.Bridge.denoteCV_inv hden).1
   cases n with
   | zero => rw [checkConstantValE.eq_1]; exact RefE.of_cls0 rfl
@@ -341,9 +341,9 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
   have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have e1 : rdW (m10.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = w1 := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq1]; exact hg0.ext _ _ hw1)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hg0.ext _ _ hw1)
   have e2 : rdW (m10.arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775) = w2 := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq2]; exact hg0.ext _ _ hw2)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq2]; exact hg0.ext _ _ hw2)
   have hsl10 : hslice? (erA m10) w1.toNat w2.toNat = some cv.levelParams := ArrExt.hslice? hg0.ext hsl
   refine RefE.onlySim (fun _ => checkConstantValE.k_cv_lps.none ..) (fun _ _ h => h) fun r11 m11 h11 => ?_
   rw [checkConstantValE.k_cv_lps.arm1]
@@ -492,9 +492,9 @@ theorem vg_ref {p : Prog} (_hP : CcvProg p) (hap : ApdF p) (hcrf : L.Ind.CrfF p)
   -- `cv_lps(q)`
   have hg0 : IWGrow m m7 := hg6.trans hg7
   have e1 : rdW (m7.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = w1 := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq1]; exact hg0.ext _ _ hw1)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hg0.ext _ _ hw1)
   have e2 : rdW (m7.arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775) = w2 := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq2]; exact hg0.ext _ _ hw2)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq2]; exact hg0.ext _ _ hw2)
   have hsl7 : hslice? (erA m7) w1.toNat w2.toNat = some cv.levelParams := ArrExt.hslice? hg0.ext hsl
   refine RefE.onlySim (fun _ => valueGuardsE.k_cv_lps.none ..) (fun _ _ h => h) fun r11 m11 h11 => ?_
   rw [valueGuardsE.k_cv_lps.arm1]
@@ -552,9 +552,9 @@ theorem checkDefnVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap
   have e4 : (c + 4).toNat = c.toNat + 4 := toNat_add_small c 4 (by omega)
   have e1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
   have ev : rdW (m.arr64 (L.tierA EREC ((c + 5) >>> 40))) (c + 5 &&& 1099511627775) = wv := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [e5]; exact hwv)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e5]; exact hwv)
   have et : rdW (m.arr64 (L.tierA EREC ((c + 4) >>> 40))) (c + 4 &&& 1099511627775) = wt := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [e4]; simpa [Nat.add_assoc] using hwt)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e4]; simpa [Nat.add_assoc] using hwt)
   cases n with
   | zero => rw [checkDefnValE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
@@ -607,9 +607,9 @@ theorem checkOpaqueVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (h
   have e4 : (c + 4).toNat = c.toNat + 4 := toNat_add_small c 4 (by omega)
   have e1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
   have ev : rdW (m.arr64 (L.tierA EREC ((c + 5) >>> 40))) (c + 5 &&& 1099511627775) = wv := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [e5]; exact hwv)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e5]; exact hwv)
   have et : rdW (m.arr64 (L.tierA EREC ((c + 4) >>> 40))) (c + 4 &&& 1099511627775) = wt := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [e4]; simpa [Nat.add_assoc] using hwt)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e4]; simpa [Nat.add_assoc] using hwt)
   cases n with
   | zero => rw [checkOpaqueValE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
@@ -668,9 +668,9 @@ theorem checkThmVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap 
   have e4 : (c + 4).toNat = c.toNat + 4 := toNat_add_small c 4 (by omega)
   have e1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
   have ev : rdW (m.arr64 (L.tierA EREC ((c + 5) >>> 40))) (c + 5 &&& 1099511627775) = wv := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [e5]; exact hwv)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e5]; exact hwv)
   have et : rdW (m.arr64 (L.tierA EREC ((c + 4) >>> 40))) (c + 4 &&& 1099511627775) = wt := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [e4]; simpa [Nat.add_assoc] using hwt)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e4]; simpa [Nat.add_assoc] using hwt)
   cases n with
   | zero => rw [checkThmValE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>

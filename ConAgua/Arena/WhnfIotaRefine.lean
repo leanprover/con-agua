@@ -116,7 +116,7 @@ theorem uint64_succ_toNat (n i : Word) (h : i < n) : (i + 1).toNat = i.toNat + 1
   forUp_succ_toNat h
 
 /-- Model of the `find_rule` scan from index `i`, by the `Nat` index, over the word read `rd`
-(L's tagged read `erRdT m`; the L code aborts on a read past the array, so the spec only constrains
+(L's tagged read `erRd m`; the L code aborts on a read past the array, so the spec only constrains
 successful runs). -/
 def frN (rd : Word → Word) (ro rc c : Word) (i : Nat) : List Word :=
   if i < rc.toNat then
@@ -135,18 +135,18 @@ theorem frN_miss (rd : Word → Word) (ro rc c x : Word) (h : x < rc) (hc : ¬ r
 
 theorem frN_hitT (m : Mem) (ro rc c x : Word) (h : x < rc)
     (hc : rdW (m.arr64 (tierA EREC ((ro + 11 * x) >>> 40))) ((ro + 11 * x) &&& 0xFFFFFFFFFF) = c) :
-    frN (erRdT m) ro rc c x.toNat = [1, ro + 11 * x] := frN_hit _ ro rc c x h hc
+    frN (erRd m) ro rc c x.toNat = [1, ro + 11 * x] := frN_hit _ ro rc c x h hc
 theorem frN_missT (m : Mem) (ro rc c x : Word) (h : x < rc)
     (hc : ¬ rdW (m.arr64 (tierA EREC ((ro + 11 * x) >>> 40))) ((ro + 11 * x) &&& 0xFFFFFFFFFF) = c) :
-    frN (erRdT m) ro rc c x.toNat = frN (erRdT m) ro rc c (x + 1).toNat := frN_miss _ ro rc c x h hc
+    frN (erRd m) ro rc c x.toNat = frN (erRd m) ro rc c (x + 1).toNat := frN_miss _ ro rc c x h hc
 
 theorem findRuleLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ True⦄ exec p k findRuleLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      frN (erRdT s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3).toNat = r.retOr [0, 0]; ⊤⦄ :=
+      frN (erRd s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3).toNat = r.retOr [0, 0]; ⊤⦄ :=
   Triple.forUp_pre rfl (fun s => s.mem = s₀.mem ∧ s.loc 0 = s₀.loc 0 ∧ s.loc 1 = s₀.loc 1 ∧
-      s.loc 2 = s₀.loc 2 ∧ frN (erRdT s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s.loc 3).toNat =
-        frN (erRdT s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3).toNat)
+      s.loc 2 = s₀.loc 2 ∧ frN (erRd s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s.loc 3).toNat =
+        frN (erRd s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3).toNat)
     (fun _ => ⟨rfl, rfl, rfl, rfl, rfl⟩) (by grind [frN_end, Sig.retOr]) (fun k s₁ => by
       sym only [lang_grind, arena_grind] =>
         vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64,
@@ -156,7 +156,7 @@ theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k
     (s₀ : St) (ro rc c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p k) "find_rule" [ro, rc, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ frN (erRdT s₀.mem) ro rc c 0 = r; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ frN (erRd s₀.mem) ro rc c 0 = r; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, findRuleL]
   cases k with
@@ -409,7 +409,7 @@ def icaW (p : Prog) (n : Nat) (m : Mem) (vis e : Word) : Option (Word × Mem) :=
       | none => none
       | some (r₂, m₂) =>
         if r₂.headD 0 = 0 then some (0, m₂)
-        else some (if erRdT m₂ (r₂.tail.headD 0) = 4 then 1 else 0, m₂)
+        else some (if erRd m₂ (r₂.tail.headD 0) = 4 then 1 else 0, m₂)
 
 theorem isCtorApp_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (vis e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_ctor_app" [vis, e]
@@ -520,7 +520,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
   have hctor := decCI_ctorR (erRdOK s₀.mem) hci
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   rw [hfind'] at hrun1
-  by_cases h4 : erRdT s₀.mem (r₂.tail.headD 0) = 4
+  by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) = 4
   · obtain ⟨cv, rfl⟩ := hctor.1 h4
     rw [ite_eq_left h4] at hr
     refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_

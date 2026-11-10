@@ -53,7 +53,7 @@ mutual
 /-- **The model of `ci_canon_defn(p, q)`**. -/
 def cdW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
-  | k + 1, m, p, q => cdK0 k m p q (if hintEqB (erRdT m) (p + 6) (q + 6) then 1 else 0)
+  | k + 1, m, p, q => cdK0 k m p q (if hintEqB (erRd m) (p + 6) (q + 6) then 1 else 0)
 
 /-- After `hint_eq`. -/
 def cdK0 (k : Nat) (m : Mem) (p q e : Word) : Option (Word × Mem) :=
@@ -70,13 +70,13 @@ def cdK2 (k : Nat) (p q : Word) : Option (List Word × Mem) → Option (Word × 
   | some (rc, m2) =>
     ceW k m2 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
       (rc.tail.tail.tail.tail.headD 0) (rc.tail.tail.tail.tail.tail.headD 0) 4000000000
-      (erRdT m2 (p + 5)) (erRdT m2 (q + 5))
+      (erRd m2 (p + 5)) (erRd m2 (q + 5))
 end
 
 section arms
 variable (k : Nat) (m m1 m2 : Mem) (p q e : Word) (rc : List Word)
 theorem cdW_succ : cdW (k + 1) m p q =
-    cdK0 k m p q (if hintEqB (erRdT m) (p + 6) (q + 6) then 1 else 0) := by rw [cdW]
+    cdK0 k m p q (if hintEqB (erRd m) (p + 6) (q + 6) then 1 else 0) := by rw [cdW]
 theorem cdK0_def : cdK0 k m p q e =
     (if e = 0 then some (0, m) else cdK1 k p q (cvceW k m (p + 1) (q + 1))) := by rw [cdK0]
 theorem cdK1_some : cdK1 k p q (some (e, m1)) =
@@ -84,7 +84,7 @@ theorem cdK1_some : cdK1 k p q (some (e, m1)) =
 theorem cdK2_some : cdK2 k p q (some (rc, m2)) =
     ceW k m2 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
       (rc.tail.tail.tail.tail.headD 0) (rc.tail.tail.tail.tail.tail.headD 0) 4000000000
-      (erRdT m2 (p + 5)) (erRdT m2 (q + 5)) := by rw [cdK2]
+      (erRd m2 (p + 5)) (erRd m2 (q + 5)) := by rw [cdK2]
 end arms
 
 grind_pattern [ind_grind] cdW_succ => cdW (k + 1) m p q
@@ -139,10 +139,10 @@ theorem cdW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
   have hB := hintEqB_ok' (erRdOK m) (p := p) (q := q) (k := 6) (kn := 6) rfl hhp hhq
   simp only [IConstantInfo.canonEq]
   rw [cdK0_def] at h
-  by_cases hbB : hintEqB (erRdT m) (p + 6) (q + 6) = true
+  by_cases hbB : hintEqB (erRd m) (p + 6) (q + 6) = true
   · have hd : hi = hi' := of_decide_eq_true (hB ▸ hbB)
     subst hd
-    have hne : (if hintEqB (erRdT m) (p + 6) (q + 6) = true then (1 : Word) else 0) ≠ 0 := by
+    have hne : (if hintEqB (erRd m) (p + 6) (q + 6) = true then (1 : Word) else 0) ≠ 0 := by
       simp [hbB]
     rw [ite_eq_right hne] at h
     cases hc : cvceW k m (p + 1) (q + 1) with
@@ -190,7 +190,7 @@ theorem cdW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨rfl, hS1, hg1, hP1, hL1⟩)
     exact ⟨b, a', hb, hr, hq⟩
-  · have hB0 : (if hintEqB (erRdT m) (p + 6) (q + 6) = true then (1 : Word) else 0) = 0 := by
+  · have hB0 : (if hintEqB (erRd m) (p + 6) (q + 6) = true then (1 : Word) else 0) = 0 := by
       simp [hbB]
     rw [ite_eq_left hB0] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -206,9 +206,9 @@ mutual
 def cwW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | k + 1, m, p, q =>
-    if erRdT m (p + 5) ≠ erRdT m (q + 5) ∨
-        erRdT m (p + 6) ≠ erRdT m (q + 6) then some (0, m)
-    else if bEqB (erRdT m (p + 9)) (erRdT m (q + 9)) = false then some (0, m)
+    if erRd m (p + 5) ≠ erRd m (q + 5) ∨
+        erRd m (p + 6) ≠ erRd m (q + 6) then some (0, m)
+    else if bEqB (erRd m (p + 9)) (erRd m (q + 9)) = false then some (0, m)
     else cwK1 k p q (cvceW k m (p + 1) (q + 1))
 
 /-- After `cv_canon_eq`. -/
@@ -222,24 +222,24 @@ def cwK2 (k : Nat) (p q : Word) : Option (List Word × Mem) → Option (Word × 
   | some (rc, m2) =>
     cnCrW k m2 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
       (rc.tail.tail.tail.tail.headD 0) (rc.tail.tail.tail.tail.tail.headD 0) 4000000000
-      (erRdT m2 (p + 7)) (erRdT m2 (p + 8))
-      (erRdT m2 (q + 7)) (erRdT m2 (q + 8))
+      (erRd m2 (p + 7)) (erRd m2 (p + 8))
+      (erRd m2 (q + 7)) (erRd m2 (q + 8))
 end
 
 section arms
 variable (k : Nat) (m m1 m2 : Mem) (p q e : Word) (rc : List Word)
 theorem cwW_succ : cwW (k + 1) m p q =
-    (if erRdT m (p + 5) ≠ erRdT m (q + 5) ∨
-        erRdT m (p + 6) ≠ erRdT m (q + 6) then some (0, m)
-    else if bEqB (erRdT m (p + 9)) (erRdT m (q + 9)) = false then some (0, m)
+    (if erRd m (p + 5) ≠ erRd m (q + 5) ∨
+        erRd m (p + 6) ≠ erRd m (q + 6) then some (0, m)
+    else if bEqB (erRd m (p + 9)) (erRd m (q + 9)) = false then some (0, m)
     else cwK1 k p q (cvceW k m (p + 1) (q + 1))) := by rw [cwW]
 theorem cwK1_some : cwK1 k p q (some (e, m1)) =
     (if e = 0 then some (0, m1) else cwK2 k p q (ctxW k m1 (p + 1) (q + 1))) := by rw [cwK1]
 theorem cwK2_some : cwK2 k p q (some (rc, m2)) =
     cnCrW k m2 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
       (rc.tail.tail.tail.tail.headD 0) (rc.tail.tail.tail.tail.tail.headD 0) 4000000000
-      (erRdT m2 (p + 7)) (erRdT m2 (p + 8))
-      (erRdT m2 (q + 7)) (erRdT m2 (q + 8)) := by rw [cwK2]
+      (erRd m2 (p + 7)) (erRd m2 (p + 8))
+      (erRd m2 (q + 7)) (erRd m2 (q + 8)) := by rw [cwK2]
 end arms
 
 grind_pattern [ind_grind] cwW_succ => cwW (k + 1) m p q
@@ -288,11 +288,11 @@ theorem cwW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
   rw [cwW_succ] at h
   obtain ⟨hcp, hmp, hrp, hkp, o1, l1, ho1, hl1, hrs⟩ := ciD_rec hp
   obtain ⟨hcq, hmq, hrq, hkq, o2, l2, ho2, hl2, hrs'⟩ := ciD_rec hq
-  obtain ⟨wk, ewk, rfl⟩ : ∃ w, erRdT m (p + 9) = w ∧ isK = (w != 0) := by
+  obtain ⟨wk, ewk, rfl⟩ : ∃ w, erRd m (p + 9) = w ∧ isK = (w != 0) := by
     simp only [bool?, Option.map_eq_some_iff] at hkp
     obtain ⟨w, hw, rfl⟩ := hkp
     exact ⟨w, (erRdOK m).at 9 rfl hw, rfl⟩
-  obtain ⟨wk', ewk', rfl⟩ : ∃ w, erRdT m (q + 9) = w ∧ isK' = (w != 0) := by
+  obtain ⟨wk', ewk', rfl⟩ : ∃ w, erRd m (q + 9) = w ∧ isK' = (w != 0) := by
     simp only [bool?, Option.map_eq_some_iff] at hkq
     obtain ⟨w, hw, rfl⟩ := hkq
     exact ⟨w, (erRdOK m).at 9 rfl hw, rfl⟩
@@ -391,21 +391,21 @@ theorem cwW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
 def cieW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | k + 1, m, p, q =>
-    if erRdT m p ≠ erRdT m q then some (0, m)
-    else if 5 < erRdT m p then none
-    else if erRdT m p = 1 then cdW k m p q
-    else if erRdT m p = 4 ∧ (erRdT m (p + 5) ≠ erRdT m (q + 5) ∨
-        erRdT m (p + 6) ≠ erRdT m (q + 6)) then some (0, m)
-    else if erRdT m p = 5 then cwW k m p q
+    if erRd m p ≠ erRd m q then some (0, m)
+    else if 5 < erRd m p then none
+    else if erRd m p = 1 then cdW k m p q
+    else if erRd m p = 4 ∧ (erRd m (p + 5) ≠ erRd m (q + 5) ∨
+        erRd m (p + 6) ≠ erRd m (q + 6)) then some (0, m)
+    else if erRd m p = 5 then cwW k m p q
     else cvceW k m (p + 1) (q + 1)
 
 theorem cieW_succ (k : Nat) (m : Mem) (p q : Word) : cieW (k + 1) m p q =
-    (if erRdT m p ≠ erRdT m q then some (0, m)
-    else if 5 < erRdT m p then none
-    else if erRdT m p = 1 then cdW k m p q
-    else if erRdT m p = 4 ∧ (erRdT m (p + 5) ≠ erRdT m (q + 5) ∨
-        erRdT m (p + 6) ≠ erRdT m (q + 6)) then some (0, m)
-    else if erRdT m p = 5 then cwW k m p q
+    (if erRd m p ≠ erRd m q then some (0, m)
+    else if 5 < erRd m p then none
+    else if erRd m p = 1 then cdW k m p q
+    else if erRd m p = 4 ∧ (erRd m (p + 5) ≠ erRd m (q + 5) ∨
+        erRd m (p + 6) ≠ erRd m (q + 6)) then some (0, m)
+    else if erRd m p = 5 then cwW k m p q
     else cvceW k m (p + 1) (q + 1)) := rfl
 
 grind_pattern [ind_grind] cieW_succ => cieW (k + 1) m p q
@@ -438,8 +438,8 @@ theorem cieW_ok {vis : Word} {fe : IFEnv}
   rw [cieW_succ] at h
   obtain ⟨wk, e, hx⟩ := ciD hp
   obtain ⟨wk', e', hy⟩ := ciD hq
-  have r1 : erRdT m p = wk := erRdT_of p wk e
-  have r2 : erRdT m q = wk' := erRdT_of q wk' e'
+  have r1 : erRd m p = wk := erRd_of p wk e
+  have r2 : erRd m q = wk' := erRd_of q wk' e'
   rw [r1, r2] at h
   have wl : ∀ (w : Word) (n : Nat) (hn : n < 2 ^ 64), w.toNat = n → w = UInt64.ofNat n := fun w n hn h =>
     UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hn])

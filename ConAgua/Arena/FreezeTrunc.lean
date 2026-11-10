@@ -57,15 +57,15 @@ theorem PinsR.trunc {m : Mem} {p : Pins} (h : PinsR m p) : PinsR (truncFrozen m)
 
 /-! ## The record pool -/
 
-theorem erecTop_trunc (m : Mem) : erecTop (truncFrozen m) = erecTop m := by
-  simp only [erecTop, truncFrozen_ctl]
+theorem erTop_trunc (m : Mem) : erTop (truncFrozen m) = erTop m := by
+  simp only [erTop, truncFrozen_ctl]
 
 theorem erecP_trunc (m : Mem) : erecP (truncFrozen m) = erecP m := by
   funext i
   have h1 : erecTop1 (truncFrozen m) = erecTop1 m := by simp only [erecTop1, truncFrozen_ctl]
   have h2 : (truncFrozen m).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
     truncFrozen_other m _ (by decide)
-  simp only [erecP, erecTop_trunc, h1, h2, truncFrozen_erec]
+  simp only [erecP, erTop_trunc, h1, h2, truncFrozen_erec]
   split
   · split
     · split
@@ -76,7 +76,7 @@ theorem erecP_trunc (m : Mem) : erecP (truncFrozen m) = erecP m := by
     · rfl
   · rfl
 
-theorem rdW_erec_trunc (m : Mem) {x : Word} (hx : x.toNat < erecTop m) :
+theorem rdW_erec_trunc (m : Mem) {x : Word} (hx : x.toNat < erTop m) :
     rdW ((truncFrozen m).arr64 EREC) x = rdW (m.arr64 EREC) x := by
   rw [truncFrozen_erec]; exact rdW_extract _ hx
 
@@ -84,11 +84,11 @@ theorem IWOK.trunc {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (truncFrozen m) := 
   have hI : (truncFrozen m).arr64 L.Ind.IW = m.arr64 L.Ind.IW := truncFrozen_other m _ (by decide)
   have hE1 : (truncFrozen m).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
     truncFrozen_other m _ (by decide)
-  have he : ((truncFrozen m).arr64 EREC).size = min (erecTop m) (m.arr64 EREC).size := by
+  have he : ((truncFrozen m).arr64 EREC).size = min (erTop m) (m.arr64 EREC).size := by
     rw [truncFrozen_erec, size_extract0]
   have h0 := (L.Ind.IWOK_iff m).1 h
-  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, erecTop1, hI, hE1, truncFrozen_ctl, he] at h0 ⊢
-  simp only [erecTop] at he ⊢
+  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, erTop, erecTop1, hI, hE1, truncFrozen_ctl, he] at h0 ⊢
+  simp only [erTop] at he ⊢
   omega
 
 theorem PinSetsR.trunc {m : Mem} {ips : List INatOpPinSet} (h : L.Rom.PinSetsR m ips) :
@@ -96,10 +96,10 @@ theorem PinSetsR.trunc {m : Mem} {ips : List INatOpPinSet} (h : L.Rom.PinSetsR m
   obtain ⟨h1, h2, h3⟩ := h
   have hc := truncFrozen_ctl m
   have ht := L.Rom.top_lt m
-  refine ⟨by rw [hc]; exact h1, by rw [hc, erecTop_trunc]; exact h2, fun k hk => ?_⟩
+  refine ⟨by rw [hc]; exact h1, by rw [hc, erTop_trunc]; exact h2, fun k hk => ?_⟩
   rw [hc, rdW_erec_trunc m (by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; omega)]
-  refine L.Rom.PinSetR.keep (h3 k hk) ⟨Nat.le_of_eq (erecTop_trunc m).symm, fun i hi => ?_⟩
+  refine L.Rom.PinSetR.keep (h3 k hk) ⟨Nat.le_of_eq (erTop_trunc m).symm, fun i hi => ?_⟩
   rw [truncFrozen_erec]
   simp only [Array.getElem?_extract, Nat.zero_add]
   by_cases h2 : i < (m.arr64 EREC).size <;> simp [hi, h2, Nat.lt_min]

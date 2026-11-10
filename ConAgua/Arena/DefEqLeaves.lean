@@ -635,10 +635,10 @@ theorem headHint_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St)
     rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
   have hdefn := decCI_defn (erRdOK s₀.mem) hci
   rw [hfind'] at hrun1
-  by_cases h1 : erRdT s₀.mem (r₂.tail.headD 0) = 1
+  by_cases h1 : erRd s₀.mem (r₂.tail.headD 0) = 1
   · rw [hc2, headHintW.k_env_find.arm3 (hc1 := h0) (hc2 := h1)] at hW
     obtain ⟨cv, v, rfl, -, hk6⟩ := hdefn.1 h1
-    exact hres _ _ hW (by unfold HW; unfold erRdT at hk6; omega) _ hrun1 rfl
+    exact hres _ _ hW (by unfold HW; unfold erRd at hk6; omega) _ hrun1 rfl
   · rw [hc2, headHintW.k_env_find.arm2 (hc1 := h0) (hc2 := h1)] at hW
     rw [hintOf_none _ (fun cv v hint e => hdefn.2 h1 cv v hint (Option.some.inj e))] at hrun1
     exact hres 0 0 hW hw0 _ hrun1 rfl
@@ -731,13 +731,13 @@ the run's pair): no hypotheses for `grind` to instantiate. -/
 
 /-- After `ls_node`: the list's length against the count at `EREC[q]` (read after the call). -/
 def ufLsF (q : Word) (x : List Word × Mem) : Option (Word × Mem) :=
-  some (if x.1.tail.headD 0 = erRdT x.2 q then 1 else 0, x.2)
+  some (if x.1.tail.headD 0 = erRd x.2 q then 1 else 0, x.2)
 
 /-- After `env_find`: a definition whose level-parameter count is the length of the list of the
 head `hh` (read after the call, as the L code does). -/
 def ufEnvF (p : Prog) (n : Nat) (hh : Word) (x : List Word × Mem) : Option (Word × Mem) :=
   if x.1.headD 0 = 0 then some (0, x.2)
-  else if erRdT x.2 (x.1.tail.headD 0) ≠ 1 then some (0, x.2)
+  else if erRd x.2 (x.1.tail.headD 0) ≠ 1 then some (0, x.2)
   else (callW p n "ls_node" [tfld x.2 CONST (tierW hh) (idxW hh) 1] x.2).bind
     (ufLsF (x.1.tail.headD 0 + 3))
 
@@ -855,7 +855,7 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   have hfind' : fe.find? (decI k) = some ci := by
     rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
   have hdefn := decCI_defn (erRdOK s₀.mem) hci
-  rcases (Classical.em (erRdT s₀.mem (r₂.tail.headD 0) = 1)).symm with h1 | h1
+  rcases (Classical.em (erRd s₀.mem (r₂.tail.headD 0) = 1)).symm with h1 | h1
   · simp only [h0, h1, ne_eq, not_false_eq_true, ↓reduceIte] at hW
     exact hres 0 hW hw0 _ (unfoldableHead_run_other fe _ a₀ _ _ _ hgaf hct hv
       (fun cv v hint e => hdefn.2 h1 cv v hint (by rw [hfind'] at e; exact Option.some.inj e))) rfl

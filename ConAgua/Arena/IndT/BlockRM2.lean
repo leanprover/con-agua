@@ -179,7 +179,7 @@ theorem rm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {nP ms : Wor
   obtain ⟨wx, hwx, hwxl, hname⟩ := decCV_name (a := erecP s2.mem) hcvm2
   have ex : rdW (s2.mem.arr64 (tierA EREC ((UInt64.ofNat c : Word) >>> 40)))
       ((UInt64.ofNat c : Word) &&& 1099511627775) = wx := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ hwx
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx
   dsimp only [rmE.k_declined_at_definition]
   rw [ex]
   -- `sl_contains`

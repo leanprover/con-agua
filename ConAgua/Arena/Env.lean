@@ -783,7 +783,7 @@ theorem ownSet_ctl (m : Mem) (w c p : Word) : (ownSet m w c p).arr64 CTL = m.arr
 
 theorem erecP_ownSet (m : Mem) (w c p : Word) : erecP (ownSet m w c p) = erecP m := by
   funext i
-  simp only [erecP, erecTop, erecTop1, ownSet_ctl, ownSet_arr_of (b := (EREC : TieredArray)) (by decide),
+  simp only [erecP, erTop, erecTop1, ownSet_ctl, ownSet_arr_of (b := (EREC : TieredArray)) (by decide),
     ownSet_arr_of (b := tier1 EREC) (by decide)]
   rfl
 
@@ -976,7 +976,7 @@ theorem tblSet_ctl (m : Mem) (w v : Word) : (tblSet m w v).arr64 CTL = m.arr64 C
 
 theorem erecP_tblSet (m : Mem) (w v : Word) : erecP (tblSet m w v) = erecP m := by
   funext i
-  simp only [erecP, erecTop, erecTop1, tblSet_ctl, tblSet_arr_of (b := (EREC : TieredArray)) (by decide),
+  simp only [erecP, erTop, erecTop1, tblSet_ctl, tblSet_arr_of (b := (EREC : TieredArray)) (by decide),
     tblSet_arr_of (b := tier1 EREC) (by decide)]
   rfl
 

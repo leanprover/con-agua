@@ -182,14 +182,14 @@ read them, then the next rule. -/
 theorem j1_inv {p : Prog} (hp : p.lookup "erec_put" = some erecPut) {n : Nat}
     {ko kc us o l d rhs k lo : Word} {m m' : Mem} {res : List Word}
     (h : rulesAtLpsGoW.j1 p n ko kc us o l d rhs k lo m = some (res, m')) :
-    ∃ w0 w1 w5 w6 w7 : Word, w0 = erRdT m o ∧ w1 = erRdT (wrER m d [w0]) (o + 1) ∧
-      w5 = erRdT (wrER m d [w0, w1, 0, k, lo]) (o + 5) ∧
-      w6 = erRdT (wrER m d [w0, w1, 0, k, lo, w5]) (o + 6) ∧
-      w7 = erRdT (wrER m d [w0, w1, 0, k, lo, w5, w6]) (o + 7) ∧
+    ∃ w0 w1 w5 w6 w7 : Word, w0 = erRd m o ∧ w1 = erRd (wrER m d [w0]) (o + 1) ∧
+      w5 = erRd (wrER m d [w0, w1, 0, k, lo]) (o + 5) ∧
+      w6 = erRd (wrER m d [w0, w1, 0, k, lo, w5]) (o + 6) ∧
+      w7 = erRd (wrER m d [w0, w1, 0, k, lo, w5, w6]) (o + 7) ∧
       ∃ r', rulesAtLpsGoW p n (wrER m d [w0, w1, 0, k, lo, w5, w6, w7, rhs, 0, 0]) ko kc us (o + 11)
         (l - 1) (d + 11) = some (r', m') := by
   have rd : ∀ (X : Mem) (x : Word), rdW (X.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) =
-      erRdT X x := fun _ _ => rfl
+      erRd X x := fun _ _ => rfl
   rw [rulesAtLpsGoW.j1.arm1, rd] at h
   obtain ⟨_, h⟩ := putK hp (rulesAtLpsGoW.k_erec_put.none ..) h
   rw [rulesAtLpsGoW.k_erec_put.arm1, rd] at h
@@ -256,7 +256,7 @@ theorem erAllocW_mem {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m'))
     rw [← h.2, erAllocMem, ite_eq_right c]
 
 theorem erTopOf_put (m : Mem) (a v x : Word) : erTopOf (erecPutMem m a v) x = erTopOf m x := by
-  simp only [erTopOf, erecTop, erecTop1, erecPutMem_ctl]
+  simp only [erTopOf, erTop, erecTop1, erecPutMem_ctl]
 
 theorem erTopOf_wrER : ∀ (ws : List Word) (m : Mem) (d x : Word), erTopOf (wrER m d ws) x = erTopOf m x
   | [], _, _, _ => rfl
@@ -422,7 +422,7 @@ theorem fireStep {p : Prog} (hP : RulesProg p) {n : Nat} {m m' : Mem} {a : AStat
   have herec6 : erecP (s₅.mem.set64 CTL 136 (bs.headD 0)) = erecP s₅.mem :=
     erecP_frame hfr6 (by simp) (by simp) (by decide) (by decide)
   have htop6 : ∀ x, erTopOf (s₅.mem.set64 CTL 136 (bs.headD 0)) x = erTopOf s₅.mem x := fun x => by
-    simp only [erTopOf, erecTop, erecTop1, hfr6.ctl 129 (by decide), hfr6.ctl 130 (by decide)]
+    simp only [erTopOf, erTop, erecTop1, hfr6.ctl 129 (by decide), hfr6.ctl 130 (by decide)]
   have htop5 : erTopOf s₅.mem (r4.headD 0) = erTopOf m₄ (r4.headD 0) := by rw [e5, erTopOf_wrER]
   rw [← hm']
   simp only [List.headD_cons]
@@ -570,17 +570,17 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
     obtain ⟨-, -, -, -, -, h32, hw8, hrh⟩ := decRule_rd (erRdOK m) hrm
     have hlm : hslice? (erecP m) ko.toNat kc.toNat = some lpsH := ArrExt.hslice? hg.ext hl
     have rd : ∀ (X : Mem) (x : Word),
-        rdW (X.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRdT X x := fun _ _ => rfl
+        rdW (X.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRd X x := fun _ _ => rfl
     rw [rd] at hW
     -- `inst_lp` on the right-hand side
-    cases h1 : callW p n "inst_lp" [ko, kc, us, erRdT m (o + 8)] m with
+    cases h1 : callW p n "inst_lp" [ko, kc, us, erRd m (o + 8)] m with
     | none => rw [h1] at hW; simp [rulesAtLpsGoW.k_inst_lp.none] at hW
     | some x1 =>
     obtain ⟨r1, mi⟩ := x1
     rw [h1] at hW
     obtain ⟨e1, a1, hrun1, hT1, hg1, hf1, he1, hrd1, hdh1, hx1⟩ :=
       instStep hP.toQuotAtProg hT hus hw8 hlm h1
-    have hrhs' : denoteE a.store (decE (erRdT m (o + 8))) = some x0.rhs := by
+    have hrhs' : denoteE a.store (decE (erRd m (o + 8))) = some x0.rhs := by
       rw [decE_eq, ← hrh]; exact hrhs0
     obtain ⟨hst1, -⟩ := ConRon.Bridge.instLPFast_run hok hr hlT huT hrhs' hrun1
     have hlT1 := ConRon.Bridge.denoteNListE_ext hst1.ext _ _ hlT
@@ -589,19 +589,19 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
     -- the fire
     obtain ⟨lo, hs, mf, a2, hW2, hT2, hg2, hf2, hfire, hlo, hlvs⟩ :
         ∃ (lo : Word) (hs : List LIdx) (mf : Mem) (a2 : AState),
-        rulesAtLpsGoW.j1 p n ko kc us o rl d (r1.headD 0) (erRdT m (o + 3)) lo mf = some (res, m') ∧
+        rulesAtLpsGoW.j1 p n ko kc us o rl d (r1.headD 0) (erRd m (o + 3)) lo mf = some (res, m') ∧
         StageT dn vis fe mf a2 ∧ IWGrow mi mf ∧ MemFrame quotA quotC mi mf ∧
         (rl0.fire.atLps lpsT usT).run a1 = .ok (fireAt rl0.fire hs, a2) ∧
-        ((∀ lv, rl0.fire ≠ .levels lv) → lo = erRdT m (o + 4)) ∧
-        (∀ lv, rl0.fire = .levels lv → hs.length = (erRdT m (o + 5)).toNat ∧ lo.toNat < 2 ^ 41 ∧
+        ((∀ lv, rl0.fire ≠ .levels lv) → lo = erRd m (o + 4)) ∧
+        (∀ lv, rl0.fire = .levels lv → hs.length = (erRd m (o + 5)).toNat ∧ lo.toNat < 2 ^ 41 ∧
           erTopOf mi lo ≤ erOff lo ∧ erOff lo + hs.length < 2 ^ 40 ∧
           ∀ j < hs.length, erecP mf (lo.toNat + j) = (lsWords hs)[j]?) := by
-      by_cases hk3 : erRdT m (o + 3) = 2
+      by_cases hk3 : erRd m (o + 3) = 2
       · rw [rulesAtLpsGoW.k_inst_lp.arm1 _ _ _ _ _ _ _ _ _ _ (by rw [rd, hrd1]; exact hk3)] at hW
         simp only [rd] at hW
         rw [hrd1] at hW
         obtain ⟨lv, hlv⟩ := h32 hk3
-        have hsl : hslice? (erecP m) (erRdT m (o + 4)).toNat (erRdT m (o + 5)).toNat = some lv := by
+        have hsl : hslice? (erecP m) (erRd m (o + 4)).toNat (erRd m (o + 5)).toNat = some lv := by
           rcases decRule_fireE (erRdOK m) hrm with ⟨h0, -⟩ | ⟨-, lvls, hfl, hsl⟩
           · rw [hk3] at h0; cases h0
           · rcases hfl with hfl | ⟨pins, hfl⟩
@@ -612,7 +612,7 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
           simp only [ConRon.Arena.Frontend.denoteFire, Option.map_eq_some_iff] at hf01
           obtain ⟨L, hL, -⟩ := hf01
           exact denoteLList_mem hL
-        cases h2 : callW p n "fire_levels_at" [erRdT m (o + 4), erRdT m (o + 5), ko, kc, us] mi with
+        cases h2 : callW p n "fire_levels_at" [erRd m (o + 4), erRd m (o + 5), ko, kc, us] mi with
         | none => rw [h2] at hW; simp [rulesAtLpsGoW.k_fire_levels_at.none] at hW
         | some x2 =>
         obtain ⟨r2, mf⟩ := x2
@@ -652,9 +652,9 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
     have hP11 : ∀ P : List Word, P.length ≤ 11 → IWGrow m₀ (wrER mf d P) := fun P hP =>
       (wrER_fresh h₀ P mf a2 d hT2.stage hfm hgm hd0 (by omega) hd41).2.1
     have hsrc : ∀ P : List Word, P.length ≤ 11 → ∀ (c : Word) (j : Nat) (v : Word), c.toNat = j →
-        erecP m₁ (o.toNat + j) = some v → erRdT (wrER mf d P) (o + c) = v := fun P hP c j v hc hv =>
+        erecP m₁ (o.toNat + j) = some v → erRd (wrER mf d P) (o + c) = v := fun P hP c j v hc hv =>
       (erRdOK _).at c hc ((hg₁₀.trans (hP11 P hP)).ext _ _ hv)
-    generalize hws : [w0, w1, 0, erRdT m (o + 3), lo, w5, w6, w7, r1.headD 0, 0, 0] = ws at hW3
+    generalize hws : [w0, w1, 0, erRd m (o + 3), lo, w5, w6, w7, r1.headD 0, 0, 0] = ws at hW3
     have hwsl : ws.length = 11 := by rw [← hws]; rfl
     obtain ⟨hSh, hgh, hfh, hrdh, houth⟩ := wrER_fresh h₀ ws mf a2 d hT2.stage hfm hgm hd0
       (by rw [hwsl]; omega) hd41
@@ -671,7 +671,7 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
         (decRules_shift hrs' fun _ _ hv => L.Ind.erecP_lt64 hv)
         (ConRon.Bridge.denoteRules_ext (hst1.ext.trans hst2.ext) _ _ hxs) hW3
     -- the twin
-    have hrh' : rl0.rhs = decE (erRdT m (o + 8)) := by rw [decE_eq]; exact hrh
+    have hrh' : rl0.rhs = decE (erRd m (o + 8)) := by rw [decE_eq]; exact hrh
     have hrunT : (rulesAtLps lpsH (decI us) lpsT usT (rl0 :: rules')).run a =
         .ok (⟨rl0.ctor, rl0.nfields, fireAt rl0.fire hs, decI (r1.headD 0)⟩ :: rs'', a3) := by
       simp only [rulesAtLps, StateT.run_bind, hrh', hrun1, except_ok_bind, hfire, hrun3]

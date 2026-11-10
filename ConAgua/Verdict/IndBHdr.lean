@@ -113,7 +113,7 @@ theorem ccl_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
   obtain ⟨-, hgP1, -, -, -⟩ := wrER_fresh hS.stage [0] m1 a A hT1.stage hfq hg1 hbase
     (by simp; omega) h41
   have hx1 : rdW ((wrER m1 A [0]).arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = nw := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (hgP1.ext _ _ hw0)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (hgP1.ext _ _ hw0)
   have e2 : erecPutMem m1 A 0 = wrER m1 A [0] := rfl
   rw [e2, hx1]
   have e3 : erecPutMem (wrER m1 A [0]) (A + 1) nw = wrER m1 A [0, nw] := rfl
@@ -123,7 +123,7 @@ theorem ccl_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     (by simp; omega) h41
   have hx2 : rdW ((wrER m1 A [0, nw]).arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775)
       = w1 := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq1]; exact hgP2.ext _ _ hw1)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hgP2.ext _ _ hw1)
   rw [hx2]
   have e4 : erecPutMem (wrER m1 A [0, nw]) (A + 2) w1 = wrER m1 A [0, nw, w1] := by
     simp only [wrER, word_add11]
@@ -132,7 +132,7 @@ theorem ccl_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     (by simp; omega) h41
   have hx3 : rdW ((wrER m1 A [0, nw, w1]).arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775)
       = w2 := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq2]; exact hgP3.ext _ _ hw2)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq2]; exact hgP3.ext _ _ hw2)
   rw [hx3]
   have e5 : erecPutMem (wrER m1 A [0, nw, w1]) (A + 3) w2 = wrER m1 A [0, nw, w1, w2] := by
     simp only [wrER, word_add11, word_add21]
@@ -142,7 +142,7 @@ theorem ccl_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     (by simp; omega) h41
   have hx4 : rdW ((wrER m1 A [0, nw, w1, w2]).arr64 (L.tierA EREC ((q + 3) >>> 40)))
       (q + 3 &&& 1099511627775) = t := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq3]; exact hgP4.ext _ _ hw3)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq3]; exact hgP4.ext _ _ hw3)
   rw [hx4]
   have e6 : erecPutMem (wrER m1 A [0, nw, w1, w2]) (A + 4) t = wrER m1 A [0, nw, w1, w2, t] := by
     simp only [wrER, word_add11, word_add21, word_add31]
@@ -284,10 +284,10 @@ theorem cch_ref {p : Prog} (hP : CchProg p) (hApd : ApdF p) (hCrf : CrfF p)
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceW hqd
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hqd).2.2
   have ex : rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = wx := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ hwx
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx
   have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   have et : rdW (m.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wt := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq3]; exact hwt)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq3]; exact hwt)
   cases n with
   | zero => rw [classConstOkHeaderE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
@@ -331,9 +331,9 @@ theorem cch_ref {p : Prog} (hP : CchProg p) (hApd : ApdF p) (hCrf : CrfF p)
   have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have e1 : rdW (m3.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = w1 := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq1]; exact hg3.ext _ _ hw1)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hg3.ext _ _ hw1)
   have e2 : rdW (m3.arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775) = w2 := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq2]; exact hg3.ext _ _ hw2)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq2]; exact hg3.ext _ _ hw2)
   have hsl3 : hslice? (erA m3) w1.toNat w2.toNat = some cv.levelParams := ArrExt.hslice? hg3.ext hsl
   refine RefE.onlySim (fun _ => classConstOkHeaderE.k_cv_lps.none ..) (fun _ _ h => h) fun r11 m11 h11 => ?_
   rw [classConstOkHeaderE.k_cv_lps.arm1]
@@ -460,7 +460,7 @@ theorem cco_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q : Word} 
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hq').2.2
   have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   have et : rdW (m1.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wt := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq3]; exact hg1.ext _ _ hwt)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq3]; exact hg1.ext _ _ hwt)
   rw [et, hty]
   refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n (by omega) hS1 0 wt hwtl _ h2)
     (RSim.coreAbs hq.closed (by decide) (hA1 hA) (inferT_rsim hq n (by omega) hS1 0 wt hwtl))

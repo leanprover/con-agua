@@ -235,9 +235,9 @@ theorem fnz_ok {p : Prog} (hpp : PropReadProg p) (hpr : p.lookup "pi_result" = s
   · simp [fnzW] at h
   rw [fnzW.arm1] at h
   obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (decCI_ind_cv' hci)
-  change fnzW.k_former_z p n us (erRdT m (q + 2)) (erRdT m (q + 3)) (rdW (m.arr64 CTL) 192)
-    (callW p n "former_z" [erRdT m (q + 4)] m) = some (w, m') at h
-  rcases c1 : callW p n "former_z" [erRdT m (q + 4)] m with _ | ⟨r1, m1⟩
+  change fnzW.k_former_z p n us (erRd m (q + 2)) (erRd m (q + 3)) (rdW (m.arr64 CTL) 192)
+    (callW p n "former_z" [erRd m (q + 4)] m) = some (w, m') at h
+  rcases c1 : callW p n "former_z" [erRd m (q + 4)] m with _ | ⟨r1, m1⟩
   · rw [c1, fnzW.k_former_z.none] at h; cases h
   rw [c1, fnzW.k_former_z.arm1] at h
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -287,10 +287,10 @@ theorem fnz_ok {p : Prog} (hpp : PropReadProg p) (hpr : p.lookup "pi_result" = s
     have hN := nameN_rel _ hS1.nwf
     have hvs := (lvsR_of_slice hR1 ids vs _ _ s2 (by have := m1.top.toNat_lt; have := hR1.lit.1.top41; omega)
       hdl).toAR
-    have hkr : NmsK (nameN a1.store.lss.ls.ns) m1 (keyT EREC) (erRdT m (q + 2)) (erRdT m (q + 3)) ks :=
+    have hkr : NmsK (nameN a1.store.lss.ls.ns) m1 (keyT EREC) (erRd m (q + 2)) (erRd m (q + 3)) ks :=
       nmsAR_of_hslice _ _ _ cvT.levelParams ks _ _ rfl (by rw [he1']; exact hl) hk
-    rcases c3 : callW p n "lv_spw" [r1.tail.headD 0, r1.tail.tail.headD 0, erRdT m (q + 2),
-        erRdT m (q + 3), tfld m1 LVLS (tierW us) (idxW us) 0, tfld m1 LVLS (tierW us) (idxW us) 1] m1
+    rcases c3 : callW p n "lv_spw" [r1.tail.headD 0, r1.tail.tail.headD 0, erRd m (q + 2),
+        erRd m (q + 3), tfld m1 LVLS (tierW us) (idxW us) 0, tfld m1 LVLS (tierW us) (idxW us) 1] m1
       with _ | ⟨r3, m3⟩
     · rw [c3, fnzW.k_lv_spw.none] at h; cases h
     rw [c3, fnzW.k_lv_spw.arm1] at h
@@ -425,7 +425,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
       (CorePost decBool dn m vis fe M eb ResH) := by
   obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (decCI_ind_cv' hci)
   obtain ⟨hni, hnp⟩ := decCI_ind_n (erRdOK m) hci
-  simp only [erRdT] at hl hty hty32 hni hnp
+  simp only [erRd] at hl hty hty32 hni hnp
   rw [fnzaE.eq_2]
   split
   · exact RefE.of_cls0 rfl
@@ -460,7 +460,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
     fun r3 m3 _ h3 => RefE.after_core (w := id) h3 fun M3 hS3 _ => ?_
   rw [fnzaE.k_inst_lp.arm1]
   have hf := fsl_ref p hp.toFslProg n F hk hnF hn62 dn vis fe eb mode hm4 hebm n (by omega) m3 _ M3 0
-    (erRdT m1 (q + 17) + erRdT m1 (q + 11)) (r3.headD 0) hS3 h3.resOk
+    (erRd m1 (q + 17) + erRd m1 (q + 11)) (r3.headD 0) hS3 h3.resOk
   rw [hn', ← hni, ← hnp, show ((0 : Word)).toNat = 0 from rfl] at hf
   refine RefE.bind_coreE (w := id) (fun _ => fnzaE.k_former_sort_loop.none ..) id hf
     fun r4 m4 _ h4 M4 hS4 _ => ?_
