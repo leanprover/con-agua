@@ -208,3 +208,20 @@ importers as in §4 before landing. The rename rules for the duplicate names thi
 (`erRd_fold` → `erRd_foldN`, `erRd_of_nat?` → `erRd_nat`, `IWGrow.of_frame` → `IWGrow.of_keep`,
 `iwOK_reset` → `IWOK.reset`, `erRdT` → `erRd`, `erecTop` → `erTop`) are candidates for that
 sync's `[names]`.
+
+## 7. Landing
+
+Gates green in the worktree (`scripts/gates.sh`: links, vendor, modules, provenance, reasons,
+build, warnings, shake, the five closure checks). Two consequences outside the moved code:
+
+* `erRd_get` in `arena_grind` made 13 `finish [… erRd_get]` parameters redundant (grind's
+  "this parameter is redundant" warning, 85 in the build log, in NcGoW, CrW, CloseTelescope,
+  ClassNPcOf, NuW, BlockRecNameSetOk, CftW, NestHoles, NcnW2): dropped from those lists.
+* `shake` then proposed 16 import removals the moves left; 13 were removed, 3 are re-exports the
+  build needs (`HbMemoRel` → `IWFrame`, `StructUsedFrame` → `DeclBase`, `CIReadRefBase` →
+  `IndMaster`) and are in `scripts/shake-allowlist.txt`. `IndIface` imports `ErecVocab` instead of
+  `Tiers`, and `ErecVocab` imports `Tiers` instead of `ErecRd`; the cost table's "after" column
+  was measured just before these import removals, which only shrink closures.
+
+Helpers: two (Opus), branches `syncvocab-a` (Ind*/Rec* files, 33 declarations) and
+`syncvocab-b` (Decl*, Checker, Rom and the rest, 22), both merged; worktrees removed.
