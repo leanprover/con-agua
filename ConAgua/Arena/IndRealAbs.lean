@@ -292,11 +292,8 @@ theorem wrER_afr (ws : List Word) (m : Mem) (q : Word) : AFr m (wrER m q ws) :=
 
 theorem cvNewW_afr {m m' : Mem} {nm lo ll ty q : Word} (h : cvNewW m nm lo ll ty = some (q, m')) :
     AFr m m' := by
-  simp only [cvNewW] at h
-  split at h; · cases h
-  rename_i q1 m1 h1
-  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  exact (erAllocW_afr h1).trans (by rw [cvNewMem_eq]; exact wrER_afr _ _ _)
+  obtain ⟨m1, h1, rfl⟩ := cvNewW_some h
+  exact (erAllocW_afr h1).trans (wrER_afr _ _ _)
 
 theorem sointernW_afr {m m' : Mem} {u r : Word} (h : sointernW m u = some (r, m')) : AFr m m' :=
   AFr.of_frame (sointernW_frame m u r m' h)
