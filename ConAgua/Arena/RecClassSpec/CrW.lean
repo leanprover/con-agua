@@ -1200,7 +1200,7 @@ theorem npcW_afr {n : Nat} {m m' : Mem} {p vis i : Word} {r : List Word}
     (h : npcW n m p vis i = some (r, m')) : AFr m m' := by
   rcases n with _ | n
   · simp [npcW] at h
-  simp only [npcW, npcK1.eq_def, npcK2.eq_def, npcK3.eq_def] at h
+  simp only [npcW, npcW.k_block_shape_member_names.eq_def, npcW.k_sl_contains.eq_def] at h
   afr_auto h [memberNamesW_afr]
 
 theorem slotMotW_afr {n : Nat} {m m' : Mem} {p vis dom : Word} {r : List Word}

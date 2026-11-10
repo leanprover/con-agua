@@ -11,6 +11,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy2
 public import ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndParts
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -48,43 +49,17 @@ theorem decHL_of_get {k : IdxKind} (m : Mem) : ∀ (xs : List (Idx k)) (o : Nat)
     have h0' : hd? (iwA m) o = some x := h0
     simp [h0', ih']
 
-/-- The model of `member_names_copy`. -/
-def nameCopyW : Nat → Mem → Word → Word → Word → Option Mem
-  | 0, _, _, _, _ => none
-  | n + 1, m, d, s, l =>
-    if l = 0 then some m
-    else nameCopyW n
-      (m.set64 IW d (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) s)))) (d + 1) (s + 1) (l - 1)
-
-section arms
-variable (n : Nat) (m : Mem) (d s l : Word)
-theorem nameCopyW_nil (hl : l = 0) : nameCopyW (n + 1) m d s l = some m := by
-  simp [nameCopyW, hl]
-theorem nameCopyW_step (hl : l ≠ 0) :
+/-- **`member_names_copy` is its model `nameCopyW`** (generated). -/
+l_model memberNamesCopy_spec (p : Prog) (hp : p.lookup "member_names_copy" = some memberNamesCopy)
+  fns [hp ↦ nameCopyW void]
+  grind [arena_grind]
+/-- `nameCopyW`'s step with its continuation applied (the shape `ipCopyW_get` takes). -/
+theorem nameCopyW_step (n : Nat) (m : Mem) (d s l : Word) (hl : l ≠ 0) :
     nameCopyW (n + 1) m d s l =
       nameCopyW n (m.set64 IW d (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) s))))
         (d + 1) (s + 1) (l - 1) := by
-  simp [nameCopyW, hl]
-end arms
-
-grind_pattern [ind_grind] nameCopyW_nil => nameCopyW (n + 1) m d s l
-grind_pattern [ind_grind] nameCopyW_step => nameCopyW (n + 1) m d s l
-
-theorem memberNamesCopy_spec (p : Prog) (hp : p.lookup "member_names_copy" = some memberNamesCopy)
-    (n : Nat) :
-    ∀ (s₀ : St) (d s l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "member_names_copy" [d, s, l]
-    ⦃fun _ s' => LocEq s' s₀ ∧ nameCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, memberNamesCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ d s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, memberNamesCopy]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20) [erRd]
+  rw [nameCopyW.arm2 n m d s l hl, erRd_foldN]
+  cases nameCopyW n _ _ _ _ <;> rfl
 
 /-- **What `member_names_copy` leaves.** -/
 theorem nameCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nameCopyW n m d s l = some m' →
@@ -98,7 +73,7 @@ theorem nameCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nameCopyW n m
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))))))
       else (m.arr64 IW)[i]? :=
   ipCopyW_get nameCopyW (fun m x => erRd m (rdW (m.arr64 IW) x)) (fun x d => x.toNat < d)
-    (fun _ _ _ _ => by simp [nameCopyW]) (nameCopyW_nil · · · · ·) (nameCopyW_step · · · · ·)
+    (fun _ _ _ _ => by simp [nameCopyW]) (nameCopyW.arm1 · · · · ·) (nameCopyW_step · · · · ·)
     (fun m d v x hx => by rw [erRd_set_iw, rdW_set64_IW_ne m d v x (by omega)])
     (fun _ _ h => by omega) n
 
