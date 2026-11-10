@@ -5,6 +5,8 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.DeclRec
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.SimLib
@@ -24,8 +26,10 @@ discharge `IndStubs.lean`'s `reservedRecName_spec` from it. Every function here 
 pin table: the memory is unchanged, and the twin's runs are pure reads of a filled table
 (`PinsFull`, from the flag the first `pin_at` checks).
 
-* `pin_range_has(x, k, hi)`: its model `prhW` (by fuel, as `resFromW`), and what a returned word
-  says: `1` iff `x` is one of the pins `k ‥ hi - 1` (`prhW_iff`).
+The models (`prhW`, `lghW`, `rrbW`, `rrnW`, `nonW`) are generated (`l_model`), each pin read
+through `pin_at`'s model `pinAtW`.
+
+* `pin_range_has(x, k, hi)`: its model `prhW`, and what a returned word says: `1` iff `x` is one of the pins `k ‥ hi - 1` (`prhW_iff`).
 * `lit_guard_has(x)`: the ten literal-guard pins read, then the `||` chain (`lghW`).
 * `reserved_rec_name(x)`: `reserved_contains`, `lit_guard_has`, `pin_range_has(x, 14, 21)`
   (`natOpNames`), `pin_range_has(x, 21, 29)` (`natDivModNames`), in the twin's order.
@@ -41,71 +45,98 @@ namespace L.Stubs
 
 open L.Arena L.Ind
 
-/-! ## `pin_range_has(x, k, hi)` -/
+/-! ## The models -/
 
-/-- The model of `pin_range_has(x, k, hi)` at fuel `n` (the memory is unchanged). -/
-def prhW : Nat → Mem → Word → Word → Word → Option Word
-  | 0, _, _, _, _ => none
-  | n + 1, m, x, k, hi =>
-    if hi ≤ k then some 0
-    else if pinW m 0 = 0 then none
-    else if 52 ≤ k then none
-    else if pinW m (if k = 51 then 71 else 1 + k.toNat) = x then some 1
-    else prhW n m x (k + 1) hi
+/-- A pin read in a filled table, below slot `51`. -/
+theorem pinAtW_eq {m : Mem} {i : Word} (h0 : pinW m 0 ≠ 0) (hi : i.toNat < 51) :
+    pinAtW m i = some ([pinW m (1 + i.toNat)], m) := by
+  have h52 : ¬ 52 ≤ i := fun h => by have := UInt64.le_iff_toNat_le.mp h; simp at this; omega
+  have h51 : i ≠ 51 := fun e => by subst e; simp at hi
+  unfold pinAtW
+  rw [ite_eq_right h0, ite_eq_right h52, ite_eq_right h51]
+  have e : rdW (m.arr64 PINS) (1 + i) = pinW m (1 + i.toNat) := by
+    simp only [rdW, pinW]
+    congr 2
+    rw [UInt64.toNat_add]; simp; omega
+  rw [e]
 
-theorem prhW_step (n : Nat) (m : Mem) (x k hi : Word) : prhW (n + 1) m x k hi =
-    if hi ≤ k then some 0
-    else if pinW m 0 = 0 then none
-    else if 52 ≤ k then none
-    else if pinW m (if k = 51 then 71 else 1 + k.toNat) = x then some 1
-    else prhW n m x (k + 1) hi := rfl
+/-- A pin read in an empty table aborts. -/
+theorem pinAtW_none {m : Mem} {i : Word} (h0 : pinW m 0 = 0) : pinAtW m i = none := by
+  unfold pinAtW; rw [ite_eq_left h0]
 
-grind_pattern [ind_grind] prhW_step => prhW (n + 1) m x k hi
+/-- The model of `pin_range_has(x, k, hi)`. -/
+l_model prh_spec (p : Prog) (hp : p.lookup "pin_range_has" = some pinRangeHas)
+    (hpin : p.lookup "pin_at" = some pinAtL)
+  fns [hp ↦ prhW]
+  specs [pinAt_specW p hpin n]
+  grind [arena_grind, ind_grind]
 
-theorem prh_spec (p : Prog) (hp : p.lookup "pin_range_has" = some pinRangeHas)
-    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) :
-    ∀ (s₀ : St) (x k hi : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_range_has" [x, k, hi]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ prhW n s₀.mem x k hi = some (r.headD 0); ⊤⦄ := by
+/-- The model of `lit_guard_has(x)`: the ten literal-guard pins (`pin_at(1)`, `(2)`, `(3)`,
+`(5)`‥`(10)`, `(12)`). -/
+l_model lgh_spec (p : Prog) (hp : p.lookup "lit_guard_has" = some litGuardHas)
+    (hpin : p.lookup "pin_at" = some pinAtL)
+  fns [hp ↦ lghW]
+  specs [pinAt_specW p hpin n]
+  grind [arena_grind, ind_grind]
+
+/-- The model of `reserved_rec_bool(x)`: `Bool` and its two constructors (pins 29, 30, 31). -/
+l_model rrb_spec (p : Prog) (hp : p.lookup "reserved_rec_bool" = some reservedRecBoolL)
+    (hpin : p.lookup "pin_at" = some pinAtL)
+  fns [hp ↦ rrbW]
+  specs [pinAt_specW p hpin n]
+  grind [arena_grind, ind_grind]
+
+/-- The model of `reserved_rec_name(x)`. -/
+l_model rrn_spec (p : Prog) (hp : p.lookup "reserved_rec_name" = some reservedRecNameL)
+    (hrc : p.lookup "reserved_contains" = some reservedContains)
+    (hrf : p.lookup "reserved_from" = some reservedFrom)
+    (hlg : p.lookup "lit_guard_has" = some litGuardHas)
+    (hpr : p.lookup "pin_range_has" = some pinRangeHas)
+    (hrb : p.lookup "reserved_rec_bool" = some reservedRecBoolL)
+    (hpin : p.lookup "pin_at" = some pinAtL)
+  fns [hp ↦ rrnW]
+  specs [resCont_spec p hrf hrc n, lgh_spec p hlg hpin n, prh_spec p hpr hpin n,
+    rrb_spec p hrb hpin n]
+  grind [arena_grind, ind_grind]
+
+/-- The model of `nat_op_name(x)`: pins 14‥20, then 21‥28. -/
+l_model non_spec (p : Prog) (hp : p.lookup "nat_op_name" = some natOpNameL)
+    (hpr : p.lookup "pin_range_has" = some pinRangeHas)
+    (hpin : p.lookup "pin_at" = some pinAtL)
+  fns [hp ↦ nonW]
+  specs [prh_spec p hpr hpin n]
+  grind [arena_grind, ind_grind]
+
+/-! ## What the models answer -/
+
+/-- **What `pin_range_has` answers**: `1` iff `x` is a pin in slots `k ‥ hi - 1`, else `0`; the
+memory unchanged. -/
+theorem prhW_iff (n : Nat) : ∀ (m m' : Mem) (x k hi r : Word), hi.toNat ≤ 51 →
+    prhW n m x k hi = some (r, m') →
+    m = m' ∧ r ≤ 1 ∧ (r ≠ 0 ↔ ∃ i, k.toNat ≤ i ∧ i < hi.toNat ∧ pinW m (1 + i) = x) := by
   induction n with
-  | zero =>
-    intro s₀ x k hi; rw [invoke_eq _ hp]; simp only [callFn, pinRangeHas]; vcgen [exec] <;> grind
+  | zero => intro m m' x k hi r _ h; rw [prhW.eq_1] at h; cases h
   | succ n ih =>
-    intro s₀ x k hi
-    rw [invoke_eq _ hp]
-    simp only [callFn, pinRangeHas]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_any p hpin n, ih] <;>
-      finish (gen := 20)
-
-/-- **What `pin_range_has` answers**: `1` iff `x` is a pin in slots `k ‥ hi - 1`, else `0`. -/
-theorem prhW_iff (n : Nat) : ∀ (m : Mem) (x k hi r : Word), hi.toNat ≤ 51 →
-    prhW n m x k hi = some r →
-    r ≤ 1 ∧ (r ≠ 0 ↔ ∃ i, k.toNat ≤ i ∧ i < hi.toNat ∧ pinW m (1 + i) = x) := by
-  induction n with
-  | zero => intro m x k hi r _ h; simp [prhW] at h
-  | succ n ih =>
-    intro m x k hi r h51 h
-    rw [prhW_step] at h
+    intro m m' x k hi r h51 h
     by_cases hk : hi ≤ k
-    · rw [ite_eq_left hk] at h; cases Option.some.inj h
+    · rw [prhW.arm1 n m x k hi hk] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have := UInt64.le_iff_toNat_le.mp hk
-      refine ⟨by decide, by simp only [ne_eq, not_true_eq_false, false_iff]; omega⟩
-    rw [ite_eq_right hk] at h
+      exact ⟨rfl, by decide, by simp only [ne_eq, not_true_eq_false, false_iff]; omega⟩
+    rw [prhW.arm2 n m x k hi hk] at h
     have hk' : k.toNat < hi.toNat := by
       have := UInt64.not_le.mp hk; exact UInt64.lt_iff_toNat_lt.mp this
-    obtain ⟨h0, h⟩ := of_ite_none h
-    obtain ⟨h5, h⟩ := of_ite_none h
-    have hk51 : k ≠ 51 := fun e => by subst e; simp at hk'; omega
-    rw [ite_eq_right hk51] at h
+    by_cases h0 : pinW m 0 = 0
+    · rw [pinAtW_none h0, prhW.k_pin_at.none] at h; cases h
+    rw [pinAtW_eq h0 (by omega)] at h
     by_cases he : pinW m (1 + k.toNat) = x
-    · rw [ite_eq_left he] at h; cases Option.some.inj h
-      refine ⟨by decide, ?_⟩
-      exact ⟨fun _ => ⟨k.toNat, Nat.le_refl _, hk', he⟩, fun _ => by decide⟩
-    rw [ite_eq_right he] at h
+    · rw [prhW.k_pin_at.arm1 n x k hi [pinW m (1 + k.toNat)] m he] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      exact ⟨rfl, by decide, fun _ => ⟨k.toNat, Nat.le_refl _, hk', he⟩, fun _ => by decide⟩
+    rw [prhW.k_pin_at.arm2 n x k hi [pinW m (1 + k.toNat)] m he] at h
     have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    obtain ⟨hr, hiff⟩ := ih m x (k + 1) hi r h51 h
-    refine ⟨hr, hiff.trans ?_⟩
+    obtain ⟨hm, hr, hiff⟩ := ih m m' x (k + 1) hi r h51 h
+    refine ⟨hm, hr, hiff.trans ?_⟩
     rw [hk1]
     constructor
     · rintro ⟨i, h1, h2, h3⟩; exact ⟨i, by omega, h2, h3⟩
@@ -114,136 +145,6 @@ theorem prhW_iff (n : Nat) : ∀ (m : Mem) (x k hi r : Word), hi.toNat ≤ 51 �
       · exact ⟨i, by omega, h2, h3⟩
       · have : i = k.toNat := by omega
         subst this; exact absurd h3 he
-
-/-! ## `lit_guard_has(x)` -/
-
-/-- Pin `k`'s word, as `pin_at(k)` returns it. -/
-abbrev pk (m : Mem) (k : Word) : Word := pinW m (1 + k.toNat)
-
-/-- The model of `lit_guard_has(x)`: the ten literal-guard pins (`pin_at(1)`, `(2)`, `(3)`,
-`(5)`‥`(10)`, `(12)`). -/
-def lghW (m : Mem) (x : Word) : Option Word :=
-  if pinW m 0 = 0 then none
-  else if x = pinW m 2 ∨ x = pinW m 3 ∨ x = pinW m 4 ∨ x = pinW m 6 ∨ x = pinW m 7 ∨
-    x = pinW m 8 ∨ x = pinW m 9 ∨ x = pinW m 10 ∨ x = pinW m 11 ∨ x = pinW m 13 then some 1
-  else some 0
-
-/-- `pin_at(i)` returns to the caller's exact state. -/
-theorem pinAt_eq (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
-    ⦃fun r s' => s' = s₀ ∧ pinW s₀.mem 0 ≠ 0 ∧
-      r = [pinW s₀.mem (if i = 51 then 71 else 1 + i.toNat)]; ⊤⦄ := by
-  refine triple_post (pinAt_any p hp n s₀ i) ?_
-  rintro r ⟨m', l'⟩ ⟨hl, h0, -, hr, hm⟩
-  obtain ⟨m, l⟩ := s₀
-  simp only [LocEq] at hl
-  simp only at hm hl
-  subst hm hl
-  exact ⟨rfl, h0, hr⟩
-
-set_option maxHeartbeats 2000000 in
-theorem lgh_spec (p : Prog) (hp : p.lookup "lit_guard_has" = some litGuardHas)
-    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lit_guard_has" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ lghW s₀.mem x = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, litGuardHas]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, pinAt_eq p hpin n]
-    all_goals subst_vars
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff, reduceIte,
-      beq_iff_eq, Cond.pval, Expr.pval, Bool.or_eq_true] at *)
-    all_goals grind [lang_grind, arena_grind, lghW]
-
-/-! ## `reserved_rec_name(x)` -/
-
-/-- A pure read's spec, with the caller's exact state back. -/
-theorem triple_eq_of_mem {prog : M (List Word)} {s₀ : St} {Q : List Word → Prop}
-    (h : ⦃fun s => s = s₀⦄ prog ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ Q r; ⊤⦄) :
-    ⦃fun s => s = s₀⦄ prog ⦃fun r s' => s' = s₀ ∧ Q r; ⊤⦄ := by
-  refine triple_post h ?_
-  rintro r ⟨m', l'⟩ ⟨hl, hm, hq⟩
-  obtain ⟨m, l⟩ := s₀
-  simp only [LocEq] at hl
-  simp only at hm hl
-  subst hm hl
-  exact ⟨rfl, hq⟩
-
-/-- After `pin_range_has(x, 14, 21)`. -/
-def rrnK3 (n : Nat) (m : Mem) (x : Word) : Option Word → Option Word
-  | none => none
-  | some r => if r ≠ 0 then some 1 else prhW n m x 21 29
-
-/-- The model of `reserved_rec_bool(x)`: `Bool` and its two constructors (pins 29, 30, 31). -/
-def rrbW (m : Mem) (x : Word) : Option Word :=
-  if pinW m 0 = 0 then none
-  else if x = pinW m 30 ∨ x = pinW m 31 ∨ x = pinW m 32 then some 1
-  else some 0
-
-set_option maxHeartbeats 2000000 in
-theorem rrb_spec (p : Prog) (hp : p.lookup "reserved_rec_bool" = some reservedRecBoolL)
-    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reserved_rec_bool" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ rrbW s₀.mem x = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, reservedRecBoolL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, pinAt_eq p hpin n]
-    all_goals subst_vars
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff, reduceIte,
-      beq_iff_eq, Cond.pval, Expr.pval] at *)
-    all_goals grind [lang_grind, arena_grind, rrbW]
-
-/-- After `pin_range_has(x, 21, 29)`. -/
-def rrnK4 (m : Mem) (x : Word) : Option Word → Option Word
-  | none => none
-  | some r => if r ≠ 0 then some 1 else rrbW m x
-
-/-- After `pin_range_has(x, 14, 21)` (in `reserved_rec_name`). -/
-def rrnK3b (n : Nat) (m : Mem) (x : Word) : Option Word → Option Word
-  | none => none
-  | some r => if r ≠ 0 then some 1 else rrnK4 m x (prhW n m x 21 29)
-
-/-- After `lit_guard_has`. -/
-def rrnK2 (n : Nat) (m : Mem) (x : Word) : Option Word → Option Word
-  | none => none
-  | some r => if r ≠ 0 then some 1 else rrnK3b n m x (prhW n m x 14 21)
-/-- After `reserved_contains`. -/
-def rrnK1 (n : Nat) (m : Mem) (x : Word) : Option Word → Option Word
-  | none => none
-  | some r => if r ≠ 0 then some 1 else rrnK2 n m x (lghW m x)
-/-- The model of `reserved_rec_name(x)` (the memory is unchanged). -/
-def rrnW (n : Nat) (m : Mem) (x : Word) : Option Word := rrnK1 n m x (resContW n m x)
-
-set_option maxHeartbeats 2000000 in
-theorem rrn_spec (p : Prog) (hp : p.lookup "reserved_rec_name" = some reservedRecNameL)
-    (hrc : p.lookup "reserved_contains" = some reservedContains)
-    (hrf : p.lookup "reserved_from" = some reservedFrom)
-    (hlg : p.lookup "lit_guard_has" = some litGuardHas)
-    (hpr : p.lookup "pin_range_has" = some pinRangeHas)
-    (hrb : p.lookup "reserved_rec_bool" = some reservedRecBoolL)
-    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reserved_rec_name" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ rrnW n s₀.mem x = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, reservedRecNameL]
-  have h1 := fun s₀ x => triple_eq_of_mem (resCont_spec p hrf hrc n s₀ x)
-  have h2 := fun s₀ x => triple_eq_of_mem (lgh_spec p hlg hpin n s₀ x)
-  have h3 := fun s₀ x k hi => triple_eq_of_mem (prh_spec p hpr hpin n s₀ x k hi)
-  have h4 := fun s₀ x => triple_eq_of_mem (rrb_spec p hrb hpin n s₀ x)
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, h1, h2, h3, h4] <;>
-    finish (gen := 20) [rrnW, rrnK1, rrnK2, rrnK3b, rrnK4]
-
-/-! ## What the models answer -/
 
 /-- What `reserved_from` from `j` answers. -/
 theorem resFromW_iff (n : Nat) : ∀ (m : Mem) (x j r : Word), j.toNat ≤ 16 →
@@ -292,14 +193,24 @@ theorem resContW_iff {n : Nat} {m : Mem} {x r : Word} (h : resContW n m x = some
     obtain ⟨hr, hiff⟩ := resFromW_iff n m x 0 r (by simp) h
     exact ⟨hr, hiff.trans (by simp)⟩
 
-theorem lghW_iff {m : Mem} {x r : Word} (h : lghW m x = some r) :
-    r ≤ 1 ∧ (r ≠ 0 ↔ x ∈ [pinW m 2, pinW m 3, pinW m 4, pinW m 6, pinW m 7, pinW m 8, pinW m 9,
-      pinW m 10, pinW m 11, pinW m 13]) := by
-  unfold lghW at h
-  obtain ⟨h0, h⟩ := of_ite_none h
-  split at h <;> rename_i hc <;> cases Option.some.inj h
-  · refine ⟨by decide, ?_⟩; simp only [List.mem_cons, List.not_mem_nil, or_false]; simpa using hc
-  · refine ⟨by decide, ?_⟩; simp only [List.mem_cons, List.not_mem_nil, or_false]; simpa using hc
+/-- A two-way answer with the memory unchanged. -/
+theorem ite_some_eq {c : Prop} [Decidable c] {a b r : Word} {m m' : Mem}
+    (h : (if c then some (a, m) else some (b, m)) = some (r, m')) :
+    m = m' ∧ ((c ∧ r = a) ∨ (¬ c ∧ r = b)) := by
+  by_cases hc : c <;> simp_all
+
+theorem lghW_iff {m m' : Mem} {x r : Word} (h : lghW m x = some (r, m')) :
+    m = m' ∧ r ≤ 1 ∧ (r ≠ 0 ↔ x ∈ [pinW m 2, pinW m 3, pinW m 4, pinW m 6, pinW m 7, pinW m 8,
+      pinW m 9, pinW m 10, pinW m 11, pinW m 13]) := by
+  by_cases h0 : pinW m 0 = 0
+  · rw [lghW.arm1, pinAtW_none h0, lghW.k_pin_at.none] at h; cases h
+  simp (disch := decide) only [lghW.arm1, pinAtW_eq h0, lghW.k_pin_at.arm1, lghW.k_pin_at_2.arm1,
+    lghW.k_pin_at_3.arm1, lghW.k_pin_at_4.arm1, lghW.k_pin_at_5.arm1, lghW.k_pin_at_6.arm1,
+    lghW.k_pin_at_7.arm1, lghW.k_pin_at_8.arm1, lghW.k_pin_at_9.arm1, lghW.k_pin_at_10,
+    List.headD_cons, UInt64.reduceToNat, Nat.reduceAdd] at h
+  obtain ⟨rfl, hc | hc⟩ := ite_some_eq h <;> obtain ⟨hc, rfl⟩ := hc
+  · refine ⟨rfl, by decide, ?_⟩; simp only [List.mem_cons, List.not_mem_nil, or_false]; simpa using hc
+  · refine ⟨rfl, by decide, ?_⟩; simp only [List.mem_cons, List.not_mem_nil, or_false]; simpa using hc
 
 /-- The four lists' words, as the twin reads them. -/
 def rrnIn (m : Mem) (x : Word) : Prop :=
@@ -310,59 +221,64 @@ def rrnIn (m : Mem) (x : Word) : Prop :=
   (∃ i, 21 ≤ i ∧ i < 29 ∧ pinW m (1 + i) = x) ∨
   x ∈ [pinW m 30, pinW m 31, pinW m 32]
 
-theorem rrbW_iff {m : Mem} {x r : Word} (h : rrbW m x = some r) :
-    r ≤ 1 ∧ (r ≠ 0 ↔ x ∈ [pinW m 30, pinW m 31, pinW m 32]) := by
-  unfold rrbW at h
-  obtain ⟨h0, h⟩ := of_ite_none h
-  split at h <;> rename_i hc <;> cases Option.some.inj h
-  · refine ⟨by decide, ?_⟩; simp only [List.mem_cons, List.not_mem_nil, or_false]; simpa using hc
-  · refine ⟨by decide, ?_⟩; simp only [List.mem_cons, List.not_mem_nil, or_false]; simpa using hc
+theorem rrbW_iff {m m' : Mem} {x r : Word} (h : rrbW m x = some (r, m')) :
+    m = m' ∧ r ≤ 1 ∧ (r ≠ 0 ↔ x ∈ [pinW m 30, pinW m 31, pinW m 32]) := by
+  by_cases h0 : pinW m 0 = 0
+  · rw [rrbW.arm1, pinAtW_none h0, rrbW.k_pin_at.none] at h; cases h
+  simp (disch := decide) only [rrbW.arm1, pinAtW_eq h0, rrbW.k_pin_at, rrbW.k_pin_at_2,
+    rrbW.k_pin_at_3.arm1, List.headD_cons, UInt64.reduceToNat, Nat.reduceAdd] at h
+  repeat' split at h
+  all_goals
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨rfl, ?_⟩
+    by_cases e3 : x = pinW m 32 <;> simp_all
 
-theorem rrnW_iff {n : Nat} {m : Mem} {x r : Word} (h : rrnW n m x = some r) :
-    r ≤ 1 ∧ (r ≠ 0 ↔ rrnIn m x) := by
-  unfold rrnW at h
+theorem rrnW_iff {n : Nat} {m m' : Mem} {x r : Word} (h : rrnW n m x = some (r, m')) :
+    m = m' ∧ r ≤ 1 ∧ (r ≠ 0 ↔ rrnIn m x) := by
+  cases n with
+  | zero => rw [rrnW.eq_1] at h; cases h
+  | succ n =>
+  rw [rrnW.arm1] at h
   cases h1 : resContW n m x with
-  | none => rw [h1] at h; cases h
+  | none => rw [h1, rrnW.k_reserved_contains.none] at h; cases h
   | some r1 =>
   rw [h1] at h
   obtain ⟨-, i1⟩ := resContW_iff h1
-  simp only [rrnK1] at h
   by_cases c1 : r1 ≠ 0
-  · rw [ite_eq_left c1] at h; cases Option.some.inj h
-    exact ⟨by decide, ⟨fun _ => .inl (i1.mp c1), fun _ => by decide⟩⟩
-  rw [ite_eq_right c1] at h
-  cases h2 : lghW m x with
-  | none => rw [h2] at h; cases h
-  | some r2 =>
+  · rw [rrnW.k_reserved_contains.arm1 _ _ _ _ c1] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    exact ⟨rfl, by decide, ⟨fun _ => .inl (i1.mp c1), fun _ => by decide⟩⟩
+  rw [rrnW.k_reserved_contains.arm2 _ _ _ _ (by simpa using c1)] at h
+  rcases h2 : lghW m x with _ | ⟨r2, m2⟩
+  · rw [h2, rrnW.k_lit_guard_has.none] at h; cases h
   rw [h2] at h
-  obtain ⟨-, i2⟩ := lghW_iff h2
-  simp only [rrnK2] at h
+  obtain ⟨rfl, -, i2⟩ := lghW_iff h2
   by_cases c2 : r2 ≠ 0
-  · rw [ite_eq_left c2] at h; cases Option.some.inj h
-    exact ⟨by decide, ⟨fun _ => .inr (.inl (i2.mp c2)), fun _ => by decide⟩⟩
-  rw [ite_eq_right c2] at h
-  cases h3 : prhW n m x 14 21 with
-  | none => rw [h3] at h; cases h
-  | some r3 =>
+  · rw [rrnW.k_lit_guard_has.arm1 _ _ _ _ c2] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    exact ⟨rfl, by decide, ⟨fun _ => .inr (.inl (i2.mp c2)), fun _ => by decide⟩⟩
+  rw [rrnW.k_lit_guard_has.arm2 _ _ _ _ (by simpa using c2)] at h
+  rcases h3 : prhW n m x 14 21 with _ | ⟨r3, m3⟩
+  · rw [h3, rrnW.k_pin_range_has.none] at h; cases h
   rw [h3] at h
-  obtain ⟨-, i3⟩ := prhW_iff n m x 14 21 r3 (by decide) h3
-  simp only [rrnK3b] at h
+  obtain ⟨rfl, -, i3⟩ := prhW_iff n m _ x 14 21 r3 (by decide) h3
   by_cases c3 : r3 ≠ 0
-  · rw [ite_eq_left c3] at h; cases Option.some.inj h
-    exact ⟨by decide, ⟨fun _ => .inr (.inr (.inl (by simpa using i3.mp c3))), fun _ => by decide⟩⟩
-  rw [ite_eq_right c3] at h
-  cases h4 : prhW n m x 21 29 with
-  | none => rw [h4] at h; cases h
-  | some r4 =>
+  · rw [rrnW.k_pin_range_has.arm1 _ _ _ _ c3] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    exact ⟨rfl, by decide, ⟨fun _ => .inr (.inr (.inl (by simpa using i3.mp c3))), fun _ => by decide⟩⟩
+  rw [rrnW.k_pin_range_has.arm2 _ _ _ _ (by simpa using c3)] at h
+  rcases h4 : prhW n m x 21 29 with _ | ⟨r4, m4⟩
+  · rw [h4, rrnW.k_pin_range_has_2.none] at h; cases h
   rw [h4] at h
-  obtain ⟨-, i4⟩ := prhW_iff n m x 21 29 r4 (by decide) h4
-  simp only [rrnK4] at h
+  obtain ⟨rfl, -, i4⟩ := prhW_iff n m _ x 21 29 r4 (by decide) h4
   by_cases c4 : r4 ≠ 0
-  · rw [ite_eq_left c4] at h; cases Option.some.inj h
-    exact ⟨by decide, ⟨fun _ => .inr (.inr (.inr (.inl (by simpa using i4.mp c4)))), fun _ => by decide⟩⟩
-  rw [ite_eq_right c4] at h
-  obtain ⟨hr, i5⟩ := rrbW_iff h
-  refine ⟨hr, i5.trans ?_⟩
+  · rw [rrnW.k_pin_range_has_2.arm1 _ _ _ c4] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    exact ⟨rfl, by decide,
+      ⟨fun _ => .inr (.inr (.inr (.inl (by simpa using i4.mp c4)))), fun _ => by decide⟩⟩
+  rw [rrnW.k_pin_range_has_2.arm2 _ _ _ (by simpa using c4)] at h
+  obtain ⟨hm, hr, i5⟩ := rrbW_iff h
+  refine ⟨hm, hr, i5.trans ?_⟩
   simp only [rrnIn]
   have n1 := mt i1.mpr c1
   have n2 := mt i2.mpr c2
@@ -380,50 +296,43 @@ theorem rrnW_iff {n : Nat} {m : Mem} {x r : Word} (h : rrnW n m x = some r) :
 
 /-! ## `nat_op_name(x)` -/
 
-/-- The model of `nat_op_name(x)` (the memory is unchanged): pins 14‥20, then 21‥28. -/
-def nonW (n : Nat) (m : Mem) (x : Word) : Option Word := rrnK3 n m x (prhW n m x 14 21)
-
-set_option maxHeartbeats 2000000 in
-theorem non_spec (p : Prog) (hp : p.lookup "nat_op_name" = some natOpNameL)
-    (hpr : p.lookup "pin_range_has" = some pinRangeHas)
-    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_name" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ nonW n s₀.mem x = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpNameL]
-  have h3 := fun s₀ x k hi => triple_eq_of_mem (prh_spec p hpr hpin n s₀ x k hi)
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, h3] <;>
-    finish (gen := 20) [nonW, rrnK3]
-
-theorem nonW_iff {n : Nat} {m : Mem} {x r : Word} (h : nonW n m x = some r) :
-    r ≤ 1 ∧ (r ≠ 0 ↔ ∃ i, 14 ≤ i ∧ i < 29 ∧ pinW m (1 + i) = x) := by
-  unfold nonW at h
-  cases h3 : prhW n m x 14 21 with
-  | none => rw [h3] at h; cases h
-  | some r3 =>
+theorem nonW_iff {n : Nat} {m m' : Mem} {x r : Word} (h : nonW n m x = some (r, m')) :
+    m = m' ∧ r ≤ 1 ∧ (r ≠ 0 ↔ ∃ i, 14 ≤ i ∧ i < 29 ∧ pinW m (1 + i) = x) := by
+  cases n with
+  | zero => rw [nonW.eq_1] at h; cases h
+  | succ n =>
+  rw [nonW.arm1] at h
+  rcases h3 : prhW n m x 14 21 with _ | ⟨r3, m3⟩
+  · rw [h3, nonW.k_pin_range_has.none] at h; cases h
   rw [h3] at h
-  obtain ⟨-, i3⟩ := prhW_iff n m x 14 21 r3 (by decide) h3
-  simp only [rrnK3] at h
+  obtain ⟨rfl, -, i3⟩ := prhW_iff n m _ x 14 21 r3 (by decide) h3
   simp only [UInt64.reduceToNat] at i3
   by_cases c3 : r3 ≠ 0
-  · rw [ite_eq_left c3] at h; cases Option.some.inj h
+  · rw [nonW.k_pin_range_has.arm1 _ _ _ _ c3] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨i, h1, h2, h3⟩ := i3.mp c3
-    exact ⟨by decide, ⟨fun _ => ⟨i, h1, by omega, h3⟩, fun _ => by decide⟩⟩
-  rw [ite_eq_right c3] at h
-  obtain ⟨hr, i4⟩ := prhW_iff n m x 21 29 r (by decide) h
+    exact ⟨rfl, by decide, ⟨fun _ => ⟨i, h1, by omega, h3⟩, fun _ => by decide⟩⟩
+  rw [nonW.k_pin_range_has.arm2 _ _ _ _ (by simpa using c3)] at h
+  obtain ⟨hm, hr, i4⟩ := prhW_iff n m m' x 21 29 r (by decide) h
   simp only [UInt64.reduceToNat] at i4
-  refine ⟨hr, i4.trans ⟨fun ⟨i, h1, h2, h3⟩ => ⟨i, by omega, h2, h3⟩, fun ⟨i, h1, h2, h3⟩ => ?_⟩⟩
+  refine ⟨hm, hr, i4.trans ⟨fun ⟨i, h1, h2, h3⟩ => ⟨i, by omega, h2, h3⟩, fun ⟨i, h1, h2, h3⟩ => ?_⟩⟩
   rcases Nat.lt_or_ge i 21 with hl | hl
   · exact absurd (i3.mpr ⟨i, h1, hl, h3⟩) c3
   · exact ⟨i, hl, h2, h3⟩
 
-theorem nonW_flag {n : Nat} {m : Mem} {x r : Word} (h : nonW n m x = some r) : pinW m 0 ≠ 0 := by
+theorem nonW_flag {n : Nat} {m m' : Mem} {x r : Word} (h : nonW n m x = some (r, m')) :
+    pinW m 0 ≠ 0 := by
   intro h0
-  unfold nonW at h
   cases n with
-  | zero => simp [prhW, rrnK3] at h
-  | succ n => rw [prhW_step, ite_eq_right (by decide), ite_eq_left h0] at h; simp [rrnK3] at h
+  | zero => rw [nonW.eq_1] at h; cases h
+  | succ n =>
+  rw [nonW.arm1] at h
+  cases n with
+  | zero => rw [prhW.eq_1, nonW.k_pin_range_has.none] at h; cases h
+  | succ n =>
+    rw [prhW.arm2 _ _ _ _ _ (by decide), pinAtW_none h0, prhW.k_pin_at.none,
+      nonW.k_pin_range_has.none] at h
+    cases h
 
 /-- The certified operations' pins (14‥20), as the twin's `contains`. -/
 theorem natOps_contains {m : Mem} {a : AState} (hF : PinsFull m a.pins) {x : Word}
@@ -531,13 +440,13 @@ theorem natOpName_sim {p : Prog} (hp : p.lookup "nat_op_name" = some natOpNameL)
   cases n with
   | zero => simp [callW_zero] at hc
   | succ k =>
-  obtain ⟨s', rfl, -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (non_spec p hp hpr hpin k _ w) hc
-  simp only at hm hW
-  obtain ⟨-, hiff⟩ := nonW_iff hW
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (non_spec p hp hpr hpin (k + 1) _ w) hc
+  simp only at hW
+  obtain ⟨hm, -, hiff⟩ := nonW_iff hW
   have hF := hS.check.pins.full (nonW_flag hW)
   obtain ⟨b, hrun, hb⟩ := natOpName_run hF w hw
-  exact ⟨b, a, hrun, hm, rfl, hiff.trans hb.symm⟩
+  exact ⟨b, a, hrun, hm.symm, rfl, hiff.trans hb.symm⟩
 
 /-! ## The twin side -/
 
@@ -652,12 +561,16 @@ structure RrnProg (p : Prog) : Prop where
   rb : p.lookup "reserved_rec_bool" = some reservedRecBoolL
   pin : p.lookup "pin_at" = some pinAtL
 
-theorem rrnW_flag {n : Nat} {m : Mem} {x r : Word} (h : rrnW n m x = some r) : pinW m 0 ≠ 0 := by
+theorem rrnW_flag {n : Nat} {m m' : Mem} {x r : Word} (h : rrnW n m x = some (r, m')) :
+    pinW m 0 ≠ 0 := by
   intro h0
-  unfold rrnW at h
   cases n with
-  | zero => simp [resContW, rrnK1] at h
-  | succ n => rw [resContW_step, ite_eq_left h0] at h; simp [rrnK1] at h
+  | zero => rw [rrnW.eq_1] at h; cases h
+  | succ n =>
+  rw [rrnW.arm1] at h
+  cases n with
+  | zero => simp [resContW, rrnW.k_reserved_contains.none] at h
+  | succ n => rw [resContW_step, ite_eq_left h0, rrnW.k_reserved_contains.none] at h; cases h
 
 /-- **`reserved_rec_name(x)` refines `reservedRecName`** under the stage relation: the memory and
 the twin's state are unchanged, and the word is `1` exactly when the twin answers `true`. -/
@@ -667,14 +580,14 @@ theorem reservedRecName_refines {p : Prog} (hP : RrnProg p) (_dn : NIdx → Opti
     RefAM p "reserved_rec_name" [x] (StageR vis fe) (reservedRecName (decI x))
       (KeepPost vis fe decW0B) := by
   refine CallRef.refAM (CallRef.of_succ fun k m a r m' hS hc => ?_)
-  obtain ⟨s', rfl, -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (rrn_spec p hP.rrn hP.rc hP.rf hP.lg hP.pr hP.rb hP.pin k _ x) hc
-  simp only at hm hW
-  obtain ⟨hr, hiff⟩ := rrnW_iff hW
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (rrn_spec p hP.rrn hP.rc hP.rf hP.lg hP.pr hP.rb hP.pin (k + 1) _ x) hc
+  simp only at hW
+  obtain ⟨hm, hr, hiff⟩ := rrnW_iff hW
   have hF := hS.check.pins.full (rrnW_flag hW)
   obtain ⟨b, hrun, hb⟩ := reservedRecName_run hF x hx
   refine ⟨b, a, hrun, ?_⟩
-  rw [hm]
+  rw [← hm]
   refine ⟨hS, IWGrow.refl _, ?_, UInt64.le_iff_toNat_le.mp hr⟩
   cases b with
   | true => simpa using hiff.mpr (hb.mp rfl)

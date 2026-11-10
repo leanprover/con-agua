@@ -129,7 +129,7 @@ theorem liNode_core (v : LNodeView) (W : Mem → Option (Word × Mem))
     {m m' : Mem} {a : AState} {h : Word} (hS : CoreS dn m a vis fe M eb)
     (hch : ∀ c ∈ v.lchildren, ∃ l, denoteL a.store.ls c = some l)
     (hnch : ∀ n ∈ v.nchildren, ∃ x, denoteN a.store.ls.ns n = some x)
-    (hW : liNodeK (W m) = some (h, m')) :
+    (hW : lvInternW.k_intern_zero (W m) = some (h, m')) :
     ∃ a', (internLNode v).run a = .ok (decI h, a') ∧ LvOut dn vis fe M eb m m' a a' h := by
   obtain ⟨ok, hR, res, hlt, hf⟩ := liNode_ok (internLNode v) W hop m a h m' hS.arena hW
   have hrun := node_run ok
@@ -158,7 +158,7 @@ theorem lvInternW_core (L : Level) :
     | zero => simp [lvInternW] at hW
     | succ n =>
     have hg : lvG m q = 0 := by cases hl; simp_all [lvG]
-    rw [lvInternW_zero n m q hg] at hW
+    rw [lvInternW.arm1 n m q hg] at hW
     exact liNode_core .zero zinternW
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.zero_A m a hA w m' hI
@@ -175,7 +175,7 @@ theorem lvInternW_core (L : Level) :
       | param hv hn => exact ⟨_, _, hv, hn⟩
     have hg : lvG m q = 4 := by simp [lvG, hv]
     have hx : lvA m q = x := by simp [lvA, hv]
-    rw [lvInternW_param n m q (by rw [hg]; decide) hg, hx] at hW
+    rw [lvInternW.arm2 n m q (by rw [hg]; decide) hg, hx] at hW
     obtain ⟨a', hrun, ho⟩ := liNode_core (.param (decI x)) (fun m => pinternW m x)
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.param_A m a hA w m' x hn.1 hI
@@ -197,13 +197,13 @@ theorem lvInternW_core (L : Level) :
       cases hl with
       | succ hv hu => exact ⟨_, hv, hu⟩
     have hg : lvG m q = 1 := by simp [lvG, hv]
-    rw [lvInternW_rec n m q (by rw [hg]; decide) (by rw [hg]; decide), hg,
+    rw [lvInternW.arm3 n m q (by rw [hg]; decide) (by rw [hg]; decide), hg,
       show lvA m q = x by simp [lvA, hv]] at hW
     cases hU : lvInternW n m x with
-    | none => rw [hU] at hW; simp [liOneK] at hW
+    | none => rw [hU] at hW; simp [lvInternW.k_lv_intern] at hW
     | some r =>
     obtain ⟨hu', m₁⟩ := r
-    rw [hU, liOneK_succ n _ _ _ _ rfl] at hW
+    rw [hU, lvInternW.k_lv_intern.arm1 n _ _ _ _ rfl] at hW
     obtain ⟨a₁, hrun₁, o₁⟩ := ih n m a x hu' m₁ hS hu hU
     obtain ⟨a', hrun, o⟩ := liNode_core (.succ (decI hu')) (fun m => sinternW m hu')
       (fun m a w m' hA hI => by
@@ -226,21 +226,21 @@ theorem lvInternW_core (L : Level) :
       cases hl with
       | max hv hu hw => exact ⟨_, _, hv, hu, hw⟩
     have hg : lvG m q = 2 := by simp [lvG, hv]
-    rw [lvInternW_rec n m q (by rw [hg]; decide) (by rw [hg]; decide), hg,
+    rw [lvInternW.arm3 n m q (by rw [hg]; decide) (by rw [hg]; decide), hg,
       show lvA m q = x by simp [lvA, hv], show lvB m q = y by simp [lvB, hv]] at hW
     cases hU : lvInternW n m x with
-    | none => rw [hU] at hW; simp [liOneK] at hW
+    | none => rw [hU] at hW; simp [lvInternW.k_lv_intern] at hW
     | some r =>
     obtain ⟨hu', m₁⟩ := r
-    rw [hU, liOneK_two n _ _ _ _ (by decide)] at hW
+    rw [hU, lvInternW.k_lv_intern.arm2 n _ _ _ _ (by decide)] at hW
     obtain ⟨a₁, hrun₁, o₁⟩ := ihu n m a x hu' m₁ hS hu hU
     have hvv₁ : LvR (nameN a₁.store.lss.ls.ns) m₁ y v := by
       rw [o₁.keep.2]; exact LvR.of_view o₁.views hvv
     cases hV : lvInternW n m₁ y with
-    | none => rw [hV] at hW; simp [liTwoK] at hW
+    | none => rw [hV] at hW; simp [lvInternW.k_lv_intern_2] at hW
     | some r =>
     obtain ⟨hv', m₂⟩ := r
-    rw [hV, liTwoK_max _ _ _ _ rfl] at hW
+    rw [hV, lvInternW.k_lv_intern_2.arm1 _ _ _ _ rfl] at hW
     obtain ⟨a₂, hrun₂, o₂⟩ := ihv n m₁ a₁ y hv' m₂ o₁.core hvv₁ hV
     obtain ⟨a', hrun, o⟩ := liNode_core (.max (decI hu') (decI hv')) (fun m => minternW m hu' hv')
       (fun m a w m' hA hI => by
@@ -266,21 +266,21 @@ theorem lvInternW_core (L : Level) :
       cases hl with
       | imax hv hu hw => exact ⟨_, _, hv, hu, hw⟩
     have hg : lvG m q = 3 := by simp [lvG, hv]
-    rw [lvInternW_rec n m q (by rw [hg]; decide) (by rw [hg]; decide), hg,
+    rw [lvInternW.arm3 n m q (by rw [hg]; decide) (by rw [hg]; decide), hg,
       show lvA m q = x by simp [lvA, hv], show lvB m q = y by simp [lvB, hv]] at hW
     cases hU : lvInternW n m x with
-    | none => rw [hU] at hW; simp [liOneK] at hW
+    | none => rw [hU] at hW; simp [lvInternW.k_lv_intern] at hW
     | some r =>
     obtain ⟨hu', m₁⟩ := r
-    rw [hU, liOneK_two n _ _ _ _ (by decide)] at hW
+    rw [hU, lvInternW.k_lv_intern.arm2 n _ _ _ _ (by decide)] at hW
     obtain ⟨a₁, hrun₁, o₁⟩ := ihu n m a x hu' m₁ hS hu hU
     have hvv₁ : LvR (nameN a₁.store.lss.ls.ns) m₁ y v := by
       rw [o₁.keep.2]; exact LvR.of_view o₁.views hvv
     cases hV : lvInternW n m₁ y with
-    | none => rw [hV] at hW; simp [liTwoK] at hW
+    | none => rw [hV] at hW; simp [lvInternW.k_lv_intern_2] at hW
     | some r =>
     obtain ⟨hv', m₂⟩ := r
-    rw [hV, liTwoK_imax _ _ _ _ rfl] at hW
+    rw [hV, lvInternW.k_lv_intern_2.arm2 _ _ _ _ (by decide) rfl] at hW
     obtain ⟨a₂, hrun₂, o₂⟩ := ihv n m₁ a₁ y hv' m₂ o₁.core hvv₁ hV
     obtain ⟨a', hrun, o⟩ := liNode_core (.imax (decI hu') (decI hv')) (fun m => iminternW m hu' hv')
       (fun m a w m' hA hI => by
@@ -320,9 +320,9 @@ theorem lvSubIntW_core {n : Nat} {m m' : Mem} {a : AState} {u ko kc vo vc h : Wo
     ∃ a', (internLevel (Level.subst ks vs L)).run a = .ok (decI h, a') ∧
       SubOut dn vis fe M eb m m' a a' h := by
   cases n with
-  | zero => simp [lvSubIntW] at hW
+  | zero => rw [lvSubIntW.eq_1] at hW; cases hW
   | succ n =>
-  simp only [lvSubIntW] at hW
+  rw [lvSubIntW.arm1] at hW
   obtain ⟨hS₀, hk₀⟩ := hS.frame (reset_frame m) (by simp) (by simp)
   have hl : LvR (nameN a.store.lss.ls.ns) (m.set64 CTL 192 0) u L := by
     have := denoteL_lvR hS₀.arena.base (decI u) L hdu
@@ -339,10 +339,10 @@ theorem lvSubIntW_core {n : Nat} {m m' : Mem} {a : AState} {u ko kc vo vc h : Wo
     (by have := hE.vtop; omega) hE.vden
   have hk := hE.keys.of_arr (m' := m.set64 CTL 192 0) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
   cases hSb : substLW (keyA SPN) POOL n (m.set64 CTL 192 0) u ko kc vo vc with
-  | none => rw [hSb] at hW; simp [subIntK] at hW
+  | none => rw [hSb, lvSubIntW.k_lp_substl.none] at hW; cases hW
   | some r =>
   obtain ⟨x, m₁⟩ := r
-  rw [hSb, subIntK_some] at hW
+  rw [hSb, lvSubIntW.k_lp_substl.arm1] at hW
   obtain ⟨he, hx⟩ := substLW_ok (nameN_rel _ hS.nwf) (KR := keyA SPN) (VA := POOL) (keyA_heap (by decide)) (by decide)
     ks vs n _ _ _ _ _ _ _ _ _ hl hk.toK hv.toAR hSb
   obtain ⟨hS₁, hk₁⟩ := hS₀.frame he.memFrame (by simp [LH]) (by simp)

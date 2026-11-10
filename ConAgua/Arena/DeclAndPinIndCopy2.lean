@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.DeclAndPinIndCopy
 import ConAgua.Arena.DeclAndPinInd
 public import ConAgua.Arena.DeclAndPinIndDec
-import ConAgua.Arena.SimLib
 public import ConAgua.Arena.WhnfBase
 public import ConAgua.Front.StateDR
 
@@ -318,6 +317,20 @@ theorem erAlloc_f {m m1 : Mem} {k o : Word} (h : erAllocW m k = some (o, m1)) (h
 
 /-! ## `dind_copy` -/
 
+/-- A non-empty `dind_copy` step: the source is not `0`, the rest copies from the next word. -/
+theorem dindCopyW_succ {n : Nat} {m m' : Mem} {d s l : Word} (h : dindCopyW (n + 1) m d s l = some m')
+    (hl : l ≠ 0) : s ≠ 0 ∧
+      dindCopyW n (erecPutMem m d (rdW (m.arr64 DLP) s)) (d + 1) (s + 1) (l - 1) = some m' := by
+  by_cases hs : s = 0
+  · rw [dindCopyW.abort1 n m d s l hl hs] at h; cases h
+  by_cases hg : decide ((d &&& 1099511627775).toNat < (m.arr64 (tierA EREC (d >>> 40))).size) = true
+  · rw [dindCopyW.arm2 n m d s l hl hs hg] at h
+    refine ⟨hs, ?_⟩
+    revert h
+    cases dindCopyW n (erecPutMem m d (rdW (m.arr64 DLP) s)) (d + 1) (s + 1) (l - 1) <;>
+      simp [dindCopyW.k_dind_copy.none, dindCopyW.k_dind_copy.arm1]
+  · rw [dindCopyW.abort2 n m d s l hl hs hg] at h; cases h
+
 /-- **What `dind_copy(d, s, l)` leaves**: word `x + j` of the flag's tier the `DLP` word `s + j`
 (`d` the tagged `fB + x`), all else as it was; a non-empty copy has a source other than `0`. -/
 theorem dindCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word) (x : Nat), dindCopyW n m d s l = some m' →
@@ -329,19 +342,18 @@ theorem dindCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word) (x : Nat), din
         some (rdW (m.arr64 DLP) (s + UInt64.ofNat (i - x)))
       else (m.arr64 (fT m))[i]? := by
   induction n with
-  | zero => intro m m' d s l x h; simp [dindCopyW] at h
+  | zero => intro m m' d s l x h; rw [dindCopyW.eq_1] at h; cases h
   | succ n ih =>
     intro m m' d s l x h hd hsz hcap
     by_cases hl : l = 0
-    · rw [dindCopyW_nil n m d s l hl] at h
+    · rw [dindCopyW.arm1 n m d s l hl] at h
       cases h
       subst hl
       refine ⟨fun _ _ => rfl, fun _ => rfl, fun h => absurd rfl h, fun i => ?_⟩
       have : ¬ (x ≤ i ∧ i < x + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, ite_false]
-    have hs : ¬ s = 0 := fun hs => by rw [dindCopyW_src n m d s l hl hs] at h; cases h
-    rw [dindCopyW_step n m d s l hl hs] at h
+    obtain ⟨hs, h⟩ := dindCopyW_succ h hl
     have hl0 : 0 < l.toNat := by
       have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
       omega
@@ -416,28 +428,38 @@ theorem toNat_add_ofNat {s : Word} {k : Nat} (h : s.toNat + k < 2 ^ 64) :
 
 /-! ## `ind_rec_copy`'s record -/
 
+/-- The relocating writes after the record's copy (`ircW.k_dind_copy_2`). -/
+theorem ircW_kdc2 {k q r p p' : Word} {m6 m' : Mem}
+    (h : ircW.k_dind_copy_2 k q r p (some m6) = some (p', m')) :
+    p = p' ∧ (if k = 5 then erecPutMem (erecPutMem m6 (p + 2) q) (p + 7) r
+      else erecPutMem m6 (p + 2) q) = m' := by
+  simp only [ircW.k_dind_copy_2, ircW.j2] at h
+  revert h
+  repeat' split
+  all_goals simp_all
+
 /-- **The record's copy** (`nn` words from `s`, then word `2` := `q`, and for a recursor word
 `7` := `r`), allocated at the top of the flag's tier. -/
 theorem ircT_ok {n : Nat} {mx m' : Mem} {s q r nn kw p : Word}
-    (h : ircT n s q r nn kw (erAllocW mx nn) = some (p, m')) (hW : IWOK mx)
+    (h : ircW.j1 n s kw q r nn mx = some (p, m')) (hW : IWOK mx)
     (hnn : 3 ≤ nn.toNat) (h5 : kw = 5 → 8 ≤ nn.toNat) :
     p.toNat = fB mx + fTop mx ∧ fTop m' = fTop mx + nn.toNat ∧ ErW (fun i => fTop mx ≤ i) mx m' ∧
       s ≠ 0 ∧ ∀ k < nn.toNat, (m'.arr64 (fT mx))[fTop mx + k]? =
         some (if k = 2 then q else if k = 7 ∧ kw = 5 then r
           else rdW (mx.arr64 DLP) (s + UInt64.ofNat k)) := by
+  rw [ircW.j1.arm1] at h
   cases ha : erAllocW mx nn with
-  | none => rw [ha] at h; cases h
+  | none => rw [ha, ircW.k_erec_alloc_2.none] at h; cases h
   | some x =>
   obtain ⟨pp, m5⟩ := x
-  rw [ha, ircT_some] at h
+  rw [ha, ircW.k_erec_alloc_2.arm1] at h
   obtain ⟨hpp, ht5, hW5, hok5⟩ := erAlloc_f ha hW
   have hw5 := hW5 (fun _ => False)
   cases hd : dindCopyW n m5 pp s nn with
-  | none => rw [hd] at h; cases h
+  | none => rw [hd, ircW.k_dind_copy_2.none] at h; cases h
   | some m6 =>
-  rw [hd, ircT2_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rw [hd] at h
+  obtain ⟨rfl, rfl⟩ := ircW_kdc2 h
   have hcap := fCap hW
   have hr0 := fTop_le hW
   have hB := fB_le mx
@@ -606,7 +628,7 @@ theorem decCI_front_kind {T : Array Word} {x : Nat}
 the level parameters (and a recursor's rules) were already copied. -/
 theorem irc_fin {n : Nat} {m mx m' : Mem} {t : Nat}
     {s q r nn kw p : Word} {kk : Nat} {c : IConstantInfo}
-    (hT : ircT n s q r nn kw (erAllocW mx nn) = some (p, m'))
+    (hT : ircW.j1 n s kw q r nn mx = some (p, m'))
     (hwx : ErW (fun i => fTop m ≤ i) m mx) (hW : IWOK m)
     (hc : decCI (aread (trunc (m.arr64 DLP) t)) s.toNat = some c) (hF : FrontCI c)
     (hP : (m.arr64 DLP).size < 2 ^ 63)
@@ -675,9 +697,9 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
     ErW (fun i => fTop m ≤ i) m m' ∧ fB m + fTop m ≤ p.toNat ∧
       RecRob (erecP m') (fB m + fTop m) (fB m + fTop m') p.toNat c := by
   cases n with
-  | zero => simp [ircW] at h
+  | zero => rw [ircW.eq_1] at h; cases h
   | succ n =>
-  rw [ircW_step] at h
+  rw [ircW.arm1] at h
   obtain ⟨kk, hkk, hk345⟩ := decCI_front_kind hc hF
   obtain ⟨kw, hTk, rfl⟩ : ∃ kw, (trunc (m.arr64 DLP) t)[s.toNat]? = some kw ∧ kw.toNat = kk := by
     simpa [nat?] using hkk
@@ -689,10 +711,10 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
   have hcap := fCap hW
   have hr0 := fTop_le hW
   cases ha1 : erAllocW m (rdW (m.arr64 DLP) (s + 3)) with
-  | none => rw [ha1] at h; cases h
+  | none => rw [ha1, ircW.k_erec_alloc.none] at h; cases h
   | some x =>
   obtain ⟨q, m1⟩ := x
-  rw [ha1, ircK1_some] at h
+  rw [ha1, ircW.k_erec_alloc.arm1] at h
   obtain ⟨hq, ht1, hW1, hok1⟩ := erAlloc_f ha1 hW
   have hw1 := hW1 (fun i => fTop m ≤ i)
   have hP1 : m1.arr64 DLP = m.arr64 DLP := hw1.dlp
@@ -700,9 +722,9 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
   have eT1 := hw1.fT_eq
   rw [hP1] at h
   cases hd2 : dindCopyW n m1 q (rdW (m.arr64 DLP) (s + 2)) (rdW (m.arr64 DLP) (s + 3)) with
-  | none => rw [hd2] at h; cases h
+  | none => rw [hd2, ircW.k_dind_copy.none] at h; cases h
   | some m2 =>
-  rw [hd2, ircK2_some] at h
+  rw [hd2] at h
   have hq1 : q.toNat = fB m1 + fTop m := by rw [eB1]; exact hq
   have hr1 := fTop_le hok1
   obtain ⟨-, -, hsrc2, hG2⟩ := dindCopyW_get n m1 m2 q _ _ (fTop m) hd2 hq1 (by omega) (fCap hok1)
@@ -712,7 +734,6 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
   have hP2 : m2.arr64 DLP = m.arr64 DLP := hw2.dlp
   have eB2 := hw2.fB_eq
   have eT2 := hW2.fT_eq
-  rw [hP2] at h
   have hm2 := hW2.top
   have hl : ∀ j < (rdW (m.arr64 DLP) (s + 3)).toNat, erecP m2 (q.toNat + j) =
       some (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) (s + 2) + UInt64.ofNat j)) := by
@@ -723,36 +744,38 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
   rcases hk345 with h3 | h4 | h5
   · have e : kw = 3 := UInt64.toNat_inj.mp (by rw [h3]; rfl)
     subst e
-    rw [ite_eq_left rfl] at h
+    rw [ircW.k_dind_copy.arm1 n s 3 q m2 rfl] at h
     exact irc_fin h hw2 hW hc hF hP hkk rfl (by rfl) (Or.inl rfl) (by omega) hlr hl hsrc2
       (fun h5 => by simp at h5)
   · have e : kw = 4 := UInt64.toNat_inj.mp (by rw [h4]; rfl)
     subst e
-    rw [ite_eq_right (by decide), ite_eq_left rfl] at h
+    rw [ircW.k_dind_copy.arm2 n s 4 q m2 (by decide) rfl] at h
     exact irc_fin h hw2 hW hc hF hP hkk rfl (by rfl) (Or.inr (Or.inl rfl)) (by omega) hlr hl
       hsrc2 (fun h5 => by simp at h5)
   · have e : kw = 5 := UInt64.toNat_inj.mp (by rw [h5]; rfl)
     subst e
-    rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl] at h
-    obtain ⟨hg, h⟩ := of_ite_none h
+    have hg : ¬ 1152921504606846976 ≤ rdW (m2.arr64 DLP) (s + 8) := fun hg => by
+      rw [ircW.k_dind_copy.abort1 n s 5 q m2 (by decide) (by decide) rfl hg] at h; cases h
+    rw [ircW.k_dind_copy.arm3 n s 5 q m2 (by decide) (by decide) rfl hg, hP2] at h
+    rw [hP2] at hg
     have hb : (rdW (m.arr64 DLP) (s + 8)).toNat < 2 ^ 60 := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hg); simpa using this
     have h11 : (11 * rdW (m.arr64 DLP) (s + 8)).toNat = 11 * (rdW (m.arr64 DLP) (s + 8)).toNat := by
       rw [UInt64.toNat_mul]; simp; omega
     cases ha3 : erAllocW m2 (11 * rdW (m.arr64 DLP) (s + 8)) with
-    | none => rw [ha3] at h; cases h
+    | none => rw [ha3, ircW.k_erec_alloc_3.none] at h; cases h
     | some x =>
     obtain ⟨r, m3⟩ := x
-    rw [ha3, ircR1_some] at h
+    rw [ha3, ircW.k_erec_alloc_3.arm1] at h
     obtain ⟨hr, ht3, hW3, hok3⟩ := erAlloc_f ha3 hok2
     have hw3 := hW3 (fun i => fTop m2 ≤ i)
     have hP3 : m3.arr64 DLP = m.arr64 DLP := by rw [hw3.dlp, hP2]
     have eB3 := hw3.fB_eq
     rw [hP3] at h
     cases hd4 : dindCopyW n m3 r (rdW (m.arr64 DLP) (s + 7)) (11 * rdW (m.arr64 DLP) (s + 8)) with
-    | none => rw [hd4] at h; cases h
+    | none => rw [hd4, ircW.k_dind_copy_3.none] at h; cases h
     | some m4 =>
-    rw [hd4, ircR2_some] at h
+    rw [hd4, ircW.k_dind_copy_3.arm1] at h
     have hr3 : r.toNat = fB m3 + fTop m2 := by rw [eB3]; exact hr
     have hrr3 := fTop_le hok3
     have hcap2 := fCap hok2
@@ -787,6 +810,17 @@ theorem decCIsR_succ (a : Nat → Option Word) (o k : Nat) :
   simp only [Function.comp_def]
   congr 1; funext j; congr 2; omega
 
+/-- The slot's write after a record's copy (`icgW.k_ind_rec_copy`), then the rest. -/
+theorem icgW_krc {n : Nat} {o bo bl p : Word} {m1 m' : Mem}
+    (h : icgW.k_ind_rec_copy n o bo bl (some (p, m1)) = some m') :
+    icgW n (erecPutMem m1 o p) (o + 1) (bo + 1) (bl - 1) = some m' := by
+  by_cases hg : decide ((o &&& 1099511627775).toNat < (m1.arr64 (tierA EREC (o >>> 40))).size) = true
+  · rw [icgW.k_ind_rec_copy.arm1 n o bo bl p m1 hg] at h
+    revert h
+    cases icgW n (erecPutMem m1 o p) (o + 1) (bo + 1) (bl - 1) <;>
+      simp [icgW.k_ind_copy_go.none, icgW.k_ind_copy_go.arm1]
+  · rw [icgW.k_ind_rec_copy.abort1 n o bo bl p m1 hg] at h; cases h
+
 /-- **`ind_copy_go(o, bo, bl)` copies a front block**: the slots `[x, x + bl)` (`o` the tagged
 `fB + x`) and fresh records above the old top written, and in every reader agreeing with the
 result from `o` to the new top the slots decode (`decCIsR`) to the block. -/
@@ -798,16 +832,16 @@ theorem icgW_ok {t : Nat} (n : Nat) :
       ∀ B : Nat → Option Word, (∀ i, fB m + x ≤ i → i < fB m + fTop m' → B i = erecP m' i) →
         L.Front.decCIsR B o.toNat bl.toNat = some block := by
   induction n with
-  | zero => intro m m' o bo bl block x h; simp [icgW] at h
+  | zero => intro m m' o bo bl block x h; rw [icgW.eq_1] at h; cases h
   | succ n ih =>
   intro m m' o bo bl block x h hdec hFB hP hW ho hob
   by_cases hl : bl = 0
-  · rw [icgW_nil n m o bo bl hl] at h
+  · rw [icgW.arm1 n m o bo bl hl] at h
     cases h; subst hl
     simp only [UInt64.toNat_zero, decCIs_zero] at hdec
     cases hdec
     exact ⟨ErW.refl _ _ (fTop_le hW), fun _ _ => rfl⟩
-  rw [icgW_step n m o bo bl hl] at h
+  rw [icgW.arm2 n m o bo bl hl] at h
   have hl0 : bl.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
   have hl1 : (bl - 1).toNat = bl.toNat - 1 := by
     have := bl.toNat_lt; rw [UInt64.toNat_sub]; simp; omega
@@ -830,10 +864,11 @@ theorem icgW_ok {t : Nat} (n : Nat) :
   have hblt := trunc_lt hw hbo
   rw [hrd] at h
   cases hi : ircW n m w with
-  | none => rw [hi] at h; cases h
+  | none => rw [hi, icgW.k_ind_rec_copy.none] at h; cases h
   | some y =>
   obtain ⟨p, m1⟩ := y
-  rw [hi, icgK_some] at h
+  rw [hi] at h
+  replace h := icgW_krc h
   obtain ⟨hW1, hp1, hR1⟩ := ircW_ok hi hc hFc hP hW
   have hm1 := hW1.top
   have hok1 := hW1.iwok hW
@@ -909,15 +944,17 @@ theorem ibeW_ok {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {block : List 
   have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [h6]; decide
   have e3 : rdW (m.arr64 DECL) (3 + 8 * i) = dw (m.arr64 DECL) i.toNat 2 := rdW_dwI hD h0 rfl (by decide)
   have e4 : rdW (m.arr64 DECL) (4 + 8 * i) = dw (m.arr64 DECL) i.toNat 3 := rdW_dwI hD h0 rfl (by decide)
-  simp only [ibeW, e3, e4] at h
+  cases n with
+  | zero => rw [ibeW.eq_1] at h; cases h
+  | succ n =>
+  rw [ibeW.arm1, e3, e4] at h
   cases ha : erAllocW m (dw (m.arr64 DECL) i.toNat 3) with
-  | none => rw [ha] at h; cases h
+  | none => rw [ha, ibeW.k_erec_alloc.none] at h; cases h
   | some x =>
   obtain ⟨o, m1⟩ := x
-  rw [ha] at h
-  simp only at h
+  rw [ha, ibeW.k_erec_alloc.arm1] at h
   rcases hg : icgW n m1 o (dw (m.arr64 DECL) i.toNat 2) (dw (m.arr64 DECL) i.toNat 3) with _ | m2 <;>
-    simp only [hg, reduceCtorEq] at h
+    simp only [hg, ibeW.k_ind_copy_go.none, ibeW.k_ind_copy_go.arm1, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨ho, ht1, hW1, hok1⟩ := erAlloc_f ha hW
   have hw1 := hW1 (fun j => fTop m ≤ j)
@@ -958,7 +995,7 @@ theorem indBlockToErec_ok {p : Prog} (hp : IbeProg p) {n : Nat} {m m' : Mem} {i 
       r = [r.headD 0, r.tail.headD 0] ∧ (r.tail.headD 0).toNat = block.length ∧
       L.Front.decCIsR (erecP m') (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat < 2 ^ 64 := by
-  obtain ⟨s', rfl, -, n', hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (indBlockToErec_specW p hp.erec_alloc hp.erec_put hp.dind_copy hp.ind_rec_copy hp.ind_copy_go
       hp.ind_block_to_erec n ⟨m, Locals.init []⟩ i) hc
   exact ibeW_ok hW hS hdecl hFB hD hP

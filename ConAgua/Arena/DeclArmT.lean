@@ -39,25 +39,9 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem erecCiW_frame {n : Nat} {m m' : Mem} {i k : Word} {r : List Word}
     (h : erecCiW n m i k = some (r, m')) : MemFrame [EREC, tier1 EREC] [129, 130] m m' := by
   cases n with
-  | zero => simp [erecCiW] at h
+  | zero => rw [erecCiW.eq_1] at h; cases h
   | succ n =>
-  rw [erecCiW_step] at h
-  cases h1 : erAllocW m (rdW (m.arr64 DECL) (4 + 8 * i)) with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨s, m1⟩ := x
-  rw [h1, eciK1_some] at h
-  cases h2 : dlpCopyW n m1 s (1 + rdW (m.arr64 DECL) (3 + 8 * i)) (rdW (m.arr64 DECL) (4 + 8 * i)) with
-  | none => rw [h2] at h; cases h
-  | some m2 =>
-  rw [h2, eciK2_some] at h
-  cases h3 : erAllocW m2 8 with
-  | none => rw [h3] at h; cases h
-  | some x =>
-  obtain ⟨p, m3⟩ := x
-  rw [h3, eciK3_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨s, m1, m2, p, m3, h1, h2, h3, -, rfl⟩ := erecCiW_some h
   have fA : ∀ {m m1 : Mem} {k q : Word}, erAllocW m k = some (q, m1) →
       MemFrame [EREC, tier1 EREC] [129, 130] m m1 := fun {m m1 k q} hh => by
     rw [erAllocW_mem hh]

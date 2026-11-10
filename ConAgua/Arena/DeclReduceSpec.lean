@@ -5,6 +5,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.DeclCvg
+import ConAgua.L.ModelGen
 import ConAgua.Arena.WhnfDeltaRefine
 public import ConAgua.Arena.IndCallM
 public import ConAgua.Arena.WhnfDelta
@@ -274,49 +275,6 @@ theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
 section rcv
 variable (p : Prog)
 
-/-- After `intern_fvar`. -/
-def rcvK4 : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) => some ([r4], m4)
-
-/-- After `const_e`: the handle guard, the variable. -/
-def rcvK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) =>
-    if 4294967296 ≤ r3.headD 0 then none else rcvK4 (fvinternW m3 0 (r3.headD 0))
-
-/-- After the element's name. -/
-def rcvK2 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => rcvK3 (callW p n "const_e" [r2.headD 0] m2)
-
-/-- After the `reduceNat` pin. -/
-def rcvK1 (n : Nat) (c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => rcvK2 p n (if c = r1.headD 0 then pinAtW m1 1 else pinAtW m1 29)
-
-/-- **The model of `reduce_cert_var(c)`.** -/
-def rcvW : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, c => rcvK1 p n c (pinAtW m 43)
-
-section arms
-variable (n : Nat) (m m1 m2 m3 m4 : Mem) (c r4 : Word) (r1 r2 r3 : List Word)
-theorem rcvW_step : rcvW p (n + 1) m c = rcvK1 p n c (pinAtW m 43) := rfl
-theorem rcvK1_some : rcvK1 p n c (some (r1, m1)) =
-    rcvK2 p n (if c = r1.headD 0 then pinAtW m1 1 else pinAtW m1 29) := rfl
-theorem rcvK2_some : rcvK2 p n (some (r2, m2)) = rcvK3 (callW p n "const_e" [r2.headD 0] m2) := rfl
-theorem rcvK3_some : rcvK3 (some (r3, m3)) =
-    if 4294967296 ≤ r3.headD 0 then none else rcvK4 (fvinternW m3 0 (r3.headD 0)) := rfl
-theorem rcvK4_some : rcvK4 (some (r4, m4)) = some ([r4], m4) := rfl
-end arms
-
-grind_pattern [ind_grind] rcvW_step => rcvW p (n + 1) m c
-grind_pattern [ind_grind] rcvK1_some => rcvK1 p n c (some (r1, m1))
-grind_pattern [ind_grind] rcvK2_some => rcvK2 p n (some (r2, m2))
-grind_pattern [ind_grind] rcvK3_some => rcvK3 (some (r3, m3))
-grind_pattern [ind_grind] rcvK4_some => rcvK4 (some (r4, m4))
-
 /-- The lookups of `reduce_cert_var`. -/
 structure RcvProg (p : Prog) : Prop where
   rcv : p.lookup "reduce_cert_var" = some reduceCertVarL
@@ -330,18 +288,11 @@ structure RcvProg (p : Prog) : Prop where
   fp : p.lookup "fvar_push" = some fvarPush
   fi : p.lookup "intern_fvar" = some internFVar
 
-theorem rcv_specW (h : RcvProg p) (n : Nat) (s₀ : St) (c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_cert_var" [c]
-    ⦃fun r s' => LocEq s' s₀ ∧ rcvW p n s₀.mem c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.rcv]
-  simp only [callFn, reduceCertVarL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p h.pa n,
-        callW_spec p n "const_e", internFVar_spec p h.ff h.fp h.fi n] <;>
-      finish (gen := 20)
+/-- **The model of `reduce_cert_var(c)`.** -/
+l_model rcv_specW (p : Prog) (h : RcvProg p)
+  fns [h.rcv ↦ rcvW list]
+  specs [pinAt_specW p h.pa n, callW_spec p n "const_e", internFVar_spec p h.ff h.fp h.fi n]
+  grind [arena_grind, ind_grind]
 
 end rcv
 
@@ -367,10 +318,12 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
   refine triple_post (rcv_specW p hp n s₀ c) ?_
   rintro r s' ⟨hl, h⟩
   cases n with
-  | zero => simp [rcvW] at h
+  | zero => rw [rcvW.eq_1] at h; cases h
   | succ n =>
-  rw [rcvW_step] at h
-  rcases h1 : pinAtW s₀.mem 43 with _ | ⟨r1, m1⟩ <;> simp only [h1, rcvK1, reduceCtorEq] at h
+  rw [rcvW.arm1] at h
+  rcases h1 : pinAtW s₀.mem 43 with _ | ⟨r1, m1⟩ <;> rw [h1] at h
+  · rw [rcvW.k_pin_at.none] at h; cases h
+  rw [rcvW.k_pin_at.eq_2, ← apply_ite (rcvW.k_pin_at_2 p n)] at h
   obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
   subst hm1
   generalize s₀.mem = m1 at *
@@ -380,10 +333,10 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
   -- the element's name: one of two pins
   generalize hpick : (if c = r1.headD 0 then pinAtW m1 1 else pinAtW m1 29) = pk at h
   cases pk with
-  | none => cases h
+  | none => rw [rcvW.k_pin_at_2.none] at h; cases h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
-  rw [rcvK2_some] at h
+  rw [rcvW.k_pin_at_2.arm1, rcvW.j1.arm1] at h
   have hname : m2 = m1 ∧ (r2.headD 0).toNat < 2 ^ 32 ∧
       ((if (decI c : NIdx) == decI (pinW m1 (1 + (43 : Word).toNat)) then pinAt 1 else pinAt 29) :
         AM NIdx).run a₀ = .ok (decI (r2.headD 0), a₀) := by
@@ -404,15 +357,18 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
       simpa using hrun
   obtain ⟨rfl, hnl, hrun2⟩ := hname
   -- `const_e`
-  rcases h3 : callW p n "const_e" [r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;> simp only [h3, rcvK3, reduceCtorEq] at h
+  rcases h3 : callW p n "const_e" [r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;> rw [h3] at h
+  · rw [rcvW.k_const_e.none] at h; cases h
   obtain ⟨a3, hrun3, hS3, hg3⟩ := constE_stage hp.ce hp.pw hp.cf hp.cp hp.ic h3 hS hnl
   by_cases hb : 4294967296 ≤ r3.headD 0
-  · rw [ite_eq_left hb] at h; cases h
-  rw [ite_eq_right hb] at h
+  · rw [rcvW.k_const_e.abort1 p r3 m3 hb] at h; cases h
+  rw [rcvW.k_const_e.arm1 p r3 m3 hb] at h
   have ht : (r3.headD 0).toNat < 2 ^ 32 := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this
   -- `intern_fvar`
-  rcases h4 : fvinternW m3 0 (r3.headD 0) with _ | ⟨r4, m4⟩ <;> simp only [h4, rcvK4, reduceCtorEq] at h
+  rcases h4 : fvinternW m3 0 (r3.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at h
+  · rw [rcvW.k_intern_fvar.none] at h; cases h
+  rw [rcvW.k_intern_fvar.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a4, hrun4, hS4, hg4⟩ := internFVar_stage hS3 0 (r3.headD 0) ht h4
   have hrun : (reduceCertVar (decI c)).run a₀ = .ok (decE r4, a4) := by
@@ -425,88 +381,15 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
 
 /-! ## `reduce_pin_guard(vis, c)` -/
 
-section rpg
-variable (p : Prog)
-
-/-- After `consts_resolve_ffast`. -/
-def rpgK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) => some ([r5.headD 0], m5)
-
-/-- After `all_level_params_defined`. -/
-def rpgK4 (cl : CallM) (n : Nat) (vis e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) =>
-    if r4.headD 0 = 0 then some ([0], m4) else rpgK5 (cl n "consts_resolve_ffast" [vis, e] m4)
-
-/-- After `has_fvar_fast`. -/
-def rpgK3 (cl : CallM) (n : Nat) (vis e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) =>
-    if r3.headD 0 ≠ 0 then some ([0], m3)
-    else rpgK4 cl n vis e (cl n "all_level_params_defined" [0, 0, e] m3)
-
-/-- After `loose_bvars_bounded_fast`. -/
-def rpgK2 (cl : CallM) (n : Nat) (vis e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0], m2)
-    else rpgK3 cl n vis e (hffF m2 [4000000000, e])
-
-/-- After the pin. -/
-def rpgK1 (cl : CallM) (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    rpgK2 cl n vis (r1.headD 0) (lbbF m1 [4000000000, 0, r1.headD 0])
-
 /-- **The model of `reduce_pin_guard(vis, c)`**, `all_level_params_defined` and
-`consts_resolve_ffast` read through `cl`
-(`stubCall` for the `StageR` proof, `realCall p` under `StageT`). -/
-def rpgW (cl : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, vis, c => rpgK1 cl n vis (callW p n "reduce_decl_pin" [c] m)
+`consts_resolve_ffast` read through `cl` (`stubCall` for the `StageR` proof, `realCall p` under
+`StageT`). -/
+l_model rpg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p)
+    (hp : p.lookup "reduce_pin_guard" = some reducePinGuardL) (cl : CallM) (hcl : CallSpec p cl)
+  fns [hp ↦ rpgW list]
+  specs [callW_spec p n "reduce_decl_pin", lbbF_spec p hb n, hffF_spec p hf n,
+    hcl n "all_level_params_defined", hcl n "consts_resolve_ffast"]
+  grind [arena_grind, ind_grind]
 
-section arms
-variable (cl : CallM) (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis c e : Word) (r1 r2 r3 r4 r5 : List Word)
-theorem rpgW_step : rpgW p cl (n + 1) m vis c = rpgK1 cl n vis (callW p n "reduce_decl_pin" [c] m) :=
-  rfl
-theorem rpgK1_some : rpgK1 cl n vis (some (r1, m1)) =
-    rpgK2 cl n vis (r1.headD 0) (lbbF m1 [4000000000, 0, r1.headD 0]) := rfl
-theorem rpgK2_some : rpgK2 cl n vis e (some (r2, m2)) =
-    if r2.headD 0 = 0 then some ([0], m2)
-    else rpgK3 cl n vis e (hffF m2 [4000000000, e]) := rfl
-theorem rpgK3_some : rpgK3 cl n vis e (some (r3, m3)) =
-    if r3.headD 0 ≠ 0 then some ([0], m3)
-    else rpgK4 cl n vis e (cl n "all_level_params_defined" [0, 0, e] m3) := rfl
-theorem rpgK4_some : rpgK4 cl n vis e (some (r4, m4)) =
-    if r4.headD 0 = 0 then some ([0], m4) else rpgK5 (cl n "consts_resolve_ffast" [vis, e] m4) :=
-  rfl
-theorem rpgK5_some : rpgK5 (some (r5, m5)) = some ([r5.headD 0], m5) := rfl
-end arms
-
-grind_pattern [ind_grind] rpgW_step => rpgW p cl (n + 1) m vis c
-grind_pattern [ind_grind] rpgK1_some => rpgK1 cl n vis (some (r1, m1))
-grind_pattern [ind_grind] rpgK2_some => rpgK2 cl n vis e (some (r2, m2))
-grind_pattern [ind_grind] rpgK3_some => rpgK3 cl n vis e (some (r3, m3))
-grind_pattern [ind_grind] rpgK4_some => rpgK4 cl n vis e (some (r4, m4))
-grind_pattern [ind_grind] rpgK5_some => rpgK5 (some (r5, m5))
-
-theorem rpg_specW (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "reduce_pin_guard" = some reducePinGuardL)
-    (cl : CallM) (hcl : CallSpec p cl) (n : Nat) (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_pin_guard" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ rpgW p cl n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, reducePinGuardL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        callW_spec p n "reduce_decl_pin", lbbF_spec p hb n,
-        hffF_spec p hf n, hcl n "all_level_params_defined",
-        hcl n "consts_resolve_ffast"] <;>
-      finish (gen := 20)
-
-end rpg
 
 end L.Arena

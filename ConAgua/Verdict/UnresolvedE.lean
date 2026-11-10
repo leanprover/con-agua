@@ -2,7 +2,7 @@ module
 
 import ConAgua.Arena.IndSumSpec.McGoStep
 public import ConAgua.Arena.ConstsResolveF
-import ConAgua.Arena.DeclBasisSpec
+import ConAgua.Arena.DeclRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
