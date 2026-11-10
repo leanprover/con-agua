@@ -404,86 +404,56 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
 
 /-! ## `block_counts` -/
 
-/-- The pure tail of `block_counts`: from the binder count `bl`, the result's tag `g` and the
-recursor data. -/
-def bcPure (nPd k nC nR bl g rOk rMI rRP : Word) : List Word :=
-  if g = 2 then
-    (if bl < nPd then [0, 0, 0] else [1, nPd, bl - nPd])
-  else if rOk = 0 then [0, 0, 0]
-  else if rRP < nC + k ∨ rMI < rRP then [0, 0, 0]
-  else if rRP - (nC + k) = nPd then [1, nPd, rMI - rRP]
-  else if k < nR ∧ nPd + nR + nC ≤ rRP then [1, nPd, rMI - rRP]
-  else [0, 0, 0]
+section piB
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hv : p.lookup "e_view" = some eView)
+  (hs : p.lookup "sl_cons" = some slCons)
+  (hp : p.lookup "pi_binders" = some piBinders)
+include ha hc hv hs hp
 
-section pure
-variable (nPd k nC nR bl g rOk rMI rRP : Word)
-theorem bcPure_sort_lt (hg : g = 2) (h : bl < nPd) : bcPure nPd k nC nR bl g rOk rMI rRP = [0, 0, 0] := by
-  simp [bcPure, hg, h]
-theorem bcPure_sort_ge (hg : g = 2) (h : ¬ bl < nPd) :
-    bcPure nPd k nC nR bl g rOk rMI rRP = [1, nPd, bl - nPd] := by simp [bcPure, hg, h]
-theorem bcPure_norec (hg : g ≠ 2) (h : rOk = 0) : bcPure nPd k nC nR bl g rOk rMI rRP = [0, 0, 0] := by
-  simp [bcPure, hg, h]
-theorem bcPure_badrp (hg : g ≠ 2) (h0 : rOk ≠ 0) (h : rRP < nC + k ∨ rMI < rRP) :
-    bcPure nPd k nC nR bl g rOk rMI rRP = [0, 0, 0] := by simp [bcPure, hg, h0, h]
-theorem bcPure_eq1 (hg : g ≠ 2) (h0 : rOk ≠ 0) (h : ¬ (rRP < nC + k ∨ rMI < rRP))
-    (h1 : rRP - (nC + k) = nPd) : bcPure nPd k nC nR bl g rOk rMI rRP = [1, nPd, rMI - rRP] := by
-  simp only [bcPure, hg, h0, h, h1]; simp
-theorem bcPure_eq2 (hg : g ≠ 2) (h0 : rOk ≠ 0) (h : ¬ (rRP < nC + k ∨ rMI < rRP))
-    (h1 : ¬ rRP - (nC + k) = nPd) (h2 : k < nR ∧ nPd + nR + nC ≤ rRP) :
-    bcPure nPd k nC nR bl g rOk rMI rRP = [1, nPd, rMI - rRP] := by
-  simp only [bcPure, hg, h0, h, h1, h2]; simp
-theorem bcPure_none (hg : g ≠ 2) (h0 : rOk ≠ 0) (h : ¬ (rRP < nC + k ∨ rMI < rRP))
-    (h1 : ¬ rRP - (nC + k) = nPd) (h2 : ¬ (k < nR ∧ nPd + nR + nC ≤ rRP)) :
-    bcPure nPd k nC nR bl g rOk rMI rRP = [0, 0, 0] := by
-  simp only [bcPure, hg, h0, h, h1, h2]; simp
-end pure
+theorem piBinders_spec (n : Nat) : ∀ (s₀ : St) (fuel h : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_binders" [fuel, h]
+    ⦃fun r s' => LocEq s' s₀ ∧ piBW n s₀.mem fuel h = some (r, s'.mem) ∧
+      r = [r.headD 0, r.getD 1 0, r.getD 2 0]; ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ fuel h; rw [invoke_eq _ hp]; simp only [callFn, piBinders]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ fuel h
+    rw [invoke_eq _ hp]
+    simp only [callFn, piBinders]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        eViewSpec4 p hv n, slConsSpec2 p ha hc hs n, ih] <;>
+      finish (gen := 20) [List.getD_cons_zero, List.getD_cons_succ, Sig.retVal]
 
-/-- **The model of `block_counts_head`**: `(bl, g)` and the memory. -/
-def bchW : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, cvT => bchK1 n (piBW n m CWF (erRd m (cvT + 3)))
-where
-  bchK1 (_n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
-    | none => none
-    | some (rs, m1) => bchK2 (rs.getD 1 0) m1 (eViewW m1 (rs.getD 2 0))
-  bchK2 (bl : Word) (m1 : Mem) : List Word → Option (List Word × Mem)
-    | [] => none
-    | v => some ([bl, v.headD 0], m1)
+end piB
 
-section arms
-variable (n : Nat) (m m1 : Mem) (cvT bl : Word) (rs v : List Word)
-theorem bchW_step : bchW (n + 1) m cvT =
-    bchW.bchK1 n (piBW n m CWF (erRd m (cvT + 3))) := rfl
-theorem bchK1_some : bchW.bchK1 n (some (rs, m1)) =
-    bchW.bchK2 (rs.getD 1 0) m1 (eViewW m1 (rs.getD 2 0)) := rfl
-theorem bchK2_ne (h : v ≠ []) : bchW.bchK2 bl m1 v = some ([bl, v.headD 0], m1) := by
-  cases v with
-  | nil => exact absurd rfl h
-  | cons a as => rfl
-end arms
+/-- **`block_counts_pure` is its model `bcPure`** (generated): the arithmetic tail of
+`block_counts`, from the binder count `bl`, the result's tag `g` and the recursor data. -/
+l_model blockCountsPure_spec (p : Prog) (hpp : p.lookup "block_counts_pure" = some blockCountsPure)
+  fns [hpp ↦ bcPure ro list]
+  grind [arena_grind] finish []
 
-grind_pattern [ind_grind] bchW_step => bchW (n + 1) m cvT
-grind_pattern [ind_grind] bchK1_some => bchW.bchK1 n (some (rs, m1))
-grind_pattern [ind_grind] bchK2_ne => bchW.bchK2 bl m1 v
+/-- **`block_counts_head` is its model `bchW`** (generated): `(bl, g)` and the memory. -/
+l_model blockCountsHead_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hv : p.lookup "e_view" = some eView)
+    (hs : p.lookup "sl_cons" = some slCons) (hpb : p.lookup "pi_binders" = some piBinders)
+    (hh : p.lookup "block_counts_head" = some blockCountsHead)
+  fns [hh ↦ bchW list]
+  specs [piBinders_spec p ha hc hv hs hpb n, eViewSpec4 p hv n]
+  grind [arena_grind] fold [CWF] finish [CWF]
 
-/-- After `block_counts_head`: the arithmetic tail. -/
-def bcK (nPd k nC nR rOk rMI rRP : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => some (bcPure nPd k nC nR (r1.headD 0) (r1.getD 1 0) rOk rMI rRP, m1)
-
-/-- **The model of `block_counts`.** -/
-def bcW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, nPd, k, nC, nR, cvT, rOk, rMI, rRP => bcK nPd k nC nR rOk rMI rRP (bchW n m cvT)
-
-theorem bcK_some (nPd k nC nR rOk rMI rRP : Word) (r1 : List Word) (m1 : Mem) :
-    bcK nPd k nC nR rOk rMI rRP (some (r1, m1)) =
-      some (bcPure nPd k nC nR (r1.headD 0) (r1.getD 1 0) rOk rMI rRP, m1) := rfl
-theorem bcW_def (n : Nat) (m : Mem) (nPd k nC nR cvT rOk rMI rRP : Word) :
-    bcW (n + 1) m nPd k nC nR cvT rOk rMI rRP = bcK nPd k nC nR rOk rMI rRP (bchW n m cvT) := rfl
-grind_pattern [ind_grind] bcK_some => bcK nPd k nC nR rOk rMI rRP (some (r1, m1))
-grind_pattern [ind_grind] bcW_def => bcW (n + 1) m nPd k nC nR cvT rOk rMI rRP
+/-- **`block_counts` is its model `bcW`** (generated). -/
+l_model blockCounts_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hv : p.lookup "e_view" = some eView)
+    (hs : p.lookup "sl_cons" = some slCons) (hpb : p.lookup "pi_binders" = some piBinders)
+    (hh : p.lookup "block_counts_head" = some blockCountsHead)
+    (hpp : p.lookup "block_counts_pure" = some blockCountsPure)
+    (hp : p.lookup "block_counts" = some blockCounts)
+  fns [hp ↦ bcW list]
+  specs [blockCountsHead_spec p ha hc hv hs hpb hh n, blockCountsPure_spec p hpp n]
+  grind [arena_grind]
 
 theorem arenaR_frame_iw {m m' : Mem} {a : AState} (hf : MemFrame [IW] [200] m m')
     (h : ArenaR m a) : ArenaR m' a :=
@@ -512,16 +482,17 @@ theorem bchW_ok (n : Nat) (m m1 : Mem) (a : AState) (cvT : Word) (r1 : List Word
   cases n with
   | zero => simp [bchW] at h
   | succ n =>
-    rw [bchW_step] at h
-    rcases hp : piBW n m CWF (erRd m (cvT + 3)) with _ | ⟨rs, m1'⟩ <;> rw [hp] at h
-    · simp [bchW.bchK1] at h
-    rw [bchK1_some] at h
-    by_cases hr : eViewW m1' (rs.getD 2 0) = []
-    · rw [hr] at h; simp [bchW.bchK2] at h
-    rw [bchK2_ne _ _ _ hr] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    rw [bchW.arm1, erRd_foldN] at h
+    obtain ⟨rs, m1', hp, h⟩ := ipK_inv h (bchW.k_pi_binders.none)
     obtain ⟨bs, e, hrun, hsh, hdec, hb1, hb2, hg, hf, -⟩ :=
       piBW_ok n m m1' a CWF _ rs hR hp hty hsz hc
+    have e1 : rs.tail.headD 0 = rs.getD 1 0 := by rw [hsh]; rfl
+    have e2 : rs.tail.tail.headD 0 = rs.getD 2 0 := by rw [hsh]; rfl
+    by_cases hr : eViewW m1' (rs.tail.tail.headD 0) = []
+    · simp only [bchW.k_pi_binders, hr, ite_true, reduceCtorEq] at h
+    rw [bchW.k_pi_binders.arm1 _ _ hr, e1, e2] at h
+    rw [e2] at hr
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hR1 : ArenaR m1' a := arenaR_frame_iw hf hR
     obtain ⟨v, hv, hvr⟩ := eViewW_ok m1' a hR1 _ hr
     have hlen := decHL_length m1' hdec
@@ -591,13 +562,13 @@ theorem bcTail_run (nPd k nC nR : Nat) (rr : Option (Nat × Nat)) (a : AState) :
     repeat' split
     all_goals rfl
 
-theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
+theorem bcPure_nonsort (m : Mem) (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
     (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32)
     (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32) :
-    bcPure nPd k nC nR bl g rOk rMI rRP = encONN (bcTail nPd.toNat k.toNat nC.toNat nR.toNat
-      (if rOk = 0 then none else some (rMI.toNat, rRP.toNat))) := by
+    bcPure m nPd k nC nR bl g rOk rMI rRP = some (encONN (bcTail nPd.toNat k.toNat nC.toNat nR.toNat
+      (if rOk = 0 then none else some (rMI.toNat, rRP.toNat)))) := by
   by_cases h0 : rOk = 0
-  · rw [bcPure_norec _ _ _ _ _ _ _ _ _ hg h0, ite_eq_left h0]; rfl
+  · rw [bcPure.arm3 m _ _ _ _ _ _ _ _ _ hg h0, ite_eq_left h0]; rfl
   rw [ite_eq_right h0]
   simp only [bcTail]
   have e1 : (nC + k).toNat = nC.toNat + k.toNat := by
@@ -605,7 +576,7 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
   have e2 : (nPd + nR + nC).toNat = nPd.toNat + nR.toNat + nC.toNat := by
     rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega
   by_cases c1 : rRP < nC + k ∨ rMI < rRP
-  · rw [bcPure_badrp _ _ _ _ _ _ _ _ _ hg h0 c1]
+  · rw [bcPure.arm4 m _ _ _ _ _ _ _ _ _ hg h0 c1]
     have : (rRP.toNat < nC.toNat + k.toNat || rMI.toNat < rRP.toNat) = true := by
       rcases c1 with c | c
       · have := UInt64.lt_iff_toNat_lt.mp c; rw [e1] at this; simp [this]
@@ -632,7 +603,7 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
       apply UInt64.toNat_inj.mp
       rw [UInt64.toNat_sub_of_le _ _ hrm, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
     by_cases c2 : rRP - (nC + k) = nPd
-    · rw [bcPure_eq1 _ _ _ _ _ _ _ _ _ hg h0 c1 c2]
+    · rw [bcPure.arm5 m _ _ _ _ _ _ _ _ _ hg h0 c1 c2]
       have : (rRP.toNat - (nC.toNat + k.toNat) == nPd.toNat) = true := by
         rw [← hsub, c2]; simp
       rw [ite_eq_left this]
@@ -642,7 +613,7 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
         exact fun h => c2 (UInt64.toNat_inj.mp h)
       rw [ite_eq_right (by simp [c2'])]
       by_cases c3 : k < nR ∧ nPd + nR + nC ≤ rRP
-      · rw [bcPure_eq2 _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
+      · rw [bcPure.arm6 m _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
         have : (k.toNat < nR.toNat && nPd.toNat + nR.toNat + nC.toNat ≤ rRP.toNat) = true := by
           have a := UInt64.lt_iff_toNat_lt.mp c3.1
           have b := UInt64.le_iff_toNat_le.mp c3.2
@@ -650,7 +621,7 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
           simp [a, b]
         rw [ite_eq_left this]
         simp only [encONN, hsub2, ofNat_toNat_word]
-      · rw [bcPure_none _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
+      · rw [bcPure.arm7 m _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
         have : (k.toNat < nR.toNat && nPd.toNat + nR.toNat + nC.toNat ≤ rRP.toNat) = false := by
           by_cases a : k < nR
           · have b : ¬ nPd + nR + nC ≤ rRP := fun h => c3 ⟨a, h⟩
@@ -660,6 +631,10 @@ theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
           · have a' := (not_congr UInt64.lt_iff_toNat_lt).mp a
             simp [a']
         rw [ite_eq_right (by simp [this])]; rfl
+
+theorem encONN_three (x : Option (Nat × Nat)) :
+    [(encONN x).headD 0, (encONN x).tail.headD 0, (encONN x).tail.tail.headD 0] = encONN x := by
+  rcases x with _ | ⟨_, _⟩ <;> rfl
 
 theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP : Word)
     (r : List Word) (cv : IConstantVal) (rr : Option (Nat × Nat))
@@ -675,13 +650,16 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
   cases n with
   | zero => simp [bcW] at h
   | succ n =>
-  rw [bcW_def] at h
-  obtain ⟨r1, m1, hh, h⟩ := ipK_inv h (by simp [bcK])
-  rw [bcK_some] at h
+  rw [bcW.arm1] at h
+  obtain ⟨r1, m1, hh, h⟩ := ipK_inv h (bcW.k_block_counts_head.none ..)
+  rw [bcW.k_block_counts_head.arm1] at h
+  obtain ⟨r0, hr0, h⟩ := ipK_inv1 h (bcW.k_block_counts_pure.none _)
+  rw [bcW.k_block_counts_pure.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hty32, hty⟩ := decCVp_type hcv hb
   obtain ⟨bs, res, v, hrun, hsh, hlen, hview, hiff, hg, hf⟩ :=
     bchW_ok n m m1 a cvT r1 hR hh hty32 hsz hc
+  rw [show r1.tail.headD 0 = r1.getD 1 0 by rw [hsh]; rfl] at hr0
   have hvr := view_run res a v hview
   have hl32 : (r1.headD 0).toNat = bs.length := hlen
   by_cases hs : r1.getD 1 0 = 2
@@ -694,7 +672,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
         rw [← hty]
         simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
         rw [ite_eq_right hlt]; rfl
-      · rw [bcPure_sort_lt _ _ _ _ _ _ _ _ _ hs hl]; rfl
+      · rw [bcPure.arm1 _ _ _ _ _ _ _ _ _ _ hs hl] at hr0; obtain rfl := Option.some.inj hr0; rfl
     · have hge : nPd.toNat ≤ bs.length := by
         have := (not_congr UInt64.lt_iff_toNat_lt).mp hl; omega
       refine ⟨some (nPd.toNat, bs.length - nPd.toNat), ?_, ?_, fun p q e => by
@@ -703,8 +681,8 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
         rw [← hty]
         simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
         rw [ite_eq_left hge]; rfl
-      · rw [bcPure_sort_ge _ _ _ _ _ _ _ _ _ hs hl]
-        simp only [encONN]
+      · rw [bcPure.arm2 _ _ _ _ _ _ _ _ _ _ hs hl] at hr0; obtain rfl := Option.some.inj hr0
+        simp only [encONN, List.headD_cons, List.tail_cons]
         have e1 : UInt64.ofNat nPd.toNat = nPd := ofNat_toNat_word nPd
         have e2 : UInt64.ofNat (bs.length - nPd.toNat) = r1.headD 0 - nPd := by
           apply UInt64.toNat_inj.mp
@@ -726,7 +704,8 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
       cases v with
       | sort u => exact absurd rfl (hns u)
       | _ => exact bcTail_run _ _ _ _ rr a
-    · rw [bcPure_nonsort _ _ _ _ _ _ _ _ _ hs h1 h2 h3 h4 h5 h6, hrr]
+    · rw [bcPure_nonsort _ _ _ _ _ _ _ _ _ _ hs h1 h2 h3 h4 h5 h6, ← hrr] at hr0
+      obtain rfl := Option.some.inj hr0; exact encONN_three _
 
 end L.Ind
 

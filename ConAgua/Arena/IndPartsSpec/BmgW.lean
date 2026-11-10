@@ -104,19 +104,21 @@ theorem bcW_ptop {n : Nat} {m m' : Mem} {nPd k nC nR cvT rOk rMI rRP : Word} {r 
   cases n with
   | zero => simp [bcW] at h
   | succ n =>
-  rw [bcW_def] at h
+  rw [bcW.arm1] at h
+  obtain ⟨r1, m1, hh, h⟩ := ipK_inv h (bcW.k_block_counts_head.none ..)
+  rw [bcW.k_block_counts_head.arm1] at h
+  obtain ⟨r0, -, h⟩ := ipK_inv1 h (bcW.k_block_counts_pure.none _)
+  rw [bcW.k_block_counts_pure.arm1] at h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   cases n with
-  | zero => simp [bchW, bcK] at h
+  | zero => simp [bchW] at hh
   | succ n =>
-  rw [bchW_step] at h
-  rcases hp : piBW n m CWF (erRd m (cvT + 3)) with _ | ⟨rs, m1⟩ <;> rw [hp] at h
-  · simp [bchW.bchK1, bcK] at h
-  rw [bchK1_some] at h
-  by_cases hr : eViewW m1 (rs.getD 2 0) = []
-  · rw [hr] at h; simp [bchW.bchK2, bcK] at h
-  rw [bchK2_ne _ _ _ hr, bcK_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  rw [bchW.arm1] at hh
+  obtain ⟨rs, m2, hp, hh⟩ := ipK_inv hh bchW.k_pi_binders.none
+  simp only [bchW.k_pi_binders] at hh
+  split at hh
+  · cases hh
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
   exact piBW_ptop n _ _ _ _ _ hp hP
 
 /-! ## The program bundle -/
