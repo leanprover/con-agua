@@ -376,7 +376,7 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
       Holds (fun i => (d.toNat ≤ i ∧ i < d.toNat + 2) ∨ (erT m ≤ i ∧ i < erT m')) (fun _ => False)
         (fun m => (hlist? (erA m) d.toNat : Option (List NIdx))) m' (ws.map decI) := by
   have hw := callW_model (M := fun mq => nameSlW p k mq q d) (nameSl_specW rom p hL k · q d) hc
-  simp only [nameSlW, rdU, putE] at hw
+  simp only [nameSlW] at hw
   obtain ⟨r0, m0, h0, hw⟩ := ntBW_inv hw
   obtain ⟨hm0, hr0⟩ := u64Call hL h0
   rw [hm0, hr0] at hw
