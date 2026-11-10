@@ -157,17 +157,17 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     ∃ b a', (ds.allM (pcF hp.toNat)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       r.headD 0 = (if b then 1 else 0) := by
   induction n with
-  | zero => intro m m' a dO dL ds r h; simp [cpW] at h
+  | zero => intro m m' a dO dL ds r h; simp [cpW.eq_1] at h
   | succ n ih =>
     intro m m' a dO dL ds r h hS hds hin
     by_cases hl0 : dL = 0
-    · rw [cpW_nil (h := hl0)] at h
+    · rw [cpW.arm1 (hc1 := hl0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : ds = [] := by simpa [decHL, hslice?] using hds.symm
       subst this
       exact ⟨true, a, rfl, hS, IWGrow.refl _, rfl⟩
-    rw [cpW_cons (h := hl0)] at h
+    rw [cpW.arm2 (hc1 := hl0)] at h
     have hl : dL.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨l', hl'⟩ : ∃ l', dL.toNat = l' + 1 := ⟨dL.toNat - 1, by omega⟩
     have hds' := hds
@@ -179,40 +179,44 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     have hl1 : (dL - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     rw [List.allM_cons]
-    rcases hb : bvbW n m (rdW (m.arr64 IW) dO) CWF with _ | ⟨bb, m1⟩ <;> rw [hb] at h; · simp [cpK1] at h
+    rcases hb : bvbW n m (rdW (m.arr64 IW) dO) CWF with _ | ⟨bb, m1⟩ <;> rw [hb] at h; · rw [cpW.k_bvar_b.none] at h; cases h
     obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) _ bb hxH hb
     rw [decE_eq, hxd] at hrun1
     by_cases hbb : bb ≠ 0
-    · rw [cpK1_b (h := hbb)] at h
+    · rw [cpW.k_bvar_b.arm1 (hc1 := hbb)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
       have : (bb.toNat != 0) = true := by
         simp only [bne_iff_ne, ne_eq]; intro h0; exact hbb (UInt64.toNat_inj.mp (by simpa using h0))
       simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, this, ite_true]
       rfl
-    rw [cpK1_ok (h := hbb)] at h
+    rw [cpW.k_bvar_b.arm2 (hc1 := by simpa using hbb)] at h
     have hbb0 : (bb.toNat != 0) = false := by simp at hbb; simp [hbb]
     have hrd1 : rdW (m1.arr64 IW) dO = rdW (m.arr64 IW) dO := by
       simp only [rdW]; rw [hg1.iwGet _ (by simpa using hin 0 (by omega))]
     rw [hrd1] at h
-    rcases hst : fvbF m1 [CWF, rdW (m.arr64 IW) dO] with _ | ⟨r2, m2⟩ <;> rw [hst] at h; · simp [cpK2] at h
+    rcases hst : fvbF m1 [CWF, rdW (m.arr64 IW) dO] with _ | ⟨r2, m2⟩ <;> rw [hst] at h; · rw [cpW.k_fvar_b.none] at h; cases h
     obtain ⟨k, a2, hrun2, hS2, hg2, hk⟩ := fvbF_ok dn vis fe CWF _ hxH _ _ a1 r2 hst hS1
     rw [CWF_eq, hxd] at hrun2
     simp only [decW0Nat] at hk
     by_cases hc : hp < r2.headD 0
-    · rw [cpK2_out (h := hc)] at h
+    · rw [cpW.k_fvar_b.arm1 (hc1 := hc)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hgt : ¬ k ≤ hp.toNat := by have := UInt64.lt_iff_toNat_lt.mp hc; omega
       refine ⟨false, a2, ?_, hS2, hg1.trans hg2, rfl⟩
       simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, ite_false,
         hrun2, hgt, decide_false]
       rfl
-    rw [cpK2_in (h := hc)] at h
+    rw [cpW.k_fvar_b.arm2 (hc1 := hc)] at h
+    rcases hgo : cpW n m2 hp (dO + 1) (dL - 1) with _ | ⟨r', m''⟩ <;> rw [hgo] at h
+    · rw [cpW.k_nest_cont_params_closed.none] at h; cases h
+    rw [cpW.k_nest_cont_params_closed.arm1] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hle : k ≤ hp.toNat := by
       have : ¬ hp.toNat < (r2.headD 0).toNat := fun e => hc (UInt64.lt_iff_toNat_lt.mpr e)
       omega
     have hg12 := hg1.trans hg2
-    obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m2 m' a2 (dO + 1) (dL - 1) xs r h hS2
+    obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m2 m'' a2 (dO + 1) (dL - 1) xs r' hgo hS2
       (by rw [hdO1, hl1, ← hxs, decHL]; exact decHL_agree (RdS.of_grow hg12) (fun j hj => by
             have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
       (fun j hj => by rw [hdO1, hl1] at *; have := hin (j + 1) (by omega); have := hg12.iw; omega)

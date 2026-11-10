@@ -7,6 +7,8 @@ public import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+public import ConAgua.Arena.BvarB
+public import ConAgua.Arena.IndRealWalk
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.Env
 import all ConAgua.Arena.IndPos2
@@ -234,19 +236,11 @@ open L.Arena
 
 /-! ## `nest_cont_params_closed`: the parameters have no local variables -/
 
-mutual
-def cpW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, hp, dO, dL =>
-    if dL = 0 then some ([1], m) else cpK1 n hp dO dL (bvbW n m (rdW (m.arr64 IW) dO) CWF)
-def cpK1 (n : Nat) (hp dO dL : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (bb, m1) =>
-    if bb ≠ 0 then some ([0], m1) else cpK2 n hp dO dL (fvbF m1 [CWF, rdW (m1.arr64 IW) dO])
-def cpK2 (n : Nat) (hp dO dL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => if hp < r.headD 0 then some ([0], m2) else cpW n m2 hp (dO + 1) (dL - 1)
-end
+l_model nestContParamsClosed_spec (p : Prog) (hb : BvbProg p) (hf : HfF p)
+    (hp : p.lookup "nest_cont_params_closed" = some nestContParamsClosedL)
+  fns [hp ↦ cpW list]
+  specs [bvarBL_spec p hb n, fvbF_spec p hf n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 end L.Ind
 

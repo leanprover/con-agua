@@ -295,9 +295,9 @@ theorem new1W_afr {m m' : Mem} {x : Word} {r : List Word} (h : new1W m x = some 
 -- from IndPosSpec/FgW
 theorem cpW_afr : ∀ (n : Nat) (m m' : Mem) (hp dO dL : Word) (r : List Word),
     cpW n m hp dO dL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, h => by simp [cpW] at h
+  | 0, _, _, _, _, _, _, h => by simp [cpW.eq_1] at h
   | n + 1, m, m', hp, dO, dL, r, h => by
-    unfold cpW cpK1 cpK2 at h
+    simp only [cpW.eq_2, cpW.k_bvar_b.eq_def, cpW.k_fvar_b.eq_def, cpW.k_nest_cont_params_closed.eq_def] at h
     afr_auto h [bvbW_afr, fvbF_afr, cpW_afr n _ _ _ _ _ _]
 
 -- from IndPosSpec/NestCrest
