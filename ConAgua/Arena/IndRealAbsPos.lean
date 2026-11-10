@@ -399,8 +399,8 @@ theorem cfW_mfr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} 
 
 -- from IndPosSpec/NestCrest
 theorem nwsW_afr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
-    (h : nwsW n m ctx off l po pl = some (r, m')) : AFr m m' := by
-  unfold nwsW nwsK at h
+    (h : nwsWf (n + 1) m ctx off l po pl = some (r, m')) : AFr m m' := by
+  simp only [nwsWf.eq_2, nwsWf.k_nest_ds_closed.eq_def] at h
   afr_auto h [dcWf_afr]
 
 -- from IndPosSpec/NestCrest

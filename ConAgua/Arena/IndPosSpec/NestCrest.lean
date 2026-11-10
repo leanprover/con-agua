@@ -285,8 +285,8 @@ theorem ntWf_mfr {k : Nat} {m m' : Mem} {vis C : Word} {r : List Word} (h : ntWf
   mfr_auto h [ncWf_mfr]
 
 theorem nwsW_mfr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
-    (h : nwsW n m ctx off l po pl = some (r, m')) : MFr [] [] m m' := by
-  unfold nwsW nwsK at h
+    (h : nwsWf (n + 1) m ctx off l po pl = some (r, m')) : MFr [] [] m m' := by
+  simp only [nwsWf.eq_2, nwsWf.k_nest_ds_closed.eq_def] at h
   mfr_auto h [dcWf_mfr]
 
 theorem rhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP nio nil q j : Word),

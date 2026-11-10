@@ -5,7 +5,6 @@ import ConAgua.Arena.IndPosSpec.NcnW2
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.Arena.IndPosSpec.NbPosW
 public import ConAgua.Arena.IndPosSpec.NbKeyK2
 public import ConAgua.Arena.IndPosSpec.NbLook
 import ConAgua.Arena.IndPosSpec.EntryW
@@ -306,10 +305,8 @@ theorem nestCtorNf_spec' (p : Prog) (L : NbLook p) (k : Nat) (s₀ : St) (ctx po
 
 theorem nestWalkStack_spec' (p : Prog) (L : NbLook p) (n : Nat) (s₀ : St) (ctx off l po pl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_walk_stack" [ctx, off, l, po, pl]
-    ⦃fun r s' => LocEq s' s₀ ∧ nwsWf n s₀.mem ctx off l po pl = some (r, s'.mem); ⊤⦄ := by
-  match n with
-  | 0 => exact triple_post (invoke_exec0 p _ _ s₀) (fun _ _ h => h.elim)
-  | n + 1 => exact nestWalkStack_spec p L.dc L.hws n s₀ ctx off l po pl
+    ⦃fun r s' => LocEq s' s₀ ∧ nwsWf n s₀.mem ctx off l po pl = some (r, s'.mem); ⊤⦄ :=
+  nestWalkStack_spec p L.dc L.hws n s₀ ctx off l po pl
 
 end L.Ind
 

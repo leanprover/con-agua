@@ -150,27 +150,11 @@ theorem dcWf_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
 
 /-! ## `nest_walk_stack` refines `nestWalkStack` -/
 
-def nwsK (po pl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => if r.headD 0 ≠ 0 then some ([0, 0], m1) else some ([po, pl], m1)
-/-- The model of `nest_walk_stack(ctx, dsOff, dsLen, progOff, progLen)` at exec fuel `n + 1`. -/
-def nwsW (n : Nat) (m : Mem) (ctx off l po pl : Word) : Option (List Word × Mem) :=
-  nwsK po pl (dcWf n m ctx off l)
-theorem nwsK_closed (po pl : Word) (r : List Word) (m1 : Mem) (h : r.headD 0 ≠ 0) :
-    nwsK po pl (some (r, m1)) = some ([0, 0], m1) := by rw [nwsK, ite_eq_left h]
-theorem nwsK_open (po pl : Word) (r : List Word) (m1 : Mem) (h : ¬ r.headD 0 ≠ 0) :
-    nwsK po pl (some (r, m1)) = some ([po, pl], m1) := by rw [nwsK, ite_eq_right h]
-attribute [ind_grind] nwsK_closed nwsK_open
-
-theorem nestWalkStack_spec (p : Prog) (hl : DcLook p)
-    (hp : p.lookup "nest_walk_stack" = some nestWalkStackL) (n : Nat) (s₀ : St) (ctx off l po pl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_walk_stack" [ctx, off, l, po, pl]
-    ⦃fun r s' => LocEq s' s₀ ∧ nwsW n s₀.mem ctx off l po pl = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestWalkStackL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      dc_spec' p hl.hf hl.hh hl.hg hl.hp n] <;>
-    finish (gen := 20) [nwsW]
+l_model nestWalkStack_spec (p : Prog) (hl : DcLook p)
+    (hp : p.lookup "nest_walk_stack" = some nestWalkStackL)
+  fns [hp ↦ nwsWf list]
+  specs [dc_spec' p hl.hf hl.hh hl.hg hl.hp n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 theorem nestWalkStack_eq (ctx : NestCtx) (prog : List NestHole) (ds : List EIdx) :
     ConRon.Arena.nestWalkStack ctx prog ds = (do
@@ -179,24 +163,24 @@ theorem nestWalkStack_eq (ctx : NestCtx) (prog : List NestHole) (ds : List EIdx)
 
 theorem nwsW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) (m m' : Mem)
     (a : AState) (ctx off l po pl : Word) (c : NestCtx) (ds : List EIdx) (prog : List NestHole)
-    (r : List Word) (h : nwsW n m ctx off l po pl = some (r, m')) (hS : StageR vis fe m a)
+    (r : List Word) (h : nwsWf (n + 1) m ctx off l po pl = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hhi : c.hiAt 0 < 2 ^ 64) (hds : decHL m off.toNat l.toNat = some ds)
     (hdi : ∀ j < l.toNat, off.toNat + j < iwTop m) :
     ∃ x a', (ConRon.Arena.nestWalkStack c prog ds).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ ((x = [] ∧ r = [0, 0]) ∨ (x = prog ∧ r = [po, pl])) := by
-  unfold nwsW at h
-  rcases hd : dcWf n m ctx off l with _ | ⟨r1, m1⟩ <;> rw [hd] at h; · simp [nwsK] at h
+  rw [nwsWf.arm1] at h
+  rcases hd : dcWf n m ctx off l with _ | ⟨r1, m1⟩ <;> rw [hd] at h; · rw [nwsWf.k_nest_ds_closed.none] at h; cases h
   obtain ⟨b, a', hrun, hS', hg, hr⟩ := dcWf_ok dn fe vis n m m1 a ctx off l c ds r1 hd hS hc hin hhi hds hdi
   rw [nestWalkStack_eq]
   cases b with
   | true =>
-    rw [nwsK_closed (h := by rw [hr]; decide)] at h
+    rw [nwsWf.k_nest_ds_closed.arm1 (hc1 := by rw [hr]; decide)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨[], a', ?_, hS', hg, Or.inl ⟨rfl, rfl⟩⟩
     simp only [StateT.run_bind, hrun, except_ok_bind]; rfl
   | false =>
-    rw [nwsK_open (h := by rw [hr]; decide)] at h
+    rw [nwsWf.k_nest_ds_closed.arm2 (hc1 := by rw [hr]; decide)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨prog, a', ?_, hS', hg, Or.inr ⟨rfl, rfl⟩⟩
     simp only [StateT.run_bind, hrun, except_ok_bind]; rfl
@@ -219,7 +203,7 @@ theorem nestWalkStack_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       IWGrow s₀.mem s'.mem ∧
       ((AM.res (ConRon.Arena.nestWalkStack c prog ds) a₀ = [] ∧ r = [0, 0]) ∨
         (AM.res (ConRon.Arena.nestWalkStack c prog ds) a₀ = prog ∧ r = [po, pl])); ⊤⦄ := by
-  refine triple_post (nestWalkStack_spec p hl hp n s₀ ctx off l po pl) ?_
+  refine triple_post (nestWalkStack_spec p hl hp (n + 1) s₀ ctx off l po pl) ?_
   rintro r s' ⟨hlc, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := nwsW_ok dn fe vis n _ _ a₀ ctx off l po pl c ds prog r hm hS hc
     hin hhi hds hdi

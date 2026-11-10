@@ -15,7 +15,6 @@ import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.IndPosSpec.NbPosW
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.IndPosSpec.CfW
 
@@ -83,9 +82,8 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hF 
   rw [hs1] at hws
   rw [nnewE.k_nest_walk_stack.arm1]
   cases n with
-  | zero => simp [nwsWf] at hws
+  | zero => simp [nwsWf.eq_1] at hws
   | succ n' =>
-  simp only [nwsWf] at hws
   obtain ⟨wp, a1, hrun1, hS1, hg1, hwp⟩ := nwsW_ok dn fe vis n' m m1 a ctx dO dL po pl c ds prog rw hws hS
     hW.u.dec hW.u.inn hhi0 hdsD (fun j hj => by omega)
   have hWp : WCtx dn vis fe m1 ctx (rw.headD 0) (rw.tail.headD 0) c wp := by
