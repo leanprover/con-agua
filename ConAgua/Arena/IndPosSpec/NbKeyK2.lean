@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.NcnW
 public import ConAgua.Arena.IndPosSpec.DepthGo
 
 @[expose] public section

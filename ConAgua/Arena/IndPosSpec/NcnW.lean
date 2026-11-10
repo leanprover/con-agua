@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.IndPosSpec.RxMapW
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.IndPosSpec.Rx
-public import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndPos2
 

@@ -1,11 +1,9 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.CfW
-import ConAgua.Arena.IndPosSpec.NcnW2
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.Arena.IndPosSpec.NbKeyK2
 public import ConAgua.Arena.IndPosSpec.NbLook
 import ConAgua.Arena.IndPosSpec.UnW
 import ConAgua.Arena.IndPartsSpec.BlockCounts

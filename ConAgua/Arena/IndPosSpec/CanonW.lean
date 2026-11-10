@@ -10,7 +10,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndPos
-public import ConAgua.Arena.IndPos2
 public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.IndView
 import all ConAgua.Arena.IndPos
