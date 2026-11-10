@@ -7,6 +7,7 @@ public import ConAgua.Arena.ViewL
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -396,25 +397,9 @@ theorem bbGo_spec (n : Nat) : BbGoSpec p n ∧ BbNodeSpec p n := by
     · intro s₀ h c; rw [invoke_eq _ hpn]; simp only [callFn, bbNode]; vcgen [exec] <;> grind
   | succ n ih => exact ⟨bbGo_step p hpf hps hp n ih.2, bbNode_step p hpn n ih.1⟩
 
+end go
+
 /-! ## `bb_memo(h, c)`: the entry, between two clears -/
-
-/-- After the walk: clear the memo again. -/
-def clrK : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (r, m₁) => if rdW (m₁.arr64 CTL) 24 + 2 = 0 then none else some (r, mclearG bmSch m₁)
-
-/-- **The model of `bb_memo`.** -/
-def bbMemoW (n : Nat) (m : Mem) (h c : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) 24 + 2 = 0 then none else clrK (bbW n (mclearG bmSch m) h c)
-
-theorem bbMemoW_eq (n : Nat) (m : Mem) (h c : Word) (h0 : rdW (m.arr64 CTL) 24 + 2 ≠ 0) :
-    bbMemoW n m h c = clrK (bbW n (mclearG bmSch m) h c) := by simp [bbMemoW, h0]
-
-theorem clrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 24 + 2 ≠ 0) :
-    clrK (some (r, m₁)) = some (r, mclearG bmSch m₁) := by simp [clrK, h0]
-
-grind_pattern [arena_grind] bbMemoW_eq => bbMemoW n m h c
-grind_pattern [arena_grind] clrK_some => clrK (some (r, m₁))
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1478-1484 ConRon.Arena.bvarBoundMemo -/
 @[no_expose, l_impl ConRon.Arena.bvarBoundMemo]
@@ -425,21 +410,23 @@ def bbMemo : FunDecl := lfn (h, c) locals (r, u) {
   return r
 }
 
-include hpf hps hp hpn in
-theorem bbMemo_spec (hpc : p.lookup "bm_clear" = some (memoClearG bmSch))
-    (hpm : p.lookup "bb_memo" = some bbMemo) (n : Nat) (s₀ : St) (h c : Word) :
+/-- `bb_go`'s spec at fuel `n`, as a triple (for `l_model`). -/
+theorem bbGo_specT (p : Prog) (hpf : p.lookup "bm_find" = some (memoFindG bmSch))
+    (hps : p.lookup "bm_put" = some (memoPutG bmSch)) (hp : p.lookup "bb_go" = some bbGo)
+    (hpn : p.lookup "bb_node" = some bbNode) (n : Nat) (s₀ : St) (h c : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "bb_memo" [h, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ bbMemoW n s₀.mem h c = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have ih := (bbGo_spec p hpf hps hp hpn n).1
-  unfold BbGoSpec at ih
-  rw [invoke_eq _ hpm]
-  simp only [callFn, bbMemo]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec bmSch p _ hpc n, ih] <;>
-    finish
+    invoke p (exec p n) "bb_go" [h, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ bbW n s₀.mem h c = some (r.headD 0, s'.mem); ⊤⦄ :=
+  (bbGo_spec p hpf hps hp hpn n).1 s₀ h c
 
-end go
+/-- **The model of `bb_memo`** (`bbMemoW`). -/
+l_model bbMemo_spec (p : Prog) (hpf : p.lookup "bm_find" = some (memoFindG bmSch))
+    (hps : p.lookup "bm_put" = some (memoPutG bmSch)) (hp : p.lookup "bb_go" = some bbGo)
+    (hpn : p.lookup "bb_node" = some bbNode) (hpc : p.lookup "bm_clear" = some (memoClearG bmSch))
+    (hpm : p.lookup "bb_memo" = some bbMemo)
+  fns [hpm ↦ bbMemoW]
+  specs [memoClearG_spec bmSch p _ hpc n, bbGo_specT p hpf hps hp hpn n]
+  grind [arena_grind] pfuel
 
 /-- The walk and the memo, as one program. -/
 def walkProg : Prog :=
