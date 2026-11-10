@@ -18,17 +18,19 @@ import all ConAgua.Checker.Entry
 
 The error halves of `ParThreadCall.lean` and `ParThreadTwin.lean`. A thread calls entry 2 once per
 record it claims, on its own region (`ThreadRuns`); when call `j` fails with a class other than
-`0`, the twin's worker, from the index state's worker, running the thread's records in order up to
-and including `j`, fails with that class (`checkJobList` reports it as a value), unless some
-record below one of them does not pass on its own (the weakened `TwinVerdictPooled`).
+`0` and every record below `j` was run, and accepted, by some thread's calls, the twin's worker,
+from the index state's worker, running the thread's records in order up to and including `j`,
+fails with that class (`checkJobList` reports it as a value).
 
 * `CjStepE`, `cjStepE_of`: `check_jobs(j, j + 1)` failing from the jobs' relation (`JobRel`)
   claims record `j`'s list failure (`checkJobs_ref`'s error half, under `JobG`);
 * `checkJobs_thrE`, `checkB_thrE`, `checkThrE`, `runThrE`: the same on a thread's memory
   (`ThrAt`), through `check_b` and `check`;
-* `threads_twinVerdictPooled`: with entry 1's run, `TwinVerdictPooled [b]`: the thread's calls
-  before the failing one ran ok (`runThr`), each from a worker state at a view where con-ron's fold
-  invariant holds (`worker_foldOK`, the records below passing: `prefixOK_of_passes`).
+* `threads_twinVerdictPooled`: with entry 1's run, `TwinVerdictPooled [b]`: the threads' calls
+  below `j` give con-ron's fold invariant at every view up to `j` (`pool_prefix`), so the failing
+  thread's calls before the failing one ran ok (`runThr`), each from a worker state at a view
+  where the invariant holds (`worker_foldOK`), and the failing call is the twin's failure
+  (`runThrE`).
 -/
 
 set_option experimental.vcgen true
@@ -286,11 +288,12 @@ open ConAgua.Final in
 /-- **A thread's failing call is the twin pool's failure.** Entry 1 (`check` with the mode word
 `1`, from the loaded memory) returning `2^63 + k`; the buffer `B` (the first `len` words of `OUT`,
 `len` the header's word `1`); a thread with a fresh region memory `r₀` (as in
-`threads_twinAcceptsPooled`) whose calls `cs` ran and whose next call, on record `j`, failed with an
-error `e` of class other than `0` (`ThreadFails`), every claimed index below `k`, every record
-below `j` passing on its own. Then the twin's pool fails with that class (`TwinVerdictPooled`),
-given `check_decl`'s program facts (`CheckerCd`) and the jobs' error claims (`JobG`) at every
-phase A. -/
+`threads_twinAcceptsPooled`) whose calls `cs`, each on a record below `j`, ran and whose next call,
+on record `j < k`, failed with an error `e` of class other than `0` (`ThreadFails`); and threads
+`ths` (each a fresh region memory with its calls, as in `threads_twinAcceptsPooled`, every claim
+below `k`, each thread's claims increasing) whose calls ran every record below `j`. Then the twin's
+pool fails with that class (`TwinVerdictPooled`), given `check_decl`'s program facts (`CheckerCd`)
+and the jobs' error claims (`JobG`) at every phase A. -/
 theorem threads_twinVerdictPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd)
     (hJG : ∀ (b pb : ByteArray) (PA : PhaseA b), pb.size < 2 ^ 63 → PbPre pb →
       JobG PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
@@ -301,10 +304,13 @@ theorem threads_twinVerdictPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : C
     (B : Array Word) (hB : B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat)
     (r₀ : Mem) (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m₁.arr64 b).size)
     (hI : r₀.glob INIT = 0) (j : Word) (cs : List (Word × Nat × Mem)) (n : Nat) (e : Err)
-    (hruns : ThreadFails B j n e r₀ cs)
-    (hcs : ∀ c ∈ cs, c.1 < rs₁.headD 0 - 9223372036854775808)
+    (hruns : ThreadFails B j n e r₀ cs) (hcs : ∀ c ∈ cs, c.1 < j)
     (hj : j < rs₁.headD 0 - 9223372036854775808) (hk0 : e.cls ≠ 0)
-    (hpass : ∀ i < j.toNat, TwinJobPasses [b] i) :
+    (ths : List (Mem × List (Word × Nat × Mem)))
+    (hth : ∀ t ∈ ths, (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m₁.arr64 b).size) ∧
+      t.1.glob INIT = 0 ∧ ThreadRuns B t.1 t.2 ∧ ∀ c ∈ t.2, c.1 < rs₁.headD 0 - 9223372036854775808)
+    (hinc : ∀ t ∈ ths, (t.2.map (·.1)).Pairwise (· < ·))
+    (hbelow : ∀ i : Word, i < j → ∃ t ∈ ths, ∃ c ∈ t.2, c.1 = i) :
     TwinVerdictPooled [b] e.cls := by
   have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
   obtain ⟨PA, m₇, m, hF, hok, hm₁, hres⟩ := checkA_run b pb sz hin 1 (Or.inl rfl) N₁ hN₁ rs₁ m₁ h₁ hr
@@ -330,7 +336,7 @@ theorem threads_twinVerdictPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : C
     rw [hres, e, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
   have hjN : j.toNat < PA.ds.size := by rw [← hk]; exact UInt64.lt_iff_toNat_lt.mp hj
   have hcN : ∀ c ∈ cs, c.1.toNat < PA.ds.size := fun c hc => by
-    rw [← hk]; exact UInt64.lt_iff_toNat_lt.mp (hcs c hc)
+    have := UInt64.lt_iff_toNat_lt.mp (hcs c hc); omega
   -- the twin's side
   let a₀ : AState := { PA.sF with caches := Caches.empty }
   let Rel : Mem → AState → Prop := fun r a =>
@@ -362,85 +368,10 @@ theorem threads_twinVerdictPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : C
     have e : PA.ds[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = PA.ds[k] := by simp only [hk']
     rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
   have H := hH hstep
-  -- a call with a record below it that does not pass: the weakened verdict
-  by_cases hbad : ∃ c ∈ cs, ∃ i < c.1.toNat, ¬ TwinJobPasses [b] i
-  · obtain ⟨c, hc, i, hi, hn⟩ := hbad
-    refine TwinVerdictPooled.of_not_passes (j := c.1.toNat) ?_ hi hn
-    intro pins sA sB sC sD sE sF pre r ds ipins I hA' hB' hC' hD' _ _
-    rw [hA] at hA'; injection hA' with hA'; obtain ⟨-, rfl⟩ := Prod.mk.inj hA'
-    rw [hBp] at hB'; injection hB' with hB'; obtain ⟨hB1, rfl⟩ := Prod.mk.inj hB'
-    injection hB1 with hB1; subst hB1
-    rw [hC] at hC'; injection hC' with hC'; obtain ⟨hC1, rfl⟩ := Prod.mk.inj hC'
-    injection hC1 with hC1; subst hC1
-    rw [hD] at hD'; injection hD' with hD'; obtain ⟨rfl, rfl⟩ := Prod.mk.inj hD'
-    exact hcN c hc
-  simp only [not_exists, not_and, Classical.not_not] at hbad
-  -- a passing record's job accepts from the index state's worker
-  have hjob : ∀ i (hi : i < PA.ds.size), TwinJobPasses [b] i →
-      ∃ a', recordJob VM PA.ipins PA.I i PA.ds[i] PA.sF.worker = .ok ((), a') := by
-    intro i hi hp
-    obtain ⟨s', hs'⟩ := hp PA.pins PA.sA PA.sB PA.sC PA.sD PA.sE PA.sF PA.pre PA.rc PA.ds PA.ipins
-      PA.I hA hBp hC hD hE PA.idx
-    cases hrj : recordJob VM PA.ipins PA.I i PA.ds[i] PA.sF.worker with
-    | ok v => exact ⟨v.2, by cases v; rfl⟩
-    | error ce =>
-      have e1 : (checkJobList VM PA.ipins PA.I PA.ds [i]) PA.sF.worker = .ok (.error (ce, i), AState.abandoned) := by
-        simp only [checkJobList, runJob, Array.getElem?_eq_getElem hi, hrj]
-      rw [show (checkJobList VM PA.ipins PA.I PA.ds [i]) PA.sF.worker = _ from hs'] at e1
-      cases e1
-  -- the fold's prefixes below passing records
-  have hpre : ∀ x, x ≤ PA.ds.size → (∀ i < x, TwinJobPasses [b] i) → PrefixOK pinsP dsP x ∧
-      ((ConLeche.Cached.recsConsts (dsP.take x)).map (·.name)).Nodup := by
-    intro x
-    induction x with
-    | zero =>
-      intro _ _
-      have h0 : (ConLeche.Cached.recsConsts ([] : List ConLeche.Declaration)).length = 0 := by
-        have := (ConLeche.Cached.buildIndex_spec (#[] : Array ConLeche.Declaration)).next
-        simpa [ConLeche.Cached.buildIndex] using this.symm
-      refine ⟨⟨0, fun _ _ => rfl⟩, ?_⟩
-      rw [List.take_zero, List.eq_nil_of_length_eq_zero h0]
-      exact List.nodup_nil
-    | succ x ih =>
-      intro hx hp
-      obtain ⟨hPx, hndx⟩ := ih (by omega) fun i hi => hp i (by omega)
-      obtain ⟨a', hj'⟩ := hjob x (by omega) (hp x (by omega))
-      obtain ⟨hx', hdk⟩ := H.hden x (by omega)
-      obtain ⟨-, env', F, hd⟩ := job_spec Vt H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
-        H.hpI (WorkerOK.start hst) (by omega) hx' hdk hPx hndx hj'
-      exact PrefixOK.step H.hpush hx' hPx hd hndx
-  have hfold : ∀ x a, x < PA.ds.size → (∀ i < x, TwinJobPasses [b] i) → WorkerOK PA.sF a →
-      ∃ env, FoldOK env (PA.I.view x) (AM.st enterScratch a) := fun x a hx hp hw => by
-    obtain ⟨hP, hnd⟩ := hpre x (by omega) hp
-    obtain ⟨hx', -⟩ := H.hden x hx
-    exact worker_foldOK Vt H.hpinsOK H.hpersPins H.hI H.hpI hx' hP hnd hw
-  -- the thread's walk
-  have walk : ∀ (cs : List (Word × Nat × Mem)) (r : Mem) (a : AState), Rel r a → WorkerOK PA.sF a →
-      ThreadFails B j n e r cs →
-      (∀ c ∈ cs, c.1.toNat < PA.ds.size ∧ ∀ i < c.1.toNat, TwinJobPasses [b] i) →
-      ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (cs.map (·.1.toNat) ++ [j.toNat])) a e := by
-    intro cs
-    induction cs with
-    | nil =>
-      intro r a hR hw ⟨hn, hrun⟩ _
-      exact runThrE hCE n hn a j hjN (hfold _ a hjN hpass hw) _ rfl (hR j) rfl rfl hrun
-    | cons c cs ih =>
-      intro r a hR hw h hc
-      obtain ⟨j', n', r'⟩ := c
-      obtain ⟨hn', ⟨rs, hrun⟩, hkept, hrest⟩ := h
-      obtain ⟨hj', hp'⟩ := hc _ List.mem_cons_self
-      obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJP.check_jobs hRS hsz n' hn' a j' hj'
-        (hfold _ a hj' hp' hw) _ rfl (hR _) rfl rfl hrun
-      have hR' : Rel r' a' := fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI' hkept t ht).trans (hX t ht)⟩
-      obtain ⟨hP, hnd⟩ := hpre _ (by omega) hp'
-      obtain ⟨hx', hdk⟩ := H.hden _ hj'
-      obtain ⟨hw', -⟩ := job_spec Vt H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
-        H.hpI hw hj' hx' hdk hP hnd hrj
-      exact ErrClaimV.cons_ok hj' hrj
-        (ih r' a' hR' hw' hrest fun c hc' => hc c (List.mem_cons_of_mem _ hc'))
-  -- the thread's start
-  have hstart : Rel r₀ PA.sF.worker := by
-    intro j
+  -- the threads' runs below `j`: the fold's prefixes up to `j`
+  have hstart : ∀ r : Mem, (∀ b ∈ parOwnedL, r.arr64 b = zeros (m₁.arr64 b).size) → r.glob INIT = 0 →
+      Rel r PA.sF.worker := by
+    intro r hz hI j
     have hoff := hF.build.off
     have hw := hF.build.drv.state.wf
     have hKI := indexKeysIn_of hF.jobM.arena.base H.hI H.hpI
@@ -451,11 +382,58 @@ theorem threads_twinVerdictPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : C
       show m.bytes L.Rom.PB = _
       rw [hF.bytes, ← Mem.arr8, hF.r7.since.keep.arr8]; exact loadMem_pb b pb sz
     · rw [hBm]
-      exact thr_first hok hlt r₀ j (fun b hb => by rw [hz b hb, hO.size]) hI
-  have hW := walk cs r₀ PA.sF.worker hstart (WorkerOK.start hst) hruns
-    fun c hc => ⟨hcN c hc, hbad c hc⟩
+      exact thr_first hok hlt r j (fun b hb => by rw [hz b hb, hO.size]) hI
+  let ths' : List (Mem × List Nat) := ths.map fun t => (t.1, t.2.map (·.1.toNat))
+  have hinc' : ∀ t ∈ ths', t.2.Pairwise (· < ·) := by
+    intro t ht
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    have := hinc t₀ ht₀
+    rw [List.pairwise_map] at this ⊢
+    exact this.imp fun h => UInt64.lt_iff_toNat_lt.mp h
+  have hpre := pool_prefix Vt H hst ths'
+    (fun t ht => by
+      obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+      exact hstart t₀.1 (hth t₀ ht₀).1 (hth t₀ ht₀).2.1)
+    (fun t ht => by
+      obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+      exact threadRuns_chain B _ _ (hth t₀ ht₀).2.2.1)
+    hinc' j.toNat (by omega) (fun i hi => by
+      have hi64 : (UInt64.ofNat i).toNat = i := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+      obtain ⟨t, ht, c, hc, hci⟩ := hbelow (UInt64.ofNat i) (by rw [UInt64.lt_iff_toNat_lt, hi64]; exact hi)
+      exact ⟨_, List.mem_map_of_mem ht, List.mem_map.mpr ⟨c, hc, by rw [hci, hi64]⟩⟩)
+  have hfold : ∀ x a, x < PA.ds.size → x ≤ j.toNat → WorkerOK PA.sF a →
+      ∃ env, FoldOK env (PA.I.view x) (AM.st enterScratch a) := fun x a hx hxj hw => by
+    obtain ⟨hP, hnd⟩ := hpre x hxj
+    obtain ⟨hx', -⟩ := H.hden x hx
+    exact worker_foldOK Vt H.hpinsOK H.hpersPins H.hI H.hpI hx' hP hnd hw
+  -- the thread's walk
+  have walk : ∀ (cs : List (Word × Nat × Mem)) (r : Mem) (a : AState), Rel r a → WorkerOK PA.sF a →
+      ThreadFails B j n e r cs →
+      (∀ c ∈ cs, c.1 < j) →
+      ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (cs.map (·.1.toNat) ++ [j.toNat])) a e := by
+    intro cs
+    induction cs with
+    | nil =>
+      intro r a hR hw ⟨hn, hrun⟩ _
+      exact runThrE hCE n hn a j hjN (hfold _ a hjN (Nat.le_refl _) hw) _ rfl (hR j) rfl rfl hrun
+    | cons c cs ih =>
+      intro r a hR hw h hc
+      obtain ⟨j', n', r'⟩ := c
+      obtain ⟨hn', ⟨rs, hrun⟩, hkept, hrest⟩ := h
+      have hjj : j'.toNat < j.toNat := UInt64.lt_iff_toNat_lt.mp (hc _ List.mem_cons_self)
+      have hj' : j'.toNat < PA.ds.size := by omega
+      obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJP.check_jobs hRS hsz n' hn' a j' hj'
+        (hfold _ a hj' (by omega) hw) _ rfl (hR _) rfl rfl hrun
+      have hR' : Rel r' a' := fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI' hkept t ht).trans (hX t ht)⟩
+      obtain ⟨hP, hnd⟩ := hpre _ (by omega)
+      obtain ⟨hx', hdk⟩ := H.hden _ hj'
+      obtain ⟨hw', -⟩ := job_spec Vt H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
+        H.hpI hw hj' hx' hdk hP hnd hrj
+      exact ErrClaimV.cons_ok hj' hrj
+        (ih r' a' hR' hw' hrest fun c hc' => hc c (List.mem_cons_of_mem _ hc'))
+  have hW := walk cs r₀ PA.sF.worker (hstart r₀ hz hI) (WorkerOK.start hst) hruns hcs
   refine .inr ⟨PA.pins, PA.sA, PA.sB, PA.sC, PA.sD, PA.sE, PA.sF, PA.pre, PA.rc, PA.ds, PA.ipins,
-    PA.I, cs.map (·.1.toNat) ++ [j.toNat], hA, hBp, hC, hD, hE, PA.idx, fun t ht => ?_, .inl (hW hk0)⟩
+    PA.I, cs.map (·.1.toNat) ++ [j.toNat], hA, hBp, hC, hD, hE, PA.idx, fun t ht => ?_, hW hk0⟩
   rcases List.mem_append.mp ht with ht | ht
   · obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ht
     exact hcN c hc

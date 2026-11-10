@@ -142,17 +142,13 @@ structure ThreadM where
 /-- The address of `OUT`'s slot in entry 1's region at `base`. -/
 def outAddr (base : Nat) : Nat := base + abiSlot * abiSlot64 checkerTab OUT
 
-/-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
-returning at `st₀`, the buffer `B`, and the threads `ths`. -/
-structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
-    (B : Array Word) (ths : List ThreadM) : Prop where
-  call₀ : AbiCall b pb dm₀ ra₀
-  ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
-  rdx₀ : st₀.data.regs.rdx = 0
-  rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
-  /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
-  bufw : ∀ i (h : i < B.size), rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some B[i]
-  buflen : ∃ w, rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8)) = some w ∧ w.toNat = B.size
+/-- **The threads' accepting calls** (trusted; the module doc lists it): for entry 1 at `dm₀`
+returning at `st₀` and the buffer `B`, every call `i < t.n` of each thread `t` of `ths` is made
+with the buffer in place and on the thread's region, returns accept with the buffer kept, and
+claims a job index below `k`; each thread's region is zero at its first call and carries over
+between its calls, and its claims increase. -/
+structure ThreadsAcc [Host] (dm₀ : MachineData) (st₀ : MachineState) (B : Array Word)
+    (ths : List ThreadM) : Prop where
   /-- the calls: the buffer in place, each thread on its region -/
   calls : ∀ t ∈ ths, ∀ i < t.n, BufCallH B (t.dm i) (t.ra i) ∧
     (t.dm i).regs.rdi.toNat = outAddr dm₀.regs.r8.toNat ∧ (t.dm i).regs.rcx.toNat = t.base ∧
@@ -166,9 +162,22 @@ structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Wo
   next : ∀ t ∈ ths, ∀ i, i + 1 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen →
     (t.dm (i + 1)).dmem.get? (A x) = (t.st i).data.dmem.get? (A x)
   claimed : ∀ t ∈ ths, ∀ i < t.n, (t.dm i).regs.rdx < st₀.data.regs.rax - 9223372036854775808
-  cover : ∀ j : Word, j < st₀.data.regs.rax - 9223372036854775808 → ∃ t ∈ ths, ∃ i < t.n, (t.dm i).regs.rdx = j
   /-- the claims increase in each thread (the claim counter is monotone) -/
   incr : ∀ t ∈ ths, ∀ i j, i < j → j < t.n → (t.dm i).regs.rdx < (t.dm j).regs.rdx
+
+/-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
+returning at `st₀`, the buffer `B`, and the threads `ths`, whose calls all accept
+(`ThreadsAcc`) and claim every job index below `k`. -/
+structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
+    (B : Array Word) (ths : List ThreadM) : Prop extends ThreadsAcc dm₀ st₀ B ths where
+  call₀ : AbiCall b pb dm₀ ra₀
+  ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+  rdx₀ : st₀.data.regs.rdx = 0
+  rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
+  /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
+  bufw : ∀ i (h : i < B.size), rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some B[i]
+  buflen : ∃ w, rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8)) = some w ∧ w.toNat = B.size
+  cover : ∀ j : Word, j < st₀.data.regs.rax - 9223372036854775808 → ∃ t ∈ ths, ∃ i < t.n, (t.dm i).regs.rdx = j
 
 /-! ## Pieces -/
 
@@ -232,6 +241,65 @@ theorem threadRuns_range (B : Array Word) (t : ThreadM) (rm : Nat → Mem)
     obtain ⟨h1, h2⟩ := h s (by omega)
     exact ⟨by simp [abiFuel], h1, h2, threadRuns_range B t rm h c (s + 1) (by omega)⟩
 
+set_option linter.constructorNameAsVariable false in
+/-- **Each thread's calls, at the L level** (`thread_chain`): for a buffer with entry 1's header
+facts, a thread of `ThreadsAcc` ran a chain of L calls from the zero region (`ThreadRuns`), one
+per machine call, on the claimed indices (below `k`, increasing), and every call returned with the
+caller's registers. -/
+theorem threadsAcc_runs [Host] (k0 : Nat) (hcode : Code checkerFile k0) (dm₀ : MachineData)
+    (st₀ : MachineState) (B : Array Word) (ths : List ThreadM) (hA : ThreadsAcc dm₀ st₀ B ths)
+    (hhdr : ∀ i < frozenIdsL.length, 9 + 2 * i < B.size)
+    (hent' : ∀ i < frozenIdsL.length, (bufEntry B i).1 + (bufEntry B i).2 ≤ B.size)
+    (hdisj : ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i ≠ i' →
+      (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1 ∨
+      (bufEntry B i').1 + (bufEntry B i').2 ≤ (bufEntry B i).1 ∨ (bufEntry B i).2 = 0 ∨ (bufEntry B i').2 = 0) :
+    ∀ t, ∃ cs : List (Word × Nat × Mem), t ∈ ths → ThreadRuns B (zeroMem checkerTab) cs ∧
+      (∀ c ∈ cs, c.1 < st₀.data.regs.rax - 9223372036854775808) ∧
+      (∀ i < t.n, ∃ c ∈ cs, c.1 = (t.dm i).regs.rdx) ∧
+      (∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) ∧
+      (cs.map (·.1)).Pairwise (· < ·) := by
+  have hc := code_of_checkerFile_par hcode
+  have hnres : 1 ≤ checkerTab.nres := by decide
+  intro t
+  by_cases ht : t ∈ ths
+  · by_cases hn0 : t.n = 0
+    · exact ⟨[], fun _ => ⟨trivial, fun c h => absurd h (by simp), fun i hi => absurd hi (by omega),
+        fun i hi => absurd hi (by omega), List.Pairwise.nil⟩⟩
+    obtain ⟨hH0, -, hcx0, h80⟩ := hA.calls t ht 0 (by omega)
+    have hneed : workerNeed parOwnedL ≤ t.blen := h80 ▸ hH0.need
+    have hfit : t.base + t.blen < 2 ^ 64 := hcx0 ▸ h80 ▸ hH0.fits
+    obtain ⟨rm, h0, hrun⟩ := thread_chain checkerProg checkerTab checkerTab_abiOk hnres frozenIdsL parOwnedL
+      parOwnedL_not_frozen PLO PHI MODE B (outAddr dm₀.regs.r8.toNat) t.base t.blen t.n hneed hfit t.dm t.ra t.st
+      (hA.zero t ht)
+      (fun i hi r hr => by
+        obtain ⟨hH, hdi, hcx, h8⟩ := hA.calls t ht i hi
+        have hbc : BufCall checkerTab frozenIdsL parOwnedL B (t.dm i) (t.ra i) :=
+          ⟨⟨hH.need, hH.fits, hH.bend, hhdr, hent', hdisj, hH.apart⟩, hH.hB, hH.hmap, hH.hra, hH.hcs,
+            hH.hcs24, hH.hcs8⟩
+        have hEv := abiB_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerProgI_wf MODE PLO PHI OUT HDRF
+          CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+          (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i) (t.ra i) hbc
+          (by rw [hcx]; exact hr) checker_bufMinOk
+        rw [hdi, hcx] at hEv
+        exact hA.ret t ht i hi _ hEv (fun s h => h.1))
+      (hA.acc t ht) (hA.next t ht)
+    refine ⟨thrCalls t rm, fun _ => ⟨?_, ?_, ?_, fun i hi => by obtain ⟨_, -, -, -, h⟩ := hrun i hi; exact h, ?_⟩⟩
+    · rw [← h0, thrCalls, List.range_eq_range']
+      refine threadRuns_range B t rm (fun i hi => ?_) t.n 0 (by omega)
+      obtain ⟨rs, h1, -, h3, -⟩ := hrun i hi
+      exact ⟨⟨rs, h1⟩, bufKept_of_memRel h3 hent' (hA.kept t ht i hi)⟩
+    · intro c hc'
+      obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hc'
+      rw [List.mem_range] at hi
+      exact hA.claimed t ht i hi
+    · intro i hi
+      exact ⟨_, List.mem_map.mpr ⟨i, List.mem_range.mpr hi, rfl⟩, rfl⟩
+    · simp only [thrCalls, List.map_map]
+      rw [List.pairwise_map]
+      refine (List.pairwise_lt_range (n := t.n)).imp_of_mem fun hi hj hij => ?_
+      exact hA.incr t ht _ _ hij (List.mem_range.mp hj)
+  · exact ⟨[], fun h => absurd h ht⟩
+
 /-! ## The theorem -/
 
 -- the linter's traversal of this proof exceeds the recursion limit
@@ -246,7 +314,6 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (V : Type w) [ConLeche.SetTheor
       RegsRestored dm₀.regs st₀.data.regs ∧
       ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs := by
   have hc := code_of_checkerFile_par hcode
-  have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1
   have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
@@ -312,57 +379,14 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (V : Type w) [ConLeche.SetTheor
     · exact Or.inl (hinc' i hi i' hi' h)
     · exact Or.inr (Or.inl (hinc' i' hi' i hi h))
   -- each thread: its chain of L runs
-  have hthr : ∀ t, ∃ cs : List (Word × Nat × Mem), t ∈ ths → ThreadRuns B (zeroMem checkerTab) cs ∧
-      (∀ c ∈ cs, c.1 < rs₁.headD 0 - 9223372036854775808) ∧
-      (∀ i < t.n, ∃ c ∈ cs, c.1 = (t.dm i).regs.rdx) ∧
-      (∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) ∧
-      (cs.map (·.1)).Pairwise (· < ·) := by
-    intro t
-    by_cases ht : t ∈ ths
-    · by_cases hn0 : t.n = 0
-      · exact ⟨[], fun _ => ⟨trivial, fun c h => absurd h (by simp), fun i hi => absurd hi (by omega),
-          fun i hi => absurd hi (by omega), List.Pairwise.nil⟩⟩
-      obtain ⟨hH0, -, hcx0, h80⟩ := hR.calls t ht 0 (by omega)
-      have hneed : workerNeed parOwnedL ≤ t.blen := h80 ▸ hH0.need
-      have hfit : t.base + t.blen < 2 ^ 64 := hcx0 ▸ h80 ▸ hH0.fits
-      obtain ⟨rm, h0, hrun⟩ := thread_chain checkerProg checkerTab checkerTab_abiOk hnres frozenIdsL parOwnedL
-        parOwnedL_not_frozen PLO PHI MODE B (outAddr dm₀.regs.r8.toNat) t.base t.blen t.n hneed hfit t.dm t.ra t.st
-        (hR.zero t ht)
-        (fun i hi r hr => by
-          obtain ⟨hH, hdi, hcx, h8⟩ := hR.calls t ht i hi
-          have hbc : BufCall checkerTab frozenIdsL parOwnedL B (t.dm i) (t.ra i) :=
-            ⟨⟨hH.need, hH.fits, hH.bend, hhdr, hent', hdisj, hH.apart⟩, hH.hB, hH.hmap, hH.hra, hH.hcs,
-              hH.hcs24, hH.hcs8⟩
-          have hEv := abiB_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerProgI_wf MODE PLO PHI OUT HDRF
-            CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-            (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i) (t.ra i) hbc
-            (by rw [hcx]; exact hr) checker_bufMinOk
-          rw [hdi, hcx] at hEv
-          exact hR.ret t ht i hi _ hEv (fun s h => h.1))
-        (hR.acc t ht) (hR.next t ht)
-      refine ⟨thrCalls t rm, fun _ => ⟨?_, ?_, ?_, fun i hi => by obtain ⟨_, -, -, -, h⟩ := hrun i hi; exact h, ?_⟩⟩
-      · rw [← h0, thrCalls, List.range_eq_range']
-        refine threadRuns_range B t rm (fun i hi => ?_) t.n 0 (by omega)
-        obtain ⟨rs, h1, -, h3, -⟩ := hrun i hi
-        exact ⟨⟨rs, h1⟩, bufKept_of_memRel h3 hent' (hR.kept t ht i hi)⟩
-      · intro c hc'
-        obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hc'
-        rw [List.mem_range] at hi
-        rw [← hrax₁]; exact hR.claimed t ht i hi
-      · intro i hi
-        exact ⟨_, List.mem_map.mpr ⟨i, List.mem_range.mpr hi, rfl⟩, rfl⟩
-      · simp only [thrCalls, List.map_map]
-        rw [List.pairwise_map]
-        refine (List.pairwise_lt_range (n := t.n)).imp_of_mem fun hi hj hij => ?_
-        exact hR.incr t ht _ _ hij (List.mem_range.mp hj)
-    · exact ⟨[], fun h => absurd h ht⟩
+  have hthr := threadsAcc_runs k0 hcode dm₀ st₀ B ths hR.toThreadsAcc hhdr hent' hdisj
   obtain ⟨f, hf⟩ := Classical.axiomOfChoice hthr
   refine ⟨?_, hRR₀, fun t ht i hi => (hf t ht).2.2.2.1 i hi⟩
   refine threads_twinAcceptsPooled V checkerCd_proved b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq
     (ths.map fun t => (zeroMem checkerTab, f t)) (fun t' ht' => ?_) (fun j hj => ?_) ?_
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
     obtain ⟨h1, h2, -, -, -⟩ := hf t ht
-    refine ⟨fun a ha => ?_, rfl, h1, h2⟩
+    refine ⟨fun a ha => ?_, rfl, h1, fun c hc => by rw [← hrax₁]; exact h2 c hc⟩
     have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
     simp only [abiLayout_tab]
