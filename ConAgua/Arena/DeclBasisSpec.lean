@@ -23,7 +23,7 @@ import all ConAgua.Arena.Pins
 /-!
 # Pin reads, `of_reduce_op`, `install_basis_decl(s)` (lane `decls3`)
 
-* `pin_at(i)` as a word model (`pinAtW`) and its twin read (`pinAtW_ok`).
+* `pin_at(i)`'s twin read (`pinAtW_ok`; the model `pinAtW` is `DeclRec.lean`'s).
 * `of_reduce_op(n)` refines `ofReduceOp` (pin reads only).
 * `install_basis_decl(vis, c)` refines `installBasisDecl` (the duplicate check, the push) and
   `install_basis_decls(vis, o, l)` refines `installBasisDecls` (an `IW` slice of constant-record
@@ -41,24 +41,6 @@ namespace L.Arena
 open L.Ind
 
 /-! ## `pin_at(i)` -/
-
-/-- **The model of `pin_at(i)`**: the flag, the slot bound, the slot. -/
-def pinAtW (m : Mem) (i : Word) : Option (List Word × Mem) :=
-  if pinW m 0 = 0 then none else if 52 ≤ i then none
-  else if i = 51 then some ([rdW (m.arr64 PINS) 71], m) else some ([rdW (m.arr64 PINS) (1 + i)], m)
-
-theorem pinAt_specW (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St)
-    (i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ pinAtW s₀.mem i = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, pinAtL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [pinAtW, pinW_eq, rdW_eq]
 
 /-- **A pin read is the twin's** (`pinAt`), the memory unchanged. -/
 theorem pinAtW_ok {m m' : Mem} {a : AState} {i : Word} {r : List Word}

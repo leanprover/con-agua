@@ -12,6 +12,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.SimLib
 import all ConAgua.Arena.DeclStep
 import all ConAgua.Arena.Env
+import all ConAgua.Arena.Pins
 
 @[expose] public section
 
@@ -51,6 +52,26 @@ structure RecProg (p : Prog) : Prop where
   push : p.lookup "env_push" = some envPushL
 
 /-! ## Word models and their `vcgen` specs -/
+
+/-! ### `pin_at(i)` (here for the readers below `DeclBasisSpec.lean`) -/
+
+/-- **The model of `pin_at(i)`**: the flag, the slot bound, the slot. -/
+def pinAtW (m : Mem) (i : Word) : Option (List Word × Mem) :=
+  if pinW m 0 = 0 then none else if 52 ≤ i then none
+  else if i = 51 then some ([rdW (m.arr64 PINS) 71], m) else some ([rdW (m.arr64 PINS) (1 + i)], m)
+
+theorem pinAt_specW (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St)
+    (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
+    ⦃fun r s' => LocEq s' s₀ ∧ pinAtW s₀.mem i = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, pinAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [pinAtW, pinW_eq, rdW_eq]
 
 /-- The low 32 bits (`dlp_copy`'s and `erec_ci`'s mask). -/
 def mask32 (w : Word) : Word := w &&& 4294967295
