@@ -411,7 +411,7 @@ theorem hbFastW_afr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e =
 -- from IndPosSpec/NestCrest
 theorem ncnW_afr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}
     (h : ncnW k m ctx po pl us dO dL cv closed = some (r, m')) : AFr m m' := by
-  unfold ncnW ncnK1 ncnK2 ncnK3 at h
+  simp only [ncnW.arm1, ncnW.k_rec5.eq_def, ncnW.k_nest_hole_img_ds.eq_def, ncnW.k_replace_fvars.eq_def] at h
   afr_auto h [posRecW_afr, rxDsW_afr, rxW_afr]
 
 -- from IndPosSpec/NestCrest

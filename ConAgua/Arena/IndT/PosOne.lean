@@ -200,21 +200,13 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   · rw [noE.k_nest_ctor_nf.none]
     exact fun hG => ErrClaim.of_callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) c5
   rw [noE.k_nest_ctor_nf.arm1]
-  obtain ⟨s5, hs5, -, hnf⟩ := triple_of_callW (nestCtorNf_spec' p L n ⟨m4, Locals.init []⟩ _ _ _ _ _ _ _ _)
-    (callW_of_callE c5)
+  cases n with
+  | zero => obtain ⟨e, he, -⟩ := callE_zero p _ _ m4; rw [he] at c5; cases c5
+  | succ n' =>
+  obtain ⟨s5, hs5, -, hnf⟩ := triple_of_callW
+    (nestCtorNf_spec p L.ct.cr.rx L.hnf n' ⟨m4, Locals.init []⟩ _ _ _ _ _ _ _ _) (callW_of_callE c5)
   simp only at hnf
   rw [hs5] at hnf
-  cases n with
-  | zero => simp [ncnWf] at hnf
-  | succ n' =>
-  simp only [ncnWf] at hnf
-  rcases hnf2 : ncnW n' m4 ctx po pl us dO dL cv (rw.tail.tail.tail.headD 0) with _ | ⟨nf, m5'⟩ <;>
-    rw [hnf2] at hnf
-  · cases hnf
-  simp only [Option.some.injEq, Prod.mk.injEq, List.cons.injEq, and_true] at hnf
-  obtain ⟨rfl, hm5⟩ := hnf
-  rw [hm5] at hnf2
-  replace hnf := hnf2
   obtain ⟨M, G, g, hR⟩ := hP4.rf
   have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize
   obtain ⟨x, a8, hrun8, hnfd, hnfb, M', G', hS5, hg5, hR5, -⟩ := ncnW_ok fe vis n' m4 m5 a7 ctx po pl us dO dL cv _

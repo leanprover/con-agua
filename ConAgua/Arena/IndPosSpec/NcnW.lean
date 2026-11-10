@@ -2,13 +2,17 @@ module
 
 public import ConAgua.Arena.IndPosSpec.RxMapW
 import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndPosSpec.Rx
+public import ConAgua.Arena.IndPosSpec.CtxFields
+import ConAgua.L.ModelGen
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 
 /-!
 # NcnW
 
-`ncnK3`, `ncnK2`, `ncnK1`, `ncnW`, `ncnK3_some`, `ncnK2_some` and the lemmas only they use.
+`nestCtorNf_spec`: the model `ncnW` of `nest_ctor_nf`.
 -/
 
 noncomputable section
@@ -22,26 +26,12 @@ namespace L.Ind
 
 open L.Arena
 
-def ncnK3 (us cv q l : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (ty, m3) => posRecW m3 [erRd m3 cv, us, q, l, ty]
-def ncnK2 (k : Nat) (f us cv closed : Word) : Option (Word × Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (q, l, m2) => ncnK3 us cv q l (rxW k m2 f closed)
-def ncnK1 (k : Nat) (us dO dL cv closed : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (f, m1) => ncnK2 k f us cv closed (rxDsW k m1 f dO dL)
-/-- The model of `nest_ctor_nf` at exec fuel `k + 1`. -/
-def ncnW (k : Nat) (m : Mem) (ctx po pl us dO dL cv closed : Word) : Option (Word × Mem) :=
-  ncnK1 k us dO dL cv closed (posRecW m [0, ctx, po, pl, pl])
-
-section arms
-variable (k : Nat) (m1 m2 m3 : Mem) (f us cv closed dO dL q l ty : Word)
-theorem ncnK3_some : ncnK3 us cv q l (some (ty, m3)) = posRecW m3 [erRd m3 cv, us, q, l, ty] := rfl
-theorem ncnK2_some : ncnK2 k f us cv closed (some (q, l, m2)) = ncnK3 us cv q l (rxW k m2 f closed) := rfl
-theorem ncnK1_some : ncnK1 k us dO dL cv closed (some (f, m1)) = ncnK2 k f us cv closed (rxDsW k m1 f dO dL) := rfl
-end arms
-attribute [ind_grind] ncnK3_some ncnK2_some ncnK1_some
+/-- **`nest_ctor_nf` is its model `ncnW`** (generated, the fuel a parameter: the spec at exec fuel
+`k + 1`). -/
+l_model nestCtorNf_spec (p : Prog) (hL : RxLook p) (hp : p.lookup "nest_ctor_nf" = some nestCtorNfL)
+  fns [hp ↦ ncnW]
+  specs [posRec5_specW p hL.ha hL.h5 n, (rxSpec_all p hL n).2.2.2.1, (rxSpec_all p hL n).2.2.2.2.2.2.2]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] pfuel
 
 end L.Ind
 

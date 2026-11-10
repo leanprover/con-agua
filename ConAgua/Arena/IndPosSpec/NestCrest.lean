@@ -339,7 +339,7 @@ theorem hbFastW_mfr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e =
 
 theorem ncnW_mfr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}
     (h : ncnW k m ctx po pl us dO dL cv closed = some (r, m')) : RxFr m m' := by
-  unfold ncnW ncnK1 ncnK2 ncnK3 at h
+  simp only [ncnW.arm1, ncnW.k_rec5.eq_def, ncnW.k_nest_hole_img_ds.eq_def, ncnW.k_replace_fvars.eq_def] at h
   mfr_auto h [posRecW_mfr, rxDsW_mfr, rxW_mfr]
 
 theorem pcrW_mfr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : List Word}

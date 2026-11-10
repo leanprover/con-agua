@@ -279,16 +279,6 @@ open L.Arena
 theorem pos2_getElem_getD (a : Array Word) (i : Nat) (h : i < a.size) : a[i] = a[i]?.getD 0 := by
   simp [h]
 
-theorem nestCtorNf_spec' (p : Prog) (L : NbLook p) (k : Nat) (s₀ : St) (ctx po pl us dO dL cv closed : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_ctor_nf" [ctx, po, pl, us, dO, dL, cv, closed]
-    ⦃fun r s' => LocEq s' s₀ ∧ ncnWf k s₀.mem ctx po pl us dO dL cv closed = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  match k with
-  | 0 => exact triple_post (invoke_exec0 p _ _ s₀) (fun _ _ h => h.elim)
-  | k + 1 =>
-    refine triple_post (nestCtorNf_spec p L.ct.cr.rx L.hnf k s₀ ctx po pl us dO dL cv closed) ?_
-    rintro r s' ⟨h1, h2⟩
-    exact ⟨h1, by simp [ncnWf, h2]⟩
-
 theorem nestWalkStack_spec' (p : Prog) (L : NbLook p) (n : Nat) (s₀ : St) (ctx off l po pl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_walk_stack" [ctx, off, l, po, pl]
     ⦃fun r s' => LocEq s' s₀ ∧ nwsWf n s₀.mem ctx off l po pl = some (r, s'.mem); ⊤⦄ :=
