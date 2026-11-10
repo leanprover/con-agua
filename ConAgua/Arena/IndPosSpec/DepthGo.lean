@@ -605,30 +605,6 @@ theorem whnfWalkFuel_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
 
 end census
 
-theorem phsB_some (q nn : Word) (m2 : Mem) : phsB q nn (some m2) = some ([q, nn], m2) := rfl
-theorem phsA_some (k : Nat) (nn q : Word) (m1 : Mem) : phsA k nn (some (q, m1)) = phsB q nn (phsGoW k m1 q nn 0) := rfl
-attribute [ind_grind] phsB_some phsA_some
-
-section spec2
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hpw : p.lookup "pin_word" = some pinWordL)
-  (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
-  (his : p.lookup "intern_sort" = some internSort)
-  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
-  (hif : p.lookup "intern_fvar" = some internFVar)
-  (hg : p.lookup "nest_phs_go" = some nestPhsGo) (hp : p.lookup "nest_phs" = some nestPhs)
-include ha hpw hsf hsp his hff hfp hif hg hp
-
-theorem nestPhs_spec (k : Nat) (s₀ : St) (nn : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_phs" [nn]
-    ⦃fun r s' => LocEq s' s₀ ∧ phsW k s₀.mem nn = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestPhs]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      iwAlloc_specW p ha k, nestPhsGo_spec p hpw hsf hsp his hff hfp hif hg k] <;>
-    finish (gen := 20) [phsW]
-
-end spec2
-
 /-- The pool outside `[q, q + n)`, its top and size, the constant records: unchanged. -/
 structure KeepIW (q n : Word) (m m' : Mem) : Prop where
   get : ∀ idx, (idx < q.toNat ∨ q.toNat + n.toNat ≤ idx) → (m'.arr64 IW)[idx]? = (m.arr64 IW)[idx]?
@@ -778,12 +754,12 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     ∃ phs a', (ConRon.Arena.nestPhs nn.toNat).run a = .ok (phs, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some phs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  unfold phsW at h
-  rcases hal : allocW m nn with _ | ⟨q, m1⟩ <;> rw [hal] at h; · simp [phsA] at h
-  rw [phsA_some] at h
+  rw [phsW.arm1] at h
+  rcases hal : allocW m nn with _ | ⟨q, m1⟩ <;> rw [hal] at h; · rw [phsW.k_iw_alloc.none] at h; cases h
+  rw [phsW.k_iw_alloc.arm1] at h
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
-  rcases hl : phsGoW k m1 q nn 0 with _ | m2 <;> rw [hl] at h; · simp [phsB] at h
-  rw [phsB_some] at h
+  rcases hl : phsGoW k m1 q nn 0 with _ | m2 <;> rw [hl] at h; · rw [phsW.k_nest_phs_go.none] at h; cases h
+  rw [phsW.k_nest_phs_go.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   have hroom1 : q.toNat + nn.toNat ≤ (m1.arr64 IW).size := by
@@ -941,7 +917,7 @@ theorem phsGoW_mfr (k : Nat) : ∀ (m m' : Mem) (q n i : Word), phsGoW k m q n i
       fun h => (MFr.set_iw _ _ _).trans (ih _ _ _ _ _ h)]
 
 theorem phsW_mfr {k : Nat} {m m' : Mem} {nn : Word} {r : List Word} (h : phsW k m nn = some (r, m')) : MFr [] [] m m' := by
-  simp only [phsW, phsA.eq_def, phsB.eq_def] at h
+  simp only [phsW.arm1, phsW.k_iw_alloc.eq_def, phsW.k_nest_phs_go.eq_def] at h
   mfr_auto h [allocW_mfr, phsGoW_mfr k _ _ _ _ _]
 
 theorem rpGoW_mfr (n : Nat) :

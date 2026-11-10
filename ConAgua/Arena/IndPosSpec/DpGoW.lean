@@ -101,13 +101,17 @@ l_model nestPhsGo_spec (p : Prog) (hpw : p.lookup "pin_word" = some pinWordL)
 theorem phsGoW.k_nest_phs_go_id (x : Option Mem) : phsGoW.k_nest_phs_go x = x := by
   cases x <;> rfl
 
-def phsB (q nn : Word) : Option Mem → Option (List Word × Mem)
-  | none => none
-  | some m2 => some ([q, nn], m2)
-def phsA (k : Nat) (nn : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m1) => phsB q nn (phsGoW k m1 q nn 0)
-def phsW (k : Nat) (m : Mem) (nn : Word) : Option (List Word × Mem) := phsA k nn (allocW m nn)
+/-- **`nest_phs(n)` is its model `phsW`** (generated, the fuel a parameter). -/
+l_model nestPhs_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hpw : p.lookup "pin_word" = some pinWordL)
+    (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+    (his : p.lookup "intern_sort" = some internSort)
+    (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+    (hif : p.lookup "intern_fvar" = some internFVar)
+    (hg : p.lookup "nest_phs_go" = some nestPhsGo) (hp : p.lookup "nest_phs" = some nestPhs)
+  fns [hp ↦ phsW list]
+  specs [iwAlloc_specW p ha n, nestPhsGo_spec p hpw hsf hsp his hff hfp hif hg n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] pfuel
+
 theorem decHL_write {k : IdxKind} (m : Mem) (q i v : Word) (ws : List (Idx k))
     (hv : v.toNat < 2 ^ 32) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hb : q.toNat + i.toNat < (m.arr64 IW).size) (h : decHL m q.toNat i.toNat = some ws) :

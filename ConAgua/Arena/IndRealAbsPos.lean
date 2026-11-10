@@ -85,7 +85,7 @@ theorem phsGoW_afr (k : Nat) : ∀ (m m' : Mem) (q n i : Word), phsGoW k m q n i
 
 -- from IndPosSpec/DepthGo
 theorem phsW_afr {k : Nat} {m m' : Mem} {nn : Word} {r : List Word} (h : phsW k m nn = some (r, m')) : AFr m m' := by
-  simp only [phsW, phsA.eq_def, phsB.eq_def] at h
+  simp only [phsW.arm1, phsW.k_iw_alloc.eq_def, phsW.k_nest_phs_go.eq_def] at h
   afr_auto h [allocW_afr, phsGoW_afr k _ _ _ _ _]
 
 -- from IndPosSpec/DepthGo
