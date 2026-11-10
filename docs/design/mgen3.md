@@ -349,3 +349,24 @@ Generator observations from this round: a pure callee tested in an `if` elaborat
 inlined as `List.headD [a, b, c, d] 0` (batch 9's literal rule applies only under `guards`);
 a continuation sometimes carries a model parameter it does not use; `EREC` loads are
 `rdW (… tierA EREC …)` (`simp only [erRd_foldN]` bridges).
+
+### Batch 11: `node_lit`, `expr_node` (lead)
+
+`node_lit` generated with `pre [s₀.mem.arr8 IN = b ∧ pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat ≤
+pcap s₀.mem]` and `keep [hE.no_st8]` (the hand proof's `Triple.keep` around `nat_dec`): the
+generated model is the hand one (`litK` is `litW.k_nat_dec b`). `expr_node` generated over the
+others' specs, with `guards ["level_get"]`: its model is the hand `nodeW` but for the sort
+case's guard, now `¬ tblOK … = true` first. The hand `applyExpr_spec` proof goes through as it
+was over the generated `exprNode_spec` (its precondition a side goal the `finish` closes).
+Not generated: `node_lit_str` (`str_put_esc`'s post `r.headD 0 = s₀.mem.top ∧ strPutEscW … =
+some (r.tail.headD 0, s'.mem)` is not a model shape), `node_const` (`ls_put`'s post is a list
+and a memory model at once: "ambiguous post"), `ls_put` (fuel-free over `b`), `apply_expr`
+(its model's `putK` is `Front/IdTable`'s, shared with the other `apply_*`).
+
+| module | instructions (batch 9 → 11) | user s |
+|---|---|---|
+| `Front/ApplyExpr` | 33.8 → 37.7 G | 7.3 → 7.2 |
+| `Front/ApplyExprRefine` | 11.4 → 11.5 G | 2.6 → 2.1 |
+| `Front/FrontPreOK1` | 15.5 → 15.5 G | 2.6 → 2.3 |
+
+Lines: +48 −87 (**−39**).
