@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Checker.PrepLeafRef
 import ConAgua.Checker.HoistClosureL
-import ConAgua.Checker.HoistOrderRef3
 import ConAgua.L.WordOff
 
 @[expose] public section

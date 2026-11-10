@@ -11,7 +11,6 @@ import ConAgua.Arena.IndT.PosNew
 import ConAgua.Arena.IndT.PosOne
 import ConAgua.Arena.IndT.PosWalk
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndT.PosFields

@@ -8,7 +8,6 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndPosSpec.NestKeyMap
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.DpGoW
 public import ConAgua.Arena.IndPosSpec.NestBlockOfKey

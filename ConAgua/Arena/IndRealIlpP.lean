@@ -4,7 +4,6 @@ public import ConAgua.Arena.IndRealMemo
 import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndPosSpec.NestKeyMap
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

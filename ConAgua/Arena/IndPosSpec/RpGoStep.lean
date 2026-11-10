@@ -7,7 +7,6 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConAgua.Arena.LdRd
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.FVarStore

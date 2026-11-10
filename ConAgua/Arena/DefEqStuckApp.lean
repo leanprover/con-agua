@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.DefEqStuckStr
-import ConAgua.Arena.DefEqStuckCert
 import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Arena.DefEqStuckShape
 import ConAgua.Arena.GrindAttr

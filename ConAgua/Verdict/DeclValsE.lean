@@ -11,7 +11,6 @@ import ConAgua.Arena.IndT.WalkC
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndT.Base
 import ConAgua.Arena.RefWalk
-public import ConAgua.Arena.DeclValRef
 public import ConAgua.Arena.DeclBasisSpec
 public import ConAgua.Arena.QuotAtT
 public import ConAgua.Arena.StrLitShape

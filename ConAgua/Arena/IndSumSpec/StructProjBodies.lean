@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndSumSpec.PBDecA
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
-import ConAgua.Arena.IndPosSpec.MatesW
 public import ConAgua.Arena.IndRealIlpP
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.DeclValRef
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 public import ConAgua.Arena.DeclRec
 import ConAgua.Arena.GrindAttr

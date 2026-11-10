@@ -7,7 +7,6 @@ import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.GgW
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndPosSpec.P2sfW
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Arena.IndPosSpec.SnocWMfr

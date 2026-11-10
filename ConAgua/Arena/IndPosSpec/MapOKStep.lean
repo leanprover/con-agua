@@ -7,7 +7,6 @@ import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.Arena.IndSim
 public import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndPosSpec.NestKeyMap
 public import ConAgua.Arena.IndPosSpec.RpGoStep
 public import ConAgua.Arena.IndPosSpec.RxMapW
 import ConAgua.L.WordOff

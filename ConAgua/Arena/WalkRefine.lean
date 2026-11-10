@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.Walk
-import ConAgua.Arena.FVarRangeRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.View
 public import ConAgua.Arena.ArenaRel

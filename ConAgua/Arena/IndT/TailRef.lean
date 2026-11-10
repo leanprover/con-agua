@@ -8,7 +8,6 @@ import ConAgua.Arena.RecCheckSpec.BlockNestedBit
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
-import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Arena.IndT.PassCS

@@ -7,7 +7,6 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndSumSpec.DecCVpGrow
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import all ConAgua.Arena.IndSum
 import ConAgua.Arena.IndT.Lift
 public import ConAgua.Arena.TwinStep

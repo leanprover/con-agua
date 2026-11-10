@@ -13,7 +13,6 @@ import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndPosSpec.KlB
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.IndSumSpec.CheckSumCtor
 import ConAgua.Arena.RefWalk
 import ConRon.Bridge.Inductives.BlockInstall
 import ConRon.Bridge.Specs

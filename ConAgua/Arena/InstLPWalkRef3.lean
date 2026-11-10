@@ -4,7 +4,6 @@ import ConAgua.Arena.InstLPWalkRef2
 import ConAgua.Arena.InstLPLevel2
 import ConAgua.Arena.InstLPWalkArms
 import ConAgua.Arena.InstLPWalkGo
-import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.IndView
 import ConAgua.Arena.InstLPWalkLet
 import ConAgua.Arena.LiftRefine

@@ -5,7 +5,6 @@ import ConAgua.Arena.IndSumSpec.CheckSumCtor
 import ConAgua.Arena.IndSumSpec.SumRules
 import ConRon.Bridge.Inductives.SumInstall
 import ConRon.Bridge.Inductives.StructParts
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.Row
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk

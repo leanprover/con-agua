@@ -6,7 +6,6 @@ public import ConAgua.Arena.RecSim
 import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndPartsSpec.RecTW
 public import ConAgua.Arena.IndRealOpf
-import ConAgua.L.WordOff
 
 @[expose] public section
 

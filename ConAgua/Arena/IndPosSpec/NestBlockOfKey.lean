@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.IndPosSpec.NestKeyMap
 public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

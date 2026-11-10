@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.IndT.StreamRecsFire
 import ConAgua.Arena.IndT.StreamRecsChk
 public import ConAgua.Arena.IndT.TailStream
-import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConRon.Bridge.Inductives.Records
 import ConAgua.Arena.RefWalk
 import ConRon.Bridge.Inductives.StreamRecs

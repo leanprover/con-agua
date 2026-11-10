@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.IndSumSpec.CtorX
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

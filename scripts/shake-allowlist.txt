@@ -150,3 +150,4 @@ ConAgua/Verdict/FrontViE.lean	public import ConAgua.Front.IndApplyRefine3	# the 
 ConAgua/Verdict/KnotAllE.lean	public import ConAgua.Checker.LoopDecl	# names `prog_bundle [...]` reads
 ConAgua/Verdict/KnotAllE.lean	public import ConAgua.Checker.LoopDeclArm	# names `prog_bundle [...]` reads
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
+ConAgua/Arena/Pool.lean	public import ConAgua.L.WordOff	# the build needs it: `grind_pattern [arena_grind] L.toNat_add_of_not_lt` puts the lemma in the set, and every module that uses arena_grind must see its declaration

@@ -4,7 +4,6 @@ import ConAgua.Arena.DeclReduceSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclValRef
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.DeclCanonEq

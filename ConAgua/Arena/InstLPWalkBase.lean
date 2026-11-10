@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.CoreWalks
 public import ConAgua.Arena.InstLP
-import ConAgua.Arena.LevelInternRef
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.DerRel
 public import ConAgua.Arena.LevelApd

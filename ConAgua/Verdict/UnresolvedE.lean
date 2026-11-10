@@ -8,7 +8,6 @@ import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.DefEqLeaves
-import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.IndView

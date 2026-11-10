@@ -2,7 +2,6 @@ module
 
 import ConRon.Bridge.Inductives.PosWalks
 import ConAgua.Verdict.PosE1L
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 public import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndPosSpec.NestCrest

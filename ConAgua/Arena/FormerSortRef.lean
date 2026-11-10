@@ -9,7 +9,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndView
 import ConAgua.Arena.RefWalk
 import ConRon.Bridge.Rel
-import ConAgua.Arena.InferBodyLet
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

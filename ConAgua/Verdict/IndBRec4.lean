@@ -23,7 +23,6 @@ import ConAgua.Arena.IndInstallSpec.OfClosed
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import all ConAgua.Arena.RecGen
 import ConAgua.L.WordOff
 

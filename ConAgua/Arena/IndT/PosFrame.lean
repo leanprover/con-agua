@@ -4,7 +4,6 @@ public import ConAgua.Arena.IndT.PosFkc
 import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosNgc
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 import all ConRon.Bridge.Inductives.Positivity
 import ConAgua.Arena.IndPosSpec.GgW2
