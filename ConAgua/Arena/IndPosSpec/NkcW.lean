@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.IndPosSpec.NkFields
+import ConAgua.L.ModelGen
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 public import ConAgua.Arena.IndPartsSpec.EqW
@@ -126,64 +127,18 @@ open L.Arena
 
 /-! ## `nest_key_eq`, `nest_keys_contains`: word models -/
 
-/-- The model of `nest_key_eq(k1, k2)` at exec fuel `n + 1` (the memory is unchanged). -/
-def nkeW (n : Nat) (m : Mem) (k1 k2 : Word) : Option Word :=
-  if rdW (m.arr64 IW) k1 ≠ rdW (m.arr64 IW) k2 then some 0
-  else if rdW (m.arr64 IW) (k1 + 1) ≠ rdW (m.arr64 IW) (k2 + 1) then some 0
-  else eqW n m (rdW (m.arr64 IW) (k1 + 2)) (rdW (m.arr64 IW) (k1 + 3)) (rdW (m.arr64 IW) (k2 + 2))
-    (rdW (m.arr64 IW) (k2 + 3))
+l_model nestKeyEq_spec (p : Prog) (hq : p.lookup "sl_eq" = some slEq)
+    (hp : p.lookup "nest_key_eq" = some nestKeyEqL)
+  fns [hp ↦ nkeWf ro]
+  specs [slEq_spec p hq n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
-/-- `nest_key_eq` at any exec fuel. -/
-def nkeWf : Nat → Mem → Word → Word → Option Word
-  | 0, _, _, _ => none
-  | n + 1, m, k1, k2 => nkeW n m k1 k2
-
-mutual
-/-- The model of `nest_keys_contains(off, l, k)`. -/
-def nkcW : Nat → Mem → Word → Word → Word → Option Word
-  | 0, _, _, _, _ => none
-  | n + 1, m, o, l, k => if l = 0 then some 0 else nkcK n m o l k (nkeWf n m (rdW (m.arr64 IW) o) k)
-def nkcK (n : Nat) (m : Mem) (o l k : Word) : Option Word → Option Word
-  | none => none
-  | some r => if r ≠ 0 then some 1 else nkcW n m (o + 1) (l - 1) k
-end
-
-section arms
-variable (n : Nat) (m : Mem) (o l k r : Word)
-theorem nkcW_nil (h : l = 0) : nkcW (n + 1) m o l k = some 0 := by simp [nkcW, h]
-theorem nkcW_cons (h : ¬ l = 0) : nkcW (n + 1) m o l k = nkcK n m o l k (nkeWf n m (rdW (m.arr64 IW) o) k) := by
-  simp [nkcW, h]
-theorem nkcK_hit (h : r ≠ 0) : nkcK n m o l k (some r) = some 1 := by rw [nkcK, ite_eq_left h]
-theorem nkcK_miss (h : ¬ r ≠ 0) : nkcK n m o l k (some r) = nkcW n m (o + 1) (l - 1) k := by rw [nkcK, ite_eq_right h]
-end arms
-attribute [ind_grind] nkcW_nil nkcW_cons nkcK_hit nkcK_miss
-
-theorem nestKeyEq_spec (p : Prog) (hq : p.lookup "sl_eq" = some slEq)
-    (hp : p.lookup "nest_key_eq" = some nestKeyEqL) (n : Nat) (s₀ : St) (k1 k2 : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_key_eq" [k1, k2]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ nkeWf n s₀.mem k1 k2 = some (r.headD 0); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestKeyEqL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slEq_spec p hq n] <;>
-      finish (gen := 20) [nkeWf, nkeW, rdW_eq, LocEq]
-
-theorem nestKeysContains_spec (p : Prog) (hq : p.lookup "sl_eq" = some slEq)
+l_model nestKeysContains_spec (p : Prog) (hq : p.lookup "sl_eq" = some slEq)
     (he : p.lookup "nest_key_eq" = some nestKeyEqL)
-    (hp : p.lookup "nest_keys_contains" = some nestKeysContainsL) (n : Nat) :
-    ∀ (s₀ : St) (o l k : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_keys_contains" [o, l, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ nkcW n s₀.mem o l k = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ o l k; rw [invoke_eq _ hp]; simp only [callFn, nestKeysContainsL]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o l k
-    simp only [invoke_eq _ hp, callFn, nestKeysContainsL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nestKeyEq_spec p hq he n, ih] <;>
-      finish (gen := 20) [rdW_eq, LocEq]
+    (hp : p.lookup "nest_keys_contains" = some nestKeysContainsL)
+  fns [hp ↦ nkcW ro]
+  specs [nestKeyEq_spec p hq he n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 end L.Ind
 
@@ -206,11 +161,11 @@ theorem nkeWf_ok {n : Nat} {m : Mem} {k1 k2 r : Word} {K1 K2 : NestKey}
     (h2 : DecB (fun m => decNK m k2.toNat) m K2) (htop : iwTop m < 2 ^ 64) :
     r = if K1 == K2 then 1 else 0 := by
   cases n with
-  | zero => simp [nkeWf] at h
+  | zero => simp [nkeWf.eq_1] at h
   | succ n =>
   obtain ⟨a0, a1, a2, a3, a4, a5, -⟩ := pos2_nk_fields h1 htop
   obtain ⟨b0, b1, b2, b3, b4, b5, -⟩ := pos2_nk_fields h2 htop
-  simp only [nkeWf, nkeW] at h
+  simp only [nkeWf.eq_2] at h
   rw [pos2_nk_beq, ← a1, ← b1, ← a3, ← b3, decI_beq _ _ a0 b0, decI_beq _ _ a2 b2]
   by_cases e0 : rdW (m.arr64 IW) k1 ≠ rdW (m.arr64 IW) k2
   · rw [ite_eq_left e0] at h; cases h; simp [e0]
@@ -258,17 +213,17 @@ theorem nkcW_ok (k : Word) (K : NestKey) : ∀ (n : Nat) (m : Mem) (o l r : Word
     iwTop m < 2 ^ 64 → r = if ks.contains K then 1 else 0 := by
   intro n
   induction n with
-  | zero => intro m o l r ks h; simp [nkcW] at h
+  | zero => intro m o l r ks h; simp [nkcW.eq_1] at h
   | succ n ih =>
     intro m o l r ks h hks hK htop
     by_cases hl0 : l = 0
-    · rw [nkcW_nil (h := hl0)] at h; cases h
+    · rw [nkcW.arm1 (hc1 := hl0)] at h; cases h
       subst hl0
       have : ks = [] := by
         have := (show decPL (truncM m) (decNK (truncM m)) o.toNat 0 = some ks from hks)
         simpa [decPL] using this.symm
       subst this; simp
-    rw [nkcW_cons (h := hl0)] at h
+    rw [nkcW.arm2 (hc1 := hl0)] at h
     obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by
       have : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
     rw [hl'] at hks
@@ -276,18 +231,18 @@ theorem nkcW_ok (k : Word) (K : NestKey) : ∀ (n : Nat) (m : Mem) (o l r : Word
     have hrd : (rdW (m.arr64 IW) o).toNat = v := by
       simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hv
       obtain ⟨w, hw, rfl⟩ := hv; simp [rdW, hw]
-    rcases he : nkeWf n m (rdW (m.arr64 IW) o) k with _ | r0 <;> rw [he] at h; · simp [nkcK] at h
+    rcases he : nkeWf n m (rdW (m.arr64 IW) o) k with _ | r0 <;> rw [he] at h; · rw [nkcW.k_nest_key_eq.none] at h; cases h
     have hr0 := nkeWf_ok he (by rw [hrd]; exact hK0) hK htop
     have hcons : (K0 :: ks').contains K = ((K0 == K) || ks'.contains K) := by
       simp [List.contains_cons, pos2_nk_beq_comm K]
     by_cases hb : r0 ≠ 0
-    · rw [nkcK_hit (h := hb)] at h; cases h
+    · rw [nkcW.k_nest_key_eq.arm1 (hc1 := hb)] at h; cases h
       have : (K0 == K) = true := by
         cases hc : (K0 == K) with
         | true => rfl
         | false => rw [hc] at hr0; exact absurd (by simpa using hr0) hb
       simp [hcons, this]
-    · rw [nkcK_miss (h := hb)] at h
+    · rw [nkcW.k_nest_key_eq.arm2 (hc1 := by simpa using hb)] at h
       have : (K0 == K) = false := by
         cases hc : (K0 == K) with
         | false => rfl
@@ -372,41 +327,6 @@ open L.Arena
 
 /-! ## `nest_accept_group` refines `nestAcceptGroup` -/
 
-mutual
-def nagW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, us, dO, dL, gO, gL, kO, kL =>
-    if gL = 0 then some ([kO, kL], m)
-    else nagK1 n us dO dL gO gL kO kL (posRecW m [rdW (m.arr64 IW) (rdW (m.arr64 IW) gO), us, dO, dL])
-def nagK1 (n : Nat) (us dO dL gO gL kO kL : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (key, m1) => nagK2 n us dO dL gO gL kO kL key m1 (nkcW n m1 kO kL key)
-def nagK2 (n : Nat) (us dO dL gO gL kO kL key : Word) (m1 : Mem) : Option Word → Option (List Word × Mem)
-  | none => none
-  | some b => if b ≠ 0 then nagW n m1 us dO dL (gO + 1) (gL - 1) kO kL
-    else nagK3 n us dO dL gO gL (snocW n m1 kO kL key)
-def nagK3 (n : Nat) (us dO dL gO gL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => nagW n m2 us dO dL (gO + 1) (gL - 1) (r.headD 0) (r.tail.headD 0)
-end
-
-section arms
-variable (n : Nat) (m m1 m2 : Mem) (us dO dL gO gL kO kL key b : Word) (r : List Word)
-theorem nagW_nil (h : gL = 0) : nagW (n + 1) m us dO dL gO gL kO kL = some ([kO, kL], m) := by simp [nagW, h]
-theorem nagW_cons (h : ¬ gL = 0) : nagW (n + 1) m us dO dL gO gL kO kL =
-    nagK1 n us dO dL gO gL kO kL (posRecW m [rdW (m.arr64 IW) (rdW (m.arr64 IW) gO), us, dO, dL]) := by
-  simp [nagW, h]
-theorem nagK1_some : nagK1 n us dO dL gO gL kO kL (some (key, m1)) =
-    nagK2 n us dO dL gO gL kO kL key m1 (nkcW n m1 kO kL key) := by rw [nagK1]
-theorem nagK2_hit (h : b ≠ 0) : nagK2 n us dO dL gO gL kO kL key m1 (some b) =
-    nagW n m1 us dO dL (gO + 1) (gL - 1) kO kL := by rw [nagK2, ite_eq_left h]
-theorem nagK2_miss (h : ¬ b ≠ 0) : nagK2 n us dO dL gO gL kO kL key m1 (some b) =
-    nagK3 n us dO dL gO gL (snocW n m1 kO kL key) := by rw [nagK2, ite_eq_right h]
-theorem nagK3_some : nagK3 n us dO dL gO gL (some (r, m2)) =
-    nagW n m2 us dO dL (gO + 1) (gL - 1) (r.headD 0) (r.tail.headD 0) := by rw [nagK3]
-end arms
-attribute [ind_grind] nagW_nil nagW_cons nagK1_some nagK2_hit nagK2_miss nagK3_some
-
 /-- The lookups of `nest_accept_group`. -/
 structure NagLook (p : Prog) : Prop where
   ha : p.lookup "iw_alloc" = some iwAlloc
@@ -418,23 +338,11 @@ structure NagLook (p : Prog) : Prop where
   hkc : p.lookup "nest_keys_contains" = some nestKeysContainsL
   hp : p.lookup "nest_accept_group" = some nestAcceptGroupL
 
-theorem nestAcceptGroup_spec (p : Prog) (L : NagLook p) (n : Nat) :
-    ∀ (s₀ : St) (us dO dL gO gL kO kL : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_accept_group" [us, dO, dL, gO, gL, kO, kL]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      nagW n s₀.mem us dO dL gO gL kO kL = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ us dO dL gO gL kO kL
-    rw [invoke_eq _ L.hp]; simp only [callFn, nestAcceptGroupL]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ us dO dL gO gL kO kL
-    simp only [invoke_eq _ L.hp, callFn, nestAcceptGroupL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec4_specW p L.ha L.h4 n, nestKeysContains_spec p L.hq L.he L.hkc n,
-        slSnoc_specW p L.ha L.hc2 L.hsn n, ih] <;>
-      finish (gen := 20) (instances := 5000) [rdW_eq, Locals.init_cons_zero]
+l_model nestAcceptGroup_spec (p : Prog) (hL : NagLook p)
+  fns [hL.hp ↦ nagW list]
+  specs [posRec4_specW p hL.ha hL.h4 n, nestKeysContains_spec p hL.hq hL.he hL.hkc n,
+    slSnoc_specW p hL.ha hL.hc2 hL.hsn n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 end L.Ind
 

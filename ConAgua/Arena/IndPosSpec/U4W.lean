@@ -11,7 +11,7 @@ public import ConAgua.Arena.IndPosSpec.RootHoles
 /-!
 # U4W
 
-`cfK1`, `cfW`, `haWf`, `u4W`, `u4K`, `roK1`.
+`haWf`, `u4W`, `u4K`, `roK1`.
 -/
 
 noncomputable section
@@ -24,18 +24,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-def cfK1 (k : Nat) (us dO dL gO gL ns2 aO aL kb : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 ≠ 0 then
-      cfK2 ns2 aO aL kb (nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1)))
-    else cfK2 ns2 aO aL kb (some ([rdW (m1.arr64 IW) ns2, rdW (m1.arr64 IW) (ns2 + 1)], m1))
-/-- The model of `nest_cont_new_finish(ctx, us, dsOff, dsLen, grpOff, grpLen, ns2, actOff, actLen, kb)`. -/
-def cfW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, ctx, us, dO, dL, gO, gL, ns2, aO, aL, kb => cfK1 k us dO dL gO gL ns2 aO aL kb (dcWf k m ctx dO dL)
 
 end L.Ind
 

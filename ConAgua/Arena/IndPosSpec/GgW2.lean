@@ -202,21 +202,6 @@ namespace L.Ind
 
 open L.Arena
 
-theorem nestContNewFinish_spec (p : Prog) (L : NagLook p) (hd : DcLook p) (h6 : p.lookup "rec6" = some rec6)
-    (hp : p.lookup "nest_cont_new_finish" = some nestContNewFinishL) (n : Nat) (s₀ : St)
-    (ctx us dO dL gO gL ns2 aO aL kb : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_new_finish" [ctx, us, dO, dL, gO, gL, ns2, aO, aL, kb]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      cfW n s₀.mem ctx us dO dL gO gL ns2 aO aL kb = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestContNewFinishL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        dc_spec' p hd.hf hd.hh hd.hg hd.hp n, nestAcceptGroup_spec p L n, rec6_specW p L.ha h6 n] <;>
-      finish (gen := 20) (instances := 5000) [cfW, nestedW, rdW_eq]
-
 end L.Ind
 
 namespace L.Ind

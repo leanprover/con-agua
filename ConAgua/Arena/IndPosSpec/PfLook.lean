@@ -10,7 +10,7 @@ public import ConAgua.Arena.IndDecStab
 /-!
 # PfLook
 
-`NSB`, `NfsB`, `nestedW`, `cfK3`, `cfK2`, `hkW` and the lemmas only they use.
+`NSB`, `NfsB`, `nestedW`, `hkW` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -47,13 +47,6 @@ open L.Arena
 /-- The kind word of `.nested (kb != 0)`. -/
 def nestedW (kb : Word) : Word := 4 + 8 * (if kb ≠ 0 then 1 else 0)
 
-def cfK3 (kb : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m3) => some ([nestedW kb, q], m3)
-def cfK2 (ns2 aO aL kb : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => cfK3 kb (posRecW m2 [r.headD 0, r.tail.headD 0, aO, aL, rdW (m2.arr64 IW) (ns2 + 4),
-      rdW (m2.arr64 IW) (ns2 + 5)])
 end L.Ind
 
 namespace L.Ind
