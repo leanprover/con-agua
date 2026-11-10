@@ -372,7 +372,8 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hrunP : pinEmptyLevels.run a1 = .ok (decI ls, a1) := by rw [hz]; exact pinEmptyLevels_run hfull
   rcases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with _ | ⟨r3, m2⟩ <;> simp only [hmk, tmdK3, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hI, hE, hIsz, hEsz, hCsz⟩ := hS1.iw
+  have hIsz := hS1.iw.iwSize
+  have hCsz := hS1.iw.ctl
   have hdec0 : ∀ {k : IdxKind} (mm : Mem), (decHL mm (0 : Word).toNat (0 : Word).toNat : Option (List (Idx k))) = some [] := by
     intro k mm; simp [decHL, hslice?]
   have hdecP : ∀ {α : Type} (mm : Mem) (f : Nat → Option α), decPL mm f (0 : Word).toNat (0 : Word).toNat = some [] := by
@@ -442,7 +443,8 @@ theorem plnW_stage {α : Type} {f : Mem → Nat → Option α} (cvOf : α → IC
     StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, l] ∧
       decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat = some (xs.map fun x => (cvOf x).name) ∧
       (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
-  obtain ⟨-, -, hsz, -, hc⟩ := hS.iw
+  have hsz := hS.iw.iwSize
+  have hc := hS.iw.ctl
   have hroom := ptrNamesW_room h hsz
   have hlen : xs.length = l.toNat := decPL_length _ hx.1
   by_cases hl : l = 0

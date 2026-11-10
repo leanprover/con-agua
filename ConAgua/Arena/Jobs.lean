@@ -421,16 +421,9 @@ def jobMem (m₁ : Mem) (k : Word) : Mem :=
     (rdW ((m₁.set64 CTL 133 (rdW (m₁.arr64 CTL) 133 + 1)).arr64 FIRSTS) k)).set64 CTL 135 k
 
 /-- `iw_reset` keeps the pool's bounds (its top moves to `0`). -/
-theorem IWOK.reset {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 200 0) := by
-  have h := (IWOK_iff m).mp h
-  have hne : ∀ b : TieredArray, b ≠ CTL → (m.set64 CTL 200 0).arr64 b = m.arr64 b :=
-    fun b hb => Mem.arr64_set64_ne _ _ _ _ _ hb
-  rw [IWOK_iff]
-  simp only [iwTop, erTop, erecTop1, rdW_set_ctl m 200 0 129 (by decide),
-    rdW_set_ctl m 200 0 130 (by decide), hne IW (by decide), hne EREC (by decide),
-    hne (tier1 EREC) (by decide), Mem.size_arr64_set64]
-  refine ⟨by rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by simpa using h.2.2.2.2.1⟩]; simp, h.2.1, h.2.2.1,
-    h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2⟩
+theorem IWOK.reset {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 200 0) :=
+  L.Ind.IWOK.of_iw ((MemFrame.setCtl m 200 0).mono (by simp) (by simp)) h
+    (by simp [iwTop, rdW_set64, h.ctl])
 
 theorem envArrs_ne_ctl : ∀ b ∈ envArrs, b ≠ CTL := by decide
 
@@ -662,15 +655,10 @@ theorem andPin_job {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
 
 /-- Emptying tier 1 of the record pool keeps the pool's bounds. -/
 theorem IWOK.set130 {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 130 0) := by
-  have h := (IWOK_iff m).mp h
   have hne : ∀ b : TieredArray, b ≠ CTL → (m.set64 CTL 130 0).arr64 b = m.arr64 b :=
     fun b hb => Mem.arr64_set64_ne _ _ _ _ _ hb
-  rw [IWOK_iff]
-  simp only [iwTop, erTop, erecTop1, rdW_set_ctl m 130 0 129 (by decide),
-    rdW_set_ctl m 130 0 200 (by decide), hne IW (by decide), hne EREC (by decide),
-    hne (tier1 EREC) (by decide), Mem.size_arr64_set64]
-  refine ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, ?_, h.2.2.2.2.2.2⟩
-  rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by have := h.2.2.2.2.1; simp; omega⟩]; simp
+  have := h.ctl
+  grind [IWOK_iff, iwTop, erTop, erecTop1, rdW_set64, Mem.size_arr64_set64]
 
 /-- **The job relation after the bracket's close**: from the relation `check_decl` leaves (at its
 view `v` and environment `x`), the memos, and the stream index and the pool at the job's start

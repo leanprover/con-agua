@@ -41,7 +41,10 @@ theorem lokW_stage {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Word} {r : List Word} {bs : BlockShape} (h : lokW n m q = some (r, m'))
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m q.toNat) m bs) :
     r = [if ConRon.Arena.blockRecLpsOk bs then 1 else 0] ∧ StageR vis fe m' a ∧ IWGrow m m' := by
-  obtain ⟨hI1, -, hsz, hEs, hc⟩ := hS.iw
+  have hI1 := hS.iw.iw
+  have hsz := hS.iw.iwSize
+  have hEs := hS.iw.erSize
+  have hc := hS.iw.ctl
   obtain ⟨hr, hg, hf, hw⟩ := lokW_ok n m m' q r bs h (hq.get (decBS_mono _)) (hq.stab (decBS_mono _))
     (rpShape9 hq) hsz hc hEs
   exact ⟨hr, stage_frame_iw hS hf (by rw [← hf.size IW]; exact hw hI1), hg⟩

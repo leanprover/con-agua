@@ -7,7 +7,6 @@ import ConAgua.Arena.WhnfIotaRefine4
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclBase
 public import ConAgua.Arena.CoreErec
 import all ConAgua.Arena.WhnfEntry
 public import ConAgua.Arena.LeafFrame
@@ -506,18 +505,10 @@ theorem StageT.of_heap {m m' : Mem} {a a' : AState} {M : ModeMaps} (hT : StageT 
     (by intro b hb; simp only [List.mem_singleton] at hb; subst hb; decide)
     (by intro x hx; simp only [List.mem_singleton] at hx; subst hx; decide)
     (hC.memos.frame hf (by decide) (by decide) (by decide) (by decide))
-  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by decide) (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by decide) (by decide)
-  have hE1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hf.arr (tier1 EREC) (by decide) (by decide)
   have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (by decide) (by decide)
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by decide)
-  have h130 : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := hf.ctl 130 (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (by decide)
   obtain ⟨hCR, hTw⟩ := hC'.checkR
-  refine ⟨⟨⟨hCR, IWOK.frame hf (by decide) (by decide) (by decide) (by decide) hT.stage.iw⟩, hTw,
-    by simp only [pinW, hP]; exact hT.flag⟩, ?_⟩
-  exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE],
-    by simp [erecTop1, h130], fun i _ => by rw [hE1]⟩
+  exact ⟨⟨⟨hCR, IWOK.frame hf (by decide) (by decide) (by decide) (by decide) hT.stage.iw⟩, hTw,
+    by simp only [pinW, hP]; exact hT.flag⟩, IWGrow.of_keep hf (by decide) (by decide)⟩
 
 /-- The twin side of `lv_leq_top`: the two readbacks, then `Level.leq`. -/
 def leqTopAM (u v : LIdx) : AM (Option Bool) := do

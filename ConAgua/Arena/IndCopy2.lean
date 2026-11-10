@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Arena.IWFrame
 public import ConAgua.Arena.IndCopy
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -77,19 +78,6 @@ theorem wrIW_get : ∀ (ws : List Word) (m : Mem) (q : Word) (i : Nat),
         simp [hqlt]
       · rw [ite_eq_right (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         simp [Ne.symm hiq]
-
-/-- A frame that grew the pool by `N` words from the old top, leaving everything below as it
-was, is an `IWGrow`. -/
-theorem iwGrow_of_frame {m m' : Mem} {N : Word} (hf : MemFrame [IW] [200] m m')
-    (htop : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + N)
-    (hroom : iwTop m + N.toNat ≤ (m.arr64 IW).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
-    (hlow : ∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) : IWGrow m m' := by
-  refine ⟨?_, ?_, hlow, ?_, ?_, ?_⟩
-  · simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp only [iwTop] at hroom; omega
-  · simp only [erTop]; rw [hf.ctl 129 (by simp)]; exact Nat.le_refl _
-  · intro i _; rw [hf.arr EREC (by decide) (by decide)]
-  · simp only [erecTop1]; rw [hf.ctl 130 (by simp)]; exact Nat.le_refl _
-  · intro i _; rw [hf.arr (tier1 EREC) (by decide) (by decide)]
 
 /-- A copy that touches only `IW` is a frame. -/
 theorem memFrame_of_copy {m m' : Mem} (hA : ∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b)
@@ -525,10 +513,6 @@ theorem erCopy_spec (p : Prog) (hp : p.lookup "er_copy" = some erCopy) (n : Nat)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish (gen := 20) [erRd]
-
-/-- `erRd` does not read `IW`. -/
-theorem erRd_set_iw (m : Mem) (d v a : Word) : erRd (m.set64 IW d v) a = erRd m a := by
-  unfold erRd; rw [Mem.arr64_set64_ne _ _ _ _ _ (by rw [tierA_EREC]; split <;> decide)]
 
 /-- **What an `EREC → IW` copy leaves**: every array but `IW` as it was, `IW` the same size, the
 destination holding the tagged reads of the source, the rest of `IW` unchanged. -/

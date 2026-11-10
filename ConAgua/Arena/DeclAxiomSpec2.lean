@@ -219,7 +219,7 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {vis : Word}
     have hq1 : (q + 1).toNat = q.toNat + 1 := by
       have := erecP_lt64 hwn; rw [UInt64.toNat_add]; simp; omega
     have hcv2 : decCV (erA m2) (q + 1).toNat = some cv := by
-      rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg2) hcv
+      rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg2) hcv
     rcases h3 : callW p n "matches_pin" [q + 1, r2.headD 0] m2 with _ | ⟨r3, m3⟩
     · rw [h3, fpcW.k_matches_pin.none] at hJ; cases hJ
     rw [h3, fpcW.k_matches_pin.arm1] at hJ
@@ -329,7 +329,7 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {vis : Word}
   rcases h5 : callW p n "rom_cv" [4] m4 with _ | ⟨r5, m5⟩ <;> simp only [h5, tcoK5, reduceCtorEq] at hW
   obtain ⟨pin, a5, hrun5, hS5, hg5, hpin⟩ := h.red.rom.cv vis fe 4 (by decide) n _ a4 r5 m5 hS4 h5
   have hq5 : decCV (erA m5) q.toNat = some cv :=
-    ArrExt.decCV (IWGrow.erecExt ((hg2.trans hg4).trans hg5)) hq
+    ArrExt.decCV (L.Ind.IWGrow.ext ((hg2.trans hg4).trans hg5)) hq
   obtain ⟨rfl, hrun6, hd6⟩ := mpW_ok (a := a5) hW hS5.iw.erSize hq5 (decRCV_get hpin)
   refine ⟨_, _, ?_, hS5, hg2.trans (hg4.trans hg5), hd6⟩
   simp only [show trustCompilerA = romCvT (4 : Word).toNat from rfl, StateT.run_bind, hrun5,

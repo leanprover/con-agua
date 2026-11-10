@@ -555,7 +555,7 @@ theorem brw_spec (hp : p.lookup "block_rec_want" = some blockRecWant) (n : Nat) 
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nrF_spec p hP.nr n,
         slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd_get]
+      finish (gen := 20) [rdW_eq]
 
 theorem brg_spec (hp : p.lookup "block_rec_got" = some blockRecGot) (n : Nat) :
     ∀ (s₀ : St) (ro rl : Word),
@@ -570,7 +570,7 @@ theorem brg_spec (hp : p.lookup "block_rec_got" = some blockRecGot) (n : Nat) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd_get]
+      finish (gen := 20) [rdW_eq]
 
 end spec
 

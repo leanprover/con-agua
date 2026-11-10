@@ -68,10 +68,6 @@ theorem decSC_mono (p : Nat) : OMono (fun m => decSC m p) := by
     | apply OMono.bind
     | intro _)
 
-/-- A generated model's `EREC⦃a⦄` read, folded to `erRd`. -/
-theorem erRd_fold (m : Mem) (a : Word) :
-    rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 1099511627775) = erRd m a := rfl
-
 /-! ## `rec3` as `posRecW` -/
 
 theorem partsRec3_eq (m : Mem) (a b c : Word) :

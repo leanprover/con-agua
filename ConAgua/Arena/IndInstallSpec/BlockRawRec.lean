@@ -498,7 +498,8 @@ theorem blockIsRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" 
   refine triple_post (brr_spec p hM ha hc hn hpd hm hg hp n s₀ q) ?_
   rintro r s' ⟨hl, hm'⟩
   have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
-  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.iw
+  have hsz := hS.iw.iwSize
+  have hcl := hS.iw.ctl
   have hqt : decBS (truncM s₀.mem) q.toNat = some bs := hq
   have hq' : decBS s₀.mem q.toNat = some bs := hq.get (decBS_mono _)
   obtain ⟨hmem, -, -, -, -, -, hpr⟩ := decBS_some hqt

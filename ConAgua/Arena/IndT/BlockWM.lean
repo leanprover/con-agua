@@ -216,7 +216,8 @@ theorem wmW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {p 
   rcases hal : allocW m 9 with _ | ⟨q, m3⟩ <;> rw [hal] at h
   · simp at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hI2, hE2, hIsz2, hEsz2, hCsz2⟩ := hS.iw
+  have hIsz2 := hS.iw.iwSize
+  have hCsz2 := hS.iw.ctl
   obtain ⟨hqe, hm3, hroom⟩ := allocW_facts hal hIsz2
   subst hm3
   have hIW3 : (allocMem m 9).arr64 IW = m.arr64 IW := allocMem_IW m 9

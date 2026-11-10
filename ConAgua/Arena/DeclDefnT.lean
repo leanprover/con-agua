@@ -4,7 +4,6 @@ public import ConAgua.Arena.DeclAxQuotT
 public import ConAgua.Arena.DeclDivGateT
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.StageC
-import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.RefWalk
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
@@ -165,7 +164,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   refine RefE.bindRun (s₀ := ⟨s3.mem, Locals.init []⟩)
     (fun _ => checkDeclDefnE.k_check_defn_val.none ..)
     (checkDefnVal_specE p hX.ccv.val n _ vis q) (fun _ => trivial) id
-    (checkDefnVal_ref hX.ccv hq hap hkp hcrf hn' hP3.stage (ArrExt.decCV (IWGrow.erecPExt hg3) hcv1)
+    (checkDefnVal_ref hX.ccv hq hap hkp hcrf hn' hP3.stage (ArrExt.decCV (L.Ind.IWGrow.ext hg3) hcv1)
       (hg3.ext _ _ hwv) hwvl (denoteCV_lps hcA) hP3.crOK)
     fun r4 s4 ci4 a4 h4 _ hrun4 ⟨hP4, hr4, hci4⟩ => ?_
   rw [checkDeclDefnE.k_check_defn_val.arm1]
@@ -182,7 +181,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
     exact ConRon.Bridge.denoteN_ext (ConRon.Bridge.denoteCV_inv hcA).1 hstep2.ext
   have hPD4 := ConRon.Bridge.PinsDenote.mono (hstep1.ext.trans hstep2.ext) _ _ hPD
   have hci4 : decCI (erecP s4.mem) q.toNat = some (.defnInfo cv (decI wv) hh) :=
-    ArrExt.decCI (IWGrow.erecPExt ((hg3.trans hP4.grow))) hci1
+    ArrExt.decCI (L.Ind.IWGrow.ext ((hg3.trans hP4.grow))) hci1
   have hCr4 := hP4.crOK
   have hgr4 : IWGrow m s4.mem := hg1.trans (hg3.trans hP4.grow)
   have hcin : (IConstantInfo.defnInfo cv (decI wv) hh).name = decI wn := hname
@@ -242,7 +241,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
     · have hno : ns.contains (decI wn) = false := by rw [← hb6, hb]; rfl
       rw [checkDeclDefnE.k_sl_contains_2.arm2 _ _ _ _ _ _ _ hb, hno]
       simp only [Bool.false_eq_true, ite_false, pure_bind]
-      exact final fe3 m6 a5 hC6 (ArrExt.decCI (IWGrow.erecPExt hg76) hci7) (hg7.trans hg76)
+      exact final fe3 m6 a5 hC6 (ArrExt.decCI (L.Ind.IWGrow.ext hg76) hci7) (hg7.trans hg76)
     have hyes : ns.contains (decI wn) = true := by
       rw [← hb6]; exact bne_iff_ne.mpr hb
     rw [checkDeclDefnE.k_sl_contains_2.arm1 _ _ _ _ _ _ _ hb, hyes]
@@ -262,13 +261,13 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
       (cdmp_specE p hX.dm n _ (r0.headD 0) (r0.tail.headD 0) vis q wn) (fun hG => hG.nv)
       (fun hG => hG.core)
       (cdmp_ref hX.dm hq hcl hkp hcrf n hn' hwnl hC0 hok7.envWF
-        (ArrExt.decCI (IWGrow.erecPExt hg70) hci7) hcin hok2 hnm7 hI0 hPD7 hCr0)
+        (ArrExt.decCI (L.Ind.IWGrow.ext hg70) hci7) hcin hok2 hnm7 hI0 hPD7 hCr0)
       fun r8 s8 fe8 a8 h8 _ hrun8 hQ8 => ?_
     rw [checkDeclDefnE.k_check_div_mod_pin.arm1]
     dsimp only at hQ8
     rw [hQ8.ret]
     exact final fe8 s8.mem a8 hQ8.stage
-      (ArrExt.decCI (IWGrow.erecPExt (hg70.trans hQ8.grow)) hci7) (hg7.trans (hg70.trans hQ8.grow))
+      (ArrExt.decCI (L.Ind.IWGrow.ext (hg70.trans hQ8.grow)) hci7) (hg7.trans (hg70.trans hQ8.grow))
   -- the structural gate's names
   refine RefE.bindSim (fun _ => checkDeclDefnE.k_nat_op_names.none ..)
     (natOpNames_ref hG n s4.mem a4 · · hT4.stage ·) fun r5 ns m5 a5 h5 hrun5 ⟨hS5, hg5, hd5⟩ => ?_
@@ -290,7 +289,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   have hPS6 := L.Arena.PinSetsR.step hPS5 hg6 (hfr (by decide) h6)
   have hCr6 := hkp.call (im_mem _ rfl) h6 hCr5
   have hg46 : IWGrow s4.mem m6 := hg5.trans hg6
-  have hci6 := ArrExt.decCI (IWGrow.erecPExt hg46) hci4
+  have hci6 := ArrExt.decCI (L.Ind.IWGrow.ext hg46) hci4
   by_cases hb : r6.headD 0 = 0
   · have hno : ns.contains (decI wn) = false := by rw [← hb6, hb]; rfl
     rw [checkDeclDefnE.k_sl_contains.arm2 _ _ _ _ _ _ _ hb, hno]
@@ -315,7 +314,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   exact tail fe7 s7.mem a7 hQ7.stage hQ7.same
     ⟨hQ7.stage.check.congr_find (fun k => (hQ7.same.find k).symm) hQ7.same.tbls.symm
       hQ7.same.base.symm, hQ7.ext, hQ7.pins⟩
-    (ArrExt.decCI (IWGrow.erecPExt hg67) hci6) ((hgr4.trans hg46).trans hg67)
+    (ArrExt.decCI (L.Ind.IWGrow.ext hg67) hci6) ((hgr4.trans hg46).trans hg67)
     (L.Arena.PinSetsR.step hPS6 hg67 (hfr (by decide) h7w)) (hkp.call (im_mem _ rfl) h7w hCr6)
 
 end L.Arena

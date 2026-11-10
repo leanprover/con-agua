@@ -5,7 +5,6 @@ public import ConAgua.Arena.DeclCanonExpr2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclRec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsCanon
@@ -200,8 +199,8 @@ theorem cnCrW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
         hb1 hr1
         (fun hne2 => by
           rw [ite_eq_right hne2] at h
-          have hx2 := decRules_shift (ArrExt.decRules (IWGrow.erecPExtR hg1) hxs'e) (erRdOK m1).lt
-          have hy2 := decRules_shift (ArrExt.decRules (IWGrow.erecPExtR hg1) hys'e) (erRdOK m1).lt
+          have hx2 := decRules_shift (ArrExt.decRules (L.Ind.IWGrow.ext hg1) hxs'e) (erRdOK m1).lt
+          have hy2 := decRules_shift (ArrExt.decRules (L.Ind.IWGrow.ext hg1) hys'e) (erRdOK m1).lt
           rw [← l1p, ← l2p] at *
           obtain ⟨b2, hb2, hr2, hS2, hg2, hP2⟩ := ih m1 m' a po pl qo ql co cl fuel (o1 + 11) (l1 - 1)
             (o2 + 11) (l2 - 1) x ps qs cs _ _ h hS1 (hC.grow hg1) hL hP1 hx2 hy2

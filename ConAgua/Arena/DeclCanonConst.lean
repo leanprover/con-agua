@@ -4,7 +4,6 @@ public import ConAgua.Arena.DeclCanonNames
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclRec
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.IndInstallSpec.DomsW
 import Std.WP.Tactic
@@ -171,7 +170,7 @@ theorem ctxW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
   | some x2 =>
   obtain ⟨rp, m2⟩ := x2
   rw [h2, ctxK2_some] at h
-  have hcv1 : decCV (erecP m1) cp.toNat = some cv := ArrExt.decCV (IWGrow.erecPExtR hg1) hcv
+  have hcv1 : decCV (erecP m1) cp.toNat = some cv := ArrExt.decCV (L.Ind.IWGrow.ext hg1) hcv
   obtain ⟨hS2, hg2, hd2, hz2⟩ := cvLpsW_ok h2 hS1 hcv1
   cases h3 : L.Arena.cvLpsW k m2 cq with
   | none => rw [h3] at h; simp [ctxK3] at h
@@ -179,7 +178,7 @@ theorem ctxW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
   obtain ⟨rq, m3⟩ := x3
   rw [h3, ctxK3_some] at h
   have hcv2 : decCV (erecP m2) cq.toNat = some cv' :=
-    ArrExt.decCV (IWGrow.erecPExtR (hg1.trans hg2)) hcv'
+    ArrExt.decCV (L.Ind.IWGrow.ext (hg1.trans hg2)) hcv'
   obtain ⟨hS3, hg3, hd3, hz3⟩ := cvLpsW_ok h3 hS2 hcv2
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hu1 := decRL_unpack hd1
@@ -297,9 +296,9 @@ theorem cvceW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     subst hrc
     simp only [List.headD_cons, List.tail_cons] at h
     have hcvm : decCV (erecP m1) q.toNat = some cv :=
-      ArrExt.decCV (IWGrow.erecPExtR hg1) hcv
+      ArrExt.decCV (L.Ind.IWGrow.ext hg1) hcv
     have hcvm' : decCV (erecP m1) r.toNat = some cv' :=
-      ArrExt.decCV (IWGrow.erecPExtR hg1) hcv'
+      ArrExt.decCV (L.Ind.IWGrow.ext hg1) hcv'
     obtain ⟨-, -, wt1, -, -, g3, -, ht1, -, htm1, -⟩ := cvWords hcvm
     obtain ⟨-, -, vt1, -, -, f3', -, gt1, -, gtm1, -⟩ := cvWords hcvm'
     rw [g3, f3'] at h

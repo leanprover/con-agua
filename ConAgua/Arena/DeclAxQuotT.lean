@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.DeclArmT
 public import ConAgua.Arena.DeclArmAxiom
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
@@ -267,7 +266,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   have hnmA : denoteN a.store.ns (decI wn) = some c.name := by
     rw [← hname]; exact (ConRon.Bridge.denoteCV_inv hcvd).1
   have hext1 := hstep1.ext
-  have hPx : ArrExt (erecP m2) (erecP m3) := IWGrow.erecPExt hg3
+  have hPx : ArrExt (erecP m2) (erecP m3) := L.Ind.IWGrow.ext hg3
   have hM3 : CoreMemos m3 := hS3.twin.memos
   have hlf : ∀ {f : FnName} {k : Nat} {args : List Word} {x y : Mem} {rx : List Word},
       f ∈ leafFns → callW p k f args x = some (rx, y) → CoreMemos x → CoreMemos y :=
@@ -285,7 +284,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   generalize AM.res (stdAxiomOk fe cv) a3 = b4 at hrun4 hb4
   generalize AM.st (stdAxiomOk fe cv) a3 = a4 at hrun4 hS4
   obtain ⟨-, hext4, hcache4, -, -⟩ := ConRon.Bridge.stdAxiomOk_run hok1 hcA hrun4
-  have hP4 : ArrExt (erecP m2) (erecP m4) := IWGrow.erecPExt (hg3.trans hg4)
+  have hP4 : ArrExt (erecP m2) (erecP m4) := L.Ind.IWGrow.ext (hg3.trans hg4)
   -- a push of the axiom, after a passed test
   have push : ∀ {mx : Mem} {ax : AState}, StageR vis fe mx ax → IWGrow m2 mx → CoreMemos mx →
       RefE (VerdictCtxU p) (checkDeclAxiomE.k_env_push p (liftE (callW p n "env_push" [vis, q] mx)))
@@ -294,7 +293,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
     intro mx ax hSx hgx hMx
     refine RefE.onlySim (fun _ => checkDeclAxiomE.k_env_push.none ..) (fun _ _ h => h) fun ry my e => ?_
     rw [checkDeclAxiomE.k_env_push.arm1]
-    obtain ⟨hSy, hgy⟩ := push_call hX.rcp e hSx (ArrExt.decCI (IWGrow.erecPExt hgx) hci1)
+    obtain ⟨hSy, hgy⟩ := push_call hX.rcp e hSx (ArrExt.decCI (L.Ind.IWGrow.ext hgx) hci1)
     exact RefE.ret rfl ⟨by simpa using hSy, hlf (leaf_mem _ rfl) e hMx,
       hg1.trans (hgx.trans hgy)⟩
   rw [checkDeclAxiomE.k_std_axiom_ok.eq_2]
@@ -461,7 +460,7 @@ theorem cdt_ref {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p) (hcl : Lea
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv1
   -- the theorem check
   refine RefE.bindE (fun _ => checkDeclThmE.k_check_thm_val.none ..) id
-    (checkThmVal_ref hX.ccv hq hap hkp hcrf hn' hP3.stage (ArrExt.decCV (IWGrow.erecPExt hg3) hcv1)
+    (checkThmVal_ref hX.ccv hq hap hkp hcrf hn' hP3.stage (ArrExt.decCV (L.Ind.IWGrow.ext hg3) hcv1)
       (hg3.ext _ _ hwv) hwvl
       ⟨env, c, hFo.envWF, hok1.check, ConRon.Bridge.denoteCV_ext hcvd hstep1.ext,
         ConLeche.Expr.WScoped.of_not_hasFvar (ConRon.Bridge.checkConstantVal_typeWF hcF).fvar⟩
@@ -474,7 +473,7 @@ theorem cdt_ref {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p) (hcl : Lea
   refine RefE.onlySim (fun _ => checkDeclThmE.k_env_push.none ..) (fun _ _ h => h) fun r5 m5 h5 => ?_
   rw [checkDeclThmE.k_env_push.arm1]
   obtain ⟨hS5, hg5⟩ := push_call hX.ccv.val.rcp h5 hS4.stage
-    (ArrExt.decCI (IWGrow.erecPExt (hg3.trans hg4)) hci1)
+    (ArrExt.decCI (L.Ind.IWGrow.ext (hg3.trans hg4)) hci1)
   exact RefE.ret rfl ⟨by simpa using hS5,
     leaf_memos hcl (leaf_mem _ rfl) h5 hS4.twin.memos, hg1.trans (hg3.trans (hg4.trans hg5))⟩
 

@@ -58,16 +58,8 @@ open L.Arena
 theorem iwKeep {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A)
     (hC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C) (hI : IWOK m) :
-    IWOK m' ∧ IWGrow m m' := by
-  have hW := hf.arr IW hA.1 (by decide)
-  have hE := hf.arr EREC hA.2.1 (by decide)
-  have hE1 := hf.arr (tier1 EREC) hA.2.2 (by decide)
-  have h129 := hf.ctl 129 hC.1
-  have h130 := hf.ctl 130 hC.2.1
-  have h200 := hf.ctl 200 hC.2.2
-  exact ⟨IWOK.of_keep hf hA hC hI,
-    ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hW], fun i _ => by rw [hE],
-      by simp [erecTop1, h130], fun i _ => by rw [hE1]⟩⟩
+    IWOK m' ∧ IWGrow m m' :=
+  ⟨IWOK.of_keep hf hA hC hI, IWGrow.of_keep hf hA hC⟩
 
 /-- A write of `CTL[c]`, `c` none of the tops, keeps `IWOK`, and the pools stay. -/
 theorem iwKeep_ctl {m : Mem} {c : Word} (v : Word) (hc : c ≠ 129 ∧ c ≠ 130 ∧ c ≠ 200) (hI : IWOK m) :

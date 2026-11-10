@@ -219,7 +219,8 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
   have hEREC1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := by
     rw [hA (tier1 EREC) (by decide)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  refine ⟨?_, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
+  refine ⟨?_, { iw := ?_, er := ?_, iwGet := ?_, erGet := ?_, er1 := ?_, er1Get := ?_ }, ⟨?_, ?_, ?_⟩,
+    htop⟩
   · simp only [decHL, hl1, hslice?_succ]
     have h0 : (hd? (iwA m') q.toNat : Option (Idx k)) = some (decI x) := by
       simp [hd?, iwA, aread_apply, hget, hx]

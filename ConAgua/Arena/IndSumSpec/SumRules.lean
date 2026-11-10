@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.GrindAttr
@@ -120,9 +121,6 @@ theorem sumDecHL_tail {m : Mem} {o l : Nat} {x : EIdx} {xs : List EIdx}
   exact hys
 
 /-! ## `sum_rules_go`: the word model -/
-
-theorem erecPutMem_iw (m : Mem) (a v : Word) : (erecPutMem m a v).arr64 IW = m.arr64 IW :=
-  (erecPutMem_frame m a v).arr IW (by decide) (by decide)
 
 /-- The memory after the rule record's eleven `erec_put`s (the name read before them, the
 right-hand side read from `IW` at its time). -/
@@ -371,7 +369,7 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
   -- the pointer written
   have hoT : o.toNat < iwTop m := by simp only [Nat.min_def] at hroom; split at hroom <;> omega
   have hoS : o.toNat < (M.arr64 IW).size := by
-    obtain ⟨h1, -, -, -, -⟩ := hSM.iw; have := hgM.iw; omega
+    have h1 := hSM.iw.iw; have := hgM.iw; omega
   have haccM : decPL M (rlDec M) q0.toNat j = some acc :=
     sumDecPL_grow hgM (fun q x h => ArrExt.decRule (IWGrow.ext hgM) h) _ _ _
       (by omega) hacc

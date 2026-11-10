@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.Tiers
+public import ConAgua.Arena.ErecVocab
 public import ConRon.Arena.Inductives.GenRec
 meta import ConAgua.Arena.Tiers
 meta import ConRon.Arena.Inductives.GenRec
@@ -138,8 +138,6 @@ variable (m : Mem)
 
 /-- The work pool. -/
 def iwA : Nat → Option Word := aread (m.arr64 IW)
-/-- The constant records (both tiers of `EREC`, `erecP`). -/
-def erA : Nat → Option Word := erecP m
 
 /-- Word `i` of `IW`, a number. -/
 def iwN (i : Nat) : Option Nat := nat? (iwA m) i
@@ -286,8 +284,6 @@ stays valid in `m'`. -/
 
 /-- The pool's top `CTL[200]`. -/
 def iwTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 200).toNat
-/-- The constant records' top `CTL[129]`. -/
-def erTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 129).toNat
 
 /-- The pool is in bounds, and the arrays an allocation computes with have word-sized lengths
 (lane `indproofs`: a stub's post carries these, so a caller's allocation after a stub works). -/
@@ -495,10 +491,6 @@ theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc)
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erAllocW, erAllocMem, ctl_t0', tierA, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ]
 
-/-- The memory after `erec_put(a, v)`. -/
-def erecPutMem (m : Mem) (a v : Word) : Mem :=
-  m.set64 (tierA EREC (a >>> 40)) (a &&& 0xFFFFFFFFFF) v
-
 theorem erecPut_specW (p : Prog) (hp : p.lookup "erec_put" = some erecPut) (n : Nat) (s₀ : St)
     (a v : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_put" [a, v]
@@ -516,90 +508,6 @@ theorem erecPut_specW (p : Prog) (hp : p.lookup "erec_put" = some erecPut) (n : 
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erecPutMem, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ]
-
-theorem mask40_toNat (a : Word) : (a &&& 0xFFFFFFFFFF).toNat = a.toNat % 2 ^ 40 := by
-  rw [UInt64.toNat_and]; exact Nat.and_two_pow_sub_one_eq_mod _ 40
-
-theorem tierA_EREC (a : Word) : tierA EREC (a >>> 40) =
-    if a.toNat / 2 ^ 40 % 2 = 0 then (EREC : TieredArray) else tier1 EREC := by
-  have hbit : ((a >>> 40) &&& 1).toNat = a.toNat / 2 ^ 40 % 2 := by
-    rw [UInt64.toNat_and, UInt64.toNat_shiftRight]
-    simp only [Nat.shiftRight_eq_div_pow, UInt64.toNat_ofNat]
-    exact Nat.and_one_is_mod _
-  unfold tierA
-  by_cases e : a.toNat / 2 ^ 40 % 2 = 0
-  · have : (a >>> 40) &&& 1 = 0 := UInt64.toNat_inj.mp (by rw [hbit, e]; rfl)
-    simp [e, this]
-  · have : (a >>> 40) &&& 1 ≠ 0 := fun h' => e (by rw [← hbit, h']; rfl)
-    simp [e, this]
-
-/-- The offset of a tagged address within its tier. -/
-def erOff (a : Word) : Nat := a.toNat % 2 ^ 40
-
-/-- The tier array of a tagged address. -/
-def erTier (a : Word) : TieredArray := if a.toNat / 2 ^ 40 % 2 = 0 then (EREC : TieredArray) else tier1 EREC
-
-/-- The top of the tier of a tagged address. -/
-def erTopOf (m : Mem) (a : Word) : Nat := if a.toNat / 2 ^ 40 % 2 = 0 then erecTop m else erecTop1 m
-
-theorem nat_and40 (n : Nat) : n &&& 1099511627775 = n % 1099511627776 :=
-  Nat.and_two_pow_sub_one_eq_mod n 40
-
-theorem erecPutMem_arr (m : Mem) (a v : Word) (b : TieredArray) :
-    (erecPutMem m a v).arr64 b = if b = erTier a then (m.arr64 b).setIfInBounds (erOff a) v else m.arr64 b := by
-  unfold erecPutMem
-  rw [tierA_EREC, ← erTier]
-  by_cases e : b = erTier a
-  · subst e; simp [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, mask40_toNat, erOff, nat_and40]
-  · simp [Mem.arr64_set64_ne _ _ _ _ _ e, e]
-
-theorem ctl_ne_erTier (a : Word) : (CTL : TieredArray) ≠ erTier a := by
-  unfold erTier; split <;> decide
-
-theorem erecPutMem_ctl (m : Mem) (a v : Word) : (erecPutMem m a v).arr64 CTL = m.arr64 CTL := by
-  rw [erecPutMem_arr, ite_eq_right (ctl_ne_erTier a)]
-
-/-- **A write at or above the top of its tier keeps the record pool.** -/
-theorem erecPutMem_grow {m : Mem} {a v : Word} (h : erTopOf m a ≤ erOff a) :
-    ErecGrow m (erecPutMem m a v) := by
-  have hc := erecPutMem_ctl m a v
-  simp only [erTopOf, erOff] at h
-  refine ⟨by simp [erecTop, hc], fun i hi => ?_, by simp [erecTop1, hc], fun i hi => ?_⟩
-  · rw [erecPutMem_arr]; unfold erTier; split
-    · rename_i e; simp only [e, ite_true] at h
-      have : ¬ (a.toNat % 2 ^ 40 = i) := by omega
-      simp [Array.getElem?_setIfInBounds, erOff, this]
-    · simp
-  · rw [erecPutMem_arr]; unfold erTier; split
-    · simp
-    · rename_i e; simp only [e, ite_false] at h
-      have : ¬ (a.toNat % 2 ^ 40 = i) := by omega
-      simp [Array.getElem?_setIfInBounds, erOff, this]
-
-/-- A written word below its tier's top reads back. -/
-theorem erecP_putMem_self {m : Mem} {a v : Word} (ht : erOff a < erTopOf m a)
-    (hb : erOff a < (m.arr64 (erTier a)).size) :
-    erecP (erecPutMem m a v) a.toNat = some v := by
-  have hc := erecPutMem_ctl m a v
-  simp only [erecP, a.toNat_lt, ite_true, erecTop, erecTop1, hc, erecPutMem_arr]
-  simp only [erTopOf, erOff, erTier] at ht hb ⊢
-  split
-  · rename_i e; simp only [e, ite_true] at ht hb
-    simp [erecTop] at ht; simp [ht, Array.getElem?_setIfInBounds, hb]
-  · rename_i e; simp only [e, ite_false] at ht hb
-    simp [erecTop1] at ht; simp [ht, Array.getElem?_setIfInBounds, hb]
-
-/-- A write leaves every other address (modulo `2^41`, the tier bit and the offset). -/
-theorem erecP_putMem_other {m : Mem} {a v : Word} {i : Nat} (hi : i % 2 ^ 41 ≠ a.toNat % 2 ^ 41) :
-    erecP (erecPutMem m a v) i = erecP m i := by
-  have hc := erecPutMem_ctl m a v
-  have hne : ¬ (i / 2 ^ 40 % 2 = a.toNat / 2 ^ 40 % 2 ∧ i % 2 ^ 40 = a.toNat % 2 ^ 40) := by
-    intro ⟨h1, h2⟩; apply hi; omega
-  simp only [erecP, erecTop, erecTop1, hc, erecPutMem_arr, erTier, erOff]
-  by_cases t : a.toNat / 2 ^ 40 % 2 = 0 <;> by_cases ti : i / 2 ^ 40 % 2 = 0 <;>
-    simp only [t, ti, ite_true, ite_false] <;> simp [Array.getElem?_setIfInBounds] <;>
-    first | rfl | (have : a.toNat % 1099511627776 ≠ i % 1099511627776 := by omega
-                   simp [this]; rfl)
 
 /-- **`erec_alloc`'s effect**: the pool grows (`ErecGrow`), the address is the old top of the
 flag's tier (tier 1 at `2^40`), that top moved up by `k` within the array, only `CTL[129]` or

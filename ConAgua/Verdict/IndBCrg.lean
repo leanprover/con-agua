@@ -163,7 +163,7 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
     (L.Arena.cvLps_specW p hp.alloc hp.copy hp.eti hp.lps N ⟨m2, Locals.init []⟩ cvR) h3
   rw [hs3] at h3'
   have hg12 := hg1.trans hg2
-  obtain ⟨hS3, hg3, hd3, -⟩ := cvLpsA_stage h3' hS2 (ArrExt.decCV (IWGrow.erecExt hg12) hqd) hqb
+  obtain ⟨hS3, hg3, hd3, -⟩ := cvLpsA_stage h3' hS2 (ArrExt.decCV (L.Ind.IWGrow.ext hg12) hqd) hqb
   have hA3 : AbsOK m3 := by
     have hA2 : AbsOK m2 := (AFr.of_frame (lbbF_frame h1)).trans (AFr.of_frame (hffF_frame h2)) hA
     cases N with

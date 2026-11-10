@@ -195,7 +195,7 @@ theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       blockShapeMemberNames_spec p ha hmc hmn n, slContains_spec p hct n,
       envFind_spec p hg hb hef n] <;>
-    finish (gen := 20) [rdW_eq, St.setLocs_mem', erRd_get]
+    finish (gen := 20) [rdW_eq, St.setLocs_mem']
 
 theorem npc_mem {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : bs.memberNames.contains i = true) :
     ConRon.Arena.classNPcOf bs fe i = bs.nP := by

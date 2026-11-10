@@ -274,7 +274,7 @@ theorem famW_ok {p : Prog} (h : StdProg2 p) {vis : Word}
   rw [e5, famW.k_matches_pin.arm1] at hW
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨rfl, hrun5, hd5⟩ := mpW_ok (a := a4) e5 hS4.iw.erSize
-    (ArrExt.decCV (IWGrow.erecExt hg04) hq) (decRCV_get hpin)
+    (ArrExt.decCV (L.Ind.IWGrow.ext hg04) hq) (decRCV_get hpin)
   refine ⟨_, _, ?_, hS4, hg04, by simpa [decW0B] using hd5⟩
   simp only [StateT.run_bind, hrun4, exc_ok_bind']
   exact hrun5

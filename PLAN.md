@@ -201,6 +201,11 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
         lists it in `_tmp/ladder/<worktree>/tickets.tsv`). Write the rules file as you
         restate: every mechanical rename or argument change of the sync is one regex rule, and
         rerun the ladder after each build round of a partial tree (it only looks at what fails).
+        Its vocabulary rung is the attribute sets, not pasted lemma names: the rules file says
+        `vocab_hook vocab_attr.py` (`scripts/sync-rules/vocab_attr.py`: the encodings' grind sets
+        added to `grind`/`sym`/`finish` lists, the scoped spec sets opened before `vcgen`, a
+        positional `IWOK` destructuring replaced by `grind`); a new encoding's set goes there and
+        into its vocabulary file (`Arena/ErecVocab.lean`, `Arena/IWFrame.lean`).
      d. **Fan out the tickets** by file (at most ~3 helpers). The brief names the files each
         helper owns, the shared rules, and the reply address: the lead's agent id. Helpers
         message only the lead, never the coordinator. A rename of a shared name is the

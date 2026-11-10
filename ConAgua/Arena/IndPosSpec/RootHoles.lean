@@ -48,7 +48,11 @@ theorem posRecW_stage {vis : Word} {fe : IFEnv} {a : AState}
   simp only [posRecW] at h
   rcases hal : allocW m (UInt64.ofNat ws.length) with _ | ⟨q1, m1⟩ <;> rw [hal] at h; · simp at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
+  have h1 := hS.iw.iw
+  have h2 := hS.iw.er
+  have h3 := hS.iw.iwSize
+  have h4 := hS.iw.erSize
+  have h5 := hS.iw.ctl
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal h3
   subst hm1
   have hk : (UInt64.ofNat ws.length).toNat = ws.length := UInt64.toNat_ofNat_of_lt' hl
@@ -229,15 +233,18 @@ theorem GrowX.set {q n : Nat} (m : Mem) (x v : Word) (hx : q ≤ x.toNat ∧ x.t
     by simp only [erecTop1, hC]; exact Nat.le_refl _, fun i _ => by rw [hE1]⟩
 
 theorem GrowX.grow {q n : Nat} {m m' : Mem} (h : GrowX q n m m') (hq : iwTop m ≤ q) : IWGrow m m' :=
-  ⟨h.iw, h.er, fun i hi => h.rd i ⟨hi, Or.inl (by omega)⟩, h.erGet, h.er1, h.er1Get⟩
+  { iw := h.iw, er := h.er, iwGet := fun i hi => h.rd i ⟨hi, Or.inl (by omega)⟩, erGet := h.erGet,
+    er1 := h.er1, er1Get := h.er1Get }
 
 theorem GrowX.grow' {q n : Nat} {m m1 m2 : Mem} (h : GrowX q n m1 m2) (hg : IWGrow m m1)
     (hq : iwTop m ≤ q) : IWGrow m m2 :=
-  ⟨Nat.le_trans hg.iw h.iw, Nat.le_trans hg.er h.er,
-    fun i hi => (h.rd i ⟨Nat.lt_of_lt_of_le hi hg.iw, Or.inl (by omega)⟩).trans (hg.iwGet i hi),
-    fun i hi => (h.erGet i (Nat.lt_of_lt_of_le hi hg.er)).trans (hg.erGet i hi),
-    Nat.le_trans hg.er1 h.er1,
-    fun i hi => (h.er1Get i (Nat.lt_of_lt_of_le hi hg.er1)).trans (hg.er1Get i hi)⟩
+  { iw := Nat.le_trans hg.iw h.iw
+    er := Nat.le_trans hg.er h.er
+    iwGet := fun i hi =>
+      (h.rd i ⟨Nat.lt_of_lt_of_le hi hg.iw, Or.inl (by omega)⟩).trans (hg.iwGet i hi)
+    erGet := fun i hi => (h.erGet i (Nat.lt_of_lt_of_le hi hg.er)).trans (hg.erGet i hi)
+    er1 := Nat.le_trans hg.er1 h.er1
+    er1Get := fun i hi => (h.er1Get i (Nat.lt_of_lt_of_le hi hg.er1)).trans (hg.er1Get i hi) }
 
 theorem HolesAt.decPL {m : Mem} {q : Nat} {hs : List NestHole} {P : Nat → Prop}
     (h : HolesAt m q hs.length hs P) : decPL m (decNH m) q hs.length = some hs :=

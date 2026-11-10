@@ -142,7 +142,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {vis : Word}
   rw [e6, oraW.k_matches_pin.arm1] at hW
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨rfl, hrun6, hd6⟩ := mpW_ok (a := AM.st (ofReducePinA (decI wn)) a4) (mp_callR h.red e6)
-    hS5.iw.erSize (ArrExt.decCV (IWGrow.erecExt hg05) hq) (decRCV_get hd5)
+    hS5.iw.erSize (ArrExt.decCV (L.Ind.IWGrow.ext hg05) hq) (decRCV_get hd5)
   refine ⟨_, _, ?_, hS5, hg05, by simpa [decW0B] using hd6⟩
   simp only [StateT.run_bind, hrun5, exc_ok_bind']
   exact hrun6
