@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.Icvg
 import ConAgua.Arena.RecCheckSpec.RcLook
-import ConAgua.Arena.RecStab
 public import ConAgua.Arena.RecCheckSpec.TaCW
 
 @[expose] public section

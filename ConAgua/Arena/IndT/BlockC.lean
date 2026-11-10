@@ -15,7 +15,6 @@ import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndDeclConstsFire
 import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPartsSpec.AllCtors
-import ConAgua.Arena.RecStab
 import all ConAgua.Arena.IndInstall
 
 @[expose] public section

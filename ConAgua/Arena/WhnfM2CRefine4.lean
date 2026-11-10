@@ -5,7 +5,6 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.Arena.DefEqStuckGo
-import ConAgua.Arena.DeclCanonEq
 import all ConAgua.Arena.WhnfM2C
 public import ConAgua.Arena.WhnfM2CRefine2
 

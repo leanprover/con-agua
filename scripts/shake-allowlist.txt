@@ -138,3 +138,5 @@ ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build nee
 ConAgua/Arena/HbMemoRel.lean	public import ConAgua.Arena.IWFrame	# the build needs it: re-exports IWFrame (IWOK.frameC moved there from this file) to the importers that use it (WhnfBase, WhnfDeltaSlot)
 ConAgua/Arena/IndSumSpec/StructUsedFrame.lean	import ConAgua.Arena.DeclBase	# the build needs it: allocW_facts (IndCopy2) comes through it
 ConAgua/Rom/CIReadRefBase.lean	public import ConAgua.Arena.IndMaster	# the build needs it: allocW (IndCopy) comes through it
+ConAgua/Arena/DeclCanonSpec.lean	public import ConAgua.Arena.ErecRd	# the build needs it: re-exports the readers (RdOK, erRdOK, decCI_split) to DeclCanonEq and the other DeclCanon* files (its own use went with erRdT)
+ConAgua/Arena/WhnfCore.lean	public import ConAgua.Arena.ErecRd	# the build needs it: re-exports the readers (RdOK, erRdOK, decCI_split) to WhnfCoreRefine and the other Whnf* files (its own use went with erRdT)

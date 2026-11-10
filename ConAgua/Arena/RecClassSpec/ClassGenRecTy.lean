@@ -13,7 +13,6 @@ import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
-import ConAgua.Arena.RecStab
 public import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
 import all ConAgua.Arena.RecClass
 

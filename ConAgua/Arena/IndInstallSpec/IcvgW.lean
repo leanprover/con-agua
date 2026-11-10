@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.IndInstallSpec.Icvg
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.Arena.RecStab
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndInstall
 

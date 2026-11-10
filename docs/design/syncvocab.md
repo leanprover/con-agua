@@ -293,5 +293,10 @@ kinds; `nidx_word_lt32` (Env and DeclCanonView2, same name), `dmWord_lt32`, `Vie
 scan finds about 215 groups of same-statement theorems, most of them `UInt64` arithmetic
 (`(a + ofNat k).toNat = a.toNat + k` under 11 names, `w - 1` under 7, `w + 1` under 5).
 
+`shake` then proposed 14 import removals: 12 removed (`RecStab` in eleven files, whose only use was
+`iwN_grow`; `ErecRd` in `PropReadW`; `DeclCanonEq` in `WhnfM2CRefine4`, `hslice_len`'s), 2 are
+re-exports of the readers the build needs (`DeclCanonSpec`, `WhnfCore` → `ErecRd`), now in
+`scripts/shake-allowlist.txt`.
+
 No sync rules file needed a change: `scripts/sync-rules/` names none of the deleted names
 (`vocab_attr.py`'s `IWOK_GRIND` already says `erTop`), and §6's `[names]` candidates are now done.
