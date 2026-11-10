@@ -1,6 +1,6 @@
 module
 
-import ConAgua.Final.BufChain
+public import ConAgua.Final.BufChain
 import ConAgua.Final.DrvFinal
 public import ConAgua.Checker.ParThreadTwin
 import ConAgua.Final.BufAbi
@@ -29,8 +29,9 @@ reports accept, the threads claim every job index and each thread's claims incre
 pooled pipeline accepts `[b]` (`TwinAcceptsPooled [b]`). Relative to a set theory `V`: con-ron's
 fold invariant at a job's view comes from the model of the accepted prefix.
 
-**What the theorem trusts of the harness** (the hypotheses of `ThreadsRun`; beyond them, what
-`Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
+**What the theorem trusts of the harness** (the hypotheses of `ThreadsRun`, whose per-thread
+facts are `ThreadsAcc`, which the threaded verdict reuses for the jobs below a failing one; beyond
+them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
 
 * **Entry 1's call**: `ca_start_a` is called as `AbiCall` says (the input and pin buffers, a zero
   region, the 32 bytes of machine stack around `rsp`; `mmap` gives the stated memory facts).
@@ -314,6 +315,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (V : Type w) [ConLeche.SetTheor
       RegsRestored dm₀.regs st₀.data.regs ∧
       ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs := by
   have hc := code_of_checkerFile_par hcode
+  have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1
   have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀

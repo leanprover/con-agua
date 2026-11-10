@@ -40,7 +40,7 @@
    `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. A failing
    threaded run prints the verdict of the failing job with the smallest index, which is what the
    sequential run prints; a reject or decline is covered by `checkerFile_threads_verdict`, under
-   the hypotheses `ThreadsFail` (ConAgua/Final/ThreadsVerdict.lean) states about the failing call. */
+   `ThreadsFail` (ConAgua/Final/ThreadsVerdict.lean): the failing call and the jobs below it. */
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -181,9 +181,9 @@ static uint8_t *read_input(const char *path, uint64_t *n) {
    `incr`) and a stop flag that only shortens a failing run. Each thread has its own region and
    its own result slot; main combines the slots after joining every thread. Accept iff no slot
    holds a failure: every call that thread made accepted, and the threads drain the counter past
-   k unless one fails. Otherwise the verdict is that of the failing job with the smallest index,
-   as a one-thread run would report it: the indices are claimed in order and a thread finishes
-   the job it holds, so every lower job has been run, and accepted, when the threads are joined. */
+   k unless one fails. Otherwise the verdict is that of the failing job with the smallest index:
+   the indices are claimed in order and a thread finishes the job it holds, so every lower job
+   has been run, and accepted, when the threads are joined (`ThreadFail`'s `below`). */
 static const uint64_t *g_buf;   /* the frozen buffer */
 static uint64_t g_len, g_k;     /* its length in words; the number of jobs (records) */
 static uint64_t g_next;         /* the claim counter */

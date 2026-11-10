@@ -425,7 +425,7 @@ theorem threads_twinVerdictPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : C
       obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJP.check_jobs hRS hsz n' hn' a j' hj'
         (hfold _ a hj' (by omega) hw) _ rfl (hR _) rfl rfl hrun
       have hR' : Rel r' a' := fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI' hkept t ht).trans (hX t ht)⟩
-      obtain ⟨hP, hnd⟩ := hpre _ (by omega)
+      obtain ⟨hP, hnd⟩ := hpre j'.toNat (by omega)
       obtain ⟨hx', hdk⟩ := H.hden _ hj'
       obtain ⟨hw', -⟩ := job_spec Vt H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
         H.hpI hw hj' hx' hdk hP hnd hrj

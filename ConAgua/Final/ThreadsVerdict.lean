@@ -26,20 +26,18 @@ region (as `ThreadsRun`, `Final/ThreadsFinal.lean`). If the run reports a failur
 thread's call `i` returns `rdx = 2` with `rax = k` while its calls before `i` returned accept,
 then for a class `k &&& 3` of `1` (reject) or `2` (decline) the twin's pool fails
 (`TwinVerdictPooled [b]`): the pipeline fails with that class before or in the jobs
-(`TwinVerdict`), or the stages and the stream index ran ok and either the failing thread's jobs up
-to and including the failing one, run in order from the index state's worker (each at the
-index's view of its position), fail with that class, or some record below them does not pass on
-its own. The last case is the weakened form: the theorem does not know whether the other
-threads accepted the records below the failing job, and a job's check needs them accepted
-(con-ron's fold invariant at the job's view). Every other outcome claims nothing.
+(`TwinVerdict`), or the stages and the stream index ran ok and the failing thread's jobs up to
+and including the failing one, run in order from the index state's worker (each at the index's
+view of its position), fail with that class. Every other outcome claims nothing.
 
-From the machine-level entries (`abiA_outcome`, `abiB_outcome`, the thread's chain
-`thread_chain`) and the L-level claims (`ThreadVerdicts`: entry 1's `Entry1Verdict`, and
-`ThreadEVerdict`: a thread's failing call at the L level, when every record below its job
-passes on its own, is the pool's failure with its class; `threadFail_twin` takes the other case
-to the weakened verdict, `TwinVerdictPooled.of_not_passes`). Relative to a set theory `V`, as the
-threaded accept theorems: the fold invariant at a job's view comes from the model of the
-accepted prefix.
+From the machine-level entries (`abiA_outcome`, `abiB_outcome`, the threads' chains
+`thread_chain`, `threadsAcc_runs`) and the L-level claims (`ThreadVerdicts`: entry 1's
+`Entry1Verdict`, and `ThreadEVerdict`: a thread's failing call at the L level, when the threads'
+accepting calls ran every record below its job, is the pool's failure with its class). A job's
+check needs con-ron's fold invariant at the job's view, which needs every record below it
+accepted: that is why the harness's report of the smallest failing job index (`ThreadFail`'s
+`below`) is a hypothesis. Relative to a set theory `V`, as the threaded accept theorems: the fold
+invariant at a job's view comes from the model of the accepted prefix.
 
 **What the theorem trusts of the harness** (the hypotheses of `Entry1Fail` and `ThreadFail`;
 beyond them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and
@@ -53,8 +51,16 @@ loader):
   and is passed to each call (route A: read-only, `mprotect`); the thread's region is its own,
   zero at the first call, and at each later call holding the bytes the previous call left; each
   call is made as `BufCallH` says; every claimed job index (in `rdx`) is below `k`
-  (`k = rax - 2^63` from entry 1, the number of records). Neither the coverage of the job indices
-  by the threads nor the order of a thread's claims is needed.
+  (`k = rax - 2^63` from entry 1, the number of records); the calls before `i` claimed smaller
+  indices than call `i` (one monotone claim counter).
+* **The jobs below the failing one** (`ThreadFail`'s `others` and `below`): every job index below
+  call `i`'s was claimed by a call of some thread of `ths` that returned accept, and those
+  threads' calls are as `ThreadsRun` has them (`ThreadsAcc`: the buffer in place, each thread on
+  its own region, zero at its first call and carried over between its calls, each call accepting
+  with the buffer kept, every claim below `k`, each thread's claims increasing). `main.c` claims
+  the indices `0, 1, 2, …` in order from one counter, each thread finishes the call it holds and
+  records only its first failure, and the harness reports, after joining every thread, the
+  failure with the smallest index: so every lower index was claimed, run and accepted.
 * The verdicts: entry 1 returns `rdx = 2` (`Entry1Fail`), or `rdx = 0` and `rax ≥ 2^63`, the
   thread's calls before `i` return `rdx = 0`, `rax = ACCEPT`, and call `i` returns `rdx = 2`
   (`ThreadFail`). The harness reports the code `k` it read from that call's `rax`.

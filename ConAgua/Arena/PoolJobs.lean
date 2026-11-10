@@ -14,7 +14,8 @@ holds at the job's view, which needs every job below it accepted (in any worker)
 does the induction over positions: the workers' runs, each step refining `recordJob` under
 `FoldOK` (`hstep`), with claims increasing in each worker, give every worker's list accepted by
 the twin's `checkJobList` from the driver state's worker (con-ron's `PooledAccepts`' last part),
-and the pure fold's prefixes.
+and the pure fold's prefixes. `pool_prefix` is the induction alone, up to a position `n`, from
+workers whose claims cover the positions below `n` (the prefix below a failing job).
 
 The worker's L-level state is abstract (`σ`, the relation `Rel`, the step `Call`): the threads'
 entry 2 (one call per job) and the sequential `check_jobs` loop (one `record_job` call per job)
