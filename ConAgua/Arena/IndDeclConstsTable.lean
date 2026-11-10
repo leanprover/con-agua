@@ -2,15 +2,14 @@ module
 
 public import ConAgua.Arena.IndDeclConstsBlock
 public import ConAgua.Arena.IndSumSpec.StructProjBodies
-public import ConAgua.Arena.IndPartsSpec.MemberNames
-public import ConAgua.Arena.IndRealAbs
-public import ConAgua.Arena.IndSumSpec.TsrW
 import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 @[expose] public section
 

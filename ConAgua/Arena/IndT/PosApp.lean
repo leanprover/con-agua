@@ -8,6 +8,7 @@ public import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Checker.NoVerdictTree
+import ConAgua.Arena.IndPosSpec.CfW
 
 @[expose] public section
 

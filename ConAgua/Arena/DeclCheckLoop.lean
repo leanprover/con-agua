@@ -1,14 +1,9 @@
 module
 
-public import ConAgua.Arena.DeclArmAxiom
-public import ConAgua.Arena.DeclNatGateSpec
-public import ConAgua.Arena.DeclDivModSpec.RomPinSets
-public import ConAgua.Arena.DeclArmLoop
-public import ConAgua.Arena.DeclNatOpEq
-public import ConAgua.Arena.DeclReducePin
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.DeclStep
 
 @[expose] public section
 
@@ -31,7 +26,6 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 open L.Ind
-open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 local notation "V" => ConLeche.CheckMode.verified
 

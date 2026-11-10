@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndMaster
-public import ConAgua.Arena.Frame
 public import ConAgua.Arena.CoreErec
 import ConAgua.Arena.DerRel
 

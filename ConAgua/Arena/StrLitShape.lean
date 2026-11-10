@@ -1,14 +1,9 @@
 module
 
-public import ConAgua.Arena.StrLitTy
 public import ConAgua.Arena.StrLitChar
 public import ConAgua.Arena.StrLitList
-public import ConAgua.Arena.StrLitExt
-public import ConAgua.Arena.WhnfDeltaRefine
-import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.DefEqMid
 public import ConAgua.Arena.IndTwin
-import ConAgua.Arena.StageC
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

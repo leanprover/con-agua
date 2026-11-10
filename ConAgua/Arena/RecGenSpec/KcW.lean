@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.RecGenSpec.CkcW
 public import ConAgua.Arena.RecGenSpec.KofProg
-import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.SgGoW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr

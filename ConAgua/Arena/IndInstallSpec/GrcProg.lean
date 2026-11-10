@@ -12,7 +12,6 @@ public import ConAgua.Arena.IndRealBle
 public import ConAgua.Arena.RecCheckSpec.RpLook
 public import ConAgua.Arena.RecGenSpec.ClassRecTysOk
 public import ConAgua.Arena.RecGenSpec.DecB
-public import ConAgua.Arena.RecGenSpec.DecCIIndCv
 public import ConAgua.Arena.RecGenSpec.DecCNWords
 public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 public import ConAgua.Arena.IndInstallSpec.SelProg

@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndexRel
-public import ConAgua.Arena.IndLibSpec
 public import ConAgua.Arena.CheckerL
 import ConAgua.Census.Attr
 import ConAgua.Arena.RecSim

@@ -1,18 +1,11 @@
 module
 
-import ConAgua.Arena.IndT.WalkC
-public import ConAgua.Verdict.DeclValE
 public import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclCvgT
-import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndPartsSpec.MemberNames
-import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.IndRealWalkT
-import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.IndRealAbs
 import all ConAgua.Arena.DeclStep
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.Arena.Verdict
+public import ConAgua.Arena.DeclHeader
 
 @[expose] public section
 /-!

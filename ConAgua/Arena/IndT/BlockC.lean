@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.BasisBlockC
 public import ConAgua.Arena.IndArmLps
 public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
-public import ConAgua.Arena.IndInstallSpec.Icvg
 public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 public import ConAgua.Arena.IndPartsSpec.PlW
 public import ConRon.Bridge.Inductives.BlockTail
@@ -12,15 +11,11 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
-import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.IndDeclConstsTable
 import ConAgua.Arena.IndDeclConstsFire
 import ConAgua.Arena.IndInstallSpec.PartsAt
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndPartsSpec.AllCtors
 import ConAgua.Arena.RecStab
-import ConAgua.Arena.IndInstallSpec.IcvgW
 import all ConAgua.Arena.IndInstall
 
 @[expose] public section

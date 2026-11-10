@@ -1,6 +1,6 @@
 module
+import ConLeche.Kernel.Env
 
-public import ConAgua.Arena.DeclRec
 
 @[expose] public section
 
@@ -12,11 +12,9 @@ The value checks end with `env_push`, which changes the environment; it writes t
 across it.
 -/
 
-open ConRon.Arena
 
 namespace L.Arena
 
-open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 

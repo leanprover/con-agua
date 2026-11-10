@@ -6,13 +6,9 @@ import ConAgua.Arena.RecFireCore
 import ConAgua.Arena.DeclCanonRules
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.InstLPRef
-import ConAgua.Arena.LevelArena
-import ConAgua.Arena.LevelEquiv
-import ConAgua.Arena.LevelInternRef
 import ConAgua.Arena.RecFireEnv
 import ConAgua.Arena.WhnfIotaRecRefine
 import ConAgua.Arena.PropReadRefine
-import ConAgua.Arena.TwinStep
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Checker.Canon
 

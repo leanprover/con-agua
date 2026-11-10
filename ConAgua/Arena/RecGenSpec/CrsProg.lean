@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.RecGenSpec.CruleProg
 public import ConAgua.Arena.RecClassSpec.RuProg
 
 @[expose] public section

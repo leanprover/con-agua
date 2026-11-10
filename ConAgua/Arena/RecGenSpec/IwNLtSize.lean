@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.IndIface
 public import ConAgua.Arena.WhnfBase
 
 @[expose] public section

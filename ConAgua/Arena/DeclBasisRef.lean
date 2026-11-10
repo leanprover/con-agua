@@ -1,26 +1,12 @@
 module
 
-public import ConAgua.Arena.BasisL
-public import ConAgua.Rom.CIReadSpec
-public import ConAgua.Front.StateDR
 public import ConAgua.Arena.StageTLift
 public import ConRon.Bridge.Checker.Basis
 public import ConAgua.Arena.QuotRulesT
-public import ConAgua.Arena.LeafFns
-public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.ErToIwBlk
-import ConAgua.Arena.QuotRecW
-import ConAgua.Arena.IndCopy2
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.RecGenSpec.StabDecCRDecB
-import ConAgua.Arena.IndTwin
-import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.DeclAndPinIndRef
-import ConAgua.Arena.DeclAndPinIndDec
-import ConAgua.Arena.InferLeaves
-import ConAgua.Arena.IlpRd
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import all ConAgua.Arena.IndIface

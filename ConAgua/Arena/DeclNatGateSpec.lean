@@ -1,9 +1,9 @@
 module
 
-public import ConAgua.Arena.DeclArmDefn
 public import ConAgua.Arena.DeclNatEq
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

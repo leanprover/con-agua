@@ -1,12 +1,8 @@
 module
 
-public import ConAgua.Arena.IndDeclConstsFire
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-public import ConAgua.Arena.IndSumSpec.TsrW
-import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndInstallSpec.IcbiW
 import ConAgua.Arena.WhnfIotaRefine
-import ConAgua.Arena.Env
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

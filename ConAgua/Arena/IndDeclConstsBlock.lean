@@ -2,16 +2,14 @@ module
 
 public import ConAgua.Arena.IndDeclConstsRecs
 public import ConAgua.Arena.IndInstallSpec.BlockRawRec
-public import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.IndPosSpec.RootHoles
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-import ConAgua.Arena.IndRealNames
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 
 @[expose] public section
 

@@ -14,6 +14,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.IndRealIlpL
 import ConLeche.Verify.Cached.Erase
+import ConAgua.Arena.IndPosSpec.CfW
 
 @[expose] public section
 

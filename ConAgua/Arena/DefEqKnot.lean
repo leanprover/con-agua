@@ -6,7 +6,6 @@ import ConAgua.Arena.PropReadRefine4
 import ConAgua.Arena.InferProj2
 import ConAgua.Arena.StrLitSup
 import ConAgua.Arena.StrLitCtor
-public import ConAgua.Arena.WhnfProjRefine3
 import ConAgua.Arena.WhnfIotaRecRefine3
 import ConAgua.Arena.WalkCore
 public import ConAgua.Arena.InstLPEntry
@@ -23,7 +22,7 @@ public import ConAgua.Arena.StrLitBase
 public import ConAgua.Arena.WalkLeaves
 public import ConAgua.Arena.WalkScope
 public import ConAgua.Arena.WhnfIotaRecRefine
-public import ConAgua.Arena.WhnfM2CRefine2
+public import ConAgua.Arena.WhnfProjRefine
 
 @[expose] public section
 

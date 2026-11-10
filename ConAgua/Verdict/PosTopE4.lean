@@ -21,6 +21,7 @@ public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Verdict.PosE
 public import ConAgua.Verdict.PosFt
 import all ConAgua.Arena.IndPos2
+import ConAgua.Arena.IndPosSpec.CfW
 
 @[expose] public section
 /-!

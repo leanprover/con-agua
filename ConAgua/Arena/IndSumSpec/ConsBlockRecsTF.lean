@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndSumSpec.TsrW
-import ConAgua.Arena.RecGenSpec.CruleProg
 public import ConAgua.Arena.RecGenSpec.DecRR
 import ConAgua.Arena.IndInstallSpec.IcbiW
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
@@ -11,12 +10,8 @@ public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.L.WordOff
 import ConAgua.Arena.IndInstallSpec.InstallIwB
-import ConAgua.Arena.RecClassSpec.Classes
-import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.IndInstallSpec.DomsW
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndSum

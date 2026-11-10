@@ -9,6 +9,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndPos2
+public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 
 @[expose] public section
 

@@ -13,6 +13,11 @@ import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Checker.DeclVal
 public import ConAgua.Verdict.DeclValsE
 import all ConAgua.Arena.DeclArms
+public import ConAgua.Arena.DeclAxiomSpec4
+public import ConAgua.Arena.DeclAxiomSpec
+public import ConAgua.Arena.DeclAxiomSpec2
+import ConAgua.Arena.DeclArmQuot
+import ConAgua.Arena.InferFieldSort
 
 @[expose] public section
 

@@ -1,12 +1,9 @@
 module
 
 public import ConAgua.Arena.QuotAtT
-public import ConAgua.Arena.QuotRecW
-import ConAgua.Arena.InferLeaves
 import ConRon.Bridge.Checker.Canon
 import ConAgua.Arena.IlpRd
 import ConAgua.Arena.IndInstallSpec.NhW
-import ConAgua.Arena.DeclAndPinIndRef
 
 @[expose] public section
 

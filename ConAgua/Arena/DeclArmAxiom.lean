@@ -1,15 +1,11 @@
 module
 
-public import ConAgua.Arena.DeclArmQuot
-public import ConAgua.Arena.DeclAxiomSpec
-public import ConAgua.Arena.DeclAxiomSpec2
-public import ConAgua.Arena.DeclAxiomSpec4
-public import ConAgua.Arena.DeclValSpec
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.DeclValRef
+public import ConAgua.Arena.DeclRec
+public import ConAgua.Arena.WhnfBase
 
 @[expose] public section
 

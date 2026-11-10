@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.IndPosSpec.MapOKStep
 public import ConAgua.Arena.IndPosSpec.NcnW
 public import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

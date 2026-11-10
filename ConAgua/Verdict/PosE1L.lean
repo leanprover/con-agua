@@ -10,6 +10,7 @@ import ConAgua.Arena.IndPosSpec.NtyW
 import ConAgua.Arena.RefWalk
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.IndPosSpec.UCtx
 
 @[expose] public section
 

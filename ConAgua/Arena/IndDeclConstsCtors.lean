@@ -3,11 +3,8 @@ module
 public import ConAgua.Arena.IndDeclConstsFormers
 public import ConAgua.Arena.IndPartsSpec.AllCtors
 public import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

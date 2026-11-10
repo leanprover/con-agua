@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.DeclStep
-public import ConAgua.Arena.IndMaster
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

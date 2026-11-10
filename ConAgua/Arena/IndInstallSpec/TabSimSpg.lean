@@ -1,11 +1,7 @@
 module
 
-public import ConAgua.Arena.IndInstallSpec.TabsProg
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Arena.IndSumSpec.StructProjBodies
-public import ConAgua.Arena.IndSumSpec.Row
-public import ConAgua.Arena.IndSumSpec.StructUsedLater
-public import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk

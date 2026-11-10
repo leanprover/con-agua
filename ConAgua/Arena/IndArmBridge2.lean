@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.DeclRec
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 public import ConAgua.Front.StateDR
 

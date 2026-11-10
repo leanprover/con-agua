@@ -17,6 +17,7 @@ import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndPosSpec.NbPosW
 public import ConAgua.Arena.IndRealIlpL
+public import ConAgua.Arena.IndPosSpec.CfW
 
 @[expose] public section
 

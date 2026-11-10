@@ -1,15 +1,13 @@
 module
 
 public import ConAgua.Arena.DeclAxiomSpec3
-import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclBasisSpec2
-import ConAgua.Arena.WhnfDeltaRefine
 import all ConAgua.Arena.DeclArms
+import ConAgua.Arena.DeclCvg
 
 @[expose] public section
 

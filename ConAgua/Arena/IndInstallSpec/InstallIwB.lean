@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
 public import ConAgua.Arena.IndSumSpec.SumProg
-public import ConAgua.Arena.IndDecPLB
 
 @[expose] public section
 

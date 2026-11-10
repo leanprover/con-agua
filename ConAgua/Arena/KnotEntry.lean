@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.DefEqKnot
-public import ConAgua.Arena.IndTwin
 
 @[expose] public section
 

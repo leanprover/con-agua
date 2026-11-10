@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.IndRealCrF
 public import ConAgua.Arena.IndRealNames
 public import ConAgua.Arena.IndRealSpine
 

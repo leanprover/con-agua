@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.DeclCanonRules
 public import ConAgua.Arena.DeclCanonConst
-import ConAgua.Arena.DeclCanonSpec2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

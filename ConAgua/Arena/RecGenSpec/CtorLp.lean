@@ -1,6 +1,7 @@
 module
+import ConLeche.Kernel.Env
+public import ConAgua.L.Semantics
 
-public import ConAgua.Arena.IndIface
 
 @[expose] public section
 
@@ -14,13 +15,9 @@ noncomputable section
 
 set_option experimental.vcgen true
 
-open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
 
 namespace L.Ind
 
-open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 

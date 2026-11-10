@@ -4,15 +4,11 @@ public import ConAgua.Arena.QuotRecT
 public import ConAgua.Arena.QuotFns
 public import ConAgua.Arena.IndPartsSpec.PlW
 public import ConAgua.Arena.IndSumSpec.Row
-public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Checker.Basis
 public import ConAgua.Arena.DeclCanonEq
 public import ConAgua.Arena.DeclCanonSpec
-public import ConAgua.Arena.DeclCvg
-public import ConAgua.Arena.IndLibSpec
 public import ConAgua.Rom.CIReadSpec
-public import ConAgua.Arena.LeafFns
 import ConAgua.Arena.IlpRd
 import ConAgua.Arena.DeclAndPinIndRef
 import ConAgua.Arena.IndexLoops

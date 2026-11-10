@@ -1,10 +1,6 @@
 module
 
-import ConAgua.Arena.IndInstallSpec.IcaW
 public import ConRon.Bridge.Inductives.Records
-import ConAgua.Arena.IndPosSpec.MatesW
-public import ConAgua.Arena.DeclBase
-public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndInstallSpec.InstallIwB
 import ConAgua.Arena.LevelSimpRel

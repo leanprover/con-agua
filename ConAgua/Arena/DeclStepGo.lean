@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.DeclRec
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.GrindAttr

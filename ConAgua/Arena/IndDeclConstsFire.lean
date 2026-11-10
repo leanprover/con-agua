@@ -1,17 +1,9 @@
 module
 
 public import ConAgua.Arena.IndDeclConstsDrop
-public import ConAgua.Arena.StripTeleSpec
-public import ConAgua.Arena.IndRealSpine
-public import ConAgua.Arena.IndRealFvt
 public import ConAgua.Arena.DeclCanonView2
-public import ConAgua.Arena.IndView
 import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Arena.RecClassSpec.CloseLams
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndSumSpec.TsrW
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
-import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 import ConAgua.Arena.Verdict
 import ConRon.Bridge.Grind
@@ -19,6 +11,7 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
+import ConAgua.Arena.IndSumSpec.DecHLTake
 
 @[expose] public section
 

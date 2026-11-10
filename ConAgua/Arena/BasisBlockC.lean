@@ -2,10 +2,7 @@ module
 
 public import ConAgua.Arena.DeclBasisRef
 public import ConAgua.Arena.LoopT
-public import ConAgua.Arena.TwinStep
-public import ConAgua.Arena.Verdict
 public import ConRon.Arena.DeclCheck
-public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.Arena.IndArmBridge2
 public import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 

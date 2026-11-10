@@ -23,6 +23,7 @@ import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
 public import ConAgua.Verdict.DeclValsE
 public import ConRon.Bridge.Checker.Hyp
+public import ConRon.Bridge.Inductives.Records
 
 @[expose] public section
 

@@ -9,9 +9,9 @@ import ConAgua.L.ModelGen
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.IndPartsSpec.BlockCounts
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.IndPosSpec.CfW
 public import ConAgua.Arena.IndPosSpec.NbLook
 import all ConAgua.Arena.IndPos2
+public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 
 @[expose] public section
 

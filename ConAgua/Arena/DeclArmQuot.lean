@@ -1,20 +1,11 @@
 module
 
-import ConAgua.Arena.DeclTwin
-public import ConAgua.Arena.DeclBasisSpec2
-import ConAgua.Arena.DeclCanonConst
-import ConAgua.Arena.DeclCanonSpec2
-import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclValRef
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
-import ConAgua.Arena.RefWalk
-import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.DeclCanonView2
 import all ConAgua.Arena.DeclArms
+public import ConAgua.Front.StateDR
 
 @[expose] public section
 

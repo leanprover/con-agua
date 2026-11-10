@@ -2,10 +2,7 @@ module
 
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Front.StateDR
-import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.RecGenSpec.StabDecCRDecB
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.DeclAndPinIndDec
 import all ConAgua.Arena.IndIface
 

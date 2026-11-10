@@ -5,7 +5,6 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndRealLvlT
 import ConAgua.Arena.RefWalk
-public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.Run
 import all ConAgua.Arena.IndIface

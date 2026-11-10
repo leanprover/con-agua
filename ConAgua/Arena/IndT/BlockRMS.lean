@@ -10,6 +10,8 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndT.BlockNames
 import all ConAgua.Arena.IndInstall
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 @[expose] public section
 

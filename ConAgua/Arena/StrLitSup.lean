@@ -1,14 +1,9 @@
 module
 
 import ConAgua.L.ModelGen
-import ConAgua.Arena.WhnfDeltaRefine
 import all ConAgua.Arena.Pins
-import ConAgua.Arena.StrLitChar
-import ConAgua.Arena.StrLitList
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DefEqMid
-import ConAgua.Arena.InferBodyLet
 import ConAgua.L.LocNF
 import Std.Tactic.BVDecide.Normalize.Bool
 import Std.WP.Tactic

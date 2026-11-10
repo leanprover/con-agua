@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.DeclStepSpec
-import ConAgua.Arena.Verdict
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

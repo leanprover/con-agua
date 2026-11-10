@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.DeclReduceSpec2
-public import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

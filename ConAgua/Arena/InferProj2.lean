@@ -2,9 +2,7 @@ module
 
 public import ConAgua.Arena.InferProj
 public import ConAgua.Arena.InferBodyDisp
-import ConAgua.Arena.ProjView
 import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.DefEqStuckCert
 public import ConAgua.Arena.WhnfProjRefine
 public import ConAgua.Arena.InferProj2Models
 import ConAgua.Arena.DefEqStuckShape

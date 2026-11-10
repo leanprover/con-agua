@@ -29,6 +29,7 @@ public import ConAgua.Arena.IndT.PosMc
 public import ConAgua.Arena.IndT.PosFkc
 import all ConAgua.Arena.IndInstall
 import ConAgua.Arena.IndT.PosAll
+import ConAgua.Arena.IndPosSpec.CfW
 
 @[expose] public section
 

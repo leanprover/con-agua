@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndDecPLB
 public import ConAgua.Arena.IndPartsSpec.BsoK2
 import ConAgua.Arena.IndPosSpec.RootHoles

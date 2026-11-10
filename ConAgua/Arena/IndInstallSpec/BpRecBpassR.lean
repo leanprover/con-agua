@@ -1,12 +1,11 @@
 module
 
-public import ConAgua.Arena.IndInstallSpec.DecCNS
-public import ConAgua.Arena.IndInstallSpec.DecISS
 public import ConAgua.Arena.IndInstallSpec.HbFreeMfr
 public import ConAgua.Arena.IndInstallSpec.Icp
 public import ConAgua.Arena.IndInstallSpec.Pos3MapMProj
-import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.IndInstallSpec.CapsProg
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 
 @[expose] public section
 

@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.DeclDivModSpec.DecCIDefnValue
 public import ConAgua.Arena.DeclDivModSpec.DivModEnvGuard
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.DeclPins
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

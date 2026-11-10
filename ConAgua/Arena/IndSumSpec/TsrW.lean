@@ -9,11 +9,8 @@ public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndSim
-import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.L.WordOff
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import all ConAgua.Arena.RecCheck
 

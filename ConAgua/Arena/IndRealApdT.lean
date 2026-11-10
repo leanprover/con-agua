@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.DeclApdRef
 import ConAgua.Arena.MemoRekey
 public import ConAgua.Arena.StageTLift
-import ConAgua.Arena.StageInst1
 import ConAgua.Arena.TwinStep
 import all ConAgua.Arena.DeclApd
 import all ConAgua.Arena.IndIface

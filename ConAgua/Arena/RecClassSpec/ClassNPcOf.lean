@@ -11,10 +11,11 @@ public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndPartsSpec.MemberNames
 import all ConAgua.Arena.RecClass
+public import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.RecClass
 
 @[expose] public section
 

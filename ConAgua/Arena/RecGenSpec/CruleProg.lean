@@ -1,8 +1,5 @@
 module
 
-public import ConAgua.Arena.IndRealCrF
-public import ConAgua.Arena.IndRealWalk
-public import ConAgua.Arena.RecGen
 
 @[expose] public section
 
@@ -16,13 +13,9 @@ noncomputable section
 
 set_option experimental.vcgen true
 
-open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
 
 namespace L.Ind
 
-open L.Arena
 
 /-! ## Shared pieces -/
 

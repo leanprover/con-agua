@@ -11,6 +11,7 @@ import ConAgua.Arena.IndSumSpec.Row
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 public import ConAgua.Arena.IndSumSpec.SumProg
 public import ConRon.Bridge.Inductives.Rel
+public import ConAgua.Arena.IndRealCrF
 
 @[expose] public section
 

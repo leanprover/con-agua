@@ -1,15 +1,13 @@
 module
 
-public import ConAgua.Arena.IndInstall
-public import ConAgua.Arena.WhnfBase
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 public import ConAgua.L.Examples
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
+public import ConAgua.Arena.IndIface
 
 @[expose] public section
 

@@ -19,6 +19,8 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 @[expose] public section
 

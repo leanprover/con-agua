@@ -1,15 +1,13 @@
 module
 
 public import ConAgua.Arena.DeclCheckLoop
-public import ConAgua.Arena.CheckerL
 public import ConAgua.Arena.DeclAndPin
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclPins
-import ConAgua.Arena.DeclStepSpec
-import ConAgua.Arena.ScratchRefine
 public import ConAgua.Arena.Scratch
 import all ConAgua.Arena.CheckerL
+public import ConAgua.Arena.DeclStepGo
+public import ConAgua.Arena.DeclCanonEq
 
 @[expose] public section
 

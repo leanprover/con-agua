@@ -1,14 +1,9 @@
 module
 
-public import ConAgua.Rom.CIReadSpec
 import ConRon.Bridge.Checker.Basis
 import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.Arena.RefWalk
-import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.DeclCanonEq
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.Pins
 

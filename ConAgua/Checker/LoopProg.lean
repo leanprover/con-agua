@@ -166,6 +166,7 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+public import ConAgua.Arena.DeclArmLoop
 
 @[expose] public section
 

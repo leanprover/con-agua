@@ -11,6 +11,7 @@ public import ConAgua.Arena.DeclReducePin
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Verdict.VCtx
 public import ConLeche.Verify.Shift
+public import ConAgua.Arena.IndRealApdT
 
 @[expose] public section
 

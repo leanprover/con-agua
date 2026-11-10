@@ -12,10 +12,10 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndMaster
-public import ConAgua.Arena.IndReal
 public import ConAgua.Arena.IndSum
 public import ConAgua.Arena.SimLib
 import all ConAgua.Arena.IndSum
+public import ConAgua.Arena.StripTeleSpec
 
 @[expose] public section
 

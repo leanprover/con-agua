@@ -3,11 +3,8 @@ module
 public import ConAgua.Arena.IndDeclConstsCtors
 public import ConAgua.Arena.StageInst1
 public import ConAgua.Arena.IndPosSpec.MatesW
-public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndSumSpec.StructProjArgP
-public import ConAgua.Arena.IndSumSpec.DecHLTake
 public import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndPosSpec.CanonW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

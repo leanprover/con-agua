@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.RecGenSpec.CfaFv
-public import ConAgua.Arena.RecGenSpec.CtorLp
 public import ConAgua.Arena.RecGenSpec.CfoProg
 public import ConAgua.Arena.RecGenSpec.Set64
 public import ConAgua.Arena.GrindAttr

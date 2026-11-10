@@ -1,11 +1,13 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.RecClassSpec.CloseLams
 import all ConAgua.Arena.IndParts
+import ConAgua.Arena.ErecRd
+import ConRon.Bridge.Grind
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 @[expose] public section
 
