@@ -12,6 +12,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.DefEqStuckIrrel
 import all ConAgua.Arena.DefEq
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -170,9 +171,9 @@ theorem ac_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   have hb1 := hsp1.bound
   have hb2 := hsp2.bound
   have e1 : (spTop m₁).toNat = (r₁.headD 0).toNat + (r₁.tail.headD 0).toNat := by
-    rw [htop1, ← hr10, addW_toNat (by omega)]
+    rw [htop1, ← hr10, L.toNat_add_of_lt _ _ (by omega)]
   have e2 : (spTop m₄).toNat = (r₂.headD 0).toNat + (r₂.tail.headD 0).toNat := by
-    rw [htop2, ← hr20, addW_toNat (by have := hg1.size; omega)]
+    rw [htop2, ← hr20, L.toNat_add_of_lt _ _ (by have := hg1.size; omega)]
   have hle12 : (spTop m₁).toNat ≤ (spTop m₄).toNat := UInt64.le_iff_toNat_le.mp hg2.1
   have h5top : spTop m₅ = spTop m₄ := hst₅.1
   have hA : SpineR m₅ (r₁.headD 0) (r₁.tail.headD 0) aa.toArray :=

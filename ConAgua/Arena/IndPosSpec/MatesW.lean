@@ -81,13 +81,6 @@ l_model nestFrameMatesGo_spec (p : Prog) (hc : p.lookup "sl_contains" = some slC
   specs [slContains_spec p hc n, slSnoc_specW p ha hcp hsn n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
-theorem getD2_eq (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
-  rcases vl with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩ <;> rfl
-theorem getD3_eq (vl : List Word) : vl.getD 3 0 = vl.tail.tail.tail.headD 0 := by
-  rcases vl with _ | ⟨a, _ | ⟨b, _ | ⟨c, _ | ⟨d, t⟩⟩⟩⟩ <;> rfl
-theorem getD1_eq' (vl : List Word) : vl.getD 1 0 = vl.tail.headD 0 := by
-  rcases vl with _ | ⟨a, _ | ⟨b, t⟩⟩ <;> rfl
-
 /-- The word-valued memo relation of the mentions walk. -/
 abbrev maMR (m : Mem) (mp : Std.HashMap EIdx Bool) : Prop :=
   MemoRG maSch bmKey (fun w : Word => w != 0) m mp

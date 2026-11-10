@@ -19,6 +19,7 @@ import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.RecCheckSpec.TcmLook
 public import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import all ConAgua.Arena.RecCheck
+import ConAgua.L.WordOff
 
 @[expose] public section
 /-!
@@ -176,7 +177,7 @@ theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hC4 := hC3.of_pstep hS4 hA4 q4
   dsimp only [tcmE.k_param_levels]
   refine RefE.abort0 rfl fun hw => ?_
-  have hd : (pfl + ftl).toNat = pfl.toNat + ftl.toNat := word_add_nowrap hw
+  have hd : (pfl + ftl).toNat = pfl.toNat + ftl.toNat := L.toNat_add_of_not_lt hw
   have hg04 : IWGrow m m4 := hg1.trans ((hg2.trans hg3).trans hg4)
   -- `target_holes`
   refine RefE.bindLift (fun _ => rfl) fun rh m5 h5 => ?_

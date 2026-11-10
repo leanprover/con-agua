@@ -24,6 +24,7 @@ import all ConAgua.Arena.ProjStore
 import all ConAgua.Arena.TeleLift
 import all ConAgua.Arena.Walk
 import all ConAgua.Arena.WalkLift
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -200,7 +201,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     by_cases hk : k < l
     · have hk' : k.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hk
       obtain ⟨w, hw, hwlt, hwx⟩ := decHL_word hdec hS.iw.iwSize k.toNat hk'
-      rw [word_ofNat_toNat] at hw
+      rw [L.toUInt64_toNat] at hw
       have hdrop : xs.drop k.toNat = xs[k.toNat] :: xs.drop (k.toNat + 1) :=
         List.drop_eq_getElem_cons (by omega)
       have hxk : xs[k.toNat] = decI w := by
@@ -227,7 +228,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         | nil => exact absurd e hv
         | cons g vt => exact ⟨g, vt, rfl⟩
       rw [hvl] at hvr
-      simp only [ViewR, getD1_eq] at hvr
+      simp only [ViewR, L.getD_one] at hvr
       obtain ⟨-, -, -, hy1, hy2⟩ := hvr
       have hy2' : (vt.tail.headD 0).toNat < 2 ^ 32 := by simpa using hy1
       have hy3 : decE (vt.tail.headD 0) = bd := by simpa using hy2
@@ -244,7 +245,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       have hdec' : decHL m1 o.toNat l.toNat = some xs := by
         have hI : m1.arr64 IW = m.arr64 IW := hfr.arr IW i1lA_iw (by decide)
         simp only [decHL, iwA, hI]; exact hdec
-      have hk1 : (k + 1).toNat = k.toNat + 1 := toNat_add_one' (by have := l.toNat_lt; omega)
+      have hk1 : (k + 1).toNat = k.toNat + 1 := L.toNat_add_one_of_lt (by have := l.toNat_lt; omega)
       obtain ⟨x3, a3, hrun3, ⟨hS3, hg3, hout3⟩, hA3⟩ :=
         ih m1 m' a1 (rb.headD 0) (k + 1) r hW hS1 hA1 hlt1 (by omega) hdec'
       refine ⟨x3, a3, ?_, ⟨hS3, hg1.trans hg3, hout3⟩, hA3⟩

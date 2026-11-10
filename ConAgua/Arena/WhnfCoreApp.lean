@@ -12,6 +12,7 @@ import ConRon.Arena.WFProofs
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfCore
 import all ConAgua.Arena.WhnfCore
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -561,7 +562,7 @@ theorem peel_restore {m₀ m m₃ : Mem} {co cn : Word} (hco : co = spTop m₀)
   have := StackKept.restore (m := m₀) (m₁ := m₃) (fun j hj => by
       have hjc : j < co := hco ▸ hj
       have : j < spTop m := by
-        rw [htop, UInt64.lt_iff_toNat_lt, addW _ _ hcn]
+        rw [htop, UInt64.lt_iff_toNat_lt, L.toNat_add_of_lt _ _ hcn]
         have := UInt64.lt_iff_toNat_lt.mp hjc
         omega
       rw [hSt.below j this, hb j hjc]) (by rw [hSt.size, hsz]) (hbk.trans hSt.bstk)
@@ -593,7 +594,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
     have hspn := hS.spn
     have hco_le : co.toNat + cn.toNat ≤ (m.arr64 SPN).size := hacc.bound
     have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
-    have hadd : (co + cn).toNat = co.toNat + cn.toNat := addW _ _ hcn64
+    have hadd : (co + cn).toNat = co.toNat + cn.toNat := L.toNat_add_of_lt _ _ hcn64
     have hspT : (spTop m).toNat = co.toNat + cn.toNat := by rw [htop, hadd]
     have har : SpineR m ao an args :=
       har₀.keepT co hsz hb hlo (hsz ▸ hspn)

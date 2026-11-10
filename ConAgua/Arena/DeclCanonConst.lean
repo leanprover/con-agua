@@ -11,6 +11,7 @@ import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DeclCvg
 import all ConAgua.Arena.DeclArmsCanon
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -33,7 +34,7 @@ theorem decRL_two {k : IdxKind} {m : Mem} {r : List Word} {xs : List (Idx k)}
     (hd : decHL m (r.headD 0).toNat (r.tail.headD 0).toNat = some xs)
     (hb : (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m) :
     decRL (fun m => decHL m) 0 m r xs := by
-  simpa only [decRL, getD0, cnGetD1] using (⟨hd, hb⟩ : _ ∧ _)
+  simpa only [decRL, L.getD_zero, cnGetD1] using (⟨hd, hb⟩ : _ ∧ _)
 
 theorem allocW_mem' {m m1 : Mem} {q k : Word} (h : allocW m k = some (q, m1)) :
     m1 = allocMem m k := by

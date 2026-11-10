@@ -11,6 +11,7 @@ public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
 
 import ConAgua.L.ModelGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -120,9 +121,6 @@ l_model dbct_spec (p : Prog) (hp : p.lookup "block_ctors" = some blockCtors)
   specs [callW_spec p n "block_shape_all_ctors", callW_spec p n "block_ctors_go"]
   grind [arena_grind]
 
-theorem getD_one_eq (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  rcases r with _ | ⟨x, _ | ⟨y, _⟩⟩ <;> rfl
-
 /-- The shape's `nP` word (`p + 4`), in any memory grown into. -/
 theorem shape_nP {m : Mem} {pp : Word} {bs : BlockShape} (hq : DecB (fun m => decBS m pp.toNat) m bs)
     (h9 : pp.toNat + 9 ≤ iwTop m) {m' : Mem} (hg : IWGrow m m') :
@@ -157,7 +155,7 @@ theorem dbctW_ok {p : Prog} (hP : DcCtorsProg p) {n : Nat} {m m' : Mem} {pp : Wo
   obtain ⟨s1, rfl, -, hS1, hg1, hd1, hb1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeAllCtors_refines p hP.alloc hP.iwCopy hP.numCtors hP.ctorsCopy hP.allCtorsGo hP.allCtors n
       _ a (fun _ => none) vis fe pp bs hS hq) h1
-  simp only [getD_one_eq] at hd1 hb1
+  simp only [L.getD_one] at hd1 hb1
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
   have hnP := shape_nP hq hq9 hg1
   obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)

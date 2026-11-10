@@ -6,6 +6,7 @@ public import ConAgua.Arena.RecSim
 import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndPartsSpec.RecTW
 public import ConAgua.Arena.IndRealOpf
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -119,10 +120,7 @@ theorem simPiBinders {vis : Word} {fe : IFEnv} {m : Mem}
     piBW_ok n m m' a CWF h rs hS.check.arena.base hp hh hS.iw.iwSize hS.iw.ctl
   have hroom := piBW_room n m m' a CWF h rs hS.check.arena.base hp hh hS.iw.iwSize hS.iw.ctl hS.iw.iw
   refine ⟨(bs, e), a, by rw [← CWF_eq]; exact hrun, stage_frame_iw hS hf (by rw [← hf.size IW]; exact hroom),
-    hg, by simpa [getD_one] using hdec, by simpa [getD_one] using hle⟩
-
-theorem drop3_headD (r : List Word) : (r.drop 3).headD 0 = r.tail.tail.tail.headD 0 := by
-  rcases r with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
+    hg, by simpa [L.getD_one] using hdec, by simpa [L.getD_one] using hle⟩
 
 end L.Ind
 

@@ -14,6 +14,7 @@ public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 public import ConAgua.Arena.IndPosSpec.GrpAt
 import all ConAgua.Arena.IndPos
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -71,7 +72,7 @@ theorem NSB.grow {m m' : Mem} {p : Word} {NS : NestState} (h : NSB m p NS) (hg :
   have hp := (nsb_words h htop).1
   have e : ∀ i : Word, i.toNat < 6 → rdW (m'.arr64 IW) (p + i) = rdW (m.arr64 IW) (p + i) := by
     intro i hi
-    have : (p + i).toNat = p.toNat + i.toNat := word_add_toNat (by omega)
+    have : (p + i).toNat = p.toNat + i.toNat := L.toNat_add_of_lt _ _ (by omega)
     simp only [rdW, this]; rw [hg.iwGet _ (by omega)]
   have e0 : rdW (m'.arr64 IW) p = rdW (m.arr64 IW) p := by simpa using e 0 (by decide)
   refine ⟨DecB.grow (decNS_mono _) hg h.dec, ?_, ?_, ?_⟩
@@ -97,7 +98,7 @@ theorem nsb_rec6 {m' : Mem} {q kO kL aO aL nO nL : Word} {keys act : List NestKe
   have n5 : iwN (truncM m') (q.toNat + 4 + 1) = some nL.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 5 (by omega))
   have rq : ∀ i : Word, i.toNat < 6 → rdW (m'.arr64 IW) (q + i) = [kO, kL, aO, aL, nO, nL][i.toNat]?.getD 0 := by
     intro i hi
-    have : (q + i).toNat = q.toNat + i.toNat := word_add_toNat (by omega)
+    have : (q + i).toNat = q.toNat + i.toNat := L.toNat_add_of_lt _ _ (by omega)
     simp only [rdW, this]; rw [hget _ (by simpa using hi)]
   have r0 : rdW (m'.arr64 IW) q = kO := by simpa using rq 0 (by decide)
   have r1 : rdW (m'.arr64 IW) (q + 1) = kL := by simpa using rq 1 (by decide)

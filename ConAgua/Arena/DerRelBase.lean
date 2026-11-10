@@ -3,6 +3,7 @@ module
 import ConAgua.Arena.View
 public import ConAgua.Arena.ExprMk
 public import ConAgua.Arena.ArenaRel
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -91,7 +92,7 @@ def tierOf (a : AState) (t : Word) : ETables := if t = 0 then a.store.pers else 
 theorem derT2_tier {α : Type} [BEq α] [Hashable α] {a : AState} {g : ETables → Tbl α EIdx UInt64}
     {P : Word → Nat → α → UInt64 → Prop} (hD : DerT2 a g P) (t : Word) (ht : t ≤ 1) :
     DerT (g (tierOf a t)) (P t) := by
-  rcases word_le_one t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   · simpa [tierOf] using hD.1
   · simpa [tierOf] using hD.2
 

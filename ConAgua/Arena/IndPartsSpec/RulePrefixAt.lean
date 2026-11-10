@@ -11,6 +11,7 @@ import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy
 import all ConAgua.Arena.IndParts
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -89,10 +90,6 @@ theorem ipK_inv1 {β γ : Type} {K : Option β → Option γ} {o : Option β} {y
 /-- `UInt64.ofNat` is additive (both sides are mod `2 ^ 64`, so no overflow side condition). -/
 theorem ofNat_add_word (a b : Nat) : UInt64.ofNat (a + b) = UInt64.ofNat a + UInt64.ofNat b := by
   apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-
-/-- `UInt64.ofNat` roundtrips a word. -/
-theorem ofNat_toNat_word (w : Word) : UInt64.ofNat w.toNat = w := by
-  apply UInt64.toNat_inj.mp; simp
 
 /-! ## From `decPL`'s `mapM` to a head/tail unfolding (as `hslice?_succ` does for `decHL`) -/
 
@@ -199,7 +196,7 @@ theorem blockShapeRulePrefixAt_refines (p : Prog)
   have hovv := hov o l v ho hl hv
   obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
   have ev : UInt64.ofNat (o + r.toNat) = UInt64.ofNat o + r := by
-    rw [ofNat_add_word, ofNat_toNat_word]
+    rw [ofNat_add_word, L.ofNat_toNat]
   rw [ev] at hv'
   obtain ⟨hw1, -⟩ := iwN_rdW hrP (by omega)
   have ew : UInt64.ofNat (v + 1) = UInt64.ofNat v + 1 := by
@@ -255,7 +252,7 @@ theorem blockShapeMajorIdxAt_refines (p : Prog)
   have hovv := hov o l v ho hl hv
   obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
   have ev : UInt64.ofNat (o + r.toNat) = UInt64.ofNat o + r := by
-    rw [ofNat_add_word, ofNat_toNat_word]
+    rw [ofNat_add_word, L.ofNat_toNat]
   rw [ev] at hv'
   obtain ⟨hw1, -⟩ := iwN_rdW hmI (by omega)
   have ew : UInt64.ofNat (v + 2) = UInt64.ofNat v + 2 := by
@@ -384,7 +381,7 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
             exact (Array.getElem?_eq_some_iff.mp hw).1
           omega
         have hv' := (iwN_rdW hv (by omega)).1
-        rw [ofNat_toNat_word] at hv'
+        rw [L.ofNat_toNat] at hv'
         have hdm := decMS_some hms0
         obtain ⟨o2, l2, ho2, hl2, hg2⟩ := decAt_some hdm.2.2.2
         have heq1 : v + 2 + 1 = v + 3 := by omega
@@ -456,7 +453,7 @@ theorem blockShapeNumCtorsW_ok (n : Nat) (m : Mem) (q r : Word) (bs : BlockShape
   obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
   have e1 : UInt64.ofNat (q.toNat + 1) = q + 1 := by
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-  rw [ofNat_toNat_word] at ho'
+  rw [L.ofNat_toNat] at ho'
   rw [e1] at hl'
   have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
   have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
@@ -619,7 +616,7 @@ theorem ipCopyW_get (W : Nat → Mem → Word → Word → Word → Option Mem) 
       by_cases hid : i = d.toNat
       · subst hid
         rw [ite_eq_right (by omega), show s.toNat + (d.toNat - d.toNat) = s.toNat by omega,
-                ofNat_toNat_word, hm1get, ite_eq_left rfl, hv]
+                L.ofNat_toNat, hm1get, ite_eq_left rfl, hv]
       · rw [ite_eq_left (by omega), show s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) by omega,
                hsrc _ (by omega), hm1, hg _ _ _ _ (hptr _ (by omega))]
     · rw [ite_eq_right hi, ite_eq_right (by omega), hm1get, ite_eq_right (by omega)]
@@ -704,7 +701,7 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
   obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
   have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-  rw [ofNat_toNat_word] at ho'
+  rw [L.ofNat_toNat] at ho'
   rw [e1] at hl'
   have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
   have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]

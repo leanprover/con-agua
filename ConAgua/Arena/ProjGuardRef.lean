@@ -13,6 +13,7 @@ import all ConAgua.Arena.Infer
 import all ConAgua.Arena.LevelZero
 import ConRon.Bridge.Grind
 import ConAgua.Front.Preserve
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -202,7 +203,7 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   split
   · exact RefE.of_cls0 rfl
   rename_i hov
-  have hn' := toNat_add_of_not_lt' hov
+  have hn' := L.toNat_add_of_not_lt hov
   unfold ConRon.Arena.projGuardSort
   refine RefE.bindLift (fun _ => pgsE.k_former_res_sort.none ..) fun r1 m1 c1 => ?_
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

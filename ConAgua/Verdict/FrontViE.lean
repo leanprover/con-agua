@@ -7,6 +7,7 @@ import all ConAgua.Front.IndApplyRefine3
 import ConAgua.L.ModelGen
 public import ConAgua.Checker.NoVerdictFns
 import all ConAgua.Front.IndApply
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -80,7 +81,7 @@ theorem unsafe_ref {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : Wo
     · rw [viUnsafeE.arm1 p n m to tn j hle]
       exact ⟨rfl, fun k hk hjk => by have := UInt64.le_iff_toNat_le.mp hle; omega⟩
     have hj := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
-    have hj1 := wsucc j tn (UInt64.not_le.mp hle)
+    have hj1 := L.toNat_add_one_of_word_lt j tn (UInt64.not_le.mp hle)
     have hix : (to + 11 * j + 7).toNat = to.toNat + 11 * j.toNat + 7 := widx _ _ _ _ (by simp; omega)
     obtain ⟨-, -, -, h7, -, -⟩ := hL.2.2 j.toNat (by omega)
     by_cases h0 : rdW (m.arr64 IFR) (to + 11 * j + 7) = 0
@@ -143,7 +144,7 @@ theorem npGo_ref {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn d : Wo
     · rw [viNpGoE.arm1 p n m to tn d j hle]
       exact ⟨rfl, fun k hk hjk => by have := UInt64.le_iff_toNat_le.mp hle; omega⟩
     have hj := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
-    have hj1 := wsucc j tn (UInt64.not_le.mp hle)
+    have hj1 := L.toNat_add_one_of_word_lt j tn (UInt64.not_le.mp hle)
     have hix : (to + 11 * j + 10).toNat = to.toNat + 11 * j.toNat + 10 := widx _ _ _ _ (by simp; omega)
     obtain ⟨-, -, -, -, -, h10⟩ := hL.2.2 j.toNat (by omega)
     by_cases h0 : rdW (m.arr64 IFR) (to + 11 * j + 10) = d
@@ -217,8 +218,8 @@ theorem findLastW_zero : ∀ (n : Nat) (m : Mem) (o x j f k : Word), findLastW n
     have hj1 : (j - 1).toNat = j.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
     have hoj : (o + j - 1).toNat = o.toNat + (j.toNat - 1) := by
-      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [widx2 _ _ hb]; simp; omega)),
-        widx2 _ _ hb]; simp; omega
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [L.toNat_add_of_lt _ _ hb]; simp; omega)),
+        L.toNat_add_of_lt _ _ hb]; simp; omega
     split at h
     · cases h; exact absurd hf (by decide)
     · rename_i hx
@@ -347,7 +348,7 @@ theorem ctor_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : Aren
     have hw4 : (np + rdW (m.arr64 IFR) (co + 10 * k + 4)).toNat = np.toNat + cts[k.toNat].numFields := by
       rw [rd 4 (by decide)]
       simp only [show (4 : Word).toNat = 4 from rfl]
-      rw [widx2 _ _ (by rw [c4.1]; have := c4.2; omega), c4.1]
+      rw [L.toNat_add_of_lt _ _ (by rw [c4.1]; have := c4.2; omega), c4.1]
     by_cases g4 : np + rdW (m.arr64 IFR) (co + 10 * k + 4) = x
     · rw [viCtorE.k_ind_pi_tele_len.arm1 p np _ m x g4]
       refine ⟨rfl, k.toNat, by rw [hkk], f1, hfold, hcidx', hind, decE t, hexp, ?_⟩
@@ -428,11 +429,11 @@ theorem recIdx_ref {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn tyt 
     · rw [recIdxE.arm1 p n m T ni np tn tyn tyt fuel j hle]
       exact ⟨rfl, fun k h1 h2 => by have := UInt64.le_iff_toNat_le.mp hle; omega⟩
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
-    have hj1 := wsucc j tn (UInt64.not_le.mp hle)
+    have hj1 := L.toNat_add_one_of_word_lt j tn (UInt64.not_le.mp hle)
     have ex1 : rdW (m.arr64 IFL) (tyn + j) = wd m IFL (tyn.toNat + j.toNat) := by
-      rw [wd_eq, widx2 _ _ (by omega)]
+      rw [wd_eq, L.toNat_add_of_lt _ _ (by omega)]
     have ex2 : rdW (m.arr64 IFL) (tyt + j) = wd m IFL (tyt.toNat + j.toNat) := by
-      rw [wd_eq, widx2 _ _ (by omega)]
+      rw [wd_eq, L.toNat_add_of_lt _ _ (by omega)]
     -- the rest of the loop, given the check at `j`
     have hrest : (wd m IFL (tyn.toNat + j.toNat) = T → ∃ o,
         (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + j.toNat)))).run a = .ok (o, a) ∧
@@ -473,7 +474,7 @@ theorem recIdx_ref {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn tyt 
       · rw [recIdxE.k_pi_sort_tele_len.arm1 p n T ni np tn tyn tyt fuel j m ok kk h0 hx]
         exact hrest fun _ => ⟨_, s1, fun x hx' => by
           simp only [h0, ite_false, Option.some.injEq] at hx'
-          rw [← hx', ← hx, widx2 _ _ (by omega)]⟩
+          rw [← hx', ← hx, L.toNat_add_of_lt _ _ (by omega)]⟩
       · rw [recIdxE.k_pi_sort_tele_len.abort1 p n T ni np tn tyn tyt fuel j m ok kk h0 hx]
         intro _ _
         refine ⟨rfl, j.toNat, Nat.le_refl _, hjn, hT, fun k' h1 h2 => by omega, kk.toNat, ?_, ?_⟩
@@ -481,7 +482,7 @@ theorem recIdx_ref {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn tyt 
         · intro he
           apply hx
           apply UInt64.toNat_inj.mp
-          rw [widx2 _ _ (by omega), he]
+          rw [L.toNat_add_of_lt _ _ (by omega), he]
     · rw [recIdxE.arm3 p n m T ni np tn tyn tyt fuel j hle hT]
       rw [ex1] at hT
       exact hrest fun h' => absurd h' hT

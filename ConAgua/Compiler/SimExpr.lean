@@ -3,6 +3,7 @@ module
 public import ConAgua.Compiler.Rel
 public import ConAgua.Compiler.Sim32
 import Kraken.X64.Registers
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -666,8 +667,6 @@ theorem set64_set64 (R : Reg64s) (r : Reg64) (a b : BitVec 64) : (R.set64 r a).s
   cases r <;> rfl
 
 omit [Host] in
-theorem tier_bit (u : Word) : (u &&& 1).toNat ≤ 1 := by
-  rw [UInt64.toNat_and]; exact Nat.le_trans Nat.and_le_right (by decide)
 
 omit [Host] in
 /-- The descriptor words of tier `u`'s array, from the tier-0 offsets: `8 (u & 1)` further
@@ -675,14 +674,14 @@ omit [Host] in
 theorem tier_off (tab : Tab) {a : ArrId} (ha : tab.dom64 (tier1 a) = true) (u : Word) :
     (tab.len64 (tierA a u)).toNat = (tab.len64 a).toNat + 8 * (u &&& 1).toNat ∧
     (tab.base64 (tierA a u)).toNat = (tab.base64 a).toNat + 8 * (u &&& 1).toNat := by
-  have := tier_bit u
+  have := L.toNat_and_one_le u
   simp only [Tab.len64, Tab.dlen, Tab.base64, Tab.dbase]
   rw [tab.pos64_tierA ha]; omega
 
 omit [Host] in
 theorem tier_off32 (tab : Tab) {a : ArrId} (ha : tab.dom64 (tier1 a) = true) (u : Word) :
     (tab.len32 (tierA a u)).toNat = (tab.len32 a).toNat + 8 * (u &&& 1).toNat := by
-  have := tier_bit u
+  have := L.toNat_and_one_le u
   simp only [Tab.len32, Tab.dlen32]
   rw [tab.pos64_tierA ha]; omega
 
@@ -727,7 +726,7 @@ theorem arrW_tier {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
   have hta := G.tab.dom64_tierA ha u
   have htap := G.tab.pos64_lt hta
   have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
-  have hb := tier_bit u
+  have hb := L.toNat_and_one_le u
   have hoff := tier_off G.tab ha u
   have hD : ∀ d : Int, s.regs.r15.toNat + 8 * (s.regs.get64 R).toNat + d.toNat =
       G.T + 8 * (u &&& 1).toNat + d.toNat := by
@@ -756,7 +755,7 @@ theorem arrW32_tier {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
   have hta := G.tab.dom64_tierA ha u
   have htap := G.tab.pos64_lt hta
   have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
-  have hb := tier_bit u
+  have hb := L.toNat_and_one_le u
   have hoff := tier_off G.tab ha u
   have hoff32 := tier_off32 G.tab ha u
   have hD : ∀ d : Int, s.regs.r15.toNat + 8 * (s.regs.get64 R).toNat + d.toNat =
@@ -810,7 +809,7 @@ theorem sim_ld64t_core {ctx : Ctx} (hT : ctx.tab = G.tab)
   have hta := G.tab.dom64_tierA ha u
   have htap := G.tab.pos64_lt hta
   have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
-  have hb := tier_bit u
+  have hb := L.toNat_and_one_le u
   have hr15 := hI.r15
   have hoff := tier_off G.tab ha u
   have hD : ∀ d : Int, s.regs.r15.toNat + 8 * (s.regs.get64 R).toNat + d.toNat =
@@ -1790,7 +1789,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
         have hta := G.tab.dom64_tierA ha (σ.loc x)
         have htap := G.tab.pos64_lt hta
         have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
-        have hb := tier_bit (σ.loc x)
+        have hb := L.toNat_and_one_le (σ.loc x)
         have hr15 := hI.r15
         have hoff := tier_off G.tab ha (σ.loc x)
         refine ev_movRMt hc.head ⟨by simp [Tab.len64, Tab.dlen]; lomega, by simp [hT, Tab.len64, Tab.dlen]; lomega⟩
@@ -1812,7 +1811,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
       have hta := G.tab.dom64_tierA ha u
       have htap := G.tab.pos64_lt hta
       have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
-      have hb := tier_bit u
+      have hb := L.toNat_and_one_le u
       have hr15 := hI1.r15
       have hoff := tier_off G.tab ha u
       refine sim_tierDesc (r := .rax) hc1.left (u := u) (by simp [hrax1]) fun st => ?_

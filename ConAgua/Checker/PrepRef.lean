@@ -3,6 +3,7 @@ module
 public import ConAgua.Checker.PrepLoopRef
 import ConAgua.Checker.PrepCopyRef
 import ConAgua.Checker.HoistRef
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -267,7 +268,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
       rdW (m₆.arr64 IW) (ord' + UInt64.ofNat i) := by
     intro i hi
     have hn : (ord' + UInt64.ofNat i).toNat = ord'.toNat + i :=
-      addW_toNat _ _ (by have := hI₆.iw; have := hI₆.iwSize; omega)
+      L.toNat_add_ofNat_of_lt _ _ (by have := hI₆.iw; have := hI₆.iwSize; omega)
     simp only [rdW, hn]; rw [hA₇.grow.iwGet _ (by omega)]
   obtain ⟨hdw, hmf₉, -, hD0, -⟩ := pCopyBack_ok n n m₇ m₈ m₉ ord' c t z₈ z₉
     (fun i hi => by rw [hIW₇ i hi]; exact (hO₆ i (by omega)).1)

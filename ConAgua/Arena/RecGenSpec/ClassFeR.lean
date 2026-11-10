@@ -16,6 +16,7 @@ public import ConAgua.Arena.RecGenSpec.DecCVX
 public import ConAgua.Arena.RecSim
 public import ConAgua.Arena.RecStab
 import all ConAgua.Arena.RecGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -571,8 +572,8 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
     rw [hre]; simp only [List.headD_cons, iwTop]; omega)
   -- the rest
   have hcvo1 := rec2ToNat_succ (o := cvo) (i := cvo.toNat) (Nat.le_refl _) (by have := hS.iw.iw; omega)
-  have hcvl1 := rec2ToNat_pred hvl
-  have hrcl1 := rec2ToNat_pred hcl
+  have hcvl1 := L.toNat_sub_one_of_ne hvl
+  have hrcl1 := L.toNat_sub_one_of_ne hcl
   have hM1 : (M + 1).toNat = M.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (ferW.k_class_fe_r_go.none ..)
   rw [ferW.k_class_fe_r_go.arm1] at h

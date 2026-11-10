@@ -3,6 +3,7 @@ module
 public import ConAgua.Rom.PinReadSpec
 public import ConAgua.Rom.DecExpr
 import ConAgua.Rom.Dec
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -95,12 +96,6 @@ def PinsC : List Word := 129 :: 150 :: 151 :: ExprC
 
 /-! ## Word arithmetic -/
 
-theorem addN {x y : Word} (h : x.toNat + y.toNat < 2 ^ 64) : (x + y).toNat = x.toNat + y.toNat := by
-  rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
-
-theorem ofNatN {i : Nat} (h : i < 2 ^ 64) : (UInt64.ofNat i).toNat = i := by
-  rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt h
-
 /-! ## `EW`: what a step wrote in `EREC` -/
 
 /-- **`EREC` below `m`'s top changed only in `[lo, hi)`**; the top did not go down; the
@@ -165,7 +160,7 @@ theorem erAlloc_ok {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m'))
   have hf : MemFrame [] [129] m (erAllocMem m k) := hmem ▸ MemFrame.setCtl m 129 _
   have htop : erTop (erAllocMem m k) = (rdW (m.arr64 CTL) 129).toNat + k.toNat := by
     simp only [erTop, hmem, rdW_set64]
-    rw [ite_eq_left ⟨trivial, trivial, by simp; omega⟩, addN (by omega)]
+    rw [ite_eq_left ⟨trivial, trivial, by simp; omega⟩, L.toNat_add_of_lt _ _ (by omega)]
   refine ⟨rfl, htop, by omega, hf, fun lo hi => ?_⟩
   have hE : (erAllocMem m k).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
   exact ⟨by rw [htop]; simp only [erTop]; omega, fun i _ _ => by rw [hE], by rw [hE],
@@ -182,7 +177,7 @@ theorem SliceR.frame {m m' : Mem} {o l : Word} {hs : List EIdx} {lo hi : Nat} (h
   refine ⟨Nat.le_trans hb hw.top, hl, fun i hi' => ?_⟩
   have ht := erTop_lt m
   have hx : (o + UInt64.ofNat i).toNat = o.toNat + i := by
-    rw [addN] <;> rw [ofNatN (by omega)] <;> omega
+    rw [L.toNat_add_of_lt] <;> rw [L.toNat_ofNat_of_lt (by omega)] <;> omega
   rw [← hv i hi', rdW, rdW, hx, hw.low _ (by omega) (by omega)]
 
 /-- A slice: its first word, then the rest. -/
@@ -191,7 +186,7 @@ theorem SliceR.cons {m : Mem} {o o' l l' : Word} {h : EIdx} {hs : List EIdx}
     (hl : l'.toNat = l.toNat + 1) (hb : o.toNat + 1 ≤ erTop m) : SliceR m o l' (h :: hs) := by
   obtain ⟨hb2, hl2, hv⟩ := h₂
   have ht := erTop_lt m
-  have ho' : o'.toNat = o.toNat + 1 := by subst ho; rw [addN (by simp; omega)]; simp
+  have ho' : o'.toNat = o.toNat + 1 := by subst ho; rw [L.toNat_add_of_lt _ _ (by simp; omega)]; simp
   refine ⟨by omega, by simp; omega, fun i hi => ?_⟩
   cases i with
   | zero => simpa using h₁
@@ -335,7 +330,7 @@ theorem EW.get {lo hi : Nat} {m m' : Mem} (hw : EW lo hi m m') (x : Word) (hx : 
 theorem sub8 {k : Word} (hk : k.toNat ≤ 8) : (8 - k).toNat = 8 - k.toNat := by
   rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using hk)]; simp
 
-theorem succN {k : Word} (hk : k.toNat < 8) : (k + 1).toNat = k.toNat + 1 := addN (by simp; omega)
+theorem succN {k : Word} (hk : k.toNat < 8) : (k + 1).toNat = k.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
 
 theorem hdrIdx {r j : Word} (hr : r.toNat + 24 < 2 ^ 64) (hj : j.toNat < 8) :
     (r + 8 + 2 * j).toNat = r.toNat + 8 + 2 * j.toNat ∧ (r + 9 + 2 * j).toNat = r.toNat + 9 + 2 * j.toNat := by
@@ -358,11 +353,11 @@ theorem TPinsR.nil {m : Mem} {o : Word} (h : o.toNat ≤ erTop m) : TPinsR m o 0
 theorem pairIdx {o : Word} {i : Nat} (h : o.toNat + 2 * i + 2 < 2 ^ 64) :
     (o + 2 * UInt64.ofNat i).toNat = o.toNat + 2 * i ∧
       (o + 2 * UInt64.ofNat i + 1).toNat = o.toNat + 2 * i + 1 := by
-  have hi : (UInt64.ofNat i).toNat = i := ofNatN (by omega)
+  have hi : (UInt64.ofNat i).toNat = i := L.toNat_ofNat_of_lt (by omega)
   have h2 : (2 * UInt64.ofNat i).toNat = 2 * i := by
     rw [UInt64.toNat_mul, hi]; simp only [UInt64.reduceToNat]; omega
-  have h3 : (o + 2 * UInt64.ofNat i).toNat = o.toNat + 2 * i := by rw [addN (by omega), h2]
-  exact ⟨h3, by rw [addN (by simp; omega), h3]; simp⟩
+  have h3 : (o + 2 * UInt64.ofNat i).toNat = o.toNat + 2 * i := by rw [L.toNat_add_of_lt _ _ (by omega), h2]
+  exact ⟨h3, by rw [L.toNat_add_of_lt _ _ (by simp; omega), h3]; simp⟩
 
 theorem TPinsR.frame {m m' : Mem} {o l : Word} {ps : List (NIdx × EIdx)} {lo hi : Nat}
     (h : TPinsR m o l ps) (hw : EW lo hi m m') (hd : o.toNat + 2 * l.toNat ≤ lo ∨ hi ≤ o.toNat) :
@@ -383,7 +378,7 @@ theorem TPinsR.cons {m : Mem} {o o' l l' : Word} {x : NIdx × EIdx} {ps : List (
     (hb : o.toNat + 2 ≤ erTop m) : TPinsR m o l' (x :: ps) := by
   obtain ⟨hb2, hl2, hv⟩ := h₃
   have ht := erTop_lt m
-  have ho' : o'.toNat = o.toNat + 2 := by subst ho; rw [addN (by simp; omega)]; simp
+  have ho' : o'.toNat = o.toNat + 2 := by subst ho; rw [L.toNat_add_of_lt _ _ (by simp; omega)]; simp
   refine ⟨by omega, by simp; omega, fun i hi => ?_⟩
   cases i with
   | zero => simpa using ⟨h₁, h₂⟩
@@ -412,7 +407,7 @@ theorem SliceR.keep {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
   refine ⟨Nat.le_trans hb hk.1, hl, fun i hi' => ?_⟩
   have ht := erTop_lt m
   have hx : (o + UInt64.ofNat i).toNat = o.toNat + i := by
-    rw [addN] <;> rw [ofNatN (by omega)] <;> omega
+    rw [L.toNat_add_of_lt] <;> rw [L.toNat_ofNat_of_lt (by omega)] <;> omega
   rw [← hv i hi', hk.get (by rw [hx]; omega)]
 
 theorem TPinsR.keep {m m' : Mem} {o l : Word} {ps : List (NIdx × EIdx)} (h : TPinsR m o l ps)
@@ -429,14 +424,14 @@ theorem PinSetR.keep {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m 
   obtain ⟨hb, hp, hc, htp⟩ := h
   have ht := erTop_lt m
   refine ⟨Nat.le_trans hb hk.1, hp.keep hk, fun j hj => ?_, fun j hj => ?_⟩
-  · have := hdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [ofNatN (by omega)]; exact hj)
-    rw [ofNatN (by omega)] at this
+  · have := hdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [L.toNat_ofNat_of_lt (by omega)]; exact hj)
+    rw [L.toNat_ofNat_of_lt (by omega)] at this
     have h1 := hc j hj
     unfold HdrR at h1 ⊢
     rw [hk.get (by rw [this.1]; omega), hk.get (by rw [this.2]; omega)]
     exact h1.keep hk
-  · have := thdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [ofNatN (by omega)]; exact hj)
-    rw [ofNatN (by omega)] at this
+  · have := thdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [L.toNat_ofNat_of_lt (by omega)]; exact hj)
+    rw [L.toNat_ofNat_of_lt (by omega)] at this
     have h1 := htp j hj
     unfold THdrR at h1 ⊢
     rw [hk.get (by rw [this.1]; omega), hk.get (by rw [this.2]; omega)]
@@ -580,13 +575,13 @@ theorem PinSetR.frame {m m' : Mem} {r : Word} {ip : INatOpPinSet} {b lo hi : Nat
   have hix : ∀ j, j < 8 → (r + 8 + 2 * UInt64.ofNat j).toNat = r.toNat + 8 + 2 * j ∧
       (r + 9 + 2 * UInt64.ofNat j).toNat = r.toNat + 9 + 2 * j := by
     intro j hj
-    have := hdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [ofNatN (by omega)]; exact hj)
-    rw [ofNatN (by omega)] at this; exact this
+    have := hdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [L.toNat_ofNat_of_lt (by omega)]; exact hj)
+    rw [L.toNat_ofNat_of_lt (by omega)] at this; exact this
   have tix : ∀ j, j < 8 → (r + 24 + 2 * UInt64.ofNat j).toNat = r.toNat + 24 + 2 * j ∧
       (r + 25 + 2 * UInt64.ofNat j).toNat = r.toNat + 25 + 2 * j := by
     intro j hj
-    have := thdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [ofNatN (by omega)]; exact hj)
-    rw [ofNatN (by omega)] at this; exact this
+    have := thdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [L.toNat_ofNat_of_lt (by omega)]; exact hj)
+    rw [L.toNat_ofNat_of_lt (by omega)] at this; exact this
   have tk : ∀ j, j < 8 → rdW (m'.arr64 EREC) (r + 24 + 2 * UInt64.ofNat j) =
         rdW (m.arr64 EREC) (r + 24 + 2 * UInt64.ofNat j) ∧
       rdW (m'.arr64 EREC) (r + 25 + 2 * UInt64.ofNat j) = rdW (m.arr64 EREC) (r + 25 + 2 * UInt64.ofNat j) := by
@@ -651,7 +646,7 @@ theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLec
     omega
   have hkm : (k - 1).toNat = k.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using hk1)]; simp
-  have ho1 : (o + 1).toNat = o.toNat + 1 := addN (by simp; omega)
+  have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
   have ht₁ := expr_top hf₁
   have hs₁ : (m₁.arr64 EREC).size = (mem.arr64 EREC).size := hf₁.size EREC
   rw [erecPutMem_lo m₁ o h (by omega)] at hW
@@ -692,7 +687,7 @@ theorem pinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r k q' : Word) (m
     obtain ⟨rfl, rfl⟩ := hW
     have : (8 : Word) - 8 = 0 := by decide
     rw [this]
-    exact ⟨[], [], a, rfl, by simp, inv, SliceR.nil (by rw [addN (by simp; omega)]; simp; omega),
+    exact ⟨[], [], a, rfl, by simp, inv, SliceR.nil (by rw [L.toNat_add_of_lt _ _ (by simp; omega)]; simp; omega),
       EW.refl _ _ _, MemFrame.refl _ _ _⟩
   by_cases hc' : ¬ rclearOK mem
   · simp [romPinsToW, h8, hc'] at hW
@@ -704,7 +699,7 @@ theorem pinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r k q' : Word) (m
   have hk8 : k.toNat < 8 := by
     have : k.toNat ≠ 8 := fun h' => h8 (UInt64.toNat_inj.mp (by simpa using h'))
     omega
-  have hrk : (r + k).toNat = r.toNat + k.toNat := addN (by omega)
+  have hrk : (r + k).toNat = r.toNat + k.toNat := L.toNat_add_of_lt _ _ (by omega)
   obtain ⟨es₁, hs₁, mm, a₁, seen₁, hrun₁, hlen₁, inv₁, hsl₁, hew₁, hfr₁⟩ :=
     exprsTo_dec rom hr n _ a [] ∅ q (r + k) 1 q₁ m₁ (inv.reset hc)
       (by rw [resetMem_top]; simp; omega) (by rw [resetMem_top, resetMem_size]; exact inv.top)
@@ -874,8 +869,8 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
     omega
   have hkm : (k - 1).toNat = k.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using hk1)]; simp
-  have ho1 : (o + 1).toNat = o.toNat + 1 := addN (by simp; omega)
-  have ho2 : (o + 2).toNat = o.toNat + 2 := addN (by simp; omega)
+  have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
+  have ho2 : (o + 2).toNat = o.toNat + 2 := L.toNat_add_of_lt _ _ (by simp; omega)
   -- the name
   rcases hN : romNameW rom n mem q with _ | ⟨h, q₁, m₁⟩ <;> rw [hN] at hW
   · simp [tpK] at hW
@@ -1080,7 +1075,7 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
     omega
   have hkm : (k - 1).toNat = k.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using hk1)]; simp
-  have ho1 : (o + 1).toNat = o.toNat + 1 := addN (by simp; omega)
+  have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
   rcases hA : erAllocW mem 40 with _ | ⟨r, m₁⟩ <;> rw [hA] at hW
   · simp [setsK] at hW
   rw [setsK_some] at hW
@@ -1120,8 +1115,8 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
           rdW (m₃₀.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) ∧
         rdW (m₃.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) = rdW (m₃₀.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) := by
       intro j hj
-      have := hdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [ofNatN (by omega)]; exact hj)
-      rw [ofNatN (by omega)] at this
+      have := hdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [L.toNat_ofNat_of_lt (by omega)]; exact hj)
+      rw [L.toNat_ofNat_of_lt (by omega)] at this
       exact ⟨ewT.get _ (by omega) (by omega), ewT.get _ (by omega) (by omega)⟩
     refine ⟨⟨by omega, by rw [hpins]; exact (hslP.frame ewL (by simp)).frame ewT (by first | (simp; done) | (simp; omega)),
       fun j hj => ?_, fun j hj => ?_⟩, by omega, fun j hj => ?_, fun j hj => ?_⟩

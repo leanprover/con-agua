@@ -13,6 +13,7 @@ import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.IndSumSpec.SumRules
 import ConAgua.Arena.RefWalk
 import all ConAgua.Arena.IndSum
+import ConAgua.L.WordOff
 
 @[expose] public section
 /-!
@@ -100,7 +101,7 @@ theorem scts_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
   by_cases hov1 : nP + nIdx < nP
   · rw [sctsE.abort1 p k m vis vis T lo ll nP nIdx rs isP lg cvTaw cO cL hl hov1]
     exact RefE.of_cls0 rfl
-  have hni : nP.toNat + nIdx.toNat < 2 ^ 64 := by rw [← sumAddNoOv hov1]; exact UInt64.toNat_lt _
+  have hni : nP.toNat + nIdx.toNat < 2 ^ 64 := by rw [← L.toNat_add_of_not_lt hov1]; exact UInt64.toNat_lt _
   obtain ⟨L, hL⟩ : ∃ L, cL.toNat = L + 1 :=
     ⟨cL.toNat - 1, by have : cL.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   have hcs' : decPL (truncM m) (decCN (truncM m)) cO.toNat (L + 1) = some cs := by
@@ -134,7 +135,7 @@ theorem scts_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
   rw [hw, hw2, hw3]
   have hcvB : DecB (fun m => decCVp m w2.toNat) m cv := by
     show decCVp (truncM m) w2.toNat = some cv; rw [hw2v]; exact hcv
-  have hnf : nP.toNat + w3.toNat < 2 ^ 64 := by rw [← sumAddNoOv hov2]; exact UInt64.toNat_lt _
+  have hnf : nP.toNat + w3.toNat < 2 ^ 64 := by rw [← L.toNat_add_of_not_lt hov2]; exact UInt64.toNat_lt _
   subst hw3v
   simp only [checkSumCtors]
   -- the head constructor (by its unified model)
@@ -152,7 +153,7 @@ theorem scts_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
   dsimp only at hC1 hg1 hA1
   have x1 := c1.ext
   have hcO1 : (cO + 1).toNat = cO.toNat + 1 := sumToNat_succ (by omega)
-  have hcL1 : (cL - 1).toNat = L := by rw [sumToNat_pred hl]; omega
+  have hcL1 : (cL - 1).toNat = L := by rw [L.toNat_sub_one_of_ne hl]; omega
   -- the rest, in tail position
   exact RefE.lastE (fun _ => sctsE.k_check_sum_ctors.none ..) (fun _ => sctsE.k_check_sum_ctors.arm1 ..) id
     (ih (by omega) m1 a1 (cO + 1) (cL - 1) cs restP hC1 (by rw [decHL_grow hg1 hlb]; exact hlps)

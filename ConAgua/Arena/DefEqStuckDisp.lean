@@ -11,6 +11,7 @@ import ConAgua.L.ModelGen
 public import ConAgua.Arena.DefEqStuckStr
 public import ConAgua.Arena.IndView
 import all ConAgua.Arena.DefEq
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -120,7 +121,7 @@ theorem ViewW.tag {g w1 w2 : Word} {v : ENodeView} (h : ViewW g w1 w2 v) : g = t
 
 theorem viewW_of {r : List Word} {v : ENodeView} (h : L.Ind.ViewR r v) :
     ViewW (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) v := by
-  cases v <;> simp only [L.Ind.ViewR, getD1, getD2] at h <;>
+  cases v <;> simp only [L.Ind.ViewR, L.getD_one, L.getD_two] at h <;>
     first
     | exact ⟨h.1, h.2.1⟩
     | exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2⟩
@@ -336,7 +337,7 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     obtain ⟨l, rfl⟩ := tagV_lit (hta ▸ c1.1)
     obtain ⟨fo, x, rfl⟩ := tagV_app (htb ▸ c1.2)
     obtain ⟨-, hfw, hfo, -, -⟩ := hvrb
-    rw [getD1] at hfw hfo
+    rw [L.getD_one] at hfw hfo
     refine RefE.of_run_eq (ds_strL _ _ fe _ _ _ a₀ l fo x hva hvb) ?_
     have H := str_ref p hq hi hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d
       a b 0 a (rb.tail.headD 0) l (by omega) (by omega) hs ha hb ha hfw (hhda ▸ c1.1) hva
@@ -349,7 +350,7 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     obtain ⟨fo, x, rfl⟩ := tagV_app (hta ▸ c2.1)
     obtain ⟨l, rfl⟩ := tagV_lit (htb ▸ c2.2)
     obtain ⟨-, hfw, hfo, -, -⟩ := hvra
-    rw [getD1] at hfw hfo
+    rw [L.getD_one] at hfw hfo
     refine RefE.of_run_eq (ds_strR _ _ fe _ _ _ a₀ l fo x hva hvb) ?_
     have H := str_ref p hq hi hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d
       a b 1 b (ra.tail.headD 0) l (by omega) (by omega) hs ha hb hb hfw (hhdb ▸ c2.2) hvb

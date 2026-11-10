@@ -9,6 +9,7 @@ public import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.RecClass
 import ConAgua.L.ModelGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -31,15 +32,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-/-- A nonzero length word: its `toNat` is a successor, the predecessor's `toNat` that. -/
-theorem wordSucc_of_ne {w : Word} (h : w ≠ 0) : ∃ k, w.toNat = k + 1 ∧ (w - 1).toNat = k := by
-  have hpos : 1 ≤ w.toNat := by
-    rcases Nat.eq_zero_or_pos w.toNat with h0 | h0
-    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) h
-    · omega
-  refine ⟨w.toNat - 1, by omega, ?_⟩
-  rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp
 
 theorem decNL_succ (m : Mem) (off n : Nat) :
     decNL m off (n + 1) = (do
@@ -603,7 +595,7 @@ theorem closeLamsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
       subst hbs
       exact ⟨decI body, a, rfl, hS, IWGrow.refl m, by simpa using hb, rfl, hA⟩
     · rw [closeLamsW.arm2 n m bo bl i body hbl] at h
-      obtain ⟨l1, hl1, hbl1⟩ := wordSucc_of_ne hbl
+      obtain ⟨l1, hl1, hbl1⟩ := L.exists_toNat_eq_succ hbl
       rw [hl1] at hbs
       obtain ⟨dom, rest, rfl, hrest, hdom⟩ := decHL_cons_r hbs
       have hbo1 : (bo + 1).toNat = bo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega

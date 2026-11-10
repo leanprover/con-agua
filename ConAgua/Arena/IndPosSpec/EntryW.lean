@@ -10,6 +10,7 @@ import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -152,8 +153,8 @@ theorem stripW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
         simp only [decOLE, decW0E] at hdec
         obtain ⟨-, -, hel, hed⟩ := hdec
         refine ⟨hS1, hg, r1.tail.tail.tail.headD 0, rfl, ?_, ?_, ?_⟩
-        · rwa [drop3_eq] at hel
-        · rwa [drop3_eq] at hed
+        · rwa [L.drop_three] at hel
+        · rwa [L.drop_three] at hed
         · exact hcv
   · have hker : erRd m ciq ≠ 4 := by
       rw [hk0.1]; intro h4
@@ -229,7 +230,7 @@ theorem entryW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
             rw [show decide (tagW (r2.headD 0) = 3) = true by rw [hk3]; decide] at this
             simpa using this
           obtain ⟨n0, us0, rfl⟩ := EStore.view_const a2.store x2 ht v (hdE ▸ hv)
-          simp only [ViewR, getD1_eq] at hvr
+          simp only [ViewR, L.getD_one] at hvr
           obtain ⟨-, hn1, hn2, -, -⟩ := hvr
           simp only [List.tail_cons] at hn1 hn2
           have hview : a2.store.viewConst x2 = some (n0, us0) :=

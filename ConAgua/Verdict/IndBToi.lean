@@ -14,6 +14,7 @@ import all ConAgua.Arena.RecCheck
 public import ConAgua.Verdict.PosFt
 import ConAgua.Arena.QuotCiT
 import ConRon.Bridge.Inductives.Positivity
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -188,7 +189,7 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
   rw [hty.2] at hrun7
   refine ⟨_, _, hrun7, ?_⟩
   dsimp only [toiE.k_pi_binders]
-  rw [getD_two] at he7
+  rw [L.getD_two] at he7
   -- `e_view`
   refine RefE.bindCall (Q := fun b a' v => b.2 = m7 ∧ a' = a5 ∧ ViewR b.1 v) (fun _ => rfl)
     (fun hG _ h8 => ErrClaim.of_callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h8)
@@ -207,7 +208,7 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
     cases v
     case sort u =>
       obtain ⟨-, hu1, hu2⟩ := hvr
-      rw [getD_one] at hu1 hu2
+      rw [L.getD_one] at hu1 hu2
       refine RefE.ret rfl ⟨⟨rfl, ?_, hu1, hu2⟩, hS7, ((hg3.trans hg35).trans hg6).trans hg7,
         ((((AFr.iw (erToIwW_iwFr hlp)).trans hA5).trans (instW_afr _ _ _ _ _ _ _ h6)).trans
           (piBW_afr _ _ _ _ _ _ h7)) hP3.abs,
@@ -217,7 +218,7 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
           exact hP3m.fr ((((erToIwW_mfr hlp).trans (MFr.of_frame hf5 hfA hfC)).trans
             (instW_mfr _ _ _ _ _ _ _ h6)).trans (piBW_mfr _ _ _ _ _ _ h7))⟩
       simp only [List.headD_cons]
-      rw [getD_one] at hdec7
+      rw [L.getD_one] at hdec7
       exact (decHL_length _ hdec7).symm
     all_goals (exfalso; revert hvr; simp only [ViewR, h2]; simp)
   refine RefE.abortAt (by simpa using h2) ?_

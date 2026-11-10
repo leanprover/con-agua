@@ -5,6 +5,7 @@ public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndPosSpec.RootHoles
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConRon.Bridge.Grind
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -417,11 +418,6 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       exact ⟨⟨hd3, Nat.le_of_eq ht3⟩, hsr1.grow decSR_mono (hg2.trans hg3)⟩
     | _ => simp [ciKind] at h4
 
-theorem partsWadd {q : Word} {i : Nat} (h : q.toNat + i < 2 ^ 64) :
-    (q + UInt64.ofNat i).toNat = q.toNat + i := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
-  exact Nat.mod_eq_of_lt h
-
 /-- The 6-word record written by `rec6`. -/
 theorem partsRec6 {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {q b0 b1 b2 b3 b4 b5 : Word} {ts : List IConstantVal}
@@ -435,7 +431,7 @@ theorem partsRec6 {vis : Word} {fe : IFEnv} {a : AState}
   have rd : ∀ (i : Nat) (hi : i < 6), rdW (m'.arr64 IW) (q + UInt64.ofNat i) =
       [b0, b1, b2, b3, b4, b5][i]'(by simpa using hi) := by
     intro i hi
-    exact rdW_of_get? (partsWadd (by omega)).symm
+    exact rdW_of_get? (L.toNat_add_ofNat_of_lt _ _ (by omega)).symm
       (by rw [hget i (by simpa using hi), List.getElem?_eq_getElem])
   have r0 : rdW (m'.arr64 IW) q = b0 := by simpa using rd 0 (by omega)
   have r1 : rdW (m'.arr64 IW) (q + 1) = b1 := by simpa using rd 1 (by omega)
@@ -523,7 +519,7 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       obtain ⟨hS2, hg2, hd2, ht2⟩ := partsConsPL (fun _ => OMono.decCVp _) h2 hS1 hts1.2 hts1.1 hy
       have hlt1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
       have e : ∀ i, i < 6 → rdW (m2.arr64 IW) (q1 + UInt64.ofNat i) = rdW (m1.arr64 IW) (q1 + UInt64.ofNat i) :=
-        fun i hi => rdW_iw_grow hg2 (by rw [partsWadd (by omega)]; omega)
+        fun i hi => rdW_iw_grow hg2 (by rw [L.toNat_add_ofNat_of_lt _ _ (by omega)]; omega)
       have e2 : rdW (m2.arr64 IW) (q1 + 2) = rdW (m1.arr64 IW) (q1 + 2) := e 2 (by omega)
       have e3 : rdW (m2.arr64 IW) (q1 + 3) = rdW (m1.arr64 IW) (q1 + 3) := e 3 (by omega)
       have e4 : rdW (m2.arr64 IW) (q1 + 4) = rdW (m1.arr64 IW) (q1 + 4) := e 4 (by omega)

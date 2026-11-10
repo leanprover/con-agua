@@ -15,6 +15,7 @@ public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.IndPosSpec.RpGoStep
 public import ConAgua.Arena.IndPosSpec.RxMapW
 import all ConAgua.Arena.IndPos
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -289,32 +290,32 @@ theorem dpNode_arm (k : Nat) (ih : DpGoOK k) (vl : List Word) (v : ENodeView) (h
       MemFrame [DPM] [207] m m' := by
   cases v with
   | app f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := dpNodeBin_ok k ih m m' a f1 _ _ _ _ r mp (Or.inl hg) hx hy hn hA hM
     rw [hdx, hdy] at this
     simp only [dpArm]; exact this
   | lam f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := dpNodeBin_ok k ih m m' a f1 _ _ _ _ r mp (Or.inr (Or.inl hg)) hx hy hn hA hM
     rw [hdx, hdy] at this
     simp only [dpArm]; exact this
   | forallE f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := dpNodeBin_ok k ih m m' a f1 _ _ _ _ r mp (Or.inr (Or.inr hg)) hx hy hn hA hM
     rw [hdx, hdy] at this
     simp only [dpArm]; exact this
   | letE t v' b' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy, hz, hdz⟩ := hvr
     rw [hg] at hn
     have := dpNodeLet_ok k ih m m' a f1 _ _ _ r mp hx hy hz hn hA hM
     rw [hdx, hdy, hdz] at this
     simp only [dpArm]; exact this
   | proj s i e =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, -, hz, hdz⟩ := hvr
     rw [hg] at hn
     have := dpNodeProj_ok k ih m m' a f1 9 _ _ _ r mp (by decide) (by decide) hz hn hA hM
@@ -361,7 +362,7 @@ theorem dpGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → DpGoOK k) (m m' :
       rcases hset : msetG dpSch m1 h 0 rn with _ | m2 <;> rw [hset] at hb; · simp [dpG5] at hb
       rw [dpG5_some] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-      have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+      have hF1 : (f - 1).toNat = F := by rw [L.toNat_sub_one_of_ne hf0, hF]; rfl
       obtain ⟨d, mp1, hr1, hbb, hM1, hfr1⟩ := dpNode_arm k (ih k (by omega)) vl v hvr hnv m m1 a (f - 1) rn mp
         hnode hA hM
       rw [hF1] at hr1
@@ -378,7 +379,7 @@ theorem dpGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → DpGoOK k) : DpGoOK
   by_cases hf0 : f = 0
   · rw [dpGoW_abort j m f h hf0] at hb; simp at hb
   rw [dpGoW_view j m f h hf0] at hb
-  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := toNat_ne_zero' hf0; omega⟩
+  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := L.toNat_ne_zero_of_ne _ hf0; omega⟩
   cases hvl : eViewW m h with
   | nil => rw [hvl] at hb; simp [dpG1] at hb
   | cons g vt =>
@@ -727,7 +728,7 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
         rw [← hdec]; simp only [decHL, iwA, hI2]
       have hdec3 := decHL_write m2 q i v ws hvlt (by rw [hI2]; exact hsz) (by rw [hI2]; omega) hdec2
       have hS3 := hS2.set_iw (q + i) v
-      have hi1 : (i + 1).toNat = i.toNat + 1 := toNat_add_one' (by omega)
+      have hi1 : (i + 1).toNat = i.toNat + 1 := L.toNat_add_one_of_lt (by omega)
       obtain ⟨phs, a3, hrun, hS4, hK, hdecF⟩ := ih (m2.set64 IW (q + i) v) m' a2 q n (i + 1) (ws ++ [decI v]) _dn fe vis h
         hS3 (by rw [hi1]; omega) (by rw [(set64IW_frame m2 (q + i) v).size IW, hI2]; exact hq)
         (by rw [(set64IW_frame m2 (q + i) v).size IW, hI2]; exact hsz) (by rw [hi1]; exact hdec3)

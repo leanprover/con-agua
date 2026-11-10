@@ -11,6 +11,7 @@ public import ConAgua.Arena.CoreWalks
 public import ConAgua.Arena.ProjGuardRowsT
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.Infer
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -231,7 +232,7 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   obtain ⟨-, ⟨M₁, hS₁, hK₁, hSt₁⟩, -, hrw1⟩ := h₁
   have hbnd := hsp.bound
   have hspn := hS.spn
-  have hadd : (to + tn).toNat = to.toNat + tn.toNat := addW _ _ (by omega)
+  have hadd : (to + tn).toNat = to.toNat + tn.toNat := L.toNat_add_of_lt _ _ (by omega)
   rw [ptaW.k_inst_lp.eq_2] at hW
   obtain ⟨g1, hW⟩ := of_ite_none hW
   have g2' : (to + tn).toNat < (m₁.arr64 SPN).size := by
@@ -242,7 +243,7 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
     rw [UInt64.le_iff_toNat_le, e] at this
     omega
   have g3' : (136 : Word).toNat < (m₁.arr64 CTL).size := hS₁.ctl136
-  have htn1 : (tn + 1).toNat = tn.toNat + 1 := addW _ _ (by have h1 := hsp.bound; have h2 := hS.spn; simp only [UInt64.toNat_one]; omega)
+  have htn1 : (tn + 1).toNat = tn.toNat + 1 := L.toNat_add_of_lt _ _ (by have h1 := hsp.bound; have h2 := hS.spn; simp only [UInt64.toNat_one]; omega)
   have htopv : to.toNat + tn.toNat ≤ (spTop s.mem).toNat := by rw [htop, hadd]; exact Nat.le_refl _
   have hsp₁ : SpineR m₁ to tn xs.toArray := hsp.keep hSt₁.size hSt₁.below htopv hspn
   obtain ⟨hspR, htop₂, -, -, -, -, -⟩ := spPush_step (m₀ := m₁) hS₁.spn hsp₁ (fun _ _ => rfl) rfl
@@ -253,7 +254,7 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   rw [hpush] at hW
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
   have hsz₁ : (m₁.arr64 SPN).size = (s.mem.arr64 SPN).size := hSt₁.size
-  have hadd1 : (to + (tn + 1)).toNat = to.toNat + (tn + 1).toNat := addW _ _ (by omega)
+  have hadd1 : (to + (tn + 1)).toNat = to.toNat + (tn + 1).toNat := L.toNat_add_of_lt _ _ (by omega)
   have h₂ := CoreSpec.of_callW (hil n ⟨spPush m₁ to tn pe, Locals.init []⟩ (AM.st _ a₀) dn vis fe M₁ eb
     (r₁.headD 0) to (tn + 1) 0 _ hS₂ hrw1 hspR (by rw [htop₂, hadd1]; exact Nat.le_refl _)) hc2
   have hrun2 := ipRun_of_ref h₂
@@ -461,7 +462,7 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n F
   have hspn₁ := hS₁.spn
   have hbnd := hsp₁.bound
   have htopv : (r₁.headD 0).toNat + (r₁.tail.headD 0).toNat ≤ (spTop m₂).toNat := by
-    rw [htop₂, addW _ _ (by omega)]; exact Nat.le_refl _
+    rw [htop₂, L.toNat_add_of_lt _ _ (by omega)]; exact Nat.le_refl _
   have hsp' : SpineR m₃ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
     hsp₁.keep hSt₃.size hSt₃.below htopv hspn₁
   rcases c5 : callW p (n + 1) "proj_type_at" [q, i, us, r₁.headD 0, r₁.tail.headD 0, pe] m₃ with

@@ -11,6 +11,7 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndPos
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -283,7 +284,7 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
         have h1 : ((decI e : EIdx).tag == ETag.const) = true := by rw [htag, he3]; decide
         exact beq_iff_eq.mp h1
       obtain ⟨nn, us0, rfl⟩ := EStore.view_const a.store (decE e) ht v hv
-      simp only [ViewR, getD1_eq', getD2_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨-, hx, hdx, hy, hdy⟩ := hvr
       have hview : a.store.viewConst (decE e) = some (nn, us0) :=
         EStore.viewConst_of_view _ _ ht nn us0 hv
@@ -460,7 +461,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
             have h1 : ((decI e : EIdx).tag == ETag.const) = true := by rw [decI_tag_const_beq e he, he3]; decide
             exact beq_iff_eq.mp h1
           obtain ⟨nn, us0, rfl⟩ := EStore.view_const a.store (decE e) ht v hv
-          simp only [ViewR, getD1_eq', getD2_eq] at hvr
+          simp only [ViewR, L.getD_one, L.getD_two] at hvr
           obtain ⟨-, hx, hdx, hy, hdy⟩ := hvr
           have hview : a.store.viewConst (decE e) = some (nn, us0) :=
             EStore.viewConst_of_view _ _ ht nn us0 hv
@@ -470,7 +471,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
             rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
             rfl
           · exact ⟨_, _, rfl, hx, hdx, hy, hdy⟩
-    · obtain ⟨N', rfl⟩ : ∃ N', N = N' + 1 := ⟨N - 1, by have := toNat_ne_zero' hn0; omega⟩
+    · obtain ⟨N', rfl⟩ : ∃ N', N = N' + 1 := ⟨N - 1, by have := L.toNat_ne_zero_of_ne _ hn0; omega⟩
       by_cases hd : tagW e ≠ 4
       · rw [phW.arm3 k m b e n hn0 hd] at h
         simp only [Option.some.injEq] at h
@@ -489,7 +490,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
             have h1 : ((decI e : EIdx).tag == ETag.app) = true := by rw [decI_tag_app_beq e he, he4]; decide
             exact beq_iff_eq.mp h1
           obtain ⟨f', a', rfl⟩ := EStore.view_app a.store (decE e) ht v hv
-          simp only [ViewR, getD1_eq', getD2_eq] at hvr
+          simp only [ViewR, L.getD_one, L.getD_two] at hvr
           obtain ⟨-, hx, hdx, hy, hdy⟩ := hvr
           have hview : a.store.viewApp (decE e) = some (f', a') :=
             EStore.viewApp_of_view _ _ ht f' a' hv
@@ -520,10 +521,10 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
                   rw [decI_tag_fvar_beq _ hy, hy1']; decide
                 rw [← hyd]; exact beq_iff_eq.mp h1
               obtain ⟨j, ty, rfl⟩ := EStore.view_fvar a.store a' ht2 v2 hv2
-              simp only [ViewR, getD1_eq'] at hvr2
+              simp only [ViewR, L.getD_one] at hvr2
               obtain ⟨-, hj, -⟩ := hvr2
               have hfi : a.store.viewFVarIdx a' = some j := EStore.viewFVarIdx_of_view' _ _ ht2 j ty hv2
-              have hnn : (n - 1).toNat = N' := by rw [toNat_sub_one' hn0, hN]; rfl
+              have hnn : (n - 1).toNat = N' := by rw [L.toNat_sub_one_of_ne hn0, hN]; rfl
               have hbn : (b + (n - 1)).toNat = b.toNat + N' := by
                 rw [UInt64.toNat_add, hnn]; exact Nat.mod_eq_of_lt (by omega)
               by_cases hm : (g2 :: vt2).tail.headD 0 ≠ b + (n - 1)

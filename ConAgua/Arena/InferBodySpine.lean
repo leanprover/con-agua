@@ -12,6 +12,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.Infer
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -108,7 +109,7 @@ theorem spPush_step {m m₀ : Mem} {co cn v : Word} {acc : Array EIdx}
       BKept m₀ (spPush m co cn v) ∧ PoolGrew m₀ (spPush m co cn v) := by
   have hco_le := hacc.bound
   have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
-  have hadd : (co + cn).toNat = co.toNat + cn.toNat := addW _ _ hcn64
+  have hadd : (co + cn).toNat = co.toNat + cn.toNat := L.toNat_add_of_lt _ _ hcn64
   refine ⟨(hacc.push hspn (by rw [← hadd]; exact hbd) v hv).setCtl 136 (co + (cn + 1)), ?_, ?_,
     by simp only [spPush, size_set64]; exact hsz, by simp only [spPush, size_set64]; exact h136,
     hbk.trans (BKept.of_frame (spnCtl_frame m (co + cn) v (co + (cn + 1))) (by decide) (by decide)),
@@ -124,12 +125,6 @@ theorem spPush_step {m m₀ : Mem} {co cn v : Word} {acc : Array EIdx}
 
 
 /-! ## `infer_spine_io` refines `inferSpineIO`, both outcomes -/
-
-theorem succ_toNat_of_lt {i an : Word} (h : i < an) : (i + 1).toNat = i.toNat + 1 := by
-  rw [UInt64.toNat_add]; simp
-  have := UInt64.lt_iff_toNat_lt.mp h
-  have := an.toNat_lt
-  omega
 
 /-- **A spine's exit, both outcomes**: `inst_list` at the accumulator (outside the verdict closure,
 lifted), the top put back (`k` the model's continuation). -/
@@ -147,7 +142,7 @@ theorem spTail_ref (p : Prog) (hil : InstListOK p) {G : Prop} (n : Nat)
   have hco_le := hacc.bound
   have hspn := hS.spn
   have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
-  have hadd : (co + cn).toNat = co.toNat + cn.toNat := addW _ _ hcn64
+  have hadd : (co + cn).toNat = co.toNat + cn.toNat := L.toNat_add_of_lt _ _ hcn64
   rw [← bind_pure (instantiateListFast coreWalkFuel (decE ty) acc 0)]
   refine RefE.bind_callW hk0 (hil n ⟨m, Locals.init []⟩ a dn vis fe M eb ty co cn 0 acc hS ht hacc
     (by rw [htop, hadd]; exact Nat.le_refl _)) fun r₁ m₁ _ ⟨_, ⟨M', hS', hK', hSt'⟩, _, hrw⟩ => ?_
@@ -187,7 +182,7 @@ theorem spioLoop_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
     have hspn := hS.spn
     have hco_le : co.toNat + cn.toNat ≤ (m.arr64 SPN).size := hacc.bound
     have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
-    have hadd : (co + cn).toNat = co.toNat + cn.toNat := addW _ _ hcn64
+    have hadd : (co + cn).toNat = co.toNat + cn.toNat := L.toNat_add_of_lt _ _ hcn64
     have hspT : (spTop m).toNat = co.toNat + cn.toNat := by rw [htop, hadd]
     have har : SpineR m ao an args := har₀.keepT co hsz hb hlo (hsz ▸ hspn)
     by_cases hlt : i < an
@@ -198,7 +193,7 @@ theorem spioLoop_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         have h := har.get i.toNat hlt'; rwa [hit] at h
       have hvv : HW (spW m (ao + i)) := by
         have h := har.lt i.toNat (by rw [← har.size]; exact hlt'); rwa [hit] at h
-      have hi1 := succ_toNat_of_lt hlt
+      have hi1 := L.toNat_add_one_of_word_lt _ _ hlt
       by_cases ht6 : tagW ty = 6
       · -- the ∀ step: the argument is pushed
         rw [ite_eq_left ht6]
@@ -431,7 +426,7 @@ theorem aio_ref (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p)
   have hb1 := hxs.bound
   have hspn₁ := hS₁.spn
   have hadd : (r₁.tail.headD 0 + r₁.tail.tail.headD 0).toNat =
-      (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := addW _ _ (by omega)
+      (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := L.toNat_add_of_lt _ _ (by omega)
   have htopN : (spTop m₁).toNat = (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := by
     rw [htop1, ← ho1, hadd]
   have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ a₀ dn vis fe M eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩

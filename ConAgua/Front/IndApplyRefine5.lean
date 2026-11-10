@@ -5,6 +5,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Front.IndApply
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -98,7 +99,7 @@ theorem ptr_rec (cts : List IndCtorRec) (co : Word) (k : Nat) (hk : k < cts.leng
     cts.getD ((w.toNat - co.toNat) / 10) default = cts[k] := by
   have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
   subst hw
-  rw [widx2 _ _ (by rw [UInt64.toNat_mul, hk']; simp; omega), UInt64.toNat_mul, hk']
+  rw [L.toNat_add_of_lt _ _ (by rw [UInt64.toNat_mul, hk']; simp; omega), UInt64.toNat_mul, hk']
   simp only [show (10 : Word).toNat = 10 from rfl]
   rw [Nat.mod_eq_of_lt (by omega), show co.toNat + 10 * k - co.toNat = 10 * k by omega,
     Nat.mul_div_cancel_left _ (by decide)]
@@ -174,7 +175,7 @@ theorem orderIn_ref : ∀ (n : Nat) (m : Mem) (t tt jj pos : Word),
   | succ n ih =>
     intro m t tt jj pos hI ht hjj hpos hfo
     have h4 : rdW (m.arr64 IFR) (t + 4) = wd m₀ IFR (t.toNat + 4) := by
-      rw [wd_eq, widx2 _ _ (by simp; omega), hI.wdR]; rfl
+      rw [wd_eq, L.toNat_add_of_lt _ _ (by simp; omega), hI.wdR]; rfl
     by_cases hle : rdW (m.arr64 IFR) (t + 4) ≤ jj
     · rw [viOrderInE.arm1 p n m _ _ _ _ _ _ _ _ _ _ _ hle]
       rw [h4] at hle
@@ -185,8 +186,8 @@ theorem orderIn_ref : ∀ (n : Nat) (m : Mem) (t tt jj pos : Word),
     have hlt' := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
     obtain ⟨hf1, hf2⟩ := hfo jj.toNat (Nat.le_refl _) hlt'
     simp only [Nat.sub_self, Nat.add_zero] at hf1 hf2
-    have hfp : (fo + pos).toNat = fo.toNat + pos.toNat := widx2 _ _ (by omega)
-    have hop : (oo + pos).toNat = oo.toNat + pos.toNat := widx2 _ _ (by omega)
+    have hfp : (fo + pos).toNat = fo.toNat + pos.toNat := L.toNat_add_of_lt _ _ (by omega)
+    have hop : (oo + pos).toNat = oo.toNat + pos.toNat := L.toNat_add_of_lt _ _ (by omega)
     have hnn : rdW (m.arr64 IFL) (fo + pos) = wd m₀ IFL (fo.toNat + pos.toNat) := by
       rw [wd_eq, hfp, hI.2 _ hf1]
     rw [hnn]
@@ -206,8 +207,8 @@ theorem orderIn_ref : ∀ (n : Nat) (m : Mem) (t tt jj pos : Word),
     dsimp only at hmc hck
     rw [hmc]
     rw [hI.islice _ _ hcnB] at hfold
-    have hj1 := wsucc jj _ (UInt64.not_le.mp hle)
-    have hp1 : (pos + 1).toNat = pos.toNat + 1 := widx2 _ _ (by simp; omega)
+    have hj1 := L.toNat_add_one_of_word_lt jj _ (UInt64.not_le.mp hle)
+    have hp1 : (pos + 1).toNat = pos.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
     have ih1 := ih (m.set64 IFL (oo + pos) r) t tt (jj + 1) (pos + 1)
       (hI.set _ _ (by rw [hop]; omega)) ht (by rw [hj1]; omega) (by rw [hj1, hp1]; omega)
       (fun c' h1 h2 => by
@@ -331,9 +332,9 @@ theorem orderGo_ref : ∀ (n : Nat) (m : Mem) (ti pos : Word),
       exact ⟨hI, fun _ _ => rfl, fun k h1 h2 => by omega⟩
     rw [viOrderGoE.arm2 p n m _ _ _ _ _ _ _ _ _ _ _ _ hle]
     have hlt' := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
-    have hti1 := wsucc ti tn (UInt64.not_le.mp hle)
+    have hti1 := L.toNat_add_one_of_word_lt ti tn (UInt64.not_le.mp hle)
     have htt' : rdW (m.arr64 IFL) (tyn + ti) = wd m₀ IFL (tyn.toNat + ti.toNat) := by
-      rw [wd_eq, widx2 _ _ (by omega), hI.2 _ (by omega)]
+      rw [wd_eq, L.toNat_add_of_lt _ _ (by omega), hI.2 _ (by omega)]
     rw [htt']
     have hmono := psum_mono m₀ to (ti.toNat + 1) tn.toNat (by omega)
     rw [psum_succ] at hmono

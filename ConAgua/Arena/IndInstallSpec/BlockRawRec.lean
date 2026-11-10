@@ -20,6 +20,7 @@ public import ConAgua.Arena.IndPosSpec.NoGoStep
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndPos
 import ConAgua.L.ModelGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -179,7 +180,7 @@ theorem pdmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     have hns' := hns.get (OMono.decHL _ _)
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     obtain ⟨ws, hws, hnm', hwlt⟩ := slR_of_decHL m _ _ _ hns' (by omega)
-    rw [ofNat_toNat_word, ofNat_toNat_word] at hws
+    rw [L.ofNat_toNat, L.ofNat_toNat] at hws
     rcases hma : maConstWk n m no nl (tfld m FORALL (tierW e) (idxW e) 0) with _ | ⟨b, m1⟩
     · rw [hma, pdmW.k_mentions_any_const.none] at h; cases h
     rw [hma] at h
@@ -346,7 +347,7 @@ theorem brgoW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
       have := partsIwLt hl'; rw [UInt64.toNat_add, hpw]; simp; omega
     obtain ⟨how, -, -⟩ := partsIwRd ho hp2
     obtain ⟨hlw, -, -⟩ := partsIwRd hl' (by rw [hp3])
-    rw [hw, how, hlw, ofNat_toNat_word, ofNat_toNat_word, partsAnyM_cons]
+    rw [hw, how, hlw, L.ofNat_toNat, L.ofNat_toNat, partsAnyM_cons]
     exact brrK_sim (rest := fun m1 => brgoW n m1 no nl (moff + 1) (mlen - 1))
       (brgoW.k_block_is_rec_member.none ..) (fun r m1 h => brgoW.k_block_is_rec_member.arm1 _ _ _ _ _ r m1 h)
       (fun r m1 h => brgoW.k_block_is_rec_member.arm2 _ _ _ _ _ r m1 h) brgoW.k_block_is_rec_go.none brgoW.k_block_is_rec_go.arm1
@@ -423,13 +424,13 @@ theorem blockIsRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" 
   have hk : bs.k = l.toNat := by rw [BlockShape.k, decPL_length _ hdm']
   obtain ⟨hlr, -, -⟩ := partsIwRd hlw (show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega)
   have hS1 : StageR vis fe m1 a₀ := stage_frame_iw hS hf1 (by
-    rw [← ht1, hk]; rw [hlr, ofNat_toNat_word] at hroom; simp only [iwTop] at hroom ⊢; omega)
+    rw [← ht1, hk]; rw [hlr, L.ofNat_toNat] at hroom; simp only [iwTop] at hroom ⊢; omega)
   subst hr1
   simp only [List.headD_cons, List.tail_cons] at hm'
   obtain ⟨how, -, -⟩ := partsIwRd ho rfl
   rw [rdW_iw_grow hg1 (by omega), rdW_iw_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)] at hm'
-  have hoW : rdW (s₀.mem.arr64 IW) q = o := by rw [how, ofNat_toNat_word]
-  rw [hoW, hlr, ofNat_toNat_word] at hm'
+  have hoW : rdW (s₀.mem.arr64 IW) q = o := by rw [how, L.ofNat_toNat]
+  rw [hoW, hlr, L.ofNat_toNat] at hm'
   have hkW : (UInt64.ofNat bs.k).toNat = bs.k := by rw [hk]; simp
   have hsim := brgoW_sim (no := rdW (s₀.mem.arr64 CTL) 200) (nl := UInt64.ofNat bs.k) (names := bs.memberNames) n m1 a₀ o l bs.members mp hS1
     ((show DecB (fun m => decPL m (decMS m) o.toNat l.toNat) s₀.mem bs.members from hdm).grow

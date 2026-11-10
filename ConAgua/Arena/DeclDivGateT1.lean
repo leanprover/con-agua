@@ -16,6 +16,7 @@ import ConAgua.Arena.DeclNatGate
 import ConAgua.Arena.IndInstallSpec.DomsW
 public import ConAgua.Arena.LeafFns
 public import ConAgua.Arena.TwinStep
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -442,7 +443,7 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.I
     have hrest : L.Rom.TPinsR m1 (o + 2) (l - 1) tps := by
       have hl1 : (l - 1).toNat = l.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-      have ho2 : (o + 2).toNat = o.toNat + 2 := L.Rom.addN (by simp; omega)
+      have ho2 : (o + 2).toNat = o.toNat + 2 := L.toNat_add_of_lt _ _ (by simp; omega)
       refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1]; omega, by rw [hl1]; omega,
         fun i hi => ?_⟩ ⟨hg1.er, hg1.erGet⟩
       have := hv (i + 1) (by simpa using hi)
@@ -772,7 +773,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.Ind
   have hCr6 := hkp.call (im_mem _ rfl) h6 hCr5.crOK
   obtain ⟨x6, a6, hrun6, hS6, hg6, hd6⟩ :=
     sc0List_ref hD hs0 c annVal hc hann hyps ho hl k m5 a5 r6 m6 hC5.stage hd5' hb5 h6
-  simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1] at hd6
+  simp only [decRL, Nat.zero_add, L.getD_zero, L.getD_one] at hd6
   obtain ⟨hi6, hhs⟩ := ConRon.Bridge.substConst0List_run hyps hx hC5.check.state hC5.check.pins
     (ConRon.Bridge.denoteN_ext hn c15.ext) (ConRon.Bridge.denote_ext hv c15.ext)
     (ConRon.Bridge.denoteEList_ext c15.ext _ _ hh) hrun6
@@ -902,7 +903,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.I
     have r0 : rdW (m.arr64 IW) so = q := hq
     have rq1 : rdW (m.arr64 IW) q = ho := rdW_iw_of h0 rfl
     have rq2 : rdW (m.arr64 IW) (q + 1) = hl :=
-      rdW_iw_of h1 (word_add_one (by omega))
+      rdW_iw_of h1 (L.toNat_add_one_of_lt (by omega))
     have rq3 : rdW (m.arr64 IW) (q + 2) = e :=
       rdW_iw_of h2 (word_add_two (by omega))
     rw [r0, rq1, rq2, rq3] at hw
@@ -981,9 +982,9 @@ theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.In
   rw [h3, bW_some] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  simp only [decStmtL, ntGetD0, ntGetD1] at hd1
+  simp only [decStmtL, L.getD_zero, L.getD_one] at hd1
   unfold decRL at hd2
-  simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd2
+  simp only [Nat.zero_add, L.getD_zero, L.getD_one] at hd2
   obtain ⟨x3, a3, hrun3, hC3, c3, hg3, hd3⟩ := cggoC hD hcl hkp hcrf hs0 hsA c annVal hc hann x1 _ x2 _
     (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) k m2 a1 r3 m3 hC2 hCr2
     (hd1.grow hg2) hd2.1 hd2.2 hn1 (ConRon.Bridge.denote_ext hv c1.ext) hsd hpr h3

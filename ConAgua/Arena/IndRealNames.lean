@@ -20,6 +20,7 @@ import all ConAgua.Arena.NAnonStore
 import all ConAgua.Arena.NStrStore
 import all ConAgua.Arena.Store
 import ConAgua.Arena.IndMaster
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -136,7 +137,7 @@ theorem prW_some {m m' : Mem} {k o : Word} (h : prW m k = some (o, m')) (hp : pc
   obtain ⟨c1, h⟩ := of_ite_none h
   obtain ⟨c2, h⟩ := of_ite_none h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have e : (rdW (m.arr64 CTL) 0 + k).toNat = (rdW (m.arr64 CTL) 0).toNat + k.toNat := add_nc _ _ c1
+  have e : (rdW (m.arr64 CTL) 0 + k).toNat = (rdW (m.arr64 CTL) 0).toNat + k.toNat := L.toNat_add_of_not_lt c1
   have hno : (rdW (m.arr64 CTL) 0).toNat + k.toNat < 2 ^ 64 := by
     rw [← e]; exact UInt64.toNat_lt _
   simp only [← top_rdW] at c2 hno ⊢
@@ -235,7 +236,7 @@ theorem iwpW_ok {m₀ : Mem} (hok : PoolOK m₀) : ∀ (n : Nat) (m m' : Mem) (s
     have hsplit := tag_split d
     have htier := tag_tier_le d hd41
     obtain ⟨et, ei, ed⟩ := tag_succ d hd41 (by omega)
-    have hs1 : (s + 1).toNat = s.toNat + 1 := toNat_succ_lt (by omega)
+    have hs1 : (s + 1).toNat = s.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hlm : (l - 1).toNat = l.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
     have hne : tierA POOL (d >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))

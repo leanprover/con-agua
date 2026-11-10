@@ -14,6 +14,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -252,7 +253,7 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
 
 theorem lspushOK_eqC (m : Mem) (t : Word) : lspushOK m t = pushOKC lsCS m t := by
   rw [lspushOK, pushOKC, dec_le_not_lt ((lscnt m t + 1) * 3) (m.len64 (tierA LSREC t)),
-    dec_lt_not_le' (lscnt m t) (m.len64 (tierA LSHP t))]
+    L.decide_lt_eq_not_decide_le (lscnt m t) (m.len64 (tierA LSHP t))]
   simp only [lsCS, Bool.not_or, Bool.and_assoc]
   rfl
 

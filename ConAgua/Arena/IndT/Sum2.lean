@@ -11,6 +11,7 @@ public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import all ConAgua.Arena.IndSum
 import ConAgua.Arena.IndT.Lift
 public import ConAgua.Arena.TwinStep
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -111,7 +112,7 @@ theorem ct_ref (m : Mem) (a : AState) (n cvTa0 : Word) (cvTa : IConstantVal)
   obtain ⟨l, e⟩ := le
   simp only [decOLE, decW0E] at hdec
   obtain ⟨-, -, hb32, hbe⟩ := hdec
-  rw [drop3_eq] at hb32 hbe
+  rw [L.drop_three] at hb32 hbe
   by_cases ht : tagW (r1.tail.tail.tail.headD 0) = 2
   · by_cases hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []
     · rw [ctE.k_strip_pis.arm1 _ _ _ _ h0 ht hne]; exact RefE.of_cls0 (by simp)

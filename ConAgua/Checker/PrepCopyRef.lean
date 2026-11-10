@@ -4,6 +4,7 @@ import ConAgua.Checker.HoistOrderRef3
 import ConAgua.Checker.HoistTargetsRef
 public import ConAgua.Checker.Prelude
 public import ConAgua.Front.StateDR
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -61,7 +62,7 @@ theorem pCopyRec_ok (t q i : Word) (n : Nat) : ∀ (m m' : Mem) (k z : Word), k.
     · rw [pCopyRecW.arm2 n m t q i k h8] at h
       rw [word_le] at h8
       have h8' : (8 : Word).toNat = 8 := rfl
-      have hk1 := toNat_succ k (by omega)
+      have hk1 := @L.toNat_add_one_of_lt k (by omega)
       have hs1 := size_set64 m IW IW (t + 8 * i + k) (rdW (m.arr64 DECL) (q + k))
       obtain ⟨hf, hr⟩ := ih _ _ (k + 1) z (by omega) (by rw [hs1]; omega) (by rw [hs1]; omega) h
       refine ⟨(MemFrame.set64 m IW (by decide) _ _).trans hf, fun x => ?_⟩
@@ -98,7 +99,7 @@ theorem pBackRec_ok (t i : Word) (n : Nat) : ∀ (m m' : Mem) (k z : Word), k.to
     · rw [pBackRecW.arm2 n m t i k h8] at h
       rw [word_le] at h8
       have h8' : (8 : Word).toNat = 8 := rfl
-      have hk1 := toNat_succ k (by omega)
+      have hk1 := @L.toNat_add_one_of_lt k (by omega)
       have hs1 := size_set64 m DECL DECL (1 + 8 * i + k) (rdW (m.arr64 IW) (t + 8 * i + k))
       obtain ⟨hf, hr⟩ := ih _ _ (k + 1) z (by omega) (by rw [hs1]; omega) (by rw [hs1]; omega) h
       refine ⟨(MemFrame.set64 m DECL (by decide) _ _).trans hf, fun x => ?_⟩
@@ -136,7 +137,7 @@ theorem pCopy_ok (ord c t : Word) (n : Nat) : ∀ (m m' : Mem) (i z : Word), i.t
       exact ⟨MemFrame.refl _ _ _, fun x => by rw [iteF (by omega)]⟩
     · rw [pCopyW.arm2 n m ord c t i hci] at h
       rw [word_le] at hci
-      have hi1 := toNat_succ i (by omega)
+      have hi1 := @L.toNat_add_one_of_lt i (by omega)
       cases hrc : pCopyRecW n m t (1 + 8 * rdW (m.arr64 IW) (ord + i)) i 0 with
       | none => rw [hrc] at h; simp [pCopyW.k_prep_copy_rec] at h
       | some p =>
@@ -182,7 +183,7 @@ theorem pBack_ok (t c : Word) (n : Nat) : ∀ (m m' : Mem) (i z : Word), i.toNat
       exact ⟨MemFrame.refl _ _ _, fun x => by rw [iteF (by omega)]⟩
     · rw [pBackW.arm2 n m t c i hci] at h
       rw [word_le] at hci
-      have hi1 := toNat_succ i (by omega)
+      have hi1 := @L.toNat_add_one_of_lt i (by omega)
       cases hrc : pBackRecW n m t i 0 with
       | none => rw [hrc] at h; simp [pBackW.k_prep_back_rec] at h
       | some p =>

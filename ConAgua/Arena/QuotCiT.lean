@@ -4,6 +4,7 @@ public import ConAgua.Arena.QuotAtT
 import ConRon.Bridge.Checker.Canon
 import ConAgua.Arena.IlpRd
 import ConAgua.Arena.IndInstallSpec.NhW
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -349,10 +350,6 @@ theorem ciJ1_inv {p : Prog} {n : Nat} {c po pl k nn : Word} {m m' : Mem} {res : 
   rw [h3] at hW
   exact ⟨r1, m1, r2, m2, r3, m3, by first | rfl | exact h1, by first | rfl | exact h2,
     by first | rfl | exact h3, hW⟩
-
-theorem word_toNat_add {c : Word} {k : Nat} (h : c.toNat + k < 2 ^ 64) :
-    (c + UInt64.ofNat k).toNat = c.toNat + k := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat']; omega
 
 /-- The kind word of a constant record. -/
 def ciKindQ : IConstantInfo → Nat
@@ -867,7 +864,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     have hsrc : ∀ (X : Mem), IWGrow m X → ∀ (j : Nat) (wj : Word), erecP m (c.toNat + j) = some wj →
         erRd X (c + UInt64.ofNat j) = wj := fun X hX j wj hj => by
       have := erecP_lt64 hj
-      exact erRd_of _ _ (by rw [word_toNat_add (by omega)]; exact hX.ext _ _ hj)
+      exact erRd_of _ _ (by rw [L.toNat_add_ofNat_of_lt _ _ (by omega)]; exact hX.ext _ _ hj)
     have rd : ∀ x : Word, rdW (m5.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRd m5 x :=
       fun _ => rfl
     simp only [rd, show c + 8 = c + UInt64.ofNat 8 from rfl, hsrc m5 hpre5.grow 8 w8 hw8] at hW

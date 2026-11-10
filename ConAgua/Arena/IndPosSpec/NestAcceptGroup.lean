@@ -5,6 +5,7 @@ public import ConAgua.Arena.IndPosSpec.GrpAt
 public import ConAgua.Arena.IndPosSpec.NkcW
 import ConAgua.Arena.Env
 import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -123,7 +124,7 @@ theorem nagW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       pos2_key_rec h4 hus (by omega) hget1 hds1
     have hks1 := hks.grow hg1
     have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
-    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
+    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
     have hgL1 : (gL - 1).toNat = grp'.length := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     have hgrp' : GrpAt m1 (gO + 1).toNat grp' := by

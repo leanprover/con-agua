@@ -6,6 +6,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -26,9 +27,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-theorem scaGetD3 (r : List Word) : r.getD 3 0 = r.tail.tail.tail.headD 0 := by
-  rcases r with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩ <;> rfl
 
 section suball
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
@@ -211,7 +209,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
       exact ⟨decE h, a1, hrun, hS1, hg1, by simpa using hh, rfl⟩
     cases vv with
     | const c us =>
-      simp only [ViewR, ntGetD1, getD2] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨h3, hc0, hcd, hu0, hud⟩ := hvr
       rw [ite_eq_left h3] at hw
       cases h2 : callW p k "pin_word" [52] m1 with
@@ -241,7 +239,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
           decide_eq_false hcond, Bool.false_eq_true, ite_false]
         rfl
     | app fa aa =>
-      simp only [ViewR, ntGetD1, getD2] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨hT, hf0, hfd, ha0, had⟩ := hvr
       simp (config := { decide := true }) only [hT, ↓reduceIte] at hw
       subst hfd had
@@ -251,7 +249,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
       simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']
       exact hrun
     | lam ty b =>
-      simp only [ViewR, ntGetD1, getD2] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨hT, hf0, hfd, ha0, had⟩ := hvr
       simp (config := { decide := true }) only [hT, ↓reduceIte] at hw
       subst hfd had
@@ -261,7 +259,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
       simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']
       exact hrun
     | forallE ty b =>
-      simp only [ViewR, ntGetD1, getD2] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨hT, hf0, hfd, ha0, had⟩ := hvr
       simp (config := { decide := true }) only [hT, ↓reduceIte] at hw
       subst hfd had
@@ -271,7 +269,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
       simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']
       exact hrun
     | letE t v b =>
-      simp only [ViewR, ntGetD1, getD2, scaGetD3] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
       obtain ⟨hT, ht0, htd, hv0, hvd, hb0, hbd⟩ := hvr
       simp (config := { decide := true }) only [hT, ↓reduceIte] at hw
       subst htd hvd hbd
@@ -280,7 +278,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
       simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']
       exact hrun
     | proj s i e0 =>
-      simp only [ViewR, ntGetD1, getD2, scaGetD3] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
       obtain ⟨hT, hs0, hsd, hid, he0, hed⟩ := hvr
       simp (config := { decide := true }) only [hT, ↓reduceIte] at hw
       subst hsd hid hed

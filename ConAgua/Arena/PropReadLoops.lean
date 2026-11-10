@@ -8,6 +8,7 @@ import ConAgua.Front.Preserve
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.PropRead
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -29,13 +30,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-theorem pr_word_sub1 (f : Word) (hf : f ≠ 0) : (f - 1).toNat = f.toNat - 1 := by
-  have : f.toNat ≠ 0 := fun h => hf (UInt64.toNat_inj.mp (by simpa using h))
-  rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
-
-theorem pr_word_ne0 (f : Word) (hf : f ≠ 0) : f.toNat ≠ 0 :=
-  fun h => hf (UInt64.toNat_inj.mp (by simpa using h))
-
 /-! ## `binder_dom(k, e)` -/
 
 /-- **The model of `binder_dom`**: `(flag, domain)`, `none` where the L code aborts. -/
@@ -48,8 +42,8 @@ def bdW (m : Mem) (k e : Word) : Option (Word × Word) :=
 termination_by k.toNat
 decreasing_by
   have hk0 : k ≠ 0 := by assumption
-  have := pr_word_sub1 k hk0
-  have := pr_word_ne0 k hk0
+  have := L.toNat_sub_one_of_ne hk0
+  have := L.toNat_ne_zero_of_ne k hk0
   omega
 
 theorem bdW_miss (m : Mem) (k e : Word) (h : tagW e ≠ 6) : bdW m k e = some (0, 0) := by
@@ -149,14 +143,14 @@ theorem bdW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro k e fl v hkN he hL
     by_cases hk0 : k = 0
     · exact ih k e fl v (by subst hk0; simp) he hL
-    obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 k hk0)
+    obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (L.toNat_ne_zero_of_ne k hk0)
     by_cases hc : tagW e = 6
     · have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [bdW] at hL; simp [hc, hv] at hL
       have hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e := by
         intro hv; rw [bdW] at hL; simp [hc, hv1, hv] at hL
       rw [bdW_step m k e _ hc hk0 hv1 hv2 rfl] at hL
-      have hkm1 := pr_word_sub1 k hk0
+      have hkm1 := L.toNat_sub_one_of_ne hk0
       have hcnt : idxW e < tcnt m FORALL (tierW e) := UInt64.not_le.mp hv2
       have hvb := viewBind_forall m a hR e he ⟨hv1, hcnt⟩ hc
       have h1 := (view_forall m a hR e he ⟨hv1, hcnt⟩ hc).2.2
@@ -248,12 +242,12 @@ theorem gafLoopW_numArgs (m : Mem) (a : AState) (hR : ArenaR m a) :
       have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl] at hL
-      have hfm1 := pr_word_sub1 f hf0
+      have hfm1 := L.toNat_sub_one_of_ne hf0
       have hcnt : idxA e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       obtain ⟨ihr, ihb⟩ := ih _ (f - 1) e' f' (by rw [hfm1]; omega) h1 hL hf'
-      have hf1 := pr_word_ne0 f hf0
+      have hf1 := L.toNat_ne_zero_of_ne f hf0
       obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero hf1
       refine ⟨?_, by omega⟩
       have hsub : (f - f').toNat = (f - 1 - f').toNat + 1 := by
@@ -266,7 +260,7 @@ theorem gafLoopW_numArgs (m : Mem) (a : AState) (hR : ArenaR m a) :
       rfl
     · rw [gafLoopW_done m e f hc] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-      obtain ⟨k, hk⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 f hf')
+      obtain ⟨k, hk⟩ := Nat.exists_eq_succ_of_ne_zero (L.toNat_ne_zero_of_ne f hf')
       refine ⟨?_, Nat.le_refl _⟩
       rw [hk, numArgs]
       have htag : (decE e).tag ≠ ETag.app := fun h => hc ((decE_tag_app e he).mp h)
@@ -290,7 +284,7 @@ theorem acaW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {e f c h : Word} (he : 
   obtain ⟨h1, h2⟩ := gafLoopW_ok m a hR _ e f _ _ (Nat.le_refl _) he hL hf0
   obtain ⟨h3, h4⟩ := gafLoopW_numArgs m a hR _ e f _ _ (Nat.le_refl _) he hL hf0
   refine ⟨h1, h3, h2, ?_⟩
-  have := pr_word_ne0 f' hf0
+  have := L.toNat_ne_zero_of_ne f' hf0
   rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
   omega
 
@@ -319,11 +313,11 @@ theorem gafLoopW_args (m : Mem) (a : AState) (hR : ArenaR m a) :
       have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl] at hL
-      have hfm1 := pr_word_sub1 f hf0
+      have hfm1 := L.toNat_sub_one_of_ne hf0
       have hcnt : idxA e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
-      have hf1 := pr_word_ne0 f hf0
+      have hf1 := L.toNat_ne_zero_of_ne f hf0
       obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero hf1
       obtain ⟨J, hJ⟩ : ∃ J, F = J + 1 := ⟨F - 1, by omega⟩
       have ihr := ih _ (f - 1) e' f' J (by rw [hfm1]; omega) h1 hL hf' (by rw [hfm1]; omega)
@@ -334,12 +328,12 @@ theorem gafLoopW_args (m : Mem) (a : AState) (hR : ArenaR m a) :
     · obtain ⟨k, hk⟩ : ∃ k, F = k + 1 := by
         rw [gafLoopW_done m e f hc] at hL
         obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-        have := pr_word_ne0 f hf'
+        have := L.toNat_ne_zero_of_ne f hf'
         exact ⟨F - 1, by omega⟩
       obtain ⟨k', hk'⟩ : ∃ k', f.toNat = k' + 1 := by
         rw [gafLoopW_done m e f hc] at hL
         obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-        exact Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 f hf')
+        exact Nat.exists_eq_succ_of_ne_zero (L.toNat_ne_zero_of_ne f hf')
       have htag : (decE e).tag ≠ ETag.app := fun h => hc ((decE_tag_app e he).mp h)
       rw [hk, hk', getAppArgs, getAppArgs]
       simp [htag]
@@ -357,8 +351,8 @@ def lpLoopW (m : Mem) (f k e : Word) : Option (Word × Word × Word) :=
 termination_by f.toNat
 decreasing_by
   have hf0 : f ≠ 0 := by assumption
-  have := pr_word_sub1 f hf0
-  have := pr_word_ne0 f hf0
+  have := L.toNat_sub_one_of_ne hf0
+  have := L.toNat_ne_zero_of_ne f hf0
   omega
 
 theorem lpLoopW_done (m : Mem) (f k e : Word) (h : tagW e ≠ 5) :
@@ -457,8 +451,8 @@ theorem lpLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       have hv2 : ¬ tcnt m LAM (tierW e) ≤ idxW e := by
         intro hv; rw [lpLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [lpLoopW_step m f k e _ hc hf0 hv1 hv2 rfl] at hL
-      have hfm1 := pr_word_sub1 f hf0
-      have hf1 := pr_word_ne0 f hf0
+      have hfm1 := L.toNat_sub_one_of_ne hf0
+      have hf1 := L.toNat_ne_zero_of_ne f hf0
       have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hcnt : idxW e < tcnt m LAM (tierW e) := UInt64.not_le.mp hv2
       have hvb := viewBind_lam m a hR e he ⟨hv1, hcnt⟩ hc
@@ -494,7 +488,7 @@ theorem lamProjW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {f k e r0 r1 r2 : W
   by_cases hf0 : f' = 0
   · simp [hf0] at hW
   simp only [hf0, ↓reduceIte] at hW
-  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 f' hf0)
+  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (L.toNat_ne_zero_of_ne f' hf0)
   have hlam : ((decE e').tag == ETag.lam) = false := by
     rw [tag_beq_w e' he' 5 (by decide) ETag.lam rfl 5 rfl]; simp [hn5]
   by_cases hg : tagW e' = 0
@@ -546,8 +540,8 @@ def tsLoopW (m : Mem) (f r d : Word) : Option (Word × Word × Word) :=
 termination_by f.toNat
 decreasing_by
   have hf0 : f ≠ 0 := by assumption
-  have := pr_word_sub1 f hf0
-  have := pr_word_ne0 f hf0
+  have := L.toNat_sub_one_of_ne hf0
+  have := L.toNat_ne_zero_of_ne f hf0
   omega
 
 theorem tsLoopW_done (m : Mem) (f r d : Word) (h : tagW r ≠ 6) :
@@ -618,8 +612,8 @@ theorem tsLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) (root :
       have hv2 : ¬ tcnt m FORALL (tierW r) ≤ idxW r := by
         intro hv; rw [tsLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [tsLoopW_step m f r d _ hc hf0 hv1 hv2 rfl] at hL
-      have hfm1 := pr_word_sub1 f hf0
-      have hf1 := pr_word_ne0 f hf0
+      have hfm1 := L.toNat_sub_one_of_ne hf0
+      have hf1 := L.toNat_ne_zero_of_ne f hf0
       have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hcnt : idxW r < tcnt m FORALL (tierW r) := UInt64.not_le.mp hv2
       have hvb := viewBind_forall m a hR r he ⟨hv1, hcnt⟩ hc
@@ -659,8 +653,8 @@ termination_by f.toNat
 decreasing_by
   all_goals
     have hf0 : f ≠ 0 := by assumption
-    have := pr_word_sub1 f hf0
-    have := pr_word_ne0 f hf0
+    have := L.toNat_sub_one_of_ne hf0
+    have := L.toNat_ne_zero_of_ne f hf0
     omega
 
 theorem ppLoopW_done (m : Mem) (f e : Word) (h5 : tagW e ≠ 5) (h7 : tagW e ≠ 7)
@@ -747,8 +741,8 @@ theorem ppLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) :
         intro hf0; rw [hf0, ppLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [ppLoopW] at hL; simp [hc, hf0, hv] at hL
-      have hfm1 := pr_word_sub1 f hf0
-      have hf1 := pr_word_ne0 f hf0
+      have hfm1 := L.toNat_sub_one_of_ne hf0
+      have hf1 := L.toNat_ne_zero_of_ne f hf0
       obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero hf1
       have hjf : j = (f - 1).toNat := by rw [hfm1]; omega
       rcases hc with h5 | h7 | h4

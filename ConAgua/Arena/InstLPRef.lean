@@ -6,6 +6,7 @@ public import ConAgua.Arena.LevelInternRef
 import ConRon.Bridge.SpecsL
 import ConAgua.Arena.CoreLevels
 import ConAgua.Front.ApplyExprRefine
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -94,7 +95,7 @@ theorem NmsR.set_past {N : Word → Name → Prop} {m : Mem} {A : ArrId} {d v : 
       rcases Nat.eq_zero_or_pos k.toNat with h | h
       · exact absurd (UInt64.toNat_inj.mp (by simpa using h)) hk0
       · omega
-    have ho1 : (o + 1).toNat = o.toNat + 1 := toNat_succ_lt (by have := d.toNat_lt; omega)
+    have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_one_of_lt (by have := d.toNat_lt; omega)
     have hkm : (k - 1).toNat = k.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
     refine .cons hk0 ?_ (ih (by rw [ho1, hkm]; omega))
@@ -236,8 +237,8 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
       simpa [rdW] using this
     have hsz₂ : ((m₁.set64 SPN b h).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [Mem.size_arr64_set64, hspn₁]
-    have hb1 : (b + 1).toNat = b.toNat + 1 := toNat_succ_lt (by omega)
-    have ho1 : (o + 1).toNat = o.toNat + 1 := toNat_succ_lt (by omega)
+    have hb1 : (b + 1).toNat = b.toNat + 1 := L.toNat_add_one_of_lt (by omega)
+    have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hl1 : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hns₁ : a₁.store.lss.ls.ns = a.store.lss.ls.ns := by rw [hkp₁.2, hstc]
@@ -418,8 +419,8 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
       simpa [rdW] using this
     have hsz₂ : ((m₁.set64 SPN b h).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [Mem.size_arr64_set64, hspn₁]
-    have hb1 : (b + 1).toNat = b.toNat + 1 := toNat_succ_lt (by omega)
-    have ho1 : (o + 1).toNat = o.toNat + 1 := toNat_succ_lt (by omega)
+    have hb1 : (b + 1).toNat = b.toNat + 1 := L.toNat_add_one_of_lt (by omega)
+    have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hl1 : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hns₁ : a₁.store.lss.ls.ns = a.store.lss.ls.ns := by rw [hkp₁.2, hstc]

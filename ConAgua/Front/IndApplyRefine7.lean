@@ -7,6 +7,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.IndApplyRefine
 import ConAgua.L.ModelGen
 import all ConAgua.Front.IndApply
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -119,7 +120,7 @@ theorem rec_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : Arena
   | succ n =>
   rw [recE.arm1]
   have ix : ∀ s : Word, s.toNat ≤ 10 → rdW (m.arr64 IFR) (r + s) = wd m IFR (r.toNat + s.toNat) := by
-    intro s hs; rw [wd_eq, widx2 _ _ (by omega)]
+    intro s hs; rw [wd_eq, L.toNat_add_of_lt _ _ (by omega)]
   obtain ⟨⟨c1, -, -⟩, c2, c3, c4, c5, c6, -⟩ := hrec
   rcases hl : lkW m NID (rdW (m.arr64 IFR) r) with _ | rnw
   · rw [liftE_none, recE.k_name_get.none]; exact fun _ hk => absurd Err.cls_oob hk
@@ -232,7 +233,7 @@ theorem recsGo_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : Ar
     · rw [recsGoE.arm1 p n m ro rn np tn cn tyn tyt fuel j hle]
       exact ⟨rfl, fun k hk hjk => by have := UInt64.le_iff_toNat_le.mp hle; omega⟩
     rw [recsGoE.arm2 p n m ro rn np tn cn tyn tyt fuel j hle]
-    have hj1 := wsucc j rn (UInt64.not_le.mp hle)
+    have hj1 := L.toNat_add_one_of_word_lt j rn (UInt64.not_le.mp hle)
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
     have hix : (ro + 11 * j).toNat = ro.toNat + 11 * j.toNat := by
       have := widx ro 11 j 0 (by simp; omega); simpa using this
@@ -283,7 +284,7 @@ theorem nestedW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : 
       have := UInt64.le_iff_toNat_le.mp hle
       exact ⟨fun _ k hk h1 => by omega, fun h => absurd rfl h⟩
     rename_i hlt
-    have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
+    have hj1 := L.toNat_add_one_of_word_lt j tn (UInt64.not_le.mp hlt)
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
     have hix : (to + 11 * j + 9).toNat = to.toNat + 11 * j.toNat + 9 := widx _ _ _ _ (by simp; omega)
     have hty := hL.2.2 j.toNat (by omega)
@@ -402,7 +403,7 @@ theorem nparams_ref {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : W
   rw [viNparamsE.arm2 p n m to tn h0]
   have hne : tys ≠ [] := fun e => h0 (by apply UInt64.toNat_inj.mp; rw [htn, e]; rfl)
   have h0' : 0 < tys.length := by cases tys with | nil => exact absurd rfl hne | cons _ _ => simp
-  have hix : (to + 10).toNat = to.toNat + 10 := widx2 _ _ (by simp; omega)
+  have hix : (to + 10).toNat = to.toNat + 10 := L.toNat_add_of_lt _ _ (by simp; omega)
   obtain ⟨-, -, -, -, -, h10⟩ := hL.2.2 0 h0'
   simp only [Nat.mul_zero, Nat.add_zero] at h10
   have hd : (rdW (m.arr64 IFR) (to + 10)).toNat = tys[0].numParams := by rw [wd_eq, hix, h10.1]

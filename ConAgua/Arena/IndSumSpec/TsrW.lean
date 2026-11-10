@@ -14,6 +14,7 @@ import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.IndSum
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -623,7 +624,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {rP M rhso rhsl : Word} {r :
   | levels _ => exact absurd hdf (by simp [decFire])
   | nested lvls pins =>
   obtain ⟨-, ⟨hdl, hbl⟩, ⟨hdp, hbp⟩⟩ := hdf
-  simp only [getD_one, getD_two, getD_three, getD_four, show (1 + 1 : Nat) = 2 from rfl,
+  simp only [L.getD_one, L.getD_two, L.getD_three, L.getD_four, show (1 + 1 : Nat) = 2 from rfl,
     show (3 + 1 : Nat) = 4 from rfl] at hdl hbl hdp hbp
   rcases h3 : efF (k + 1) m2 (rf.tail.headD 0) (rf.tail.tail.headD 0) with _ | ⟨re, m3⟩ <;>
     simp only [h3, tsrW.k_er_from_iw, reduceCtorEq] at h

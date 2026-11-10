@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Front.IndInstallRefine2
 import ConAgua.Front.IndApplyRefine2
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -109,8 +110,8 @@ theorem instGo_twin {α : Type} [Inhabited α] {st : StateD} (a : AState) (xs : 
     rcases h1 : R n m (ptr m j) with _ | ⟨q, m₁⟩ <;> simp only [h1, allocK, reduceCtorEq] at h
     have hj' : UInt64.ofNat j.toNat = j := UInt64.ofNat_toNat
     obtain ⟨S1, S2, S3, S4, S5⟩ := hR n m j.toNat q m₁ hL hf hjl (by rw [hj']; exact h1)
-    have hbj : (bo + j).toNat = bo.toNat + j.toNat := widx2 _ _ (by omega)
-    have hj1 : (j + 1).toNat = j.toNat + 1 := widx2 _ _ (by simp; omega)
+    have hbj : (bo + j).toNat = bo.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
+    have hj1 : (j + 1).toNat = j.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
     have hs1 : (m₁.arr64 DLP).size = (m.arr64 DLP).size := S2.size DLP
     have ht1 : topN (m₁.set64 DLP (bo + j) q) DLP = topN m₁ DLP := by
       unfold topN; rw [wd_set_ne _ _ _ _ _ (by omega)]

@@ -14,6 +14,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPos2
 public import ConAgua.Arena.IndPosSpec.CtxFields
 import all ConAgua.Arena.IndPos2
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -247,7 +248,7 @@ theorem nkcW_ok (k : Word) (K : NestKey) : ∀ (n : Nat) (m : Mem) (o l r : Word
         cases hc : (K0 == K) with
         | false => rfl
         | true => rw [hc] at hr0; simp at hr0 hb; rw [hb] at hr0; exact absurd hr0 (by decide)
-      have ho1 : (o + 1).toNat = o.toNat + 1 := word_add_toNat (by simp; omega)
+      have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
       have hl1 : (l - 1).toNat = l' := by
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
       rw [ih m (o + 1) (l - 1) r ks' h (by rw [ho1, hl1]; exact hks') hK htop]

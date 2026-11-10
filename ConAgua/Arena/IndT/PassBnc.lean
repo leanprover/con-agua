@@ -17,6 +17,7 @@ import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.IndPosSpec.SnocWStage
 import ConAgua.Arena.IndT.Lift
 public import ConAgua.Arena.CrOKFrame
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -180,7 +181,7 @@ theorem bnc_ok {p : Prog} (hP : PosBlkProg p) (hOpf : OpfF p) {dn : NIdx → Opt
     obtain ⟨rfl, -⟩ := ConRon.Bridge.AM.pure_ok h'
     exact ⟨rfl, rfl, rfl⟩
   have hpn : c.params.length + c.names.length < 2 ^ 64 := by
-    have := partsAddNoOv hov2
+    have := L.toNat_add_of_not_lt hov2
     rw [hkT] at this
     have := (r2.tail.tail.headD 0 + UInt64.ofNat bs.k : Word).toNat_lt
     rw [hnc.2.2, hnc.2.1, decHL_length _ hfd]
@@ -188,7 +189,7 @@ theorem bnc_ok {p : Prog} (hP : PosBlkProg p) (hOpf : OpfF p) {dn : NIdx → Opt
     have : bs.k = bs.members.length := rfl
     omega
   have hhi : c.hiAt 0 < 2 ^ 64 := by
-    have := partsAddNoOv hov
+    have := L.toNat_add_of_not_lt hov
     rw [UInt64.toNat_ofNat_of_lt' hnpb, hkT] at this
     have := (UInt64.ofNat bs.nP + UInt64.ofNat bs.k : Word).toNat_lt
     simp only [NestCtx.hiAt, hnc.1, hnc.2, BlockShape.memberNames, List.length_map]

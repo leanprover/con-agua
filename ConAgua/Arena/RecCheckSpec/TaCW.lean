@@ -11,6 +11,7 @@ import ConAgua.Arena.IndPosSpec.NestKeyMap
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.RecCheck
 import ConAgua.L.ModelGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -391,7 +392,7 @@ theorem taNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
       (TaQ dn fe vis m) := by
   cases v with
   | app f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl⟩ := hvr
     rw [hg, taNodeW.arm1 k m no nl lvls ho hl f1 4 _ _ _ rfl]
     exact taBin_ok dn fe vis k ih (fun m a b => mkAppW m a b) internAppE
@@ -399,7 +400,7 @@ theorem taNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
       m a no nl lvls ho hl f1 _ _ _ _ (taNodeW.k_target_abs_go.none ..) (fun _ _ => taNodeW.k_target_abs_go.arm1 ..)
       (fun _ => taNodeW.k_target_abs_go_2.none ..) (fun _ _ _ => taNodeW.k_target_abs_go_2.arm1 ..) names holes mp hS hx hy hlv hI hM
   | lam f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl⟩ := hvr
     rw [hg, taNodeW.arm2 k m no nl lvls ho hl f1 5 _ _ _ (by decide) rfl]
     exact taBin_ok dn fe vis k ih (fun m a b => mkLamW m a b) internLamE
@@ -407,7 +408,7 @@ theorem taNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
       m a no nl lvls ho hl f1 _ _ _ _ (taNodeW.k_target_abs_go_3.none ..) (fun _ _ => taNodeW.k_target_abs_go_3.arm1 ..)
       (fun _ => taNodeW.k_target_abs_go_4.none ..) (fun _ _ _ => taNodeW.k_target_abs_go_4.arm1 ..) names holes mp hS hx hy hlv hI hM
   | forallE f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl⟩ := hvr
     rw [hg, taNodeW.arm3 k m no nl lvls ho hl f1 6 _ _ _ (by decide) (by decide) rfl]
     exact taBin_ok dn fe vis k ih (fun m a b => mkForallW m a b) internForallEE
@@ -415,12 +416,12 @@ theorem taNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
       m a no nl lvls ho hl f1 _ _ _ _ (taNodeW.k_target_abs_go_5.none ..) (fun _ _ => taNodeW.k_target_abs_go_5.arm1 ..)
       (fun _ => taNodeW.k_target_abs_go_6.none ..) (fun _ _ _ => taNodeW.k_target_abs_go_6.arm1 ..) names holes mp hS hx hy hlv hI hM
   | letE t v' b' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl, hz, rfl⟩ := hvr
     rw [hg, taNodeW.arm4 k m no nl lvls ho hl f1 7 _ _ _ (by decide) (by decide) (by decide) rfl]
     exact taLet_ok dn fe vis k ih m a no nl lvls ho hl f1 _ _ _ names holes mp hS hx hy hz hlv hI hM
   | proj s i e =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, rfl, rfl, hz, rfl⟩ := hvr
     rw [hg, taNodeW.arm5 k m no nl lvls ho hl f1 9 _ _ _ (by decide) (by decide) (by decide) (by decide)]
     exact taProj_ok dn fe vis k ih m a no nl lvls ho hl f1 _ _ _ names holes mp hS hz hlv hI hM
@@ -470,7 +471,7 @@ theorem taGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
   cases j with
   | zero => rw [taNodeW.eq_1]; exact Sim.of_none
   | succ k =>
-  have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+  have hF1 : (f - 1).toNat = F := by rw [L.toNat_sub_one_of_ne hf0, hF]; rfl
   rw [← hF1]
   refine Sim.bindK (taGoW.k_target_abs_node.none _) (fun _ _ => taGoW_kNode ..)
     (taNode_arm dn fe vis k (ih k (by omega)) _ v hvr hnv m a no nl lvls ho hl (f - 1) h names holes mp hS
@@ -489,7 +490,7 @@ theorem taGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
   intro m a no nl lvls ho hl f h names holes mp hS hh hlv hI hM
   by_cases hf0 : f = 0
   · rw [taGoW.abort1 j m no nl lvls ho hl f h hf0]; exact Sim.of_none
-  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := toNat_ne_zero' hf0; omega⟩
+  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := L.toNat_ne_zero_of_ne _ hf0; omega⟩
   rw [hF]
   cases hvl : eViewW m h with
   | nil => rw [taGoW.abort2 j m no nl lvls ho hl f h hf0 hvl]; exact Sim.of_none
@@ -506,7 +507,7 @@ theorem taGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
         first | exact Or.inl hvr.1 | exact Or.inr (Or.inl hvr.1) | exact Or.inr (Or.inr (Or.inl hvr.1)) | exact Or.inr (Or.inr (Or.inr hvr)))]
       exact Sim.ret ⟨rfl, hS, IWGrow.refl _, hM⟩
     | const nn' us' =>
-      simp only [ViewR, getD1_eq', getD2_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨hg3, hx, hdx, hy, hdy⟩ := hvr
       rw [taGoW.arm5 j m no nl lvls ho hl f h hf0 (by rw [hvl]; simp) (by rw [hvl, hg3]; decide)
         (by rw [hvl, hg3]; decide) (by rw [hvl, hg3]; decide) (by rw [hvl, hg3]; decide) (by rw [hvl]; exact hg3),

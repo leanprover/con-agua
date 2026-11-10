@@ -174,9 +174,6 @@ theorem encCaps_len (c : ConLeche.IndCaps) :
   simp only [List.append_nil, List.length_append, bw, u64B, List.length_cons, List.length_nil] at h
   omega
 
-theorem ofNat_toNat_lt {n : Nat} (h : n < 2 ^ 64) : (UInt64.ofNat n).toNat = n := by
-  rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt h
-
 section caps
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
@@ -326,9 +323,9 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
       ⟨caps.eta, decI (r1.headD 0), caps.etaParams, caps.etaFields, caps.unitlike, caps.unitParams,
         wsA.map decI, caps.nparams, caps.nIdx, wsC.map decI⟩
       v0 (r1.headD 0) _ _ v3 _ _ _ hW0 hW1 hW2 hW3 hW4 hW5 hW6 hW12 hlt1
-      (by rw [← hv0]; exact (bw_ne _).symm) rfl (ofNat_toNat_lt hep).symm (ofNat_toNat_lt hef).symm
-      (by rw [← hv3]; exact (bw_ne _).symm) (ofNat_toNat_lt hup).symm
-      (ofNat_toNat_lt hix).symm (ofNat_toNat_lt hnp).symm hA' hH11
+      (by rw [← hv0]; exact (bw_ne _).symm) rfl (L.toNat_ofNat_of_lt hep).symm (L.toNat_ofNat_of_lt hef).symm
+      (by rw [← hv3]; exact (bw_ne _).symm) (L.toNat_ofNat_of_lt hup).symm
+      (L.toNat_ofNat_of_lt hix).symm (L.toNat_ofNat_of_lt hnp).symm hA' hH11
     refine hH.mono (fun i hi => ?_) (fun _ h => h)
     rcases hi with hi | hi | hi | hi
     · left; off_omega

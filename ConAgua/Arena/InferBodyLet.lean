@@ -13,6 +13,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.Infer
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -217,16 +218,6 @@ theorem inferLamResult_any (p : Prog) (hp : InferLeafProg p) (ha : Abstract1OK p
   | zero => exact CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | succ n => exact inferLamResult_refines p hp n ha s₀ a₀ dn vis fe M eb ty bt d hS hbt
 
-theorem toNat_succ_of_ne {d : Word} (h : ¬ d + 1 = 0) : (d + 1).toNat = d.toNat + 1 := by
-  rw [UInt64.toNat_add]
-  have : d.toNat + 1 < 2 ^ 64 := by
-    rcases Nat.lt_or_ge (d.toNat + 1) (2 ^ 64) with h' | h'
-    · exact h'
-    · exfalso; apply h
-      apply UInt64.toNat_inj.mp
-      rw [UInt64.toNat_add]; have := d.toNat_lt; simp; omega
-  simp; omega
-
 /-- **`infer_lam_io` refines the io body's `.lam` clause** (`inferLamIOT`) at the io view of the
 knot, both outcomes: the body's type (the `infer_io` slot at `d + 1`); the rest claims nothing. -/
 theorem ilam_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
@@ -240,7 +231,7 @@ theorem ilam_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
   have hK := hk n (Nat.le_refl _)
   simp only [ilamE, inferLamIOT]
   refine RefE.abort0 (by rfl) fun hd => ?_
-  rw [← toNat_succ_of_ne hd]
+  rw [← L.toNat_add_one_of_ne _ hd]
   refine RefE.bind_callW (fun _ => rfl) (internFVar_coreSpec hb n s₀ hs.rel d ty hty)
     fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
   dsimp only [ilamE.k_intern_fvar]
@@ -334,7 +325,7 @@ theorem ifa_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
   have hK := hk n (Nat.le_refl _)
   simp only [ifaE, inferForallIOT]
   refine RefE.abort0 (by rfl) fun hd => ?_
-  rw [← toNat_succ_of_ne hd]
+  rw [← L.toNat_add_one_of_ne _ hd]
   refine RefE.bind_callE (fun _ => rfl) (hK.inferIO F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty)
     (fun (hG : InferG p n) => (hG.knot n (Nat.le_refl _)).inferIO F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty)
     fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_

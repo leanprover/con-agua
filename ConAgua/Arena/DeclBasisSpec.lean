@@ -17,6 +17,7 @@ public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.Pins
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -301,7 +302,7 @@ theorem ibds_ref {p : Prog} (hB : BasisProg p) (dn : NIdx → Option ConLeche.Na
   have hob : o.toNat + 1 < 2 ^ 64 := by
     have := (Array.getElem?_eq_some_iff.mp hw0).1
     have := hS.iw.iwSize; simp only [iwA] at *; omega
-  have ho1 : (o + 1).toNat = o.toNat + 1 := toNat_add_small o 1 hob
+  have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_ofNat_of_lt o 1 hob
   have hl1 : (l - 1).toNat = k := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
   have hDt : DecB (basisDec dn (o + 1).toNat (l - 1).toNat) m cs := by

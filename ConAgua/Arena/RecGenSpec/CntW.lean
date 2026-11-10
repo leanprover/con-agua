@@ -12,6 +12,7 @@ import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.RecGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -234,7 +235,7 @@ theorem cntW_ok (n : Nat) : ∀ (m : Mem) (o l w r : Word) (ms : List TargetMajo
         simp only [Option.some.injEq] at h
         subst h
         have hr1 : (r1 + 1).toNat = r1.toNat + 1 :=
-          word_add_toNat (by rw [show (1 : Word).toNat = 1 from rfl]; have := l.toNat_lt; omega)
+          L.toNat_add_of_lt _ _ (by rw [show (1 : Word).toNat = 1 from rfl]; have := l.toNat_lt; omega)
         refine ⟨?_, by omega⟩
         rw [hr1, h1]
         simp [memCount, hiff.mp he]
@@ -304,7 +305,7 @@ theorem opmW_ok (n : Nat) : ∀ (m : Mem) (j k o l r : Word) (ms : List TargetMa
       have : ¬ k.toNat ≤ j.toNat := fun e => hkj (UInt64.le_iff_toNat_le.mpr e)
       omega
     have hj1 : (j + 1).toNat = j.toNat + 1 :=
-      word_add_toNat (by rw [show (1 : Word).toNat = 1 from rfl]; have := k.toNat_lt; omega)
+      L.toNat_add_of_lt _ _ (by rw [show (1 : Word).toNat = 1 from rfl]; have := k.toNat_lt; omega)
     obtain ⟨c, hc, h⟩ := of_K h (by simp only [opmK])
     obtain ⟨hc1, -⟩ := cntW_ok n m o l (j + 1) c ms hc hd hb hsz
       (fun e => by have := congrArg UInt64.toNat e; rw [hj1] at this; simp at this)

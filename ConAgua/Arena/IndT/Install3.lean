@@ -24,6 +24,7 @@ import all ConAgua.Arena.IndInstall
 public import ConAgua.Verdict.DeclValsE
 public import ConRon.Bridge.Checker.Hyp
 public import ConRon.Bridge.Inductives.Records
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -137,7 +138,7 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   · rw [cbtE.abort1 p n m vis nP ms (by rw [hw1]; exact hov)]; exact RefE.of_cls0 rfl
   rw [cbtE.arm1 p n m vis nP ms (by rw [hw1]; exact hov), hw0, hw1]
   have hk : (nP + UInt64.ofNat msh.nIdx).toNat = nP.toNat + msh.nIdx := by
-    rw [partsAddNoOv hov, UInt64.toNat_ofNat_of_lt' hnb]
+    rw [L.toNat_add_of_not_lt hov, UInt64.toNat_ofNat_of_lt' hnb]
   unfold ConRon.Arena.checkBlockTele
   -- `check_constant_val`
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (checkConstantVal_specE p hV n _ vis _ 0)
@@ -185,7 +186,7 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   obtain ⟨bs, body⟩ := bb
   obtain ⟨h1', -, hb32, hbe⟩ := hd3
   refine RefE.pass (by rw [h1']; decide) ?_
-  rw [drop3_eq] at hb32 hbe
+  rw [L.drop_three] at hb32 hbe
   -- `intern_sort`
   refine RefE.bindLift (fun _ => rfl) fun r4 m4 h4 => ?_
   obtain ⟨srt, a4, hr4, hS4, hg4, hsrt, hf4⟩ := installSortSim hP n hS3 hP2.sort32 r4 m4 h4

@@ -19,6 +19,7 @@ import ConAgua.Arena.StageC
 import ConLeche.Verify.BridgeWfImp
 import ConRon.Bridge.Inductives.BlockTail
 import all ConAgua.Arena.IndInstall
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -219,7 +220,7 @@ theorem rm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {nP ms : Wor
   rw [hw1]
   refine RefE.abort0 rfl fun hov => ?_
   have hk : (nP + UInt64.ofNat msh.nIdx).toNat = nP.toNat + msh.nIdx := by
-    rw [partsAddNoOv hov, UInt64.toNat_ofNat_of_lt' hnb]
+    rw [L.toNat_add_of_not_lt hov, UInt64.toNat_ofNat_of_lt' hnb]
   -- `reduced_former`
   have hcvB4 : DecB (fun m => decCVp m (UInt64.ofNat c : Word).toNat) s4.mem msh.cvT :=
     hcvB.grow (OMono.decCVp _) hg04

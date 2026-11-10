@@ -11,6 +11,7 @@ import ConAgua.Checker.ProgWf
 public import ConAgua.Checker.ProgTab
 public import ConAguaAsm.Checker
 import all ConAgua.Checker.Entry
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -331,7 +332,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (V : Type w) [ConLeche.SetTheor
   rw [hres₁] at hout₀'
   obtain ⟨-, hRes₁, hMem₁⟩ := hout₀'
   have hrax₁ : st₀.data.regs.rax = rs₁.headD 0 := by
-    rw [← getD_zero_headD]; exact hRes₁.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
+    rw [← L.getD_zero]; exact hRes₁.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
   have h₁ : L.run checkerProg abiFuel "check" [] (loadMemM b pb (abiSz checkerTab) 1) =
       .ok (rs₁, m₁) := hres₁
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]

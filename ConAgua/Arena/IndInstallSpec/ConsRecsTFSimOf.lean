@@ -39,11 +39,6 @@ def tailRcCallees : List FnName :=
 def tailCallees : List FnName :=
   ["check_block_idx_sorts", "cons_block_ctors", "block_nested_bit", "check_block_rec"]
 
-theorem tailToNat {q : Word} {k : Nat} (h : q.toNat + k < 2 ^ 64) :
-    (q + UInt64.ofNat k).toNat = q.toNat + k := by
-  have hs : UInt64.size = 2 ^ 64 := rfl
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by omega)]; exact Nat.mod_eq_of_lt h
-
 end L.Ind
 
 end

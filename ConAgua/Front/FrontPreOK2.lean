@@ -13,6 +13,7 @@ import ConAgua.Front.IndInstallRefine4
 public import ConAgua.Front.IndApplySpec2
 public import ConAgua.Front.IndFieldsSpec
 import all ConAgua.Front.IndApply
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -88,7 +89,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   obtain ⟨T1, T2, T3, T4, T5⟩ := instGo_twin a tys (tyT st) (fun _ m p => typeW b.data m p)
     (fun _ j => to + 11 * j) m₁ bo tn hTn (fun n' mi k q mo hLi hf hk hR => by
       have hifr : mi.arr64 IFR = m.arr64 IFR := by rw [hf.1 IFR (by decide) (by decide), hifr1]
-      have hk' := ofNat_toNat_lt k (by omega)
+      have hk' := @L.toNat_ofNat_of_lt k (by omega)
       have hw : (to + 11 * UInt64.ofNat k).toNat = to.toNat + 11 * k := by
         have := w_addmul to (UInt64.ofNat k) 11 (by decide) (by rw [hk']; omega)
         rw [hk'] at this; exact this
@@ -97,7 +98,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
     n m₁ m₂ 0 hL1 (MemFrame.refl _ _ _) (by simp) (by omega) (by omega) h2
   simp only [UInt64.toNat_zero, Nat.add_zero] at T4 T5
   -- the constructors
-  have hbt : (bo + tn).toNat = bo.toNat + tys.length := by rw [widx2 _ _ (by omega), hTn]
+  have hbt : (bo + tn).toNat = bo.toNat + tys.length := by rw [L.toNat_add_of_lt _ _ (by omega), hTn]
   rw [instCtorsW_eq] at h3
   obtain ⟨C1, C2, C3, C4, C5⟩ := instGo_twin a ordered (ctT st) (fun _ m p => ctorRW b.data m p)
     (fun m j => rdW (m.arr64 IFL) (oo + j)) m₂ (bo + tn) cn (by rw [hCn, hord])
@@ -107,10 +108,10 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
       have hifl : mi.arr64 IFL = m.arr64 IFL := by
         rw [hf.1 IFL (by decide) (by decide), T1.1 IFL (by decide) (by decide), hifl1]
       obtain ⟨k, hk, hw, hok⟩ := hptr p hp
-      have hp' := ofNat_toNat_lt p (by omega)
+      have hp' := @L.toNat_ofNat_of_lt p (by omega)
       have hrd : rdW (mi.arr64 IFL) (oo + UInt64.ofNat p) = co + 10 * UInt64.ofNat k := by
         rw [hifl, rdW_wdI _ _ _ _ (by rw [hp']; omega), hp', hw]
-      have hk' := ofNat_toNat_lt k (by omega)
+      have hk' := @L.toNat_ofNat_of_lt k (by omega)
       have hw' : (co + 10 * UInt64.ofNat k).toNat = co.toNat + 10 * k := by
         have := w_addmul co (UInt64.ofNat k) 10 (by decide) (by rw [hk']; omega)
         rw [hk'] at this; exact this
@@ -122,7 +123,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   simp only [UInt64.toNat_zero, Nat.add_zero] at C4 C5
   -- the recursors
   have hbtc : (bo + tn + cn).toNat = bo.toNat + tys.length + cts.length := by
-    rw [widx2 _ _ (by rw [hbt]; omega), hbt, hCn]
+    rw [L.toNat_add_of_lt _ _ (by rw [hbt]; omega), hbt, hCn]
   rw [instRecsW_eq] at h4
   obtain ⟨R1, R2, R3, R4, R5⟩ := instGo_twin a rcs (recT st) (fun n m p => recRW b.data n m p)
     (fun _ j => ro + 11 * j) m₃ (bo + tn + cn) rn hRn
@@ -133,7 +134,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
       have hifl : mi.arr64 IFL = m.arr64 IFL := by
         rw [hf.1 IFL (by decide) (by decide), C1.1 IFL (by decide) (by decide),
           T1.1 IFL (by decide) (by decide), hifl1]
-      have hk' := ofNat_toNat_lt k (by omega)
+      have hk' := @L.toNat_ofNat_of_lt k (by omega)
       have hw : (ro + 11 * UInt64.ofNat k).toNat = ro.toNat + 11 * k := by
         have := w_addmul ro (UInt64.ofNat k) 11 (by decide) (by rw [hk']; omega)
         rw [hk'] at this; exact this

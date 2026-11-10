@@ -10,6 +10,7 @@ import Std.WP.Tactic
 import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclApd
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -322,13 +323,6 @@ theorem apdTwin_node (ks : List ConLeche.Name) (memo : Std.HashMap EIdx Bool) (f
 
 /-! ## The refinement, by induction on the exec fuel -/
 
-/-- A nonzero fuel word is the successor of its decrement. -/
-theorem apd_fuel_pred (f : Word) (hf : f ≠ 0) : ∃ F, f.toNat = F + 1 ∧ (f - 1).toNat = F := by
-  have : f.toNat ≠ 0 := fun h => hf (UInt64.toNat_inj.mp (by simpa using h))
-  refine ⟨(f - 1).toNat, ?_, rfl⟩
-  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]
-  simp; omega
-
 /-- What the walk's word model says about the twin. -/
 def ApdGoOK (a : AState) (n : Nat) : Prop :=
   ∀ (m m' : Mem) (o l f h r : Word) (mp : Std.HashMap EIdx Bool) (ks : List ConLeche.Name),
@@ -460,7 +454,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
     exact ⟨true, mp, rfl, rfl, hM, MemFrame.refl _ _ _⟩
   | sort u =>
-    simp only [ViewR, getD1_eq'] at hvr
+    simp only [ViewR, L.getD_one] at hvr
     obtain ⟨hg, hx, hdx⟩ := hvr
     rw [apdNodeW_sort n m o l f _ _ _ _ hg] at hn
     cases e : apdW IW n m (vl.tail.headD 0) o l with
@@ -474,7 +468,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
       simp only [apdArm, StateT.run_bind, readLevel_run a u L hL, except_ok_bind]
       rfl
   | const nn us =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, -, -, hy, hdy⟩ := hvr
     rw [apdNodeW_const n m o l f _ _ _ _ hg] at hn
     obtain ⟨Ls, hL⟩ := env.constLs (decE h) nn us hv
@@ -484,7 +478,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     simp only [apdArm, StateT.run_bind, readLevels_run a us Ls hL, except_ok_bind]
     rfl
   | fvar i ty =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, -, hy, hdy⟩ := hvr
     subst hdy
     rw [apdNodeW_fvar n m o l f _ _ _ _ hg] at hn
@@ -492,7 +486,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     rw [hF1] at hr
     exact ⟨b, mp', hr, hb, hM', hf⟩
   | proj s i e =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, -, -, -, hw, hdw⟩ := hvr
     subst hdw
     rw [apdNodeW_proj n m o l f _ _ _ _ hg] at hn
@@ -500,7 +494,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     rw [hF1] at hr
     exact ⟨b, mp', hr, hb, hM', hf⟩
   | app f' x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     subst hdx hdy
     rw [apdNodeW_bin n m o l f _ _ _ _ (Or.inl hg)] at hn
@@ -511,7 +505,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     · refine ⟨b₂, mp₂, ?_, hr, hM2, hf₀.trans hf2⟩
       simp only [apdArm, StateT.run_bind, h1, h2, except_ok_bind, ↓reduceIte]
   | lam t b' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     subst hdx hdy
     rw [apdNodeW_bin n m o l f _ _ _ _ (Or.inr (Or.inl hg))] at hn
@@ -522,7 +516,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     · refine ⟨b₂, mp₂, ?_, hr, hM2, hf₀.trans hf2⟩
       simp only [apdArm, StateT.run_bind, h1, h2, except_ok_bind, Bool.false_eq_true, Bool.not_true, ↓reduceIte]
   | forallE t b' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     subst hdx hdy
     rw [apdNodeW_bin n m o l f _ _ _ _ (Or.inr (Or.inr hg))] at hn
@@ -533,7 +527,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     · refine ⟨b₂, mp₂, ?_, hr, hM2, hf₀.trans hf2⟩
       simp only [apdArm, StateT.run_bind, h1, h2, except_ok_bind, Bool.false_eq_true, Bool.not_true, ↓reduceIte]
   | letE t v' b' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy, hw, hdw⟩ := hvr
     subst hdx hdy hdw
     rw [apdNodeW_let n m o l f _ _ _ _ hg] at hn
@@ -559,7 +553,7 @@ theorem apdGo_step_ok (n : Nat) (ih : ApdGoOK a n) : ApdGoOK a (n + 1) := by
   rw [apdGoW_succ] at hb
   have hf : ¬ f = 0 := fun hf => by rw [apdG1_abort n m o l f h hf] at hb; simp at hb
   rw [apdG1_go n m o l f h hf] at hb
-  obtain ⟨F, hF, hF1⟩ := apd_fuel_pred f hf
+  obtain ⟨F, hF, hF1⟩ := L.exists_toNat_eq_succ hf
   rw [hF]
   have hfr : ¬ mfindG apdSch m h 0 = [] := fun hfr => by rw [apdG2_abort n m o l f h _ hfr] at hb; simp at hb
   by_cases hhit : (mfindG apdSch m h 0).headD 0 ≠ 0

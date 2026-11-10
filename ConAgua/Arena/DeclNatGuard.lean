@@ -8,6 +8,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatGate
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -285,12 +286,6 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
         simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', exc_ok_bind', hf, hrun1, hx,
           Bool.not_true, Bool.false_eq_true, ite_false, boolFalseName_eq, e4', hf2, hrun2]
 
-theorem ntGetD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> simp
-theorem ntGetD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  cases r with
-  | nil => simp
-  | cons a t => cases t <;> simp
-
 theorem natOpGuard_unfold (fe : IFEnv) (c : NIdx) : natOpGuard fe c = (do
     if !(← natLitSupported fe) then pure false else do
       let deps ← natOpDeps c
@@ -336,7 +331,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   obtain ⟨deps, a2, hrun2, hS2, hg2, hx2⟩ := natOpDeps_ref (vis := vis) (fe := fe)
     hN.toNatGateProg c k m1 a1 r2 m2 ⟨hS1, hc⟩ h2
   have hd2 : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat = some deps := by
-    have := hx2.1; rw [ntGetD0, ntGetD1] at this; exact this
+    have := hx2.1; rw [L.getD_zero, L.getD_one] at this; exact this
   cases h3 : callW p k "nat_op_deps_stored" [vis, r2.headD 0, r2.tail.headD 0] m2 with
   | none => rw [h3] at hw; simp [ntBW] at hw
   | some q3 =>
@@ -389,7 +384,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   obtain ⟨dm, a6, hrun6, hS6, hg6, hx6⟩ := natDivModNames_ref (vis := vis) (fe := fe)
     hN.toNatGateProg k m3 a3 r6 m6 hS3 h6
   have hd6 : decHL m6 (r6.headD 0).toNat (r6.tail.headD 0).toNat = some dm := by
-    have := hx6.1; rw [ntGetD0, ntGetD1] at this; exact this
+    have := hx6.1; rw [L.getD_zero, L.getD_one] at this; exact this
   cases h7 : callW p k "sl_contains" [r6.headD 0, r6.tail.headD 0, c] m6 with
   | none => rw [h7] at hw; simp [ntBW] at hw
   | some q7 =>

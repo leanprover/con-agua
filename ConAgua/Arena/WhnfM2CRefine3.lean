@@ -6,6 +6,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfIotaRefine3
 public import ConAgua.Arena.Rom
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -22,9 +23,6 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 /-! ## The two projections pushed after the type's arguments -/
-
-theorem word_add2 (x : Word) : x + 1 + 1 = x + 2 := by
-  rw [UInt64.add_assoc]; rfl
 
 /-- **`m2c_and2`'s stack writes**: the relation is kept, the stack grew, and the slice `(to, tn + 2)`
 denotes the arguments followed by the two projections. -/
@@ -52,7 +50,7 @@ theorem and2Push_ok {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} 
     have h3 : (to + tn + 1).toNat = to.toNat + tn.toNat + 1 := by
       rw [UInt64.toNat_add, ht, Nat.mod_eq_of_lt (by simp; omega)]; rfl
     have sp2 := sp1.push (by rw [sz1]; exact hspn) (by rw [sz1, h1]; rw [sz1, h3] at c4; omega) p1 hp1
-    rw [← hassoc, word_add2] at sp2
+    rw [← hassoc, L.add_one_add_one] at sp2
     have sp3 := sp2.setCtl 136 (to + tn + 2)
     have hf : MemFrame [SPN] [136] m
         (((m.set64 SPN (to + tn) p0).set64 SPN (to + tn + 1) p1).set64 CTL 136 (to + tn + 2)) :=

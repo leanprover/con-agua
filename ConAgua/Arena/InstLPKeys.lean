@@ -9,6 +9,7 @@ import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.LevelApd
 import all ConAgua.Arena.InstLP
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -227,7 +228,7 @@ theorem keysOkW_names {m : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a
     | some xs =>
     simp only [e', Option.bind_some, Option.pure_def, Option.some.injEq] at hs
     subst hs
-    have ho1 : (o + 1).toNat = o.toNat + 1 := toNat_succ_lt (by omega)
+    have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hl1' : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     obtain ⟨ks, hks, hn⟩ := ih (o + 1) (l - 1) xs hk (by rw [ho1, hl1']; exact e') (by omega)

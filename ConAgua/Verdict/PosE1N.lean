@@ -16,6 +16,7 @@ public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Verdict.PosE1M
 public import ConAgua.Verdict.PosFt
 public import ConAgua.Arena.IndPosSpec.UCtx
+import ConAgua.L.WordOff
 
 @[expose] public section
 /-!
@@ -137,8 +138,8 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
   obtain ⟨-, -, -, -, -, -, -, hsH, hsd, -⟩ := ctx_fields hU3.dec hU3.inn htop3
   have hdv : denoteL a5.store.ls (decI (rdW (m3.arr64 IW) (ctx + 9))) = some sortP := by
     rw [hsd]; exact ConRon.Bridge.denoteL_ext hsort c5.ext
-  have huH' : H ((eViewW m2 (rs.getD 2 0)).tail.headD 0) := by rw [← getD1_eq]; exact huH
-  have hud' : decI ((eViewW m2 (rs.getD 2 0)).tail.headD 0) = u := by rw [← getD1_eq]; exact hud
+  have huH' : H ((eViewW m2 (rs.getD 2 0)).tail.headD 0) := by rw [← L.getD_one]; exact huH
+  have hud' : decI ((eViewW m2 (rs.getD 2 0)).tail.headD 0) = u := by rw [← L.getD_one]; exact hud
   rw [← hud'] at hsL
   rw [← hud', ← hsd]
   -- `lvl_eq_fueled`

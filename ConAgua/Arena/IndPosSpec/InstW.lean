@@ -3,6 +3,7 @@ module
 import ConAgua.Arena.IndInstallSpec.DomsW
 public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -43,7 +44,7 @@ theorem instW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
         rw [h0] at hdec; simpa [decHL, hslice?] using hdec.symm
       subst this
       exact ⟨some (decI e), a, rfl, hS, IWGrow.refl _, rfl, he, rfl⟩
-    · have hl1 : al.toNat = (al.toNat - 1) + 1 := by have := toNat_ne_zero' hal; omega
+    · have hl1 : al.toNat = (al.toNat - 1) + 1 := by have := L.toNat_ne_zero_of_ne _ hal; omega
       rw [hl1, decHL, hslice?_succ] at hdec
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdec
       obtain ⟨xa, hxa, rest, hrest, rfl⟩ := hdec
@@ -69,7 +70,7 @@ theorem instW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
               rw [decI_tag_forallE_beq e he, he6]; decide
             exact beq_iff_eq.mp h1
           obtain ⟨ty, bd, rfl⟩ := EStore.view_forall a.store (decE e) ht v hv
-          simp only [ViewR, getD1_eq] at hvr
+          simp only [ViewR, L.getD_one] at hvr
           obtain ⟨-, -, -, hy1, hy2⟩ := hvr
           have hy2' : (vt.tail.headD 0).toNat < 2 ^ 32 := by simpa using hy1
           have hy3 : decE (vt.tail.headD 0) = bd := by simpa using hy2
@@ -87,8 +88,8 @@ theorem instW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
           rcases hw : instW n m1 (ao + 1) (al - 1) (rb.headD 0) with _ | ⟨r3, m3⟩ <;> rw [hw] at h; · simp [instK3] at h
           rw [instK3_some] at h
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-          have hao1 : (ao + 1).toNat = ao.toNat + 1 := toNat_add_one' (by omega)
-          have hal1 : (al - 1).toNat = al.toNat - 1 := toNat_sub_one' hal
+          have hao1 : (ao + 1).toNat = ao.toNat + 1 := L.toNat_add_one_of_lt (by omega)
+          have hal1 : (al - 1).toNat = al.toNat - 1 := L.toNat_sub_one_of_ne hal
           have hdec' : decHL m1 (ao + 1).toNat (al - 1).toNat = some rest := by
             rw [hao1, hal1, decHL_grow hg1 (by omega)]; exact hrest
           obtain ⟨x3, a3, hrun3, hS3, hg3, hout3⟩ :=

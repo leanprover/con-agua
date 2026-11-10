@@ -10,6 +10,7 @@ import ConAgua.Arena.RefWalk
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Arena.IndPosSpec.UCtx
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -173,7 +174,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
     obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := dO) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
     have hdO1 : (dO + 1).toNat = dO.toNat + 1 :=
-      word_add_toNat (show dO.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; have := hS.iw.iwSize; omega)
+      L.toNat_add_of_lt _ _ (show dO.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; have := hS.iw.iwSize; omega)
     have hl1 : (dL - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     rw [List.allM_cons]

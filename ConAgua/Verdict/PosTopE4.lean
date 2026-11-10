@@ -22,6 +22,7 @@ public import ConAgua.Verdict.PosE
 public import ConAgua.Verdict.PosFt
 import all ConAgua.Arena.IndPos2
 import ConAgua.Arena.IndPosSpec.CfW
+import ConAgua.L.WordOff
 
 @[expose] public section
 /-!
@@ -127,7 +128,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
     rw [hcl'] at hcb'
     have rd0 : rdW (m.arr64 IW) cO = hdr := by simp [rdW, h0w]
     have rd1 : rdW (m.arr64 IW) hdr = cO' := by simp [rdW, h1w]
-    have hdr1 : (hdr + 1).toNat = hdr.toNat + 1 := word_add_toNat (by simp; omega)
+    have hdr1 : (hdr + 1).toNat = hdr.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
     have rd2 : rdW (m.arr64 IW) (hdr + 1) = cL' := by simp [rdW, hdr1, h2w]
     -- the context's words
     obtain ⟨hn0, -, hpa0, -, -, hus0, husd0, -, -, -⟩ := ctx_fields hU.dec hU.inn htop
@@ -185,8 +186,8 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
       exact pos2_decB_snoc pos2_rootOuts_mono (hout.grow hg12) hg3 (by omega) hw3 hx3
         (DecB.grow (pos2_rootOuts_mono _) hg3 hrec)
     have hg13 := hg12.trans hg3
-    have hcO1 : (cO + 1).toNat = cO.toNat + 1 := word_add_toNat (by simp; omega)
-    have hcL1 : (cL - 1).toNat = css'.length := by rw [pos2_word_pred h0]; omega
+    have hcO1 : (cO + 1).toNat = cO.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
+    have hcL1 : (cL - 1).toNat = css'.length := by rw [L.toNat_sub_one_of_ne h0]; omega
     have hA3 : AbsOK m3 := snocW_afr hsn (posRecW_afr hr2 hA1)
     have hC3 : StageC dn vis fe env m3 a1 := hC1.of_pstep hS3 hA3 (PStep.refl hC1.check.state)
     -- the rest of the members
@@ -287,7 +288,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
     simp only [Nat.add_zero, List.getElem_cons_zero] at h0w hkd' hnpc
     have rd0 : rdW (m.arr64 IW) sO = sp := by simp [rdW, h0w]
     have rd1 : rdW (m.arr64 IW) sp = key := by simp [rdW, h1w]
-    have hsp1' : (sp + 1).toNat = sp.toNat + 1 := word_add_toNat (by simp; omega)
+    have hsp1' : (sp + 1).toNat = sp.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
     have rd2 : rdW (m.arr64 IW) (sp + 1) = nPc := by simp [rdW, hsp1', h2w]
     rw [rd0, rd1, rd2]
     obtain ⟨hnnH, hnnd, husH, husd, hdsd, hdsb, hk4⟩ := pos2_nk_fields hkd' htop
@@ -362,8 +363,8 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
       fun ⟨r3, m3⟩ x3 a3 hrun3 ⟨hC3, hg3, _, hns3, hP3, hA3, _⟩ => ?_
     dsimp only at hC3 hg3 hns3 hP3 hA3
     have hg13 := hg12.trans hg3
-    have hsO1 : (sO + 1).toNat = sO.toNat + 1 := word_add_toNat (by simp; omega)
-    have hsL1 : (sL - 1).toNat = seeds'.length := by rw [pos2_word_pred h0]; omega
+    have hsO1 : (sO + 1).toNat = sO.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
+    have hsL1 : (sL - 1).toNat = seeds'.length := by rw [L.toNat_sub_one_of_ne h0]; omega
     obtain ⟨c3, v1, ⟨-, hns1P⟩, -⟩ := ConRon.Bridge.Inductives.nestContKey_spec (ConRon.Bridge.CoreSpec.of_core : ConRon.Bridge.CoreSpec checkFuel) henv hc
       (ConRon.Bridge.Inductives.nestPos_spec (ConRon.Bridge.CoreSpec.of_core : ConRon.Bridge.CoreSpec checkFuel) henv hc _)
       [] [] 0 kk.cname keyP.cname kk.lvls keyP.lvls kk.ds keyP.ds nPcN xc niP.2 NS nsP

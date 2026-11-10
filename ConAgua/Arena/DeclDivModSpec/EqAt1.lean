@@ -10,6 +10,7 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.DeclArmsNat
 import all ConAgua.Arena.IndIface
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -928,7 +929,7 @@ theorem stmtL_of_rec3 {m m1 : Mem} {r : List Word} {s1 s2 s3 : Word} {st1 st2 st
 theorem decStmtL_pair {m : Mem} {r : List Word} {ss : List (List EIdx × EIdx)} (h : decStmtL m r ss) :
     decStmtL m [r.headD 0, r.tail.headD 0] ss := by
   unfold decStmtL at *
-  rw [ntGetD0, ntGetD1] at h
+  rw [L.getD_zero, L.getD_one] at h
   exact h
 
 /-! ## `stmt1` -/

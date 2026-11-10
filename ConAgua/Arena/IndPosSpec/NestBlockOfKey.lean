@@ -8,6 +8,7 @@ public import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndPos
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -187,9 +188,6 @@ theorem decCV_type {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : 
   obtain ⟨_, _, _, _, _, hd, hq⟩ := h
   rw [← Option.some.inj hq]; exact hd
 
-theorem drop3_eq (r : List Word) : r.drop 3 = r.tail.tail.tail := by
-  rcases r with _ | ⟨a, _ | ⟨b, _ | ⟨c, r⟩⟩⟩ <;> simp
-
 /-! ### `viewConst` against `view` -/
 
 theorem ETables.getConst_of_get (t : ETables) (i : EIdx) (ht : i.tag = ETag.const) (n : NIdx) (us : LsIdx)
@@ -214,9 +212,6 @@ theorem EStore.viewConst_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.con
 
 theorem viewConst_run (h : EIdx) (a : AState) :
     (viewConst h).run a = .ok (a.store.viewConst h, a) := rfl
-
-theorem getD1_eq (vl : List Word) : vl.getD 1 0 = vl.tail.headD 0 := by
-  rcases vl with _ | ⟨a, _ | ⟨b, t⟩⟩ <;> rfl
 
 theorem ETables.get_const (t : ETables) (i : EIdx) (ht : i.tag = ETag.const) (v : ENodeView)
     (h : t.get i = some v) : ∃ n us, v = .const n us := by
@@ -424,14 +419,14 @@ theorem closeW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IF
         rw [h0] at hdec; simpa [decHL, hslice?] using hdec.symm
       subst this
       exact ⟨decI body, a, rfl, hS, IWGrow.refl _, ⟨hbody, rfl⟩, hA⟩
-    · have hl1 : dl.toNat = (dl.toNat - 1) + 1 := by have := toNat_ne_zero' hdl; omega
+    · have hl1 : dl.toNat = (dl.toNat - 1) + 1 := by have := L.toNat_ne_zero_of_ne _ hdl; omega
       rw [hl1, decHL, hslice?_succ] at hdec
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdec
       obtain ⟨d, hdd, bs, hbs, rfl⟩ := hdec
       rw [closeW_cons n m dO dl i body hdl] at h
-      have hdo1 : (dO + 1).toNat = dO.toNat + 1 := toNat_add_one' (by omega)
-      have hdl1 : (dl - 1).toNat = dl.toNat - 1 := toNat_sub_one' hdl
-      have hi1 : (i + 1).toNat = i.toNat + 1 := toNat_add_one' (by omega)
+      have hdo1 : (dO + 1).toNat = dO.toNat + 1 := L.toNat_add_one_of_lt (by omega)
+      have hdl1 : (dl - 1).toNat = dl.toNat - 1 := L.toNat_sub_one_of_ne hdl
+      have hi1 : (i + 1).toNat = i.toNat + 1 := L.toNat_add_one_of_lt (by omega)
       rcases hr1 : closeW n m (dO + 1) (dl - 1) (i + 1) body with _ | ⟨r1, m1⟩ <;> rw [hr1] at h; · simp [closeK1] at h
       rw [closeK1_some] at h
       obtain ⟨x1, a1, hrun1, hS1, hg1, ⟨hlt1, hdec1⟩, hA1⟩ :=

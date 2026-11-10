@@ -16,6 +16,7 @@ import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndInstallSpec.DomsW
 import all ConAgua.Arena.IndStream
 public import ConAgua.Arena.IndDecStab
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -70,11 +71,6 @@ theorem iwN_rd0 {m : Mem} {w : Word} {v : Nat} (h : iwN m w.toNat = some v)
   have := rec2RdN (w := w) (k := 0) (by simpa using h) hsz
   simpa using this
 
-theorem getD0_headD (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
-
-theorem getD1_headD (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  rcases r with _ | ⟨_, _ | _⟩ <;> rfl
-
 section sims
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   {env : ConLeche.Env}
@@ -111,7 +107,7 @@ theorem src_ref (hP : StrProg p) (hq : KnotStageProg p) (henv : ConLeche.EnvWF e
   -- `cv_lps(cvG)`
   refine RefE.onlySim (fun _ => srcE.k_cv_lps.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
   obtain ⟨hS1, hg1, ⟨hl1, hlb1⟩, -⟩ := cvLpsW_ok h1 hC.stage (by rw [hqgN]; exact hcvg)
-  rw [getD0_headD, getD1_headD] at hl1 hlb1
+  rw [L.getD_zero, L.getD_one] at hl1 hlb1
   have hA1 : AbsOK m1 := cvLpsA_afr h1 hA
   have hC1 : StageC dn vis fe env m1 a :=
     hC.of_pstep hS1 hA1 (ConRon.Bridge.Inductives.PStep.refl hC.check.state)

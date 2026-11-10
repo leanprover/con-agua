@@ -11,6 +11,7 @@ import ConAgua.Front.StateDR
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.InstLPLevel
 public import ConAgua.Arena.WhnfIota
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -195,11 +196,11 @@ theorem sleElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
         erecP_frame o₁.frame (by decide) (by decide) (by decide) (by decide)]
     have hE₂ := hEc.keep hk₂ o₁.grow
     have hspn := hS.spn
-    have hb1 : (b + 1).toNat = b.toNat + 1 := toNat_succ_lt (by omega)
+    have hb1 : (b + 1).toNat = b.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hsl1 : hslice? (erecP m) (o + 1).toNat j = some lvls := by
       cases j with
       | zero => simpa [hslice?] using hsl'
-      | succ j' => rw [toNat_succ_lt (hslice?_erecP_lt hsl')]; exact hsl'
+      | succ j' => rw [L.toNat_add_one_of_lt (hslice?_erecP_lt hsl')]; exact hsl'
     have hl1 : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := o₁.frame.1 SPN (by decide) (by decide)
@@ -324,11 +325,11 @@ theorem slpElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
         erecP_frame o₁.frame (by decide) (by decide) (by decide) (by decide)]
     have hE₂ := hEc.keep hk₂ hg₁
     have hspn := hS.spn
-    have hb1 : (b + 1).toNat = b.toNat + 1 := toNat_succ_lt (by omega)
+    have hb1 : (b + 1).toNat = b.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hsl1 : hslice? (erecP m) (o + 1).toNat j = some ids := by
       cases j with
       | zero => simpa [hslice?] using hsl'
-      | succ j' => rw [toNat_succ_lt (hslice?_erecP_lt hsl')]; exact hsl'
+      | succ j' => rw [L.toNat_add_one_of_lt (hslice?_erecP_lt hsl')]; exact hsl'
     have hl1 : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := o₁.frame.1 SPN (by decide) (by decide)

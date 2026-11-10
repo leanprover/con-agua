@@ -6,6 +6,7 @@ import ConAgua.L.WriteSet
 import ConAgua.Arena.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -161,18 +162,11 @@ attribute [store_grind] homeS
 
 /-! ## The layout, as numbers -/
 
-theorem le_one_cases (t : Word) (h : t ≤ 1) : t = 0 ∨ t = 1 := by
-  have := UInt64.le_iff_toNat_le.mp h
-  have h1 : t.toNat = 0 ∨ t.toNat = 1 := by simp at this; omega
-  rcases h1 with h1 | h1
-  · exact .inl (UInt64.toNat_inj.mp (by simpa using h1))
-  · exact .inr (UInt64.toNat_inj.mp (by simpa using h1))
-
 section lay
 variable (S : Schema) (m : Mem)
 
 theorem GrowR.tier (hG : GrowR S m) (t : Word) (ht : t ≤ 1) : TierLay S m t := by
-  rcases le_one_cases t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   · exact hG.1
   · exact hG.2
 
@@ -323,7 +317,7 @@ include hS in
   simp only [baseW]
   rw [pushG_ctl S hS m t vs j c q ht]
   have : SCB ≠ S.ca + t := by
-    rcases le_one_cases t ht with rfl | rfl <;> grind
+    rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;> grind
   simp [this]
 
 /-- The new slot's value, below `2^47`, when the base leaves room for the index
@@ -333,7 +327,7 @@ theorem slot_new_lt (ht : t ≤ 1) (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 47 
       (baseW m t).toNat + c.toNat + 1 < 2 ^ 47 := by
   have : (baseW m t).toNat < 2 ^ 47 - 2 ^ 32 := by
     simp only [baseW]
-    rcases le_one_cases t ht with rfl | rfl <;> simp <;> omega
+    rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;> simp <;> omega
   constructor
   · rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega
   · omega

@@ -9,6 +9,7 @@ import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndView
 public import ConAgua.Arena.InferBodyBind
 public import ConAgua.Arena.InferBodySpine
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -259,13 +260,6 @@ theorem coreRef_of_imp {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState}
     (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok) : CoreRef T' a₀ dec dn m₀ vis fe M eb r m ok :=
   coreRef_congr ((himp _ _ (AM.run_of_ok _ _ h.run)).trans (AM.run_of_ok _ _ h.run).symm) h
 
-theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  rcases r with _ | ⟨x, _ | ⟨y, t⟩⟩ <;> rfl
-theorem getD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
-  rcases r with _ | ⟨x, _ | ⟨y, _ | ⟨z, t⟩⟩⟩ <;> rfl
-theorem getD3 (r : List Word) : r.getD 3 0 = r.tail.tail.tail.headD 0 := by
-  rcases r with _ | ⟨x, _ | ⟨y, _ | ⟨z, _ | ⟨w, t⟩⟩⟩⟩ <;> rfl
-
 /-! ## The twin's arms that fail at the dispatcher -/
 
 section armsE
@@ -416,7 +410,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
   | fvar idx ty =>
     obtain ⟨hg, hi, hty, hdec⟩ := hvr
     simp (config := { decide := true }) only [hg, ↓reduceIte]
-    rw [getD1] at hi; rw [getD2] at hty hdec
+    rw [L.getD_one] at hi; rw [L.getD_two] at hty hdec
     by_cases hlt : (L.Ind.eViewW s₀.mem e).tail.headD 0 < d
     · rw [ite_eq_left hlt]
       have hi' : idx < d.toNat := by rw [← hi]; exact UInt64.lt_iff_toNat_lt.mp hlt
@@ -428,7 +422,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
       exact fun _ => ErrClaim.fail _ _ rfl
   | sort u =>
     obtain ⟨hg, hu, hdec⟩ := hvr
-    rw [getD1] at hu hdec
+    rw [L.getD_one] at hu hdec
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     refine RefE.of_run_eq (inferBody_sort _ fe d.toNat (decE e) a₀ u hv) ?_
     subst hdec
@@ -448,7 +442,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
     exact RefE.ret rfl ⟨CoreAfter.comp hK₁ hSt₁ h₂.after, rfl, h₂.resOk⟩
   | const nm us =>
     obtain ⟨hg, hn1, hdn, hu2, hdu⟩ := hvr
-    rw [getD1] at hn1 hdn; rw [getD2] at hu2 hdu
+    rw [L.getD_one] at hn1 hdn; rw [L.getD_two] at hu2 hdu
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     rw [← hdn, ← hdu] at hv
     refine RefE.of_run_eq (inferBody_const _ fe d.toNat (decE e) a₀ _ _ hv) ?_
@@ -469,7 +463,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
         (il_ref p hq.leaf hc.lit k _ a₀ dn vis fe MM eb e l hS he h8 hv)⟩
   | forallE ty b =>
     obtain ⟨hg, h1, hd1, h2, hd2⟩ := hvr
-    rw [getD1] at h1 hd1; rw [getD2] at h2 hd2
+    rw [L.getD_one] at h1 hd1; rw [L.getD_two] at h2 hd2
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     rw [← hd1, ← hd2] at hv
     refine RefE.of_run_eq (inferBody_forall _ fe d.toNat (decE e) a₀ _ _ hv) ?_
@@ -482,7 +476,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
           (hk.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hs h1 h2)⟩
   | lam ty b =>
     obtain ⟨hg, h1, hd1, h2, hd2⟩ := hvr
-    rw [getD1] at h1 hd1; rw [getD2] at h2 hd2
+    rw [L.getD_one] at h1 hd1; rw [L.getD_two] at h2 hd2
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     rw [← hd1, ← hd2] at hv
     refine RefE.of_run_eq (inferBody_lam _ fe d.toNat (decE e) a₀ _ _ hv) ?_
@@ -508,7 +502,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
           (hk.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d e hs he h4)⟩
   | letE ty v b =>
     obtain ⟨hg, h1, hd1, h2, hd2, h3, hd3⟩ := hvr
-    rw [getD1] at h1 hd1; rw [getD2] at h2 hd2; rw [getD3] at h3 hd3
+    rw [L.getD_one] at h1 hd1; rw [L.getD_two] at h2 hd2; rw [L.getD_three] at h3 hd3
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     rw [← hd1, ← hd2, ← hd3] at hv
     refine RefE.of_run_eq (inferBody_let _ fe d.toNat (decE e) a₀ _ _ _ hv) ?_
@@ -521,7 +515,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
           fe MM eb mode d _ _ _ (by omega) (by omega) hs h1 h2 h3)⟩
   | proj sn i pe =>
     obtain ⟨hg, h1, hd1, h2, h3, hd3⟩ := hvr
-    rw [getD1] at h1 hd1; rw [getD2] at h2; rw [getD3] at h3 hd3
+    rw [L.getD_one] at h1 hd1; rw [L.getD_two] at h2; rw [L.getD_three] at h3 hd3
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     rw [← hd1, ← h2, ← hd3] at hv
     refine RefE.of_run_eq (inferBody_proj _ fe d.toNat (decE e) a₀ _ _ _ hv) ?_
@@ -561,7 +555,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
   | fvar idx ty =>
     obtain ⟨hg, hi, hty, hdec⟩ := hvr
     simp (config := { decide := true }) only [hg, ↓reduceIte]
-    rw [getD1] at hi; rw [getD2] at hty hdec
+    rw [L.getD_one] at hi; rw [L.getD_two] at hty hdec
     by_cases hlt : (L.Ind.eViewW s₀.mem e).tail.headD 0 < d
     · rw [ite_eq_left hlt]
       have hi' : idx < d.toNat := by rw [← hi]; exact UInt64.lt_iff_toNat_lt.mp hlt
@@ -573,7 +567,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
       exact fun _ => ErrClaim.fail _ _ rfl
   | sort u =>
     obtain ⟨hg, hu, hdec⟩ := hvr
-    rw [getD1] at hu hdec
+    rw [L.getD_one] at hu hdec
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     refine RefE.of_run_eq (inferBodyIO_sort _ fe d.toNat (decE e) a₀ u hv) ?_
     subst hdec
@@ -593,7 +587,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     exact RefE.ret rfl ⟨CoreAfter.comp hK₁ hSt₁ h₂.after, rfl, h₂.resOk⟩
   | const nm us =>
     obtain ⟨hg, hn1, hdn, hu2, hdu⟩ := hvr
-    rw [getD1] at hn1 hdn; rw [getD2] at hu2 hdu
+    rw [L.getD_one] at hn1 hdn; rw [L.getD_two] at hu2 hdu
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     rw [← hdn, ← hdu] at hv
     refine RefE.of_run_eq (inferBodyIO_const _ fe d.toNat (decE e) a₀ _ _ hv) ?_
@@ -621,7 +615,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
         (il_ref p hq.leaf hc.lit k _ a₀ dn vis fe MM eb e l hS he h8 hv)⟩
   | forallE ty b =>
     obtain ⟨hg, h1, hd1, h2, hd2⟩ := hvr
-    rw [getD1] at h1 hd1; rw [getD2] at h2 hd2
+    rw [L.getD_one] at h1 hd1; rw [L.getD_two] at h2 hd2
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     rw [← hd1, ← hd2] at hv
     refine RefE.of_run_eq (inferBodyIO_forall _ fe d.toNat (decE e) a₀ _ _ hv) ?_
@@ -634,7 +628,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
           dn vis fe MM eb mode d _ _ (by omega) (by omega) hs h1 h2)⟩
   | lam ty b =>
     obtain ⟨hg, h1, hd1, h2, hd2⟩ := hvr
-    rw [getD1] at h1 hd1; rw [getD2] at h2 hd2
+    rw [L.getD_one] at h1 hd1; rw [L.getD_two] at h2 hd2
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     rw [← hd1, ← hd2] at hv
     refine RefE.of_run_eq (inferBodyIO_lam _ fe d.toNat (decE e) a₀ _ _ hv) ?_
@@ -659,7 +653,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
           (by omega) (by omega) _ a₀ dn vis fe MM eb mode d e hs he h4)⟩
   | letE ty v b =>
     obtain ⟨hg, h1, hd1, h2, hd2, h3, hd3⟩ := hvr
-    rw [getD1] at h1 hd1; rw [getD2] at h2 hd2; rw [getD3] at h3 hd3
+    rw [L.getD_one] at h1 hd1; rw [L.getD_two] at h2 hd2; rw [L.getD_three] at h3 hd3
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     rw [← hd1, ← hd2, ← hd3] at hv
     refine RefE.of_run_eq (inferBodyIO_let _ fe d.toNat (decE e) a₀ _ _ _ hv) ?_
@@ -674,7 +668,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     exact RefE.ret rfl ⟨CoreAfter.comp hK₁ hSt₁ h₄.after, rfl, h₄.resOk⟩
   | proj sn i pe =>
     obtain ⟨hg, h1, hd1, h2, h3, hd3⟩ := hvr
-    rw [getD1] at h1 hd1; rw [getD2] at h2; rw [getD3] at h3 hd3
+    rw [L.getD_one] at h1 hd1; rw [L.getD_two] at h2; rw [L.getD_three] at h3 hd3
     simp (config := { decide := true }) only [hg, ↓reduceIte]
     rw [← hd1, ← h2, ← hd3] at hv
     refine RefE.of_run_eq (inferBodyIO_proj _ fe d.toNat (decE e) a₀ _ _ _ hv) ?_

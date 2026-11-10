@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.ConsLibRel
 public import ConAgua.Arena.LpCol
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -321,7 +322,7 @@ theorem col_read {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited 
       f ((if t = 0 then P else Q).derAt i.toNat) := by
   have hcnt := hT.cnt t ht
   have hc : ColT A f m t (if t = 0 then P else Q) := by
-    rcases word_le_one t ht with rfl | rfl
+    rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
     · simpa using hc0
     · simpa using hc1
   simp only [cntC] at hcnt
@@ -343,7 +344,7 @@ theorem const_read {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabite
     (if i < rdW (m.arr64 CTL) (C.ca + t) then v else 0) = f ((if t = 0 then P else Q).derAt i.toNat) := by
   have hcnt := hT.cnt t ht
   have hc : ConstT (fun d => f d = v) (if t = 0 then P else Q) := by
-    rcases word_le_one t ht with rfl | rfl
+    rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
     · simpa using hc0
     · simpa using hc1
   simp only [cntC] at hcnt
@@ -426,7 +427,7 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
         rw [hA] at hA'; cases hA'; exact tierA_ne_tier _ ht ht' (Ne.symm hne)),
       Mem.arr64_set64_ne _ _ _ _ _ (ne_tierA (Ne.symm (hW.col A hA).2.2.1) t').symm,
       wrRecK_eq, wrRec_arr_ne C.sch _ _ _ (tierA_ne (hW.col A hA).1 t' t)]
-  rcases word_le_one t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   · have e0 := hcm 0 (by decide)
     have e1 := hcm 1 (by decide)
     simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false] at e0 e1

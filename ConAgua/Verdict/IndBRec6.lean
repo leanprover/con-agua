@@ -19,6 +19,7 @@ import ConAgua.Arena.IndInstallSpec.OfClosed
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.RecGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 /-!
@@ -234,14 +235,14 @@ theorem crr_ref (hP : CrrProgE p) (henv : ConLeche.EnvWF env) (visR pO pL : Word
       (by simp at htop3; simp [iwTop] at htop3 ⊢; omega) hg3
       ((rec3CVX_decB hcv).grow (OMono.decCVp _) ((hR1.grow.trans hg2)) |> fun h => by rw [tp]; exact h) hMd
       ((decRL_decB hR1.dec).grow (OMono.decHL _ _) hg2 |> fun h => by
-        simp only [getD_zero, Nat.zero_add, getD_one] at h; exact h)
+        simp only [L.getD_zero, Nat.zero_add, L.getD_one] at h; exact h)
   -- the rest
   have hg03 := hR1.grow.trans (hg2.trans hg3)
   have hvo1 := rec2ToNat_succ (o := vo) (i := vo.toNat) (Nat.le_refl _) (by have := hS.iw.iw; omega)
   have hco1 := rec2ToNat_succ (o := co) (i := co.toNat) (Nat.le_refl _)
     (by have := hS.iw.iw; have := (rec2IwN_trunc hc0).1; omega)
-  have hvl1 := rec2ToNat_pred hvl
-  have hcl1 := rec2ToNat_pred hcl
+  have hvl1 := L.toNat_sub_one_of_ne hvl
+  have hcl1 := L.toNat_sub_one_of_ne hcl
   have ih' := ih (by omega) m3 a2 (vo + 1) (vl - 1) (co + 1) (cl - 1) cvs' cs' cvsP' hC3
     (hG.grow (decCG_mono _) hg03) (hrc.grow (OMono.decNL _ _) hg03) (hcg.grow hg03)
     (by rw [hvo1, hvl1, hjv]; exact hcvsT.grow hg03)

@@ -11,6 +11,7 @@ import ConAgua.Arena.SimLib
 import ConAgua.Arena.View
 public import ConAgua.Arena.DerRelBase
 public import ConRon.Arena.Core
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -576,7 +577,7 @@ theorem agoOK_succ (n : Nat) (ih : ANodeOK n) : AGoOK (n + 1) := by
   intro m m' a h k d fu r hA hh hb
   have hfu : ¬ fu = 0 := fun hfu => by rw [absW.abort1 n m h k d fu hfu] at hb; cases hb
   rw [absW.arm1 n m h k d fu hfu] at hb
-  rw [ctrW_toNat fu hfu, abstract1Go_succ']
+  rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, abstract1Go_succ']
   refine SimD.exists (Sim.bindD (K := absW.k_ab_fvb n h k d fu) (absW.k_ab_fvb.none n h k d fu)
     (fun x m₁ => absW.k_ab_fvb.ite n h k d fu x m₁)
     (Sim.ofD fun x m₁ e => fvbW_ok n m m₁ a hA h (fu - 1) x hh e) fun x m₁ a₁ hA₁ => ?_) hb
@@ -707,7 +708,7 @@ theorem alamArm_ok (hg : tagW h = 5) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
   refine Sim.bindD (K := absLamW.k_abs_go_2 h k _ _ x) (absLamW.k_abs_go_2.none ..)
     (fun y m₂ => absLamW.k_abs_go_2.set ..) (Sim.ofD fun y m₂ e => by
-    simpa only [succW_toNat k hk1] using ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw e)
+    simpa only [L.toNat_add_one_of_ne k hk1] using ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw e)
         fun y m₂ a₂ hA₂ => ?_
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
@@ -744,7 +745,7 @@ theorem aforallArm_ok (hg : tagW h = 6) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
   refine Sim.bindD (K := absForallW.k_abs_go_2 h k _ _ x) (absForallW.k_abs_go_2.none ..)
     (fun y m₂ => absForallW.k_abs_go_2.set ..) (Sim.ofD fun y m₂ e => by
-    simpa only [succW_toNat k hk1] using ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw e)
+    simpa only [L.toNat_add_one_of_ne k hk1] using ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw e)
         fun y m₂ a₂ hA₂ => ?_
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
@@ -784,7 +785,7 @@ theorem aletArm_ok (hg : tagW h = 7) :
     (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ k d fu y hA₁ hvw e) fun y m₂ a₂ hA₂ => ?_
   refine Sim.bindD (K := absLetW.k_abs_go_3 h k _ _ _ x y) (absLetW.k_abs_go_3.none ..)
     (fun z m₃ => absLetW.k_abs_go_3.set ..) (Sim.ofD fun z m₃ e => by
-    simpa only [succW_toNat k hk1] using ih m₂ m₃ a₂ _ (k + 1) d fu z hA₂ hbw e)
+    simpa only [L.toNat_add_one_of_ne k hk1] using ih m₂ m₃ a₂ _ (k + 1) d fu z hA₂ hbw e)
         fun z m₃ a₃ hA₃ => ?_
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltLetE (decE h)
       (decE x == decE (tfld m LET (tierW h) (idxW h) 0) && decE y == decE (tfld m LET (tierW h) (idxW h) 1) && decE z == decE (tfld m LET (tierW h) (idxW h) 2))

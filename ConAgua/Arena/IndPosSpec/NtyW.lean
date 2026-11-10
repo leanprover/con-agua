@@ -7,6 +7,7 @@ public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.NestOccAny
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -57,7 +58,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     obtain ⟨x, hx, xs', hxs', rfl⟩ := hxs2
     obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA, aread_apply, aread_apply] using hx)
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
-      word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hxb 0 (by omega); omega)
+      L.toNat_add_of_lt _ _ (show off.toNat + 1 < 2 ^ 64 by have := hxb 0 (by omega); omega)
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     obtain ⟨mp0, hM0⟩ := hP.no

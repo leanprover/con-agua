@@ -10,6 +10,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndParts
 import ConAgua.L.ModelGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -280,7 +281,7 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
   | zero => simp [recTW] at hrt
   | succ n =>
   have hnl : nl.toNat = names.length := (decHL_length m hnames).symm
-  have hnlw : [UInt64.ofNat names.length] = [nl] := by rw [← hnl, ofNat_toNat_word nl]
+  have hnlw : [UInt64.ofNat names.length] = [nl] := by rw [← hnl, L.ofNat_toNat nl]
   rw [recTW.arm1] at hrt
   obtain ⟨r1, m1, hra, hrt⟩ := ipK_inv hrt (by simp [recTW.k_strip_pis])
   obtain ⟨x1, a1, hrun1, hS1, hg1, hdec1⟩ := stripF_pis_ok vis fe mI ty hty m m1 a r1 hra hS
@@ -362,7 +363,7 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
         have hnames3 : decHL m3 no.toNat nl.toNat = some names := by
           rw [decHL_grow3 (hg1.trans hg3) hbt]; exact hnames
         obtain ⟨ws, hws, hnm, hwlt⟩ := slR_of_decHL m3 nl.toNat no.toNat names hnames3 hb
-        rw [ofNat_toNat_word, ofNat_toNat_word] at hws
+        rw [L.ofNat_toNat, L.ofNat_toNat] at hws
         have hlen : ws.length < 2 ^ 64 := by
           have := decHL_length m3 hnames3
           rw [hnm] at this; simp at this; omega

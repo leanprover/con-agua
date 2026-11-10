@@ -11,6 +11,7 @@ import all ConAgua.Arena.IndDeclConsts
 public import ConAgua.Arena.IndDeclConstsFire
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -59,9 +60,6 @@ theorem efF_stage {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   | zero => simp [efF] at h
   | succ n => exact efW_stage n h hS hd hb
 
-theorem getD4_eq (r : List Word) : r.getD 4 0 = r.tail.tail.tail.tail.headD 0 := by
-  rcases r with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩⟩ <;> rfl
-
 /-- A `Bool` word of `IW` below the top, as the model reads it. -/
 theorem rdW_of_iwB {m : Mem} {o w : Word} {b : Bool} (h : iwB (truncM m) (o.toNat + w.toNat) = some b) :
     (rdW (m.arr64 IW) (o + w) != 0) = b := by
@@ -106,7 +104,7 @@ theorem brW_ok {p : Prog} (hP : RecsProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
         fun _ _ _ _ _ => rfl⟩
     | nested lv ps =>
       obtain ⟨h0, ⟨hl1, hl2⟩, ⟨hp1, hp2⟩⟩ := hdf
-      simp only [Nat.reduceAdd, getD1_eq, getD2_eq, getD3_eq, getD4_eq] at hl1 hl2 hp1 hp2
+      simp only [Nat.reduceAdd, L.getD_one, L.getD_two, L.getD_three, L.getD_four] at hl1 hl2 hp1 hp2
       exact ⟨lv, ps, ⟨hl1, hl2⟩, ⟨hp1, hp2⟩, fun R elo epo h1 h2 => ⟨h0, h1, h2⟩⟩
     | levels _ => exact hdf.elim
   rcases h2 : efF n m1 (r1.tail.headD 0) (r1.tail.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h

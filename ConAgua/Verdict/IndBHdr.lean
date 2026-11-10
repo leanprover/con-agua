@@ -14,6 +14,7 @@ import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Verdict.DeclValsE
 import all ConAgua.Arena.RecGen
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+import ConAgua.L.WordOff
 
 @[expose] public section
 /-!
@@ -126,7 +127,7 @@ theorem ccl_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hgP2.ext _ _ hw1)
   rw [hx2]
   have e4 : erecPutMem (wrER m1 A [0, nw]) (A + 2) w1 = wrER m1 A [0, nw, w1] := by
-    simp only [wrER, word_add11]
+    simp only [wrER, L.add_one_add_one]
   rw [e4]
   obtain ⟨-, hgP3, -, -, -⟩ := wrER_fresh hS.stage [0, nw, w1] m1 a A hT1.stage hfq hg1 hbase
     (by simp; omega) h41
@@ -135,7 +136,7 @@ theorem ccl_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq2]; exact hgP3.ext _ _ hw2)
   rw [hx3]
   have e5 : erecPutMem (wrER m1 A [0, nw, w1]) (A + 3) w2 = wrER m1 A [0, nw, w1, w2] := by
-    simp only [wrER, word_add11, word_add21]
+    simp only [wrER, L.add_one_add_one, word_add21]
   rw [e5]
   -- the type word
   obtain ⟨-, hgP4, -, -, -⟩ := wrER_fresh hS.stage [0, nw, w1, w2] m1 a A hT1.stage hfq hg1 hbase
@@ -145,7 +146,7 @@ theorem ccl_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq3]; exact hgP4.ext _ _ hw3)
   rw [hx4]
   have e6 : erecPutMem (wrER m1 A [0, nw, w1, w2]) (A + 4) t = wrER m1 A [0, nw, w1, w2, t] := by
-    simp only [wrER, word_add11, word_add21, word_add31]
+    simp only [wrER, L.add_one_add_one, word_add21, word_add31]
   rw [e6]
   obtain ⟨hS6, hg6, -, hrd, -⟩ := wrER_fresh hS.stage [0, nw, w1, w2, t] m1 a A hT1.stage hfq hg1 hbase
     (by simp; omega) h41

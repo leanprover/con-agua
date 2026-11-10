@@ -5,6 +5,7 @@ import ConAgua.Arena.DeclAndPinInd
 public import ConAgua.Arena.DeclAndPinIndDec
 public import ConAgua.Arena.WhnfBase
 public import ConAgua.Front.StateDR
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -421,11 +422,6 @@ theorem rdW_of_trunc {P : Array Word} {t x : Nat} {w v : Word} (h : (trunc P t)[
 theorem trunc_lt {P : Array Word} {t x : Nat} {v : Word} (h : (trunc P t)[x]? = some v)
     (hx : x ≠ 0) : x < P.size := (Array.getElem?_eq_some_iff.mp (trunc_getAP h hx).1).1
 
-theorem toNat_add_ofNat {s : Word} {k : Nat} (h : s.toNat + k < 2 ^ 64) :
-    (s + UInt64.ofNat k).toNat = s.toNat + k := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [show UInt64.size = 2 ^ 64 from rfl]; omega)]
-  simp; omega
-
 /-! ## `ind_rec_copy`'s record -/
 
 /-- The relocating writes after the record's copy (`ircW.k_dind_copy_2`). -/
@@ -531,7 +527,7 @@ theorem shR_of_copy {P : Array Word} {B : Nat → Option Word} {t : Nat} {sW : W
   have hs : sW.toNat ≠ 0 := fun h0 => hs0 (UInt64.toNat_inj.mp (by simpa using h0))
   have hx : sW.toNat + k ≠ 0 := by omega
   have hlt := trunc_lt hv hx
-  rw [hcopy k hk, rdW_of_trunc hv hx (toNat_add_ofNat (by omega))]
+  rw [hcopy k hk, rdW_of_trunc hv hx (L.toNat_add_ofNat_of_lt _ _ (by omega))]
 
 /-- A slice of the cut pool whose copy is at `q`. -/
 theorem slice_of_copy {P : Array Word} {B : Nat → Option Word} {t : Nat} {offW cntW : Word} {q : Nat}
@@ -543,7 +539,7 @@ theorem slice_of_copy {P : Array Word} {B : Nat → Option Word} {t : Nat} {offW
   have ho : offW.toNat ≠ 0 := fun h0 => hne hc0 (UInt64.toNat_inj.mp (by simpa using h0))
   have hx : offW.toNat + j ≠ 0 := by omega
   have hlt := trunc_lt hv hx
-  rw [hcopy j hj, rdW_of_trunc hv hx (toNat_add_ofNat (by omega))]
+  rw [hcopy j hj, rdW_of_trunc hv hx (L.toNat_add_ofNat_of_lt _ _ (by omega))]
 
 /-- A header word the cut pool holds at `s + k` is the pool's word at the word index `s + k`. -/
 theorem hdr_of_trunc {P : Array Word} {t : Nat} {sW : Word} {k x : Nat} (hP : P.size < 2 ^ 63)
@@ -553,7 +549,7 @@ theorem hdr_of_trunc {P : Array Word} {t : Nat} {sW : Word} {k x : Nat} (hP : P.
   obtain ⟨w, hw, rfl⟩ := hx
   have hs : sW.toNat ≠ 0 := fun h0 => hs0 (UInt64.toNat_inj.mp (by simpa using h0))
   have hlt := trunc_lt hw (by omega)
-  rw [rdW_of_trunc hw (by omega) (toNat_add_ofNat (by omega))]
+  rw [rdW_of_trunc hw (by omega) (L.toNat_add_ofNat_of_lt _ _ (by omega))]
 
 /-- **The relocation, from the copy's words.** -/
 theorem decCI_of_copy {P : Array Word} {B : Nat → Option Word} {t : Nat}

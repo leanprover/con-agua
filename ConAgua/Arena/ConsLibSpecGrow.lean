@@ -213,10 +213,6 @@ theorem homeW_eq (h n : Word) :
     UInt64.ofNat (((h * golden) ^^^ ((h * golden) >>> 32)).toNat * n.toNat / 2 ^ 64) = homeW h n :=
   rfl
 
-theorem word_toNat_pred (e : Word) (h : ¬ e = 0) : e.toNat = (e - 1).toNat + 1 := by
-  have : e.toNat ≠ 0 := fun h' => h (UInt64.toNat_inj.mp (by simpa using h'))
-  rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-
 theorem self_ne_addlit (a k : Nat) (h : 0 < k) : a ≠ a + k := by omega
 
 theorem addlit_ne_addlit (a i j : Nat) (h : i ≠ j) : a + i ≠ a + j := by omega

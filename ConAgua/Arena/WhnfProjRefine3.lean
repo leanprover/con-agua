@@ -30,12 +30,6 @@ theorem except_ok_bind' {ε α β : Type} (x : α) (f : α → Except ε β) : (
 theorem rdW_of_get {a : Array Word} {x : Word} {k : Nat} {w : Word} (hk : x.toNat = k)
     (h : a[k]? = some w) : rdW a x = w := by simp [rdW, hk, h]
 
-theorem fo_toNat_add_small (x : Word) (c : Nat) (h : x.toNat + c < 2 ^ 64) :
-    (x + UInt64.ofNat c).toNat = x.toNat + c := by
-  rw [UInt64.toNat_add]
-  have e : (UInt64.ofNat c).toNat = c := by simp; omega
-  rw [e]; exact Nat.mod_eq_of_lt h
-
 /-- **`tower_slots_all` refines `towerSlotsAll`**, on the real `find_proj`. -/
 @[refines ConRon.Arena.towerSlotsAll]
 theorem towerSlotsAll_refines (p : Prog) (hp : IotaProg' p) (hq : ProjProg p) :

@@ -5,6 +5,7 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 public import ConAgua.Arena.LdRd
 import ConAgua.Arena.RefWalk
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -114,7 +115,7 @@ theorem ect_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
   have hK := hk n (Nat.le_refl _)
   simp only [ectE]
   unfold etaTyT
-  rw [← toNat_succ_of_ne hd]
+  rw [← L.toNat_add_one_of_ne _ hd]
   refine RefE.bind_callE (fun _ => rfl) (hK.infer F s₀ a₀ dn vis fe M eb mode (d + 1) lhs hF hn hs hl)
     (fun (hkE : KnotUpToE p n) => (hkE n (Nat.le_refl _)).infer F s₀ a₀ dn vis fe M eb mode (d + 1) lhs
         hF hn hs hl)
@@ -152,7 +153,7 @@ theorem ecb_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   simp only [ecbE]
   unfold etaBodyT
   refine RefE.abort0 (by decide) fun hd => ?_
-  rw [← toNat_succ_of_ne hd]
+  rw [← L.toNat_add_one_of_ne _ hd]
   refine RefE.bind_callW (fun _ => rfl) (internFVar_coreSpec hq.body n s₀ hs.rel d ty1 hty)
     fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
   dsimp only [ecbE.k_intern_fvar]

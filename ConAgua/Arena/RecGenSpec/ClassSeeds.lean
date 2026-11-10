@@ -23,6 +23,7 @@ public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.IndPosSpec.UCtx
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.RecGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -65,10 +66,10 @@ theorem decTM_words {m : Mem} {q : Word} {tm : TargetMajor} (h : DecB (fun m => 
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨r8, hk8, -⟩ := partsIwRd hk (w := q + 8) (by
     have := partsIwLt hk
-    exact word_add_toNat (by rw [show (8 : Word).toNat = 8 from rfl]; omega))
+    exact L.toNat_add_of_lt _ _ (by rw [show (8 : Word).toNat = 8 from rfl]; omega))
   obtain ⟨r4, hk4, -⟩ := partsIwRd h3 (w := q + 4) (by
     have := partsIwLt h3
-    exact word_add_toNat (by rw [show (4 : Word).toNat = 4 from rfl]; omega))
+    exact L.toNat_add_of_lt _ _ (by rw [show (4 : Word).toNat = 4 from rfl]; omega))
   exact ⟨k, r8, hk8, hmem, by rw [r4, UInt64.toNat_ofNat_of_lt' hk4]⟩
 
 section sgw
@@ -129,11 +130,11 @@ theorem sgW_nksl (k : Nat)
   have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize
   have r2 : rdW (m4.arr64 IW) (key + 2) = q := by
     have := hget4 2 (by simp)
-    have e : (key + 2).toNat = key.toNat + 2 := word_add_toNat (by simp; omega)
+    have e : (key + 2).toNat = key.toNat + 2 := L.toNat_add_of_lt _ _ (by simp; omega)
     simp only [rdW, e]; simp at this; rw [this]; rfl
   have r3 : rdW (m4.arr64 IW) (key + 3) = dL := by
     have := hget4 3 (by simp)
-    have e : (key + 3).toNat = key.toNat + 3 := word_add_toNat (by simp; omega)
+    have e : (key + 3).toNat = key.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
     simp only [rdW, e]; simp at this; rw [this]; rfl
   simp only [NKSl, List.headD_cons]
   rw [r2, r3]

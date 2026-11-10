@@ -12,6 +12,7 @@ import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 public import ConAgua.Arena.IndSumSpec.SumProg
 public import ConRon.Bridge.Inductives.Rel
 public import ConAgua.Arena.IndRealCrF
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -65,8 +66,8 @@ theorem opf_step (hOpf : OpfF p) (hk : InsAt dn vis fe env m₀ a₀ m a) {k e i
     · rintro l b rfl
       obtain ⟨lP, bP, hq, hl, hb⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho
       obtain ⟨-, ⟨hl', hlb⟩, hb', hbd⟩ := hdec
-      rw [sumGetD1, sumGetD2] at hl' hlb
-      rw [drop3_eq] at hb' hbd
+      rw [L.getD_one, L.getD_two] at hl' hlb
+      rw [L.drop_three] at hb' hbd
       exact ⟨hl', hlb, hb', hbd, lP, bP, hq, hl, hb⟩
 
 /-- **`param_levels`' step**. -/
@@ -132,7 +133,7 @@ theorem gaa_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {e : 
     obtain ⟨xs, a', hr, hS, hg, hxs, hxb⟩ := (sumSim_of_relW h5 hk.stage.stage) r s.mem hm
     obtain ⟨ha, hx⟩ := ConRon.Bridge.Inductives.getAppArgs_run hk.stage.check.state heP hr
     rw [ha] at hr hS
-    rw [sumGetD0, sumGetD1] at hxs hxb
+    rw [L.getD_zero, L.getD_one] at hxs hxb
     exact ⟨xs, a, hr, InsAt.pstep hk.stage hS (gaaF_afr hm hk.abs) hg (PStep.refl hk.stage.check.state),
       hxs, hxb, hx⟩
 
@@ -205,7 +206,7 @@ theorem strip_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {k 
     · rintro l b rfl
       obtain ⟨-, bP, -, -, hb⟩ := ConRon.Bridge.Inductives.denoteBP_some ho
       obtain ⟨-, -, hb', hbd⟩ := hdec
-      rw [drop3_eq] at hb' hbd
+      rw [L.drop_three] at hb' hbd
       exact ⟨hb', hbd, bP, hb⟩
 
 /-- **`struct_ctor_resid_ok`'s step**. -/
@@ -245,7 +246,7 @@ theorem ftds_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {o l
     obtain ⟨ds, a', hr, hS, hg, hds, hdb⟩ :=
       (sumSim_of_relW (ftdsF_ok dn vis fe o l xs) ⟨hk.stage.stage, hd, fun _ => hb⟩) r s.mem hm
     obtain ⟨p6, hdP⟩ := ConRon.Bridge.Inductives.fvarTypeDs_run xs xsP hk.stage.check.state hxs hr
-    rw [sumGetD0, sumGetD1] at hds hdb
+    rw [L.getD_zero, L.getD_one] at hds hdb
     exact ⟨ds, a', hr, InsAt.pstep hk.stage hS (ftdsF_afr hm hk.abs) hg p6, hds, hdb, hdP⟩
 
 end steps

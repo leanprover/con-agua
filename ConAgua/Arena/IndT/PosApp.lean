@@ -9,6 +9,7 @@ import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPosSpec.CfW
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -85,7 +86,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
   obtain ⟨ha1, hargsP⟩ := ConRon.Bridge.Inductives.getAppArgs_run hC.check.state hwP hrun1
   subst ha1
   have e0 : ra.getD 0 0 = ra.headD 0 := by cases ra <;> rfl
-  rw [e0, getD1_eq] at hargs hargsb
+  rw [e0, L.getD_one] at hargs hargsb
   unfold posAppT
   refine RefE.bind_right hrun1 ?_
   -- the head
@@ -132,7 +133,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
     obtain ⟨i, ty, rfl⟩ : ∃ i ty, v = .fvar i ty := by
       cases v <;> simp only [ViewR] at hvr <;> (try (rw [h1v] at hvr; simp at hvr)) <;> exact ⟨_, _, rfl⟩
     obtain ⟨-, hi1, -, -⟩ := hvr
-    rw [getD1_eq] at hi1
+    rw [L.getD_one] at hi1
     dsimp only
     rw [← hi1, pfK_eq]
     have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
@@ -163,8 +164,8 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
     obtain ⟨nn, us, rfl⟩ : ∃ nn us, v = .const nn us := by
       cases v <;> simp only [ViewR] at hvr <;> (try (rw [h3v] at hvr; simp at hvr)) <;> exact ⟨_, _, rfl⟩
     obtain ⟨-, hnH, hnd, husH, husd⟩ := hvr
-    rw [getD1_eq] at hnH hnd
-    rw [pos2_getD2] at husH husd
+    rw [L.getD_one] at hnH hnd
+    rw [L.getD_two] at husH husd
     obtain ⟨nm, ls, -, hnmP, hlsP⟩ := ConRon.Bridge.denote_const_inv hC.check.state.wf
       (by rw [← hhdd, ← decE_eq]; exact hview) hhdP
     have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize

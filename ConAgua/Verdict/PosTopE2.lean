@@ -9,6 +9,7 @@ public import ConAgua.Arena.IlpRd
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.UCtx
 public import ConAgua.Arena.Verdict
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -75,7 +76,7 @@ theorem nu_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     simp only [Nat.add_zero, List.getElem_cons_zero] at h1 h6 h8
     have r1 : rdW (m.arr64 IW) off = hdr := by simp [rdW, h1]
     have r2 : rdW (m.arr64 IW) hdr = o := by simp [rdW, h2]
-    have hh1 : (hdr + 1).toNat = hdr.toNat + 1 := word_add_toNat (by
+    have hh1 : (hdr + 1).toNat = hdr.toNat + 1 := L.toNat_add_of_lt _ _ (by
       have := hS.iw.iw; have := hS.iw.iwSize; simp; omega)
     have r3 : rdW (m.arr64 IW) (hdr + 1) = ll := by simp [rdW, hh1, h3]
     rw [r1, r2, r3, ConRon.Arena.nestUniform.eq_2]
@@ -85,7 +86,7 @@ theorem nu_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     refine ⟨_, _, hrun1, RefE.ofArms (fun h => nuE.k_nest_uniform_cs.abort1 (hc1 := h) ..)
       (fun h => nuE.k_nest_uniform_cs.arm1 (hc1 := h) ..) ?_⟩
     refine RefE.guardIf (by decide) (fun h => by grind) (fun h => by grind) fun _ _ => ?_
-    have ho1 : (off + 1).toNat = off.toNat + 1 := word_add_toNat (by
+    have ho1 : (off + 1).toNat = off.toNat + 1 := L.toNat_add_of_lt _ _ (by
       have := hS.iw.iw; have := hS.iw.iwSize; simp; omega)
     have hl1 : (l - 1).toNat = l.toNat - 1 :=
       UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))

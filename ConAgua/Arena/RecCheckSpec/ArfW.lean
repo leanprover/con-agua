@@ -12,6 +12,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.RecSim
 import all ConAgua.Arena.RecCheck
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -115,7 +116,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have hds1 : decHL m1 (UInt64.ofNat o' : Word).toNat (UInt64.ofNat l' : Word).toNat = some TM.ds := by
     rw [to, tl]; exact hdsDecB.stab (OMono.decHL _ _) m1 hg1
   have hv1 := hd1
-  simp only [decRL, getD_zero, Nat.zero_add, getD_one] at hv1
+  simp only [decRL, L.getD_zero, Nat.zero_add, L.getD_one] at hv1
   obtain ⟨hv1d, hv1b⟩ := hv1
   rcases rec3IwSlice (show decHL (truncM m) o' l' = some TM.ds from hds') with hbnd | hl0
   · rcases h2 : aplW n m1 rP (UInt64.ofNat o') (UInt64.ofNat l') with _ | ⟨r2, m2⟩ <;> simp only [h2, arfW.k_abstract_prefix_list, reduceCtorEq] at hb

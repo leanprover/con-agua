@@ -13,6 +13,7 @@ public import ConAgua.Arena.WhnfBase
 public import ConAgua.Arena.DeclArmsCanon
 public import ConAgua.Arena.Env
 public import ConAgua.L.ProgHas
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -192,14 +193,6 @@ def ciEqB (a : Word → Word) (p q : Word) : Bool :=
   else if 5 < a p then false
   else cvEqB a (p + 1) (q + 1) && ciEqRestB a p q (a p)
 
-theorem toNat_pred {l : Word} (h0 : l ≠ 0) : l.toNat = (l - 1).toNat + 1 := by
-  have : 0 < l.toNat := by
-    rcases Nat.eq_zero_or_pos l.toNat with h | h
-    · exact absurd (UInt64.toNat_inj.mp (by simpa using h)) h0
-    · exact h
-  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]
-  simp; omega
-
 section arms
 variable (a : Word → Word) (c : Nat) (o1 o2 l1 l2 : Word) (x y q r h g p : Word)
 
@@ -213,7 +206,7 @@ theorem rulesEqN_succ : rulesEqN a (c + 1) o1 o2 =
 theorem erSlEqB_step (hl : l1 = l2) (h0 : l1 ≠ 0) :
     erSlEqB a o1 l1 o2 l2 = (a o1 == a o2 && erSlEqB a (o1 + 1) (l1 - 1) (o2 + 1) (l2 - 1)) := by
   subst hl
-  have hc : l1.toNat = (l1 - 1).toNat + 1 := toNat_pred h0
+  have hc : l1.toNat = (l1 - 1).toNat + 1 := L.toNat_eq_toNat_sub_one_add_one _ h0
   simp only [erSlEqB, beq_self_eq_true, Bool.true_and]
   rw [hc, slEqN_succ]
 
@@ -237,7 +230,7 @@ theorem rulesEqB_step (hl : l1 = l2) (h0 : l1 ≠ 0) :
     rulesEqB a o1 l1 o2 l2 = (ruleEqButRhsB a o1 o2 && a (o1 + 8) == a (o2 + 8) &&
       rulesEqB a (o1 + 11) (l1 - 1) (o2 + 11) (l2 - 1)) := by
   subst hl
-  have hc : l1.toNat = (l1 - 1).toNat + 1 := toNat_pred h0
+  have hc : l1.toNat = (l1 - 1).toNat + 1 := L.toNat_eq_toNat_sub_one_add_one _ h0
   simp only [rulesEqB, beq_self_eq_true, Bool.true_and]
   rw [hc, rulesEqN_succ]
 

@@ -10,6 +10,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndParts
 import ConAgua.L.ModelGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -209,7 +210,7 @@ theorem bcPure_nonsort (m : Mem) (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g �
       have : (rRP.toNat - (nC.toNat + k.toNat) == nPd.toNat) = true := by
         rw [← hsub, c2]; simp
       rw [ite_eq_left this]
-      simp only [encONN, hsub2, ofNat_toNat_word]
+      simp only [encONN, hsub2, L.ofNat_toNat]
     · have c2' : (rRP.toNat - (nC.toNat + k.toNat) == nPd.toNat) = false := by
         rw [← hsub]; simp only [beq_eq_false_iff_ne, ne_eq]
         exact fun h => c2 (UInt64.toNat_inj.mp h)
@@ -222,7 +223,7 @@ theorem bcPure_nonsort (m : Mem) (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g �
           rw [e2] at b
           simp [a, b]
         rw [ite_eq_left this]
-        simp only [encONN, hsub2, ofNat_toNat_word]
+        simp only [encONN, hsub2, L.ofNat_toNat]
       · rw [bcPure.arm7 m _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
         have : (k.toNat < nR.toNat && nPd.toNat + nR.toNat + nC.toNat ≤ rRP.toNat) = false := by
           by_cases a : k < nR
@@ -285,7 +286,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
         rw [ite_eq_left hge]; rfl
       · rw [bcPure.arm2 _ _ _ _ _ _ _ _ _ _ hs hl] at hr0; obtain rfl := Option.some.inj hr0
         simp only [encONN, List.headD_cons, List.tail_cons]
-        have e1 : UInt64.ofNat nPd.toNat = nPd := ofNat_toNat_word nPd
+        have e1 : UInt64.ofNat nPd.toNat = nPd := L.ofNat_toNat nPd
         have e2 : UInt64.ofNat (bs.length - nPd.toNat) = r1.headD 0 - nPd := by
           apply UInt64.toNat_inj.mp
           rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))]

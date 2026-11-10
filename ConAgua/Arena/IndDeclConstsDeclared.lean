@@ -10,6 +10,7 @@ import ConRon.Bridge.Grind
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -63,7 +64,7 @@ theorem declW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockS
   have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
   have e1' : (p + 1).toNat = p.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  rw [ofNat_toNat_word] at ho'
+  rw [L.ofNat_toNat] at ho'
   rw [e1] at hl'
   have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
   have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]

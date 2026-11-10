@@ -19,6 +19,7 @@ import all ConAgua.Arena.IndSum
 public import ConAgua.Arena.StripTeleSpec
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndSumSpec.TblProg
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -194,10 +195,6 @@ theorem rlDec_set_iw (m : Mem) (o v : Word) : rlDec (m.set64 IW o v) = rlDec m :
 theorem sumToNat_succ {w : Word} (h : w.toNat < 2 ^ 64 - 1) : (w + 1).toNat = w.toNat + 1 := by
   rw [UInt64.toNat_add]; simp; omega
 
-theorem sumToNat_pred {w : Word} (h : w ≠ 0) : (w - 1).toNat = w.toNat - 1 := by
-  have : w.toNat ≠ 0 := fun e => h (UInt64.toNat_inj.mp (by simpa using e))
-  rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
-
 theorem Rec11.grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : Rec11 m o l) (hb : o + l ≤ iwTop m) :
     Rec11 m' o l := by
   intro j hj v hv i hi
@@ -331,8 +328,8 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
   have hlt : o.toNat < 2 ^ 64 - 1 := by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega
   have hcO1 : (cO + 1).toNat = cO.toNat + 1 := sumToNat_succ (by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega)
   have hrO1 : (rO + 1).toNat = rO.toNat + 1 := sumToNat_succ (by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega)
-  have hcL1 : (cL - 1).toNat = L := by rw [sumToNat_pred hcL]; omega
-  have hrL1 : (rL - 1).toNat = R := by rw [sumToNat_pred hrL]; omega
+  have hcL1 : (cL - 1).toNat = L := by rw [L.toNat_sub_one_of_ne hcL]; omega
+  have hrL1 : (rL - 1).toNat = R := by rw [L.toNat_sub_one_of_ne hrL]; omega
   rcases h3 : rgoW n (M.set64 IW o q) (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) with _ | ⟨r3, m3⟩ <;>
     rw [h3] at h
   · rw [rgoW.k_sum_rules_go.none] at h; cases h

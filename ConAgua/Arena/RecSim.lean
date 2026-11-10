@@ -8,6 +8,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -38,16 +39,6 @@ namespace L.Ind
 open L.Arena
 
 /-! ## Result words -/
-
-theorem getD_zero (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
-theorem getD_one (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  cases r with | nil => rfl | cons a t => cases t <;> rfl
-theorem getD_two (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
-  rw [show r.getD 2 0 = r.tail.getD 1 0 by cases r <;> rfl, getD_one]
-theorem getD_three (r : List Word) : r.getD 3 0 = r.tail.tail.tail.headD 0 := by
-  rw [show r.getD 3 0 = r.tail.getD 2 0 by cases r <;> rfl, getD_two]
-theorem getD_four (r : List Word) : r.getD 4 0 = r.tail.tail.tail.tail.headD 0 := by
-  rw [show r.getD 4 0 = r.tail.getD 3 0 by cases r <;> rfl, getD_three]
 
 /-! ## Arguments read directly (grind's offset matching of `Locals.init_cons_succ` stops early) -/
 
@@ -215,11 +206,6 @@ def KP {α : Type} (vis : Word) (fe : IFEnv) (m : Mem)
 
 /-! ## Words read at a decoded record -/
 
-theorem ofNat_add_toNat (w : Word) (k : Nat) (h : w.toNat + k < 2 ^ 64) :
-    (w + UInt64.ofNat k).toNat = w.toNat + k := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by omega : k < 2 ^ 64)]
-  exact Nat.mod_eq_of_lt h
-
 /-- A number at `IW[w + k]`, read at the word address. -/
 theorem iwN_rdW_at {m : Mem} {w : Word} {k v : Nat} (h : iwN m (w.toNat + k) = some v)
     (hsz : (m.arr64 IW).size < 2 ^ 64) :
@@ -231,7 +217,7 @@ theorem iwN_rdW_at {m : Mem} {w : Word} {k v : Nat} (h : iwN m (w.toNat + k) = s
   have := iwN_rdW h (by omega)
   have he : UInt64.ofNat (w.toNat + k) = w + UInt64.ofNat k := by
     apply UInt64.toNat_inj.mp
-    rw [ofNat_add_toNat w k (by omega)]; simp; omega
+    rw [L.toNat_add_ofNat_of_lt w k (by omega)]; simp; omega
   rw [he] at this; exact this
 
 /-- A handle at `IW[w + k]`, read at the word address. -/
@@ -246,7 +232,7 @@ theorem iwH_rdW_at {m : Mem} {kk : IdxKind} {w : Word} {k : Nat} {x : Idx kk}
   have := iwH_rdW h (by omega)
   have he : UInt64.ofNat (w.toNat + k) = w + UInt64.ofNat k := by
     apply UInt64.toNat_inj.mp
-    rw [ofNat_add_toNat w k (by omega)]; simp; omega
+    rw [L.toNat_add_ofNat_of_lt w k (by omega)]; simp; omega
   rw [he] at this; exact this
 
 /-! ## Records without a size precondition -/

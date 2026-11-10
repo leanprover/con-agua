@@ -6,6 +6,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.LiftRefine
 import ConAgua.Arena.View
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -222,7 +223,7 @@ def FlNodeOK (n : Nat) : Prop :=
 theorem flGoOK_succ (n : Nat) (ih : FlNodeOK n) : FlGoOK (n + 1) := by
   intro m m' a seen acc h k c k' hD hM hL hh hb
   have hc : ¬ c = 0 := fun hc => by rw [flW.abort1 n m h k c hc] at hb; cases hb
-  rw [ctrW_toNat c hc, fvarLeavesGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
+  rw [L.toNat_eq_toNat_sub_one_add_one c hc, fvarLeavesGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
   rw [← derFW_ok m a hD.1 hD.2 h hh]
   by_cases hf : derFW m h = 0
   · rw [flW.arm1 n m h k c hc hf] at hb
@@ -465,7 +466,7 @@ theorem lsbNodeW.k_lsb_go_3_eq (n : Nat) (k c b : Word) (o : Option (Word × Mem
 theorem lsbGoOK_succ (n : Nat) (ih : LsbNodeOK n) : LsbGoOK (n + 1) := by
   intro m m' a memo bl h k c r hD hM hL hh hb
   have hc : ¬ c = 0 := fun hc => by rw [lsbW.abort1 n m h k c hc] at hb; cases hb
-  rw [ctrW_toNat c hc, leavesSubGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
+  rw [L.toNat_eq_toNat_sub_one_add_one c hc, leavesSubGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
   rw [← derFW_ok m a hD.1 hD.2 h hh]
   by_cases hf : derFW m h = 0
   · rw [lsbW.arm1 n m h k c hc hf] at hb

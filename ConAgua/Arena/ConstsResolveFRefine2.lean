@@ -5,6 +5,7 @@ import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.WhnfIotaRefine
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -98,9 +99,6 @@ theorem eViewW_lit (m : Mem) (h : Word) (hne : eViewW m h ≠ []) (h8 : (eViewW 
     · simp [cc] at h8
   simp [g9] at hne
 
-theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  rcases r with _ | ⟨a, _ | ⟨b, r⟩⟩ <;> rfl
-
 theorem pinsFound_nat (fe : IFEnv) (m : Mem) :
     pinsFound fe m [1, 2, 3] = ((fe.find? (decI (pinW m 2))).isSome &&
       (fe.find? (decI (pinW m 3))).isSome && (fe.find? (decI (pinW m 4))).isSome) := by
@@ -117,12 +115,6 @@ theorem pinsFound_str (fe : IFEnv) (m : Mem) :
 
 theorem ite_not (b : Bool) : (if (!b) = true then (0 : Word) else 1) = if b = true then 1 else 0 := by
   cases b <;> rfl
-
-theorem getD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
-  rcases r with _ | ⟨a, _ | ⟨b, _ | ⟨c, r⟩⟩⟩ <;> rfl
-
-theorem getD3 (r : List Word) : r.getD 3 0 = r.tail.tail.tail.headD 0 := by
-  rcases r with _ | ⟨a, _ | ⟨b, _ | ⟨c, _ | ⟨d, r⟩⟩⟩⟩ <;> rfl
 
 /-! ## The memo -/
 
@@ -229,7 +221,7 @@ theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} 
     obtain ⟨hg, hx, hxn, -, -⟩ := hR
     rw [hg] at hW
     simp only [clW, show (3 : Word) ≠ 8 by decide, ite_false, ite_true] at hW
-    rw [getD1] at hx hxn
+    rw [L.getD_one] at hx hxn
     cases he : callW p n "env_find" [(eViewW m h).tail.headD 0, vis] m with
     | none => rw [he] at hW; cases hW
     | some q =>
@@ -329,7 +321,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
   simp only at hmv hrv
   subst hmv hrv
   obtain ⟨v, hview, hR⟩ := eViewW_ok m a hS.check.arena.base h hne
-  rw [ctrW_toNat f hf, constsResolveFGo, StateT.run_bind, view_run (decE h) a v hview,
+  rw [L.toNat_eq_toNat_sub_one_add_one f hf, constsResolveFGo, StateT.run_bind, view_run (decE h) a v hview,
     except_ok_bind]
   cases v with
   | bvar _ | sort _ | const _ _ | lit _ =>
@@ -343,7 +335,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     simp only [StateT.run_bind, hb, except_ok_bind]; rfl
   | fvar i ty =>
     obtain ⟨hg, -, hb1, hd1⟩ := hR
-    rw [getD2] at hb1 hd1
+    rw [L.getD_two] at hb1 hd1
     rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
@@ -368,8 +360,8 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     simp only [hmiss, StateT.run_bind, hr1, except_ok_bind]; rfl
   | app _ _ | lam _ _ | forallE _ _ =>
     obtain ⟨hg, hb1, hd1, hb2, hd2⟩ := hR
-    rw [getD1] at hb1 hd1
-    rw [getD2] at hb2 hd2
+    rw [L.getD_one] at hb1 hd1
+    rw [L.getD_two] at hb2 hd2
     rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
@@ -399,9 +391,9 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     simp only [hmiss, StateT.run_bind, hr1, hr2, except_ok_bind]; rfl
   | letE t x bd =>
     obtain ⟨hg, hb1, hd1, hb2, hd2, hb3, hd3⟩ := hR
-    rw [getD1] at hb1 hd1
-    rw [getD2] at hb2 hd2
-    rw [getD3] at hb3 hd3
+    rw [L.getD_one] at hb1 hd1
+    rw [L.getD_two] at hb2 hd2
+    rw [L.getD_three] at hb3 hd3
     rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
@@ -438,8 +430,8 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     cases b1 <;> cases b2 <;> rfl
   | proj sn i e =>
     obtain ⟨hg, hb1, hd1, -, hb3, hd3⟩ := hR
-    rw [getD1] at hb1 hd1
-    rw [getD3] at hb3 hd3
+    rw [L.getD_one] at hb1 hd1
+    rw [L.getD_three] at hb3 hd3
     rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW

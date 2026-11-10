@@ -5,6 +5,7 @@ import ConAgua.Arena.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
 public import ConAgua.Layout
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -991,13 +992,12 @@ grind_pattern [arena_grind] wt_pos => wt i
 sees (`grind` derives the same fact inside its linear-arithmetic module, from where it does not
 reach the ring solver; then the step `V + c·wt i = …` fails). Triggered by the comparison the
 program makes. -/
-theorem add_nc (x y : Word) (h : ¬ x + y < x) : (x + y).toNat = x.toNat + y.toNat := by grind
 theorem add_c (x y : Word) (h : x + y < x) : (x + y).toNat + 2 ^ 64 = x.toNat + y.toNat := by
   grind
 theorem add_nc' (x y : Word) (h : ¬ x + y < y) : (x + y).toNat = x.toNat + y.toNat := by grind
 theorem add_c' (x y : Word) (h : x + y < y) : (x + y).toNat + 2 ^ 64 = x.toNat + y.toNat := by
   grind
-grind_pattern [arena_grind] add_nc => x + y < x
+grind_pattern [arena_grind] L.toNat_add_of_not_lt => x + y < x
 grind_pattern [arena_grind] add_c => x + y < x
 grind_pattern [arena_grind] add_nc' => x + y < y
 grind_pattern [arena_grind] add_c' => x + y < y

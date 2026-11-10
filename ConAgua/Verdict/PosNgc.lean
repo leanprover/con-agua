@@ -4,6 +4,7 @@ public import ConAgua.Verdict.PosE2M
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.RefWalk
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -67,7 +68,7 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
     obtain ⟨hcH, hcd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.name) (by simpa [iwH, iwA] using hc)
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
-      word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hcb 0 (by omega); omega)
+      L.toNat_add_of_lt _ _ (show off.toNat + 1 < 2 ^ 64 by have := hcb 0 (by omega); omega)
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     refine RefE.onlySim (fun _ => ngcE.k_nest_container.none ..) (fun _ _ h => h) fun r1 m1 hnt => ?_

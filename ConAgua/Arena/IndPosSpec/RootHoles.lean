@@ -13,6 +13,7 @@ import ConAgua.Arena.StripTeleSpec
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -313,9 +314,9 @@ theorem rhGoW_ok (fe : IFEnv) (vis : Word) (a : AState)
     rw [rhGoW.k_rec3.arm1, rhGoW.k_nest_ctx_root_holes_go_id] at h
     obtain ⟨hS2, hg2, hk2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht1 ht2
-    have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
+    have hqj : (q + j).toNat = q.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
     have hj1 : (j + 1).toNat = j.toNat + 1 :=
-      word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := nl.toNat_lt; omega)
+      L.toNat_add_of_lt _ _ (show j.toNat + 1 < 2 ^ 64 by have := nl.toNat_lt; omega)
     have hg12 := hg1.trans hg2
     -- the new hole, in `m2`
     have hgk : ∀ i < 4, (m2.arr64 IW)[key.toNat + i]? = [w, lv, po, pl][i]? := fun i hi => by
@@ -460,8 +461,8 @@ theorem rhW_ok (k : Nat) (fe : IFEnv) (vis : Word) (a : AState)
   rw [rhWf.k_iw_alloc.arm1] at h
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   have hqt : q.toNat = iwTop m := by simp only [iwTop, hqd]
-  have e5 : (ctx + 5).toNat = ctx.toNat + 5 := word_add_toNat (by have := h13 5 (by omega); simp; omega)
-  have e6 : (ctx + 6).toNat = ctx.toNat + 6 := word_add_toNat (by have := h13 6 (by omega); simp; omega)
+  have e5 : (ctx + 5).toNat = ctx.toNat + 5 := L.toNat_add_of_lt _ _ (by have := h13 5 (by omega); simp; omega)
+  have e6 : (ctx + 6).toNat = ctx.toNat + 6 := L.toNat_add_of_lt _ _ (by have := h13 6 (by omega); simp; omega)
   have r5 : (rdW (m1.arr64 IW) (ctx + 5)).toNat = o5 := by
     rw [show rdW (m1.arr64 IW) (ctx + 5) = rdW (m.arr64 IW) (ctx + 5) by
       simp only [rdW, hg1.iwGet (ctx + 5).toNat (by rw [e5]; exact h13 5 (by omega))]]
@@ -669,7 +670,7 @@ theorem haW_ok (k : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     have hh' : idx.toNat < c.rootHoles.length + pl.toNat := by
       have := UInt64.lt_iff_toNat_lt.mp hh; omega
     have hx : (r2.headD 0 + idx).toNat = iwTop m1 + idx.toNat := by
-      rw [word_add_toNat (by omega), hr20]
+      rw [L.toNat_add_of_lt _ _ (by omega), hr20]
     refine ⟨hS2, hg1.trans hg2, ?_⟩
     simp only [ConRon.Arena.nestHoleAt, ite_eq_left hge, decONH, List.headD_cons, List.tail_cons, true_and]
     by_cases hr : idx.toNat < c.rootHoles.length

@@ -6,6 +6,7 @@ public import ConRon.Arena.Core
 import ConAgua.Arena.SimLib
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Arena.ArenaRel
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -90,11 +91,6 @@ The walk's counter `c` is the twin's `fuel` exactly (`c.toNat`): at `c = 0` the 
 twin throws), else `c.toNat = (c - 1).toNat + 1` and the twin's `fuel + 1` clause runs its arms at
 `(c - 1).toNat`, where `fr_node` runs. The induction is on L's own fuel `n`. -/
 
-/-- A nonzero counter is the successor of its decrement (the twin's `fuel + 1` clause). -/
-theorem ctrW_toNat (c : Word) (hc : c ≠ 0) : c.toNat = (c - 1).toNat + 1 := by
-  have : c.toNat ≠ 0 := fun h => hc (UInt64.toNat_inj.mp (by simpa using h))
-  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-
 /-- The walks' entries start their counter at the literal `4000000000`: the twin's
 `coreWalkFuel` (`ConRon/Arena/Core.lean`), the fuel the core calls every walk at. -/
 theorem coreWalkFuel_toNat : (4000000000 : Word).toNat = coreWalkFuel := rfl
@@ -115,7 +111,7 @@ theorem frGoOK_succ (n : Nat) (ih : FrNodeOK n) : FrGoOK (n + 1) := by
   intro F m m' a h c r hF hR hh hb
   by_cases hc : c = 0
   · rw [frW.abort1 n m h c hc] at hb; cases hb
-  have hc1 := ctrW_toNat c hc
+  have hc1 := L.toNat_eq_toNat_sub_one_add_one c hc
   obtain ⟨G, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
   rw [fvarRangeGo_succ', StateT.run_bind, fvarBGet_run]
   by_cases hr : mfindG frSch m h 0 = []
@@ -225,7 +221,7 @@ theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
     obtain ⟨hv, -⟩ := view_fvar_idx m a hR h hh (vok FVAR hc) g1
     refine ⟨a, ?_, hR⟩
     rw [frNodeA_run F _ a _ hv, show frArm F (.fvar _ _) = pure (_ + 1) from rfl,
-      succW_toNat _ h1]
+      L.toNat_add_one_of_ne _ h1]
     rfl
   by_cases g4 : tagW h = 4
   · by_cases hc : tcnt m APP (tierW h) ≤ idxA h

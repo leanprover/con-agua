@@ -19,6 +19,7 @@ import all ConAgua.Arena.ExprMk
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.ProjStore
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -134,7 +135,7 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     cases vv with
     | forallE ty body =>
       obtain ⟨-, hx32, rfl, hy32, rfl⟩ := hVR
-      simp only [getD1_eq', getD2_eq] at hx32 hy32 ⊢
+      simp only [L.getD_one, L.getD_two] at hx32 hy32 ⊢
       generalize (eViewW m h).tail.headD 0 = x at hx32 ⊢
       generalize (eViewW m h).tail.tail.headD 0 = y at hy32 ⊢
       refine Sim.bindD (dec := fun ra => decE (ra.headD 0))

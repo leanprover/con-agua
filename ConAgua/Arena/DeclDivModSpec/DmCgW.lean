@@ -49,9 +49,6 @@ l_model applied_specW (p : Prog) (hp : p.lookup "div_mod_cert_applied" = some di
   specs [callW_spec p n "nat_var", callW_spec p n "mk_app", callW_spec p n "intern_fvar"]
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
-theorem word_add_one {w : Word} (h : w.toNat + 1 < 2 ^ 64) : (w + 1).toNat = w.toNat + 1 := by
-  rw [UInt64.toNat_add]; simp; omega
-
 /-! ## `consts_resolve_all` -/
 
 def craW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs o l : Word) : Option (List Word × Mem) :=

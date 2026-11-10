@@ -16,6 +16,7 @@ public import ConAgua.Verdict.VCtx
 public import ConRon.Bridge.Checker.Hyp
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
+import ConAgua.L.WordOff
 
 @[expose] public section
 /-!
@@ -110,7 +111,7 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   obtain ⟨xs1, b1, hq1, hxs1, -⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho1
   rw [hz] at hq1
   obtain ⟨-, hrl1, -⟩ := hdec1
-  simp only [decRL, show (1:Nat) + 1 = 2 from rfl, agGetD1, agGetD2] at hrl1
+  simp only [decRL, show (1:Nat) + 1 = 2 from rfl, L.getD_one, L.getD_two] at hrl1
   obtain ⟨hfv1, hfvb1⟩ := hrl1
   have hlen1 := decHL_length m1 hfv1
   have hlen0 := decHL_length m hfvs0
@@ -132,7 +133,7 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   have hC2 : StageC dn vis fe env m2 a2 := hC1.of_pstep hSt2 hA2 p2
   refine ⟨_, _, hrun2, ?_⟩
   dsimp only [cbaoE.k_fvar_type_ds]
-  simp only [decRL, show (0:Nat) + 1 = 1 from rfl, agGetD0, agGetD1] at hdec2
+  simp only [decRL, show (0:Nat) + 1 = 1 from rfl, L.getD_zero, L.getD_one] at hdec2
   obtain ⟨hdm2, hdb2⟩ := hdec2
   have hlt1 := UInt64.toNat_lt (ra.tail.headD 0)
   have hlt2 := UInt64.toNat_lt (ra.tail.tail.headD 0)

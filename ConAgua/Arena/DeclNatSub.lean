@@ -10,6 +10,7 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.DeclArmsNat
 import all ConAgua.Arena.IndIface
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -315,7 +316,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     obtain ⟨s', hs', -, hcons⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
       (slCons_specW p hN.lIwAlloc hN.lIwCopy hN.lSlCons k _ (r4.headD 0) (r3.headD 0) (r3.tail.headD 0)) h5
     have hE3 : EqL m4 (r3.headD 0).toNat (r3.tail.headD 0).toNat x3 := by
-      have := hd3; simp only [decEqRL, ntGetD0, ntGetD1] at this; exact this.grow hK4.1
+      have := hd3; simp only [decEqRL, L.getD_zero, L.getD_one] at this; exact this.grow hK4.1
     have hcons' : consW k m4 (r4.headD 0) (r3.headD 0) (r3.tail.headD 0) = some (r5, m5) := by
       rw [← hs']; exact hcons
     obtain ⟨hS5, hg5, hE5⟩ := eqL_cons hcons' hS4 hE3 rec4 hl1 hl2
@@ -324,7 +325,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     · simp only [substConst0Pairs, StateT.run_bind, hrun1, hrun2, hrun3, exc_ok_bind', StateT.run_pure,
         ← hx1, ← hx2]
       rfl
-    · simp only [decEqRL, ntGetD0, ntGetD1, List.headD_cons, List.tail_cons]
+    · simp only [decEqRL, L.getD_zero, L.getD_one, List.headD_cons, List.tail_cons]
       exact hE5
 
 @[refines ConRon.Arena.substConst0Pairs]

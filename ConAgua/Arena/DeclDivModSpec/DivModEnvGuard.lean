@@ -6,6 +6,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatDeps
 public import ConAgua.Rom.CIReadSpec
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -102,7 +103,7 @@ theorem eg_ref (hD : DmProg7 p) (c : Word) :
     (natOpDeps_ref hT.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg (vis := vis) (fe := fe) c).bind_
       ⟨hS1, hc⟩ hw
   unfold decRL at hd2
-  simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd2
+  simp only [Nat.zero_add, L.getD_zero, L.getD_one] at hd2
   replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
   obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := okAll_ref hT (vis := vis) (fe := fe) (r2.headD 0) (r2.tail.headD 0) x2
     k m2 a2 r3 m3 hS2 hd2.1 hd2.2 h3

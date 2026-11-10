@@ -31,12 +31,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- A word sum that does not wrap. -/
-theorem sumAddNoOv {a b : Word} (h : ¬ a + b < a) : (a + b).toNat = a.toNat + b.toNat := by
-  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add] at h
-  have := b.toNat_lt; have := a.toNat_lt
-  rw [UInt64.toNat_add]; omega
-
 /-! ## The relation to the twin -/
 
 /-- The sorts headers' decoder: a pointer to `[off, len]` of a level-handle slice. -/

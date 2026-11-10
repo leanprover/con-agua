@@ -20,6 +20,7 @@ import ConAgua.Arena.RecClassSpec.Rec2SimTMA
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.RecClass
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -306,7 +307,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
       ⟨hS7, by rw [decHL_grow hg27 hxb]; exact hxs, fun _ => Nat.le_trans hxb hg27.iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r8, m8⟩ bs a8 - ⟨⟨hS8, hg8, hbs, hbb⟩, hf8⟩
   dsimp only at hS8 hg8 hbs hbb
-  simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
+  simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hbs hbb
   by_cases hov : e + r8.tail.headD 0 < e
   · rw [iclW.k_fvar_type_ds.abort1 (hc1 := hov)]; simp only [show itW.k_class_gen_minor_ty_ih1_close none = none from rfl, show i1W.k_class_gen_minor_ty_ih1_tail none = none from rfl, hK]
     exact RSim.none
@@ -594,7 +595,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
       ⟨hS3, by rw [decHL_grow hg13 hfb]; exact hfvs, fun _ => Nat.le_trans hfb hg13.iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r4, m4⟩ fbs a4 - ⟨⟨hS4, hg4, hfbs, hfbb⟩, hf4⟩
   dsimp only at hS4 hg4 hfbs hfbb
-  simp only [getD_zero, Nat.zero_add, getD_one] at hfbs hfbb
+  simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hfbs hfbb
   rw [mcW.k_fvar_type_ds.arm1]
   have hg14 := hg13.trans hg4
   refine RSim.lstep (K := fun o => c2W.k_class_gen_minor_ty_close (mcW.k_sl_append n d (r3.headD 0) o)) rfl fun ⟨r5, m5⟩ h5 => ?_
@@ -655,7 +656,7 @@ theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl 
     (RSim.withF (simGetAppArgs hS hres) (fun _ hb => gaaF_afr hb)) ?_
   rintro ⟨r1, m1⟩ ra a1 - ⟨⟨hS1, hg1, hra, hrb⟩, hf1⟩
   dsimp only at hS1 hg1 hra hrb
-  simp only [getD_zero, Nat.zero_add, getD_one] at hra hrb
+  simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hra hrb
   rw [cW.k_get_app_args_f.arm1]
   obtain ⟨nw, enw, hnwH, hnwd⟩ := rec2CCName (hX.stab (decCC_mono _) m1 hg1) hS1.iw.iwSize
   simp only [erRd_foldN]; rw [enw]
@@ -761,8 +762,8 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   · rw [bW.k_open_pis_at_fvars_f.arm1 (hc1 := ho2)]; exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, rfl⟩, hA2⟩
   obtain ⟨fvs, res⟩ := p2
   obtain ⟨h21, ⟨hfvs, hfb⟩, hrH, hrd⟩ := ho2
-  simp only [getD_one, getD_two, Nat.reduceAdd] at hfvs hfb
-  simp only [drop3_headD] at hrH hrd
+  simp only [L.getD_one, L.getD_two, Nat.reduceAdd] at hfvs hfb
+  simp only [L.headD_drop_three] at hrH hrd
   rw [bW.k_open_pis_at_fvars_f.arm2 (hc1 := by rw [h21]; decide)]
   have hg12 := hg1.trans hg2
   have hX2 := hX.stab (decCC_mono _) m2 hg12

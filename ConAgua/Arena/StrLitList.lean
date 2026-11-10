@@ -13,6 +13,7 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndView
 import all ConAgua.Arena.StrLit
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -46,7 +47,7 @@ theorem slViewR_app {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h4 :
   all_goals first
     | (exfalso; obtain ⟨h0, -⟩ := hr; revert h0; decide)
     | (exfalso; revert hr; decide)
-    | (obtain ⟨-, h1, h3, h5, h6⟩ := hr; rw [getD_one] at h1 h3; rw [getD_two] at h5 h6
+    | (obtain ⟨-, h1, h3, h5, h6⟩ := hr; rw [L.getD_one] at h1 h3; rw [L.getD_two] at h5 h6
        exact ⟨by rw [h3, h6], h1, h5⟩)
 
 theorem slViewR_bvar {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h0 : r.headD 0 = 0) :
@@ -55,7 +56,7 @@ theorem slViewR_bvar {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h0 
   all_goals first
     | (exfalso; obtain ⟨h0, -⟩ := hr; revert h0; decide)
     | (exfalso; revert hr; decide)
-    | (obtain ⟨-, h1⟩ := hr; rw [getD_one] at h1; rw [h1])
+    | (obtain ⟨-, h1⟩ := hr; rw [L.getD_one] at h1; rw [h1])
 
 theorem slViewR_const {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h3 : r.headD 0 = 3) :
     v = .const (decI (r.tail.headD 0)) (decI (r.tail.tail.headD 0)) ∧ HW (r.tail.headD 0) ∧
@@ -64,7 +65,7 @@ theorem slViewR_const {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h3
   all_goals first
     | (exfalso; obtain ⟨h0, -⟩ := hr; revert h0; decide)
     | (exfalso; revert hr; decide)
-    | (obtain ⟨-, h1, h4, h5, h6⟩ := hr; rw [getD_one] at h1 h4; rw [getD_two] at h5 h6
+    | (obtain ⟨-, h1, h4, h5, h6⟩ := hr; rw [L.getD_one] at h1 h4; rw [L.getD_two] at h5 h6
        exact ⟨by rw [h4, h6], h1, h5⟩)
 
 /-! ## The `∀`-guard -/

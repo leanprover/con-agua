@@ -8,6 +8,7 @@ import ConAgua.L.For
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import all ConAgua.Arena.CheckerL
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -214,7 +215,7 @@ theorem icLoop_close {m₀ m m' : Mem} {I : IStreamIndex} {cs : List IConstantIn
     (j + 1).toNat ≤ l.toNat ∧
       IcInv m₀ I cs (j + 1).toNat (m'.set64 CTL 128 (rdW (m.arr64 CTL) 128 + 1)) := by
   have hj' : j.toNat < l.toNat := hj
-  have hs := L.forUp_succ_toNat hj
+  have hs := L.toNat_add_one_of_word_lt _ _ hj
   have hnx' : (rdW (m.arr64 CTL) 128).toNat < 4294967294 := by
     have : ¬ (4294967294 : Word).toNat ≤ (rdW (m.arr64 CTL) 128).toNat := hnx
     simp at this; omega
@@ -255,7 +256,7 @@ theorem itLoop_close {m₀ m m' : Mem} {I : IStreamIndex} {ts : List IProjTable}
         (m.arr64 (tixArr (rowTag (erecRd m (rdW (m.arr64 IW) (o + j) + 2))))).size) :
     (j + 1).toNat ≤ l.toNat ∧ ItInv m₀ I r.toNat ts (j + 1).toNat m' := by
   have hj' : j.toNat < l.toNat := hj
-  have hs := L.forUp_succ_toNat hj
+  have hs := L.toNat_add_one_of_word_lt _ _ hj
   obtain ⟨hP, hiw, hIW⟩ := erecP_of_frameI hI.frame
     (by simp only [TixA, List.mem_cons, List.not_mem_nil, or_false]; rintro b (rfl | rfl | rfl) <;> decide)
     (by simp)

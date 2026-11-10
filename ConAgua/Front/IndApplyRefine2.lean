@@ -6,6 +6,7 @@ public import ConAgua.Front.IndRel
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Front.IndApplySpec
 public import ConAgua.Front.StateDR
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -48,14 +49,6 @@ theorem widx (o c k s : Word) (h : o.toNat + c.toNat * k.toNat + s.toNat < 2 ^ 6
   rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_mul, Nat.mod_eq_of_lt h1]
   omega
 
-theorem widx2 (o k : Word) (h : o.toNat + k.toNat < 2 ^ 64) : (o + k).toNat = o.toNat + k.toNat := by
-  rw [UInt64.toNat_add]; omega
-
-theorem wsucc (j : Word) (l : Word) (h : j < l) : (j + 1).toNat = j.toNat + 1 := by
-  have := UInt64.lt_iff_toNat_lt.mp h
-  have := UInt64.toNat_lt l
-  rw [UInt64.toNat_add]; simp; omega
-
 theorem len64_toNat (m : Mem) (A : ArrId) (hs : (m.arr64 A).size < 2 ^ 63) :
     (m.len64 A).toNat = (m.arr64 A).size := by
   simp only [Mem.len64]; exact toNat_ofNat_size _ hs
@@ -95,7 +88,7 @@ theorem allocW_factsA {m m' : Mem} {A : ArrId} {k o : Word} (hA : A ≠ CTL)
   have hl := len64_toNat m A hs
   have hw0 : rdW (m.arr64 A) 0 = wd m A 0 := rfl
   have e1 : (rdW (m.arr64 A) 0 + 1).toNat = topN m A + 1 := by
-    rw [widx2 _ _ (by rw [hw0]; simp [topN] at ht ⊢; omega)]; simp [topN, hw0]
+    rw [L.toNat_add_of_lt _ _ (by rw [hw0]; simp [topN] at ht ⊢; omega)]; simp [topN, hw0]
   split at h; cases h
   split at h; cases h; rename_i h1
   split at h; cases h; rename_i h2
@@ -107,7 +100,7 @@ theorem allocW_factsA {m m' : Mem} {A : ArrId} {k o : Word} (hA : A ≠ CTL)
     hl, e1] at h2'
   have e2 : (rdW (m.arr64 A) 0 + 1 - 1 + k).toNat = topN m A + k.toNat := by
     have : rdW (m.arr64 A) 0 + 1 - 1 = rdW (m.arr64 A) 0 := by simp
-    rw [this, widx2 _ _ (by rw [hw0]; simp [topN] at ht ⊢; omega)]
+    rw [this, L.toNat_add_of_lt _ _ (by rw [hw0]; simp [topN] at ht ⊢; omega)]
     simp [topN, hw0]
   refine ⟨e1, ?_, by omega, fun i hi => ?_, MemFrame.set64 _ _ (TieredArray.t0_ne hA) _ _⟩
   · simp only [topN, wd_setA, show (0 : Word).toNat = 0 from rfl, true_and]
@@ -217,8 +210,6 @@ theorem mapLk_ext {m m' : Mem} (h : IExt m m') (f x : Word) : mapLk m' f x = map
   simp only [mapLk, lkW_congr (h.tbl NID (.inl rfl)),
     lkW_congr (h.tbl EID (.inr (.inr rfl)))]
 
-theorem ofNat_toNat' (j : Word) : UInt64.ofNat j.toNat = j := UInt64.ofNat_toNat
-
 /-! ## `vi_map_go`, `vi_ids_go`, `vi_listed_go` -/
 
 /-- **`vi_map_go`**: the lookups of the records `j ‥ l` pushed in order. -/
@@ -253,14 +244,14 @@ theorem mapGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l sz s f j : Word),
       simp only [hr, mapGoW.k_vi_map_go, reduceCtorEq, Option.some.injEq] at h
     subst h
     obtain ⟨x1, x2, x3, x4⟩ := pushLW_ok hT hp
-    have hj1 := wsucc j l hjl'
+    have hj1 := L.toNat_add_one_of_word_lt j l hjl'
     obtain ⟨y1, y2, y3, y4⟩ := ih m₁ _ o l sz s f (j + 1) hr x2
       (UInt64.le_iff_toNat_le.mpr (by rw [hj1]; exact UInt64.lt_iff_toNat_lt.mp hjl'))
     have hjn := UInt64.lt_iff_toNat_lt.mp hjl'
     refine ⟨x1.trans y1, y2, by rw [y3, x3, hj1]; omega, fun k h1 h2 => ?_⟩
     by_cases hkj : k = j.toNat
     · subst hkj
-      rw [ofNat_toNat', hk, Nat.sub_self, Nat.add_zero, ← x4, y1.keep _ (by omega) (by omega)]
+      rw [L.ofNat_toNat, hk, Nat.sub_self, Nat.add_zero, ← x4, y1.keep _ (by omega) (by omega)]
     · have := y4 k (by rw [hj1]; omega) h2
       rw [mapLk_ext x1, x1.ifr, x3, hj1] at this
       rw [this]
@@ -289,7 +280,7 @@ theorem idsGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l k : Word),
     rename_i hlk
     have hkl' : k < l := UInt64.not_le.mp hlk
     have hkn := UInt64.lt_iff_toNat_lt.mp hkl'
-    have hok : (o + k).toNat = o.toNat + k.toNat := widx2 _ _ (by have := hT.1; have := hT.2; omega)
+    have hok : (o + k).toNat = o.toNat + k.toNat := L.toNat_add_of_lt _ _ (by have := hT.1; have := hT.2; omega)
     cases hk : lkW m NID (rdW (m.arr64 IFL) (o + k)) with
     | none => rw [hk, idsGoW.k_name_get.none] at h; cases h
     | some w =>
@@ -303,7 +294,7 @@ theorem idsGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l k : Word),
     cases h
     have h := hq
     obtain ⟨x1, x2, x3, x4⟩ := pushLW_ok hT hp
-    have hk1 := wsucc k l hkl'
+    have hk1 := L.toNat_add_one_of_word_lt k l hkl'
     obtain ⟨y1, y2, y3, y4⟩ := ih m₁ m' o l (k + 1) h x2
       (UInt64.le_iff_toNat_le.mpr (by rw [hk1]; exact hkn)) (by rw [x3]; omega)
     refine ⟨x1.trans y1, y2, by rw [y3, x3, hk1]; omega, fun c h1 h2 => ?_⟩

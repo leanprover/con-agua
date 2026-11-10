@@ -9,6 +9,7 @@ import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.StreamRecs
 import all ConAgua.Arena.IndStream
 import ConAgua.Arena.IndPartsSpec.EqW
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -373,7 +374,7 @@ theorem snd_ok (h : SnoProg p) (k : Word) {N : Nat} {m m' : Mem} {a : AState}
     (viewLs_specW p h.ln h.sum.ha h.pc h.vl N _ us) h3
   obtain ⟨ids, hr3, hS3, hg3', hd3, -⟩ := viewLsW_ok hm3 hS1 hus (rcPoolSmall hS1)
   have hA3 := hA1.iw (viewLsW_iwFrame hm3)
-  simp only [decRL, getD_zero, Nat.zero_add, getD_one] at hd3
+  simp only [decRL, L.getD_zero, Nat.zero_add, L.getD_one] at hd3
   obtain ⟨hd3, hb3⟩ := hd3
   generalize s3.mem = m3 at *
   rw [sndW.k_view_ls.arm1] at hm
@@ -405,7 +406,7 @@ theorem snd_ok (h : SnoProg p) (k : Word) {N : Nat} {m m' : Mem} {a : AState}
   obtain ⟨args, a5, hr5, hS5, hg5, hxs5, hxb5⟩ :=
     (sumSim_of_relW (gaaF_ok (fun _ => none) vis fe CWF dom hdom) hS3) r5 _ hm5
   have hA5 := gaaF_afr hm5 hA3
-  rw [getD_zero, getD_one] at hxs5 hxb5
+  rw [L.getD_zero, L.getD_one] at hxs5 hxb5
   rw [CWF_eq] at hr5
   generalize s5.mem = m5 at *
   rw [sndW.k_get_app_args_f.arm1] at hm
@@ -481,7 +482,7 @@ theorem sno_ok (h : SnoProg p) {N : Nat} {m m' : Mem} {a : AState} {ty mI rP : W
   | levels _ => exact absurd hf id
   | nested lvls pins =>
   obtain ⟨hk, ⟨hl, hlb⟩, ⟨hp, hpb⟩⟩ := hf
-  simp only [getD_succ0, getD_zero] at hl hlb hp hpb
+  simp only [getD_succ0, L.getD_zero] at hl hlb hp hpb
   rw [snoW.arm2 _ _ _ _ _ _ _ _ _ _ _ hk] at hm
   -- `strip_pis`
   rcases h1 : callW p N "strip_pis" [mI, ty] m with _ | ⟨r1, m1⟩ <;> rw [h1] at hm
@@ -502,7 +503,7 @@ theorem sno_ok (h : SnoProg p) {N : Nat} {m m' : Mem} {a : AState} {ty mI rP : W
   | some q =>
   obtain ⟨pre, rest⟩ := q
   obtain ⟨h1', -, hbl, hbe⟩ := hdec
-  rw [drop3_eq] at hbl hbe
+  rw [L.drop_three] at hbl hbe
   have h1ne : r1.headD 0 ≠ 0 := by rw [h1']; decide
   by_cases hg6 : tagW (r1.tail.tail.tail.headD 0) ≠ 6
   · rw [snoW.k_strip_pis.arm2 _ _ _ _ _ _ _ _ _ _ h1ne hg6] at hm

@@ -4,6 +4,7 @@ import ConAgua.Arena.SlotTop
 public import ConAgua.Arena.StoreLib
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -147,7 +148,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
     rw [rd2, ite_eq_right (by omega), rd1, ite_eq_right (word_ne_of_toNat (by simp; omega))]
   -- the tier and its numbers
   have hTt : TierR S R hs KP m t (if t = 0 then tbP else tbS) := by
-    rcases le_one_cases t ht with rfl | rfl
+    rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
     · simpa using hT0
     · simpa using hT1
   generalize htb : (if t = 0 then tbP else tbS) = tb at hTt
@@ -155,7 +156,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
   have hc27 : (cntW S m t).toNat ≤ 2 ^ 30 := by rw [hc']; exact Nat.le_trans hcap (capS_le _)
   have hbt63 : bt.toNat + (cntW S m t).toNat + 1 < 2 ^ 47 := by
     rw [← hbt]
-    rcases le_one_cases t ht with rfl | rfl
+    rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
     · simp; omega
     · simp; omega
   have hN0 : (0 : Word) < n * 2 := UInt64.lt_iff_toNat_lt.mpr (by rw [e2n]; simp; omega)
@@ -345,7 +346,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
     have e := arr' _ (by rw [← hsa]; exact tierA_ne_tier _ ht' ht hne)
     simpa only [TierLay, knW, koW, e] using hL'
   refine ⟨⟨by rw [ctl']; exact hctl, by rw [ctl']; exact hb⟩, by rw [ctl']; exact hfl, ?_⟩
-  rcases le_one_cases t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   · simp only [↓reduceIte] at htb; subst htb
     exact ⟨newT, othT 1 (by decide) (by decide) _ hT1, layT, layO 1 (by decide) (by decide) hG.2⟩
   · simp only [show (1 : Word) ≠ 0 by decide, ↓reduceIte] at htb; subst htb

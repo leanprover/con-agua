@@ -36,6 +36,7 @@ import all ConAgua.Arena.Store
 import all ConAgua.Arena.WhnfSpineArgs
 import all ConAgua.Arena.WhnfSpineRefine
 import all ConAgua.Arena.ZeroStore
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -189,8 +190,8 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     rcases n with _ | n
     · simp [ikCopyW] at hW
     rw [ikCopyW_succ n m s d l hl0] at hW
-    have hd1 : (d + 1).toNat = d.toNat + 1 := L.Arena.toNat_succ_lt (by omega)
-    have hs1 : (s + 1).toNat = s.toNat + 1 := L.Arena.toNat_succ_lt (by omega)
+    have hd1 : (d + 1).toNat = d.toNat + 1 := L.toNat_add_one_of_lt (by omega)
+    have hs1 : (s + 1).toNat = s.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hlm : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hsz₁ : ((m.set64 SPN d (rdW (m.arr64 LPIW) s)).arr64 SPN).size = (m.arr64 SPN).size :=

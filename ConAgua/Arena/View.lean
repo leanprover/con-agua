@@ -153,15 +153,6 @@ theorem predW_toNat (z : Word) : (predW z).toNat = z.toNat - 1 := by
   · simp only [h, ↓reduceIte, UInt64.sub_zero]
     have : ¬ 0 < z.toNat := h; omega
 
-theorem succW_toNat (x : Word) (h : x + 1 ≠ 0) : (x + 1).toNat = x.toNat + 1 := by
-  have := x.toNat_lt
-  rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]
-  rw [Nat.mod_eq_of_lt]
-  rcases Nat.lt_or_ge (x.toNat + 1) (2 ^ 64) with hl | hl
-  · exact hl
-  · exfalso; apply h; apply UInt64.toNat_inj.mp
-    rw [UInt64.toNat_add]; simp only [UInt64.toNat_one, UInt64.toNat_zero]; omega
-
 theorem decE_word (x : EIdx) : decE x.word.toUInt64 = x := by
   cases x; simp [decE]
 

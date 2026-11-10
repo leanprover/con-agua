@@ -223,13 +223,6 @@ l_model natOpTyPinned_specW (p : Prog) (hp : p.lookup "nat_op_ty_pinned" = some 
   specs [callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "e_view", callW_spec p n "nat_op_cod"]
   grind [arena_grind] heartbeats 3200000 bind ntBW
 
-theorem getD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
-  cases r with
-  | nil => simp
-  | cons a t => cases t with
-    | nil => simp
-    | cons b u => cases u <;> simp
-
 theorem viewR_forall {rv : List Word} {v : ENodeView} (h : ViewR rv v) :
     (rv.headD 0 = 6 ∧ ∃ dom body, v = .forallE dom body ∧ H (rv.tail.headD 0) ∧
       decE (rv.tail.headD 0) = dom ∧ H (rv.tail.tail.headD 0) ∧ decE (rv.tail.tail.headD 0) = body) ∨

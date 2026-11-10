@@ -4,6 +4,7 @@ public import ConAgua.Arena.ConsLibSpec
 public import ConAgua.Arena.Frame
 import ConAgua.Arena.StoreGrow
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -72,7 +73,7 @@ theorem storeR_frame (hS : S.WF) (hkm : KMono S hs KP) (A₀ : List TieredArray)
     intro t ht
     simp only [cntW]
     apply hfc
-    rcases word_le_one t ht with rfl | rfl
+    rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
     · simpa using hc0
     · exact hc1
   refine ⟨⟨by rw [hfs]; exact hctl, by rw [hfc SCB hscb]; exact hb⟩, by rw [hfc 1 h1]; exact hfl, ?_, ?_, ?_⟩
@@ -125,7 +126,7 @@ theorem ConsSch.WF.tag16 : C.tag.toUInt64.toNat < 16 := by
 
 theorem ConsSch.WF.base (t : Word) (ht : t ≤ 1) (i : Word) :
     (if t = 0 then C.P else C.S) + i = hdS C.tag C.wide t i := by
-  rcases word_le_one t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   · simp only [↓reduceIte, hW.P]; cases C.wide <;> simp only [hdS, hdW, hdA] <;> grind
   · simp only [show (1 : Word) ≠ 0 by decide, ↓reduceIte, hW.S]
     cases C.wide <;> simp only [hdS, hdW, hdA] <;> grind
@@ -184,7 +185,7 @@ theorem ConsR.congr {C' : ConsSch} (hs : C.sch = C'.sch) (hh : C.hsM = C'.hsM) :
 
 theorem ConsR.tier (h : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) :
     TierR C.sch R C.hsM C.KP m t (if t = 0 then P else Q) := by
-  rcases word_le_one t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   · simpa using h.2.2.1
   · simpa using h.2.2.2.1
 
@@ -313,7 +314,7 @@ theorem ConsR.mono' {m' : Mem} (h : ConsR C R m on P Q)
     ConsR C R m' on P Q := by
   obtain ⟨⟨h1, h2⟩, hfl, hT0, hT1, hG⟩ := h
   have hc0 : ∀ t, t ≤ 1 → cntW C.sch m' t = cntW C.sch m t := fun t ht => by
-    simp only [cntW]; rcases word_le_one t ht with rfl | rfl
+    simp only [cntW]; rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
     · exact hc _ (.inr (.inr (.inl (by simp [ConsSch.sch]))))
     · exact hc _ (.inr (.inr (.inr rfl)))
   have hb : ∀ t, baseW m' t = baseW m t := fun t => by simp only [baseW, hc SCB (.inr (.inl rfl))]
@@ -336,7 +337,7 @@ theorem ConsR.mono {m' : Mem} (h : ConsR C R m on P Q)
   have tier : ∀ t (tb : Tbl α (Idx k) δ), t ≤ 1 → TierR C.sch R C.hsM C.KP m t tb →
       TierR C.sch R C.hsM C.KP m' t tb := fun t tb ht hT =>
     tierR_mono C.sch R C.hsM C.KP m m' t tb (hra t) (hsa t)
-      (by simp only [cntW]; rcases word_le_one t ht with rfl | rfl
+      (by simp only [cntW]; rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
           · exact hc _ (.inr (.inr (.inl (by simp [ConsSch.sch]))))
           · exact hc _ (.inr (.inr (.inr rfl))))
       (by simp only [baseW, hc SCB (.inr (.inl rfl))]) (hR t) (hh t)
@@ -379,7 +380,7 @@ theorem ConsR.setFlag (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (h : ConsR C R m 
       (fun i K hK => C.kp_mono m _ t i (hra t) (hfr _ _ t i hout (hfld t i)).2 K hK) hT
     · simp only [cntW]
       apply hrd
-      rcases word_le_one t ht with rfl | rfl
+      rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
       · simpa using hS.scb.2.2.1
       · simpa using hS.scb.2.2.2
     · simp only [baseW, hrd SCB hscb']
@@ -588,7 +589,7 @@ theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem
     · simp only [pushG, newRecM]
       rw [rdW_set64, Mem.arr64_set64_ne _ _ _ _ _ (hS.sa_ctl' t).symm]
       have : C.sch.ca + (t &&& 1) ≠ 0 := by
-        rcases word_le_one t ht with rfl | rfl
+        rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
         · intro e; have := congrArg UInt64.toNat e; simp at this; omega
         · intro e; have := congrArg UInt64.toNat e
           simp [UInt64.toNat_add] at this; omega
@@ -679,7 +680,7 @@ theorem pushRec_cnt (C : ConsSch) (hW : C.WF) (m : Mem) (t : Word) (ht : t ≤ 1
   simp only [ConsSch.sch] at hca
   simp only [cntC, pushRec, colW_arr C _ _ _ _ CTL (col_tier_ne hcol t), rdW_set64, wrRecK_eq,
     wrRec_arr_ne C.sch _ _ CTL (hW.sch.ra_ctl' t).symm]
-  rcases word_le_one t ht with rfl | rfl <;> rcases word_le_one t' ht' with rfl | rfl <;>
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;> rcases L.eq_zero_or_eq_one_of_le_one t' ht' with rfl | rfl <;>
     simp [UInt64.toNat_add] <;> first | omega | (intro h; have := congrArg UInt64.toNat h; simp [UInt64.toNat_add] at this; omega)
 
 /-- **An interning hits** (the memory is unchanged) **or appends** node `cntC` to tier `t`: the
@@ -719,7 +720,7 @@ theorem consInternM_frame (hW : C.WF) {ks : List Word} {w : Word} {m' : Mem}
       wrRecK_eq, wrRec_arr_ne C.sch _ _ CTL (hW.sch.ra_ctl' t).symm]
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hx
     have : C.ca + (t &&& 1) ≠ x := by
-      rcases word_le_one t ht with rfl | rfl
+      rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
       · simpa using Ne.symm hx.1
       · simpa using Ne.symm hx.2
     simp [this]

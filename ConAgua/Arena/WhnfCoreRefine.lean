@@ -282,9 +282,6 @@ theorem StackKept.restoreG' {m m₁ : Mem} (hg : StackGrew m m₁) :
   rw [UInt64.le_iff_toNat_le] at hle
   exact UInt64.toNat_inj.mp (by simp at hle ⊢; omega)
 
-theorem addW (a b : Word) (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
-  rw [UInt64.toNat_add, Nat.mod_eq_of_lt h]
-
 /-- The twin's second half of the `.app` clause. -/
 def whnfCoreApp2T (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (v h : EIdx)
     (args nodes : Array EIdx) : AM WhnfStep := do

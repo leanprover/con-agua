@@ -139,14 +139,6 @@ structure TcmLook (p : Prog) : Prop where
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
-theorem word_add_nowrap {a b : Word} (h : ¬ a + b < a) : (a + b).toNat = a.toNat + b.toNat := by
-  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add] at h
-  have := a.toNat_lt; have := b.toNat_lt
-  rw [UInt64.toNat_add]
-  by_cases hw : a.toNat + b.toNat < 2 ^ 64
-  · exact Nat.mod_eq_of_lt hw
-  · exfalso; apply h; rw [Nat.mod_eq_sub_mod (by omega), Nat.mod_eq_of_lt (by omega)]; omega
-
 end rel
 
 end L.Ind

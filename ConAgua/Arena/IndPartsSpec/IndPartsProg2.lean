@@ -89,12 +89,6 @@ theorem partsCVType {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp (truncM 
   rw [erRd_of_erA (by rw [hw3]; exact hx')]
   exact ⟨hxl, hxe.symm⟩
 
-/-- A word sum that does not wrap. -/
-theorem partsAddNoOv {a b : Word} (h : ¬ a + b < a) : (a + b).toNat = a.toNat + b.toNat := by
-  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add] at h
-  have := b.toNat_lt; have := a.toNat_lt
-  rw [UInt64.toNat_add]; omega
-
 /-- After `sl_cons`: the slice (the shared tail of the hand `IndParts` models). -/
 def bgoK3 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none

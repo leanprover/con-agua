@@ -11,6 +11,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.View
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -456,7 +457,7 @@ theorem ligoOK_succ (n : Nat) (ih : LIArmOK n) : LIGoOK (n + 1) := by
   intro m m' a h d v fu r hA hh hv hb
   have hfu : ¬ fu = 0 := fun hfu => by rw [i1lW] at hb; simp [hfu] at hb
   rw [i1lW.arm1 n m h d v fu hfu] at hb
-  rw [ctrW_toNat fu hfu, instantiate1LiftGo_succ, StateT.run_bind]
+  rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, instantiate1LiftGo_succ, StateT.run_bind]
   cases hx : bvbW n m h (fu - 1) with
   | none => rw [hx, i1lW.k_bvar_b] at hb; cases hb
   | some p =>
@@ -684,7 +685,7 @@ theorem i1lLamArm_ok (hvw : viewOK m h LAM) (hg : tagW h = 5) :
   rcases h2 : i1lW n m₁ (tfld m LAM (tierW h) (idxW h) 1) (d + 1) v fu with _ | ⟨y, m₂⟩ <;> simp only [h2, h1, i1lLamW.k_i1l_go, i1lLamW.k_i1l_go_2, reduceCtorEq] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw hv h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (d + 1) v fu y hA₁ haw hv h2
-  rw [succW_toNat d hd1] at ha₂
+  rw [L.toNat_add_one_of_ne d hd1] at ha₂
   obtain ⟨a', h3, h4⟩ := i1lTail_ok _ _ a₂ h d r m' hh
     (fun r₃ m₃ h => mkLam_okI m₂ a₂ hA₂ x y r₃ m₃ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
@@ -708,7 +709,7 @@ theorem i1lForallArm_ok (hvw : viewOK m h FORALL) (hg : tagW h = 6) :
   rcases h2 : i1lW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) (d + 1) v fu with _ | ⟨y, m₂⟩ <;> simp only [h2, h1, i1lForallW.k_i1l_go, i1lForallW.k_i1l_go_2, reduceCtorEq] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw hv h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (d + 1) v fu y hA₁ haw hv h2
-  rw [succW_toNat d hd1] at ha₂
+  rw [L.toNat_add_one_of_ne d hd1] at ha₂
   obtain ⟨a', h3, h4⟩ := i1lTail_ok _ _ a₂ h d r m' hh
     (fun r₃ m₃ h => mkForall_okI m₂ a₂ hA₂ x y r₃ m₃ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
@@ -738,7 +739,7 @@ theorem i1lLetArm_ok (hvw : viewOK m h LET) (hg : tagW h = 7) :
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA htw hv h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ d v fu y hA₁ hvw' hv h2
   obtain ⟨a₃, ha₃, hA₃⟩ := ih m₂ m₃ a₂ _ (d + 1) v fu z hA₂ hbw hv h3
-  rw [succW_toNat d hd1] at ha₃
+  rw [L.toNat_add_one_of_ne d hd1] at ha₃
   obtain ⟨a', h4, h5⟩ := i1lTail_ok _ _ a₃ h d r m' hh
     (fun r₄ m₄ h => mkLet_okI m₃ a₃ hA₃ x y z r₄ m₄ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, ha₃, except_ok_bind]; exact h4, h5⟩

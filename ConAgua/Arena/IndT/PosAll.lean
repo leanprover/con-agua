@@ -18,6 +18,7 @@ import ConAgua.Arena.IndT.PosFields
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndSumSpec.StructUsedHb
 public import ConAgua.Verdict.PosE
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -59,7 +60,7 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
   rw [npE.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hf0]
   have hfu : fu.toNat = (fu - 1).toNat + 1 := by
     have : fu.toNat ≠ 0 := fun e' => hf0 (UInt64.toNat_inj.mp (by simpa using e'))
-    rw [pos2_word_pred hf0]; omega
+    rw [L.toNat_sub_one_of_ne hf0]; omega
   rw [hfu, nestPos_succ]
   have hhi := hW.hi htop
   -- `nest_ctx_hi_at`

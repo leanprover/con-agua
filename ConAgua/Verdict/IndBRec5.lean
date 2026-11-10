@@ -23,6 +23,7 @@ import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndInstallSpec.OfClosed
 import ConAgua.Arena.IndInstallSpec.DomsW
 import all ConAgua.Arena.RecGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 /-!
@@ -196,7 +197,7 @@ theorem crs_ref (hP : CrsProgE p) (henv : ConLeche.EnvWF env) (visR pO pL : Word
   have c14 := (p12.toCore hC.check).trans hR4.core
   -- the rest
   have hxo1 := rec2ToNat_succ (o := xo) (i := xo.toNat) (Nat.le_refl _) (by omega)
-  have hxl1 := rec2ToNat_pred hxl
+  have hxl1 := L.toNat_sub_one_of_ne hxl
   have ih' := ih (by omega) m4 a4 (xo + 1) (xl - 1) Xs' XsP' hR4.stage (hG.grow (decCG_mono _) hg04)
     (hrc.grow (OMono.decNL _ _) hg04)
     (hcg.grow (OMono.decPL (fun q => OMono.decCVp q) _ _) hg04)
@@ -212,13 +213,13 @@ theorem crs_ref (hP : CrsProgE p) (henv : ConLeche.EnvWF env) (visR pO pL : Word
   refine RefE.onlySim (fun _ => crsE.k_sl_cons.none ..) (fun _ _ h => h) fun r6 m6 h6 => ?_
   rw [crsE.k_sl_cons.arm1]
   obtain ⟨hrs, hrsb⟩ := hR5.dec
-  rw [getD_zero, getD_one] at hrs hrsb
+  rw [L.getD_zero, L.getD_one] at hrs hrsb
   obtain ⟨hS6, hg6, hd6, ht6⟩ := consW_stage h6 hR5.stage.stage hrsb hgH hrs
   have hA6 := consW_afr h6 hR5.abs
   refine RefE.ret rfl ⟨hR5.stage.of_check hS6 hA6 hR5.stage.check (Ext.refl _),
     hg04.trans (hR5.grow.trans hg6), ⟨?_, ?_⟩, hA6, hR5.ma.imp fun _ h => maMR_mfr (consW_mfr h6) h,
     c14.trans hR5.core⟩ <;>
-    simp only [getD_zero, List.headD_cons, hR4.res]
+    simp only [L.getD_zero, List.headD_cons, hR4.res]
   · exact hd6
   · exact Nat.le_of_eq ht6
 

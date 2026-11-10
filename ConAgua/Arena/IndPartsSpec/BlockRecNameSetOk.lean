@@ -18,6 +18,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndPos
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -40,9 +41,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-theorem partsDrop3 (r : List Word) : (r.drop 3).headD 0 = r.tail.tail.tail.headD 0 := by
-  rcases r with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
 
 /-- `memberIdxAt?`'s index lies in the names. -/
 theorem partsMemberIdx_lt {names : List NIdx} {lvls : LsIdx} {e : EIdx} {a a' : AState} {i : Nat}
@@ -92,7 +90,7 @@ theorem ctmW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
   · cases hmo
   rename_i hov
   have hk : (nP + UInt64.ofNat nF).toNat = nP.toNat + nF := by
-    rw [partsAddNoOv hov, UInt64.toNat_ofNat_of_lt' hnFb]
+    rw [L.toNat_add_of_not_lt hov, UInt64.toNat_ofNat_of_lt' hnFb]
   revert r m'
   show Sim _ _ a _
   have h1 := partsSimW (stripF_pis_ok vis fe (nP + UInt64.ofNat nF)
@@ -110,7 +108,7 @@ theorem ctmW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
   | some q =>
     obtain ⟨l1, e1⟩ := q
     obtain ⟨h1', -, hbl, hbe⟩ := hd1
-    rw [partsDrop3] at hbl hbe
+    rw [L.headD_drop_three] at hbl hbe
     simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
     have h2 := partsSimW (gafF_ok vis fe CWF _ hbl) hS1
     rw [CWF_eq, hbe] at h2
@@ -124,7 +122,7 @@ theorem ctmW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
       hnm.stab (OMono.decHL _ _) m2 (hg1.trans hg2)
     have hb : no.toNat + nl.toNat < 2 ^ 64 := by omega
     obtain ⟨ws, hws, hnm', hwlt⟩ := slR_of_decHL m2 nl.toNat no.toNat names hnames2 hb
-    rw [ofNat_toNat_word, ofNat_toNat_word] at hws
+    rw [L.ofNat_toNat, L.ofNat_toNat] at hws
     have hlen : ws.length < 2 ^ 64 := by
       have := decHL_length m2 hnames2; rw [hnm'] at this; simp at this; omega
     refine Sim.congr (op := ConRon.Arena.memberIdxAt? names (decI lvls) x2 >>= pure) ?_ (bind_pure _)
@@ -257,7 +255,7 @@ theorem bgoW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP mm : Word}
         simp only [List.headD_cons, List.tail_cons, beq_iff_eq, optEq]
         constructor
         · rintro ⟨-, rfl⟩; exact hi'.symm
-        · intro e; exact ⟨by decide, by rw [e, ofNat_toNat_word]⟩
+        · intro e; exact ⟨by decide, by rw [e, L.ofNat_toNat]⟩
     by_cases hc : r1.headD 0 ≠ 0 ∧ r1.tail.headD 0 = mm
     · rw [bgoW.k_block_groups_one.arm1 (hc1 := hc), ite_eq_left (hcond.mp hc)]
       intro r m' e
@@ -643,7 +641,7 @@ theorem blockRecNameSetOk_refines (p : Prog) (hP : IndPartsProg3 p) (n : Nat) (s
       rw [decHL_grow3 hg2 hb1]; exact hd1
     obtain ⟨gws, hgs, hgm, hgl⟩ := slR_of_decHL m2 _ _ _ hd2 (by omega)
     obtain ⟨wws, hws, hwm, hwl⟩ := slR_of_decHL m2 _ _ _ hd1' (by have := hg2.iw; omega)
-    rw [ofNat_toNat_word, ofNat_toNat_word] at hgs hws
+    rw [L.ofNat_toNat, L.ofNat_toNat] at hgs hws
     have hb := setEqW_ok hgs hws h3
     refine ⟨_, a1, rfl, ?_, hS2, hg1.trans hg2⟩
     rw [hb, hgm, hwm, partsAll_decI wws gws hwl hgl, partsAll_decI gws wws hgl hwl]

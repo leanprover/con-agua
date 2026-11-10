@@ -15,6 +15,7 @@ import ConAgua.Arena.IndT.PassCS
 import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 import all ConRon.Bridge.Inductives.BlockTail
 import all ConAgua.Arena.IndInstall
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -105,7 +106,7 @@ theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtPro
   have hA := hB.abs
   have hT0 : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have e : ∀ k : Nat, k < 11 → ∀ x : Word, x = w + UInt64.ofNat k → x.toNat = w.toNat + k :=
-    fun k hk x hx => by rw [hx]; exact tailToNat (by have := hBB.1; omega)
+    fun k hk x hx => by rw [hx]; exact L.toNat_add_ofNat_of_lt _ _ (by have := hBB.1; omega)
   -- the record
   have hdq' : decBPass fe (truncM m) w.toNat = some ⟨fe, bs, kinds, params, rd, cls, tbl⟩ := hdq
   simp only [decBPass, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, BlockPass.mk.injEq,

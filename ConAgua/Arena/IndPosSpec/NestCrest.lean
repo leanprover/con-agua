@@ -18,6 +18,7 @@ public import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 public import ConAgua.Arena.IndPosSpec.P2ctK1
 public import ConAgua.Arena.IndPosSpec.UCtx
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -516,10 +517,10 @@ theorem u4W_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     obtain ⟨w, hw, hx⟩ := hkw i.toNat hlt
     obtain ⟨hwi, hw'⟩ := truncM_iw_get hw
     have hrd : rdW (m.arr64 IW) (ko + i) = w := by
-      have e : (ko + i).toNat = ko.toNat + i.toNat := word_add_toNat (by
+      have e : (ko + i).toNat = ko.toNat + i.toNat := L.toNat_add_of_lt _ _ (by
         have := hS.iw.iw; have := hS.iw.iwSize; have := hg0.iw; omega)
       simp only [rdW, e]; simp only [iwA, aread_apply] at hw'; rw [hg0.iwGet _ hwi, hw']; rfl
-    have hi1 : (i + 1).toNat = i.toNat + 1 := word_add_toNat (by have := nF.toNat_lt; simp; omega)
+    have hi1 : (i + 1).toNat = i.toNat + 1 := L.toNat_add_of_lt _ _ (by have := nF.toNat_lt; simp; omega)
     have hrange : List.range' i.toNat (nF.toNat - i.toNat) =
         i.toNat :: List.range' (i + 1).toNat (nF.toNat - (i + 1).toNat) := by
       rw [hi1, show nF.toNat - i.toNat = (nF.toNat - (i.toNat + 1)) + 1 by omega, List.range'_succ]

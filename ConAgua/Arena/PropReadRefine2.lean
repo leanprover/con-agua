@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.DefEqStuckShape
 import ConRon.Bridge.Grind
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -232,7 +233,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   obtain ⟨rfl, rfl, rfl⟩ := hW
   have hjk' := hjk
   have hk0 : k ≠ 0 := by intro h; subst h; simp at hjk
-  have e1 : (k - 1).toNat = k.toNat - 1 := pr_word_sub1 k hk0
+  have e1 : (k - 1).toNat = k.toNat - 1 := L.toNat_sub_one_of_ne hk0
   have e2 : (k - 1 - jj).toNat = k.toNat - 1 - jj.toNat := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, e1]; omega), e1]
   have hidx : (k.toNat - 1 - jj.toNat) < xs.toArray.size := by
@@ -290,7 +291,7 @@ theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     obtain ⟨rfl, rfl⟩ := hW
     exact ⟨by simp [unwrapIdDefs]; rfl, RdAfter.refl _hS, _he⟩
   simp only [hk, ↓reduceIte] at hW
-  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 k hk)
+  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (L.toNat_ne_zero_of_ne k hk)
   rcases hc1 : callW p n "unwrap_step" [vis, f, e] m with _ | ⟨r₁, m₁⟩ <;> rw [hc1] at hW
   · cases hW
   obtain ⟨hRd₁, hb₁, hrun₁⟩ := uws_ok hp _hS _hf _he hc1
@@ -308,7 +309,7 @@ theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   refine ⟨?_, hRd₁.trans hRd₂, hb₂⟩
   rw [hj, hrun₁ j]
   simp only [h0, ↓reduceIte]
-  rw [show j = (k - 1).toNat by rw [pr_word_sub1 k hk]; omega]
+  rw [show j = (k - 1).toNat by rw [L.toNat_sub_one_of_ne hk]; omega]
   exact hrun₂
 
 /-- **`peel_pis_w` refines `peelPisW`.** -/
@@ -356,7 +357,7 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     obtain ⟨rfl, rfl, rfl⟩ := hK
     obtain ⟨hrun₂, hRd₂, hb₂⟩ := ih hS₁ _hf h1 hc2
     refine ⟨?_, hRd.trans hRd₂, hb₂⟩
-    rw [pr_word_sub1 k hk] at hrun₂
+    rw [L.toNat_sub_one_of_ne hk] at hrun₂
     simp only [StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
     exact hrun₂
   unfold ppwW at hW
@@ -374,7 +375,7 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     simp only [UInt64.toNat_zero, ConRon.Arena.peelPisW, StateT.run_bind, hrun₁, except_ok_bind]
     rfl
   simp only [hk, ↓reduceIte] at hW
-  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 k hk)
+  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (L.toNat_ne_zero_of_ne k hk)
   have hj' : j = k.toNat - 1 := by omega
   by_cases h6 : tagW e = 6
   · simp only [h6, ne_eq, not_true_eq_false, ↓reduceIte] at hW

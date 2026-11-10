@@ -11,6 +11,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -121,10 +122,10 @@ theorem partsLpsEq {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   obtain ⟨hS1, hg1, hd1, ht1⟩ := partsLpsCopy h hS hcv hq
   have hT : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
   obtain ⟨ws1, hs1, hn1, hl1⟩ := slR_of_decHL m1 _ _ _ hd1 (by omega)
-  rw [ofNat_toNat_word, ofNat_toNat_word] at hs1
+  rw [L.ofNat_toNat, L.ofNat_toNat] at hs1
   have hl' : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow3 hg1 hlb]; exact hl
   obtain ⟨ws2, hs2, hn2, hl2⟩ := slR_of_decHL m1 _ _ _ hl' (by have := hg1.iw; omega)
-  rw [ofNat_toNat_word, ofNat_toNat_word] at hs2
+  rw [L.ofNat_toNat, L.ofNat_toNat] at hs2
   have hres := eqW_ok n m1 _ _ _ _ e ws1 ws2 hs1 hs2 he
   refine ⟨hS1, hg1, ?_⟩
   rw [hn1, hn2, map_decI_beq ws1 ws2 hl1 hl2, hres]
@@ -265,7 +266,7 @@ theorem bpcW_ok {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
       simp only [beq_iff_eq]
       constructor
       · intro e; rw [← e, UInt64.toNat_ofNat_of_lt' hnPb]
-      · intro e; rw [e, ofNat_toNat_word]
+      · intro e; rw [e, L.ofNat_toNat]
     by_cases hnp : rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP
     · rw [bpcW.arm2 n m nP cso csl lo ll hc hnp] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -438,10 +439,10 @@ theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   rw [bslW.k_sl_eq.eq_2] at h
   have hT1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
   obtain ⟨ws1, hs1, hn1, hl1'⟩ := slR_of_decHL m1 _ _ _ hd1 (by omega)
-  rw [ofNat_toNat_word, ofNat_toNat_word] at hs1
+  rw [L.ofNat_toNat, L.ofNat_toNat] at hs1
   have hl' : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow3 hg1 hlb]; exact hl
   obtain ⟨ws2, hs2, hn2, hl2⟩ := slR_of_decHL m1 _ _ _ hl' (by have := hg1.iw; omega)
-  rw [ofNat_toNat_word, ofNat_toNat_word] at hs2
+  rw [L.ofNat_toNat, L.ofNat_toNat] at hs2
   have hres := eqW_ok n m1 _ _ _ _ ev ws1 ws2 hs1 hs2 he1
   have hbeq : (relps == lps) = decide (ws1 = ws2) := by rw [hn1, hn2, map_decI_beq ws1 ws2 hl1' hl2]
   by_cases hev : ev = 0
@@ -849,7 +850,7 @@ theorem bsoW_sim {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
   · cases e
   rename_i hov
   have hk : (nP + getDW m io il 0 0).toNat = nP.toNat + ns.headD 0 := by
-    rw [partsAddNoOv hov, getDW_head hns hb]
+    rw [L.toNat_add_of_not_lt hov, getDW_head hns hb]
   revert r m' e
   have h1 := partsSimW (stripF_pis_ok vis fe (nP + getDW m io il 0 0) ty hty) hS
   rw [hk] at h1
@@ -873,7 +874,7 @@ theorem bsoW_sim {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
   | some q =>
     obtain ⟨l1, e1⟩ := q
     obtain ⟨h1', -, hbl, hbe⟩ := hd1
-    rw [partsDrop3] at hbl hbe
+    rw [L.headD_drop_three] at hbl hbe
     simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
     intro r m' e
     split at e

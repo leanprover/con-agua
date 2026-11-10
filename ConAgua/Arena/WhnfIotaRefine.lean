@@ -17,6 +17,7 @@ import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -115,7 +116,7 @@ theorem rule_idx {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
 /-! ## `find_rule(ro, rc, c)` -/
 
 theorem uint64_succ_toNat (n i : Word) (h : i < n) : (i + 1).toNat = i.toNat + 1 :=
-  forUp_succ_toNat h
+  L.toNat_add_one_of_word_lt _ _ h
 
 /-- Model of the `find_rule` scan from index `i`, by the `Nat` index, over the word read `rd`
 (L's tagged read `erRd m`; the L code aborts on a read past the array, so the spec only constrains
@@ -133,7 +134,7 @@ theorem frN_hit (rd : Word → Word) (ro rc c x : Word) (h : x < rc) (hc : rd (r
   rw [frN, ite_eq_left (UInt64.lt_iff_toNat_lt.mp h)]; simp [hc]
 theorem frN_miss (rd : Word → Word) (ro rc c x : Word) (h : x < rc) (hc : ¬ rd (ro + 11 * x) = c) :
     frN rd ro rc c x.toNat = frN rd ro rc c (x + 1).toNat := by
-  rw [frN, ite_eq_left (UInt64.lt_iff_toNat_lt.mp h), forUp_succ_toNat h]; simp [hc]
+  rw [frN, ite_eq_left (UInt64.lt_iff_toNat_lt.mp h), L.toNat_add_one_of_word_lt _ _ h]; simp [hc]
 
 theorem frN_hitT (m : Mem) (ro rc c x : Word) (h : x < rc)
     (hc : rdW (m.arr64 (tierA EREC ((ro + 11 * x) >>> 40))) ((ro + 11 * x) &&& 0xFFFFFFFFFF) = c) :

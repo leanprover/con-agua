@@ -16,6 +16,7 @@ public import ConAgua.Arena.KnotEntry
 public import ConAgua.Verdict.VCtx
 public import ConRon.Bridge.Checker.Hyp
 import all ConAgua.Arena.IndInstall
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -126,7 +127,7 @@ theorem iis_ref (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLeche.B
   rw [hw, hnpw, hw1, hw0]
   rw [hw, hnpw, hw1] at hov
   have hk : (UInt64.ofNat bs.nP + UInt64.ofNat msh.nIdx : Word).toNat = bs.nP + msh.nIdx := by
-    rw [partsAddNoOv hov, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib]
+    rw [L.toNat_add_of_not_lt hov, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib]
   rw [installIdx_cons]
   unfold idxOneAM
   simp only [bind_assoc]
@@ -175,7 +176,7 @@ theorem iis_ref (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLeche.B
   have hR2 := fsorts_ref hq henv hLC hLT hP.sum.hg hP.sum.hpw hP.sum.het hP.sum.hcn n (by omega) m1 a1 1 0
     (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx) m1 (fvs.drop bs.nP) []
     _ hC1 hA1 (IWGrow.refl m1) hdT hbT (by simp [decHL, hslice?]) (by simp) hrs32 ⟨_, by rw [hrse]; exact hsP1⟩
-    (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _) hxsd hxPos
+    (by rw [← L.toNat_add_of_not_lt hov]; exact UInt64.toNat_lt _) hxsd hxPos
   rw [hrse, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib,
     show ((1 : Word) != 0) = true from rfl, show ((0 : Word) != 0) = false from rfl] at hR2
   refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩) (fun _ => iisE.k_check_struct_field_sorts_i.none ..)

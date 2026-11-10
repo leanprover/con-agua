@@ -132,11 +132,6 @@ theorem Triple.forUp_pre {p : Prog} {w B : Stmt} {j n : Var} {P : St → Prop} {
     vcgen [evalC, evalE, hbody k, ih]
     all_goals (subst_vars; simp_all [Cmp.eval])
 
-/-- The step of a counted loop does not wrap. -/
-theorem forUp_succ_toNat {i n : Word} (h : i < n) : (i + 1).toNat = i.toNat + 1 := by
-  have := n.toNat_lt; have : i.toNat < n.toNat := h
-  rw [UInt64.toNat_add]; simp; omega
-
 /-! ### Tests: the `for` sugar is `forS` -/
 
 example : (lblk (i, n, x) { for i < n { x += i } }) = forS 0 1 (lblk (i, n, x) { x += i }) := rfl

@@ -13,6 +13,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.RecCheck
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -198,7 +199,7 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {vis : Word}
     rw [decHL_grow3 hg2 hb1]; exact hd1
   obtain ⟨wws, hws, hwm, hwl⟩ := slR_of_decHL s2.mem _ _ _ hd1' (by have := hg2.iw; have := hT s2.mem; omega)
   obtain ⟨gws, hgs, hgm, hgl⟩ := slR_of_decHL s2.mem _ _ _ hd2 (by rw [ht2]; exact hT _)
-  rw [ofNat_toNat_word, ofNat_toNat_word] at hws hgs
+  rw [L.ofNat_toNat, L.ofNat_toNat] at hws hgs
   have hset := setEqW_ok hws hgs hW3
   have hcond : (wws.length == gws.length && gws.all (fun w => wws.contains w) &&
       wws.all (fun w => gws.contains w)) = rpSetOk ((rpAux bs).map (·.cvR.name)) want := by
@@ -222,7 +223,7 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {vis : Word}
       (slNodup_spec p L.contains L.nodup (n + 1) _ _ _) h5
     simp only [List.headD_cons, List.tail_cons] at hW5 hm5
     obtain ⟨nws, hns, hnm, hnl⟩ := slR_of_decHL s4.mem _ _ _ hd4 (by rw [ht4]; exact hT _)
-    rw [ofNat_toNat_word, ofNat_toNat_word] at hns
+    rw [L.ofNat_toNat, L.ofNat_toNat] at hns
     have hnd := nodupW_ok _ _ _ _ _ _ hns hW5
     rw [tpnW.k_sl_nodup.arm1, hm5]
     refine Sim.ret ⟨?_, hS4, hg1.trans (hg2.trans hg4)⟩

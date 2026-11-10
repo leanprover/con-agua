@@ -15,6 +15,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -302,9 +303,6 @@ grind_pattern [lang_grind] escLoopW_esc => escLoopW b m top e j k, b[j.toNat],
 
 /-! ## The block form of the loop (lane blkcopy2) -/
 
-theorem escTN_add_one (x : Word) (h : x.toNat + 1 < 2 ^ 64) : (x + 1).toNat = x.toNat + 1 := by
-  rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
-
 /-- A backslash-free run `[j, j')` of the body is one block copy (`copy!`). -/
 theorem escLoopW_skip (b : Array UInt8) : ∀ d (m : Mem) (top e j j' k : Word),
     j'.toNat - j.toNat = d → j ≤ j' → j' ≤ e → j'.toNat ≤ b.size →
@@ -333,10 +331,10 @@ theorem escLoopW_skip (b : Array UInt8) : ∀ d (m : Mem) (top e j j' k : Word),
       have := congrArg UInt64.toUInt8 h; simpa using this
     have hL := (m.len64 (tierA 0 (top >>> 40))).toNat_lt
     rw [escLoopW_raw b m top e j k hje hjb hn (by rw [UInt64.le_iff_toNat_le]; omega)]
-    have hj1' : (j + 1).toNat = j.toNat + 1 := escTN_add_one j (by have := j'.toNat_lt; omega)
+    have hj1' : (j + 1).toNat = j.toNat + 1 := @L.toNat_add_one_of_lt j (by have := j'.toNat_lt; omega)
     have hk1 : ((top &&& 1099511627775) + (k + 1)).toNat =
         ((top &&& 1099511627775) + k).toNat + 1 := by
-      rw [← UInt64.add_assoc]; exact escTN_add_one _ (by omega)
+      rw [← UInt64.add_assoc]; exact @L.toNat_add_one_of_lt _ (by omega)
     have hlen : ∀ (i v : Word), (m.set64 (tierA 0 (top >>> 40)) i v).len64 (tierA 0 (top >>> 40)) =
         m.len64 (tierA 0 (top >>> 40)) := fun i v => by simp only [Mem.len64, Mem.size64_set64]
     rw [ih _ top e (j + 1) j' (k + 1) (by omega) (UInt64.le_iff_toNat_le.mpr (by omega)) h2 hb

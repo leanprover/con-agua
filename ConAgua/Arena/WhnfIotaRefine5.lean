@@ -12,6 +12,7 @@ import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.WhnfIota
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -118,7 +119,7 @@ theorem spine_entry (m : Mem) (ao an i : Word) (args : Array EIdx) (hargs : Spin
       decE (spW m (ao + i)) := by
   have hi' : i.toNat < an.toNat := hi
   have hsz : i.toNat < args.size := by rw [hargs.size]; exact hi'
-  have e : ao + i.toNat.toUInt64 = ao + i := by rw [toUInt64_toNat_self]
+  have e : ao + i.toNat.toUInt64 = ao + i := by rw [L.toUInt64_toNat]
   refine ⟨hsz, ?_, ?_⟩
   · have := hargs.lt i.toNat hi'
     rw [e] at this

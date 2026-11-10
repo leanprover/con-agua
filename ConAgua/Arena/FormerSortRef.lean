@@ -17,6 +17,7 @@ import all ConAgua.Arena.WhnfIota
 public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.Arena.RefECore
 public import ConAgua.Arena.KnotE
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -182,7 +183,7 @@ theorem fsl_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
         fun r₄ m₄ _ h₄ => RefE.after_core (w := id) h₄ fun M₄ hS₄ _ => ?_
       rw [fslE.k_inst_entry.arm1]
       have h1 := ih (by omega) m₄ _ M₄ (d + 1) (c - 1) (r₄.headD 0) hS₄ h₄.resOk
-      rw [toNat_succ_of_ne hd] at h1
+      rw [L.toNat_add_one_of_ne _ hd] at h1
       exact RefE.tail_relist (g := fun r => [r.headD 0, r.tail.headD 0])
         (fun _ => fslE.k_former_sort_loop.none ..) (fun ⟨_, _⟩ => fslE.k_former_sort_loop.arm1 ..)
         (fun r => by simp [decOS]) (fun r h => by simpa [OkOS] using h) id h1

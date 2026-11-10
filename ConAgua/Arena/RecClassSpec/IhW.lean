@@ -13,6 +13,7 @@ public import ConAgua.Arena.RecClassSpec.CloseLams
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.RecClass
 import ConAgua.L.ModelGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -89,7 +90,7 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
       simp [decPL] at hcs
       subst hcs
       exact ⟨fun _ => rfl, fun nm hnm => by simp [crOf] at hnm⟩
-    · obtain ⟨c1, hc1, hcgl1⟩ := wordSucc_of_ne hcgl
+    · obtain ⟨c1, hc1, hcgl1⟩ := L.exists_toNat_eq_succ hcgl
       rw [hc1] at hcs
       obtain ⟨pn, cv, cs', rfl, hpn, hcv, hcs'⟩ := decPL_cons hcs
       have hpn' := iwN_rdW hpn (by omega)
@@ -110,7 +111,7 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
           refine ⟨0, [], by simp [hrcl], by simp, by simp, ?_, ?_⟩
           · simp [hrcl, decNL]
           · simp [hrcl]; omega
-        · obtain ⟨r1, hr1, hrcl1⟩ := wordSucc_of_ne hrcl
+        · obtain ⟨r1, hr1, hrcl1⟩ := L.exists_toNat_eq_succ hrcl
           rw [hr1, decNL_succ] at hrc
           simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hrc
           obtain ⟨x, hx, xs, hxs, rfl⟩ := hrc
@@ -230,7 +231,7 @@ theorem msW_ok (n : Nat) : ∀ (m : Mem) (so sl c : Word) (r : List Word) (sls :
       simp [decPL] at hdec
       subst hdec
       simp [motIdx, msRes]
-    · obtain ⟨s1, hs1, hsl1⟩ := wordSucc_of_ne hsl
+    · obtain ⟨s1, hs1, hsl1⟩ := L.exists_toNat_eq_succ hsl
       rw [hs1] at hdec
       obtain ⟨pn, sl', rest, rfl, hpn, hcs, hdec'⟩ := decPL_cons hdec
       have hso : so.toNat < (m.arr64 IW).size := iwN_lt hpn

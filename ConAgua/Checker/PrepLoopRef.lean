@@ -3,6 +3,7 @@ module
 public import ConAgua.Checker.PrepLeafRef
 import ConAgua.Checker.HoistClosureL
 import ConAgua.Checker.HoistOrderRef3
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -231,7 +232,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
         fun k _hk => hIW k (by omega), rfl, hE, rfl, rfl, rfl, PFr.refl _ _ _ _⟩
       rw [hnil, frontOf.eq_1]; rfl
     · have hlt : aw.toNat < np.toNat := by have := mt UInt64.le_iff_toNat_le.mpr hstop; omega
-      have ha1 : (aw + 1).toNat = aw.toNat + 1 := toNat_succ aw (by omega)
+      have ha1 : (aw + 1).toNat = aw.toNat + 1 := @L.toNat_add_one_of_lt aw (by omega)
       have hawn : aw.toNat < dsAll.size := by omega
       have hoa : (ord + aw).toNat = ord.toNat + aw.toNat := by rw [UInt64.toNat_add]; omega
       rw [pFrontW.arm2 _ _ _ _ _ _ _ hstop] at h
@@ -272,7 +273,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
           have hmkf : mk + f - 1 = mk + UInt64.ofNat (f.toNat - 1) := by
             rw [← hv, UInt64.ofNat_toNat]; grind
           have hmx' : (mk + UInt64.ofNat (f.toNat - 1)).toNat = mk.toNat + (f.toNat - 1) :=
-            addW_toNat _ _ (by omega)
+            L.toNat_add_ofNat_of_lt _ _ (by omega)
           rw [hmkf] at h
           refine ⟨_, f - 1, some dsAll[f.toNat - 1]!, by omega, by simp [hv], ?_, ?_, ?_, ?_, ?_, h⟩
           · rw [pick_hit _ _ _ (f.toNat - 1) (unm_sorted _ _ _ _) (mem_unm.mpr ⟨hnpx, by omega, hmx⟩)
@@ -284,7 +285,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
             symm
             apply unm_mark
             · intro y hy1 hy2 hyx
-              have hy' := addW_toNat mk y (by omega)
+              have hy' := L.toNat_add_ofNat_of_lt mk y (by omega)
               rw [rdIW_set64, rdIW_set64, hIW1, ite_f (by rw [hoa, hy']; omega),
                 ite_f (by rw [hmx', hy']; omega)]
             · rw [rdIW_set64, rdIW_set64, ite_f (by rw [hoa, hmx']; omega),
@@ -295,7 +296,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
             rw [getIW_set64, getIW_set64, ite_f (by rw [hoa]; omega), ite_f (by rw [hmx']; omega)]
           · rw [rdIW_set64, ite_t ⟨rfl, by rw [size_set64, hoa, hIW1]; omega⟩]
           · intro k _hk
-            have hk' := addW_toNat ord k (by omega)
+            have hk' := L.toNat_add_ofNat_of_lt ord k (by omega)
             rw [rdIW_set64, rdIW_set64, hIW1, ite_f (by rw [hoa, hk']; omega),
               ite_f (by rw [hmx', hk']; omega)]
         · rw [pFrontW.k_prep_find.arm2 _ _ _ _ _ _ _ _ (Decidable.of_not_not hfz), pFrontW.j1.arm1] at h
@@ -304,7 +305,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
           · have hU : unm (m1.set64 IW (ord + aw) aw) mk np.toNat nw.toNat = unm m mk np.toNat nw.toNat := by
               apply unm_congr
               intro y hy1 hy2
-              have hy' := addW_toNat mk y (by omega)
+              have hy' := L.toNat_add_ofNat_of_lt mk y (by omega)
               rw [rdIW_set64, hIW1, ite_f (by rw [hoa, hy']; omega)]
             rw [hU, pick_miss]
             intro y hy
@@ -315,7 +316,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
             rw [getIW_set64, ite_f (by rw [hoa]; omega)]
           · rw [rdIW_set64, ite_t ⟨rfl, by rw [hoa, hIW1]; omega⟩]
           · intro k _hk
-            have hk' := addW_toNat ord k (by omega)
+            have hk' := L.toNat_add_ofNat_of_lt ord k (by omega)
             rw [rdIW_set64, hIW1, ite_f (by rw [hoa, hk']; omega)]
       obtain ⟨m2, v, o, hv, hX, hpick, hMF, hreg, hrd, hkeep, h2⟩ := hcase
       have hfr2 : PFr ord mk nw m1 m2 := PFr.of_frame hMF hreg
@@ -371,11 +372,11 @@ theorem pRest_ok (nw ord mk : Word) :
       exact ⟨by simp, fun k hk => by simp at hk, MemFrame.refl _ _ _, fun _ _ => rfl⟩
     · have hjlt : j.toNat < nw.toNat := by
         have := mt UInt64.le_iff_toNat_le.mpr hj; omega
-      have hj1 := toNat_succ j (by omega)
+      have hj1 := @L.toNat_add_one_of_lt j (by omega)
       have hmkj : mk + j = mk + UInt64.ofNat j.toNat := by simp
       by_cases hz : rdW (m.arr64 IW) (mk + j) = 0
       · rw [pRestW.arm2 _ _ _ _ _ _ _ hj hz, pRestW.j1.arm1] at h
-        have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_succ c (by omega)
+        have hc1 : (c + 1).toNat = c.toNat + 1 := @L.toNat_add_one_of_lt c (by omega)
         have hsz : ((m.set64 IW (ord + c) j).arr64 IW).size = (m.arr64 IW).size := size_set64 _ _ _ _ _
         obtain ⟨hr, hk, hfr, hout⟩ := ih _ m' (c + 1) (j + 1) r h1 (hsz ▸ h2) (hsz ▸ h3)
           (by omega) (by omega) h
@@ -390,7 +391,7 @@ theorem pRest_ok (nw ord mk : Word) :
           have : ¬ (ord + c = mk + UInt64.ofNat x) := by
             intro e
             have := congrArg UInt64.toNat e
-            rw [hoc, addW_toNat mk x (by omega)] at this
+            rw [hoc, L.toNat_add_ofNat_of_lt mk x (by omega)] at this
             omega
           simp [this]
         rw [hU] at hr hk

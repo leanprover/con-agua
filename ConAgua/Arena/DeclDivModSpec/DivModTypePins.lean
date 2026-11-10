@@ -9,6 +9,7 @@ import ConAgua.L.ModelGen
 public import ConAgua.Rom.PinSets
 import all ConAgua.Arena.DeclArmsNat
 import all ConAgua.Arena.IndIface
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -390,7 +391,7 @@ theorem divModCertProofs_ref {vis : Word} {fe : IFEnv} {p : Prog}
   obtain ⟨hS2, hg2, hd2, htop, -⟩ := erToIwW_stage he2 hS (sliceR_hslice hsl hS.iw)
   refine ⟨(certsOf ip).getD (dmSlotW m c).toNat [], a, divModCertProofs_run hF hc ip, hS2, hg2, ?_⟩
   unfold decRL
-  rw [ntGetD0, show (0 + 1 : Nat) = 1 from rfl, ntGetD1]
+  rw [L.getD_zero, show (0 + 1 : Nat) = 1 from rfl, L.getD_one]
   simp only [List.headD_cons, List.tail_cons]
   exact ⟨hd2, by omega⟩
 

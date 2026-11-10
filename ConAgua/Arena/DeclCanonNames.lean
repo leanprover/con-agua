@@ -11,6 +11,7 @@ import ConAgua.Arena.IndMaster
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsCanon
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -57,7 +58,7 @@ theorem gnW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
       refine ⟨[], a, ?_, hS, IWGrow.refl _, ⟨by simp [decHL, hslice?], by simp⟩, rfl, hP⟩
       simp [ConRon.Arena.canonNamesGo]; rfl
     rw [ite_eq_right hn] at h
-    have hn1 : n.toNat = (n - 1).toNat + 1 := toNat_pred hn
+    have hn1 : n.toNat = (n - 1).toNat + 1 := L.toNat_eq_toNat_sub_one_add_one _ hn
     have hi1 : (i + 1).toNat = i.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; omega
     unfold gnW.k_intern_nanon at h
@@ -141,7 +142,7 @@ theorem cnW_ok {vis : Word} {fe : IFEnv} {n : Nat}
   obtain ⟨hs, a', hrun, hS', hg, hd, hv, hP'⟩ := gnW_ok n _ _ a 0 k r0 hg0 hS
     (by have := UInt64.toNat_lt k; simpa using this) hP
   refine ⟨hs, a', hrun, hS', hg, ?_, hv, hP'⟩
-  simpa only [decRL, getD0, cnGetD1, List.getD_cons_zero, List.getD_cons_succ] using hd
+  simpa only [decRL, L.getD_zero, cnGetD1, List.getD_cons_zero, List.getD_cons_succ] using hd
 
 /-- **`canon_names` refines `canonNames`.** -/
 @[refines ConRon.Arena.canonNames]

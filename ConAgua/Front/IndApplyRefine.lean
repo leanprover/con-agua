@@ -4,6 +4,7 @@ public import ConAgua.Front.IndApplySpec
 public import ConRon.Arena.Frontend.ExportC
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.View
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -60,12 +61,6 @@ theorem forIn_yield {α β : Type} (f : α → β → AM (ForInStep β)) (a : AS
 
 /-! ## Views -/
 
-theorem getD2 (l : List Word) : l.getD 2 0 = l.tail.tail.headD 0 := by
-  rcases l with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
-
-theorem getD1 (l : List Word) : l.getD 1 0 = l.tail.headD 0 := by
-  rcases l with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
-
 /-- The view of a handle the L code views. -/
 theorem view_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hne : eViewW m h ≠ []) :
     ∃ v, (view (decE h)).run a = .ok (v, a) ∧ ViewR (eViewW m h) v := by
@@ -86,7 +81,7 @@ theorem viewR_forall {r : List Word} {v : ENodeView} (h : ViewR r v) (h6 : r.hea
   rw [h6] at ht
   cases v <;> simp only [tagOf] at ht <;> (try exact absurd ht (by decide))
   simp only [ViewR] at h
-  exact ⟨_, by rw [← getD2, h.2.2.2.2]⟩
+  exact ⟨_, by rw [← L.getD_two, h.2.2.2.2]⟩
 
 theorem viewR_sort {r : List Word} {v : ENodeView} (h : ViewR r v) (h2 : r.headD 0 = 2) :
     v = .sort (decI (r.tail.headD 0)) ∧ (r.tail.headD 0).toNat < 2 ^ 32 := by
@@ -94,11 +89,7 @@ theorem viewR_sort {r : List Word} {v : ENodeView} (h : ViewR r v) (h2 : r.headD
   rw [h2] at ht
   cases v <;> simp only [tagOf] at ht <;> (try exact absurd ht (by decide))
   simp only [ViewR] at h
-  exact ⟨by rw [← getD1, h.2.2], by rw [← getD1]; exact h.2.1⟩
-
-theorem fuel_pred {f : Word} (hf : ¬ f = 0) : f.toNat = (f - 1).toNat + 1 := by
-  have : f.toNat ≠ 0 := fun h0 => hf (UInt64.toNat_inj.mp (by simpa using h0))
-  rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+  exact ⟨by rw [← L.getD_one, h.2.2], by rw [← L.getD_one]; exact h.2.1⟩
 
 /-! ## The telescope walks -/
 
@@ -119,7 +110,7 @@ theorem teleW_ok : ∀ (n : Nat) (f h r : Word), teleW n m f h = some r →
     split at hw; cases hw; rename_i hf
     split at hw; cases hw; rename_i hne
     obtain ⟨v, hv, hr⟩ := view_ok' m a hR h hne
-    have hf1 := fuel_pred hf
+    have hf1 := L.toNat_eq_toNat_sub_one_add_one _ hf
     rw [hf1, ConRon.Arena.Frontend.indPiTeleLen, run_bind _ _ a _ hv]
     split at hw
     · rename_i h6
@@ -151,7 +142,7 @@ theorem sortTeleW_ok : ∀ (n : Nat) (f h ok r : Word), sortTeleW n m f h = some
     split at hw; cases hw; rename_i hf
     split at hw; cases hw; rename_i hne
     obtain ⟨v, hv, hr⟩ := view_ok' m a hR h hne
-    have hf1 := fuel_pred hf
+    have hf1 := L.toNat_eq_toNat_sub_one_add_one _ hf
     rw [hf1, piSortTeleLen?, run_bind _ _ a _ hv]
     split at hw
     · rename_i h6
@@ -208,7 +199,7 @@ theorem ctlSumW_eq : ∀ (n : Nat) (m : Mem) (k c s : Word), ctlSumW n m k c = s
       · rw [hr, ctlSumW.k_ctl_sum.none] at h; cases h
       · rw [hr, ctlSumW.k_ctl_sum.arm1] at h
         cases h
-        rw [ih _ _ _ _ hr, fuel_pred hc]
+        rw [ih _ _ _ _ hr, L.toNat_eq_toNat_sub_one_add_one _ hc]
         rfl
 
 /-- **`store_fuel` is the twin's `storeFuel`**: the store's node count `+ 1`. -/
