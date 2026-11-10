@@ -9,6 +9,7 @@ import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.InferBodySpineFModels
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.InferLeaves
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -164,7 +165,7 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
     have hspn := hS.spn
     have hco_le : co.toNat + cn.toNat ≤ (m.arr64 SPN).size := hacc.bound
     have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
-    have hadd : (co + cn).toNat = co.toNat + cn.toNat := addW _ _ hcn64
+    have hadd : (co + cn).toNat = co.toNat + cn.toNat := L.toNat_add_of_lt _ _ hcn64
     have hspT : (spTop m).toNat = co.toNat + cn.toNat := by rw [htop, hadd]
     have har : SpineR m ao an args := har₀.keepT co hsz hb hlo (hsz ▸ hspn)
     have hkeep : ∀ {m₂ : Mem}, StackKept m m₂ → (∀ j, j < co → spW m₂ j = spW m₀ j) := by
@@ -181,7 +182,7 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         have h := har.get i.toNat hlt'; rwa [hit] at h
       have hvv : HW (spW m (ao + i)) := by
         have h := har.lt i.toNat (by rw [← har.size]; exact hlt'); rwa [hit] at h
-      have hi1 := succ_toNat_of_lt hlt
+      have hi1 := L.toNat_add_one_of_word_lt _ _ hlt
       by_cases ht6 : tagW ty = 6
       · -- the ∀ step: the domain opened, the argument checked and pushed
         rw [ite_eq_left ht6]
@@ -386,7 +387,7 @@ theorem a_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFP
   have hb1 := hxs.bound
   have hspn₁ := hS₁.spn
   have hadd : (r₁.tail.headD 0 + r₁.tail.tail.headD 0).toNat =
-      (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := addW _ _ (by omega)
+      (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := L.toNat_add_of_lt _ _ (by omega)
   have htopN : (spTop m₁).toNat = (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := by
     rw [htop1, ← ho1, hadd]
   have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ a₀ dn vis fe M eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩

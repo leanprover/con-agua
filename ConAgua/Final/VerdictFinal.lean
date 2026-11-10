@@ -9,6 +9,7 @@ public import ConAgua.Checker.ProgTab
 public import ConAgua.Final.DrvAbi
 public import ConAguaAsm.Checker
 import all ConAgua.Checker.Entry
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -43,7 +44,7 @@ theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k :
   · subst hc
     exact hV.entry1 b pb _ hin 3 (Or.inr rfl) abiFuel hN e he hk
   · subst hc
-    rw [getD_zero_headD] at hge he
+    rw [L.getD_zero] at hge he
     refine hV.entry2 b pb _ hin abiFuel hN rs₁ m₁ h₁ hge abiFuel (by simp [abiFuel])
       (seqMem m₁ MODE PLO PHI OUT HDRF CTLF 138 0 (rs₁.headD 0 - 9223372036854775808))
       ?_ rfl rfl rfl ?_ ?_ e he hk

@@ -4,10 +4,12 @@ Name it in a sync's rules file as `vocab_hook vocab_attr.py` (scripts/reproof-la
 `candidates(proof, ctx)` gets the codemod text of a base proof and returns its variants, tried in
 order (the ladder keeps the first that elaborates):
 
-  sets      the encodings' grind sets (`SETS`) added to every `grind [`, `grind only [`, `sym [`,
-            `sym only [` and `finish [` list that lacks them, and to a bare `finish`;
+  sets      the encodings' grind sets (`SETS`) added to every `grind [`, `grind only [`, `sym [`
+            and `sym only [` list that lacks them, and a list to a bare `sym =>`/`sym only =>`;
   sets+     the same with the costly sets too (`SETS_PLUS`: definitions unfolded, kept out of the
-            everyday sets because every importer that names those pays for them);
+            everyday sets because every importer that names those pays for them), and, since a
+            `finish` list ignores attribute sets, their declarations (`FINISH_PLUS`) added to
+            every `finish [` list and to a bare `finish`;
   specs     `sets+`, and the tagged-load spec set (`SPEC_SCOPES`, scoped `@[spec]` sets) opened
             in front of every tactic line that starts with `vcgen` or `sym` (vcgen reads one
             global `@[spec]` set, so a named set is a scoped one: `open scoped S in vcgen [...]`);
@@ -22,11 +24,21 @@ order (the ladder keeps the first that elaborates):
 
 The sets live in ConAgua/Arena/ErecVocab.lean (`arena_grind`, `erec_grind`, `L.Arena.ErecSpec`) and
 ConAgua/Arena/IWFrame.lean (`ind_grind`); a sync that moves another encoding adds its set here.
+
+An attribute set works only where a grind goal starts (`grind [S]`, `sym [S] => …`): there its
+theorems enter the goal's E-matching state. `finish [S]` inside the block (also `vcgen … with
+finish [S]`) accepts the name but does nothing with it: `finish` elaborates its list
+incrementally (`Lean.Elab.Tactic.Grind.withParams`), which activates the lemmas and definitions
+named one by one (`assertExtra`) and only records the set in the parameters, after the goal's
+E-matching theorems were already fixed when the block started (`mkGoalCore`). So the sets go to the
+`sym`/`grind` list, and a `finish` list gets the declarations themselves (lane dedup2).
 """
 import re
 
 SETS = ["arena_grind"]
 SETS_PLUS = ["erec_grind"]
+# what `SETS_PLUS` holds, named one by one for `finish` lists (`attribute [erec_grind] L.Arena.erRd`)
+FINISH_PLUS = ["erRd"]
 SPEC_SCOPES = ["L.Arena.ErecSpec"]
 IWOK_GRIND = "grind [IWOK_iff, ind_grind, iwTop, erTop, erecTop1]"
 # `L.Ind.IWOK`'s fields in declaration order (ConAgua/Arena/IndIface.lean)
@@ -34,6 +46,8 @@ IWOK_FIELDS = ["iw", "er", "iwSize", "erSize", "ctl", "er1", "er1Size", "erCap",
 
 # a list opener: `grind [`, `grind only [`, `sym only [`, `finish [`, `finish (gen := 20) [`
 LIST = re.compile(r"\b(grind|sym|finish)\b((?:\s+only)?(?:\s*\([^()]*\))*)\s*\[")
+# an entry point without a list: `sym =>`, `sym only =>`
+BARE_SYM = re.compile(r"\bsym\b((?:\s+only)?(?:\s*\([^()]*\))*)(?=\s*=>)")
 BARE_FINISH = re.compile(r"\bfinish\b((?:\s*\([^()]*\))*)(?=\s*(?:$|<;>|\)|;))", re.M)
 
 
@@ -51,25 +65,33 @@ def _close(text, i):
     return -1
 
 
-def add_sets(text, sets=SETS):
+def add_sets(text, sets=SETS, finish=()):
+    """`sets` into every `grind`/`sym` list (and a bare `sym =>`), `finish` into every `finish`
+    list (and a bare `finish`)."""
     out, pos = [], 0
     for m in LIST.finditer(text):
         if m.start() < pos:
+            continue
+        want = list(finish) if m.group(1) == "finish" else sets
+        if not want:
             continue
         lb = m.end() - 1
         rb = _close(text, lb)
         if rb < 0:
             continue
         items = text[lb + 1:rb]
-        missing = [s for s in sets if not re.search(r"\b%s\b" % re.escape(s), items)]
+        missing = [s for s in want if not re.search(r"\b%s\b" % re.escape(s), items)]
         out.append(text[pos:rb])
         if missing:
             out.append((", " if items.strip() else "") + ", ".join(missing))
         pos = rb
     out.append(text[pos:])
     text = "".join(out)
+    text = BARE_SYM.sub(lambda m: f"sym{m.group(1)} [{', '.join(sets)}]", text)
     # a bare `finish` (no list): give it one
-    return BARE_FINISH.sub(lambda m: f"finish{m.group(1)} [{', '.join(sets)}]", text)
+    if finish:
+        text = BARE_FINISH.sub(lambda m: f"finish{m.group(1)} [{', '.join(finish)}]", text)
+    return text
 
 
 def open_specs(text, scopes=SPEC_SCOPES):
@@ -144,7 +166,7 @@ def candidates(proof, ctx):
     out = []
     s = add_sets(proof)
     out.append(("sets", s))
-    s2 = add_sets(s, SETS + SETS_PLUS)
+    s2 = add_sets(s, SETS + SETS_PLUS, FINISH_PLUS)
     out.append(("sets+", s2))
     out.append(("specs", open_specs(s2)))
     w = iwok(s)

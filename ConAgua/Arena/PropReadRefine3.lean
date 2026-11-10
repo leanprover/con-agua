@@ -4,6 +4,7 @@ import ConAgua.Arena.PropReadRefine2
 import ConAgua.Arena.InferBodyDisp
 import ConAgua.Arena.DefEqStuckShape
 public import ConAgua.Arena.PropReadRefine
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -233,11 +234,6 @@ end arm
 
 /-! ## `head_type_pw`, `type_sort_pw` -/
 
-theorem pr_getD1 (l : List Word) : l.getD 1 0 = l.tail.headD 0 := by
-  rcases l with _ | ⟨x, _ | ⟨y, l⟩⟩ <;> rfl
-theorem pr_getD2 (l : List Word) : l.getD 2 0 = l.tail.tail.headD 0 := by
-  rcases l with _ | ⟨x, _ | ⟨y, _ | ⟨z, l⟩⟩⟩ <;> rfl
-
 /-- `headTypePW`'s `.const` arm is `cArmT` at `htResT`. -/
 theorem headTypePW_const (fe : IFEnv) (f : Nat) (root : EIdx) (d : Nat) (h : EIdx) (k : Nat)
     (a : AState) (I : NIdx) (us : LsIdx) (hv : a.store.view h = some (.const I us)) :
@@ -306,12 +302,12 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   · obtain ⟨hg, hi⟩ := hVR
     simp only [hg, show (0 : Word) ≠ 3 by decide, show (0 : Word) ≠ 1 by decide,
       ↓reduceIte, true_and] at hW
-    rw [pr_getD1] at hi
+    rw [L.getD_one] at hi
     by_cases hlt : w.tail.headD 0 < d
     · simp only [hlt, ↓reduceIte] at hW
       have hlt' : i < d.toNat := by rw [← hi]; exact UInt64.lt_iff_toNat_lt.mp hlt
       have hdi : (d - 1 - w.tail.headD 0).toNat = d.toNat - 1 - i := by
-        have h1 : (d - 1).toNat = d.toNat - 1 := pr_word_sub1 d (by intro e; subst e; simp at hlt')
+        have h1 : (d - 1).toNat = d.toNat - 1 := @L.toNat_sub_one_of_ne d (by intro e; subst e; simp at hlt')
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, h1]; omega), h1, hi]
       rcases hb : bdW m (d - 1 - w.tail.headD 0) root with _ | ⟨bf, bd⟩ <;> rw [hb] at hW
       · cases hW
@@ -340,7 +336,7 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       exact ⟨none, a, by rw [hpre]; simp only [hlt', ↓reduceIte]; rfl, RdAfter.refl hS, rfl⟩
   -- fvar
   · obtain ⟨hg, -, hty, hty'⟩ := hVR
-    rw [pr_getD2] at hty hty'
+    rw [L.getD_two] at hty hty'
     simp only [hg, show (1 : Word) ≠ 3 by decide, ↓reduceIte] at hW
     rcases hc2 : callW p n "head_type_res" [vis, f, k, w.tail.tail.headD 0] m with _ | ⟨r₂, m₂⟩ <;>
       rw [hc2] at hW
@@ -358,8 +354,8 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     exact ⟨none, a, by rw [hpre]; rfl, RdAfter.refl hS, rfl⟩
   -- const
   · obtain ⟨hg, hn, hn', husw, hus'⟩ := hVR
-    rw [pr_getD1] at hn hn'
-    rw [pr_getD2] at husw hus'
+    rw [L.getD_one] at hn hn'
+    rw [L.getD_two] at husw hus'
     simp only [hg, ↓reduceIte] at hW
     rcases hc2 : callW p n "head_type_const" [vis, f, k, w.tail.headD 0, w.tail.tail.headD 0] m
       with _ | ⟨r₂, m₂⟩
@@ -423,8 +419,8 @@ theorem tsp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   by_cases hf0 : f' = 0
   · simp [hf0] at hW
   simp only [hf0, ↓reduceIte] at hW
-  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 f' hf0)
-  have hfm := pr_word_sub1 f' hf0
+  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (L.toNat_ne_zero_of_ne f' hf0)
+  have hfm := L.toNat_sub_one_of_ne hf0
   have hj' : j = (f' - 1).toNat := by omega
   have hnf : ((decE rr).tag == ETag.forallE) = false := by
     rw [tag_beq_w rr hrr 6 (by decide) ETag.forallE rfl 6 rfl]; simp [hn6]

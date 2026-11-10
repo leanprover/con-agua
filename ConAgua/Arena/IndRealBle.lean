@@ -15,6 +15,7 @@ public import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.Run
 import all ConAgua.Arena.IndParts
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -115,7 +116,7 @@ theorem bsncW_ok (n : Nat) (m : Mem) (q r : Word) (bs : BlockShape)
   obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
   have e1 : UInt64.ofNat (q.toNat + 1) = q + 1 := by
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-  rw [ofNat_toNat_word] at ho'
+  rw [L.ofNat_toNat] at ho'
   rw [e1] at hl'
   have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
   have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]

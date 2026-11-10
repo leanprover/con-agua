@@ -17,6 +17,7 @@ import ConRon.Bridge.Inductives.GenRec
 public import ConAgua.Arena.RecGenSpec.CfaFv
 public import ConAgua.Arena.RecStab
 import all ConAgua.Arena.RecGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -223,7 +224,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     obtain ⟨teleP, leafP, -, hteleB, hleaf⟩ := ConRon.Bridge.Inductives.denoteBP_some hbp
     obtain ⟨h21, ⟨hdl, hbl⟩, hlwH, hlwD⟩ := hd2
     rw [cfaE.k_strip_pis.arm1 (hc1 := by rw [h21]; decide)]
-    simp only [getD_one, show (1 + 1 : Nat) = 2 from rfl, getD_two] at hdl hbl
+    simp only [L.getD_one, show (1 + 1 : Nat) = 2 from rfl, L.getD_two] at hdl hbl
     have hl3 : (r2.drop 3).headD 0 = r2.tail.tail.tail.headD 0 := by
       rcases r2 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
     rw [hl3] at hlwH hlwD

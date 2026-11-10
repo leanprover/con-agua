@@ -10,6 +10,7 @@ import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndPosSpec.CfW
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -160,7 +161,7 @@ theorem bindRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : B
   have p23 := p2.trans p3
   have hC3 : StageC dn vis fe env m5 a3 := hC.of_pstep hS3 hA3 p23
   have hx03 := p23.ext
-  have hdep1 : (dep + 1).toNat = dep.toNat + 1 := pos2_word_succ hd1
+  have hdep1 : (dep + 1).toNat = dep.toNat + 1 := _root_.L.toNat_add_one_of_ne _ hd1
   have hwb : ConLeche.Expr.WScoped (dep + 1).toNat (bP.instantiate1 (.fvar dep.toNat dP) 0) := by
     rw [hdep1]; exact ConLeche.Expr.WScoped.instantiate1 hww.1 0 hww.2
   have hb2P' : denoteE a3.store (decI (rb.headD 0)) = some (bP.instantiate1 (.fvar dep.toNat dP) 0) := by
@@ -176,7 +177,7 @@ theorem bindRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : B
     rw [npbE.k_nest_pos.eq_1]
     refine RefE.bind_left fun hG => ?_
     have := RefE.run_err hs True.intro hG hR h6c
-    rw [pos2_word_succ hd1, pos2_word_succ hk1, hb2d] at this
+    rw [_root_.L.toNat_add_one_of_ne _ hd1, _root_.L.toNat_add_one_of_ne _ hk1, hb2d] at this
     exact this
   | ok q6 =>
   obtain ⟨rp, m6⟩ := q6
@@ -188,7 +189,7 @@ theorem bindRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : B
   obtain ⟨-, v1, ⟨-, hnbP, -, -⟩, -⟩ := ConRon.Bridge.Inductives.nestPos_spec coreSpecV henv hc
     fu.toNat prog progP (dep + 1).toNat (kb + 1).toNat (decI (rb.headD 0)) _ NS nsP hwb
     a3 a4 x hC3.check ⟨dCtx_ext _ hx03 _ _ hctx, dProg_ext hx03 _ _ hprog, hb2P', dState_ext hx03 _ _ hnsP⟩ hrun4
-  rw [pos2_word_succ hd1, pos2_word_succ hk1, hb2d] at hrun4
+  rw [_root_.L.toNat_add_one_of_ne _ hd1, _root_.L.toNat_add_one_of_ne _ hk1, hb2d] at hrun4
   refine RefE.bind_right hrun4 ?_
   -- the rest: abstracted, rebuilt
   cases h7 : callE p n "abstract1_fast" [CWF, rp.tail.headD 0, dep, 0] m6 with

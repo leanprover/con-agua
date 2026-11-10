@@ -4,6 +4,7 @@ import ConAgua.Rom.CIReadRefData
 import ConAgua.Rom.CIReadRefNames
 import ConAgua.Rom.ReadScr
 public import ConAgua.Rom.CIReadRefCI
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -245,7 +246,7 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (by rw [hpos, encBlock, List.append_assoc]; rfl) (by simp) (by omega)
   simp only [UInt64.add_zero] at hc0
   rw [hc0] at hw
-  have hcN : (UInt64.ofNat cs.length).toNat = cs.length := ofNat_toNat_lt (by omega)
+  have hcN : (UInt64.ofNat cs.length).toNat = cs.length := L.toNat_ofNat_of_lt (by omega)
   have hI0 := RInv.refl hS
   obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
   obtain ⟨hI2, hM2, hs2, -, -, -, hi2, -⟩ := freshCall hL hI0 h2

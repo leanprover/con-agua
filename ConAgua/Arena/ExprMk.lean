@@ -16,6 +16,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -306,10 +307,6 @@ theorem slot_eq_iff {i c t u : Word} (hi : i < 2147483648) (hc : c < 2147483648)
     omega
   · rintro ⟨rfl, rfl⟩; rfl
 
-theorem h01 (x : Word) (hx : x ≤ 1) : x = 0 ∨ x = 1 := by
-  simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj] at *
-  have : (1 : Word).toNat = 1 := rfl; have : (0 : Word).toNat = 0 := rfl; omega
-
 /-- The memory after appending node `c = CTL[k + t]` to a binary table (records `R`, one packed
 word `f | a << 32` per node; slot array `S`, range words `D`, each tiered), outside the slot
 array (the library's `pushRec`), with the new node's range slot zeroed. -/
@@ -335,7 +332,7 @@ theorem pushZ_ctl (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
       if k + t = x ∧ (k + t).toNat < (m.arr64 CTL).size then rdW (m.arr64 CTL) (k + t) + 1
       else rdW (m.arr64 CTL) x := by
   rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
-  rcases h01 t ht with rfl | rfl <;>
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;>
   simp [pushZ, Mem.arr64_set64_ne, Mem.arr64_set32_ne, rdW_set64E, CTL, ADER, AREC, LADER, LAREC,
     FADER, FAREC]
 
@@ -345,7 +342,7 @@ theorem pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
           (rdW (m.arr64 CTL) (k + t) / 2).toNat < (m.arr64 (tierA D t)).size then 0
       else p32Get (m.arr64 (tierA D t)) x := by
   rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
-  rcases h01 t ht with rfl | rfl <;>
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;>
   simp [pushZ, p32Get_set32, Mem.arr64_set64_ne, CTL, ADER, AREC, LADER, LAREC,
     FADER, FAREC]
 
@@ -398,7 +395,7 @@ theorem der_pushZ_A (hT : BinTbl R S D k) (hsel : R = AREC ∧ S = ASLOT ∧ D =
   have h1 : rdW ((pushZ R S D k m t f a).arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := by
     rw [hctl]
     rcases hT with ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩ <;>
-      rcases h01 t ht with rfl | rfl <;> simp
+      rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;> simp
   have key : rdW (m.arr64 CTL) (k + t) ≤ idxW h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxW h →
       idxW h = rdW (m.arr64 CTL) (k + t) := by
     simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
@@ -443,7 +440,7 @@ theorem der_pushZ_A (hT : BinTbl R S D k) (hsel : R = AREC ∧ S = ASLOT ∧ D =
       else pcol m D (tierW h) i :=
     fun i => pcol_pushZ_der m t f a hT ht _ htw i
   obtain ⟨rfl, rfl, rfl, rfl⟩ := hsel
-  rcases h01 t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   all_goals simp (config := {decide := true}) only [derBW, derFW, exprLPW, h1, hcnt]
   all_goals simp only [ho BVAR (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide),
     ho CONST_LP (by decide) (by decide) (by decide), hoP LEDER (by decide) (by decide) (by decide), hoP PJDER (by decide) (by decide) (by decide)]
@@ -452,7 +449,7 @@ theorem der_pushZ_A (hT : BinTbl R S D k) (hsel : R = AREC ∧ S = ASLOT ∧ D =
   all_goals try simp only [hoP FADER (by decide) (by decide) (by decide)]
   all_goals try simp only [hd]
   all_goals
-    rcases h01 _ htw with e | e <;> simp only [e] <;>
+    rcases L.eq_zero_or_eq_one_of_le_one _ htw with e | e <;> simp only [e] <;>
       simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, APP, LAM, FORALL, BVAR,
         FVAR, LET, PROJ, SORT, CONST, UInt64.add_zero, ite_false, ite_true, true_and, false_and,
         and_false, and_true, tcnt, tfld, pcol, TRec.ad, TRec.wd, TRec.ex, tierA_zero, tierA_one] at * <;>
@@ -474,7 +471,7 @@ theorem der_pushZ_LA (hT : BinTbl R S D k) (hsel : R = LAREC ∧ S = LASLOT ∧ 
   have h1 : rdW ((pushZ R S D k m t f a).arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := by
     rw [hctl]
     rcases hT with ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩ <;>
-      rcases h01 t ht with rfl | rfl <;> simp
+      rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;> simp
   have key : rdW (m.arr64 CTL) (k + t) ≤ idxW h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxW h →
       idxW h = rdW (m.arr64 CTL) (k + t) := by
     simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
@@ -519,7 +516,7 @@ theorem der_pushZ_LA (hT : BinTbl R S D k) (hsel : R = LAREC ∧ S = LASLOT ∧ 
       else pcol m D (tierW h) i :=
     fun i => pcol_pushZ_der m t f a hT ht _ htw i
   obtain ⟨rfl, rfl, rfl, rfl⟩ := hsel
-  rcases h01 t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   all_goals simp (config := {decide := true}) only [derBW, derFW, exprLPW, h1, hcnt]
   all_goals simp only [ho BVAR (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide),
     ho CONST_LP (by decide) (by decide) (by decide), hoP LEDER (by decide) (by decide) (by decide), hoP PJDER (by decide) (by decide) (by decide)]
@@ -528,7 +525,7 @@ theorem der_pushZ_LA (hT : BinTbl R S D k) (hsel : R = LAREC ∧ S = LASLOT ∧ 
   all_goals try simp only [hoP FADER (by decide) (by decide) (by decide)]
   all_goals try simp only [hd]
   all_goals
-    rcases h01 _ htw with e | e <;> simp only [e] <;>
+    rcases L.eq_zero_or_eq_one_of_le_one _ htw with e | e <;> simp only [e] <;>
       simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, APP, LAM, FORALL, BVAR,
         FVAR, LET, PROJ, SORT, CONST, UInt64.add_zero, ite_false, ite_true, true_and, false_and,
         and_false, and_true, tcnt, tfld, pcol, TRec.ad, TRec.wd, TRec.ex, tierA_zero, tierA_one] at * <;>
@@ -550,7 +547,7 @@ theorem der_pushZ_FA (hT : BinTbl R S D k) (hsel : R = FAREC ∧ S = FASLOT ∧ 
   have h1 : rdW ((pushZ R S D k m t f a).arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := by
     rw [hctl]
     rcases hT with ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩ <;>
-      rcases h01 t ht with rfl | rfl <;> simp
+      rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;> simp
   have key : rdW (m.arr64 CTL) (k + t) ≤ idxW h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxW h →
       idxW h = rdW (m.arr64 CTL) (k + t) := by
     simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
@@ -595,7 +592,7 @@ theorem der_pushZ_FA (hT : BinTbl R S D k) (hsel : R = FAREC ∧ S = FASLOT ∧ 
       else pcol m D (tierW h) i :=
     fun i => pcol_pushZ_der m t f a hT ht _ htw i
   obtain ⟨rfl, rfl, rfl, rfl⟩ := hsel
-  rcases h01 t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   all_goals simp (config := {decide := true}) only [derBW, derFW, exprLPW, h1, hcnt]
   all_goals simp only [ho BVAR (by decide) (by decide) (by decide), ho FVAR (by decide) (by decide) (by decide), ho FVAR_LP (by decide) (by decide) (by decide), ho SORT_LP (by decide) (by decide) (by decide),
     ho CONST_LP (by decide) (by decide) (by decide), hoP LEDER (by decide) (by decide) (by decide), hoP PJDER (by decide) (by decide) (by decide)]
@@ -604,7 +601,7 @@ theorem der_pushZ_FA (hT : BinTbl R S D k) (hsel : R = FAREC ∧ S = FASLOT ∧ 
   all_goals try simp only [hoP FADER (by decide) (by decide) (by decide)]
   all_goals try simp only [hd]
   all_goals
-    rcases h01 _ htw with e | e <;> simp only [e] <;>
+    rcases L.eq_zero_or_eq_one_of_le_one _ htw with e | e <;> simp only [e] <;>
       simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, APP, LAM, FORALL, BVAR,
         FVAR, LET, PROJ, SORT, CONST, UInt64.add_zero, ite_false, ite_true, true_and, false_and,
         and_false, and_true, tcnt, tfld, pcol, TRec.ad, TRec.wd, TRec.ex, tierA_zero, tierA_one] at * <;>
@@ -671,7 +668,7 @@ theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some 
     rw [← apushOK_eqC] at hok
     simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
   refine ⟨t, ht, h, he, ?_⟩
-  rcases h01 t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   · rw [show (if (0 : Word) = 0 then appCS.P else appCS.S) + cntC appCS m 0 = hdA 0 (acnt m 0) by simp [appCS, appP, hdA, cntC, acnt]]
     exact hw_fieldsA _ _ (by decide) h
   · rw [show (if (1 : Word) = 0 then appCS.P else appCS.S) + cntC appCS m 1 = hdA 1 (acnt m 1) by simp [appCS, appS, hdA, cntC, acnt]]
@@ -717,7 +714,7 @@ theorem lainternW_grow {m m₁ : Mem} {f a r : Word} (hI : lainternW m f a = som
     rw [← lapushOK_eqC] at hok
     simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
   refine ⟨t, ht, h, he, ?_⟩
-  rcases h01 t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   · rw [show (if (0 : Word) = 0 then lamCS.P else lamCS.S) + cntC lamCS m 0 = hdW 5 0 (lacnt m 0) by simp [lamCS, lamP, hdW, cntC, lacnt]]
     exact hw_fieldsN _ _ _ (by decide) (by decide) h
   · rw [show (if (1 : Word) = 0 then lamCS.P else lamCS.S) + cntC lamCS m 1 = hdW 5 1 (lacnt m 1) by simp [lamCS, lamS, hdW, cntC, lacnt]]
@@ -758,7 +755,7 @@ theorem fainternW_grow {m m₁ : Mem} {f a r : Word} (hI : fainternW m f a = som
     rw [← fapushOK_eqC] at hok
     simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
   refine ⟨t, ht, h, he, ?_⟩
-  rcases h01 t ht with rfl | rfl
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   · rw [show (if (0 : Word) = 0 then forallCS.P else forallCS.S) + cntC forallCS m 0 = hdW 6 0 (facnt m 0) by simp [forallCS, forallP, hdW, cntC, facnt]]
     exact hw_fieldsN _ _ _ (by decide) (by decide) h
   · rw [show (if (1 : Word) = 0 then forallCS.P else forallCS.S) + cntC forallCS m 1 = hdW 6 1 (facnt m 1) by simp [forallCS, forallS, hdW, cntC, facnt]]

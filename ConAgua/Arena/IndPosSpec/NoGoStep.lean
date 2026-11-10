@@ -12,6 +12,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.StageInst1
 import all ConAgua.Arena.IndPos
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -510,32 +511,32 @@ theorem noNode_arm (k : Nat) (ih : NoGoOK k) (vl : List Word) (v : ENodeView) (h
         .ok ((b, mp'), a) ∧ (r != 0) = b ∧ noMR m' mp' ∧ MemFrame [NOM] [205] m m' := by
   cases v with
   | app f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := noNodeBin_ok k ih m m' a no nl lo hi f1 _ _ _ _ r ws mp (Or.inl hg) hx hy hn hA hws hwlt hM
     rw [hdx, hdy] at this
     simp only [noArm]; exact this
   | lam f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := noNodeBin_ok k ih m m' a no nl lo hi f1 _ _ _ _ r ws mp (Or.inr (Or.inl hg)) hx hy hn hA hws hwlt hM
     rw [hdx, hdy] at this
     simp only [noArm]; exact this
   | forallE f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := noNodeBin_ok k ih m m' a no nl lo hi f1 _ _ _ _ r ws mp (Or.inr (Or.inr hg)) hx hy hn hA hws hwlt hM
     rw [hdx, hdy] at this
     simp only [noArm]; exact this
   | letE t v' b' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy, hz, hdz⟩ := hvr
     rw [hg] at hn
     have := noNodeLet_ok k ih m m' a no nl lo hi f1 _ _ _ r ws mp hx hy hz hn hA hws hwlt hM
     rw [hdx, hdy, hdz] at this
     simp only [noArm]; exact this
   | proj s i e =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, -, hz, hdz⟩ := hvr
     rw [hg] at hn
     have := noNodeProj_ok k ih m m' a no nl lo hi f1 _ _ _ r ws mp hz hn hA hws hwlt hM
@@ -589,7 +590,7 @@ theorem noGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) (m m' :
       rcases hset : msetG noSch m1 h 0 rn with _ | m2 <;> rw [hset] at hb; · simp [noG5] at hb
       rw [noG5_some] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-      have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+      have hF1 : (f - 1).toNat = F := by rw [L.toNat_sub_one_of_ne hf0, hF]; rfl
       obtain ⟨bb, mp1, hr1, hbb, hM1, hfr1⟩ := noNode_arm k (ih k (by omega)) vl v hvr hnv m m1 a no nl lo hi
         (f - 1) rn ws mp hnode hA hws hwlt hM
       rw [hF1] at hr1
@@ -606,7 +607,7 @@ theorem noGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) : NoGoOK
   by_cases hf0 : f = 0
   · rw [noGoW_abort j m no nl lo hi f h hf0] at hb; simp at hb
   rw [noGoW_view j m no nl lo hi f h hf0] at hb
-  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := toNat_ne_zero' hf0; omega⟩
+  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := L.toNat_ne_zero_of_ne _ hf0; omega⟩
   cases hvl : eViewW m h with
   | nil => rw [hvl] at hb; simp [noG1] at hb
   | cons g vt =>
@@ -634,7 +635,7 @@ theorem noGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) : NoGoOK
       exact ⟨false, mp, rfl, rfl, hM, MemFrame.refl _ _ _⟩
     | const nn us =>
       rw [hF, nestOccGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
-      simp only [ViewR, getD1_eq'] at hvr
+      simp only [ViewR, L.getD_one] at hvr
       obtain ⟨hg3, hx, hdx, -⟩ := hvr
       have hg3' : (g :: vt).headD 0 = 3 := hg3
       rw [noG1_const j m no nl lo hi f h _ (by simp) (by rw [hg3']; decide) (by rw [hg3']; decide) hg3'] at hb
@@ -649,7 +650,7 @@ theorem noGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) : NoGoOK
         cases bc <;> simp
     | fvar i ty =>
       rw [hF, nestOccGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
-      simp only [ViewR, getD1_eq'] at hvr
+      simp only [ViewR, L.getD_one] at hvr
       obtain ⟨hg1, hix, -⟩ := hvr
       have hg1' : (g :: vt).headD 0 = 1 := hg1
       rw [noG1_fvar j m no nl lo hi f h _ (by simp) (by rw [hg1']; decide) hg1'] at hb

@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Verdict.PosE
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Arena.IndPosSpec.GgW
@@ -10,6 +9,7 @@ import ConAgua.Arena.IndPosSpec.SnocWMfr
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPosSpec.CfW
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -73,7 +73,7 @@ theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn v
   obtain ⟨hp0, hp1, q, hq, hcvv, hnF⟩ := hcn
   simp only [Nat.add_zero, List.getElem_cons_zero] at hw hcvv hnF
   have hrw : rdW (m.arr64 IW) cO = w := by simp [rdW, hw]
-  have hw1 : (w + 1).toNat = w.toNat + 1 := word_add_toNat (by simp; omega)
+  have hw1 : (w + 1).toNat = w.toNat + 1 := _root_.L.toNat_add_of_lt _ _ (by simp; omega)
   have hrq : (rdW (m.arr64 IW) w).toNat = q := by
     have := rd_iwN (m := m) (p := w) (i := 0) (by simpa using hq) (by simp; omega); simpa using this
   have hrn : (rdW (m.arr64 IW) (w + 1)).toNat = nFn := rd_iwN (by simpa using hnF) (by simp; omega)
@@ -127,8 +127,8 @@ theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn v
     rw [h30, h31]
     exact pos2_decB_snoc decKE_mono (hout.grow hg12) hg3 (by omega) hw3 hx3 (DecB.grow (decKE_mono _) hg3 hke)
   have hg13 := hg12.trans hg3
-  have hcO1 : (cO + 1).toNat = cO.toNat + 1 := word_add_toNat (by simp; omega)
-  have hcL1 : (cL - 1).toNat = cs'.length := by rw [pos2_word_pred h0]; omega
+  have hcO1 : (cO + 1).toNat = cO.toNat + 1 := _root_.L.toNat_add_of_lt _ _ (by simp; omega)
+  have hcL1 : (cL - 1).toNat = cs'.length := by rw [_root_.L.toNat_sub_one_of_ne h0]; omega
   have hA3 : AbsOK m3 := snocW_afr hsn (posRecW_afr hr3 hA1)
   have hC3 : StageC dn vis fe env m3 a1 := hC1.of_pstep hS3 hA3 (PStep.refl hC1.check.state)
   -- the rest

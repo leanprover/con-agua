@@ -12,6 +12,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndPos
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -295,18 +296,6 @@ theorem iwN_rdw {m : Mem} {w : Word} {v : Nat} (h : iwN m w.toNat = some v) :
   have := iwN_rdW h w.toNat_lt
   rwa [UInt64.ofNat_toNat] at this
 
-theorem toNat_add_one' {w : Word} (h : w.toNat + 1 < 2 ^ 64) : (w + 1).toNat = w.toNat + 1 := by
-  rw [UInt64.toNat_add]; simp; omega
-
-theorem toNat_sub_one' {w : Word} (h : w ≠ 0) : (w - 1).toNat = w.toNat - 1 := by
-  have : w.toNat ≠ 0 := fun h0 => h (UInt64.toNat_inj.mp (by simpa using h0))
-  have h1 : (1 : Word).toNat = 1 := by decide
-  have : (1 : Word) ≤ w := UInt64.le_iff_toNat_le.mpr (by omega)
-  rw [UInt64.toNat_sub_of_le _ _ this, h1]
-
-theorem toNat_ne_zero' {w : Word} (h : w ≠ 0) : w.toNat ≠ 0 :=
-  fun h0 => h (UInt64.toNat_inj.mp (by simpa using h0))
-
 /-! ## `nest_kinds_flat_mid`, `nest_kinds_flat` -/
 
 l_model nestKindsFlatMid_spec (p : Prog) (hf : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat)
@@ -326,12 +315,12 @@ theorem decPL_step {m : Mem} {α : Type} {f : Nat → Option α} {off cnt : Word
     ∃ v y xs', iwN m off.toNat = some v ∧ f v = some y ∧
       decPL m f (off + 1).toNat (cnt - 1).toNat = some xs' ∧ xs = y :: xs' ∧
       rdW (m.arr64 IW) off = UInt64.ofNat v ∧ v < 2 ^ 64 := by
-  have hc1 : cnt.toNat = (cnt.toNat - 1) + 1 := by have := toNat_ne_zero' hc; omega
+  have hc1 : cnt.toNat = (cnt.toNat - 1) + 1 := by have := L.toNat_ne_zero_of_ne _ hc; omega
   rw [hc1, decPL_succ] at h
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨v, hv, y, hy, xs', hxs', rfl⟩ := h
   have hlt := iwN_idx hv
-  rw [toNat_add_one' (by omega), toNat_sub_one' hc]
+  rw [L.toNat_add_one_of_lt (by omega), L.toNat_sub_one_of_ne hc]
   exact ⟨v, y, xs', hv, hy, hxs', rfl, iwN_rdw hv⟩
 
 /-- A header-and-slice record read twice. -/

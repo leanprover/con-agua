@@ -2,10 +2,10 @@ module
 
 import ConAgua.Arena.CoreWalks
 public import ConAgua.Arena.InstLP
-import ConAgua.Arena.LevelInternRef
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.DerRel
 public import ConAgua.Arena.LevelApd
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -84,7 +84,7 @@ theorem NmsR.of_below {N : Word → Name → Prop} {m m' : Mem} {A : ArrId} {t :
       rcases Nat.eq_zero_or_pos k.toNat with h | h
       · exact absurd (UInt64.toNat_inj.mp (by simpa using h)) hk0
       · omega
-    have ho1 : (o + 1).toNat = o.toNat + 1 := toNat_succ_lt (by omega)
+    have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hkm : (k - 1).toNat = k.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
     exact .cons hk0 (by rw [hb o (by omega)]; exact hx) (ih (by rw [ho1, hkm]; omega))

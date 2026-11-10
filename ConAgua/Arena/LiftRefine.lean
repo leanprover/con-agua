@@ -2,11 +2,11 @@ module
 
 public import ConAgua.Arena.LiftSpec
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.FVarRangeRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.View
 public import ConAgua.Arena.DerRelBase
 public import ConRon.Arena.ExprOps
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -128,21 +128,12 @@ theorem cut_iff (x c : Word) :
   have e2 : x ≤ c ↔ x.toNat ≤ c.toNat := UInt64.le_iff_toNat_le
   rw [e1, e2, Bool.and_eq_true, decide_eq_true_iff, decide_eq_true_iff]; rfl
 
-/-- No wrap: `x + y` is not below `x`. -/
-theorem add_noovf (x y : Word) (h : ¬ x + y < x) : (x + y).toNat = x.toNat + y.toNat := by
-  rw [UInt64.toNat_add]
-  have := x.toNat_lt; have := y.toNat_lt
-  rcases Nat.lt_or_ge (x.toNat + y.toNat) (2 ^ 64) with hl | hl
-  · exact Nat.mod_eq_of_lt hl
-  · exfalso; apply h; rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add]
-    rw [Nat.mod_eq_sub_mod hl, Nat.mod_eq_of_lt (by omega)]; omega
-
 theorem lgoOK_succ (n : Nat) (ih : LArmOK n) : LGoOK (n + 1) := by
   intro m m' a h c k fu r hA hh hb
   by_cases hfu : fu = 0
   · rw [liftW] at hb; simp [hfu] at hb
   have hd := derBW_ok m a hA.1 hA.2 h hh
-  rw [ctrW_toNat fu hfu, liftLooseBVarsGo_succ, StateT.run_bind, derivedE_run]
+  rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, liftLooseBVarsGo_succ, StateT.run_bind, derivedE_run]
   simp only [except_ok_bind]
   by_cases hcut : derBW m h < 32767 ∧ derBW m h ≤ c
   · rw [liftW.arm1 n m h c k fu hfu hcut] at hb
@@ -178,7 +169,7 @@ theorem lgoOK_succ (n : Nat) (ih : LArmOK n) : LGoOK (n + 1) := by
     have hge : (tfld m BVAR (tierW h) (idxW h) 0).toNat ≥ c.toNat := by
       have := UInt64.not_lt.mp hl; exact UInt64.le_iff_toNat_le.mp this
     simp only [hge, ↓reduceIte]
-    rw [← add_noovf _ _ ho, AM.run_of_ok _ _ hok, hres]; exact ⟨_, rfl, hA'⟩
+    rw [← L.toNat_add_of_not_lt ho, AM.run_of_ok _ _ hok, hres]; exact ⟨_, rfl, hA'⟩
   have arm := fun c0 (hc : ¬ tcnt m c0 (tierW h) ≤ idxW h) =>
     ih m m' a h c k (fu - 1) r hA hh
   by_cases g4 : tagW h = 4
@@ -351,7 +342,7 @@ theorem lamArm_ok (hv : viewOK m h LAM) (hg : tagW h = 5) :
   simp only [h1, h2, liftLamW.k_lift_go, liftLamW.k_lift_go_2] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ c k fu x hA hfw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (c + 1) k fu y hA₁ haw h2
-  rw [succW_toNat c hc1] at ha₂
+  rw [L.toNat_add_one_of_ne c hc1] at ha₂
   obtain ⟨a', h3, h4⟩ := tail_ok _ _ a₂ h c r m' hh (fun r₃ m₃ h => mkLam_ok m₂ a₂ hA₂ x y r₃ m₃ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
 
@@ -379,7 +370,7 @@ theorem forallArm_ok (hv : viewOK m h FORALL) (hg : tagW h = 6) :
   simp only [h1, h2, liftForallW.k_lift_go, liftForallW.k_lift_go_2] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ c k fu x hA hfw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (c + 1) k fu y hA₁ haw h2
-  rw [succW_toNat c hc1] at ha₂
+  rw [L.toNat_add_one_of_ne c hc1] at ha₂
   obtain ⟨a', h3, h4⟩ := tail_ok _ _ a₂ h c r m' hh (fun r₃ m₃ h => mkForall_ok m₂ a₂ hA₂ x y r₃ m₃ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
 
@@ -413,7 +404,7 @@ theorem letArm_ok (hv : viewOK m h LET) (hg : tagW h = 7) :
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ c k fu x hA htw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ c k fu y hA₁ hvw h2
   obtain ⟨a₃, ha₃, hA₃⟩ := ih m₂ m₃ a₂ _ (c + 1) k fu z hA₂ hbw h3
-  rw [succW_toNat c hc1] at ha₃
+  rw [L.toNat_add_one_of_ne c hc1] at ha₃
   obtain ⟨a', h4, h5⟩ := tail_ok _ _ a₃ h c r m' hh
     (fun r₄ m₄ h => mkLet_ok m₃ a₃ hA₃ x y z r₄ m₄ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, ha₃, except_ok_bind]; exact h4, h5⟩

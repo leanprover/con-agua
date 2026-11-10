@@ -5,6 +5,7 @@ public import ConAgua.Checker.HoistOrderRef
 public import ConAgua.Checker.HoistIndexRef
 public import ConAgua.Checker.HoistNatRef
 public import ConAgua.Checker.HoistWalkRef
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -40,7 +41,7 @@ theorem ordR_low {m m' : Mem} {ord : Word} {ds : Array IDeclaration} (B : Nat) (
     (hIW : ∀ x : Nat, x < B → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?)
     (hD : m'.arr64 DECL = m.arr64 DECL) (hP : m'.arr64 DLP = m.arr64 DLP) : OrdR m' ord ds := by
   intro k hk
-  have hn : (ord + UInt64.ofNat k).toNat = ord.toNat + k := addW_toNat _ _ (by omega)
+  have hn : (ord + UInt64.ofNat k).toNat = ord.toNat + k := L.toNat_add_ofNat_of_lt _ _ (by omega)
   have hr : rdW (m'.arr64 IW) (ord + UInt64.ofNat k) = rdW (m.arr64 IW) (ord + UInt64.ofNat k) := by
     simp only [rdW, hn]; rw [hIW _ (by omega)]
   rw [hr, hD, hP]

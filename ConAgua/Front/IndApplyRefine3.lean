@@ -3,6 +3,7 @@ module
 public import ConAgua.Front.IndApplyRefine2
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Front.IndApplyRefine
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -90,7 +91,7 @@ theorem listedGoW_twin : ∀ (n : Nat) (m m' : Mem) (j : Word), listedGoW n m to
     obtain ⟨i1, i2, i3, i4⟩ := idsGoW_facts n m m₁ _ _ 0 hg hT (UInt64.le_iff_toNat_le.mpr (Nat.zero_le _))
       (by rw [hc4]; exact n2)
     simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero, hc4] at i3 i4
-    have hj1 := wsucc j tn hjt
+    have hj1 := _root_.L.toNat_add_one_of_word_lt j tn hjt
     obtain ⟨L, lr, le, lt, ltop, lfl, lb, llen⟩ := ih m₁ m' (j + 1) h (hE.trans i1) i2
       (UInt64.le_iff_toNat_le.mpr (by rw [hj1]; exact hjn))
     have hl0 : (tys[j.toNat].ctors.mapM st.name).run a =
@@ -157,9 +158,9 @@ theorem listedW_twin {n : Nat} {m m' : Mem} {fo x : Word} (h : listedW n m to tn
   have hw : (rdW (m₂.arr64 IFL) 0).toNat = topN m IFL + L.flatten.length := by
     rw [e0]; show topN m₂ IFL = _; rw [l4, a4]
   have hlo : lo.toNat ≤ (rdW (m₂.arr64 IFL) 0 + 1).toNat := by
-    rw [widx2 _ _ (by simp; omega)]; simp; omega
+    rw [_root_.L.toNat_add_of_lt _ _ (by simp; omega)]; simp; omega
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hlo),
-    widx2 _ _ (by simp; omega), hw, a3]
+    _root_.L.toNat_add_of_lt _ _ (by simp; omega), hw, a3]
   simp only [UInt64.toNat_one]; omega
 
 end listed
@@ -183,7 +184,7 @@ theorem containsW_facts : ∀ (n : Nat) (m : Mem) (o l x j r : Word), containsW 
       exact ⟨fun h => absurd rfl h, fun _ k h1 h2 => by omega⟩
     rename_i hlj
     have hjl := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlj)
-    have hoj : (o + j).toNat = o.toNat + j.toNat := widx2 _ _ (by omega)
+    have hoj : (o + j).toNat = o.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
     split at h
     · rename_i hx
       cases h
@@ -191,7 +192,7 @@ theorem containsW_facts : ∀ (n : Nat) (m : Mem) (o l x j r : Word), containsW 
       exact ⟨fun _ => ⟨j.toNat, Nat.le_refl _, hjl, hx⟩, fun h => absurd h (by decide)⟩
     · rename_i hx
       rw [wd_eq, hoj] at hx
-      have hj1 := wsucc j l (UInt64.not_le.mp hlj)
+      have hj1 := L.toNat_add_one_of_word_lt j l (UInt64.not_le.mp hlj)
       obtain ⟨i1, i2⟩ := ih m o l x (j + 1) r h hb
       rw [hj1] at i1 i2
       refine ⟨fun hr => ?_, fun hr k h1 h2 => ?_⟩
@@ -215,8 +216,8 @@ theorem nodupW_facts : ∀ (n : Nat) (m : Mem) (o l j u : Word), nodupW n m o l 
       intro i i' h1 h2 h3; omega
     rename_i hlj
     have hjl := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlj)
-    have hj1 := wsucc j l (UInt64.not_le.mp hlj)
-    have hoj : (o + j).toNat = o.toNat + j.toNat := widx2 _ _ (by omega)
+    have hj1 := L.toNat_add_one_of_word_lt j l (UInt64.not_le.mp hlj)
+    have hoj : (o + j).toNat = o.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
     rcases hc : containsW n m o l (rdW (m.arr64 IFL) (o + j)) (j + 1) with _ | c <;> simp only [hc, nodupW.k_ifl_contains, reduceCtorEq] at h
     split at h
     · cases h; exact absurd rfl hu
@@ -267,8 +268,8 @@ theorem findLastW_facts : ∀ (n : Nat) (m : Mem) (o x j f k : Word), findLastW 
     have hj1 : (j - 1).toNat = j.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
     have hoj : (o + j - 1).toNat = o.toNat + (j.toNat - 1) := by
-      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [widx2 _ _ hb]; simp; omega)),
-        widx2 _ _ hb]; simp; omega
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [L.toNat_add_of_lt _ _ hb]; simp; omega)),
+        L.toNat_add_of_lt _ _ hb]; simp; omega
     split at h
     · rename_i hx
       cases h

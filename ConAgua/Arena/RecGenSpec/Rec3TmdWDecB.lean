@@ -45,15 +45,6 @@ theorem rec3Sim_rsim {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : 
     {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
     RSim mo op a (fun b a' x => Q b.1 x b.2 a') := fun b hb => h b.1 b.2 hb
 
-/-- A word sum that does not wrap. -/
-theorem rec3Add_toNat {a b : Word} (h : ¬ a + b < a) : (a + b).toNat = a.toNat + b.toNat := by
-  have h' : ¬ (a + b).toNat < a.toNat := fun x => h (UInt64.lt_iff_toNat_lt.mpr x)
-  rw [UInt64.toNat_add] at h' ⊢
-  have := a.toNat_lt; have := b.toNat_lt
-  by_cases hc : a.toNat + b.toNat < 2 ^ 64
-  · exact Nat.mod_eq_of_lt hc
-  · exfalso; apply h'; rw [Nat.mod_eq_sub_mod (by omega), Nat.mod_eq_of_lt (by omega)]; omega
-
 /-- The slots' count and the constructors of a class generator decoded below the tops. -/
 theorem rec3CG_parts {m : Mem} {g : Nat} {G : ClassGen} (h : DecB (fun m => decCG m g) m G) :
     iwN m (g + 8) = some G.slots.length ∧

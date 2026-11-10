@@ -12,6 +12,7 @@ public import ConAgua.Arena.IndCopy2
 public import ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndParts
 import ConAgua.L.ModelGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -125,7 +126,7 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
   obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
   have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-  rw [ofNat_toNat_word] at ho'
+  rw [L.ofNat_toNat] at ho'
   rw [e1] at hl'
   have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
   have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
@@ -384,7 +385,7 @@ theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockSh
   obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
   have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-  rw [ofNat_toNat_word] at ho'
+  rw [L.ofNat_toNat] at ho'
   rw [e1] at hl'
   cases n with
   | zero => simp [lpsW] at h

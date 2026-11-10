@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Checker.HoistOrderRef2
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -42,9 +43,6 @@ theorem tgW_eq_zero (o : Option Nat) (h : ∀ x, o = some x → x + 1 < 2 ^ 64) 
   cases o with
   | none => simp [tgW]
   | some x => simp only [reduceCtorEq, iff_false]; exact tgW_some_ne x (h x rfl)
-
-theorem toNat_succ (k : Word) (h : k.toNat + 1 < 2 ^ 64) : (k + 1).toNat = k.toNat + 1 := by
-  rw [UInt64.toNat_add]; simp; omega
 
 theorem word_succ (k : Word) : k + 1 = UInt64.ofNat (k.toNat + 1) := by
   rw [UInt64.ofNat_add, UInt64.ofNat_toNat]; rfl
@@ -92,7 +90,7 @@ theorem hZero_ok (n : Nat) : ∀ (m m' : Mem) (o c k r : Word),
       rw [iteF (by omega)]
     · rw [hZeroW.arm2 n m o c k hck] at h
       rw [word_le] at hck
-      have hk1 := toNat_succ k (by omega)
+      have hk1 := @L.toNat_add_one_of_lt k (by omega)
       have hs1 : ((m.set64 IW (o + k) 0).arr64 IW).size = (m.arr64 IW).size := size_set64 _ _ _ _ _
       obtain ⟨hf, hr⟩ := ih _ _ o c (k + 1) r (by rw [hs1]; omega) (by rw [hs1]; omega) h
       refine ⟨(frame_set m _ _).trans hf, fun i hi => ?_⟩
@@ -134,7 +132,7 @@ theorem hAny_ok (n : Nat) (m : Mem) (tg c : Word) (T : Std.HashMap Nat Nat)
       · rw [hAnyW.arm3 n m tg c k (by rw [word_le]; omega) (Decidable.of_not_not hne)] at h
         obtain ⟨rfl, hr⟩ := ih (k + 1) r m' h
         refine ⟨rfl, ?_⟩
-        rw [hr, toNat_succ k (by omega)]
+        rw [hr, @L.toNat_add_one_of_lt k (by omega)]
         have hk : T[k.toNat]? = none := by rw [← hz, ← hrd]; exact Decidable.of_not_not hne
         constructor
         · intro h j h1 h2
@@ -186,7 +184,7 @@ theorem hBucket_ok (T : Std.HashMap Nat Nat) (tg c hd tl nx : Word)
       exact ⟨MemFrame.refl _ _ _, fun _ _ => rfl, hB⟩
     · have hck' := hck
       rw [word_le] at hck'
-      have hk1 := toNat_succ k (by omega)
+      have hk1 := @L.toNat_add_one_of_lt k (by omega)
       have hrd : rdW (m.arr64 IW) (tg + k) = tgW T[k.toNat]? := by
         rw [addrW]; exact htg _ (by omega)
       cases hT : T[k.toNat]? with
@@ -327,7 +325,7 @@ theorem hChain_ok (T : Std.HashMap Nat Nat) (ord nx out : Word) (C : Nat) (w : N
       rw [hh, tgW_some] at h
       rw [hChainW.arm2 n m ord nx out q _ (by rw [← tgW_some]; exact tgW_some_ne x (by omega)),
         addr1, addr1, addrW] at h
-      have hq1 := toNat_succ q (by omega)
+      have hq1 := @L.toNat_add_one_of_lt q (by omega)
       have hr1 := fun j hj => rd_set m (out.toNat + q.toNat) j
         (rdW (m.arr64 IW) (UInt64.ofNat (ord.toNat + x))) (by omega) hj
       have he : rdW ((m.set64 IW (UInt64.ofNat (out.toNat + q.toNat))
@@ -389,7 +387,7 @@ theorem hEmit_ok (T : Std.HashMap Nat Nat) (ord c tg hd nx out : Word) (w : Nat 
     · have hcp' := hcp
       rw [word_le] at hcp'
       have hpc' : p.toNat < c.toNat := by omega
-      have hp1 := toNat_succ p (by omega)
+      have hp1 := @L.toNat_add_one_of_lt p (by omega)
       rw [hEmitW.arm2 n m ord c tg hd nx out q p hcp, addrW] at h
       rw [show rdW (m.arr64 IW) (UInt64.ofNat (hd.toNat + p.toNat)) =
         tgW (posT T p.toNat 0 c.toNat).head? from hhd _ hpc'] at h
@@ -423,7 +421,7 @@ theorem hEmit_ok (T : Std.HashMap Nat Nat) (ord c tg hd nx out : Word) (w : Nat 
             have hr2 := fun j hj => rd_set m1 (out.toNat + q1.toNat) j
               (rdW (m1.arr64 IW) (UInt64.ofNat (ord.toNat + p.toNat))) (by omega) hj
             refine ⟨_, _, h, frame_set _ _ _, ?_, ?_, ?_⟩
-            · simp only [ite_true, List.length_singleton]; exact toNat_succ q1 (by omega)
+            · simp only [ite_true, List.length_singleton]; exact @L.toNat_add_one_of_lt q1 (by omega)
             · intro i y hy
               simp only [ite_true] at hy
               cases i with

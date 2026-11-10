@@ -12,6 +12,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 import all ConAgua.Arena.IndPos2
 import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -107,10 +108,10 @@ theorem nhGoW_ok (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
     simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hns2
     obtain ⟨nn, hnn, ns', hns', rfl⟩ := hns2
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
-      word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hnb 0 (by omega); omega)
+      L.toNat_add_of_lt _ _ (show off.toNat + 1 < 2 ^ 64 by have := hnb 0 (by omega); omega)
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-    have hmm1 : (mm + 1).toNat = mm.toNat + 1 := word_add_toNat (by simp; omega)
+    have hmm1 : (mm + 1).toNat = mm.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
     rw [ConRon.Arena.nestHoles.go.eq_2]
     -- the member's former
     obtain ⟨-, -, -, -, -, -, -, hfo⟩ := decCtx_some hc
@@ -134,14 +135,14 @@ theorem nhGoW_ok (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
     obtain ⟨q, hq, hcvq⟩ := hfx
     have hfoin : fo + mm.toNat < iwTop m := hin.2 11 (by omega) fo fl (by simpa using hfo1) (by simpa using hfl1) _ hmmf
     have eq : (rdW (m.arr64 IW) (ctx + 11) + mm).toNat = fo + mm.toNat := by
-      rw [word_add_toNat (by omega), r11]
+      rw [L.toNat_add_of_lt _ _ (by omega), r11]
     have rq : (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm)).toNat = q := by
       have := rd_iwN (m := m) (p := rdW (m.arr64 IW) (ctx + 11) + mm) (i := 0) (by simpa [eq] using hq)
         (by simp; omega)
       simpa using this
     obtain ⟨w, hw, hwH', hwd'⟩ := hd?_some (decCV_type hcvq)
     have e3 : (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3).toNat = q + 3 := by
-      rw [word_add_toNat (by have := erecP_lt64 hw; simp; omega), rq]; rfl
+      rw [L.toNat_add_of_lt _ _ (by have := erecP_lt64 hw; simp; omega), rq]; rfl
     have hrw : erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3) = w :=
       erRd_of_erA (by rw [e3]; exact hw)
     rw [hrw] at h
@@ -169,11 +170,11 @@ theorem nhGoW_ok (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
     rw [nhGoW.k_inst_pis_with.arm2 (hc1 := by rw [hx1]; decide)] at h
     have hnP2 : (rdW (m2.arr64 IW) (ctx + 4)).toNat = c.nP := by
       have : rdW (m2.arr64 IW) (ctx + 4) = rdW (m.arr64 IW) (ctx + 4) := by
-        have e : (ctx + 4).toNat = ctx.toNat + 4 := word_add_toNat (by simp; omega)
+        have e : (ctx + 4).toNat = ctx.toNat + 4 := L.toNat_add_of_lt _ _ (by simp; omega)
         simp only [rdW, e]; rw [hg2.iwGet _ (by omega)]
       rw [this, hnP]
     have hu : (rdW (m2.arr64 IW) (ctx + 4) + mm).toNat = c.nP + mm.toNat := by
-      rw [word_add_toNat (by rw [hnP2]; omega), hnP2]
+      rw [L.toNat_add_of_lt _ _ (by rw [hnP2]; omega), hnP2]
     rcases hfv : fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0) with _ | ⟨v, m3⟩ <;> rw [hfv] at h; · simp [nhGoW.k_intern_fvar.none] at h
     obtain ⟨a3, hrun3, hS3, hg3⟩ := internFVar_stage hS2 _ _ htH hfv
     by_cases hvb : 4294967296 ≤ v

@@ -8,7 +8,6 @@ import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.DefEqLeaves
-import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.IndView
@@ -16,6 +15,7 @@ public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
 import all ConAgua.Arena.ConstsResolveF
 import all ConAgua.Arena.IndIface
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -540,10 +540,6 @@ theorem ue_eViewW_lit {m : Mem} {h : Word} (hne : eViewW m h ≠ []) (h8 : (eVie
     repeat' split at h8
     all_goals first | (simp at h8; done) | exact g8 ‹_›
 
-theorem ue_toNat_pred {f : Word} (hf0 : f ≠ 0) : f.toNat = (f - 1).toNat + 1 := by
-  have : f.toNat ≠ 0 := fun e => hf0 (UInt64.toNat_inj.mp (by simpa using e))
-  rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-
 /-- **`has_str_lit_go`'s model is the pure walk** at the twin fuel `f.toNat`. -/
 theorem hslW_pure (a : AState) : ∀ (n : Nat) (m : Mem) (f h r : Word), ArenaR m a → H h →
     hslW n m f h = some r → hslP a.store f.toNat (decE h) = some (r != 0) := by
@@ -557,11 +553,11 @@ theorem hslW_pure (a : AState) : ∀ (n : Nat) (m : Mem) (f h r : Word), ArenaR 
     by_cases hne : eViewW m h = []
     · rw [hslW.abort2 n m f h hf0 hne] at hW; cases hW
     obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hA h hne
-    rw [ue_toNat_pred hf0, hslP_succ, hv]
+    rw [L.toNat_eq_toNat_sub_one_add_one _ hf0, hslP_succ, hv]
     change hslN (hslP a.store (f - 1).toNat) v = some (r != 0)
     cases v with
     | bvar _ | sort _ | const _ _ =>
-      simp only [ViewR, getD1_eq', getD2_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       have hg := hvr.1
       rw [hslW.arm2 n m f h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide)] at hW
       cases hW; rfl
@@ -579,20 +575,20 @@ theorem hslW_pure (a : AState) : ∀ (n : Nat) (m : Mem) (f h r : Word), ArenaR 
         rw [hv] at hs; cases hs
         simp [hslN, hk0]
     | fvar _ ty =>
-      simp only [ViewR, getD1_eq', getD2_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨hg, -, hy, hdy⟩ := hvr
       rw [hslW.arm3 n m f h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) hg] at hW
       simp only [hslN, ← hdy]
       exact ih m _ _ r hA hy hW
     | proj _ _ x =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
       obtain ⟨hg, -, -, -, hz, hdz⟩ := hvr
       rw [hslW.arm6 n m f h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)
         (by rw [hg]; decide) (by rw [hg]; decide)] at hW
       simp only [hslN, ← hdz]
       exact ih m _ _ r hA hz hW
     | app f0 x0 | lam f0 x0 | forallE f0 x0 =>
-      simp only [ViewR, getD1_eq', getD2_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
       rw [hslW.arm4 n m f h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)
         (by rw [hg]; decide)] at hW
@@ -609,7 +605,7 @@ theorem hslW_pure (a : AState) : ∀ (n : Nat) (m : Mem) (f h r : Word), ArenaR 
           rw [hslW.k_has_str_lit_go.arm2 n f _ m r1 e1'] at hW
           rw [ih m _ _ r hA hy hW]; simp [ueOrS, e1']
     | letE t0 v0 b0 =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
       obtain ⟨hg, hx, hdx, hy, hdy, hz, hdz⟩ := hvr
       rw [hslW.arm5 n m f h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)
         (by rw [hg]; decide) hg] at hW
@@ -655,11 +651,11 @@ theorem umW_pure (a : AState) (T : Word) (hT : H T) : ∀ (n : Nat) (m : Mem) (f
     by_cases hne : eViewW m h = []
     · rw [umW.abort2 n m f T h hf0 hne] at hW; cases hW
     obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hA h hne
-    rw [ue_toNat_pred hf0, umP_succ, hv]
+    rw [L.toNat_eq_toNat_sub_one_add_one _ hf0, umP_succ, hv]
     change umN (decI T) (umP a.store (decI T) (f - 1).toNat) v = some (r != 0)
     cases v with
     | bvar _ | sort _ =>
-      simp only [ViewR, getD1_eq'] at hvr
+      simp only [ViewR, L.getD_one] at hvr
       have hg := hvr.1
       rw [umW.arm1 n m f T h hf0 hne (by rw [hg]; decide)] at hW
       cases hW; rfl
@@ -668,14 +664,14 @@ theorem umW_pure (a : AState) (T : Word) (hT : H T) : ∀ (n : Nat) (m : Mem) (f
       rw [umW.arm1 n m f T h hf0 hne (by rw [hg]; decide)] at hW
       cases hW; rfl
     | const _ _ =>
-      simp only [ViewR, getD1_eq', getD2_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨hg, hx, hdx, -⟩ := hvr
       rw [umW.arm2 n m f T h hf0 hne (by rw [hg]; decide) hg] at hW
       cases hW
       simp only [umN, ← hdx]
       rw [ue_beq_ite _ T hx hT]
     | fvar _ ty =>
-      simp only [ViewR, getD1_eq', getD2_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨hg, -, hy, hdy⟩ := hvr
       rw [umW.arm3 n m f T h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) hg] at hW
       simp only [umN, ← hdy]
@@ -686,7 +682,7 @@ theorem umW_pure (a : AState) (T : Word) (hT : H T) : ∀ (n : Nat) (m : Mem) (f
         cases hW
         exact ih m _ _ _ hA hy h1
     | proj _ _ z =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
       obtain ⟨hg, hx, hdx, -, hz, hdz⟩ := hvr
       rw [umW.arm6 n m f T h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)
         (by rw [hg]; decide) (by rw [hg]; decide)] at hW
@@ -699,7 +695,7 @@ theorem umW_pure (a : AState) (T : Word) (hT : H T) : ∀ (n : Nat) (m : Mem) (f
         rw [ih m _ _ _ hA hz h1, word_or_ne, ue_beq_ite _ T hx hT]
         rfl
     | app f0 x0 | lam f0 x0 | forallE f0 x0 =>
-      simp only [ViewR, getD1_eq', getD2_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two] at hvr
       obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
       rw [umW.arm4 n m f T h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)
         (by rw [hg]; decide)] at hW
@@ -716,7 +712,7 @@ theorem umW_pure (a : AState) (T : Word) (hT : H T) : ∀ (n : Nat) (m : Mem) (f
       rw [ih m _ _ _ hA hx h1, ih m _ _ _ hA hy h2, word_or_ne]
       rfl
     | letE t0 v0 b0 =>
-      simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+      simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
       obtain ⟨hg, hx, hdx, hy, hdy, hz, hdz⟩ := hvr
       rw [umW.arm5 n m f T h hf0 hne (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)
         (by rw [hg]; decide) hg] at hW

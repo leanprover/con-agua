@@ -18,6 +18,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.Preserve
 public import ConAgua.Checker.NoVerdictFns
 import all ConAgua.Arena.WhnfIota
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -48,9 +49,6 @@ theorem defEqList_nil_cons_run (r : CoreFnsA) (fe : IFEnv) (d : Nat) (b : EIdx) 
 theorem defEqList_cons_nil_run (r : CoreFnsA) (fe : IFEnv) (d : Nat) (x : EIdx) (xs : List EIdx)
     (a : AState) : (defEqList r fe d (x :: xs) []).run a = .ok (false, a) := by
   simp [defEqList]; rfl
-
-theorem toUInt64_toNat_self (i : Word) : i.toNat.toUInt64 = i := by
-  simp [Nat.toUInt64]
 
 /-- A spine slice that may be empty anywhere (an empty slice has no bound to keep). -/
 def SpineN (m : Mem) (off cnt : Word) (xs : Array EIdx) : Prop :=
@@ -137,16 +135,16 @@ theorem dl_ref (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
       rw [List.drop_eq_getElem_cons (by simpa using hszb)]; simp
     have hga : aas[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := by
       have := hsa'.get i.toNat hsza
-      simpa [spW, toUInt64_toNat_self] using this
+      simpa [spW, L.toUInt64_toNat] using this
     have hgb : bs[i.toNat] = decE (rdW (m.arr64 SPN) (bo + i)) := by
       have := hsb'.get i.toNat hszb
-      simpa [spW, toUInt64_toNat_self] using this
+      simpa [spW, L.toUInt64_toNat] using this
     have hxa : HW (rdW (m.arr64 SPN) (ao + i)) := by
       have := hsa'.lt i.toNat hia'
-      unfold HW; simpa [spW, toUInt64_toNat_self] using this
+      unfold HW; simpa [spW, L.toUInt64_toNat] using this
     have hxb : HW (rdW (m.arr64 SPN) (bo + i)) := by
       have := hsb'.lt i.toNat hib'
-      unfold HW; simpa [spW, toUInt64_toNat_self] using this
+      unfold HW; simpa [spW, L.toUInt64_toNat] using this
     rw [hga] at hdra
     rw [hgb] at hdrb
     rw [hdra, hdrb, show ∀ (r : CoreFnsA) (x y : EIdx) (xs ys : List EIdx),
@@ -472,7 +470,7 @@ theorem isW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLeche
       rw [List.drop_eq_getElem_cons (by simpa using hsz)]; simp
     have hget : args[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := by
       have := hsp.get i.toNat hsz
-      simpa [spW, toUInt64_toNat_self] using this
+      simpa [spW, L.toUInt64_toNat] using this
     rw [hget] at hdrop
     have htt : tN = t.toNat := htN (by omega)
     cases k with
@@ -721,10 +719,6 @@ theorem push_step (m : Mem) (q v : Word) (hq : q.toNat < (m.arr64 SPN).size)
     rw [spW_set64_ne _ _ _ _ this]
   · rw [spW_setCtl, spW_set64_eq _ _ _ hq]
 
-theorem word_succ_add (off : Word) (i : Nat) :
-    off + (i + 1).toUInt64 = (off + 1) + i.toUInt64 := by
-  simp [Nat.toUInt64, UInt64.ofNat_add, UInt64.add_assoc, UInt64.add_comm]
-
 /-- A slot followed by a spine slice is a spine slice. -/
 theorem SpineR.cons_slot (m : Mem) (off cnt v : Word) (ys : List EIdx) (hv : HW v)
     (hslot : spW m off = v) (htail : SpineR m (off + 1) cnt ys.toArray)
@@ -741,13 +735,13 @@ theorem SpineR.cons_slot (m : Mem) (off cnt v : Word) (ys : List EIdx) (hv : HW 
     cases i with
     | zero => simpa [hslot, HW] using hv
     | succ i =>
-      rw [word_succ_add]
+      rw [L.add_toUInt64_succ]
       exact htail.lt i (by omega)
   · simp only [List.size_toArray, List.length_cons] at hi
     cases i with
     | zero => simp [hslot]
     | succ i =>
-      rw [word_succ_add]
+      rw [L.add_toUInt64_succ]
       have := htail.get i (by simp only [List.size_toArray]; omega)
       simpa using this
 
@@ -870,10 +864,10 @@ theorem ispW_ok (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCal
       rw [List.drop_eq_getElem_cons (by simpa using hszp)]; simp
     have hget : pins[j.toNat] = decE (rdW (m.arr64 SPN) (pvo + j)) := by
       have := hsp.get j.toNat hszp
-      simpa [spW, toUInt64_toNat_self] using this
+      simpa [spW, L.toUInt64_toNat] using this
     have hpinw : HW (rdW (m.arr64 SPN) (pvo + j)) := by
       have := hsp.lt j.toNat hlt'
-      unfold HW; simpa [spW, toUInt64_toNat_self] using this
+      unfold HW; simpa [spW, L.toUInt64_toNat] using this
     rw [hget] at hdrop
     rcases hc1 : callW p k "inst_lp" [po, pl, us, rdW (m.arr64 SPN) (pvo + j)] m with _ | ⟨r₁, m₁⟩
     · simp only [ispW, hlt, ↓reduceIte, hc1] at hL; cases hL

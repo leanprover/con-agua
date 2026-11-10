@@ -12,6 +12,7 @@ import ConAgua.Arena.IndPosSpec.MentionsAnyGo
 import ConAgua.Arena.IndPosSpec.SnocWDecK
 import ConAgua.Arena.IndPosSpec.SnocWStage
 public import ConAgua.Arena.IndPosSpec.FgW2
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -193,7 +194,7 @@ theorem GrpAt.head {m : Mem} {o : Nat} {x : NIdx × EIdx} {grp : List (NIdx × E
     ∃ w c t : Word, rdW (m.arr64 IW) (UInt64.ofNat o) = w ∧ w.toNat + 1 < iwTop m ∧ rdW (m.arr64 IW) w = c ∧
       H c ∧ decI c = x.1 ∧ rdW (m.arr64 IW) (w + 1) = t ∧ H t ∧ decI t = x.2 := by
   obtain ⟨w, c, t, h1, h2, h3, h4, h5, h6, h7, h8⟩ := h 0 (by simp)
-  have e1 : (w + 1).toNat = w.toNat + 1 := word_add_toNat (by simp; omega)
+  have e1 : (w + 1).toNat = w.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
   refine ⟨w, c, t, ?_, h2, by simp [rdW, h3], h4, by simpa using h5, by simp [rdW, e1, h6], h7, by simpa using h8⟩
   simp only [Nat.add_zero] at h1
   simp [rdW, UInt64.toNat_ofNat_of_lt' ho, h1]
@@ -276,7 +277,7 @@ theorem fgW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     obtain ⟨hr5, hN5, hg5, -, hl5, ht5⟩ := snocW_decK hs2 hS4.iw.iwSize hS4.iw.ctl (by have := hg14.iw; omega)
       hcH (by rw [decHL_agree (RdS.of_grow hg14) (fun j hj => by omega)]; exact hN)
     have hS5 := snocW_stage hs2 hS4
-    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
+    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
     have hgL1 : (gL - 1).toNat = grp'.length := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     have hg15 := hg14.trans hg5
@@ -367,12 +368,12 @@ theorem fhW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
     obtain ⟨hr2, hA2, hg2, -, -, ht2⟩ := snocW_decK hs hS1.iw.iwSize hS1.iw.ctl (by have := hg1.iw; omega)
       hvH (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hA)
     have hS2 := snocW_stage hs hS1
-    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
+    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
     have hgL1 : (gL - 1).toNat = grp'.length := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     have hhi1 : (hi + 1).toNat = hi.toNat + 1 := by
       rcases Nat.lt_or_ge (hi.toNat + 1) (2 ^ 64) with hl | hl
-      · exact word_add_toNat (by simpa using hl)
+      · exact L.toNat_add_of_lt _ _ (by simpa using hl)
       · exfalso; apply hov; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; have := hi.toNat_lt; simp; omega
     have hg12 := hg1.trans hg2
     have hb2 : (gO + 1).toNat + grp'.length ≤ iwTop m2 := by
@@ -445,7 +446,7 @@ theorem caW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have hA2 : KsB m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat (acc ++ [⟨decI cw, decI us, ds⟩]) := by
       rw [h20, h21]
       exact pos2_decB_snoc decNK_mono (hA.grow hg1) hg2 (by omega) hw2 hx2 (DecB.grow (decNK_mono _) hg2 hK)
-    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
+    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
     have hgL1 : (gL - 1).toNat = grp'.length := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     have hg12 := hg1.trans hg2

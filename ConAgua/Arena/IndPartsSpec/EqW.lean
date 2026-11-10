@@ -148,11 +148,6 @@ theorem blockShapeLps_spec2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     ⦃fun r s' => LocEq s' s₀ ∧ lpsW n s₀.mem q = some (r, s'.mem) ∧ r = [r.headD 0, r.getD 1 0]; ⊤⦄ :=
   triple_post (blockShapeLps_spec p ha hc he hp n s₀ q) (fun _r _s' ⟨h1, h2⟩ => ⟨h1, h2, lpsW_two h2⟩)
 
-theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  cases r with
-  | nil => rfl
-  | cons a as => cases as <;> rfl
-
 end L.Ind
 
 end

@@ -25,6 +25,7 @@ public import ConAgua.Arena.RecClassSpec.Classes
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.RecClass
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -192,7 +193,7 @@ theorem crW_ok (vis : Word) (fe : IFEnv) (cR : CallM)
       subst hrecs
       refine ⟨some [], a, rfl, hS, IWGrow.refl m, ?_, hJ⟩
       simp [CrRes, decNL]
-    · obtain ⟨r1, hr1, hrl1⟩ := wordSucc_of_ne hrl
+    · obtain ⟨r1, hr1, hrl1⟩ := L.exists_toNat_eq_succ hrl
       rw [hr1] at hrecs
       obtain ⟨p0, rc, rest, rfl, hp0, hrc, hrest⟩ := decPL_cons hrecs
       obtain ⟨q, hq, hcv, hmIq⟩ := decRS_fields hrc
@@ -568,7 +569,7 @@ theorem ih1W_sim (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
   simp only [List.tail_cons, List.headD_cons]
   refine RSim.bind (K := ih1W.k_get_app_args_f d (UInt64.ofNat t)) rfl (simGetAppArgs hS3 hb2) ?_
   rintro ⟨r5, m5⟩ rargs a5 - ⟨hS5, hg5, hd5, ht5⟩
-  simp only [Nat.zero_add, getD_zero, getD_one] at hd5 ht5
+  simp only [Nat.zero_add, L.getD_zero, L.getD_one] at hd5 ht5
   have hg15 := hg13.trans hg5
   have hb5 : (r5.headD 0).toNat + (r5.tail.headD 0).toNat < 2 ^ 64 := by
     have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.iw.iw
@@ -709,7 +710,7 @@ theorem viewConstW {m : Mem} {a : AState} (hR : ArenaR m a) {w : Word} (hne : eV
   have hhead := eViewW_head3 m w hne hg
   cases v with
   | const nn us =>
-    simp only [ViewR, getD_one, getD_two] at hR'
+    simp only [ViewR, L.getD_one, L.getD_two] at hR'
     obtain ⟨-, hn1, hn2, hu1, hu2⟩ := hR'
     refine ⟨?_, hn1, hu1⟩
     show Except.ok (a.store.viewConst (decE w), a) = _
@@ -881,7 +882,7 @@ theorem tailW_sim (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
   refine RSim.bind (K := tailW.k_get_app_args_f n nP mo ml d fo fl c) rfl (simGetAppArgs hS hH) ?_
   rintro ⟨r5, m5⟩ rargs a5 - ⟨hS5, hg5, hd5, ht5⟩
   dsimp only at hS5 hg5 hd5 ht5
-  simp only [Nat.zero_add, getD_zero, getD_one] at hd5 ht5
+  simp only [Nat.zero_add, L.getD_zero, L.getD_one] at hd5 ht5
   have hb5 : (r5.headD 0).toNat + (r5.tail.headD 0).toNat < 2 ^ 64 := by
     have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.iw.iw
     have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.iw.iwSize
@@ -936,8 +937,8 @@ theorem minorW_sim (vis : Word) (fe : IFEnv) (cR : CallM)
   · rw [minorW.k_open_pis_at_fvars_f.arm1 (hc1 := ho)]; exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
   obtain ⟨fvs, concl⟩ := fc
   obtain ⟨h21, ⟨hfvs, hft⟩, hcH, rfl⟩ := ho
-  simp only [getD_one, getD_two, Nat.reduceAdd] at hfvs hft
-  rw [drop3_headD] at hcH ⊢
+  simp only [L.getD_one, L.getD_two, Nat.reduceAdd] at hfvs hft
+  rw [L.headD_drop_three] at hcH ⊢
   rw [minorW.k_open_pis_at_fvars_f.arm2 (hc1 := by rw [h21]; decide)]
   refine RSim.bind (K := minorW.k_fvar_head cR n nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0)
     (r2.tail.tail.tail.headD 0)) rfl
@@ -1135,7 +1136,7 @@ theorem slotMotW_sim (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     ((eViewW m2 (r2.headD 0)).tail.tail.headD 0)) rfl (simGetAppArgs hS2 hwH) ?_
   rintro ⟨r3, m3⟩ args a3 - ⟨hS3, hg3', hd3, ht3⟩
   dsimp only at hS3 hg3' hd3 ht3
-  simp only [Nat.zero_add, getD_zero, getD_one] at hd3 ht3
+  simp only [Nat.zero_add, L.getD_zero, L.getD_one] at hd3 ht3
   have hg13 := hg12.trans hg3'
   rw [slotMotW.k_get_app_args_f.arm1]
   refine RSim.lstep (K := slotMotW.k_class_n_pc_of _ _ (r3.headD 0) (r3.tail.headD 0)) rfl ?_
@@ -1873,7 +1874,7 @@ theorem readW_sim (vis : Word) (fe : IFEnv) (cR : CallM)
   · rw [rdK1_fail (h := ho)]; exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hJ1⟩
   obtain ⟨fvs, body⟩ := fb
   obtain ⟨h11, -, hbH, rfl⟩ := ho
-  rw [drop3_headD] at hbH ⊢
+  rw [L.headD_drop_three] at hbH ⊢
   rw [rdK1_ok (h := by rw [h11]; decide)]
   have hrP1 : rdW (m1.arr64 IW) (UInt64.ofNat p0 + 1) = UInt64.ofNat rc0.rP := by
     have h := iwN_rdW_at (w := UInt64.ofNat p0) (k := 1) (m := m)

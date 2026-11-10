@@ -8,6 +8,7 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.RecClass
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -366,7 +367,7 @@ theorem rcW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       subst hslots
       exact ⟨hS, IWGrow.refl m, [], by simp [decNL], by simp [decPL, ConRon.Arena.ClassRead.classes],
         by simp, by simp⟩
-    · obtain ⟨l1, hl1, hsl1⟩ := wordSucc_of_ne hsl
+    · obtain ⟨l1, hl1, hsl1⟩ := L.exists_toNat_eq_succ hsl
       rw [hl1] at hslots hext
       obtain ⟨sp, cs, rest, rfl, hsp, hcs, hrest⟩ := decPL_cons hslots
       obtain ⟨hhead, hextt⟩ := SlotsExt_cons hext

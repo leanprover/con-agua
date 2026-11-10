@@ -17,6 +17,7 @@ import ConAgua.Checker.DefnArmT
 import ConAgua.Checker.IndArm
 import ConAgua.Checker.BasisBlockProg
 import ConAgua.Checker.ArmsT
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -45,9 +46,6 @@ theorem code_of_checkerFile_par [Host] {k0 : Nat} (hcode : Code checkerFile k0) 
   exact hcode
 
 theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF 138 = true := by decide +kernel
-
-/-- `getD 0 0` is the head. -/
-theorem getD_zero_headD (rs : List Word) : rs.getD 0 0 = rs.headD 0 := by cases rs <;> rfl
 
 /-- `seqMem`'s word arrays (the globals' writes keep them). -/
 theorem seqMem_arr64 (m : Mem) (lo hi : Word) (s : TieredArray) :
@@ -78,7 +76,7 @@ theorem drvAccepts_twin (Vt : Type w) [ConLeche.SetTheory Vt] (b pb : ByteArray)
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
   rcases hcase with hacc | ⟨hge, rs₂, m₂, h₂, hacc₂⟩
   · -- entry 1 never returns `ACCEPT`: its result is `2^63 + |ds|`
-    rw [getD_zero_headD] at hacc
+    rw [L.getD_zero] at hacc
     have hr : rs₁.headD 0 ≠ 1 := by rw [hacc]; decide
     obtain ⟨PA, m₇, m, hF, -, -, hres⟩ :=
       checkA_run b pb _ hin 3 (Or.inr rfl) abiFuel hN rs₁ m₁ h₁ hr
@@ -92,7 +90,7 @@ theorem drvAccepts_twin (Vt : Type w) [ConLeche.SetTheory Vt] (b pb : ByteArray)
     rw [e2] at e
     simp only [ACCEPT, UInt64.reduceToNat] at e
     omega
-  · rw [getD_zero_headD] at hge h₂ hacc₂
+  · rw [L.getD_zero] at hge h₂ hacc₂
     refine drv_twinAccepts Vt checkerCd_proved b pb _ hin abiFuel hN rs₁ m₁ h₁ hge abiFuel (by simp [abiFuel])
       (seqMem m₁ MODE PLO PHI OUT HDRF CTLF 138 0 (rs₁.headD 0 - 9223372036854775808)) rs₂ m₂
       ?_ rfl rfl rfl ?_ h₂ hacc₂

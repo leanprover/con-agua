@@ -19,6 +19,7 @@ public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
 import all ConAgua.Arena.RecCheck
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -217,7 +218,7 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp pfo pfl fvo fvl ao al I us 
   simp only [List.length_cons, List.length_nil] at ht4
   have hg04 := hg02.trans hg4
   have hnidb : (bs.members[t.toNat]'hvtl).nIdx < 2 ^ 64 := iwN_val_lt hnit'
-  have ht1 : (t + 1).toNat = t.toNat + 1 := word_add_toNat (by rw [show (1 : Word).toNat = 1 from rfl]; omega)
+  have ht1 : (t + 1).toNat = t.toNat + 1 := L.toNat_add_of_lt _ _ (by rw [show (1 : Word).toNat = 1 from rfl]; omega)
   have hdec := decTM_decB_of (m := m4') (q := q.toNat) (by omega)
     (by simpa using hget4 0 (by simp)) (by simpa using hget4 1 (by simp)) (by simpa using hget4 2 (by simp))
     (by simpa using hget4 3 (by simp)) (by simpa using hget4 4 (by simp)) (by simpa using hget4 5 (by simp))

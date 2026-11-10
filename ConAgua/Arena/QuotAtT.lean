@@ -14,6 +14,7 @@ import ConAgua.Arena.DeclAndPinIndRef
 import ConAgua.Arena.IndexLoops
 import ConAgua.Arena.IndInstallSpec.NhW
 import all ConAgua.Arena.BasisL
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -113,7 +114,6 @@ theorem decCV_of_wr4 {a : Nat → Option Word} {q : Nat} {w0 w1 w2 w3 : Word} {p
   decCV_of_words (by simpa using hrd 0 (by simp)) h0l (by simpa using hrd 1 (by simp))
     (by simpa [Nat.add_assoc] using hrd 2 (by simp)) hs (by simpa using hrd 3 (by simp)) h3l
 
-theorem word_add11 (c : Word) : c + 1 + 1 = c + 2 := by rw [UInt64.add_assoc]; rfl
 theorem word_add12 (c : Word) : c + 1 + 2 = c + 3 := by rw [UInt64.add_assoc]; rfl
 theorem word_add13 (c : Word) : c + 1 + 3 = c + 4 := by rw [UInt64.add_assoc]; rfl
 
@@ -208,7 +208,7 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
   have hr2 := erRd_congr (m := m) (m' := s2.mem) (hpf12.arr _ (plA_not (by simp [plBad])) (by decide))
     (hpf12.arr _ (plA_not (by simp [plBad])) (by decide))
   have he12 : erecP s2.mem = erecP m := by rw [he2, he1]
-  simp only [hr2, word_add11, word_add12, word_add13] at hW
+  simp only [hr2, L.add_one_add_one, word_add12, word_add13] at hW
   obtain ⟨hlps, -, hty, hty32⟩ := decCV_rd (erRdOK m) hcv
   cases h3 : callW p n "inst_lp" [erRd m (c + 2), erRd m (c + 3), r2.headD 0, erRd m (c + 4)] s2.mem with
   | none => rw [h3] at hW; simp [cvAtLpsW.k_inst_lp] at hW
@@ -253,7 +253,7 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
   rw [callW_erecPut hP.erPut h7]
   have hwr : erecPutMem (erecPutMem (erecPutMem (erecPutMem s3.mem d (erRd m (c + 1))) (d + 1) po)
       (d + 2) pl) (d + 3) (r3.headD 0) = wrER s3.mem d [erRd m (c + 1), po, pl, r3.headD 0] := by
-    simp only [wrER, word_add11, word_add21]
+    simp only [wrER, L.add_one_add_one, word_add21]
   rw [hwr]
   -- the region and the words
   have hg3' : IWGrow m₀ s3.mem := hg.trans (hg1.trans (hg2.trans hg3))

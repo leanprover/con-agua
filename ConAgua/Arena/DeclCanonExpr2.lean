@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.DeclCanonExpr
 import ConAgua.Arena.DeclCvg
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -17,13 +18,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-theorem cnGetD1' (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  rcases r with _ | ⟨x, _ | ⟨y, z⟩⟩ <;> rfl
-theorem getD2' (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
-  rcases r with _ | ⟨x, _ | ⟨y, _ | ⟨z, w⟩⟩⟩ <;> rfl
-theorem getD3' (r : List Word) : r.getD 3 0 = r.tail.tail.tail.headD 0 := by
-  rcases r with _ | ⟨x, _ | ⟨y, _ | ⟨z, _ | ⟨w, v⟩⟩⟩⟩ <;> rfl
 
 theorem andThen_ok' {A B : AM Bool} {a : AState} {r r1 : Word} {b1 : Bool} {Q : Prop}
     (hA : A.run a = .ok (b1, a)) (hr1 : r1 = if b1 then 1 else 0)
@@ -66,12 +60,12 @@ theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     rw [ite_eq_right hne2] at h
     obtain ⟨vx, hvx, hrx⟩ := eViewW_ok m a hS.check.arena.base x hne1
     obtain ⟨vy, hvy, hry⟩ := eViewW_ok m a hS.check.arena.base y hne2
-    have hfuel : fuel.toNat = (fuel - 1).toNat + 1 := toNat_pred hf
+    have hfuel : fuel.toNat = (fuel - 1).toNat + 1 := L.toNat_eq_toNat_sub_one_add_one _ hf
     rw [hfuel, ConRon.Arena.canonExprEq.eq_2, StateT.run_bind, view_run _ _ _ hvx, exc_ok_bind',
       StateT.run_bind, view_run _ _ _ hvy, exc_ok_bind']
     generalize eViewW m x = ru at *
     generalize eViewW m y = rv at *
-    cases vx <;> cases vy <;> simp only [ViewR, cnGetD1', getD2', getD3'] at hrx hry
+    cases vx <;> cases vy <;> simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hrx hry
     all_goals first
       | simp only [hrx.1, hry.1] at h
       | simp only [hrx.1, hry] at h

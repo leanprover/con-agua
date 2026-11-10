@@ -9,6 +9,7 @@ import ConAgua.Arena.StageInst1
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.DerRel
 import ConRon.Bridge.Grind
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -185,7 +186,7 @@ theorem opfGo_okC : ∀ (k : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (n e 
   have c' := callW_model (M := fun mm => opfGoK opfP k mm n e i co cn)
     (fun s => opfGoK_spec opfP rfl k s n e i co cn) hc
   have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hS.spn
-  have hcc : (co + cn).toNat = co.toNat + cn.toNat := wadd_toNat' (by have := hsl.bound; omega)
+  have hcc : (co + cn).toNat = co.toNat + cn.toNat := L.toNat_add_of_lt _ _ (by have := hsl.bound; omega)
   have hst : co.toNat + cn.toNat ≤ (spTop m).toNat := by
     simp only [spTop, htop, hcc]; exact Nat.le_refl _
   simp only [opfGoK] at c'
@@ -235,7 +236,7 @@ theorem opfGo_okC : ∀ (k : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (n e 
   rw [hn1] at hrun
   have hsz : (m5.arr64 SPN).size = (m.arr64 SPN).size := by rw [hsz5, hsz4, hs3]
   have hcc1 : (co + (cn + 1)).toNat = co.toNat + cn.toNat + 1 := by
-    rw [wadd_toNat' (by rw [hcn1]; omega), hcn1]; omega
+    rw [L.toNat_add_of_lt _ _ (by rw [hcn1]; omega), hcn1]; omega
   refine ⟨_, _, M5, hrun, hS5, hK2.trans hK5, hsz, fun w hw => ?_, ?_⟩
   · rw [hcc] at hw
     rw [hkb5 w (by rw [hcc1]; omega), hsp4, ite_eq_right (fun h => by subst h; omega)]

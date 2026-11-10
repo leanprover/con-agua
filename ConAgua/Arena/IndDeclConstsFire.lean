@@ -12,6 +12,7 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
 import ConAgua.Arena.IndSumSpec.DecHLTake
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -78,9 +79,6 @@ theorem iwLt {m : Mem} {o w : Word} {v : Nat} (h : iwN (truncM m) (o.toNat + w.t
   obtain ⟨hlt, -⟩ := acTr h
   rw [UInt64.toNat_add]; omega
 
-theorem dcDrop3_headD (r : List Word) : (r.drop 3).headD 0 = r.tail.tail.tail.headD 0 := by
-  rcases r with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
-
 /-- **`rec_fire` refines `recFire`** (its model, from the stage relation): the fire's kind and
 its two `IW` slices of handles below the pool's top. -/
 theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
@@ -138,7 +136,7 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
     rw [e1]; rfl
   obtain ⟨hd10, -, hd1e⟩ := hd1
   obtain ⟨hew32, hewd⟩ := hd1e
-  rw [dcDrop3_headD] at hew32 hewd
+  rw [L.headD_drop_three] at hew32 hewd
   have hne0 : ¬ r1.headD 0 = 0 := by rw [hd10]; decide
   simp only [rfW.k_strip_pis, hne0, ↓reduceIte] at h
   generalize hew : r1.tail.tail.tail.headD 0 = ew at h hew32 hewd
@@ -165,7 +163,7 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   have hdec : ∃ ty b : EIdx, v = .forallE ty b ∧
       ((eViewW m1 ew).tail.headD 0).toNat < 2 ^ 32 ∧ decE ((eViewW m1 ew).tail.headD 0) = ty := by
     cases v <;> simp only [ViewR] at hR
-    case forallE ty b => exact ⟨ty, b, rfl, by rw [← getD1_eq]; exact hR.2.1, by rw [← getD1_eq]; exact hR.2.2.1⟩
+    case forallE ty b => exact ⟨ty, b, rfl, by rw [← L.getD_one]; exact hR.2.1, by rw [← L.getD_one]; exact hR.2.2.1⟩
     all_goals first | exact absurd (hhead.symm.trans hR.1) (by decide) | exact absurd (hhead.symm.trans hR) (by decide)
   obtain ⟨ty, bb, rfl, hdw32, hdwd⟩ := hdec
   have hvb := EStore.viewBind_of_view_forall _ _ _ _ hv
@@ -207,7 +205,7 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   have hdec2 : ∃ nn us, v2 = .const nn us ∧
       ((eViewW m2 hd).tail.tail.headD 0).toNat < 2 ^ 32 ∧ decI ((eViewW m2 hd).tail.tail.headD 0) = us := by
     cases v2 <;> simp only [ViewR] at hR2
-    case const nn us => exact ⟨nn, us, rfl, by rw [← getD2_eq]; exact hR2.2.2.2.1, by rw [← getD2_eq]; exact hR2.2.2.2.2⟩
+    case const nn us => exact ⟨nn, us, rfl, by rw [← L.getD_two]; exact hR2.2.2.2.1, by rw [← L.getD_two]; exact hR2.2.2.2.2⟩
     all_goals first | exact absurd (hhead2.symm.trans hR2.1) (by decide) | exact absurd (hhead2.symm.trans hR2) (by decide)
   obtain ⟨nn, us, rfl, huw32, huwd⟩ := hdec2
   have hvc := EStore.viewConst_of_view_r _ _ _ _ hv2
@@ -235,7 +233,7 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
       have : ¬ _ := fun c => hc (UInt64.lt_iff_toNat_lt.mpr c)
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]; omega
   obtain ⟨hargs, hargsb⟩ := hd4
-  simp only [getD_zero, Nat.zero_add, getD_one] at hargs hargsb
+  simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hargs hargsb
   have hlen := decHL_length _ hargs
   obtain ⟨alw, hal, h⟩ : ∃ alw : Word, alw.toNat = args.length - (rs.mI - rs.rP) ∧
       rfW.j2 p n (r3.headD 0) (r3.tail.headD 0) (r4.headD 0) alw nIw m4 = some (r, m') := by
@@ -257,7 +255,7 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   simp only [rfW.k_expr_drop_vars_list, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hids, hidsb⟩ := hd3
-  simp only [getD_zero, Nat.zero_add, getD_one] at hids hidsb
+  simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hids hidsb
   refine ⟨.nested ids ys, a5, ?_, hS5, hg04.trans hg5, rfl, ⟨?_, ?_⟩, ⟨by simpa using hd5, by simpa using hb5⟩⟩
   · simp only [ConRon.Arena.recFire, hnlt, ↓reduceIte]
     rw [e1, ← hewd, e3]

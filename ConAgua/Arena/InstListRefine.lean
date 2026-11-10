@@ -9,6 +9,7 @@ import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.LiftRefine
 import ConAgua.Arena.SimLib
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -335,7 +336,7 @@ def ILGArmOK (n : Nat) : Prop :=
 theorem ilgoOK_succ (n : Nat) (ih : ILArmOK n) : ILGoOK (n + 1) := by
   intro m m' a h d o l fu r vs hA hsl hbd hh hb
   have hfu : ¬ fu = 0 := fun hfu => by rw [ilW] at hb; simp [hfu] at hb
-  rw [ctrW_toNat fu hfu, instantiateList_succ, StateT.run_bind, instListCutoff_run]
+  rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, instantiateList_succ, StateT.run_bind, instListCutoff_run]
   simp only [except_ok_bind]
   by_cases hcut : ilCut m h d
   · rw [ilW_cut n m h d o l fu hfu hcut] at hb
@@ -397,7 +398,7 @@ theorem ilgoOK_succ (n : Nat) (ih : ILArmOK n) : ILGoOK (n + 1) := by
 theorem ilggoOK_succ (n : Nat) (ih : ILGArmOK n) (ihl : ILGoOK n) : ILGGoOK (n + 1) := by
   intro m m' a h d o l fu r vs hA hsl hbd hh hb
   have hfu : ¬ fu = 0 := fun hfu => by rw [ilgW] at hb; simp [hfu] at hb
-  rw [ctrW_toNat fu hfu, instantiateListGo_succ, StateT.run_bind, instListCutoff_run]
+  rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, instantiateListGo_succ, StateT.run_bind, instListCutoff_run]
   simp only [except_ok_bind]
   by_cases hcut : ilCut m h d
   · rw [ilgW_cut n m h d o l fu hfu hcut] at hb
@@ -506,7 +507,7 @@ theorem llamArm_ok (hg : tagW h = 5) :
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.bindD (K := llamK₁.llamK₂ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA₁
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA₁
           (hsl.of_spn hs₁) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA₂, hs₂⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
@@ -534,7 +535,7 @@ theorem lforallArm_ok (hg : tagW h = 6) :
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.bindD (K := lfaK₁.lfaK₂ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA₁
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA₁
           (hsl.of_spn hs₁) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA₂, hs₂⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
@@ -566,7 +567,7 @@ theorem lletArm_ok (hg : tagW h = 7) :
   obtain ⟨hA₂, hs₂⟩ := hR
   refine Sim.bindD (K := lleK₁.lleK₃ x y) rfl (fun _ _ => rfl)
     (Sim.ofD fun z m₃ e => by
-      simpa only [succW_toNat d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs hA₂
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs hA₂
           ((hsl.of_spn hs₁).of_spn hs₂) hbd hbw e) fun z m₃ a₃ hR => ?_
   obtain ⟨hA₃, hs₃⟩ := hR
   refine Sim.ofOk fun r m' hb => ?_
@@ -758,7 +759,7 @@ theorem glamArm_ok (hg : tagW h = 5) :
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.bindD (K := glamK₁.glamK₂ h d x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA1
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA1
           (hsl.of_spn hs1) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA2, hs2⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
@@ -787,7 +788,7 @@ theorem gforallArm_ok (hg : tagW h = 6) :
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.bindD (K := gfaK₁.gfaK₂ h d x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA1
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA1
           (hsl.of_spn hs1) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA2, hs2⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
@@ -820,7 +821,7 @@ theorem gletArm_ok (hg : tagW h = 7) :
   obtain ⟨hA2, hs2⟩ := hR
   refine Sim.bindD (K := gleK₁.gleK₃ h d x y) rfl (fun _ _ => rfl)
     (Sim.ofD fun z m₃ e => by
-      simpa only [succW_toNat d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs hA2
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs hA2
           ((hsl.of_spn hs1).of_spn hs2) hbd hbw e) fun z m₃ a₃ hR => ?_
   obtain ⟨hA3, hs3⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by

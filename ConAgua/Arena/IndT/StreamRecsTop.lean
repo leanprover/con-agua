@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.IndT.StreamRecsFire
 import ConAgua.Arena.IndT.StreamRecsChk
 public import ConAgua.Arena.IndT.TailStream
-import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConRon.Bridge.Inductives.Records
 import ConAgua.Arena.RefWalk
 import ConRon.Bridge.Inductives.StreamRecs
@@ -11,6 +10,7 @@ import ConRon.Bridge.Core.Walks.Cached
 import all ConAgua.Arena.IndStream
 import ConAgua.Arena.BasisBlockC
 public import ConAgua.Arena.IndT.StreamRecsRules
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -63,7 +63,7 @@ theorem pslR_cons {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o 
       PSlR f xs' (o + 1) (l - 1) m ∧ (UInt64.ofNat v : Word).toNat = v := by
   obtain ⟨hd, hb⟩ := h
   have hd' : decPL (truncM m) (f (truncM m)) o.toNat l.toNat = some xs := hd
-  obtain ⟨k, hk⟩ : ∃ k, l.toNat = k + 1 := ⟨l.toNat - 1, by have := toNat_ne_zero' hl; omega⟩
+  obtain ⟨k, hk⟩ : ∃ k, l.toNat = k + 1 := ⟨l.toNat - 1, by have := L.toNat_ne_zero_of_ne _ hl; omega⟩
   rw [hk, decPL_succ] at hd'
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd'
   obtain ⟨v, hv, y, hy, xs', hxs', rfl⟩ := hd'

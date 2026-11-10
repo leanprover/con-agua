@@ -7,6 +7,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.IndApplyRefine
 import all ConAgua.Front.IndApply
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -95,8 +96,8 @@ theorem nodupW_zero : ∀ (n : Nat) (m : Mem) (o l j : Word), nodupW n m o l j =
     · cases h
     rename_i hlj
     have hjl := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlj)
-    have hj1 := wsucc j l (UInt64.not_le.mp hlj)
-    have hoj : (o + j).toNat = o.toNat + j.toNat := widx2 _ _ (by omega)
+    have hj1 := L.toNat_add_one_of_word_lt j l (UInt64.not_le.mp hlj)
+    have hoj : (o + j).toNat = o.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
     rcases hc : containsW n m o l (rdW (m.arr64 IFL) (o + j)) (j + 1) with _ | c <;> simp only [hc, nodupW.k_ifl_contains, reduceCtorEq] at h
     obtain ⟨c1, -⟩ := containsW_facts n m o l _ _ c hc hb
     rw [hj1] at c1

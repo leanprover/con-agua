@@ -14,6 +14,7 @@ import ConRon.Bridge.Checker.NatOpNames
 public import ConAgua.Arena.DeclNatGateSpec
 import all ConAgua.Arena.DeclArms
 import ConAgua.Arena.DeclArmDefn
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -135,7 +136,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   simp only [stepCV, stepVal] at hcv1 hv1
   generalize r1.headD 0 = q at hci1 hcv1 hv1 ⊢
   obtain ⟨wt, hwt, -, -⟩ := (decCV_words hcv1).2.2
-  have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by have := erecP_lt64 hwt; omega)
+  have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (by have := erecP_lt64 hwt; omega)
   have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
   obtain ⟨wn, hwn, hwnl, hname⟩ := decCV_name hcv1
   have ewn : rdW (m1.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = wn := by

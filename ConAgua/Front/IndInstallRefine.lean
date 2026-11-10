@@ -8,6 +8,7 @@ import ConAgua.Front.ApplyExprRefine
 import ConAgua.Front.IndApplyRefine
 public import ConAgua.Front.IndRel
 public import ConAgua.Front.StateDR
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -176,9 +177,9 @@ theorem cvM_wd (m : Mem) (q n o l t : Word) (j : Nat) (hq : q.toNat + 3 < (m.arr
     wd (cvM m q n o l t) DLP j =
       if j = q.toNat then n else if j = q.toNat + 1 then o + 1 else if j = q.toNat + 2 then l
       else if j = q.toNat + 3 then t else wd m DLP j := by
-  have e1 : (q + 1).toNat = q.toNat + 1 := widx2 _ _ (by simp; omega)
-  have e2 : (q + 2).toNat = q.toNat + 2 := widx2 _ _ (by simp; omega)
-  have e3 : (q + 3).toNat = q.toNat + 3 := widx2 _ _ (by simp; omega)
+  have e1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
+  have e2 : (q + 2).toNat = q.toNat + 2 := L.toNat_add_of_lt _ _ (by simp; omega)
+  have e3 : (q + 3).toNat = q.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
   simp only [cvM, wd_setA, size_set64, e1, e2, e3, true_and]
   by_cases h0 : j = q.toNat
   · subst h0; simp; omega
@@ -233,7 +234,7 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
   have htop1 : topN m₁ DLP = topN m DLP + (listN b.data lps).length := by
     show ((m₁.arr64 DLP)[0]?.getD 0).toNat = _
     rw [F7]; simp only [Option.getD_some]
-    rw [widx2 _ _ (by rw [F1, hrdN]; omega), F1, hrdN]; simp
+    rw [L.toNat_add_of_lt _ _ (by rw [F1, hrdN]; omega), F1, hrdN]; simp
   have hq3 : q.toNat + 3 < (m₁.arr64 DLP).size := by rw [hs1]; omega
   have htopF : topN (cvM m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th) DLP =
       topN m DLP + (listN b.data lps).length := by

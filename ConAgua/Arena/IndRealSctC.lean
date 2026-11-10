@@ -30,6 +30,7 @@ public import ConAgua.Arena.IndInstallSpec.TabsProg
 public import ConAgua.Arena.TwinStep
 public import ConAgua.Arena.IndPartsSpec.MemberNames
 public import ConRon.Bridge.Inductives.Run
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -259,7 +260,7 @@ theorem sctW_okR {p : Prog} (hp : ApdF p) {vis : Word}
     have hT := hS.lt64 hbb
     have hbL : bL.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
     have hb1' : (bO + 1).toNat + (bL - 1).toNat ≤ iwTop m := by
-      rw [sumToNat_succ (by omega), sumToNat_pred hl]; omega
+      rw [sumToNat_succ (by omega), L.toNat_sub_one_of_ne hl]; omega
     refine sumSim_map (K := sctW.k_check_struct_proj_table_scoped (realCall p))
       (sctW.k_check_struct_proj_table_scoped.none _) (fun _ _ => rfl)
       (ih m4 s4 (bO + 1) (bL - 1) bs' hS4 (stateOK_of_sp hok he14) (names_of_sp he14 hks)

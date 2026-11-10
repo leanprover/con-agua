@@ -11,7 +11,6 @@ import ConAgua.Arena.IndT.WalkC
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndT.Base
 import ConAgua.Arena.RefWalk
-public import ConAgua.Arena.DeclValRef
 public import ConAgua.Arena.DeclBasisSpec
 public import ConAgua.Arena.QuotAtT
 public import ConAgua.Arena.StrLitShape
@@ -28,6 +27,7 @@ public import ConAgua.Arena.IndRealApdT
 public import ConAgua.Arena.KnotEntry
 public import ConLeche.Verify.Shift
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -92,7 +92,6 @@ l_model checkOpaqueVal_specE (p : Prog) (hp : ValProg p)
   extra [ld64_rdW_specT, ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
 
-theorem word_add11 (d : Word) : d + 1 + 1 = d + 2 := by rw [UInt64.add_assoc]; rfl
 theorem word_add31 (d : Word) : d + 3 + 1 = d + 4 := by rw [UInt64.add_assoc]; rfl
 
 /-- **The fresh `axiomInfo cv` record `check_constant_val` builds for `lit_shape_ok`**:
@@ -146,7 +145,7 @@ theorem ccv_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
   have e3 : erecPutMem (erecPutMem m1 A 0) (A + 1) nw = wrER m1 A [0, nw] := rfl
   rw [e3, hx2] at h5 h6 ⊢
   have e4 : erecPutMem (wrER m1 A [0, nw]) (A + 2) w1 = wrER m1 A [0, nw, w1] := by
-    simp only [wrER, word_add11]
+    simp only [wrER, L.add_one_add_one]
   rw [e4] at h5 h6 ⊢
   obtain ⟨-, hgP3, -, -, -⟩ := wrER_fresh hS.stage [0, nw, w1] m1 a A hT1.stage hfq hg1 hbase
     (by simp; omega) h41
@@ -156,7 +155,7 @@ theorem ccv_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
   rw [hx3]
   have e6 : erecPutMem (erecPutMem (wrER m1 A [0, nw, w1]) (A + 3) w2) (A + 4) t =
       wrER m1 A [0, nw, w1, w2, t] := by
-    simp only [wrER, word_add11, word_add21, word_add31]
+    simp only [wrER, L.add_one_add_one, word_add21, word_add31]
   rw [e6]
   obtain ⟨hS6, hg6, -, hrd, -⟩ := wrER_fresh hS.stage [0, nw, w1, w2, t] m1 a A hT1.stage hfq hg1 hbase
     (by simp; omega) h41
@@ -548,9 +547,9 @@ theorem checkDefnVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap
       (fun w y a' => CcvPost dn vis fe m w.2 a' ∧ w.1 = c ∧ y = .defnInfo cv (decI wv) hint) := by
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hcv).2.2
   have hc5 : c.toNat + 5 < 2 ^ 64 := erecP_lt64 hwv
-  have e5 : (c + 5).toNat = c.toNat + 5 := toNat_add_small c 5 (by omega)
-  have e4 : (c + 4).toNat = c.toNat + 4 := toNat_add_small c 4 (by omega)
-  have e1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
+  have e5 : (c + 5).toNat = c.toNat + 5 := L.toNat_add_ofNat_of_lt c 5 (by omega)
+  have e4 : (c + 4).toNat = c.toNat + 4 := L.toNat_add_ofNat_of_lt c 4 (by omega)
+  have e1 : (c + 1).toNat = c.toNat + 1 := L.toNat_add_ofNat_of_lt c 1 (by omega)
   have ev : rdW (m.arr64 (L.tierA EREC ((c + 5) >>> 40))) (c + 5 &&& 1099511627775) = wv := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e5]; exact hwv)
   have et : rdW (m.arr64 (L.tierA EREC ((c + 4) >>> 40))) (c + 4 &&& 1099511627775) = wt := by
@@ -603,9 +602,9 @@ theorem checkOpaqueVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (h
       (fun w y a' => CcvPost dn vis fe m w.2 a' ∧ w.1 = c ∧ y = .axiomInfo cv) := by
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hcv).2.2
   have hc5 : c.toNat + 5 < 2 ^ 64 := erecP_lt64 hwv
-  have e5 : (c + 5).toNat = c.toNat + 5 := toNat_add_small c 5 (by omega)
-  have e4 : (c + 4).toNat = c.toNat + 4 := toNat_add_small c 4 (by omega)
-  have e1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
+  have e5 : (c + 5).toNat = c.toNat + 5 := L.toNat_add_ofNat_of_lt c 5 (by omega)
+  have e4 : (c + 4).toNat = c.toNat + 4 := L.toNat_add_ofNat_of_lt c 4 (by omega)
+  have e1 : (c + 1).toNat = c.toNat + 1 := L.toNat_add_ofNat_of_lt c 1 (by omega)
   have ev : rdW (m.arr64 (L.tierA EREC ((c + 5) >>> 40))) (c + 5 &&& 1099511627775) = wv := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e5]; exact hwv)
   have et : rdW (m.arr64 (L.tierA EREC ((c + 4) >>> 40))) (c + 4 &&& 1099511627775) = wt := by
@@ -664,9 +663,9 @@ theorem checkThmVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap 
   have hL := hq.knot.lvc
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hcv).2.2
   have hc5 : c.toNat + 5 < 2 ^ 64 := erecP_lt64 hwv
-  have e5 : (c + 5).toNat = c.toNat + 5 := toNat_add_small c 5 (by omega)
-  have e4 : (c + 4).toNat = c.toNat + 4 := toNat_add_small c 4 (by omega)
-  have e1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
+  have e5 : (c + 5).toNat = c.toNat + 5 := L.toNat_add_ofNat_of_lt c 5 (by omega)
+  have e4 : (c + 4).toNat = c.toNat + 4 := L.toNat_add_ofNat_of_lt c 4 (by omega)
+  have e1 : (c + 1).toNat = c.toNat + 1 := L.toNat_add_ofNat_of_lt c 1 (by omega)
   have ev : rdW (m.arr64 (L.tierA EREC ((c + 5) >>> 40))) (c + 5 &&& 1099511627775) = wv := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e5]; exact hwv)
   have et : rdW (m.arr64 (L.tierA EREC ((c + 4) >>> 40))) (c + 4 &&& 1099511627775) = wt := by

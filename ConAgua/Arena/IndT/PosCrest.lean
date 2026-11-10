@@ -16,6 +16,7 @@ public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.TwinStep
 public import ConAgua.Verdict.VCtx
 import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -162,7 +163,7 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   -- the instantiated type
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
-  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
+  have e3 : (cv + 3).toNat = cv.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
   have hrdt : rdW (m1.arr64 (tierA EREC ((cv + 3) >>> 40))) (cv + 3 &&& 1099511627775) = wt := by
     change erRd m1 (cv + 3) = wt
     rw [erRd_frame (erToIwW_iwFr (show erToIwW _ m _ _ = some (r1, m1) from hlp)) (by decide) (by decide)]

@@ -217,7 +217,7 @@ theorem rule_relP {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
     simp only [Nat.add_zero] at hW0
     have hW8 : erA (erecPutMem m4 (rr + 8) (r4.headD 0)) (rr.toNat + 8) = some (r4.headD 0) := by
       rw [← off_toNat (by omega)]; exact hg5
-    exact (holds_decRule _ _ _ _ _ hW0 hW1 hW3 hW8 hlt1 hlt4 rfl rfl (ofNat_toNat_lt hnf).symm rfl
+    exact (holds_decRule _ _ _ _ _ hW0 hW1 hW3 hW8 hlt1 hlt4 rfl rfl (L.toNat_ofNat_of_lt hnf).symm rfl
       rfl).mono (fun i hi => .inl hi) (fun _ h => h)
 
 set_option maxHeartbeats 1000000 in
@@ -294,7 +294,7 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   have e3 := u64_at hr (r1.tail.headD 0) 16 (u64B rl.nfields ++ u64B 2) lvls.length _
     (by rw [hd1]; repeat rw [List.append_assoc]) (by simp [u64B]) (by omega)
   rw [e3] at hw
-  have hlN : (UInt64.ofNat lvls.length).toNat = lvls.length := ofNat_toNat_lt (by omega)
+  have hlN : (UInt64.ofNat lvls.length).toNat = lvls.length := L.toNat_ofNat_of_lt (by omega)
   cases ha : callW p k "erec_alloc" [UInt64.ofNat lvls.length] (putERs m1 ws) with
   | none => rw [ha] at hw; simp at hw
   | some ta =>
@@ -403,7 +403,7 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
     have hH := holds_hlist (k := .level) _ (rr.toNat + 4) (ra.headD 0) (UInt64.ofNat lvls.length) wl hW4 hW5
       (by rw [hlN, hwl]) hWs hwlt
     refine (holds_decRuleL _ _ _ _ _ (wl.map decI) hW0 hW1 hW3 hW8 hH hlt1 hlt4 rfl rfl
-      (ofNat_toNat_lt hnf).symm rfl rfl).mono (fun i hi => ?_) (fun _ h => h)
+      (L.toNat_ofNat_of_lt hnf).symm rfl rfl).mono (fun i hi => ?_) (fun _ h => h)
     rcases hi with hi | hi | hi | hi
     · left; exact hi
     · left; omega

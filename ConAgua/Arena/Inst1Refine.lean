@@ -8,6 +8,7 @@ import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.View
 public import ConAgua.Arena.DerRelBase
 public import ConRon.Arena.Core
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -170,7 +171,7 @@ theorem igoOK_succ (n : Nat) (ih : IArmOK n) : IGoOK (n + 1) := by
   by_cases hfu : fu = 0
   · rw [instW] at hb; simp [hfu] at hb
   have hd := derBW_ok m a hA.base hA.der h hh
-  rw [ctrW_toNat fu hfu, instantiate1Go_succ, StateT.run_bind, derivedE_run]
+  rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, instantiate1Go_succ, StateT.run_bind, derivedE_run]
   simp only [except_ok_bind]
   by_cases hcut : derBW m h < 32767 ∧ derBW m h ≤ d
   · rw [instW.arm1 n m h d v fu hfu hcut] at hb
@@ -315,7 +316,7 @@ theorem ilamArm_ok (hg : tagW h = 5) :
   simp only [h1, h2, instLamW.k_inst_go, instLamW.k_inst_go_2] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (d + 1) v fu y hA₁ haw h2
-  rw [succW_toNat d hd1] at ha₂
+  rw [L.toNat_add_one_of_ne d hd1] at ha₂
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
   obtain ⟨a', h3, h4⟩ := itail_ok _ _ a₂ h d r m' hh
@@ -349,7 +350,7 @@ theorem iforallArm_ok (hg : tagW h = 6) :
   simp only [h1, h2, instForallW.k_inst_go, instForallW.k_inst_go_2] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (d + 1) v fu y hA₁ haw h2
-  rw [succW_toNat d hd1] at ha₂
+  rw [L.toNat_add_one_of_ne d hd1] at ha₂
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
   obtain ⟨a', h3, h4⟩ := itail_ok _ _ a₂ h d r m' hh
@@ -388,7 +389,7 @@ theorem iletArm_ok (hg : tagW h = 7) :
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA htw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ d v fu y hA₁ hvw h2
   obtain ⟨a₃, ha₃, hA₃⟩ := ih m₂ m₃ a₂ _ (d + 1) v fu z hA₂ hbw h3
-  rw [succW_toNat d hd1] at ha₃
+  rw [L.toNat_add_one_of_ne d hd1] at ha₃
   obtain ⟨a', h4, h5⟩ := itail_ok _ _ a₃ h d r m' hh
     (fun r₄ m₄ h => mkLet_ok m₃ a₃ hA₃ x y z r₄ m₄ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, ha₃, except_ok_bind]; exact h4, h5⟩

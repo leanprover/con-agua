@@ -11,6 +11,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.RecStab
 public import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -137,7 +138,7 @@ theorem mjoW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 nIdx ty d : 
   · rw [mjoW.k_open_pis_at_fvars_f.arm1 (hc1 := ho)]; exact RSim.pure_some ⟨⟨hS4, hg4, rfl⟩, hA4⟩
   obtain ⟨ifs, body⟩ := p4
   obtain ⟨h41, ⟨hifs, hfb⟩, -⟩ := ho
-  simp only [getD_one, getD_two, Nat.reduceAdd] at hifs hfb
+  simp only [L.getD_one, L.getD_two, Nat.reduceAdd] at hifs hfb
   rw [mjoW.k_open_pis_at_fvars_f.arm2 (hc1 := by rw [h41]; decide)]
   refine RSim.bindPure (K := mjoW.k_class_gen_major_tail) rfl (RSim.withF (mjtW_sim n m4 a4 ind lvls ds0 dl0 _ _ I U ds ifs hS4 hI hU
     (hds.grow (OMono.decHL _ _) hg4) hifs hfb) (fun _ hb => mjtW_afr hb)) ?_
@@ -147,8 +148,8 @@ theorem mjoW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 nIdx ty d : 
   rcases x with _ | p
   · exact hx
   obtain ⟨h1, ⟨h2, h3⟩, h4⟩ := hx
-  refine ⟨by simpa using h1, ⟨by simpa [getD_one, getD_two] using h2, by simpa [getD_one, getD_two] using h3⟩, ?_⟩
-  simpa [decW0E, drop3_headD] using h4
+  refine ⟨by simpa using h1, ⟨by simpa [L.getD_one, L.getD_two] using h2, by simpa [L.getD_one, L.getD_two] using h3⟩, ?_⟩
+  simpa [decW0E, L.headD_drop_three] using h4
 
 end sims
 
@@ -226,8 +227,8 @@ theorem mjW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rcases x with _ | p
   · exact hx
   obtain ⟨h1, ⟨h2, h3⟩, h4⟩ := hx
-  refine ⟨by simpa using h1, ⟨by simpa [getD_one, getD_two] using h2, by simpa [getD_one, getD_two] using h3⟩, ?_⟩
-  simpa [decW0E, drop3_headD] using h4
+  refine ⟨by simpa using h1, ⟨by simpa [L.getD_one, L.getD_two] using h2, by simpa [L.getD_one, L.getD_two] using h3⟩, ?_⟩
+  simpa [decW0E, L.headD_drop_three] using h4
 
 /-! ## `class_gen_motive_ty` -/
 
@@ -254,8 +255,8 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   · rw [motW.k_class_gen_major.arm1 (hc1 := ho1)]; exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hA1⟩
   obtain ⟨ifs, maj⟩ := p1
   obtain ⟨h11, ⟨hifs, hfb⟩, hmH, hmd⟩ := ho1
-  simp only [getD_one, getD_two, Nat.reduceAdd] at hifs hfb
-  simp only [drop3_headD] at hmH hmd
+  simp only [L.getD_one, L.getD_two, Nat.reduceAdd] at hifs hfb
+  simp only [L.headD_drop_three] at hmH hmd
   rw [motW.k_class_gen_major.arm2 (hc1 := by rw [h11]; decide)]
   obtain ⟨-, hgt, -, -, hel, -⟩ := rec2CG_parts hG
   obtain ⟨ve, eve, hve, dve⟩ := iwH_rdW_at (w := g) (k := 11) (by rw [iwH_grow hg1 (show g.toNat + 11 < iwTop m by omega)]; exact hel) hS1.iw.iwSize
@@ -289,7 +290,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs, fun _ => Nat.le_trans hfb (hg2.trans hg3).iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r4, m4⟩ bs a4 - ⟨⟨hS4, hg4, hbs, hbb⟩, hf4⟩
   dsimp only at hS4 hg4 hbs hbb
-  simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
+  simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hbs hbb
   by_cases hov : d + r4.tail.headD 0 < d
   · rw [motW.k_fvar_type_ds.abort1 (hc1 := hov)]; exact RSim.none
   rw [motW.k_fvar_type_ds.arm1 (hc1 := hov)]

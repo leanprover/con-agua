@@ -26,7 +26,7 @@ notation writes it). Its rule, proved once:
 * `Triple.forUp_pre`: the same rule for a named loop block, in the shape `⦃s = s₀ ∧ P s⦄ exec p k w
   ⦃Q⦄` of a hand loop spec; it takes the loop's whole body (the step included, post `LoopPost`),
   so that `hw` is `rfl` without restating the body.
-* `forUp_succ_toNat`: the step does not wrap (`j < n`).
+* the step does not wrap (`j < n`): `L.toNat_add_one_of_word_lt` (`L/WordOff.lean`).
 -/
 
 set_option experimental.vcgen true
@@ -131,11 +131,6 @@ theorem Triple.forUp_pre {p : Prog} {w B : Stmt} {j n : Var} {P : St → Prop} {
     rw [exec, step_while (c := .cmp .ult (.var j) (.var n)) hw]
     vcgen [evalC, evalE, hbody k, ih]
     all_goals (subst_vars; simp_all [Cmp.eval])
-
-/-- The step of a counted loop does not wrap. -/
-theorem forUp_succ_toNat {i n : Word} (h : i < n) : (i + 1).toNat = i.toNat + 1 := by
-  have := n.toNat_lt; have : i.toNat < n.toNat := h
-  rw [UInt64.toNat_add]; simp; omega
 
 /-! ### Tests: the `for` sugar is `forS` -/
 

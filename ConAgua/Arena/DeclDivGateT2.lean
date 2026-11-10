@@ -19,6 +19,7 @@ public import ConAgua.Arena.TwinStep
 public import ConAgua.Verdict.VCtx
 public import ConRon.Bridge.Checker.DivMod
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -169,7 +170,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have hI1 := hS.iw.iw
     have r0 : rdW (m.arr64 IW) so = q := hq0
     have rq1 : rdW (m.arr64 IW) q = ho := rdW_iw_of h0 rfl
-    have rq2 : rdW (m.arr64 IW) (q + 1) = hl := rdW_iw_of h1 (word_add_one (by omega))
+    have rq2 : rdW (m.arr64 IW) (q + 1) = hl := rdW_iw_of h1 (L.toNat_add_one_of_lt (by omega))
     have rq3 : rdW (m.arr64 IW) (q + 2) = e0 := rdW_iw_of h2 (word_add_two (by omega))
     have hlpos : 0 < pl.toNat :=
       Nat.pos_of_ne_zero (fun e' => hpl0 (UInt64.toNat_inj.mp (by simpa using e')))
@@ -180,7 +181,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have hpo : po.toNat < iwTop m := by omega
     have hq3 : q.toNat + 3 ≤ iwTop m := hp3
     have hq0' : q.toNat < iwTop m := by omega
-    have hq1 : (q + 1).toNat < iwTop m := by rw [word_add_one (by omega)]; omega
+    have hq1 : (q + 1).toNat < iwTop m := by rw [L.toNat_add_one_of_lt (by omega)]; omega
     have hq2 : (q + 2).toNat < iwTop m := by rw [word_add_two (by omega)]; omega
     rw [r0, rq1, rq2, rq3]
     simp only [checkDivModCerts]
@@ -223,7 +224,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have hCr3 := hkp.call (im_mem _ rfl) h3' hCr2
     obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := sc0List_ref hD.toDmProg7.toDmProg6.toDmProg5 hs0 c
       annVal hc hann hy ho hl k m2 a2 r3 m3 hC2.stage hdh2 (Nat.le_trans hbd hG2.iw) h3'
-    simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1] at hd3
+    simp only [decRL, Nat.zero_add, L.getD_zero, L.getD_one] at hd3
     obtain ⟨hi3, hhs⟩ := ConRon.Bridge.substConst0List_run hy hx hC2.check.state hC2.check.pins
       (ConRon.Bridge.denoteN_ext hn c02.ext) (ConRon.Bridge.denote_ext hv c02.ext)
       (ConRon.Bridge.denoteEList_ext c02.ext _ _ hsd1) hrun3
@@ -415,7 +416,7 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
     have hrest : L.Rom.TPinsR m2 (o + 2) (l - 1) tps := by
       have hl1' : (l - 1).toNat = l.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-      have ho2 : (o + 2).toNat = o.toNat + 2 := L.Rom.addN (by simp; omega)
+      have ho2 : (o + 2).toNat = o.toNat + 2 := L.toNat_add_of_lt _ _ (by simp; omega)
       refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1']; omega, by rw [hl1']; omega,
         fun i hi => ?_⟩ ⟨hG2.er, hG2.erGet⟩
       have := hv (i + 1) (by simpa using hi)
@@ -521,9 +522,9 @@ theorem cpv_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
   refine ⟨_, _, hrun4, ?_⟩
   dsimp only [checkDivModPinValueE.k_div_mod_cert_proofs]
   -- the certificates
-  simp only [decStmtL, ntGetD0, ntGetD1] at hd3
+  simp only [decStmtL, L.getD_zero, L.getD_one] at hd3
   unfold decRL at hd4
-  simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd4
+  simp only [Nat.zero_add, L.getD_zero, L.getD_one] at hd4
   refine (cm_ref hD hq hcl hkp hcrf hs0 hsA henv c value hc hval hwsv x3 _ x4 _ (r3.headD 0)
     (r3.tail.headD 0) (r4.headD 0) (r4.tail.headD 0) k hk' m4 a3 hC4 hCr4 (hd3.grow hg4) hd4.1
     hd4.2 hn3 (ConRon.Bridge.denote_ext hv c03.ext) hsd hpr

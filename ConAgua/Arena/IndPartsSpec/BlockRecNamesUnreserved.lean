@@ -15,6 +15,7 @@ public import ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndParts
 import ConAgua.Arena.Env
 import ConAgua.L.ModelGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -114,7 +115,7 @@ theorem recUW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
       obtain ⟨hv', hvb⟩ := iwN_rdW hv (by omega)
       obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
       obtain ⟨hn32, hnI⟩ := decCVp_name_p hcvR hab
-      rw [ofNat_toNat_word] at hv'
+      rw [L.ofNat_toNat] at hv'
       have hrd : erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro)) =
           erRd m (UInt64.ofNat a0) := by rw [hv', hva']
       rw [hrd] at h

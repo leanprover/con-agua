@@ -4,13 +4,13 @@ import ConAgua.Arena.DeclReduceSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclValRef
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.DeclCanonEq
 public import ConAgua.Rom.CIReadSpec
 public import ConAgua.Arena.LeafFns
 import all ConAgua.Arena.DeclArms
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -303,7 +303,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {vis : Word}
   have hrun2 := AM.run_of_ok _ _ hok2
   have hpin := decRCV_get hd2
   obtain ⟨wn, hwn, -⟩ := decCV_name hcvR
-  have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (erecP_lt64 hwn)
+  have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (erecP_lt64 hwn)
   have hcvR2 : decCV (erA s2.mem) (q + 1).toNat = some cvR := by
     rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg2) hcvR
   rcases h3 : callW p n "matches_pin" [q + 1, r2.headD 0] s2.mem with _ | ⟨r3, m3⟩
@@ -450,7 +450,7 @@ theorem reoW_ok {p : Prog} (h : RedProg p) {vis : Word}
     obtain ⟨pin, a4, hrun4, hS4, hg4, hpin⟩ := h.rom.cv vis fe 5 (by decide) n _ a r4 m4 hS h4
     have hrun4' : boolCvA.run a = .ok (pin, a4) := hrun4
     obtain ⟨wn, hwn, -⟩ := decCV_name hcvB
-    have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (erecP_lt64 hwn)
+    have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (erecP_lt64 hwn)
     have hcvB4 : decCV (erA m4) (q + 1).toNat = some cvB := by
       rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg4) hcvB
     rcases h5 : callW p n "matches_pin" [q + 1, r4.headD 0] m4 with _ | ⟨r5, m5⟩

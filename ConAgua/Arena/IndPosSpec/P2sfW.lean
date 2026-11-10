@@ -5,6 +5,7 @@ import ConAgua.Arena.IndPosSpec.Mfr
 public import ConAgua.Arena.IndPosSpec.P2rtW
 import ConAgua.Arena.IndPosSpec.Pos2WfWfSome
 public import ConAgua.Arena.IndPosSpec.RootOutsB
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -78,7 +79,7 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     obtain ⟨w, hw, hH, hdj⟩ := hel k.toNat hkl
     have hg0t := hg0.iw
     have hrd : rdW (m.arr64 IW) (dO + k) = w := by
-      have e : (dO + k).toNat = dO.toNat + k.toNat := word_add_toNat (by omega)
+      have e : (dO + k).toNat = dO.toNat + k.toNat := L.toNat_add_of_lt _ _ (by omega)
       simp only [rdW, e]; rw [hg0.iwGet _ (by omega), hw]; rfl
     rw [hrd] at h
     rcases hwf : wfWf n m w with _ | ⟨rw, m1⟩ <;> rw [hwf] at h; · rw [p2sfW.k_whnf_walk_fuel.none] at h; cases h
@@ -99,7 +100,7 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     obtain ⟨n', wv, hn, hwW, rfl⟩ := pos2_wfWf_some hwf
     obtain ⟨mp, hmp⟩ := hP.dp
     obtain ⟨d, hrunw, hwd, hM1, hS1, hg1, hf1⟩ := wfW_ok n' dn fe vis m m1 a w wv mp hwW hS hH hmp
-    have hk1 : (k + 1).toNat = k.toNat + 1 := word_add_toNat (by simp; omega)
+    have hk1 : (k + 1).toNat = k.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
     obtain ⟨a', hrun, hS', hg', hP'⟩ := p2sfW_ok dn vis fe dO dL ds m0 hlen hel hb n m1 m' a (k + 1) _ r' h hS1
       (hg0.trans hg1) (by omega) (hP.setDp hf1 ⟨∅, hM1⟩)
     refine ⟨a', ?_, hS', hg1.trans hg', hP'⟩

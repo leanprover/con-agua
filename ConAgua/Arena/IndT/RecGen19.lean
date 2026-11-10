@@ -11,6 +11,7 @@ import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.RefWalk
 public import ConRon.Bridge.Inductives.ClassRead
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -118,11 +119,11 @@ theorem clm_ref (hP : ClmProg p) (hF : FtProg p) (hFk : FkcProg p) (hWt : WhnfTo
   have hkq : (UInt64.ofNat q : Word).toNat + 4 ≤ iwTop m := hk4
   have e2 : rdW (m1.arr64 IW) (UInt64.ofNat q + 2) = rdW (m.arr64 IW) (UInt64.ofNat q + 2) := by
     have e : (UInt64.ofNat q + 2 : Word).toNat = (UInt64.ofNat q : Word).toNat + 2 :=
-      word_add_toNat (by rw [show (2 : Word).toNat = 2 from rfl]; omega)
+      L.toNat_add_of_lt _ _ (by rw [show (2 : Word).toNat = 2 from rfl]; omega)
     simp only [rdW, e]; rw [hg1.iwGet _ (by omega)]
   have e3 : rdW (m1.arr64 IW) (UInt64.ofNat q + 3) = rdW (m.arr64 IW) (UInt64.ofNat q + 3) := by
     have e : (UInt64.ofNat q + 3 : Word).toNat = (UInt64.ofNat q : Word).toNat + 3 :=
-      word_add_toNat (by rw [show (3 : Word).toNat = 3 from rfl]; omega)
+      L.toNat_add_of_lt _ _ (by rw [show (3 : Word).toNat = 3 from rfl]; omega)
     simp only [rdW, e]; rw [hg1.iwGet _ (by omega)]
   rw [e2, e3]
   -- the application

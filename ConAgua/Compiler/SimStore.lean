@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Compiler.SimStmt
 import Kraken.X64.Registers
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -455,7 +456,7 @@ theorem descW_tier {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
   have hta := G.tab.dom64_tierA ha u
   have htap := G.tab.pos64_lt hta
   have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
-  have hb := tier_bit u
+  have hb := L.toNat_and_one_le u
   have hoff := tier_off G.tab ha u
   have hD : ∀ d : Int, s.regs.r15.toNat + 8 * (s.regs.get64 R).toNat + d.toNat =
       G.T + 8 * (u &&& 1).toNat + d.toNat := by
@@ -483,7 +484,7 @@ theorem descW32_tier {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
   have hta := G.tab.dom64_tierA ha u
   have htap := G.tab.pos64_lt hta
   have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
-  have hb := tier_bit u
+  have hb := L.toNat_and_one_le u
   have hoff := tier_off G.tab ha u
   have hoff32 := tier_off32 G.tab ha u
   have hD : ∀ d : Int, s.regs.r15.toNat + 8 * (s.regs.get64 R).toNat + d.toNat =
@@ -1116,7 +1117,7 @@ theorem sim_st64t_core {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
   have hta := G.tab.dom64_tierA ha u
   have htap := G.tab.pos64_lt hta
   have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
-  have hb := tier_bit u
+  have hb := L.toNat_and_one_le u
   have hr15 := hI4.r15
   have hoff := tier_off G.tab ha u
   have hsz := hI4.mem.size64 _ hta

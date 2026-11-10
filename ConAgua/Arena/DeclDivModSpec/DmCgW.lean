@@ -13,7 +13,7 @@ import all ConAgua.Arena.DeclArmsNat
 /-!
 # DmCgW
 
-`SubstC0`, `applied_specW`, `appliedW`, `rdW_iw_grow`, `word_add_one`, `craW` and the lemmas only they use.
+`SubstC0`, `applied_specW`, `appliedW`, `rdW_iw_grow`, `craW` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -48,9 +48,6 @@ l_model applied_specW (p : Prog) (hp : p.lookup "div_mod_cert_applied" = some di
   fns [hp ↦ appliedW list]
   specs [callW_spec p n "nat_var", callW_spec p n "mk_app", callW_spec p n "intern_fvar"]
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
-
-theorem word_add_one {w : Word} (h : w.toNat + 1 < 2 ^ 64) : (w + 1).toNat = w.toNat + 1 := by
-  rw [UInt64.toNat_add]; simp; omega
 
 /-! ## `consts_resolve_all` -/
 

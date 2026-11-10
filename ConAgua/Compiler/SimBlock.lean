@@ -4,6 +4,7 @@ public import ConAgua.Compiler.SimStmt
 import ConAgua.Compiler.SimStore
 import ConAgua.L.Blocks
 import Kraken.X64.Registers
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -388,7 +389,7 @@ theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 
     have htap := G.tab.pos64_lt hta
     have hwa := G.tab.pos64_lt (G.tab.dom64_t0 ha)
     have hTT := tier_T hG ha
-    have hb := tier_bit u
+    have hb := L.toNat_and_one_le u
     have hoff := tier_off G.tab ha u
     refine ev_congr (h _ (G.T + 8 * (u &&& 1).toNat) rfl ((KeepR.refl s).ofEq ?_)
       (fun r' hr' => by simp only [rget_set, hr', ↓reduceIte]) ?_

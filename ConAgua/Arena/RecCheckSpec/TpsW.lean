@@ -13,6 +13,7 @@ import all ConAgua.Arena.RecCheck
 import ConAgua.Arena.IndPartsSpec.RecTW
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -118,7 +119,7 @@ theorem tpsW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
     (blockShapeAllCtors_refines p L.alloc L.copy L.nco L.acc L.acg L.ac (n + 1) _ a dn vis fe pp bs hS1
       (hq.grow (decBS_mono _) hg1)) h2
   dsimp only at hS2 hg2 hac hacb
-  rw [getD1] at hac hacb
+  rw [_root_.L.getD_one] at hac hacb
   -- their names
   refine Sim.mstep (K := tpsW.k_ptr_list_names p (n + 1) _ _) rfl (fun _ _ => rfl) fun ra m3 h3 => ?_
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
@@ -146,7 +147,7 @@ theorem tpsW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
     rw [decHL_grow3 hg4 (Nat.le_of_eq ht3)]; exact hd3
   obtain ⟨ws1, hs1, hm1, hl1⟩ := slR_of_decHL s4.mem _ _ _ hd3' (by have := hg4.iw; have := hT s4.mem; omega)
   obtain ⟨ws2, hs2, hm2, hl2⟩ := slR_of_decHL s4.mem _ _ _ hd4 (by rw [ht4]; exact hT _)
-  rw [ofNat_toNat_word, ofNat_toNat_word] at hs1 hs2
+  rw [_root_.L.ofNat_toNat, _root_.L.ofNat_toNat] at hs1 hs2
   have heq := eqW_ok _ _ _ _ _ _ _ ws1 ws2 hs1 hs2 hW5
   rw [tpsW.k_sl_eq.arm1, hm5]
   refine Sim.ret ⟨?_, rfl, hS4, hg1.trans (hg2.trans (hg3.trans hg4))⟩

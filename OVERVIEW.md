@@ -226,8 +226,8 @@ not accepted
 
 **The threaded mode** (`--jobs=N`, §9.3) has its own theorem, and its harness
 assumptions are the fields of
-[`ThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L144-L179)
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L30-L53)):
+[`ThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L145-L180)
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L31-L54)):
 
 * entry 1 is called as `AbiCall` says, and the harness regains control at each
   call's return address in a state the machine is guaranteed to reach there
@@ -250,8 +250,8 @@ assumptions are the fields of
 
 The threaded verdict theorem (`checkerFile_threads_verdict`) has its own set,
 the cases of
-[`ThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L74-L122)
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L39-L63)):
+[`ThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L75-L123)
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L40-L64)):
 either entry 1 is called as `AbiCall` says and returns (`FirstReturn`) with
 `rdx = 2`, and the code reported is its `rax`; or, for one thread and one of
 its calls `i`, the facts above hold for that thread's calls up to `i` (entry 1
@@ -468,7 +468,7 @@ the layout and enters the trampoline, so `compile_correct` gives one L run of
 the program, §8.6); if that returns `2^63 + k`, it calls entry 2 in place, a
 second L run in mode 2 on the memory the first left; if the machine reports
 accept, both L runs did.
-[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L108-L114)
+[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L106-L112)
 composes it with `drv_twinAccepts` for the committed file, and
 `EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 
@@ -753,7 +753,7 @@ con-ron's `Nat` is a `Vec<u64>` of limbs. In L every number, every name's bytes
 and every level list's handles live in one tiered word array, the **pool**, as
 a slice `(offset, length)`; the pool grows at its top, and nothing below the top
 is written again, so every slice stays valid
-([the pool](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/Pool.lean#L11-L30)).
+([the pool](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/Pool.lean#L12-L31)).
 A slice address carries its tier in bit 40. The scratch tier's slices are
 dropped with the scratch tier; within one declaration the pool only grows
 (deviation D10).
@@ -852,7 +852,7 @@ relation that suffices and lifted.
 Data structures are abstract. The cons tables are one library, generic in a
 schema, whose relation `ConsR` is `irreducible` outside its file; users see
 lemmas for reading, keeping and interning, never the slots
-([`ConsLibRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLibRel.lean#L10-L30)).
+([`ConsLibRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLibRel.lean#L11-L31)).
 Likewise the records are read through `tfld`/`tcnt`, and the layout
 (`TRec.ad`) stays folded.
 

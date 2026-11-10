@@ -9,6 +9,7 @@ import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.RecGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 /-!
@@ -153,9 +154,9 @@ theorem rts_ref (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 6
   have hro1 := rec2ToNat_succ (o := ro) (i := ro.toNat) (Nat.le_refl _) (by omega)
   have hvo1 := rec2ToNat_succ (o := vo) (i := vo.toNat) (Nat.le_refl _) (by omega)
   have hco1 := rec2ToNat_succ (o := co) (i := co.toNat) (Nat.le_refl _) (by omega)
-  have hrl1 := rec2ToNat_pred hrl
-  have hvl1 := rec2ToNat_pred hvl
-  have hcl1 := rec2ToNat_pred hcl
+  have hrl1 := L.toNat_sub_one_of_ne hrl
+  have hvl1 := L.toNat_sub_one_of_ne hvl
+  have hcl1 := L.toNat_sub_one_of_ne hcl
   have hok' := RecsOK_tail (by rw [← hjr]; simpa using hok)
   have ih' := ih (by omega) m1 a1 (ro + 1) (rl - 1) (vo + 1) (vl - 1) (co + 1) (cl - 1) rcs' cvs' cs' rcsP' cvsP' hC1
     (hG.grow (decCG_mono _) hg1)

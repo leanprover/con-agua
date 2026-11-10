@@ -5,6 +5,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -149,11 +150,11 @@ theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N 
   have hb1 := hxs.bound
   have hb2 := hns.bound
   have e1 : (r₁.tail.headD 0 + r₁.tail.tail.headD 0).toNat =
-      (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := addW _ _ (by omega)
+      (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := L.toNat_add_of_lt _ _ (by omega)
   rw [e1] at hb2
   have htopN : (spTop m₁).toNat = (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat +
       (r₁.tail.tail.headD 0).toNat := by
-    rw [htop1, ← ho1, addW _ _ (by rw [e1]; omega), e1]
+    rw [htop1, ← ho1, L.toNat_add_of_lt _ _ (by rw [e1]; omega), e1]
   have hxs₂ := hxs.keep hSt₂.size hSt₂.below (by omega) hspn₁
   have hns₂ := hns.keep hSt₂.size hSt₂.below (by rw [e1]; omega) hspn₁
   have h4 := capp2_ref p hp hwc hcc n' (hk.mono (by omega)) F (by omega) (by omega)

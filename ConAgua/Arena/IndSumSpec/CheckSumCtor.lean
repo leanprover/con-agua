@@ -13,7 +13,7 @@ public import ConAgua.Arena.IndSumSpec.StructProjArgP
 /-!
 # CheckSumCtor
 
-`sumGetD0–2`, the callees of `check_sum_ctor(_tail)` as `Sim`s, `checkSumCtor_eq`, `sumTypeWord`.
+The callees of `check_sum_ctor(_tail)` as `Sim`s, `checkSumCtor_eq`, `sumTypeWord`.
 -/
 
 noncomputable section
@@ -29,13 +29,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-theorem sumGetD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  rcases r with _ | ⟨a, _ | ⟨b, r⟩⟩ <;> rfl
-theorem sumGetD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
-  rcases r with _ | ⟨a, _ | ⟨b, _ | ⟨c, r⟩⟩⟩ <;> rfl
-theorem sumGetD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by
-  rcases r with _ | ⟨a, r⟩ <;> rfl
 
 /-- `param_levels` as a `Sim`. -/
 theorem plSim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) (m : Mem)

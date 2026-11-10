@@ -18,6 +18,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import ConAgua.L.For
 import ConAgua.Front.Preserve
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -507,13 +508,6 @@ theorem dec_le_not_lt (x y : Word) : decide (x ≤ y) = !decide (y < x) := by
   · have : x ≤ y := UInt64.not_lt.mp h
     simp [h, this]
 
-theorem dec_lt_not_le' (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
-  by_cases h : y ≤ x
-  · have : ¬ x < y := fun h' => absurd h (UInt64.not_le.mpr h')
-    simp [h, this]
-  · have : x < y := UInt64.not_le.mp h
-    simp [h, this]
-
 section specs
 variable (p : Prog)
 
@@ -592,7 +586,7 @@ theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
   arrs := by decide
 
 theorem pushOK_eqC (m : Mem) (t : Word) : pushOK m t = pushOKC litCS m t := by
-  rw [pushOK, pushOKC, dec_lt_not_le' (cnt m t) (m.len64 (tierA REC t) >>> 2)]; rfl
+  rw [pushOK, pushOKC, L.decide_lt_eq_not_decide_le (cnt m t) (m.len64 (tierA REC t) >>> 2)]; rfl
 
 section kinds
 variable (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_eq" = some limbsEq)

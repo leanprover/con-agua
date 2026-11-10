@@ -16,6 +16,7 @@ import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndSumSpec.DecHLTake
 import ConAgua.Arena.RecClassSpec.MkTMWAfr
 import ConAgua.Arena.RefWalk
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -480,7 +481,7 @@ theorem tmf_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hK : KnotStagePro
   refine ⟨_, _, hrun, ?_⟩
   dsimp only [tmfE.k_get_app_args_f]
   have k1 := TmAt.pstep hC hS1 (gaaF_afr hs1 hA) hg1 (hPm.fr (MFr.ofGaaF hs1)) (PStep.refl hC.check.state)
-  rw [getD_zero, getD_one] at hd1 hb1
+  rw [L.getD_zero, L.getD_one] at hd1 hb1
   -- the head
   refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   obtain ⟨s2, rfl, -, hs2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩) (gafF_spec p hP.ad n _ [CWF, mty]) h2

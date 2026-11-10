@@ -7,7 +7,6 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConAgua.Arena.LdRd
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.FVarStore
@@ -15,6 +14,7 @@ import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.SortStore
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -607,14 +607,14 @@ theorem rpNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
       StageR vis fe m' a' ∧ IWGrow m m' ∧ rpMR m' mp' := by
   cases v with
   | app f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rpNodeW_app] at hn
     have := rpApp_ok dn fe vis k ih m m' a no nl us b nn f1 h _ _ r N names mp hn hS hh hx hy hus hdec hno hit hN hnn hb hM
     rw [hdx, hdy] at this
     exact this
   | lam f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rpNodeW_bin k m no nl us b nn f1 h 5 _ _ _ (Or.inl rfl)] at hn
     obtain ⟨a', mp', hr, hS', hg', hM'⟩ := rpBin_ok dn fe vis k ih 5 (fun m a b => mkLamW m a b) internLamE
@@ -624,7 +624,7 @@ theorem rpNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
     rw [hdx, hdy] at hr
     exact ⟨a', mp', hr, hS', hg', hM'⟩
   | forallE f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rpNodeW_bin k m no nl us b nn f1 h 6 _ _ _ (Or.inr rfl)] at hn
     obtain ⟨a', mp', hr, hS', hg', hM'⟩ := rpBin_ok dn fe vis k ih 6 (fun m a b => mkForallW m a b) internForallEE
@@ -634,14 +634,14 @@ theorem rpNode_arm (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word
     rw [hdx, hdy] at hr
     exact ⟨a', mp', hr, hS', hg', hM'⟩
   | letE t v' b' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy, hz, hdz⟩ := hvr
     rw [hg, rpNodeW_let] at hn
     have := rpLet_ok dn fe vis k ih m m' a no nl us b nn f1 _ _ _ r N names mp hn hS hx hy hz hus hdec hno hit hN hnn hb hM
     rw [hdx, hdy, hdz] at this
     exact this
   | proj s i e =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, hi, hz, hdz⟩ := hvr
     rw [hg, rpNodeW_proj k m no nl us b nn f1 h 9 _ _ _ (by decide) (by decide) (by decide)] at hn
     have := rpProj_ok dn fe vis k ih m m' a no nl us b nn f1 _ _ _ r N names mp hn hS hz hus hdec hno hit hN hnn hb hM
@@ -706,7 +706,7 @@ theorem rpGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
       rcases hset : msetG raSch m1 h 0 rn with _ | m2 <;> rw [hset] at hb; · simp [rpG5] at hb
       rw [rpG5_some] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-      have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+      have hF1 : (f - 1).toNat = F := by rw [L.toNat_sub_one_of_ne hf0, hF]; rfl
       obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := rpNode_arm dn fe vis k (ih k (by omega)) vl v hvr hnv m m1 a no nl us b
         nn (f - 1) h rn N names mp hnode hS hh hus hdec hno hit hN hnn hbN hM
       rw [hF1] at hr1
@@ -724,7 +724,7 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
   by_cases hf0 : f = 0
   · rw [rpGoW_abort j m no nl us b nn f h hf0] at hb; simp at hb
   rw [rpGoW_view j m no nl us b nn f h hf0] at hb
-  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := toNat_ne_zero' hf0; omega⟩
+  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := L.toNat_ne_zero_of_ne _ hf0; omega⟩
   cases hvl : eViewW m h with
   | nil => rw [hvl] at hb; simp [rpG1] at hb
   | cons g vt =>

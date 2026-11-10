@@ -5,6 +5,7 @@ import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.Env
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -217,7 +218,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       obtain ⟨hvw, hvb⟩ := iwN_rdW hv (by omega)
       obtain ⟨hcow, hcob⟩ := iwN_rdW hco (by omega)
       obtain ⟨hclw, hclb⟩ := iwN_rdW hcl3 (by omega)
-      rw [ofNat_toNat_word] at hvw
+      rw [L.ofNat_toNat] at hvw
       have e2 : UInt64.ofNat v + 2 = UInt64.ofNat (v + 2) := by
         apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
       have e3 : UInt64.ofNat v + 3 = UInt64.ofNat (v + 3) := by
@@ -318,7 +319,7 @@ theorem acW_ok (n : Nat) (m m2 : Mem) (p : Word) (r : List Word) (bs : BlockShap
   obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
   have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-  rw [ofNat_toNat_word] at ho'
+  rw [L.ofNat_toNat] at ho'
   rw [e1] at hl'
   have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hob)
   have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hlb)

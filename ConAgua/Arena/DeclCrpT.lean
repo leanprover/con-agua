@@ -17,6 +17,7 @@ import ConRon.Bridge.Checker.Base
 public import ConRon.Bridge.Checker.DeclVal
 public import ConRon.Bridge.Core.Knot
 import all ConAgua.Arena.DeclArms
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -641,10 +642,10 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
   obtain ⟨wn, hwn, hwnl, hname0⟩ := decCV_name hcv1
   obtain ⟨wt, hwt, -, -⟩ := (decCV_words hcv1).2.2
   have hqb : q.toNat + 1 + 3 < 2 ^ 64 := erecP_lt64 hwt
-  have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
+  have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (by omega)
   have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv1
-  have hq5 : (q + 5).toNat = q.toNat + 5 := toNat_add_small q 5 (erecP_lt64 hwv)
+  have hq5 : (q + 5).toNat = q.toNat + 5 := L.toNat_add_ofNat_of_lt q 5 (erecP_lt64 hwv)
   have exn : rdW (m1.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = wn := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hwn)
   have exv : rdW (m1.arr64 (L.tierA EREC ((q + 5) >>> 40))) (q + 5 &&& 1099511627775) = wv := by

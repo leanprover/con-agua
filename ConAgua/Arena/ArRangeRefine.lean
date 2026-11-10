@@ -7,6 +7,7 @@ import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.View
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -26,21 +27,15 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem dk_toNat (d k : UInt64) (hdk : ¬ d + k < d) : (d + k).toNat = d.toNat + k.toNat := by
-  have h := UInt64.not_lt.mp hdk
-  rw [UInt64.le_iff_toNat_le, UInt64.toNat_add] at h
-  rw [UInt64.toNat_add]
-  have := d.toNat_lt; have := k.toNat_lt
-  omega
 theorem rng_iff (d k I : UInt64) (hdk : ¬ d + k < d) :
     (d ≤ I ∧ I < d + k) ↔ (decide (d.toNat ≤ I.toNat) && decide (I.toNat < d.toNat + k.toNat)) = true := by
   simp only [Bool.and_eq_true, decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.lt_iff_toNat_lt,
-    dk_toNat d k hdk]
+    L.toNat_add_of_not_lt hdk]
 theorem rng_word (c d k I : UInt64) (hdk : ¬ d + k < d) (hi : d ≤ I ∧ I < d + k)
     (ho : ¬ c + (d + k - 1 - I) < c) :
     (c + (d + k - 1 - I)).toNat = c.toNat + (d.toNat + k.toNat - 1 - I.toNat) := by
   obtain ⟨h1, h2⟩ := hi
-  have e := dk_toNat d k hdk
+  have e := L.toNat_add_of_not_lt hdk
   rw [UInt64.le_iff_toNat_le] at h1
   rw [UInt64.lt_iff_toNat_lt, e] at h2
   have h3 : (1 : UInt64) ≤ d + k := by rw [UInt64.le_iff_toNat_le, e]; simp; omega
@@ -111,7 +106,7 @@ theorem rgoOK_succ (n : Nat) (ih : RNodeOK n) : RGoOK (n + 1) := by
   intro m m' a h c d k fu r hA hh hb
   have hfu : ¬ fu = 0 := fun hfu => by rw [arW] at hb; simp [hfu] at hb
   rw [arW_eq n m h c d k fu hfu] at hb
-  rw [ctrW_toNat fu hfu, abstractRangeGo_succ']
+  rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, abstractRangeGo_succ']
   refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
     (Sim.ofD fun x m₁ e => fvbW_ok n m m₁ a hA h (fu - 1) x hh e) fun x m₁ a₁ hA₁ => ?_) hb
   rw [rcutK_some]
@@ -243,7 +238,7 @@ theorem rlamArm_ok (hg : tagW h = 5) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
   refine Sim.bindD (K := rlamK₁.rlamK₂ h c _ _ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-    simpa only [succW_toNat c hk1] using ih m₁ m₂ a₁ _ (c + 1) d k fu y hA₁ haw e)
+    simpa only [L.toNat_add_one_of_ne c hk1] using ih m₁ m₂ a₁ _ (c + 1) d k fu y hA₁ haw e)
         fun y m₂ a₂ hA₂ => ?_
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
@@ -279,7 +274,7 @@ theorem rforallArm_ok (hg : tagW h = 6) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
   refine Sim.bindD (K := rfaK₁.rfaK₂ h c _ _ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-    simpa only [succW_toNat c hk1] using ih m₁ m₂ a₁ _ (c + 1) d k fu y hA₁ haw e)
+    simpa only [L.toNat_add_one_of_ne c hk1] using ih m₁ m₂ a₁ _ (c + 1) d k fu y hA₁ haw e)
         fun y m₂ a₂ hA₂ => ?_
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
@@ -317,7 +312,7 @@ theorem rletArm_ok (hg : tagW h = 7) :
     (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ c d k fu y hA₁ hvw e) fun y m₂ a₂ hA₂ => ?_
   refine Sim.bindD (K := rleK₁.rleK₃ h c _ _ _ x y) rfl (fun _ _ => rfl)
     (Sim.ofD fun z m₃ e => by
-    simpa only [succW_toNat c hk1] using ih m₂ m₃ a₂ _ (c + 1) d k fu z hA₂ hbw e)
+    simpa only [L.toNat_add_one_of_ne c hk1] using ih m₂ m₃ a₂ _ (c + 1) d k fu z hA₂ hbw e)
         fun z m₃ a₃ hA₃ => ?_
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltLetE (decE h)
       (decE x == decE (tfld m LET (tierW h) (idxW h) 0) && decE y == decE (tfld m LET (tierW h) (idxW h) 1) && decE z == decE (tfld m LET (tierW h) (idxW h) 2))

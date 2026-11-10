@@ -23,6 +23,7 @@ public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.RecClassSpec.ClassNPcOf
 public import ConAgua.Arena.TwinStep
 public import ConAgua.Verdict.VCtx
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -255,7 +256,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   obtain ⟨h41, ⟨hdl, hbl⟩, -⟩ := hd4
   obtain ⟨fvsP, -, -, hfvsP, -⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho4
   rw [cxoE.k_open_pis_at_fvars_f.arm1 (hc1 := by rw [h41]; decide)]
-  simp only [getD_one, show (1 + 1 : Nat) = 2 from rfl, getD_two] at hdl hbl
+  simp only [L.getD_one, show (1 + 1 : Nat) = 2 from rfl, L.getD_two] at hdl hbl
   have k14 := k1.trans (k2.trans k4)
   -- `class_fields_of`
   obtain ⟨mp0, hM0⟩ := k4.rc.pos.no

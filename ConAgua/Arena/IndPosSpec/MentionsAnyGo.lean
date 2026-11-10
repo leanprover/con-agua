@@ -5,9 +5,9 @@ import ConAgua.Arena.IndPosSpec.SlRCongr
 import ConAgua.Arena.IndPosSpec.SnocWDecK
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.Env
-import ConAgua.Arena.IndPosSpec.NestKeyMap
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.CanonW
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -83,7 +83,7 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
         rw [h0] at hblock; simpa [hslice?] using hblock.symm
       subst this
       exact ⟨by simpa [ConRon.Arena.nestFrameMates.go] using hout, IWGrow.refl _, rfl, hit⟩
-    · have hl1 : l.toNat = (l.toNat - 1) + 1 := by have := toNat_ne_zero' hl; omega
+    · have hl1 : l.toNat = (l.toNat - 1) + 1 := by have := L.toNat_ne_zero_of_ne _ hl; omega
       rw [hl1, hslice?_succ] at hblock
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hblock
       obtain ⟨x, hx, rest, hrest, rfl⟩ := hblock
@@ -94,7 +94,7 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
       rw [matesW.arm2 (hc1 := hl), erRd_foldN, hrd] at h
       rcases hcn : containsW n m oO oL w0 with _ | b <;> rw [hcn] at h; · rw [matesW.k_sl_contains.none] at h; cases h
       have hbv := containsW_ok n _ _ _ _ _ _ hws hcn
-      have hl1' : (l - 1).toNat = l.toNat - 1 := toNat_sub_one' hl
+      have hl1' : (l - 1).toNat = l.toNat - 1 := L.toNat_sub_one_of_ne hl
       have hcond : ((decI w0 : NIdx) == decI c || (ws.map (fun w => (decI w : NIdx))).contains (decI w0)) =
           decide (w0 = c ∨ b ≠ 0) := by
         rw [decI_beq w0 c hw0lt hc, contains_map_decI w0 hw0lt ws hwlt, hbv]
@@ -110,7 +110,7 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
           obtain ⟨y, hy, -⟩ := hr1
           obtain ⟨w1, hw1, -⟩ := hd?_some hy
           have h64 := erecP_lt64 hw1
-          rw [toNat_add_one' (by omega)]; exact hrest
+          rw [L.toNat_add_one_of_lt (by omega)]; exact hrest
       subst hw0d
       by_cases hskip : (w0 = c ∨ b ≠ 0)
       · have hskip' : erRd m off = c ∨ b ≠ 0 := by rw [hrd]; exact hskip
@@ -271,39 +271,39 @@ theorem maNode_arm (k : Nat) (ih : MaGoOK k) (vl : List Word) (v : ENodeView) (h
       (r != 0) = b ∧ maMR m' mp' ∧ MemFrame [MAM] [203] m m' := by
   cases v with
   | fvar i ty =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, -, hy, hdy⟩ := hvr
     rw [hg] at hn
     have := maNodeFVar_ok k ih m m' a no nl f1 _ _ _ r ws mp hy hn hA hws hwlt hM
     rw [← hdy] at *
     simp only [maArm]; exact this
   | app f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := maNodeBin_ok k ih m m' a no nl f1 _ _ _ _ r ws mp (Or.inl hg) hx hy hn hA hws hwlt hM
     rw [hdx, hdy] at this
     simp only [maArm]; exact this
   | lam f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := maNodeBin_ok k ih m m' a no nl f1 _ _ _ _ r ws mp (Or.inr (Or.inl hg)) hx hy hn hA hws hwlt hM
     rw [hdx, hdy] at this
     simp only [maArm]; exact this
   | forallE f x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     have := maNodeBin_ok k ih m m' a no nl f1 _ _ _ _ r ws mp (Or.inr (Or.inr hg)) hx hy hn hA hws hwlt hM
     rw [hdx, hdy] at this
     simp only [maArm]; exact this
   | letE t v' b' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy, hz, hdz⟩ := hvr
     rw [hg] at hn
     have := maNodeLet_ok k ih m m' a no nl f1 _ _ _ r ws mp hx hy hz hn hA hws hwlt hM
     rw [hdx, hdy, hdz] at this
     simp only [maArm]; exact this
   | proj s i e =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, -, hz, hdz⟩ := hvr
     rw [hg] at hn
     have := maNodeProj_ok k ih m m' a no nl f1 _ _ _ r ws mp hx hz hn hA hws hwlt hM
@@ -365,7 +365,7 @@ theorem maGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → MaGoOK k) (m m' :
       rw [maG5_some] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       have hf1 : f - 1 = f - 1 := rfl
-      have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+      have hF1 : (f - 1).toNat = F := by rw [L.toNat_sub_one_of_ne hf0, hF]; rfl
       obtain ⟨bb, mp1, hr1, hbb, hM1, hfr1⟩ := maNode_arm k (ih k (by omega)) vl v hvr hnv m m1 a no nl (f - 1) rn
         ws mp hnode hA hws hwlt hM
       rw [hF1] at hr1
@@ -382,7 +382,7 @@ theorem maGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → MaGoOK k) : MaGoOK
   by_cases hf0 : f = 0
   · rw [maGoW_abort j m no nl f h hf0] at hb; simp at hb
   rw [maGoW_view j m no nl f h hf0] at hb
-  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := toNat_ne_zero' hf0; omega⟩
+  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := L.toNat_ne_zero_of_ne _ hf0; omega⟩
   cases hvl : eViewW m h with
   | nil => rw [hvl] at hb; simp [maG1] at hb
   | cons g vt =>
@@ -410,7 +410,7 @@ theorem maGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → MaGoOK k) : MaGoOK
       exact ⟨false, mp, rfl, rfl, hM, MemFrame.refl _ _ _⟩
     | const nn us =>
       rw [hF, mentionsAnyGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
-      simp only [ViewR, getD1_eq'] at hvr
+      simp only [ViewR, L.getD_one] at hvr
       obtain ⟨hg3, hx, hdx, -⟩ := hvr
       have hg3' : (g :: vt).headD 0 = 3 := hg3
       rw [maG1_const j m no nl f h _ (by simp) (by rw [hg3']; decide) hg3'] at hb

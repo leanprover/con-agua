@@ -13,7 +13,6 @@ import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndPosSpec.KlB
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.IndSumSpec.CheckSumCtor
 import ConAgua.Arena.RefWalk
 import ConRon.Bridge.Inductives.BlockInstall
 import ConRon.Bridge.Specs
@@ -26,6 +25,7 @@ public import ConRon.Bridge.Inductives.Positivity
 public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -106,7 +106,7 @@ theorem iao_ref (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   subst hx1
   obtain ⟨xsP, xP, hxq, hxs, -⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho1
   obtain ⟨-, ⟨hfd, hfb⟩, -⟩ := hd1
-  rw [sumGetD1, sumGetD2] at hfd hfb
+  rw [L.getD_one, L.getD_two] at hfd hfb
   have hfvsc := ConRon.Bridge.Inductives.openers_typeD_WScoped hxq hW
   -- `check_struct_field_sorts_i`
   rcases n with _ | k
@@ -114,7 +114,7 @@ theorem iao_ref (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   have hR := fsorts_ref hq henv hLC hLT hsum.hg hsum.hpw hsum.het hsum.hcn (k + 1) (by omega) m1 a1 isP 0
     (rdW (m.arr64 IW) (ctx + 9)) hi _ _ 0 0 nF m1 fvs [] xsP k1.stage k1.abs (IWGrow.refl _) hfd hfb
     (by simp [decHL, hslice?]) (by simp) hs32 ⟨sortP, by rw [hse]; exact ConRon.Bridge.denoteL_ext hsP p1.ext⟩
-    (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _) hxs
+    (by rw [← L.toNat_add_of_not_lt hov]; exact UInt64.toNat_lt _) hxs
     (fun i _ x hx => by rw [hhi]; exact hfvsc i x hx)
   rw [hse, hhi, hb, show ((0 : Word) != 0) = false from rfl] at hR
   refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩) (fun _ => rfl)

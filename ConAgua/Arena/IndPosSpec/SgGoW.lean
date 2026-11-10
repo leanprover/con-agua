@@ -12,6 +12,7 @@ import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 import ConAgua.Arena.IndPosSpec.SnocWStage
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -151,8 +152,8 @@ theorem sgGoW_ok (k : Nat) :
   have hg01 := hg0.trans hg1
   obtain ⟨a2, hr2, hzH, M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := (rxOK_all fe vis (k' + 1)).2.2.2.2.2.2 m1 m2 a1 f y
     _ z M G g hrf hS1 (hfm.grow hg01) (lt_of_notbig hyb) hR1
-  have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
-  have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := dL.toNat_lt; omega)
+  have hqj : (q + j).toNat = q.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have hj1 : (j + 1).toNat = j.toNat + 1 := L.toNat_add_of_lt _ _ (show j.toNat + 1 < 2 ^ 64 by have := dL.toNat_lt; omega)
   have hg12 := hg1.trans hg2
   have hacc2 : decHL m2 q.toNat j.toNat = some acc := by rw [decHL_grow hg12 (by omega)]; exact hacc
   have hdec3 := decHL_write m2 q j z acc hzH hS2.iw.iwSize (by have := hS2.iw.iw; have := hg12.iw; omega) hacc2

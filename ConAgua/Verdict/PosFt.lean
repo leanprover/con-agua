@@ -14,6 +14,7 @@ import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import all ConAgua.Arena.IndPos2
 import ConAgua.Arena.QuotCiT
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -222,7 +223,7 @@ theorem ft_ref (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {cvq capsq :
   change RefE _ (if erRd m (capsq + 12) + erRd m (capsq + 6) < erRd m (capsq + 12) then _ else _) _ _ _
   refine RefE.abort0 rfl fun hov => ?_
   have hsum : (erRd m (capsq + 12) + erRd m (capsq + 6)).toNat = caps.nparams + caps.nIdx := by
-    rw [partsAddNoOv hov, hnp, hni]
+    rw [L.toNat_add_of_not_lt hov, hnp, hni]
   -- `reduced_former`
   have hRF := rf_ref hq hP.toRfProg henv k (by omega) (n := erRd m (capsq + 12) + erRd m (capsq + 6))
     hC hA hcv hcvP hws

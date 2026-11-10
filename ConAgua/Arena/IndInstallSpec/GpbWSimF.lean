@@ -16,6 +16,7 @@ import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -268,7 +269,7 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       ⟨hS, by rw [t1, t2]; exact hpar, by rw [t1, t2]; exact hpb⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r1, m1⟩ pbs a1 - ⟨⟨hS1, hg1, hpbs, hpbb⟩, hf1⟩
   dsimp only at hS1 hg1 hpbs hpbb
-  simp only [getD_zero, Nat.zero_add, getD_one] at hpbs hpbb
+  simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hpbs hpbb
   rw [gpbW.k_fvar_type_ds.arm1]
   have hps := psW_sim dn vis fe G g hns n m1 a1 0 0 hS1 (hG.grow (decCG_mono _) hg1) (by simp) (by simp)
     (hf1 hA)

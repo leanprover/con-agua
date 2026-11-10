@@ -123,9 +123,6 @@ theorem sumDecHL_write_front {k : IdxKind} (m : Mem) (o kk : Nat) (w v : Word) (
     simp [hd?, iwA, aread_apply, set64IW_get, hw, hsz, hv]
   rw [e1, e0, h]; rfl
 
-theorem sum_toNat_add {a b : Word} (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
-  rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
-
 end L.Ind
 
 end

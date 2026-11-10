@@ -7,7 +7,7 @@ public import ConAgua.Arena.RecClassSpec.Classes
 /-!
 # DecCVX
 
-`decCVX`, `rec2ToNat_succ`, `rec2ToNat_pred`.
+`decCVX`, `rec2ToNat_succ`.
 -/
 
 noncomputable section
@@ -33,10 +33,6 @@ noncomputable def decCVX (m : Mem) (p : Nat) : Option IConstantVal :=
 
 theorem rec2ToNat_succ {o : Word} {i : Nat} (h : o.toNat ≤ i) (hi : i < 2 ^ 64 - 1) :
     (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-
-theorem rec2ToNat_pred {l : Word} (h : l ≠ 0) : (l - 1).toNat = l.toNat - 1 := by
-  have : l.toNat ≠ 0 := fun e => h (UInt64.toNat_inj.mp (by simpa using e))
-  rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
 
 end L.Ind
 

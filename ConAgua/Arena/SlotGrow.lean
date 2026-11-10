@@ -107,9 +107,6 @@ theorem tierA_of_le (a : Nat) (t : Word) (ht : t ≤ 1) :
 theorem tierA_and_one (a : Nat) (t : Word) : tierA a (t &&& 1) = tierA a t := by
   simp only [tierA, UInt64.and_assoc, UInt64.and_self]
 
-theorem and_one_le (t : Word) : (t &&& 1).toNat ≤ 1 := by
-  rw [UInt64.toNat_and]; exact Nat.le_trans Nat.and_le_right (by simp)
-
 theorem tierA_inj {a b : Nat} {t u : Word} (ht : t ≤ 1) (hu : u ≤ 1) :
     tierA a t = tierA b u ↔ a = b ∧ t = u := by
   have h01 : ∀ x : Word, x ≤ 1 → x = 0 ∨ x = 1 := fun x hx => by

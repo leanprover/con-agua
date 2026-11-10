@@ -16,6 +16,7 @@ public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.UCtx
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndPos2
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -73,7 +74,7 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   replace cin1 := cin1 hc
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨-, -, -, -, -, hlvH, hlvd, -⟩ := ctx_fields cin1 cin1' htop1
-  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
+  have e3 : (cv + 3).toNat = cv.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
   have hrd3 : erRd m1 (cv + 3) = wt := (erRd_of_erecP (hg1.ext _ _ (by rw [e3]; exact hwt))).1
   rw [hrd3] at h
   rcases hst : cR (k + 2) "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, rdW (m1.arr64 IW) (ctx + 10), wt] m1 with _ | ⟨r2, m2⟩ <;> rw [hst] at h; · simp [nrcK2] at h
@@ -134,7 +135,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
   have hcv3 : cv.toNat + 3 < 2 ^ 64 := erecP_lt64 hwt
-  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
+  have e3 : (cv + 3).toNat = cv.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
   have hrd3 : erRd m (cv + 3) = wt := (erRd_of_erecP (by rw [e3]; exact hwt)).1
   unfold nuW at h
   rw [hrd3] at h
@@ -353,7 +354,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     | true =>
       subst hr1
       rw [ucK_yes (h := by simp)] at h
-      have ho1 : (o + 1).toNat = o.toNat + 1 := word_add_toNat (by
+      have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_of_lt _ _ (by
         have := hS.iw.iw; have := hS.iw.iwSize; simp at hob; simp; omega)
       have hl1 : (l - 1).toNat = l.toNat - 1 :=
         UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))

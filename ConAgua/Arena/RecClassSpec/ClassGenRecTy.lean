@@ -15,6 +15,7 @@ import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 public import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
 import all ConAgua.Arena.RecClass
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -133,7 +134,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
       ⟨hS, hifs, fun _ => hfb⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r1, m1⟩ ibs a1 - ⟨⟨hS1, hg1, hibs, hib⟩, hf1⟩
   dsimp only at hS1 hg1 hibs hib
-  simp only [getD_zero, Nat.zero_add, getD_one] at hibs hib
+  simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hibs hib
   rw [grtW.k_fvar_type_ds.arm1]
   have hpo1 : iwN m1 (g.toNat + 12) = some po := by rw [iwN_grow hg1 (by omega)]; exact hpo
   obtain ⟨e12, t12⟩ := rec2RdN (w := g) (k := 12) hpo1 hS1.iw.iwSize
@@ -209,8 +210,8 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   · rw [gtW.k_class_gen_major.arm1 (hc1 := ho1)]; exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hA1⟩
   obtain ⟨ifs, maj⟩ := p1
   obtain ⟨h11, ⟨hifs, hfb⟩, hmH, hmd⟩ := ho1
-  simp only [getD_one, getD_two, Nat.reduceAdd] at hifs hfb
-  simp only [drop3_headD] at hmH hmd
+  simp only [L.getD_one, L.getD_two, Nat.reduceAdd] at hifs hfb
+  simp only [L.headD_drop_three] at hmH hmd
   have h10 : r1.headD 0 ≠ 0 := by rw [h11]; decide
   by_cases hov : UInt64.ofNat l12 + r1.tail.tail.headD 0 < UInt64.ofNat l12
   · rw [gtW.k_class_gen_major.abort1 (hc1 := h10) (hc2 := hov)]; exact RSim.none

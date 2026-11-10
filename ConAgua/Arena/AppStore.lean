@@ -9,6 +9,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -190,15 +191,8 @@ theorem appOK : ConsOK p appCS where
   mloc := fun h => by simp [appCS] at h
   hrec := fun s => by simp [appCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, ahash, appHashW]
 
-theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
-  by_cases h : y ≤ x
-  · have : ¬ x < y := fun h' => absurd h (UInt64.not_le.mpr h')
-    simp [h, this]
-  · have : x < y := UInt64.not_le.mp h
-    simp [h, this]
-
 theorem apushOK_eqC (m : Mem) (t : Word) : apushOK m t = pushOKC appCS m t := by
-  rw [apushOK, pushOKC, dec_lt_not_le (acnt m t) (m.len64 (tierA AREC t))]; rfl
+  rw [apushOK, pushOKC, L.decide_lt_eq_not_decide_le (acnt m t) (m.len64 (tierA AREC t))]; rfl
 
 theorem internApp_spec (hpf : p.lookup "app_find" = some appFind)
     (hpp : p.lookup "app_push" = some appPush) (hp : p.lookup "intern_app" = some internApp)

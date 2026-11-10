@@ -17,6 +17,7 @@ import ConAgua.Arena.DerRel
 import ConAgua.Arena.WhnfCoreRefine
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.WhnfCore
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -272,7 +273,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
   simp only [g0', beq_self_eq_true] at htag
   unfold LsStore.viewLen
   rw [hpers]
-  rcases word_le_one (tierW h) ht1 with h0 | h1
+  rcases L.eq_zero_or_eq_one_of_le_one (tierW h) ht1 with h0 | h1
   · -- persistent
     have hlt : (idxW h).toNat < a.store.lss.pers.lists.nodes.size := by
       rw [← ConsR.cntP hR.ls]

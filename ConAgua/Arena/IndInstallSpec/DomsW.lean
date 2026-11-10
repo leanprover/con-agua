@@ -12,7 +12,7 @@ import ConAgua.Arena.IndLibSpec
 # DomsW
 
 Slice lemmas: `decHL` along the pool's growth (`decHL_grow`) and its elements as word reads
-(`decHL_getI`, `decHL_get'`), and the `getD` readings `agGetD0–2`.
+(`decHL_getI`, `decHL_get'`).
 -/
 
 section
@@ -83,13 +83,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-theorem agGetD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  rcases r with _ | ⟨a, _ | ⟨b, c⟩⟩ <;> rfl
-theorem agGetD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
-  rcases r with _ | ⟨a, _ | ⟨b, _ | ⟨c, d⟩⟩⟩ <;> rfl
-theorem agGetD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by
-  rcases r with _ | ⟨a, b⟩ <;> rfl
 
 end L.Ind
 

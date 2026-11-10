@@ -260,10 +260,6 @@ theorem walk_then (ih : WalkOK n) {X : AM (Std.HashSet EIdx × Array NIdx)}
   wres_bind h1 fun seen₁ ns₁ hs1 _ => by
     rw [hf]; exact ih _ _ _ _ _ _ _ _ _ _ _ _ _ (h1.arena hA) hc hs1 hb
 
-theorem ctrW_toNat' (c : Word) (hc : c ≠ 0) : c.toNat = (c - 1).toNat + 1 := by
-  have : c.toNat ≠ 0 := fun h => hc (UInt64.toNat_inj.mp (by simpa using h))
-  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-
 end walk
 
 section arms
@@ -375,7 +371,7 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
   · rw [hWalkW.eq_def] at hb; simp [hfu] at hb
   by_cases hr : mfindG hsSch m e 0 = []
   · rw [hWalkW.eq_def] at hb; simp [hfu, hr] at hb
-  rw [ctrW_toNat' fu hfu, usedConstsGo.eq_2]
+  rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, usedConstsGo.eq_2]
   by_cases hh : (mfindG hsSch m e 0).headD 0 ≠ 0
   · rw [hWalkW.arm1 n m e i k tg ws sp fu hfu hr hh] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)

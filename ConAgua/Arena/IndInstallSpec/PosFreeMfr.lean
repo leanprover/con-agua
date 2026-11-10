@@ -5,9 +5,9 @@ import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.RecClassSpec.ReadProg
 import ConAgua.Arena.RecGenSpec.FlushStage
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.ScratchRefine
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -99,7 +99,7 @@ theorem bpPSl {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fu
   obtain ⟨o, l, ho, hl, hd, -⟩ := partsAt hf h
   obtain ⟨hwo, -⟩ := bpWord ho hw
   obtain ⟨hwl, -⟩ := bpWord hl hw1
-  rw [ofNat_toNat_word] at hwo hwl
+  rw [L.ofNat_toNat] at hwo hwl
   rw [hwo, hwl]
   exact ⟨hd, hB _ _ (iwN_truncM_get ho).2 (iwN_truncM_get hl).2⟩
 

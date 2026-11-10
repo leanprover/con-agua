@@ -14,6 +14,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.RecClassSpec.Classes
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.IndParts
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -262,7 +263,7 @@ theorem bmfW_sim {vis : Word} {fe : IFEnv} {no nl mm : Word}
       simp only [beq_iff_eq]
       constructor
       · intro e; rw [← e, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
-      · intro e; rw [e, ofNat_toNat_word]
+      · intro e; rw [e, _root_.L.ofNat_toNat]
     simp only [List.headD_cons]
     by_cases hc : UInt64.ofNat t = mm
     · have hb : (t == mm.toNat) = true := hcond.mp hc

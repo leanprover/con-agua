@@ -7,6 +7,7 @@ import ConAgua.Front.StateDR
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Arena.Rom
 import ConRon.Arena.WFProofs
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -565,9 +566,6 @@ theorem lvSubIntW_ok (n : Nat) (m m' : Mem) (a : AState) (u ko kc vo vc h : Word
 
 /-! ## `ek_copy`, `keys_push`: the keys onto the spine stack -/
 
-theorem toNat_succ_lt {d : Word} (h : d.toNat + 1 < 2 ^ 64) : (d + 1).toNat = d.toNat + 1 := by
-  rw [UInt64.toNat_add]; simp; omega
-
 /-- A nonempty record-pool slice starts below `2 ^ 64`. -/
 theorem hslice?_erecP_lt {k : IdxKind} {m : Mem} {o j : Nat} {xs : List (Idx k)}
     (h : hslice? (erecP m) o (j + 1) = some xs) : o < 2 ^ 64 := by
@@ -629,11 +627,11 @@ theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     | succ n =>
     rw [ekCopyW.arm2 n m s d l hl0] at hW
     replace hW := ekCopyW_k hW
-    have hd1 : (d + 1).toNat = d.toNat + 1 := toNat_succ_lt (by omega)
+    have hd1 : (d + 1).toNat = d.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hs1e : hslice? (erecP m) (s + 1).toNat j = some xs' := by
       cases j with
       | zero => simpa [hslice?] using e'
-      | succ j' => rw [toNat_succ_lt (hslice?_erecP_lt e')]; exact e'
+      | succ j' => rw [L.toNat_add_one_of_lt (hslice?_erecP_lt e')]; exact e'
     have hlm : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hsz₁ : ((m.set64 SPN d (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775))).arr64 SPN).size = (m.arr64 SPN).size :=

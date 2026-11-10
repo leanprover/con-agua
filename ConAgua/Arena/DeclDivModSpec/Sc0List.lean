@@ -9,6 +9,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatGate
 import ConAgua.Arena.IndInstallSpec.DomsW
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -76,7 +77,7 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
     obtain ⟨-, hwlt, rfl, hrest⟩ := decHL_cons_iw hS.iw.iwSize hd
     obtain ⟨-, hwlt2, rfl, -⟩ := decHL_cons_iw hS.iw.iwSize hrest
     have hlt2 : (ho + 1).toNat < iwTop m := by
-      have h1 := hS.iw.iw; have h2 := hS.iw.iwSize; simp only [h2w] at hb; have e := word_add_one (w := ho) (by omega); omega
+      have h1 := hS.iw.iw; have h2 := hS.iw.iwSize; simp only [h2w] at hb; have e := L.toNat_add_one_of_lt (w := ho) (by omega); omega
     rw [ite_eq_right (by decide), ite_eq_left rfl, rdW_iw_grow hG4 (by simp only [h2w] at hb; omega)]
     refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
     refine Sim.ntB ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun r6 _ m6 a6 ⟨hS6, hg6, hl6, rfl⟩ => ?_
@@ -152,7 +153,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p vis fe) (nm r : Word) (hn 
       (slCons_specW p hD.lIwAlloc hD.lIwCopy hD.lSlCons k _ (r1.headD 0) (r2.headD 0) (r2.tail.headD 0)) h3
     have hcons' : consW k m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) = some (r3, m3) := by
       rw [← hs']; exact hcons
-    simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1] at hd2
+    simp only [decRL, Nat.zero_add, L.getD_zero, L.getD_one] at hd2
     obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hcons' hS2 hd2.2 hl1 hd2.1
     refine ⟨x1 :: x2, a2, ?_, hS3, hg1.trans (hg2.trans hg3), ?_⟩
     · simp only [substConst0List, StateT.run_bind, StateT.run_pure]
@@ -160,7 +161,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p vis fe) (nm r : Word) (hn 
           .ok (x1, a1) := hrun1
       simp only [hrun1', exc_ok_bind', hrun2]
       rfl
-    · simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1, List.headD_cons, List.tail_cons]
+    · simp only [decRL, Nat.zero_add, L.getD_zero, L.getD_one, List.headD_cons, List.tail_cons]
       rw [← hx1]
       exact ⟨hd3, by omega⟩
 

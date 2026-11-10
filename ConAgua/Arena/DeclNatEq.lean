@@ -7,6 +7,7 @@ import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsNat
 import all ConAgua.Arena.IndIface
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -262,7 +263,7 @@ theorem eqL_retag {m : Mem} {rl : List Word} {xl : List (EIdx × EIdx)} {k : Nat
     (h : decEqRL m rl xl) (hk : xl.length = k) :
     EqL m (rl.headD 0).toNat k xl := by
   obtain ⟨h1, h2, h3⟩ := h
-  simp only [ntGetD0, ntGetD1] at h1 h2 h3
+  simp only [L.getD_zero, L.getD_one] at h1 h2 h3
   exact ⟨by omega, hk.symm, h3⟩
 
 def natEqPrT (c : NIdx) (z : EIdx) (x : EIdx) (sx : EIdx) : AM (List (EIdx × EIdx)) := do

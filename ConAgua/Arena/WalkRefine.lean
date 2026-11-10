@@ -1,11 +1,11 @@
 module
 
 public import ConAgua.Arena.Walk
-import ConAgua.Arena.FVarRangeRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.View
 public import ConAgua.Arena.ArenaRel
 public import ConRon.Arena.ExprOps
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -93,7 +93,7 @@ theorem bbNodeA_run (F : Nat) (h : EIdx) (a : AState) (v : ENodeView)
 
 /-! ## The refinement, by induction on the fuel
 
-The counter `c` is the twin's `fuel` exactly (`c.toNat`; `FVarRangeRefine.lean`'s `ctrW_toNat`):
+The counter `c` is the twin's `fuel` exactly (`c.toNat`; `L.toNat_eq_toNat_sub_one_add_one`):
 at `c = 0` the L code aborts where the twin throws. -/
 
 /-- What `bb_go`'s model at L fuel `n` and counter `c` says about the arena walk at `c.toNat`. -/
@@ -111,7 +111,7 @@ def NodeOK (n : Nat) : Prop :=
 theorem goOK_succ (n : Nat) (ih : NodeOK n) : GoOK (n + 1) := by
   intro F m m' a h c r hF hR hh hb
   have hc : ¬ c = 0 := fun hc => by rw [bbW] at hb; simp [hc] at hb
-  have hc1 := ctrW_toNat c hc
+  have hc1 := L.toNat_eq_toNat_sub_one_add_one c hc
   obtain ⟨G, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
   rw [bvarBoundGo_succ', StateT.run_bind, bvarBGet_run]
   have hr : ¬ mfindG bmSch m h 0 = [] := fun hr => by rw [bbW] at hb; simp [hc, hr] at hb
@@ -223,7 +223,7 @@ theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
     rw [bbNodeW_bvar n m h c (vok BVAR hc) g0 h1] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     refine ⟨a, ?_, hR⟩
-    rw [bbNodeA_run F _ a _ (view_bvar m a hR h hh (vok BVAR hc) g0), succW_toNat _ h1]; rfl
+    rw [bbNodeA_run F _ a _ (view_bvar m a hR h hh (vok BVAR hc) g0), L.toNat_add_one_of_ne _ h1]; rfl
   by_cases g4 : tagW h = 4
   · by_cases hc : tcnt m APP (tierW h) ≤ idxA h
     · rw [bbNodeW] at hb; simp [hs, g4, hc] at hb

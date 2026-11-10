@@ -5,6 +5,7 @@ import ConAgua.Checker.HoistIndexRef
 public import ConAgua.Checker.HoistClosureTwin
 import ConRon.Bridge.Grind
 public import ConAgua.Checker.HoistRefBase
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -82,10 +83,6 @@ structure HEnv (m : Mem) (a : AState) (ds : Array IDeclaration) (idx : Std.HashM
   top : ws.toNat + c ≤ iwTop m
   iwok : IWOK m
 
-theorem addW_toNat (x : Word) (k : Nat) (h : x.toNat + k < 2 ^ 64) :
-    (x + UInt64.ofNat k).toNat = x.toNat + k := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat']; omega
-
 theorem hnSch_wf : hnSch.WF := ⟨by decide, by decide⟩
 
 /-- **The setting survives the hoist's passes.** -/
@@ -106,7 +103,7 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
   · intro k hk
     have hk' : k < c := hE.size ▸ hk
     have hn : (ord + UInt64.ofNat k).toNat = ord.toNat + k :=
-      addW_toNat ord k (by have := hE.rg1; have := hE.rg2; have := hE.rg3; have := hE.isz; omega)
+      L.toNat_add_ofNat_of_lt ord k (by have := hE.rg1; have := hE.rg2; have := hE.rg3; have := hE.isz; omega)
     have hr : rdW (m'.arr64 IW) (ord + UInt64.ofNat k) = rdW (m.arr64 IW) (ord + UInt64.ofNat k) := by
       simp only [rdW, hn]
       rw [hf.2 _ (Or.inl (by have := hE.rg1; omega))]
@@ -145,7 +142,7 @@ theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : S
   · intro k hk
     have hk' : k < c := hE.size ▸ hk
     have hn : (ord + UInt64.ofNat k).toNat = ord.toNat + k :=
-      addW_toNat ord k (by have := hE.rg1; have := hE.rg2; have := hE.rg3; have := hE.isz; omega)
+      L.toNat_add_ofNat_of_lt ord k (by have := hE.rg1; have := hE.rg2; have := hE.rg3; have := hE.isz; omega)
     have hr : rdW (m'.arr64 IW) (ord + UInt64.ofNat k) = rdW (m.arr64 IW) (ord + UInt64.ofNat k) := by
       simp only [rdW, hn]
       rw [hf.grow.iwGet _ (by have := hE.rg1; have := hE.rg2; have := hE.top; omega)]
@@ -158,11 +155,11 @@ theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : S
 
 theorem rdW_addr (A : Array Word) (x : Word) (k : Nat) (h : x.toNat + k < 2 ^ 64) :
     rdW A (x + UInt64.ofNat k) = A[x.toNat + k]?.getD 0 := by
-  simp only [rdW, addW_toNat x k h]
+  simp only [rdW, L.toNat_add_ofNat_of_lt x k h]
 
 theorem set64_addr (m : Mem) (x : Word) (k : Nat) (v : Word) (h : x.toNat + k < 2 ^ 64) :
     (m.set64 IW (x + UInt64.ofNat k) v).arr64 IW = (m.arr64 IW).set! (x.toNat + k) v := by
-  rw [Mem.arr64_set64_same, addW_toNat x k h]
+  rw [Mem.arr64_set64_same, L.toNat_add_ofNat_of_lt x k h]
 
 theorem tgW_ne_zero (t : Nat) (h : t + 1 < 2 ^ 64) : tgW (some t) ≠ 0 := by
   intro e
@@ -780,7 +777,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
       intro m₁ hf p hp
       have hp' := hG (p + 1) (by simp; omega)
       have hadr : (o + UInt64.ofNat (q.toNat + (p + 1))).toNat = o.toNat + (q.toNat + (p + 1)) :=
-        addW_toNat _ _ (by simp at hl; omega)
+        L.toNat_add_ofNat_of_lt _ _ (by simp at hl; omega)
       have hrd : rdW (m₁.arr64 IW) (o + UInt64.ofNat ((q + 1).toNat + p)) =
           rdW (m.arr64 IW) (o + UInt64.ofNat (q.toNat + (p + 1))) := by
         rw [hq1, show q.toNat + 1 + p = q.toNat + (p + 1) by omega]

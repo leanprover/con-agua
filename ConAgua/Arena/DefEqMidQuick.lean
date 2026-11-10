@@ -11,6 +11,7 @@ import ConAgua.L.ModelGen
 public import ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.DefEq
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -132,12 +133,6 @@ theorem quick_eViewW_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
   simp only [g9, ite_false] at hne ⊢
   exact absurd rfl hne
 
-theorem getD_one (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
-  rcases r with _ | ⟨x, _ | ⟨y, r⟩⟩ <;> rfl
-
-theorem getD_two (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
-  rcases r with _ | ⟨x, _ | ⟨y, _ | ⟨z, r⟩⟩⟩ <;> rfl
-
 /-- **A run of `e_view`**: the memory kept, the twin's view, the words denoting it, the tag word. -/
 theorem eView_callW_view {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat}
     {m m' : Mem} {a : AState} (hR : ArenaR m a) {h : Word} {r : List Word}
@@ -155,7 +150,7 @@ theorem viewR_sort {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h2 : 
   all_goals first
     | (exfalso; obtain ⟨h0, -⟩ := hr; revert h0; decide)
     | (exfalso; revert hr; decide)
-    | (obtain ⟨-, h1, h3⟩ := hr; rw [getD_one] at h1 h3; exact ⟨by rw [h3], h1⟩)
+    | (obtain ⟨-, h1, h3⟩ := hr; rw [L.getD_one] at h1 h3; exact ⟨by rw [h3], h1⟩)
 
 theorem viewR_forall {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h6 : r.headD 0 = 6) :
     v = .forallE (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0)) ∧ HW (r.tail.headD 0) ∧
@@ -164,7 +159,7 @@ theorem viewR_forall {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h6 
   all_goals first
     | (exfalso; obtain ⟨h0, -⟩ := hr; revert h0; decide)
     | (exfalso; revert hr; decide)
-    | (obtain ⟨-, h1, h3, h4, h5⟩ := hr; rw [getD_one] at h1 h3; rw [getD_two] at h4 h5
+    | (obtain ⟨-, h1, h3, h4, h5⟩ := hr; rw [L.getD_one] at h1 h3; rw [L.getD_two] at h4 h5
        exact ⟨by rw [h3, h5], h1, h4⟩)
 
 theorem viewR_lam {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h5 : r.headD 0 = 5) :
@@ -174,7 +169,7 @@ theorem viewR_lam {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h5 : r
   all_goals first
     | (exfalso; obtain ⟨h0, -⟩ := hr; revert h0; decide)
     | (exfalso; revert hr; decide)
-    | (obtain ⟨-, h1, h3, h4, h6⟩ := hr; rw [getD_one] at h1 h3; rw [getD_two] at h4 h6
+    | (obtain ⟨-, h1, h3, h4, h6⟩ := hr; rw [L.getD_one] at h1 h3; rw [L.getD_two] at h4 h6
        exact ⟨by rw [h3, h6], h1, h4⟩)
 
 /-- The twin's arm match of `quickDefEq` (after the tag tests). -/

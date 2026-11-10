@@ -6,6 +6,7 @@ public import ConLeche.Frontend.Scan.Fast
 import ConAgua.Scan.Link
 import ConAgua.Scan.Utf8Link
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -42,14 +43,14 @@ theorem valid_go (b : Array UInt8) (k0 n : Word) (B : ByteArray)
       if (ByteArray.utf8Decode?.go B i acc hi).isSome then 1 else 0 := by
   fun_induction ByteArray.utf8Decode?.go B i acc hi with
   | case1 i acc hi h1 h2 =>
-    have hk := word_add k0 i (by omega)
+    have hk := L.toNat_add_ofNat_of_lt k0 i (by omega)
     have hch := utf8CharN_eq b (k0 + UInt64.ofNat i) n B i h1 (by omega) hn
       (fun t ht => by rw [hk, Nat.add_assoc]; exact hB (i + t) ht)
     rw [h2] at hch
     rw [utf8ValidN, ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, hk]; omega), hch]
     simp [encChar]
   | case2 i acc hi h1 c h2 ih =>
-    have hk := word_add k0 i (by omega)
+    have hk := L.toNat_add_ofNat_of_lt k0 i (by omega)
     have hsz := ByteArray.le_size_of_utf8DecodeChar?_eq_some h2
     have hpos := c.utf8Size_pos
     have h4 := c.utf8Size_le_four
@@ -62,14 +63,14 @@ theorem valid_go (b : Array UInt8) (k0 n : Word) (B : ByteArray)
     have hk' : k0 + UInt64.ofNat i + UInt64.ofNat c.utf8Size = k0 + UInt64.ofNat (i + c.utf8Size) := by
       rw [UInt64.ofNat_add, UInt64.add_assoc]
     have hstep : k0 + UInt64.ofNat i < k0 + UInt64.ofNat i + UInt64.ofNat c.utf8Size := by
-      rw [UInt64.lt_iff_toNat_lt, hk', word_add k0 (i + c.utf8Size) (by omega), hk]; omega
+      rw [UInt64.lt_iff_toNat_lt, hk', L.toNat_add_ofNat_of_lt k0 (i + c.utf8Size) (by omega), hk]; omega
     rw [utf8ValidN, ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, hk]; omega), hch]
     simp only [show ¬ UInt64.ofNat c.utf8Size = 0 from fun h => by
       have := congrArg UInt64.toNat h; rw [hlen] at this; simp at this; omega, ite_false,
       hstep, ite_true]
     rw [hk', ih]
   | case3 i acc hi h1 =>
-    have hk := word_add k0 i (by omega)
+    have hk := L.toNat_add_ofNat_of_lt k0 i (by omega)
     rw [utf8ValidN, ite_eq_right (by rw [UInt64.lt_iff_toNat_lt, hk]; omega)]
     simp
 

@@ -17,6 +17,7 @@ public import ConAgua.Arena.DeclAxiomSpec
 public import ConAgua.Arena.DeclAxiomSpec2
 import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.InferFieldSort
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -141,7 +142,7 @@ theorem cdq_ref {p : Prog} (hQ : QuotArmProg p) {dn : NIdx → Option ConLeche.N
   obtain ⟨hS1, hg1, -, hcv1⟩ := erecCiW_okAT h1 hS hD hi hcvAt
   have hq1 : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 := by
     obtain ⟨w, hw, -⟩ := decCV_name hcv1
-    exact toNat_add_small _ 1 (L.Arena.erecP_lt64 hw)
+    exact L.toNat_add_ofNat_of_lt _ 1 (L.Arena.erecP_lt64 hw)
   exact RefE.weakenP (cqr_ref hQ.cqr hQ.leaf hQs n k hS1 hok hr (by rw [hq1]; exact hcv1) hden)
     fun v fe' a' h => ⟨h.stage, hg1.trans h.grow, h.memos⟩
 
@@ -222,7 +223,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   obtain ⟨wn, hwn, hwnl, hname0⟩ := decCV_name hcv1
   obtain ⟨wt, hwt, -, -⟩ := (decCV_words hcv1).2.2
   have hqb : q.toNat + 1 + 3 < 2 ^ 64 := erecP_lt64 hwt
-  have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
+  have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (by omega)
   have hname : cv.name = decI wn := hname0
   have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
   have ex : rdW (m1.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = wn := by
@@ -443,7 +444,7 @@ theorem cdt_ref {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p) (hcl : Lea
   simp only [stepCV, stepVal] at hcv1 hv1
   generalize r1.headD 0 = q at hci1 hcv1 hv1 ⊢
   obtain ⟨wt, hwt, -, -⟩ := (decCV_words hcv1).2.2
-  have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by have := erecP_lt64 hwt; omega)
+  have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (by have := erecP_lt64 hwt; omega)
   have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
   -- the constant check
   have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by have := erecP_lt64 hwt; omega)

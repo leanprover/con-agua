@@ -7,9 +7,9 @@ import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.Arena.IndSim
 public import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndPosSpec.NestKeyMap
 public import ConAgua.Arena.IndPosSpec.RpGoStep
 public import ConAgua.Arena.IndPosSpec.RxMapW
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -348,7 +348,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
   have hlen := decHL_length m hn
   have hhi : (hiW m ctx 0).toNat = c.nP + c.names.length := by
     simp only [hiW]
-    rw [word_add_toNat (by rw [word_add_toNat (by omega)]; simp; omega), word_add_toNat (by omega), hnP, hlen]
+    rw [L.toNat_add_of_lt _ _ (by rw [L.toNat_add_of_lt _ _ (by omega)]; simp; omega), L.toNat_add_of_lt _ _ (by omega), hnP, hlen]
     simp
   rw [ConRon.Arena.nestHoleImg.eq_1]
   by_cases hin2 : rdW (m.arr64 IW) (ctx + 4) ≤ i ∧ i < hiW m ctx 0
@@ -400,11 +400,11 @@ theorem imgOK_step (n : Nat) (hImg : ImgOK fe vis n) (hFr : FrOK fe vis n) : Img
   · rw [rxImgW_root (h0 := h0)] at h
     subst h0
     exact rootOK fe vis m m' a ctx i c prog r0 r1 M G g h hS hc hin (by simpa using hb) hR
-  have hnn : nn.toNat ≠ 0 := toNat_ne_zero' h0
-  have hn1 : (nn - 1).toNat = nn.toNat - 1 := toNat_sub_one' h0
+  have hnn : nn.toNat ≠ 0 := L.toNat_ne_zero_of_ne _ h0
+  have hn1 : (nn - 1).toNat = nn.toNat - 1 := L.toNat_sub_one_of_ne h0
   have hhi : (hiW m ctx (nn - 1)).toNat = c.hiAt (nn.toNat - 1) := by
     simp only [hiW, ConRon.Arena.NestCtx.hiAt]
-    rw [word_add_toNat (by rw [word_add_toNat (by omega)]; omega), word_add_toNat (by omega), hnP, hlen, hn1]
+    rw [L.toNat_add_of_lt _ _ (by rw [L.toNat_add_of_lt _ _ (by omega)]; omega), L.toNat_add_of_lt _ _ (by omega), hnP, hlen, hn1]
   obtain ⟨n1, hn1'⟩ : ∃ n1, nn.toNat = n1 + 1 := ⟨nn.toNat - 1, by omega⟩
   rw [hn1', nestHoleImg_succ]
   by_cases hh : i = hiW m ctx (nn - 1)
@@ -603,7 +603,7 @@ theorem frOK_step (n : Nat) (hDs : DsOK fe vis n) : FrOK fe vis (n + 1) := by
     have hn' : n1.toNat < pl.toNat := UInt64.lt_iff_toNat_lt.mp hn
     obtain ⟨w, hw, hd, hni⟩ := hH n1.toNat hn'
     have hrw : rdW (m.arr64 IW) (po + n1) = w := by
-      simp [rdW, word_add_toNat (show po.toNat + n1.toNat < 2 ^ 64 by omega), hw]
+      simp [rdW, L.toNat_add_of_lt _ _ (show po.toNat + n1.toNat < 2 ^ 64 by omega), hw]
     rw [hrw] at h
     rw [List.getElem?_eq_getElem (by omega)] at hd
     have hgd : prog.getD n1.toNat default = prog[n1.toNat]'(by omega) := by
@@ -687,8 +687,8 @@ theorem dsGoOK_step (n : Nat) (hRf : RfOK fe vis n) (hDg : DsGoOK fe vis n) :
   rcases hrf : rxW n m f x with _ | ⟨r, m1⟩ <;> rw [hrf] at h; · simp [dgK] at h
   rw [dgK_some] at h
   obtain ⟨a1, hr1, hrH, M1, G1, hS1, hg1, hR1, hk1, hG1⟩ := hRf m m1 a f x fm r M G g hrf hS (hfm.grow hg0) hxH hR
-  have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
-  have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := l.toNat_lt; omega)
+  have hqj : (q + j).toNat = q.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have hj1 : (j + 1).toNat = j.toNat + 1 := L.toNat_add_of_lt _ _ (show j.toNat + 1 < 2 ^ 64 by have := l.toNat_lt; omega)
   have hacc1 : decHL m1 q.toNat j.toNat = some acc := by rw [decHL_grow hg1 (by omega)]; exact hacc
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   have hdec2 := decHL_write m1 q j r acc hrH hsz1 (by have := hS1.iw.iw; have := hg1.iw; omega) hacc1
@@ -881,7 +881,7 @@ theorem rxNode_arm (k : Nat) (hGo : GoOK fe vis k) (vl : List Word) (v : ENodeVi
       GoPost fe vis m m' a' M G gn mp' := by
   cases v with
   | app f' x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rxNodeW_bin (hg := Or.inl rfl)] at hn
     have := rxBin_ok fe vis k hGo 4 (fun m a b => mkAppW m a b) internAppE (fun m a2 x2 => by simp [rpMkW])
@@ -889,7 +889,7 @@ theorem rxNode_arm (k : Nat) (hGo : GoOK fe vis k) (vl : List Word) (v : ENodeVi
       m m' a f f1 _ _ r fm mp M G gn hn hS hfm hx hy hR hb hg0
     rw [hdx, hdy] at this; exact this
   | lam f' x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rxNodeW_bin (hg := Or.inr (Or.inl rfl))] at hn
     have := rxBin_ok fe vis k hGo 5 (fun m a b => mkLamW m a b) internLamE (fun m a2 x2 => by simp [rpMkW])
@@ -897,7 +897,7 @@ theorem rxNode_arm (k : Nat) (hGo : GoOK fe vis k) (vl : List Word) (v : ENodeVi
       m m' a f f1 _ _ r fm mp M G gn hn hS hfm hx hy hR hb hg0
     rw [hdx, hdy] at this; exact this
   | forallE f' x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     rw [hg, rxNodeW_bin (hg := Or.inr (Or.inr rfl))] at hn
     have := rxBin_ok fe vis k hGo 6 (fun m a b => mkForallW m a b) internForallEE (fun m a2 x2 => by simp [rpMkW])
@@ -905,13 +905,13 @@ theorem rxNode_arm (k : Nat) (hGo : GoOK fe vis k) (vl : List Word) (v : ENodeVi
       m m' a f f1 _ _ r fm mp M G gn hn hS hfm hx hy hR hb hg0
     rw [hdx, hdy] at this; exact this
   | letE t v' b' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy, hz, hdz⟩ := hvr
     rw [hg, rxNodeW_let (hg := by decide) (h7 := rfl)] at hn
     have := rxLet_ok fe vis k hGo m m' a f f1 _ _ _ r fm mp M G gn hn hS hfm hx hy hz hR hb hg0
     rw [hdx, hdy, hdz] at this; exact this
   | proj s i e =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, hi, hz, hdz⟩ := hvr
     rw [hg, rxNodeW_proj (hg := by decide) (h7 := by decide)] at hn
     have := rxProj_ok fe vis k hGo m m' a f f1 _ _ _ r fm mp M G gn hn hS hfm hz hR hb hg0
@@ -976,7 +976,7 @@ theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK fe vis k) (m
     rcases hnode : rxNodeW (k + 1) m f (fu - 1) (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
         (vl.tail.tail.tail.headD 0) with _ | ⟨rn, m1⟩; · rw [hnode] at hgo; simp [rxG4] at hgo
     rw [hnode, rxG4_some] at hgo
-    have hF1 : (fu - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+    have hF1 : (fu - 1).toNat = F := by rw [L.toNat_sub_one_of_ne hf0, hF]; rfl
     obtain ⟨mp1, a1, hr1, M1, G1, hS1, hg1, hR1, hb1, hk1, hG1⟩ := rxNode_arm fe vis k (ih k (by omega)) vl v hvr
       hnv m m1 a f (fu - 1) h rn fm mp M G gn hnode hS hfm ⟨hMR, ⟨hB1, hB2, hgG, hGl, hcsz⟩, hFr⟩ hb hg0
     rw [hF1] at hr1
@@ -1007,7 +1007,7 @@ theorem goOK_step (j : Nat) (hMap : MapOK fe vis j) (ih : ∀ k, k + 1 < j + 1 �
   by_cases hf0 : fu = 0
   · rw [rxGoW_abort (hf := hf0)] at hgo; simp at hgo
   rw [rxGoW_view (hf := hf0)] at hgo
-  obtain ⟨F, hF⟩ : ∃ F, fu.toNat = F + 1 := ⟨fu.toNat - 1, by have := toNat_ne_zero' hf0; omega⟩
+  obtain ⟨F, hF⟩ : ∃ F, fu.toNat = F + 1 := ⟨fu.toNat - 1, by have := L.toNat_ne_zero_of_ne _ hf0; omega⟩
   cases hvl : eViewW m h with
   | nil => rw [hvl] at hgo; simp [rxG1] at hgo
   | cons g vt =>
@@ -1044,7 +1044,7 @@ theorem goOK_step (j : Nat) (hMap : MapOK fe vis j) (ih : ∀ k, k + 1 < j + 1 �
   | fvar i ty =>
     obtain ⟨hg1, hi, -, -⟩ := hvr
     rw [rxG1_fvar (hv := by simp) (hg := by rw [hg1]; decide) (h1 := hg1)] at hgo
-    rw [getD1_eq'] at hi
+    rw [L.getD_one] at hi
     rcases hmap : rxMapW j m f ((g :: vt).tail.headD 0) with _ | ⟨r0, r1, m1⟩ <;> rw [hmap] at hgo; · simp [rxH] at hgo
     rw [rxH_some] at hgo
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hgo)

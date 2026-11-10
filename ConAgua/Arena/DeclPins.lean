@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Rom.PinSets
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -20,10 +21,6 @@ namespace L.Arena
 
 open L.Ind
 open L.Rom (PinSetsR PinSetR SliceR HdrR)
-
-theorem toNat_add_small' (c : Word) (k : Nat) (h : c.toNat + k < 2 ^ 64) :
-    (c + UInt64.ofNat k).toNat = c.toNat + k := by
-  rw [UInt64.toNat_add]; simp; omega
 
 
 /-- **The record pool only grew**: its top did not go down, and the words below the old top kept. -/
@@ -76,7 +73,7 @@ theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
   have hlt : (o + UInt64.ofNat i).toNat < erTop m := by
     have : (rdW (m.arr64 CTL) 129).toNat < 2 ^ 64 := UInt64.toNat_lt_size _
     have : erTop m < 2 ^ 64 := this
-    rw [toNat_add_small' o i (by omega)]; omega
+    rw [L.toNat_add_ofNat_of_lt o i (by omega)]; omega
   rw [rdW_keep hek hlt]; exact hw i hi
 
 theorem PinSetR.grow {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip)
@@ -94,7 +91,7 @@ theorem PinSetsR.grow {m m' : Mem} {ips : List INatOpPinSet} (h : PinSetsR m ips
   have htop : erTop m < 2 ^ 64 := UInt64.toNat_lt_size _
   refine ⟨by rw [h151]; exact hc, by rw [h150]; omega, fun k hk => ?_⟩
   have ek : (rdW (m.arr64 CTL) 150 + UInt64.ofNat k).toNat = (rdW (m.arr64 CTL) 150).toNat + k :=
-    toNat_add_small' _ k (by omega)
+    L.toNat_add_ofNat_of_lt _ k (by omega)
   rw [h150, rdW_keep hek (by rw [ek]; omega)]
   exact PinSetR.grow (hr k hk) hg
 

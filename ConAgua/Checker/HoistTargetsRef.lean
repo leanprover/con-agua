@@ -2,6 +2,7 @@ module
 
 import ConAgua.Checker.HoistNatRef
 public import ConAgua.Checker.HoistClosureL
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -34,7 +35,7 @@ theorem tgtR_frameA {m m' : Mem} {tg : Word} {c : Nat} {T : Std.HashMap Nat Nat}
     TgtR m' tg c T := by
   refine ⟨fun k hk => ?_, hT.2⟩
   rw [← hT.1 k hk]
-  have hn : (tg + UInt64.ofNat k).toNat = tg.toNat + k := addW_toNat _ _ (by omega)
+  have hn : (tg + UInt64.ofNat k).toNat = tg.toNat + k := L.toNat_add_ofNat_of_lt _ _ (by omega)
   simp only [rdW, hn]
   rw [hf.grow.iwGet _ (by omega)]
 

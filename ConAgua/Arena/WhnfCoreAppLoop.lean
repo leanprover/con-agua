@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -164,7 +165,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
     intro hkn a m v vn same i va MM hS hv hva htop htv hb hsz hbk hpg
     have hspn := hS.spn
     have hvn64 : vo.toNat + vn.toNat < 2 ^ 64 := by have := hva.bound; omega
-    have hadd : (vo + vn).toNat = vo.toNat + vn.toNat := addW _ _ hvn64
+    have hadd : (vo + vn).toNat = vo.toNat + vn.toNat := L.toNat_add_of_lt _ _ hvn64
     have hlt_args : args.size = an.toNat := har₀.size
     have hle0 : spTop m₀ ≤ spTop m := by
       rw [UInt64.le_iff_toNat_le, htop]; exact htv
@@ -194,7 +195,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
     have haoT : ao.toNat + an.toNat ≤ (spTop m₀).toNat := by omega
     have hnoT : (ao + an).toNat + an.toNat ≤ (spTop m₀).toNat := by
       have := har₀.bound
-      rw [addW _ _ (by omega)]; omega
+      rw [L.toNat_add_of_lt _ _ (by omega)]; omega
     have har : SpineR m ao an args := har₀.keepT _ hsz hb haoT hspn0
     have hno : SpineR m (ao + an) an nodes := hno₀.keepT _ hsz hb hnoT hspn0
     have hit : (i.toNat).toUInt64 = i := by simp
@@ -317,7 +318,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       have hvn1 : (vn + 1).toNat = vn.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega
       have hadd2 : (vo + (vn + 1)).toNat = vo.toNat + vn.toNat + 1 := by
-        rw [← UInt64.add_assoc, addW _ _ (by rw [hadd]; have : (1 : Word).toNat = 1 := rfl; omega),
+        rw [← UInt64.add_assoc, L.toNat_add_of_lt _ _ (by rw [hadd]; have : (1 : Word).toNat = 1 := rfl; omega),
           hadd]
         have : (1 : Word).toNat = 1 := rfl
         omega
@@ -444,7 +445,7 @@ theorem app_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n �
         (same != 0) args nodes i.toNat) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hS := hs.rel
   have hvn64 : vo.toNat + vn.toNat < 2 ^ 64 := by have := hva.bound; have := hS.spn; omega
-  have hadd : (vo + vn).toNat = vo.toNat + vn.toNat := addW _ _ hvn64
+  have hadd : (vo + vn).toNat = vo.toNat + vn.toNat := L.toNat_add_of_lt _ _ hvn64
   exact appLoop_ref p hp hwc hcc n hk F hF hn mode vis d hd vo ao an (spTop s₀.mem) args nodes dn fe
     eb s₀.mem hs.mode4 hs.eb_mode hhd har hno hlo (by rw [htop, hadd]; omega) rfl hS.spn (n + 1)
     (Nat.le_refl _) a₀ s₀.mem v vn same i vargs MM hS hv hva htop (by rw [htop]; exact Nat.le_refl _)

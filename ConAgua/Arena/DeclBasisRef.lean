@@ -10,6 +10,7 @@ import ConAgua.Arena.DeclAndPinIndRef
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import all ConAgua.Arena.IndIface
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -309,7 +310,7 @@ theorem atBlockGoW_ok (hB : BasisLProg p) :
     rw [UInt64.toNat_add]; simp; omega
   rw [← hq1] at hcv
   obtain ⟨hsl, -⟩ := decCV_rdq (erRdOK m) hcv
-  rw [word_add11, word_add12] at hsl
+  rw [L.add_one_add_one, word_add12] at hsl
   have hps := (ConRon.Bridge.denoteCV_inv (ConRon.Bridge.denoteCI_toConstantVal hdc)).2.1
   simp only [L.Ind.erRd_foldN] at h
   cases h1 : callW p n "ci_at_lps" [rdW (m.arr64 IW) po, erRd m (rdW (m.arr64 IW) co + 2),

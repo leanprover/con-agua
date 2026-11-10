@@ -14,6 +14,7 @@ import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.RecCheckSpec.TmFields
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.RecCheck
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -175,7 +176,7 @@ theorem tkh_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl 
   subst a4
   have hC4 := hC2.of_pstep hS4 hA4 (PStep.refl hC.check.state)
   have hg14 := (hg12.trans hg3).trans hg4
-  simp only [getD_zero, getD_one, Nat.zero_add] at hla hlab hma hmab
+  simp only [L.getD_zero, L.getD_one, Nat.zero_add] at hla hlab hma hmab
   have hla4 : HSl0 m4 (ra.headD 0) (ra.tail.headD 0) la := (HSl0.of hla hlab).grow hg4
   have hma4 : HSl0 m4 (rb.headD 0) (rb.tail.headD 0) ma := HSl0.of hma hmab
   -- the same class, as many arguments
@@ -246,7 +247,7 @@ theorem tk_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl M
   obtain ⟨twP, lwP, -, htw, hlw⟩ := ConRon.Bridge.Inductives.denoteBP_some hbp
   obtain ⟨h0, ⟨hdl, hbl⟩, hlwH, hlwD⟩ := hd1
   rw [tkE.k_strip_pis.arm2 (hc1 := by rw [h0]; decide)]
-  simp only [show (1 + 1 : Nat) = 2 from rfl, getD_one, getD_two] at hdl hbl
+  simp only [show (1 + 1 : Nat) = 2 from rfl, L.getD_one, L.getD_two] at hdl hbl
   have hl3 : (rs.drop 3).headD 0 = rs.tail.tail.tail.headD 0 := by
     rcases rs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
   rw [hl3] at hlwH hlwD

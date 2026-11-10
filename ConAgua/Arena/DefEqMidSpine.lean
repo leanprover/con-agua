@@ -11,6 +11,7 @@ import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.DefEq
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -74,7 +75,7 @@ theorem viewR_const {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h3 :
   all_goals first
     | (exfalso; obtain ⟨h0, -⟩ := hr; revert h0; decide)
     | (exfalso; revert hr; decide)
-    | (obtain ⟨-, h1, h4, h5, h6⟩ := hr; rw [getD_one] at h1 h4; rw [getD_two] at h5 h6
+    | (obtain ⟨-, h1, h4, h5, h6⟩ := hr; rw [L.getD_one] at h1 h4; rw [L.getD_two] at h5 h6
        exact ⟨by rw [h4, h6], h1, h5⟩)
 
 /-- **A run of `spine_head`**: the memory kept, the twin's `spineHeadT` without a state change, a

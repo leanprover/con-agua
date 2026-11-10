@@ -412,11 +412,6 @@ theorem size_set64 (m : Mem) (a : TieredArray) (c v : Word) :
     ((m.set64 a c v).arr64 a).size = (m.arr64 a).size := by
   simp [Mem.set64, Mem.arr64]
 
-theorem word_add (k : Word) (i : Nat) (h : k.toNat + i < 2 ^ 64) :
-    (k + UInt64.ofNat i).toNat = k.toNat + i := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)]
-  simp; omega
-
 theorem arr64_set64_same (m : Mem) (c v : Word) :
     (m.set64 OUT c v).arr64 OUT = (m.arr64 OUT).set! c.toNat v := by
   simp [Mem.set64, Mem.arr64]

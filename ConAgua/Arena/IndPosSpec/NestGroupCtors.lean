@@ -12,6 +12,7 @@ import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.BvbWMfr
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -92,11 +93,11 @@ theorem ntW_ok (fe : IFEnv) (vis C : Word) (hC : H C)
   obtain ⟨o, ho, l, hl, hns⟩ := hcts
   have hb : ciq.toNat + 5 + 13 + 1 < 2 ^ 64 := by obtain ⟨_, e⟩ := nat?_rd hl; exact erecP_lt64 e
   have e13 : (ciq + 5 + 13).toNat = ciq.toNat + 5 + 13 := by
-    rw [word_add_toNat (by simp; omega), word_add_toNat (by simp; omega)]; rfl
+    rw [L.toNat_add_of_lt _ _ (by simp; omega), L.toNat_add_of_lt _ _ (by simp; omega)]; rfl
   have e14 : (ciq + 5 + 14).toNat = ciq.toNat + 5 + 13 + 1 := by
-    rw [word_add_toNat (by simp; omega), word_add_toNat (by simp; omega)]; rfl
+    rw [L.toNat_add_of_lt _ _ (by simp; omega), L.toNat_add_of_lt _ _ (by simp; omega)]; rfl
   have e12 : (ciq + 5 + 12).toNat = ciq.toNat + 5 + 12 := by
-    rw [word_add_toNat (by simp; omega), word_add_toNat (by simp; omega)]; rfl
+    rw [L.toNat_add_of_lt _ _ (by simp; omega), L.toNat_add_of_lt _ _ (by simp; omega)]; rfl
   have ro := erecP_rdN ho e13
   have rl := erecP_rdN hl e14
   generalize erRd m (ciq + 5 + 13) = co at h ro
@@ -186,7 +187,7 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
     obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA, aread_apply, aread_apply] using hx)
     have hsz := hS.iw.iwSize
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
-      word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; omega)
+      L.toNat_add_of_lt _ _ (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; omega)
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     rcases hst : fvbF m [CWF, rdW (m.arr64 IW) off] with _ | ⟨r1, m1⟩ <;> rw [hst] at h; · rw [dcGoW.k_fvar_b.none] at h; cases h

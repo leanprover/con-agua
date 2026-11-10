@@ -6,6 +6,7 @@ import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.InstListRefine
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndRealOpf
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -36,9 +37,6 @@ theorem wadd_toNat {o : Word} {i : Nat} (h : o.toNat + i < 2 ^ 64) :
     (o + i.toUInt64).toNat = o.toNat + i := by
   rw [UInt64.toNat_add]; simp [Nat.toUInt64]; omega
 
-theorem wadd_toNat' {o c : Word} (h : o.toNat + c.toNat < 2 ^ 64) : (o + c).toNat = o.toNat + c.toNat := by
-  rw [UInt64.toNat_add]; omega
-
 theorem wsub1 {n : Word} (hn : n ≠ 0) : (n - 1).toNat + 1 = n.toNat := by
   have : n.toNat ≠ 0 := fun h => hn (UInt64.toNat_inj.mp (by simpa using h))
   rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
@@ -56,8 +54,8 @@ theorem SpineR.push' {m m' : Mem} {o c x : Word} {acc : Array EIdx} (h : SpineR 
   have hc1 : (c + 1).toNat = c.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hne : ∀ i, i < c.toNat → o + i.toUInt64 ≠ o + c := fun i hi he => by
     have := congrArg UInt64.toNat he
-    rw [wadd_toNat (by omega), wadd_toNat' (by omega)] at this; omega
-  have hcc : o + c.toNat.toUInt64 = o + c := by rw [word_ofNat_toNat]
+    rw [wadd_toNat (by omega), L.toNat_add_of_lt _ _ (by omega)] at this; omega
+  have hcc : o + c.toNat.toUInt64 = o + c := by rw [L.toUInt64_toNat]
   refine ⟨by simp [h.size, hc1], by rw [hsz, hc1]; omega, ?_, ?_⟩
   · intro i hi; rw [hc1] at hi; rw [hsp]
     rcases Nat.lt_or_ge i c.toNat with hi' | hi'
@@ -196,7 +194,7 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
   have c' := callW_model (M := fun mm => opfGoK opfP k mm n e i co cn)
     (fun s => opfGoK_spec opfP rfl k s n e i co cn) hc
   have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.wk.2.2.1
-  have hcc : (co + cn).toNat = co.toNat + cn.toNat := wadd_toNat' (by have := hsl.bound; omega)
+  have hcc : (co + cn).toNat = co.toNat + cn.toNat := L.toNat_add_of_lt _ _ (by have := hsl.bound; omega)
   simp only [opfGoK] at c'
   by_cases hn : n = 0
   · rw [ite_eq_left hn] at c'

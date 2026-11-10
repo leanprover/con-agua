@@ -16,6 +16,7 @@ import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.WhnfEntry
 import all ConAgua.Arena.TeleLift
 import all ConAgua.Arena.WhnfSpineArgs
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -182,8 +183,6 @@ theorem ftdsF_spec0 (p : Prog) (hp : FtdsF p) (n : Nat) (s₀ : St) (args : List
     ⦃fun r s' => LocEq s' s₀ ∧ ftdsF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
   callF_spec ftdsProg_closed (hp.agree ftdsFns) (by decide) n s₀ args
 
-theorem word_ofNat_toNat (k : Word) : (k.toNat).toUInt64 = k := by simp [Nat.toUInt64]
-
 /-- **The loop of `fvar_type_ds`**: the words `ws` written from `q + k` on, the twin's
 `fvarTypeDs` of the rest of the input, its state unchanged. The input slice lies below `q`. -/
 theorem ftdsGoW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a : AState)
@@ -209,10 +208,10 @@ theorem ftdsGoW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
       · rw [ftdsGoW_none o l q f m k hk h1] at h; cases h
       rw [ftdsGoW_step o l q f m m1 k r1 hk h1] at h
       obtain ⟨w, hw, hw32, hxk⟩ := decHL_word hxs hsz0 k.toNat hk'
-      rw [word_ofNat_toNat] at hw
+      rw [L.toUInt64_toNat] at hw
       have hx : rdW (m.arr64 IW) (o + k) = w := by
         have := hin k.toNat (Nat.le_refl _) hk'
-        rw [word_ofNat_toNat] at this
+        rw [L.toUInt64_toNat] at this
         rw [this, hw]
       rw [hx] at h1
       obtain ⟨hm1, hrun1, hlt1⟩ := ftdW_ok m m1 a hS.check.arena.base w hw32 r1 (ftdF_eq h1)

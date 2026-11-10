@@ -13,6 +13,7 @@ import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.IndSumSpec.Row
 import all ConAgua.Arena.IndInstall
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -78,7 +79,7 @@ theorem lpsW_ok' {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   obtain ⟨o, l, ho, hl, hdm, hb⟩ := partsAt decMS_mono hmem
   obtain ⟨how, -, -⟩ := partsIwRd ho rfl
   obtain ⟨hlw, -, -⟩ := partsIwRd hl (show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega)
-  rw [ofNat_toNat_word] at how hlw
+  rw [L.ofNat_toNat] at how hlw
   rcases n with _ | n
   · simp [lpsW] at h
   by_cases hl0 : l = 0

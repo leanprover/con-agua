@@ -13,6 +13,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConRon.Arena.Canon
 import all ConAgua.Arena.DeclArmsCanon
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -216,7 +217,7 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
     rw [ite_eq_right hne2] at h
     obtain ⟨vu, hru, hlu⟩ := lvView hR hu hne1
     obtain ⟨vv, hrv, hlv⟩ := lvView hR hv hne2
-    have hfuel : fuel.toNat = (fuel - 1).toNat + 1 := toNat_pred hf
+    have hfuel : fuel.toNat = (fuel - 1).toNat + 1 := L.toNat_eq_toNat_sub_one_add_one _ hf
     rw [hfuel, ConRon.Arena.canonLevelEq.eq_2, StateT.run_bind, hru, exc_ok_bind', StateT.run_bind, hrv,
       exc_ok_bind']
     rw [hlu, hlv] at h
@@ -389,7 +390,6 @@ l_model canonLevelsEq_spec (p : Prog) (hp : CanonProg p)
     canonLevelListEq_spec p hp n]
   grind [arena_grind]
 
-theorem getD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
 theorem cnGetD1 (r : List Word) : r.getD (0 + 1) 0 = r.tail.headD 0 := by
   cases r with
   | nil => rfl
@@ -399,7 +399,7 @@ theorem decRL_unpack {k : IdxKind} {m : Mem} {r : List Word} {ids : List (Idx k)
     (h : decRL (fun m => decHL m) 0 m r ids) :
     decHL m (r.headD 0).toNat (r.tail.headD 0).toNat = some ids ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m := by
-  simpa only [decRL, getD0, cnGetD1] using h
+  simpa only [decRL, L.getD_zero, cnGetD1] using h
 
 theorem lsEqW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     {m m' : Mem} {a : AState} {po pl qo ql co cl fuel us vs r : Word} {ps qs cs : List NIdx}

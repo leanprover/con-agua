@@ -23,8 +23,8 @@ import ConAgua.Arena.IndInstallSpec.OfClosed
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import all ConAgua.Arena.RecGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 /-!
@@ -153,7 +153,7 @@ theorem crdW_ok (fe : IFEnv) (v po pl : Word) (pushed : List NIdx) {env : ConLec
     have hT : iwTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 200).toNat_lt
     have hpu2 : decHL m2 po.toNat pl.toNat = some pushed := by rw [decHL_grow hg2 hpb]; exact hpu
     obtain ⟨ws, hws, hnm, hwlt⟩ := slR_of_decHL m2 _ _ _ hpu2 (by have := hg2.iw; omega)
-    rw [ofNat_toNat_word, ofNat_toNat_word] at hws
+    rw [L.ofNat_toNat, L.ofNat_toNat] at hws
     obtain ⟨mb, hrunM, hbm, hM3, hS3, hg3⟩ :=
       maConstW_ok n' (fun _ => none) fe v m2 m3 a2 po pl w b3 ws mp h3 hS2 hw32 hws hwlt hM2
     have hA3 : AbsOK m3 := AFr.of_frame (maConstW_frame h3) (by decide) (by decide) hA2
@@ -286,7 +286,7 @@ theorem crc_ref (hp : CruleProg p) (hApd : ApdF p) {visR : Word} {feR : IFEnv}
   · rw [crcE.k_strip_lams.abort1 _ _ _ _ _ _ _ _ hd4]; exact RefE.of_cls0 rfl
   obtain ⟨h41, ⟨hdl, htl⟩, -⟩ := hd4
   rw [crcE.k_strip_lams.arm1 _ _ _ _ _ _ _ _ (by rw [h41]; decide)]
-  simp only [getD_one, getD_two, Nat.reduceAdd] at hdl htl
+  simp only [L.getD_one, L.getD_two, Nat.reduceAdd] at hdl htl
   obtain ⟨rbsP, bodyP, -, hrbs, -⟩ := ConRon.Bridge.Inductives.denoteBP_some hq7
   -- the domains at `feR`
   refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
@@ -444,7 +444,7 @@ theorem cr1_ref (hp : CruleProg p) (hApd : ApdF p) {visR : Word} {feR : IFEnv}
   rw [cr1E.arm1 p N m visR pO pL g cvR x gen hb]
   have hn : (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1)).toNat =
       G.nP + G.slots.length + X.nF := by
-    rw [rec3Add_toNat hb, e0, e8, e1, t1]
+    rw [L.toNat_add_of_not_lt hb, e0, e8, e1, t1]
     rw [UInt64.toNat_add, t0, t8]; exact congrArg (· + X.nF) (Nat.mod_eq_of_lt hns)
   have h := crule_ref hq hp hApd henvR N (by omega) hC hgen (rec2DecCV_erecP hcv hext)
     (rec3CVExt_lt hC.stage hext) hA hpu hpb hma hcvP hgP

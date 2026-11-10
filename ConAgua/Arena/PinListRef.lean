@@ -9,6 +9,7 @@ import ConRon.Bridge.Specs
 import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.IndexLoops
 import ConAgua.Arena.DeclCanonRules
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -174,7 +175,7 @@ theorem pinCopyOk_sim (hP : PinListLProg p) (n : Nat) {m : Mem} {a : AState} {c 
   | succ n0 =>
   rw [L.Arena.cvLpsW_step] at hW2
   have hW2' : erToIwW n0 m (erRd m (c + 2)) (erRd m (c + 3)) = some (r2, s2.mem) := by
-    rw [← word_add11, ← word_add12]; exact hW2
+    rw [← L.add_one_add_one, ← word_add12]; exact hW2
   obtain ⟨hS2, hg2, hdl2, htop2, -⟩ := erToIwW_stage hW2' hT.stage hsl
   have hf2 := erToIwW_iwFr hW2'
   have hT2 : StageT dn vis fe s2.mem a := StageT.of_iw hT hS2 hf2
@@ -644,7 +645,7 @@ theorem cvLps_sim (hP : PinListLProg p) {n : Nat} {m m2 : Mem} {a : AState} {c :
   | succ n0 =>
   rw [L.Arena.cvLpsW_step] at hW2
   have hW2' : erToIwW n0 m (erRd m (c + 2)) (erRd m (c + 3)) = some (r2, s2.mem) := by
-    rw [← word_add11, ← word_add12]; exact hW2
+    rw [← L.add_one_add_one, ← word_add12]; exact hW2
   obtain ⟨hS2, hg2, hdl2, htop2, -⟩ := erToIwW_stage hW2' hT.stage hsl
   have hf2 := erToIwW_iwFr hW2'
   exact ⟨StageT.of_iw hT hS2 hf2, hg2,

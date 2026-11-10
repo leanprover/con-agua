@@ -23,6 +23,7 @@ public import ConAgua.Arena.IndT.Install1
 import ConLeche.Verify.Denote.IndFrame
 public import ConRon.Bridge.Inductives.Rel
 import all ConAgua.Arena.IndSum
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -168,7 +169,7 @@ theorem ctl_ref (hP : SumProg p) (hcr : CrfF p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62
       dsimp only [ctlE.k_field_doms_resolve]
       refine RefE.guard (by decide) hb1.1 hb1.2 fun _ hb => ?_
       have hao' : (ra.headD 0 + nP).toNat = (ra.headD 0).toNat + nP.toNat :=
-        sum_toNat_add (by have := k5.stage.stage.lt64 hab; omega)
+        L.toNat_add_of_lt _ _ (by have := k5.stage.stage.lt64 hab; omega)
       have halp : (ra.tail.headD 0 - nP).toNat = (ra.tail.headD 0).toNat - nP.toNat :=
         UInt64.toNat_sub_of_le _ _ hle
       have hdrop := decHL_drop nP.toNat (k7.decHL hargs hab) hle2
@@ -260,7 +261,7 @@ theorem ctor_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
   -- `strip_pis`
   obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (dcv m1 k1.grow)
   rw [show rdW (m1.arr64 (tierA EREC ((cvCw + 3) >>> 40))) (cvCw + 3 &&& 1099511627775) = w1 from hw1]
-  refine RefE.bindSim (fun _ => rfl) (strip_step hP k1 hw1l (sum_toNat_add hnf) hw1d
+  refine RefE.bindSim (fun _ => rfl) (strip_step hP k1 hw1l (L.toNat_add_of_lt _ _ hnf) hw1d
     (ConRon.Bridge.denoteCV_type hcA)) fun r2 o2 m2 a2 _ _ ⟨k2, ho2, hdo2⟩ => ?_
   dsimp only [ctorE.k_strip_pis]
   refine RefE.guardOpt (by decide) ho2.1 ho2.2 fun ⟨sl, cb⟩ hq2 _ => ?_

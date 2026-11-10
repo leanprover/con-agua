@@ -16,6 +16,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.LevelZero
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -381,13 +382,6 @@ theorem decCI_ind_n {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R 
   have e2 : rd (q + 17) = w2 := hR.offN (k := 17) (by simpa [Nat.add_assoc] using hw2) (by decide)
   exact ⟨by rw [e1], by rw [e2]⟩
 
-/-- A word sum that does not wrap (the `x + y < x` guard failed) is the sum of the numbers. -/
-theorem toNat_add_of_not_lt' {x y : Word} (h : ¬ x + y < x) : (x + y).toNat = x.toNat + y.toNat := by
-  have hx := x.toNat_lt
-  have hy := y.toNat_lt
-  simp only [UInt64.lt_iff_toNat_lt, UInt64.toNat_add] at h ⊢
-  omega
-
 /-- What `former_never_zero_at`'s refinement needs of a program. -/
 structure FnzaProg (p : Prog) : Prop extends FslProg p where
   fnza : p.lookup "former_never_zero_at" = some formerNeverZeroAtL
@@ -430,7 +424,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
   split
   · exact RefE.of_cls0 rfl
   rename_i hov
-  have hn' := toNat_add_of_not_lt' hov
+  have hn' := L.toNat_add_of_not_lt hov
   unfold ConRon.Arena.formerNeverZeroAt
   refine RefE.bindLift (fun _ => fnzaE.k_former_res_sort.none ..) fun r1 m1 c1 => ?_
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

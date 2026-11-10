@@ -8,6 +8,7 @@ import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.View
 public import ConAgua.Arena.DerRelBase
 public import ConRon.Arena.Core
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -113,7 +114,7 @@ def WsNodeOK (n : Nat) : Prop :=
 theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
   intro m m' a memo h d c r hD hM hh hb
   have hc : ¬ c = 0 := fun hc => by rw [wscW.abort1 n m h d c hc] at hb; cases hb
-  rw [ctrW_toNat c hc, wscopedBGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
+  rw [L.toNat_eq_toNat_sub_one_add_one c hc, wscopedBGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
   rw [← derFW_ok m a hD.1 hD.2 h hh]
   by_cases hf : derFW m h = 0
   · rw [wscW.arm1 n m h d c hc hf] at hb

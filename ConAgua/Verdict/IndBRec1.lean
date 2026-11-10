@@ -18,6 +18,7 @@ public import ConAgua.Arena.RecGenSpec.KcW
 public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
 import all ConAgua.Arena.RecGen
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -100,7 +101,7 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
     (fun hb => by rw [← hb2] at hb; simpa using hb) fun _ _ => ?_
   have ek (j : Word) (hj : j.toNat < 4) :
       rdW (m2.arr64 IW) (r1.headD 0 + j) = rdW (m1.arr64 IW) (r1.headD 0 + j) := by
-    simp only [rdW, word_add_toNat (show (r1.headD 0).toNat + j.toNat < 2 ^ 64 by omega)]
+    simp only [rdW, _root_.L.toNat_add_of_lt _ _ (show (r1.headD 0).toNat + j.toNat < 2 ^ 64 by omega)]
     rw [hg2.iwGet _ (by omega)]
   refine RefE.ret rfl ?_
   dsimp only

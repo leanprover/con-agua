@@ -14,6 +14,7 @@ import all ConAgua.Arena.IndInstall
 import ConAgua.Arena.QuotCiT
 import ConAgua.Arena.RecClassSpec.MjProg
 public import ConAgua.L.ErrSpec
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -203,7 +204,7 @@ theorem cbrt_ok {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
       exact hPop
   -- the rest
   have hio1 := rec2ToNat_succ (o := io) (i := io.toNat) (Nat.le_refl _) (by have : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt; omega)
-  have hil1 := rec2ToNat_pred hz
+  have hil1 := L.toNat_sub_one_of_ne hz
   have hg04 := hg03.trans hg4
   rcases h5 : cbrtE p n s4.mem (io + 1) (il - 1) (r3.headD 0) (r4.headD 0) (r4.tail.headD 0) with e | ⟨r5, m5⟩
   · rw [h5, cbrtE.k_cons_block_recs_temp.none] at h; cases h

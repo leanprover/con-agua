@@ -16,6 +16,7 @@ public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Checker.Hyp
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndSum
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -282,7 +283,7 @@ theorem fsorts_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wo
   rw [fsortsE.arm2 p n m vis isProp large s nP fo fl io il j hj]
   obtain ⟨J, hjJ⟩ : ∃ J, j.toNat = J + 1 :=
     ⟨j.toNat - 1, by have : j.toNat ≠ 0 := fun e => hj (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-  have hJ : (j - 1).toNat = J := by rw [sumToNat_pred hj]; omega
+  have hJ : (j - 1).toNat = J := by rw [L.toNat_sub_one_of_ne hj]; omega
   rw [hjJ, checkStructFieldSortsI_succ]
   -- the field (`sl_get`, L only)
   refine RefE.onlySim (fun _ => fsortsE.k_sl_get.none ..) (fun r1 m1 h1 =>
@@ -298,7 +299,7 @@ theorem fsorts_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wo
   have hfvs' : decHL m fo.toNat fl.toNat = some fvs := by rw [decHL_grow hg0 hfb]; exact hfvs
   obtain ⟨w, hw, hwl, hwd⟩ := decHL_get' hfvs' J hJl (by omega)
   have efo : fo + (j - 1) = UInt64.ofNat (fo.toNat + J) := by
-    apply UInt64.toNat_inj.mp; rw [sum_toNat_add (by omega), hJ]; simp; omega
+    apply UInt64.toNat_inj.mp; rw [L.toNat_add_of_lt _ _ (by omega), hJ]; simp; omega
   have hr1 : r1.headD 0 = w := by
     simp only [getW, hl, ite_false, Option.some.injEq] at hgw
     rw [← hgw, efo, hw]
@@ -311,7 +312,7 @@ theorem fsorts_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wo
   obtain ⟨aP, haP, hda⟩ := ConRon.Bridge.ExprOps.denoteEList_getElem? fvs fvsP hfP J (decI w) hget
   have hwsa := hws J (by omega) aP haP
   refine RefE.bind_right (v := decI w) (a₁ := a) (by rw [hget]; rfl) ?_
-  have hdep : (nP + (j - 1)).toNat = nP.toNat + J := by rw [sum_toNat_add (by omega), hJ]
+  have hdep : (nP + (j - 1)).toNat = nP.toNat + J := by rw [L.toNat_add_of_lt _ _ (by omega), hJ]
   rw [← hdep]
   -- `fvar_type_d` (outside the verdict closure)
   refine RefE.bindSim (fun _ => fsortsE.k_fvar_type_d.none ..) (sumSim_of_relW (ftdF_ok dn vis fe w hwl) hS)

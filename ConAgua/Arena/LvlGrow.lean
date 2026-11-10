@@ -5,6 +5,7 @@ import ConAgua.Arena.StoreDenLvl
 import ConAgua.Arena.LevelView
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConRon.Arena.WFProofs
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -98,7 +99,7 @@ theorem lvNodeW_mono {m m' : Mem} (hl : LvlCnt m m') {u : Word} (hu : HW u)
     apply h1
     have hx : k + tierW u ∈ lvlCtlW := by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hk
-      rcases word_le_one (tierW u) ht with e | e <;> rw [e] <;>
+      rcases L.eq_zero_or_eq_one_of_le_one (tierW u) ht with e | e <;> rw [e] <;>
         rcases hk with rfl | rfl | rfl | rfl | rfl <;> decide
     have := hl.cnt _ hx
     rw [UInt64.le_iff_toNat_le] at h2 ⊢; omega

@@ -13,6 +13,7 @@ import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ConsLib
 import all ConAgua.Arena.ExprMk
 import all ConAgua.Arena.WhnfSpineRefine
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -159,11 +160,6 @@ l_model i2s_spec (p : Prog) (hp : p.lookup "iw_to_spn" = some iwToSpnL)
   fns [hp ↦ i2sW list]
   grind [arena_grind] finish [ntBW] gen 20 bind ntBW
 
-theorem word_add_nat_succ (d : Word) (j : Nat) : d + (j + 1).toUInt64 = (d + 1) + j.toUInt64 := by
-  apply UInt64.toNat_inj.mp
-  simp [UInt64.toNat_add, Nat.toUInt64]
-  omega
-
 /-- **What `iw_to_spn` does**: the stack words `d ‥ d + l` are the pool's `s ‥ s + l`, nothing
 else changes. -/
 theorem i2sW_ok : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
@@ -206,7 +202,7 @@ theorem i2sW_ok : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
         have e0 : ∀ x : Word, x + (0 : Nat).toUInt64 = x := fun x => by simp
         rw [e0, e0, hout d (Or.inl (by rw [hd1]; omega)), hset]
       | succ j =>
-        rw [word_add_nat_succ, word_add_nat_succ, hget j (by rw [hl1]; omega), hiw0]
+        rw [L.add_toUInt64_succ, L.add_toUInt64_succ, hget j (by rw [hl1]; omega), hiw0]
     · intro w hw'
       rw [hout w (by rw [hd1, hl1]; omega)]
       apply hoth

@@ -7,6 +7,7 @@ import ConAgua.Arena.IndView
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConRon.Bridge.Grind
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -109,9 +110,6 @@ theorem growRef_preG {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec
   obtain ⟨hok, ⟨M'', hS'', hK'', hSt''⟩, hres, hr⟩ := h
   exact ⟨hok, ⟨M'', hS'', hK'', hg.trans hSt''⟩, hres, hr⟩
 
-theorem addW_toNat {x y : Word} (h : x.toNat + y.toNat < 2 ^ 64) : (x + y).toNat = x.toNat + y.toNat := by
-  rw [UInt64.toNat_add, Nat.mod_eq_of_lt h]
-
 /-- **`struct_eta_cert_wtb` refines `setWtbT`, both outcomes** (its slices left on the stack): the
 errors are `struct_eta_cert_go`'s. -/
 @[refines_part ConRon.Arena.structEtaCertWith "the type's head and spine (setWtbT)"]
@@ -184,7 +182,7 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
   have hb3 := hsp.bound
   have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hspn
   have htt : (r₃.headD 0).toNat + (r₃.tail.headD 0).toNat ≤ (spTop m₃).toNat := by
-    have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0) (by omega)
+    have e := L.toNat_add_of_lt (r₃.headD 0) (r₃.tail.headD 0) (by omega)
     rw [htop3, ← hr30]; omega
   cases n with
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
@@ -345,7 +343,7 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
         d b us k (r₂.tail.headD 0) (r₃.headD 0) (r₃.tail.headD 0) wtb aargs.toArray cvc _ _
         (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb huw hnw hwtb ⟨_, _, hv⟩
         (by rw [hep]; exact hci) hsp (by
-          have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0)
+          have e := L.toNat_add_of_lt (r₃.headD 0) (r₃.tail.headD 0)
             (by have := hsp.bound; omega)
           rw [htop3, ← hr30]; omega))
   · rw [ite_eq_left (by

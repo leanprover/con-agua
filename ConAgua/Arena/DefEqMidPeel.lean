@@ -12,6 +12,7 @@ import ConAgua.Front.Preserve
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndView
 import all ConAgua.Arena.DefEq
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -151,9 +152,6 @@ theorem FvsR.kept {m m' : Mem} {fo k : Word} {fvs : Array EIdx} (h : FvsR m fo k
     (hk : StackKept m m') (hspn : (m.arr64 SPN).size < 2 ^ 63) : FvsR m' fo k fvs :=
   ⟨h.spine.keep hk.size hk.below h.le_top hspn, hk.1.trans h.top, h.fit⟩
 
-theorem peel_word_add_toNat (d k : Word) (h : d.toNat + k.toNat < 2 ^ 64) : (d + k).toNat = d.toNat + k.toNat := by
-  rw [UInt64.toNat_add]; omega
-
 theorem toNat_zero_w : (0 : Word).toNat = 0 := rfl
 
 /-- **`peel_leaf` refines `defeqPeelLeaf`, both outcomes**, from `inst_list`'s spec: the errors are
@@ -168,7 +166,7 @@ theorem pl_ref (p : Prog) (hil : InstListOK p) (n : Nat)
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [plE]
   unfold defeqPeelLeaf
-  rw [← peel_word_add_toNat d k hdk]
+  rw [← L.toNat_add_of_lt d k hdk]
   refine RefE.bind_callW (fun _ => rfl) (hil n s₀ a₀ dn vis fe M eb a fo k 0 fvs hs.rel ha hx.spine
     hx.le_top) fun r₁ m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ hst₁ => ?_
   dsimp only [plE.k_inst_list]
@@ -231,7 +229,7 @@ theorem pd_ref (p : Prog) (hil : InstListOK p) (n : Nat)
       (CorePost decDom dn s₀.mem vis fe M eb ResW) := by
   simp only [pdE]
   unfold peelDomT
-  rw [← peel_word_add_toNat d k hdk]
+  rw [← L.toNat_add_of_lt d k hdk]
   refine RefE.bind_callW (fun _ => rfl) (hil n s₀ a₀ dn vis fe M eb da fo k 0 fvs hs.rel ha hx.spine
     hx.le_top) fun r₁ m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ hst₁ => ?_
   dsimp only [pdE.k_inst_list]
@@ -492,7 +490,7 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     obtain ⟨e₁, hf₁⟩ := peel_internFVar_core hp hS (d + k) t2 ht r₁ hc1
-    rw [peel_word_add_toNat d k hdk] at e₁
+    rw [L.toNat_add_of_lt d k hdk] at e₁
     obtain ⟨hok, ⟨M₁, hS₁, hK₁, hst₁⟩, hres, hw⟩ := e₁
     have hfvs₁ := hx.kept hst₁ hS.spn
     have hfoK : (fo + k).toNat = fo.toNat + k.toNat := by

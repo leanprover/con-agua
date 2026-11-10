@@ -9,6 +9,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.StripTeleSpec
 import all ConAgua.Arena.IndSum
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -71,9 +72,6 @@ end spec
 
 /-! ## The relation to the twin -/
 
-theorem usDrop3_eq (rs : List Word) : rs.drop 3 = rs.tail.tail.tail := by
-  rcases rs with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩ <;> rfl
-
 theorem add3_toNat {nP j : Word} (h : nP.toNat + j.toNat + 1 < 2 ^ 64) :
     (nP + j + 1).toNat = nP.toNat + j.toNat + 1 := by
   rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega
@@ -103,7 +101,7 @@ theorem ustW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     obtain ⟨l, e⟩ := le
     obtain ⟨h1, -, hb32, hbe⟩ := hdec
     rw [ustK1_some_ne (by rw [h1]; decide)] at h
-    rw [usDrop3_eq] at hb32 hbe
+    rw [L.drop_three] at hb32 hbe
     have hbH : H (rs.tail.tail.tail.headD 0) := hb32
     obtain ⟨b, a', hr2, hb, hM2, hS2, hg2⟩ :=
       hbFastW_ok n m1 m' a1 0 (rs.tail.tail.tail.headD 0) r mp hbH hS1 hM1 h

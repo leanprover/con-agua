@@ -10,6 +10,7 @@ import ConAgua.Arena.RecClassSpec.PdWAfr
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 import all ConAgua.Arena.RecClass
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -418,7 +419,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
       ⟨hS9, by rw [decHL_grow hg29 hxb]; exact hxs, fun _ => Nat.le_trans hxb hg29.iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r10, m10⟩ bs a10 - ⟨⟨hS10, hg10, hbs, hbb⟩, hf10⟩
   dsimp only at hS10 hg10 hbs hbb
-  simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
+  simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hbs hbb
   by_cases hov : e + r10.tail.headD 0 < e
   · rw [c1cW.k_fvar_type_ds.abort1 (hc1 := hov)]; simp only [c1tW.k_class_gen_rule_call1_close, fcK, hK]; exact RSim.none
   rw [c1cW.k_fvar_type_ds.arm1 (hc1 := hov)]
@@ -567,7 +568,7 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
       ⟨hS3, by rw [decHL_grow hg13 hfb]; exact hfvs, fun _ => Nat.le_trans hfb hg13.iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r4, m4⟩ fbs a4 - ⟨⟨hS4, hg4, hfbs, hfbb⟩, hf4⟩
   dsimp only at hS4 hg4 hfbs hfbb
-  simp only [getD_zero, Nat.zero_add, getD_one] at hfbs hfbb
+  simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hfbs hfbb
   rw [grcW.k_fvar_type_ds.arm1]
   have hg14 := hg13.trans hg4
   obtain ⟨-, -, -, -, -, ⟨o12, l12, h12, h13, hpre⟩⟩ := rec2CG_parts (hG.grow (decCG_mono _) (hg14))
@@ -667,7 +668,7 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   · rw [ruK2_fail (h := ho2)]; exact RSim.pure_some ⟨⟨hS2, hg2, rfl⟩, hA2⟩
   obtain ⟨fvs, res⟩ := p2
   obtain ⟨h21, ⟨hfvs, hfb⟩, -, -⟩ := ho2
-  simp only [getD_one, getD_two, Nat.reduceAdd] at hfvs hfb
+  simp only [L.getD_one, L.getD_two, Nat.reduceAdd] at hfvs hfb
   rw [ruK2_ok (h := by rw [h21]; decide), rbW.arm1]
   have hX2 := hX.stab (decCC_mono _) m2 hg2
   obtain ⟨-, -, htyN2⟩ := rec2CC_parts hX2

@@ -6,13 +6,14 @@ import ConAgua.Arena.StripTeleSpec
 import ConAgua.Arena.WhnfSpineRefine
 public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.IndView
+import ConAgua.L.WordOff
 
 @[expose] public section
 
 /-!
 # Pos2DecHLSplit
 
-`pos2_forall_view`, `pos2_word_add`, `pos2_word_succ`, `pos2_word_pred`, `pos2_ns_rd`, `pos2_decHL_split` and the lemmas only they use.
+`pos2_forall_view`, `pos2_ns_rd`, `pos2_decHL_split` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -39,25 +40,10 @@ theorem pos2_forall_view {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
   exact ⟨_, _, hew, hty, hb, by rw [viewBind_run']; simp only [← decE_eq]; rw [hvb],
     (decE_tag_forallE w hw).mpr h6⟩
 
-theorem pos2_word_add {x y : Word} (h : ¬ x + y < x) : (x + y).toNat = x.toNat + y.toNat := by
-  rcases Nat.lt_or_ge (x.toNat + y.toNat) (2 ^ 64) with hl | hl
-  · exact word_add_toNat hl
-  · exfalso; apply h; apply UInt64.lt_iff_toNat_lt.mpr; rw [UInt64.toNat_add]
-    have := x.toNat_lt; have := y.toNat_lt; omega
-
-theorem pos2_word_succ {x : Word} (h : ¬ x + 1 = 0) : (x + 1).toNat = x.toNat + 1 := by
-  rcases Nat.lt_or_ge (x.toNat + 1) (2 ^ 64) with hl | hl
-  · exact word_add_toNat (by simpa using hl)
-  · exfalso; apply h; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; have := x.toNat_lt; simp; omega
-
-theorem pos2_word_pred {x : Word} (h : x ≠ 0) : (x - 1).toNat = x.toNat - 1 := by
-  have : x.toNat ≠ 0 := fun e => h (UInt64.toNat_inj.mp (by simpa using e))
-  rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
-
 /-- The words of a `NestState` record, read after the pool grew. -/
 theorem pos2_ns_rd {m m' : Mem} (hg : IWGrow m m') {p : Word} (hp : p.toNat + 6 ≤ iwTop m)
     (htop : iwTop m < 2 ^ 64) (i : Word) (hi : i.toNat < 6) : rdW (m'.arr64 IW) (p + i) = rdW (m.arr64 IW) (p + i) :=
-  rdW_iw_grow hg (by rw [word_add_toNat (by omega)]; omega)
+  rdW_iw_grow hg (by rw [L.toNat_add_of_lt _ _ (by omega)]; omega)
 
 /-- A handle slice split at `k`. -/
 theorem pos2_decHL_split {k : IdxKind} {m : Mem} {o l n : Nat} {xs : List (Idx k)} (h : decHL m o l = some xs)
@@ -82,16 +68,13 @@ theorem pos2_len_eq {aL nPc nI : Word} (h : nPc.toNat ≤ aL.toNat) :
   constructor
   · intro e
     rcases Nat.lt_or_ge (nPc.toNat + nI.toNat) (2 ^ 64) with hl | hl
-    · rw [e, word_add_toNat hl]
+    · rw [e, L.toNat_add_of_lt _ _ hl]
     · exfalso
       have := congrArg UInt64.toNat e; rw [UInt64.toNat_add] at this
       have := nI.toNat_lt; have := nPc.toNat_lt
       omega
   · intro e
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, ← e]; exact (Nat.mod_eq_of_lt aL.toNat_lt).symm
-
-theorem pos2_getD2 (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
-  rcases vl with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩ <;> rfl
 
 end L.Ind
 

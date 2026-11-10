@@ -256,7 +256,7 @@ theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat}
       exact hg4
     have ecv := ((hH2.putER (pp + 5) (UInt64.ofNat nP) (fun i hi => ⟨by off_omega, by omega⟩) (by off_omega)).putER (pp + 6)
       (UInt64.ofNat nF) (fun i hi => ⟨by off_omega, by omega⟩) (by off_omega)) m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
-    simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, ofNat_toNat_lt hnP, ofNat_toNat_lt hnF]
+    simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, L.toNat_ofNat_of_lt hnP, L.toNat_ofNat_of_lt hnF]
 
 /-- An inductive. -/
 theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat}
@@ -372,7 +372,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat}
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
       rcases hjw with rfl | rfl | rfl <;> off_omega) (by omega) hws41
   have h11 : (11 * UInt64.ofNat rs.length).toNat = 11 * rs.length := by
-    rw [UInt64.toNat_mul, ofNat_toNat_lt (by omega)]; simp; omega
+    rw [UInt64.toNat_mul, L.toNat_ofNat_of_lt (by omega)]; simp; omega
   cases h4 : callW p (k' + 1) "erec_alloc" [11 * UInt64.ofNat rs.length] (putERs m2 ws) with
   | none => rw [h4] at hw; simp at hw
   | some t4 =>
@@ -415,7 +415,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat}
     rw [hq32, ← List.drop_drop, hd2]; simp [u64B]
   obtain ⟨memo2, irs, a3, hrun3, hlen3, hI8, hM8, hs8, hq8, hek8, ht8, hIW8, hH8⟩ :=
     rulesTo_rel hL hr rs hrs _ memo1 (k' + 1) _ a1 _ (r4.headD 0) _ rest r5 m6 hI7 hM7
-      (by rw [hs7, hs5, hs4, hs2]) hd32 (ofNat_toNat_lt (by omega)) (by omega) (by omega) h5
+      (by rw [hs7, hs5, hs4, hs2]) hd32 (L.toNat_ofNat_of_lt (by omega)) (by omega) (by omega) h5
   -- the earlier words through the rules
   have hk8 : ∀ i, i < erT m2 → erA m6 i = erA (putERs m5 ws') i := fun i hi =>
     hek8.2 i (by omega) (by omega)
@@ -467,7 +467,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat}
         (fun i hi => h1 i (by rcases hi with hi | hi <;> omega)) (fun _ h => h.elim)
     rw [← hkw] at e9
     simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, bool?_of e9, nat?_of e7, nat?_of e8,
-      ofNat_toNat_lt hmI, ofNat_toNat_lt hrP, ofNat_toNat_lt (show rs.length < 2 ^ 64 by omega), bw_ne]
+      L.toNat_ofNat_of_lt hmI, L.toNat_ofNat_of_lt hrP, L.toNat_ofNat_of_lt (show rs.length < 2 ^ 64 by omega), bw_ne]
     simp at erules; simp [erules]
 
 /-- **`rci_ci` refines `Frontend.internCI`** for the constants `ciFits` admits. -/

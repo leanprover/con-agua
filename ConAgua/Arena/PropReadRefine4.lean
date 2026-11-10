@@ -4,6 +4,7 @@ public import ConAgua.Arena.PropReadRefine3
 import ConAgua.Arena.DefEqLeaves2
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.WhnfCore
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -230,7 +231,7 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       (by rw [hpre]; rfl)
   · -- fvar
     obtain ⟨hg, -, hty, hty'⟩ := hVR
-    rw [pr_getD2] at hty hty'
+    rw [L.getD_two] at hty hty'
     simp only [hg, show (1 : Word) ≠ 3 by decide, ↓reduceIte] at hW
     rcases hc2 : callW p n "type_sort_pw" [vis, f, w.tail.tail.headD 0] m with _ | ⟨r₂, m₂⟩ <;>
       rw [hc2] at hW
@@ -243,8 +244,8 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   · exact hnev 2 hVR.1 (by decide) (by decide) (Or.inl rfl) (by rw [hpre]; rfl)
   · -- const
     obtain ⟨hg, hn, hn', husw, hus'⟩ := hVR
-    rw [pr_getD1] at hn hn'
-    rw [pr_getD2] at husw hus'
+    rw [L.getD_one] at hn hn'
+    rw [L.getD_two] at husw hus'
     simp only [hg, ↓reduceIte] at hW
     rcases hc2 : callW p n "head_proof_const" [vis, f, w.tail.headD 0, w.tail.tail.headD 0] m
       with _ | ⟨r₂, m₂⟩
@@ -275,8 +276,8 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   · exact hnev 8 hVR (by decide) (by decide) (Or.inr (Or.inr rfl)) (by rw [hpre]; rfl)
   · -- proj
     obtain ⟨hg, hsw, hsn, hiw, -, -⟩ := hVR
-    rw [pr_getD1] at hsw hsn
-    rw [pr_getD2] at hiw
+    rw [L.getD_one] at hsw hsn
+    rw [L.getD_two] at hiw
     simp only [hg, show (9 : Word) ≠ 3 by decide, show (9 : Word) ≠ 1 by decide,
       show (9 : Word) ≠ 2 by decide, show (9 : Word) ≠ 6 by decide, show (9 : Word) ≠ 8 by decide,
       ↓reduceIte] at hW
@@ -311,8 +312,8 @@ theorem ppLoopW_le (m : Mem) : ∀ (N : Nat) (f e f' e' : Word), f.toNat ≤ N �
     · split at hL
       · cases hL
       · rename_i hc0
-        have h1 := pr_word_sub1 f hc0
-        have h2 := pr_word_ne0 f hc0
+        have h1 := L.toNat_sub_one_of_ne hc0
+        have h2 := L.toNat_ne_zero_of_ne f hc0
         split at hL
         · cases hL
         split at hL
@@ -367,11 +368,11 @@ theorem prf_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   · cases hW
   simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
-  have hfm := pr_word_sub1 f' hf0
+  have hfm := L.toNat_sub_one_of_ne hf0
   have hle : f'.toNat ≤ f.toNat := ppLoopW_le m _ f e f' e' (Nat.le_refl _) hL
   obtain ⟨res, a', hrun₂, hA, hd⟩ := hpw_call hp hden hlps hfp hek hpf hS (by omega) he' hc2
   refine ⟨res, a', ?_, hA, hd⟩
-  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 f' hf0)
+  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (L.toNat_ne_zero_of_ne f' hf0)
   have hj' : j = (f' - 1).toNat := by omega
   have t5 : ((decE e').tag == ETag.lam) = false := by
     rw [tag_beq_w e' he' 5 (by decide) ETag.lam rfl 5 rfl]; simp [h5]

@@ -9,6 +9,7 @@ import ConAgua.Arena.LevelView
 import ConAgua.Arena.LvlGrow
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -57,7 +58,7 @@ theorem pisOut_ref (p : Prog) (hb : InferBodyProg p) (hcap : BStkCap) (dn : NIdx
       rw [ite_eq_right (by simp)]
       exact RefE.ret (by rw [inferPisOut]; rfl) ⟨CorePost.ret hS rfl hv, hdv⟩
     rw [ite_eq_left hn]
-    have hn1 := sub1_toNat hn
+    have hn1 := L.toNat_sub_one_of_ne hn
     have hn0' : n.toNat ≠ 0 := fun h' => hn (UInt64.toNat_inj.mp (by simpa using h'))
     have hjK : (n - 1).toNat < ws.size := by rw [hB.size, hn1]; omega
     have hwsj : ws[(n - 1).toNat] = rdW (m.arr64 BSTK) (lo + (n - 1)) := by
@@ -120,7 +121,7 @@ theorem ipl_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hsz := hcap _ _ _ _ _ _ _ hS
-  have hdk' : (d + k).toNat = d.toNat + k.toNat := addW _ _ hdk
+  have hdk' : (d + k).toNat = d.toNat + k.toNat := L.toNat_add_of_lt _ _ hdk
   have h0 : (0 : Word).toNat = 0 := rfl
   have hT : inferPisLeaf (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI) =
       (instantiateListFast coreWalkFuel (decE t) fvs (0 : Word).toNat >>= fun ob =>
@@ -266,9 +267,9 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
     have hcp := hcap _ _ _ _ _ _ _ hS
     have hfb := hf.bound
     have hBb := hB.bound
-    have haddf : (fo + k).toNat = fo.toNat + k.toNat := addW _ _ (by omega)
-    have haddl : (lo + k).toNat = lo.toNat + k.toNat := addW _ _ (by omega)
-    have haddd : (d + k).toNat = d.toNat + k.toNat := addW _ _ (by omega)
+    have haddf : (fo + k).toNat = fo.toNat + k.toNat := L.toNat_add_of_lt _ _ (by omega)
+    have haddl : (lo + k).toNat = lo.toNat + k.toNat := L.toNat_add_of_lt _ _ (by omega)
+    have haddd : (d + k).toNat = d.toNat + k.toNat := L.toNat_add_of_lt _ _ (by omega)
     have hftop : fo.toNat + k.toNat ≤ (spTop m).toNat := by rw [htop, haddf]; exact Nat.le_refl _
     have hbtop : lo.toNat + k.toNat ≤ (bTop m).toNat := by rw [hbt, haddl]; exact Nat.le_refl _
     by_cases hc : peel ≠ 0 ∧ tagW t = 6
@@ -363,7 +364,7 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
         rw [UInt64.toNat_sub_of_le]; · rfl
         rw [UInt64.le_iff_toNat_le]; simp
         have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega
-      have hk1 : (k + 1).toNat = k.toNat + 1 := addW _ _ (by simp; omega)
+      have hk1 : (k + 1).toNat = k.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
       have hih := ih (by omega) (tPush m₄ fo lo k (r₄.headD 0) (tfld m₃ SORT (tierW (r₃.headD 0))
         (idxW (r₃.headD 0)) 0)) _ M₄ (peel - 1) _ (k + 1) (tfld m FORALL (tierW t) (idxW t) 0)
         (tfld m₃ SORT (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0) _ _ hS' hbody hf' htop' hB' hbt' hws'

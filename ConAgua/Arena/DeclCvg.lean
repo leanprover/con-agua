@@ -245,8 +245,4 @@ theorem iwReset_stage {vis : Word} {fe : IFEnv} {m : Mem}
 theorem erecP_reset (m : Mem) : erecP (m.set64 CTL 200 0) = erecP m :=
   erecP_frame (MemFrame.setCtl m 200 0) (by decide) (by decide) (by decide) (by decide)
 
-theorem word_add_toNat (g : Word) (k : Nat) (h : g.toNat + k < 2 ^ 64) :
-    (g + UInt64.ofNat k).toNat = g.toNat + k := by
-  rw [UInt64.toNat_add]; simp; omega
-
 end L.Arena

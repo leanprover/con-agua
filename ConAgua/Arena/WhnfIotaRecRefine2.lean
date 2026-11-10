@@ -13,6 +13,7 @@ import ConAgua.L.ModelGen
 public import ConAgua.Arena.WhnfIotaRecRefine
 import all ConAgua.Arena.WhnfIotaRec
 import ConAgua.Arena.IotaCase3Ref
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -675,7 +676,7 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   -- the major
   have hmIl : (erRd s₀.mem (recP + 5)).toNat < sn.toNat := by omega
   have hmw : so + erRd s₀.mem (recP + 5) = so + (erRd s₀.mem (recP + 5)).toNat.toUInt64 := by
-    rw [toUInt64_toNat_self]
+    rw [L.toUInt64_toNat]
   have hmaj : HW (rdW (s₀.mem.arr64 SPN) (so + erRd s₀.mem (recP + 5))) := by
     have := hsa.lt _ hmIl; unfold HW; rw [hmw]; exact this
   have hgetD : xs.toList.getD (erRd s₀.mem (recP + 5)).toNat (decE (rb.headD 0)) =

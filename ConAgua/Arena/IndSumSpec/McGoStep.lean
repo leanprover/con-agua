@@ -16,6 +16,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.SimLib
 import all ConAgua.Arena.IndSum
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -263,18 +264,18 @@ theorem mcNode_arm (k : Nat) (ih : McGoOK k) (vl : List Word) (v : ENodeView) (h
     exact Sim.ret ⟨rfl, by rw [word_or_ne, hb1, hb2], hM2, hf1.trans hf2⟩
   cases v with
   | fvar i ty =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, -, hy, hdy⟩ := hvr
     rw [hg, mcNodeW_fvar k m f T 1 _ _ _ rfl, mcArm, ← hdy]
     exact ih m a _ T _ mp hA hy hT hM
   | app f0 x' | lam f0 x' | forallE f0 x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     simp only [mcArm, ← hdx, ← hdy]
     exact bin _ _ _ (by first | exact Or.inl hg | exact Or.inr (Or.inl hg) | exact Or.inr (Or.inr hg))
       hx hy
   | letE t v' b' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy, hz, hdz⟩ := hvr
     rw [hg, mcNodeW_let k m f T 7 _ _ _ rfl]
     simp only [mcArm, ← hdx, ← hdy, ← hdz]
@@ -288,7 +289,7 @@ theorem mcNode_arm (k : Nat) (ih : McGoOK k) (vl : List Word) (v : ENodeView) (h
     exact Sim.ret ⟨rfl, by rw [word_or_ne, word_or_ne, hb1, hb2, hb3], hM3,
       (hf1.trans hf2).trans hf3⟩
   | proj s i e =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, -, hz, hdz⟩ := hvr
     rw [hg, mcNodeW_proj k m f T 9 _ _ _ (by decide) (by decide) (by decide)]
     simp only [mcArm, ← hdx, ← hdz]
@@ -336,7 +337,7 @@ theorem mcGo_step_ok (j : Nat) (ih : ∀ k, k < j + 1 → McGoOK k) : McGoOK (j 
     | const nn us =>
       rw [mentionsConstGo_succ']
       refine Sim.bind_twin (view_run _ a _ hv) ?_
-      simp only [ViewR, getD1_eq'] at hvr
+      simp only [ViewR, L.getD_one] at hvr
       obtain ⟨hg3, hx, hdx, -⟩ := hvr
       rw [mcG1_const j m f T h _ (by simp) (by rw [hg3]; decide) hg3]
       refine Sim.ret ⟨rfl, ?_, hM, MemFrame.refl _ _ _⟩
@@ -743,19 +744,19 @@ theorem hbNode_arm {vis : Word} {fe : IFEnv} (k : Nat)
       (HbQi vis fe (ConRon.Arena.hasLooseBVarBIns hE i.toNat) m) := by
   cases v with
   | app f0 x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl⟩ := hvr
     rw [hbNodeW_4 (hg := hg)]
     exact hbOr_ok k ih m a i i _ _ f mp hx hy _ hS hM
   | lam f0 x' | forallE f0 x' =>
-    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl⟩ := hvr
     rw [hbNodeW_56 (hg := by first | exact Or.inl hg | exact Or.inr hg)]
     have := hbOr_ok k ih m a i (i + 1) _ _ f mp hx hy (ConRon.Arena.hasLooseBVarBIns hE i.toNat) hS hM
     rw [word_toNat_add_one hi] at this
     exact this
   | letE t v' b' =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, rfl, hy, rfl, hz, rfl⟩ := hvr
     rw [hbNodeW_7 (hg := hg)]
     refine Sim.bindK (by rw [hbL1]) (fun _ _ => rfl) (ih m a _ i _ mp hS hx hM) ?_
@@ -768,7 +769,7 @@ theorem hbNode_arm {vis : Word} {fe : IFEnv} (k : Nat)
     · rw [hbL1_one (hr := by simp)]
       exact Sim.ret ⟨_, rfl, rfl, hM1, hS1, hg1⟩
   | proj s idx e =>
-    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, -, hz, rfl⟩ := hvr
     rw [hbNodeW_9 (hg1 := by rw [hg]; decide) (hg2 := by rw [hg]; decide) (hg3 := by rw [hg]; decide)]
     exact Sim.bindRet (ih m a _ i _ mp hS hz hM) fun _ x _ _ h => ⟨x, rfl, h⟩
@@ -834,7 +835,7 @@ theorem hbGo_step_ok {vis : Word} {fe : IFEnv} (j : Nat)
     cases v with
     | bvar i' =>
       have hg0 : (g :: vt).headD 0 = 0 := by simpa [ViewR] using hvr.1
-      have hi' : ((g :: vt).tail.headD 0).toNat = i' := by rw [← getD1_eq']; exact hvr.2
+      have hi' : ((g :: vt).tail.headD 0).toNat = i' := by rw [← L.getD_one]; exact hvr.2
       rw [hbK2_bvar j m1 f i h _ (by simp) hg0]
       unfold hbRestT
       refine Sim.bind_twin (view_run _ a1 _ hv) (Sim.ret ⟨?_, hM1, hS1, hg1⟩)

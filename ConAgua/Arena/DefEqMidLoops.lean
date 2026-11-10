@@ -10,6 +10,7 @@ public import ConAgua.Arena.DefEq
 public import ConAgua.Arena.KnotE
 public import ConAgua.Arena.RefECore
 import all ConAgua.Arena.DefEq
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -220,10 +221,6 @@ theorem take_rev_succ {α : Type} (xs : List α) (i : Nat) (h : i < xs.length) :
     (xs.take (i + 1)).reverse = xs[i] :: (xs.take i).reverse := by
   rw [List.take_add_one, List.getElem?_eq_getElem h]; simp
 
-theorem word_pred (i : Word) (h : i ≠ 0) : (i - 1).toNat = i.toNat - 1 := by
-  have : i.toNat ≠ 0 := fun h' => h (UInt64.toNat_inj.mp (by simpa using h'))
-  rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
-
 section lrevRef
 variable (p : Prog)
 
@@ -267,8 +264,8 @@ theorem lrev_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
         omega
     have hi0 : i ≠ 0 := fun h => hex (.inl h)
     have hj0 : j ≠ 0 := fun h => hex (.inr h)
-    have hi1 := word_pred i hi0
-    have hj1 := word_pred j hj0
+    have hi1 := L.toNat_sub_one_of_ne hi0
+    have hj1 := L.toNat_sub_one_of_ne hj0
     have hin : i.toNat ≠ 0 := fun h => hi0 (h0i.mpr h)
     have hjn : j.toNat ≠ 0 := fun h => hj0 (h0j.mpr h)
     rw [lrevE.loop1.arm2 (hc1 := rfl) (hc2 := hex), show rdW (m.arr64 SPN) = spW m from rfl]

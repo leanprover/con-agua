@@ -9,6 +9,7 @@ import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.InferBodyBindModels
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.InferBodyLet
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -120,11 +121,6 @@ theorem BKept.of_mkForall {m m' : Mem} {t b r : Word} (h : mkForallW m t b = som
     BKept m m' :=
   BKept.of_frame (mkForallW_frame h) (by simp [tier1, FADER, FAREC, FASLOT, BSTK]) (by simp)
 
-theorem sub1_toNat {n : Word} (h : n ≠ 0) : (n - 1).toNat = n.toNat - 1 := by
-  have : n.toNat ≠ 0 := fun h' => h (UInt64.toNat_inj.mp (by simpa using h'))
-  rw [UInt64.toNat_sub_of_le]; · rfl
-  rw [UInt64.le_iff_toNat_le]; simp; omega
-
 /-- **The outward rebuild refines `inferLamsOut`, both outcomes** (by induction on the loop fuel;
 `ar_entry` and `mk_forall` are lifted, their errors of class `0`). -/
 theorem lamsOut_ref (p : Prog) (hp : InferLeafProg p) (hab : AbstractRangeOK p)
@@ -147,7 +143,7 @@ theorem lamsOut_ref (p : Prog) (hp : InferLeafProg p) (hab : AbstractRangeOK p)
       rw [ite_eq_right (by simp)]
       exact RefE.ret (by rw [inferLamsOut]; rfl) (CorePost.ret hS rfl hc)
     rw [ite_eq_left hn]
-    have hn1 := sub1_toNat hn
+    have hn1 := L.toNat_sub_one_of_ne hn
     have hn0' : n.toNat ≠ 0 := fun h' => hn (UInt64.toNat_inj.mp (by simpa using h'))
     have hjK : (n - 1).toNat < ws.size := by rw [hB.size, hn1]; omega
     have hwsj : ws[(n - 1).toNat] = rdW (m.arr64 BSTK) (lo + (n - 1)) := by
@@ -201,7 +197,7 @@ theorem ilf_ref (p : Prog) (hp : InferLeafProg p)
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hsz := hcap _ _ _ _ _ _ _ hS
-  have hdk' : (d + k).toNat = d.toNat + k.toNat := addW _ _ hdk
+  have hdk' : (d + k).toNat = d.toNat + k.toNat := L.toNat_add_of_lt _ _ hdk
   have h0 : (0 : Word).toNat = 0 := rfl
   have hT : inferLamsLeaf (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE t) k.toNat fvs (ws.map decE) =
       (instantiateListFast coreWalkFuel (decE t) fvs (0 : Word).toNat >>= fun ob =>
@@ -309,7 +305,7 @@ theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : ASta
   obtain ⟨-, -, h1, h2, h3⟩ := hok
   have hspn := hS.spn
   have hco := hf.bound
-  have hadd : (fo + k).toNat = fo.toNat + k.toNat := addW _ _ (by omega)
+  have hadd : (fo + k).toNat = fo.toNat + k.toNat := L.toNat_add_of_lt _ _ (by omega)
   obtain ⟨m₁, hm₁⟩ : ∃ m₁, m₁ = m.set64 SPN (fo + k) fv := ⟨_, rfl⟩
   obtain ⟨m₂, hm₂⟩ : ∃ m₂, m₂ = m₁.set64 BSTK (lo + k) x := ⟨_, rfl⟩
   obtain ⟨m₃, hm₃⟩ : ∃ m₃, m₃ = m₂.set64 CTL 136 (fo + (k + 1)) := ⟨_, rfl⟩
@@ -357,7 +353,7 @@ theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : ASta
     exact hb j hj
   · intro j hj
     have hBb := hB.bound
-    have haddl : (lo + k).toNat = lo.toNat + k.toNat := addW _ _ (by omega)
+    have haddl : (lo + k).toNat = lo.toNat + k.toNat := L.toNat_add_of_lt _ _ (by omega)
     rw [eB, hm₂, rdW_set64, ite_eq_right (fun h => by
             have := UInt64.lt_iff_toNat_lt.mp hj; rw [← h.2.1, haddl] at this; omega), e2]
   · have hfr : MemFrame [SPN, BSTK] [136, 137] m (tPush m fo lo k fv x) := by
@@ -458,9 +454,9 @@ theorem lamsLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
     have hcp := hcap _ _ _ _ _ _ _ hS
     have hfb := hf.bound
     have hBb := hB.bound
-    have haddf : (fo + k).toNat = fo.toNat + k.toNat := addW _ _ (by omega)
-    have haddl : (lo + k).toNat = lo.toNat + k.toNat := addW _ _ (by omega)
-    have haddd : (d + k).toNat = d.toNat + k.toNat := addW _ _ (by omega)
+    have haddf : (fo + k).toNat = fo.toNat + k.toNat := L.toNat_add_of_lt _ _ (by omega)
+    have haddl : (lo + k).toNat = lo.toNat + k.toNat := L.toNat_add_of_lt _ _ (by omega)
+    have haddd : (d + k).toNat = d.toNat + k.toNat := L.toNat_add_of_lt _ _ (by omega)
     have hftop : fo.toNat + k.toNat ≤ (spTop m).toNat := by rw [htop, haddf]; exact Nat.le_refl _
     have hbtop : lo.toNat + k.toNat ≤ (bTop m).toNat := by rw [hbt, haddl]; exact Nat.le_refl _
     by_cases hc : peel ≠ 0 ∧ tagW t = 5
@@ -538,7 +534,7 @@ theorem lamsLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
         rw [UInt64.toNat_sub_of_le]; · rfl
         rw [UInt64.le_iff_toNat_le]; simp
         have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega
-      have hk1 : (k + 1).toNat = k.toNat + 1 := addW _ _ (by simp; omega)
+      have hk1 : (k + 1).toNat = k.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
       have hih := ih (by omega) (tPush m₄ fo lo k (r₄.headD 0) (r₁.headD 0)) _ M₄ (peel - 1) _ (k + 1)
         (tfld m LAM (tierW t) (idxW t) 0) _ _ hS' hbody hf' htop' hB' hbt' hws'
         (by rw [hk1, hpeel1]; omega) hb' hsz' (fun i hi => (hbbT i hi).trans (hbb₄ i hi))

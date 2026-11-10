@@ -15,6 +15,7 @@ import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.IndRealIlpL
 import ConLeche.Verify.Cached.Erase
 import ConAgua.Arena.IndPosSpec.CfW
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -110,7 +111,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   obtain ⟨hds, hidx⟩ := pos2_decHL_split hargs1 (show nPcW.toNat ≤ aL.toNat by omega)
   have hPle : nPcW.toNat ≤ aL.toNat := by omega
   have hab1 : aO.toNat + aL.toNat ≤ iwTop m1 := by have := hg1.iw; omega
-  have hiO : (aO + nPcW).toNat = aO.toNat + nPcW.toNat := word_add_toNat (by omega)
+  have hiO : (aO + nPcW).toNat = aO.toNat + nPcW.toNat := _root_.L.toNat_add_of_lt _ _ (by omega)
   have hiL : (aL - nPcW).toNat = aL.toNat - nPcW.toNat := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))]
   have hP1 : PosMR m1 := hP.fr (ntWf_mfr hnt)

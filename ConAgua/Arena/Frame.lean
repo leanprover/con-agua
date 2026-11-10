@@ -83,12 +83,6 @@ theorem MemFrame.setCtl (m : Mem) (c v : Word) : MemFrame [] [c] m (m.set64 CTL 
   simp only [List.mem_singleton] at hx
   simp [Ne.symm hx]
 
-theorem word_le_one (t : Word) (h : t ≤ 1) : t = 0 ∨ t = 1 := by
-  have : t.toNat ≤ 1 := h
-  rcases (show t.toNat = 0 ∨ t.toNat = 1 by omega) with h | h
-  · exact .inl (UInt64.toNat_inj.mp h)
-  · exact .inr (UInt64.toNat_inj.mp h)
-
 /-! ## Frames from the program text (`L/WriteSet.lean`)
 
 A program whose functions `fs` pass `closedA p A C fs` (by `decide +kernel` on the concrete

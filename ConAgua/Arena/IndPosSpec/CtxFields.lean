@@ -171,9 +171,6 @@ theorem rd_iwH {k : IdxKind} {m : Mem} {p i : Word} {x : Idx k} (h : iwH m (p.to
   simp only [rdW, this, hw, Option.getD_some]
   exact ⟨hl, hx.symm⟩
 
-theorem word_add_toNat {a b : Word} (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
-  rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
-
 /-! ## `nest_ctx_root_holes(_go)` refines `NestCtx.rootHoles` -/
 
 /-- The pointers at `q, …, q + j - 1` decode to the first `j` holes, every read in `P`. -/

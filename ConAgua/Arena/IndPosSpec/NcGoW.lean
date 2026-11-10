@@ -10,6 +10,7 @@ public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPosSpec.DpGoW
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.IndPos
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -157,7 +158,7 @@ theorem hslice?_wshift {k : IdxKind} {a : Nat → Option Word} {co : Word} {n : 
     simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h'
     obtain ⟨x, hx, -⟩ := h'
     obtain ⟨w, hw, -⟩ := hd?_some hx
-    rw [word_add_toNat (by have := ha _ _ hw; simpa using this)]
+    rw [L.toNat_add_of_lt _ _ (by have := ha _ _ hw; simpa using this)]
     simpa using h
 
 /-- The recursive call of `nest_container_ctors_go` passes its two results on. -/
@@ -266,7 +267,7 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
       subst hci'
       have hcvE : decCV (erecP m) (ciq.toNat + 1) = some cv := decCI_ctor_cv hci
       have hciq1 : (ciq + 1).toNat = ciq.toNat + 1 :=
-        word_add_toNat (show ciq.toNat + 1 < 2 ^ 64 by
+        L.toNat_add_of_lt _ _ (show ciq.toNat + 1 < 2 ^ 64 by
           obtain ⟨_, e⟩ := decCV_rd hcvE; have := erecP_lt64 e; simpa using this)
       have hU : UInt64.size = 2 ^ 64 := rfl
       have hnF : (UInt64.ofNat nF).toNat = nF := UInt64.toNat_ofNat_of_lt' (by omega)
@@ -275,7 +276,7 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
       rcases hrec : posRecW m2 [ciq + 1, UInt64.ofNat nF] with _ | ⟨q3, m3⟩ <;> rw [hrec] at h; · rw [ncGoW.k_rec2.none] at h; cases h
       obtain ⟨hS3, hg3, hq3, ht3, hget3⟩ := posRecW_stage hrec hS2 (by simp)
       simp only [List.length_cons, List.length_nil] at ht3
-      have hcol : (cs + ol).toNat = cs.toNat + ol.toNat := word_add_toNat (by omega)
+      have hcol : (cs + ol).toNat = cs.toNat + ol.toNat := L.toNat_add_of_lt _ _ (by omega)
       have hS4 := hS3.set_iw (cs + ol) q3
       have hg23 := hg2.trans hg3
       have hGX4 : GrowX cs.toNat N m (m3.set64 IW (cs + ol) q3) :=
@@ -318,7 +319,7 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
             simp only [hlen, Nat.sub_self, List.getElem_cons_zero, ncProj]
             exact hnew
       have hol1 : (ol + 1).toNat = acc.length + 1 := by
-        rw [word_add_toNat (show ol.toNat + (1 : Word).toNat < 2 ^ 64 by simp; omega)]; simp [hol]
+        rw [L.toNat_add_of_lt _ _ (show ol.toNat + (1 : Word).toNat < 2 ^ 64 by simp; omega)]; simp [hol]
       have hrest : ∀ fp' : Word, fp'.toNat = ((acc ++ [(cv, nPc, nF)]).head?.map (·.2.1)).getD 0 →
           ncGoW.j1 k vis C co cl cs (ol + 1) fp' (m3.set64 IW (cs + ol) q3) = some (r, m') →
           ∃ ys a', (List.filterMapM (ncF fe (decI C)) ns').run a1 = .ok (ys, a') ∧ StageR vis fe m' a' ∧

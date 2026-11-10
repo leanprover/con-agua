@@ -4,12 +4,12 @@ import ConAgua.Arena.InstLPWalkRef2
 import ConAgua.Arena.InstLPLevel2
 import ConAgua.Arena.InstLPWalkArms
 import ConAgua.Arena.InstLPWalkGo
-import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.IndView
 import ConAgua.Arena.InstLPWalkLet
 import ConAgua.Arena.LiftRefine
 import ConAgua.Arena.WhnfDeltaRefine
 public import ConAgua.Arena.InstLPWalkRef
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -84,7 +84,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (derB_spec p hp.mkp.spine.derb n _ h) h1
   have hm₁ : m₁ = m := hs1.symm.trans hm1
   subst hm₁
-  rw [ctrW_toNat fu hfu, instLPGo_succ]
+  rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, instLPGo_succ]
   have hd := derLW_ok m₁ a hS.arena.base hS.arena.der h hh
   rw [hlp] at hW
   -- the cut-off
