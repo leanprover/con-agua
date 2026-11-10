@@ -8,6 +8,9 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.Pins
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndPos2
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 
@@ -71,24 +74,12 @@ theorem lt_of_notbig {z : Word} (h : ¬ 4294967296 ≤ z) : z.toNat < 2 ^ 32 := 
 
 /-! ## `nest_frame_mates_go` -/
 
-mutual
-def matesW : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, c, off, l, oO, oL =>
-    if l = 0 then some ([oO, oL], m)
-    else matesK1 n m c off l oO oL (containsW n m oO oL (erRd m off))
-def matesK1 (n : Nat) (m : Mem) (c off l oO oL : Word) : Option Word → Option (List Word × Mem)
-  | none => none
-  | some b =>
-    if erRd m off = c ∨ b ≠ 0 then matesK3 (matesW n m c (off + 1) (l - 1) oO oL)
-    else matesK2 n c off l (snocW n m oO oL (erRd m off))
-def matesK2 (n : Nat) (c off l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => matesK3 (matesW n m2 c (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0))
-def matesK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) => some ([r.headD 0, r.tail.headD 0], m3)
-end
+l_model nestFrameMatesGo_spec (p : Prog) (hc : p.lookup "sl_contains" = some slContains)
+    (ha : p.lookup "iw_alloc" = some iwAlloc) (hcp : p.lookup "iw_copy" = some iwCopy)
+    (hsn : p.lookup "sl_snoc" = some slSnoc) (hp : p.lookup "nest_frame_mates_go" = some nestFrameMatesGoL)
+  fns [hp ↦ matesW list]
+  specs [slContains_spec p hc n, slSnoc_specW p ha hcp hsn n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 theorem getD2_eq (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
   rcases vl with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩ <;> rfl

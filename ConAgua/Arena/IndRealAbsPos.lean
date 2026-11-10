@@ -248,9 +248,10 @@ theorem nagW_afr : ∀ (n : Nat) (m m' : Mem) (us dO dL gO gL kO kL : Word) (r :
 -- from IndPosSpec/FgW
 theorem matesW_afr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List Word),
     matesW n m c off l oO oL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, h => by simp [matesW] at h
+  | 0, _, _, _, _, _, _, _, _, h => by simp [matesW.eq_1] at h
   | n + 1, m, m', c, off, l, oO, oL, r, h => by
-    unfold matesW matesK1 matesK2 matesK3 at h
+    simp only [matesW.eq_2, matesW.k_sl_contains.eq_def, matesW.k_sl_snoc.eq_def,
+      matesW.k_nest_frame_mates_go.eq_def] at h
     afr_auto h [snocW_afr, matesW_afr n _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/FgW
@@ -265,10 +266,9 @@ theorem nfmW_afr {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
     {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) :
     AFr m m' := by
   cases n with
-  | zero => simp [nfmW] at h
+  | zero => simp [nfmW.eq_1] at h
   | succ n =>
-  simp only [nfmW] at h
-  unfold nfmK matesK3 at h
+  simp only [nfmW.arm1, nfmW.k_nest_block_of.eq_def, nfmW.k_nest_frame_mates_go.eq_def] at h
   afr_auto h [nboW_afr hg hb hp, matesW_afr _ _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/FgW

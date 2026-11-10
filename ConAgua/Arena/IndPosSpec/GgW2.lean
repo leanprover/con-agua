@@ -19,7 +19,7 @@ import all ConAgua.Arena.IndSum
 /-!
 # GgW2
 
-`posRecW_iwFr`, `snocW_iwFr`, `nestFrameMates_specW`, `slNew1_specW` and the lemmas only they use.
+`posRecW_iwFr`, `snocW_iwFr`, `slNew1_specW` and the lemmas only they use.
 -/
 
 section
@@ -73,19 +73,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-theorem nestFrameMates_specW (p : Prog) (L : FmLook p) (n : Nat) (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame_mates" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ nfmW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ L.hp, callFn, nestFrameMatesL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        nestBlockOf_specW p L.hg L.hf L.hbo n,
-        nestFrameMatesGo_spec p L.hc L.ha L.hcp L.hsn L.hgo n] <;>
-      finish (gen := 20) [nfmW]
 
 theorem slNew1_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "sl_new1" = some slNew1) (n : Nat) (s₀ : St) (x : Word) :
