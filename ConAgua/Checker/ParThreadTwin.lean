@@ -70,6 +70,17 @@ theorem run_load_size {b pb : ByteArray} {sz : TieredArray → Nat} (hs : ∀ s,
   simp only [loadMemM, Mem.setG, loadMem, Mem.arr64, Array.size_replicate]
   exact hs a
 
+/-- **A thread's calls are a chain of the pool's steps** (a call on record `k` from the region
+memory `r` that returns `r'` and keeps the buffer). -/
+theorem threadRuns_chain (B : Array Word) :
+    ∀ (cs : List (Word × Nat × Mem)) (r : Mem), ThreadRuns B r cs →
+      JobChain (fun k r r' => ∃ n rs, n ≤ 2 ^ 62 ∧
+        L.run checkerProg n "check" [] (bufMem B r (UInt64.ofNat k)) = .ok (rs, r') ∧ BufKept B r')
+        r (cs.map (·.1.toNat))
+  | [], r, _ => .nil r
+  | (j, n, r') :: cs, r, ⟨hn, ⟨rs, hrun⟩, hkept, hrest⟩ =>
+    .cons ⟨n, rs, hn, by rw [UInt64.ofNat_toNat]; exact hrun, hkept⟩ (threadRuns_chain B cs r' hrest)
+
 /-- **The threads' runs accept ⇒ the twin's pool accepts.** Entry 1 (`check` with the mode word
 `1`, from the loaded memory) returning `2^63 + k`; the buffer `B`, the first `len` words of `OUT`
 (`len` the header's word `1`); and threads `ths`, each a fresh region memory (`INIT = 0`, every owned
@@ -158,19 +169,9 @@ theorem threads_twinAcceptsPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : C
     · rw [hBm]
       exact thr_first hok hlt t₀.1 j (fun b hb => by rw [hz b hb, hO.size]) hI
   have hchain : ∀ t ∈ ths', JobChain Call t.1 t.2 := by
-    have aux : ∀ (cs : List (Word × Nat × Mem)) (r : Mem), ThreadRuns B r cs →
-        JobChain Call r (cs.map (·.1.toNat)) := by
-      intro cs
-      induction cs with
-      | nil => intro r _; exact .nil _
-      | cons c cs ih =>
-        intro r hruns
-        obtain ⟨j, n, r'⟩ := c
-        obtain ⟨hn, ⟨rs, hrun⟩, hkept, hrest⟩ := hruns
-        exact .cons ⟨n, rs, hn, by rw [UInt64.ofNat_toNat]; exact hrun, hkept⟩ (ih r' hrest)
     intro t ht
     obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
-    exact aux _ _ (hth t₀ ht₀).2.2.1
+    exact threadRuns_chain B _ _ (hth t₀ ht₀).2.2.1
   have hinc' : ∀ t ∈ ths', t.2.Pairwise (· < ·) := by
     intro t ht
     obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht

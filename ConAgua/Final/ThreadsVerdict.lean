@@ -7,10 +7,7 @@ import ConAgua.Checker.AsmFinal
 import ConAgua.Checker.ProgIRef
 import ConAgua.Checker.ProgWf
 import ConAgua.Final.BufAbi
-import ConAgua.Final.BufChain
 import ConAgua.Final.DrvFinal
-import ConAgua.Checker.CheckARun
-public import ConAgua.Compiler.Main
 import all ConAgua.Checker.Entry
 
 @[expose] public section
@@ -26,20 +23,18 @@ region (as `ThreadsRun`, `Final/ThreadsFinal.lean`). If the run reports a failur
 thread's call `i` returns `rdx = 2` with `rax = k` while its calls before `i` returned accept,
 then for a class `k &&& 3` of `1` (reject) or `2` (decline) the twin's pool fails
 (`TwinVerdictPooled [b]`): the pipeline fails with that class before or in the jobs
-(`TwinVerdict`), or the stages and the stream index ran ok and either the failing thread's jobs up
-to and including the failing one, run in order from the index state's worker (each at the
-index's view of its position), fail with that class, or some record below them does not pass on
-its own. The last case is the weakened form: the theorem does not know whether the other
-threads accepted the records below the failing job, and a job's check needs them accepted
-(con-ron's fold invariant at the job's view). Every other outcome claims nothing.
+(`TwinVerdict`), or the stages and the stream index ran ok and the failing thread's jobs up to
+and including the failing one, run in order from the index state's worker (each at the index's
+view of its position), fail with that class. Every other outcome claims nothing.
 
-From the machine-level entries (`abiA_outcome`, `abiB_outcome`, the thread's chain
-`thread_chain`) and the L-level claims (`ThreadVerdicts`: entry 1's `Entry1Verdict`, and
-`ThreadEVerdict`: a thread's failing call at the L level, when every record below its job
-passes on its own, is the pool's failure with its class; `threadFail_twin` takes the other case
-to the weakened verdict, `TwinVerdictPooled.of_not_passes`). Relative to a set theory `V`, as the
-threaded accept theorems: the fold invariant at a job's view comes from the model of the
-accepted prefix.
+From the machine-level entries (`abiA_outcome`, `abiB_outcome`, the threads' chains
+`thread_chain`, `threadsAcc_runs`) and the L-level claims (`ThreadVerdicts`: entry 1's
+`Entry1Verdict`, and `ThreadEVerdict`: a thread's failing call at the L level, when the threads'
+accepting calls ran every record below its job, is the pool's failure with its class). A job's
+check needs con-ron's fold invariant at the job's view, which needs every record below it
+accepted: that is why the harness's report of the smallest failing job index (`ThreadFail`'s
+`below`) is a hypothesis. Relative to a set theory `V`, as the threaded accept theorems: the fold
+invariant at a job's view comes from the model of the accepted prefix.
 
 **What the theorem trusts of the harness** (the hypotheses of `Entry1Fail` and `ThreadFail`;
 beyond them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and
@@ -53,8 +48,16 @@ loader):
   and is passed to each call (route A: read-only, `mprotect`); the thread's region is its own,
   zero at the first call, and at each later call holding the bytes the previous call left; each
   call is made as `BufCallH` says; every claimed job index (in `rdx`) is below `k`
-  (`k = rax - 2^63` from entry 1, the number of records). Neither the coverage of the job indices
-  by the threads nor the order of a thread's claims is needed.
+  (`k = rax - 2^63` from entry 1, the number of records); the calls before `i` claimed smaller
+  indices than call `i` (one monotone claim counter).
+* **The jobs below the failing one** (`ThreadFail`'s `others` and `below`): every job index below
+  call `i`'s was claimed by a call of some thread of `ths` that returned accept, and those
+  threads' calls are as `ThreadsRun` has them (`ThreadsAcc`: the buffer in place, each thread on
+  its own region, zero at its first call and carried over between its calls, each call accepting
+  with the buffer kept, every claim below `k`, each thread's claims increasing). `main.c` claims
+  the indices `0, 1, 2, …` in order from one counter, each thread finishes the call it holds and
+  records only its first failure, and the harness reports, after joining every thread, the
+  failure with the smallest index: so every lower index was claimed, run and accepted.
 * The verdicts: entry 1 returns `rdx = 2` (`Entry1Fail`), or `rdx = 0` and `rax ≥ 2^63`, the
   thread's calls before `i` return `rdx = 0`, `rax = ACCEPT`, and call `i` returns `rdx = 2`
   (`ThreadFail`). The harness reports the code `k` it read from that call's `rax`.
@@ -78,9 +81,11 @@ structure Entry1Fail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Wo
 
 /-- **A thread's call `i` fails** (trusted; the module doc lists it): entry 1 at `dm₀` returning
 at `st₀`, the buffer `B`, and the thread `t`'s calls `0, …, i` (`ThreadsRun`'s fields for them),
-the calls before `i` accepting, call `i` returning `rdx = 2`. -/
+the calls before `i` accepting and claiming smaller job indices, call `i` returning `rdx = 2`;
+and every job index below call `i`'s claimed by an accepting call of the threads `ths`
+(`ThreadsAcc`). -/
 structure ThreadFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
-    (B : Array Word) (t : ThreadM) (i : Nat) : Prop where
+    (B : Array Word) (ths : List ThreadM) (t : ThreadM) (i : Nat) : Prop where
   call₀ : AbiCall b pb dm₀ ra₀
   ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
   rdx₀ : st₀.data.regs.rdx = 0
@@ -102,20 +107,26 @@ structure ThreadFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Wo
   next : ∀ i', i' < i → ∀ x, t.base ≤ x → x < t.base + t.blen →
     (t.dm (i' + 1)).dmem.get? (A x) = (t.st i').data.dmem.get? (A x)
   claimed : ∀ i' ≤ i, (t.dm i').regs.rdx < st₀.data.regs.rax - 9223372036854775808
+  /-- the thread's earlier calls claimed smaller job indices -/
+  before : ∀ i' < i, (t.dm i').regs.rdx < (t.dm i).regs.rdx
+  /-- the jobs below call `i`'s: each claimed by an accepting call of a thread of `ths` -/
+  others : ThreadsAcc dm₀ st₀ B ths
+  below : ∀ j < (t.dm i).regs.rdx, ∃ t' ∈ ths, ∃ i' < t'.n, (t'.dm i').regs.rdx = j
 
 /-- **The threaded harness reports a failure with the code `k`**: entry 1 failed with
 `rax = k`, or a thread's call `i` failed with `rax = k`. -/
 def ThreadsFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
     (k : Word) : Prop :=
   (Entry1Fail b pb dm₀ ra₀ st₀ ∧ k = st₀.data.regs.rax) ∨
-  ∃ (B : Array Word) (t : ThreadM) (i : Nat), ThreadFail b pb dm₀ ra₀ st₀ B t i ∧
-    k = (t.st i).data.regs.rax
+  ∃ (B : Array Word) (ths : List ThreadM) (t : ThreadM) (i : Nat),
+    ThreadFail b pb dm₀ ra₀ st₀ B ths t i ∧ k = (t.st i).data.regs.rax
 
 /-- **A thread's failing call, at the L level**: entry 1 (`check` with the mode word `1`)
 returned `2^63 + k`, the buffer `B` is `OUT`'s first `len` words, a thread with a fresh region
 `r₀` ran its calls `cs` (`ThreadFails`: each accepting call's run returned and left the buffer in
-place) and its next call, on the claimed index `j`, failed with `e` of class other than `0`, and
-every record below `j` passes on its own (`TwinJobPasses`): the twin's pool fails with that
+place), each on an index below `j`, and its next call, on the claimed index `j < k`, failed with
+`e` of class other than `0`; and threads `ths`, each a fresh region with its calls (`ThreadRuns`),
+claims below `k` and increasing, ran every index below `j`: the twin's pool fails with that
 class. Relative to set theory (`[SetTheory Vt]`, as the threaded accept theorems): con-ron's fold
 invariant at a job's view is stated through a model. -/
 def ThreadEVerdict : Prop :=
@@ -126,8 +137,13 @@ def ThreadEVerdict : Prop :=
     ∀ (B : Array Word), B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat →
     ∀ (r₀ : Mem), (∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m₁.arr64 b).size) → r₀.glob INIT = 0 →
     ∀ (j : Word) (cs : List (Word × Nat × Mem)) (n : Nat) (e : Err), ThreadFails B j n e r₀ cs →
-    (∀ c ∈ cs, c.1 < rs₁.headD 0 - 9223372036854775808) → j < rs₁.headD 0 - 9223372036854775808 →
-    e.cls ≠ 0 → (∀ i < j.toNat, TwinJobPasses [b] i) → TwinVerdictPooled [b] e.cls
+    (∀ c ∈ cs, c.1 < j) → j < rs₁.headD 0 - 9223372036854775808 → e.cls ≠ 0 →
+    ∀ (ths : List (Mem × List (Word × Nat × Mem))),
+    (∀ t ∈ ths, (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m₁.arr64 b).size) ∧
+      t.1.glob INIT = 0 ∧ ThreadRuns B t.1 t.2 ∧ ∀ c ∈ t.2, c.1 < rs₁.headD 0 - 9223372036854775808) →
+    (∀ t ∈ ths, (t.2.map (·.1)).Pairwise (· < ·)) →
+    (∀ i : Word, i < j → ∃ t ∈ ths, ∃ c ∈ t.2, c.1 = i) →
+    TwinVerdictPooled [b] e.cls
 
 /-- **The threaded harness's verdict claims** (the L-level obligations): entry 1's
 (`Entry1Verdict`, as in `SeqVerdicts`) and a thread's failing call (`ThreadEVerdict`). -/
@@ -195,8 +211,8 @@ set_option linter.constructorNameAsVariable false in
 /-- A thread's failing call is the twin pool's failure. -/
 theorem threadFail_twin [Host] (V : Type u) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (t : ThreadM) (i : Nat)
-    (hV : ThreadEVerdict.{u}) (hR : ThreadFail b pb dm₀ ra₀ st₀ B t i)
+    (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+    (t : ThreadM) (i : Nat) (hV : ThreadEVerdict.{u}) (hR : ThreadFail b pb dm₀ ra₀ st₀ B ths t i)
     (hk : (t.st i).data.regs.rax &&& 3 ≠ 0) :
     TwinVerdictPooled [b] ((t.st i).data.regs.rax &&& 3) := by
   have hc := code_of_checkerFile_par hcode
@@ -302,44 +318,33 @@ theorem threadFail_twin [Host] (V : Type u) [ConLeche.SetTheory V] (k0 : Nat) (h
     obtain ⟨rs, h1, -, h3, -⟩ := hrun i' hi
     exact ⟨⟨rs, h1⟩, bufKept_of_memRel h3 hent' (hR.kept i' hi)⟩) he i 0 (by omega)
   rw [h0] at hruns
-  -- a record below `j` that does not pass: the weakened verdict
-  have hr₁ : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
-  obtain ⟨PA, m₇, m, hF, -, -, hres⟩ := checkA_run b pb _ hin 1 (Or.inl rfl) abiFuel hN rs₁ m₁ h₁ hr₁
-  have hsz : PA.ds.size < 2 ^ 63 := by
-    have := hF.build.decls.room; have := hF.build.decls.dsize; omega
-  have hj : ((t.dm i).regs.rdx).toNat < PA.ds.size := by
-    have hc := hR.claimed i (Nat.le_refl _)
-    rw [hrax₁, hres] at hc
-    have e : (9223372036854775808 : Word) + UInt64.ofNat PA.ds.size - 9223372036854775808 =
-        UInt64.ofNat PA.ds.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
-    rw [e, UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)] at hc
-    exact hc
-  by_cases hpass : ∀ i' < ((t.dm i).regs.rdx).toNat, TwinJobPasses [b] i'
-  rotate_left
-  · simp only [Classical.not_forall] at hpass
-    obtain ⟨i', hi', hn⟩ := hpass
-    refine TwinVerdictPooled.of_not_passes (j := ((t.dm i).regs.rdx).toNat) ?_ hi' hn
-    intro pins sA sB sC sD sE sF pre r ds ipins I hA' hB' hC' hD' _ _
-    obtain ⟨hA, hB, hC, hD, -⟩ := PA.pfx
-    rw [hA] at hA'; injection hA' with hA'; obtain ⟨-, rfl⟩ := Prod.mk.inj hA'
-    rw [hB] at hB'; injection hB' with hB'; obtain ⟨hB1, rfl⟩ := Prod.mk.inj hB'
-    injection hB1 with hB1; subst hB1
-    rw [hC] at hC'; injection hC' with hC'; obtain ⟨hC1, rfl⟩ := Prod.mk.inj hC'
-    injection hC1 with hC1; subst hC1
-    rw [hD] at hD'; injection hD' with hD'; obtain ⟨rfl, rfl⟩ := Prod.mk.inj hD'
-    exact hj
-  refine hV V b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem checkerTab)
-    (fun a ha => ?_) rfl _ _ abiFuel e hruns (fun c hc => ?_)
-    (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk hpass
-  · have hl := parOwnedL_dom a ha
+  -- the other threads' calls (`threadsAcc_runs`)
+  obtain ⟨f, hf⟩ := Classical.axiomOfChoice
+    (threadsAcc_runs k0 hcode dm₀ st₀ B ths hR.others hhdr hent' hdisj)
+  have hzero : ∀ a ∈ parOwnedL, (zeroMem checkerTab).arr64 a = zeros (m₁.arr64 a).size := by
+    intro a ha
+    have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
     simp only [abiLayout_tab]
     rw [abiLayout_s64 _ _ _ _ _ _ (by
       have := checkerTab.pos64_lt hl; have := (abiTabOk_spec checkerTab_abiOk).1; omega), checkerTab.wAt_pos64 hl]
     simp [zeroMem, Mem.arr64, zeros]
+  refine hV V b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem checkerTab) hzero rfl _ _ abiFuel e
+    hruns (fun c hc => ?_) (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk
+    (ths.map fun t' => (zeroMem checkerTab, f t')) (fun t' ht' => ?_) (fun t' ht' => ?_)
+    (fun j hj => ?_)
   · obtain ⟨i', hi', rfl⟩ := List.mem_map.mp hc
     rw [List.mem_range'] at hi'
-    rw [← hrax₁]; exact hR.claimed i' (by omega)
+    exact hR.before i' (by omega)
+  · obtain ⟨t', ht, rfl⟩ := List.mem_map.mp ht'
+    obtain ⟨h1, h2, -, -, -⟩ := hf t' ht
+    exact ⟨hzero, rfl, h1, fun c hc => by rw [← hrax₁]; exact h2 c hc⟩
+  · obtain ⟨t', ht, rfl⟩ := List.mem_map.mp ht'
+    exact (hf t' ht).2.2.2.2
+  · obtain ⟨t', ht', i', hi', hj'⟩ := hR.below j hj
+    obtain ⟨-, -, h3, -, -⟩ := hf t' ht'
+    obtain ⟨c, hc', hcj⟩ := h3 i' hi'
+    exact ⟨_, List.mem_map.mpr ⟨t', ht', rfl⟩, c, hc', by rw [hcj, hj']⟩
 
 /-- **The verdict theorem for the threaded harness of `checker.s`**: when the trusted threaded
 harness's run reports a failure with the code `k` (`ThreadsFail`: entry 1 returned `rdx = 2`, or
@@ -351,9 +356,9 @@ theorem checkerFile_threads_verdict_of [Host] (V : Type u) [ConLeche.SetTheory V
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
     (hV : ThreadVerdicts.{u}) (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
     TwinVerdictPooled [b] (k &&& 3) := by
-  rcases hF with ⟨hE, rfl⟩ | ⟨B, t, i, hT, rfl⟩
+  rcases hF with ⟨hE, rfl⟩ | ⟨B, ths, t, i, hT, rfl⟩
   · exact (entry1Fail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ hV.entry1 hE hk).pooled
-  · exact threadFail_twin V k0 hcode b pb h64 dm₀ ra₀ st₀ B t i hV.thr hT hk
+  · exact threadFail_twin V k0 hcode b pb h64 dm₀ ra₀ st₀ B ths t i hV.thr hT hk
 
 /-- info: 'ConAgua.Final.checkerFile_threads_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_threads_verdict_of

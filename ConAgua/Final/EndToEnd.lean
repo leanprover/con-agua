@@ -46,10 +46,10 @@ region; the hypotheses are listed in `Final/ThreadsFinal.lean`).
   caller's callee-saved registers intact (`RegsRestored`).
 * `checkerFile_threads_verdict`: if the harness's run reports a failure with the code `k`
   (`ThreadsFail`, `Final/ThreadsVerdict.lean`: entry 1 returned `rdx = 2`, or a thread's call
-  returned `rdx = 2` after that thread's earlier calls accepted) of class `1` or `2`, the twin's
-  pooled pipeline fails (`TwinVerdictPooled [b]`): with that class, or, in the weakened case, some
-  record below the failing thread's jobs does not pass on its own (another thread's record; a
-  job's check is at the view of its position and needs the records below it accepted).
+  returned `rdx = 2` after that thread's earlier calls accepted, and every job index below the
+  failing one was claimed by an accepting call) of class `1` or `2`, the twin's pooled pipeline
+  fails with that class (`TwinVerdictPooled [b]`): before the jobs, or in the failing thread's
+  jobs, run in order from the index state's worker.
 * `checkerFile_threads_model`, `checkerFile_threads_no_False`: the model and no-`False`
   corollaries.
 
@@ -170,10 +170,10 @@ theorem checkerFile_threads_regs [Host] (V : Type w) [ConLeche.SetTheory V] (k0 
 
 /-- **Threaded reject or decline**: if the harness's run reports a failure with the code `k`
 (`ThreadsFail`: entry 1 returned `rdx = 2`, or a thread's call returned `rdx = 2` after that
-thread's earlier calls accepted; the hypotheses are listed in `Final/ThreadsVerdict.lean`) whose
-class `k &&& 3` is `1` (reject) or `2` (decline), the twin's pooled pipeline fails on `[b]`
-(`TwinVerdictPooled`): with an error of that class, or some record below the failing thread's
-jobs does not pass on its own. -/
+thread's earlier calls accepted, and every job index below the failing one was claimed by an
+accepting call; the hypotheses are listed in `Final/ThreadsVerdict.lean`) whose class `k &&& 3` is
+`1` (reject) or `2` (decline), the twin's pooled pipeline fails on `[b]` with an error of that
+class (`TwinVerdictPooled`). -/
 theorem checkerFile_threads_verdict [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)

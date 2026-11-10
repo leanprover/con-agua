@@ -137,9 +137,9 @@ phase is
 the stream index (`buildIndex`, which reads every record off once, with no
 inference), then every record's job, in order, on one worker; a job checks its
 record at the index's view of the record's position.
-[`TwinVerdict [b] c`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L68-L69)
+[`TwinVerdict [b] c`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L63-L64)
 is the same pipeline
-([`twinRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L57-L64)), at some pin
+([`twinRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L52-L59)), at some pin
 list, failing with an error of class `c` (`invalid` is `1`, con-ron's exit
 code 1; `notImplemented` is `2`, exit code 2), in the monad or as a reported
 failure of a line or a record. There is no converse: a run that the twin
@@ -226,8 +226,8 @@ not accepted
 
 **The threaded mode** (`--jobs=N`, §9.3) has its own theorem, and its harness
 assumptions are the fields of
-[`ThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L145-L171)
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L32-L54)):
+[`ThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L144-L179)
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L30-L53)):
 
 * entry 1 is called as `AbiCall` says, and the harness regains control at each
   call's return address in a state the machine is guaranteed to reach there
@@ -248,20 +248,24 @@ assumptions are the fields of
 * entry 1 returned `rdx = 0`, `rax ≥ 2^63`, and every call `rdx = 0`, `rax =
   ACCEPT`.
 
-The threaded verdict theorem (`checkerFile_threads_verdict`) has its own,
-smaller set, the cases of
-[`ThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L73-L112)
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L44-L60)):
+The threaded verdict theorem (`checkerFile_threads_verdict`) has its own set,
+the cases of
+[`ThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L74-L122)
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L39-L63)):
 either entry 1 is called as `AbiCall` says and returns (`FirstReturn`) with
 `rdx = 2`, and the code reported is its `rax`; or, for one thread and one of
 its calls `i`, the facts above hold for that thread's calls up to `i` (entry 1
 returned `rdx = 0` and `2^63 + k`, the buffer in place, the thread's own region,
 zero at its first call and carried from call to call, every claimed index below
-`k`), its calls before `i` returned `ACCEPT`, call `i` returned `rdx = 2`, and
-the code reported is that call's `rax`. Nothing is assumed about the other
-threads, about which failing job the harness reports (it reports the one
-with the smallest index), or about the claiming covering every index or
-increasing.
+`k`, the calls before `i` claiming smaller indices than `i`), its calls before
+`i` returned `ACCEPT`, call `i` returned `rdx = 2`, the code reported is that
+call's `rax`, and every job index below call `i`'s was claimed by a call of some
+thread that returned `ACCEPT`, those threads' calls being as `ThreadsRun` has
+them (`ThreadsAcc`). The last fact is what the harness's report gives: the
+counter hands out `0, 1, 2, …` in order, a thread finishes the call it holds
+and records only its first failure, and after joining every thread the harness
+reports the failure with the smallest index, so every lower index was claimed,
+run and accepted. Nothing is assumed about the claiming covering every index.
 
 Not trusted: the compiler and its Lean execution (the kernel checks the
 compiled code, §8.4), the printer that wrote the file, the entry stubs, the
@@ -1134,18 +1138,19 @@ adds that entry 1 and every `ca_check_b` call return with the caller's
 callee-saved registers intact.
 [`checkerFile_threads_verdict`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L177-L180)
 covers a failing run: if the harness behaves as `ThreadsFail` says (§2.3) and
-the reported code has class `1` or `2`, the twin's pool fails
-([`TwinVerdictPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L194-L212)):
+the reported code has class `1` or `2`, the twin's pool fails with that class
+([`TwinVerdictPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L189-L203)):
 the pipeline fails before the jobs with that class (`TwinVerdict`), or the
-stages and the stream index ran ok and either the failing thread's jobs, in the
-order it claimed them, fail from the index state's worker with that class, or
-some record below them does not pass its own job. This is weaker than the
-sequential verdict: a reject or decline reported by a thread for job `j` means
-"the input is rejected", with the class of `j`'s failure only when every record
-below `j` passes on its own. con-ron proves no rejection theorem for its pool
-that would give the strong form; the harness reports the failing job with the
-smallest index, and every lower job has been run and accepted by then, but that
-is not among the hypotheses.
+stages and the stream index ran ok and the failing thread's jobs, in the order
+it claimed them, fail from the index state's worker with that class. A job's
+check needs con-ron's fold invariant at the job's view, which needs every
+record below it accepted; the threads' accepting calls below the failing job
+give it (the induction of con-ron's `pooled_fold`, up to the failing job,
+[`pool_prefix`](ConAgua/Arena/PoolJobs.lean)). This is the pool's form of the
+sequential verdict, not `TwinVerdict` itself: con-ron proves nothing that
+takes one worker's failing list to the sequential run's verdict (a job's
+result from a worker's state equal to its result from the sequential run's
+state).
 
 `ca_start` and `--jobs=8` agree with con-leche's pinned verdicts on all 689
 fixtures of `scripts/diff-e2e.py` (§10.3; 2026-11-09).
