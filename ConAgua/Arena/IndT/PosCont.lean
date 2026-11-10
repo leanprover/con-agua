@@ -65,9 +65,8 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   dsimp only at hnt
   rw [hs1] at hnt
   cases n with
-  | zero => simp [ntWf] at hnt
+  | zero => simp [ntWf.eq_1] at hnt
   | succ n' =>
-  simp only [ntWf] at hnt
   obtain ⟨xc, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok fe vis nn hnn n' m m1 a r1 hnt hS
   obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.nestContainer_spec ctxP hfind (decI nn) nP a a1 xc hC.check.state
     ⟨hC.check.ienv.toS, hnP⟩ hrun1
@@ -114,7 +113,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   have hiO : (aO + nPcW).toNat = aO.toNat + nPcW.toNat := word_add_toNat (by omega)
   have hiL : (aL - nPcW).toNat = aL.toNat - nPcW.toNat := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))]
-  have hP1 : PosMR m1 := hP.fr (ntWf_mfr (k := n' + 1) (by simpa [ntWf] using hnt))
+  have hP1 : PosMR m1 := hP.fr (ntWf_mfr hnt)
   rw [← hhp]
   -- the checks
   have hs := nccE_spec p L (n' + 1) ⟨m1, Locals.init []⟩ ctx (nhiW m1 ctx pl) nn aO nPcW (aO + nPcW) (aL - nPcW)
@@ -134,7 +133,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   obtain ⟨s2, hs2, -, -, a2, -, hR2⟩ := RefE.run_ok hs hR h3
   rw [hs2] at hR2; dsimp only at hR2
   obtain ⟨hrun2a, ⟨q, hrun2q, hqq⟩, hrun2c, hS2, hg2, hP2, hA2⟩ := hR2
-  replace hA2 : AbsOK m2 := hA2 (ntWf_afr (k := n' + 1) (by simpa [ntWf] using hnt) hA)
+  replace hA2 : AbsOK m2 := hA2 (ntWf_afr hnt hA)
   have hargsT1 := ConRon.Bridge.Inductives.denoteEList_take
     (ConRon.Bridge.denoteEList_ext p1.ext _ _ hargsP) nPcW.toNat
   obtain ⟨p2, hpc⟩ := ConRon.Bridge.Inductives.paramsLocal_spec (nhiW m1 ctx pl).toNat _ _ a1 a2 true p1.ok

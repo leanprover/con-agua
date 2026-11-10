@@ -16,8 +16,7 @@ import all ConAgua.Arena.IndPos2
 /-!
 # NestGroupCtors: `ConRon.Arena.nestGroupCtors`, `ConRon.Arena.nestWalkStack`, `ConRon.Arena.piDomsOcc`
 
-The refinement theorems `nestWalkStack_refines`, `piDomsOcc_refines` and the lemmas only they use;
-`nest_container` at any fuel (`ntWf`) for `nest_group_ctors` (`Verdict/PosNgc.lean`).
+The refinement theorems `nestWalkStack_refines`, `piDomsOcc_refines` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -371,20 +370,6 @@ theorem piDomsOcc_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using hr, mp', hM'⟩
 
 end census
-
-/-! ## `nest_group_ctors`'s callee `nest_container` -/
-
-/-- `nest_container` at any exec fuel. -/
-def ntWf : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | k + 1, m, vis, C => ntW k m vis C
-
-theorem nt_spec' (p : Prog) (hl : NtLook p) (k : Nat) (s₀ : St) (vis C : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container" [vis, C]
-    ⦃fun r s' => LocEq s' s₀ ∧ ntWf k s₀.mem vis C = some (r, s'.mem); ⊤⦄ := by
-  cases k with
-  | zero => rw [invoke_eq _ hl.hnt]; simp only [callFn, nestContainer]; vcgen [exec] <;> grind
-  | succ k => exact nt_spec p hl k s₀ vis C
 
 theorem CNOk.grow {m m' : Mem} {p : Nat} {x : IConstantVal × Nat} (h : CNOk m p x (· < iwTop m))
     (hg : IWGrow m m') : CNOk m' p x (· < iwTop m') :=

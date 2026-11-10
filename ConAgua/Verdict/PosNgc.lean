@@ -72,10 +72,9 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     refine RefE.onlySim (fun _ => ngcE.k_nest_container.none ..) (fun _ _ h => h) fun r1 m1 hnt => ?_
     cases k with
-    | zero => simp [ntWf] at hnt
+    | zero => simp [ntWf.eq_1] at hnt
     | succ k =>
-    have hnt' : ntW k m vis (rdW (m.arr64 IW) off) = some (r1, m1) := by simpa [ntWf] using hnt
-    obtain ⟨x, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok fe vis _ hcH k m m1 a r1 hnt' hS
+    obtain ⟨x, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok fe vis _ hcH k m m1 a r1 hnt hS
     rw [hcd] at hrun1
     simp only [ConRon.Arena.nestGroupCtors.eq_2]
     refine RefE.bind_right hrun1 ?_
