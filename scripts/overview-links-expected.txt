@@ -1592,13 +1592,13 @@
    123    specs [lvEquiv_spec p hp hpe n]
    124    grind [arena_grind, level_grind]
 
-== ConAgua/Arena/LevelArena.lean#L267-L272
-   267  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
-   268      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
-   269      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
-   270      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
-   271      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
-   272      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
+== ConAgua/Arena/LevelArena.lean#L266-L271
+   266  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
+   267      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
+   268      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
+   269      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
+   270      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
+   271      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
 
 == vendor/con-ron/ConRon/Arena/Core.lean#L136-L153
    136  /-- con-leche: ConLeche/Kernel/Level.lean:164-169 isEquiv — `Level.isEquiv`
@@ -1676,54 +1676,54 @@
     64    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
     65  ```
 
-== ConAgua/Arena/ArenaRel.lean#L286-L309
-   286  /-- **The arena relation**: every represented table and the pool (the store tier, over
-   287  `a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
-   288  opaque to `grind` (DESIGN.md, "Does the relation scale?"): proofs name its fields. -/
-   289  structure ArenaR (m : Mem) (a : AState) : Prop where
-   290    lit : LitR m a
-   291    app : AppR m a
-   292    sort : SortR m a
-   293    const : ConstR m a
-   294    letE : LetR m a
-   295    bvar : BVarR m a
-   296    fvar : FVarR m a
-   297    lam : LamR m a
-   298    forallE : ForallR m a
-   299    proj : ProjR m a
-   300    zero : ZeroR m a
-   301    succ : SuccR m a
-   302    max : MaxR m a
-   303    imax : ImaxR m a
-   304    param : ParamR m a
-   305    ls : LsR m a
-   306    nanon : NAnonR m a
-   307    nstr : NStrR m a
-   308    nnum : NNumR m a
-   309    memos : MemosR m a.memos
+== ConAgua/Arena/ArenaRel.lean#L285-L308
+   285  /-- **The arena relation**: every represented table and the pool (the store tier, over
+   286  `a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
+   287  opaque to `grind` (DESIGN.md, "Does the relation scale?"): proofs name its fields. -/
+   288  structure ArenaR (m : Mem) (a : AState) : Prop where
+   289    lit : LitR m a
+   290    app : AppR m a
+   291    sort : SortR m a
+   292    const : ConstR m a
+   293    letE : LetR m a
+   294    bvar : BVarR m a
+   295    fvar : FVarR m a
+   296    lam : LamR m a
+   297    forallE : ForallR m a
+   298    proj : ProjR m a
+   299    zero : ZeroR m a
+   300    succ : SuccR m a
+   301    max : MaxR m a
+   302    imax : ImaxR m a
+   303    param : ParamR m a
+   304    ls : LsR m a
+   305    nanon : NAnonR m a
+   306    nstr : NStrR m a
+   307    nnum : NNumR m a
+   308    memos : MemosR m a.memos
 
-== ConAgua/Arena/ConsLibRel.lean#L12-L32
-    12  /-!
-    13  # The cons-table library: the relation and the user API (lane conslib)
-    14  
-    15  A cons table `C` (`ConsLib.lean`) represents the arena's two `Tbl`s of one constructor (the twin's
-    16  `HashMap2`s: persistent and scratch) by **`ConsR C R m on P Q`**: both tiers hold the same nodes
-    17  in the same order (node `i` of tier `t` related to `nodes[i]` by the instance's record relation
-    18  `R`), the same key → handle map, the node counts at `CTL[ca + t]`, the scratch flag `CTL[1]` is
-    19  `on`; and the slots index the nodes (the slot layout, the probing and the growth state, which no
-    20  user sees). The L model of every `intern_X` is `consInternM C m ks` (`ConsLibSpec.lean`).
-    21  
-    22  Both are irreducible outside this file: the lemmas below are the whole interface.
-    23  
-    24  * **Reading the relation**: `ConsR.flag`, `ConsR.ctl`, `ConsR.cnt`, `ConsR.cap`, `ConsR.rec`,
-    25    `ConsR.cons`, `ConsR.back`, `ConsR.recSize`, `ConsR.node`, `ConsR.cons_hit`.
-    26  * **Keeping it**: `ConsR.frame` (a writer apart from the table), `ConsR.setFlag` (`CTL[1]`),
-    27    `ConsR.reset` (the scratch reset), `consR_init` (the all-zero memory), `ConsR.congr`.
-    28  * **An interning**: `consIntern_correct` (it refines the arena's hash-consing, from the
-    29    instance's obligations `ConsKeyOK`), `consInternM_frame` (what it writes), `consInternM_word`,
-    30    `consInternM_lt`, `consInternM_pw` (the handle word), `consInternM_out` (a hit, or the append
-    31    of node `cntC`: the memory outside the slot array is `pushRec`).
-    32  
+== ConAgua/Arena/ConsLibRel.lean#L11-L31
+    11  /-!
+    12  # The cons-table library: the relation and the user API (lane conslib)
+    13  
+    14  A cons table `C` (`ConsLib.lean`) represents the arena's two `Tbl`s of one constructor (the twin's
+    15  `HashMap2`s: persistent and scratch) by **`ConsR C R m on P Q`**: both tiers hold the same nodes
+    16  in the same order (node `i` of tier `t` related to `nodes[i]` by the instance's record relation
+    17  `R`), the same key → handle map, the node counts at `CTL[ca + t]`, the scratch flag `CTL[1]` is
+    18  `on`; and the slots index the nodes (the slot layout, the probing and the growth state, which no
+    19  user sees). The L model of every `intern_X` is `consInternM C m ks` (`ConsLibSpec.lean`).
+    20  
+    21  Both are irreducible outside this file: the lemmas below are the whole interface.
+    22  
+    23  * **Reading the relation**: `ConsR.flag`, `ConsR.ctl`, `ConsR.cnt`, `ConsR.cap`, `ConsR.rec`,
+    24    `ConsR.cons`, `ConsR.back`, `ConsR.recSize`, `ConsR.node`, `ConsR.cons_hit`.
+    25  * **Keeping it**: `ConsR.frame` (a writer apart from the table), `ConsR.setFlag` (`CTL[1]`),
+    26    `ConsR.reset` (the scratch reset), `consR_init` (the all-zero memory), `ConsR.congr`.
+    27  * **An interning**: `consIntern_correct` (it refines the arena's hash-consing, from the
+    28    instance's obligations `ConsKeyOK`), `consInternM_frame` (what it writes), `consInternM_word`,
+    29    `consInternM_lt`, `consInternM_pw` (the handle word), `consInternM_out` (a hit, or the append
+    30    of node `cntC`: the memory outside the slot array is `pushRec`).
+    31  
 
 == ConAgua/L/WriteSet.lean#L14-L31
     14  /-!
