@@ -98,7 +98,7 @@ theorem erSliceEqLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := erSliceEqLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64_rdT_spec, ih] <;>
-      finish
+      finish [erRd]
 
 theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL) (n : Nat)
     (s₀ : St) (o1 n1 o2 n2 : Word) :

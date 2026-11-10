@@ -140,7 +140,7 @@ theorem canonCtx_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (cp cq
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
         evalE_tagE, evalE_idxAE, evalE_idxGE, canonNames_spec p hp n,
         cvLps_specW p (hp.get "iw_alloc") (hp.get "er_copy") (hp.get "er_to_iw") (hp.get "cv_lps") n] <;>
-      finish (gen := 20) [ctxW, rdW_eq]
+      finish (gen := 20) [ctxW, rdW_eq, erRd]
 
 theorem ctxW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {cp cq : Word} {r : List Word} {cv cv' : IConstantVal}
@@ -240,7 +240,7 @@ theorem cvCanonEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (q r 
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
         evalE_tagE, evalE_idxAE, evalE_idxGE, canonCtx_spec p hp n, canonExprEq_spec p hp n] <;>
-      finish (gen := 20) [cvceW, rdW_eq]
+      finish (gen := 20) [cvceW, rdW_eq, erRd]
 
 /-- The three words of a constant value that the comparison reads. -/
 theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (h : decCV (erecP m) q.toNat = some cv) :

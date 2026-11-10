@@ -951,7 +951,7 @@ theorem unfoldDefnAt_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St
       tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, ld64_rdT_spec,
       callW_spec p n "const_val_at", callW_spec p n "get_app_args",
       callW_spec p n "mk_app_n"] <;>
-    finish (gen := 30) [unfoldDefnAtW, tierW, idxW]
+    finish (gen := 30) [unfoldDefnAtW, tierW, idxW, erRd]
 
 /-- The model of `unfold_definition`: `(flag, result, memory)`. -/
 l_model unfoldDefinition_spec (p : Prog) (hp : WhnfDeltaProg p)
@@ -1264,7 +1264,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
     rw [hn, hfind]; simp only [envFound, g3, ↓reduceIte]; exact hci
   obtain ⟨hdefn, hndefn, -, -, -, -⟩ := decCI_split (erRdOK _) hci
   by_cases g4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 1
-  · rw [ite_eq_left g4] at hW
+  · rw [if_pos (by exact g4)] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
@@ -1272,7 +1272,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
       (fun cv v hint hh => hndefn g4 cv v hint (by rw [hfind'] at hh; exact Option.some.inj hh))) ?_ ?_).core
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
-  rw [ite_eq_right g4] at hW
+  rw [if_neg (by exact g4)] at hW
   have g4' : erRd s₀.mem (r₂.tail.headD 0) = 1 := by simpa using g4
   obtain ⟨cv, value, hint, rfl, hcv, hv', hvl⟩ := hdefn g4'
   cases h3 : callW p n "unfold_defn_at" [e, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1, r₂.tail.headD 0] s₀.mem with

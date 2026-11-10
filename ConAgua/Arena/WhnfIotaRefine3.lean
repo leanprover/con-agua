@@ -204,7 +204,7 @@ theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         ld64_rdT_spec, evalE_tld, tld, callW_spec p k "find_proj", ih] <;>
-      finish (gen := 20) [iotaArW]
+      finish (gen := 20) [iotaArW, erRd]
 
 /-- Model of `and_rescue_slots`. -/
 def arTop (p : Prog) (k : Nat) (m : Mem) (vis ctor nP : Word) : Option (List Word × Mem) :=
