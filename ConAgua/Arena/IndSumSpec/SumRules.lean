@@ -369,7 +369,7 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
   -- the pointer written
   have hoT : o.toNat < iwTop m := by simp only [Nat.min_def] at hroom; split at hroom <;> omega
   have hoS : o.toNat < (M.arr64 IW).size := by
-    obtain ⟨h1, -, -, -, -⟩ := hSM.iw; have := hgM.iw; omega
+    have h1 := hSM.iw.iw; have := hgM.iw; omega
   have haccM : decPL M (rlDec M) q0.toNat j = some acc :=
     sumDecPL_grow hgM (fun q x h => ArrExt.decRule (IWGrow.ext hgM) h) _ _ _
       (by omega) hacc

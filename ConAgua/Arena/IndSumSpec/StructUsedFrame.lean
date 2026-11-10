@@ -149,15 +149,8 @@ theorem hbFastW_frame {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e
 
 /-- A frame of the two memos keeps `IWOK` and the pools. -/
 theorem iw_of_hbFrame {m m' : Mem} (hf : MemFrame hbWA hbWC m m') (hI : IWOK m) : IWOK m' ∧ IWGrow m m' := by
-  have hW := hf.arr IW (by decide) (by decide)
-  have hE := hf.arr EREC (by decide) (by decide)
-  have hE1 := hf.arr (tier1 EREC) (by decide) (by decide)
-  have h129 := hf.ctl 129 (by decide)
-  have h130 := hf.ctl 130 (by decide)
-  have h200 := hf.ctl 200 (by decide)
   exact ⟨L.Arena.IWOK.frame hf (by decide) (by decide) (by decide) (by decide) hI (by decide) (by decide),
-    ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hW], fun i _ => by rw [hE],
-      by simp [erecTop1, h130], fun i _ => by rw [hE1]⟩⟩
+    IWGrow.of_keep hf (by decide) (by decide)⟩
 
 /-! ## The strippers only grow the pool -/
 
@@ -235,8 +228,10 @@ theorem stripF_grow {tg : Word} {m m' : Mem} {args r : List Word} (h : stripF tg
   have hE1 := hf.arr (tier1 EREC) (by decide) (by decide)
   have h129 := hf.ctl 129 (by decide)
   have h130 := hf.ctl 130 (by decide)
-  refine ⟨hI', ⟨by simpa [iwTop] using hot, by simp [erTop, h129], fun i hi => hlow i (by simpa [iwTop] using hi),
-    fun i _ => by rw [hE], by simp [erecTop1, h130], fun i _ => by rw [hE1]⟩⟩
+  refine ⟨hI',
+    { iw := (by simpa [iwTop] using hot), er := (by simp [erTop, h129]),
+      iwGet := fun i hi => hlow i (by simpa [iwTop] using hi), erGet := (fun i _ => by rw [hE]),
+      er1 := (by simp [erecTop1, h130]), er1Get := fun i _ => by rw [hE1] }⟩
 
 /-- **`struct_used_later`'s model keeps `IWOK` and only grows the pool**, at any memory. -/
 theorem ustW_grow {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP j = some (r, m'))

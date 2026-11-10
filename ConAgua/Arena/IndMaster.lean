@@ -415,8 +415,10 @@ theorem erRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hI : (wrER m1 q ws).arr64 IW = m.arr64 IW := by
     rw [hfw.arr IW (by decide) (by decide), hm1 _ (by decide)]
   have h200 : rdW ((wrER m1 q ws).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl 200 (by simp)
-  refine ⟨⟨CheckR.erGrow hS.check hfr hgrow, hW⟩, ⟨by simp only [iwTop, h200]; exact Nat.le_refl _,
-    hgrow.top, fun i _ => by rw [hI], hgrow.get, hgrow.top1, hgrow.get1⟩, hoff, ?_, hq41, htier,
+  refine ⟨⟨CheckR.erGrow hS.check hfr hgrow, hW⟩,
+    { iw := (by simp only [iwTop, h200]; exact Nat.le_refl _),
+      er := hgrow.top, iwGet := (fun i _ => by rw [hI]), erGet := hgrow.get, er1 := hgrow.top1,
+      er1Get := hgrow.get1 }, hoff, ?_, hq41, htier,
     fun j hj => ?_⟩
   · rw [hT _ hcw, htop1, hk]
   · have hjl : erOff q + j < 2 ^ 40 := by

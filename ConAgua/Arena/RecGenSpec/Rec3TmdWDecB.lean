@@ -137,7 +137,8 @@ theorem rec3TmdW_decB {vis : Word} {fe : IFEnv} {a : AState}
   obtain ⟨⟨r3, m2⟩, hmk, h⟩ := of_K h rfl
   rw [tmdK3_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨-, -, hsz, -, hc⟩ := hS1.iw
+  have hsz := hS1.iw.iwSize
+  have hc := hS1.iw.ctl
   simp only [mkTMW] at hmk
   rcases hal : allocW m1 13 with _ | qm
   · rw [hal] at hmk; simp at hmk

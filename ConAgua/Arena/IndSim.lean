@@ -42,7 +42,7 @@ theorem pinZero_stage {vis : Word} {fe : IFEnv} {m : Mem}
 /-- A slice below the pool's top has its end below `2^64` (`IWOK`). -/
 theorem StageR.lt64 {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (hS : StageR vis fe m a) {x : Nat} (h : x ≤ iwTop m) : x < 2 ^ 64 := by
-  obtain ⟨h1, -, h3, -, -⟩ := hS.iw; omega
+  have h1 := hS.iw.iw; have h3 := hS.iw.iwSize; omega
 
 /-- A memory fact of the model's result, added to a `Sim`'s post. -/
 theorem _root_.L.Arena.Sim.withFr {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}

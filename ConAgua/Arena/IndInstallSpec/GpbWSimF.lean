@@ -49,9 +49,11 @@ theorem iwGrow_truncM (m : Mem) : IWGrow m (truncM m) := by
   have hE : (truncM m).arr64 EREC = m.arr64 EREC := by simp only [truncM, Mem.arr64]; simp [EREC, IW]
   have hE1 : (truncM m).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := by
     simp only [truncM, Mem.arr64]; simp [EREC, IW, tier1]
-  refine ⟨by simp only [iwTop, hc]; exact Nat.le_refl _, by simp only [erTop, hc]; exact Nat.le_refl _,
-    fun i hi => ?_, fun i _ => by rw [hE], by simp only [erecTop1, hc]; exact Nat.le_refl _,
-    fun i _ => by rw [hE1]⟩
+  refine { iw := (by simp only [iwTop, hc]; exact Nat.le_refl _),
+            er := (by simp only [erTop, hc]; exact Nat.le_refl _),
+            iwGet := fun i hi => ?_, erGet := (fun i _ => by rw [hE]),
+            er1 := (by simp only [erecTop1, hc]; exact Nat.le_refl _),
+            er1Get := (fun i _ => by rw [hE1]) }
   have := truncM_iw_eq (m := m) hi
   simpa [iwA, aread_apply] using this
 

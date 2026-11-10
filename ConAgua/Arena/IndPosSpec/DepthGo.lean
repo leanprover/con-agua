@@ -837,7 +837,8 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   refine ⟨phs, a', ?_, hS2, ?_, by simpa using hdec, ?_⟩
   · rw [nestPhs_eq]
     simpa using hrun
-  · refine ⟨?_, ?_, fun idx hidx => ?_, fun idx hidx => ?_, ?_, fun idx hidx => ?_⟩
+  · refine { iw := ?_, er := ?_, iwGet := fun idx hidx => ?_, erGet := fun idx hidx => ?_,
+              er1 := ?_, er1Get := fun idx hidx => ?_ }
     · rw [hK.iwTop_eq]; exact hg1.iw
     · rw [hK.erTop_eq]; exact hg1.er
     · have hq : idx < q.toNat := by
