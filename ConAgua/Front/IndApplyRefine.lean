@@ -124,7 +124,7 @@ theorem teleW_ok : ∀ (n : Nat) (f h r : Word), teleW n m f h = some r →
     split at hw
     · rename_i h6
       obtain ⟨ty, rfl⟩ := viewR_forall hr h6
-      rcases hrec : teleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | r' <;> simp only [hrec, teleK, reduceCtorEq] at hw
+      rcases hrec : teleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | r' <;> simp only [hrec, teleW.k_ind_pi_tele_len, reduceCtorEq] at hw
       cases hw
       obtain ⟨h1, h2⟩ := ih _ _ _ hrec
       simp only
@@ -156,7 +156,7 @@ theorem sortTeleW_ok : ∀ (n : Nat) (f h ok r : Word), sortTeleW n m f h = some
     split at hw
     · rename_i h6
       obtain ⟨ty, rfl⟩ := viewR_forall hr h6
-      rcases hrec : sortTeleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | ⟨ok', r'⟩ <;> simp only [hrec, stK, reduceCtorEq] at hw
+      rcases hrec : sortTeleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | ⟨ok', r'⟩ <;> simp only [hrec, sortTeleW.k_pi_sort_tele_len, reduceCtorEq] at hw
       obtain ⟨h1, h2⟩ := ih _ _ _ _ hrec
       simp only
       rw [run_bind _ _ a _ h1]
@@ -218,18 +218,19 @@ theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Wo
   cases n with
   | zero => simp [storeFuelW] at h
   | succ n =>
-  simp only [storeFuelW] at h
+  rw [storeFuelW.arm1] at h
   cases h1 : ctlSumW n m 2 4 with
-  | none => rw [h1] at h; cases h
+  | none => rw [h1, storeFuelW.k_ctl_sum.none] at h; cases h
   | some x =>
+  rw [h1, storeFuelW.k_ctl_sum.arm1] at h
   cases h2 : ctlSumW n m 16 8 with
-  | none => rw [h1, h2] at h; cases h
+  | none => rw [h2, storeFuelW.k_ctl_sum_2.none] at h; cases h
   | some y =>
+  rw [h2, storeFuelW.k_ctl_sum_2.arm1] at h
   cases h3 : ctlSumW n m 26 8 with
-  | none => rw [h1, h2, h3] at h; cases h
+  | none => rw [h3, storeFuelW.k_ctl_sum_3.none] at h; cases h
   | some z =>
-  rw [h1, h2, h3] at h
-  simp only [sfK, Option.some.injEq] at h
+  rw [h3, storeFuelW.k_ctl_sum_3.arm1, Option.some.injEq] at h
   subst h
   rw [ctlSumW_eq _ _ _ _ _ h1, ctlSumW_eq _ _ _ _ _ h2, ctlSumW_eq _ _ _ _ _ h3]
   obtain ⟨a1, a2, a3, a4⟩ := ConsR.sizes hR.lit.2
