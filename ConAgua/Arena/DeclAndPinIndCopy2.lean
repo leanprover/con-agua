@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.DeclAndPinIndCopy
 import ConAgua.Arena.DeclAndPinInd
 public import ConAgua.Arena.DeclAndPinIndDec
-import ConAgua.Arena.SimLib
 public import ConAgua.Arena.WhnfBase
 public import ConAgua.Front.StateDR
 
