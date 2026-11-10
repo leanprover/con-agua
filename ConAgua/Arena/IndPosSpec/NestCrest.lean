@@ -315,7 +315,7 @@ theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e =
 abbrev HbFr (m m' : Mem) : Prop := MFr [HBM] [214, 215] m m'
 
 theorem hbInsW_mfr {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, m')) : HbFr m m' := by
-  unfold hbInsW at h
+  rw [hbInsW_eq] at h
   rcases hs : msetG hbSch m e i r with _ | m2 <;> rw [hs] at h; · simp at h
   simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h

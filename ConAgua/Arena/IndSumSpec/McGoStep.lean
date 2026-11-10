@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndPosSpec.NodeV
 import ConAgua.Arena.IndPosSpec.MatesW
 public import ConAgua.Arena.BvarBRefine
@@ -426,8 +427,20 @@ end hbStubs
 
 /-! ## `has_loose_b_var_b_ins`, `has_loose_b_var_b_go`: the word models -/
 
-def hbInsW (m : Mem) (e i r : Word) : Option (Word × Mem) :=
-  (msetG hbSch m e i r).map (fun m' => (r, m'))
+/-- **`has_loose_b_var_b_ins(e, i, r)` is its model `hbInsW`** (generated). -/
+l_model hbIns_spec (p : Prog) (hf : p.lookup "hb_find" = some (memoFindG hbSch))
+    (hput : p.lookup "hb_put" = some (memoPutG hbSch))
+    (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
+  fns [hins ↦ hbInsW]
+  specs [memoFindG_spec hbSch p _ hf n, memoPutG_spec hbSch p _ hput n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
+
+/-- The model as the memo's set. -/
+theorem hbInsW_eq (m : Mem) (e i r : Word) : hbInsW m e i r = (msetG hbSch m e i r).map (fun m' => (r, m')) := by
+  simp only [hbInsW, msetG]
+  split
+  · rfl
+  · cases mputG hbSch m e i r _ _ <;> rfl
 
 mutual
 def hbGoW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
@@ -531,31 +544,6 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
   (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
   (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p)
-
-include hf hput in
-theorem hbIns_spec_raw (hp : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL) (n : Nat) (s₀ : St)
-    (e i r : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "has_loose_b_var_b_ins" [e, i, r]
-    ⦃fun rr s' => LocEq s' s₀ ∧ msetG hbSch s₀.mem e i r = some s'.mem ∧ rr.headD 0 = r; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, hasLooseBVarBInsL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoFindG_spec hbSch p _ hf n,
-      memoPutG_spec hbSch p _ hput n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Nat.reduceEqDiff, reduceIte] at *)
-    all_goals grind [lang_grind, arena_grind, ind_grind, msetG]
-
-include hf hput in
-theorem hbIns_spec (hp : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL) (n : Nat) (s₀ : St)
-    (e i r : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "has_loose_b_var_b_ins" [e, i, r]
-    ⦃fun rr s' => LocEq s' s₀ ∧ hbInsW s₀.mem e i r = some (rr.headD 0, s'.mem); ⊤⦄ := by
-  refine triple_post (hbIns_spec_raw p hf hput hp n s₀ e i r) ?_
-  rintro rr s' ⟨hl, hm, hr⟩
-  refine ⟨hl, ?_⟩
-  rw [hbInsW, hm, ← hr]; rfl
 
 def HbGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (f i h : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "has_loose_b_var_b_go" [f, i, h]
@@ -666,7 +654,7 @@ theorem hbIns_ok {m m' : Mem} {e i r r' : Word} {b : Bool} {mp : Std.HashMap (EI
     (he : H e) (hr : r = if b then 1 else 0) (hM : hbMR m mp) (h : hbInsW m e i r = some (r', m')) :
     r' = r ∧ hbMR m' (ConRon.Arena.hasLooseBVarBIns (decE e) i.toNat (b, mp)).2 ∧
       MemFrame [HBM] [215] m m' := by
-  simp only [hbInsW] at h
+  rw [hbInsW_eq] at h
   cases hm : msetG hbSch m e i r with
   | none => rw [hm] at h; simp at h
   | some m2 =>
@@ -882,28 +870,31 @@ theorem hbGoOK {vis : Word} {fe : IFEnv} (n : Nat) :
 
 /-! ## `has_loose_b_var_b_fast` -/
 
-def hbFastW (n : Nat) (m : Mem) (i e : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) hbSch.cs + 2 = 0 then none else hbGoW n (mclearG hbSch m) CWF i e
+/-- `has_loose_b_var_b_go`'s spec as a triple (for `l_model`). -/
+theorem hbGo_spec' (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
+    (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
+    (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p) (n : Nat) (s₀ : St)
+    (f i h : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "has_loose_b_var_b_go" [f, i, h]
+    ⦃fun r s' => LocEq s' s₀ ∧ hbGoW n s₀.mem f i h = some (r.headD 0, s'.mem); ⊤⦄ :=
+  hbGo_spec p hv hf hput hins hgo hbp n s₀ f i h
 
-theorem hbFastW_eq (n : Nat) (m : Mem) (i e : Word) (h0 : rdW (m.arr64 CTL) hbSch.cs + 2 ≠ 0) :
-    hbFastW n m i e = hbGoW n (mclearG hbSch m) CWF i e := by simp [hbFastW, h0]
-attribute [ind_grind] hbFastW_eq
-
-theorem hbFast_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+/-- **`has_loose_b_var_b_fast(i, e)` is its model `hbFastW`** (generated, the fuel a parameter). -/
+l_model hbFast_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
     (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
     (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p)
     (hcl : p.lookup "hb_clear" = some (memoClearG hbSch))
-    (hp : p.lookup "has_loose_b_var_b_fast" = some hasLooseBVarBFastL) (n : Nat) (s₀ : St) (i e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "has_loose_b_var_b_fast" [i, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ hbFastW n s₀.mem i e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have ih := hbGo_spec p hv hf hput hins hgo hbp n
-  unfold HbGoSpec at ih
-  rw [invoke_eq _ hp]
-  simp only [callFn, hasLooseBVarBFastL]
-  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec hbSch p _ hcl n, ih]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Nat.reduceEqDiff, reduceIte] at *)
-  all_goals grind [lang_grind, arena_grind, ind_grind]
+    (hp : p.lookup "has_loose_b_var_b_fast" = some hasLooseBVarBFastL)
+  fns [hp ↦ hbFastW]
+  specs [memoClearG_spec hbSch p _ hcl n, hbGo_spec' p hv hf hput hins hgo hbp n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] pfuel
+
+theorem hbFastW_eq (n : Nat) (m : Mem) (i e : Word) (h0 : rdW (m.arr64 CTL) hbSch.cs + 2 ≠ 0) :
+    hbFastW n m i e = hbGoW n (mclearG hbSch m) CWF i e := by
+  rw [hbFastW.arm1 (hc1 := h0)]
+attribute [ind_grind] hbFastW_eq
 
 theorem hbFastW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (i e r : Word) (mp0 : Std.HashMap (EIdx × Nat) Bool)
@@ -912,7 +903,7 @@ theorem hbFastW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     ∃ b a', (ConRon.Arena.hasLooseBVarBFast i.toNat (decE e)).run a = .ok (b, a') ∧
       r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   by_cases h0 : rdW (m.arr64 CTL) hbSch.cs + 2 = 0
-  · simp [hbFastW, h0] at hm
+  · rw [hbFastW.abort1 (hc1 := h0)] at hm; cases hm
   rw [hbFastW_eq n _ i e h0] at hm
   have hf0 := mclearG_frame hbSch m
   have hM0 := memoRV_clear hbSch hbSch_wf lfKey hbVR m mp0 hM h0
