@@ -12,6 +12,7 @@ public import ConAgua.Arena.IndRealOpf
 public import ConAgua.Arena.RecClassSpec.CloseLams
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.RecClass
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -34,22 +35,10 @@ namespace L.Ind
 
 open L.Arena
 
-theorem classRecOf_spec (p : Prog) (hp : p.lookup "class_rec_of" = some classRecOf) (n : Nat) :
-    ∀ (s₀ : St) (rco rcl cgo cgl t : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rec_of" [rco, rcl, cgo, cgl, t]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ classRecOfW n s₀.mem rco rcl cgo cgl t = some r; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ rco rcl cgo cgl t; rw [invoke_eq _ hp]; simp only [callFn, classRecOf]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ rco rcl cgo cgl t
-    rw [invoke_eq _ hp]
-    simp only [callFn, classRecOf]
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, croK, erRd]
+/-- **`class_rec_of` is its model `classRecOfW`** (generated). -/
+l_model classRecOf_spec (p : Prog) (hp : p.lookup "class_rec_of" = some classRecOf)
+  fns [hp ↦ classRecOfW ro list]
+  grind [arena_grind, ind_grind] finish [rdW_eq, erRd]
 
 /-- The twin's `classRecOf`, as a recursion on the shifted lists. -/
 def crOf (t : Nat) : List Nat → List IConstantVal → Option NIdx
@@ -92,7 +81,7 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
   | succ n ih =>
     intro m rco rcl cgo cgl t r rc cs h hrc hcs hb1 hb2
     by_cases hcgl : cgl = 0
-    · rw [classRecOfW_nil n m rco rcl cgo cgl t hcgl] at h
+    · rw [classRecOfW.arm1 n m rco rcl cgo cgl t hcgl] at h
       simp only [Option.some.injEq] at h
       subst h
       have : cgl.toNat = 0 := by rw [hcgl]; rfl
@@ -103,15 +92,14 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
     · obtain ⟨c1, hc1, hcgl1⟩ := wordSucc_of_ne hcgl
       rw [hc1] at hcs
       obtain ⟨pn, cv, cs', rfl, hpn, hcv, hcs'⟩ := decPL_cons hcs
-      have hgo : cgo.toNat < (m.arr64 IW).size := iwN_lt hpn
       have hpn' := iwN_rdW hpn (by omega)
       rw [UInt64.ofNat_toNat] at hpn'
       obtain ⟨wn, hwn1, hwn2, hwn3⟩ := decCVp_name hcv
       have hcgo1 : (cgo + 1).toNat = cgo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       -- the first recursion-count entry and the shifted slice
-      obtain ⟨v, rc', P1, P2, P3, P4, P5, P6⟩ : ∃ (v : Word) (rc' : List Nat),
+      obtain ⟨v, rc', P1, P3, P4, P5, P6⟩ : ∃ (v : Word) (rc' : List Nat),
           (if rcl ≠ 0 then rdW (m.arr64 IW) rco else 0) = v ∧
-          (rcl ≠ 0 → rco.toNat < (m.arr64 IW).size) ∧ rc.headD 0 = v.toNat ∧ rc.tail = rc' ∧
+          rc.headD 0 = v.toNat ∧ rc.tail = rc' ∧
           decNL m (rco + 1).toNat (if rcl ≠ 0 then rcl - 1 else 0).toNat = some rc' ∧
           (rco + 1).toNat + (if rcl ≠ 0 then rcl - 1 else 0).toNat < 2 ^ 64 := by
         by_cases hrcl : rcl = 0
@@ -119,7 +107,7 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
           rw [hr0] at hrc
           simp [decNL] at hrc
           subst hrc
-          refine ⟨0, [], by simp [hrcl], fun h => absurd hrcl h, by simp, by simp, ?_, ?_⟩
+          refine ⟨0, [], by simp [hrcl], by simp, by simp, ?_, ?_⟩
           · simp [hrcl, decNL]
           · simp [hrcl]; omega
         · obtain ⟨r1, hr1, hrcl1⟩ := wordSucc_of_ne hrcl
@@ -129,7 +117,7 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
           have hx' := iwN_rdW hx (by omega)
           rw [UInt64.ofNat_toNat] at hx'
           have hrco1 : (rco + 1).toNat = rco.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-          refine ⟨UInt64.ofNat x, xs, by simp [hrcl, hx'.1], fun _ => iwN_lt hx, ?_, rfl, ?_, ?_⟩
+          refine ⟨UInt64.ofNat x, xs, by simp [hrcl, hx'.1], ?_, rfl, ?_, ?_⟩
           · rw [UInt64.toNat_ofNat_of_lt' hx'.2]; rfl
           · simp only [hrcl, ne_eq, not_false_eq_true, ite_true, hrco1, hrcl1]; exact hxs
           · simp only [hrcl, ne_eq, not_false_eq_true, ite_true, hrco1, hrcl1]; omega
@@ -141,10 +129,16 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
       have hcrOf : crOf t.toNat rc (cv :: cs') =
           if (rc.headD 0 == t.toNat) = true then some cv.name else crOf t.toNat rc' cs' := by
         simp only [crOf, P4]
+      have hj : classRecOfW (n + 1) m rco rcl cgo cgl t =
+          classRecOfW.j1 n rco cgo cgl t v (if rcl ≠ 0 then rcl - 1 else 0) m := by
+        rw [← P1]
+        by_cases hr : rcl = 0
+        · rw [classRecOfW.arm3 _ _ _ _ _ _ _ hcgl hr]; simp [hr]
+        · rw [classRecOfW.arm2 _ _ _ _ _ _ _ hcgl hr]; simp [hr]
+      rw [hj] at h
       by_cases hvt : v = t
-      · rw [classRecOfW_hit n m rco rcl cgo cgl t hcgl P2 (by rw [P1]; exact hvt)] at h
-        rw [ite_eq_left hgo] at h
-        simp only [Option.some.injEq] at h
+      · rw [classRecOfW.j1.arm1 _ _ _ _ _ _ _ _ hvt] at h
+        simp only [erRd_foldN, Option.some.injEq] at h
         subst h
         have hrd : erRd m (rdW (m.arr64 IW) cgo) = wn := by
           rw [hpn'.1]
@@ -154,9 +148,9 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
         simp only [Option.some.injEq] at hnm
         subst hnm
         exact ⟨rfl, by simpa using hwn2, by simpa using hwn3⟩
-      · rw [classRecOfW_miss n m rco rcl cgo cgl t hcgl P2 (by rw [P1]; exact hvt)] at h
+      · rw [classRecOfW.j1.arm2 _ _ _ _ _ _ _ _ hvt] at h
         obtain ⟨r1, hr, h⟩ := of_K h rfl
-        simp only [croK, Option.some.injEq] at h
+        simp only [classRecOfW.k_class_rec_of.arm1, Option.some.injEq] at h
         subst h
         have hcs'' : decPL m (decCVp m) (cgo + 1).toNat (cgl - 1).toNat = some cs' := by
           rw [hcgo1, hcgl1]; exact hcs'

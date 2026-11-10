@@ -49,7 +49,7 @@ theorem rec2ExprGetD_specF (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFin
     ⦃fun r s' => LocEq s' s₀ ∧ fuelW n (exprGetDW s₀.mem o l i) = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact exprGetD_spec p hpf hpp hib hp n s₀ o l i
+  | succ n => exact exprGetD_spec p hpf hpp hib hp (n + 1) s₀ o l i
 
 theorem rec2SimExprGetD {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (n : Nat) (hS : StageR vis fe m a) {o l i : Word} {xs : List EIdx}
@@ -115,7 +115,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 theorem exprGetDW_afr {m m' : Mem} {o l i : Word} {r : List Word} (h : exprGetDW m o l i = some (r, m')) :
     AFr m m' := by
-  unfold exprGetDW at h
+  simp only [exprGetDW, exprGetDW.k_intern_bvar.eq_def] at h
   afr_auto h [binternW_afr]
 
 theorem exprGetDF_afr {n : Nat} {m m' : Mem} {o l i : Word} {r : List Word}
