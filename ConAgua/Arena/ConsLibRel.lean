@@ -680,7 +680,7 @@ theorem pushRec_cnt (C : ConsSch) (hW : C.WF) (m : Mem) (t : Word) (ht : t ≤ 1
   simp only [ConsSch.sch] at hca
   simp only [cntC, pushRec, colW_arr C _ _ _ _ CTL (col_tier_ne hcol t), rdW_set64, wrRecK_eq,
     wrRec_arr_ne C.sch _ _ CTL (hW.sch.ra_ctl' t).symm]
-  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;> rcases L.eq_zero_or_eq_one_of_le_one t' ht' with rfl | rfl <;>
+  rcases _root_.L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;> rcases _root_.L.eq_zero_or_eq_one_of_le_one t' ht' with rfl | rfl <;>
     simp [UInt64.toNat_add] <;> first | omega | (intro h; have := congrArg UInt64.toNat h; simp [UInt64.toNat_add] at this; omega)
 
 /-- **An interning hits** (the memory is unchanged) **or appends** node `cntC` to tier `t`: the

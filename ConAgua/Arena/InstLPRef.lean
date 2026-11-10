@@ -237,8 +237,8 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
       simpa [rdW] using this
     have hsz₂ : ((m₁.set64 SPN b h).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [Mem.size_arr64_set64, hspn₁]
-    have hb1 : (b + 1).toNat = b.toNat + 1 := L.toNat_add_one_of_lt (by omega)
-    have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_one_of_lt (by omega)
+    have hb1 : (b + 1).toNat = b.toNat + 1 := _root_.L.toNat_add_one_of_lt (by omega)
+    have ho1 : (o + 1).toNat = o.toNat + 1 := _root_.L.toNat_add_one_of_lt (by omega)
     have hl1 : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hns₁ : a₁.store.lss.ls.ns = a.store.lss.ls.ns := by rw [hkp₁.2, hstc]

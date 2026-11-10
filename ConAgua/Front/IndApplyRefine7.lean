@@ -120,7 +120,7 @@ theorem rec_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : Arena
   | succ n =>
   rw [recE.arm1]
   have ix : ∀ s : Word, s.toNat ≤ 10 → rdW (m.arr64 IFR) (r + s) = wd m IFR (r.toNat + s.toNat) := by
-    intro s hs; rw [wd_eq, L.toNat_add_of_lt _ _ (by omega)]
+    intro s hs; rw [wd_eq, _root_.L.toNat_add_of_lt _ _ (by omega)]
   obtain ⟨⟨c1, -, -⟩, c2, c3, c4, c5, c6, -⟩ := hrec
   rcases hl : lkW m NID (rdW (m.arr64 IFR) r) with _ | rnw
   · rw [liftE_none, recE.k_name_get.none]; exact fun _ hk => absurd Err.cls_oob hk

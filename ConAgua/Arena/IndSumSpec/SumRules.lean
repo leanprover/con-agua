@@ -328,8 +328,8 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
   have hlt : o.toNat < 2 ^ 64 - 1 := by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega
   have hcO1 : (cO + 1).toNat = cO.toNat + 1 := sumToNat_succ (by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega)
   have hrO1 : (rO + 1).toNat = rO.toNat + 1 := sumToNat_succ (by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega)
-  have hcL1 : (cL - 1).toNat = L := by rw [L.toNat_sub_one_of_ne hcL]; omega
-  have hrL1 : (rL - 1).toNat = R := by rw [L.toNat_sub_one_of_ne hrL]; omega
+  have hcL1 : (cL - 1).toNat = L := by rw [_root_.L.toNat_sub_one_of_ne hcL]; omega
+  have hrL1 : (rL - 1).toNat = R := by rw [_root_.L.toNat_sub_one_of_ne hrL]; omega
   rcases h3 : rgoW n (M.set64 IW o q) (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) with _ | ⟨r3, m3⟩ <;>
     rw [h3] at h
   · rw [rgoW.k_sum_rules_go.none] at h; cases h

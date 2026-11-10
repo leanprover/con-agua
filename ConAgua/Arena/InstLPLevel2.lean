@@ -112,8 +112,8 @@ theorem slsElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     have hk₀₂ := o₁.stack.trans hk₂
     have hE₂ := hE.keep hk₀₂ o₁.grow
     have hspn := hS.spn
-    have hb1 : (b + 1).toNat = b.toNat + 1 := L.toNat_add_one_of_lt (by omega)
-    have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_one_of_lt (by have := m.top.toNat_lt; omega)
+    have hb1 : (b + 1).toNat = b.toNat + 1 := _root_.L.toNat_add_one_of_lt (by omega)
+    have ho1 : (o + 1).toNat = o.toNat + 1 := _root_.L.toNat_add_one_of_lt (by have := m.top.toNat_lt; omega)
     have hl1 : (l - 1).toNat = k := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hsz₂ : ((m₁.set64 SPN b h).arr64 SPN).size = (m.arr64 SPN).size := by

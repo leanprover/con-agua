@@ -103,7 +103,7 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hq : KnotStageProg 
     obtain ⟨hcH, hcd⟩ := rd_iwH0E (m := m) (o := cO) (k := IdxKind.name) (by simpa [iwH, iwA] using hn0)
     generalize hcw : rdW (m.arr64 IW) cO = cw at hcH hcd ⊢
     have hcO1 : (cO + 1).toNat = cO.toNat + 1 :=
-      L.toNat_add_of_lt _ _ (show cO.toNat + 1 < 2 ^ 64 by have := hcb 0 (by omega); omega)
+      _root_.L.toNat_add_of_lt _ _ (show cO.toNat + 1 < 2 ^ 64 by have := hcb 0 (by omega); omega)
     have hcL1 : (cL - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     -- the key record
@@ -133,8 +133,8 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hq : KnotStageProg 
       subst e2 e3; omega
     have hksl : NKSl m1 key := by
       have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
-      have e2 : (key + 2).toNat = key.toNat + 2 := L.toNat_add_of_lt _ _ (by simp; omega)
-      have e3 : (key + 3).toNat = key.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
+      have e2 : (key + 2).toNat = key.toNat + 2 := _root_.L.toNat_add_of_lt _ _ (by simp; omega)
+      have e3 : (key + 3).toNat = key.toNat + 3 := _root_.L.toNat_add_of_lt _ _ (by simp; omega)
       unfold NKSl
       have r2 : rdW (m1.arr64 IW) (key + 2) = dO := by
         simp only [rdW, e2]; rw [show (m1.arr64 IW)[key.toNat + 2]? = some dO by simpa using hget1 2 (by simp)]; rfl

@@ -266,7 +266,7 @@ theorem bpcW_ok {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
       simp only [beq_iff_eq]
       constructor
       · intro e; rw [← e, UInt64.toNat_ofNat_of_lt' hnPb]
-      · intro e; rw [e, L.ofNat_toNat]
+      · intro e; rw [e, _root_.L.ofNat_toNat]
     by_cases hnp : rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP
     · rw [bpcW.arm2 n m nP cso csl lo ll hc hnp] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -439,10 +439,10 @@ theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   rw [bslW.k_sl_eq.eq_2] at h
   have hT1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
   obtain ⟨ws1, hs1, hn1, hl1'⟩ := slR_of_decHL m1 _ _ _ hd1 (by omega)
-  rw [L.ofNat_toNat, L.ofNat_toNat] at hs1
+  rw [_root_.L.ofNat_toNat, _root_.L.ofNat_toNat] at hs1
   have hl' : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow3 hg1 hlb]; exact hl
   obtain ⟨ws2, hs2, hn2, hl2⟩ := slR_of_decHL m1 _ _ _ hl' (by have := hg1.iw; omega)
-  rw [L.ofNat_toNat, L.ofNat_toNat] at hs2
+  rw [_root_.L.ofNat_toNat, _root_.L.ofNat_toNat] at hs2
   have hres := eqW_ok n m1 _ _ _ _ ev ws1 ws2 hs1 hs2 he1
   have hbeq : (relps == lps) = decide (ws1 = ws2) := by rw [hn1, hn2, map_decI_beq ws1 ws2 hl1' hl2]
   by_cases hev : ev = 0

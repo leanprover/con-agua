@@ -255,7 +255,7 @@ theorem bgoW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP mm : Word}
         simp only [List.headD_cons, List.tail_cons, beq_iff_eq, optEq]
         constructor
         · rintro ⟨-, rfl⟩; exact hi'.symm
-        · intro e; exact ⟨by decide, by rw [e, L.ofNat_toNat]⟩
+        · intro e; exact ⟨by decide, by rw [e, _root_.L.ofNat_toNat]⟩
     by_cases hc : r1.headD 0 ≠ 0 ∧ r1.tail.headD 0 = mm
     · rw [bgoW.k_block_groups_one.arm1 (hc1 := hc), ite_eq_left (hcond.mp hc)]
       intro r m' e

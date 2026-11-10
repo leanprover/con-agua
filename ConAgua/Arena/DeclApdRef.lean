@@ -454,7 +454,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
     exact ⟨true, mp, rfl, rfl, hM, MemFrame.refl _ _ _⟩
   | sort u =>
-    simp only [ViewR, L.getD_one] at hvr
+    simp only [ViewR, _root_.L.getD_one] at hvr
     obtain ⟨hg, hx, hdx⟩ := hvr
     rw [apdNodeW_sort n m o l f _ _ _ _ hg] at hn
     cases e : apdW IW n m (vl.tail.headD 0) o l with
@@ -468,7 +468,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
       simp only [apdArm, StateT.run_bind, readLevel_run a u L hL, except_ok_bind]
       rfl
   | const nn us =>
-    simp only [ViewR, L.getD_one, L.getD_two] at hvr
+    simp only [ViewR, _root_.L.getD_one, _root_.L.getD_two] at hvr
     obtain ⟨hg, -, -, hy, hdy⟩ := hvr
     rw [apdNodeW_const n m o l f _ _ _ _ hg] at hn
     obtain ⟨Ls, hL⟩ := env.constLs (decE h) nn us hv
@@ -478,7 +478,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     simp only [apdArm, StateT.run_bind, readLevels_run a us Ls hL, except_ok_bind]
     rfl
   | fvar i ty =>
-    simp only [ViewR, L.getD_one, L.getD_two] at hvr
+    simp only [ViewR, _root_.L.getD_one, _root_.L.getD_two] at hvr
     obtain ⟨hg, -, hy, hdy⟩ := hvr
     subst hdy
     rw [apdNodeW_fvar n m o l f _ _ _ _ hg] at hn
@@ -486,7 +486,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     rw [hF1] at hr
     exact ⟨b, mp', hr, hb, hM', hf⟩
   | proj s i e =>
-    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
+    simp only [ViewR, _root_.L.getD_one, _root_.L.getD_two, _root_.L.getD_three] at hvr
     obtain ⟨hg, -, -, -, hw, hdw⟩ := hvr
     subst hdw
     rw [apdNodeW_proj n m o l f _ _ _ _ hg] at hn
@@ -494,7 +494,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     rw [hF1] at hr
     exact ⟨b, mp', hr, hb, hM', hf⟩
   | app f' x' =>
-    simp only [ViewR, L.getD_one, L.getD_two] at hvr
+    simp only [ViewR, _root_.L.getD_one, _root_.L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     subst hdx hdy
     rw [apdNodeW_bin n m o l f _ _ _ _ (Or.inl hg)] at hn
@@ -505,7 +505,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     · refine ⟨b₂, mp₂, ?_, hr, hM2, hf₀.trans hf2⟩
       simp only [apdArm, StateT.run_bind, h1, h2, except_ok_bind, ↓reduceIte]
   | lam t b' =>
-    simp only [ViewR, L.getD_one, L.getD_two] at hvr
+    simp only [ViewR, _root_.L.getD_one, _root_.L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     subst hdx hdy
     rw [apdNodeW_bin n m o l f _ _ _ _ (Or.inr (Or.inl hg))] at hn
@@ -516,7 +516,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     · refine ⟨b₂, mp₂, ?_, hr, hM2, hf₀.trans hf2⟩
       simp only [apdArm, StateT.run_bind, h1, h2, except_ok_bind, Bool.false_eq_true, Bool.not_true, ↓reduceIte]
   | forallE t b' =>
-    simp only [ViewR, L.getD_one, L.getD_two] at hvr
+    simp only [ViewR, _root_.L.getD_one, _root_.L.getD_two] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
     subst hdx hdy
     rw [apdNodeW_bin n m o l f _ _ _ _ (Or.inr (Or.inr hg))] at hn
@@ -527,7 +527,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     · refine ⟨b₂, mp₂, ?_, hr, hM2, hf₀.trans hf2⟩
       simp only [apdArm, StateT.run_bind, h1, h2, except_ok_bind, Bool.false_eq_true, Bool.not_true, ↓reduceIte]
   | letE t v' b' =>
-    simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
+    simp only [ViewR, _root_.L.getD_one, _root_.L.getD_two, _root_.L.getD_three] at hvr
     obtain ⟨hg, hx, hdx, hy, hdy, hw, hdw⟩ := hvr
     subst hdx hdy hdw
     rw [apdNodeW_let n m o l f _ _ _ _ hg] at hn

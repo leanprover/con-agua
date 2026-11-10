@@ -91,7 +91,7 @@ theorem listedGoW_twin : ∀ (n : Nat) (m m' : Mem) (j : Word), listedGoW n m to
     obtain ⟨i1, i2, i3, i4⟩ := idsGoW_facts n m m₁ _ _ 0 hg hT (UInt64.le_iff_toNat_le.mpr (Nat.zero_le _))
       (by rw [hc4]; exact n2)
     simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero, hc4] at i3 i4
-    have hj1 := L.toNat_add_one_of_word_lt j tn hjt
+    have hj1 := _root_.L.toNat_add_one_of_word_lt j tn hjt
     obtain ⟨L, lr, le, lt, ltop, lfl, lb, llen⟩ := ih m₁ m' (j + 1) h (hE.trans i1) i2
       (UInt64.le_iff_toNat_le.mpr (by rw [hj1]; exact hjn))
     have hl0 : (tys[j.toNat].ctors.mapM st.name).run a =
@@ -158,9 +158,9 @@ theorem listedW_twin {n : Nat} {m m' : Mem} {fo x : Word} (h : listedW n m to tn
   have hw : (rdW (m₂.arr64 IFL) 0).toNat = topN m IFL + L.flatten.length := by
     rw [e0]; show topN m₂ IFL = _; rw [l4, a4]
   have hlo : lo.toNat ≤ (rdW (m₂.arr64 IFL) 0 + 1).toNat := by
-    rw [L.toNat_add_of_lt _ _ (by simp; omega)]; simp; omega
+    rw [_root_.L.toNat_add_of_lt _ _ (by simp; omega)]; simp; omega
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hlo),
-    L.toNat_add_of_lt _ _ (by simp; omega), hw, a3]
+    _root_.L.toNat_add_of_lt _ _ (by simp; omega), hw, a3]
   simp only [UInt64.toNat_one]; omega
 
 end listed

@@ -241,8 +241,8 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
   · rw [nfrE.k_nest_frame_holes.abort2 p n vis ctx fu hi us dO dL gL ns _ _ _ _ _ _ r7 m7 hov hov2]
     exact RefE.of_cls0 rfl
   rw [nfrE.k_nest_frame_holes.arm1 p n vis ctx fu hi us dO dL gL ns _ _ _ _ _ _ r7 m7 hov hov2, g0, g1]
-  have hhg : (hi + gL).toNat = hi.toNat + gL.toNat := L.toNat_add_of_not_lt hov
-  have hdg : (dL + gL).toNat = dL.toNat + gL.toNat := L.toNat_add_of_not_lt hov2
+  have hhg : (hi + gL).toNat = hi.toNat + gL.toNat := _root_.L.toNat_add_of_not_lt hov
+  have hdg : (dL + gL).toNat = dL.toNat + gL.toNat := _root_.L.toNat_add_of_not_lt hov2
   have hg47 := (hg5.trans hg6).trans hg7
   have hg17 := (hg12.trans hg47)
   have htop7 : iwTop m7 < 2 ^ 64 := Nat.lt_of_le_of_lt hS7.iw.iw hS7.iw.iwSize
