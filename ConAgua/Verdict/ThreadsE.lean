@@ -56,7 +56,7 @@ theorem invoke_agree_err {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → B
     {s₁ s₂ : St} (hm : Agree S S8 s₁.mem s₂.mem) (hl : s₁.loc = s₂.loc) {e : Err}
     (h : (invoke p (exec p n) f vs).run s₁ = .error e) :
     (invoke p (exec p n) f vs).run s₂ = .error e := by
-  have := invoke_agree hp hf n vs hm hl
+  have := L.invoke_agree hp hf n vs hm hl
   rw [h] at this
   revert this
   cases (invoke p (exec p n) f vs).run s₂ with
