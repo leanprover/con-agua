@@ -36,16 +36,9 @@ theorem taCW_same {n : Nat} {m m' : Mem} {no nl lvls ho hl hh nn vus r : Word}
   cases n with
   | zero => simp [taCW] at h
   | succ n =>
-    simp only [taCW] at h
-    by_cases hv : vus ≠ lvls
-    · rw [ite_eq_left hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm
-    rw [ite_eq_right hv] at h
-    rcases hf : findW n m no nl nn with _ | fr <;> rw [hf] at h <;>
-      try (simp only [taCK, reduceCtorEq] at h; done)
-    simp only [taCK] at h
-    split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm
-    split at h <;> (simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm)
+    simp only [taCW, taCW.k_sl_find.eq_def] at h
+    repeat' split at h
+    all_goals (simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h; try exact h.2.symm)
 
 theorem taGoW_mfr (n : Nat) :
     (∀ (m m' : Mem) (no nl lvls ho hl f h r : Word), taGoW n m no nl lvls ho hl f h = some (r, m') →

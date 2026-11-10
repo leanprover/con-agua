@@ -10,13 +10,14 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.RecCheck
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
 /-!
 # TaCW
 
-`taCK`, `taCW`, `taGoW`, `taG1`, `taG3`, `taG4` and the lemmas only they use.
+`taCW` (generated), `taGoW`, `taG1`, `taG3`, `taG4` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -33,19 +34,24 @@ open L.Arena
 
 /-! ## Word models -/
 
-/-- After `sl_find` in `target_abs_const`. -/
-def taCK (m : Mem) (ho hl h : Word) : Option (List Word) → Option (Word × Mem)
-  | none => none
-  | some fr =>
-    if fr.headD 0 = 0 then some (h, m)
-    else if hl ≤ fr.tail.headD 0 then some (h, m)
-    else some (rdW (m.arr64 IW) (ho + fr.tail.headD 0), m)
+/-- The lookups of the `target_abs` walk. -/
+structure TaLook (p : Prog) : Prop where
+  hk : MkLook p
+  hv : p.lookup "e_view" = some eView
+  hf : p.lookup "sl_find" = some slFind
+  tf : p.lookup "ta_find" = some (memoFindG taSch)
+  tp : p.lookup "ta_put" = some (memoPutG taSch)
+  tc : p.lookup "ta_clear" = some (memoClearG taSch)
+  cst : p.lookup "target_abs_const" = some targetAbsConst
+  go : p.lookup "target_abs_go" = some targetAbsGo
+  node : p.lookup "target_abs_node" = some targetAbsNode
+  top : p.lookup "target_abs" = some targetAbs
 
-/-- **The model of `target_abs_const`.** -/
-def taCW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, no, nl, lvls, ho, hl, h, nn, vus =>
-    if vus ≠ lvls then some (h, m) else taCK m ho hl h (findW n m no nl nn)
+/-- **`target_abs_const` is its model `taCW`** (generated). -/
+l_model taConst_spec (p : Prog) (hL : TaLook p)
+  fns [hL.cst ↦ taCW]
+  specs [slFind_spec p hL.hf n]
+  grind [arena_grind]
 
 mutual
 def taGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (Word × Mem)
@@ -98,17 +104,6 @@ end
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (no nl lvls ho hl f f1 h g x y z a2 x2 c2 r nn vus : Word)
   (v fr : List Word)
-theorem taCW_ne (hv : vus ≠ lvls) : taCW (n + 1) m no nl lvls ho hl h nn vus = some (h, m) := by simp [taCW, hv]
-theorem taCW_eq (hv : ¬ vus ≠ lvls) :
-    taCW (n + 1) m no nl lvls ho hl h nn vus = taCK m ho hl h (findW n m no nl nn) := by
-  simp only [taCW]; rw [ite_eq_right hv]
-theorem taCK_miss (h0 : fr.headD 0 = 0) : taCK m ho hl h (some fr) = some (h, m) := by
-  simp only [taCK]; rw [ite_eq_left h0]
-theorem taCK_out (h0 : ¬ fr.headD 0 = 0) (h1 : hl ≤ fr.tail.headD 0) : taCK m ho hl h (some fr) = some (h, m) := by
-  simp only [taCK]; rw [ite_eq_right h0, ite_eq_left h1]
-theorem taCK_hit (h0 : ¬ fr.headD 0 = 0) (h1 : ¬ hl ≤ fr.tail.headD 0) :
-    taCK m ho hl h (some fr) = some (rdW (m.arr64 IW) (ho + fr.tail.headD 0), m) := by
-  simp only [taCK]; rw [ite_eq_right h0, ite_eq_right h1]
 theorem taGoW_abort (hf : f = 0) : taGoW (n + 1) m no nl lvls ho hl f h = none := by simp [taGoW, hf]
 theorem taGoW_view (hf : f ≠ 0) :
     taGoW (n + 1) m no nl lvls ho hl f h = taG1 n m no nl lvls ho hl f h (eViewW m h) := by simp [taGoW, hf]
@@ -150,38 +145,12 @@ theorem taL2_some : taL2 n no nl lvls ho hl f1 z a2 (some (x2, m2)) =
 theorem taL3_some : taL3 a2 x2 (some (c2, m3)) = rpMkW m3 7 a2 x2 c2 0 0 := by rw [taL3]
 theorem taP1_some : taP1 x y (some (a2, m1)) = rpMkW m1 9 a2 0 0 y x := by rw [taP1]
 end arms
-attribute [ind_grind] taCW_ne taCW_eq taCK_miss taCK_out taCK_hit taGoW_abort taGoW_view taG1_leaf
+attribute [ind_grind] taGoW_abort taGoW_view taG1_leaf
   taG1_const taG1_node taG3_abort taG3_hit taG3_miss taG4_some taG5_some taNodeW_bin taNodeW_let
   taNodeW_proj taB1_some taB2_some taL1_some taL2_some taL3_some taP1_some
 
-/-- The lookups of the `target_abs` walk. -/
-structure TaLook (p : Prog) : Prop where
-  hk : MkLook p
-  hv : p.lookup "e_view" = some eView
-  hf : p.lookup "sl_find" = some slFind
-  tf : p.lookup "ta_find" = some (memoFindG taSch)
-  tp : p.lookup "ta_put" = some (memoPutG taSch)
-  tc : p.lookup "ta_clear" = some (memoClearG taSch)
-  cst : p.lookup "target_abs_const" = some targetAbsConst
-  go : p.lookup "target_abs_go" = some targetAbsGo
-  node : p.lookup "target_abs_node" = some targetAbsNode
-  top : p.lookup "target_abs" = some targetAbs
-
 section spec
 variable (p : Prog) (L : TaLook p)
-
-include L in
-theorem taConst_spec (n : Nat) (s₀ : St) (no nl lvls ho hl h nn vus : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_abs_const" [no, nl, lvls, ho, hl, h, nn, vus]
-    ⦃fun r s' => LocEq s' s₀ ∧ taCW n s₀.mem no nl lvls ho hl h nn vus = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.cst]
-  simp only [callFn, targetAbsConst]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slFind_spec p L.hf n] <;>
-      finish (gen := 20) [rdW_eq]
 
 def TaGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (no nl lvls ho hl f h : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_abs_go" [no, nl, lvls, ho, hl, f, h]
@@ -352,25 +321,25 @@ theorem taCW_ok (n : Nat) {m m' : Mem} {no nl lvls ho hl h nn vus r : Word} {nam
   obtain _ | n := n
   · simp [taCW] at hc
   by_cases hv : vus ≠ lvls
-  · rw [taCW_ne (hv := hv)] at hc
+  · rw [taCW.arm1 (hc1 := hv)] at hc
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
     have : ¬ ((decI vus : LsIdx) == decI lvls) = true := by rw [decI_beq vus lvls hvus hlv]; simpa using hv
     refine ⟨rfl, ?_⟩
     simp only [taConstT, this]; rfl
-  rw [taCW_eq (hv := hv)] at hc
+  rw [taCW.arm2 (hc1 := by simpa using hv)] at hc
   have hbeq : ((decI vus : LsIdx) == decI lvls) = true := by rw [decI_beq vus lvls hvus hlv]; simpa using hv
   obtain ⟨ws, hws, rfl, hwlt⟩ := slR_of_decHL m _ _ names hdec hno
   simp only [UInt64.ofNat_toNat] at hws
   have hlen : ws.length < 2 ^ 64 := by have := decHL_length m hdec; simp at this; omega
   have hhl := decHL_length m hho
   rcases hfw : findW n m no nl nn with _ | fr <;> rw [hfw] at hc <;>
-    try (simp only [taCK, reduceCtorEq] at hc; done)
+    try (simp only [taCW.k_sl_find, reduceCtorEq] at hc; done)
   have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
   have hfi := findIdx_map_decI (k := .name) nn hn ws hwlt
   cases hwi : ws.findIdx? (· == nn) with
   | none =>
     rw [hwi] at hfr; subst hfr
-    rw [taCK_miss (h0 := rfl)] at hc
+    rw [taCW.k_sl_find.arm1 (hc1 := rfl)] at hc
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
     refine ⟨rfl, ?_⟩
     simp only [taConstT, hbeq, ite_true, hfi, hwi]
@@ -379,13 +348,13 @@ theorem taCW_ok (n : Nat) {m m' : Mem} {no nl lvls ho hl h nn vus r : Word} {nam
     obtain ⟨hil, -⟩ := List.findIdx?_eq_some_iff_getElem.mp hwi
     have hi : (UInt64.ofNat i : Word).toNat = i := UInt64.toNat_ofNat_of_lt' (show i < 2 ^ 64 by omega)
     by_cases hout : hl ≤ UInt64.ofNat i
-    · rw [taCK_out (h0 := by simp) (h1 := by simpa using hout)] at hc
+    · rw [taCW.k_sl_find.arm2 (hc1 := by simp) (hc2 := by simpa using hout)] at hc
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
       have : holes.length ≤ i := by
         have h1 := UInt64.le_iff_toNat_le.mp hout; rw [hi] at h1; rw [hhl]; exact h1
       refine ⟨rfl, ?_⟩
       simp only [taConstT, hbeq, ite_true, hfi, hwi, List.getElem?_eq_none this]
-    · rw [taCK_hit (h0 := by simp) (h1 := by simpa using hout)] at hc
+    · rw [taCW.k_sl_find.arm3 (hc1 := by simp) (hc2 := by simpa using hout)] at hc
       simp only [Option.some.injEq, Prod.mk.injEq, List.tail_cons, List.headD_cons] at hc
       obtain ⟨rfl, rfl⟩ := hc
       have hih : i < hl.toNat := by
