@@ -228,24 +228,17 @@ def rmMem (m1 : Mem) (q old flo fll fpo fpl : Word) : Mem :=
   erecPutMem (erecPutMem m10 (q + 9) 0) (q + 10) 0
 
 /-- **The model of `generated_rule_nested`.** -/
-def trnW (m : Mem) (old flo fll fpo fpl : Word) : Option (List Word × Mem) :=
-  match erAllocW m 11 with
-  | none => none
-  | some (q, m1) => some ([q], rmMem m1 q old flo fll fpo fpl)
+l_model trn_spec (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut)
+  fns [hL.trn ↦ trnW list]
+  specs [erecAlloc_specW p hL.ea n, erecPut_specM p hpu n]
+  grind [arena_grind]
 
-theorem trn_spec (p : Prog) (L : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat)
-    (s₀ : St) (old flo fll fpo fpl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "generated_rule_nested" [old, flo, fll, fpo, fpl]
-    ⦃fun r s' => LocEq s' s₀ ∧ trnW s₀.mem old flo fll fpo fpl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.trn]
-  simp only [callFn, generatedRuleNested]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        erecAlloc_specW p L.ea n, erecPut_specW p hpu n] <;>
-      finish (gen := 30) (instances := 5000) [trnW, rmMem, erRd]
+/-- `trnW` by its memory `rmMem`. -/
+theorem trnW_eq (m : Mem) (old flo fll fpo fpl : Word) : trnW m old flo fll fpo fpl =
+    match erAllocW m 11 with
+    | none => none
+    | some (q, m1) => some ([q], rmMem m1 q old flo fll fpo fpl) := by
+  rw [trnW.arm1]; rcases erAllocW m 11 with _ | ⟨q, m1⟩ <;> rfl
 
 l_model tsrm_spec (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut)
   fns [hL.tsrm ↦ tsrmW]
@@ -443,12 +436,12 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
   rw [tsrmW.arm2 (hc1 := h0)] at h
   cases ha : erAllocW m 11 with
   | none =>
-    rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW, ha],
+    rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW_eq, ha],
       tsrmW.k_generated_rule_nested.none] at h; cases h
   | some x =>
   obtain ⟨q, m1⟩ := x
   rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = some ([q], rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl)
-    by simp [trnW, ha], tsrmW.k_generated_rule_nested.arm1] at h
+    by simp [trnW_eq, ha], tsrmW.k_generated_rule_nested.arm1] at h
   simp only [List.headD_cons] at h
   rw [hrd.1] at h
   have hold : rlDec m (UInt64.ofNat pp : Word).toNat = some rl0 := by
@@ -523,12 +516,12 @@ theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r
     rw [tsrmW.arm2 (hc1 := h0)] at h
     cases ha : erAllocW m 11 with
     | none =>
-      rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW, ha],
+      rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW_eq, ha],
         tsrmW.k_generated_rule_nested.none] at h; cases h
     | some x =>
     obtain ⟨q, m1⟩ := x
     rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl =
-      some ([q], rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) by simp [trnW, ha],
+      some ([q], rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) by simp [trnW_eq, ha],
       tsrmW.k_generated_rule_nested.arm1] at h
     have f1 : AFr m1 (rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) := AFr.of_frame (rmMem_frame _ _ _ _ _ _ _)
     generalize rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl = M at h f1
