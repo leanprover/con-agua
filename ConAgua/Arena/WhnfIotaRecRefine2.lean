@@ -281,9 +281,9 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     · refine .inl (RefE.ret (by rw [iotaRecFire2T, ite_eq_right h]; rfl) ⟨⟨MM, hS, KeptAll.refl _ _,
         StackKept.refl _⟩, (decOptR_none_rec _ rfl).symm, by show ResW [0, 0]; unfold ResW HW; decide⟩)
   by_cases l1 : mn < erRd s₀.mem (ctorP + 5)
-  · rw [ite_eq_left l1]
+  · rw [if_pos (by exact l1)]
     exact hres0.resolve_right fun h => (hlen_iff.mp h).1 l1
-  rw [ite_eq_right l1]
+  rw [if_neg (by exact l1)]
   by_cases l2 : mn - erRd s₀.mem (ctorP + 5) ≠ erRd s₀.mem (rl + 1)
   · rw [ite_eq_left l2]
     exact hres0.resolve_right fun h => l2 (hlen_iff.mp h).2

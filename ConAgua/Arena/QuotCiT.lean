@@ -210,7 +210,7 @@ theorem erCopyErW_eq {p : Prog} (hp : p.lookup "erec_put" = some erecPut) :
     cases n with
     | zero => rw [erCopyErW.eq_1] at h; cases h
     | succ n =>
-    rw [erCopyErW.arm2 p n m d s l hl0] at h
+    rw [erCopyErW.arm2 p n m d s l hl0] at h; simp only [erRd_foldN] at h
     cases h1 : callW p n "erec_put" [d, erRd m s] m with
     | none => rw [h1] at h; simp [erCopyErW.k_erec_put.none] at h
     | some x1 =>
@@ -715,8 +715,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       have := erecP_lt64 hwv
       have h5 : (5 : Word).toNat = 5 := rfl
       rw [UInt64.toNat_add, h5, Nat.mod_eq_of_lt (by omega)]; exact hpre5.grow.ext _ _ hwv)
-    simp only [show ∀ x, rdW (m5.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRd m5 x
-      from fun _ => rfl, ev] at hW
+    simp only [erRd_foldN, ev] at hW
     cases h6 : callW p n "inst_lp" [erRd m5 (c + 2), erRd m5 (c + 3), r5.headD 0, wv] m5 with
     | none => rw [h6] at hW; simp [ciAtLpsW.k_inst_lp] at hW
     | some x6 =>

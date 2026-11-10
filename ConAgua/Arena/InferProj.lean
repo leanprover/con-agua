@@ -222,7 +222,7 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
         ptaW.j1 p n q us to tn pe (erRd s.mem (erRd s.mem (q + 9) + i)) s.mem
       else ptaW.j1 p n q us to tn pe 0 s.mem) = ptaW.j1 p n q us to tn pe (projBodyW s.mem q i) s.mem := by
     unfold projBodyW sliceAt; split <;> rfl
-  rw [hj, ptaW.j1.eq_1] at hW
+  erw [hj, ptaW.j1.eq_1] at hW
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
   have h₁ := CoreSpec.of_callW (hlp n s a₀ dn vis fe M eb _ _ us (projBodyW s.mem q i) tbl.levelParams
     hS hbw hus hlps) hc1

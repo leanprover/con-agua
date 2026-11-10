@@ -137,7 +137,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       rw [m2cArmsE.k_eta_rescue_ok.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g1']
       simp only [show (r1.headD 0 != 0) = false by rw [g1']; rfl, Bool.false_eq_true, ↓reduceIte]
       exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
-        (fun h => h.mono (Nat.le_succ _)) (by rw [hctor, hlp, hnp]) hR
+        (fun h => h.mono (Nat.le_succ _)) (by rw [hctor, hlp, hnp]; rfl) hR
         (m2cAnd_ref p hp hc hpi hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
           mode d T major _ _ _ hm4 hebm hT hmaj hctorHW m a M hS)
   · rw [m2cArmsE.arm1 _ _ _ _ _ _ _ _ _ _ _ _ g]
@@ -146,7 +146,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     | zero => rw [m2cKE.eq_1, m2cArmsE.k_m2c_k.none]; exact RefE.of_cls0 (by simp)
     | succ N' =>
     exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
-      (fun h => h.mono (Nat.le_succ _)) (by simp only [m2cArmsT, hK, ↓reduceIte, hctor, hlp, hnp]) hR
+      (fun h => h.mono (Nat.le_succ _)) (by simp only [m2cArmsT, hK, ↓reduceIte, hctor, hlp, hnp, _root_.L.Ind.erRd_foldN]) hR
       (m2cK_ref p hp hc hpi hE N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
         mode d T major _ _ _ hm4 hebm hT hmaj hctorHW m a M hS)
 
@@ -223,7 +223,7 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     cases ci with
     | indInfo cv caps => exact absurd (hind.mp ⟨cv, caps, rfl⟩) g5
     | _ => rfl
-  rw [m2cCtorE.k_env_find.arm3 _ _ _ _ _ _ _ _ _ _ _ _ g4 (by simpa using g5)]
+  rw [m2cCtorE.k_env_find.arm3 _ _ _ _ _ _ _ _ _ _ _ _ g4 (by simpa [erRd] using g5)]
   obtain ⟨cvT, caps, rfl⟩ := hind.mpr (by simpa using g5)
   cases N with
   | zero => rw [m2cArmsE.eq_1, m2cCtorE.k_m2c_arms.none]; exact RefE.of_cls0 (by simp)
@@ -312,7 +312,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     cases ci with
     | ctorInfo cv nP nF => exact absurd (hctr.mp ⟨cv, nP, nF, rfl⟩) g4
     | _ => rfl
-  rw [m2cHeadE.k_env_find.arm3 _ _ _ _ _ _ _ _ _ _ g3 (by simpa using g4)]
+  rw [m2cHeadE.k_env_find.arm3 _ _ _ _ _ _ _ _ _ _ g3 (by simpa [erRd] using g4)]
   obtain ⟨cvj, cnP, cnF, rfl⟩ := hctr.mpr (by simpa using g4)
   exact RefE.tail_eq (m2cHeadE.k_m2c_ctor.none p) (fun v => m2cHeadE.k_m2c_ctor.arm1 p v.1 v.2)
     (fun h => h.mono (Nat.le_succ _)) (by rw [hstep]; simp only [hfind'])

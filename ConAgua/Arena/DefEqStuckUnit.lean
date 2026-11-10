@@ -186,11 +186,11 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   have hfind' := find_of_found hfind h0 hci
   have hind := decCI_indK (erRdOK _) hci
   by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 3
-  · rw [ite_eq_left h4]
+  · rw [if_pos (by exact h4)]
     exact RefE.ret (suHead_other _ fe _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e)))
       (CorePost.ret hS rfl hw0)
-  rw [ite_eq_right h4]
+  rw [if_neg (by exact h4)]
   obtain ⟨cvT, caps, hci_eq⟩ := hind.1 (by simpa using h4)
   rw [hci_eq] at hci
   have hIR := decCI_indCaps (erRdOK _) hci
@@ -234,7 +234,7 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       (r₃.tail.headD 0) (r₄.tail.headD 0) r₅
   · obtain ⟨o1, o2, o3, o4⟩ := hok
     rw [ite_eq_left (hiff.mpr ⟨o1, o2, o3, o4⟩)]
-    simp only [o1, o2, o3, o4, ne_eq, not_true_eq_false, ↓reduceIte]
+    simp only [L.Ind.erRd_foldN, o1, o2, o3, o4, ne_eq, not_true_eq_false, ↓reduceIte]
     cases n with
     | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
     | succ N =>
@@ -248,16 +248,16 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       RefE.ret rfl ⟨⟨M₅, hS₅, hK₅, hSt₅⟩, rfl, hw0⟩
     unfold uhOK at hok
     by_cases o1 : erRd s₀.mem (r₂.tail.headD 0 + 9) = 0
-    · rw [ite_eq_left o1]; exact hl
-    rw [ite_eq_right o1]
+    · erw [ite_eq_left o1]; exact hl
+    erw [ite_eq_right o1]
     by_cases o2 : r₅.headD 0 ≠ 0
     · rw [ite_eq_left o2]; exact hl
     rw [ite_eq_right o2]
     by_cases o3 : r₃.tail.headD 0 ≠ erRd s₀.mem (r₂.tail.headD 0 + 10)
-    · rw [ite_eq_left o3]; exact hl
-    rw [ite_eq_right o3]
+    · erw [ite_eq_left o3]; exact hl
+    erw [ite_eq_right o3]
     by_cases o4 : r₄.tail.headD 0 ≠ erRd s₀.mem (r₂.tail.headD 0 + 3)
-    · rw [ite_eq_left o4]; exact hl
+    · erw [ite_eq_left o4]; exact hl
     exact absurd ⟨o1, by simpa using o2, by simpa using o3, by simpa using o4⟩ hok
 
 /-! ## `struct_unit_cert` -/
