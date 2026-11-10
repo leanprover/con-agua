@@ -146,11 +146,11 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   rw [ite_eq_right f0]
   obtain ⟨ci, hfind, hci⟩ := hfsome f0
   by_cases k5 : erRd s₀.mem (re.tail.headD 0) ≠ 5
-  · rw [ite_eq_left k5]
+  · erw [ite_eq_left k5]
     have hnr := (decCI_rec_rd (erRdOK s₀.mem) hci).2 k5
     exact hnone _ rfl (cT_run_find _ _ _ _ _ _ _ _ a₀ (fun cv mI rP isK rules h => by
       rw [hfind] at h; cases h; exact hnr cv mI rP isK rules rfl))
-  rw [ite_eq_right k5]
+  erw [ite_eq_right k5]
   obtain ⟨cv, rules, rfl, hcv, hrules⟩ := (decCI_rec_rd (erRdOK s₀.mem) hci).1 (Classical.not_not.mp k5)
   generalize hrecP : re.tail.headD 0 = recP at *
   -- the arity
@@ -165,10 +165,10 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
   have hsnp : sn.toNat ≠ 0 := fun h => s0 (UInt64.toNat_inj.mp (by simpa using h))
   by_cases a1 : sn - 1 ≠ erRd s₀.mem (recP + 5)
-  · rw [ite_eq_left a1]
+  · erw [ite_eq_left a1]
     exact hnone _ rfl (cT_run_arity _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ hfind (by
       rw [hsz]; intro h; apply a1; apply UInt64.toNat_inj.mp; rw [hsn1]; omega))
-  rw [ite_eq_right a1]
+  erw [ite_eq_right a1]
   have hn : xs.size = (erRd s₀.mem (recP + 5)).toNat + 1 := by
     have := congrArg UInt64.toNat (Classical.not_not.mp a1); rw [hsn1] at this; omega
   -- the levels' length and the telescope
@@ -197,10 +197,10 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have htk : (takeEidx xs xs.size).toList.length = (erRd s₀.mem (recP + 5)).toNat + 1 := by
     rw [takeEidx_size]; simp [hn]
   by_cases u1 : [o, l].tail.headD 0 ≠ erRd s₀.mem (recP + 3)
-  · rw [ite_eq_left u1]
+  · erw [ite_eq_left u1]
     exact hnone _ rfl (cT_run_check _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ _ _ hfind hn hvl hrunP'
       (fun ⟨_, h2, _⟩ => u1 (by rw [hlen] at h2; exact UInt64.toNat_inj.mp h2)))
-  rw [ite_eq_right u1]
+  erw [ite_eq_right u1]
   by_cases p0 : rp.headD 0 = 0
   · rw [ite_eq_left p0]
     exact hnone _ rfl (cT_run_check _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ _ _ hfind hn hvl hrunP'
