@@ -47,7 +47,7 @@ theorem fieldCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l k : Word), fieldCopyW
   | 0, _, _, _, _, _, _, h => by simp [fieldCopyW] at h
   | n + 1, m, m', d, s, l, k, h => by
     by_cases hl : l = 0
-    · rw [fieldCopyW_nil n m d s l k hl] at h; cases h; exact AFr.refl _
+    · rw [fieldCopyW.arm1 n m d s l k hl] at h; cases h; exact AFr.refl _
     · rw [fieldCopyW_step n m d s l k hl] at h
       exact (AFr.set64 _ IW (by decide) (by decide) _ _).trans (fieldCopyW_afr n _ _ _ _ _ _ h)
 

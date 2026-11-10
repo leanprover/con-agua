@@ -11,6 +11,8 @@ public import ConAgua.Arena.IndPartsSpec.MemberNames
 public import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 public import ConAgua.Arena.IndPosSpec.CtxFields
 import all ConAgua.Arena.IndParts
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -34,41 +36,16 @@ open L.Arena
 
 /-! ## `block_shape_formers` (`BlockShape.formers`), through `member_field_copy` -/
 
-/-- The model of `member_field_copy(d, s, l, k)`: `IW[d + j] := IW[IW[s + j] + k]`. -/
-def fieldCopyW : Nat → Mem → Word → Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, d, s, l, k =>
-    if l = 0 then some m
-    else fieldCopyW n (m.set64 IW d (rdW (m.arr64 IW) (rdW (m.arr64 IW) s + k))) (d + 1) (s + 1) (l - 1) k
+/-- **`member_field_copy(d, s, l, k)`'s model `fieldCopyW`** (generated): `IW[d + j] := IW[IW[s + j] + k]`. -/
+l_model memberFieldCopy_spec (p : Prog) (hp : p.lookup "member_field_copy" = some memberFieldCopy)
+  fns [hp ↦ fieldCopyW void]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-section arms
-variable (n : Nat) (m : Mem) (d s l k : Word)
-theorem fieldCopyW_nil (hl : l = 0) : fieldCopyW (n + 1) m d s l k = some m := by
-  simp [fieldCopyW, hl]
-theorem fieldCopyW_step (hl : l ≠ 0) :
+/-- `fieldCopyW`'s copy step, the recursive call's memory passed on. -/
+theorem fieldCopyW_step (n : Nat) (m : Mem) (d s l k : Word) (hl : l ≠ 0) :
     fieldCopyW (n + 1) m d s l k =
       fieldCopyW n (m.set64 IW d (rdW (m.arr64 IW) (rdW (m.arr64 IW) s + k))) (d + 1) (s + 1) (l - 1) k := by
-  simp [fieldCopyW, hl]
-end arms
-
-grind_pattern [ind_grind] fieldCopyW_nil => fieldCopyW (n + 1) m d s l k
-grind_pattern [ind_grind] fieldCopyW_step => fieldCopyW (n + 1) m d s l k
-
-theorem memberFieldCopy_spec (p : Prog) (hp : p.lookup "member_field_copy" = some memberFieldCopy)
-    (n : Nat) :
-    ∀ (s₀ : St) (d s l k : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "member_field_copy" [d, s, l, k]
-    ⦃fun _ s' => LocEq s' s₀ ∧ fieldCopyW n s₀.mem d s l k = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ d s l k; rw [invoke_eq _ hp]; simp only [callFn, memberFieldCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ d s l k
-    rw [invoke_eq _ hp]
-    simp only [callFn, memberFieldCopy]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20)
+  rw [fieldCopyW.arm2 (hc1 := hl)]; cases fieldCopyW n _ _ _ _ _ <;> rfl
 
 /-- **What `member_field_copy` leaves**: word `k` of each member record, the records below `d`. -/
 theorem fieldCopyW_get (n : Nat) (k : Word) : ∀ (m m' : Mem) (d s l : Word), fieldCopyW n m d s l k = some m' →
@@ -82,7 +59,7 @@ theorem fieldCopyW_get (n : Nat) (k : Word) : ∀ (m m' : Mem) (d s l : Word), f
       else (m.arr64 IW)[i]? :=
   ipCopyW_get (fun n m d s l => fieldCopyW n m d s l k) (fun m x => rdW (m.arr64 IW) (x + k))
     (fun x d => (x + k).toNat < d)
-    (fun _ _ _ _ => by simp [fieldCopyW]) (fieldCopyW_nil · · · · · k) (fieldCopyW_step · · · · · k)
+    (fun _ _ _ _ => by simp [fieldCopyW]) (fieldCopyW.arm1 · · · · · k) (fieldCopyW_step · · · · · k)
     (fun m d v x hx => rdW_set64_IW_ne m d v (x + k) (by omega))
     (fun _ _ h => by omega) n
 
