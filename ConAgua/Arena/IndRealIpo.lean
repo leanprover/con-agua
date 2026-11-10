@@ -112,21 +112,6 @@ end arms
 
 attribute [ind_grind] ipoK_bad ipoK_ok ipoT_none ipoT_bad ipoT_ok ipoW_exit ipoW_ind ipoW_other
 
-/-- `pi_sort_tele_len` with its two lookups only (the front's `sortTele_spec`). -/
-theorem sortTele_specI (p : Prog) (hps : p.lookup "pi_sort_tele_len" = some L.Front.Ind.piSortTeleLen)
-    (hev : p.lookup "e_view" = some eView) (n : Nat) : ∀ (s₀ : St) (f h : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_sort_tele_len" [f, h]
-    ⦃fun r s' => s' = s₀ ∧ L.Front.Ind.sortTeleW n s₀.mem f h = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ f h; rw [invoke_eq _ hps]; simp only [callFn, L.Front.Ind.piSortTeleLen]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ f h
-    rw [invoke_eq _ hps]
-    simp only [callFn, L.Front.Ind.piSortTeleLen]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        eView_spec p hev n] <;> finish [L.Front.Ind.sortTeleW]
-
 theorem ipoLoop_spec (p : Prog) (hps : p.lookup "pi_sort_tele_len" = some L.Front.Ind.piSortTeleLen)
     (hev : p.lookup "e_view" = some eView) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ exec p k ipoLoop
@@ -138,7 +123,7 @@ theorem ipoLoop_spec (p : Prog) (hps : p.lookup "pi_sort_tele_len" = some L.Fron
     rw [exec, step_while (w := ipoLoop) rfl]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, ld64_rdT_spec, ih,
-        sortTele_specI p hps hev k] <;>
+        L.Front.Ind.sortTele_spec p hps hev k] <;>
       finish (gen := 40) (instances := 20000) [CWF, erRd]
 
 theorem ipoW_ne_brk : ∀ (k : Nat) (m : Mem) (np o l j : Word), ipoW k m np o l j ≠ some .brk := by

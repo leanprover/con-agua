@@ -388,8 +388,11 @@ theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     obtain ⟨_, e, -⟩ := h'; exact erecP_lt64 (truncM_er_get e)
   obtain ⟨w1, hw1b⟩ := partsErRd (IWGrow.refl m) ho (w := cvR0 + 1) (by rw [UInt64.toNat_add]; simp; omega)
   obtain ⟨w2, hw2b⟩ := partsErRd (IWGrow.refl m) hlw (w := cvR0 + 2) (by rw [UInt64.toNat_add]; simp; omega)
-  unfold bslW at h
-  rw [w1, w2] at h
+  rcases n with _ | n
+  · simp [bslW] at h
+  have w1' : rdW (m.arr64 (tierA EREC ((cvR0 + 1) >>> 40))) ((cvR0 + 1) &&& 1099511627775) = _ := w1
+  have w2' : rdW (m.arr64 (tierA EREC ((cvR0 + 2) >>> 40))) ((cvR0 + 2) &&& 1099511627775) = _ := w2
+  rw [bslW.eq_2, w1', w2'] at h
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   by_cases h0 : l' = 0
   · subst h0
@@ -406,7 +409,9 @@ theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   obtain ⟨w, hw, hwl, hwe⟩ := hd?_some he
   have hw' := truncM_er_get hw
   have hrdw : erRd m (UInt64.ofNat o') = w := erRd_of_erA (by rw [UInt64.toNat_ofNat_of_lt' hw1b]; exact hw')
-  rw [hrdw] at h
+  have hrdw' : rdW (m.arr64 (tierA EREC (UInt64.ofNat o' >>> 40))) (UInt64.ofNat o' &&& 1099511627775) = w :=
+    hrdw
+  rw [hrdw'] at h
   have hrel' : hslice? (erA (truncM m)) (UInt64.ofNat o' + 1).toNat L = some relps := by
     rcases L with _ | L
     · simpa [hslice?] using hrel
@@ -422,12 +427,12 @@ theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hw2b]; simp)]
     rw [UInt64.toNat_ofNat_of_lt' hw2b]; simp
   rcases h1 : erToIwW n m (UInt64.ofNat o' + 1) (UInt64.ofNat (L + 1) - 1) with _ | ⟨rp, m1⟩ <;> rw [h1] at h
-  · cases h
-  simp only at h
+  · rw [bslW.k_er_to_iw.none] at h; cases h
+  rw [bslW.k_er_to_iw.arm1] at h
   obtain ⟨hS1, hg1, hd1, ht1⟩ := partsSliceCopy h1 hS (by rw [hl1]; exact hrel')
   rcases he1 : eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll with _ | ev <;> rw [he1] at h
-  · cases h
-  simp only at h
+  · rw [bslW.k_sl_eq.none] at h; cases h
+  rw [bslW.k_sl_eq.eq_2] at h
   have hT1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
   obtain ⟨ws1, hs1, hn1, hl1'⟩ := slR_of_decHL m1 _ _ _ hd1 (by omega)
   rw [ofNat_toNat_word, ofNat_toNat_word] at hs1
@@ -451,8 +456,8 @@ theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     · simp [hw12]
     · rw [hres, ite_eq_right hw12] at hev; exact absurd rfl hev
   rcases hc : containsW n m1 lo ll w with _ | hsv <;> rw [hc] at h
-  · cases h
-  simp only at h
+  · rw [bslW.k_sl_contains.none] at h; cases h
+  rw [bslW.k_sl_contains.eq_2] at h
   have hcv2 := containsW_ok n m1 lo ll w hsv ws2 hs2 hc
   have hcont : lps.contains e = ws2.contains w := by rw [hn2, hwe]; exact contains_map_decI w hwl ws2 hl2
   by_cases hh : hsv ≠ 0
@@ -1219,7 +1224,7 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   have hg05 := hg04.trans hg5
   -- `block_shape_large` (model only)
   intro r m' e
-  rcases h6 : bslW n m5 (UInt64.ofNat cvp) lo ll with _ | ⟨r6, m6⟩ <;> rw [h6] at e
+  rcases h6 : bslW (n + 1) m5 (UInt64.ofNat cvp) lo ll with _ | ⟨r6, m6⟩ <;> rw [h6] at e
   · cases e
   simp only [bbK13'] at e
   obtain ⟨hS6, hg6, hlg⟩ := bslW_ok h6 hS5 (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact (show DecB (fun m => decCVp m cvp) m r0.1 from hcv).grow (OMono.decCVp _) hg05)

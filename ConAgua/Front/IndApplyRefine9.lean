@@ -97,7 +97,7 @@ theorem nodupW_zero : ∀ (n : Nat) (m : Mem) (o l j : Word), nodupW n m o l j =
     have hjl := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlj)
     have hj1 := wsucc j l (UInt64.not_le.mp hlj)
     have hoj : (o + j).toNat = o.toNat + j.toNat := widx2 _ _ (by omega)
-    rcases hc : containsW n m o l (rdW (m.arr64 IFL) (o + j)) (j + 1) with _ | c <;> simp only [hc, nodupK, reduceCtorEq] at h
+    rcases hc : containsW n m o l (rdW (m.arr64 IFL) (o + j)) (j + 1) with _ | c <;> simp only [hc, nodupW.k_ifl_contains, reduceCtorEq] at h
     obtain ⟨c1, -⟩ := containsW_facts n m o l _ _ c hc hb
     rw [hj1] at c1
     split at h
@@ -189,9 +189,9 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     intro s hs k hk
     have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
     rw [wd_eq, widx _ _ _ _ (by rw [hk']; simp; omega), hk']; rfl
-  rcases h3 : mapW n m to tn 11 0 0 with _ | ⟨⟨tyn, x1⟩, m₁⟩
-  · rw [flat3_none, liftE_none, validateE.k_vi_map.none]; exact fun _ hk => absurd Err.cls_oob hk
-  rw [flat3_some, liftE_some, validateE.k_vi_map.arm1]
+  rcases h3 : mapW n m to tn 11 0 0 with _ | ⟨tyn, x1, m₁⟩
+  · rw [liftE_none, validateE.k_vi_map.none]; exact fun _ hk => absurd Err.cls_oob hk
+  rw [liftE_some, validateE.k_vi_map.arm1]
   obtain ⟨t1, t2, t3, -, t5, t6, t7⟩ := mapW_twin hT h3 a tys (fun t => t.cv.name) st.name
     (by rw [hTn])
     (fun k hk => by
@@ -201,9 +201,9 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     (fun x w hw => lkW_name hD a (by simpa [mapLk] using hw))
   have hD₁ : StateDR m₁ st := hD.frame t2.frame (by decide) (by decide) (by decide) (by decide) (by decide)
   -- the type types
-  rcases h4 : mapW n m₁ to tn 11 2 1 with _ | ⟨⟨tyt, x2⟩, m₂⟩
-  · rw [flat3_none, liftE_none, validateE.k_vi_map_2.none]; exact fun _ hk => absurd Err.cls_oob hk
-  rw [flat3_some, liftE_some, validateE.k_vi_map_2.arm1]
+  rcases h4 : mapW n m₁ to tn 11 2 1 with _ | ⟨tyt, x2, m₂⟩
+  · rw [liftE_none, validateE.k_vi_map_2.none]; exact fun _ hk => absurd Err.cls_oob hk
+  rw [liftE_some, validateE.k_vi_map_2.arm1]
   obtain ⟨u1, u2, u3, -, u5, u6, u7⟩ := mapW_twin t3 h4 a tys (fun t => t.cv.type) (getDeclD st)
     (by rw [hTn])
     (fun k hk => by
@@ -215,17 +215,17 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
   have e12 := t2.trans u2
   have hD₂ : StateDR m₂ st := hD.frame e12.frame (by decide) (by decide) (by decide) (by decide) (by decide)
   -- the listed constructor names
-  rcases h5 : listedW n m₂ to tn with _ | ⟨⟨fo, x⟩, m₃⟩
-  · rw [flat3_none, liftE_none, validateE.k_vi_listed.none]; exact fun _ hk => absurd Err.cls_oob hk
-  rw [flat3_some, liftE_some, validateE.k_vi_listed.arm1]
+  rcases h5 : listedW n m₂ to tn with _ | ⟨fo, x, m₃⟩
+  · rw [liftE_none, validateE.k_vi_listed.none]; exact fun _ hk => absurd Err.cls_oob hk
+  rw [liftE_some, validateE.k_vi_listed.arm1]
   obtain ⟨LS, l1, l2, l3, l4, l5, l6, l7, l8, l9⟩ := listedW_twin hD a tys to tn
     (fun k hk => hTy.2.2 k hk) hTn (by omega) h5 e12 u3
   have e13 := e12.trans l2
   have hD₃ : StateDR m₃ st := hD.frame e13.frame (by decide) (by decide) (by decide) (by decide) (by decide)
   -- the constructor records' names
-  rcases h6 : mapW n m₃ co cn 10 0 0 with _ | ⟨⟨cno, x3⟩, m₄⟩
-  · rw [flat3_none, liftE_none, validateE.k_vi_map_3.none]; exact fun _ hk => absurd Err.cls_oob hk
-  rw [flat3_some, liftE_some, validateE.k_vi_map_3.arm1]
+  rcases h6 : mapW n m₃ co cn 10 0 0 with _ | ⟨cno, x3, m₄⟩
+  · rw [liftE_none, validateE.k_vi_map_3.none]; exact fun _ hk => absurd Err.cls_oob hk
+  rw [liftE_some, validateE.k_vi_map_3.arm1]
   obtain ⟨v1, v2, v3, -, v5, v6, v7⟩ := mapW_twin l3 h6 a cts (fun c => c.cv.name) st.name
     (by rw [hCn])
     (fun k hk => by

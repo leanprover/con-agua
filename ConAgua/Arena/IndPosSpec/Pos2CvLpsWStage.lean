@@ -7,13 +7,16 @@ public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 
 /-!
 # Pos2CvLpsWStage
 
-`pos2_cvLpsW_stage`, `nhGoW`, `nhK2`, `nhK3`, `nhK4` and the lemmas only they use.
+`pos2_cvLpsW_stage`, `nest_holes_go`'s generated model `nhGoW` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -36,49 +39,6 @@ theorem pos2_cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' :=
   cvLpsW_stage h hS hcv hq
 
-mutual
-def nhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | k + 1, m, ctx, mm, off, l, oo, ol =>
-    if l = 0 then some ([1, oo, ol], m)
-    else if rdW (m.arr64 IW) (ctx + 12) ≤ mm then some ([0, 0, 0], m)
-    else nhK2 k ctx mm off l oo ol (instW k m (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8))
-      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3)))
-def nhK2 (k : Nat) (ctx mm off l oo ol : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0, 0, 0], m2)
-    else nhK3 k ctx mm off l oo ol (fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0))
-def nhK3 (k : Nat) (ctx mm off l oo ol : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (v, m3) => if 4294967296 ≤ v then none else nhK4 k ctx mm off l (snocW k m3 oo ol v)
-def nhK4 (k : Nat) (ctx mm off l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) => nhGoW k m4 ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0)
-end
-
-section arms
-variable (k : Nat) (m m2 m3 m4 : Mem) (ctx mm off l oo ol v : Word) (r2 r4 : List Word)
-theorem nhGoW_nil (h : l = 0) : nhGoW (k + 1) m ctx mm off l oo ol = some ([1, oo, ol], m) := by
-  simp [nhGoW, h]
-theorem nhGoW_nof (h : ¬ l = 0) (h12 : rdW (m.arr64 IW) (ctx + 12) ≤ mm) :
-    nhGoW (k + 1) m ctx mm off l oo ol = some ([0, 0, 0], m) := by simp [nhGoW, h, h12]
-theorem nhGoW_cons (h : ¬ l = 0) (h12 : ¬ rdW (m.arr64 IW) (ctx + 12) ≤ mm) : nhGoW (k + 1) m ctx mm off l oo ol =
-    nhK2 k ctx mm off l oo ol (instW k m (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8))
-      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3))) := by simp [nhGoW, h, h12]
-theorem nhK2_none (h : r2.headD 0 = 0) : nhK2 k ctx mm off l oo ol (some (r2, m2)) = some ([0, 0, 0], m2) := by
-  rw [nhK2, ite_eq_left h]
-theorem nhK2_some (h : ¬ r2.headD 0 = 0) : nhK2 k ctx mm off l oo ol (some (r2, m2)) =
-    nhK3 k ctx mm off l oo ol (fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0)) := by
-  rw [nhK2, ite_eq_right h]
-theorem nhK3_ok (h : ¬ 4294967296 ≤ v) : nhK3 k ctx mm off l oo ol (some (v, m3)) =
-    nhK4 k ctx mm off l (snocW k m3 oo ol v) := by
-  rw [nhK3, ite_eq_right h]
-theorem nhK4_some : nhK4 k ctx mm off l (some (r4, m4)) =
-    nhGoW k m4 ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0) := by rw [nhK4]
-end arms
-attribute [ind_grind] nhGoW_nil nhGoW_nof nhGoW_cons nhK2_none nhK2_some nhK3_ok nhK4_some
-
 /-- The lookups of `nest_holes`. -/
 structure NhLook (p : Prog) : Prop where
   hi1 : I1Prog p
@@ -92,6 +52,13 @@ structure NhLook (p : Prog) : Prop where
   hif : p.lookup "intern_fvar" = some internFVar
   hgo : p.lookup "nest_holes_go" = some nestHolesGoL
   hp : p.lookup "nest_holes" = some nestHolesL
+
+/-- **`nest_holes_go`'s model `nhGoW`** (generated). -/
+l_model nhGo_spec (p : Prog) (hl : NhLook p)
+  fns [hl.hgo ↦ nhGoW list]
+  specs [instPisWith_spec p hl.hv hl.hip hl.hi1 n, internFVar_spec p hl.hff hl.hfp hl.hif n,
+    slSnoc_specW p hl.ha hl.hc hl.hsn n]
+  grind [arena_grind] extra [ld64_rd_spec] finish [rdW_eq] gen 20
 
 /-- The model of `nest_holes(ctx)` at exec fuel `k + 1`. -/
 def nhW (k : Nat) (m : Mem) (ctx : Word) : Option (List Word × Mem) :=

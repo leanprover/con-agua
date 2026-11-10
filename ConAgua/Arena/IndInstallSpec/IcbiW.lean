@@ -17,7 +17,7 @@ import all ConAgua.Arena.IndInstall
 /-!
 # IcbiW
 
-`wrER_append`, `iirK5`, `icbiK4`, `icbiW`, `icbiK1`, `icbiK2` and the lemmas only they use.
+`wrER_append`, `icbiK4`, `icbiW`, `icbiK1`, `icbiK2` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -42,10 +42,7 @@ theorem wrER_append : ∀ (xs ys : List Word) (m : Mem) (q : Word),
     simp only [List.length_cons]
     rw [UInt64.ofNat_add, UInt64.add_assoc, UInt64.add_comm (UInt64.ofNat xs.length)]; rfl
 
-/-- The four writes, one continuation each. -/
-def iirK5 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m5) => some ([q], m5)
+
 /-! ## `cons_block_inds` -/
 
 /-- After the rest. -/

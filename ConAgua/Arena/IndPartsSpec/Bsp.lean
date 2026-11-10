@@ -48,20 +48,13 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **The model of `block_shape_large`.** -/
-def bslW (n : Nat) (m : Mem) (cvR0 lo ll : Word) : Option (List Word × Mem) :=
-  if erRd m (cvR0 + 2) = 0 then some ([0, 0], m)
-  else match erToIwW n m (erRd m (cvR0 + 1) + 1) (erRd m (cvR0 + 2) - 1) with
-    | none => none
-    | some (rp, m1) =>
-      match eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll with
-      | none => none
-      | some e =>
-        if e = 0 then some ([0, 0], m1)
-        else match containsW n m1 lo ll (erRd m (erRd m (cvR0 + 1))) with
-          | none => none
-          | some hs => if hs ≠ 0 then some ([0, 0], m1)
-            else some ([1, erRd m (erRd m (cvR0 + 1))], m1)
+/-- **`block_shape_large`'s model `bslW`** (generated). -/
+l_model bsl_spec (p : Prog) (hP : IndPartsProg4 p) (hec : p.lookup "er_copy" = some erCopy)
+    (het : p.lookup "er_to_iw" = some erToIw) (hseq : p.lookup "sl_eq" = some slEq)
+    (hp : p.lookup "block_shape_large" = some blockShapeLarge)
+  fns [hp ↦ bslW list]
+  specs [erToIw_specW p hP.alloc hec het n, slEq_spec p hseq n, slContains_spec p hP.contains n]
+  grind [arena_grind] finish [rdW_eq]
 
 end L.Ind
 
@@ -198,7 +191,7 @@ def bbK13' (mo ml ro2 rl2 nPd s ip : Word) : Option (List Word × Mem) → Optio
 def bbK12 (n : Nat) (nPd _cto _ctl _cso _csl _rso _rsl _cvT0 cvR0 : Word) (lo ll s ip mo ml : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => bbK13' mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW n m cvR0 lo ll)
+  | some (r, m) => bbK13' mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW (n + 1) m cvR0 lo ll)
 
 /-- After `block_shape_members_of`. -/
 def bbK11 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)

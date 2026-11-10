@@ -233,7 +233,8 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   simp only [List.headD_cons] at hw
-  replace hw := rdU_some hL hw
+  replace hw := u64_some hL hw
+  simp only [List.headD_cons] at hw
   obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom s hs
   rw [hcs] at hpos
   have hrl := hr; simp only [RomOK] at hrl

@@ -128,7 +128,7 @@ theorem listedGoW_twin : ∀ (n : Nat) (m m' : Mem) (j : Word), listedGoW n m to
 
 include hD hF hlen hbnd in
 /-- **`vi_listed` is the twin's `listed`**: its flattening is the slice `(fo, x)` the model pushed. -/
-theorem listedW_twin {n : Nat} {m m' : Mem} {fo x : Word} (h : listedW n m to tn = some ((fo, x), m'))
+theorem listedW_twin {n : Nat} {m m' : Mem} {fo x : Word} (h : listedW n m to tn = some (fo, x, m'))
     (hE : IExt m₀ m) (hT : TopOK m) :
     ∃ L : List (List NIdx), (tys.mapM fun t : ConLeche.Frontend.IndTypeRec => t.ctors.mapM st.name).run a = .ok (L, a) ∧
       IExt m m' ∧ TopOK m' ∧ fo.toNat = topN m IFL + 1 ∧ x.toNat = L.flatten.length ∧
@@ -138,11 +138,11 @@ theorem listedW_twin {n : Nat} {m m' : Mem} {fo x : Word} (h : listedW n m to tn
   cases n with
   | zero => simp [listedW] at h
   | succ n =>
-  simp only [listedW] at h
-  rcases ha : allocW m IFL 0 with _ | ⟨lo, m₁⟩ <;> simp only [ha, allocK, reduceCtorEq] at h
-  rcases hg : listedGoW n m₁ to tn 0 with _ | m₂ <;> simp only [hg, listedK, reduceCtorEq] at h
+  rw [listedW.arm1] at h
+  rcases ha : allocW m IFL 0 with _ | ⟨lo, m₁⟩ <;> simp only [ha, listedW.k_ifl_alloc, reduceCtorEq] at h
+  rcases hg : listedGoW n m₁ to tn 0 with _ | m₂ <;> simp only [hg, listedW.k_vi_listed_go, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
+  obtain ⟨rfl, rfl, rfl⟩ := h
   obtain ⟨a1, a2, a3, a4⟩ := allocW_ok hT ha
   simp only [show (0 : Word).toNat = 0 from rfl, Nat.add_zero] at a4
   obtain ⟨L, l1, l2, l3, l4, l5, l6, l7⟩ := listedGoW_twin hD a tys to tn hF hlen hbnd n m₁ _ 0 hg
@@ -217,7 +217,7 @@ theorem nodupW_facts : ∀ (n : Nat) (m : Mem) (o l j u : Word), nodupW n m o l 
     have hjl := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlj)
     have hj1 := wsucc j l (UInt64.not_le.mp hlj)
     have hoj : (o + j).toNat = o.toNat + j.toNat := widx2 _ _ (by omega)
-    rcases hc : containsW n m o l (rdW (m.arr64 IFL) (o + j)) (j + 1) with _ | c <;> simp only [hc, nodupK, reduceCtorEq] at h
+    rcases hc : containsW n m o l (rdW (m.arr64 IFL) (o + j)) (j + 1) with _ | c <;> simp only [hc, nodupW.k_ifl_contains, reduceCtorEq] at h
     split at h
     · cases h; exact absurd rfl hu
     rename_i hc0
@@ -278,7 +278,10 @@ theorem findLastW_facts : ∀ (n : Nat) (m : Mem) (o x j f k : Word), findLastW 
     · rename_i hx
       rw [wd_eq, hoj] at hx
       intro hf
-      obtain ⟨i1, i2, i3⟩ := ih m o x (j - 1) f k h (by rw [hj1]; omega) hf
+      rcases hr : findLastW n m o x (j - 1) with _ | ⟨f', k'⟩ <;>
+        simp only [hr, findLastW.k_ifl_find_last, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨i1, i2, i3⟩ := ih m o x (j - 1) _ _ hr (by rw [hj1]; omega) hf
       rw [hj1] at i1 i3
       refine ⟨by omega, i2, fun k' h1 h2 => ?_⟩
       by_cases hk : k' = j.toNat - 1
