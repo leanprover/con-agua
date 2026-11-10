@@ -245,6 +245,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   · rw [m2cEtaE.k_get_app_args.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2]
     exact hmaj' (fun e => g2 ((decI_inj_iff hT2 hT).mp e.1))
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
+  simp only [_root_.L.Ind.erRd_foldN]
   by_cases g3 : r2'.tail.headD 0 ≠ erRd m (indP + 7)
   · rw [m2cEtaE.k_get_app_args.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2' g3]
     exact hmaj' (fun e => g3 (UInt64.toNat_inj.mp (by rw [← hlen, e.2.1, hrec.etaParams])))

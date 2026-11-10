@@ -47,7 +47,7 @@ theorem erSlEq_specR (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (
     simp only [callFn, L.Ind.erSlEq]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, ih] <;>
-      finish (gen := 20) [rdW_eq]
+      finish (gen := 20) [rdW_eq, erRd]
 
 /-- **`eta_rescue_ok`'s model**: `er_sl_eq` and `pin_at` lifted. -/
 l_model eroW_spec (p : Prog) (hf : p.lookup "eta_rescue_ok" = some etaRescueOkL)
@@ -102,6 +102,7 @@ theorem ero_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
   rw [eroW.arm3 _ _ _ _ _ _ g1 g2'] at h
   have hE : caps.eta = true := by rw [heta]; simpa using g1
   have hC : (caps.etaCtor == decI ctor) = true := by rw [hec, g2']; simp
+  simp only [L.Ind.erRd_foldN] at h
   rcases c1 : callW p n "er_sl_eq" [erRd m (cq + 2), erRd m (cq + 3), erRd m (q + 2),
       erRd m (q + 3)] m with _ | ⟨r1, m1⟩
   · rw [c1, eroW.k_er_sl_eq.none] at h; cases h

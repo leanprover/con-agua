@@ -60,7 +60,7 @@ theorem ctorFamily_spec (p : Prog) (hp : p.lookup "ctor_family" = some ctorFamil
       evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       callW_spec p n "pi_result", callW_spec p n "get_app_fn", callW_spec p n "const_name_of",
       callW_spec p n "env_find"] <;>
-    finish [cfamW]
+    finish [cfamW, erRd]
 
 /-- An inductive record by its kind word `3`. -/
 theorem decCI_ind_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word}
@@ -248,12 +248,12 @@ theorem ic3_ref (p : Prog) (hp : IotaProg4 p) (hz : FnzaProg p) (n F : Nat) (hk 
   dsimp only
   have hlen' : (erRd m (r₁.tail.headD 0 + 3)).toNat = cvT.levelParams.length := hlen.symm
   by_cases hl : erRd m (r₁.tail.headD 0 + 3) ≠ l
-  · rw [ic3E.k_ls_node.arm1 _ _ _ _ _ _ _ _ _ (by simpa using hl)]
+  · rw [ic3E.k_ls_node.arm1 _ _ _ _ _ _ _ _ _ (by simpa [erRd] using hl)]
     have hb : (cvT.levelParams.length == l.toNat) = false := by
       rw [← hlen']; simpa using fun e => hl (UInt64.toNat_inj.mp e)
     rw [hb, ite_eq_right (by simp)]
     exact RefE.ret rfl (CorePost.ret hS rfl (by unfold ResH HW; decide))
-  rw [ic3E.k_ls_node.arm2 _ _ _ _ _ _ _ _ _ (by simpa using hl)]
+  rw [ic3E.k_ls_node.arm2 _ _ _ _ _ _ _ _ _ (by simpa [erRd] using hl)]
   have hb : (cvT.levelParams.length == l.toNat) = true := by
     rw [← hlen', Classical.not_not.mp hl]; simp
   rw [hb, ite_eq_left rfl]

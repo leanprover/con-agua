@@ -255,9 +255,10 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
     fun r3 m3 _ h3 => ?_
   obtain ⟨M3, hS3, hK3, hSt3⟩ := h3.after
   refine RefE.mono (R := PgsPost dn m3 vis fe M3 eb) ?_ (PgsPost.comp hK3 hSt3)
-  rw [pgsE.k_inst_lp.arm1]
+  rw [pgsE.k_inst_lp.arm1]; simp only [L.Ind.erRd_foldN]
   have hf := fsl_ref p hp.toFslProg n F hk hnF hn62 dn vis fe eb mode hm4 hebm n (by omega) m3 _ M3 0
     (erRd m1 (q + 17) + erRd m1 (q + 11)) (r3.headD 0) hS3 h3.resOk
+  simp only [L.Ind.erRd_foldN] at hn' hni hnp
   rw [hn', ← hni, ← hnp, show ((0 : Word)).toNat = 0 from rfl,
     ← formerSortLoop_congr hRW] at hf
   rcases hx4 : fslE p n m3 mode vis 0 (erRd m1 (q + 17) + erRd m1 (q + 11)) (r3.headD 0) with
@@ -267,6 +268,7 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   rw [hx4] at hf
   obtain ⟨y4, a4', hrun4', hP4⟩ := hf
   have h4 := hP4.coreRef hrun4'
+  simp only [L.Ind.erRd_foldN] at h4
   refine RefE.bind_right (by rw [show decH r3 = decE (r3.headD 0) from rfl, AM.run_of_ok _ _ h4.run,
     h4.res]) ?_
   obtain ⟨M4, hS4, hK4, hSt4⟩ := h4.after

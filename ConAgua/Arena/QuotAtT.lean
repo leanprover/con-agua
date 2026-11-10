@@ -223,8 +223,8 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
   obtain ⟨hT3, hg3⟩ := StageT.of_core hP.core instLp_stageCore h3 hT2 hC'
   obtain ⟨hE3, hE13, hrd3, he3⟩ := callW_erec_closedT hP.coreErec instLp_core h3
   have hqf3 := callW_quotFrame hP.quot (by decide) h3
-  have hr3 := erRd_congr (m := s2.mem) (m' := s3.mem) hE3 hE13
-  simp only [hr3, hr2] at hW
+  have hr3 := fun x => (erRd_congr (m := s2.mem) (m' := s3.mem) hE3 hE13 x).trans (hr2 x)
+  simp only [hr3] at hW
   -- the four words
   cases h4 : callW p n "erec_put" [d, erRd m (c + 1)] s3.mem with
   | none => rw [h4] at hW; simp [cvAtLpsW.k_erec_put] at hW
@@ -505,9 +505,9 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
   obtain ⟨hT4, hg4, hoff4, htop4, hq41⟩ := erAlloc_stageT hA hT2
   obtain ⟨-, hf4, -⟩ := erAllocW_spec hA hT2.stage.iw
   have hqf4 := callW_quotFrame hP.quot (by decide) h4
-  have hrd4 := erRd_congr (m := s2.mem) (m' := m4) (hf4.arr _ (by simp) (by decide))
-    (hf4.arr _ (by simp) (by decide))
-  simp only [hrd4, hrd2] at hW
+  have hrd4 := fun x => (erRd_congr (m := s2.mem) (m' := m4) (hf4.arr _ (by simp) (by decide))
+    (hf4.arr _ (by simp) (by decide)) x).trans (hrd2 x)
+  simp only [hrd4] at hW
   -- `cv_at_lps(a, c + 1, EREC⦃q + 1⦄, EREC⦃q + 2⦄)`
   cases h5 : callW p (n0 + 1) "cv_at_lps" [r4.headD 0, r1.headD 0 + 1, erRd m1 (q + 1), erRd m1 (q + 2)] m4 with
   | none => rw [h5] at hW; simp [quotPinHitW.k_cv_at_lps] at hW
@@ -587,6 +587,7 @@ theorem quotAt_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (hC : C
   obtain ⟨hst1, hpin⟩ := ConRon.Bridge.quotPin_run (s' := a1) hok hrun1
   have hq1 : decCV (erecP m1) q.toNat = some cv := ArrExt.decCV hg1.erecGrow.ext hq
   obtain ⟨hsl1, -⟩ := decCV_rdq (erRdOK m1) hq1
+  simp only [L.Ind.erRd_foldN] at hW
   cases h2 : callW p n "ci_at_lps" [r1.headD 0, erRd m1 (q + 1), erRd m1 (q + 2)] m1 with
   | none => rw [h2] at hW; simp [quotAtW.k_ci_at_lps] at hW
   | some x2 =>

@@ -165,10 +165,10 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
   have hfind' := find_of_found hfind h0 hci
   have hind := decCI_indK (erRdOK _) hci
   by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 3
-  · rw [ite_eq_left h4]
+  · rw [if_pos (by exact h4)]
     exact RefE.of_run_eq (setWtbT_other _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e))) hl
-  rw [ite_eq_right h4]
+  rw [if_neg (by exact h4)]
   obtain ⟨cvT, caps, hci_eq⟩ := hind.1 (by simpa using h4)
   rw [hci_eq] at hci
   -- the type's spine
@@ -310,10 +310,10 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   have hfind' := find_of_found hfind h0 hci
   have hctor := decCI_ctorF (erRdOK _) hci
   by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 4
-  · rw [ite_eq_left h4]
+  · rw [if_pos (by exact h4)]
     exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv np nf e => hctor.2 h4 cv np nf (by rw [hfind'] at e; exact Option.some.inj e))) hl
-  rw [ite_eq_right h4]
+  rw [if_neg (by exact h4)]
   obtain ⟨cvc, hci_eq⟩ := hctor.1 (by simpa using h4)
   rw [hci_eq] at hci
   -- the constructor's spine
