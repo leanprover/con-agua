@@ -124,7 +124,7 @@ theorem teleW_ok : ∀ (n : Nat) (f h r : Word), teleW n m f h = some r →
     split at hw
     · rename_i h6
       obtain ⟨ty, rfl⟩ := viewR_forall hr h6
-      rcases hrec : teleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | r' <;> simp only [hrec, teleK, reduceCtorEq] at hw
+      rcases hrec : teleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | r' <;> simp only [hrec, teleW.k_ind_pi_tele_len, reduceCtorEq] at hw
       cases hw
       obtain ⟨h1, h2⟩ := ih _ _ _ hrec
       simp only
@@ -156,7 +156,7 @@ theorem sortTeleW_ok : ∀ (n : Nat) (f h ok r : Word), sortTeleW n m f h = some
     split at hw
     · rename_i h6
       obtain ⟨ty, rfl⟩ := viewR_forall hr h6
-      rcases hrec : sortTeleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | ⟨ok', r'⟩ <;> simp only [hrec, stK, reduceCtorEq] at hw
+      rcases hrec : sortTeleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | ⟨ok', r'⟩ <;> simp only [hrec, sortTeleW.k_pi_sort_tele_len, reduceCtorEq] at hw
       obtain ⟨h1, h2⟩ := ih _ _ _ _ hrec
       simp only
       rw [run_bind _ _ a _ h1]
@@ -218,18 +218,19 @@ theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Wo
   cases n with
   | zero => simp [storeFuelW] at h
   | succ n =>
-  simp only [storeFuelW] at h
+  rw [storeFuelW.arm1] at h
   cases h1 : ctlSumW n m 2 4 with
-  | none => rw [h1] at h; cases h
+  | none => rw [h1, storeFuelW.k_ctl_sum.none] at h; cases h
   | some x =>
+  rw [h1, storeFuelW.k_ctl_sum.arm1] at h
   cases h2 : ctlSumW n m 16 8 with
-  | none => rw [h1, h2] at h; cases h
+  | none => rw [h2, storeFuelW.k_ctl_sum_2.none] at h; cases h
   | some y =>
+  rw [h2, storeFuelW.k_ctl_sum_2.arm1] at h
   cases h3 : ctlSumW n m 26 8 with
-  | none => rw [h1, h2, h3] at h; cases h
+  | none => rw [h3, storeFuelW.k_ctl_sum_3.none] at h; cases h
   | some z =>
-  rw [h1, h2, h3] at h
-  simp only [sfK, Option.some.injEq] at h
+  rw [h3, storeFuelW.k_ctl_sum_3.arm1, Option.some.injEq] at h
   subst h
   rw [ctlSumW_eq _ _ _ _ _ h1, ctlSumW_eq _ _ _ _ _ h2, ctlSumW_eq _ _ _ _ _ h3]
   obtain ⟨a1, a2, a3, a4⟩ := ConsR.sizes hR.lit.2
@@ -296,6 +297,10 @@ theorem sliceL_three (p : Array Word) (o : Nat) :
     sliceL p o 3 = [p[o]?.getD 0, p[o + 1]?.getD 0, p[o + 2]?.getD 0] := by
   simp [sliceL, List.ofFn_succ]
 
+/-- A pool load as the model reads it: `prd`. -/
+theorem prd_rdW (m : Mem) (x : Word) :
+    rdW (m.arr64 (tierA POOL (x >>> 40))) (x &&& 1099511627775) = prd m x := rfl
+
 /-- **`name_rec_pre` refines `viewN`, matched against `.str T "rec"`.** -/
 @[refines_part ConRon.Arena.viewN "matched against `.str T \"rec\"` (name_rec_pre)"]
 theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrpW m w = some (f, T)) :
@@ -352,7 +357,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     (tfld m NSTR (tierW w) (idxW w) 2).toNat
   rw [hsl] at hlen
   have htop := UInt64.toNat_lt m.top
-  unfold nrpStr at h
+  simp only [prd_rdW] at h
   generalize ho : tfld m NSTR (tierW w) (idxW w) 1 = o at hol hsl hlen h
   generalize hlw : tfld m NSTR (tierW w) (idxW w) 2 = lw at hol hsl hlen h
   have h41 := hR.lit.1.top41
@@ -371,8 +376,8 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     split at h
     · cases h; exact absurd rfl hf
     rename_i h3
-    split at h
-    · rename_i hrec
+    by_cases hrec : prd m o = 114 ∧ prd m (o + 1) = 101 ∧ prd m (o + 2) = 99
+    · simp only [hrec, and_self, ↓reduceIte] at h
       cases h
       have hl3 : lw.toNat = 3 := by
         have : lw = 3 := by simpa using h3
@@ -383,7 +388,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
       rw [r1, r2, r3, ← strWords_rec] at hsl
       rw [strWords_inj _ _ hsl.symm, hq, decI_word]
       exact ⟨rfl, word_lt _⟩
-    · cases h; exact absurd rfl hf
+    · simp only [hrec, ↓reduceIte] at h; cases h; exact absurd rfl hf
   · intro hf T' heq
     simp only [NNodeView.str.injEq] at heq
     obtain ⟨-, hs'⟩ := heq
@@ -392,9 +397,9 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     split at h
     · rename_i h3
       exact h3 (UInt64.toNat_inj.mp (by simp; omega))
-    split at h
-    · cases h; exact absurd hf (by decide)
-    rename_i h3 hrec
+    rename_i h3
+    by_cases hrec : prd m o = 114 ∧ prd m (o + 1) = 101 ∧ prd m (o + 2) = 99
+    · simp only [hrec, and_self, ↓reduceIte] at h; cases h; exact absurd hf (by decide)
     apply hrec
     rw [← hlen, sliceL_three] at hsl
     simp only [List.cons.injEq] at hsl
