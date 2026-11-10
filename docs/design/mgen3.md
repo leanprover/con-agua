@@ -411,3 +411,20 @@ it). Left: the RxMapW family (10, about 118 uses in `MapOKStep`), `depth_go` and
 fuel-offset models (`nest_root_canon`, `nest_uniform_ok`, `nest_crest`), the total word model
 `nest_field_kind_flat`. The lead removed four imports `shake` flagged and allowlisted six
 (re-exports other modules reach names through, and names used only in tactic lists).
+
+### Batch 14: helper `mgen3-parts2` (round 3)
+
+18 functions; 18 files, +661 −1236 (**−575**). `block_counts_pure`/`_head`/`block_counts`
+(`RecTW` 34 → 30 G), `block_rec_names_unreserved`, `block_rec_lps_one`/`_ok_go`/`_ok` (`EqW`
+3.1 → 1.0 s), `class_n_pc_of` (`simp [] locals`; 100 → 76 G, and its hand spec's
+`maxHeartbeats 1000000` gone), `ptr_list_names`, `ptr_names_copy` with `member_names_copy`,
+`nest_out_kinds`, `target_abs_const` (43 → 25 G), `target_abs` (`pfuel`), `target_abs_go` with
+`target_abs_node` (one mutual model). Bridges: `nameCopyW_step`, `ptrCopyW_eq` (the two copy
+functions have the same code), `ptrNamesW_some`, `encONN_three`, `taGoW_leaf`, `taGoW_kNode`,
+`taGoW_some` (what a returning step did; the frame lemmas use it instead of a `repeat' split`
+that was 4× slower). The `IndIface` models this helper was given turned out to live elsewhere
+(`lpsW` in `MemberNames`, `nIdxsW` in `RulePrefixAt`, `tmdW` in `PtrNamesWDec`, `psGoW` in
+`StructElimLevel`) and to be unfolded by name in other files (`NestCtx`, `TcmLook`,
+`TabSimSpg`, `CfaFv`, …): kept. `generated_rules`, `check_sum_tele`, `aux_rule_fire`,
+`class_rules_ok`, `target_major_nfs` were already generated (their remaining hand lemmas are
+refinements).
