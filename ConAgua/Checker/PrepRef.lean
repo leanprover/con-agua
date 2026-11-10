@@ -138,16 +138,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
     ((iw_mf hA₁.fr).trans (iw_mf hA₂.fr)).trans (iw_mf0 hf₃)
   have hDECL₃ : m₃.arr64 DECL = m.arr64 DECL := hmf₃.arr DECL (by decide) (by decide)
   have hDLP₃ : m₃.arr64 DLP = m.arr64 DLP := hmf₃.arr DLP (by decide) (by decide)
-  have hI₃ : IWOK m₃ := by
-    obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hA₂.ok
-    have hER : m₃.arr64 EREC = m₂.arr64 EREC := hf₃.1 EREC (by decide) (by decide)
-    have h129 : erTop m₃ = erTop m₂ := by simp only [erTop]; rw [hf₃.ctl 129 (by simp)]
-    exact ⟨by rw [htop₃, hf₃.size IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hf₃.size IW]; exact h3, by rw [hER]; exact h4, by rw [hf₃.size CTL]; exact h5,
-      by rw [show erecTop1 m₃ = erecTop1 m₂ by simp only [erecTop1]; rw [hf₃.ctl 130 (by simp)],
-        hf₃.1 (tier1 EREC) (by decide) (by decide)]; exact h6,
-      by rw [hf₃.1 (tier1 EREC) (by decide) (by decide)]; exact h7, by rw [hER]; exact h8,
-      by rw [hf₃.1 (tier1 EREC) (by decide) (by decide)]; exact h9⟩
+  have hI₃ : IWOK m₃ := IWOK.frameC hf₃ (by decide) (by decide) (by simp) (by simp) (by simp) hA₂.ok
   have hA₃ : ArenaR m₃ a := by
     refine ArenaR.frame_ext [IW] [200]
       (by intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide)
@@ -229,17 +220,8 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   -- the hoist
   have hP₅ : PinsR m₅ a₁.pins := by
     rw [hpins₁]; exact hP.congr (hmf₅.arr PINS (by decide) (by decide))
-  have hI₅ : IWOK m₅ := by
-    obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hE₄.iwok
-    have hER : m₅.arr64 EREC = m₄.arr64 EREC := hmf₅'.1 EREC (by decide) (by decide)
-    have h200 : iwTop m₅ = iwTop m₄ := by simp only [iwTop]; rw [hmf₅'.ctl 200 (by simp)]
-    have h129 : erTop m₅ = erTop m₄ := by simp only [erTop]; rw [hmf₅'.ctl 129 (by simp)]
-    exact ⟨by rw [h200, hmf₅'.size IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hmf₅'.size IW]; exact h3, by rw [hER]; exact h4, by rw [hmf₅'.size CTL]; exact h5,
-      by rw [show erecTop1 m₅ = erecTop1 m₄ by simp only [erecTop1]; rw [hmf₅'.ctl 130 (by simp)],
-        hmf₅'.1 (tier1 EREC) (by decide) (by decide)]; exact h6,
-      by rw [hmf₅'.1 (tier1 EREC) (by decide) (by decide)]; exact h7, by rw [hER]; exact h8,
-      by rw [hmf₅'.1 (tier1 EREC) (by decide) (by decide)]; exact h9⟩
+  have hI₅ : IWOK m₅ :=
+    IWOK.frameC hmf₅' (by decide) (by decide) (by simp) (by simp) (by simp) hE₄.iwok
   have htop₅ : iwTop m₅ = iwTop m₄ := by simp only [iwTop]; rw [hmf₅'.ctl 200 (by simp)]
   have hA₅ : ArenaR m₅ a₁ := by
     refine ArenaR.frame_ext [IW] [] (by
