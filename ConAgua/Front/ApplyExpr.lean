@@ -459,32 +459,6 @@ def constW (b : Array UInt8) (m : Mem) (a c : Word) : Option (Word × Mem) :=
   return h
 }
 
-/-- After `nat_dec`: its result `(o, l)` and memory (`none`: it aborted), then `intern_lit(o, l)`. -/
-def litK : Option (List Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (r, m₁) =>
-    if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) < r.headD 0 - (r.headD 0 >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
-    else internW m₁ (r.headD 0) (r.tail.headD 0)
-
-@[arena_grind =] theorem litK_none : litK none = none := by rfl
-@[arena_grind =] theorem litK_some (r : List Word) (m₁ : Mem) : litK (some (r, m₁)) =
-    if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) < r.headD 0 - (r.headD 0 >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
-    else internW m₁ (r.headD 0) (r.tail.headD 0) := by rfl
-
-theorem litK_intern {r : List Word} {m₁ m' : Mem} {w : Word} (h : litK (some (r, m₁)) = some (w, m')) :
-    internW m₁ (r.headD 0) (r.tail.headD 0) = some (w, m') := by
-  rw [litK_some] at h
-  split at h
-  · cases h
-  split at h
-  · cases h
-  exact h
-
-/-- The model of `node_lit(c, d)`: the decimal digits `[c, d)` into the pool, interned. -/
-def litW (b : Array UInt8) (m : Mem) (c d : Word) : Option (Word × Mem) := litK (natDecW b m c d)
-
 /-! ## `node_lit_str`: a string literal's body, unescaped into the pool and interned
 
 Shares the pattern of a `str` name line (`apply_str`, `Line.lean`): `str_put_esc` decodes the
@@ -796,46 +770,29 @@ l_model nodeProj_spec (p : Prog) (hE : ExprLookups p)
     mkProj_spec p hE.der_b hE.proj_find hE.proj_push hE.intern_proj hE.mk_proj n]
   grind [arena_grind] finish [NONE] guards ["expr_get", "name_get"]
 
-/-- The model of `expr_node(pl, a, c, d)`: the node's handle and the memory after. -/
-def nodeW (b : Array UInt8) (m : Mem) (pl a c d : Word) : Option (Word × Mem) :=
-  if pl = 8 then (if a = NONE then none else binternW m a)
-  else if pl = 9 then (if tblOK m LID a = true then sointernW m (tblW m LID a) else none)
-  else if pl = 10 ∨ pl = 11 ∨ pl = 12 then binW m pl a c
-  else if pl = 13 then letW m a c d
-  else if pl = 14 then projW m a c d
-  else if pl = 15 then constW b m a c
-  else if pl = 16 then litW b m c d
-  else if pl = 17 then litStrW b m c d
-  else none
+/-- **`node_lit`** (generated): `litW`, the decimal digits `[c, d)` into the pool, interned. -/
+l_model nodeLit_spec (p : Prog) (hE : ExprLookups p) (b : Array UInt8)
+  fns [hE.node_lit ↦ litW]
+  specs [natDec_specW p b hE.dec_chunk hE.nat_mad hE.nat_dec n,
+    internLit_spec p hE.front.lit_hash hE.front.limbs_eq hE.lit_match hE.lit_find hE.lit_push
+      hE.intern_lit n]
+  pre [s₀.mem.arr8 IN = b ∧ pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat ≤ pcap s₀.mem]
+  keep [hE.no_st8]
+  grind [arena_grind] finish [Keep.size]
 
-/-- **The model of `apply_expr(pl, idx, a, c, d)`.** -/
-def applyExprW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
-  if tblFresh m EID idx = true then putK EID idx (nodeW b m pl a c d) else none
+theorem litK_intern {b : Array UInt8} {r : List Word} {m₁ m' : Mem} {w : Word}
+    (h : litW.k_nat_dec b (some (r, m₁)) = some (w, m')) :
+    internW m₁ (r.headD 0) (r.tail.headD 0) = some (w, m') := by
+  simp only [litW.k_nat_dec] at h
+  split at h
+  · cases h
+  split at h
+  · cases h
+  exact h
 
 section specs2
 variable (p : Prog) (hE : ExprLookups p)
 include hE
-
-theorem nodeLit_spec (b : Array UInt8) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hps : pcap s₀.mem < 2 ^ 63) (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (c d : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "node_lit" [c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ litW b s₀.mem c d = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hE.node_lit]
-  simp only [callFn, nodeLit]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hdec : ∀ (s₁ : St), s₁.mem.arr8 IN = b → ∀ c d : Word,
-        ⦃fun s => s = s₁⦄ invoke p (exec p n) "nat_dec" [c, d]
-        ⦃fun r s' => (LocEq s' s₁ ∧ natDecW b s₁.mem c d = some (r, s'.mem)) ∧
-          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
-      Triple.keep hE.no_st8 (natDec_specW p b hE.dec_chunk hE.nat_mad hE.nat_dec n s₁ hm₁ c d)
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hdec,
-        internLit_spec p hE.front.lit_hash hE.front.limbs_eq hE.lit_match hE.lit_find hE.lit_push
-          hE.intern_lit n] <;>
-      finish [litW, Keep.size]
 
 theorem nodeLitStr_spec (b : Array UInt8)
     (hpb : p.lookup "byte_in" = some L.Scan.Str.byteIn)
@@ -885,31 +842,35 @@ theorem nodeConst_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ 
         internConst_spec p hE.const_find hE.const_push hE.intern_const n] <;>
       finish [constW]
 
-theorem exprNode_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
+end specs2
+
+/-- **`expr_node`** (generated): `nodeW`, the dispatch on the kind `pl`; the node's handle and
+the memory after. -/
+l_model exprNode_spec (p : Prog) (hE : ExprLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpb : p.lookup "byte_in" = some L.Scan.Str.byteIn)
     (hph : p.lookup "hex_val" = some L.Scan.Str.hexVal)
     (hp4 : p.lookup "hex4" = some L.Scan.Str.hex4) (hp3 : p.lookup "hex3" = some L.Scan.Str.hex3)
     (hpsu : p.lookup "esc_sur" = some L.Front.Unescape.escSur)
     (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
     (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
-    (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (pl a c d : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "expr_node" [pl, a, c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ nodeW b s₀.mem pl a c d = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hE.expr_node]
-  simp only [callFn, exprNode]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, levelGet_spec p hE.front n,
-        internBVar_spec p hE.bvar_find hE.bvar_push hE.intern_bvar n,
-        internSort_spec p hE.sort_find hE.sort_push hE.intern_sort n,
-        nodeBin_spec p hE n, nodeLet_spec p hE n, nodeProj_spec p hE n,
-        nodeConst_spec p hE b hb n, nodeLit_spec p hE b n,
-        nodeLitStr_spec p hE b hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
-      finish [nodeW, NONE]
+    (hpe : p.lookup "str_put_esc" = some strPutEsc)
+  fns [hE.expr_node ↦ nodeW]
+  specs [levelGet_spec p hE.front n,
+    internBVar_spec p hE.bvar_find hE.bvar_push hE.intern_bvar n,
+    internSort_spec p hE.sort_find hE.sort_push hE.intern_sort n,
+    nodeBin_spec p hE n, nodeLet_spec p hE n, nodeProj_spec p hE n,
+    nodeConst_spec p hE b hb n, nodeLit_spec p hE b n,
+    nodeLitStr_spec p hE b hpb hph hp4 hp3 hpsu hpo hpu hpe n]
+  pre [s₀.mem.arr8 IN = b ∧ pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat ≤ pcap s₀.mem]
+  grind [arena_grind] finish [NONE] guards ["level_get"]
+
+/-- **The model of `apply_expr(pl, idx, a, c, d)`.** -/
+def applyExprW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
+  if tblFresh m EID idx = true then putK EID idx (nodeW b m pl a c d) else none
+
+section specs3
+variable (p : Prog) (hE : ExprLookups p)
+include hE
 
 theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpb : p.lookup "byte_in" = some L.Scan.Str.byteIn)
@@ -933,6 +894,6 @@ theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
         exprFresh_spec p hE n, exprPut_spec p hE n, exprNode_spec p hE b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
       finish [applyExprW]
 
-end specs2
+end specs3
 
 end L.Front
