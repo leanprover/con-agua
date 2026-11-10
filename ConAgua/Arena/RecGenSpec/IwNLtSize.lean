@@ -7,7 +7,7 @@ public import ConAgua.Arena.WhnfBase
 /-!
 # IwNLtSize
 
-`cfaFv` (`class_fields_agree`'s datum variable), `iwN_lt_size`.
+`cfaFv` (`class_fields_agree`'s datum variable).
 -/
 
 noncomputable section

@@ -22,7 +22,7 @@ con-ron #143: every record's check is a job at the stream index's view of its po
 (`recordJob`, `Arena/StreamIndex.lean`), a worker runs its jobs in order (`checkJobList`,
 `Arena/Checker.lean`).
 
-* `TwinOK.ofCheck`: the twin's invariants `TwinOK` at an environment from con-ron's `CheckOK`
+* `TwinOK.of_check` (`TwinStep.lean`): the twin's invariants `TwinOK` at an environment from con-ron's `CheckOK`
   there and the memory's half (`TwinMem`); a job's start has `CheckOK` at its view from
   `FoldOK` (con-ron's `view_foldOK`).
 * `JobR`: what a worker's memory keeps between two jobs (the checker state without an

@@ -16,7 +16,7 @@ import all ConAgua.Arena.DefEq
 
 Reads only: `get_app_fn`, the head's `const` record, `env_find`, the constructor record's counts,
 `get_app_args` (its slice dropped: the top put back). Shared helpers for the structure-η side:
-`envFind_callW` (a run of `env_find`), `decCI_ctorF` (a constructor record's counts),
+`envFind_callW` (a run of `env_find`), `decCI_ctorR` (a constructor record's counts, `WhnfIotaRefine.lean`),
 `getAppArgs_callW`, `CoreS.restoreTop` (the relation after the top is put back).
 -/
 

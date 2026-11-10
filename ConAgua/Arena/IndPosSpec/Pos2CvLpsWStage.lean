@@ -16,7 +16,7 @@ import all ConAgua.Arena.IndPos2
 /-!
 # Pos2CvLpsWStage
 
-`pos2_cvLpsW_stage`, `nest_holes_go`'s generated model `nhGoW` and the lemmas only they use.
+`nest_holes_go`'s generated model `nhGoW` and the lemmas only they use.
 -/
 
 noncomputable section

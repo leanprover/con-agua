@@ -19,7 +19,7 @@ import all ConAgua.Arena.IndParts
 /-!
 # Bs
 
-`decSR`, `decSC`, `partsDecRules_mono`, `decSR_mono`, `decSC_mono`, `partsRec3_eq` and the lemmas only they use.
+`decSR`, `decSC`, `decSR_mono`, `decSC_mono`, `partsRec3_eq` and the lemmas only they use.
 -/
 
 noncomputable section

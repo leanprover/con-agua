@@ -15,7 +15,7 @@ import all ConAgua.Arena.IndIface
 /-!
 # SetEqW
 
-`slAllIn_spec`, `allInW`, `allInW_ok`, `setEqW`, `setEqW_ok`, `partsPSl_nil` and the lemmas only they use.
+`slAllIn_spec`, `allInW`, `allInW_ok`, `setEqW`, `setEqW_ok`, `pslR_nil` and the lemmas only they use.
 -/
 
 noncomputable section

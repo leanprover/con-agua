@@ -22,7 +22,7 @@ import ConAgua.Arena.RecClassSpec.MjProg
 /-!
 # NkcW
 
-`pos2_hslice_get`, `pos2_decHL_trunc`, `pos2_iwN_trunc`, `pos2_iwH_trunc`, `pos2_nk_in`, `pos2_nk_fields` and the lemmas only they use.
+`pos2_hslice_get`, `pos2_decHL_trunc`, `pos2_nk_in`, `pos2_nk_fields` and the lemmas only they use.
 -/
 
 noncomputable section

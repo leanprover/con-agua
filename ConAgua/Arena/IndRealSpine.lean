@@ -243,7 +243,7 @@ theorem mknF_frame {m m' : Mem} {args r : List Word} (h : mknF m args = some (r,
 
 /-- **`mk_app_n_f`'s model refines `mkAppN`** (replaces `IndStubs.mkAppN_spec`): the slice copied
 to the stack top, `mk_app_n` (lane `whnf`'s `mkAppNFromW_ok` under `ArenaD`), the top put back;
-the stage relation across the copy and the top (above array 136, `stageR_hi`) and across
+the stage relation across the copy and the top (above array 136, `StageR.frame_hi`) and across
 `mk_app` (the app tables, below 64, `StageR.of_walk`; the twin keeps `cp`). -/
 theorem mknF_ok (vis : Word) (fe : IFEnv) (f o l : Word) (hf : H f)
     (xs : List EIdx) :

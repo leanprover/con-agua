@@ -10,7 +10,7 @@ import ConRon.Bridge.Grind
 /-!
 # ReadProg
 
-`ReadProg`, `FA2.get`, `decRead`, `RecsDec`, `iwN_truncM_get`.
+`ReadProg`, `FA2.get`, `decRead`, `RecsDec`.
 -/
 
 noncomputable section

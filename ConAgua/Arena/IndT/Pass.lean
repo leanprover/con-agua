@@ -82,7 +82,7 @@ l_model nok_spec (p : Prog) (hp : p.lookup "nest_out_kinds" = some L.Ind.nestOut
 /-! ## The state the steps carry -/
 
 /-- **`StageC` at another view and environment** (a local copy of `IndT/GenRec1`'s
-`StageC.of_checkE`): the stage relation there, `CheckOK` there, the memory's half from `AbsOK` and
+`StageC.ofView`): the stage relation there, `CheckOK` there, the memory's half from `AbsOK` and
 the store's extension. -/
 theorem StageC.ofView {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe fe' : IFEnv}
     {env env' : ConLeche.Env} {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)

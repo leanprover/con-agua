@@ -13,7 +13,7 @@ import ConAgua.Arena.RecCheckSpec.TcmLook
 /-!
 # Pos3NhGoWMfr
 
-`pos3_nameCopyW_mfr`, `pos3_nIdxsCopyW_mfr`, `pos3_memberNamesW_mfr`, `pos3_nIdxsW_mfr`, `pos3_lpsW_mfr`, `pos3_pinternW_mfr` and the lemmas only they use.
+`pos3_nameCopyW_mfr`, `pos3_nIdxsCopyW_mfr`, `pos3_memberNamesW_mfr`, `pos3_nIdxsW_mfr`, `pinternW_mfr` and the lemmas only they use.
 -/
 
 open ConRon.Arena

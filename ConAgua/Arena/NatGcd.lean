@@ -43,7 +43,7 @@ theorem gcd_zero_len (p : Array Word) (o : Nat) (l : Word) (b : Nat) (h : l = 0)
 grind_pattern [natop_grind] gcd_zero_len => Nat.gcd (pv p o l.toNat) b
 
 /-- A normalised slice below `t` stays normalised in a pool that agrees below `t`.
-(`LitRefine.lean` has `Agree.norm`; it is not a `module`.) -/
+(`LitRefine.lean` is not a `module`.) -/
 theorem Norm.of_agree (p q : Array Word) (t o l : Nat) (h : Agree p q t) (hk : o + l ≤ t)
     (hn : Norm q o l) : Norm p o l := by
   intro hl

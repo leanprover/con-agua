@@ -8,7 +8,7 @@ import ConAgua.Arena.WhnfIotaRecRefine
 /-!
 # PdsC
 
-`tpClosed`, `tpRest`, `tpStep`, `ite_bind'`, `tpd_cons`, `tpd_nil`, `tpd_nilr`, `word_lt_iff`.
+`tpClosed`, `tpRest`, `tpStep`, `tpd_cons`, `tpd_nil`, `tpd_nilr`, `word_lt_iff`.
 -/
 
 open ConRon.Arena

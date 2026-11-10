@@ -570,7 +570,7 @@ theorem gaaF_frame {m m' : Mem} {args r : List Word} (h : gaaF m args = some (r,
 
 /-- **`get_app_args_f`'s model refines `getAppArgs`** (replaces `IndStubs.getAppArgs_spec`):
 `get_app_args` (`getAppArgs_refinesR`), the stack slice into a fresh pool slice
-(`s2iW_wr`, `recPost_wr`, `slice_keep`), the stack top put back (`stageR_hi`). -/
+(`s2iW_wr`, `recPost_wr`, `slice_keep`), the stack top put back (`StageR.frame_hi`). -/
 theorem gaaF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
     RelW gaaF [f, e] (StageR vis fe) (getAppArgs f.toNat (decI e))
       (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by

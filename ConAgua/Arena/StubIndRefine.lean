@@ -18,7 +18,7 @@ import all ConAgua.Arena.WhnfEntry
 # The fuel adapters and `er_sl_eq`
 
 The models of the fuel adapters `get_app_fn_f`, `pi_result_f` (`gaffW`, `pirfW`), `er_sl_eq`'s
-spec from its lookup alone (`erSlEq_spec'`) and `rdW_of_get`. (`ctor_family` is now the core's,
+spec from its lookup alone (`L.Arena.erSlEq_spec`) and `L.Checker.rdW_of`. (`ctor_family` is now the core's,
 `WhnfIota.lean`; the old model and its twin block, and `rec_rule_k_of`, `rec_rule_eta_of`,
 `rec_rule_bits`, left with the sync.)
 -/

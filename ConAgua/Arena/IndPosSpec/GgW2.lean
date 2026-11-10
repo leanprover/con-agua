@@ -272,7 +272,7 @@ namespace L.Ind
 
 open L.Arena
 
--- `posRec3_eq`, `posRec3_specW`: `CtxFields.lean`.
+-- `posRec3_eq`, `rec3_specW_iw`: `CtxFields.lean`.
 
 theorem pos2_getElem_getD (a : Array Word) (i : Nat) (h : i < a.size) : a[i] = a[i]?.getD 0 := by
   simp [h]

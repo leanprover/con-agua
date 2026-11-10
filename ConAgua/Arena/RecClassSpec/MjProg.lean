@@ -13,7 +13,7 @@ public import ConAgua.Arena.IndRealAbs
 /-!
 # MjProg
 
-`rec2IwN_trunc`, `rec2IwH_trunc`, `rec2CG_parts`, `rec2DecTM_parts`, `TMR`, `MjProg` and the lemmas only they use.
+`iwN_truncM_some`, `iwH_truncM_some`, `rec2CG_parts`, `rec2DecTM_parts`, `TMR`, `MjProg` and the lemmas only they use.
 -/
 
 noncomputable section

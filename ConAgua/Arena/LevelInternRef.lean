@@ -23,7 +23,7 @@ reader does not need:
   re-interns a `param`'s name, read back from a handle; under `NStoreWF` (`consP`/`consS`/`fresh`)
   the probe finds the handle, and the state does not change.
 * **Interning keeps every level pointer's view** (`ViewsKept`): a store handle's by the twin's
-  `LStore.view_intern_mono` (L's view of a handle is the arena's, `lvNodeW_view`/`lvNodeW_store`),
+  `LStore.view_intern_mono` (L's view of a handle is the arena's, `lview_of_lvNodeW`/`lvNodeW_store`),
   a heap node's because the stores do not write the heap. So the second child's `LvR` survives
   the first child's interning (`LvR.of_view`).
 -/

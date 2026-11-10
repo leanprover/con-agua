@@ -18,7 +18,7 @@ public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 # `genRecCheck` under `StageC`, part 1 (lane `indstaget`, helper `grc`)
 
 What the refinements of `gen_rec_check_prep` and `gen_rec_check` (`GenRec2`, `GenRec3`) read:
-`StageC.of_checkE` (`StageC` at another view and environment, from con-ron's `CheckOK` there) and
+`StageC.ofView` (`StageC` at another view and environment, from con-ron's `CheckOK` there) and
 `cnfs_ref` (`classes_nfs` for both outcomes, under `StageC`, with the classes' constructors'
 level-parameter slices as a conditional field, `classesNfs_refinesLp`'s); its ok half
 `classesNfs_refinesC`.

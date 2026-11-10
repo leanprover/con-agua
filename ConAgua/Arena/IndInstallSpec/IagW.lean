@@ -12,7 +12,7 @@ import ConAgua.Arena.Verdict
 /-!
 # IagW
 
-`installIteBind`, `installAgree_cons` (the twin's `checkBlockAgree` at a member), `AgreeProg`.
+`installAgree_cons` (the twin's `checkBlockAgree` at a member), `AgreeProg`.
 -/
 
 noncomputable section

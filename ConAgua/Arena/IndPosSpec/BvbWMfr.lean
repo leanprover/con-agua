@@ -14,7 +14,7 @@ import ConAgua.Arena.IlpRd
 /-!
 # BvbWMfr
 
-`hbMR_mfr`, `PosMR`, `posmemo_erCopyW_iw`, `erToIwW_mfr`, `MFr.ofFvbF` and the lemmas only they use.
+`hbMR_mfr`, `PosMR`, `erToIwW_mfr`, `MFr.ofFvbF` and the lemmas only they use.
 -/
 
 section

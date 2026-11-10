@@ -16,7 +16,7 @@ import all ConAgua.Arena.IndPos
 /-!
 # IndPartsProg2
 
-`partsSimW`, `memWk`, `memberIdxAt_specK`, `ctorMember_specK`, `ctmW`, `partsIwRd` and the lemmas only they use.
+`RelW.simS`, `memWk`, `memberIdxAt_specK`, `ctorMember_specK`, `ctmW`, `partsIwRd` and the lemmas only they use.
 -/
 
 noncomputable section

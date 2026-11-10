@@ -7,7 +7,7 @@ public import ConAgua.Arena.IndLibSpec
 /-!
 # SlRCongr
 
-`slR_congr`.
+`SlR.congr`.
 -/
 
 
