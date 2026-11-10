@@ -176,22 +176,6 @@ theorem word_add_toNat {a b : Word} (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).t
 
 /-! ## `nest_ctx_root_holes(_go)` refines `NestCtx.rootHoles` -/
 
-mutual
-def rhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option Mem
-  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, no, nl, lv, po, pl, nP, nio, nil, q, j =>
-    if nl ≤ j then some m
-    else rhK1 k no nl lv po pl nP nio nil q j (posRecW m [rdW (m.arr64 IW) (no + j), lv, po, pl])
-def rhK1 (k : Nat) (no nl lv po pl nP nio nil q j : Word) : Option (Word × Mem) → Option Mem
-  | none => none
-  | some (key, m1) =>
-    rhK2 k no nl lv po pl nP nio nil q j (posRecW m1 [key, nP, getDW m1 nio nil j 0])
-def rhK2 (k : Nat) (no nl lv po pl nP nio nil q j : Word) : Option (Word × Mem) → Option Mem
-  | none => none
-  | some (h, m2) => rhGoW k (m2.set64 IW (q + j) h) no nl lv po pl nP nio nil q (j + 1)
-end
-
 def rhB (q nl : Word) : Option Mem → Option (List Word × Mem)
   | none => none
   | some m2 => some ([q, nl], m2)

@@ -405,9 +405,9 @@ theorem nwsW_afr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
 -- from IndPosSpec/NestCrest
 theorem rhGoW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP nio nil q j : Word),
     rhGoW k m no nl lv po pl nP nio nil q j = some m' → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW.eq_1] at h
   | k + 1, m, m', no, nl, lv, po, pl, nP, nio, nil, q, j, h => by
-    unfold rhGoW rhK1 rhK2 at h
+    simp only [rhGoW.eq_2, rhGoW.k_rec4.eq_def, rhGoW.k_rec3.eq_def, rhGoW.k_nest_ctx_root_holes_go_id] at h
     afr_auto h [posRecW_afr, fun h => (set64IW_afr _ _ _).trans (rhGoW_afr k _ _ _ _ _ _ _ _ _ _ _ _ h)]
 
 -- from IndPosSpec/NestCrest
