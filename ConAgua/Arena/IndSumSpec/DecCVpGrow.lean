@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndView
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.GrindAttr
@@ -31,40 +30,16 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## Constant values read from `EREC` below its top -/
 
-theorem decCVp_grow {m m' : Mem} (hg : IWGrow m m') {cq : Nat} (hcq : cq + 4 ≤ erTop m)
-    (hsl : ∀ lo ll, nat? (erA m) (cq + 1) = some lo → nat? (erA m) (cq + 2) = some ll →
+theorem decCVp_grow {m m' : Mem} (hg : IWGrow m m') {cq : Nat} (_hcq : cq + 4 ≤ erTop m)
+    (_hsl : ∀ lo ll, nat? (erA m) (cq + 1) = some lo → nat? (erA m) (cq + 2) = some ll →
       lo + ll ≤ erTop m ∨ ll = 0) {cv : IConstantVal} (h : decCVp m cq = some cv) :
-    decCVp m' cq = some cv := by
-  have e : ∀ i, i < erTop m → (erA m')[i]? = (erA m)[i]? := fun i hi => hg.erGet i hi
-  simp only [decCVp] at h ⊢
-  simp only [decCV, bind, Option.bind, pure, hlist?] at h ⊢
-  have e0 : (hd? (erA m') cq : Option NIdx) = hd? (erA m) cq := by simp only [hd?, e cq (by omega)]
-  have e1 : nat? (erA m') (cq + 1) = nat? (erA m) (cq + 1) := by simp only [nat?, e (cq + 1) (by omega)]
-  have e2 : nat? (erA m') (cq + 1 + 1) = nat? (erA m) (cq + 1 + 1) := by
-    simp only [nat?, e (cq + 1 + 1) (by omega)]
-  have e3 : (hd? (erA m') (cq + 3) : Option EIdx) = hd? (erA m) (cq + 3) := by
-    simp only [hd?, e (cq + 3) (by omega)]
-  rw [e0, e1, e2, e3]
-  cases h1 : nat? (erA m) (cq + 1) with
-  | none => rw [h1] at h; revert h; cases (hd? (erA m) cq : Option NIdx) <;> simp
-  | some lo =>
-  cases h2 : nat? (erA m) (cq + 1 + 1) with
-  | none => rw [h1, h2] at h; revert h; cases (hd? (erA m) cq : Option NIdx) <;> simp
-  | some ll =>
-  have hN := hsl lo ll h1 (by simpa using h2)
-  have hs : (hslice? (erA m') lo ll : Option (List NIdx)) = hslice? (erA m) lo ll := by
-    simp only [hslice?]
-    exact mapM_congr_of _ _ _ (fun j hj => by
-      have := List.mem_range.mp hj
-      simp only [hd?, e (lo + j) (by omega)])
-  rw [h1, h2] at h
-  simp only [hs]
-  exact h
+    decCVp m' cq = some cv :=
+  hg.erecGrow.ext.decCV h
 
 /-- A record's handle field, as the word L reads. -/
-theorem hd?_rdW {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? a i = some x)
+theorem hd?_rdW {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? (aread a) i = some x)
     (hi : i < 2 ^ 64) : ∃ w, rdW a (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  simp only [hd?] at h
+  simp only [hd?, aread_apply] at h
   cases hw : a[i]? with
   | none => simp [hw] at h
   | some w =>

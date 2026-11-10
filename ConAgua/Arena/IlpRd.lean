@@ -33,13 +33,13 @@ def StageMemoFr (m m' : Mem) : Prop :=
 
 /-- **The contract of a reading of `inst_lp_fast`** at every exec fuel, at call points satisfying
 `Pre`. -/
-def IlpRd (cR : CallM) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+def IlpRd (cR : CallM) (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (Pre : Mem → AState → Prop) : Prop :=
   ∀ (k : Nat) (f o l us e : Word) (ks : List NIdx) (m m' : Mem) (a : AState) (r : List Word), H us → H e →
-    Pre m a → StageR dn vis fe m a → decHL m o.toNat l.toNat = some ks →
+    Pre m a → StageR vis fe m a → decHL m o.toNat l.toNat = some ks →
     cR k "inst_lp_fast" [f, o, l, us, e] m = some (r, m') →
     ∃ x a', (instLPFast f.toNat ks (decI us) (decI e)).run a = .ok (x, a') ∧
-      KeepPost dn vis fe decW0E m m' a' r x ∧ StageMemoFr m m' ∧ AFr m m'
+      KeepPost vis fe decW0E m m' a' r x ∧ StageMemoFr m m' ∧ AFr m m'
 
 /-- The call points of a model whose callees before `inst_lp_fast` write only the record pool and
 leave the twin state: the start's twin state, an `IW` frame from the start memory. -/

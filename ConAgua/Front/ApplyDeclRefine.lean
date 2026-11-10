@@ -13,7 +13,7 @@ public import ConAgua.Front.StateDR
 `declCvW_refines`: if the record `apply_decl` writes (`declCvW`, after `decl_kind`'s `(k, q)`)
 succeeds on fields `f` that con-leche's scanner relates to the declaration record `d` (`DeclR`,
 `DeclIface.lean`), then con-ron's
-`applyLine st (.decl d)` is `pure (.inl st')` (no interning, no verdict), the memory after is
+`applyRecord st (.decl d)` is `pure (.inl st')` (no interning, no verdict), the memory after is
 related to the same arena state by `ArenaD` and to `st'` by `StateDR`: the record is appended to
 `DECL`, its universe parameter names to `DLP` (`DeclsF`, `StateDR.lean`). `apply_decl`'s
 refinement for both outcomes (`applyDecl_ref`) is in `ApplyDLineRef.lean`.
@@ -240,8 +240,8 @@ theorem DeclAt_mono (D D' P P' : Array Word) (i : Nat) (d : IDeclaration)
   | quotDecl kk cv =>
     obtain ⟨h0, h1, h2⟩ := h
     exact ⟨by rw [hw 0 (by omega)]; exact h0, hcv cv h1, by rw [hw 6 (by omega)]; exact h2⟩
-  | basisDecl _ => exact h.elim
   | indDecl _ _ => exact h.elim
+
 
 theorem DeclAtF_mono (D D' P P' : Array Word) (i : Nat) (d : IDeclaration)
     (hD : ∀ j, 0 < j → j < 1 + 8 * i + 8 → D'[j]? = D[j]?)
@@ -256,9 +256,10 @@ theorem DeclAtF_mono (D D' P P' : Array Word) (i : Nat) (d : IDeclaration)
     refine ⟨by rw [hw 0 (by omega)]; exact h0, by rw [hw 4 (by omega)]; exact h4, t, by omega, ?_⟩
     rw [hw 2 (by omega), hw 3 (by omega), trunc_congr P P' t hPs (fun j h1 h2 => hP j h1 (by omega))]
     exact hb
-  | axiomDecl _ | defnDecl _ _ _ | thmDecl _ _ | opaqueDecl _ _ | quotDecl _ _ | basisDecl _ =>
+  | axiomDecl _ | defnDecl _ _ _ | thmDecl _ _ | opaqueDecl _ _ | quotDecl _ _ =>
     simp only [DeclAtF] at h ⊢
     exact DeclAt_mono D D' P P' i _ hD hP htop h
+
 
 theorem DeclsF.push (D P D' P' : Array Word) (ds : Array IDeclaration) (x : IDeclaration)
     (h : DeclsF D P ds) (hDs : D'.size = D.size) (hPs : P'.size = P.size)
@@ -267,9 +268,16 @@ theorem DeclsF.push (D P D' P' : Array Word) (ds : Array IDeclaration) (x : IDec
     (htop' : (P'[0]?.getD 0).toNat + 1 ≤ P.size)
     (hDo : ∀ j, 0 < j → j < 1 + 8 * ds.size → D'[j]? = D[j]?)
     (hPo : ∀ j, 0 < j → j < 1 + (P[0]?.getD 0).toNat → P'[j]? = P[j]?)
-    (hnew : DeclAtF D' P' ds.size x) : DeclsF D' P' (ds.push x) := by
+    (hnew : DeclAtF D' P' ds.size x) (hnp : ∀ b nP, x = .indDecl b nP → nP < 2 ^ 63) :
+    DeclsF D' P' (ds.push x) := by
   refine ⟨by rw [hDs]; exact h.dsize, by rw [hPs]; exact h.psize, by simpa using hc,
-    by rw [hDs]; simpa using hroom, by rw [hPs]; exact htop', fun i hi => ?_⟩
+    by rw [hDs]; simpa using hroom, by rw [hPs]; exact htop', fun i hi => ?_, fun i hi b nP e => ?_⟩
+  rotate_left
+  · simp only [Array.size_push] at hi
+    rw [Array.getElem_push] at e
+    split at e
+    · exact h.npb i _ b nP e
+    · exact hnp b nP e
   simp only [Array.size_push] at hi
   rw [Array.getElem_push]
   split
@@ -400,6 +408,7 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
       (by rw [hP0, htc, ← hrd]; omega) (by rw [hP0, htc]; omega)
       (fun j hj0 hj => by rw [G5 j hj0 (by rw [hcn']; exact hj), hm'D])
       (fun j hj0 hj => by rw [hm'P]; exact F4 j hj0 (by rw [hrd]; omega)) ?_
+      (fun _ _ e => by unfold declOf at e; repeat (first | (split at e; · cases e) | cases e))
     -- the new record
     have hlist : (sliceL (m'.arr64 DLP) (1 + (rdW (m.arr64 DLP) 0).toNat)
         (lsCntN b.data (f.lps + 1) 0).toNat).map decI = cvp.levelParams := by
@@ -440,13 +449,13 @@ theorem DeclKindOk.k5 {pl hk hn flag k q : Word} (h : DeclKindOk pl hk hn flag k
 
 /-- **The record `apply_decl` writes refines con-ron's declaration step**: on fields `f` that
 con-leche's scanner relates to the declaration record `d` (`DeclR`), with `decl_kind`'s `(k, q)`,
-a successful `declCvW` is `applyLine st (.decl d) = pure (.inl st')` (no interning, no verdict),
+a successful `declCvW` is `applyRecord st (.decl d) = pure (.inl st')` (no interning, no verdict),
 with `ArenaD` of the same arena state and `StateDR m' st'` (the ok half of `applyDecl_ref`). -/
 theorem declCvW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD)
     (hA : ArenaD m a₀) (hD : StateDR m st) (f : DFld) (d : DeclRec) (hE : DeclR b d f) {k q : Word}
     (hks : DeclKindOk f.pl f.hk f.hn f.flag k q)
     (h : declCvW b.data m k q f.name f.lps f.type f.value f.hn = some m') :
-    ∃ st', applyLine st (.decl d) = pure (.inl st') ∧ ArenaD m' a₀ ∧ StateDR m' st' := by
+    ∃ st', applyRecord st (.decl d) = pure (.inl st') ∧ ArenaD m' a₀ ∧ StateDR m' st' := by
   have hk5 := hks.k5
   cases d with
   | ax cv u =>
@@ -457,7 +466,7 @@ theorem declCvW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : State
     have hu : u = false := by cases u <;> simp_all
     subst hu
     refine ⟨_, ?_, hA', hD'⟩
-    simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf]
+    simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf]
   | defn cv v hints safety =>
     obtain ⟨hpl, hcv, hvv, hh, hsf⟩ := hE
     obtain ⟨cvp, e, hpc, hge, hA', hD'⟩ := cv_core b m m' a₀ st hA hD f cv hcv k q hk5 h
@@ -470,14 +479,14 @@ theorem declCvW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : State
     cases hints with
     | «abbrev» =>
       simp only [HintsR] at hh
-      simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg, hintW, hh]
+      simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg, hintW, hh]
     | «opaque» =>
       simp only [HintsR] at hh
-      simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg, hintW, hh]
+      simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg, hintW, hh]
     | regular n =>
       obtain ⟨h3, hn⟩ := hh
       have : f.hn ≠ NONE := fun h' => hkn ⟨h3, h'⟩
-      simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg, hintW, h3,
+      simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg, hintW, h3,
         itemR_eq hn this]
   | thm cv v =>
     obtain ⟨hpl, hcv, hvv⟩ := hE
@@ -486,7 +495,7 @@ theorem declCvW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : State
       (try (rw [hpl] at h1; exact absurd h1 (by decide)))
     have hg := hge (.inr (.inl rfl)) v hvv
     refine ⟨_, ?_, hA', hD'⟩
-    simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg]
+    simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg]
   | opaq cv v u =>
     obtain ⟨hpl, hcv, hvv, hfl⟩ := hE
     obtain ⟨cvp, e, hpc, hge, hA', hD'⟩ := cv_core b m m' a₀ st hA hD f cv hcv k q hk5 h
@@ -496,7 +505,7 @@ theorem declCvW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : State
     subst hu
     have hg := hge (.inr (.inr rfl)) v hvv
     refine ⟨_, ?_, hA', hD'⟩
-    simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg]
+    simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, hg]
   | quot cv kind =>
     obtain ⟨hpl, hcv, hq⟩ := hE
     obtain ⟨cvp, e, hpc, -, hA', hD'⟩ := cv_core b m m' a₀ st hA hD f cv hcv k q hk5 h
@@ -515,13 +524,14 @@ theorem declCvW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : State
       · exact .inr (.inr (.inl (UInt64.toNat_inj.mp (by simpa using h))))
       · exact .inr (.inr (.inr (UInt64.toNat_inj.mp (by simpa using h))))
     rcases hf with h' | h' | h' | h'
-    · rw [q1 h']; simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
-    · rw [q2 h']; simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
-    · rw [q3 h']; simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
-    · rw [q4 h']; simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
+    · rw [q1 h']; simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
+    · rw [q2 h']; simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
+    · rw [q3 h']; simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
+    · rw [q4 h']; simp [applyRecord, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
   | ind tys cts rcs =>
     have hpl : f.pl = 25 := hE.1
     rcases hks with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ <;>
       (rw [hpl] at h1; exact absurd h1 (by decide))
+
 
 end L.Front

@@ -35,7 +35,7 @@ open L.Arena L.Ind
 abbrev crSch : MemoSch := ⟨CRM, 158⟩
 
 /-- `pin_found(vis, k)`: pin `k`'s name has a row below `vis`. -/
--- con-ron: ConRon/Arena/Core.lean:519-565 ConRon.Arena.constsResolve
+-- con-ron: ConRon/Arena/Core.lean:545-591 ConRon.Arena.constsResolve
 @[no_expose] def pinFound : FunDecl := lfn (vis, k) locals (n, f, q) {
   n := call pin_at(k);
   (f, q) := call env_find(n, vis);
@@ -44,7 +44,7 @@ abbrev crSch : MemoSch := ⟨CRM, 158⟩
 
 /-- `cr_lit_pins(vis, s)`: the literal's pins resolve (`s ≠ 0`: a `String` literal's ten,
 else a `Nat` literal's three). -/
--- con-ron: ConRon/Arena/Core.lean:519-565 ConRon.Arena.constsResolve
+-- con-ron: ConRon/Arena/Core.lean:545-591 ConRon.Arena.constsResolve
 @[no_expose] def crLitPins : FunDecl := lfn (vis, s) locals (a, b, c, d, f, g, h, i, j, k) {
   a := call pin_found(vis, 1); b := call pin_found(vis, 2); c := call pin_found(vis, 3);
   if s == 0 {
@@ -60,7 +60,7 @@ else a `Nat` literal's three). -/
 }
 
 /-- `cr_leaf(vis, g, x, h)`: `constsResolve` at a leaf of tag `g` (`x` the view's first field). -/
--- con-ron: ConRon/Arena/Core.lean:519-565 ConRon.Arena.constsResolve
+-- con-ron: ConRon/Arena/Core.lean:545-591 ConRon.Arena.constsResolve
 @[no_expose] def crLeaf : FunDecl := lfn (vis, g, x, h) locals (s, f, q, r) {
   if g == 8 {
     s := call is_str_lit(h);
@@ -162,7 +162,7 @@ def hasStrLitGoL : FunDecl := lfn (f, h) locals (g, x, y, z, t, i, r) {
 
 /-- `ue_mentions_go(f, T, h)`: `mentions_const_go` (the twin's `mentionsConstGo`, the same walk)
 without its memo. -/
--- con-ron: ConRon/Arena/Inductives/StructParts.lean:267-308 ConRon.Arena.mentionsConstGo
+-- con-ron: ConRon/Arena/Inductives/StructParts.lean:140-181 ConRon.Arena.mentionsConstGo
 @[no_expose, l_impl ConRon.Arena.mentionsConstGo]
 def ueMentionsGoL : FunDecl := lfn (f, T, h) locals (g, x, y, z, r, b1, b2, b3) {
   if f == 0 { abort };
@@ -187,9 +187,10 @@ def ueMentionsGoL : FunDecl := lfn (f, T, h) locals (g, x, y, z, r, b1, b2, b3) 
 }
 
 /-- `unresolved_consts_error(vis, e, w)`: the twin's `fail (← unresolvedConstsErrorL (←
-strLitSupported fe) where_ e)` (`w ≤ 1`) and `fail (← unresolvedConstsError where_ e)` (`w ≥ 2`):
+strLitStored fe) where_ e)` (`w ≤ 1`) and `fail (← unresolvedConstsError where_ e)` (`w ≥ 2`):
 always aborts. `w` names the twin's `where_` (`0` "type", `1` "value", `2` "type of", `3`
-"generated rule of", `4` "the domains of a generated rule of"; the reason of each message). For
+"generated rule of", `4` "the domains of a generated rule of", `5` "the type of the recursor", `6`
+"the recursor's rule"; the reason of each message). For
 `w ≤ 1`: without the String support declarations, a string literal in `e` (`has_str_lit_go`)
 declines. Then a term mentioning `sorryAx` (pin 13, `ue_mentions_go`: the twin's `mentionsConst`)
 declines, anything else rejects. -/
@@ -198,7 +199,7 @@ declines, anything else rejects. -/
 @[no_expose, l_impl ConRon.Arena.unresolvedConstsError ConRon.Arena.unresolvedConstsErrorL]
 def unresolvedConstsErrL : FunDecl := lfn (vis, e, w) locals (s, r, sa, m) {
   if w <= 1 {
-    s := call str_lit_supported(vis);
+    s := call str_lit_stored(vis);
     if s == 0 {
       r := call has_str_lit_go(⟪CWF⟫, e);
       if r != 0 { fail R_STRING_LITERALS_BEFORE }
@@ -211,12 +212,16 @@ def unresolvedConstsErrL : FunDecl := lfn (vis, e, w) locals (s, r, sa, m) {
     if w == 1 { fail R_USE_OF_THE_SORRYAX_IN_VALUE };
     if w == 2 { fail R_USE_OF_THE_SORRYAX_IN_TYPE_OF };
     if w == 3 { fail R_USE_OF_THE_SORRYAX_IN_GENERATED };
+    if w == 5 { fail R_USE_OF_THE_SORRYAX_IN_REC_TYPE };
+    if w == 6 { fail R_USE_OF_THE_SORRYAX_IN_REC_RULE };
     fail R_USE_OF_THE_SORRYAX_IN_THE
   };
   if w == 0 { fail R_UNKNOWN_CONSTANT_IN_TYPE };
   if w == 1 { fail R_UNKNOWN_CONSTANT_IN_VALUE };
   if w == 2 { fail R_UNKNOWN_CONSTANT_IN_TYPE_OF };
   if w == 3 { fail R_UNKNOWN_CONSTANT_IN_GENERATED };
+  if w == 5 { fail R_UNKNOWN_CONSTANT_IN_REC_TYPE };
+  if w == 6 { fail R_UNKNOWN_CONSTANT_IN_REC_RULE };
   fail R_UNKNOWN_CONSTANT_IN_THE
 }
 

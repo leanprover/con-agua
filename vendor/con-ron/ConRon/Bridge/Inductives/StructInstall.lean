@@ -8,8 +8,8 @@ statements here.
 
 `checkStructDomsAt` is the first CORE-grade twin of the tier: it calls
 `isDefEqCore`, so its frame is `CoreStep` and its statement takes `CheckOK`.
-`checkStructProjTable` is pure grade at the store but installs, so it answers
-an `InstRel`.
+`checkStructProjTable` is pure grade at the store and reads the index's
+lookups (`IFEnvOKS`); it pushes nothing.
 
 ## `checkStructDomsAtFA`'s `Array` spelling
 
@@ -58,7 +58,7 @@ theorem checkStructDomsAt_mono {μ : CheckMode} {env : Env} {F F' : Nat}
         MonadExceptOf.throw, pure, Except.pure] at h
     | some b =>
     simp only [ha, hb, ConLeche.unwrapOr, bind, Except.bind, pure, Except.pure] at h ⊢
-    cases hd : ConLeche.isDefEqCore μ env F (off + j) a.fvarTypeD b with
+    cases hd : ConLeche.isDefEqCore μ false env F (off + j) a.fvarTypeD b with
     | error e => rw [hd] at h; exact nomatch h
     | ok c =>
       rw [hd] at h
@@ -87,17 +87,16 @@ comparison, `off + i` at the `i`-th pair).  `Bridge/Checker/Base.lean`'s
 `checkDefEqList_bridge` carries exactly the same two for exactly the same
 reason.  `checkStructDomsAt_specF` below is the form the constructors' stage
 (`checkSumCtor_spec`) consumes. -/
-theorem checkStructDomsAt_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
-    (hk : CoreSpec μ Arena.checkFuel) (henv : EnvWF env) (off : Nat)
+theorem checkStructDomsAt_spec {env : Env} (fe : IFEnv)
+    (hk : CoreSpec Arena.checkFuel) (henv : EnvWF env) (off : Nat)
     (fvs doms : List EIdx) (fvsP domsP : List Expr) (j : Nat)
     (hws : ∀ i, i < j → ∀ a b, fvsP[i]? = some a → domsP[i]? = some b →
       Expr.WScoped (off + i) a.fvarTypeD ∧ Expr.WScoped (off + i) b) :
-    CSpec μ env fe
+    CSpec env fe
       (fun st => Frontend.denoteEList st fvs = some fvsP ∧
-        Frontend.denoteEList st doms = some domsP ∧
-        denoteFEnv st fe = some env)
-      (Arena.checkStructDomsAt μ fe off fvs doms j)
-      (fun _ _ => ∃ F, ConLeche.checkStructDomsAt (ConLeche.fueledOps μ F)
+        Frontend.denoteEList st doms = some domsP)
+      (Arena.checkStructDomsAt .verified fe off fvs doms j)
+      (fun _ _ => ∃ F, ConLeche.checkStructDomsAt (ConLeche.fueledOps .verified F)
         env off fvsP domsP j = (.ok () : CheckM Unit)) := by
   have hknot := hk.knot env fe henv
   induction j with
@@ -108,7 +107,7 @@ theorem checkStructDomsAt_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
     exact ⟨CoreStep.refl hok, 0, rfl⟩
   | succ j ih =>
     intro s₀ s' r hok hpre hrun
-    obtain ⟨hfvs, hdoms, hfe⟩ := hpre
+    obtain ⟨hfvs, hdoms⟩ := hpre
     simp only [Arena.checkStructDomsAt] at hrun
     obtain ⟨a, s1, k1, hz1⟩ := AM.bind_ok hrun
     cases ha : fvs[j]? with
@@ -134,17 +133,16 @@ theorem checkStructDomsAt_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
     obtain ⟨c, s4, k4, hz4⟩ := AM.bind_ok hz3
     obtain ⟨hws1, hws2⟩ := hws j (Nat.lt_succ_self j) aP bP haP hbP
     obtain ⟨hok4, hx4, hp4, hsim⟩ := AM.of_run (P := fun u => u = s₀)
-      (Q := fun r u => CheckOK μ env fe u ∧ Ext s₀.store u.store ∧
+      (Q := fun r u => CheckOK false env fe u ∧ Ext s₀.store u.store ∧
         u.pins = s₀.pins ∧
-        Core.SimV (ConLeche.isDefEqCore μ env) (off + j) aP.fvarTypeD bP r)
+        Core.SimV (ConLeche.isDefEqCore .verified false env) (off + j) aP.fvarTypeD bP r)
       rfl k4 (hknot.defeq s₀ (off + j) t b aP.fvarTypeD bP hok ht hdb hws1 hws2)
     obtain ⟨F1, hF1⟩ := hsim
     obtain ⟨hc, hz5⟩ := AM.dunless_ok AM.Never.fail_any hz4
     replace hz5 := AM.pure_bind_ok hz5
     subst hc
     obtain ⟨hstep, F2, hF2⟩ := ih (fun i hi => hws i (Nat.lt_succ_of_lt hi)) s4 s' r
-      hok4 ⟨denoteEList_ext hx4 _ _ hfvs, denoteEList_ext hx4 _ _ hdoms,
-        denoteFEnv_mono hx4 hfe⟩ hz5
+      hok4 ⟨denoteEList_ext hx4 _ _ hfvs, denoteEList_ext hx4 _ _ hdoms⟩ hz5
     refine ⟨⟨hstep.ok, hx4.trans hstep.ext, by rw [hstep.pins, hp4]⟩, max F1 F2, ?_⟩
     have h1 := ConLeche.isDefEqCore_mono (Nat.le_max_left F1 F2) hF1
     have h2 := checkStructDomsAt_mono (Nat.le_max_right F1 F2) hF2
@@ -154,49 +152,30 @@ theorem checkStructDomsAt_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
 
 /-! ## The projection table -/
 
-/-- con-leche: ConLeche/Kernel/Inductives/StructInstall.lean:64-84 checkStructProjTable
-con-leche: ConLeche/Kernel/Inductives/StructInstallF.lean:72-92 checkStructProjTableF
-**The structure-like block's projection table**: one table per structure, carrying the fields' bodies off the annotated constructor type
-and the guard levels the constructors' stage measured.
+/-- con-leche: ConLeche/Kernel/Inductives/StructInstall.lean:52-80 checkStructProjTable
+con-leche: ConLeche/Kernel/Inductives/StructInstallF.lean:71-89 checkStructProjTableF
+**The projection table's checks** at a structure-like member: the fields'
+bodies read off the annotated constructor type, validated once, the structure
+stored and its table not taken.  Nothing is pushed (the table is the block's
+install, `Arena/Install.lean`'s `blockTables`).
 
-**The `guards` hypothesis, and what it buys.**
-`InstRel`'s `proj` field is `ProjOut` — "the table list only grew, and every
-table of the new list was already in the old one, or is well shaped" — and
-this is the ONE install of the whole arena that pushes a table, so this is the
-one theorem where that field has content.  `IProjTableOK`'s two clauses are
-`bodies.size = numFields` (the twin's own `unless bodies.size = nF`) and
-`guards.length = numFields`.  The second is about an ARGUMENT, so the install
-cannot test it and does not: `hg` is it, and the caller — the uniform route's
-`checkBlockTables` (`Arena/Inductives/BlockTail.lean`), which builds
-`structProjGuards cA.1.type nP cA.2 sorts` and passes it beside `cA.2` —
-discharges it from `structProjGuards_length`.
-
-**Proof:** over `structProjBodies_spec` (`Bridge/Inductives/StructParts.lean`),
-the `IProjTable` record's denotation (`Bridge/Rel.lean`'s `denoteProjTable`),
-and `IFEnv.pushTable`'s own lemmas (`IFEnvCoh.pushTable`, `Pushed.pushTable`,
-`denoteFEnv_pushTable`).  The two gates (the structure is stored, its table
+**Proof:** over `structProjBodies_spec` (`Bridge/Inductives/StructParts.lean`)
+and the four scoping walks; the two gates (the structure is stored, its table
 is not taken) are the index's lookups at a handle that denotes
-(`IFEnvOK.find_isSome`, `IFEnvOK.findTable_isSome`); the `proj` clause is `hg`
-and the `bodies.size` test read off the `unless`. -/
+(`IFEnvOK.find_isSome`, `IFEnvOK.findTable_isSome`). -/
 theorem checkStructProjTable_run (fe : IFEnv) (env : Env)
-    (T C : NIdx) (TP CP : ConLeche.Name) (lps : List NIdx)
-    (lpsP : List ConLeche.Name) (nP nF : Nat) (resSort : LIdx)
-    (resSortP : Level) (guards : List LIdx) (guardsP : List Level)
-    (cvCa : IConstantVal) (cvCaP : ConstantVal)
-    (hg : guards.length = nF) (hcoh : IFEnvCoh fe) :
+    (T : NIdx) (TP : ConLeche.Name) (lps : List NIdx)
+    (lpsP : List ConLeche.Name) (nP nF : Nat)
+    (cvCa : IConstantVal) (cvCaP : ConstantVal) :
     PSpecP
-      (fun st => denoteN st.ns T = some TP ∧ denoteN st.ns C = some CP ∧
+      (fun st => denoteN st.ns T = some TP ∧
         Frontend.denoteNList st.ns lps = some lpsP ∧
-        denoteL st.ls resSort = some resSortP ∧
-        denoteLList st.ls guards = some guardsP ∧
-        Frontend.denoteCV st cvCa = some cvCaP ∧
-        denoteFEnv st fe = some env ∧ IFEnvOKS env fe st)
-      (Arena.checkStructProjTable T C lps nP nF resSort guards cvCa fe)
-      (InstRel fe (fun env' =>
-        @ConLeche.checkStructProjTable CheckM _ _ TP CP lpsP nP nF resSortP
-          guardsP cvCaP env = .ok env')) := by
+        Frontend.denoteCV st cvCa = some cvCaP ∧ IFEnvOKS env fe st)
+      (Arena.checkStructProjTable T lps nP nF cvCa fe)
+      (fun _ _ =>
+        @ConLeche.checkStructProjTable CheckM _ _ TP lpsP nP nF cvCaP env = .ok ()) := by
   intro s₀ s' r hok hpins hpre hrun
-  obtain ⟨hT, hC, hlps, hrs, hgd, hcv, hfe, hienvS⟩ := hpre
+  obtain ⟨hT, hlps, hcv, hienvS⟩ := hpre
   have hread : ReadOK env fe s₀ := ⟨hok, hpins, hienvS s₀ rfl⟩
   have hnever : ∀ {α β : Type} {e : Arena.CheckError} {g : α → AM β},
       AM.Never ((Arena.fail e : AM α) >>= g) := fun {_ _ _ _} => AM.Never.fail_any
@@ -260,16 +239,14 @@ theorem checkStructProjTable_run (fe : IFEnv) (env : Env)
     bodies.toList bodiesP.toList s₁ s₃ sc (hread.mono p1.ok p1.ext p1.pins)
     (denoteNListE_ext p1.ext _ _ hlps) hbl k3
   obtain ⟨hg1, z4⟩ := AM.dunless_ok hnever z3
-  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
-  have x13 := p3.ext
+  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hread₃ : ReadOK env fe s₃ := hread.mono p3.ok (p1.ext.trans p3.ext) (by rw [p3.pins, p1.pins])
-  have x05 : Ext s₀.store s₃.store := p1.ext.trans x13
+  have x05 : Ext s₀.store s₃.store := p1.ext.trans p3.ext
   have hT₃ : denoteN s₃.store.ns T = some TP := denoteN_ext hT x05
   -- the structure is stored, and its table is not taken
   obtain ⟨hg2, z5⟩ := AM.dunless_ok hnever z4
-  try replace z5 := AM.pure_bind_ok z5  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
-  obtain ⟨hg3, z6⟩ := AM.dunless_ok hnever z5
-  try replace z6 := AM.pure_bind_ok z6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+  try replace z5 := AM.pure_bind_ok z5  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
+  obtain ⟨hg3, z6⟩ := AM.dunless_ok (AM.Never.fail _) z5
   obtain ⟨rfl, rfl⟩ := AM.pure_ok z6
   have hg2' : (env.find? TP).isSome = true := by
     rw [← hread₃.ienv.find_isSome p3.ok hT₃]; exact hg2
@@ -277,7 +254,6 @@ theorem checkStructProjTable_run (fe : IFEnv) (env : Env)
     have e := hread₃.ienv.findTable_isSome p3.ok hT₃
     revert e hg3
     cases fe.findTable? T <;> cases env.findTable? TP <;> simp
-  -- the pushed table
   have hsize : bodies.size = nF := hg1.1
   have hall : (bodiesP.toList.all fun b => !b.hasFvar && b.allLevelParamsDefined lpsP &&
       b.constsResolve env && b.looseBVarsBounded (nP + 1)) = true := by
@@ -286,48 +262,31 @@ theorem checkStructProjTable_run (fe : IFEnv) (env : Env)
     rw [← hsize]
     have := ExprOps.denoteEList_length _ _ hbl
     simpa using this
-  have hdt : Frontend.denoteProjTable s'.store ⟨T, lps, nP, C, nF, resSort, bodies, guards⟩
-      = some ⟨TP, lpsP, nP, CP, nF, resSortP, bodiesP, guardsP⟩ := by
-    simp only [Frontend.denoteProjTable, hT₃, denoteNListE_ext x05 _ _ hlps,
-      denoteN_ext hC x05, denoteL_ext hrs x05, denoteEArray_ext hbodies x13]
-    have e1 : denoteLList s'.store.ls guards = some guardsP := denoteLList_ext x05.lss.ls _ _ hgd
-    rw [e1]
-  refine ⟨p1.trans p3, hcoh.pushTable _, Pushed.pushTable _ _, Nat.le_refl _,
-    ⟨_, denoteFEnv_pushTable (denoteFEnv_mono x05 hfe) hdt, ?_⟩,
-    ProjOut.pushTable fe ⟨hsize, hg⟩⟩
+  refine ⟨p1.trans p3, ?_⟩
   simp only [ConLeche.checkStructProjTable, hbP, ConLeche.unwrapOr, bind, Except.bind, pure,
     Except.pure]
   rw [ite_eq_left ⟨hsizeP, by rw [← Array.all_toList]; exact hall⟩,
     ite_eq_left hg2', ite_eq_left hg3']
 
-/-- con-leche: ConLeche/Kernel/Inductives/StructInstall.lean:64-84 checkStructProjTable
-con-leche: ConLeche/Kernel/Inductives/StructInstallF.lean:72-92 checkStructProjTableF
-**The monad-generic form** (task #105): `checkStructProjTable_run` with the
-install's `InstRel` naming con-leche's table stage at `FueledM`, the monad the
-uniform route's `checkBlockTables` runs it in (`ConLeche/Kernel/Inductives/
-BlockTail.lean`).  The stage calls no operation, so the fuel is immaterial:
-`checkStructProjTable_datF` is `rfl` at every fuel. -/
+/-- con-leche: ConLeche/Kernel/Inductives/StructInstall.lean:52-80 checkStructProjTable
+con-leche: ConLeche/Kernel/Inductives/StructInstallF.lean:71-89 checkStructProjTableF
+**The monad-generic form** (task #105): `checkStructProjTable_run` at
+`FueledM`, the monad the block's `checkBlockTables` runs it in.  The stage
+calls no operation, so the fuel is immaterial: `checkStructProjTable_datF` is
+`rfl` at every fuel. -/
 theorem checkStructProjTable_runF (fe : IFEnv) (env : Env)
-    (T C : NIdx) (TP CP : ConLeche.Name) (lps : List NIdx)
-    (lpsP : List ConLeche.Name) (nP nF : Nat) (resSort : LIdx)
-    (resSortP : Level) (guards : List LIdx) (guardsP : List Level)
-    (cvCa : IConstantVal) (cvCaP : ConstantVal)
-    (hg : guards.length = nF) (hcoh : IFEnvCoh fe) :
+    (T : NIdx) (TP : ConLeche.Name) (lps : List NIdx)
+    (lpsP : List ConLeche.Name) (nP nF : Nat)
+    (cvCa : IConstantVal) (cvCaP : ConstantVal) :
     PSpecP
-      (fun st => denoteN st.ns T = some TP ∧ denoteN st.ns C = some CP ∧
+      (fun st => denoteN st.ns T = some TP ∧
         Frontend.denoteNList st.ns lps = some lpsP ∧
-        denoteL st.ls resSort = some resSortP ∧
-        denoteLList st.ls guards = some guardsP ∧
-        Frontend.denoteCV st cvCa = some cvCaP ∧
-        denoteFEnv st fe = some env ∧ IFEnvOKS env fe st)
-      (Arena.checkStructProjTable T C lps nP nF resSort guards cvCa fe)
-      (InstRel fe (fun env' =>
-        FOk (ConLeche.checkStructProjTable TP CP lpsP nP nF resSortP guardsP cvCaP env
-          : FueledM Env) env')) := by
+        Frontend.denoteCV st cvCa = some cvCaP ∧ IFEnvOKS env fe st)
+      (Arena.checkStructProjTable T lps nP nF cvCa fe)
+      (fun _ _ => FOk (ConLeche.checkStructProjTable TP lpsP nP nF cvCaP env : FueledM Unit) ()) := by
   intro s₀ s' r hok hpins hpre hrun
-  obtain ⟨hstep, hrel⟩ := checkStructProjTable_run fe env T C TP CP lps lpsP nP nF resSort
-    resSortP guards guardsP cvCa cvCaP hg hcoh s₀ s' r hok hpins hpre hrun
-  obtain ⟨env', hd, hP⟩ := hrel.denote
-  exact ⟨hstep, { hrel with denote := ⟨env', hd, 0, by rw [checkStructProjTable_datF]; exact hP⟩ }⟩
+  obtain ⟨hstep, hP⟩ := checkStructProjTable_run fe env T TP lps lpsP nP nF cvCa cvCaP
+    s₀ s' r hok hpins hpre hrun
+  exact ⟨hstep, 0, by rw [checkStructProjTable_datF]; exact hP⟩
 
 end ConRon.Bridge.Inductives

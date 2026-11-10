@@ -52,7 +52,7 @@ theorem si_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (StuckG p n) (siE p (n + 1) s₀.mem mode vis d a b)
-      (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (stuckIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   unfold stuckIrrel
   cases n with
@@ -101,7 +101,7 @@ theorem stuckIrrel_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc 
     (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "stuck_irrel" [mode, vis, d, a, b]
-      (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
+      (stuckIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (siE_spec p hq.stuckIrrel hq.setCert hq.setWith hq.setWtb hq.setGo hq.setTail hq.sunit
     hq.suHead hq.suTail (n + 1) s₀ mode vis d a b)

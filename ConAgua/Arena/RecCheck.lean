@@ -12,8 +12,8 @@ The L translation of `vendor/con-ron/ConRon/Arena/Inductives/RecCheck.lean`: the
 abstraction (`target_abs`), the per-component class match (`target_class_match`) and the table
 entries it selects (`target_major_nfs`), a class resolved from a major (`target_major_of`) and
 typed (`target_major_pins`), the recursor records' pins (`target_rec_pins`), node agreement
-(`target_k53`, K.53′), and the stored family's rules (`tgt_stored_rules`, `cons_block_recs_tf`)
-with the container bit (`block_nested_bit`).
+(`target_k53`, K.53′), and the generated family's records (`generated_rules`, `rec_k_expected`,
+`block_rec_infos_tf`) with the container bit (`block_nested_bit`).
 
 No proofs this round (DESIGN §8, lane `induct`): every `FunDecl` below is tagged with the twin
 function it translates; a later round proves refinement.
@@ -38,7 +38,7 @@ open L.Arena
 
 /-- The `const n us` arm: `h` unless `us` is the walk's `lvls` and `n` is a member name with a
 hole at its index. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:61-115 ConRon.Arena.targetAbsGo
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:56-110 ConRon.Arena.targetAbsGo
 @[no_expose, l_impl ConRon.Arena.targetAbsGo]
 def targetAbsConst : FunDecl := lfn (no, nl, lvls, ho, hl, h, n, vus) locals (ok, t) {
   if vus != lvls { return h };
@@ -51,7 +51,7 @@ def targetAbsConst : FunDecl := lfn (no, nl, lvls, ho, hl, h, n, vus) locals (ok
 /-- `target_abs_node(names.off, names.len, lvls, holes.off, holes.len, fuel1, g, x, y, z)`: the memoised
 fallback's arms (`app`, `lam`, `forallE`, `letE`, else `proj`; the other five tags are handled in
 `target_abs_go` before the memo is touched). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:61-115 ConRon.Arena.targetAbsGo
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:56-110 ConRon.Arena.targetAbsGo
 @[no_expose, l_impl ConRon.Arena.targetAbsGo]
 def targetAbsNode : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, g, x, y, z) locals (a2, x2, c2, r) {
   if g == 4 {
@@ -87,7 +87,7 @@ def targetAbsNode : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, g, x, y, z) loca
 
 /-- **`target_abs_go`**: `bvar`/`sort`/`lit`/`fvar` unchanged, `const` via `target_abs_const`,
 else probe the `ta` memo and, on a miss, dispatch (`target_abs_node`) and insert. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:61-115 ConRon.Arena.targetAbsGo
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:56-110 ConRon.Arena.targetAbsGo
 @[no_expose, l_impl ConRon.Arena.targetAbsGo]
 def targetAbsGo : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, h) locals (g, x, y, z, fd, j, d, r, u) {
   if fuel == 0 { abort };
@@ -109,7 +109,7 @@ def targetAbsGo : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, h) locals (g, x, y
 }
 
 /-- **`target_abs`**: the fresh-memo entry (`ta_clear`, then the walk at `⟪CWF⟫`). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:117-122 ConRon.Arena.targetAbs
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:112-117 ConRon.Arena.targetAbs
 @[no_expose, l_impl ConRon.Arena.targetAbs]
 def targetAbs : FunDecl := lfn (no, nl, lvls, ho, hl, e) locals (z, r) {
   z := call ta_clear();
@@ -119,7 +119,7 @@ def targetAbs : FunDecl := lfn (no, nl, lvls, ho, hl, e) locals (z, r) {
 
 /-- **`target_holes`**: the rule frame's holes, `fvar (base + j)` at the former's type, in
 member order. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:124-132 ConRon.Arena.targetHoles
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:119-127 ConRon.Arena.targetHoles
 @[no_expose, l_impl ConRon.Arena.targetHoles]
 def targetHoles : FunDecl := lfn (tyo, tyl, base) locals (v, ro, rl, qo, ql) {
   if tyl == 0 { return (0, 0) };
@@ -155,7 +155,7 @@ def targetHoles : FunDecl := lfn (tyo, tyl, base) locals (v, ro, rl, qo, ql) {
 
 /-- **`target_major_default`**: the anonymous inductive at no level/parameter, the `deriving
 Inhabited` fallback `Ms.getD c default` reads. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:156-165 ConRon.Arena.targetMajorDefault
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:151-160 ConRon.Arena.targetMajorDefault
 @[no_expose, l_impl ConRon.Arena.targetMajorDefault]
 def targetMajorDefault : FunDecl := lfn () locals (anon, ls, r) {
   anon := call intern_nanon();
@@ -165,7 +165,7 @@ def targetMajorDefault : FunDecl := lfn () locals (anon, ls, r) {
 }
 
 /-- **`target_major_at`**: `ms[c]?`, else `target_major_default`. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:167-172 ConRon.Arena.targetMajorAt
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:162-167 ConRon.Arena.targetMajorAt
 @[no_expose, l_impl ConRon.Arena.targetMajorAt]
 def targetMajorAt : FunDecl := lfn (mo, ml, c) locals (r) {
   if c < ml { return IW.u64[mo + c] };
@@ -174,7 +174,7 @@ def targetMajorAt : FunDecl := lfn (mo, ml, c) locals (r) {
 }
 
 /-- **`erase_fvar_tys`**: `replaceFVars .erase e`, `f` a fresh `[2]` `FvMap` record. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:174-178 ConRon.Arena.eraseFVarTys
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:169-173 ConRon.Arena.eraseFVarTys
 @[no_expose, l_impl ConRon.Arena.eraseFVarTys]
 def eraseFVarTys : FunDecl := lfn (e) locals (f, r) {
   f := call iw_alloc(1);
@@ -185,7 +185,7 @@ def eraseFVarTys : FunDecl := lfn (e) locals (f, r) {
 
 /-- **`target_canon_params`**: `replaceFVars (.canon pfvs) e`, `f = [3, pfvs.off, pfvs.len]` (an
 empty `pfvs` recorded at offset `0`: its offset is whatever the caller's record holds). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:180-184 ConRon.Arena.targetCanonParams
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:175-179 ConRon.Arena.targetCanonParams
 @[no_expose, l_impl ConRon.Arena.targetCanonParams]
 def targetCanonParams : FunDecl := lfn (pfo, pfl, e) locals (po, f, r) {
   po := pfo;
@@ -198,7 +198,7 @@ def targetCanonParams : FunDecl := lfn (pfo, pfl, e) locals (po, f, r) {
 /-- One step of `target_params_def_eq`'s loop: the closedness test (short-circuiting, `bvar_b a`,
 `bvar_b b`, `fvar_b a`, `fvar_b b` in order), then member-abstracted canon forms, then syntactic
 or inferred-and-defeq. Returns `1` to continue the loop, `0` to stop it (the overall `false`). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:186-213 ConRon.Arena.targetParamsDefEq
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:181-208 ConRon.Arena.targetParamsDefEq
 @[no_expose, l_impl ConRon.Arena.targetParamsDefEq]
 def targetParamsDefEqStep : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, pfl, a, b)
     locals (bb, fb, ac, av, bc, bv, u, deq) {
@@ -226,7 +226,7 @@ def targetParamsDefEqStep : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, p
 /-- **`target_params_def_eq`**: per-component parameter defeq, stopping at the first mismatch; a
 self-recursion on both slices, as the twin's list recursion (lists of different lengths are
 compared up to the shorter one's end, then `false`). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:186-213 ConRon.Arena.targetParamsDefEq
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:181-208 ConRon.Arena.targetParamsDefEq
 @[no_expose, l_impl ConRon.Arena.targetParamsDefEq]
 def targetParamsDefEq : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, pfl, ao, al, bo, bl)
     locals (r) {
@@ -240,7 +240,7 @@ def targetParamsDefEq : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, pfl, 
 
 /-- **`target_class_match`**: levels up to `lvls_eq_c` (the cached `lvlsEq?`, as the twin), then
 per-component parameter defeq over the recursor prefix `pfvs` with the member holes on top. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:215-229 ConRon.Arena.targetClassMatch
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:210-224 ConRon.Arena.targetClassMatch
 @[no_expose, l_impl ConRon.Arena.targetClassMatch]
 def targetClassMatch : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl)
     locals (e, mno, mnl, lpso, lpsl, blvls, ho, hl, d, r) {
@@ -257,12 +257,12 @@ def targetClassMatch : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl,
 }
 
 /-- Does any of `ctors` carry the constructor name `name`? -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:231-246 ConRon.Arena.targetMajorNfs
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:226-241 ConRon.Arena.targetMajorNfs
 @[no_expose, l_impl ConRon.Arena.targetMajorNfs]
 def ctorsHaveName : FunDecl := lfn (co, cl, name) locals (ce, r) {
   if cl == 0 { return 0 };
   ce := IW.u64[co];
-  if EREC.u64[IW.u64[ce]] == name { return 1 };
+  if EREC⦃IW.u64[ce]⦄ == name { return 1 };
   r := call ctors_have_name(co + 1, cl - 1, name);
   return r
 }
@@ -270,7 +270,7 @@ def ctorsHaveName : FunDecl := lfn (co, cl, name) locals (ce, r) {
 /-- **`target_major_nfs`**: the walk's recorded constructor normal forms matching this class, as the
 twin's recursion: the tail first (so the class-match calls fire from the last entry to the first),
 each kept entry consed onto the kept tail (`sl_cons`, D18). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:231-246 ConRon.Arena.targetMajorNfs
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:226-241 ConRon.Arena.targetMajorNfs
 @[no_expose, l_impl ConRon.Arena.targetMajorNfs]
 def targetMajorNfs : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl, cto, ctl, nfo, nfl)
     locals (ro, rl, eptr, has, keep, qo, ql) {
@@ -287,25 +287,26 @@ def targetMajorNfs : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl, c
 }
 
 /-- **`target_ctors_of`**: a stored inductive's constructors and parameter count. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:248-253 ConRon.Arena.targetCtorsOf
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:243-248 ConRon.Arena.targetCtorsOf
 @[no_expose, l_impl ConRon.Arena.targetCtorsOf]
 def targetCtorsOf : FunDecl := lfn (vis, I) locals (ok, nPc, cso, csl) {
   (ok, nPc, cso, csl) := call nest_container(vis, I);
   return (ok, nPc, cso, csl)
 }
 
-/-- **`target_outside_inst`**: an OUTSIDE major's instantiated type former: its index count and
-result sort. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:255-272 ConRon.Arena.targetOutsideInst
+/-- **`target_outside_inst`**: an OUTSIDE major's instantiated type former (at its telescope,
+`family_telescope`): its index count and result sort. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:250-269 ConRon.Arena.targetOutsideInst
 @[no_expose, l_impl ConRon.Arena.targetOutsideInst]
 def targetOutsideInst : FunDecl := lfn (vis, I, us, dso, dsl)
-    locals (f, q, kind, tl, ok, ty, bso, bsl, body, g, x, y, z, lo, ll) {
+    locals (f, q, kind, tyI, tl, ok, ty, bso, bsl, body, g, x, y, z, lo, ll) {
   (f, q) := call env_find(I, vis);
   if f == 0 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
-  kind := EREC.u64[q];
+  kind := EREC⦃q⦄;
   if kind != 3 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
-  (lo, ll) := call er_to_iw(EREC.u64[q + 2], EREC.u64[q + 3]);
-  tl := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC.u64[q + 4]);
+  tyI := call family_telescope(vis, q + 1, q + 5);
+  (lo, ll) := call er_to_iw(EREC⦃q + 2⦄, EREC⦃q + 3⦄);
+  tl := call inst_lp_fast(⟪CWF⟫, lo, ll, us, tyI);
   (ok, ty) := call inst_pis_with(dso, dsl, tl);
   if ok == 0 { fail R_TARGET_REC_THE_MAJOR_S };
   (bso, bsl, body) := call pi_binders(⟪CWF⟫, ty);
@@ -314,20 +315,19 @@ def targetOutsideInst : FunDecl := lfn (vis, I, us, dso, dsl)
   return (bsl, x)
 }
 
-/-- `target_major_of`'s MEMBER branch: the member at the block's levels and parameters. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:276-339 ConRon.Arena.targetMajorOf
+/-- `target_major_of`'s MEMBER branch: the member at the block's levels and parameters, its
+constructors the member's own (`ms.ctors`). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:273-335 ConRon.Arena.targetMajorOf
 @[no_expose, l_impl ConRon.Arena.targetMajorOf]
-def targetMajorOfMember : FunDecl := lfn (p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, I, us, t)
-    locals (mo, ml, ms, nidx, ch, ctor_o, ctor_l, nP, lpso, lpsl, blvls, al2, fl2, eq1, eq2, r) {
+def targetMajorOfMember : FunDecl := lfn (p, pfo, pfl, fvo, fvl, args_o, args_l, I, us, t)
+    locals (mo, ml, ms, nidx, ctor_o, ctor_l, nP, lpso, lpsl, blvls, al2, fl2, eq1, eq2, r) {
   mo := IW.u64[p];
   ml := IW.u64[p + 1];
   if ml <= t { abort };
   ms := IW.u64[mo + t];
   nidx := IW.u64[ms + 1];
-  if cal <= t { abort };
-  ch := IW.u64[cao + t];
-  ctor_o := IW.u64[ch];
-  ctor_l := IW.u64[ch + 1];
+  ctor_o := IW.u64[ms + 2];
+  ctor_l := IW.u64[ms + 3];
   nP := IW.u64[p + 4];
   (lpso, lpsl) := call block_shape_lps(p);
   blvls := call param_levels(lpso, lpsl);
@@ -345,7 +345,7 @@ def targetMajorOfMember : FunDecl := lfn (p, cao, cal, pfo, pfl, fvo, fvl, args_
 
 /-- `target_major_of`'s OUTSIDE branch: the closedness test over the instantiation's
 parameters (`ds.allM`, stopping at the first failure). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:276-339 ConRon.Arena.targetMajorOf
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:273-335 ConRon.Arena.targetMajorOf
 @[no_expose, l_impl ConRon.Arena.targetMajorOf]
 def targetMajorOfOutsideClosed : FunDecl := lfn (dso, dsl, nP) locals (x, bb, fb, r) {
   if dsl == 0 { return 1 };
@@ -360,7 +360,7 @@ def targetMajorOfOutsideClosed : FunDecl := lfn (dso, dsl, nP) locals (x, bb, fb
 
 /-- `target_major_of`'s OUTSIDE branch: does any parameter occur as a member or hole
 (`ds.anyM`, stopping at the first hit; a self-recursion). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:276-339 ConRon.Arena.targetMajorOf
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:273-335 ConRon.Arena.targetMajorOf
 @[no_expose, l_impl ConRon.Arena.targetMajorOf]
 def targetMajorOfOutsideOcc : FunDecl := lfn (mno, mnl, dso, dsl) locals (b, r) {
   if dsl == 0 { return 0 };
@@ -372,7 +372,7 @@ def targetMajorOfOutsideOcc : FunDecl := lfn (mno, mnl, dso, dsl) locals (b, r) 
 
 /-- `target_major_of`'s OUTSIDE branch, after the parameter checks: the instantiation's index
 count and sort, in the block's universe (Q1), the record. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:276-339 ConRon.Arena.targetMajorOf
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:273-335 ConRon.Arena.targetMajorOf
 @[no_expose, l_impl ConRon.Arena.targetMajorOf]
 def targetMajorOfOutsideTail : FunDecl := lfn (vis, p, pfo, pfl, I, us, dso, dsl, cso, csl)
     locals (nidx, sI, e, r) {
@@ -386,7 +386,7 @@ def targetMajorOfOutsideTail : FunDecl := lfn (vis, p, pfo, pfl, I, us, dso, dsl
 
 /-- `target_major_of`'s OUTSIDE branch: not `Quot`, a stored inductive, parameters closed and
 occurring, in the block's universe (Q1). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:276-339 ConRon.Arena.targetMajorOf
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:273-335 ConRon.Arena.targetMajorOf
 @[no_expose, l_impl ConRon.Arena.targetMajorOf]
 def targetMajorOfOutside : FunDecl := lfn (vis, p, pfo, pfl, I, us, args_o, args_l, mno, mnl)
     locals (qq, ok3, nPc, cso, csl, cl, r) {
@@ -404,14 +404,14 @@ def targetMajorOfOutside : FunDecl := lfn (vis, p, pfo, pfl, I, us, args_o, args
 }
 
 /-- `target_major_of` after the head's `const` view: the member or the outside branch. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:276-339 ConRon.Arena.targetMajorOf
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:273-335 ConRon.Arena.targetMajorOf
 @[no_expose, l_impl ConRon.Arena.targetMajorOf]
-def targetMajorOfConst : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, x, y)
+def targetMajorOfConst : FunDecl := lfn (vis, p, pfo, pfl, fvo, fvl, args_o, args_l, x, y)
     locals (mno, mnl, ok2, t, r) {
   (mno, mnl) := call block_shape_member_names(p);
   (ok2, t) := call sl_find(mno, mnl, x);
   if ok2 != 0 {
-    r := call target_major_of_member(p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, x, y, t);
+    r := call target_major_of_member(p, pfo, pfl, fvo, fvl, args_o, args_l, x, y, t);
     return r
   };
   r := call target_major_of_outside(vis, p, pfo, pfl, x, y, args_o, args_l, mno, mnl);
@@ -420,23 +420,23 @@ def targetMajorOfConst : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, a
 
 /-- **`target_major_of`**: a recursor's major, resolved from its opened type — a MEMBER, or an
 OUTSIDE stored inductive (a nested block's container). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:276-339 ConRon.Arena.targetMajorOf
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:273-335 ConRon.Arena.targetMajorOf
 @[no_expose, l_impl ConRon.Arena.targetMajorOf]
-def targetMajorOf : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, mty)
+def targetMajorOf : FunDecl := lfn (vis, p, pfo, pfl, fvo, fvl, mty)
     locals (args_o, args_l, hd, tag, g, x, y, z, r) {
   (args_o, args_l) := call get_app_args_f(⟪CWF⟫, mty);
   hd := call get_app_fn_f(⟪CWF⟫, mty);
   tag := ⟦hd⟧.tag;
   if tag != 3 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE };
   (g, x, y, z) := call e_view(hd);
-  r := call target_major_of_const(vis, p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, x, y);
+  r := call target_major_of_const(vis, p, pfo, pfl, fvo, fvl, args_o, args_l, x, y);
   return r
 }
 
 /-! ## The pins at a resolved major -/
 
 /-- **`target_pin_tys`**: an outside major's parameters, typed at the rule prefix, in order. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:341-348 ConRon.Arena.targetPinTys
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:337-344 ConRon.Arena.targetPinTys
 @[no_expose, l_impl ConRon.Arena.targetPinTys]
 def targetPinTys : FunDecl := lfn (vis, d, xo, xl) locals (u) {
   if xl == 0 { skip }
@@ -446,19 +446,16 @@ def targetPinTys : FunDecl := lfn (vis, d, xo, xl) locals (u) {
   }
 }
 
-/-- **`target_major_pins`**: nothing at a member; an outside major's parameters and the
-instantiation itself, typed at the rule prefix. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:350-363 ConRon.Arena.targetMajorPins
+/-- **`target_major_pins`**: nothing at a member; an outside major's parameters, and the family at
+the key `I.{us} D⃗` (`family_key_check`), typed at the rule prefix. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:346-356 ConRon.Arena.targetMajorPins
 @[no_expose, l_impl ConRon.Arena.targetMajorPins]
-def targetMajorPins : FunDecl := lfn (vis, rP, M) locals (mem, hd, app, u) {
+def targetMajorPins : FunDecl := lfn (vis, rP, M) locals (mem, u) {
   mem := IW.u64[M + 8];
   if mem != 0 { skip }
   else {
     u := call target_pin_tys(vis, rP, IW.u64[M + 2], IW.u64[M + 3]);
-    hd := call intern_const(IW.u64[M], IW.u64[M + 1]);
-    if 4294967296 <= hd { abort };
-    app := call mk_app_n_f(hd, IW.u64[M + 2], IW.u64[M + 3]);
-    u := call infer_type_core(vis, rP, app)
+    u := call family_key_check(vis, rP, IW.u64[M], IW.u64[M + 1], IW.u64[M + 2], IW.u64[M + 3])
   }
 }
 
@@ -466,7 +463,7 @@ def targetMajorPins : FunDecl := lfn (vis, rP, M) locals (mem, hd, app, u) {
 
 /-- Split the block's recursors into its own (`tgt < k`) and the auxiliary ones: the twin's two
 `filter`s, a self-recursion consing each recursor onto its side's slice (`sl_cons`, D18). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:360-395 ConRon.Arena.targetRecPins
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def blockRecSplitOwnAux : FunDecl := lfn (reco, recl, k) locals (oo, ol, ao, al, rc, qo, ql) {
   if recl == 0 { return (0, 0, 0, 0) };
@@ -482,7 +479,7 @@ def blockRecSplitOwnAux : FunDecl := lfn (reco, recl, k) locals (oo, ol, ao, al,
 
 /-- The wanted auxiliary names `n₀.rec_{j+1} … n₀.rec_{j+auxl}`, interned in order (the twin's
 `mapM` over `List.range`), a self-recursion consing each name (`sl_cons`, D18). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:360-395 ConRon.Arena.targetRecPins
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def blockRecWantAuxNames : FunDecl := lfn (n0, j, auxl) locals (nm, ro, rl, qo, ql) {
   if auxl == 0 { return (0, 0) };
@@ -494,20 +491,20 @@ def blockRecWantAuxNames : FunDecl := lfn (n0, j, auxl) locals (nm, ro, rl, qo, 
 
 /-- `ptr_names_copy(d, s, l)`: `IW[d + j] := EREC[IW[IW[s + j]]]` for `j < l`, recursively (the
 constants' names of a slice of pointers whose word `0` is a constant pointer). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:360-395 ConRon.Arena.targetRecPins
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def ptrNamesCopy : FunDecl := lfn (d, s, l) locals (ptr, cv, u) {
   if l == 0 { return 0 };
   ptr := IW.u64[s];
   cv := IW.u64[ptr];
-  IW.u64[d] := EREC.u64[cv];
+  IW.u64[d] := EREC⦃cv⦄;
   u := call ptr_names_copy(d + 1, s + 1, l - 1);
   return 0
 }
 
 /-- The constants' names of a slice of pointers whose word `0` is a constant pointer (a
 `RecShape`'s `cvR`, or a `(cv, nF)` constructor entry). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:360-395 ConRon.Arena.targetRecPins
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def ptrListNames : FunDecl := lfn (o, l) locals (go, u) {
   go := call iw_alloc(l);
@@ -516,12 +513,12 @@ def ptrListNames : FunDecl := lfn (o, l) locals (go, u) {
 }
 
 /-- The name pins: `n₀`, the auxiliary names as a set, no two recursors sharing a name. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:360-395 ConRon.Arena.targetRecPins
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def targetRecPinsNames : FunDecl := lfn (mo, k, reco, recl, auxo, auxl)
     locals (n0, ms0, cvt0, wo, wl, go, gl, ok, nodupo, nodupl) {
   if k == 0 { n0 := call intern_nanon() }
-  else { ms0 := IW.u64[mo]; cvt0 := IW.u64[ms0]; n0 := EREC.u64[cvt0] };
+  else { ms0 := IW.u64[mo]; cvt0 := IW.u64[ms0]; n0 := EREC⦃cvt0⦄ };
   (wo, wl) := call block_rec_want_aux_names(n0, 0, auxl);
   (go, gl) := call ptr_list_names(auxo, auxl);
   ok := call sl_set_eq(wo, wl, go, gl);
@@ -533,7 +530,7 @@ def targetRecPinsNames : FunDecl := lfn (mo, k, reco, recl, auxo, auxl)
 
 /-- The constructor grouping pin: the block splits, with `k` formers, as many rules as
 recursors, and the same constructors in the same order. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:360-395 ConRon.Arena.targetRecPins
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def targetRecPinsSplit : FunDecl := lfn (p, k, recl, blocko, blockl)
     locals (ok, q, cvtsl, rsl, cso, csl, aco, acl, an_o, an_l, cn_o, cn_l) {
@@ -554,7 +551,7 @@ def targetRecPinsSplit : FunDecl := lfn (p, k, recl, blocko, blockl)
 
 /-- **`target_rec_pins`**: level parameters, reserved names, the member/auxiliary recursor name
 pins, no shared names, and the constructor grouping against the stream. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:360-395 ConRon.Arena.targetRecPins
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def targetRecPins : FunDecl := lfn (p, blocko, blockl)
     locals (ok, reco, recl, k, owno, ownl, auxo, auxl, mo) {
@@ -579,20 +576,20 @@ def targetRecPins : FunDecl := lfn (p, blocko, blockl)
 
 /-- **`target_ctor_at`**: a member's constructor type as stored, an outside inductive's
 instantiated at the major's levels. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:406-412 ConRon.Arena.targetCtorAt
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:399-405 ConRon.Arena.targetCtorAt
 @[no_expose, l_impl ConRon.Arena.targetCtorAt]
 def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r, lo, ll, us) {
   mem := IW.u64[M + 8];
-  if mem != 0 { return EREC.u64[c + 3] };
+  if mem != 0 { return EREC⦃c + 3⦄ };
   us := IW.u64[M + 1];
   (lo, ll) := call cv_lps(c);
-  r := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC.u64[c + 3]);
+  r := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC⦃c + 3⦄);
   return r
 }
 
 /-- Erase the free-variable annotations of every element of a slice, in order: the twin's `mapM`
 as a self-recursion, each result consed onto the rest's slice (`sl_cons`, D18). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:414-453 ConRon.Arena.targetK53
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:407-446 ConRon.Arena.targetK53
 @[no_expose, l_impl ConRon.Arena.targetK53]
 def eraseEach : FunDecl := lfn (o, l) locals (v, ro, rl, qo, ql) {
   if l == 0 { return (0, 0) };
@@ -604,7 +601,7 @@ def eraseEach : FunDecl := lfn (o, l) locals (v, ro, rl, qo, ql) {
 
 /-- `target_k53`'s telescope check: the stripped domains and the recorded telescope agree up to
 erased annotations. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:414-453 ConRon.Arena.targetK53
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:407-446 ConRon.Arena.targetK53
 @[no_expose, l_impl ConRon.Arena.targetK53]
 def targetK53Tele : FunDecl := lfn (bso, bsl, teo, tel) locals (ewo, ewl, eto, etl, r) {
   (ewo, ewl) := call erase_each(bso, bsl);
@@ -615,7 +612,7 @@ def targetK53Tele : FunDecl := lfn (bso, bsl, teo, tel) locals (ewo, ewl, eto, e
 
 /-- `target_k53`'s head check: both leaf and major domain are constant applications of the same
 head, of equal arity. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:414-453 ConRon.Arena.targetK53
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:407-446 ConRon.Arena.targetK53
 @[no_expose, l_impl ConRon.Arena.targetK53]
 def targetK53Heads : FunDecl := lfn (vis, p, fto, ftl, Mc, leafW, majDom)
     locals (lh, mh, ltag, mtag, g, x, y, z, ip, usp, ii, lao, lal, mao, mal, r) {
@@ -640,7 +637,7 @@ def targetK53Heads : FunDecl := lfn (vis, p, fto, ftl, Mc, leafW, majDom)
 
 /-- `target_k53`'s argument check: the indices (past `Mc.nPc`) erase equal, the class the leaf's
 parameters name is a member occurrence, and it matches the callee's class. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:414-453 ConRon.Arena.targetK53
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:407-446 ConRon.Arena.targetK53
 @[no_expose, l_impl ConRon.Arena.targetK53]
 def targetK53Args : FunDecl := lfn (vis, p, fto, ftl, Mc, ip, usp, lao, lal, mao, mal)
     locals (nPc, ld_o, ld_l, md_o, md_l, leo, lel, meo, mel, r, lpl, hd, app, mno, mnl, occ) {
@@ -664,7 +661,7 @@ def targetK53Args : FunDecl := lfn (vis, p, fto, ftl, Mc, ip, usp, lao, lal, mao
 }
 
 /-- **`target_k53`**: K.53′ at one recorded field. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:414-453 ConRon.Arena.targetK53
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:407-446 ConRon.Arena.targetK53
 @[no_expose, l_impl ConRon.Arena.targetK53]
 def targetK53 : FunDecl := lfn (vis, p, fto, ftl, Mc, teo, tel, majDom, f) locals (ok, bso, bsl, leafW, r) {
   (ok, bso, bsl, leafW) := call strip_pis(tel, f);
@@ -677,7 +674,7 @@ def targetK53 : FunDecl := lfn (vis, p, fto, ftl, Mc, teo, tel, majDom, f) local
 
 /-- **`target_pi_doms_with`**: the domains of the first `|xs|` `∀` binders, each instantiated at
 the earlier `xs`; `(0, 0, 0)` when `e` runs out of binders first. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:455-469 ConRon.Arena.targetPiDomsWith
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:448-462 ConRon.Arena.targetPiDomsWith
 @[no_expose, l_impl ConRon.Arena.targetPiDomsWith]
 def targetPiDomsWith : FunDecl := lfn (xo, xl, e) locals (tag, g, d, b, z, xj, cur, ok, ro, rl, qo, ql) {
   if xl == 0 { return (1, 0, 0) };
@@ -695,7 +692,7 @@ def targetPiDomsWith : FunDecl := lfn (xo, xl, e) locals (tag, g, d, b, z, xj, c
 /-! ## The stored family -/
 
 /-- **`abstract_prefix`**: the free variables `0 … k-1` closed at cursor `c`, innermost first. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:473-481 ConRon.Arena.abstractPrefix
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:466-474 ConRon.Arena.abstractPrefix
 @[no_expose, l_impl ConRon.Arena.abstractPrefix]
 def abstractPrefix : FunDecl := lfn (k, c, e) locals (cur, r) {
   if k == 0 { return e };
@@ -705,7 +702,7 @@ def abstractPrefix : FunDecl := lfn (k, c, e) locals (cur, r) {
 }
 
 /-- **`abstract_prefix_list`**: `ds.map (abstractPrefix rP)`, in order. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:483-491 ConRon.Arena.abstractPrefixList
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:476-484 ConRon.Arena.abstractPrefixList
 @[no_expose, l_impl ConRon.Arena.abstractPrefixList]
 def abstractPrefixList : FunDecl := lfn (rP, dso, dsl) locals (x, qo, ql, ro, rl) {
   if dsl == 0 { return (0, 0) };
@@ -718,7 +715,7 @@ def abstractPrefixList : FunDecl := lfn (rP, dso, dsl) locals (x, qo, ql, ro, rl
 /-- **`aux_rule_fire`**: the firing mode of a rule at an OUTSIDE major — `.nested` at the class's
 levels and its parameters closed over the rule prefix. Result: `(1, lvls.off, lvls.len, pins.off,
 pins.len)` (kind `1` nested). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:493-501 ConRon.Arena.auxRuleFire
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:486-494 ConRon.Arena.auxRuleFire
 @[no_expose, l_impl ConRon.Arena.auxRuleFire]
 def auxRuleFire : FunDecl := lfn (M, rP) locals (lo, ll, po, pl) {
   (lo, ll) := call view_ls(IW.u64[M + 1]);
@@ -726,60 +723,73 @@ def auxRuleFire : FunDecl := lfn (M, rP) locals (lo, ll, po, pl) {
   return (1, lo, ll, po, pl)
 }
 
-/-- `tgt_rule_nested(old, flo, fll, fpo, fpl)`: a fresh 11-word rule record, `old`'s fields with the
-NESTED fire at the record-pool slices `(flo, fll)` (levels), `(fpo, fpl)` (pins). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:503-514 ConRon.Arena.tgtStoredRules
-@[no_expose, l_impl ConRon.Arena.tgtStoredRules]
-def tgtRuleNested : FunDecl := lfn (old, flo, fll, fpo, fpl) locals (newp) {
+/-- `generated_rule_nested(old, flo, fll, fpo, fpl)`: a fresh 11-word rule record, `old`'s fields
+with the NESTED fire at the record-pool slices `(flo, fll)` (levels), `(fpo, fpl)` (pins). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:496-506 ConRon.Arena.generatedRules
+@[no_expose, l_impl ConRon.Arena.generatedRules]
+def generatedRuleNested : FunDecl := lfn (old, flo, fll, fpo, fpl) locals (newp, ez) {
   newp := call erec_alloc(11);
-  EREC.u64[newp] := EREC.u64[old];
-  EREC.u64[newp + 1] := EREC.u64[old + 1];
-  EREC.u64[newp + 2] := EREC.u64[old + 2];
-  EREC.u64[newp + 3] := 1;
-  EREC.u64[newp + 4] := flo;
-  EREC.u64[newp + 5] := fll;
-  EREC.u64[newp + 6] := fpo;
-  EREC.u64[newp + 7] := fpl;
-  EREC.u64[newp + 8] := EREC.u64[old + 8];
-  EREC.u64[newp + 9] := EREC.u64[old + 9];
-  EREC.u64[newp + 10] := EREC.u64[old + 10];
+  ez := call erec_put(newp, EREC⦃old⦄);
+  ez := call erec_put(newp + 1, EREC⦃old + 1⦄);
+  ez := call erec_put(newp + 2, 0);
+  ez := call erec_put(newp + 3, 1);
+  ez := call erec_put(newp + 4, flo);
+  ez := call erec_put(newp + 5, fll);
+  ez := call erec_put(newp + 6, fpo);
+  ez := call erec_put(newp + 7, fpl);
+  ez := call erec_put(newp + 8, EREC⦃old + 8⦄);
+  ez := call erec_put(newp + 9, 0);
+  ez := call erec_put(newp + 10, 0);
   return newp
 }
 
-/-- Rebuild each rule record of `(ro, rl)` with the given NESTED fire (its level and pin slices in
-`EREC`), as fresh `EREC` records; the twin's `rules.map`, a self-recursion consing each new record
-pointer onto the rest's slice (`sl_cons`, D18). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:503-514 ConRon.Arena.tgtStoredRules
-@[no_expose, l_impl ConRon.Arena.tgtStoredRules]
-def tgtStoredRulesRemap : FunDecl := lfn (ro, rl, flo, fll, fpo, fpl) locals (newp, to, tl, qo, ql) {
+/-- `generated_rules_remap(ro, rl, flo, fll, fpo, fpl)`: each rule record of `(ro, rl)` rebuilt with
+the given NESTED fire (its level and pin slices in `EREC`), as fresh `EREC` records; the twin's
+`rules.map`, a self-recursion consing each new record pointer onto the rest's slice (`sl_cons`,
+D18). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:496-506 ConRon.Arena.generatedRules
+@[no_expose, l_impl ConRon.Arena.generatedRules]
+def generatedRulesRemap : FunDecl := lfn (ro, rl, flo, fll, fpo, fpl) locals (newp, to, tl, qo, ql) {
   if rl == 0 { return (0, 0) };
-  newp := call tgt_rule_nested(IW.u64[ro], flo, fll, fpo, fpl);
-  (to, tl) := call tgt_stored_rules_remap(ro + 1, rl - 1, flo, fll, fpo, fpl);
+  newp := call generated_rule_nested(IW.u64[ro], flo, fll, fpo, fpl);
+  (to, tl) := call generated_rules_remap(ro + 1, rl - 1, flo, fll, fpo, fpl);
   (qo, ql) := call sl_cons(newp, to, tl);
   return (qo, ql)
 }
 
-/-- **`tgt_stored_rules`**: `sum_rules` at the major's parameters and constructors; at an OUTSIDE
-major every rule's fire is recomputed once (`aux_rule_fire`, its slices in `IW`), its slices copied
-to `EREC` (`er_from_iw`: a rule record's fire slices are read from the record pool, `decRule`), and
-the rules rebuilt. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:503-514 ConRon.Arena.tgtStoredRules
-@[no_expose, l_impl ConRon.Arena.tgtStoredRules]
-def tgtStoredRules : FunDecl := lfn (vis, cv, rP, M, rhso, rhsl)
+/-- **`generated_rules(rP, M, rhss.off, rhss.len)`**: one generated recursor's rules, at its major —
+`sum_rules` at the major's constructors; at an OUTSIDE major every rule's fire is computed once
+(`aux_rule_fire`, its slices in `IW`), its slices copied to `EREC` (`er_from_iw`: a rule record's
+fire slices are read from the record pool, `decRule`), and the rules rebuilt. Reads no
+environment. An `IW` list of `EREC` rule pointers. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:496-506 ConRon.Arena.generatedRules
+@[no_expose, l_impl ConRon.Arena.generatedRules]
+def generatedRules : FunDecl := lfn (rP, M, rhso, rhsl)
     locals (ro, rl, fk, flo, fll, fpo, fpl, elo, ell, epo, epl, no, nl) {
-  (ro, rl) := call sum_rules(vis, EREC.u64[cv], IW.u64[M + 4], IW.u64[M + 6], IW.u64[M + 7],
-    rhso, rhsl);
+  (ro, rl) := call sum_rules(IW.u64[M + 6], IW.u64[M + 7], rhso, rhsl);
   if IW.u64[M + 8] != 0 { return (ro, rl) };
   (fk, flo, fll, fpo, fpl) := call aux_rule_fire(M, rP);
   (elo, ell) := call er_from_iw(flo, fll);
   (epo, epl) := call er_from_iw(fpo, fpl);
-  (no, nl) := call tgt_stored_rules_remap(ro, rl, elo, ell, epo, epl);
+  (no, nl) := call generated_rules_remap(ro, rl, elo, ell, epo, epl);
   return (no, nl)
+}
+
+/-- **`rec_k_expected(p, M)`**: the K flag a recursor of this block has (official's `is_K_target`):
+the block a proposition with one member, the recursor's major that member, with one constructor
+and no fields; an outside major's recursor is never K. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:508-515 ConRon.Arena.recKExpected
+@[no_expose, l_impl ConRon.Arena.recKExpected]
+def recKExpected : FunDecl := lfn (p, M) locals (c) {
+  if IW.u64[M + 8] == 0 { return 0 };
+  if IW.u64[M + 7] != 1 { return 0 };
+  c := IW.u64[IW.u64[M + 6]];
+  return u64(IW.u64[p + 1] == 1) & u64(IW.u64[p + 8] != 0) & u64(IW.u64[c + 1] == 0)
 }
 
 /-- `block_nested_bit_go(reco, recl, k)`: some recursor's major is not a member
 (`recs.any (fun rc => !(rc.tgt < k))`), a self-recursion. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:516-520 ConRon.Arena.blockNestedBit
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-521 ConRon.Arena.blockNestedBit
 @[no_expose, l_impl ConRon.Arena.blockNestedBit]
 def blockNestedBitGo : FunDecl := lfn (reco, recl, k) locals (r) {
   if recl == 0 { return 0 };
@@ -790,7 +800,7 @@ def blockNestedBitGo : FunDecl := lfn (reco, recl, k) locals (r) {
 
 /-- **`block_nested_bit`**: some field kind is not flat, or some recursor's major is not a
 member. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:516-520 ConRon.Arena.blockNestedBit
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-521 ConRon.Arena.blockNestedBit
 @[no_expose, l_impl ConRon.Arena.blockNestedBit]
 def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, r) {
   flat := call nest_kinds_flat(ko, kl);
@@ -800,27 +810,27 @@ def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, r) {
 }
 
 /-- `rule_copy(b, old)`: the 11 words of the rule record at `old` copied to `EREC[b ‥ b + 11)`. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:522-539 ConRon.Arena.consBlockRecsTF
-@[no_expose, l_impl ConRon.Arena.consBlockRecsTF]
-def ruleCopy : FunDecl := lfn (b, old) locals () {
-  EREC.u64[b] := EREC.u64[old];
-  EREC.u64[b + 1] := EREC.u64[old + 1];
-  EREC.u64[b + 2] := EREC.u64[old + 2];
-  EREC.u64[b + 3] := EREC.u64[old + 3];
-  EREC.u64[b + 4] := EREC.u64[old + 4];
-  EREC.u64[b + 5] := EREC.u64[old + 5];
-  EREC.u64[b + 6] := EREC.u64[old + 6];
-  EREC.u64[b + 7] := EREC.u64[old + 7];
-  EREC.u64[b + 8] := EREC.u64[old + 8];
-  EREC.u64[b + 9] := EREC.u64[old + 9];
-  EREC.u64[b + 10] := EREC.u64[old + 10];
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:523-534 ConRon.Arena.blockRecInfosTF
+@[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
+def ruleCopy : FunDecl := lfn (b, old) locals (ez) {
+  ez := call erec_put(b, EREC⦃old⦄);
+  ez := call erec_put(b + 1, EREC⦃old + 1⦄);
+  ez := call erec_put(b + 2, EREC⦃old + 2⦄);
+  ez := call erec_put(b + 3, EREC⦃old + 3⦄);
+  ez := call erec_put(b + 4, EREC⦃old + 4⦄);
+  ez := call erec_put(b + 5, EREC⦃old + 5⦄);
+  ez := call erec_put(b + 6, EREC⦃old + 6⦄);
+  ez := call erec_put(b + 7, EREC⦃old + 7⦄);
+  ez := call erec_put(b + 8, EREC⦃old + 8⦄);
+  ez := call erec_put(b + 9, EREC⦃old + 9⦄);
+  ez := call erec_put(b + 10, EREC⦃old + 10⦄);
   return 0
 }
 
 /-- `rules_to_erec_go(base, ro, rl)`: copy the 11-word rule records `IW[ro ‥ ro + rl)` point to into
 the `EREC` run at `base`, first to last; a self-recursion. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:522-539 ConRon.Arena.consBlockRecsTF
-@[no_expose, l_impl ConRon.Arena.consBlockRecsTF]
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:523-534 ConRon.Arena.blockRecInfosTF
+@[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def rulesToErecGo : FunDecl := lfn (base, ro, rl) locals (u) {
   if rl == 0 { return 0 };
   u := call rule_copy(base, IW.u64[ro]);
@@ -829,9 +839,9 @@ def rulesToErecGo : FunDecl := lfn (base, ro, rl) locals (u) {
 }
 
 /-- Copy an `IW` pointer-list of 11-word rule records into one fresh CONSECUTIVE `EREC` run (a
-capacity abort above `2^32` rules). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:522-539 ConRon.Arena.consBlockRecsTF
-@[no_expose, l_impl ConRon.Arena.consBlockRecsTF]
+recursor record's rules, `decRules`; a capacity abort above `2^32` rules). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:523-534 ConRon.Arena.blockRecInfosTF
+@[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def rulesToErec : FunDecl := lfn (ro, rl) locals (base, u) {
   if 4294967296 <= rl { abort };
   base := call erec_alloc(rl * 11);
@@ -839,54 +849,48 @@ def rulesToErec : FunDecl := lfn (ro, rl) locals (base, u) {
   return (base, rl)
 }
 
-/-- `rec_info_rec(cv, mI, rP, reo, rel)`: a fresh 9-word `.recInfo` record (kind `5`, `cv`'s 4 words
-inline, `major`, `pre`, the rules' run). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:522-539 ConRon.Arena.consBlockRecsTF
-@[no_expose, l_impl ConRon.Arena.consBlockRecsTF]
-def recInfoRec : FunDecl := lfn (cv, mI, rP, reo, rel) locals (q) {
-  q := call erec_alloc(9);
-  EREC.u64[q] := 5;
-  EREC.u64[q + 1] := EREC.u64[cv];
-  EREC.u64[q + 2] := EREC.u64[cv + 1];
-  EREC.u64[q + 3] := EREC.u64[cv + 2];
-  EREC.u64[q + 4] := EREC.u64[cv + 3];
-  EREC.u64[q + 5] := mI;
-  EREC.u64[q + 6] := rP;
-  EREC.u64[q + 7] := reo;
-  EREC.u64[q + 8] := rel;
+/-- `rec_info_rec(cv, mI, rP, isK, reo, rel)`: a fresh 10-word `.recInfo` record (kind `5`, `cv`'s
+4 words inline, `major`, `pre`, the rules' run, `isK`); the copied name word a handle (`env_push`
+reads it). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:523-534 ConRon.Arena.blockRecInfosTF
+@[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
+def recInfoRec : FunDecl := lfn (cv, mI, rP, isK, reo, rel) locals (q, ez) {
+  q := call erec_alloc(10);
+  ez := call erec_put(q, 5);
+  ez := call erec_put(q + 1, EREC⦃cv⦄);
+  ez := call erec_put(q + 2, EREC⦃cv + 1⦄);
+  ez := call erec_put(q + 3, EREC⦃cv + 2⦄);
+  ez := call erec_put(q + 4, EREC⦃cv + 3⦄);
+  ez := call erec_put(q + 5, mI);
+  ez := call erec_put(q + 6, rP);
+  ez := call erec_put(q + 7, reo);
+  ez := call erec_put(q + 8, rel);
+  ez := call erec_put(q + 9, isK);
+  if 4294967296 <= EREC⦃q + 1⦄ { abort };
   return q
 }
 
-/-- Build the `recInfo` record (kind `5`: `cv`'s 4 words inline, `major`, `pre`, the rules copied
-to one fresh `EREC` run) and `env_push` it. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:522-539 ConRon.Arena.consBlockRecsTF
-@[no_expose, l_impl ConRon.Arena.consBlockRecsTF]
-def consBlockRecsPush : FunDecl := lfn (vis, cv, mI, rP, ro, rl) locals (reo, rel, q, nvis) {
-  (reo, rel) := call rules_to_erec(ro, rl);
-  q := call rec_info_rec(cv, mI, rP, reo, rel);
-  nvis := call env_push(vis, q);
-  return nvis
-}
-
-/-- **`cons_block_recs_tf`**: the checked family consed through the index, at its majors; the
-rules' lookups at the constructors' visibility bound `vis₂` (fixed), the recursors pushed above
-the growing `vis`; the twin's list recursion. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:522-539 ConRon.Arena.consBlockRecsTF
-@[no_expose, l_impl ConRon.Arena.consBlockRecsTF]
-def consBlockRecsTF : FunDecl := lfn (vis2, p, m, lo, ll, vis)
-    locals (trip, cv, M, rhso, rhsl, mI, rP, ro, rl, nvis, r) {
-  if ll == 0 { return vis };
+/-- **`block_rec_infos_tf(p, m, out.off, out.len)`**: the checked family's records, at their
+majors, in push order — each recursor `(cv, M, rhss)` at its record's major index and rule prefix,
+its K flag `rec_k_expected` and its rules at ITS major (`generated_rules`, copied into one run);
+every record built before the first push. An `IW` list of `EREC` record pointers. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:523-534 ConRon.Arena.blockRecInfosTF
+@[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
+def blockRecInfosTF : FunDecl := lfn (p, m, lo, ll)
+    locals (trip, cv, M, mI, rP, ro, rl, reo, rel, isK, q, io, il, o, l) {
+  if ll == 0 { return (0, 0) };
   trip := IW.u64[lo];
   cv := IW.u64[trip];
   M := IW.u64[trip + 1];
-  rhso := IW.u64[trip + 2];
-  rhsl := IW.u64[trip + 3];
-  mI := call block_shape_major_idx_at(p, m);
   rP := call block_shape_rule_prefix_at(p, m);
-  (ro, rl) := call tgt_stored_rules(vis2, cv, rP, M, rhso, rhsl);
-  nvis := call cons_block_recs_push(vis, cv, mI, rP, ro, rl);
-  r := call cons_block_recs_tf(vis2, p, m + 1, lo + 1, ll - 1, nvis);
-  return r
+  (ro, rl) := call generated_rules(rP, M, IW.u64[trip + 2], IW.u64[trip + 3]);
+  (io, il) := call block_rec_infos_tf(p, m + 1, lo + 1, ll - 1);
+  mI := call block_shape_major_idx_at(p, m);
+  isK := call rec_k_expected(p, M);
+  (reo, rel) := call rules_to_erec(ro, rl);
+  q := call rec_info_rec(cv, mI, rP, isK, reo, rel);
+  (o, l) := call sl_cons(q, io, il);
+  return (o, l)
 }
 
 /-! ## The program -/
@@ -917,10 +921,11 @@ def recCheckFns : Prog :=
    ("target_k53_heads", targetK53Heads), ("target_k53_args", targetK53Args),
    ("target_k53", targetK53), ("target_pi_doms_with", targetPiDomsWith),
    ("abstract_prefix", abstractPrefix), ("abstract_prefix_list", abstractPrefixList),
-   ("aux_rule_fire", auxRuleFire), ("tgt_rule_nested", tgtRuleNested), ("tgt_stored_rules_remap", tgtStoredRulesRemap),
-   ("tgt_stored_rules", tgtStoredRules), ("block_nested_bit_go", blockNestedBitGo), ("block_nested_bit", blockNestedBit),
-   ("rule_copy", ruleCopy), ("rules_to_erec_go", rulesToErecGo), ("rec_info_rec", recInfoRec), ("rules_to_erec", rulesToErec), ("cons_block_recs_push", consBlockRecsPush),
-   ("cons_block_recs_tf", consBlockRecsTF)]
+   ("aux_rule_fire", auxRuleFire), ("generated_rule_nested", generatedRuleNested),
+   ("generated_rules_remap", generatedRulesRemap), ("generated_rules", generatedRules),
+   ("rec_k_expected", recKExpected), ("block_nested_bit_go", blockNestedBitGo),
+   ("block_nested_bit", blockNestedBit), ("rule_copy", ruleCopy), ("rules_to_erec_go", rulesToErecGo),
+   ("rec_info_rec", recInfoRec), ("rules_to_erec", rulesToErec), ("block_rec_infos_tf", blockRecInfosTF)]
 
 /-- Stubs for the functions of OTHER modules this module calls.
 
@@ -929,7 +934,8 @@ def recCheckFns : Prog :=
   `block_shape_all_ctors`/`block_rec_lps_ok`/`block_rec_names_unreserved` are `Inductives/
   Positivity.lean`'s and `BlockParts.lean`'s, per the brief's exact conventions.
 * `replace_fvars` is `IndPos`'s `FvMap` replacement; `param_levels` is `IndSum`'s; `sum_rules` is
-  `IndSum`'s `sumRules`, read at a resolved major's parameter count and constructors.
+  `IndSum`'s `sumRules`, read at a resolved major's constructors; `family_telescope`,
+  `family_key_check` are `IndPos2`'s.
 * `block_rec_name_set_ok(members.off, members.len, recs.off, recs.len)`: the brief left this
   callee's parameter convention unstated (`block_rec_name_set_ok(...)`); this module ASSUMES the
   twin's own argument order, `blockRecNameSetOk (members : List MemberShape) (recs : List
@@ -941,8 +947,8 @@ def recCheckForeign : Prog :=
    ("block_rec_lps_ok", stub 1), ("block_rec_names_unreserved", stub 2),
    ("block_rec_name_set_ok", stub 4), ("block_split", stub 2),
    ("block_shape_major_idx_at", stub 2), ("block_shape_rule_prefix_at", stub 2),
-   ("pi_binders", stub 2), ("sum_rules", stub 7), ("block_shape_lps", stub 1),
-   ("er_from_iw", stub 2)]
+   ("pi_binders", stub 2), ("sum_rules", stub 4), ("block_shape_lps", stub 1),
+   ("er_from_iw", stub 2), ("family_telescope", stub 3), ("family_key_check", stub 6)]
 
 -- `abstract_prefix` at `k = 0`: the identity.
 #guard
@@ -969,11 +975,11 @@ def recCheckForeign : Prog :=
      | _ => false)
   | _ => false
 
--- `cons_block_recs_tf` over an empty list: the view is unchanged, nothing else read.
+-- `block_rec_infos_tf` over an empty list: the empty list, nothing else read.
 #guard
   match run (recCheckFns ++ libFns ++ stubFns ++ masterFns ++ recCheckForeign) 1000
-    "cons_block_recs_tf" [0, 0, 0, 0, 0, 5] testMem with
-  | .ok ([5], _) => true
+    "block_rec_infos_tf" [0, 0, 0, 0] testMem with
+  | .ok ([0, 0], _) => true
   | _ => false
 
 end L.Ind

@@ -11,7 +11,7 @@ public import ConAgua.Front.DeclsPre
 The checker parses the stream with the prelude's records still in `DECL[0‥P)`
 (`Checker/Prelude.lean`): `front_run` starts from a memory related to the blank parse state
 prefixed by them (`StateD.blank.pre D`, `Front/DeclsPre.lean`). The twin's parse only pushes to
-`decls` (`applyLine_pre`), so the frontend's own refinement carries over: the memory is related to
+`decls` (`applyRecord_pre`), so the frontend's own refinement carries over: the memory is related to
 the twin's parse state prefixed by `D` (`FrontInvP`, the driver's invariant, `FrontRunRef.lean`).
 -/
 
@@ -26,21 +26,21 @@ namespace L.Front
 section pre
 variable (D : Array IDeclaration)
 
-theorem applyLine_pre_ok {st : StateD} {r : LineRec} {a : AState} :
-    AM.ok (applyLine (st.pre D) r) a ↔ AM.ok (applyLine st r) a := by
-  simp only [AM.ok, applyLine_pre_run]
-  cases (applyLine st r).run a <;> rfl
+theorem applyRecord_pre_ok {st : StateD} {r : LineRec} {a : AState} :
+    AM.ok (applyRecord (st.pre D) r) a ↔ AM.ok (applyRecord st r) a := by
+  simp only [AM.ok, applyRecord_pre_run]
+  cases (applyRecord st r).run a <;> rfl
 
-theorem applyLine_pre_st {st : StateD} {r : LineRec} {a : AState} :
-    AM.st (applyLine (st.pre D) r) a = AM.st (applyLine st r) a := by
-  simp only [AM.st, applyLine_pre_run]
-  cases (applyLine st r).run a <;> rfl
+theorem applyRecord_pre_st {st : StateD} {r : LineRec} {a : AState} :
+    AM.st (applyRecord (st.pre D) r) a = AM.st (applyRecord st r) a := by
+  simp only [AM.st, applyRecord_pre_run]
+  cases (applyRecord st r).run a <;> rfl
 
-theorem applyLine_pre_res {st : StateD} {r : LineRec} {a : AState} (h : AM.ok (applyLine st r) a) :
-    AM.res (applyLine (st.pre D) r) a = preL D (AM.res (applyLine st r) a) := by
-  simp only [AM.res, AM.ok, applyLine_pre_run] at h ⊢
+theorem applyRecord_pre_res {st : StateD} {r : LineRec} {a : AState} (h : AM.ok (applyRecord st r) a) :
+    AM.res (applyRecord (st.pre D) r) a = preL D (AM.res (applyRecord st r) a) := by
+  simp only [AM.res, AM.ok, applyRecord_pre_run] at h ⊢
   revert h
-  cases (applyLine st r).run a with
+  cases (applyRecord st r).run a with
   | error e => simp
   | ok v => intro _; rfl
 

@@ -4,6 +4,10 @@ public import ConAgua.Arena.Tiers
 public import ConRon.Arena.Inductives.GenRec
 meta import ConAgua.Arena.Tiers
 meta import ConRon.Arena.Inductives.GenRec
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 
@@ -56,12 +60,12 @@ other, and the not-yet-translated callees (**stubs**) with their specs (stated, 
 | twin type | words |
 |---|---|
 | `IConstantVal × Nat` (a constructor with its field count) | `[cv, nF]` (`cv` an `EREC` pointer) |
-| `MemberShape` | `[cvT, nIdx, ctors.off, ctors.len]` (ctors: pointers to `[cv, nF]`) |
-| `RecShape` | `[cvR, rP, mI, tgt, rhss.off, rhss.len]` |
-| `BlockShape` (= `BlockParts`) | `[members.off, members.len, recs.off, recs.len, nP, elim, resSort, large, isProp]` |
-| `NestCtx` | `[names.off, names.len, lps.off, lps.len, nP, nIdxs.off, nIdxs.len, params.off, params.len, sort, lvls]` |
+| `MemberShape` | `[cvT, nIdx, ctors.off, ctors.len, declared]` (ctors: pointers to `[cv, nF]`; `cvT` the former at its telescope, `declared` as the stream declares it, both `EREC` pointers) |
+| `RecShape` | `[cvR, rP, mI, tgt, rules.off, rules.len, isK]` (rules: the record's `EREC` slice of 11-word rules) |
+| `BlockShape` | `[members.off, members.len, recs.off, recs.len, nP, elim, resSort, large, isProp]` |
+| `NestCtx` | `[names.off, names.len, lps.off, lps.len, nP, nIdxs.off, nIdxs.len, params.off, params.len, sort, lvls, formers.off, formers.len]` (formers: `EREC` pointers) |
 | `NestKey`, `ClassKey` | `[name, lvls, ds.off, ds.len]` |
-| `NestHole` | `[key, base]` (`key` a `NestKey` pointer) |
+| `NestHole` | `[key, base, nIdx]` (`key` a `NestKey` pointer) |
 | `NestCtorNf` | `[ctor, lvls, ds.off, ds.len, ty]` |
 | `NestState` | `[keys.off, keys.len, active.off, active.len, nfs.off, nfs.len]` (keys/active: `NestKey` pointers; nfs: `NestCtorNf` pointers) |
 | `ClassSlot` | `.motive key`: `[0, key]`; `.minor cls ctor ihs`: `[1, cls, ctor, ihs.off, ihs.len]` (ihs: pointers to `[field, cls]`) |
@@ -71,9 +75,9 @@ other, and the not-yet-translated callees (**stubs**) with their specs (stated, 
 | `ClassCtor` | `[cv, nF, kinds.off, kinds.len, tyD, tyN]` |
 | `ClassGen` | `[nP, params.off, params.len, cls.off, cls.len, formerTys.off, formerTys.len, slots.off, slots.len, ctors.off, ctors.len, elim, pre.off, pre.len]` (ctors: pointers to list headers) |
 | `List α` as an element | a pointer to a 2-word header `[off, len]` |
-| `BlockPass` | `[env1, cvTas.off, cvTas.len, p, ctorsAs.off, ctorsAs.len, sortsss.off, sortsss.len, kinds.off, kinds.len, nfs.off, nfs.len, params.off, params.len, rd, cls.off, cls.len, tbl.off, tbl.len]` |
+| `BlockPass` | `[env1, p, kinds.off, kinds.len, params.off, params.len, rd, cls.off, cls.len, tbl.off, tbl.len]` |
 | `IConstantVal × TargetMajor × List EIdx` | `[cv, M, rhss.off, rhss.len]` |
-| `NIdx × Option (Nat × IConstantInfo)` (a displaced env row) | `[name, c, q]` (the raw row: counter `+ 1` or `0`, record) |
+| `NIdx × Option IConstantInfo` (a displaced env row) | `[name, c, q]` (the own layer's raw row: counter `+ 1` or `0`, record) |
 
 `NestFieldKind` is one word: `.ordinary` `0`, `.recursive t` `1 + 8 t`, `.reflexive t` `2 + 8 t`,
 `.inProgress` `3`, `.nested r` `4 + 8 r` (`r ∈ {0, 1}`). `IIndCaps` and `IRecRule` are `EREC`
@@ -133,9 +137,9 @@ section dec
 variable (m : Mem)
 
 /-- The work pool. -/
-def iwA : Array Word := m.arr64 IW
-/-- The constant records. -/
-def erA : Array Word := m.arr64 EREC
+def iwA : Nat → Option Word := aread (m.arr64 IW)
+/-- The constant records (both tiers of `EREC`, `erecP`). -/
+def erA : Nat → Option Word := erecP m
 
 /-- Word `i` of `IW`, a number. -/
 def iwN (i : Nat) : Option Nat := nat? (iwA m) i
@@ -165,27 +169,29 @@ def decCVp (q : Nat) : Option IConstantVal := decCV (erA m) q
 def decCN (p : Nat) : Option (IConstantVal × Nat) := do
   pure (← decCVp m (← iwN m p), ← iwN m (p + 1))
 
-/-- `MemberShape`. -/
+/-- `MemberShape`: `cvT` (an `EREC` pointer), `nIdx`, the constructors' slice, `declared` (an
+`EREC` pointer) at `p + 4`. -/
 def decMS (p : Nat) : Option MemberShape := do
-  pure ⟨← decCVp m (← iwN m p), ← iwN m (p + 1), ← decAt m (decPL m (decCN m)) (p + 2)⟩
+  pure ⟨← decCVp m (← iwN m p), ← decCVp m (← iwN m (p + 4)), ← iwN m (p + 1),
+    ← decAt m (decPL m (decCN m)) (p + 2)⟩
 
-/-- `RecShape`. -/
+/-- `RecShape`: `cvR` (an `EREC` pointer), `rP`, `mI`, `tgt`, the rules (the stored recursor's
+`EREC` slice of 11-word rule records, `(off, cnt)` at `p + 4`, `p + 5`), `isK` at `p + 6`. -/
 def decRS (p : Nat) : Option RecShape := do
   pure ⟨← decCVp m (← iwN m p), ← iwN m (p + 1), ← iwN m (p + 2), ← iwN m (p + 3),
-    ← decAt m (decHL m) (p + 4)⟩
+    ← decRules (erA m) (← iwN m (p + 4)) (← iwN m (p + 5)), ← iwB m (p + 6)⟩
 
 /-- `BlockShape`. -/
 def decBS (p : Nat) : Option BlockShape := do
   pure ⟨← decAt m (decPL m (decMS m)) p, ← decAt m (decPL m (decRS m)) (p + 2), ← iwN m (p + 4),
     ← iwH m (p + 5), ← iwH m (p + 6), ← iwB m (p + 7), ← iwB m (p + 8)⟩
 
-/-- `BlockParts` (its shape). -/
-def decBP (p : Nat) : Option BlockParts := do pure ⟨← decBS m p⟩
-
-/-- `NestCtx`. -/
+/-- `NestCtx`: … `sort` at `p + 9`, `lvls` at `p + 10`, the formers (a slice of `EREC` pointers)
+at `p + 11`, `p + 12`. -/
 def decCtx (p : Nat) : Option NestCtx := do
   pure ⟨← decAt m (decHL m) p, ← decAt m (decHL m) (p + 2), ← iwN m (p + 4),
-    ← decAt m (decNL m) (p + 5), ← decAt m (decHL m) (p + 7), ← iwH m (p + 9), ← iwH m (p + 10)⟩
+    ← decAt m (decNL m) (p + 5), ← decAt m (decHL m) (p + 7), ← iwH m (p + 9),
+    ← decAt m (decPL m (decCVp m)) (p + 11), ← iwH m (p + 10)⟩
 
 /-- `NestKey`. -/
 def decNK (p : Nat) : Option NestKey := do
@@ -195,9 +201,9 @@ def decNK (p : Nat) : Option NestKey := do
 def decCK (p : Nat) : Option ClassKey := do
   pure ⟨← iwH m p, ← iwH m (p + 1), ← decAt m (decHL m) (p + 2)⟩
 
-/-- `NestHole`. -/
+/-- `NestHole`: the key (a pointer), `base`, `nIdx`. -/
 def decNH (p : Nat) : Option NestHole := do
-  pure ⟨← decNK m (← iwN m p), ← iwN m (p + 1)⟩
+  pure ⟨← decNK m (← iwN m p), ← iwN m (p + 1), ← iwN m (p + 2)⟩
 
 /-- `NestCtorNf`. -/
 def decNCN (p : Nat) : Option NestCtorNf := do
@@ -222,7 +228,7 @@ def decNFK (w : Word) : Option NestFieldKind :=
 
 /-- A slice of `NestFieldKind` words. -/
 def decKL (o l : Nat) : Option (List NestFieldKind) :=
-  (List.range l).mapM fun j => do decNFK (← (iwA m)[o + j]?)
+  (List.range l).mapM fun j => do decNFK (← iwA m (o + j))
 
 /-- A `(Nat × Nat)` record. -/
 def decNN (p : Nat) : Option (Nat × Nat) := do pure (← iwN m p, ← iwN m (p + 1))
@@ -291,11 +297,20 @@ structure IWOK (m : Mem) : Prop where
   iwSize : (m.arr64 IW).size < 2 ^ 64
   erSize : (m.arr64 EREC).size < 2 ^ 64
   ctl : 200 < (m.arr64 CTL).size
+  /-- The tier-1 record pool (a job's own records, `erec_alloc` with the scratch flag on). -/
+  er1 : erecTop1 m ≤ (m.arr64 (tier1 EREC)).size
+  er1Size : (m.arr64 (tier1 EREC)).size < 2 ^ 64
+  /-- Both record tiers are addressable by a tagged address (offset below `2^40`). -/
+  erCap : (m.arr64 EREC).size < 2 ^ 40
+  er1Cap : (m.arr64 (tier1 EREC)).size < 2 ^ 40
 
 /-- `IWOK` as its conjunction, for `simp` (a memory changed only where `IWOK` does not read). -/
 theorem IWOK_iff (m : Mem) : IWOK m ↔ iwTop m ≤ (m.arr64 IW).size ∧ erTop m ≤ (m.arr64 EREC).size ∧
-    (m.arr64 IW).size < 2 ^ 64 ∧ (m.arr64 EREC).size < 2 ^ 64 ∧ 200 < (m.arr64 CTL).size :=
-  ⟨fun h => ⟨h.iw, h.er, h.iwSize, h.erSize, h.ctl⟩, fun ⟨a, b, c, d, e⟩ => ⟨a, b, c, d, e⟩⟩
+    (m.arr64 IW).size < 2 ^ 64 ∧ (m.arr64 EREC).size < 2 ^ 64 ∧ 200 < (m.arr64 CTL).size ∧
+    erecTop1 m ≤ (m.arr64 (tier1 EREC)).size ∧ (m.arr64 (tier1 EREC)).size < 2 ^ 64 ∧
+    (m.arr64 EREC).size < 2 ^ 40 ∧ (m.arr64 (tier1 EREC)).size < 2 ^ 40 :=
+  ⟨fun h => ⟨h.iw, h.er, h.iwSize, h.erSize, h.ctl, h.er1, h.er1Size, h.erCap, h.er1Cap⟩,
+   fun ⟨a, b, c, d, e, f, g, i, j⟩ => ⟨a, b, c, d, e, f, g, i, j⟩⟩
 
 /-- The pool and the constant records only grew. -/
 structure IWGrow (m m' : Mem) : Prop where
@@ -303,11 +318,45 @@ structure IWGrow (m m' : Mem) : Prop where
   er : erTop m ≤ erTop m'
   iwGet : ∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?
   erGet : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
+  /-- The tier-1 record pool only grew too. -/
+  er1 : erecTop1 m ≤ erecTop1 m'
+  er1Get : ∀ i < erecTop1 m, (m'.arr64 (tier1 EREC))[i]? = (m.arr64 (tier1 EREC))[i]?
+
+theorem IWGrow.refl (m : Mem) : IWGrow m m :=
+  ⟨Nat.le_refl _, Nat.le_refl _, fun _ _ => rfl, fun _ _ => rfl, Nat.le_refl _, fun _ _ => rfl⟩
+
+theorem IWGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : IWGrow m₁ m₂) (h₂ : IWGrow m₂ m₃) : IWGrow m₁ m₃ :=
+  ⟨Nat.le_trans h₁.iw h₂.iw, Nat.le_trans h₁.er h₂.er,
+   fun i hi => (h₂.iwGet i (Nat.lt_of_lt_of_le hi h₁.iw)).trans (h₁.iwGet i hi),
+   fun i hi => (h₂.erGet i (Nat.lt_of_lt_of_le hi h₁.er)).trans (h₁.erGet i hi),
+   Nat.le_trans h₁.er1 h₂.er1,
+   fun i hi => (h₂.er1Get i (Nat.lt_of_lt_of_le hi h₁.er1)).trans (h₁.er1Get i hi)⟩
+
+/-- The record pool part of `IWGrow`. -/
+theorem IWGrow.erecGrow {m m' : Mem} (h : IWGrow m m') : ErecGrow m m' :=
+  ⟨h.er, h.erGet, h.er1, h.er1Get⟩
+
+/-- Every record decoding of `m` stays valid in `m'`. -/
+theorem IWGrow.ext {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erecP m') := h.erecGrow.ext
+
+/-- `IWGrow` from a frame that keeps the pool arrays and the tops (`IW`, `EREC` in both tiers,
+`CTL[129]`, `CTL[130]`, `CTL[200]`). -/
+theorem IWGrow.of_keep {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A)
+    (hC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C) : IWGrow m m' := by
+  have hI := hf.arr IW hA.1 (by decide)
+  have hE := hf.arr EREC hA.2.1 (by decide)
+  have hE1 := hf.arr (tier1 EREC) hA.2.2 (by decide)
+  have h129 := hf.ctl 129 hC.1
+  have h130 := hf.ctl 130 hC.2.1
+  have h200 := hf.ctl 200 hC.2.2
+  exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE],
+    by simp [erecTop1, h130], fun i _ => by rw [hE1]⟩
 
 /-- **The stage relation**: the checker state at the view `vis` of `fe`, and the pool. -/
-structure StageR (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) :
+structure StageR (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) :
     Prop where
-  check : CheckR dn m a vis fe
+  check : CheckR m a vis fe
   iw : IWOK m
 
 /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
@@ -324,9 +373,9 @@ def RefAM {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
 
 /-- The usual post: the stage relation at the same environment, the pool grown, and the results
 decoding the twin's result by `dec`. -/
-def KeepPost {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+def KeepPost {α : Type} (vis : Word) (fe : IFEnv)
     (dec : Mem → List Word → α → Prop) (m m' : Mem) (a : AState) (r : List Word) (x : α) : Prop :=
-  StageR dn vis fe m' a ∧ IWGrow m m' ∧ dec m' r x
+  StageR vis fe m' a ∧ IWGrow m m' ∧ dec m' r x
 
 /-- Result decoders. -/
 def decW0E (_m : Mem) (r : List Word) (e : EIdx) : Prop := (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = e
@@ -368,15 +417,292 @@ def decOE (m : Mem) (r : List Word) : Option EIdx → Prop
   CTL.u64[200] := 0
 }
 
-/-- `erec_alloc(n)`: `n` fresh words of `EREC`, returns their offset. -/
+/-- `erec_alloc(n)`: `n` fresh words of `EREC`, returns their tagged address: tier 0 (below
+`CTL[129]`) while the scratch flag `CTL[1]` is off (the stream index, the pins), tier 1 (below
+`CTL[130]`, emptied with the scratch tier) inside a job. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 @[no_expose] def erecAlloc : FunDecl := lfn (n) locals (o) {
-  o := CTL.u64[129];
-  if len(EREC.u64) < o { abort };
-  if len(EREC.u64) - o < n { abort };
-  CTL.u64[129] := o + n;
-  return o
+  if CTL.u64[1] == 0 {
+    o := CTL.u64[129];
+    if len(EREC⟨0⟩) < o { abort };
+    if len(EREC⟨0⟩) - o < n { abort };
+    CTL.u64[129] := o + n;
+    return o
+  };
+  o := CTL.u64[130];
+  if len(EREC⟨1⟩) < o { abort };
+  if len(EREC⟨1⟩) - o < n { abort };
+  CTL.u64[130] := o + n;
+  return 1099511627776 + o
 }
+
+/-- `erec_put(a, v)`: word `v` at the tagged address `a` of `EREC`. -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
+@[no_expose] def erecPut : FunDecl := lfn (a, v) locals (t, i) {
+  t := ⦃a⦄.tier;
+  i := ⦃a⦄.idx;
+  EREC⟨t⟩[i] := v;
+  return 0
+}
+
+/-! ## The record pool: `erec_alloc` and `erec_put`
+
+`erec_alloc(k)` allocates in the tier of the scratch flag `CTL[1]`: tier 0 at the top `CTL[129]`
+while it is off (the stream index, the pins), tier 1 at `2^40 + CTL[130]` while it is on (a
+job's own records). `erec_put(a, v)` writes at the tagged address `a`. Both keep every record
+below the old tops (`ErecGrow`), so every decoding through `erecP` stays valid. -/
+
+section erec
+open ConRon.Arena Std.WP
+open scoped Lean.Order
+set_option experimental.vcgen true
+set_option linter.unusedSimpArgs false
+
+/-- The memory after `erec_alloc(k)`: the top of the flag's tier moved up by `k`. -/
+def erAllocMem (m : Mem) (k : Word) : Mem :=
+  if rdW (m.arr64 CTL) 1 = 0 then m.set64 CTL 129 (rdW (m.arr64 CTL) 129 + k)
+  else m.set64 CTL 130 (rdW (m.arr64 CTL) 130 + k)
+
+/-- The model of `erec_alloc(k)`: the tagged address of the first fresh word and the memory. -/
+def erAllocW (m : Mem) (k : Word) : Option (Word × Mem) :=
+  if rdW (m.arr64 CTL) 1 = 0 then
+    let o := rdW (m.arr64 CTL) 129
+    if m.len64 EREC < o then none
+    else if m.len64 EREC - o < k then none
+    else some (o, erAllocMem m k)
+  else
+    let o := rdW (m.arr64 CTL) 130
+    if m.len64 (tier1 EREC) < o then none
+    else if m.len64 (tier1 EREC) - o < k then none
+    else some (1099511627776 + o, erAllocMem m k)
+
+theorem ctl_t0' : TieredArray.t0 1 = (CTL : TieredArray) := rfl
+
+theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc) (n : Nat) (s₀ : St)
+    (k : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_alloc" [k]
+    ⦃fun r s' => LocEq s' s₀ ∧ erAllocW s₀.mem k = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, erecAlloc]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, st64]
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+      St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
+      Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
+    all_goals subst_vars
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erAllocW, erAllocMem, ctl_t0', tierA, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ]
+
+/-- The memory after `erec_put(a, v)`. -/
+def erecPutMem (m : Mem) (a v : Word) : Mem :=
+  m.set64 (tierA EREC (a >>> 40)) (a &&& 0xFFFFFFFFFF) v
+
+theorem erecPut_specW (p : Prog) (hp : p.lookup "erec_put" = some erecPut) (n : Nat) (s₀ : St)
+    (a v : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_put" [a, v]
+    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = erecPutMem s₀.mem a v ∧
+      (a &&& 0xFFFFFFFFFF).toNat < (s₀.mem.arr64 (tierA EREC (a >>> 40))).size; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, erecPut]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, st64]
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+      St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
+      Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
+    all_goals subst_vars
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erecPutMem, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ]
+
+theorem mask40_toNat (a : Word) : (a &&& 0xFFFFFFFFFF).toNat = a.toNat % 2 ^ 40 := by
+  rw [UInt64.toNat_and]; exact Nat.and_two_pow_sub_one_eq_mod _ 40
+
+theorem tierA_EREC (a : Word) : tierA EREC (a >>> 40) =
+    if a.toNat / 2 ^ 40 % 2 = 0 then (EREC : TieredArray) else tier1 EREC := by
+  have hbit : ((a >>> 40) &&& 1).toNat = a.toNat / 2 ^ 40 % 2 := by
+    rw [UInt64.toNat_and, UInt64.toNat_shiftRight]
+    simp only [Nat.shiftRight_eq_div_pow, UInt64.toNat_ofNat]
+    exact Nat.and_one_is_mod _
+  unfold tierA
+  by_cases e : a.toNat / 2 ^ 40 % 2 = 0
+  · have : (a >>> 40) &&& 1 = 0 := UInt64.toNat_inj.mp (by rw [hbit, e]; rfl)
+    simp [e, this]
+  · have : (a >>> 40) &&& 1 ≠ 0 := fun h' => e (by rw [← hbit, h']; rfl)
+    simp [e, this]
+
+/-- The offset of a tagged address within its tier. -/
+def erOff (a : Word) : Nat := a.toNat % 2 ^ 40
+
+/-- The tier array of a tagged address. -/
+def erTier (a : Word) : TieredArray := if a.toNat / 2 ^ 40 % 2 = 0 then (EREC : TieredArray) else tier1 EREC
+
+/-- The top of the tier of a tagged address. -/
+def erTopOf (m : Mem) (a : Word) : Nat := if a.toNat / 2 ^ 40 % 2 = 0 then erecTop m else erecTop1 m
+
+theorem nat_and40 (n : Nat) : n &&& 1099511627775 = n % 1099511627776 :=
+  Nat.and_two_pow_sub_one_eq_mod n 40
+
+theorem erecPutMem_arr (m : Mem) (a v : Word) (b : TieredArray) :
+    (erecPutMem m a v).arr64 b = if b = erTier a then (m.arr64 b).setIfInBounds (erOff a) v else m.arr64 b := by
+  unfold erecPutMem
+  rw [tierA_EREC, ← erTier]
+  by_cases e : b = erTier a
+  · subst e; simp [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, mask40_toNat, erOff, nat_and40]
+  · simp [Mem.arr64_set64_ne _ _ _ _ _ e, e]
+
+theorem ctl_ne_erTier (a : Word) : (CTL : TieredArray) ≠ erTier a := by
+  unfold erTier; split <;> decide
+
+theorem erecPutMem_ctl (m : Mem) (a v : Word) : (erecPutMem m a v).arr64 CTL = m.arr64 CTL := by
+  rw [erecPutMem_arr, ite_eq_right (ctl_ne_erTier a)]
+
+/-- **A write at or above the top of its tier keeps the record pool.** -/
+theorem erecPutMem_grow {m : Mem} {a v : Word} (h : erTopOf m a ≤ erOff a) :
+    ErecGrow m (erecPutMem m a v) := by
+  have hc := erecPutMem_ctl m a v
+  simp only [erTopOf, erOff] at h
+  refine ⟨by simp [erecTop, hc], fun i hi => ?_, by simp [erecTop1, hc], fun i hi => ?_⟩
+  · rw [erecPutMem_arr]; unfold erTier; split
+    · rename_i e; simp only [e, ite_true] at h
+      have : ¬ (a.toNat % 2 ^ 40 = i) := by omega
+      simp [Array.getElem?_setIfInBounds, erOff, this]
+    · simp
+  · rw [erecPutMem_arr]; unfold erTier; split
+    · simp
+    · rename_i e; simp only [e, ite_false] at h
+      have : ¬ (a.toNat % 2 ^ 40 = i) := by omega
+      simp [Array.getElem?_setIfInBounds, erOff, this]
+
+/-- A written word below its tier's top reads back. -/
+theorem erecP_putMem_self {m : Mem} {a v : Word} (ht : erOff a < erTopOf m a)
+    (hb : erOff a < (m.arr64 (erTier a)).size) :
+    erecP (erecPutMem m a v) a.toNat = some v := by
+  have hc := erecPutMem_ctl m a v
+  simp only [erecP, a.toNat_lt, ite_true, erecTop, erecTop1, hc, erecPutMem_arr]
+  simp only [erTopOf, erOff, erTier] at ht hb ⊢
+  split
+  · rename_i e; simp only [e, ite_true] at ht hb
+    simp [erecTop] at ht; simp [ht, Array.getElem?_setIfInBounds, hb]
+  · rename_i e; simp only [e, ite_false] at ht hb
+    simp [erecTop1] at ht; simp [ht, Array.getElem?_setIfInBounds, hb]
+
+/-- A write leaves every other address (modulo `2^41`, the tier bit and the offset). -/
+theorem erecP_putMem_other {m : Mem} {a v : Word} {i : Nat} (hi : i % 2 ^ 41 ≠ a.toNat % 2 ^ 41) :
+    erecP (erecPutMem m a v) i = erecP m i := by
+  have hc := erecPutMem_ctl m a v
+  have hne : ¬ (i / 2 ^ 40 % 2 = a.toNat / 2 ^ 40 % 2 ∧ i % 2 ^ 40 = a.toNat % 2 ^ 40) := by
+    intro ⟨h1, h2⟩; apply hi; omega
+  simp only [erecP, erecTop, erecTop1, hc, erecPutMem_arr, erTier, erOff]
+  by_cases t : a.toNat / 2 ^ 40 % 2 = 0 <;> by_cases ti : i / 2 ^ 40 % 2 = 0 <;>
+    simp only [t, ti, ite_true, ite_false] <;> simp [Array.getElem?_setIfInBounds] <;>
+    first | rfl | (have : a.toNat % 1099511627776 ≠ i % 1099511627776 := by omega
+                   simp [this]; rfl)
+
+/-- **`erec_alloc`'s effect**: the pool grows (`ErecGrow`), the address is the old top of the
+flag's tier (tier 1 at `2^40`), that top moved up by `k` within the array, only `CTL[129]` or
+`CTL[130]` changed. -/
+theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m'))
+    (hW : IWOK m) :
+    ErecGrow m m' ∧ MemFrame [] [129, 130] m m' ∧ erOff a = erTopOf m a ∧
+      erTopOf m' a = erTopOf m a + k.toNat ∧ erTopOf m' a ≤ (m.arr64 (erTier a)).size ∧
+      (a.toNat / 2 ^ 40 % 2 = 0 ↔ rdW (m.arr64 CTL) 1 = 0) ∧ a.toNat < 2 ^ 41 ∧ IWOK m' := by
+  have hc : 130 < (m.arr64 CTL).size := by have := hW.ctl; omega
+  have hs0 := hW.erCap
+  have hs1 := hW.er1Cap
+  have e129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
+  have e130 : (130 : Word).toNat < (m.arr64 CTL).size := by simp; omega
+  unfold erAllocW at h
+  split at h
+  · rename_i hf
+    dsimp only at h
+    split at h
+    · simp at h
+    split at h
+    · simp at h
+    rename_i h1 h2
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp only [erAllocMem, hf, ite_true]
+    simp only [Mem.len64, UInt64.lt_iff_toNat_lt] at h1 h2
+    generalize ho : rdW (m.arr64 CTL) 129 = o at h1 h2 ⊢
+    have hS : (UInt64.ofNat (m.arr64 EREC).size).toNat = (m.arr64 EREC).size := by simp; omega
+    rw [hS] at h1
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [hS]; omega)), hS] at h2
+    have hok : (o + k).toNat = o.toNat + k.toNat := by rw [UInt64.toNat_add]; omega
+    have hmem := MemFrame.setCtl m 129 (o + k)
+    have t0 : erecTop (m.set64 CTL 129 (o + k)) = o.toNat + k.toNat := by
+      simp only [erecTop, rdW_set64, e129, and_self, ite_true, hok]
+    have t1 : erecTop1 (m.set64 CTL 129 (o + k)) = erecTop1 m := by
+      simp only [erecTop1, rdW_set64]; rw [ite_eq_right (by simp)]
+    have hE : (m.set64 CTL 129 (o + k)).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+    have hE1 : (m.set64 CTL 129 (o + k)).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
+      Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+    have hd : o.toNat / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt (by omega)]
+    have hok' : IWOK (m.set64 CTL 129 (o + k)) := by
+      have hI : (m.set64 CTL 129 (o + k)).arr64 IW = m.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+      have h200 : iwTop (m.set64 CTL 129 (o + k)) = iwTop m := by
+        simp only [iwTop, rdW_set64]; rw [ite_eq_right (by simp)]
+      have h0 : erTop (m.set64 CTL 129 (o + k)) = o.toNat + k.toNat := t0
+      refine ⟨by rw [h200, hI]; exact hW.iw, by rw [h0, hE]; omega, by rw [hI]; exact hW.iwSize,
+        by rw [hE]; exact hW.erSize, by rw [Mem.size_arr64_set64]; exact hW.ctl,
+        by rw [t1, hE1]; exact hW.er1, by rw [hE1]; exact hW.er1Size, by rw [hE]; exact hs0,
+        by rw [hE1]; exact hs1⟩
+    have hof : erOff o = o.toNat := Nat.mod_eq_of_lt (by omega)
+    have htop : erecTop m = o.toNat := by simp [erecTop, ho]
+    refine ⟨⟨by omega, fun i _ => by rw [hE], by rw [t1]; exact Nat.le_refl _, fun i _ => by rw [hE1]⟩,
+      hmem.mono (by simp) (by simp), ?_, ?_, ?_, ?_, by omega, hok'⟩
+    · simp only [hof, erTopOf, hd, ite_true, htop]
+    · simp only [erTopOf, hd, ite_true, t0, htop]
+    · simp only [erTopOf, erTier, hd, ite_true, t0]; omega
+    · simp [hd, hf]
+  · rename_i hf
+    dsimp only at h
+    split at h
+    · simp at h
+    split at h
+    · simp at h
+    rename_i h1 h2
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp only [erAllocMem, hf, ite_false]
+    simp only [Mem.len64, UInt64.lt_iff_toNat_lt] at h1 h2
+    generalize ho : rdW (m.arr64 CTL) 130 = o at h1 h2 ⊢
+    have hS : (UInt64.ofNat (m.arr64 (tier1 EREC)).size).toNat = (m.arr64 (tier1 EREC)).size := by simp; omega
+    rw [hS] at h1
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [hS]; omega)), hS] at h2
+    have hok : (o + k).toNat = o.toNat + k.toNat := by rw [UInt64.toNat_add]; omega
+    have hmem := MemFrame.setCtl m 130 (o + k)
+    have t1 : erecTop1 (m.set64 CTL 130 (o + k)) = o.toNat + k.toNat := by
+      simp only [erecTop1, rdW_set64, e130, and_self, ite_true, hok]
+    have t0 : erecTop (m.set64 CTL 130 (o + k)) = erecTop m := by
+      simp only [erecTop, rdW_set64]; rw [ite_eq_right (by simp)]
+    have hE : (m.set64 CTL 130 (o + k)).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+    have hE1 : (m.set64 CTL 130 (o + k)).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
+      Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+    have ha : (1099511627776 + o).toNat = 2 ^ 40 + o.toNat := by rw [UInt64.toNat_add]; simp; omega
+    have hok' : IWOK (m.set64 CTL 130 (o + k)) := by
+      have hI : (m.set64 CTL 130 (o + k)).arr64 IW = m.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+      have h200 : iwTop (m.set64 CTL 130 (o + k)) = iwTop m := by
+        simp only [iwTop, rdW_set64]; rw [ite_eq_right (by simp)]
+      have h0 : erTop (m.set64 CTL 130 (o + k)) = erTop m := t0
+      refine ⟨by rw [h200, hI]; exact hW.iw, by rw [h0, hE]; exact hW.er, by rw [hI]; exact hW.iwSize,
+        by rw [hE]; exact hW.erSize, by rw [Mem.size_arr64_set64]; exact hW.ctl,
+        by rw [t1, hE1]; omega, by rw [hE1]; exact hW.er1Size, by rw [hE]; exact hs0,
+        by rw [hE1]; exact hs1⟩
+    have hd : (1099511627776 + o).toNat / 2 ^ 40 % 2 = 1 := by rw [ha]; omega
+    have hof : erOff (1099511627776 + o) = o.toNat := by simp only [erOff, ha]; omega
+    have htop : erecTop1 m = o.toNat := by simp [erecTop1, ho]
+    refine ⟨⟨by rw [t0]; exact Nat.le_refl _, fun i _ => by rw [hE], by omega, fun i _ => by rw [hE1]⟩,
+      hmem.mono (by simp) (by simp), ?_, ?_, ?_, ?_, by omega, hok'⟩
+    · simp only [hof, erTopOf, hd, htop]; simp
+    · simp only [erTopOf, hd, t1, htop]; simp
+    · simp only [erTopOf, erTier, hd, t1]; simp; omega
+    · simp only [hd, hf]; simp
+
+end erec
 
 /-- `er_to_iw(off, len)`: the `EREC` slice copied into `IW`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
@@ -390,7 +716,7 @@ def decOE (m : Mem) (r : List Word) : Option EIdx → Prop
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 @[no_expose] def erCopy : FunDecl := lfn (d, s, l) locals (u) {
   if l == 0 { return 0 };
-  IW.u64[d] := EREC.u64[s];
+  IW.u64[d] := EREC⦃s⦄;
   u := call er_copy(d + 1, s + 1, l - 1);
   return 0
 }
@@ -581,27 +907,41 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
   return q
 }
 
+/-- `rec7(a, b, c, d, e, f, g)`. -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
+@[no_expose] def rec7 : FunDecl := lfn (a, b, c, d, e, f, g) locals (q) {
+  q := call iw_alloc(7);
+  IW.u64[q] := a;
+  IW.u64[q + 1] := b;
+  IW.u64[q + 2] := c;
+  IW.u64[q + 3] := d;
+  IW.u64[q + 4] := e;
+  IW.u64[q + 5] := f;
+  IW.u64[q + 6] := g;
+  return q
+}
+
 /-- `cv_new(name, lo, ll, ty)`: a fresh constant value in `EREC` (`lo`, `ll` an `EREC` slice). -/
 -- con-ron: none — constant-value records in `EREC` (the twin's `ConstantVal` structure)
-@[no_expose] def cvNew : FunDecl := lfn (nm, lo, ll, ty) locals (q) {
+@[no_expose] def cvNew : FunDecl := lfn (nm, lo, ll, ty) locals (q, ez) {
   q := call erec_alloc(4);
-  EREC.u64[q] := nm;
-  EREC.u64[q + 1] := lo;
-  EREC.u64[q + 2] := ll;
-  EREC.u64[q + 3] := ty;
+  ez := call erec_put(q, nm);
+  ez := call erec_put(q + 1, lo);
+  ez := call erec_put(q + 2, ll);
+  ez := call erec_put(q + 3, ty);
   return q
 }
 
 /-- `cv_lps(cv)`: a constant's level parameters, copied into `IW`. -/
 -- con-ron: none — constant-value records in `EREC` (the twin's `ConstantVal` structure)
 @[no_expose] def cvLps : FunDecl := lfn (q) locals (o, l) {
-  (o, l) := call er_to_iw(EREC.u64[q + 1], EREC.u64[q + 2]);
+  (o, l) := call er_to_iw(EREC⦃q + 1⦄, EREC⦃q + 2⦄);
   return (o, l)
 }
 
 /-- `reserved_contains(n)`: `(← reservedBasisNames).contains n` (the 16 reserved names,
 `PINS[55‥70]`). -/
--- con-ron: ConRon/Arena/Core.lean:1457-1461 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1498-1502 ConRon.Arena.reservedBasisNames
 @[no_expose] def reservedContains : FunDecl := lfn (n) locals (r) {
   if PINS.u64[0] == 0 { abort };
   r := call reserved_from(n, 0);
@@ -609,7 +949,7 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
 }
 
 /-- `reserved_from(n, j)`: `n` among `PINS[55 + j‥70]`. -/
--- con-ron: ConRon/Arena/Core.lean:1457-1461 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1498-1502 ConRon.Arena.reservedBasisNames
 @[no_expose] def reservedFrom : FunDecl := lfn (n, j) locals (r) {
   if 16 <= j { return 0 };
   if PINS.u64[55 + j] == n { return 1 };
@@ -618,15 +958,15 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
 }
 
 /-- `lvl_eq_true(u, v)`: `lvlEq? u v == some true` as `0`/`1`. -/
--- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:136-153 ConRon.Arena.lvlEq?
 @[no_expose] def lvlEqTrue : FunDecl := lfn (u, v) locals (r) {
   r := call lvl_eq_c(u, v);
   return u64(r == 2)
 }
 
 /-- `lvl_eq_fueled(u, v)`: `liftFueled (← lvlEq? u v)`: `none` declines. -/
--- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
--- con-ron: ConRon/Arena/Core.lean:314-319 ConRon.Arena.liftFueled
+-- con-ron: ConRon/Arena/Core.lean:136-153 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:313-318 ConRon.Arena.liftFueled
 @[no_expose] def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
   r := call lvl_eq_c(u, v);
   if r == 0 { fail R_RESOURCE_LIMIT_FUEL };
@@ -706,7 +1046,7 @@ def libFns : Prog :=
    ("sl_new1", slNew1), ("sl_append", slAppend), ("sl_snoc", slSnoc), ("sl_cons", slCons),
    ("sl_contains", slContains), ("sl_find", slFind), ("sl_eq", slEq), ("sl_nodup", slNodup),
    ("sl_get", slGet), ("sl_getd", slGetD), ("sl_set_eq", slSetEq),
-   ("rec2", rec2), ("rec3", rec3), ("rec4", rec4), ("rec5", rec5), ("rec6", rec6),
+   ("rec2", rec2), ("rec3", rec3), ("rec4", rec4), ("rec5", rec5), ("rec6", rec6), ("rec7", rec7),
    ("cv_new", cvNew), ("cv_lps", cvLps), ("reserved_contains", reservedContains),
    ("lvl_eq_true", lvlEqTrue), ("lvl_eq_fueled", lvlEqFueled), ("e_view", eView),
    ("view_ls", viewLsL), ("view_ls_len", viewLsLenL)]
@@ -725,7 +1065,7 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort (.const 0)⟩
 * `whnf_top(vis, dep, e)` (lane `whnf`'s entry, `WhnfEntry.lean`) → `e'`: `whnf .verified fe checkFuel dep e`.
 * `infer_type_core(vis, dep, e)` → `t`; `ensure_sort_core(vis, dep, t)` → `u` (a level handle);
   `is_def_eq_core(vis, dep, a, b)` → `0`/`1`.
-* `check_constant_val(vis, cv)` → nothing (`cv` an `EREC` pointer).
+* `check_constant_val(vis, cv, allowOp)` → nothing (`cv` an `EREC` pointer).
 * `consts_resolve_ffast(vis, e)` → `0`/`1`.
 * `strip_pis(k, e)` → `(ok, bs.off, bs.len, body)`; `strip_lams(k, e)` the same.
 * `open_pis_at_fvars_f(n, e, i)` → `(ok, fvs.off, fvs.len, body)`.
@@ -744,16 +1084,13 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort (.const 0)⟩
 * `name_rec(n)` → `internNNode (.str n "rec")`; `name_rec_i(n, i)` → `internNNode (.str n
   s!"rec_{i}")`; `proj_table_name(T)` → `projTableName T`.
 * `reserved_rec_name(n)` → `0`/`1`.
-* `rec_rule_bits(vis, ctor)` → `(k, eta)` (the two bits `recRuleBits` writes).
-* `basis_pin_hit(off, len)` → `(ok, kind)` (the block's record pointers, an `IW` slice);
-  `check_basis_decl(vis, kind)` → `vis'`; `ind_params_ok(nP, off, len)` → `0`/`1`.
-* `lv_zero_caps(l)` → `(tag, off, len)`: `zeronessOf (← readLevelM l)` as the three words of a
-  `PropWhen` (lane `pinsenv`'s `decPW` layout: `0` `never`, `1` `ifAllZero` with the names an
-  `EREC` slice below the record pool's top; lane `indproofs2`: was written at an `EREC` word `q`
-  inside a record already allocated, which the stage relation cannot follow). -/
+* `basis_name_hit(off, len)` → `(hit, kind)` (the block's record pointers, an `EREC` slice);
+  `check_basis_block(vis, kind, off, len)` → `vis'`; `ind_params_ok(nP, off, len)` → `0`/`1`.
+* `former_def_headed(ty)` → `0`/`1` (`Core.lean`'s `formerDefHeaded`, at the former's type); `lit_shape_ok(q)` → `0`/`1`
+  (`Core.lean`'s `litShapeOk`, `q` a constant record in `EREC`). -/
 def stubFns : Prog :=
   [("whnf_top", stub 3), ("infer_type_core", stub 3), ("ensure_sort_core", stub 3),
-   ("is_def_eq_core", stub 4), ("check_constant_val", stub 2), ("consts_resolve_ffast", stub 2),
+   ("is_def_eq_core", stub 4), ("check_constant_val", stub 3), ("consts_resolve_ffast", stub 2),
    ("strip_pis", stub 2), ("strip_lams", stub 2), ("open_pis_at_fvars_f", stub 3),
    ("get_app_fn_f", stub 2), ("get_app_args_f", stub 2), ("mk_app_n_f", stub 3),
    ("fvar_type_d", stub 1), ("fvar_type_ds", stub 2), ("pi_result_f", stub 2),
@@ -763,8 +1100,8 @@ def stubFns : Prog :=
    ("all_level_params_defined", stub 3),
    ("intern_ls_iw", stub 2), ("name_rec", stub 1), ("name_rec_i", stub 2),
    ("proj_table_name", stub 1), ("reserved_rec_name", stub 1),
-   ("rec_rule_bits", stub 2), ("basis_pin_hit", stub 2), ("check_basis_decl", stub 2),
-   ("ind_params_ok", stub 3), ("lv_zero_caps", stub 1)]
+   ("basis_name_hit", stub 2), ("check_basis_block", stub 4),
+   ("ind_params_ok", stub 3), ("former_def_headed", stub 1), ("lit_shape_ok", stub 1)]
 
 /-- The callees that exist on master, as stubs here so that each module's program can be checked
 for closure (`Prog.wf`) on its own: `env_find(w, vis)`, `env_push(vis, q)`,

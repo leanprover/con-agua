@@ -52,10 +52,10 @@ theorem pos2_decB_append (hf : ∀ q, OMono (fun m => f m q)) {m m' : Mem} {o1 l
     by_cases hjl : j < xs.length
     · obtain ⟨v, a, b, c⟩ := he1 j hjl
       refine ⟨v, by omega, ?_, by rw [List.getElem_append_left hjl]; exact (DecB.grow (hf v) hg c)⟩
-      simp only [iwN, nat?, iwA] at b ⊢; rw [hw1 j (by omega)]; exact b
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply] at b ⊢; rw [hw1 j (by omega)]; exact b
     · obtain ⟨v, a, b, c⟩ := he2 (j - xs.length) (by omega)
       refine ⟨v, by omega, ?_, by rw [List.getElem_append_right (by omega)]; exact (DecB.grow (hf v) hg c)⟩
-      simp only [iwN, nat?, iwA] at b ⊢
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply] at b ⊢
       have := hw2 (j - xs.length) (by omega)
       rw [show q + l1 + (j - xs.length) = q + j by omega] at this
       rw [this]; exact b
@@ -70,14 +70,14 @@ namespace L.Ind
 open L.Arena
 
 /-- **`nest_accept_group` is `nestAcceptGroup`** over the decoded group and key slice. -/
-theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (us dO dL : Word) (ds : List EIdx)
+theorem nagW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (us dO dL : Word) (ds : List EIdx)
     (hus : H us) : ∀ (n : Nat) (m m' : Mem) (a : AState) (gO gL kO kL : Word) (grp : List (NIdx × EIdx))
     (keys : Array NestKey) (r : List Word),
-    nagW n m us dO dL gO gL kO kL = some (r, m') → StageR dn vis fe m a →
+    nagW n m us dO dL gO gL kO kL = some (r, m') → StageR vis fe m a →
     DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) m ds →
     gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp →
     KsB m kO.toNat kL.toNat keys.toList → kO.toNat + kL.toNat ≤ iwTop m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       KsB m' (r.headD 0).toNat (r.tail.headD 0).toNat (nestAcceptGroup (decI us) ds grp keys).toList ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   intro n
@@ -167,13 +167,13 @@ decodes as the accepted keys). -/
 @[refines ConRon.Arena.nestAcceptGroup]
 theorem nestAcceptGroup_refines (p : Prog) (L : NagLook p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (us dO dL gO gL kO kL : Word)
-    (ds : List EIdx) (grp : List (NIdx × EIdx)) (keys : Array NestKey) (hS : StageR dn vis fe s₀.mem a₀)
+    (ds : List EIdx) (grp : List (NIdx × EIdx)) (keys : Array NestKey) (hS : StageR vis fe s₀.mem a₀)
     (hus : H us) (hds : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) s₀.mem ds)
     (hgl : gL.toNat = grp.length) (hgb : gO.toNat + grp.length ≤ iwTop s₀.mem)
     (hgrp : GrpAt s₀.mem gO.toNat grp) (hks : KsB s₀.mem kO.toNat kL.toNat keys.toList)
     (hkb : kO.toNat + kL.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_accept_group" [us, dO, dL, gO, gL, kO, kL]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       KsB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat (nestAcceptGroup (decI us) ds grp keys).toList ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
   refine triple_post (nestAcceptGroup_spec p L n s₀ us dO dL gO gL kO kL) ?_

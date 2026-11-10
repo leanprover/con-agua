@@ -49,7 +49,7 @@ theorem viewR_shape {rv : List Word} {v : ENodeView} (h : ViewR rv v) :
     refine ⟨?_, ?_, fun _ _ => by simp, fun _ _ => by simp⟩ <;> simp_all
 
 theorem decNL_getW : ∀ (m : Mem) (l o : Nat) (xs : List Nat), decNL m o l = some xs →
-    xs.length = l ∧ ∀ (j : Nat) (hj : j < xs.length), ∃ w : Word, (iwA m)[o + j]? = some w ∧
+    xs.length = l ∧ ∀ (j : Nat) (hj : j < xs.length), ∃ w : Word, iwA m (o + j) = some w ∧
       w.toNat = xs[j]
   | m, 0, o, xs, h => by simp [decNL] at h; subst h; simp
   | m, l + 1, o, xs, h => by
@@ -70,7 +70,7 @@ theorem decNL_getW : ∀ (m : Mem) (l o : Nat) (xs : List Nat), decNL m o l = so
 theorem EqL.decNL {m : Mem} {o l : Nat} {ps : List (EIdx × EIdx)} (h : EqL m o l ps) :
     ∃ xs, decNL m o l = some xs := by
   obtain ⟨h1, h2, h3⟩ := h
-  have hget : ∀ j (hj : j < ps.length), ∃ p : Word, (iwA m)[o + j]? = some p := fun j hj => by
+  have hget : ∀ j (hj : j < ps.length), ∃ p : Word, iwA m (o + j) = some p := fun j hj => by
     obtain ⟨p, a, b, hp, -⟩ := h3 j hj
     exact ⟨p, hp⟩
   refine ⟨(List.range ps.length).map (fun j => ((iwN m (o + j)).getD 0)), ?_⟩
@@ -80,11 +80,11 @@ theorem EqL.decNL {m : Mem} {o l : Nat} {ps : List (EIdx × EIdx)} (h : EqL m o 
     simp [iwN, nat?, hp])
   simpa [h2] using this
 
-theorem eqL_cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem eqL_cons {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {x o l : Word} {r : List Word} {es : List (EIdx × EIdx)} {ea eb : Word}
-    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hE : EqL m o.toNat l.toNat es) (hx : RecAt m x ea eb) (hea : H ea) (heb : H eb) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       EqL m' (r.headD 0).toNat (r.tail.headD 0).toNat ((decE ea, decE eb) :: es) := by
   obtain ⟨xs, hxs⟩ := hE.decNL
   obtain ⟨hS', hg, hd, ht⟩ := consW_stageN h hS hE.1 hxs
@@ -133,10 +133,10 @@ l_model sc0_specW (p : Prog) (hp : p.lookup "subst_const0" = some substConst0L)
 
 theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
     ∀ (f : Nat) (fuel : Word), fuel.toNat = f → ∀ (h : Word) (k : Nat) (m : Mem) (a : AState)
-      (res : List Word) (m' : Mem), StageR dn vis fe m a → H nm → H r → H h →
+      (res : List Word) (m' : Mem), StageR vis fe m a → H nm → H r → H h →
       callW p k "subst_const0" [nm, r, fuel, h] m = some (res, m') →
       ∃ x a', (substConst0 (decI nm) (decE r) f (decE h)).run a = .ok (x, a') ∧
-        KeepPost dn vis fe decW0E m m' a' res x := by
+        KeepPost vis fe decW0E m m' a' res x := by
   intro f
   induction f with
   | zero =>
@@ -161,7 +161,7 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
     | some q1 =>
     obtain ⟨rv, m1⟩ := q1
     rw [h1, bW_some] at hw
-    obtain ⟨vv, a1, hrun1, hS1, hg1, hvr⟩ := eView_ref (dn := dn) (vis := vis) (fe := fe) (p := p) h hN.lEView k m a rv m1 hS h1
+    obtain ⟨vv, a1, hrun1, hS1, hg1, hvr⟩ := eView_ref (vis := vis) (fe := fe) (p := p) h hN.lEView k m a rv m1 hS h1
     have hrun1' : (view (decE h)).run a = .ok (vv, a1) := hrun1
     have hfuel1 : (fuel - 1).toNat = f := by
       have : 0 < fuel.toNat := Nat.pos_of_ne_zero (fun e => hnz (UInt64.toNat_inj.mp (by simpa using e)))
@@ -174,7 +174,7 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
       | some q2 =>
       obtain ⟨re, m2⟩ := q2
       rw [h2, bW_some] at hw
-      obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ := pinWord52_ref (dn := dn) (vis := vis) (fe := fe) p
+      obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ := pinWord52_ref (vis := vis) (fe := fe) p
         hN.lPinWord k m1 a1 re m2 hS1 h2
       subst hvv hcd hud
       have hbeq : ((decI (rv.tail.headD 0) : NIdx) == decI nm && (decI (rv.tail.tail.headD 0) : LsIdx) == x2) =
@@ -219,7 +219,7 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
       rw [h4', bW_some] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
-      obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := mkApp_ref (dn := dn) (vis := vis) (fe := fe) hN.toMasterProg
+      obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := mkApp_ref (vis := vis) (fe := fe) hN.toMasterProg
         (r1.headD 0) (r2.headD 0) k m3 a3 r3 m4 hS3 h4'
       refine ⟨x4, a4, ?_, hS4, hg1.trans (hg2.trans (hg3.trans hg4)), hl4, hx4⟩
       simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hrun3, ← hx2, ← hx3]
@@ -231,12 +231,11 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
       simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind']
       cases vv <;> first | rfl | (exfalso; exact hnc _ _ rfl) | (exfalso; exact hna _ _ rfl)
 
-
 @[refines ConRon.Arena.substConst0]
 theorem substConst0_refines (hN : NatSubProg p) (nm r fuel h : Word) :
     RefAM p "subst_const0" [nm, r, fuel, h]
-      (fun m a => StageR dn vis fe m a ∧ H nm ∧ H r ∧ H h)
-      (substConst0 (decI nm) (decE r) fuel.toNat (decE h)) (KeepPost dn vis fe decW0E) :=
+      (fun m a => StageR vis fe m a ∧ H nm ∧ H r ∧ H h)
+      (substConst0 (decI nm) (decE r) fuel.toNat (decE h)) (KeepPost vis fe decW0E) :=
   CallRef.refAM (fun k m a res m' ⟨hS, hn, hr, hh⟩ hc =>
     sc0_ref hN nm r fuel.toNat fuel rfl h k m a res m' hS hn hr hh hc)
 
@@ -250,10 +249,10 @@ l_model pairs_specW (p : Prog) (hp : p.lookup "subst_const0_pairs" = some substC
 
 theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     ∀ (ps : List (EIdx × EIdx)) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word)
-      (m' : Mem), StageR dn vis fe m a → EqL m o.toNat l.toNat ps → o.toNat + l.toNat < 2 ^ 64 →
+      (m' : Mem), StageR vis fe m a → EqL m o.toNat l.toNat ps → o.toNat + l.toNat < 2 ^ 64 →
       callW p k "subst_const0_pairs" [nm, r, o, l] m = some (res, m') →
       ∃ x a', (substConst0Pairs (decI nm) (decE r) ps).run a = .ok (x, a') ∧
-        KeepPost dn vis fe decEqRL m m' a' res x := by
+        KeepPost vis fe decEqRL m m' a' res x := by
   intro ps
   induction ps with
   | nil =>
@@ -277,9 +276,9 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     rw [pairsW.eq_2] at hw
     rw [ite_eq_right (fun h => hl0 (by simp [h]))] at hw
     have hpp' : rdW (m.arr64 IW) o = pp := by
-      simp only [iwA] at hpp; simp [rdW, hpp]
+      simp only [iwA, aread_apply] at hpp; simp [rdW, hpp]
     have hea' : rdW (m.arr64 IW) pp = ea := by
-      obtain ⟨-, h2, -⟩ := hrec; simp only [iwA] at h2; simp [rdW, h2]
+      obtain ⟨-, h2, -⟩ := hrec; simp only [iwA, aread_apply] at h2; simp [rdW, h2]
     have hpb : (pp + 1).toNat = pp.toNat + 1 := by
       obtain ⟨h1, -, -⟩ := hrec
       have e1 := hS.iw.iw; have e2 := hS.iw.iwSize; have e3 : pp.toNat + 1 < 2 ^ 64 := by omega
@@ -287,7 +286,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     have heb' : ∀ m1, IWGrow m m1 → rdW (m1.arr64 IW) (pp + 1) = eb := by
       intro m1 hg
       obtain ⟨h1, -, h3⟩ := hrec
-      simp only [iwA] at h3; simp only [rdW, hpb]; rw [hg.iwGet _ (by omega)]; simp [h3]
+      simp only [iwA, aread_apply] at h3; simp only [rdW, hpb]; rw [hg.iwGet _ (by omega)]; simp [h3]
     rw [hpp', hea'] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hK1⟩ := sc0_ref hN nm r _ 4000000000 fuelW ea k m a r1 m1 hS hn hr hea h1
@@ -331,9 +330,9 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
 @[refines ConRon.Arena.substConst0Pairs]
 theorem substConst0Pairs_refines (hN : NatSubProg p) (nm r o l : Word) (ps : List (EIdx × EIdx)) :
     RefAM p "subst_const0_pairs" [nm, r, o, l]
-      (fun m a => StageR dn vis fe m a ∧ H nm ∧ H r ∧ EqL m o.toNat l.toNat ps ∧
+      (fun m a => StageR vis fe m a ∧ H nm ∧ H r ∧ EqL m o.toNat l.toNat ps ∧
         o.toNat + l.toNat < 2 ^ 64)
-      (substConst0Pairs (decI nm) (decE r) ps) (KeepPost dn vis fe decEqRL) :=
+      (substConst0Pairs (decI nm) (decE r) ps) (KeepPost vis fe decEqRL) :=
   CallRef.refAM (fun k m a res m' ⟨hS, hn, hr, hE, hb⟩ hc =>
     pairs_ref hN nm r hn hr ps o l k m a res m' hS hE hb hc)
 

@@ -143,20 +143,32 @@ theorem range_map_getElem! {α β : Type} [Inhabited α] (l : List α) (g : α �
   simp only [List.getElem_map, List.getElem_range]; rw [getElem!_pos l j h1]
 
 theorem hd?_of {k : IdxKind} {a : Array Word} {i : Nat} {w : Word} (h : a[i]? = some w)
+    (hw : w.toNat < 2 ^ 32) : (hd? (aread a) i : Option (Idx k)) = some (decI w) := by
+  simp [hd?, aread_apply, h, hw]
+
+theorem hd?_ofR {k : IdxKind} {a : Nat → Option Word} {i : Nat} {w : Word} (h : a i = some w)
     (hw : w.toNat < 2 ^ 32) : (hd? a i : Option (Idx k)) = some (decI w) := by
   simp [hd?, h, hw]
+
+/-- A constant value from its words, over a reader. -/
+theorem decCV_ofR {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
+    (h0 : a q = some wn) (hn : wn.toNat < 2 ^ 32) (h1 : a (q + 1) = some s)
+    (h2 : a (q + 2) = some ll) (h3 : a (q + 3) = some wt) (ht : wt.toNat < 2 ^ 32)
+    (hs : ∀ j < ll.toNat, a (s.toNat + j) = some (f j) ∧ (f j).toNat < 2 ^ 32) :
+    decCV a q = some ⟨decI wn, (List.range ll.toNat).map (fun j => decI (f j)), decI wt⟩ := by
+  have h2' : a (q + 1 + 1) = some ll := h2
+  have hsl : (hslice? a s.toNat ll.toNat : Option (List NIdx)) =
+      some ((List.range ll.toNat).map fun j => decI (f j)) :=
+    mapM_some_ofI _ _ _ (fun j hj => hd?_ofR (hs j (List.mem_range.mp hj)).1 (hs j (List.mem_range.mp hj)).2)
+  simp [decCV, hlist?, nat?, hd?_ofR h0 hn, hd?_ofR h3 ht, h1, h2', hsl]
 
 /-- A constant value from its words (handles below `2^32`). -/
 theorem decCV_of {a : Array Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
     (h0 : a[q]? = some wn) (hn : wn.toNat < 2 ^ 32) (h1 : a[q + 1]? = some s)
     (h2 : a[q + 2]? = some ll) (h3 : a[q + 3]? = some wt) (ht : wt.toNat < 2 ^ 32)
     (hs : ∀ j < ll.toNat, a[s.toNat + j]? = some (f j) ∧ (f j).toNat < 2 ^ 32) :
-    decCV a q = some ⟨decI wn, (List.range ll.toNat).map (fun j => decI (f j)), decI wt⟩ := by
-  have h2' : a[q + 1 + 1]? = some ll := h2
-  have hsl : (hslice? a s.toNat ll.toNat : Option (List NIdx)) =
-      some ((List.range ll.toNat).map fun j => decI (f j)) :=
-    mapM_some_ofI _ _ _ (fun j hj => hd?_of (hs j (List.mem_range.mp hj)).1 (hs j (List.mem_range.mp hj)).2)
-  simp [decCV, hlist?, nat?, hd?_of h0 hn, hd?_of h3 ht, h1, h2', hsl]
+    decCV (aread a) q = some ⟨decI wn, (List.range ll.toNat).map (fun j => decI (f j)), decI wt⟩ := by
+  exact decCV_ofR h0 hn h1 h2 h3 ht hs
 
 /-- The words of `cvM`. -/
 theorem cvM_wd (m : Mem) (q n o l t : Word) (j : Nat) (hq : q.toNat + 3 < (m.arr64 DLP).size)
@@ -190,8 +202,8 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
       topN m' DLP = topN m DLP + cv.levelParams.length ∧ topN m' DLP + 1 ≤ (m'.arr64 DLP).size ∧
       (∀ i, 1 ≤ i → i < q.toNat → wd m' DLP i = wd m DLP i) ∧
       (∀ i, q.toNat + 4 ≤ i → i ≤ topN m DLP → wd m' DLP i = wd m DLP i) ∧
-      (∀ P, (∀ i, (q.toNat ≤ i ∧ i < q.toNat + 4) ∨ (topN m DLP < i ∧ i ≤ topN m' DLP) →
-        P[i]? = some (wd m' DLP i)) → decCV P q.toNat = some cvp) := by
+      (∀ P : Nat → Option Word, (∀ i, (q.toNat ≤ i ∧ i < q.toNat + 4) ∨ (topN m DLP < i ∧ i ≤ topN m' DLP) →
+        P i = some (wd m' DLP i)) → decCV P q.toNat = some cvp) := by
   have hps := hD.psize
   have hptop : topN m DLP + 1 ≤ (m.arr64 DLP).size := hD.ptop
   unfold cvW at h
@@ -257,7 +269,7 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
       rw [UInt64.toNat_add, hrdN]; simp; omega
     have hc : (lsCntN b.data (lps + 1) 0).toNat = (listN b.data lps).length := by
       rw [F1]; simp
-    have := decCV_of (f := fun j => tblW m NID (listN b.data lps)[j]!) e0 n2 e1 e2 e3 y2 (fun j hj => by
+    have := decCV_ofR (f := fun j => tblW m NID (listN b.data lps)[j]!) e0 n2 e1 e2 e3 y2 (fun j hj => by
       rw [hc] at hj
       have hmem : (listN b.data lps)[j]! ∈ listN b.data lps := by
         rw [getElem!_pos (listN b.data lps) j hj]; exact List.getElem_mem hj

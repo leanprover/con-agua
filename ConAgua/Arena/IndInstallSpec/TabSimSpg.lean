@@ -1,9 +1,7 @@
 module
 
-public import ConAgua.Arena.IndInstallSpec.TabsProg
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Arena.IndSumSpec.StructProjBodies
-public import ConAgua.Arena.IndSumSpec.StructProjGuards
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
@@ -15,7 +13,7 @@ public import ConAgua.Arena.IndPartsSpec.MemberNames
 /-!
 # TabSimSpg
 
-`binternW_mfr`, `minternW_mfr`, `mkProjW_mfr`, `erAllocW_mfr`, `set64ER_mfr`, `colW_mfr` and the lemmas only they use.
+`binternW_mfr`, `minternW_mfr`, `mkProjW_mfr`, `erAllocW_mfr`, `set64ER_mfr` and the lemmas only they use.
 -/
 
 section
@@ -35,55 +33,14 @@ theorem minternW_mfr {m m' : Mem} {u v r : Word} (h : minternW m u v = some (r, 
 theorem mkProjW_mfr {m m' : Mem} {a b c r : Word} (h : mkProjW m a b c = some (r, m')) : MFr [] [] m m' :=
   MFr.of_low (mkProjW_low h)
 theorem erAllocW_mfr {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m')) : MFr [] [] m m' := by
-  rw [erAllocW_mem h]; exact MFr.of_frame (MemFrame.setCtl m 129 _) (by simp) (by simp)
+  have hm : m' = erAllocMem m k := by
+    unfold erAllocW at h; split at h <;> (repeat' split at h) <;> simp_all
+  subst hm; unfold erAllocMem; split
+  · exact MFr.of_frame (MemFrame.setCtl m 129 _) (by simp) (by simp)
+  · exact MFr.of_frame (MemFrame.setCtl m 130 _) (by simp) (by simp)
+
 theorem set64ER_mfr (m : Mem) (k v : Word) : MFr [] [] m (m.set64 EREC k v) :=
   MFr.of_frame (MemFrame.set64 m EREC (by decide) k v) (by simp [EREC]) (by simp)
-
-/-! ## `struct_proj_guards` -/
-
-theorem colW_mfr : ∀ (n : Nat) (m m' : Mem) (uo ul so sl z j k acc : Word) (r : List Word),
-    colW n m uo ul so sl z j k acc = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, _, h => by simp [colW] at h
-  | n + 1, m, m', uo, ul, so, sl, z, j, k, acc, r, h => by
-    simp only [colW, colK.eq_def, colK2.eq_def] at h
-    mfr_auto h [colW_mfr n _ _ _ _ _ _ _ _ _ _ _, minternW_mfr]
-
-theorem rowW_mfr : ∀ (n : Nat) (m m' : Mem) (uo ul so sl z i k : Word) (r : List Word),
-    rowW n m uo ul so sl z i k = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [rowW] at h
-  | n + 1, m, m', uo, ul, so, sl, z, i, k, r, h => by
-    simp only [rowW, rowK1.eq_def, rowK2.eq_def, plK0.eq_def, plK3.eq_def] at h
-    mfr_auto h [rowW_mfr n _ _ _ _ _ _ _ _ _ _, colW_mfr n _ _ _ _ _ _ _ _ _ _ _, allocW_mfr, consW_mfr]
-
-end L.Ind
-
-namespace L.Ind
-open L.Arena
-
-/-- **`struct_proj_guards` leaves the `hb` memo well formed** (its walk's memo after the clear). -/
-theorem spgW_hb {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem}
-    {a : AState} {cty nP nF so sl : Word} {r : List Word} {mp : Std.HashMap (EIdx × Nat) Bool}
-    (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
-    (hS : StageR dn vis fe m a) (hM : hbMR m mp) (h : spgW n m cty nP nF so sl = some (r, m')) :
-    ∃ mp', hbMR m' mp' := by
-  unfold spgW at h
-  cases hz' : pinWordV m 53 with
-  | none => rw [hz'] at h; simp [spgK1] at h
-  | some z =>
-  rw [hz'] at h
-  by_cases h0 : rdW (m.arr64 CTL) hbSch.cs + 2 = 0
-  · rw [spgK1_some_zero n m cty nP nF so sl z h0] at h; cases h
-  rw [spgK1_some n m cty nP nF so sl z h0] at h
-  have hf0 := mclearG_frame hbSch m
-  have hM0 := memoRV_clear hbSch hbSch_wf lfKey hbVR m mp hM h0
-  obtain ⟨hS0, -⟩ := StageR.frame_hi hS hf0 (by simp) (by
-      intro x hx; simp [hbSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [hbSch])
-  obtain ⟨⟨u, m2⟩, hu, h⟩ := of_K h rfl; rw [spgK2_some] at h
-  obtain ⟨-, mp', -, -, -, -, -, hM2, -, -⟩ :=
-    ulW_ok n _ _ a cty nP nF 0 u ∅ (by simpa using hb) hc' hS0 hM0 hu
-  obtain ⟨⟨rr, m3⟩, hr, h⟩ := of_K h rfl; rw [spgK3_some] at h
-  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  exact ⟨mp', hbMR_mfr (rowW_mfr _ _ _ _ _ _ _ _ _ _ _ hr) (by simp) (by simp) hM2⟩
 
 /-! ## `check_struct_proj_table` -/
 
@@ -167,7 +124,7 @@ theorem efgW_mfr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     simp only [efgW, efgK.eq_def] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-    · refine MFr.trans (set64ER_mfr m q (rdW (m.arr64 IW) o)) ?_
+    · refine MFr.trans (MFr.of_frame (erecPutMem_frame m q (rdW (m.arr64 IW) o)) (by simp [EREC]) (by simp)) ?_
       mfr_auto h [efgW_mfr n _ _ _ _ _ _]
 
 theorem efW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m o l = some (r, m')) :
@@ -177,96 +134,6 @@ theorem efW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m
 
 theorem wrER_mfr (ws : List Word) (m : Mem) (q : Word) : MFr [] [] m (wrER m q ws) :=
   MFr.of_frame (wrER_frame ws m q) (by simp [EREC]) (by simp)
-
-theorem envPushW_mfr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m vis q = some (r, m')) :
-    MFr [] [] m m' := by
-  simp only [envPushW] at h
-  split at h; · cases h
-  split at h; · cases h
-  split at h
-  rotate_left; · cases h
-  rename_i hc
-  obtain ⟨ht, -⟩ := hc
-  have hra : (rowArr (rdW (m.arr64 EREC) (q + 1)) : TieredArray) ≠ ↑CTL :=
-    TieredArray.t0_ne (rowArr_ne _ (by decide))
-  have hmem : rowArr (rdW (m.arr64 EREC) (q + 1)) < 201 := by
-    exact Nat.lt_trans (rowArr_lt _) (by decide)
-  have h1 : MFr [] [] m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) :=
-    MFr.of_frame ((MemFrame.set64 m _ hra _ _).trans (MemFrame.set64 _ _ hra _ _))
-      (by intro b hb; simp at hb; subst hb; exact .inl hmem) (by simp)
-  refine MFr.trans h1 ?_
-  simp only [envPushK.eq_def] at h
-  split at h; · cases h
-  split at h
-  rotate_left; · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  rw [← h.2]
-  exact MFr.trans (MFr.of_frame (MemFrame.set64 _ ECON (by decide) _ _) (by simp [ECON]) (by simp))
-    (MFr.of_frame (MemFrame.setCtl _ 128 _) (by simp) (by simp))
-
-end L.Ind
-
-end
-
-section
-
-open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
-
-namespace L.Ind
-
-open L.Arena
-
-/-! ## `struct_proj_guards` as a callee -/
-
-theorem getDW_len0 (m : Mem) (o i d : Word) : getDW m o 0 i d = d := by simp [getDW]
-
-theorem colW_sl0 (n : Nat) : ∀ (m : Mem) (uo ul so z j k acc : Word),
-    colW n m uo ul so 0 z j k acc = colW n m uo ul 0 0 z j k acc := by
-  induction n with
-  | zero => intros; simp [colW]
-  | succ n ih => intros; simp only [colW, getDW_len0, colK.eq_def, colK2.eq_def, ih]
-
-theorem rowW_sl0 (n : Nat) : ∀ (m : Mem) (uo ul so z i k : Word),
-    rowW n m uo ul so 0 z i k = rowW n m uo ul 0 0 z i k := by
-  induction n with
-  | zero => intros; simp [rowW]
-  | succ n ih => intros; simp only [rowW, getDW_len0, colW_sl0, rowK1.eq_def, rowK2.eq_def, ih]
-
-/-- With an empty sorts slice the model does not read its offset. -/
-theorem spgW_sl0 (n : Nat) (m : Mem) (cty nP nF so : Word) :
-    spgW n m cty nP nF so 0 = spgW n m cty nP nF 0 0 := by
-  simp only [spgW, spgK1.eq_def, spgK2.eq_def, rowW_sl0]
-
-/-- **`struct_proj_guards` as a `Sim`, keeping its memo well formed.** -/
-theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {m : Mem} {a : AState} (cty nP nF so sl : Word) (sorts : List LIdx)
-    (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
-    (hS : StageR dn vis fe m a) (hM : HbMemo m) (hs : decHL m so.toNat sl.toNat = some sorts)
-    (hst : sl = 0 ∨ so.toNat + sl.toNat ≤ iwTop m) :
-    Sim (callW p (k + 1) "struct_proj_guards" [cty, nP, nF, so, sl] m)
-      (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a
-      (fun r gs m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-        decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some gs ∧
-        (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ HbMemo m') := by
-  intro r m' e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (spg_spec p hP.tbl.hv hP.hf hP.hput hP.hins hP.hgo hP.hbp hP.hst hP.hsg hP.tbl.ha hP.tbl.hc hP.tbl.hsc hP.hul
-      hP.hgd hP.hmf hP.hmp hP.him hP.hcol hP.hrow hP.hpw hP.hcl hP.hspg k _ cty nP nF so sl) e
-  obtain ⟨mp, hmp⟩ := hM
-  have hM' : HbMemo s'.mem := spgW_hb k hc' hb hS hmp hW
-  rcases hst with h0 | hst
-  · subst h0
-    rw [spgW_sl0] at hW
-    have hs0 : sorts = [] := by simpa [decHL, hslice?] using hs.symm
-    subst hs0
-    obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF 0 0 [] mp hc' hb hS hmp
-      (by simp [decHL, hslice?]) (by simp) r s'.mem hW
-    exact ⟨x, a', h1, hS', hg, hd, ht, hM'⟩
-  · obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF so sl sorts mp hc' hb hS hmp hs hst
-      r s'.mem hW
-    exact ⟨x, a', h1, hS', hg, hd, ht, hM'⟩
 
 end L.Ind
 

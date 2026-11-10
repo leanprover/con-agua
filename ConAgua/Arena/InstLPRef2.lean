@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.ErecRd
 import ConAgua.Arena.InstLPRef
 import ConAgua.Front.IdTable
 import ConRon.Arena.WFProofs
@@ -74,10 +75,10 @@ theorem ReadNCOK.of_ls {a a' : AState} (hc : ReadNCOK a) (hls : a'.store.lss.ls 
 `EREC` name slice `(qo, qc)`), else nested (the stored levels the `EREC` slice `(fvo, fvc)`). -/
 def FireR (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (cvjLps : List NIdx) :
     Prop :=
-  (fk = 0 ∧ rl.fire = .plain ∧ hslice? (m.arr64 EREC) qo.toNat qc.toNat = some cvjLps ∧
+  (fk = 0 ∧ rl.fire = .plain ∧ hslice? (erecP m) qo.toNat qc.toNat = some cvjLps ∧
       qo.toNat + qc.toNat < 2 ^ 64 ∧ ∀ q ∈ cvjLps, ∃ nm, denoteN a.store.lss.ls.ns q = some nm) ∨
     (fk ≠ 0 ∧ ∃ lvls pins, rl.fire = .nested lvls pins ∧
-      hslice? (m.arr64 EREC) fvo.toNat fvc.toNat = some lvls ∧ fvo.toNat + fvc.toNat < 2 ^ 64 ∧
+      hslice? (erecP m) fvo.toNat fvc.toNat = some lvls ∧ fvo.toNat + fvc.toNat < 2 ^ 64 ∧
       ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L)
 
 /-- What `rec_fire_levels` writes. -/
@@ -176,7 +177,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     (vs : List Level) (hA : ArenaD m a) (hmode : ModeOK m) (hwf : StoreWF a.store) (hnc : ReadNCOK a) (hlc : ReadLCOK a)
     (hlsc : ReadLsCOK a) (hsz : (m.arr64 SPN).size < 2 ^ 63) (hctl : 136 < (m.arr64 CTL).size)
     (hus : us.toNat < 2 ^ 32) (hdus : denoteLs a.store.lss (decI us) = some vs)
-    (hlps : hslice? (m.arr64 EREC) po.toNat pc.toNat = some lps) (hpb : po.toNat + pc.toNat < 2 ^ 64)
+    (hlps : hslice? (erecP m) po.toNat pc.toNat = some lps) (_hpb : po.toNat + pc.toNat < 2 ^ 64)
     (hks : lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
     (hfire : FireR m a fk fvo fvc qo qc rl cvjLps)
     (hW : recFireLevelsW p n m fk fvo fvc po pc us qo qc = some (r, m')) :
@@ -195,8 +196,9 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
   · cases hW
   obtain ⟨s₂, hs₂m, -, hW₂⟩ := triple_of_callW (keysPush_spec p hL.toLvSubProg n ⟨m₀, Locals.init []⟩ po pc) h2
   rw [hs₂m] at hW₂
-  have hk := lp_nmsR_of_hslice a.store.lss.ls.ns m₀ EREC lps ks po pc hlps hpb hks
-  obtain ⟨hb, hk₁, hf₁, htop₁, hroom, hbel₁⟩ := keysPushW_ok n m₀ m₁ po pc (bs.headD 0) ks hk hsz hctl hW₂
+  obtain ⟨hb, hks₁, hf₁, htop₁, hroom, hbel₁⟩ := keysPushW_ok n m₀ m₁ po pc (bs.headD 0) lps hlps hsz hctl hW₂
+  have hk₁ := lp_nmsR_of_hslice a.store.lss.ls.ns m₁ SPN lps ks (bs.headD 0) pc hks₁
+    (by have := hsz; omega) hks
   -- the twin's readbacks
   obtain ⟨c₁, hrn, hnc₁, el₁, els₁, eq₁⟩ := readNamesM_run a hnc lps ks hks
   obtain ⟨c₂, hrl, hlsc₂, el₂, en₂, eq₂⟩ := lp_readLevelsM_run { a with caches := c₁ } (decI us) vs hdus
@@ -212,7 +214,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     intro h l e; rw [← hal] at e; simp only at e; rw [en₂] at e
     have := hnc₁ h l e; rw [hstl]; exact this
   have hlscl : ReadLsCOK al := hlsc₂
-  have herec₁ : m₁.arr64 EREC = m₀.arr64 EREC := hf₁.arr EREC (by simp [SPN, EREC]) (by decide)
+  have herec₁ : erecP m₁ = erecP m₀ := erecP_frame hf₁ (by decide) (by decide) (by decide) (by decide)
   have hpool₁ : m₁.arr64 POOL = m₀.arr64 POOL := hf₁.arr POOL (by simp [SPN, POOL]) (by decide)
   have hpool₁' : m₁.arr64 POOL1 = m₀.arr64 POOL1 := hf₁.arr POOL1 (by simp [SPN, POOL1]) (by decide)
   have hpool₁v := vpool_congr hpool₁ hpool₁'
@@ -294,52 +296,5 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
       (by rw [hpi₂, ← hal]) (by rw [hme₂, ← hal]) hsl₂ hbl₂ hf₂ h4
     refine ⟨a₃, ?_, hok⟩
     simp only [recFireLevels, hnest, StateT.run_bind, hrn, except_ok_bind, hrl, hrun₂, hrun₃]
-
-/-! ## `caps_never_zero` refines `capsNeverZero` -/
-
-/-- **The model of `caps_never_zero` refines `capsNeverZero`** at the recursor's level parameters
-(an `EREC` name slice that reads back), the universe arguments (a list that reads back) and the
-family's stored sort datum `caps.sortZ` related at its words. -/
-@[refines ConRon.Arena.capsNeverZero]
-theorem capsNeverZeroW_run (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so sc x : Word)
-    (lps : List NIdx) (ks : List Name) (vs : List Level) (caps : IIndCaps) (hA : ArenaD m a)
-    (hwf : NStoreWF a.store.lss.ls.ns) (hnc : ReadNCOK a) (hlsc : ReadLsCOK a)
-    (hus : us.toNat < 2 ^ 32) (hsz : (m.arr64 SPN).size < 2 ^ 63)
-    (hdl : denoteLs a.store.lss (decI us) = some vs)
-    (hlps : hslice? (m.arr64 EREC) po.toNat pc.toNat = some lps) (hpb : po.toNat + pc.toNat < 2 ^ 64)
-    (hks : lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
-    (hp : PWR (nameN a.store.lss.ls.ns) m EREC swd so sc caps.sortZ)
-    (hW : capsNeverZeroW n m po pc us swd so sc = some (x, m')) :
-    ∃ a', (capsNeverZero lps (decI us) caps).run a = .ok (x != 0, a') ∧ ArenaD m' a' ∧
-      a'.store = a.store ∧ a'.pins = a.pins ∧ a'.memos = a.memos ∧
-      a'.caches = { { a.caches with readNC := a'.caches.readNC } with readLsC := a'.caches.readLsC } ∧
-      ReadNCOK a' ∧ ReadLsCOK a' ∧
-      MemFrame [LH, SPN] [192, 136] m m' ∧ spTop m' = spTop m ∧
-      (∀ i : Word, i < spTop m → spW m' i = spW m i) ∧ x.toNat < 2 ^ 32 := by
-  have hk := lp_nmsR_of_hslice a.store.lss.ls.ns m EREC lps ks po pc hlps hpb hks
-  obtain ⟨hA', hf, htop, hbel, hx, hlt⟩ :=
-    capsNeverZeroW_ok n m m' a po pc us swd so sc x ks vs caps.sortZ hA hwf hus hsz hdl hk hp hW
-  obtain ⟨c₁, hrn, hnc₁, -, els₁, eq₁⟩ := readNamesM_run a hnc lps ks hks
-  have hlsc₁ : ReadLsCOK { a with caches := c₁ } := fun h l e => hlsc h l (by rw [← els₁]; exact e)
-  obtain ⟨c₂, hrl, hlsc₂, -, en₂, eq₂⟩ := lp_readLevelsM_run { a with caches := c₁ } (decI us) vs hdl hlsc₁
-  generalize ha₂ : ({ { a with caches := c₁ } with caches := c₂ } : AState) = a₂ at hrl hlsc₂
-  have hst : a₂.store = a.store := by rw [← ha₂]
-  have hpi : a₂.pins = a.pins := by rw [← ha₂]
-  have hme : a₂.memos = a.memos := by rw [← ha₂]
-  have hca : a₂.caches = c₂ := by rw [← ha₂]
-  have hA₂ : ArenaD m' a₂ := by rw [← ha₂]; exact hA'.with_caches _
-  refine ⟨a₂, ?_, hA₂, hst, hpi, hme, ?_, ?_, hlsc₂, hf, htop, hbel, hlt⟩
-  · have hb : (Level.substPW ks vs caps.sortZ).isNever = (x != 0) := by
-      cases h : (Level.substPW ks vs caps.sortZ).isNever
-      · rw [h] at hx
-        have h0 : x = 0 := Classical.byContradiction fun h0 => by have := Eq.mp hx h0; cases this
-        subst h0; rfl
-      · rw [h] at hx
-        have h0 : x ≠ 0 := Eq.mpr hx rfl
-        exact (bne_iff_ne.mpr h0).symm
-    simp only [ConRon.Arena.capsNeverZero, StateT.run_bind, hrn, except_ok_bind, hrl, hb]; rfl
-  · rw [hca]; conv => lhs; rw [eq₂]
-    rw [en₂]; dsimp only; conv => lhs; rw [eq₁]
-  · intro h l e; rw [hca, en₂] at e; rw [hst]; exact hnc₁ h l e
 
 end L.Arena

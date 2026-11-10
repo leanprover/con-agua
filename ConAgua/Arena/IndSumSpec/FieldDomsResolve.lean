@@ -27,11 +27,11 @@ open L.Arena
 
 /-! ## The relational lemmas -/
 
-theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
+theorem fdrW_ok (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
-    fdrW n m v o l = some (r, m') → StageR dn v fe m a → decHL m o.toNat l.toNat = some xs →
+    fdrW n m v o l = some (r, m') → StageR v fe m a → decHL m o.toNat l.toNat = some xs →
     o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m → AbsOK m →
-    ∃ b a', (fieldDomsResolve fe xs).run a = .ok (b, a') ∧ KeepPost dn v fe decW0B m m' a' r b ∧
+    ∃ b a', (fieldDomsResolve fe xs).run a = .ok (b, a') ∧ KeepPost v fe decW0B m m' a' r b ∧
       AbsOK m' := by
   induction n with
   | zero => intro m m' a v o l xs r h; simp [fdrW] at h
@@ -49,11 +49,11 @@ theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
       rw [fdrW_cons n m v o l hl, hw] at h
       obtain ⟨ra, m1, h1, h⟩ := kSome_inv h (by simp [fdrK1]) (fun _ _ => rfl)
       rw [fdrK1_some] at h
-      obtain ⟨t, a1, hrun1, hS1, hg1, ht32, hteq⟩ := ftdF_ok dn v fe w hw32 m m1 a ra h1 hS
+      obtain ⟨t, a1, hrun1, hS1, hg1, ht32, hteq⟩ := ftdF_ok (fun _ => none) v fe w hw32 m m1 a ra h1 hS
       have hA1 := ftdF_afr h1 hA
       obtain ⟨rb, m2, h2, h⟩ := kSome_inv h (by simp [fdrK2]) (fun _ _ => rfl)
       obtain ⟨c, a2, hrun2, ⟨hS2, hg2, hceq, hc1⟩, hA2⟩ :=
-        crfF_ok dn v fe (ra.headD 0) ht32 m1 m2 a1 rb h2 ⟨hS1, hA1⟩
+        crfF_ok v fe (ra.headD 0) ht32 m1 m2 a1 rb h2 ⟨hS1, hA1⟩
       have hrun12 : ∀ (k : Bool → AM Bool),
           (do let t ← fvarTypeD (decI w); let c ← constsResolveFFast fe t; k c).run a = (k c).run a2 := by
         intro k
@@ -84,11 +84,11 @@ theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         simp only [fieldDomsResolve]
         rw [this]; exact hrun3
 
-theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
+theorem iarW_ok (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
-    iarW n m v o l = some (r, m') → StageR dn v fe m a → decHL m o.toNat l.toNat = some xs →
+    iarW n m v o l = some (r, m') → StageR v fe m a → decHL m o.toNat l.toNat = some xs →
     o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m → AbsOK m →
-    ∃ b a', (idxArgsResolve fe xs).run a = .ok (b, a') ∧ KeepPost dn v fe decW0B m m' a' r b ∧
+    ∃ b a', (idxArgsResolve fe xs).run a = .ok (b, a') ∧ KeepPost v fe decW0B m m' a' r b ∧
       AbsOK m' := by
   induction n with
   | zero => intro m m' a v o l xs r h; simp [iarW] at h
@@ -106,7 +106,7 @@ theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
       rw [iarW_cons n m v o l hl, hw] at h
       obtain ⟨rb, m2, h2, h⟩ := kSome_inv h (by simp [iarK]) (fun _ _ => rfl)
       obtain ⟨c, a2, hrun2, ⟨hS2, hg2, hceq, hc1⟩, hA2⟩ :=
-        crfF_ok dn v fe w hw32 m m2 a rb h2 ⟨hS, hA⟩
+        crfF_ok v fe w hw32 m m2 a rb h2 ⟨hS, hA⟩
       have hrun12 : ∀ (k : Bool → AM Bool),
           (do let c ← constsResolveFFast fe (decI w); k c).run a = (k c).run a2 := by
         intro k
@@ -143,16 +143,16 @@ with the walk memos `AbsOK`), at the view `vis0` of the pre-block environment `f
 theorem fieldDomsResolve_refines (p : Prog)
     (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (hftd : FtdF p) (hcr : CrfF p) (n : Nat)
     (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
-    (hS : StageR dn vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
+    (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
+    (hS : StageR vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
     (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "field_doms_resolve" [vis0, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (fieldDomsResolve fe₀ xs) a₀ ∧
-      KeepPost dn vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (fieldDomsResolve fe₀ xs) a₀) r
+      KeepPost vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (fieldDomsResolve fe₀ xs) a₀) r
         (AM.res (fieldDomsResolve fe₀ xs) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (fdrW_spec p hp hftd hcr n s₀ vis0 o l) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hpost, hA'⟩ := fdrW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht hA
+  obtain ⟨b, a', hrun, hpost, hA'⟩ := fdrW_ok fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hpost, hA'⟩
 
@@ -162,16 +162,16 @@ at the view `vis0` of the pre-block environment `fe₀`. -/
 @[refines ConRon.Arena.idxArgsResolve]
 theorem idxArgsResolve_refines (p : Prog)
     (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (hcr : CrfF p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
-    (hS : StageR dn vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
+    (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
+    (hS : StageR vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
     (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_args_resolve" [vis0, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (idxArgsResolve fe₀ xs) a₀ ∧
-      KeepPost dn vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (idxArgsResolve fe₀ xs) a₀) r
+      KeepPost vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (idxArgsResolve fe₀ xs) a₀) r
         (AM.res (idxArgsResolve fe₀ xs) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (iarW_spec p hp hcr n s₀ vis0 o l) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hpost, hA'⟩ := iarW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht hA
+  obtain ⟨b, a', hrun, hpost, hA'⟩ := iarW_ok fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hpost, hA'⟩
 

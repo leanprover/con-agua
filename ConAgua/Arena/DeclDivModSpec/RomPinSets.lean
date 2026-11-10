@@ -78,12 +78,22 @@ namespace L.Ind
 
 open L.Arena
 
-/-- The words `er_to_iw` leaves: the copy at the old top. -/
-theorem erToIwW_words {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
-    (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
-    (_hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
-    (hsrc : o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
-    ∀ i < l.toNat, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + i]? = (m.arr64 EREC)[o.toNat + i]? := by
+/-- `erRd` does not read `CTL`. -/
+theorem erRd_allocMem (m : Mem) (k a : Word) : erRd (allocMem m k) a = erRd m a := by
+  unfold erRd allocMem; rw [Mem.arr64_set64_ne _ _ _ _ _ (by rw [tierA_EREC]; split <;> decide)]
+
+/-- **`er_to_iw` under the stage relation, word by word** (`erToIwW_stage` without a decoding of
+the source: the words need not be handles): the copy at the old top, word `i` the tagged read
+`EREC⦃o + i⦄`. -/
+theorem erToIwW_words {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {o l : Word}
+    {r : List Word} (h : erToIwW n m o l = some (r, m')) (hS : StageR vis fe m a)
+    (hsrc : o.toNat + l.toNat ≤ 2 ^ 64) :
+    r = [rdW (m.arr64 CTL) 200, l] ∧ StageR vis fe m' a ∧ IWGrow m m' ∧
+      MemFrame [IW] [200] m m' ∧ (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' ∧
+      ∀ i < l.toNat, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + i]? =
+        some (erRd m (UInt64.ofNat (o.toNat + i))) := by
+  have hsz := hS.iw.iwSize
+  have hc := hS.iw.ctl
   simp only [erToIwW] at h
   cases hal : allocW m l with
   | none => simp [hal] at h
@@ -91,28 +101,33 @@ theorem erToIwW_words {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   obtain ⟨q, m1⟩ := qm
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
-  cases hcp : erCopyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  rcases hcp : erCopyW (n - 1) m1 q o l with _ | m2 <;>
+    simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq hm1
   have hIW := allocMem_IW m l
-  have hEE : (allocMem m l).arr64 EREC = m.arr64 EREC := by
-    simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨hA, hS, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hEE]; exact hsrc)
-    (by rw [hEE]; exact hE) (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
-  rw [hEE] at hG
-  intro i hi
-  rw [hG, ite_eq_left (by omega)]
-  congr 1; omega
+  obtain ⟨hA, hSz, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp hsrc
+    (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
+  rw [hIW] at hSz hG
+  have hfr : MemFrame [IW] [200] m m2 :=
+    (allocMem_frame m l).trans (copy_frame hA (by rw [hSz, hIW]))
+  have htop : rdW (m2.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + l := by
+    rw [hA CTL (by decide), allocMem_top m _ hc]
+  have hsum : (rdW (m.arr64 CTL) 200 + l).toNat = (rdW (m.arr64 CTL) 200).toNat + l.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hg : IWGrow m m2 := iwGrow_of_frame hfr (N := l) htop (by simp only [iwTop]; omega) hsz
+    (fun i hi => by simp only [iwTop] at hi; rw [hG, ite_eq_right (by omega)])
+  have hti : (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m2 := by simp only [iwTop, htop, hsum]
+  have hroom' : iwTop m2 ≤ (m2.arr64 IW).size := by rw [← hti, hSz]; exact hroom
+  refine ⟨rfl, ⟨CheckR.frame_iw hfr hS.check, hS.iw.of_iw hfr hroom'⟩, hg, hfr, hti, fun i hi => ?_⟩
+  rw [hG, ite_eq_left (by omega), erRd_allocMem]
+  congr 3; omega
 
 section divgate
 variable {dn : NIdx → Option ConLeche.Name} {p : Prog}
 
 structure DmProg10 (p : Prog) : Prop extends DmProg9 p where
   lRomPinSets : p.lookup "rom_pin_sets" = some L.Rom.romPinSetsL
-  lDefnDivGate : p.lookup "defn_div_gate" = some defnDivGate
 
 theorem romPinSets_spec' (hD : DmProg10 p) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_pin_sets" []
@@ -127,9 +142,9 @@ theorem romPinSets_spec' (hD : DmProg10 p) (n : Nat) (s₀ : St) :
 /-- **`rom_pin_sets()` under the stage relation**: the variant records, as an `IW` slice. -/
 theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List INatOpPinSet}
     {n : Nat} {m m' : Mem} {a : AState} {r : List Word}
-    (hS : StageR dn vis fe m a) (hP : PinSetsR m ips)
+    (hS : StageR vis fe m a) (hP : PinSetsR m ips)
     (hc : callW p n "rom_pin_sets" [] m = some (r, m')) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ PinSetsR m' ips ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ PinSetsR m' ips ∧
       PinsIW m' (r.headD 0).toNat (r.tail.headD 0).toNat ips := by
   cases n with
   | zero => rw [callW_zero] at hc; cases hc
@@ -138,13 +153,13 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
     (romPinSets_spec' hD k _) hc
   have hmod' : erToIwW k m (rdW (m.arr64 CTL) 150) (rdW (m.arr64 CTL) 151) = some (r, s'.mem) := hmod
   obtain ⟨hlen, hbd, hrec⟩ := hP
-  obtain ⟨hI1, hE1, hsz, hEs, hct⟩ := hS.iw
-  have hEtop : erecTop m ≤ (m.arr64 EREC).size := hE1
-  have hsrc : (rdW (m.arr64 CTL) 150).toNat + (rdW (m.arr64 CTL) 151).toNat ≤ (m.arr64 EREC).size := by
+  have hI := hS.iw
+  have hEtop : erecTop m ≤ (m.arr64 EREC).size := hI.er
+  have hcap := hI.erCap
+  have hsrc : (rdW (m.arr64 CTL) 150).toNat + (rdW (m.arr64 CTL) 151).toNat ≤ erecTop m := by
     omega
-  obtain ⟨hr, hd, hg, hfr, -, htop⟩ := erToIwW_dec (k := IdxKind.expr) hmod' hsz hct hEs hsrc
-  obtain ⟨-, -, -, hS', hg', htop'⟩ := L.Arena.erToIwW_stage hmod' hS (Or.inr hsrc)
-  have hw := erToIwW_words hmod' hsz hct hEs hsrc
+  obtain ⟨hr, hS', hg, hfr, htop, hw⟩ :=
+    erToIwW_words hmod' hS (by have := erecTop_lt m; omega)
   have hP' : PinSetsR s'.mem ips :=
     PinSetsR.grow ⟨hlen, hbd, hrec⟩ (IWGrow.recGrow hg) (hfr.ctl 150 (by simp)) (hfr.ctl 151 (by simp))
   refine ⟨hS', hg, hP', ?_⟩
@@ -155,21 +170,21 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
   have hjl : j < (rdW (m.arr64 CTL) 151).toNat := by omega
   have hoj : (rdW (m.arr64 CTL) 150 + UInt64.ofNat j).toNat = (rdW (m.arr64 CTL) 150).toNat + j := by
     have := (rdW (m.arr64 CTL) 150).toNat_lt
+    have := erecTop_lt m
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
     exact Nat.mod_eq_of_lt (by omega)
-  have hlt : (rdW (m.arr64 CTL) 150).toNat + j < (m.arr64 EREC).size := by omega
   refine ⟨rdW (m.arr64 EREC) (rdW (m.arr64 CTL) 150 + UInt64.ofNat j), ?_, PinSetR.grow (hrec j hj) hg⟩
-  have e1 : (iwA s'.mem)[(rdW (m.arr64 CTL) 200).toNat + j]? = (m.arr64 EREC)[(rdW (m.arr64 CTL) 150).toNat + j]? := hw j hjl
-  have e2 : rdW (m.arr64 EREC) (rdW (m.arr64 CTL) 150 + UInt64.ofNat j) = (m.arr64 EREC)[(rdW (m.arr64 CTL) 150).toNat + j] := by
-    rw [rdW_eq _ _ ((rdW (m.arr64 CTL) 150).toNat + j) hoj.symm hlt]
-  rw [e1, e2]
-  exact Array.getElem?_eq_getElem hlt
+  have e1 := hw j hjl
+  have e2 : UInt64.ofNat ((rdW (m.arr64 CTL) 150).toNat + j) = rdW (m.arr64 CTL) 150 + UInt64.ofNat j :=
+    UInt64.toNat_inj.mp (by rw [hoj]; simp; have := erecTop_lt m; omega)
+  rw [e2, erRd_lo hI (by rw [hoj]; omega)] at e1
+  simpa only [iwA, aread_apply] using e1
 
 /-! ## `defn_div_gate` -/
 
 /-- The gate and its callees. -/
 def dgFns : List FnName :=
-  ["defn_div_gate", "nat_div_mod_names", "sl_contains", "rom_pin_sets", "check_div_mod_pin"]
+  ["nat_div_mod_names", "sl_contains", "rom_pin_sets", "check_div_mod_pin"]
 
 end divgate
 

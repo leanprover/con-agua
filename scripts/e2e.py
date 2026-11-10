@@ -860,7 +860,7 @@ def main():
         log("building")
         # only what e2e needs (not the whole proof tree)
         lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins",
-             "e2e-l", "e2e-ref", "e2e-diff")
+             "e2e-l", "e2e-ref", *([] if args.no_diff else ["e2e-diff"]))
     prog = os.path.join(WORK, "checker.prog")
     if args.text_dump:
         # the old path: every binding of the lanes' modules, through text (no `checkerProg` needed)

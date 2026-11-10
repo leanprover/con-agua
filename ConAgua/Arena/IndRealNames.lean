@@ -18,6 +18,7 @@ import all ConAgua.Arena.LsStore
 import all ConAgua.Arena.NAnonStore
 import all ConAgua.Arena.NStrStore
 import all ConAgua.Arena.Store
+import ConAgua.Arena.IndMaster
 
 @[expose] public section
 
@@ -90,8 +91,8 @@ theorem nainternW_lt {m m' : Mem} {a : AState} {w : Word} (hR : NAnonR m a)
 
 /-- **`intern_nanon`'s model refines `internNNode .anonymous`** (replaces
 `IndStubs.internNanonStub_spec`). -/
-theorem naF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
-    RelW naF [] (StageR dn vis fe) (internNNode .anonymous) (KeepPost dn vis fe decW0N) := by
+theorem naF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    RelW naF [] (StageR vis fe) (internNNode .anonymous) (KeepPost vis fe decW0N) := by
   intro m m' a r hc hS
   have hW := naF_W hc
   obtain ⟨a', hrun, hS', hg, -, -⟩ := internNAnon_stage hS hW
@@ -391,8 +392,8 @@ theorem recBytes_ok (m : Mem) (hpool : PoolOK m)
   simp (config := { decide := true }) [b0, b1, b2]
 
 /-- **`name_rec`'s model refines `internNNode (.str n "rec")`** (replaces `IndStubs.nameRec_spec`). -/
-theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x : Word) (hx : H x) :
-    RelW nrF [x] (StageR dn vis fe) (internNNode (.str (decI x) "rec")) (KeepPost dn vis fe decW0N) := by
+theorem nrF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x : Word) (hx : H x) :
+    RelW nrF [x] (StageR vis fe) (internNNode (.str (decI x) "rec")) (KeepPost vis fe decW0N) := by
   intro m m' a r hc hS
   obtain ⟨n', hc'⟩ := callF_run hc
   cases n' with
@@ -497,7 +498,7 @@ theorem internLsIw_specW (p : Prog) (hp : p.lookup "intern_ls_iw" = some L.Stubs
     finish [ilwW]
 
 /-- A decoded handle slice is the words of its list, inside the array. -/
-theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hslice? a o l = some us →
+theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hslice? (aread a) o l = some us →
     sliceL a o l = lsWords us ∧ (0 < l → o + l ≤ a.size)
   | 0, o, us, h => by
     simp [hslice?] at h; subst h; simp [sliceL, lsWords]
@@ -507,9 +508,9 @@ theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hsli
     obtain ⟨x, hx, ys, hys, rfl⟩ := h
     obtain ⟨ih, hb⟩ := hslice_lsWords l (o + 1) ys hys
     cases hw : a[o]? with
-    | none => simp [hd?, hw] at hx
+    | none => simp [hd?, aread_apply, hw] at hx
     | some w =>
-    simp only [hd?, hw, bind, Option.bind_some] at hx
+    simp only [hd?, aread_apply, hw, bind, Option.bind_some] at hx
     by_cases hw32 : w.toNat < 2 ^ 32
     · rw [ite_eq_left hw32] at hx
       cases hx
@@ -525,10 +526,10 @@ theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hsli
 
 /-- **`intern_ls_iw`'s model refines `internLsNode us`** at the `IW` slice decoding to `us`
 (replaces `IndStubs.internLsIw_spec`). -/
-theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l : Word)
+theorem ilF_ok (vis : Word) (fe : IFEnv) (o l : Word)
     (us : List LIdx) :
-    RelW ilF [o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some us)
-      (internLsNode us) (KeepPost dn vis fe (fun _ r (x : LsIdx) => H (r.headD 0) ∧ decI (r.headD 0) = x)) := by
+    RelW ilF [o, l] (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some us)
+      (internLsNode us) (KeepPost vis fe (fun _ r (x : LsIdx) => H (r.headD 0) ∧ decI (r.headD 0) = x)) := by
   rintro m m' a r hc ⟨hS, hd⟩
   obtain ⟨n', hc'⟩ := callF_run hc
   cases n' with
@@ -573,7 +574,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have hol : o.toNat + l.toNat < 2 ^ 64 := by
     rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
     · rw [h0]; exact Nat.lt_of_lt_of_le (UInt64.toNat_lt o) (by omega)
-    · have := hb h0; simp only [iwA] at this; omega
+    · have := hb h0; omega
   obtain ⟨hg, hf₂, -, hsl₂⟩ := iwpW_ok hpool n m₁ m₂ o m.top l (callW_ip rfl h2) g0 (Nat.le_refl _) h41
     (by rw [htier₁]; exact hroom) hol
   rw [hiw₁] at hsl₂

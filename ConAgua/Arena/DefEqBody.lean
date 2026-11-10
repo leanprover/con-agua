@@ -59,7 +59,7 @@ theorem BodyG.mono {p : Prog} {n n' : Nat} (h : BodyG p n) (hn : n' ≤ n) : Bod
 /-! ## The twin side -/
 
 /-- **`defeqBody` past the `Bool.true` shortcut**, copied (`defeqBody_eq`). -/
-def defeqBodyRestT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
+def defeqBodyRestT (mode : ConLeche.CheckMode) (eager : Bool) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (a b : EIdx) : AM Bool := do
   match ← quickDefEq mode r depth a b with
   | some v => pure v
@@ -70,21 +70,21 @@ def defeqBodyRestT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (dept
   match ← quickDefEq mode r depth a' b' with
   | some v => pure v
   | none =>
-  match ← lazyDeltaReduction mode r fe depth defeqLoopFuel a' b' with
+  match ← lazyDeltaReduction mode eager r fe depth defeqLoopFuel a' b' with
   | .verdict v => pure v
   | .unknown a₁ b₁ => defeqTailT mode r fe depth a₁ b₁
 
-theorem defeqBody_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
+theorem defeqBody_eq (mode : ConLeche.CheckMode) (eager : Bool) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (a b : EIdx) :
-    defeqBody mode r fe depth a b =
+    defeqBody mode eager r fe depth a b =
       (if a == b then pure true else do
         let x ← isBoolTrue b
         let y ← hasFvarFast coreWalkFuel a
-        let sc ← if x && (mode.eager || !y) then boolTrueShortcut r depth a else pure false
-        if sc then pure true else defeqBodyRestT mode r fe depth a b) := by rfl
+        let sc ← if x && (eager || !y) then boolTrueShortcut r depth a else pure false
+        if sc then pure true else defeqBodyRestT mode eager r fe depth a b) := by rfl
 
 theorem decMode_eager (mode : Word) (h : mode < 4) :
-    (decMode mode).eager = decide ((mode >>> 1) &&& 1 ≠ 0) := by
+    decEager mode = decide ((mode >>> 1) &&& 1 ≠ 0) := by
   rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> decide
 
 theorem depth_lt_of_shr (d : Word) (h : d >>> 63 = 0) : d.toNat < 2 ^ 63 := by
@@ -106,7 +106,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d x y : Word)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hx : HW x) (hy : HW y) :
     RefE (BodyG p n) (bodyE p n s₀.mem mode vis d x y)
-      (defeqBody (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE x) (decE y)) a₀
+      (defeqBody (decMode mode) (decEager mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE x) (decE y)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   cases n with
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
@@ -139,7 +139,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   have rest : ∀ (sc : Word) (st : AState) (m₃ : Mem) (M₃ : ModeMaps), CoreS dn m₃ st vis fe M₃ eb →
       RefE (BodyG p (k + 1 + 1)) (bodyE.j1 p (k + 1) mode vis d x y sc m₃)
         (if (sc != 0) = true then pure true else
-          defeqBodyRestT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE x) (decE y))
+          defeqBodyRestT (decMode mode) (decEager mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE x) (decE y))
         st (CorePost decBool dn m₃ vis fe M₃ eb ResH) := by
     intro sc st m₃ M₃ hS₃
     simp only [bodyE.j1]
@@ -242,7 +242,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
   by_cases hb : r₁.headD 0 ≠ 0 ∧ ((mode >>> 1) &&& 1 ≠ 0 ∨ r₂.headD 0 = 0)
   · rw [ite_eq_left hb.1, ite_eq_left hb.2]
-    have hcond : (decBool r₁ && ((decMode mode).eager || !decBool r₂)) = true := by
+    have hcond : (decBool r₁ && (decEager mode || !decBool r₂)) = true := by
       rw [decMode_eager mode hs.mode4, decBool_true_of hb.1]
       rcases hb.2 with h | h
       · simp [h]
@@ -265,7 +265,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     · rw [ite_eq_right (fun h => h h1)]
     · rw [ite_eq_left h1, ite_eq_right (fun h => hb ⟨h1, h⟩)]
   rw [hW2]
-  have hcond : (decBool r₁ && ((decMode mode).eager || !decBool r₂)) = false := by
+  have hcond : (decBool r₁ && (decEager mode || !decBool r₂)) = false := by
     rw [decMode_eager mode hs.mode4]
     by_cases h1 : r₁.headD 0 = 0
     · simp [decBool_false_of h1]

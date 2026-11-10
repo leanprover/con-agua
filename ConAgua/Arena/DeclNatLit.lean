@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.DeclNatGate
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclCanonEq
 import ConAgua.L.LocNF
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -35,14 +34,14 @@ def ciTag : IConstantInfo → Nat
   | .axiomInfo _ => 0 | .defnInfo .. => 1 | .thmInfo _ => 2 | .indInfo .. => 3
   | .ctorInfo .. => 4 | .recInfo .. => 5
 
-theorem decCI_tag {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a dn p = some ci) :
-    ∃ w, a[p]? = some w ∧ w.toNat = ciTag ci := by
+theorem decCI_tag {rd : Nat → Option Word} {p : Nat}
+    {ci : IConstantInfo} (h : decCI rd p = some ci) :
+    ∃ w, rd p = some w ∧ w.toNat = ciTag ci := by
   unfold decCI at h
-  cases hk : nat? a p with
+  cases hk : nat? rd p with
   | none => simp [hk] at h
   | some k =>
-  have hw : ∃ w, a[p]? = some w ∧ w.toNat = k := by
+  have hw : ∃ w, rd p = some w ∧ w.toNat = k := by
     simp only [nat?, Option.map_eq_some_iff] at hk
     obtain ⟨w, hw, hk⟩ := hk; exact ⟨w, hw, hk⟩
   obtain ⟨w, hw, hwk⟩ := hw
@@ -53,47 +52,45 @@ theorem decCI_tag {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat
   refine ⟨w, hw, ?_⟩
   rw [hwk]
   rcases k with _ | _ | _ | _ | _ | _ | k
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, -, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h; rfl
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h; rfl
-  · simp at h
+  all_goals simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
+  all_goals first
+    | (simp at h; done)
+    | ((first
+        | obtain ⟨cv, hcv, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
+       rfl)
+
+/-- The type word of a constant value, over any reader. -/
+theorem decCV_typeWR {rd : Nat → Option Word} {q : Nat} {cv : IConstantVal}
+    (h : decCV rd q = some cv) : ∃ w, rd (q + 3) = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
+  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨_, _, _, _, ty, hty, rfl⟩ := h
+  exact hd?_some hty
 
 /-- A record's constant value reads: the level-parameter count word and the type word. -/
-theorem natCvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC).size < 2 ^ 64)
+theorem natCvWords {m : Mem} {q : Word} {cv : IConstantVal}
     (h : decCV (erecP m) (q.toNat + 1) = some cv) :
-    ∃ wt, ((rdW (m.arr64 EREC) (q + 3) = 0) ↔ cv.levelParams.isEmpty = true) ∧
-      rdW (m.arr64 EREC) (q + 4) = wt ∧ wt.toNat < 2 ^ 32 ∧ cv.type = decI wt ∧
-      ∀ m', IWGrow m m' → rdW (m'.arr64 EREC) (q + 3) = rdW (m.arr64 EREC) (q + 3) ∧
-        rdW (m'.arr64 EREC) (q + 4) = wt := by
+    ∃ wt, ((erRd m (q + 3) = 0) ↔ cv.levelParams.isEmpty = true) ∧
+      erRd m (q + 4) = wt ∧ wt.toNat < 2 ^ 32 ∧ cv.type = decI wt ∧
+      ∀ m', IWGrow m m' → erRd m' (q + 3) = erRd m (q + 3) ∧ erRd m' (q + 4) = wt := by
   obtain ⟨wl, hwl, hlen⟩ := decCV_lps_len h
-  obtain ⟨wt, hwt, hlt, hty⟩ := decCV_typeW h
-  have hwl' := erecP_get hwl
-  have hwt' := erecP_get hwt
-  have hb : q.toNat + 4 < (m.arr64 EREC).size := by
-    have := (Array.getElem?_eq_some_iff.mp hwt').1; omega
-  have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have hq4 : (q + 4).toNat = q.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
-  have e3 : rdW (m.arr64 EREC) (q + 3) = wl := by
-    simp only [rdW, hq3]; rw [show q.toNat + 3 = q.toNat + 1 + 2 by omega, hwl']; rfl
-  have e4 : rdW (m.arr64 EREC) (q + 4) = wt := by
-    simp only [rdW, hq4]; rw [show q.toNat + 4 = q.toNat + 1 + 3 by omega, hwt']; rfl
-  have hst : ∀ m', IWGrow m m' → rdW (m'.arr64 EREC) (q + 3) = rdW (m.arr64 EREC) (q + 3) ∧
-      rdW (m'.arr64 EREC) (q + 4) = wt := by
+  obtain ⟨wt, hwt, hlt, hty⟩ := decCV_typeWR h
+  have hb := erecP_lt64 hwt
+  have hq3 : (q + 3).toNat = q.toNat + 1 + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have hq4 : (q + 4).toNat = q.toNat + 1 + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have hwl' : erecP m (q + 3).toNat = some wl := by rw [hq3]; exact hwl
+  have hwt' : erecP m (q + 4).toNat = some wt := by rw [hq4]; exact hwt
+  have e3 : erRd m (q + 3) = wl := (erRd_of_erecP hwl').1
+  have e4 : erRd m (q + 4) = wt := (erRd_of_erecP hwt').1
+  have hst : ∀ m', IWGrow m m' → erRd m' (q + 3) = erRd m (q + 3) ∧ erRd m' (q + 4) = wt := by
     intro m' hg
-    constructor
-    · rw [e3]; simp only [rdW, hq3]
-      rw [show q.toNat + 3 = q.toNat + 1 + 2 by omega, hg.erec_get hwl]; rfl
-    · simp only [rdW, hq4]
-      rw [show q.toNat + 4 = q.toNat + 1 + 3 by omega, hg.erec_get hwt]; rfl
+    exact ⟨by rw [e3]; exact (erRd_of_erecP (hg.ext _ _ hwl')).1,
+      (erRd_of_erecP (hg.ext _ _ hwt')).1⟩
   refine ⟨wt, ?_, e4, hlt, hty, hst⟩
   rw [e3]
   simp only [List.isEmpty_iff_length_eq_zero]
@@ -102,17 +99,38 @@ theorem natCvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC
   · intro hl; exact UInt64.toNat_inj.mp (by simpa [hlen] using hl)
 
 /-- A word read of the record's tag. -/
-theorem tagWord {m : Mem} {q : Word} {ci : IConstantInfo} {dn : NIdx → Option ConLeche.Name}
-    (hsz : (m.arr64 EREC).size < 2 ^ 64) (h : decCI (erecP m) dn q.toNat = some ci) :
-    (rdW (m.arr64 EREC) q).toNat = ciTag ci := by
+theorem tagWord {m : Mem} {q : Word} {ci : IConstantInfo}
+    (h : decCI (erecP m) q.toNat = some ci) : (erRd m q).toNat = ciTag ci := by
   obtain ⟨w, hw, ht⟩ := decCI_tag h
-  rw [rdW_erec_of hsz hw, ht]
+  rw [(erRd_of_erecP hw).1, ht]
+
+/-- A decoded constant record has its `ConstantVal` at `q + 1` (InferLeaves' `decCI_cvA`). -/
+theorem decCI_cvN {R : Nat → Option Word} {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
+    decCV R (q.toNat + 1) = some ci.toConstantVal := by
+  cases hq : R q.toNat with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | k
+  all_goals (rw [hk] at h; simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h)
+  all_goals first
+    | (simp at h; done)
+    | ((first
+        | obtain ⟨cv, hcv, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
+       exact hcv)
 
 /-- The record's constant value decodes at `q + 1`. -/
 theorem ciCv_decodes {m : Mem} {q : Word} {ci : IConstantInfo} {cv : IConstantVal}
-    {dn : NIdx → Option ConLeche.Name} (h : decCI (erecP m) dn q.toNat = some ci)
+    (h : decCI (erecP m) q.toNat = some ci)
     (hcv : ci.toConstantVal = cv) : decCV (erecP m) (q.toNat + 1) = some cv :=
-  hcv ▸ ciD_cv h
+  hcv ▸ decCI_cvN h
 
 structure NatLitProg (p : Prog) : Prop extends NatCvProg p where
   lNatIndOk : p.lookup "nat_ind_ok" = some natIndOkL
@@ -133,17 +151,17 @@ section lit
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
 /-- The decoded `env_find` answer of `(found, q)`. -/
-def FoundR (dn : NIdx → Option ConLeche.Name) (m : Mem) (found q : Word) (o : Option IConstantInfo) :
-    Prop := decFd dn m [found, q] o
+def FoundR (m : Mem) (found q : Word) (o : Option IConstantInfo) :
+    Prop := decFd m [found, q] o
 
 /-! ### `nat_ind_ok` -/
 
 def natIndOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (List Word × Mem) :=
   if found = 0 then some ([0], m) else
-  if rdW (m.arr64 EREC) q ≠ 3 then some ([0], m) else
-  if rdW (m.arr64 EREC) (q + 3) ≠ 0 then some ([0], m) else
+  if erRd m q ≠ 3 then some ([0], m) else
+  if erRd m (q + 3) ≠ 0 then some ([0], m) else
   ntBW (callW p n "pin_word" [54] m) fun r1 m1 =>
-  some ([if rdW (m1.arr64 EREC) (q + 4) = r1.headD 0 then 1 else 0], m1)
+  some ([if erRd m1 (q + 4) = r1.headD 0 then 1 else 0], m1)
 
 theorem natIndOk_specW (p : Prog) (hp : p.lookup "nat_ind_ok" = some natIndOkL) (n : Nat)
     (s₀ : St) (found q : Word) :
@@ -154,17 +172,16 @@ theorem natIndOk_specW (p : Prog) (hp : p.lookup "nat_ind_ok" = some natIndOkL) 
   sym only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_word"] <;>
-    finish (gen := 20) [natIndOkW, ntBW]
+    finish (gen := 20) [natIndOkW, ntBW, erRd]
 
 theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantInfo) :
     CallRef p "nat_ind_ok" [found, q]
-      (fun m a => StageR dn vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR dn m found q o)
-      (natIndOk o) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR m found q o)
+      (natIndOk o) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, h0, hfd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natIndOkW p k mm found q) (natIndOk_specW p hN.lNatIndOk k · found q) hc
   unfold natIndOkW at hw
   have hF := hS.check.pins.full h0
-  have hsz := hS.iw.erSize
   cases o with
   | none =>
     simp only [FoundR, decFd] at hfd
@@ -177,15 +194,15 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
     obtain ⟨hf1, hci⟩ := hfd
     simp only [List.headD_cons, List.tail_cons] at hf1 hci
     rw [ite_eq_right (by rw [hf1]; decide)] at hw
-    have htag := tagWord hsz hci
-    by_cases h3 : rdW (m.arr64 EREC) q = 3
+    have htag := tagWord hci
+    by_cases h3 : erRd m q = 3
     · have hci3 : ciTag ci = 3 := by rw [← htag, h3]; rfl
       cases ci with
       | indInfo cv caps =>
         rw [ite_eq_right (by simpa using h3)] at hw
         have hcvd := ciCv_decodes (cv := cv) hci rfl
-        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
-        by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
+        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hcvd
+        by_cases hl : erRd m (q + 3) = 0
         · rw [ite_eq_right (by simpa using hl)] at hw
           replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
           obtain ⟨hm1, -, hr1⟩ := callW_pinWord' hN.lPinWord h1
@@ -195,12 +212,12 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
           have hp54 : (pinW m 54).toNat < 2 ^ 32 := hF.lv_lt.2.2
           have hisE : cv.levelParams.isEmpty = true := hiff.mp hl
           have hrun : (natIndOk (some (.indInfo cv caps))).run a =
-              .ok (decide (rdW (m.arr64 EREC) (q + 4) = pinW m 54), a) := by
+              .ok (decide (erRd m (q + 4) = pinW m 54), a) := by
             simp only [natIndOk, sortOne, StateT.run_bind, pinSortOne_run hF, exc_ok_bind', hisE,
               Bool.true_and, hty, hrd, decI_beq _ _ hlt hp54, StateT.run_pure]
             rfl
           refine ⟨_, a, hrun, hS, IWGrow.refl _, ?_⟩
-          by_cases he : rdW (m.arr64 EREC) (q + 4) = pinW m 54
+          by_cases he : erRd m (q + 4) = pinW m 54
           · simp [decW0B, he]
           · simp [decW0B, he]
         · rw [ite_eq_left (by simpa using hl)] at hw
@@ -225,11 +242,11 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
 
 def natZeroOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (List Word × Mem) :=
   if found = 0 then some ([0], m) else
-  if rdW (m.arr64 EREC) q ≠ 4 then some ([0], m) else
+  if erRd m q ≠ 4 then some ([0], m) else
   ntBW (callW p n "pin_at" [1] m) fun r1 m1 =>
   ntBW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
-  if rdW (m2.arr64 EREC) (q + 3) ≠ 0 then some ([0], m2) else
-  some ([if rdW (m2.arr64 EREC) (q + 4) = r2.headD 0 then 1 else 0], m2)
+  if erRd m2 (q + 3) ≠ 0 then some ([0], m2) else
+  some ([if erRd m2 (q + 4) = r2.headD 0 then 1 else 0], m2)
 
 theorem natZeroOk_specW (p : Prog) (hp : p.lookup "nat_zero_ok" = some natZeroOkL) (n : Nat)
     (s₀ : St) (found q : Word) :
@@ -240,7 +257,7 @@ theorem natZeroOk_specW (p : Prog) (hp : p.lookup "nat_zero_ok" = some natZeroOk
   sym only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish (gen := 20) [natZeroOkW, ntBW]
+    finish (gen := 20) [natZeroOkW, ntBW, erRd]
 
 theorem natZeroOk_nonctor {ci : IConstantInfo} (h : ciTag ci ≠ 4) : natZeroOk (some ci) = pure false := by
   cases ci <;> simp_all [natZeroOk, ciTag]
@@ -254,13 +271,12 @@ theorem pinNat_call {p : Prog} (hN : NatLitProg p) {k : Nat} {m m1 : Mem} {r1 : 
 
 theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantInfo) :
     CallRef p "nat_zero_ok" [found, q]
-      (fun m a => StageR dn vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR dn m found q o)
-      (natZeroOk o) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR m found q o)
+      (natZeroOk o) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, h0, hfd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natZeroOkW p k mm found q) (natZeroOk_specW p hN.lNatZeroOk k · found q) hc
   unfold natZeroOkW at hw
   have hF := hS.check.pins.full h0
-  have hsz := hS.iw.erSize
   cases o with
   | none =>
     simp only [FoundR, decFd] at hfd
@@ -273,23 +289,23 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
     obtain ⟨hf1, hci⟩ := hfd
     simp only [List.headD_cons, List.tail_cons] at hf1 hci
     rw [ite_eq_right (by rw [hf1]; decide)] at hw
-    have htag := tagWord hsz hci
-    by_cases h4 : rdW (m.arr64 EREC) q = 4
+    have htag := tagWord hci
+    by_cases h4 : erRd m q = 4
     · cases ci with
       | ctorInfo cv np nf =>
         rw [ite_eq_right (by simpa using h4)] at hw
         have hcvd := ciCv_decodes (cv := cv) hci rfl
-        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
+        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hcvd
         replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
         obtain ⟨hm1, -, hr1⟩ := pinNat_call hN h1
         subst hm1
         replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
         have hp2 : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt 1 (by decide)
-        obtain ⟨x2, a2, hr2, hS2, hg2, hx2l, hx2⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
+        obtain ⟨x2, a2, hr2, hS2, hg2, hx2l, hx2⟩ := constE_ref (vis := vis) (fe := fe)
           hN.toMasterProg (r1.headD 0) k m1 a r2 m2 ⟨hS, hp2⟩ h2
         obtain ⟨hst3, hst4⟩ := hstay m2 hg2
-        by_cases hl : rdW (m1.arr64 EREC) (q + 3) = 0
-        · have hl2 : rdW (m2.arr64 EREC) (q + 3) = 0 := by rw [hst3]; exact hl
+        by_cases hl : erRd m1 (q + 3) = 0
+        · have hl2 : erRd m2 (q + 3) = 0 := by rw [hst3]; exact hl
           rw [ite_eq_right (by simpa using hl2)] at hw
           simp only [Option.some.injEq, Prod.mk.injEq] at hw
           obtain ⟨rfl, rfl⟩ := hw
@@ -308,7 +324,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
           by_cases he : wt = r2.headD 0
           · rw [ite_eq_left he, decide_eq_true he]; decide
           · rw [ite_eq_right he, decide_eq_false he]; decide
-        · have hl2 : ¬ rdW (m2.arr64 EREC) (q + 3) = 0 := by rw [hst3]; exact hl
+        · have hl2 : ¬ erRd m2 (q + 3) = 0 := by rw [hst3]; exact hl
           rw [ite_eq_left (by simpa using hl2)] at hw
           simp only [Option.some.injEq, Prod.mk.injEq] at hw
           obtain ⟨rfl, rfl⟩ := hw
@@ -335,16 +351,16 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
 
 def natSuccOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (List Word × Mem) :=
   if found = 0 then some ([0], m) else
-  if rdW (m.arr64 EREC) q ≠ 4 then some ([0], m) else
-  if rdW (m.arr64 EREC) (q + 3) ≠ 0 then some ([0], m) else
+  if erRd m q ≠ 4 then some ([0], m) else
+  if erRd m (q + 3) ≠ 0 then some ([0], m) else
   ntBW (callW p n "pin_at" [1] m) fun r1 m1 =>
   ntBW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
-  if tagW (rdW (m2.arr64 EREC) (q + 4)) ≠ 6 then some ([0], m2) else
-  if tierW (rdW (m2.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m2.arr64 CTL) 1 = 0 then none else
-  if tcnt m2 FORALL (tierW (rdW (m2.arr64 EREC) (q + 4))) ≤ idxW (rdW (m2.arr64 EREC) (q + 4))
+  if tagW (erRd m2 (q + 4)) ≠ 6 then some ([0], m2) else
+  if tierW (erRd m2 (q + 4)) ≠ 0 ∧ rdW (m2.arr64 CTL) 1 = 0 then none else
+  if tcnt m2 FORALL (tierW (erRd m2 (q + 4))) ≤ idxW (erRd m2 (q + 4))
     then none else
-  some ([if tfld m2 FORALL (tierW (rdW (m2.arr64 EREC) (q + 4))) (idxW (rdW (m2.arr64 EREC) (q + 4))) 0 = r2.headD 0 ∧
-        tfld m2 FORALL (tierW (rdW (m2.arr64 EREC) (q + 4))) (idxW (rdW (m2.arr64 EREC) (q + 4))) 1 = r2.headD 0 then 1 else 0], m2)
+  some ([if tfld m2 FORALL (tierW (erRd m2 (q + 4))) (idxW (erRd m2 (q + 4))) 0 = r2.headD 0 ∧
+        tfld m2 FORALL (tierW (erRd m2 (q + 4))) (idxW (erRd m2 (q + 4))) 1 = r2.headD 0 then 1 else 0], m2)
 
 theorem natSuccOk_specW (p : Prog) (hp : p.lookup "nat_succ_ok" = some natSuccOkL) (n : Nat)
     (s₀ : St) (found q : Word) :
@@ -356,20 +372,19 @@ theorem natSuccOk_specW (p : Prog) (hp : p.lookup "nat_succ_ok" = some natSuccOk
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish (gen := 20) [natSuccOkW, ntBW, tierW, idxW]
+    finish (gen := 20) [natSuccOkW, ntBW, tierW, idxW, erRd]
 
 theorem natSuccOk_nonctor {ci : IConstantInfo} (h : ciTag ci ≠ 4) : natSuccOk (some ci) = pure false := by
   cases ci <;> simp_all [natSuccOk, ciTag]
 
 theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantInfo) :
     CallRef p "nat_succ_ok" [found, q]
-      (fun m a => StageR dn vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR dn m found q o)
-      (natSuccOk o) (KeepPost dn vis fe decW0B) := by
+      (fun m a => StageR vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR m found q o)
+      (natSuccOk o) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, h0, hfd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natSuccOkW p k mm found q) (natSuccOk_specW p hN.lNatSuccOk k · found q) hc
   unfold natSuccOkW at hw
   have hF := hS.check.pins.full h0
-  have hsz := hS.iw.erSize
   cases o with
   | none =>
     simp only [FoundR, decFd] at hfd
@@ -382,14 +397,14 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
     obtain ⟨hf1, hci⟩ := hfd
     simp only [List.headD_cons, List.tail_cons] at hf1 hci
     rw [ite_eq_right (by rw [hf1]; decide)] at hw
-    have htag := tagWord hsz hci
-    by_cases h4 : rdW (m.arr64 EREC) q = 4
+    have htag := tagWord hci
+    by_cases h4 : erRd m q = 4
     · cases ci with
       | ctorInfo cv np nf =>
         rw [ite_eq_right (by simpa using h4)] at hw
         have hcvd := ciCv_decodes (cv := cv) hci rfl
-        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
-        by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
+        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hcvd
+        by_cases hl : erRd m (q + 3) = 0
         · rw [ite_eq_right (by simpa using hl)] at hw
           have hisE : cv.levelParams.isEmpty = true := hiff.mp hl
           replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
@@ -397,7 +412,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
           subst hm1
           replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
           have hp2 : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt 1 (by decide)
-          obtain ⟨x2, a2, hr2, hS2, hg2, hx2l, hx2⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
+          obtain ⟨x2, a2, hr2, hS2, hg2, hx2l, hx2⟩ := constE_ref (vis := vis) (fe := fe)
             hN.toMasterProg (r1.headD 0) k m1 a r2 m2 ⟨hS, hp2⟩ h2
           obtain ⟨-, hst4⟩ := hstay m2 hg2
           rw [hst4] at hw
@@ -488,19 +503,19 @@ theorem natLitSupported_specW (p : Prog) (hp : p.lookup "nat_lit_supported" = so
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "nat_ind_ok",
       callW_spec p n "nat_zero_ok", callW_spec p n "nat_succ_ok"] <;>
-    finish (gen := 20) [natLitSupportedW, ntBW]
+    finish (gen := 20) [natLitSupportedW, ntBW, erRd]
 
 /-- A pin read at slot `1 + j`, as a run. -/
 theorem pinAt_call {p : Prog} (hp : p.lookup "pin_at" = some pinAtL) {k : Nat} {m m1 : Mem}
     {i : Word} {j : Nat} (hj : 1 + i.toNat = j) {r1 : List Word}
-    (h : callW p k "pin_at" [i] m = some (r1, m1)) :
+    (h : callW p k "pin_at" [i] m = some (r1, m1)) (h51 : i ≠ 51 := by decide) :
     m1 = m ∧ pinW m 0 ≠ 0 ∧ r1.headD 0 = pinW m j := by
-  obtain ⟨hm, h0, -, hr⟩ := pinAt_model hp h hj
+  obtain ⟨hm, h0, -, hr⟩ := pinAt_model hp h hj h51
   exact ⟨hm, h0, hr⟩
 
 theorem natLitSupported_ref (hN : NatLitProg p) :
-    CallRef p "nat_lit_supported" [vis] (StageR dn vis fe) (natLitSupported fe)
-      (KeepPost dn vis fe decW0B) := by
+    CallRef p "nat_lit_supported" [vis] (StageR vis fe) (natLitSupported fe)
+      (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
   have hw := callW_model (M := fun mm => natLitSupportedW p k mm vis) (natLitSupported_specW p hN.lNatLitSupported k · vis) hc
   unfold natLitSupportedW at hw
@@ -514,7 +529,7 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
   obtain ⟨hm2, hfd⟩ := envFind_call hN.toMasterProg (r1.headD 0) hp1 hS.check.env h2
   rw [hm2] at hw
   replace hw := ntBW_some hw; obtain ⟨ri, m3, h3, hw⟩ := hw
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := natIndOk_ref (dn := dn) (vis := vis) (fe := fe) hN
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := natIndOk_ref (vis := vis) (fe := fe) hN
     (rf.headD 0) (rf.tail.headD 0) (fe.find? (decI (r1.headD 0))) k m a ri m3 ⟨hS, h0, hfd⟩ h3
   have e1 : (pinAt 1).run a = .ok (decI (r1.headD 0), a) := by
     have := pinAt_run hF 1 (by decide)
@@ -545,7 +560,7 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
     obtain ⟨hm5, hfd2⟩ := envFind_call hN.toMasterProg (r4.headD 0) hp4 hS1.check.env h5
     rw [hm5] at hw
     replace hw := ntBW_some hw; obtain ⟨rz, m6, h6, hw⟩ := hw
-    obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := natZeroOk_ref (dn := dn) (vis := vis) (fe := fe) hN
+    obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := natZeroOk_ref (vis := vis) (fe := fe) hN
       (rg.headD 0) (rg.tail.headD 0) (fe.find? (decI (r4.headD 0))) k m3 a1 rz m6 ⟨hS1, h0', hfd2⟩ h6
     have e2 : (pinAt 2).run a1 = .ok (decI (r4.headD 0), a1) := by
       have := pinAt_run hF3 2 (by decide)
@@ -579,7 +594,7 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
       replace hw := ntBW_some hw; obtain ⟨rs, m9, h9, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
-      obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := natSuccOk_ref (dn := dn) (vis := vis) (fe := fe) hN
+      obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := natSuccOk_ref (vis := vis) (fe := fe) hN
         (rh.headD 0) (rh.tail.headD 0) (fe.find? (decI (r7.headD 0))) k m6 a2 rs m9
         ⟨hS2, h0'', hfd3⟩ h9
       have e3 : (pinAt 3).run a2 = .ok (decI (r7.headD 0), a2) := by
@@ -593,8 +608,8 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
 
 @[refines ConRon.Arena.natLitSupported]
 theorem natLitSupported_refines (hN : NatLitProg p) :
-    RefAM p "nat_lit_supported" [vis] (StageR dn vis fe) (natLitSupported fe)
-      (KeepPost dn vis fe decW0B) :=
+    RefAM p "nat_lit_supported" [vis] (StageR vis fe) (natLitSupported fe)
+      (KeepPost vis fe decW0B) :=
   (natLitSupported_ref hN).refAM
 
 end lit

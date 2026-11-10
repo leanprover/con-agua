@@ -93,7 +93,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     (hoo : oo.toNat + cts.length < 2 ^ 63)
     (hptr : ∀ p (hp : p < ordered.length), ∃ k, ∃ _ : k < cts.length,
       wd m IFL (oo.toNat + p) = co + 10 * UInt64.ofNat k ∧ ordered[p] = cts[k])
-    (h : installW n b.data m to tn oo cn ro rn np = some m') :
+    (hnp : np.toNat < 2 ^ 63) (h : installW n b.data m to tn oo cn ro rn np = some m') :
     ∃ st', (ConRon.Arena.Frontend.installIndD st tys ordered rcs np.toNat).run a = .ok (st', a) ∧
       ArenaD m' a ∧ StateDR m' st' ∧ MemFrame [DLP, DECL] [] m m' := by
   obtain ⟨hTn, hTy, hCn, hCt, hRn, hRc⟩ := hF
@@ -216,7 +216,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
         let rules ← r.rules.mapM (ConRon.Arena.Frontend.parseRuleD st)
         pure (IConstantInfo.recInfo (← parseCVD st r.cv)
           (r.numParams + r.numMotives + r.numMinors + r.numIndices)
-          (r.numParams + r.numMotives + r.numMinors) rules) : AM _)).run a =
+          (r.numParams + r.numMotives + r.numMinors) r.k rules) : AM _)).run a =
         .ok (rcs.map fun r => resOf (recT st r) a, a) := rR
     unfold ConRon.Arena.Frontend.installIndD
     rw [run_bind _ _ a _ rT', run_bind _ _ a _ rC', run_bind _ _ a _ rR']; rfl
@@ -251,6 +251,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
       (by rw [hP0, hP00]; omega) (by rw [hP0]; rw [hs4] at hpt4; omega)
       (fun j hj0 hj => by rw [G5 j hj0 hj, hdecl4])
       (fun j hj0 hj => by rw [hm'P]; exact getElem?_of_wd hs4 (by omega) (hkeep j hj0 (by omega))) ?_
+      (fun _ _ e => by cases e; exact hnp)
     -- the new record
     unfold DeclAtF
     rw [← hcn']
@@ -261,11 +262,11 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
       rw [trunc_get _ _ _ (by omega) h2 (by omega), wd_some _ _ _ (by omega)]
     have hslot : ∀ s ci, 1 ≤ s → s ≤ topN m₄ DLP → 1 ≤ (wd m₄ DLP s).toNat →
         RecAt m₄ (wd m₄ DLP s).toNat ci →
-        (do L.Arena.decCI (trunc (m₄.arr64 DLP) (topN m₄ DLP)) (fun _ => none)
-                (← L.Arena.nat? (trunc (m₄.arr64 DLP) (topN m₄ DLP)) s)) = some ci := by
+        (do L.Arena.decCI (aread (trunc (m₄.arr64 DLP) (topN m₄ DLP)))
+                (← L.Arena.nat? (aread (trunc (m₄.arr64 DLP) (topN m₄ DLP))) s)) = some ci := by
       intro s ci h1 h2 h3 hr
       have e : (trunc (m₄.arr64 DLP) (topN m₄ DLP))[s]? = some (wd m₄ DLP s) := hAg 1 (Nat.le_refl _) s h1 h2
-      simp [L.Arena.nat?, e, hr _ (hAg _ h3)]
+      simp [L.Arena.nat?, aread_apply, e, hr _ (hAg _ h3)]
     have hTlen : (tys.map fun t => resOf (tyT st t) a).length = tys.length := by simp
     have hClen : (ordered.map fun c => resOf (ctT st c) a).length = cts.length := by simp [hord]
     have hRlen : (rcs.map fun r => resOf (recT st r) a).length = rcs.length := by simp

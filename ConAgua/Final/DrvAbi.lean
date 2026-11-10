@@ -407,7 +407,7 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
   refine ev_cmpRO (r := .rax) (o := oR .rcx) (v := (9223372036854775808 : Word)) (Code.get (i := 22) hL3 rfl)
     (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) ?_
   refine ev_jcc (Code.get (i := 23) hL3 rfl) (fun hlt => ?_) (fun hge3 => ?_)
-  · -- entry 1 finished without pending work: its result is the result
+  · -- entry 1 returned below `2^63`: no jobs to run, its result is the result
     refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp (fun _ hacc => ⟨hb, hpb, rs1, m1, hres, Or.inl ?_⟩)
       (fun h2 => absurd (hrdx0 ▸ h2) (by decide))
     rw [← hrax]; exact hacc

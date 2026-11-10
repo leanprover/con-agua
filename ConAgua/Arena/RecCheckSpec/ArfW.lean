@@ -83,10 +83,10 @@ def decFire (m' : Mem) (r : List Word) : IRecRuleFire → Prop
   | _ => False
 
 theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
-    (a : AState) (M rP : Word) (TM : TargetMajor) (hS : StageR dn vis fe m a)
+    (a : AState) (M rP : Word) (TM : TargetMajor) (hS : StageR vis fe m a)
     (hM : DecB (fun m => decTM m M.toNat) m TM) (hP : PoolSmall m) (hA : AbsOK m) :
     RSim (arfW n m M rP) (ConRon.Arena.auxRuleFire TM rP.toNat) a
-      (fun b a' x => KP dn vis fe m decFire b a' x ∧ AbsOK b.2) := by
+      (fun b a' x => KP vis fe m decFire b a' x ∧ AbsOK b.2) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>

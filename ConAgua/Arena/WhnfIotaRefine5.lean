@@ -10,7 +10,6 @@ public import Std.WP.Tactic
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.WhnfIotaRefine2
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.WhnfIota
 
@@ -312,7 +311,7 @@ theorem icfCheck_ref (p : Prog) (hil : InstListOK p) (K F : Nat) (hk : KnotUpTo 
     (hS : CoreS dn m a vis fe M eb) (hacc : SpineR m aco acn acc)
     (htop : aco.toNat + acn.toNat ≤ (spTop m).toNat) :
     RefE (KnotUpToE p K) (icfCheckE p (K + 1) m mode vis d ty aco acn arg)
-      (icfChkT (coreKnot (decMode mode) fe id F) d.toNat (decE ty) acc (decE arg)) a
+      (icfChkT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE ty) acc (decE arg)) a
       (CorePost decBool dn m vis fe M eb ResH) := by
   rw [icfCheckE.eq_2]
   refine RefE.bind_callW (fun _ => icfCheckE.k_inst_list.eq_1 ..)
@@ -324,7 +323,7 @@ theorem icfCheck_ref (p : Prog) (hil : InstListOK p) (K F : Nat) (hk : KnotUpTo 
       ⟨hS1, hm4, hebm⟩ harg)
     (fun hG => (hG K (Nat.le_refl _)).infer F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d arg hnF hn62
       ⟨hS1, hm4, hebm⟩ harg) fun r2 m2 _ h2 => RefE.after_core (w := id) h2 fun M2 hS2 _ => ?_
-  rw [icfCheckE.k_infer.eq_2, ← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+  rw [icfCheckE.k_infer.eq_2, ← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
   refine RefE.bind_callE (x := icfCheckE.k_defeq p) (fun _ => icfCheckE.k_defeq.eq_1 ..)
     ((hk K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d _ _ hnF hn62
       ⟨hS2, hm4, hebm⟩ h2.resOk h1.resOk)
@@ -344,7 +343,7 @@ def ICFRef (p : Prog) (fE : Prog → Nat → Mem → Word → Word → Word → 
     SpineR s₀.mem aco acn acc → SpineR s₀.mem ao an args → aco + acn = spTop s₀.mem →
     ao.toNat + an.toNat ≤ aco.toNat →
     RefE (KnotUpToE p N) (fE p (N + 1) s₀.mem mode vis d h aco acn ao an i)
-      (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat) a₀
+      (iotaCertsFullAux (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h) acc args i.toNat) a₀
       (GrowPost decBool dn s₀.mem vis fe MM eb ResH)
 
 theorem icfForall_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : Nat)
@@ -572,7 +571,7 @@ theorem icfTop_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (n : Nat) 
     (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (hh : HW h) (hargs : SpineR s₀.mem ao an args)
     (htop : ao + an = spTop s₀.mem) :
     RefE (KnotUpToE p n) (icfTopE p (n + 1) s₀.mem mode vis d h ao an)
-      (iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList) a₀
+      (iotaCertsFull (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h) args.toList) a₀
       (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
   rw [icfTopE.eq_2]
   cases n with
@@ -599,8 +598,8 @@ theorem icfTop_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (n : Nat) 
   have hE := (icf_all p hp hil F n').1 (hk.mono (by omega)) (by omega) (by omega) ⟨s₀.mem, Locals.init []⟩
     a₀ dn vis fe MM eb mode d h (t.headD 0) 0 ao an 0 #[] args hS hm4 hebm hh trivial
     hnil hargs (by rw [UInt64.add_zero, htop']; exact htop) (by rw [htop', hsum]; omega)
-  have hT : iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList =
-      iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) #[] args
+  have hT : iotaCertsFull (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h) args.toList =
+      iotaCertsFullAux (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h) #[] args
         (0 : Word).toNat := by
     simp only [iotaCertsFull, Array.toArray_toList]; rfl
   rw [hT]
@@ -622,11 +621,11 @@ def ICFSpec (p : Prog) (f : FnName) (cond : Word → Word → Word → Prop) (N 
     ⦃fun s => s = s₀⦄
     invoke p (exec p (N + 1)) f [mode, vis, d, h, aco, acn, ao, an, i]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args
+      AM.ok (iotaCertsFullAux (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h) acc args
         i.toNat) a₀ ∧
-      CoreAfterG dn s₀.mem s'.mem (AM.st (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe
+      CoreAfterG dn s₀.mem s'.mem (AM.st (iotaCertsFullAux (coreKnot (decMode mode) (decEager mode) fe id F) fe
         d.toNat (decE h) acc args i.toNat) a₀) vis fe MM eb ∧
-      AM.res (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args
+      AM.res (iotaCertsFullAux (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h) acc args
         i.toNat) a₀ = decBool r ∧ ResH r; ⊤⦄
 
 /-- **`iota_certs_full_aux` refines `iotaCertsFullAux`** (`icf_all`'s ok half). Statement changes:
@@ -652,7 +651,7 @@ theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p
     CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW h →
     SpineR s₀.mem ao an args → ao + an = spTop s₀.mem →
     CoreSpec p (n + 1) "iota_certs_full" [mode, vis, d, h, ao, an]
-      (iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList) decBool s₀
+      (iotaCertsFull (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h) args.toList) decBool s₀
       a₀ dn vis fe MM eb :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h ao an args hS hm4 hebm hh hargs htop =>
     RefE.coreSpec ((icfE_spec p hp (n + 1)).2.2.2.2 s₀ mode vis d h ao an)

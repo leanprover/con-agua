@@ -5,6 +5,7 @@ public import ConAgua.Arena.DeclDivModSpec.Cons
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclNatGate
 import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
@@ -53,8 +54,8 @@ theorem DmProg2.cvProg (hD : DmProg2 p) : NatCvProg p :=
   hD.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg
 
 theorem bct_ref (hD : DmProg6 p) (nm : Word) :
-    CallRef p "bool_ctor_typed" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
-      (boolCtorTyped fe (decI nm)) (KeepPost dn vis fe decW0B) := by
+    CallRef p "bool_ctor_typed" [vis, nm] (fun m a => StageR vis fe m a ∧ H nm)
+      (boolCtorTyped fe (decI nm)) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hn⟩ hcall => ?_
   have hw := callW_model (M := fun mq => dmBctW p (k + 1) mq vis nm)
     (bct_specW p hD.lBoolCtorTyped (k + 1) · vis nm) hcall
@@ -83,7 +84,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
       (constE_ref hD.toDmProg5.toMasterProg (r3.headD 0)).bind_ ⟨hS3, hl3⟩ hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
-    obtain ⟨wt, -, hrd, hwt, hty, hst⟩ := cvWordsAt hS2.iw.erSize hcv2
+    obtain ⟨wt, -, hrd, hwt, hty, hst⟩ := cvWordsAt hcv2
     have hrd4 := (hst m4 (hg3.trans hg4)).2
     refine ⟨decide (wt = r4.headD 0), a4, ?_, hS4, hg2.trans (hg3.trans hg4), ?_⟩
     · have hb := decI_beq (k := IdxKind.expr) _ _ hwt hl4
@@ -92,7 +93,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
       simp only [hrun4', exc_ok_bind', hty]
       simp only [hb]
       try rfl
-    · rw [hrd4]
+    · simp only [erRd_foldN, hrd4]
       unfold decW0B
       simp only [List.headD_cons]
       generalize r4.headD 0 = z
@@ -100,8 +101,8 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
 
 @[refines ConRon.Arena.boolCtorTyped]
 theorem boolCtorTyped_refines (hD : DmProg6 p) (nm : Word) :
-    RefAM p "bool_ctor_typed" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
-      (boolCtorTyped fe (decI nm)) (KeepPost dn vis fe decW0B) :=
+    RefAM p "bool_ctor_typed" [vis, nm] (fun m a => StageR vis fe m a ∧ H nm)
+      (boolCtorTyped fe (decI nm)) (KeepPost vis fe decW0B) :=
   (bct_ref hD nm).refAM
 
 /-! ## `div_mod_pin_guard` -/
@@ -114,8 +115,8 @@ l_model tps_specW (p : Prog) (hp : p.lookup "type_pin_stored" = some typePinStor
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem internSort_ref (hM : MasterProg p) (u : Word) (hu : H u) :
-    CallRef p "intern_sort" [u] (StageR dn vis fe) (internE (.sort (decI u)))
-      (KeepPost dn vis fe decW0E) := by
+    CallRef p "intern_sort" [u] (StageR vis fe) (internE (.sort (decI u)))
+      (KeepPost vis fe decW0E) := by
   refine CallRef.of_triple fun n s₀ a₀ hS => ?_
   refine triple_post (internSort_spec p hM.lSortFind hM.lSortPush hM.lInternSort n s₀ u) ?_
   rintro r s' ⟨hl, hI⟩
@@ -123,8 +124,8 @@ theorem internSort_ref (hM : MasterProg p) (u : Word) (hu : H u) :
   exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, consInternM_lt sortCS_wf hS.check.arena.base.sort hI, rfl⟩
 
 theorem tps_ref (hD : DmProg6 p) (nm : Word) :
-    CallRef p "type_pin_stored" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
-      (typePinStored fe (decI nm)) (KeepPost dn vis fe decW0E) := by
+    CallRef p "type_pin_stored" [vis, nm] (fun m a => StageR vis fe m a ∧ H nm)
+      (typePinStored fe (decI nm)) (KeepPost vis fe decW0E) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hn⟩ hcall => ?_
   have hw := callW_model (M := fun mq => dmTpsW p (k + 1) mq vis nm)
     (tps_specW p hD.lTypePinStored (k + 1) · vis nm) hcall
@@ -138,7 +139,7 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
     have hz : rf.headD 0 = 0 := hfd
     rw [ite_eq_left hz] at hw
     obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-      (pinWord53_ref (dn := dn) (vis := vis) (fe := fe) p hD.toDmProg5.toMasterProg.lPinWord).bind_ hS hw
+      (pinWord53_ref (vis := vis) (fe := fe) p hD.toDmProg5.toMasterProg.lPinWord).bind_ hS hw
     obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
       (internSort_ref hD.toDmProg5.toMasterProg (r2.headD 0) hl2).bind_ hS2 hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -154,17 +155,17 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
       (ciToCv_ref hD.toDmProg5.cvProg (rf.tail.headD 0) ci).bind_ ⟨hS, hci⟩ hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
-    obtain ⟨wt, -, hrd, hwt, hty, -⟩ := cvWordsAt hS2.iw.erSize hcv2
+    obtain ⟨wt, -, hrd, hwt, hty, -⟩ := cvWordsAt hcv2
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun2)
     refine ⟨ci.toConstantVal.type, a, ?_, hS2, hg2, ?_⟩
     · simp only [typePinStored, hf]; rfl
-    · simp only [List.headD_cons, hrd, decW0E]
+    · simp only [List.headD_cons, erRd_foldN, hrd, decW0E]
       exact ⟨hwt, hty.symm⟩
 
 @[refines ConRon.Arena.typePinStored]
 theorem typePinStored_refines (hD : DmProg6 p) (nm : Word) :
-    RefAM p "type_pin_stored" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
-      (typePinStored fe (decI nm)) (KeepPost dn vis fe decW0E) :=
+    RefAM p "type_pin_stored" [vis, nm] (fun m a => StageR vis fe m a ∧ H nm)
+      (typePinStored fe (decI nm)) (KeepPost vis fe decW0E) :=
   (tps_ref hD nm).refAM
 
 set_option maxHeartbeats 1600000 in

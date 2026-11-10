@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.PropReadRefine2
 import ConAgua.Arena.InferBodyDisp
-import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.DefEqStuckShape
 public import ConAgua.Arena.PropReadRefine
 
@@ -84,7 +83,7 @@ theorem rpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
 theorem spa_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     {lo lc us k o c : Word} {lps : List NIdx} {pw : PropWhen}
-    (hl : hslice? (m.arr64 EREC) lo.toNat lc.toNat = some lps)
+    (hl : hslice? (erecP m) lo.toNat lc.toNat = some lps)
     (hks : ∃ ks, lps.mapM (denoteN a.store.ns) = some ks) (hus : HW us)
     (hls : ∃ ls, denoteLs a.store.lss (decI us) = some ls)
     (hd : PWD (nameN a.store.lss.ls.ns) m k o c (some pw)) {r : List Word}
@@ -157,14 +156,14 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   by_cases h0 : r₁.headD 0 = 0
   · simp only [h0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
-    have hnone : fe.find? (decI cn) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hnone : fe.find? (decI cn) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     exact ⟨none, a, by simp only [cArmT, hnone]; rfl, RdAfter.refl hS, rfl⟩
   simp only [h0, ↓reduceIte] at hW
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
-  have hcv := decCI_cvA hci (erecP_ext _)
+  have hcv := decCI_cvA hci
   generalize hcvr : ci.toConstantVal = cv at hcv
-  obtain ⟨hw1, -, hw4, hty, hsl⟩ := infer_decCV_words hcv hS.erec
+  obtain ⟨hw1, -, hw4, hty, hsl⟩ := infer_decCV_words (erRdOK _) hcv
   by_cases hne : lsNodeW m₁ us = []
   · simp [hne] at hW
   simp only [hne, ↓reduceIte] at hW
@@ -180,10 +179,10 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
       except_ok_bind, show ∀ x, (viewLsLen x).run a = .ok (a.store.lss.viewLen x, a) from
         fun _ => rfl, hvl]
   have hlen : ids.length = cv.levelParams.length ↔
-      (lsNodeW m₁ us).tail.headD 0 = rdW (m₁.arr64 EREC) (r₁.tail.headD 0 + 3) := by
-    rw [hlen1, hslice?_length hsl, ← hlen2]
+      (lsNodeW m₁ us).tail.headD 0 = erRdT m₁ (r₁.tail.headD 0 + 3) := by
+    rw [hlen1, hslice?_lenR hsl, ← hlen2]
     exact ⟨fun h => UInt64.toNat_inj.mp h, fun h => by rw [h]⟩
-  by_cases hl : (lsNodeW m₁ us).tail.headD 0 ≠ rdW (m₁.arr64 EREC) (r₁.tail.headD 0 + 3)
+  by_cases hl : (lsNodeW m₁ us).tail.headD 0 ≠ erRdT m₁ (r₁.tail.headD 0 + 3)
   · simp only [hl, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     have : ¬ ids.length = cv.levelParams.length := fun h => hl (hlen.mp h)
@@ -191,7 +190,7 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   simp only [hl, ↓reduceIte] at hW
   have hlen' : ids.length = cv.levelParams.length := hlen.mpr (by simpa using hl)
   -- the datum of the type
-  rcases hc2 : sub (rdW (m₁.arr64 EREC) (r₁.tail.headD 0 + 4)) m₁ with _ | ⟨r₂, m₂⟩ <;>
+  rcases hc2 : sub (erRdT m₁ (r₁.tail.headD 0 + 4)) m₁ with _ | ⟨r₂, m₂⟩ <;>
     rw [hc2] at hW
   · cases hW
   obtain ⟨res₂, a₂, hrun₂, hRd₂, hd₂⟩ := hsub hS hw4 hc2
@@ -213,17 +212,17 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
     rcases res₂ with _ | pw
     · exact absurd (hd₂.none_iff.mpr rfl) hk0
     · exact ⟨pw, rfl⟩
-  rcases hc3 : callW p n "subst_pw_at" [rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 2),
-      rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 3), us, r₂.headD 0, r₂.tail.headD 0,
+  rcases hc3 : callW p n "subst_pw_at" [erRdT m₂ (r₁.tail.headD 0 + 2),
+      erRdT m₂ (r₁.tail.headD 0 + 3), us, r₂.headD 0, r₂.tail.headD 0,
       r₂.tail.tail.headD 0] m₂ with _ | ⟨r₃, m₃⟩
   · rw [hc3] at hW; cases hW
   rw [hc3] at hW
   simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨h1, h2, h3, rfl⟩ := hW
-  have herec := hRd₂.erec
+  have herec := hRd₂.erecT
   obtain ⟨ks, hks⟩ := hlps dn m₁ a vis fe M eb hS _ ci hfind'
   rw [hcvr] at hks
-  obtain ⟨res₃, a₃, hrun₃, hRd₃, hd₃⟩ := spa_call hp hden hRd₂.rel (by rw [herec]; exact hsl)
+  obtain ⟨res₃, a₃, hrun₃, hRd₃, hd₃⟩ := spa_call hp hden hRd₂.rel (by rw [herec.1, herec.2]; exact hsl)
     ⟨ks, by rw [hst]; exact hks⟩ hus (by rw [hst]; exact hls) (by rw [hst]; exact hd₂) hc3
   refine ⟨res₃, a₃, by rw [hpre2]; exact hrun₃, hRd₂.trans hRd₃, ?_⟩
   rw [hst] at hd₃

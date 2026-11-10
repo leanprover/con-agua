@@ -1,37 +1,32 @@
 /-
-# `ConRon.Refine2.Checker.Phased` — Theorem 2 at the fold the driver runs
+# `ConRon.Refine2.Checker.Phased` — Theorem 2 at the check phase the driver runs
 
-**Task #97-P5-Driver.**  The binary's driver (`crates/con-ron/src/driver.rs`,
-unverified) is a straight line of calls into the verified crate:
+The binary's driver (`crates/con-ron/src/driver.rs`, unverified) is a straight line of
+calls into the verified crate after the pins:
 
-    install_fold_hooked → freeze_tier → pool::parallel_all → thaw_tier
+    build_index → freeze_tier → pool::parallel_all (worker_state, run_job) → thaw_tier
 
-and phase B is the pool's fold of the verified `check_pending` over the
-records, from one `worker_state` over the frozen tier.  This module is
-Theorem 2 for that line, against `Arena/Phased.lean`'s
-`installThenCheckPhased`:
+and the check phase is the pool's fold of the verified `run_job` over the record
+positions, from one `worker_state` per worker over the frozen tier.  This module is
+Theorem 2 for that line, against `Arena/Pooled.lean`'s `PooledAccepts`:
 
-* **phase A** — `install_fold_hooked` IS `install_fold` (`install_fold_hooked_eq`:
-  the hook is `Unit`-valued and reads only), so `install_fold_refines` applies;
-* **the boundary** — `freeze_tier` moves the store's four persistent tables
-  out into a `frozen` tier, and `thaw_tier` puts them back, so the store comes
-  back exactly (`freeze_tier_ok`; task #98-FREEZE made it a pure move, with no
-  flag and no decline);
-* **the worker** — `worker_state` is an empty store, frozen, and over that
-  tier it is `AIdle` against the twin's `AState.worker` of the phase-A state,
-  at the TIER as the reader parameter (`worker_state_rel`): its persistent
-  reads go to the tier, which is exactly what the phase-A store's reads went
-  to because phase A's reader is an owned store's (`hpers`).  So
-  `check_pending_refines` applies at `pers := tier`, record by record;
-* **the result** — the Rust's state after the fold is the phase-A state (the
-  store thawed back), which is what the twin's `checkPendingWorker` hands
-  back too, so `AStateRel₀` carries over unchanged.
+* **the index** — `build_index` from the empty index is the twin's `buildIndex`
+  (`build_index_empty_refines`), the indexes related by `StreamIndexRel`;
+* **the boundary** — `freeze_tier` moves the store's four persistent tables and the index
+  into a `frozen` tier, and `thaw_tier` puts them back, so the store comes back exactly
+  (`freeze_tier_ok`);
+* **the worker** — `worker_state` is an empty store, frozen, `AIdle` against the twin's
+  `AState.worker` of the driver's state at the tier (`worker_state_rel`), so
+  `run_job_refines` applies job by job;
+* **the result** — the Rust's state after the pool is the index build's (the store
+  thawed back), which is what the twin's jobs start from too.
 
-The one hypothesis beyond the relation is `hpers : pers.frozen = false`, the
-phase-A reader's shape (task #98-FREEZE; the capstone reads it off
-`PersTier::empty`).
+The one hypothesis beyond the relation is `hpers : pers.frozen = false`, the driver's
+reader (the capstone reads it off `PersTier::empty`).
 -/
-import ConRon.Refine2.Checker.Top
+import ConRon.Refine2.Checker.Jobs
+import ConRon.Refine2.Checker.IndexBuild
+import ConRon.Refine2.Checker.OleanPool
 import ConRon.Refine2.Checker.Init
 import ConRon.Arena.Pooled
 
@@ -44,59 +39,25 @@ namespace ConRon.Refine2
 
 open ConRon.Arena
 
-/-! ## Phase A: the hook changes nothing -/
+/-! ## The boundary and the worker -/
 
-private theorem install_fold_hooked_aux {H : Type} (inst : arena.checker.InstallHook H)
-    (h : H) (n : Nat) :
-    ∀ {pers st mode pins p} {ds : alloc.vec.Vec arena.env.IDeclaration}
-      {i : Std.Usize} {o},
-      ds.val.length - i.val = n →
-      arena.checker.install_fold_hooked inst pers st mode pins p ds i h = ok o →
-      arena.checker.install_fold pers st mode pins p ds i = ok o := by
-  induction n using Nat.strong_induction_on with
-  | _ n ih =>
-    intro pers st mode pins p ds i o hn hrun
-    rw [arena.checker.install_fold_hooked.eq_def] at hrun
-    rw [arena.checker.install_fold.eq_def]
-    try dsimp only at hrun ⊢
-    split at hrun
-    · rename_i hge
-      rw [ite_eq_left hge]
-      exact hrun
-    · rename_i hge
-      rw [ite_eq_right hge]
-      obtain ⟨p0, p1, p2⟩ := p
-      obtain ⟨d, hd, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-      obtain ⟨u, -, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-      rw [hd]
-      simp only [bind_ok]
-      obtain ⟨q, hq, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-      rw [hq]
-      simp only [bind_ok]
-      obtain ⟨r, st1⟩ := q
-      cases r with
-      | Err e => exact hrun
-      | Ok q' =>
-        obtain ⟨i2, hi2, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
-        rw [hi2]
-        simp only [bind_ok]
-        have hi2v : i2.val = i.val + 1 := ConRon.Refine.HashMap.uscalar_add_eq hi2
-        have hlt : i.val < ds.val.length := by
-          have := alloc.vec.Vec.len_val ds; scalar_tac
-        exact ih (ds.val.length - i2.val) (by omega) rfl hrun
-
-/-- **`install_fold_hooked` IS `install_fold`**: the driver's phase A, with the
-heartbeat's install line called before each step, has `install_fold`'s outcome
-whatever the hook — the hook returns `()` and is handed the store by shared
-reference, so it has nothing to change. -/
-theorem install_fold_hooked_eq {H : Type} {inst : arena.checker.InstallHook H} {h : H}
-    {pers st mode pins p} {ds : alloc.vec.Vec arena.env.IDeclaration}
-    {i : Std.Usize} {o}
-    (hrun : arena.checker.install_fold_hooked inst pers st mode pins p ds i h = ok o) :
-    arena.checker.install_fold pers st mode pins p ds i = ok o :=
-  install_fold_hooked_aux inst h _ rfl hrun
-
-/-! ## The worker -/
+/-- **`freeze_tier` moves the four persistent tables and the index out, and `thaw_tier`
+puts them back**: the tier is the store's own tables and the index, `frozen`, and the
+store comes back exactly. -/
+theorem freeze_tier_ok {ar ar' : arena.store.EStore} {ix : arena.stream_index.IStreamIndex}
+    {tier : arena.store.PersTier}
+    (h : arena.checker.freeze_tier ar ix = ok (tier, ar')) :
+    tier = tierWith ar ix ∧ arena.checker.thaw_tier ar' tier = ok (ix, ar) := by
+  rw [arena.checker.freeze_tier] at h
+  obtain ⟨n, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  simp only [core.mem.replace] at h
+  obtain ⟨l, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  obtain ⟨lt, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  obtain ⟨e, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  have h' := Result.ok_injective h
+  simp only [Prod.mk.injEq] at h'
+  obtain ⟨rfl, rfl⟩ := h'
+  exact ⟨rfl, rfl⟩
 
 /-- **`pins_dup` is the identity on the value.** -/
 theorem pins_dup_val {p q : arena.pins.Pins} (h : arena.checker.pins_dup p = ok q) :
@@ -113,38 +74,21 @@ theorem pins_dup_val {p q : arena.pins.Pins} (h : arena.checker.pins_dup p = ok 
   have e2 : v1 = p.reserved := alloc.vec.Vec.ext _ _ (nidx_vec_dup_val hv1)
   rw [e1, e2, dupId_lsidx _ _ hli, dupId_lidx _ _ hl, dupId_eidx _ _ he]
 
-/-- **`freeze_tier` moves the four persistent tables out, and `thaw_tier`
-puts them back**: the tier is the store's own tables, `frozen`, and the store
-comes back exactly (task #98-FREEZE: a pure move, no flag and no decline). -/
-theorem freeze_tier_ok {ar ar' : arena.store.EStore} {tier : arena.store.PersTier}
-    (h : arena.checker.freeze_tier ar = ok (tier, ar')) :
-    tier = tierOf ar ∧ arena.checker.thaw_tier ar' tier = ok ar := by
-  rw [arena.checker.freeze_tier] at h
-  obtain ⟨n, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  simp only [core.mem.replace] at h
-  obtain ⟨l, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain ⟨lt, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  obtain ⟨e, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-  have h' := Result.ok_injective h
-  simp only [Prod.mk.injEq] at h'
-  obtain ⟨rfl, rfl⟩ := h'
-  exact ⟨rfl, rfl⟩
-
-/-- **A phase-B worker over the frozen tier is the twin's worker of the
-phase-A state, idle** (task #98-FREEZE).  `worker_state` builds an empty store
+/-- **A check-phase worker over the frozen tier is the twin's worker of the
+driver's state, idle** (task #98-FREEZE).  `worker_state` builds an empty store
 and freezes it (`EStore::empty_frozen`): its scratch tiers are on and empty,
 fresh memos and caches and a copy of the pins.  Read through `tierOf` of the
-phase-A store — the tier `freeze_tier` moved out of it — its persistent arm
-is exactly the tables the phase-A store's reads went to (`hpers`: the phase-A
+driver's store — the tier `freeze_tier` moved out of it — its persistent arm
+is exactly the tables the driver's store's reads went to (`hpers`: the phase-A
 reader is an owned store's), so it is `AIdle` against `AState.worker` of the
-twin state the phase-A store relates to: related to the twin worker with its
+twin state the driver's store relates to: related to the twin worker with its
 scratch tier opened, at the TIER as the reader parameter. -/
 theorem worker_state_rel {pers : arena.store.PersTier} {st : arena.monad.AState}
-    {lst : AState} {w : arena.monad.AState}
+    {lst : AState} {w : arena.monad.AState} (ix : arena.stream_index.IStreamIndex)
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
     (hpers : pers.frozen = false)
     (hw : arena.checker.worker_state st.pins = ok w) :
-    AIdle (tierOf st.store) w lst.worker ∧ AStateInv (tierOf st.store) w := by
+    AIdle (tierWith st.store ix) w lst.worker ∧ AStateInv (tierWith st.store ix) w := by
   rw [arena.checker.worker_state] at hw
   obtain ⟨est, hest, hw⟩ := ConRon.Refine.bind_eq_ok_iff.mp hw
   obtain ⟨st0, hst0, hw⟩ := ConRon.Refine.bind_eq_ok_iff.mp hw
@@ -189,6 +133,7 @@ theorem worker_state_rel {pers : arena.store.PersTier} {st : arena.monad.AState}
   obtain ⟨ee, -, hfz⟩ := ConRon.Refine.bind_eq_ok_iff.mp hfz
   simp only [core.mem.replace] at hfz
   obtain ⟨es, hes, hfz⟩ := ConRon.Refine.bind_eq_ok_iff.mp hfz
+  obtain ⟨le0, -, hfz⟩ := ConRon.Refine.bind_eq_ok_iff.mp hfz
   have h' := Result.ok_injective hfz
   simp only [Prod.mk.injEq] at h'
   obtain ⟨-, rfl⟩ := h'
@@ -208,364 +153,237 @@ theorem worker_state_rel {pers : arena.store.PersTier} {st : arena.monad.AState}
   subst h'
   obtain ⟨hMR, hMI⟩ := memos_empty hm
   obtain ⟨hCR, hCI⟩ := caches_empty hc
-  -- the phase-A store's persistent arm, which the tier now is
+  -- the driver's store's persistent arm, which the tier now is
   have hS := hrel.store
   have hSI := hinv.store
   refine ⟨⟨⟨⟨⟨⟨?_, rN, rfl⟩, ?_, rL, rfl⟩, ?_, rLs, rfl⟩, ?_, rE, rfl⟩, hMR, hCR,
       hrel.pins⟩,
     ⟨⟨⟨⟨⟨?_, iN, fun _ => rfl⟩, ?_, iL, fun _ => rfl⟩, ?_, iLs, fun _ => rfl⟩, ?_, iE,
       fun _ => rfl⟩, hMI, hCI⟩⟩
-  · simpa [rPersN, tierOf, hpers, AState.worker, EStore.enableScratch, EStore.dropScratch,
+  · simpa [rPersN, tierWith, hpers, AState.worker, EStore.enableScratch, EStore.dropScratch,
       LsStore.enableScratch, LsStore.dropScratch, LStore.enableScratch, LStore.dropScratch,
       NStore.enableScratch, NStore.dropScratch] using hS.lss.lvl.ns.perst
-  · simpa [rPersL, tierOf, hpers, AState.worker, EStore.enableScratch, EStore.dropScratch,
+  · simpa [rPersL, tierWith, hpers, AState.worker, EStore.enableScratch, EStore.dropScratch,
       LsStore.enableScratch, LsStore.dropScratch, LStore.enableScratch,
       LStore.dropScratch] using hS.lss.lvl.perst
-  · simpa [rPersLs, tierOf, hpers, AState.worker, EStore.enableScratch, EStore.dropScratch,
+  · simpa [rPersLs, tierWith, hpers, AState.worker, EStore.enableScratch, EStore.dropScratch,
       LsStore.enableScratch, LsStore.dropScratch] using hS.lss.perst
-  · simpa [rPersE, tierOf, hpers, AState.worker, EStore.enableScratch,
+  · simpa [rPersE, tierWith, hpers, AState.worker, EStore.enableScratch,
       EStore.dropScratch] using hS.perst
-  · simpa [rPersN, tierOf, hpers] using hSI.lss.lvl.ns.perst
-  · simpa [rPersL, tierOf, hpers] using hSI.lss.lvl.perst
-  · simpa [rPersLs, tierOf, hpers] using hSI.lss.perst
-  · simpa [rPersE, tierOf, hpers] using hSI.perst
-
-/-! ## The fold -/
-
-private theorem mk_ifenv_empty_refines' {e f}
-    (he : arena.env.i_env_empty = ok e) (hf : arena.env.mk_ifenv e = ok f) :
-    IFEnvRel f (mkIFEnv IEnv.empty) ∧ IFEnvInv f := by
-  rw [arena.env.i_env_empty] at he
-  have he' : e =
-      { consts := alloc.vec.Vec.new arena.env.IConstantInfo,
-        tables := alloc.vec.Vec.new arena.env.IProjTable } :=
-    (Result.ok_injective he).symm
-  subst he'
-  rw [arena.env.mk_ifenv] at hf
-  obtain ⟨hm, hhm, hf⟩ := ConRon.Refine.bind_eq_ok_iff.mp hf
-  obtain ⟨hinv0, -, hnone⟩ :=
-    ConRon.Refine.HashMap2.with_capacity_refines
-      (HashableInst := arena.handle.NIdx.Insts.Con_ron_coreRonHashmapHashable) hhm
-  obtain ⟨q, hq, hf⟩ := ConRon.Refine.bind_eq_ok_iff.mp hf
-  rw [arena.env.mk_ifenv_go] at hq
-  simp only [alloc.vec.Vec.new, alloc.vec.Vec.len, ge_iff_le] at hq
-  have hq' : q = (0#u64, hm) := (Result.ok_injective hq).symm
-  subst hq'
-  obtain ⟨hm1, hhm1, hf1⟩ := ConRon.Refine.bind_eq_ok_iff.mp hf
-  obtain ⟨tinv0, -, tnone⟩ :=
-    ConRon.Refine.HashMap2.with_capacity_refines
-      (HashableInst := arena.handle.NIdx.Insts.Con_ron_coreRonHashmapHashable) hhm1
-  obtain ⟨tb, htb, hf2⟩ := ConRon.Refine.bind_eq_ok_iff.mp hf1
-  rw [arena.env.mk_tbls_go] at htb
-  simp only [alloc.vec.Vec.new, alloc.vec.Vec.len, ge_iff_le] at htb
-  have htb' : tb = hm1 := (Result.ok_injective htb).symm
-  subst htb'
-  have hf' := (Result.ok_injective hf2).symm
-  subst hf'
-  refine ⟨⟨rfl, ?_, rfl, fun ci h => by simp [alloc.vec.Vec.new] at h,
-    fun k p hp => by rw [hnone k] at hp; exact absurd hp (by simp), ?_,
-    fun k s hs => by rw [tnone k] at hs; exact absurd hs (by simp)⟩,
-    hinv0, by simp, ?_, tinv0, ?_⟩
-  · intro n
-    rw [hnone n]
-    simp [mkIFEnv, mkIFEnvGo, IEnv.empty]
-  · intro n
-    rw [tnone n]
-    simp [mkIFEnv, mkIFEnvTblsGo, IEnv.empty]
-  · intro n p hp
-    rw [hnone n] at hp
-    exact absurd hp (by simp)
-  · intro n s hs
-    rw [tnone n] at hs
-    exact absurd hs (by simp)
+  · simpa [rPersN, tierWith, hpers] using hSI.lss.lvl.ns.perst
+  · simpa [rPersL, tierWith, hpers] using hSI.lss.lvl.perst
+  · simpa [rPersLs, tierWith, hpers] using hSI.lss.perst
+  · simpa [rPersE, tierWith, hpers] using hSI.perst
 
 /-! ## The pool (tasks #97-P5-POOL, #98-POOL)
 
-The binary's phase B is `pool::parallel_all` (`crates/con-ron/src/pool.rs`), a generic combinator
-that runs a per-index `step` on a pool of workers, each folding it over the
-indices it claimed on ONE state it built with `init`.  Its contract is
-`ParallelAll`, stated here generically — nothing in it is about checking —
-and it is the whole of the pool's trust: the claim of `pool.rs`'s note, an
-argument about that function's control flow.  The driver instantiates it
-with two calls into the verified crate, `init := worker_state pins` and
-`step := fun st k => check_pending tier st mode fe pend[k]` (`pendingStep`).
+The check phase is `pool::parallel_all` (`crates/con-ron/src/pool.rs`), a generic
+combinator that runs a per-index `step` on a pool of workers, each folding it over the
+indices it claimed, in increasing order, on ONE state it built with `init`.  Its contract
+is `ParallelAll`, stated here generically — nothing in it is about checking — and it is
+the whole of the pool's trust.  The driver instantiates it with two calls into the
+verified crate, `init := worker_state pins` and `step := fun st k => run_job tier st mode
+pins ds (k as u64)` (`jobStep`). -/
 
-`PoolAccepts` is the driver's fold, accepted: phase A, the freeze, and
-`ParallelAll` over the pending records.  `PoolAccepts.toParts` turns the
-claims into the shape the proof consumes (`PoolAcceptsParts`: per worker, an
-accepting fold of `check_pending` from one `worker_state` over the records it
-checked, together covering the pending list), and `pool_accepts_refines`
-walks that into the twin's `PooledAccepts` with no argument about a worker's
-history: `worker_state_rel` relates each worker's start state, and
-`foldAllOk_check_pending_refines` walks its fold, step by step, whatever list
-it was. -/
+/-- **The driver's `step` closure**, `|w, k| checker::run_job(&tier, w, &mode, &ipins, ds,
+k as u64)` (`crates/con-ron/src/driver.rs` `check_decls_driver`), as the Aeneas model
+reads it: `run_job` at the `usize` index cast up to a `u64`.  The pool's indices are
+`usize`s, so a `Nat` past one is a panic. -/
+def jobStep (tier : arena.store.PersTier) (mode : kernel.env.CheckMode)
+    (pins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet)
+    (ds : alloc.vec.Vec arena.env.IDeclaration) (st : arena.monad.AState) (k : Nat) :
+    Result ((core.result.Result Unit (kernel.core_types.CheckError × Std.U64)) ×
+      arena.monad.AState) :=
+  if h : k < 2 ^ UScalarTy.Usize.numBits then
+    arena.checker.run_job tier st mode pins ds
+      (UScalar.cast .U64 (UScalar.ofNatCore (ty := .Usize) k h))
+  else fail .panic
 
-/-- **A fold with every step `Ok`**: `step` from `s` over `ks` in order,
-threading the state, every call answering `.Ok ()`. -/
-def FoldAllOk {S E I : Type} (step : S → I → Result (core.result.Result Unit E × S)) :
-    S → List I → Prop
-  | _, [] => True
-  | s, k :: ks => ∃ s', step s k = ok (.Ok (), s') ∧ FoldAllOk step s' ks
-
-/-- **The contract of `crates/con-ron/src/pool.rs`'s `parallel_all`** (task
-#98-POOL) — the pool's one trusted claim, stated with nothing about what the
-pool runs.  `parallel_all(n, workers, init, step, after)` returning `Ok(())`
-means: every index in `0..n` was claimed by some worker; and each worker
-built its state with `init()` ONCE and folded `step` over its claims, in claim
-order, every step answering `Ok(())`.  Nothing more is promised about the
-claims (task #98-H8): not that each index was claimed only once, nor that a
-worker's claims increase.  `pool.rs` does hand them out off a monotone
-counter, so both hold, but the proof uses neither — each record is checked
-against its own prefix environment, so Theorem 1's
-`Arena.pooledAccepts_bridge` (`Bridge/Checker/Phased.lean`) covers any order,
-any split and any repetition.
-An index `≥ n` needs no clause either: the driver's `step` fails there
-(`pendingStep`), so an accepting fold never claims one.  `init` and `step` are the Aeneas models
-of the two closures (`init` in `Result`, as every extracted function is);
-`after`, the heartbeat hook, holds the state by `&` and is not in the
-contract.  It holds at every worker count, including the count the pool fell
-back to when the OS refused a thread. -/
-def ParallelAll {S E : Type} (n : Nat) (init : Result S)
-    (step : S → Nat → Result (core.result.Result Unit E × S)) : Prop :=
-  ∃ parts : List (List Nat),
-    (∀ k < n, ∃ w ∈ parts, k ∈ w) ∧
-    ∀ w ∈ parts, ∃ s₀, init = ok s₀ ∧ FoldAllOk step s₀ w
-
-/-- **The driver's `step` closure**, `|w, k| checker::check_pending(&tier, w,
-mode, &fe, &pend[k])` (`crates/con-ron/src/driver.rs`
-`check_decls_driver`), as the Aeneas model reads it: `check_pending` on the
-`k`-th pending record, and a panic past the end (`&pend[k]`'s bounds check). -/
-def pendingStep (tier : arena.store.PersTier) (mode : kernel.env.CheckMode)
-    (fe : arena.env.IFEnv) (pend : alloc.vec.Vec arena.checker.PendingCheck)
-    (st : arena.monad.AState) (k : Nat) :
-    Result ((core.result.Result Unit kernel.core_types.CheckError) × arena.monad.AState) :=
-  match pend.val[k]? with
-  | some pc => arena.checker.check_pending tier st mode fe pc
-  | none => fail .panic
-
-/-- con-leche: Main.lean:289-316 checkPool — **the driver's fold with the
-pool, accepted** (`crates/con-ron/src/driver.rs` `check_decls_driver`, one
-conjunct per call): `fold_start`, phase A (`install_fold_hooked`) accepting with
-environment `fe`, pending records `pend` and state `st'`; the tier frozen out
-of `st'.store`; and phase B, `parallel_all` over the pending records with the
-driver's two closures, accepted — `ParallelAll`, the pool's contract.  The
-driver's `thaw_tier` then restores `st'.store` exactly (`freeze_tier_ok`), so
-`st'` is the state the fold hands back. -/
-def PoolAccepts {H : Type} (inst : arena.checker.InstallHook H)
-    (pers : arena.store.PersTier) (st : arena.monad.AState)
+/-- con-leche: ConLeche/Driver/CheckPool.lean:236-269 checkPool — **the driver's check
+phase, accepted** (`crates/con-ron/src/driver.rs` `check_decls_driver`, one conjunct per
+call): the index built from the empty one, accepting with index `ix` and state `st'`; the
+tier frozen out of `st'.store` and `ix`; and `parallel_all` over the record positions
+with the driver's two closures, accepted — `ParallelAll`, the pool's contract.  The
+driver's `thaw_tier` then restores `st'.store` exactly (`freeze_tier_ok`), so `st'` is the
+state the phase hands back. -/
+def PoolAccepts (pers : arena.store.PersTier) (st : arena.monad.AState)
     (mode : kernel.env.CheckMode)
     (pins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet)
-    (ds : alloc.vec.Vec arena.env.IDeclaration) (h : H)
-    (fe : arena.env.IFEnv) (st' : arena.monad.AState) : Prop :=
-  ∃ (t : Std.U64 × arena.env.IFEnv × alloc.vec.Vec arena.checker.PendingCheck)
-    (n : Std.U64) (pend : alloc.vec.Vec arena.checker.PendingCheck)
-    (tier : arena.store.PersTier) (est : arena.store.EStore),
-    arena.checker.fold_start = ok t ∧
-    arena.checker.install_fold_hooked inst pers st mode pins t ds 0#usize h
-      = ok (.Ok (n, fe, pend), st') ∧
-    arena.checker.freeze_tier st'.store = ok (tier, est) ∧
-    ParallelAll pend.length (arena.checker.worker_state st'.pins)
-      (pendingStep tier mode fe pend)
+    (ds : alloc.vec.Vec arena.env.IDeclaration)
+    (ix : arena.stream_index.IStreamIndex) (st' : arena.monad.AState) : Prop :=
+  ∃ (tier : arena.store.PersTier) (est : arena.store.EStore),
+    arena.stream_index.build_index pers st ixEmpty ds 0#usize = ok (.Ok ix, st') ∧
+    arena.checker.freeze_tier st'.store ix = ok (tier, est) ∧
+    ParallelAll ds.length (arena.checker.worker_state st'.pins) (jobStep tier mode pins ds)
 
-/-- `PoolAccepts` from one premise per step of the driver — the shape the
-headlines state it in (`ConRon.Capstone`'s `h6`, `h7`, `h8`): phase A as the
-driver calls it, `install_fold_hooked(…, fold_start(), ds, 0, obs)`; the
-freeze; and phase B, `ParallelAll`. -/
-theorem poolAccepts_intro {H : Type} {inst : arena.checker.InstallHook H}
-    {h : H} {pers st mode pins ds fe st'}
-    {n : Std.U64} {pend : alloc.vec.Vec arena.checker.PendingCheck}
+/-- `PoolAccepts` from one premise per call of the driver — the shape the headlines state
+it in: the index build from `stream_index_empty()`, the freeze, the pool. -/
+theorem poolAccepts_intro {pers st mode pins ds ix st'}
     {tier : arena.store.PersTier} {est : arena.store.EStore}
-    (hA : (do
-        let t ← arena.checker.fold_start
-        arena.checker.install_fold_hooked inst pers st mode pins t ds 0#usize h)
-      = ok (.Ok (n, fe, pend), st'))
-    (hF : arena.checker.freeze_tier st'.store = ok (tier, est))
-    (hB : ParallelAll pend.length (arena.checker.worker_state st'.pins)
-      (pendingStep tier mode fe pend)) :
-    PoolAccepts inst pers st mode pins ds h fe st' := by
-  obtain ⟨t, ht, hA⟩ := ConRon.Refine.bind_eq_ok_iff.mp hA
-  exact ⟨t, n, pend, tier, est, ht, hA, hF, hB⟩
+    (hI : (do
+        let e ← arena.stream_index.stream_index_empty
+        arena.stream_index.build_index pers st e ds 0#usize) = ok (.Ok ix, st'))
+    (hF : arena.checker.freeze_tier st'.store ix = ok (tier, est))
+    (hB : ParallelAll ds.length (arena.checker.worker_state st'.pins)
+      (jobStep tier mode pins ds)) :
+    PoolAccepts pers st mode pins ds ix st' := by
+  rw [stream_index_empty_eq, bind_ok] at hI
+  exact ⟨tier, est, hI, hF, hB⟩
 
-/-- **The pool's accept, per worker** (the shape of task #97-P5-POOL's
-`PoolAccepts`): phase A, the freeze, and `parts`, the record lists the
-workers checked — each drawn from `pend`, together covering it — each
-a fold of `check_pending` over the frozen tier from one `worker_state`, every
-step accepting.  The lists are plain `List`s, not `Vec`s: a worker's list may
-repeat records (task #98-H8), so no length bound is known for it. -/
-def PoolAcceptsParts {H : Type} (inst : arena.checker.InstallHook H)
-    (pers : arena.store.PersTier) (st : arena.monad.AState)
-    (mode : kernel.env.CheckMode)
-    (pins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet)
-    (ds : alloc.vec.Vec arena.env.IDeclaration) (h : H)
-    (fe : arena.env.IFEnv) (st' : arena.monad.AState) : Prop :=
-  ∃ (t : Std.U64 × arena.env.IFEnv × alloc.vec.Vec arena.checker.PendingCheck)
-    (n : Std.U64) (pend : alloc.vec.Vec arena.checker.PendingCheck)
-    (tier : arena.store.PersTier) (est : arena.store.EStore)
-    (parts : List (List arena.checker.PendingCheck)),
-    arena.checker.fold_start = ok t ∧
-    arena.checker.install_fold_hooked inst pers st mode pins t ds 0#usize h
-      = ok (.Ok (n, fe, pend), st') ∧
-    arena.checker.freeze_tier st'.store = ok (tier, est) ∧
-    (∀ pc ∈ pend.val, ∃ w ∈ parts, pc ∈ w) ∧
-    (∀ w ∈ parts, ∀ pc ∈ w, pc ∈ pend.val) ∧
-    (∀ w ∈ parts, ∃ s₀, arena.checker.worker_state st'.pins = ok s₀ ∧
-      FoldAllOk (fun st pc => arena.checker.check_pending tier st mode fe pc) s₀ w)
-
-/-- A `pendingStep` fold names its records: every index is in range, and the
-records at those indices are a `check_pending` fold. -/
-private theorem foldAllOk_pendingStep {tier mode fe}
-    {pend : alloc.vec.Vec arena.checker.PendingCheck} :
-    ∀ (ks : List Nat) (s : arena.monad.AState),
-      FoldAllOk (pendingStep tier mode fe pend) s ks →
-      ∃ pcs : List arena.checker.PendingCheck,
-        ks.map (fun k => pend.val[k]?) = pcs.map some ∧
-        FoldAllOk (fun st pc => arena.checker.check_pending tier st mode fe pc) s pcs := by
-  intro ks
-  induction ks with
-  | nil => intro _ _; exact ⟨[], rfl, trivial⟩
-  | cons k ks ih =>
-    intro s hf
-    obtain ⟨s1, hs1, hf⟩ := hf
-    unfold pendingStep at hs1
+/-- **A worker's fold ⊑ `checkJobList`**: each claimed index is a record position, and the
+worker's jobs, from its one idle state, are the twin's. -/
+theorem foldAllOk_jobStep_refines {tier} {I : IStreamIndex} {mode : kernel.env.CheckMode}
+    {pins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
+    {ds : alloc.vec.Vec arena.env.IDeclaration}
+    (hI : StreamIndexRel tier.env I) (htf : tier.frozen = true) :
+    ∀ (ks : List Nat) {st lst},
+      AIdle tier st lst → AStateInv tier st →
+      FoldAllOk (jobStep tier mode pins ds) st ks →
+      (∀ k ∈ ks, k < ds.val.length) ∧
+      ∃ s'', checkJobList (ConRon.Refine.absMode mode) (absINatOpPinSetL pins) I
+        (absIDeclL ds).toArray ks lst = .ok (.ok (), s'')
+  | [], _, lst, _, _, _ => ⟨by simp, lst, rfl⟩
+  | k :: ks, _, lst, hidle, hinv, ⟨_, hs1, hf⟩ => by
+    unfold jobStep at hs1
     split at hs1
-    · rename_i pc hpc
-      obtain ⟨pcs, hm, hf'⟩ := ih s1 hf
-      exact ⟨pc :: pcs, by simp [hpc, hm], s1, hs1, hf'⟩
+    · rename_i hk
+      have hu : (UScalar.cast .U64 (UScalar.ofNatCore (ty := .Usize) k hk)).val = k := by
+        rw [usize_cast_u64_val']; rfl
+      have hkU : (UScalar.cast .U64 (UScalar.ofNatCore (ty := .Usize) k hk)).val
+          ≤ Std.Usize.max := by
+        have h2 : Std.Usize.max = 2 ^ UScalarTy.Usize.numBits - 1 := by
+          rw [← UScalar.max_USize_eq, UScalar.max_def]
+        have h3 := Nat.one_le_two_pow (n := UScalarTy.Usize.numBits)
+        rw [hu, h2]; omega
+      obtain ⟨hlt, lst1, hx, hidle1, hinv1, -⟩ := run_job_refines hidle hinv htf hI hkU hs1
+      rw [hu] at hlt
+      have hau : absU (UScalar.cast .U64 (UScalar.ofNatCore (ty := .Usize) k hk)) = k := hu
+      rw [hau] at hx
+      obtain ⟨hall, s'', h⟩ := foldAllOk_jobStep_refines hI htf ks hidle1 hinv1 hf
+      refine ⟨?_, s'', ?_⟩
+      · intro x hx
+        rcases List.mem_cons.mp hx with rfl | hx
+        · exact hlt
+        · exact hall x hx
+      · simp only [checkJobList]
+        rw [show runJob _ _ I _ k lst = .ok (.ok (), lst1) from hx]
+        exact h
     · simp at hs1
 
-/-- **The pool's contract, per worker** (task #98-POOL): a `PoolAccepts` —
-`ParallelAll` over the pending records — is a `PoolAcceptsParts`, each
-worker's claims read as the list of records it checked. -/
-theorem PoolAccepts.toParts {H : Type} {inst : arena.checker.InstallHook H}
-    {h : H} {pers st mode pins ds fe st'}
-    (hp : PoolAccepts inst pers st mode pins ds h fe st') :
-    PoolAcceptsParts inst pers st mode pins ds h fe st' := by
-  obtain ⟨t, n, pend, tier, est, ht, hA, hF, parts, hcov, hw⟩ := hp
-  -- each worker's claims, as records
-  have hrec : ∀ w ∈ parts, ∃ pcs : List arena.checker.PendingCheck,
-      w.map (fun k => pend.val[k]?) = pcs.map some ∧
-      ∃ s₀, arena.checker.worker_state st'.pins = ok s₀ ∧
-        FoldAllOk (fun st pc => arena.checker.check_pending tier st mode fe pc) s₀ pcs := by
-    intro w hwm
-    obtain ⟨s₀, hs₀, hf⟩ := hw w hwm
-    obtain ⟨pcs, hm, hf'⟩ := foldAllOk_pendingStep w s₀ hf
-    exact ⟨pcs, hm, s₀, hs₀, hf'⟩
-  choose! recs hrecm hrecf using hrec
-  refine ⟨t, n, pend, tier, est, parts.map recs, ht, hA, hF, ?_, ?_, ?_⟩
-  · intro pc hpc
-    obtain ⟨j, hj, rfl⟩ := List.getElem_of_mem hpc
-    obtain ⟨w, hwm, hjw⟩ := hcov j hj
-    refine ⟨recs w, List.mem_map_of_mem hwm, ?_⟩
-    have hs : some pend.val[j] ∈ (recs w).map some := by
-      rw [← hrecm w hwm]
-      exact List.mem_map.mpr ⟨j, hjw, List.getElem?_eq_getElem hj⟩
-    simpa using hs
-  · intro v hv pc hpc
-    obtain ⟨w, hwm, rfl⟩ := List.mem_map.mp hv
-    have hs : some pc ∈ w.map (fun k => pend.val[k]?) := by
-      rw [hrecm w hwm]; exact List.mem_map_of_mem hpc
-    obtain ⟨k, -, hk⟩ := List.mem_map.mp hs
-    exact List.mem_of_getElem? hk
-  · intro v hv
-    obtain ⟨w, hwm, rfl⟩ := List.mem_map.mp hv
-    exact hrecf w hwm
+/-- **`pool_accepts_refines` — Theorem 2 at the check phase the binary runs, pool and all**
+(tasks #97-P5-POOL, #141, #143).
 
-/-- **A worker's fold ⊑ `checkPendingList`**: a fold of `check_pending`
-over any list of records, every step accepting, from a related state, is the
-twin's `checkPendingList` over the abstracted records, accepting.
-`check_pending_refines` per step; the list is a plain `List` (a pool worker's
-claims, which may repeat a record: task #98-H8). -/
-theorem foldAllOk_check_pending_refines {pers rf lf} {mode : kernel.env.CheckMode}
-    (hfe : IFEnvRel rf lf) (hfinv : IFEnvInv rf) :
-    ∀ (pcs : List arena.checker.PendingCheck) {st lst},
-      AIdle pers st lst → AStateInv pers st → pers.frozen = true →
-      FoldAllOk (fun st pc => arena.checker.check_pending pers st mode rf pc) st pcs →
-      ∃ s'', checkPendingList (ConRon.Refine.absMode mode) lf (pcs.map absPendingCheck) lst
-        = .ok (.ok (), s'')
-  | [], _, lst, _, _, _, _ => ⟨lst, rfl⟩
-  | pc :: pcs, _, lst, hidle, hinv, htf, ⟨_, hs1, hf⟩ => by
-    have hP := check_pending_refines (lf := lf) (pc := pc) hidle hinv htf hfe hfinv hs1
-    simp only [SimIdle, StateT.run] at hP
-    obtain ⟨lst1, hx, hidle1, hinv1, -⟩ := hP
-    obtain ⟨s'', h⟩ := foldAllOk_check_pending_refines hfe hfinv pcs hidle1 hinv1 htf hf
-    refine ⟨s'', ?_⟩
-    simp only [List.map_cons, checkPendingList, hx]
-    exact h
+*An accept of the Aeneas model — the index build, the freeze, and every worker's fold of
+`run_job` over its claims — implies the twin's `PooledAccepts` from the related state,
+the indexes related, ending in a related state.*
 
-/-- **`pool_accepts_refines` — Theorem 2 at the fold the binary runs, pool
-and all** (task #97-P5-POOL).
-
-*A pooled accept of the Aeneas model — phase A, the freeze, and every
-worker's fold of `check_pending` over its records — implies the twin's
-`PooledAccepts` from the related state, with the related environment, ending
-in a related state.*
-
-Lockstep hypotheses (`AStateRel₀`
-and `AStateInv`, nothing about the twin — task #97-T2-LOCKSTEP lane Checker).  Each worker is related on
-its own: `worker_state_rel` puts its fresh state against `lst'.worker`, and
-`foldAllOk_check_pending_refines` walks that worker's list — whatever list
-the pool gave it. -/
-theorem pool_accepts_refines {H : Type} {inst : arena.checker.InstallHook H}
-    {h : H} {pers st lst}
+Lockstep hypotheses (`AStateRel₀` and `AStateInv`, nothing about the twin).  Each worker
+is related on its own: `worker_state_rel` puts its fresh state against `lst'.worker`, and
+`foldAllOk_jobStep_refines` walks that worker's list. -/
+theorem pool_accepts_refines {pers st lst}
     {mode : kernel.env.CheckMode}
     {pins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
-    {ds : alloc.vec.Vec arena.env.IDeclaration} {fe st'}
+    {ds : alloc.vec.Vec arena.env.IDeclaration} {ix st'}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
     (hpers : pers.frozen = false)
-    (hpool : PoolAccepts inst pers st mode pins ds h fe st') :
-    ∃ lfe lst', PooledAccepts (ConRon.Refine.absMode mode) (absINatOpPinSetL pins)
-        (absIDeclL ds).toArray lst lfe lst' ∧
-      IFEnvRel fe lfe ∧ AStateRel₀ pers st' lst' := by
-  obtain ⟨t, n, pend, tier, est, parts, ht, hq, hfr, hcov, hsub, hw⟩ := hpool.toParts
-  rw [arena.checker.fold_start] at ht
-  obtain ⟨e, he, ht⟩ := ConRon.Refine.bind_eq_ok_iff.mp ht
-  obtain ⟨f, hf, ht⟩ := ConRon.Refine.bind_eq_ok_iff.mp ht
-  have ht' := (Result.ok_injective ht).symm
-  subst ht'
-  obtain ⟨hfe, hfinv⟩ := mk_ifenv_empty_refines' he hf
-  have hq' := install_fold_hooked_eq hq
-  have hz1 : absIDeclLFrom ds 0#usize = absIDeclL ds := by simp
-  have hA := install_fold_refines
-    (p := (0#u64, f, alloc.vec.Vec.new arena.checker.PendingCheck))
-    (lf := mkIFEnv IEnv.empty) (i := 0#usize) hrel hinv hpers hfe hfinv hq'
-  have hz2 : (absPendingCheckL (alloc.vec.Vec.new arena.checker.PendingCheck)).toArray
-      = (#[] : Array PendingCheck) := rfl
-  have hz3 : absU (0#u64) = 0 := rfl
-  simp only [SimFold, hz1, hz2, hz3] at hA
-  obtain ⟨v, lst', hx, hR, hrel1, hinv1⟩ := hA
-  obtain ⟨n1, fe1, pend1⟩ := v
-  obtain ⟨-, hv2, hv3⟩ := hR
-  subst hv3
+    (hpool : PoolAccepts pers st mode pins ds ix st') :
+    ∃ I lst', PooledAccepts (ConRon.Refine.absMode mode) (absINatOpPinSetL pins)
+        (absIDeclL ds).toArray lst I lst' ∧
+      AStateRel₀ pers st' lst' ∧ StreamIndexRel ix I := by
+  obtain ⟨tier, est, hB, hfr, parts, hcov, hw⟩ := hpool
+  obtain ⟨I, lst', hx, hrel1, hinv1, hI⟩ := build_index_empty_refines hrel hinv hB
   obtain ⟨htier, -⟩ := freeze_tier_ok hfr
   subst htier
-  have hx' : installFold (ConRon.Refine.absMode mode) (absINatOpPinSetL pins)
-      (0, mkIFEnv IEnv.empty, #[]) (absIDeclL ds) lst
-      = .ok (.ok (n1, fe1, (absPendingCheckL pend).toArray), lst') := hx
-  -- one worker: its own `worker_state`, its own list
-  have hwork1 : ∀ w ∈ parts, ∃ s'', checkPendingList (ConRon.Refine.absMode mode) fe1
-      (w.map absPendingCheck) lst'.worker = .ok (.ok (), s'') := by
+  have hwork : ∀ w ∈ parts, (∀ k ∈ w, k < ds.val.length) ∧
+      ∃ s'', checkJobList (ConRon.Refine.absMode mode) (absINatOpPinSetL pins) I
+        (absIDeclL ds).toArray w lst'.worker = .ok (.ok (), s'') := by
     intro w hwm
-    obtain ⟨ws, hws, hf⟩ := hw w hwm
-    obtain ⟨hrelW, hinvW⟩ := worker_state_rel hrel1 hinv1 hpers hws
-    exact foldAllOk_check_pending_refines hv2.rel hv2.inv w hrelW hinvW rfl hf
-  refine ⟨fe1, lst', ⟨n1, (absPendingCheckL pend).toArray,
-    parts.map (List.map absPendingCheck), ?_, ?_, ?_, ?_⟩, hv2.rel, hrel1⟩
-  · simpa only using hx'
-  · intro pc hpc
-    simp only [absPendingCheckL, List.mem_map] at hpc
-    obtain ⟨x, hx, rfl⟩ := hpc
-    obtain ⟨w, hwm, hxw⟩ := hcov x hx
-    exact ⟨w.map absPendingCheck, List.mem_map_of_mem hwm,
-      List.mem_map_of_mem hxw⟩
-  · intro lw hlw pc hpc
-    simp only [List.mem_map] at hlw
-    obtain ⟨w, hwm, rfl⟩ := hlw
-    simp only [absPendingCheckL, List.mem_map] at hpc ⊢
-    obtain ⟨x, hx, rfl⟩ := hpc
-    exact ⟨x, hsub w hwm x hx, rfl⟩
-  · intro lw hlw
-    simp only [List.mem_map] at hlw
-    obtain ⟨w, hwm, rfl⟩ := hlw
-    exact hwork1 w hwm
+    obtain ⟨-, ws, hws, hf⟩ := hw w hwm
+    obtain ⟨hrelW, hinvW⟩ := worker_state_rel ix hrel1 hinv1 hpers hws
+    exact foldAllOk_jobStep_refines hI rfl w hrelW hinvW hf
+  refine ⟨I, lst', ⟨parts, hx, fun t ht => ?_, fun w hw' t ht => ?_,
+    fun w hw' => (hw w hw').1, fun w hw' => (hwork w hw').2⟩, hrel1, hI⟩
+  · exact hcov t (by simpa [absIDeclL] using ht)
+  · simpa [absIDeclL] using (hwork w hw').1 t ht
+
+/-! ## The `--olean` check phase -/
+
+/-- con-leche: ConLeche/Driver/CheckMain.lean:152-170 checkOleansG — **the driver's check
+phase on an `--olean` run, accepted**: the index built from the empty one, the tier
+frozen, and `parallel_all` over the record positions with the `--olean` closures
+(`oleanWorkerInit`, `oleanJobStep`). -/
+def OleanPoolAccepts {F : Type} (inst : frontend.olean.files.OleanFs F) (fs : F)
+    (pers : arena.store.PersTier) (st : arena.monad.AState) (mode : kernel.env.CheckMode)
+    (pins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet)
+    (ds : alloc.vec.Vec arena.env.IDeclaration) (pk : frontend.olean.spec.OleanPins) (values : alloc.vec.Vec frontend.olean.records.ModRef)
+    (sp : alloc.vec.Vec (alloc.vec.Vec Std.U32))
+    (ix : arena.stream_index.IStreamIndex) (st' : arena.monad.AState) : Prop :=
+  ∃ (tier : arena.store.PersTier) (est : arena.store.EStore),
+    arena.stream_index.build_index pers st ixEmpty ds 0#usize = ok (.Ok ix, st') ∧
+    arena.checker.freeze_tier st'.store ix = ok (tier, est) ∧
+    ParallelAll ds.length (oleanWorkerInit st'.pins)
+      (oleanJobStep inst fs tier mode pins ds pk values sp)
+
+/-- `OleanPoolAccepts` from one premise per call of the driver. -/
+theorem oleanPoolAccepts_intro {F : Type} {inst : frontend.olean.files.OleanFs F} {fs : F}
+    {pers st mode pins ds pk values sp ix st'}
+    {tier : arena.store.PersTier} {est : arena.store.EStore}
+    (hI : (do
+        let e ← arena.stream_index.stream_index_empty
+        arena.stream_index.build_index pers st e ds 0#usize) = ok (.Ok ix, st'))
+    (hF : arena.checker.freeze_tier st'.store ix = ok (tier, est))
+    (hB : ParallelAll ds.length (oleanWorkerInit st'.pins)
+      (oleanJobStep inst fs tier mode pins ds pk values sp)) :
+    OleanPoolAccepts inst fs pers st mode pins ds pk values sp ix st' := by
+  rw [stream_index_empty_eq, bind_ok] at hI
+  exact ⟨tier, est, hI, hF, hB⟩
+
+open ConRon.Refine2.Frontend.Olean in
+/-- **`olean_pool_accepts_refines` — Theorem 2 at the check phase of an `--olean` run**:
+an accept of the Aeneas model, the index, the freeze and every worker's fold of the
+binary's `olean_job` over its claims, implies the twin's `PooledOleanAccepts` from the
+related state, at the reader's related module references (`hv`: `OleanReadRel.values`)
+and pins, on a record of the file system answering as the binary's (`FsRel`). -/
+theorem olean_pool_accepts_refines {F : Type} {inst : frontend.olean.files.OleanFs F}
+    {fsv : F} {fs : Arena.Frontend.Olean.OleanFs} {pers st lst}
+    {mode : kernel.env.CheckMode}
+    {pins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
+    {ds : alloc.vec.Vec arena.env.IDeclaration} {pk : frontend.olean.spec.OleanPins} {values : alloc.vec.Vec frontend.olean.records.ModRef}
+    {values' : Array Arena.Frontend.Olean.ModRef} {sp : alloc.vec.Vec (alloc.vec.Vec Std.U32)}
+    {ix st'}
+    (hfs : FsRel inst fsv fs) (hv : List.Forall₂ ModRefRel values.val values'.toList)
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
+    (hpers : pers.frozen = false)
+    (hpool : OleanPoolAccepts inst fsv pers st mode pins ds pk values sp ix st') :
+    ∃ I lst', PooledOleanAccepts fs (absPins pk) (absSearchPath sp) values'
+        (ConRon.Refine.absMode mode) (absINatOpPinSetL pins) (absIDeclL ds).toArray lst I lst' ∧
+      AStateRel₀ pers st' lst' ∧ StreamIndexRel ix I := by
+  obtain ⟨tier, est, hB, hfr, parts, hcov, hw⟩ := hpool
+  obtain ⟨I, lst', hx, hrel1, hinv1, hI⟩ := build_index_empty_refines hrel hinv hB
+  obtain ⟨htier, -⟩ := freeze_tier_ok hfr
+  subst htier
+  have hwork : ∀ w ∈ parts, (∀ k ∈ w, k < ds.val.length) ∧
+      ∃ s'', checkOleanJobList fs (absPins pk) (absSearchPath sp) values'
+        (ConRon.Refine.absMode mode) (absINatOpPinSetL pins) I (absIDeclL ds).toArray w {}
+        lst'.worker = .ok (.ok (), s'') := by
+    intro w hwm
+    obtain ⟨-, ws, hws, hf⟩ := hw w hwm
+    rw [oleanWorkerInit] at hws
+    obtain ⟨w0, hw0, hws⟩ := ConRon.Refine.bind_eq_ok_iff.mp hws
+    obtain ⟨c0, hc0, hws⟩ := ConRon.Refine.bind_eq_ok_iff.mp hws
+    obtain rfl := (Result.ok_injective hws).symm
+    obtain ⟨hrelW, hinvW⟩ := worker_state_rel ix hrel1 hinv1 hpers hw0
+    exact foldAllOk_oleanJobStep_refines hfs hv rfl hI w hrelW hinvW rfl
+      (value_cache_empty_rel hc0) hf
+  refine ⟨I, lst', ⟨parts, hx, fun t ht => ?_, fun w hw' t ht => ?_,
+    fun w hw' => (hw w hw').1, fun w hw' => (hwork w hw').2⟩, hrel1, hI⟩
+  · exact hcov t (by simpa [absIDeclL] using ht)
+  · simpa [absIDeclL] using (hwork w hw').1 t ht
+
+/-- info: 'ConRon.Refine2.olean_pool_accepts_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms olean_pool_accepts_refines
+
+/-- info: 'ConRon.Refine2.pool_accepts_refines' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms pool_accepts_refines
 
 end ConRon.Refine2

@@ -44,13 +44,13 @@ def LitInj (a : AState) : Prop :=
   ∀ (x y : EIdx) (l : ConLeche.Literal), a.store.view x = some (.lit l) →
     a.store.view y = some (.lit l) → x = y
 
-theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (po pl qo ql co cl fuel x y r : Word) (ps qs cs : List NIdx),
-    ceW n m po pl qo ql co cl fuel x y = some (r, m') → StageR dn vis fe m a →
+    ceW n m po pl qo ql co cl fuel x y = some (r, m') → StageR vis fe m a →
     CtxR m po pl qo ql co cl ps qs cs → LitInj a → PoolSmall m → x.toNat < 2 ^ 32 →
     y.toNat < 2 ^ 32 →
     ∃ b, (ConRon.Arena.canonExprEq ps qs cs fuel.toNat (decE x) (decE y)).run a = .ok (b, a) ∧
-      r = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
+      r = (if b then 1 else 0) ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
   induction n with
   | zero => intro m m' a po pl qo ql co cl fuel x y r ps qs cs h; simp [ceW] at h
   | succ n ih =>
@@ -172,7 +172,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       obtain ⟨b1, hb1, hr1, hS1, hg1, hP1⟩ := ih m m1 a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hc
         hS hC hL hP hw1 hw2
       rw [hf1, hf2] at hb1
-      obtain ⟨b, hb, hr, hq1, hq2, hq3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
+      obtain ⟨b, hb, hr, hq1, hq2, hq3⟩ := andThen_ok' (Q := StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
         hb1 hr1
         (fun hne => by
           rw [ite_eq_right hne] at h
@@ -199,7 +199,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       obtain ⟨c1, hc1, hr1, hS1, hg1, hP1⟩ := ih m m1 a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hc
         hS hC hL hP hw1 hw2
       rw [ht1, ht2] at hc1
-      obtain ⟨b, hb, hr, hq1, hq2, hq3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
+      obtain ⟨b, hb, hr, hq1, hq2, hq3⟩ := andThen_ok' (Q := StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
         hc1 hr1
         (fun hne => by
           rw [ite_eq_right hne] at h
@@ -212,7 +212,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
           obtain ⟨c2, hc2, hr2, hS2, hg2, hP2⟩ := ih m1 m2 a po pl qo ql co cl (fuel - 1) _ _ r2 ps qs cs hd
             hS1 (hC.grow hg1) hL hP1 hw1' hw2'
           rw [hv1, hv2] at hc2
-          obtain ⟨b3, hb3, hr3, q1, q2, q3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
+          obtain ⟨b3, hb3, hr3, q1, q2, q3⟩ := andThen_ok' (Q := StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
             hc2 hr2
             (fun hne2 => by
               rw [ite_eq_right hne2] at h
@@ -292,7 +292,7 @@ def CPostL {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : I
 theorem canonExprEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (po pl qo ql co cl fuel x y : Word) (ps qs cs : List NIdx) :
     RefAM p "canon_expr_eq" [po, pl, qo, ql, co, cl, fuel, x, y]
-      (fun m a => StageR dn vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧ LitInj a ∧
+      (fun m a => StageR vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧ LitInj a ∧
         PoolSmall m ∧ x.toNat < 2 ^ 32 ∧ y.toNat < 2 ^ 32)
       (ConRon.Arena.canonExprEq ps qs cs fuel.toNat (decE x) (decE y))
       (CPostL dn vis fe decW0B) := by

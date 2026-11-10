@@ -133,8 +133,8 @@ def unwrapStepL : FunDecl :=
   (t, x) := node CONST⟦hh⟧;
   (fd, p) := call env_find(CONST⟨t, x⟩.n, vis);
   if fd == 0 { return (0, 0) };
-  if EREC.u64[p] != 1 { return (0, 0) };
-  (lf, k, j) := call lam_proj(f, 0, EREC.u64[p + 5]);
+  if EREC⦃p⦄ != 1 { return (0, 0) };
+  (lf, k, j) := call lam_proj(f, 0, EREC⦃p + 5⦄);
   if lf == 0 { return (0, 0) };
   top := CTL.u64[136];
   (ao, an) := call get_app_args(e);
@@ -206,10 +206,10 @@ def headTypeConstL : FunDecl := lfn (vis, f, n, cn, us) locals (fd, p, lo, l, k,
   (fd, p) := call env_find(cn, vis);
   if fd == 0 { return (0, 0, 0) };
   (lo, l) := call ls_node(us);
-  if l != EREC.u64[p + 3] { return (0, 0, 0) };
-  (k, o, c) := call head_type_res(vis, f, n, EREC.u64[p + 4]);
+  if l != EREC⦃p + 3⦄ { return (0, 0, 0) };
+  (k, o, c) := call head_type_res(vis, f, n, EREC⦃p + 4⦄);
   if k == 0 { return (0, 0, 0) };
-  (k, o, c) := call subst_pw_at(EREC.u64[p + 2], EREC.u64[p + 3], us, k, o, c);
+  (k, o, c) := call subst_pw_at(EREC⦃p + 2⦄, EREC⦃p + 3⦄, us, k, o, c);
   return (k, o, c)
 }
 
@@ -270,10 +270,10 @@ def headProofConstL : FunDecl := lfn (vis, f, cn, us) locals (fd, p, lo, l, k, o
   (fd, p) := call env_find(cn, vis);
   if fd == 0 { return (0, 0, 0) };
   (lo, l) := call ls_node(us);
-  if l != EREC.u64[p + 3] { return (0, 0, 0) };
-  (k, o, c) := call type_sort_pw(vis, f, EREC.u64[p + 4]);
+  if l != EREC⦃p + 3⦄ { return (0, 0, 0) };
+  (k, o, c) := call type_sort_pw(vis, f, EREC⦃p + 4⦄);
   if k == 0 { return (0, 0, 0) };
-  (k, o, c) := call subst_pw_at(EREC.u64[p + 2], EREC.u64[p + 3], us, k, o, c);
+  (k, o, c) := call subst_pw_at(EREC⦃p + 2⦄, EREC⦃p + 3⦄, us, k, o, c);
   return (k, o, c)
 }
 
@@ -285,7 +285,7 @@ def headProofProjL : FunDecl := lfn (vis, f, sn, i) locals (fd, q, b, k, o, c) {
   (fd, q) := call find_proj(vis, sn, i);
   if fd == 0 { return (0, 0, 0) };
   b := 0;
-  if i < EREC.u64[q + 10] { b := EREC.u64[EREC.u64[q + 9] + i] };
+  if i < EREC⦃q + 10⦄ { b := EREC⦃EREC⦃q + 9⦄ + i⦄ };
   (k, o, c) := call type_sort_pw(vis, f, b);
   if k == 1 { return (1, 0, 0) };
   return (0, 0, 0)

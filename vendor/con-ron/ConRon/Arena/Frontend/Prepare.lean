@@ -126,14 +126,17 @@ structure Prepared where
   /-- the records moved ahead of a pinned `Nat` operation they ground -/
   hoisted : Array NIdx := #[]
 
-/-- con-leche: ConLeche/Frontend/Prepare.lean:159-163 prepareD —
-`preparePrelude`, with its receipts. -/
-def prepareD (pre : PreludeIx) (ds : Array IDeclaration) : AM Prepared := do
+/-- con-leche: ConLeche/Frontend/Prepare.lean:159-166 prepareD —
+`preparePrelude`, with its receipts.  `used` says what a record mentions, where
+the record itself does not say: a theorem's record read from an `.olean` holds a
+reference to its value (`Arena/Frontend/Olean/Lazy.lean`). -/
+def prepareD (pre : PreludeIx) (ds : Array IDeclaration)
+    (used : IDeclaration → AM (Array NIdx) := IDeclaration.usedConsts) : AM Prepared := do
   let (front, rest) ← frontOf #[] pre.decls.toList ds
-  let (decls, hoisted) ← hoistNatOpGround (front ++ rest)
+  let (decls, hoisted) ← hoistNatOpGround used (front ++ rest)
   pure ⟨decls, decls.size - ds.size, hoisted⟩
 
-/-- con-leche: ConLeche/Frontend/Prepare.lean:165-172 preparePrelude — the
+/-- con-leche: ConLeche/Frontend/Prepare.lean:168-175 preparePrelude — the
 parsed stream, prepared for the fold: the prelude's declarations first (the
 stream's own copies where it has them), the rest of the stream after them,
 every pinned `Nat` operation's stream-certified ground ahead of it.  An array

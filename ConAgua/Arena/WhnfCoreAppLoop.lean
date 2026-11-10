@@ -108,7 +108,7 @@ def IotaRecAtE (p : Prog) : Prop :=
     SlotPre s₀ a₀ dn vis fe M eb mode → HW hd → SpineR s₀.mem so sn xs →
     so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpecE p (N + 1) "iota_rec_at" [mode, vis, d, hd, so, sn]
-      (iotaRecAt (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size) s₀ a₀
+      (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs xs.size) s₀ a₀
 
 /-- **What the `app` arm's errors assume** at L fuel `n` (`whnf_app`, `whnf_core_app2`,
 `whnf_core_app`): the knot's slots' claims and `iota_rec_at`'s. -/
@@ -152,7 +152,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       (m.arr64 SPN).size = (m₀.arr64 SPN).size → BKept m₀ m → PoolGrew m₀ m →
       RefE (AppG p n)
         (whnfAppE.k_loop1 p top (whnfAppE.loop1 p k m mode vis d v hd vo vn same ao an i top))
-        (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE hd) va
+        (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v) (decE hd) va
           (same != 0) args nodes i.toNat) a (CorePost decStep dn m₀ vis fe MM eb ResW) := by
   subst htop0
   intro k
@@ -173,7 +173,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
     · rw [ite_eq_right hlt]
       have hnlt : ¬ i.toNat < args.size := by
         rw [hlt_args]; exact fun h => hlt (UInt64.lt_iff_toNat_lt.mpr h)
-      have hrun : (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v)
+      have hrun : (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v)
           (decE hd) va (same != 0) args nodes i.toNat).run a = .ok (.done (decE v), a) := by
         rw [whnfApp]; simp only [hnlt, dite_false]; rfl
       exact RefE.ret hrun ⟨⟨MM, hS.frame_stk (MemFrame.setCtl m 136 _) (by simp) (by simp),
@@ -223,7 +223,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       rw [hi1] at hok hS' hres
       have hlamtag : ((decE v).tag == ETag.lam) = true := by
         rw [decE_tag_lam_beq v hv]; simp [hlam]
-      have hrun : (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v)
+      have hrun : (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v)
           (decE hd) va (same != 0) args nodes i.toNat).run a =
           .ok (AM.res (betaPeel (decE (tfld m LAM (tierW v) (idxW v) 1))
             #[decE (rdW (m.arr64 SPN) (ao + i))] args (i.toNat + 1)) a,
@@ -253,7 +253,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       rwa [hit] at h
     have hnotlam : ((decE v).tag == ETag.lam) = false := by
       rw [decE_tag_lam_beq v hv]; simp [hlam]
-    have hunf := whnfApp_nolam (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+    have hunf := whnfApp_nolam (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
       (decE v) (decE hd) va (same != 0) args nodes i.toNat hlt' hnotlam
     have hxi' : args[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := hxi
     rw [hnodeget, hxi'] at hunf
@@ -267,14 +267,14 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
             let ap ← internAppRebuilt (decE (rdW (m.arr64 SPN) (ao + an + i))) (same != 0) (decE v)
               (decE (rdW (m.arr64 SPN) (ao + i)))
             if (decE hd).tag == ETag.const then do
-              let step ← iotaRecAt (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+              let step ← iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
                 (decE hd) (va.push (decE (rdW (m.arr64 SPN) (ao + i))))
                 (va.push (decE (rdW (m.arr64 SPN) (ao + i)))).size
-              appStepT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) ap
+              appStepT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) ap
                 (va.push (decE (rdW (m.arr64 SPN) (ao + i))))
                 (ap == decE (rdW (m.arr64 SPN) (ao + an + i))) args nodes i.toNat step
             else
-              appStepT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) ap
+              appStepT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) ap
                 (va.push (decE (rdW (m.arr64 SPN) (ao + i))))
                 (ap == decE (rdW (m.arr64 SPN) (ao + an + i))) args nodes i.toNat none) a
           (CorePost decStep dn m₀ vis fe MM eb ResW) := by
@@ -440,7 +440,7 @@ theorem app_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n �
     (har : SpineR s₀.mem ao an args) (hno : SpineR s₀.mem (ao + an) an nodes)
     (hlo : ao.toNat + an.toNat + an.toNat ≤ vo.toNat) :
     RefE (AppG p n) (whnfAppE p (n + 1) s₀.mem mode vis d v hd vo vn same ao an i)
-      (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
+      (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
         (same != 0) args nodes i.toNat) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hS := hs.rel
   have hvn64 : vo.toNat + vn.toNat < 2 ^ 64 := by have := hva.bound; have := hS.spn; omega
@@ -460,7 +460,7 @@ theorem whnfApp_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
     (har : SpineR s₀.mem ao an args) (hno : SpineR s₀.mem (ao + an) an nodes)
     (hlo : ao.toNat + an.toNat + an.toNat ≤ vo.toNat) :
     CoreSpec p (n + 1) "whnf_app" [mode, vis, d, v, hd, vo, vn, same, ao, an, i]
-      (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
+      (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
         (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (whnfAppE_spec p hp.app (n + 1) s₀ mode vis d v hd vo vn same ao an i)
     (app_ref p hp hwc hcc n hk F hF hn s₀ a₀ dn vis fe MM eb mode d v hd vo vn same ao an i vargs args

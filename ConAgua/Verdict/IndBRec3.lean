@@ -36,11 +36,19 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-l_model classRecTysOkE_spec (p : Prog) (hp : RtsProg p)
+/-- `RtsProg` with `class_rec_ty_check`'s and `class_const_ok`'s lookups. -/
+structure RtsProgE (p : Prog) : Prop extends RtsProg p where
+  cch : CchProg p
+  crc : p.lookup "class_rec_ty_check" = some classRecTyCheckL
+
+theorem RtsProgE.toRtoProgE {p : Prog} (h : RtsProgE p) : RtoProgE p :=
+  { h.toRtoProg with cch := h.cch, crc := h.crc }
+
+l_model classRecTysOkE_spec (p : Prog) (hp : RtsProgE p)
   fns [hp.rts ↦ classRecTysOkE]
-  specs [classRecTyOkE_spec p hp.toRtoProg n, slCons_specW p hp.alloc hp.copy hp.cons n]
+  specs [classRecTyOkE_spec p hp.toRtoProgE n, slCons_specW p hp.alloc hp.copy hp.cons n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `class_rec_tys_ok` gives besides the twin's checked constants `xs` (from `m`): the stage
@@ -54,12 +62,12 @@ structure RtsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   abs : AbsOK m'
 
 section sims
-variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p)
+variable {p : Prog} (hP : CchProg p) (hq : KnotStageProg p) (hApd : ApdF p) (hCrf : CrfF p)
   (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
-  {dn : NIdx → Option ConLeche.Name} {vis : Word}
+  {dn : NIdx → Option ConLeche.Name} (hCs : CcvSims p dn) {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-include hq hApd hCrk henv in
+include hP hq hApd hCrf hCs henv in
 /-- **`class_rec_tys_ok` refines `classRecTysOk`, both outcomes** under `StageC` (twin side:
 con-ron's `classRecTysOk_spec`'s proof; the extension after one recursor from con-ron's
 `classRecTyOk_spec` on its run). -/
@@ -130,7 +138,7 @@ theorem rts_ref (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 6
     rw [hq'] at h'; cases h'; exact hext
   unfold ConRon.Arena.classRecTysOk
   -- `class_rec_ty_ok`
-  have hr := rto_ref (k := k) (c := UInt64.ofNat c0) hq hApd hCrk henv n (by omega) hC hG hns
+  have hr := rto_ref (k := k) (c := UInt64.ofNat c0) hP hq hApd hCrf hCs henv n (by omega) hC hG hns
     (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR) (by rw [tv]; exact hCV) hA hgP hrcP hcvP
     (hw _ List.mem_cons_self)
   rw [tc] at hr
@@ -138,7 +146,7 @@ theorem rts_ref (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 6
     fun ⟨r1, m1⟩ x a1 hrun1 ⟨hC1, hg1, hx, hA1⟩ => ?_
   dsimp only at hC1 hg1 hx hA1
   rw [classRecTysOkE.k_class_rec_ty_ok.arm1]
-  obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.classRecTyOk_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.classRecTyOk_spec fe ConRon.Bridge.CoreSpec.of_core
     henv G gP k.toNat RS rcP CV cvP c0 (hw _ List.mem_cons_self) a a1 x hC.check ⟨hgP, hrcP, hcvP⟩
     hrun1
   -- the rest
@@ -172,10 +180,10 @@ theorem rts_ref (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 6
   exact RefE.ret rfl ⟨hR2.stage.of_pstep hS3 hA3 (PStep.refl hR2.stage.check.state),
     hg1.trans (hR2.grow.trans hg3), by simpa [decCVS] using hsp3, hA3⟩
 
-include hq hApd hCrk henv in
+include hq hApd hCrf hCs henv in
 /-- **`class_rec_tys_ok` refines `classRecTysOk`** under `StageC` (`rts_ref`'s ok half). -/
 @[refines ConRon.Arena.classRecTysOk]
-theorem classRecTysOk_refinesC (hp : RtsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
+theorem classRecTysOk_refinesC (hp : RtsProgE p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (g k ro rl vo vl co cl : Word) (G : ClassGen) (rcs : List RecShape)
     (cvs : List IConstantVal) (cs : List Nat) (hC : StageC dn vis fe env s₀.mem a₀)
     (hG : DecB (fun m => decCG m g.toNat) s₀.mem G) (hns : G.nP + G.slots.length < 2 ^ 64)
@@ -193,16 +201,16 @@ theorem classRecTysOk_refinesC (hp : RtsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s
         (AM.st (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀)
         (AM.res (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (classRecTysOkE_spec p hp n s₀ vis g k ro rl vo vl co cl)
-    (rts_ref hq hApd hCrk henv g k G hns gP n hn _ a₀ ro rl vo vl co cl rcs cvs cs rcsP cvsP hC hG
-      hrcs hok hcvs hcs hA hgP hrcsP hcvsP hw)) ?_
+    (rts_ref hp.cch hq hApd hCrf hCs henv g k G hns gP n hn s₀.mem a₀ ro rl vo vl co cl rcs cvs cs rcsP
+      cvsP hC hG hrcs hok hcvs hcs hA hgP hrcsP hcvsP hw)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, ⟨by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.dec⟩, hR.abs⟩
 
-include hq hApd hCrk hnv hcE hU henv in
+include hq hApd hCrf hCs hnv hcE hU henv in
 /-- **`class_rec_tys_ok`'s error claim** (the hypotheses of `classRecTysOk_refinesC`, and the core
 stubs' error claims; `rts_ref`'s error half). -/
-theorem classRecTysOk_claim (hp : RtsProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
+theorem classRecTysOk_claim (hp : RtsProgE p) (n : Nat) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (g k ro rl vo vl co cl : Word) (G : ClassGen) (rcs : List RecShape)
     (cvs : List IConstantVal) (cs : List Nat) (hC : StageC dn vis fe env s₀.mem a₀)
     (hG : DecB (fun m => decCG m g.toNat) s₀.mem G) (hns : G.nP + G.slots.length < 2 ^ 64)
@@ -218,7 +226,7 @@ theorem classRecTysOk_claim (hp : RtsProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
       (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) s₀ a₀ :=
   RefE.coreSpecE (classRecTysOkE_spec p hp n s₀ vis g k ro rl vo vl co cl) hnv
     { nv := hnv, core := hcE, uce := hU }
-    (rts_ref hq hApd hCrk henv g k G hns gP n hn _ a₀ ro rl vo vl co cl rcs cvs cs rcsP cvsP hC hG
+    (rts_ref hp.cch hq hApd hCrf hCs henv g k G hns gP n hn _ a₀ ro rl vo vl co cl rcs cvs cs rcsP cvsP hC hG
       hrcs hok hcvs hcs hA hgP hrcsP hcvsP hw)
 
 end sims

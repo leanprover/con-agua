@@ -108,7 +108,7 @@ theorem sut_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
     (M : ModeMaps) (eb mode d b wta : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b) (hwta : HW wta) :
     RefE (KnotUpToE p n) (sutE p (n + 1) s₀.mem mode vis d b wta)
-      (suTailT (coreKnot (decMode mode) fe id F) d.toNat (decE b) (decE wta)) a₀
+      (suTailT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE b) (decE wta)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [sutE]
@@ -129,7 +129,7 @@ theorem sut_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
     exact RefE.ret rfl (CorePost.ret hS₂ rfl hw0)
   simp only [h6, decide_false, Bool.false_eq_true, ↓reduceIte]
   have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
-  rw [← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+  rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
   exact RefE.bind_callE (fun _ => rfl) (hK.defeq F _ _ dn vis fe M₂ eb mode d wta _ hF hn hs₂ hwta hh2)
     (fun (hkE : KnotUpToE p n) => (hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode d wta _ hF hn
       hs₂ hwta hh2)
@@ -149,7 +149,7 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d b wta : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b) (hwta : HW wta) :
     RefE (KnotUpToE p n) (suhE p (n + 1) s₀.mem mode vis d b wta)
-      (suHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decE wta)) a₀
+      (suHeadT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE b) (decE wta)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hR := hS.arena.base
@@ -178,14 +178,14 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   dsimp only [suhE.k_env_find]
   by_cases h0 : r₂.headD 0 = 0
   · rw [ite_eq_left h0]
-    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     exact RefE.ret (suHead_other _ fe _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv caps e => by rw [hnone] at e; cases e)) (CorePost.ret hS rfl hw0)
   rw [ite_eq_right h0]
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
-  have hind := decCI_indK hci (erecP_ext _) hS.erec
-  by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 3
+  have hind := decCI_indK (erRdOK _) hci
+  by_cases h4 : erRdT s₀.mem (r₂.tail.headD 0) ≠ 3
   · rw [ite_eq_left h4]
     exact RefE.ret (suHead_other _ fe _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e)))
@@ -193,7 +193,7 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   rw [ite_eq_right h4]
   obtain ⟨cvT, caps, hci_eq⟩ := hind.1 (by simpa using h4)
   rw [hci_eq] at hci
-  have hIR := decCI_indCaps hci (erecP_ext _) hS.erec
+  have hIR := decCI_indCaps (erRdOK _) hci
   -- the type's spine, the top put back
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppArgs_callW hq.leaf.core.spine hS hwta h)
     fun r₃ m₃ ⟨hf3, hg3, _, _, targs, hargs, hsp⟩ => ?_
@@ -217,20 +217,20 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   obtain ⟨M₅, hS₅, hK₅, hSt₅⟩ : CoreAfter dn s₀.mem m₅ a₀ vis fe M eb := by
     obtain ⟨M', hS', hK', hSt'⟩ := hA₅
     exact ⟨M', hS', hK', hK₃.trans hSt'⟩
-  have hlpT : cvT.levelParams.length = (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3)).toNat :=
-    hslice?_length hIR.lp
+  have hlpT : cvT.levelParams.length = (erRdT s₀.mem (r₂.tail.headD 0 + 3)).toNat :=
+    hslice?_lenR hIR.lp
   have hiff : (caps.unitlike = true ∧ a₀.pins.reserved.contains (decI k) = false ∧
       targs.length = caps.unitParams ∧ (r₄.tail.headD 0).toNat = cvT.levelParams.length) ↔
-      uhOK (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 9)) (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 10))
-        (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3)) (r₃.tail.headD 0) (r₄.tail.headD 0) r₅ := by
+      uhOK (erRdT s₀.mem (r₂.tail.headD 0 + 9)) (erRdT s₀.mem (r₂.tail.headD 0 + 10))
+        (erRdT s₀.mem (r₂.tail.headD 0 + 3)) (r₃.tail.headD 0) (r₄.tail.headD 0) r₅ := by
     unfold uhOK
     rw [hIR.unitlike, ← hr₅, hlen, hIR.unitParams, hlpT]
     simp only [decBool, bne_iff_ne, ne_eq, bne_eq_false_iff_eq, UInt64.toNat_inj]
   refine RefE.of_run_eq (suHead_ind _ fe _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
     (by rw [hfind', hci_eq]) targs hargs hS.pins _ hvl) ?_
   dsimp only [suhE.k_reserved_contains_w]
-  by_cases hok : uhOK (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 9))
-      (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 10)) (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3))
+  by_cases hok : uhOK (erRdT s₀.mem (r₂.tail.headD 0 + 9))
+      (erRdT s₀.mem (r₂.tail.headD 0 + 10)) (erRdT s₀.mem (r₂.tail.headD 0 + 3))
       (r₃.tail.headD 0) (r₄.tail.headD 0) r₅
   · obtain ⟨o1, o2, o3, o4⟩ := hok
     rw [ite_eq_left (hiff.mpr ⟨o1, o2, o3, o4⟩)]
@@ -247,16 +247,16 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
         (pure false : AM Bool) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) :=
       RefE.ret rfl ⟨⟨M₅, hS₅, hK₅, hSt₅⟩, rfl, hw0⟩
     unfold uhOK at hok
-    by_cases o1 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 9) = 0
+    by_cases o1 : erRdT s₀.mem (r₂.tail.headD 0 + 9) = 0
     · rw [ite_eq_left o1]; exact hl
     rw [ite_eq_right o1]
     by_cases o2 : r₅.headD 0 ≠ 0
     · rw [ite_eq_left o2]; exact hl
     rw [ite_eq_right o2]
-    by_cases o3 : r₃.tail.headD 0 ≠ rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 10)
+    by_cases o3 : r₃.tail.headD 0 ≠ erRdT s₀.mem (r₂.tail.headD 0 + 10)
     · rw [ite_eq_left o3]; exact hl
     rw [ite_eq_right o3]
-    by_cases o4 : r₄.tail.headD 0 ≠ rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 3)
+    by_cases o4 : r₄.tail.headD 0 ≠ erRdT s₀.mem (r₂.tail.headD 0 + 3)
     · rw [ite_eq_left o4]; exact hl
     exact absurd ⟨o1, by simpa using o2, by simpa using o3, by simpa using o4⟩ hok
 
@@ -269,7 +269,7 @@ theorem suc_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (KnotUpToE p n) (sucE p (n + 1) s₀.mem mode vis d a b)
-      (structUnitCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (structUnitCert (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [sucE]
@@ -299,7 +299,7 @@ theorem suCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : 
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "struct_unit_cert" [mode, vis, d, a, b]
-      (structUnitCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
+      (structUnitCert (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (sucE_spec p hq.sunit hq.suHead hq.suTail (n + 1) s₀ mode vis d a b)
     (suc_ref p hq hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)

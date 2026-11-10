@@ -44,29 +44,20 @@ theorem tgt_isEmpty (T : Std.HashMap Nat Nat) (c : Nat) (hc : ∀ k, c ≤ k →
 
 theorem iwok_alloc {m m1 : Mem} {k q : Word} (h : allocW m k = some (q, m1)) (hI : IWOK m) :
     IWOK m1 := by
-  obtain ⟨_, rfl, _, hroom, htop⟩ := allocW_post h hI
-  have hf := allocMem_frame m k
-  obtain ⟨_, h2, h3, h4, h5⟩ := hI
-  have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.arr EREC (by decide) (by decide)
-  have h129 : erTop (allocMem m k) = erTop m := by
-    simp only [erTop]; rw [hf.ctl 129 (by decide)]
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · rw [htop, allocMem_IW]; exact hroom
-  · rw [h129, hE]; exact h2
-  · rw [allocMem_IW]; exact h3
-  · rw [hE]; exact h4
-  · rw [hf.size CTL]; exact h5
+  obtain ⟨_, hm1, _, hroom, htop⟩ := allocW_post h hI
+  have hf : MemFrame [IW] [200] m m1 := by
+    rw [hm1]; exact (MemFrame.setCtl m 200 _).mono (by simp) (by simp)
+  exact IWOK.of_iw hf hI (by rw [htop, hf.size IW]; exact hroom)
 
 theorem iwok_frame {m m' : Mem} (hf : MemFrame [IW] [] m m') (hI : IWOK m) : IWOK m' := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hI
-  have ht : iwTop m' = iwTop m := by simp only [iwTop]; rw [hf.ctl 200 (by simp)]
-  have he : erTop m' = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by simp)]
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · rw [ht, hf.size]; exact h1
-  · rw [he, hf.size]; exact h2
-  · rw [hf.size]; exact h3
-  · rw [hf.size]; exact h4
-  · rw [hf.size]; exact h5
+  have hE := hf.arr EREC (by decide) (by decide)
+  have hE1 := hf.arr (tier1 EREC) (by decide) (by decide)
+  have hc := hf.size CTL
+  have hI' := hf.size IW
+  have h1 := (IWOK_iff m).1 hI
+  simp only [IWOK_iff, iwTop, erTop, erecTop1, hE, hE1, hc, hI', hf.ctl 129 (by simp),
+    hf.ctl 130 (by simp), hf.ctl 200 (by simp)] at h1 ⊢
+  exact h1
 
 theorem getElem?_of_rd {m m' : Mem} (i : Nat) (hs : (m'.arr64 IW).size = (m.arr64 IW).size)
     (hi : i < (m.arr64 IW).size) (hl : (m.arr64 IW).size < 2 ^ 64) (h : rd m' i = rd m i) :
@@ -182,12 +173,15 @@ theorem hoistApply_ok (n : Nat) (m m' : Mem) (ord c tg out : Word) (T : Std.Hash
     rw [← htop4]; simp only [iwTop]; rw [hF.ctl 200 (by simp)]
   have hlow8 : ∀ i < iwTop m, rd m' i = rd m i := fun i hi => by
     rw [hfr8 i (by omega) (Or.inl (by simp; omega)), hlow7 i (by omega), hlow6 i hi]
-  refine ⟨iwok_frame hF hI4, ⟨by omega, ?_, fun i hi => ?_, fun i hi => ?_⟩, hFall, by omega,
-    by omega, fun j hj => ?_⟩
+  refine ⟨iwok_frame hF hI4, ⟨by omega, ?_, fun i hi => ?_, fun i hi => ?_, ?_, fun i hi => ?_⟩, hFall,
+    by omega, by omega, fun j hj => ?_⟩
   · have := hFall.ctl 129 (by decide)
     simp only [erTop, this]; exact Nat.le_refl _
   · exact getElem?_of_rd i hs8 (by have := hI.iw; omega) hs (hlow8 i hi)
   · rw [hFall.arr EREC (by decide) (by decide)]
+  · have := hFall.ctl 130 (by decide)
+    simp only [erecTop1, this]; exact Nat.le_refl _
+  · rw [hFall.arr (tier1 EREC) (by decide) (by decide)]
   · rw [addrN, addrN]
     have hj' : (emitL T c.toNat 0)[j]? = some ((hoistOrder T c.toNat)[j]'(by
         simp [hoistOrder, List.length_mergeSort]; exact hj)) := by

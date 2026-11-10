@@ -186,10 +186,10 @@ theorem i1lA_iw : (IW : TieredArray) ∉ i1lA := by decide
 /-- **The loop refines `instPisAtLift` on the rest of the slice.** -/
 theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f o l : Word)
     (xs : List EIdx) : ∀ (n : Nat) (m m' : Mem) (a : AState) (h k : Word) (r : List Word),
-    ipalGoW f o l n m h k = some (r, m') → StageR dn vis fe m a → AbsOK m → H h →
+    ipalGoW f o l n m h k = some (r, m') → StageR vis fe m a → AbsOK m → H h →
     k.toNat ≤ l.toNat → decHL m o.toNat l.toNat = some xs →
     ∃ x a', (instPisAtLift f.toNat (xs.drop k.toNat) (decI h)).run a = .ok (x, a') ∧
-      KeepPost dn vis fe decOE m m' a' r x ∧ AbsOK m' := by
+      KeepPost vis fe decOE m m' a' r x ∧ AbsOK m' := by
   have hxl : ∀ m, decHL m o.toNat l.toNat = some xs → xs.length = l.toNat := fun m h => decHL_length m h
   intro n
   induction n with
@@ -272,9 +272,9 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
 theorem ipalF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f o l e : Word)
     (he : H e) (xs : List EIdx) :
     RelW ipalF [f, o, l, e]
-      (fun m a => StageR dn vis fe m a ∧ AbsOK m ∧ decHL m o.toNat l.toNat = some xs)
+      (fun m a => StageR vis fe m a ∧ AbsOK m ∧ decHL m o.toNat l.toNat = some xs)
       (instPisAtLift f.toNat xs (decI e))
-      (fun m m' a r x => KeepPost dn vis fe decOE m m' a r x ∧ AbsOK m') := by
+      (fun m m' a r x => KeepPost vis fe decOE m m' a r x ∧ AbsOK m') := by
   intro m m' a r h ⟨hS, hA, hdec⟩
   obtain ⟨n, hW⟩ := ipalF_W h
   rcases n with _ | n

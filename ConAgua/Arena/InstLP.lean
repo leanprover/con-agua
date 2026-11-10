@@ -87,23 +87,23 @@ def slsGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1945-1955 ConRon.Arena.substLevelsAt -/
+/-- con-ron: ConRon/Arena/Core.lean:2016-2026 ConRon.Arena.substLevelsAt -/
 @[no_expose, l_impl ConRon.Arena.substLevelsAt]
 def sleGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   if l == 0 { return 0 };
-  h := call lv_sub_int(EREC.u64[o], ko, kc, vo, vc);
+  h := call lv_sub_int(EREC⦃o⦄, ko, kc, vo, vc);
   if h >= 4294967296 { abort };
   SPN.u64[b] := h;
   r := call sle_go(o + 1, l - 1, b + 1, ko, kc, vo, vc);
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1957-1967 ConRon.Arena.substParamLevels -/
+/-- con-ron: ConRon/Arena/Core.lean:2028-2038 ConRon.Arena.substParamLevels -/
 @[no_expose, l_impl ConRon.Arena.substParamLevels]
 def slpGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (f, v, h, r) {
   if l == 0 { return 0 };
-  (f, v) := call lp_lookup(ko, kc, vo, vc, EREC.u64[o]);
-  if f != 0 { h := call lv_intern(v) } else { h := call intern_param(EREC.u64[o]) };
+  (f, v) := call lp_lookup(ko, kc, vo, vc, EREC⦃o⦄);
+  if f != 0 { h := call lv_intern(v) } else { h := call intern_param(EREC⦃o⦄) };
   if h >= 4294967296 { abort };
   SPN.u64[b] := h;
   r := call slp_go(o + 1, l - 1, b + 1, ko, kc, vo, vc);
@@ -384,7 +384,8 @@ fuel explicit: anything but `coreWalkFuel` aborts, as `WhnfEntry.lean`'s `_f` ad
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1981-1999 ConRon.Arena.recFireLevels -/
+/-- con-ron: ConRon/Arena/Core.lean:2052-2075 ConRon.Arena.recFireLevels — a `.nested` or `.levels`
+rule (kind `1`, `2`) substitutes its stored levels, a `.plain` one the constructor's parameters. -/
 @[no_expose, l_impl ConRon.Arena.recFireLevels]
 def recFireLevelsL : FunDecl := lfn (fireKind, fvo, fvc, po, pc, us, qo, qc) locals (vo, vc, b, c, x, r) {
   (vo, vc) := call ls_node(us);

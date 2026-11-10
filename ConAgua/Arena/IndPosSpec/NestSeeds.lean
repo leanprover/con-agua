@@ -55,7 +55,7 @@ theorem pos2_outs_rec {m' : Mem} {q o l : Word} {xs : List (List NestFieldKind �
     (hq : q.toNat + 2 ≤ iwTop m')
     (hget : ∀ j < [o, l].length, (m'.arr64 IW)[q.toNat + j]? = [o, l][j]?) (hx : OutsB m' o.toNat l.toNat xs) :
     DecB (fun m => decAt m (fun o l => decPL m (decKE m) o l) q.toNat) m' xs := by
-  have g : ∀ j < 2, (iwA (truncM m'))[q.toNat + j]? = [o, l][j]? := fun j hj => by
+  have g : ∀ j < 2, iwA (truncM m') (q.toNat + j) = [o, l][j]? := fun j hj => by
     rw [truncM_iw_eq (by omega)]; exact hget j (by simpa using hj)
   have n0 : iwN (truncM m') q.toNat = some o.toNat := by
     simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 0 (by omega))
@@ -108,15 +108,15 @@ variable {p : Prog} (L : RsLook p) (n : Nat) (dn : NIdx → Option ConLeche.Name
 include L in
 @[refines_part ConRon.Arena.nestSeeds "the seed's fuel fold (nest_seeds_fuel)"]
 theorem nestSeedsFuel_refines (s₀ : St) (a₀ : AState) (dO dL k f : Word) (ds : List EIdx)
-    (hS : StageR dn vis fe s₀.mem a₀) (hlen : ds.length = dL.toNat)
+    (hS : StageR vis fe s₀.mem a₀) (hlen : ds.length = dL.toNat)
     (hel : ∀ j < dL.toNat, ∃ w, (s₀.mem.arr64 IW)[dO.toNat + j]? = some w ∧ H w ∧ ds[j]? = some (decI w))
     (hb : dO.toNat + dL.toNat ≤ iwTop s₀.mem) (hk : k.toNat ≤ dL.toNat) (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_seeds_fuel" [dO, dL, k, f]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ a', ((ds.drop k.toNat).foldlM pos2FuelF f.toNat).run a₀ =
-      .ok ((r.headD 0).toNat, a') ∧ StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
+      .ok ((r.headD 0).toNat, a') ∧ StageR vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
   refine triple_post (nestSeedsFuel_spec L n s₀ dO dL k f) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := p2sfW_ok dn vis fe dO dL ds s₀.mem hlen hel hb n s₀.mem s'.mem a₀ k f _ hm hS (IWGrow.refl _) hk hP
+  have := p2sfW_ok (fun _ => none) vis fe dO dL ds s₀.mem hlen hel hb n s₀.mem s'.mem a₀ k f _ hm hS (IWGrow.refl _) hk hP
   exact ⟨hlc, by simpa using this⟩
 
 end census

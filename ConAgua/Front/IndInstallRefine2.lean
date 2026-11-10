@@ -38,7 +38,7 @@ theorem resOf_eq {α : Type} [Inhabited α] {x : AM α} {a a' : AState} {c : α}
 /-- **The constant record at `q`** decodes as `ci` in every pool that holds `m`'s words from `q`
 to the top. -/
 def RecAt (m : Mem) (q : Nat) (ci : IConstantInfo) : Prop :=
-  ∀ P, AgreesFrom P m q → decCI P (fun _ => none) q = some ci
+  ∀ P, AgreesFrom P m q → decCI (aread P) q = some ci
 
 theorem RecAt.keep {m m' : Mem} {q : Nat} {ci : IConstantInfo} (h : RecAt m q ci)
     (ht : topN m DLP ≤ topN m' DLP) (hk : ∀ i, q ≤ i → i ≤ topN m DLP → wd m' DLP i = wd m DLP i) :
@@ -68,9 +68,9 @@ theorem AgreesFrom.get {P : Array Word} {m : Mem} {q : Nat} (h : AgreesFrom P m 
 
 /-- `ind_caps`' fifteen words decode as the default capabilities. -/
 theorem capsM_dec (m : Mem) (q : Word) (hs : q.toNat + 15 ≤ (m.arr64 DLP).size) (hq : q.toNat + 15 < 2 ^ 64)
-    (P : Array Word) (dn : NIdx → Option ConLeche.Name)
+    (P : Array Word)
     (h : ∀ k, k < 15 → P[q.toNat + k]? = some (wd (capsM m q) DLP (q.toNat + k))) :
-    decCaps P dn q.toNat = some {} := by
+    decCaps (aread P) q.toNat = some {} := by
   have h0 := h 0 (by decide)
   simp only [Nat.add_zero] at h0
   have v0 : wd (capsM m q) DLP q.toNat = 0 := by
@@ -101,7 +101,7 @@ theorem capsM_dec (m : Mem) (q : Word) (hs : q.toNat + 15 ≤ (m.arr64 DLP).size
     unfold capsM; rw [wd_set_ne _ DLP (q + 14) _ (q.toNat + 6) (by rw [widx2 q 14 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 13) _ (q.toNat + 6) (by rw [widx2 q 13 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 12) _ (q.toNat + 6) (by rw [widx2 q 12 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 11) _ (q.toNat + 6) (by rw [widx2 q 11 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 10) _ (q.toNat + 6) (by rw [widx2 q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 6) (by rw [widx2 q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 6) (by rw [widx2 q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 6) (by rw [widx2 q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 6) _ (q.toNat + 6) (by rw [widx2 q 6 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
   rw [v6] at h6
   have h7 := h 7 (by decide)
-  have v7 : wd (capsM m q) DLP (q.toNat + 7) = 1 := by
+  have v7 : wd (capsM m q) DLP (q.toNat + 7) = 0 := by
     unfold capsM; rw [wd_set_ne _ DLP (q + 14) _ (q.toNat + 7) (by rw [widx2 q 14 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 13) _ (q.toNat + 7) (by rw [widx2 q 13 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 12) _ (q.toNat + 7) (by rw [widx2 q 12 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 11) _ (q.toNat + 7) (by rw [widx2 q 11 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 10) _ (q.toNat + 7) (by rw [widx2 q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 7) (by rw [widx2 q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 7) (by rw [widx2 q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 7) _ (q.toNat + 7) (by rw [widx2 q 7 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
   rw [v7] at h7
   have h8 := h 8 (by decide)
@@ -132,7 +132,7 @@ theorem capsM_dec (m : Mem) (q : Word) (hs : q.toNat + 15 ≤ (m.arr64 DLP).size
   have v14 : wd (capsM m q) DLP (q.toNat + 14) = 0 := by
     unfold capsM; rw [wd_set_eq _ DLP (q + 14) _ (q.toNat + 14) (by rw [widx2 q 14 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
   rw [v14] at h14
-  simp [decCaps, bool?, hd?, nat?, decPW, hlist?, hslice?, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14]
+  simp [decCaps, L.Arena.aread_apply, bool?, hd?, nat?, hlist?, hslice?, h0, h1, h2, h3, h4, h5, h6, h10, h11, h12, h13, h14]
   rfl
 
 /-- `ind_caps` writes only its fifteen words. -/
@@ -231,15 +231,16 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
     have g0 : P[q1.toNat]? = some 3 := by
       rw [hP.get (Nat.le_refl _) (by rw [ht3, ht2]; omega), hc0 _ (by omega),
         C4 _ (by omega) (by omega), wd_set_eq _ _ _ _ _ rfl (by omega)]
-    have gcv : decCV P (q1.toNat + 1) = some cvp := by
+    have gcv : decCV (L.Arena.aread P) (q1.toNat + 1) = some cvp := by
       rw [← hq1]
-      exact C6 P (fun i hi => by
-        rw [hP.get (by omega) (by rw [ht3, ht2]; omega), hc0 i (by omega)])
-    have gcaps : decCaps P (fun _ => none) (q1.toNat + 5) = some {} := by
+      exact C6 (L.Arena.aread P) (fun i hi => by
+        rw [L.Arena.aread_apply, hP.get (by omega) (by rw [ht3, ht2]; omega), hc0 i (by omega)])
+    have gcaps : decCaps (L.Arena.aread P) (q1.toNat + 5) = some {} := by
       rw [← hq5]
-      exact capsM_dec m₂ (q1 + 5) (by rw [hs2]; omega) (by omega) P _
+      exact capsM_dec m₂ (q1 + 5) (by rw [hs2]; omega) (by omega) P
         (fun k hk => hP.get (by omega) (by rw [ht3, ht2]; omega))
-    simp [decCI, nat?, g0, gcv, gcaps]
+    simp [decCI, nat?, L.Arena.aread_apply, g0, gcv, gcaps]
+
 
 /-- **`ind_ctor` against the twin's constructor constant.** -/
 theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st)
@@ -311,16 +312,17 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
     have g0 : P[q1.toNat]? = some 4 := by
       rw [hP.get (Nat.le_refl _) (by rw [ht3, ht2]; omega), hc0 _ (by omega),
         C4 _ (by omega) (by omega), wd_set_eq _ _ _ _ _ rfl (by omega)]
-    have gcv : decCV P (q1.toNat + 1) = some cvp := by
+    have gcv : decCV (L.Arena.aread P) (q1.toNat + 1) = some cvp := by
       rw [← hq1]
-      exact C6 P (fun i hi => by
-        rw [hP.get (by omega) (by rw [ht3, ht2]; omega), hc0 i (by omega)])
+      exact C6 (L.Arena.aread P) (fun i hi => by
+        rw [L.Arena.aread_apply, hP.get (by omega) (by rw [ht3, ht2]; omega), hc0 i (by omega)])
     have g5 : P[q1.toNat + 5]? = some (wd m IFR (c.toNat + 5)) := by
       rw [hP.get (by omega) (by rw [ht3, ht2]; omega), wd_set_ne _ _ _ _ _ (by omega),
         wd_set_eq _ _ _ _ _ hq5 (by omega)]
     have g6 : P[q1.toNat + 6]? = some (wd m IFR (c.toNat + 4)) := by
       rw [hP.get (by omega) (by rw [ht3, ht2]; omega),
         wd_set_eq _ _ _ _ _ hq6 (by simp only [size_set64]; omega)]
-    simp [decCI, nat?, g0, gcv, g5, g6, p0.1, f0.1]
+    simp [decCI, nat?, L.Arena.aread_apply, g0, gcv, g5, g6, p0.1, f0.1]
+
 
 end L.Front.Ind

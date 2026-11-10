@@ -69,17 +69,19 @@ theorem trunc_congr (P P' : Array Word) (t : Nat) (hs : P'.size = P.size)
     · rw [ite_eq_right ht, ite_eq_right ht]
 
 /-- The constants of a slice of record pointers (lane `pinsenv`'s layout, `decCI`). -/
-def decCIs (a : Array Word) (dn : NIdx → Option ConLeche.Name) (off cnt : Nat) :
-    Option (List IConstantInfo) :=
-  (List.range cnt).mapM fun j => do L.Arena.decCI a dn (← L.Arena.nat? a (off + j))
+def decCIs (a : Array Word) (off cnt : Nat) : Option (List IConstantInfo) :=
+  (List.range cnt).mapM fun j => do L.Arena.decCI (L.Arena.aread a) (← L.Arena.nat? (L.Arena.aread a) (off + j))
+
+/-- `decCIs` over a reader (the record pool's two tiers, `erecP`). -/
+def decCIsR (a : Nat → Option Word) (off cnt : Nat) : Option (List IConstantInfo) :=
+  (List.range cnt).mapM fun j => do L.Arena.decCI a (← L.Arena.nat? a (off + j))
 
 /-- **`DECL` record `i` is the inductive block `block` with `nP` parameters** (`IndApply.lean`):
 kind `6`, its block a slice of the pool `P` (`DLP`) of pointers to `decCI` constant records in
-`P`, all of it below some `t` at most `P`'s top. A block's constants carry no `PropWhen` names
-(`sortZ := ifAllZero []`), so the name decoder is irrelevant (`fun _ => none`). -/
+`P`, all of it below some `t` at most `P`'s top. -/
 def IndDeclAt (D P : Array Word) (i : Nat) (block : List IConstantInfo) (nP : Nat) : Prop :=
   dw D i 0 = 6 ∧ (dw D i 4).toNat = nP ∧ ∃ t, t ≤ (P[0]?.getD 0).toNat ∧
-    decCIs (trunc P t) (fun _ => none) (dw D i 2).toNat (dw D i 3).toNat = some block
+    decCIs (trunc P t) (dw D i 2).toNat (dw D i 3).toNat = some block
 
 /-- The hint of a definition record: kind `q` (`1` abbrev, `2` opaque, else regular), height `h`. -/
 def hintW (q h : Word) : ConLeche.ReducibilityHint :=
@@ -119,6 +121,8 @@ structure DeclsF (D P : Array Word) (ds : Array IDeclaration) : Prop where
   room : 1 + 8 * ds.size ≤ D.size
   ptop : (P[0]?.getD 0).toNat + 1 ≤ P.size
   recs : ∀ i (h : i < ds.size), DeclAtF D P i ds[i]
+  /-- An inductive block's parameter count is below `2^63` (the parse's numbers are). -/
+  npb : ∀ i (h : i < ds.size) b nP, ds[i] = .indDecl b nP → nP < 2 ^ 63
 
 /-- **The parse state relation**: `NID` represents the name table, `LID` the level table, `EID`
 the expression table, `DECL`/`DLP` the declarations; the inductive lines' scratch arrays `IFR`,

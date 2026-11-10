@@ -1,6 +1,5 @@
 module
 
-public import ConRon.Bridge.Inductives.BlockParts
 public import ConRon.Bridge.Inductives.StructParts
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
@@ -14,7 +13,6 @@ import all ConRon.Bridge.Inductives.RecCheck
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.IndT.RecCheckTpd
 import ConAgua.Arena.RecCheckSpec.TmFields
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
@@ -129,7 +127,7 @@ theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     (lvlsEqC_simC p hq.closed hq.knot.lvc n hC hA us lvls hus hlv husP hlvP)
     fun r1 o1 m1 a1 h1 _ ⟨hC1, hg1, hd1, hA1, c1, _⟩ => ?_
   have hS1 := hC1.stage
-  have hP1 := hP.fr (MFr.ofCore hq.closed (by decide) h1)
+  have hP1 := hP.ofCore hq.closed (by decide) h1
   by_cases hne : r1.headD 0 ≠ 2
   · rw [tcmE.k_lvls_eq_c.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hne]
     refine RefE.ret (y := false) ?_ ⟨rfl, hC1, hg1, hP1, hA1⟩
@@ -183,7 +181,7 @@ theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   -- `target_holes`
   refine RefE.bindLift (fun _ => rfl) fun rh m5 h5 => ?_
   have hlen : pfvs.length = pfl.toNat := hpf.len
-  obtain ⟨holes, a5, run5, hS5, hg5, hdh, hbh⟩ := thW_ok dn vis fe n m4 m5 a4 fto ftl pfl rh formerTys h5 hS4
+  obtain ⟨holes, a5, run5, hS5, hg5, hdh, hbh⟩ := thW_ok vis fe n m4 m5 a4 fto ftl pfl rh formerTys h5 hS4
     (by rw [decHL_grow hg04 hftb]; exact hft) (hS.lt64 hftb) (by have := hg04.iw; omega)
     (by rw [← hd]; exact (pfl + ftl).toNat_lt)
   rw [← hlen] at run5

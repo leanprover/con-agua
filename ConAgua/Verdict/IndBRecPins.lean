@@ -69,7 +69,7 @@ theorem namesTwin_run {bs : BlockShape} {a a' : AState} {b : Bool} (h : (namesTw
 /-- What `target_rec_pins` gives besides the twin's run (from `m`): the stage relation, the growth. -/
 structure TrpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a' : AState) : Prop where
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
 
 section sims
@@ -82,7 +82,7 @@ steps; `target_rec_pins_names` is the twin's name pins from `n₀` on (`namesTwi
 one answer where the twin has two `fail`s. -/
 theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockShape}
     {blk : List IConstantInfo}
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs)
+    (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs)
     (hblk : DecB (fun m => decEBlk dn m bo.toNat bl.toNat) m blk) :
     RefE (VerdictCtx p) (trpE p N m pp bo bl) (ConRon.Arena.targetRecPins bs blk) a
       (fun v _ a' => TrpPost dn vis fe m v.2 a') := by
@@ -178,7 +178,7 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
   subst hs5
   dsimp only at hW5
   have hg14 := (hg12.trans hg3).trans hg4
-  obtain ⟨b5, a5, hrun3, hr5, hS5, hg5⟩ := tpnW_sim p L N' s4.mem _ mo ml ro rl _ _ bs hS4
+  obtain ⟨b5, a5, hrun3, hr5, hS5, hg5⟩ := tpnW_sim (dn := dn) p L N' s4.mem _ mo ml ro rl _ _ bs hS4
     (hms.grow (fun q => decMS_mono q) hg14) (hrs.grow (fun q => decRS_mono q) hg14)
     (haux.grow (fun q => decRS_mono q) hg4) r5 s5.mem hW5
   obtain ⟨n0, a2, want, hn0, hwant, rfl⟩ := namesTwin_run hrun3
@@ -215,12 +215,12 @@ include L in
 below the tops, nothing else. -/
 @[refines ConRon.Arena.targetRecPins]
 theorem targetRecPins_refines (n : Nat) (s₀ : St) (a₀ : AState) (pp bo bl : Word) (bs : BlockShape)
-    (blk : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
+    (blk : List IConstantInfo) (hS : StageR vis fe s₀.mem a₀)
     (hq : DecB (fun m => decBS m pp.toNat) s₀.mem bs)
     (hblk : DecB (fun m => decEBlk dn m bo.toNat bl.toNat) s₀.mem blk) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 3)) "target_rec_pins" [pp, bo, bl]
     ⦃fun _r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetRecPins bs blk) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetRecPins bs blk) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.targetRecPins bs blk) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (trpE_spec p L.pins (n + 3) s₀ pp bo bl) (trp_ref L (n + 3) hS hq hblk)) ?_
   rintro _r s' ⟨hl, _, a', run, hR⟩

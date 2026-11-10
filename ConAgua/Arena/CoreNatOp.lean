@@ -319,7 +319,7 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   have hD : DerR m' a := DerR.frameM natA natC m m' hf (by decide) a hS.arena.der
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by decide) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by decide)
-  refine ⟨⟨⟨hR, hder m' hD⟩, ?_, ?_, hS.env.frame (by decide) (.of_lt natC_lt (by decide)) hf, ?_, ?_, ?_,
+  refine ⟨⟨⟨hR, hder m' hD⟩, ?_, ?_, hS.env.frame (by decide) (fun x hx => not_mem_envCtl (.inl (by have := natC_lt x hx; omega))) hf, ?_, ?_, ?_,
     hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide),
     hf.size BSTK ▸ hS.bstk,
     hS.den.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp])
@@ -328,7 +328,7 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
       (fun x c us hv => (hview x _ (.inr ⟨_, _, rfl⟩) hv).imp id (by
         rintro ⟨c', h⟩; cases h; exact hS.den.emptyLs))
       (hS.den.lvlAll.congr (by simp only [EStore.ls, hl])) (hS.den.lsAll.congr hl),
-    hS.mode.poolGrew hP⟩, by simp only [spTop, h136], by rw [hspn],
+    hS.mode.poolGrew hP, hS.iwF hf⟩, by simp only [spTop, h136], by rw [hspn],
     fun i _ => by simp only [spW, hspn], BKept.of_frame hf (by decide) (by decide), hP⟩
   · rw [hc]; exact hS.core.frame (by decide) (.of_lt natC_lt (by decide)) hf
   · rw [hp]; exact hS.pins.congr (hf.arr PINS (by decide) (by decide))

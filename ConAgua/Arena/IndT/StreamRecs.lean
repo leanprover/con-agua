@@ -14,6 +14,7 @@ import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.RecGen
+public import ConRon.Bridge.Inductives.Records
 
 @[expose] public section
 
@@ -42,13 +43,13 @@ local notation "V" => ConLeche.CheckMode.verified
 set_option experimental.vcgen true in
 /-- **The model of `class_stream_recs`, both outcomes**: `check_constant_val` by its unified model,
 the recursion by the model, `sl_cons` lifted. -/
-l_model csrE_spec (p : Prog) (hV : ValProg p) (ha : p.lookup "iw_alloc" = some iwAlloc)
+l_model csrE_spec (p : Prog) (hV : CcvProg p) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
   (hf : p.lookup "class_stream_recs" = some classStreamRecsL)
   fns [hf ↦ csrE]
   specs [checkConstantVal_specE p hV n, slCons_specW p ha hc hsc n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -63,10 +64,10 @@ structure CsrPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {env : ConLeche.Env}
-variable {p : Prog} (hq : KnotStageProg p) (henv : ConLeche.EnvWF env) (hV : ValProg p)
+variable {p : Prog} (hq : KnotStageProg p) (henv : ConLeche.EnvWF env) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims p dn)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hq henv hApd hCrk in
+include hq henv hV hcr hCS hApd hCrk in
 /-- **`class_stream_recs` refines `classStreamRecs .verified` under `StageC`, both outcomes**
 (twin side con-ron's `classStreamRecs_spec`): `check_constant_val` by `ccv_ref`, the rest by
 induction. -/
@@ -119,14 +120,14 @@ theorem csr_ref (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
     rw [hqt]; exact rec3CVExt_lt hS hext
   unfold ConRon.Arena.classStreamRecs
   -- `check_constant_val`
-  have h1R := ccv_ref hq hApd hCrk (n := n) (by omega) hC.stageT
-    (by rw [hqt]; exact rec2DecCV_erecP hcv hext) hqb3 (denoteCV_lps hcvR) hA.crMemo.crOK
-  rcases h1 : checkConstantValE p n m vis (UInt64.ofNat q) with e1 | ⟨r0, m1⟩
+  have h1R := ccv_ref (allow := 0) hV hq hApd hCrk hcr hCS (n := n) (by omega) hC.stageT
+    (by rw [hqt]; exact rec2DecCV_erecP hcv hext) hqb3 hcvR hA.crMemo.crOK
+  rcases h1 : checkConstantValE p n m vis (UInt64.ofNat q) 0 with e1 | ⟨r0, m1⟩
   · rw [csrE.k_check_constant_val.none]; rw [h1] at h1R; exact RefE.bind_left h1R
   rw [csrE.k_check_constant_val.arm1]
   rw [h1] at h1R
   obtain ⟨u, a1, hrun1, hP1⟩ := h1R
-  obtain ⟨c1, -⟩ := ConRon.Bridge.checkConstantVal_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨c1, -⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core
     hC.check henv hcvR hrun1
   have hC1 : StageC dn vis fe env m1 a1 := StageC.of_T hP1.stage c1.ok
   have hA1 := hP1.abs hA
@@ -177,7 +178,7 @@ theorem csr_ref (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
     · exact hextm3
     · exact CVExt_grow hg3 (hext2 q' hq'')
 
-include hq henv hV hApd hCrk in
+include hq henv hV hcr hCS hApd hCrk in
 /-- **`class_stream_recs` refines `classStreamRecs .verified`** under `StageC` (the program's own
 `check_constant_val`; `csr_ref`'s ok half): the result slice holds the recursors' constant
 pointers, in order. -/
@@ -195,7 +196,7 @@ theorem classStreamRecs_refinesC (hc : p.lookup "iw_copy" = some iwCopy)
       IWGrow s₀.mem s'.mem ∧ CsRes s'.mem r (AM.res (ConRon.Arena.classStreamRecs V fe recs) a₀) ∧
       AbsOK s'.mem; ⊤⦄ :=
   triple_post (RefE.triple (csrE_spec p hV ha hc hsc hp n s₀ vis rcso rcsl)
-      (csr_ref hq henv hApd hCrk fe n hn _ a₀ vis rcso rcsl recs recsP hC hA hOK hrecsP))
+      (csr_ref hq henv hV hcr hCS hApd hCrk fe n hn _ a₀ vis rcso rcsl recs recsP hC hA hOK hrecsP))
     fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
       obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
       exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.res, hR.abs⟩
@@ -204,8 +205,8 @@ end sims
 
 /-- **`class_stream_recs`' error claim** (the hypotheses of `classStreamRecs_refinesC`). -/
 theorem classStreamRecs_claim {p : Prog} {dn : NIdx → Option ConLeche.Name} {env : ConLeche.Env}
-    (hq : KnotStageProg p) (henv : ConLeche.EnvWF env) (hV : ValProg p) (hApd : ApdF p)
-    (hCrk : CrKeep p) (hG : VerdictCtxU p) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hq : KnotStageProg p) (henv : ConLeche.EnvWF env) (hV : CcvProg p) (hcr : CrfF p)
+    (hCS : CcvSims p dn) (hApd : ApdF p) (hCrk : CrKeep p) (hG : VerdictCtxU p) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
     (hp : p.lookup "class_stream_recs" = some classStreamRecsL) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (fe : IFEnv) (vis rcso rcsl : Word) (recs : List RecShape)
@@ -214,7 +215,7 @@ theorem classStreamRecs_claim {p : Prog} {dn : NIdx → Option ConLeche.Name} {e
     (hrecsP : recs.mapM (dRec a₀.store) = some recsP) :
     CoreSpecE p n "class_stream_recs" [vis, rcso, rcsl] (ConRon.Arena.classStreamRecs V fe recs) s₀ a₀ :=
   RefE.coreSpecE (csrE_spec p hV ha hc hsc hp n s₀ vis rcso rcsl) hG.nv hG
-    (csr_ref hq henv hApd hCrk fe n hn s₀.mem a₀ vis rcso rcsl recs recsP hC hA hOK hrecsP)
+    (csr_ref hq henv hV hcr hCS hApd hCrk fe n hn s₀.mem a₀ vis rcso rcsl recs recsP hC hA hOK hrecsP)
 
 end L.Ind
 

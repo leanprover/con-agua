@@ -32,7 +32,7 @@ theorem bsrW_afr : ∀ (n : Nat) (m m' : Mem) (off l : Word) (r : List Word),
     bsrW n m off l = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, h => by simp [bsrW.eq_1] at h
   | n + 1, m, m', off, l, r, h => by
-    simp only [bsrW.eq_2, bsrW.k_block_split_recs.eq_def, bsrW.k_rec5.eq_def,
+    simp only [bsrW.eq_2, bsrW.k_block_split_recs.eq_def, bsrW.k_rec6.eq_def,
       bsrW.k_sl_cons.eq_def] at h
     afr_auto h [bsrW_afr n _ _ _ _ _, posRecW_afr, consW_afr]
 

@@ -182,11 +182,11 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 @[refines ConRon.Arena.openPisAtFvarsFGo]
 theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) (acc : Array EIdx)
     (r : List Word), callW opfP k "opf_go" [n, e, i, co, cn] m = some (r, m') →
-    StageR dn vis fe m a → AbsOK m → e.toNat < 2 ^ 32 → SpineR m co cn acc →
+    StageR vis fe m a → AbsOK m → e.toNat < 2 ^ 32 → SpineR m co cn acc →
     rdW (m.arr64 CTL) 136 = co + cn →
     i.toNat + ((m.arr64 SPN).size - (co.toNat + cn.toNat)) < 2 ^ 64 →
     ∃ x a', (openPisAtFvarsFGo acc n.toNat (decE e) i.toNat).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
       OGo (co + cn) n m m' r x := by
   intro k
   induction k with
@@ -254,11 +254,11 @@ top `t`. -/
 @[refines ConRon.Arena.openPisAtFvars]
 theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : List Word),
     callW opfP k "opa_go" [n, e, i] m = some (r, m') →
-    StageR dn vis fe m a → AbsOK m → e.toNat < 2 ^ 32 →
+    StageR vis fe m a → AbsOK m → e.toNat < 2 ^ 32 →
     (rdW (m.arr64 CTL) 136).toNat ≤ (m.arr64 SPN).size →
     i.toNat + ((m.arr64 SPN).size - (rdW (m.arr64 CTL) 136).toNat) < 2 ^ 64 →
     ∃ x a', (openPisAtFvars n.toNat (decE e) i.toNat).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
       OGo (rdW (m.arr64 CTL) 136) n m m' r x := by
   intro k
   induction k with
@@ -327,9 +327,9 @@ theorem opfF_run (n : Nat) (e : EIdx) (i : Nat) (a a1 : AState) (x1 : Option (Li
 
 /-- **The tail**: the stack slice `(co, n)` copied to a fresh pool slice, the top put back. -/
 theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : List EIdx}
-    {r : List Word} (hS : StageR dn vis fe m2 a2) (hAb : AbsOK m2) (hsl : SpineR m2 co n fvs.toArray)
+    {r : List Word} (hS : StageR vis fe m2 a2) (hAb : AbsOK m2) (hsl : SpineR m2 co n fvs.toArray)
     (hb : b.toNat < 2 ^ 32) (h : opfTail k n co b (allocW m2 n) = some (r, m')) :
-    KeepPost dn vis fe decOLE m2 m' a2 r (some (fvs, decE b)) ∧ AbsOK m' := by
+    KeepPost vis fe decOLE m2 m' a2 r (some (fvs, decE b)) ∧ AbsOK m' := by
   obtain ⟨⟨q, m3⟩, ha, h⟩ := of_K h rfl; rw [opfTail_some] at h
   obtain ⟨r3, m4, c3, h⟩ := ntBW_some h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -391,9 +391,9 @@ memos (replaces `IndStubs.openPisAtFvarsF_spec`; a first fvar index `≥ 2^63` a
 D33, so the indices do not wrap); the memos are well formed after. -/
 @[refines ConRon.Arena.openPisAtFvarsF]
 theorem opfF_ok (k e i : Word) (he : H e) :
-    RelW opfF [k, e, i] (fun m a => StageR dn vis fe m a ∧ AbsOK m)
+    RelW opfF [k, e, i] (fun m a => StageR vis fe m a ∧ AbsOK m)
       (openPisAtFvarsF k.toNat (decI e) i.toNat)
-      (fun m m' a r x => KeepPost dn vis fe decOLE m m' a r x ∧ AbsOK m') := by
+      (fun m m' a r x => KeepPost vis fe decOLE m m' a r x ∧ AbsOK m') := by
   intro m m' a r h ⟨hS, hAb⟩
   obtain ⟨N, hc⟩ := callF_run h
   rcases N with _ | K
@@ -420,7 +420,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
       simp [Nat.toUInt64]; omega
     omega
   obtain ⟨r1, m1, h1, c'⟩ := ntBW_some c'
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hAb1, hsz1, hO1⟩ := opfGo_ok dn vis fe K m m1 a k e i co 0 #[] r1
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hAb1, hsz1, hO1⟩ := opfGo_ok vis fe K m m1 a k e i co 0 #[] r1
     h1 hS hAb he (by simpa using SpineR.empty' (m := m) hcob) (by rw [hco]; simp) (by simp; omega)
   have hrun := opfF_run k.toNat (decE e) i.toNat a a1 x1 hrun1
   simp only [opfK2] at c'
@@ -430,7 +430,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
     obtain ⟨fvs, b⟩ := p
     obtain ⟨h0, hb, hdb, -, hsl, -⟩ := hO1
     rw [ite_eq_right (by rw [h0]; decide)] at c'
-    obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok dn vis fe hS1 hAb1 hsl hb c'
+    obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok vis fe hS1 hAb1 hsl hb c'
     rw [hdb] at hdec
     exact ⟨_, _, hrun, ⟨hS', hg1.trans hg', hdec⟩, hAb'⟩
   | none =>
@@ -445,7 +445,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz1]
     obtain ⟨r2, m2, h2, c'⟩ := ntBW_some c'
     simp only [opfK3] at c'
-    obtain ⟨x2, a2, hrun2, hS2, hg2, hAb2, -, hO2⟩ := opaGo_ok dn vis fe K _ m2 a1 k e i r2 h2
+    obtain ⟨x2, a2, hrun2, hS2, hg2, hAb2, -, hO2⟩ := opaGo_ok vis fe K _ m2 a1 k e i r2 h2
       hS1' hAb1' he (by rw [htop1, hsz1']; exact hcob) (by rw [htop1, hsz1']; omega)
     rw [htop1] at hO2
     simp only at hrun
@@ -462,7 +462,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
       obtain ⟨fvs, b⟩ := p
       obtain ⟨h0, hb, hdb, -, hsl, -⟩ := hO2
       rw [ite_eq_right (by rw [h0]; decide)] at c'
-      obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok dn vis fe hS2 hAb2 hsl hb c'
+      obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok vis fe hS2 hAb2 hsl hb c'
       rw [hdb] at hdec
       exact ⟨_, _, hrun, ⟨hS', hg1.trans (hg1'.trans (hg2.trans hg')), hdec⟩, hAb'⟩
 

@@ -109,18 +109,18 @@ theorem trunc_get_zero {P : Array Word} {t : Nat} {v : Word} (h : (trunc P t)[0]
     simp only [Array.getElem?_extract] at h
     split at h <;> simp_all
 
-theorem decCIs_succ (a : Array Word) (dn : NIdx → Option ConLeche.Name) (o k : Nat) :
-    decCIs a dn o (k + 1) = (do
-      let x ← (do let v ← nat? a o; decCI a dn v)
-      let xs ← decCIs a dn (o + 1) k
+theorem decCIs_succ (a : Array Word) (o k : Nat) :
+    decCIs a o (k + 1) = (do
+      let x ← (do let v ← nat? (aread a) o; decCI (aread a) v)
+      let xs ← decCIs a (o + 1) k
       pure (x :: xs)) := by
   simp only [decCIs, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
   congr 1; funext x; congr 1
   simp only [Function.comp_def]
   congr 1; funext j; congr 2; omega
 
-theorem decCIs_zero (a : Array Word) (dn : NIdx → Option ConLeche.Name) (o : Nat) :
-    decCIs a dn o 0 = some [] := rfl
+theorem decCIs_zero (a : Array Word) (o : Nat) :
+    decCIs a o 0 = some [] := rfl
 
 theorem lo32_of_lt {w : Word} (h : w.toNat < 2 ^ 32) : lo32 w = w := by
   apply UInt64.toNat_inj.mp
@@ -134,12 +134,12 @@ def andHs (m : Mem) : List NIdx :=
 
 /-- **`and_block_named` is `blockAndNamed`** on the block the front's record decodes to (in the
 pool cut at `t`), for a slice that does not start at word `0`. -/
-theorem abnW_eq {m : Mem} {t : Nat} {dn' : NIdx → Option ConLeche.Name}
+theorem abnW_eq {m : Mem} {t : Nat}
     (hP : (m.arr64 DLP).size < 2 ^ 63)
     (h12 : (rdW (m.arr64 PINS) 12).toNat < 2 ^ 32) (h49 : (rdW (m.arr64 PINS) 49).toNat < 2 ^ 32)
     (h50 : (rdW (m.arr64 PINS) 50).toNat < 2 ^ 32) :
     ∀ (k : Nat) (bo : Word) (block : List IConstantInfo),
-      decCIs (trunc (m.arr64 DLP) t) dn' bo.toNat k = some block → (1 ≤ bo.toNat ∨ k = 0) →
+      decCIs (trunc (m.arr64 DLP) t) bo.toNat k = some block → (1 ≤ bo.toNat ∨ k = 0) →
       abnW m bo k = if blockAndNamed (andHs m) block then 1 else 0 := by
   intro k
   induction k with

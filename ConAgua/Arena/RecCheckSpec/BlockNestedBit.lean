@@ -73,8 +73,8 @@ theorem blockNestedBitGo_spec (p : Prog) (hp : p.lookup "block_nested_bit_go" = 
 theorem decRS_tgt {m : Mem} {p : Nat} {R : RecShape} (h : decRS m p = some R) :
     iwN m (p + 3) = some R.tgt := by
   simp only [decRS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨q, hq, cv, hcv, rP, hrP, mI, hmI, tg, htg, rh, hrh, rfl⟩ := h
-  exact htg
+  obtain ⟨_, _, _, _, _, _, _, _, t, ht, _, _, _, _, _, _, _, _, rfl⟩ := h
+  exact ht
 
 theorem nbGoW_ok (n : Nat) : ∀ (m : Mem) (o l k r : Word) (recs : List RecShape),
     (m.arr64 IW).size < 2 ^ 64 → decPL m (decRS m) o.toNat l.toNat = some recs →

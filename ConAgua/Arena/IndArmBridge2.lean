@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.DeclRec
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 public import ConAgua.Front.StateDR
 
@@ -21,22 +20,11 @@ namespace L.Ind
 open L.Arena
 
 /-- The cut memory's record pool is the pool below its top. -/
-theorem erA_truncM (m : Mem) : erA (truncM m) = erecP m := by
-  apply Array.ext_getElem?
-  intro i
-  by_cases hi : i < erTop m
-  · rw [truncM_er_eq hi, erecP_getE hi]; rfl
-  · rw [truncM_er_get?, ite_eq_right hi]
-    symm
-    simp only [erecP, Array.getElem?_extract]
-    split
-    · rename_i h
-      exact absurd (show i < erTop m by simp only [erTop, erecTop] at *; omega) hi
-    · rfl
+theorem erA_truncM (m : Mem) : erA (truncM m) = erecP m := truncM_erA m
 
 /-- **The front's block decoding is the stage's** (`IndArmSpec`'s premise to `cidW_ok`'s). -/
 theorem decB_decEBlk_of_decCIs {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat}
-    {blk : List IConstantInfo} (h : L.Front.decCIs (erecP m) dn o l = some blk) :
+    {blk : List IConstantInfo} (h : L.Front.decCIsR (erecP m) o l = some blk) :
     DecB (fun m => decEBlk dn m o l) m blk := by
   show decEBlk dn (truncM m) o l = some blk
   simp only [decEBlk, erA_truncM]

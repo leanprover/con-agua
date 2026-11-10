@@ -98,10 +98,10 @@ theorem abstractPrefix_spec (p : Prog) (hp : p.lookup "abstract_prefix" = some a
 
 theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (k c e : Word) (r : List Word),
-    absPrefW n m k c e = some (r, m') → StageR dn vis fe m a → H e → c.toNat + k.toNat < 2 ^ 64 →
+    absPrefW n m k c e = some (r, m') → StageR vis fe m a → H e → c.toNat + k.toNat < 2 ^ 64 →
     AbsOK m →
     ∃ x a', (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x ∧
       AbsOK m' := by
   induction n with
   | zero => intro m m' a k c e r h; simp [absPrefW] at h
@@ -167,11 +167,11 @@ theorem rcSl_step {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)}
 
 theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (rP dso dsl : Word) (r : List Word) (ds : List EIdx),
-    aplW n m rP dso dsl = some (r, m') → StageR dn vis fe m a →
+    aplW n m rP dso dsl = some (r, m') → StageR vis fe m a →
     decHL m dso.toNat dsl.toNat = some ds → dso.toNat + dsl.toNat < 2 ^ 64 →
     dso.toNat + dsl.toNat ≤ iwTop m → rP.toNat < 2 ^ 64 → AbsOK m →
     ∃ xs a', (ConRon.Arena.abstractPrefixList rP.toNat ds).run a = .ok (xs, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ AbsOK m' := by
   induction n with
@@ -278,13 +278,13 @@ theorem targetHoles_spec (p : Prog) (hff : p.lookup "fvar_find" = some fvarFind)
         internFVar_spec p hff hfp hif n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
 
-theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
+theorem thW_ok (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (tyo tyl base : Word) (r : List Word) (tys : List EIdx),
-    thW n m tyo tyl base = some (r, m') → StageR dn vis fe m a →
+    thW n m tyo tyl base = some (r, m') → StageR vis fe m a →
     decHL m tyo.toNat tyl.toNat = some tys → tyo.toNat + tyl.toNat < 2 ^ 64 →
     tyo.toNat + tyl.toNat ≤ iwTop m → base.toNat + tyl.toNat < 2 ^ 64 →
     ∃ xs a', (ConRon.Arena.targetHoles tys base.toNat).run a = .ok (xs, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   induction n with
@@ -419,37 +419,15 @@ def PdRes (m' : Mem) (r : List Word) : Option (List EIdx) → Prop
 
 /-! ## `er_to_iw` and `cv_lps` under the stage relation -/
 
-theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {k : IdxKind}
-    (h : erToIwW n m o l = some (r, m')) (hS : StageR dn vis fe m a)
-    (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
-      (decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat : Option (List (Idx k))) =
-        hslice? (erA m) o.toNat l.toNat ∧
+theorem erToIwW_stage {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {k : IdxKind} {xs : List (Idx k)}
+    (h : erToIwW n m o l = some (r, m')) (hS : StageR vis fe m a)
+    (hxs : hslice? (erA m) o.toNat l.toNat = some xs) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ m'.arr64 EREC = m.arr64 EREC := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  rcases hsrc with hl0 | hsrc
-  · have hl : l = 0 := UInt64.toNat_inj.mp (by simpa using hl0)
-    subst hl
-    simp only [erToIwW] at h
-    cases hal : allocW m 0 with
-    | none => simp [hal] at h
-    | some qm =>
-    obtain ⟨q, m1⟩ := qm
-    obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hS
-    obtain ⟨-, hm1, -⟩ := allocW_facts hal hsz
-    simp only [hal] at h
-    obtain _ | n := n
-    · simp [erCopyW] at h
-    obtain _ | n := n
-    · simp [erCopyW] at h
-    simp only [Nat.add_sub_cancel, erCopyW_nil n _ _ _ _ rfl, Option.some.injEq,
-      Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    refine ⟨hS1, hg1, by simp [decHL, hslice?], ?_, ?_⟩
-    · simp only [List.headD_cons, List.tail_cons]; rw [hq, ht1]
-    · rw [hm1]; simp only [allocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  obtain ⟨hr, hd, hg, hf, hE, ht⟩ := erToIwW_dec (k := k) h hsz hc hEs hsrc
+  have hsz := hS.iw.iwSize
+  obtain ⟨hr, hd, hg, hf, hE, ht⟩ := erToIwW_dec h hsz hS.iw.ctl hxs
   have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
     rw [← ht, hf.size IW]
     simp only [erToIwW] at h
@@ -466,17 +444,12 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
         obtain ⟨rfl, -⟩ := h
         subst hq
         simpa using hr2
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   subst hr
-  refine ⟨⟨CheckR.frame_iw hf hS.check, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht, hE⟩
-  · simp only [erTop, h129, hE]; exact hE1
-  · rw [hf.size IW]; exact hsz
-  · rw [hE]; exact hEs
-  · rw [hf.size CTL]; exact hc
+  exact ⟨⟨CheckR.frame_iw hf hS.check, hS.iw.of_iw hf hroom⟩, hg, by simpa using hd, by simpa using ht, hE⟩
 
 /-- The model of `cv_lps(q)`. -/
 def cvLpsW (n : Nat) (m : Mem) (q : Word) : Option (List Word × Mem) :=
-  erToIwW (n - 1) m (rdW (m.arr64 EREC) (q + 1)) (rdW (m.arr64 EREC) (q + 2))
+  erToIwW (n - 1) m (erRd m (q + 1)) (erRd m (q + 2))
 
 theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
@@ -490,15 +463,20 @@ theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         erToIw_specW2 p ha hc he n] <;>
-      finish (gen := 20) [cvLpsW, rdW_eq]
+      finish (gen := 20) [cvLpsW, rdW_eq, erRd]
 
-theorem cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+/-- A number decoded off the record pool is the word `EREC⦃·⦄` reads there. -/
+theorem erRd_nat {m : Mem} {q : Word} {i v : Nat} (h : nat? (erA m) i = some v) (hi : q.toNat = i) :
+    erRd m q = UInt64.ofNat v ∧ v < 2 ^ 64 := by
+  simp only [nat?, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  exact ⟨by rw [erRd_of_erA (by rw [hi]; exact hw), UInt64.ofNat_toNat], w.toNat_lt⟩
+
+theorem cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
-    (h : cvLpsW n m q = some (r, m')) (hS : StageR dn vis fe m a)
-    (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64)
-    (hlpb : (rdW (m.arr64 EREC) (q + 2)).toNat = 0 ∨
-      (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
+    (h : cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
+    (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   obtain ⟨-, hl, -⟩ := decCV_some (a := erA m) (q := q.toNat) hcv
@@ -506,26 +484,12 @@ theorem cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   obtain ⟨o', ho, l', hl', hs⟩ := hl
   have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have hr1 : rdW (m.arr64 EREC) (q + 1) = UInt64.ofNat o' := by
-    simp only [nat?, erA, Option.map_eq_some_iff] at ho
-    obtain ⟨w, hw, rfl⟩ := ho
-    simp [rdW, hq1, hw]
-  have hr2 : rdW (m.arr64 EREC) (q + 2) = UInt64.ofNat l' := by
-    simp only [nat?, erA, Option.map_eq_some_iff] at hl'
-    obtain ⟨w, hw, rfl⟩ := hl'
-    simp [rdW, hq2, hw]
-  have hob : o' < 2 ^ 64 := by
-    simp only [nat?, erA, Option.map_eq_some_iff] at ho
-    obtain ⟨w, hw, rfl⟩ := ho; exact w.toNat_lt
-  have hlb : l' < 2 ^ 64 := by
-    simp only [nat?, erA, Option.map_eq_some_iff] at hl'
-    obtain ⟨w, hw, rfl⟩ := hl'; exact w.toNat_lt
+  obtain ⟨hr1, hob⟩ := erRd_nat ho hq1
+  obtain ⟨hr2, hlb⟩ := erRd_nat hl' (by rw [hq2])
   simp only [cvLpsW, hr1, hr2] at h
-  have hsrc := hlpb
-  rw [hr1, hr2] at hsrc
-  obtain ⟨hS', hg, hdec, ht, hE⟩ := erToIwW_stage (k := IdxKind.name) h hS hsrc
-  refine ⟨hS', hg, hE, ?_, ht⟩
-  · rw [hdec]; rw [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; exact hs
+  obtain ⟨hS', hg, hdec, ht, hE⟩ := erToIwW_stage h hS
+    (by rw [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; exact hs)
+  exact ⟨hS', hg, hE, hdec, ht⟩
 
 /-! ## `target_ctor_at` -/
 
@@ -538,11 +502,11 @@ def tcK2 : Option (List Word × Mem) → Option (List Word × Mem)
 def tcK1 (cR : CallM) (n : Nat) (us c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
-    tcK2 (cR n "inst_lp_fast" [CWF, r.headD 0, r.tail.headD 0, us, rdW (m1.arr64 EREC) (c + 3)] m1)
+    tcK2 (cR n "inst_lp_fast" [CWF, r.headD 0, r.tail.headD 0, us, erRd m1 (c + 3)] m1)
 
 /-- **The model of `target_ctor_at`** (its `inst_lp_fast` read through `cR`). -/
 def tcW (cR : CallM) (n : Nat) (m : Mem) (M c : Word) : Option (List Word × Mem) :=
-  if rdW (m.arr64 IW) (M + 8) ≠ 0 then some ([rdW (m.arr64 EREC) (c + 3)], m)
+  if rdW (m.arr64 IW) (M + 8) ≠ 0 then some ([erRd m (c + 3)], m)
   else tcK1 cR n (rdW (m.arr64 IW) (M + 1)) c (cvLpsW n m c)
 
 theorem decTM_ds {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :

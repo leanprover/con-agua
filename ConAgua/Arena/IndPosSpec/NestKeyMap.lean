@@ -74,10 +74,10 @@ theorem decCtx_some {m : Mem} {p : Nat} {ctx : NestCtx} (h : decCtx m p = some c
     decAt m (decHL m) p = some ctx.names ∧ decAt m (decHL m) (p + 2) = some ctx.lps ∧
     iwN m (p + 4) = some ctx.nP ∧ decAt m (decNL m) (p + 5) = some ctx.nIdxs ∧
     decAt m (decHL m) (p + 7) = some ctx.params ∧ iwH m (p + 9) = some ctx.sort ∧
-    iwH m (p + 10) = some ctx.lvls := by
+    iwH m (p + 10) = some ctx.lvls ∧ decAt m (decPL m (decCVp m)) (p + 11) = some ctx.formers := by
   simp only [decCtx, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, g, hg, rfl⟩ := h
-  exact ⟨ha, hb, hc, hd, he, hf, hg⟩
+  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, x, hx, g, hg, rfl⟩ := h
+  exact ⟨ha, hb, hc, hd, he, hf, hg, hx⟩
 
 /-- **`nest_ctx_hi_at` is `NestCtx.hiAt`.** -/
 @[refines ConRon.Arena.NestCtx.hiAt]
@@ -234,12 +234,12 @@ end specs
 /-- A decoded `List NestFieldKind` slice, head first. -/
 theorem decKL_succ (m : Mem) (o n : Nat) :
     decKL m o (n + 1) = (do
-      let w ← (iwA m)[o]?
+      let w ← iwA m o
       let x ← decNFK w
       let xs ← decKL m (o + 1) n
       pure (x :: xs)) := by
   simp only [decKL, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
-  rcases hw : (iwA m)[o]? with _ | w; · simp only [Option.bind_eq_bind, Option.bind_none]
+  rcases hw : iwA m o with _ | w; · simp only [Option.bind_eq_bind, Option.bind_none]
   simp only [Option.bind_eq_bind, Option.bind_some]
   rcases hx : decNFK w with _ | x; · simp only [Option.bind_none]
   simp only [Option.bind_some]
@@ -269,7 +269,7 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
         omega
       rw [hcnt1] at hdec
       rw [decKL_succ] at hdec
-      rcases hw : (iwA m)[off.toNat]? with _ | w; · simp [hw, Option.bind_eq_bind, Option.bind_none] at hdec
+      rcases hw : iwA m off.toNat with _ | w; · simp [hw, Option.bind_eq_bind, Option.bind_none] at hdec
       simp only [hw, Option.bind_eq_bind, Option.bind_some] at hdec
       rcases hnfk : decNFK w with _ | fk; · simp [hnfk, Option.bind_none] at hdec
       simp only [hnfk, Option.bind_some] at hdec
@@ -278,7 +278,7 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
       | some ks' =>
         simp only [hrest, Option.bind_some, Option.pure_def,
           Option.some.injEq] at hdec
-        have hw' : (m.arr64 IW)[off.toNat]? = some w := hw
+        have hw' : (m.arr64 IW)[off.toNat]? = some w := by simpa [iwA, aread_apply] using hw
         have hwrd : rdW (m.arr64 IW) off = w := by
           simp only [rdW, hw', Option.getD_some]
         have h1 : (1 : Word).toNat = 1 := by decide
@@ -287,7 +287,6 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
         have hoffub : off.toNat < 2 ^ 64 := by have := off.toNat_lt; omega
         have hbound : off.toNat + 1 < 2 ^ 64 := by
           have := (Array.getElem?_eq_some_iff.mp hw').1
-          have h2 : (m.arr64 IW).size = (iwA m).size := rfl
           omega
         by_cases hkf : kindFlatW (rdW (m.arr64 IW) off) = 0
         · rw [kindsFlatInnerW_miss n m off cnt hc hkf] at h
@@ -320,7 +319,7 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
 /-! ## Reading decoded words without side conditions on the index -/
 
 theorem iwN_idx {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, -⟩ := h
   exact (Array.getElem?_eq_some_iff.mp hw).1
 

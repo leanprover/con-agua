@@ -44,12 +44,12 @@ include ha hc hsc hg hpf hpp hip hp
 @[refines ConRon.Arena.paramLevels]
 theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (hil : IlF p) (k : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l : Word)
-    (lps : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (lps : List NIdx) (hS : StageR vis fe s₀.mem a₀)
     (hd : decHL s₀.mem o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat < 2 ^ 64)
     (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "param_levels" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (paramLevels lps) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (paramLevels lps) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (paramLevels lps) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       H (r.headD 0) ∧ decI (r.headD 0) = AM.res (paramLevels lps) a₀; ⊤⦄ := by
   refine triple_post (plW_spec p ha hc hsc hg hpf hpp hip hp hq hil k s₀ o l) ?_
   rintro r s' ⟨hl, hm⟩
@@ -64,7 +64,7 @@ theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
-    ilF_ok dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
+    ilF_ok vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
   have hrun : (paramLevels lps).run a₀ = .ok (x, a2) := by
     simp only [paramLevels, StateT.run_bind, hrun1]
     exact hrun2
@@ -85,22 +85,21 @@ namespace ConRon.Arena
 open ConLeche
 
 /-- `targetMajorOf`'s member branch, verbatim. -/
-def tmoMemT (p : BlockShape) (ctorsAs : List (List (IConstantVal × Nat))) (pfvs fvs args : List EIdx)
-    (I : NIdx) (us : LsIdx) (t : Nat) : AM TargetMajor := do
+def tmoMemT (p : BlockShape) (pfvs fvs args : List EIdx) (I : NIdx) (us : LsIdx) (t : Nat) :
+    AM TargetMajor := do
   -- a MEMBER: at the block's levels and parameters
   let ms ← unwrapOr p.members[t]? (.internal "target rec: member")
-  let ctorsA ← unwrapOr ctorsAs[t]? (.internal "target rec: member constructors")
   let blvls ← paramLevels p.lps
   let pf := fvs.take p.nP
   if us == blvls && args.take p.nP == pf then
     pure { ind := I, lvls := us, ds := pf, nPc := p.nP, nIdx := ms.nIdx,
-           ctors := ctorsA, member := some t, nfs := [], pfvs := pfvs }
+           ctors := ms.ctors, member := some t, nfs := [], pfvs := pfvs }
   else
     fail (.invalid "target rec: the recursor's major premise is not the member at its \
       parameters and its index binders")
 
 /-- `targetMajorOf`'s outside branch, verbatim. -/
-def tmoOutT (fe : IFEnv) (p : BlockShape) (pfvs args : List EIdx) (I : NIdx) (us : LsIdx) :
+def tmoOutT (mode : CheckMode) (fe : IFEnv) (p : BlockShape) (pfvs args : List EIdx) (I : NIdx) (us : LsIdx) :
     AM TargetMajor := do
   -- an OUTSIDE inductive (a nested block's container)
   let q ← pinQuot
@@ -128,7 +127,7 @@ def tmoOutT (fe : IFEnv) (p : BlockShape) (pfvs args : List EIdx) (I : NIdx) (us
               at an instantiation that is no auxiliary type of the block (official \
               generates no such auxiliary recursor: `elim_nested_inductive`, \
               `is_nested`)")
-          let (nIdx, sI) ← targetOutsideInst fe I us ds
+          let (nIdx, sI) ← targetOutsideInst mode fe I us ds
           unless ← liftFueled "level comparison" (← lvlEq? sI p.resSort) do
             fail (.invalid "target rec: the recursor's major lives in another \
               universe than the block (Q1)")
@@ -136,18 +135,18 @@ def tmoOutT (fe : IFEnv) (p : BlockShape) (pfvs args : List EIdx) (I : NIdx) (us
                  ctors := ctors, member := none, nfs := [], pfvs := pfvs }
 
 /-- `targetMajorOf`'s outside branch after the parameter checks, verbatim. -/
-def tmoTailT (fe : IFEnv) (p : BlockShape) (pfvs ds : List EIdx) (nPc : Nat)
+def tmoTailT (mode : CheckMode) (fe : IFEnv) (p : BlockShape) (pfvs ds : List EIdx) (nPc : Nat)
     (ctors : List (IConstantVal × Nat)) (I : NIdx) (us : LsIdx) : AM TargetMajor := do
-  let (nIdx, sI) ← targetOutsideInst fe I us ds
+  let (nIdx, sI) ← targetOutsideInst mode fe I us ds
   unless ← liftFueled "level comparison" (← lvlEq? sI p.resSort) do
     fail (.invalid "target rec: the recursor's major lives in another \
       universe than the block (Q1)")
   pure { ind := I, lvls := us, ds := ds, nPc := nPc, nIdx := nIdx,
          ctors := ctors, member := none, nfs := [], pfvs := pfvs }
 
-theorem targetMajorOf_eq (fe : IFEnv) (p : BlockShape) (ctorsAs : List (List (IConstantVal × Nat)))
-    (pfvs fvs : List EIdx) (mty : EIdx) :
-    targetMajorOf fe p ctorsAs pfvs fvs mty = (do
+theorem targetMajorOf_eq (mode : CheckMode) (fe : IFEnv) (p : BlockShape) (pfvs fvs : List EIdx)
+    (mty : EIdx) :
+    targetMajorOf mode fe p pfvs fvs mty = (do
       let args ← getAppArgs coreWalkFuel mty
       let hd ← getAppFn coreWalkFuel mty
       if hd.tag == ETag.const then
@@ -155,8 +154,8 @@ theorem targetMajorOf_eq (fe : IFEnv) (p : BlockShape) (ctorsAs : List (List (IC
         | none => failDanglingE
         | some (I, us) =>
           match p.memberNames.findIdx? (· == I) with
-          | some t => tmoMemT p ctorsAs pfvs fvs args I us t
-          | none => tmoOutT fe p pfvs args I us
+          | some t => tmoMemT p pfvs fvs args I us t
+          | none => tmoOutT mode fe p pfvs args I us
       else
         fail (.invalid "target rec: the recursor's major premise is not an inductive's \
           application")) := by rfl

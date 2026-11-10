@@ -516,6 +516,12 @@ def main():
                      "ConAgua.Checker.Prelude", "ConAgua.E2E.Dump")
     e2e.log("dumping")
     mods = [m for m in e2e.all_modules() if not SKIP.match(m) and OUT_MOD not in e2e.closure(m)]
+    if os.environ.get("CHECKER_PROG_BUILT_ONLY"):
+        def built(m):
+            o = os.path.join(ROOT, ".lake", "build", "lib", "lean", *m.split(".")) + ".olean"
+            return os.path.exists(o) and all(built_c.setdefault(d, os.path.exists(os.path.join(ROOT, ".lake", "build", "lib", "lean", *d.split(".")) + ".olean")) for d in e2e.closure(m) if d.startswith("ConAgua"))
+        built_c = {}
+        mods = [m for m in mods if built(m)]
     dumps, clashes = e2e.dump_sets(mods)
     if clashes:
         for bad, other, decl in clashes:

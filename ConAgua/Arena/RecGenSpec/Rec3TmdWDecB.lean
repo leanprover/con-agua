@@ -4,7 +4,6 @@ public import ConAgua.Arena.RecClassSpec.ClassGenRule
 public import ConAgua.Arena.RecGenSpec.CrsProg
 public import ConAgua.Arena.RecGenSpec.DecRR
 import ConAgua.Arena.RecGenSpec.Rec3CVX
-import ConAgua.Arena.RecGenSpec.RgW
 public import ConAgua.Arena.IndSumSpec.Row
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.LdRd
@@ -71,11 +70,13 @@ theorem rec3CG_parts {m : Mem} {g : Nat} {G : ClassGen} (h : DecB (fun m => decC
     (rec2IwN_trunc h10).2, hc⟩
 
 /-- `CVExt` bounds the record's address. -/
-theorem rec3CVExt_lt {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    {q : Nat} (hS : StageR dn vis fe m a) (h : CVExt m q) : q + 3 < 2 ^ 64 := by
-  obtain ⟨-, hE1, -, hEs, -⟩ := hS.iw
-  have := h.1
-  omega
+theorem rec3CVExt_lt {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+    {q : Nat} (_hS : StageR vis fe m a) (h : CVExt m q) : q + 3 < 2 ^ 64 := by
+  obtain ⟨cv, hcv⟩ := Option.isSome_iff_exists.mp h
+  have h3 : erecP m (q + 3) ≠ none := by
+    intro e; simp [decCVp, decCV, erA, hd?, e] at hcv
+  obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp h3
+  exact erecP_lt64 hv
 
 /-! ## `class_rules_ok_one` -/
 
@@ -124,13 +125,13 @@ theorem rec3DecTM_trunc {m : Mem} {q : Nat} (hq : q + 13 ≤ iwTop m) (h3 : iwN 
   simp [decHL, hslice?, decPL]
 
 /-- **`target_major_default`'s record is decoded below the tops.** -/
-theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {m m' : Mem} {r : List Word} {tm : TargetMajor} (h : tmdW m = some (r, m')) (hS : StageR dn vis fe m a)
+theorem rec3TmdW_decB {vis : Word} {fe : IFEnv} {a : AState}
+    {m m' : Mem} {r : List Word} {tm : TargetMajor} (h : tmdW m = some (r, m')) (hS : StageR vis fe m a)
     (hd : decTM m' (r.headD 0).toNat = some tm) : DecB (fun m => decTM m (r.headD 0).toNat) m' tm := by
   rw [tmdW_eq] at h
   obtain ⟨⟨ra, m1⟩, h1, h⟩ := of_K h rfl
   rw [tmdK1_some] at h
-  obtain ⟨_x1, _a1, _hr1, hS1, _hg1, _hw1, _hl1⟩ := naF_ok dn vis fe m m1 a ra h1 hS
+  obtain ⟨_x1, _a1, _hr1, hS1, _hg1, _hw1, _hl1⟩ := naF_ok (fun _ => none) vis fe m m1 a ra h1 hS
   obtain ⟨ls, hp, h⟩ := of_K h rfl
   rw [tmdK2_some] at h
   obtain ⟨⟨r3, m2⟩, hmk, h⟩ := of_K h rfl
@@ -159,7 +160,7 @@ theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
         ((rdW (m1.arr64 CTL) 200).toNat + k) =
         some (([ra.headD 0, ls, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : List Word)[k]'(by simpa using hk)).toNat := by
     intro k hk
-    simp only [iwN, nat?, iwA, hget k (by simpa using hk)]
+    simp only [iwN, nat?, iwA, aread_apply, hget k (by simpa using hk)]
     rw [List.getElem?_eq_getElem (by simp; omega)]; rfl
   have htop' : iwTop (wrIW (allocMem m1 13) (rdW (m1.arr64 CTL) 200)
       [ra.headD 0, ls, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) = (rdW (m1.arr64 CTL) 200).toNat + 13 := by
@@ -170,10 +171,10 @@ theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 
 /-- **`target_major_at`, its record decoded below the tops.** -/
 theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
-    (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR dn vis fe m a)
+    (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR vis fe m a)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hb : mo.toNat + ml.toNat < 2 ^ 64) :
     RSim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a
-      (fun b a' tm => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧
+      (fun b a' tm => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧
         DecB (fun m => decTM m (b.1.headD 0).toNat) b.2 tm) := by
   have hms0 : decPL m (decTM m) mo.toNat ml.toNat = some ms :=
     hms.get (OMono.decPL (fun q => decTM_mono q) _ _)
@@ -224,7 +225,7 @@ theorem rec3Rec4_decB {m m' : Mem} {cvw mw ro rl : Word} {q : Nat} {cv : IConsta
   have hw : ∀ j (hj : j < 4), iwN (truncM m') (q + j) = some ([cvw, mw, ro, rl][j]'(by simpa using hj)).toNat :=
     fun j hj => by
       rw [iwN_truncM (by omega)]
-      simp only [iwN, nat?, iwA, hget j hj]
+      simp only [iwN, nat?, iwA, aread_apply, hget j hj]
       rw [List.getElem?_eq_getElem (by simp; omega)]; rfl
   have h0 := hw 0 (by omega)
   have h1 := hw 1 (by omega)
@@ -242,10 +243,9 @@ theorem rec3Rec4_decB {m m' : Mem} {cvw mw ro rl : Word} {q : Nat} {cv : IConsta
 /-- A stable constant record is decoded below the tops. -/
 theorem rec3CVX_decB {m : Mem} {p : Nat} {cv : IConstantVal} (h : StabD (fun m => decCVX m p) m cv) :
     DecB (fun m => decCVp m p) m cv := by
-  obtain ⟨h1, h2⟩ := rec3CVX h
+  obtain ⟨h1, -⟩ := rec3CVX h
   show decCV (erA (truncM m)) p = some cv
-  rw [rec2DecCV_agree (a := erA m) (T := erTop m) (fun i hi => truncM_er_eq hi) h2.1 h2.2]
-  exact h1
+  rw [truncM_erA]; exact h1
 
 /-- A stable constant slice is decoded below the tops. -/
 theorem rec3SPL_decB {m : Mem} {o l : Nat} {cvs : List IConstantVal} (h : SPL decCVX m o l cvs) :
@@ -287,8 +287,8 @@ structure CrrProg (p : Prog) : Prop where
 /-! ## The relational lemma -/
 
 /-- The constructors of class `c`, as `class_recs_rules_ok_go` reads them. -/
-theorem rec3CtorsAt {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    {g c : Word} {G : ClassGen} (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G) :
+theorem rec3CtorsAt {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+    {g c : Word} {G : ClassGen} (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G) :
     DecB (fun m' => decPL m' (decCC m') (crrXs m g c).1.toNat (crrXs m g c).2.toNat) m (G.ctors.getD c.toNat []) := by
   have hsz := hS.iw.iwSize
   obtain ⟨-, o9, l9, h9, h10, hct⟩ := rec3CG_parts hG

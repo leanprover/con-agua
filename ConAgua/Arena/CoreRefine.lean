@@ -4,6 +4,7 @@ import ConAgua.Arena.ScratchRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.DerRel
 public import ConAgua.Arena.Tiers
+public import ConRon.Arena.Core
 
 @[expose] public section
 
@@ -50,12 +51,12 @@ theorem flushCaches_run (a : AState) :
 /-- **`flush_caches()` refines `flushCaches`** under `CheckR`. -/
 @[refines ConRon.Arena.flushCaches]
 theorem flushCaches_refinesC (p : Prog) (hp : FlushProg p) (a₀ : AState) (n : Nat) (s₀ : St)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (hC : CheckR dn s₀.mem a₀ vis fe) :
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (hC : CheckR s₀.mem a₀ vis fe) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "flush_caches" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok flushCaches a₀ ∧
-      CheckR dn s'.mem (AM.st flushCaches a₀) vis fe; ⊤⦄ := by
+      CheckR s'.mem (AM.st flushCaches a₀) vis fe; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hok, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (flushCaches_spec p hp n s₀)
@@ -68,7 +69,8 @@ theorem flushCaches_refinesC (p : Prog) (hp : FlushProg p) (a₀ : AState) (n : 
       DerR.frameM [] _ _ _ hf (by simp) _ hC.arena.der⟩,
     hC.core.flush hok,
     hC.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
-    hC.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf,
+    hC.env.frame (fun _ hb => by simp at hb)
+      (fun x hx => not_mem_envCtl (.inl (by have := flushCtl_lt x hx; omega))) hf,
     hC.mode.frame hf (by simp [flushCtl]) (by simp [flushCtl])⟩
 
 /-! ## The mode memos: probe and insert at the current generation -/

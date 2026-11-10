@@ -30,11 +30,6 @@ open L.Arena
 
 /-! ## The twin's values by the stubs' ids -/
 
-/-- `rom_ci(id)`'s constant. -/
-def romCiT : Nat → AM IConstantInfo
-  | 0 => eqA | 1 => natA | 2 => iffA | 3 => iffIntroA | 4 => iffRecA | 5 => nonemptyA
-  | 6 => nonemptyIntroA | _ => nonemptyRecA
-
 /-- `rom_cv(id)`'s constant value. -/
 def romCvT : Nat → AM IConstantVal
   | 0 => propextA | 1 => choiceA | 2 => trueCvA | 3 => trueIntroCvA | 4 => trustCompilerA
@@ -51,9 +46,9 @@ def basisOfW : Nat → ConLeche.BasisKind
 /-! ## Result decoders (below the tops) -/
 
 /-- A constant record at `r[0]`, decoded below the record pool's top. -/
-def decRCI (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word) (ci : IConstantInfo) :
+def decRCI (_dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word) (ci : IConstantInfo) :
     Prop :=
-  DecB (fun m => decCI (erA m) dn (r.headD 0).toNat) m ci
+  DecB (fun m => decCI (erA m) (r.headD 0).toNat) m ci
 
 /-- A constant value at `r[0]`, decoded below the record pool's top. -/
 def decRCV (m : Mem) (r : List Word) (cv : IConstantVal) : Prop :=
@@ -66,6 +61,6 @@ def decRBlk (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word)
 
 /-! The specs: `ConAgua/Rom/CIReadSpec.lean` (`RomRefs`, about the real readers of
 `CIRead.lean`; lane `decls4`). The arms take them as a field of their program bundles
-(`RedProg.rom`, `QuotProg.rom`, `DmProg7.lRom`). -/
+(`BasisLProg.rom`, `CbbProg.rom`). -/
 
 end L.Ind

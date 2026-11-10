@@ -139,18 +139,17 @@ abbrev CrFrame (m m' : Mem) : Prop := MemFrame [CRM] [158, 159] m m'
 
 theorem crV_stable : VStable crSch CrV := fun _ _ _ _ _ h => h
 
-theorem StageR.crf {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} (hS : StageR dn vis fe m a) (hf : CrFrame m m') :
-    StageR dn vis fe m' a ∧ IWGrow m m' :=
+theorem StageR.crf {vis : Word} {fe : IFEnv} {m m' : Mem}
+    {a : AState} (hS : StageR vis fe m a) (hf : CrFrame m m') :
+    StageR vis fe m' a ∧ IWGrow m m' :=
   StageR.frame_hi hS hf (by simp [CRM]) (by simp) (by simp [IW, CRM]) (by simp)
-
 
 /-- What the walk's call at L fuel `n` says: the twin's walk at the counter's fuel, from the
 related memo, reads only and answers the word, with the memo related after. -/
-def CrfOK (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
+def CrfOK (p : Prog) (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     Prop :=
   ∀ (m m' : Mem) (a : AState) (memo : Std.HashMap EIdx Bool) (f h : Word) (r : List Word),
-    StageR dn vis fe m a → CrR m memo → h.toNat < 2 ^ 32 →
+    StageR vis fe m a → CrR m memo → h.toNat < 2 ^ 32 →
     callW p n "crf_go" [vis, f, h] m = some (r, m') →
     ∃ b memo', (constsResolveFGo fe memo f.toNat (decE h)).run a = .ok ((b, memo'), a) ∧
       CrR m' memo' ∧ CrFrame m m' ∧ r.headD 0 = if b then 1 else 0
@@ -172,7 +171,7 @@ include hp
 /-- **`cr_lit_pins(vis, s)` as a call**: memory unchanged, the flag set, the word the twin's
 literal guard (`s = 0`: `Nat`'s three pins, else `String`'s ten). -/
 theorem clp_callW {n : Nat} {m m' : Mem} {a : AState} {s : Word} {r : List Word}
-    (hS : StageR dn vis fe m a) (hc : callW p n "cr_lit_pins" [vis, s] m = some (r, m')) :
+    (hS : StageR vis fe m a) (hc : callW p n "cr_lit_pins" [vis, s] m = some (r, m')) :
     m' = m ∧ pinW m 0 ≠ 0 ∧
       r.headD 0 = if (if s = 0 then pinsFound fe m [1, 2, 3]
         else pinsFound fe m [1, 2, 3, 5, 6, 7, 8, 9, 10, 12]) then 1 else 0 := by
@@ -183,12 +182,12 @@ theorem clp_callW {n : Nat} {m m' : Mem} {a : AState} {s : Word} {r : List Word}
   unfold clpW at hW
   by_cases h0 : s = 0
   · rw [ite_eq_left h0] at hW
-    obtain ⟨rfl, hf, rfl⟩ := clpL_callW hp hS _ _ _ _ _ hW
+    obtain ⟨rfl, hf, rfl⟩ := clpL_callW hp hS _ _ _ _ _ hW (by simp)
     refine ⟨rfl, hf, ?_⟩
     simp only [ite_eq_left h0, Bool.false_or, List.headD_cons]
     exact ite_not _
   · rw [ite_eq_right h0] at hW
-    obtain ⟨rfl, hf, rfl⟩ := clpL_callW hp hS _ _ _ _ _ hW
+    obtain ⟨rfl, hf, rfl⟩ := clpL_callW hp hS _ _ _ _ _ hW (by simp)
     refine ⟨rfl, hf, ?_⟩
     simp only [ite_eq_right h0, Bool.false_or, List.headD_cons]
     exact ite_not _
@@ -196,7 +195,7 @@ theorem clp_callW {n : Nat} {m m' : Mem} {a : AState} {s : Word} {r : List Word}
 /-- **`cr_leaf` at a leaf's view is `constsResolve`**: memory unchanged, the twin's walk at the
 node reads only, and the word is its answer. -/
 theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} {v : ENodeView}
-    (hS : StageR dn vis fe m a) (hh : h.toNat < 2 ^ 32) (hne : eViewW m h ≠ [])
+    (hS : StageR vis fe m a) (hh : h.toNat < 2 ^ 32) (hne : eViewW m h ≠ [])
     (hv : a.store.view (decE h) = some v) (hR : ViewR (eViewW m h) v)
     (hleaf : (eViewW m h).headD 0 = 0 ∨ (eViewW m h).headD 0 = 2 ∨ (eViewW m h).headD 0 = 3 ∨
       (eViewW m h).headD 0 = 8)
@@ -472,7 +471,6 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     rw [← hd1, ← hd3]
     simp only [hmiss, StateT.run_bind, hr1, except_ok_bind]; rfl
 
-
 /-- **The model of `crf_go` refines `constsResolveFGo`** at every L fuel: from a memory in the
 stage relation with the memo table related to the twin's threaded memo, a returning call is the
 twin's walk at the counter's fuel, reading only, answering the word, the memo related after. -/
@@ -490,9 +488,9 @@ def CrOK (m : Mem) : Prop := ∃ memo, CrR m memo
 (with a related walk-memo table), in the `RefAM` shape of `IndStubs.lean`'s
 `constsResolveFFast_spec`; the memo table stays related after. -/
 theorem constsResolveFFast_ref (e : Word) (he : H e) :
-    CallRef p "consts_resolve_ffast" [vis, e] (fun m a => StageR dn vis fe m a ∧ CrOK m)
+    CallRef p "consts_resolve_ffast" [vis, e] (fun m a => StageR vis fe m a ∧ CrOK m)
       (constsResolveFFast fe (decI e))
-      (fun m m' a r x => KeepPost dn vis fe decW0B m m' a r x ∧ CrOK m') := by
+      (fun m m' a r x => KeepPost vis fe decW0B m m' a r x ∧ CrOK m') := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, memo0, hM0⟩ hc => ?_
   have hW := callW_model (M := fun mm => crffW p k mm vis e) (crff_spec p hp k · vis e) hc
   unfold crffW at hW
@@ -516,7 +514,7 @@ theorem constsResolveFFast_ref (e : Word) (he : H e) :
     (mclearG_frame crSch m).mono (by simp) (by simp)
   have hSc := (StageR.crf hS hfc).1
   have hMc : CrR (mclearG crSch m) ∅ := memoRV_clear crSch crSch_wf bmKey CrV m memo0 hM0 hw
-  obtain ⟨b, memo', hr, hM', hF, hres⟩ := crf_refines hp k _ _ a ∅ _ e rg hSc hMc he h2
+  obtain ⟨b, memo', hr, hM', hF, hres⟩ := crf_refines (dn := fun _ => none) hp k _ _ a ∅ _ e rg hSc hMc he h2
   rw [coreWalkFuel_toNat] at hr
   obtain ⟨hS', hG⟩ := StageR.crf hS (hfc.trans hF)
   refine ⟨b, a, ?_, ⟨hS', hG, ?_, ?_⟩, memo', hM'⟩
@@ -528,9 +526,9 @@ theorem constsResolveFFast_ref (e : Word) (he : H e) :
 (`RefAM`): the census link. -/
 @[refines ConRon.Arena.constsResolveFFast]
 theorem constsResolveFFast_refines (e : Word) (he : H e) :
-    RefAM p "consts_resolve_ffast" [vis, e] (fun m a => StageR dn vis fe m a ∧ CrOK m)
+    RefAM p "consts_resolve_ffast" [vis, e] (fun m a => StageR vis fe m a ∧ CrOK m)
       (constsResolveFFast fe (decI e))
-      (fun m m' a r x => KeepPost dn vis fe decW0B m m' a r x ∧ CrOK m') :=
+      (fun m m' a r x => KeepPost vis fe decW0B m m' a r x ∧ CrOK m') :=
   (constsResolveFFast_ref hp e he).refAM
 
 end rel

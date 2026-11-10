@@ -96,13 +96,13 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 theorem sgGoW_ok (k : Nat) :
     ∀ (m0 m m' : Mem) (a : AState) (ctx f dO dL q j : Word) (c : NestCtx) (holes ds acc : List EIdx)
       (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word),
-    sgGoW k m ctx f dO dL q j = some m' → StageR dn vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat →
+    sgGoW k m ctx f dO dL q j = some m' → StageR vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat →
     q.toNat + dL.toNat ≤ iwTop m → decCtx m0 ctx.toNat = some c → CtxIn m0 ctx.toNat (· < iwTop m0) →
     CtxSl m0 ctx.toNat → c.nP + c.names.length < 2 ^ 64 → FMOk m0 f.toNat (.keyMap c.params holes) →
     decHL m0 dO.toNat dL.toNat = some ds → (∀ j < dL.toNat, dO.toNat + j < iwTop m0) → j.toNat ≤ dL.toNat →
     decHL m q.toNat j.toNat = some acc → RfInv m M G g → PosMR m →
     ∃ ys a', ((ds.drop j.toNat).mapM (sgF c holes)).run a = .ok (ys, a') ∧
-      decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
+      decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR vis fe m' a' ∧ IWGrow m0 m' ∧
       iwTop m ≤ iwTop m' ∧ (∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G g ∧ G ≤ G') ∧ PosMR m' := by
   induction k with
   | zero => intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h; simp [sgGoW] at h
@@ -147,7 +147,7 @@ theorem sgGoW_ok (k : Nat) :
       (rdW (m.arr64 IW) (ctx + 4)) x with _ | ⟨y, m1⟩; · rw [hra] at h; simp [sgK1] at h
   rw [hra] at h
   obtain ⟨mp0, hM⟩ := hP.rp
-  obtain ⟨a1, hr1, hM1, hS1, hg1⟩ := rpConstW_ok k' dn fe vis m m1 a _ _ _ 0 _ x y c.nP c.names mp0 hra hS hxH hlvH hn
+  obtain ⟨a1, hr1, hM1, hS1, hg1⟩ := rpConstW_ok k' (fun _ => none) fe vis m m1 a _ _ _ 0 _ x y c.nP c.names mp0 hra hS hxH hlvH hn
     (by omega) hnsum hnP (by rw [hnP]; omega) (by simp; omega) hM
   have hR1 := hR.frame (rpConstW_fr hra)
   by_cases hyb : 4294967296 ≤ y
@@ -156,7 +156,7 @@ theorem sgGoW_ok (k : Nat) :
   rcases hrf : rxW (k' + 1) m1 f y with _ | ⟨z, m2⟩ <;> rw [hrf] at h; · simp [sgK2] at h
   rw [sgK2_some] at h
   have hg01 := hg0.trans hg1
-  obtain ⟨a2, hr2, hzH, M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := (rxOK_all dn fe vis (k' + 1)).2.2.2.2.2.2 m1 m2 a1 f y
+  obtain ⟨a2, hr2, hzH, M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := (rxOK_all fe vis (k' + 1)).2.2.2.2.2.2 m1 m2 a1 f y
     _ z M G g hrf hS1 (hfm.grow hg01) (lt_of_notbig hyb) hR1
   have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
   have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := dL.toNat_lt; omega)

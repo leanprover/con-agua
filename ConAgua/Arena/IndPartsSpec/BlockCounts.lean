@@ -82,14 +82,14 @@ theorem piBinders_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 theorem recTargetOf_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hp : p.lookup "rec_target_of" = some recTargetOf)
     (hst : StripProg p) (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-    (vis no nl mI ty : Word) (names : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (vis no nl mI ty : Word) (names : List NIdx) (hS : StageR vis fe s₀.mem a₀)
     (hty : ty.toNat < 2 ^ 32) (hnames : decHL s₀.mem no.toNat nl.toNat = some names)
     (hb : no.toNat + nl.toNat < 2 ^ 64) (hbt : no.toNat + nl.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_target_of" [no, nl, mI, ty]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.recTargetOf names mI.toNat (decI ty)) a₀ ∧
       r = [UInt64.ofNat (AM.res (ConRon.Arena.recTargetOf names mI.toNat (decI ty)) a₀)] ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.recTargetOf names mI.toNat (decI ty)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.recTargetOf names mI.toNat (decI ty)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (recTargetOf_spec p hv hf hp hst had n s₀ no nl mI ty) ?_
   rintro r s' ⟨hl, hm⟩
@@ -170,7 +170,7 @@ theorem blockCountsHead_spec (n : Nat) (s₀ : St) (cvT : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         piBinders_spec p ha hc hv hs hpb n, eViewSpec4 p hv n] <;>
-      finish (gen := 20) [rdW_eq, CWF, List.getD_cons_zero, List.getD_cons_succ, List.tail_cons]
+      finish (gen := 20) [rdW_eq, erRd, CWF, List.getD_cons_zero, List.getD_cons_succ, List.tail_cons]
 
 theorem blockCountsHead_spec' (n : Nat) (s₀ : St) (cvT : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts_head" [cvT]

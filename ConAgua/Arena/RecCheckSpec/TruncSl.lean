@@ -45,7 +45,7 @@ theorem truncH {k : IdxKind} {m : Mem} {w : Word} {i : Nat} {x : Idx k}
     H (rdW (m.arr64 IW) (w + UInt64.ofNat i)) ∧ decI (rdW (m.arr64 IW) (w + UInt64.ofNat i)) = x := by
   have hi : w.toNat + i < iwTop m := by
     simp only [iwH, hd?] at h
-    cases hw : (iwA (truncM m))[w.toNat + i]? with
+    cases hw : iwA (truncM m) (w.toNat + i) with
     | none => simp [hw] at h
     | some v => exact (truncM_iw_get hw).1
   rw [iwH_truncM hi] at h

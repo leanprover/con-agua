@@ -4,6 +4,7 @@ public import ConAgua.Arena.IndPartsSpec.BlockShapeAllCtorsGo
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.Env
 
 @[expose] public section
 
@@ -39,7 +40,7 @@ theorem decPL_words {m : Mem} {α : Type} {f : Nat → Option α} :
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨v, hv, x, hx, ys, hys, rfl⟩ := h
     obtain ⟨ws, hlen, hcells, hmap⟩ := decPL_words l (o + 1) ys hys
-    simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hv
+    simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hv
     obtain ⟨w, hw, rfl⟩ := hv
     refine ⟨w :: ws, by simp [hlen], fun j hj => ?_, ?_⟩
     · cases j with
@@ -67,7 +68,7 @@ theorem decPL_of_words {m : Mem} {α : Type} {f : Nat → Option α} :
     rw [List.length_cons, decPL_succ]
     have hw : iwN m o = some w.toNat := by
       have := hc 0 (by simp)
-      simp only [iwN, nat?, iwA, Option.map_eq_some_iff]
+      simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff]
       exact ⟨w, by simpa using this, rfl⟩
     rw [hw]
     simp only [bind, Option.bind_some, hx, ih, pure]
@@ -126,15 +127,18 @@ theorem iwGrow_of_copy {m0 m m1 : Mem} (hg : IWGrow m0 m) (hA : ∀ b : TieredAr
     (hG : ∀ i, i < q → (m1.arr64 IW)[i]? = (m.arr64 IW)[i]?) : IWGrow m0 m1 := by
   have htop : iwTop m1 = iwTop m := by simp only [iwTop, hA CTL (by decide)]
   have hEr : erTop m1 = erTop m := by simp only [erTop, hA CTL (by decide)]
-  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
+  have hEr1 : erecTop1 m1 = erecTop1 m := by simp only [erecTop1, hA CTL (by decide)]
+  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
   · rw [htop]; exact hg.iw
   · rw [hEr]; exact hg.er
   · rw [hG i (by omega)]; exact hg.iwGet i hi
   · rw [hA EREC (by decide)]; exact hg.erGet i hi
+  · rw [hEr1]; exact hg.er1
+  · rw [hA (tier1 EREC) (by decide)]; exact hg.er1Get i hi
 
 theorem iwN_eq_agree {m m0 : Mem} {q i : Nat} (hag : ∀ j, j < q → (m.arr64 IW)[j]? = (m0.arr64 IW)[j]?)
     (hi : i < q) : iwN m i = iwN m0 i := by
-  simp only [iwN, nat?, iwA]
+  simp only [iwN, nat?, iwA, aread_apply, aread_apply]
   rw [hag i hi]
 
 /-- A read of the cut pool: below the top, and the pool's own. -/
@@ -196,7 +200,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       | cons ms0 rest =>
       rw [hmsl] at hdB hroom
       obtain ⟨v, hvB, hms0B⟩ := decPL_head hdB
-      obtain ⟨-, -, hctB⟩ := decMS_some hms0B
+      obtain ⟨-, -, -, hctB⟩ := decMS_some hms0B
       obtain ⟨co, cl', hcoB, hclB, hctorsB⟩ := decAt_some hctB
       obtain ⟨hofft, hv0⟩ := acTr hvB
       obtain ⟨-, hco0⟩ := acTr hcoB
@@ -365,7 +369,7 @@ theorem acW_ok (n : Nat) (m m2 : Mem) (p : Word) (r : List Word) (bs : BlockShap
       simp only [UInt64.toNat_zero, Nat.add_zero] at this
       have hlt : q.toNat + j < iwTop m2' := by rw [← htop2, hT, ← hwl]; omega
       have e := truncM_iw_eq (m := m2') hlt
-      simp only [iwA] at e
+      simp only [iwA, aread_apply, aread_apply] at e
       rw [e]; exact this)
     (acMapGrow hg2 hwm)
   rw [hwl, ← hT] at this
@@ -380,11 +384,11 @@ theorem blockShapeAllCtors_refines (p : Prog) (ha : p.lookup "iw_alloc" = some i
     (hcc : p.lookup "block_shape_ctors_copy" = some blockShapeCtorsCopy)
     (hg : p.lookup "block_shape_all_ctors_go" = some blockShapeAllCtorsGo)
     (hp : p.lookup "block_shape_all_ctors" = some blockShapeAllCtors)
-    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (q : Word) (bs : BlockShape) (hS : StageR dn vis fe s₀.mem a₀)
+    (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (q : Word) (bs : BlockShape) (hS : StageR vis fe s₀.mem a₀)
     (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_all_ctors" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       DecB (fun m => decPL m (decCN m) (r.headD 0).toNat (r.getD 1 0).toNat) s'.mem bs.allCtors ∧
       (r.headD 0).toNat + (r.getD 1 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
   refine triple_post (blockShapeAllCtors_spec p ha hcp hnc hcc hg hp n s₀ q) ?_

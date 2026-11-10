@@ -13,6 +13,7 @@ import ConAgua.Arena.IndPosSpec.SnocWMfr
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Checker.NoVerdictTree
 import ConLeche.Verify.Cached.NestPosC
+import ConLeche.Verify.Inductives.NestCallSyn
 import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.IndRealIlpL
 import all ConAgua.Arena.IndIface
@@ -106,7 +107,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   rw [oneK_eq]
   -- the crest, typed
   have hR1 := crest_ref hq hIlpf dn vis fe henv (k := n) (by omega) hC hCc.hus hCc.hnames hCc.hnamesb hCc.hnn
-    (hCc.hds.get (OMono.decHL _ _)) hCc.hdsb hCc.hholes hCc.hholesb ((erecP_ext m).decCV hcv) hcv3 hP hA hpre
+    (hCc.hds.get (OMono.decHL _ _)) hCc.hdsb hCc.hholes hCc.hholesb hcv hcv3 hP hA hpre
     hcvP hcl
   have hs1 := ncrE_spec p L.ct n ⟨m, Locals.init []⟩ vis no nl us dO dL hO hL cv hi
   rcases c1 : callE p n "nest_ctors_crest" [vis, no, nl, us, dO, dL, hO, hL, cv, hi] m with e1 | ⟨rc, m1⟩
@@ -216,7 +217,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   replace hnf := hnf2
   obtain ⟨M, G, g, hR⟩ := hP4.rf
   have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize
-  obtain ⟨x, a8, hrun8, hnfd, hnfb, M', G', hS5, hg5, hR5, -⟩ := ncnW_ok dn fe vis n' m4 m5 a7 ctx po pl us dO dL cv _
+  obtain ⟨x, a8, hrun8, hnfd, hnfb, M', G', hS5, hg5, hR5, -⟩ := ncnW_ok fe vis n' m4 m5 a7 ctx po pl us dO dL cv _
     (r5.headD 0) c prog ds cvv M G g hnf hS4 hW4.u.dec hW4.u.inn hW4.hs
     (by have := hW.hb; simp [NestCtx.hiAt] at this; omega) hCc.hus
     ((hCc.hds.grow (OMono.decHL _ _) hg14).get (OMono.decHL _ _))
@@ -283,7 +284,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
       hA7, (c1'.trans c2').trans ((p6.trans (p7.trans p8)).toCore hC2.check),
       ⟨(ks.map kindOf, ConLeche.closeTelescope ndsP hi.toNat curP),
         by simp [dOut, ConRon.Bridge.denote_ext hclP hx58],
-        ConLeche.Cached.closeTelescope_wscoped ndsP hi.toNat curP hwnds hwcur⟩,
+        ConLeche.closeTelescope_wscoped ndsP hi.toNat curP hwnds hwcur⟩,
       ⟨_, ConRon.Bridge.Inductives.dState_push (dState_ext hx58 _ _ hns2P) hnfP⟩⟩
   · exact hks.grow ((((hg3.trans hg4).trans hg5).trans hg6).trans hg7)
   · simp only [List.headD_cons, List.tail_cons]

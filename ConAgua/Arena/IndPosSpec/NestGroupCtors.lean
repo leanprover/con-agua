@@ -2,12 +2,10 @@ module
 
 public import ConAgua.Arena.IndPosSpec.NcGoW
 public import ConAgua.Arena.IndPosSpec.NoConstWf
-import ConAgua.Arena.IndPartsSpec.BlockCounts
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
-import ConAgua.Arena.DeclRec
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndPos
@@ -16,9 +14,9 @@ import all ConAgua.Arena.IndPos2
 @[expose] public section
 
 /-!
-# NestGroupCtors: `ConRon.Arena.nestArity`, `ConRon.Arena.nestGroupCtors`, `ConRon.Arena.nestWalkStack`, `ConRon.Arena.piDomsOcc`
+# NestGroupCtors: `ConRon.Arena.nestGroupCtors`, `ConRon.Arena.nestWalkStack`, `ConRon.Arena.piDomsOcc`
 
-The refinement theorems `nestArity_refines`, `nestWalkStack_refines`, `piDomsOcc_refines` and the lemmas only they use;
+The refinement theorems `nestWalkStack_refines`, `piDomsOcc_refines` and the lemmas only they use;
 `nest_container` at any fuel (`ntWf`) for `nest_group_ctors` (`Verdict/PosNgc.lean`).
 -/
 
@@ -28,128 +26,6 @@ set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
-
-namespace L.Ind
-
-open L.Arena
-
-def naK1 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then some ([0], m1)
-    else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then some ([0], m1)
-    else naK2 (piBW n m1 CWF (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4)))
-/-- The model of `nest_arity(vis, c)` at exec fuel `n + 1`. -/
-def naW (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) := naK1 n (envFindW m c vis)
-
-section arms
-variable (n : Nat) (m1 m2 : Mem) (r rs : List Word)
-theorem naK2_some : naK2 (some (rs, m2)) = some ([rs.getD 1 0], m2) := rfl
-theorem naK1_miss (h : r.headD 0 = 0) : naK1 n (some (r, m1)) = some ([0], m1) := by rw [naK1, ite_eq_left h]
-theorem naK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
-    naK1 n (some (r, m1)) = some ([0], m1) := by rw [naK1, ite_eq_right h, ite_eq_left h3]
-theorem naK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
-    naK1 n (some (r, m1)) = naK2 (piBW n m1 CWF (rdW (m1.arr64 EREC) (r.tail.headD 0 + 4))) := by
-  rw [naK1, ite_eq_right h, ite_eq_right h3]
-end arms
-attribute [ind_grind] naK2_some naK1_miss naK1_noind naK1_ind
-
-theorem nestArity_spec (p : Prog) (hl : NaLook p) (n : Nat) (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_arity" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ naW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hl.hp, callFn, nestArityL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      envFind_specW p hl.hx hl.hg hl.hf n,
-      piBinders_spec p hl.ha hl.hc hl.hv hl.hs hl.hpb n] <;>
-    finish (gen := 20) [naW, rdW_eq, List.getD_cons_zero, List.getD_cons_succ]
-
-theorem nestArity_none {fe : IFEnv} {C : NIdx} (h : ∀ cv caps, fe.find? C ≠ some (.indInfo cv caps)) :
-    ConRon.Arena.nestArity fe C = pure 0 := by
-  simp only [ConRon.Arena.nestArity]
-
-theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C)
-    (n : Nat) (m m' : Mem) (a : AState) (r : List Word)
-    (h : naW n m vis C = some (r, m')) (hS : StageR dn vis fe m a) :
-    ∃ x a', (ConRon.Arena.nestArity fe (decI C)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
-      IWGrow m m' ∧ (r.headD 0).toNat = x := by
-  have hE := hS.check.env
-  unfold naW at h
-  rcases hef : envFindW m C vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [naK1] at h
-  have hm1 := envFindW_mem hef
-  rw [hm1] at h hef
-  by_cases hf0 : r1.headD 0 = 0
-  · rw [naK1_miss (h := hf0)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨-, hfind⟩ := envFindW_miss hef hE hC hf0
-    refine ⟨0, a, ?_, hS, IWGrow.refl _, rfl⟩
-    rw [nestArity_none (fun cv caps e => by rw [hfind] at e; cases e)]; rfl
-  obtain ⟨-, hfind, ci, hci⟩ := envFindW_hit hef hE hC hf0
-  rw [hci] at hfind
-  have hciq := decCI_idx hci
-  have hsz := erecP_size_le m
-  by_cases h3 : rdW (m.arr64 EREC) (r1.tail.headD 0) ≠ 3
-  · rw [naK1_noind (h := hf0) (h3 := h3)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨0, a, ?_, hS, IWGrow.refl _, rfl⟩
-    rw [nestArity_none (fun cv caps e => by
-      rw [hfind] at e; cases e
-      have hk := decCI_indInfo_kind hci
-      exact h3 (by
-        have := erecP_rdN hk rfl
-        exact UInt64.toNat_inj.mp (by rw [this]; rfl)))]; rfl
-  rw [naK1_ind (h := hf0) (h3 := h3)] at h
-  generalize r1.tail.headD 0 = ciq at h hfind hci h3 hciq
-  have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
-    have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
-    simp only [nat?, this]
-    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
-    have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3
-    simp [rdW, hb] at this ⊢; rw [this]; rfl
-  obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
-  have hb16 := decCI_indInfo_bound hci
-  have hcv : decCV (erecP m) (ciq.toNat + 1) = some cv := by
-    simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hci
-    obtain ⟨k, hk, hci⟩ := hci
-    rw [hk3] at hk; cases hk
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at hci
-    obtain ⟨cv', h1, _, _, h2⟩ := hci
-    cases h2; exact h1
-  obtain ⟨w, hw, hwH, hwd⟩ := hd?_some (decCV_type hcv)
-  have e4 : (ciq + 4).toNat = ciq.toNat + 1 + 3 := by
-    rw [word_add_toNat (by have := hS.iw.er; have := hS.iw.erSize; simp; omega)]; rfl
-  have hrw : rdW (m.arr64 EREC) (ciq + 4) = w := by simp [rdW, e4, erecP_get hw]
-  rw [hrw] at h
-  rcases hpb : piBW n m CWF w with _ | ⟨rs, m2⟩ <;> rw [hpb] at h; · simp [naK2] at h
-  rw [naK2_some] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨bs, e, hrun, hdec, -, -, hS2, hg2, -⟩ := piBW_cwf hpb hS hwH
-  refine ⟨bs.length, a, ?_, hS2, hg2, ?_⟩
-  · simp only [ConRon.Arena.nestArity, hfind, StateT.run_bind]
-    rw [hwd, hrun]; rfl
-  · simp [decHL_length _ hdec]
-
-section census
-variable (p : Prog) (hl : NaLook p)
-include hl
-
-/-- **`nest_arity` refines `nestArity`**. -/
-@[refines ConRon.Arena.nestArity]
-theorem nestArity_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis C : Word) (hC : H C) (hS : StageR dn vis fe s₀.mem a₀) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_arity" [vis, C]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestArity fe (decI C)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestArity fe (decI C)) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat = AM.res (ConRon.Arena.nestArity fe (decI C)) a₀; ⊤⦄ := by
-  refine triple_post (nestArity_spec p hl n s₀ vis C) ?_
-  rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout⟩ := naW_ok dn fe vis C hC n _ _ a₀ r hm hS
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
-
-end census
-
-end L.Ind
 
 namespace L.Ind
 
@@ -206,9 +82,9 @@ theorem dc_spec (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some n
 theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Word) (HI : Nat)
     (hHI : hi.toNat = HI) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (off l : Word) (ds : List EIdx) (r : List Word),
-    dcGoW n m hi off l = some (r, m') → StageR dn vis fe m a →
+    dcGoW n m hi off l = some (r, m') → StageR vis fe m a →
     decHL m off.toNat l.toNat = some ds → (∀ j < l.toNat, off.toNat + j < iwTop m) →
-    ∃ b a', (ds.allM (dsF HI)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ b a', (ds.allM (dsF HI)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       r.headD 0 = (if b then 1 else 0) := by
   induction n with
   | zero => intro m m' a off l ds r h; simp [dcGoW] at h
@@ -227,7 +103,7 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
     have hds' := hds
     simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
     obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
-    obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
+    obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA, aread_apply, aread_apply] using hx)
     have hsz := hS.iw.iwSize
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
       word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; omega)
@@ -270,11 +146,11 @@ theorem dc_spec' (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some 
 /-- `nest_ds_closed` from the stage relation: `ds.allM (fvarB · ≤ ctx.hiAt 0)`. -/
 theorem dcWf_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) (m m' : Mem)
     (a : AState) (ctx off l : Word) (c : NestCtx) (ds : List EIdx) (r : List Word)
-    (h : dcWf n m ctx off l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : dcWf n m ctx off l = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hhi : c.hiAt 0 < 2 ^ 64) (hds : decHL m off.toNat l.toNat = some ds)
     (hdi : ∀ j < l.toNat, off.toNat + j < iwTop m) :
-    ∃ b a', (ds.allM (dsF (c.hiAt 0))).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ b a', (ds.allM (dsF (c.hiAt 0))).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       r.headD 0 = (if b then 1 else 0) := by
   cases n with
   | zero => simp [dcWf] at h
@@ -314,11 +190,11 @@ theorem nestWalkStack_eq (ctx : NestCtx) (prog : List NestHole) (ds : List EIdx)
 
 theorem nwsW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) (m m' : Mem)
     (a : AState) (ctx off l po pl : Word) (c : NestCtx) (ds : List EIdx) (prog : List NestHole)
-    (r : List Word) (h : nwsW n m ctx off l po pl = some (r, m')) (hS : StageR dn vis fe m a)
+    (r : List Word) (h : nwsW n m ctx off l po pl = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hhi : c.hiAt 0 < 2 ^ 64) (hds : decHL m off.toNat l.toNat = some ds)
     (hdi : ∀ j < l.toNat, off.toNat + j < iwTop m) :
-    ∃ x a', (ConRon.Arena.nestWalkStack c prog ds).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.nestWalkStack c prog ds).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ ((x = [] ∧ r = [0, 0]) ∨ (x = prog ∧ r = [po, pl])) := by
   unfold nwsW at h
   rcases hd : dcWf n m ctx off l with _ | ⟨r1, m1⟩ <;> rw [hd] at h; · simp [nwsK] at h
@@ -345,12 +221,12 @@ below `2^64`): the empty stack `(0, 0)` or the given one. -/
 @[refines ConRon.Arena.nestWalkStack]
 theorem nestWalkStack_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx off l po pl : Word) (c : NestCtx) (ds : List EIdx) (prog : List NestHole)
-    (hS : StageR dn vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
+    (hS : StageR vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
     (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) (hhi : c.hiAt 0 < 2 ^ 64)
     (hds : decHL s₀.mem off.toNat l.toNat = some ds) (hdi : ∀ j < l.toNat, off.toNat + j < iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_walk_stack" [ctx, off, l, po, pl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestWalkStack c prog ds) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestWalkStack c prog ds) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestWalkStack c prog ds) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       ((AM.res (ConRon.Arena.nestWalkStack c prog ds) a₀ = [] ∧ r = [0, 0]) ∨
         (AM.res (ConRon.Arena.nestWalkStack c prog ds) a₀ = prog ∧ r = [po, pl])); ⊤⦄ := by
@@ -400,11 +276,11 @@ theorem piDomsOcc_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" =
 theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo hi : Word)
     (names : List NIdx) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (n e : Word) (r : List Word) (mp : Std.HashMap EIdx Bool),
-    pdoW k m no nl lo hi n e = some (r, m') → StageR dn vis fe m a → H e →
+    pdoW k m no nl lo hi n e = some (r, m') → StageR vis fe m a → H e →
     decHL m no.toNat nl.toNat = some names → (∀ j < nl.toNat, no.toNat + j < iwTop m) →
     noMR m mp →
     ∃ b a' mp', (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ noMR m' mp' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ noMR m' mp' ∧
       MFr [NOM] [204, 205] m m' := by
   induction k with
   | zero => intro m m' a n e r mp h; simp [pdoW] at h
@@ -478,12 +354,12 @@ include hl hp
 @[refines ConRon.Arena.piDomsOcc]
 theorem piDomsOcc_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl lo hi n e : Word) (names : List NIdx) (mp : Std.HashMap EIdx Bool)
-    (hS : StageR dn vis fe s₀.mem a₀) (he : H e) (hn : decHL s₀.mem no.toNat nl.toNat = some names)
+    (hS : StageR vis fe s₀.mem a₀) (he : H e) (hn : decHL s₀.mem no.toNat nl.toNat = some names)
     (hnb : ∀ j < nl.toNat, no.toNat + j < iwTop s₀.mem) (hM : noMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "pi_doms_occ" [no, nl, lo, hi, n, e]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       r.headD 0 = (if AM.res (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀
         then 1 else 0) ∧ ∃ mp', noMR s'.mem mp'; ⊤⦄ := by

@@ -222,7 +222,7 @@ theorem decHL_grow3 {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
   apply mapM_opt_congr3
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
-  simp only [hd?, iwA]
+  simp only [hd?, iwA, aread_apply, aread_apply]
   rw [hg.iwGet (o + j) (by omega)]
 
 /-- A returning `e_view` of a `const` handle. -/
@@ -362,14 +362,14 @@ theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
 
 end spec
 
-theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl mI ty : Word) (r : List Word) (names : List NIdx),
-    recTW n m no nl mI ty = some (r, m') → StageR dn vis fe m a → ty.toNat < 2 ^ 32 →
+    recTW n m no nl mI ty = some (r, m') → StageR vis fe m a → ty.toNat < 2 ^ 32 →
     decHL m no.toNat nl.toNat = some names → no.toNat + nl.toNat < 2 ^ 64 →
     no.toNat + nl.toNat ≤ iwTop m →
     ∃ t a', (ConRon.Arena.recTargetOf names mI.toNat (decI ty)).run a = .ok (t, a') ∧
-      r = [UInt64.ofNat t] ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  intro dn fe vis m m' a no nl mI ty r names hrt hS hty hnames hb hbt
+      r = [UInt64.ofNat t] ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
+  intro _dn fe vis m m' a no nl mI ty r names hrt hS hty hnames hb hbt
   cases n with
   | zero => simp [recTW] at hrt
   | succ n =>
@@ -377,7 +377,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
   have hnlw : [UInt64.ofNat names.length] = [nl] := by rw [← hnl, ofNat_toNat_word nl]
   rw [recTW_step] at hrt
   obtain ⟨r1, m1, hra, hrt⟩ := ipK_inv hrt (by simp [recTK1])
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hdec1⟩ := stripF_pis_ok dn vis fe mI ty hty m m1 a r1 hra hS
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hdec1⟩ := stripF_pis_ok vis fe mI ty hty m m1 a r1 hra hS
   have hty' : (decI ty : EIdx) = decE ty := rfl
   cases x1 with
   | none =>
@@ -418,7 +418,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         rw [hdomw]; exact hty2
       obtain ⟨r3, m3, hra3, hrt⟩ := ipK_inv hrt (by simp [recTK3])
       obtain ⟨x3, a3, hrun3, hS3, hg3, hdl3, hdI3⟩ :=
-        gafF_ok dn vis fe CWF _ hdomlt m1 m3 a1 r3 hra3 hS1
+        gafF_ok vis fe CWF _ hdomlt m1 m3 a1 r3 hra3 hS1
       have hR3 : ArenaR m3 a3 := hS3.check.arena.base
       have hvb := viewBind_forall m1 a1 hR1 _ hbl hvok hg6'
       have hrun3' : StateT.run (getAppFn coreWalkFuel (decE
@@ -537,7 +537,7 @@ end pure
 /-- **The model of `block_counts_head`**: `(bl, g)` and the memory. -/
 def bchW : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
-  | n + 1, m, cvT => bchK1 n (piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)))
+  | n + 1, m, cvT => bchK1 n (piBW n m CWF (erRd m (cvT + 3)))
 where
   bchK1 (_n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
     | none => none
@@ -549,7 +549,7 @@ where
 section arms
 variable (n : Nat) (m m1 : Mem) (cvT bl : Word) (rs v : List Word)
 theorem bchW_step : bchW (n + 1) m cvT =
-    bchW.bchK1 n (piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3))) := rfl
+    bchW.bchK1 n (piBW n m CWF (erRd m (cvT + 3))) := rfl
 theorem bchK1_some : bchW.bchK1 n (some (rs, m1)) =
     bchW.bchK2 (rs.getD 1 0) m1 (eViewW m1 (rs.getD 2 0)) := rfl
 theorem bchK2_ne (h : v ≠ []) : bchW.bchK2 bl m1 v = some ([bl, v.headD 0], m1) := by
@@ -599,9 +599,9 @@ theorem sort_head_iff (m1 : Mem) (res : Word) (v : ENodeView) (hv : ViewR (eView
 
 theorem bchW_ok (n : Nat) (m m1 : Mem) (a : AState) (cvT : Word) (r1 : List Word)
     (hR : ArenaR m a) (h : bchW n m cvT = some (r1, m1))
-    (hty : (rdW (m.arr64 EREC) (cvT + 3)).toNat < 2 ^ 32)
+    (hty : (erRd m (cvT + 3)).toNat < 2 ^ 32)
     (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size) :
-    ∃ bs res v, (ConRon.Arena.piBinders coreWalkFuel (decE (rdW (m.arr64 EREC) (cvT + 3)))).run a
+    ∃ bs res v, (ConRon.Arena.piBinders coreWalkFuel (decE (erRd m (cvT + 3)))).run a
         = .ok ((bs, res), a) ∧ r1 = [r1.headD 0, r1.getD 1 0] ∧ (r1.headD 0).toNat = bs.length ∧
       a.store.view res = some v ∧ ((r1.getD 1 0 = 2) ↔ ∃ u, v = .sort u) ∧
       IWGrow m m1 ∧ MemFrame [IW] [200] m m1 := by
@@ -609,7 +609,7 @@ theorem bchW_ok (n : Nat) (m m1 : Mem) (a : AState) (cvT : Word) (r1 : List Word
   | zero => simp [bchW] at h
   | succ n =>
     rw [bchW_step] at h
-    rcases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with _ | ⟨rs, m1'⟩ <;> rw [hp] at h
+    rcases hp : piBW n m CWF (erRd m (cvT + 3)) with _ | ⟨rs, m1'⟩ <;> rw [hp] at h
     · simp [bchW.bchK1] at h
     rw [bchK1_some] at h
     by_cases hr : eViewW m1' (rs.getD 2 0) = []
@@ -630,17 +630,16 @@ theorem bchW_ok (n : Nat) (m m1 : Mem) (a : AState) (cvT : Word) (r1 : List Word
 
 theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
     (hb : q.toNat + 3 < 2 ^ 64) :
-    (rdW (m.arr64 EREC) (q + 3)).toNat < 2 ^ 32 ∧ decE (rdW (m.arr64 EREC) (q + 3)) = cv.type := by
+    (erRd m (q + 3)).toNat < 2 ^ 32 ∧ decE (erRd m (q + 3)) = cv.type := by
   simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨nm, -, lv, -, ty, hty, hcv⟩ := h
   have hty' : ty = cv.type := by rw [← hcv]
-  rcases hw : (erA m)[q.toNat + 3]? with _ | w
+  have e : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  rcases hw : erA m (q.toNat + 3) with _ | w
   · simp [hd?, hw] at hty
+  have hrd : erRd m (q + 3) = w := erRd_of_erA (by rw [e]; exact hw)
   by_cases hl : w.toNat < 2 ^ 32
   · simp [hd?, hw, hl] at hty
-    have e : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-    have hrd : rdW (m.arr64 EREC) (q + 3) = w := by
-      simp only [rdW, e]; exact (by simpa [erA] using hw : (m.arr64 EREC)[q.toNat + 3]? = some w) ▸ rfl
     rw [hrd]
     exact ⟨hl, by rw [← hty', ← hty]; rfl⟩
   · simp [hd?, hw, hl] at hty

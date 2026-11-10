@@ -74,11 +74,11 @@ theorem classGenSlotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pi
     (hif : p.lookup "intern_fvar" = some internFVar)
     (hp : p.lookup "class_gen_slot_var" = some classGenSlotVar) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g s : Word) (G : ClassGen)
-    (hS : StageR dn vis fe s₀.mem a₀) (hg : iwN s₀.mem g.toNat = some G.nP)
+    (hS : StageR vis fe s₀.mem a₀) (hg : iwN s₀.mem g.toNat = some G.nP)
     (hgt : g.toNat < iwTop s₀.mem) (hns : G.nP + s.toNat < 2 ^ 64) :
     ⦃fun s_ => s_ = s₀⦄ invoke p (exec p n) "class_gen_slot_var" [g, s]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.slotVar G s.toNat) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ClassGen.slotVar G s.toNat) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.ClassGen.slotVar G s.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       decE (r.headD 0) = AM.res (ConRon.Arena.ClassGen.slotVar G s.toNat) a₀; ⊤⦄ := by
   refine triple_post (slotVar_spec p hpin hsf hsp his hff hfp hif hp n s₀ g s) ?_
@@ -98,14 +98,14 @@ theorem classGenMotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pin
     (hms : p.lookup "class_read_motive_slot" = some classReadMotiveSlot)
     (hp : p.lookup "class_gen_mot_var" = some classGenMotVar) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g c : Word) (G : ClassGen)
-    (hS : StageR dn vis fe s₀.mem a₀) (hg : iwN s₀.mem g.toNat = some G.nP)
+    (hS : StageR vis fe s₀.mem a₀) (hg : iwN s₀.mem g.toNat = some G.nP)
     (hgt : g.toNat < iwTop s₀.mem)
     (hsl : decAt s₀.mem (decPL s₀.mem (decCS s₀.mem)) (g.toNat + 7) = some G.slots)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hgb : g.toNat + 9 < 2 ^ 64)
     (hsz : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) :
     ⦃fun s_ => s_ = s₀⦄ invoke p (exec p (n + 1)) "class_gen_mot_var" [g, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.motVar G c.toNat) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ClassGen.motVar G c.toNat) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.ClassGen.motVar G c.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       decE (r.headD 0) = AM.res (ConRon.Arena.ClassGen.motVar G c.toNat) a₀; ⊤⦄ := by
   refine triple_post (motVar_spec p hpin hsf hsp his hff hfp hif hsv hms hp n s₀ g c) ?_
@@ -120,13 +120,13 @@ refinement, under the walk memos, and `get_app_args`). -/
 theorem classGenIhParts_refines (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some classGenIhParts)
     (had : AdF p) (hopf : OpfF p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv)
-    (g t tele w d : Word) (G : ClassGen) (hS : StageR dn vis fe s₀.mem a₀) (hw : H w)
+    (g t tele w d : Word) (G : ClassGen) (hS : StageR vis fe s₀.mem a₀) (hw : H w)
     (hcls : decAt s₀.mem (decPL s₀.mem (decTM s₀.mem)) (g.toNat + 3) = some G.cls)
     (hsz : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_gen_ih_parts" [g, t, tele, w, d]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       IhRes s'.mem r (AM.res (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by

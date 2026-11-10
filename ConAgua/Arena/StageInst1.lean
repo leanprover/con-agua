@@ -128,10 +128,10 @@ theorem instC_lt : ∀ x ∈ instC, x.toNat < 64 := by
 
 /-- **`instantiate1_fast` refines `instantiate1Fast coreWalkFuel` under the stage relation**
 (replaces `IndStubs.instantiate1Fast_spec`). -/
-theorem i1F_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e v d : Word)
+theorem i1F_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e v d : Word)
     (he : H e) :
-    RelW i1F [CWF, e, v, d] (StageR dn vis fe)
-      (instantiate1Fast CWF.toNat (decI e) (decI v) d.toNat) (KeepPost dn vis fe decW0E) := by
+    RelW i1F [CWF, e, v, d] (StageR vis fe)
+      (instantiate1Fast CWF.toNat (decI e) (decI v) d.toNat) (KeepPost vis fe decW0E) := by
   intro m m' a r h hS
   obtain ⟨n, hc⟩ := callF_run h
   have hfr : MemFrame instA instC m m' :=

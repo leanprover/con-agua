@@ -8,6 +8,7 @@ import all Init.Data.List.Control
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.Arena.IndSumSpec.McGoStep
 
 @[expose] public section
 
@@ -61,10 +62,10 @@ theorem ckc2W_mfr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
 
 theorem ckc2W_ok (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (nP o l : Word) (xs : List EIdx) (r : List Word),
-    ckc2W n m nP o l = some (r, m') → StageR dn vis fe m a → decHL m o.toNat l.toNat = some xs →
+    ckc2W n m nP o l = some (r, m') → StageR vis fe m a → decHL m o.toNat l.toNat = some xs →
     o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
     ∃ b a', (xs.allM (keyClosedTest nP.toNat)).run a = .ok (b, a') ∧
-      KeepPost dn vis fe decW0B m m' a' r b := by
+      KeepPost vis fe decW0B m m' a' r b := by
   induction n with
   | zero => intro m m' a nP o l xs r h; simp [ckc2W] at h
   | succ n ih =>
@@ -80,7 +81,7 @@ theorem ckc2W_ok (n : Nat) :
       obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
       rw [ckc2W_cons n m nP o l hl, hw] at h
       obtain ⟨⟨rb, m1⟩, h2, h⟩ := of_K h (by simp only [ckc2K1])
-      obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW dn vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) w rb hw32 h2
+      obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) w rb hw32 h2
       by_cases hz : rb ≠ 0
       · rw [ckc2K1_open n m1 nP o l w rb hz] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -93,7 +94,7 @@ theorem ckc2W_ok (n : Nat) :
       · rw [ckc2K1_closed n m1 nP o l w rb hz] at h
         have hk : rb.toNat = 0 := by rw [show rb = 0 by simpa using hz]; rfl
         obtain ⟨⟨rf, m2⟩, h3, h⟩ := of_K h (by simp only [ckc2K2])
-        obtain ⟨kf, a2, hrun2, hS2, hg2, hkf⟩ := fvbF_ok dn vis fe CWF w hw32 m1 m2 a1 rf h3 hS1
+        obtain ⟨kf, a2, hrun2, hS2, hg2, hkf⟩ := fvbF_ok (fun _ => none) vis fe CWF w hw32 m1 m2 a1 rf h3 hS1
         rw [CWF_eq] at hrun2
         have hg12 := hg1.trans hg2
         have hlt : (nP < rf.headD 0) ↔ ¬ kf ≤ nP.toNat := by
@@ -139,16 +140,16 @@ include L
 stub): the parameters a slice below the top, the walk memos well formed before and after. -/
 @[refines ConRon.Arena.targetCanonParams]
 theorem targetCanonParams_refinesP (k : Nat) (s₀ : St) (a₀ : AState) (pfo pfl e : Word) (pfvs : List EIdx)
-    (hS : StageR dn vis fe s₀.mem a₀) (hpf : decHL s₀.mem pfo.toNat pfl.toNat = some pfvs)
+    (hS : StageR vis fe s₀.mem a₀) (hpf : decHL s₀.mem pfo.toNat pfl.toNat = some pfvs)
     (hpb : pfo.toNat + pfl.toNat ≤ iwTop s₀.mem) (he : H e) (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "target_canon_params" [pfo, pfl, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀ ∧
       decE (r.headD 0) = AM.res (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀ ∧ H (r.headD 0) ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
   refine triple_post (tcpP_spec L k s₀ pfo pfl e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hH, hS', hg, hP'⟩ := tcpPW_ok dn fe vis k _ _ a₀ pfo pfl e _ pfvs hm hS hpf hpb he hP
+  obtain ⟨a', hrun, hH, hS', hg, hP'⟩ := tcpPW_ok fe vis k _ _ a₀ pfo pfl e _ pfvs hm hS hpf hpb he hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres], hH, by rw [hst]; exact hS', hg, hP'⟩
 
@@ -157,7 +158,7 @@ below the tops, the canonical parameters a slice below the top; the canonical ke
 decoded below the tops, its parameter slice below the top. -/
 @[refines ConRon.Arena.classKeyCanon]
 theorem classKeyCanon_refines (k : Nat) (s₀ : St) (a₀ : AState) (po pl key : Word) (pfvs : List EIdx)
-    (ck : ClassKey) (hS : StageR dn vis fe s₀.mem a₀) (hpf : decHL s₀.mem po.toNat pl.toNat = some pfvs)
+    (ck : ClassKey) (hS : StageR vis fe s₀.mem a₀) (hpf : decHL s₀.mem po.toNat pl.toNat = some pfvs)
     (hpb : po.toNat + pl.toNat ≤ iwTop s₀.mem) (hk : DecB (fun m => decCK m key.toNat) s₀.mem ck)
     (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "class_key_canon" [po, pl, key]
@@ -166,11 +167,11 @@ theorem classKeyCanon_refines (k : Nat) (s₀ : St) (a₀ : AState) (po pl key :
       (r.headD 0).toNat + 4 ≤ iwTop s'.mem ∧
       (rdW (s'.mem.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (s'.mem.arr64 IW) (r.headD 0 + 3)).toNat ≤
         iwTop s'.mem ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classKeyCanon pfvs ck) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.classKeyCanon pfvs ck) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
   refine triple_post (kc_spec L k s₀ po pl key) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, h1, h2, h3, h4, h5, h6⟩ := kcW_ok dn fe vis k _ _ a₀ po pl key r pfvs ck hm hS hpf hpb hk hP
+  obtain ⟨x, a', hrun, h1, h2, h3, h4, h5, h6⟩ := kcW_ok fe vis k _ _ a₀ po pl key r pfvs ck hm hS hpf hpb hk hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact h1, h2, h3, by rw [hst]; exact h4, h5, h6⟩
 

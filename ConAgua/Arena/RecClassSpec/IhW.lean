@@ -49,7 +49,7 @@ theorem classRecOf_spec (p : Prog) (hp : p.lookup "class_rec_of" = some classRec
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
       BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, croK]
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, croK, erRd]
 
 /-- The twin's `classRecOf`, as a recursion on the shifted lists. -/
 def crOf (t : Nat) : List Nat → List IConstantVal → Option NIdx
@@ -75,18 +75,9 @@ theorem crOf_eq (t : Nat) : ∀ (cs : List IConstantVal) (rc : List Nat),
       simp only [Option.map_map, Function.comp_def, e1, List.getD_cons_succ]
 
 theorem decCVp_name {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv) :
-    ∃ w, (m.arr64 EREC)[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = cv.name := by
-  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨nm, hnm, -, -, -, -, -, rfl⟩ := h
-  simp only [hd?] at hnm
-  cases hq : (erA m)[q]? with
-  | none => simp [hq] at hnm
-  | some w =>
-    simp only [hq] at hnm
-    by_cases hl : w.toNat < 2 ^ 32
-    · simp [hl] at hnm
-      exact ⟨w, by simpa [erA] using hq, hl, hnm⟩
-    · simp [hl] at hnm
+    ∃ w, erA m q = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = cv.name := by
+  obtain ⟨w, hw, hl, he⟩ := decCV_name h
+  exact ⟨w, hw, hl, he.symm⟩
 
 theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r : List Word)
     (rc : List Nat) (cs : List IConstantVal),
@@ -152,20 +143,12 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
         simp only [crOf, P4]
       by_cases hvt : v = t
       · rw [classRecOfW_hit n m rco rcl cgo cgl t hcgl P2 (by rw [P1]; exact hvt)] at h
-        have hpe : pn < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hwn1).1
-        have hg : cgo.toNat < (m.arr64 IW).size ∧
-            (rdW (m.arr64 IW) cgo).toNat < (m.arr64 EREC).size := by
-          refine ⟨hgo, ?_⟩
-          have e : (m.arr64 IW)[cgo.toNat]? = some (UInt64.ofNat pn) := by
-            have := hpn'.1
-            simpa [rdW, hgo] using this
-          rw [hpn'.1, UInt64.toNat_ofNat_of_lt' hpn'.2]; exact hpe
-        rw [ite_eq_left hg] at h
+        rw [ite_eq_left hgo] at h
         simp only [Option.some.injEq] at h
         subst h
-        have hrd : rdW (m.arr64 EREC) (rdW (m.arr64 IW) cgo) = wn := by
+        have hrd : erRd m (rdW (m.arr64 IW) cgo) = wn := by
           rw [hpn'.1]
-          simp [rdW, UInt64.toNat_ofNat_of_lt' hpn'.2, hwn1]
+          exact erRd_of_erA (by rw [UInt64.toNat_ofNat_of_lt' hpn'.2]; exact hwn1)
         rw [hrd, hcrOf, ite_eq_left (hxv.mp hvt)]
         refine ⟨fun e => by simp at e, fun nm hnm => ?_⟩
         simp only [Option.some.injEq] at hnm
@@ -415,11 +398,11 @@ theorem pinWordW_some {m : Mem} {u : Word} (h : pinWordW m 53 = some u) : pinW m
     · cases h
   · cases h
 
-theorem slotVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
-    (a : AState) (g s : Word) (G : ClassGen) (r : List Word) (hS : StageR dn vis fe m a)
+theorem slotVarW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+    (a : AState) (g s : Word) (G : ClassGen) (r : List Word) (hS : StageR vis fe m a)
     (hg : iwN m g.toNat = some G.nP) (hgt : g.toNat < iwTop m) (hns : G.nP + s.toNat < 2 ^ 64)
     (h : slotVarW m g s = some (r, m')) :
-    ∃ x a', (ConRon.Arena.ClassGen.slotVar G s.toNat).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.ClassGen.slotVar G s.toNat).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decE (r.headD 0) = x := by
   simp only [slotVarW] at h
   split at h
@@ -516,12 +499,12 @@ theorem motIdx_lt : ∀ (sls : List ClassSlot) (j i : Nat), i ∈ motIdx j sls �
       have := ih (j + 1) i h; simp; omega
 
 theorem motVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat)
-    (m m' : Mem) (a : AState) (g c : Word) (G : ClassGen) (r : List Word) (hS : StageR dn vis fe m a)
+    (m m' : Mem) (a : AState) (g c : Word) (G : ClassGen) (r : List Word) (hS : StageR vis fe m a)
     (hg : iwN m g.toNat = some G.nP) (hgt : g.toNat < iwTop m)
     (hsl : decAt m (decPL m (decCS m)) (g.toNat + 7) = some G.slots)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hgb : g.toNat + 9 < 2 ^ 64)
     (hsz : (m.arr64 IW).size < 2 ^ 64) (h : motVarW n m g c = some (r, m')) :
-    ∃ x a', (ConRon.Arena.ClassGen.motVar G c.toNat).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.ClassGen.motVar G c.toNat).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decE (r.headD 0) = x := by
   obtain ⟨o, l, ho, hl, hdec⟩ := decAt_some hsl
   have ho' := iwN_off (k := 7) ho (by omega)
@@ -733,7 +716,7 @@ theorem ihNPc_word {m : Mem} {g t : Word} {cls : List TargetMajor}
 
 theorem iwH_lt {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : iwH m i = some x) :
     i < (m.arr64 IW).size := by
-  simp only [iwH, hd?, iwA] at h
+  simp only [iwH, hd?, iwA, aread_apply, aread_apply] at h
   cases hw : (m.arr64 IW)[i]? with
   | none => simp [hw] at h
   | some w => exact (Array.getElem?_eq_some_iff.mp hw).1
@@ -761,17 +744,17 @@ def IhRes (m' : Mem) (r : List Word) : Option (List EIdx × List EIdx) → Prop
       (r.tail.tail.tail.headD 0).toNat + (r.tail.tail.tail.tail.headD 0).toNat ≤ iwTop m'
 
 theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
-    (a : AState) (g t tele w d : Word) (G : ClassGen) (r : List Word) (hS : StageR dn vis fe m a)
+    (a : AState) (g t tele w d : Word) (G : ClassGen) (r : List Word) (hS : StageR vis fe m a)
     (hw : H w) (hcls : decAt m (decPL m (decTM m)) (g.toNat + 3) = some G.cls)
     (hsz : (m.arr64 IW).size < 2 ^ 64) (hA : AbsOK m)
     (h : ihW m g t tele w d = some (r, m')) :
     ∃ res a', (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat).run a = .ok (res, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ IhRes m' r res ∧ AbsOK m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ IhRes m' r res ∧ AbsOK m' := by
   simp only [ihW] at h
   obtain ⟨hnp0, hnp64⟩ := ihNPc_word (t := t) hcls hsz
   rw [hnp0] at h
   obtain ⟨⟨r1, m1⟩, hs, h⟩ := of_K h rfl
-  obtain ⟨res1, a1, hrun1, ⟨hS1, hg1, hdec1⟩, hA1⟩ := opfF_ok dn vis fe tele w d hw m m1 a r1 hs ⟨hS, hA⟩
+  obtain ⟨res1, a1, hrun1, ⟨hS1, hg1, hdec1⟩, hA1⟩ := opfF_ok vis fe tele w d hw m m1 a r1 hs ⟨hS, hA⟩
   cases res1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hdec1
@@ -919,11 +902,11 @@ theorem tpd_step (x d b b' : EIdx) (e : Word) (xs : List EIdx) (a a1 a2 : AState
 
 theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (xo xl e : Word) (r : List Word) (xs : List EIdx),
-    pdW n m xo xl e = some (r, m') → StageR dn vis fe m a → H e →
+    pdW n m xo xl e = some (r, m') → StageR vis fe m a → H e →
     decHL m xo.toNat xl.toNat = some xs → xo.toNat + xl.toNat < 2 ^ 64 →
     xo.toNat + xl.toNat ≤ iwTop m →
     ∃ res a', (ConRon.Arena.targetPiDomsWith xs (decI e)).run a = .ok (res, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PdRes m' r res := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ PdRes m' r res := by
   induction n with
   | zero => intro m m' a xo xl e r xs h; simp [pdW] at h
   | succ n ih =>

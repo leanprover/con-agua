@@ -28,12 +28,12 @@ open L.Arena
 
 /-- **`sl_cons` of a pointer onto a pointer slice decoded below the tops.** -/
 theorem partsConsPL {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q))
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
-    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hb : o.toNat + l.toNat ≤ iwTop m)
     (hxs : DecB (fun m => decPL m (f m) o.toNat l.toNat) m xs) (hy : DecB (fun m => f m x.toNat) m y) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       DecB (fun m => decPL m (f m) (r.headD 0).toNat (r.tail.headD 0).toNat) m' (y :: xs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   have hxs' : decPL (truncM m) (f (truncM m)) o.toNat l.toNat = some xs := hxs
@@ -67,7 +67,7 @@ theorem PSlR.nil {α : Type} (f : Mem → Nat → Option α) (m : Mem) : PSlR f 
 
 /-- **`blockSplit`'s record at `q`**: its three slices, decoded below the tops. -/
 def SplitRec (x : List IConstantVal × List (IConstantVal × Nat × Nat) ×
-    List (IConstantVal × Nat × Nat × List IRecRule)) (q : Word) (m : Mem) : Prop :=
+    List (IConstantVal × Nat × Nat × Bool × List IRecRule)) (q : Word) (m : Mem) : Prop :=
   q.toNat + 6 ≤ iwTop m ∧
   PSlR decCVp x.1 (rdW (m.arr64 IW) q) (rdW (m.arr64 IW) (q + 1)) m ∧
   PSlR decSC x.2.1 (rdW (m.arr64 IW) (q + 2)) (rdW (m.arr64 IW) (q + 3)) m ∧
@@ -75,7 +75,7 @@ def SplitRec (x : List IConstantVal × List (IConstantVal × Nat × Nat) ×
 
 /-- `block_split`'s result `(ok, q)` against the twin. -/
 def SplitR (x : Option (List IConstantVal × List (IConstantVal × Nat × Nat) ×
-    List (IConstantVal × Nat × Nat × List IRecRule))) (r : List Word) (m : Mem) : Prop :=
+    List (IConstantVal × Nat × Nat × Bool × List IRecRule))) (r : List Word) (m : Mem) : Prop :=
   match x with
   | none => r.headD 0 = 0
   | some t => r.headD 0 = 1 ∧ SplitRec t (r.tail.headD 0) m

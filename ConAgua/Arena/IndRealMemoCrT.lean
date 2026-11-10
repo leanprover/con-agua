@@ -37,9 +37,9 @@ include hp
 /-- **`consts_resolve_ffast` refines `constsResolveFFast` and keeps the twin state**: lane `tails`'
 `constsResolveFFast_ref` with the state after the run named (it is the state before). -/
 theorem constsResolveFFast_keepsSt (e : Word) (he : H e) (a₀ : AState) :
-    CallRef p "consts_resolve_ffast" [vis, e] (fun m a => StageR dn vis fe m a ∧ CrOK m ∧ a = a₀)
+    CallRef p "consts_resolve_ffast" [vis, e] (fun m a => StageR vis fe m a ∧ CrOK m ∧ a = a₀)
       (constsResolveFFast fe (decI e))
-      (fun m m' a r x => KeepPost dn vis fe decW0B m m' a r x ∧ CrOK m' ∧ a = a₀) := by
+      (fun m m' a r x => KeepPost vis fe decW0B m m' a r x ∧ CrOK m' ∧ a = a₀) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, ⟨memo0, hM0⟩, ha⟩ hc => ?_
   have hW := callW_model (M := fun mm => crffW p k mm vis e) (crff_spec p hp k · vis e) hc
   unfold crffW at hW
@@ -56,7 +56,7 @@ theorem constsResolveFFast_keepsSt (e : Word) (he : H e) (a₀ : AState) :
     (mclearG_frame crSch m).mono (by simp) (by simp)
   have hSc := (StageR.crf hS hfc).1
   have hMc : CrR (mclearG crSch m) ∅ := memoRV_clear crSch crSch_wf bmKey CrV m memo0 hM0 hw
-  obtain ⟨b, memo', hr, hM', hF, hres⟩ := crf_refines hp k _ _ a ∅ _ e rg hSc hMc he h2
+  obtain ⟨b, memo', hr, hM', hF, hres⟩ := crf_refines (dn := fun _ => none) hp k _ _ a ∅ _ e rg hSc hMc he h2
   rw [coreWalkFuel_toNat] at hr
   obtain ⟨hS', hG⟩ := StageR.crf hS (hfc.trans hF)
   refine ⟨b, a, ?_, ⟨⟨hS', hG, ?_, ?_⟩, ⟨memo', hM'⟩, ha⟩⟩
@@ -94,7 +94,7 @@ theorem crfF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   intro m m' a r h ⟨hT, hCr⟩
   have hf := crfF_frame h
   obtain ⟨x, a', hrun, ⟨hS', hg, hd⟩, hCr', ha'⟩ := relW_callF (P := crfP)
-    (L.Stubs.constsResolveFFast_keepsSt crfP_prog (dn := dn) (vis := vis) (fe := fe) e he a).refAM
+    (L.Stubs.constsResolveFFast_keepsSt crfP_prog (vis := vis) (fe := fe) e he a).refAM
     m m' a r h ⟨hT.stage, hCr, rfl⟩
   subst ha'
   exact ⟨x, _, hrun, ⟨⟨hS', hT.twin.frame hf (by decide) (by decide) (by decide) (by decide)

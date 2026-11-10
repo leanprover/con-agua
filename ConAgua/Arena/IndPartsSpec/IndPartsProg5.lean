@@ -38,6 +38,7 @@ structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
   slGetD : p.lookup "sl_getd" = some slGetD
   pinWord : p.lookup "pin_word" = some pinWordL
   rec4 : p.lookup "rec4" = some rec4
+  rec7 : p.lookup "rec7" = some rec7
   slGet : p.lookup "sl_get" = some slGet
   paramFind : p.lookup "param_find" = some paramFind
   paramPush : p.lookup "param_push" = some paramPush
@@ -53,7 +54,6 @@ structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
   sort : p.lookup "block_shape_result_sort" = some blockShapeResultSort
   ctorsOf : p.lookup "block_shape_ctors_of" = some blockShapeCtorsOf
   membersOf : p.lookup "block_shape_members_of" = some blockShapeMembersOf
-  rhssOf : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf
   recsOf : p.lookup "block_shape_recs_of" = some blockShapeRecsOf
   large : p.lookup "block_shape_large" = some blockShapeLarge
   pack : p.lookup "block_shape_pack" = some blockShapePack
@@ -62,7 +62,6 @@ structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
   tail : p.lookup "block_shape_tail" = some blockShapeTail
   build : p.lookup "block_shape_build" = some blockShapeBuild
   shape : p.lookup "block_shape" = some blockShape
-  parts : p.lookup "block_parts" = some blockParts
   na : NaF p
 
 end L.Ind

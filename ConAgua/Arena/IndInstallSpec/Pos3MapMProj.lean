@@ -1,15 +1,13 @@
 module
 
-public import ConAgua.Arena.IndInstall
-public import ConAgua.Arena.WhnfBase
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 public import ConAgua.L.Examples
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
+public import ConAgua.Arena.IndIface
 
 @[expose] public section
 
@@ -63,19 +61,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **`check_block_positivity_nfs_member` is its model `pnmW`** (generated). -/
-l_model pnm_spec (p : Prog)
-    (hp : p.lookup "check_block_positivity_nfs_member" = some checkBlockPositivityNfsMember)
-  fns [hp ↦ pnmW]
-  specs [callW_spec p n "sl_cons"]
-  grind [ind_grind] finish [rdW_eq] gen 20
-
 /-! ## `check_block_positivity_nfs` -/
-
-/-- **`check_block_positivity_nfs` is its model `pnfW`** (generated). -/
-l_model pnf_spec (p : Prog) (hp : p.lookup "check_block_positivity_nfs" = some checkBlockPositivityNfs)
-  fns [hp ↦ pnfW]
-  specs [callW_spec p n "check_block_positivity_nfs_member", callW_spec p n "rec2", callW_spec p n "sl_cons"]
-  grind [ind_grind] finish [rdW_eq] gen 20
 
 end L.Ind

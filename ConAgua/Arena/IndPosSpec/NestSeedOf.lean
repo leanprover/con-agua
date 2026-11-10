@@ -85,12 +85,12 @@ theorem nestSeedOf_spec (k : Nat) (s₀ : St) (ctx hO hL ind us dO dL nPc : Word
 end spec
 
 section rel
-variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+variable (fe : IFEnv) (vis : Word)
 
 theorem sgW_ok (k : Nat)
     (m m' : Mem) (a : AState) (ctx hO hL ind us dO dL nPc : Word) (r : List Word) (c : NestCtx)
     (holes ds : List EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (h : sgW k m ctx hO hL ind us dO dL nPc = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : sgW k m ctx hO hL ind us dO dL nPc = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
     (hb : c.nP + c.names.length < 2 ^ 64) (hho : decHL m hO.toNat hL.toNat = some holes)
     (hhob : hO.toNat + hL.toNat ≤ iwTop m) (hds : decHL m dO.toNat dL.toNat = some ds)
@@ -98,7 +98,7 @@ theorem sgW_ok (k : Nat)
     (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat).run a = .ok (x, a') ∧
       decNK m' (r.headD 0).toNat = some x.1 ∧ (r.tail.headD 0).toNat = x.2 ∧
-      NKIn m' (r.headD 0).toNat (· < iwTop m') ∧ RxPost dn fe vis m m' a' M G g ∧ PosMR m' := by
+      NKIn m' (r.headD 0).toNat (· < iwTop m') ∧ RxPost fe vis m m' a' M G g ∧ PosMR m' := by
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, hpa, hpa', -, -, -, -, -, h11⟩ := ctx_fields hc hin htop
   have hpsum : (rdW (m.arr64 IW) (ctx + 7)).toNat + (rdW (m.arr64 IW) (ctx + 8)).toNat ≤ iwTop m := by
@@ -129,7 +129,7 @@ theorem sgW_ok (k : Nat)
   have hqt : q.toNat = iwTop m1 := by simp only [iwTop, hqd]
   rcases hgo : sgGoW k m2 ctx f dO dL q 0 with _ | m3 <;> rw [hgo] at h; · simp at h
   simp only at h
-  obtain ⟨ys, a3, hrun, hdec3, hS3, hg13, ht3, ⟨M3, G3, hR3, hk3, hG3⟩, hP3⟩ := sgGoW_ok dn fe vis k m1 m2 m3 a ctx f
+  obtain ⟨ys, a3, hrun, hdec3, hS3, hg13, ht3, ⟨M3, G3, hR3, hk3, hG3⟩, hP3⟩ := sgGoW_ok fe vis k m1 m2 m3 a ctx f
     dO dL q 0 c holes ds [] M G g hgo hS2 hg2 (by omega) (by omega) (by rw [ec1]; exact hc) hci1 hsl1 hb hfm
     (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.iw)
     (by simp) (by simp [decHL, hslice?]) (hR1.frame (allocW_fr hal))
@@ -168,10 +168,10 @@ include L
 /-- **`nest_seed_of` refines `nestSeedOf`** (through the stubs below `replace_apps` and `replace_fvars`;
 the walk memos well formed in the memory at hand, `PosMR`, and again after). -/
 @[refines ConRon.Arena.nestSeedOf]
-theorem nestSeedOf_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+theorem nestSeedOf_refines (k : Nat) (s₀ : St) (a₀ : AState) (fe : IFEnv)
     (vis ctx hO hL ind us dO dL nPc : Word) (c : NestCtx) (holes ds : List EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hP : PosMR s₀.mem)
-    (hS : StageR dn vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
+    (hS : StageR vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
     (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) (hsl : CtxSl s₀.mem ctx.toNat)
     (hb : c.nP + c.names.length < 2 ^ 64) (hho : decHL s₀.mem hO.toNat hL.toNat = some holes)
     (hhob : hO.toNat + hL.toNat ≤ iwTop s₀.mem) (hds : decHL s₀.mem dO.toNat dL.toNat = some ds)
@@ -183,11 +183,11 @@ theorem nestSeedOf_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → 
         some (AM.res (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat) a₀).1 ∧
       (r.tail.headD 0).toNat = (AM.res (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat) a₀).2 ∧
       NKIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧
-      RxPost dn fe vis s₀.mem s'.mem (AM.st (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat) a₀)
+      RxPost fe vis s₀.mem s'.mem (AM.st (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat) a₀)
         M G g ∧ PosMR s'.mem; ⊤⦄ := by
   refine triple_post (nestSeedOf_spec p L k s₀ ctx hO hL ind us dO dL nPc) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, h1, h2, h3, h4, hP'⟩ := sgW_ok dn fe vis k _ _ a₀ ctx hO hL ind us dO dL nPc r c holes ds
+  obtain ⟨x, a', hrun, h1, h2, h3, h4, hP'⟩ := sgW_ok fe vis k _ _ a₀ ctx hO hL ind us dO dL nPc r c holes ds
     M G g hm hS hc hin hsl hb hho hhob hds hdsb hind hus hR hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact h1, by rw [hres]; exact h2, h3, by rw [hst]; exact h4, hP'⟩

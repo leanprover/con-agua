@@ -10,6 +10,7 @@ import ConAgua.Arena.IndPosSpec.NtyW
 import ConAgua.Arena.RefWalk
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.IndPosSpec.UCtx
 
 @[expose] public section
 
@@ -41,9 +42,7 @@ theorem pfK_eq {β : Type} (fe : IFEnv) (c : NestCtx) (prog : List NestHole) (kb
     congr 1; funext b
     split
     · funext s; rfl
-    · simp only [bind_assoc]
-      congr 1; funext ar
-      split
+    · split
       · simp
       · funext s; rfl
 
@@ -54,11 +53,20 @@ theorem pfK_run {β : Type} {fe : IFEnv} {c : NestCtx} {prog : List NestHole} {k
     (pfK fe c prog kb hi i args K).run a = (K x).run a' := by
   rw [pfK_eq]; simp only [StateT.run_bind, h]; rfl
 
+/-- A decoded hole's index count is the word L reads at `+ 2`. -/
+theorem nh_nidx {m : Mem} {p : Word} {hl : NestHole} (hd : decNH m p.toNat = some hl)
+    (hin : NHIn m p.toNat (· < iwTop m)) (htop : iwTop m < 2 ^ 64) :
+    (rdW (m.arr64 IW) (p + 2)).toNat = hl.nIdx := by
+  simp only [decNH, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hd
+  obtain ⟨k, hk, key, hkey, b, hb, x, hx, h'⟩ := hd
+  obtain rfl := Option.some.inj h'
+  exact rd_iwN (i := 2) (by simpa using hx) (by have := hin.w2; simp; omega)
+
 /-- What `nest_pos_fvar` gives besides the twin's field kind `x`: the stage, the growth, the
 result word, the frames. -/
 structure PfvPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (w : Word)
     (m' : Mem) (x : NestFieldKind) (a' : AState) : Prop where
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   kind : decNFK w = some x
   pos : PosMR m'
@@ -67,7 +75,7 @@ structure PfvPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 /-- **`nest_pos_fvar` refines `pfK`, both outcomes.** -/
 theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m : Mem} {a : AState} {ctx po pl kb hi i aO aL : Word} {c : NestCtx}
-    {prog : List NestHole} {args : List EIdx} (hS : StageR dn vis fe m a)
+    {prog : List NestHole} {args : List EIdx} (hS : StageR vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hpr : HSl m po.toNat pl.toNat prog) (hhi : c.hiAt 0 < 2 ^ 64)
     (hargs : decHL m aO.toNat aL.toNat = some args) (hab : aO.toNat + aL.toNat ≤ iwTop m) (hP : PosMR m) :
     RefE (closedNV p _root_.L.Checker.nvFns = true) (pfvE p k m vis ctx po pl kb hi i aO aL)
@@ -88,12 +96,12 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   cases hnh : ConRon.Arena.nestHoleAt c prog i.toNat with
   | none =>
     rw [hnh] at hon; simp only [decONH] at hon
-    rw [pfvE.k_nest_hole_at.abort1 _ _ _ _ _ _ _ _ _ _ _ hon]
+    rw [pfvE.k_nest_hole_at.abort1 (hc1 := hon)]
     exact fun _ => ErrClaim.fail _ _ (by decide)
   | some hl =>
   rw [hnh] at hon
   obtain ⟨hon1, hdec, hnin⟩ := hon
-  rw [pfvE.k_nest_hole_at.arm1 _ _ _ _ _ _ _ _ _ _ _ (by rw [hon1]; decide)]
+  rw [pfvE.k_nest_hole_at.arm1 (hc1 := by rw [hon1]; decide)]
   dsimp only
   have hU1 := hU.grow hg1
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
@@ -115,34 +123,18 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   obtain ⟨hd2, hnin2⟩ := hnin.grow hg2
   rw [← hd2] at hdec
-  obtain ⟨hcH, hcd, hdl⟩ := nh_key_words hdec hnin2 htop2
-  refine RefE.onlySim (fun _ => pfvE.k_nest_arity.none ..) (fun _ _ h => h) fun r3 m3 hna => ?_
-  have hna' : naW k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0))) = some (r3, m3) := by
-    simpa [naWf] using hna
-  obtain ⟨ar, a3, hrun3, hS3, hg3, hr3⟩ := naW_ok dn fe vis _ hcH k m2 m3 a r3 hna' hS2
-  rw [hcd] at hrun3
-  refine RefE.bind_right hrun3 ?_
+  have hni := nh_nidx hdec hnin2 htop2
   have hal := decHL_length m hargs
-  rw [pfvE.k_nest_arity.eq_2]
-  refine RefE.abort0 rfl fun hov => ?_
-  have hsum : (aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat =
-      aL.toNat + hl.key.ds.length := by
-    rw [← hdl]
-    rcases Nat.lt_or_ge (aL.toNat + (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat) (2 ^ 64)
-      with hl' | hl'
-    · exact word_add_toNat hl'
-    · exfalso; apply hov; apply UInt64.lt_iff_toNat_lt.mpr; rw [UInt64.toNat_add]
-      have := aL.toNat_lt; have := (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat_lt; omega
-  refine RefE.splitNot (fun hne hq => hne (UInt64.toNat_inj.mp (by rw [hsum, hr3, ← hal]; simpa using hq)))
-    (fun hq he => hq (by rw [hal, ← hsum, ← hr3, he, beq_self_eq_true])) (fun _ _ _ => ErrClaim.fail _ _ (by decide)) fun _ _ => ?_
-  rcases hk : hkWf (k + 1) m3 ctx kb i with _ | w
+  refine RefE.splitNot (fun hne hq => hne (UInt64.toNat_inj.mp (by rw [hni, ← hal]; simpa using hq)))
+    (fun hq he => hq (by rw [hal, ← hni, he, beq_self_eq_true])) (fun _ _ _ => ErrClaim.fail _ _ (by decide))
+    fun _ _ => ?_
+  rcases hk : hkWf (k + 1) m2 ctx kb i with _ | w
   · rw [liftE_none, pfvE.k_nest_pos_hole_kind.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, pfvE.k_nest_pos_hole_kind.arm1]
-  have hU3 := (hU1.grow hg2).grow hg3
-  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
-  have hw := hkW_ok (by simpa [hkWf] using hk) hU3.dec hU3.inn htop3 hhi (nestHoleAt_nP hnh)
-  exact RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, by simpa using hw,
-    hP2.fr (naW_mfr hna'), ((haW_afr hha').trans (noaW_afr _ _ _ _ _ _ _ _ _ _ hoa)).trans (naW_afr hna')⟩
+  have hU2 := hU1.grow hg2
+  have hw := hkW_ok (by simpa [hkWf] using hk) hU2.dec hU2.inn htop2 hhi (nestHoleAt_nP hnh)
+  exact RefE.ret rfl ⟨hS2, hg1.trans hg2, by simpa using hw,
+    hP2, (haW_afr hha').trans (noaW_afr _ _ _ _ _ _ _ _ _ _ hoa)⟩
 
 /-- `nestCont`'s checks between the container and the instantiation's former (`nest_cont_checks`),
 the rest of the twin `REST`. -/
@@ -160,9 +152,9 @@ def nccT {β : Type} (c : NestCtx) (hp : Nat) (n : NIdx) (ds idx : List EIdx) (R
 /-- `cpW_ok` with no exec-fuel bound (its walks run at `CWF`: `bvbW_stageW`'s first case). -/
 theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (dO dL : Word) (ds : List EIdx) (r : List Word),
-    cpW n m hp dO dL = some (r, m') → StageR dn vis fe m a →
+    cpW n m hp dO dL = some (r, m') → StageR vis fe m a →
     decHL m dO.toNat dL.toNat = some ds → (∀ j < dL.toNat, dO.toNat + j < iwTop m) →
-    ∃ b a', (ds.allM (pcF hp.toNat)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ b a', (ds.allM (pcF hp.toNat)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       r.headD 0 = (if b then 1 else 0) := by
   induction n with
   | zero => intro m m' a dO dL ds r h; simp [cpW] at h
@@ -188,7 +180,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     rw [List.allM_cons]
     rcases hb : bvbW n m (rdW (m.arr64 IW) dO) CWF with _ | ⟨bb, m1⟩ <;> rw [hb] at h; · simp [cpK1] at h
-    obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW dn vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) _ bb hxH hb
+    obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) _ bb hxH hb
     rw [decE_eq, hxd] at hrun1
     by_cases hbb : bb ≠ 0
     · rw [cpK1_b (h := hbb)] at h
@@ -254,7 +246,7 @@ structure NccPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   occ : (idx.anyM (fun x => ConRon.Arena.nestOcc c.names c.nP hp.toNat x)).run a = .ok (false, a)
   quot : ∃ q, pinQuot.run a = .ok (q, a) ∧ (decI nn == q) = false
   params : (ds.allM (pcF hp.toNat)).run a = .ok (true, a')
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   pos : PosMR m'
   abs : AFr m m'
@@ -262,7 +254,7 @@ structure NccPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 /-- **`nest_cont_checks` refines `nccT`, both outcomes.** -/
 theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m : Mem} {a : AState} {ctx hp nn dO dL iO iL : Word}
-    {c : NestCtx} {ds idx : List EIdx} (hS : StageR dn vis fe m a)
+    {c : NestCtx} {ds idx : List EIdx} (hS : StageR vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hds : decHL m dO.toNat dL.toNat = some ds)
     (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m) (hidx : decHL m iO.toNat iL.toNat = some idx)
     (hidxb : ∀ j < iL.toNat, iO.toNat + j < iwTop m) (hnH : H nn) (hP : PosMR m) :

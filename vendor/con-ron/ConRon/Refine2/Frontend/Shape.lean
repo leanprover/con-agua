@@ -38,12 +38,8 @@ lets a reader's failure be carried into a verdict-valued caller with no side
 lemma (`SimDV.of_bind`), exactly as `RefineOld/Frontend/StateDR.lean`'s
 `LineOutV.of_bind` did.
 
-`SimStream` is `Refine2/Checker/Top.lean`'s **`SimFold` at another error
-pair** — the kind mirrored, the position equal, the state not compared on the
-error arm.  The two are the same definition at `(CheckError, u64)` in both
-cases and they belong together in `Refine2/Shape.lean`; keeping them apart is
-what stops this tier importing the whole declaration checker, and DESIGN.md's
-section lists the merge.
+`SimStream` relates an outcome whose error is a PAIR — the kind mirrored, the
+position equal, the state not compared on the error arm.
 
 **2. The frontend tier of Theorem 2 needs NO well-formedness hypothesis on a
 term**, and that is the arena's dividend.  `RefineOld/Frontend/Base.lean`'s
@@ -363,8 +359,7 @@ theorem SimDV.of_bind {γ : Type} {pers : arena.store.PersTier} {lst : AState}
 
 /-! ## `SimStream` — the chunk drivers' error PAIR
 
-`Refine2/Checker/Top.lean`'s `SimFold` at the parse's own error pair.  The
-kind is mirrored and the position is real content and is compared; the state
+An outcome at the parse's own error pair.  The kind is mirrored and the position is real content and is compared; the state
 is NOT compared on the error arm, and must not be — the twin's `chunkStep`
 hands back whatever state the failing line left.
 
@@ -529,5 +524,18 @@ structure ScanSpec : Prop where
   newlineFrom : ∀ {b : Slice Std.U8} {i : Std.Usize} {v : Bool},
     frontend.scan_fast.newline_from b i = ok v →
     v = ConLeche.Frontend.newlineFrom (absBytes b) (absPos i)
+
+/-- `usize as u64`: a widening, so the value is kept. -/
+theorem cast_u64_usize {i : Std.Usize} {r : Std.U64}
+    (h : lift (UScalar.cast .U64 i) = ok r) : r.val = i.val := by
+  simp only [lift, Result.ok.injEq] at h
+  subst h
+  rw [UScalar.cast_val_eq]
+  apply Nat.mod_eq_of_lt
+  have := i.hBounds
+  simp only [UScalarTy.numBits] at this ⊢
+  cases System.Platform.numBits_eq with
+  | inl h => rw [h] at this; omega
+  | inr h => rw [h] at this; omega
 
 end ConRon.Refine2.Frontend

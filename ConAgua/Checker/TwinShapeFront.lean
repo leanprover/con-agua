@@ -80,7 +80,7 @@ theorem post_installIndDF (st : StateD) (tys : List IndTypeRec) (cts : List IndC
       (fun s => ∃ d, s.decls = st.decls.push d ∧ FrontDecl d) := by
   unfold installIndD
   refine Post.bind (Post.mapM (Q := L.Arena.FrontCI) _ fun t _ =>
-    Post.bind (Post.any _) fun _ _ => Post.ret ⟨rfl, rfl, .inr rfl⟩) fun types ht => ?_
+    Post.bind (Post.any _) fun _ _ => Post.ret ⟨rfl, rfl⟩) fun types ht => ?_
   refine Post.bind (Post.mapM (Q := L.Arena.FrontCI) _ fun t _ =>
     Post.bind (Post.any _) fun _ _ => Post.ret trivial) fun ctors hc => ?_
   refine Post.bind (Post.mapM (Q := L.Arena.FrontCI) _ fun t _ =>
@@ -94,9 +94,10 @@ theorem post_installIndDF (st : StateD) (tys : List IndTypeRec) (cts : List IndC
   · exact hc ci h
   · exact hr ci h
 
+
 /-- **A line pushes at most one record**, a `FrontDecl` one. -/
 theorem post_applyLineF (st : StateD) (r : LineRec) :
-    L.Front.Post (applyLine st r) (fun x => ∀ st', x = .inl st' → PushedOneF st st') := by
+    L.Front.Post (applyRecord st r) (fun x => ∀ st', x = .inl st' → PushedOneF st st') := by
   cases r with
   | expr i e =>
     refine Post.bind (Q := fun s => s.decls = st.decls) ?_ fun s hs =>
@@ -119,7 +120,7 @@ theorem post_applyLineF (st : StateD) (r : LineRec) :
   | header => exact Post.ret (by intro st' h; cases h; exact .inl rfl)
   | blank => exact Post.ret (by intro st' h; cases h; exact .inl rfl)
   | decl d =>
-    simp only [ConRon.Arena.Frontend.applyLine, ConRon.Arena.Frontend.applyDeclD]
+    simp only [ConRon.Arena.Frontend.applyRecord, ConRon.Arena.Frontend.applyDeclD]
     cases d with
     | ax cv u =>
       unfold ConRon.Arena.Frontend.processLineCoreD
@@ -156,10 +157,19 @@ theorem post_applyLineF (st : StateD) (r : LineRec) :
       · exact Post.bind (post_installIndDF st _ _ _ _) fun s hs =>
           Post.ret (by intro st' h; cases h; exact .inr hs)
 
+
 theorem applyLine_front {st st' : StateD} {r : LineRec} {a a' : AState}
-    (h : applyLine st r a = .ok (.inl st', a')) (hs : FrontDecls st.decls) :
+    (h : applyRecord st r a = .ok (.inl st', a')) (hs : FrontDecls st.decls) :
     FrontDecls st'.decls :=
   (post_applyLineF st r a _ a' h st' rfl).keep hs
+
+theorem applyLineN_front {st st' : StateD} {r : LineRec} {n : Nat} {a a' : AState}
+    (h : applyLine st r n a = .ok (.inl st', a')) (hs : FrontDecls st.decls) :
+    FrontDecls st'.decls := by
+  unfold applyLine at h
+  split at h
+  · exact applyLine_front h hs
+  · simp [fail, throwThe, MonadExceptOf.throw, StateT.lift, bind, Except.bind] at h
 
 /-! ## The drivers -/
 
@@ -212,9 +222,10 @@ theorem feedChunk_front_le :
               have h1 := ConLeche.Frontend.usizeInBounds b i hlt
               have h2 := USize.lt_iff_toNat_lt.mp hij
               omega
-            exact ih hmeas' hrest (applyLine_front hline hf)
+            exact ih hmeas' hrest (applyLineN_front hline hf)
           · rw [dite_eq_right hij] at hrest
             exact absurd (ConRon.Bridge.AM.pure_ok hrest).1 (by simp)
+
 
 theorem feedChunk_front {s s' : AState} {sd sd' : StateD} {b : ByteArray} {i : USize}
     {lineNo lineNo' : Nat} {tail : USize}
@@ -238,7 +249,8 @@ theorem applyFinalLine_front {s s' : AState} {sd sd' : StateD} {b : ByteArray} {
     | inl st =>
       obtain ⟨hv, -⟩ := ConRon.Bridge.AM.pure_ok hrest
       cases hv
-      exact applyLine_front hline hf
+      exact applyLineN_front hline hf
+
 
 theorem init_front {s s' : AState} {sd : StateD} (h : StateD.init s = .ok (sd, s')) :
     FrontDecls sd.decls := by
@@ -379,8 +391,8 @@ theorem post_frontOf :
     · exact .inr (.inl (List.mem_cons_of_mem _ h))
     · exact .inr (.inr (hr d h))
 
-theorem post_hoistNatOpGround (ds : Array IDeclaration) :
-    L.Front.Post (hoistNatOpGround ds) (fun r => ∀ d ∈ r.1.toList, d ∈ ds.toList) := by
+theorem post_hoistNatOpGround (used : IDeclaration → AM (Array NIdx)) (ds : Array IDeclaration) :
+    L.Front.Post (hoistNatOpGround used ds) (fun r => ∀ d ∈ r.1.toList, d ∈ ds.toList) := by
   unfold hoistNatOpGround
   refine Post.bind (Post.any _) fun target _ => ?_
   split
@@ -396,7 +408,7 @@ theorem post_preparePrelude (pre : PreludeIx) (ds : Array IDeclaration) :
       (fun out => ∀ d ∈ out.toList, d ∈ pre.decls.toList ∨ d ∈ ds.toList) := by
   unfold preparePrelude prepareD
   refine Post.bind (Post.bind (post_frontOf pre.decls.toList #[] ds) fun fr hfr =>
-    Post.bind (post_hoistNatOpGround _) fun dh hdh => Post.ret (P := fun p : Prepared =>
+    Post.bind (post_hoistNatOpGround _ _) fun dh hdh => Post.ret (P := fun p : Prepared =>
       ∀ d ∈ p.decls.toList, d ∈ pre.decls.toList ∨ d ∈ ds.toList) ?_) fun p hp => Post.ret hp
   intro d hd
   have h1 := hdh d hd
@@ -405,6 +417,7 @@ theorem post_preparePrelude (pre : PreludeIx) (ds : Array IDeclaration) :
   · simp at h
   · exact .inl h
   · exact .inr h
+
 
 /-! ## The prefix -/
 

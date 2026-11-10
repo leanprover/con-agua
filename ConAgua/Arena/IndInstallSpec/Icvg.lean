@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndInstall
 
@@ -31,11 +30,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `check_block_inds_cv_tas` -/
 
-/-- **`check_block_inds_cv_tas_go` is its model `icvgW`** (generated). -/
-l_model icvg_spec (p : Prog) (hp : p.lookup "check_block_inds_cv_tas_go" = some checkBlockIndsCvTasGo)
-  fns [hp ↦ icvgW]
-  specs [callW_spec p n "sl_cons"]
-  grind [ind_grind] finish [rdW_eq] gen 20
 
 /-- The recursor shapes' slice of the shape at `pp` lies below the top. -/
 def RecsB (m : Mem) (pp : Word) : Prop :=

@@ -125,7 +125,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     hnfsP' hformer hpw
   rw [ConRon.Arena.targetMajorNfs]
   refine RefE.bindE (fun _ => tmnE.k_target_major_nfs.none ..) id ih' fun ⟨rr, m1⟩ ys a1 run1 hR1 => ?_
-  obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe ConRon.Bridge.CoreSpec.of_core
     henv bs pP formerTys pfvs formerTysP pfvsP (decI us) usP ds dsP ctors ctorsP hformer hpw nfs'
     nfsP' a a1 ys hC.check ⟨hsh, hftP, hpfP, husP, hdsP, hctP, hnfsP'⟩ run1
   rw [tmnE.k_target_major_nfs.arm1]

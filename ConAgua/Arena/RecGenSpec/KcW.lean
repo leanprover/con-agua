@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.RecGenSpec.CkcW
 public import ConAgua.Arena.RecGenSpec.KofProg
-import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.SgGoW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
@@ -207,7 +206,7 @@ end spec
 theorem decNK_decB_of_in {m : Mem} {k : Nat} {nk : NestKey} (h : decNK m k = some nk)
     (hin : NKIn m k (· < iwTop m)) : DecB (fun m => decNK m k) m nk := by
   show decNK (truncM m) k = some nk
-  rw [(hin.agree (m' := truncM m) (fun i hi => by simpa [iwA] using truncM_iw_eq hi)).1]; exact h
+  rw [(hin.agree (m' := truncM m) (fun i hi => by simpa [iwA, aread_apply, aread_apply] using truncM_iw_eq hi)).1]; exact h
 
 theorem decCK_decB_of_nk {m : Mem} {k : Nat} {nk : NestKey} (h : DecB (fun m => decNK m k) m nk) :
     DecB (fun m => decCK m k) m (ckOfNk nk) := by
@@ -220,10 +219,10 @@ section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem tcpPW_ok (k : Nat) (m m' : Mem) (a : AState) (pfo pfl e z : Word) (pfvs : List EIdx)
-    (h : tcpPW k m pfo pfl e = some (z, m')) (hS : StageR dn vis fe m a)
+    (h : tcpPW k m pfo pfl e = some (z, m')) (hS : StageR vis fe m a)
     (hpf : decHL m pfo.toNat pfl.toNat = some pfvs) (hpb : pfo.toNat + pfl.toNat ≤ iwTop m) (he : H e)
     (hP : PosMR m) :
-    ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE z, a') ∧ H z ∧ StageR dn vis fe m' a' ∧
+    ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE z, a') ∧ H z ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ PosMR m' := by
   unfold tcpPW at h
   -- the openers' offset as recorded: `0` for an empty slice
@@ -248,18 +247,18 @@ theorem tcpPW_ok (k : Nat) (m m' : Mem) (a : AState) (pfo pfl e z : Word) (pfvs 
   have hP1 := hP.fr (posRecW_mfr hr1)
   obtain ⟨M, G, g, hR⟩ := hP1.rf
   obtain ⟨a', hrun, hzH, M', G', hS', hg2, hR', -, -⟩ :=
-    (rxOK_all dn fe vis k).2.2.2.2.2.2 m1 m' a f e _ z M G g h hS1 hfm he hR
+    (rxOK_all fe vis k).2.2.2.2.2.2 m1 m' a f e _ z M G g h hS1 hfm he hR
   exact ⟨a', hrun, hzH, hS', hg1.trans hg2, hP1.setRf (rxW_mfr h) ⟨M', G', g, hR'⟩⟩
 
 theorem ckgW_ok (k : Nat) :
     ∀ (m0 m m' : Mem) (a : AState) (po pl dO dL q j : Word) (pfvs ds acc : List EIdx),
-    ckgW k m po pl dO dL q j = some m' → StageR dn vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat →
+    ckgW k m po pl dO dL q j = some m' → StageR vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat →
     q.toNat + dL.toNat ≤ iwTop m → decHL m0 po.toNat pl.toNat = some pfvs →
     po.toNat + pl.toNat ≤ iwTop m0 → decHL m0 dO.toNat dL.toNat = some ds →
     (∀ i < dL.toNat, dO.toNat + i < iwTop m0) → j.toNat ≤ dL.toNat →
     decHL m q.toNat j.toNat = some acc → PosMR m →
     ∃ ys a', ((ds.drop j.toNat).mapM (ConRon.Arena.targetCanonParams pfvs)).run a = .ok (ys, a') ∧
-      decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
+      decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR vis fe m' a' ∧ IWGrow m0 m' ∧
       iwTop m ≤ iwTop m' ∧ PosMR m' := by
   induction k with
   | zero => intro m0 m m' a po pl dO dL q j pfvs ds acc h; simp [ckgW] at h
@@ -287,7 +286,7 @@ theorem ckgW_ok (k : Nat) :
   simp only [tcpPWf] at h
   obtain ⟨⟨z, m2⟩, htc, h⟩ := of_K h (by simp only [ckgK])
   rw [ckgK_some] at h
-  obtain ⟨a1, hr1, hzH, hS2, hg2, hP2⟩ := tcpPW_ok dn fe vis k' m m2 a po pl x z pfvs htc hS
+  obtain ⟨a1, hr1, hzH, hS2, hg2, hP2⟩ := tcpPW_ok fe vis k' m m2 a po pl x z pfvs htc hS
     (by rw [decHL_grow hg0 hpb]; exact hpf) (by have := hg0.iw; omega) hxH hP
   have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
   have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := dL.toNat_lt; omega)
@@ -312,13 +311,13 @@ theorem ckgW_ok (k : Nat) :
 /-- **`class_key_canon`'s model simulates `classKeyCanon`**: the key decoded below the tops, the
 canonical parameters a slice below the top. -/
 theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List Word) (pfvs : List EIdx)
-    (ck : ClassKey) (h : kcW k m po pl key = some (r, m')) (hS : StageR dn vis fe m a)
+    (ck : ClassKey) (h : kcW k m po pl key = some (r, m')) (hS : StageR vis fe m a)
     (hpf : decHL m po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop m)
     (hk : DecB (fun m => decCK m key.toNat) m ck) (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.classKeyCanon pfvs ck).run a = .ok (x, a') ∧ DecB (fun m => decCK m (r.headD 0).toNat) m' x ∧
       (r.headD 0).toNat + 4 ≤ iwTop m' ∧
       (rdW (m'.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (m'.arr64 IW) (r.headD 0 + 3)).toNat ≤ iwTop m' ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' := by
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hk
   obtain ⟨hcH, hcd, huH, hud, hds, hdsb, hk4⟩ := pos2_nk_fields hnk htop
@@ -327,7 +326,7 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   have hqt : q.toNat = iwTop m := by simp only [iwTop, hqd]
   obtain ⟨m2, hgo, h⟩ := of_K h rfl
-  obtain ⟨ys, a2, hrun, hdec2, hS2, hg12, ht2, hP2⟩ := ckgW_ok dn fe vis k m m1 m2 a po pl _ _ q 0 pfvs nk.ds []
+  obtain ⟨ys, a2, hrun, hdec2, hS2, hg12, ht2, hP2⟩ := ckgW_ok fe vis k m m1 m2 a po pl _ _ q 0 pfvs nk.ds []
     hgo hS1 hg1 (by omega) (by omega) hpf hpb hds hdsb (by simp) (by simp [decHL, hslice?])
     (hP.fr (allocW_mfr hal))
   simp only [kcK] at h

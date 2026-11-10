@@ -168,12 +168,15 @@ open L.Arena
 
 /-- A writer of neither `IW`, `EREC` nor `CTL[129]`, `CTL[200]` keeps the pool's growth. -/
 theorem IWGrow.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A) (hC : (200 : Word) ∉ C ∧ (129 : Word) ∉ C) : IWGrow m m' := by
+    (hA : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A)
+    (hC : (200 : Word) ∉ C ∧ (129 : Word) ∉ C ∧ (130 : Word) ∉ C) : IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW hA.1 (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC hA.2 (by decide)
-  refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC hA.2.1 (by decide)
+  have hE1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hf.arr _ hA.2.2 (by decide)
+  refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE], ?_, fun i _ => by rw [hE1]⟩
   · simp only [iwTop, hf.ctl 200 hC.1]; exact Nat.le_refl _
-  · simp only [erTop, hf.ctl 129 hC.2]; exact Nat.le_refl _
+  · simp only [erTop, hf.ctl 129 hC.2.1]; exact Nat.le_refl _
+  · simp only [erecTop1, hf.ctl 130 hC.2.2]; exact Nat.le_refl _
 
 /-- **The model of `struct_ps_at_go` refines `structPsAt.go`** from a memory related to `a` by
 `ArenaR`. -/

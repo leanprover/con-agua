@@ -116,16 +116,16 @@ theorem ipl_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
     (hws : ∀ (i : Nat) (h : i < ws.size), HW ws[i])
     (hwl : ∀ (i : Nat) (h : i < ws.size), lvNodeW s₀.mem ws[i] ≠ []) (hdk : d.toNat + k.toNat < 2 ^ 64) :
     RefE (InferG p n) (iplE p (n + 1) s₀.mem mode vis d t k fo lo)
-      (inferPisLeaf (coreKnot (decMode mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI)) a₀
+      (inferPisLeaf (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI)) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hsz := hcap _ _ _ _ _ _ _ hS
   have hdk' : (d + k).toNat = d.toNat + k.toNat := addW _ _ hdk
   have h0 : (0 : Word).toNat = 0 := rfl
-  have hT : inferPisLeaf (coreKnot (decMode mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI) =
+  have hT : inferPisLeaf (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI) =
       (instantiateListFast coreWalkFuel (decE t) fvs (0 : Word).toNat >>= fun ob =>
-        (coreKnot (decMode mode) fe id F).infer (d + k).toNat ob >>= fun bt =>
-        ensureSort (coreKnot (decMode mode) fe id F) fe (d + k).toNat bt >>= fun v =>
+        (coreKnot (decMode mode) (decEager mode) fe id F).infer (d + k).toNat ob >>= fun bt =>
+        ensureSort (coreKnot (decMode mode) (decEager mode) fe id F) fe (d + k).toNat bt >>= fun v =>
         inferPisOut (ws.map decI) k.toNat v >>= fun iv => internSortE iv) := by
     rw [hdk', h0, inferPisLeaf, Array.size_map, hB.size]
   rw [hT]
@@ -188,7 +188,7 @@ theorem inferPisLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
     (hws : ∀ (i : Nat) (h : i < ws.size), HW ws[i])
     (hwl : ∀ (i : Nat) (h : i < ws.size), lvNodeW s₀.mem ws[i] ≠ []) (hdk : d.toNat + k.toNat < 2 ^ 64) :
     CoreSpec p (n + 1) "infer_pis_leaf" [mode, vis, d, t, k, fo, lo]
-      (inferPisLeaf (coreKnot (decMode mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI))
+      (inferPisLeaf (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI))
       decH s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (iplE_spec p hq.pisLeaf (n + 1) s₀ mode vis d t k fo lo)
     (ipl_ref p hp hb hil hcap n hk F hF hn s₀ a₀ dn vis fe M eb mode d t k fo lo fvs ws hs ht hf hftop
@@ -206,7 +206,7 @@ theorem inferPisLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb
     (∀ (i : Nat) (h : i < ws.size), lvNodeW s₀.mem ws[i] ≠ []) →
     d.toNat + k.toNat < 2 ^ 64 →
     CoreSpec p n "infer_pis_leaf" [mode, vis, d, t, k, fo, lo]
-      (inferPisLeaf (coreKnot (decMode mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI))
+      (inferPisLeaf (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI))
       decH s₀ a₀ dn vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
@@ -226,7 +226,7 @@ theorem inferPisLeaf_anyE (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (h
     lo.toNat + k.toNat ≤ (bTop s₀.mem).toNat → (∀ (i : Nat) (h : i < ws.size), HW ws[i]) →
     (∀ (i : Nat) (h : i < ws.size), lvNodeW s₀.mem ws[i] ≠ []) → d.toNat + k.toNat < 2 ^ 64 →
     CoreSpecE p n "infer_pis_leaf" [mode, vis, d, t, k, fo, lo]
-      (inferPisLeaf (coreKnot (decMode mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI)) s₀ a₀
+      (inferPisLeaf (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI)) s₀ a₀
   | 0, _, _, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
       CoreSpecE.zero p _ _ _ s₀ a₀
   | n + 1, hk, hG, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, t, k, fo, lo, fvs, ws, hs, ht, hf,
@@ -252,7 +252,7 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       (∀ j, j < lo → rdW (m.arr64 BSTK) j = rdW (m₀.arr64 BSTK) j) →
       (m.arr64 BSTK).size = (m₀.arr64 BSTK).size → PoolGrew m₀ m →
       RefE (InferG p N) (ipsE.k_loop1 p N mode vis d fo lo (ipsE.loop1 p j m mode vis d peel t k fo lo ty u))
-        (inferPis (coreKnot (decMode mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
+        (inferPis (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
           (ws.map decI)) a (TelP dn vis fe M eb m₀ fo lo) := by
   intro j
   induction j with
@@ -373,8 +373,8 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       exact hih.mono fun _ _ _ h => h.keep (hK₁.trans (hK₂.trans (hK₃.trans hK₄)))
     · -- the exit: the leaf
       rw [ite_eq_right hc]
-      have hT : (inferPis (coreKnot (decMode mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
-          (ws.map decI)).run a = (inferPisLeaf (coreKnot (decMode mode) fe id F) fe d.toNat (decE t)
+      have hT : (inferPis (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
+          (ws.map decI)).run a = (inferPisLeaf (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE t)
           k.toNat fvs (ws.map decI)).run a := by
         by_cases hp0 : peel = 0
         · subst hp0; rfl
@@ -420,7 +420,7 @@ theorem ips_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
     (hbb0 : ∀ j, j < lo → rdW (s₀.mem.arr64 BSTK) j = rdW (m₀.arr64 BSTK) j)
     (hbsz0 : (s₀.mem.arr64 BSTK).size = (m₀.arr64 BSTK).size) (hpg0 : PoolGrew m₀ s₀.mem) :
     RefE (InferG p n) (ipsE p (n + 1) s₀.mem mode vis d peel t k fo lo)
-      (inferPis (coreKnot (decMode mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
+      (inferPis (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
         (ws.map decI)) a₀ (TelP dn vis fe M eb m₀ fo lo) := by
   simp only [ipsE]
   exact pisLoop_ref p hp hq hb hil hcap n hk F hF hn dn vis fe mode d fo lo eb hs.mode4 hs.eb_mode
@@ -443,7 +443,7 @@ theorem inferPis_tel (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
     (hbb0 : ∀ j, j < lo → rdW (s₀.mem.arr64 BSTK) j = rdW (m₀.arr64 BSTK) j)
     (hbsz0 : (s₀.mem.arr64 BSTK).size = (m₀.arr64 BSTK).size) (hpg0 : PoolGrew m₀ s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_pis" [mode, vis, d, peel, t, k, fo, lo]
-    ⦃fun r s' => LocEq s' s₀ ∧ ∃ y a', (inferPis (coreKnot (decMode mode) fe id F) fe d.toNat peel.toNat
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ y a', (inferPis (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat peel.toNat
       (decE t) k.toNat fvs (ws.map decI)).run a₀ = .ok (y, a') ∧
       TelP dn vis fe M eb m₀ fo lo (r, s'.mem) y a'; ⊤⦄ :=
   RefE.triple (ipsE_spec p hq.pis (n + 1) s₀ mode vis d peel t k fo lo)
@@ -463,7 +463,7 @@ theorem inferPis_anyE (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : 
     (∀ j, j < lo → rdW (s₀.mem.arr64 BSTK) j = rdW (m₀.arr64 BSTK) j) →
     (s₀.mem.arr64 BSTK).size = (m₀.arr64 BSTK).size → PoolGrew m₀ s₀.mem →
     CoreSpecE p n "infer_pis" [mode, vis, d, peel, t, k, fo, lo]
-      (inferPis (coreKnot (decMode mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
+      (inferPis (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
         (ws.map decI)) s₀ a₀
   | 0, _, _, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
       _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => CoreSpecE.zero p _ _ _ s₀ a₀
@@ -484,7 +484,7 @@ theorem ifr_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d ty body : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
     RefE (InferG p n) (ifrE p (n + 1) s₀.mem mode vis d ty body)
-      (inferForall (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE body)) a₀
+      (inferForall (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty) (decE body)) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hK := hk n (Nat.le_refl _)
@@ -584,7 +584,7 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d ty body : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
     CoreSpec p (n + 1) "infer_forall" [mode, vis, d, ty, body]
-      (inferForall (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE body)) decH s₀ a₀ dn vis fe
+      (inferForall (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE ty) (decE body)) decH s₀ a₀ dn vis fe
         M eb :=
   RefE.coreSpec (ifrE_spec p hq.fa (n + 1) s₀ mode vis d ty body)
     (ifr_ref p hp hq hb hil hcap n hk F hF hn s₀ a₀ dn vis fe M eb mode d ty body hs hty hbody)

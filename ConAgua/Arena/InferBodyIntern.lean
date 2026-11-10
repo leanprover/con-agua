@@ -105,8 +105,8 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     hf.arr SPN (fun h => absurd (hA _ h) (by decide)) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
     hf.ctl 136 (fun h => by have := hC _ h; simp at this)
-  refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; omega)
-      (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
+  refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => not_mem_envArrs (by have := hA b hb; omega))
+      (fun x hx => not_mem_envCtl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
       hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
@@ -117,7 +117,8 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
         ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
           fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
-          fun h => absurd (hC _ h) (by decide)⟩,
+          fun h => absurd (hC _ h) (by decide)⟩
+        (fun h => absurd (hA _ h) (by decide)) (fun h => by have := hC _ h; simp at this),
       hf.size BSTK ▸ hS.bstk,
       hS.den.mono (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext) (by rw [hL.pins])
         (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
@@ -127,7 +128,10 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
             have e : a'.store.lss.view u = a.store.lss.view u := by
               unfold LsStore.view; rw [hL.lsp, hL.lss, hL.lon]
             rw [← e]; exact hu)
-          (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext)), hmode⟩,
+          (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext)), hmode,
+      hS.iwF hf (fun h => absurd (hA _ h) (by decide)) (fun h => absurd (hA _ h) (by decide))
+        (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)
+        (fun h => by have := hC _ h; simp at this)⟩,
     StackKept.of_frameL hf
       ⟨fun h => absurd (hA _ h) (by decide),
        fun h => absurd (hA _ h) (by decide), hP⟩
@@ -198,6 +202,7 @@ theorem internSort_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
   have hI₂ := hI
   have hw := consInternM_lt sortCS_wf hS.arena.base.sort hI₂
   have hS' := hS.arena_frameD hD (Keeps.run (keeps_cpl_internSort _) (AM.run_of_ok _ _ hok)) hf
+    (hiw := hS.iwF hf) (hhb := hS.memos.hbF hf)
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (by decide)

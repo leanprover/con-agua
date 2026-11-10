@@ -12,7 +12,6 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.RefWalk
-import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.TwinStep
 import all ConAgua.Arena.RecCheck

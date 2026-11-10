@@ -7,6 +7,7 @@ import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
 import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.BvarB
 import all ConAgua.Arena.CheckerL
 import all ConAgua.Arena.ConsLib
@@ -30,14 +31,15 @@ import all ConAgua.Arena.ForallStore
 import all ConAgua.Arena.Freeze
 import all ConAgua.Arena.HasFvar
 import all ConAgua.Arena.ImaxStore
+import all ConAgua.Arena.IndDeclConsts
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
+import all ConAgua.Arena.IndStream
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.Infer
-import all ConAgua.Arena.InferFieldSort
 import all ConAgua.Arena.Inst1
 import all ConAgua.Arena.Inst1Spec
 import all ConAgua.Arena.InstLP
@@ -79,7 +81,6 @@ import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
@@ -132,6 +133,7 @@ import all ConAgua.Front.LineRec
 import all ConAgua.Front.NatDec
 import all ConAgua.Front.Unescape
 import all ConAgua.L.Examples
+import all ConAgua.Rom.CIConst
 import all ConAgua.Rom.CIRead
 import all ConAgua.Rom.PinRead
 import all ConAgua.Rom.PinReadSpec

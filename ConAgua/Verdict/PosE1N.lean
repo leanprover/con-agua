@@ -5,18 +5,17 @@ import ConRon.Bridge.Inductives.PosWalks
 import ConAgua.Arena.IndPosSpec.NtyW
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Verdict.PosNty
-import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.Specs
-public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.NkFields
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Verdict.PosE1M
+public import ConAgua.Verdict.PosFt
+public import ConAgua.Arena.IndPosSpec.UCtx
 
 @[expose] public section
 /-!
@@ -32,6 +31,8 @@ open Std.WP
 open scoped Lean.Order
 open ConRon.Bridge.Inductives (dCtx dKey)
 
+local notation "V" => ConLeche.CheckMode.verified
+
 namespace L.Ind
 open L.Arena
 
@@ -43,7 +44,7 @@ theorem nvAt_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) {f :
 count of binders at `r[0]`, the container's type at `r[1]`, the frames, `AbsOK`. -/
 structure NitPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)
     (m' : Mem) (x : Nat × EIdx) (a' : AState) : Prop where
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   count : (r.headD 0).toNat = x.1
   hty : H (r.tail.headD 0)
@@ -55,25 +56,33 @@ structure NitPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 (`nty_ref`), `pi_binders`, `e_view` and `nest_occ_any` (lifted), the level comparison (`lef_ref`,
 under `StageC` with the context's and key's denotations). -/
 theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env} (k : Nat) {m : Mem}
+    (hq : KnotStageProg p) (hF : FtProg p)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+    (k : Nat) (hk62 : k ≤ 2 ^ 62) {m : Mem}
     {a : AState} {ctx hi key : Word} {HI : Nat} {c : NestCtx} {kk : NestKey} {ctxP : ConLeche.NestCtx}
     {keyP : ConLeche.NestKey} (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hHI : hi.toNat = HI)
     (hU : UCtx dn vis fe m ctx c) (hk : decNK m key.toNat = some kk) (hkin : NKIn m key.toNat (· < iwTop m))
     (hksl : NKSl m key) (hP : PosMR m) (hctx : dCtx a.store env.find? c = some ctxP)
     (hkey : dKey a.store kk = some keyP) :
-    RefE (closedNV p _root_.L.Checker.nvFns = true) (nitE p k m vis ctx hi key)
-      (ConRon.Arena.nestInstType fe c HI kk) a (fun v x a' => NitPost dn vis fe m v.1 v.2 x a') := by
+    RefE (WtG p) (nitE p k m vis ctx hi key)
+      (ConRon.Arena.nestInstType V fe c HI kk) a (fun v x a' => NitPost dn vis fe m v.1 v.2 x a') := by
   cases k with
   | zero => rw [nitE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ k =>
   have hS := hC.stage
   rw [nitE.arm1]
   -- `nest_inst_type_ty`: the twin up to `instPisWith`
-  change RefE _ _ (ntyT fe kk _) _ _
-  rw [ntyT_eq]
-  refine RefE.bindE (fun _ => rfl) id (nty_ref L.ty k (IlpRd.realC hIlpf hC) hS hk hkin hksl)
-    fun ⟨w1, m1⟩ ty a5 _ ⟨⟨cv, caps, q, a3, a4, tl, hfind, hvl, hrun3, hrun4, hrun5⟩, hS1, hg1, htyH, htyd,
-      hA1, hM1⟩ => ?_
+  change RefE _ _ (ntyTV fe kk _) _ _
+  rw [ntyTV_eq]
+  refine RefE.bindE (fun _ => rfl) id (nty_ref L.ty hq hF hIlpf henv k (by omega) hC hA hk hkin hksl hkey)
+    fun ⟨w1, m1⟩ ty a5 _ hN => ?_
+  have hS1 := hN.stage.stage
+  have hg1 := hN.grow
+  have htyH := hN.hw
+  have htyd := hN.dec
+  have c5 := hN.core
+  obtain ⟨tyP, htyP⟩ := hN.den
+  simp only at hS1 hg1 htyH htyd
   dsimp only [nitE.k_nest_inst_type_ty]
   -- `pi_binders`
   refine RefE.bindLift (fun _ => rfl) fun rs m2 hpb => ?_
@@ -109,7 +118,7 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
   have hne2 := ctx_names_end hU2.dec hU2.inn hU2.sl htop2
   refine RefE.bindLift (fun _ => rfl) fun r3 m3 hoa => ?_
   obtain ⟨b, hrunoa, hS3, hg3, hr3, hP3⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m2 m3 a5 _ _ bs _ hoa hS2
-    hn2 hne2 hdecbs (fun j hj => by omega) ((hP.fr hM1).fr (piBW_mfr _ _ _ _ _ _ hpb))
+    hn2 hne2 hdecbs (fun j hj => by omega) ((hN.pos hP).fr (piBW_mfr _ _ _ _ _ _ hpb))
   rw [hnP2, hHI] at hrunoa
   refine ⟨_, _, hrunoa, ?_⟩
   dsimp only [nitE.k_nest_occ_any]
@@ -117,22 +126,11 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
     (fun hb => by subst hb; rw [hr3]; decide) fun _ _ => ?_
   -- the stage at the comparison
   have hok := hC.check
-  obtain ⟨hcn, hlv, hds⟩ := ConRon.Bridge.Inductives.dKey_inv hkey
-  obtain ⟨namesP, lpsP, paramsP, sortP, -, -, -, -, hsort, -⟩ := ConRon.Bridge.Inductives.dCtx_inv hctx
-  obtain ⟨ci, hci, -⟩ := ConRon.Bridge.Inductives.find_some_rel hok.ienv hcn hfind
-  obtain ⟨cvP, capsP, hcvP, -, -⟩ := ConRon.Bridge.Inductives.denoteCI_indInfo_inv hci
-  obtain ⟨-, hlpsC, htyC⟩ := ConRon.Bridge.denoteCV_inv hcvP
-  obtain ⟨hs3', -⟩ := ConRon.Bridge.Inductives.stripPis_pstep hok.state htyC hrun3
-  subst hs3'
-  obtain ⟨c4, htl⟩ := ConRon.Bridge.Inductives.instLPFast_cstep hok hlpsC hlv htyC hrun4
-  obtain ⟨p5, ho2⟩ := ConRon.Bridge.Inductives.instPisWith_spec kk.ds keyP.ds tl _ a4 a5 (some ty)
-    c4.ok.state ⟨ConRon.Bridge.denoteEList_ext c4.ext _ _ hds, htl⟩ hrun5
-  have c5 := c4.trans (p5.toCore c4.ok)
-  obtain ⟨tyP, -, htyP⟩ := ho2
+  obtain ⟨namesP, lpsP, paramsP, sortP, -, -, -, -, -, hsort, -⟩ := ConRon.Bridge.Inductives.dCtx_inv hctx
   obtain ⟨-, -, hpb2⟩ := ConRon.Bridge.Inductives.piBinders_spec _ ty tyP a5 a5 (bs, e') c5.ok.state htyP hrunpb'
   obtain ⟨-, hv5⟩ := ConRon.Bridge.view_run hview'
   obtain ⟨sP, -, hsL⟩ := ConRon.Bridge.denote_sort_inv c5.ok.state.wf hv5 hpb2
-  have hA3 : AbsOK m3 := noaW_afr _ _ _ _ _ _ _ _ _ _ hoa (piBW_afr _ _ _ _ _ _ hpb (hA1 hA))
+  have hA3 : AbsOK m3 := noaW_afr _ _ _ _ _ _ _ _ _ _ hoa (piBW_afr _ _ _ _ _ _ hpb hN.abs)
   have hC3 : StageC dn vis fe env m3 a5 := hC.of_check hS3 hA3 c5.ok c5.ext
   have hU3 := hU2.grow hg3
   have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
@@ -145,7 +143,7 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
   rw [← hud', ← hsd]
   -- `lvl_eq_fueled`
   rw [lefT_bind]
-  refine RefE.bindE (fun _ => rfl) (fun hnv => nvAt_of hnv (_root_.L.Checker.nv_mem (by decide +kernel)))
+  refine RefE.bindE (fun _ => rfl) (fun hG => nvAt_of hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)))
     (lef_ref hcl hLC k hC3.stageT huH' hsH hsL hdv) fun ⟨w4, m4⟩ b' a6 _ hRp => ?_
   dsimp only [nitE.k_lvl_eq_fueled]
   have hres := hRp.res

@@ -60,9 +60,9 @@ theorem bpf_spec (hp : p.lookup "block_shape_pins_formers" = some blockShapePins
     rw [invoke_eq _ hp]
     simp only [callFn, blockShapePinsFormers]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n,
         erToIw_specW p hP.alloc hec het n, slEq_spec p hseq n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+      finish (gen := 20) [rdW_eq, erRd]
 
 omit hP in
 theorem bpr_spec (hp : p.lookup "block_shape_pins_recs" = some blockShapePinsRecs) (n : Nat) :
@@ -76,8 +76,8 @@ theorem bpr_spec (hp : p.lookup "block_shape_pins_recs" = some blockShapePinsRec
     rw [invoke_eq _ hp]
     simp only [callFn, blockShapePinsRecs]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n, ih] <;>
+      finish (gen := 20) [rdW_eq, erRd]
 
 include hec het hseq in
 theorem bpc_spec (hp : p.lookup "block_shape_pins_ctors" = some blockShapePinsCtors) (n : Nat) :
@@ -91,9 +91,9 @@ theorem bpc_spec (hp : p.lookup "block_shape_pins_ctors" = some blockShapePinsCt
     rw [invoke_eq _ hp]
     simp only [callFn, blockShapePinsCtors]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n,
         erToIw_specW p hP.alloc hec het n, slEq_spec p hseq n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+      finish (gen := 20) [rdW_eq, erRd]
 
 end spec
 
@@ -122,9 +122,9 @@ theorem bsl_spec (p : Prog) (hP : IndPartsProg4 p) (hec : p.lookup "er_copy" = s
   rw [invoke_eq _ hp]
   simp only [callFn, blockShapeLarge]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erToIw_specW p hP.alloc hec het n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erToIw_specW p hP.alloc hec het n,
       slEq_spec p hseq n, slContains_spec p hP.contains n] <;>
-    finish (gen := 20) [bslW, rdW_eq]
+    finish (gen := 20) [bslW, rdW_eq, erRd]
 
 end L.Ind
 
@@ -163,9 +163,9 @@ theorem bsn_spec (hp : p.lookup "block_shape_names_of" = some blockShapeNamesOf)
     rw [invoke_eq _ hp]
     simp only [callFn, blockShapeNamesOf]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+      finish (gen := 20) [rdW_eq, erRd]
 
 theorem bct_spec (hp : p.lookup "block_shape_ctors_of" = some blockShapeCtorsOf) (n : Nat) :
     ∀ (s₀ : St) (cso csl : Word),
@@ -182,7 +182,7 @@ theorem bct_spec (hp : p.lookup "block_shape_ctors_of" = some blockShapeCtorsOf)
         posRec2_specW p hP.alloc hP.rec2 n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
-theorem bmo_spec (h4 : p.lookup "rec4" = some rec4)
+theorem bmo_spec (h5 : p.lookup "rec5" = some rec5)
     (hp : p.lookup "block_shape_members_of" = some blockShapeMembersOf) (n : Nat) :
     ∀ (s₀ : St) (cto ctl io go : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_members_of" [cto, ctl, io, go]
@@ -196,9 +196,9 @@ theorem bmo_spec (h4 : p.lookup "rec4" = some rec4)
     rw [invoke_eq _ hp]
     simp only [callFn, blockShapeMembersOf]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec4_specW p hP.alloc h4 n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        posRec5_specW p hP.alloc h5 n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
+      finish (gen := 20) [rdW_eq, erRd]
 
 end spec
 
@@ -262,7 +262,7 @@ theorem bbH2_fail (h : r.headD 0 = 0) : bbH2 c n nPd cto ctl cso csl rso rsl cvT
     some ([0, 0], m) := by simp only [bbH2]; exact ite_eq_left h
 theorem bbH2_ok (h : ¬ r.headD 0 = 0) : bbH2 c n nPd cto ctl cso csl rso rsl cvT0 no nl (some (r, m)) =
     bbH3 c n nPd cto ctl cso csl rso rsl no nl (r.tail.headD 0) (r.tail.tail.headD 0)
-      (erToIwW (n + 3) m (rdW (m.arr64 EREC) (cvT0 + 1)) (rdW (m.arr64 EREC) (cvT0 + 2))) := by
+      (erToIwW (n + 3) m (erRd m (cvT0 + 1)) (erRd m (cvT0 + 2))) := by
   simp only [bbH2]; exact ite_eq_right h
 end arms
 attribute [ind_grind] btK3_some btK1_some bbH2_fail bbH2_ok
@@ -280,8 +280,8 @@ theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
       bct_spec p hP.toIndPartsProg4 hP.ctorsOf (n + 1),
       plW_spec p hP.alloc hP.copy hP.cons hP.slGet hP.paramFind hP.paramPush hP.internParam hP.plGo hP.pl hP.il (n + 1),
       bg_spec p hP.toIndPartsProg hP.view hP.find hP.midx hP.cmem hP.gone hP.rec2 hP.ggo hP.groups n,
-      bmo_spec p hP.toIndPartsProg4 hP.rec4 hP.membersOf (n + 1),
-      brs_spec p hP.toIndPartsProg4 hP.rec6 hP.rhssOf hP.recsOf (n + 1),
+      bmo_spec p hP.toIndPartsProg4 hP.rec5 hP.membersOf (n + 1),
+      brs_spec p hP.toIndPartsProg4 hP.rec7 hP.recsOf (n + 1),
       bsl_spec p hP.toIndPartsProg4 hP.erCopy hP.erToIw hP.slEq hP.large n,
       bseal_spec p hP.na hP.alloc hP.pack hP.sealF (n + 1)] <;>
     finish (gen := 20) [bfW, rdW_eq, bbK8_some, bbK9_some, bbK10_some, bbK11_some, bbK12_some,
@@ -296,10 +296,10 @@ theorem bt_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c
   rw [invoke_eq _ hP.tail]
   simp only [callFn, blockShapeTail]
   sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       bso_spec p hP.view hP.pinWord hP.slGetD hP.sort hP.strip (n + 1), pinWord_specV p hP.pinWord (n + 2),
       hc (n + 2) "lvl_eq_c", bf_spec p hP n] <;>
-    finish (gen := 20) [btW, rdW_eq, btK1_some, btK2_some, btK3_some, bgoK3_some]
+    finish (gen := 20) [btW, rdW_eq, erRd, btK1_some, btK2_some, btK3_some, bgoK3_some]
 
 set_option maxHeartbeats 20000000 in
 theorem bb_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St) (nPd cto ctl cso csl rso rsl : Word) :
@@ -308,12 +308,12 @@ theorem bb_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c
   rw [invoke_eq _ hP.build]
   simp only [callFn, blockShapeBuild]
   sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       bsn_spec p hP.toIndPartsProg4 hP.namesOf (n + 3), bmc_spec p hP.toIndPartsProg4 (n + 2),
       erToIw_specW p hP.alloc hP.erCopy hP.erToIw (n + 3),
       bpo_spec p hP.toIndPartsProg4 hP.resFrom hP.resCont hP.erCopy hP.erToIw hP.slEq hP.pinsF hP.pinsR
         hP.pinsC hP.pinsOk (n + 2), bt_spec p hP c hc n] <;>
-    finish (gen := 20) [bbW, rdW_eq, bbH1_some, bbH2_fail, bbH2_ok, bbH3_some, bbH4_fail, bbH4_ok, bgoK3_some]
+    finish (gen := 20) [bbW, rdW_eq, erRd, bbH1_some, bbH2_fail, bbH2_ok, bbH3_some, bbH4_fail, bbH4_ok, bgoK3_some]
 
 end L.Ind
 
@@ -342,7 +342,7 @@ theorem bsh_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p 
   simp only [callFn, blockShape]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bs_spec p hP.alloc hP.copy hP.cons hP.rec5 hP.rec3 hP.rec6 hP.recs hP.ctors hP.split (n + 4),
+      bs_spec p hP.alloc hP.copy hP.cons hP.rec3 hP.rec6 hP.recs hP.ctors hP.split (n + 4),
       bb_spec p hP c hc n] <;>
     finish (gen := 20) [bshW, rdW_eq, bgoK3_some]
 

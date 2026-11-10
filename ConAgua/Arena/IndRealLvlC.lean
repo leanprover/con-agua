@@ -14,11 +14,10 @@ public import ConRon.Bridge.Inductives.Run
 /-!
 # The level callees under `StageC` (lane `indproofs4`, helper `lvl`)
 
-The `StageT` sims of `lvl_eq_c`, `lvls_eq_c` (`IndRealLvlT.lean`) and `lv_zero_caps`
-(`IndRealLvlZT.lean`) lifted to lane `indstaget`'s `StageC` (`IndT/Lift.lean`): con-ron's frame
+The `StageT` sims of `lvl_eq_c`, `lvls_eq_c` (`IndRealLvlT.lean`) lifted to lane `indstaget`'s `StageC` (`IndT/Lift.lean`): con-ron's frame
 lemmas make the twin's run a `PStep` (`lvlEq?_pstep`, `readLevelM_pstep`) or a `CoreStep`
 (`RC.lvlsEq?_run`, which also names the verdict); `lv_leq_top`'s from `IndTwin.lvLeqTop_simT`'s proof, and `AbsOK` is carried across the call (the
-core's write set, `absOK_core`; `lv_zero_caps`' own, `lzcF_frame`). For the `StageC` proofs that
+core's write set, `absOK_core`). For the `StageC` proofs that
 read these calls through the stub contracts (`tcm_ref`, `Verdict/IndBTcm.lean`).
 -/
 
@@ -59,7 +58,7 @@ theorem lvlsEqC_simC (n : Nat) {m : Mem} {a : AState} (hC : StageC dn vis fe env
     (hvsP : denoteLs a.store.lss (decI vs) = some vsP) :
     Sim (callW p n "lvls_eq_c" [us, vs] m) (lvlsEq? (decI us) (decI vs)) a
       (fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ decLvlEq m' r x ∧ AbsOK m' ∧
-        ConRon.Bridge.CoreStep .verified env fe a a' ∧ x = ConLeche.Level.isEquivList usP vsP) := by
+        ConRon.Bridge.CoreStep env fe a a' ∧ x = ConLeche.Level.isEquivList usP vsP) := by
   intro r m' e
   obtain ⟨x, a', hrun, hT', hg, hd⟩ := lvlsEqC_simT p hcl hL n hC.stageT us vs hu hv r m' e
   have hA' := absOK_core hcl (by decide) e hA hT'

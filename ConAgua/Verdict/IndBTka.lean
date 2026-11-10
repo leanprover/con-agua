@@ -125,14 +125,14 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   unfold tkArgs
   -- `erase_each` of the leaf's indices
   refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
-  obtain ⟨le, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok dn fe vis n h1 hS hla.drop hP
+  obtain ⟨le, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok fe vis n h1 hS hla.drop hP
   rw [hnP] at run1
   refine ⟨_, _, run1, ?_⟩
   dsimp only [tkaE.k_erase_each]
   have hA1 := eeW_afr n h1 hA
   -- `erase_each` of the major's indices
   refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
-  obtain ⟨me, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok dn fe vis n h2 hS1 (hma.grow hg1).drop hP1
+  obtain ⟨me, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok fe vis n h2 hS1 (hma.grow hg1).drop hP1
   rw [hnP] at run2
   refine ⟨_, _, run2, ?_⟩
   dsimp only [tkaE.k_erase_each_2]
@@ -184,7 +184,7 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   generalize hL : (if lal < K then lal else K) = lpl at hlp ⊢
   -- `mk_app_n_f`
   refine RefE.bindLift (fun _ => rfl) fun ra m4 h5 => ?_
-  obtain ⟨app, a4, run4, hS4, hg4, happH, happD⟩ := mknF_ok dn vis fe hd lao lpl hhd _ m3 m4 a3 ra h5
+  obtain ⟨app, a4, run4, hS4, hg4, happH, happD⟩ := mknF_ok vis fe hd lao lpl hhd _ m3 m4 a3 ra h5
     ⟨hS3, hlp.1⟩
   have hA4 := mknF_afr h5 hA3
   have hlpP := denoteEList_ext q13.ext _ _ (ConRon.Bridge.Inductives.denoteEList_take hlaP TM.nPc)
@@ -209,7 +209,7 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hC5 := hC4.of_pstep hS5 hA5 (PStep.refl hC4.check.state)
   -- `nest_occ`
   refine RefE.bindLift (fun _ => rfl) fun occ m6 h7 => ?_
-  obtain ⟨b, run6, hb6, hS6, hg6, hP6⟩ := noF_ok dn fe vis n h7 hS5 happH hdn (Nat.le_of_eq htn) hP5
+  obtain ⟨b, run6, hb6, hS6, hg6, hP6⟩ := noF_ok fe vis n h7 hS5 happH hdn (Nat.le_of_eq htn) hP5
   refine ⟨_, _, run6, ?_⟩
   have hA6 := noF_afr h7 hA5
   have hC6 := hC5.of_pstep hS6 hA6 (PStep.refl hC5.check.state)

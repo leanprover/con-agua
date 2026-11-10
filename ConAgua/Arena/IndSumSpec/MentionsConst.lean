@@ -39,16 +39,16 @@ include hv hf hput hgo
 /-- **`mentions_const_go` refines `mentionsConstGo`**, from a memo related to the twin's, at the twin
 fuel `f.toNat` of the L fuel word `f`, at every exec depth `n`. -/
 @[refines ConRon.Arena.mentionsConstGo]
-theorem mentionsConstGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem mentionsConstGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis f T h : Word) (mp : Std.HashMap EIdx Bool) (hh : H h)
-    (hT : H T) (hS : StageR dn vis fe s₀.mem a₀) (hM : mcMR s₀.mem mp) :
+    (hT : H T) (hS : StageR vis fe s₀.mem a₀) (hM : mcMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "mentions_const_go" [f, T, h]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.mentionsConstGo (decI T) mp f.toNat (decE h)) a₀ ∧
       AM.st (ConRon.Arena.mentionsConstGo (decI T) mp f.toNat (decE h)) a₀ = a₀ ∧
       (r.headD 0 != 0) = (AM.res (ConRon.Arena.mentionsConstGo (decI T) mp f.toNat (decE h)) a₀).1 ∧
       mcMR s'.mem (AM.res (ConRon.Arena.mentionsConstGo (decI T) mp f.toNat (decE h)) a₀).2 ∧
-      StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (mcGo_spec p hv hf hput hgo n s₀ f T h) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨⟨b, mp'⟩, _, hrun, rfl, hb, hM', hfr⟩ := mcGoOK n _ a₀ f T h mp hS.check.arena.base hh hT hM _ _ hm
@@ -94,15 +94,15 @@ include hv hf hput hgo hcl hp
 /-- **`mentions_const` refines `mentionsConst`**: clear the `mc` memo (any well-formed one on entry),
 one memoised walk from `coreWalkFuel`, at every exec depth. -/
 @[refines ConRon.Arena.mentionsConst]
-theorem mentionsConst_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem mentionsConst_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis T e : Word) (mp0 : Std.HashMap EIdx Bool) (hh : H e)
-    (hT : H T) (hS : StageR dn vis fe s₀.mem a₀) (hM : mcMR s₀.mem mp0) :
+    (hT : H T) (hS : StageR vis fe s₀.mem a₀) (hM : mcMR s₀.mem mp0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "mentions_const" [T, e]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.mentionsConst (decI T) (decE e)) a₀ ∧
       AM.st (ConRon.Arena.mentionsConst (decI T) (decE e)) a₀ = a₀ ∧
       (r.headD 0 != 0) = AM.res (ConRon.Arena.mentionsConst (decI T) (decE e)) a₀ ∧
-      (∃ mp1, mcMR s'.mem mp1) ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      (∃ mp1, mcMR s'.mem mp1) ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (mentionsConst_spec p hv hf hput hgo hcl hp n s₀ T e) ?_
   rintro r s' ⟨hl, hm⟩
   by_cases h0 : rdW (s₀.mem.arr64 CTL) mcSch.cs + 2 = 0
@@ -141,13 +141,13 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView)
 include hf hput hins in
 /-- **`has_loose_b_var_b_ins` refines `hasLooseBVarBIns`**: the answer's word is recorded in the memo. -/
 @[refines ConRon.Arena.hasLooseBVarBIns]
-theorem hasLooseBVarBIns_refines (n : Nat) (s₀ : St) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+theorem hasLooseBVarBIns_refines (n : Nat) (s₀ : St) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis : Word) (a₀ : AState) (e i r : Word) (b : Bool) (mp : Std.HashMap (EIdx × Nat) Bool) (he : H e)
-    (hr : r = if b then 1 else 0) (hS : StageR dn vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp) :
+    (hr : r = if b then 1 else 0) (hS : StageR vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "has_loose_b_var_b_ins" [e, i, r]
     ⦃fun rr s' => LocEq s' s₀ ∧ rr.headD 0 = r ∧
       hbMR s'.mem (ConRon.Arena.hasLooseBVarBIns (decE e) i.toNat (b, mp)).2 ∧
-      StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (hbIns_spec p hf hput hins n s₀ e i r) ?_
   rintro rr s' ⟨hl, hm⟩
   obtain ⟨hr', hM', hfr⟩ := hbIns_ok he hr hM hm
@@ -160,15 +160,15 @@ include hv hf hput hins hgo hbp in
 `f.toNat` of the L fuel word `f`, at every exec depth `n` (`bvar_b` is lane `exprops4`'s,
 `bvbW_stageW`). -/
 @[refines ConRon.Arena.hasLooseBVarBGo]
-theorem hasLooseBVarBGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem hasLooseBVarBGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis f i h : Word) (mp : Std.HashMap (EIdx × Nat) Bool) (hh : H h)
-    (hS : StageR dn vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp) :
+    (hS : StageR vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "has_loose_b_var_b_go" [f, i, h]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.hasLooseBVarBGo mp i.toNat f.toNat (decE h)) a₀ ∧
       r.headD 0 = (if (AM.res (ConRon.Arena.hasLooseBVarBGo mp i.toNat f.toNat (decE h)) a₀).1 then 1 else 0) ∧
       hbMR s'.mem (AM.res (ConRon.Arena.hasLooseBVarBGo mp i.toNat f.toNat (decE h)) a₀).2 ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.hasLooseBVarBGo mp i.toNat f.toNat (decE h)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.hasLooseBVarBGo mp i.toNat f.toNat (decE h)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (hbGo_spec p hv hf hput hins hgo hbp n s₀ f i h) ?_
   rintro r s' ⟨hl, hm⟩
@@ -190,15 +190,15 @@ include hv hf hput hins hgo hbp hcl hp
 /-- **`has_loose_b_var_b_fast` refines `hasLooseBVarBFast`**: clear the `hb` memo (any well-formed one
 on entry), one memoised walk from `coreWalkFuel`. -/
 @[refines ConRon.Arena.hasLooseBVarBFast]
-theorem hasLooseBVarBFast_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem hasLooseBVarBFast_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis i e : Word) (mp0 : Std.HashMap (EIdx × Nat) Bool)
-    (hh : H e) (hS : StageR dn vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp0) :
+    (hh : H e) (hS : StageR vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "has_loose_b_var_b_fast" [i, e]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.hasLooseBVarBFast i.toNat (decE e)) a₀ ∧
       r.headD 0 = (if AM.res (ConRon.Arena.hasLooseBVarBFast i.toNat (decE e)) a₀ then 1 else 0) ∧
       (∃ mp1, hbMR s'.mem mp1) ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.hasLooseBVarBFast i.toNat (decE e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.hasLooseBVarBFast i.toNat (decE e)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (hbFast_spec p hv hf hput hins hgo hbp hcl hp n s₀ i e) ?_
   rintro r s' ⟨hl, hm⟩

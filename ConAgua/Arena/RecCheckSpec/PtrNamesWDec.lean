@@ -41,15 +41,15 @@ def chnW : Nat → Mem → Word → Word → Word → Option Word
   | 0, _, _, _, _ => none
   | n + 1, m, co, cl, name =>
     if cl = 0 then some 0
-    else if rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) co)) = name then some 1
+    else if erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) co)) = name then some 1
     else chnW n m (co + 1) (cl - 1) name
 
 section arms
 variable (n : Nat) (m : Mem) (co cl name : Word)
 theorem chnW_nil (h : cl = 0) : chnW (n + 1) m co cl name = some 0 := by simp [chnW, h]
-theorem chnW_hit (h : cl ≠ 0) (hx : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) co)) = name) :
+theorem chnW_hit (h : cl ≠ 0) (hx : erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) co)) = name) :
     chnW (n + 1) m co cl name = some 1 := by simp [chnW, h, hx]
-theorem chnW_next (h : cl ≠ 0) (hx : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) co)) ≠ name) :
+theorem chnW_next (h : cl ≠ 0) (hx : erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) co)) ≠ name) :
     chnW (n + 1) m co cl name = chnW n m (co + 1) (cl - 1) name := by simp [chnW, h, hx]
 end arms
 
@@ -76,8 +76,8 @@ theorem ptrNamesCopy_spec (p : Prog) (hp : p.lookup "ptr_names_copy" = some ptrN
     rw [invoke_eq _ hp]
     simp only [callFn, ptrNamesCopy]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20)
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish (gen := 20) [erRd]
 
 /-- The model of `ptr_list_names`. -/
 def ptrNamesW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
@@ -134,8 +134,9 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
   subst hq' hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
   have hIW := allocMem_IW m l
-  have hEE : (allocMem m l).arr64 EREC = m.arr64 EREC := by
-    simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hEE : ∀ x, erRd (allocMem m l) x = erRd m x := fun x => by
+    simp only [erRd, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by rw [tierA_EREC, ← erTier]; exact (ctl_ne_erTier x).symm)]
   have hptr' : ∀ j < l.toNat,
       (rdW ((allocMem m l).arr64 IW) (UInt64.ofNat (o.toNat + j))).toNat < q.toNat := by
     intro j hj
@@ -148,7 +149,7 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
     (by simp only [iwTop, hqq] at hsrc; omega)
     (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz) hptr'
   rw [hIW] at hS hG
-  rw [hEE] at hG
+  simp only [hEE] at hG
   have hfr : MemFrame [IW] [200] m m2 :=
     (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
   have htop : rdW (m2.arr64 CTL) 200 = q + l := by
@@ -168,13 +169,12 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
       obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
       rw [hva'] at hGj
       obtain ⟨w, hw, hwl', hnm'⟩ := decCV_name (a := erA m) (by simpa [decCVp] using hcvj)
-      have hrd : rdW (m.arr64 EREC) (UInt64.ofNat a) = w := by
+      have hrd : erRd m (UInt64.ofNat a) = w := by
         have : (UInt64.ofNat a).toNat = a := by simp; omega
-        have hw' : (m.arr64 EREC)[a]? = some w := hw
-        simp [rdW, this, hw']
+        exact erRd_of_erA (by rw [this]; exact hw)
       rw [hrd] at hGj
       simp only [List.getElem_map]
-      simp only [iwH, hd?, iwA, hGj]
+      simp only [iwH, hd?, iwA, aread_apply, hGj]
       simp [hwl', hnm'])
     simpa [hlen] using this
   · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_
@@ -264,7 +264,7 @@ theorem tmMem_dec (m : Mem) (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word)
   have r11 := hrd 11 (by simp)
   have r12 := hrd 12 (by simp)
   simp only [List.getElem?_cons_zero, List.getElem?_cons_succ] at r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12
-  simp only [decTM, bind, pure, iwH, hd?, iwN, nat?, decAt, iwA, Nat.add_zero] at *
+  simp only [decTM, bind, pure, iwH, hd?, iwN, nat?, decAt, iwA, aread_apply, Nat.add_zero] at *
   simp [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, h0, h1, hds, hct, hnf, hpf]
 
 /-! ## `target_major_default` -/
@@ -355,8 +355,8 @@ theorem mkTMW_dec {m m' : Mem} {r : List Word} (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a1
   omega
 
 theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a : AState)
-    (r : List Word) (h : tmdW m = some (r, m')) (hS : StageR dn vis fe m a) :
-    ∃ tm a', ConRon.Arena.targetMajorDefault.run a = .ok (tm, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    (r : List Word) (h : tmdW m = some (r, m')) (hS : StageR vis fe m a) :
+    ∃ tm a', ConRon.Arena.targetMajorDefault.run a = .ok (tm, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       decTM m' (r.headD 0).toNat = some tm := by
   rw [tmdW_eq] at h
   rcases h1 : naF m [] with _ | ⟨ra, m1⟩ <;> simp only [h1, tmdK1, reduceCtorEq] at h
@@ -436,10 +436,10 @@ theorem plnW_stage {α : Type} {f : Mem → Nat → Option α} (cvOf : α → IC
     (hf : ∀ q, OMono (fun m => f m q))
     (hcv : ∀ m pp x, f m pp = some x → ∃ a, iwN m pp = some a ∧ decCVp m a = some (cvOf x))
     (hfb : ∀ m pp x, f (truncM m) pp = some x → pp < iwTop m)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
-    (h : ptrNamesW n m o l = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR0 f xs o l m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, l] ∧
+    (h : ptrNamesW n m o l = some (r, m')) (hS : StageR vis fe m a) (hx : PSlR0 f xs o l m) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, l] ∧
       decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat = some (xs.map fun x => (cvOf x).name) ∧
       (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
   obtain ⟨-, -, hsz, -, hc⟩ := hS.iw

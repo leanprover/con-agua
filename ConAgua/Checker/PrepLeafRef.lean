@@ -37,7 +37,7 @@ theorem pl_contains_cons (x y : NIdx) (l : List NIdx) :
 /-- `decl_declares_go` against the block's names (the slice `DIND[o + q ‥ o + c)`). -/
 theorem pDeclGo_ok (n : Nat) : ∀ (m : Mem) (o c q w r : Word) (P : Array Word) (t : Nat)
     (cs : List IConstantInfo), m.arr64 DIND = P → t ≤ (P[0]?.getD 0).toNat → o.toNat ≠ 0 →
-    decCIs (trunc P t) (fun _ => none) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs →
+    decCIs (trunc P t) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs →
     w.toNat < 2 ^ 32 → pDeclGoW n m o c w q = some r →
     (r ≠ 0 ↔ (cs.map (·.name)).contains (decI w) = true) := by
   induction n with

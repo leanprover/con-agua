@@ -31,7 +31,7 @@ syntactically, checking nothing.  The Rust twin is
 -/
 module
 
-public import ConRon.Arena.Inductives.BlockParts
+public import ConRon.Arena.Inductives.BlockShape
 
 @[expose] public section
 
@@ -148,7 +148,7 @@ def classReadMinor (nP : Nat) (motPos : List Nat) (d : Nat) (dom : EIdx) :
               pure (some (.minor c cn ihs))
           else pure none
 
-/-- con-leche: ConLeche/Kernel/Inductives/GenRec.lean:473-479 classNPcOf
+/-- con-leche: ConLeche/Kernel/Inductives/GenRec.lean:489-495 classNPcOf
 An inductive's parameter count as the pre-pass reads it: the block's at a
 member, the stored `IndCaps`' otherwise (`0` at no inductive).  Placed here,
 not in `GenRec` (module note). -/

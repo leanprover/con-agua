@@ -5,7 +5,6 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndRealLvlT
 import ConAgua.Arena.RefWalk
-public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.Run
 import all ConAgua.Arena.IndIface
@@ -92,7 +91,7 @@ theorem lef_ref {p : Prog} (hcl : CoreStageClosed p) (hL : LvlCacheProg p) (n : 
     (fun hx => by subst hx; exact hdec) fun b hb h0 => ?_
   subst hb
   refine RefE.ret rfl ⟨hrun, ?_, hSt, hg,
-    MFr.of_frame (run_memFrame hcl (by decide) (run_of_callW h1')).1 coreStageA_stage coreStageC_stage,
+    MFr.of_frame (run_memFrame hcl.lvl (by decide) (run_of_callW h1')).1 coreStageA_stage coreStageC_stage,
     fun env hC hA => ?_⟩
   · cases b <;> simp at hdec ⊢ <;> simp [hdec]
   obtain ⟨x', a1', hrun', hC1, -, -, hA1, hP⟩ :=

@@ -43,10 +43,10 @@ theorem rec2TMD_ds {a a' : AState} {tm : TargetMajor}
       rw [← e1]
 
 theorem rec2SimTMA (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
-    (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR dn vis fe m a)
+    (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR vis fe m a)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hb : mo.toNat + ml.toNat < 2 ^ 64) :
     RSim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a
-      (fun b a' tm => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ TMR b.2 (b.1.headD 0).toNat tm) := by
+      (fun b a' tm => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ TMR b.2 (b.1.headD 0).toNat tm) := by
   have hms0 : decPL m (decTM m) mo.toNat ml.toNat = some ms :=
     hms.get (OMono.decPL (fun q => decTM_mono q) _ _)
   intro b hb'

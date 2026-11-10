@@ -147,9 +147,9 @@ end specs
 /-! ## The refinement under `CoreS` (lane `whnf`'s `instLP_refines`, the keys from `IW`) -/
 
 theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Word),
-    hslice? (m.arr64 LPIW) s.toNat l.toNat = some lps → d.toNat + l.toNat ≤ (m.arr64 SPN).size →
+    hslice? (aread (m.arr64 LPIW)) s.toNat l.toNat = some lps → d.toNat + l.toNat ≤ (m.arr64 SPN).size →
     (m.arr64 SPN).size < 2 ^ 63 → s.toNat + l.toNat < 2 ^ 64 → ikCopyW n m s d l = some m' →
-    hslice? (m'.arr64 SPN) d.toNat l.toNat = some lps ∧ MemFrame [SPN] [] m m' ∧
+    hslice? (aread (m'.arr64 SPN)) d.toNat l.toNat = some lps ∧ MemFrame [SPN] [] m m' ∧
       ∀ i : Word, i.toNat < d.toNat → rdW (m'.arr64 SPN) i = rdW (m.arr64 SPN) i := by
   intro lps
   induction lps with
@@ -160,10 +160,10 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
       · rfl
       · rw [hk', lp_hslice_succ] at hs
         simp only [Option.bind_eq_bind] at hs
-        cases e : (hd? (m.arr64 LPIW) s.toNat : Option NIdx) with
+        cases e : (hd? (aread (m.arr64 LPIW)) s.toNat : Option NIdx) with
         | none => simp [e] at hs
         | some x =>
-          cases e' : (hslice? (m.arr64 LPIW) (s.toNat + 1) j : Option (List NIdx)) with
+          cases e' : (hslice? (aread (m.arr64 LPIW)) (s.toNat + 1) j : Option (List NIdx)) with
           | none => simp [e, e'] at hs
           | some xs => simp [e, e'] at hs
     have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
@@ -178,10 +178,10 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     · rw [hk'] at hs; simp [hslice?] at hs
     rw [hk', lp_hslice_succ] at hs
     simp only [Option.bind_eq_bind] at hs
-    cases e : (hd? (m.arr64 LPIW) s.toNat : Option NIdx) with
+    cases e : (hd? (aread (m.arr64 LPIW)) s.toNat : Option NIdx) with
     | none => simp [e] at hs
     | some x' =>
-    cases e' : (hslice? (m.arr64 LPIW) (s.toNat + 1) j : Option (List NIdx)) with
+    cases e' : (hslice? (aread (m.arr64 LPIW)) (s.toNat + 1) j : Option (List NIdx)) with
     | none => simp [e, e'] at hs
     | some xs' =>
     simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs
@@ -206,8 +206,8 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     refine ⟨?_, (MemFrame.set64 _ _ (by decide) _ _).trans hf', ?_⟩
     · rw [lp_hslice_succ]
       have hsize : d.toNat < (m'.arr64 SPN).size := by rw [hf'.size SPN, hsz₁]; exact hdl
-      have hd' : (hd? (m'.arr64 SPN) d.toNat : Option NIdx) = some x' := by
-        rw [← e]; simp only [hd?]
+      have hd' : (hd? (aread (m'.arr64 SPN)) d.toNat : Option NIdx) = some x' := by
+        rw [← e]; simp only [hd?, aread_apply]
         have h1 : (m'.arr64 SPN)[d.toNat]? = some (rdW (m'.arr64 SPN) d) := by simp [rdW, hsize]
         have h2 : (m.arr64 LPIW)[s.toNat]? = some (rdW (m.arr64 LPIW) s) := by
           cases ee : (m.arr64 LPIW)[s.toNat]? with
@@ -228,7 +228,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
     (hf : p.lookup "inst_lp_fast" = some instLPFastL) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb f po pl us e : Word) (lps : List NIdx) (hS : CoreS dn s₀.mem a₀ vis fe M eb) (he : HW e)
-    (hus : HW us) (hlps : hslice? (s₀.mem.arr64 LPIW) po.toNat pl.toNat = some lps)
+    (hus : HW us) (hlps : hslice? (aread (s₀.mem.arr64 LPIW)) po.toNat pl.toNat = some lps)
     (hsz0 : (s₀.mem.arr64 LPIW).size < 2 ^ 64) :
     CoreSpec p n "inst_lp_fast" [f, po, pl, us, e]
       (instLPFast f.toNat lps (decI us) (decE e)) decH s₀ a₀ dn vis fe M eb := by
@@ -328,8 +328,8 @@ def ilpfP : Prog :=
    ("mk_app_n_from", L.Arena.mkAppNFromL), ("pi_result", L.Arena.piResultL),
    ("peel_pis", L.Arena.peelPisL), ("app_count", L.Arena.appCountL),
    ("app_fill", L.Arena.appFillL), ("app_fill_n", L.Arena.appFillNL),
-   ("caps_never_zero", L.Arena.capsNeverZeroL), ("keys_push", L.Arena.keysPush),
-   ("ek_copy", L.Arena.ekCopy), ("lp_substpw", L.Arena.lpSubstPW), ("lp_spw", L.Arena.lpSpw),
+   ("keys_push", L.Arena.keysPush),
+   ("ek_copy", L.Arena.ekCopy),
    ("lv_zero", L.Arena.lvZero), ("lh_push", L.Arena.lhPush), ("sle_go", L.Arena.sleGo),
    ("slp_go", L.Arena.slpGo), ("rec_fire_levels", L.Arena.recFireLevelsL),
    ("inst_lp", L.Arena.instLPL), ("keys_ok", L.Arena.keysOk), ("keys_push_iw", L.Arena.keysPushIW),
@@ -422,15 +422,20 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 theorem StageT.of_coreFrame {A : List TieredArray} {C : List Word} {m m' : Mem} {a a' : AState}
     {M : ModeMaps} (hfr : MemFrame A C m m') (hIW : (IW : TieredArray) ∉ A) (hE : (EREC : TieredArray) ∉ A) (hP : (PINS : TieredArray) ∉ A)
     (h129 : (129 : Word) ∉ C) (h200 : (200 : Word) ∉ C) (hS : StageT dn vis fe m a)
-    (hC : CoreS dn m' a' vis fe M 0) : StageT dn vis fe m' a' ∧ IWGrow m m' := by
+    (hC : CoreS dn m' a' vis fe M 0) (hE1 : (tier1 EREC : TieredArray) ∉ A := by decide)
+    (h130 : (130 : Word) ∉ C := by decide) : StageT dn vis fe m' a' ∧ IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hfr.arr _ hIW (by decide)
   have hE' : m'.arr64 EREC = m.arr64 EREC := hfr.arr _ hE (by decide)
+  have hE1' : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hfr.arr _ hE1 (by decide)
   have hP' : m'.arr64 PINS = m.arr64 PINS := hfr.arr _ hP (by decide)
   have h129' : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl _ h129
+  have h130' : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := hfr.ctl _ h130
   have h200' : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ h200
   obtain ⟨hCR, hT⟩ := hC.checkR
-  refine ⟨⟨⟨hCR, IWOK.frame hfr hIW hE h129 h200 hS.stage.iw⟩, hT, by simp only [pinW, hP']; exact hS.flag⟩, ?_⟩
-  exact ⟨by simp [iwTop, h200'], by simp [erTop, h129'], fun i _ => by rw [hI], fun i _ => by rw [hE']⟩
+  refine ⟨⟨⟨hCR, IWOK.frame hfr hIW hE h129 h200 hS.stage.iw hE1 h130⟩, hT,
+    by simp only [pinW, hP']; exact hS.flag⟩, ?_⟩
+  exact ⟨by simp [iwTop, h200'], by simp [erTop, h129'], fun i _ => by rw [hI], fun i _ => by rw [hE'],
+    by simp [erecTop1, h130'], fun i _ => by rw [hE1']⟩
 
 /-- **`inst_lp_fast` refines `instLPFast` under `StageT`** (the contract
 `IndStubs.instLPFast_spec` with `StageT` for `StageR`: `CoreS` needs the twin's invariants). -/

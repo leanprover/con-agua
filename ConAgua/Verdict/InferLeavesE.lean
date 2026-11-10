@@ -1,9 +1,6 @@
 module
+public import ConAgua.Arena.InferLeaves
 
-import ConAgua.Arena.InferProj2
-public import ConAgua.Arena.InferBodyDisp
-public import ConAgua.Arena.InferProj
-public import ConAgua.Arena.WhnfProjRefine
 
 @[expose] public section
 
@@ -15,7 +12,6 @@ error halves of their unified refinements (`inferConst_ref`, `Arena/InferLeaves.
 over `ipa_ref`, `Arena/InferProj2.lean`, `Arena/InferProj.lean`):
 
 * `inferConst_refinesE`: `infer_const` against `inferConstT`;
-* `inferProj_refinesE'`: `infer_proj` against `inferProj` at both grades (`InferProjOKE`).
 -/
 
 open ConRon.Arena
@@ -34,12 +30,5 @@ theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK
   RefE.coreSpecE (inferConstE_spec p hp.inferConst hp.lsNode (n + 1) s₀ vis nm us) hnv hnv
     (inferConst_ref p hp hct n s₀ a₀ dn vis fe M eb nm us hS hnm hus)
 
-/-- **`infer_proj`'s verdicts at both grades** (`ip_ref`'s error half). -/
-theorem inferProj_refinesE' (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p)
-    (hc : InferProjCallees p) (hnv : closedNV p L.Checker.nvFns = true) : InferProjOKE p :=
-  fun n hk hkE F s₀ a₀ dn vis fe M eb mode d sn i pe hF hn hs hsn hpe =>
-    have h := ip_ref p hp hpj hc n hk F s₀ a₀ dn vis fe M eb mode d sn i pe hF hn hs hsn hpe
-    ⟨RefE.coreSpecE (ipE_spec p hp.ip hp.ipa (n + 1) s₀ mode 0 vis d sn i pe) hnv ⟨hkE, hnv⟩ h.1,
-      RefE.coreSpecE (ipE_spec p hp.ip hp.ipa (n + 1) s₀ mode 1 vis d sn i pe) hnv ⟨hkE, hnv⟩ h.2⟩
 
 end L.Arena

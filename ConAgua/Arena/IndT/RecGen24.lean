@@ -185,7 +185,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
       (fun m' _ a' => CnaPost dn vis fe env m m' a') := by
     intro r0 m0 hcf0
     rw [cfaE.j2.arm1]
-    obtain ⟨a0, run0, hH0, hS0, hg0, hP0⟩ := cfaFv_ok P dn fe vis fvo fvl fvs hcf0 hS hfv hfvb64 hP
+    obtain ⟨a0, run0, hH0, hS0, hg0, hP0⟩ := cfaFv_ok P fe vis fvo fvl fvs hcf0 hS hfv hfvb64 hP
     obtain ⟨q0, hfv0⟩ := ConRon.Bridge.Inductives.exprGetD_spec fvs fvsP i.toNat a a0 _ hC.check.state
       hfvP run0
     have k0 := RcAt.pstep hC hS0 (cfaFv_afr P hcf0 hA) hP0 hg0 q0
@@ -205,7 +205,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     -- `strip_pis`
     refine RefE.bindLift (fun _ => cfaE.k_strip_pis.none ..) fun r2 m2 c2 => ?_
     obtain ⟨s2, rfl, -, hok2, hS2, hg2, hd2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-      (stripPis_refines p P.strip dn vis fe (UInt64.ofNat tl) (r1.headD 0) hH1 k _ a0 hS1) c2
+      (stripPis_refines p P.strip vis fe (UInt64.ofNat tl) (r1.headD 0) hH1 k _ a0 hS1) c2
     obtain ⟨s2', hs2', -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
       (stripPis_specW p P.strip k _ (UInt64.ofNat tl) (r1.headD 0)) c2
     rw [hs2'] at hw2
@@ -280,7 +280,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     rw [cfaE.k_class_nodes_agree.arm1, cfaE.j1.arm1]
     have run5' := run5
     rw [← hlwD, ← decE_eq] at run5'
-    obtain ⟨c6, -⟩ := ConRon.Bridge.Inductives.classNodesAgree_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
+    obtain ⟨c6, -⟩ := ConRon.Bridge.Inductives.classNodesAgree_spec fe (ConRon.Bridge.CoreSpec.of_core)
       henv bs pP formerTys formerTysP tm (MsP.getD t default) teleB teleP (decE (r2.tail.tail.tail.headD 0))
       leafP fvs fvsP i.toNat default hformer (ConLeche.Cached.TargetMajScoped.getD hMs t) es esP a4 _ u
       k4.stage.check

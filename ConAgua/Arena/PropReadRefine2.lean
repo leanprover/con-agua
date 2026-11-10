@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.DefEqStuckShape
-import ConAgua.Arena.WhnfCoreRefine
 import ConRon.Bridge.Grind
 
 @[expose] public section
@@ -27,44 +26,28 @@ open ConLeche (Name Level PropWhen)
 /-! ## Helpers -/
 
 /-- A decoded definition record: its value is word `q + 5`. -/
-theorem decCI_defnV {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
-    (hsz : b.size < 2 ^ 63) (h1 : rdW b q = 1) :
-    ∃ cv hint, ci = .defnInfo cv (decE (rdW b (q + 5))) hint ∧ HW (rdW b (q + 5)) := by
-  cases hq : a[q.toNat]? with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  have hrd : rdW b q = w := by
-    have := rdW_ext hab hsz (k := 0) (by decide) (by simpa using hq); simpa using this
-  rw [hrd] at h1; subst h1
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some,
-    show UInt64.toNat 1 = 1 from rfl, Option.bind_eq_some_iff] at h
-  obtain ⟨cv, -, v, hv, hint, -, hc⟩ := h
-  cases hc
-  obtain ⟨w5, hw5, hl5, rfl⟩ := hd?_eq hv
-  have h5 : rdW b (q + 5) = w5 := rdW_ext hab hsz (k := 5) (by decide) hw5
-  exact ⟨cv, hint, by rw [h5, decE_eq], by rw [h5]; exact hl5⟩
+theorem decCI_defnV {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) (h1 : rd q = 1) :
+    ∃ cv hint, ci = .defnInfo cv (decE (rd (q + 5))) hint ∧ HW (rd (q + 5)) := by
+  obtain ⟨cv, v, hint, rfl, -, rfl, hlt⟩ := (decCI_split hR h).1 h1
+  exact ⟨cv, hint, rfl, hlt⟩
 
 /-- A decoded record whose kind word is not `1` is not a definition. -/
-theorem decCI_not_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
-    (hsz : b.size < 2 ^ 63) (h1 : rdW b q ≠ 1) : ∀ cv v hint, ci ≠ .defnInfo cv v hint :=
-  (decCI_defn h hab hsz).2 h1
+theorem decCI_not_defn {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) (h1 : rd q ≠ 1) :
+    ∀ cv v hint, ci ≠ .defnInfo cv v hint :=
+  (decCI_split hR h).2.1 h1
 
 /-- A run of `env_find`: the memory unchanged, the twin's lookup decoded. -/
-theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
-    {m m' : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR dn m vis fe) {k : Word} (hk : HW k)
+theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat}
+    {m m' : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR m vis fe) {k : Word} (hk : HW k)
     {r : List Word} (hc : callW p n "env_find" [k, vis] m = some (r, m')) :
-    m' = m ∧ fe.find? (decI k) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
-      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) := by
-  obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_refines p (hp.get "env_ix") (hp.get "env_row_get") (hp.get "env_find") n ⟨m, Locals.init []⟩ vis k hE hk) hc
-  obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_found p (hp.get "env_ix") (hp.get "env_row_get") (hp.get "env_find") n ⟨m, Locals.init []⟩ vis k hk) hc
-  refine ⟨by rw [← ht₂]; exact hm₂, hfind, fun h0 => ?_⟩
-  obtain ⟨htag, hrow, hq⟩ := hfound h0
-  obtain ⟨ci, hci⟩ := hE.found_some k hk htag hrow
-  exact ⟨ci, by rw [hq]; exact hci⟩
+    m' = m ∧ fe.find? (decI k) = envFound m (r.headD 0) (r.tail.headD 0) ∧
+      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
+  obtain ⟨t₂, ht₂, hm₂, -, hfind, hdec⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envFind_refines p (hp.get "env_row_get") (hp.get "base_row_get") (hp.get "env_find") n
+      ⟨m, Locals.init []⟩ vis k hE hk) hc
+  exact ⟨by rw [← ht₂]; exact hm₂, hfind, hdec⟩
 
 /-- The head name of a `const` handle (the store's projection). -/
 theorem pr_viewConstName (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
@@ -170,24 +153,24 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   by_cases h0 : r₂.headD 0 = 0
   · simp only [h0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, -, rfl⟩ := hW
-    have hnone : fe.find? (decI cn) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hnone : fe.find? (decI cn) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     refine ⟨RdAfter.refl hS, fun h => absurd rfl h, fun j => ?_⟩
     rw [hpre, hnone]; rfl
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   simp only [h0, ↓reduceIte] at hW
-  by_cases h1 : rdW (m₂.arr64 EREC) (r₂.tail.headD 0) = 1
+  by_cases h1 : erRdT m₂ (r₂.tail.headD 0) = 1
   rotate_left
   · simp only [h1, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, -, rfl⟩ := hW
-    have hnd := decCI_not_defn hci (erecP_ext _) hS.erec h1
+    have hnd := decCI_not_defn (erRdOK _) hci h1
     refine ⟨RdAfter.refl hS, fun h => absurd rfl h, fun j => ?_⟩
     rw [hpre, hfind']
     rcases ci with _ | ⟨cv, v, hint⟩ | _ | _ | _ | _ | _
     all_goals first | rfl | exact absurd rfl (hnd cv v hint)
   simp only [h1, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  obtain ⟨cv, hint, hci_eq, hv5⟩ := decCI_defnV hci (erecP_ext _) hS.erec h1
-  generalize rdW (m₂.arr64 EREC) (r₂.tail.headD 0 + 5) = vw at hci_eq hv5 hW
+  obtain ⟨cv, hint, hci_eq, hv5⟩ := decCI_defnV (erRdOK _) hci h1
+  generalize erRdT m₂ (r₂.tail.headD 0 + 5) = vw at hci_eq hv5 hW
   rcases hlp : lamProjW m₂ f 0 vw with _ | ⟨lf, k, jj⟩ <;> rw [hlp] at hW
   · cases hW
   simp only at hW

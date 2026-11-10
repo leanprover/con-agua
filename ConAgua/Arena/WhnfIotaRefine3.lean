@@ -10,7 +10,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.ProjView
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.L.ModelGen
@@ -41,37 +40,62 @@ l_model recFireArgs_spec (p : Prog) (hp : p.lookup "rec_fire_args" = some recFir
   specs [callW_spec p n "inst_spine_pins"]
   grind [arena_grind]
 
-theorem recFireArgs_nested_eq (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
-    (rP : Nat) (lv : List LIdx) (pins : List EIdx) (h : rl.fire = .nested lv pins) :
-    recFireArgs rl lps us args rP = instSpinePins lps us args rP pins := by
+theorem recFireArgs_nested_eq (rl : IRecRule) (cnP : Nat) (lps : List NIdx) (us : LsIdx)
+    (args : List EIdx) (rP : Nat) (lv : List LIdx) (pins : List EIdx) (h : rl.fire = .nested lv pins) :
+    recFireArgs rl cnP lps us args rP = instSpinePins lps us args rP pins := by
   simp [recFireArgs, h]
 
-theorem recFireArgs_plain_run (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
-    (rP : Nat) (h : rl.fire = .plain) (a : AState) :
-    (recFireArgs rl lps us args rP).run a = .ok (args.take rl.ctorParams, a) := by
-  simp [recFireArgs, h]; rfl
+theorem recFireArgs_plain_run (rl : IRecRule) (cnP : Nat) (lps : List NIdx) (us : LsIdx)
+    (args : List EIdx) (rP : Nat) (h : rl.fire = .plain ∨ ∃ lvls, rl.fire = .levels lvls) (a : AState) :
+    (recFireArgs rl cnP lps us args rP).run a = .ok (args.take cnP, a) := by
+  rcases h with h | ⟨lv, h⟩ <;> simp [recFireArgs, h] <;> rfl
+
+/-- A rule record whose fire kind word is not `1` is not nested. -/
+theorem decRule_notNested {R : Nat → Option Word} {rd : Word → Word} {q : Word} {rl : IRecRule}
+    (hR : RdOK R rd) (h : decRule R q.toNat = some rl) (h1 : rd (q + 3) ≠ 1) :
+    rl.fire = .plain ∨ ∃ lvls, rl.fire = .levels lvls := by
+  simp only [decRule, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨kd, hkd, h⟩ := h
+  simp only [nat?, Option.map_eq_some_iff] at hkd
+  obtain ⟨w3, hw3, rfl⟩ := hkd
+  have e3 : rd (q + 3) = w3 := hR.at 3 rfl hw3
+  rw [e3] at h1
+  have hne : w3.toNat ≠ 1 := fun e => h1 (UInt64.toNat_inj.mp (by rw [e]; rfl))
+  rcases hk : w3.toNat with _ | _ | _ | k
+  · rw [hk] at h
+    simp only [Option.bind_some, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+    obtain ⟨_, _, _, _, _, _, rfl⟩ := h; exact .inl rfl
+  · exact absurd hk hne
+  · rw [hk] at h
+    cases hlv : hlist? (k := .level) R (q.toNat + 4) with
+    | none => rw [hlv] at h; simp at h
+    | some lv =>
+      rw [hlv] at h
+      simp only [Option.bind_some, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+      obtain ⟨_, _, _, _, _, _, rfl⟩ := h; exact .inr ⟨lv, rfl⟩
+  · rw [hk] at h; simp at h
 
 /-- **`rec_fire_args` refines `recFireArgs`.** Statement changes: `CoreAfterG` (the nested arm leaves a
 slice on the stack) and both input slices below the stack top. -/
 theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCallees p)
     (hE : ErecKeptInst p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao an rP ctorParams : Word) (rl : IRecRule)
+    (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao an rP cnP : Word) (rl : IRecRule)
     (lps : List NIdx) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps → SpineR s₀.mem ao an args →
+    hslice? (erecP s₀.mem) po.toNat pc.toNat = some lps → SpineR s₀.mem ao an args →
     (fireKind = 1 → ∃ lvls pins, rl.fire = .nested lvls pins ∧ SpineR s₀.mem pvo pvc pins.toArray) →
-    (fireKind ≠ 1 → rl.fire = .plain) → rl.ctorParams = ctorParams.toNat →
+    (fireKind ≠ 1 → rl.fire = .plain ∨ ∃ lvls, rl.fire = .levels lvls) →
     ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
     (fireKind = 1 → pvo.toNat + pvc.toNat ≤ (spTop s₀.mem).toNat) →
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rec_fire_args" [fireKind, pvo, pvc, po, pc, us, ao, an, rP, ctorParams]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ ∧
-      CoreAfterG dn s₀.mem s'.mem (AM.st (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀) vis
+    invoke p (exec p n) "rec_fire_args" [fireKind, pvo, pvc, po, pc, us, ao, an, rP, cnP]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (recFireArgs rl cnP.toNat lps (decI us) args.toList rP.toNat) a₀ ∧
+      CoreAfterG dn s₀.mem s'.mem (AM.st (recFireArgs rl cnP.toNat lps (decI us) args.toList rP.toNat) a₀) vis
         fe MM eb ∧
-      ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
+      ∃ xs, AM.res (recFireArgs rl cnP.toNat lps (decI us) args.toList rP.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
   intro n s₀ a₀ dn vis fe MM eb fireKind pvo pvc po pc us ao an rP cp rl lps args hS hus hlps hsa hnest
-    hplain hcp hat hpt
+    hplain hat hpt
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
@@ -87,7 +111,7 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
     obtain ⟨t₁, ht₁, hloc1, hok, hca, xs, hres, hxs⟩ := triple_of_callW
       (instSpinePins_refines' p hp hc hw hE n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pc us ao an rP
         pvo pvc lps args pins.toArray hS hus hlps hsa hsp hat (hpt h1)) hc1
-    rw [recFireArgs_nested_eq rl lps (decI us) args.toList rP.toNat lv pins hfire]
+    rw [recFireArgs_nested_eq rl cp.toNat lps (decI us) args.toList rP.toNat lv pins hfire]
     simp only at hok hca hres
     simp only [ht₁] at hxs hca
     rw [← hm]
@@ -101,7 +125,7 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
       rw [← hW]; by_cases ha : an < cp <;> simp [ispLen, ha]
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW')
     have hfire := hplain h1
-    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (recFireArgs_plain_run rl lps (decI us) args.toList
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (recFireArgs_plain_run rl cp.toNat lps (decI us) args.toList
       rP.toNat hfire a₀)
     have hr1 : r.headD 0 = ao := by
       have := congrArg (fun l => l.headD 0) hr.symm; simpa using this
@@ -109,21 +133,48 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
       have := congrArg (fun l => l.tail.headD 0) hr.symm; simpa using this
     refine ⟨hok, ?_, _, hres, ?_⟩
     · rw [hst, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, (StackKept.refl _).toGrew⟩
-    · rw [hr1, hr2, ← hm, hcp, ← ispLen_take' cp an args.toList (by simp [hsa.size])]
+    · rw [hr1, hr2, ← hm, ← ispLen_take' cp an args.toList (by simp [hsa.size])]
       exact hsa.take _ (ispLen_le cp an).2
 
 /-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
 
-theorem rdW_eq_getElem (a : Array Word) (x : Word) (h : x.toNat < a.size) : rdW a x = a[x.toNat] := by
-  simp [rdW, h]
 
+/-- The tagged read's bound for word `x` (`EREC⦃x⦄` in bounds). -/
+abbrev erIn (m : Mem) (x : Word) : Prop :=
+  (x &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (x >>> 40))).size
 
-/-- A checked word read, as `ld64`: `none` out of bounds. -/
-def ldE (a : Array Word) (x : Word) : Option Word :=
-  if h : x.toNat < a.size then some a[x.toNat] else none
+/-- A decoded word at `q + k` is what the tagged read at `q + k` reads, in bounds. -/
+theorem erecP_atW {m : Mem} {q : Word} {k : Nat} {w : Word} (h : erecP m (q.toNat + k) = some w)
+    (hk : k < 2 ^ 64) : erIn m (q + UInt64.ofNat k) ∧ erRdT m (q + UInt64.ofNat k) = w := by
+  have e : (q + UInt64.ofNat k).toNat = q.toNat + k := by
+    have := erecP_lt64 h
+    rw [UInt64.toNat_add]; simp only [UInt64.toNat_ofNat']
+    rw [Nat.mod_eq_of_lt hk, Nat.mod_eq_of_lt (by omega)]
+  rw [← e] at h
+  exact ⟨(erecP_tagRead h).1, erRdT_of _ _ h⟩
 
-/-- Model of the `and_rescue_slots` loop at L fuel `k`. -/
-def iotaArW (p : Prog) (vis ctor nP us an : Word) : Nat → Mem → Word → Option (List Word × Mem)
+/-- **A decoded projection table's words** at `q + 5`, `q + 6`, `q + 7`. -/
+theorem decTbl_wordsT {m : Mem} {q : Word} {tbl : IProjTable} (h : decTbl (erecP m) q.toNat = some tbl) :
+    (erIn m (q + 5) ∧ (erRdT m (q + 5)).toNat = tbl.numParams) ∧
+    (erIn m (q + 6) ∧ HW (erRdT m (q + 6)) ∧ tbl.ctor = decI (erRdT m (q + 6))) ∧
+    (erIn m (q + 7) ∧ (erRdT m (q + 7)).toNat = tbl.numFields) := by
+  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨sn, -, lp, -, np, hnp, c, hc, nf, hnf, bd, -, rfl⟩ := h
+  simp only [nat?, Option.map_eq_some_iff] at hnp hnf
+  obtain ⟨w5, hw5, rfl⟩ := hnp
+  obtain ⟨w7, hw7, rfl⟩ := hnf
+  obtain ⟨w6, hw6, h32, rfl⟩ := hd?_some hc
+  obtain ⟨i5, e5⟩ := erecP_atW (k := 5) hw5 (by decide)
+  obtain ⟨i6, e6⟩ := erecP_atW (k := 6) hw6 (by decide)
+  obtain ⟨i7, e7⟩ := erecP_atW (k := 7) hw7 (by decide)
+  exact ⟨⟨i5, by rw [show (q + 5 : Word) = q + UInt64.ofNat 5 from rfl, e5]⟩,
+    ⟨i6, by show HW (erRdT m (q + UInt64.ofNat 6)); rw [e6]; exact h32,
+      by rw [show (q + 6 : Word) = q + UInt64.ofNat 6 from rfl, e6]⟩,
+    ⟨i7, by rw [show (q + 7 : Word) = q + UInt64.ofNat 7 from rfl, e7]⟩⟩
+
+/-- Model of the `and_rescue_slots` loop at L fuel `k` (the table words read tagged). -/
+def iotaArW (p : Prog) (vis ctor nP an : Word) : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
   | k + 1, m, j =>
     if j < 2 then
@@ -131,30 +182,20 @@ def iotaArW (p : Prog) (vis ctor nP us an : Word) : Nat → Mem → Word → Opt
       | none => none
       | some (r₁, m₁) =>
         if r₁.headD 0 = 0 then some ([0], m₁)
-        else match callW p k "fire_ok" [r₁.tail.headD 0, j, us] m₁ with
-          | none => none
-          | some (r₂, m₂) =>
-            match ldE (m₂.arr64 EREC) (r₁.tail.headD 0 + 6) with
-            | none => none
-            | some w₆ =>
-              if w₆ ≠ ctor then some ([0], m₂)
-              else match ldE (m₂.arr64 EREC) (r₁.tail.headD 0 + 5) with
-                | none => none
-                | some w₅ =>
-                  if w₅ ≠ nP then some ([0], m₂)
-                  else match ldE (m₂.arr64 EREC) (r₁.tail.headD 0 + 7) with
-                    | none => none
-                    | some w₇ =>
-                      if w₇ ≠ 2 then some ([0], m₂)
-                      else if r₂.headD 0 = 0 then some ([0], m₂)
-                      else iotaArW p vis ctor nP us an k m₂ (j + 1)
+        else if ¬ erIn m₁ (r₁.tail.headD 0 + 6) then none
+        else if erRdT m₁ (r₁.tail.headD 0 + 6) ≠ ctor then some ([0], m₁)
+        else if ¬ erIn m₁ (r₁.tail.headD 0 + 5) then none
+        else if erRdT m₁ (r₁.tail.headD 0 + 5) ≠ nP then some ([0], m₁)
+        else if ¬ erIn m₁ (r₁.tail.headD 0 + 7) then none
+        else if erRdT m₁ (r₁.tail.headD 0 + 7) ≠ 2 then some ([0], m₁)
+        else iotaArW p vis ctor nP an k m₁ (j + 1)
     else some ([1], m)
 
 theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p k andRescueLoop
     ⦃fun r s' => r ≠ .brk ∧
-      iotaArW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) k s₀.mem (s₀.loc 5) =
+      iotaArW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) k s₀.mem (s₀.loc 4) =
         some (r.retOr [1], s'.mem); ⊤⦄ := by
   induction k generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -162,21 +203,20 @@ theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     rw [exec, step_while (w := andRescueLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p k "find_proj", callW_spec p k "fire_ok", ih] <;>
-      finish (gen := 20) [iotaArW, ldE]
-
+        ld64_rdT_spec, evalE_tld, tld, callW_spec p k "find_proj", ih] <;>
+      finish (gen := 20) [iotaArW]
 
 /-- Model of `and_rescue_slots`. -/
-def arTop (p : Prog) (k : Nat) (m : Mem) (vis ctor nP us : Word) : Option (List Word × Mem) :=
+def arTop (p : Prog) (k : Nat) (m : Mem) (vis ctor nP : Word) : Option (List Word × Mem) :=
   match callW p k "pin_at" [11] m with
   | none => none
-  | some (r₀, m₀) => iotaArW p vis ctor nP us (r₀.headD 0) (k + 1) m₀ 0
+  | some (r₀, m₀) => iotaArW p vis ctor nP (r₀.headD 0) (k + 1) m₀ 0
 
 theorem andRescueSlots_spec (p : Prog) (hp : p.lookup "and_rescue_slots" = some andRescueSlotsL)
-    (k : Nat) (s₀ : St) (vis ctor nP us : Word) :
+    (k : Nat) (s₀ : St) (vis ctor nP : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p (k + 1)) "and_rescue_slots" [vis, ctor, nP, us]
-    ⦃fun r s' => LocEq s' s₀ ∧ arTop p k s₀.mem vis ctor nP us = some (r, s'.mem); ⊤⦄ := by
+    invoke p (exec p (k + 1)) "and_rescue_slots" [vis, ctor, nP]
+    ⦃fun r s' => LocEq s' s₀ ∧ arTop p k s₀.mem vis ctor nP = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, andRescueSlotsL]
   sym only [lang_grind, arena_grind] =>
@@ -184,61 +224,23 @@ theorem andRescueSlots_spec (p : Prog) (hp : p.lookup "and_rescue_slots" = some 
       callW_spec p k "pin_at", fun s₀ => Triple.step_exec (andRescueLoop_spec p (k + 1) s₀)] <;>
     finish [arTop]
 
-theorem andRescueSlotsGo_zero_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (j : Nat)
-    (a : AState) : (andRescueSlotsGo fe an ctor nP ust 0 j).run a = .ok (true, a) := by
-  simp [andRescueSlotsGo]; rfl
-
-theorem andRescueSlotsGo_none_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (n j : Nat)
-    (a : AState) (h : fe.findProj? an j = none) :
-    (andRescueSlotsGo fe an ctor nP ust (n + 1) j).run a = .ok (false, a) := by
-  simp only [andRescueSlotsGo, h]; rfl
-
-theorem andRescueSlotsGo_stop_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (n j : Nat)
-    (a a₂ : AState) (e : IProjEntry) (b : Bool) (h : fe.findProj? an j = some e)
-    (hb : (e.fireOk ust).run a = .ok (b, a₂))
-    (hc : (e.ctor == ctor && e.numParams == nP && e.numFields == 2 && b) = false) :
-    (andRescueSlotsGo fe an ctor nP ust (n + 1) j).run a = .ok (false, a₂) := by
-  simp only [andRescueSlotsGo, h, StateT.run_bind, hb, except_ok_bind, hc]
-  rfl
-
-theorem andRescueSlotsGo_cont_run (fe : IFEnv) (an ctor : NIdx) (nP : Nat) (ust : LsIdx) (n j : Nat)
-    (a a₂ a₃ : AState) (e : IProjEntry) (b res : Bool)
-    (h : fe.findProj? an j = some e) (hb : (e.fireOk ust).run a = .ok (b, a₂))
-    (hc : (e.ctor == ctor && e.numParams == nP && e.numFields == 2 && b) = true)
-    (hr : (andRescueSlotsGo fe an ctor nP ust n (j + 1)).run a₂ = .ok (res, a₃)) :
-    (andRescueSlotsGo fe an ctor nP ust (n + 1) j).run a = .ok (res, a₃) := by
-  simp only [andRescueSlotsGo, h, StateT.run_bind, hb, except_ok_bind, hc, ite_true]
-  exact hr
-
-theorem decTbl_bound (a : Array Word) (q : Nat) (tbl : IProjTable) (h : decTbl a q = some tbl) :
-    q + 12 < a.size := by
-  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-    Option.some.injEq] at h
-  obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, g, hg, -⟩ := h
-  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hg
-  obtain ⟨-, -, c, ⟨w, hw, -⟩, -⟩ := hg
-  exact (Array.getElem?_eq_some_iff.mp hw).1
-
-theorem ldE_eq (a : Array Word) (x : Word) (h : x.toNat < a.size) : ldE a x = some (rdW a x) := by
-  simp [ldE, rdW, h]
-
-theorem addW13 (q c : Word) (a : Array Word) (hq : q.toNat + 12 < a.size)
-    (hsz : a.size < 2 ^ 63) (hc : c.toNat ≤ 12) : (q + c).toNat = q.toNat + c.toNat := by
-  rw [UInt64.toNat_add]; simp; omega
+theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (an : NIdx)
+    (a : AState) (hp : (pinAt PIN_AND).run a = .ok (an, a)) :
+    (andRescueSlots fe ctor nP).run a = .ok (andRescueSlotsGo fe an ctor nP 2 0, a) := by
+  simp only [andRescueSlots, pinAnd, StateT.run_bind, hp, except_ok_bind]; rfl
 
 /-- **The `and_rescue_slots` loop refines `andRescueSlotsGo`**. -/
 theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (eb ctor nP us anW : Word) (hctor : HW ctor) (hus : HW us) (hanW : HW anW) :
+    (fe : IFEnv) (eb ctor nP anW : Word) (hctor : HW ctor) (hanW : HW anW) :
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (L : List Word) (m' : Mem),
       j.toNat + K = 2 → CoreS dn m a vis fe M eb →
-      (∃ (h : EIdx) (c : NIdx), a.store.view h = some (.const c (decI us))) →
-      iotaArW p vis ctor nP us anW k m j = some (L, m') →
-      CoreRef (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a decBool
-        dn m vis fe M eb L m' := by
+      iotaArW p vis ctor nP anW k m j = some (L, m') →
+      CoreRef (pure (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat K j.toNat) : AM Bool) a
+        decBool dn m vis fe M eb L m' := by
   intro K
   induction K with
   | zero =>
-    intro k m a M j L m' hK hS hV hL
+    intro k m a M j L m' hK hS hL
     have hn : ¬ j < 2 := fun h => by
       have : j.toNat < 2 := h
       omega
@@ -247,11 +249,10 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     | succ k =>
     simp only [iotaArW, hn, ↓reduceIte] at hL
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-    refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_zero_run fe (decI anW) (decI ctor) nP.toNat (decI us)
-      j.toNat a) ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩ ?_ (by simp [ResH, HW])
-    · simp [decBool]
+    exact CoreRef.of_run rfl ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
+      (by simp [decBool, andRescueSlotsGo]) (by simp [ResH, HW])
   | succ K ih =>
-    intro k m a M j L m' hK hS hV hL
+    intro k m a M j L m' hK hS hL
     have hlt : j < 2 := by
       have : j.toNat < 2 := by omega
       exact this
@@ -260,173 +261,96 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     | succ k =>
     rcases hc1 : callW p k "find_proj" [vis, anW, j] m with _ | ⟨r₁, m₁⟩
     · simp only [iotaArW, hlt, ↓reduceIte, hc1] at hL; cases hL
-    obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hr₁⟩ := CoreSpec.of_callW
+    obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, -⟩ := CoreSpec.of_callW
       (hcc.findProj k ⟨m, Locals.init []⟩ a dn vis fe M eb anW j hS hanW) hc1
-    have hSt₁ : StackKept m m₁ := hSt₁
+    change CoreS dn m₁ a vis fe M₁ eb at hS₁
     have hrunF : fe.findProj? (decI anW) j.toNat =
-        decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat := hres1
+        decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) j.toNat := hres1
+    have hgo : ∀ v, andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (K + 1) j.toNat = v →
+        L = [if v then 1 else 0] → m' = m₁ →
+        CoreRef (pure (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (K + 1) j.toNat) : AM Bool) a
+          decBool dn m vis fe M eb L m' := fun v hv hLv hm => by
+      subst hLv hm
+      exact CoreRef.of_run (v := v) (by rw [hv]; rfl) ⟨M₁, hS₁, hK₁, hSt₁⟩ (by cases v <;> rfl)
+        (by cases v <;> simp [ResH, HW])
     by_cases h0 : r₁.headD 0 = 0
     · simp only [iotaArW, hlt, ↓reduceIte, hc1, h0] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-      have hnone : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat = none := by
-        simp only [decEntry, h0, ↓reduceIte]
-      rw [hnone] at hrunF
-      refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_none_run fe (decI anW) (decI ctor) nP.toNat (decI us)
-        K j.toNat a hrunF) ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ (by simp [ResH, HW])
-      · simp [decBool]
-    obtain ⟨tbl, htbl, hfe⟩ := hcc.projFound k m a dn vis fe M eb anW j r₁ m₁ hS hc1 h0
-    have hEr1 : m₁.arr64 EREC = m.arr64 EREC := hcc.erec k "find_proj" _ m r₁ m₁ (Or.inl rfl) hc1
-    have hsome : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat =
-        some (tbl.entry j.toNat) := by
-      simp only [decEntry, ite_eq_right h0, htbl, Option.map_some]
-    rw [hsome] at hrunF
-    rcases hc2 : callW p k "fire_ok" [r₁.tail.headD 0, j, us] m₁ with _ | ⟨r₂, m₂⟩
-    · simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, hc2] at hL; cases hL
-    obtain ⟨hrunB, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
-      (hcc.fireOk k ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb (r₁.tail.headD 0) j us tbl hS₁ hus
-        (by rw [hEr1]; exact htbl) hfe (by simpa [IProjTable.entry] using findProj?_lt hrunF)
-        hV) hc2
-    have hSt₂ : StackKept m₁ m₂ := hSt₂
-    have hEr2 : m₂.arr64 EREC = m₁.arr64 EREC := hcc.erec k "fire_ok" _ m₁ r₂ m₂ (Or.inr rfl) hc2
-    -- the record's words
-    have hE2 : m₂.arr64 EREC = m.arr64 EREC := hEr2.trans hEr1
-    have hsz := hS.erec
-    have hbd := decTbl_bound _ _ _ htbl
-    obtain ⟨-, hnp, hw6, hct, hnf⟩ := decTbl_words htbl hsz
-    have hx6 : (r₁.tail.headD 0 + 6).toNat < (m₂.arr64 EREC).size := by
-      rw [addW13 _ _ _ hbd hsz (by decide), hE2]; simp only [UInt64.toNat_ofNat]; omega
-    have hx5 : (r₁.tail.headD 0 + 5).toNat < (m₂.arr64 EREC).size := by
-      rw [addW13 _ _ _ hbd hsz (by decide), hE2]; simp only [UInt64.toNat_ofNat]; omega
-    have hx7 : (r₁.tail.headD 0 + 7).toNat < (m₂.arr64 EREC).size := by
-      rw [addW13 _ _ _ hbd hsz (by decide), hE2]; simp only [UInt64.toNat_ofNat]; omega
-    -- the common twin data
-    have hW6 : rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 6) = rdW (m.arr64 EREC) (r₁.tail.headD 0 + 6) := by
-      rw [hE2]
-    have hW5 : rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 5) = rdW (m.arr64 EREC) (r₁.tail.headD 0 + 5) := by
-      rw [hE2]
-    have hW7 : rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 7) = rdW (m.arr64 EREC) (r₁.tail.headD 0 + 7) := by
-      rw [hE2]
-    have hfire : (tbl.entry j.toNat).fireOk (decI us) = (tbl.entry j.toNat).fireOk (decI us) := rfl
-    have hb : (((tbl.entry j.toNat).fireOk (decI us)).run a) =
-        .ok (decBool r₂, AM.st ((tbl.entry j.toNat).fireOk (decI us)) a) :=
-      hrunB
-    have hb' := hb
-    have hfin : ((tbl.entry j.toNat).ctor == decI ctor && (tbl.entry j.toNat).numParams == nP.toNat &&
-          (tbl.entry j.toNat).numFields == 2 && decBool r₂) = false → L = [0] → m' = m₂ →
-        CoreRef (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) (K + 1) j.toNat) a
-          decBool dn m vis fe M eb L m' := by
-      intro hcf hLe hme
-      subst hLe; subst hme
-      refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_stop_run fe (decI anW) (decI ctor) nP.toNat (decI us)
-        K j.toNat a _ (tbl.entry j.toNat) (decBool r₂) hrunF hb' hcf) ⟨M₂, hS₂, hK₁.trans hK₂,
-        hSt₁.trans hSt₂⟩ ?_ (by simp [ResH, HW])
-      · simp [decBool]
-    have hL' := hL
-    simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, hc2] at hL'
-    rw [ldE_eq _ _ hx6] at hL'
-    dsimp only at hL'
-    by_cases hc6 : rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 6) = ctor
-    · rw [ite_eq_right (by simpa using hc6)] at hL'
-      rw [ldE_eq _ _ hx5] at hL'
-      dsimp only at hL'
-      by_cases hc5 : rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 5) = nP
-      · rw [ite_eq_right (by simpa using hc5)] at hL'
-        rw [ldE_eq _ _ hx7] at hL'
-        dsimp only at hL'
-        by_cases hc7 : rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 7) = 2
-        · rw [ite_eq_right (by simpa using hc7)] at hL'
-          by_cases hr20 : r₂.headD 0 = 0
-          · rw [ite_eq_left hr20] at hL'
-            obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL')
-            refine hfin ?_ rfl rfl
-            have hb0 : decBool r₂ = false := by simp only [decBool]; rw [hr20]; rfl
-            rw [hb0]; simp
-          · rw [ite_eq_right hr20] at hL'
-            have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat 2 j hlt
-            obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hL1⟩ := ih k m₂ _ M₂ (j + 1) L m'
-              (by omega) hS₂ (by
-                obtain ⟨h, c, hv⟩ := hV
-                exact ⟨h, c, by
-                  rw [show AM.st (pure (fe.findProj? (decI anW) j.toNat) : AM _) a = a from rfl,
-                    fireOk_store hb]; exact hv⟩) hL'
-            rw [h1] at hok3 hS₃ hres3
-            have hrunR := AM.run_of_ok _ _ hok3
-            have hcond : ((tbl.entry j.toNat).ctor == decI ctor && (tbl.entry j.toNat).numParams == nP.toNat &&
-                (tbl.entry j.toNat).numFields == 2 && decBool r₂) = true := by
-              have hh6 : HW (rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 6)) := by rw [hW6]; exact hw6
-              have e1 : ((tbl.entry j.toNat).ctor == decI ctor) = true := by
-                show (tbl.ctor == decI ctor) = true
-                rw [hct, ← hW6, decI_beq _ _ hh6 hctor]
-                exact decide_eq_true hc6
-              have e2 : ((tbl.entry j.toNat).numParams == nP.toNat) = true := by
-                show (tbl.numParams == nP.toNat) = true
-                rw [hnp, ← hW5, hc5]; simp
-              have e3 : ((tbl.entry j.toNat).numFields == 2) = true := by
-                show (tbl.numFields == 2) = true
-                rw [hnf, ← hW7, hc7]; rfl
-              have e4 : decBool r₂ = true := by simp only [decBool]; simpa using hr20
-              rw [e1, e2, e3, e4]; rfl
-            refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_cont_run fe (decI anW) (decI ctor) nP.toNat
-              (decI us) K j.toNat a _ _ (tbl.entry j.toNat) (decBool r₂) _ hrunF hb' hcond hrunR)
-              ⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩ hres3 hL1
-        · rw [ite_eq_left (by simpa using hc7)] at hL'
-          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL')
-          refine hfin ?_ rfl rfl
-          have : (tbl.entry j.toNat).numFields ≠ 2 := by
-            show tbl.numFields ≠ 2
-            rw [hnf, ← hW7]
-            intro h; apply hc7; exact UInt64.toNat_inj.mp (by simpa using h)
-          simp [this]
-      · rw [ite_eq_left (by simpa using hc5)] at hL'
-        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL')
-        refine hfin ?_ rfl rfl
-        have : (tbl.entry j.toNat).numParams ≠ nP.toNat := by
-          show tbl.numParams ≠ nP.toNat
-          rw [hnp, ← hW5]
-          intro h; apply hc5; exact UInt64.toNat_inj.mp h
-        simp [this]
-    · rw [ite_eq_left (by simpa using hc6)] at hL'
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL')
-      refine hfin ?_ rfl rfl
-      have hh6 : HW (rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 6)) := by rw [hW6]; exact hw6
-      have : ((tbl.entry j.toNat).ctor == decI ctor) = false := by
-        show (tbl.ctor == decI ctor) = false
-        rw [hct, ← hW6, decI_beq _ _ hh6 hctor]
-        exact decide_eq_false hc6
-      simp [this]
+      have hnone : fe.findProj? (decI anW) j.toNat = none := by
+        rw [hrunF]; simp only [decEntry, h0, ↓reduceIte]
+      exact hgo false (by simp [andRescueSlotsGo, hnone]) rfl rfl
+    obtain ⟨tbl, htbl, -⟩ := hcc.projFound k m a dn vis fe M eb anW j r₁ m₁ hS hc1 h0
+    have k1 := hcc.erec k "find_proj" _ m r₁ m₁ rfl hc1
+    have hsome : fe.findProj? (decI anW) j.toNat = some (tbl.entry j.toNat) := by
+      rw [hrunF]; simp only [decEntry, ite_eq_right h0, htbl, Option.map_some]
+    rw [← k1.2.2.2] at htbl
+    obtain ⟨⟨i5, e5⟩, ⟨i6, w6, e6⟩, ⟨i7, e7⟩⟩ := decTbl_wordsT htbl
+    simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, i6, i5, i7, not_true_eq_false] at hL
+    by_cases c6 : erRdT m₁ (r₁.tail.headD 0 + 6) ≠ ctor
+    · rw [ite_eq_left c6] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      refine hgo false ?_ rfl rfl
+      have : (tbl.ctor == decI ctor) = false := by
+        rw [e6, decI_beq _ _ w6 hctor]; simpa using c6
+      simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
+    rw [ite_eq_right c6] at hL
+    by_cases c5 : erRdT m₁ (r₁.tail.headD 0 + 5) ≠ nP
+    · rw [ite_eq_left c5] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      refine hgo false ?_ rfl rfl
+      have : (tbl.numParams == nP.toNat) = false := by
+        rw [← e5]; simpa using fun e => c5 (UInt64.toNat_inj.mp e)
+      simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
+    rw [ite_eq_right c5] at hL
+    by_cases c7 : erRdT m₁ (r₁.tail.headD 0 + 7) ≠ 2
+    · rw [ite_eq_left c7] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      refine hgo false ?_ rfl rfl
+      have hne : tbl.numFields ≠ 2 := fun e => c7 (UInt64.toNat_inj.mp (by rw [e7, e]; rfl))
+      have : (tbl.numFields == 2) = false := by simpa using hne
+      simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
+    rw [ite_eq_right c7] at hL
+    have hc : (tbl.ctor == decI ctor && tbl.numParams == nP.toNat && tbl.numFields == 2) = true := by
+      rw [e6, ← e5, ← e7, Classical.not_not.mp c6, Classical.not_not.mp c5, Classical.not_not.mp c7]
+      simp
+    have hj1 : (j + 1).toNat = j.toNat + 1 := by
+      rw [UInt64.toNat_add]; have : j.toNat < 2 := hlt; simp; omega
+    obtain ⟨-, ⟨M', hS', hK', hSt'⟩, hresR, hvR⟩ := ih k m₁ a M₁ (j + 1) L m' (by omega) hS₁ hL
+    change CoreS dn m' a vis fe M' eb at hS'
+    refine CoreRef.of_run (v := andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (K + 1) j.toNat)
+      rfl ⟨M', hS', hK₁.trans hK', hSt₁.trans hSt'⟩ ?_ hvR
+    rw [← hresR]
+    show _ = andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat K (j + 1).toNat
+    rw [hj1]
+    simp only [andRescueSlotsGo, hsome, IProjTable.entry]
+    rw [ite_eq_left hc]
 
-theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (ust : LsIdx) (an : NIdx)
-    (a a₁ : AState) (b : Bool) (hp : (pinAt PIN_AND).run a = .ok (an, a))
-    (hr : (andRescueSlotsGo fe an ctor nP ust 2 0).run a = .ok (b, a₁)) :
-    (andRescueSlots fe ctor nP ust).run a = .ok (b, a₁) := by
-  simp only [andRescueSlots, pinAnd, StateT.run_bind, hp, except_ok_bind, hr]
-
-/-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj`, `fire_ok` and their facts as
-`ProjCallees`). -/
+/-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj` and its facts as `ProjCallees`). -/
 theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees p) :
     AndRescueSlotsOK p := by
-  intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus hV
+  intro n s₀ a₀ dn vis fe MM eb ctor nP hS hctor
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
-  refine triple_post (andRescueSlots_spec p hp.andRescueSlots n s₀ vis ctor nP us) fun r s' ⟨hloc,
+  refine triple_post (andRescueSlots_spec p hp.andRescueSlots n s₀ vis ctor nP) fun r s' ⟨hloc,
     hW⟩ => ⟨hloc, ?_⟩
   simp only [arTop] at hW
   rcases hc0 : callW p n "pin_at" [11] s₀.mem with _ | ⟨r₀, m₀⟩ <;>
     simp only [hc0, reduceCtorEq] at hW
   obtain ⟨t₀, ht₀, hm₀, hloc0, hanHW, hpin⟩ := triple_of_callW
     (pinAt_refines p hp.pinat n ⟨s₀.mem, Locals.init []⟩ a₀ ⟨fun _ => hS.pins⟩ 11) hc0
-  have hmm : m₀ = s₀.mem := by rw [← ht₀]; exact hm₀
+  have hmm : s₀.mem = m₀ := by rw [← ht₀, hm₀]
   subst hmm
   have hanW : HW (r₀.headD 0) := hanHW
-  obtain ⟨hok, hca, hres, hL1⟩ := arW_ok p hcc dn vis fe eb ctor nP us (r₀.headD 0) hctor hus hanW 2
-    (n + 1) s₀.mem a₀ MM 0 r s'.mem (by simp) hS hV hW
-  have hrunA := andRescueSlots_run fe (decI ctor) nP.toNat (decI us) (decI (r₀.headD 0)) a₀ _ _
-    (by simpa [PIN_AND] using hpin) (AM.run_of_ok _ _ hok)
+  obtain ⟨-, hca, hres, hL1⟩ := arW_ok p hcc dn vis fe eb ctor nP (r₀.headD 0) hctor hanW 2
+    (n + 1) s₀.mem a₀ MM 0 r s'.mem (by simp) hS hW
+  have hrunA := andRescueSlots_run fe (decI ctor) nP.toNat (decI (r₀.headD 0)) a₀
+    (by simpa [PIN_AND] using hpin)
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunA
   refine ⟨hokF, ?_, ?_, hL1⟩
-  · rw [hstF]; simpa using hca
-  · rw [hresF]; simpa using hres
+  · rw [hstF]; exact hca
+  · rw [hresF]; exact hres
+
 
 /-! ## `fab_scope_ok(d, fab, major)` -/
 
@@ -537,7 +461,7 @@ theorem litMajorToCtor_run_nat (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) 
 
 theorem litMajorToCtor_run_str_unsup (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) (a a₁ : AState)
     (ht : h.tag = ETag.lit) (s : String) (hv : a.store.view h = some (.lit (.strVal s)))
-    (hs : (strLitSupported fe).run a = .ok (false, a₁)) :
+    (hs : (strLitStored fe).run a = .ok (false, a₁)) :
     (litMajorToCtor r fe d h).run a = .ok (h, a₁) := by
   have hv' : (view h).run a = .ok (.lit (.strVal s), a) := by
     simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
@@ -546,22 +470,13 @@ theorem litMajorToCtor_run_str_unsup (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : 
 
 theorem litMajorToCtor_run_str (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) (a a₁ a₂ a₃ : AState)
     (ht : h.tag = ETag.lit) (s : String) (hv : a.store.view h = some (.lit (.strVal s)))
-    (hs : (strLitSupported fe).run a = .ok (true, a₁)) (c res : EIdx)
+    (hs : (strLitStored fe).run a = .ok (true, a₁)) (c res : EIdx)
     (hc : (strLitToConstructor s).run a₁ = .ok (c, a₂)) (hw : (r.whnf d c).run a₂ = .ok (res, a₃)) :
     (litMajorToCtor r fe d h).run a = .ok (res, a₃) := by
   have hv' : (view h).run a = .ok (.lit (.strVal s), a) := by
     simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
   simp only [litMajorToCtor, ht, beq_self_eq_true, ↓reduceIte, StateT.run_bind, hv', except_ok_bind,
     hs, hc, hw]
-
-theorem ldE_some (a : Array Word) (x w : Word) (h : ldE a x = some w) :
-    x.toNat < a.size ∧ w = rdW a x := by
-  unfold ldE at h
-  split at h
-  · rename_i hb
-    simp only [Option.some.injEq] at h
-    exact ⟨hb, by rw [← h, rdW_eq_getElem a x hb]⟩
-  · cases h
 
 /-- A refinement transports along twins with the same run. -/
 theorem CoreRef.of_run_eq {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} {dec : List Word → α}
@@ -573,7 +488,7 @@ theorem CoreRef.of_run_eq {α : Type} [Inhabited α] {T T' : AM α} {a₀ : ASta
 
 theorem litMajorToCtor_err_str (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) (a a₁ a₂ : AState)
     (ht : h.tag = ETag.lit) (s : String) (hv : a.store.view h = some (.lit (.strVal s)))
-    (hs : (strLitSupported fe).run a = .ok (true, a₁)) (c : EIdx)
+    (hs : (strLitStored fe).run a = .ok (true, a₁)) (c : EIdx)
     (hc : (strLitToConstructor s).run a₁ = .ok (c, a₂)) (ce : CheckError)
     (hw : (r.whnf d c).run a₂ = .error ce) :
     (litMajorToCtor r fe d h).run a = .error ce := by
@@ -591,16 +506,16 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hh : HW h) :
     RefE (KnotUpToE p n) (lmtcE p (n + 1) s₀.mem mode vis d h)
-      (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) a₀
+      (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   have hR := hS.arena.base
   simp only [lmtcE]
   -- `lit_to_ctor_if_nat`, whenever the twin runs `litToCtorIfNat`
-  have hnat : (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)).run a₀ =
+  have hnat : (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)).run a₀ =
       (litToCtorIfNat fe (decE h)).run a₀ →
       RefE (KnotUpToE p n) (lmtcE.k_lit_to_ctor_if_nat p
         (liftE (callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem)))
-        (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) a₀
+        (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) a₀
         (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
     intro hT
     rcases c1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩
@@ -627,23 +542,23 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
   | strVal str =>
     have hk1 : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 1 := hrel.1
     rw [ite_eq_right (by rw [hk1]; decide)]
-    rcases c1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩
-    · rw [liftE_none, lmtcE.k_str_lit_supported.none]; exact RefE.of_cls0 (by simp)
+    rcases c1 : callW p n "str_lit_stored" [vis] s₀.mem with _ | ⟨r₁, m₁⟩
+    · rw [liftE_none, lmtcE.k_str_lit_stored.none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some]
     obtain ⟨hrun1, ⟨M₁, hS₁, hK₁, hSt₁⟩, -⟩ := CoreSpec.run
-      (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) c1
-    simp only [lmtcE.k_str_lit_supported]
+      (hw.strLitStored n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) c1
+    simp only [lmtcE.k_str_lit_stored]
     by_cases h0 : r₁.headD 0 = 0
     · rw [ite_eq_left h0]
       rw [decBool_f_m2c h0] at hrun1
-      exact RefE.ret (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe d.toNat
+      exact RefE.ret (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
         (decE h) a₀ _ htag str hview hrun1) ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, rfl, hh⟩
     rw [ite_eq_right h0]
     rw [decBool_t_m2c h0] at hrun1
     rcases c2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩
     · rw [liftE_none, lmtcE.k_str_lit_ctor.none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some]
-    have hviewA : (AM.st (strLitSupported fe) a₀).store.view (decE h) =
+    have hviewA : (AM.st (strLitStored fe) a₀).store.view (decE h) =
         some (.lit (.strVal str)) := hsup fe a₀ (decE h) _ hview
     obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
       (hw.strLitCtor n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb h str hS₁ hh hviewA) c2
@@ -657,13 +572,13 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
           mode d _ hnF hn62 ⟨hS₂, hm4, hebm⟩ hr₂) c3)
     obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW hW (callW_of_callE c3)
     have hrun3 := AM.run_of_ok _ _ hok3
-    exact RefE.ret (litMajorToCtor_run_str (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) a₀
+    exact RefE.ret (litMajorToCtor_run_str (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h) a₀
       _ _ _ htag str hview hrun1 _ _ hrun2 hrun3)
       ⟨⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩, hres3, hr₃⟩
 
 /-- **`lit_major_to_ctor` refines `litMajorToCtor`** (`lmtc_ref`'s ok half). Statement changes (the
 knot's `whnf` slot needs them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`; and
-`SupKeep` (`strLitSupported` keeps the store's views: `StrLitKeep.supKeep_of`) as a hypothesis. -/
+`SupKeep` (`strLitStored` keeps the store's views: `StrLitKeep.supKeep_of`) as a hypothesis. -/
 theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
@@ -671,7 +586,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
     (MM : ModeMaps) (eb mode d h : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
     eb = (mode >>> 1) &&& 1 → HW h →
     CoreSpec p (n + 1) "lit_major_to_ctor" [mode, vis, d, h]
-      (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
+      (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
       eb :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h hS hm4 hebm hh =>
     RefE.coreSpec (lmtcE_spec p hp.litMajorToCtor (n + 1) s₀ mode vis d h)

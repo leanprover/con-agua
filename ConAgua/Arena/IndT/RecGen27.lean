@@ -14,7 +14,6 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.IndRealOpf3
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndT.Lift
@@ -136,7 +135,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
     (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hR : DecB (fun m => decCR m rd.toNat) m R)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
-    (hcA : DecB (fun m => decCN m cA.toNat) m cA') (hlp : CtorLp m cA) (hnpk : bs.nP + bs.k < 2 ^ 64)
+    (hcA : DecB (fun m => decCN m cA.toNat) m cA') (hnpk : bs.nP + bs.k < 2 ^ 64)
     (hsz5 : (m.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR m)
     {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
     {cAP : ConLeche.ConstantVal × Nat}
@@ -165,8 +164,8 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have hk1 := callW_keepW c1
   have hsz1 := k1.stage.stage.iw.iwSize
   obtain ⟨⟨no, nl, h9, h10, hno, hnl, hnfs⟩, hds, hmw13⟩ := decTM_slices hTM hsz1
-  obtain ⟨ca, hca, hca3, hcv, hnmH, hnmD, hnF, hnFb, -⟩ := decCN_words (hcA.grow (decCN_mono _) k1.grow) hsz1
-  obtain ⟨cam, hcam, hca3m, -, -, -, -, -, hcAt⟩ := decCN_words hcA hsz
+  obtain ⟨ca, hca, hca3, hcv, hnmH, hnmD, hnF, hnFb, -⟩ := decCN_wordsE (hcA.grow (decCN_mono _) k1.grow) hsz1
+  obtain ⟨cam, hcam, hca3m, -, -, -, -, -, hcAt⟩ := decCN_wordsE hcA hsz
   rw [h9, h10, hca]
   -- `class_ctor_of_nfs`
   refine RefE.onlySim (fun _ => cxoE.k_class_ctor_of_nfs.none ..) (fun _ _ h => h) fun r2 m2 c2 => ?_
@@ -174,7 +173,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   · obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩) (invoke_exec_zero p _ _ _) c2
     exact hf.elim
   obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (cnf_spec p P.ha P.cnf n _ (UInt64.ofNat no) (UInt64.ofNat nl) (rdW (m1.arr64 EREC) (UInt64.ofNat ca))) c2
+    (cnf_spec p P.ha P.cnf n _ (UInt64.ofNat no) (UInt64.ofNat nl) (erRd m1 (UInt64.ofNat ca))) c2
   simp only at hs2 hw2; subst hs2
   obtain ⟨hS2, hg2, hf2, hes⟩ := cnfF_ok _ _ _ tm.nfs n hw2 k1.stage.stage (by
     rw [UInt64.toNat_ofNat_of_lt' hno, UInt64.toNat_ofNat_of_lt' hnl]; exact hnfs) hnmH
@@ -197,19 +196,23 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   generalize hE0 : rdW (s2.mem.arr64 IW) (r2.headD 0) = e0w at he0 ⊢
   obtain ⟨htyH, htyD⟩ := decNCN_ty he0 hsz2
   have hca64 : ca < 2 ^ 64 := by
-    have := (rdW (m1.arr64 CTL) 129).toNat_lt; simp only [erTop] at hca3; omega
+    omega
   have hcaT : (UInt64.ofNat ca : Word).toNat = ca := UInt64.toNat_ofNat_of_lt' hca64
   have hcaeq : cam = ca := by
     have hcm64 : cam < 2 ^ 64 := by
-      have := (rdW (m.arr64 CTL) 129).toNat_lt; simp only [erTop] at hca3m; omega
+      omega
     have e := hca
     rw [rdW_grow k1.grow (by omega), hcam] at e
     have := congrArg UInt64.toNat e
     rwa [UInt64.toNat_ofNat_of_lt' hcm64, hcaT] at this
   subst cam
-  have hER2 : rdW (s2.mem.arr64 EREC) (UInt64.ofNat ca) = rdW (m1.arr64 EREC) (UInt64.ofNat ca) :=
-    rdW_er_grow hg2 (by rw [hcaT]; omega)
-  rw [hER2]
+  have hER2 : erRd s2.mem (UInt64.ofNat ca) = erRd m1 (UInt64.ofNat ca) := by
+    have hcv2 : decCVp s2.mem ca = some cA'.1 := (hcv.grow (OMono.decCVp _) hg2).get (OMono.decCVp _)
+    obtain ⟨hnm2, -, -⟩ := decCV_some (a := erA s2.mem) (q := ca) hcv2
+    obtain ⟨w, hw, hwH, hwD⟩ := erH_rdW hnm2 hca64
+    rw [hw]; exact (decI_inj_iff hwH hnmH).mp (hwD.trans hnmD.symm)
+  rw [show rdW (s2.mem.arr64 (tierA EREC (UInt64.ofNat ca >>> 40))) (UInt64.ofNat ca &&& 1099511627775) =
+    erRd s2.mem (UInt64.ofNat ca) from rfl, hER2]
   -- `class_minor_slot`
   have hsz5' : (s2.mem.arr64 IW).size + 5 < 2 ^ 64 := by rw [hk2 IW, hk1 IW]; exact hsz5
   have h3 := cms_ref P.cmsg (n + 1) (a := a1) (c := c) ((hR.grow (decCR_mono _) hg12).get (decCR_mono _)) hnmH hsz5'
@@ -227,7 +230,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   subst hm3 a3
   dsimp only
   -- `open_pis_at_fvars_f`
-  obtain ⟨ca2, hca2, -, -, -, -, hnF2, -, -⟩ := decCN_words (hcA.grow (decCN_mono _) hg12) hsz2
+  obtain ⟨ca2, hca2, -, -, -, -, hnF2, -, -⟩ := decCN_wordsE (hcA.grow (decCN_mono _) hg12) hsz2
   have hq4 : rdW (s2.mem.arr64 IW) (q + 4) = UInt64.ofNat bs.nP := (partsShapeWords hg12 hbsD hq9).1
   have hq1 : rdW (s2.mem.arr64 IW) (q + 1) = UInt64.ofNat bs.k := by
     have e : (q + 1 : Word) = UInt64.ofNat (q.toNat + 1) := by
@@ -240,7 +243,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   obtain ⟨s4, rfl, -, hw4⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (opfF_spec p hOpf (n + 1) _ [UInt64.ofNat cA'.2, rdW (s2.mem.arr64 IW) (e0w + 4),
       UInt64.ofNat (bs.nP + bs.k)]) c4
-  obtain ⟨ox, a4, run4, ⟨hS4, hg4, hd4⟩, hA4⟩ := opfF_ok dn vis fe _ _ (UInt64.ofNat (bs.nP + bs.k)) htyH
+  obtain ⟨ox, a4, run4, ⟨hS4, hg4, hd4⟩, hA4⟩ := opfF_ok (vis := vis) (fe := fe) _ _ (UInt64.ofNat (bs.nP + bs.k)) htyH
     _ _ a1 r4 hw4 ⟨hS2, k2.abs⟩
   rw [UInt64.toNat_ofNat_of_lt' hnFb, UInt64.toNat_ofNat_of_lt' hnpk, htyD] at run4
   obtain ⟨q4, ho4⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run k2.stage.check.state he0ty run4
@@ -291,7 +294,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
       (ConRon.Bridge.Inductives.dCtorNf_ext.list (k4.trans k5).core.ext _ _ hEP) hformer hMs)
     fun r6 s6 u6 a6 h6 _ run6 hR6' => ?_
   rw [cxoE.k_class_fields_agree.arm1]
-  obtain ⟨cs6, -⟩ := ConRon.Bridge.Inductives.classFieldsAgree_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨cs6, -⟩ := ConRon.Bridge.Inductives.classFieldsAgree_spec fe (ConRon.Bridge.CoreSpec.of_core)
     henv bs pP formerTys formerTysP ms MsP fvs fvsP (e0' :: es') (e0P :: EsP') cvP.name hformer hMs kinds 0
     a5 _ () k5.stage.check
     ⟨ConRon.Bridge.Inductives.dShape_ext k15.core.ext _ _ hsh, denoteEList_ext k15.core.ext _ _ hftP,
@@ -302,16 +305,8 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have hk6 := callW_keepW (callW_of_callE h6)
   -- `target_ctor_at`
   have hg26 : IWGrow m1 s6.mem := (k2.trans (k4.trans (k5.trans k6))).grow
-  have hca3' : ca + 3 < 2 ^ 64 := by
-    have := (rdW (m1.arr64 CTL) 129).toNat_lt; simp only [erTop] at hca3; omega
+  have hca3' : ca + 3 < 2 ^ 64 := hca3
   have hkm6 : KeepW m s6.mem := hk1.trans (hk2.trans (hk4.trans (hk5.trans hk6)))
-  have hlp6 : (rdW (s6.mem.arr64 EREC) (UInt64.ofNat ca + 2)).toNat = 0 ∨
-      (rdW (s6.mem.arr64 EREC) (UInt64.ofNat ca + 1)).toNat +
-      (rdW (s6.mem.arr64 EREC) (UInt64.ofNat ca + 2)).toNat ≤ (s6.mem.arr64 EREC).size := by
-    have e1 : (UInt64.ofNat ca + 1 : Word).toNat = ca + 1 := by rw [UInt64.toNat_add]; simp <;> omega
-    have e2 : (UInt64.ofNat ca + 2 : Word).toNat = ca + 2 := by rw [UInt64.toNat_add]; simp <;> omega
-    rw [rdW_er_grow k16.grow (by rw [e2]; omega), rdW_er_grow k16.grow (by rw [e1]; omega), hkm6 EREC]
-    have := hlp; simp only [CtorLp] at this; rw [hcam] at this; exact this
   refine RefE.bindLift (fun _ => cxoE.k_target_ctor_at.none ..) fun r7 m7 c7 => ?_
   rw [cxoE.k_target_ctor_at.arm1]
   obtain ⟨s7, rfl, -, hw7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
@@ -321,7 +316,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
     tm cA'.1 r7 (realCall p) (IlpRd.realC hIlpf k6.stage) k6.stage.stage
       ((hTM.grow (decTM_mono _) hg26).get (decTM_mono _))
       (by rw [hcaT]; exact (hcv.grow (OMono.decCVp _) hg26).get (OMono.decCVp _)) hmw13 (by rw [hcaT]; omega)
-      hlp6 hw7
+      hw7
   rw [← ht7D] at run7
   obtain ⟨cs7, ht0P⟩ := ConRon.Bridge.Inductives.targetCtorAt_spec fe tm _ cA'.1 cvP a6 a7 _ k6.stage.check
     ⟨ConRon.Bridge.Inductives.dMajor_ext (k2.trans (k4.trans (k5.trans k6))).core.ext _ _ hmP,
@@ -334,7 +329,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   refine RefE.bindLift (fun _ => cxoE.k_inst_pis_with.none ..) fun r8 m8 c8 => ?_
   obtain ⟨s8, rfl, -, hw8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (instPisWith_spec p P.hv P.ipw P.hi1 (n + 1) _ _ _ _) c8
-  obtain ⟨ox, a8, run8, hS8, hg8, hd8⟩ := instW_ok0 (n + 1) hw8 hS7 ht7H hds7
+  obtain ⟨ox, a8, run8, hS8, hg8, hd8⟩ := instW_ok0 (dn := dn) (n + 1) hw8 hS7 ht7H hds7
   obtain ⟨q8, -⟩ := ConRon.Bridge.Inductives.instPisWith_spec tm.ds _ _ _ a7 a8 ox k7.stage.check.state
     ⟨denoteEList_ext (k2.trans (k4.trans (k5.trans (k6.trans k7)))).core.ext _ _ hmdsP, ht0P⟩ run8
   have k8 := RcAt.pstep k7.stage hS8 (instW_afr _ _ _ _ _ _ _ hw8 k7.abs) (k7.rc.fr (instW_mfr _ _ _ _ _ _ _ hw8))
@@ -347,7 +342,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   rw [cxoE.k_inst_pis_with.arm1 (hc1 := by rw [h81]; decide)]
   -- `rec6`
   have hsz8 := hS8.iw.iwSize
-  obtain ⟨ca8, hca8, -, hcv8, -, -, hnF8, -, -⟩ := decCN_words (hcA.grow (decCN_mono _) k18.grow) hsz8
+  obtain ⟨ca8, hca8, -, hcv8, -, -, hnF8, -, -⟩ := decCN_wordsE (hcA.grow (decCN_mono _) k18.grow) hsz8
   obtain ⟨hty8H, hty8D⟩ := decNCN_ty (he0.grow (decNCN_mono _) (k4.trans (k5.trans (k6.trans (k7.trans k8)))).grow)
     hsz8
   rw [hnF8]
@@ -384,7 +379,7 @@ theorem classCtorOf_refinesC {p : Prog} (hq : KnotStageProg p) {env : ConLeche.E
     (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys) (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
     (hR : DecB (fun m => decCR m rd.toNat) s₀.mem R)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) s₀.mem ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
-    (hcA : DecB (fun m => decCN m cA.toNat) s₀.mem cA') (hlp : CtorLp s₀.mem cA) (hnpk : bs.nP + bs.k < 2 ^ 64)
+    (hcA : DecB (fun m => decCN m cA.toNat) s₀.mem cA') (hnpk : bs.nP + bs.k < 2 ^ 64)
     (hsz5 : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR s₀.mem)
     {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
     {cAP : ConLeche.ConstantVal × Nat}
@@ -404,7 +399,7 @@ theorem classCtorOf_refinesC {p : Prog} (hq : KnotStageProg p) {env : ConLeche.E
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (RefE.triple (cxoE_spec p P (n + 1) s₀ vis q fto ftl rd mo ml c cA)
-    (cxo_ref hq henv P hIlpf hOpf dn fe n hn hC hA hbs hft hftb hR hms hmsb hcA hlp hnpk hsz5 hP hsh hftP
+    (cxo_ref hq henv P hIlpf hOpf dn fe n hn hC hA hbs hft hftb hR hms hmsb hcA hnpk hsz5 hP hsh hftP
       hmsP hcAP hformer hMs)) ?_
   rintro r s' ⟨hl, x, a', run, hR'⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
@@ -425,7 +420,7 @@ extension after it from con-ron's `classCtorOf_spec` on its run). -/
 theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m0) (hR : DecB (fun m => decCR m rd.toNat) m0 R)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m0 ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
-    (hcAs : DecB (fun m => decPL m (decCN m) ao.toNat al.toNat) m0 cAs) (hlp : CtorsLp m0 ao al)
+    (hcAs : DecB (fun m => decPL m (decCN m) ao.toNat al.toNat) m0 cAs) 
     (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m0.arr64 IW).size + 5 < 2 ^ 64) (hq : qo.toNat = iwTop m0)
     (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
     (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (k : Nat) (hk' : k ≤ 2 ^ 62) :
@@ -476,8 +471,6 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have hvT : (UInt64.ofNat v : Word).toNat = v := UInt64.toNat_ofNat_of_lt' hrd0.2
   have hcA0 : DecB (fun m => decCN m (UInt64.ofNat v : Word).toNat) m0 cAs[j.toNat] := by
     rw [hvT]; rw [← hlen] at hjl; exact hdv
-  have hlp0 : CtorLp m0 (UInt64.ofNat v) := by
-    have := hlp j.toNat hjl; rw [hnj, hrd0.1] at this; exact this
   rw [List.drop_eq_getElem_cons (by rw [hlen]; omega)] at hcsP
   obtain ⟨cAP, csP', rfl, hcAP, hcsP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hcsP
   rw [List.drop_eq_getElem_cons (by omega), ConRon.Arena.classCtorsOf]
@@ -490,12 +483,12 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
     (fun hG => hG.nv) id (cxo_ref hkp henv P.toCxoProg hIlpf hOpf dn fe k (by omega) hC hA (hbs.grow hg)
     (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.iw)
     (hR.grow (decCR_mono _) hg) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg) hmsb
-    (hcA0.grow (decCN_mono _) hg) (hlp0.grow hcA0 hsz0 hg hk) hnpk (by rw [hk IW]; exact hsz5) hP
+    (hcA0.grow (decCN_mono _) hg) hnpk (by rw [hk IW]; exact hsz5) hP
     hsh hftP hmsP hcAP hformer hMs (vis := vis) (q := q) (fto := fto) (ftl := ftl) (rd := rd) (mo := mo)
     (ml := ml) (c := c)) fun r1 s1 x1 a1 h1 _ run1 ⟨hC1, hg1, hd1, hP1, hA1⟩ => ?_
   rw [cosE.k_class_ctor_of.arm1]
   dsimp only at hC1 hg1 hd1 hP1 hA1
-  obtain ⟨cs1, -⟩ := ConRon.Bridge.Inductives.classCtorOf_spec fe (ConRon.Bridge.CoreSpec.of_core rfl) henv
+  obtain ⟨cs1, -⟩ := ConRon.Bridge.Inductives.classCtorOf_spec fe ConRon.Bridge.CoreSpec.of_core henv
     bs pP formerTys formerTysP R rdP ms MsP c.toNat cAs[j.toNat] cAP hformer hMs a _ _ hC.check
     ⟨hsh, hftP, hrdP, hmsP, hcAP⟩ run1
   have hS1 := hC1.stage
@@ -553,7 +546,7 @@ theorem cos_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
     (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hR : DecB (fun m => decCR m rd.toNat) m R)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
-    (hcAs : DecB (fun m => decPL m (decCN m) ao.toNat al.toNat) m cAs) (hlp : CtorsLp m ao al)
+    (hcAs : DecB (fun m => decPL m (decCN m) ao.toNat al.toNat) m cAs) 
     (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR m)
     {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
     {rdP : ConLeche.ClassRead} {csP : List (ConLeche.ConstantVal × Nat)}
@@ -576,7 +569,7 @@ theorem cos_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have hf1 := allocW_mfr hal
   have hA1 := allocW_afr hal hA
   have h := cosLoop_ref hkp henv P hIlpf hOpf dn fe vis q fto ftl rd mo ml c ao al (r1.headD 0) bs formerTys R ms
-    cAs m hbs hft hftb hR hms hmsb hcAs hlp hnpk hsz5 hq hformer hMs (n + 1) hn s1.mem a 0 [] [] csP
+    cAs m hbs hft hftb hR hms hmsb hcAs hnpk hsz5 hq hformer hMs (n + 1) hn s1.mem a 0 [] [] csP
     (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1 (KeepW.of_mfr hf1) (by omega) UInt64.zero_le
     (by simp [decNL]) .nil (hP.fr hf1) hsh hftP hrdP hmsP (by simpa using hcsP)
   simp only [UInt64.toNat_zero, List.drop_zero] at h
@@ -604,7 +597,7 @@ theorem classCtorsOf_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
     (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys) (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
     (hR : DecB (fun m => decCR m rd.toNat) s₀.mem R)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) s₀.mem ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
-    (hcAs : DecB (fun m => decPL m (decCN m) ao.toNat al.toNat) s₀.mem cAs) (hlp : CtorsLp s₀.mem ao al)
+    (hcAs : DecB (fun m => decPL m (decCN m) ao.toNat al.toNat) s₀.mem cAs) 
     (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR s₀.mem)
     {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
     {rdP : ConLeche.ClassRead} {csP : List (ConLeche.ConstantVal × Nat)}
@@ -624,7 +617,7 @@ theorem classCtorsOf_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (RefE.triple (cosE_spec p P (n + 1) s₀ vis q fto ftl rd mo ml c ao al)
-    (cos_ref hkp henv P hIlpf hOpf dn fe n hn hC hA hbs hft hftb hR hms hmsb hcAs hlp hnpk hsz5 hP hsh hftP
+    (cos_ref hkp henv P hIlpf hOpf dn fe n hn hC hA hbs hft hftb hR hms hmsb hcAs hnpk hsz5 hP hsh hftP
       hrdP hmsP hcsP hformer hMs)) ?_
   rintro r s' ⟨hl, x, a', run, hR'⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
@@ -645,7 +638,7 @@ after it from con-ron's `classCtorsOf_spec` on its run). -/
 theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m0) (hR : DecB (fun m => decCR m rd.toNat) m0 R)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m0 ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
-    (hlp : ClassesLp m0 mo ml) (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m0.arr64 IW).size + 5 < 2 ^ 64)
+    (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m0.arr64 IW).size + 5 < 2 ^ 64)
     (hq : qo.toNat = iwTop m0) (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
     (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (k : Nat) (hk' : k ≤ 2 ^ 62) :
     ∀ (m : Mem) (a : AState) (c : Word) (acc : List (List ClassCtor)) (ps : List Nat)
@@ -703,7 +696,6 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have hlT : (UInt64.ofNat l : Word).toNat = l := UInt64.toNat_ofNat_of_lt' r7.2
   have hcts' : DecB (fun m => decPL m (decCN m) (UInt64.ofNat o : Word).toNat (UInt64.ofNat l : Word).toNat) m0
       ms[c.toNat].ctors := by rw [hoT, hlT]; exact hcts
-  have hlp0 := hlp c.toNat hcl v o l hv0 ho hl
   have hol : (UInt64.ofNat o : Word).toNat + (UInt64.ofNat l : Word).toNat < 2 ^ 64 := by
     rcases decB_decPL_bound hcts with h0 | h0
     · rw [hoT, hlT, h0]; omega
@@ -722,12 +714,12 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
     (UInt64.ofNat l)) (fun hG => hG.nv) id (cos_ref hkp henv P.toCosProg hIlpf hOpf dn fe k' (by omega) hC hA (hbs.grow hg)
     (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.iw) (hR.grow (decCR_mono _) hg)
     (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg) hmsb
-    (hcts'.grow (OMono.decPL (fun q => decCN_mono q) _ _) hg) (hlp0.grow hcts' hsz0 hg hk) hnpk
+    (hcts'.grow (OMono.decPL (fun q => decCN_mono q) _ _) hg) hnpk
     (by rw [hk IW]; exact hsz5) hP hsh hftP hrdP hmsP hmc hformer hMs (vis := vis) (c := c))
     fun r1 s1 x1 a1 h1 _ run1 ⟨hC1, hg1, hd1, hP1, hA1⟩ => ?_
   rw [ccsE.k_class_ctors_of.arm1]
   dsimp only at hC1 hg1 hd1 hP1 hA1
-  obtain ⟨cs1, -⟩ := ConRon.Bridge.Inductives.classCtorsOf_spec fe (ConRon.Bridge.CoreSpec.of_core rfl) henv
+  obtain ⟨cs1, -⟩ := ConRon.Bridge.Inductives.classCtorsOf_spec fe ConRon.Bridge.CoreSpec.of_core henv
     bs pP formerTys formerTysP R rdP ms MsP c.toNat hformer hMs ms[c.toNat].ctors mP.ctors a _ _ hC.check
     ⟨hsh, hftP, hrdP, hmsP, hmc⟩ run1
   have hS1 := hC1.stage
@@ -750,10 +742,10 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
     rw [hr2]
     have hw0 : iwN s2.mem (rdW (s1.mem.arr64 CTL) 200).toNat = some (r1.headD 0).toNat := by
       have e0 := hget2 0 (by simp); rw [Nat.add_zero] at e0
-      simp only [iwN, nat?, iwA, e0]; rfl
+      simp [iwN, nat?, iwA, aread_apply, e0]
     have hw1 : iwN s2.mem ((rdW (s1.mem.arr64 CTL) 200).toNat + 1) = some (r1.tail.headD 0).toNat := by
       have e1 := hget2 1 (by simp)
-      simp only [iwN, nat?, iwA, e1]; rfl
+      simp [iwN, nat?, iwA, aread_apply, e1]
     have ht2' : iwTop s2.mem = iwTop s1.mem + 2 := by simpa using ht2
     exact stabA_decLH hw0 hw1 (Nat.le_trans hb0 hg1.iw) (by rw [ht2']; exact Nat.le_refl _)
       ((hd1.mono (by omega)).grow (AgreeA.of_grow hg2))
@@ -806,7 +798,7 @@ theorem ccs_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
     (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hR : DecB (fun m => decCR m rd.toNat) m R)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
-    (hlp : ClassesLp m mo ml) (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m.arr64 IW).size + 5 < 2 ^ 64)
+    (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m.arr64 IW).size + 5 < 2 ^ 64)
     (hP : RcMR m)
     {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
     {rdP : ConLeche.ClassRead}
@@ -829,7 +821,7 @@ theorem ccs_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have hf1 := allocW_mfr hal
   have hA1 := allocW_afr hal hA
   have h := ccsLoop_ref hkp henv P hIlpf hOpf dn fe vis q fto ftl rd mo ml (r1.headD 0) bs formerTys R ms m
-    hbs hft hftb hR hms hmsb hlp hnpk hsz5 hq hformer hMs (n + 1) hn s1.mem a 0 [] [] MsP
+    hbs hft hftb hR hms hmsb hnpk hsz5 hq hformer hMs (n + 1) hn s1.mem a 0 [] [] MsP
     (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1 (KeepW.of_mfr hf1) (by omega) UInt64.zero_le
     (by simp [decNL]) .nil (hP.fr hf1) hsh hftP hrdP hmsP (by simpa using hmsP)
   simp only [UInt64.toNat_zero, List.drop_zero] at h
@@ -857,7 +849,7 @@ theorem classesCtors_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
     (hbs : BSOK s₀.mem q.toNat bs) (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem) (hR : DecB (fun m => decCR m rd.toNat) s₀.mem R)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) s₀.mem ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
-    (hlp : ClassesLp s₀.mem mo ml) (hnpk : bs.nP + bs.k < 2 ^ 64)
+    (hnpk : bs.nP + bs.k < 2 ^ 64)
     (hsz5 : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR s₀.mem)
     {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
     {rdP : ConLeche.ClassRead}
@@ -877,7 +869,7 @@ theorem classesCtors_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (RefE.triple (ccsE_spec p P (n + 1) s₀ vis q fto ftl rd mo ml)
-    (ccs_ref hkp henv P hIlpf hOpf dn fe n hn hC hA hbs hft hftb hR hms hmsb hlp hnpk hsz5 hP hsh hftP
+    (ccs_ref hkp henv P hIlpf hOpf dn fe n hn hC hA hbs hft hftb hR hms hmsb hnpk hsz5 hP hsh hftP
       hrdP hmsP hformer hMs)) ?_
   rintro r s' ⟨hl, x, a', run, hR'⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
@@ -897,7 +889,7 @@ theorem classesCtors_claim {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.En
     (hbs : BSOK s₀.mem q.toNat bs) (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem) (hR : DecB (fun m => decCR m rd.toNat) s₀.mem R)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) s₀.mem ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
-    (hlp : ClassesLp s₀.mem mo ml) (hnpk : bs.nP + bs.k < 2 ^ 64)
+    (hnpk : bs.nP + bs.k < 2 ^ 64)
     (hsz5 : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR s₀.mem)
     (hsh : dShape a₀.store bs = some pP)
     (hftP : Frontend.denoteEList a₀.store formerTys = some formerTysP)
@@ -911,7 +903,7 @@ theorem classesCtors_claim {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.En
   | zero => exact CoreSpecE.zero _ _ _ _ _ _
   | succ n =>
     exact RefE.coreSpecE (ccsE_spec p P (n + 1) s₀ vis q fto ftl rd mo ml) hnv ⟨hnv, hcE⟩
-      (ccs_ref hkp henv P hIlpf hOpf dn fe n hN hC hA hbs hft hftb hR hms hmsb hlp hnpk hsz5 hP hsh hftP
+      (ccs_ref hkp henv P hIlpf hOpf dn fe n hN hC hA hbs hft hftb hR hms hmsb hnpk hsz5 hP hsh hftP
         hrdP hmsP hformer hMs)
 
 end L.Ind

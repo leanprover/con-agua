@@ -83,13 +83,16 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
   have hEREC : m'.arr64 EREC = m.arr64 EREC := by
     rw [hA EREC (by decide)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hEREC1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := by
+    rw [hA (tier1 EREC) (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have htop : rdW (m'.arr64 CTL) 200 = q + (l + 1) := by
     rw [hA CTL (by decide)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64]; simp [hc, hq]
-  refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
+  refine ⟨?_, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
   · rw [hl1, decNL_succ]
     have h0 : iwN m' q.toNat = some x.toNat := by
-      simp [iwN, nat?, iwA, hget]
+      simp [iwN, nat?, iwA, aread_apply, hget]
     rw [h0]
     have : decNL m' (q.toNat + 1) l.toNat = some xs := by
       rw [← hxs]
@@ -97,7 +100,7 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
       apply mapM_opt_congr
       intro j hj
       have hj' : j < l.toNat := List.mem_range.mp hj
-      simp only [iwN, nat?, iwA, hget]
+      simp only [iwN, nat?, iwA, aread_apply, hget]
       rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       have : o.toNat + (q.toNat + 1 + j - (q.toNat + 1)) = o.toNat + j := by omega
       simp
@@ -110,6 +113,8 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
     simp only [iwTop, hq] at hi
     rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
   · intro i _; rw [hEREC]
+  · simp only [erecTop1, hCTL 130 (by decide)]; exact Nat.le_refl _
+  · intro i _; rw [hEREC1]
   · intro b hb hbc
     rw [hA b (by simpa using hb)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by simpa using hb), Mem.arr64_set64_ne _ _ _ _ _ hbc]
@@ -189,25 +194,21 @@ theorem consW_roomN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
 
 /-- **`sl_cons` keeps the stage relation**: the pool grew by the new slice, which decodes to
 `x :: xs`. -/
-theorem consW_stageN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem consW_stageN {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List Nat}
-    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : o.toNat + l.toNat ≤ iwTop m)
     (hxs : decNL m o.toNat l.toNat = some xs) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (x.toNat :: xs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
+  have hsz := hS.iw.iwSize
+  have hc := hS.iw.ctl
   obtain ⟨hr, hd, hg, hf, -, ht⟩ := consW_decN h hsz hc hsrc hxs
   have hroom := consW_roomN h hsz hc hsrc hxs
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
   subst hr
-  refine ⟨⟨CheckR.frame_iw hf hS.check, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht⟩
-  · simp only [erTop, h129, hE]; exact hE1
-  · rw [hf.size IW]; exact hsz
-  · rw [hE]; exact hEs
-  · rw [hf.size CTL]; exact hc
+  exact ⟨⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw hroom⟩, hg,
+    by simpa using hd, by simpa using ht⟩
 
 theorem gafF_afr {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : AFr m m' :=
   AFr.of_frame (gafF_frame h)
@@ -224,7 +225,7 @@ def crW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word 
     else crK1 cR n nP mo ml ro rl
       (cR n "open_pis_at_fvars_f"
         [rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1,
-         rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m)
+         erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m)
 
 /-- After `open_pis_at_fvars_f`. -/
 def crK1 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -266,43 +267,22 @@ theorem decNL_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : o + l ≤ iw
   apply mapM_opt_congr
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
-  simp only [iwN, nat?, iwA]
+  simp only [iwN, nat?, iwA, aread_apply, aread_apply]
   rw [hg.iwGet (o + j) (by omega)]
 
 /-! ## Constant records are stable under the pool's growth -/
 
-/-- `q`'s constant-value record lies below the `EREC` top (its four words and its level-parameter
-slice). -/
-def CVExt (m : Mem) (q : Nat) : Prop :=
-  q + 4 ≤ erTop m ∧ ∀ o l, nat? (erA m) (q + 1) = some o → nat? (erA m) (q + 2) = some l →
-    o + l ≤ erTop m ∨ l = 0
+/-- `q`'s constant-value record decodes (its four words and its level-parameter slice are all
+defined in the record pool, in either tier), so it stays decoded as the pool grows. -/
+def CVExt (m : Mem) (q : Nat) : Prop := (decCVp m q).isSome
+
+theorem CVExt.of_dec {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv) : CVExt m q := by
+  simp [CVExt, h]
 
 theorem decCVp_grow_r {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) :
     decCVp m' q = decCVp m q := by
-  have hag : ∀ i, i < erTop m → (erA m')[i]? = (erA m)[i]? := fun i hi => by
-    simp only [erA]; exact hg.erGet i hi
-  have hn : ∀ i, i < erTop m → nat? (erA m') i = nat? (erA m) i := fun i hi => by
-    simp only [nat?, hag i hi]
-  have hh : ∀ {k : IdxKind} i, i < erTop m → (hd? (erA m') i : Option (Idx k)) = hd? (erA m) i :=
-    fun i hi => by simp only [hd?, hag i hi]
-  obtain ⟨hq4, hl⟩ := hq
-  simp only [decCVp, decCV]
-  rw [hh q (by omega), hh (q + 3) (by omega)]
-  have hlist : (hlist? (erA m') (q + 1) : Option (List (Idx IdxKind.name))) = hlist? (erA m) (q + 1) := by
-    simp only [hlist?]
-    rw [hn (q + 1) (by omega), hn (q + 1 + 1) (by omega)]
-    cases ho : nat? (erA m) (q + 1) with
-    | none => simp
-    | some o =>
-      cases hl' : nat? (erA m) (q + 1 + 1) with
-      | none => simp
-      | some l =>
-        try simp only [Option.bind_some]
-        apply hslice?_congr
-        intro j hj
-        have := hl o l ho hl'
-        exact hag (o + j) (by omega)
-  rw [hlist]
+  obtain ⟨cv, hcv⟩ := Option.isSome_iff_exists.mp hq
+  rw [hcv]; exact ArrExt.decCV hg.ext hcv
 
 theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o : Nat),
     decPL m f o l = (decNL m o l).bind (fun ps => ps.mapM f) := by
@@ -323,13 +303,7 @@ theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o :
         | some ps => simp [hf]
 
 theorem CVExt_grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) : CVExt m' q := by
-  obtain ⟨h1, h2⟩ := hq
-  have hn : ∀ i, i < erTop m → nat? (erA m') i = nat? (erA m) i := fun i hi => by
-    simp only [nat?, erA]; rw [hg.erGet i hi]
-  refine ⟨Nat.le_trans h1 hg.er, fun o l ho hl => ?_⟩
-  rw [hn (q + 1) (by omega)] at ho
-  rw [hn (q + 2) (by omega)] at hl
-  exact (h2 o l ho hl).imp_left fun h => Nat.le_trans h hg.er
+  simp only [CVExt, decCVp_grow_r hg hq]; exact hq
 
 /-! ## `class_read_classes` (loop rewritten as recursion: the rest, then `sl_cons` at a motive) -/
 
@@ -341,9 +315,9 @@ theorem decCK_grow {m m' : Mem} (hg : IWGrow m m') {k : Nat} (hk : CKExt m k) :
     decCK m' k = decCK m k := by
   obtain ⟨h1, h2⟩ := hk
   have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet i hi]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet i hi]
   have hh : ∀ {kk : IdxKind} i, i < iwTop m → (iwH m' i : Option (Idx kk)) = iwH m i :=
-    fun i hi => by simp only [iwH, hd?, iwA]; rw [hg.iwGet i hi]
+    fun i hi => by simp only [iwH, hd?, iwA, aread_apply, aread_apply]; rw [hg.iwGet i hi]
   simp only [decCK]
   rw [hh k (by omega), hh (k + 1) (by omega)]
   have hat : decAt m' (decHL (k := IdxKind.expr) m') (k + 2) = decAt m (decHL (k := IdxKind.expr) m) (k + 2) := by
@@ -372,7 +346,7 @@ theorem mapM_decCK_grow {m m' : Mem} (hg : IWGrow m m') :
 theorem CKExt_grow {m m' : Mem} (hg : IWGrow m m') {k : Nat} (hk : CKExt m k) : CKExt m' k := by
   obtain ⟨h1, h2⟩ := hk
   have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet i hi]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet i hi]
   refine ⟨Nat.le_trans h1 hg.iw, fun o l ho hl => ?_⟩
   rw [hiw (k + 2) (by omega)] at ho
   rw [hiw (k + 3) (by omega)] at hl
@@ -420,11 +394,11 @@ def CcRes (m' : Mem) (r : List Word) (keys : List ClassKey) : Prop :=
     decPL m' (decCK m') (r.headD 0).toNat (r.tail.headD 0).toNat = some keys ∧
     (∀ k ∈ ptrs, CKExt m' k) ∧ (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m'
 
-theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a : AState) (n : Nat) :
+theorem rcW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a : AState) (n : Nat) :
     ∀ (m m' : Mem) (so sl : Word) (r : List Word) (slots : List ClassSlot),
-    rcW n m so sl = some (r, m') → StageR dn vis fe m a →
+    rcW n m so sl = some (r, m') → StageR vis fe m a →
     decPL m (decCS m) so.toNat sl.toNat = some slots → SlotsExt m so.toNat sl.toNat →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ CcRes m' r (ConRon.Arena.ClassRead.classes slots) := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ CcRes m' r (ConRon.Arena.ClassRead.classes slots) := by
   induction n with
   | zero => intro m m' so sl r slots h; simp [rcW] at h
   | succ n ih =>
@@ -523,11 +497,11 @@ theorem classReadClasses_refines (p : Prog) (hc : p.lookup "iw_copy" = some iwCo
     (ha : p.lookup "iw_alloc" = some iwAlloc) (hsc : p.lookup "sl_cons" = some slCons)
     (hp : p.lookup "class_read_classes" = some classReadClasses) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (so sl : Word) (slots : List ClassSlot)
-    (hS : StageR dn vis fe s₀.mem a₀)
+    (hS : StageR vis fe s₀.mem a₀)
     (hslots : decPL s₀.mem (decCS s₀.mem) so.toNat sl.toNat = some slots)
     (hext : SlotsExt s₀.mem so.toNat sl.toNat) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_classes" [so, sl]
-    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       CcRes s'.mem r (ConRon.Arena.ClassRead.classes slots); ⊤⦄ := by
   refine triple_post (classReadClasses_spec p hc ha hsc hp n s₀ so sl) ?_
   rintro r s' ⟨hl, hm⟩

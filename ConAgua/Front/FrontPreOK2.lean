@@ -167,6 +167,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
     simp only [UInt64.toNat_zero] at this
     omega
 
+
 theorem DGrow.ofDK {m m₁ m' : Mem} (hk : DK m m₁) (hg : DGrow m₁ m') : DGrow m m' := by
   have hc : dcnt m₁ = dcnt m := by simp only [dcnt, hk.1]
   have ht : dtop m₁ = dtop m := by simp only [dtop, hk.2]
@@ -187,9 +188,9 @@ l_model applyInd_specE (p : Prog) (hf : p.lookup "apply_ind" = some applyInd)
 theorem claimR_of_validate {st : StateD} {tys : List IndTypeRec} {cts : List IndCtorRec}
     {rcs : List IndRecRec} {a : AState} {e : Err}
     (h : VerdictClaimL (ConRon.Arena.Frontend.validateIndD st tys cts rcs) a e) :
-    VerdictClaimR (applyLine st (.decl (.ind tys cts rcs))) a e := by
+    VerdictClaimR (applyRecord st (.decl (.ind tys cts rcs))) a e := by
   intro hk
-  have hrun : (applyLine st (.decl (.ind tys cts rcs))).run a =
+  have hrun : (applyRecord st (.decl (.ind tys cts rcs))).run a =
       (processLineCoreD st (.ind tys cts rcs)).run a := rfl
   rcases h hk with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
   · refine .inl ⟨ce, ?_, hc⟩
@@ -229,7 +230,7 @@ theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups
     {tys : List IndTypeRec} {cts : List IndCtorRec} {rcs : List IndRecRec} {e : USize}
     (hscan : scanIndDecl b v = .ok (.ind tys cts rcs) e) :
     RefC (ApplyIndG p st a) (applyIndE p n m v.toUInt64) (fun x => ApplyIndPost st a tys cts rcs m x.2)
-      (VerdictClaimR (applyLine st (.decl (.ind tys cts rcs))) a) := by
+      (VerdictClaimR (applyRecord st (.decl (.ind tys cts rcs))) a) := by
   have hno := hAL.decl.expr.no_st8
   cases n with
   | zero => simp only [applyIndE, RefC_error]; exact fun _ hk => absurd Err.cls_outOfFuel hk
@@ -293,7 +294,7 @@ theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups
   have hs2'' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.size IFL, hs1']
   have hIFR2 : topN m₂ IFR < 2 ^ 62 := by unfold topN wd; rw [hifr2]; exact hIFR1
   have hIFL2 : topN m₂ IFL < 2 ^ 62 := by have := V3.2; omega
-  obtain ⟨st', I1, I2, I3, I4⟩ := installW_twin hA2 hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 hW3
+  obtain ⟨st', I1, I2, I3, I4⟩ := installW_twin hA2 hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 (by omega) hW3
   have hk : DK m m₂ := (DK.ofFrame hfr1 (by decide) (by decide)).trans
     (DK.ofFrame hfr2 (by decide) (by decide))
   refine ⟨⟨st', ?_, I3⟩, I2, fun hmo => MemFrame.modeOK I4 (by simp) (by simp)
@@ -305,5 +306,6 @@ theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups
   simp only []
   rw [run_bind _ _ a _ I1]
   rfl
+
 
 end L.Front.Ind

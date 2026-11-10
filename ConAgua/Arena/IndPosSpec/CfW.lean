@@ -85,7 +85,7 @@ theorem nsb_rec6 {m' : Mem} {q kO kL aO aL nO nL : Word} {keys act : List NestKe
     (ha : KsB m' aO.toNat aL.toNat act) (hab : aO.toNat + aL.toNat ≤ iwTop m')
     (hn : NfsB m' nO.toNat nL.toNat nfs) (hnb : nO.toNat + nL.toNat ≤ iwTop m') :
     NSB m' q ⟨keys.toArray, act, nfs.toArray⟩ := by
-  have g : ∀ j < 6, (iwA (truncM m'))[q.toNat + j]? = [kO, kL, aO, aL, nO, nL][j]? := fun j hj => by
+  have g : ∀ j < 6, iwA (truncM m') (q.toNat + j) = [kO, kL, aO, aL, nO, nL][j]? := fun j hj => by
     rw [truncM_iw_eq (by omega)]; exact hget j (by simpa using hj)
   have n0 : iwN (truncM m') q.toNat = some kO.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 0 (by omega))
   have n1 : iwN (truncM m') (q.toNat + 1) = some kL.toNat := by simpa [iwN, nat?] using congrArg (Option.map UInt64.toNat) (g 1 (by omega))
@@ -155,13 +155,13 @@ theorem decNFK_nestedW (kb : Word) : decNFK (nestedW kb) = some (.nested (kb.toN
 theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k : Nat} {m m' : Mem} {a : AState}
     {ctx us dO dL gO gL ns2 aO aL kb : Word} {c : NestCtx} {ds : List EIdx} {grp : List (NIdx × EIdx)}
     {NS2 : NestState} {act : List NestKey} {r : List Word}
-    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) (hS : StageR vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hhi : c.hiAt 0 < 2 ^ 64) (hus : H us)
     (hds : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) m ds)
     (hdsb : dO.toNat + dL.toNat ≤ iwTop m)
     (hgl : gL.toNat = grp.length) (hgb : gO.toNat + grp.length ≤ iwTop m) (hgrp : GrpAt m gO.toNat grp)
     (hns : NSB m ns2 NS2) (hact : KsB m aO.toNat aL.toNat act) (hab : aO.toNat + aL.toNat ≤ iwTop m) :
-    ∃ x a', (cfT c (decI us) ds grp NS2 act kb.toNat).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (cfT c (decI us) ds grp NS2 act kb.toNat).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ r.headD 0 = nestedW kb ∧ decNFK (r.headD 0) = some x.1 ∧ NSB m' (r.tail.headD 0) x.2 := by
   cases k with
   | zero => simp [cfW] at h
@@ -178,7 +178,7 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
   have hkb1 := hns1.b0
   -- the keys, cached or not
   have hkeys : ∃ (rk : List Word) (mk : Mem), cfK1 k us dO dL gO gL ns2 aO aL kb (some (r1, m1)) =
-      cfK2 ns2 aO aL kb (some (rk, mk)) ∧ StageR dn vis fe mk a1 ∧ IWGrow m1 mk ∧
+      cfK2 ns2 aO aL kb (some (rk, mk)) ∧ StageR vis fe mk a1 ∧ IWGrow m1 mk ∧
       KsB mk (rk.headD 0).toNat (rk.tail.headD 0).toNat
         (if b then nestAcceptGroup (decI us) ds grp NS2.keys else NS2.keys).toList ∧
       (rk.headD 0).toNat + (rk.tail.headD 0).toNat ≤ iwTop mk := by
@@ -219,11 +219,6 @@ namespace L.Ind
 
 open L.Arena
 
-def naWf : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | k + 1, m, vis, c => naW k m vis c
-
-
 end L.Ind
 
 namespace L.Ind
@@ -250,7 +245,7 @@ namespace L.Ind
 open L.Arena
 
 theorem decKL_get {m : Mem} {o l : Nat} {ks : List NestFieldKind} (h : decKL m o l = some ks) :
-    ks.length = l ∧ ∀ j (_hj : j < l), ∃ w, (iwA m)[o + j]? = some w ∧ decNFK w = ks[j]? := by
+    ks.length = l ∧ ∀ j (_hj : j < l), ∃ w, iwA m (o + j) = some w ∧ decNFK w = ks[j]? := by
   induction l generalizing o ks with
   | zero => simp [decKL] at h; subst h; simp
   | succ l ih =>

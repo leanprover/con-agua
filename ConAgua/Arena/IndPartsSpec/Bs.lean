@@ -36,9 +36,9 @@ open L.Arena
 
 /-! ## Decoders of the split's records -/
 
-/-- `blockSplitRecs`'s element `[cv, mI, rP, rules.off, rules.len]`. -/
-def decSR (m : Mem) (p : Nat) : Option (IConstantVal × Nat × Nat × List IRecRule) := do
-  pure (← decCVp m (← iwN m p), ← iwN m (p + 1), ← iwN m (p + 2),
+/-- `blockSplitRecs`'s element `[cv, mI, rP, rules.off, rules.len, isK]`. -/
+def decSR (m : Mem) (p : Nat) : Option (IConstantVal × Nat × Nat × Bool × List IRecRule) := do
+  pure (← decCVp m (← iwN m p), ← iwN m (p + 1), ← iwN m (p + 2), ← iwB m (p + 5),
     ← decRules (erA m) (← iwN m (p + 3)) (← iwN m (p + 4)))
 
 /-- `blockSplitCtors`'s element `[cv, nP, nF]`. -/
@@ -53,6 +53,7 @@ theorem decSR_mono (p : Nat) : OMono (fun m => decSR m p) := by
   repeat' (first
     | exact OMono.const _
     | apply OMono.iwN
+    | apply OMono.iwB
     | apply OMono.decCVp
     | apply partsDecRules_mono
     | apply OMono.bind
@@ -66,6 +67,10 @@ theorem decSC_mono (p : Nat) : OMono (fun m => decSC m p) := by
     | apply OMono.decCVp
     | apply OMono.bind
     | intro _)
+
+/-- A generated model's `EREC⦃a⦄` read, folded to `erRd`. -/
+theorem erRd_fold (m : Mem) (a : Word) :
+    rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 1099511627775) = erRd m a := rfl
 
 /-! ## `rec3` as `posRecW` -/
 
@@ -103,32 +108,32 @@ attribute [ind_grind] bsK3_some
 /-- **`block_split_recs` is its model** `bsrW`. -/
 l_model bsr_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hs : p.lookup "sl_cons" = some slCons)
-  (h5 : p.lookup "rec5" = some rec5)
+  (h6 : p.lookup "rec6" = some rec6)
   (hp : p.lookup "block_split_recs" = some blockSplitRecs)
   fns [hp ↦ bsrW list]
-  specs [posRec5_specW p ha h5 n, slCons_specW p ha hc hs n]
+  specs [rec6_specW p ha h6 n, slCons_specW p ha hc hs n]
   grind [arena_grind, ind_grind] finish [rdW_eq] gen 20
 
 /-- **`block_split_ctors` is its model** `bscW`. -/
 l_model bsc_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hs : p.lookup "sl_cons" = some slCons)
-  (h5 : p.lookup "rec5" = some rec5) (h3 : p.lookup "rec3" = some rec3)
+  (h6 : p.lookup "rec6" = some rec6) (h3 : p.lookup "rec3" = some rec3)
   (hr : p.lookup "block_split_recs" = some blockSplitRecs)
   (hp : p.lookup "block_split_ctors" = some blockSplitCtors)
   fns [hp ↦ bscW list]
-  specs [partsRec3_specW p ha h3 n, slCons_specW p ha hc hs n, bsr_spec p ha hc hs h5 hr n]
+  specs [partsRec3_specW p ha h3 n, slCons_specW p ha hc hs n, bsr_spec p ha hc hs h6 hr n]
   grind [arena_grind, ind_grind] finish [rdW_eq] gen 20
 
 /-- **`block_split` is its model** `bsW`. -/
 l_model bs_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hs : p.lookup "sl_cons" = some slCons)
-  (h5 : p.lookup "rec5" = some rec5) (h3 : p.lookup "rec3" = some rec3)
+  (h3 : p.lookup "rec3" = some rec3)
   (h6 : p.lookup "rec6" = some rec6)
   (hr : p.lookup "block_split_recs" = some blockSplitRecs)
   (hct : p.lookup "block_split_ctors" = some blockSplitCtors)
   (hp : p.lookup "block_split" = some blockSplit)
   fns [hp ↦ bsW list]
-  specs [rec6_specW p ha h6 n, slCons_specW p ha hc hs n, bsc_spec p ha hc hs h5 h3 hr hct n]
+  specs [rec6_specW p ha h6 n, slCons_specW p ha hc hs n, bsc_spec p ha hc hs h6 h3 hr hct n]
   grind [arena_grind, ind_grind] finish [rdW_eq] gen 20
 
 end L.Ind

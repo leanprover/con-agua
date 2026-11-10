@@ -57,7 +57,7 @@ l_model strE_spec (p : Prog) (hf : p.lookup "stuck_str" = some stuckStrL)
     (hh : p.lookup "struct_unit_head" = some structUnitHeadL)
     (hut : p.lookup "struct_unit_tail" = some structUnitTailL)
   fns [hf ↦ strE list]
-  specs [callW_spec p n "pin_word", callW_spec p n "pin_at", callW_spec p n "str_lit_supported",
+  specs [callW_spec p n "pin_word", callW_spec p n "pin_at", callW_spec p n "str_lit_stored",
     callW_spec p n "str_lit_ctor", siE_spec p hi hc hw hb hg ht hu hh hut n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] heartbeats 1000000

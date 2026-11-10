@@ -84,14 +84,4 @@ def nonemptyRecA : AM IConstantInfo := internCI ConLeche.nonemptyRecA
 /-- con-leche: ConLeche/Kernel/StdAxioms.lean:161-166 choiceA -/
 def choiceA : AM IConstantVal := internCV ConLeche.choiceA
 
-/-- con-leche: ConLeche/Kernel/BasisA.lean:29-44 _ — the stored `Eq` pin,
-`ConLeche.eqA` (spliced by `#stored_basis`, so the citation is the command's
-range), interned.  It is the comparand of every "requires the pinned `Eq`
-basis" test in the checker. -/
-def eqA : AM IConstantInfo := internCI ConLeche.eqA
-
-/-- con-leche: ConLeche/Kernel/BasisA.lean:29-44 _ — the stored `Nat` pin,
-`ConLeche.natA`, interned. -/
-def natA : AM IConstantInfo := internCI ConLeche.natA
-
 end ConRon.Arena

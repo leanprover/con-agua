@@ -2,21 +2,19 @@ module
 
 import ConAgua.Checker.LoopProg
 import ConAgua.Checker.IndArmClosed
-import ConAgua.Arena.IndArm
+public import ConAgua.Arena.IndArm
 meta import ConAgua.Checker.LoopProg
 meta import ConAgua.Checker.IndArmClosed
 meta import ConAgua.Arena.IndArm
 import ConAgua.Checker.CoreErec
 import ConAgua.Checker.IndCore
 import ConAgua.Checker.IndMemoClosed
+import ConAgua.Checker.CrLeaves
 import ConAgua.Checker.LoopDecl
 import ConAgua.Checker.LoopProgTac
-public import ConAgua.Arena.CheckerT
-public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 public import ConAgua.Arena.IndInstallSpec.OfClosed
 public import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
-public import ConAgua.Arena.IndRealLvlZ
 public import ConAgua.Arena.IndT.ArmMemos
 public import ConAgua.Arena.IndT.GenRec2
 public import ConAgua.Checker.IndArmTrees2
@@ -26,6 +24,7 @@ import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
 import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.BvarB
 import all ConAgua.Arena.CheckerL
 import all ConAgua.Arena.ConsLib
@@ -100,7 +99,6 @@ import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecCheckSpec.CnfW
@@ -142,6 +140,7 @@ import all ConAgua.Checker.Entry
 import all ConAgua.Checker.Hoist
 import all ConAgua.Checker.Prelude
 import all ConAgua.Checker.Presize
+import all ConAgua.Rom.CIConst
 import all ConAgua.Front.Apply
 import all ConAgua.Front.ApplyDecl
 import all ConAgua.Front.ApplyExpr
@@ -188,22 +187,27 @@ open L L.Rom L.Arena L.Ind L.Compiler
 
 /-! ## The write sets (`Checker/IndArmClosed.lean`'s per-function checks) -/
 
-theorem checkerProg_armPos : closedA checkerProg posFreeA posFreeC armPosFns = true :=
-  closedW_of_all armPosTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armPosChk
-theorem checkerProg_armHb : closedA checkerProg hbFreeA hbFreeC armHbFns = true :=
-  closedW_of_all armHbTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armHbChk
-theorem checkerProg_armRc : closedA checkerProg rcFreeA rcFreeC armRcFns = true :=
-  closedW_of_all armRcTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armRcChk
+theorem checkerProg_armPos : closedAL checkerProg posFreeA posFreeC armPosFns usLeaves = true :=
+  closedWL_of_all armPosTree.eq armPosCallTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armPosChk
+theorem checkerProg_armHb : closedAL checkerProg hbFreeA hbFreeC armHbFns usLeaves = true :=
+  closedWL_of_all armHbTree.eq armHbCallTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armHbChk
+theorem checkerProg_armRc : closedAL checkerProg rcFreeA rcFreeC armRcFns usLeaves = true :=
+  closedWL_of_all armRcTree.eq armRcCallTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armRcChk
 theorem checkerProg_armTa : closedA checkerProg taFreeA taFreeC armTaFns = true :=
   closedW_of_all armTaTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armTaChk
 theorem checkerProg_armCid : closedA checkerProg cidFreeA cidFreeC armCidFns = true :=
   closedW_of_all armCidTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armCidChk
 theorem checkerProg_armRcHb : closedA checkerProg rcHbFreeA rcHbFreeC armRcHbFns = true :=
   closedW_of_all armRcHbTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armRcHbChk
-theorem checkerProg_armMa : closedA checkerProg maFreeA maFreeC armMaFns = true :=
-  closedW_of_all armMaTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armMaChk
+theorem checkerProg_armMa : closedAL checkerProg maFreeA maFreeC armMaFns maLeaves = true :=
+  closedWL_of_all armMaTree.eq armMaCallTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armMaChk
 theorem checkerProg_armMc : closedA checkerProg mcFreeA mcFreeC armMcFns = true :=
   closedW_of_all armMcTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armMcChk
+theorem checkerProg_armOwn : closedA checkerProg
+    (checkerWordArrays.filter fun b => decide (b ∉ ([OIXA, OIXS, OIXN, tier1 OIXA, tier1 OIXS, tier1 OIXN] :
+      List TieredArray)))
+    (((List.range 256).filter fun c => decide (c ≠ 133)).map Nat.toUInt64) armOwnFns = true :=
+  closedW_of_all armOwnTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armOwnChk
 theorem checkerProg_armAbs : closedA checkerProg armAbsA armAbsC armAbsFns = true :=
   closedW_of_all armAbsTree.eq (fun _ h => tA_mem h) (fun _ h => tC_mem h) checkerProg_armAbsChk
 
@@ -225,22 +229,21 @@ theorem mem_of_tree {fs : List FnName} {t : NTree} (ht : namesTree fs = some t) 
   exact of_decide_eq_true h
 
 theorem armPos_pass : ∀ f ∈ passCallees, f ∈ armPosFns := subset_of_tree armPosTree.eq (by decide +kernel)
-theorem armPos_raw : "block_raw_rec" ∈ armPosFns := mem_of_tree armPosTree.eq (by decide +kernel)
+theorem armPos_raw : "block_is_rec" ∈ armPosFns := mem_of_tree armPosTree.eq (by decide +kernel)
 theorem armHb_tail : ∀ f ∈ tailCallees, f ∈ armHbFns := subset_of_tree armHbTree.eq (by decide +kernel)
 theorem armRc_tail : ∀ f ∈ tailRcCallees, f ∈ armRcFns := subset_of_tree armRcTree.eq (by decide +kernel)
 theorem armTa_block : ∀ f ∈ blockTaCallees, f ∈ armTaFns :=
   subset_of_tree armTaTree.eq (by decide +kernel)
 theorem armCid_frame : ∀ f ∈ cidFrameCallees, f ∈ armCidFns :=
   subset_of_tree armCidTree.eq (by decide +kernel)
-theorem armCid_basis : "check_basis_decl" ∈ armCidFns := mem_of_tree armCidTree.eq (by decide +kernel)
-theorem armRc_grc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ armRcFns :=
+theorem armRc_grc : ∀ f ∈ grcRcCallees, f ∈ armRcFns :=
   subset_of_tree armRcTree.eq (by decide +kernel)
 theorem armRcHb_tables : "check_block_tables" ∈ armRcHbFns :=
   mem_of_tree armRcHbTree.eq (by decide +kernel)
 theorem armMa_pass : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ armMaFns :=
   subset_of_tree armMaTree.eq (by decide +kernel)
 theorem armMc_block : "check_block" ∈ armMcFns := mem_of_tree armMcTree.eq (by decide +kernel)
-theorem armAbs_split : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_raw_rec"],
+theorem armAbs_split : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_is_rec"],
     f ∈ armAbsFns := subset_of_tree armAbsTree.eq (by decide +kernel)
 
 /-! ## The program facts at the substituted checker program -/
@@ -256,8 +259,13 @@ structure IndArmProgs (p : Prog) : Prop where
   apd : ApdF p
   crk : CrKeep p
   ilpf : IlpfF p
-  lz : LzcF p
   cid : CidProg p
+
+/-- **The core's write set with its two leaves at the substituted checker program**
+(`checkerProg_coreStageW`; the leaves' bundles by lookups). -/
+theorem checkerProg_coreStagePB (bs : List UInt8) : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg) :=
+  ⟨closedWL_subPB bs checkerProg_coreStageW, by prog_bundle [], by prog_bundle [],
+    closedW_subPB bs checkerProg_lvlCoreW⟩
 
 /-- **The inductive arm's program facts at the substituted checker program** (one `prog_bundle`:
 a lookup two fields share is proved once). -/
@@ -266,35 +274,39 @@ theorem indArmProgs_checker (bs : List UInt8) (hr : RomOK bs)
   have hrom := checkerProg_romRefsPB bs hr hpre
   prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
     checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
-    (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
+    checkerProg_coreStagePB bs,
     closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
-    hrom, closedWL_subPB bs checkerProg_indMemo]
+    hrom, closedWL_subPB bs checkerProg_indMemo, checkerProg_crLeavesPB bs]
 
 /-- `AbsKeep` of the arm's callees that reach no walk, from their write set. -/
 theorem indArmKeep_checker (bs : List UInt8) :
-    ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_raw_rec"],
+    ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_is_rec"],
       AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
   absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free (armAbs_split f hf)
 
-/-- **The inductive arm's contract at the substituted checker program**, from `AbsKeep` of the
-callees that reach the walks. -/
+/-- **`check_block`'s contract at the substituted checker program** (`blockRefS_of`), from its
+callees' contracts (`Checker/BlockRefsProg`'s `cbRefs_checker`, from the caller). -/
+theorem blockRefS_checker (bs : List UInt8)
+    (hR : ∀ dn, DnInj dn → CbRefs (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn) :
+    ∀ dn, DnInj dn → BlockRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
+  fun dn hdn => blockRefS_of (hR dn hdn) fun hG => hG.nv
+
+/-- **The inductive arm's contract at the substituted checker program**, from the contracts of
+its two returning callees (`check_basis_block`'s `CbbRef` from the caller:
+`Checker/BasisBlockProg`'s `cbbRef_checker`; `blockRefS_checker`); `CcvSims` (its
+`check_shapeless`) and `BasisRefs` from the caller (`Checker/ArmsT`'s `checkerProg_ccvSimsPB`,
+`basisRefs_of (checkerProg_basisLProgPB bs hr hpre)`). -/
 theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) :
+    (hpre : bs = romData ++ bs.drop romData.length)
+    (hCS : ∀ dn, CcvSims (Prog.subPB bs checkerProg) dn)
+    (hB : BasisRefs (Prog.subPB bs checkerProg))
+    (hcb : ∀ dn, DnInj dn → CbbRef (Prog.subPB bs checkerProg) dn)
+    (hR : ∀ dn, DnInj dn → CbRefs (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn) :
     ∀ dn, DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn := by
   have H := indArmProgs_checker bs hr hpre
-  have hk := indArmKeep_checker bs
-  exact indArmSpec_of H.kp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.lz H.cid
-    (closedW_subPB bs checkerProg_armPos) armPos_pass armPos_raw
-    (closedW_subPB bs checkerProg_armHb) armHb_tail
-    (closedW_subPB bs checkerProg_armRc) armRc_tail
-    (closedW_subPB bs checkerProg_armTa) armTa_block
-    (closedW_subPB bs checkerProg_armCid) armCid_frame
-    (fun f hf => hk f (by simp [hf]))
-    (fun f hf => hk f (by simp [hf]))
-    (hk _ (by simp))
-    armCid_basis armRc_grc
-    (closedW_subPB bs checkerProg_armRcHb) armRcHb_tables
-    (closedW_subPB bs checkerProg_armMa) armMa_pass
-    (closedW_subPB bs checkerProg_armMc) armMc_block
+  have hV : CcvProg (Prog.subPB bs checkerProg) := by prog_bundle [H.v, H.cid.basis]
+  have hcrf : CrfF (Prog.subPB bs checkerProg) := by prog_bundle []
+  exact indArmSpec_of hV H.kp H.apd H.crk hcrf ⟨H.cid, hB, checkerProg_coreStagePB bs, H.lc⟩ hCS hcb
+    (blockRefS_checker bs hR) (closedW_subPB bs checkerProg_armCid) armCid_frame
 
 end L.Checker

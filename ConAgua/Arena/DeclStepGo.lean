@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.DeclRec
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.GrindAttr
@@ -64,20 +63,6 @@ grind_pattern [ind_grind] pinInW_empty => pinInW (n + 1) m x k hi
 grind_pattern [ind_grind] pinInW_end => pinInW (n + 1) m x k hi
 grind_pattern [ind_grind] pinInW_hit => pinInW (n + 1) m x k hi
 grind_pattern [ind_grind] pinInW_next => pinInW (n + 1) m x k hi
-
-theorem pinIn_specW (p : Prog) (hp : p.lookup "pin_in" = some pinIn) (n : Nat) :
-    ∀ (s₀ : St) (x k hi : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_in" [x, k, hi]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ pinInW n s₀.mem x k hi = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ x k hi; rw [invoke_eq _ hp]; simp only [callFn, pinIn]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ x k hi
-    rw [invoke_eq _ hp]
-    simp only [callFn, pinIn]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20) [rdW_eq, pinW_eq]
 
 /-- **What `pin_in` answers**: `x` is one of the words `PINS[k‥hi)`. -/
 theorem pinInW_ok (n : Nat) : ∀ (m : Mem) (x k hi : Word) (c : Word),
@@ -182,28 +167,6 @@ theorem pinIn_contains {m : Mem} {p : Pins} (hF : PinsFull m p) {n : Nat} {x k h
   · rintro ⟨j, a, b, e⟩; exact ⟨j, a, by omega, by rw [← rdW_pins m j (by omega)]; exact e⟩
   · rintro ⟨j, a, b, e⟩; exact ⟨j, a, by omega, by rw [rdW_pins m j (by omega)]; exact e⟩
 
-/-! ## The twin's two arms -/
-
-/-- **`installStepGo`'s guard-and-install arm** (what `install_value` refines). -/
-def ivT (fe : IFEnv) : IDeclaration → AM (IFEnv × Option ValueGroup)
-  | .defnDecl cv value hint => do
-    installHeader fe cv
-    installValueGuards fe cv value
-    pure (fe.push (.defnInfo cv value hint), some ⟨.defn, cv, value⟩)
-  | .thmDecl cv value => do
-    installHeader fe cv
-    pure (fe.push (.thmInfo cv), some ⟨.thm, cv, value⟩)
-  | .opaqueDecl cv value => do
-    installHeader fe cv
-    installValueGuards fe cv value
-    pure (fe.push (.axiomInfo cv), some ⟨.opaque, cv, value⟩)
-  | _ => pure (fe, none)
-
-/-- **`installStepGo`'s `checkDecl` arm.** -/
-def cdT (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (fe : IFEnv) (d : IDeclaration) :
-    AM (IFEnv × Option ValueGroup) := do
-  pure (← checkDecl mode pins fe d, none)
-
 /-- The pinned definitions' names (`natOpNames ++ natDivModNames`) are the pin table's 15 to 29. -/
 theorem pinnedDefn_contains (m : Mem) (x : NIdx) :
     (((List.range' 15 7).map fun j => (decI (pinW m j) : NIdx)).contains x ||
@@ -213,18 +176,16 @@ theorem pinnedDefn_contains (m : Mem) (x : NIdx) :
 
 /-- The lookups `install_step_go`'s body needs. -/
 structure IstgProg (p : Prog) : Prop where
-  go : p.lookup "install_step_go" = some installStepGoL
   reset : p.lookup "iw_reset" = some iwReset
-  pin : p.lookup "pin_in" = some pinIn
 
 /-! ## The loop's relation around the body -/
 
 theorem stepC_200 : (200 : Word) ∈ stepC := by decide +kernel
 
 /-- **`iw_reset` keeps the loop's relation.** -/
-theorem LoopR.reset {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
-    (h : LoopR pins dn m a vis fe pend ds) : LoopR pins dn (m.set64 CTL 200 0) a vis fe pend ds := by
+theorem LoopR.reset {pins : List INatOpPinSet} {m : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {ds : Array IDeclaration}
+    (h : LoopR pins m a vis fe ds) : LoopR pins (m.set64 CTL 200 0) a vis fe ds := by
   have hf : MemFrame stepA stepC m (m.set64 CTL 200 0) :=
     (MemFrame.setCtl m 200 0).mono (by simp) (by simpa using stepC_200)
   refine h.of_step (iwReset_stage ⟨h.check, h.iw⟩).1 hf ?_
@@ -241,15 +202,14 @@ def IvArgs (ck vk : Word) : IDeclaration → Prop
 
 /-- `install_value`'s text: this lane's functions, lane `induct`'s library and stubs, the
 environment. -/
-def ivProg : Prog := declStepFns ++ L.Ind.libFns ++ L.Ind.stubFns ++ envProg
+def ivProg : Prog := declStepFns ++ L.Ind.libFns ++ L.Ind.stubFns ++ envProg ++ [("erec_put", L.Ind.erecPut)]
 
 /-- The functions `install_value` reaches. -/
 def ivFns : List FnName :=
-  ["install_value", "erec_ci", "erec_alloc", "dlp_copy", "install_header", "env_find",
-   "env_row_get", "env_ix", "reserved_contains", "reserved_from", "cv_lps",
+  ["erec_ci", "erec_alloc", "erec_put", "dlp_copy", "env_find",
+   "env_row_get", "reserved_contains", "reserved_from", "cv_lps",
    "er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains", "loose_bvars_bounded_fast",
-   "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast", "install_value_guards",
-   "env_push", "env_row_set", "erec_vg"]
+   "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast", "env_push", "env_row_set"]
 
 /-- A program with `install_value`'s text. -/
 structure IvProg (p : Prog) : Prop extends TextProg p ivProg ivFns where
@@ -259,12 +219,8 @@ structure IvProg (p : Prog) : Prop extends TextProg p ivProg ivFns where
 section ivLookups
 variable {p : Prog} (h : IvProg p)
 include h
-theorem IvProg.iv : p.lookup "install_value" = some installValueL :=
-  (h.agree _ (by decide) (by decide)).trans rfl
 theorem IvProg.recP : RecProg p := by
   constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
-theorem IvProg.ih : IhProg p := by
-  constructor <;> first | exact h.bvb | exact h.hf | exact (h.agree _ (by decide) (by decide)).trans rfl
 end ivLookups
 
 end L.Arena

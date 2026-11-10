@@ -11,7 +11,6 @@ import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
-public import ConAgua.Arena.IndRealOpf
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Verdict.VCtx
 public import ConRon.Bridge.Checker.Hyp
@@ -51,7 +50,7 @@ l_model cbaoE_spec (p : Prog) (hf : p.lookup "check_block_agree_one" = some chec
   fns [hf ↦ cbaoE]
   specs [callW_spec p n "open_pis_at_fvars_f", callW_spec p n "fvar_type_ds", lefE_spec p hl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specT, ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the agreements leave: the stage relation, the growth, the absence of stale records, the
@@ -61,7 +60,7 @@ structure AgreePost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   stage : StageC dn vis fe env m' a'
   grow : IWGrow m m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -74,7 +73,7 @@ by the caller; the denotations as con-ron's `checkBlockAgree_specF`'s proof has 
 theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {nP fvs0O fvs0L s0 cvTa s : Word} {cv : IConstantVal} {fvs0 : List EIdx}
     (hC : StageC dn vis fe env m a) (hA : AbsOK m)
-    (hty : (rdW (m.arr64 EREC) (cvTa + 3)).toNat < 2 ^ 32 ∧ decI (rdW (m.arr64 EREC) (cvTa + 3)) = cv.type)
+    (hty : (erRd m (cvTa + 3)).toNat < 2 ^ 32 ∧ decI (erRd m (cvTa + 3)) = cv.type)
     (hfvs0 : decHL m fvs0O.toNat fvs0L.toNat = some fvs0)
     (hfot : fvs0O.toNat + fvs0L.toNat ≤ iwTop m) (hs : H s) (hs0 : H s0)
     {tyP : ConLeche.Expr} {xs0 : List ConLeche.Expr} {sP s0P : ConLeche.Level}
@@ -91,14 +90,14 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   | succ n =>
   have hStage := hC.stage
   have hz : UInt64.toNat 0 = 0 := rfl
-  have hty' : cv.type = decI (rdW (m.arr64 EREC) (cvTa + 3)) := hty.2.symm
+  have hty' : cv.type = decI (erRd m (cvTa + 3)) := hty.2.symm
   rw [cbaoE.arm1]
   unfold agreeBodyAM
   rw [hty']
   -- `open_pis_at_fvars_f`
   refine RefE.bindLift (fun _ => rfl) fun ra m1 h1 => ?_
   obtain ⟨x1, a1, hrun1, hSt1, hg1, hdec1, hA1⟩ := opfF_okRA hty.1 (callW_opfF hOpf h1) hStage hA
-  have hdty : denoteE a.store (decI (rdW (m.arr64 EREC) (cvTa + 3))) = some tyP := by
+  have hdty : denoteE a.store (decI (erRd m (cvTa + 3))) = some tyP := by
     rw [hty.2]; exact htyP
   obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC.check.state hdty hrun1
   have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hSt1 hA1 p1
@@ -164,7 +163,7 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     fun r3 s3 u3 a3 _ _ hrun3 ⟨hC3, hg3, hA3⟩ => ?_
   dsimp only [cbaoE.k_check_block_doms_at] at hC3 hg3 hA3 ⊢
   obtain ⟨c3, -⟩ := ConRon.Bridge.Inductives.checkBlockDomsAt_specF fe
-    (ConRon.Bridge.CoreSpec.of_core rfl) henv 0 fvs x2 xs1 (xs0.map ConLeche.Expr.fvarTypeD) hc ht
+    ConRon.Bridge.CoreSpec.of_core henv 0 fvs x2 xs1 (xs0.map ConLeche.Expr.fvarTypeD) hc ht
     nP.toNat a2 a3 u3 hC2.check ⟨hxs1', hdoms⟩ hrun3
   have hx03 := p1.ext.trans (p2.ext.trans c3.ext)
   -- `lvl_eq_fueled`

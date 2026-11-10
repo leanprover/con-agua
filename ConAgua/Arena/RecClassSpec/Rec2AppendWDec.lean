@@ -33,12 +33,12 @@ theorem rec2AppendW_norm (n : Nat) (m : Mem) (o1 o2 l2 : Word) :
 
 /-- `sl_append` of a slice decoded below the tops (possibly empty, at any offset) and a slice
 below the top. -/
-theorem rec2AppendW_dec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem rec2AppendW_dec {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word} {xs ys : List EIdx}
-    (h : appendW n m o1 l1 o2 l2 = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : appendW n m o1 l1 o2 l2 = some (r, m')) (hS : StageR vis fe m a)
     (h1 : DecB (fun m => (decHL m o1.toNat l1.toNat : Option (List EIdx))) m xs)
     (h2 : decHL m o2.toNat l2.toNat = some ys) (hb2 : o2.toNat + l2.toNat ≤ iwTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (xs ++ ys) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   have hx0 : decHL m o1.toNat l1.toNat = some xs := h1.get (OMono.decHL _ _)
@@ -47,7 +47,7 @@ theorem rec2AppendW_dec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
     obtain ⟨hr, hd, -, -, -, htop⟩ := appendW_dec h' hS.iw.iwSize hS.iw.ctl hb1 hb2 hx h2
     obtain ⟨hS', hg, -⟩ := appendW_stage h' hS hb1 hb2
     exact (⟨hS', hg, by rw [hr]; exact hd, by rw [hr]; simp only [List.headD_cons, List.tail_cons]; omega⟩ :
-      StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (xs ++ ys) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m')
   by_cases hl : l1 = 0

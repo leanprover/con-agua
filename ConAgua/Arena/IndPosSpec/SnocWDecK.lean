@@ -40,12 +40,12 @@ theorem snocW_decK {k : IdxKind} {n : Nat} {m m' : Mem} {o l x : Word} {r : List
     rw [← hxs]; simp only [decHL]
     apply hslice?_congr
     intro j hj
-    simp only [iwA, hget]
+    simp only [iwA, aread_apply, hget]
     rw [ite_eq_right (by omega), ite_eq_left (by omega)]
     congr 1; omega
   have h2 : (hslice? (iwA m') (iwTop m + l.toNat) 1 : Option (List (Idx k))) = some [decI x] := by
     rw [hslice?_succ]
-    have : (hd? (iwA m') (iwTop m + l.toNat) : Option (Idx k)) = some (decI x) := by simp [hd?, iwA, hget, hx]
+    have : (hd? (iwA m') (iwTop m + l.toNat) : Option (Idx k)) = some (decI x) := by simp [hd?, iwA, aread_apply, hget, hx]
     rw [this]; simp [hslice?]
   rw [h1, h2]; simp
 

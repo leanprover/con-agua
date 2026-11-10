@@ -1,7 +1,7 @@
 module
 
 public import ConRon.Arena.Basis
-public import ConRon.Bridge.Promote.Pers
+public import ConRon.Bridge.Pers
 public import ConRon.Bridge.Checker.Basis
 
 @[expose] public section
@@ -181,9 +181,6 @@ theorem andPinOk_scratch {pd : IDeclaration} {s s' : AState} {b : Bool}
         exact (canonEqList_ks _ _ _ _ _ k4).trans hstep.scratch
       · exact congrArg (·.store.scratchOn) (ConRon.Bridge.AM.pure_ok k3).2
     · exact congrArg (·.store.scratchOn) (ConRon.Bridge.AM.pure_ok k2).2
-  | basisDecl _ =>
-    simp only [andPinOk] at h
-    exact congrArg (·.store.scratchOn) (ConRon.Bridge.AM.pure_ok h).2
   | _ => rw [ConRon.Bridge.andPinNameFree_run hp h]
 
 end L.Arena

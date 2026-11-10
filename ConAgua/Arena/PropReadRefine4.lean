@@ -34,30 +34,25 @@ theorem pr_run_of_ok {α : Type} [Inhabited α] {x : AM α} {a : AState} (h : AM
 
 /-- **A projection table's body at field `i`**: the words `head_proof_proj` reads are the
 handle of `tbl.bodies.getD i default`. -/
-theorem decTbl_body {E : Array Word} {q : Word} {tbl : IProjTable} (h : decTbl E q.toNat = some tbl)
-    (hsz : E.size < 2 ^ 63) (i : Word) :
-    HW (if i < rdW E (q + 10) then rdW E (rdW E (q + 9) + i) else 0) ∧
-      decE (if i < rdW E (q + 10) then rdW E (rdW E (q + 9) + i) else 0) =
+theorem decTbl_body {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {tbl : IProjTable} (h : decTbl R q.toNat = some tbl) (i : Word) :
+    HW (if i < rd (q + 10) then rd (rd (q + 9) + i) else 0) ∧
+      decE (if i < rd (q + 10) then rd (rd (q + 9) + i) else 0) =
         tbl.bodies.getD i.toNat default := by
   simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h
-  obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, bs, hbs, -, -, rfl⟩ := h
+  obtain ⟨-, -, -, -, -, -, -, -, -, -, bs, hbs, rfl⟩ := h
   simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
     Option.map_eq_some_iff] at hbs
   obtain ⟨off, ⟨wo, hwo, rfl⟩, cnt, ⟨wc, hwc, rfl⟩, hs⟩ := hbs
-  have hext : ArrExt E E := fun _ _ h => h
-  have h9 : rdW E (q + 9) = wo := rdW_ext hext hsz (k := 9) (by decide) hwo
-  have h10 : rdW E (q + 10) = wc := rdW_ext hext hsz (k := 10) (by decide)
-    (by simpa [Nat.add_assoc] using hwc)
+  have h9 : rd (q + 9) = wo := hR.offN (k := 9) hwo (by decide)
+  have h10 : rd (q + 10) = wc := hR.offN (k := 10) (by simpa [Nat.add_assoc] using hwc) (by decide)
   rw [h9, h10]
   obtain ⟨hlen, hget⟩ := hslice?_get hs
   by_cases hi : i < wc
   · have hi' : i.toNat < wc.toNat := UInt64.lt_iff_toNat_lt.mp hi
     obtain ⟨w, hw, hw32, hl⟩ := hget i.toNat hi'
-    have hlt : wo.toNat + i.toNat < E.size := (Array.getElem?_eq_some_iff.mp hw).1
-    have hrd : rdW E (wo + i) = w := by
-      have : (wo + i).toNat = wo.toNat + i.toNat := by rw [UInt64.toNat_add]; omega
-      simp [rdW, this, hw]
+    have hrd : rd (wo + i) = w := hR.off hw rfl
     simp only [hi, ↓reduceIte, hrd]
     refine ⟨hw32, ?_⟩
     have hb : i.toNat < bs.length := by omega
@@ -109,7 +104,7 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   obtain ⟨hok, hafter, hres, -⟩ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
     (hfp n ⟨m, Locals.init []⟩ a dn vis fe M eb sn i hS hsn) hc1
   have hfx : fe.findProj? (decI sn) i.toNat =
-      decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) i.toNat := hres
+      decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) i.toNat := hres
   replace hafter : CoreAfter dn m m₁ a vis fe M eb := hafter
   generalize ha₁ : a = a₁ at hafter
   subst ha₁
@@ -122,16 +117,17 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     rfl
   simp only [h0, ↓reduceIte] at hW
   obtain ⟨tbl, htbl, -⟩ := hpf n m a dn vis fe M eb sn i r₁ m₁ hS hc1 h0
-  have hE : m₁.arr64 EREC = m.arr64 EREC := hek n "find_proj" _ m r₁ m₁ (Or.inl rfl) hc1
-  obtain ⟨hbw, hbe⟩ := decTbl_body htbl hS.erec i
-  simp only [hppB, hE] at hW
-  generalize (if i < rdW (m.arr64 EREC) (r₁.tail.headD 0 + 10) then
-    rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (r₁.tail.headD 0 + 9) + i) else 0) = b at hW hbw hbe
+  obtain ⟨-, -, hE, -⟩ := hek n "find_proj" _ m r₁ m₁ rfl hc1
+  obtain ⟨hbw, hbe⟩ := decTbl_body (erRdOK m) htbl i
+  simp only [hppB] at hW
+  rw [hE] at hW
+  generalize (if i < erRdT m (r₁.tail.headD 0 + 10) then
+    erRdT m (erRdT m (r₁.tail.headD 0 + 9) + i) else 0) = b at hW hbw hbe
   obtain ⟨M₁, hS₁, hK₁, hSt₁⟩ := hafter
   rcases hc2 : callW p n "type_sort_pw" [vis, f, b] m₁ with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
   · cases hW
   obtain ⟨res₂, a₂, hrun₂, hRd₂, hd₂⟩ := tsp_call hp hden hlps hS₁ hf hbw hc2
-  have hentry : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) i.toNat =
+  have hentry : decEntry (erecP m) (r₁.headD 0) (r₁.tail.headD 0) i.toNat =
       some (tbl.entry i.toNat) := by
     simp only [decEntry, h0, ↓reduceIte, htbl, Option.map_some]
   have hbody : (tbl.entry i.toNat).body = decE b := hbe.symm

@@ -128,15 +128,15 @@ theorem leafAt_spec (p : Prog) (hp : p.lookup "class_leaf_at" = some classLeafAt
       gafF_spec p had n, eView_spec p hv n] <;>
     finish (gen := 20) [leafAtW, rdW_eq]
 
-theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
-    (a : AState) (Mp leaf : Word) (bigM : TargetMajor) (r : List Word) (hS : StageR dn vis fe m a)
+theorem leafAtW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+    (a : AState) (Mp leaf : Word) (bigM : TargetMajor) (r : List Word) (hS : StageR vis fe m a)
     (hl : H leaf) (hM : decTM m Mp.toNat = some bigM) (hMt : Mp.toNat < iwTop m)
     (h : leafAtW m Mp leaf = some (r, m')) :
     ∃ b a', (ConRon.Arena.classLeafAt bigM (decI leaf)).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧ (r.headD 0).toNat ≤ 1 := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧ (r.headD 0).toNat ≤ 1 := by
   simp only [leafAtW] at h
   rcases hs : gafF m [CWF, leaf] with _ | ⟨r1, m1⟩ <;> simp only [hs, reduceCtorEq] at h
-  obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF leaf hl m m1 a r1 hs hS
+  obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok vis fe CWF leaf hl m m1 a r1 hs hS
   rw [CWF_eq] at hrun1
   generalize hw : r1.headD 0 = w at hd1 hd2 h
   have e1 : (decI leaf : EIdx) = decE leaf := rfl
@@ -206,11 +206,11 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
 theorem classLeafAt_refines (p : Prog) (hp : p.lookup "class_leaf_at" = some classLeafAtL)
     (hv : p.lookup "e_view" = some eView) (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (Mp leaf : Word) (bigM : TargetMajor)
-    (hS : StageR dn vis fe s₀.mem a₀) (hl : H leaf) (hM : decTM s₀.mem Mp.toNat = some bigM)
+    (hS : StageR vis fe s₀.mem a₀) (hl : H leaf) (hM : decTM s₀.mem Mp.toNat = some bigM)
     (hMt : Mp.toNat < iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_leaf_at" [Mp, leaf]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       ((r.headD 0 != 0) = AM.res (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀ ∧ (r.headD 0).toNat ≤ 1);
       ⊤⦄ := by
@@ -234,7 +234,7 @@ theorem RecsOK_grow {m m' : Mem} (hg : IWGrow m m') {ro rl : Nat} {cvs : List IC
   refine ⟨Nat.le_trans h1 hg.iw, h2, fun j hj => ?_⟩
   obtain ⟨p0, q, cv, hp0, hp1, hq, hcv, hext, hcvs⟩ := h3 j hj
   have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet i hi]
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet i hi]
   refine ⟨p0, q, cv, ?_, Nat.le_trans hp1 hg.iw, ?_, ?_, CVExt_grow hg hext, hcvs⟩
   · rw [hiw _ (by omega)]; exact hp0
   · rw [hiw _ (by omega)]; exact hq

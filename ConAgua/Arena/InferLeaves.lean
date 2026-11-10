@@ -11,12 +11,10 @@ public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 public import ConAgua.Arena.WhnfCoreApp
-import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.RefECore
 public import ConAgua.Arena.KnotE
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
-import ConAgua.L.WordOff
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.RefWalk
 import all ConAgua.Arena.Infer
@@ -62,8 +60,8 @@ structure InferLeafProg (p : Prog) : Prop where
   inferLit : p.lookup "infer_lit" = some inferLitL
   pinAt : p.lookup "pin_at" = some pinAtL
   inferConst : p.lookup "infer_const" = some inferConstL
-  envix : p.lookup "env_ix" = some envIxL
   envrow : p.lookup "env_row_get" = some envRowGetL
+  baserow : p.lookup "base_row_get" = some baseRowGetL
   envfind : p.lookup "env_find" = some envFindL
   lsNode : p.lookup "ls_node" = some lsNode
 
@@ -91,7 +89,7 @@ theorem es_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AStat
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d e : Word)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (he : HW e) :
     RefE (KnotUpToE p n) (esE p (n + 1) s₀.mem mode vis d e)
-      (ensureSort (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
+      (ensureSort (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) a₀
       (CorePost decLv dn s₀.mem vis fe M eb ResH) := by
   simp only [esE]
   refine RefE.bind_callE (fun _ => rfl)
@@ -123,7 +121,7 @@ def EnsureSortSpecE (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW e →
     CoreSpecE p n "ensure_sort" [mode, vis, d, e]
-      (ensureSort (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) s₀ a₀
+      (ensureSort (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) s₀ a₀
 
 /-- `ensure_sort`'s error claim at every L fuel up to `n` (`es_ref`'s error half). -/
 theorem ensureSortSpecE_of_knot (p : Prog) (hp : InferLeafProg p) :
@@ -263,7 +261,7 @@ theorem defeqE_anyE (p : Prog) (hkp : KnotProg p) :
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d x y : Word),
     n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW x → HW y →
     CoreSpecE p n "defeq_e" [mode, vis, d, x, y]
-      ((coreKnot (decMode mode) fe id F).defeqE d.toNat (decE x) (decE y)) s₀ a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).defeqE d.toNat (decE x) (decE y)) s₀ a₀
   | 0, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => CoreSpecE.zero p _ _ _ s₀ a₀
   | n + 1, hk, hkE, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, x, y, hF, hn, hs, hx, hy =>
     RefE.coreSpecE (deE_spec p hkp.defeqE (n + 1) s₀ mode vis d x y) trivial
@@ -278,7 +276,7 @@ theorem da_ref (p : Prog) (hkp : KnotProg p) (n : Nat) (he : IsEagerReduceH p) (
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hta : HW ta)
     (hty : HW ty) :
     RefE (InferG p n) (daE p (n + 1) s₀.mem mode vis d a ta ty)
-      (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) a₀
+      (defeqArg (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [daE, defeqArg]
   refine RefE.bind_callW (fun _ => rfl) (he n s₀ a₀ dn vis fe M eb a hs.rel ha)
@@ -287,7 +285,7 @@ theorem da_ref (p : Prog) (hkp : KnotProg p) (n : Nat) (he : IsEagerReduceH p) (
   have hs' : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M' eb mode := ⟨hS', hs.mode4, hs.eb_mode⟩
   by_cases h0 : r₁.headD 0 ≠ 0
   · rw [ite_eq_left h0, show decBool r₁ = true by simpa [decBool] using h0, ite_eq_left rfl,
-      ← bind_pure ((coreKnot (decMode mode) fe id F).defeqE _ _ _)]
+      ← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeqE _ _ _)]
     have hde : DefeqESlot p n := by
       cases n with
       | zero => intro F s₀ a₀ dn vis fe M eb mode d x y _ _ _ _ _
@@ -297,7 +295,7 @@ theorem da_ref (p : Prog) (hkp : KnotProg p) (n : Nat) (he : IsEagerReduceH p) (
       (fun (hG : InferG p n) => defeqE_anyE p hkp n hk hG.knot F _ _ dn vis fe M' eb mode d ta ty hF hn
         hs' hta hty) fun r₂ m₂ _ h₂ => RefE.ret rfl ⟨h₂.after, rfl, h₂.resOk⟩
   rw [ite_eq_right h0, show decBool r₁ = false by simpa [decBool] using h0, ite_eq_right (by decide),
-    ← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+    ← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
   exact RefE.bind_callE (fun _ => rfl)
     ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M' eb mode d ta ty hF hn hs' hta hty)
     (fun (hG : InferG p n) => (hG.knot n (Nat.le_refl _)).defeq F _ _ dn vis fe M' eb mode d ta ty hF hn
@@ -311,7 +309,7 @@ theorem defeqArg_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (n
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hta : HW ta)
     (hty : HW ty) :
     CoreSpec p (n + 1) "defeq_arg" [mode, vis, d, a, ta, ty]
-      (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) decBool
+      (defeqArg (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) decBool
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (daE_spec p hp.defeqArg (n + 1) s₀ mode vis d a ta ty)
     (da_ref p hkp n he hk F s₀ a₀ dn vis fe M eb mode d a ta ty hF hn hs ha hta hty)
@@ -323,7 +321,7 @@ theorem defeqArg_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he :
     (eb mode d a ta ty : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW a →
     HW ta → HW ty →
     CoreSpecE p n "defeq_arg" [mode, vis, d, a, ta, ty]
-      (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) s₀ a₀
+      (defeqArg (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) s₀ a₀
   | 0, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => CoreSpecE.zero p _ _ _ s₀ a₀
   | n + 1, hk, hG, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, ta, ty, hF, hn, hs, ha, hta, hty =>
     RefE.coreSpecE (daE_spec p hp.defeqArg (n + 1) s₀ mode vis d a ta ty) hG.nv (hG.mono (by omega))
@@ -476,12 +474,12 @@ end lr
 def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
   match l with
   | .natVal _ => do
-      if ← natLitSupported fe then do
+      if ← natLitStored fe then do
         let nn ← pinNat
         constE nn
       else fail (.invalid "Nat literal without the Nat basis declarations")
   | .strVal _ => do
-      if ← strLitSupported fe then do
+      if ← strLitStored fe then do
         let sn ← pinString
         constE sn
       else fail (.notImplemented
@@ -507,8 +505,8 @@ theorem inferBodyIO_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
 structure InferLitCallees (p : Prog) : Prop where
   natLitSup : ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
-    CoreSpec p n "nat_lit_supported" [vis] (natLitSupported fe) decBool s₀ a₀ dn vis fe M eb
-  strLitSup : StrLitSupportedOK p
+    CoreSpec p n "nat_lit_stored" [vis] (natLitStored fe) decBool s₀ a₀ dn vis fe M eb
+  strLitSup : StrLitStoredOK p
   constE : ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (eb nm : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW nm →
     CoreSpec p n "const_e" [nm] (constE (decI nm)) decH s₀ a₀ dn vis fe M eb
@@ -517,7 +515,7 @@ structure InferLitCallees (p : Prog) : Prop where
 closure) lifted. -/
 l_model ilE_spec (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
   fns [hf ↦ ilE list]
-  specs [callW_spec p n "nat_lit_supported", callW_spec p n "str_lit_supported",
+  specs [callW_spec p n "nat_lit_stored", callW_spec p n "str_lit_stored",
     callW_spec p n "pin_at", callW_spec p n "const_e"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified
@@ -573,7 +571,7 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     simp only [inferLitT]
     refine RefE.bind_callW (fun _ => rfl) (hc.natLitSup n s₀ a₀ dn vis fe M eb hS)
       fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
-    dsimp only [ilE.k_nat_lit_supported]
+    dsimp only [ilE.k_nat_lit_stored]
     refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
       (fun hb => by simpa [decBool] using hb)
       fun _ _ => ?_
@@ -585,7 +583,7 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     simp only [inferLitT]
     refine RefE.bind_callW (fun _ => rfl) (hc.strLitSup n s₀ a₀ dn vis fe M eb hS)
       fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
-    dsimp only [ilE.k_str_lit_supported]
+    dsimp only [ilE.k_str_lit_stored]
     refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
       (fun hb => by simpa [decBool] using hb)
       fun _ _ => ?_
@@ -626,10 +624,10 @@ theorem inferBody_const (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
   rfl
 
 /-- A decoded constant record has its `ConstantVal` at `q + 1`. -/
-theorem decCI_cvA {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b) :
-    decCV b (q.toNat + 1) = some ci.toConstantVal := by
-  cases hq : a[q.toNat]? with
+theorem decCI_cvA {R : Nat → Option Word} {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
+    decCV R (q.toNat + 1) = some ci.toConstantVal := by
+  cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
@@ -645,7 +643,7 @@ theorem decCI_cvA {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : W
         | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, rfl⟩ := h
         | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h
         | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
-       exact hab.decCV hcv)
+       exact hcv)
 
 theorem mapM_len {α β : Type} (f : α → Option β) :
     ∀ (l : List α) (xs : List β), l.mapM f = some xs → xs.length = l.length
@@ -657,36 +655,19 @@ theorem mapM_len {α β : Type} (f : α → Option β) :
     simp [mapM_len f l ys hys]
 
 theorem hslice?_length {k : IdxKind} {b : Array Word} {o c : Nat} {xs : List (Idx k)}
-    (h : hslice? b o c = some xs) : xs.length = c := by
+    (h : hslice? (aread b) o c = some xs) : xs.length = c := by
   unfold hslice? at h; simpa using mapM_len _ _ _ h
 
 /-- The words of a decoded `ConstantVal` at `q + 1`: name, level-parameter slice, type. -/
-theorem infer_decCV_words {b : Array Word} {q : Word} {cv : IConstantVal}
-    (h : decCV b (q.toNat + 1) = some cv) (hsz : b.size < 2 ^ 63) :
-    HW (rdW b (q + 1)) ∧ cv.name = decI (rdW b (q + 1)) ∧ HW (rdW b (q + 4)) ∧
-      cv.type = decI (rdW b (q + 4)) ∧
-      hslice? b (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
-  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-    Option.some.injEq] at h
-  obtain ⟨nm, hn, ls, hl, ty, ht, rfl⟩ := h
-  obtain ⟨w1, hw1, hl1, rfl⟩ := hd?_eq hn
-  obtain ⟨w4, hw4, hl4, rfl⟩ := hd?_eq ht
-  have hlt : q.toNat + 1 + 3 < b.size := by
-    rcases Nat.lt_or_ge (q.toNat + 1 + 3) b.size with h' | h'
-    · exact h'
-    · simp [Array.getElem?_eq_none h'] at hw4
-  have hq : q.toNat < 2 ^ 63 := by omega
-  have r1 : rdW b (q + 1) = w1 := by simp (disch := omega) only [rdW, off_toNat, hw1]; rfl
-  have r4 : rdW b (q + 4) = w4 := by
-    simp (disch := omega) only [rdW, off_toNat]; rw [show q.toNat + 4 = q.toNat + 1 + 3 by omega, hw4]; rfl
-  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hl
-  obtain ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩ := hl
-  have r2 : rdW b (q + 2) = wo := by
-    simp (disch := omega) only [rdW, off_toNat]; rw [show q.toNat + 2 = q.toNat + 1 + 1 by omega, hwo]; rfl
-  have r3 : rdW b (q + 3) = wc := by
-    simp (disch := omega) only [rdW, off_toNat]; rw [show q.toNat + 3 = q.toNat + 1 + 1 + 1 by omega, hwc]; rfl
-  rw [r1, r2, r3, r4]
-  exact ⟨hl1, rfl, hl4, rfl, hs⟩
+theorem infer_decCV_words {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
+    {q : Word} {cv : IConstantVal} (h : decCV R (q.toNat + 1) = some cv) :
+    HW (rd (q + 1)) ∧ cv.name = decI (rd (q + 1)) ∧ HW (rd (q + 4)) ∧
+      cv.type = decI (rd (q + 4)) ∧
+      hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams := by
+  obtain ⟨⟨w1, hw1, hl1, hn⟩, -, -⟩ := decCV_words h
+  have e1 : rd (q + 1) = w1 := hR.off hw1 (by simp)
+  obtain ⟨hsl, -, hty, hl4⟩ := decCV_rd hR h
+  exact ⟨by rw [e1]; exact hl1, by rw [e1]; exact hn, hl4, hty, hsl⟩
 
 theorem viewLs_run (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss.view h = some ids) :
     (viewLs h).run a = .ok (ids, a) := by
@@ -705,7 +686,7 @@ l_model inferConstE_spec (p : Prog) (hf : p.lookup "infer_const" = some inferCon
   fns [hf ↦ inferConstE list]
   specs [callW_spec p n "env_find", lsNode_spec p hls n, callW_spec p n "const_ty_at", callW_spec p n "pin_at"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`infer_const(vis, n, us)` refines the `.const` clause** (`inferConstT`), both outcomes: an
@@ -718,17 +699,16 @@ theorem inferConst_ref (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK p) (
     RefE (closedNV p L.Checker.nvFns = true) (inferConstE p (n + 1) s₀.mem vis nm us)
       (inferConstT fe (decI nm) (decI us)) a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   simp only [inferConstE]
-  refine RefE.onlySim (fun _ => rfl) (fun r₁ m₁ c1 => And.intro (triple_of_callW
-      (envFind_refines p hp.envix hp.envrow hp.envfind n ⟨s₀.mem, Locals.init []⟩ vis nm hS.env hnm) c1)
-      (triple_of_callW (envFind_found p hp.envix hp.envrow hp.envfind n ⟨s₀.mem, Locals.init []⟩ vis nm hnm) c1))
-    fun r₁ m₁ ⟨⟨t₁, ht₁, hm₁, _, hfind⟩, ⟨_, _, _, _, hfound⟩⟩ => ?_
+  refine RefE.onlySim (fun _ => rfl) (fun r₁ m₁ c1 => triple_of_callW
+      (envFind_refines p hp.envrow hp.baserow hp.envfind n ⟨s₀.mem, Locals.init []⟩ vis nm hS.env hnm) c1)
+    fun r₁ m₁ ⟨t₁, ht₁, hm₁, _, hfind, hfound⟩ => ?_
   rw [ht₁] at hm₁
   subst hm₁
   dsimp only [inferConstE.k_env_find]
   by_cases h0 : r₁.headD 0 = 0
   · -- `unknownConstError`
     rw [ite_eq_left h0]
-    have hnone : fe.find? (decI nm) = none := by rw [hfind]; simp only [decFound, h0, ite_true]
+    have hnone : fe.find? (decI nm) = none := by rw [hfind]; simp only [envFound, h0, ite_true]
     refine RefE.onlySim (fun _ => rfl) (fun r₂ m₂ c2 => triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
       (pinAt_refines p hp.pinAt n ⟨s₀.mem, Locals.init []⟩ a₀ ⟨fun _ => hS.pins⟩ 13) c2)
       fun r₂ m₂ ⟨t₂, ht₂, hm₂, _, hlt, hpin⟩ => ?_
@@ -749,15 +729,13 @@ theorem inferConst_ref (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK p) (
     · rw [ite_eq_right he, ite_eq_right he]; exact fun _ => ErrClaim.fail _ _ rfl
   -- found: the level count
   rw [ite_eq_right h0]
-  obtain ⟨htag, hrow, hq⟩ := hfound h0
-  obtain ⟨ci, hci⟩ := hS.env.found_some nm hnm htag hrow
+  obtain ⟨ci, hci⟩ := hfound h0
   have hfind' : fe.find? (decI nm) = some ci := by
-    rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
-  rw [← hq] at hci
-  have hcv := decCI_cvA hci (erecP_ext _)
+    rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
+  have hcv := decCI_cvA hci
   generalize hcvr : ci.toConstantVal = cv at hcv
   refine RefE.abort0 (by rfl) fun hne => ?_
-  obtain ⟨hw1, hname, hw4, hty, hsl⟩ := infer_decCV_words hcv hS.erec
+  obtain ⟨hw1, hname, hw4, hty, hsl⟩ := infer_decCV_words (erRdOK _) hcv
   obtain ⟨ids, hv, hlen1, hlen2⟩ := lsNodeW_view hS.arena.base hus hne
   rw [show inferConstT fe (decI nm) (decI us) = (viewLs (decI us) >>= fun usl =>
       if (usl.length != cv.levelParams.length) = true then fail (.invalid "incorrect number of universe levels")
@@ -765,12 +743,14 @@ theorem inferConst_ref (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK p) (
   refine RefE.bind_right (viewLs_run _ _ _ hv) ?_
   refine RefE.guardThen (by rfl)
     (fun hl => by
-      rw [hslice?_length hsl, ← hlen2, ← hlen1]
+      rw [hslice?_lenR hsl, ← hlen2, ← hlen1]
       simp only [bne_iff_ne, ne_eq]
       intro h; exact hl (UInt64.toNat_inj.mp h))
-    (fun hb hl => by rw [hslice?_length hsl, ← hl, hlen1, hlen2] at hb; simp at hb) fun _ _ => ?_
-  have hcv' : cv = ⟨decI (rdW (s₀.mem.arr64 EREC) (r₁.tail.headD 0 + 1)), cv.levelParams,
-      decE (rdW (s₀.mem.arr64 EREC) (r₁.tail.headD 0 + 4))⟩ := by
+    (fun hb hl => by
+      rw [hslice?_lenR hsl, show erRdT s₀.mem (r₁.tail.headD 0 + 3) = _ from hl.symm, hlen1, hlen2] at hb
+      simp at hb) fun _ _ => ?_
+  have hcv' : cv = ⟨decI (erRdT s₀.mem (r₁.tail.headD 0 + 1)), cv.levelParams,
+      decE (erRdT s₀.mem (r₁.tail.headD 0 + 4))⟩ := by
     rw [← hname, decE_eq, ← hty]
   rw [hcv', ← bind_pure (constTyAt _ _)]
   refine RefE.bind_callW (fun _ => rfl)

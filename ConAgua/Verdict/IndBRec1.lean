@@ -58,7 +58,7 @@ structure KofPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   key : DecB (fun m => decCK m r.toNat) m' x
   top : r.toNat + 4 ≤ iwTop m'
   ds : (rdW (m'.arr64 IW) (r + 2)).toNat + (rdW (m'.arr64 IW) (r + 3)).toNat ≤ iwTop m'
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   pos : PosMR m'
 
@@ -71,7 +71,7 @@ omit L in
 closedness test `class_key_of_closed` (`ckc2W_ok`, both outside the verdict closure), the one
 reject site (the major's parameters mention more than the recursor's). -/
 theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : List EIdx}
-    {ck : ClassKey} (hS : StageR dn vis fe m a) (hpf : decHL m po.toNat pl.toNat = some pfvs)
+    {ck : ClassKey} (hS : StageR vis fe m a) (hpf : decHL m po.toNat pl.toNat = some pfvs)
     (hpb : po.toNat + pl.toNat ≤ iwTop m) (hk : DecB (fun m => decCK m key.toNat) m ck)
     (hP : PosMR m) :
     RefE (closedNV p _root_.L.Checker.nvFns = true) (classKeyOfE p n m nP po pl key) (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a
@@ -85,14 +85,14 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
   obtain _ | k := n
   · simp [kcWf] at h1
   obtain ⟨x1, a1, hrun1, hd1, hb1, hds1, hS1, hg1, hP1⟩ :=
-    kcW_ok dn fe vis k m m1 a po pl key r1 pfvs ck h1 hS hpf hpb hk hP
+    kcW_ok fe vis k m m1 a po pl key r1 pfvs ck h1 hS hpf hpb hk hP
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hd1
   obtain ⟨-, -, -, -, hds, -, -⟩ := pos2_nk_fields hnk htop1
   refine ⟨_, _, hrun1, ?_⟩
   dsimp only [classKeyOfE.k_class_key_canon]
   refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
-  obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok dn fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 h2 hS1
+  obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 h2 hS1
     hds (by omega) hds1
   refine ⟨_, _, hrun2, ?_⟩
   dsimp only [classKeyOfE.k_class_key_of_closed]
@@ -112,7 +112,7 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
 `bvar_b` the master's walk, at exec fuel below `coreWalkFuel`; `kof_ref`'s ok half). -/
 @[refines ConRon.Arena.classKeyOf]
 theorem classKeyOf_refines (k : Nat) (s₀ : St) (a₀ : AState)
-    (nP po pl key : Word) (pfvs : List EIdx) (ck : ClassKey) (hS : StageR dn vis fe s₀.mem a₀)
+    (nP po pl key : Word) (pfvs : List EIdx) (ck : ClassKey) (hS : StageR vis fe s₀.mem a₀)
     (hpf : decHL s₀.mem po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop s₀.mem)
     (hk : DecB (fun m => decCK m key.toNat) s₀.mem ck) (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 2)) "class_key_of" [nP, po, pl, key]
@@ -121,10 +121,10 @@ theorem classKeyOf_refines (k : Nat) (s₀ : St) (a₀ : AState)
       (r.headD 0).toNat + 4 ≤ iwTop s'.mem ∧
       (rdW (s'.mem.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (s'.mem.arr64 IW) (r.headD 0 + 3)).toNat ≤
         iwTop s'.mem ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (classKeyOfE_spec p L (k + 2) s₀ nP po pl key)
-    (kof_ref dn fe vis (k + 2) hS hpf hpb hk hP)) ?_
+    (kof_ref (fun _ => none) fe vis (k + 2) hS hpf hpb hk hP)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hres]; exact hR.key, hR.top, hR.ds, by rw [hst]; exact hR.stage, hR.grow,
@@ -278,7 +278,7 @@ abstraction memo. -/
 structure RgPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState)
     (G : ClassGen) (c : Word) (m' : Mem) (tm : TargetMajor) (a' : AState) : Prop where
   run : (ConRon.Arena.targetMajorAt G.cls c.toNat).run a = .ok (tm, a')
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   abs : AbsOK m'
 
@@ -289,7 +289,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 major (`target_major_at`, outside the verdict closure), then the member guard and the rule prefix
 and major index guards, each a reject site of the twin's. -/
 theorem rg_ref {p : Prog} (n : Nat) {m : Mem} {a : AState} {g k rc c : Word} {G : ClassGen}
-    {RS : RecShape} (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    {RS : RecShape} (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS)
     (hA : AbsOK m) :
     RefE (closedNV p _root_.L.Checker.nvFns = true) (classRecTyOkGuardsE p n m g k rc c)

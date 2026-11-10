@@ -70,7 +70,7 @@ include ha hl hk hng hnp hip hf hput hgo hnode hcl hra hp
 variables, then rewrite the applications (result `[1, e]`, or `[0, 0]` for `none`). -/
 @[refines ConRon.Arena.nestCanonCrest]
 theorem nestCanonCrest_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis no nl us nn cty : Word) (names : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (fe : IFEnv) (vis no nl us nn cty : Word) (names : List NIdx) (hS : StageR vis fe s₀.mem a₀)
     (hcty : H cty) (hus : H us) (hdec : decHL s₀.mem no.toNat nl.toNat = some names)
     (hno : no.toNat + nl.toNat < 2 ^ 64) (hit : no.toNat + nl.toNat ≤ iwTop s₀.mem)
     (hnn : nn.toNat + names.length < 2 ^ 64)
@@ -78,7 +78,7 @@ theorem nestCanonCrest_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "nest_canon_crest" [no, nl, us, nn, cty]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decOE s'.mem r (AM.res (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀) ∧
       ∃ mp, rpMR s'.mem mp; ⊤⦄ := by
@@ -105,7 +105,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : Word) (r : List Word)
     (names : List NIdx) (ds holes : List EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (h : pcrW k m no nl us dO dL hO hL cty = some (r, m')) (hS : StageR dn vis fe m a) (hcty : H cty)
+    (h : pcrW k m no nl us dO dL hO hL cty = some (r, m')) (hS : StageR vis fe m a) (hcty : H cty)
     (hus : H us) (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop m) (hnn : dL.toNat + names.length < 2 ^ 64)
     (mp0 : Std.HashMap EIdx EIdx) (hMr : rpMR m mp0)
@@ -113,11 +113,11 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
     (hho : decHL m hO.toNat hL.toNat = some holes) (hhob : hO.toNat + hL.toNat ≤ iwTop m)
     (hR : RfInv m M G g) :
     ∃ x a', (ConRon.Arena.nestCrest names (decI us) ds holes (decI cty)).run a = .ok (x, a') ∧
-      decOE m' r x ∧ RxPost dn fe vis m m' a' M G g ∧ ∃ mp, rpMR m' mp := by
+      decOE m' r x ∧ RxPost fe vis m m' a' M G g ∧ ∃ mp, rpMR m' mp := by
   unfold pcrW at h
   have hdl := decHL_length m hds
   rcases hpc : pccW k m no nl us dL cty with _ | ⟨r1, m1⟩ <;> rw [hpc] at h; · simp [pcrK1] at h
-  obtain ⟨x, a1, hrun1, hS1, hg1, hout1, mp1, hM1⟩ := pccW_ok k dn fe vis m m1 a no nl us dL cty names r1 hpc hS hcty
+  obtain ⟨x, a1, hrun1, hS1, hg1, hout1, mp1, hM1⟩ := pccW_ok k (fun _ => none) fe vis m m1 a no nl us dL cty names r1 hpc hS hcty
     hus hdec hno hit hnn mp0 hMr
   have hR1 := hR.frame (pccW_fr hpc)
   cases x with
@@ -148,7 +148,7 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
     rcases hrx : rxW (k + 2) m2 f (r1.tail.headD 0) with _ | ⟨rr, m3⟩ <;> rw [hrx] at h; · simp [pcrK3] at h
     rw [pcrK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨a3, hrun3, hH3, hpost3⟩ := (rxOK_all dn fe vis (k + 2)).2.2.2.2.2.2 m2 m3 a1 f _ _ rr M G g hrx hS2 hfm
+    obtain ⟨a3, hrun3, hH3, hpost3⟩ := (rxOK_all fe vis (k + 2)).2.2.2.2.2.2 m2 m3 a1 f _ _ rr M G g hrx hS2 hfm
       hcH (hR1.frame (posRecW_fr hrec))
     refine ⟨some (decE rr), a3, ?_, ⟨rfl, hH3, rfl⟩, RxPost.of_fr hR ((pccW_fr hpc).trans (posRecW_fr hrec)) hg12 hpost3,
       mp1, rpMR_mfr ((posRecW_mfr hrec).up.trans (rxW_mfr hrx)) (by decide) (by decide) hM1⟩
@@ -164,9 +164,9 @@ include L
 /-- **`nest_crest` refines `nestCrest`** (through the stubs below `nest_canon_crest` and `mk_app_n`;
 `replace_apps`' memo well formed in the memory at hand, and again after). -/
 @[refines ConRon.Arena.nestCrest]
-theorem nestCrest_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+theorem nestCrest_refines (k : Nat) (s₀ : St) (a₀ : AState) (fe : IFEnv)
     (vis no nl us dO dL hO hL cty : Word) (names : List NIdx) (ds holes : List EIdx)
-    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hS : StageR dn vis fe s₀.mem a₀) (hcty : H cty)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hS : StageR vis fe s₀.mem a₀) (hcty : H cty)
     (hus : H us) (hdec : decHL s₀.mem no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop s₀.mem) (hnn : dL.toNat + names.length < 2 ^ 64)
     (mp0 : Std.HashMap EIdx EIdx) (hMr : rpMR s₀.mem mp0)
@@ -176,11 +176,11 @@ theorem nestCrest_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 3)) "nest_crest" [no, nl, us, dO, dL, hO, hL, cty]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestCrest names (decI us) ds holes (decI cty)) a₀ ∧
       decOE s'.mem r (AM.res (ConRon.Arena.nestCrest names (decI us) ds holes (decI cty)) a₀) ∧
-      RxPost dn fe vis s₀.mem s'.mem (AM.st (ConRon.Arena.nestCrest names (decI us) ds holes (decI cty)) a₀) M G g ∧
+      RxPost fe vis s₀.mem s'.mem (AM.st (ConRon.Arena.nestCrest names (decI us) ds holes (decI cty)) a₀) M G g ∧
       ∃ mp, rpMR s'.mem mp; ⊤⦄ := by
   refine triple_post (nestCrest_spec p L k s₀ no nl us dO dL hO hL cty) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hout, hpost, hM'⟩ := pcrW_ok dn fe vis k _ _ a₀ no nl us dO dL hO hL cty r names ds holes M G g hm
+  obtain ⟨x, a', hrun, hout, hpost, hM'⟩ := pcrW_ok fe vis k _ _ a₀ no nl us dO dL hO hL cty r names ds holes M G g hm
     hS hcty hus hdec hno hit hnn mp0 hMr hds hdsb hho hhob hR
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hout, by rw [hst]; exact hpost, hM'⟩
@@ -264,7 +264,7 @@ theorem ncGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis C co cl cs ol fp : Word) (r 
   | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [ncGoW] at h
   | k + 1, m, m', vis, C, co, cl, cs, ol, fp, r, h => by
     unfold ncGoW ncK1 ncK2 ncK3 at h
-    mfr_auto h [ncGoW_mfr k _ _ _ _ _ _ _ _ _ _, envFindW_mfr, entryW_mfr, posRecW_mfr,
+    mfr_auto h [ncGoW_mfr k _ _ _ _ _ _ _ _ _ _, entryW_mfr, posRecW_mfr,
       fun h => (MFr.set_iw _ _ _).trans (ncGoW_mfr k _ _ _ _ _ _ _ _ _ _ h)]
 
 theorem ncWf_mfr {k : Nat} {m m' : Mem} {vis C co cl : Word} {r : List Word} (h : ncWf k m vis C co cl = some (r, m')) :
@@ -281,21 +281,24 @@ theorem ntWf_mfr {k : Nat} {m m' : Mem} {vis C : Word} {r : List Word} (h : ntWf
   cases k with
   | zero => simp [ntWf] at h
   | succ k =>
-  simp only [ntWf] at h
-  unfold ntW ntK1 ntK2 at h
-  mfr_auto h [envFindW_mfr, ncWf_mfr]
+  simp only [ntWf, ntW, ntK1] at h
+  split at h
+  · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
+  split at h
+  · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
+  unfold ntK2 at h; mfr_auto h [ncWf_mfr]
 
 theorem nwsW_mfr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
     (h : nwsW n m ctx off l po pl = some (r, m')) : MFr [] [] m m' := by
   unfold nwsW nwsK at h
   mfr_auto h [dcWf_mfr]
 
-theorem rhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP q j : Word),
-    rhGoW k m no nl lv po pl nP q j = some m' → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h
-  | k + 1, m, m', no, nl, lv, po, pl, nP, q, j, h => by
+theorem rhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP nio nil q j : Word),
+    rhGoW k m no nl lv po pl nP nio nil q j = some m' → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h
+  | k + 1, m, m', no, nl, lv, po, pl, nP, nio, nil, q, j, h => by
     unfold rhGoW rhK1 rhK2 at h
-    mfr_auto h [posRecW_mfr, fun h => (MFr.set_iw _ _ _).trans (rhGoW_mfr k _ _ _ _ _ _ _ _ _ _ h)]
+    mfr_auto h [posRecW_mfr, fun h => (MFr.set_iw _ _ _).trans (rhGoW_mfr k _ _ _ _ _ _ _ _ _ _ _ _ h)]
 
 theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
     (h : haW k m ctx po pl i = some (r, m')) : MFr [] [] m m' := by
@@ -306,14 +309,9 @@ theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
     | succ k =>
     simp only [rhWf] at h
     unfold rhW rhA rhB at h
-    mfr_auto h [allocW_mfr, rhGoW_mfr _ _ _ _ _ _ _ _ _ _ _]
+    mfr_auto h [allocW_mfr, rhGoW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _]
   unfold haW haK1 haK2 at h
   mfr_auto h [rh, appendW_mfr]
-
-theorem naW_mfr {k : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : naW k m vis c = some (r, m')) :
-    MFr [] [] m m' := by
-  unfold naW naK1 naK2 at h
-  mfr_auto h [envFindW_mfr, piBW_mfr _ _ _ _ _ _]
 
 theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : MFr [] [] m m' := by
   unfold resHeadW resHeadK at h
@@ -464,8 +462,8 @@ theorem nh_key_words {m : Mem} {p : Word} {hl : NestHole} (hd : decNH m p.toNat 
     H (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) ∧ decI (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) = hl.key.cname ∧
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) p + 3)).toNat = hl.key.ds.length := by
   obtain ⟨k, hk, hK⟩ := decNH_fields hd
-  have hkin := hin.2.2 k hk
-  have hp0 := hin.1
+  have hkin := hin.key k hk
+  have hp0 := hin.w0
   have hk0 := hkin.1 0 (by omega)
   have hklt : k < 2 ^ 64 := by omega
   have hk' : (UInt64.ofNat k : Word).toNat = k := UInt64.toNat_ofNat_of_lt' hklt
@@ -501,13 +499,13 @@ theorem decNFK_ordinary {w : Word} {x : NestFieldKind} (h : decNFK w = some x) :
          · cases h)
       | (cases h; done)
 
-theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem u4W_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {m0 : Mem} (ko nF cl : Word) (ks : List NestFieldKind) (hcl : H cl)
     (hks : decKL (truncM m0) ko.toNat nF.toNat = some ks) :
     ∀ (n : Nat) (m m' : Mem) (a : AState) (i : Word) (r : List Word),
-    u4W n m ko nF cl i = some (r, m') → StageR dn vis fe m a → IWGrow m0 m → i.toNat ≤ nF.toNat → PosMR m →
+    u4W n m ko nF cl i = some (r, m') → StageR vis fe m a → IWGrow m0 m → i.toNat ≤ nF.toNat → PosMR m →
     ∃ b a', ((List.range' i.toNat (nF.toNat - i.toNat)).anyM (u4F ks (decI cl))).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
   intro n
   obtain ⟨hkl, hkw⟩ := decKL_get hks
   induction n with
@@ -526,7 +524,7 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     have hrd : rdW (m.arr64 IW) (ko + i) = w := by
       have e : (ko + i).toNat = ko.toNat + i.toNat := word_add_toNat (by
         have := hS.iw.iw; have := hS.iw.iwSize; have := hg0.iw; omega)
-      simp only [rdW, e]; simp only [iwA] at hw'; rw [hg0.iwGet _ hwi, hw']; rfl
+      simp only [rdW, e]; simp only [iwA, aread_apply] at hw'; rw [hg0.iwGet _ hwi, hw']; rfl
     have hi1 : (i + 1).toNat = i.toNat + 1 := word_add_toNat (by have := nF.toNat_lt; simp; omega)
     have hrange : List.range' i.toNat (nF.toNat - i.toNat) =
         i.toNat :: List.range' (i + 1).toNat (nF.toNat - (i + 1).toNat) := by
@@ -584,10 +582,10 @@ open L.Arena
 
 theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m m' : Mem} {a : AState} {ctx hi cur : Word} {c : NestCtx} {r : List Word}
-    (h : roW k m ctx hi cur = some (r, m')) (hS : StageR dn vis fe m a) (hU : UCtx dn vis fe m ctx c)
+    (h : roW k m ctx hi cur = some (r, m')) (hS : StageR vis fe m a) (hU : UCtx dn vis fe m ctx c)
     (hcur : H cur) (hP : PosMR m) :
     ∃ b a', (∀ {β : Type} (K : Bool → AM β), (roK c hi.toNat (decI cur) K).run a = (K b).run a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
   cases k with
   | zero => simp [roW] at h
   | succ k =>

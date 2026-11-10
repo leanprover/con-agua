@@ -6,7 +6,6 @@ import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface
 
@@ -141,14 +140,20 @@ namespace L.Ind
 
 open L.Arena
 
-theorem hslice?_congr {k : IdxKind} (a b : Array Word) (off off' n : Nat)
-    (h : ∀ j < n, a[off + j]? = b[off' + j]?) :
+theorem hslice?_congr {k : IdxKind} (a b : Nat → Option Word) (off off' n : Nat)
+    (h : ∀ j < n, a (off + j) = b (off' + j)) :
     (hslice? a off n : Option (List (Idx k))) = hslice? b off' n := by
-  simp only [hslice?]
-  apply mapM_congr'
-  intro j hj
-  simp only [List.mem_range] at hj
-  simp only [hd?, h j hj]
+  have key : ∀ l : List Nat, (∀ j ∈ l, j < n) →
+      l.mapM (fun j => (hd? a (off + j) : Option (Idx k))) = l.mapM fun j => hd? b (off' + j) := by
+    intro l
+    induction l with
+    | nil => intro _; rfl
+    | cons j js ih =>
+      intro hl
+      have e : (hd? a (off + j) : Option (Idx k)) = hd? b (off' + j) := by
+        unfold hd?; rw [h j (hl j (by simp))]
+      rw [List.mapM_cons, List.mapM_cons, e, ih (fun x hx => hl x (by simp [hx]))]
+  exact key _ (fun j hj => List.mem_range.mp hj)
 
 theorem consPre_ctl (m : Mem) (x l : Word) (i : Word) (hi : i ≠ 200) :
     rdW ((consPre m x l).arr64 CTL) i = rdW (m.arr64 CTL) i := by
@@ -211,16 +216,19 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
   have htop : rdW (m'.arr64 CTL) 200 = q + (l + 1) := by
     rw [hA CTL (by decide)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64]; simp [hc, hq]
-  refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
+  have hEREC1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := by
+    rw [hA (tier1 EREC) (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  refine ⟨?_, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
   · simp only [decHL, hl1, hslice?_succ]
     have h0 : (hd? (iwA m') q.toNat : Option (Idx k)) = some (decI x) := by
-      simp [hd?, iwA, hget, hx]
+      simp [hd?, iwA, aread_apply, hget, hx]
     rw [h0]
     have : (hslice? (iwA m') (q.toNat + 1) l.toNat : Option (List (Idx k))) = some xs := by
       rw [← hxs]; simp only [decHL]
       apply hslice?_congr
       intro j hj
-      simp only [iwA, hget]
+      simp only [iwA, aread_apply, hget]
       rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       congr 1; omega
     simp [this]
@@ -232,6 +240,8 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
     simp only [iwTop, hq] at hi
     rw [hget, ite_eq_right (by omega), ite_eq_right (by omega)]
   · intro i _; rw [hEREC]
+  · simp only [erecTop1, hCTL 130 (by decide)]; exact Nat.le_refl _
+  · intro i _; rw [hEREC1]
   · intro b hb hbc
     rw [hA b (by simpa using hb)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by simpa using hb), Mem.arr64_set64_ne _ _ _ _ _ hbc]

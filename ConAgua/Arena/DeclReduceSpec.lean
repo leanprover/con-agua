@@ -9,6 +9,7 @@ import ConAgua.Arena.WhnfDeltaRefine
 public import ConAgua.Arena.IndCallM
 public import ConAgua.Arena.WhnfDelta
 import all ConAgua.Arena.DeclArms
+public import ConAgua.Arena.IndRealWalk
 
 @[expose] public section
 
@@ -18,7 +19,7 @@ import all ConAgua.Arena.DeclArms
 Three twin functions of one shape: read a pin, compare the argument with it, intern one of two
 con-leche values (`if c == pin then A else B`). In L: `pin_at(k)`, then `rom_cv`/`rom_expr_pin` at one
 of two ids. One model (`selW`) and one relational lemma (`selW_ok`) serve all three; through the
-ROM stubs (`DeclRomStubs.lean`), so census `sorry`.
+ROM readers' refinements (`RomRefs`).
 -/
 
 noncomputable section
@@ -65,26 +66,26 @@ grind_pattern [ind_grind] selK2_some => selK2 (some (r2, m2))
 /-! ## The relational lemma -/
 
 /-- **A pin-selected ROM value is the twin's**: `do let x ← pinAt k; if c == x then T i else T j`. -/
-theorem selW_ok {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem selW_ok {α : Type} {vis : Word} {fe : IFEnv}
     {a : AState} {p : Prog} {n : Nat} {m m' : Mem} {c k : Word} {f : FnName} {i j : Word}
     {r : List Word} {T : Nat → AM α} {dec : Mem → List Word → α → Prop}
     (hT : ∀ w, (w = i ∨ w = j) →
-      L.Rom.RomRef p f [w] (StageR dn vis fe) (T w.toNat) (KeepPost dn vis fe dec))
+      L.Rom.RomRef p f [w] (StageR vis fe) (T w.toNat) (KeepPost vis fe dec))
     (hdec : ∀ m r x, dec m r x → dec m [r.headD 0] x)
-    (h : selW p n m c k f i j = some (r, m')) (hS : StageR dn vis fe m a) (hc : c.toNat < 2 ^ 32) :
+    (h : selW p n m c k f i j = some (r, m')) (hS : StageR vis fe m a) (hc : c.toNat < 2 ^ 32) (hk51 : k ≠ 51) :
     ∃ x a', (do let y ← pinAt k.toNat; if (decI c : NIdx) == y then T i.toNat else T j.toNat).run a =
-      .ok (x, a') ∧ KeepPost dn vis fe dec m m' a' r x := by
+      .ok (x, a') ∧ KeepPost vis fe dec m m' a' r x := by
   cases n with
   | zero => simp [selW] at h
   | succ n =>
   simp only [selW] at h
   rcases h1 : pinAtW m k with _ | ⟨r1, m1⟩ <;> simp only [h1, selK, reduceCtorEq] at h
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins hk51
   have e1 : r1.headD 0 = pinW m (1 + k.toNat) := by rw [hr1]; rfl
   have hbeq : ((decI c : NIdx) == decI (pinW m (1 + k.toNat))) = decide (c = pinW m (1 + k.toNat)) :=
     decI_beq c _ hc hl1
   have tail : ∀ w, (w = i ∨ w = j) → selK2 (callW p n f [w] m) = some (r, m') →
-      ∃ x a', (T w.toNat).run a = .ok (x, a') ∧ KeepPost dn vis fe dec m m' a' r x := by
+      ∃ x a', (T w.toNat).run a = .ok (x, a') ∧ KeepPost vis fe dec m m' a' r x := by
     intro w hw h
     rcases h2 : callW p n f [w] m with _ | ⟨r2, m2⟩ <;> simp only [h2, selK2, reduceCtorEq] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -166,7 +167,7 @@ end specs
 section refines
 variable (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (a₀ : AState)
   (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word)
-  (hS : StageR dn vis fe s₀.mem a₀) (hc : c.toNat < 2 ^ 32) (hR : L.Rom.RomRefs p)
+  (hS : StageR vis fe s₀.mem a₀) (hc : c.toNat < 2 ^ 32) (hR : L.Rom.RomRefs p)
 include hpa hS hc hR
 
 /-- **`reduce_op_cv_a(c)` refines `reduceOpCvA`** (through `rom_cv`'s stub). -/
@@ -174,12 +175,12 @@ include hpa hS hc hR
 theorem reduceOpCvA_refines (hp : p.lookup "reduce_op_cv_a" = some reduceOpCvAL) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_op_cv_a" [c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (reduceOpCvA (decI c)) a₀ ∧
-      KeepPost dn vis fe decRCV s₀.mem s'.mem (AM.st (reduceOpCvA (decI c)) a₀) r
+      KeepPost vis fe decRCV s₀.mem s'.mem (AM.st (reduceOpCvA (decI c)) a₀) r
         (AM.res (reduceOpCvA (decI c)) a₀); ⊤⦄ := by
   refine triple_post (reduceOpCvA_specW p hpa hp n s₀ c) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hP⟩ := selW_ok (T := romCvT)
-    (fun w hw => hR.cv dn vis fe w (by rcases hw with rfl | rfl <;> decide)) decRCV_head hm hS hc
+    (fun w hw => hR.cv vis fe w (by rcases hw with rfl | rfl <;> decide)) decRCV_head hm hS hc (by decide)
   have e : reduceOpCvA (decI c) =
       (do let y ← pinAt (43 : Word).toNat
           if (decI c : NIdx) == y then romCvT (6 : Word).toNat else romCvT (7 : Word).toNat) := rfl
@@ -192,12 +193,12 @@ theorem reduceOpCvA_refines (hp : p.lookup "reduce_op_cv_a" = some reduceOpCvAL)
 theorem ofReducePinA_refines (hp : p.lookup "of_reduce_pin_a" = some ofReducePinAL) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "of_reduce_pin_a" [c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ofReducePinA (decI c)) a₀ ∧
-      KeepPost dn vis fe decRCV s₀.mem s'.mem (AM.st (ofReducePinA (decI c)) a₀) r
+      KeepPost vis fe decRCV s₀.mem s'.mem (AM.st (ofReducePinA (decI c)) a₀) r
         (AM.res (ofReducePinA (decI c)) a₀); ⊤⦄ := by
   refine triple_post (ofReducePinA_specW p hpa hp n s₀ c) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hP⟩ := selW_ok (T := romCvT)
-    (fun w hw => hR.cv dn vis fe w (by rcases hw with rfl | rfl <;> decide)) decRCV_head hm hS hc
+    (fun w hw => hR.cv vis fe w (by rcases hw with rfl | rfl <;> decide)) decRCV_head hm hS hc (by decide)
   have e : ofReducePinA (decI c) =
       (do let y ← pinAt (45 : Word).toNat
           if (decI c : NIdx) == y then romCvT (8 : Word).toNat else romCvT (9 : Word).toNat) := rfl
@@ -210,13 +211,13 @@ theorem ofReducePinA_refines (hp : p.lookup "of_reduce_pin_a" = some ofReducePin
 theorem reduceDeclPin_refines (hp : p.lookup "reduce_decl_pin" = some reduceDeclPinL) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_decl_pin" [c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (reduceDeclPin (decI c)) a₀ ∧
-      KeepPost dn vis fe decW0E s₀.mem s'.mem (AM.st (reduceDeclPin (decI c)) a₀) r
+      KeepPost vis fe decW0E s₀.mem s'.mem (AM.st (reduceDeclPin (decI c)) a₀) r
         (AM.res (reduceDeclPin (decI c)) a₀); ⊤⦄ := by
   refine triple_post (reduceDeclPin_specW p hpa hp n s₀ c) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hP⟩ := selW_ok (T := romExprT)
-    (fun w hw => hR.expr dn vis fe w (by rcases hw with rfl | rfl <;> decide)) decW0E_head hm hS
-    hc
+    (fun w hw => hR.expr vis fe w (by rcases hw with rfl | rfl <;> decide)) decW0E_head hm hS
+    hc (by decide)
   have e : reduceDeclPin (decI c) =
       (do let y ← pinAt (43 : Word).toNat
           if (decI c : NIdx) == y then romExprT (0 : Word).toNat else romExprT (1 : Word).toNat) :=
@@ -233,11 +234,11 @@ end refines
 theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
     (hpw : p.lookup "pin_word" = some pinWordL) (hcf : p.lookup "const_find" = some constFind)
     (hcp : p.lookup "const_push" = some constPush) (hic : p.lookup "intern_const" = some internConst)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {nm : Word} {r : List Word}
-    (h : callW p n "const_e" [nm] m = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : callW p n "const_e" [nm] m = some (r, m')) (hS : StageR vis fe m a)
     (hnm : nm.toNat < 2 ^ 32) :
-    ∃ a', (constE (decI nm)).run a = .ok (decE (r.headD 0), a') ∧ StageR dn vis fe m' a' ∧
+    ∃ a', (constE (decI nm)).run a = .ok (decE (r.headD 0), a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' := by
   cases n with
   | zero => simp [callW_zero] at h
@@ -354,14 +355,14 @@ theorem reduceCertVar_eq (c : NIdx) :
     boolName, pinBool, PIN_REDUCE_NAT, PIN_NAT, PIN_BOOL, bind_assoc]
 
 /-- **`reduce_cert_var(c)` refines `reduceCertVar`** (pin reads, `const_e`, `intern_fvar`;
-sorry-free). -/
+proved). -/
 @[refines ConRon.Arena.reduceCertVar]
 theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) (hc : c.toNat < 2 ^ 32) :
+    (fe : IFEnv) (vis c : Word)
+    (hS : StageR vis fe s₀.mem a₀) (hc : c.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_cert_var" [c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (reduceCertVar (decI c)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (reduceCertVar (decI c)) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (reduceCertVar (decI c)) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       AM.res (reduceCertVar (decI c)) a₀ = decE (r.headD 0); ⊤⦄ := by
   refine triple_post (rcv_specW p hp n s₀ c) ?_
   rintro r s' ⟨hl, h⟩

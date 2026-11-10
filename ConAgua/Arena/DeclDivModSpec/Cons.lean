@@ -52,9 +52,9 @@ def dmTpgW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs nm ty : Word) : Optio
 
 /-! ## `div_mod_certs_guard_go` -/
 
-theorem rdW_iw_of {m : Mem} {x : Word} {i : Nat} {w : Word} (h : (iwA m)[i]? = some w)
+theorem rdW_iw_of {m : Mem} {x : Word} {i : Nat} {w : Word} (h : iwA m i = some w)
     (hx : x.toNat = i) : rdW (m.arr64 IW) x = w := by
-  simp only [iwA] at h; simp [rdW, hx, h]
+  simp only [iwA, aread_apply] at h; simp [rdW, hx, h]
 
 theorem StmtL.cons {m : Mem} {so sl : Word} {s : List EIdx × EIdx} {ss : List (List EIdx × EIdx)}
     (hI : IWOK m) (h : StmtL m so.toNat sl.toNat (s :: ss)) :

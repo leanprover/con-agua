@@ -21,8 +21,7 @@ The twin's `Canon.lean` (the lockstep canonical-form comparisons `IConstantInfo.
   word (`bool?`: any nonzero word is `true`, `b_eq`), the height of a non-regular hint
   (`hint_eq`), the fire slices of a plain rule. Handles compare as words: the stores intern each
   value once (`denoteE`/`denoteN`/`denoteL` injective), so handle equality is value equality —
-  also for a literal (`canon_expr_eq`'s `.lit` clause compares handles) and for `PropWhen`'s
-  names (`dn` injective).
+  also for a literal (`canon_expr_eq`'s `.lit` clause compares handles).
 * `canon_names(n)`: the numbered names `⟨0⟩ … ⟨n-1⟩` as an `IW` slice. The renaming context of a
   comparison is three `IW` slices, flattened: the two parameter lists `ps`, `ps'` and the
   numerals `cs` (`po, pl, qo, ql, co, cl`), then the fuel (a word, `coreWalkFuel` = `4·10^9` at
@@ -40,7 +39,7 @@ open L.Arena
 @[no_expose] def erSlEq : FunDecl := lfn (o1, l1, o2, l2) locals (r) {
   if l1 != l2 { return 0 };
   if l1 == 0 { return 1 };
-  if EREC.u64[o1] != EREC.u64[o2] { return 0 };
+  if EREC⦃o1⦄ != EREC⦃o2⦄ { return 0 };
   r := call er_sl_eq(o1 + 1, l1 - 1, o2 + 1, l2 - 1);
   return r
 }
@@ -55,46 +54,33 @@ open L.Arena
 /-- `cv_eq(q, q')`: the derived equality of two constant values (name, level parameters, type). -/
 -- con-ron: none — the derived `IConstantVal` equality
 @[no_expose] def cvEq : FunDecl := lfn (q, r) locals (e, o1, l1, o2, l2) {
-  if EREC.u64[q] != EREC.u64[r] { return 0 };
-  o1 := EREC.u64[q + 1];
-  l1 := EREC.u64[q + 2];
-  o2 := EREC.u64[r + 1];
-  l2 := EREC.u64[r + 2];
+  if EREC⦃q⦄ != EREC⦃r⦄ { return 0 };
+  o1 := EREC⦃q + 1⦄;
+  l1 := EREC⦃q + 2⦄;
+  o2 := EREC⦃r + 1⦄;
+  l2 := EREC⦃r + 2⦄;
   e := call er_sl_eq(o1, l1, o2, l2);
   if e == 0 { return 0 };
-  return u64(EREC.u64[q + 3] == EREC.u64[r + 3])
+  return u64(EREC⦃q + 3⦄ == EREC⦃r + 3⦄)
 }
 
 /-- `hint_eq(h, h')`: the hints at `EREC[h]`, `EREC[h + 1]` (kind, height) are equal; the height
 counts only for a regular hint (kind `2`). -/
 -- con-ron: none — the derived `ReducibilityHint` equality, at `decHint`'s decoding
 @[no_expose] def hintEq : FunDecl := lfn (h, g) locals () {
-  if EREC.u64[h] != EREC.u64[g] { return 0 };
-  if EREC.u64[h] == 2 { return u64(EREC.u64[h + 1] == EREC.u64[g + 1]) };
+  if EREC⦃h⦄ != EREC⦃g⦄ { return 0 };
+  if EREC⦃h⦄ == 2 { return u64(EREC⦃h + 1⦄ == EREC⦃g + 1⦄) };
   return 1
-}
-
-/-- `pw_eq(q, q')`: two `PropWhen` records (`decPW`) are equal. -/
--- con-ron: none — the derived `PropWhen` equality, at `decPW`'s decoding
-@[no_expose] def pwEq : FunDecl := lfn (q, r) locals (e, o1, l1, o2, l2) {
-  if EREC.u64[q] != EREC.u64[r] { return 0 };
-  if EREC.u64[q] != 1 { return 1 };
-  o1 := EREC.u64[q + 1];
-  l1 := EREC.u64[q + 2];
-  o2 := EREC.u64[r + 1];
-  l2 := EREC.u64[r + 2];
-  e := call er_sl_eq(o1, l1, o2, l2);
-  return e
 }
 
 /-- `er_sl_at(p, q, i)`: the `EREC` slices at words `(p + i, p + i + 1)` and `(q + i, q + i + 1)` agree
 (the words are loaded into locals before the call). -/
 -- con-ron: none — plumbing of the derived record equalities
 @[no_expose] def erSlAt : FunDecl := lfn (p, q, i) locals (o1, l1, o2, l2, e) {
-  o1 := EREC.u64[p + i];
-  l1 := EREC.u64[p + i + 1];
-  o2 := EREC.u64[q + i];
-  l2 := EREC.u64[q + i + 1];
+  o1 := EREC⦃p + i⦄;
+  l1 := EREC⦃p + i + 1⦄;
+  o2 := EREC⦃q + i⦄;
+  l2 := EREC⦃q + i + 1⦄;
   e := call er_sl_eq(o1, l1, o2, l2);
   return e
 }
@@ -102,23 +88,20 @@ counts only for a regular hint (kind `2`). -/
 /-- `caps_eq_a(q, q')`: `eta`, `etaCtor`, `etaParams`, `etaFields`, `unitlike` (words `0‥4`). -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
 @[no_expose] def capsEqA : FunDecl := lfn (q, r) locals (e) {
-  e := call b_eq(EREC.u64[q], EREC.u64[r]);
+  e := call b_eq(EREC⦃q⦄, EREC⦃r⦄);
   if e == 0 { return 0 };
-  if EREC.u64[q + 1] != EREC.u64[r + 1] { return 0 };
-  if EREC.u64[q + 2] != EREC.u64[r + 2] { return 0 };
-  if EREC.u64[q + 3] != EREC.u64[r + 3] { return 0 };
-  e := call b_eq(EREC.u64[q + 4], EREC.u64[r + 4]);
+  if EREC⦃q + 1⦄ != EREC⦃r + 1⦄ { return 0 };
+  if EREC⦃q + 2⦄ != EREC⦃r + 2⦄ { return 0 };
+  if EREC⦃q + 3⦄ != EREC⦃r + 3⦄ { return 0 };
+  e := call b_eq(EREC⦃q + 4⦄, EREC⦃r + 4⦄);
   return e
 }
 
-/-- `caps_eq_b(q, q')`: `unitParams`, `ruleK`, `sortZ` (words `5‥9`). -/
+/-- `caps_eq_b(q, q')`: `unitParams`, `nIdx` (words `5`, `6`; words `7‥9` are not read). -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
-@[no_expose] def capsEqB : FunDecl := lfn (q, r) locals (e) {
-  if EREC.u64[q + 5] != EREC.u64[r + 5] { return 0 };
-  e := call b_eq(EREC.u64[q + 6], EREC.u64[r + 6]);
-  if e == 0 { return 0 };
-  e := call pw_eq(q + 7, r + 7);
-  return e
+@[no_expose] def capsEqB : FunDecl := lfn (q, r) locals () {
+  if EREC⦃q + 5⦄ != EREC⦃r + 5⦄ { return 0 };
+  return u64(EREC⦃q + 6⦄ == EREC⦃r + 6⦄)
 }
 
 /-- `caps_eq_c(q, q')`: `all`, `nparams`, `ctors` (words `10‥14`). -/
@@ -126,7 +109,7 @@ counts only for a regular hint (kind `2`). -/
 @[no_expose] def capsEqC : FunDecl := lfn (q, r) locals (e) {
   e := call er_sl_at(q, r, 10);
   if e == 0 { return 0 };
-  if EREC.u64[q + 12] != EREC.u64[r + 12] { return 0 };
+  if EREC⦃q + 12⦄ != EREC⦃r + 12⦄ { return 0 };
   e := call er_sl_at(q, r, 13);
   return e
 }
@@ -142,22 +125,27 @@ counts only for a regular hint (kind `2`). -/
   return e
 }
 
-/-- `rule_eq_a(q, q')`: `ctor`, `nfields`, `ctorParams`, the fire kind (words `0‥3`). -/
+/-- `rule_eq_a(q, q')`: `ctor`, `nfields`, the fire kind (words `0`, `1`, `3`; word `2` is not
+read). -/
 -- con-ron: ConRon/Arena/Canon.lean:180-194 ConRon.Arena.canonRulesEq
 @[no_expose] def ruleEqA : FunDecl := lfn (q, r) locals () {
-  if EREC.u64[q] != EREC.u64[r] { return 0 };
-  if EREC.u64[q + 1] != EREC.u64[r + 1] { return 0 };
-  if EREC.u64[q + 2] != EREC.u64[r + 2] { return 0 };
-  return u64(EREC.u64[q + 3] == EREC.u64[r + 3])
+  if EREC⦃q⦄ != EREC⦃r⦄ { return 0 };
+  if EREC⦃q + 1⦄ != EREC⦃r + 1⦄ { return 0 };
+  return u64(EREC⦃q + 3⦄ == EREC⦃r + 3⦄)
 }
 
-/-- `rule_eq_b(q, q')`: a nested fire's two slices (words `4‥7`); a plain fire has none. -/
+/-- `rule_eq_b(q, q')`: a nested fire's two slices (words `4‥7`), a `levels` fire's level slice
+(words `4`, `5`); a plain fire has none. -/
 -- con-ron: ConRon/Arena/Canon.lean:180-194 ConRon.Arena.canonRulesEq
 @[no_expose] def ruleEqB : FunDecl := lfn (q, r) locals (e) {
-  if EREC.u64[q + 3] == 1 {
+  if EREC⦃q + 3⦄ == 1 {
     e := call er_sl_at(q, r, 4);
     if e == 0 { return 0 };
     e := call er_sl_at(q, r, 6);
+    return e
+  };
+  if EREC⦃q + 3⦄ == 2 {
+    e := call er_sl_at(q, r, 4);
     return e
   };
   return 1
@@ -170,10 +158,6 @@ counts only for a regular hint (kind `2`). -/
   e := call rule_eq_a(q, r);
   if e == 0 { return 0 };
   e := call rule_eq_b(q, r);
-  if e == 0 { return 0 };
-  e := call b_eq(EREC.u64[q + 9], EREC.u64[r + 9]);
-  if e == 0 { return 0 };
-  e := call b_eq(EREC.u64[q + 10], EREC.u64[r + 10]);
   return e
 }
 
@@ -184,7 +168,7 @@ counts only for a regular hint (kind `2`). -/
   if l1 == 0 { return 1 };
   e := call rule_eq_but_rhs(o1, o2);
   if e == 0 { return 0 };
-  if EREC.u64[o1 + 8] != EREC.u64[o2 + 8] { return 0 };
+  if EREC⦃o1 + 8⦄ != EREC⦃o2 + 8⦄ { return 0 };
   e := call rules_eq(o1 + 11, l1 - 1, o2 + 11, l2 - 1);
   return e
 }
@@ -194,23 +178,25 @@ values agree. -/
 -- con-ron: none — the derived `IConstantInfo` equality (`fe.find? n == some pin`)
 @[no_expose] def ciEqRest : FunDecl := lfn (p, q, k) locals (e, o1, l1, o2, l2) {
   if k == 1 {
-    if EREC.u64[p + 5] != EREC.u64[q + 5] { return 0 };
+    if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ { return 0 };
     e := call hint_eq(p + 6, q + 6);
     return e
   };
   if k == 3 { e := call caps_eq(p + 5, q + 5); return e };
   if k == 4 {
-    if EREC.u64[p + 5] != EREC.u64[q + 5] { return 0 };
-    return u64(EREC.u64[p + 6] == EREC.u64[q + 6])
+    if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ { return 0 };
+    return u64(EREC⦃p + 6⦄ == EREC⦃q + 6⦄)
   };
   if k == 5 {
-    if EREC.u64[p + 5] != EREC.u64[q + 5] { return 0 };
-    if EREC.u64[p + 6] != EREC.u64[q + 6] { return 0 };
-    o1 := EREC.u64[p + 7];
-    l1 := EREC.u64[p + 8];
-    o2 := EREC.u64[q + 7];
-    l2 := EREC.u64[q + 8];
+    if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ { return 0 };
+    if EREC⦃p + 6⦄ != EREC⦃q + 6⦄ { return 0 };
+    o1 := EREC⦃p + 7⦄;
+    l1 := EREC⦃p + 8⦄;
+    o2 := EREC⦃q + 7⦄;
+    l2 := EREC⦃q + 8⦄;
     e := call rules_eq(o1, l1, o2, l2);
+    if e == 0 { return 0 };
+    e := call b_eq(EREC⦃p + 9⦄, EREC⦃q + 9⦄);
     return e
   };
   return 1
@@ -219,8 +205,8 @@ values agree. -/
 /-- `ci_eq(p, p')`: the derived equality of two constant records (`decCI`), kind by kind. -/
 -- con-ron: none — the derived `IConstantInfo` equality (`fe.find? n == some pin`)
 @[no_expose] def ciEq : FunDecl := lfn (p, q) locals (k, e) {
-  k := EREC.u64[p];
-  if k != EREC.u64[q] { return 0 };
+  k := EREC⦃p⦄;
+  if k != EREC⦃q⦄ { return 0 };
   if 5 < k { abort };
   e := call cv_eq(p + 1, q + 1);
   if e == 0 { return 0 };
@@ -228,20 +214,11 @@ values agree. -/
   return e
 }
 
-/-- `find_is(vis, n, pin)`: `fe.find? n == some pin` (`pin` a constant record). -/
--- con-ron: none — `fe.find? n == some ci`, the lookup and the derived equality
-@[no_expose] def findIs : FunDecl := lfn (vis, n, pin) locals (f, r, e) {
-  (f, r) := call env_find(n, vis);
-  if f == 0 { return 0 };
-  e := call ci_eq(r, pin);
-  return e
-}
-
 /-! ## `toConstantVal` -/
 
 /-- `ci_to_cv(p)`: `IConstantInfo.toConstantVal` → the constant value pointer: the inline one at
 `p + 1` (every constant record has it there). -/
--- con-ron: ConRon/Arena/Env.lean:180-184 ConRon.Arena.IConstantInfo.toConstantVal
+-- con-ron: ConRon/Arena/Env.lean:168-172 ConRon.Arena.IConstantInfo.toConstantVal
 @[no_expose, l_impl ConRon.Arena.IConstantInfo.toConstantVal]
 def ciToCv : FunDecl := lfn (p) locals () {
   return p + 1
@@ -392,7 +369,7 @@ def canonExprEq : FunDecl :=
 `cp`'s parameter count, then both parameter lists, as `(po, pl, qo, ql, co, cl)`. -/
 -- con-ron: ConRon/Arena/Canon.lean:52-63 ConRon.Arena.canonNamesGo
 @[no_expose] def canonCtx : FunDecl := lfn (cp, cq) locals (n, co, cl, po, pl, qo, ql) {
-  n := EREC.u64[cp + 2];
+  n := EREC⦃cp + 2⦄;
   (co, cl) := call canon_names(n);
   (po, pl) := call cv_lps(cp);
   (qo, ql) := call cv_lps(cq);
@@ -404,10 +381,10 @@ the types under the renaming. -/
 -- con-ron: ConRon/Arena/Canon.lean:167-178 ConRon.Arena.IConstantVal.canonEq
 @[no_expose, l_impl ConRon.Arena.IConstantVal.canonEq]
 def cvCanonEq : FunDecl := lfn (q, r) locals (co, cl, po, pl, qo, ql, e, a, b) {
-  if EREC.u64[q] != EREC.u64[r] || EREC.u64[q + 2] != EREC.u64[r + 2] { return 0 };
+  if EREC⦃q⦄ != EREC⦃r⦄ || EREC⦃q + 2⦄ != EREC⦃r + 2⦄ { return 0 };
   (po, pl, qo, ql, co, cl) := call canon_ctx(q, r);
-  a := EREC.u64[q + 3];
-  b := EREC.u64[r + 3];
+  a := EREC⦃q + 3⦄;
+  b := EREC⦃r + 3⦄;
   e := call canon_expr_eq(po, pl, qo, ql, co, cl, 4000000000, a, b);
   return e
 }
@@ -422,8 +399,8 @@ def canonRulesEq : FunDecl :=
   if l1 == 0 || l2 == 0 { return 0 };
   e := call rule_eq_but_rhs(o1, o2);
   if e == 0 { return 0 };
-  a := EREC.u64[o1 + 8];
-  b := EREC.u64[o2 + 8];
+  a := EREC⦃o1 + 8⦄;
+  b := EREC⦃o2 + 8⦄;
   e := call canon_expr_eq(po, pl, qo, ql, co, cl, fuel, a, b);
   if e == 0 { return 0 };
   e := call canon_rules_eq(po, pl, qo, ql, co, cl, fuel, o1 + 11, l1 - 1, o2 + 11, l2 - 1);
@@ -438,24 +415,26 @@ def canonRulesEq : FunDecl :=
   e := call cv_canon_eq(p + 1, q + 1);
   if e == 0 { return 0 };
   (po, pl, qo, ql, co, cl) := call canon_ctx(p + 1, q + 1);
-  a := EREC.u64[p + 5];
-  b := EREC.u64[q + 5];
+  a := EREC⦃p + 5⦄;
+  b := EREC⦃q + 5⦄;
   e := call canon_expr_eq(po, pl, qo, ql, co, cl, 4000000000, a, b);
   return e
 }
 
-/-- `ci_canon_rec(p, p')`: two recursors, the two counts first, then the common data, then the
-rules. -/
+/-- `ci_canon_rec(p, p')`: two recursors, the two counts and `isK` first, then the common data,
+then the rules. -/
 -- con-ron: ConRon/Arena/Canon.lean:196-221 ConRon.Arena.IConstantInfo.canonEq
 @[no_expose] def ciCanonRec : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, o1, l1, o2, l2) {
-  if EREC.u64[p + 5] != EREC.u64[q + 5] || EREC.u64[p + 6] != EREC.u64[q + 6] { return 0 };
+  if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ || EREC⦃p + 6⦄ != EREC⦃q + 6⦄ { return 0 };
+  e := call b_eq(EREC⦃p + 9⦄, EREC⦃q + 9⦄);
+  if e == 0 { return 0 };
   e := call cv_canon_eq(p + 1, q + 1);
   if e == 0 { return 0 };
   (po, pl, qo, ql, co, cl) := call canon_ctx(p + 1, q + 1);
-  o1 := EREC.u64[p + 7];
-  l1 := EREC.u64[p + 8];
-  o2 := EREC.u64[q + 7];
-  l2 := EREC.u64[q + 8];
+  o1 := EREC⦃p + 7⦄;
+  l1 := EREC⦃p + 8⦄;
+  o2 := EREC⦃q + 7⦄;
+  l2 := EREC⦃q + 8⦄;
   e := call canon_rules_eq(po, pl, qo, ql, co, cl, 4000000000, o1, l1, o2, l2);
   return e
 }
@@ -465,12 +444,12 @@ recursor's two counts first; an inductive's capabilities are not compared). -/
 -- con-ron: ConRon/Arena/Canon.lean:196-221 ConRon.Arena.IConstantInfo.canonEq
 @[no_expose, l_impl ConRon.Arena.IConstantInfo.canonEq]
 def ciCanonEq : FunDecl := lfn (p, q) locals (k, e) {
-  k := EREC.u64[p];
-  if k != EREC.u64[q] { return 0 };
+  k := EREC⦃p⦄;
+  if k != EREC⦃q⦄ { return 0 };
   if 5 < k { abort };
   if k == 1 { e := call ci_canon_defn(p, q); return e };
   if k == 4 {
-    if EREC.u64[p + 5] != EREC.u64[q + 5] || EREC.u64[p + 6] != EREC.u64[q + 6] { return 0 }
+    if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ || EREC⦃p + 6⦄ != EREC⦃q + 6⦄ { return 0 }
   };
   if k == 5 { e := call ci_canon_rec(p, q); return e };
   e := call cv_canon_eq(p + 1, q + 1);
@@ -495,12 +474,12 @@ def canonEqListL : FunDecl := lfn (o1, l1, o2, l2) locals (e, a, b) {
 
 /-- This module's functions. -/
 def declArmsCanonFns : Prog :=
-  [("er_sl_eq", erSlEq), ("b_eq", bEq), ("cv_eq", cvEq), ("hint_eq", hintEq), ("pw_eq", pwEq),
+  [("er_sl_eq", erSlEq), ("b_eq", bEq), ("cv_eq", cvEq), ("hint_eq", hintEq),
    ("caps_eq", capsEq), ("rule_eq_but_rhs", ruleEqButRhs), ("rules_eq", rulesEq),
    ("ci_eq", ciEq), ("er_sl_at", erSlAt), ("caps_eq_a", capsEqA),
    ("caps_eq_b", capsEqB), ("caps_eq_c", capsEqC), ("rule_eq_a", ruleEqA), ("rule_eq_b", ruleEqB),
    ("ci_eq_rest", ciEqRest), ("canon_ctx", canonCtx),
-   ("ci_canon_defn", ciCanonDefn), ("ci_canon_rec", ciCanonRec), ("find_is", findIs), ("ci_to_cv", ciToCv),
+   ("ci_canon_defn", ciCanonDefn), ("ci_canon_rec", ciCanonRec), ("ci_to_cv", ciToCv),
    ("canon_names_go", canonNamesGo), ("canon_names", canonNames),
    ("canon_name_map", canonNameMap), ("canon_level_eq", canonLevelEq),
    ("canon_level_list_eq", canonLevelListEq), ("canon_levels_eq", canonLevelsEq),
@@ -510,10 +489,10 @@ def declArmsCanonFns : Prog :=
 /-- Functions of master the arms call that lane `induct`'s program does not carry (as stubs here;
 the whole program uses the real ones): `intern_succ(u)` (`LevelStore.lean`), `intern_nnum(pre,
 i)` (`NNumStore.lean`), `const_e(n)` (`WhnfDelta.lean`, `constE`), `nat_lit_supported(vis)`
-(`WhnfDelta.lean`, `natLitSupported`). -/
+(`WhnfDelta.lean`, `natLitSupported`), the core's `lit_shape_ok(p)`, `nat_op_name(n)`. -/
 def armsMasterFns : Prog :=
   [("intern_succ", stub 1), ("intern_nnum", stub 2), ("const_e", stub 1),
-   ("nat_lit_supported", stub 1)]
+   ("nat_lit_supported", stub 1), ("lit_shape_ok", stub 1), ("nat_op_name", stub 1)]
 
 /-! ## Runs on stub-free paths -/
 

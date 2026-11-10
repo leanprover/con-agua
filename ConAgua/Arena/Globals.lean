@@ -8,8 +8,15 @@ public import ConAgua.L.Syntax
 # The checker's global variables
 
 Every global variable of the checker's program, with its id (`L.GVar`; the compiler puts global `g`
-at `Tab.globOff g` in the table, a zero word in a fresh region). Pick a new id here. (Ids `0`‥`7`
+at `Tab.globOff g` in the table, a zero word in a fresh region). Pick a new id here. (Ids `4`‥`7`
 are free.)
+
+* `ETOP1` (`0`): the top of `EREC`'s tier 1, a job's own records (`erec_alloc`), `0` after the
+  scratch tier is emptied.
+* `EBELOW` (`1`), `EBELOWR` (`2`): the job's view of the frozen stream index, `IFBase.below` and
+  `IFBase.belowRec` (the record's first counter and its position).
+* `ESTAMP` (`3`): the job's stamp: an own-layer row of the environment is the job's only when it
+  carries the current stamp (`Env.lean`).
 
 * `MODE` (`8`): the entry mode, written by the entry stubs (`ConAgua/Compiler/Abi.lean`): `0` (the
   region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) the stages,
@@ -28,5 +35,9 @@ abbrev MODE : L.GVar := ⟨8⟩
 abbrev PLO : L.GVar := ⟨9⟩
 abbrev PHI : L.GVar := ⟨11⟩
 abbrev INIT : L.GVar := ⟨10⟩
+abbrev ETOP1 : L.GVar := ⟨0⟩
+abbrev EBELOW : L.GVar := ⟨1⟩
+abbrev EBELOWR : L.GVar := ⟨2⟩
+abbrev ESTAMP : L.GVar := ⟨3⟩
 
 end L.Arena

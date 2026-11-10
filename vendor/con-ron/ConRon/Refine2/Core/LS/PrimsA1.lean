@@ -427,6 +427,20 @@ theorem pin_sorry_ax_run₀ {pers st lst} {o}
   rw [hc] at h
   exact h
 
+/-- `pin_bool` ⊑ `pinBool`, at slot `PIN_BOOL`. -/
+theorem pin_bool_run₀ {pers st lst} {o}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
+    (hrun : arena.pins.pin_bool st = ok o) :
+    PinRE absNIdx lst o pinBool := by
+  rw [arena.pins.pin_bool] at hrun
+  have h := pin_at_run₀ hrel hinv hrun
+  have hc : absSz arena.pins.PIN_BOOL = Arena.PIN_BOOL := by
+    show (arena.pins.PIN_BOOL).val = _
+    rw [arena.pins.PIN_BOOL]
+    rfl
+  rw [hc] at h
+  exact h
+
 /-- `pin_bool_true` ⊑ `pinBoolTrue`, at slot `PIN_BOOL_TRUE`. -/
 theorem pin_bool_true_run₀ {pers st lst} {o}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
@@ -583,6 +597,11 @@ theorem pin_eager_reduce_run₀ {pers st lst} {o}
     (hinv : AStateInv pers st) :
     LSR pers (fun a b => b = absNIdx a) (arena.pins.pin_sorry_ax st) st lst pinSorryAx :=
   pinRE_lsr hrel hinv fun _ h => pin_sorry_ax_run₀ hrel hinv h
+
+@[lockstep] theorem pin_bool_ls {pers st lst} (hrel : AStateRel₀ pers st lst)
+    (hinv : AStateInv pers st) :
+    LSR pers (fun a b => b = absNIdx a) (arena.pins.pin_bool st) st lst pinBool :=
+  pinRE_lsr hrel hinv fun _ h => pin_bool_run₀ hrel hinv h
 
 @[lockstep] theorem pin_bool_true_ls {pers st lst} (hrel : AStateRel₀ pers st lst)
     (hinv : AStateInv pers st) :
@@ -1301,18 +1320,6 @@ theorem is_equiv_list_from_refines (ls rs : alloc.vec.Vec kernel.level.Level)
       (fun u => ConRon.Refine.LevelWF u ∧ TwinEq .zero (ConRon.Refine.absLevel u)) :=
   fun _ h => ⟨ConRon.Refine.Level.zero_wf' h, (ConRon.Refine.Level.zero_refines h).symm⟩
 
-@[lockstep] theorem level_subst_pw_ls (ks : alloc.vec.Vec kernel.name.Name)
-    (vs : alloc.vec.Vec kernel.level.Level) (pw : kernel.prop_when.PropWhen)
-    (hks : ConRon.Refine.NamesWF ks) (hvs : ConRon.Refine.LevelsWF vs)
-    (hpw : ConRon.Refine.PropWhenWF pw) :
-    LSP (kernel.level.subst_pw ks vs pw)
-      (fun r => ConRon.Refine.PropWhenWF r ∧ TwinEq
-        (ConLeche.Level.substPW (ConRon.Refine.absNames ks) (ConRon.Refine.absLevels vs)
-          (ConRon.Refine.absPropWhen pw)) (ConRon.Refine.absPropWhen r)) := by
-  intro r h
-  obtain ⟨h1, h2⟩ := ConRon.Refine.ExprOps.subst_pw_refines hks hvs hpw h
-  exact ⟨h2, h1.symm⟩
-
 @[lockstep] theorem prop_when_is_never_ls (pw : kernel.prop_when.PropWhen) :
     LSP (kernel.prop_when.is_never pw)
       (fun b => b = ConLeche.PropWhen.isNever (ConRon.Refine.absPropWhen pw)) :=
@@ -1599,35 +1606,6 @@ theorem take_eidx_n_from_val (xs : alloc.vec.Vec arena.handle.EIdx) :
 
 attribute [local lockstep_simp] absIRecRule absIRecRuleFire
 
-@[lockstep] theorem rec_rule_k_ls (rules : alloc.vec.Vec arena.env.IRecRule) :
-    LSP (arena.core.rec_rule_k rules) (fun b => b = recRuleK (rules.val.map absIRecRule)) := by
-  intro b h
-  rw [arena.core.rec_rule_k] at h
-  split at h
-  · rename_i hl
-    obtain ⟨x, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
-    obtain ⟨hb, rfl⟩ := ConRon.Refine2.ExprOps.vecIndexAt hx
-    cases Result.ok_injective h
-    have hl' : rules.val.length = 1 := by
-      have := congrArg (fun u : Std.Usize => u.val) hl
-      simpa [alloc.vec.Vec.len_val] using this
-    obtain ⟨y, hy⟩ := List.length_eq_one_iff.mp hl'
-    simp only [hy, List.map_cons, List.map_nil, recRuleK]
-    simp [absIRecRule]
-  · rename_i hl
-    cases Result.ok_injective h
-    have hl' : rules.val.length ≠ 1 := by
-      intro hc; apply hl; apply Aeneas.Std.UScalar.eq_imp
-      simpa [alloc.vec.Vec.len_val] using hc
-    unfold recRuleK
-    split
-    · rename_i r heq
-      have := congrArg List.length heq
-      simp at this; exact absurd this hl'
-    · rfl
-
-/-- `find_rule` answers the INDEX of the first rule at `c` from `i` on; the
-twin's `findRule` answers the rule itself. -/
 theorem find_rule_from (rules : alloc.vec.Vec arena.env.IRecRule) (c : arena.handle.NIdx) :
     ∀ k (i : Std.Usize), rules.length - i.val ≤ k → ∀ o,
       arena.core.find_rule rules c i = ok o →

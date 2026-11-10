@@ -67,3 +67,5 @@ public import ConAgua.Arena.NatDiv
 public import ConAgua.Arena.NatBitsNat
 public import ConAgua.Arena.NatGcd
 public import ConAgua.Arena.Store
+public import ConAgua.Arena.IndexRel
+public import ConAgua.Checker.ArmsT

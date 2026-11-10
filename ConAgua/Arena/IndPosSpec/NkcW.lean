@@ -36,7 +36,7 @@ open L.Arena
 /-! ## Decoded below the tops: the reads lie below the top -/
 
 theorem pos2_hslice_get {k : IdxKind} {a : Array Word} :
-    ∀ {o n : Nat} {l : List (Idx k)}, hslice? a o n = some l →
+    ∀ {o n : Nat} {l : List (Idx k)}, hslice? (aread a) o n = some l →
     l.length = n ∧ ∀ j, j < n → ∃ w, a[o + j]? = some w ∧ H w ∧ l[j]? = some (decI w)
   | o, 0, l, h => by simp [hslice?] at h; subst h; simp
   | o, n + 1, l, h => by
@@ -274,7 +274,7 @@ theorem nkcW_ok (k : Word) (K : NestKey) : ∀ (n : Nat) (m : Mem) (o l r : Word
     rw [hl'] at hks
     obtain ⟨v, K0, ks', rfl, hoi, hv, hK0, hks'⟩ := hks.cons
     have hrd : (rdW (m.arr64 IW) o).toNat = v := by
-      simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hv
+      simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hv
       obtain ⟨w, hw, rfl⟩ := hv; simp [rdW, hw]
     rcases he : nkeWf n m (rdW (m.arr64 IW) o) k with _ | r0 <;> rw [he] at h; · simp [nkcK] at h
     have hr0 := nkeWf_ok he (by rw [hrd]; exact hK0) hK htop
@@ -341,10 +341,10 @@ theorem pos2_decB_snoc (hf : ∀ q, OMono (fun m => f m q)) {m m' : Mem} {o l q 
     by_cases hjl : j < xs.length
     · obtain ⟨v, h1, h2, h3⟩ := he j hjl
       refine ⟨v, by omega, ?_, by rw [List.getElem_append_left hjl]; exact (DecB.grow (hf v) hg h3)⟩
-      simp only [iwN, nat?, iwA] at h2 ⊢; rw [hw j (by omega)]; exact h2
+      simp only [iwN, nat?, iwA, aread_apply, aread_apply] at h2 ⊢; rw [hw j (by omega)]; exact h2
     · have hj' : j = xs.length := by omega
       subst hj'
-      refine ⟨w.toNat, by omega, by simp [iwN, nat?, iwA, hl, hx], ?_⟩
+      refine ⟨w.toNat, by omega, by simp [iwN, nat?, iwA, aread_apply, hl, hx], ?_⟩
       simpa using hxd
   simpa [hl] using this
 
@@ -358,7 +358,8 @@ theorem pos2_key_rec {m' : Mem} {q c us dO dL : Word} {ds : List EIdx} (hc : H c
     (hds : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) m' ds) :
     DecB (fun m => decNK m q.toNat) m' ⟨decI c, decI us, ds⟩ := by
   have g : ∀ j < 4, ((truncM m').arr64 IW)[q.toNat + j]? = [c, us, dO, dL][j]? := fun j hj => by
-    rw [show ((truncM m').arr64 IW) = iwA (truncM m') from rfl, truncM_iw_eq (by omega)]; exact hget j (by simpa using hj)
+    have e := truncM_iw_eq (m := m') (i := q.toNat + j) (by omega)
+    simp only [iwA, aread_apply] at e; rw [e]; exact hget j (by simpa using hj)
   show decNK (truncM m') q.toNat = _
   exact decNK_of_words (by simpa using g 0 (by omega)) hc (by simpa using g 1 (by omega)) hus
     (by simpa using g 2 (by omega)) (by simpa using g 3 (by omega)) hds

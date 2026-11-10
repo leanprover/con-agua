@@ -1,15 +1,9 @@
 module
 
 import ConAgua.Arena.StubNamesRefine
-import ConAgua.Arena.StubIndRefine
-import ConAgua.Arena.StageInst1
 public import ConAgua.Arena.CallF
-public import ConAgua.Arena.DeclArmsCanon
 public import ConAgua.Arena.StripTeleSpec
-public import ConAgua.Arena.StubInd
 public import ConAgua.Arena.StubNames
-public import ConAgua.Arena.WhnfEntry
-public import ConAgua.Arena.WhnfIota
 import all ConAgua.Arena.DeclArmsCanon
 import all ConAgua.Arena.Env
 import all ConAgua.Arena.IndIface
@@ -64,7 +58,8 @@ theorem relW_callF {α : Type} [Inhabited α] {P : Prog} {f : FnName} {args : Li
 def rrnProg : Prog :=
   [("reserved_rec_name", L.Stubs.reservedRecNameL), ("reserved_contains", reservedContains),
    ("reserved_from", reservedFrom), ("lit_guard_has", L.Stubs.litGuardHas),
-   ("pin_range_has", L.Stubs.pinRangeHas), ("pin_at", pinAtL)]
+   ("pin_range_has", L.Stubs.pinRangeHas), ("pin_at", pinAtL),
+   ("reserved_rec_bool", L.Stubs.reservedRecBoolL)]
 
 def rrnFns : List FnName := rrnProg.map (·.1)
 
@@ -86,45 +81,7 @@ theorem rrnF_spec (p : Prog) (hp : RrnF p) (n : Nat) (s₀ : St) (args : List Wo
 /-- **`reserved_rec_name`'s model refines `reservedRecName`** (replaces
 `IndStubs.reservedRecName_spec`). -/
 theorem rrnF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Word) (hn : H n) :
-    RelW rrnF [n] (StageR dn vis fe) (reservedRecName (decI n)) (KeepPost dn vis fe decW0B) :=
+    RelW rrnF [n] (StageR vis fe) (reservedRecName (decI n)) (KeepPost vis fe decW0B) :=
   relW_callF (L.Stubs.reservedRecName_refines (p := rrnProg) (by constructor <;> rfl) dn vis fe n hn)
-
-/-! ## `rec_rule_bits` (lane `tails`' `recRuleBits_refines`) -/
-
-/-- `rec_rule_bits` and its callees. -/
-def rrbProg : Prog :=
-  [("rec_rule_bits", L.Stubs.recRuleBitsL), ("rec_rule_k_of", L.Stubs.recRuleKOfL),
-   ("rec_rule_eta_of", L.Stubs.recRuleEtaOfL), ("ctor_family", L.Stubs.ctorFamily),
-   ("er_sl_eq", L.Ind.erSlEq), ("const_name_of", constNameOfL), ("get_app_fn_f", getAppFnFL),
-   ("pi_result_f", piResultFL), ("get_app_fn", getAppFnL), ("pi_result", piResultL),
-   ("env_find", envFindL), ("env_row_get", envRowGetL), ("env_ix", envIxL)]
-
-def rrbFns : List FnName := rrbProg.map (·.1)
-
-theorem rrbProg_closed : closedA rrbProg [] [] rrbFns = true := by decide +kernel
-
-abbrev RrbF (p : Prog) : Prop := ProgHas p rrbProg
-
-/-- **The model of `rec_rule_bits`.** -/
-noncomputable def rrbF (m : Mem) (args : List Word) : Option (List Word × Mem) :=
-  callF rrbProg "rec_rule_bits" m args
-
-theorem rrbF_spec (p : Prog) (hp : RrbF p) (n : Nat) (s₀ : St) (args : List Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_rule_bits" args
-    ⦃fun r s' => LocEq s' s₀ ∧ rrbF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
-  callF_spec rrbProg_closed (hp.agree rrbFns) (by decide) n s₀ args
-
-/-- **`rec_rule_bits`' model refines `recRuleBits`** (replaces `IndStubs.recRuleBits_spec`). -/
-theorem rrbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c : Word) (hc : H c)
-    (rl : IRecRule) (hrl : rl.ctor = decI c) :
-    RelW rrbF [vis, c] (StageR dn vis fe) (recRuleBits fe rl)
-      (KeepPost dn vis fe (fun _ r (x : IRecRule) =>
-        x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) :=
-  relW_callF (L.Stubs.recRuleBits_refines (p := rrbProg) (by constructor <;> rfl) dn vis fe c hc rl hrl)
-
-theorem rrbF_frame {m m' : Mem} {args r : List Word} (h : rrbF m args = some (r, m')) :
-    MemFrame [] [] m m' := by
-  obtain ⟨n, hc⟩ := callF_run h
-  exact (run_memFrame rrbProg_closed (by decide) (run_of_callW hc)).1
 
 end L.Ind

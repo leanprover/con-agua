@@ -47,74 +47,55 @@ structure NatGateProg (p : Prog) : Prop extends MasterProg p where
 
 /-! ## `pin_at` as a model -/
 
-def pinAtW (m : Mem) (i : Word) : Option (List Word × Mem) :=
-  if pinW m 0 = 0 then none else if 51 ≤ i then none else some ([rdW (m.arr64 PINS) (1 + i)], m)
-
-theorem pinAt_specW (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St)
-    (i : Word) :
+/-- `pin_at(i)` as a pure read, for a slot other than `51` (whose word is `PINS[71]`): the memory
+is unchanged, and the word is slot `1 + i`. -/
+theorem pinAt_pure (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word)
+    (h51 : i ≠ 51 := by decide) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ pinAtW s₀.mem i = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ pinW s₀.mem 0 ≠ 0 ∧ i.toNat < 51 ∧
+      r = [pinW s₀.mem (1 + i.toNat)] ∧ s'.mem = s₀.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, pinAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have h51' : i.toNat ≠ 51 := fun e => h51 (UInt64.toNat_inj.mp (by simpa using e))
+    sym only [lang_grind, arena_grind] =>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [pinW_eq, rdW_eq]
+
+/-- `pin_at(i)` as a pure read at any slot (the vcgen form: slot `51`'s word is `PINS[71]`). -/
+theorem pinAt_any (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
+    ⦃fun r s' => LocEq s' s₀ ∧ pinW s₀.mem 0 ≠ 0 ∧ i.toNat < 52 ∧
+      r = [pinW s₀.mem (if i = 51 then 71 else 1 + i.toNat)] ∧ s'.mem = s₀.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, pinAtL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [pinAtW, pinW_eq, rdW_eq]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [pinW_eq, rdW_eq]
 
-/-- A returning `pin_at(i)`: memory unchanged, flag set, `i < 51`, the word of slot `j = 1 + i`. -/
+/-- A returning `pin_at(i)`, `i ≠ 51`: memory unchanged, flag set, `i < 51`, the word of slot
+`j = 1 + i`. -/
 theorem pinAt_model {p : Prog} (hp : p.lookup "pin_at" = some pinAtL) {n : Nat} {m m' : Mem}
     {i : Word} {r : List Word} (h : callW p n "pin_at" [i] m = some (r, m')) {j : Nat}
-    (hj : 1 + i.toNat = j) : m' = m ∧ pinW m 0 ≠ 0 ∧ i.toNat < 51 ∧ r.headD 0 = pinW m j := by
-  obtain ⟨s', rfl, -, hmod⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (pinAt_specW p hp n _ i) h
-  change pinAtW m i = some (r, s'.mem) at hmod
-  unfold pinAtW at hmod
-  by_cases h0 : pinW m 0 = 0
-  · simp [h0] at hmod
-  rw [ite_eq_right h0] at hmod
-  by_cases h1 : 51 ≤ i
-  · simp [h1] at hmod
-  rw [ite_eq_right h1] at hmod
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmod
-  obtain ⟨rfl, hm⟩ := hmod
-  have hi : i.toNat < 51 := by
-    have : ¬ (51 : Word).toNat ≤ i.toNat := fun e => h1 (UInt64.le_iff_toNat_le.mpr e)
-    simpa using this
-  refine ⟨hm.symm, h0, hi, ?_⟩
-  have e1 : (1 + i).toNat = 1 + i.toNat := by rw [UInt64.toNat_add]; simp; omega
-  simp [rdW, pinW, e1, hj]
+    (hj : 1 + i.toNat = j) (h51 : i ≠ 51 := by decide) :
+    m' = m ∧ pinW m 0 ≠ 0 ∧ i.toNat < 51 ∧ r.headD 0 = pinW m j := by
+  obtain ⟨s', rfl, -, h0, hi, rfl, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pinAt_pure p hp n _ i h51) h
+  exact ⟨hm, h0, hi, by simp [hj]⟩
 
-/-- `pin_at(i)` as a pure read: the memory is unchanged, and the word is slot `1 + i`. -/
-theorem pinAt_pure (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ pinW s₀.mem 0 ≠ 0 ∧ i.toNat < 51 ∧
-      r = [pinW s₀.mem (1 + i.toNat)] ∧ s'.mem = s₀.mem; ⊤⦄ := by
-  refine triple_post (pinAt_specW p hp n s₀ i) ?_
-  rintro r s' ⟨hl, hm⟩
-  unfold pinAtW at hm
-  by_cases h0 : pinW s₀.mem 0 = 0
-  · simp [h0] at hm
-  rw [ite_eq_right h0] at hm
-  by_cases h1 : 51 ≤ i
-  · simp [h1] at hm
-  rw [ite_eq_right h1] at hm
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, hm⟩ := hm
-  have hi : i.toNat < 51 := by
-    have : ¬ (51 : Word).toNat ≤ i.toNat := fun e => h1 (UInt64.le_iff_toNat_le.mpr e)
-    simpa using this
-  have e1 : (1 + i).toNat = 1 + i.toNat := by rw [UInt64.toNat_add]; simp; omega
-  exact ⟨hl, h0, hi, by simp [rdW, pinW, e1], hm.symm⟩
 
 theorem decHL_words {k : IdxKind} (m : Mem) : ∀ (ws : List Word) (o : Nat),
-    (∀ w ∈ ws, w.toNat < 2 ^ 32) → (∀ j < ws.length, (iwA m)[o + j]? = ws[j]?) →
+    (∀ w ∈ ws, w.toNat < 2 ^ 32) → (∀ j < ws.length, iwA m (o + j) = ws[j]?) →
     (decHL m o ws.length : Option (List (Idx k))) = some (ws.map decI)
   | [], o, _, _ => by simp [decHL, hslice?]
   | w :: ws, o, hlt, hget => by
     simp only [List.length_cons, decHL, hslice?_succ]
-    have h0 : (iwA m)[o]? = some w := by simpa using hget 0 (by simp)
+    have h0 : iwA m o = some w := by simpa using hget 0 (by simp)
     have hw : w.toNat < 2 ^ 32 := hlt w (by simp)
     have ih := decHL_words (k := k) m ws (o + 1) (fun x hx => hlt x (by simp [hx]))
       (fun j hj => by simpa [Nat.add_assoc, Nat.add_comm 1 j] using hget (j + 1) (by simpa using hj))
@@ -122,10 +103,10 @@ theorem decHL_words {k : IdxKind} (m : Mem) : ∀ (ws : List Word) (o : Nat),
     simp [hd?, h0, hw, ih]
 
 /-- A freshly written handle slice keeps the stage relation and decodes. -/
-theorem slice_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} {ws : List Word} {q k : Word} (hS : StageR dn vis fe m a)
+theorem slice_keep {κ : IdxKind} {vis : Word} {fe : IFEnv} {m m' : Mem}
+    {a : AState} {ws : List Word} {q k : Word} (hS : StageR vis fe m a)
     (hrec : RecPost m m' [q] ws) (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hk : k.toNat = ws.length) :
-    KeepPost dn vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a [q, k]
+    KeepPost vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a [q, k]
       (ws.map (decI : Word → Idx κ)) := by
   obtain ⟨hq, hKeep, hroom, htop, hget⟩ := hrec
   have hq' : q.toNat = iwTop m := by simp only [List.headD_cons] at hq; rw [hq]; rfl
@@ -151,7 +132,7 @@ theorem natOpNames_specW (p : Prog) (hp : p.lookup "nat_op_names" = some natOpNa
   simp only [callFn, natOpNamesL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_pure p hpin n, callW_spec p n "iw_alloc"] <;>
+      pinAt_any p hpin n, callW_spec p n "iw_alloc"] <;>
     finish (gen := 20) [natOpNamesW, ntBW]
 
 theorem natOpNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
@@ -159,8 +140,8 @@ theorem natOpNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
   simp [natOpNames, StateT.run_bind, pinAt_run hF, exc_ok_bind', StateT.run_map] <;> rfl
 
 theorem natOpNames_ref (hN : NatGateProg p) :
-    CallRef p "nat_op_names" [] (StageR dn vis fe) natOpNames
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
+    CallRef p "nat_op_names" [] (StageR vis fe) natOpNames
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
   have hw := callW_model (M := fun mm => natOpNamesW p k mm) (natOpNames_specW p hN.lNatOpNames hN.lPinAt k ·) hc
   unfold natOpNamesW at hw
@@ -197,8 +178,8 @@ theorem natOpNames_ref (hN : NatGateProg p) :
 
 @[refines ConRon.Arena.natOpNames]
 theorem natOpNames_refines (hN : NatGateProg p) :
-    RefAM p "nat_op_names" [] (StageR dn vis fe) natOpNames
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) :=
+    RefAM p "nat_op_names" [] (StageR vis fe) natOpNames
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) :=
   (natOpNames_ref hN).refAM
 
 def natDivModNamesW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
@@ -214,7 +195,7 @@ theorem natDivModNames_specW (p : Prog) (hp : p.lookup "nat_div_mod_names" = som
   simp only [callFn, natDivModNamesL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_pure p hpin n, callW_spec p n "iw_alloc"] <;>
+      pinAt_any p hpin n, callW_spec p n "iw_alloc"] <;>
     finish (gen := 20) [natDivModNamesW, ntBW]
 
 theorem natDivModNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
@@ -222,8 +203,8 @@ theorem natDivModNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
   simp [natDivModNames, StateT.run_bind, pinAt_run hF, exc_ok_bind', StateT.run_map] <;> rfl
 
 theorem natDivModNames_ref (hN : NatGateProg p) :
-    CallRef p "nat_div_mod_names" [] (StageR dn vis fe) natDivModNames
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
+    CallRef p "nat_div_mod_names" [] (StageR vis fe) natDivModNames
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
   have hw := callW_model (M := fun mm => natDivModNamesW p k mm) (natDivModNames_specW p hN.lNatDivModNames hN.lPinAt k ·) hc
   unfold natDivModNamesW at hw
@@ -261,8 +242,8 @@ theorem natDivModNames_ref (hN : NatGateProg p) :
 
 @[refines ConRon.Arena.natDivModNames]
 theorem natDivModNames_refines (hN : NatGateProg p) :
-    RefAM p "nat_div_mod_names" [] (StageR dn vis fe) natDivModNames
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) :=
+    RefAM p "nat_div_mod_names" [] (StageR vis fe) natDivModNames
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) :=
   (natDivModNames_ref hN).refAM
 
 end names
@@ -270,13 +251,13 @@ end names
 /-! ## `nat_op_deps` -/
 
 /-- A freshly written slice, from the allocation and the words written. -/
-theorem emit_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+theorem emit_keep {κ : IdxKind} {vis : Word} {fe : IFEnv} {p : Prog}
     (hal : p.lookup "iw_alloc" = some iwAlloc) {k : Nat} {m mq m' : Mem} {a : AState}
-    {rq r : List Word} {N : Word} {ws : List Word} (hS : StageR dn vis fe m a)
+    {rq r : List Word} {N : Word} {ws : List Word} (hS : StageR vis fe m a)
     (hN : N.toNat = ws.length) (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hq : callW p k "iw_alloc" [N] m = some (rq, mq)) (hr : r = [rq.headD 0, N])
     (hm : m' = wrIW mq (rq.headD 0) ws) :
-    KeepPost dn vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a r
+    KeepPost vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a r
       (ws.map (decI : Word → Idx κ)) := by
   obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hal N k m rq mq hS.iw hq
   have hrec := recPost_wr m ws N hN hS.iw (by simpa [iwTop, hN] using hroom)
@@ -300,7 +281,7 @@ theorem natOpPinsA_specW (p : Prog) (hp : p.lookup "nat_op_pins_a" = some natOpP
   | succ n =>
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_pure p hpin n] <;>
+      pinAt_any p hpin n] <;>
     finish (gen := 20) [natOpPinsAW]
 
 theorem natOpPinsA_fref (hp : p.lookup "nat_op_pins_a" = some natOpPinsAL)
@@ -335,7 +316,7 @@ theorem natOpPinsB_specW (p : Prog) (hp : p.lookup "nat_op_pins_b" = some natOpP
   | succ n =>
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_pure p hpin n] <;>
+      pinAt_any p hpin n] <;>
     finish (gen := 20) [natOpPinsBW]
 
 theorem natOpPinsB_fref (hp : p.lookup "nat_op_pins_b" = some natOpPinsBL)
@@ -370,7 +351,7 @@ theorem natOpPinsC_specW (p : Prog) (hp : p.lookup "nat_op_pins_c" = some natOpP
   | succ n =>
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_pure p hpin n] <;>
+      pinAt_any p hpin n] <;>
     finish (gen := 20) [natOpPinsCW]
 
 theorem natOpPinsC_fref (hp : p.lookup "nat_op_pins_c" = some natOpPinsCL)
@@ -482,9 +463,9 @@ end pins
 
 /-! ## `nat_op_deps` -/
 
-theorem KeepPost.of_grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {α : Type}
+theorem KeepPost.of_grow {vis : Word} {fe : IFEnv} {α : Type}
     {dec : Mem → List Word → α → Prop} {m1 m m' : Mem} {a : AState} {r : List Word} {x : α}
-    (h : KeepPost dn vis fe dec m1 m' a r x) (hg : IWGrow m m1) : KeepPost dn vis fe dec m m' a r x :=
+    (h : KeepPost vis fe dec m1 m' a r x) (hg : IWGrow m m1) : KeepPost vis fe dec m m' a r x :=
   ⟨h.1, hg.trans h.2.1, h.2.2⟩
 
 end L.Ind

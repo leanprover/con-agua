@@ -24,7 +24,7 @@ local notation "V" => ConLeche.CheckMode.verified
 section twin
 variable (mode : ConLeche.CheckMode) (fe : IFEnv) (p : BlockShape) (nestedBit : Bool)
     (params : List EIdx) (tbl : List NestCtorNf) (rd : ClassRead) (ms : List TargetMajor)
-    (cvTas : List IConstantVal) (block : List IConstantInfo) {β : Type}
+    (block : List IConstantInfo) {β : Type}
 
 /-- The twin's `genRecCheck`, part A: the pins, the stream's recursor types, the guards. -/
 def grcTwinA (k : List IConstantVal → AM β) : AM β := do
@@ -42,13 +42,14 @@ def grcTwinA (k : List IConstantVal → AM β) : AM β := do
 /-- Part B: the classes' entries and constructors, the count, the formers, the level. -/
 def grcTwinB (k : List TargetMajor → List (List ConRon.Arena.ClassCtor) → List EIdx → LIdx → AM β) :
     AM β := do
-  let formerTys := cvTas.map (·.type)
+  let formers := p.formers
+  let formerTys := formers.map (·.type)
   let ms2 ← ConRon.Arena.classesNfs mode fe p formerTys tbl ms
   let ctors ← ConRon.Arena.classesCtors mode fe p formerTys rd ms2 0 ms2
   unless (rd.slots.filter ConRon.Arena.ClassSlot.isMinor).length == (ctors.map List.length).sum do
     ConRon.Arena.fail (.invalid "generated recursor: the recursors' prefix has a minor premise for no \
       constructor of a class (official: invalid recursor)")
-  let formerTysC ← ms2.mapM (ConRon.Arena.classFormerTy fe cvTas)
+  let formerTysC ← ms2.mapM (ConRon.Arena.classFormerTy mode fe formers)
   let elim ← ConRon.Arena.structElimLevel p.elim p.large
   k ms2 ctors formerTysC elim
 
@@ -67,10 +68,10 @@ def grcTwinC (cvRis : List IConstantVal) (ms2 : List TargetMajor)
 /-- The rest: the pushes, the rules, the pops. -/
 def grcTwinR (g : ConRon.Arena.ClassGen) (cvGs : List IConstantVal) :
     AM (IFEnv × List (IConstantVal × TargetMajor × List EIdx)) := do
-  let visT := fe.visibleBelow
   let (feR, prevs) := ConRon.Arena.classFeR p cvGs rd.recCls fe
+  let pushed := cvGs.map (·.name)
   ConRon.Arena.flushCaches
-  let out ← ConRon.Arena.classRecsRulesOk mode visT feR g rd.recCls cvGs cvGs rd.recCls
+  let out ← ConRon.Arena.classRecsRulesOk mode feR pushed g rd.recCls cvGs cvGs rd.recCls
   let fe2 := prevs.foldr (fun (n, prev) acc => acc.popTemp n prev) feR
   ConRon.Arena.flushCaches
   pure (fe2, out)

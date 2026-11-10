@@ -16,13 +16,15 @@ import Std.WP.Triple.SpecLemmas
 /-!
 # One line of the export, applied: `front_line`
 
-`front_line(i)` reads the line at `i` once, as con-ron's `scan_line_fwd` does (`line_rec`,
+`front_line(i, first)` reads the line at `i` once, as con-ron's `scan_line_fwd` does (`line_rec`,
 `ConAgua.Front.LineRec`): it validates the line and reads its record's fields in one pass, then
-applies the record to the parse state: a name or level line by `apply_rec` (`apply_nstr`,
+applies the record to the parse state if it stands where it may (`lineRecPlaced`: the `meta`
+header only as the first line, every other record never there, a blank line nowhere; a misplaced
+line aborts, the twin's `.internal` failure): a name or level line by `apply_rec` (`apply_nstr`,
 `apply_nnum`, `apply_level`, `ConAgua.Front.Apply`), an expression line by `apply_expr`, a
 declaration or inductive line by `apply_dline` (below). It returns `(0, 0)` for a line that does
-not scan, `(1, next)` otherwise (`next` after the line's newline, `0` at the end of the input). A
-blank line and the `meta` header change nothing. A number of more than 18 digits aborts
+not scan, `(1, next)` otherwise (`next` after the line's newline, `0` at the end of the input). The
+`meta` header changes nothing. A number of more than 18 digits aborts
 (`docs/deviations.md`, D2), as does a full pool or table.
 
 The models here are the name and level steps' (`lineRecW`, `applyStrW`, with `apply_rec`'s and
@@ -42,13 +44,14 @@ open L.Front.Unescape (strPutEscW strPutEsc_specW escSur escOne utf8Put strPutEs
 
 namespace L.Front
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine -/
-@[no_expose, l_impl ConRon.Arena.Frontend.applyLine]
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:471-477 ConRon.Arena.Frontend.applyLine -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:455-462 ConRon.Arena.Frontend.lineRecPlaced
+@[no_expose, l_impl ConRon.Arena.Frontend.applyLine ConRon.Arena.Frontend.lineRecPlaced]
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2576-2599 ConLeche.Frontend.scanLineFwd
-def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
+def frontLine : FunDecl := lfn (i, first) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
   s := call skip_ws(i);
-  if s < len(IN.u8) && IN.u8[s] == 10 { return (1, s + 1) };
-  if len(IN.u8) <= s { return (1, 0) };
+  if s < len(IN.u8) && IN.u8[s] == 10 { abort };
+  if len(IN.u8) <= s { abort };
   if IN.u8[s] != 123 { return (0, 0) };
   (j, pl, idx, a, c, d) := call line_rec(s + 1);
   if j == 0 { return (0, 0) };
@@ -56,6 +59,7 @@ def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
   if q < len(IN.u8) && IN.u8[q] == 10 { nx := q + 1 }
   else if len(IN.u8) <= q { nx := 0 }
   else { return (0, 0) };
+  if pl == 7 { if first == 0 { abort } } else { if first != 0 { abort } };
   if pl == 0 { ok := call apply_dline(s + 1) }
   else if pl <= 7 { ok := call apply_rec(pl, idx, a, c, d) }
   else { ok := call apply_expr(pl, idx, a, c, d) };
@@ -64,7 +68,7 @@ def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
 
 /-- A declaration line: its fields, applied (an inductive block by `apply_ind` at its value's
 position `nm`, `IndApply.lean`; a line that does not read aborts). -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:471-477 ConRon.Arena.Frontend.applyLine
 @[no_expose] def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) {
   (pl, nm, lps, ty, vl, hk, hn, fl) := call rec_decl_line(j);
   if pl == 0 { abort };
@@ -77,7 +81,7 @@ position `nm`, `IndApply.lean`; a line that does not read aborts). -/
 }
 
 /-- A name or level line with fields `(pl, idx, a, c, d)`, applied. -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:471-477 ConRon.Arena.Frontend.applyLine
 @[no_expose] def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
   if pl == 0 { abort };
   if pl == 7 { return 0 };
@@ -96,7 +100,7 @@ position `nm`, `IndApply.lean`; a line that does not read aborts). -/
 }
 
 /-- A `str` name line: the body `[c, d)`, unescaped into the pool and applied. -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:471-477 ConRon.Arena.Frontend.applyLine
 @[no_expose] def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l) {
   if c == 0 { abort };
   (o, l) := call str_put_esc(c, d);

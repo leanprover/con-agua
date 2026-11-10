@@ -39,20 +39,11 @@ theorem allocWr_ok {m : Mem} {ws : List Word} {k : Word} (hI : IWOK m) (hk : k.t
   have hfr : MemFrame [IW] [200] m (wrIW (allocMem m k) (rdW (m.arr64 CTL) 200) ws) :=
     (allocMem_frame m k).trans (wrIW_frame ws _ _)
   obtain ⟨_, hKeep, _, htop, _⟩ := hrec
-  obtain ⟨hI1, hE1, hsz, hEs, hct⟩ := hI
-  refine ⟨⟨hfr, hKeep.1, ?_⟩, htop, fun j hj => ?_⟩
-  · have hE : (wrIW (allocMem m k) (rdW (m.arr64 CTL) 200) ws).arr64 EREC = m.arr64 EREC :=
-      hfr.arr EREC (by decide) (by decide)
-    have h129 := hfr.ctl 129 (by decide)
-    refine ⟨?_, ?_, ?_, ?_, ?_⟩
-    · rw [htop, hfr.size IW]; exact hroom
-    · simp only [erTop, h129, hE]; exact hE1
-    · rw [hfr.size IW]; exact hsz
-    · rw [hE]; exact hEs
-    · rw [hfr.size CTL]; exact hct
-  · have := pw_rec ⟨hI1, hE1, hsz, hEs, hct⟩ (recPost_wr m ws k hk ⟨hI1, hE1, hsz, hEs, hct⟩ hroom) j hj
-    simp only [pw] at this
-    rw [this, getElem!_pos ws j hj]
+  refine ⟨⟨hfr, hKeep.1, IWOK.of_iw hfr hI (by rw [htop, hfr.size IW]; exact hroom)⟩, htop,
+    fun j hj => ?_⟩
+  have := pw_rec hI (recPost_wr m ws k hk hI hroom) j hj
+  simp only [pw] at this
+  rw [this, getElem!_pos ws j hj]
 
 theorem iwTop_lt' (m : Mem) : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
 theorem iwTop_lt_size (m : Mem) : iwTop m < UInt64.size := UInt64.toNat_lt _

@@ -60,9 +60,9 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hel : ∀ j < dL.toNat, ∃ w, (m0.arr64 IW)[dO.toNat + j]? = some w ∧ H w ∧ ds[j]? = some (decI w))
     (hb : dO.toNat + dL.toNat ≤ iwTop m0) :
     ∀ (n : Nat) (m m' : Mem) (a : AState) (k f : Word) (r : List Word),
-    p2sfW n m dO dL k f = some (r, m') → StageR dn vis fe m a → IWGrow m0 m → k.toNat ≤ dL.toNat → PosMR m →
+    p2sfW n m dO dL k f = some (r, m') → StageR vis fe m a → IWGrow m0 m → k.toNat ≤ dL.toNat → PosMR m →
     ∃ a', ((ds.drop k.toNat).foldlM pos2FuelF f.toNat).run a = .ok ((r.headD 0).toNat, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m'
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ PosMR m'
   | 0, m, m', a, k, f, r, h, _, _, _, _ => by simp [p2sfW] at h
   | n + 1, m, m', a, k, f, r, h, hS, hg0, hk, hP => by
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize

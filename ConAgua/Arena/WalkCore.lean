@@ -47,12 +47,12 @@ theorem wscoped_core (hp : WsProg p) : WscopedBFastOK p := by
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   have hmem : CoreMemos s'.mem :=
     ⟨coreIl_frame hf (by decide) (by decide) hS.memos, coreAb_frame hf (by decide) (by decide) hS.memos,
-      hM',
+      ⟨hM',
       let ⟨mp, hm⟩ := hS.memos.walk.fl
       ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf mp hm⟩,
       let ⟨mp, hm⟩ := hS.memos.walk.lsb
       ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf mp hm⟩,
-      hS.memos.walk.lp.frame hf (by decide) (by decide)⟩
+      hS.memos.walk.lp.frame hf (by decide) (by decide)⟩, hS.memos.hbF hf⟩
   obtain ⟨hS', hSt⟩ := hS.frameM hf (by decide) (by simp) hmem
   refine ⟨hloc, hok, ⟨M, by rw [hst]; exact hS', KeptAll.refl _ _, hSt⟩, ?_, ?_⟩
   · rw [hres, decBool]
@@ -77,9 +77,9 @@ theorem leafGuard_core (hp : LgProg p) : LeafGuardOK p := by
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   have hmem : CoreMemos s'.mem :=
     ⟨coreIl_frame hf (by decide) (by decide) hS.memos, coreAb_frame hf (by decide) (by decide) hS.memos,
-      let ⟨mp, hm⟩ := hS.memos.walk.ws
+      ⟨let ⟨mp, hm⟩ := hS.memos.walk.ws
       ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ _ _ (by decide) (by decide) _ _ hf mp hm⟩,
-      hM'.1, hM'.2, hS.memos.walk.lp.frame hf (by decide) (by decide)⟩
+      hM'.1, hM'.2, hS.memos.walk.lp.frame hf (by decide) (by decide)⟩, hS.memos.hbF hf⟩
   obtain ⟨hS', hSt⟩ := hS.frameM hf (by decide) (by simp) hmem
   refine ⟨hloc, hok, ⟨M, by rw [hst]; exact hS', KeptAll.refl _ _, hSt⟩, ?_, ?_⟩
   · rw [hres, decBool]

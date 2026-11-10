@@ -18,8 +18,8 @@ import all ConAgua.Arena.WhnfCore
 
 The callW pattern of `WhnfCoreSlot.lean`, one function at a time.
 
-* Environment reads: `env_find`'s flag `≠ 0` means the name has a row (`envFind_found`), and every
-  row decodes (`EnvR.found_some`): the L code may read the record's words where the twin matches
+* Environment reads: `env_find`'s flag `≠ 0` means the name has a record that decodes
+  (`envFind_refines`): the L code may read the record's words where the twin matches
   on the decoded constant (`decCI_ctor`).
 -/
 
@@ -33,42 +33,12 @@ namespace L.Arena
 
 /-! ## `env_find`: a found row is a row -/
 
-theorem envFind_found (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
-    (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
-    (n : Nat) (s₀ : St) (vis w : Word) (hw : w.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "env_find" [w, vis]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
-      (r.headD 0 ≠ 0 → rowTag w ≤ 2 ∧ rowC s₀.mem w ≠ 0 ∧ r.tail.headD 0 = rowP s₀.mem w); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, envFindL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
-      finish
+theorem hd?_eq {k : IdxKind} {a : Nat → Option Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
+    ∃ w, a i = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w :=
+  hd?_some h
 
-/-- **Every row of the index decodes.** -/
-theorem EnvR.found_some {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
-    (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2)
-    (hc : rowC m w ≠ 0) : ∃ ci, decCI (erecP m) dn (rowP m w).toNat = some ci := by
-  have hn : (decI w : NIdx).word.toUInt64 = w := (word_decI _ w hw).mpr rfl
-  have hk := h.keys (decI w) (by rw [hn]; exact ht)
-  have hv := h.vals (decI w) (by rw [hn]; exact ht) (by rw [hn]; exact hc)
-  rw [hn] at hk hv
-  cases e : fe.idx[(decI w : NIdx)]? with
-  | none => simp [e, rowW, hc] at hk
-  | some q => rw [e] at hv; exact ⟨q.2, hv.symm⟩
-
-theorem hd?_eq {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
-    ∃ w, a[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
-  cases e : a[i]? with
-  | none => simp [hd?, e] at h
-  | some w => simp [hd?, e] at h; exact ⟨w, rfl, h.1, h.2.symm⟩
-
-theorem decCV_type {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    ∃ w, a[q + 3]? = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
+theorem decCV_type {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+    ∃ w, a (q + 3) = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨n, -, ls, -, ty, ht, hc⟩ := h
   cases hc
@@ -77,39 +47,16 @@ theorem decCV_type {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q
 
 /-- The kind word of a decoded constant record says whether it is a constructor, and a
 constructor's type is the handle at `q + 4`. -/
-theorem decCI_ctor {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
-    (hsz : b.size < 2 ^ 63) :
-    (rdW b q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ cv.type = decI (rdW b (q + 4)) ∧
-      (rdW b (q + 4)).toNat < 2 ^ 32) ∧
-    (rdW b q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
-  cases hq : a[q.toNat]? with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  have hqb := hab _ _ hq
-  have hlt : q.toNat < b.size := by
-    rcases Nat.lt_or_ge q.toNat b.size with h' | h'
-    · exact h'
-    · simp [Array.getElem?_eq_none h'] at hqb
-  have h4 : (q + 4).toNat = q.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
-  have hrd : rdW b q = w := by simp [rdW, hqb]
-  rw [hrd]
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  constructor
-  · intro hw; subst hw
-    simp only [show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff] at h
-    obtain ⟨cv, hcv, np, -, nf, -, hc⟩ := h
-    cases hc
-    obtain ⟨tw, htw, htl, hty⟩ := decCV_type hcv
-    have htwb := hab _ _ htw
-    have hrd4 : rdW b (q + 4) = tw := by
-      simp only [rdW, h4]; rw [show q.toNat + 4 = q.toNat + 1 + 3 by omega, htwb]; rfl
-    exact ⟨cv, _, _, rfl, by rw [hrd4]; exact hty, by rw [hrd4]; exact htl⟩
-  · intro hw cv np nf hc
-    subst hc
-    have hne : w.toNat ≠ 4 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h hne; simp [Option.bind_eq_some_iff] at h hne)
+theorem decCI_ctor {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
+    (rd q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ cv.type = decI (rd (q + 4)) ∧
+      (rd (q + 4)).toNat < 2 ^ 32) ∧
+    (rd q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+  have hs := decCI_split hR h
+  refine ⟨fun h4 => ?_, hs.2.2.2.2.2⟩
+  obtain ⟨cv, np, nf, rfl, hcv⟩ := hs.2.2.2.2.1 h4
+  obtain ⟨-, -, hty, hlt⟩ := decCV_rd hR hcv
+  exact ⟨cv, np, nf, rfl, hty, hlt⟩
 
 /-! ## Runs of plain triples -/
 
@@ -121,8 +68,8 @@ def projCertW (p : Prog) (n : Nat) (m : Mem) (vis k _ao an : Word) : Option (Wor
   | none => none
   | some (r₁, m₁) =>
     if r₁.headD 0 = 0 then some (0, m₁)
-    else if rdW (m₁.arr64 EREC) (r₁.tail.headD 0) ≠ 4 then some (0, m₁)
-    else match callW p n "peel_pis" [an, rdW (m₁.arr64 EREC) (r₁.tail.headD 0 + 4)] m₁ with
+    else if erRdT m₁ (r₁.tail.headD 0) ≠ 4 then some (0, m₁)
+    else match callW p n "peel_pis" [an, erRdT m₁ (r₁.tail.headD 0 + 4)] m₁ with
       | none => none
       | some (r₂, m₂) => some (if r₂.headD 0 ≠ 0 then 1 else 0, m₂)
 
@@ -134,13 +81,13 @@ theorem projCertW_none (h : callW p n "env_find" [k, vis] m = some (r₁, m₁))
   simp only [projCertW, h, h0, ↓reduceIte]
 
 theorem projCertW_kind (h : callW p n "env_find" [k, vis] m = some (r₁, m₁)) (h0 : ¬ r₁.headD 0 = 0)
-    (h4 : rdW (m₁.arr64 EREC) (r₁.tail.headD 0) ≠ 4) :
+    (h4 : erRdT m₁ (r₁.tail.headD 0) ≠ 4) :
     projCertW p n m vis k ao an = some (0, m₁) := by
   simp only [projCertW, h, h0, h4, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem projCertW_peel (h : callW p n "env_find" [k, vis] m = some (r₁, m₁)) (h0 : ¬ r₁.headD 0 = 0)
-    (h4 : ¬ rdW (m₁.arr64 EREC) (r₁.tail.headD 0) ≠ 4)
-    (h2 : callW p n "peel_pis" [an, rdW (m₁.arr64 EREC) (r₁.tail.headD 0 + 4)] m₁ = some (r₂, m₂)) :
+    (h4 : ¬ erRdT m₁ (r₁.tail.headD 0) ≠ 4)
+    (h2 : callW p n "peel_pis" [an, erRdT m₁ (r₁.tail.headD 0 + 4)] m₁ = some (r₂, m₂)) :
     projCertW p n m vis k ao an = some (if r₂.headD 0 ≠ 0 then 1 else 0, m₂) := by
   simp only [projCertW, h, h0, h4, h2, ↓reduceIte]
 
@@ -152,10 +99,9 @@ theorem projCert_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (vi
   rw [invoke_eq _ hp.cert]
   simp only [callFn, projCertL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "env_find", callW_spec p n "peel_pis"] <;>
     finish [projCertW_none, projCertW_kind, projCertW_peel]
-
 
 theorem projCert_run_none (fe : IFEnv) (c : NIdx) (args : List EIdx) (a : AState)
     (h : ∀ cv np nf, fe.find? c ≠ some (.ctorInfo cv np nf)) :
@@ -189,16 +135,14 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   refine ⟨hloc, ?_⟩
   simp only [projCertW] at hW
   rcases hc : callW p n "env_find" [k, vis] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hc, reduceCtorEq] at hW
-  obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callW
-    (envFind_refines p hp.envix hp.envrow hp.envfind n s vis k hS.env hk) hc
-  obtain ⟨t₁', ht₁', hm₁', -, hfound⟩ := triple_of_callW
-    (envFind_found p hp.envix hp.envrow hp.envfind n s vis k hk) hc
+  obtain ⟨t₁, ht₁, hm₁, -, hfind, hdec⟩ := triple_of_callW
+    (envFind_refines p hp.envrow hp.baserow hp.envfind n s vis k hS.env hk) hc
   rw [ht₁] at hm₁
   subst hm₁
   by_cases h0 : r₁.headD 0 = 0
   · rw [ite_eq_left h0] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf h => by
       rw [hnone] at h; cases h)
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
@@ -208,13 +152,11 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     · rw [hres]; simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right h0] at hW
-  obtain ⟨htag, hrow, hq⟩ := hfound h0
-  obtain ⟨ci, hci⟩ := hS.env.found_some k hk htag hrow
+  obtain ⟨ci, hci⟩ := hdec h0
   have hfind' : fe.find? (decI k) = some ci := by
-    rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
-  rw [← hq] at hci
-  have hctor := decCI_ctor hci (erecP_ext _) hS.erec
-  by_cases h4 : rdW (s.mem.arr64 EREC) (r₁.tail.headD 0) ≠ 4
+    rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
+  have hctor := decCI_ctor (erRdOK _) hci
+  by_cases h4 : erRdT s.mem (r₁.tail.headD 0) ≠ 4
   · rw [ite_eq_left h4] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf h => by
@@ -227,7 +169,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right h4] at hW
   obtain ⟨cv, np, nf, rfl, hty, htw⟩ := hctor.1 (by simpa using h4)
-  rcases hc2 : callW p n "peel_pis" [an, rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 4)] s.mem with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
+  rcases hc2 : callW p n "peel_pis" [an, erRdT s.mem (r₁.tail.headD 0 + 4)] s.mem with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨t₂, ht₂, hm₂, -, -, hpeel⟩ := triple_of_callW
     (peelPis_refines p hp.spine n s a₀ hS.arena.base an _ htw) hc2
@@ -257,13 +199,17 @@ theorem CoreS.frame_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
       DerR.frameM A C m m' hf (fun b hb => by rw [hA b hb]; decide) a hS.arena.der⟩,
     hS.core.frame (aA 96 128 (by decide)) (aC 96 128 (by decide)) hf,
     hS.pins.congr (hf.arr PINS (fun h => by have := hA _ h; simp [PINS, SPN] at this) (by decide)),
-    hS.env.frame (aA 129 144 (by decide)) (aC 128 136 (by decide)) hf,
+    hS.env.frame (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide) hf,
     hS.readL, hS.readLs, hS.nwf, hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
     hS.memos.frame_hi hf (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide)
-      (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide),
+      (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide)
+      (fun h => by have := hA _ h; simp [L.Ind.HBM, SPN] at this) (fun h => by have := hC _ h; simp at this),
     hf.size BSTK ▸ hS.bstk,
     hS.den.frameE (hf.arr EREC (fun h => by have := hA _ h; simp [EREC, SPN] at this) (by decide)),
-    hS.mode.frame hf (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)⟩
+    hS.mode.frame hf (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this),
+    hS.iwF hf (fun h => by have := hA _ h; simp [EREC, SPN] at this)
+      (fun h => by have := hA _ h; simp [SPN] at this) (fun h => by have := hC _ h; simp at this)
+      (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)⟩
 
 theorem SpineR.keep {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
     (hsz : (m'.arr64 SPN).size = (m.arr64 SPN).size)

@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Checker.Prog
 public import ConAgua.Arena.LoopFns
 public import ConAgua.Compiler.WriteSetSplit
 public import ConAgua.Arena.LevelIntern
@@ -86,7 +85,6 @@ import all ConAgua.Arena.NatSub
 import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
@@ -179,11 +177,5 @@ theorem loopPc_mem (w : Word) (h : loopPc w = true) : w ∈ loopC := by
   simp only [loopPc, decide_eq_true_eq] at h
   simp only [loopC, List.mem_map, List.mem_range]
   exact ⟨w.toNat, h, UInt64.ofNat_toNat⟩
-
-/-- Every function of the checker passes the loop's per-function check. -/
-prog_all checkerProg_loopAllChk : checkerProg (wsChk CTL loopPa loopPc loopAllTree)
-
-theorem checkerProg_loopClosed : LoopClosed checkerProg :=
-  closedW_of_all loopAllTree.eq loopPa_mem loopPc_mem checkerProg_loopAllChk
 
 end L.Checker

@@ -197,19 +197,19 @@ theorem viewLs_run' (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss
 
 theorem lsWords_length (ids : List LIdx) : (lsWords ids).length = ids.length := by simp [lsWords]
 
-theorem word_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
+theorem nidx_word_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
   simp only [UInt32.toNat_toUInt64]; exact x.word.toNat_lt
 
 theorem hslice_sliceL {P : Array Word} {o l : Nat} {ids : List LIdx}
     (hb : l = 0 ∨ o + l ≤ P.size) (h : sliceL P o l = lsWords ids) :
-    hslice? P o l = some ids := by
+    hslice? (aread P) o l = some ids := by
   have hlen : ids.length = l := by
     have := sliceL_length P o l
     rw [h, lsWords_length] at this; exact this
   rcases hb with rfl | hb
   · have : ids = [] := List.length_eq_zero_iff.mp hlen
     subst this; simp [hslice?]
-  · have hgood : ∀ j ∈ List.range l, hd? P (o + j) = some (decI (P[o + j]?.getD 0) : LIdx) := by
+  · have hgood : ∀ j ∈ List.range l, hd? (aread P) (o + j) = some (decI (P[o + j]?.getD 0) : LIdx) := by
       intro j hj
       have hj' : j < l := List.mem_range.mp hj
       have hlt : o + j < P.size := by omega
@@ -220,26 +220,25 @@ theorem hslice_sliceL {P : Array Word} {o l : Nat} {ids : List LIdx}
         rw [← e2]
         simp only [h]
         simp only [lsWords, List.getElem_map]
-        exact word_lt32 _
-      simp only [hd?, e1, Option.getD_some] at hw ⊢
+        exact nidx_word_lt32 _
+      simp only [hd?, aread_apply, e1, Option.getD_some] at hw ⊢
       simp [hw]
-    have := mapM_some_of (fun j => (hd? P (o + j) : Option LIdx)) (fun j => (decI (P[o + j]?.getD 0) : LIdx))
+    have := mapM_some_of (fun j => (hd? (aread P) (o + j) : Option LIdx)) (fun j => (decI (P[o + j]?.getD 0) : LIdx))
       (List.range l) hgood
     simp only [hslice?]
     have e3 : (List.range l).map (fun j => (decI (P[o + j]?.getD 0) : LIdx)) = ids := by
       rw [sliceL_map_decI, h]; simp [lsWords, Function.comp_def, decI_word]
     rw [this, e3]
 
-
 /-- **`view_ls` refines `viewLs` under the stage relation**: the twin's view succeeds without
 changing the state, the stage relation holds after, the pool only grew, and the new slice (below
 the top) holds the list's handles. -/
 def PoolSmall (m : Mem) : Prop := pcap m < 2 ^ 64
 
-theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem viewLsW_ok {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {us : Word} {r : List Word} (h : viewLsW n m us = some (r, m'))
-    (hS : StageR dn vis fe m a) (hu : us.toNat < 2 ^ 32) (hP : PoolSmall m) :
-    ∃ ids : List LIdx, (viewLs (decI us)).run a = .ok (ids, a) ∧ StageR dn vis fe m' a ∧
+    (hS : StageR vis fe m a) (hu : us.toNat < 2 ^ 32) (hP : PoolSmall m) :
+    ∃ ids : List LIdx, (viewLs (decI us)).run a = .ok (ids, a) ∧ StageR vis fe m' a ∧
       IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r ids ∧ PoolSmall m' := by
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   have hR := hS.check.arena.base
@@ -281,24 +280,17 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
       rw [hG, ite_eq_right (by omega)]
   have htop' : iwTop m2 = q.toNat + l.toNat := by simp only [iwTop, htop, hsum]
   have hdec : decHL m2 q.toNat l.toNat = some ids := by
-    have e1 : (decHL m2 q.toNat l.toNat : Option (List LIdx)) = hslice? (vpool m) o.toNat l.toNat := by
+    have e1 : (decHL m2 q.toNat l.toNat : Option (List LIdx)) = hslice? (aread (vpool m)) o.toNat l.toNat := by
       simp only [decHL]
       apply hslice?_congr
       intro j hj
-      simp only [iwA, hG]
+      simp only [iwA, aread_apply, hG]
       rw [ite_eq_left (by omega)]
       congr 1; omega
     rw [e1]
     exact hslice_sliceL (.inr (by rw [vpool_size]; omega)) hsl
   have hroom2 : iwTop m2 ≤ (m2.arr64 IW).size := by rw [htop', hS2]; omega
-  have hSt : StageR dn vis fe m2 a := by
-    refine ⟨CheckR.frame_iw hfr hS.check, hroom2, ?_, ?_, ?_, ?_⟩
-    · have h129 : rdW (m2.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl 129 (by simp)
-      have hE2 : m2.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
-      simp only [erTop, h129, hE2]; exact hE1
-    · rw [hfr.size IW]; exact hsz
-    · rw [hfr.arr EREC (by decide) (by decide)]; exact hEs
-    · rw [hfr.size CTL]; exact hc
+  have hSt : StageR vis fe m2 a := ⟨CheckR.frame_iw hfr hS.check, IWOK.of_iw hfr hS.iw hroom2⟩
   refine ⟨ids, viewLs_run' _ _ _ hv, hSt, hgrow, ⟨?_, ?_⟩, ?_⟩
   · simpa using hdec
   · show q.toNat + l.toNat ≤ iwTop m2

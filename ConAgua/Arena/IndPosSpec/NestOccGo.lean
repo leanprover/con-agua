@@ -47,12 +47,12 @@ theorem mentionsAnyConst_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec maSch p _ hcl n, ih] <;>
     finish
 
-theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem maConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl e r : Word) (ws : List Word) (mp0 : Std.HashMap EIdx Bool)
-    (hb : maConstW n m no nl e = some (r, m')) (hS : StageR dn vis fe m a) (hh : H e)
+    (hb : maConstW n m no nl e = some (r, m')) (hS : StageR vis fe m a) (hh : H e)
     (hws : SlR m no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hM : maMR m mp0) :
     ∃ b, (ConRon.Arena.mentionsAnyConst (ws.map (fun w => (decI w : NIdx))) (decE e)).run a =
-        .ok (b, a) ∧ (r != 0) = b ∧ maMR m' ∅ ∧ StageR dn vis fe m' a ∧ IWGrow m m' := by
+        .ok (b, a) ∧ (r != 0) = b ∧ maMR m' ∅ ∧ StageR vis fe m' a ∧ IWGrow m m' := by
   by_cases h0 : rdW (m.arr64 CTL) maSch.cs + 2 = 0
   · simp [maConstW, h0] at hb
   rw [maConstW_eq n m no nl e h0] at hb
@@ -96,7 +96,7 @@ the per-call memo is any well-formed one on entry (`mp0`) and empty after. -/
 @[refines ConRon.Arena.mentionsAnyConst]
 theorem mentionsAnyConst_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl e : Word) (ws : List Word) (mp0 : Std.HashMap EIdx Bool) (hh : H e)
-    (hS : StageR dn vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
+    (hS : StageR vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hM : maMR s₀.mem mp0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "mentions_any_const" [no, nl, e]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -104,7 +104,7 @@ theorem mentionsAnyConst_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NId
       AM.st (ConRon.Arena.mentionsAnyConst (ws.map (fun w => (decI w : NIdx))) (decE e)) a₀ = a₀ ∧
       (r.headD 0 != 0) =
         AM.res (ConRon.Arena.mentionsAnyConst (ws.map (fun w => (decI w : NIdx))) (decE e)) a₀ ∧
-      maMR s'.mem ∅ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      maMR s'.mem ∅ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (mentionsAnyConst_spec p hv hc hf hput hgo hnode hcl hp n s₀ no nl e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, hrun, hb, hM', hS', hg⟩ := maConstW_ok n dn fe vis _ _ a₀ no nl e _ ws mp0 hm hS hh hws hwlt hM
@@ -127,9 +127,9 @@ include hv hc hf hput hgo hnode
 /-- **`nest_occ_go` (with `nest_occ_node`) refines `nestOccGo`**, from a memo related to
 the twin's. -/
 @[refines ConRon.Arena.nestOccGo]
-theorem nestOccGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem nestOccGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl lo hi f h : Word) (ws : List Word) (mp : Std.HashMap EIdx Bool) (hh : H h)
-    (hS : StageR dn vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
+    (hS : StageR vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hM : noMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_occ_go" [no, nl, lo, hi, f, h]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -139,7 +139,7 @@ theorem nestOccGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
         (AM.res (ConRon.Arena.nestOccGo (ws.map (fun w => (decI w : NIdx))) lo.toNat hi.toNat mp f.toNat (decE h)) a₀).1 ∧
       noMR s'.mem
         (AM.res (ConRon.Arena.nestOccGo (ws.map (fun w => (decI w : NIdx))) lo.toNat hi.toNat mp f.toNat (decE h)) a₀).2 ∧
-      StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post ((noGo_spec p hv hc hf hput hgo hnode n).1 s₀ no nl lo hi f h) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := noGoOK n _ _ a₀ no nl lo hi f h _ ws mp hm hS.check.arena.base hh hws hwlt hM
@@ -166,12 +166,12 @@ theorem nestOcc_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec noSch p _ hcl n, ih] <;>
     finish
 
-theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem noConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl lo hi e r : Word) (ws : List Word) (mp0 : Std.HashMap EIdx Bool)
-    (hb : noConstW n m no nl lo hi e = some (r, m')) (hS : StageR dn vis fe m a) (hh : H e)
+    (hb : noConstW n m no nl lo hi e = some (r, m')) (hS : StageR vis fe m a) (hh : H e)
     (hws : SlR m no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hM : noMR m mp0) :
     ∃ b, (ConRon.Arena.nestOcc (ws.map (fun w => (decI w : NIdx))) lo.toNat hi.toNat (decE e)).run a =
-        .ok (b, a) ∧ (r != 0) = b ∧ noMR m' ∅ ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧
+        .ok (b, a) ∧ (r != 0) = b ∧ noMR m' ∅ ∧ StageR vis fe m' a ∧ IWGrow m m' ∧
         MFr [NOM] [204, 205] m m' := by
   by_cases h0 : rdW (m.arr64 CTL) noSch.cs + 2 = 0
   · simp [noConstW, h0] at hb
@@ -216,7 +216,7 @@ the per-call memo is any well-formed one on entry (`mp0`) and empty after. -/
 @[refines ConRon.Arena.nestOcc]
 theorem nestOcc_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl lo hi e : Word) (ws : List Word) (mp0 : Std.HashMap EIdx Bool) (hh : H e)
-    (hS : StageR dn vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
+    (hS : StageR vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hM : noMR s₀.mem mp0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_occ" [no, nl, lo, hi, e]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -224,7 +224,7 @@ theorem nestOcc_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Opt
       AM.st (ConRon.Arena.nestOcc (ws.map (fun w => (decI w : NIdx))) lo.toNat hi.toNat (decE e)) a₀ = a₀ ∧
       (r.headD 0 != 0) =
         AM.res (ConRon.Arena.nestOcc (ws.map (fun w => (decI w : NIdx))) lo.toNat hi.toNat (decE e)) a₀ ∧
-      noMR s'.mem ∅ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      noMR s'.mem ∅ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (nestOcc_spec p hv hc hf hput hgo hnode hcl hp n s₀ no nl lo hi e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, hrun, hb, hM', hS', hg, -⟩ := noConstW_ok n dn fe vis _ _ a₀ no nl lo hi e _ ws mp0 hm hS hh hws hwlt hM
@@ -314,9 +314,9 @@ include hv hf hp
 
 /-- **`member_idx_at` refines `memberIdxAt?`**. -/
 @[refines ConRon.Arena.memberIdxAt?]
-theorem memberIdxAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem memberIdxAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl lvls e : Word) (ws : List Word) (he : H e) (hlv : H lvls)
-    (hS : StageR dn vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
+    (hS : StageR vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hlen : ws.length < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "member_idx_at" [no, nl, lvls, e]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -579,9 +579,9 @@ include hv hp
 
 /-- **`ph_app` refines `phApp?`**: the constant applied to exactly the placeholders. -/
 @[refines ConRon.Arena.phApp?]
-theorem phApp_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem phApp_refines (k : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis b e n : Word) (N : Nat) (hN : n.toNat = N) (he : H e)
-    (hb : b.toNat + N < 2 ^ 64) (hS : StageR dn vis fe s₀.mem a₀) :
+    (hb : b.toNat + N < 2 ^ 64) (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "ph_app" [b, e, n]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       AM.ok (ConRon.Arena.phApp? b.toNat (decI e) N) a₀ ∧

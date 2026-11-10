@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.CheckerT
+public import ConAgua.Arena.DeclCheckT
 public import ConAgua.Arena.GrindAttr
 
 @[expose] public section
@@ -26,20 +26,20 @@ local notation "V" => ConLeche.CheckMode.verified
 section quot
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
 
-/-- **`check_decl_quot`'s error claim under `StageT`**, from `cdq_ref` through the run. -/
-theorem checkDeclQuot_errT {p : Prog} (hQ : QuotProg p) (hRp : RecProg p) (hdn : DnInj dn) (hQd : QuotDn dn)
+/-- **`check_decl_quot`'s error claim under `StageT`** (`cdq_ref`'s error half). -/
+theorem checkDeclQuot_errT {p : Prog} (hQ : QuotArmProg p) (hQs : QuotSims p dn)
     (hnv : closedNV p L.Checker.nvFns = true) (k : ConLeche.QuotKind) (cv : IConstantVal) :
     ArmSpecE pins dn ds p "check_decl_quot" (.quotDecl k cv) := by
-  intro n _ m a vis fe pend i hi hd hok0 hR hS _ hden _ _ e hc
+  intro n _ m a vis fe i hi hd hok hR hS hF hden _ _ e hc
   have hd' : ds[i.toNat] = .quotDecl k cv := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  have hcvD : ∃ c, Frontend.denoteCV a.store cv = some c := by
-    obtain ⟨x, hx⟩ := hden
-    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hx
-    obtain ⟨c, hc, -⟩ := hx
-    exact ⟨c, hc⟩
-  exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclQuot_specE p hQ hRp n _ i vis) hnv trivial
-    (cdq_ref hQ hdn n hS.stage hR.decls hi hd' hok0 (hQd.namesDn hS.twin.mem) hcvD) hc
+  obtain ⟨x, hx⟩ := hden
+  simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hx
+  obtain ⟨c, hcd, -⟩ := hx
+  obtain ⟨env, hF⟩ := hF
+  exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩)
+    (checkDeclQuot_specE p hQ.cdq hQ.rcp hQ.cqr.cqr hQ.cqr.basis n _ i vis) hnv trivial
+    (cdq_ref (pins := pins) hQ hQs n hS hR.decls hi hd' hok hF.check.readOK hcd) hc
 
 end quot
 

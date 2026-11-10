@@ -117,7 +117,7 @@ theorem lst_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n �
     ∀ k, k ≤ n + 1 → ∀ (i : Word) (m : Mem) (a : AState) (M : ModeMaps) (eb : Word),
       CoreS dn m a vis fe M eb → eb = (mode >>> 1) &&& 1 → StackKept m₀ m → i ≤ an → i ≤ bn →
       RefE (KnotUpToE p n) (lstE.loop1 p k m mode vis d ao an bo bn i)
-        (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat (xs.drop i.toNat) (ys.drop i.toNat)) a
+        (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (xs.drop i.toNat) (ys.drop i.toNat)) a
         (fun v y a' => CorePost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   have hxl := slice_len hx
   have hyl := slice_len hy
@@ -182,7 +182,7 @@ theorem defeqLst_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
     (hxt : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (KnotUpToE p n) (lstE p (n + 1) s₀.mem mode vis d ao an bo bn)
-      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs ys) a₀
+      (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat xs ys) a₀
       (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [lstE.arm1]
   simpa only [UInt64.toNat_zero, List.drop_zero] using
@@ -201,7 +201,7 @@ theorem defeqLst_refines (hp : p.lookup "defeq_lst" = some defeqLstL) (n : Nat)
     (hxt : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
     CoreSpec p (n + 1) "defeq_lst" [mode, vis, d, ao, an, bo, bn]
-      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs ys) decBool s₀ a₀ dn vis fe M eb :=
+      (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat xs ys) decBool s₀ a₀ dn vis fe M eb :=
   CoreSpec.of_refE (w := fun (v : Word × Mem) => ([v.1], v.2))
     (defeqLst_specE p hp (n + 1) s₀ mode vis d ao an bo bn)
     (defeqLst_ref p n hk F hF hn s₀ a₀ dn vis fe M eb mode d ao an bo bn hs xs ys hx hy hxt hyt)
@@ -237,7 +237,7 @@ theorem lrev_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       CoreS dn m a vis fe M eb → eb = (mode >>> 1) &&& 1 → StackKept m₀ m → i.toNat ≤ an.toNat →
       j.toNat ≤ bn.toNat → an.toNat - i.toNat = bn.toNat - j.toNat →
       RefE (KnotUpToE p n) (lrevE.loop1 p k m mode vis d ao an bo bn i j)
-        (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat (xs.take i.toNat).reverse
+        (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (xs.take i.toNat).reverse
           (ys.take j.toNat).reverse) a
         (fun v y a' => CorePost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   have hxl := slice_len hx
@@ -298,7 +298,7 @@ theorem defeqListRev_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
     (hxt : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (KnotUpToE p n) (lrevE p (n + 1) s₀.mem mode vis d ao an bo bn)
-      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.reverse ys.reverse) a₀
+      (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat xs.reverse ys.reverse) a₀
       (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [lrevE.arm1]
   have hxl := slice_len hx
@@ -319,7 +319,7 @@ theorem defeqListRev_refines (hp : p.lookup "defeq_list_rev" = some defeqListRev
     (hxt : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
     CoreSpec p (n + 1) "defeq_list_rev" [mode, vis, d, ao, an, bo, bn]
-      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.reverse ys.reverse) decBool s₀ a₀
+      (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat xs.reverse ys.reverse) decBool s₀ a₀
       dn vis fe M eb :=
   CoreSpec.of_refE (w := fun (v : Word × Mem) => ([v.1], v.2))
     (defeqListRev_specE p hp (n + 1) s₀ mode vis d ao an bo bn)

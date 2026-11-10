@@ -117,7 +117,7 @@ theorem installRec2Tele {p : Prog} (hP : InstProg p) (n : Nat) {dn : NIdx → Op
     {vis : Word} {fe : IFEnv} {m m1 m2 : Mem} {a : AState} {r1 r2 : List Word} {x : IConstantVal × LIdx}
     (hT : TeleOut dn vis fe m r1 x m1 a)
     (h : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] m1 = some (r2, m2)) :
-    StageR dn vis fe m2 a ∧ IWGrow m m2 ∧ DecB (fun m => decTele m (r2.headD 0).toNat) m2 x ∧
+    StageR vis fe m2 a ∧ IWGrow m m2 ∧ DecB (fun m => decTele m (r2.headD 0).toNat) m2 x ∧
       (r2.headD 0).toNat < iwTop m2 := by
   obtain ⟨hS1, hg1, hcv, hcx, hs32, hsd⟩ := hT
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
@@ -130,11 +130,11 @@ theorem installRec2Tele {p : Prog} (hP : InstProg p) (n : Nat) {dn : NIdx → Op
     show decTele (truncM s'.mem) _ = some x
     have e0 : iwN (truncM s'.mem) (rdW (m1.arr64 CTL) 200).toNat = some (r1.headD 0).toNat := by
       rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
-      simp [iwN, nat?, iwA, this]
+      simp [iwN, nat?, iwA, aread_apply, this]
     have e1 : (iwH (truncM s'.mem) ((rdW (m1.arr64 CTL) 200).toNat + 1) : Option LIdx) = some x.2 := by
       rw [iwH_truncM hq1]; have h1 := hget 1 (by simp)
       simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at h1
-      simp only [iwH, hd?, iwA, h1, Option.bind_eq_bind, Option.bind_some]
+      simp only [iwH, hd?, iwA, aread_apply, h1, Option.bind_eq_bind, Option.bind_some]
       rw [ite_eq_left hs32, hsd]
     have e2 : decCVp (truncM s'.mem) (r1.headD 0).toNat = some x.1 :=
       (installCvDecB hcv hcx).grow (OMono.decCVp _) hg2

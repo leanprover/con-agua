@@ -1,7 +1,7 @@
 module
 
-public import ConAgua.Checker.Prog
 meta import ConAgua.Checker.Prog
+public import ConAgua.L.Syntax
 
 @[expose] public section
 
@@ -65,13 +65,5 @@ partial def parClosure (p : Prog) : List FnName → List FnName → List FnName
     match p.lookup f with
     | some fd => parClosure p (parCalls fd.body ++ r) (f :: seen)
     | none => parClosure p r (f :: seen)
-
-/-- The word arrays phase B names that are neither frozen nor owned (must be none). -/
-def parMissing : List TieredArray :=
-  ((parClosure checkerProg ["check_b"] []).flatMap fun f =>
-    match checkerProg.lookup f with | some fd => parArrsS fd.body | none => []).eraseDups.filter
-    fun a => !(frozenIds.contains a) && !(parOwned.contains a)
-
-#guard parMissing == []
 
 end L.Checker

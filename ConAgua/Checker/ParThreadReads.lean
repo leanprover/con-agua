@@ -7,6 +7,10 @@ meta import ConAgua.Checker.PhaseBReads
 meta import ConAgua.Arena.LevelIntern
 meta import ConAgua.Arena.LevelSubstLP
 import all ConAgua.Arena.Abs1
+import all ConAgua.Arena.BasisL
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.IndStream
+import all ConAgua.Rom.CIConst
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
@@ -82,7 +86,6 @@ import all ConAgua.Arena.NatSub
 import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
@@ -174,11 +177,11 @@ theorem thrS_iff (a : TieredArray) : thrS a = true ↔
   simp [thrS, and_assoc]
 
 /-- Every function of the checker passes the thread's per-function read check. -/
-prog_all checkerProg_thrReadsChk : checkerProg (rdChk thrS (fun _ => false) phaseBTree)
+prog_all checkerProg_thrReadsChk : checkerProg (rdChk thrS (fun _ => false) phaseBJobTree)
 
-/-- **Phase B's read set, for a thread**: the call closure of `check_pending_go` names only word
-arrays of `thrS`, no byte array, and calls only into itself. -/
-theorem checkerProg_thrReads : readsIn checkerProg thrS (fun _ => false) phaseBFns = true :=
-  readsIn_of_all phaseBTree.eq checkerProg_thrReadsChk
+/-- **The jobs' read set, for a thread**: the call closure of `check_jobs` names only word arrays
+of `thrS`, no byte array, and calls only into itself. -/
+theorem checkerProg_thrReads : readsIn checkerProg thrS (fun _ => false) phaseBJobFns = true :=
+  readsIn_of_all phaseBJobTree.eq checkerProg_thrReadsChk
 
 end L.Checker

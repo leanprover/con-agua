@@ -43,27 +43,30 @@ def efgW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, q, o, l =>
     if l = 0 then some ([0], m)
-    else efgK (efgW n (m.set64 EREC q (rdW (m.arr64 IW) o)) (q + 1) (o + 1) (l - 1))
+    else efgK (efgW n (erecPutMem m q (rdW (m.arr64 IW) o)) (q + 1) (o + 1) (l - 1))
 
 theorem efgW_nil (n : Nat) (m : Mem) (q o l : Word) (h : l = 0) : efgW (n + 1) m q o l = some ([0], m) := by
   simp [efgW, h]
 theorem efgW_cons (n : Nat) (m : Mem) (q o l : Word) (h : l ≠ 0) : efgW (n + 1) m q o l =
-    efgK (efgW n (m.set64 EREC q (rdW (m.arr64 IW) o)) (q + 1) (o + 1) (l - 1)) := by simp [efgW, h]
+    efgK (efgW n (erecPutMem m q (rdW (m.arr64 IW) o)) (q + 1) (o + 1) (l - 1)) := by simp [efgW, h]
 theorem efgK_some (r : List Word) (m : Mem) : efgK (some (r, m)) = some ([0], m) := rfl
 attribute [ind_grind] efgW_nil efgW_cons efgK_some
 
-theorem efgW_spec (p : Prog) (hp : p.lookup "er_from_iw_go" = some erFromIwGo) (n : Nat) :
+theorem efgW_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
+    (hp : p.lookup "er_from_iw_go" = some erFromIwGo) (n : Nat) :
     ∀ (s₀ : St) (q o l : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_from_iw_go" [q, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ efgW n s₀.mem q o l = some (r, s'.mem); ⊤⦄ := by
   induction n with
-  | zero => intro s₀ q o l; rw [invoke_eq _ hp]; simp only [callFn, erFromIwGo]; vcgen [exec] <;> grind
+  | zero =>
+    intro s₀ q o l; rw [invoke_eq _ hp]; simp only [callFn, erFromIwGo]
+    vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ q o l
     rw [invoke_eq _ hp]
     simp only [callFn, erFromIwGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecPut_specW p hpu n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- After the copy. -/
@@ -83,7 +86,7 @@ theorem efK2_some (q l : Word) (r : List Word) (m : Mem) : efK2 q l (some (r, m)
 attribute [ind_grind] efK1_some efK2_some
 
 theorem efW_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
-    (hg : p.lookup "er_from_iw_go" = some erFromIwGo) (hp : p.lookup "er_from_iw" = some erFromIw)
+    (hpu : p.lookup "erec_put" = some erecPut) (hg : p.lookup "er_from_iw_go" = some erFromIwGo) (hp : p.lookup "er_from_iw" = some erFromIw)
     (n : Nat) (s₀ : St) (o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "er_from_iw" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ efW n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
@@ -91,7 +94,7 @@ theorem efW_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   simp only [callFn, erFromIw]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, erecAlloc_specW p ha n,
-      efgW_spec p hg n] <;>
+      efgW_spec p hpu hg n] <;>
     finish (gen := 20) [efW]
 
 /-! ## `check_struct_proj_table`: the word model -/
@@ -126,12 +129,8 @@ structure TblProg (p : Prog) : Prop where
   hsct : p.lookup "check_struct_proj_table_scoped" = some checkStructProjTableScopedL
   hbb : BvbProg p
   hhf : HfF p
-  hix : p.lookup "env_ix" = some envIxL
   hrg : p.lookup "env_row_get" = some envRowGetL
   hfind : p.lookup "env_find" = some envFindL
-  htix : p.lookup "tbl_ix" = some tblIxL
-  htrg : p.lookup "tbl_row_get" = some tblRowGetL
-  htrs : p.lookup "tbl_row_set" = some tblRowSetL
   hftab : p.lookup "find_table" = some findTableL
   hept : p.lookup "env_push_table" = some envPushTableL
   hea : p.lookup "erec_alloc" = some erecAlloc
@@ -142,6 +141,7 @@ structure TblProg (p : Prog) : Prop where
   hi1 : I1lF p
   hipal : IpalF p
   hcr : CrfF p
+  hft : FindTableProg p
 
 end L.Ind
 

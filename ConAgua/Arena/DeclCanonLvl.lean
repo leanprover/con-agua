@@ -314,7 +314,7 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
     all_goals first
       | (-- succ.succ
          obtain ⟨b, hb, hr⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h hR hC
-           (word_lt32 _) (word_lt32 _)
+           (nidx_word_lt32 _) (nidx_word_lt32 _)
          rw [decI_word, decI_word] at hb
          exact ⟨b, hb, hr⟩)
       | (-- max.max, imax.imax
@@ -324,12 +324,12 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
          | some r1 =>
          rw [cnClK1_some] at h
          obtain ⟨b1, hb1, hr1⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hx1 hR hC
-           (word_lt32 _) (word_lt32 _)
+           (nidx_word_lt32 _) (nidx_word_lt32 _)
          rw [decI_word, decI_word] at hb1
          refine andThen_ok hb1 hr1 (fun hne => ?_) (fun h0 => ?_)
          · rw [ite_eq_right hne] at h
            obtain ⟨b2, hb2, hr2⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h hR hC
-             (word_lt32 _) (word_lt32 _)
+             (nidx_word_lt32 _) (nidx_word_lt32 _)
            rw [decI_word, decI_word] at hb2
            exact ⟨b2, hb2, hr2⟩
          · rw [ite_eq_left h0] at h; simp at h; simp [← h])
@@ -344,9 +344,9 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
          rename_i y hy
          simp only [Option.some.injEq] at h
          obtain ⟨hx32, hxd⟩ := nmW_ok hx hC.p hC.c (by have := iwTop_lt m; have := hC.pt; omega)
-           (by have := iwTop_lt m; have := hC.ct; omega) (word_lt32 _)
+           (by have := iwTop_lt m; have := hC.ct; omega) (nidx_word_lt32 _)
          obtain ⟨hy32, hyd⟩ := nmW_ok hy hC.q hC.c (by have := iwTop_lt m; have := hC.qt; omega)
-           (by have := iwTop_lt m; have := hC.ct; omega) (word_lt32 _)
+           (by have := iwTop_lt m; have := hC.ct; omega) (nidx_word_lt32 _)
          rw [decI_word] at hxd hyd
          refine ⟨ConRon.Arena.canonNameMap ps cs _ == ConRon.Arena.canonNameMap qs cs _, rfl, ?_⟩
          rw [← hxd, ← hyd, ← h]
@@ -357,13 +357,13 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
 
 /-- The shape of a comparison that leaves memory and twin state alone. -/
 theorem refAM_same {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
-    (pre : Mem → AState → Prop) (op : AM α) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (pre : Mem → AState → Prop) (op : AM α) (_dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (dec : Mem → List Word → α → Prop)
-    (hpre : ∀ m a, pre m a → StageR dn vis fe m a)
+    (hpre : ∀ m a, pre m a → StageR vis fe m a)
     (h : ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
       ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
       ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ ∃ x, op.run a₀ = .ok (x, a₀) ∧ dec s₀.mem r x; ⊤⦄) :
-    RefAM p f args pre op (KeepPost dn vis fe dec) := by
+    RefAM p f args pre op (KeepPost vis fe dec) := by
   intro n s₀ a₀ hp
   refine triple_post (h n s₀ a₀ hp) ?_
   rintro r s' ⟨hl, hm, x, hx, hd⟩
@@ -381,10 +381,10 @@ theorem decW0B_of' {m : Mem} {r : List Word} {b : Bool} (h : r.headD 0 = if b th
 theorem canonLevelEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (po pl qo ql co cl fuel u v : Word) (ps qs cs : List NIdx) :
     RefAM p "canon_level_eq" [po, pl, qo, ql, co, cl, fuel, u, v]
-      (fun m a => StageR dn vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧ u.toNat < 2 ^ 32 ∧
+      (fun m a => StageR vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧ u.toNat < 2 ^ 32 ∧
         v.toNat < 2 ^ 32)
       (ConRon.Arena.canonLevelEq ps qs cs fuel.toNat (decI u) (decI v))
-      (KeepPost dn vis fe decW0B) := by
+      (KeepPost vis fe decW0B) := by
   refine refAM_same p _ _ _ _ dn vis fe _ (fun m a h => h.1) ?_
   intro n s₀ a₀ ⟨hS, hC, hu, hv⟩
   refine triple_post (canonLevelEq_spec p hp n s₀ po pl qo ql co cl fuel u v) ?_
@@ -503,11 +503,11 @@ theorem canonLevelListEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Op
     (vis : Word) (fe : IFEnv) (po pl qo ql co cl fuel ao al bo bl : Word) (ps qs cs : List NIdx)
     (xs ys : List LIdx) :
     RefAM p "canon_level_list_eq" [po, pl, qo, ql, co, cl, fuel, ao, al, bo, bl]
-      (fun m a => StageR dn vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧
+      (fun m a => StageR vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧
         decHL m ao.toNat al.toNat = some xs ∧ decHL m bo.toNat bl.toNat = some ys ∧
         ao.toNat + al.toNat ≤ iwTop m ∧ bo.toNat + bl.toNat ≤ iwTop m)
       (ConRon.Arena.canonLevelListEq ps qs cs fuel.toNat xs ys)
-      (KeepPost dn vis fe decW0B) := by
+      (KeepPost vis fe decW0B) := by
   refine refAM_same p _ _ _ _ dn vis fe _ (fun m a h => h.1) ?_
   intro n s₀ a₀ ⟨hS, hC, hx, hy, hxt, hyt⟩
   refine triple_post (canonLevelListEq_spec p hp n s₀ po pl qo ql co cl fuel ao al bo bl) ?_
@@ -568,13 +568,13 @@ theorem decRL_unpack {k : IdxKind} {m : Mem} {r : List Word} {ids : List (Idx k)
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m := by
   simpa only [decRL, getD0, cnGetD1] using h
 
-theorem lsEqW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
+theorem lsEqW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     {m m' : Mem} {a : AState} {po pl qo ql co cl fuel us vs r : Word} {ps qs cs : List NIdx}
-    (h : lsEqW n m po pl qo ql co cl fuel us vs = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : lsEqW n m po pl qo ql co cl fuel us vs = some (r, m')) (hS : StageR vis fe m a)
     (hC : CtxR m po pl qo ql co cl ps qs cs) (hu : us.toNat < 2 ^ 32) (hv : vs.toNat < 2 ^ 32)
     (hP : PoolSmall m) :
     ∃ b, (ConRon.Arena.canonLevelsEq ps qs cs fuel.toNat (decI us) (decI vs)).run a = .ok (b, a) ∧
-      r = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
+      r = (if b then 1 else 0) ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
   cases n with
   | zero => simp [lsEqW] at h
   | succ n =>
@@ -616,16 +616,16 @@ theorem lsEqW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
 
 /-- The post of a comparison that may grow the pool: the usual one, and the pool array stays
 addressable by a word (`PoolSmall`). -/
-def CPost {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+def CPost {α : Type} (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (dec : Mem → List Word → α → Prop) (m m' : Mem) (a : AState) (r : List Word) (x : α) : Prop :=
-  KeepPost dn vis fe dec m m' a r x ∧ PoolSmall m'
+  KeepPost vis fe dec m m' a r x ∧ PoolSmall m'
 
 /-- **`canon_levels_eq` refines `canonLevelsEq`.** -/
 @[refines ConRon.Arena.canonLevelsEq]
 theorem canonLevelsEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (po pl qo ql co cl fuel us vs : Word) (ps qs cs : List NIdx) :
     RefAM p "canon_levels_eq" [po, pl, qo, ql, co, cl, fuel, us, vs]
-      (fun m a => StageR dn vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧ us.toNat < 2 ^ 32 ∧
+      (fun m a => StageR vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧ us.toNat < 2 ^ 32 ∧
         vs.toNat < 2 ^ 32 ∧ PoolSmall m)
       (ConRon.Arena.canonLevelsEq ps qs cs fuel.toNat (decI us) (decI vs))
       (CPost dn vis fe decW0B) := by

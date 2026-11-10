@@ -145,7 +145,7 @@ theorem lo_ref (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
     (eb mode d ty₁ body₁ ty₂ body₂ : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (h₁ : HW ty₁) (hb₁ : HW body₁) (h₂ : HW ty₂) (hb₂ : HW body₂) :
     RefE (KnotUpToE p n) (loE p (n + 1) s₀.mem mode vis d ty₁ body₁ ty₂ body₂)
-      (lamsOpenT (coreKnot (decMode mode) fe id F) d.toNat (decE ty₁) (decE body₁) (decE ty₂)
+      (lamsOpenT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE ty₁) (decE body₁) (decE ty₂)
         (decE body₂)) a₀ (CorePost decLO dn s₀.mem vis fe M eb Res3) := by
   unfold lamsOpenT
   simp only [loE]
@@ -316,7 +316,7 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       (M : ModeMaps) (eb : Word), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW ty₁ →
       HW body₁ → HW ty₂ → HW body₂ → d.toNat + k < 2 ^ 64 →
       RefE (KnotNvG p n) (lamsE.loop1 p k m mode vis d ty₁ body₁ ty₂ body₂)
-        (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) K d.toNat (decE ty₁)
+        (defeqLams (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) K d.toNat (decE ty₁)
           (decE body₁) (decE ty₂) (decE body₂)) s
         (fun v y a' => CorePost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   intro k
@@ -386,7 +386,7 @@ theorem defeqLams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn
     (M : ModeMaps) (eb mode d ty₁ body₁ ty₂ body₂ : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (h1 : HW ty₁) (hb1 : HW body₁) (h2 : HW ty₂) (hb2 : HW body₂) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (lamsE p (n + 1) s₀.mem mode vis d ty₁ body₁ ty₂ body₂)
-      (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) lamsFuel d.toNat (decE ty₁)
+      (defeqLams (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) lamsFuel d.toNat (decE ty₁)
         (decE body₁) (decE ty₂) (decE body₂)) a₀
       (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [lamsE.arm1]
@@ -404,7 +404,7 @@ theorem defeqLams_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
     (M : ModeMaps) (eb mode d ty₁ body₁ ty₂ body₂ : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (h1 : HW ty₁) (hb1 : HW body₁) (h2 : HW ty₂) (hb2 : HW body₂) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "defeq_lams" [mode, vis, d, ty₁, body₁, ty₂, body₂]
-      (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) lamsFuel d.toNat (decE ty₁)
+      (defeqLams (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) lamsFuel d.toNat (decE ty₁)
         (decE body₁) (decE ty₂) (decE body₂)) decBool s₀ a₀ dn vis fe M eb :=
   CoreSpec.of_refE (w := fun (v : Word × Mem) => ([v.1], v.2))
     (defeqLams_specE p hp.lams (n + 1) s₀ mode vis d ty₁ body₁ ty₂ body₂)

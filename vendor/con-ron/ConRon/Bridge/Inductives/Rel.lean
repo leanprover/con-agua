@@ -8,13 +8,13 @@ run forms those stages share.
 
 * **The core grade**: `CSpec` (invariant `CheckOK`, frame
   `Bridge/Checker/Hyp.lean`'s `CoreStep`) and `CSpecF` (its answer related to
-  a con-leche function run at `fueledOpsM μ`, through `FOk`).  `PStep.toCore`
+  a con-leche function run at `fueledOpsM .verified`, through `FOk`).  `PStep.toCore`
   is the bridge from the pure grade.
 * **The install frame**: `InstStep`, `ReadOK`, `IFEnvOKS`, for runs that push
   constants and call the knot at the pushed index.
-* **The environment relations**: `InstRel` (an install's answer), `ProjOut`
-  (the projection-table obligation), `IndOut` (the route's conclusion, what
-  `IndSpec` reads).
+* **The environment relations**: `EnvRel` (an index answers for an
+  environment), `InstRel` (an install's answer), `IndOut` (the route's
+  conclusion, what `IndSpec` reads).
 * **Run forms**: `stripPis`/`stripLams`, the spine readers, the interners the
   generators call, `lvlEq?`/`readLevelM` at the pure frame, `List.mapM`/
   `allM`/`anyM` of a pure-grade step, `fvarB` (with `FvarBSpec` discharged),
@@ -62,28 +62,28 @@ open ConLeche ConRon.Arena ConRon.Bridge
 preserves the whole checking invariant, by `Bridge/StateOK.lean`'s
 `CheckOK.mono`.  This is what lets a core-grade function call a pure-grade one
 and keep its own hypothesis. -/
-theorem PStep.toCore {μ : CheckMode} {env : Env} {fe : IFEnv} {s s' : AState}
-    (h : PStep s s') (hc : CheckOK μ env fe s) : CoreStep μ env fe s s' :=
+theorem PStep.toCore {env : Env} {fe : IFEnv} {s s' : AState}
+    (h : PStep s s') (hc : CheckOK false env fe s) : CoreStep env fe s s' :=
   ⟨hc.monoF h.ok h.ext h.cframe h.pins, h.ext, h.pins⟩
 
 /-- con-leche: ConLeche/Verify/Cached/SimC.lean:366 SimC — **the CORE grade's
 statement**: the same at a function that calls the knot, so the invariant is
 `CheckOK` and the frame is `CoreStep`.  The pure side's fuel existential lives
 inside `R`, as `Bridge/Core/Knot.lean`'s `SimE` has it. -/
-@[expose] def CSpec (μ : CheckMode) (env : Env) (fe : IFEnv) {α : Type}
+@[expose] def CSpec (env : Env) (fe : IFEnv) {α : Type}
     (P : EStore → Prop) (c : AM α) (R : EStore → α → Prop) : Prop :=
-  ∀ (s₀ s' : AState) (r : α), CheckOK μ env fe s₀ → P s₀.store →
-    c s₀ = .ok (r, s') → CoreStep μ env fe s₀ s' ∧ R s'.store r
+  ∀ (s₀ s' : AState) (r : α), CheckOK false env fe s₀ → P s₀.store →
+    c s₀ = .ok (r, s') → CoreStep env fe s₀ s' ∧ R s'.store r
 
 /-- con-leche: ConLeche/Verify/Cached/BlockRunC.lean:335 SimG — **the core
 grade against a monad-generic con-leche function** (task #105): the twin's
 answer is related by `R` to SOME value the pure side, run at the monotone
-fueled operations `fueledOpsM μ`, produces at some fuel (`FOk`,
+fueled operations `fueledOpsM .verified`, produces at some fuel (`FOk`,
 `Bridge/Inductives/Records.lean`).  Composing two such runs needs no
 monotonicity lemma of the composed functions: `FOk.bind` takes the maximum. -/
-@[expose] def CSpecF (μ : CheckMode) (env : Env) (fe : IFEnv) {α β : Type}
+@[expose] def CSpecF (env : Env) (fe : IFEnv) {α β : Type}
     (P : EStore → Prop) (c : AM α) (R : EStore → α → β → Prop) (p : FueledM β) : Prop :=
-  CSpec μ env fe P c (fun st r => ∃ v, R st r v ∧ FOk p v)
+  CSpec env fe P c (fun st r => ∃ v, R st r v ∧ FOk p v)
 
 /-! ## The install frame
 
@@ -108,8 +108,8 @@ theorem InstStep.trans {a b c : AState} (h₁ : InstStep a b) (h₂ : InstStep b
     InstStep a c :=
   ⟨h₂.state, h₁.ext.trans h₂.ext, by rw [h₂.pins, h₁.pins]⟩
 
-theorem _root_.ConRon.Bridge.CoreStep.toInst {μ : CheckMode} {env : Env} {fe : IFEnv} {s s' : AState}
-    (h : CoreStep μ env fe s s') : InstStep s s' :=
+theorem _root_.ConRon.Bridge.CoreStep.toInst {env : Env} {fe : IFEnv} {s s' : AState}
+    (h : CoreStep env fe s s') : InstStep s s' :=
   ⟨h.ok.state, h.ext, h.pins⟩
 
 theorem PStep.toInst {s s' : AState} (h : PStep s s') : InstStep s s' :=
@@ -127,8 +127,8 @@ structure ReadOK (env : Env) (fe : IFEnv) (s : AState) : Prop where
   pins : PinsOK s
   ienv : IFEnvOK env fe s
 
-theorem _root_.ConRon.Bridge.CheckOK.toR {μ : CheckMode} {env : Env} {fe : IFEnv} {s : AState}
-    (h : CheckOK μ env fe s) : ReadOK env fe s :=
+theorem _root_.ConRon.Bridge.CheckOK.toR {env : Env} {fe : IFEnv} {s : AState}
+    (h : CheckOK false env fe s) : ReadOK env fe s :=
   ⟨h.state, h.pins, h.ienv⟩
 
 theorem ReadOK.mono {env : Env} {fe : IFEnv} {s s' : AState} (h : ReadOK env fe s)
@@ -139,9 +139,9 @@ theorem ReadOK.mono {env : Env} {fe : IFEnv} {s s' : AState} (h : ReadOK env fe 
 /-- con-leche: ConLeche/Cached/CheckerC.lean flushC — **the flush restores
 `CheckOK` at any index the state reads correctly**: the caches go, and the
 empty cache set is sound at every environment (`CacheOK.of_empty`). -/
-theorem ReadOK.flush {μ : CheckMode} {env : Env} {fe : IFEnv} {s s' : AState}
+theorem ReadOK.flush {env : Env} {fe : IFEnv} {s s' : AState}
     (h : ReadOK env fe s) (hrun : Arena.flushCaches s = .ok ((), s')) :
-    CheckOK μ env fe s' ∧ InstStep s s' ∧ s'.store = s.store := by
+    CheckOK false env fe s' ∧ InstStep s s' ∧ s'.store = s.store := by
   have e : Arena.flushCaches s = .ok ((), { s with caches := Caches.empty }) := rfl
   rw [e] at hrun
   obtain ⟨-, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun)
@@ -268,35 +268,6 @@ theorem fvarTypeD_run {s₀ s' : AState} {h r : EIdx} {hP : Expr}
   obtain ⟨h1, h2⟩ := AM.of_run (P := fun t => t = s₀) rfl hrun
     (ExprOps.fvarTypeD_spec s₀ h hok (by rw [hd]; rfl))
   exact ⟨h1, h2 hP hd⟩
-
-/-- con-leche: none — **the level list reads at an INDEX**, with the fallback
-carried through: `structProjGuards`' `sorts.getD j z` against con-leche's
-`sorts.getD j .zero`. -/
-theorem denoteLList_getD {st : LStore} : ∀ {us : List LIdx} {xs : List Level},
-    denoteLList st us = some xs → ∀ {z : LIdx} {zP : Level},
-      denoteL st z = some zP → ∀ (j : Nat),
-        denoteL st (us.getD j z) = some (xs.getD j zP) := by
-  intro us
-  induction us with
-  | nil =>
-    intro xs h z zP hz j
-    simp only [denoteLList] at h
-    obtain rfl := Option.some.inj h
-    simpa using hz
-  | cons u us ih =>
-    intro xs h z zP hz j
-    simp only [denoteLList, opt2] at h
-    cases hu : denoteL st u with
-    | none => rw [hu] at h; simp at h
-    | some y =>
-      cases hus : denoteLList st us with
-      | none => rw [hu, hus] at h; simp at h
-      | some ys =>
-        rw [hu, hus] at h
-        obtain rfl := Option.some.inj h
-        cases j with
-        | zero => simpa using hu
-        | succ j => simpa using ih hus hz j
 
 /-- con-leche: none — **`internLsNode`, as a run**: a universe-argument list
 node, which is what `paramLevels` answers. -/
@@ -439,199 +410,78 @@ theorem denoteCI_not_ctor {st : EStore} {ci : IConstantInfo} {c : ConstantInfo}
 list and the environment.  This tier needs both, because every install
 function grows the arena while the environment it was handed stands still. -/
 
-/-! ## The projection table's obligation
-
-`Bridge/StateOK.lean`'s `IProjTableOK` is the shape `IFEnvOK.tblHit` asks of
-every visible table, and `Bridge/Checker/Inv.lean`'s `IFEnvOK_of_denote` takes
-it over the table list as the hypothesis `hproj`.  Its ONE debtor is
-`Arena.checkStructProjTablePush` — the only function of the whole arena that
-pushes a table — and this tier owns it.
-
-One of the record's two clauses the install itself tests (`unless
-bodies.size = nF` is `bodies` verbatim).  The other, `guards.length =
-numFields`, is about an ARGUMENT, so it cannot be tested there and its site
-is the CALLER: `Arena/Inductives/BlockTail.lean`'s structure tail builds the
-guards with `structProjGuards`, whose answer has length `nF` by construction
-(`structProjGuards_length`).  So `checkStructProjTable_spec` takes
-`guards.length = nF` as a HYPOTHESIS and `BlockTail.lean` discharges it.
-
-The clause an install can actually CONCLUDE is RELATIVE — "the table list only
-grew, and every table the new index holds was already in the old one, or is
-well shaped" — because the route chains many installs and only the structure
-tail pushes one.  `ProjOut` is that clause; it composes (`ProjOut.trans`), and
-it is a FIELD of `InstRel` so that every install of the tier carries it rather
-than each caller restating it. -/
-
-/-- con-leche: none — a level-handle list's denotation has its own length.
-What `BlockTail.lean` reads `guards.length = nF` off, against
-`structProjGuards_length`. -/
-theorem denoteLList_length {st : LStore} :
-    ∀ (us : List LIdx) (xs : List Level), denoteLList st us = some xs →
-      us.length = xs.length := by
-  intro us
-  induction us with
-  | nil => intro xs h; simp only [denoteLList, Option.some.injEq] at h; simp [← h]
-  | cons u us ih =>
-    intro xs h
-    simp only [denoteLList, opt2] at h
-    cases hu : denoteL st u with
-    | none => rw [hu] at h; simp at h
-    | some y =>
-      cases hus : denoteLList st us with
-      | none => rw [hu, hus] at h; simp at h
-      | some ys =>
-        rw [hu, hus] at h
-        simp only [Option.some.injEq] at h
-        subst h
-        simp only [List.length_cons, ih _ hus]
-
-/-- con-leche: ConLeche/Verify/EnvWF.lean:161-168 TableWF — **what an install
-owes about projection tables**: it only pushed onto the table list
-(`TPushed`, what makes the promotion's `kt` the install's tables), and every
-table of the new list is an old one or well shaped. -/
-@[expose] def ProjOut (fe fe' : IFEnv) : Prop :=
-  TPushed fe fe' ∧ ∀ t ∈ fe'.env.tables, t ∈ fe.env.tables ∨ IProjTableOK t
-
-/-- con-leche: none — an install that changes nothing owes nothing. -/
-theorem ProjOut.refl (fe : IFEnv) : ProjOut fe fe :=
-  ⟨TPushed.refl fe, fun _ h => Or.inl h⟩
-
-/-- con-leche: none — **the obligation chains**, which is what a route's
-dozen stages need of it. -/
-theorem ProjOut.trans {fe₀ fe₁ fe₂ : IFEnv}
-    (h₁ : ProjOut fe₀ fe₁) (h₂ : ProjOut fe₁ fe₂) : ProjOut fe₀ fe₂ := by
-  refine ⟨h₁.1.trans h₂.1, fun t hm => ?_⟩
-  rcases h₂.2 t hm with h' | h'
-  · exact h₁.2 t h'
-  · exact Or.inr h'
-
-/-- con-leche: ConLeche/Kernel/FEnv.lean:189-197 FEnv.push — **a constant's
-push owes nothing**: it leaves the table list alone.  Every install of the
-tier but `checkStructProjTablePush` needs exactly this. -/
-theorem ProjOut.push (fe : IFEnv) (ci : IConstantInfo) : ProjOut fe (fe.push ci) :=
-  ⟨TPushed.push fe ci, fun _ h => Or.inl h⟩
-
-/-- con-leche: ConLeche/Kernel/FEnv.lean:199-205 pushTable — **a pushed table
-owes its own shape**: the one install that pushes a table
-(`checkStructProjTablePush`) discharges `ProjOut` with the new table's
-`IProjTableOK`. -/
-theorem ProjOut.pushTable (fe : IFEnv) {t : IProjTable} (ht : IProjTableOK t) :
-    ProjOut fe (fe.pushTable t) := by
-  refine ⟨TPushed.pushTable fe t, fun t' hm => ?_⟩
-  rcases List.mem_cons.1 hm with h | h
-  · subst h; exact Or.inr ht
-  · exact Or.inl h
-
 /-! ## The environment's own relation
 
-An install route's argument and answer are `IFEnv`s, and the pure side's are
-`Env`s; `Bridge/Promote/Exact.lean`'s `denoteFEnv` is the function that
-relates them and `Bridge/Checker/Inv.lean`'s `FoldOK` is where it is carried.
-`IndOut` is what an install route CONCLUDES, and it is
-`Bridge/Checker/Decl.lean`'s `DeclOut` with the run at the route rather than
-at `checkDecl`. -/
+An install's argument and answer are `IFEnv`s, and the pure side's are
+`Env`s.  There is no denotation of a whole index (the stream's index under a
+job's layer is frozen and never read back as a list): an index is related to an
+environment by its LOOKUPS (`IFEnvOK`), and that is what every knot call of the
+tier needs of it.  `EnvRel` adds the two facts a push needs to carry the
+lookups across (`IFEnvOK.pushStored`): no table without its structure, on both
+sides.  `InstRel` is what an install function concludes, `IndOut` what the
+route concludes. -/
+
+/-- con-leche: ConLeche/Verify/SimI.lean:54 ISOK (the `ienv` clause) — **an
+index answers for an environment**, at a store: the lookups agree
+(`IFEnvOKS`), the index has no table without its structure (`TblGate`), and
+neither has the environment (`TablesStored`). -/
+structure EnvRel (env : Env) (fe : IFEnv) (st : EStore) : Prop where
+  ienv : IFEnvOKS env fe st
+  gate : TblGate fe
+  stored : TablesStored env
+
+/-- con-leche: none — `EnvRel` survives the arena's growth. -/
+theorem EnvRel.mono {env : Env} {fe : IFEnv} {st st' : EStore}
+    (h : EnvRel env fe st) (hx : Ext st st') : EnvRel env fe st' :=
+  ⟨h.ienv.mono hx, h.gate, h.stored⟩
+
+/-- con-leche: none — the relation at a checking state. -/
+theorem EnvRel.ofCheck {env : Env} {fe : IFEnv} {s : AState}
+    (h : CheckOK false env fe s) (hg : TblGate fe) (henv : EnvWF env) :
+    EnvRel env fe s.store :=
+  ⟨h.ienv.toS, hg, TablesStored.of_envWF henv⟩
+
+/-- con-leche: none — the lookups at a state whose store is the relation's. -/
+theorem EnvRel.ifenv {env : Env} {fe : IFEnv} {s : AState}
+    (h : EnvRel env fe s.store) : IFEnvOK env fe s :=
+  h.ienv s rfl
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:189-197 FEnv.push — **a pushed
+constant**: the lookups by `IFEnvOK.pushStored`, the gates by their push
+lemmas. -/
+theorem EnvRel.push {env : Env} {fe : IFEnv} {st : EStore} {ci : IConstantInfo}
+    {c : ConstantInfo} (h : EnvRel env fe st) (hwf : StoreWF st)
+    (hci : Frontend.denoteCI st ci = some c) :
+    EnvRel ⟨c :: env.consts, env.tables⟩ (fe.push ci) st where
+  ienv := fun s hs => (h.ienv s hs).pushStored ⟨hs ▸ hwf⟩ h.gate h.stored (hs ▸ hci)
+  gate := h.gate.push ci
+  stored := h.stored.cons
 
 /-- con-leche: ConLeche/Verify/Cached/BridgeC.lean:609 checkDeclStepC_run —
-**an INSTALL function's answer relation**: the new index is still its list's
-index, it only pushed, its visibility bound only rose, and it denotes an
-environment con-leche's own install produces.
+**an INSTALL function's answer relation**: the new index answers for an
+environment con-leche's own install produces (`P` names that install).
 
-Every install twin of this tier (the formers' and constructors' pushes,
-`checkStructProjTable`, the recursor stage, the route) answers an `IFEnv`,
-and this is the one relation all of them use; `IndOut` below is `InstRel` plus what the STATE did, and
-`Bridge/Inductives/Decl.lean` assembles the two. -/
-structure InstRel (fe : IFEnv) (P : Env → Prop) (st : EStore) (fe' : IFEnv) :
-    Prop where
-  coh : IFEnvCoh fe'
-  pushed : Pushed fe fe'
-  visible : fe.visibleBelow ≤ fe'.visibleBelow
-  denote : ∃ env', denoteFEnv st fe' = some env' ∧ P env'
-  /-- **the projection tables this install left behind are well shaped** —
-  the section above says why the clause is relative and why it lives here
-  rather than at the one install that can discharge it. -/
-  proj : ProjOut fe fe'
-
-/-- con-leche: none — `InstRel` composes along a chain of installs: the
-environment relations chain by `Pushed.trans`, the projection obligation by
-`ProjOut.trans`, and the pure side's runs are chained by the caller (each
-install's `P` names its own con-leche function). -/
-theorem InstRel.trans {fe₀ fe₁ fe₂ : IFEnv} {P₁ P₂ : Env → Prop}
-    {st₁ st₂ : EStore} (h₁ : InstRel fe₀ P₁ st₁ fe₁)
-    (h₂ : InstRel fe₁ P₂ st₂ fe₂) : InstRel fe₀ P₂ st₂ fe₂ where
-  coh := h₂.coh
-  pushed := h₁.pushed.trans h₂.pushed
-  visible := Nat.le_trans h₁.visible h₂.visible
-  denote := h₂.denote
-  proj := h₁.proj.trans h₂.proj
-
-/-- con-leche: ConLeche/Kernel/FEnv.lean:199-205 pushTable — **a table push's
-denotation, inverted**: the pushed table denotes, and the new environment is
-the old one with it consed onto the tables. -/
-theorem denoteFEnv_pushTable_inv {st : EStore} {fe : IFEnv} {env env' : Env}
-    {t : IProjTable} (h : denoteFEnv st fe = some env)
-    (h' : denoteFEnv st (fe.pushTable t) = some env') :
-    ∃ pt, Frontend.denoteProjTable st t = some pt ∧
-      env' = ⟨env.consts, pt :: env.tables⟩ := by
-  obtain ⟨hcs, hts⟩ := denoteIEnv_some.mp h
-  obtain ⟨hcs', hts'⟩ := denoteIEnv_some.mp h'
-  simp only [IFEnv.pushTable, Frontend.denoteProjTableList] at hcs' hts'
-  cases hp : Frontend.denoteProjTable st t with
-  | none => rw [hp] at hts'; simp at hts'
-  | some pt =>
-    rw [hp, hts] at hts'
-    rw [hcs] at hcs'
-    simp only [Option.some.injEq] at hcs' hts'
-    refine ⟨pt, rfl, ?_⟩
-    cases env'
-    simp only at hcs' hts'
-    rw [← hcs', ← hts']
-
-/-- con-leche: none — `InstRel` survives the arena's growth. -/
-theorem InstRel.ext {fe fe' : IFEnv} {P : Env → Prop} {st st' : EStore}
-    (h : InstRel fe P st fe') (hx : Ext st st') : InstRel fe P st' fe' := by
-  obtain ⟨e, he, hp⟩ := h.denote
-  exact ⟨h.coh, h.pushed, h.visible, ⟨e, denoteFEnv_mono hx he, hp⟩, h.proj⟩
-
-/-- con-leche: none — an `InstRel` whose pure-side claim is implied by
-another's. -/
-theorem InstRel.imp {fe fe' : IFEnv} {P Q : Env → Prop} {st : EStore}
-    (h : InstRel fe P st fe') (hPQ : ∀ e, P e → Q e) : InstRel fe Q st fe' := by
-  obtain ⟨e, he, hp⟩ := h.denote
-  exact ⟨h.coh, h.pushed, h.visible, ⟨e, he, hPQ e hp⟩, h.proj⟩
+Every install twin of this tier (the formers' and constructors' pushes, the
+recursor stage's pushes) answers an `IFEnv`, and this is the one relation all
+of them use. -/
+structure InstRel (P : Env → Prop) (st : EStore) (fe' : IFEnv) : Prop where
+  denote : ∃ env', EnvRel env' fe' st ∧ P env'
 
 /-- con-leche: ConLeche/Verify/Cached/BridgeC.lean:609 checkDeclStepC_run —
-**what an inductive install route leaves behind**.  Seven clauses, and the
-correspondence with `DeclOut` is one-for-one except that the `run` clause is
-abstracted: `Bridge/Inductives/Decl.lean` instantiates it at
-`ConLeche.checkDecl … (.indDecl b nP)` and the two route theorems at their own
-con-leche function.
-
-**`visible` is here and not in `DeclOut`**, because `IndSpec`
-(`Bridge/Checker/Hyp.lean`) asks for it: `Arena/Checker.lean`'s promotion
-counter is read off `visibleBelow`, so the step needs to know the route only
-moved it up. -/
-structure IndOut (fe fe' : IFEnv) (s s' : AState) (run : Env → Prop) : Prop where
+**what the inductive route leaves behind**: `IndSpec.run`'s conclusion, the
+state's frame and the pure side's run (`run`, instantiated by
+`Bridge/Inductives/Decl.lean` at `ConLeche.checkDecl … (.indDecl b nP)`).
+Nothing about the route's environment: the job's index is dropped with its
+scratch tier. -/
+structure IndOut (s s' : AState) (run : Prop) : Prop where
   state : StateOK s'
   ext : Ext s.store s'.store
   pins : s'.pins = s.pins
-  coh : IFEnvCoh fe'
-  pushed : Pushed fe fe'
-  visible : fe.visibleBelow ≤ fe'.visibleBelow
-  denote : ∃ env', denoteFEnv s'.store fe' = some env' ∧ run env'
-  /-- **the eighth clause**: the arm's own `ProjOut`.
-  `Bridge/Checker/Hyp.lean`'s `IndSpec` and `Bridge/Checker/Decl.lean`'s
-  `DeclOut` carry both its halves (`TPushed` and the table shapes), which
-  `indSpec_of_bridge` projects out. -/
-  proj : ProjOut fe fe'
-  /-- **the ninth clause**: the environment the new index denotes is
-  well formed.  The fold boundary after each declaration needs `EnvWF` at the
-  pushed index; `DeclOut` carries the same clause.  Stated for every denotation
-  — `denoteFEnv` is a function, so this is the `denote` clause's witness. -/
-  envWF : ∀ env', denoteFEnv s'.store fe' = some env' → EnvWF env'
+  run : run
 
 /-! ## The recognisers' readers
 
-The recogniser (`blockParts?`, `blockShape?`) and the generated recursors read
+The recogniser (`blockShape?`) and the generated recursors read
 the reserved-name list, peel a rule's right-hand side with `stripLams`, and
 ask `lvlEq?` for `isProp`.  The run forms below put each of those at THIS
 tier's frame. -/
@@ -661,23 +511,6 @@ theorem stripLams_pstep {k : Nat} {s₀ s' : AState} {c : EIdx} {cP : Expr}
     (ExprOps.stripLams_spec k s₀ c hok (by rw [hd]; rfl))
   exact ⟨h1, h2 cP hd⟩
 
-/-- con-leche: none — a rule's right-hand side denotes. -/
-theorem denoteRule_rhs {st : EStore} {rl : IRecRule} {x : RecRule}
-    (h : Frontend.denoteRule st rl = some x) : denoteE st rl.rhs = some x.rhs := by
-  simp only [Frontend.denoteRule] at h
-  cases hc : denoteN st.ns rl.ctor with
-  | none => rw [hc] at h; simp at h
-  | some c =>
-    cases hf : Frontend.denoteFire st rl.fire with
-    | none => rw [hc, hf] at h; simp at h
-    | some f =>
-      cases he : denoteE st rl.rhs with
-      | none => rw [hc, hf, he] at h; simp at h
-      | some e =>
-        rw [hc, hf, he] at h
-        obtain rfl := Option.some.inj h
-        rfl
-
 /-- con-leche: none — **`lvlEq?` at the pure frame**: it moves only the two
 caches `CacheFrame` names (`Core.lvlEq?_frame`). -/
 theorem lvlEq?_pstep {s s' : AState} {u v : LIdx} {r : Option Bool}
@@ -705,13 +538,6 @@ theorem readLevelM_denote_L {s₀ s s' : AState} {h : LIdx} {u : Level}
     (q : PStep s₀ s) (hrun : readLevelM h s = .ok (u, s')) :
     denoteL s.store.ls h = some u :=
   (Core.readLevelM_denote (q.cframe.readL hrl) hrun).1
-
-/-- con-leche: none — the same from the core grade's `CheckOK`. -/
-theorem readLevelM_denote_core {μ : CheckMode} {env : Env} {fe : IFEnv}
-    {s₀ s s' : AState} {h : LIdx} {u : Level} (hc : CheckOK μ env fe s₀)
-    (q : PStep s₀ s) (hrun : readLevelM h s = .ok (u, s')) :
-    denoteL s.store.ls h = some u :=
-  readLevelM_denote_L hc.caches.readL q hrun
 
 /-! ## `List.mapM` at the pure frame
 
@@ -966,50 +792,50 @@ Each answer is an `FOk` of `fueledOpsM`'s operation, the frame a `CoreStep`. -/
 
 section Knot
 
-variable {μ : CheckMode} {env : Env} {fe : IFEnv}
+variable {env : Env} {fe : IFEnv}
 
 /-- con-leche: ConLeche/Kernel/CheckerBase.lean:27 CheckerOps.whnf — the knot's
 `whnf` slot in run form, its answer an `FOk` of `fueledOpsM`'s. -/
-theorem whnf_crun (hk : CoreSpec μ Arena.checkFuel) (henv : EnvWF env)
+theorem whnf_crun (hk : CoreSpec Arena.checkFuel) (henv : EnvWF env)
     {s s' : AState} {d : Nat} {e r : EIdx} {eP : Expr}
-    (hok : CheckOK μ env fe s) (he : denoteE s.store e = some eP)
+    (hok : CheckOK false env fe s) (he : denoteE s.store e = some eP)
     (hw : Expr.WScoped d eP)
-    (hrun : Arena.whnf μ fe Arena.checkFuel d e s = .ok (r, s')) :
-    CoreStep μ env fe s s' ∧ ∃ w, denoteE s'.store r = some w ∧ Expr.WScoped d w ∧
-      FOk ((fueledOpsM μ).whnf env d eP) w := by
+    (hrun : Arena.whnf .verified fe Arena.checkFuel d e s = .ok (r, s')) :
+    CoreStep env fe s s' ∧ ∃ w, denoteE s'.store r = some w ∧ Expr.WScoped d w ∧
+      FOk ((fueledOpsM .verified).whnf env d eP) w := by
   obtain ⟨h1, h2, h3, v, hv, hwv, hF⟩ := AM.of_run (P := fun u => u = s)
-    (Q := fun r u => CheckOK μ env fe u ∧ Ext s.store u.store ∧ u.pins = s.pins ∧
-      Core.SimE (ConLeche.whnf μ env) d eP u.store r)
+    (Q := fun r u => CheckOK false env fe u ∧ Ext s.store u.store ∧ u.pins = s.pins ∧
+      Core.SimE (ConLeche.whnf .verified false env) d eP u.store r)
     rfl hrun ((hk.knot env fe henv).whnf s d e eP hok he hw)
   exact ⟨⟨h1, h2, h3⟩, v, hv, hwv, FOk.whnf hF⟩
 
 /-- con-leche: ConLeche/Kernel/CheckerBase.lean:27 CheckerOps.inferType — the
 knot's `infer` slot in run form. -/
-theorem infer_crun (hk : CoreSpec μ Arena.checkFuel) (henv : EnvWF env)
+theorem infer_crun (hk : CoreSpec Arena.checkFuel) (henv : EnvWF env)
     {s s' : AState} {d : Nat} {e r : EIdx} {eP : Expr}
-    (hok : CheckOK μ env fe s) (he : denoteE s.store e = some eP)
+    (hok : CheckOK false env fe s) (he : denoteE s.store e = some eP)
     (hw : Expr.WScoped d eP)
-    (hrun : Arena.inferTypeCore μ fe Arena.checkFuel d e s = .ok (r, s')) :
-    CoreStep μ env fe s s' ∧ ∃ w, denoteE s'.store r = some w ∧ Expr.WScoped d w ∧
-      FOk ((fueledOpsM μ).inferType env d eP) w := by
+    (hrun : Arena.inferTypeCore .verified fe Arena.checkFuel d e s = .ok (r, s')) :
+    CoreStep env fe s s' ∧ ∃ w, denoteE s'.store r = some w ∧ Expr.WScoped d w ∧
+      FOk ((fueledOpsM .verified).inferType env d eP) w := by
   obtain ⟨h1, h2, h3, v, hv, hwv, hF⟩ := AM.of_run (P := fun u => u = s)
-    (Q := fun r u => CheckOK μ env fe u ∧ Ext s.store u.store ∧ u.pins = s.pins ∧
-      Core.SimE (ConLeche.inferTypeCore μ env) d eP u.store r)
+    (Q := fun r u => CheckOK false env fe u ∧ Ext s.store u.store ∧ u.pins = s.pins ∧
+      Core.SimE (ConLeche.inferTypeCore .verified false env) d eP u.store r)
     rfl hrun ((hk.knot env fe henv).infer s d e eP hok he hw)
   exact ⟨⟨h1, h2, h3⟩, v, hv, hwv, FOk.inferType hF⟩
 
 /-- con-leche: ConLeche/Kernel/CheckerBase.lean:27 CheckerOps.ensureSort — the
 seventh entry point in run form. -/
-theorem ensureSort_crun (hk : CoreSpec μ Arena.checkFuel) (henv : EnvWF env)
+theorem ensureSort_crun (hk : CoreSpec Arena.checkFuel) (henv : EnvWF env)
     {s s' : AState} {d : Nat} {e : EIdx} {r : LIdx} {eP : Expr}
-    (hok : CheckOK μ env fe s) (he : denoteE s.store e = some eP)
+    (hok : CheckOK false env fe s) (he : denoteE s.store e = some eP)
     (hw : Expr.WScoped d eP)
-    (hrun : Arena.ensureSortCore μ fe Arena.checkFuel d e s = .ok (r, s')) :
-    CoreStep μ env fe s s' ∧ ∃ u, denoteL s'.store.ls r = some u ∧
-      FOk ((fueledOpsM μ).ensureSort env d eP) u := by
+    (hrun : Arena.ensureSortCore .verified fe Arena.checkFuel d e s = .ok (r, s')) :
+    CoreStep env fe s s' ∧ ∃ u, denoteL s'.store.ls r = some u ∧
+      FOk ((fueledOpsM .verified).ensureSort env d eP) u := by
   obtain ⟨h1, h2, h3, u, hu, hF⟩ := AM.of_run (P := fun u => u = s)
-    (Q := fun r u => CheckOK μ env fe u ∧ Ext s.store u.store ∧ u.pins = s.pins ∧
-      SimL (ConLeche.ensureSortCore μ env) d eP u.store r)
+    (Q := fun r u => CheckOK false env fe u ∧ Ext s.store u.store ∧ u.pins = s.pins ∧
+      SimL (ConLeche.ensureSortCore .verified false env) d eP u.store r)
     rfl hrun (hk.sort env fe henv s d e eP hok he hw)
   exact ⟨⟨h1, h2, h3⟩, u, hu, FOk.ensureSort hF⟩
 
@@ -1018,11 +844,11 @@ executed level instantiation at the checking invariant (it writes the three
 readback caches, so the frame is a `CoreStep`). -/
 theorem instLPFast_cstep {s s' : AState}
     {ks : List NIdx} {us : LsIdx} {e r : EIdx} {ksv : List ConLeche.Name}
-    {usv : List Level} {eP : Expr} (hok : CheckOK μ env fe s)
+    {usv : List Level} {eP : Expr} (hok : CheckOK false env fe s)
     (hks : Frontend.denoteNList s.store.ns ks = some ksv)
     (hus : denoteLs s.store.lss us = some usv) (he : denoteE s.store e = some eP)
     (hrun : Arena.instLPFast Arena.coreWalkFuel ks us e s = .ok (r, s')) :
-    CoreStep μ env fe s s' ∧
+    CoreStep env fe s s' ∧
       denoteE s'.store r = some (eP.instantiateLevelParams ksv usv) := by
   obtain ⟨hst, hx, hL, hLs, hN, hc, hp, -, hrel⟩ :=
     AM.of_run (P := fun t => t = s) rfl hrun
@@ -1032,11 +858,11 @@ theorem instLPFast_cstep {s s' : AState}
 
 /-- con-leche: none — `lvlEq?` at the core grade: the store stands still and
 the verdict is `Level.isEquiv` of the denotations (`Core.lvlEq?_spec`). -/
-theorem lvlEq?_crun {μ : CheckMode} {env : Env} {fe : IFEnv} {s s' : AState}
-    {u v : LIdx} {uP vP : Level} {r : Option Bool} (hok : CheckOK μ env fe s)
+theorem lvlEq?_crun {env : Env} {fe : IFEnv} {s s' : AState}
+    {u v : LIdx} {uP vP : Level} {r : Option Bool} (hok : CheckOK false env fe s)
     (hu : denoteL s.store.ls u = some uP) (hv : denoteL s.store.ls v = some vP)
     (hrun : Arena.lvlEq? u v s = .ok (r, s')) :
-    CoreStep μ env fe s s' ∧ r = Level.isEquiv uP vP := by
+    CoreStep env fe s s' ∧ r = Level.isEquiv uP vP := by
   obtain ⟨h1, h2, h3, lu, lv, hlu, hlv, ha⟩ :=
     AM.of_run (P := fun t => t = s) rfl hrun (Core.lvlEq?_spec s u v hok)
   rw [hu] at hlu; rw [hv] at hlv
@@ -1045,16 +871,16 @@ theorem lvlEq?_crun {μ : CheckMode} {env : Env} {fe : IFEnv} {s s' : AState}
 
 /-- con-leche: ConLeche/Verify/BridgeDecl.lean fueledOpsM — **a knot defeq,
 in run form**. -/
-theorem defeq_crun {μ : CheckMode} {env : Env} {fe : IFEnv}
-    (hknot : Core.KnotSpec μ env fe Arena.checkFuel) {s₀ s' : AState} {d : Nat}
-    {a b : EIdx} {aP bP : Expr} {r : Bool} (hok : CheckOK μ env fe s₀)
+theorem defeq_crun {env : Env} {fe : IFEnv}
+    (hknot : Core.KnotSpec false env fe Arena.checkFuel) {s₀ s' : AState} {d : Nat}
+    {a b : EIdx} {aP bP : Expr} {r : Bool} (hok : CheckOK false env fe s₀)
     (ha : denoteE s₀.store a = some aP) (hb : denoteE s₀.store b = some bP)
     (hwa : Expr.WScoped d aP) (hwb : Expr.WScoped d bP)
-    (hrun : Arena.isDefEqCore μ fe Arena.checkFuel d a b s₀ = .ok (r, s')) :
-    CoreStep μ env fe s₀ s' ∧ FOk ((fueledOpsM μ).isDefEq env d aP bP) r := by
+    (hrun : Arena.isDefEqCore .verified fe Arena.checkFuel d a b s₀ = .ok (r, s')) :
+    CoreStep env fe s₀ s' ∧ FOk ((fueledOpsM .verified).isDefEq env d aP bP) r := by
   obtain ⟨h1, h2, h3, hF⟩ := AM.of_run (P := fun u => u = s₀)
-    (Q := fun x u => CheckOK μ env fe u ∧ Ext s₀.store u.store ∧ u.pins = s₀.pins ∧
-      Core.SimV (ConLeche.isDefEqCore μ env) d aP bP x)
+    (Q := fun x u => CheckOK false env fe u ∧ Ext s₀.store u.store ∧ u.pins = s₀.pins ∧
+      Core.SimV (ConLeche.isDefEqCore .verified false env) d aP bP x)
     rfl hrun (hknot.defeq s₀ d a b aP bP hok ha hb hwa hwb)
   exact ⟨⟨h1, h2, h3⟩, FOk.isDefEq hF⟩
 

@@ -457,9 +457,9 @@ theorem callW_dl {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
 
 /-- **`name_rec_i`'s model refines `internNNode (.str n s!"rec_{i}")`** (replaces
 `IndStubs.nameRecI_spec`). -/
-theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x i : Word) (hx : H x) :
-    RelW nriF [x, i] (StageR dn vis fe) (internNNode (.str (decI x) s!"rec_{i.toNat}"))
-      (KeepPost dn vis fe decW0N) := by
+theorem nriF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x i : Word) (hx : H x) :
+    RelW nriF [x, i] (StageR vis fe) (internNNode (.str (decI x) s!"rec_{i.toNat}"))
+      (KeepPost vis fe decW0N) := by
   intro m m' a r hc hS
   obtain ⟨n', hc'⟩ := callF_run hc
   cases n' with

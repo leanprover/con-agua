@@ -35,7 +35,7 @@ def stuckStrT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (side : Boo
         | .const cO usO => do
           let el ← emptyLevels
           let sl ← pinStringOfList
-          if cO = sl ∧ usO = el ∧ (← strLitSupported fe) then do
+          if cO = sl ∧ usO = el ∧ (← strLitStored fe) then do
             let c ← strLitToConstructor st
             if side then r.defeq depth a c else r.defeq depth c b
           else stuckIrrel r fe depth a b
@@ -48,7 +48,7 @@ theorem stuckStrT_run (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (si
     (st : String) (fo : EIdx) (s : AState) (m : Mem) (hP : PinsFull m s.pins) (cO : NIdx) (usO : LsIdx)
     (ht : (fo.tag == ETag.const) = true) (hv : s.store.view fo = some (.const cO usO)) :
     (stuckStrT r fe depth a b side (.strVal st) fo).run s =
-      (strLitSupported fe >>= fun x =>
+      (strLitStored fe >>= fun x =>
         if cO = decI (pinW m (1 + 6)) ∧ usO = decI (pinW m 52) ∧ x = true then do
           let c ← strLitToConstructor st
           if side then r.defeq depth a c else r.defeq depth c b
@@ -66,7 +66,7 @@ theorem si_tail {p : Prog} (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
     (hS : CoreS dn m a₀ vis fe M eb) (hmode : mode < 4) (heb : eb = (mode >>> 1) &&& 1)
     (ha : HW a) (hb : HW b) :
     RefE (StuckG p n) (K (siE p n m mode vis d a b))
-      (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (stuckIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn m vis fe M eb ResH) := by
   cases n with
   | zero => rw [show siE p 0 m mode vis d a b = .error .outOfFuel from rfl, hK1]; exact RefE.of_cls0 rfl
@@ -84,24 +84,24 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hlt : HW lt) (hfo : HW fo)
     (hg : tagW lt = 8) (hl : a₀.store.view (decE lt) = some (.lit l)) :
     RefE (StuckG p n) (strE p (n + 1) s₀.mem mode vis d a b side lt fo)
-      (stuckStrT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
+      (stuckStrT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
         (decE fo)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hR := hS.arena.base
   have hirr : ∀ (st : AState) (m : Mem) (M' : ModeMaps), CoreS dn m st vis fe M' eb →
       RefE (StuckG p n) (strE.j1 p n mode vis d a b m)
-        (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) st
+        (stuckIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) st
         (CorePost decBool dn m vis fe M' eb ResH) := fun st m M' hS' =>
     si_tail hq hi hc (fun _ => rfl) (fun _ => rfl) n hk F hF hn m st dn vis fe M' eb mode d a b hS'
       hs.mode4 hs.eb_mode ha hb
   have hdef : ∀ (st : AState) (m : Mem) (M' : ModeMaps) (x y : Word), CoreS dn m st vis fe M' eb →
       HW x → HW y →
       RefE (StuckG p n) (strE.k_defeq p (callE p n "defeq" [mode, vis, d, x, y] m))
-        ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) st
+        ((coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE x) (decE y)) st
         (CorePost decBool dn m vis fe M' eb ResH) := by
     intro st m M' x y hS' hx hy
     have hs' : SlotPre ⟨m, Locals.init []⟩ st dn vis fe M' eb mode := ⟨hS', hs.mode4, hs.eb_mode⟩
-    rw [← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+    rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
     exact RefE.bind_callE (fun _ => rfl)
       ((hk n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn hs' hx hy)
       (fun (hG : StuckG p n) => (hG.knot n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn
@@ -145,11 +145,12 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
       (pinAt_rd p hq.leaf.pinat n ⟨s₀.mem, Locals.init []⟩ 6) h) fun r₂ m₂ ⟨t₂, ht₂, hm₂, _, _, hr₂⟩ => ?_
     obtain rfl : m₂ = s₀.mem := by rw [← ht₂]; exact hm₂
     dsimp only [strE.k_pin_at]
-    -- `str_lit_supported`
+    simp (config := {decide := true}) only [↓reduceIte] at hr₂
+    -- `str_lit_stored`
     refine RefE.of_run_eq (stuckStrT_run _ fe _ _ _ _ st _ a₀ s₀.mem hS.pins _ _ hct hv) ?_
-    refine RefE.bind_callW (fun _ => rfl) (hc.strLitSupported n s₀ a₀ dn vis fe M eb hS)
+    refine RefE.bind_callW (fun _ => rfl) (hc.strLitStored n s₀ a₀ dn vis fe M eb hS)
       fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
-    dsimp only [strE.k_str_lit_supported]
+    dsimp only [strE.k_str_lit_stored]
     have hsl : HW (rdW (s₀.mem.arr64 PINS) (1 + 6)) := by
       have := hS.pins.names_lt 6 (by decide); rwa [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl] at this
     have hel : HW (rdW (s₀.mem.arr64 PINS) 52) := by
@@ -188,7 +189,7 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hlt : HW lt) (hfo : HW fo)
     (hg : tagW lt = 8) (hl : a₀.store.view (decE lt) = some (.lit l)) :
     CoreSpec p (n + 1) "stuck_str" [mode, vis, d, a, b, side, lt, fo]
-      (stuckStrT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
+      (stuckStrT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
         (decE fo)) decBool s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (strE_spec p hq.stuckStr hq.stuckIrrel hq.setCert hq.setWith hq.setWtb hq.setGo
     hq.setTail hq.sunit hq.suHead hq.suTail (n + 1) s₀ mode vis d a b side lt fo)

@@ -22,13 +22,15 @@ open L.Arena (AM.ok AM.res AM.st AM.run_of_ok)
 namespace L.Front
 
 
-/-- One line, as con-ron applies it, with the relation `Inv` after: the scanner reads the record
-`r` at `i` and the next position `q` (the word `nx`), `applyLine st r` succeeds from `a₀` with the
-parse state `st'`, and `Inv m (state after) st'`. -/
-def LineStepI (Inv : Mem → AState → StateD → Prop) (b : ByteArray) (i : USize) (nx : Word)
-    (st : StateD) (a₀ : AState) (m : Mem) : Prop :=
-  ∃ r q st', scanLineFwd b i = .ok r q ∧ q.toUInt64 = nx ∧ AM.ok (applyLine st r) a₀ ∧
-    AM.res (applyLine st r) a₀ = .inl st' ∧ Inv m (AM.st (applyLine st r) a₀) st'
+/-- One line, as con-ron applies it after `lineNo` lines, with the relation `Inv` after: the
+scanner reads the record `r` at `i` and the next position `q` (the word `nx`), `r` stands where it
+may (`lineRecPlaced (lineNo == 0)`), `applyRecord st r` succeeds from `a₀` with the parse state
+`st'`, and `Inv m (state after) st'`. -/
+def LineStepI (Inv : Mem → AState → StateD → Prop) (b : ByteArray) (i : USize) (lineNo : Nat)
+    (nx : Word) (st : StateD) (a₀ : AState) (m : Mem) : Prop :=
+  ∃ r q st', scanLineFwd b i = .ok r q ∧ q.toUInt64 = nx ∧ lineRecPlaced (lineNo == 0) r = true ∧
+    AM.ok (applyRecord st r) a₀ ∧
+    AM.res (applyRecord st r) a₀ = .inl st' ∧ Inv m (AM.st (applyRecord st r) a₀) st'
 
 /-- `parseBytes` after `StateD.init`: the lines from `i`, then the tail. -/
 def finishFrom (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat) :
@@ -37,7 +39,7 @@ def finishFrom (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat) :
   | .error e => pure (.error e)
   | .ok (st, lineNo, tail) =>
     if tail < b.usize then
-      match ← applyFinalLine st b tail (lineNo + 1) with
+      match ← applyFinalLine st b tail lineNo with
       | .error e => pure (.error e)
       | .ok st => pure (.ok (.ofState st))
     else
@@ -63,21 +65,23 @@ theorem finishFrom_end (hi : ¬ i < b.usize) :
   rfl
 
 theorem finishFrom_last (r : LineRec) (st' : StateD) (a' : AState) (hi : i < b.usize)
-    (hs : scanLineFwd b i = .ok r 0) (hap : (applyLine st r).run a = .ok (.inl st', a')) :
+    (hs : scanLineFwd b i = .ok r 0) (hp : lineRecPlaced (lineNo == 0) r = true)
+    (hap : (applyRecord st r).run a = .ok (.inl st', a')) :
     (finishFrom st b i lineNo).run a = .ok (.ok (.ofState st'), a') := by
   have hi' : i < USize.ofNat b.size := hi
   unfold finishFrom
   rw [feedChunk, dite_eq_left hi]
-  simp [hs, hi', applyFinalLine, hap]
+  simp [hs, hi', applyFinalLine, applyLine, hp, hap]
   rfl
 
 theorem finishFrom_next (r : LineRec) (q : USize) (st' : StateD) (a' : AState) (hi : i < b.usize)
     (hs : scanLineFwd b i = .ok r q) (hq : q ≠ 0) (hiq : i < q)
-    (hap : (applyLine st r).run a = .ok (.inl st', a')) :
+    (hp : lineRecPlaced (lineNo == 0) r = true)
+    (hap : (applyRecord st r).run a = .ok (.inl st', a')) :
     (finishFrom st b i lineNo).run a = (finishFrom st' b q (lineNo + 1)).run a' := by
   conv => lhs; unfold finishFrom
   rw [feedChunk, dite_eq_left hi]
-  simp [hs, hq, StateT.run_bind, hap, hiq]
+  simp [hs, hq, StateT.run_bind, applyLine, hp, hap, hiq]
   rfl
 
 end steps

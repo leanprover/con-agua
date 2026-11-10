@@ -1,17 +1,20 @@
 module
 
 public import ConAgua.Verdict.PosE
-import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Verdict.PosE1L
 import ConAgua.Verdict.PosE1N
+public import ConAgua.Verdict.PosFt
+import ConAgua.Arena.IndT.PosFields
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.IndRealIlpL
+import ConLeche.Verify.Cached.Erase
+import ConAgua.Arena.IndPosSpec.CfW
 
 @[expose] public section
 
@@ -38,7 +41,8 @@ local notation "V" => ConLeche.CheckMode.verified
 section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
-theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n : Nat)
+theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p)
+    (hF : FtProg p) (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62)
     (ih : NbRef p dn vis fe env n) : ContRef p dn vis fe env (n + 1) := by
   intro m a ctx fu po pl kb nn us aO aL ns c prog args NS ctxP progP nP usP argsP nsP dep hC hW hnn hus
     hargs hab hns hP hA hc hctx hprog hnP husP hargsP hnsP hwargs
@@ -64,7 +68,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   | zero => simp [ntWf] at hnt
   | succ n' =>
   simp only [ntWf] at hnt
-  obtain ⟨xc, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis nn hnn n' m m1 a r1 hnt hS
+  obtain ⟨xc, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok fe vis nn hnn n' m m1 a r1 hnt hS
   obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.nestContainer_spec ctxP hfind (decI nn) nP a a1 xc hC.check.state
     ⟨hC.check.ienv.toS, hnP⟩ hrun1
   rw [ConRon.Arena.nestCont.eq_def]
@@ -186,18 +190,18 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
       ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx02 _ _ hargsP) nPcW.toNat]
   have hP3 : PosMR m3 := hP2.fr (posRecW_mfr hk4)
   have hsN := nitE_spec p L.nit (n' + 1) ⟨m3, Locals.init []⟩ vis ctx (nhiW m1 ctx pl) key
-  have hN := nit_ref L.nit hcl hIlpf hLC (n' + 1) (hi := nhiW m1 ctx pl) hC3 hA3 rfl ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl hP3
+  have hN := nit_ref L.nit hcl hIlpf hLC hq hF henv (n' + 1) (by omega) (hi := nhiW m1 ctx pl) hC3 hA3 rfl ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl hP3
     (dCtx_ext _ hx02 _ _ hctx) hkey2
   cases h5 : callE p (n' + 1) "nest_inst_type" [vis, ctx, nhiW m1 ctx pl, key] m3 with
   | error e5 =>
     rw [ncE.k_nest_inst_type.eq_1]
-    exact fun hG => ErrClaim.bind_left (RefE.run_err hsN hG.nv hG.nv hN h5)
+    exact fun hG => ErrClaim.bind_left (RefE.run_err hsN hG.nv ⟨hG.nv, hG.whnf⟩ hN h5)
   | ok q5 =>
   obtain ⟨r4, m4⟩ := q5
   obtain ⟨s5, hs5, -, xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, hA4⟩ := RefE.run_ok hsN hN h5
   dsimp only at hS4 hg4 hni0 hctyH hctyd hP4 hA4
   rw [hs5] at hS4 hg4 hP4 hA4
-  obtain ⟨c4, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (nhiW m1 ctx pl).toNat
+  obtain ⟨c4, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec coreSpecV henv hc c (nhiW m1 ctx pl).toNat
     ⟨decI nn, decI us, args.take nPcW.toNat⟩ ⟨nP, usP, argsP.take nPcW.toNat⟩ a2 a4 xi c2.ok
     ⟨dCtx_ext _ hx02 _ _ hctx, hkey2⟩ hrun4
   have c24 := c2.trans c4

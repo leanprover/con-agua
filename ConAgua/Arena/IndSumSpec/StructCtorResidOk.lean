@@ -141,10 +141,10 @@ end spec
 
 theorem plW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
     (m m' : Mem) (a : AState) (o l : Word) (lps : List NIdx) (r : List Word)
-    (h : plW k m o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : plW k m o l = some (r, m')) (hS : StageR vis fe m a)
     (hd : decHL m o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat < 2 ^ 64)
     (ht : o.toNat + l.toNat ≤ iwTop m) :
-    ∃ x a', (paramLevels lps).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+    ∃ x a', (paramLevels lps).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       H (r.headD 0) ∧ decI (r.headD 0) = x := by
   cases k with
   | zero => cases h
@@ -157,7 +157,7 @@ theorem plW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
-    ilF_ok dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
+    ilF_ok vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
   refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hH, by simpa using hx⟩
   simp only [paramLevels, StateT.run_bind, hrun1]
   exact hrun2
@@ -170,12 +170,12 @@ theorem srRes_ok (fn hd al nP nIdx e : Word) (b1 b2 b3 : Bool)
 
 theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
     (m m' : Mem) (a : AState) (T lo ll nP o nIdx cbody : Word) (r : List Word) (lps : List NIdx)
-    (h : srW k m T lo ll nP o nIdx cbody = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : srW k m T lo ll nP o nIdx cbody = some (r, m')) (hS : StageR vis fe m a)
     (hT : H T) (hcb : H cbody) (hd : decHL m lo.toNat ll.toNat = some lps)
     (hb : lo.toNat + ll.toNat < 2 ^ 64) (ht : lo.toNat + ll.toNat ≤ iwTop m)
     (hon : o.toNat + nP.toNat < 2 ^ 64) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) :
     ∃ x a', (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)).run a =
-      .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
+      .ok (x, a') ∧ KeepPost vis fe decW0B m m' a' r x := by
   cases k with
   | zero => cases h
   | succ k =>
@@ -191,7 +191,7 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 T (r1.headD 0) hT hus h2
   obtain ⟨rf, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   rw [srK3_some] at h
-  obtain ⟨fnv, a3, hrun3, hS3, hg3, hf32, hfd⟩ := gafF_ok dn vis fe CWF cbody hcb m2 m3 a2 rf h3 hS2
+  obtain ⟨fnv, a3, hrun3, hS3, hg3, hf32, hfd⟩ := gafF_ok vis fe CWF cbody hcb m2 m3 a2 rf h3 hS2
   obtain ⟨ra, m4, h4, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   rw [srK4_some] at h
   obtain ⟨args, a4, hrun4, hS4, hg4, hargs, hat⟩ :=
@@ -306,14 +306,14 @@ include ha hc hsc hg hpf hpp hip hplg hpl hil hcf hcp hic hbf hbp hib hpg hps he
 @[refines ConRon.Arena.structCtorResidOk]
 theorem structCtorResidOk_refines (k : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T lo ll nP o nIdx cbody : Word)
-    (lps : List NIdx) (hS : StageR dn vis fe s₀.mem a₀) (hT : H T) (hcb : H cbody)
+    (lps : List NIdx) (hS : StageR vis fe s₀.mem a₀) (hT : H T) (hcb : H cbody)
     (hd : decHL s₀.mem lo.toNat ll.toNat = some lps) (hb : lo.toNat + ll.toNat < 2 ^ 64)
     (ht : lo.toNat + ll.toNat ≤ iwTop s₀.mem) (hon : o.toNat + nP.toNat < 2 ^ 64)
     (hni : nP.toNat + nIdx.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "struct_ctor_resid_ok" [T, lo, ll, nP, o, nIdx, cbody]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀ ∧
-      KeepPost dn vis fe decW0B s₀.mem s'.mem
+      KeepPost vis fe decW0B s₀.mem s'.mem
         (AM.st (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀) r
         (AM.res (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀); ⊤⦄ := by
   refine triple_post (srW_spec p ha hc hsc hg hpf hpp hip hplg hpl hil hcf hcp hic hbf hbp hib hpg hps

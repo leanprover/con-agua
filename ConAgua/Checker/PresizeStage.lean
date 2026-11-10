@@ -228,10 +228,11 @@ theorem irpStage_ps (hpb : pb.size < 2 ^ 63) :
     simp only [stkTop] at this ⊢
     rw [this]; exact stkTop_loadMem b pb sz
   · have z := loadMem_rd b pb sz
-    exact HZ.frame ⟨z _ _, z _ _, z _ _, z _ _, z _, z _⟩ hfr' (pinA_not (by decide) (by decide))
+    exact HZ.frame ⟨z _ _, z _ _, z _ _, z _ _, z _ _, z _, z _⟩ hfr' (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
-      (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
+      (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
+
+
 
 end
-
 end L.Checker

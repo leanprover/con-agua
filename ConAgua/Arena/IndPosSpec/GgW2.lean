@@ -10,6 +10,7 @@ public import ConAgua.Arena.IndPosSpec.NbKeyK2
 public import ConAgua.Arena.IndPosSpec.NbLook
 import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.UnW
+import ConAgua.Arena.IndPartsSpec.BlockCounts
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
@@ -77,14 +78,14 @@ open L.Arena
 
 theorem nestFrameMates_specW (p : Prog) (L : FmLook p) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame_mates" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ nfmW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ nfmW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ L.hp, callFn, nestFrameMatesL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        nestBlockOf_specW p L.hx L.hg L.hf L.hbo n,
+        nestBlockOf_specW p L.hg L.hf L.hbo n,
         nestFrameMatesGo_spec p L.hc L.ha L.hcp L.hsn L.hgo n] <;>
       finish (gen := 20) [nfmW]
 
@@ -107,8 +108,10 @@ namespace L.Ind
 open L.Arena
 
 theorem nestFrameGrp_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc2 : p.lookup "iw_copy" = some iwCopy) (h2 : p.lookup "rec2" = some rec2)
+    (hc2 : p.lookup "iw_copy" = some iwCopy) (h3 : p.lookup "rec3" = some rec3)
     (h4 : p.lookup "rec4" = some rec4) (hsn : p.lookup "sl_snoc" = some slSnoc)
+    (hv : p.lookup "e_view" = some eView) (hs : p.lookup "sl_cons" = some slCons)
+    (hpb : p.lookup "pi_binders" = some piBinders)
     (hp : p.lookup "nest_frame_grp" = some nestFrameGrpL) (n : Nat) :
     ∀ (s₀ : St) (hi us dO dL gO gL pO pL nO nL : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame_grp" [hi, us, dO, dL, gO, gL, pO, pL, nO, nL]
@@ -123,8 +126,10 @@ theorem nestFrameGrp_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     simp only [invoke_eq _ hp, callFn, nestFrameGrpL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec4_specW p ha h4 n, posRec2_specW p ha h2 n, slSnoc_specW p ha hc2 hsn n, ih] <;>
-      finish (gen := 20) (instances := 5000) [rdW_eq, Locals.init_cons_zero]
+        posRec4_specW p ha h4 n, posRec3_specW p ha h3 n, piBinders_spec p ha hc2 hv hs hpb n,
+        slSnoc_specW p ha hc2 hsn n, ih] <;>
+      finish (gen := 20) (instances := 5000) [rdW_eq, Locals.init_cons_zero, CWF, List.getD_cons_zero,
+        List.getD_cons_succ]
 
 end L.Ind
 
@@ -241,14 +246,8 @@ theorem nestHoleAt_spec' (p : Prog) (L : PfLook p) (k : Nat) (s₀ : St) (ctx po
     ⦃fun r s' => LocEq s' s₀ ∧ haWf k s₀.mem ctx po pl i = some (r, s'.mem); ⊤⦄ := by
   cases k with
   | zero => rw [invoke_eq _ L.hha]; simp only [callFn, nestHoleAt]; vcgen [exec] <;> grind
-  | succ k => exact nestHoleAt_spec p L.ha L.h2 L.h4 L.hrg L.hr L.hc L.hap L.hha k s₀ ctx po pl i
+  | succ k => exact nestHoleAt_spec p L.ha L.h3 L.hsg L.h4 L.hrg L.hr L.hc L.hap L.hha k s₀ ctx po pl i
 
-theorem nestArity_spec' (p : Prog) (hl : NaLook p) (k : Nat) (s₀ : St) (vis c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_arity" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ naWf k s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  cases k with
-  | zero => rw [invoke_eq _ hl.hp]; simp only [callFn, nestArityL]; vcgen [exec] <;> grind
-  | succ k => exact nestArity_spec p hl k s₀ vis c
 
 end L.Ind
 
@@ -325,29 +324,7 @@ namespace L.Ind
 
 open L.Arena
 
-theorem posRec3_eq (m : Mem) (a b c : Word) :
-    (match allocW m 3 with | none => none | some (q, _) => some (q, rec3Mem m a b c)) =
-      posRecW m [a, b, c] := by
-  rw [posRecW_eq m [a, b, c] 3 rfl]
-  cases allocW m 3 with
-  | none => rfl
-  | some pr =>
-    simp only [rec3Mem, wrIW]
-    rw [show rdW (m.arr64 CTL) 200 + 1 + 1 = rdW (m.arr64 CTL) 200 + 2 by
-      rw [UInt64.add_assoc]; rfl]
-
-theorem posRec3_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.lookup "rec3" = some rec3)
-    (n : Nat) (s₀ : St) (a b c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c] = some (r.headD 0, s'.mem); ⊤⦄ := by
-  simp only [← posRec3_eq, invoke_eq _ h3, callFn, rec3]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_specW p ha n] <;>
-      finish [rec3Mem, allocMem, allocW]
+-- `posRec3_eq`, `posRec3_specW`: `CtxFields.lean`.
 
 theorem pos2_getElem_getD (a : Array Word) (i : Nat) (h : i < a.size) : a[i] = a[i]?.getD 0 := by
   simp [h]

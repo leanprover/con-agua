@@ -284,31 +284,31 @@ theorem rec2CG_cls {m : Mem} {g : Nat} {G : ClassGen} (h : decCG m g = some G) :
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
-theorem rec2SimIh (n : Nat) {m : Mem} {a : AState} (hS : StageR dn vis fe m a) {g : Word} {G : ClassGen}
+theorem rec2SimIh (n : Nat) {m : Mem} {a : AState} (hS : StageR vis fe m a) {g : Word} {G : ClassGen}
     (hG : DecB (fun m => decCG m g.toNat) m G) (t tele : Word) {w : Word} (hw : H w) (d : Word)
     (hA : AbsOK m) :
     RSim (rec2IhF n m g t tele w d) (G.ihParts t.toNat tele.toNat (decI w) d.toNat) a
-      (fun b a' x => (StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ IhRes b.2 b.1 x) ∧ AbsOK b.2) := by
+      (fun b a' x => (StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ IhRes b.2 b.1 x) ∧ AbsOK b.2) := by
   rcases n with _ | n
   · exact RSim.none
   rintro ⟨r, m'⟩ h
-  obtain ⟨res, a', hrun, hS', hg, hres, hA'⟩ := ihW_ok dn vis fe m m' a g t tele w d G r hS hw
+  obtain ⟨res, a', hrun, hS', hg, hres, hA'⟩ := ihW_ok (fun _ => none) vis fe m m' a g t tele w d G r hS hw
     (rec2CG_cls (hG.get (decCG_mono _))) hS.iw.iwSize hA h
   exact ⟨res, a', hrun, ⟨hS', hg, hres⟩, hA'⟩
 
 /-- `class_gen_minor_ty_ih1`, in continuation form: the twin's body of `ihsGo` at one recursive
 field, then `REST` at the inductive hypothesis. -/
 theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso wsl fvso fvsl i e : Word)
-    (G : ClassGen) (ws fvs : List EIdx) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (G : ClassGen) (ws fvs : List EIdx) (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64)
     (hws : decHL m wso.toNat wsl.toNat = some ws) (hwb : wso.toNat + wsl.toNat ≤ iwTop m)
     (hfvs : decHL m fvso.toNat fvsl.toNat = some fvs) (hfb : fvso.toNat + fvsl.toNat ≤ iwTop m)
     (hA : AbsOK m)
     (K : Option (List Word × Mem) → Option β) (hK : K none = none) (REST : EIdx → AM (Option γ))
     (Q : β → AState → Option γ → Prop)
-    (hnone : ∀ m' a', StageR dn vis fe m' a' → IWGrow m m' → AbsOK m' →
+    (hnone : ∀ m' a', StageR vis fe m' a' → IWGrow m m' → AbsOK m' →
       RSim (K (some ([0, 0], m'))) (pure none) a' Q)
-    (hsome : ∀ m' a' w, StageR dn vis fe m' a' → IWGrow m m' → H w → AbsOK m' →
+    (hsome : ∀ m' a' w, StageR vis fe m' a' → IWGrow m m' → H w → AbsOK m' →
       RSim (K (some ([1, w], m'))) (REST (decI w)) a' Q) :
     RSim (K (i1W (n + 1) m g t tele wso wsl fvso fvsl i e)) (do
       let w ← ConRon.Arena.exprGetD ws i.toNat
@@ -352,7 +352,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   subst hfd
   rw [itW.k_expr_get_d.arm1]
   refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_mk_app_n_f n g t _ _ _ _ e o))) hK
-    (RSim.withF ((mknF_ok dn vis fe _ _ _ hfH xs).sim ⟨hS3, by rw [decHL_grow hg3 hxb]; exact hxs⟩)
+    (RSim.withF ((mknF_ok vis fe _ _ _ hfH xs).sim ⟨hS3, by rw [decHL_grow hg3 hxb]; exact hxs⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r4, m4⟩ fx a4 - ⟨⟨hS4, hg4, hfxH, hfxd⟩, hf4⟩
   dsimp only at hS4 hg4 hfxH hfxd
@@ -375,7 +375,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   rw [itW.k_sl_snoc.arm1, hr6]
   simp only [List.headD_cons, List.tail_cons]
   refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_mk_app_n_f_2 n _ _ e o))) hK
-    (RSim.withF ((mknF_ok dn vis fe _ _ _ hmtH (idx ++ [decI (r4.headD 0)])).sim ⟨hS6, hd6⟩)
+    (RSim.withF ((mknF_ok vis fe _ _ _ hmtH (idx ++ [decI (r4.headD 0)])).sim ⟨hS6, hd6⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r7, m7⟩ body a7 - ⟨⟨hS7, hg7, hbH, hbd⟩, hf7⟩
   dsimp only at hS7 hg7 hbH hbd
@@ -389,7 +389,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
     exact (by rw [show itW.k_class_gen_minor_ty_ih1_close none = none from rfl, show i1W.k_class_gen_minor_ty_ih1_tail none = none from rfl, hK]; exact RSim.none)
   rw [iclW.arm1]
   refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_class_gen_minor_ty_ih1_close (iclW.k_fvar_type_ds n e (r7.headD 0) o)))) hK
-    (RSim.withF ((ftdsF_ok dn vis fe _ _ xs).sim
+    (RSim.withF ((ftdsF_ok (fun _ => none) vis fe _ _ xs).sim
       ⟨hS7, by rw [decHL_grow hg27 hxb]; exact hxs, fun _ => Nat.le_trans hxb hg27.iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r8, m8⟩ bs a8 - ⟨⟨hS8, hg8, hbs, hbb⟩, hf8⟩
   dsimp only at hS8 hg8 hbs hbb
@@ -401,9 +401,9 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   have hel : e.toNat + (r8.tail.headD 0).toNat < 2 ^ 64 := by
     have := nctAddNowrap (a := r8.tail.headD 0) (b := e) (by rwa [UInt64.add_comm]); omega
   refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_class_gen_minor_ty_ih1_close (iclW.k_close_telescope o)))) hK (Q1 := fun b a' x =>
-    StageR dn vis fe b.2 a' ∧ IWGrow m8 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
+    StageR vis fe b.2 a' ∧ IWGrow m8 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r9, m9⟩ h9
-    obtain ⟨x, a', hrun, hS', hg, hx, hA9⟩ := closeW_ok n dn fe vis m8 m9 a8 _ _ e _ bs r9 h9 hS8 hbH hbs
+    obtain ⟨x, a', hrun, hS', hg, hx, hA9⟩ := closeW_ok n (fun _ => none) fe vis m8 m9 a8 _ _ e _ bs r9 h9 hS8 hbH hbs
       (hS8.lt64 hbb) hbb hel (hf8 (hf7 hA6))
     exact ⟨x, a', hrun, hS', hg, hx, hA9⟩
   rintro ⟨r9, m9⟩ ih a9 - ⟨hS9, hg9, ⟨hih, hihd⟩, hA9⟩
@@ -499,17 +499,17 @@ theorem rec2IsTag {m : Mem} {x i : Word} {X : ClassCtor} (hX : decCC m x.toNat =
     simp only [ite_eq_right hilt]
     exact ⟨fun _ => (by decide), fun t tele e => (by cases e)⟩
 
-theorem misW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (X : ClassCtor)
+theorem misW_sim (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (X : ClassCtor)
     (hns : G.nP + G.slots.length < 2 ^ 64) (g x d nF wso wsl fvso fvsl : Word) (ws fvs : List EIdx)
     (hnF : nF.toNat = X.nF) (n : Nat) :
-    ∀ (m : Mem) (a : AState) (i l : Word), StageR dn vis fe m a → DecB (fun m => decCG m g.toNat) m G →
+    ∀ (m : Mem) (a : AState) (i l : Word), StageR vis fe m a → DecB (fun m => decCG m g.toNat) m G →
     DecB (fun m => decCC m x.toNat) m X →
     decHL m wso.toNat wsl.toNat = some ws → wso.toNat + wsl.toNat ≤ iwTop m →
     decHL m fvso.toNat fvsl.toNat = some fvs → fvso.toNat + fvsl.toNat ≤ iwTop m →
     l.toNat ≤ i.toNat → i.toNat ≤ X.nF → AbsOK m →
     RSim (misW n m g x d nF wso wsl fvso fvsl i l)
       (ConRon.Arena.ClassGen.minorTy.ihsGo G X d.toNat fvs ws l.toNat (rec2Recs X i.toNat)) a
-      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2) := by
+      (fun b a' o => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2) := by
   induction n with
   | zero => intros; intro b hb; simp [misW] at hb
   | succ n ih =>
@@ -611,7 +611,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 /-- The model of `class_gen_minor_ty_concl2` simulates the twin's tail of `minorTy`. -/
 theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao ral capp : Word)
-    (G : ClassGen) (NPC : Nat) (fvs ihs ra : List EIdx) (hS : StageR dn vis fe m a)
+    (G : ClassGen) (NPC : Nat) (fvs ihs ra : List EIdx) (hS : StageR vis fe m a)
     (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64)
     (hnpc : nPc.toNat = NPC)
     (hfvs : decHL m fo.toNat fl.toNat = some fvs) (hfb : fo.toNat + fl.toNat ≤ iwTop m)
@@ -623,7 +623,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
       let concl ← mkAppN mc (List.drop NPC ra ++ [decI capp])
       let fbs ← List.mapM G.binder fvs
       let r ← ConRon.Arena.closeTelescope (fbs ++ ihs) d.toNat concl
-      pure (some r)) a (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
+      pure (some r)) a (fun b a' x => KP vis fe m decOE b a' x ∧ AbsOK b.2) := by
   rw [c2W.arm1]
   refine RSim.bind (K := c2W.k_class_gen_mot_var n d nPc fo fl ihso ihsl rao ral capp) rfl
     (RSim.withF (rec2SimMotVar n hS c hG hns) (fun _ hb => rec2MotVarF_afr hb)) ?_
@@ -665,7 +665,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   rw [c2W.k_sl_snoc.arm1, hr2]
   simp only [List.headD_cons, List.tail_cons]
   refine RSim.bind (K := c2W.k_mk_app_n_f n d fo fl ihso ihsl) rfl
-    (RSim.withF ((mknF_ok dn vis fe _ _ _ hmcH (ra.drop NPC ++ [decI capp])).sim ⟨hS2, hd2⟩)
+    (RSim.withF ((mknF_ok vis fe _ _ _ hmcH (ra.drop NPC ++ [decI capp])).sim ⟨hS2, hd2⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r3, m3⟩ body a3 - ⟨⟨hS3, hg3, hbH, hbd⟩, hf3⟩
   dsimp only at hS3 hg3 hbH hbd
@@ -676,7 +676,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   · intro b hb; simp [mcW, c2W.k_class_gen_minor_ty_close] at hb
   rw [mcW.arm1]
   refine RSim.bind (K := fun o => c2W.k_class_gen_minor_ty_close (mcW.k_fvar_type_ds n ihso ihsl d (r3.headD 0) o)) rfl
-    (RSim.withF ((ftdsF_ok dn vis fe _ _ fvs).sim
+    (RSim.withF ((ftdsF_ok (fun _ => none) vis fe _ _ fvs).sim
       ⟨hS3, by rw [decHL_grow hg13 hfb]; exact hfvs, fun _ => Nat.le_trans hfb hg13.iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r4, m4⟩ fbs a4 - ⟨⟨hS4, hg4, hfbs, hfbb⟩, hf4⟩
   dsimp only at hS4 hg4 hfbs hfbb
@@ -692,9 +692,9 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   have hdl : d.toNat + (r5.tail.headD 0).toNat < 2 ^ 64 := by
     have := nctAddNowrap (a := r5.tail.headD 0) (b := d) (by rwa [UInt64.add_comm]); omega
   refine RSim.bind (K := fun o => c2W.k_class_gen_minor_ty_close (mcW.k_close_telescope o)) rfl (Q1 := fun b a' x =>
-    StageR dn vis fe b.2 a' ∧ IWGrow m5 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
+    StageR vis fe b.2 a' ∧ IWGrow m5 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r6, m6⟩ h6
-    obtain ⟨x, a', hrun, hS', hg, hx, hA6⟩ := closeW_ok n dn fe vis m5 m6 a4 _ _ d _ _ r6 h6 hS5 hbH hd5
+    obtain ⟨x, a', hrun, hS', hg, hx, hA6⟩ := closeW_ok n (fun _ => none) fe vis m5 m6 a4 _ _ d _ _ r6 h6 hS5 hbH hd5
       (hS5.lt64 hb5) hb5 hdl (appendW_afr h5 (hf4 (hf3 hA2)))
     exact ⟨x, a', hrun, hS', hg, hx, hA6⟩
   rintro ⟨r6, m6⟩ x a6 - ⟨hS6, hg6, hx, hA6⟩
@@ -706,7 +706,7 @@ end sims
 /-- The constructor's name word, read through its record. -/
 theorem rec2CCName {m : Mem} {x : Word} {X : ClassCtor} (hX : decCC m x.toNat = some X)
     (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    ∃ w, rdW (m.arr64 EREC) (rdW (m.arr64 IW) x) = w ∧ H w ∧ decI w = X.cv.name := by
+    ∃ w, erRd m (rdW (m.arr64 IW) x) = w ∧ H w ∧ decI w = X.cv.name := by
   simp only [decCC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hX
   obtain ⟨q, hq, cv, hcv, nF, hnF, ks, hks, y4, hy4, y5, hy5, rfl⟩ := hX
   obtain ⟨eq, tq⟩ := rec2RdN (w := x) (k := 0) (by simpa using hq) hsz
@@ -714,13 +714,13 @@ theorem rec2CCName {m : Mem} {x : Word} {X : ClassCtor} (hX : decCC m x.toNat = 
   simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv
   obtain ⟨nm, hnm, lps, hlps, ty, hty, rfl⟩ := hcv
   obtain ⟨w, hw, hwl, hwd⟩ := hd?_some hnm
-  exact ⟨w, by rw [eq]; exact rdW_of_get? tq.symm hw, hwl, hwd.symm⟩
+  exact ⟨w, by rw [eq]; exact erRd_of_erA (by rw [tq]; exact hw), hwl, hwd.symm⟩
 
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl res ihso ihsl : Word)
-    (G : ClassGen) (X : ClassCtor) (LV : LsIdx) (NPC : Nat) (DS fvs ihs : List EIdx) (hS : StageR dn vis fe m a)
+    (G : ClassGen) (X : ClassCtor) (LV : LsIdx) (NPC : Nat) (DS fvs ihs : List EIdx) (hS : StageR vis fe m a)
     (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64)
     (hX : DecB (fun m => decCC m x.toNat) m X) (hres : H res) (hlv : H lvls) (hlvd : decI lvls = LV)
     (hds : DecB (fun m => (decHL m ds0.toNat dl0.toNat : Option (List EIdx))) m DS) (hnpc : nPc.toNat = NPC)
@@ -735,7 +735,7 @@ theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl 
       let concl ← mkAppN mc (List.drop NPC ra ++ [capp])
       let fbs ← List.mapM G.binder fvs
       let r ← ConRon.Arena.closeTelescope (fbs ++ ihs) d.toNat concl
-      pure (some r)) a (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
+      pure (some r)) a (fun b a' x => KP vis fe m decOE b a' x ∧ AbsOK b.2) := by
   rw [cW.arm1]
   refine RSim.bind (K := cW.k_get_app_args_f n g c x d lvls ds0 dl0 nPc fo fl ihso ihsl) rfl
     (RSim.withF (simGetAppArgs hS hres) (fun _ hb => gaaF_afr hb)) ?_
@@ -744,10 +744,10 @@ theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl 
   simp only [getD_zero, Nat.zero_add, getD_one] at hra hrb
   rw [cW.k_get_app_args_f.arm1]
   obtain ⟨nw, enw, hnwH, hnwd⟩ := rec2CCName (hX.stab (decCC_mono _) m1 hg1) hS1.iw.iwSize
-  rw [enw]
+  simp only [erRd_fold]; rw [enw]
   subst hlvd
   refine RSim.bind (K := cW.k_intern_const n g c d ds0 dl0 nPc fo fl ihso ihsl (r1.headD 0) (r1.tail.headD 0)) rfl
-    (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
+    (Q1 := fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨cc, m2⟩ h2
     obtain ⟨a', hrun, hS', hg⟩ := internConst_stage hS1 nw lvls hnwH hlv h2
     rw [hnwd] at hrun
@@ -767,7 +767,7 @@ theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl 
     (by rw [decHL_grow hg12 hfb]; exact hfvs) (Nat.le_trans hfb hg12.iw)
   rw [cW.k_sl_append.arm1]
   refine RSim.bind (K := cW.k_mk_app_n_f n g c d nPc fo fl ihso ihsl (r1.headD 0) (r1.tail.headD 0)) rfl
-    (RSim.withF ((mknF_ok dn vis fe _ _ _ hccH (DS ++ fvs)).sim ⟨hS3, hd3⟩) (fun _ hb => mknF_afr hb)) ?_
+    (RSim.withF ((mknF_ok vis fe _ _ _ hccH (DS ++ fvs)).sim ⟨hS3, hd3⟩) (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r4, m4⟩ capp a4 - ⟨⟨hS4, hg4, hcH, hcd⟩, hf4⟩
   dsimp only at hS4 hg4 hcH hcd
   subst hcd
@@ -791,11 +791,11 @@ end sims
 
 /-- The decoded result of `class_gen_minor_ty`. -/
 theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
-    (a : AState) (g c x d : Word) (G : ClassGen) (X : ClassCtor) (hS : StageR dn vis fe m a)
+    (a : AState) (g c x d : Word) (G : ClassGen) (X : ClassCtor) (hS : StageR vis fe m a)
     (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64)
     (hX : DecB (fun m => decCC m x.toNat) m X) (hA : AbsOK m) :
     RSim (mnW n m g c x d) (ConRon.Arena.ClassGen.minorTy G c.toNat X d.toNat) a
-      (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
+      (fun b a' x => KP vis fe m decOE b a' x ∧ AbsOK b.2) := by
   rcases n with _ | n
   · exact RSim.none
   rw [mnW_eq]
@@ -857,7 +857,7 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   simp only [show UInt64.ofNat 5 = (5 : Word) from rfl] at evN
   rw [evN]
   refine RSim.bind (K := fun o => cK4 (bW.k_target_pi_doms_with n g c x d vl _ _ _ _ _ _ o)) rfl (Q1 := fun b a' x =>
-    StageR dn vis fe b.2 a' ∧ IWGrow m2 b.2 ∧ PdRes b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
+    StageR vis fe b.2 a' ∧ IWGrow m2 b.2 ∧ PdRes b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r3, m3⟩ h3
     obtain ⟨res', a', hrun, hS', hg, hres⟩ := pdW_ok dn vis fe n m2 m3 a2 _ _ vN r3 fvs h3 hS2 hvN hfvs
       (hS2.lt64 hfb) hfb
@@ -894,7 +894,7 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hg14 := hg13.trans hg4
   rcases n with _ | n
   · intro b hb; simp [cW, bW.k_class_gen_minor_ty_concl, cK4] at hb
-  have hc := cW_sim (dn := dn) (vis := vis) (fe := fe) n m4 a4 g c x d vl _ _ _ _ _ _ _ _ G X tm.lvls tm.nPc
+  have hc := cW_sim (vis := vis) (fe := fe) n m4 a4 g c x d vl _ _ _ _ _ _ _ _ G X tm.lvls tm.nPc
     tm.ds fvs ihs hS4 (hG.grow (decCG_mono _) hg14) hns (hX.grow (decCC_mono _) hg14) hrH hvl dvl
     (hds1.grow (OMono.decHL _ _) (hg2.trans (hg3.trans hg4))) tn (by rw [decHL_grow (hg3.trans hg4) hfb]; exact hfvs)
     (Nat.le_trans hfb (hg3.trans hg4).iw) hihs hib hA4

@@ -21,7 +21,7 @@ import all ConAgua.Arena.IndParts
 /-!
 # Bsp
 
-`bslW`, `brh_spec`, `brhW`, `brs_spec`, `brsW`, `packMem` and the lemmas only they use.
+`bslW`, `brs_spec`, `brsW`, `rec7_specW`, `packMem` and the lemmas only they use.
 -/
 
 section
@@ -50,18 +50,18 @@ open L.Arena
 
 /-- **The model of `block_shape_large`.** -/
 def bslW (n : Nat) (m : Mem) (cvR0 lo ll : Word) : Option (List Word × Mem) :=
-  if rdW (m.arr64 EREC) (cvR0 + 2) = 0 then some ([0, 0], m)
-  else match erToIwW n m (rdW (m.arr64 EREC) (cvR0 + 1) + 1) (rdW (m.arr64 EREC) (cvR0 + 2) - 1) with
+  if erRd m (cvR0 + 2) = 0 then some ([0, 0], m)
+  else match erToIwW n m (erRd m (cvR0 + 1) + 1) (erRd m (cvR0 + 2) - 1) with
     | none => none
     | some (rp, m1) =>
       match eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll with
       | none => none
       | some e =>
         if e = 0 then some ([0, 0], m1)
-        else match containsW n m1 lo ll (rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (cvR0 + 1))) with
+        else match containsW n m1 lo ll (erRd m (erRd m (cvR0 + 1))) with
           | none => none
           | some hs => if hs ≠ 0 then some ([0, 0], m1)
-            else some ([1, rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (cvR0 + 1))], m1)
+            else some ([1, erRd m (erRd m (cvR0 + 1))], m1)
 
 end L.Ind
 
@@ -83,23 +83,9 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **`block_shape_rhss_of` is its model `brhW`** (generated). -/
-l_model brh_spec (p : Prog) (hP : IndPartsProg4 p)
-    (hp : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf)
-  fns [hp ↦ brhW]
-  specs [slCons_specW p hP.alloc hP.copy hP.cons n]
-  grind [ind_grind] finish [rdW_eq] gen 20
 
 /-! ## `block_shape_recs_of` -/
 
-/-- **`block_shape_recs_of` is its model `brsW`** (generated). -/
-l_model brs_spec (p : Prog) (hP : IndPartsProg4 p) (h6 : p.lookup "rec6" = some rec6)
-    (hr : p.lookup "block_shape_rhss_of" = some blockShapeRhssOf)
-    (hp : p.lookup "block_shape_recs_of" = some blockShapeRecsOf)
-  fns [hp ↦ brsW]
-  specs [recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n, brh_spec p hP hr n,
-    rec6_specW p hP.alloc h6 n, slCons_specW p hP.alloc hP.copy hP.cons n]
-  grind [ind_grind] finish [rdW_eq] gen 20
 
 end L.Ind
 
@@ -153,6 +139,45 @@ theorem bsp_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
       finish (gen := 20) [packMem, allocMem, allocW]
+
+/-! ## `rec7` and `block_shape_recs_of` -/
+
+/-- The memory after `rec7`. -/
+def rec7Mem (m : Mem) (a b c d e f g : Word) : Mem :=
+  let q := rdW (m.arr64 CTL) 200
+  (((((((allocMem m 7).set64 IW q a).set64 IW (q + 1) b).set64 IW (q + 2) c).set64 IW (q + 3) d).set64
+    IW (q + 4) e).set64 IW (q + 5) f).set64 IW (q + 6) g
+
+theorem rec7Mem_eq (m : Mem) (a b c d e f g : Word) :
+    rec7Mem m a b c d e f g = wrIW (allocMem m 7) (rdW (m.arr64 CTL) 200) [a, b, c, d, e, f, g] := by
+  simp [rec7Mem, wrIW, UInt64.add_assoc]
+
+theorem partsRec7_eq (m : Mem) (a b c d e f g : Word) :
+    (match allocW m 7 with | none => none | some (q, _) => some (q, rec7Mem m a b c d e f g)) =
+      posRecW m [a, b, c, d, e, f, g] := by
+  rw [posRecW_eq m _ 7 rfl, rec7Mem_eq]; cases allocW m 7 <;> rfl
+
+theorem rec7_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (h7 : p.lookup "rec7" = some rec7) (n : Nat) (s₀ : St) (a b c d e f g : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "rec7" [a, b, c, d, e, f, g]
+    ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c, d, e, f, g] = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [← partsRec7_eq, invoke_eq _ h7]
+  simp only [callFn, rec7]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n] <;>
+      finish (gen := 20) [rec7Mem, allocMem, allocW]
+
+/-- **`block_shape_recs_of` is its model `brsW`** (generated). -/
+l_model brs_spec (p : Prog) (hP : IndPartsProg4 p) (h7 : p.lookup "rec7" = some rec7)
+    (hp : p.lookup "block_shape_recs_of" = some blockShapeRecsOf)
+  fns [hp ↦ brsW]
+  specs [recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n,
+    rec7_specW p hP.alloc h7 n, slCons_specW p hP.alloc hP.copy hP.cons n]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 /-! ## `block_shape_build`: the model -/
 
@@ -235,7 +260,7 @@ def btK1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll : Wor
 def btW (c : CallM) (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
     Option (List Word × Mem) :=
   btK1 c n nPd cto ctl cso csl rso rsl no nl io lo ll
-    (bsoW m nPd io il (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cto + 3)))
+    (bsoW m nPd io il (erRd m (rdW (m.arr64 IW) cto + 3)))
 
 /-- After `block_shape_pins_ok`. -/
 def bbH4 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
@@ -259,7 +284,7 @@ def bbH2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 no nl : Word) :
   | some (r, m) =>
     if r.headD 0 = 0 then some ([0, 0], m)
     else bbH3 c n nPd cto ctl cso csl rso rsl no nl (r.tail.headD 0) (r.tail.tail.headD 0)
-      (erToIwW (n + 3) m (rdW (m.arr64 EREC) (cvT0 + 1)) (rdW (m.arr64 EREC) (cvT0 + 2)))
+      (erToIwW (n + 3) m (erRd m (cvT0 + 1)) (erRd m (cvT0 + 2)))
 
 /-- After `block_shape_names_of`. -/
 def bbH1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) :

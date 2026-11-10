@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.IndLibSpec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Arena.IndIface
 
@@ -75,7 +74,8 @@ theorem OMono.mapM {f : Mem → Nat → Option α} (hf : ∀ j, OMono (fun m => 
     obtain ⟨y, hy, ys, hys, rfl⟩ := h
     exact ⟨y, (hf j).mono m m' y he hy, ys, (OMono.mapM hf js).mono m m' ys he hys, rfl⟩
 
-theorem OMono.iwGet (i : Nat) : OMono (fun m => (iwA m)[i]?) := ⟨fun _ _ _ he h => he.1 _ _ h⟩
+theorem OMono.iwGet (i : Nat) : OMono (fun m => iwA m i) := ⟨fun _ _ _ he h => he.1 _ _ h⟩
+
 theorem OMono.iwN (i : Nat) : OMono (fun m => iwN m i) := ⟨fun _ _ _ he h => he.1.nat? h⟩
 theorem OMono.iwB (i : Nat) : OMono (fun m => iwB m i) := ⟨fun _ _ _ he h => he.1.bool? h⟩
 theorem OMono.iwH {k : IdxKind} (i : Nat) : OMono (fun m => (iwH m i : Option (Idx k))) :=
@@ -83,6 +83,9 @@ theorem OMono.iwH {k : IdxKind} (i : Nat) : OMono (fun m => (iwH m i : Option (I
 theorem OMono.decHL {k : IdxKind} (o l : Nat) : OMono (fun m => (decHL m o l : Option (List (Idx k)))) :=
   ⟨fun _ _ _ he h => he.1.hslice? h⟩
 theorem OMono.decCVp (q : Nat) : OMono (fun m => decCVp m q) := ⟨fun _ _ _ he h => he.2.decCV h⟩
+
+theorem OMono.decRules (o l : Nat) : OMono (fun m => decRules (erA m) o l) :=
+  ⟨fun _ _ _ he h => he.2.decRules h⟩
 
 theorem OMono.decNL (o l : Nat) : OMono (fun m => decNL m o l) :=
   OMono.mapM (fun j => OMono.iwN (o + j)) _
@@ -146,6 +149,7 @@ theorem decRS_mono (p : Nat) : OMono (fun m => decRS m p) := by
     | apply OMono.decHL
     | apply OMono.decNL
     | apply OMono.decCVp
+    | apply OMono.decRules
     | apply OMono.decAt
     | apply OMono.decPL
     | apply decCN_mono
@@ -522,50 +526,53 @@ end decoders
 
 /-! ## Below the tops -/
 
-/-- The memory with both pools cut at their tops. -/
+/-- The memory with the work pool cut at its top (`erA`, `erecP`, already reads the record
+pool's two tiers below their tops). -/
 def truncM (m : Mem) : Mem :=
-  ⟨m.bytes, fun b => if b = ↑IW then (m.arr64 IW).extract 0 (iwTop m)
-      else if b = ↑EREC then (m.arr64 EREC).extract 0 (erTop m) else m.words b, m.glob⟩
+  ⟨m.bytes, fun b => if b = ↑IW then (m.arr64 IW).extract 0 (iwTop m) else m.words b, m.glob⟩
 
 /-- A word of the cut `IW`: the pool's word below the top. -/
 theorem truncM_iw_get? (m : Mem) (i : Nat) :
-    (iwA (truncM m))[i]? = if i < iwTop m then (iwA m)[i]? else none := by
-  simp only [iwA, truncM, Mem.arr64, ite_true, Array.getElem?_extract]
+    iwA (truncM m) i = if i < iwTop m then iwA m i else none := by
+  simp only [iwA, aread_apply, truncM, Mem.arr64, ite_true, Array.getElem?_extract]
   split <;> simp_all <;> omega
 
-theorem truncM_er_get? (m : Mem) (i : Nat) :
-    (erA (truncM m))[i]? = if i < erTop m then (erA m)[i]? else none := by
-  simp only [erA, truncM, Mem.arr64, ite_true, Array.getElem?_extract,
-    show (EREC : TieredArray) ≠ IW by decide, ite_false]
-  split <;> simp_all <;> omega
+/-- The cut leaves the record pool. -/
+theorem truncM_erA (m : Mem) : erA (truncM m) = erA m := by
+  funext i
+  simp +decide only [erA, erecP, erecTop, erecTop1, truncM, Mem.arr64, ite_false, tier1]
+  rfl
+
+theorem truncM_er_get? (m : Mem) (i : Nat) : erA (truncM m) i = erA m i := by
+  rw [truncM_erA]
 
 /-- A word of the cut pool is a word below the top. -/
-theorem truncM_iw_get {m : Mem} {i : Nat} {v : Word} (h : (iwA (truncM m))[i]? = some v) :
-    i < iwTop m ∧ (iwA m)[i]? = some v := by
+theorem truncM_iw_get {m : Mem} {i : Nat} {v : Word} (h : iwA (truncM m) i = some v) :
+    i < iwTop m ∧ iwA m i = some v := by
   rw [truncM_iw_get?] at h; split at h
   · exact ⟨by assumption, h⟩
   · cases h
 
-theorem truncM_er_get {m : Mem} {i : Nat} {v : Word} (h : (erA (truncM m))[i]? = some v) :
-    i < erTop m ∧ (erA m)[i]? = some v := by
-  rw [truncM_er_get?] at h; split at h
-  · exact ⟨by assumption, h⟩
-  · cases h
+theorem truncM_er_get {m : Mem} {i : Nat} {v : Word} (h : erA (truncM m) i = some v) :
+    erA m i = some v := by
+  rwa [truncM_erA] at h
 
 /-- **Below the top, the cut pool reads as the pool.** -/
 theorem truncM_iw_eq {m : Mem} {i : Nat} (hi : i < iwTop m) :
-    (iwA (truncM m))[i]? = (iwA m)[i]? := by rw [truncM_iw_get?, ite_eq_left hi]
+    iwA (truncM m) i = iwA m i := by rw [truncM_iw_get?, ite_eq_left hi]
 
-theorem truncM_er_eq {m : Mem} {i : Nat} (hi : i < erTop m) :
-    (erA (truncM m))[i]? = (erA m)[i]? := by rw [truncM_er_get?, ite_eq_left hi]
+theorem truncM_er_eq {m : Mem} {i : Nat} : erA (truncM m) i = erA m i := by rw [truncM_erA]
+
+/-- The record pool only grew (both tiers). -/
+theorem IWGrow.erExt {m m' : Mem} (hg : IWGrow m m') : ArrExt (erA m) (erA m') :=
+  hg.erecGrow.ext
 
 /-- Every memory the pools grow into extends the cut pools. -/
 theorem IWGrow.truncExt {m m' : Mem} (hg : IWGrow m m') : PoolExt (truncM m) m' := by
   refine ⟨fun i v h => ?_, fun i v h => ?_⟩
   · obtain ⟨hi, hv⟩ := truncM_iw_get h
-    simp only [iwA] at hv ⊢; rw [hg.iwGet i hi]; exact hv
-  · obtain ⟨hi, hv⟩ := truncM_er_get h
-    simp only [erA] at hv ⊢; rw [hg.erGet i hi]; exact hv
+    simp only [iwA, aread_apply] at hv ⊢; rw [hg.iwGet i hi]; exact hv
+  · exact hg.erExt i v (truncM_er_get h)
 
 /-- **Decoded below the tops**: the decoding succeeds in the cut pools. -/
 def DecB {α : Type} (f : Mem → Option α) (m : Mem) (x : α) : Prop := f (truncM m) = some x
@@ -585,10 +592,8 @@ theorem DecB.grow (hf : OMono f) (hg : IWGrow m m') (h : DecB f m x) : DecB f m'
   refine hf.mono _ _ _ ⟨fun i v hv => ?_, fun i v hv => ?_⟩ h
   · obtain ⟨hi, hv'⟩ := truncM_iw_get hv
     rw [truncM_iw_eq (Nat.lt_of_lt_of_le hi hg.iw)]
-    simp only [iwA] at hv' ⊢; rw [hg.iwGet i hi]; exact hv'
-  · obtain ⟨hi, hv'⟩ := truncM_er_get hv
-    rw [truncM_er_eq (Nat.lt_of_lt_of_le hi hg.er)]
-    simp only [erA] at hv' ⊢; rw [hg.erGet i hi]; exact hv'
+    simp only [iwA, aread_apply] at hv' ⊢; rw [hg.iwGet i hi]; exact hv'
+  · rw [truncM_erA] at hv ⊢; exact hg.erExt i v hv
 
 end decB
 

@@ -12,7 +12,6 @@ import ConAgua.Arena.LvlGrow
 import ConAgua.Arena.StoreDenLvl
 import ConRon.Arena.WFProofs
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.IndIface
 public import ConAgua.Arena.KnotSlot
 public import ConAgua.Arena.RomExpr
 public import ConAgua.Arena.WhnfDeltaRefine
@@ -85,8 +84,8 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     unfold ModeOK; rw [hf.top_eq hP0, hfl]; exact hS.mode
   have hD : DerR m' a' := DerR.of_tiers m' a a'
     (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega) a hS.arena.der) hL.pers hL.scr
-  refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; omega)
-      (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
+  refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => not_mem_envArrs (by have := hA b hb; omega))
+      (fun x hx => not_mem_envCtl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
       hS.memos.frame hf ⟨nA _ (by decide), nA _ (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
@@ -95,7 +94,8 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
           fun h => absurd (hC _ h) (by decide)⟩
         ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
-          fun h => absurd (hC _ h) (by decide)⟩,
+          fun h => absurd (hC _ h) (by decide)⟩
+        (nA _ (by decide)) (fun h => by have := hC _ h; simp at this),
       hf.size BSTK ▸ hS.bstk,
       hS.den.mono ⟨by rw [hL.ls]; exact LExt.refl _, fun i us h => by
           unfold denoteLs at h ⊢
@@ -106,7 +106,10 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
         (by rw [hL.pins]) (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
         (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
         (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv))
-        (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls])) hlsa, hmode⟩,
+        (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls])) hlsa, hmode,
+      hS.iwF hf (nA _ (by decide)) (fun h => absurd (hA _ h) (by decide))
+        (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)
+        (fun h => by have := hC _ h; simp at this)⟩,
     StackKept.of_frameL hf ⟨nA SPN (by decide), nA BSTK (by decide), hP⟩
       ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hlc hP1 hPT⟩
   · rw [hL.caches]
@@ -144,14 +147,8 @@ structure StrLitProg (p : Prog) : Prop extends WhnfDeltaProg' p where
   listConsTyOk : p.lookup "list_cons_ty_ok" = some listConsTyOkL
   charOfNatTyOk : p.lookup "char_of_nat_ty_ok" = some charOfNatTyOkL
   stringOfListTyOk : p.lookup "string_of_list_ty_ok" = some stringOfListTyOkL
-  strSup7 : p.lookup "str_sup_7" = some strSup7L
-  strSup6 : p.lookup "str_sup_6" = some strSup6L
-  strSup5 : p.lookup "str_sup_5" = some strSup5L
-  strSup4 : p.lookup "str_sup_4" = some strSup4L
-  strSup3 : p.lookup "str_sup_3" = some strSup3L
-  strSup2 : p.lookup "str_sup_2" = some strSup2L
-  strSup1 : p.lookup "str_sup_1" = some strSup1L
-  strLitSupported : p.lookup "str_lit_supported" = some strLitSupportedL
+  strLitStored : p.lookup "str_lit_stored" = some strLitStoredL
+  litShapeOk : p.lookup "lit_shape_ok" = some litShapeOkL
   strUtf8Char : p.lookup "str_utf8_char" = some strUtf8CharL
   strConsSpine : p.lookup "str_cons_spine" = some strConsSpineL
   strLitCtor : p.lookup "str_lit_ctor" = some strLitCtorL
@@ -575,6 +572,6 @@ theorem keeps_cpl_constE (x : NIdx) : Keeps cpl (constE x) :=
 theorem zero_den {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {w : Word}
     (hw : w = pinW m (53 : Word).toNat) : ∃ l, denoteL a.store.ls (decI w) = some l := by
-  subst hw; have := hS.den.zero; rw [hS.pins.zeroLevel] at this; exact this
+  subst hw; have := hS.den.zero; rw [hS.pins.zeroLevel] at this; exact ⟨_, this⟩
 
 end L.Arena

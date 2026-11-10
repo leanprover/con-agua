@@ -26,10 +26,10 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem knot_whnf_miss_err (mode : ConLeche.CheckMode) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx)
+theorem knot_whnf_miss_err (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx)
     (a : AState) (h : whnfStuckTag e = false) (hm : a.caches.whnfC[e]? = none) (ce : CheckError)
-    (hb : (whnfBody (coreKnot mode fe id F) fe d e).run a = .error ce) :
-    ((coreKnot mode fe id (F + 1)).whnf d e).run a = .error ce := by
+    (hb : (whnfBody (coreKnot mode eager fe id F) fe d e).run a = .error ce) :
+    ((coreKnot mode eager fe id (F + 1)).whnf d e).run a = .error ce := by
   simp [coreKnot, h, hm, StateT.run_bind, hb]; try rfl
 
 section refs
@@ -42,13 +42,13 @@ theorem wstep_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     RefE (KnotUpToE p n) (whnfStepE p (n + 1) s₀.mem mode vis d e)
-      (whnfStep (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
+      (whnfStep (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) a₀
       (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hs' : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hs.rel, hs.mode4, hs.eb_mode⟩
   have hW1 := (hk n (Nat.le_refl _)).whnfCore F _ a₀ dn vis fe MM eb mode 0 d e hF hn hs' he
   rw [show ((0 : Word) != 0) = false from rfl] at hW1
   have hE1 : KnotUpToE p n → CoreSpecE p n "whnf_core" [mode, 0, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).whnfCore false d.toNat (decE e)) ⟨s₀.mem, Locals.init []⟩ a₀ :=
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnfCore false d.toNat (decE e)) ⟨s₀.mem, Locals.init []⟩ a₀ :=
     fun hG => by
       have h := (hG n (Nat.le_refl _)).whnfCore F _ a₀ dn vis fe MM eb mode 0 d e hF hn hs' he
       rwa [show ((0 : Word) != 0) = false from rfl] at h
@@ -100,7 +100,7 @@ theorem wloop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
     ∀ k, k ≤ n + 1 → ∀ K, k ≤ K → ∀ (m : Mem) (a : AState) (MM : ModeMaps) (eb e : Word),
       CoreS dn m a vis fe MM eb → eb = (mode >>> 1) &&& 1 → HW e →
       RefE (KnotUpToE p n) (whnfLoopE.loop1 p k m mode vis d e)
-        (whnfLoop (coreKnot (decMode mode) fe id F) fe d.toNat K (decE e)) a
+        (whnfLoop (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat K (decE e)) a
         (fun v y a' => CorePost decH dn m vis fe MM eb ResH ([v.1], v.2) y a') := by
   intro k
   induction k with
@@ -131,14 +131,14 @@ theorem wloop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
       fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.valid⟩
 
 include hp hno hlp in
-/-- **`whnf` at `n + 1` refines the knot's `whnf` slot of `coreKnot mode fe id F`, both
+/-- **`whnf` at `n + 1` refines the knot's `whnf` slot of `coreKnot mode eager fe id F`, both
 outcomes**, `F ≥ n + 1`: a stuck tag answers itself, a memo hit its entry, a miss the body's
 answer (`whnf_loop` at `n`, its unified model), recorded. -/
 theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb mode d e : Word)
     (hF : n + 1 ≤ F) (hn : n + 1 ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     RefE (KnotUpToE p n) (whnfE p (n + 1) s₀.mem mode vis d e)
-      ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE e)) a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnf d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   have hS := hs.rel
@@ -148,7 +148,7 @@ theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   by_cases hst : tagW e = 2 ∨ tagW e = 1 ∨ tagW e = 5 ∨ tagW e = 6 ∨ tagW e = 8
   · rw [ite_eq_left hst]
     have ht : whnfStuckTag (decE e) = true := by rw [whnfStuck_iff e he]; simpa using hst
-    exact RefE.ret (knot_whnf_stuck _ fe F' d.toNat _ a₀ ht) (CorePost.ret hS rfl he)
+    exact RefE.ret (knot_whnf_stuck _ _ fe F' d.toNat _ a₀ ht) (CorePost.ret hS rfl he)
   rw [ite_eq_right hst]
   have ht : whnfStuckTag (decE e) = false := by rw [whnfStuck_iff e he]; simpa using hst
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
@@ -159,7 +159,7 @@ theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   simp only [whnfE.k_wh_find]
   by_cases h1' : (mfindG whSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
   · rw [ite_eq_left h1']
-    exact RefE.ret (knot_whnf_hit _ fe F' d.toNat _ a₀ ht _ (hf.1 h1').1)
+    exact RefE.ret (knot_whnf_hit _ _ fe F' d.toNat _ a₀ ht _ (hf.1 h1').1)
       (CorePost.ret hS rfl (hf.1 h1').2)
   rw [ite_eq_right h1']
   have hmiss := hf.2 (by simpa using h1')
@@ -172,7 +172,7 @@ theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   rcases c2 : whnfLoopE p (n' + 1) s₀.mem mode vis d e with e2 | ⟨x, m₂⟩
   · simp only [whnfLoopE] at c2
     rw [c2] at h2
-    exact fun hG => ErrClaim.of_run_eq (fun ce h' => knot_whnf_miss_err _ fe F' d.toNat _ a₀ ht hmiss ce h')
+    exact fun hG => ErrClaim.of_run_eq (fun ce h' => knot_whnf_miss_err _ _ fe F' d.toNat _ a₀ ht hmiss ce h')
       (h2 (hG.mono (by omega)))
   simp only [whnfLoopE] at c2
   rw [c2] at h2
@@ -185,7 +185,7 @@ theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   have hset := callW_memoSet hp.whFind hp.whPut h3 h4
   rw [hkey] at hset
   obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wh e x he hrw hset
-  have hrun' := knot_whnf_miss _ fe F' d.toNat _ a₀ ht hmiss _ _ hrun
+  have hrun' := knot_whnf_miss _ _ fe F' d.toNat _ a₀ ht hmiss _ _ hrun
   rw [hy] at hrun'
   exact RefE.ret hrun' ⟨⟨_, hS₂, hK₁.wh _ _, hSt₁.trans hSt₂⟩, rfl, hrw⟩
 

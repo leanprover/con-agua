@@ -35,13 +35,13 @@ def cnCrW : Nat → Mem → Word → Word → Word → Word → Word → Word �
     if l1 = 0 ∧ l2 = 0 then some (1, m)
     else if l1 = 0 ∨ l2 = 0 then some (0, m)
     else crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2
-      (if ruleEqButRhsB (m.arr64 EREC) o1 o2 then 1 else 0)
+      (if ruleEqButRhsB (erRdT m) o1 o2 then 1 else 0)
 
 /-- After `rule_eq_but_rhs`. -/
 def crK0 (k : Nat) (m : Mem) (po pl qo ql co cl fuel o1 l1 o2 l2 e : Word) : Option (Word × Mem) :=
   if e = 0 then some (0, m)
   else cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2
-    (ceW k m po pl qo ql co cl fuel (rdW (m.arr64 EREC) (o1 + 8)) (rdW (m.arr64 EREC) (o2 + 8)))
+    (ceW k m po pl qo ql co cl fuel (erRdT m (o1 + 8)) (erRdT m (o2 + 8)))
 
 /-- After `canon_expr_eq`. -/
 def cnCrK1 (k : Nat) (po pl qo ql co cl fuel o1 l1 o2 l2 : Word) : Option (Word × Mem) →
@@ -58,11 +58,11 @@ theorem crW_succ : cnCrW (k + 1) m po pl qo ql co cl fuel o1 l1 o2 l2 =
     (if l1 = 0 ∧ l2 = 0 then some (1, m)
     else if l1 = 0 ∨ l2 = 0 then some (0, m)
     else crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2
-      (if ruleEqButRhsB (m.arr64 EREC) o1 o2 then 1 else 0)) := by rw [cnCrW]
+      (if ruleEqButRhsB (erRdT m) o1 o2 then 1 else 0)) := by rw [cnCrW]
 theorem crK0_def : crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2 e =
     (if e = 0 then some (0, m)
     else cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2
-      (ceW k m po pl qo ql co cl fuel (rdW (m.arr64 EREC) (o1 + 8)) (rdW (m.arr64 EREC) (o2 + 8)))) :=
+      (ceW k m po pl qo ql co cl fuel (erRdT m (o1 + 8)) (erRdT m (o2 + 8)))) :=
   by rw [crK0]
 theorem crK1_some : cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2 (some (e, m1)) =
     (if e = 0 then some (0, m1)
@@ -93,26 +93,43 @@ theorem canonRulesEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel o1
     rw [invoke_eq _ (hp.get "canon_rules_eq")]
     simp only [callFn, canonRulesEq]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ruleEqButRhs_spec p hp n, canonExprEq_spec p hp n, ih] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
+        evalE_tagE, evalE_idxAE, evalE_idxGE, ruleEqButRhs_spec p hp n, canonExprEq_spec p hp n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 end specs6
 
 
-theorem decRules_length {a : Array Word} {o l : Nat} {xs : List IRecRule}
-    (h : decRules a o l = some xs) : xs.length = l := by
+theorem decRules_length {R : Nat → Option Word} {o l : Nat} {xs : List IRecRule}
+    (h : decRules R o l = some xs) : xs.length = l := by
   have := mapM_opt_length _ _ _ h
   simpa using this
 
-theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
+/-- The next rule's records, at the word address. -/
+theorem decRules_shift {R : Nat → Option Word} {o : Word} {k : Nat} {rs : List IRecRule}
+    (h : decRules R (o.toNat + 11) k = some rs) (hR : ∀ i v, R i = some v → i < 2 ^ 64) :
+    decRules R (o + 11).toNat k = some rs := by
+  cases k with
+  | zero => simpa [decRules] using h
+  | succ k =>
+  have h' := h
+  rw [decRules_succ] at h'
+  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h'
+  obtain ⟨r0, hr0, -⟩ := h'
+  obtain ⟨w, hw, -⟩ := hd?_some (decRule_ctor hr0)
+  have := hR _ _ hw
+  have e : (o + 11).toNat = o.toNat + 11 := by
+    rw [UInt64.toNat_add]; simp only [show (11 : Word).toNat = 11 from rfl]; omega
+  rw [e]; exact h
+
+theorem cnCrW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (po pl qo ql co cl fuel o1 l1 o2 l2 x : Word) (ps qs cs : List NIdx)
       (xs ys : List IRecRule),
-    cnCrW k m po pl qo ql co cl fuel o1 l1 o2 l2 = some (x, m') → StageR dn vis fe m a →
+    cnCrW k m po pl qo ql co cl fuel o1 l1 o2 l2 = some (x, m') → StageR vis fe m a →
     CtxR m po pl qo ql co cl ps qs cs → LitInj a → PoolSmall m →
     decRules (erecP m) o1.toNat l1.toNat = some xs → decRules (erecP m) o2.toNat l2.toNat = some ys →
     ∃ b, (ConRon.Arena.canonRulesEq ps qs cs fuel.toNat xs ys).run a = .ok (b, a) ∧
-      x = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
+      x = (if b then 1 else 0) ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
   induction k with
   | zero => intro m m' a po pl qo ql co cl fuel o1 l1 o2 l2 x ps qs cs xs ys h; simp [cnCrW] at h
   | succ k ih =>
@@ -154,29 +171,21 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     obtain ⟨y1', hy1e, ys'', hys'e, hyeq⟩ := hys
     obtain ⟨rfl, rfl⟩ := List.cons.inj hxeq
     obtain ⟨rfl, rfl⟩ := List.cons.inj hyeq
-    have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
-    have hx1 := ArrExt.decRule (erecP_ext m) hx1e
-    have hy1 := ArrExt.decRule (erecP_ext m) hy1e
-    obtain ⟨w0, w1, w2, w3, w8, w9, w10, e0, e1, e2, e3, e8, e9, e10, h0', h8, c0, c1, c2, c8, c9, c10, hf, hb⟩ :=
-      ruleFields (a := erA m) (q := o1) hsz hx1
-    obtain ⟨v0, v1, v2, v3, v8, v9, v10, f0, f1, f2, f3, f8, f9, f10, g0', g8, d0, d1, d2, d8, d9, d10, hg, hb'⟩ :=
-      ruleFields (a := erA m) (q := o2) hsz hy1
-    have hB := ruleEqButRhsB_ok hsz hx1 hy1
-    have o1e : (o1 + 11).toNat = o1.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
-    have o2e : (o2 + 11).toNat = o2.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
+    obtain ⟨w0, w1, w3, w8, e0, e1, e3, e8, h0', h8, c0, c1, c8, hf⟩ := ruleFields (erRdOK m) hx1e
+    obtain ⟨v0, v1, v3, v8, f0, f1, f3, f8, g0', g8, d0, d1, d8, hg⟩ := ruleFields (erRdOK m) hy1e
+    have hB := ruleEqButRhsB_ok (erRdOK m) hx1e hy1e
     have l1p : (l1 - 1).toNat = xs''.length := by rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp [l1e]
     have l2p : (l2 - 1).toNat = ys''.length := by rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp [l2e]
     rw [crK0_def] at h
     rw [ConRon.Arena.canonRulesEq.eq_2]
-    by_cases hbB : ruleEqButRhsB (m.arr64 EREC) o1 o2 = true
+    by_cases hbB : ruleEqButRhsB (erRdT m) o1 o2 = true
     · have hd : ({ x1' with rhs := default } : IRecRule) = { y1' with rhs := default } :=
         of_decide_eq_true (hB ▸ hbB)
       have hcond : (({ x1' with rhs := default } : IRecRule) == { y1' with rhs := default }) = true :=
         beq_iff_eq.mpr hd
-      have hne : (if ruleEqButRhsB (m.arr64 EREC) o1 o2 = true then (1 : Word) else 0) ≠ 0 := by
+      have hne : (if ruleEqButRhsB (erRdT m) o1 o2 = true then (1 : Word) else 0) ≠ 0 := by
         simp [hbB]
       rw [ite_eq_right hne] at h
-      simp only [erA] at e8 f8
       rw [e8, f8] at h
       cases hc : ceW k m po pl qo ql co cl fuel w8 v8 with
       | none => rw [hc] at h; simp [cnCrK1] at h
@@ -187,13 +196,13 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         hc hS hC hL hP h8 g8
       rw [c8, d8] at *
       rw [ite_eq_left hcond]
-      obtain ⟨b, hb, hr, q1, q2, q3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
+      obtain ⟨b, hb, hr, q1, q2, q3⟩ := andThen_ok' (Q := StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
         hb1 hr1
         (fun hne2 => by
           rw [ite_eq_right hne2] at h
-          have hx2 := ArrExt.decRules (IWGrow.erecPExtR hg1) hxs'e
-          have hy2 := ArrExt.decRules (IWGrow.erecPExtR hg1) hys'e
-          rw [← o1e, ← o2e, ← l1p, ← l2p] at *
+          have hx2 := decRules_shift (ArrExt.decRules (IWGrow.erecPExtR hg1) hxs'e) (erRdOK m1).lt
+          have hy2 := decRules_shift (ArrExt.decRules (IWGrow.erecPExtR hg1) hys'e) (erRdOK m1).lt
+          rw [← l1p, ← l2p] at *
           obtain ⟨b2, hb2, hr2, hS2, hg2, hP2⟩ := ih m1 m' a po pl qo ql co cl fuel (o1 + 11) (l1 - 1)
             (o2 + 11) (l2 - 1) x ps qs cs _ _ h hS1 (hC.grow hg1) hL hP1 hx2 hy2
           exact ⟨b2, hb2, hr2, hS2, hg1.trans hg2, hP2⟩)
@@ -202,7 +211,7 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           exact ⟨rfl, hS1, hg1, hP1⟩)
       exact ⟨b, hb, hr, q1, q2, q3⟩
-    · have hB0 : (if ruleEqButRhsB (m.arr64 EREC) o1 o2 = true then (1 : Word) else 0) = 0 := by
+    · have hB0 : (if ruleEqButRhsB (erRdT m) o1 o2 = true then (1 : Word) else 0) = 0 := by
         simp [hbB]
       rw [ite_eq_left hB0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -215,14 +224,13 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       rw [hcond]
       exact ⟨false, rfl, rfl, hS, IWGrow.refl _, hP⟩
 
-
 /-- **`canon_rules_eq` refines `canonRulesEq`.** -/
 @[refines ConRon.Arena.canonRulesEq]
 theorem canonRulesEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (po pl qo ql co cl fuel o1 l1 o2 l2 : Word) (ps qs cs : List NIdx)
     (xs ys : List IRecRule) :
     RefAM p "canon_rules_eq" [po, pl, qo, ql, co, cl, fuel, o1, l1, o2, l2]
-      (fun m a => StageR dn vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧ LitInj a ∧
+      (fun m a => StageR vis fe m a ∧ CtxR m po pl qo ql co cl ps qs cs ∧ LitInj a ∧
         PoolSmall m ∧ decRules (erecP m) o1.toNat l1.toNat = some xs ∧
         decRules (erecP m) o2.toNat l2.toNat = some ys)
       (ConRon.Arena.canonRulesEq ps qs cs fuel.toNat xs ys) (CPostL dn vis fe decW0B) := by

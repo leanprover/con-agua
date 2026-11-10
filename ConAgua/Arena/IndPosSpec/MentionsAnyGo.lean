@@ -47,12 +47,12 @@ include hf hpw hsf hsp his hff hfp hif hp
 @[refines ConRon.Arena.nestCanonSub]
 theorem nestCanonSub_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl us nn c v : Word) (names : List NIdx) (hc : H c) (hus : H us) (hv : H v)
-    (hS : StageR dn vis fe s₀.mem a₀) (hdec : decHL s₀.mem no.toNat nl.toNat = some names)
+    (hS : StageR vis fe s₀.mem a₀) (hdec : decHL s₀.mem no.toNat nl.toNat = some names)
     (hb : no.toNat + nl.toNat < 2 ^ 64) (hnn : nn.toNat + names.length < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_canon_sub" [no, nl, us, nn, c, v]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decOE s'.mem r (AM.res (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀); ⊤⦄ := by
   refine triple_post (nestCanonSub_spec p hf hpw hsf hsp his hff hfp hif hp n s₀ no nl us nn c v) ?_
@@ -88,26 +88,32 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hblock
       obtain ⟨x, hx, rest, hrest, rfl⟩ := hblock
       obtain ⟨w0, hw0, hw0lt, hw0d⟩ := hd?_some hx
-      have hrd : rdW (m.arr64 EREC) off = w0 := by
-        have : (m.arr64 EREC)[off.toNat]? = some w0 := hw0
-        simp only [rdW, this, Option.getD_some]
+      have hrd : erRd m off = w0 := erRd_of_erA hw0
       obtain ⟨ws, hws, rfl, hwlt⟩ := slR_of_decHL m _ _ out hout hb
       simp only [UInt64.ofNat_toNat] at hws
       rw [matesW_cons n m c off l oO oL hl, hrd] at h
       rcases hcn : containsW n m oO oL w0 with _ | b <;> rw [hcn] at h; · simp [matesK1] at h
       have hbv := containsW_ok n _ _ _ _ _ _ hws hcn
-      have hlt : off.toNat < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hw0).1
-      have hoff1 : (off + 1).toNat = off.toNat + 1 := toNat_add_one' (by omega)
       have hl1' : (l - 1).toNat = l.toNat - 1 := toNat_sub_one' hl
       have hcond : ((decI w0 : NIdx) == decI c || (ws.map (fun w => (decI w : NIdx))).contains (decI w0)) =
           decide (w0 = c ∨ b ≠ 0) := by
         rw [decI_beq w0 c hw0lt hc, contains_map_decI w0 hw0lt ws hwlt, hbv]
         by_cases h1 : w0 = c <;> by_cases h2 : ws.contains w0 = true <;> simp [h1]
       have hblock' : hslice? (erA m) (off + 1).toNat (l - 1).toNat = some rest := by
-        rw [hoff1, hl1']; exact hrest
+        rw [hl1']
+        rcases Nat.eq_zero_or_pos (l.toNat - 1) with h0 | h0
+        · rw [h0] at hrest ⊢; simpa [hslice?] using hrest
+        · obtain ⟨k, hk⟩ : ∃ k, l.toNat - 1 = k + 1 := ⟨l.toNat - 1 - 1, by omega⟩
+          have hr1 := hrest
+          rw [hk, hslice?_succ] at hr1
+          simp only [bind, Option.bind_eq_some_iff] at hr1
+          obtain ⟨y, hy, -⟩ := hr1
+          obtain ⟨w1, hw1, -⟩ := hd?_some hy
+          have h64 := erecP_lt64 hw1
+          rw [toNat_add_one' (by omega)]; exact hrest
       subst hw0d
       by_cases hskip : (w0 = c ∨ b ≠ 0)
-      · have hskip' : rdW (m.arr64 EREC) off = c ∨ b ≠ 0 := by rw [hrd]; exact hskip
+      · have hskip' : erRd m off = c ∨ b ≠ 0 := by rw [hrd]; exact hskip
         rw [matesK1_skip n m c off l oO oL b hskip'] at h
         rcases hrec : matesW n m c (off + 1) (l - 1) oO oL with _ | ⟨r3, m3⟩ <;> rw [hrec] at h; · simp [matesK3] at h
         rw [matesK3_some] at h
@@ -117,7 +123,7 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
         refine ⟨?_, hg, hE', by simpa using htop⟩
         rw [ConRon.Arena.nestFrameMates.go.eq_2, ite_eq_left (by rw [hcond]; simpa using hskip)]
         simpa using hd
-      · have hskip' : ¬ (rdW (m.arr64 EREC) off = c ∨ b ≠ 0) := by rw [hrd]; exact hskip
+      · have hskip' : ¬ (erRd m off = c ∨ b ≠ 0) := by rw [hrd]; exact hskip
         rw [matesK1_add n m c off l oO oL b hskip', hrd] at h
         rcases hsn : snocW n m oO oL w0 with _ | ⟨r2, m2⟩ <;> rw [hsn] at h; · simp [matesK2] at h
         rw [matesK2_some] at h
@@ -131,11 +137,12 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
         have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hfr2.size IW]; exact hsz
         have hc2 : 200 < (m2.arr64 CTL).size := by rw [hfr2.size CTL]; exact hc200
         obtain ⟨hd, hg, hE', htop⟩ := ih m2 m3 c (off + 1) (l - 1) _ (oL + 1) rest _ r3 hrec hsz2 hc2
-          (by rw [hE2]; exact hEs) hc (by simp only [erA]; rw [hE2]; exact hblock') (by simpa using hdec2)
+          (by rw [hE2]; exact hEs) hc (hg2.ext.hslice? hblock') (by simpa using hdec2)
           (Nat.le_of_eq htop2) (by have : iwTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 200).toNat_lt; omega)
         refine ⟨?_, hg2.trans hg, hE'.trans hE2, by simpa using htop⟩
         rw [ConRon.Arena.nestFrameMates.go.eq_2, ite_eq_right (by rw [hcond]; simpa using hskip)]
         simpa using hd
+
 
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (no nl f f1 h g x y z b1 b2 b3 r : Word) (v fr : List Word)
@@ -440,9 +447,9 @@ include hv hc hf hput hgo hnode
 /-- **`mentions_any_go` (with `mentions_any_node`) refines `mentionsAnyGo`**, from a memo related to
 the twin's. -/
 @[refines ConRon.Arena.mentionsAnyGo]
-theorem mentionsAnyGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem mentionsAnyGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl f h : Word) (ws : List Word) (mp : Std.HashMap EIdx Bool) (hh : H h)
-    (hS : StageR dn vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
+    (hS : StageR vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hM : maMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "mentions_any_go" [no, nl, f, h]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -452,7 +459,7 @@ theorem mentionsAnyGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
         (AM.res (ConRon.Arena.mentionsAnyGo (ws.map (fun w => (decI w : NIdx))) mp f.toNat (decE h)) a₀).1 ∧
       maMR s'.mem
         (AM.res (ConRon.Arena.mentionsAnyGo (ws.map (fun w => (decI w : NIdx))) mp f.toNat (decE h)) a₀).2 ∧
-      StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post ((maGo_spec p hv hc hf hput hgo hnode n).1 s₀ no nl f h) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := maGoOK n _ _ a₀ no nl f h _ ws mp hm hS.check.arena.base hh hws hwlt hM

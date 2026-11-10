@@ -3,7 +3,6 @@ module
 public import ConLeche.Kernel.NatOpPins
 public import ConAgua.Arena.RomPins
 public import ConAgua.Rom.PinRead
-public import ConAgua.Arena.PromoteProg
 public import ConAgua.Arena.LiftSpec
 
 @[expose] public section
@@ -27,7 +26,7 @@ def romTestPool : Prog :=
    ("rom_levels", romLevels), ("rom_lvls_go", romLvlsGo), ("stk_push", stkPush), ("stk_pool", stkPool),
    ("rom_ex_leaf", romExLeaf), ("rom_ex_ref", romExRef), ("rom_ex_one", romExOne),
    ("rom_ex_two", romExTwo), ("memo_get", memoGet)] ++
-  L.Ind.libFns ++ promoteProg ++ liftProg ++ litProg ++ appProg ++ bvarProg ++ constProg ++
+  L.Ind.libFns ++ liftProg ++ litProg ++ appProg ++ bvarProg ++ constProg ++
   forallProg ++ fvarProg ++ lamProg ++ letProg ++ lsProg ++ nanonProg ++ nstrProg ++ nnumProg ++
   projProg ++ sortProg ++ succProg ++ zeroProg ++ maxProg ++ imaxProg ++ paramProg
 

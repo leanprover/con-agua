@@ -28,7 +28,7 @@ raises `.internal` — a loud stop, never a quiet wrong answer.
 
 ## What is pinned
 
-The fifty-one names below and `reservedBasisNames`' sixteen, plus the three
+The fifty-two names below and `reservedBasisNames`' sixteen, plus the three
 interned values every `pin` site around them needs: the empty
 universe-argument list, the level `0` and the expression `Sort 1`
 (`Arena/Core.lean`'s `emptyLevels`, `zeroLevel` and `sortOne`, which now read
@@ -66,7 +66,7 @@ open ConLeche
 /-! ## The slots -/
 
 /-- con-leche: none — the arena's own pin table; the number of pinned names. -/
-def pinCount : Nat := 51
+def pinCount : Nat := 52
 
 /-- con-leche: none — the arena's own pin table; `eqName`'s slot. -/
 def PIN_EQ : Nat := 0
@@ -174,6 +174,9 @@ def PIN_AND_REC : Nat := 49
 /-- con-leche: none — the arena's own pin table; `eagerReduceName`'s slot (the
 argument check's `eagerReduce` test, `isEagerReduce`). -/
 def PIN_EAGER_REDUCE : Nat := 50
+/-- con-leche: none — the arena's own pin table; `quotMkName`'s slot (a
+quotient record's slots stored before it, `quotPredsOk`). -/
+def PIN_QUOT_MK : Nat := 51
 
 /-! ## Filling the table -/
 
@@ -204,7 +207,7 @@ def pinNames : List ConLeche.Name :=
     ConLeche.reduceNatName, ConLeche.reduceBoolName,
     ConLeche.ofReduceNatName, ConLeche.ofReduceBoolName, ConLeche.quotName,
     ConLeche.andIntroName, ConLeche.andRecName,
-    ConLeche.Name.anonymous.str "eagerReduce"]
+    ConLeche.Name.anonymous.str "eagerReduce", ConLeche.quotMkName]
 
 /-- con-leche: ConLeche/Kernel/Basis/Names.lean:95-102 reservedBasisNames —
 the sixteen names a stream may not declare, as con-leche's values.  Its own
@@ -285,7 +288,7 @@ def pinSortOne : AM EIdx := do
   if pinsReady s then pure s.pins.sortOne
   else fail (.internal "arena: reserved-name pins not interned")
 
-/-! ## The fifty-one named readers, one per slot -/
+/-! ## The fifty-two named readers, one per slot -/
 
 /-- con-leche: ConLeche/Kernel/Basis/Names.lean:18 eqName — off the table. -/
 def pinEq : AM NIdx := pinAt PIN_EQ
@@ -315,41 +318,41 @@ def pinAnd : AM NIdx := pinAt PIN_AND
 def pinCharOfNat : AM NIdx := pinAt PIN_CHAR_OF_NAT
 /-- con-leche: ConLeche/Kernel/Basis/Names.lean:118 sorryAxName — off the table. -/
 def pinSorryAx : AM NIdx := pinAt PIN_SORRY_AX
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:403 natPredName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:416 natPredName — off the table. -/
 def pinNatPred : AM NIdx := pinAt PIN_NAT_PRED
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:404 natAddName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:417 natAddName — off the table. -/
 def pinNatAdd : AM NIdx := pinAt PIN_NAT_ADD
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:405 natSubName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:418 natSubName — off the table. -/
 def pinNatSub : AM NIdx := pinAt PIN_NAT_SUB
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:406 natMulName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:419 natMulName — off the table. -/
 def pinNatMul : AM NIdx := pinAt PIN_NAT_MUL
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:407 natPowName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:420 natPowName — off the table. -/
 def pinNatPow : AM NIdx := pinAt PIN_NAT_POW
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:408 natBeqName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:421 natBeqName — off the table. -/
 def pinNatBeq : AM NIdx := pinAt PIN_NAT_BEQ
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:409 natBleName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:422 natBleName — off the table. -/
 def pinNatBle : AM NIdx := pinAt PIN_NAT_BLE
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:410 natDivName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:423 natDivName — off the table. -/
 def pinNatDiv : AM NIdx := pinAt PIN_NAT_DIV
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:411 natModName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:424 natModName — off the table. -/
 def pinNatMod : AM NIdx := pinAt PIN_NAT_MOD
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:412 natGcdName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:425 natGcdName — off the table. -/
 def pinNatGcd : AM NIdx := pinAt PIN_NAT_GCD
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:413 natLandName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:426 natLandName — off the table. -/
 def pinNatLand : AM NIdx := pinAt PIN_NAT_LAND
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:414 natLorName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:427 natLorName — off the table. -/
 def pinNatLor : AM NIdx := pinAt PIN_NAT_LOR
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:415 natXorName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:428 natXorName — off the table. -/
 def pinNatXor : AM NIdx := pinAt PIN_NAT_XOR
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:416 natShiftLeftName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:429 natShiftLeftName — off the table. -/
 def pinNatShiftLeft : AM NIdx := pinAt PIN_NAT_SHIFT_LEFT
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:417 natShiftRightName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:430 natShiftRightName — off the table. -/
 def pinNatShiftRight : AM NIdx := pinAt PIN_NAT_SHIFT_RIGHT
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:418 boolName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:431 boolName — off the table. -/
 def pinBool : AM NIdx := pinAt PIN_BOOL
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:430 boolTrueName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:443 boolTrueName — off the table. -/
 def pinBoolTrue : AM NIdx := pinAt PIN_BOOL_TRUE
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:431 boolFalseName — off the table. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:444 boolFalseName — off the table. -/
 def pinBoolFalse : AM NIdx := pinAt PIN_BOOL_FALSE
 /-- con-leche: ConLeche/Kernel/StdAxioms.lean:34 propextName — off the table. -/
 def pinPropext : AM NIdx := pinAt PIN_PROPEXT
@@ -390,8 +393,11 @@ def pinAndIntro : AM NIdx := pinAt PIN_AND_INTRO
 /-- con-leche: ConLeche/Kernel/Basis/And.lean:43 andRecName — off the table
 (task #106: the fold's `And` pin). -/
 def pinAndRec : AM NIdx := pinAt PIN_AND_REC
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:420-422 eagerReduceName — off the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:433-435 eagerReduceName — off the
 table (the argument check's `eagerReduce` test). -/
 def pinEagerReduce : AM NIdx := pinAt PIN_EAGER_REDUCE
+/-- con-leche: none — the arena's own pin table; `quotMkName`'s handle, off the
+table (`quotPredsOk`). -/
+def pinQuotMk : AM NIdx := pinAt PIN_QUOT_MK
 
 end ConRon.Arena

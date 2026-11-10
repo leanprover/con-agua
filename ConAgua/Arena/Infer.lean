@@ -24,20 +24,19 @@ stack `BSTK`** (array 145, top `CTL[137]`, lane `defeq`; outside every tier of `
 `CoreS.frame` already allows). Both tops are put back before a function returns.
 
 **Callees not written yet** (stubs, `DefeqCallees` in `Knot.lean`): `abs_entry(e, d, k)`
-(`abstract1Fast coreWalkFuel`), `ar_entry(e, d, k, c)` (`abstractRangeFast coreWalkFuel`),
-`field_sort_zero(po, pl, us, fs)` (`Level.isEquiv (Level.subst ks vs fs) .zero == some true` on
-the readbacks, `inferProj`'s propositional-structure test); from lane `whnf`: `inst_list`,
-`inst1`, `inst_lp`, `find_proj`, `str_lit_supported`.
+(`abstract1Fast coreWalkFuel`), `ar_entry(e, d, k, c)` (`abstractRangeFast coreWalkFuel`); from lane `whnf`: `inst_list`,
+`inst1`, `inst_lp`, `find_proj`, `str_lit_stored`.
 -/
 
 open ConRon.Arena
+open L.Ind (IW)
 
 
 namespace L.Arena
 
 /-! ## Sorts, constants, literals -/
 
-/-- con-ron: ConRon/Arena/Core.lean:2443-2452 ConRon.Arena.ensureSort -/
+/-- con-ron: ConRon/Arena/Core.lean:2523-2532 ConRon.Arena.ensureSort -/
 @[no_expose, l_impl ConRon.Arena.ensureSort]
 def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
   hh := call whnf(mode, vis, d, e);
@@ -48,9 +47,9 @@ def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
 
 /-- The `.const n us` clause of both bodies: the stored constant, the level count, `constTyAt` (`const_ty_at`, lane `whnf`, with its cache) at the record's own name
 (word `p + 1`, the twin's `cv.name`; the cache key). -/
--- con-ron: ConRon/Arena/Core.lean:2743-2801 ConRon.Arena.inferBody
--- con-ron: ConRon/Arena/Core.lean:2803-2871 ConRon.Arena.inferBodyIO
--- con-ron: ConRon/Arena/Core.lean:233-247 ConRon.Arena.unknownConstError
+-- con-ron: ConRon/Arena/Core.lean:3035-3093 ConRon.Arena.inferBody
+-- con-ron: ConRon/Arena/Core.lean:3095-3163 ConRon.Arena.inferBodyIO
+-- con-ron: ConRon/Arena/Core.lean:232-246 ConRon.Arena.unknownConstError
 @[no_expose, l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO ConRon.Arena.unknownConstError]
 def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
   (f, p) := call env_find(n, vis);
@@ -61,33 +60,33 @@ def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
     fail R_UNKNOWN_CONSTANT_2
   };
   (lo, l) := call ls_node(us);
-  if l != EREC.u64[p + 3] { fail R_INCORRECT_NUMBER_OF };
-  r := call const_ty_at(EREC.u64[p + 1], EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4], us);
+  if l != EREC⦃p + 3⦄ { fail R_INCORRECT_NUMBER_OF };
+  r := call const_ty_at(EREC⦃p + 1⦄, EREC⦃p + 2⦄, EREC⦃p + 3⦄, EREC⦃p + 4⦄, us);
   return r
 }
 
 /-- The two `.lit` clauses of both bodies: `Nat` (`pinNat`) or `String` (`pinString`), each
 behind its basis guard. -/
--- con-ron: ConRon/Arena/Core.lean:2743-2801 ConRon.Arena.inferBody
--- con-ron: ConRon/Arena/Core.lean:2803-2871 ConRon.Arena.inferBodyIO
+-- con-ron: ConRon/Arena/Core.lean:3035-3093 ConRon.Arena.inferBody
+-- con-ron: ConRon/Arena/Core.lean:3095-3163 ConRon.Arena.inferBodyIO
 @[no_expose, l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO]
 def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
   (t, i) := node LIT⟦e⟧;
   if LIT⟨t, i⟩.kind == 0 {
-    s := call nat_lit_supported(vis);
+    s := call nat_lit_stored(vis);
     if s == 0 { fail R_NAT_LITERAL_WITHOUT };
     c := call pin_at(1);
     r := call const_e(c);
     return r
   };
-  s := call str_lit_supported(vis);
+  s := call str_lit_stored(vis);
   if s == 0 { fail R_STRING_LITERALS_BEFORE };
   c := call pin_at(5);
   r := call const_e(c);
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2454-2460 ConRon.Arena.inferLamResult -/
+/-- con-ron: ConRon/Arena/Core.lean:2754-2760 ConRon.Arena.inferLamResult -/
 @[no_expose, l_impl ConRon.Arena.inferLamResult]
 def inferLamResultL : FunDecl := lfn (ty, bt, d) locals (ab, r) {
   ab := call abs_entry(bt, d, 0);
@@ -103,8 +102,8 @@ and `infer_forall` abort at `d ≥ 2^63`, so `d + k` does not wrap). The twin's 
 is the exact counter `peel`. -/
 
 /-- The λ loop's leaf and its outward rebuild. -/
--- con-ron: ConRon/Arena/Core.lean:2499-2507 ConRon.Arena.inferLamsLeaf
--- con-ron: ConRon/Arena/Core.lean:2486-2497 ConRon.Arena.inferLamsOut
+-- con-ron: ConRon/Arena/Core.lean:2799-2807 ConRon.Arena.inferLamsLeaf
+-- con-ron: ConRon/Arena/Core.lean:2786-2797 ConRon.Arena.inferLamsOut
 @[no_expose, l_impl ConRon.Arena.inferLamsLeaf ConRon.Arena.inferLamsOut]
 def inferLamsLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, cur, n, ta) {
   ob := call inst_list(t, fo, k, 0);
@@ -119,7 +118,7 @@ def inferLamsLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt,
   return cur
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2509-2533 ConRon.Arena.inferLams -/
+/-- con-ron: ConRon/Arena/Core.lean:2809-2833 ConRon.Arena.inferLams -/
 @[no_expose, l_impl ConRon.Arena.inferLams]
 def inferLamsL : FunDecl :=
     lfn (mode, vis, d, peel, t, k, fo, lo) locals (s, i, ty, body, tyo, tty, w, fv, r) {
@@ -147,8 +146,8 @@ def inferLamsL : FunDecl :=
 }
 
 /-- The ∀ loop's leaf and its outward `imax` fold. -/
--- con-ron: ConRon/Arena/Core.lean:2546-2556 ConRon.Arena.inferPisLeaf
--- con-ron: ConRon/Arena/Core.lean:2535-2544 ConRon.Arena.inferPisOut
+-- con-ron: ConRon/Arena/Core.lean:2846-2856 ConRon.Arena.inferPisLeaf
+-- con-ron: ConRon/Arena/Core.lean:2835-2844 ConRon.Arena.inferPisOut
 @[no_expose, l_impl ConRon.Arena.inferPisLeaf ConRon.Arena.inferPisOut]
 def inferPisLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, v, n, r) {
   ob := call inst_list(t, fo, k, 0);
@@ -163,7 +162,7 @@ def inferPisLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, 
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2558-2579 ConRon.Arena.inferPis -/
+/-- con-ron: ConRon/Arena/Core.lean:2858-2879 ConRon.Arena.inferPis -/
 @[no_expose, l_impl ConRon.Arena.inferPis]
 def inferPisL : FunDecl :=
     lfn (mode, vis, d, peel, t, k, fo, lo) locals (s, i, ty, body, tyo, tty, w, u, fv, r) {
@@ -192,7 +191,7 @@ def inferPisL : FunDecl :=
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2581-2591 ConRon.Arena.inferLam -/
+/-- con-ron: ConRon/Arena/Core.lean:2881-2891 ConRon.Arena.inferLam -/
 @[no_expose, l_impl ConRon.Arena.inferLam]
 def inferLamL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, fv, so, lo, r) {
   if d >> 63 != 0 { abort };
@@ -214,7 +213,7 @@ def inferLamL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, fv, so, 
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2593-2605 ConRon.Arena.inferForall -/
+/-- con-ron: ConRon/Arena/Core.lean:2893-2905 ConRon.Arena.inferForall -/
 @[no_expose, l_impl ConRon.Arena.inferForall]
 def inferForallL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, t, i, u, fv, so, lo, r) {
   if d >> 63 != 0 { abort };
@@ -244,7 +243,7 @@ The arguments are the slice `(ao, an)` `head_and_args` left on the stack; the ac
 slice `(co, cn)` above it (`co` the top on entry; a top past the stack's end is a capacity
 abort, so that the empty accumulator is a slice). The `whnf` re-entry resets it to `#[a]`. -/
 
-/-- con-ron: ConRon/Arena/Core.lean:2621-2627 ConRon.Arena.defeqArg -/
+/-- con-ron: ConRon/Arena/Core.lean:2921-2927 ConRon.Arena.defeqArg -/
 @[no_expose, l_impl ConRon.Arena.defeqArg]
 def defeqArgL : FunDecl := lfn (mode, vis, d, a, ta, ty) locals (er, r) {
   er := call is_eager_reduce(a);
@@ -258,7 +257,7 @@ def defeqArgL : FunDecl := lfn (mode, vis, d, a, ta, ty) locals (er, r) {
 
 /-- One argument of the full-grade spine at a `∀` type `(dom, body)`, its domain already opened
 (`dom2`): infer the argument, compare its type, push it. -/
--- con-ron: ConRon/Arena/Core.lean:2629-2657 ConRon.Arena.inferSpine
+-- con-ron: ConRon/Arena/Core.lean:2929-2957 ConRon.Arena.inferSpine
 @[no_expose, l_impl ConRon.Arena.inferSpine]
 def inferSpineArgL : FunDecl := lfn (mode, vis, d, a, dom2) locals (ta, ok) {
   ta := call infer(mode, vis, d, a);
@@ -267,7 +266,7 @@ def inferSpineArgL : FunDecl := lfn (mode, vis, d, a, dom2) locals (ta, ok) {
   return 0
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2629-2657 ConRon.Arena.inferSpine -/
+/-- con-ron: ConRon/Arena/Core.lean:2929-2957 ConRon.Arena.inferSpine -/
 @[no_expose, l_impl ConRon.Arena.inferSpine]
 def inferSpineL : FunDecl :=
     lfn (mode, vis, d, ty, ao, an) locals (co, cn, i, a, t, x, dom, dom2, ty2, w, z, r) {
@@ -306,7 +305,7 @@ def inferSpineL : FunDecl :=
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2659-2666 ConRon.Arena.inferApp -/
+/-- con-ron: ConRon/Arena/Core.lean:2959-2966 ConRon.Arena.inferApp -/
 @[no_expose, l_impl ConRon.Arena.inferApp]
 def inferAppL : FunDecl := lfn (mode, vis, d, e) locals (top, hd, ao, an, tf, r) {
   top := CTL.u64[136];
@@ -317,7 +316,7 @@ def inferAppL : FunDecl := lfn (mode, vis, d, e) locals (top, hd, ao, an, tf, r)
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2668-2689 ConRon.Arena.inferSpineIO -/
+/-- con-ron: ConRon/Arena/Core.lean:2968-2989 ConRon.Arena.inferSpineIO -/
 @[no_expose, l_impl ConRon.Arena.inferSpineIO]
 def inferSpineIOL : FunDecl :=
     lfn (mode, vis, d, ty, ao, an) locals (co, cn, i, a, t, x, ty2, w, r) {
@@ -351,7 +350,7 @@ def inferSpineIOL : FunDecl :=
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2691-2697 ConRon.Arena.inferAppIOAt -/
+/-- con-ron: ConRon/Arena/Core.lean:2991-2997 ConRon.Arena.inferAppIOAt -/
 @[no_expose, l_impl ConRon.Arena.inferAppIOAt]
 def inferAppIOL : FunDecl := lfn (mode, vis, d, e) locals (top, hd, ao, an, tf, r) {
   top := CTL.u64[136];
@@ -367,12 +366,12 @@ def inferAppIOL : FunDecl := lfn (mode, vis, d, e) locals (top, hd, ao, an, tf, 
 /-- The entry's type at the subject's levels and arguments: `instLPFast` of the entry's body,
 then ONE `instantiateList` against `targs ++ [pe]` (the arguments' slice `(to, tn)` is at the
 stack top, so `pe` is pushed right after it). `q` is the table record, `i` the field. -/
--- con-ron: ConRon/Arena/Core.lean:2265-2276 ConRon.Arena.IProjEntry.typeAt
+-- con-ron: ConRon/Arena/Core.lean:2345-2356 ConRon.Arena.IProjEntry.typeAt
 @[no_expose, l_impl ConRon.Arena.IProjEntry.typeAt]
 def projTypeAtL : FunDecl := lfn (q, i, us, to, tn, pe) locals (body, b, r) {
   body := 0;
-  if i < EREC.u64[q + 10] { body := EREC.u64[EREC.u64[q + 9] + i] };
-  b := call inst_lp(EREC.u64[q + 3], EREC.u64[q + 4], us, body);
+  if i < EREC⦃q + 10⦄ { body := EREC⦃EREC⦃q + 9⦄ + i⦄ };
+  b := call inst_lp(EREC⦃q + 3⦄, EREC⦃q + 4⦄, us, body);
   if len(SPN.u64) <= to + tn { abort };
   SPN.u64[to + tn] := pe;
   CTL.u64[136] := to + tn + 1;
@@ -381,33 +380,140 @@ def projTypeAtL : FunDecl := lfn (q, i, us, to, tn, pe) locals (body, b, r) {
   return r
 }
 
+/-! ## The projection's guard at the use (`checkProjGuard`, con-leche task #480)
+
+Nothing about the guard is stored: the structure's sort is read off its type or walked to at the
+use's levels (`proj_guard_sort`), the rows are read off the constructor's telescope opened at the
+use's levels (`proj_guard_rows`), and each row's term must be a proposition wherever the guard sort
+is zero (`check_guard_rows`). The rows are pairs `(depth, term)` on the spine stack `SPN` (two words
+each, at `ro`), above the top while they are checked. -/
+
+/-- `check_guard_rows(mode, vis, ro, rn, i, gs)`: rows `i, …, rn - 1` of the slice at `ro`: each
+row's term, inferred at the io grade at its own depth and head-normalized, has a sort that is zero
+wherever `gs` is (`lv_zero_where_zero`). -/
+-- con-ron: ConRon/Arena/Core.lean:2534-2556 ConRon.Arena.checkGuardRows
+@[no_expose, l_impl ConRon.Arena.checkGuardRows]
+def checkGuardRowsL : FunDecl := lfn (mode, vis, ro, rn, i, gs) locals (d, dom, t, w, tg, x, u, ok, r) {
+  if rn <= i { return 0 };
+  d := SPN.u64[ro + 2 * i];
+  dom := SPN.u64[ro + 2 * i + 1];
+  t := call infer_io(mode, vis, d, dom);
+  w := call whnf(mode, vis, d, t);
+  if ⟦w⟧.tag != 2 { fail R_EXPECTED_A_SORT };
+  (tg, x) := node SORT⟦w⟧;
+  u := SORT⟨tg, x⟩.u;
+  ok := call lv_zero_where_zero(gs, u);
+  if ok == 0 { fail R_PROJECTION_FROM_A };
+  r := call check_guard_rows(mode, vis, ro, rn, i + 1, gs);
+  return r
+}
+
+/-- `proj_guard_sort(mode, vis, p, us)`: the sort the rows answer to at this use, `(1, gs)`, or
+`(0, 0)` where the guard asks nothing (`p` the structure's inductive record). A stored type that
+ends in a sort answers at once (`Prop` asks for propositions: the zero level, pin word 53); else the
+sort is walked to (`former_sort_loop`, from depth `0`): never zero asks nothing, no sort rejects. -/
+-- con-ron: ConRon/Arena/Core.lean:2558-2578 ConRon.Arena.projGuardSort
+@[no_expose, l_impl ConRon.Arena.projGuardSort]
+def projGuardSortL : FunDecl := lfn (mode, vis, p, us) locals (po, pc, ty, n, f, u, a, z, ity, nv) {
+  po := EREC⦃p + 2⦄;
+  pc := EREC⦃p + 3⦄;
+  ty := EREC⦃p + 4⦄;
+  n := EREC⦃p + 17⦄ + EREC⦃p + 11⦄;
+  if n < EREC⦃p + 17⦄ { abort };
+  (f, u) := call former_res_sort(ty);
+  if f != 0 {
+    a := call lv_always_zero(u);
+    if a != 0 { z := call pin_word(53); return (1, z) };
+    return (0, 0)
+  };
+  ity := call inst_lp(po, pc, us, ty);
+  (f, u) := call former_sort_loop(mode, vis, 0, n, ity);
+  if f == 0 { fail R_PROJECTION_FROM_A_STRUCTURE };
+  nv := call lv_never(u);
+  if nv != 0 { return (0, 0) };
+  return (1, u)
+}
+
+/-- `proj_guard_rows_at(cty, nP, idx, fo, fn, j, ro, rn)`: the rows of fields `j, …, idx` read off
+the opened telescope's free variables (the `IW` slice `(fo, fn)`): field `idx`, and every earlier
+field a later one uses (`struct_used_later`), as `(nP + j, its variable's type)`, appended at row
+`rn` of the slice at `ro` (the top raised past each); the row count after. -/
+-- con-ron: ConRon/Arena/Core.lean:2695-2712 ConRon.Arena.projGuardRowsAt
+@[no_expose, l_impl ConRon.Arena.projGuardRowsAt]
+def projGuardRowsAtL : FunDecl := lfn (cty, nP, idx, fo, fn, j, ro, rn) locals (used, ty, r) {
+  if idx < j { return rn };
+  if j == idx { used := 1 } else { used := call struct_used_later(cty, nP, j) };
+  if used != 0 && nP + j < fn {
+    ty := call fvar_type_d(IW.u64[fo + nP + j]);
+    if len(SPN.u64) <= ro + 2 * rn + 1 { abort };
+    SPN.u64[ro + 2 * rn] := nP + j;
+    SPN.u64[ro + 2 * rn + 1] := ty;
+    CTL.u64[136] := ro + 2 * rn + 2;
+    r := call proj_guard_rows_at(cty, nP, idx, fo, fn, j + 1, ro, rn + 1);
+    return r
+  };
+  r := call proj_guard_rows_at(cty, nP, idx, fo, fn, j + 1, ro, rn);
+  return r
+}
+
+/-- `proj_guard_rows(vis, q, i, us)`: what a `.proj` use of field `i` of the table record `q` must
+show: `(1, ro, rn)` the rows at `ro` on the stack (left above the top), or `(0, 0, 0)` where the
+stored constructor does not bind what the entry says. The constructor's type at the use's levels
+(`const_ty_at`), opened in one pass (`open_pis_at_fvars_f`). -/
+-- con-ron: ConRon/Arena/Core.lean:2714-2733 ConRon.Arena.projGuardRows
+@[no_expose, l_impl ConRon.Arena.projGuardRows]
+def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, ok, fo, fn, b, ro, rn, k) {
+  np := EREC⦃q + 5⦄;
+  (f, c) := call env_find(EREC⦃q + 6⦄, vis);
+  if f == 0 { return (0, 0, 0) };
+  cty := call const_ty_at(EREC⦃c + 1⦄, EREC⦃c + 2⦄, EREC⦃c + 3⦄, EREC⦃c + 4⦄, us);
+  k := np + i + 1;
+  if k <= np { abort };
+  (ok, fo, fn, b) := call open_pis_at_fvars_f(k, cty, 0);
+  if ok == 0 { return (0, 0, 0) };
+  ro := CTL.u64[136];
+  rn := call proj_guard_rows_at(EREC⦃c + 4⦄, np, i, fo, fn, 0, ro, 0);
+  return (1, ro, rn)
+}
+
+/-- `check_proj_guard(mode, vis, q, i, us)`: the official `infer_proj` restriction at this use of
+field `i` of the table record `q` (the structure's name at `q + 2`); the stack top put back. -/
+-- con-ron: ConRon/Arena/Core.lean:2735-2752 ConRon.Arena.checkProjGuard
+@[no_expose, l_impl ConRon.Arena.checkProjGuard]
+def checkProjGuardL : FunDecl := lfn (mode, vis, q, i, us) locals (top, f, p, g, gs, ok, ro, rn, u) {
+  top := CTL.u64[136];
+  (f, p) := call env_find(EREC⦃q + 2⦄, vis);
+  if f == 0 { fail R_PROJECTION_FROM_A };
+  if EREC⦃p⦄ != 3 { fail R_PROJECTION_FROM_A };
+  (g, gs) := call proj_guard_sort(mode, vis, p, us);
+  if g == 0 { return 0 };
+  (ok, ro, rn) := call proj_guard_rows(vis, q, i, us);
+  if ok == 0 { fail R_PROJECTION_FROM_A };
+  u := call check_guard_rows(mode, vis, ro, rn, 0, gs);
+  CTL.u64[136] := top;
+  return 0
+}
+
 /-- `inferProj` from the subject type's head constant `T.{us}` on (`te` the head-normal subject
 type, `q` the table record of field `i`). -/
--- con-ron: ConRon/Arena/Core.lean:2699-2741 ConRon.Arena.inferProj
+-- con-ron: ConRon/Arena/Core.lean:2999-3033 ConRon.Arena.inferProj
 @[no_expose, l_impl ConRon.Arena.inferProj]
 def inferProjAtL : FunDecl :=
-    lfn (vis, sn, i, pe, te, T, us, q) locals (top, to, tn, lo, usl, z, ok, fs, r) {
+    lfn (mode, vis, sn, i, pe, te, T, us, q) locals (top, to, tn, lo, usl, u, r) {
   top := CTL.u64[136];
   (to, tn) := call get_app_args(te);
   if T != sn { fail R_INVALID_PROJECTION_THE };
-  if tn != EREC.u64[q + 5] { fail R_PROJECTION_PARAMETER_MISMATCH };
+  if tn != EREC⦃q + 5⦄ { fail R_PROJECTION_PARAMETER_MISMATCH };
   (lo, usl) := call ls_node(us);
-  if usl != EREC.u64[q + 4] { fail R_PROJECTION_WITHOUT_A };
-  z := call pin_word(53);
-  ok := call lvl_eq_c(EREC.u64[q + 8], z);
-  if 2 <= ok {
-    fs := 0;
-    if i < EREC.u64[q + 12] { fs := EREC.u64[EREC.u64[q + 11] + i] };
-    ok := call field_sort_zero(EREC.u64[q + 3], EREC.u64[q + 4], us, fs);
-    if ok == 0 { fail R_PROJECTION_FROM_A }
-  };
+  if usl != EREC⦃q + 4⦄ { fail R_PROJECTION_WITHOUT_A };
+  u := call check_proj_guard(mode, vis, q, i, us);
   r := call proj_type_at(q, i, us, to, tn, pe);
   CTL.u64[136] := top;
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2699-2741 ConRon.Arena.inferProj
-con-ron: ConRon/Arena/Core.lean:301-312 ConRon.Arena.projMissError -/
+/-- con-ron: ConRon/Arena/Core.lean:2999-3033 ConRon.Arena.inferProj
+con-ron: ConRon/Arena/Core.lean:300-311 ConRon.Arena.projMissError -/
 @[no_expose, l_impl ConRon.Arena.inferProj ConRon.Arena.projMissError]
 def inferProjL : FunDecl :=
     lfn (mode, io, vis, d, sn, i, pe) locals (it, te, hh, t, x, f, q, r, cT, cu, to, tn) {
@@ -428,21 +534,21 @@ def inferProjL : FunDecl :=
     if cT == sn {
       (to, tn) := call get_app_args(te);
       (f, q) := call env_find(cT, vis);
-      if f != 0 && EREC.u64[q] == 3 && EREC.u64[q + 19] == 1 && EREC.u64[q + 17] < tn {
-        (f, q) := call env_find(EREC.u64[EREC.u64[q + 18]], vis);
-        if f != 0 && EREC.u64[q] == 4 && i < EREC.u64[q + 6] { fail R_PROJECTION_ON_AN }
+      if f != 0 && EREC⦃q⦄ == 3 && EREC⦃q + 19⦄ == 1 && EREC⦃q + 17⦄ < tn {
+        (f, q) := call env_find(EREC⦃EREC⦃q + 18⦄⦄, vis);
+        if f != 0 && EREC⦃q⦄ == 4 && i < EREC⦃q + 6⦄ { fail R_PROJECTION_ON_AN }
       }
     };
     fail R_INVALID_PROJECTION_NOT
   };
-  r := call infer_proj_at(vis, sn, i, pe, te, cT, cu, q);
+  r := call infer_proj_at(mode, vis, sn, i, pe, te, cT, cu, q);
   return r
 }
 
 /-! ## The bodies -/
 
 /-- The full body's `.letE` clause (official `infer_let`). -/
--- con-ron: ConRon/Arena/Core.lean:2743-2801 ConRon.Arena.inferBody
+-- con-ron: ConRon/Arena/Core.lean:3035-3093 ConRon.Arena.inferBody
 @[no_expose, l_impl ConRon.Arena.inferBody]
 def inferLetL : FunDecl := lfn (mode, vis, d, ty, v, b) locals (tty, u, tv, ok, ob, r) {
   tty := call infer(mode, vis, d, ty);
@@ -455,7 +561,7 @@ def inferLetL : FunDecl := lfn (mode, vis, d, ty, v, b) locals (tty, u, tv, ok, 
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2743-2801 ConRon.Arena.inferBody -/
+/-- con-ron: ConRon/Arena/Core.lean:3035-3093 ConRon.Arena.inferBody -/
 @[no_expose, l_impl ConRon.Arena.inferBody]
 def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) {
   (g, x1, x2, x3) := call e_view(e);
@@ -501,7 +607,7 @@ def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) 
 
 /-- The io body's `.forallE` clause (chained, one binder). The depth capacity: the body runs at
 `d + 1`, which must not wrap (the twin's depth is a `Nat`). -/
--- con-ron: ConRon/Arena/Core.lean:2803-2871 ConRon.Arena.inferBodyIO
+-- con-ron: ConRon/Arena/Core.lean:3095-3163 ConRon.Arena.inferBodyIO
 @[no_expose, l_impl ConRon.Arena.inferBodyIO]
 def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, i, u, fv, ob, bt, v, iu, r) {
   if d + 1 == 0 { abort };
@@ -520,7 +626,7 @@ def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, 
 }
 
 /-- The io body's `.lam` clause (no domain-sort run; the depth capacity as `infer_forall_io`'s). -/
--- con-ron: ConRon/Arena/Core.lean:2803-2871 ConRon.Arena.inferBodyIO
+-- con-ron: ConRon/Arena/Core.lean:3095-3163 ConRon.Arena.inferBodyIO
 @[no_expose, l_impl ConRon.Arena.inferBodyIO]
 def inferLamIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (fv, ob, bt, r) {
   if d + 1 == 0 { abort };
@@ -531,7 +637,7 @@ def inferLamIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (fv, ob, bt, r)
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2803-2871 ConRon.Arena.inferBodyIO -/
+/-- con-ron: ConRon/Arena/Core.lean:3095-3163 ConRon.Arena.inferBodyIO -/
 @[no_expose, l_impl ConRon.Arena.inferBodyIO]
 def inferBodyIOL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, ob, r) {
   (g, x1, x2, x3) := call e_view(e);

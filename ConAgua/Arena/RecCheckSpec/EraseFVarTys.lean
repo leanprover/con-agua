@@ -72,12 +72,12 @@ theorem eraseFVarTys_spec (p : Prog) (L : RxLook p) (hp : p.lookup "erase_fvar_t
     finish (gen := 20) [eftW]
 
 /-- A fresh `FvMap` record of words `ws` (`recW`): what `replace_fvars` needs of it, and the frames. -/
-theorem rcFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem} {a : AState}
-    {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m1)) (hS : StageR dn vis fe m a)
+theorem rcFresh {vis : Word} {fe : IFEnv} {m m1 : Mem} {a : AState}
+    {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m1)) (hS : StageR vis fe m a)
     (hk : k.toNat = ws.length) :
     r = [rdW (m.arr64 CTL) 200] ∧ (rdW (m.arr64 CTL) 200).toNat = iwTop m ∧
     (∀ j < ws.length, (m1.arr64 IW)[iwTop m + j]? = ws[j]?) ∧
-    StageR dn vis fe m1 a ∧ IWGrow m m1 ∧ MemFrame [IW] [200] m m1 ∧ iwTop m1 = iwTop m + ws.length := by
+    StageR vis fe m1 a ∧ IWGrow m m1 ∧ MemFrame [IW] [200] m m1 ∧ iwTop m1 = iwTop m + ws.length := by
   obtain ⟨hr, hget, hg, hf, ht, -⟩ := recW_post h hS.iw.ctl hS.iw.iwSize hk
   refine ⟨hr, rfl, hget, ?_, hg, hf, ht⟩
   simp only [recW] at h
@@ -87,11 +87,11 @@ theorem rcFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   exact StageR.wrIW (allocW_stage hal hS).1 q ws
 
 /-- `erase_fvar_tys` simulates `eraseFVarTys`. -/
-theorem eftW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) {m m' : Mem}
-    {a : AState} {e : Word} {r : List Word} (h : eftW n m e = some (r, m')) (hS : StageR dn vis fe m a)
+theorem eftW_ok (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) {m m' : Mem}
+    {a : AState} {e : Word} {r : List Word} (h : eftW n m e = some (r, m')) (hS : StageR vis fe m a)
     (he : H e) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.eraseFVarTys (decE e)).run a = .ok (decE (r.headD 0), a') ∧ H (r.headD 0) ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   unfold eftW at h
   rcases ha : allocW m 1 with _ | ⟨f, m1⟩ <;> simp only [ha, eftK1, reduceCtorEq] at h
   rcases hr : rxW n (m1.set64 IW f 2) f e with _ | ⟨z, m2⟩ <;> simp only [hr, eftK2, reduceCtorEq] at h
@@ -105,7 +105,7 @@ theorem eftW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
     · have := hget 0 (by simp); rw [Nat.add_zero, ← hq] at this; exact iwN_of_get this
     · simp only [List.length_singleton] at ht1; omega
   obtain ⟨M, G, g, hR⟩ := hP.pos.rf
-  obtain ⟨a', hrun, hH, M', G', hS', hg', hR', -, -⟩ := (rxOK_all dn fe vis n).2.2.2.2.2.2 _ _ a _ e .erase z M G g hr
+  obtain ⟨a', hrun, hH, M', G', hS', hg', hR', -, -⟩ := (rxOK_all fe vis n).2.2.2.2.2.2 _ _ a _ e .erase z M G g hr
     hS1 hfm he (hR.frame (RfFr.of_iw hf1))
   exact ⟨a', hrun, hH, hS', hg1.trans hg', (hP.fr (MFr.of_iw hf1)).setRf (rxW_mfr hr) ⟨M', G', g, hR'⟩⟩
 
@@ -125,12 +125,12 @@ theorem targetCanonParams_spec (p : Prog) (L : RxLook p) (h3 : p.lookup "rec3" =
     finish (gen := 20) [tcpW]
 
 /-- `target_canon_params` simulates `targetCanonParams`, from the openers decoded below the top. -/
-theorem tcpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) {m m' : Mem}
+theorem tcpW_ok (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) {m m' : Mem}
     {a : AState} {pfo pfl e : Word} {pfvs : List EIdx} {r : List Word}
-    (h : tcpW n m pfo pfl e = some (r, m')) (hS : StageR dn vis fe m a) (hpf : HSl0 m pfo pfl pfvs)
+    (h : tcpW n m pfo pfl e = some (r, m')) (hS : StageR vis fe m a) (hpf : HSl0 m pfo pfl pfvs)
     (he : H e) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE (r.headD 0), a') ∧
-      H (r.headD 0) ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
+      H (r.headD 0) ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   unfold tcpW at h
   -- the openers' offset as recorded: `0` for an empty slice
   obtain ⟨po, hpo, hpd, hpb⟩ : ∃ po : Word, po = (if pfl = 0 then 0 else pfo) ∧
@@ -160,7 +160,7 @@ theorem tcpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
     refine ⟨iwN_of_get g0, by omega, po.toNat, pfl.toNat, iwN_of_get g1, iwN_of_get g2, ?_, by omega⟩
     rw [decHL_grow hg1 hpb]; exact hpd
   obtain ⟨M, G, g, hR⟩ := hP.pos.rf
-  obtain ⟨a', hrun, hH, M', G', hS', hg', hR', -, -⟩ := (rxOK_all dn fe vis n).2.2.2.2.2.2 _ _ a _ e _ z M G g hr
+  obtain ⟨a', hrun, hH, M', G', hS', hg', hR', -, -⟩ := (rxOK_all fe vis n).2.2.2.2.2.2 _ _ a _ e _ z M G g hr
     hS1 hfm he (hR.frame (RfFr.of_iw hf1))
   exact ⟨a', hrun, hH, hS', hg1.trans hg', (hP.fr (MFr.of_iw hf1)).setRf (rxW_mfr hr) ⟨M', G', g, hR'⟩⟩
 
@@ -172,11 +172,11 @@ include L
 memos well formed before and after. -/
 @[refines ConRon.Arena.eraseFVarTys]
 theorem eraseFVarTys_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis e : Word) (he : H e) (hS : StageR dn vis fe s₀.mem a₀) (hP : RcMR s₀.mem) :
+    (fe : IFEnv) (vis e : Word) (he : H e) (hS : StageR vis fe s₀.mem a₀) (hP : RcMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "erase_fvar_tys" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.eraseFVarTys (decE e)) a₀ ∧
       decE (r.headD 0) = AM.res (ConRon.Arena.eraseFVarTys (decE e)) a₀ ∧ H (r.headD 0) ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.eraseFVarTys (decE e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.eraseFVarTys (decE e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
   refine triple_post (eraseFVarTys_spec p L.rx L.eft n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
@@ -187,12 +187,12 @@ theorem eraseFVarTys_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
 /-- **`target_canon_params` refines `targetCanonParams`** (through `replace_fvars`' stub). -/
 @[refines ConRon.Arena.targetCanonParams]
 theorem targetCanonParams_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis pfo pfl e : Word) (pfvs : List EIdx) (he : H e) (hS : StageR dn vis fe s₀.mem a₀)
+    (fe : IFEnv) (vis pfo pfl e : Word) (pfvs : List EIdx) (he : H e) (hS : StageR vis fe s₀.mem a₀)
     (hpf : HSl0 s₀.mem pfo pfl pfvs) (hP : RcMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_canon_params" [pfo, pfl, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀ ∧
       decE (r.headD 0) = AM.res (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀ ∧ H (r.headD 0) ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
   refine triple_post (targetCanonParams_spec p L.rx L.r3 L.tcp n s₀ pfo pfl e) ?_
   rintro r s' ⟨hl, hm⟩
@@ -216,23 +216,23 @@ theorem NcOut.tco {m : Mem} {r : List Word} {x : Option (Nat × List (IConstantV
   | some y => exact h
 
 /-- `target_ctors_of` simulates `targetCtorsOf`. -/
-theorem tcoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word) (hI : H I) (n : Nat) {m m' : Mem} {a : AState} {r : List Word} (h : tcoW (n + 2) m vis I = some (r, m'))
-    (hS : StageR dn vis fe m a) :
-    ∃ x a', (ConRon.Arena.targetCtorsOf fe (decI I)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+theorem tcoW_ok (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word) (hI : H I) (n : Nat) {m m' : Mem} {a : AState} {r : List Word} (h : tcoW (n + 2) m vis I = some (r, m'))
+    (hS : StageR vis fe m a) :
+    ∃ x a', (ConRon.Arena.targetCtorsOf fe (decI I)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ NcOut m' r x ∧ MFr [] [] m m' := by
   rw [tcoW.arm1] at h
   rcases hn : ntWf (n + 1) m vis I with _ | ⟨r1, m1⟩ <;> simp only [hn, tcoW.k_nest_container, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok dn fe vis I hI n m _ a r1 hn hS
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok fe vis I hI n m _ a r1 hn hS
   exact ⟨x, a', hrun, hS', hg, hout.tco, ntWf_mfr hn⟩
 
 /-- **`target_ctors_of` refines `targetCtorsOf`** (through `nest_container`'s stubs). -/
 @[refines ConRon.Arena.targetCtorsOf]
 theorem targetCtorsOf_refines (p : Prog) (L : RcLook p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word) (hI : H I) (hS : StageR dn vis fe s₀.mem a₀) :
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word) (hI : H I) (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "target_ctors_of" [vis, I]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetCtorsOf fe (decI I)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetCtorsOf fe (decI I)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.targetCtorsOf fe (decI I)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ NcOut s'.mem r (AM.res (ConRon.Arena.targetCtorsOf fe (decI I)) a₀); ⊤⦄ := by
   refine triple_post (targetCtorsOf_spec p L (n + 2) s₀ vis I) ?_
   rintro r s' ⟨hl, hm⟩

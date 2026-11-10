@@ -144,20 +144,22 @@ word at `p`, then decodes the constant there). -/
 theorem decRS_some {m : Mem} {p : Nat} {rs : RecShape} (h : decRS m p = some rs) :
     (∃ a, iwN m p = some a ∧ decCVp m a = some rs.cvR) ∧ iwN m (p + 1) = some rs.rP ∧
     iwN m (p + 2) = some rs.mI ∧ iwN m (p + 3) = some rs.tgt ∧
-    decAt m (decHL m) (p + 4) = some rs.rhss := by
+    (∃ o c, iwN m (p + 4) = some o ∧ iwN m (p + 5) = some c ∧ decRules (erA m) o c = some rs.rules) ∧
+    iwB m (p + 6) = some rs.isK := by
   rw [decRS] at h
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, rfl⟩ := h
-  exact ⟨⟨a, ha, hb⟩, hc, hd, he, hf⟩
+  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, g, hg, r, hr, i, hi, rfl⟩ := h
+  exact ⟨⟨a, ha, hb⟩, hc, hd, he, ⟨f, g, hf, hg, hr⟩, hi⟩
 
 /-- `MemberShape`'s fields: `cvT` is read through the same indirection. -/
 theorem decMS_some {m : Mem} {p : Nat} {ms : MemberShape} (h : decMS m p = some ms) :
-    (∃ a, iwN m p = some a ∧ decCVp m a = some ms.cvT) ∧ iwN m (p + 1) = some ms.nIdx ∧
+    (∃ a, iwN m p = some a ∧ decCVp m a = some ms.cvT) ∧
+    (∃ a, iwN m (p + 4) = some a ∧ decCVp m a = some ms.declared) ∧ iwN m (p + 1) = some ms.nIdx ∧
     decAt m (decPL m (decCN m)) (p + 2) = some ms.ctors := by
   rw [decMS] at h
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨a, ha, b, hb, c, hc, d, hd, rfl⟩ := h
-  exact ⟨⟨a, ha, hb⟩, hc, hd⟩
+  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, rfl⟩ := h
+  exact ⟨⟨a, ha, hb⟩, ⟨c, hc, hd⟩, he, hf⟩
 
 /-! ## `BlockShape.rulePrefixAt`, `BlockShape.majorIdxAt` -/
 
@@ -375,7 +377,7 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
         rw [numCtorsOfW_cons n m off l hl, hcons] at h
         obtain ⟨hr', hlt'⟩ := ih m (off + 1) (l - 1) r' mrest hsmall hbnd1 hd1 hcons
         have hv3 : v + 3 < 2 ^ 64 := by
-          obtain ⟨_, _, _, hl3, _⟩ := decAt_some (decMS_some hms0).2.2
+          obtain ⟨_, _, _, hl3, _⟩ := decAt_some (decMS_some hms0).2.2.2
           have : v + 2 + 1 < (m.arr64 IW).size := by
             simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hl3
             obtain ⟨w, hw, -⟩ := hl3
@@ -384,7 +386,7 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
         have hv' := (iwN_rdW hv (by omega)).1
         rw [ofNat_toNat_word] at hv'
         have hdm := decMS_some hms0
-        obtain ⟨o2, l2, ho2, hl2, hg2⟩ := decAt_some hdm.2.2
+        obtain ⟨o2, l2, ho2, hl2, hg2⟩ := decAt_some hdm.2.2.2
         have heq1 : v + 2 + 1 = v + 3 := by omega
         rw [heq1] at hl2
         have hl2rd := (iwN_rdW hl2 (by omega)).1
@@ -750,7 +752,7 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
     have := decNL_of_get m2 bs.nIdxs q.toNat (fun j hj => by
       have hj' : j < l := by omega
       obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l o bs.members hg j hj'
-      obtain ⟨-, hnI, -⟩ := decMS_some hy
+      obtain ⟨-, -, hnI, -⟩ := decMS_some hy
       have hGj := hG (q.toNat + j)
       rw [ite_eq_left (by rw [hll]; omega)] at hGj
       have e2 : q.toNat + j - q.toNat = j := by omega
@@ -762,7 +764,7 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
       have e4 : UInt64.ofNat v + 1 = UInt64.ofNat (v + 1) := by
         apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
       rw [e4, hn'] at hGj
-      simp only [iwN, nat?, iwA]
+      simp only [iwN, nat?, iwA, aread_apply]
       rw [hGj]
       have hy' : bs.members[j]'(by omega) = y := by
         simpa [List.getElem?_eq_getElem (show j < bs.members.length by omega)] using hget

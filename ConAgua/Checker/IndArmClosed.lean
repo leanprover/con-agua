@@ -4,9 +4,14 @@ public import ConAgua.Checker.Prog
 public import ConAgua.Checker.IndArmTrees1
 public import ConAgua.Checker.IndArmTrees2
 meta import ConAgua.Checker.Prog
+meta import ConAgua.Arena.LeafFrame
 meta import ConAgua.Checker.IndArmTrees1
 meta import ConAgua.Checker.IndArmTrees2
 import all ConAgua.Arena.Abs1
+import all ConAgua.Arena.BasisL
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.IndStream
+import all ConAgua.Rom.CIConst
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
@@ -84,7 +89,6 @@ import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
@@ -163,7 +167,8 @@ sets of `Checker/IndArmFns.lean`; and behind the write set (apart from the walk 
 together by `closedW_of_all` in `Checker/IndArm.lean`: this module needs only `checkerProg` and
 the array names, so its kernel checks run early in the build, beside the arm's proofs. The
 nine arms are checked together, one `prog_all` over `wsChkM` (each function's name code and body
-reduced once per chunk check, not once per arm: ~26 CPU-s instead of ~90 in three modules).
+reduced once per chunk check, not once per arm: ~26 CPU-s instead of ~90 in three modules). The
+arms that reach `struct_used_later` or `mentions_any_const` take them as leaves (`wsChkL`).
 -/
 
 namespace L.Checker
@@ -173,34 +178,37 @@ open L.Arena L.Ind L.Compiler
 /-! ## The checks -/
 
 prog_all checkerProg_armChk : checkerProg
-  (wsChkM CTL [armPosT, armHbT, armRcT, armTaT, armCidT, armRcHbT, armMaT, armMcT, armAbsT])
+  (wsChkM CTL [armPosT, armHbT, armRcT, armTaT, armCidT, armRcHbT, armMaT, armMcT, armAbsT, armOwnT])
 
 theorem checkerProg_armPosChk :
-    ∀ x ∈ checkerProg, wsChk CTL armPosT.1 armPosT.2.1 armPosT.2.2 x = true :=
+    ∀ x ∈ checkerProg, wsChkL CTL armPosT.1 armPosT.2.1 armPosT.2.2.1 armPosT.2.2.2 x = true :=
   wsChk_of_all checkerProg_armChk (by simp)
 theorem checkerProg_armHbChk :
-    ∀ x ∈ checkerProg, wsChk CTL armHbT.1 armHbT.2.1 armHbT.2.2 x = true :=
+    ∀ x ∈ checkerProg, wsChkL CTL armHbT.1 armHbT.2.1 armHbT.2.2.1 armHbT.2.2.2 x = true :=
   wsChk_of_all checkerProg_armChk (by simp)
 theorem checkerProg_armRcChk :
-    ∀ x ∈ checkerProg, wsChk CTL armRcT.1 armRcT.2.1 armRcT.2.2 x = true :=
+    ∀ x ∈ checkerProg, wsChkL CTL armRcT.1 armRcT.2.1 armRcT.2.2.1 armRcT.2.2.2 x = true :=
   wsChk_of_all checkerProg_armChk (by simp)
 theorem checkerProg_armTaChk :
-    ∀ x ∈ checkerProg, wsChk CTL armTaT.1 armTaT.2.1 armTaT.2.2 x = true :=
+    ∀ x ∈ checkerProg, wsChkL CTL armTaT.1 armTaT.2.1 armTaT.2.2.1 armTaT.2.2.2 x = true :=
   wsChk_of_all checkerProg_armChk (by simp)
 theorem checkerProg_armCidChk :
-    ∀ x ∈ checkerProg, wsChk CTL armCidT.1 armCidT.2.1 armCidT.2.2 x = true :=
+    ∀ x ∈ checkerProg, wsChkL CTL armCidT.1 armCidT.2.1 armCidT.2.2.1 armCidT.2.2.2 x = true :=
   wsChk_of_all checkerProg_armChk (by simp)
 theorem checkerProg_armRcHbChk :
-    ∀ x ∈ checkerProg, wsChk CTL armRcHbT.1 armRcHbT.2.1 armRcHbT.2.2 x = true :=
+    ∀ x ∈ checkerProg, wsChkL CTL armRcHbT.1 armRcHbT.2.1 armRcHbT.2.2.1 armRcHbT.2.2.2 x = true :=
   wsChk_of_all checkerProg_armChk (by simp)
 theorem checkerProg_armMaChk :
-    ∀ x ∈ checkerProg, wsChk CTL armMaT.1 armMaT.2.1 armMaT.2.2 x = true :=
+    ∀ x ∈ checkerProg, wsChkL CTL armMaT.1 armMaT.2.1 armMaT.2.2.1 armMaT.2.2.2 x = true :=
   wsChk_of_all checkerProg_armChk (by simp)
 theorem checkerProg_armMcChk :
-    ∀ x ∈ checkerProg, wsChk CTL armMcT.1 armMcT.2.1 armMcT.2.2 x = true :=
+    ∀ x ∈ checkerProg, wsChkL CTL armMcT.1 armMcT.2.1 armMcT.2.2.1 armMcT.2.2.2 x = true :=
   wsChk_of_all checkerProg_armChk (by simp)
 theorem checkerProg_armAbsChk :
-    ∀ x ∈ checkerProg, wsChk CTL armAbsT.1 armAbsT.2.1 armAbsT.2.2 x = true :=
+    ∀ x ∈ checkerProg, wsChkL CTL armAbsT.1 armAbsT.2.1 armAbsT.2.2.1 armAbsT.2.2.2 x = true :=
+  wsChk_of_all checkerProg_armChk (by simp)
+theorem checkerProg_armOwnChk :
+    ∀ x ∈ checkerProg, wsChkL CTL armOwnT.1 armOwnT.2.1 armOwnT.2.2.1 armOwnT.2.2.2 x = true :=
   wsChk_of_all checkerProg_armChk (by simp)
 
 end L.Checker

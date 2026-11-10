@@ -11,15 +11,15 @@ module -- shake: keep-all (`#print axioms` stores no constant shake can see)
 public import ConRon.Bridge.Inductives.Decl
 import ConRon.Bridge.Inductives.PosWalks
 import ConRon.Bridge.Inductives.FieldTele
-import ConRon.Bridge.Inductives.BlockParts
+import ConRon.Bridge.Inductives.BlockShape
 import ConRon.Bridge.Inductives.ClassRead
 import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.Inductives.BlockInstall
 import ConRon.Bridge.Inductives.SumInstall
 import ConRon.Bridge.Inductives.StructInstall
 import ConRon.Bridge.Inductives.RecCheck
+import ConRon.Bridge.Inductives.StreamRecs
 import ConRon.Bridge.Inductives.GenRec
-import ConRon.Bridge.Inductives.BlockWF
 import ConRon.Bridge.Inductives.BlockTail
 
 public section
@@ -33,7 +33,7 @@ namespace ConRon.Bridge.Inductives
 #print axioms piBinders_spec
 #print axioms closeTelescope_spec
 -- the recogniser and the pre-pass
-#print axioms blockParts?_spec
+#print axioms blockShape?_spec
 #print axioms classRead_spec
 -- the positivity walk
 #print axioms nestPos_spec
@@ -48,11 +48,15 @@ namespace ConRon.Bridge.Inductives
 #print axioms checkStructProjTable_runF
 -- the recursor stage
 #print axioms targetMajorOf_spec
-#print axioms consBlockRecsTF_spec
+#print axioms blockRecInfosTF_run
+#print axioms streamKCheck_run
+#print axioms streamRecsCheck_spec
 #print axioms checkBlockClasses_spec
 #print axioms genRecCheck_spec
+#print axioms reduceMembers_spec
+#print axioms checkBlockPass_of
+#print axioms checkBlockTail_of
 -- the route, and the tier's theorem
-#print axioms checkBlock_envWF
 #print axioms checkBlock_bridge
 #print axioms checkIndRoute_bridge
 #print axioms indSpec_of_bridge

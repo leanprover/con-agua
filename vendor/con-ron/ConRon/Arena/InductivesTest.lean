@@ -6,8 +6,8 @@ The module-level differential check of `Arena/Inductives/*`, the shape
 
 > write a declaration list ONCE, as con-leche `Declaration` values — inductive
 > blocks as an elaborator exports them; intern it into the arena; run the
-> arena's `checkDeclsPure` and its two-phase `installThenCheck`; read the
-> resulting environment back with `denoteCIList`, and compare with
+> arena's `checkDeclsPure` and its stream check `checkStream` (the index of
+> the records, then every record's job); read the fold's environment back with `denoteCIList`, and compare with
 > con-leche's own `checkDeclsPure` on the SAME values.
 
 "Whole outcome": an accept must meet an accept at the same environment —
@@ -18,10 +18,11 @@ must meet a failure of the same KIND (messages are not compared, DESIGN §3.1).
 **The blocks are written by hand**, recursor types included, in the official
 shape (formers, then constructors, then recursors — `blockSplit`'s order).
 The uniform route GENERATES each recursor and compares it with the stream's by
-defeq, and it never reads the stream's rules (it installs its own), so a
-fixture needs a correct recursor TYPE and nothing more; `accepts` pins that
-con-leche accepts each positive fixture, so a wrong hand-written type cannot
-make a check pass vacuously on two agreeing errors.
+defeq, the rules as well, so a fixture writes a correct recursor TYPE and each
+rule's constructor and field count, and `withRules` gives its rules the
+right-hand sides con-leche generates; `accepts` pins that con-leche accepts each
+positive fixture, so a wrong hand-written type cannot make a check pass
+vacuously on two agreeing errors.
 
 Covered: a recursive family (`N`), a structure with its projection table
 (`Pair`), an indexed propositional family with a large eliminator (`Eq'`), a
@@ -81,21 +82,22 @@ private def chk (dsCL : List Declaration) : Bool :=
   | .error a, .error b => errEq a b
   | _, _ => false
 
-/-- con-leche: none — the arena's TWO-PHASE fold (the one the binary runs),
+/-- con-leche: none — the arena's check of a stream as the driver runs it
+(`checkStream`: the index of the records, then every record's job at its view),
 with the startup pin walk in front. -/
-private def runInstall (dsCL : List Declaration) :
-    AM (Except (CheckError × Nat) IFEnv) := do
+private def runJobs (dsCL : List Declaration) :
+    AM (Except (CheckError × Nat) Unit) := do
   let (_, ds) ← Frontend.internDecls ∅ dsCL
   let pins ← internAllPins []
-  installThenCheck MU pins ds.toArray
+  checkStream MU pins ds.toArray
 
-/-- con-leche: none — the two-phase fold against con-leche's one-phase
-`checkDeclsPure`, over the whole outcome. -/
-private def chkInstall (dsCL : List Declaration) : Bool :=
-  match (do internReservedPins; runInstall dsCL).run (AState.init EStore.empty),
+/-- con-leche: none — the driver's jobs against con-leche's fold
+`checkDeclsPure`: the same accept, or a failure of the same kind (a job's
+environment is not read back; `checkStream` returns none). -/
+private def chkJobs (dsCL : List Declaration) : Bool :=
+  match (do internReservedPins; runJobs dsCL).run (AState.init EStore.empty),
       (ConLeche.checkDeclsPure MU OPS [] dsCL : ConLeche.CheckM ConLeche.Env) with
-  | .ok (.ok fe, s'), .ok env =>
-    Frontend.denoteCIList s'.store fe.env.consts == some env.consts
+  | .ok (.ok (), _), .ok _ => true
   | .ok (.error (a, _), _), .error b => errEq a b
   | _, _ => false
 
@@ -134,11 +136,36 @@ private def ap (f a : ConLeche.Expr) : ConLeche.Expr := .app f a
 private def ty1 : ConLeche.Expr := .sort (.succ .zero)
 /-- con-leche: none — `Sort u` at a named parameter. -/
 private def sortP (u : String) : ConLeche.Expr := .sort (.param (nm u))
-/-- con-leche: none — a stream rule placeholder: the uniform route never
-reads the stream's rules, so only the constructor and the field count are
-meaningful. -/
+/-- con-leche: none — a stream rule before `withRules`: the constructor and the
+field count, and a placeholder right-hand side. -/
 private def rl (c : ConLeche.Name) (nF : Nat) : RecRule :=
-  { ctor := c, nfields := nF, ctorParams := 0, fire := .plain, rhs := ty1 }
+  { ctor := c, nfields := nF, fire := .plain, rhs := ty1 }
+
+/-- con-leche: none — each record's rules from the generated right-hand sides at
+its position. -/
+private def fillRules : List ConstantInfo → List (List ConLeche.Expr) → List ConstantInfo
+  | .recInfo cv mI rP isK rules :: rest, gs :: gss =>
+    .recInfo cv mI rP isK (List.zipWith (fun r g => { r with rhs := g }) rules gs) :: fillRules rest gss
+  | ci :: rest, gss => ci :: fillRules rest gss
+  | [], _ => []
+
+/-- con-leche: none — a block as an elaborator exports it: its rules' right-hand
+sides are the ones con-leche's recursor stage generates at the environment of
+`pre`.  A block that does not get that far stays as it is. -/
+private def withRules (pre : List Declaration) (nP : Nat) (block : List ConstantInfo) :
+    List ConstantInfo :=
+  let out? : ConLeche.CheckM (List (ConstantVal × ConLeche.TargetMajor × List ConLeche.Expr)) := do
+    let env ← ConLeche.checkDeclsPure MU OPS [] pre
+    match ConLeche.blockShape? nP block with
+    | none => throw (.internal "fixture: not a block")
+    | some p₀ =>
+      let q ← ConLeche.checkBlockPass OPS env p₀ (ConLeche.blockIsRec p₀)
+      let p := q.p
+      ConLeche.checkBlockRec OPS (ConLeche.consBlockCtors p.nP p.memberCtors q.env₁) p
+        (ConLeche.blockNestedBit p q.kinds) q.params q.tbl.toList q.rd q.cls block
+  match out? with
+  | .ok out => fillRules block (out.map (·.2.2))
+  | .error _ => block
 
 /-! ## Fixture 1 — `N`, a recursive family -/
 
@@ -153,17 +180,18 @@ private def nRecTy : ConLeche.Expr :=
         (pi cN (ap (bv 3) (bv 0)))))
 /-- con-leche: none — the `N` block. -/
 private def nBlock : List ConstantInfo :=
+  withRules [] 0 <|
   [ .indInfo ⟨nm "N", [], ty1⟩ {},
     .ctorInfo ⟨nm2 "N" "zero", [], cN⟩ 0 0,
     .ctorInfo ⟨nm2 "N" "succ", [], pi cN cN⟩ 0 1,
     .recInfo ⟨nm2 "N" "rec", [nm "u"], nRecTy⟩ 3 3
-      [rl (nm2 "N" "zero") 0, rl (nm2 "N" "succ") 1] ]
+      false [rl (nm2 "N" "zero") 0, rl (nm2 "N" "succ") 1] ]
 
 #guard accepts [.indDecl nBlock 0]
 #guard installed [.indDecl nBlock 0] == 4
 #guard !hasTable [.indDecl nBlock 0]
 #guard chk [.indDecl nBlock 0]
-#guard chkInstall [.indDecl nBlock 0]
+#guard chkJobs [.indDecl nBlock 0]
 
 /-! ## Fixture 2 — `Pair α β`, a structure and its projection table -/
 
@@ -181,15 +209,16 @@ private def pairRecTy : ConLeche.Expr :=
       (pi (pairAt (bv 3) (bv 2)) (ap (bv 2) (bv 0))))))
 /-- con-leche: none — the `Pair` block. -/
 private def pairBlock : List ConstantInfo :=
+  withRules [] 2 <|
   [ .indInfo ⟨nm "Pair", [], pi ty1 (pi ty1 ty1)⟩ {},
     .ctorInfo ⟨nm2 "Pair" "mk", [],
       pi ty1 (pi ty1 (pi (bv 1) (pi (bv 1) (pairAt (bv 3) (bv 2)))))⟩ 2 2,
-    .recInfo ⟨nm2 "Pair" "rec", [nm "u"], pairRecTy⟩ 4 4 [rl (nm2 "Pair" "mk") 2] ]
+    .recInfo ⟨nm2 "Pair" "rec", [nm "u"], pairRecTy⟩ 4 4 false [rl (nm2 "Pair" "mk") 2] ]
 
 #guard accepts [.indDecl pairBlock 2]
 #guard hasTable [.indDecl pairBlock 2]
 #guard chk [.indDecl pairBlock 2]
-#guard chkInstall [.indDecl pairBlock 2]
+#guard chkJobs [.indDecl pairBlock 2]
 
 /-! ## Fixture 3 — `Eq'`, an indexed propositional family, large eliminator -/
 
@@ -209,15 +238,16 @@ private def eqRecTy : ConLeche.Expr :=
         (pi (bv 3) (pi (eqAt (bv 4) (bv 3) (bv 0)) (ap (ap (bv 3) (bv 1)) (bv 0)))))))
 /-- con-leche: none — the `Eq'` block. -/
 private def eqBlock : List ConstantInfo :=
+  withRules [] 2 <|
   [ .indInfo ⟨nm "Eq'", [nm "u"], pi (sortP "u") (pi (bv 0) (pi (bv 1) (.sort .zero)))⟩ {},
     .ctorInfo ⟨nm2 "Eq'" "refl", [nm "u"],
       pi (sortP "u") (pi (bv 0) (eqAt (bv 1) (bv 0) (bv 0)))⟩ 2 0,
-    .recInfo ⟨nm2 "Eq'" "rec", [nm "v", nm "u"], eqRecTy⟩ 5 4 [rl (nm2 "Eq'" "refl") 0] ]
+    .recInfo ⟨nm2 "Eq'" "rec", [nm "v", nm "u"], eqRecTy⟩ 5 4 true [rl (nm2 "Eq'" "refl") 0] ]
 
 #guard accepts [.indDecl eqBlock 2]
 #guard !hasTable [.indDecl eqBlock 2]
 #guard chk [.indDecl eqBlock 2]
-#guard chkInstall [.indDecl eqBlock 2]
+#guard chkJobs [.indDecl eqBlock 2]
 
 /-! ## Fixture 4 — `Tru`, a `Prop` with rule K -/
 
@@ -228,13 +258,14 @@ private def truRecTy : ConLeche.Expr :=
     (pi (ap (bv 0) (c0 (nm2 "Tru" "intro"))) (pi (c0 (nm "Tru")) (ap (bv 2) (bv 0))))
 /-- con-leche: none — the `Tru` block. -/
 private def truBlock : List ConstantInfo :=
+  withRules [] 0 <|
   [ .indInfo ⟨nm "Tru", [], .sort .zero⟩ {},
     .ctorInfo ⟨nm2 "Tru" "intro", [], c0 (nm "Tru")⟩ 0 0,
-    .recInfo ⟨nm2 "Tru" "rec", [nm "u"], truRecTy⟩ 2 2 [rl (nm2 "Tru" "intro") 0] ]
+    .recInfo ⟨nm2 "Tru" "rec", [nm "u"], truRecTy⟩ 2 2 true [rl (nm2 "Tru" "intro") 0] ]
 
 #guard accepts [.indDecl truBlock 0]
 #guard chk [.indDecl truBlock 0]
-#guard chkInstall [.indDecl truBlock 0]
+#guard chkJobs [.indDecl truBlock 0]
 
 /-! ## Fixture 5 — a MUTUAL block
 
@@ -256,22 +287,23 @@ private def abRecTy (last : ConLeche.Expr) : ConLeche.Expr :=
           last))))
 /-- con-leche: none — the mutual block. -/
 private def abBlock : List ConstantInfo :=
+  withRules [] 0 <|
   [ .indInfo ⟨nm "A", [], ty1⟩ {},
     .indInfo ⟨nm "B", [], ty1⟩ {},
     .ctorInfo ⟨nm2 "A" "a", [], cA⟩ 0 0,
     .ctorInfo ⟨nm2 "A" "ab", [], pi cB cA⟩ 0 1,
     .ctorInfo ⟨nm2 "B" "b", [], pi cA cB⟩ 0 1,
     .recInfo ⟨nm2 "A" "rec", [nm "u"], abRecTy (pi cA (ap (bv 5) (bv 0)))⟩ 5 5
-      [rl (nm2 "A" "a") 0, rl (nm2 "A" "ab") 1],
+      false [rl (nm2 "A" "a") 0, rl (nm2 "A" "ab") 1],
     .recInfo ⟨nm2 "B" "rec", [nm "u"], abRecTy (pi cB (ap (bv 4) (bv 0)))⟩ 5 5
-      [rl (nm2 "B" "b") 1] ]
+      false [rl (nm2 "B" "b") 1] ]
 
 #guard accepts [.indDecl abBlock 0]
 -- seven constants (`B`'s projection table — one constructor, no index — is
 -- in the table component)
 #guard installed [.indDecl abBlock 0] == 7
 #guard chk [.indDecl abBlock 0]
-#guard chkInstall [.indDecl abBlock 0]
+#guard chkJobs [.indDecl abBlock 0]
 
 /-! ## Fixture 6 — a NESTED block
 
@@ -297,11 +329,12 @@ private def lRecTy : ConLeche.Expr :=
         (pi (lAt (bv 3)) (ap (bv 3) (bv 0))))))
 /-- con-leche: none — the container block `L`. -/
 private def lBlock : List ConstantInfo :=
+  withRules [] 1 <|
   [ .indInfo ⟨nm "L", [], pi ty1 ty1⟩ {},
     .ctorInfo ⟨nm2 "L" "nil", [], pi ty1 (lAt (bv 0))⟩ 1 0,
     .ctorInfo ⟨nm2 "L" "cons", [], pi ty1 (pi (bv 0) (pi (lAt (bv 1)) (lAt (bv 2))))⟩ 1 2,
     .recInfo ⟨nm2 "L" "rec", [nm "u"], lRecTy⟩ 4 4
-      [rl (nm2 "L" "nil") 0, rl (nm2 "L" "cons") 2] ]
+      false [rl (nm2 "L" "nil") 0, rl (nm2 "L" "cons") 2] ]
 
 /-- con-leche: none — a fixture term. -/
 private def cT : ConLeche.Expr := c0 (nm "Tree")
@@ -319,12 +352,13 @@ private def treeRecTy (last : ConLeche.Expr) : ConLeche.Expr :=
 /-- con-leche: none — the nested block: one former, one constructor, TWO
 recursors. -/
 private def treeBlock : List ConstantInfo :=
+  withRules [.indDecl lBlock 1] 0 <|
   [ .indInfo ⟨nm "Tree", [], ty1⟩ {},
     .ctorInfo ⟨nm2 "Tree" "node", [], pi (lAt cT) cT⟩ 0 1,
     .recInfo ⟨nm2 "Tree" "rec", [nm "u"], treeRecTy (pi cT (ap (bv 5) (bv 0)))⟩ 5 5
-      [rl (nm2 "Tree" "node") 1],
+      false [rl (nm2 "Tree" "node") 1],
     .recInfo ⟨nm2 "Tree" "rec_1", [nm "u"], treeRecTy (pi (lAt cT) (ap (bv 4) (bv 0)))⟩ 5 5
-      [rl (nm2 "L" "nil") 0, rl (nm2 "L" "cons") 2] ]
+      false [rl (nm2 "L" "nil") 0, rl (nm2 "L" "cons") 2] ]
 
 #guard accepts [.indDecl lBlock 1]
 #guard accepts [.indDecl lBlock 1, .indDecl treeBlock 0]
@@ -332,7 +366,7 @@ private def treeBlock : List ConstantInfo :=
 -- table component)
 #guard installed [.indDecl lBlock 1, .indDecl treeBlock 0] == 8
 #guard chk [.indDecl lBlock 1, .indDecl treeBlock 0]
-#guard chkInstall [.indDecl lBlock 1, .indDecl treeBlock 0]
+#guard chkJobs [.indDecl lBlock 1, .indDecl treeBlock 0]
 
 /-! ## Rejects and declines -/
 
@@ -349,7 +383,7 @@ private def badBlock : List ConstantInfo :=
       pi (pi (c0 (nm "Bad")) (sortP "u"))
         (pi (pi (pi (c0 (nm "Bad")) (c0 (nm "Bad"))) (ap (bv 1) (ap (c0 (nm2 "Bad" "mk")) (bv 0))))
           (pi (c0 (nm "Bad")) (ap (bv 2) (bv 0))))⟩ 2 2
-      [rl (nm2 "Bad" "mk") 1] ]
+      false [rl (nm2 "Bad" "mk") 1] ]
 
 #guard !accepts [.indDecl badBlock 0]
 #guard chk [.indDecl badBlock 0]
@@ -374,7 +408,7 @@ swapped). -/
 /-- con-leche: none — `N` with a wrong recursor type. -/
 private def wrongRecBlock : List ConstantInfo :=
   nBlock.map fun ci => match ci with
-    | .recInfo cv mI rP rules => .recInfo { cv with type := truRecTy } mI rP rules
+    | .recInfo cv mI rP isK rules => .recInfo { cv with type := truRecTy } mI rP isK rules
     | c => c
 
 #guard !accepts [.indDecl wrongRecBlock 0]

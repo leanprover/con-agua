@@ -28,11 +28,11 @@ open L.Arena
 
 /-- **`sl_snoc` keeps the stage relation**: the pool grew by the new slice, whose words are the
 source's and `x` (any words: pointers too). -/
-theorem snocW_words {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem snocW_words {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
-    (h : snocW n m o l x = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : snocW n m o l x = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : o.toNat + l.toNat ≤ iwTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ (r.headD 0).toNat = iwTop m ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ (r.headD 0).toNat = iwTop m ∧
       (r.tail.headD 0).toNat = l.toNat + 1 ∧ iwTop m' = iwTop m + l.toNat + 1 ∧
       (∀ i < l.toNat, (m'.arr64 IW)[iwTop m + i]? = (m.arr64 IW)[o.toNat + i]?) ∧
       (m'.arr64 IW)[iwTop m + l.toNat]? = some x := by

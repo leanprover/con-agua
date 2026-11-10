@@ -258,10 +258,10 @@ theorem natOpDeps_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word}
 
 /-- **`armsW` keeps the stage** and answers the slice of `depsL`. -/
 theorem armsW_keep (hN : NatGateProg p) {k : Nat} {m m1 m' : Mem} {a : AState} {c : Word}
-    {r : List Word} (hS1 : StageR dn vis fe m1 a) (hg1 : IWGrow m m1) (hF : PinsFull m a.pins) :
+    {r : List Word} (hS1 : StageR vis fe m1 a) (hg1 : IWGrow m m1) (hF : PinsFull m a.pins) :
     ∀ tab : List (Nat × List Nat), (∀ x ∈ tab, x.2.length < 2 ^ 64 ∧ ∀ i ∈ x.2, 1 ≤ i ∧ i ≤ 51) →
       armsW p k m1 (pinW m) c tab = some (r, m') →
-      KeepPost dn vis fe (decRL (fun m => decHL m) 0) m m' a r
+      KeepPost vis fe (decRL (fun m => decHL m) 0) m m' a r
         ((depsL (pinW m) c tab).map (decI : Word → NIdx)) := by
   intro tab
   induction tab with
@@ -298,8 +298,8 @@ theorem pinRecW_get (m : Mem) (i : Nat) (h : i < (pinRecW m).length) (hi : i < 1
   all_goals first | rfl | omega
 
 theorem natOpDeps_ref (hN : NatGateProg p) (c : Word) :
-    CallRef p "nat_op_deps" [c] (fun m a => StageR dn vis fe m a ∧ H c) (natOpDeps (decI c))
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
+    CallRef p "nat_op_deps" [c] (fun m a => StageR vis fe m a ∧ H c) (natOpDeps (decI c))
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc⟩ hcall => ?_
   have hw := callW_model (M := fun mm => natOpDepsW p k mm c) (natOpDeps_specW p hN.lNatOpDeps k · c) hcall
   simp only [natOpDepsW] at hw
@@ -319,8 +319,8 @@ theorem natOpDeps_ref (hN : NatGateProg p) (c : Word) :
 
 @[refines ConRon.Arena.natOpDeps]
 theorem natOpDeps_refines (hN : NatGateProg p) (c : Word) :
-    RefAM p "nat_op_deps" [c] (fun m a => StageR dn vis fe m a ∧ H c) (natOpDeps (decI c))
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) :=
+    RefAM p "nat_op_deps" [c] (fun m a => StageR vis fe m a ∧ H c) (natOpDeps (decI c))
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) :=
   (natOpDeps_ref hN c).refAM
 
 end deps

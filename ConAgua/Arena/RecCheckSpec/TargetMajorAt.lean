@@ -46,15 +46,15 @@ L function reads the stored pointer directly (no allocation), which decodes to t
 `ms[c]`, just as the twin's `pure m` does nothing to the state. -/
 @[refines_part ConRon.Arena.targetMajorAt "hit"]
 theorem targetMajorAt_refines_hit (p : Prog) (hp : p.lookup "target_major_at" = some targetMajorAt)
-    (n : Nat) (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    (hR : StageR dn vis fe s₀.mem a₀) (mo ml c : Word) (ms : List TargetMajor)
+    (n : Nat) (s₀ : St) (a₀ : AState) {vis : Word} {fe : IFEnv}
+    (hR : StageR vis fe s₀.mem a₀) (mo ml c : Word) (ms : List TargetMajor)
     (bigM : TargetMajor) (hms : decPL s₀.mem (decTM s₀.mem) mo.toNat ml.toNat = some ms)
     (hc : c.toNat < ml.toNat) (hfound : ms[c.toNat]? = some bigM)
     (hbound : mo.toNat + ml.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "target_major_at" [mo, ml, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetMajorAt ms c.toNat) a₀ ∧
-      KeepPost dn vis fe (fun m' r (x : TargetMajor) => decTM m' (r.headD 0).toNat = some x)
+      KeepPost vis fe (fun m' r (x : TargetMajor) => decTM m' (r.headD 0).toNat = some x)
         s₀.mem s'.mem a₀ r (AM.res (ConRon.Arena.targetMajorAt ms c.toNat) a₀); ⊤⦄ := by
   obtain ⟨v, hv, hdec⟩ := decPL_getH s₀.mem hms c.toNat hc
   have hv' := iwN_rdW hv (by omega)
@@ -81,11 +81,11 @@ theorem targetMajorAt_refines_hit (p : Prog) (hp : p.lookup "target_major_at" = 
 @[refines ConRon.Arena.abstractPrefix]
 theorem abstractPrefix_refines (p : Prog) (hp : p.lookup "abstract_prefix" = some abstractPrefix)
     (hab : AbF p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (k c e : Word) (hS : StageR dn vis fe s₀.mem a₀) (he : H e)
+    (fe : IFEnv) (k c e : Word) (hS : StageR vis fe s₀.mem a₀) (he : H e)
     (hb : c.toNat + k.toNat < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "abstract_prefix" [k, c, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       decI (r.headD 0) = AM.res (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)) a₀ ∧
       AbsOK s'.mem; ⊤⦄ := by
@@ -102,12 +102,12 @@ theorem abstractPrefixList_refines (p : Prog) (hap : p.lookup "abstract_prefix" 
     (hsc : p.lookup "sl_cons" = some slCons)
     (hp : p.lookup "abstract_prefix_list" = some abstractPrefixList) (hab : AbF p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (rP dso dsl : Word)
-    (ds : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hds : decHL s₀.mem dso.toNat dsl.toNat = some ds)
+    (ds : List EIdx) (hS : StageR vis fe s₀.mem a₀) (hds : decHL s₀.mem dso.toNat dsl.toNat = some ds)
     (hb : dso.toNat + dsl.toNat < 2 ^ 64) (hbt : dso.toNat + dsl.toNat ≤ iwTop s₀.mem)
     (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "abstract_prefix_list" [rP, dso, dsl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.abstractPrefixList rP.toNat ds) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.abstractPrefixList rP.toNat ds) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.abstractPrefixList rP.toNat ds) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (ConRon.Arena.abstractPrefixList rP.toNat ds) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
@@ -125,19 +125,19 @@ theorem targetHoles_refines (p : Prog) (hff : p.lookup "fvar_find" = some fvarFi
     (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsc : p.lookup "sl_cons" = some slCons)
     (hp : p.lookup "target_holes" = some targetHoles) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (tyo tyl base : Word)
-    (tys : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (tyo tyl base : Word)
+    (tys : List EIdx) (hS : StageR vis fe s₀.mem a₀)
     (htys : decHL s₀.mem tyo.toNat tyl.toNat = some tys) (hb : tyo.toNat + tyl.toNat < 2 ^ 64)
     (hbt : tyo.toNat + tyl.toNat ≤ iwTop s₀.mem) (hbase : base.toNat + tyl.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_holes" [tyo, tyl, base]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetHoles tys base.toNat) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetHoles tys base.toNat) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.targetHoles tys base.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (ConRon.Arena.targetHoles tys base.toNat) a₀); ⊤⦄ := by
   refine triple_post (targetHoles_spec p hff hfp hif hc ha hsc hp n s₀ tyo tyl base) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨xs, a', hrun, hS', hg, hd, -⟩ := thW_ok dn vis fe n _ _ a₀ tyo tyl base r tys hm hS htys hb hbt hbase
+  obtain ⟨xs, a', hrun, hS', hg, hd, -⟩ := thW_ok vis fe n _ _ a₀ tyo tyl base r tys hm hS htys hb hbt hbase
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.targetHoles tys base.toNat) a₀ a' xs hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd⟩
 
@@ -152,11 +152,11 @@ theorem targetPiDomsWith_refines (p : Prog) (hv : p.lookup "e_view" = some eView
     (hp : p.lookup "target_pi_doms_with" = some targetPiDomsWith) (hi1 : I1Prog p) (n : Nat) (s₀ : St)
     (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (xo xl e : Word) (xs : List EIdx)
-    (hS : StageR dn vis fe s₀.mem a₀) (he : H e) (hxs : decHL s₀.mem xo.toNat xl.toNat = some xs)
+    (hS : StageR vis fe s₀.mem a₀) (he : H e) (hxs : decHL s₀.mem xo.toNat xl.toNat = some xs)
     (hb : xo.toNat + xl.toNat < 2 ^ 64) (hbt : xo.toNat + xl.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pi_doms_with" [xo, xl, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ PdRes s'.mem r (AM.res (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀);
       ⊤⦄ := by
   refine triple_post (targetPiDomsWith_spec p hv hc ha hsc hp hi1 n s₀ xo xl e) ?_
@@ -179,27 +179,23 @@ theorem targetCtorAt_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     ⦃fun r s' => LocEq s' s₀ ∧ tcW cR n s₀.mem M c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, targetCtorAt]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       cvLps_spec p ha hc he hcv n, hcR n "inst_lp_fast"] <;>
-    finish (gen := 20) [tcW, tcK1, tcK2]
+    finish (gen := 20) [tcW, tcK1, tcK2, erRd]
 
 theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m m' : Mem)
     (a : AState) (Mp c : Word) (bigM : TargetMajor) (cv : IConstantVal) (r : List Word) (cR : CallM)
-    (hI : IlpRd cR dn vis fe (IlpBase m a)) (hS : StageR dn vis fe m a) (hM : decTM m Mp.toNat = some bigM) (hcv : decCVp m c.toNat = some cv)
+    (hI : IlpRd cR dn vis fe (IlpBase m a)) (hS : StageR vis fe m a) (hM : decTM m Mp.toNat = some bigM) (hcv : decCVp m c.toNat = some cv)
     (hMb : Mp.toNat + 13 < 2 ^ 64) (hcb : c.toNat + 3 < 2 ^ 64)
-    (hlpb : (rdW (m.arr64 EREC) (c + 2)).toNat = 0 ∨
-      (rdW (m.arr64 EREC) (c + 1)).toNat + (rdW (m.arr64 EREC) (c + 2)).toNat ≤ (m.arr64 EREC).size)
     (h : tcW cR n m Mp c = some (r, m')) :
-    ∃ x a', (ConRon.Arena.targetCtorAt bigM cv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.targetCtorAt bigM cv).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x ∧ AFr m m' := by
   obtain ⟨hlv, w8, h8, hmem⟩ := decTM_fields hM
   obtain ⟨-, -, htyp⟩ := decCV_some (a := erA m) (q := c.toNat) hcv
-  obtain ⟨wt, hwt, hwtlt, hwtd⟩ := erH_rdW htyp (by omega)
-  have hwc : UInt64.ofNat (c.toNat + 3) = c + 3 := by
-    apply UInt64.toNat_inj.mp
-    rw [UInt64.toNat_add]
-    simp
-  rw [hwc] at hwt
+  obtain ⟨wt, hwtA, hwtlt, hwtd'⟩ := hd?_some htyp
+  have hwtd : decI wt = cv.type := hwtd'.symm
+  have hc3 : (c + 3).toNat = c.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have hwt : erRd m (c + 3) = wt := erRd_of_erA (by rw [hc3]; exact hwtA)
   have e : UInt64.ofNat Mp.toNat = Mp := UInt64.ofNat_toNat
   have h8' := iwN_off (k := 8) h8 (by omega)
   rw [e] at h8'
@@ -222,9 +218,9 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     rw [hwl] at h
     rcases hcl : cvLpsW n m c with _ | ⟨r1, m1⟩ <;> rw [hcl] at h <;>
       try (simp only [tcK1, reduceCtorEq] at h; done)
-    obtain ⟨hS1, hg1, hE, hdec1, hto⟩ := cvLpsW_stage hcl hS hcv hcb hlpb
+    obtain ⟨hS1, hg1, hE, hdec1, hto⟩ := cvLpsW_stage hcl hS hcv hcb
     simp only [tcK1] at h
-    rw [hE, hwt] at h
+    rw [erRd_of_erA (m := m1) (by rw [hc3]; exact hg1.ext _ _ hwtA)] at h
     rcases hi : cR n "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, wl, wt] m1 with _ | ⟨r2, m2⟩ <;> rw [hi] at h <;>
       try (simp only [tcK2, reduceCtorEq] at h; done)
     simp only [tcK2, Option.some.injEq, Prod.mk.injEq] at h

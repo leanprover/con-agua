@@ -43,11 +43,11 @@ theorem nestOcc_spec' (p : Prog) (hl : NoLook p) (n : Nat) (s₀ : St) (no nl lo
 /-- `nest_occ` from the stage relation, its names a decoded slice below the top. -/
 theorem noConstWf_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl lo hi e r : Word) (names : List NIdx) (mp0 : Std.HashMap EIdx Bool)
-    (hb : noConstWf n m no nl lo hi e = some (r, m')) (hS : StageR dn vis fe m a) (hh : H e)
+    (hb : noConstWf n m no nl lo hi e = some (r, m')) (hS : StageR vis fe m a) (hh : H e)
     (hn : decHL m no.toNat nl.toNat = some names) (hnb : no.toNat + nl.toNat < 2 ^ 64)
     (hM : noMR m mp0) :
     ∃ b, (ConRon.Arena.nestOcc names lo.toNat hi.toNat (decE e)).run a = .ok (b, a) ∧ (r != 0) = b ∧
-      noMR m' ∅ ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [NOM] [204, 205] m m' := by
+      noMR m' ∅ ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [NOM] [204, 205] m m' := by
   cases n with
   | zero => simp [noConstWf] at hb
   | succ n =>

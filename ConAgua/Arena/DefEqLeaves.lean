@@ -9,7 +9,6 @@ import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Arena.WhnfIotaRefine
-import ConAgua.Arena.WhnfCoreRefine
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.DefEq
 import all ConAgua.Arena.Pins
@@ -57,11 +56,11 @@ structure DefEqLeafProg (p : Prog) : Prop where
 
 /-! ## Shared lemmas -/
 
-/-- `pin_at(i)` reads `PINS[1 + i]` and changes nothing. -/
+/-- `pin_at(i)` reads `PINS[1 + i]` (`PINS[71]` for `i = 51`) and changes nothing. -/
 theorem pinAt_rd (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ i < 51 ∧
-      r.headD 0 = rdW (s₀.mem.arr64 PINS) (1 + i); ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ i < 52 ∧
+      r.headD 0 = rdW (s₀.mem.arr64 PINS) (if i = 51 then 71 else 1 + i); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, pinAtL]
   cases n with
@@ -130,6 +129,7 @@ theorem isBoolTrue_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m
     (h : Word) (hh : HW h) (w : Word) (hW : isBoolTrueW m h = some w) :
     (isBoolTrue (decE h)).run a = .ok (w != 0, a) := by
   unfold isBoolTrueW at hW
+  simp (config := {decide := true}) only [↓reduceIte] at hW
   rcases (Classical.em (tagW h = 3)).symm with h3 | h3
   · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
     subst hW
@@ -278,6 +278,7 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
     (h : Word) (hh : HW h) (w : Word) (hW : isEagerReduceW m h = some w) :
     (isEagerReduce (decE h)).run a = .ok (w != 0, a) := by
   unfold isEagerReduceW at hW
+  simp (config := {decide := true}) only [↓reduceIte] at hW
   rcases (Classical.em (tagW h = 4)).symm with h4 | h4
   · simp only [ne_eq, h4, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
     subst hW
@@ -341,6 +342,7 @@ theorem isEagerReduce_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ 
   have hrun' := isEagerReduce_run _ _ hS.arena.base hS.pins h hh _ hW
   refine coreRef_pure hS hrun' rfl ?_
   unfold isEagerReduceW at hW
+  simp (config := {decide := true}) only [↓reduceIte] at hW
   unfold ResH HW
   repeat' split at hW
   all_goals simp only [reduceCtorEq, Option.some.injEq] at hW
@@ -395,6 +397,7 @@ theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m 
     (e : Word) (he : HW e) (w : Word) (hW : isNatZeroW m e = some w) :
     (isNatZero (decE e)).run a = .ok (w != 0, a) := by
   unfold isNatZeroW at hW
+  simp (config := {decide := true}) only [↓reduceIte] at hW
   by_cases h8 : tagW e = 8
   · simp only [h8, ↓reduceIte] at hW
     by_cases hs : tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
@@ -487,31 +490,17 @@ theorem mapM_length {β : Type} {f : Nat → Option β} :
     obtain ⟨y, -, ys, hys, rfl⟩ := h
     simp [mapM_length hys]
 
-/-- Word `q + k` of an extension, read off the decoded array. -/
-theorem rdW_ext {a b : Array Word} (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) {q : Word} {k : Nat}
-    (hk : k < 16) {w : Word} (ha : a[q.toNat + k]? = some w) : rdW b (q + UInt64.ofNat k) = w := by
-  have hb := hab _ _ ha
-  have hlt : q.toNat + k < b.size := by
-    rcases Nat.lt_or_ge (q.toNat + k) b.size with h' | h'
-    · exact h'
-    · simp [Array.getElem?_eq_none h'] at hb
-  have : (q + UInt64.ofNat k).toNat = q.toNat + k := by
-    rw [UInt64.toNat_add, UInt64.toNat_ofNat']; rw [Nat.mod_eq_of_lt (a := k) (by omega)]; omega
-  simp only [rdW, this, hb, Option.getD_some]
-
 /-- The kind word of a decoded constant record says whether it is a definition; a definition's
-level-parameter count is word `q + 3`, its hint words `q + 6`, `q + 7`. -/
-theorem decCI_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
-    (hsz : b.size < 2 ^ 63) :
-    (rdW b q = 1 → ∃ cv v, ci = .defnInfo cv v (decHintW (rdW b (q + 6)) (rdW b (q + 7))) ∧
-      cv.levelParams.length = (rdW b (q + 3)).toNat ∧ (rdW b (q + 6)).toNat ≤ 2) ∧
-    (rdW b q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) := by
-  cases hq : a[q.toNat]? with
+level-parameter count is word `q + 3`, its hint words `q + 6`, `q + 7` (over any reader). -/
+theorem decCI_defn {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
+    (rd q = 1 → ∃ cv v, ci = .defnInfo cv v (decHintW (rd (q + 6)) (rd (q + 7))) ∧
+      cv.levelParams.length = (rd (q + 3)).toNat ∧ (rd (q + 6)).toNat ≤ 2) ∧
+    (rd q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) := by
+  cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
-  have hrd : rdW b q = w := by
-    have := rdW_ext hab hsz (k := 0) (by decide) (by simpa using hq); simpa using this
+  have hrd : rd q = w := hR.rd _ _ hq
   rw [hrd]
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
   constructor
@@ -522,7 +511,7 @@ theorem decCI_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
     simp only [decHint, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
       Option.map_eq_some_iff] at hhint
     obtain ⟨k, ⟨wk, hwk, rfl⟩, hk⟩ := hhint
-    have h6 : rdW b (q + 6) = wk := rdW_ext hab hsz (k := 6) (by decide) hwk
+    have h6 : rd (q + 6) = wk := hR.offN (k := 6) (hk := by decide) hwk
     rw [h6]
     refine ⟨cv, v, ?_, ?_, ?_⟩
     · rcases hkk : wk.toNat with _ | _ | _ | k
@@ -536,7 +525,7 @@ theorem decCI_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
         simp only [Option.map_eq_some_iff, Option.bind_eq_some_iff, Option.pure_def,
           Option.some.injEq] at hk
         obtain ⟨hh, ⟨wh, hwh, rfl⟩, rfl⟩ := hk
-        have h7 : rdW b (q + 7) = wh := rdW_ext hab hsz (k := 7) (by decide)
+        have h7 : rd (q + 7) = wh := hR.offN (k := 7) (hk := by decide)
           (by simpa [Nat.add_assoc] using hwh)
         have h0 : wk ≠ 0 := fun e => by subst e; simp at hkk
         have h1 : wk ≠ 1 := fun e => by subst e; simp at hkk
@@ -548,7 +537,7 @@ theorem decCI_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
       simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
         Option.map_eq_some_iff] at hls
       obtain ⟨o, -, c, ⟨wc, hwc, rfl⟩, hs⟩ := hls
-      have h3 : rdW b (q + 3) = wc := rdW_ext hab hsz (k := 3) (by decide)
+      have h3 : rd (q + 3) = wc := hR.offN (k := 3) (hk := by decide)
         (by simpa [Nat.add_assoc] using hwc)
       rw [h3]
       simp only [hslice?] at hs
@@ -632,28 +621,24 @@ theorem headHint_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St)
   generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hW hrun1
   rcases hc2 : callW p n "env_find" [k, vis] s₀.mem with _ | ⟨r₂, m₂⟩
   · rw [hc2, headHintW.k_env_find.none] at hW; cases hW
-  obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW
-    (envFind_refines p hp.core.envix hp.core.envrow hp.core.envfind n s₀ vis k hS.env hnw) hc2
-  obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW
-    (envFind_found p hp.core.envix hp.core.envrow hp.core.envfind n s₀ vis k hnw) hc2
+  obtain ⟨t₂, ht₂, hm₂, -, hfind, hdec⟩ := triple_of_callW
+    (envFind_refines p hp.core.envrow hp.core.baserow hp.core.envfind n s₀ vis k hS.env hnw) hc2
   rw [ht₂] at hm₂
   subst hm₂
   by_cases h0 : r₂.headD 0 = 0
   · rw [hc2, headHintW.k_env_find.arm1 (hc1 := h0)] at hW
-    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     rw [hnone] at hrun1
     exact hres 0 0 hW hw0 _ hrun1 rfl
-  obtain ⟨htag, hrow, hq⟩ := hfound h0
-  obtain ⟨ci, hci⟩ := hS.env.found_some k hnw htag hrow
+  obtain ⟨ci, hci⟩ := hdec h0
   have hfind' : fe.find? (decI k) = some ci := by
-    rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
-  rw [← hq] at hci
-  have hdefn := decCI_defn hci (erecP_ext _) hS.erec
+    rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
+  have hdefn := decCI_defn (erRdOK s₀.mem) hci
   rw [hfind'] at hrun1
-  by_cases h1 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 1
+  by_cases h1 : erRdT s₀.mem (r₂.tail.headD 0) = 1
   · rw [hc2, headHintW.k_env_find.arm3 (hc1 := h0) (hc2 := h1)] at hW
     obtain ⟨cv, v, rfl, -, hk6⟩ := hdefn.1 h1
-    exact hres _ _ hW (by unfold HW; omega) _ hrun1 rfl
+    exact hres _ _ hW (by unfold HW; unfold erRdT at hk6; omega) _ hrun1 rfl
   · rw [hc2, headHintW.k_env_find.arm2 (hc1 := h0) (hc2 := h1)] at hW
     rw [hintOf_none _ (fun cv v hint e => hdefn.2 h1 cv v hint (Option.some.inj e))] at hrun1
     exact hres 0 0 hW hw0 _ hrun1 rfl
@@ -746,13 +731,13 @@ the run's pair): no hypotheses for `grind` to instantiate. -/
 
 /-- After `ls_node`: the list's length against the count at `EREC[q]` (read after the call). -/
 def ufLsF (q : Word) (x : List Word × Mem) : Option (Word × Mem) :=
-  some (if x.1.tail.headD 0 = rdW (x.2.arr64 EREC) q then 1 else 0, x.2)
+  some (if x.1.tail.headD 0 = erRdT x.2 q then 1 else 0, x.2)
 
 /-- After `env_find`: a definition whose level-parameter count is the length of the list of the
 head `hh` (read after the call, as the L code does). -/
 def ufEnvF (p : Prog) (n : Nat) (hh : Word) (x : List Word × Mem) : Option (Word × Mem) :=
   if x.1.headD 0 = 0 then some (0, x.2)
-  else if rdW (x.2.arr64 EREC) (x.1.tail.headD 0) ≠ 1 then some (0, x.2)
+  else if erRdT x.2 (x.1.tail.headD 0) ≠ 1 then some (0, x.2)
   else (callW p n "ls_node" [tfld x.2 CONST (tierW hh) (idxW hh) 1] x.2).bind
     (ufLsF (x.1.tail.headD 0 + 3))
 
@@ -855,26 +840,22 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   rcases hc2 : callW p n "env_find" [k, vis] s₀.mem with _ | ⟨r₂, m₂⟩
   · simp [hc2] at hW
   rw [hc2, Option.bind_some] at hW
-  obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW
-    (envFind_refines p hp.core.envix hp.core.envrow hp.core.envfind n s₀ vis k hS.env hnw) hc2
-  obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW
-    (envFind_found p hp.core.envix hp.core.envrow hp.core.envfind n s₀ vis k hnw) hc2
+  obtain ⟨t₂, ht₂, hm₂, -, hfind, hdec⟩ := triple_of_callW
+    (envFind_refines p hp.core.envrow hp.core.baserow hp.core.envfind n s₀ vis k hS.env hnw) hc2
   rw [ht₂] at hm₂
   subst hm₂
   unfold ufEnvF at hW
   simp only at hW
   by_cases h0 : r₂.headD 0 = 0
   · simp only [h0, ↓reduceIte] at hW
-    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     exact hres 0 hW hw0 _ (unfoldableHead_run_other fe _ a₀ _ _ _ hgaf hct hv
       (fun cv v hint e => by rw [hnone] at e; cases e)) rfl
-  obtain ⟨htag, hrow, hq⟩ := hfound h0
-  obtain ⟨ci, hci⟩ := hS.env.found_some k hnw htag hrow
+  obtain ⟨ci, hci⟩ := hdec h0
   have hfind' : fe.find? (decI k) = some ci := by
-    rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
-  rw [← hq] at hci
-  have hdefn := decCI_defn hci (erecP_ext _) hS.erec
-  rcases (Classical.em (rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 1)).symm with h1 | h1
+    rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
+  have hdefn := decCI_defn (erRdOK s₀.mem) hci
+  rcases (Classical.em (erRdT s₀.mem (r₂.tail.headD 0) = 1)).symm with h1 | h1
   · simp only [h0, h1, ne_eq, not_false_eq_true, ↓reduceIte] at hW
     exact hres 0 hW hw0 _ (unfoldableHead_run_other fe _ a₀ _ _ _ hgaf hct hv
       (fun cv v hint e => hdefn.2 h1 cv v hint (by rw [hfind'] at e; exact Option.some.inj e))) rfl

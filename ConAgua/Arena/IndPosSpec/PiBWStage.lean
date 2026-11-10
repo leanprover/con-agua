@@ -13,7 +13,7 @@ import all ConAgua.Arena.IndPos
 /-!
 # PiBWStage
 
-`piBW_stage`, `piBW_cwf`, `naK2`, `NaLook`, `nhiW`, `nestCtxHiAt_specE` and the lemmas only they use.
+`piBW_stage`, `piBW_cwf`, `NaLook`, `nhiW`, `nestCtxHiAt_specE` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -30,9 +30,9 @@ open L.Arena
 /-! ## `pi_binders` under the stage relation -/
 
 /-- **`pi_binders` keeps the stage relation** (it only conses into the pool). -/
-theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem piBW_stage {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : List Word),
-    piBW n m fuel h = some (rs, m') → StageR dn vis fe m a → H h → StageR dn vis fe m' a := by
+    piBW n m fuel h = some (rs, m') → StageR vis fe m a → H h → StageR vis fe m' a := by
   induction n with
   | zero => intro m m' a fuel h rs hh; simp [piBW] at hh
   | succ n ih =>
@@ -64,34 +64,27 @@ theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     exact (consW_stage hcons hS1 hle1 hty2 hdec1).1
 
 /-- `pi_binders` at `CWF` from the stage relation: the twin's run, the stage relation kept. -/
-theorem piBW_cwf {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
+theorem piBW_cwf {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
     {a : AState} {h : Word} {rs : List Word} (hpb : piBW n m CWF h = some (rs, m'))
-    (hS : StageR dn vis fe m a) (hh : H h) :
+    (hS : StageR vis fe m a) (hh : H h) :
     ∃ bs e, (ConRon.Arena.piBinders coreWalkFuel (decI h)).run a = .ok ((bs, e), a) ∧
       decHL m' (rs.headD 0).toNat (rs.getD 1 0).toNat = some bs ∧
       (rs.getD 2 0).toNat < 2 ^ 32 ∧ decE (rs.getD 2 0) = e ∧
-      StageR dn vis fe m' a ∧ IWGrow m m' ∧ (rs.headD 0).toNat + (rs.getD 1 0).toNat ≤ iwTop m' := by
+      StageR vis fe m' a ∧ IWGrow m m' ∧ (rs.headD 0).toNat + (rs.getD 1 0).toNat ≤ iwTop m' := by
   obtain ⟨bs, e, hrun, -, hdec, hb1, hb2, hg, -, hle⟩ :=
     piBW_ok n m m' a CWF h rs hS.check.arena.base hpb hh hS.iw.iwSize hS.iw.ctl
   rw [CWF_eq] at hrun
   exact ⟨bs, e, hrun, hdec, hb1, hb2, piBW_stage n m m' a CWF h rs hpb hS hh, hg, hle⟩
 
-/-! ## `nest_arity` refines `nestArity` -/
-
-def naK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rs, m2) => some ([rs.getD 1 0], m2)
-/-- The lookups of `nest_arity`. -/
+/-- The lookups of `pi_binders` and `env_find`. -/
 structure NaLook (p : Prog) : Prop where
   ha : p.lookup "iw_alloc" = some iwAlloc
   hc : p.lookup "iw_copy" = some iwCopy
   hv : p.lookup "e_view" = some eView
   hs : p.lookup "sl_cons" = some slCons
   hpb : p.lookup "pi_binders" = some piBinders
-  hx : p.lookup "env_ix" = some envIxL
   hg : p.lookup "env_row_get" = some envRowGetL
   hf : p.lookup "env_find" = some envFindL
-  hp : p.lookup "nest_arity" = some nestArityL
 
 end L.Ind
 
@@ -120,7 +113,7 @@ theorem nestCtxHiAt_specE (p : Prog) (hp : p.lookup "nest_ctx_hi_at" = some nest
 theorem rd_iwH0E {k : IdxKind} {m : Mem} {o : Word} {x : Idx k} (h : iwH m o.toNat = some x) :
     H (rdW (m.arr64 IW) o) ∧ decI (rdW (m.arr64 IW) o) = x := by
   obtain ⟨w, hw, hl, hx⟩ := hd?_some h
-  simp only [iwA] at hw
+  simp only [iwA, aread_apply, aread_apply] at hw
   simp only [rdW, hw, Option.getD_some]
   exact ⟨hl, hx.symm⟩
 

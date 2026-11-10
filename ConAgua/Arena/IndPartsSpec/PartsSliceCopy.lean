@@ -1,16 +1,16 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.BpcW
-import ConAgua.Arena.IndPartsSpec.BsW
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.Env
 
 @[expose] public section
 
 /-!
 # PartsSliceCopy
 
-`erCopyW_zero`, `partsErLt`, `partsHslice_last`, `partsErToIw_zero`, `partsSliceCopy`, `partsLpsCopy` and the lemmas only they use.
+`erCopyW_zero`, `partsHslice_last`, `partsErToIw_zero`, `partsSliceCopy`, `partsLpsCopy` and the lemmas only they use.
 -/
 
 
@@ -40,12 +40,8 @@ open L.Arena
 theorem erCopyW_zero (n : Nat) (m : Mem) (d o o' : Word) : erCopyW n m d o 0 = erCopyW n m d o' 0 := by
   cases n <;> rfl
 
-theorem partsErLt {m : Mem} {i v : Nat} (h : nat? (erA (truncM m)) i = some v) : i < erTop m := by
-  simp only [nat?, Option.map_eq_some_iff] at h
-  obtain ⟨x, hx, -⟩ := h; exact (truncM_er_get hx).1
-
 theorem partsHslice_last {k : IdxKind} {a : Array Word} : ∀ (l o : Nat) (xs : List (Idx k)),
-    hslice? a o (l + 1) = some xs → ∃ w, a[o + l]? = some w
+    hslice? (aread a) o (l + 1) = some xs → ∃ w, a[o + l]? = some w
   | 0, o, xs, h => by
     rw [hslice?_succ] at h
     simp only [bind, Option.bind_eq_some_iff] at h
@@ -66,50 +62,25 @@ theorem partsErToIw_zero (n : Nat) (m : Mem) (o : Word) : erToIwW n m o 0 = erTo
   · simp only; rw [erCopyW_zero _ _ _ o 0]
 
 /-- **`er_to_iw` of an `EREC` handle slice decoded below the tops.** -/
-theorem partsSliceCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem partsSliceCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {o l : Word} {r : List Word} {xs : List NIdx} (h : erToIwW n m o l = some (r, m'))
-    (hS : StageR dn vis fe m a) (hs : hslice? (erA (truncM m)) o.toNat l.toNat = some xs) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    (hS : StageR vis fe m a) (hs : hslice? (erA (truncM m)) o.toNat l.toNat = some xs) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  have hdl : ∀ {r m'} (o : Word), erToIwW n m o l = some (r, m') →
-      o.toNat + l.toNat ≤ (m.arr64 EREC).size → hslice? (erA m) o.toNat l.toNat = some xs →
-      StageR dn vis fe m' a ∧ IWGrow m m' ∧
-      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-    intro r m' o h hsrc hs
-    have hroom : iwTop m + l.toNat ≤ (m.arr64 IW).size := by
-      simp only [erToIwW] at h
-      rcases hal : allocW m l with _ | x
-      · rw [hal] at h; cases h
-      obtain ⟨hq', -, hr⟩ := allocW_facts hal hsz
-      rw [hq'] at hr; simp only [iwTop]; omega
-    obtain ⟨hr, hd, hg, hf, -, ht⟩ := erToIwW_dec (k := IdxKind.name) h hsz hc hEs hsrc
-    subst hr
-    simp only [List.headD_cons, List.tail_cons]
-    refine ⟨stage_frame_iw hS hf (by simp only [iwTop] at ht hroom ⊢; omega), hg, ?_, ht⟩
-    rw [hd, hs]
-  have hs' : hslice? (erA m) o.toNat l.toNat = some xs := ArrExt.hslice? (IWGrow.refl m).truncExt.2 hs
-  rcases Nat.eq_zero_or_pos l.toNat with h0 | hpos
-  · have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using h0)
-    subst hl0
-    rw [partsErToIw_zero] at h
-    have : xs = [] := by simpa [hslice?] using hs.symm
-    subst this
-    exact hdl 0 h (by simp) (by simp [hslice?])
-  · obtain ⟨w, hw⟩ := partsHslice_last (l.toNat - 1) o.toNat xs (by rw [Nat.sub_add_cancel hpos]; exact hs)
-    have := (truncM_er_get hw).1
-    have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-    exact hdl _ h (by omega) hs'
+  rw [truncM_erA] at hs
+  have hsz := hS.iw.iwSize
+  have hroom := erToIwW_room h hsz
+  obtain ⟨rfl, hd, hg, hf, -, ht⟩ := erToIwW_dec (k := .name) h hsz hS.iw.ctl hs
+  refine ⟨⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw ?_⟩, hg, by simpa using hd, by simpa using ht⟩
+  rw [← ht, hf.size IW]; exact hroom
 
 /-- `er_to_iw` of a constant's level-parameter slice (decoded below the tops), as a handle slice. -/
-theorem partsLpsCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem partsLpsCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Nat} {cv : IConstantVal} {r : List Word}
-    (h : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat q + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat q + 2)) =
-      some (r, m'))
-    (hS : StageR dn vis fe m a) (hcv : DecB (fun m => decCVp m q) m cv) (hq : q < 2 ^ 64) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    (h : erToIwW n m (erRd m (UInt64.ofNat q + 1)) (erRd m (UInt64.ofNat q + 2)) = some (r, m'))
+    (hS : StageR vis fe m a) (hcv : DecB (fun m => decCVp m q) m cv) (hq : q < 2 ^ 64) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   have hcv' : decCV (erA (truncM m)) q = some cv := hcv
@@ -118,13 +89,21 @@ theorem partsLpsCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   have hlvE : lv = cv.levelParams := by rw [← hcvT]
   simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
   obtain ⟨o', ho, l', hl, hsl⟩ := hlv
-  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-  have hq2lt := partsErLt hl
+  have hrd : ∀ {i v : Nat} {w : Word}, nat? (erA (truncM m)) i = some v → w.toNat = i →
+      erRd m w = UInt64.ofNat v ∧ v < 2 ^ 64 := by
+    intro i v w hv hw
+    rw [truncM_erA] at hv
+    simp only [nat?, Option.map_eq_some_iff] at hv
+    obtain ⟨x, hx, rfl⟩ := hv
+    subst hw
+    exact ⟨by rw [erRd_of_erA hx, UInt64.ofNat_toNat], x.toNat_lt⟩
+  have hl64 : q + 2 < 2 ^ 64 := by
+    rw [truncM_erA] at hl
+    simp only [nat?, Option.map_eq_some_iff] at hl
+    obtain ⟨x, hx, -⟩ := hl; exact erecP_lt64 hx
   have hqw : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' hq
-  obtain ⟨w1, hw1b, -⟩ := partsErRd (IWGrow.refl m) ho (w := UInt64.ofNat q + 1)
-    (by rw [UInt64.toNat_add, hqw]; simp; omega)
-  obtain ⟨w2, hw2b, -⟩ := partsErRd (IWGrow.refl m) hl (w := UInt64.ofNat q + 2)
-    (by rw [UInt64.toNat_add, hqw]; simp; omega)
+  obtain ⟨w1, hw1b⟩ := hrd ho (w := UInt64.ofNat q + 1) (by rw [UInt64.toNat_add, hqw]; simp; omega)
+  obtain ⟨w2, hw2b⟩ := hrd hl (w := UInt64.ofNat q + 2) (by rw [UInt64.toNat_add, hqw]; simp; omega)
   rw [w1, w2] at h
   exact partsSliceCopy h hS
     (by rw [UInt64.toNat_ofNat_of_lt' hw1b, UInt64.toNat_ofNat_of_lt' hw2b, hsl, hlvE])
@@ -133,11 +112,11 @@ section arms
 variable (n : Nat) (m m1 : Mem) (cto ctl lo ll cv b e : Word) (rp : List Word)
 theorem bpfW_nil (h : ctl = 0) : bpfW (n + 1) m cto ctl lo ll = some ([1], m) := by simp [bpfW, h]
 theorem bpfW_cons (h : ctl ≠ 0) : bpfW (n + 1) m cto ctl lo ll = bpfK1 n cto ctl lo ll (rdW (m.arr64 IW) cto) m
-    (resContW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cto))) := by simp [bpfW, h]
+    (resContW n m (erRd m (rdW (m.arr64 IW) cto))) := by simp [bpfW, h]
 theorem bpfK1_res (h : b ≠ 0) : bpfK1 n cto ctl lo ll cv m (some b) = some ([0], m) := by
   simp only [bpfK1]; exact ite_eq_left h
 theorem bpfK1_ok (h : ¬ b ≠ 0) : bpfK1 n cto ctl lo ll cv m (some b) =
-    bpfK2 n cto ctl lo ll (erToIwW n m (rdW (m.arr64 EREC) (cv + 1)) (rdW (m.arr64 EREC) (cv + 2))) := by
+    bpfK2 n cto ctl lo ll (erToIwW n m (erRd m (cv + 1)) (erRd m (cv + 2))) := by
   simp only [bpfK1]; exact ite_eq_right h
 theorem bpfK2_some : bpfK2 n cto ctl lo ll (some (rp, m1)) =
     bpfK3 n cto ctl lo ll m1 (eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll) := by simp [bpfK2]
@@ -156,12 +135,12 @@ theorem bpcW_np (h : csl ≠ 0) (h2 : rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1
     bpcW (n + 1) m nP cso csl lo ll = some ([0], m) := by simp [bpcW, h, h2]
 theorem bpcW_cons (h : csl ≠ 0) (h2 : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP) :
     bpcW (n + 1) m nP cso csl lo ll = bpcK1 n nP cso csl lo ll (rdW (m.arr64 IW) (rdW (m.arr64 IW) cso)) m
-      (resContW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cso)))) := by
+      (resContW n m (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) cso)))) := by
   simp only [bpcW]; rw [ite_eq_right h, ite_eq_right h2]
 theorem bpcK1_res (h : b ≠ 0) : bpcK1 n nP cso csl lo ll cv m (some b) = some ([0], m) := by
   simp only [bpcK1]; exact ite_eq_left h
 theorem bpcK1_ok (h : ¬ b ≠ 0) : bpcK1 n nP cso csl lo ll cv m (some b) =
-    bpcK2 n nP cso csl lo ll (erToIwW n m (rdW (m.arr64 EREC) (cv + 1)) (rdW (m.arr64 EREC) (cv + 2))) := by
+    bpcK2 n nP cso csl lo ll (erToIwW n m (erRd m (cv + 1)) (erRd m (cv + 2))) := by
   simp only [bpcK1]; exact ite_eq_right h
 theorem bpcK2_some : bpcK2 n nP cso csl lo ll (some (rp, m1)) =
     bpcK3 n nP cso csl lo ll m1 (eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll) := by simp [bpcK2]

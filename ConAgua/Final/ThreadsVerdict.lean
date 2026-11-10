@@ -9,6 +9,7 @@ import ConAgua.Checker.ProgWf
 import ConAgua.Final.BufAbi
 import ConAgua.Final.BufChain
 import ConAgua.Final.DrvFinal
+import ConAgua.Checker.CheckARun
 public import ConAgua.Compiler.Main
 import all ConAgua.Checker.Entry
 
@@ -18,20 +19,27 @@ import all ConAgua.Checker.Entry
 # The verdict theorem for the threaded harness of the committed file
 
 `checkerFile_threads_verdict_of`: the trusted threaded harness (`main.c`, `run_jobs`) runs entry 1
-(`ca_start_a`) of `checker.s` and hands the buffer it left to its threads, each calling
-`ca_check_b` once per group index it claims, on its own region (as `ThreadsRun`,
-`Final/ThreadsFinal.lean`). If the run reports a failure with the code `k` (`ThreadsFail`): entry 1
-returns `rdx = 2` with `rax = k`, or entry 1 returns ok and some thread's call `i` returns
-`rdx = 2` with `rax = k` while its calls before `i` returned accept, then a class `k &&& 3` of `1`
-(reject) or `2` (decline) is the twin pool's failure with that class (`TwinVerdictPooled [b]`):
-the pipeline fails before phase B, or the stages and phase A ran ok and the failing thread's
-groups up to and including the failing one, checked in order from the phase-A state's worker,
-fail. Every other outcome claims nothing.
+(`ca_start_a`: the stages and the stream index) of `checker.s` and hands the buffer it left to its
+threads, each calling `ca_check_b` once per job index (a record's position) it claims, on its own
+region (as `ThreadsRun`, `Final/ThreadsFinal.lean`). If the run reports a failure with the code
+`k` (`ThreadsFail`): entry 1 returns `rdx = 2` with `rax = k`, or entry 1 returns ok and some
+thread's call `i` returns `rdx = 2` with `rax = k` while its calls before `i` returned accept,
+then for a class `k &&& 3` of `1` (reject) or `2` (decline) the twin's pool fails
+(`TwinVerdictPooled [b]`): the pipeline fails with that class before or in the jobs
+(`TwinVerdict`), or the stages and the stream index ran ok and either the failing thread's jobs up
+to and including the failing one, run in order from the index state's worker (each at the
+index's view of its position), fail with that class, or some record below them does not pass on
+its own. The last case is the weakened form: the theorem does not know whether the other
+threads accepted the records below the failing job, and a job's check needs them accepted
+(con-ron's fold invariant at the job's view). Every other outcome claims nothing.
 
 From the machine-level entries (`abiA_outcome`, `abiB_outcome`, the thread's chain
 `thread_chain`) and the L-level claims (`ThreadVerdicts`: entry 1's `Entry1Verdict`, and
-`check_pending`'s error claim `CPVerdict`, which `threads_twinVerdictPooled`,
-`Verdict/ThreadsE.lean`, turns into the pool's failure).
+`ThreadEVerdict`: a thread's failing call at the L level, when every record below its job
+passes on its own, is the pool's failure with its class; `threadFail_twin` takes the other case
+to the weakened verdict, `TwinVerdictPooled.of_not_passes`). Relative to a set theory `V`, as the
+threaded accept theorems: the fold invariant at a job's view comes from the model of the
+accepted prefix.
 
 **What the theorem trusts of the harness** (the hypotheses of `Entry1Fail` and `ThreadFail`;
 beyond them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and
@@ -44,14 +52,17 @@ loader):
   `ThreadsRun` trusts: the buffer (`OUT`'s first `len` words at entry 1's return) stays in place
   and is passed to each call (route A: read-only, `mprotect`); the thread's region is its own,
   zero at the first call, and at each later call holding the bytes the previous call left; each
-  call is made as `BufCallH` says; every claimed group index (in `rdx`) is below `k`
-  (`k = rax - 2^63` from entry 1). Coverage of the group indices by the threads is not needed.
+  call is made as `BufCallH` says; every claimed job index (in `rdx`) is below `k`
+  (`k = rax - 2^63` from entry 1, the number of records). Neither the coverage of the job indices
+  by the threads nor the order of a thread's claims is needed.
 * The verdicts: entry 1 returns `rdx = 2` (`Entry1Fail`), or `rdx = 0` and `rax ≥ 2^63`, the
   thread's calls before `i` return `rdx = 0`, `rax = ACCEPT`, and call `i` returns `rdx = 2`
   (`ThreadFail`). The harness reports the code `k` it read from that call's `rax`.
 -/
 
 namespace ConAgua.Final
+
+universe u
 
 open L L.Compiler L.Checker L.Arena ConRon.Arena
 
@@ -100,12 +111,29 @@ def ThreadsFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (
   ∃ (B : Array Word) (t : ThreadM) (i : Nat), ThreadFail b pb dm₀ ra₀ st₀ B t i ∧
     k = (t.st i).data.regs.rax
 
+/-- **A thread's failing call, at the L level**: entry 1 (`check` with the mode word `1`)
+returned `2^63 + k`, the buffer `B` is `OUT`'s first `len` words, a thread with a fresh region
+`r₀` ran its calls `cs` (`ThreadFails`: each accepting call's run returned and left the buffer in
+place) and its next call, on the claimed index `j`, failed with `e` of class other than `0`, and
+every record below `j` passes on its own (`TwinJobPasses`): the twin's pool fails with that
+class. Relative to set theory (`[SetTheory Vt]`, as the threaded accept theorems): con-ron's fold
+invariant at a job's view is stated through a model. -/
+def ThreadEVerdict : Prop :=
+  ∀ (Vt : Type u) [ConLeche.SetTheory Vt] (b pb : ByteArray) (sz : TieredArray → Nat), InputsOK b pb sz →
+    ∀ (N₁ : Nat), N₁ < 2 ^ 62 → ∀ (rs₁ : List Word) (m₁ : Mem),
+    L.run checkerProg N₁ "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁) →
+    9223372036854775808 ≤ (rs₁.headD 0).toNat →
+    ∀ (B : Array Word), B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat →
+    ∀ (r₀ : Mem), (∀ b ∈ parOwnedL, r₀.arr64 b = zeros (m₁.arr64 b).size) → r₀.glob INIT = 0 →
+    ∀ (j : Word) (cs : List (Word × Nat × Mem)) (n : Nat) (e : Err), ThreadFails B j n e r₀ cs →
+    (∀ c ∈ cs, c.1 < rs₁.headD 0 - 9223372036854775808) → j < rs₁.headD 0 - 9223372036854775808 →
+    e.cls ≠ 0 → (∀ i < j.toNat, TwinJobPasses [b] i) → TwinVerdictPooled [b] e.cls
+
 /-- **The threaded harness's verdict claims** (the L-level obligations): entry 1's
-(`Entry1Verdict`, as in `SeqVerdicts`) and `check_pending`'s error claim at the programs phase B
-runs (`CPVerdict`, the hypothesis `entry2Verdict_of` takes). -/
+(`Entry1Verdict`, as in `SeqVerdicts`) and a thread's failing call (`ThreadEVerdict`). -/
 structure ThreadVerdicts : Prop where
   entry1 : Entry1Verdict checkerProg
-  cp : CPVerdict
+  thr : ThreadEVerdict.{u}
 
 /-! ## Pieces -/
 
@@ -141,7 +169,7 @@ theorem entry1Fail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (hF : Entry1Fail b pb dm₀ ra₀ st₀) (hk : st₀.data.regs.rax &&& 3 ≠ 0) :
     TwinVerdict [b] (st₀.data.regs.rax &&& 3) := by
   have hc := code_of_checkerFile_par hcode
-  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 132
+  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hF.call₀
   obtain ⟨⟨-, -, -, hout₀⟩, hsz⟩ := hF.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hF.rdx₀]; decide
@@ -163,19 +191,18 @@ theorem entry1Fail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     rw [hF.rdx₀] at hout₀'
     exact absurd hout₀'.1 (by decide)
 
--- the linter's traversal of this proof exceeds the recursion limit
 set_option linter.constructorNameAsVariable false in
 /-- A thread's failing call is the twin pool's failure. -/
-theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem threadFail_twin [Host] (V : Type u) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (t : ThreadM) (i : Nat)
-    (hV : CPVerdict) (hR : ThreadFail b pb dm₀ ra₀ st₀ B t i)
+    (hV : ThreadEVerdict.{u}) (hR : ThreadFail b pb dm₀ ra₀ st₀ B t i)
     (hk : (t.st i).data.regs.rax &&& 3 ≠ 0) :
     TwinVerdictPooled [b] ((t.st i).data.regs.rax &&& 3) := by
   have hc := code_of_checkerFile_par hcode
   have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1 (as `threadsRun_twinAcceptsPooled_regs`)
-  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 132
+  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
   obtain ⟨⟨-, -, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
@@ -208,6 +235,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     simp only [abiLayout_tab] at this
     rw [abiLayout_b64 _ _ _ _ _ _ hOUTp, abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
     simpa only [outAddr, abiSlot64] using this
+  have hH : hdrW = 136 := by decide
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)
@@ -224,7 +252,11 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
       exact (Option.some.inj e).symm
   rw [← hBeq] at hent' hinc'
   have hhdr : ∀ i < frozenIdsL.length, 9 + 2 * i < B.size := by
-    intro i hi; have : frozenIdsL.length = 62 := rfl; omega
+    intro i hi
+    have : frozenIdsL.length = frozen.length + 1 := by rw [frozenIdsL_eq]; simp
+    have : frozen.length = 63 := frozen_length
+    have := h126; have : hdrW = 136 := by decide
+    omega
   have hdisj : ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i ≠ i' →
       (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1 ∨
       (bufEntry B i').1 + (bufEntry B i').2 ≤ (bufEntry B i).1 ∨ (bufEntry B i).2 = 0 ∨ (bufEntry B i').2 = 0 := by
@@ -246,14 +278,14 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
       ⟨⟨hH.need, hH.fits, hH.bend, hhdr, hent', hdisj, hH.apart⟩, hH.hB, hH.hmap, hH.hra, hH.hcs,
         hH.hcs24, hH.hcs8⟩
     have hEv := abiB_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerProgI_wf MODE PLO PHI OUT HDRF
-      CTLF 132 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i') (t.ra i') hbc
       (by rw [hcx]; exact hr) checker_bufMinOk
     rw [hdi, hcx] at hEv
     exact hR.ret i' hi _ hEv (fun s h => h.1)
   -- the calls before `i` (`thread_chain`)
   obtain ⟨rm, h0, hrun⟩ := thread_chain checkerProg checkerTab checkerTab_abiOk hnres frozenIdsL parOwnedL
-    (by decide) PLO PHI MODE B (outAddr dm₀.regs.r8.toNat) t.base t.blen i hneed hfit t.dm t.ra t.st
+    parOwnedL_not_frozen PLO PHI MODE B (outAddr dm₀.regs.r8.toNat) t.base t.blen i hneed hfit t.dm t.ra t.st
     (fun _ => hR.zero) (fun i' hi r hr => hpost i' (by omega) r hr) hR.acc
     (fun i' hi => hR.next i' (by omega))
   -- the region at call `i`, and call `i`'s failure
@@ -261,7 +293,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     rcases i with _ | i
     · rw [h0]; exact regionRel_zero checkerTab_abiOk hneed hfit _ hR.zero
     · obtain ⟨-, -, -, h3, -⟩ := hrun i (by omega)
-      exact (RegionRel.of_memRel (by decide) h3).transfer checkerTab_abiOk hneed (hR.next i (by omega))
+      exact (RegionRel.of_memRel parOwnedL_not_frozen h3).transfer checkerTab_abiOk hneed (hR.next i (by omega))
   obtain ⟨-, -, -, hout⟩ := hpost i (Nat.le_refl _) (rm i) hreg
   obtain ⟨e, he, hrax⟩ := outcome_err (hout.resolve_left (by rw [hR.rdx]; decide)) hR.rdx
   rw [hrax] at hk ⊢
@@ -270,9 +302,35 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     obtain ⟨rs, h1, -, h3, -⟩ := hrun i' hi
     exact ⟨⟨rs, h1⟩, bufKept_of_memRel h3 hent' (hR.kept i' hi)⟩) he i 0 (by omega)
   rw [h0] at hruns
-  refine threads_twinVerdictPooled hV b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem checkerTab)
+  -- a record below `j` that does not pass: the weakened verdict
+  have hr₁ : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
+  obtain ⟨PA, m₇, m, hF, -, -, hres⟩ := checkA_run b pb _ hin 1 (Or.inl rfl) abiFuel hN rs₁ m₁ h₁ hr₁
+  have hsz : PA.ds.size < 2 ^ 63 := by
+    have := hF.build.decls.room; have := hF.build.decls.dsize; omega
+  have hj : ((t.dm i).regs.rdx).toNat < PA.ds.size := by
+    have hc := hR.claimed i (Nat.le_refl _)
+    rw [hrax₁, hres] at hc
+    have e : (9223372036854775808 : Word) + UInt64.ofNat PA.ds.size - 9223372036854775808 =
+        UInt64.ofNat PA.ds.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
+    rw [e, UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)] at hc
+    exact hc
+  by_cases hpass : ∀ i' < ((t.dm i).regs.rdx).toNat, TwinJobPasses [b] i'
+  rotate_left
+  · simp only [Classical.not_forall] at hpass
+    obtain ⟨i', hi', hn⟩ := hpass
+    refine TwinVerdictPooled.of_not_passes (j := ((t.dm i).regs.rdx).toNat) ?_ hi' hn
+    intro pins sA sB sC sD sE sF pre r ds ipins I hA' hB' hC' hD' _ _
+    obtain ⟨hA, hB, hC, hD, -⟩ := PA.pfx
+    rw [hA] at hA'; injection hA' with hA'; obtain ⟨-, rfl⟩ := Prod.mk.inj hA'
+    rw [hB] at hB'; injection hB' with hB'; obtain ⟨hB1, rfl⟩ := Prod.mk.inj hB'
+    injection hB1 with hB1; subst hB1
+    rw [hC] at hC'; injection hC' with hC'; obtain ⟨hC1, rfl⟩ := Prod.mk.inj hC'
+    injection hC1 with hC1; subst hC1
+    rw [hD] at hD'; injection hD' with hD'; obtain ⟨rfl, rfl⟩ := Prod.mk.inj hD'
+    exact hj
+  refine hV V b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem checkerTab)
     (fun a ha => ?_) rfl _ _ abiFuel e hruns (fun c hc => ?_)
-    (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk
+    (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk hpass
   · have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
     simp only [abiLayout_tab]
@@ -288,14 +346,14 @@ harness's run reports a failure with the code `k` (`ThreadsFail`: entry 1 return
 a thread's call returned `rdx = 2` after its earlier calls accepted) and the class `k &&& 3` is
 `1` (reject) or `2` (decline), the twin's pool on `[b]` fails with that class
 (`TwinVerdictPooled`), given the L-level verdict claims (`ThreadVerdicts`). -/
-theorem checkerFile_threads_verdict_of [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem checkerFile_threads_verdict_of [Host] (V : Type u) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
-    (hV : ThreadVerdicts) (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
+    (hV : ThreadVerdicts.{u}) (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
     TwinVerdictPooled [b] (k &&& 3) := by
   rcases hF with ⟨hE, rfl⟩ | ⟨B, t, i, hT, rfl⟩
   · exact (entry1Fail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ hV.entry1 hE hk).pooled
-  · exact threadFail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ B t i hV.cp hT hk
+  · exact threadFail_twin V k0 hcode b pb h64 dm₀ ra₀ st₀ B t i hV.thr hT hk
 
 /-- info: 'ConAgua.Final.checkerFile_threads_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_threads_verdict_of

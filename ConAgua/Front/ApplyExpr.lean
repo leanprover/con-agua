@@ -75,14 +75,14 @@ namespace L.Front
 /-! ## `expr_get`, `expr_fresh`, `expr_put` -/
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:131-136 ConRon.Arena.Frontend.StateD.expr
-con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:335-337 ConLeche.Frontend.IdTable.get? -/
 @[no_expose] def exprGet : FunDecl := tblGetG EID "esp_find"
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:163-166 ConRon.Arena.Frontend.StateD.freshExpr
-con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:352-361 ConLeche.Frontend.IdTable.bound -/
 @[no_expose] def exprFresh : FunDecl := tblFreshG EID "esp_find"
 
-/-- con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
+/-- con-leche: ConLeche/Frontend/Scan/Types.lean:339-346 ConLeche.Frontend.IdTable.insert -/
 @[no_expose] def exprPut : FunDecl := tblPutG EID "esp_find" "esp_put"
 
 /-! ## `ls_put(v)` -/

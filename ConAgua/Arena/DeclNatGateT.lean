@@ -4,10 +4,9 @@ public import ConAgua.Arena.KnotEntry
 public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.DeclNatGateSpec
 public import ConAgua.Arena.DeclNatOpEq
-import ConAgua.Arena.DeclReducePin
-import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.StageC
 public import ConRon.Bridge.Checker.DeclVal
+public import ConAgua.Arena.DeclNatPushPop
 import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatGate
 import ConAgua.Arena.RefWalk
@@ -16,6 +15,7 @@ public import ConAgua.Arena.LeafFns
 public import ConAgua.Arena.TwinStep
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
 
 @[expose] public section
 
@@ -56,23 +56,15 @@ local notation "V" => ConLeche.CheckMode.verified
 state (`StateOK` after, `Ext`, caches and pins unchanged). -/
 theorem StageC.of_run {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {env : ConLeche.Env} {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR dn vis fe m' a') (hf : MemFrame leafA leafC m m')
+    (hS : StageR vis fe m' a') (hf : MemFrame leafA leafC m m')
     (hok : ConRon.Bridge.StateOK a') (hx : Ext a.store a'.store) (hc : a'.caches = a.caches)
     (hp : a'.pins = a.pins) : StageC dn vis fe env m' a' :=
   ⟨hS, h.check.mono hok hx hc hp,
     ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,
       by rw [hf.size]; exact h.mem.bstk,
-      h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp,
+      h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb,
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
-
-/-- The stage relation at the pushed view `w`, back from the pre-insertion view. -/
-theorem stageR_of_restrict {dn : NIdx → Option ConLeche.Name} {vis w : Word} {fe2 : IFEnv}
-    {m : Mem} {a : AState} (h : StageR dn vis (fe2.restrictTo vis.toNat) m a)
-    (hvb : fe2.visibleBelow = w.toNat) : StageR dn w fe2 m a := by
-  have := h.restrict w
-  rw [IFEnv.restrictTo_restrictTo, ← hvb, IFEnv.restrictTo_self] at this
-  exact this
 
 /-! ## `certify_nat_eqs` -/
 
@@ -120,16 +112,16 @@ theorem cert_ref (hq : KnotStageProg p) (o l : Word) (ps : List (EIdx × EIdx)) 
     obtain ⟨pp, ea, eb, hl0, hpp, hrec, hea, heb, he, hrest⟩ := hE.cons
     rw [certifyNatEqsE.arm2 p k m vis o l (fun h => hl0 (by simp [h]))]
     have hpp' : rdW (m.arr64 IW) o = pp := by
-      simp only [iwA] at hpp; simp [rdW, hpp]
+      simp only [iwA, aread_apply] at hpp; simp [rdW, hpp]
     have hea' : rdW (m.arr64 IW) pp = ea := by
-      obtain ⟨-, h2, -⟩ := hrec; simp only [iwA] at h2; simp [rdW, h2]
+      obtain ⟨-, h2, -⟩ := hrec; simp only [iwA, aread_apply] at h2; simp [rdW, h2]
     have heb' : rdW (m.arr64 IW) (pp + 1) = eb := by
       obtain ⟨h1, -, h3⟩ := hrec
       have hpb : (pp + 1).toNat = pp.toNat + 1 := by
         have e1 := hS.stage.iw.iw; have e2 := hS.stage.iw.iwSize
         have e3 : pp.toNat + 1 < 2 ^ 64 := by omega
         rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; exact Nat.mod_eq_of_lt e3
-      simp only [iwA] at h3; simp [rdW, hpb, h3]
+      simp only [iwA, aread_apply] at h3; simp [rdW, hpb, h3]
     rw [hpp', hea', heb']
     subst he
     simp only [certifyNatEqs]
@@ -176,269 +168,250 @@ theorem certW_okC (hN : NatEqProg p) (hq : KnotStageProg p) {env : ConLeche.Env}
     ∃ x a', (certifyNatEqs V fe ps).run a = .ok (x, a') ∧ StageC dn vis fe env m' a' ∧
       IWGrow m m' ∧ decW0B m' r x ∧ Ext a.store a'.store := by
   obtain ⟨x, a', hrun, hT, hg, hd⟩ := certW_okT hN hq o l ps k hk m a r m' hS.stageT hE hb hc
-  obtain ⟨hstep, -⟩ := ConRon.Bridge.certifyNatEqs_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨hstep, -⟩ := ConRon.Bridge.certifyNatEqs_bridge ConRon.Bridge.CoreSpec.of_core
     hS.check henv hden hws hrun
-  exact ⟨x, a', hrun, StageC.of_T hT hstep.ok, hg, hd, hstep.ext⟩
+  exact ⟨x, a', hrun, L.Ind.StageC.of_T hT hstep.ok, hg, hd, hstep.ext⟩
 
 end cert
 
-/-! ## `defn_nat_cert` and `defn_nat_gate`: one model and one refinement for both outcomes -/
+/-! ## `check_structural_nat_pin`: one model and one refinement for both outcomes -/
 
-/-- **The model of `defn_nat_cert`, both outcomes**: the leaves outside the verdict closure
-(`env_find`, `nat_op_equations`, `subst_const0_pairs`) through their `Option` models,
-`certify_nat_eqs` through its run. -/
-l_model defnNatCert_specE (p : Prog) (hf : p.lookup "defn_nat_cert" = some defnNatCert)
-  fns [hf ↦ defnNatCertE]
-  specs [callW_spec p n "env_find", callW_spec p n "nat_op_equations",
-    callW_spec p n "subst_const0_pairs"]
+/-- **The model of `check_structural_nat_pin_at_fe2`, both outcomes**: the leaves through their
+`Option` models. -/
+l_model snpFe2_specE (p : Prog)
+  (hf : p.lookup "check_structural_nat_pin_at_fe2" = some checkStructuralNatPinAtFe2L)
+  fns [hf ↦ snpFe2E]
+  specs [callW_spec p n "nat_op_guard", callW_spec p n "nat_op_deps",
+    callW_spec p n "nat_op_stored_ok_all", callW_spec p n "env_find"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  heartbeats 400000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- **The model of `check_structural_nat_pin`, both outcomes**: the leaves through their `Option`
+models, the reads at the pushed view and `certify_nat_eqs` through their models. -/
+l_model snp_specE (p : Prog)
+  (hf : p.lookup "check_structural_nat_pin" = some checkStructuralNatPinL)
+  (h2 : p.lookup "check_structural_nat_pin_at_fe2" = some checkStructuralNatPinAtFe2L)
+  (hc : p.lookup "certify_nat_eqs" = some certifyNatEqsL)
+  fns [hf ↦ snpE]
+  specs [callW_spec p n "env_row_get", callW_spec p n "env_push", snpFe2_specE p h2 n,
+    callW_spec p n "env_pop_temp", callW_spec p n "nat_op_equations",
+    callW_spec p n "subst_const0_pairs", certifyNatEqs_specE p hc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **The model of `defn_nat_gate`, both outcomes**: the leaves through their `Option` models,
-`defn_nat_cert` through its model. -/
-l_model defnNatGate_specE (p : Prog) (hf : p.lookup "defn_nat_gate" = some defnNatGate)
-  (hc : p.lookup "defn_nat_cert" = some defnNatCert)
-  fns [hf ↦ defnNatGateE]
-  specs [callW_spec p n "nat_op_names", callW_spec p n "sl_contains", callW_spec p n "nat_op_guard",
-    callW_spec p n "nat_op_deps", callW_spec p n "nat_op_stored_ok_all", defnNatCert_specE p hc n]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
-  heartbeats 400000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-section gate
+section snp
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name}
 
-/-- What `defn_nat_cert` gives besides the twin's run (from `m`, `a`): `StageC` at the
-pre-insertion view, the growth, `Ext` of the twin's store. -/
-structure DncPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe2 : IFEnv)
-    (env : ConLeche.Env) (m m' : Mem) (a a' : AState) : Prop where
-  stage : StageC dn vis (fe2.restrictTo vis.toNat) env m' a'
+/-- What the reads at the pushed view give (from `m`): the stage relation there, the growth, the
+stored value's word. -/
+structure SnpFe2Post (w : Word) (fe2 : IFEnv) (m m' : Mem) (r : Word) (v : EIdx) (a' : AState) :
+    Prop where
+  stage : StageR w fe2 m' a'
   grow : IWGrow m m'
-  ext : Ext a.store a'.store
+  hw : H r
+  dec : decE r = v
+  frame : MemFrame leafA leafC m m'
+  own : ownC m' = ownC m
 
-/-- **`defn_nat_cert` refines `natCertT` under `StageC`, both outcomes** (con-ron's
-`checkDecl_bridge_defn`, the stored value's branch): `env_find` reads the pushed index (the twin's
-`IFEnvOK.hit` at `env2`), the equations and their substitution are leaves at the pushed view, the
-certificate runs at the pre-insertion view (`cert_ref`); its failure is
-the twin's `notImplemented`. -/
-theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vis w n : Word}
-    {fe2 : IFEnv} {env env2 : ConLeche.Env} {nm : ConLeche.Name} (k : Nat) (hk : k ≤ 2 ^ 62)
-    {m : Mem} {a : AState} (hn : H n)
-    (hSw : StageR dn w fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
-    (henv : ConLeche.EnvWF env) (hie : StepOK env2 fe2 a)
-    (hnm : denoteN a.store.ns (decI n) = some nm) :
-    RefE (CoreStubsE p) (defnNatCertE p k m vis w n) (natCertT fe2 (fe2.restrictTo vis.toNat) (decI n))
-      a (fun v _ a' => DncPost dn vis fe2 env m v.2 a a') := by
+/-- **`check_structural_nat_pin_at_fe2` refines `checkStructuralNatPinAtFe2`, both outcomes**: the
+guard, the dependencies and their storage by the leaves' refinements at the pushed view, the
+stored definition's value word. -/
+theorem snpFe2_ref (hN : NatSubProg' p) (hcl : LeafClosed p) (hF2 : Fe2Closed p) {w n : Word}
+    {fe2 : IFEnv} (k : Nat) {m : Mem}
+    {a : AState} (hn : H n) (hS : StageR w fe2 m a) :
+    RefE True (snpFe2E p k m w n) (checkStructuralNatPinAtFe2 fe2 (decI n)) a
+      (fun v x a' => SnpFe2Post w fe2 m v.2 v.1 x a') := by
   cases k with
-  | zero => rw [defnNatCertE.eq_1]; exact RefE.of_cls0 (by simp)
+  | zero => rw [snpFe2E.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
-  have hk' : k ≤ 2 ^ 62 := by omega
-  rw [defnNatCertE.arm1]
-  have hE := hN.toNatSubProg.toNatEqProg
-  have hG := hE.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 h1 => ?_
-  obtain ⟨hm1, hfd⟩ := envFind_call hG.toMasterProg n hn hSw.check.env h1
-  subst hm1
-  cases hf : fe2.find? (decI n) with
-  | none =>
-    rw [hf] at hfd
-    have hz : r1.headD 0 = 0 := hfd
-    rw [defnNatCertE.k_env_find.abort1 p _ _ _ _ _ hz]; exact RefE.of_cls0 rfl
-  | some ci =>
-  rw [hf] at hfd
-  obtain ⟨hf1, hci⟩ := hfd
-  have hnz : ¬ r1.headD 0 = 0 := by rw [hf1]; decide
-  have hsz := hSw.iw.erSize
-  by_cases hkk' : ¬ rdW (m1.arr64 EREC) (r1.tail.headD 0) = 1
-  · rw [defnNatCertE.k_env_find.abort2 p _ _ _ _ _ hnz hkk']; exact RefE.of_cls0 rfl
-  have hkk : rdW (m1.arr64 EREC) (r1.tail.headD 0) = 1 := Classical.not_not.mp hkk'
-  rw [defnNatCertE.k_env_find.arm1 p _ _ _ _ _ hnz hkk]
-  generalize hq0 : r1.tail.headD 0 = q at hci hkk ⊢
-  rcases decCI_defn_cases hci with ⟨cv, v, hint, rfl, hk1, hcv⟩ | ⟨w1, hw1, hne, hnd⟩
-  rotate_left
-  · have hk' := erecP_get hw1
-    exact absurd hkk (by rw [rdW, hk']; exact hne)
-  obtain ⟨wv, hk1', hk5, hwl, hwd⟩ := decCI_defn_val hci
-  have hq5 : (q + 5).toNat = q.toNat + 5 := by
-    have : q.toNat + 5 < (m1.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp (erecP_get hk5)).1
-    rw [UInt64.toNat_add]; simp; omega
-  have hqlt : q.toNat + 5 < erTop m1 := erecP_lt (erecP_get_rev hk5)
-  -- the twin's stored value (`IFEnvOK.hit` at the pushed index)
-  obtain ⟨nm', c', hnm', hci', hfindP⟩ := hie.ienv.hit (decI n) _ hf
-  have hnmEq : nm' = nm := by rw [hnm] at hnm'; exact (Option.some.inj hnm').symm
-  subst hnmEq
-  simp only [Frontend.denoteCI] at hci'
-  cases hcv' : Frontend.denoteCV a.store cv with
-  | none => rw [hcv'] at hci'; simp at hci'
-  | some cvP =>
-  cases hjv : denoteE a.store v with
-  | none => rw [hcv', hjv] at hci'; simp at hci'
-  | some vP =>
-  rw [hcv', hjv] at hci'
-  simp only [Option.some.injEq] at hci'
-  subst hci'
-  have hv : decE wv = v := hwd
-  simp only [natCertT, hf]
-  -- the equations
-  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ :=
-    natOpEquations_ref hN 0 n k m1 a r2 m2 ⟨hSw, by decide, hn⟩ h2
-  have hrun2' : (natOpEquations 0 (decI n)).run a = .ok (x2, a2) := hrun2
-  refine ⟨_, _, hrun2', ?_⟩
-  dsimp only [defnNatCertE.k_nat_op_equations]
-  obtain ⟨hst2, hx2, hc2, hp2, hdeq⟩ :=
-    ConRon.Bridge.natOpEquations_run hC.check.state hC.check.pins hnm hrun2'
-  have hC2 := StageC.of_run hC (hS2.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)
-    hst2 hx2 hc2 hp2
-  have hE2 := decEqRL_headD hd2
-  have e5' : rdW (m2.arr64 EREC) (q + 5) = wv := by
-    simp only [rdW, hq5]; rw [hg2.erGet _ hqlt, erecP_get hk5]; rfl
-  rw [e5']
-  -- their substitution
-  rw [← hv]
-  refine RefE.bindLift (fun _ => rfl) fun r3 m3 h3 => ?_
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := pairs_ref hN.toNatSubProg n wv hn hwl x2 (r2.headD 0)
-    (r2.tail.headD 0) k m2 a2 r3 m3 hS2 hE2 (EqL.lt64 hE2 hS2.iw) h3
-  have hvP2 : denoteE a2.store (decE wv) = some vP := by
-    rw [hv]; exact ConRon.Bridge.denote_ext hjv hx2
-  obtain ⟨hst3, hx3, hc3, hp3, hdps⟩ := ConRon.Bridge.substConst0Pairs_run hst2 hC2.check.pins
-    (ConRon.Bridge.denoteN_ext hnm hx2) hvP2 hdeq hrun3
-  have hC3 := StageC.of_run hC2 (hS3.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h3)
-    hst3 hx3 hc3 hp3
-  have hE3 := decEqRL_headD hd3
-  refine ⟨_, _, (hrun3 : (substConst0Pairs (decI n) (decE wv) x2).run a2 = .ok (x3, a3)), ?_⟩
-  dsimp only [defnNatCertE.k_subst_const0_pairs]
-  -- the certificate, at the pre-insertion view
-  refine RefE.bindCall (fun _ => rfl)
-    (fun hcE _ h4 => RefE.run_err (s₀ := ⟨m3, Locals.init []⟩)
-      (certifyNatEqs_specE p hE.lNatCertify k _ vis (r3.headD 0) (r3.tail.headD 0)) trivial hcE
-      (cert_ref hq _ _ x3 k hk' m3 a3 hC3.stageT hE3 (EqL.lt64 hE3 hS3.iw)) h4)
-    (fun _ h4 => certW_okC hE hq henv hk' hC3 hE3 (EqL.lt64 hE3 hS3.iw) hdps
-      (ConRon.Bridge.natOpEqs_wscoped hie.envWF hfindP) h4)
-    fun r4 m4 x4 a4 _ _ ⟨hC4, hg4, hd4, hx4⟩ => ?_
-  dsimp only [defnNatCertE.k_certify_nat_eqs]
-  refine RefE.guardIf rfl (fun e4 => by rw [← hd4.1, e4]; rfl)
-    (fun e4 => by rw [← hd4.1] at e4; simpa using e4) fun _ _ => ?_
-  exact RefE.ret rfl ⟨hC4, (hg2.trans hg3).trans hg4, hx2.trans (hx3.trans hx4)⟩
-
-/-- What `defn_nat_gate` gives besides the twin's run (from `m`, `a`): the stage relation at the
-pushed view `w`, `StageC` at the pre-insertion view `vis`, the growth, `Ext` of the twin's
-store. -/
-structure DngPost (dn : NIdx → Option ConLeche.Name) (vis w : Word) (fe2 : IFEnv)
-    (env : ConLeche.Env) (m m' : Mem) (a a' : AState) : Prop where
-  stageW : StageR dn w fe2 m' a'
-  stage : StageC dn vis (fe2.restrictTo vis.toNat) env m' a'
-  grow : IWGrow m m'
-  ext : Ext a.store a'.store
-
-/-- **`defn_nat_gate` refines `natGateT` under `StageC`, both outcomes** (con-ron's
-`checkDecl_bridge_defn`, the structural-`Nat` gate): from the stage relation at the pushed view
-`w` (extended index `fe2`), `StageC` at the pre-insertion view `vis` (con-ron's `CheckOK` at
-`env`, the environment before the push), `env`'s well-formedness, the pushed index's `StepOK` (at
-`env2`) and the name's denotation; a nonstandard environment is the twin's `notImplemented`, the
-certificate by `dnc_ref`. -/
-theorem dng_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vis w n : Word} {fe2 : IFEnv}
-    {env env2 : ConLeche.Env} {nm : ConLeche.Name} (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem}
-    {a : AState} (hn : H n)
-    (hSw : StageR dn w fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
-    (henv : ConLeche.EnvWF env) (hie : StepOK env2 fe2 a)
-    (hnm : denoteN a.store.ns (decI n) = some nm) :
-    RefE (CoreStubsE p) (defnNatGateE p k m vis w n)
-      (natGateT (fe2.restrictTo vis.toNat) fe2 (decI n)) a
-      (fun v _ a' => DngPost dn vis w fe2 env m v.2 a a') := by
-  cases k with
-  | zero => rw [defnNatGateE.eq_1]; exact RefE.of_cls0 (by simp)
-  | succ k =>
-  have hk' : k ≤ 2 ^ 62 := by omega
-  rw [defnNatGateE.arm1]
+  rw [snpFe2E.arm1]
   have hE := hN.toNatSubProg.toNatEqProg
   have hT := hE.toNatTyProg
   have hGd := hT.toNatGuardProg
   have hG := hGd.toNatLitProg.toNatCvProg.toNatGateProg
-  have hvb : fe2.visibleBelow = w.toNat := hSw.check.env.vis
-  rw [natGateT_eq]
-  -- the operation names
-  refine RefE.bindSim (fun _ => rfl) (natOpNames_ref hG k m a · · hSw ·)
-    fun r1 xs m1 a1 h1 hrun1 ⟨hS1, hg1, hd1⟩ => ?_
-  dsimp only [defnNatGateE.k_nat_op_names]
-  obtain ⟨e1, -⟩ := ConRon.Bridge.natOpNames_run hC.check.pins hrun1
-  have e1' := e1.symm
-  subst e1'
-  have hC1 := StageC.of_run hC (hS1.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h1)
-    hC.check.state (Ext.refl _) rfl rfl
-  obtain ⟨hdh1, hb1⟩ := decRL0 hd1
-  -- membership
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r2 m2 h2 => ?_
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := slContains_ref hG.lSlContains (r1.headD 0)
-    (r1.tail.headD 0) n xs hn k m1 a r2 m2 ⟨hS1, hdh1⟩ h2
-  have ha2 : a2 = a := by
-    simp only [pure, StateT.pure, StateT.run, Except.pure, Except.ok.injEq, Prod.mk.injEq] at hrun2
-    exact hrun2.2.symm
-  subst ha2
-  have hx2 : x2 = xs.contains (decI n) := by
-    simp only [pure, StateT.pure, StateT.run, Except.pure, Except.ok.injEq, Prod.mk.injEq] at hrun2
-    exact hrun2.1.symm
-  have hC2 := StageC.of_run hC1 (hS2.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)
-    hC.check.state (Ext.refl _) rfl rfl
-  rw [defnNatGateE.k_sl_contains.eq_2, ite_not]
-  refine RefE.retIf (fun e2 => by rw [← hx2, ← hd2.1, e2]; rfl)
-    (fun hf => by rw [← hx2, ← hd2.1] at hf; simpa using hf)
-    (fun _ => ⟨hS2, hC2, hg1.trans hg2, Ext.refl _⟩) fun _ _ => ?_
-  -- the guard
-  refine RefE.bindSim (fun _ => rfl) (natOpGuard_ref hGd n k m2 a2 · · ⟨hS2, hn⟩ ·)
+  simp only [checkStructuralNatPinAtFe2]
+  refine RefE.bindSim (fun _ => rfl) (natOpGuard_ref hGd n k m a · · ⟨hS, hn⟩ ·)
+    fun r1 x1 m1 a1 h1 hrun1 ⟨hS1, hg1, hd1⟩ => ?_
+  dsimp only [snpFe2E.k_nat_op_guard]
+  refine RefE.bindSim (fun _ => rfl) (natOpDeps_ref hG n k m1 a1 · · ⟨hS1, hn⟩ ·)
+    fun r2 ds m2 a2 h2 hrun2 ⟨hS2, hg2, hd2⟩ => ?_
+  dsimp only [snpFe2E.k_nat_op_deps]
+  obtain ⟨hdh2, hb2⟩ := decRL0 hd2
+  refine RefE.bindSim (fun _ => rfl)
+    (okAll_ref hT (r2.headD 0) (r2.tail.headD 0) ds k m2 a2 · · hS2 hdh2 hb2 ·)
     fun r3 x3 m3 a3 h3 hrun3 ⟨hS3, hg3, hd3⟩ => ?_
-  dsimp only [defnNatGateE.k_nat_op_guard]
-  obtain ⟨hst3, hx3, hc3, hp3, -⟩ :=
-    ConRon.Bridge.natOpGuard_run hC2.check.state hC2.check.pins hie.ienv hnm hrun3
-  have hC3 := StageC.of_run hC2 (hS3.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h3)
-    hst3 hx3 hc3 hp3
-  have hnm3 := ConRon.Bridge.denoteN_ext hnm hx3
-  -- the dependencies
-  refine RefE.bindSim (fun _ => rfl) (natOpDeps_ref hG n k m3 a3 · · ⟨hS3, hn⟩ ·)
-    fun r4 ds m4 a4 h4 hrun4 ⟨hS4, hg4, hd4⟩ => ?_
-  dsimp only [defnNatGateE.k_nat_op_deps]
-  obtain ⟨hst4, hx4, hc4, hp4, hdeps⟩ :=
-    ConRon.Bridge.natOpDeps_run hst3 hC3.check.pins hnm3 hrun4
-  have hC4 := StageC.of_run hC3 (hS4.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h4)
-    hst4 hx4 hc4 hp4
-  obtain ⟨hdh4, hb4⟩ := decRL0 hd4
-  -- the stored dependencies
-  refine RefE.bindSim (fun _ => rfl) (okAll_ref hT (r4.headD 0) (r4.tail.headD 0) ds k m4 a4 · · hS4 hdh4 hb4 ·)
-    fun r5 x5 m5 a5 h5 hrun5 ⟨hS5, hg5, hd5⟩ => ?_
-  obtain ⟨hst5, hx5, hc5, hp5, -⟩ := ConRon.Bridge.natOpStoredOkAll_run hst4 hC4.check.pins
-    (hie.mono (hx3.trans hx4)).ienv hdeps hrun5
-  have hC5 := StageC.of_run hC4 (hS5.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h5)
-    hst5 hx5 hc5 hp5
-  dsimp only [defnNatGateE.k_nat_op_stored_ok_all]
+  dsimp only [snpFe2E.k_nat_op_stored_ok_all]
+  have hfr : MemFrame leafA leafC m m3 :=
+    ((callW_leafFrame hcl (leaf_mem _ (by decide)) h1).trans
+      (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)).trans
+      (callW_leafFrame hcl (leaf_mem _ (by decide)) h3)
+  have hown : ownC m3 = ownC m :=
+    ((callW_fe2_ownC hF2 (by simp [fe2Fns]) h3).trans (callW_fe2_ownC hF2 (by simp [fe2Fns]) h2)).trans
+      (callW_fe2_ownC hF2 (by simp [fe2Fns]) h1)
+  have e1 := hd1.1
   have e3 := hd3.1
-  have e5 := hd5.1
-  refine RefE.guard rfl (fun e35 => by grind) (fun hb => by grind) fun _ _ => ?_
-  -- the certificate
-  have hx35 := hx3.trans (hx4.trans hx5)
-  refine RefE.lastE (K := defnNatGateE.k_defn_nat_cert p) (fun _ => rfl) (fun _ => rfl) id
-    (dnc_ref hN hq hcl k hk' hn hS5 hC5 henv (hie.mono hx35) (ConRon.Bridge.denoteN_ext hnm hx35))
-    fun _ _ _ _ ⟨hC6, hg6, hx6⟩ => ⟨stageR_of_restrict hC6.stage hvb, hC6,
-      (((((hg1.trans hg2).trans hg3).trans hg4).trans hg5).trans hg6), hx35.trans hx6⟩
+  refine RefE.guard rfl (fun e => by grind) (fun hb => by grind) fun _ _ => ?_
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
+  obtain ⟨hm4, hfd⟩ := envFind_call hG.toMasterProg n hn hS3.check.env h4
+  subst hm4
+  cases hf : fe2.find? (decI n) with
+  | none =>
+    rw [hf] at hfd
+    have hz : r4.headD 0 = 0 := hfd
+    rw [snpFe2E.k_env_find.abort1 p _ _ hz]; exact RefE.of_cls0 rfl
+  | some ci =>
+  rw [hf] at hfd
+  obtain ⟨hf1, hci⟩ := hfd
+  have hnz : r4.headD 0 ≠ 0 := by rw [hf1]; decide
+  by_cases hkk' : ¬ erRd m4 (r4.tail.headD 0) = 1
+  · rw [snpFe2E.k_env_find.abort2 p _ _ hnz hkk']; exact RefE.of_cls0 rfl
+  have hkk : erRd m4 (r4.tail.headD 0) = 1 := Classical.not_not.mp hkk'
+  rw [snpFe2E.k_env_find.arm1 p _ _ hnz hkk]
+  simp only [erRd_foldN]
+  generalize r4.tail.headD 0 = q at hci hkk ⊢
+  rcases decCI_defn_cases hci with ⟨cv, v, hint, rfl, -, -⟩ | ⟨w1, hw1, hne, -⟩
+  rotate_left
+  · exact absurd hkk (by rw [(erRd_of_erecP hw1).1]; exact hne)
+  obtain ⟨wv, -, hk5, hwl, hwd⟩ := decCI_defn_val hci
+  have hq5 : (q + 5).toNat = q.toNat + 5 := by
+    have := erecP_lt64 hk5; rw [UInt64.toNat_add]; simp; omega
+  have e5 : erRd m4 (q + 5) = wv := (erRd_of_erecP (by rw [hq5]; exact hk5)).1
+  rw [e5]
+  exact RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, hwl, hwd, hfr, hown⟩
 
-/-- **`defn_nat_gate` under `StageC`** from the call's run (`dng_ref`'s ok half). -/
-theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = some defnNatGate)
-    (hc : p.lookup "defn_nat_cert" = some defnNatCert) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    {vis w n : Word} {fe2 : IFEnv} {env env2 : ConLeche.Env} {nm : ConLeche.Name} {k : Nat}
-    (hk : k ≤ 2 ^ 62) {m m' : Mem} {a : AState} {r : List Word} (hn : H n)
-    (hcall : callW p k "defn_nat_gate" [vis, w, n] m = some (r, m'))
-    (hSw : StageR dn w fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
-    (henv : ConLeche.EnvWF env) (hie : StepOK env2 fe2 a)
+/-- **`StageC` across a leaf frame to another stage**: the stage relation and `CheckOK` after given,
+the memory's half of `TwinOK` by the frame. -/
+theorem StageC.of_frame {vis vis' : Word} {fe fe' : IFEnv} {env : ConLeche.Env} {m m' : Mem}
+    {a a' : AState} (h : StageC dn vis fe env m a) (hS : StageR vis' fe' m' a')
+    (hck : CheckOK false env fe' a') (hf : MemFrame leafA leafC m m')
+    (hx : Ext a.store a'.store) : StageC dn vis' fe' env m' a' :=
+  ⟨hS, hck,
+    ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,
+      by rw [hf.size]; exact h.mem.bstk,
+      h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb,
+      fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
+    by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
+
+/-- The structural gate's program facts: the leaves' (`NatSubProg'`), the gate's two functions,
+the push and the pop, and the reads' frame (`Fe2Closed`). -/
+structure SnpProg (p : Prog) : Prop extends NatSubProg' p where
+  snp : p.lookup "check_structural_nat_pin" = some checkStructuralNatPinL
+  snpFe2 : p.lookup "check_structural_nat_pin_at_fe2" = some checkStructuralNatPinAtFe2L
+  rs : p.lookup "env_row_set" = some envRowSetL
+  push : p.lookup "env_push" = some envPushL
+  pop : p.lookup "env_pop_temp" = some envPopTempL
+  fe2 : Fe2Closed p
+
+/-- What the structural gate gives besides the twin's run (from `m`, `a`): `StageC` at the
+returned index (the push popped), the growth, `Ext` of the twin's store, the view back at `vis`,
+the returned index answering as `fe`, the pins unchanged. -/
+structure SnpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (env : ConLeche.Env) (m m' : Mem) (r : Word) (fe' : IFEnv) (a a' : AState) : Prop where
+  stage : StageC dn vis fe' env m' a'
+  grow : IWGrow m m'
+  ext : Ext a.store a'.store
+  ret : r = vis
+  same : ConRon.Bridge.IFEnv.SameView fe' fe
+  pins : a'.pins = a.pins
+
+/-- **`check_structural_nat_pin` refines `checkStructuralNatPin` under `StageC`, both outcomes**
+(con-ron's `checkStructuralNatPin_bridge`): the own row read, the push, the reads at the pushed
+view (`snpFe2_ref`), the pop (`pushPop_stage`: the twin's popped index, which answers as `fe`),
+then the equations and their substitution (leaves) and the certificate (`cert_ref`) at `vis`; a
+failed certificate is the twin's `notImplemented`. -/
+theorem snp_ref (hN : SnpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vis pw n : Word}
+    {fe : IFEnv} {env env2 : ConLeche.Env} {nm : ConLeche.Name} {ci : IConstantInfo} (k : Nat)
+    (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} (hn : H n) (hC : StageC dn vis fe env m a)
+    (henv : ConLeche.EnvWF env) (hci : decCI (erecP m) pw.toNat = some ci)
+    (hname : ci.name = decI n) (hok2 : StepOK env2 (fe.push ci) a)
     (hnm : denoteN a.store.ns (decI n) = some nm) :
-    ∃ a', (natGateT (fe2.restrictTo vis.toNat) fe2 (decI n)).run a = .ok ((), a') ∧
-      StageR dn w fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
-      IWGrow m m' ∧ Ext a.store a'.store := by
-  obtain ⟨s', rfl, -, ⟨⟩, a', hrun, hR⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
-    (defnNatGate_specE p hg hc k _ vis w n) (dng_ref hN hq hcl k hk hn hSw hC henv hie hnm) hcall
-  exact ⟨a', hrun, hR.stageW, hR.stage, hR.grow, hR.ext⟩
+    RefE (CoreStubsE p) (snpE p k m vis pw n) (checkStructuralNatPin V fe ci (decI n)) a
+      (fun v fe' a' => SnpPost dn vis fe env m v.2 v.1 fe' a a') := by
+  cases k with
+  | zero => rw [snpE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  have hk' : k ≤ 2 ^ 62 := by omega
+  rw [snpE.arm1]
+  have hE := hN.toNatSubProg.toNatEqProg
+  have hM := hE.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg.toMasterProg
+  have hsv := ConRon.Bridge.IFEnv.sameView_popTemp fe ci
+  simp only [checkStructuralNatPin]
+  -- the own row the push displaces
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  obtain ⟨s1, hs1, hm1, -, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envRowGet_spec p hM.lEnvRowGet k _ n) h1
+  have hm1' : m1 = m := by rw [← hs1, hm1]
+  subst hm1'
+  rw [snpE.k_env_row_get.arm1, hr1]
+  simp only [List.headD_cons, List.tail_cons]
+  -- the push
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r2 m2 h2 => ?_
+  rw [snpE.k_env_push.arm1]
+  obtain ⟨hS2, hg2⟩ := envPush_stage hN.rs hN.push h2 hC.stage hci
+  have hf2 := callW_leafFrame hcl (leaf_mem _ (by decide)) h2
+  -- the reads at the pushed view
+  refine RefE.bindE (fun _ => rfl) (fun _ => trivial)
+    (snpFe2_ref hN.toNatSubProg' hcl hN.fe2 k hn hS2) fun ⟨v3, m3⟩ y3 a3 hrun3 hQ3 => ?_
+  rw [snpE.k_check_structural_nat_pin_at_fe2.arm1]
+  dsimp only at hQ3
+  obtain ⟨hst3, hx3, hc3, hp3, -, cv', v', hint', hfindP, hv3⟩ :=
+    ConRon.Bridge.checkStructuralNatPinAtFe2_bridge hC.check.state hC.check.pins hok2 hnm hrun3
+  -- the pop
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
+  rw [snpE.k_env_pop_temp.arm1]
+  obtain ⟨hS4, hg4, hr4⟩ := pushPop_stage hN.rs hN.push hN.pop hC.stage hci hname hn h2 hQ3.stage
+    (hg2.trans hQ3.grow) hQ3.own h4
+  have hf4 := callW_leafFrame hcl (leaf_mem _ (by decide)) h4
+  rw [hname] at hS4
+  have hck4 : CheckOK false env ((fe.push ci).popTemp ci.name fe.idx[ci.name]?) a3 :=
+    (hC.check.mono hst3 hx3 hc3 hp3).congr_find hsv.find hsv.tbls hsv.base
+  rw [hname] at hck4 hsv
+  have hC4 := StageC.of_frame hC hS4 hck4 ((hf2.trans hQ3.frame).trans hf4) hx3
+  have hnm4 := ConRon.Bridge.denoteN_ext hnm hx3
+  -- the equations
+  refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
+  obtain ⟨x5, a5, hrun5, hS5, hg5, hd5⟩ :=
+    natOpEquations_ref hN.toNatSubProg' 0 n k m4 a3 r5 m5 ⟨hS4, by decide, hn⟩ h5
+  have hrun5' : (natOpEquations 0 (decI n)).run a3 = .ok (x5, a5) := hrun5
+  refine ⟨_, _, hrun5', ?_⟩
+  dsimp only [snpE.k_nat_op_equations]
+  obtain ⟨hst5, hx5, hc5, hp5, hdeq⟩ :=
+    ConRon.Bridge.natOpEquations_run hC4.check.state hC4.check.pins hnm4 hrun5'
+  have hC5 := StageC.of_run hC4 hS5 (callW_leafFrame hcl (leaf_mem _ (by decide)) h5)
+    hst5 hx5 hc5 hp5
+  have hE5 := decEqRL_headD hd5
+  -- their substitution
+  rw [← hQ3.dec]
+  refine RefE.bindLift (fun _ => rfl) fun r6 m6 h6 => ?_
+  obtain ⟨x6, a6, hrun6, hS6, hg6, hd6⟩ := pairs_ref hN.toNatSubProg n v3 hn hQ3.hw x5 (r5.headD 0)
+    (r5.tail.headD 0) k m5 a5 r6 m6 hS5 hE5 (EqL.lt64 hE5 hS5.iw) h6
+  have hvP5 : denoteE a5.store (decE v3) = some v' := by
+    rw [hQ3.dec]; exact ConRon.Bridge.denote_ext hv3 hx5
+  obtain ⟨hst6, hx6, hc6, hp6, hdps⟩ := ConRon.Bridge.substConst0Pairs_run hst5 hC5.check.pins
+    (ConRon.Bridge.denoteN_ext hnm4 hx5) hvP5 hdeq hrun6
+  have hC6 := StageC.of_run hC5 hS6 (callW_leafFrame hcl (leaf_mem _ (by decide)) h6)
+    hst6 hx6 hc6 hp6
+  have hE6 := decEqRL_headD hd6
+  refine ⟨_, _, (hrun6 : (substConst0Pairs (decI n) (decE v3) x5).run a5 = .ok (x6, a6)), ?_⟩
+  dsimp only [snpE.k_subst_const0_pairs]
+  -- the certificate
+  refine RefE.bindE (fun _ => rfl) id
+    (cert_ref hq _ _ x6 k hk' m6 a6 hC6.stageT hE6 (EqL.lt64 hE6 hS6.iw))
+    fun ⟨r7, m7⟩ x7 a7 hrun7 hQ7 => ?_
+  dsimp only at hQ7
+  obtain ⟨hstep7, -⟩ := ConRon.Bridge.certifyNatEqs_bridge ConRon.Bridge.CoreSpec.of_core
+    hC6.check henv hdps (ConRon.Bridge.natOpEqs_wscoped hok2.envWF hfindP) hrun7
+  have hC7 := L.Ind.StageC.of_T hQ7.stage hstep7.ok
+  refine RefE.guardIf rfl (fun e7 => by rw [← hQ7.res.1, e7]; rfl)
+    (fun e7 => by rw [← hQ7.res.1] at e7; simpa using e7) fun _ _ => ?_
+  rw [hr4] at hC7
+  exact RefE.ret rfl ⟨hC7, ((((hg2.trans hQ3.grow).trans hg4).trans hg5).trans hg6).trans hQ7.grow,
+    ((hx3.trans hx5).trans hx6).trans hstep7.ext, hr4, hsv, by rw [hstep7.pins, hp6, hp5, hp3]⟩
 
-end gate
+end snp
 
 end L.Arena

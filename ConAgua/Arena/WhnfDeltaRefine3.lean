@@ -268,7 +268,7 @@ def redWfT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (a b : EIdx) :
 /-- The binary arm of `reduceNat`, past the level test. -/
 def redBinT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (a b : EIdx) :
     AM (Option EIdx) := do
-  if (← natBinOpName c) && (← natOpStored fe c) then
+  if ← natBinOpName c then
     redOpT r depth c a b
   else
     redWfT r fe depth c a b

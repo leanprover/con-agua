@@ -36,7 +36,7 @@ open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 /-- `and_block_named(bo, bl)`: some member of the inductive block at `DLP[bo ‥ bo + bl)` (record
 pointers into `DLP` (`DIND`), a record's name at `+ 1`) declares one of the three pinned `And` names. -/
--- con-ron: ConRon/Arena/Basis.lean:114-119 ConRon.Arena.blockAndNamed
+-- con-ron: ConRon/Arena/Basis.lean:275-280 ConRon.Arena.blockAndNamed
 @[no_expose, l_impl ConRon.Arena.blockAndNamed]
 def andBlockNamed : FunDecl := lfn (bo, bl) locals (s, x, r) {
   if bl == 0 { return 0 };
@@ -51,7 +51,7 @@ def andBlockNamed : FunDecl := lfn (bo, bl) locals (s, x, r) {
 three pinned `And` names, or an inductive block that declares none of them, or one that does and
 is the pinned `And` block (two parameters, equal to the ROM's `andPin` up to the canonical form:
 the block copied into `EREC` and an `IW` slice, `canon_eq_list`). -/
--- con-ron: ConRon/Arena/Basis.lean:128-148 ConRon.Arena.andPinOk
+-- con-ron: ConRon/Arena/Basis.lean:289-307 ConRon.Arena.andPinOk
 @[no_expose, l_impl ConRon.Arena.andPinOk]
 def andPinOkL : FunDecl := lfn (i) locals (x, k, bo, bl, nmd, np, o, l, io, il, po, pl, e) {
   if PINS.u64[0] == 0 { abort R_PIN_DATA };
@@ -153,20 +153,20 @@ theorem andPinOk_run {D P : Array Word} {i : Nat} {d : IDeclaration} (hd : DeclA
   | thmDecl cv v => simp only [andPinOk]; rw [← hd.2.1.1]; exact andPinNameFree_run hF _
   | opaqueDecl cv v => simp only [andPinOk]; rw [← hd.2.1.1]; exact andPinNameFree_run hF _
   | quotDecl k cv => simp only [andPinOk]; rw [← hd.2.1.1]; exact andPinNameFree_run hF _
-  | indDecl b nP | basisDecl k => exact hd.elim
+  | indDecl b nP => exact hd.elim
 
 /-- **`and_pin_ok` refines `andPinOk`** on record `i` of the loop's declarations. -/
 @[refines_part ConRon.Arena.andPinOk "one-constant records (the front's record kinds)"]
-theorem andPinOk_refines {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
+theorem andPinOk_refines {pins : List INatOpPinSet} (ds : Array IDeclaration) (p : Prog)
     (hp : p.lookup "and_pin_ok" = some andPinOkL) :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
       (i : Word) (_hi : i.toNat < ds.size), (∀ b k, dsAt ds i ≠ .indDecl b k) →
-      LoopR pins dn s₀.mem a₀ vis fe pend ds →
+      LoopR pins s₀.mem a₀ vis fe ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "and_pin_ok" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (andPinOk (dsAt ds i)) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe pend ds ∧
+      LoopR pins s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe ds ∧
       AM.res (andPinOk (dsAt ds i)) a₀ = (r.headD 0 != 0); ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i _hi hone hR
+  intro n s₀ a₀ vis fe i _hi hone hR
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hk⟩ := M.of_run (P := fun s => s = s₀) hs hrun (andPinOk_specW p hp n s₀ i)

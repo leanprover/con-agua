@@ -18,11 +18,12 @@ import Std.WP.Triple.SpecLemmas
 `Tiers.lean`'s `PinsR` relates the word array `PINS` (128) to the twin's `a.pins`. This file
 has the L readers and their refinements:
 
-* `pin_at(i)`: the flag, the bound `i < 51`, then word `1 + i` (the twin's `pinAt i`: a bounds
-  test on the table and a read). Refines `pinAt` at every `i` (`pinAt_refines`); each of the 51
+* `pin_at(i)`: the flag, the bound `i < 52`, then word `1 + i`, or word `71` for slot `51`
+  (`quotMkName`, added after the layout below was fixed) (the twin's `pinAt i`: a bounds
+  test on the table and a read). Refines `pinAt` at every `i` (`pinAt_refines`); each of the 52
   named readers (`pinNat`, …, and Core's `natAddName`, …) is `pin_at` at a literal.
 * `pin_word(k)`: the flag, then word `k`, for the three interned values (`pinEmptyLevels`,
-  `pinZeroLevel`, `pinSortOne`: words 52‥54).
+  `pinZeroLevel`, `pinSortOne`: words 52‥54); the sixteen reserved basis names are words 55‥70.
 
 A reader does not change the memory or the twin state. The twin-side facts are `pinAt_run` and
 friends: under `PinsFull` each reader is a pure read of the related word.
@@ -44,7 +45,15 @@ theorem pinAt_run {m : Mem} {a : AState} (h : PinsFull m a.pins) (i : Nat) (hi :
   have hs := h.names_size
   have := h.names i hi
   simp [pinAt, StateT.run, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get,
-    Except.bind, pure, StateT.pure, Except.pure, hs, hi, this]
+    Except.bind, pure, StateT.pure, Except.pure, hs, show i < 52 by omega, this]
+
+/-- Slot `51` (`quotMkName`) reads word `71`. -/
+theorem pinAt_run51 {m : Mem} {a : AState} (h : PinsFull m a.pins) :
+    (pinAt 51).run a = .ok (decI (pinW m 71), a) := by
+  have hs := h.names_size
+  have := h.quotMk
+  simp [pinAt, StateT.run, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get,
+    Except.bind, pure, StateT.pure, Except.pure, hs, this]
 
 theorem pinsReady_true {m : Mem} {a : AState} (h : PinsFull m a.pins) : pinsReady a = true := by
   simp [pinsReady, h.names_size, pinCount]
@@ -76,16 +85,17 @@ theorem pinReserved_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
 /-! ## The L readers -/
 
 /-- `pin_at(i)`: `PINS[1 + i]`, after the flag and the bound. -/
--- con-ron: ConRon/Arena/Pins.lean:254-261 ConRon.Arena.pinAt
+-- con-ron: ConRon/Arena/Pins.lean:257-264 ConRon.Arena.pinAt
 @[no_expose, l_impl ConRon.Arena.pinAt]
 def pinAtL : FunDecl := lfn (i) locals () {
   if PINS.u64[0] == 0 { abort };
-  if 51 <= i { abort };
+  if 52 <= i { abort };
+  if i == 51 { return PINS.u64[71] };
   return PINS.u64[1 + i]
 }
 
 /-- `pin_word(k)`: `PINS[k]`, after the flag (the three interned values, `k` = 52, 53, 54). -/
--- con-ron: ConRon/Arena/Pins.lean:254-261 ConRon.Arena.pinAt
+-- con-ron: ConRon/Arena/Pins.lean:257-264 ConRon.Arena.pinAt
 @[no_expose] def pinWordL : FunDecl := lfn (k) locals () {
   if PINS.u64[0] == 0 { abort };
   return PINS.u64[k]
@@ -111,6 +121,17 @@ theorem pinAt_word {m : Mem} {a : AState} (hP : PinsR m a.pins) (i : Word)
   rw [← pinW_eq m _ hb, h1]
   exact ⟨pinAt_run hF _ hi', hF.names_lt _ hi'⟩
 
+/-- The read `pin_at(51)` makes: word `71`. -/
+theorem pinAt_word51 {m : Mem} {a : AState} (hP : PinsR m a.pins) (i : Word)
+    (h0 : 0 < (m.arr64 PINS).size) (hf : (m.arr64 PINS)[0] ≠ 0) (hi : i = 51)
+    (hb : 71 < (m.arr64 PINS).size) :
+    (pinAt i.toNat).run a = .ok (decI ((m.arr64 PINS)[71]), a) ∧
+      ((m.arr64 PINS)[71]).toNat < 2 ^ 32 := by
+  have hF := hP.full (pinW_zero m h0 hf)
+  subst hi
+  rw [← pinW_eq m _ hb]
+  exact ⟨pinAt_run51 hF, hF.quotMk_lt⟩
+
 /-- **`pin_at` refines `pinAt`**: on a return, the memory is unchanged and the twin's read returns
 the same handle and keeps the state. -/
 @[refines ConRon.Arena.pinAt]
@@ -126,6 +147,7 @@ theorem pinAt_refines (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat
   | zero => vcgen [exec] <;> grind
   | succ n =>
     have key := pinAt_word hP i
+    have key51 := pinAt_word51 hP i
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish

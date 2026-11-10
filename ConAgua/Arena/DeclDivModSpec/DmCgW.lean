@@ -33,8 +33,8 @@ variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
 
 /-- **`subst_const0` refines `substConst0`** at the walk fuel `4000000000` (helper `decls3-nat`'s). -/
 def SubstC0 : Prop := ∀ nm r h : Word, H nm → H r → H h →
-  CallRef p "subst_const0" [nm, r, 4000000000, h] (StageR dn vis fe)
-    (substConst0 (decI nm) (decE r) coreWalkFuel (decE h)) (KeepPost dn vis fe decW0E)
+  CallRef p "subst_const0" [nm, r, 4000000000, h] (StageR vis fe)
+    (substConst0 (decI nm) (decE r) coreWalkFuel (decE h)) (KeepPost vis fe decW0E)
 
 end subst
 

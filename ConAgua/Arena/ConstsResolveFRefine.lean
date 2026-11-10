@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.ConstsResolveF
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.DeclNatSpec
@@ -56,7 +55,7 @@ structure CrfProg (p : Prog) : Prop where
   isl : p.lookup "is_str_lit" = some isStrLitL
   ef : p.lookup "env_find" = some envFindL
   erg : p.lookup "env_row_get" = some envRowGetL
-  eix : p.lookup "env_ix" = some envIxL
+  brg : p.lookup "base_row_get" = some baseRowGetL
   pin : p.lookup "pin_at" = some pinAtL
 
 /-! ## The models over the calls, and their specs -/
@@ -256,32 +255,27 @@ section rel
 variable {p : Prog} (hp : CrfProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 include hp
 
-omit hp in
-theorem envFindW_01 {m m1 : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) :
-    r.headD 0 = 0 ∨ r.headD 0 = 1 := by
-  unfold envFindW at h
-  split at h; · simp at h
-  split at h; · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.1]; simp
-  split at h <;> (simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.1]; simp)
-
 /-- **`env_find(w, vis)` as a call**: memory unchanged, and the word says whether `w` has a row in
 the environment. -/
 theorem envFind_callW {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
-    (hE : EnvR dn m vis fe) (hw : w.toNat < 2 ^ 32)
+    (hE : EnvR m vis fe) (hw : w.toNat < 2 ^ 32)
     (hc : callW p n "env_find" [w, vis] m = some (r, m')) :
     m' = m ∧ r.headD 0 = if (fe.find? (decI w)).isSome then 1 else 0 := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_specW p hp.eix hp.erg hp.ef n _ w vis) hc
-  obtain ⟨hm, hf, hci⟩ := envFindW_found hW hE hw
-  refine ⟨hm, ?_⟩
+  obtain ⟨s', hs', h1, -, hR⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envFind_spec p hp.erg hp.brg hp.ef n _ vis w) hc
+  refine ⟨hs'.symm.trans h1, ?_⟩
+  subst hR
+  obtain ⟨hf, hd⟩ := hE.find_res hw
   rw [hf]
-  simp only at hci
-  rcases envFindW_01 hW with h0 | h1
-  · rw [h0]; simp [decFound]
-  · obtain ⟨ci, hci⟩ := hci (by rw [h1]; decide)
-    rw [h1]
-    simp only [decFound, ite_eq_right (show (1 : Word) ≠ 0 by decide), hci, Option.isSome_some,
-      ↓reduceIte]
+  by_cases h0 : (findRes m vis w).headD 0 = 0
+  · rw [h0]; simp [envFound]
+  · obtain ⟨ci, hci⟩ := hd h0
+    have h1 : (findRes m vis w).headD 0 = 1 := by
+      unfold findRes at h0 ⊢
+      by_cases a1 : ownHit m vis w <;> by_cases a2 : baseHit m w <;> simp_all
+    have e : envFound m 1 ((findRes m vis w).tail.headD 0) = some ci := by
+      unfold envFound; rw [ite_eq_right (show (1 : Word) ≠ 0 by decide)]; exact hci
+    rw [h1, e]; rfl
 
 omit hp in
 theorem ite_beq0 (c : Bool) : ((if c = true then (1 : Word) else 0) == 0) = !c := by
@@ -290,7 +284,8 @@ theorem ite_beq0 (c : Bool) : ((if c = true then (1 : Word) else 0) == 0) = !c :
 /-- **`pin_found(vis, i)`**: memory unchanged, the flag set, `i < 51`, and the word says whether
 pin `i`'s name has a row. -/
 theorem pf_callW {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {a : AState}
-    (hS : StageR dn vis fe m a) (hc : callW p n "pin_found" [vis, i] m = some (r, m')) :
+    (hS : StageR vis fe m a) (hc : callW p n "pin_found" [vis, i] m = some (r, m'))
+    (h51 : i ≠ 51) :
     m' = m ∧ pinW m 0 ≠ 0 ∧ i.toNat < 51 ∧
       r.headD 0 = (if (fe.find? (decI (pinW m (1 + i.toNat)))).isSome then 1 else 0) ∧
       (r.headD 0 == 0) = !(fe.find? (decI (pinW m (1 + i.toNat)))).isSome := by
@@ -304,7 +299,7 @@ theorem pf_callW {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {a : AState}
   | some q =>
   obtain ⟨r1, m1⟩ := q
   rw [h1, bW_some] at hW
-  obtain ⟨rfl, h0, hi, hr1⟩ := pinAt_model hp.pin h1 rfl
+  obtain ⟨rfl, h0, hi, hr1⟩ := pinAt_model hp.pin h1 rfl h51
   cases h2 : callW p n "env_find" [r1.headD 0, vis] m1 with
   | none => rw [h2] at hW; cases hW
   | some q =>
@@ -325,33 +320,33 @@ def pinsFound (fe : IFEnv) (m : Mem) (ks : List Word) : Bool :=
 
 /-- **`cr_lit_pins`' chain**: the memory unchanged, the flag set, and the answer is `0` iff a zero
 was seen before or a pin of `k₀ :: ks` has no row. -/
-theorem clpL_callW {n : Nat} {m : Mem} {a : AState} (hS : StageR dn vis fe m a) :
+theorem clpL_callW {n : Nat} {m : Mem} {a : AState} (hS : StageR vis fe m a) :
     ∀ (ks : List Word) (z : Bool) (k₀ : Word) (r : List Word) (m' : Mem),
     clpL p n vis z ks (callW p n "pin_found" [vis, k₀] m) = some (r, m') →
-    m' = m ∧ pinW m 0 ≠ 0 ∧
+    (∀ k ∈ k₀ :: ks, k ≠ 51) → m' = m ∧ pinW m 0 ≠ 0 ∧
       r = [if z || !pinsFound fe m (k₀ :: ks) then 0 else 1] := by
   intro ks
   induction ks with
   | nil =>
-    intro z k₀ r m' h
+    intro z k₀ r m' h h51
     cases hc : callW p n "pin_found" [vis, k₀] m with
     | none => rw [hc, clpL_none] at h; cases h
     | some q =>
     obtain ⟨r0, m0⟩ := q
     rw [hc, clpL_nil, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨rfl, h0, -, -, hz⟩ := pf_callW hp hS hc
+    obtain ⟨rfl, h0, -, -, hz⟩ := pf_callW hp hS hc (h51 _ (by simp))
     refine ⟨rfl, h0, ?_⟩
     simp only [pinsFound, List.all_cons, List.all_nil, Bool.and_true, hz]
   | cons k ks ih =>
-    intro z k₀ r m' h
+    intro z k₀ r m' h h51
     cases hc : callW p n "pin_found" [vis, k₀] m with
     | none => rw [hc, clpL_none] at h; cases h
     | some q =>
     obtain ⟨r0, m0⟩ := q
     rw [hc, clpL_cons] at h
-    obtain ⟨rfl, h0, -, -, hz⟩ := pf_callW hp hS hc
-    obtain ⟨rfl, -, hr⟩ := ih _ k r m' h
+    obtain ⟨rfl, h0, -, -, hz⟩ := pf_callW hp hS hc (h51 _ (by simp))
+    obtain ⟨rfl, -, hr⟩ := ih _ k r m' h (fun x hx => h51 x (by simp_all))
     refine ⟨rfl, h0, ?_⟩
     rw [hr]
     simp only [pinsFound, List.all_cons, hz, Bool.not_and, Bool.or_assoc]

@@ -257,11 +257,11 @@ theorem structProjArgP_refines (p : Prog) (hd : p.lookup "der_b" = some derB)
     (hjf : p.lookup "proj_find" = some projFind) (hjp : p.lookup "proj_push" = some projPush)
     (hji : p.lookup "intern_proj" = some internProj) (hmp : p.lookup "mk_proj" = some mkProj)
     (hp : p.lookup "struct_proj_arg_p" = some structProjArgPL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T j : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) :
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T j : Word)
+    (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_arg_p" [T, j]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjArgP (decI T) j.toNat) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (structProjArgP (decI T) j.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      StageR vis fe s'.mem (AM.st (structProjArgP (decI T) j.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       AM.res (structProjArgP (decI T) j.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
   refine triple_post (spaW_spec p hd hpf hpp hib hjf hjp hji hmp hp n s₀ T j) ?_
   rintro r s' ⟨hl, hm⟩
@@ -427,36 +427,35 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ### The twin, one level unfolded
 
-`whnfTelescope` is structural recursion that matches under a bind, so Lean generates no equation
-lemma for it (PLAN.md's vcgen gaps). `wtArm` is its body after the view, and `whnfTelescope_eq`
-the unfolding, by `Nat.brecOn` and a case split on the view. -/
+`wtArm` is `whnfTelescope`'s body after the view, and `whnfTelescope_eq` the unfolding (its
+equation lemma and a case split on the view). -/
 
 /-- The arms of `whnfTelescope` after the view. -/
-def wtArm (mode : ConLeche.CheckMode) (fe : IFEnv) (i : Nat) :
+def wtArm (mode : ConLeche.CheckMode) (fe : IFEnv) (i : Nat) (out : List EIdx) :
     ENodeView → Nat → AM (List EIdx × LIdx)
-  | .sort s, 0 => pure ([], s)
-  | .sort _, _ + 1 => fail (.invalid "direct sum: type former does not reduce to a telescope")
-  | .forallE _ _, 0 => fail (.invalid "direct sum: type former does not reduce to a sort")
+  | .sort s, 0 => pure (out, s)
+  | .sort _, _ + 1 =>
+    fail (.invalid "direct sum: type former does not reduce to a telescope                ")
+  | .forallE _ _, 0 =>
+    fail (.invalid "direct sum: type former does not reduce to a sort                 ")
   | .forallE dom body, n + 1 => do
-      let fv ← internE (.fvar i dom)
+      let fv ← internFVarE i dom
       let b ← instantiate1Fast coreWalkFuel body fv 0
-      let x ← whnfTelescope mode fe (i + 1) n b
-      pure (dom :: x.1, x.2)
-  | _, 0 => fail (.invalid "direct sum: type former does not reduce to a sort")
-  | _, _ + 1 => fail (.invalid "direct sum: type former does not reduce to a telescope")
+      whnfTelescope mode fe (i + 1) n b (out ++ [dom])
+  | _, 0 => fail (.invalid "direct sum: type former does not reduce to a sort                 ")
+  | _, _ + 1 =>
+    fail (.invalid "direct sum: type former does not reduce to a telescope                ")
 
-theorem whnfTelescope_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (i n : Nat) (e : EIdx) :
-    whnfTelescope mode fe i n e = (do
+theorem whnfTelescope_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (i n : Nat) (e : EIdx)
+    (out : List EIdx) :
+    whnfTelescope mode fe i n e out = (do
       let e' ← whnf mode fe checkFuel i e
       let v ← view e'
-      wtArm mode fe i v n) := by
-  cases n <;>
-  · delta whnfTelescope
-    dsimp only [Nat.brecOn, Nat.brecOn.go, whnfTelescope._f]
-    refine congrArg (whnf mode fe checkFuel i e >>= ·) (funext fun e' => ?_)
-    refine congrArg (view e' >>= ·) (funext fun v => ?_)
-    cases v <;> first | rfl |
-      (simp only [wtArm]; delta whnfTelescope; dsimp only [Nat.brecOn, Nat.brecOn.go])
+      wtArm mode fe i out v n) := by
+  rw [whnfTelescope]
+  refine congrArg (whnf mode fe checkFuel i e >>= ·) (funext fun e' => ?_)
+  refine congrArg (view e' >>= ·) (funext fun v => ?_)
+  cases v <;> cases n <;> rfl
 
 end L.Ind
 

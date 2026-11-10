@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.InstLPLevel2
-import ConAgua.Arena.CapsNeverZeroCore
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.InferFieldSort
@@ -62,19 +61,19 @@ theorem stackPut_core {m₀ m₁ : Mem} {a : AState} {b h : Word} (hS : CoreS dn
 
 /-- A handle word of a record-pool slice. -/
 theorem hslice_cons {k : IdxKind} {b : Array Word} {o : Word} {j : Nat} {x : Idx k}
-    {xs : List (Idx k)} (h : hslice? b o.toNat (j + 1) = some (x :: xs)) :
-    ∃ w : Word, HW w ∧ x = decI w ∧ rdW b o = w ∧ hslice? b (o.toNat + 1) j = some xs := by
+    {xs : List (Idx k)} (h : hslice? (aread b) o.toNat (j + 1) = some (x :: xs)) :
+    ∃ w : Word, HW w ∧ x = decI w ∧ rdW b o = w ∧ hslice? (aread b) (o.toNat + 1) j = some xs := by
   rw [lp_hslice_succ] at h
   simp only [Option.bind_eq_bind] at h
-  cases e : (hd? b o.toNat : Option (Idx k)) with
+  cases e : (hd? (aread b) o.toNat : Option (Idx k)) with
   | none => simp [e] at h
   | some x' =>
-  cases e' : (hslice? b (o.toNat + 1) j : Option (List (Idx k))) with
+  cases e' : (hslice? (aread b) (o.toNat + 1) j : Option (List (Idx k))) with
   | none => simp [e, e'] at h
   | some xs' =>
   simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  simp only [hd?] at e
+  simp only [hd?, aread_apply] at e
   cases ew : b[o.toNat]? with
   | none => simp [ew] at e
   | some w =>
@@ -85,15 +84,53 @@ theorem hslice_cons {k : IdxKind} {b : Array Word} {o : Word} {j : Nat} {x : Idx
 
 /-- An empty slice. -/
 theorem hslice_nil {k : IdxKind} {b : Array Word} {o l : Word}
-    (h : hslice? b o.toNat l.toNat = some ([] : List (Idx k))) : l = 0 := by
+    (h : hslice? (aread b) o.toNat l.toNat = some ([] : List (Idx k))) : l = 0 := by
   rcases hk : l.toNat with _ | j
   · exact UInt64.toNat_inj.mp (by simpa using hk)
   · rw [hk, lp_hslice_succ] at h
     simp only [Option.bind_eq_bind] at h
-    cases e : (hd? b o.toNat : Option (Idx k)) with
+    cases e : (hd? (aread b) o.toNat : Option (Idx k)) with
     | none => simp [e] at h
     | some x =>
-      cases e' : (hslice? b (o.toNat + 1) j : Option (List (Idx k))) with
+      cases e' : (hslice? (aread b) (o.toNat + 1) j : Option (List (Idx k))) with
+      | none => simp [e, e'] at h
+      | some xs => simp [e, e'] at h
+
+/-- A handle word of a record-pool slice (the tiered read). -/
+theorem hslice_consE {k : IdxKind} {m : Mem} {o : Word} {j : Nat} {x : Idx k}
+    {xs : List (Idx k)} (h : hslice? (erecP m) o.toNat (j + 1) = some (x :: xs)) :
+    ∃ w : Word, HW w ∧ x = decI w ∧ rdW (m.arr64 (tierA EREC (o >>> 40))) (o &&& 1099511627775) = w ∧
+      hslice? (erecP m) (o.toNat + 1) j = some xs := by
+  rw [lp_hslice_succ] at h
+  simp only [Option.bind_eq_bind] at h
+  cases e : (hd? (erecP m) o.toNat : Option (Idx k)) with
+  | none => simp [e] at h
+  | some x' =>
+  cases e' : (hslice? (erecP m) (o.toNat + 1) j : Option (List (Idx k))) with
+  | none => simp [e, e'] at h
+  | some xs' =>
+  simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  simp only [hd?] at e
+  cases ew : erecP m o.toNat with
+  | none => simp [ew] at e
+  | some w =>
+  simp only [ew] at e
+  have hw : w.toNat < 2 ^ 32 := Classical.byContradiction fun hw => by simp [hw] at e
+  simp [hw] at e
+  exact ⟨w, hw, e.symm, by unfold rdW; rw [(erecP_tagRead ew).2]; rfl, rfl⟩
+
+/-- An empty record-pool slice. -/
+theorem hslice_nilE {k : IdxKind} {m : Mem} {o l : Word}
+    (h : hslice? (erecP m) o.toNat l.toNat = some ([] : List (Idx k))) : l = 0 := by
+  rcases hk : l.toNat with _ | j
+  · exact UInt64.toNat_inj.mp (by simpa using hk)
+  · rw [hk, lp_hslice_succ] at h
+    simp only [Option.bind_eq_bind] at h
+    cases e : (hd? (erecP m) o.toNat : Option (Idx k)) with
+    | none => simp [e] at h
+    | some x =>
+      cases e' : (hslice? (erecP m) (o.toNat + 1) j : Option (List (Idx k))) with
       | none => simp [e, e'] at h
       | some xs => simp [e, e'] at h
 
@@ -105,7 +142,7 @@ stack top. -/
 theorem sleElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs : List Level} :
     ∀ (lvls : List LIdx) (n : Nat) (m m' : Mem) (a : AState) (o l b : Word),
     CoreS dn m a vis fe M eb → ILWEnv m a ko kc vo vc ks us vs →
-    hslice? (m.arr64 EREC) o.toNat l.toNat = some lvls → o.toNat + l.toNat < 2 ^ 64 →
+    hslice? (erecP m) o.toNat l.toNat = some lvls →
     (∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L) →
     (spTop m).toNat ≤ b.toNat → b.toNat + l.toNat ≤ (m.arr64 SPN).size →
     slElemW EREC n m o l b ko kc vo vc = some m' →
@@ -117,8 +154,8 @@ theorem sleElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
   intro lvls
   induction lvls with
   | nil =>
-    intro n m m' a o l b hS hE hsl hob hd hb hbs hW
-    have hl0 := hslice_nil hsl
+    intro n m m' a o l b hS hE hsl hd hb hbs hW
+    have hl0 := hslice_nilE hsl
     subst hl0
     cases n with
     | zero => simp [slElemW] at hW
@@ -127,11 +164,11 @@ theorem sleElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     exact ⟨[], a, rfl, hS, ILWGrow.refl a, StackKept.refl m, by simp [sliceL, lsWords],
       fun _ _ => rfl, by simp⟩
   | cons u lvls ih =>
-    intro n m m' a o l b hS hE hsl hob hd hb hbs hW
+    intro n m m' a o l b hS hE hsl hd hb hbs hW
     rcases hk : l.toNat with _ | j
     · rw [hk] at hsl; simp [hslice?] at hsl
     rw [hk] at hsl
-    obtain ⟨w, hw, rfl, hrd, hsl'⟩ := hslice_cons hsl
+    obtain ⟨w, hw, rfl, hrd, hsl'⟩ := hslice_consE hsl
     have hl0 : l ≠ 0 := fun h0 => by subst h0; simp at hk
     obtain ⟨L, hL⟩ := hd _ (List.mem_cons_self ..)
     cases n with
@@ -153,13 +190,16 @@ theorem sleElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
       hE.keep (StackKept.refl m) (ILWGrow.of_lss rfl)
     obtain ⟨a₁, hrun₁, o₁⟩ := lvSubIntW_core hSc hEc hw hL hSb
     obtain ⟨hS₂, hk₂⟩ := stackPut_core (h := h) o₁.core o₁.stack hb
-    have herec₁ : m₁.arr64 EREC = m.arr64 EREC := o₁.frame.1 EREC (by decide) (by decide)
-    have herec₂ : (m₁.set64 SPN b h).arr64 EREC = m.arr64 EREC := by
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), herec₁]
+    have herec₂ : erecP (m₁.set64 SPN b h) = erecP m := by
+      rw [erecP_frame (MemFrame.set64 _ _ (by decide) _ _) (by decide) (by decide) (by decide) (by decide),
+        erecP_frame o₁.frame (by decide) (by decide) (by decide) (by decide)]
     have hE₂ := hEc.keep hk₂ o₁.grow
     have hspn := hS.spn
     have hb1 : (b + 1).toNat = b.toNat + 1 := toNat_succ_lt (by omega)
-    have ho1 : (o + 1).toNat = o.toNat + 1 := toNat_succ_lt (by omega)
+    have hsl1 : hslice? (erecP m) (o + 1).toNat j = some lvls := by
+      cases j with
+      | zero => simpa [hslice?] using hsl'
+      | succ j' => rw [toNat_succ_lt (hslice?_erecP_lt hsl')]; exact hsl'
     have hl1 : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := o₁.frame.1 SPN (by decide) (by decide)
@@ -167,7 +207,7 @@ theorem sleElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
       rw [Mem.size_arr64_set64, hspn₁]
     obtain ⟨hs', a', hrun', hS', hg', hk', hsl'', hbl', hel'⟩ :=
       ih n (m₁.set64 SPN b h) m' a₁ (o + 1) (l - 1) (b + 1) hS₂ hE₂
-        (by rw [herec₂, ho1, hl1]; exact hsl') (by rw [ho1, hl1]; omega)
+        (by rw [herec₂, hl1]; exact hsl1)
         (fun u hu => (hd u (List.mem_cons_of_mem _ hu)).elim fun L hL => ⟨L, o₁.grow.ext.ls.lvl _ _ hL⟩)
         (by rw [hb1, hk₂.top]; omega) (by rw [hsz₂, hb1, hl1]; omega) hW
     have hhw : h.toNat < 2 ^ 32 := o₁.hw
@@ -202,18 +242,18 @@ theorem slpOne_core {n : Nat} {m m₁ : Mem} {a : AState} {ko kc vo vc w h : Wor
     {ks : List Name} {us : List LIdx} {vs : List Level}
     (hS : CoreS dn m a vis fe M eb) (hE : ILWEnv m a ko kc vo vc ks us vs)
     (hn : nameN a.store.lss.ls.ns w nm) (hh : h.toNat < 2 ^ 32)
-    (hW : slpOne n m w (lookupW SPN POOL n m ko kc vo vc w) = some (h, m₁)) :
+    (hW : slpOne n m w (lookupW (keyA SPN) POOL n m ko kc vo vc w) = some (h, m₁)) :
     ∃ a₁, (internLevel (Level.subst ks vs (.param nm))).run a = .ok (decI h, a₁) ∧
       LvOut dn vis fe M eb m m₁ a a₁ h := by
   have htop := m.top.toNat_lt
   have h41 := hS.arena.base.lit.1.top41
   have hv := lvsR_of_slice hS.arena.base us vs vo vc hE.vals (by have := hE.vtop; omega) hE.vden
-  cases e : lookupW SPN POOL n m ko kc vo vc w with
+  cases e : lookupW (keyA SPN) POOL n m ko kc vo vc w with
   | none => rw [e] at hW; simp [slpOne] at hW
   | some fv =>
   obtain ⟨f, v⟩ := fv
   rw [e] at hW
-  rcases lookupW_ok (nameN_rel _ hS.nwf) n _ _ _ _ _ _ _ _ _ _ _ hE.keys hv.toAR hn e with
+  rcases lookupW_ok (nameN_rel _ hS.nwf) n _ _ _ _ _ _ _ _ _ _ _ hE.keys.toK hv.toAR hn e with
     ⟨hf, hvl⟩ | ⟨rfl, hgo⟩
   · rw [slpOne_hit n m w f v hf] at hW
     obtain ⟨a₁, hrun, o⟩ := lvInternW_core _ n m a v h m₁ hS hvl hW
@@ -240,7 +280,7 @@ record-pool name slice `(o, l)` of names that read back: the results land at `SP
 theorem slpElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs : List Level} :
     ∀ (ids : List NIdx) (n : Nat) (m m' : Mem) (a : AState) (o l b : Word),
     CoreS dn m a vis fe M eb → ILWEnv m a ko kc vo vc ks us vs →
-    hslice? (m.arr64 EREC) o.toNat l.toNat = some ids → o.toNat + l.toNat < 2 ^ 64 →
+    hslice? (erecP m) o.toNat l.toNat = some ids →
     (∀ u ∈ ids, ∃ nm, denoteN a.store.ns u = some nm) →
     (spTop m).toNat ≤ b.toNat → b.toNat + l.toNat ≤ (m.arr64 SPN).size →
     slpW n m o l b ko kc vo vc = some m' →
@@ -252,8 +292,8 @@ theorem slpElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
   intro ids
   induction ids with
   | nil =>
-    intro n m m' a o l b hS hE hsl hob hd hb hbs hW
-    have hl0 := hslice_nil hsl
+    intro n m m' a o l b hS hE hsl hd hb hbs hW
+    have hl0 := hslice_nilE hsl
     subst hl0
     cases n with
     | zero => simp [slpW] at hW
@@ -262,18 +302,18 @@ theorem slpElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     exact ⟨[], a, rfl, hS, ILWGrow.refl a, StackKept.refl m, by simp [sliceL, lsWords],
       fun _ _ => rfl, by simp⟩
   | cons u ids ih =>
-    intro n m m' a o l b hS hE hsl hob hd hb hbs hW
+    intro n m m' a o l b hS hE hsl hd hb hbs hW
     rcases hk : l.toNat with _ | j
     · rw [hk] at hsl; simp [hslice?] at hsl
     rw [hk] at hsl
-    obtain ⟨w, hw, rfl, hrd, hsl'⟩ := hslice_cons hsl
+    obtain ⟨w, hw, rfl, hrd, hsl'⟩ := hslice_consE hsl
     have hl0 : l ≠ 0 := fun h0 => by subst h0; simp at hk
     obtain ⟨nm, hnm⟩ := hd _ (List.mem_cons_self ..)
     cases n with
     | zero => simp [slpW] at hW
     | succ n =>
     rw [slpW_cons n m o l b ko kc vo vc hl0, hrd] at hW
-    cases hSb : slpOne n m w (lookupW SPN POOL n m ko kc vo vc w) with
+    cases hSb : slpOne n m w (lookupW (keyA SPN) POOL n m ko kc vo vc w) with
     | none => rw [hSb] at hW; simp [slpK] at hW
     | some r =>
     obtain ⟨h, m₁⟩ := r
@@ -290,13 +330,16 @@ theorem slpElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     obtain ⟨a₁, hrun₁, o₁⟩ := slpOne_core hSc hEc ⟨hw, hnm⟩ hhw hSb
     obtain ⟨hS₂, hk₂⟩ := stackPut_core (h := h) o₁.core o₁.stack hb
     have hg₁ : ILWGrow { a with caches := { a.caches with readNC := X } } a₁ := o₁.step.grow
-    have herec₁ : m₁.arr64 EREC = m.arr64 EREC := o₁.frame.1 EREC (by decide) (by decide)
-    have herec₂ : (m₁.set64 SPN b h).arr64 EREC = m.arr64 EREC := by
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), herec₁]
+    have herec₂ : erecP (m₁.set64 SPN b h) = erecP m := by
+      rw [erecP_frame (MemFrame.set64 _ _ (by decide) _ _) (by decide) (by decide) (by decide) (by decide),
+        erecP_frame o₁.frame (by decide) (by decide) (by decide) (by decide)]
     have hE₂ := hEc.keep hk₂ hg₁
     have hspn := hS.spn
     have hb1 : (b + 1).toNat = b.toNat + 1 := toNat_succ_lt (by omega)
-    have ho1 : (o + 1).toNat = o.toNat + 1 := toNat_succ_lt (by omega)
+    have hsl1 : hslice? (erecP m) (o + 1).toNat j = some ids := by
+      cases j with
+      | zero => simpa [hslice?] using hsl'
+      | succ j' => rw [toNat_succ_lt (hslice?_erecP_lt hsl')]; exact hsl'
     have hl1 : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := o₁.frame.1 SPN (by decide) (by decide)
@@ -304,7 +347,7 @@ theorem slpElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
       rw [Mem.size_arr64_set64, hspn₁]
     obtain ⟨hs', a', hrun', hS', hg', hk', hsl'', hbl', hel'⟩ :=
       ih n (m₁.set64 SPN b h) m' a₁ (o + 1) (l - 1) (b + 1) hS₂ hE₂
-        (by rw [herec₂, ho1, hl1]; exact hsl') (by rw [ho1, hl1]; omega)
+        (by rw [herec₂, hl1]; exact hsl1)
         (fun u hu => (hd u (List.mem_cons_of_mem _ hu)).elim fun x hx => ⟨x, by
           have := hx; simp only [EStore.ns] at this ⊢; rw [hg₁.ns]; exact this⟩)
         (by rw [hb1, hk₂.top]; omega) (by rw [hsz₂, hb1, hl1]; omega) hW
@@ -404,10 +447,10 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
   obtain ⟨s₂, hs₂m, -, hW₂⟩ :=
     triple_of_callW (keysPush_spec p hL.toLvSubProg n ⟨m₀, Locals.init []⟩ po pc) h2
   rw [hs₂m] at hW₂
-  have hk := lp_nmsR_of_hslice a₀.store.lss.ls.ns m₀ EREC lps ks po pc hlps
-    (hslice_noWrap hS.erec hlps) hks
-  obtain ⟨hb, hk₁, hf₁, htop₁, hroom, hbel₁⟩ :=
-    keysPushW_ok n m₀ m₁ po pc (bs.headD 0) ks hk hS.spn hS.ctl136 hW₂
+  obtain ⟨hb, hks₁, hf₁, htop₁, hroom, hbel₁⟩ :=
+    keysPushW_ok n m₀ m₁ po pc (bs.headD 0) lps hlps hS.spn hS.ctl136 hW₂
+  have hk₁ := lp_nmsR_of_hslice a₀.store.lss.ls.ns m₁ SPN lps ks (bs.headD 0) pc hks₁
+    (by have := hS.spn; omega) hks
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   have hgr₁ : StackGrew m₀ m₁ := StackGrew.of_spnFrame hf₁
     (UInt64.le_iff_toNat_le.mpr (by rw [htop₁, hb]; omega))
@@ -419,7 +462,7 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
   obtain ⟨Y, hY, hcY⟩ := readLevelsM_run' { a₀ with caches := { a₀.caches with readNC := X } }
     (decI us) vs hdus (by exact hS.readLs)
   have hS₂ := CoreS.readCaches hS₁ X Y (by exact hcY) hcX
-  have herec₁ : m₁.arr64 EREC = m₀.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
+  have herec₁ : erecP m₁ = erecP m₀ := erecP_frame hf₁ (by decide) (by decide) (by decide) (by decide)
   have hpool₁ : m₁.arr64 POOL = m₀.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
   have hpool₁' : m₁.arr64 POOL1 = m₀.arr64 POOL1 := hf₁.1 POOL1 (by simp [SPN, POOL1]) (by decide)
   have hpool₁v := vpool_congr hpool₁ hpool₁'
@@ -433,7 +476,7 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
       (bs.headD 0) pc (tfld m₀ LVLS (tierW us) (idxW us) 0) (tfld m₀ LVLS (tierW us) (idxW us) 1) ks ids vs :=
     ⟨hk₁, by omega, by rw [hpool₁v]; exact sl₁, by rw [htopm₁]; exact t₁, hdl'⟩
   unfold rflK at hW
-  rcases hfc with ⟨hfk, hpl, hq, cks, hcks⟩ | ⟨hfk, lvls, pins, hnest, hfv, hfvd⟩
+  rcases hfc with ⟨hfk, hpl, hq, cks, hcks⟩ | ⟨hfk, lvls, hnest, hfv, hfvd⟩
   · -- plain
     simp only [hfk, ne_eq, not_true_eq_false, ↓reduceIte] at hW
     by_cases u1 : m₁.len64 SPN < spTop m₁
@@ -457,7 +500,6 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
     rw [hs₃m] at hW₃
     obtain ⟨hs, a₃, hrun₂, hS₃, -, hk₃, hsl₂, -, hel₃⟩ :=
       slpElemW_core cvjLps n m₁ m₂ _ qo qc (spTop m₁) hS₂ hE (by rw [herec₁]; exact hq)
-        (hslice_noWrap hS.erec hq)
         (mapM_some_mem cvjLps cks hcks) (Nat.le_refl _) (by rw [hsz₁]; omega) hW₃
     cases h4 : callW p n "spn_ls" [spTop m₁, qc] m₂ with
     | none => rw [h4] at hW; cases hW
@@ -497,7 +539,6 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
     rw [hs₃m] at hW₃
     obtain ⟨hs, a₃, hrun₂, hS₃, -, hk₃, hsl₂, -, hel₃⟩ :=
       sleElemW_core lvls n m₁ m₂ _ fvo fvc (spTop m₁) hS₂ hE (by rw [herec₁]; exact hfv)
-        (hslice_noWrap hS.erec hfv)
         hfvd (Nat.le_refl _) (by rw [hsz₁]; omega) hW₃
     cases h4 : callW p n "spn_ls" [spTop m₁, fvc] m₂ with
     | none => rw [h4] at hW; cases hW
@@ -509,7 +550,8 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
     obtain ⟨a₄, hrun₄, hS₄, hk₄, hw₄⟩ := rflTail_core p hL hS₃ (hgr₁.trans hk₃.toGrew) hb hsl₂
       (by omega) hel₃ h4
     have hrun : (recFireLevels rl lps (decI us) cvjLps).run a₀ = .ok (decI (rs.headD 0), a₄) := by
-      simp only [recFireLevels, hnest, StateT.run_bind, hX, except_ok_bind, hY, hrun₂, hrun₄]
+      rcases hnest with hnest | ⟨pins, hnest⟩ <;>
+        simp only [recFireLevels, hnest, StateT.run_bind, hX, except_ok_bind, hY, hrun₂, hrun₄]
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
     refine ⟨hok, ?_, by rw [hres, decLs, hr], by unfold ResH; rw [← hr]; exact hw₄⟩
     rw [hst, ← hm]

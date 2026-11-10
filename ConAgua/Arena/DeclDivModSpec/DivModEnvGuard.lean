@@ -1,11 +1,9 @@
 module
 
-import ConAgua.Arena.DeclBasisSpec2
 public import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatDeps
-public import ConAgua.Arena.DeclCanonEq
 public import ConAgua.Rom.CIReadSpec
 import all ConAgua.Arena.DeclArmsNat
 
@@ -30,8 +28,8 @@ open L.Arena
 
 structure DmProg7 (p : Prog) : Prop extends DmProg6 p where
   lDivModEnvGuard : p.lookup "div_mod_env_guard" = some divModEnvGuardL
-  lFindIs : p.lookup "find_is" = some findIs
   lNatOpGuard' : p.lookup "nat_op_guard" = some natOpGuardL
+  lEqStored : p.lookup "eq_stored" = some eqStoredL
   lRom : L.Rom.RomRefs p
 
 section envguard
@@ -40,14 +38,47 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 /-- **`div_mod_env_guard` is its model `egW`** (generated). -/
 l_model eg_specW (p : Prog) (hp : p.lookup "div_mod_env_guard" = some divModEnvGuardL)
   fns [hp ↦ egW list]
-  specs [callW_spec p n "nat_op_guard", callW_spec p n "nat_op_deps", callW_spec p n "nat_op_stored_ok_all", callW_spec p n "pin_at", callW_spec p n "rom_ci", callW_spec p n "find_is", callW_spec p n "bool_ctor_typed"]
+  specs [callW_spec p n "nat_op_guard", callW_spec p n "nat_op_deps", callW_spec p n "nat_op_stored_ok_all", callW_spec p n "pin_at", callW_spec p n "rom_ci", callW_spec p n "bool_ctor_typed", callW_spec p n "eq_stored"]
   grind [arena_grind] heartbeats 3200000 bind ntBW
 
 theorem DmProg7.ty (hD : DmProg7 p) : NatTyProg p := hD.toDmProg6.toDmProg5.toDmProg2.toNatEqProg.toNatTyProg
 
-theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
-    CallRef p "div_mod_env_guard" [vis, c] (fun m s => StageR dn vis fe m s ∧ H c)
-      (divModEnvGuard fe (decI c)) (KeepPost dn vis fe decW0B) := by
+/-- **`eq_stored` is its model `eqsW`** (generated). -/
+l_model eqs_specW (p : Prog) (hp : p.lookup "eq_stored" = some eqStoredL)
+  fns [hp ↦ eqsW list]
+  specs [callW_spec p n "pin_at", callW_spec p n "env_find"]
+  grind [arena_grind] heartbeats 1600000 bind ntBW
+
+theorem eqStored_ref (hD : DmProg7 p) :
+    CallRef p "eq_stored" [vis] (StageR vis fe) (eqStored fe) (KeepPost vis fe decW0B) := by
+  refine CallRef.of_succ fun k m a r m' hS hcall => ?_
+  have hw := callW_model (M := fun mq => eqsW p (k + 1) mq vis)
+    (eqs_specW p hD.lEqStored (k + 1) · vis) hcall
+  rw [eqsW.arm1] at hw
+  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, rfl⟩, hw⟩ :=
+    (pinSlot_ref p hD.toDmProg6.toDmProg5.lPinAt 0 pinEq rfl).bind_ hS hw
+  replace hw := ntBW_some hw; obtain ⟨rf, m2, h2, hw⟩ := hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨hm2, hfd⟩ := envFind_call hD.toDmProg6.toDmProg5.toMasterProg (r1.headD 0) hl1
+    hS1.check.env h2
+  subst hm2
+  refine ⟨(fe.find? (decI (r1.headD 0))).isSome, a1, ?_, hS1, hg1, ?_⟩
+  · simp only [eqStored, StateT.run_bind, hrun1, exc_ok_bind']
+    rfl
+  · cases hf : fe.find? (decI (r1.headD 0)) with
+    | none =>
+      rw [hf] at hfd
+      have hz : rf.headD 0 = 0 := hfd
+      unfold decW0B; simp only [List.headD_cons, hz]; exact ⟨rfl, by decide⟩
+    | some ci =>
+      rw [hf] at hfd
+      obtain ⟨hr1, -⟩ := hfd
+      unfold decW0B; simp only [List.headD_cons, hr1]; exact ⟨rfl, by decide⟩
+
+theorem eg_ref (hD : DmProg7 p) (c : Word) :
+    CallRef p "div_mod_env_guard" [vis, c] (fun m s => StageR vis fe m s ∧ H c)
+      (divModEnvGuard fe (decI c)) (KeepPost vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc⟩ hcall => ?_
   have hw := callW_model (M := fun mq => egW p (k + 1) mq vis c)
     (eg_specW p hD.lDivModEnvGuard (k + 1) · vis c) hcall
@@ -55,7 +86,7 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
   have hT := hD.ty
   -- the dependency guard
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hw⟩ :=
-    (natOpGuard_ref hT.toNatGuardProg (vis := vis) (fe := fe) (dn := dn) c).bind_ ⟨hS, hc⟩ hw
+    (natOpGuard_ref hT.toNatGuardProg (vis := vis) (fe := fe) c).bind_ ⟨hS, hc⟩ hw
   by_cases z1 : r1.headD 0 = 0
   · rw [ite_eq_left z1] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -68,12 +99,12 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
   have hx1 := decW0B_true hd1 z1
   -- the dependencies
   obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hd2⟩, hw⟩ :=
-    (natOpDeps_ref hT.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg (vis := vis) (fe := fe) (dn := dn) c).bind_
+    (natOpDeps_ref hT.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg (vis := vis) (fe := fe) c).bind_
       ⟨hS1, hc⟩ hw
   unfold decRL at hd2
   simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd2
   replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := okAll_ref hT (vis := vis) (fe := fe) (dn := dn) (r2.headD 0) (r2.tail.headD 0) x2
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := okAll_ref hT (vis := vis) (fe := fe) (r2.headD 0) (r2.tail.headD 0) x2
     k m2 a2 r3 m3 hS2 hd2.1 hd2.2 h3
   have hG3 : IWGrow m m3 := hg1.trans (hg2.trans hg3)
   by_cases z3 : r3.headD 0 = 0
@@ -88,35 +119,23 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
   rw [ite_eq_right z3] at hw
   have hx3 := decW0B_true hd3 z3
   -- the pinned Eq
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
-    (pinSlot_ref p hD.toDmProg6.toDmProg5.lPinAt 0 pinEq rfl).bind_ hS3 hw
-  obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hd5⟩, hw⟩ :=
-    CallRef.bind_ (hD.lRom.ci dn vis fe 0 (by decide)) hS4 hw
-  have hrun5' : eqA.run a4 = .ok (x5, a5) := hrun5
-  replace hw := ntBW_some hw; obtain ⟨r6, m6, h6, hw⟩ := hw
-  obtain ⟨x6, a6, hrun6, hS6, hg6, hd6⟩ :=
-    (CallRef.of_refAM (findIs_spec (p := p) hD.toDmProg6.toDmProg5.toDmProg2.cvProg.lCanon dn vis fe hdn (r4.headD 0)
-      (r5.headD 0) x5)) k m5 a5 r6 m6 ⟨hS5, hl4, decRCI_get hd5⟩ h6
-  obtain ⟨hx6e, hxa⟩ := pure_run_eq hrun6
-  subst hxa
-  have hG6 : IWGrow m m6 := hG3.trans (hg4.trans (hg5.trans hg6))
-  by_cases z6 : r6.headD 0 = 0
-  · rw [ite_eq_left z6] at hw
+  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hd4⟩, hw⟩ :=
+    (eqStored_ref hD (vis := vis) (fe := fe)).bind_ hS3 hw
+  have hG6 : IWGrow m m4 := hG3.trans hg4
+  by_cases z4 : r4.headD 0 = 0
+  · rw [ite_eq_left z4] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
-    have hx6 := decW0B_false hd6 z6
-    have hb6 : (fe.find? (decI (r4.headD 0)) == some x5) = false := by rw [← hx6e]; exact hx6
-    refine ⟨false, a6, ?_, hS6, hG6, decW0B_of_false _⟩
+    have hx4 := decW0B_false hd4 z4
+    refine ⟨false, a4, ?_, hS4, hG6, decW0B_of_false _⟩
     simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3, hrun4,
-      hrun5', bne, hb6, Bool.not_false, Bool.not_true, eq_self, ite_true, ite_false,
-      Bool.false_eq_true]
+      hx4, Bool.not_false, Bool.not_true, eq_self, ite_true, ite_false, Bool.false_eq_true]
     rfl
-  rw [ite_eq_right z6] at hw
-  have hx6 := decW0B_true hd6 z6
-  have hb6 : (fe.find? (decI (r4.headD 0)) == some x5) = true := by rw [← hx6e]; exact hx6
+  rw [ite_eq_right z4] at hw
+  have hx4 := decW0B_true hd4 z4
   -- the two constructors
   obtain ⟨r7, m7, x7, a7, hrun7, ⟨hS7, hg7, hl7, rfl⟩, hw⟩ :=
-    (pinSlot_ref p hD.toDmProg6.toDmProg5.lPinAt 30 pinBoolTrue rfl).bind_ hS6 hw
+    (pinSlot_ref p hD.toDmProg6.toDmProg5.lPinAt 30 pinBoolTrue rfl).bind_ hS4 hw
   obtain ⟨r8, m8, x8, a8, hrun8, ⟨hS8, hg8, hd8⟩, hw⟩ :=
     (bct_ref hD.toDmProg6 (r7.headD 0)).bind_ ⟨hS7, hl7⟩ hw
   have hG8 : IWGrow m m8 := hG6.trans (hg7.trans hg8)
@@ -127,7 +146,7 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
     have hx8 := decW0B_false hd8 z8
     refine ⟨false, a8, ?_, hS8, hG8, decW0B_of_false _⟩
     simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3, hrun4,
-      hrun5', bne, hb6, hrun7, hrun8, hx8, Bool.not_false, Bool.not_true, eq_self, ite_true,
+      hx4, hrun7, hrun8, hx8, Bool.not_false, Bool.not_true, eq_self, ite_true,
       ite_false, Bool.false_eq_true]
     rfl
   rw [ite_eq_right z8] at hw
@@ -140,14 +159,14 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
   obtain ⟨rfl, rfl⟩ := hw
   refine ⟨x10, a10, ?_, hS10, hG8.trans (hg9.trans hg10), hd10⟩
   simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3, hrun4,
-    hrun5', bne, hb6, hrun7, hrun8, hx8, hrun9, Bool.not_true, ite_false, Bool.false_eq_true]
+    hx4, hrun7, hrun8, hx8, hrun9, Bool.not_true, ite_false, Bool.false_eq_true]
   exact hrun10
 
 @[refines ConRon.Arena.divModEnvGuard]
-theorem divModEnvGuard_refines (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
-    RefAM p "div_mod_env_guard" [vis, c] (fun m s => StageR dn vis fe m s ∧ H c)
-      (divModEnvGuard fe (decI c)) (KeepPost dn vis fe decW0B) :=
-  (eg_ref hD hdn c).refAM
+theorem divModEnvGuard_refines (hD : DmProg7 p) (c : Word) :
+    RefAM p "div_mod_env_guard" [vis, c] (fun m s => StageR vis fe m s ∧ H c)
+      (divModEnvGuard fe (decI c)) (KeepPost vis fe decW0B) :=
+  (eg_ref hD c).refAM
 
 end envguard
 

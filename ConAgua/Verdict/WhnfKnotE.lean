@@ -39,10 +39,10 @@ include hq hnv in
 theorem KnotAllProg.prepareMajorE : PrepareMajorE p :=
   prepareMajorE_of p hq.m2c.toIotaProg4 (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
     (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
-      (ErecKeptKnot.of_closed hq.hcl) (KnotAllProg.projC hq))
-    (ErecKeptKnot.of_closed hq.hcl) hnv
+      (ErecPKept.of_closed hq.hcl) (KnotAllProg.projC hq) hq.prop (KnotAllProg.instLP hq))
+    (ErecKeptRec.of_closed hq.hcl) hnv
     (majorToCtorE_of p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
-      (ErecKeptKnot.of_closed hq.hcl) (KnotAllProg.projC hq) hnv
+      (ErecPKept.of_closed hq.hcl) (KnotAllProg.projC hq) hq.prop (KnotAllProg.instLP hq) hnv
       (proofIrrelE_of p hq.m2c.toIotaProg4 (LvlDen.of_den coreDen_of) hnv))
 
 include hq hnv in
@@ -54,7 +54,7 @@ include hq hnv in
 theorem KnotAllProg.iotaRecAtE : IotaRecAtE p :=
   iotaRecAtE_of p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
     (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
-      (ErecKeptKnot.of_closed hq.hcl) (KnotAllProg.projC hq))
+      (ErecPKept.of_closed hq.hcl) (KnotAllProg.projC hq) hq.prop (KnotAllProg.instLP hq))
     (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl) hnv
     (KnotAllProg.prepareMajorE hq hnv) (KnotAllProg.iotaRecFireE hq hnv)
 

@@ -37,12 +37,12 @@ open L.Arena
 /-- `consts_resolve_ffast`'s functions and the reads it calls. -/
 def crfP : Prog := L.Stubs.crfProg ++
   [("e_view", eView), ("is_str_lit", isStrLitL), ("env_find", envFindL), ("env_row_get", envRowGetL),
-    ("env_ix", envIxL), ("pin_at", pinAtL)]
+    ("base_row_get", baseRowGetL), ("pin_at", pinAtL)]
 
 /-- The functions `consts_resolve_ffast` reaches. -/
 def crfPFns : List FnName :=
   ["consts_resolve_ffast", "crf_go", "cr_leaf", "cr_lit_pins", "pin_found", "crm_find", "crm_put",
-    "crm_clear", "e_view", "is_str_lit", "env_find", "env_row_get", "env_ix", "pin_at"]
+    "crm_clear", "e_view", "is_str_lit", "env_find", "env_row_get", "base_row_get", "pin_at"]
 
 theorem crfP_closed : closedA crfP [L.Stubs.CRM] [158, 159] crfPFns = true := by decide +kernel
 

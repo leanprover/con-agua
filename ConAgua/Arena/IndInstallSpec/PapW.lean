@@ -7,7 +7,6 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.CoreErec
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
@@ -20,7 +19,7 @@ import all ConAgua.Arena.Env
 /-!
 # PapW
 
-`selmW`, `selm_spec`, `structElimLevel_stage`, `StageR.of_envFrame`, `popProg`, `popFns` and the lemmas only they use.
+`selmW`, `selm_spec`, `structElimLevel_stage`, `papW_ok`, `genRecCheckPopAll_refines` and the lemmas only they use.
 -/
 
 set_option experimental.vcgen true
@@ -60,11 +59,11 @@ theorem selm_spec (p : Prog) (hp : p.lookup "struct_elim_level" = some structEli
 /-- **`struct_elim_level(elim, large)` refines `structElimLevel` under the stage relation**, its
 result a handle. -/
 theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (a : AState)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (elim large : Word)
-    (hS : StageR dn vis fe s₀.mem a) (he : elim.toNat < 2 ^ 32) :
+    {vis : Word} {fe : IFEnv} (elim large : Word)
+    (hS : StageR vis fe s₀.mem a) (he : elim.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_elim_level" [elim, large]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ a', (ConRon.Arena.structElimLevel (decI elim) (large != 0)).run a =
-        .ok (decI (r.headD 0), a') ∧ StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
+        .ok (decI (r.headD 0), a') ∧ StageR vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
       (r.headD 0).toNat < 2 ^ 32; ⊤⦄ := by
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
@@ -105,60 +104,6 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
     simp only [List.headD_cons, ConRon.Arena.structElimLevel, hb]
     exact hrun
 
-/-! ## The stage relation across an environment-index write -/
-
-/-- **A run that writes only the environment's rows, `ECON` and `CTL[128]`**, relating its
-memory to an environment `fe'` at view `vis'`, keeps the stage relation (at `fe'`) and the pool. -/
-theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe fe' : IFEnv}
-    {a : AState} {m m' : Mem} (hS : StageR dn vis fe m a)
-    (hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] m m') (hE : EnvR dn m' vis' fe') :
-    StageR dn vis' fe' m' a ∧ IWGrow m m' := by
-  have hC : CheckR dn m' a vis' fe' :=
-    ⟨⟨ArenaR.frame (fun b hb => by
-          simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-          rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-        (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
-        hS.check.arena.base,
-      DerR.frameM _ _ m _ hfr (by decide) a hS.check.arena.der⟩,
-     hS.check.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
-     hS.check.pins.frame (by decide) hfr, hE, hS.check.mode.frame hfr (by decide) (by decide)⟩
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  have hI : m'.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
-  have hER : m'.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
-  have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.ctl 200 (by decide)]
-  have h129 : erTop m' = erTop m := by simp only [erTop, hfr.ctl 129 (by decide)]
-  refine ⟨⟨hC, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
-  · rw [h200, hI]; exact hI1
-  · rw [h129, hER]; exact hE1
-  · rw [hI]; exact hsz
-  · rw [hER]; exact hEs
-  · rw [hfr.size CTL]; exact hc
-  · exact ⟨by omega, by omega, fun i _ => by rw [hI], fun i _ => by rw [hER]⟩
-
-/-! ## `env_pop_temp`'s write set -/
-
-/-- `env_pop_temp` and its callees. -/
-def popProg : Prog :=
-  [("env_pop_temp", envPopTempL), ("env_row_set", envRowSetL), ("env_ix", envIxL)]
-
-def popFns : List FnName := popProg.map (·.1)
-
-theorem popProg_closed : closedA popProg [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] popFns = true := by
-  decide +kernel
-
-theorem popTemp_frame {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
-    (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
-    {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word}
-    (h : callW p n "env_pop_temp" vs m = some (r, m')) :
-    MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] m m' := by
-  have hag : ∀ f ∈ popFns, p.lookup f = popProg.lookup f := by
-    intro f hf
-    simp only [popFns, popProg, List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil,
-      or_false] at hf
-    rcases hf with rfl | rfl | rfl <;> simp only [hx, hs, hpt] <;> rfl
-  rw [callW_agree popProg_closed hag n (by simp [popFns, popProg])] at h
-  exact (run_memFrame popProg_closed (by simp [popFns, popProg]) (L.Arena.run_of_callW h)).1
-
 /-! ## `gen_rec_check_pop_all` -/
 
 /-- **`gen_rec_check_pop_all` is its model `papW`** (generated; its loop `papW.loop1`). -/
@@ -174,18 +119,32 @@ theorem FA2.getElem {α β : Type} {R : α → β → Prop} :
   | _, _, .cons h hs, 0, _, _ => h
   | _, _, .cons _ hs, i + 1, h1, h2 => FA2.getElem hs i (by simpa using h1) (by simpa using h2)
 
-theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
-    (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (a : AState) (po pl : Word)
-    (prevs : List (NIdx × Option (Nat × IConstantInfo))) (k : Nat) :
+/-- The prev value `env_pop_temp` puts back is the decoded displaced row. -/
+theorem prevD_eq {m : Mem} {c q : Word} {pv : Option IConstantInfo} (h : prevD m c q = some pv) :
+    (if c = 0 then none else decCI (erecP m) q.toNat) = pv ∧
+      (c ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) := by
+  unfold prevD at h
+  by_cases hc : c = 0
+  · simp only [hc, ite_true, Option.some.injEq] at h ⊢; exact ⟨h, fun h => absurd rfl h⟩
+  · simp only [hc, ite_false] at h ⊢
+    obtain ⟨ci, hci, rfl⟩ := Option.map_eq_some_iff.mp h
+    exact ⟨hci, fun _ => ⟨ci, hci⟩⟩
+
+/-- **The pop loop**: from the `j`-th displaced row down, each `env_pop_temp` undoes the newest push
+(`PopOK` of the first `j` rows, newest first, gives `env_pop_temp`'s preconditions). -/
+theorem papW_ok {p : Prog} (hs : p.lookup "env_row_set" = some envRowSetL)
+    (hpt : p.lookup "env_pop_temp" = some envPopTempL)
+    (fe : IFEnv) (a : AState) (po pl : Word)
+    (prevs : List (NIdx × Option IConstantInfo)) (cs : List (NIdx × Word)) (k : Nat) :
     ∀ (m m' : Mem) (vis v' j : Word), papW.loop1 p k m vis po j = some (v', m') →
-    StageR dn vis ((prevs.drop j.toNat).foldr (fun x acc => acc.popTemp x.1 x.2) fe) m a →
-    j.toNat ≤ pl.toNat → SPL (decPrev dn) m po.toNat pl.toNat prevs →
-    StageR dn v' (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) m' a ∧ IWGrow m m' := by
+    StageR vis ((prevs.drop j.toNat).foldr (fun x acc => acc.popTemp x.1 x.2) fe) m a →
+    j.toNat ≤ pl.toNat → SPL decPrev m po.toNat pl.toNat prevs → SPL decPrevC m po.toNat pl.toNat cs →
+    PopOK (ownC m) vis (cs.take j.toNat).reverse →
+    StageR v' (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) m' a ∧ IWGrow m m' := by
   induction k with
   | zero => intro m m' vis v' j h; simp [papW.loop1.eq_1] at h
   | succ k ih =>
-  intro m m' vis v' j h hS hj hsp
+  intro m m' vis v' j h hS hj hsp hspC hPop
   by_cases h0 : ¬ 0 < j
   · rw [papW.loop1.arm2 (hc1 := h0)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -196,25 +155,31 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
     exact ⟨hS, IWGrow.refl _⟩
   simp only [Decidable.not_not] at h0
   have hj0 : 0 < j.toNat := by simpa using UInt64.lt_iff_toNat_lt.mp h0
-  obtain ⟨hb, ps, hps, hfa⟩ := hsp
+  obtain ⟨hb, ps, hps, hfa⟩ := id hsp
+  obtain ⟨-, psC, hpsC, hfaC⟩ := id hspC
+  have hpsE : psC = ps := by rw [hps] at hpsC; exact (Option.some.inj hpsC).symm
+  subst hpsE
   have hlen := decNL_length m hps
   have hplen : prevs.length = pl.toNat := by rw [← hfa.length_eq, hlen]
+  have hclen : cs.length = pl.toNat := by rw [← hfaC.length_eq, hlen]
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hsz := hS.iw.iwSize
   obtain ⟨i, hi⟩ : ∃ i, i = j.toNat - 1 := ⟨_, rfl⟩
-  have hil : i < ps.length := by omega
+  have hil : i < psC.length := by omega
   have hj1 : (j - 1).toNat = i := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
   have hpoi : (po + (j - 1)).toNat = po.toNat + i := by
     rw [UInt64.toNat_add, hj1]; simp; omega
-  obtain ⟨-, hget⟩ := decNL_getW m pl.toNat po.toNat ps hps
+  obtain ⟨-, hget⟩ := decNL_getW m pl.toNat po.toNat psC hps
   obtain ⟨w, hw, hwv⟩ := hget i hil
   have hrd1 : rdW (m.arr64 IW) (po + (j - 1)) = w := by
-    simp only [rdW, hpoi]; simp only [iwA] at hw; rw [hw]; rfl
-  have hst := FA2.getElem hfa i hil (by omega)
-  have hdp : decPrev dn m ps[i] = some prevs[i] := hst.get
+    simp only [rdW, hpoi]; simp only [iwA, aread_apply, aread_apply] at hw; rw [hw]; rfl
+  have hdp : decPrev m psC[i] = some prevs[i] := (FA2.getElem hfa i hil (by omega)).get
+  have hdc : decPrevC m psC[i] = some cs[i] := (FA2.getElem hfaC i hil (by omega)).get
   simp only [decPrev, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdp
   obtain ⟨nm, hnm, c, hc, q, hq, pv, hpv, hxe⟩ := hdp
+  simp only [decPrevC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, hnm, hc] at hdc
+  obtain ⟨_, ⟨rfl⟩, _, ⟨rfl⟩, hxc⟩ := hdc
   simp only [iwH, hd?, bind, Option.bind_eq_some_iff] at hnm
   obtain ⟨wn, hwn, hnm⟩ := hnm
   split at hnm
@@ -222,48 +187,72 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
   · cases hnm
   rename_i hwn32
   simp only [Option.some.injEq] at hnm
-  have hq0 : ps[i] < (m.arr64 IW).size := by
-    have := (Array.getElem?_eq_some_iff.mp (by simpa [iwA] using hwn)).1; exact this
-  have hq2 : ps[i] + 2 < (m.arr64 IW).size := by
-    have := (Array.getElem?_eq_some_iff.mp (by simpa [iwA] using hq)).1; exact this
-  have e0 : w.toNat = ps[i] := hwv
-  have e1 : (w + 1).toNat = ps[i] + 1 := by rw [UInt64.toNat_add, e0]; simp; omega
-  have e2 : (w + 2).toNat = ps[i] + 2 := by rw [UInt64.toNat_add, e0]; simp; omega
-  have r0 : rdW (m.arr64 IW) w = wn := by simp only [rdW, e0]; simp only [iwA] at hwn; rw [hwn]; rfl
-  have r1 : rdW (m.arr64 IW) (w + 1) = c := by simp only [rdW, e1]; simp only [iwA] at hc; rw [hc]; rfl
-  have r2 : rdW (m.arr64 IW) (w + 2) = q := by simp only [rdW, e2]; simp only [iwA] at hq; rw [hq]; rfl
+  have e0 : w.toNat = psC[i] := hwv
+  have e1 : (w + 1).toNat = psC[i] + 1 := by
+    have := (Array.getElem?_eq_some_iff.mp (by simpa [iwA, aread_apply, aread_apply] using hc)).1
+    rw [UInt64.toNat_add, e0]; simp; omega
+  have e2 : (w + 2).toNat = psC[i] + 2 := by
+    have := (Array.getElem?_eq_some_iff.mp (by simpa [iwA, aread_apply, aread_apply] using hq)).1
+    rw [UInt64.toNat_add, e0]; simp; omega
+  have r0 : rdW (m.arr64 IW) w = wn := by simp only [rdW, e0]; simp only [iwA, aread_apply, aread_apply] at hwn; rw [hwn]; rfl
+  have r1 : rdW (m.arr64 IW) (w + 1) = c := by simp only [rdW, e1]; simp only [iwA, aread_apply, aread_apply] at hc; rw [hc]; rfl
+  have r2 : rdW (m.arr64 IW) (w + 2) = q := by simp only [rdW, e2]; simp only [iwA, aread_apply, aread_apply] at hq; rw [hq]; rfl
   rw [papW.loop1.arm1 (hc1 := h0), hrd1, r0, r1, r2] at h
+  -- the stack's top
+  have hwnW : nm.word.toUInt64 = wn := by rw [← hnm]; exact decI_word_self wn hwn32
+  rw [show j.toNat = i + 1 by omega, List.take_succ_eq_append_getElem (by omega), List.reverse_append,
+    ← hxc] at hPop
+  obtain ⟨htop, hv, hc32, hcv, hfree, hrest⟩ := hPop
+  obtain ⟨hpvE, hcd⟩ := prevD_eq hpv
   cases c1 : callW p k "env_pop_temp" [vis, wn, c, q] m with
   | none => rw [c1, papW.k_env_pop_temp.none] at h; cases h
   | some x =>
   obtain ⟨r1', m1⟩ := x
   rw [c1, papW.k_env_pop_temp.arm1] at h
-  obtain ⟨s1, hs1, -, hE1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPopTemp_refines p hx hs hpt k _ vis wn c q pv hS.check.env (by simpa using hwn32) hpv) c1
-  subst hs1
-  have hfr := popTemp_frame hx hs hpt c1
-  obtain ⟨hS1, hg1⟩ := StageR.of_envFrame hS hfr hE1
+  have hE := hS.check.env
+  obtain ⟨s1, hs1, -, hr1, hE1, hm1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envPopTemp_refines p hs hpt k _ vis wn c q hE (by simpa using hwn32) hv
+      (by rw [← hwnW]; exact htop) hc32 hcv hcd
+      (fun hc0 n hn => hfree hc0 n fun e => hn (by rw [e, hwnW]))) c1
+  obtain ⟨s1', hs1', hm1', -, -, ht, hbd⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envPopTemp_spec p hs hpt k _ vis wn c q) c1
+  rw [hm1, hpvE] at hE1
+  have hmm : m1 = ownSet m wn c q := by rw [← hs1, hm1]
+  subst hmm
+  simp only at ht hbd
+  obtain ⟨hS1, hg1⟩ := StageR.of_own hS hE1
+  have hO1 : ownC (ownSet m wn c q) = updC (ownC m) nm c := by
+    funext n'
+    simp only [ownC, updC]
+    split
+    · rename_i e; subst e; rw [hwnW]; exact (ownRaw_ownSet_self ht hbd hc32 hE.stamp).1
+    · rename_i hne
+      rw [ownRaw_ownSet_other (by simpa using hwn32) (L.Arena.nidx_word_lt32 n') ht
+        fun e => hne (nidx_word_inj (by rw [e, hwnW]))]
   have hdrop : ((prevs.drop j.toNat).foldr (fun x acc => acc.popTemp x.1 x.2) fe).popTemp (decI wn) pv =
       (prevs.drop (j - 1).toNat).foldr (fun x acc => acc.popTemp x.1 x.2) fe := by
     rw [hj1, List.drop_eq_getElem_cons (i := i) (show i < prevs.length by omega), ← hxe,
       show i + 1 = j.toNat by omega, hnm]
     rfl
   rw [hdrop] at hS1
-  obtain ⟨hS', hg'⟩ := ih s1.mem m' (r1'.headD 0) v' (j - 1) h hS1 (by omega)
-    (SPL.grow ⟨hb, ps, hps, hfa⟩ hg1)
+  simp only [hr1, List.headD_cons] at h
+  obtain ⟨hS', hg'⟩ := ih _ m' (vis - 1) v' (j - 1) h hS1 (by omega) (hsp.grow hg1) (hspC.grow hg1)
+    (by rw [hO1, hj1]; exact hrest)
   exact ⟨hS', hg1.trans hg'⟩
 
 /-- **`gen_rec_check_pop_all(vis, prevs.off, prevs.len)` undoes the temporary pushes**, last first:
-the stage relation at the returned view of `prevs.foldr popTemp fe`, the pool unchanged. -/
-theorem genRecCheckPopAll_refines {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
-    (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
+the stage relation at the returned view of `prevs.foldr popTemp fe`, the pool unchanged, given
+the displaced rows' names and counters `cs` pop as a stack (`PopOK`, `classFeR_refines`' post). -/
+theorem genRecCheckPopAll_refines {p : Prog} (hs : p.lookup "env_row_set" = some envRowSetL)
+    (hpt : p.lookup "env_pop_temp" = some envPopTempL)
     (hp : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll) (n : Nat) (s₀ : St) (a : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (po pl : Word)
-    (prevs : List (NIdx × Option (Nat × IConstantInfo))) (hS : StageR dn vis fe s₀.mem a)
-    (hpv : SPL (decPrev dn) s₀.mem po.toNat pl.toNat prevs) :
+    (vis : Word) (fe : IFEnv) (po pl : Word)
+    (prevs : List (NIdx × Option IConstantInfo)) (cs : List (NIdx × Word)) (hS : StageR vis fe s₀.mem a)
+    (hpv : SPL decPrev s₀.mem po.toNat pl.toNat prevs) (hcs : SPL decPrevC s₀.mem po.toNat pl.toNat cs)
+    (hpop : PopOK (ownC s₀.mem) vis cs.reverse) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_pop_all" [vis, po, pl]
     ⦃fun r s' => LocEq s' s₀ ∧
-      StageR dn (r.headD 0) (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) s'.mem a ∧
+      StageR (r.headD 0) (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) s'.mem a ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   rcases n with _ | n
   · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
@@ -274,8 +263,9 @@ theorem genRecCheckPopAll_refines {p : Prog} (hx : p.lookup "env_ix" = some envI
   rw [papW.k_loop1.arm1] at hm
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   have hlen := hpv.length
+  have hclen := hcs.length
   have hd : (prevs.drop pl.toNat) = [] := List.drop_eq_nil_of_le (by omega)
-  exact ⟨hl, papW_ok hx hs hpt dn fe a po pl prevs (n + 1) s₀.mem _ vis _ pl h1
-    (by rw [hd]; exact hS) (Nat.le_refl _) hpv⟩
+  exact ⟨hl, papW_ok hs hpt fe a po pl prevs cs (n + 1) s₀.mem _ vis _ pl h1
+    (by rw [hd]; exact hS) (Nat.le_refl _) hpv hcs (by rw [List.take_of_length_le (by omega)]; exact hpop)⟩
 
 end L.Ind

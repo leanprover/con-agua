@@ -1,7 +1,6 @@
 module
 
-public import ConAgua.Compiler.WriteSetSplit
-public import ConAgua.Layout
+public import ConAgua.Arena.LeafFrame
 
 @[expose] public section
 
@@ -30,16 +29,17 @@ theorem tC_mem {g : Nat → Bool} {w : Word} (h : tC g w = true) :
   exact ⟨w.toNat, ⟨h.1, h.2⟩, UInt64.ofNat_toNat⟩
 
 /-- The tests of one arm: the arrays and `CTL` words its functions may store to, the tree of
-its function set. -/
-abbrev ArmTest := (TieredArray → Bool) × (Word → Bool) × NTree
+its function set, the tree of what they may call (the set and the arm's leaves; the set's own
+tree for an arm without leaves). -/
+abbrev ArmTest := (TieredArray → Bool) × (Word → Bool) × NTree × NTree
 
 /-- All arms' write-set checks on one function. -/
 def wsChkM (ctl : ArrId) (arms : List ArmTest) (x : FnName × FunDecl) : Bool :=
-  arms.all fun a => wsChk ctl a.1 a.2.1 a.2.2 x
+  arms.all fun a => wsChkL ctl a.1 a.2.1 a.2.2.1 a.2.2.2 x
 
 theorem wsChk_of_all {ctl : ArrId} {arms : List ArmTest} {p : Prog}
     (h : ∀ x ∈ p, wsChkM ctl arms x = true) {a : ArmTest} (ha : a ∈ arms) :
-    ∀ x ∈ p, wsChk ctl a.1 a.2.1 a.2.2 x = true :=
+    ∀ x ∈ p, wsChkL ctl a.1 a.2.1 a.2.2.1 a.2.2.2 x = true :=
   fun x hx => List.all_eq_true.mp (h x hx) a ha
 
 end L.Checker

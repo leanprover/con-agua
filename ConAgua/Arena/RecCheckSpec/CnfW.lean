@@ -265,11 +265,11 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : ASt
 theorem cnfW_ok (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m0 nfs) (hnm : H nm)
     (hq : q.toNat = iwTop m0) (k : Nat) :
     ∀ (m m' : Mem) (j rp rp' : Word),
-    cnfW k m nfo nfl nm q j rp = some (rp', m') → StageR dn vis fe m a → IWGrow m0 m →
+    cnfW k m nfo nfl nm q j rp = some (rp', m') → StageR vis fe m a → IWGrow m0 m →
     iwTop m = q.toNat + nfl.toNat → j ≤ nfl → rp ≤ j →
     decPL m (decNCN (truncM m0)) q.toNat rp.toNat =
       some ((nfs.take j.toNat).filter (fun e => e.ctor == decI nm)) →
-    StageR dn vis fe m' a ∧ IWGrow m0 m' ∧ iwTop m' = iwTop m ∧ MFr [] [] m m' ∧ rp' ≤ nfl ∧
+    StageR vis fe m' a ∧ IWGrow m0 m' ∧ iwTop m' = iwTop m ∧ MFr [] [] m m' ∧ rp' ≤ nfl ∧
       decPL m' (decNCN (truncM m0)) q.toNat rp'.toNat = some (nfs.filter (fun e => e.ctor == decI nm)) := by
   have hnfs0 : decPL (truncM m0) (decNCN (truncM m0)) nfo.toNat nfl.toNat = some nfs := hnfs
   have hlen := decPL_length _ hnfs0
@@ -295,7 +295,7 @@ theorem cnfW_ok (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m
   obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hnfs0 j.toNat hjl
   obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
   have hvm : iwN m (nfo.toNat + j.toNat) = some v := by
-    simp only [iwN, nat?, iwA] at hv0 ⊢; rw [hg.iwGet _ hvt]; exact hv0
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply] at hv0 ⊢; rw [hg.iwGet _ hvt]; exact hv0
   have hrd := iwN_rdW_at (w := nfo) (k := j.toNat) hvm hsz
   have hnj : nfo + UInt64.ofNat j.toNat = nfo + j := by simp
   rw [hnj] at hrd
@@ -348,9 +348,9 @@ theorem pslr_of_decPL {m0 m : Mem} (hg : IWGrow m0 m) {o l : Word} {xs : List Ne
 /-- **`class_ctor_of_nfs` refines the filter**: the entries of `nfs` (decoded below the tops) whose
 constructor is `nm`, a pointer slice decoded below the tops. -/
 theorem cnfF_ok (n : Nat) {m m' : Mem} {r : List Word} (h : cnfF n m nfo nfl nm = some (r, m'))
-    (hS : StageR dn vis fe m a) (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m nfs)
+    (hS : StageR vis fe m a) (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m nfs)
     (hnm : H nm) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       PSlR decNCN (nfs.filter (fun e => e.ctor == decI nm)) (r.headD 0) (r.tail.headD 0) m' := by
   simp only [cnfF] at h
   obtain ⟨⟨q, m1⟩, hal, h⟩ := of_K h rfl

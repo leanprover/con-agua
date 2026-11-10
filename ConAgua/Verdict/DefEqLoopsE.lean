@@ -43,7 +43,7 @@ theorem defeqListRev_refinesE (p : Prog) (hp : p.lookup "defeq_list_rev" = some 
     (hxt : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
     CoreSpecE p (n + 1) "defeq_list_rev" [mode, vis, d, ao, an, bo, bn]
-      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.reverse ys.reverse) s₀ a₀ :=
+      (defEqList (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat xs.reverse ys.reverse) s₀ a₀ :=
   RefE.coreSpecE (defeqListRev_specE p hp (n + 1) s₀ mode vis d ao an bo bn) trivial hkE
     (defeqListRev_ref p n hk F hF hn s₀ a₀ dn vis fe M eb mode d ao an bo bn hs xs ys hx hy hxt hyt)
 

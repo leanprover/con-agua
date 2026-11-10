@@ -23,9 +23,9 @@ import all ConAgua.Arena.IndPos
 @[expose] public section
 
 /-!
-# BlockRawRec: `ConRon.Arena.blockRawRec`, `ConRon.Arena.piDomsMentionAny`
+# BlockRawRec: `ConRon.Arena.blockIsRec`, `ConRon.Arena.piDomsMentionAny`
 
-The refinement theorems `piDomsMentionAny_refines`, `blockRawRec_refines` and the lemmas only they use.
+The refinement theorems `piDomsMentionAny_refines`, `blockIsRec_refines` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -187,13 +187,13 @@ theorem partsEView_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
   exact absurd rfl hne
 
 /-- **`pi_doms_mention_any`'s model refines `piDomsMentionAny`.** -/
-theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
+theorem pdmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (f e : Word) (mp : Std.HashMap EIdx Bool),
-    StageR dn vis fe m a → H e → DecB (fun m => decHL m no.toNat nl.toNat) m names →
+    StageR vis fe m a → H e → DecB (fun m => decHL m no.toNat nl.toNat) m names →
     no.toNat + nl.toNat ≤ iwTop m → maMR m mp →
     Sim (pdmW n m no nl f e) (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a
       (fun r b m' a' => r = [if b then 1 else 0] ∧ a' = a ∧ (∃ mp', maMR m' mp') ∧
-        StageR dn vis fe m' a ∧ IWGrow m m') := by
+        StageR vis fe m' a ∧ IWGrow m m') := by
   induction n with
   | zero => intro m a f e mp _ _ _ _ _ r m' h; simp [pdmW] at h
   | succ n ih =>
@@ -234,7 +234,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     cases n with
     | zero => simp [maConstWk] at hma
     | succ n' =>
-    obtain ⟨c, hrun, hbc, hM1, hS1, hg1⟩ := maConstW_ok n' dn fe vis m m1 a no nl _ b ws mp hma hS hty hws hwlt hM
+    obtain ⟨c, hrun, hbc, hM1, hS1, hg1⟩ := maConstW_ok n' (fun _ => none) fe vis m m1 a no nl _ b ws mp hma hS hty hws hwlt hM
     simp only [ConRon.Arena.piDomsMentionAny, htag, ite_true, StateT.run_bind, viewBind_run' _ a, hvb]
     rw [hnm']
     simp only [except_ok_bind, StateT.run_bind, hrun]
@@ -262,15 +262,15 @@ the names a handle slice below the top; any well-formed `mentions_any` memo on e
 @[refines ConRon.Arena.piDomsMentionAny]
 theorem piDomsMentionAny_refines (p : Prog) (hM : MaProg p)
     (hp : p.lookup "pi_doms_mention_any" = some piDomsMentionAny) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (no nl f e : Word) (names : List NIdx)
-    (mp : Std.HashMap EIdx Bool) (hS : StageR dn vis fe s₀.mem a₀) (he : H e)
+    (vis : Word) (fe : IFEnv) (no nl f e : Word) (names : List NIdx)
+    (mp : Std.HashMap EIdx Bool) (hS : StageR vis fe s₀.mem a₀) (he : H e)
     (hns : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names) (hnb : no.toNat + nl.toNat ≤ iwTop s₀.mem)
     (hmp : maMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_doms_mention_any" [no, nl, f, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ ∧
       r = [if AM.res (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ then 1 else 0] ∧
       AM.st (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ = a₀ ∧
-      (∃ mp', maMR s'.mem mp') ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ :=
+      (∃ mp', maMR s'.mem mp') ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ :=
   triple_post (pdm_spec p hM hp n s₀ no nl f e) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hr, hst, hM', hS', hg⟩ := Sim.run (pdmW_sim n s₀.mem a₀ f e mp hS he hns hnb hmp) hm
     ⟨hl, hok, hr, hst, hM', by rw [← hst] at hS'; rw [hst] at hS'; exact hS', hg⟩
@@ -280,15 +280,15 @@ def brrK (_n : Nat) (rest : Mem → Option (List Word × Mem)) : Option (List Wo
   | none => none
   | some (r, m1) => if r.headD 0 ≠ 0 then some ([1], m1) else pdmK3 (rest m1)
 
-/-- **The model of `block_raw_rec_member`.** -/
+/-- **The model of `block_is_rec_member`.** -/
 def brmW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | n + 1, m, no, nl, coff, clen =>
     if clen = 0 then some ([0], m)
     else brrK n (fun m1 => brmW n m1 no nl (coff + 1) (clen - 1))
-      (pdmW n m no nl CWF (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) coff) + 3)))
+      (pdmW n m no nl CWF (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) coff) + 3)))
 
-/-- **The model of `block_raw_rec_go`.** -/
+/-- **The model of `block_is_rec_go`.** -/
 def brgoW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | n + 1, m, no, nl, moff, mlen =>
@@ -307,7 +307,7 @@ theorem brrK_miss (h : ¬ r.headD 0 ≠ 0) : brrK n rest (some (r, m1)) = pdmK3 
 theorem brmW_nil (h : clen = 0) : brmW (n + 1) m no nl coff clen = some ([0], m) := by simp [brmW, h]
 theorem brmW_cons (h : clen ≠ 0) : brmW (n + 1) m no nl coff clen =
     brrK n (fun m1 => brmW n m1 no nl (coff + 1) (clen - 1))
-      (pdmW n m no nl CWF (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) coff) + 3))) := by
+      (pdmW n m no nl CWF (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) coff) + 3))) := by
   simp [brmW, h]
 theorem brgoW_nil (h : mlen = 0) : brgoW (n + 1) m no nl moff mlen = some ([0], m) := by simp [brgoW, h]
 theorem brgoW_cons (h : mlen ≠ 0) : brgoW (n + 1) m no nl moff mlen =
@@ -318,49 +318,49 @@ end arms
 attribute [ind_grind] brrK_hit brrK_miss brmW_nil brmW_cons brgoW_nil brgoW_cons
 
 theorem brm_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
-    (hp : p.lookup "block_raw_rec_member" = some blockRawRecMember) (n : Nat) :
+    (hp : p.lookup "block_is_rec_member" = some blockIsRecMember) (n : Nat) :
     ∀ (s₀ : St) (no nl coff clen : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_raw_rec_member" [no, nl, coff, clen]
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_is_rec_member" [no, nl, coff, clen]
     ⦃fun r s' => LocEq s' s₀ ∧ brmW n s₀.mem no nl coff clen = some (r, s'.mem); ⊤⦄ := by
   induction n with
-  | zero => intro s₀ no nl coff clen; rw [invoke_eq _ hp]; simp only [callFn, blockRawRecMember]; vcgen [exec] <;> grind
+  | zero => intro s₀ no nl coff clen; rw [invoke_eq _ hp]; simp only [callFn, blockIsRecMember]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ no nl coff clen
     rw [invoke_eq _ hp]
-    simp only [callFn, blockRawRecMember]
+    simp only [callFn, blockIsRecMember]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pdm_spec p hM hpd n, ih] <;>
-      finish (gen := 20) [rdW_eq, CWF]
+      finish (gen := 20) [rdW_eq, CWF, erRd]
 
 theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
-    (hm : p.lookup "block_raw_rec_member" = some blockRawRecMember)
-    (hp : p.lookup "block_raw_rec_go" = some blockRawRecGo) (n : Nat) :
+    (hm : p.lookup "block_is_rec_member" = some blockIsRecMember)
+    (hp : p.lookup "block_is_rec_go" = some blockIsRecGo) (n : Nat) :
     ∀ (s₀ : St) (no nl moff mlen : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_raw_rec_go" [no, nl, moff, mlen]
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_is_rec_go" [no, nl, moff, mlen]
     ⦃fun r s' => LocEq s' s₀ ∧ brgoW n s₀.mem no nl moff mlen = some (r, s'.mem); ⊤⦄ := by
   induction n with
-  | zero => intro s₀ no nl moff mlen; rw [invoke_eq _ hp]; simp only [callFn, blockRawRecGo]; vcgen [exec] <;> grind
+  | zero => intro s₀ no nl moff mlen; rw [invoke_eq _ hp]; simp only [callFn, blockIsRecGo]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ no nl moff mlen
     rw [invoke_eq _ hp]
-    simp only [callFn, blockRawRecGo]
+    simp only [callFn, blockIsRecGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, brm_spec p hM hpd hm n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- The post of the memo walks: the result a `Bool` word, the twin's state kept, a memo left. -/
-def RawR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m : Mem) (a : AState) :
+def RawR {vis : Word} {fe : IFEnv} (m : Mem) (a : AState) :
     List Word → Bool → Mem → AState → Prop :=
-  fun r b m' a' => r = [if b then 1 else 0] ∧ a' = a ∧ (∃ mp', maMR m' mp') ∧ StageR dn vis fe m' a ∧ IWGrow m m'
+  fun r b m' a' => r = [if b then 1 else 0] ∧ a' = a ∧ (∃ mp', maMR m' mp') ∧ StageR vis fe m' a ∧ IWGrow m m'
 
 /-- **One element of an `anyM`** (`brrK`): the element's test, then, if it fails, the rest. -/
-theorem brrK_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat}
+theorem brrK_sim {vis : Word} {fe : IFEnv} {n : Nat}
     {rest : Mem → Option (List Word × Mem)} {mo : Option (List Word × Mem)} {hd tl : AM Bool} {m : Mem}
-    {a : AState} (h1 : Sim mo hd a (RawR (dn := dn) (vis := vis) (fe := fe) m a))
-    (h2 : ∀ m1 mp1, StageR dn vis fe m1 a → IWGrow m m1 → maMR m1 mp1 →
-      Sim (rest m1) tl a (RawR (dn := dn) (vis := vis) (fe := fe) m1 a)) :
+    {a : AState} (h1 : Sim mo hd a (RawR (vis := vis) (fe := fe) m a))
+    (h2 : ∀ m1 mp1, StageR vis fe m1 a → IWGrow m m1 → maMR m1 mp1 →
+      Sim (rest m1) tl a (RawR (vis := vis) (fe := fe) m1 a)) :
     Sim (brrK n rest mo) (do let b ← hd; if b then pure true else tl) a
-      (RawR (dn := dn) (vis := vis) (fe := fe) m a) := by
+      (RawR (vis := vis) (fe := fe) m a) := by
   refine Sim.bindK (K := brrK n rest) (body := fun r1 m1 => if r1.headD 0 ≠ 0 then some ([1], m1)
     else pdmK3 (rest m1)) rfl (fun _ _ => rfl) h1 ?_
   rintro r1 b m1 a1 ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
@@ -376,16 +376,16 @@ theorem brrK_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rintro r2 b2 m2 a2 ⟨rfl, rfl, hM2, hS2, hg2⟩
     exact Sim.ret ⟨rfl, rfl, hM2, hS2, hg1.trans hg2⟩
 
-/-- **`block_raw_rec_member`'s model refines a member's `ctors.anyM`.** -/
-theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
+/-- **`block_is_rec_member`'s model refines a member's `ctors.anyM`.** -/
+theorem brmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (coff clen : Word) (cs : List (IConstantVal × Nat))
     (mp : Std.HashMap EIdx Bool),
-    StageR dn vis fe m a → DecB (fun m => decPL m (decCN m) coff.toNat clen.toNat) m cs →
+    StageR vis fe m a → DecB (fun m => decPL m (decCN m) coff.toNat clen.toNat) m cs →
     (clen = 0 ∨ coff.toNat + clen.toNat ≤ iwTop m) → DecB (fun m => decHL m no.toNat nl.toNat) m names →
     no.toNat + nl.toNat ≤ iwTop m → maMR m mp →
     Sim (brmW n m no nl coff clen)
       (cs.anyM fun c => ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) a
-      (RawR (dn := dn) (vis := vis) (fe := fe) m a) := by
+      (RawR (vis := vis) (fe := fe) m a) := by
   induction n with
   | zero => intro m a coff clen cs mp _ _ _ _ _ _ r m' h; simp [brmW] at h
   | succ n ih =>
@@ -404,21 +404,21 @@ theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     obtain ⟨htyl, htye⟩ := partsCVType hcv (UInt64.toNat_ofNat_of_lt' hcvb)
     rw [hw, hcw, partsAnyM_cons]
     have h1 := pdmW_sim (names := names) n m a CWF _ mp hS htyl hns hnb hM
-    rw [CWF_eq, show decE (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 3)) = cv.type from htye] at h1
+    rw [CWF_eq, show decE (erRd m (UInt64.ofNat cvp + 3)) = cv.type from htye] at h1
     exact brrK_sim h1 fun m1 mp1 hS1 hg1 hM1 => ih m1 a (coff + 1) (clen - 1) cs' mp1 hS1
       (hcs'.grow decCN_mono hg1).1 (Or.inr (hcs'.grow decCN_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1)
       (Nat.le_trans hnb hg1.iw) hM1
 
-/-- **`block_raw_rec_go`'s model refines the members' `anyM`.** -/
-theorem brgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
+/-- **`block_is_rec_go`'s model refines the members' `anyM`.** -/
+theorem brgoW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (moff mlen : Word) (ms : List MemberShape)
     (mp : Std.HashMap EIdx Bool),
-    StageR dn vis fe m a → DecB (fun m => decPL m (decMS m) moff.toNat mlen.toNat) m ms →
+    StageR vis fe m a → DecB (fun m => decPL m (decMS m) moff.toNat mlen.toNat) m ms →
     (mlen = 0 ∨ moff.toNat + mlen.toNat ≤ iwTop m) → DecB (fun m => decHL m no.toNat nl.toNat) m names →
     no.toNat + nl.toNat ≤ iwTop m → maMR m mp →
     Sim (brgoW n m no nl moff mlen)
       (ms.anyM fun ms => ms.ctors.anyM fun c => ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) a
-      (RawR (dn := dn) (vis := vis) (fe := fe) m a) := by
+      (RawR (vis := vis) (fe := fe) m a) := by
   induction n with
   | zero => intro m a moff mlen ms mp _ _ _ _ _ _ r m' h; simp [brgoW] at h
   | succ n ih =>
@@ -434,7 +434,7 @@ theorem brgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     obtain ⟨pc, ms0, ms', rfl, hw, hpb, hm0, hms'⟩ := partsPSl_cons hms hl
     have hd0 : decMS (truncM m) pc = some ms0 := hm0
     simp only [decMS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd0
-    obtain ⟨cvp, -, cvT, -, nIdx, -, ctors, hct, rfl⟩ := hd0
+    obtain ⟨cvp, -, cvT, -, dp, -, decl, -, nIdx, -, ctors, hct, rfl⟩ := hd0
     obtain ⟨o, l, ho, hl', hdc, hcb⟩ := partsAt decCN_mono hct
     have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -449,7 +449,7 @@ theorem brgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
       ih m1 a (moff + 1) (mlen - 1) ms' mp1 hS1 (hms'.grow decMS_mono hg1).1
         (Or.inr (hms'.grow decMS_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1) (Nat.le_trans hnb hg1.iw) hM1
 
-/-- **The model of `block_raw_rec`** (at exec fuel `n + 1`). -/
+/-- **The model of `block_is_rec`** (at exec fuel `n + 1`). -/
 def brrW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
   match memberNamesW n m p with
   | none => none
@@ -462,39 +462,39 @@ theorem brr_spec (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" = some iwA
     (hc : p.lookup "member_names_copy" = some memberNamesCopy)
     (hn : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
     (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
-    (hm : p.lookup "block_raw_rec_member" = some blockRawRecMember)
-    (hg : p.lookup "block_raw_rec_go" = some blockRawRecGo)
-    (hp : p.lookup "block_raw_rec" = some blockRawRec) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_raw_rec" [q]
+    (hm : p.lookup "block_is_rec_member" = some blockIsRecMember)
+    (hg : p.lookup "block_is_rec_go" = some blockIsRecGo)
+    (hp : p.lookup "block_is_rec" = some blockIsRec) (n : Nat) (s₀ : St) (q : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_is_rec" [q]
     ⦃fun r s' => LocEq s' s₀ ∧ brrW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
-  simp only [callFn, blockRawRec]
+  simp only [callFn, blockIsRec]
   sym only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       blockShapeMemberNames_spec p ha hc hn n, brgo_spec p hM hpd hm hg n] <;>
     finish (gen := 20) [brrW, rdW_eq]
 
-/-- **`block_raw_rec` refines `blockRawRec`** (through `mentions_any_const`'s walk; the members'
+/-- **`block_is_rec` refines `blockIsRec`** (through `mentions_any_const`'s walk; the members'
 slice of the shape record below the pool's top, `hsrc`; any well-formed `mentions_any` memo on
 entry). -/
-@[refines ConRon.Arena.blockRawRec]
-theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" = some iwAlloc)
+@[refines ConRon.Arena.blockIsRec]
+theorem blockIsRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "member_names_copy" = some memberNamesCopy)
     (hn : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
     (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
-    (hm : p.lookup "block_raw_rec_member" = some blockRawRecMember)
-    (hg : p.lookup "block_raw_rec_go" = some blockRawRecGo)
-    (hp : p.lookup "block_raw_rec" = some blockRawRec) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q : Word) (bs : BlockShape)
-    (mp : Std.HashMap EIdx Bool) (hS : StageR dn vis fe s₀.mem a₀)
+    (hm : p.lookup "block_is_rec_member" = some blockIsRecMember)
+    (hg : p.lookup "block_is_rec_go" = some blockIsRecGo)
+    (hp : p.lookup "block_is_rec" = some blockIsRec) (n : Nat) (s₀ : St) (a₀ : AState)
+    (vis : Word) (fe : IFEnv) (q : Word) (bs : BlockShape)
+    (mp : Std.HashMap EIdx Bool) (hS : StageR vis fe s₀.mem a₀)
     (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
     (hsrc : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → o + l ≤ iwTop s₀.mem)
     (hmp : maMR s₀.mem mp) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_raw_rec" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockRawRec ⟨bs⟩) a₀ ∧
-      AM.st (ConRon.Arena.blockRawRec ⟨bs⟩) a₀ = a₀ ∧
-      r = [if AM.res (ConRon.Arena.blockRawRec ⟨bs⟩) a₀ then 1 else 0] ∧
-      (∃ mp', maMR s'.mem mp') ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_is_rec" [q]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockIsRec bs) a₀ ∧
+      AM.st (ConRon.Arena.blockIsRec bs) a₀ = a₀ ∧
+      r = [if AM.res (ConRon.Arena.blockIsRec bs) a₀ then 1 else 0] ∧
+      (∃ mp', maMR s'.mem mp') ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (brr_spec p hM ha hc hn hpd hm hg hp n s₀ q) ?_
   rintro r s' ⟨hl, hm'⟩
   have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
@@ -530,7 +530,7 @@ theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc"
   have hroom := memberNamesW_room h1 hsz
   have hk : bs.k = l.toNat := by rw [BlockShape.k, decPL_length _ hdm']
   obtain ⟨hlr, -, -⟩ := partsIwRd hlw (show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega)
-  have hS1 : StageR dn vis fe m1 a₀ := stage_frame_iw hS hf1 (by
+  have hS1 : StageR vis fe m1 a₀ := stage_frame_iw hS hf1 (by
     rw [← ht1, hk]; rw [hlr, ofNat_toNat_word] at hroom; simp only [iwTop] at hroom ⊢; omega)
   subst hr1
   simp only [List.headD_cons, List.tail_cons] at hm'
@@ -553,7 +553,7 @@ theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc"
   obtain ⟨b, a', hrun, hR⟩ := hsim r2 m2 h2
   obtain ⟨hr2, ha', hM2, hS2, hg2⟩ := hR
   subst ha'
-  have hrun' : (ConRon.Arena.blockRawRec ⟨bs⟩).run a' = .ok (b, a') := hrun
+  have hrun' : (ConRon.Arena.blockIsRec bs).run a' = .ok (b, a') := hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   rw [hm2] at hM2 hS2 hg2
   refine ⟨hl, hok, hst, by rw [hres, hr2]; rfl, hM2, hS2, hg1.trans hg2⟩

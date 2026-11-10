@@ -106,28 +106,6 @@ section tele
 variable (m : Mem) (a : AState) (hR : ArenaR m a)
 include hR
 
-@[refines ConRon.Arena.Frontend.piResultD]
-theorem piResW_ok : ∀ (n : Nat) (f h r : Word), piResW n m f h = some r →
-    (ConRon.Arena.Frontend.piResultD f.toNat (decE h)).run a = .ok (decE r, a) := by
-  intro n
-  induction n with
-  | zero => intro f h r hw; simp [piResW] at hw
-  | succ n ih =>
-    intro f h r hw
-    simp only [piResW] at hw
-    split at hw; cases hw; rename_i hf
-    split at hw; cases hw; rename_i hne
-    obtain ⟨v, hv, hr⟩ := view_ok' m a hR h hne
-    rw [fuel_pred hf, ConRon.Arena.Frontend.piResultD, run_bind _ _ a _ hv]
-    split at hw
-    · rename_i h6
-      obtain ⟨ty, rfl⟩ := viewR_forall hr h6
-      exact ih _ _ _ hw
-    · rename_i h6
-      cases hw
-      cases v <;> (try rfl)
-      exact absurd (viewR_head hr) h6
-
 @[refines ConRon.Arena.Frontend.indPiTeleLen]
 theorem teleW_ok : ∀ (n : Nat) (f h r : Word), teleW n m f h = some r →
     (ConRon.Arena.Frontend.indPiTeleLen f.toNat (decE h)).run a = .ok (r.toNat, a) ∧

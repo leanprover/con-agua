@@ -43,7 +43,7 @@ theorem decHL_truncM_bound {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k
     (h : decHL (truncM m) o l = some xs) (hl : l ≠ 0) : o + l ≤ iwTop m := by
   have := decHL_getI h (l - 1) (by omega)
   simp only [iwH, hd?] at this
-  cases hw : (iwA (truncM m))[o + (l - 1)]? with
+  cases hw : iwA (truncM m) (o + (l - 1)) with
   | none => simp [hw] at this
   | some w =>
     have := (truncM_iw_get hw).1

@@ -17,10 +17,10 @@ carries no structure, so the ROM holds them a second time, **structured** (`romC
 `romData` between the reserved names and the item stream; `ConAgua/Rom/CIRead.lean` reads it):
 
 * a table of `ciSlots` 8-byte offsets, relative to the region's start: slots `0‥4` the raw basis
-  blocks (`BasisKind.decls`, kinds `eqK`, `natK`, `emptyK`, `falseK`, `quotK`), `5‥9` the
-  annotated ones (`declsA`), `10‥17` the `rom_ci` constants (`romCiT`'s order), `18‥27` the
-  `rom_cv` constant values (`romCvT`'s order), `28‥29` the `rom_expr_pin` expressions, `30` the
-  pinned `And` block (`andPin`, `rom_and_pin`);
+  blocks (`BasisKind.decls`, kinds `eqK`, `natK`, `emptyK`, `falseK`, `quotK`), `5‥11` the
+  `rom_ci` constants (`romCiT`'s order), `12‥21` the `rom_cv` constant values (`romCvT`'s
+  order), `22‥23` the `rom_expr_pin` expressions, `24` the pinned `And` block (`andPin`,
+  `rom_and_pin`);
 * the entries: a block is its length, then its constants at ONE expression memo (`internCIList`);
   a constant, a constant value or an expression is encoded at a fresh memo (`internCI`,
   `internCV`, `internExpr`).
@@ -32,15 +32,12 @@ parameters, type), then the kind's parts. A constant: its kind (`decCI`'s number
 projection table has no encoding: none of these constants is one), the constant value, then
 
 * defn: the value, the hint kind (`0` opaque, `1` abbrev, `2` regular) and its height;
-* ind: `eta`, `etaParams`, `etaFields`, `unitlike`, `unitParams`, `ruleK`, `nparams`, the `sortZ`
-  tag (`0` never, `1` ifAllZero), then the names `etaCtor`, `all` (count, names), `ctors` (count,
-  names), and the `sortZ` names (count, names; the twin keeps them as values and interns none, the
-  reader interns them last: for the pinned `Quot`, the one name `u` is a level parameter already
-  interned);
+* ind: `eta`, `etaParams`, `etaFields`, `unitlike`, `unitParams`, `nIdx`, `nparams`, then the
+  names `etaCtor`, `all` (count, names), `ctors` (count, names);
 * ctor: `numParams`, `numFields`;
-* rec: `majorIdx`, `numParams`, the rule count, per rule: `ctor`, `nfields`, `ctorParams`, `k`,
-  `eta`, the fire tag (`0` plain, `1` nested: the level count, the levels, the pin count, the pins
-  at the block's memo), `rhs`.
+* rec: `majorIdx`, `numParams`, `isK`, the rule count, per rule: `ctor`, `nfields`, the fire tag
+  (`0` plain; `1` nested: the level count, the levels, the pin count, the pins at the block's
+  memo; `2` levels: the level count, the levels), `rhs`.
 -/
 
 open ConRon.Arena
@@ -70,16 +67,12 @@ def bw (b : Bool) : List UInt8 := u64B (if b then 1 else 0)
 
 /-- An inductive's capabilities (no expression). -/
 def encCaps (c : ConLeche.IndCaps) : List UInt8 :=
-  let (tag, zs) := match c.sortZ with
-    | .never => (0, [])
-    | .ifAllZero ns => (1, ns)
   bw c.eta ++ u64B c.etaParams ++ u64B c.etaFields ++ bw c.unitlike ++ u64B c.unitParams ++
-    bw c.ruleK ++ u64B c.nparams ++ u64B tag ++ encName c.etaCtor ++ encNameL c.all ++
-    encNameL c.ctors ++ encNameL zs
+    u64B c.nIdx ++ u64B c.nparams ++ encName c.etaCtor ++ encNameL c.all ++ encNameL c.ctors
 
 /-- A recursor rule at the memo `seen`. -/
 def encRule (seen : List ConLeche.Expr) (rl : ConLeche.RecRule) : List UInt8 × List ConLeche.Expr :=
-  let hd := encName rl.ctor ++ u64B rl.nfields ++ u64B rl.ctorParams ++ bw rl.k ++ bw rl.eta
+  let hd := encName rl.ctor ++ u64B rl.nfields
   match rl.fire with
   | .plain =>
     let r := encExprM seen rl.rhs
@@ -88,6 +81,9 @@ def encRule (seen : List ConLeche.Expr) (rl : ConLeche.RecRule) : List UInt8 × 
     let p := encExprsM seen pins
     let r := encExprM p.2 rl.rhs
     (hd ++ u64B 1 ++ encLevels lvls ++ u64B pins.length ++ p.1 ++ r.1, r.2)
+  | .levels lvls =>
+    let r := encExprM seen rl.rhs
+    (hd ++ u64B 2 ++ encLevels lvls ++ r.1, r.2)
 
 /-- Rules at one memo. -/
 def encRules (seen : List ConLeche.Expr) : List ConLeche.RecRule → List UInt8 × List ConLeche.Expr
@@ -111,10 +107,10 @@ def encCI (seen : List ConLeche.Expr) : ConLeche.ConstantInfo → List UInt8 × 
   | .thmInfo v => let r := encCV seen v; (u64B 2 ++ r.1, r.2)
   | .indInfo v c => let r := encCV seen v; (u64B 3 ++ r.1 ++ encCaps c, r.2)
   | .ctorInfo v nP nF => let r := encCV seen v; (u64B 4 ++ r.1 ++ u64B nP ++ u64B nF, r.2)
-  | .recInfo v mI rP rs =>
+  | .recInfo v mI rP isK rs =>
     let r := encCV seen v
     let x := encRules r.2 rs
-    (u64B 5 ++ r.1 ++ u64B mI ++ u64B rP ++ u64B rs.length ++ x.1, x.2)
+    (u64B 5 ++ r.1 ++ u64B mI ++ u64B rP ++ bw isK ++ u64B rs.length ++ x.1, x.2)
 
 /-- Constants at one memo. -/
 def encCIsM (seen : List ConLeche.Expr) : List ConLeche.ConstantInfo → List UInt8 × List ConLeche.Expr
@@ -132,7 +128,7 @@ def basisKinds : List ConLeche.BasisKind := [.eqK, .natK, .emptyK, .falseK, .quo
 
 /-- `rom_ci`'s constants by id (`romCiT`). -/
 def romCiVals : List ConLeche.ConstantInfo :=
-  [ConLeche.eqA, ConLeche.natA, ConLeche.iffA, ConLeche.iffIntroA, ConLeche.iffRecA,
+  [ConLeche.natA, ConLeche.iffA, ConLeche.iffIntroA, ConLeche.iffRecA,
    ConLeche.nonemptyA, ConLeche.nonemptyIntroA, ConLeche.nonemptyRecA]
 
 /-- `rom_cv`'s constant values by id (`romCvT`). -/
@@ -147,14 +143,13 @@ def romExprVals : List ConLeche.Expr := [ConLeche.reduceNatDeclPin, ConLeche.red
 /-- The entries, in slot order. -/
 def ciEntries : List (List UInt8) :=
   basisKinds.map (fun k => encBlock (ConLeche.BasisKind.decls k)) ++
-  basisKinds.map (fun k => encBlock (ConLeche.BasisKind.declsA k)) ++
   romCiVals.map (fun c => (encCI [] c).1) ++
   romCvVals.map (fun v => (encCV [] v).1) ++
   romExprVals.map (fun e => (encExprM [] e).1) ++
   [encBlock ConLeche.andPin]
 
 /-- The number of slots. -/
-def ciSlots : Nat := 31
+def ciSlots : Nat := 25
 
 /-- Slot offsets (relative to the region's start), after a table of `n` slots. -/
 def ciTable (start : Nat) : List (List UInt8) → List UInt8

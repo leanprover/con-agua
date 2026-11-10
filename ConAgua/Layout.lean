@@ -32,7 +32,7 @@ use) and the stand-alone example programs' arrays (`L.Examples.HIST`, `L.Scan.Ut
 of the array in every layout the checker runs in; the compiler then drops the bounds check of a
 constant index below `k`. The entry stubs establish it and their proofs prove it: `ca_setup` and
 `ca_check_seq` give every array a whole slot (except `OUT`, `CTLF`, which have no minimum, and
-`HDRF`'s 132 words), and `ca_check_b` gives the owned arrays a slot and tests every frozen array's
+`HDRF`'s 138 words), and `ca_check_b` gives the owned arrays a slot and tests every frozen array's
 length in the buffer, declining below the minimum; an array that is neither frozen nor owned gets no
 memory there, so it has no minimum. The minima are the largest constant index the program uses,
 plus one (`CTL`: 256, `L.Checker.ctlMin`).
@@ -152,32 +152,33 @@ declare_arrays checkerArrays
   | /-- The level-equality memo (`lqSch`). -/ Arena.LQ : word min 3 := 105
   | /-- The level-list-equality memo (`lsqSch`). -/ Arena.LSQ : word min 3 := 106
   -- the environment (`Arena/Tiers.lean`)
-  | /-- The pin table. -/ Arena.PINS : word min 55 := 128
-  | /-- The projection-table rows of `anonymous` names (`tblArr`). -/ Arena.TIXA : word tiered := 129
-  | /-- The projection-table rows of `str` names. -/ Arena.TIXS : word tiered := 130
-  | /-- The projection-table rows of `num` names. -/ Arena.TIXN : word tiered := 131
-  | /-- The environment index rows of tier-0 `anonymous` names (`rowArr`). -/
+  | /-- The pin table. -/ Arena.PINS : word min 72 := 128
+  | /-- The frozen stream index's projection-table rows of `anonymous` names (`Env.lean`). -/
+    Arena.TIXA : word := 129
+  | /-- The stream index's table rows of `str` names. -/ Arena.TIXS : word := 130
+  | /-- The stream index's table rows of `num` names. -/ Arena.TIXN : word := 131
+  | /-- The frozen stream index's constant rows of `anonymous` names (`Env.lean`). -/
     Arena.EIXA : word := 132
-  | /-- The environment index rows of tier-0 `str` names. -/ Arena.EIXS : word := 133
-  | /-- The environment index rows of tier-0 `num` names. -/ Arena.EIXN : word := 134
-  | /-- The record pointer of every constant, oldest first. -/ Arena.ECON : word := 135
-  | /-- The environment's record pool (`EnvRec.lean`). -/ Arena.EREC : word := 136
-  | /-- The pending checks. -/ Arena.PEND : word := 137
+  | /-- The stream index's constant rows of `str` names. -/ Arena.EIXS : word := 133
+  | /-- The stream index's constant rows of `num` names. -/ Arena.EIXN : word := 134
+  | /-- The environment's record pool (`EnvRec.lean`; tier 1: a job's own records). -/
+    Arena.EREC : word tiered := 136
+  | /-- The stream index's first counter of every record (`IStreamIndex.firsts`). -/
+    Arena.FIRSTS : word := 137
   | /-- The ROM interner's handle stack. -/ Rom.RSTK : word := 138
   | /-- The memo of the ROM expression interner. -/ Rom.RMEMO : word := 139
-  | /-- The environment index rows of tier-1 `anonymous` names (`EIXA`'s scratch tier, chosen by
-    `selArr`, not `tierA`). -/ Arena.EIXA1 : word := 140
-  | /-- The environment index rows of tier-1 `str` names. -/ Arena.EIXS1 : word := 141
-  | /-- The environment index rows of tier-1 `num` names. -/ Arena.EIXN1 : word := 142
-  | /-- The projection tables, by slot, oldest first. -/ Arena.ETAB : word := 143
+  | /-- A job's own constant rows of `anonymous` names, by the name's tier (`Env.lean`). -/
+    Arena.OIXA : word tiered := 140
+  | /-- A job's own constant rows of `str` names. -/ Arena.OIXS : word tiered := 141
+  | /-- A job's own constant rows of `num` names. -/ Arena.OIXN : word tiered := 142
+  | /-- A job's own table rows of `anonymous` names, by the name's tier (`Env.lean`). -/
+    Arena.OTXA : word tiered := 146
+  | /-- A job's own table rows of `str` names. -/ Arena.OTXS : word tiered := 147
+  | /-- A job's own table rows of `num` names. -/ Arena.OTXN : word tiered := 148
   -- walk stacks and walk-local memos
   | /-- The spine stack (also the substitution slice of `instantiateList`, `ILSPN`). -/
     Arena.SPN : word := 144
   | /-- The binder stack. -/ Arena.BSTK : word := 145
-  | /-- The promotion's name memo. -/ Arena.PNM : word := 146
-  | /-- The promotion's level memo. -/ Arena.PLM : word := 147
-  | /-- The promotion's level-list memo. -/ Arena.PLSM : word := 148
-  | /-- The promotion's expression memo. -/ Arena.PEM : word := 149
   | /-- The handles of the ROM interner memo's entries, as a set. -/ Rom.RSET : word := 150
   | /-- The scope walk's memo (`wscopedBGo`), also the `apd` walk's (`APDM`). -/
     Arena.WSM : word min 3 := 151

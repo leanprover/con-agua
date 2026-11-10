@@ -30,22 +30,15 @@ namespace L.Arena
 
 /-! ## Records -/
 
-theorem erecP_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (EREC : TieredArray) ∉ A) (hC : (129 : Word) ∉ C) : erecP m' = erecP m := by
-  unfold erecP erecTop
-  rw [hf.arr EREC hA (by decide), hf.ctl 129 hC]
-
 /-- The kind word of a decoded record says whether it is an inductive. -/
-theorem decCI_indK {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
-    (hsz : b.size < 2 ^ 63) :
-    (rdW b q = 3 → ∃ cv caps, ci = .indInfo cv caps) ∧
-    (rdW b q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
-  cases hq : a[q.toNat]? with
+theorem decCI_indK {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
+    (rd q = 3 → ∃ cv caps, ci = .indInfo cv caps) ∧
+    (rd q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
+  cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
-  have hrd : rdW b q = w := by
-    have := rdW_ext hab hsz (k := 0) (by decide) (by simpa using hq); simpa using this
+  have hrd : rd q = w := hR.rd _ _ hq
   rw [hrd]
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
   constructor
@@ -129,10 +122,10 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b)
     (hus : HW us) (hcw : HW c) (hwtb : HW wtb)
     (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
-    (hcvc : decCI (erecP s₀.mem) dn pc.toNat = some (.ctorInfo cvc np nf))
+    (hcvc : decCI (erecP s₀.mem) pc.toNat = some (.ctorInfo cvc np nf))
     (ha : SpineR s₀.mem ao an aargs) (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (SetG p n) (secwtbE p (n + 1) s₀.mem mode vis d b us c pc ao an wtb)
-      (setWtbT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
+      (setWtbT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
         aargs.toList (decE wtb)) a₀ (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hR := hS.arena.base
@@ -164,14 +157,14 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
   dsimp only [secwtbE.k_env_find]
   by_cases h0 : r₂.headD 0 = 0
   · rw [ite_eq_left h0]
-    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     exact RefE.of_run_eq (setWtbT_other _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv caps e => by rw [hnone] at e; cases e)) hl
   rw [ite_eq_right h0]
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
-  have hind := decCI_indK hci (erecP_ext _) hS.erec
-  by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 3
+  have hind := decCI_indK (erRdOK _) hci
+  by_cases h4 : erRdT s₀.mem (r₂.tail.headD 0) ≠ 3
   · rw [ite_eq_left h4]
     exact RefE.of_run_eq (setWtbT_other _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e))) hl
@@ -182,7 +175,8 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppArgs_callW hq.leaf.core.spine hS hwtb h)
     fun r₃ m₃ ⟨hf3, hg3, hr30, htop3, targs, hargs, hsp⟩ => ?_
   have hS₃ := hS.frame_stk hf3 (by simp) (by simp)
-  have hep : erecP m₃ = erecP s₀.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp)
+  have hep : erecP m₃ = erecP s₀.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp [EREC, SPN, tier1]) (by simp)
+    (by simp)
   simp only [secwtbE.k_get_app_args]
   refine RefE.of_run_eq (setWtbT_ind _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
     (by rw [hfind', hci_eq]) targs hargs) ?_
@@ -277,7 +271,7 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
     (eb mode d a b wtb : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hwtb : HW wtb) :
     RefE (SetG p n) (secwE p (n + 1) s₀.mem mode vis d a b wtb)
-      (structEtaCertWith (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decE wtb))
+      (structEtaCertWith (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b) (decE wtb))
       a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hR := hS.arena.base
@@ -308,14 +302,14 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   dsimp only [secwE.k_env_find]
   by_cases h0 : r₂.headD 0 = 0
   · rw [ite_eq_left h0]
-    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv np nf e => by rw [hnone] at e; cases e)) hl
   rw [ite_eq_right h0]
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
-  have hctor := decCI_ctorF hci (erecP_ext _) hS.erec
-  by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 4
+  have hctor := decCI_ctorF (erRdOK _) hci
+  by_cases h4 : erRdT s₀.mem (r₂.tail.headD 0) ≠ 4
   · rw [ite_eq_left h4]
     exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv np nf e => hctor.2 h4 cv np nf (by rw [hfind'] at e; exact Option.some.inj e))) hl
@@ -326,16 +320,19 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppArgs_callW hq.leaf.core.spine hS ha h)
     fun r₃ m₃ ⟨hf3, hg3, hr30, htop3, aargs, hargs, hsp⟩ => ?_
   have hS₃ := hS.frame_stk hf3 (by simp) (by simp)
-  have hep : erecP m₃ = erecP s₀.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp)
-  have herec : m₃.arr64 EREC = s₀.mem.arr64 EREC := hf3.1 EREC (by simp [EREC, SPN]) (by decide)
+  have hep : erecP m₃ = erecP s₀.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp [EREC, SPN, tier1]) (by simp)
+    (by simp)
+  have herec : ∀ x : Word, rdW (m₃.arr64 (tierA EREC (x >>> 40))) (x &&& 0xFFFFFFFFFF) = erRdT s₀.mem x :=
+    erRdT_congr (hf3.1 EREC (by simp [EREC, SPN]) (by decide))
+      (hf3.1 (tier1 EREC) (by simp [EREC, SPN, tier1]) (by decide))
   refine RefE.of_run_eq (setWith_ctor _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv cvc _ _
     (by rw [hfind', hci_eq]) aargs hargs) ?_
   have hlen : aargs.length = (r₃.tail.headD 0).toNat := by simpa using hsp.size
   have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hS.spn
   simp only [secwE.k_get_app_args, herec]
-  by_cases hcnt : ¬ r₃.tail.headD 0 < rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6) ∧
-      r₃.tail.headD 0 - rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6) =
-        rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 5)
+  by_cases hcnt : ¬ r₃.tail.headD 0 < erRdT s₀.mem (r₂.tail.headD 0 + 6) ∧
+      r₃.tail.headD 0 - erRdT s₀.mem (r₂.tail.headD 0 + 6) =
+        erRdT s₀.mem (r₂.tail.headD 0 + 5)
   · rw [ite_eq_right (fun h => h.elim hcnt.1 (fun h' => h' hcnt.2))]
     rw [ite_eq_left (by rw [hlen]; exact (count_iff _ _ _).mpr hcnt)]
     cases n with
@@ -352,7 +349,7 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
             (by have := hsp.bound; omega)
           rw [htop3, ← hr30]; omega))
   · rw [ite_eq_left (by
-      by_cases hc1 : r₃.tail.headD 0 < rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6)
+      by_cases hc1 : r₃.tail.headD 0 < erRdT s₀.mem (r₂.tail.headD 0 + 6)
       · exact .inl hc1
       · exact .inr (fun e => hcnt ⟨hc1, e⟩))]
     rw [ite_eq_right (by rw [hlen, count_iff]; exact hcnt)]
@@ -377,7 +374,7 @@ theorem sec_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
     (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (SetG p n) (secE p (n + 1) s₀.mem mode vis d a b)
-      (structEtaCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (structEtaCert (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hK := hk n (Nat.le_refl _)
   simp only [secE]
@@ -417,7 +414,7 @@ theorem setCert_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
     (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "struct_eta_cert" [mode, vis, d, a, b]
-      (structEtaCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
+      (structEtaCert (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (secE_spec p hq.setCert hq.setWith hq.setWtb hq.setGo hq.setTail (n + 1) s₀ mode vis
     d a b) (sec_ref p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)

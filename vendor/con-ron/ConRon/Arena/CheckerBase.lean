@@ -35,7 +35,7 @@ not twinned there (the store layer needed the representation, not the
 predicates); the declaration front door is their only reader, so they are
 here.  Each is a handle comparison or one `viewN`. -/
 
-/-- con-leche: ConLeche/Kernel/Level.lean:211-214 Name.nodup — no duplicates
+/-- con-leche: ConLeche/Kernel/Level.lean:227-230 Name.nodup — no duplicates
 in a list of name HANDLES.  A name comparison is a handle comparison (DESIGN
 §8.3: `denoteN` is injective). -/
 def nameNodup : List NIdx → Bool
@@ -56,8 +56,8 @@ The parameter list is read BACK once at the entry, as `instLPFast` reads its
 own functions on transient values, and DESIGN §8.3's lesson 4 says a level
 algorithm runs on trees. -/
 
-/-- con-leche: ConLeche/Kernel/Level.lean:233-249 Expr.allLevelParamsDefined
-con-leche: ConLeche/Kernel/Level.lean:280-313 Expr.allLevelParamsDefinedGo
+/-- con-leche: ConLeche/Kernel/Level.lean:249-265 Expr.allLevelParamsDefined
+con-leche: ConLeche/Kernel/Level.lean:296-329 Expr.allLevelParamsDefinedGo
 The memoized walk.  `params` are transient names (see the section note); the
 memo is keyed on the node, which is what makes a shared subterm cost one
 probe. -/
@@ -93,7 +93,7 @@ def allLevelParamsDefinedGo (params : List ConLeche.Name)
         | .proj _ _ e => allLevelParamsDefinedGo params memo fuel e
       pure (p.1, p.2.insert h p.1)
 
-/-- con-leche: ConLeche/Kernel/Level.lean:386-388 Expr.allLevelParamsDefinedFast
+/-- con-leche: ConLeche/Kernel/Level.lean:402-404 Expr.allLevelParamsDefinedFast
 The executed `allLevelParamsDefined`: one memoized DAG walk, at the parameter
 list read back once. -/
 def allLevelParamsDefined (lps : List NIdx) (e : EIdx) : AM Bool := do
@@ -239,20 +239,27 @@ def unresolvedConstsErrorL (strOk : Bool) (where_ : String) (e : EIdx) :
 
 /-! ## The per-declaration constant check -/
 
-/-- con-leche: ConLeche/Kernel/CheckerBase.lean:102-121 checkConstantVal
-con-leche: ConLeche/Kernel/DeclCheck.lean:361-379 checkConstantValF
-Checks common to all declarations: fresh name, well-formed universe
-parameters, and a type that is a type and mentions only declared parameters.
-Returns nothing: the constant is stored as declared (con-leche's task #342).
-
-The name is read back for four of the six messages — DESIGN §8.3's "readback
-happens only for the environment index's error text". -/
-def checkConstantVal (mode : CheckMode) (fe : IFEnv) (cv : IConstantVal) :
-    AM Unit := do
+/-- con-leche: ConLeche/Kernel/CheckerBase.lean:102-126 checkConstantVal
+con-leche: ConLeche/Kernel/DeclCheck.lean:361-383 checkConstantValF
+con-leche: ConLeche/Cached/ParsedC.lean:42-66 checkConstantValC
+Checks common to all declarations: fresh name, no reserved name, a certified
+operation's name only at a definition (`allowOp`, the cited default `false`,
+spelled at every call as the Rust must), a literal's name only at its shape,
+well-formed universe parameters, and a type that is a type and mentions only
+declared parameters.  Returns nothing: the constant is stored as declared.
+The messages drop con-leche's interpolated name (§3.1), except the certified
+operation's, which names it as upstream's does (upstream's `.olean` gate reads
+it): the name read back from the store. -/
+def checkConstantVal (mode : CheckMode) (fe : IFEnv) (cv : IConstantVal)
+    (allowOp : Bool) : AM Unit := do
   if (fe.find? cv.name).isSome then
     fail (.invalid "duplicate declaration")
   if (← reservedBasisNames).contains cv.name then
     fail (.invalid "reserved basis name")
+  if (← natOpName cv.name) && !allowOp then
+    fail (.invalid s!"a certified Nat operation's name, not a definition: {← readName cv.name}")
+  unless ← litShapeOk (.axiomInfo cv) do
+    fail (.notImplemented "a declaration at a literal's name with another shape")
   unless nameNodup cv.levelParams do
     fail (.invalid "duplicate universe parameters")
   unless ← looseBVarsBoundedFast coreWalkFuel 0 cv.type do
@@ -263,59 +270,13 @@ def checkConstantVal (mode : CheckMode) (fe : IFEnv) (cv : IConstantVal) :
     fail (.invalid
       "undeclared universe parameter in type")
   unless ← constsResolveFFast fe cv.type do
-    fail (← unresolvedConstsErrorL (← strLitSupported fe) "type" cv.type)
+    fail (← unresolvedConstsErrorL (← strLitStored fe) "type" cv.type)
   let stype ← inferTypeCore mode fe checkFuel 0 cv.type
   let _u ← ensureSortCore mode fe checkFuel 0 stype
 
 /-! ## The strategy-independent helpers -/
 
-/-- con-leche: ConLeche/Kernel/CheckerBase.lean:123-133 openPisAtFvars — open
-the first `n` `∀`-binders at fresh free variables `0..n-1` (each fvar's type
-is the binder domain, instantiated with the earlier fvars).  Structural on
-`n`, so no fuel of its own. -/
-def openPisAtFvars : Nat → EIdx → Nat → AM (Option (List EIdx × EIdx))
-  | 0, e, _ => pure (some ([], e))
-  | n + 1, h, i => do
-    if h.tag == ETag.forallE then
-      match ← view h with
-      | .forallE dom body => do
-        let fv ← internE (.fvar i dom)
-        let b ← instantiate1Fast coreWalkFuel body fv 0
-        match ← openPisAtFvars n b (i + 1) with
-        | some (fvs, e) => pure (some (fv :: fvs, e))
-        | none => pure none
-      | _ => pure none
-    else pure none
-
-/-- con-leche: ConLeche/Kernel/CheckerBase.lean:135-149 openPisAtFvarsFGo —
-core of `openPisAtFvarsF`: `acc` holds the already-created fvars, innermost
-binder first.  One `instantiateList` pass per domain instead of one
-whole-telescope `instantiate1` pass per binder. -/
-def openPisAtFvarsFGo (acc : Array EIdx) :
-    Nat → EIdx → Nat → AM (Option (List EIdx × EIdx))
-  | 0, e, _ => do pure (some ([], ← instantiateListFast coreWalkFuel e acc 0))
-  | n + 1, h, i => do
-    if h.tag == ETag.forallE then
-      match ← view h with
-      | .forallE dom body => do
-        let d ← instantiateListFast coreWalkFuel dom acc 0
-        let fv ← internE (.fvar i d)
-        match ← openPisAtFvarsFGo (acc.push fv) n body (i + 1) with
-        | some (fvs, e) => pure (some (fv :: fvs, e))
-        | none => pure none
-      | _ => pure none
-    else pure none
-
-/-- con-leche: ConLeche/Kernel/CheckerBase.lean:151-158 openPisAtFvarsF —
-one-pass `openPisAtFvars` (the fallback covers telescopes whose binders only
-appear after substitution). -/
-def openPisAtFvarsF (n : Nat) (e : EIdx) (i : Nat) :
-    AM (Option (List EIdx × EIdx)) := do
-  match ← openPisAtFvarsFGo #[] n e i with
-  | some r => pure (some r)
-  | none => openPisAtFvars n e i
-
-/-- con-leche: ConLeche/Kernel/CheckerBase.lean:203-209 unwrapOr — unwrap an
+/-- con-leche: ConLeche/Kernel/CheckerBase.lean:171-177 unwrapOr — unwrap an
 optional value or fail with the given error. -/
 def unwrapOr {α : Type} (o : Option α) (err : CheckError) : AM α :=
   match o with
@@ -327,7 +288,7 @@ def unwrapOr {α : Type} (o : Option α) (err : CheckError) : AM α :=
 A `ConLeche/Kernel/Env.lean` declaration, placed at its only reader — the
 `.indDecl` arm — exactly as the `Level.lean` declarations above are. -/
 
-/-- con-leche: ConLeche/Kernel/Env.lean:465-499 indParamsOk — **the stream's
+/-- con-leche: ConLeche/Kernel/Env.lean:390-424 indParamsOk — **the stream's
 declared parameter count, checked as official checks it** (con-leche's task
 #228).  Both halves are one-sided on purpose: `false` means official rejects. -/
 def indParamsOk (nP : Nat) : List IConstantInfo → AM Bool

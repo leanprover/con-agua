@@ -4,8 +4,8 @@ public import ConAgua.Arena.DeclCvg
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.ScratchRefine
+import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 
 @[expose] public section
 
@@ -28,52 +28,49 @@ namespace L.Ind
 open L.Arena
 
 /-- `flush_caches()` under the stage relation. -/
-theorem flush_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (h : StageR dn vis fe m a) (hok : FlushOK m) :
-    StageR dn vis fe (flushMem m) { a with caches := Caches.empty } ∧ IWGrow m (flushMem m) := by
+theorem flush_stage {vis : Word} {fe : IFEnv} {m : Mem}
+    {a : AState} (h : StageR vis fe m a) (hok : FlushOK m) :
+    StageR vis fe (flushMem m) { a with caches := Caches.empty } ∧ IWGrow m (flushMem m) := by
   have hf := flushMem_frame m
-  have hC : CheckR dn (flushMem m) { a with caches := Caches.empty } vis fe :=
+  have hC : CheckR (flushMem m) { a with caches := Caches.empty } vis fe :=
     ⟨ArenaD.caches_irrel _ ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ hf _ h.check.arena.base,
       DerR.frameM [] _ _ _ hf (by simp) _ h.check.arena.der⟩,
     h.check.core.flush hok,
     h.check.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
-    h.check.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf,
+    h.check.env.frame (by simp) (fun x hx => not_mem_envCtl (by have := flushCtl_lt x hx; omega)) hf,
     h.check.mode.frame hf (by simp [flushCtl]) (by simp [flushCtl])⟩
-  have hIW : (flushMem m).arr64 IW = m.arr64 IW := hf.1 IW (by simp) (by decide)
-  have hE : (flushMem m).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp) (by decide)
-  have h200 : rdW ((flushMem m).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 :=
-    hf.ctl 200 (by simp [flushCtl])
-  have h129 : rdW ((flushMem m).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
-    hf.ctl 129 (by simp [flushCtl])
-  refine ⟨⟨hC, ?_⟩, ?_⟩
-  · simp only [IWOK_iff, iwTop, erTop, hIW, hE, h200, h129, hf.size CTL]; exact (IWOK_iff _).1 h.iw
-  · refine ⟨?_, ?_, fun i _ => by rw [hIW], fun i _ => by rw [hE]⟩
-    · simp only [iwTop, h200]; exact Nat.le_refl _
-    · simp only [erTop, h129]; exact Nat.le_refl _
+  have hA3 : (IW : TieredArray) ∉ ([] : List TieredArray) ∧ (EREC : TieredArray) ∉ ([] : List TieredArray) ∧
+      tier1 EREC ∉ ([] : List TieredArray) := by simp
+  have hC3 : (129 : Word) ∉ flushCtl ∧ (130 : Word) ∉ flushCtl ∧ (200 : Word) ∉ flushCtl := by
+    simp [flushCtl]
+  exact ⟨⟨hC, IWOK.of_keep hf hA3 hC3 h.iw⟩, IWGrow.of_keep hf hA3 hC3⟩
 
 /-- `cv_lps(q)` under the stage relation: the level parameters, a slice below the top. -/
-theorem cvLpsA_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem cvLpsA_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
-    (h : L.Arena.cvLpsW n m q = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : L.Arena.cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erA m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq
-  have e1 : rdW (m.arr64 EREC) (q + 1) = w1 :=
-    rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw1
-  have e2 : rdW (m.arr64 EREC) (q + 2) = w2 :=
-    rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw2
-  have hsrc : w2.toNat = 0 ∨ w1.toNat + w2.toNat ≤ (m.arr64 EREC).size := by
-    rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
-    · exact .inl h0
-    · exact .inr (hslice?_bound _ _ _ _ hsl h0)
+  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hq
+  obtain ⟨nm, -, lv, hlv, ty, -, rfl⟩ := hq
+  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
+  obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
+  simp only [nat?, Option.map_eq_some_iff] at ho2 hl2
+  obtain ⟨w1, hw1, rfl⟩ := ho2
+  obtain ⟨w2, hw2, rfl⟩ := hl2
+  have e1 : erRd m (q + 1) = w1 :=
+    erRd_of_erA (by rw [show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega]; exact hw1)
+  have e2 : erRd m (q + 2) = w2 :=
+    erRd_of_erA (by rw [show (q + 2).toNat = q.toNat + 2 by rw [UInt64.toNat_add]; simp; omega]; exact hw2)
   rcases n with _ | n
   · simp [L.Arena.cvLpsW] at h
-  rw [L.Arena.cvLpsW_step, e1, e2] at h
-  obtain ⟨-, hr4t, hdec4, hS4, hg4, htop4⟩ := L.Arena.erToIwW_stage h hS hsrc
-  rw [hr4t]
-  exact ⟨hS4, hg4, by rw [hdec4]; exact hsl, htop4⟩
+  rw [L.Arena.cvLpsW_step] at h
+  change erToIwW n m (erRd m (q + 1)) (erRd m (q + 2)) = some (r, m') at h
+  rw [e1, e2] at h
+  obtain ⟨hS4, hg4, hdec4, htop4, -⟩ := erToIwW_stage h hS hsl
+  exact ⟨hS4, hg4, hdec4, Nat.le_of_eq htop4⟩
 
 end L.Ind
 

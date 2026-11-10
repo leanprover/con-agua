@@ -49,36 +49,32 @@ theorem nestRootCanon_spec (p : Prog) (hl : PccLook p) (hc : p.lookup "er_copy" 
       cvLps_spec p hl.ha hc he hcv (k + 2), hcR (k + 2) "inst_lp_fast",
       nestCanonCrest_spec p hl.ha hl.hl hl.hk hl.hng hl.hnp hl.hip hl.hf hl.hput hl.hgo hl.hnode hl.hcl
         hl.hra hl.hp k] <;>
-    finish (gen := 20) [nrcW, rdW_eq]
+    finish (gen := 20) [nrcW, rdW_eq, erRd_get]
 
 theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem)
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word) (cR : CallM)
     (hI : IlpRd cR dn vis fe (IlpBase m a))
-    (h : nrcW cR k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : nrcW cR k m ctx cv = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
     (hcv : decCV (erecP m) cv.toNat = some cvv)
     (hnn : c.nP + c.names.length < 2 ^ 64) (hP : PosMR m) :
-    ∃ x a', (ConRon.Arena.nestRootCanon c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.nestRootCanon c cvv).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x ∧ PosMR m' ∧ (PccAfr → AFr m m') := by
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
-  have hcv3 : cv.toNat + 3 < erTop m := by
-    have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_le m; omega
-  have hEb : erTop m ≤ (m.arr64 EREC).size := hS.iw.er
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
+  have hcv3 : cv.toNat + 3 < 2 ^ 64 := erecP_lt64 hwt
   unfold nrcW at h
   rcases hlp : cvLpsW (k + 2) m cv with _ | ⟨r1, m1⟩ <;> rw [hlp] at h; · simp [nrcK1] at h
   rw [nrcK1_some] at h
-  obtain ⟨hS1, hg1, hE1, hdec1, -⟩ := pos2_cvLpsW_stage hlp hS ((erecP_ext m).decCV hcv) (by omega)
+  obtain ⟨hS1, hg1, hE1, hdec1, -⟩ := pos2_cvLpsW_stage hlp hS hcv hcv3
   -- the instantiation's arguments
   obtain ⟨cin1, cin1'⟩ := CtxIn.grow hin hg1
-  rw [hc] at cin1
+  replace cin1 := cin1 hc
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨-, -, -, -, -, hlvH, hlvd, -⟩ := ctx_fields cin1 cin1' htop1
   have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
-  have hrd3 : rdW (m1.arr64 EREC) (cv + 3) = wt := by
-    rw [hE1]; simp [rdW, e3, erecP_get hwt]
+  have hrd3 : erRd m1 (cv + 3) = wt := (erRd_of_erecP (hg1.ext _ _ (by rw [e3]; exact hwt))).1
   rw [hrd3] at h
   rcases hst : cR (k + 2) "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, rdW (m1.arr64 IW) (ctx + 10), wt] m1 with _ | ⟨r2, m2⟩ <;> rw [hst] at h; · simp [nrcK2] at h
   rw [nrcK2_some] at h
@@ -89,7 +85,7 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   rw [CWF_eq, hlvd, ← hwtd] at hrun2
   have hg12 := hg1.trans hg2
   obtain ⟨cin2, cin2'⟩ := CtxIn.grow hin hg12
-  rw [hc] at cin2
+  replace cin2 := cin2 hc
   have hsl2 := hsl.grow hin hg12
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   obtain ⟨hn2, -, -, -, hnP2, hlvH2, hlvd2, -⟩ := ctx_fields cin2 cin2' htop2
@@ -118,29 +114,28 @@ theorem nestUniformOk_spec (p : Prog) (hl : NuLook p) (cR : CallM) (hcR : CallSp
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestCtxHiAt_specE p hl.hh (k + 3), piDomsOcc_spec p hl.no hl.hpd (k + 3),
       nestRootCanon_spec p hl.pcc hl.hc hl.he hl.hcv cR hcR k, nestOcc_spec' p hl.no (k + 3)] <;>
-    finish (gen := 20) [nuW, rdW_eq]
+    finish (gen := 20) [nuW, rdW_eq, erRd_get]
 
 theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem)
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word) (cR : CallM)
     (hI : ∀ (m1 : Mem) (a1 : AState) (r1 : List Word) (b : Bool),
       pdoW (k + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
-        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (rdW (m.arr64 EREC) (cv + 3)) = some (r1, m1) →
+        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + 3)) = some (r1, m1) →
       (ConRon.Arena.piDomsOcc c.names c.nP (c.hiAt 0) c.nP cvv.type).run a = .ok (b, a1) →
-      StageR dn vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
-    (h : nuW cR k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
+      StageR vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
+    (h : nuW cR k m ctx cv = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
     (hcv : decCV (erecP m) cv.toNat = some cvv) (hhi : c.hiAt 0 < 2 ^ 64) (hP : PosMR m) :
-    ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ r = [if x then 1 else 0] ∧ PosMR m' ∧ (NuAfr → AFr m m') := by
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hnb, -, -, hnP, -⟩ := ctx_fields hc hin htop
   have hhiW := nhiW_toNat (nf := 0) hc hin htop (by simpa using hhi)
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
-  have hcv3 : cv.toNat + 3 < erTop m := by
-    have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_le m; omega
-  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by have := hS.iw.er; have := hS.iw.erSize; simp; omega)
-  have hrd3 : rdW (m.arr64 EREC) (cv + 3) = wt := by simp [rdW, e3, erecP_get hwt]
+  have hcv3 : cv.toNat + 3 < 2 ^ 64 := erecP_lt64 hwt
+  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
+  have hrd3 : erRd m (cv + 3) = wt := (erRd_of_erecP (by rw [e3]; exact hwt)).1
   unfold nuW at h
   rw [hrd3] at h
   obtain ⟨mp0, hM0⟩ := hP.no
@@ -172,7 +167,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   have hcv1 : decCV (erecP m1) cv.toNat = some cvv := (GrowX.of_grow (q := 0) (n := 0) hg1).erecP.decCV hcv
   rcases hrc : nrcW cR k m1 ctx cv with _ | ⟨r2, m2⟩ <;> rw [hrc] at h; · simp [nuK2] at h
   obtain ⟨cin1, cin1'⟩ := CtxIn.grow hin hg1
-  rw [hc] at cin1
+  replace cin1 := cin1 hc
   have hnn : c.nP + c.names.length < 2 ^ 64 := by simpa [NestCtx.hiAt] using hhi
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, hP2, hA2⟩ := nrcW_ok k dn fe vis m1 m2 a1 ctx cv c cvv r2 cR hI1 hrc hS1 cin1 cin1'
     (hsl.grow hin hg1) hcv1 hnn hP1
@@ -189,7 +184,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   rw [nuK2_some (h := by rw [hx0]; decide)] at h
   have hg12 := hg1.trans hg2
   obtain ⟨cin2, cin2'⟩ := CtxIn.grow hin hg12
-  rw [hc] at cin2
+  replace cin2 := cin2 hc
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   obtain ⟨hn2, -⟩ := ctx_fields cin2 cin2' htop2
   have hne2 := ctx_names_end cin2 cin2' (hsl.grow hin hg12) htop2
@@ -292,13 +287,13 @@ theorem nuWf_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word) (cR : CallM)
     (hI : ∀ (k' : Nat) (m1 : Mem) (a1 : AState) (r1 : List Word) (b : Bool),
       pdoW (k' + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
-        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (rdW (m.arr64 EREC) (cv + 3)) = some (r1, m1) →
+        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + 3)) = some (r1, m1) →
       (ConRon.Arena.piDomsOcc c.names c.nP (c.hiAt 0) c.nP cvv.type).run a = .ok (b, a1) →
-      StageR dn vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
-    (h : nuWf cR k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
+      StageR vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
+    (h : nuWf cR k m ctx cv = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
     (hcv : decCV (erecP m) cv.toNat = some cvv) (hhi : c.hiAt 0 < 2 ^ 64) (hP : PosMR m) :
-    ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ r = [if x then 1 else 0] ∧ PosMR m' ∧ (NuAfr → AFr m m') := by
   match k, h with
   | k + 4, h => exact nuW_ok k dn fe vis m m' a ctx cv c cvv r cR (hI k) h hS hc hin hsl hcv hhi hP
@@ -308,19 +303,19 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     (hJI : ∀ (m : Mem) (a : AState) (cv : Word) (cvv : IConstantVal), J m a → Pcv cvv →
       decCV (erecP m) cv.toNat = some cvv → ∀ (k' : Nat) (m1 : Mem) (a1 : AState) (r1 : List Word) (b : Bool),
       pdoW (k' + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
-        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (rdW (m.arr64 EREC) (cv + 3)) = some (r1, m1) →
+        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + 3)) = some (r1, m1) →
       (ConRon.Arena.piDomsOcc c.names c.nP (c.hiAt 0) c.nP cvv.type).run a = .ok (b, a1) →
-      StageR dn vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
+      StageR vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
     (hJnu : ∀ (k : Nat) (m m' : Mem) (a a' : AState) (cv : Word) (cvv : IConstantVal) (r : List Word) (x : Bool),
       J m a → Pcv cvv → nuWf cR k m ctx cv = some (r, m') →
-      (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') → StageR dn vis fe m' a' → (NuAfr → AFr m m') →
+      (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') → StageR vis fe m' a' → (NuAfr → AFr m m') →
       J m' a') (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (o l : Word) (cs : List (IConstantVal × Nat)) (r : List Word),
-    ucW cR k m ctx o l = some (r, m') → StageR dn vis fe m a → J m a → (∀ x ∈ cs, Pcv x.1) →
+    ucW cR k m ctx o l = some (r, m') → StageR vis fe m a → J m a → (∀ x ∈ cs, Pcv x.1) →
     UCtx dn vis fe m ctx c →
     l.toNat = cs.length → o.toNat + cs.length ≤ iwTop m → CsAt m o.toNat cs (· < iwTop m) → PosMR m →
     ∃ b a', (cs.allM (fun x => ConRon.Arena.nestUniformOk c x.1)).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' ∧ J m' a' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' ∧ J m' a' := by
   induction k with
   | zero => intro m m' a o l cs r h; simp [ucW] at h
   | succ k ih =>
@@ -339,7 +334,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     simp only [Nat.add_zero, List.getElem_cons_zero] at hw hcvv
     have hrw : rdW (m.arr64 IW) o = w := by simp [rdW, hw]
     obtain ⟨q, hq, rfl⟩ : ∃ q : Word, (m.arr64 IW)[w.toNat]? = some q ∧ q.toNat = qn := by
-      simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hqn; exact hqn
+      simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hqn; exact hqn
     have hrq : rdW (m.arr64 IW) w = q := by simp [rdW, hq]
     rw [hrw, hrq] at h
     rcases hnu : nuWf cR k m ctx q with _ | ⟨r1, m1⟩ <;> rw [hnu] at h; · simp [ucK] at h

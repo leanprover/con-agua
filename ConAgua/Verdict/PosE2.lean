@@ -1,18 +1,18 @@
 module
 
 public import ConAgua.Verdict.PosE2M
+public import ConAgua.Verdict.PosFt
 import ConAgua.Verdict.PosE1N
-import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.GgW
 import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndPosSpec.SnocWMfr
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
-public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndRealIlpL
 public import ConLeche.Verify.Inductives.NestScope
+import ConRon.Bridge.Inductives.Positivity
+public import ConAgua.Arena.IndPosSpec.UCtx
 
 @[expose] public section
 /-!
@@ -62,26 +62,27 @@ structure NggPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 
 /-- **`nest_grow_group` refines `nestGrowGroup`, both outcomes** (under `StageC ∧ AbsOK`, the twin's
 store an extension of `a0`'s): only `nest_inst_type` claims (`nit_ref`). -/
-theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
+theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hq : KnotStageProg p) (hLC : LvlCacheProg p)
+    (hF : FtProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
+    (henv : ConLeche.EnvWF env)
     (ctx hi us dO dL : Word) (HI : Nat) (hHI : hi.toNat = HI) (c : NestCtx)
     (ds : List EIdx) (hus : H us) (a0 : AState) (csA : List NIdx) {ctxP : ConLeche.NestCtx}
     {usP : List ConLeche.Level} {dsP : List ConLeche.Expr} {matesP : List ConLeche.Name}
     (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a0.store env.find? c = some ctxP)
     (husP : denoteLs a0.store.lss (decI us) = some usP) (hdsP : Frontend.denoteEList a0.store ds = some dsP)
     (hmates : Frontend.denoteNList a0.store.ns csA = some matesP) (k : Nat) :
-    ∀ (m : Mem) (a : AState) (cO cL gO gL : Word) (cs : List NIdx) (grp : List (NIdx × EIdx)),
+    k ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO cL gO gL : Word) (cs : List NIdx) (grp : List (NIdx × EIdx)),
     StageC dn vis fe env m a → AbsOK m → ConRon.Arena.Ext a0.store a.store → (∀ n ∈ cs, n ∈ csA) →
     UCtx dn vis fe m ctx c → decHL m dO.toNat dL.toNat = some ds → dO.toNat + dL.toNat ≤ iwTop m →
     decHL m cO.toNat cL.toNat = some cs → (∀ j < cL.toNat, cO.toNat + j < iwTop m) →
     gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp → PosMR m →
-    RefE (closedNV p _root_.L.Checker.nvFns = true) (nggE p k m vis ctx hi us dO dL cO cL gO gL)
-      (ConRon.Arena.nestGrowGroup fe c HI (decI us) ds cs grp) a
+    RefE (WtG p) (nggE p k m vis ctx hi us dO dL cO cL gO gL)
+      (ConRon.Arena.nestGrowGroup V fe c HI (decI us) ds cs grp) a
       (fun v res a' => NggPost dn vis fe env a0 m v.1 res v.2 a') := by
   induction k with
   | zero => intros; rw [nggE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ k ih =>
-    intro m a cO cL gO gL cs grp hC hA hx0 hcsA hU hds hdb hcs hcb hgl hgb hgrp hP
+    intro hk m a cO cL gO gL cs grp hC hA hx0 hcsA hU hds hdb hcs hcb hgl hgb hgrp hP
     have hS := hC.stage
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hc0 : cL = 0
@@ -147,12 +148,13 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
     have hctxa : dCtx a.store env.find? c = some ctxP := dCtx_ext _ hx0 _ _ hctx
     -- `nest_inst_type`
     refine RefE.bindE (fun _ => nggE.k_nest_inst_type.none ..) id
-      (nit_ref L.nit hcl hIlpf hLC k hC1 hA1 hHI (hU.grow hg1) hdk hkin hksl hP1 hctxa hkeyP)
+      (nit_ref L.nit hq.closed hIlpf hLC hq hF henv k (by omega) hC1 hA1 hHI (hU.grow hg1) hdk hkin hksl hP1 hctxa hkeyP)
       fun ⟨r2, m2⟩ ⟨x1, x2⟩ a2 hrun2 ⟨hS2, hg2, hx1, htH, htd, hP2, hA2⟩ => ?_
     rw [nggE.k_nest_inst_type.arm1]
-    obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c HI ⟨n0, decI us, ds⟩
+    obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec
+      (ConRon.Bridge.CoreSpec.of_core : ConRon.Bridge.CoreSpec checkFuel) henv hc c HI ⟨n0, decI us, ds⟩
       ⟨n0P, usP, dsP⟩ a a2 _ hC1.check ⟨hctxa, hkeyP⟩ hrun2
-    have hC2 : StageC dn vis fe env m2 a2 := hC1.of_cstep hS2 hA2 c4
+    have hC2 : StageC dn vis fe env m2 a2 := hC1.of_check hS2 hA2 c4.ok c4.ext
     have hx2 := hx0.trans c4.ext
     dsimp only at htd ⊢
     -- the pair record and the snoc
@@ -189,7 +191,7 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
         · rw [hg4.iwGet _ (by omega)]; simpa using hget3 1 (by simp)
         · simpa using htd
     refine RefE.lastE (fun _ => nggE.k_nest_grow_group.none ..) (fun _ => nggE.k_nest_grow_group.arm1 ..) id
-      (ih m4 a2 (cO + 1) (cL - 1) _ _ cs' (grp ++ [(n0, x2)]) hC4 hA4 hx2
+      (ih (by omega) m4 a2 (cO + 1) (cL - 1) _ _ cs' (grp ++ [(n0, x2)]) hC4 hA4 hx2
       (fun n hn => hcsA n (List.mem_cons_of_mem _ hn)) (hU.grow hg14)
       (by rw [decHL_agree (RdS.of_grow hg14) (fun j hj => by omega)]; exact hds)
       (by have := hg14.iw; omega)

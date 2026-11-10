@@ -96,18 +96,18 @@ def TwinOK (a : AState) (st : StateD) : Prop :=
 
 /-- A line con-ron applies keeps `TwinOK`. -/
 theorem TwinOK.line {a : AState} {st : StateD} (h : TwinOK a st) {r : LineRec} {st' : StateD}
-    (h1 : AM.ok (applyLine st r) a) (h2 : AM.res (applyLine st r) a = .inl st') :
-    TwinOK (AM.st (applyLine st r) a) st' := by
+    (h1 : AM.ok (applyRecord st r) a) (h2 : AM.res (applyRecord st r) a = .inl st') :
+    TwinOK (AM.st (applyRecord st r) a) st' := by
   obtain ⟨hok, hoff, hpins, hp, sc, hrel⟩ := h
-  cases hr : (applyLine st r).run a with
+  cases hr : (applyRecord st r).run a with
   | error e => simp [AM.ok, hr] at h1
   | ok q =>
     obtain ⟨x, a'⟩ := q
     have hx : x = .inl st' := by simpa [AM.res, hr] using h2
-    have ha : AM.st (applyLine st r) a = a' := by simp [AM.st, hr]
+    have ha : AM.st (applyRecord st r) a = a' := by simp [AM.st, hr]
     rw [ha]
     subst hx
-    obtain ⟨hstep, hpers, y, -, hsum⟩ := ConRon.Bridge.Frontend.applyLine_run hok hoff hpins hrel hp hr
+    obtain ⟨hstep, hpers, y, -, hsum⟩ := ConRon.Bridge.Frontend.applyRecord_run hok hoff hpins hrel hp hr
     refine ⟨hstep.ok, by rw [hstep.scratch]; exact hoff, hpins.mono hstep.ext hstep.pins, hpers st' rfl, ?_⟩
     cases y with
     | inl sc' => exact ⟨sc', hsum⟩
@@ -226,9 +226,10 @@ accepted. -/
   {\"axiom\":{\"isUnsafe\":false,\"levelParams\":[],\"name\":1,\"type\":0}}\n\
   {\"def\":{\"hints\":{\"regular\":3},\"levelParams\":[1],\"name\":1,\"safety\":\"safe\",\"type\":0,\"value\":2}}")).toOption.map
   (·.1) == some [0]
-/- A line that does not scan: its number. An unbound id: the run aborts. -/
+/- A line that does not scan: its number (after the header, which must be line 0, #144). An unbound
+id: the run aborts. -/
 #guard (run frontAllProg 100000 "front_run" [] (frontMemOf
-  "{\"il\":1,\"succ\":0}\n{\"il\":2,\"succ\":}\n")).toOption.map (·.1) == some [2]
+  "{\"meta\":{\"x\":1}}\n{\"il\":1,\"succ\":0}\n{\"il\":2,\"succ\":}\n")).toOption.map (·.1) == some [3]
 #guard (run frontAllProg 100000 "front_run" [] (frontMemOf
   "{\"ie\":0,\"sort\":5}\n")).toOption.isNone
 

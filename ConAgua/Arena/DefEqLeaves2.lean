@@ -30,26 +30,82 @@ namespace L.Arena
 
 /-! ## `er_slice_eq` -/
 
+/-- `er_slice_eq`'s loop as a function of a reader `rd` (L's tagged read `EREC⦃·⦄`). -/
+def eqF (rd : Word → Word) (a b l i : Word) : Bool :=
+  if i < l then
+    if rd (a + i) = rd (b + i) then eqF rd a b l (i + 1) else false
+  else true
+termination_by l.toNat - i.toNat
+decreasing_by
+  have : i.toNat < l.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹i < l›
+  have := l.toNat_lt
+  have : (i + 1).toNat = i.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  omega
+
+theorem eqF_end (rd : Word → Word) (a b l i : Word) (h : ¬ i < l) : eqF rd a b l i = true := by
+  rw [eqF]; simp [h]
+
+theorem eqF_ne (rd : Word → Word) (a b l i : Word) (hi : i < l) (hne : rd (a + i) ≠ rd (b + i)) :
+    eqF rd a b l i = false := by
+  rw [eqF]; simp [hi, hne]
+
+theorem eqF_eq (rd : Word → Word) (a b l i i' : Word) (hi : i < l) (hi' : i' = i + 1)
+    (he : rd (a + i) = rd (b + i)) : eqF rd a b l i = eqF rd a b l i' := by
+  subst hi'; rw [eqF]; simp [hi, he]
+
+grind_pattern [arena_grind] eqF_end => eqF rd a b l i
+grind_pattern [arena_grind] eqF_ne => eqF rd a b l i
+grind_pattern [arena_grind] eqF_eq => eqF rd a b l i, eqF rd a b l i'
+
+/-- `eqF` compares the reads at every offset from `i` below `l`. -/
+theorem eqF_iff (rd : Word → Word) (a b l i : Word) :
+    eqF rd a b l i = true ↔
+      ∀ k : Nat, i.toNat ≤ k → k < l.toNat → rd (a + UInt64.ofNat k) = rd (b + UInt64.ofNat k) := by
+  fun_induction eqF rd a b l i with
+  | case1 i hi he ih =>
+    rw [ih]
+    have hlt : i.toNat < l.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hi
+    have e1 : (i + 1).toNat = i.toNat + 1 := by
+      have := l.toNat_lt
+      rw [UInt64.toNat_add]; simp; omega
+    have ei : UInt64.ofNat i.toNat = i := by simp
+    constructor
+    · intro H k hk hkl
+      by_cases hk' : k = i.toNat
+      · subst hk'; rw [ei]; exact he
+      · exact H k (by omega) hkl
+    · intro H k hk hkl; exact H k (by omega) hkl
+  | case2 i hi he =>
+    simp only [Bool.false_eq_true, false_iff]
+    have hlt : i.toNat < l.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hi
+    intro H; exact he (by simpa using H i.toNat (Nat.le_refl _) hlt)
+  | case3 i hi =>
+    simp only [true_iff]
+    intro k hk hkl
+    have : l.toNat ≤ i.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hi
+    omega
+
 theorem erSliceEqLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n erSliceEqLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if eqW (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 2) (s₀.loc 1) (s₀.loc 4)
+      r.retOr [1] = [if eqF (erRdT s₀.mem) (s₀.loc 0) (s₀.loc 2) (s₀.loc 1) (s₀.loc 4)
         then 1 else 0]; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := erSliceEqLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish
-
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64_rdT_spec, ih] <;>
+      finish
 
 theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL) (n : Nat)
     (s₀ : St) (o1 n1 o2 n2 : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (n + 1)) "er_slice_eq" [o1, n1, o2, n2]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
-      r = [if n1 = n2 ∧ eqW (s₀.mem.arr64 EREC) o1 o2 n1 0 = true then 1 else 0]; ⊤⦄ := by
+      r = [if n1 = n2 ∧ eqF (erRdT s₀.mem) o1 o2 n1 0 = true then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, erSliceEqL]
   sym only [lang_grind, arena_grind] =>
@@ -70,15 +126,15 @@ theorem mapM_get {α β : Type} {f : α → Option β} :
     | succ k => simpa using hg k (by simpa using hk)
 
 /-- A decoded handle slice: its length, and each element a word below `2^32`. -/
-theorem hslice?_get {k : IdxKind} {a : Array Word} {o n : Nat} {l : List (Idx k)}
-    (h : hslice? a o n = some l) :
-    l.length = n ∧ ∀ j, j < n → ∃ w, a[o + j]? = some w ∧ w.toNat < 2 ^ 32 ∧ l[j]? = some (decI w) := by
+theorem hslice?_get {k : IdxKind} {R : Nat → Option Word} {o n : Nat} {l : List (Idx k)}
+    (h : hslice? R o n = some l) :
+    l.length = n ∧ ∀ j, j < n → ∃ w, R (o + j) = some w ∧ w.toNat < 2 ^ 32 ∧ l[j]? = some (decI w) := by
   obtain ⟨hl, hg⟩ := mapM_get h
   simp only [List.length_range] at hl
   refine ⟨hl, fun j hj => ?_⟩
   have := hg j (by simpa using hj)
   simp only [List.getElem_range] at this
-  cases e : a[o + j]? with
+  cases e : R (o + j) with
   | none => simp [hd?, e] at this; omega
   | some w =>
     simp only [hd?, e, Option.bind_eq_bind, Option.bind_some] at this
@@ -108,35 +164,18 @@ theorem erSliceEq_refines (p : Prog) (hp : p.lookup "er_slice_eq" = some erSlice
   rw [ite_bne]
   obtain ⟨hl1, hg1⟩ := hslice?_get h1
   obtain ⟨hl2, hg2⟩ := hslice?_get h2
-  have hext := erecP_ext s.mem
-  have hb : ∀ {o c : Nat} {l : List (Idx k)}, hslice? (erecP s.mem) o c = some l → 0 < c →
-      o + c < 2 ^ 64 := by
-    intro o c l h hc
-    obtain ⟨-, hg⟩ := hslice?_get h
-    obtain ⟨w, hw, -, -⟩ := hg (c - 1) (by omega)
-    have := hext _ _ hw
-    have : o + (c - 1) < (s.mem.arr64 EREC).size := by
-      rcases Nat.lt_or_ge (o + (c - 1)) (s.mem.arr64 EREC).size with h' | h'
-      · exact h'
-      · simp [Array.getElem?_eq_none h'] at this
-    omega
+  have hR : RdOK (erecP s.mem) (erRdT s.mem) := erRdOK s.mem
   congr 1
   apply propext
   constructor
   · rintro ⟨rfl, he⟩
-    rcases Nat.eq_zero_or_pos n1.toNat with hz | hz
-    · apply List.ext_getElem?; intro j
-      rw [List.getElem?_eq_none (by omega), List.getElem?_eq_none (by omega)]
-    have hb1 := hb h1 hz
-    have hb2 := hb h2 hz
-    rw [eqW_iff _ _ _ _ _ hb1 hb2] at he
+    rw [eqF_iff] at he
     apply List.ext_getElem?; intro j
     by_cases hj : j < n1.toNat
     · obtain ⟨w1, hw1, -, he1⟩ := hg1 j hj
       obtain ⟨w2, hw2, -, he2⟩ := hg2 j hj
       have := he j (by simp) hj
-      rw [hext _ _ hw1, hext _ _ hw2] at this
-      simp only [Option.getD_some] at this
+      rw [hR.offN hw1 (by have := n1.toNat_lt; omega), hR.offN hw2 (by have := n1.toNat_lt; omega)] at this
       rw [he1, he2, this]
     · rw [List.getElem?_eq_none (by omega), List.getElem?_eq_none (by omega)]
   · intro heq
@@ -144,15 +183,13 @@ theorem erSliceEq_refines (p : Prog) (hp : p.lookup "er_slice_eq" = some erSlice
     have hn : n1 = n2 := UInt64.toNat_inj.mp (hl1.symm.trans hl2)
     subst hn
     refine ⟨rfl, ?_⟩
-    rcases Nat.eq_zero_or_pos n1.toNat with hz | hz
-    · exact eqW_end _ _ _ _ _ (by simp [UInt64.lt_iff_toNat_lt, hz])
-    rw [eqW_iff _ _ _ _ _ (hb h1 hz) (hb h2 hz)]
+    rw [eqF_iff]
     intro j _ hj
     obtain ⟨w1, hw1, hl1', he1⟩ := hg1 j hj
     obtain ⟨w2, hw2, hl2', he2⟩ := hg2 j hj
     rw [he1] at he2
     have := decI_inj hl1' hl2' (Option.some.inj he2)
-    rw [hext _ _ hw1, hext _ _ hw2, this]
+    rw [hR.offN hw1 (by have := n1.toNat_lt; omega), hR.offN hw2 (by have := n1.toNat_lt; omega), this]
 
 /-! ## `CoreS` across the `Nat` literal arms (`nat_pred_lit`)
 
@@ -183,7 +220,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cplL a' = cplL a)
     (hf : MemFrame A C m m')
     (h128 : ∀ b ∈ A, b.arr < 96 ∨ 128 ≤ b.arr) (hpins : (PINS : TieredArray) ∉ A)
-    (henv : AvoidA 129 144 A)
+    (henv : AvoidA 129 149 A)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)
     (hmA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
@@ -193,15 +230,18 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
     (hscA : (SOREC : TieredArray) ∉ A ∧ (CREC : TieredArray) ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
-      by decide) (hmode : ModeOK m') :
+      by decide) (hmode : ModeOK m')
+    (hiwA : (EREC : TieredArray) ∉ A ∧ (tier1 EREC : TieredArray) ∉ A ∧ (L.Ind.HBM : TieredArray) ∉ A := by decide)
+    (hiwC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C ∧ (214 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb := by
   simp only [cplL, Prod.mk.injEq] at hcpl
   obtain ⟨hc, hp, hl⟩ := hcpl
-  refine ⟨hD, ?_, ?_, hS.env.frame henv
-      (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
-      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
+  refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => not_mem_envArrs (by have := henv b hb; omega))
+      (fun x hx => not_mem_envCtl (by have := hCenv x hx; omega)) hf, ?_, ?_, ?_,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC hiwA.2.2 hiwC.2.2.2,
       hf.size BSTK ▸ hS.bstk,
-      hS.den.of_arena hS.arena.base hD.base hc hp hl hf hscA hscC, hmode⟩
+      hS.den.of_arena hS.arena.base hD.base hc hp hl hf hscA hscC, hmode,
+      hS.iwF hf hiwA.1 hiwA.2.1 hiwC.1 hiwC.2.1 hiwC.2.2.1⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)
       (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))

@@ -29,26 +29,26 @@ def WhnfCoreSlotE (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode cheap d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW e →
     CoreSpecE p n "whnf_core" [mode, cheap, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) s₀ a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) s₀ a₀
 
 /-- `whnf`'s error claim. -/
 def WhnfSlotE (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
-    CoreSpecE p n "whnf" [mode, vis, d, e] ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE e)) s₀ a₀
+    CoreSpecE p n "whnf" [mode, vis, d, e] ((coreKnot (decMode mode) (decEager mode) fe id F).whnf d.toNat (decE e)) s₀ a₀
 
 /-- `infer`'s error claim. -/
 def InferSlotE (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
-    CoreSpecE p n "infer" [mode, vis, d, e] ((coreKnot (decMode mode) fe id F).infer d.toNat (decE e)) s₀ a₀
+    CoreSpecE p n "infer" [mode, vis, d, e] ((coreKnot (decMode mode) (decEager mode) fe id F).infer d.toNat (decE e)) s₀ a₀
 
 /-- `infer_io`'s error claim. -/
 def InferIOSlotE (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpecE p n "infer_io" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE e)) s₀ a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).inferIO d.toNat (decE e)) s₀ a₀
 
 /-- `defeq`'s error claim. -/
 def DefeqSlotE (p : Prog) (n : Nat) : Prop :=
@@ -56,7 +56,7 @@ def DefeqSlotE (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW x →
     HW y →
     CoreSpecE p n "defeq" [mode, vis, d, x, y]
-      ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) s₀ a₀
+      ((coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE x) (decE y)) s₀ a₀
 
 /-- **The knot's error half at L fuel `n`**: every slot. -/
 structure KnotOKE (p : Prog) (n : Nat) : Prop where

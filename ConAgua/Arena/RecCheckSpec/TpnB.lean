@@ -83,12 +83,12 @@ theorem wantAuxFrom_succ (n0 : NIdx) (j k : Nat) :
 
 /-- **`block_rec_want_aux_names`' model refines the twin's `mapM` of `name_rec_i`** (the real
 `name_rec_i`, `nriF_ok`). -/
-theorem wanW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
-    ∀ (m : Mem) (a : AState) (n0 j auxl : Word), H n0 → StageR dn vis fe m a →
+theorem wanW_sim {vis : Word} {fe : IFEnv} (n : Nat) :
+    ∀ (m : Mem) (a : AState) (n0 j auxl : Word), H n0 → StageR vis fe m a →
     j.toNat + auxl.toNat < 2 ^ 64 →
     Sim (wanW n m n0 j auxl) (wantAuxFrom (decI n0) j.toNat auxl.toNat) a
       (fun r xs m' a' => decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
-        (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+        (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   induction n with
   | zero => intro m a n0 j auxl _ _ _ r m' e; simp [wanW] at e
   | succ n ih =>
@@ -104,7 +104,7 @@ theorem wanW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
     obtain ⟨k, hk⟩ : ∃ k, auxl.toNat = k + 1 := ⟨auxl.toNat - 1, by omega⟩
     rw [hk, wantAuxFrom_succ]
-    have h1 := partsSimW (nriF_ok dn vis fe n0 (j + 1) hn0) hS
+    have h1 := partsSimW (nriF_ok (fun _ => none) vis fe n0 (j + 1) hn0) hS
     rw [hj1] at h1
     refine Sim.bindK (K := wanW.k_name_rec_i n n0 j auxl)
       (body := fun r1 m1 => wanW.k_block_rec_want_aux_names n (r1.headD 0) (wanW n m1 n0 (j + 1) (auxl - 1)))
@@ -151,28 +151,28 @@ theorem decRS_lt (m : Mem) (pp : Nat) (x : RecShape) (h : decRS (truncM m) pp = 
   obtain ⟨⟨a, ha, -⟩, -⟩ := decRS_some h; exact partsIwLt ha
 
 /-- From `n₀` on: the wanted names, the stream's, the set test, the duplicate test. -/
-theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {vis : Word}
     {fe : IFEnv} (bs : BlockShape) (reco recl auxo auxl n0 : Word) (x : NIdx) (hn0 : H n0)
     (hx : decI n0 = x) :
-    ∀ (m : Mem) (a : AState), StageR dn vis fe m a → PSlR0 decRS bs.recs reco recl m →
+    ∀ (m : Mem) (a : AState), StageR vis fe m a → PSlR0 decRS bs.recs reco recl m →
     PSlR decRS (rpAux bs) auxo auxl m →
     Sim (tpnB p (n + 1) reco recl auxo auxl n0 m)
       (do
         let wantAux ← (List.range (rpAux bs).length).mapM fun i => internNNode (.str x s!"rec_{i + 1}")
         if rpSetOk ((rpAux bs).map (·.cvR.name)) wantAux then pure (nameNodup (bs.recs.map (·.cvR.name)))
         else pure false)
-      a (fun r b m' a' => r.headD 0 = (if b then 1 else 0) ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      a (fun r b m' a' => r.headD 0 = (if b then 1 else 0) ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   intro m a hS hrs haux
   have hl : auxl.toNat = (rpAux bs).length := (decPL_length _ haux.1).symm
   have hT : ∀ m : Mem, iwTop m < 2 ^ 64 := fun m => (rdW (m.arr64 CTL) 200).toNat_lt
   have hwant : Sim (callW p (n + 1) "block_rec_want_aux_names" [n0, 0, auxl] m)
       ((List.range (rpAux bs).length).mapM fun i => internNNode (.str x s!"rec_{i + 1}")) a
       (fun r xs m' a' => decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
-        (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+        (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
     intro r m' e
     obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (wan_spec p L.toIndPartsProg L.nri L.wan (n + 1) _ n0 0 auxl) e
-    have h := wanW_sim (dn := dn) (vis := vis) (fe := fe) (n + 1) m a n0 0 auxl hn0 hS
+    have h := wanW_sim (vis := vis) (fe := fe) (n + 1) m a n0 0 auxl hn0 hS
       (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact auxl.toNat_lt) r s'.mem hW
     have heq : wantAuxFrom (decI n0) (0 : Word).toNat auxl.toNat =
         (List.range (rpAux bs).length).mapM fun i => internNNode (.str x s!"rec_{i + 1}") := by
@@ -237,10 +237,10 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
 recursors' slice decoded below the tops. -/
 theorem tpnW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} (m : Mem) (a : AState) (mo k reco recl auxo auxl : Word) (bs : BlockShape)
-    (hS : StageR dn vis fe m a) (hms : PSlR0 decMS bs.members mo k m)
+    (hS : StageR vis fe m a) (hms : PSlR0 decMS bs.members mo k m)
     (hrs : PSlR0 decRS bs.recs reco recl m) (haux : PSlR decRS (rpAux bs) auxo auxl m) :
     Sim (tpnW p (n + 1) m mo k reco recl auxo auxl) (namesTwin bs) a
-      (fun r b m' a' => r.headD 0 = (if b then 1 else 0) ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+      (fun r b m' a' => r.headD 0 = (if b then 1 else 0) ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   unfold tpnW namesTwin
   by_cases hk : k = 0
   · rw [ite_eq_left hk]
@@ -249,7 +249,7 @@ theorem tpnW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
     rw [h0]
     refine Sim.bindK (K := tpnK0 p (n + 1) reco recl auxo auxl) rfl (fun _ _ => rfl)
       (show Sim (callW p (n + 1) "intern_nanon" [] m) (internNNode .anonymous) a
-        (fun r x m' a' => KeepPost dn vis fe decW0N m m' a' r x) from fun r m' e => by
+        (fun r x m' a' => KeepPost vis fe decW0N m m' a' r x) from fun r m' e => by
         obtain ⟨s', rfl, -, hs⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (naF_spec p L.rna (n + 1) _ []) e
         exact naF_ok dn vis fe m s'.mem a r hs hS) ?_
     rintro r0 x0 m0 a0 ⟨hS0, hg0, hx0b, hx0⟩

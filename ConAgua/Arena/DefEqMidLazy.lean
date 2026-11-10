@@ -127,7 +127,7 @@ theorem dq_tail {p : Prog} (hp : LazyProg p) (hc : LazyCallees p)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (K (dqE p n s₀.mem mode vis d a b))
-      (deltaQuick (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) a₀
+      (deltaQuick (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) a₀
       (CorePost decDS dn s₀.mem vis fe M eb Res3) := by
   cases n with
   | zero =>
@@ -164,7 +164,7 @@ theorem ll_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (llE p (n + 1) s₀.mem mode vis d a b)
-      (ldsOneT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat true (decE a) (decE b)) a₀
+      (ldsOneT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat true (decE a) (decE b)) a₀
       (CorePost decDS dn s₀.mem vis fe M eb Res3) := by
   have hS := hs.rel
   unfold ldsOneT
@@ -191,7 +191,7 @@ theorem lr_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (lrE p (n + 1) s₀.mem mode vis d a b)
-      (ldsOneT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat false (decE a) (decE b)) a₀
+      (ldsOneT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat false (decE a) (decE b)) a₀
       (CorePost decDS dn s₀.mem vis fe M eb Res3) := by
   have hS := hs.rel
   unfold ldsOneT
@@ -240,7 +240,7 @@ theorem u2_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (u2E p (n + 1) s₀.mem mode vis d a b)
-      (unfold2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (unfold2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decDS dn s₀.mem vis fe M eb Res3) := by
   have hS := hs.rel
   unfold unfold2T
@@ -324,7 +324,7 @@ theorem sm_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     (eb mode d a b ka ha kb hb : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hwa : HW a)
     (hwb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (smE p (n + 1) s₀.mem mode vis d a b ka ha kb hb)
-      (sameT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
+      (sameT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)
         (decHintW ka ha) (decHintW kb hb)) a₀ (CorePost decDS dn s₀.mem vis fe M eb Res3) := by
   have hS := hs.rel
   unfold sameT
@@ -339,7 +339,7 @@ theorem sm_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   -- the unfold arm
   have unf : ∀ (m₂ : Mem) (M₂ : ModeMaps) (a₂ : AState), CoreS dn m₂ a₂ vis fe M₂ eb →
       RefE (KnotNvG p (k + 1)) (smE.j1 p (k + 1) mode vis d a b 0 m₂)
-        (unfold2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₂
+        (unfold2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₂
         (CorePost decDS dn m₂ vis fe M₂ eb Res3) := by
     intro m₂ M₂ a₂ hS₂
     rw [smE.j1, ite_eq_right (fun h => h rfl)]
@@ -404,7 +404,7 @@ theorem bo_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (boE p (n + 1) s₀.mem mode vis d a b)
-      (bothT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (bothT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decDS dn s₀.mem vis fe M eb Res3) := by
   have hS := hs.rel
   unfold bothT
@@ -504,7 +504,7 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (ldsE p (n + 1) s₀.mem mode vis d a b)
-      (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decDS dn s₀.mem vis fe M eb Res3) := by
   have hS := hs.rel
   rw [lazyDeltaStep_eq]
@@ -567,7 +567,7 @@ theorem lazyDeltaStep_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) 
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "lazy_delta_step" [mode, vis, d, a, b]
-      (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+      (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b))
       decDS s₀ a₀ dn vis fe M eb Res3 :=
   RefE.coreSpec (ldsE_spec p hp.step hp.both hp.mid.tupa hp.left hp.right hp.same hp.unfold2 hp.mid.dq
     hp.spine.sp hp.spine.sp2 hp.spine.cmp hp.spine.rev (n + 1) s₀ mode vis d a b)

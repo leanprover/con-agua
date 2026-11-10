@@ -105,11 +105,11 @@ theorem canonNamesGo_spec (n : Nat) : ∀ (s₀ : St) (i k : Word),
 end specs5
 
 
-theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
+theorem gnW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (i n : Word) (r : List Word),
-    gnW k m i n = some (r, m') → StageR dn vis fe m a → i.toNat + n.toNat < 2 ^ 64 → PoolSmall m →
+    gnW k m i n = some (r, m') → StageR vis fe m a → i.toNat + n.toNat < 2 ^ 64 → PoolSmall m →
     ∃ (hs : List NIdx) (a' : AState),
-      (ConRon.Arena.canonNamesGo i.toNat n.toNat).run a = .ok (hs, a') ∧ StageR dn vis fe m' a' ∧
+      (ConRon.Arena.canonNamesGo i.toNat n.toNat).run a = .ok (hs, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r hs ∧ a'.store.view = a.store.view ∧ PoolSmall m' := by
   induction k with
   | zero => intro m m' a i n r h; simp [gnW] at h
@@ -173,7 +173,6 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     · refine ⟨by rw [hv3, hv2, hv1], ?_⟩
       unfold PoolSmall at hP3 ⊢; rw [pcap_congr (hfr.size POOL) (hfr.size POOL1)]; exact hP3
 
-
 /-- **The model of `canon_names(n)`**. -/
 def cnW : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
@@ -203,16 +202,16 @@ theorem LitInj.of_view {a a' : AState} (h : LitInj a) (hv : a'.store.view = a.st
 
 /-- The post of `canon_names`: the list of numerals as an `IW` slice, the pool still addressable,
 the literal hash-consing kept. -/
-def NamesPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+def NamesPost (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (r : List Word) (cs : List NIdx) : Prop :=
-  KeepPost dn vis fe (fun m r (cs : List NIdx) => decRL (fun m => decHL m) 0 m r cs) m m' a r cs ∧
+  KeepPost vis fe (fun m r (cs : List NIdx) => decRL (fun m => decHL m) 0 m r cs) m m' a r cs ∧
     PoolSmall m' ∧ LitInj a
 
-theorem cnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat}
+theorem cnW_ok {vis : Word} {fe : IFEnv} {n : Nat}
     {m m' : Mem} {a : AState} {k : Word} {r : List Word} (hr : cnW n m k = some (r, m'))
-    (hS : StageR dn vis fe m a) (hP : PoolSmall m) :
+    (hS : StageR vis fe m a) (hP : PoolSmall m) :
     ∃ (hs : List NIdx) (a' : AState), (ConRon.Arena.canonNames k.toNat).run a = .ok (hs, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r hs ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r hs ∧
       a'.store.view = a.store.view ∧ PoolSmall m' := by
   cases n with
   | zero => simp [cnW] at hr
@@ -230,7 +229,7 @@ theorem cnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n
 theorem canonNames_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (k : Word) :
     RefAM p "canon_names" [k]
-      (fun m a => StageR dn vis fe m a ∧ PoolSmall m ∧ LitInj a)
+      (fun m a => StageR vis fe m a ∧ PoolSmall m ∧ LitInj a)
       (ConRon.Arena.canonNames k.toNat) (NamesPost dn vis fe) := by
   intro n s₀ a₀ ⟨hS, hP, hL⟩
   refine triple_post (canonNames_spec p hp n s₀ k) ?_
@@ -246,7 +245,7 @@ theorem canonNames_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option C
 theorem canonNamesGo_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (i k : Word) :
     RefAM p "canon_names_go" [i, k]
-      (fun m a => StageR dn vis fe m a ∧ PoolSmall m ∧ LitInj a ∧ i.toNat + k.toNat < 2 ^ 64)
+      (fun m a => StageR vis fe m a ∧ PoolSmall m ∧ LitInj a ∧ i.toNat + k.toNat < 2 ^ 64)
       (ConRon.Arena.canonNamesGo i.toNat k.toNat) (NamesPost dn vis fe) := by
   intro n s₀ a₀ ⟨hS, hP, hL, hik⟩
   refine triple_post (canonNamesGo_spec p hp n s₀ i k) ?_

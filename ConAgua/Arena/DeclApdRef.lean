@@ -86,7 +86,7 @@ theorem nmsR_congr {N : Word → ConLeche.Name → Prop} {m m' : Mem} {A : ArrId
   | nil => exact .nil
   | cons hk hn _ ih => exact .cons hk (by rw [rdW, h]; exact hn) ih
 
-theorem hd_word {a : Array Word} {i : Nat} {x : NIdx} (h : hd? a i = some x) :
+theorem hd_word {a : Array Word} {i : Nat} {x : NIdx} (h : hd? (aread a) i = some x) :
     ∃ w, a[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
   unfold hd? at h
   cases e : a[i]? with
@@ -606,14 +606,14 @@ end step2
 
 /-! ## The entry -/
 
-theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} (n : Nat) (hS : StageR dn vis fe m a) (env : ApdEnv a) (o l e r : Word)
+theorem apdEntry_ok {vis : Word} {fe : IFEnv} {m m' : Mem}
+    {a : AState} (n : Nat) (hS : StageR vis fe m a) (env : ApdEnv a) (o l e r : Word)
     (lps : List NIdx) (ks : List ConLeche.Name) (hks : lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
     (hdec : decHL m o.toNat l.toNat = some lps) (he : H e)
     (hM : rdW (m.arr64 CTL) apdSch.cs + 2 ≠ 0 → apdMR (mclearG apdSch m) ∅)
     (hb : apdEntryW n m o l e = some (r, m')) :
     ∃ b, (ConRon.Arena.allLevelParamsDefined lps (decE e)).run a = .ok (b, a) ∧
-      r = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ ∃ mp, apdMR m' mp := by
+      r = (if b then 1 else 0) ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ ∃ mp, apdMR m' mp := by
   unfold apdEntryW at hb
   obtain ⟨h0, hb⟩ := of_ite_none hb
   have hf0 : MemFrame [] [apdSch.cs, apdSch.cs + 1] m (mclearG apdSch m) := mclearG_frame apdSch m
@@ -662,9 +662,9 @@ at the twin fuel `f.toNat` exactly (the L walk's fuel word is the twin's; the ex
 bounds the depth). -/
 @[refines ConRon.Arena.allLevelParamsDefinedGo]
 theorem alpdGo_refines (p : Prog) (hp : ApdProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l f h : Word)
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l f h : Word)
     (mp : Std.HashMap EIdx Bool) (ks : List ConLeche.Name) (hh : H h)
-    (hS : StageR dn vis fe s₀.mem a₀) (env : ApdEnv a₀)
+    (hS : StageR vis fe s₀.mem a₀) (env : ApdEnv a₀)
     (hps : NmsR (nameN a₀.store.lss.ls.ns) s₀.mem IW o l ks) (hM : apdMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "alpd_go" [o, l, f, h]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -673,7 +673,7 @@ theorem alpdGo_refines (p : Prog) (hp : ApdProg p) (n : Nat) (s₀ : St) (a₀ :
       r.headD 0 = (if (AM.res (ConRon.Arena.allLevelParamsDefinedGo ks mp f.toNat (decE h)) a₀).1
         then 1 else 0) ∧
       apdMR s'.mem (AM.res (ConRon.Arena.allLevelParamsDefinedGo ks mp f.toNat (decE h)) a₀).2 ∧
-      StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (apdGo_spec p hp.eview hp.lsnode hp.find hp.put hp.lmem hp.lnode hp.lapd hp.ls
     hp.go n s₀ o l f h) ?_
   rintro r s' ⟨hl, hm⟩
@@ -695,12 +695,12 @@ the twin side must provide `ApdEnv` (the name store well formed, the `sort`/`con
 `StoreDen` read back) and the walk's memo well formed on entry (it is cleared first, so any
 `MemoRV` memo will do). The result is `0`/`1`; the stage relation and the pool's growth are kept. -/
 @[refines ConRon.Arena.allLevelParamsDefined]
-theorem allLevelParamsDefined_refines (p : Prog) (hp : ApdProg p) (dn : NIdx → Option ConLeche.Name)
+theorem allLevelParamsDefined_refines (p : Prog) (hp : ApdProg p) (_dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (o l e : Word) (he : H e) (lps : List NIdx) :
     RefAM p "all_level_params_defined" [o, l, e]
-      (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some lps ∧ ApdEnv a ∧
+      (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some lps ∧ ApdEnv a ∧
         (∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks) ∧ ∃ mp0, apdMR m mp0)
-      (ConRon.Arena.allLevelParamsDefined lps (decI e)) (KeepPost dn vis fe decW0B) := by
+      (ConRon.Arena.allLevelParamsDefined lps (decI e)) (KeepPost vis fe decW0B) := by
   intro n s₀ a₀ ⟨hS, hdec, env, ⟨ks, hks⟩, mp0, hM⟩
   cases n with
   | zero =>
@@ -713,7 +713,7 @@ theorem allLevelParamsDefined_refines (p : Prog) (hp : ApdProg p) (dn : NIdx →
       (memoRV_clear apdSch apdSch_wf bmKey apdVR _ mp0 hM) hm
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
     refine ⟨hloc, hok, ?_⟩
-    change KeepPost dn vis fe decW0B _ _ (AM.st (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀) r
+    change KeepPost vis fe decW0B _ _ (AM.st (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀) r
       (AM.res (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀)
     rw [hst, hres]
     exact ⟨hS', hg, apd_decW0B hr⟩

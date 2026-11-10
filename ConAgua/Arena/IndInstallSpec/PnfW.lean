@@ -1,20 +1,17 @@
 module
 
 import ConAgua.Arena.IndPosSpec.FgW
-public import ConAgua.Arena.IndInstallSpec.InstallIwB
 public import ConAgua.Arena.IndInstallSpec.NfsProg
-import ConAgua.Arena.IndInstallSpec.PartsAt
 public import ConAgua.Arena.IndInstallSpec.Pos3MapMProj
-public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndPosSpec.KlB
 public import ConAgua.Arena.IndPosSpec.UnW2
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.RecClassSpec.PiBWRoom
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.RecClassSpec.MjProg
 public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndDecPLB
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+import ConAgua.Arena.RecClassSpec.CloseLams
 
 @[expose] public section
 
@@ -121,7 +118,7 @@ theorem pos3_cssAt {m : Mem} {o l : Word} {css : List (List (IConstantVal × Nat
   obtain ⟨qw, hqw, rfl, hq0⟩ := pos3_iwN_word hq
   obtain ⟨nw, hnw, rfl, hq1⟩ := pos3_iwN_word hnF
   rw [← Option.some.inj hx]
-  refine ⟨hq0, hq1, qw.toNat, by simp [iwN, nat?, iwA, hqw], decCVp_truncM hcv, by simp [iwN, nat?, iwA, hnw]⟩
+  refine ⟨hq0, hq1, qw.toNat, by simp [iwN, nat?, iwA, aread_apply, hqw], decCVp_truncM hcv, by simp [iwN, nat?, iwA, aread_apply, hnw]⟩
 
 end L.Ind
 
@@ -130,11 +127,11 @@ namespace L.Ind
 open L.Arena
 
 /-- `sl_cons` of a handle onto a handle slice, under the stage relation. -/
-theorem pos3_consH {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem pos3_consH {p : Prog} (hP : NfsProg p) {n : Nat} {vis : Word}
     {fe : IFEnv} {a : AState} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List EIdx}
-    (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hb : o.toNat + l.toNat ≤ iwTop m) (hx : x.toNat < 2 ^ 32) (hxs : decHL m o.toNat l.toNat = some xs) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (decI x :: xs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -142,58 +139,13 @@ theorem pos3_consH {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option C
   obtain ⟨hS', hg, hd, ht⟩ := consW_stage hW hS hb hx hxs
   exact ⟨hS', hg, consW_mfr hW, hd, ht⟩
 
-/-- **`check_block_positivity_nfs_member`'s model: the members' normal forms**, a fresh handle slice. -/
-theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    (n : Nat) : ∀ (m m' : Mem) (a : AState) (o l : Word) (pairs : List (List NestFieldKind × EIdx))
-    (r : List Word), pnmW p n m o l = some (r, m') → StageR dn vis fe m a → PSlR0 decKE pairs o l m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
-      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (pairs.map (·.2)) ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  induction n with
-  | zero => intro m m' a o l pairs r h; simp [pnmW.eq_1] at h
-  | succ n ih =>
-  intro m m' a o l pairs r h hS hpr
-  by_cases hl : l = 0
-  · rw [pnmW.arm1 p n m o l hl] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    rw [hpr.nil hl]
-    exact ⟨hS, IWGrow.refl _, MFr.refl _ _ _, by simp [decHL, hslice?], by simp⟩
-  rw [pnmW.arm2 p n m o l hl] at h
-  obtain ⟨q, ⟨ks, e⟩, pairs', rfl, hw, hqb, hdq, hrest⟩ := partsPSl_cons (hpr.pslr hl) hl
-  rw [hw] at h
-  have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  -- the record's handle
-  have hdqT : decKE (truncM m) q = some (ks, e) := hdq
-  simp only [decKE, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
-    Prod.mk.injEq] at hdqT
-  obtain ⟨-, -, ee, hee, -, rfl⟩ := hdqT
-  obtain ⟨heelt, hee'⟩ := rec2IwH_trunc hee
-  obtain ⟨ew, hew, hew32, hewe⟩ := iwH_rdW_at (w := UInt64.ofNat q) (k := 2) (by rw [hq']; exact hee')
-    hS.iw.iwSize
-  rw [show (UInt64.ofNat 2 : Word) = 2 from rfl] at hew
-  -- the rest
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (pnmW.k_check_block_positivity_nfs_member.none ..)
-  rw [pnmW.k_check_block_positivity_nfs_member.arm1] at h
-  obtain ⟨hS1, hg1, hf1, hd1, hb1⟩ := ih m m1 a (o + 1) (l - 1) pairs' r1 h1 hS ⟨hrest.1, Or.inr hrest.2⟩
-  have hTm : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hq2 : (UInt64.ofNat q + 2 : Word).toNat = q + 2 := by
-    rw [UInt64.toNat_add, hq']; simp only [UInt64.reduceToNat]; omega
-  have hew1 : rdW (m1.arr64 IW) (UInt64.ofNat q + 2) = ew := by
-    rw [← hew]; simp only [rdW]
-    rw [hq2, hg1.iwGet _ heelt]
-  rw [hew1] at h
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pnmW.k_sl_cons.arm1] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hS2, hg2, hf2, hd2, hb2⟩ := pos3_consH hP h2 hS1 hb1 hew32 hd1
-  refine ⟨hS2, hg1.trans hg2, hf1.trans hf2, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩
-  simp only [List.headD_cons, List.tail_cons, List.map_cons, hd2, hewe]
 
 /-- **A `rec2` header `[off, len]` of a handle slice below the top**, decoded below the tops. -/
-theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {vis : Word}
     {fe : IFEnv} {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List EIdx}
-    (h : callW p n "rec2" [o, l] m = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : callW p n "rec2" [o, l] m = some (r, m')) (hS : StageR vis fe m a)
     (hx : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ DecB (fun m => decNFS m (r.headD 0).toNat) m' xs := by
+    StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ DecB (fun m => decNFS m (r.headD 0).toNat) m' xs := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
   obtain ⟨-, -, -, hf, -, -⟩ := recW_post hW hS.iw.ctl hS.iw.iwSize rfl
@@ -204,72 +156,16 @@ theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option C
   have hq1 : (rdW (m.arr64 CTL) 200).toNat + 1 < iwTop s'.mem := by rw [htop]; simp [iwTop]
   have w0 : iwN (truncM s'.mem) (rdW (m.arr64 CTL) 200).toNat = some o.toNat := by
     rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
-    simp [iwN, nat?, iwA, this]
+    simp [iwN, nat?, iwA, aread_apply, this]
   have w1 : iwN (truncM s'.mem) ((rdW (m.arr64 CTL) 200).toNat + 1) = some l.toNat := by
     rw [iwN_truncM hq1]; have := hget 1 (by simp)
     simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
-    simp [iwN, nat?, iwA, this]
+    simp [iwN, nat?, iwA, aread_apply, this]
   have hd := (decHL_decB hx hb).grow (OMono.decHL _ _) hg
   show decAt (truncM s'.mem) _ _ = some xs
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some]
   exact hd
 
-/-- **`check_block_positivity_nfs`' model: `outs.map (·.map (·.2))`**, member by member behind fresh
-headers. -/
-theorem pnfW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    (n : Nat) : ∀ (m m' : Mem) (a : AState) (s l : Word) (outss : List (List (List NestFieldKind × EIdx)))
-    (r : List Word), pnfW p n m s l = some (r, m') → StageR dn vis fe m a → PSlR decKES outss s l m →
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
-      PSlR decNFS (outss.map (·.map (·.2))) (r.headD 0) (r.tail.headD 0) m' := by
-  induction n with
-  | zero => intro m m' a s l outss r h; simp [pnfW.eq_1] at h
-  | succ n ih =>
-  intro m m' a s l outss r h hS hos
-  by_cases hl : l = 0
-  · rw [pnfW.arm1 p n m s l hl] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have : outss = [] := by
-      have h1 := hos.1; simp only [DecB, hl] at h1
-      simpa [decPL] using h1.symm
-    subst this
-    exact ⟨hS, IWGrow.refl _, MFr.refl _ _ _, PSlR.nil decNFS m⟩
-  rw [pnfW.arm2 p n m s l hl] at h
-  obtain ⟨q, pairs, outss', rfl, hw, hqb, hdq, hrest⟩ := partsPSl_cons hos hl
-  have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  obtain ⟨po, pl, hpo, hpl, hpd, hpb⟩ := partsAt decKE_mono (show decAt (truncM m)
-    (decPL (truncM m) (decKE (truncM m))) q = some pairs from hdq)
-  obtain ⟨w1, -, -⟩ := partsIwRd hpo (w := UInt64.ofNat q) hq'
-  obtain ⟨w2, -, -⟩ := partsIwRd hpl (w := UInt64.ofNat q + 1) (by
-    have := partsIwLt hpl; have : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-    rw [UInt64.toNat_add, hq']; simp; omega)
-  rw [UInt64.ofNat_toNat] at w1 w2
-  rw [hw, w1, w2] at h
-  -- the member
-  rcases h1 : callW p n "check_block_positivity_nfs_member" [po, pl] m with _ | ⟨r1, m1⟩
-  · rw [h1] at h; simp [pnfW.k_check_block_positivity_nfs_member.none] at h
-  rw [h1, pnfW.k_check_block_positivity_nfs_member.arm1] at h
-  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (pnm_spec p hP.mem n _ po pl) h1
-  obtain ⟨hS1, hg1, hf1, hd1, hb1⟩ := pnmW_ok hP n m s1.mem a po pl pairs r1 hW1 hS ⟨hpd, hpb⟩
-  -- its header
-  rcases h2 : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with _ | ⟨r2, m2⟩
-  · rw [h2] at h; simp [pnfW.k_rec2.none] at h
-  rw [h2, pnfW.k_rec2.arm1] at h
-  obtain ⟨hS2, hg2, hf2, hd2⟩ := pos3_rec2H hP h2 hS1 hd1 hb1
-  -- the rest
-  rcases h3 : pnfW p n m2 (s + 1) (l - 1) with _ | ⟨r3, m3⟩
-  · rw [h3] at h; simp [pnfW.k_check_block_positivity_nfs.none] at h
-  rw [h3, pnfW.k_check_block_positivity_nfs.arm1] at h
-  have hg12 := hg1.trans hg2
-  obtain ⟨hS3, hg3, hf3, hd3⟩ := ih m2 m3 a (s + 1) (l - 1) outss' r3 h3 hS2 (hrest.grow decKES_mono hg12)
-  -- the cons
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [pnfW.k_sl_cons.arm1] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (slCons_specW p hP.alloc hP.copy hP.cons n _ _ _ _) h4
-  obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decNFS_mono hW4 hS3 hd3.2 hd3.1 (hd2.grow (decNFS_mono _) hg3)
-  refine ⟨hS4, (hg12.trans hg3).trans hg4, ((hf1.trans hf2).trans hf3).trans (consW_mfr hW4), ?_, ?_⟩
-  · simpa using hd4
-  · simp only [List.headD_cons, List.tail_cons]; omega
 
 end L.Ind
 

@@ -29,11 +29,10 @@ namespace L.Arena
 /-! ## The records -/
 
 /-- **A constructor record's level parameters**: the slice at `p + 2`, `p + 3`. -/
-theorem decCI_ctorLp {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {cv : IConstantVal} {np nf : Nat} (h : decCI a dn q.toNat = some (.ctorInfo cv np nf))
-    (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) :
-    hslice? a (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
-  cases hq : a[q.toNat]? with
+theorem decCI_ctorLp {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {cv : IConstantVal} {np nf : Nat} (h : decCI R q.toNat = some (.ctorInfo cv np nf)) :
+    hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams := by
+  cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
@@ -46,26 +45,26 @@ theorem decCI_ctorLp {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q 
   simp only [decCV, hlist?, nat?, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
     Option.map_eq_some_iff, Option.some.injEq] at hcv
   obtain ⟨nm, -, ls, ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩, ty, -, rfl⟩ := hcv
-  have h2 : rdW b (q + 2) = wo := rdW_ext hab hsz (k := 2) (by decide) (by simpa [Nat.add_assoc] using hwo)
-  have h3 : rdW b (q + 3) = wc := rdW_ext hab hsz (k := 3) (by decide) (by simpa [Nat.add_assoc] using hwc)
+  have h2 : rd (q + 2) = wo := hR.offN (k := 2) (hk := by decide) (by simpa [Nat.add_assoc] using hwo)
+  have h3 : rd (q + 3) = wc := hR.offN (k := 3) (hk := by decide) (by simpa [Nat.add_assoc] using hwc)
   rw [h2, h3]; exact hs
 
 /-- **An inductive record's level parameters and η/unit caps.** -/
-structure IndRecR (b : Array Word) (a : Array Word) (q : Word) (cv : IConstantVal) (caps : IIndCaps) :
+structure IndRecR (R : Nat → Option Word) (rd : Word → Word) (q : Word) (cv : IConstantVal) (caps : IIndCaps) :
     Prop where
-  lp : hslice? a (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams
-  eta : caps.eta = (rdW b (q + 5) != 0)
-  etaCtor : caps.etaCtor = decI (rdW b (q + 6))
-  etaCtor_hw : HW (rdW b (q + 6))
-  etaParams : caps.etaParams = (rdW b (q + 7)).toNat
-  etaFields : caps.etaFields = (rdW b (q + 8)).toNat
-  unitlike : caps.unitlike = (rdW b (q + 9) != 0)
-  unitParams : caps.unitParams = (rdW b (q + 10)).toNat
+  lp : hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams
+  eta : caps.eta = (rd (q + 5) != 0)
+  etaCtor : caps.etaCtor = decI (rd (q + 6))
+  etaCtor_hw : HW (rd (q + 6))
+  etaParams : caps.etaParams = (rd (q + 7)).toNat
+  etaFields : caps.etaFields = (rd (q + 8)).toNat
+  unitlike : caps.unitlike = (rd (q + 9) != 0)
+  unitParams : caps.unitParams = (rd (q + 10)).toNat
 
-theorem decCI_indCaps {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a dn q.toNat = some (.indInfo cv caps))
-    (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) : IndRecR b a q cv caps := by
-  cases hq : a[q.toNat]? with
+theorem decCI_indCaps {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI R q.toNat = some (.indInfo cv caps))  :
+    IndRecR R rd q cv caps := by
+  cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
@@ -78,18 +77,18 @@ theorem decCI_indCaps {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q
   simp only [decCV, hlist?, nat?, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
     Option.map_eq_some_iff, Option.some.injEq] at hcv
   obtain ⟨nm, -, ls, ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩, ty, -, rfl⟩ := hcv
-  have h2 : rdW b (q + 2) = wo := rdW_ext hab hsz (k := 2) (by decide) (by simpa [Nat.add_assoc] using hwo)
-  have h3 : rdW b (q + 3) = wc := rdW_ext hab hsz (k := 3) (by decide) (by simpa [Nat.add_assoc] using hwc)
+  have h2 : rd (q + 2) = wo := hR.offN (k := 2) (hk := by decide) (by simpa [Nat.add_assoc] using hwo)
+  have h3 : rd (q + 3) = wc := hR.offN (k := 3) (hk := by decide) (by simpa [Nat.add_assoc] using hwc)
   simp only [decCaps, bool?, hd?, nat?, hlist?, Option.bind_eq_bind, Option.pure_def,
     Option.bind_eq_some_iff, Option.map_eq_some_iff, Option.some.injEq] at hcaps
   obtain ⟨e, ⟨we, hwe, rfl⟩, ec, ⟨wec, hwec, hec⟩, ep, ⟨wep, hwep, rfl⟩, ef, ⟨wef, hwef, rfl⟩,
     ul, ⟨wul, hwul, rfl⟩, up, ⟨wup, hwup, rfl⟩, -, -, -, -, -, -, -, -, -, -, rfl⟩ := hcaps
-  have h5 : rdW b (q + 5) = we := rdW_ext hab hsz (k := 5) (by decide) (by simpa [Nat.add_assoc] using hwe)
-  have h6 : rdW b (q + 6) = wec := rdW_ext hab hsz (k := 6) (by decide) (by simpa [Nat.add_assoc] using hwec)
-  have h7 : rdW b (q + 7) = wep := rdW_ext hab hsz (k := 7) (by decide) (by simpa [Nat.add_assoc] using hwep)
-  have h8 : rdW b (q + 8) = wef := rdW_ext hab hsz (k := 8) (by decide) (by simpa [Nat.add_assoc] using hwef)
-  have h9 : rdW b (q + 9) = wul := rdW_ext hab hsz (k := 9) (by decide) (by simpa [Nat.add_assoc] using hwul)
-  have h10 : rdW b (q + 10) = wup := rdW_ext hab hsz (k := 10) (by decide) (by simpa [Nat.add_assoc] using hwup)
+  have h5 : rd (q + 5) = we := hR.offN (k := 5) (hk := by decide) (by simpa [Nat.add_assoc] using hwe)
+  have h6 : rd (q + 6) = wec := hR.offN (k := 6) (hk := by decide) (by simpa [Nat.add_assoc] using hwec)
+  have h7 : rd (q + 7) = wep := hR.offN (k := 7) (hk := by decide) (by simpa [Nat.add_assoc] using hwep)
+  have h8 : rd (q + 8) = wef := hR.offN (k := 8) (hk := by decide) (by simpa [Nat.add_assoc] using hwef)
+  have h9 : rd (q + 9) = wul := hR.offN (k := 9) (hk := by decide) (by simpa [Nat.add_assoc] using hwul)
+  have h10 : rd (q + 10) = wup := hR.offN (k := 10) (hk := by decide) (by simpa [Nat.add_assoc] using hwup)
   split at hec
   · rename_i hlt
     cases hec
@@ -158,8 +157,8 @@ variable (m0 : Mem) (c q tn lpe r1 r2 uslen : Word) (r : List Word)
 
 /-- The tests of `struct_eta_cert_go`, all passed. -/
 def sgOK : Prop :=
-  rdW (m0.arr64 EREC) (q + 5) ≠ 0 ∧ rdW (m0.arr64 EREC) (q + 6) = c ∧ r1 = 0 ∧ r2 = 0 ∧
-    tn = rdW (m0.arr64 EREC) (q + 7) ∧ uslen = rdW (m0.arr64 EREC) (q + 3) ∧ lpe ≠ 0 ∧ r.headD 0 ≠ 0
+  erRdT m0 (q + 5) ≠ 0 ∧ erRdT m0 (q + 6) = c ∧ r1 = 0 ∧ r2 = 0 ∧
+    tn = erRdT m0 (q + 7) ∧ uslen = erRdT m0 (q + 3) ∧ lpe ≠ 0 ∧ r.headD 0 ≠ 0
 
 end sgKarms
 
@@ -185,32 +184,32 @@ variable (p : Prog) (n : Nat) (m0 : Mem) (mode vis d b us c T q us2 ao an to tn 
 
 /-- `struct_eta_cert_go`'s tests, all passed: the tail. -/
 theorem secgE_yes (h : sgOK m0 c q tn lpe r1 r2 uslen r) :
-    secgE.k_tower_slots_all p n mode vis d b us c T us2 ao an to tn (rdW (m0.arr64 EREC) (q + 5))
-      (rdW (m0.arr64 EREC) (q + 6)) (rdW (m0.arr64 EREC) (q + 7)) (rdW (m0.arr64 EREC) (q + 8))
-      (rdW (m0.arr64 EREC) (q + 3)) lpe r1 r2 uslen (.ok (r, m)) =
+    secgE.k_tower_slots_all p n mode vis d b us c T us2 ao an to tn (erRdT m0 (q + 5))
+      (erRdT m0 (q + 6)) (erRdT m0 (q + 7)) (erRdT m0 (q + 8))
+      (erRdT m0 (q + 3)) lpe r1 r2 uslen (.ok (r, m)) =
     secgE.k_struct_eta_cert_tail p (sectE p n m mode vis d b us T us2 ao an to tn
-      (rdW (m0.arr64 EREC) (q + 7)) (rdW (m0.arr64 EREC) (q + 8))) := by
+      (erRdT m0 (q + 7)) (erRdT m0 (q + 8))) := by
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8⟩ := h
   simp only [secgE.k_tower_slots_all, h1, h2, h3, h4, h5, h6, h7, h8, ne_eq, not_true_eq_false,
     ↓reduceIte]
 
 /-- `struct_eta_cert_go`'s tests, one failed: `false`. -/
 theorem secgE_no (h : ¬ sgOK m0 c q tn lpe r1 r2 uslen r) :
-    secgE.k_tower_slots_all p n mode vis d b us c T us2 ao an to tn (rdW (m0.arr64 EREC) (q + 5))
-      (rdW (m0.arr64 EREC) (q + 6)) (rdW (m0.arr64 EREC) (q + 7)) (rdW (m0.arr64 EREC) (q + 8))
-      (rdW (m0.arr64 EREC) (q + 3)) lpe r1 r2 uslen (.ok (r, m)) = .ok ([0], m) := by
+    secgE.k_tower_slots_all p n mode vis d b us c T us2 ao an to tn (erRdT m0 (q + 5))
+      (erRdT m0 (q + 6)) (erRdT m0 (q + 7)) (erRdT m0 (q + 8))
+      (erRdT m0 (q + 3)) lpe r1 r2 uslen (.ok (r, m)) = .ok ([0], m) := by
   unfold secgE.k_tower_slots_all
-  by_cases h1 : rdW (m0.arr64 EREC) (q + 5) = 0
+  by_cases h1 : erRdT m0 (q + 5) = 0
   · simp only [h1, ↓reduceIte]
-  by_cases h2 : rdW (m0.arr64 EREC) (q + 6) ≠ c
+  by_cases h2 : erRdT m0 (q + 6) ≠ c
   · simp only [h1, h2, ne_eq, not_false_eq_true, ↓reduceIte]
   by_cases h3 : r1 ≠ 0
   · simp only [h1, h2, h3, ne_eq, not_false_eq_true, ↓reduceIte]
   by_cases h4 : r2 ≠ 0
   · simp only [h1, h2, h3, h4, ne_eq, not_false_eq_true, ↓reduceIte]
-  by_cases h5 : tn ≠ rdW (m0.arr64 EREC) (q + 7)
+  by_cases h5 : tn ≠ erRdT m0 (q + 7)
   · simp only [h1, h2, h3, h4, h5, ne_eq, not_false_eq_true, ↓reduceIte]
-  by_cases h6 : uslen ≠ rdW (m0.arr64 EREC) (q + 3)
+  by_cases h6 : uslen ≠ erRdT m0 (q + 3)
   · simp only [h1, h2, h3, h4, h5, h6, ne_eq, not_false_eq_true, ↓reduceIte]
   by_cases h7 : lpe = 0
   · simp only [h1, h2, h3, h4, h5, h6, h7, ↓reduceIte]
@@ -233,19 +232,19 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
     (hcw : HW c) (hT : HW T) (hus2 : HW us2)
     (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
     (hvus2 : ∃ x c', a₀.store.view x = some (.const c' (decI us2)))
-    (hcvc : decCI (erecP s₀.mem) dn pc.toNat = some (.ctorInfo cvc np nf))
-    (hcvT : decCI (erecP s₀.mem) dn q.toNat = some (.indInfo cvT caps))
+    (hcvc : decCI (erecP s₀.mem) pc.toNat = some (.ctorInfo cvc np nf))
+    (hcvT : decCI (erecP s₀.mem) q.toNat = some (.indInfo cvT caps))
     (ha : SpineR s₀.mem ao an aargs) (ht : SpineR s₀.mem to tn targs)
     (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (htt : to.toNat + tn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (SetG p n) (secgE p (n + 1) s₀.mem mode vis d b us c pc T q us2 ao an to tn)
-      (setGoT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc (decI T)
+      (setGoT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc (decI T)
         (decI us2) cvT caps aargs.toList targs.toList) a₀
       (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hspn := hS.spn
-  have hIR := decCI_indCaps hcvT (erecP_ext _) hS.erec
-  have hCL := decCI_ctorLp hcvc (erecP_ext _) hS.erec
+  have hIR := decCI_indCaps (erRdOK _) hcvT
+  have hCL := decCI_ctorLp (erRdOK _) hcvc
   simp only [secgE]
   cases n with
   | zero =>
@@ -288,8 +287,8 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   unfold setGoK
   -- the tests
   have hlenT : targs.toList.length = tn.toNat := by simpa using ht.size
-  have hlpT : cvT.levelParams.length = (rdW (s₀.mem.arr64 EREC) (q + 3)).toNat :=
-    hslice?_length hIR.lp
+  have hlpT : cvT.levelParams.length = (erRdT s₀.mem (q + 3)).toNat :=
+    hslice?_lenR hIR.lp
   have hiff : (caps.eta = true ∧ caps.etaCtor = decI c ∧
       a₀.pins.reserved.contains (decI T) = false ∧ a₀.pins.reserved.contains (decI c) = false ∧
       targs.toList.length = caps.etaParams ∧
@@ -298,8 +297,8 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
       sgOK s₀.mem c q tn (r₁.headD 0) (r₂.headD 0) (r₃.headD 0) (r₄.tail.headD 0) r₅ := by
     unfold sgOK
     rw [hIR.eta, hIR.etaCtor, ← hr₂, ← hr₃, hlenT, hIR.etaParams, hlpT]
-    have e2 : decI (rdW (s₀.mem.arr64 EREC) (q + 6)) = (decI c : NIdx) ↔
-        rdW (s₀.mem.arr64 EREC) (q + 6) = c :=
+    have e2 : decI (erRdT s₀.mem (q + 6)) = (decI c : NIdx) ↔
+        erRdT s₀.mem (q + 6) = c :=
       ⟨fun h => decI_inj hIR.etaCtor_hw hcw h, fun h => by rw [h]⟩
     have e7 : cvc.levelParams = cvT.levelParams ↔ r₁.headD 0 ≠ 0 := by
       have h1 : decBool r₁ = decide (cvc.levelParams = cvT.levelParams) := hr₁

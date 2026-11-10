@@ -94,14 +94,14 @@ theorem notbig_of_lt {z : Word} (h : z.toNat < 2 ^ 32) : ¬ 4294967296 ≤ z := 
   have e : (4294967296 : Word).toNat = 4294967296 := by decide
   omega
 
-theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem canonW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl us nn c v : Word) (names : List NIdx) (r : List Word),
-    canonW n m no nl us nn c v = some (r, m') → StageR dn vis fe m a → H c → H us → H v →
+    canonW n m no nl us nn c v = some (r, m') → StageR vis fe m a → H c → H us → H v →
     decHL m no.toNat nl.toNat = some names → no.toNat + nl.toNat < 2 ^ 64 →
     nn.toNat + names.length < 2 ^ 64 →
     ∃ x a', (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
-  intro dn fe vis m m' a no nl us nn c v names r h hS hc hus hv hdec hb hnn
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
+  intro _dn fe vis m m' a no nl us nn c v names r h hS hc hus hv hdec hb hnn
   cases n with
   | zero => simp [canonW] at h
   | succ n =>
@@ -179,11 +179,11 @@ section arms
 variable (n : Nat) (m m1 m2 : Mem) (c off l oO oL b : Word) (r r2 : List Word)
 theorem matesW_nil (h : l = 0) : matesW (n + 1) m c off l oO oL = some ([oO, oL], m) := by simp [matesW, h]
 theorem matesW_cons (h : l ≠ 0) : matesW (n + 1) m c off l oO oL =
-    matesK1 n m c off l oO oL (containsW n m oO oL (rdW (m.arr64 EREC) off)) := by simp [matesW, h]
-theorem matesK1_skip (h : rdW (m.arr64 EREC) off = c ∨ b ≠ 0) : matesK1 n m c off l oO oL (some b) =
+    matesK1 n m c off l oO oL (containsW n m oO oL (erRd m off)) := by simp [matesW, h]
+theorem matesK1_skip (h : erRd m off = c ∨ b ≠ 0) : matesK1 n m c off l oO oL (some b) =
     matesK3 (matesW n m c (off + 1) (l - 1) oO oL) := by simp only [matesK1]; rw [ite_eq_left h]
-theorem matesK1_add (h : ¬ (rdW (m.arr64 EREC) off = c ∨ b ≠ 0)) : matesK1 n m c off l oO oL (some b) =
-    matesK2 n c off l (snocW n m oO oL (rdW (m.arr64 EREC) off)) := by simp only [matesK1]; rw [ite_eq_right h]
+theorem matesK1_add (h : ¬ (erRd m off = c ∨ b ≠ 0)) : matesK1 n m c off l oO oL (some b) =
+    matesK2 n c off l (snocW n m oO oL (erRd m off)) := by simp only [matesK1]; rw [ite_eq_right h]
 theorem matesK2_some : matesK2 n c off l (some (r2, m2)) =
     matesK3 (matesW n m2 c (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0)) := by rw [matesK2]
 theorem matesK3_some : matesK3 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := by rw [matesK3]
@@ -213,7 +213,7 @@ theorem nestFrameMatesGo_spec (n : Nat) : ∀ (s₀ : St) (c off l oO oL : Word)
     simp only [invoke_eq _ hp, callFn, nestFrameMatesGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slContains_spec p hc n, slSnoc_specW p ha hcp hsn n, ih] <;> finish (gen := 20)
+        slContains_spec p hc n, slSnoc_specW p ha hcp hsn n, ih] <;> finish (gen := 20) [erRd]
 
 end spec
 

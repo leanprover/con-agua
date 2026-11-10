@@ -6,7 +6,6 @@ public import ConAgua.Arena.DefEqLeaves
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
@@ -22,7 +21,7 @@ its callees through their runs (`callW`), in the continuation shape (`…K (call
 argument of the model, one arm lemma per outcome), the L spec by `vcgen` + `finish`, the
 refinement from the callees' specs, sequenced by `coreRef_bind`.
 
-Functions whose callees include the knot's slots refine their twins at `coreKnot (decMode mode) fe
+Functions whose callees include the knot's slots refine their twins at `coreKnot (decMode mode) (decEager mode) fe
 id F` for `F ≥ n`, where `n` is the L fuel of the callee calls (`KnotUpTo`/`DefeqSlot` at `n`).
 -/
 
@@ -187,7 +186,7 @@ l_model lazyFoldOk_spec (p : Prog) (hp : DefEqMidProg p)
   grind [arena_grind]
 
 theorem mode_eager_bit (mode : Word) (h : mode < 4) :
-    (decMode mode).eager = decide ((mode >>> 1) &&& 1 ≠ 0) := by
+    decEager mode = decide ((mode >>> 1) &&& 1 ≠ 0) := by
   rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> decide
 
 /-- **`lazy_fold_ok` refines `lazyFoldOk`**, from `has_fvar`'s spec. -/
@@ -196,7 +195,7 @@ theorem lazyFoldOk_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p) (
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode a b : Word) (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hm : mode < 4)
     (ha : HW a) (hb : HW b) :
-    CoreSpec p (n + 1) "lazy_fold_ok" [mode, a, b] (lazyFoldOk (decMode mode) (decE a) (decE b))
+    CoreSpec p (n + 1) "lazy_fold_ok" [mode, a, b] (lazyFoldOk (decEager mode) (decE a) (decE b))
       decBool s₀ a₀ dn vis fe M eb := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
@@ -230,7 +229,7 @@ theorem bts_ref (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk : KnotUpTo p n)
     (M : ModeMaps) (eb mode d a : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) :
     RefE (KnotUpToE p n) (btsE p (n + 1) s₀.mem mode vis d a)
-      (boolTrueShortcut (coreKnot (decMode mode) fe id F) d.toNat (decE a)) a₀
+      (boolTrueShortcut (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [btsE]
   unfold boolTrueShortcut
@@ -253,7 +252,7 @@ theorem boolTrueShortcut_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk 
     (M : ModeMaps) (eb mode d a : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) :
     CoreSpec p (n + 1) "bool_true_shortcut" [mode, vis, d, a]
-      (boolTrueShortcut (coreKnot (decMode mode) fe id F) d.toNat (decE a)) decBool s₀ a₀ dn vis
+      (boolTrueShortcut (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a)) decBool s₀ a₀ dn vis
       fe M eb :=
   RefE.coreSpec (btsE_spec p hp.bts (n + 1) s₀ mode vis d a)
     (bts_ref p hp n hk F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha)
@@ -273,7 +272,7 @@ theorem tupa_ref (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk : KnotUpTo p n)
     (M : ModeMaps) (eb mode d e : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (he : HW e) :
     RefE (KnotUpToE p n) (tupaE p (n + 1) s₀.mem mode vis d e)
-      (tryUnfoldProjApp (coreKnot (decMode mode) fe id F) d.toNat (decE e)) a₀
+      (tryUnfoldProjApp (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE e)) a₀
       (CorePost decOptR dn s₀.mem vis fe M eb ResW) := by
   simp only [tupaE]
   unfold tryUnfoldProjApp
@@ -309,7 +308,7 @@ theorem tryUnfoldProjApp_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk 
     (M : ModeMaps) (eb mode d e : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (he : HW e) :
     CoreSpec p (n + 1) "try_unfold_proj_app" [mode, vis, d, e]
-      (tryUnfoldProjApp (coreKnot (decMode mode) fe id F) d.toNat (decE e)) decOptR s₀ a₀ dn vis
+      (tryUnfoldProjApp (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE e)) decOptR s₀ a₀ dn vis
       fe M eb ResW :=
   RefE.coreSpec (tupaE_spec p hp.tupa (n + 1) s₀ mode vis d e)
     (tupa_ref p hp n hk F s₀ a₀ dn vis fe M eb mode d e hF hn hs he)
@@ -347,7 +346,7 @@ def QuickDefeqSpec (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW x → HW y → d.toNat < 2 ^ 63 →
     CoreSpec p n "quick_defeq" [mode, vis, d, x, y]
-      (quickDefEq (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE x) (decE y)) decOB
+      (quickDefEq (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE x) (decE y)) decOB
       s₀ a₀ dn vis fe M eb ResW
 
 /-- `quick_defeq`'s error claim at fuel `n` (the shape of `QuickDefeqSpec`). -/
@@ -356,7 +355,7 @@ def QuickDefeqWE (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW x → HW y → d.toNat < 2 ^ 63 →
     CoreSpecE p n "quick_defeq" [mode, vis, d, x, y]
-      (quickDefEq (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE x) (decE y)) s₀ a₀
+      (quickDefEq (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE x) (decE y)) s₀ a₀
 
 /-- **The knot's slots up to fuel `n` and the verdict closure**: what the errors of the `defeq`
 family's pieces that call the slots and lifted callees claim from (`peel_*`, `lams_*`,
@@ -383,7 +382,7 @@ theorem dq_ref (p : Prog) (n : Nat) (hq : QuickDefeqSpec p n)
     (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     RefE (QuickDefeqWE p n) (dqE p (n + 1) s₀.mem mode vis d a b)
-      (deltaQuick (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) a₀
+      (deltaQuick (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) a₀
       (CorePost decDS dn s₀.mem vis fe M eb Res3) := by
   simp only [dqE]
   unfold deltaQuick
@@ -410,7 +409,7 @@ theorem deltaQuick_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hq : Quic
     (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "delta_quick" [mode, vis, d, a, b]
-      (deltaQuick (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) decDS
+      (deltaQuick (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) decDS
       s₀ a₀ dn vis fe M eb Res3 :=
   RefE.coreSpec (dqE_spec p hp.dq (n + 1) s₀ mode vis d a b)
     (dq_ref p n hq F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb hd)
@@ -447,7 +446,7 @@ theorem off_ref (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) (n : Nat)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     RefE (KnotUpToE p n) (offE p (n + 1) s₀.mem mode vis d a b)
-      (defeqOffset (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) a₀
+      (defeqOffset (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) a₀
       (CorePost decOB dn s₀.mem vis fe M eb ResW) := by
   unfold defeqOffset
   simp only [offE]
@@ -505,7 +504,7 @@ theorem defeqOffset_refines (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) 
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "defeq_offset" [mode, vis, d, a, b]
-      (defeqOffset (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) decOB s₀ a₀ dn vis
+      (defeqOffset (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) decOB s₀ a₀ dn vis
       fe M eb ResW :=
   RefE.coreSpec (offE_spec p hp.off (n + 1) s₀ mode vis d a b)
     (off_ref p hp hnp n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
@@ -530,7 +529,7 @@ theorem li_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n)
     (M : ModeMaps) (eb mode d b₁ b₂ : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hd : d.toNat + 1 < 2 ^ 64) (h₁ : HW b₁) (h₂ : HW b₂) :
     RefE (KnotUpToE p n) (liE p (n + 1) s₀.mem mode vis d b₁ b₂)
-      (defeqLamsInner (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE b₁) (decE b₂))
+      (defeqLamsInner (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE b₁) (decE b₂))
       a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hd1 : (d + 1).toNat = d.toNat + 1 := by
     rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
@@ -580,7 +579,7 @@ theorem defeqLamsInner_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk : 
     (M : ModeMaps) (eb mode d b₁ b₂ : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hd : d.toNat + 1 < 2 ^ 64) (h₁ : HW b₁) (h₂ : HW b₂) :
     CoreSpec p (n + 1) "defeq_lams_inner" [mode, vis, d, b₁, b₂]
-      (defeqLamsInner (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE b₁) (decE b₂))
+      (defeqLamsInner (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE b₁) (decE b₂))
       decBool s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (liE_spec p hp.lamsInner (n + 1) s₀ mode vis d b₁ b₂)
     (li_ref p n hk F s₀ a₀ dn vis fe M eb mode d b₁ b₂ hF hn hs hd h₁ h₂)

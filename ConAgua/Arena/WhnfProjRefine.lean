@@ -25,11 +25,12 @@ namespace L.Arena
 /-- **The lookups the projection functions need.** -/
 structure ProjProg (p : Prog) : Prop where
   findProj : p.lookup "find_proj" = some findProjL
-  fireOk : p.lookup "fire_ok" = some fireOkL
-  envix : p.lookup "env_ix" = some envIxL
-  envrow : p.lookup "env_row_get" = some envRowGetL
-  tblix : p.lookup "tbl_ix" = some tblIxL
-  tblrow : p.lookup "tbl_row_get" = some tblRowGetL
   findTable : p.lookup "find_table" = some findTableL
+  rawTable : p.lookup "raw_table" = some rawTableL
+  tblOwnGet : p.lookup "tbl_own_get" = some tblOwnGetL
+  tblBaseGet : p.lookup "tbl_base_get" = some tblBaseGetL
+  envFind : p.lookup "env_find" = some envFindL
+  envRowGet : p.lookup "env_row_get" = some envRowGetL
+  baseRowGet : p.lookup "base_row_get" = some baseRowGetL
 
 end L.Arena

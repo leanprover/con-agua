@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndSumSpec.TsrW
-import ConAgua.Arena.RecGenSpec.CruleProg
 public import ConAgua.Arena.RecGenSpec.DecRR
 import ConAgua.Arena.IndInstallSpec.IcbiW
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
@@ -11,9 +10,9 @@ public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.L.WordOff
+import ConAgua.Arena.IndInstallSpec.InstallIwB
+import ConAgua.Arena.IndInstallSpec.DomsW
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.RecCheck
@@ -23,7 +22,10 @@ import all ConAgua.Arena.RecCheck
 /-!
 # ConsBlockRecsTF: `ConRon.Arena.consBlockRecsTF`
 
-The refinement theorems `consBlockRecsTF_refines` and the lemmas only they use.
+The models and stage lemmas of `block_rec_infos_tf`'s record writers: `rule_copy`, `rules_to_erec(_go)`
+(the copied run decodes as the rules), `rec_info_rec` (a 10-word `.recInfo` record at `erec_put`);
+`rec_k_expected` (`rkW_ok`), and `block_rec_infos_tf` itself (`briW_ok`, `blockRecInfosTF_refines`:
+the records at a slice of `EREC` pointers, `decPL m (decCI (erecP m))`).
 -/
 
 section
@@ -134,69 +136,6 @@ theorem sumB01 {r : Word} {b : Bool} (h : (r != 0) = b) (hl : r.toNat ≤ 1) :
     · exact .inr (UInt64.toNat_inj.mp (by simpa using h))
   rcases this with rfl | rfl <;> decide
 
-theorem tblMem_eq (m : Mem) (q T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 : Word) :
-    tblMem m q T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 =
-      wrER m q [6, 0, T, lo2, ll2, nP, C, nF, rs, bo2, bl2, go2, gl2] := by
-  simp only [tblMem, wrER]
-  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
-    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
-    show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl,
-    show q + 7 + 1 = q + 8 by ac_rfl, show q + 8 + 1 = q + 9 by ac_rfl,
-    show q + 9 + 1 = q + 10 by ac_rfl, show q + 10 + 1 = q + 11 by ac_rfl,
-    show q + 11 + 1 = q + 12 by ac_rfl]
-
-/-! ## `check_struct_proj_table`: the relation to the twin -/
-
-/-- **The table record's decoding**, from its thirteen words and the three copied slices. -/
-theorem sumDecTbl {a : Array Word} {q : Nat}
-    {T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 : Word} {lps : List NIdx} {bodies : List EIdx}
-    {guards : List LIdx}
-    (hw : ∀ i < 13, a[q + i]? = [6, 0, T, lo2, ll2, nP, C, nF, rs, bo2, bl2, go2, gl2][i]?)
-    (hT : H T) (hC : H C) (hrs : H rs)
-    (hl : hslice? a lo2.toNat ll2.toNat = some lps) (hb : hslice? a bo2.toNat bl2.toNat = some bodies)
-    (hg : hslice? a go2.toNat gl2.toNat = some guards) :
-    decTbl a q = some ⟨decI T, lps, nP.toNat, decI C, nF.toNat, decI rs, bodies.toArray, guards⟩ := by
-  have h2 := hw 2 (by decide); have h3 := hw 3 (by decide)
-  have h4 := hw 4 (by decide); have h5 := hw 5 (by decide); have h6 := hw 6 (by decide)
-  have h7 := hw 7 (by decide); have h8 := hw 8 (by decide); have h9 := hw 9 (by decide)
-  have h10 := hw 10 (by decide); have h11 := hw 11 (by decide); have h12 := hw 12 (by decide)
-  simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12
-  have e3 : q + 3 + 1 = q + 4 := rfl
-  have e9 : q + 9 + 1 = q + 10 := rfl
-  have e11 : q + 11 + 1 = q + 12 := rfl
-  simp only [decTbl, hlist?, nat?, hd?, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12,
-    e3, e9, e11, Option.map_some, Option.bind_eq_bind, Option.bind_some, hT, hC, hrs, ite_true,
-    hl, hb, hg]
-  rfl
-
-theorem envPushW_afr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m vis q = some (r, m')) :
-    AFr m m' := by
-  simp only [envPushW] at h
-  split at h; · cases h
-  split at h; · cases h
-  split at h
-  rotate_left
-  · cases h
-  rename_i hc
-  obtain ⟨ht, -⟩ := hc
-  have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON, 140, 141, 142] := by
-    rcases rowArr_names (rdW (m.arr64 EREC) (q + 1)) with h | h | h | h | h | h <;> rw [h] <;> decide
-  have hne : (rowArr (rdW (m.arr64 EREC) (q + 1)) : TieredArray) ≠ ↑CTL :=
-    TieredArray.t0_ne (rowArr_ne _ (by decide))
-  have h49 : memoFreeA [rowArr (rdW (m.arr64 EREC) (q + 1))] = true := by
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hrow
-    rcases hrow with h | h | h | h | h | h | h <;> rw [h] <;> decide
-  have hf1 : AFr m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) := by
-    unfold rowSet
-    exact (AFr.set64 m _ hne h49 _ _).trans (AFr.set64 _ _ hne h49 _ _)
-  simp only [envPushK] at h
-  split at h; · cases h
-  split at h
-  rotate_left
-  · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  exact hf1.trans ((AFr.set64 _ ECON (by decide) (by decide) _ _).trans (AFr.setCtl _ 128 (by decide) _))
 
 end L.Ind
 
@@ -282,55 +221,68 @@ local notation "V" => ConLeche.CheckMode.verified
 section shift
 variable {a b : Array Word}
 
-/-- A rule record copied word for word (its fire slices decoding in the larger array). -/
-theorem decRule_copy {q q' : Nat} {rl : IRecRule} (h : decRule a q = some rl) (hext : ArrExt a b)
-    (hw : ∀ i, i < 11 → b[q' + i]? = a[q + i]?) : decRule b q' = some rl := by
-  obtain ⟨c, n1, n2, n8, n9, n10⟩ := decRule_fields h (fun i hi => hw i (by omega))
-  have e3 : nat? b (q' + 3) = nat? a (q + 3) := nat?_shift (hw 3 (by omega))
-  have e4 : nat? b (q' + 4) = nat? a (q + 4) := nat?_shift (hw 4 (by omega))
-  have e5 : nat? b (q' + 5) = nat? a (q + 5) := nat?_shift (hw 5 (by omega))
-  have e6 : nat? b (q' + 6) = nat? a (q + 6) := nat?_shift (hw 6 (by omega))
-  have e7 : nat? b (q' + 7) = nat? a (q + 7) := nat?_shift (hw 7 (by omega))
-  have hx := h
-  unfold L.Arena.decRule at hx ⊢
-  rw [e3]
-  cases h3 : nat? a (q + 3) with
-  | none => simp [h3] at hx
+/-- A rule record copied word for word: each word it reads at `q` present at `q'`, its fire's
+slices in a larger pool. -/
+theorem decRule_copy {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} (h : decRule R q = some rl)
+    (hext : ArrExt R R') (hw : ∀ i, i < 11 → ∀ v, R (q + i) = some v → R' (q' + i) = some v) :
+    decRule R' q' = some rl := by
+  have nat' : ∀ i, i < 11 → ∀ x, nat? R (q + i) = some x → nat? R' (q' + i) = some x := by
+    intro i hi x hx
+    simp only [L.Arena.nat?, Option.map_eq_some_iff] at hx ⊢
+    obtain ⟨v, hv, rfl⟩ := hx; exact ⟨v, hw i hi v hv, rfl⟩
+  have hd' : ∀ {k : IdxKind} i, i < 11 → ∀ x : Idx k, hd? R (q + i) = some x → hd? R' (q' + i) = some x := by
+    intro k i hi x hx
+    simp only [L.Arena.hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
+    obtain ⟨v, hv, hx⟩ := hx; exact ⟨v, hw i hi v hv, hx⟩
+  have hl' : ∀ {k : IdxKind} i, i + 1 < 11 → ∀ xs : List (Idx k), hlist? R (q + i) = some xs →
+      hlist? R' (q' + i) = some xs := by
+    intro k i hi xs hx
+    simp only [L.Arena.hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
+    obtain ⟨o, ho, c, hc, hs⟩ := hx
+    refine ⟨o, nat' i (by omega) o ho, c, ?_, hext.hslice? hs⟩
+    have := nat' (i + 1) hi c (by simpa [Nat.add_assoc] using hc)
+    simpa [Nat.add_assoc] using this
+  unfold L.Arena.decRule at h ⊢
+  cases h3 : L.Arena.nat? R (q + 3) with
+  | none => simp [h3] at h
   | some t =>
-  rw [h3] at hx
-  match t, hx with
-  | 0, hx =>
-    simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.bind_eq_some_iff,
-      Option.some.injEq] at hx ⊢
-    obtain ⟨c', hc, nf, hnf, cp, hcp, r, hr, k, hk, e, he, rfl⟩ := hx
-    simp only at c n1 n2 n8 n9 n10
-    exact ⟨_, c, _, n1, _, n2, _, n8, _, n9, _, n10, rfl⟩
-  | 1, hx =>
-    have l4 : ∀ {k : IdxKind} (xs : List (Idx k)), hlist? a (q + 4) = some xs → hlist? b (q' + 4) = some xs := by
-      intro k xs hxs
-      simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hxs ⊢
-      obtain ⟨o, ho, l, hl, hs⟩ := hxs
-      exact ⟨o, by rw [e4]; exact ho, l, by rw [show q' + 4 + 1 = q' + 5 by omega, e5]; simpa using hl,
-        hext.hslice? hs⟩
-    have l6 : ∀ {k : IdxKind} (xs : List (Idx k)), hlist? a (q + 6) = some xs → hlist? b (q' + 6) = some xs := by
-      intro k xs hxs
-      simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hxs ⊢
-      obtain ⟨o, ho, l, hl, hs⟩ := hxs
-      exact ⟨o, by rw [e6]; exact ho, l, by rw [show q' + 6 + 1 = q' + 7 by omega, e7]; simpa using hl,
-        hext.hslice? hs⟩
-    cases hy : (hlist? a (q + 4) : Option (List LIdx)) with
-    | none => simp [hy] at hx
-    | some y =>
-    cases hz : (hlist? a (q + 6) : Option (List EIdx)) with
-    | none => simp [hy, hz] at hx
-    | some z =>
-    rw [hy, hz] at hx
-    rw [l4 y hy, l6 z hz]
-    simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.bind_eq_some_iff,
-      Option.some.injEq] at hx ⊢
-    obtain ⟨c', hc, nf, hnf, cp, hcp, r, hr, k, hk, e, he, rfl⟩ := hx
-    exact ⟨_, c, _, n1, _, n2, _, n8, _, n9, _, n10, rfl⟩
-  | t + 2, hx => simp at hx
+    rw [nat' 3 (by decide) t h3]; rw [h3] at h
+    simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_some] at h ⊢
+    have tail : ∀ (f : IRecRuleFire), (do
+        let ctor ← L.Arena.hd? R q
+        let nfields ← L.Arena.nat? R (q + 1)
+        let rhs ← L.Arena.hd? R (q + 8)
+        pure ({ ctor, nfields, fire := f, rhs } : IRecRule)) = some rl →
+        (do
+        let ctor ← L.Arena.hd? R' q'
+        let nfields ← L.Arena.nat? R' (q' + 1)
+        let rhs ← L.Arena.hd? R' (q' + 8)
+        pure ({ ctor, nfields, fire := f, rhs } : IRecRule)) = some rl := by
+      intro f hf
+      simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hf ⊢
+      obtain ⟨c, hc, nf, hnf, r, hr, e'⟩ := hf
+      exact ⟨c, by simpa using hd' 0 (by decide) c (by simpa using hc), nf, nat' 1 (by decide) nf hnf,
+        r, hd' 8 (by decide) r hr, e'⟩
+    match t, h with
+    | 0, h => simp only at h ⊢; exact tail _ h
+    | 1, h =>
+      cases hy : L.Arena.hlist? (k := .level) R (q + 4) with
+      | none => simp [hy] at h
+      | some y =>
+        cases hz : L.Arena.hlist? (k := .expr) R (q + 6) with
+        | none => simp [hy, hz] at h
+        | some z =>
+          rw [hy, hz] at h; rw [hl' 4 (by decide) y hy, hl' 6 (by decide) z hz]
+          simp only [Option.bind_some] at h ⊢
+          exact tail _ h
+    | 2, h =>
+      cases hy : L.Arena.hlist? (k := .level) R (q + 4) with
+      | none => simp [hy] at h
+      | some y =>
+        rw [hy] at h; rw [hl' 4 (by decide) y hy]
+        simp only [Option.bind_some] at h ⊢
+        exact tail _ h
+    | t + 3, h => simp at h
 
 end shift
 
@@ -356,19 +308,19 @@ open L.Arena
 
 /-! ## `rules_to_erec` -/
 
-/-- The memory after one record's eleven copies (each copy reads the memory of its time). -/
+/-- The memory after one record's eleven `erec_put` copies (each copy reads the memory of its time). -/
 def cpMem (m : Mem) (b old : Word) : Mem :=
-  let m1 := m.set64 EREC b (rdW (m.arr64 EREC) old)
-  let m2 := m1.set64 EREC (b + 1) (rdW (m1.arr64 EREC) (old + 1))
-  let m3 := m2.set64 EREC (b + 2) (rdW (m2.arr64 EREC) (old + 2))
-  let m4 := m3.set64 EREC (b + 3) (rdW (m3.arr64 EREC) (old + 3))
-  let m5 := m4.set64 EREC (b + 4) (rdW (m4.arr64 EREC) (old + 4))
-  let m6 := m5.set64 EREC (b + 5) (rdW (m5.arr64 EREC) (old + 5))
-  let m7 := m6.set64 EREC (b + 6) (rdW (m6.arr64 EREC) (old + 6))
-  let m8 := m7.set64 EREC (b + 7) (rdW (m7.arr64 EREC) (old + 7))
-  let m9 := m8.set64 EREC (b + 8) (rdW (m8.arr64 EREC) (old + 8))
-  let m10 := m9.set64 EREC (b + 9) (rdW (m9.arr64 EREC) (old + 9))
-  m10.set64 EREC (b + 10) (rdW (m10.arr64 EREC) (old + 10))
+  let m1 := erecPutMem m b (erRd m old)
+  let m2 := erecPutMem m1 (b + 1) (erRd m1 (old + 1))
+  let m3 := erecPutMem m2 (b + 2) (erRd m2 (old + 2))
+  let m4 := erecPutMem m3 (b + 3) (erRd m3 (old + 3))
+  let m5 := erecPutMem m4 (b + 4) (erRd m4 (old + 4))
+  let m6 := erecPutMem m5 (b + 5) (erRd m5 (old + 5))
+  let m7 := erecPutMem m6 (b + 6) (erRd m6 (old + 6))
+  let m8 := erecPutMem m7 (b + 7) (erRd m7 (old + 7))
+  let m9 := erecPutMem m8 (b + 8) (erRd m8 (old + 8))
+  let m10 := erecPutMem m9 (b + 9) (erRd m9 (old + 9))
+  erecPutMem m10 (b + 10) (erRd m10 (old + 10))
 
 /-- **The model of `rule_copy`.** -/
 def rcpW (m : Mem) (b old : Word) : Option (List Word × Mem) := some ([0], cpMem m b old)
@@ -394,7 +346,7 @@ theorem rteK1_some : rteK1 (some (r, m)) = some ([0], m) := rfl
 end arms
 attribute [ind_grind] rcW_eq rteGoW_nil rteGoW_cons rteK1_some
 
-/-- The lookups of `cons_block_recs_tf`. -/
+/-- The lookups of `block_rec_infos_tf`. -/
 structure CbrLook (p : Prog) : Prop where
   tsr : TsrLook p
   rp : RecProg p
@@ -402,12 +354,13 @@ structure CbrLook (p : Prog) : Prop where
   rteg : p.lookup "rules_to_erec_go" = some rulesToErecGo
   rir : p.lookup "rec_info_rec" = some recInfoRec
   rte : p.lookup "rules_to_erec" = some rulesToErec
-  push : p.lookup "cons_block_recs_push" = some consBlockRecsPush
   mi : p.lookup "block_shape_major_idx_at" = some blockShapeMajorIdxAt
   rpa : p.lookup "block_shape_rule_prefix_at" = some blockShapeRulePrefixAt
-  cbr : p.lookup "cons_block_recs_tf" = some consBlockRecsTF
+  rke : p.lookup "rec_k_expected" = some recKExpected
+  bri : p.lookup "block_rec_infos_tf" = some blockRecInfosTF
 
-theorem rc_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (b old : Word) :
+theorem rc_spec (p : Prog) (L : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat)
+    (s₀ : St) (b old : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_copy" [b, old]
     ⦃fun r s' => LocEq s' s₀ ∧ rcpW s₀.mem b old = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ L.rc]
@@ -416,10 +369,10 @@ theorem rc_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (b old : Word) 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
-      finish [rcpW, cpMem]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecPut_specW p hpu n] <;>
+      finish [rcpW, cpMem, erRd]
 
-theorem rteGo_spec (p : Prog) (L : CbrLook p) (n : Nat) :
+theorem rteGo_spec (p : Prog) (L : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat) :
     ∀ (s₀ : St) (b ro rl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rules_to_erec_go" [b, ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ rteGoW n s₀.mem b ro rl = some (r, s'.mem); ⊤⦄ := by
@@ -432,132 +385,160 @@ theorem rteGo_spec (p : Prog) (L : CbrLook p) (n : Nat) :
     rw [invoke_eq _ L.rteg]
     simp only [callFn, rulesToErecGo]
     sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, rc_spec p L n, ih] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, rc_spec p L hpu n, ih] <;>
       finish (gen := 40) (instances := 20000) [rdW_eq]
 
-l_model rte_spec (p : Prog) (hL : CbrLook p)
+l_model rte_spec (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut)
   fns [hL.rte ↦ rteW]
-  specs [erecAlloc_specW p hL.tsr.ea n, rteGo_spec p hL n]
+  specs [erecAlloc_specW p hL.tsr.ea n, rteGo_spec p hL hpu n]
   grind [arena_grind]
 
 /-! ## `rules_to_erec`: the copied run decodes as the rules -/
 
+theorem ofNat_shift (q : Word) (a j : Nat) : q + UInt64.ofNat a + UInt64.ofNat j = q + UInt64.ofNat (a + j) := by
+  rw [UInt64.ofNat_add]; ac_rfl
+
+theorem ErApart.shift {q x : Word} {a k : Nat} (h : ErApart q (a + k) x) : ErApart (q + UInt64.ofNat a) k x :=
+  fun j hj => by rw [ofNat_shift]; exact h (a + j) (by omega)
+
+/-- `EREC⦃x⦄` across a run of `erec_put`s elsewhere. -/
+theorem erRd_wrER_ne : ∀ (ws : List Word) (m : Mem) (q x : Word), ErApart q ws.length x →
+    erRd (wrER m q ws) x = erRd m x
+  | [], _, _, _, _ => rfl
+  | w :: ws, m, q, x, h => by
+    simp only [wrER]
+    rw [erRd_wrER_ne ws _ (q + 1) x (fun j hj => by
+      have := h (j + 1) (by simp; omega)
+      rwa [show q + UInt64.ofNat (j + 1) = q + 1 + UInt64.ofNat j by rw [UInt64.ofNat_add]; ac_rfl] at this)]
+    exact erRd_erecPutMem_ne (by simpa using h 0 (by simp))
+
 /-- The eleven words of the record at `old`. -/
-def recWords (E : Array Word) (old : Word) : List Word :=
-  [rdW E old, rdW E (old + 1), rdW E (old + 2), rdW E (old + 3), rdW E (old + 4), rdW E (old + 5),
-    rdW E (old + 6), rdW E (old + 7), rdW E (old + 8), rdW E (old + 9), rdW E (old + 10)]
+def recWords (m : Mem) (old : Word) : List Word :=
+  [erRd m old, erRd m (old + 1), erRd m (old + 2), erRd m (old + 3), erRd m (old + 4), erRd m (old + 5),
+    erRd m (old + 6), erRd m (old + 7), erRd m (old + 8), erRd m (old + 9), erRd m (old + 10)]
+
+theorem recWords_length (m : Mem) (old : Word) : (recWords m old).length = 11 := rfl
+
+theorem recWords_get (m : Mem) (old : Word) (i : Nat) (hi : i < 11) :
+    (recWords m old)[i]? = some (erRd m (old + UInt64.ofNat i)) := by
+  rcases (show i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 ∨ i = 8 ∨ i = 9 ∨ i = 10 by omega)
+    with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp [recWords] <;> rfl
+
+theorem recWords_congr {m m' : Mem} {old : Word}
+    (h : ∀ i < 11, erRd m' (old + UInt64.ofNat i) = erRd m (old + UInt64.ofNat i)) :
+    recWords m' old = recWords m old := by
+  apply List.ext_getElem?
+  intro i
+  by_cases hi : i < 11
+  · rw [recWords_get _ _ _ hi, recWords_get _ _ _ hi, h i hi]
+  · rw [List.getElem?_eq_none (by simp [recWords_length]; omega),
+      List.getElem?_eq_none (by simp [recWords_length]; omega)]
 
 /-- The words of the records the pointers `IW[ro ‥ ro + k)` point to, in order. -/
 def ruleWords (m : Mem) (ro : Word) : Nat → List Word
   | 0 => []
-  | k + 1 => recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro) ++ ruleWords m (ro + 1) k
+  | k + 1 => recWords m (rdW (m.arr64 IW) ro) ++ ruleWords m (ro + 1) k
 
 theorem ruleWords_length (m : Mem) : ∀ (ro : Word) (k : Nat), (ruleWords m ro k).length = 11 * k
   | _, 0 => rfl
-  | ro, k + 1 => by simp [ruleWords, recWords, ruleWords_length m (ro + 1) k]; omega
-
-theorem cpMem_eq {m : Mem} {b old : Word} (hlt : old.toNat + 11 ≤ b.toNat) (hb : b.toNat + 11 < 2 ^ 64) :
-    cpMem m b old = wrER m b (recWords (m.arr64 EREC) old) := by
-  simp only [cpMem, wrER, recWords]
-  rw [show b + 1 + 1 = b + 2 by ac_rfl, show b + 2 + 1 = b + 3 by ac_rfl,
-    show b + 3 + 1 = b + 4 by ac_rfl, show b + 4 + 1 = b + 5 by ac_rfl,
-    show b + 5 + 1 = b + 6 by ac_rfl, show b + 6 + 1 = b + 7 by ac_rfl, show b + 7 + 1 = b + 8 by ac_rfl,
-    show b + 8 + 1 = b + 9 by ac_rfl, show b + 9 + 1 = b + 10 by ac_rfl]
-  simp (disch := off_omega) only [rdW_set64_ne_er]
-
-theorem rdW_agree {a a' : Array Word} {B : Nat} (hE : ∀ i < B, a'[i]? = a[i]?) {y : Word} (hy : y.toNat < B) :
-    rdW a' y = rdW a y := by
-  unfold rdW; rw [hE _ hy]
-
-/-- `EREC` below `B` and `IW` agreeing: the record words read the same. -/
-theorem ruleWords_congr {m m' : Mem} (hI : m'.arr64 IW = m.arr64 IW) {B : Nat}
-    (hE : ∀ i < B, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) :
-    ∀ (ro : Word) (k : Nat), (∀ j < k, (rdW (m.arr64 IW) (ro + UInt64.ofNat j)).toNat + 11 ≤ B) →
-      ruleWords m' ro k = ruleWords m ro k
-  | _, 0, _ => rfl
-  | ro, k + 1, h => by
-    simp only [ruleWords, hI]
-    have h0 := h 0 (by omega)
-    simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, UInt64.add_zero] at h0
-    have hr : ∀ i : Nat, i ≤ 10 → rdW (m'.arr64 EREC) (rdW (m.arr64 IW) ro + UInt64.ofNat i) =
-        rdW (m.arr64 EREC) (rdW (m.arr64 IW) ro + UInt64.ofNat i) := fun i hi =>
-      rdW_agree hE (by rw [UInt64.toNat_add]; simp; omega)
-    congr 1
-    · simp only [recWords]
-      have := hr 0 (by omega); have := hr 1 (by omega); have := hr 2 (by omega); have := hr 3 (by omega)
-      have := hr 4 (by omega); have := hr 5 (by omega); have := hr 6 (by omega); have := hr 7 (by omega)
-      have := hr 8 (by omega); have := hr 9 (by omega); have := hr 10 (by omega)
-      simp_all
-    · exact ruleWords_congr hI hE (ro + 1) k (fun j hj => by
-        have e : ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := by
-          rw [UInt64.ofNat_add]; ac_rfl
-        rw [e]; exact h (j + 1) (by omega))
+  | ro, k + 1 => by simp [ruleWords, recWords_length, ruleWords_length m (ro + 1) k]; omega
 
 theorem ruleWords_get (m : Mem) : ∀ (ro : Word) (k j i : Nat), j < k → i < 11 →
-    (ruleWords m ro k)[11 * j + i]? = some (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i))
+    (ruleWords m ro k)[11 * j + i]? = some (erRd m (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i))
   | _, 0, _, _, hj, _ => absurd hj (by omega)
   | ro, k + 1, 0, i, _, hi => by
     simp only [ruleWords, Nat.mul_zero, Nat.zero_add, show (UInt64.ofNat 0 : Word) = 0 from rfl, UInt64.add_zero]
-    rw [List.getElem?_append_left (by simp [recWords]; omega)]
-    rcases (show i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 ∨ i = 8 ∨ i = 9 ∨ i = 10 by omega)
-      with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp [recWords] <;> rfl
+    rw [List.getElem?_append_left (by simp [recWords_length]; omega), recWords_get _ _ _ hi]
   | ro, k + 1, j + 1, i, hj, hi => by
     simp only [ruleWords]
-    rw [List.getElem?_append_right (by simp [recWords]; omega)]
-    have e : 11 * (j + 1) + i - (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro)).length = 11 * j + i := by
-      simp [recWords]; omega
+    rw [List.getElem?_append_right (by simp [recWords_length]; omega)]
+    have e : 11 * (j + 1) + i - (recWords m (rdW (m.arr64 IW) ro)).length = 11 * j + i := by
+      simp [recWords_length]; omega
     rw [e, ruleWords_get m (ro + 1) k j i (by omega) hi]
     have e2 : ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := by rw [UInt64.ofNat_add]; ac_rfl
     rw [e2]
 
-theorem rteGoW_mem (n : Nat) : ∀ (m m' : Mem) (b ro rl : Word) (r : List Word),
+/-- `IW` the same and the source records' words read the same: the record words agree. -/
+theorem ruleWords_congr {m m' : Mem} (hI : m'.arr64 IW = m.arr64 IW) :
+    ∀ (ro : Word) (k : Nat), (∀ j < k, ∀ i < 11, erRd m' (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i) =
+      erRd m (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i)) →
+      ruleWords m' ro k = ruleWords m ro k
+  | _, 0, _ => rfl
+  | ro, k + 1, h => by
+    simp only [ruleWords, hI]
+    congr 1
+    · exact recWords_congr (fun i hi => by simpa using h 0 (by omega) i hi)
+    · exact ruleWords_congr hI (ro + 1) k (fun j hj i hi => by
+        have e : ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := by
+          rw [UInt64.ofNat_add]; ac_rfl
+        rw [e]; exact h (j + 1) (by omega) i hi)
+
+theorem cpMem_frame (m : Mem) (b old : Word) : MemFrame [EREC, tier1 EREC] [] m (cpMem m b old) := by
+  simp only [cpMem]
+  repeat' refine MemFrame.trans ?_ (erecPutMem_frame _ _ _)
+  exact MemFrame.refl _ _ _
+
+theorem cpMem_eq {m : Mem} {b old : Word} (hfr : ∀ i < 11, ErApart b 11 (old + UInt64.ofNat i)) :
+    cpMem m b old = wrER m b (recWords m old) := by
+  have hA : ∀ i j : Word, i.toNat < 11 → j.toNat < 11 →
+      erTier (old + i) ≠ erTier (b + j) ∨ erOff (old + i) ≠ erOff (b + j) := by
+    intro i j hi hj
+    have := hfr i.toNat hi j.toNat hj
+    simpa using this
+  have h00 : erTier old ≠ erTier b ∨ erOff old ≠ erOff b := by simpa using hA 0 0 (by decide) (by decide)
+  have h0 : ∀ j : Word, j.toNat < 11 → erTier old ≠ erTier (b + j) ∨ erOff old ≠ erOff (b + j) :=
+    fun j hj => by simpa using hA 0 j (by decide) hj
+  have hB : ∀ i : Word, i.toNat < 11 → erTier (old + i) ≠ erTier b ∨ erOff (old + i) ≠ erOff b :=
+    fun i hi => by simpa using hA i 0 hi (by decide)
+  simp only [cpMem, wrER, recWords]
+  rw [show b + 1 + 1 = b + 2 by ac_rfl, show b + 2 + 1 = b + 3 by ac_rfl,
+    show b + 3 + 1 = b + 4 by ac_rfl, show b + 4 + 1 = b + 5 by ac_rfl,
+    show b + 5 + 1 = b + 6 by ac_rfl, show b + 6 + 1 = b + 7 by ac_rfl,
+    show b + 7 + 1 = b + 8 by ac_rfl, show b + 8 + 1 = b + 9 by ac_rfl,
+    show b + 9 + 1 = b + 10 by ac_rfl]
+  simp (disch := first
+    | exact h00
+    | (apply h0; decide)
+    | (apply hB; decide)
+    | (apply hA <;> decide)) only [erRd_erecPutMem_ne]
+
+theorem rteGoW_mem : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word),
     rteGoW n m b ro rl = some (r, m') →
-    (∀ j < rl.toNat, (rdW (m.arr64 IW) (ro + UInt64.ofNat j)).toNat + 11 ≤ b.toNat) →
-    b.toNat + 11 * rl.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
-    m' = wrER m b (ruleWords m ro rl.toNat) := by
-  induction n with
-  | zero => intro m m' b ro rl r h; simp [rteGoW] at h
-  | succ n ih =>
-  intro m m' b ro rl r h hold hsz hEs
-  by_cases h0 : rl = 0
-  · rw [rteGoW_nil (h := h0)] at h
+    (∀ j < rl.toNat, ∀ i < 11, ErApart b (11 * rl.toNat) (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i)) →
+    m' = wrER m b (ruleWords m ro rl.toNat)
+  | 0, _, _, _, _, _, _, h, _ => by simp [rteGoW] at h
+  | n + 1, m, m', b, ro, rl, r, h, hfr => by
+    by_cases h0 : rl = 0
+    · rw [rteGoW_nil (h := h0)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      subst h0; rw [← h.2]; simp [ruleWords, wrER]
+    rw [rteGoW_cons (h := h0)] at h
+    have hl0 : rl.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
+    have hl1 : (rl - 1).toNat = rl.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
+    rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;>
+      simp only [h2, rteK1, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-    subst h0; rfl
-  rw [rteGoW_cons (h := h0)] at h
-  have hl0 : rl.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
-  have h00 := hold 0 (by omega)
-  simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, UInt64.add_zero] at h00
-  have hb11 : b.toNat + 11 < 2 ^ 64 := by omega
-  rw [cpMem_eq h00 hb11] at h
-  rcases h1 : rteGoW n (wrER m b (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro))) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r1, m1⟩ <;> simp only [h1, rteK1, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  generalize hW : wrER m b (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro)) = W at h1
-  have hfr := wrER_frame (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro)) m b
-  rw [hW] at hfr
-  have hI : W.arr64 IW = m.arr64 IW := hfr.1 IW (by decide) (by decide)
-  have hEsz : (W.arr64 EREC).size = (m.arr64 EREC).size := hfr.size EREC
-  have hlow : ∀ i < b.toNat, (W.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := fun i hi => by
-    rw [← hW, wrER_get _ m b i (by simp [recWords]; omega) hEs]
-    rw [ite_eq_right (by omega)]
-  have hb1 : (b + 11).toNat = b.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
-  have hl1 : (rl - 1).toNat = rl.toNat - 1 := by
-    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
-  have hshift : ∀ j < (rl - 1).toNat, (rdW (W.arr64 IW) (ro + 1 + UInt64.ofNat j)).toNat + 11 ≤ (b + 11).toNat := by
-    intro j hj
-    have e2 : ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := by rw [UInt64.ofNat_add]; ac_rfl
-    rw [hI, e2, hb1]; have := hold (j + 1) (by omega); omega
-  have := ih W m1 (b + 11) (ro + 1) (rl - 1) r1 h1 hshift (by rw [hb1, hEsz, hl1]; omega) (by rw [hEsz]; exact hEs)
-  rw [this, hl1]
-  have hcong : ruleWords W (ro + 1) (rl.toNat - 1) = ruleWords m (ro + 1) (rl.toNat - 1) :=
-    ruleWords_congr hI hlow (ro + 1) _ (fun j hj => by
-      have e2 : ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := by rw [UInt64.ofNat_add]; ac_rfl
-      rw [e2]; exact hold (j + 1) (by omega))
-  rw [hcong, ← hW]
-  obtain ⟨k, hk⟩ : ∃ k, rl.toNat = k + 1 := ⟨rl.toNat - 1, by omega⟩
-  rw [hk, show k + 1 - 1 = k from rfl]
-  simp only [ruleWords]
-  rw [wrER_append]
-  rfl
+    have hsrc : ∀ j, ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := fun j => by
+      rw [UInt64.ofNat_add]; ac_rfl
+    have hfr0 : ∀ i < 11, ErApart b 11 (rdW (m.arr64 IW) ro + UInt64.ofNat i) := fun i hi => by
+      have := hfr 0 (by omega) i hi
+      simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at this
+      exact this.mono (by omega)
+    rw [cpMem_eq hfr0] at h2
+    have hI : (wrER m b (recWords m (rdW (m.arr64 IW) ro))).arr64 IW = m.arr64 IW :=
+      (wrER_frame _ m b).arr IW (by decide) (by decide)
+    have h11 : b + 11 = b + UInt64.ofNat 11 := rfl
+    have ih := rteGoW_mem n _ m2 (b + 11) (ro + 1) (rl - 1) r2 h2 (fun j hj i hi => by
+      rw [hI, hsrc, h11]
+      exact ErApart.shift (by rw [hl1] at hj; exact (hfr (j + 1) (by omega) i hi).mono (by omega)))
+    rw [ih, hl1, ruleWords_congr hI (ro + 1) (rl.toNat - 1) (fun j hj i hi => by
+      rw [hsrc]
+      exact erRd_wrER_ne _ _ _ _ ((hfr (j + 1) (by omega) i hi).mono (by simp [recWords_length]; omega)))]
+    conv => rhs; rw [show rl.toNat = (rl.toNat - 1) + 1 by omega]
+    simp only [ruleWords]
+    rw [wrER_append, recWords_length]
+    rfl
 
 theorem mapM_range_some {α : Type} : ∀ (xs : List α) (f : Nat → Option α),
     (∀ j (hj : j < xs.length), f j = some xs[j]) → (List.range xs.length).mapM f = some xs
@@ -569,150 +550,15 @@ theorem mapM_range_some {α : Type} : ∀ (xs : List α) (f : Nat → Option α)
     simp only [h0, Option.bind_eq_bind, Option.bind_some]
     rw [ih]; rfl
 
-end L.Ind
-
-end
-
-end
-
-section
-
-noncomputable section
-
-set_option experimental.vcgen true
-
-open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
-
-namespace L.Ind
-
-open L.Arena
-
-local notation "V" => ConLeche.CheckMode.verified
-
-/-! ## `rec_info_rec` -/
-
-/-- The memory after `rec_info_rec`'s nine writes (each copy reads the memory of its time). -/
-def riMem (m1 : Mem) (q cv mi rp3 reo rel : Word) : Mem :=
-  let m2 := m1.set64 EREC q 5
-  let m3 := m2.set64 EREC (q + 1) (rdW (m2.arr64 EREC) cv)
-  let m4 := m3.set64 EREC (q + 2) (rdW (m3.arr64 EREC) (cv + 1))
-  let m5 := m4.set64 EREC (q + 3) (rdW (m4.arr64 EREC) (cv + 2))
-  let m6 := m5.set64 EREC (q + 4) (rdW (m5.arr64 EREC) (cv + 3))
-  ((((m6.set64 EREC (q + 5) mi).set64 EREC (q + 6) rp3).set64 EREC (q + 7) reo).set64 EREC (q + 8) rel)
-
-/-- **The model of `rec_info_rec`.** -/
-def riW (m : Mem) (cv mi rp3 reo rel : Word) : Option (List Word × Mem) :=
-  match erAllocW m 9 with
-  | none => none
-  | some (q, m1) => some ([q], riMem m1 q cv mi rp3 reo rel)
-
-theorem ri_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (cv mi rp3 reo rel : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_info_rec" [cv, mi, rp3, reo, rel]
-    ⦃fun r s' => LocEq s' s₀ ∧ riW s₀.mem cv mi rp3 reo rel = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.rir]
-  simp only [callFn, recInfoRec]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        erecAlloc_specW p L.tsr.ea n] <;>
-      finish [riW, riMem]
-
-theorem riMem_eq {m1 : Mem} {q cq mi rp3 reo rel : Word} (hlt : cq.toNat + 4 ≤ q.toNat) (hq : q.toNat + 9 < 2 ^ 64) :
-    riMem m1 q cq mi rp3 reo rel = wrER m1 q [5, rdW (m1.arr64 EREC) cq, rdW (m1.arr64 EREC) (cq + 1),
-      rdW (m1.arr64 EREC) (cq + 2), rdW (m1.arr64 EREC) (cq + 3), mi, rp3, reo, rel] := by
-  simp only [riMem, wrER]
-  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
-    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
-    show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl, show q + 7 + 1 = q + 8 by ac_rfl]
-  simp (disch := off_omega) only [rdW_set64_ne_er]
-
-/-- **`class_fe_r_rec` under the stage relation**: a fresh rule-less `.recInfo` record of the constant
-at `cq`. -/
-theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {m m' : Mem} {cq mi rp3 reo rel q : Word} {cv : IConstantVal} {rules : List IRecRule}
-    (h : riW m cq mi rp3 reo rel = some ([q], m'))
-    (hS : StageR dn vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv)
-    (hru : decRules (erecP m) reo.toNat rel.toNat = some rules) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
-      decCI (erecP m') dn q.toNat = some (.recInfo cv mi.toNat rp3.toNat rules) := by
-  cases h1 : erAllocW m 9 with
-  | none => simp [riW, h1] at h
-  | some x =>
-  obtain ⟨q1, m1⟩ := x
-  simp only [riW, h1, Option.some.injEq, Prod.mk.injEq, List.cons.injEq, and_true] at h
-  obtain ⟨rfl, rfl⟩ := h
-  have h3 : (erecP m)[cq.toNat + 3]? ≠ none := by
-    have := decCV_type hcv; intro e; simp [hd?, e] at this
-  have hcq : cq.toNat + 4 ≤ erTop m := by
-    obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp h3; have := erecP_lt hv; omega
-  have hE1 : m1.arr64 EREC = m.arr64 EREC := by
-    simp only [erAllocW] at h1; split at h1; · cases h1
-    split at h1; · cases h1
-    simp only [Option.some.injEq, Prod.mk.injEq] at h1; obtain ⟨-, rfl⟩ := h1
-    simp only [erAllocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.iw
-  have hq1 : q1.toNat = erTop m := by
-    simp only [erAllocW] at h1; split at h1; · cases h1
-    split at h1; · cases h1
-    simp only [Option.some.injEq, Prod.mk.injEq] at h1; obtain ⟨rfl, -⟩ := h1; rfl
-  obtain ⟨hS', hg, -, htop', hget⟩ := erRec_stage h1 hS [5, rdW (m.arr64 EREC) cq,
-    rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), rdW (m.arr64 EREC) (cq + 3), mi, rp3, reo, rel]
-    (by simp)
-  have hroom : q1.toNat + 9 < 2 ^ 64 := by
-    obtain ⟨-, h2, -, h4, -⟩ := hS'.iw; simp only [List.length_cons, List.length_nil] at htop'; omega
-  rw [riMem_eq (by omega) hroom, hE1]
-  refine ⟨hS', hg, by rw [← hE1]; exact erRec_mfr h1 _, ?_⟩
-  generalize hM : wrER m1 q1 _ = M at hS' hg htop' hget
-  have hP : ∀ j, j < 9 → (erecP M)[q1.toNat + j]? = ((M.arr64 EREC))[q1.toNat + j]? :=
-    fun j hj => erecP_getE (by simp at htop'; omega)
-  have c1 : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have c2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have c3 : (cq + 3).toNat = cq.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cq.toNat + i]? := by
-    intro i hi
-    rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
-      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.erGet _ (by omega)]
-    have hlt : cq.toNat + i < (m.arr64 EREC).size := by simp only [erTop] at hEtop hcq; omega
-    rcases i with _ | _ | _ | _ | i
-    all_goals first
-      | omega
-      | (simp only [Nat.add_zero, Nat.zero_add] at hlt ⊢
-         simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, rdW, c1, c2, c3,
-          Array.getElem?_eq_getElem hlt, Option.getD_some])
-  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cv := by
-    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
-      (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
-    exact ArrExt.decCV (IWGrow.erecPExtR hg) hcv
-  have nk : ∀ j (hj : j < 9), nat? (erecP M) (q1.toNat + j) =
-      some (([5, rdW (m.arr64 EREC) cq, rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2),
-        rdW (m.arr64 EREC) (cq + 3), mi, rp3, reo, rel] : List Word)[j]'(by simpa using hj)).toNat := by
-    intro j hj
-    simp only [nat?, hP j hj, hget j (by simpa using hj)]
-    rw [List.getElem?_eq_getElem (by simp; omega)]; rfl
-  have n0 := nk 0 (by decide)
-  have n5 := nk 5 (by decide)
-  have n6 := nk 6 (by decide)
-  have n7 := nk 7 (by decide)
-  have n8 := nk 8 (by decide)
-  simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at n0 n5 n6 n7 n8
-  have hru' : decRules (erecP M) reo.toNat rel.toNat = some rules := (IWGrow.erecPExtR hg).decRules hru
-  simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5, n6, n7, n8, Option.pure_def]
-  simp [hru']
-
-section rel
-variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
-
-/-- **`rules_to_erec` under the stage relation**: a fresh consecutive run of the rule records at the
-old record top, decoding as the rules. -/
-theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Word} {rules : List IRecRule}
-    (h : rteW n m ro rl = some (r, m')) (hS : StageR dn vis fe m a)
-    (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules) (_hb : ro.toNat + rl.toNat ≤ iwTop m) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = rl ∧
-      decRules (erecP m') (r.headD 0).toNat rl.toNat = some rules ∧ MFr [] [] m m' := by
+/-- **`rules_to_erec` under the stage relation**: a fresh run of copies of the rule records (every
+source record's eleven words in the record pool), decoding as the rules. -/
+theorem rteW_ok {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word}
+    {r : List Word} {rules : List IRecRule}
+    (h : rteW n m ro rl = some (r, m')) (hS : StageR vis fe m a)
+    (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules)
+    (hall : ∀ j < rl.toNat, ∀ v, iwN m (ro.toNat + j) = some v → ∀ i < 11, ∃ w, erecP m (v + i) = some w) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = rl ∧
+      decRules (erecP m') (r.headD 0).toNat rl.toNat = some rules := by
   obtain _ | n := n
   · simp [rteW] at h
   by_cases hbig : 4294967296 ≤ rl
@@ -722,114 +568,203 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
   rcases ha : erAllocW m (rl * 11) with _ | ⟨b, m1⟩ <;> simp only [ha, rteW.k_erec_alloc, reduceCtorEq] at h
   rcases h1 : rteGoW n m1 b ro rl with _ | ⟨r1, m2⟩ <;> simp only [h1, rteW.k_rules_to_erec_go, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
-  have hm1 := erAllocW_mem ha
-  have hI1 : m1.arr64 IW = m.arr64 IW := by rw [hm1]; exact erAllocMem_arr _ _ (by decide)
-  have hE1 : m1.arr64 EREC = m.arr64 EREC := by rw [hm1]; exact erAllocMem_arr _ _ (by decide)
   have hk : (rl * 11).toNat = 11 * rl.toNat := by
     rw [UInt64.toNat_mul]; simp; omega
-  -- the old records lie below the record pool's top, which is `b`
-  have hbq : b.toNat = erTop m := by
-    simp only [erAllocW] at ha; split at ha; · cases ha
-    split at ha; · cases ha
-    simp only [Option.some.injEq, Prod.mk.injEq] at ha; obtain ⟨rfl, -⟩ := ha; rfl
-  have hv : ∀ j < rl.toNat, ∃ v rlj, iwN m (ro.toNat + j) = some v ∧ rlDec m v = some rlj ∧ rules[j]? = some rlj ∧
-      v + 11 ≤ erTop m := by
-    intro j hj
-    obtain ⟨v, y, hv, hf, hget⟩ := decPL_get rl.toNat ro.toNat rules hd j hj
-    refine ⟨v, y, hv, hf, hget, ?_⟩
-    obtain ⟨-, -, -, -, -, h10⟩ := decRule_fields (b := erecP m) (q' := v) hf (fun _ _ => rfl)
-    simp only [bool?, Option.map_eq_some_iff] at h10
-    obtain ⟨w, hw, -⟩ := h10
-    have := erecP_lt hw; omega
+  obtain ⟨-, hf1, -⟩ := erAllocW_spec ha hS.iw
+  have hI1 : m1.arr64 IW = m.arr64 IW := hf1.arr IW (by simp) (by decide)
+  have hr1 : ∀ x, erRd m1 x = erRd m x := fun x => by
+    unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
   have hsz := hS.iw.iwSize
-  have hrdv : ∀ j < rl.toNat, ∀ v, iwN m (ro.toNat + j) = some v →
-      rdW (m.arr64 IW) (ro + UInt64.ofNat j) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
-    intro j hj v hv'
-    exact iwN_rdW_at (w := ro) (k := j) hv' hsz
-  have hold : ∀ j < rl.toNat, (rdW (m1.arr64 IW) (ro + UInt64.ofNat j)).toNat + 11 ≤ b.toNat := by
+  -- the source records: their pointers, their words in the old pool
+  have hsrc : ∀ j < rl.toNat, ∃ v, iwN m (ro.toNat + j) = some v ∧
+      rdW (m.arr64 IW) (ro + UInt64.ofNat j) = UInt64.ofNat v ∧ (UInt64.ofNat v : Word).toNat = v := by
     intro j hj
-    obtain ⟨v, rlj, hvj, -, -, hvt⟩ := hv j hj
-    obtain ⟨e, hlt⟩ := hrdv j hj v hvj
-    rw [hI1, e, UInt64.toNat_ofNat_of_lt' hlt, hbq]; exact hvt
-  obtain ⟨hS1, hg1, hq1, htop1, hget1⟩ := erRec_stage ha hS (ruleWords m1 ro rl.toNat)
-    (by rw [ruleWords_length, hk])
-  have hroom : b.toNat + 11 * rl.toNat ≤ (m1.arr64 EREC).size := by
-    obtain ⟨-, h2, -, h4, -⟩ := hS1.iw
-    have hs := (wrER_frame (ruleWords m1 ro rl.toNat) m1 b).size EREC
-    rw [ruleWords_length] at htop1; omega
-  have hm2 := rteGoW_mem n m1 m2 b ro rl r1 h1 hold hroom (by rw [hE1]; exact hS.iw.erSize)
+    obtain ⟨v, -, hv, -, -⟩ := decPL_get rl.toNat ro.toNat rules hd j hj
+    obtain ⟨e, hlt⟩ := iwN_rdW_at (w := ro) (k := j) hv hsz
+    exact ⟨v, hv, e, UInt64.toNat_ofNat_of_lt' hlt⟩
+  have hword : ∀ j < rl.toNat, ∀ i < 11, ∃ v w, iwN m (ro.toNat + j) = some v ∧
+      erecP m (v + i) = some w ∧
+      erRd m (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i) = w ∧
+      (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i).toNat = v + i := by
+    intro j hj i hi
+    obtain ⟨v, hv, e, hvv⟩ := hsrc j hj
+    obtain ⟨w, hw⟩ := hall j hj v hv i hi
+    rw [← hvv] at hw
+    obtain ⟨r1, e1⟩ := erRd_add hw (by omega)
+    exact ⟨v, w, hv, by rw [← hvv]; exact hw, by rw [e]; exact r1, by rw [e, e1, hvv]⟩
+  have hfr : ∀ j < rl.toNat, ∀ i < 11,
+      ErApart b (11 * rl.toNat) (rdW (m1.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i) := by
+    intro j hj i hi k hk'
+    obtain ⟨v, w, -, hw, -, ht⟩ := hword j hj i hi
+    rw [hI1]
+    exact erFresh ha hS.iw (x := rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i)
+      (by rw [ht]; exact hw) (by rw [hk]; exact hk')
+  have hm2 := rteGoW_mem n m1 m2 b ro rl r1 h1 hfr
   subst hm2
-  refine ⟨hS1, hg1, rfl, ?_, erRec_mfr ha _⟩
+  have hrw : ruleWords m1 ro rl.toNat = ruleWords m ro rl.toNat :=
+    ruleWords_congr hI1 ro rl.toNat (fun _ _ _ _ => hr1 _)
+  rw [hrw]
+  obtain ⟨hS1, hg1, -, -, -, -, hget1⟩ := erRec_stage ha hS (ruleWords m ro rl.toNat)
+    (by rw [ruleWords_length, hk])
+  refine ⟨hS1, hg1, rfl, ?_⟩
   simp only [List.headD_cons]
-  -- the run, record by record
-  have hrw := ruleWords_length m1 ro rl.toNat
-  generalize hM : wrER m1 b (ruleWords m1 ro rl.toNat) = M at hS1 hg1 htop1 hget1 ⊢
-  have hext := IWGrow.erecPExtR hg1
-  have hlen := decPL_length m hd
+  generalize hM : wrER m1 b (ruleWords m ro rl.toNat) = M at hS1 hg1 hget1 ⊢
+  have hlen := decPL_length (m := m) hd
   unfold decRules
   rw [← hlen]
   apply mapM_range_some
   intro j hj
   rw [hlen] at hj
-  obtain ⟨v, rlj, hvj, hfj, hgj, hvt⟩ := hv j hj
-  obtain ⟨e, hlt⟩ := hrdv j hj v hvj
+  obtain ⟨v, rlj, hvj, hfj, hgj⟩ := decPL_get rl.toNat ro.toNat rules hd j hj
   have hrj : rules[j] = rlj := by
     rw [List.getElem?_eq_getElem (by omega)] at hgj; exact Option.some.inj hgj
   rw [hrj]
-  refine decRule_copy hfj hext (fun i hi => ?_)
-  have hEt : erTop m ≤ (m.arr64 EREC).size := hS.iw.er
+  refine decRule_copy hfj (IWGrow.ext hg1) (fun i hi w hw => ?_)
+  obtain ⟨v', w', hv', hw', hrd, -⟩ := hword j hj i hi
+  rw [hvj] at hv'; cases hv'
+  rw [hw] at hw'; cases hw'
   rw [show b.toNat + 11 * j + i = b.toNat + (11 * j + i) by omega,
-    erecP_getE (by rw [htop1, hrw]; omega), hget1 (11 * j + i) (by rw [hrw]; omega),
-    ruleWords_get m1 ro rl.toNat j i hj hi, hI1, e, hE1, erecP_getE (by omega)]
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
-  refine (rdW_some ?_ (by omega)).symm
-  rw [UInt64.toNat_add]; simp; omega
+    hget1 (11 * j + i) (by rw [ruleWords_length]; omega), ruleWords_get m ro rl.toNat j i hj hi, hrd]
 
-end rel
+/-! ## `rec_info_rec` -/
 
-/-! ## `cons_block_recs_push` -/
+/-- The memory after `rec_info_rec`'s ten `erec_put`s (each copy reads the memory of its time). -/
+def riMem (m1 : Mem) (q cv mi rp isK reo rel : Word) : Mem :=
+  let m2 := erecPutMem m1 q 5
+  let m3 := erecPutMem m2 (q + 1) (erRd m2 cv)
+  let m4 := erecPutMem m3 (q + 2) (erRd m3 (cv + 1))
+  let m5 := erecPutMem m4 (q + 3) (erRd m4 (cv + 2))
+  let m6 := erecPutMem m5 (q + 4) (erRd m5 (cv + 3))
+  erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m6 (q + 5) mi) (q + 6) rp) (q + 7) reo)
+    (q + 8) rel) (q + 9) isK
 
-def cbpK3 : Option (List Word × Mem) → Option (List Word × Mem)
+/-- **The model of `rec_info_rec(cv, mI, rP, isK, reo, rel)`.** -/
+def riW (m : Mem) (cv mi rp isK reo rel : Word) : Option (Word × Mem) :=
+  match erAllocW m 10 with
   | none => none
-  | some (rv, m) => some ([rv.headD 0], m)
+  | some (q, m1) =>
+    if 4294967296 ≤ erRd (riMem m1 q cv mi rp isK reo rel) (q + 1) then none
+    else some (q, riMem m1 q cv mi rp isK reo rel)
 
-def cbpK2 (p : Prog) (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rq, m) => cbpK3 (callW p n "env_push" [vis, rq.headD 0] m)
-
-def cbpK1 (p : Prog) (n : Nat) (vis cv mI rP : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (re, m) => cbpK2 p n vis (riW m cv mI rP (re.headD 0) (re.tail.headD 0))
-
-/-- **The model of `cons_block_recs_push`** (exec fuel). -/
-def cbpW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, cv, mI, rP, ro, rl => cbpK1 p n vis cv mI rP (rteW n m ro rl)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (vis cv mI rP ro rl : Word) (rv rq re : List Word)
-theorem cbpW_succ : cbpW p (n + 1) m vis cv mI rP ro rl = cbpK1 p n vis cv mI rP (rteW n m ro rl) := rfl
-theorem cbpK1_some : cbpK1 p n vis cv mI rP (some (re, m)) =
-    cbpK2 p n vis (riW m cv mI rP (re.headD 0) (re.tail.headD 0)) := rfl
-theorem cbpK2_some : cbpK2 p n vis (some (rq, m)) = cbpK3 (callW p n "env_push" [vis, rq.headD 0] m) := rfl
-theorem cbpK3_some : cbpK3 (some (rv, m)) = some ([rv.headD 0], m) := rfl
-end arms
-attribute [ind_grind] cbpW_succ cbpK1_some cbpK2_some cbpK3_some
-
-theorem cbp_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (vis cv mI rP ro rl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_push" [vis, cv, mI, rP, ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ cbpW p n s₀.mem vis cv mI rP ro rl = some (r, s'.mem); ⊤⦄ := by
+theorem ri_spec (p : Prog) (L : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat) (s₀ : St)
+    (cv mi rp isK reo rel : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_info_rec" [cv, mi, rp, isK, reo, rel]
+    ⦃fun r s' => LocEq s' s₀ ∧ riW s₀.mem cv mi rp isK reo rel = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ L.rir]
+  simp only [callFn, recInfoRec]
   cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
+  | zero => vcgen [exec] <;> grind
   | succ n =>
-    rw [invoke_eq _ L.push]
-    simp only [callFn, consBlockRecsPush]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, rte_spec p L n, ri_spec p L n,
-        callW_spec p n "env_push"] <;>
-      finish (gen := 20) [loc_init4, loc_init5]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        erecAlloc_specW p L.tsr.ea n, erecPut_specW p hpu n] <;>
+      finish (gen := 30) (instances := 5000) [riW, riMem, erRd]
 
-/-! ## The `abstract1` memo across `cons_block_recs_push` -/
+theorem riMem_eq {m1 : Mem} {q cq mi rp isK reo rel : Word}
+    (hfr : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], ∀ j < 10,
+      erTier x ≠ erTier (q + UInt64.ofNat j) ∨ erOff x ≠ erOff (q + UInt64.ofNat j)) :
+    riMem m1 q cq mi rp isK reo rel = wrER m1 q [5, erRd m1 cq, erRd m1 (cq + 1), erRd m1 (cq + 2),
+      erRd m1 (cq + 3), mi, rp, reo, rel, isK] := by
+  have f0 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier q ∨ erOff x ≠ erOff q :=
+    fun x hx => by simpa using hfr x hx 0 (by decide)
+  have f1 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier (q + 1) ∨ erOff x ≠ erOff (q + 1) :=
+    fun x hx => hfr x hx 1 (by decide)
+  have f2 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier (q + 2) ∨ erOff x ≠ erOff (q + 2) :=
+    fun x hx => hfr x hx 2 (by decide)
+  have f3 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier (q + 3) ∨ erOff x ≠ erOff (q + 3) :=
+    fun x hx => hfr x hx 3 (by decide)
+  simp only [riMem, wrER]
+  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
+    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
+    show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl,
+    show q + 7 + 1 = q + 8 by ac_rfl, show q + 8 + 1 = q + 9 by ac_rfl]
+  simp (disch := first
+    | exact f0 _ (by simp) | exact f1 _ (by simp) | exact f2 _ (by simp) | exact f3 _ (by simp))
+    only [erRd_erecPutMem_ne]
+
+/-- **`rec_info_rec` under the stage relation**: a fresh `.recInfo` record of the constant at `cq`,
+its K flag `isK != 0` and its rules the run `(reo, rel)`. -/
+theorem riRec_stage {vis : Word} {fe : IFEnv} {a : AState}
+    {m m' : Mem} {cq mi rp isK reo rel q : Word} {cv : IConstantVal} {rules : List IRecRule}
+    (h : riW m cq mi rp isK reo rel = some (q, m'))
+    (hS : StageR vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv)
+    (hru : decRules (erecP m) reo.toNat rel.toNat = some rules) :
+    StageR vis fe m' a ∧ IWGrow m m' ∧
+      decCI (erecP m') q.toNat = some (.recInfo cv mi.toNat rp.toNat (isK != 0) rules) := by
+  rcases h1 : erAllocW m 10 with _ | ⟨q1, m1⟩
+  · simp [riW, h1] at h
+  have e : riW m cq mi rp isK reo rel = if 4294967296 ≤ erRd (riMem m1 q1 cq mi rp isK reo rel) (q1 + 1)
+      then none else some (q1, riMem m1 q1 cq mi rp isK reo rel) := by simp [riW, h1]
+  rw [e] at h
+  split at h
+  · cases h
+  obtain ⟨rfl, rfl⟩ : q1 = q ∧ riMem m1 q1 cq mi rp isK reo rel = m' := by simpa using h
+  have hcv0 := hcv
+  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure] at hcv0
+  obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, -⟩, t, ht, -⟩ := hcv0
+  obtain ⟨w0, hw0, -, -⟩ := hd?_some hnm
+  obtain ⟨w1, hw1, -⟩ : ∃ w, erecP m (cq.toNat + 1) = some w ∧ w.toNat = lo := by
+    simp only [nat?, Option.map_eq_some_iff] at hlo; exact hlo
+  obtain ⟨w2, hw2, -⟩ : ∃ w, erecP m (cq.toNat + 2) = some w ∧ w.toNat = ll := by
+    simp only [nat?, Option.map_eq_some_iff, Nat.add_assoc] at hll; exact hll
+  obtain ⟨w3, hw3, -, -⟩ := hd?_some ht
+  have hW : ∀ i < 4, ∃ w, erecP m (cq.toNat + i) = some w := by
+    intro i hi
+    rcases i with _ | _ | _ | _ | i
+    · exact ⟨w0, by simpa using hw0⟩
+    · exact ⟨w1, hw1⟩
+    · exact ⟨w2, hw2⟩
+    · exact ⟨w3, hw3⟩
+    · omega
+  have r0 : erRd m cq = w0 := (erRd_of_erecP (by simpa using hw0)).1
+  obtain ⟨r1, e1⟩ := erRd_add (j := 1) (cq := cq) (m := m) hw1 (by decide)
+  obtain ⟨r2, e2⟩ := erRd_add (j := 2) (cq := cq) (m := m) hw2 (by decide)
+  obtain ⟨r3, e3⟩ := erRd_add (j := 3) (cq := cq) (m := m) hw3 (by decide)
+  simp only [show (UInt64.ofNat 1 : Word) = 1 from rfl, show (UInt64.ofNat 2 : Word) = 2 from rfl,
+    show (UInt64.ofNat 3 : Word) = 3 from rfl] at r1 r2 r3 e1 e2 e3
+  have hfr : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], ∀ j < 10,
+      erTier x ≠ erTier (q1 + UInt64.ofNat j) ∨ erOff x ≠ erOff (q1 + UInt64.ofNat j) := by
+    intro x hx j hj
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+    rcases hx with rfl | rfl | rfl | rfl
+    · exact erFresh h1 hS.iw (by simpa using hw0) hj
+    · exact erFresh h1 hS.iw (by rw [e1]; exact hw1) hj
+    · exact erFresh h1 hS.iw (by rw [e2]; exact hw2) hj
+    · exact erFresh h1 hS.iw (by rw [e3]; exact hw3) hj
+  obtain ⟨-, hf1, -⟩ := erAllocW_spec h1 hS.iw
+  have hr1 : ∀ x, erRd m1 x = erRd m x := fun x => by
+    unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
+  rw [riMem_eq hfr, hr1, hr1, hr1, hr1, r0, r1, r2, r3]
+  obtain ⟨hS', hg, -, -, -, -, hget⟩ :=
+    erRec_stage h1 hS [5, w0, w1, w2, w3, mi, rp, reo, rel, isK] (by simp)
+  refine ⟨hS', hg, ?_⟩
+  generalize wrER m1 q1 _ = M at hS' hg hget
+  have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cq.toNat + i) := by
+    intro i hi
+    obtain ⟨w, hw⟩ := hW i hi
+    rw [IWGrow.ext hg _ _ hw, Nat.add_assoc, hget (1 + i) (by simp; omega)]
+    rcases i with _ | _ | _ | _ | i
+    · simp at hw ⊢; rw [hw0] at hw; exact Option.some.inj hw
+    · simp at hw ⊢; rw [hw1] at hw; exact Option.some.inj hw
+    · simp at hw ⊢; rw [hw2] at hw; exact Option.some.inj hw
+    · simp at hw ⊢; rw [hw3] at hw; exact Option.some.inj hw
+    · omega
+  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cv := by
+    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
+      (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
+    exact ArrExt.decCV (IWGrow.ext hg) hcv
+  have n0 : nat? (erecP M) q1.toNat = some 5 := by
+    have := hget 0 (by simp); simp only [Nat.add_zero] at this; simp [nat?, this]
+  have n5 : nat? (erecP M) (q1.toNat + 5) = some mi.toNat := by simp [nat?, hget 5 (by simp)]
+  have n6 : nat? (erecP M) (q1.toNat + 6) = some rp.toNat := by simp [nat?, hget 6 (by simp)]
+  have n7 : nat? (erecP M) (q1.toNat + 7) = some reo.toNat := by simp [nat?, hget 7 (by simp)]
+  have n8 : nat? (erecP M) (q1.toNat + 8) = some rel.toNat := by simp [nat?, hget 8 (by simp)]
+  have b9 : bool? (erecP M) (q1.toNat + 9) = some (isK != 0) := by simp [bool?, hget 9 (by simp)]
+  have hru' : decRules (erecP M) reo.toNat rel.toNat = some rules := (IWGrow.ext hg).decRules hru
+  simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5, n6, n7, n8, b9, hru',
+    Option.pure_def]
+
+/-! ## The `abstract1` memo -/
 
 theorem rteGoW_afr : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word),
     rteGoW n m b ro rl = some (r, m') → AFr m m'
@@ -841,8 +776,7 @@ theorem rteGoW_afr : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word)
     rw [rteGoW_cons (h := h0)] at h
     rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> simp only [h2, rteK1, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-    exact (show AFr m (cpMem m b (rdW (m.arr64 IW) ro)) by simp only [cpMem]; afr_set).trans
-      (rteGoW_afr n _ _ _ _ _ _ h2)
+    exact (AFr.of_frame (cpMem_frame m b (rdW (m.arr64 IW) ro))).trans (rteGoW_afr n _ _ _ _ _ _ h2)
 
 theorem rteW_afr {n : Nat} {m m' : Mem} {ro rl : Word} {r : List Word}
     (h : rteW n m ro rl = some (r, m')) : AFr m m' := by
@@ -856,54 +790,20 @@ theorem rteW_afr {n : Nat} {m m' : Mem} {ro rl : Word} {r : List Word}
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (erAllocW_afr h1).trans (rteGoW_afr n _ _ _ _ _ _ h2)
 
-theorem riW_afr {m m' : Mem} {cv mi rp3 reo rel : Word} {r : List Word}
-    (h : riW m cv mi rp3 reo rel = some (r, m')) : AFr m m' := by
+theorem riMem_frame (m : Mem) (q cv mi rp isK reo rel : Word) :
+    MemFrame [EREC, tier1 EREC] [] m (riMem m q cv mi rp isK reo rel) := by
+  simp only [riMem]
+  repeat' refine MemFrame.trans ?_ (erecPutMem_frame _ _ _)
+  exact MemFrame.refl _ _ _
+
+theorem riW_afr {m m' : Mem} {cv mi rp isK reo rel q : Word}
+    (h : riW m cv mi rp isK reo rel = some (q, m')) : AFr m m' := by
   simp only [riW] at h
   split at h; · cases h
-  rename_i q m1 h1
+  rename_i q1 m1 h1
+  split at h; · cases h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  exact (erAllocW_afr h1).trans (by simp only [riMem]; afr_set)
-
-section rel2
-variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
-
-/-- **`cons_block_recs_push` under the stage relation**: the rules' run, the `.recInfo` record, pushed. -/
-theorem cbpW_ok (p : Prog) (L : CbrLook p) (n : Nat) {m m' : Mem} {a : AState} {cv mI rP ro rl : Word}
-    {r : List Word} {cvv : IConstantVal} {rules : List IRecRule}
-    (h : cbpW p n m vis cv mI rP ro rl = some (r, m')) (hS : StageR dn vis fe m a)
-    (hcv : decCV (erecP m) cv.toNat = some cvv)
-    (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules) (hb : ro.toNat + rl.toNat ≤ iwTop m) :
-    StageR dn (r.headD 0) (fe.push (.recInfo cvv mI.toNat rP.toNat rules)) m' a ∧ IWGrow m m' ∧
-      AFr m m' := by
-  obtain _ | n := n
-  · simp [cbpW] at h
-  rw [cbpW_succ] at h
-  rcases h1 : rteW n m ro rl with _ | ⟨re, m1⟩ <;> simp only [h1, cbpK1, reduceCtorEq] at h
-  obtain ⟨hS1, hg1, hre, hru, -⟩ := rteW_ok dn fe vis n h1 hS hd hb
-  rw [hre] at h
-  rcases h2 : riW m1 cv mI rP (re.headD 0) rl with _ | ⟨rq, m2⟩ <;> simp only [h2, cbpK2, reduceCtorEq] at h
-  have hrq : rq = [rq.headD 0] := by
-    simp only [riW] at h2; split at h2
-    · cases h2
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h2; rw [← h2.1]; rfl
-  rw [hrq] at h2
-  obtain ⟨hS2, hg2, -, hci⟩ := riRec_stage h2 hS1 ((IWGrow.erecPExtR hg1).decCV hcv) hru
-  obtain ⟨wn, hwn, hwnl, -⟩ := decCI_name hci
-  have hwn' : (rdW (m2.arr64 EREC) (rq.headD 0 + 1)).toNat < 2 ^ 32 := by
-    have hq1 : (rq.headD 0 + 1).toNat = (rq.headD 0).toNat + 1 := by
-      have := erecP_lt hwn; obtain ⟨-, h2', -, h4, -⟩ := hS2.iw
-      rw [UInt64.toNat_add, show (1 : Word).toNat = 1 from rfl]; exact Nat.mod_eq_of_lt (by omega)
-    rw [rdW_of_get? hq1.symm (erecP_get hwn)]; exact hwnl
-  rcases h3 : callW p n "env_push" [vis, rq.headD 0] m2 with _ | ⟨rv, m3⟩ <;> simp only [h3, cbpK3, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-    (envPush_specW p L.rp n ⟨m2, Locals.init []⟩ vis (rq.headD 0) hwn') h3
-  subst hs4
-  obtain ⟨hS3, hg3⟩ := envPushW_ok hW4 hS2 hci
-  exact ⟨by simpa using hS3, (hg1.trans hg2).trans hg3,
-    (rteW_afr h1).trans ((riW_afr h2).trans (envPushW_afr hW4))⟩
-
-end rel2
+  exact (erAllocW_afr h1).trans (AFr.of_frame (riMem_frame _ _ _ _ _ _ _ _))
 
 end L.Ind
 
@@ -1041,89 +941,151 @@ theorem bmjW_rpW_eq {m : Mem} {q r : Word} {bs : BlockShape} (hq : DecB (fun m =
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl] at e1' e2'
   exact ⟨by rw [e2', t2'], by rw [e1', t1']⟩
 
-/-! ## `cons_block_recs_tf` -/
+/-! ## `rec_k_expected` -/
 
-def cbrK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
+l_model rk_spec (p : Prog) (hL : CbrLook p)
+  fns [hL.rke ↦ rkW ro]
+  specs []
+  grind [arena_grind]
 
-def cbrK2 (k : Mem → Word → Option (List Word × Mem)) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rv, m) => k m (rv.headD 0)
+/-- **`rec_k_expected` is `recKExpected`** at a shape and a target major decoded below the tops. -/
+theorem rkW_ok {m : Mem} {p M : Word} {bs : BlockShape} {TM : TargetMajor}
+    (hbs : DecB (fun m => decBS m p.toNat) m bs) (hM : DecB (fun m => decTM m M.toNat) m TM)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    ∃ w, rkW m p M = some w ∧ (w != 0) = ConRon.Arena.recKExpected bs TM := by
+  have hM0 : decTM (truncM m) M.toNat = some TM := hM
+  simp only [decTM, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hM0
+  obtain ⟨i0, -, l0, -, ds0, -, nP, -, nI, -, cs, hcs, k8, hk8, nfs0, -, pf0, -, hTM⟩ := hM0
+  have eCs : TM.ctors = cs := by rw [← hTM]
+  have eMem : TM.member = decON k8 := by rw [← hTM]
+  obtain ⟨co, cl, hco, hcl, hcsd⟩ := decAt_some hcs
+  obtain ⟨-, hcom⟩ := rec2IwN_trunc hco
+  obtain ⟨-, hclm⟩ := rec2IwN_trunc hcl
+  obtain ⟨-, hk8m⟩ := rec2IwN_trunc hk8
+  obtain ⟨e6, t6⟩ := rec2RdN (w := M) (k := 6) hcom hsz
+  obtain ⟨e7, t7⟩ := rec2RdN (w := M) (k := 7) (by simpa [Nat.add_assoc] using hclm) hsz
+  obtain ⟨e8, t8⟩ := rec2RdN (w := M) (k := 8) hk8m hsz
+  simp only [show UInt64.ofNat 6 = (6 : Word) from rfl, show UInt64.ofNat 7 = (7 : Word) from rfl,
+    show UInt64.ofNat 8 = (8 : Word) from rfl] at e6 e7 e8
+  have hbs0 : decBS (truncM m) p.toNat = some bs := hbs
+  obtain ⟨hmem, -, -, -, -, -, hprop⟩ := decBS_some hbs0
+  obtain ⟨mo, ml, -, hml, hmd⟩ := decAt_some hmem
+  obtain ⟨-, hmlm⟩ := rec2IwN_trunc hml
+  obtain ⟨e1, t1⟩ := rec2RdN (w := p) (k := 1) hmlm hsz
+  have ek : bs.k = ml := by
+    have := decPL_length _ hmd; simp only [BlockShape.k]; exact this
+  have eP := installIwB (k := 8) hprop hsz
+  simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 8 = (8 : Word) from rfl] at e1 eP
+  unfold rkW ConRon.Arena.recKExpected
+  rw [e8, e7, eMem, eCs]
+  by_cases hk0 : k8 = 0
+  · subst hk0
+    exact ⟨0, by simp, by simp [decON]⟩
+  have hk8' : UInt64.ofNat k8 ≠ (0 : Word) := fun e => hk0 (by rw [← t8, e]; rfl)
+  simp only [hk8', ↓reduceIte]
+  have hlen : cs.length = cl := decPL_length _ hcsd
+  by_cases hc1 : cl = 1
+  · subst hc1
+    obtain ⟨cp, c, ys, rfl, hcp, hc, hys⟩ := decPL_cons (l := 0) hcsd
+    have : ys = [] := by have := decPL_length _ hys; simpa using this
+    subst this
+    obtain ⟨-, hcpm⟩ := rec2IwN_trunc (i := (UInt64.ofNat co : Word).toNat + 0) (by rw [t6]; simpa using hcp)
+    obtain ⟨e9, t9⟩ := rec2RdN (w := UInt64.ofNat co) (k := 0) hcpm hsz
+    simp only [decCN, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+    obtain ⟨_, -, cv, -, nF, hnF, hceq⟩ := hc
+    subst hceq
+    obtain ⟨-, hnFm⟩ := rec2IwN_trunc (i := (UInt64.ofNat cp : Word).toNat + 1) (by rw [t9]; exact hnF)
+    obtain ⟨e10, t10⟩ := rec2RdN (w := UInt64.ofNat cp) (k := 1) hnFm hsz
+    simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl,
+      UInt64.add_zero] at e9 e10
+    have h1' : ¬ (UInt64.ofNat 1 : Word) ≠ 1 := by decide
+    simp only [h1', ↓reduceIte]
+    rw [e6, e9, e10, e1]
+    refine ⟨_, rfl, ?_⟩
+    simp only [decON, hk0, ite_false, ek]
+    rw [← eP, ← t1, ← t10]
+    generalize (UInt64.ofNat ml : Word) = a
+    generalize (UInt64.ofNat nF : Word) = b
+    generalize rdW (m.arr64 IW) (p + 8) = c
+    have ha' : a.toNat = 1 ↔ a = 1 := by rw [← UInt64.toNat_inj]; rfl
+    have hb' : b.toNat = 0 ↔ b = 0 := by rw [← UInt64.toNat_inj]; rfl
+    by_cases ha : a = 1 <;> by_cases hb : b = 0 <;> by_cases hc : c = 0 <;> simp [ha, hb, hc, ha', hb']
+  · have h7 : (UInt64.ofNat cl : Word) ≠ 1 := by
+      intro e; apply hc1; rw [← t7, e]; rfl
+    simp only [ne_eq, h7, not_false_eq_true, ↓reduceIte]
+    refine ⟨0, rfl, ?_⟩
+    simp only [decON, hk0, ite_false]
+    match cs, hlen with
+    | [], _ => rfl
+    | [_], h => exact absurd h.symm hc1
+    | _ :: _ :: _, _ => rfl
 
-def cbrK1 (p : Prog) (n : Nat) (vis cv mI rP : Word) (k : Mem → Word → Option (List Word × Mem)) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rr, m) => cbrK2 k (cbpW p n m vis cv mI rP (rr.headD 0) (rr.tail.headD 0))
+/-! ## `block_rec_infos_tf` -/
 
-/-- **The model of `cons_block_recs_tf`** (exec fuel). -/
-def cbrW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis2, pp, mm, lo, ll, vis =>
-    if ll = 0 then some ([vis], m)
-    else cbrK1 p n vis (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo)) (bmjW m pp mm) (brpW m pp mm)
-      (fun m' v => cbrK3 (cbrW p n m' vis2 pp (mm + 1) (lo + 1) (ll - 1) v))
-      (tsrW n m vis2 (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo)) (brpW m pp mm)
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo + 1)) (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo + 2))
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo + 3)))
+l_model bri_spec (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut)
+  fns [hL.bri ↦ briW list]
+  specs [rp_spec p hL.rpa n, tsr_spec p hL.tsr hpu n, mj_spec p hL.mi n, rk_spec p hL n, rte_spec p hL hpu n,
+    ri_spec p hL hpu n, slCons_specW p hL.tsr.rc.rx.ha hL.tsr.ic hL.tsr.sc n]
+  grind [arena_grind]
 
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (vis2 pp mm lo ll vis cv mI rP v : Word) (r rr rv : List Word)
-  (k : Mem → Word → Option (List Word × Mem))
-theorem cbrW_nil (h : ll = 0) : cbrW p (n + 1) m vis2 pp mm lo ll vis = some ([vis], m) := by simp [cbrW, h]
-theorem cbrW_cons (h : ¬ ll = 0) : cbrW p (n + 1) m vis2 pp mm lo ll vis =
-    cbrK1 p n vis (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo)) (bmjW m pp mm) (brpW m pp mm)
-      (fun m' v => cbrK3 (cbrW p n m' vis2 pp (mm + 1) (lo + 1) (ll - 1) v))
-      (tsrW n m vis2 (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo)) (brpW m pp mm)
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo + 1)) (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo + 2))
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo + 3))) := by simp [cbrW, h]
-theorem cbrK1_some : cbrK1 p n vis cv mI rP k (some (rr, m)) =
-    cbrK2 k (cbpW p n m vis cv mI rP (rr.headD 0) (rr.tail.headD 0)) := rfl
-theorem cbrK2_some : cbrK2 k (some (rv, m)) = k m (rv.headD 0) := rfl
-theorem cbrK3_some : cbrK3 (some (r, m)) = some ([r.headD 0], m) := rfl
-end arms
-attribute [ind_grind] cbrW_nil cbrW_cons cbrK1_some cbrK2_some cbrK3_some
+/-- A record pointer consed onto a slice of `EREC` record pointers (`sl_cons`). -/
+theorem consW_ci {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {cis : List IConstantInfo} {ci : IConstantInfo}
+    (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a) (hb : o.toNat + l.toNat ≤ iwTop m)
+    (hd : decPL m (decCI (erecP m)) o.toNat l.toNat = some cis) (hx : decCI (erecP m) x.toNat = some ci) :
+    decPL m' (decCI (erecP m')) (r.headD 0).toNat (r.tail.headD 0).toNat = some (ci :: cis) ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ StageR vis fe m' a ∧ IWGrow m m' := by
+  rw [decPL_eq_bind] at hd
+  rcases hps : decNL m o.toNat l.toNat with _ | ps <;> rw [hps] at hd
+  · cases hd
+  simp only [Option.bind_some] at hd
+  obtain ⟨hS', hg, hd', ht'⟩ := consW_stageN h hS hb hps
+  have hext := IWGrow.ext hg
+  refine ⟨?_, ht', hS', hg⟩
+  rw [decPL_eq_bind, hd']
+  simp only [Option.bind_some, List.mapM_cons]
+  rw [show decCI (erecP m') x.toNat = some ci from hext.decCI hx,
+    ArrExt.mapM (f := decCI (erecP m)) (g := decCI (erecP m')) (fun _ _ hy => hext.decCI hy) _ _ hd]
+  rfl
 
-theorem cbr_spec (p : Prog) (L : CbrLook p) (n : Nat) :
-    ∀ (s₀ : St) (vis2 pp mm lo ll vis : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_tf" [vis2, pp, mm, lo, ll, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ cbrW p n s₀.mem vis2 pp mm lo ll vis = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis2 pp mm lo ll vis
-    rw [invoke_eq _ L.cbr]; simp only [callFn, consBlockRecsTF]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis2 pp mm lo ll vis
-    rw [invoke_eq _ L.cbr]
-    simp only [callFn, consBlockRecsTF]
-    sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, mj_spec p L.mi n, rp_spec p L.rpa n,
-        tsr_spec p L.tsr n, cbp_spec p L n, ih] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq, loc_init4, loc_init5]
+/-- A slice of `EREC` record pointers below the `IW` top, across pool growth. -/
+theorem decPL_ci_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} {cis : List IConstantInfo}
+    (hb : o + l ≤ iwTop m) (hd : decPL m (decCI (erecP m)) o l = some cis) :
+    decPL m' (decCI (erecP m')) o l = some cis := by
+  rw [decPL_eq_bind] at hd ⊢
+  rcases hps : decNL m o l with _ | ps <;> rw [hps] at hd
+  · cases hd
+  have hps' : decNL m' o l = some ps := by
+    rw [← hps]; simp only [decNL]; apply mapM_opt_congr; intro j hj
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by simp at hj; omega)]
+  rw [hps']
+  simp only [Option.bind_some] at hd ⊢
+  exact ArrExt.mapM (fun _ _ hy => (IWGrow.ext hg).decCI hy) _ _ hd
 
-section rel
-variable (dn : NIdx → Option ConLeche.Name)
-
-theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
-    {vis2 pp mm lo ll : Word} {r : List Word} {bs : BlockShape} {xs : List (IConstantVal × TargetMajor × List EIdx)},
-    cbrW p n m vis2 pp mm lo ll vis = some (r, m') → StageR dn vis fe m a →
+/-- **`block_rec_infos_tf` refines `blockRecInfosTF`**: the records at the returned slice of
+`EREC` pointers. -/
+theorem briW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
+    {pp mm lo ll : Word} {r : List Word} {bs : BlockShape} {xs : List (IConstantVal × TargetMajor × List EIdx)},
+    briW n m pp mm lo ll = some (r, m') → StageR vis fe m a →
     DecB (fun m => decBS m pp.toNat) m bs → PSlR decRR xs lo ll m → mm.toNat + ll.toNat < 2 ^ 64 →
     AbsOK m →
-    ∃ fe' a', (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' ∧ AbsOK m' := by
+    ∃ infos a', (ConRon.Arena.blockRecInfosTF bs mm.toNat xs).run a = .ok (infos, a') ∧
+      decPL m' (decCI (erecP m')) (r.headD 0).toNat (r.tail.headD 0).toNat = some infos ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' := by
   induction n with
-  | zero => intro m m' a vis fe vis2 pp mm lo ll r bs xs h; simp [cbrW] at h
+  | zero => intro m m' a vis fe pp mm lo ll r bs xs h; simp [briW] at h
   | succ n ih =>
-  intro m m' a vis fe vis2 pp mm lo ll r bs xs h hS hbs hxs hml hA
+  intro m m' a vis fe pp mm lo ll r bs xs h hS hbs hxs hml hA
   by_cases hl : ll = 0
-  · rw [cbrW_nil (h := hl)] at h
+  · rw [briW.arm1 n m pp mm lo ll hl] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     subst hl
     have : xs = [] := by
       have := decPL_length _ (hxs.1.get (OMono.decPL decRR_mono _ _)); simpa using this
     subst this
-    exact ⟨fe, a, rfl, hS, IWGrow.refl _, hA⟩
-  rw [cbrW_cons (h := hl)] at h
+    exact ⟨[], a, rfl, by simp [decPL], by simp, hS, IWGrow.refl _, hA⟩
+  rw [briW.arm2 n m pp mm lo ll hl] at h
   have hsz := hS.iw.iwSize
   obtain ⟨x, ys, rfl, hx, hys⟩ := hxs.uncons hl hsz
   obtain ⟨cvv, TM, rhss⟩ := x
@@ -1151,52 +1113,77 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
   have hrh : DecB (fun m => decHL m (UInt64.ofNat o : Word).toNat (UInt64.ofNat l : Word).toNat) m rhss := by
     show decHL (truncM m) _ _ = some rhss; rw [t2, t3]; exact hd
   have hcvE : decCV (erecP m) (UInt64.ofNat cvp : Word).toNat = some cvv := by rw [t0]; exact decCVp_truncM hcv'
-  obtain ⟨hmj, hrp⟩ := bmjW_rpW_eq (r := mm) hbs hsz
-  -- the stored rules, at the constructors' view
-  rcases h1 : tsrW n m vis2 (UInt64.ofNat cvp) (brpW m pp mm) (UInt64.ofNat mp) (UInt64.ofNat o) (UInt64.ofNat l) with _ | ⟨rr, m1⟩ <;> simp only [h1, cbrK1, reduceCtorEq] at h
-  obtain ⟨rules, a1, run1, hd1, hb1, hS1, hg1, hA1⟩ := tsrW_ok dn (fe.restrictTo vis2.toNat) vis2 n h1
-    (hS.restrict vis2) hM hrh hA (cvv := cvv)
-  have hS1' : StageR dn vis fe m1 a1 := hS1.unrestrict hS.check.env.vis
+  obtain ⟨-, hrp⟩ := bmjW_rpW_eq (r := mm) hbs hsz
+  -- the generated rules
+  rcases h1 : tsrW n m (brpW m pp mm) (UInt64.ofNat mp) (UInt64.ofNat o) (UInt64.ofNat l) with _ | ⟨rr, m1⟩
+  · rw [h1, briW.k_generated_rules.none] at h; cases h
+  rw [h1, briW.k_generated_rules.arm1] at h
+  obtain ⟨rules, a1, run1, hd1, hR1, hb1, hS1, hg1, hA1⟩ := tsrW_ok fe vis n h1 hS hM hrh hA
   rw [hrp] at run1
-  rcases h2 : cbpW p n m1 vis (UInt64.ofNat cvp) (bmjW m pp mm) (brpW m pp mm) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rv, m2⟩ <;> simp only [h2, cbrK2, reduceCtorEq] at h
-  obtain ⟨hS2, hg2, hf2⟩ := cbpW_ok dn fe vis p L n h2 hS1' ((IWGrow.erecPExtR hg1).decCV hcvE) hd1 hb1
-  rw [hmj, hrp] at hS2
-  rcases h3 : cbrW p n m2 vis2 pp (mm + 1) (lo + 1) (ll - 1) (rv.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [h3, cbrK3, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
-  have hg12 := hg1.trans hg2
+  -- the tail's records
   have hl0 : ll.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
   have hmm1 : (mm + 1).toNat = mm.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hll1 : (ll - 1).toNat = ll.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
-  obtain ⟨fe', a3, run3, hS3, hg3, hA3⟩ := ih h3 hS2 (hbs.grow (decBS_mono _) hg12)
-    (hys.grow (fun q => decRR_mono q) hg12) (by rw [hmm1, hll1]; omega) (hf2 hA1)
-  refine ⟨fe', a3, ?_, by simpa using hS3, hg12.trans hg3, hA3⟩
-  rw [hmm1] at run3
-  simp only [ConRon.Arena.consBlockRecsTF, StateT.run_bind, run1, except_ok_bind]
-  exact run3
+  rcases h2 : briW n m1 pp (mm + 1) (lo + 1) (ll - 1) with _ | ⟨ri, m2⟩
+  · rw [h2] at h; simp [briW.k_block_rec_infos_tf] at h
+  rw [h2, briW.k_block_rec_infos_tf.arm1] at h
+  obtain ⟨infos, a2, run2, hd2, hb2, hS2, hg2, hA2⟩ := ih h2 hS1 (hbs.grow (decBS_mono _) hg1)
+    (hys.grow (fun q => decRR_mono q) hg1) (by rw [hmm1, hll1]; omega) hA1
+  rw [hmm1] at run2
+  -- the K flag, the major index
+  have hsz2 := hS2.iw.iwSize
+  have hg12 := hg1.trans hg2
+  obtain ⟨isK, hk, hkE⟩ := rkW_ok (hbs.grow (decBS_mono _) hg12) (hM.grow (decTM_mono _) hg12) hsz2
+  obtain ⟨hmj, -⟩ := bmjW_rpW_eq (r := mm) (hbs.grow (decBS_mono _) hg12) hsz2
+  rw [hk, briW.k_rec_k_expected.arm1] at h
+  -- the rules copied
+  rcases h3 : rteW n m2 (rr.headD 0) (rr.tail.headD 0) with _ | ⟨re, m3⟩
+  · rw [h3] at h; simp [briW.k_rules_to_erec] at h
+  rw [h3, briW.k_rules_to_erec.arm1] at h
+  obtain ⟨hS3, hg3, hrl3, hru3⟩ := rteW_ok n h3 hS2 (decPL_rl_grow hg2 hb1 hd1) (hR1.grow hg2 hb1)
+  rw [← hrl3] at hru3
+  -- the record
+  rcases h4 : riW m3 (UInt64.ofNat cvp) (bmjW m2 pp mm) (brpW m pp mm) isK (re.headD 0) (re.tail.headD 0)
+    with _ | ⟨q, m4⟩
+  · rw [h4] at h; simp [briW.k_rec_info_rec] at h
+  rw [h4, briW.k_rec_info_rec.arm1] at h
+  have hg13 := hg12.trans hg3
+  obtain ⟨hS4, hg4, hci⟩ := riRec_stage h4 hS3 ((IWGrow.ext hg13).decCV hcvE) hru3
+  -- consed
+  rcases h5 : consW n m4 q (ri.headD 0) (ri.tail.headD 0) with _ | ⟨r5, m5⟩
+  · rw [h5] at h; simp [briW.k_sl_cons] at h
+  rw [h5, briW.k_sl_cons.arm1] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+  have hg34 := hg3.trans hg4
+  obtain ⟨hd5, hb5, hS5, hg5⟩ := consW_ci h5 hS4 (by have := hg34.iw; omega)
+    (decPL_ci_grow hg34 hb2 hd2) hci
+  refine ⟨_, a2, ?_, by simpa using hd5, by simp only [List.headD_cons, List.tail_cons]; omega, hS5, hg13.trans (hg4.trans hg5),
+    consW_afr h5 (riW_afr h4 (rteW_afr h3 hA2))⟩
+  simp only [ConRon.Arena.blockRecInfosTF, StateT.run_bind, run1, except_ok_bind, run2]
+  rw [hmj, hrp, hkE]
+  rfl
 
-end rel
+/-- **`block_rec_infos_tf` refines `blockRecInfosTF`**: the shape and the family's `rec4` records
+decoded below the tops; the records (each recursor at its record's major index and rule prefix, its
+K flag `rec_k_expected`, its rules at its major by `generated_rules`) at the returned slice of
+`EREC` pointers. -/
+@[refines ConRon.Arena.blockRecInfosTF]
+theorem blockRecInfosTF_refines (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut)
+    (n : Nat) (s₀ : St) (a₀ : AState)
+    (fe : IFEnv) (vis pp mm lo ll : Word) (bs : BlockShape) (xs : List (IConstantVal × TargetMajor × List EIdx))
+    (hS : StageR vis fe s₀.mem a₀) (hbs : DecB (fun m => decBS m pp.toNat) s₀.mem bs)
+    (hxs : PSlR decRR xs lo ll s₀.mem) (hml : mm.toNat + ll.toNat < 2 ^ 64) (hA : AbsOK s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_infos_tf" [pp, mm, lo, ll]
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ infos a',
+      (ConRon.Arena.blockRecInfosTF bs mm.toNat xs).run a₀ = .ok (infos, a') ∧
+      decPL s'.mem (decCI (erecP s'.mem)) (r.headD 0).toNat (r.tail.headD 0).toNat = some infos ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ StageR vis fe s'.mem a' ∧
+      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
+  triple_post (bri_spec p hL hpu n s₀ pp mm lo ll) fun _ _ ⟨hl, hm⟩ =>
+    ⟨hl, briW_ok n hm hS hbs hxs hml hA⟩
 
-/-- **`cons_block_recs_tf` (with `cons_block_recs_push`, `rec_info_rec`, `rules_to_erec(_go)`,
-`rule_copy`) refines `consBlockRecsTF`** (through `tgt_stored_rules`' stubs): the shape and the
-family's `rec4` records decoded below the tops; the environment with the recursors at the returned
-view. -/
-@[refines ConRon.Arena.consBlockRecsTF]
-theorem consBlockRecsTF_refines (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis2 pp mm lo ll vis : Word) (bs : BlockShape)
-    (xs : List (IConstantVal × TargetMajor × List EIdx)) (hS : StageR dn vis fe s₀.mem a₀)
-    (hbs : DecB (fun m => decBS m pp.toNat) s₀.mem bs) (hxs : PSlR decRR xs lo ll s₀.mem)
-    (hml : mm.toNat + ll.toNat < 2 ^ 64) (hA : AbsOK s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_tf" [vis2, pp, mm, lo, ll, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀ ∧
-      StageR dn (r.headD 0) (AM.res (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀) s'.mem
-        (AM.st (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (cbr_spec p L n s₀ vis2 pp mm lo ll vis) ?_
-  rintro r s' ⟨hl', hm⟩
-  obtain ⟨fe', a', run, hS', hg, hA'⟩ := cbrW_ok dn p L n hm hS hbs hxs hml hA
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
-  exact ⟨hl', hok, by rw [hres, hst]; exact hS', hg, hA'⟩
+
 
 end L.Ind
 

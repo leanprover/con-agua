@@ -14,7 +14,7 @@ import ConAgua.Arena.DerRel
 # The knot's `whnfCore` slot: stuck tags, the memo, the body
 
 `whnf_core(mode, cheap, vis, d, e)` (`WhnfCore.lean`) refines the `whnfCore` slot of
-`coreKnot mode fe id (F + 1)`: a stuck tag answers `e` without touching memo or store
+`coreKnot mode eager fe id (F + 1)`: a stuck tag answers `e` without touching memo or store
 (`whnfCoreStuckTag`, `stuck_iff`), a memo hit (`whnfCoreCheapC` in the cheap mode, `whnfCoreC`
 otherwise, at the current generation) answers the entry, a miss runs `whnf_core_loop` (the
 body, `whnfCoreBody … (coreKnot … F)`), records it and answers it.
@@ -149,7 +149,7 @@ theorem CoreS.set_wc {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
       (hS.den.frameE (hf.arr EREC (by decide) (by decide))).caches rfl rfl rfl,
-      hS.mode.frame hf (by simp) (by simp)⟩,
+      hS.mode.frame hf (by simp) (by simp), hS.iwF hf⟩,
     StackKept.of_frame hf⟩
 
 /-- `whnfCoreCheapC` gains an entry. -/
@@ -200,41 +200,41 @@ theorem CoreS.set_wk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
       (hS.den.frameE (hf.arr EREC (by decide) (by decide))).caches rfl rfl rfl,
-      hS.mode.frame hf (by simp) (by simp)⟩,
+      hS.mode.frame hf (by simp) (by simp), hS.iwF hf⟩,
     StackKept.of_frame hf⟩
 
 /-! ## The twin's slot -/
 
 section twin
-variable (mode : ConLeche.CheckMode) (fe : IFEnv) (F : Nat) (c : Bool) (d : Nat) (e : EIdx)
+variable (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F : Nat) (c : Bool) (d : Nat) (e : EIdx)
   (a : AState)
 
 theorem knot_whnfCore_stuck (h : whnfCoreStuckTag e = true) :
-    ((coreKnot mode fe id (F + 1)).whnfCore c d e).run a = .ok (e, a) := by
+    ((coreKnot mode eager fe id (F + 1)).whnfCore c d e).run a = .ok (e, a) := by
   simp [coreKnot, h]; rfl
 
 theorem knot_whnfCore_hitK (h : whnfCoreStuckTag e = false) (x : EIdx)
     (hm : a.caches.whnfCoreCheapC[e]? = some x) :
-    ((coreKnot mode fe id (F + 1)).whnfCore true d e).run a = .ok (x, a) := by
+    ((coreKnot mode eager fe id (F + 1)).whnfCore true d e).run a = .ok (x, a) := by
   simp [coreKnot, h, hm]; rfl
 
 theorem knot_whnfCore_hitF (h : whnfCoreStuckTag e = false) (x : EIdx)
     (hm : a.caches.whnfCoreC[e]? = some x) :
-    ((coreKnot mode fe id (F + 1)).whnfCore false d e).run a = .ok (x, a) := by
+    ((coreKnot mode eager fe id (F + 1)).whnfCore false d e).run a = .ok (x, a) := by
   simp [coreKnot, h, hm]; rfl
 
 theorem knot_whnfCore_missK (h : whnfCoreStuckTag e = false)
     (hm : a.caches.whnfCoreCheapC[e]? = none) (x : EIdx) (a₁ : AState)
-    (hb : (whnfCoreBody mode (coreKnot mode fe id F) fe true d e).run a = .ok (x, a₁)) :
-    ((coreKnot mode fe id (F + 1)).whnfCore true d e).run a =
+    (hb : (whnfCoreBody mode (coreKnot mode eager fe id F) fe true d e).run a = .ok (x, a₁)) :
+    ((coreKnot mode eager fe id (F + 1)).whnfCore true d e).run a =
       .ok (x, { a₁ with caches := { a₁.caches with
         whnfCoreCheapC := a₁.caches.whnfCoreCheapC.insert e x } }) := by
   simp [coreKnot, h, hm, StateT.run_bind, hb, whnfCoreCheapSet]; rfl
 
 theorem knot_whnfCore_missF (h : whnfCoreStuckTag e = false)
     (hm : a.caches.whnfCoreC[e]? = none) (x : EIdx) (a₁ : AState)
-    (hb : (whnfCoreBody mode (coreKnot mode fe id F) fe false d e).run a = .ok (x, a₁)) :
-    ((coreKnot mode fe id (F + 1)).whnfCore false d e).run a =
+    (hb : (whnfCoreBody mode (coreKnot mode eager fe id F) fe false d e).run a = .ok (x, a₁)) :
+    ((coreKnot mode eager fe id (F + 1)).whnfCore false d e).run a =
       .ok (x, { a₁ with caches := { a₁.caches with
         whnfCoreC := a₁.caches.whnfCoreC.insert e x } }) := by
   simp [coreKnot, h, hm, StateT.run_bind, hb, whnfCoreSet]; rfl

@@ -79,10 +79,11 @@ theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteAr
   refine ⟨_, a', hb, h3.since.step hk hpf, hA, hD, h240, ?_, ht, ?_, hrk, hmo⟩
   rotate_left
   · exact h3.hz.frame hsf (by decide +kernel) (by decide +kernel)
-      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
-      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
-      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
-      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
   rw [hstep.pins]
   exact hpf0.frame hsf stageA_builtin_prelude_pins (by decide +kernel) (by decide +kernel)
     (stageC_builtin_prelude_off _ (by decide)) (stageC_builtin_prelude_off _ (by decide))
@@ -132,10 +133,11 @@ theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArra
   · exact ⟨hto.1, hto.2.1, hto.2.2.1, h4.twin.pers.mono hstep.pins,
       by simp only [PinsReadyP, hstep.pins]; exact h4.twin.ready⟩
   · exact h4.hz.frame hsf (by decide +kernel) (by decide +kernel)
-      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
-      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
-      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
-      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
   · exact fun x hx => hR x (by simpa [ParseResultD.ofState] using hx)
 
 /-! ## `prepare_prelude` -/
@@ -158,6 +160,8 @@ structure R6 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (a : AState)
   pf : PinFacts m a.pins
   iw : L.Ind.IWOK m
   mode : ModeOK m
+  /-- The tier-1 record pool's top is still zero. -/
+  c130 : rdW (m.arr64 CTL) 130 = 0
 
 theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre : PreludeIx)
     (rc : ParseResultD) (a : AState) :
@@ -167,11 +171,13 @@ theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre 
   have hc := CapsOK.keep h5.since.keep h5.since.caps
   have hctl : 256 ≤ (s₀.mem.arr64 CTL).size := hc.2.1
   have hI : L.Ind.IWOK s₀.mem := by
-    refine ⟨?_, ?_, ?_, ?_, by omega⟩
+    refine ⟨?_, ?_, ?_, ?_, by omega, ?_, ?_, hc.erec, hc.erec1⟩
     · simp only [L.Ind.iwTop, h5.hz.c200]; simp
     · simp only [L.Ind.erTop, h5.hz.c129]; simp
     · have := hc.1 L.Ind.IW (by decide); omega
     · have := hc.1 EREC (by decide); omega
+    · simp only [erecTop1, h5.hz.c130]; simp
+    · have := hc.1 (tier1 EREC) (by decide); omega
   have hseen : ∃ s, L.Checker.SeenR s₀.mem s :=
     ⟨∅, memoRV_zero0 hsSch bmKey _ s₀.mem (by simp; omega) h5.hz.c73 h5.hz.seen⟩
   have hnix : ∃ idx, NixR s₀.mem idx :=
@@ -188,9 +194,16 @@ theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre 
   refine ⟨ds', a', hrun, h5.since.step hk hpf,
     ⟨hAR, L.Front.DerR.congrSt hpe hse (DerR.frameM _ _ _ _ hsf (by decide +kernel) _ h5.arena.der)⟩, ?_, ?_, hIW,
     ModeOK.frame h5.mode hsf (not_mem_of_toNat (Z := [0, 1]) (by decide +kernel) _ (by decide))
-      (not_mem_of_toNat (Z := [0, 1]) (by decide +kernel) _ (by decide))⟩
+      (not_mem_of_toNat (Z := [0, 1]) (by decide +kernel) _ (by decide)), ?_⟩
+  rotate_right
+  · rw [hsf.ctl 130 (not_mem_of_toNat (Z := [130]) (by decide +kernel) _ (by decide))]; exact h5.hz.c130
   · refine ⟨by rw [hDs]; have := hc.1 DECL (by decide); omega, by rw [hDLP]; exact h5.decls.psize,
-      by simpa [rdW] using hcnt, ?_, by rw [hDLP]; exact h5.decls.ptop, fun i hi => (hrecs i hi).1⟩
+      by simpa [rdW] using hcnt, ?_, by rw [hDLP]; exact h5.decls.ptop, fun i hi => (hrecs i hi).1,
+      fun i hi b' nP e => by
+        have h1 := (hrecs i hi).1
+        rw [e] at h1
+        obtain ⟨h6, h4, -⟩ := h1
+        rw [← h4]; exact ((hrecs i hi).2.2 h6).2.2⟩
     rw [hDs]; have := h5.decls.room; omega
   · rw [hpins]
     exact h5.pf.frame hsf stageA_prepare_prelude_pins (by decide +kernel) (by decide +kernel)
@@ -238,6 +251,8 @@ structure R7 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (ipins : Lis
   pinsFull : PinsFull m a.pins
   iw : L.Ind.IWOK m
   mode : ModeOK m
+  /-- The tier-1 record pool's top is still zero. -/
+  c130 : rdW (m.arr64 CTL) 130 = 0
 
 theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
     (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD) (sC : AState)
@@ -252,10 +267,10 @@ theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : p
     rw [h6.since.keep.arr8]; exact loadMem_pb b pb sz
   refine triple_post (triple_and (triple_and (checkerProg_internAllPins_PB pb.data.toList
     (by simpa [RomOK] using hpb) h6.since.pbpre n s₀ a hbs h6.arena h6.mode h6.pf.full.names_size hok hpins hpp
-    hoff h6.pf.rset (by rw [h6.pf.stk]; decide) hc.ctl)
+    hoff h6.pf.rset (by rw [h6.pf.stk]; decide) hc.ctl hc.erec)
     (stage_since n (preLoop_mem "intern_all_pins" (by decide +kernel)) s₀))
     (stageFrame_intern_all_pins n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
-  obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR, htop, hM⟩ := hpost
+  obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR, htop, hM, hpfr⟩ := hpost
   have hpins' : a'.pins = a.pins := TwinCaches.internAllPins_pins hok hpins hoff hrun
   have hPINS : s'.mem.arr64 PINS = s₀.mem.arr64 PINS := hsf.1 PINS (by decide +kernel) (by decide)
   have h200 : rdW (s'.mem.arr64 CTL) 200 = rdW (s₀.mem.arr64 CTL) 200 :=
@@ -263,14 +278,18 @@ theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : p
   have hIW : s'.mem.arr64 L.Ind.IW = s₀.mem.arr64 L.Ind.IW := hsf.1 _ (by decide +kernel) (by decide)
   have hc' := CapsOK.keep (h6.since.step hk hpf).keep h6.since.caps
   refine ⟨pins, ips, a', hrun, h6.since.step hk hpf, hA, ?_, hPS, hR, ?_,
-    by rw [hpins']; exact h6.pf.full.congr hPINS, ?_, hM⟩
+    by rw [hpins']; exact h6.pf.full.congr hPINS, ?_, hM, ?_⟩
   · rw [hsf.1 DECL (by decide +kernel) (by decide), hsf.1 DLP (by decide +kernel) (by decide)]
     exact h6.decls
   · simp only [pinW, hsf.1 PINS (by decide +kernel) (by decide)]; exact h6.pf.pin0
-  · refine ⟨?_, htop, ?_, ?_, ?_⟩
+  · refine ⟨?_, htop, ?_, ?_, ?_, ?_, ?_, hc'.erec, hc'.erec1⟩
     · simp only [L.Ind.iwTop, h200, hIW]; exact h6.iw.iw
     · have := hc'.1 L.Ind.IW (by decide); omega
     · have := hc'.1 EREC (by decide); omega
     · have := hc'.2.1; simp only [ctlMin] at this; omega
+    · simp only [erecTop1]
+      rw [hpfr.ctl 130 (by decide), hpfr.arr (tier1 EREC) (by decide) (by decide)]; exact h6.iw.er1
+    · have := hc'.1 (tier1 EREC) (by decide); omega
+  · rw [hpfr.ctl 130 (by decide)]; exact h6.c130
 
 end L.Checker

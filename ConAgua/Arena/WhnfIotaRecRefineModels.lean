@@ -36,7 +36,7 @@ l_model irCmpE_spec (p : Prog) (hf : p.lookup "iota_rec_cmp" = some iotaRecCmpL)
   fns [hf ↦ irCmpE list]
   specs [callW_spec p n "erec_push", callW_spec p n "rec_fire_args", callW_spec p n "stack_cover"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- The index slice's length word of `iota_rec_vck`. -/
@@ -47,7 +47,7 @@ def ixLen (mI rP : Word) : Word := (mI - rP) * Cmp.ule.evalW rP mI
 l_model vckE_spec (p : Prog) (hp : p.lookup "iota_rec_vck" = some iotaRecVckL)
   fns [hp ↦ vckE list]
   specs [callW_spec p n "lvls_eq_c", callW_spec p n "const_ty_at"]
-  grind [arena_grind] fold [ixLen] extra [ld64_rdW_specE] unified
+  grind [arena_grind] fold [ixLen] extra [ld64_rdW_specE, ld64_rdW_specT] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena

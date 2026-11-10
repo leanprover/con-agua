@@ -7,6 +7,7 @@ import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
 import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.BvarB
 import all ConAgua.Arena.CheckerL
 import all ConAgua.Arena.ConsLib
@@ -30,14 +31,15 @@ import all ConAgua.Arena.ForallStore
 import all ConAgua.Arena.Freeze
 import all ConAgua.Arena.HasFvar
 import all ConAgua.Arena.ImaxStore
+import all ConAgua.Arena.IndDeclConsts
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
+import all ConAgua.Arena.IndStream
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.Infer
-import all ConAgua.Arena.InferFieldSort
 import all ConAgua.Arena.Inst1
 import all ConAgua.Arena.Inst1Spec
 import all ConAgua.Arena.InstLP
@@ -79,7 +81,6 @@ import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
@@ -132,6 +133,7 @@ import all ConAgua.Front.LineRec
 import all ConAgua.Front.NatDec
 import all ConAgua.Front.Unescape
 import all ConAgua.L.Examples
+import all ConAgua.Rom.CIConst
 import all ConAgua.Rom.CIRead
 import all ConAgua.Rom.PinRead
 import all ConAgua.Rom.PinReadSpec
@@ -295,22 +297,23 @@ theorem stageC_intern_reserved_pins_off :
 
 /-! ## `intern_all_pins` -/
 
-/-- The call closure of `intern_all_pins` in `checkerProg` (97 functions). -/
+/-- The call closure of `intern_all_pins` in `checkerProg` (98 functions). -/
 def stageFns_intern_all_pins : List FnName := [
   "app_find", "app_push", "bvar_find", "bvar_push", "const_find", "const_push", "der_b",
-  "erec_alloc", "forall_find", "forall_push", "fvar_find", "fvar_push", "imax_find", "imax_push",
-  "intern_all_pins", "intern_app", "intern_bvar", "intern_const", "intern_forall", "intern_fvar",
-  "intern_imax", "intern_lam", "intern_letE", "intern_lit", "intern_ls", "intern_max",
-  "intern_nanon", "intern_nnum", "intern_nstr", "intern_param", "intern_pin_sets", "intern_proj",
-  "intern_sort", "intern_succ", "intern_zero", "lam_find", "lam_push", "letE_find", "letE_push",
-  "limbs_eq", "lit_find", "lit_hash", "lit_match", "lit_push", "ls_find", "ls_match", "ls_push",
-  "max_find", "max_push", "memo_get", "memo_push", "mk_app", "mk_forall", "mk_lam", "mk_let",
-  "mk_proj", "nanon_find", "nanon_push", "nnum_find", "nnum_push", "nstr_find", "nstr_match",
-  "nstr_push", "param_find", "param_push", "proj_find", "proj_push", "rom_ex_leaf", "rom_ex_one",
-  "rom_ex_ref", "rom_ex_two", "rom_expr", "rom_exprs_to", "rom_items", "rom_level", "rom_levels",
-  "rom_lists_to", "rom_lit", "rom_lvls_go", "rom_name", "rom_pins_to", "rom_put", "rom_sets_to",
-  "rom_tpairs_to", "rom_tpins_to", "rom_u64", "rset_clear", "rset_find", "rset_put", "sort_find",
-  "sort_push", "stk_pool", "stk_push", "succ_find", "succ_push", "zero_find", "zero_push"]
+  "erec_alloc", "erec_put", "forall_find", "forall_push", "fvar_find", "fvar_push", "imax_find",
+  "imax_push", "intern_all_pins", "intern_app", "intern_bvar", "intern_const", "intern_forall",
+  "intern_fvar", "intern_imax", "intern_lam", "intern_letE", "intern_lit", "intern_ls",
+  "intern_max", "intern_nanon", "intern_nnum", "intern_nstr", "intern_param", "intern_pin_sets",
+  "intern_proj", "intern_sort", "intern_succ", "intern_zero", "lam_find", "lam_push", "letE_find",
+  "letE_push", "limbs_eq", "lit_find", "lit_hash", "lit_match", "lit_push", "ls_find", "ls_match",
+  "ls_push", "max_find", "max_push", "memo_get", "memo_push", "mk_app", "mk_forall", "mk_lam",
+  "mk_let", "mk_proj", "nanon_find", "nanon_push", "nnum_find", "nnum_push", "nstr_find",
+  "nstr_match", "nstr_push", "param_find", "param_push", "proj_find", "proj_push", "rom_ex_leaf",
+  "rom_ex_one", "rom_ex_ref", "rom_ex_two", "rom_expr", "rom_exprs_to", "rom_items", "rom_level",
+  "rom_levels", "rom_lists_to", "rom_lit", "rom_lvls_go", "rom_name", "rom_pins_to", "rom_put",
+  "rom_sets_to", "rom_tpairs_to", "rom_tpins_to", "rom_u64", "rset_clear", "rset_find", "rset_put",
+  "sort_find", "sort_push", "stk_pool", "stk_push", "succ_find", "succ_push", "zero_find",
+  "zero_push"]
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_intern_all_pins` store
 into. -/
@@ -324,12 +327,12 @@ def stageA_intern_all_pins : List TieredArray :=
   POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
   FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
-  FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP]
+  FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, EREC]
 
 /-- The `CTL` words the functions of `stageFns_intern_all_pins` store into. -/
 def stageC_intern_all_pins : List Word := [
   0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28,
-  29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 129, 131, 132, 148, 149, 150, 151]
+  29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 129, 130, 131, 132, 148, 149, 150, 151]
 
 names_tree stageTree_intern_all_pins : stageFns_intern_all_pins
 

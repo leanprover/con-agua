@@ -3,6 +3,7 @@
 ConAgua/Arena/CheckerL.lean	public import ConAgua.Arena.DeclBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/DeclApd.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/DeclAxiomSpec3.lean	public import ConAgua.Arena.DeclAxiomSpec2	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/DeclAxiomSpec4.lean	import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/DeclDivModSpec/Cons.lean	public import ConAgua.Rom.PinSets	# `open L.Rom (PinSetR)` needs the name
 ConAgua/Arena/DeclDivModSpec/SubstConst0List.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/DeclStep.lean	public import ConAgua.Front.IndApply	# the build needs it: the array names moved to ConAgua.Layout, the modules above reach the inductive lines through it
@@ -15,6 +16,7 @@ ConAgua/Arena/DefEqMid.lean	public import ConAgua.Arena.DefEqLeaves2	# kept from
 ConAgua/Arena/DefEqMid.lean	public import ConAgua.Arena.InferLeaves	# kept from before the shake: the tool replaced it by a module this one did not reach (a name declared twice), so the original import stays
 ConAgua/Arena/DefEqMidSpine.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqStuckEta.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
+ConAgua/Arena/DefEqStuckShape.lean	import ConAgua.Arena.InferBodyIntern	# the build needs it (vcgen [ld64_rdW_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/DefEqStuckShape.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/Freeze.lean	public import ConAgua.Arena.DeclBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/IndCallM.lean	public import ConAgua.Arena.IndIface	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
@@ -29,6 +31,7 @@ ConAgua/Arena/IndPosSpec/MW9.lean	public import ConAgua.Arena.Reasons	# a consta
 ConAgua/Arena/IndPosSpec/NodeV.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndPosSpec/PcrK3.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndPosSpec/SgF.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/IndRealIpo.lean	import ConAgua.Arena.InferBodyIntern	# the build needs it (vcgen [ld64_rdW_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/IndRealIpo.lean	public import ConAgua.Arena.RecSim	# `loc_init4` in a `finish [...]` list: grind may leave it out of the proof term
 ConAgua/Arena/IndSumSpec/Bnums.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndSumSpec/CheckStructFieldSortsISucc.lean	public import ConAgua.Arena.IndPosSpec.NestBlockOfKey	# the build needs it: its dependents reach the handle lemmas and this module's other names through it
@@ -40,7 +43,6 @@ ConAgua/Arena/InferBodyDispModels.lean	public import ConAgua.Arena.Verdict	# the
 ConAgua/Arena/InferBodySpine.lean	public import ConAgua.Arena.InferBodyLet	# downstream modules reach InferBodyLet (and `ld64_rdW_spec`) through it (PropReadW fails without it); the spines themselves no longer use it
 ConAgua/Arena/InferBodySpine.lean	public import ConAgua.Arena.WhnfCoreApp	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InferBodySpineF.lean	public import ConAgua.Arena.WhnfCoreApp	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
-ConAgua/Arena/InferFieldSort.lean	public import ConAgua.Arena.Env	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/InferLeaves.lean	public import ConAgua.Arena.KnotE	# needed: the build fails without it (`KnotUpToE`, `InferSlotE` in es_ref, itc_ref, InferG); the tool names it unused
 ConAgua/Arena/InferLeaves.lean	public import ConAgua.Arena.RefECore	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/InstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it

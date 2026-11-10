@@ -5,10 +5,8 @@ public import ConAgua.Arena.IndInstallSpec.GrcTwinA
 import ConAgua.Arena.IndInstallSpec.HbFreeMfr
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndInstallSpec.InstallCvDecB
-import ConAgua.Arena.RecClassSpec.ReadProg
 public import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 public import ConAgua.Arena.RecGenSpec.DecB
-public import ConAgua.Arena.RecGenSpec.DecCNWords
 public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
@@ -24,7 +22,7 @@ import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 /-!
 # GpbWSimF
 
-`genRecCheck_split`, `iwGrow_truncM`, `StabD.decB`, `mapM_of_stab`, `spl_decB`, `classesLp_of_cnsRec` and the lemmas only they use.
+`genRecCheck_split`, `iwGrow_truncM`, `StabD.decB`, `mapM_of_stab`, `spl_decB` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -38,24 +36,24 @@ local notation "V" => ConLeche.CheckMode.verified
 
 theorem genRecCheck_split (mode : ConLeche.CheckMode) (fe : IFEnv) (p : BlockShape) (nestedBit : Bool)
     (params : List EIdx) (tbl : List NestCtorNf) (rd : ClassRead) (ms : List TargetMajor)
-    (cvTas : List IConstantVal) (block : List IConstantInfo) :
-    ConRon.Arena.genRecCheck mode fe p nestedBit params tbl rd ms cvTas block =
+    (block : List IConstantInfo) :
+    ConRon.Arena.genRecCheck mode fe p nestedBit params tbl rd ms block =
       grcTwinA mode fe p nestedBit ms block (fun cvRis =>
-        grcTwinB mode fe p tbl rd ms cvTas (fun ms2 ctors ftc elim =>
+        grcTwinB mode fe p tbl rd ms (fun ms2 ctors ftc elim =>
           grcTwinC mode fe p params rd cvRis ms2 ctors ftc elim (grcTwinR mode fe p rd))) := rfl
-
--- ==== G1.lean
 
 /-! ## Decodings -/
 
 theorem iwGrow_truncM (m : Mem) : IWGrow m (truncM m) := by
-  have hc : (truncM m).arr64 CTL = m.arr64 CTL := by
-    simp only [truncM, Mem.arr64]
-    simp [CTL, IW, EREC]
+  have hc : (truncM m).arr64 CTL = m.arr64 CTL := by simp only [truncM, Mem.arr64]; simp [CTL, IW]
+  have hE : (truncM m).arr64 EREC = m.arr64 EREC := by simp only [truncM, Mem.arr64]; simp [EREC, IW]
+  have hE1 : (truncM m).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := by
+    simp only [truncM, Mem.arr64]; simp [EREC, IW, tier1]
   refine ⟨by simp only [iwTop, hc]; exact Nat.le_refl _, by simp only [erTop, hc]; exact Nat.le_refl _,
-    fun i hi => ?_, fun i hi => ?_⟩
-  · have := truncM_iw_eq (m := m) hi; simpa [iwA] using this
-  · have := truncM_er_eq (m := m) hi; simpa [erA] using this
+    fun i hi => ?_, fun i _ => by rw [hE], by simp only [erecTop1, hc]; exact Nat.le_refl _,
+    fun i _ => by rw [hE1]⟩
+  have := truncM_iw_eq (m := m) hi
+  simpa [iwA, aread_apply] using this
 
 theorem StabD.decB {α : Type} {f : Mem → Option α} {m : Mem} {x : α} (h : StabD f m x) : DecB f m x :=
   h _ (iwGrow_truncM m)
@@ -76,47 +74,6 @@ theorem spl_decB {α : Type} {dec : Mem → Nat → Option α} {m : Mem} {o l : 
   show decPL (truncM m) (dec (truncM m)) o l = some xs
   rw [decPL_eq_bind, show decNL (truncM m) o l = some ps from decNL_decB hps hb]
   exact mapM_of_stab hf
-
-/-! ## `ClassesLp` through `classes_nfs` -/
-
-theorem classesLp_of_cnsRec {mb mF : Mem} {mo ml qr : Word} {hi : Nat} {ws : List Nat}
-    {xs : List TargetMajor} (hlp : ClassesLp mb mo ml) (hg : IWGrow mb mF) (hk : KeepW mb mF)
-    (hsz : (mb.arr64 IW).size < 2 ^ 64)
-    (hws : decNL mF qr.toNat ml.toNat = some ws) (hacc : FA2 (CnsRec mb (CnsSrc mb mo ml) hi mF) ws xs) :
-    ClassesLp mF qr ml := by
-  intro c hc v o l hv ho hl
-  have hpl := decNL_length mF hws
-  have hq := mapM_opt_get (fun j => iwN mF (qr.toNat + j)) (List.range ml.toNat) ws hws c (by simpa using hc)
-  simp only [List.getElem_range] at hq
-  rw [hv] at hq
-  have hlen := FA2.length_eq hacc
-  have hR := FA2.get hacc c (by omega) (by omega)
-  simp only [Option.some.injEq] at hq
-  rw [← hq] at hR
-  obtain ⟨p0, src, eo, el, ps, hsrc, ⟨c', hc', hp0⟩, hw, htop, hwords, -⟩ := hR
-  have w6 := hwords 6 (by omega) (by omega) (by omega)
-  have w7 := hwords 7 (by omega) (by omega) (by omega)
-  have ho' : iwN (truncM mb) (p0 + 6) = some o := by
-    simp only [iwN, nat?] at ho ⊢; rw [← w6]; simpa [iwA] using ho
-  have hl' : iwN (truncM mb) (p0 + 7) = some l := by
-    simp only [iwN, nat?] at hl ⊢; rw [← w7]; simpa [iwA] using hl
-  have hs : decTM (truncM mb) p0 = some src := hsrc
-  simp only [decTM, bind, Option.bind_eq_some_iff, pure] at hs
-  obtain ⟨_, -, _, -, _, -, _, -, _, -, cts, hct, -⟩ := hs
-  obtain ⟨o', l', ho'', hl'', hdct⟩ := decAt_some hct
-  rw [ho'] at ho''; rw [show p0 + 6 + 1 = p0 + 7 by omega, hl'] at hl''
-  cases ho''; cases hl''
-  have hol : o < 2 ^ 64 ∧ l < 2 ^ 64 := by
-    simp only [iwN, nat?, Option.map_eq_some_iff] at ho' hl'
-    obtain ⟨w1, -, rfl⟩ := ho'; obtain ⟨w2, -, rfl⟩ := hl'
-    exact ⟨w1.toNat_lt, w2.toNat_lt⟩
-  have h1 := (rec2IwN_trunc ho').2
-  have h2 := (rec2IwN_trunc hl').2
-  have hL := hlp c' hc' p0 o l hp0 h1 h2
-  refine hL.grow (cAs := cts) ?_ hsz hg hk
-  show decPL (truncM mb) (decCN (truncM mb)) _ _ = some cts
-  rw [UInt64.toNat_ofNat_of_lt' hol.1, UInt64.toNat_ofNat_of_lt' hol.2]
-  exact hdct
 
 theorem rcFree_mfr {m m' : Mem} (h : MemFrame rcFreeA rcFreeC m m') :
     MFr [MAM, MCM] [202, 203, 205, 207, 209, 211, 215, 216, 217] m m' := by
@@ -228,11 +185,11 @@ theorem cgRec_decB {m : Mem} {g : Word}
     (hpre : DecB (fun m => (decHL m w12.toNat w13.toNat : Option (List EIdx))) m pre) :
     DecB (fun m => decCG m g.toNat) m (⟨nP, params, cls, ftc, slots, ctors, elim, pre⟩ : ConRon.Arena.ClassGen) := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hgw : ∀ j (_hj : j < 14), (iwA (truncM m))[g.toNat + j]? =
+  have hgw : ∀ j (_hj : j < 14), iwA (truncM m) (g.toNat + j) =
       some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using _hj)) := by
     intro j _hj
     rw [truncM_iw_eq (by omega)]
-    simp only [iwA, hget j _hj]
+    simp only [iwA, aread_apply, hget j _hj]
     rw [List.getElem?_eq_getElem (by simp; omega)]
   have hw : ∀ j (_hj : j < 14), iwN (truncM m) (g.toNat + j) =
       some ([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13][j]'(by simpa using _hj)).toNat := by
@@ -267,14 +224,13 @@ theorem cgRec_decB {m : Mem} {g : Word}
     h12, h13, Option.bind_eq_bind, Option.bind_some, e1, e3, e5, e7, e9, e12, h0]
   rfl
 
--- ==== S41P.lean
 /-! ## The prefix, fresh -/
 
 theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem) (a : AState)
-    (g : Word) (G : ClassGen) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (g : Word) (G : ClassGen) (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK m) :
     RSim (gpbW n m g) (ConRon.Arena.ClassGen.prefixBinders G) a
-      (fun b a' x => (KP dn vis fe m decIHO b a' x ∧ AbsOK b.2) ∧
+      (fun b a' x => (KP vis fe m decIHO b a' x ∧ AbsOK b.2) ∧
         (∀ pre, x = some pre → iwTop m ≤ (b.1.tail.headD 0).toNat)) := by
   rcases n with _ | n
   · exact RSim.none
@@ -297,11 +253,11 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   have hpb : 0 < l1 → o1 + l1 ≤ iwTop m := by
     intro hl
     have hpd' : decHL (truncM m) o1 l1 = some ps := hpd
-    have hs : (iwA (truncM m)).size ≤ iwTop m := by
+    have hs : ((truncM m).arr64 IW).size ≤ iwTop m := by
       apply Nat.le_of_not_lt
       intro h
       have := truncM_iw_get? m (iwTop m)
-      rw [ite_eq_right (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
+      simp only [iwA, aread_apply, Nat.lt_irrefl, ite_false, Array.getElem?_eq_getElem h] at this
       cases this
     rcases decHL_le hpd' with h0 | h0
     · omega
@@ -357,7 +313,7 @@ theorem decHL_set_out {k : IdxKind} {m : Mem} {x v : Word} {o l : Nat} (h : o + 
   apply mapM_opt_congr
   intro j hj
   have : j < l := List.mem_range.mp hj
-  simp only [hd?, iwA]
+  simp only [hd?, iwA, aread_apply, aread_apply]
   rw [set64IW_get, ite_eq_right (by omega)]
 
 -- ==== S41F.lean
@@ -369,36 +325,6 @@ theorem decCC_lh_mono : ∀ q, OMono (fun m => decLH m (decPL m (decCC m)) q) :=
 -- ==== S41G.lean
 /-! ## Part B: the classes, their constructors, the count, the formers, the level -/
 
-theorem ClassesLp.grow {m m' : Mem} {mo ml : Word} {ms : List TargetMajor} (h : ClassesLp m mo ml)
-    (hms : PSlR decTM ms mo ml m) (hg : IWGrow m m') (hk : KeepW m m') (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    ClassesLp m' mo ml := by
-  intro c hc v o l hv ho hl
-  have hms0 : decPL (truncM m) (decTM (truncM m)) mo.toNat ml.toNat = some ms := hms.dec
-  obtain ⟨v', hv', hsrc⟩ := decPL_getH (truncM m) hms0 c hc
-  obtain ⟨hvt, hvm⟩ := rec2IwN_trunc hv'
-  rw [iwN_grow hg hvt, hvm] at hv
-  have e := Option.some.inj hv
-  subst e
-  have hs := hsrc
-  simp only [decTM, bind, Option.bind_eq_some_iff, pure] at hs
-  obtain ⟨_, -, _, -, _, -, _, -, _, -, cts, hct, -⟩ := hs
-  obtain ⟨o', l', ho'', hl'', hdct⟩ := decAt_some hct
-  obtain ⟨h6t, h6⟩ := rec2IwN_trunc ho''
-  obtain ⟨h7t, h7⟩ := rec2IwN_trunc hl''
-  rw [iwN_grow hg h6t, h6] at ho
-  rw [show v' + 6 + 1 = v' + 7 by omega] at h7t h7
-  rw [iwN_grow hg h7t, h7] at hl
-  have e1 := Option.some.inj ho
-  have e2 := Option.some.inj hl
-  subst e1 e2
-  have hol : o' < 2 ^ 64 ∧ l' < 2 ^ 64 := by
-    simp only [iwN, nat?, Option.map_eq_some_iff] at h6 h7
-    obtain ⟨w1, -, rfl⟩ := h6; obtain ⟨w2, -, rfl⟩ := h7
-    exact ⟨w1.toNat_lt, w2.toNat_lt⟩
-  refine (h c hc v' o' l' hvm h6 h7).grow (cAs := cts) ?_ hsz hg hk
-  show decPL (truncM m) (decCN (truncM m)) _ _ = some cts
-  rw [UInt64.toNat_ofNat_of_lt' hol.1, UInt64.toNat_ofNat_of_lt' hol.2]
-  exact hdct
 
 /-- A handle word of a record decoded below the tops, read at its word address. -/
 theorem installIwH {k : IdxKind} {m : Mem} {w : Word} {i : Nat} {x : Idx k}
@@ -407,7 +333,7 @@ theorem installIwH {k : IdxKind} {m : Mem} {w : Word} {i : Nat} {x : Idx k}
   simp only [iwH, hd?, bind, Option.bind_eq_some_iff] at h
   obtain ⟨v, hv, hx⟩ := h
   obtain ⟨hi, hv'⟩ := truncM_iw_get hv
-  simp only [iwA] at hv'
+  simp only [iwA, aread_apply, aread_apply] at hv'
   have hlt : w.toNat + i < (m.arr64 IW).size := (Array.getElem?_eq_some_iff.mp hv').1
   have he : (w + UInt64.ofNat i).toNat = w.toNat + i := by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (show i < 2 ^ 64 by omega)]; exact Nat.mod_eq_of_lt (by omega)

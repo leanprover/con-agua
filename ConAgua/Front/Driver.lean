@@ -35,9 +35,11 @@ namespace L.Front
 
 open L.Arena (POOL)
 
-def runLoop : Stmt := lblk (i, ok, nx, ln) {
+def runLoop : Stmt := lblk (i, ok, nx, ln, f) {
   while i < len(IN0.u8) {
-    (ok, nx) := call front_line(i);
+    f := 0;
+    if ln == 0 { f := 1 };
+    (ok, nx) := call front_line(i, f);
     ln += 1;
     if ok == 0 { return ln };
     if nx == 0 { return 0 };
@@ -46,12 +48,12 @@ def runLoop : Stmt := lblk (i, ok, nx, ln) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:565-578 ConRon.Arena.Frontend.parseBytes -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:524-553 ConRon.Arena.Frontend.feedChunk
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:510-522 ConRon.Arena.Frontend.applyFinalLine
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:561-574 ConRon.Arena.Frontend.parseBytes -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:520-549 ConRon.Arena.Frontend.feedChunk
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:506-518 ConRon.Arena.Frontend.applyFinalLine
 @[no_expose, l_impl ConRon.Arena.Frontend.parseBytes ConRon.Arena.Frontend.feedChunk
   ConRon.Arena.Frontend.applyFinalLine]
-def frontRun : FunDecl := lfn () locals (i, ok, nx, ln) {
+def frontRun : FunDecl := lfn () locals (i, ok, nx, ln, f) {
   ok := call front_init();
   ⟪runLoop⟫;
   return 0

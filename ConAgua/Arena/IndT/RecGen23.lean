@@ -65,27 +65,27 @@ structure RcAt (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
   abs : AbsOK m
   rc : RcMR m
   grow : IWGrow m₀ m
-  core : CoreStep V env fe a₀ a
+  core : ConRon.Bridge.CoreStep env fe a₀ a
 
 namespace RcAt
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {m₀ m₁ m : Mem} {a₀ a₁ a : AState}
 
 theorem refl (h : StageC dn vis fe env m a) (hA : AbsOK m) (hP : RcMR m) : RcAt dn vis fe env m a m a :=
-  ⟨h, hA, hP, IWGrow.refl _, CoreStep.refl h.check⟩
+  ⟨h, hA, hP, IWGrow.refl _, ConRon.Bridge.CoreStep.refl h.check⟩
 
 theorem trans (h₁ : RcAt dn vis fe env m₀ a₀ m₁ a₁) (h₂ : RcAt dn vis fe env m₁ a₁ m a) :
     RcAt dn vis fe env m₀ a₀ m a :=
   ⟨h₂.stage, h₂.abs, h₂.rc, h₁.grow.trans h₂.grow, h₁.core.trans h₂.core⟩
 
 /-- A step that con-ron calls a `PStep`. -/
-theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR dn vis fe m a) (hA : AbsOK m) (hP : RcMR m)
+theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR vis fe m a) (hA : AbsOK m) (hP : RcMR m)
     (hg : IWGrow m₀ m) (hp : PStep a₀ a) : RcAt dn vis fe env m₀ a₀ m a :=
   ⟨h.of_pstep hS hA hp, hA, hP, hg, hp.toCore h.check⟩
 
 /-- A core step. -/
-theorem cstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR dn vis fe m a) (hA : AbsOK m) (hP : RcMR m)
-    (hg : IWGrow m₀ m) (hc : CoreStep V env fe a₀ a) : RcAt dn vis fe env m₀ a₀ m a :=
+theorem cstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR vis fe m a) (hA : AbsOK m) (hP : RcMR m)
+    (hg : IWGrow m₀ m) (hc : ConRon.Bridge.CoreStep env fe a₀ a) : RcAt dn vis fe env m₀ a₀ m a :=
   ⟨h.of_check hS hA hc.ok hc.ext, hA, hP, hg, hc⟩
 
 end RcAt
@@ -203,7 +203,7 @@ theorem cnaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     (denote_ext hlP k1.core.ext) hfd hformer hMs) fun ⟨b, m2⟩ c a2 run2 hR2 => ?_
   dsimp only at hR2
   have hc : (b != 0) = c := hR2.res
-  obtain ⟨c2', -⟩ := ConRon.Bridge.Inductives.targetK53_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
+  obtain ⟨c2', -⟩ := ConRon.Bridge.Inductives.targetK53_spec fe (ConRon.Bridge.CoreSpec.of_core)
     henv bs pP formerTys formerTysP TM McP tele teleP (decE leaf) (decE w) leafP fP hformer hMs
     a1 a2 c k1.stage.check
     ⟨ConRon.Bridge.Inductives.dShape_ext k1.core.ext _ _ hsh, denoteEList_ext k1.core.ext _ _ hftP,

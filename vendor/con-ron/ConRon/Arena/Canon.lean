@@ -165,8 +165,8 @@ def canonExprEq (ps ps' cs : List NIdx) : Nat → EIdx → EIdx → AM Bool
 /-! ## Constants -/
 
 /-- con-leche: ConLeche/Kernel/Canon.lean:65-70 ConstantVal.canon
-con-leche: ConLeche/Kernel/Canon.lean:170-174 ConstantVal.canonEq
-con-leche: ConLeche/Kernel/Canon.lean:176-181 ConstantVal.canonEqFast
+con-leche: ConLeche/Kernel/Canon.lean:170-173 ConstantVal.canonEq
+con-leche: ConLeche/Kernel/Canon.lean:175-180 ConstantVal.canonEqFast
 Two constants have the same canonical common data.  The numbered
 level-parameter lists are equal exactly when they are equally long, which is
 why the length test stands in for comparing them — and why ONE `canonNames`
@@ -177,7 +177,7 @@ def IConstantVal.canonEq (cv cv' : IConstantVal) : AM Bool := do
     canonExprEq cv.levelParams cv'.levelParams cs coreWalkFuel cv.type cv'.type
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Canon.lean:199-206 canonRulesEqFast — rule
+/-- con-leche: ConLeche/Kernel/Canon.lean:198-205 canonRulesEqFast — rule
 lists compared through the canonical form of each rule's right-hand side.
 con-leche compares the other fields by rebuilding both rules at the common
 `rhs := .bvar 0`; over handles the same predicate is the record comparison at
@@ -194,8 +194,8 @@ def canonRulesEq (ps ps' cs : List NIdx) (fuel : Nat) :
   | _, _ => pure false
 
 /-- con-leche: ConLeche/Kernel/Canon.lean:72-84 ConstantInfo.canon
-con-leche: ConLeche/Kernel/Canon.lean:225-227 ConstantInfo.canonEq
-con-leche: ConLeche/Kernel/Canon.lean:229-244 ConstantInfo.canonEqFast
+con-leche: ConLeche/Kernel/Canon.lean:224-226 ConstantInfo.canonEq
+con-leche: ConLeche/Kernel/Canon.lean:228-243 ConstantInfo.canonEqFast
 Two stored constants have the same canonical form.  `.indInfo`'s capabilities
 are not compared (`canon` resets both to `{}`). -/
 def IConstantInfo.canonEq : IConstantInfo → IConstantInfo → AM Bool
@@ -211,8 +211,8 @@ def IConstantInfo.canonEq : IConstantInfo → IConstantInfo → AM Bool
   | .indInfo cv _, .indInfo cv' _ => cv.canonEq cv'
   | .ctorInfo cv nP nF, .ctorInfo cv' nP' nF' => do
     if nP == nP' && nF == nF' then cv.canonEq cv' else pure false
-  | .recInfo cv mI rP rules, .recInfo cv' mI' rP' rules' => do
-    if mI == mI' && rP == rP' then do
+  | .recInfo cv mI rP isK rules, .recInfo cv' mI' rP' isK' rules' => do
+    if mI == mI' && rP == rP' && isK == isK' then do
       if ← cv.canonEq cv' then do
         let cs ← canonNames cv.levelParams.length
         canonRulesEq cv.levelParams cv'.levelParams cs coreWalkFuel rules rules'
@@ -220,8 +220,8 @@ def IConstantInfo.canonEq : IConstantInfo → IConstantInfo → AM Bool
     else pure false
   | _, _ => pure false
 
-/-- con-leche: ConLeche/Kernel/Canon.lean:260-263 canonEqList
-con-leche: ConLeche/Kernel/Canon.lean:265-269 canonEqListFast
+/-- con-leche: ConLeche/Kernel/Canon.lean:259-262 canonEqList
+con-leche: ConLeche/Kernel/Canon.lean:264-268 canonEqListFast
 Two blocks are the same, member for member, up to the canonical form. -/
 def canonEqList : List IConstantInfo → List IConstantInfo → AM Bool
   | [], [] => pure true

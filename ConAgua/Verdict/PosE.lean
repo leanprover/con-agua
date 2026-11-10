@@ -107,7 +107,7 @@ structure PosPost (r : List Word) (m' : Mem) (x : NestFieldKind × EIdx × NestS
   ns : NSB m' (r.tail.tail.headD 0) x.2.2
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `nest_pos_app` (on `w`) gives besides the twin's `(kind, w, state)`. -/
 structure AppPost (w : Word) (r : List Word) (m' : Mem) (x : NestFieldKind × EIdx × NestState) (a' : AState) :
@@ -119,7 +119,7 @@ structure AppPost (w : Word) (r : List Word) (m' : Mem) (x : NestFieldKind × EI
   ns : NSB m' (r.tail.headD 0) x.2.2
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `nest_cont`, `nest_cont_key` and `nest_cont_new` give besides the twin's `(kind, state)`. -/
 structure KindPost (r : List Word) (m' : Mem) (x : NestFieldKind × NestState) (a' : AState) : Prop where
@@ -129,7 +129,7 @@ structure KindPost (r : List Word) (m' : Mem) (x : NestFieldKind × NestState) (
   ns : NSB m' (r.tail.headD 0) x.2
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `nest_frame` gives besides the twin's state. -/
 structure FramePost (r : List Word) (m' : Mem) (x : NestState) (a' : AState) : Prop where
@@ -138,7 +138,7 @@ structure FramePost (r : List Word) (m' : Mem) (x : NestState) (a' : AState) : P
   ns : NSB m' (r.headD 0) x
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `nest_ctors` gives besides the twin's `(outs, state)`. -/
 structure CtorsPost (r : List Word) (m' : Mem) (x : List (List NestFieldKind × EIdx) × NestState) (a' : AState) :
@@ -150,7 +150,7 @@ structure CtorsPost (r : List Word) (m' : Mem) (x : List (List NestFieldKind × 
   ns : NSB m' (r.tail.tail.headD 0) x.2
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 /-- What `nest_ctors_one` gives besides the twin's `((kinds, closed), state)`: the continuation's
 inputs denote. -/
@@ -165,7 +165,7 @@ structure OnePost (hi : Word) (r : List Word) (m' : Mem) (x : (List NestFieldKin
   ns : NSB m' (r.tail.tail.tail.headD 0) x.2
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
   out : ∃ oP, dOut a'.store x.1 = some oP ∧ ConLeche.Expr.WScoped hi.toNat oP.2
   st : ∃ nsP3, dState a'.store x.2 = some nsP3
 
@@ -185,7 +185,7 @@ structure WalkPost (hi nF : Word) (r : List Word) (m' : Mem)
   ns : NSB m' (r.tail.tail.tail.tail.headD 0) x.2.2.2.1
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
   den : ∃ ndsP curP nsP2, Frontend.denoteEList a'.store x.2.1 = some ndsP ∧ denoteE a'.store x.2.2.1 = some curP ∧
     dState a'.store x.2.2.2.1 = some nsP2 ∧
     denoteE a'.store x.2.2.2.2 = some (ConLeche.closeTelescope ndsP hi.toNat curP) ∧
@@ -209,7 +209,7 @@ structure FieldsPost (base nF j : Word) (ks : List NestFieldKind) (nds : List EI
   nfb : nF.toNat = 0 ∨ base.toNat + j.toNat + nF.toNat < 2 ^ 64
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 end posts
 

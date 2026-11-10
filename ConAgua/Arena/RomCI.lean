@@ -160,8 +160,8 @@ def itemsCaps (c : ConLeche.IndCaps) : List Item := .nm c.etaCtor :: (c.all.map 
 theorem sim_caps (c : ConLeche.IndCaps) (m : EMemo) : Sim (internCaps c) m (itemsCaps c) (fun _ => m) := by
   have h : internCaps c = internName c.etaCtor >>= fun ct => Frontend.internNameList c.all >>= fun all =>
       Frontend.internNameList c.ctors >>= fun ctors =>
-        pure ⟨c.eta, ct, c.etaParams, c.etaFields, c.unitlike, c.unitParams, c.ruleK, c.sortZ, all,
-          c.nparams, ctors⟩ := rfl
+        pure ⟨c.eta, ct, c.etaParams, c.etaFields, c.unitlike, c.unitParams, all,
+          c.nparams, c.nIdx, ctors⟩ := rfl
   rw [h]
   exact (Sim.bind (is := [.nm c.etaCtor]) (js := c.all.map .nm ++ (c.ctors.map .nm ++ [])) (sim_name _ m) fun _ =>
     Sim.bind (is := c.all.map .nm) (js := c.ctors.map .nm ++ []) (sim_nameList _ m) fun _ =>
@@ -172,6 +172,7 @@ theorem sim_caps (c : ConLeche.IndCaps) (m : EMemo) : Sim (internCaps c) m (item
 def itemsFire : ConLeche.RecRuleFire → List Item
   | .plain => []
   | .nested lvls pins => lvls.map .lv ++ pins.map .ex
+  | .levels lvls => lvls.map .lv
 
 theorem sim_fire (f : ConLeche.RecRuleFire) (m : EMemo) : Sim (internFire m f) m (itemsFire f) Prod.fst := by
   cases f with
@@ -184,6 +185,11 @@ theorem sim_fire (f : ConLeche.RecRuleFire) (m : EMemo) : Sim (internFire m f) m
     refine (Sim.bind (is := pins.map .ex) (js := []) (sim_exprList _ m) fun r => ?_).congr (by simp)
     obtain ⟨m₁, _⟩ := r
     exact Sim.pure _ _ _ rfl
+  | levels lvls =>
+    have h : internFire m (.levels lvls) = internLevelList lvls >>= fun hls => pure (m, .levels hls) := rfl
+    rw [h]
+    exact (Sim.bind (is := lvls.map .lv) (js := []) (sim_levelList _ m) fun _ => Sim.pure _ _ _ rfl).congr
+      (by simp [itemsFire])
 
 /-- A recursor rule's items. -/
 def itemsRule (rl : ConLeche.RecRule) : List Item := .nm rl.ctor :: (itemsFire rl.fire ++ [.ex rl.rhs])
@@ -191,7 +197,7 @@ def itemsRule (rl : ConLeche.RecRule) : List Item := .nm rl.ctor :: (itemsFire r
 theorem sim_rule (rl : ConLeche.RecRule) (m : EMemo) : Sim (internRule m rl) m (itemsRule rl) Prod.fst := by
   have h : internRule m rl = internName rl.ctor >>= fun c => internFire m rl.fire >>= fun r => match r with
       | (m, f) => internExprGo m rl.rhs >>= fun r' => match r' with
-        | (m, rh) => pure (m, ⟨c, rl.nfields, rl.ctorParams, f, rh, rl.k, rl.eta⟩) := rfl
+        | (m, rh) => pure (m, ⟨c, rl.nfields, f, rh⟩) := rfl
   rw [h]
   refine (Sim.bind (is := [.nm rl.ctor]) (js := itemsFire rl.fire ++ [.ex rl.rhs]) (sim_name _ m) fun _ => ?_).congr (by simp [itemsRule])
   refine Sim.bind (is := itemsFire rl.fire) (js := [.ex rl.rhs]) (sim_fire _ m) fun r => ?_
@@ -226,7 +232,7 @@ def itemsCI : ConLeche.ConstantInfo → List Item
   | .thmInfo v => itemsCV v
   | .indInfo v c => itemsCV v ++ itemsCaps c
   | .ctorInfo v _ _ => itemsCV v
-  | .recInfo v _ _ rs => itemsCV v ++ itemsRules rs
+  | .recInfo v _ _ _ rs => itemsCV v ++ itemsRules rs
 
 theorem sim_ci (ci : ConLeche.ConstantInfo) (m : EMemo) :
     Sim (Frontend.internCI m ci) m (itemsCI ci) Prod.fst := by
@@ -264,9 +270,9 @@ theorem sim_ci (ci : ConLeche.ConstantInfo) (m : EMemo) :
     rw [h]
     refine (Sim.bind (is := itemsCV v) (js := []) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
     obtain ⟨m₁, _⟩ := r; exact Sim.pure _ _ _ rfl
-  | recInfo v mI rP rs =>
-    have h : Frontend.internCI m (.recInfo v mI rP rs) = Frontend.internCV m v >>= fun r => match r with
-        | (m, cv) => internRules m rs >>= fun r' => match r' with | (m, rules) => pure (m, .recInfo cv mI rP rules) := rfl
+  | recInfo v mI rP k rs =>
+    have h : Frontend.internCI m (.recInfo v mI rP k rs) = Frontend.internCV m v >>= fun r => match r with
+        | (m, cv) => internRules m rs >>= fun r' => match r' with | (m, rules) => pure (m, .recInfo cv mI rP k rules) := rfl
     rw [h]
     refine (Sim.bind (is := itemsCV v) (js := itemsRules rs) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
     obtain ⟨m₁, _⟩ := r
@@ -451,7 +457,7 @@ theorem simZ_exprList (es : List ConLeche.Expr) (P : AState → Prop) :
 /-! ## The pin reads -/
 
 /-- The pin table is filled (what every pin read needs). -/
-def PinsReadyP (a : AState) : Prop := a.pins.names.size = 51
+def PinsReadyP (a : AState) : Prop := a.pins.names.size = 52
 
 theorem pinsReady_cp : CpPred PinsReadyP := fun a a' h hP => by
   have : a'.pins = a.pins := congrArg Prod.snd h
@@ -467,7 +473,7 @@ theorem SimN.bind {α β : Type} {x : AM α} {f : α → AM β} {P : AState → 
 theorem SimN.pure {α : Type} (v : α) (P : AState → Prop) : SimN (Pure.pure v : AM α) P :=
   fun _a _ => ⟨v, rfl⟩
 
-theorem simN_pinAt (i : Nat) (hi : i < 51) : SimN (pinAt i) PinsReadyP := by
+theorem simN_pinAt (i : Nat) (hi : i < 52) : SimN (pinAt i) PinsReadyP := by
   intro a hP
   have : i < a.pins.names.size := by simp only [PinsReadyP] at hP; omega
   exact ⟨a.pins.names[i], by simp [pinAt, StateT.run, bind, StateT.bind, get, getThe, MonadStateOf.get,
@@ -475,7 +481,7 @@ theorem simN_pinAt (i : Nat) (hi : i < 51) : SimN (pinAt i) PinsReadyP := by
 
 theorem simN_pinReserved : SimN pinReserved PinsReadyP := by
   intro a hP
-  have : pinsReady a = true := by simp [pinsReady, pinCount, show a.pins.names.size = 51 from hP]
+  have : pinsReady a = true := by simp [pinsReady, pinCount, show a.pins.names.size = 52 from hP]
   exact ⟨a.pins.reserved, by simp [pinReserved, StateT.run, bind, StateT.bind, get, getThe,
     MonadStateOf.get, StateT.get, Except.bind, pure, StateT.pure, Except.pure, this]⟩
 
@@ -556,19 +562,14 @@ theorem simZ_pinSets (pins : List ConLeche.NatOpPinSet) :
     exact SimZ.bind pinsReady_cp (simZ_pinSet ps) fun _ =>
       SimZ.bind pinsReady_cp ih fun _ => simZ_pure _ _
 
-/-- The startup walk's items: the basis blocks in both forms, the axiom shapes, the declaration
+/-- The startup walk's items: the basis blocks, the axiom shapes, the declaration
 pins, the pin sets. -/
 def itemsAllPins (pins : List ConLeche.NatOpPinSet) : List Item :=
   seqZ [itemsCIs (ConLeche.BasisKind.decls .eqK),
-    itemsCIs (ConLeche.BasisKind.declsA .eqK),
     itemsCIs (ConLeche.BasisKind.decls .natK),
-    itemsCIs (ConLeche.BasisKind.declsA .natK),
     itemsCIs (ConLeche.BasisKind.decls .emptyK),
-    itemsCIs (ConLeche.BasisKind.declsA .emptyK),
     itemsCIs (ConLeche.BasisKind.decls .falseK),
-    itemsCIs (ConLeche.BasisKind.declsA .falseK),
     itemsCIs (ConLeche.BasisKind.decls .quotK),
-    itemsCIs (ConLeche.BasisKind.declsA .quotK),
     itemsCI ConLeche.iffA,
     itemsCI ConLeche.iffIntroA,
     itemsCI ConLeche.iffRecA,
@@ -599,11 +600,6 @@ theorem simZ_internAllPins (pins : List ConLeche.NatOpPinSet) :
   refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
-  refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_ci _ _) fun _ => ?_
@@ -613,12 +609,12 @@ theorem simZ_internAllPins (pins : List ConLeche.NatOpPinSet) :
   repeat refine SimZ.bind pinsReady_cp (simZ_cv _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_expr _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_expr _ _) fun _ => ?_
-  refine SimZ.bindN simN_pinReserved fun _ => ?_
+  refine SimZ.bindN (show SimN reservedBasisNames PinsReadyP from simN_pinReserved) fun _ => ?_
   refine SimZ.bindN simN_natOpNames fun _ => ?_
   refine SimZ.bindN simN_natDivModNames fun _ => ?_
   refine SimZ.bindN simN_reduceOpNames fun _ => ?_
-  refine SimZ.bindN (simN_pinAt _ (by decide)) fun _ => ?_
-  refine SimZ.bindN (simN_pinAt _ (by decide)) fun _ => ?_
+  refine SimZ.bindN (show SimN pinSorryAx PinsReadyP from simN_pinAt _ (by decide)) fun _ => ?_
+  refine SimZ.bindN (show SimN pinQuotSound PinsReadyP from simN_pinAt _ (by decide)) fun _ => ?_
   exact simZ_pinSets pins
 
 /-! ## `intern_all_pins()` -/

@@ -5,7 +5,6 @@ import ConAgua.Arena.InstLPKeys
 public import ConAgua.Arena.RecFireCore
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.InstLPRef
 import ConAgua.Arena.LiftRefine
 import ConAgua.Arena.PropReadRefine
@@ -83,7 +82,7 @@ slice of the spine stack below its top. -/
 theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb ko kc us e : Word} {lps : List NIdx} {rs : List Word}
     (hS : CoreS dn m a vis fe M eb) (hh : HW e) (hus : HW us)
-    (hks : hslice? (m.arr64 SPN) ko.toNat kc.toNat = some lps) (hkt : ko.toNat + kc.toNat ≤ (spTop m).toNat)
+    (hks : hslice? (aread (m.arr64 SPN)) ko.toNat kc.toNat = some lps) (hkt : ko.toNat + kc.toNat ≤ (spTop m).toNat)
     (hc : callW p (k + 1) "inst_lp_core" [ko, kc, us, e] m = some (rs, m')) :
     CoreRef (instLPFast coreWalkFuel lps (decI us) (decE e)) a decH dn m vis fe M eb rs m' := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -224,84 +223,6 @@ end core
 
 /-! ## `inst_lp`: the keys from the record pool -/
 
-/-- **`ek_copy` copies a handle slice**: the record pool's slice `(s, l)` lands on the stack at `d`,
-below `d` nothing changes. -/
-theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Word),
-    hslice? (m.arr64 EREC) s.toNat l.toNat = some lps → d.toNat + l.toNat ≤ (m.arr64 SPN).size →
-    (m.arr64 SPN).size < 2 ^ 63 → s.toNat + l.toNat < 2 ^ 64 → ekCopyW n m s d l = some m' →
-    hslice? (m'.arr64 SPN) d.toNat l.toNat = some lps ∧ MemFrame [SPN] [] m m' ∧
-      ∀ i : Word, i.toNat < d.toNat → rdW (m'.arr64 SPN) i = rdW (m.arr64 SPN) i := by
-  intro lps
-  induction lps with
-  | nil =>
-    intro n m m' s d l hs hb hsz hsl hW
-    have hl : l.toNat = 0 := by
-      rcases hk' : l.toNat with _ | j
-      · rfl
-      · rw [hk', lp_hslice_succ] at hs
-        simp only [Option.bind_eq_bind] at hs
-        cases e : (hd? (m.arr64 EREC) s.toNat : Option NIdx) with
-        | none => simp [e] at hs
-        | some x =>
-          cases e' : (hslice? (m.arr64 EREC) (s.toNat + 1) j : Option (List NIdx)) with
-          | none | some xs => simp [e, e'] at hs
-    have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
-    subst hl0
-    cases n with
-    | zero => simp [ekCopyW] at hW
-    | succ n =>
-    rw [ekCopyW_zero n m s d 0 rfl] at hW; cases hW
-    exact ⟨by simp [hslice?], MemFrame.refl _ _ _, fun _ _ => rfl⟩
-  | cons x xs ih =>
-    intro n m m' s d l hs hb hsz hsl hW
-    rcases hk' : l.toNat with _ | j
-    · rw [hk'] at hs; simp [hslice?] at hs
-    rw [hk', lp_hslice_succ] at hs
-    simp only [Option.bind_eq_bind] at hs
-    cases e : (hd? (m.arr64 EREC) s.toNat : Option NIdx) with
-    | none => simp [e] at hs
-    | some x' =>
-    cases e' : (hslice? (m.arr64 EREC) (s.toNat + 1) j : Option (List NIdx)) with
-    | none => simp [e, e'] at hs
-    | some xs' =>
-    simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs
-    obtain ⟨rfl, rfl⟩ := hs
-    have hl0 : l ≠ 0 := fun h0 => by subst h0; simp at hk'
-    cases n with
-    | zero => simp [ekCopyW] at hW
-    | succ n =>
-    rw [ekCopyW_succ n m s d l hl0] at hW
-    have hd1 : (d + 1).toNat = d.toNat + 1 := toNat_succ_lt (by omega)
-    have hs1 : (s + 1).toNat = s.toNat + 1 := toNat_succ_lt (by omega)
-    have hlm : (l - 1).toNat = j := by
-      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-    have hsz₁ : ((m.set64 SPN d (rdW (m.arr64 EREC) s)).arr64 SPN).size = (m.arr64 SPN).size :=
-      Mem.size_arr64_set64 _ _ _ _
-    have herec : (m.set64 SPN d (rdW (m.arr64 EREC) s)).arr64 EREC = m.arr64 EREC :=
-      Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-    obtain ⟨hk', hf', hb'⟩ := ih n _ m' (s + 1) (d + 1) (l - 1) (by rw [herec, hs1, hlm]; exact e')
-      (by rw [hsz₁, hd1, hlm]; omega) (by rw [hsz₁]; exact hsz) (by rw [hs1, hlm]; omega) hW
-    have hdl : d.toNat < (m.arr64 SPN).size := by omega
-    have hd : rdW (m'.arr64 SPN) d = rdW (m.arr64 EREC) s := by
-      rw [hb' d (by rw [hd1]; omega), rdW_set64]; simp [hdl]
-    refine ⟨?_, (MemFrame.set64 _ _ (by decide) _ _).trans hf', ?_⟩
-    · rw [lp_hslice_succ]
-      have hsize : d.toNat < (m'.arr64 SPN).size := by rw [hf'.size SPN, hsz₁]; exact hdl
-      have hd' : (hd? (m'.arr64 SPN) d.toNat : Option NIdx) = some x' := by
-        rw [← e]; simp only [hd?]
-        have h1 : (m'.arr64 SPN)[d.toNat]? = some (rdW (m'.arr64 SPN) d) := by simp [rdW, hsize]
-        have h2 : (m.arr64 EREC)[s.toNat]? = some (rdW (m.arr64 EREC) s) := by
-          cases ee : (m.arr64 EREC)[s.toNat]? with
-          | none => simp [hd?, ee] at e
-          | some v => simp [rdW, ee]
-        rw [h1, h2, hd]
-      rw [hd1, hlm] at hk'
-      simp [hd', hk']
-    · intro i hi
-      rw [hb' i (by rw [hd1]; omega), rdW_set64]
-      have : ¬ d = i := fun e => by subst e; omega
-      simp [this]
-
 /-- **`inst_lp(po, pl, us, e)` refines `instLPFast coreWalkFuel lps us e`** under `CoreS`, the keys
 `lps` a slice of the record pool (`InstLPOK`). -/
 @[refines ConRon.Arena.instLPFast]
@@ -349,11 +270,7 @@ theorem instLP_refines (p : Prog) (hp : ILWEntryProg p) : InstLPOK p := by
   rw [hcp, kpK_some] at hW1
   simp only [Option.some.injEq, Prod.mk.injEq] at hW1
   obtain ⟨hb, rfl⟩ := hW1
-  have hnw : po.toNat + pl.toNat < 2 ^ 64 := by
-    rcases hslice?_bound_fsz _ _ _ _ hlps with h0 | h0
-    · have := po.toNat_lt; omega
-    · have := hS.erec; omega
-  obtain ⟨hsl, hfc, hbc⟩ := ekCopyW_slice lps k m mc po (spTop m) pl hlps (by omega) hsz hnw hcp
+  obtain ⟨hsl, hfc, hbc⟩ := ekCopyW_slice lps k m mc po (spTop m) pl hlps (by omega) hsz hcp
   have hctl := hS.ctl136
   have hfm : MemFrame [SPN] [136] m (mc.set64 CTL 136 (spTop m + pl)) :=
     (hfc.mono (by simp) (by simp)).trans ((MemFrame.setCtl _ _ _).mono (by simp) (by simp))

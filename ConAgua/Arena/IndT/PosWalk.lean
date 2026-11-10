@@ -9,6 +9,7 @@ import ConAgua.Arena.IndPosSpec.Nb
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Verdict.PosE
+import ConAgua.Arena.IndPosSpec.CfW
 
 @[expose] public section
 

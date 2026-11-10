@@ -3,7 +3,6 @@ module
 import ConAgua.L.ModelGen
 public import ConAgua.Verdict.PosTopE1
 public import ConAgua.Arena.IndPosSpec.UnW2
-import ConAgua.Arena.IndT.PosAll
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.GgW
 import ConAgua.Arena.IndPosSpec.Grow
@@ -13,8 +12,6 @@ import ConAgua.Arena.IndPosSpec.Pos2RdGrow
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Arena.IndPosSpec.SnocWMfr
 import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.IndT.PosFields
-import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Verdict.PosE1N
@@ -22,7 +19,9 @@ import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.IndPosSpec.NestSeeds
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Verdict.PosE
+public import ConAgua.Verdict.PosFt
 import all ConAgua.Arena.IndPos2
+import ConAgua.Arena.IndPosSpec.CfW
 
 @[expose] public section
 /-!
@@ -30,8 +29,8 @@ import all ConAgua.Arena.IndPos2
 
 One refinement for both outcomes each: `nest_root`'s (`nrt_ref`, on its unified model `nrtE`) and
 `nest_seeds`' (`nsd_ref`, on its unified model `nsdE`, defined here): the walk's
-callees `nest_ctors`, `nest_cont_key` by the block's refinements (`nbRef_all`, both halves through
-the run; the errors under `NbG`), `nest_inst_type` by `nit_ref`, the others claim nothing
+callees `nest_ctors`, `nest_cont_key` by the block's refinements (`NbRef` at every fuel, a
+contract: the inductive area's `nbRef_all`; both halves through the run; the errors under `NbG`), `nest_inst_type` by `nit_ref`, the others claim nothing
 (`nvFns`).
 -/
 
@@ -62,19 +61,20 @@ structure NrtPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   ns : NSB m' (r.tail.tail.headD 0) x.2
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 section root
 variable {p : Prog} (L : RsLook p)
   (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (hNB : ∀ n, n ≤ 2 ^ 62 → NbRef p dn vis fe env n)
   (ctx hO hL : Word) (c : NestCtx) (holes : List EIdx)
   {ctxP : ConLeche.NestCtx} (hc : ConLeche.NestCtxOk ctxP) {holesP : List ConLeche.Expr}
   (hholes : ∀ x ∈ holesP, ConLeche.Expr.WScoped (ctxP.hiAt 0) x)
   (hlen : ctxP.names.length ≤ holesP.length)
   (hpar : ∀ x ∈ ctxP.params, ConLeche.Expr.WScoped (ctxP.hiAt 0) x)
 
-include L hq hIlpf hLC henv hc hholes hlen hpar in
+include L hNB henv hc hholes hlen hpar in
 /-- **`nest_root` refines `nestRoot`, both outcomes** (under `StageC`; `nest_ctors` through its
 run, both halves from `nbRef_all`). -/
 theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO cL ns oO oL : Word)
@@ -147,23 +147,23 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
     rw [ConRon.Arena.nestRoot]
     -- `nest_ctx_hi_at`, `nest_ctors`
     rw [rd0, rd1, rd2]
-    have hRef := (nbRef_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv n (by omega)).ctors m a ctx 1
+    have hRef := (hNB n (by omega)).ctors m a ctx 1
       0 0 0 (nhiW m ctx 0) _ _ _ _ _ hO hL cO' cL' ns 0 0 c [] c.params c.names holes cs NS [] ctxP [] _ _ _ _ csP
       nsP [] hC hW hCc hcl' hcb' hcsAt hns (by simpa using OutsB.nil m 0) (by simp) hP hA hc hctx rfl hpre hc1
       (hcF csP List.mem_cons_self) hnsP rfl
     rw [hhi0, husd0] at hRef
     refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => nrtE.k_nest_ctors.none ..)
       (nctE_spec p L.nb.pctors n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (fun _ => True.intro) id
-      hRef fun r1' s2 x1 a1 _ _ hrun1 ⟨hC1, hg1, hO1, hOb1, hns1, hP1, hA1, c1⟩ => ?_
+      hRef fun r1' s2 x1 a1 _ _ hrun1 ⟨hC1, hg1, hO1, hOb1, hns1, hP1, hA1, _⟩ => ?_
     dsimp only at hC1 hg1 hO1 hOb1 hns1 hP1 hA1
     generalize s2.mem = m1 at hC1 hg1 hO1 hOb1 hns1 hP1 hA1 ⊢
     rw [nrtE.k_nest_ctors.arm1]
     have hS1 := hC1.stage
     have hrun1P : (nestCtors V fe c true 0 [] (ctxP.hiAt 0) c.lvls c.params c.names holes cs NS []) a =
         .ok (x1, a1) := by rw [← hhiP]; exact hrun1
-    obtain ⟨-, v1, ⟨hv1, hns1P, -⟩, -⟩ := ConRon.Bridge.Inductives.nestCtors_spec coreSpecV henv true 0
+    obtain ⟨c1, v1, ⟨hv1, hns1P, -⟩, -⟩ := ConRon.Bridge.Inductives.nestCtors_spec (ConRon.Bridge.CoreSpec.of_core : ConRon.Bridge.CoreSpec checkFuel) henv true 0
       (fun crestP => ConLeche.nestPos (ConLeche.fueledOpsM V) env ctxP (ConLeche.whnfWalkFuel crestP))
-      (fun _ => by simp) (fun crestP => by simpa using ConRon.Bridge.Inductives.nestPos_spec coreSpecV henv hc _)
+      (fun _ => by simp) (fun crestP => by simpa using ConRon.Bridge.Inductives.nestPos_spec (ConRon.Bridge.CoreSpec.of_core : ConRon.Bridge.CoreSpec checkFuel) henv hc _)
       [] [] (ctxP.hiAt 0) c.lvls _ c.params ctxP.params c.names ctxP.names holes holesP
       hpar hholes hlen cs csP NS nsP [] [] (hcF csP List.mem_cons_self) a a1 x1 hC.check
       ⟨hctx, rfl, hlv, hpar', hcn, hholesP, hc1, hnsP, rfl⟩ hrun1P
@@ -228,15 +228,16 @@ structure NsdPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   ns : NSB m' (r.headD 0) x
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
+  core : ConRon.Bridge.CoreStep env fe a a'
 
 section seeds
 variable {p : Prog} (L : RsLook p)
   (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-  {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  {env : ConLeche.Env} (henv : ConLeche.EnvWF env) (hF : FtProg p)
+  (hNB : ∀ n, n ≤ 2 ^ 62 → NbRef p dn vis fe env n)
   (ctx : Word) (c : NestCtx) {ctxP : ConLeche.NestCtx} (hc : ConLeche.NestCtxOk ctxP)
 
-include L hq hIlpf hLC henv hc in
+include L hq hIlpf hLC henv hc hF hNB in
 /-- **`nest_seeds` refines `nestSeeds`, both outcomes** under `StageC` (twin side: con-ron's
 `nestSeeds_spec`; the seed's fuel by `seedFuel_spec`, its former by `nestInstType_spec`, the
 instantiation met by `nestContKey_spec`; the errors under `NbG`: `nest_inst_type`'s (`nit_ref`),
@@ -319,17 +320,17 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
         rw [hg1.iwGet _ (by omega), h1w] at h1'; cases h1'
         exact hksl'
     -- the instance's type
-    have hN := nit_ref L.nb.nit hq.closed hIlpf hLC n hC1 hA1 hhi0 (hU.grow hg1) hkd1 hkin1 hksl1 hP1
+    have hN := nit_ref L.nb.nit hq.closed hIlpf hLC hq hF henv n (by omega) hC1 hA1 hhi0 (hU.grow hg1) hkd1 hkin1 hksl1 hP1
       (dCtx_ext _ p1.ext _ _ hctx) (ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey)
-    refine RefE.bindE (fun _ => nsdE.k_nest_inst_type.none ..) (fun hG => hG.nv) hN
+    refine RefE.bindE (fun _ => nsdE.k_nest_inst_type.none ..) (fun hG => ⟨hG.nv, hG.whnf⟩) hN
       fun ⟨r2, m2⟩ x2 a2 hrun2 ⟨hS2, hg2, _, hctyH, hctyd, hP2, hA2⟩ => ?_
     rw [nsdE.k_nest_inst_type.arm1]
     have c1 := p1.toCore hC.check
-    obtain ⟨c2, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (c.hiAt 0) kk keyP
+    obtain ⟨c2, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec (ConRon.Bridge.CoreSpec.of_core : ConRon.Bridge.CoreSpec checkFuel) henv hc c (c.hiAt 0) kk keyP
       a1 a2 x2 c1.ok ⟨dCtx_ext _ p1.ext _ _ hctx, ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey⟩ hrun2
     have c12 := c1.trans c2
     have hx02 := c12.ext
-    have hC2 : StageC dn vis fe env m2 a2 := hC.of_cstep hS2 hA2 c12
+    have hC2 : StageC dn vis fe env m2 a2 := hC.of_check hS2 hA2 c12.ok c12.ext
     have hg12 := hg1.trans hg2
     have hksl2 : (rdW (m.arr64 IW) (key + 2)).toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 :=
       Nat.le_trans hksl hg12.iw
@@ -348,7 +349,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
       rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by simpa using hdsb j hj)]; simpa using hdsd
     have hnnd' : decI (rdW (m.arr64 IW) key) = kk.cname := hnnd
     have husd' : decI (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) = kk.lvls := husd
-    have hK := (nbRef_all (dn := dn) (vis := vis) (fe := fe) L.nb hq hIlpf hLC henv n (by omega)).key m2 a2 ctx
+    have hK := (hNB n (by omega)).key m2 a2 ctx
       (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key) (rdW (m.arr64 IW) (key + UInt64.ofNat 1))
       (rdW (m.arr64 IW) (key + UInt64.ofNat 2)) (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns
       c [] kk.ds NS ctxP [] keyP.cname keyP.lvls keyP.ds niP.2 nsP
@@ -358,18 +359,18 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
       (by rw [hctyd]; exact hni2) (dState_ext hx02 _ _ hnsP) (by simpa using hw _ List.mem_cons_self) hni3
     rw [hnnd', husd', hctyd, hnpc] at hK
     refine RefE.bindE (fun _ => nsdE.k_nest_cont_key.none ..) id hK
-      fun ⟨r3, m3⟩ x3 a3 hrun3 ⟨hC3, hg3, _, hns3, hP3, hA3, c3⟩ => ?_
+      fun ⟨r3, m3⟩ x3 a3 hrun3 ⟨hC3, hg3, _, hns3, hP3, hA3, _⟩ => ?_
     dsimp only at hC3 hg3 hns3 hP3 hA3
     have hg13 := hg12.trans hg3
     have hsO1 : (sO + 1).toNat = sO.toNat + 1 := word_add_toNat (by simp; omega)
     have hsL1 : (sL - 1).toNat = seeds'.length := by rw [pos2_word_pred h0]; omega
-    have hx03 := c12.ext.trans c3.ext
-    obtain ⟨-, v1, ⟨-, hns1P⟩, -⟩ := ConRon.Bridge.Inductives.nestContKey_spec coreSpecV henv hc
-      (ConRon.Bridge.Inductives.nestPos_spec coreSpecV henv hc _)
+    obtain ⟨c3, v1, ⟨-, hns1P⟩, -⟩ := ConRon.Bridge.Inductives.nestContKey_spec (ConRon.Bridge.CoreSpec.of_core : ConRon.Bridge.CoreSpec checkFuel) henv hc
+      (ConRon.Bridge.Inductives.nestPos_spec (ConRon.Bridge.CoreSpec.of_core : ConRon.Bridge.CoreSpec checkFuel) henv hc _)
       [] [] 0 kk.cname keyP.cname kk.lvls keyP.lvls kk.ds keyP.ds nPcN xc niP.2 NS nsP
       (by simpa using hw _ List.mem_cons_self) hni3 a2 a3 x3 c12.ok
       ⟨dCtx_ext _ hx02 _ _ hctx, rfl, ConRon.Bridge.denoteN_ext hkc hx02, ConRon.Bridge.denoteLs_ext hkl hx02,
         ConRon.Bridge.denoteEList_ext hx02 _ _ hkd, hni2, dState_ext hx02 _ _ hnsP⟩ hrun3
+    have hx03 := c12.ext.trans c3.ext
     rw [nsdE.k_nest_cont_key.arm1]
     have ih' := ih (by omega) m3 a3 (sO + 1) (sL - 1) (r3.tail.headD 0) seeds' x3.2 ksP' v1.2 hC3 (hU.grow hg13) hhi
       hsL1 (by rw [hsO1]; exact (hsd.grow hg13 htop).tail) hns3 hP3 hA3 (dCtx_ext _ hx03 _ _ hctx)

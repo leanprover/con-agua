@@ -71,7 +71,7 @@ theorem parseChunks_single (b : ByteArray) (hb : b.size < USize.size) :
           have hne : (b.size - tail.toNat == 0) = false := by
             simp only [beq_eq_false_iff_ne]; omega
           simp only [hne, ht, Bool.false_eq_true, ite_false, ite_true]
-          rw [applyFinalLine_tail st2 (b.extract tail.toNat b.size) b 0 tail (lineNo + 1)
+          rw [applyFinalLine_tail st2 (b.extract tail.toNat b.size) b 0 tail lineNo
             (by rw [tailAt_zero, bytes_extract_tail tail hb])]
           rfl
         · have ht' : b.size ≤ tail.toNat := by

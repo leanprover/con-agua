@@ -10,6 +10,7 @@ public import ConAgua.Census.Attr
 public import ConAgua.Arena.StoreDen
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Layout
+public import ConAgua.Arena.HbMemoRel
 import ConAgua.Arena.DerRel
 
 @[expose] public section
@@ -22,10 +23,11 @@ Everything the L code of `whnfCore`/`whnf` and their arms (`WhnfSpine.lean`, `Wh
 
 **Arguments.** The twin's bodies take `mode : CheckMode`, the knot record `r : CoreFnsA`, the
 environment view `fe : IFEnv` and `depth : Nat`. In L: a mode word (`decMode`: `0` verified, `1`
-trusted, `2` verified-eager, `3` trusted-eager; bit 0 is "trusted", bit 1 "eager"), the view word
-`vis` (`EnvR dn m vis fe`), the depth word; the record is the program itself (the knot's slots
+trusted, `2` verified-eager, `3` trusted-eager; bit 0 is "trusted" (`decMode`), bit 1 the
+twin's `eager` beside the mode (`decEager`)), the view word
+`vis` (`EnvR m vis fe`), the depth word; the record is the program itself (the knot's slots
 are L functions, `whnf_core`, `whnf`, `infer`, `infer_io`, `defeq`), tied at the twin's knot
-`coreKnot mode fe id F` for every `F` at or above the L fuel (the `GoOK` shape of `WalkRefine`).
+`coreKnot mode eager fe id F` for every `F` at or above the L fuel (the `GoOK` shape of `WalkRefine`).
 
 **The spine stack.** The twin's `Array EIdx`/`List EIdx` values (spines, accumulators, rule
 arguments) live in the word array `SPN` (144) as slices `(off, cnt)`; `CTL[136]` is the top.
@@ -53,8 +55,10 @@ namespace L.Arena
 
 /-- The mode word. -/
 def decMode (w : Word) : ConLeche.CheckMode :=
-  if w = 0 then .verified else if w = 1 then .trusted else if w = 2 then .verifiedEager
-  else .trustedEager
+  if w &&& 1 = 0 then .verified else .trusted
+
+/-- The mode word's eager bit (the twin's `eager : Bool` beside `mode`, con-leche #452). -/
+def decEager (w : Word) : Bool := (w >>> 1) &&& 1 != 0
 
 /-- A handle word (an index `< 2^32` of any kind). -/
 def HW (w : Word) : Prop := w.toNat < 2 ^ 32
@@ -422,6 +426,8 @@ structure CoreMemos (m : Mem) : Prop where
   il : ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreIlSch lfKey decE m mp
   ab : ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m mp
   walk : WalkMemos m
+  /-- The `hasLooseBVarB` memo (array `HBM`, `CTL[214]`): the core's leaves write it. -/
+  hb : ∃ mp, L.Ind.hbMR m mp
 
 theorem coreIlSch_wf : coreIlSch.WF := ⟨by decide, by decide⟩
 theorem coreAbSch_wf : coreAbSch.WF := ⟨by decide, by decide⟩
@@ -440,6 +446,12 @@ theorem WalkMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf 
     let ⟨mp, hm⟩ := h.lsb; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C hA.2.2 hC.2.2 m m' hf mp hm⟩,
     h.lp.frame hf hLA hLC⟩
 
+/-- `CoreMemos.hb` across a frame away from `HBM` and `CTL[214]`. -/
+theorem CoreMemos.hbF {A : List TieredArray} {C : List Word} {m m' : Mem} (h : CoreMemos m)
+    (hf : MemFrame A C m m') (hA : (L.Ind.HBM : TieredArray) ∉ A := by decide)
+    (hC : (214 : Word) ∉ C := by first | decide | simp) : ∃ mp, L.Ind.hbMR m' mp :=
+  h.hb.elim fun mp h' => ⟨mp, L.Ind.hbMR_frame hf hA hC h'⟩
+
 /-- **`CoreMemos` across a writer** that avoids arrays 49, 50, 151‥153 and `CTL` words 48, 50, 152,
 154, 156 (the last two avoidances are auto-params: `decide` on concrete lists). -/
 theorem CoreMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
@@ -447,11 +459,26 @@ theorem CoreMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf 
     (hWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A := by decide)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
     (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
-    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) :
+    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
+    (hHB : (L.Ind.HBM : TieredArray) ∉ A := by decide) (hHBc : (214 : Word) ∉ C := by first | decide | simp) :
     CoreMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.il; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA.1 hC.1 m m' hf mp hm⟩,
     let ⟨mp, hm⟩ := h.ab; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA.2 hC.2 m m' hf mp hm⟩,
-    h.walk.frame hf hWA hWC hLA hLC⟩
+    h.walk.frame hf hWA hWC hLA hLC, h.hbF hf hHB hHBc⟩
+
+/-- **`CoreMemos` across a writer of the `hb` memo** (`struct_used_later`): `CoreMemos.frame` with
+the `hb` memo's relation after the write given. -/
+theorem CoreMemos.frameHb {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C) (h : CoreMemos m)
+    (hWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A := by decide)
+    (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
+    (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
+    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide)
+    (hhb : ∃ mp, L.Ind.hbMR m' mp) :
+    CoreMemos m' :=
+  ⟨let ⟨mp, hm⟩ := h.il; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA.1 hC.1 m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.ab; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA.2 hC.2 m m' hf mp hm⟩,
+    h.walk.frame hf hWA hWC hLA hLC, hhb⟩
 
 /-- **`CoreMemos` across a write of the `instLP` walk's memos** (arrays 52‥54, `CTL[54‥59]`), the
 walk memos after it given. -/
@@ -463,20 +490,22 @@ theorem CoreMemos.frameLP {A : List TieredArray} {C : List Word} {m m' : Mem} (h
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
     let ⟨mp, hm⟩ := h.ab; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.walk.ws; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C
+    ⟨let ⟨mp, hm⟩ := h.walk.ws; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
     let ⟨mp, hm⟩ := h.walk.fl; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
     let ⟨mp, hm⟩ := h.walk.lsb; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
-    hLP⟩
+    hLP⟩, h.hbF hf (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide))⟩
 
 /-- **`CoreMemos` across a writer at or above array 64** (and `CTL` word 64), away from the walk
 memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreMemos.frame_hi {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : CoreMemos m)
     (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
-    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) : CoreMemos m' :=
+    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp)
+    (hHB : (L.Ind.HBM : TieredArray) ∉ A := by decide) (hHBc : (214 : Word) ∉ C := by first | decide | simp) :
+    CoreMemos m' :=
   h.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
     ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
     ⟨fun h => absurd (hWA _ h) (by decide), fun h => absurd (hWA _ h) (by decide),
@@ -486,7 +515,7 @@ theorem CoreMemos.frame_hi {A : List TieredArray} {C : List Word} {m m' : Mem} (
     ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
       fun h => absurd (hA _ h) (by decide)⟩
     ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
-      fun h => absurd (hC _ h) (by decide)⟩
+      fun h => absurd (hC _ h) (by decide)⟩ hHB hHBc
 
 /-- **The core's relation** at explicit cache maps. -/
 structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
@@ -494,7 +523,7 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   arena : ArenaD m a
   core : CoreRM m a.caches M eb
   pins : PinsFull m a.pins
-  env : EnvR dn m vis fe
+  env : EnvR m vis fe
   /-- The twin's readback caches hold readbacks (L has no readback; the twin computes on them). -/
   readL : ReadLCOK a
   readLs : ReadLsCOK a
@@ -515,15 +544,25 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   /-- **The pool's mode** (lane tierpool): outside the scratch tier the top is in tier 0, so the
   slices the core interns are tier-0 slices when the flag is off (`ModeOK.slice0`). -/
   mode : ModeOK m
+  /-- **The stage's pool and record tops are in bounds** (`IWOK`): the projection guard's lookups
+  (`pgrOK_of`) allocate after the core. -/
+  iw : L.Ind.IWOK m
 
-/-- **The relation across a writer outside every tier and the spine stack**, the walk memos given
-(`hmem`): arrays `≥ 145` (or the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack,
-the level heap, the walk-local memos. -/
-theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+/-- `CoreS.iw` across a frame away from both `EREC` tiers and `CTL[129]`, `CTL[130]`, `CTL[200]`. -/
+theorem CoreS.iwF {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 145 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
-    (hmem : CoreMemos m') :
+    (hE : (EREC : TieredArray) ∉ A := by decide) (hE1 : (tier1 EREC : TieredArray) ∉ A := by decide)
+    (h129 : (129 : Word) ∉ C := by first | decide | simp) (h130 : (130 : Word) ∉ C := by first | decide | simp)
+    (h200 : (200 : Word) ∉ C := by first | decide | simp) : L.Ind.IWOK m' :=
+  L.Ind.IWOK.frameC hf hE hE1 h129 h130 h200 hS.iw
+
+/-- `CoreS.frameSM` for a writer of the pool (`CTL[200]`), `IWOK` after it given. -/
+theorem CoreS.frameSM_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
+    (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hmem : CoreMemos m') (hiw : L.Ind.IWOK m') :
     CoreS dn m' a vis fe M eb := by
   have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
     have := hA b hb; omega
@@ -536,34 +575,65 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
     hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide))
       (by decide)),
-    hS.env.frame (aA 129 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
+    hS.env.frame (fun b hb => not_mem_envArrs (by have := hA b hb; omega))
+      (fun x hx => not_mem_envCtl (by have := hC x hx; omega)) hf,
     hS.readL, hS.readLs, hS.nwf, hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
     hmem, hf.size BSTK ▸ hS.bstk,
     hS.den.frameE (hf.arr EREC (fun h => absurd (hA _ h) (by decide))
       (by decide)),
     hS.mode.frame hf (fun h => by have := hC _ h; simp at this)
-      (fun h => by have := hC _ h; simp at this)⟩
+      (fun h => by have := hC _ h; simp at this),
+    hiw⟩
+
+/-- **The relation across a writer outside every tier and the spine stack**, the walk memos given
+(`hmem`): arrays 145 or `≥ 149` (or the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack,
+the level heap, the walk-local memos. -/
+theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
+    (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hmem : CoreMemos m') (hIW : (200 : Word) ∉ C := by first | decide | simp) :
+    CoreS dn m' a vis fe M eb :=
+  hS.frameSM_iw hf hA hC hmem
+    (L.Ind.IWOK.frameC hf (fun h => absurd (hA _ h) (by decide)) (fun h => absurd (hA _ h) (by decide))
+      (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this) hIW hS.iw)
 
 /-- `CoreS.frameSM` away from the walk-local memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 145 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
     (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
-    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) :
+    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) (hIW : (200 : Word) ∉ C := by first | decide | simp)
+    (hHB : (L.Ind.HBM : TieredArray) ∉ A := by decide) (hHBc : (214 : Word) ∉ C := by first | decide | simp) :
     CoreS dn m' a vis fe M eb :=
-  hS.frameSM hf hA hC (hS.memos.frame_hi hf (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) hWA hWC)
+  hS.frameSM hf hA hC
+    (hS.memos.frame_hi hf (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) hWA hWC hHB hHBc)
+    hIW
+
+/-- `CoreS.frameS` for a writer of the pool (`CTL[200]`), `IWOK` after it given. -/
+theorem CoreS.frameS_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
+    (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
+    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) (hiw : L.Ind.IWOK m')
+    (hHB : (L.Ind.HBM : TieredArray) ∉ A := by decide) (hHBc : (214 : Word) ∉ C := by first | decide | simp) :
+    CoreS dn m' a vis fe M eb :=
+  hS.frameSM_iw hf hA hC
+    (hS.memos.frame_hi hf (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) hWA hWC hHB hHBc)
+    hiw
 
 /-- **The relation across a writer outside every tier and the stacks**, the walk memos given:
-arrays `≥ 146` (or 64‥95), `CTL` words `≥ 138` (or 64‥95). The stacks and the pool are kept. -/
+arrays `≥ 149` (or 64‥95), `CTL` words `≥ 138` (or 64‥95). The stacks and the pool are kept. -/
 theorem CoreS.frameM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 146 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
-    (hmem : CoreMemos m') :
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
+    (hmem : CoreMemos m') (hIW : (200 : Word) ∉ C := by first | decide | simp) :
     CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
   refine ⟨hS.frameSM hf (fun b hb => by have := hA b hb; exact ⟨this.1, this.2.1, by omega⟩)
-    (fun x hx => by have := hC x hx; omega) hmem, ?_⟩
+    (fun x hx => by have := hC x hx; omega) hmem hIW, ?_⟩
   exact StackKept.of_frame hf
     ⟨fun h => absurd (hA _ h) (by decide),
      fun h => absurd (hA _ h) (by decide),
@@ -579,11 +649,14 @@ memos: the level heap (`LH`, `CTL[192]`), say. -/
 theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 146 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
     (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
-    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) :
+    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) (hIW : (200 : Word) ∉ C := by first | decide | simp)
+    (hHB : (L.Ind.HBM : TieredArray) ∉ A := by decide) (hHBc : (214 : Word) ∉ C := by first | decide | simp) :
     CoreS dn m' a vis fe M eb ∧ StackKept m m' :=
-  hS.frameM hf hA hC (hS.memos.frame_hi hf (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) hWA hWC)
+  hS.frameM hf hA hC
+    (hS.memos.frame_hi hf (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) hWA hWC hHB hHBc)
+    hIW
 
 /-- **After a core run** from `m₀` at maps `M`, `G`, generation `g`: the relation holds at some
 maps that keep every other generation's bank, and the stack below the top is as it was. -/
@@ -740,7 +813,7 @@ theorem CoreSpec.of_callW {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : F
 
 /-! ## The knot's slots
 
-`coreKnot mode fe id F` is the twin's record; the L slot at fuel `n` refines it at every
+`coreKnot mode eager fe id F` is the twin's record; the L slot at fuel `n` refines it at every
 `F ≥ n`. The two `whnf` slots are this lane's (`WhnfCore.lean`, `WhnfDelta.lean`); `infer`,
 `infer_io` and `defeq` are phases 6–7, stubs here. -/
 
@@ -758,7 +831,7 @@ def WhnfCoreSlot (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode cheap d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW e →
     CoreSpec p n "whnf_core" [mode, cheap, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) decH s₀ a₀ dn vis
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) decH s₀ a₀ dn vis
       fe M eb
 
 /-- `whnf(mode, vis, d, e)` refines the knot's `whnf` slot. -/
@@ -766,21 +839,21 @@ def WhnfSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "whnf" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
+      ((coreKnot (decMode mode) (decEager mode) fe id F).whnf d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `infer(mode, vis, d, e)` refines the knot's full-grade `infer` slot (phase 7). -/
 def InferSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "infer" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).infer d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
+      ((coreKnot (decMode mode) (decEager mode) fe id F).infer d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `infer_io(mode, vis, d, e)` refines the knot's io-grade `inferIO` slot (phase 7). -/
 def InferIOSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "infer_io" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
+      ((coreKnot (decMode mode) (decEager mode) fe id F).inferIO d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `defeq(mode, vis, d, a, b)` refines the knot's `defeq` slot (phase 6). -/
 def DefeqSlot (p : Prog) (n : Nat) : Prop :=
@@ -788,7 +861,7 @@ def DefeqSlot (p : Prog) (n : Nat) : Prop :=
     (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW x →
     HW y →
     CoreSpec p n "defeq" [mode, vis, d, x, y]
-      ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
+      ((coreKnot (decMode mode) (decEager mode) fe id F).defeq d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
       M eb
 
 /-- **The knot at L fuel `n`**: every slot. -/
@@ -827,7 +900,7 @@ parameters a slice of the environment's record pool (`EREC`). -/
 def InstLPOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb po pl us e : Word) (lps : List NIdx), CoreS dn s₀.mem a₀ vis fe M eb →
-    HW e → HW us → hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps →
+    HW e → HW us → hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps →
     CoreSpec p n "inst_lp" [po, pl, us, e]
       (instLPFast coreWalkFuel lps (decI us) (decE e)) decH s₀ a₀ dn vis fe M eb
 
@@ -839,11 +912,11 @@ def StrLitCtorOK (p : Prog) : Prop :=
     a₀.store.view (decE h) = some (.lit (.strVal s)) →
     CoreSpec p n "str_lit_ctor" [h] (strLitToConstructor s) decH s₀ a₀ dn vis fe M eb
 
-/-- `str_lit_supported(vis)` refines `strLitSupported fe`. -/
-def StrLitSupportedOK (p : Prog) : Prop :=
+/-- `str_lit_stored(vis)` refines `strLitStored fe`. -/
+def StrLitStoredOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
-    CoreSpec p n "str_lit_supported" [vis] (strLitSupported fe) decBool s₀ a₀ dn vis fe M eb
+    CoreSpec p n "str_lit_stored" [vis] (strLitStored fe) decBool s₀ a₀ dn vis fe M eb
 
 /-- **The stub callees.** (It held the knot's `infer`/`infer_io`/`defeq` slot steps too; no proof
 used them, and lane `defeq`'s knot proves those steps from facts that themselves come from proofs
@@ -852,13 +925,13 @@ structure WhnfCallees (p : Prog) : Prop where
   instList : InstListOK p
   instLP : InstLPOK p
   strLitCtor : StrLitCtorOK p
-  strLitSupported : StrLitSupportedOK p
+  strLitStored : StrLitStoredOK p
 
-/-- **`strLitSupported` keeps every stored node's view** (it reads the pins and the environment
-and interns the nodes it compares against, which only adds nodes). `StrLitSupportedOK` says
+/-- **`strLitStored` keeps every stored node's view** (it reads the pins and the environment,
+which changes no node). `StrLitStoredOK` says
 nothing about the store; `proj_lit_to_ctor` carries a `view` fact across the call. -/
 def SupKeep (fe : IFEnv) : Prop :=
   ∀ (a : AState) (h : EIdx) (w : ENodeView), a.store.view h = some w →
-    (AM.st (strLitSupported fe) a).store.view h = some w
+    (AM.st (strLitStored fe) a).store.view h = some w
 
 end L.Arena

@@ -73,7 +73,7 @@ theorem hIns_ok (m m' : Mem) (w k r : Word) (idx : Std.HashMap NIdx Nat) (hR : N
     rw [hc, ite_eq_left rfl]
     exact ⟨hR, MemFrame.refl _ _ _⟩
 
-theorem hix_hd?_some {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
+theorem hix_hd?_some {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? (aread a) i = some x) :
     ∃ w, a[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
   simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨w, hw, h⟩ := h
@@ -81,15 +81,15 @@ theorem hix_hd?_some {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : h
   · cases h; exact ⟨w, hw, by assumption, rfl⟩
   · cases h
 
-theorem hix_decCV_name {a : Array Word} {q : Nat} {v : IConstantVal} (h : decCV a q = some v) :
+theorem hix_decCV_name {a : Array Word} {q : Nat} {v : IConstantVal} (h : decCV (aread a) q = some v) :
     ∃ w, a[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ v.name = decI w := by
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h
   obtain ⟨n, hn, l, -, t, -, rfl⟩ := h
   exact hix_hd?_some hn
 
-theorem hix_decCI_name {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
-    {ci : IConstantInfo} (h : decCI a dn p = some ci) :
+theorem hix_decCI_name {a : Array Word} {p : Nat}
+    {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
     ∃ w, a[p + 1]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
   simp only [decCI, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨t, -, h⟩ := h
@@ -101,7 +101,7 @@ theorem hix_decCI_name {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p 
   · obtain ⟨v, hv, rfl⟩ := h; exact hix_decCV_name hv
   · obtain ⟨v, hv, _, _, rfl⟩ := h; exact hix_decCV_name hv
   · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
-  · obtain ⟨v, hv, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
+  · obtain ⟨v, hv, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
 
 theorem hix_trunc_get {P : Array Word} {t i : Nat} {v : Word} (h : (trunc P t)[i]? = some v)
     (hi : i ≠ 0) : P[i]? = some v ∧ i ≤ t := by
@@ -113,10 +113,10 @@ theorem hix_trunc_get {P : Array Word} {t i : Nat} {v : Word} (h : (trunc P t)[i
     exact ⟨h, by omega⟩
   · cases h
 
-theorem hix_decCIs_succ (a : Array Word) (dn : NIdx → Option ConLeche.Name) (o k : Nat) :
-    decCIs a dn o (k + 1) = (do
-      let x ← (do let v ← nat? a o; decCI a dn v)
-      let xs ← decCIs a dn (o + 1) k
+theorem hix_decCIs_succ (a : Array Word) (o k : Nat) :
+    decCIs a o (k + 1) = (do
+      let x ← (do let v ← nat? (aread a) o; decCI (aread a) v)
+      let xs ← decCIs a (o + 1) k
       pure (x :: xs)) := by
   simp only [decCIs, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
   congr 1; funext x; congr 1
@@ -132,7 +132,7 @@ decoded below `t` by `decCIs`; the slice does not start at the pool's word `0`).
 theorem hNamesGo_ok (n : Nat) : ∀ (m m' : Mem) (k o c q r : Word) (P : Array Word) (t : Nat)
     (cs : List IConstantInfo) (idx : Std.HashMap NIdx Nat),
     NixR m idx → m.arr64 DIND = P → t ≤ (P[0]?.getD 0).toNat → o.toNat ≠ 0 →
-    decCIs (trunc P t) (fun _ => none) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs →
+    decCIs (trunc P t) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs →
     k.toNat + 1 < 2 ^ 64 → hNamesGoW n m k o c q = some (r, m') →
     NixR m' (insertNames idx k.toNat (cs.map (·.name))) ∧ MemFrame [HNIX] [75, 76] m m' := by
   induction n with

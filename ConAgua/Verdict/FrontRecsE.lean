@@ -44,8 +44,8 @@ def ViewReadR (a : AState) : Prop :=
 /-- The facts of the validation before its recursor loop: `VFacts` without the recursors. -/
 abbrev VFactsR (st : StateD) (a : AState) (tys : List IndTypeRec) (cts : List IndCtorRec)
     (TN : List NIdx) (TT : List EIdx) (LS : List (List NIdx)) (CN : List NIdx) (fuel nPd : Nat)
-    (ordered : List IndCtorRec) (KE : Option Bool) : Prop :=
-  VFacts st a tys cts [] TN TT LS CN fuel nPd ordered KE
+    (ordered : List IndCtorRec) : Prop :=
+  VFacts st a tys cts [] TN TT LS CN fuel nPd ordered
 
 /-- A read-only `forIn` that yields before index `j` and is done at `j`. -/
 theorem forIn_doneR {α β : Type} (f : α → β → AM (ForInStep β)) (a : AState) :
@@ -104,7 +104,7 @@ def LoopInv (s : Option (RecordVerdict ⊕ List IndCtorRec × Nat) × Unit) : Pr
   ∃ w, s.1 = some (.inl (.invalid w))
 
 set_option hygiene false in
-/-- The recursor loop of `validateIndD`, once `kExpected?` is `KE`, stopping at the failing record. -/
+/-- The recursor loop of `validateIndD`, stopping at the failing record. -/
 macro "recsfail_tac" : tactic => `(tactic| (
   rw [hnest, ite_eq_right Bool.false_ne_true]
   obtain ⟨j, hj, hpre, rn, hrn, hfc⟩ := hF
@@ -119,11 +119,9 @@ macro "recsfail_tac" : tactic => `(tactic| (
     (fun _ => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)), ())) rfl j hj _ ?rstep ?rdone
   case rstep =>
     intro j hj
-    obtain ⟨rn, hrn, h1, h2, h3, hk, v, hv, hin⟩ := hpre j hj
+    obtain ⟨rn, hrn, h1, h2, h3, v, hv, hin⟩ := hpre j hj
     rw [run_bind _ _ a _ hrn]
     simp only [h1, h2, h3, beq_self_eq_true, ite_true]
-    rcases hK : KE with _ | kE
-    all_goals (try simp only [hk _ hK, beq_self_eq_true, ite_true])
     all_goals
       rw [run_bind _ _ a _ hv]
       rcases v with _ | ⟨T, sv⟩ | ⟨T, nv⟩
@@ -158,7 +156,7 @@ macro "recsfail_tac" : tactic => `(tactic| (
     try simp only []
     rw [run_bind _ _ a _ hrn]
     obtain ⟨xr, hxr⟩ := hRN _ _ hrn
-    rcases hfc with hp | ⟨hp, hm | ⟨hm, hn | ⟨hn, hk | ⟨hk, T, hv, jj, hjj, hjj', hpre2, hT, kk, hk2, hne⟩⟩⟩⟩
+    rcases hfc with hp | ⟨hp, hm | ⟨hm, hn | ⟨hn, T, hv, jj, hjj, hjj', hpre2, hT, kk, hk2, hne⟩⟩⟩
     · rw [ite_eq_right (by simpa using hp)]
       rw [run_bind _ _ a _ hxr]; exact ⟨_, rfl, _, rfl, _, rfl⟩
     · rw [ite_eq_left (by simpa using hp), ite_eq_right (by simpa using hm)]
@@ -166,15 +164,7 @@ macro "recsfail_tac" : tactic => `(tactic| (
     · rw [ite_eq_left (by simpa using hp), ite_eq_left (by simpa using hm), ite_eq_right (by simpa using hn)]
       rw [run_bind _ _ a _ hxr]; exact ⟨_, rfl, _, rfl, _, rfl⟩
     · rw [ite_eq_left (by simpa using hp), ite_eq_left (by simpa using hm), ite_eq_left (by simpa using hn)]
-      obtain ⟨kE, hKE', hne⟩ := hk
-      subst hKE'
-      try simp only []
-      rw [ite_eq_right (by simpa using hne)]
-      rw [run_bind _ _ a _ hxr]; exact ⟨_, rfl, _, rfl, _, rfl⟩
-    · rw [ite_eq_left (by simpa using hp), ite_eq_left (by simpa using hm), ite_eq_left (by simpa using hn)]
       obtain ⟨xT, hxT⟩ := hRV _ _ _ hv
-      rcases hK : KE with _ | kE
-      all_goals (try simp only [hk _ hK, beq_self_eq_true, ite_true])
       all_goals
         rw [run_bind _ _ a _ hv]
         try simp only []
@@ -207,12 +197,13 @@ macro "recsfail_tac" : tactic => `(tactic| (
 
 theorem validateIndD_recsFail {st : StateD} {a : AState} {tys : List IndTypeRec} {cts : List IndCtorRec}
     {rcs : List IndRecRec} {TN : List NIdx} {TT : List EIdx} {LS : List (List NIdx)} {CN : List NIdx}
-    {fuel nPd : Nat} {ordered : List IndCtorRec} {KE : Option Bool}
-    (hV : VFactsR st a tys cts TN TT LS CN fuel nPd ordered KE)
+    {fuel nPd : Nat} {ordered : List IndCtorRec}
+    (hV : VFactsR st a tys cts TN TT LS CN fuel nPd ordered)
     (hnest : (tys.any fun x => x.numNested != 0) = false)
-    (hF : RecsFail st a TN TT nPd tys.length ordered.length KE fuel rcs)
+    (hF : RecsFail st a TN TT nPd tys.length ordered.length fuel rcs)
     (hRN : NamesReadR st a) (hRV : ViewReadR a) :
     ∃ w, (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = .ok (.inl (.invalid w), a) := by
+
   unfold ConRon.Arena.Frontend.validateIndD
   simp only [hV.safe, Bool.false_eq_true, ite_false]
   rw [← hV.np1, ite_eq_left hV.np2]
@@ -258,53 +249,6 @@ theorem validateIndD_recsFail {st : StateD} {a : AState} {tys : List IndTypeRec}
   have htk : ordered.take (fpos LS LS.length) = ordered := by
     rw [fpos_full, hV.flen, ← hV.ordlen, List.take_length]
   simp only [hzl, htk]
-  split
-  · rename_i ty hd c
-    obtain ⟨r, v, hr, hv, hnone, hsort⟩ := hV.kyes ty hd c rfl rfl rfl
-    rw [run_bind _ _ a _ hr, run_bind _ _ a _ hv]
-    rcases hvs : v with _ | _ | ⟨s⟩ | _ | _ | _ | _ | _ | _ | _
-    case sort =>
-      obtain ⟨L, hL, hKE⟩ := hsort s hvs
-      simp only []
-      rw [run_bind _ _ a _ hL, ← hKE]
-      simp only [pure_bind]
-      recsfail_tac
-    all_goals
-      have hKE : KE = none := hnone (fun s' h' => by rw [hvs] at h'; cases h')
-      simp only []
-      rw [← hKE]
-      simp only [pure_bind]
-      recsfail_tac
-  · rename_i hne
-    have hKE : KE = some false := hV.kno (fun ⟨h1, h2⟩ => by
-      obtain ⟨ty, hty⟩ : ∃ ty, TT = [ty] := by
-        cases hT : TT with
-        | nil => rw [hT] at h1; simp at h1
-        | cons x xs => cases xs with
-          | nil => exact ⟨x, rfl⟩
-          | cons _ _ => rw [hT] at h1; simp at h1
-      obtain ⟨hd, hls⟩ : ∃ hd, LS = [[hd]] := by
-        cases hL : LS with
-        | nil => rw [hL] at h2; simp at h2
-        | cons l ls => cases ls with
-          | nil => cases l with
-            | nil => rw [hL] at h2; simp at h2
-            | cons x xs => cases xs with
-              | nil => exact ⟨x, rfl⟩
-              | cons _ _ => rw [hL] at h2; simp at h2
-          | cons _ _ => rw [hL] at h2; simp at h2
-      have hol : ordered.length = 1 := by
-        rw [hV.ordlen, ← hV.flen, hls]; rfl
-      obtain ⟨c, hc⟩ : ∃ c, ordered = [c] := by
-        cases ho : ordered with
-        | nil => rw [ho] at hol; simp at hol
-        | cons x xs => cases xs with
-          | nil => exact ⟨x, rfl⟩
-          | cons _ _ => rw [ho] at hol; simp at hol
-      exact hne ty hd c hty hls hc)
-    rw [← hKE]
-    simp only [pure_bind]
-    recsfail_tac
-
+  recsfail_tac
 
 end L.Front.Ind

@@ -3,7 +3,7 @@ as ConLeche/Util/PtrEq.lean, and use it at the three call sites; withPtrEqDecEq'
 in Kernel/Expr.lean. Toolchain nightly-2026-10-20 (vendor/README.md, "Toolchain switch" 1).
 
 diff --git a/vendor/con-leche/ConLeche/Driver/OwnerParse.lean b/vendor/con-leche/ConLeche/Driver/OwnerParse.lean
-index 1bf9e49e48d2881de65428c56c39a82a28af9183..09ef42bdac80458a5d9f7f3edf24c1831247d56e 100644
+index 5831e72b372b48ab1d9e59e53a12f27d926b7a23..aa990a407aeadd185f54be205825ac1c0eb593be 100644
 --- a/vendor/con-leche/ConLeche/Driver/OwnerParse.lean
 +++ b/vendor/con-leche/ConLeche/Driver/OwnerParse.lean
 @@ -5,7 +5,7 @@ public import Std.Sync.Mutex
@@ -15,7 +15,7 @@ index 1bf9e49e48d2881de65428c56c39a82a28af9183..09ef42bdac80458a5d9f7f3edf24c183
  
  /-!
  # The rounds parse driver: owner threads (task #329)
-@@ -101,7 +101,7 @@ the type's own lawful comparison (for the finished tables, entry by
+@@ -118,7 +118,7 @@ the type's own lawful comparison (for the finished tables, entry by
  entry with the kernel's pointer-first equalities, `Prior`'s
  `LawfulBEq`; for bytes, `memcmp`). -/
  @[inline] def sameB {α : Type} [BEq α] [LawfulBEq α] (a b : α) : Bool :=
@@ -142,25 +142,3 @@ index 0000000000000000000000000000000000000000..d4e0fd15c75748076e3ae69569ad6112
 +declaration. -/
 +@[expose, implemented_by withPtrEqUnsafe]
 +def ConLeche.withPtrEq {α : Type u} (a b : α) (k : Unit → Bool) (h : a = b → k () = true) : Bool := k ()
-diff --git a/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean b/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean
-index 091bbdda638f78582031dc495eab999b0b50f4bc..25a99832cc6de300e4b573357f1ad37caf522991 100644
---- a/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean
-+++ b/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean
-@@ -6,7 +6,7 @@ import ConLeche.Verify.Cached.KnotCongr
- *defined* through it and `slotIs_spec` needs its body (`k ()`), which
- `import all` makes visible in this module only (the `Init.Util`
- exception CLAUDE.md lists). -/
--import all Init.Util
-+public import ConLeche.Util.PtrEq
- 
- /-!
- # The parallel install's commit step (task #329)
-@@ -221,7 +221,7 @@ structural comparison, which is what it means logically
- (`slotIs_spec`). -/
- def slotIs (S : Slots) (k j : Nat) (ci : ConstantInfo) : Bool :=
-   match slotGet S k j with
--  | some ci' => withPtrEq ci' ci (fun _ => decide (ci' = ci)) (fun h => by simp [h])
-+  | some ci' => ConLeche.withPtrEq ci' ci (fun _ => decide (ci' = ci)) (fun h => by simp [h])
-   | none => false
- 
- theorem slotIs_spec {S : Slots} {k j : Nat} {ci : ConstantInfo}

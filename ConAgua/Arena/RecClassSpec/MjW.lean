@@ -41,9 +41,9 @@ section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
 /-- `inst_pis_with` on a slice decoded below the tops (possibly empty, at any offset). -/
-theorem rec2SimInstW (n : Nat) (hS : StageR dn vis fe m a) {ao al e : Word} (he : H e) {args : List EIdx}
+theorem rec2SimInstW (n : Nat) (hS : StageR vis fe m a) {ao al e : Word} (he : H e) {args : List EIdx}
     (hd : DecB (fun m => (decHL m ao.toNat al.toNat : Option (List EIdx))) m args) :
-    RSim (instW n m ao al e) (ConRon.Arena.instPisWith args (decI e)) a (KP dn vis fe m decOE) := by
+    RSim (instW n m ao al e) (ConRon.Arena.instPisWith args (decI e)) a (KP vis fe m decOE) := by
   rintro ⟨r, m'⟩ h
   have hd0 : decHL m ao.toNat al.toNat = some args := hd.get (OMono.decHL _ _)
   by_cases hal : al = 0
@@ -59,7 +59,7 @@ theorem rec2SimInstW (n : Nat) (hS : StageR dn vis fe m a) {ao al e : Word} (he 
     exact ⟨some (decI e), a, rfl, hS, IWGrow.refl _, rfl, he, rfl⟩
   · have hl : al.toNat ≠ 0 := fun h0 => hal (UInt64.toNat_inj.mp (by simpa using h0))
     have ht := rec2DecB_HL_top hd hl
-    obtain ⟨x, a', hrun, hS', hg, hout⟩ := instW_ok n dn fe vis m m' a ao al e args r h hS he hd0
+    obtain ⟨x, a', hrun, hS', hg, hout⟩ := instW_ok n (fun _ => none) fe vis m m' a ao al e args r h hS he hd0
       (hS.lt64 ht) ht
     exact ⟨x, a', hrun, hS', hg, hout⟩
 
@@ -76,17 +76,17 @@ section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 theorem mjtW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 fo fl : Word) (I : NIdx) (U : LsIdx)
-    (ds ifs : List EIdx) (hS : StageR dn vis fe m a) (hI : ind.toNat < 2 ^ 32 ∧ decI ind = I)
+    (ds ifs : List EIdx) (hS : StageR vis fe m a) (hI : ind.toNat < 2 ^ 32 ∧ decI ind = I)
     (hU : lvls.toNat < 2 ^ 32 ∧ decI lvls = U)
     (hds : DecB (fun m => (decHL m ds0.toNat dl0.toNat : Option (List EIdx))) m ds)
     (hifs : decHL m fo.toNat fl.toNat = some ifs) (hfb : fo.toNat + fl.toNat ≤ iwTop m) :
-    RSim (mjtW n m ind lvls ds0 dl0 fo fl) (rec2MajTail I U ds ifs) a (KP dn vis fe m decOLE) := by
+    RSim (mjtW n m ind lvls ds0 dl0 fo fl) (rec2MajTail I U ds ifs) a (KP vis fe m decOLE) := by
   rcases n with _ | n
   · exact RSim.none
   rw [mjtW.arm1]
   obtain ⟨hI1, rfl⟩ := hI
   obtain ⟨hU1, rfl⟩ := hU
-  refine RSim.bind (K := mjtW.k_intern_const n ds0 dl0 fo fl) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧
+  refine RSim.bind (K := mjtW.k_intern_const n ds0 dl0 fo fl) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧
     IWGrow m b.2 ∧ x = decE b.1) ?_ ?_
   · rintro ⟨hd, m1⟩ h1
     obtain ⟨a', hrun, hS', hg⟩ := internConst_stage hS ind lvls hI1 hU1 h1
@@ -103,7 +103,7 @@ theorem mjtW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 fo fl : Word
     (by rw [decHL_grow hg1 hfb]; exact hifs) (Nat.le_trans hfb hg1.iw)
   rw [mjtW.k_sl_append.arm1]
   refine RSim.bind (K := mjtW.k_mk_app_n_f fo fl) rfl
-    ((mknF_ok dn vis fe hd (r2.headD 0) (r2.tail.headD 0) hH (ds ++ ifs)).sim ⟨hS2, hd2⟩) ?_
+    ((mknF_ok vis fe hd (r2.headD 0) (r2.tail.headD 0) hH (ds ++ ifs)).sim ⟨hS2, hd2⟩) ?_
   rintro ⟨r3, m3⟩ maj a3 - ⟨hS3, hg3, hmaj⟩
   rw [mjtW.k_mk_app_n_f.arm1]
   have hg := hg1.trans (hg2.trans hg3)
@@ -122,12 +122,12 @@ theorem mjtW_afr {n : Nat} {m m' : Mem} {ind lvls ds0 dl0 fo fl : Word} {r : Lis
   afr_auto h [ceinternW_afr, appendW_afr, mknF_afr]
 
 theorem mjoW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 nIdx ty d : Word) (I : NIdx) (U : LsIdx)
-    (ds : List EIdx) (hS : StageR dn vis fe m a) (hI : ind.toNat < 2 ^ 32 ∧ decI ind = I)
+    (ds : List EIdx) (hS : StageR vis fe m a) (hI : ind.toNat < 2 ^ 32 ∧ decI ind = I)
     (hU : lvls.toNat < 2 ^ 32 ∧ decI lvls = U)
     (hds : DecB (fun m => (decHL m ds0.toNat dl0.toNat : Option (List EIdx))) m ds) (hty : H ty)
     (hA : AbsOK m) :
     RSim (mjoW n m ind lvls ds0 dl0 nIdx ty d) (rec2MajOpen I U ds nIdx.toNat (decI ty) d.toNat) a
-      (fun b a' x => KP dn vis fe m decOLE b a' x ∧ AbsOK b.2) := by
+      (fun b a' x => KP vis fe m decOLE b a' x ∧ AbsOK b.2) := by
   rcases n with _ | n
   · exact RSim.none
   rw [mjoW.arm1]
@@ -153,10 +153,10 @@ theorem mjoW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 nIdx ty d : 
 end sims
 
 theorem mjW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
-    (a : AState) (g c d : Word) (G : ClassGen) (hS : StageR dn vis fe m a)
+    (a : AState) (g c d : Word) (G : ClassGen) (hS : StageR vis fe m a)
     (hG : DecB (fun m => decCG m g.toNat) m G) (hA : AbsOK m) :
     RSim (mjW n m g c d) (ConRon.Arena.ClassGen.major G c.toNat d.toNat) a
-      (fun b a' x => KP dn vis fe m decOLE b a' x ∧ AbsOK b.2) := by
+      (fun b a' x => KP vis fe m decOLE b a' x ∧ AbsOK b.2) := by
   rcases n with _ | n
   · exact RSim.none
   rw [mjW.arm1, rec2Major_eq]
@@ -216,7 +216,7 @@ theorem mjW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   · rw [mjW.k_inst_pis_with.arm1 (hc1 := ho3)]; exact RSim.pure_some ⟨⟨hS3, hg1.trans (hg2.trans hg3), rfl⟩, hA3⟩
   obtain ⟨h31, htyH, htyd⟩ := ho3
   rw [mjW.k_inst_pis_with.arm2 (hc1 := by rw [h31]; decide)]
-  have hm := mjoW_sim (dn := dn) (vis := vis) (fe := fe) n m3 a3 vi vl _ _ (UInt64.ofNat tm.nIdx)
+  have hm := mjoW_sim (vis := vis) (fe := fe) n m3 a3 vi vl _ _ (UInt64.ofNat tm.nIdx)
     (r3.tail.headD 0) d tm.ind tm.lvls tm.ds hS3 ⟨hvi, dvi⟩ ⟨hvl, dvl⟩ (hds2.grow (OMono.decHL _ _) hg3) htyH hA3
   rw [tn, htyd] at hm
   refine RSim.bindPure (K := mjW.k_class_gen_major_open) rfl hm ?_
@@ -238,10 +238,10 @@ theorem rec2MapM_classBinder : ∀ xs : List EIdx, xs.mapM ConRon.Arena.classBin
 
 /-- The decoded result of an `Option EIdx` producer. -/
 theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
-    (a : AState) (g c d : Word) (G : ClassGen) (hS : StageR dn vis fe m a)
+    (a : AState) (g c d : Word) (G : ClassGen) (hS : StageR vis fe m a)
     (hG : DecB (fun m => decCG m g.toNat) m G) (hA : AbsOK m) :
     RSim (motW n m g c d) (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a
-      (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
+      (fun b a' x => KP vis fe m decOE b a' x ∧ AbsOK b.2) := by
   rcases n with _ | n
   · exact RSim.none
   rw [motW.arm1]
@@ -261,7 +261,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   obtain ⟨ve, eve, hve, dve⟩ := iwH_rdW_at (w := g) (k := 11) (by rw [iwH_grow hg1 (show g.toNat + 11 < iwTop m by omega)]; exact hel) hS1.iw.iwSize
   simp only [show UInt64.ofNat 11 = (11 : Word) from rfl] at eve
   rw [eve]
-  refine RSim.bind (K := motW.k_intern_sort n d _ _ _) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧
+  refine RSim.bind (K := motW.k_intern_sort n d _ _ _) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧
     IWGrow m1 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨srt, m2⟩ h2
     obtain ⟨a', hrun, hS', hg⟩ := internSort_stage hS1 ve hve h2
@@ -271,7 +271,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   by_cases hbig : 4294967296 ≤ srt
   · rw [motW.k_intern_sort.abort1 (hc1 := hbig)]; exact RSim.none
   rw [motW.k_intern_sort.arm1 (hc1 := hbig)]
-  refine RSim.bind (K := motW.k_mk_forall n d _ _) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧
+  refine RSim.bind (K := motW.k_mk_forall n d _ _) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧
     IWGrow m2 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨b, m3⟩ h3
     obtain ⟨a', hrun, hS', hg⟩ := mkForall_stage hS2 _ srt h3
@@ -295,7 +295,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rw [motW.k_fvar_type_ds.arm1 (hc1 := hov)]
   have hdl : d.toNat + (r4.tail.headD 0).toNat < 2 ^ 64 := by
     have := nctAddNowrap (a := r4.tail.headD 0) (b := d) (by rwa [UInt64.add_comm]); omega
-  refine RSim.bind (K := motW.k_close_telescope) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m4 b.2 ∧
+  refine RSim.bind (K := motW.k_close_telescope) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m4 b.2 ∧
     decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r5, m5⟩ h5
     obtain ⟨x, a', hrun, hS', hg, hx, hA5⟩ := closeW_ok n dn fe vis m4 m5 a4 _ _ d b bs r5 h5 hS4 hbH hbs

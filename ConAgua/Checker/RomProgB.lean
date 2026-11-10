@@ -81,7 +81,6 @@ import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
@@ -234,5 +233,6 @@ theorem checkerProg_pinProg (bs : List UInt8) : PinProg bs (Prog.subPB bs checke
   iw_alloc := lkN bs (f := "iw_alloc") (by chk_lk) rfl
   er_copy := lkN bs (f := "er_copy") (by chk_lk) rfl
   er_to_iw := lkN bs (f := "er_to_iw") (by chk_lk) rfl
+  erec_put := lkN bs (f := "erec_put") (by chk_lk) rfl
 
 end L.Checker

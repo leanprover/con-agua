@@ -13,6 +13,7 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndParts
+import ConAgua.Arena.Env
 
 @[expose] public section
 
@@ -43,7 +44,7 @@ def recUW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | n + 1, m, ro, rl =>
     if rl = 0 then some ([1], m)
     else recUK1 n ro rl
-      (rrnF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))])
+      (rrnF m [erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))])
 
 /-- After `reserved_rec_name`. -/
 def recUK1 (n : Nat) (ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -61,7 +62,7 @@ section arms
 variable (n : Nat) (m m1 m2 : Mem) (ro rl : Word) (r1 r : List Word)
 theorem recUW_nil (h : rl = 0) : recUW (n + 1) m ro rl = some ([1], m) := by simp [recUW, h]
 theorem recUW_cons (h : rl ≠ 0) : recUW (n + 1) m ro rl = recUK1 n ro rl
-    (rrnF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))]) := by
+    (rrnF m [erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))]) := by
   simp [recUW, h]
 theorem recUK1_hit (h : r1.headD 0 ≠ 0) : recUK1 n ro rl (some (r1, m1)) = some ([0], m1) := by
   simp only [recUK1]; rw [ite_eq_left h]
@@ -96,28 +97,24 @@ theorem blockRecNamesUnreserved_spec (n : Nat) : ∀ (s₀ : St) (ro rl : Word),
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         rrnF_spec p hrrn n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+      finish (gen := 20) [rdW_eq, erRd]
 
 end spec
 
 theorem decCVp_name_p {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv)
     (hb : q < 2 ^ 64) :
-    (rdW (m.arr64 EREC) (UInt64.ofNat q)).toNat < 2 ^ 32 ∧
-      decI (rdW (m.arr64 EREC) (UInt64.ofNat q)) = cv.name := by
+    (erRd m (UInt64.ofNat q)).toNat < 2 ^ 32 ∧
+      decI (erRd m (UInt64.ofNat q)) = cv.name := by
   simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨nm, hnm, lv, -, ty, -, hcv⟩ := h
   have hnm' : nm = cv.name := by rw [← hcv]
-  rcases hw : (erA m)[q]? with _ | w
+  have e : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+  rcases hw : erA m q with _ | w
   · simp [hd?, hw] at hnm
+  have hrd : erRd m (UInt64.ofNat q) = w := erRd_of_erA (by rw [e]; exact hw)
   by_cases hl : w.toNat < 2 ^ 32
   · simp [hd?, hw, hl] at hnm
-    have hrd : rdW (m.arr64 EREC) (UInt64.ofNat q) = w := by
-      have e : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-      simp only [rdW, e]
-      have : (m.arr64 EREC)[q]? = some w := hw
-      rw [this]; rfl
-    rw [hrd]
-    exact ⟨hl, by rw [← hnm', ← hnm]⟩
+    rw [hrd]; exact ⟨hl, by rw [hnm, hnm']⟩
   · simp [hd?, hw, hl] at hnm
 
 theorem decPL_tail {m : Mem} {α : Type} {f : Nat → Option α} {o k : Nat} {x : α} {xs : List α}
@@ -134,17 +131,17 @@ theorem decPL_head {m : Mem} {α : Type} {f : Nat → Option α} {o k : Nat} {x 
   obtain ⟨v, hv, y, hy, ys, -, rfl, -⟩ := h
   exact ⟨v, hv, hy⟩
 
-theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem recUW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m0 m m' : Mem) (a : AState) (ro rl : Word) (r : List Word) (recs : List RecShape),
-    recUW n m ro rl = some (r, m') → IWGrow m0 m → StageR dn vis fe m a →
+    recUW n m ro rl = some (r, m') → IWGrow m0 m → StageR vis fe m a →
     (∀ m'', IWGrow m0 m'' → decPL m'' (decRS m'') ro.toNat rl.toNat = some recs) →
     ro.toNat + rl.toNat < 2 ^ 64 →
     ∃ b a', (ConRon.Arena.blockRecNamesUnreserved recs).run a = .ok (b, a') ∧
-      r = [if b then 1 else 0] ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      r = [if b then 1 else 0] ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   induction n with
-  | zero => intro dn fe vis m0 m m' a ro rl r recs h; simp [recUW] at h
+  | zero => intro _dn fe vis m0 m m' a ro rl r recs h; simp [recUW] at h
   | succ n ih =>
-    intro dn fe vis m0 m m' a ro rl r recs h hg0 hS hdec hb
+    intro _dn fe vis m0 m m' a ro rl r recs h hg0 hS hdec hb
     by_cases hl : rl = 0
     · rw [recUW_nil n m ro rl hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -174,12 +171,12 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
       obtain ⟨hn32, hnI⟩ := decCVp_name_p hcvR hab
       rw [ofNat_toNat_word] at hv'
-      have hrd : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro)) =
-          rdW (m.arr64 EREC) (UInt64.ofNat a0) := by rw [hv', hva']
+      have hrd : erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro)) =
+          erRd m (UInt64.ofNat a0) := by rw [hv', hva']
       rw [hrd] at h
       obtain ⟨r1, m1, hra, h⟩ := ipK_inv h (by simp [recUK1])
       obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
-        rrnF_ok dn vis fe _ hn32 m m1 a r1 hra hS
+        rrnF_ok _dn vis fe _ hn32 m m1 a r1 hra hS
       rw [hnI] at hrun1
       by_cases hhit : r1.headD 0 ≠ 0
       · rw [recUK1_hit n m1 ro rl r1 hhit] at h
@@ -198,7 +195,7 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         have hro1 : (ro + 1).toNat = ro.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
         have hrl1 : (rl - 1).toNat = k := by
           rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp [hk]
-        obtain ⟨b, a2, hrun2, hr2, hS2, hg2⟩ := ih dn fe vis m0 m1 m2 a1 (ro + 1) (rl - 1) r2 rest
+        obtain ⟨b, a2, hrun2, hr2, hS2, hg2⟩ := ih _dn fe vis m0 m1 m2 a1 (ro + 1) (rl - 1) r2 rest
           hrec ((IWGrow.trans (hg0) hg1)) hS1
           (fun m'' hg'' => by
             rw [hro1, hrl1]
@@ -216,14 +213,14 @@ record lies below the pool's top). -/
 theorem blockRecNamesUnreserved_refines (p : Prog)
     (hp : p.lookup "block_rec_names_unreserved" = some blockRecNamesUnreserved) (hrrn : RrnF p)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-    (vis ro rl : Word) (recs : List RecShape) (hS : StageR dn vis fe s₀.mem a₀)
+    (vis ro rl : Word) (recs : List RecShape) (hS : StageR vis fe s₀.mem a₀)
     (hstab : ∀ m'', IWGrow s₀.mem m'' → decPL m'' (decRS m'') ro.toNat rl.toNat = some recs)
     (hb : ro.toNat + rl.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_names_unreserved" [ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.blockRecNamesUnreserved recs) a₀ ∧
       r = [if AM.res (ConRon.Arena.blockRecNamesUnreserved recs) a₀ then 1 else 0] ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockRecNamesUnreserved recs) a₀) ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.blockRecNamesUnreserved recs) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (blockRecNamesUnreserved_spec p hp hrrn n s₀ ro rl) ?_
   rintro r s' ⟨hl, hm⟩
@@ -235,9 +232,9 @@ theorem blockRecNamesUnreserved_refines (p : Prog)
 /-! ## `check_shapeless_formers` -/
 
 /-- A block: an `EREC` slice of constant-record pointers, decoded. -/
-def decEBlk (dn : NIdx → Option ConLeche.Name) (m : Mem) (off cnt : Nat) :
+def decEBlk (_dn : NIdx → Option ConLeche.Name) (m : Mem) (off cnt : Nat) :
     Option (List IConstantInfo) :=
-  (List.range cnt).mapM fun j => do decCI (erA m) dn (← nat? (erA m) (off + j))
+  (List.range cnt).mapM fun j => do decCI (erA m) (← nat? (erA m) (off + j))
 
 /-! ## `block_shape_with_sort` -/
 
@@ -395,7 +392,7 @@ theorem wsWrites_get : WsP m q p s f 9 (wsWrites m q p s f) := by
 end wsget
 
 theorem iwN_congr {m : Mem} {i j : Nat} (h : (m.arr64 IW)[i]? = (m.arr64 IW)[j]?) :
-    iwN m i = iwN m j := by simp only [iwN, nat?, iwA, h]
+    iwN m i = iwN m j := by simp only [iwN, nat?, iwA, aread_apply, h]
 
 theorem decAt_congr {m : Mem} {α : Type} (g : Nat → Nat → Option (List α)) {i j : Nat}
     (h0 : (m.arr64 IW)[i]? = (m.arr64 IW)[j]?) (h1 : (m.arr64 IW)[i + 1]? = (m.arr64 IW)[j + 1]?) :
@@ -422,17 +419,17 @@ theorem decBS_ws {m : Mem} {q p : Nat} {s f : Word} {bs : BlockShape}
   simp only [Option.bind_some]
   rw [iwN_congr c4, h3]
   simp only [Option.bind_some]
-  have e5 : iwH m (q + 5) = (iwH m (p + 5) : Option NIdx) := by simp only [iwH, hd?, iwA, c5]
+  have e5 : iwH m (q + 5) = (iwH m (p + 5) : Option NIdx) := by simp only [iwH, hd?, iwA, aread_apply, c5]
   rw [e5, h4]
   simp only [Option.bind_some]
   have e6 : iwH m (q + 6) = (some (decI s) : Option LIdx) := by
-    simp only [iwH, hd?, iwA, c6]; simp; omega
+    simp only [iwH, hd?, iwA, aread_apply, c6]; simp; omega
   rw [e6]
   simp only [Option.bind_some]
-  have e7 : iwB m (q + 7) = iwB m (p + 7) := by simp only [iwB, bool?, iwA, c7]
+  have e7 : iwB m (q + 7) = iwB m (p + 7) := by simp only [iwB, bool?, iwA, aread_apply, c7]
   rw [e7, h6]
   simp only [Option.bind_some]
-  have e8 : iwB m (q + 8) = some (f != 0) := by simp only [iwB, bool?, iwA, c8]; rfl
+  have e8 : iwB m (q + 8) = some (f != 0) := by simp only [iwB, bool?, iwA, aread_apply, c8]; rfl
   rw [e8]
   rfl
 
@@ -444,17 +441,10 @@ theorem wsWrites_frame (m : Mem) (q p s f : Word) : MemFrame [IW] [] m (wsWrites
     (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)
 
 /-- Writing a fresh record above the top (given the pool's sizes) keeps the stage relation. -/
-theorem stage_frame_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} (hS : StageR dn vis fe m a) (hf : MemFrame [IW] [200] m m')
-    (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR dn vis fe m' a := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨CheckR.frame_iw hf hS.check, by rw [hf.size IW]; exact htop, ?_, ?_, ?_, ?_⟩
-  · simp only [erTop, h129]; rw [hf.size EREC]; exact h2
-  · rw [hf.size IW]; exact h3
-  · rw [hf.size EREC]; exact h4
-  · rw [hf.size CTL]; exact h5
+theorem stage_frame_iw {vis : Word} {fe : IFEnv} {m m' : Mem}
+    {a : AState} (hS : StageR vis fe m a) (hf : MemFrame [IW] [200] m m')
+    (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR vis fe m' a :=
+  ⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw (by rw [hf.size IW]; exact htop)⟩
 
 /-- The flag `withSort` computes from the verdict. -/
 def isPropOf (x : Option Bool) : Bool :=
@@ -472,16 +462,16 @@ theorem lvlEq_prop {m : Mem} {r2 : List Word} {f : Word} {x2 : Option Bool}
   | none => intro hf h; simp only at h; rw [← hf, h]; decide
   | some b => cases b <;> (intro hf h; simp only at h; rw [← hf, h]; decide)
 
-theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem wsC_ok (cR : CallM) (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (p s : Word) (r : List Word) (bs : BlockShape)
-    (h : wsC cR n m p s = some (r, m')) (hS : StageR dn vis fe m a) (hs : s.toNat < 2 ^ 32)
+    (h : wsC cR n m p s = some (r, m')) (hS : StageR vis fe m a) (hs : s.toNat < 2 ^ 32)
     (hstab : ∀ m'', IWGrow m m'' → decBS m'' p.toNat = some bs) (hp : p.toNat + 9 ≤ iwTop m)
     (hlvl : ∀ (k : Nat) (r2 : List Word) (m2 : Mem), pinW m 0 ≠ 0 →
       cR k "lvl_eq_c" [s, pinW m 53] m = some (r2, m2) →
       ∃ x2 a2, (lvlEq? (decI s) (decI (pinW m 53))).run a = .ok (x2, a2) ∧
-        StageR dn vis fe m2 a2 ∧ IWGrow m m2 ∧ decLvlEq m2 r2 x2) :
+        StageR vis fe m2 a2 ∧ IWGrow m m2 ∧ decLvlEq m2 r2 x2) :
     ∃ bs' a' q, (BlockShape.withSort bs (decI s)).run a = .ok (bs', a') ∧ r = [q] ∧
-      decBS m' q.toNat = some bs' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      decBS m' q.toNat = some bs' ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       q.toNat + 9 ≤ iwTop m' ∧
       (∀ j, j < 9 → j ≠ 6 → j ≠ 8 → (m'.arr64 IW)[q.toNat + j]? = (m'.arr64 IW)[p.toNat + j]?) ∧
       (DecB (fun m => decBS m p.toNat) m bs → DecB (fun m => decBS m q.toNat) m' bs') := by
@@ -577,13 +567,13 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
       intro j hj h6 h8
       have e1 := truncM_iw_eq (m := m') (i := q.toNat + j) (by omega)
       have e2 := truncM_iw_eq (m := m') (i := p.toNat + j) (hpT j hj)
-      simp only [iwA] at e1 e2
+      simp only [iwA, aread_apply, aread_apply] at e1 e2
       rw [e1, e2]; exact hcell j hj h6 h8
     have c6T : ((truncM m').arr64 IW)[q.toNat + 6]? = some s := by
-      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 6) (by omega); simp only [iwA] at e1
+      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 6) (by omega); simp only [iwA, aread_apply, aread_apply] at e1
       rw [e1]; exact c6
     have c8T : ((truncM m').arr64 IW)[q.toNat + 8]? = some f := by
-      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 8) (by omega); simp only [iwA] at e1
+      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 8) (by omega); simp only [iwA, aread_apply, aread_apply] at e1
       rw [e1]; exact c8
     show decBS (truncM m') q.toNat = some _
     have := decBS_ws hpd hs (by simpa using cT 0 (by omega) (by omega) (by omega))

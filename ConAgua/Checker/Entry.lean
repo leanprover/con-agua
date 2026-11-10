@@ -75,8 +75,8 @@ def capCond (p : ArrId × Bool) : Cond :=
 def capStep (p : ArrId × Bool) (s : Stmt) : Stmt :=
   .seq (.ite (capCond p) (.abort (.const R_CAP_REGION)) .skip) s
 
-/-- The `CTL`, `DECL`, `DLP` checks, the pool's two tiers (`POOL1` as the tiered access
-`len(POOL⟨1⟩.u64)`), and the return. -/
+/-- The `CTL`, `DECL`, `DLP` checks, the pool's and the record pool's two tiers (tier 1 as the
+tiered access `len(POOL⟨1⟩.u64)`, `len(EREC⟨1⟩.u64)`), and the return. -/
 def capTail : Stmt :=
   .seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) (.abort (.const R_CAP_REGION)) .skip)
     (.seq (.ite (.cmp .eq (.len64 L.Front.DECL) (.const 0)) (.abort (.const R_CAP_REGION)) .skip)
@@ -84,14 +84,17 @@ def capTail : Stmt :=
         (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 POOL)) (.abort (.const R_CAP_REGION)) .skip)
           (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64t POOL (.const 1)))
               (.abort (.const R_CAP_REGION)) .skip)
-            (.ret [.const 0])))))
+            (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 EREC)) (.abort (.const R_CAP_REGION)) .skip)
+              (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64t EREC (.const 1)))
+                  (.abort (.const R_CAP_REGION)) .skip)
+                (.ret [.const 0])))))))
 
 /-- The body of `cap_check()`, a fold over the table's word slots (`capSlots`): every word
 array shorter than `2^62` words (handles, offsets and counts are words; `arenaR_init`'s pool
 bound, the inductive lines' scratch arrays), the slot arrays at least `consMinWords` and below
 `2^61` words long (`slotArrs`), `CTL` at least `ctlMin` words, the declaration arrays `DECL` and
-`DLP` not empty (their word `0` is a count, `StateDR`), and the pool's two tiers below `2^40`
-words (lane tierpool: a tagged address's index has 40 bits). -/
+`DLP` not empty (their word `0` is a count, `StateDR`), and the pool's and the record pool's two
+tiers below `2^40` words (lane tierpool: a tagged address's index has 40 bits). -/
 def capCheckBody : Stmt := capSlots.foldr capStep capTail
 
 /-- `cap_check()`: aborts unless the harness's capacities meet `ArenaR`'s minimums (a capacity
@@ -103,15 +106,17 @@ the checker cannot work with declines; any larger one is fine). -/
 
 `check` reads the global `MODE`, which the entry stubs write (`Compiler/Abi.lean`): `0` (the
 region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
-`check_a(1)`: the stages, phase A and `par_compact` (the frozen buffer in `OUT`,
-`Arena/Freeze.lean`), returning `2^63 + k` for `k` pending groups; `3` (the sequential driver's
+`check_a(1)`: the stages, the stream index and `par_compact` (the frozen buffer in `OUT`,
+`Arena/Freeze.lean`), returning `2^63 + k` for `k` records (jobs); `3` (the sequential driver's
 entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
-`ca_check_seq`, entry 2) is `check_b`: the pending groups `PLO‥PHI-1` over the frozen arrays. -/
+`ca_check_seq`, entry 2) is `check_b`: the jobs `PLO‥PHI-1` over the frozen arrays. -/
 
-/-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
-`c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
--- con-ron: ConRon/Arena/Main.lean:135-167 ConRon.Arena.runPipelineHead
-@[no_expose] def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+/-- `check_a(c)`: `check`'s stages, then the stream index and the frozen buffer (`c ≠ 0`: header
+and images; `c = 0`: the header only); returns `2^63 + k` for the `k` records (`1` if a line did
+not scan). -/
+-- con-ron: ConRon/Arena/Main.lean:137-169 ConRon.Arena.runPipelineHead
+-- con-ron: ConRon/Arena/Checker.lean:97-106 ConRon.Arena.checkStream
+@[no_expose] def checkAL : FunDecl := lfn (c) locals (r, z, cnt) {
   z := call cap_check();
   z := call pb_check();
   z := call presize_tables();
@@ -122,25 +127,28 @@ entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check
   z := call prepare_prelude();
   z := call intern_all_pins();
   cnt := L.Front.DECL.u64[0];
-  v := call install_fold_go(0, cnt, 0);
-  z := call par_compact(v, c);
-  return 9223372036854775808 + CTL.u64[130]
+  z := call build_index(cnt);
+  z := call par_compact(c);
+  return 9223372036854775808 + cnt
 }
 
-/-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
-pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
-B's loop (`check_pending_go`); returns `ACCEPT`. -/
--- con-ron: ConRon/Arena/Phased.lean:33-40 ConRon.Arena.AState.worker
--- con-ron: ConRon/Arena/Pooled.lean:34-47 ConRon.Arena.PooledAccepts
-@[no_expose] def checkBL : FunDecl := lfn () locals (z, n) {
+/-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer; on every call
+the core caches flushed (the worker's empty caches: in place, the index build's level-equality
+entries would remain; between two calls they are empty already, every job ending in
+`scratch_drop`), then the jobs `PLO‥PHI-1` (`PHI` at most the number of records), in order, from
+the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`. -/
+-- con-ron: ConRon/Arena/Checker.lean:64-71 ConRon.Arena.AState.worker
+-- con-ron: ConRon/Arena/Pooled.lean:33-45 ConRon.Arena.PooledAccepts
+@[no_expose, l_impl ConRon.Arena.AState.worker] def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
     n := len(CTLF.u64);
     copy!(CTL.u64, 0, CTLF.u64, 0, n);
     INIT := 1
   };
-  if CTL.u64[130] < PHI { abort };
+  z := call flush_caches();
+  if L.Front.DECL.u64[0] < PHI { abort };
   if PHI < PLO { abort };
-  z := call check_pending_go(PLO, PHI, HDRF.u64[3]);
+  z := call check_jobs(PLO, PHI);
   return 71757147230292
 }
 
@@ -181,55 +189,25 @@ Lane `induct`'s callers pass the walk fuel first (`abstract1_fast(fuel, e, d, k)
   return r
 }
 
-/-! ## `basis_pin_hit(off, len)` -/
-
-/-- `basis_pin_hit(off, len)` → `(ok, kind)`: `basisPinHit block` for the block `check_decl` built
-(`ind_block_to_erec`: an `EREC` slice of `EREC` constant records) — the kinds `eqK`, `natK`,
-`emptyK`, `falseK` (`0`‥`3`) in order, each pinned block interned first (`rom_basis_decls(kind)`, an
-`IW` slice); the first kind whose member names equal the block's (the name pre-filter; a constant
-record's name is its word `1`, `decCI`) decides by `canon_eq_list` (over `IW` slices: the block is
-copied there, `er_to_iw`); no such kind is `(0, 0)`. -/
--- con-ron: ConRon/Arena/Basis.lean:58-74 ConRon.Arena.basisPinHitGo
--- con-ron: ConRon/Arena/Basis.lean:76-84 ConRon.Arena.basisPinHit
-@[no_expose, l_impl ConRon.Arena.basisPinHit]
-def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
-  k := 0;
-  while k < 4 {
-    (o, l) := call rom_basis_decls(k);
-    if l == bl {
-      j := 0;
-      for j < l { if EREC.u64[IW.u64[o + j] + 1] != EREC.u64[EREC.u64[bo + j] + 1] { break } };
-      if j == l {
-        (q, ql) := call er_to_iw(bo, bl);
-        e := call canon_eq_list(q, ql, o, l);
-        if e != 0 { return (1, k) };
-        return (0, 0)
-      }
-    };
-    k += 1
-  };
-  return (0, 0)
-}
-
 /-! ## `ind_params_ok(nP, off, len)` -/
 
 /-- `ind_params_ok(nP, off, len)`: `indParamsOk nP block` over the block's `EREC` slice of
 constant records (`decCI`: an `indInfo` is `3, name, lps.off, lps.len, type, …`, a `ctorInfo`
 `4, name, lps.off, lps.len, type, nP, nF`): a type former's telescope to a sort has at least `nP`
 binders (no such telescope: fine), a constructor declares exactly `nP` parameters. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:330-343 ConRon.Arena.indParamsOk
+-- con-ron: ConRon/Arena/CheckerBase.lean:291-304 ConRon.Arena.indParamsOk
 @[no_expose, l_impl ConRon.Arena.indParamsOk]
 def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;
   for j < l {
-    p := EREC.u64[o + j];
-    k := EREC.u64[p];
+    p := EREC⦃o + j⦄;
+    k := EREC⦃p⦄;
     if k == 3 {
-      (ok, n) := call pi_sort_tele_len(⟪CWF⟫, EREC.u64[p + 4]);
+      (ok, n) := call pi_sort_tele_len(⟪CWF⟫, EREC⦃p + 4⦄);
       if ok != 0 && n < np { return 0 }
     };
     if k == 4 {
-      if EREC.u64[p + 5] != np { return 0 }
+      if EREC⦃p + 5⦄ != np { return 0 }
     }
   };
   return 1
@@ -255,7 +233,7 @@ def entryProg : Prog :=
    ("fz_45", fzF 45), ("fz_46", fzF 46), ("fz_47", fzF 47), ("fz_48", fzF 48), ("fz_49", fzF 49),
    ("fz_50", fzF 50), ("fz_51", fzF 51), ("fz_52", fzF 52), ("fz_53", fzF 53), ("fz_54", fzF 54),
    ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57), ("fz_58", fzF 58),
-   ("fz_59", fzF 59), ("fz_60", fzF 60),
+   ("fz_59", fzF 59), ("fz_60", fzF 60), ("fz_61", fzF 61), ("fz_62", fzF 62), ("fz_63", fzF 63),
    ("cap_check", capCheckL),
    -- the parse's large cons tables sized from the input length (`Checker/Presize.lean`)
    ("presize_tables", presizeTablesL), ("pow2_at_least", pow2AtLeastL),
@@ -266,7 +244,6 @@ def entryProg : Prog :=
    ("intern_all_pins", L.Rom.internAllPinsPB),
    ("abstract1_fast", abstract1FastA), ("instantiate1_fast", instantiate1FastA),
    ("inst1", inst1A),
-   ("basis_pin_hit", basisPinHitL),
    ("ind_params_ok", indParamsOkL)]
 
 end L.Checker

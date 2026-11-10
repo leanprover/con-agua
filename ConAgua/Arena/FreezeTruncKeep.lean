@@ -101,23 +101,14 @@ theorem KeepNF.lpMemos (h : LPMemos m) : LPMemos m' :=
     let ⟨mp, hm⟩ := h.lpls; ⟨mp, hk.memoRV (by decide) (fun _ _ h => h) hm⟩⟩
 
 theorem KeepNF.coreMemos (h : CoreMemos m) : CoreMemos m' := by
-  obtain ⟨⟨mp1, h1⟩, ⟨mp2, h2⟩, ⟨mp3, h3⟩, ⟨mp4, h4⟩, ⟨mp5, h5⟩, h6⟩ := h
+  obtain ⟨⟨mp1, h1⟩, ⟨mp2, h2⟩, ⟨⟨mp3, h3⟩, ⟨mp4, h4⟩, ⟨mp5, h5⟩, h6⟩, ⟨mp7, h7⟩⟩ := h
   exact ⟨⟨mp1, hk.memoRG (by decide) h1⟩, ⟨mp2, hk.memoRG (by decide) h2⟩,
-    ⟨mp3, hk.memoRG (by decide) h3⟩, ⟨mp4, hk.memoRG (by decide) h4⟩,
-    ⟨mp5, hk.memoRG (by decide) h5⟩, hk.lpMemos h6⟩
+    ⟨⟨mp3, hk.memoRG (by decide) h3⟩, ⟨mp4, hk.memoRG (by decide) h4⟩,
+    ⟨mp5, hk.memoRG (by decide) h5⟩, hk.lpMemos h6⟩, ⟨mp7, hk.memoRV (by decide) (fun _ _ h => h) h7⟩⟩
 
 theorem KeepNF.crOK (h : L.Stubs.CrOK m) : L.Stubs.CrOK m' := by
   obtain ⟨memo, h⟩ := h
   exact ⟨memo, hk.memoRV (by decide) (fun _ _ h => h) h⟩
-
-theorem KeepNF.pmemoR {pm : PMemo} (h : PMemoR m pm) : PMemoR m' pm :=
-  ⟨hk.memoRV (by decide) (fun _ _ h => h) h.n, hk.memoRV (by decide) (fun _ _ h => h) h.l,
-    hk.memoRV (by decide) (fun _ _ h => h) h.ls, hk.memoRV (by decide) (fun _ _ h => h) h.e⟩
-
-theorem KeepNF.declsF {ds : Array IDeclaration}
-    (h : L.Front.DeclsF (m.arr64 L.Front.DECL) (m.arr64 L.Front.DLP) ds) :
-    L.Front.DeclsF (m'.arr64 L.Front.DECL) (m'.arr64 L.Front.DLP) ds := by
-  rw [hk.arr _ (by decide), hk.arr _ (by decide)]; exact h
 
 end groups
 

@@ -46,7 +46,6 @@ theorem viewLsLen_specE (p : Prog) (hl : p.lookup "ls_node" = some lsNode)
 structure NtyLook (p : Prog) : Prop where
   hi1 : I1Prog p
   ha : p.lookup "iw_alloc" = some iwAlloc
-  hx : p.lookup "env_ix" = some envIxL
   hg : p.lookup "env_row_get" = some envRowGetL
   hf : p.lookup "env_find" = some envFindL
   hls : p.lookup "ls_node" = some lsNode

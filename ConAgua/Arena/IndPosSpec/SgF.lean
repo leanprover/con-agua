@@ -15,7 +15,6 @@ noncomputable section
 
 set_option experimental.vcgen true
 open ConRon.Arena
-open Std.WP
 open scoped Lean.Order
 
 namespace L.Ind

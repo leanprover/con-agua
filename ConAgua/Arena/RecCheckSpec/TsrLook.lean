@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.RecCheckSpec.ArfW
 public import ConAgua.Arena.RecCheckSpec.RcLook
-public import ConAgua.Arena.IndReal
 
 @[expose] public section
 
@@ -33,14 +32,13 @@ structure TsrLook (p : Prog) : Prop where
   ea : p.lookup "erec_alloc" = some erecAlloc
   srg : p.lookup "sum_rules_go" = some sumRulesGoL
   sr : p.lookup "sum_rules" = some sumRulesL
-  rrb : RrbF p
   efg : p.lookup "er_from_iw_go" = some erFromIwGo
   ef : p.lookup "er_from_iw" = some erFromIw
   ic : p.lookup "iw_copy" = some iwCopy
   sc : p.lookup "sl_cons" = some slCons
-  trn : p.lookup "tgt_rule_nested" = some tgtRuleNested
-  tsrm : p.lookup "tgt_stored_rules_remap" = some tgtStoredRulesRemap
-  tsr : p.lookup "tgt_stored_rules" = some tgtStoredRules
+  trn : p.lookup "generated_rule_nested" = some generatedRuleNested
+  tsrm : p.lookup "generated_rules_remap" = some generatedRulesRemap
+  tsr : p.lookup "generated_rules" = some generatedRules
 
 end L.Ind
 

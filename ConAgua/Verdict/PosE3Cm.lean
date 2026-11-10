@@ -242,7 +242,7 @@ l_model ncrE_spec (p : Prog) (hL : CtLook p)
   specs [cvLps_spec p hL.ha hL.hc hL.he hL.hcv n, slNodup_spec p hL.hsc hL.hnd n,
     callW_spec p n "inst_lp_fast", nestCrest_spec' p hL.cr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model noE_spec (p : Prog) (hf : p.lookup "nest_ctors_one" = some nestCtorsOneL)

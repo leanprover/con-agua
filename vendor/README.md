@@ -42,6 +42,15 @@ Bumps since (DESIGN.md has the details):
   taking upstream and re-applying the same three toolchain patterns (`try replace … :=
   AM.pure_bind_ok …`, `dsimp +instances only [IFEnv.restrictTo]` after the `restrictTo` simp).
 
+* 2026-11-08: con-ron `97eead2d` → `01ecb31c`, con-leche `0d2f467b` → `210a580e` (con-ron
+  tasks #139–#148, con-leche tasks #366–#491: the install phase goes, stored recursors checked
+  against generated ones, the `eager` flag, the `.olean` reader, key-free cons tables).
+  `con-leche/0001` lost its `Verify/Cached/ParInstall.lean` hunk (file gone); `0002`/`0003`
+  re-made at the new signatures (`eager` beside `mode`); `con-ron/0002` re-made over the new
+  `Bridge` (upstream no longer needs its `Checker/{Arms,Hyp,Split}` hunks; new sites in
+  `Inductives/{StreamRecs,Positivity}`, `Frontend/Olean/{Closure,MergeAll}`, the `split at h`
+  pattern of the new `do` elaborator).
+
 Patches at the first vendoring:
 
 | patch | what |
@@ -340,23 +349,28 @@ why this tier never built there either):
    `Frontend/Lines.lean` (four `forIn_sim` relations retyped `MProd`→`Prod`,
    one conjunct pair re-ordered so the destructuring names stay put);
    `replace z := AM.pure_bind_ok z` → `try replace …` where the bind is gone
-   (`Checker/{Arms,Base,Basis,DeclVal,Split}.lean`,
-   `Inductives/{BlockInstall,BlockTail,GenRec,StructInstall,SumInstall}.lean`;
+   (`Checker/{Base,Basis,DeclVal}.lean`,
+   `Inductives/{BlockInstall,BlockTail,GenRec,StreamRecs,StructInstall,SumInstall}.lean`;
    only the lines that fail were changed, checked one by one), and
    `obtain ⟨_, s, k, z⟩ := AM.bind_ok z'; obtain ⟨-, …⟩ := AM.pure_ok k` →
-   `have z := z'` (`Inductives/{SumInstall,RecCheck,GenRec}.lean`);
-   `Frontend/Chunks.lean`'s `simp only [pure_bind] at hrun` → `try …` (three).
+   `have z := z'` (`Inductives/{SumInstall,RecCheck,GenRec,Positivity,BlockTail}.lean`,
+   `Frontend/Olean/Closure.lean`);
+   `simp only [pure_bind] at h` → `try …` (`Frontend/Chunks.lean`, three;
+   `Frontend/Olean/{MergeAll,Closure}.lean`). Since con-ron 01ecb31c, `split at h`
+   also fails ("Failed to find match-expression discriminants") on the matches the new
+   elaborator makes of `let some x := e | return none`: `Frontend/Olean/Closure.lean`'s
+   `lazyEntry_run` cases on each `e` instead (`rcases hx : e with _ | x`, then
+   `simp only [hx] at h`), same hypothesis names.
 3. **`simp`/`dsimp` no longer rewrite instance arguments** (new
    `Simp.Config.instances := false`): after `simp only [f]`, an `ite`'s
    `Decidable` instance still mentions the folded `f`, so a later
    `generalize`/`cases h : …`/`split`/`rw [ite_eq_left …]` sees an ill-typed
    motive, and `simp` leaves goals `X = X` that differ only in an instance.
    Fixes: an extra `dsimp +instances only [same lemmas]` (`Core/Walks/{PropRead,
-   Stuck,IotaMajor}.lean`, `Checker/Split.lean`, `Frontend/Prepare.lean`), a
-   trailing `rfl` (`Core/Walks/PropRead.lean`, `Checker/Hyp.lean`,
+   Stuck,IotaMajor}.lean`, `Frontend/Prepare.lean`), a
+   trailing `rfl` (`Core/Walks/PropRead.lean`,
    `Inductives/RecCheck.lean`), `rw` → `exact` (`Inductives/PosWalks.lean`),
-   `simp only [ite_eq_left h]` → `simp only [h', ite_true]`
-   (`Inductives/Rel.lean`), a re-proof of `unfoldDefinition_eq` that decides
+   a re-proof of `unfoldDefinition_eq` that decides
    the `if` before unfolding (`Core/Walks/Spine.lean`, 25 lines), and
    `dsimp only` before `vcgen` for two nested `{ s with caches := { … with … } }`
    posts whose `let __src` `vcgen` will not zeta (`Core/Memo.lean`, the same

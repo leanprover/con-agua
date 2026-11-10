@@ -63,7 +63,7 @@ theorem pw_fold (m : Mem) (pi j : Word) : rdW (m.arr64 IW) (pi + j) = pw m pi j 
 
 def PinRecAt (m : Mem) (pi : Word) : Prop :=
   pinW m 0 ≠ 0 ∧ pi.toNat + 21 ≤ iwTop m ∧
-    ∀ j (hj : j < 21), (iwA m)[pi.toNat + j]? = some ((pinRecW m)[j]'(by simp [pinRecW]; omega))
+    ∀ j (hj : j < 21), iwA m (pi.toNat + j) = some ((pinRecW m)[j]'(by simp [pinRecW]; omega))
 
 /-- The twin's prefix of `natOpEquations`: the terms the dispatch is over. -/
 def natEqCtxT (d : Nat) : AM (EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EIdx × EIdx) := do
@@ -92,7 +92,7 @@ def NatCtxR (m : Mem) (r : List Word) (c : EIdx × EIdx × EIdx × NIdx × EIdx 
   ∃ wx wy wz wn wsx wsy wt wf : Word, c = (decE wx, decE wy, decE wz, decI wn, decE wsx, decE wsy,
       decE wt, decE wf) ∧ H wx ∧ H wy ∧ H wz ∧ H wn ∧ H wsx ∧ H wsy ∧ H wt ∧ H wf ∧
     (r.headD 0).toNat + 8 ≤ iwTop m ∧ ∀ (j : Nat) (hj : j < 8),
-      (iwA m)[(r.headD 0).toNat + j]? = some ([wx, wy, wz, wn, wsx, wsy, wt, wf][j])
+      iwA m ((r.headD 0).toNat + j) = some ([wx, wy, wz, wn, wsx, wsy, wt, wf][j])
 
 theorem pw_of_rec {m m' : Mem} {pi : Word} (hP : PinRecAt m pi) (hI : IWOK m) (hg : IWGrow m m')
     (j : Nat) (hj : j < 21) : pw m' pi (UInt64.ofNat j) = (pinRecW m)[j]'(by simp [pinRecW]; omega) := by
@@ -103,14 +103,14 @@ theorem pw_of_rec {m m' : Mem} {pi : Word} (hP : PinRecAt m pi) (hI : IWOK m) (h
     rw [UInt64.toNat_add, hj64]; have := hI.iw; omega
   have h1 := hget j hj
   simp only [pw, rdW, hadd]
-  simp only [iwA] at h1
+  simp only [iwA, aread_apply] at h1
   rw [hg.iwGet _ (by omega), h1]
   simp
 
 theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
     CallRef p "nat_eq_ctx" [pi, d]
-      (fun m a => StageR dn vis fe m a ∧ PinRecAt m pi ∧ H d)
-      (natEqCtxT d.toNat) (KeepPost dn vis fe NatCtxR) := by
+      (fun m a => StageR vis fe m a ∧ PinRecAt m pi ∧ H d)
+      (natEqCtxT d.toNat) (KeepPost vis fe NatCtxR) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hP, hd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natEqCtxW p (k + 1) mm pi d) (natEqCtx_specW p hN.lNatEqCtx (k + 1) · pi d) hc
   rw [natEqCtxW.arm1] at hw; simp only [pw_fold] at hw
@@ -127,15 +127,15 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
   have e19 : ∀ m2, IWGrow m m2 → pw m2 pi 19 = pinW m 32 := fun m2 hg => pwr m2 hg 19 (by decide)
   rw [e15 m (IWGrow.refl m)] at hw
   replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ := constE_ref (vis := vis) (fe := fe)
     hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg.toMasterProg (pinW m 2) k m a r1 m1 ⟨hS, hnames 1 (by decide)⟩ h1
   have hp1 : a1.pins = a.pins := (keepsP_constE _).run hrun1
   replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hl2, hx2⟩ := internFVar_ref (dn := dn) (vis := vis) (fe := fe)
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hl2, hx2⟩ := internFVar_ref (vis := vis) (fe := fe)
     hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg.toMasterProg d (r1.headD 0) hl1 k m1 a1 r2 m2 hS1 h2
   have hp2 : a2.pins = a1.pins := (keepsP_internE _).run hrun2
   replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hl3, hx3⟩ := internFVar_ref (dn := dn) (vis := vis) (fe := fe)
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hl3, hx3⟩ := internFVar_ref (vis := vis) (fe := fe)
     hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg.toMasterProg (d + 1) (r1.headD 0) hl1 k m2 a2 r3 m3 hS2 h3
   have hp3 : a3.pins = a2.pins := (keepsP_internE _).run hrun3
   have g1 : IWGrow m m1 := hg1
@@ -143,30 +143,30 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
   have g3 : IWGrow m m3 := g2.trans hg3
   rw [e16 m3 g3] at hw
   replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
-  obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
+  obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := constE_ref (vis := vis) (fe := fe)
     hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg.toMasterProg (pinW m 3) k m3 a3 r4 m4 ⟨hS3, hnames 2 (by decide)⟩ h4
   have hp4 : a4.pins = a3.pins := (keepsP_constE _).run hrun4
   have g4 : IWGrow m m4 := g3.trans hg4
   rw [e17 m4 g4] at hw
   replace hw := ntBW_some hw; obtain ⟨r5, m5, h5, hw⟩ := hw
-  obtain ⟨x5, a5, hrun5, hS5, hg5, hl5, hx5⟩ := natAp1_ref (dn := dn) (vis := vis) (fe := fe)
+  obtain ⟨x5, a5, hrun5, hS5, hg5, hl5, hx5⟩ := natAp1_ref (vis := vis) (fe := fe)
     (hN.toNatSubProg.toNatEqProg) (pinW m 4) (r2.headD 0) k m4 a4 r5 m5 ⟨hS4, hnames 3 (by decide), hl2⟩ h5
   have hp5 : a5.pins = a4.pins := (keepsP_natAp1 _ _).run hrun5
   have g5 : IWGrow m m5 := g4.trans hg5
   replace hw := ntBW_some hw; obtain ⟨r6, m6, h6, hw⟩ := hw
-  obtain ⟨x6, a6, hrun6, hS6, hg6, hl6, hx6⟩ := natAp1_ref (dn := dn) (vis := vis) (fe := fe)
+  obtain ⟨x6, a6, hrun6, hS6, hg6, hl6, hx6⟩ := natAp1_ref (vis := vis) (fe := fe)
     (hN.toNatSubProg.toNatEqProg) (pinW m 4) (r3.headD 0) k m5 a5 r6 m6 ⟨hS5, hnames 3 (by decide), hl3⟩ h6
   have hp6 : a6.pins = a5.pins := (keepsP_natAp1 _ _).run hrun6
   have g6 : IWGrow m m6 := g5.trans hg6
   rw [e18 m6 g6] at hw
   replace hw := ntBW_some hw; obtain ⟨r7, m7, h7, hw⟩ := hw
-  obtain ⟨x7, a7, hrun7, hS7, hg7, hl7, hx7⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
+  obtain ⟨x7, a7, hrun7, hS7, hg7, hl7, hx7⟩ := constE_ref (vis := vis) (fe := fe)
     hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg.toMasterProg (pinW m 31) k m6 a6 r7 m7 ⟨hS6, hnames 30 (by decide)⟩ h7
   have hp7 : a7.pins = a6.pins := (keepsP_constE _).run hrun7
   have g7 : IWGrow m m7 := g6.trans hg7
   rw [e19 m7 g7] at hw
   replace hw := ntBW_some hw; obtain ⟨r8, m8, h8, hw⟩ := hw
-  obtain ⟨x8, a8, hrun8, hS8, hg8, hl8, hx8⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
+  obtain ⟨x8, a8, hrun8, hS8, hg8, hl8, hx8⟩ := constE_ref (vis := vis) (fe := fe)
     hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg.toMasterProg (pinW m 32) k m7 a7 r8 m8 ⟨hS7, hnames 31 (by decide)⟩ h8
   have hp8 : a8.pins = a7.pins := (keepsP_constE _).run hrun8
   have g8 : IWGrow m m8 := g7.trans hg8
@@ -232,7 +232,7 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
     · subst hx2 hx3 hx4 hx5 hx6 hx7 hx8; rfl
     · simp only [List.headD_cons]; rw [hq', htop']; simp
     · intro j hj
-      simp only [List.headD_cons, hq', iwA]
+      simp only [List.headD_cons, hq', iwA, aread_apply]
       have := hget j (by simpa using hj)
       rw [this]
       have hj8 : j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5 ∨ j = 6 ∨ j = 7 := by omega
@@ -292,22 +292,22 @@ theorem Sim.iteH {β α : Type} {c q : Word} {e1 e2 : Option (β × Mem)} {o1 o2
 
 /-- A last callee returning an equation list, as the pair `(o, l)`. -/
 theorem CallRef.simPairE {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
-    {op : AM (List (EIdx × EIdx))} (h : CallRef p f args pre op (KeepPost dn vis fe decEqRL)) {n : Nat}
+    {op : AM (List (EIdx × EIdx))} (h : CallRef p f args pre op (KeepPost vis fe decEqRL)) {n : Nat}
     {m : Mem} {a : AState} (hp : pre m a) :
     Sim (ntBW (callW p n f args m) fun r m' => some ([r.headD 0, r.tail.headD 0], m')) op a
-      (fun r x m' a' => KeepPost dn vis fe decEqRL m m' a' r x) :=
+      (fun r x m' a' => KeepPost vis fe decEqRL m m' a' r x) :=
   Sim.ntRet (h.sim hp) fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decEqRL_norm h3⟩
 
 theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z sN sx sy bT bF : Word) :
     CallRef p "nat_eq_disp" [c, pi, cx]
-      (fun m a => StageR dn vis fe m a ∧ H c ∧ H p0 ∧ H p1 ∧ H p2 ∧ H p3 ∧ H p4 ∧ H p5 ∧ H p6 ∧
+      (fun m a => StageR vis fe m a ∧ H c ∧ H p0 ∧ H p1 ∧ H p2 ∧ H p3 ∧ H p4 ∧ H p5 ∧ H p6 ∧
         H x ∧ H y ∧ H z ∧ H sN ∧ H sx ∧ H sy ∧ H bT ∧ H bF ∧
         pw m pi 0 = p0 ∧ pw m pi 1 = p1 ∧ pw m pi 2 = p2 ∧ pw m pi 3 = p3 ∧ pw m pi 4 = p4 ∧
         pw m pi 5 = p5 ∧ pw m pi 6 = p6 ∧ pw m cx 0 = x ∧ pw m cx 1 = y ∧ pw m cx 2 = z ∧
         pw m cx 3 = sN ∧ pw m cx 4 = sx ∧ pw m cx 5 = sy ∧ pw m cx 6 = bT ∧ pw m cx 7 = bF)
       (natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
         (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF))
-      (KeepPost dn vis fe decEqRL) := by
+      (KeepPost vis fe decEqRL) := by
   refine CallRef.of_sim (M := fun k mm => natEqDispW p k mm c pi cx)
     (fun k s₀ => natEqDisp_specW p hN.lNatEqDisp k s₀ c pi cx) fun k m a ⟨hS, hc, h0, h1, h2, h3, h4, h5, h6,
       hx, hy, hz, hsN, hsx, hsy, hbT, hbF, e0, e1, e2, e3, e4, e5, e6, f0, f1, f2, f3, f4, f5, f6, f7⟩ => ?_
@@ -374,19 +374,19 @@ theorem pinRecW_pins {m m1 : Mem} (h : m1.arr64 PINS = m.arr64 PINS) : pinRecW m
   simp only [pinRecW, pinW, h]
 
 theorem pw_of_get {m : Mem} {cx w : Word} {j : Nat} (hI : IWOK m) (hcx : cx.toNat + 8 ≤ iwTop m)
-    (hj : j < 8) (h : (iwA m)[cx.toNat + j]? = some w) : pw m cx (UInt64.ofNat j) = w := by
+    (hj : j < 8) (h : iwA m (cx.toNat + j) = some w) : pw m cx (UInt64.ofNat j) = w := by
   have hsz := hI.iwSize
   have hj64 : (UInt64.ofNat j).toNat = j := UInt64.toNat_ofNat_of_lt' (show j < UInt64.size by unfold UInt64.size; omega)
   have hadd : (cx + UInt64.ofNat j).toNat = cx.toNat + j := by
     rw [UInt64.toNat_add, hj64]; have := hI.iw; omega
   simp only [pw, rdW, hadd]
-  simp only [iwA] at h
+  simp only [iwA, aread_apply] at h
   rw [h]; rfl
 
 theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
     CallRef p "nat_op_equations" [d, c]
-      (fun m a => StageR dn vis fe m a ∧ H d ∧ H c)
-      (natOpEquations d.toNat (decI c)) (KeepPost dn vis fe decEqRL) := by
+      (fun m a => StageR vis fe m a ∧ H d ∧ H c)
+      (natOpEquations d.toNat (decI c)) (KeepPost vis fe decEqRL) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hd, hc⟩ hw => ?_
   have hw := callW_model (M := fun mm => natOpEquationsW p (k + 1) mm d c) (natOpEquations_specW p hN.toNatSubProg.toNatEqProg.lNatOpEquations (k + 1) · d c) hw
   rw [natOpEquationsW.arm1] at hw
@@ -403,7 +403,7 @@ theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
     · have := hrec.2.2.2.1; rw [hpi]; simp [pinRecW] at this ⊢; omega
     · intro j hj
       have := hrec.2.2.2.2 j (by simp [pinRecW]; omega)
-      simp only [iwA, hpi]
+      simp only [iwA, aread_apply, hpi]
       rw [this]
       have hv := pinRecW_pins hpins
       simp [hv, List.getElem?_eq_getElem (show j < (pinRecW m).length by simp [pinRecW]; omega)]
@@ -450,8 +450,8 @@ theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
 
 @[refines ConRon.Arena.natOpEquations]
 theorem natOpEquations_refines (hN : NatSubProg' p) (d c : Word) :
-    RefAM p "nat_op_equations" [d, c] (fun m a => StageR dn vis fe m a ∧ H d ∧ H c)
-      (natOpEquations d.toNat (decI c)) (KeepPost dn vis fe decEqRL) :=
+    RefAM p "nat_op_equations" [d, c] (fun m a => StageR vis fe m a ∧ H d ∧ H c)
+      (natOpEquations d.toNat (decI c)) (KeepPost vis fe decEqRL) :=
   (natOpEquations_ref hN d c).refAM
 
 end opeq

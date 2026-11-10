@@ -1,9 +1,7 @@
 module
 
-public import ConAgua.Arena.CheckerT
+public import ConAgua.Arena.DeclCheckT
 public import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.DeclCrpT
-import ConAgua.Arena.StrLitSup
 
 @[expose] public section
 
@@ -33,46 +31,36 @@ section arms
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
 
 /-- **`check_decl_thm`'s error claim under `StageT`** (`cdt_ref`'s error half). -/
-theorem checkDeclThm_errT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
-    (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p)
-    (hUL : UceLookups p) (hivE : IvgE p)
-    (hp : p.lookup "check_decl_thm" = some checkDeclThm) (cv : IConstantVal) (v : EIdx) :
+theorem checkDeclThm_errT {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p)
+    (hcl : LeafClosed p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p)
+    (hC : CcvSims p dn) (hG : VerdictCtxU p) (cv : IConstantVal) (v : EIdx) :
     ArmSpecE pins dn ds p "check_decl_thm" (.thmDecl cv v) := by
-  unfold ArmSpecE
-  intro n hn m a vis fe pend i hi hd _ hR hS hF hden _ hCr e hc
+  intro n hn m a vis fe i hi hd _ hR hS hF hden _ hIM e hc
   have hd' : ds[i.toNat] = .thmDecl cv v := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨env, hF⟩ := hF
   obtain ⟨x, hx⟩ := hden
   simp only [Frontend.denoteDecl] at hx
-  split at hx
-  rotate_left
-  · cases hx
-  rename_i c e' hcd he
-  exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclThm_specE p hV hp n _ i vis) hnv
-    ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitSupported_core p hq.knot.str⟩⟩, hivE⟩
-    (cdt_ref (pins := pins) hV hq hap hkp hn hS hR.decls hi hd' hF hcd hCr) hc
+  obtain ⟨c, hcd⟩ : ∃ c, Frontend.denoteCV a.store cv = some c := by
+    revert hx; cases Frontend.denoteCV a.store cv <;> simp
+  exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclThm_specE p hX n _ i vis) hG.nv hG
+    (cdt_ref (pins := pins) hX hq hcl hap hkp hcrf hC hn hS hR.decls hi hd' hcd hF hIM.cr) hc
 
 /-- **`check_decl_opaque`'s error claim under `StageT`** (`cdo_ref`'s error half). -/
-theorem checkDeclOpaque_errT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg p)
-    (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p) (hUL : UceLookups p)
-    (hivE : IvgE p) (hdn : DnInj dn)
-    (hp : p.lookup "check_decl_opaque" = some checkDeclOpaque) (cv : IConstantVal) (v : EIdx) :
+theorem checkDeclOpaque_errT {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p)
+    (hcl : LeafClosed p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L.Ind.CrfF p)
+    (hC : CcvSims p dn) (hG : VerdictCtxU p) (cv : IConstantVal) (v : EIdx) :
     ArmSpecE pins dn ds p "check_decl_opaque" (.opaqueDecl cv v) := by
-  intro n hn m a vis fe pend i hi hd _ hR hS hF hden _ hCr e hc
+  intro n hn m a vis fe i hi hd _ hR hS hF hden _ hIM e hc
   have hd' : ds[i.toNat] = .opaqueDecl cv v := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨env, hF⟩ := hF
-  obtain ⟨x, hx⟩ := hden
-  simp only [Frontend.denoteDecl] at hx
-  split at hx
-  rotate_left
-  · cases hx
-  rename_i c e' hcd he
-  exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclOpaque_specE p hp n _ i vis) trivial
-    ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitSupported_core p hq.knot.str⟩⟩, hivE⟩
-    (cdo_ref hV hC hq hcl hlc hap hkp hdn n hn hS hR.decls hi hd' hF hcd he hCr) hc
+  obtain ⟨y, hy⟩ := hden
+  simp only [Frontend.denoteDecl] at hy
+  obtain ⟨c, hcd⟩ : ∃ c, Frontend.denoteCV a.store cv = some c := by
+    revert hy; cases Frontend.denoteCV a.store cv <;> simp
+  obtain ⟨x, hx⟩ : ∃ x, denoteE a.store v = some x := by
+    revert hy; rw [hcd]; cases denoteE a.store v <;> simp
+  exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclOpaque_specE p hX n _ i vis) hG.nv hG
+    (cdo_ref (pins := pins) hX hq hcl hap hkp hcrf hC hn hS hR.decls hi hd' hcd hx hF hIM.cr) hc
 
 end arms
 

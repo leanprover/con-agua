@@ -7,6 +7,7 @@ import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Arena.IndPosSpec.Pos2RdGrow
 import ConAgua.Checker.NoVerdictTree
+import ConAgua.Arena.IndPosSpec.CfW
 
 @[expose] public section
 

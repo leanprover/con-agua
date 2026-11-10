@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Verdict.IndBTka
-import ConAgua.Arena.IndT.RecGen19
 public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.DomsW
@@ -63,6 +62,17 @@ l_model tkE_spec (p : Prog) (hL : K53Look p)
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+/-- **`StageC` across a twin step con-ron calls a `CoreStep`**, the memory's half from `AbsOK`
+after (the inductive area's `StageC.of_cstep`, at the new `CoreStep`). -/
+theorem StageC.of_cstepE {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {env : ConLeche.Env} {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
+    (hS : StageR vis fe m' a') (hA : AbsOK m') (hs : ConRon.Bridge.CoreStep env fe a a') :
+    StageC dn vis fe env m' a' :=
+  ⟨hS, hs.ok,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, hA.coreMemos,
+      fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
+    hA.wk.2.2.2.2⟩
+
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -93,7 +103,7 @@ theorem tkh_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl 
   rw [tkhE.arm1]
   unfold tkHeads
   -- `get_app_fn_f` of the leaf and of the major's domain
-  refine RefE.bindSim (fun _ => rfl) (fun r m' h => gafF_ok dn vis fe CWF leafW hl m m' a r h hS)
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => gafF_ok vis fe CWF leafW hl m m' a r h hS)
     fun rl _ m1 a1 h1 run1 ⟨hS1, hg1, hlhH, hlhD⟩ => ?_
   obtain rfl : _ = decE (rl.headD 0) := hlhD.symm
   dsimp only [tkhE.k_get_app_fn_f]
@@ -102,7 +112,7 @@ theorem tkh_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl 
   obtain ⟨e1, hlh⟩ := ConRon.Bridge.Inductives.getAppFn_run hC.check.state hlwP run1
   subst a1
   have hC1 := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
-  refine RefE.bindSim (fun _ => rfl) (fun r m' h => gafF_ok dn vis fe CWF majDom hmj m1 m' a r h hS1)
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => gafF_ok vis fe CWF majDom hmj m1 m' a r h hS1)
     fun rm _ m2 a2 h2 run2 ⟨hS2, hg2, hmhH, hmhD⟩ => ?_
   obtain rfl : _ = decE (rm.headD 0) := hmhD.symm
   have hP2 := hP1.fr (MFr.ofGafF h2)
@@ -222,7 +232,7 @@ theorem tk_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl M
   rw [tkE.arm1, tk53_eq]
   -- `strip_pis`
   rw [htl.len]
-  refine RefE.bindSim (fun _ => rfl) (fun r m' h => stripF_pis_ok dn vis fe tel f hf m m' a r h hS)
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => stripF_pis_ok vis fe tel f hf m m' a r h hS)
     fun rs o m1 a1 h1 run1 ⟨hS1, hg1, hd1⟩ => ?_
   have hP1 := hP.fr (MFr.ofStripF h1)
   have hA1 := stripF_afr h1 hA
@@ -243,10 +253,10 @@ theorem tk_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl M
   dsimp only
   -- `target_k53_tele`
   refine RefE.bindLift (fun _ => rfl) fun rt m2 h2 => ?_
-  obtain ⟨c1, a2, run2, hc1, hS2, hg2, hP2⟩ := tteW_ok dn fe vis n h2 hS1 (HSl0.of hdl hbl) (htl.grow hg1) hP1
+  obtain ⟨c1, a2, run2, hc1, hS2, hg2, hP2⟩ := tteW_ok fe vis n h2 hS1 (HSl0.of hdl hbl) (htl.grow hg1) hP1
   have hA2 := tteW_afr h2 hA1
   have q2 := tkTele_cstep hC.check htw htlP run2
-  have hC2 := hC1.of_cstep hS2 hA2 q2
+  have hC2 := hC1.of_cstepE hS2 hA2 q2
   have hg12 := hg1.trans hg2
   refine ⟨_, _, run2, ?_⟩
   rw [tkE.k_target_k53_tele.eq_2]

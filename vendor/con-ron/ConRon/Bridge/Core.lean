@@ -15,12 +15,12 @@ steps, one knot induction**:
   `@[spec]` theorems, the `CacheOK` insert lemmas, the **stuck-tag branch**
   (DESIGN `### Task #97-P6-7`'s lever 2, which con-leche's `memoEI` has no
   counterpart for), **the five memo-wrapper steps** and the eager slot's step
-  (`memoDefeqE_step`: the `defeq` wrapper at `mode.toEager` on the eager
+  (`memoDefeqE_step`: the `defeq` wrapper at `eager := true` on the eager
   tower's own memos, swapped in and back out);
 * `Core/Arms/{WhnfCore,Whnf,Infer,InferIO,Defeq*}.lean` — rule 8's
   step-lemma inventory, one per exit of each PURE clause, plus that body's
   `BodySpec` theorem;
-* `Core/Induction.lean` — `knot_spec : ∀ f, KnotSpec mode env fe f`,
+* `Core/Induction.lean` — `knot_spec : ∀ f, KnotSpec eager env fe f`,
   `knot_spec_checkFuel` (what the Checker tier consumes) and the tier's
   `#print axioms` census;
 * `Core/EnsureSort.lean` — **the seventh entry point**, which is not a
@@ -33,8 +33,10 @@ steps, one knot induction**:
   the `defeq` body's cheap tests (`Walks/Guards.lean`), **the fuel merge**
   (`Walks/Mono.lean` — one `…_mono` and one `…Fueled_mono` per knot-calling
   walk of con-leche's `Kernel/Core.lean`), **the projection table**
-  (`Walks/Proj.lean` — `findProjAt`, `IFEnv.findProj?_spec` and
-  `IProjEntry.fireOk_spec` on `Bridge/Rel.lean`'s `denoteProjEntry`) and the
+  (`Walks/Proj.lean` — `findProjAt` and `IFEnv.findProj?_spec` on
+  `Bridge/Rel.lean`'s `denoteProjEntry`), **the walks to a family's sort and
+  the projection guard at use** (`Walks/Former.lean`, `Walks/ProjGuard.lean`)
+  and the
   sixteen statements (`Walks/Owed.lean`).
 
 **This module imports none of them** — the same rule

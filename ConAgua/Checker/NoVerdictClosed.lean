@@ -12,6 +12,16 @@ meta import ConAgua.Arena.LevelIntern
 meta import ConAgua.Arena.LevelSubstLP
 import all Init.Data.Repr
 import all ConAgua.Arena.Abs1
+import all ConAgua.Rom.CIConst
+import all ConAgua.Rom.PinReadSpec
+import all ConAgua.Scan.Line
+import all ConAgua.Arena.WhnfCoreApp
+import all ConAgua.Arena.RomCI
+import all ConAgua.Arena.Prelude
+import all ConAgua.Arena.IndStream
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.CoreWalks
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
@@ -87,7 +97,6 @@ import all ConAgua.Arena.NatSub
 import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass

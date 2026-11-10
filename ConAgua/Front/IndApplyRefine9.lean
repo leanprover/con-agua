@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Front.IndApplyRefine8
-import ConAgua.Front.IndApplyRefine6
 public import ConAgua.Verdict.FrontRecsE
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
@@ -68,7 +67,7 @@ theorem iext_of_heap {m m' : Mem} (h : MemFrame [LH] [192] m m') : IExt m m' := 
 
 l_model viTail_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_tail ↦ viTailE]
-  specs [storeFuel_spec p hL n, viOrder_specE p hL n, kExp_spec p hL n, recs_specE p hL n]
+  specs [storeFuel_spec p hL n, viOrder_specE p hL n, recs_specE p hL n]
   grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -145,7 +144,7 @@ model's ok value is `validateIndD`'s success (`ValidatePost`), its error (of cla
 twin facts `XV`) `validateIndD`'s record verdict. -/
 @[refines ConRon.Arena.Frontend.validateIndD]
 theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
-    (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) (hT : TopOK m)
+    (hD : StateDR m st) (_hok : ConRon.Bridge.StateOK a) (hT : TopOK m)
     {to tn co cn ro rn : Word} {tys : List IndTypeRec} {cts : List IndCtorRec}
     {rcs : List IndRecRec} (hF : IndFR b m to tn co cn ro rn tys cts rcs) (hIFR : topN m IFR < 2 ^ 62)
     (p : Prog) (n : Nat) :
@@ -334,40 +333,18 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
   dsimp only at o1 o2 o3 o4 o5
   have e15 := e14.trans o2
   have hR₅ : ArenaR m₅ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₅ e15.frame a hR
-  -- `kExpected?`
-  rcases h11 : kExpW n m₅ to tn tyt oo fuel with _ | ⟨ke, m₆⟩
-  · rw [liftE_none, viTailE.k_vi_k_expected.none, validateE.k_vi_tail.none]
-    exact fun _ hk => absurd Err.cls_oob hk
-  rw [liftE_some, viTailE.k_vi_k_expected.arm1]
-  obtain ⟨k1, k2, k3⟩ := kExpW_twin hR₅ hok h11
-  have e56 := iext_of_heap k1
-  have e16 := e15.trans e56
-  have hR₆ : ArenaR m₆ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₆ e16.frame a hR
-  have hD₆ : StateDR m₆ st := hD.frame e16.frame (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hIFL56 : m₆.arr64 IFL = m₅.arr64 IFL := k1.1 IFL (by decide) (by decide)
+  have hD₅ : StateDR m₅ st := hD.frame e15.frame (by decide) (by decide) (by decide) (by decide) (by decide)
   -- the words the twin's lists are read from
-  have hTNw : ∀ i, i < tys.length → wd m₆ IFL (tyn.toNat + i) = wd m₁ IFL (tyn.toNat + i) := fun i hi =>
-    ((u2.trans (l2.trans (v2.trans (o2.trans e56)))).keep _ (by omega) (by omega))
-  have hTTw : ∀ i, i < tys.length → wd m₆ IFL (tyt.toNat + i) = wd m₂ IFL (tyt.toNat + i) := fun i hi =>
-    ((l2.trans (v2.trans (o2.trans e56))).keep _ (by omega) (by omega))
-  have hTN : islice (k := .name) m₆ tyn.toNat tn.toNat = islice m₁ tyn.toNat tys.length := by
+  have hTNw : ∀ i, i < tys.length → wd m₅ IFL (tyn.toNat + i) = wd m₁ IFL (tyn.toNat + i) := fun i hi =>
+    ((u2.trans (l2.trans (v2.trans (o2)))).keep _ (by omega) (by omega))
+  have hTTw : ∀ i, i < tys.length → wd m₅ IFL (tyt.toNat + i) = wd m₂ IFL (tyt.toNat + i) := fun i hi =>
+    ((l2.trans (v2.trans (o2))).keep _ (by omega) (by omega))
+  have hTN : islice (k := .name) m₅ tyn.toNat tn.toNat = islice m₁ tyn.toNat tys.length := by
     rw [hTn]; simp only [islice]; apply List.map_congr_left; intro i hi
     simp only [List.mem_range] at hi; rw [hTNw i hi]
-  have hTT : islice (k := .expr) m₆ tyt.toNat tn.toNat = islice m₂ tyt.toNat tys.length := by
+  have hTT : islice (k := .expr) m₅ tyt.toNat tn.toNat = islice m₂ tyt.toNat tys.length := by
     rw [hTn]; simp only [islice]; apply List.map_congr_left; intro i hi
     simp only [List.mem_range] at hi; rw [hTTw i hi]
-  have hke : ke = 0 ∨ ke = 1 ∨ ke = 2 := by
-    by_cases hc : tn = 1 ∧ rdW (m₅.arr64 IFR) (to + 4) = 1
-    · obtain ⟨r, v, -, -, hn, hs⟩ := k3 hc.1 hc.2
-      by_cases hv : ∃ s, v = .sort s
-      · obtain ⟨s, hs'⟩ := hv
-        obtain ⟨L, -, hk⟩ := hs s hs'
-        rw [hk]; split <;> simp
-      · exact .inl (hn (fun s hs' => hv ⟨s, hs'⟩))
-    · exact .inr (.inl (k2 (by
-        rcases Classical.not_and_iff_not_or_not.mp hc with h | h
-        · exact .inl h
-        · exact .inr h)))
   -- the order's facts, per type and position
   have hordf : ∀ i (hi : i < LS.length) c (hc : c < LS[i].length), ∃ k,
       ∃ _ : fpos LS i + c < (ordList m₅ oo.toNat co.toNat cts cts.length).length,
@@ -385,106 +362,25 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     · rw [ordList_get, ← Nat.add_assoc, ptr_rec cts co kk hkk hco _ w1, getElem!_pos cts kk hkk]
     · rw [hnnL i hi c hc, hTNL i hi, ← Nat.add_assoc]
       exact w2
-  -- the type records' first constructor count
-  have hR4 : rdW (m₅.arr64 IFR) (to + 4) = wd m IFR (to.toNat + 4) := by
-    rw [wd_eq, widx2 _ _ (by simp; omega)]; simp only [wd, e15.ifr]; rfl
-  have hc0 : ∀ h0 : 0 < tys.length, (wd m IFR (to.toNat + 4)).toNat = tys[0].ctors.length := fun h0 => by
-    have := (hTy.2.2 0 h0).2.1; simpa using this
-  have hLS0 : ∀ hd, LS = [[hd]] → tys.length = 1 ∧ ∃ h0 : 0 < tys.length, tys[0].ctors.length = 1 := by
-    intro hd hL
-    have h1 : tys.length = 1 := by rw [← hLSl, hL]; rfl
-    refine ⟨h1, by omega, ?_⟩
-    have := congrArg (fun l => l[0]?) l9
-    rw [hL] at this
-    simp only [List.map_cons, List.map_nil, List.getElem?_cons_zero, List.length_cons, List.length_nil,
-      List.getElem?_map, List.getElem?_eq_getElem (show 0 < tys.length by omega), Option.map_some,
-      Option.some.injEq] at this
-    rw [← this]
-  -- the first ordered constructor's pointer
-  have hfirst : ∀ (h0 : 0 < tys.length) (hc : 0 < cntF m₄ to 0), ∃ kk, ∃ hk : kk < cts.length,
-      wd m₅ IFL oo.toNat = co + 10 * UInt64.ofNat kk ∧
-      ∀ hp : 0 < (ordList m₅ oo.toNat co.toNat cts cts.length).length,
-        (ordList m₅ oo.toNat co.toNat cts cts.length)[0] = cts[kk] := by
-    intro h0 hc
-    obtain ⟨kk, w1, w2⟩ := o5 0 (by omega) 0 hc
-    simp only [show psum m₄ to 0 = 0 from rfl, Nat.add_zero] at w1
-    refine ⟨kk, w2.1, w1, fun hp => ?_⟩
-    rw [ordList_get, Nat.add_zero, ptr_rec cts co kk w2.1 hco _ w1]
   -- the facts, for any recursor list whose records pass
   have hV : ∀ R : List IndRecRec, (∀ r ∈ (if (tys.any fun x => x.numNested != 0) = true then [] else R),
       RecOK st a (islice m₁ tyn.toNat tys.length) (islice m₂ tyt.toNat tys.length) np.toNat
-        tys.length (ordList m₅ oo.toNat co.toNat cts cts.length).length (keOf ke) fuel.toNat r) →
+        tys.length (ordList m₅ oo.toNat co.toNat cts cts.length).length fuel.toNat r) →
       VFacts st a tys cts R (islice m₁ tyn.toNat tys.length) (islice m₂ tyt.toNat tys.length) LS
-        (islice m₄ cno.toNat cts.length) fuel.toNat np.toNat (ordList m₅ oo.toNat co.toNat cts cts.length)
-        (keOf ke) := by
+        (islice m₄ cno.toNat cts.length) fuel.toNat np.toNat (ordList m₅ oo.toNat co.toNat cts cts.length) := by
     intro R hrecs
     refine ⟨hsafe, np1, np2, by simpa using t1, by simpa using u1, l1, by simpa using v1, hnd, hflen,
       hfuel.symm, islice_length _ _ _, islice_length _ _ _, hLSl, ordList_length _ _ _ _ _, hordf,
-      ?_, ?_, hrecs⟩
-    · intro hnot
-      by_cases hc : tn = 1 ∧ rdW (m₅.arr64 IFR) (to + 4) = 1
-      · exfalso; apply hnot
-        have h1 : tys.length = 1 := by rw [← hTn, hc.1]; rfl
-        refine ⟨by rw [islice_length]; exact h1, ?_⟩
-        rw [l9]
-        cases htys : tys with
-        | nil => rw [htys] at h1; simp at h1
-        | cons t ts =>
-          cases ts with
-          | cons _ _ => rw [htys] at h1; simp at h1
-          | nil =>
-            have := hc0 (by omega)
-            rw [← hR4, hc.2] at this
-            simp only [htys, List.getElem_cons_zero] at this
-            simp [← this]
-      · have := k2 (by
-          rcases Classical.not_and_iff_not_or_not.mp hc with h | h
-          · exact .inl h
-          · exact .inr h)
-        rw [this]; rfl
-    · intro ty hd c hTT hLS hord
-      obtain ⟨h1, h0, hlen1⟩ := hLS0 hd hLS
-      have htn : tn = 1 := UInt64.toNat_inj.mp (by rw [hTn, h1]; rfl)
-      have h4 : rdW (m₅.arr64 IFR) (to + 4) = 1 := by
-        rw [hR4]; apply UInt64.toNat_inj.mp; rw [hc0 h0, hlen1]; rfl
-      obtain ⟨r, v, hr, hv, hn, hs⟩ := k3 htn h4
-      have hty : ty = decE (rdW (m₅.arr64 IFL) tyt) := by
-        have := congrArg (fun l => l[0]?) hTT
-        simp only [List.getElem?_cons_zero, List.getElem?_eq_getElem (show 0 < (islice (k := .expr) m₂ tyt.toNat tys.length).length by rw [islice_length]; omega),
-          Option.some.injEq, islice_get, Nat.add_zero] at this
-        rw [← this, decE_eq, wd_eq, (l2.trans (v2.trans o2)).keep _ (by omega) (by omega)]
-      obtain ⟨kk, hk, hw, hget⟩ := hfirst h0 (by rw [hcnt 0 h0, hlen1]; decide)
-      have hc' : c = cts[kk] := by
-        have := hget (by rw [hord]; exact Nat.zero_lt_one)
-        simp only [hord, List.getElem_cons_zero] at this
-        exact this
-      refine ⟨r, v, by rw [hty]; exact hr, hv, fun hns => by rw [hn hns]; rfl, fun s hvs => ?_⟩
-      obtain ⟨L, hL, hke'⟩ := hs s hvs
-      refine ⟨L, hL, ?_⟩
-      have hkw : (UInt64.ofNat kk).toNat = kk :=
-        UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
-      have hnf : rdW (m₅.arr64 IFR) (rdW (m₅.arr64 IFL) oo + 4) = wd m IFR (co.toNat + 10 * kk + 4) := by
-        rw [wd_eq (A := IFL), hw, wd_eq, widx _ _ _ _ (by rw [hkw]; simp; omega), hkw]
-        simp only [wd, e15.ifr]; rfl
-      obtain ⟨-, c4, -⟩ := hCt.2.2 kk hk
-      rw [hnf] at hke'
-      rw [hke', hc']
-      by_cases hz : cts[kk].numFields = 0
-      · have hz' : wd m IFR (co.toNat + 10 * kk + 4) = 0 := UInt64.toNat_inj.mp (by rw [c4.1, hz]; rfl)
-        by_cases he : L.isEquiv .zero = some true
-        · simp [hz', he, hz, keOf]
-        · simp [hz', he, hz, keOf]
-      · have hz' : wd m IFR (co.toNat + 10 * kk + 4) ≠ 0 := fun e => hz (by rw [← c4.1, e]; rfl)
-        simp [hz', hz, keOf]
+      hrecs⟩
   -- the recursors
-  have hTy₆ : ListF (TyF b m₆) m₆ 11 to.toNat tys := hTy.ext e16 (fun _ _ x => x.ext e16)
-  have hRc₆ : ListF (RecF b m₆) m₆ 11 ro.toNat rcs := hRc.ext e16 (fun _ _ x => x.ext e16)
-  have hrs := recs_ref (p := p) (n := n) (st := st) hR₆ hD₆ hTy₆ hTn hto hRc₆ hRn hro np3 hke
+  have hTy₅ : ListF (TyF b m₅) m₅ 11 to.toNat tys := hTy.ext e15 (fun _ _ x => x.ext e15)
+  have hRc₅ : ListF (RecF b m₅) m₅ 11 ro.toNat rcs := hRc.ext e15 (fun _ _ x => x.ext e15)
+  have hrs := recs_ref (p := p) (n := n) (st := st) hR₅ hD₅ hTy₅ hTn hto hRc₅ hRn hro np3
     (by have := t3.1; have := t3.2; have := u2.top; have := l2.top; have := v2.top; omega)
     (by have := u3.1; have := u3.2; omega)
     (fun i hi => by rw [hTn] at hi; rw [hTNw i hi]; exact t7 i hi)
-    (to := to) (cn := cn) (ke := ke) (tyn := tyn) (tyt := tyt) (fuel := fuel)
-  rcases h12 : recsE p n m₆ to tn ro rn np cn ke tyn tyt fuel with e12 | ⟨u12, m₇⟩ <;> rw [h12] at hrs
+    (to := to) (cn := cn) (tyn := tyn) (tyt := tyt) (fuel := fuel)
+  rcases h12 : recsE p n m₅ to tn ro rn np cn tyn tyt fuel with e12 | ⟨u12, m₇⟩ <;> rw [h12] at hrs
   · rw [viTailE.k_vi_recs.none, validateE.k_vi_tail.none]
     intro hX hk
     obtain ⟨hc1, hany, hRF⟩ := hrs trivial hk
@@ -498,17 +394,15 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
   dsimp only at hm7
   rw [hm7]
   rw [hTN, hTT, hTn, hCn, ← ordList_length m₅ oo.toNat co.toNat cts cts.length] at hrecs
-  have hsz5 : (m₆.arr64 IFL).size = (m₅.arr64 IFL).size := k1.size IFL
-  have htop56 : topN m₆ IFL = topN m₅ IFL := by simp only [topN, wd, hIFL56]
-  refine ⟨⟨_, validateIndD_ok (hV rcs hrecs), ordList_length _ _ _ _ _, fun p hp => ?_⟩, e16,
-    ⟨by rw [hsz5]; exact o3.1, by rw [hsz5, htop56]; exact o3.2⟩, by simp only [List.headD_cons]; omega,
-    by simp only [List.headD_cons]; rw [htop56, o4, o1]; omega, np3⟩
+  refine ⟨⟨_, validateIndD_ok (hV rcs hrecs), ordList_length _ _ _ _ _, fun p hp => ?_⟩, e15,
+    ⟨o3.1, o3.2⟩, by simp only [List.headD_cons]; omega,
+    by simp only [List.headD_cons]; rw [o4, o1]; omega, np3⟩
   rw [ordList_length] at hp
   obtain ⟨i, c, hi, hc, hpe⟩ := flat_pos LS p (by rw [hflen]; exact hp)
   have hcn' : c < cntF m₄ to i := by rw [hcntL i hi]; exact hc
   obtain ⟨kk, w1, w2⟩ := o5 i (by omega) c hcn'
   rw [hps4 i (by omega), Nat.add_assoc, hpe] at w1
-  refine ⟨kk, w2.1, by simp only [wd, hIFL56, List.headD_cons] at w1 ⊢; exact w1, ?_⟩
+  refine ⟨kk, w2.1, by simp only [wd, List.headD_cons] at w1 ⊢; exact w1, ?_⟩
   rw [ordList_get, ptr_rec cts co kk w2.1 hco _ w1]
 
 end L.Front.Ind

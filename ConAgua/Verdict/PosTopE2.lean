@@ -35,7 +35,7 @@ open L.Arena
 the invariant. -/
 structure NuPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (J : Mem → AState → Prop)
     (m m' : Mem) (a' : AState) : Prop where
-  stage : StageR dn vis fe m' a'
+  stage : StageR vis fe m' a'
   grow : IWGrow m m'
   pos : PosMR m'
   inv : J m' a'
@@ -46,15 +46,15 @@ theorem nu_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (hJI : ∀ (m : Mem) (a : AState) (cv : Word) (cvv : IConstantVal), J m a → Pcv cvv →
       decCV (erecP m) cv.toNat = some cvv → ∀ (k' : Nat) (m1 : Mem) (a1 : AState) (r1 : List Word) (b : Bool),
       pdoW (k' + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
-        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (rdW (m.arr64 EREC) (cv + 3)) = some (r1, m1) →
+        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + 3)) = some (r1, m1) →
       (ConRon.Arena.piDomsOcc c.names c.nP (c.hiAt 0) c.nP cvv.type).run a = .ok (b, a1) →
-      StageR dn vis fe m1 a1 → IlpRd (realCall p) dn vis fe (IlpBase m1 a1))
+      StageR vis fe m1 a1 → IlpRd (realCall p) dn vis fe (IlpBase m1 a1))
     (hJnu : ∀ (k : Nat) (m m' : Mem) (a a' : AState) (cv : Word) (cvv : IConstantVal) (r : List Word) (x : Bool),
       J m a → Pcv cvv → nuWf (realCall p) k m ctx cv = some (r, m') →
-      (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') → StageR dn vis fe m' a' → (NuAfr → AFr m m') →
+      (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') → StageR vis fe m' a' → (NuAfr → AFr m m') →
       J m' a') (k : Nat) :
     ∀ {m : Mem} {a : AState} {off l : Word} {css : List (List (IConstantVal × Nat))},
-    StageR dn vis fe m a → J m a → (∀ cs ∈ css, ∀ x ∈ cs, Pcv x.1) →
+    StageR vis fe m a → J m a → (∀ cs ∈ css, ∀ x ∈ cs, Pcv x.1) →
     UCtx dn vis fe m ctx c → l.toNat = css.length → CssAt m off.toNat css → PosMR m →
     RefE (closedNV p _root_.L.Checker.nvFns = true) (nuE p k m ctx off l) (ConRon.Arena.nestUniform c css) a
       (fun v _ a' => NuPost dn vis fe J m v.2 a') := by

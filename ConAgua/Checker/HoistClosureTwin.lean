@@ -9,7 +9,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 /-!
 # The twin's worklist closure, characterised (lane `front4`)
 
-`hoistClosure ds idx i fuel target stack` pops a record, skips it when it is done, marks it `i` and
+`hoistClosure used ds idx i fuel target stack` pops a record, skips it when it is done, marks it `i` and
 pushes the records its constants are first declared at after `i` (`pushOne`). Here: for any set
 `N` of records that is **closed** (each successor of a member is a member or already marked in the
 initial map `T₀`) and whose members' constants the twin computes (`usedConsts` succeeds, in the
@@ -26,7 +26,7 @@ open ConRon.Arena ConRon.Arena.Frontend
 
 namespace L.Checker.HoistTwin
 
-variable (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat) (i : Nat)
+variable (used : IDeclaration → AM (Array NIdx)) (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat) (i : Nat)
 
 /-- `m` is a successor of `k` (constants `D k`): `pushOne`'s filter. -/
 def Succ (D : Nat → List NIdx) (k m : Nat) : Prop := ∃ n ∈ D k, idx[n]? = some m ∧ i < m ∧ m ≠ k
@@ -154,13 +154,13 @@ theorem run_bind {α β : Type} (x : AM α) (f : α → AM β) (a : AState) :
 theorem closure_twin (a : AState) (D : Nat → List NIdx) (N : Nat → Prop) (T₀ : Std.HashMap Nat Nat)
     (hT₀ : ∀ (k t : Nat), T₀[k]? = some t → t ≤ i)
     (hN : ∀ k : Nat, N k → T₀[k]? = none ∧ ∃ h : k < ds.size,
-      (IDeclaration.usedConsts ds[k]).run a = .ok ((D k).toArray, a))
+      (used ds[k]).run a = .ok ((D k).toArray, a))
     (hcl : ∀ k : Nat, N k → ∀ m : Nat, Succ idx i D k m → N m ∨ (T₀[m]?).isSome) :
     ∀ (fuel : Nat) (T : Std.HashMap Nat Nat) (S : List Nat),
       Ext i T₀ N T → (∀ x ∈ S, N x ∨ (T[x]?).isSome) →
       (∀ k : Nat, N k → (T[k]?).isSome → ∀ m : Nat, Succ idx i D k m → (T[m]?).isSome ∨ m ∈ S) →
       pend ds N T ≤ fuel →
-      ∃ T', (hoistClosure ds idx i fuel T S).run a = .ok (T', a) ∧ Ext i T₀ N T' ∧
+      ∃ T', (hoistClosure used ds idx i fuel T S).run a = .ok (T', a) ∧ Ext i T₀ N T' ∧
         (∀ x ∈ S, (T'[x]?).isSome) ∧
         (∀ k : Nat, N k → (T'[k]?).isSome → ∀ m : Nat, Succ idx i D k m → (T'[m]?).isSome) ∧
         (∀ k : Nat, (T[k]?).isSome → T'[k]? = T[k]?) := by
@@ -246,7 +246,7 @@ theorem closure_twin (a : AState) (D : Nat → List NIdx) (N : Nat → Prop) (T�
       obtain ⟨-, hks, hrun⟩ := hN k hNk
       have hrest : ∀ x ∈ rest, x ∈ S := fun x hx =>
         hoistDropDone_sub T i (by rw [hd]; exact List.mem_cons_of_mem _ hx)
-      have hpush : (hoistClosure.pushDeps ds idx i k rest).run a =
+      have hpush : (hoistClosure.pushDeps used ds idx i k rest).run a =
           .ok (hoistClosure.pushOne idx i k (D k) rest, a) := by
         unfold hoistClosure.pushDeps
         rw [dite_eq_left hks, run_bind, hrun]
@@ -329,16 +329,16 @@ through members. -/
 theorem closure_exact (a : AState) (D : Nat → List NIdx) (N : Nat → Prop) (T₀ : Std.HashMap Nat Nat)
     (j : Nat) (hT₀ : ∀ (k t : Nat), T₀[k]? = some t → t ≤ i)
     (hN : ∀ k : Nat, N k → T₀[k]? = none ∧ ∃ h : k < ds.size,
-      (IDeclaration.usedConsts ds[k]).run a = .ok ((D k).toArray, a))
+      (used ds[k]).run a = .ok ((D k).toArray, a))
     (hcl : ∀ k : Nat, N k → ∀ m : Nat, Succ idx i D k m → N m ∨ (T₀[m]?).isSome)
     (hj : N j ∨ (T₀[j]?).isSome) (hR : ∀ k : Nat, N k → ReachIn idx i D N j k) :
-    ∃ T', (hoistClosure ds idx i ds.size T₀ [j]).run a = .ok (T', a) ∧
+    ∃ T', (hoistClosure used ds idx i ds.size T₀ [j]).run a = .ok (T', a) ∧
       ∀ k : Nat, T'[k]? = if N k then some i else T₀[k]? := by
   classical
   have hp : pend ds N T₀ ≤ ds.size := by
     unfold pend
     exact Nat.le_trans (List.length_filter_le _ _) (by simp)
-  obtain ⟨T', hrun, hE, hS, hC, -⟩ := closure_twin ds idx i a D N T₀ hT₀ hN hcl ds.size T₀ [j]
+  obtain ⟨T', hrun, hE, hS, hC, -⟩ := closure_twin used ds idx i a D N T₀ hT₀ hN hcl ds.size T₀ [j]
     (fun k => Or.inl rfl)
     (by intro x hx; simp at hx; subst hx; exact hj)
     (by

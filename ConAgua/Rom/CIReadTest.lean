@@ -1,43 +1,31 @@
 module
 
 public import ConAgua.Compiler.WF
-public import ConAgua.Rom.CIRead
-public import ConAgua.Arena.DeclRomStubs
+public import ConAgua.Checker.Prog
+public import ConAgua.Rom.CIReadSpec
 public import ConAgua.Rom.PinStream
-meta import ConAgua.Rom.CIRead
-meta import ConAgua.Arena.DeclRomStubs
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Rom.CIReadSpec
+meta import ConAgua.Arena.DeclBasisSpec
 meta import ConAgua.Rom.PinStream
-public import ConAgua.Arena.PromoteProg
-public import ConAgua.Arena.RomPins
 
 @[expose] public section
 
 /-!
-# The ROM stubs' readers against the twin (lane `integrate`)
+# The ROM constant readers against the twin (lane `integrate`)
 
 A test, not a proof: the L interpreter runs `pb_check`, `intern_reserved_pins` and
-`intern_all_pins` on a memory whose byte array `PB` holds `pinBuffer []`, then every entry of
-`romCIProg` (`rom_basis_decls(k)`, `rom_basis_decls_a(k)` for `k < 5`, `rom_ci(id)` for `id < 8`,
-`rom_cv(id)` for `id < 10`, `rom_expr_pin(id)` for `id < 2`, `rom_and_pin()`), each from the memory after the
-startup; the twin runs `internReservedPins`, `internAllPins []` and the same interns. The records
-must decode (`decCI`, `decCV`, `basisDec`) to the twin's values, handle for handle; the program
-the readers reach passes the compiler's static check.
+`intern_all_pins` of the checker's program on a memory whose byte array `PB` holds
+`pinBuffer []`, then every ROM constant reader (`rom_basis_decls(k)` for `k < 5`, `rom_ci(id)` for
+`id < 7`, `rom_cv(id)` for `id < 10`, `rom_expr_pin(id)` for `id < 2`, `rom_and_pin()`), each from
+the memory after the startup; the twin runs `internReservedPins`, `internAllPins []` and the same
+interns. The records must decode (`decCI`, `decCV`, `basisDec`) to the twin's values, handle for
+handle; the program the readers reach passes the compiler's static check.
 -/
 
 open L L.Rom L.Arena ConRon.Arena
 
 namespace L.Rom.CITest
-
-/-- The functions the test calls: the readers, the pin-data readers, the store's interners. -/
-def pool : Prog :=
-  romCIProg ++ romProgPB ++
-  [("intern_reserved_pins", internReservedPinsL), ("rom_names_to", romNamesTo),
-   ("rom_levels", romLevels), ("rom_lvls_go", romLvlsGo), ("stk_push", stkPush), ("stk_pool", stkPool),
-   ("rom_ex_leaf", romExLeaf), ("rom_ex_ref", romExRef), ("rom_ex_one", romExOne),
-   ("rom_ex_two", romExTwo), ("memo_get", memoGet)] ++
-  L.Ind.libFns ++ promoteProg ++ liftProg ++ litProg ++ appProg ++ bvarProg ++ constProg ++
-  forallProg ++ fvarProg ++ lamProg ++ letProg ++ lsProg ++ nanonProg ++ nstrProg ++ nnumProg ++
-  projProg ++ sortProg ++ succProg ++ zeroProg ++ maxProg ++ imaxProg ++ paramProg
 
 /-- The calls of a statement. -/
 def callees : Stmt → List String
@@ -46,19 +34,20 @@ def callees : Stmt → List String
   | .call _ f _ => [f]
   | _ => []
 
-/-- The program reachable from `todo` (first binding wins), and the names with no binding. -/
+/-- The program reachable from `todo` in the checker's program (first binding wins), and the
+names with no binding. -/
 partial def closure (todo : List String) (acc : Prog) (miss : List String) : Prog × List String :=
   match todo with
   | [] => (acc.reverse, miss)
   | f :: rest =>
     if acc.any (·.1 == f) || miss.contains f then closure rest acc miss
-    else match pool.lookup f with
+    else match L.Checker.checkerProg.lookup f with
       | some fd => closure (callees fd.body ++ rest) ((f, fd) :: acc) miss
       | none => closure rest acc (f :: miss)
 
 /-- The readers' entries. -/
 def roots : List String :=
-  ["rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "rom_expr_pin", "rom_and_pin"]
+  ["rom_basis_decls", "rom_ci", "rom_cv", "rom_expr_pin", "rom_and_pin"]
 
 /-- The program: the startup stages and the readers, with every callee. -/
 def prog : Prog × List String :=
@@ -95,7 +84,7 @@ def callL (m : Mem) (f : String) (w : Word) : Except String (List Word × Mem) :
   | .ok r => pure r
   | .error e => throw s!"{f}({w}): {repr e}"
 
-/-- The twin's value of a stub call and the state after. -/
+/-- The twin's value of a reader's call. -/
 def twin {α : Type} (a : AState) (x : AM α) : Except String α :=
   match x.run a with
   | .ok (v, _) => pure v
@@ -112,14 +101,10 @@ def checks : Except String (List String) := do
     let v ← twin a (BasisKind.decls (L.Ind.basisOfW k))
     if L.Arena.basisDec dn (r.headD 0).toNat (r.tail.headD 0).toNat m' != some v then
       bad := bad ++ [s!"rom_basis_decls({k})"]
-    let (r, m') ← callL m "rom_basis_decls_a" (UInt64.ofNat k)
-    let v ← twin a (BasisKind.declsA (L.Ind.basisOfW k))
-    if L.Arena.basisDec dn (r.headD 0).toNat (r.tail.headD 0).toNat m' != some v then
-      bad := bad ++ [s!"rom_basis_decls_a({k})"]
-  for i in List.range 8 do
+  for i in List.range 7 do
     let (r, m') ← callL m "rom_ci" (UInt64.ofNat i)
     let v ← twin a (L.Ind.romCiT i)
-    if decCI (L.Ind.erA m') dn (r.headD 0).toNat != some v then bad := bad ++ [s!"rom_ci({i})"]
+    if decCI (L.Ind.erA m') (r.headD 0).toNat != some v then bad := bad ++ [s!"rom_ci({i})"]
   for i in List.range 10 do
     let (r, m') ← callL m "rom_cv" (UInt64.ofNat i)
     let v ← twin a (L.Ind.romCvT i)
@@ -137,6 +122,8 @@ def checks : Except String (List String) := do
   pure bad
 
 -- The checks pass.
+/-- info: romCIProg: every record decodes to the twin's value -/
+#guard_msgs in
 #eval show IO Unit from do
   match checks with
   | .ok [] => IO.println "romCIProg: every record decodes to the twin's value"

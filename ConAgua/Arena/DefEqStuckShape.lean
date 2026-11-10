@@ -31,38 +31,31 @@ namespace L.Arena
 /-! ## Shared helpers -/
 
 /-- **A run of `env_find`**: the memory unchanged, the twin's `find?` decoded, a hit decodes. -/
-theorem envFind_callW {p : Prog} (hp : WhnfCoreProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
-    {m m' : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR dn m vis fe) {k : Word} (hk : HW k)
+theorem envFind_callW {p : Prog} (hp : WhnfCoreProg p) {n : Nat}
+    {m m' : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR m vis fe) {k : Word} (hk : HW k)
     {r : List Word} (hc : callW p n "env_find" [k, vis] m = some (r, m')) :
-    m' = m ∧ fe.find? (decI k) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
-      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) := by
-  obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_refines p hp.envix hp.envrow hp.envfind n ⟨m, Locals.init []⟩ vis k hE hk) hc
-  obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_found p hp.envix hp.envrow hp.envfind n ⟨m, Locals.init []⟩ vis k hk) hc
-  refine ⟨by rw [← ht₂]; exact hm₂, hfind, fun h0 => ?_⟩
-  obtain ⟨htag, hrow, hq⟩ := hfound h0
-  obtain ⟨ci, hci⟩ := hE.found_some k hk htag hrow
-  exact ⟨ci, by rw [hq]; exact hci⟩
+    m' = m ∧ fe.find? (decI k) = envFound m (r.headD 0) (r.tail.headD 0) ∧
+      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
+  obtain ⟨s', hs', h1, -, h3⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envFind_refines p hp.envrow hp.baserow hp.envfind n _ vis k hE hk) hc
+  exact ⟨hs'.symm.trans h1, h3⟩
 
 /-- A found record decodes to the twin's constant. -/
-theorem find_of_found {dn : NIdx → Option ConLeche.Name} {m : Mem} {fe : IFEnv} {k : Word}
-    {r : List Word} (hfind : fe.find? (decI k) = decFound dn m (r.headD 0) (r.tail.headD 0))
+theorem find_of_found {m : Mem} {fe : IFEnv} {k : Word}
+    {r : List Word} (hfind : fe.find? (decI k) = envFound m (r.headD 0) (r.tail.headD 0))
     (h0 : r.headD 0 ≠ 0) {ci : IConstantInfo}
-    (hci : decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) : fe.find? (decI k) = some ci := by
-  rw [hfind]; simp only [decFound, h0, ↓reduceIte]; exact hci
+    (hci : decCI (erecP m) (r.tail.headD 0).toNat = some ci) : fe.find? (decI k) = some ci := by
+  rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
 
 /-- **A constructor record's counts**: kind word `4`, parameters at `q + 5`, fields at `q + 6`. -/
-theorem decCI_ctorF {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
-    (hsz : b.size < 2 ^ 63) :
-    (rdW b q = 4 → ∃ cv, ci = .ctorInfo cv (rdW b (q + 5)).toNat (rdW b (q + 6)).toNat) ∧
-    (rdW b q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
-  cases hq : a[q.toNat]? with
+theorem decCI_ctorF {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
+    (rd q = 4 → ∃ cv, ci = .ctorInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat) ∧
+    (rd q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+  cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
-  have hrd : rdW b q = w := by
-    have := rdW_ext hab hsz (k := 0) (by decide) (by simpa using hq); simpa using this
+  have hrd : rd q = w := hR.rd _ _ hq
   rw [hrd]
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
   constructor
@@ -70,8 +63,8 @@ theorem decCI_ctorF {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
     simp only [show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff, Option.map_eq_some_iff] at h
     obtain ⟨cv, hcv, np, ⟨w5, hw5, rfl⟩, nf, ⟨w6, hw6, rfl⟩, hc⟩ := h
     cases hc
-    have h5 : rdW b (q + 5) = w5 := rdW_ext hab hsz (k := 5) (by decide) hw5
-    have h6 : rdW b (q + 6) = w6 := rdW_ext hab hsz (k := 6) (by decide) hw6
+    have h5 : rd (q + 5) = w5 := hR.offN (k := 5) (hk := by decide) hw5
+    have h6 : rd (q + 6) = w6 := hR.offN (k := 6) (hk := by decide) hw6
     exact ⟨cv, by rw [h5, h6]⟩
   · intro hw cv np nf hc
     subst hc
@@ -134,10 +127,10 @@ def ecsK3 (top q : Word) (res : Option (List Word × Mem)) : Option (Word × Mem
   | none => none
   | some (r, m) =>
     if (136 : Word).toNat < (m.arr64 CTL).size then
-      if r.tail.headD 0 < rdW ((m.set64 CTL 136 top).arr64 EREC) (q + 6) then
+      if r.tail.headD 0 < erRdT (m.set64 CTL 136 top) (q + 6) then
         some (0, m.set64 CTL 136 top)
-      else some (if r.tail.headD 0 - rdW ((m.set64 CTL 136 top).arr64 EREC) (q + 6) =
-          rdW ((m.set64 CTL 136 top).arr64 EREC) (q + 5) then 1 else 0, m.set64 CTL 136 top)
+      else some (if r.tail.headD 0 - erRdT (m.set64 CTL 136 top) (q + 6) =
+          erRdT (m.set64 CTL 136 top) (q + 5) then 1 else 0, m.set64 CTL 136 top)
     else none
 
 /-- After `env_find`: a constructor record, then the arguments. -/
@@ -146,7 +139,7 @@ def ecsK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, m)
-    else if rdW (m.arr64 EREC) (r.tail.headD 0) ≠ 4 then some (0, m)
+    else if erRdT m (r.tail.headD 0) ≠ 4 then some (0, m)
     else ecsK3 (rdW (m.arr64 CTL) 136) (r.tail.headD 0) (callW p n "get_app_args" [a] m)
 
 /-- **The model of `eta_ctor_shape`** past `get_app_fn`'s run. -/
@@ -168,10 +161,10 @@ theorem etaCtorShape_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (v
       some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hq.etaCtorShape]
   simp only [callFn, etaCtorShapeL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, ld64_rdT_spec, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args"] <;>
-  simp_all [ecsK1, ecsK2, ecsK3, tierW, idxW, LocEq, BinOp.eval,
+  simp_all [ecsK1, ecsK2, ecsK3, erRdT, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, EREC, Cmp.eval, Cmp.evalW,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ, size_set64, TieredArray.t0]
@@ -271,13 +264,13 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
   simp only [ecsK2] at hW
   by_cases h0 : r₂.headD 0 = 0
   · simp only [h0, ↓reduceIte] at hW
-    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     exact hres 0 hW hw0 _ (etaCtorShape_run_other fe _ a₀ _ _ _ hgaf hct hv
       (fun cv np nf e => by rw [hnone] at e; cases e)) rfl
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
-  have hctor := decCI_ctorF hci (erecP_ext _) hS.erec
-  rcases (Classical.em (rdW (s.mem.arr64 EREC) (r₂.tail.headD 0) = 4)).symm with h4 | h4
+  have hctor := decCI_ctorF (erRdOK _) hci
+  rcases (Classical.em (erRdT s.mem (r₂.tail.headD 0) = 4)).symm with h4 | h4
   · simp only [h0, h4, ne_eq, not_false_eq_true, ↓reduceIte] at hW
     exact hres 0 hW hw0 _ (etaCtorShape_run_other fe _ a₀ _ _ _ hgaf hct hv
       (fun cv np nf e => hctor.2 h4 cv np nf (by rw [hfind'] at e; exact Option.some.inj e))) rfl
@@ -292,17 +285,20 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     · simp only [h, ↓reduceIte] at hW; cases hW
   simp only [h136, ↓reduceIte] at hW
   obtain ⟨hS', hK'⟩ := hS.restoreTop hf3 hg3 h136
-  have herec : ((m₃.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)).arr64 EREC) = s.mem.arr64 EREC := by
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-    exact hf3.1 EREC (by simp [EREC, SPN]) (by decide)
+  have herec : erRdT (m₃.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)) = erRdT s.mem := by
+    funext x
+    exact erRdT_congr
+      (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hf3.1 EREC (by simp [EREC, SPN]) (by decide))
+      (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+          exact hf3.1 (tier1 EREC) (by simp [EREC, SPN, tier1]) (by decide)) x
   rw [herec] at hW
   have hrun := etaCtorShape_run_ctor fe _ a₀ _ _ _ hgaf hct hv cv _ _ (by rw [hfind', hci_eq]) xs
     hargs
   have hlen : xs.length = (r₃.tail.headD 0).toNat := by
     have := hsp.size; simpa using this
-  have hW' : some ((if r₃.tail.headD 0 < rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 6) then (0 : Word)
-      else if r₃.tail.headD 0 - rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 6) =
-        rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 5) then 1 else 0),
+  have hW' : some ((if r₃.tail.headD 0 < erRdT s.mem (r₂.tail.headD 0 + 6) then (0 : Word)
+      else if r₃.tail.headD 0 - erRdT s.mem (r₂.tail.headD 0 + 6) =
+        erRdT s.mem (r₂.tail.headD 0 + 5) then 1 else 0),
       m₃.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)) = some (r.headD 0, s'.mem) := by
     rw [← hW]; split <;> rfl
   rw [count_test _ _ _ xs.length hlen] at hW'

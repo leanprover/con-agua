@@ -32,11 +32,11 @@ open L.Arena
 theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo hi : Word) (names : List NIdx)
     (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (off l : Word) (xs : List EIdx) (r : List Word),
-    noaW k m no nl lo hi off l = some (r, m') → StageR dn vis fe m a →
+    noaW k m no nl lo hi off l = some (r, m') → StageR vis fe m a →
     decHL m no.toNat nl.toNat = some names → no.toNat + nl.toNat ≤ iwTop m →
     decHL m off.toNat l.toNat = some xs → (∀ j < l.toNat, off.toNat + j < iwTop m) → PosMR m →
     ∃ b, (xs.anyM (fun x => ConRon.Arena.nestOcc names lo.toNat hi.toNat x)).run a = .ok (b, a) ∧
-      StageR dn vis fe m' a ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
+      StageR vis fe m' a ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
   induction k with
   | zero => intro m m' a off l xs r h; simp [noaW] at h
   | succ k ih =>
@@ -55,7 +55,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     have hxs2 := hxs
     simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hxs2
     obtain ⟨x, hx, xs', hxs', rfl⟩ := hxs2
-    obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
+    obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA, aread_apply, aread_apply] using hx)
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
       word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hxb 0 (by omega); omega)
     have hl1 : (l - 1).toNat = l' := by

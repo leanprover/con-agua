@@ -43,11 +43,11 @@ theorem of_eq (h : ∀ m', IWGrow m m' → f m' = f m) (hf : f m = some x) : Sta
 end StabD
 
 theorem iwN_grow {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) : iwN m' i = iwN m i := by
-  simp only [iwN, nat?, iwA]; rw [hg.iwGet i hi]
+  simp only [iwN, nat?, iwA, aread_apply]; rw [hg.iwGet i hi]
 
 theorem iwH_grow {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) :
     (iwH m' i : Option (Idx k)) = iwH m i := by
-  simp only [iwH, hd?, iwA]; rw [hg.iwGet i hi]
+  simp only [iwH, hd?, iwA, aread_apply]; rw [hg.iwGet i hi]
 
 /-! ## Stable pointer slices -/
 
@@ -100,11 +100,11 @@ theorem stab (h : SPL dec m o l xs) : StabD (fun m => L.Ind.decPL m (dec m) o l)
   fun _ hg => (h.grow hg).decPL
 
 /-- `sl_cons` of a stably decoding pointer onto a stable slice. -/
-theorem cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem cons {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {x o l : Word} {r : List Word} {y : α} (h : consW n m x o l = some (r, m'))
-    (hS : StageR dn vis fe m a) (hl : SPL dec m o.toNat l.toNat xs)
+    (hS : StageR vis fe m a) (hl : SPL dec m o.toNat l.toNat xs)
     (hy : StabD (fun m => dec m x.toNat) m y) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧
       SPL dec m' (r.headD 0).toNat (r.tail.headD 0).toNat (y :: xs) := by
   obtain ⟨hb, ps, hps, hf⟩ := hl
   obtain ⟨hS', hg, hdn, htop⟩ := consW_stageN h hS hb hps
@@ -183,11 +183,11 @@ theorem snocW_decN {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : L
       apply mapM_opt_congr
       intro j hj
       have hj' : j < l.toNat := List.mem_range.mp hj
-      simp only [iwN, nat?, iwA, hget]
+      simp only [iwN, nat?, iwA, aread_apply, hget]
       rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       congr 2; omega
     have h2 : iwN (m2.set64 IW (q + l) x) (q.toNat + l.toNat) = some x.toNat := by
-      simp [iwN, nat?, iwA, hget]
+      simp [iwN, nat?, iwA, aread_apply, hget]
     rw [h1, h2]; rfl
   · refine iwGrow_of_frame hfr' (N := l + 1) ?_ ?_ hsz ?_
     · rw [htop, hqq]

@@ -54,7 +54,7 @@ def nameCopyW : Nat → Mem → Word → Word → Word → Option Mem
   | n + 1, m, d, s, l =>
     if l = 0 then some m
     else nameCopyW n
-      (m.set64 IW d (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) s)))) (d + 1) (s + 1) (l - 1)
+      (m.set64 IW d (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) s)))) (d + 1) (s + 1) (l - 1)
 
 section arms
 variable (n : Nat) (m : Mem) (d s l : Word)
@@ -62,7 +62,7 @@ theorem nameCopyW_nil (hl : l = 0) : nameCopyW (n + 1) m d s l = some m := by
   simp [nameCopyW, hl]
 theorem nameCopyW_step (hl : l ≠ 0) :
     nameCopyW (n + 1) m d s l =
-      nameCopyW n (m.set64 IW d (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) s))))
+      nameCopyW n (m.set64 IW d (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) s))))
         (d + 1) (s + 1) (l - 1) := by
   simp [nameCopyW, hl]
 end arms
@@ -84,7 +84,7 @@ theorem memberNamesCopy_spec (p : Prog) (hp : p.lookup "member_names_copy" = som
     simp only [callFn, memberNamesCopy]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20)
+      finish (gen := 20) [erRd]
 
 /-- **What `member_names_copy` leaves.** -/
 theorem nameCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nameCopyW n m d s l = some m' →
@@ -94,12 +94,12 @@ theorem nameCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nameCopyW n m
     (∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat
-      then some (rdW (m.arr64 EREC)
+      then some (erRd m
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))))))
       else (m.arr64 IW)[i]? :=
-  ipCopyW_get nameCopyW (fun m x => rdW (m.arr64 EREC) (rdW (m.arr64 IW) x)) (fun x d => x.toNat < d)
+  ipCopyW_get nameCopyW (fun m x => erRd m (rdW (m.arr64 IW) x)) (fun x d => x.toNat < d)
     (fun _ _ _ _ => by simp [nameCopyW]) (nameCopyW_nil · · · · ·) (nameCopyW_step · · · · ·)
-    (fun m d v x hx => by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64_IW_ne m d v x (by omega)])
+    (fun m d v x hx => by rw [erRd_set_iw, rdW_set64_IW_ne m d v x (by omega)])
     (fun _ _ h => by omega) n
 
 /-- The model of `block_shape_member_names`. -/
@@ -169,8 +169,8 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
   subst hq' hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
   have hIW := allocMem_IW m (UInt64.ofNat l)
-  have hEE : (allocMem m (UInt64.ofNat l)).arr64 EREC = m.arr64 EREC := by
-    simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hRR : ∀ a, erRd (allocMem m (UInt64.ofNat l)) a = erRd m a := fun a => by
+    simp only [allocMem, erRd]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by rw [tierA_EREC]; split <;> decide)]
   have hptr' : ∀ j < (UInt64.ofNat l).toNat,
       (rdW ((allocMem m (UInt64.ofNat l)).arr64 IW) (UInt64.ofNat ((UInt64.ofNat o).toNat + j))).toNat
         < q.toNat := by
@@ -186,7 +186,7 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
     (by rw [hoo, hll]; simp only [iwTop, hqq] at hsrc'; omega)
     (by rw [hIW, hll]; exact hroom) (by rw [hIW]; exact hsz) hptr'
   rw [hIW] at hS hG
-  rw [hEE] at hG
+  simp only [hRR] at hG
   have hfr : MemFrame [IW] [200] m m2 :=
     (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
   have htop : rdW (m2.arr64 CTL) 200 = q + UInt64.ofNat l := by
@@ -212,24 +212,24 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
       simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv
       obtain ⟨nm, hnm, lv, -, ce, -, hcvT⟩ := hcv
       have hnmE : nm = y.cvT.name := by rw [← hcvT]
-      obtain ⟨w, hw, hwl', hnm'⟩ : ∃ w, (m.arr64 EREC)[a]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = nm := by
-        rcases hw : (m.arr64 EREC)[a]? with _ | w
+      obtain ⟨w, hw, hwl', hnm'⟩ : ∃ w, erecP m a = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = nm := by
+        rcases hw : erecP m a with _ | w
         · simp [hd?, erA, hw] at hnm
         by_cases hwl : w.toNat < 2 ^ 32
         · refine ⟨w, rfl, hwl, ?_⟩
           simp [hd?, erA, hw, hwl] at hnm
           simp [hnm]
         · simp [hd?, erA, hw, hwl] at hnm
-      have hrd : rdW (m.arr64 EREC) (UInt64.ofNat a) = w := by
-        have : (UInt64.ofNat a).toNat = a := by simp; omega
-        simp [rdW, this, hw]
+      have hrd : erRd m (UInt64.ofNat a) = w := by
+        have : (UInt64.ofNat a).toNat = a := by have := erecP_lt64 hw; simp; omega
+        exact (erRd_of_erecP (by rw [this]; exact hw)).1
       rw [hrd] at hGj
       have hy' : bs.members[j]'(by omega) = y := by
         simpa [List.getElem?_eq_getElem (show j < bs.members.length by omega)] using hget
       have hnmj : bs.memberNames[j] = nm := by
         simp [BlockShape.memberNames, List.getElem_map, hy', hnmE]
       rw [hnmj]
-      simp only [iwH, hd?, iwA, hGj]
+      simp only [iwH, hd?, iwA, aread_apply, hGj]
       simp [hwl', hnm'])
     rw [hxs] at this
     exact this
@@ -264,31 +264,11 @@ theorem blockShapeMemberNames_refines (p : Prog) (ha : p.lookup "iw_alloc" = som
 
 /-! ## `BlockParts.complete` -/
 
-/-- **`block_parts_complete` is `BlockParts.complete`**: the identity on the shape pointer
-(`BlockParts` and its shape share one pointer). -/
-@[refines ConRon.Arena.BlockParts.complete]
-theorem blockPartsComplete_refines (p : Prog)
-    (hp : p.lookup "block_parts_complete" = some blockPartsComplete) (n : Nat) (s₀ : St)
-    (p0 p1 : Word) (b0 : BlockParts) (bs : BlockShape) (h1 : decBS s₀.mem p1.toNat = some bs) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_parts_complete" [p0, p1]
-    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = p1 ∧
-      decBP s₀.mem (r.headD 0).toNat = some (BlockParts.complete b0 bs); ⊤⦄ := by
-  have hd : decBP s₀.mem p1.toNat = some (BlockParts.complete b0 bs) := by
-    simp [decBP, h1, BlockParts.complete]
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockPartsComplete]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
-      finish [Sig.retVal, Locals.init]
-
 /-! ## `BlockShape.lps` -/
 
 /-- A successful handle slice read is in bounds. -/
 theorem hslice?_bound {k : IdxKind} (a : Array Word) : ∀ (c o : Nat) (xs : List (Idx k)),
-    hslice? a o c = some xs → 0 < c → o + c ≤ a.size
+    hslice? (aread a) o c = some xs → 0 < c → o + c ≤ a.size
   | 0, o, xs, h, hc => absurd hc (by omega)
   | c + 1, o, xs, h, _ => by
     rw [hslice?_succ] at h
@@ -296,7 +276,7 @@ theorem hslice?_bound {k : IdxKind} (a : Array Word) : ∀ (c o : Nat) (xs : Lis
     obtain ⟨x, hx, ys, hys, rfl⟩ := h
     have h2 : o < a.size := by
       cases hw : a[o]? with
-      | none => simp [hd?, hw] at hx
+      | none => simp [hd?, aread_apply, hw] at hx
       | some w => exact (Array.getElem?_eq_some_iff.mp hw).1
     cases c with
     | zero => omega
@@ -339,7 +319,7 @@ theorem erToIwW_room {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
 theorem erToIwW_decS {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     {xs : List (Idx k)}
     (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
-    (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (_hE : (m.arr64 EREC).size < 2 ^ 64)
     (hsl : hslice? (erA m) o.toNat l.toNat = some xs) :
     r = [rdW (m.arr64 CTL) 200, l] ∧
     (decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat : Option (List (Idx k))) =
@@ -352,15 +332,7 @@ theorem erToIwW_decS {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List
         hslice? (erA m) o.toNat l.toNat ∧
       IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
-    by_cases hl : l = 0
-    · rw [erToIwW_src0 hl] at h
-      have := erToIwW_dec (k := k) h hsz hc hE (by subst hl; simp)
-      subst hl
-      simpa [hslice?] using this
-    · have hl0 : 0 < l.toNat := by
-        have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
-        omega
-      exact erToIwW_dec h hsz hc hE (hslice?_bound _ _ _ _ hsl hl0)
+    rw [hsl]; exact erToIwW_dec (k := k) h hsz hc hsl
   obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hd
   exact ⟨h1, h2, h3, h4, h5, h6, IWRoom.of_alloc h4 h6 hroom⟩
 
@@ -391,8 +363,8 @@ def lpsW : Nat → Mem → Word → Option (List Word × Mem)
   | n + 1, m, p =>
     if rdW (m.arr64 IW) (p + 1) = 0 then some ([0, 0], m)
     else erToIwW n m
-      (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 1))
-      (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 2))
+      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 1))
+      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 2))
 
 section arms
 variable (n : Nat) (m : Mem) (p : Word)
@@ -400,8 +372,8 @@ theorem lpsW_nil (h : rdW (m.arr64 IW) (p + 1) = 0) : lpsW (n + 1) m p = some ([
   simp [lpsW, h]
 theorem lpsW_cons (h : rdW (m.arr64 IW) (p + 1) ≠ 0) : lpsW (n + 1) m p =
     erToIwW n m
-      (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 1))
-      (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 2)) := by
+      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 1))
+      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 2)) := by
   simp [lpsW, h]
 end arms
 
@@ -421,7 +393,7 @@ theorem blockShapeLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         erToIw_specW2 p ha hc he n] <;>
-      finish (gen := 20) [rdW_eq]
+      finish (gen := 20) [rdW_eq, erRd]
 
 theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockShape}
     (h : lpsW n m p = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
@@ -475,20 +447,14 @@ theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockSh
     simp only [nat?, erA, Option.map_eq_some_iff] at ho2 hl2
     obtain ⟨w1, hw1, rfl⟩ := ho2
     obtain ⟨w2, hw2, rfl⟩ := hl2
-    have hi1 := (Array.getElem?_eq_some_iff.mp hw1).1
-    have hi2 := (Array.getElem?_eq_some_iff.mp hw2).1
-    replace hi1 : a + 1 < (m.arr64 EREC).size := hi1
-    replace hi2 : a + 2 < (m.arr64 EREC).size := hi2
-    have e2 : ∀ k : Nat, k < 2 ^ 64 → UInt64.ofNat a + UInt64.ofNat k = UInt64.ofNat (a + k) := by
-      intro k _; exact (ofNat_add_word a k).symm
-    have hrd1 : rdW (m.arr64 EREC) (UInt64.ofNat (a + 1)) = w1 := by
-      have : (UInt64.ofNat (a + 1)).toNat = a + 1 :=
-        UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-      simp only [rdW, this]; rw [hw1]; rfl
-    have hrd2 : rdW (m.arr64 EREC) (UInt64.ofNat (a + 2)) = w2 := by
-      have : (UInt64.ofNat (a + 2)).toNat = a + 2 :=
-        UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-      simp only [rdW, this]; rw [hw2]; rfl
+    have hi1 : a + 1 < 2 ^ 64 := erecP_lt64 hw1
+    have hi2 : a + 2 < 2 ^ 64 := erecP_lt64 hw2
+    have hrd1 : erRd m (UInt64.ofNat (a + 1)) = w1 := by
+      have : (UInt64.ofNat (a + 1)).toNat = a + 1 := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+      exact erRd_of_erA (by rw [this]; exact hw1)
+    have hrd2 : erRd m (UInt64.ofNat (a + 2)) = w2 := by
+      have : (UInt64.ofNat (a + 2)).toNat = a + 2 := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+      exact erRd_of_erA (by rw [this]; exact hw2)
     have e3 : UInt64.ofNat a + 1 = UInt64.ofNat (a + 1) := by
       apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
     have e4 : UInt64.ofNat a + 2 = UInt64.ofNat (a + 2) := by

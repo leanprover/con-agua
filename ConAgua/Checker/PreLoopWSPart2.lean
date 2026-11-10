@@ -7,6 +7,7 @@ import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
 import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.BvarB
 import all ConAgua.Arena.CheckerL
 import all ConAgua.Arena.ConsLib
@@ -30,14 +31,15 @@ import all ConAgua.Arena.ForallStore
 import all ConAgua.Arena.Freeze
 import all ConAgua.Arena.HasFvar
 import all ConAgua.Arena.ImaxStore
+import all ConAgua.Arena.IndDeclConsts
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
+import all ConAgua.Arena.IndStream
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.Infer
-import all ConAgua.Arena.InferFieldSort
 import all ConAgua.Arena.Inst1
 import all ConAgua.Arena.Inst1Spec
 import all ConAgua.Arena.InstLP
@@ -79,7 +81,6 @@ import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
@@ -132,6 +133,7 @@ import all ConAgua.Front.LineRec
 import all ConAgua.Front.NatDec
 import all ConAgua.Front.Unescape
 import all ConAgua.L.Examples
+import all ConAgua.Rom.CIConst
 import all ConAgua.Rom.CIRead
 import all ConAgua.Rom.PinRead
 import all ConAgua.Rom.PinReadSpec
@@ -162,7 +164,7 @@ open scoped Lean.Order
 
 /-! ## `front_run` -/
 
-/-- The call closure of `front_run` in `checkerProg` (254 functions). -/
+/-- The call closure of `front_run` in `checkerProg` (235 functions). -/
 def stageFns_front_run : List FnName := [
   "app_find", "app_push", "apply_decl", "apply_dline", "apply_expr", "apply_ind", "apply_level",
   "apply_nnum", "apply_nstr", "apply_rec", "apply_str", "bvar_find", "bvar_push", "byte_in",
@@ -180,27 +182,25 @@ def stageFns_front_run : List FnName := [
   "intern_nanon", "intern_nnum", "intern_nstr", "intern_param", "intern_proj", "intern_sort",
   "intern_succ", "intern_zero", "key_at", "key_at_g1", "key_at_g2", "key_at_g3", "key_at_g4",
   "key_at_g5", "key_at_g6", "key_end", "lam_find", "lam_push", "letE_find", "letE_push",
-  "level_fresh", "level_get", "level_put", "lh_mk", "limbs_eq", "line_rec", "lit_find",
-  "lit_find_str", "lit_hash", "lit_match", "lit_match_str", "lit_push", "lit_push_str", "lp_put",
-  "ls_find", "ls_match", "ls_push", "ls_put", "lsp_find", "lsp_put", "lv_cases", "lv_cases_at",
-  "lv_comb", "lv_dist1", "lv_dist2", "lv_eq", "lv_equiv", "lv_imax", "lv_imax_l", "lv_imax_r",
-  "lv_leq", "lv_node", "lv_rest", "lv_simp", "lv_subsimp", "lv_subst", "match_dlit", "match_lit",
-  "match_word", "max_find", "max_push", "mk_app", "mk_forall", "mk_lam", "mk_let", "mk_proj",
-  "name_fresh", "name_get", "name_put", "name_rec_pre", "nanon_find", "nanon_push", "nat_dec",
-  "nat_mad", "next_member", "nnum_find", "nnum_push", "node_bin", "node_const", "node_let",
-  "node_lit", "node_lit_str", "node_proj", "nsp_find", "nsp_put", "nstr_find", "nstr_match",
-  "nstr_push", "num_end", "param_find", "param_push", "parse_rule_d", "pi_result_d",
-  "pi_sort_tele_len", "proj_find", "proj_push", "read_nat", "rec_decl_line", "rec_decl_obj",
-  "rec_nat_list", "scan_axiom", "scan_binder_info", "scan_bool", "scan_def", "scan_hints",
-  "scan_ind_ctor", "scan_ind_ctors", "scan_ind_decl", "scan_ind_rec", "scan_ind_recs",
-  "scan_ind_type", "scan_ind_types", "scan_nat_list", "scan_opaque", "scan_quot",
-  "scan_quoted_nat", "scan_rule", "scan_rules", "scan_string", "scan_thm", "skip_braced",
-  "skip_digits", "skip_ws", "slot_nat", "sort_find", "sort_push", "store_fuel", "str_close",
-  "str_code", "str_put_esc", "sub_bit", "sub_rec", "sub_val", "succ_find", "succ_push", "u_next",
-  "unescape", "utf8_char", "utf8_put", "utf8_valid", "validate_ind_d", "value_at", "vi_ctor",
-  "vi_ids_go", "vi_k_expected", "vi_listed", "vi_listed_go", "vi_map", "vi_map_go", "vi_nested",
-  "vi_np_go", "vi_nparams", "vi_order", "vi_order_go", "vi_order_in", "vi_rec", "vi_rec_idx",
-  "vi_recs", "vi_recs_go", "vi_tail", "vi_unsafe", "zero_find", "zero_push"]
+  "level_fresh", "level_get", "level_put", "limbs_eq", "line_rec", "lit_find", "lit_find_str",
+  "lit_hash", "lit_match", "lit_match_str", "lit_push", "lit_push_str", "lp_put", "ls_find",
+  "ls_match", "ls_push", "ls_put", "lsp_find", "lsp_put", "match_dlit", "match_lit", "match_word",
+  "max_find", "max_push", "mk_app", "mk_forall", "mk_lam", "mk_let", "mk_proj", "name_fresh",
+  "name_get", "name_put", "name_rec_pre", "nanon_find", "nanon_push", "nat_dec", "nat_mad",
+  "next_member", "nnum_find", "nnum_push", "node_bin", "node_const", "node_let", "node_lit",
+  "node_lit_str", "node_proj", "nsp_find", "nsp_put", "nstr_find", "nstr_match", "nstr_push",
+  "num_end", "param_find", "param_push", "parse_rule_d", "pi_sort_tele_len", "proj_find",
+  "proj_push", "read_nat", "rec_decl_line", "rec_decl_obj", "rec_nat_list", "scan_axiom",
+  "scan_binder_info", "scan_bool", "scan_def", "scan_hints", "scan_ind_ctor", "scan_ind_ctors",
+  "scan_ind_decl", "scan_ind_rec", "scan_ind_recs", "scan_ind_type", "scan_ind_types",
+  "scan_nat_list", "scan_opaque", "scan_quot", "scan_quoted_nat", "scan_rule", "scan_rules",
+  "scan_string", "scan_thm", "skip_braced", "skip_digits", "skip_ws", "slot_nat", "sort_find",
+  "sort_push", "store_fuel", "str_close", "str_code", "str_put_esc", "sub_bit", "sub_rec",
+  "sub_val", "succ_find", "succ_push", "u_next", "unescape", "utf8_char", "utf8_put", "utf8_valid",
+  "validate_ind_d", "value_at", "vi_ctor", "vi_ids_go", "vi_listed", "vi_listed_go", "vi_map",
+  "vi_map_go", "vi_nested", "vi_np_go", "vi_nparams", "vi_order", "vi_order_go", "vi_order_in",
+  "vi_rec", "vi_rec_idx", "vi_recs", "vi_recs_go", "vi_tail", "vi_unsafe", "zero_find",
+  "zero_push"]
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_front_run` store
 into. -/
@@ -210,7 +210,7 @@ def stageA_front_run : List TieredArray :=
   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC,
   PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
   PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, Front.NID, Front.LID, Front.EID, Front.DECL, Front.DLP,
-  Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS, LH] ++
+  Front.Ind.IFR, Front.Ind.IFL, Front.NIDS, Front.LIDS, Front.EIDS] ++
   tier1s [
   POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC,
@@ -220,7 +220,7 @@ def stageA_front_run : List TieredArray :=
 /-- The `CTL` words the functions of `stageFns_front_run` store into. -/
 def stageC_front_run : List Word := [
   0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 28, 29, 30,
-  31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 65, 67, 69, 70, 71, 72, 192]
+  31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 65, 67, 69, 70, 71, 72]
 
 names_tree stageTree_front_run : stageFns_front_run
 

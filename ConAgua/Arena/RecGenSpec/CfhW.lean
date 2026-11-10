@@ -37,23 +37,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `class_rule_ok_domains`: `rbs.allM (constsResolveFFast fe₀)`, the model of `idx_args_resolve` -/
 
-theorem classRuleOkDomains_spec (p : Prog)
-    (hp : p.lookup "class_rule_ok_domains" = some classRuleOkDomains) (hcr : CrfF p) (n : Nat) :
-    ∀ (s₀ : St) (v o l : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rule_ok_domains" [v, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ iarW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ v o l; rw [invoke_eq _ hp]; simp only [callFn, classRuleOkDomains]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ v o l
-    rw [invoke_eq _ hp]
-    simp only [callFn, classRuleOkDomains]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        crfF_spec p hcr n, ih] <;>
-      finish (gen := 20)
 
 /-- The twin's `allM` is `idxArgsResolve`. -/
 theorem allM_resolve_eq (fe : IFEnv) : ∀ xs : List EIdx,

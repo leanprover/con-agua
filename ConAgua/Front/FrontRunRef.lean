@@ -49,9 +49,10 @@ l_model frontRun_specE (p : Prog) (hf : p.lookup "front_run" = some frontRun)
 /-- **A line whose `applyLine` fails or gives a verdict of class `c` ends `finishFrom` so**
 (through `feedChunk`, or `applyFinalLine` for a last line without a newline). -/
 theorem finishFrom_fail (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat) (a : AState)
-    (r : LineRec) (q : USize) (hi : i < b.usize) (hs : scanLineFwd b i = .ok r q) (c : Word)
-    (h : (∃ ce, (applyLine st r).run a = .error ce ∧ twinCls ce = c) ∨
-      ∃ v a', (applyLine st r).run a = .ok (.inr v, a') ∧ twinCls v.toError = c) :
+    (r : LineRec) (q : USize) (hi : i < b.usize) (hs : scanLineFwd b i = .ok r q)
+    (hp : lineRecPlaced (lineNo == 0) r = true) (c : Word)
+    (h : (∃ ce, (applyRecord st r).run a = .error ce ∧ twinCls ce = c) ∨
+      ∃ v a', (applyRecord st r).run a = .ok (.inr v, a') ∧ twinCls v.toError = c) :
     TwinFailsV (finishFrom st b i lineNo) a c := by
   have hi' : i < USize.ofNat b.size := hi
   by_cases hq : q = 0
@@ -60,37 +61,37 @@ theorem finishFrom_fail (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat)
     · refine .inl ⟨ce, ?_, hc⟩
       unfold finishFrom
       rw [feedChunk, dite_eq_left hi]
-      simp [hs, hi', applyFinalLine, StateT.run_bind, hce]
+      simp [hs, hi', applyFinalLine, applyLine, hp, StateT.run_bind, hce]
       rfl
     · refine .inr ⟨v.toError, lineNo + 1, a', ?_, hc⟩
       unfold finishFrom
       rw [feedChunk, dite_eq_left hi]
-      simp [hs, hi', applyFinalLine, StateT.run_bind, hv]
+      simp [hs, hi', applyFinalLine, applyLine, hp, StateT.run_bind, hv]
       rfl
   · rcases h with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
     · refine .inl ⟨ce, ?_, hc⟩
       unfold finishFrom
       rw [feedChunk, dite_eq_left hi]
-      simp [hs, hq, StateT.run_bind, hce]
+      simp [hs, hq, applyLine, hp, StateT.run_bind, hce]
       rfl
     · refine .inr ⟨v.toError, lineNo + 1, a', ?_, hc⟩
       unfold finishFrom
       rw [feedChunk, dite_eq_left hi]
-      simp [hs, hq, StateT.run_bind, hv]
+      simp [hs, hq, applyLine, hp, StateT.run_bind, hv]
       rfl
 
-/-- A claim at the prefixed parse state is one at the twin's own (`applyLine_pre_run`). -/
+/-- A claim at the prefixed parse state is one at the twin's own (`applyRecord_pre_run`). -/
 theorem claimR_of_pre (D : Array IDeclaration) {st : StateD} {r : LineRec} {a : AState} {e : Err}
-    (h : VerdictClaimR (applyLine (st.pre D) r) a e) : VerdictClaimR (applyLine st r) a e := by
+    (h : VerdictClaimR (applyRecord (st.pre D) r) a e) : VerdictClaimR (applyRecord st r) a e := by
   intro hk
   rcases h hk with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
   · refine .inl ⟨ce, ?_, hc⟩
-    rw [applyLine_pre_run] at hce
-    cases hr : (applyLine st r).run a with
+    rw [applyRecord_pre_run] at hce
+    cases hr : (applyRecord st r).run a with
     | error e' => rw [hr] at hce; cases hce; rfl
     | ok x => rw [hr] at hce; cases hce
-  · rw [applyLine_pre_run] at hv
-    cases hr : (applyLine st r).run a with
+  · rw [applyRecord_pre_run] at hv
+    cases hr : (applyRecord st r).run a with
     | error e' => rw [hr] at hv; cases hv
     | ok x =>
       obtain ⟨y, a''⟩ := x
@@ -112,28 +113,28 @@ theorem twinFailsV_of_run_eq {α β : Type} {T T' : AM (Except (ConRon.Arena.Che
 
 /-- **A line con-ron applies keeps the driver's invariant**: `front_line`'s ok fact at the prefixed
 parse state (`FrontLinePost`), the input kept, is the twin's step at its own parse state
-(`applyLine_pre_*`), with the bridge invariant (`TwinOK.line`), the records' words
+(`applyRecord_pre_*`), with the bridge invariant (`TwinOK.line`), the records' words
 (`recOK_line`) and the twin's records (`applyLine_decls`) after. -/
 theorem lineStep_ok (D : Array IDeclaration) (b : ByteArray) {m m' : Mem} {i : USize} {nx : Word}
-    {st : StateD} {a : AState} (hI : FrontInvOK D b m a st) (hk : m'.arr8 IN = m.arr8 IN)
-    (hS : LineStep b i nx (st.pre D) a m') (hg : DGrow m m') (hmo : ModeOK m') :
-    LineStepI (FrontInvOK D b) b i nx st a m' := by
-  obtain ⟨r', q, st₁, h1, h2, h3, h4, h5, h6⟩ := hS
-  have h3' := (applyLine_pre_ok D).mp h3
-  rw [applyLine_pre_res D h3'] at h4
-  rw [applyLine_pre_st D] at h5
-  cases hres : AM.res (applyLine st r') a with
+    {st : StateD} {a : AState} {lineNo : Nat} (hI : FrontInvOK D b m a st)
+    (hk : m'.arr8 IN = m.arr8 IN) (hS : LineStep b i (lineNo == 0) nx (st.pre D) a m') (hg : DGrow m m') (hmo : ModeOK m') :
+    LineStepI (FrontInvOK D b) b i lineNo nx st a m' := by
+  obtain ⟨r', q, st₁, h1, h2, hpl, h3, h4, h5, h6⟩ := hS
+  have h3' := (applyRecord_pre_ok D).mp h3
+  rw [applyRecord_pre_res D h3'] at h4
+  rw [applyRecord_pre_st D] at h5
+  cases hres : AM.res (applyRecord st r') a with
   | inr v => rw [hres] at h4; cases h4
   | inl st₀ =>
   rw [hres] at h4
   simp only [preL, Sum.map_inl, Sum.inl.injEq] at h4
   subst h4
-  have hInv : FrontInvP D b m' (AM.st (applyLine st r') a) st₀ :=
+  have hInv : FrontInvP D b m' (AM.st (applyRecord st r') a) st₀ :=
     ⟨hk.trans hI.1.1, h5, h6, hI.1.2.2.2.1.line h3' hres, hmo⟩
   have hrun := AM.run_of_ok _ _ h3'
   rw [hres] at hrun
   have hd := applyLine_decls hrun
-  refine ⟨r', q, st₀, h1, h2, h3', hres, hInv, recOK_line hI.1.2.2.1 hInv.2.2.1 hg hI.2.1 hd, ?_⟩
+  refine ⟨r', q, st₀, h1, h2, hpl, h3', hres, hInv, recOK_line hI.1.2.2.1 hInv.2.2.1 hg hI.2.1 hd, ?_⟩
   rcases hd with e | ⟨d, e, hgd⟩
   · rw [e]; exact hI.2.2
   · rw [e]
@@ -159,7 +160,7 @@ include hP h64 hsize
 `finishFrom`'s acceptance with the invariant after; a failure of class `≠ 0` ends `finishFrom`
 with that class. -/
 theorem loop_ref : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD) (a : AState)
-    (lineNo : Nat), FrontInvOK D b m a st → ln.toNat ≤ i.toNat →
+    (lineNo : Nat), FrontInvOK D b m a st → ln.toNat ≤ i.toNat → ln.toNat = lineNo →
     RefC (FrontRunG p b) (frontRunE.loop1 p n m i.toUInt64 ln)
       (fun x => x.1 = 0 → ∃ st' a', (finishFrom st b i lineNo).run a = .ok (.ok (.ofState st'), a') ∧
         FrontInvOK D b x.2 a' st')
@@ -167,21 +168,29 @@ theorem loop_ref : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD)
   intro n
   induction n with
   | zero =>
-    intro i m ln st a lineNo _ _
+    intro i m ln st a lineNo _ _ _
     simp only [frontRunE.loop1]
     exact fun _ hk => absurd Err.cls_outOfFuel hk
   | succ n ih =>
-  intro i m ln st a lineNo hI hln
+  intro i m ln st a lineNo hI hln hlnN
   have hm : m.arr8 IN = b.data := hI.1.1
   have hsz : m.len8 IN0 = UInt64.ofNat b.data.size := by
     show UInt64.ofNat (m.arr8 IN).size = _; rw [hm]
   by_cases hlt : i.toUInt64 < m.len8 IN0
   rotate_left
-  · rw [frontRunE.loop1.arm2 _ _ _ _ _ hlt]
+  · rw [frontRunE.loop1.arm3 _ _ _ _ _ hlt]
     intro _
     refine ⟨st, a, finishFrom_end st b i lineNo a fun hi => hlt ?_, hI⟩
     rw [hsz]; exact (ConAgua.Scan.RecordsLink.lt_usize_iff b h64 hsize i).mp hi
-  rw [frontRunE.loop1.arm1 _ _ _ _ _ hlt]
+  obtain ⟨f, hj, hf⟩ : ∃ f, frontRunE.loop1 p (n + 1) m i.toUInt64 ln = frontRunE.j1 p n i.toUInt64 ln f m ∧
+      (f != 0) = (lineNo == 0) := by
+    by_cases h0 : ln = 0
+    · subst h0; subst hlnN; exact ⟨1, frontRunE.loop1.arm1 _ _ _ _ _ hlt rfl, by decide⟩
+    · refine ⟨0, frontRunE.loop1.arm2 _ _ _ _ _ hlt h0, ?_⟩
+      subst hlnN
+      have : ln.toNat ≠ 0 := fun h => h0 (UInt64.toNat_inj.mp (by simpa using h))
+      simpa using this
+  rw [hj, frontRunE.j1.eq_1]
   rw [hsz] at hlt
   have hi : i < b.usize := (ConAgua.Scan.RecordsLink.lt_usize_iff b h64 hsize i).mpr hlt
   have hin := ConLeche.Frontend.usizeInBounds b i hi
@@ -192,15 +201,15 @@ theorem loop_ref : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD)
     rw [UInt64.toNat_add] at this
     simp at this
     have := ln.toNat_lt; omega
-  have hR := frontLine_ref hP h64 hsize n hm hI.1.2.1 hI.1.2.2.1 hI.1.2.2.2.1.1 hI.1.2.2.2.2 i hiN
+  have hR := frontLine_ref hP h64 hsize n hm hI.1.2.1 hI.1.2.2.1 hI.1.2.2.2.1.1 hI.1.2.2.2.2 i hiN f
   have hs := frontLine_specE p hP.front_line hP.apply_dline hP.apply_ind hP.apply.decl.apply_decl
-    hP.apply.decl.decl_kind n ⟨m, Locals.init []⟩ i.toUInt64
-  rcases h1 : callE p n "front_line" [i.toUInt64] m with e1 | ⟨r1, m1⟩
+    hP.apply.decl.decl_kind n ⟨m, Locals.init []⟩ i.toUInt64 f
+  rcases h1 : callE p n "front_line" [i.toUInt64, f] m with e1 | ⟨r1, m1⟩
   · rw [frontRunE.k_front_line.none]
     intro hG hk
-    obtain ⟨r, q, hsc, hc⟩ := RefC.run_err hs (fun e h0 h => absurd h0 h) hG.nv
+    obtain ⟨r, q, hsc, hpl, hc⟩ := RefC.run_err hs (fun e h0 h => absurd h0 h) hG.nv
       ⟨⟨hG.nv, L.Front.Ind.xOfTwin D a st hI.1.2.2.2.1⟩, hG.safe⟩ hR h1 hk
-    exact finishFrom_fail st b i lineNo a r q hi hsc e1.cls (claimR_of_pre D hc hk)
+    exact finishFrom_fail st b i lineNo a r q hi hsc (hf ▸ hpl) e1.cls (claimR_of_pre D hc hk)
   obtain ⟨s1, hs1, -, hpost⟩ := RefC.run_ok hs hR h1
   obtain ⟨sk, hsk, hkp⟩ := triple_of_callE (Triple.keep hP.apply.decl.expr.no_st8
     (M.triple_of_run (P := fun s => s = ⟨m, Locals.init []⟩) (Q := fun _ _ => True)
@@ -210,7 +219,8 @@ theorem loop_ref : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD)
   rcases hpost.res with h0 | ⟨nx, hr, hS⟩
   · rw [frontRunE.k_front_line.arm1 _ _ _ _ _ _ (by rw [show r1 = [0, 0] from h0]; rfl)]
     exact fun h => absurd h hln1
-  obtain ⟨r, q, st', hsc, hq, hok', hres, hInv⟩ :=
+  rw [hf] at hS
+  obtain ⟨r, q, st', hsc, hq, hpl, hok', hres, hInv⟩ :=
     lineStep_ok D b hI hkeep hS hpost.grow hpost.mode
   have hrun := AM.run_of_ok _ _ hok'
   rw [hres] at hrun
@@ -224,16 +234,17 @@ theorem loop_ref : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD)
       have := congrArg UInt64.toNat (hq.trans hnx)
       simpa [USize.toNat_toUInt64] using this
     subst hq0
-    exact ⟨st', _, finishFrom_last st b i lineNo a r st' _ hi hsc hrun, hInv⟩
+    exact ⟨st', _, finishFrom_last st b i lineNo a r st' _ hi hsc hpl hrun, hInv⟩
   by_cases hle : nx ≤ i.toUInt64
   · rw [frontRunE.k_front_line.arm3 _ _ _ _ _ _ h0 hnx hle]
     exact fun h => absurd h hln1
   rw [frontRunE.k_front_line.arm4 _ _ _ _ _ _ h0 hnx hle]
   have hq0 : q ≠ 0 := by intro h0'; apply hnx; rw [← hq, h0']; rfl
   have hiq : i < q := by rw [ConAgua.Scan.lt_toUInt64_iff, hq]; exact UInt64.not_le.mp hle
-  have hnext := finishFrom_next st b i lineNo a r q st' _ hi hsc hq0 hiq hrun
+  have hnext := finishFrom_next st b i lineNo a r q st' _ hi hsc hq0 hiq hpl hrun
   have hqi := USize.lt_iff_toNat_lt.mp hiq
   have hR' := ih q m1 (ln + 1) st' _ (lineNo + 1) hInv (by rw [UInt64.toNat_add]; simp; omega)
+    (by rw [UInt64.toNat_add]; simp; omega)
   simp only [List.tail_cons, List.headD_cons]
   rw [← hq]
   refine RefC.mono hR' (fun x hx h0 => ?_) (fun e _ h hk => twinFailsV_of_run_eq hnext (h hk))
@@ -265,7 +276,7 @@ theorem frontRun_ref (hpi : p.lookup "front_init" = some frontInit) (n : Nat) {m
   obtain ⟨st₀, a₁, hrun, hI⟩ := initKW_inv_ok D b m _ a₀ h₀ hK1
   have hu : parseBytes b = (StateD.init >>= fun st => finishFrom st b 0 0) :=
     parseBytes_eq b (by rw [show USize.size = 2 ^ 64 by simp [USize.size, h64]]; omega)
-  have hR := loop_ref hP D b h64 hsize (n + 1) 0 s1.mem 0 st₀ a₁ 0 hI (by simp)
+  have hR := loop_ref hP D b h64 hsize (n + 1) 0 s1.mem 0 st₀ a₁ 0 hI (by simp) (by simp)
   refine RefC.mono hR (fun x hx h0 => ?_) (fun e _ h hk => ?_)
   · obtain ⟨st', a', h1, h2⟩ := hx h0
     exact ⟨st', a', by rw [hu, StateT.run_bind, hrun]; exact h1, h2⟩

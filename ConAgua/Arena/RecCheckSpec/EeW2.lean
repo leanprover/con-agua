@@ -44,19 +44,19 @@ section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem eftF_ok (n : Nat) {m m' : Mem} {a : AState} {e : Word} {r : List Word}
-    (h : eftF n m e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e) (hP : RcMR m) :
+    (h : eftF n m e = some (r, m')) (hS : StageR vis fe m a) (he : H e) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.eraseFVarTys (decE e)).run a = .ok (decE (r.headD 0), a') ∧ H (r.headD 0) ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   cases n with
   | zero => simp [eftF] at h
-  | succ n => exact eftW_ok dn fe vis n h hS he hP
+  | succ n => exact eftW_ok (fun _ => none) fe vis n h hS he hP
 
 theorem eeW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {o l : Word} {r : List Word} {xs : List EIdx},
-    eeW n m o l = some (r, m') → StageR dn vis fe m a → HSl0 m o l xs → RcMR m →
+    eeW n m o l = some (r, m') → StageR vis fe m a → HSl0 m o l xs → RcMR m →
     ∃ ys a', (xs.mapM fun b => ConRon.Arena.eraseFVarTys b).run a = .ok (ys, a') ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some ys ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   induction n with
   | zero => intro m m' a o l r xs h; simp [eeW] at h
   | succ n ih =>
@@ -74,7 +74,7 @@ theorem eeW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {o l : Word} {r : List 
   obtain ⟨eo, el, hl0⟩ := slice_step hl (hS.lt64 hb)
   rw [ew] at h
   rcases h1 : eftF n m w with _ | ⟨rv, m1⟩ <;> simp only [h1, eeK0, reduceCtorEq] at h
-  obtain ⟨a1, run1, hv, hS1, hg1, hP1⟩ := eftF_ok dn fe vis n h1 hS hw hP
+  obtain ⟨a1, run1, hv, hS1, hg1, hP1⟩ := eftF_ok fe vis n h1 hS hw hP
   rcases h2 : eeW n m1 (o + 1) (l - 1) with _ | ⟨rr, m2⟩ <;> simp only [h2, eeK1, reduceCtorEq] at h
   obtain ⟨ys, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := ih h2 hS1
     (HSl0.of (by rw [decHL_grow hg1 (by rw [eo, el]; omega)]; exact hxs') (by rw [eo, el]; have := hg1.iw; omega)) hP1

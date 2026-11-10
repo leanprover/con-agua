@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.Checker
-public import ConAgua.Arena.PromoteCITags
 
 @[expose] public section
 -- Every module of the declaration loop's proofs (lane decls3): one build checks them together and

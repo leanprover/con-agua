@@ -4,6 +4,7 @@ import ConRon.Bridge.Checker.Names
 import ConRon.Bridge.Checker.DeclVal
 public import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Checker.Pins
+import ConRon.Bridge.Checker.NatOpNames
 public import ConRon.Arena.Checker
 
 @[expose] public section
@@ -22,35 +23,29 @@ open ConRon.Arena ConRon.Arena.Frontend
 section pins
 open ConLeche ConRon.Bridge
 
-/-- con-ron: ConRon/Bridge/Checker/Pins.lean:625-746 ConRon.Bridge.internAllPins_run — the same walk, for the conjunct
-that lemma does not export: `internAllPins` leaves the pin table (it builds the pin SETS, its
-result). -/
-theorem internAllPins_pins {ps : List NatOpPinSet} {r : List INatOpPinSet}
+/-- con-ron: ConRon/Bridge/Checker/Pins.lean:614-724 ConRon.Bridge.internAllPins_run — **the same walk**,
+split after its first block (`Eq`'s): the first block one scratch-agnostic step, the rest of the
+basis and the pinned names one more, ending in the pin sets, which extend the store and leave the
+pin table. -/
+theorem internAllPins_steps {ps : List NatOpPinSet} {r : List INatOpPinSet}
     {s s' : AState} (hok : StateOK s) (hpins : PinsOK s) (hoff : s.store.scratchOn = false)
-    (hrun : internAllPins ps s = .ok (r, s')) : s'.pins = s.pins := by
+    (hrun : internAllPins ps s = .ok (r, s')) :
+    ∃ u0 u : AState, (∃ r0, ConRon.Arena.BasisKind.decls .eqK s = .ok (r0, u0)) ∧
+      Frontend.IStepS s u0 ∧ Frontend.IStepS u0 u ∧ Ext u.store s'.store ∧ s'.pins = u.pins := by
   simp only [ConRon.Arena.internAllPins] at hrun
-  have a0 : ConRon.Bridge.Frontend.IStepS s s := ConRon.Bridge.Frontend.IStepS.refl hok
   obtain ⟨_, u0, q0, w0⟩ := AM.bind_ok hrun
-  have a1 := a0.trans (BasisKind.decls_sstep a0.ok q0)
+  have b1 := BasisKind.decls_sstep hok q0
+  have a1 : Frontend.IStepS u0 u0 := Frontend.IStepS.refl b1.ok
+  have hp0 : PinsOK u0 := hpins.mono b1.ext b1.pins
   obtain ⟨_, u1, q1, w1⟩ := AM.bind_ok w0
-  have a2 := a1.trans (BasisKind.declsA_sstep a1.ok q1)
+  have a2 := a1.trans (BasisKind.decls_sstep a1.ok q1)
   obtain ⟨_, u2, q2, w2⟩ := AM.bind_ok w1
   have a3 := a2.trans (BasisKind.decls_sstep a2.ok q2)
   obtain ⟨_, u3, q3, w3⟩ := AM.bind_ok w2
-  have a4 := a3.trans (BasisKind.declsA_sstep a3.ok q3)
+  have a4 := a3.trans (BasisKind.decls_sstep a3.ok q3)
   obtain ⟨_, u4, q4, w4⟩ := AM.bind_ok w3
-  have a5 := a4.trans (BasisKind.decls_sstep a4.ok q4)
-  obtain ⟨_, u5, q5, w5⟩ := AM.bind_ok w4
-  have a6 := a5.trans (BasisKind.declsA_sstep a5.ok q5)
-  obtain ⟨_, u6, q6, w6⟩ := AM.bind_ok w5
-  have a7 := a6.trans (BasisKind.decls_sstep a6.ok q6)
-  obtain ⟨_, u7, q7, w7⟩ := AM.bind_ok w6
-  have a8 := a7.trans (BasisKind.declsA_sstep a7.ok q7)
-  obtain ⟨_, u8, q8, w8⟩ := AM.bind_ok w7
-  have a9 := a8.trans (BasisKind.decls_sstep a8.ok q8)
-  obtain ⟨_, u9, q9, w9⟩ := AM.bind_ok w8
-  have a10 := a9.trans (BasisKind.declsA_sstep a9.ok q9)
-  obtain ⟨_, u10, q10, w10⟩ := AM.bind_ok w9
+  have a10 := a4.trans (BasisKind.decls_sstep a4.ok q4)
+  obtain ⟨_, u10, q10, w10⟩ := AM.bind_ok w4
   have a11 := a10.trans (internCI_fresh a10.ok q10).1
   obtain ⟨_, u11, q11, w11⟩ := AM.bind_ok w10
   have a12 := a11.trans (internCI_fresh a11.ok q11).1
@@ -83,30 +78,35 @@ theorem internAllPins_pins {ps : List NatOpPinSet} {r : List INatOpPinSet}
   obtain ⟨_, u25, q25, w25⟩ := AM.bind_ok w24
   have a26 := a25.trans (internCV_fresh a25.ok q25).1
   obtain ⟨_, u26, q26, w26⟩ := AM.bind_ok w25
-  have a27 := a26.trans (ConRon.Bridge.Frontend.internExpr_sstep a26.ok q26).1
+  have a27 := a26.trans (Frontend.internExpr_sstep a26.ok q26).1
   obtain ⟨_, u27, q27, w27⟩ := AM.bind_ok w26
-  have a28 := a27.trans (ConRon.Bridge.Frontend.internExpr_sstep a27.ok q27).1
+  have a28 := a27.trans (Frontend.internExpr_sstep a27.ok q27).1
   obtain ⟨_, u28, q28, w28⟩ := AM.bind_ok w27
-  have a29 := a28.trans (reservedBasisNames_sstep a28.ok (hpins.mono a28.ext a28.pins) q28)
+  have a29 := a28.trans (reservedBasisNames_sstep a28.ok (hp0.mono a28.ext a28.pins) q28)
   obtain ⟨_, u29, q29, w29⟩ := AM.bind_ok w28
-  obtain ⟨rfl, -⟩ := natOpNames_run (hpins.mono a29.ext a29.pins) q29
-  have a30 := a29
+  obtain ⟨rfl, -⟩ := natOpNames_run (hp0.mono a29.ext a29.pins) q29
   obtain ⟨_, u30, q30, w30⟩ := AM.bind_ok w29
-  obtain ⟨rfl, -⟩ := natDivModNames_run (hpins.mono a30.ext a30.pins) q30
-  have a31 := a30
+  obtain ⟨rfl, -⟩ := natDivModNames_run (hp0.mono a29.ext a29.pins) q30
   obtain ⟨_, u31, q31, w31⟩ := AM.bind_ok w30
-  obtain rfl := reduceOpNames_state (hpins.mono a31.ext a31.pins) q31
-  have a32 := a31
+  obtain rfl := reduceOpNames_state (hp0.mono a29.ext a29.pins) q31
   obtain ⟨_, u32, q32, w32⟩ := AM.bind_ok w31
-  obtain ⟨p32, -⟩ := pinAt_run (x := ConLeche.sorryAxName) (hpins.mono a32.ext a32.pins) rfl q32
+  obtain ⟨p32, -⟩ := pinAt_run (x := ConLeche.sorryAxName) (hp0.mono a29.ext a29.pins) rfl q32
   rw [p32] at w32
-  have a33 := a32
   obtain ⟨_, u33, q33, w33⟩ := AM.bind_ok w32
-  obtain ⟨p33, -⟩ := pinAt_run (x := ConLeche.quotSoundName) (hpins.mono a33.ext a33.pins) rfl q33
+  obtain ⟨p33, -⟩ := pinAt_run (x := ConLeche.quotSoundName) (hp0.mono a29.ext a29.pins) rfl q33
   rw [p33] at w33
-  obtain ⟨-, -, -, -, -, hpe, -, -⟩ :=
-    internPinSets_run a33.ok (by rw [a33.scratch]; exact hoff) w33
-  rw [hpe, a33.pins]
+  obtain ⟨-, hx', -, -, -, hpe, -, -⟩ :=
+    internPinSets_run a29.ok (by rw [a29.scratch, b1.scratch]; exact hoff) w33
+  exact ⟨u0, _, ⟨_, q0⟩, b1, a29, hx', hpe⟩
+
+/-- con-ron: ConRon/Bridge/Checker/Pins.lean:614-724 ConRon.Bridge.internAllPins_run — the conjunct
+that lemma does not export: `internAllPins` leaves the pin table (it builds the pin SETS, its
+result). -/
+theorem internAllPins_pins {ps : List NatOpPinSet} {r : List INatOpPinSet}
+    {s s' : AState} (hok : StateOK s) (hpins : PinsOK s) (hoff : s.store.scratchOn = false)
+    (hrun : internAllPins ps s = .ok (r, s')) : s'.pins = s.pins := by
+  obtain ⟨u0, u, -, h0, h1, -, hp⟩ := internAllPins_steps hok hpins hoff hrun
+  rw [hp, h1.pins, h0.pins]
 
 end pins
 

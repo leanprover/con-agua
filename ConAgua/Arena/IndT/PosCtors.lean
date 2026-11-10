@@ -6,10 +6,10 @@ import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Arena.IndPosSpec.GgW
-import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.SnocWMfr
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Checker.NoVerdictTree
+import ConAgua.Arena.IndPosSpec.CfW
 
 @[expose] public section
 
@@ -81,7 +81,7 @@ theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn v
   obtain ⟨-, -, hty⟩ := decCV_some hcvv
   obtain ⟨wt, hwt, -⟩ := hd?_some hty
   have hq3 : q + 3 < 2 ^ 64 := by
-    have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_lt m; omega
+    have := _root_.L.Arena.erecP_lt64 hwt; omega
   rw [nestCtors_cons, oneK_split]
   -- one constructor
   have hR1 := ih.one m a ctx root fu po pl hi us dO dL no nl hO hL (rdW (m.arr64 IW) w) (rdW (m.arr64 IW) (w + 1))

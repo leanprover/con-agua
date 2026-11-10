@@ -20,11 +20,14 @@ import all ConAgua.Checker.Entry
 # The threads end to end, for the committed file
 
 `threadsRun_twinAcceptsPooled` (restated as `checkerFile_threads_accept` in
-`Final/EndToEnd.lean`, with the model and no-`False` corollaries): the trusted threaded harness (`main.c`, `run_jobs`) runs
-entry 1 (`ca_start_a`) of `checker.s`, hands the buffer it left to its threads, and each thread
-calls `ca_check_b` once per group index it claims, on its own region (`ThreadsRun`). If every call
-reports accept and the threads claim every group index, the twin's pooled pipeline accepts `[b]`
-(`TwinAcceptsPooled [b]`).
+`Final/EndToEnd.lean`, with the model and no-`False` corollaries): the trusted threaded harness
+(`main.c`, `run_jobs`) runs entry 1 (`ca_start_a`: the stages, the stream index and the frozen
+buffer; it returns `2^63 + k` for `k` records) of `checker.s`, hands the buffer it left to its
+threads, and each thread calls `ca_check_b` once per job index it claims (a record's position: the
+record's job at the stream index's view of it), on its own region (`ThreadsRun`). If every call
+reports accept, the threads claim every job index and each thread's claims increase, the twin's
+pooled pipeline accepts `[b]` (`TwinAcceptsPooled [b]`). Relative to a set theory `V`: con-ron's
+fold invariant at a job's view comes from the model of the accepted prefix.
 
 **What the theorem trusts of the harness** (the hypotheses of `ThreadsRun`; beyond them, what
 `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
@@ -42,13 +45,18 @@ reports accept and the threads claim every group index, the twin's pooled pipeli
   each later call holding the bytes the previous call left. Each call is made as `BufCallH` says
   (the region mapped and large enough, the buffer apart from it, the return address and the
   32-byte stack window).
-* **The claim counter's coverage**: every claimed group index `j` (in `rdx`) is below `k`
+* **The claim counter's coverage**: every claimed job index `j` (in `rdx`) is below `k`
   (`k = rax - 2^63` from entry 1), and every index below `k` is claimed by some thread.
+* **The claims increase** in each thread: a thread's later call claims a larger index (`main.c`
+  claims off one monotone counter; con-ron's pool, `PooledAccepts`, has each worker's jobs
+  increasing, since a job's start state is reached through the jobs before it).
 * The verdicts: entry 1 returns `rdx = 0`, `rax ≥ 2^63`; every call returns `rdx = 0`,
   `rax = ACCEPT`.
 -/
 
 namespace ConAgua.Final
+
+universe w
 
 open L L.Compiler L.Checker L.Arena ConRon.Arena
 
@@ -62,35 +70,34 @@ theorem entry1_buf (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
     (h₁ : L.run checkerProg N "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
     (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
     (B : Array Word) (hB : B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat) :
-    ((m₁.arr64 OUT).getD 1 0).toNat ≤ (m₁.arr64 OUT).size ∧ 132 ≤ ((m₁.arr64 OUT).getD 1 0).toNat ∧
+    ((m₁.arr64 OUT).getD 1 0).toNat ≤ (m₁.arr64 OUT).size ∧ hdrW ≤ ((m₁.arr64 OUT).getD 1 0).toNat ∧
       (∀ i < frozenIdsL.length, (bufEntry B i).1 + (bufEntry B i).2 ≤ B.size) ∧
       (∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i < i' →
         (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1) := by
   have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
-  obtain ⟨PA, m, v, hS, -, -, hok, hm₁, -⟩ := checkA_run b pb sz hin 1 (Or.inl rfl) N hN rs₁ m₁ h₁ hr
+  obtain ⟨PA, m₇, m, -, hok, hm₁, -⟩ := checkA_run b pb sz hin 1 (Or.inl rfl) N hN rs₁ m₁ h₁ hr
   have hflag : modeFlag 1 = 1 := rfl
   rw [hflag] at hok hm₁
-  have hF := parCompactMem_out m v 1
+  have hF := parCompactMem_out m 1
   rw [← hm₁] at hF
   have hlt : (m.arr64 OUT).size < 2 ^ 64 := by
     rw [← hF.size OUT]; exact run_load_size hin.2.2.2 h₁ OUT
   have hlen : ((m₁.arr64 OUT).getD 1 0).toNat = (fzOff m frozen.length).toNat := by
     rw [hm₁, (parCompactMem_hdr hok).2.1]
-  have hBm : B = bufOf m v := by rw [hB, bufOf, hm₁, (parCompactMem_hdr hok).2.1]
-  have hs := bufOf_size (v := v) hok hlt
+  have hBm : B = bufOf m := by rw [hB, bufOf, hm₁, (parCompactMem_hdr hok).2.1]
+  have hs := bufOf_size hok hlt
   have hoffs := buf_offs hok hlt
-  have hH : hdrW = 132 := by decide
-  have hF61 : frozen.length = 61 := frozen_length
-  have hL : frozenIdsL.length = 62 := rfl
+  have hFl : frozen.length = 63 := frozen_length
+  have hL : frozenIdsL.length = frozen.length + 1 := by rw [frozenIdsL_eq]; simp
   refine ⟨by rw [hlen, hF.size, hs.2]; exact hoffs.2, by rw [hlen, hs.2]; omega,
     fun i hi => hBm ▸ buf_entries_inside hok hlt hi, fun i hi i' hi' hii => ?_⟩
   rw [hBm]
   obtain ⟨c, rfl⟩ : ∃ c, i' = c + 1 := ⟨i' - 1, by omega⟩
-  obtain ⟨he', ho'⟩ := bufEntry_succ (v := v) hok hlt (i := c) (by omega)
+  obtain ⟨he', ho'⟩ := bufEntry_succ hok hlt (i := c) (by omega)
   rw [he', ho']
   rcases i with _ | a
   · rw [bufEntry_zero hok hlt]; simp only; omega
-  · obtain ⟨he, ho⟩ := bufEntry_succ (v := v) hok hlt (i := a) (by omega)
+  · obtain ⟨he, ho⟩ := bufEntry_succ hok hlt (i := a) (by omega)
     rw [he, ho]
     have := fzSum_mono m (j := a + 1) (n := c) (by omega)
     rw [fzSum_succ, ← fzExt_eq] at this
@@ -160,6 +167,8 @@ structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Wo
     (t.dm (i + 1)).dmem.get? (A x) = (t.st i).data.dmem.get? (A x)
   claimed : ∀ t ∈ ths, ∀ i < t.n, (t.dm i).regs.rdx < st₀.data.regs.rax - 9223372036854775808
   cover : ∀ j : Word, j < st₀.data.regs.rax - 9223372036854775808 → ∃ t ∈ ths, ∃ i < t.n, (t.dm i).regs.rdx = j
+  /-- the claims increase in each thread (the claim counter is monotone) -/
+  incr : ∀ t ∈ ths, ∀ i j, i < j → j < t.n → (t.dm i).regs.rdx < (t.dm j).regs.rdx
 
 /-! ## Pieces -/
 
@@ -169,6 +178,13 @@ theorem frozenIdsL_dom : frozenIdsL.all (checkerTab.dom64 ·) = true := by decid
 /-- Every array with a minimum length is frozen or owned (`ca_check_b`'s layout gives the others
 no memory). -/
 theorem checker_bufMinOk : bufMinOk checkerTab frozenIdsL parOwnedL = true := by decide +kernel
+
+/-- No owned array is frozen. -/
+theorem parOwnedL_not_frozen : ∀ a ∈ parOwnedL, a ∉ frozenIdsL := by
+  have h : parOwnedL.all (fun a => !frozenIdsL.contains a) = true := by decide +kernel
+  intro a ha hf
+  have := List.all_eq_true.mp h a ha
+  simp [hf] at this
 
 /-- The owned arrays are in the checker's layout. -/
 theorem parOwnedL_dom : ∀ a ∈ parOwnedL, checkerTab.dom64 a = true := by
@@ -223,7 +239,7 @@ set_option linter.constructorNameAsVariable false in
 /-- **The threads' accept is the twin's pooled accept**, for the committed file `checker.s`:
 the trusted threaded harness runs as `ThreadsRun` says. And every call, entry 1 and each
 `ca_check_b`, returns with the caller's registers (`RegsRestored`). -/
-theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem threadsRun_twinAcceptsPooled_regs [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] ∧
@@ -232,7 +248,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hc := code_of_checkerFile_par hcode
   have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1
-  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 132
+  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
   obtain ⟨⟨-, hRR₀, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
@@ -265,6 +281,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
     simp only [abiLayout_tab] at this
     rw [abiLayout_b64 _ _ _ _ _ _ hOUTp, abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
     simpa only [outAddr, abiSlot64] using this
+  have hH : hdrW = 136 := by decide
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)
@@ -282,7 +299,11 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   rw [← hBeq] at hent' hinc'
   -- the buffer's header facts (`BufGeom`'s)
   have hhdr : ∀ i < frozenIdsL.length, 9 + 2 * i < B.size := by
-    intro i hi; have : frozenIdsL.length = 62 := rfl; omega
+    intro i hi
+    have : frozenIdsL.length = frozen.length + 1 := by rw [frozenIdsL_eq]; simp
+    have : frozen.length = 63 := frozen_length
+    have := h126; have : hdrW = 136 := by decide
+    omega
   have hdisj : ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i ≠ i' →
       (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1 ∨
       (bufEntry B i').1 + (bufEntry B i').2 ≤ (bufEntry B i).1 ∨ (bufEntry B i).2 = 0 ∨ (bufEntry B i').2 = 0 := by
@@ -294,17 +315,18 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hthr : ∀ t, ∃ cs : List (Word × Nat × Mem), t ∈ ths → ThreadRuns B (zeroMem checkerTab) cs ∧
       (∀ c ∈ cs, c.1 < rs₁.headD 0 - 9223372036854775808) ∧
       (∀ i < t.n, ∃ c ∈ cs, c.1 = (t.dm i).regs.rdx) ∧
-      (∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) := by
+      (∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) ∧
+      (cs.map (·.1)).Pairwise (· < ·) := by
     intro t
     by_cases ht : t ∈ ths
     · by_cases hn0 : t.n = 0
       · exact ⟨[], fun _ => ⟨trivial, fun c h => absurd h (by simp), fun i hi => absurd hi (by omega),
-          fun i hi => absurd hi (by omega)⟩⟩
+          fun i hi => absurd hi (by omega), List.Pairwise.nil⟩⟩
       obtain ⟨hH0, -, hcx0, h80⟩ := hR.calls t ht 0 (by omega)
       have hneed : workerNeed parOwnedL ≤ t.blen := h80 ▸ hH0.need
       have hfit : t.base + t.blen < 2 ^ 64 := hcx0 ▸ h80 ▸ hH0.fits
       obtain ⟨rm, h0, hrun⟩ := thread_chain checkerProg checkerTab checkerTab_abiOk hnres frozenIdsL parOwnedL
-        (by decide) PLO PHI MODE B (outAddr dm₀.regs.r8.toNat) t.base t.blen t.n hneed hfit t.dm t.ra t.st
+        parOwnedL_not_frozen PLO PHI MODE B (outAddr dm₀.regs.r8.toNat) t.base t.blen t.n hneed hfit t.dm t.ra t.st
         (hR.zero t ht)
         (fun i hi r hr => by
           obtain ⟨hH, hdi, hcx, h8⟩ := hR.calls t ht i hi
@@ -312,13 +334,13 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
             ⟨⟨hH.need, hH.fits, hH.bend, hhdr, hent', hdisj, hH.apart⟩, hH.hB, hH.hmap, hH.hra, hH.hcs,
               hH.hcs24, hH.hcs8⟩
           have hEv := abiB_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerProgI_wf MODE PLO PHI OUT HDRF
-            CTLF 132 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+            CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
             (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i) (t.ra i) hbc
             (by rw [hcx]; exact hr) checker_bufMinOk
           rw [hdi, hcx] at hEv
           exact hR.ret t ht i hi _ hEv (fun s h => h.1))
         (hR.acc t ht) (hR.next t ht)
-      refine ⟨thrCalls t rm, fun _ => ⟨?_, ?_, ?_, fun i hi => by obtain ⟨_, -, -, -, h⟩ := hrun i hi; exact h⟩⟩
+      refine ⟨thrCalls t rm, fun _ => ⟨?_, ?_, ?_, fun i hi => by obtain ⟨_, -, -, -, h⟩ := hrun i hi; exact h, ?_⟩⟩
       · rw [← h0, thrCalls, List.range_eq_range']
         refine threadRuns_range B t rm (fun i hi => ?_) t.n 0 (by omega)
         obtain ⟨rs, h1, -, h3, -⟩ := hrun i hi
@@ -329,13 +351,17 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
         rw [← hrax₁]; exact hR.claimed t ht i hi
       · intro i hi
         exact ⟨_, List.mem_map.mpr ⟨i, List.mem_range.mpr hi, rfl⟩, rfl⟩
+      · simp only [thrCalls, List.map_map]
+        rw [List.pairwise_map]
+        refine (List.pairwise_lt_range (n := t.n)).imp_of_mem fun hi hj hij => ?_
+        exact hR.incr t ht _ _ hij (List.mem_range.mp hj)
     · exact ⟨[], fun h => absurd h ht⟩
   obtain ⟨f, hf⟩ := Classical.axiomOfChoice hthr
-  refine ⟨?_, hRR₀, fun t ht i hi => (hf t ht).2.2.2 i hi⟩
-  refine threads_twinAcceptsPooled b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq
-    (ths.map fun t => (zeroMem checkerTab, f t)) (fun t' ht' => ?_) (fun j hj => ?_)
+  refine ⟨?_, hRR₀, fun t ht i hi => (hf t ht).2.2.2.1 i hi⟩
+  refine threads_twinAcceptsPooled V checkerCd_proved b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq
+    (ths.map fun t => (zeroMem checkerTab, f t)) (fun t' ht' => ?_) (fun j hj => ?_) ?_
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
-    obtain ⟨h1, h2, -, -⟩ := hf t ht
+    obtain ⟨h1, h2, -, -, -⟩ := hf t ht
     refine ⟨fun a ha => ?_, rfl, h1, h2⟩
     have hl := parOwnedL_dom a ha
     rw [hMem₁.size64 a hl]
@@ -345,16 +371,19 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
     simp [zeroMem, Mem.arr64, zeros]
   · rw [← hrax₁] at hj
     obtain ⟨t, ht, i, hi, hj'⟩ := hR.cover j hj
-    obtain ⟨-, -, h3, -⟩ := hf t ht
+    obtain ⟨-, -, h3, -, -⟩ := hf t ht
     obtain ⟨c, hc', hcj⟩ := h3 i hi
     exact ⟨_, List.mem_map.mpr ⟨t, ht, rfl⟩, c, hc', by rw [hcj, hj']⟩
+  · intro t' ht'
+    obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
+    exact (hf t ht).2.2.2.2
 
 /-- **The threads' accept is the twin's pooled accept** (`threadsRun_twinAcceptsPooled_regs`
 without the registers). -/
-theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem threadsRun_twinAcceptsPooled [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
-  (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).1
+  (threadsRun_twinAcceptsPooled_regs V k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).1
 
 end ConAgua.Final

@@ -11,7 +11,6 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.Arena.Env
 import ConAgua.Arena.IndCopy2
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy
@@ -212,39 +211,25 @@ theorem viewBind_run_s (h : EIdx) (a : AState) :
     (viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
 
 
-theorem StageR.set_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) (p x : Word) : StageR dn vis fe (m.set64 IW p x) a := by
-  have hf := set64IW_frame m p x
-  have hC : (m.set64 IW p x).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have hE : (m.set64 IW p x).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨CheckR.frame_iw hf hS.check, ?_⟩
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
-  have hI := hf.size IW
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · simp only [iwTop, hC, hI]; exact h1
-  · simp only [erTop, hC, hE]; exact h2
-  · rw [hI]; exact h3
-  · rw [hE]; exact h4
-  · rw [hC]; exact h5
+theorem StageR.set_iw {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+    (hS : StageR vis fe m a) (p x : Word) : StageR vis fe (m.set64 IW p x) a := by
+  have hf : MemFrame [IW] [200] m (m.set64 IW p x) :=
+    (MemFrame.set64 m IW (by decide) p x).mono (by simp) (by simp)
+  have ht : iwTop (m.set64 IW p x) = iwTop m := by
+    simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  exact ⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw (by rw [ht, hf.size IW]; exact hS.iw.iw)⟩
+
 /-- Putting the pool's top back to `o ≤` the top keeps the stage relation. -/
-theorem StageR.set_top {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (hS : StageR dn vis fe m a) (o : Word) (ho : o.toNat ≤ iwTop m) :
-    StageR dn vis fe (m.set64 CTL 200 o) a ∧ iwTop (m.set64 CTL 200 o) = o.toNat := by
+theorem StageR.set_top {vis : Word} {fe : IFEnv} {m : Mem}
+    {a : AState} (hS : StageR vis fe m a) (o : Word) (ho : o.toNat ≤ iwTop m) :
+    StageR vis fe (m.set64 CTL 200 o) a ∧ iwTop (m.set64 CTL 200 o) = o.toNat := by
   have hf : MemFrame [IW] [200] m (m.set64 CTL 200 o) :=
-    MemFrame.mono (MemFrame.setCtl m 200 o) (by simp) (by simp)
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
+    (MemFrame.setCtl m 200 o).mono (by simp) (by simp)
+  have hc := hS.iw.ctl
   have ht : iwTop (m.set64 CTL 200 o) = o.toNat := by
-    simp only [iwTop, rdW_set64]
-    have h200 : UInt64.toNat 200 < (m.arr64 CTL).size := by simpa using h5
-    rw [ite_eq_left ⟨trivial, trivial, h200⟩]
-  have h129 : rdW ((m.set64 CTL 200 o).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
-  have hE : (m.set64 CTL 200 o).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨⟨CheckR.frame_iw hf hS.check, ?_, ?_, ?_, ?_, ?_⟩, ht⟩
-  · rw [ht, hf.size IW]; omega
-  · simp only [erTop, h129, hE]; exact h2
-  · rw [hf.size IW]; exact h3
-  · rw [hE]; exact h4
-  · rw [hf.size CTL]; exact h5
+    simp only [iwTop, rdW_set64]; rw [ite_eq_left ⟨trivial, trivial, by simpa using hc⟩]
+  refine ⟨⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw ?_⟩, ht⟩
+  rw [ht, hf.size IW]; exact Nat.le_trans ho hS.iw.iw
 
 /-- One step of the twin's strippers (`stripPis`/`stripLams` at `k + 1`, tag `T`, the rest `rec`). -/
 def stripStepT (T : UInt32) (rec : EIdx → AM (Option (List EIdx × EIdx))) (h : EIdx) :
@@ -294,16 +279,16 @@ variable (tg : Word) (T : UInt32)
     (viewBind (decE w)).run a = .ok (some (decE ((eViewW m w).tail.headD 0),
       decE ((eViewW m w).tail.tail.headD 0)), a) ∧
     H ((eViewW m w).tail.headD 0) ∧ H ((eViewW m w).tail.tail.headD 0))
-  (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k o : Word) (a : AState)
+  (vis : Word) (fe : IFEnv) (k o : Word) (a : AState)
 include h0 hs hT hvb
 
 /-- **The loop's model refines the twin's stripper** from count `n`: the twin keeps its state,
 the stage relation holds after, only `IW` and `CTL[200]` are written, the pool below the current
 top is kept, and the words say the twin's result (`StripRes`). -/
 theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
-    stripGoW tg k o f m n h = some (r, m') → StageR dn vis fe m a → H h → n ≤ k →
+    stripGoW tg k o f m n h = some (r, m') → StageR vis fe m a → H h → n ≤ k →
     iwTop m = o.toNat + n.toNat →
-    ∃ x, (tw (k.toNat - n.toNat) (decE h)).run a = .ok (x, a) ∧ StageR dn vis fe m' a ∧
+    ∃ x, (tw (k.toNat - n.toNat) (decE h)).run a = .ok (x, a) ∧ StageR vis fe m' a ∧
       MemFrame [IW] [200] m m' ∧ (∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
       StripRes o k n m' r x := by
   intro f
@@ -384,7 +369,7 @@ theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
       simp only [decHL] at hdec
       have hon : o.toNat + n.toNat = q.toNat := by omega
       rw [hon, show q.toNat + 1 = o.toNat + (n.toNat + 1) by omega, hdec]
-      simp only [hd?, iwA, hat, Option.bind_eq_bind, Option.bind]
+      simp only [hd?, iwA, aread_apply, hat, Option.bind_eq_bind, Option.bind]
       rw [ite_eq_left hty]; rfl
 
 end loop
@@ -407,19 +392,21 @@ theorem stripTW_ok (tg : Word) (T : UInt32)
       (viewBind (decE w)).run a = .ok (some (decE ((eViewW m w).tail.headD 0),
         decE ((eViewW m w).tail.tail.headD 0)), a) ∧
       H ((eViewW m w).tail.headD 0) ∧ H ((eViewW m w).tail.tail.headD 0))
-    (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
-    RelW (stripTW tg n) [k, e] (StageR dn vis fe) (tw k.toNat (decI e)) (KeepPost dn vis fe decOLE) := by
+    (n : Nat) (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
+    RelW (stripTW tg n) [k, e] (StageR vis fe) (tw k.toNat (decI e)) (KeepPost vis fe decOLE) := by
   intro m m' a r hw hS
   match n, hw with
   | f + 1, hw =>
   rw [stripTW_succ] at hw
-  obtain ⟨x, hrun, hS', hf, hlow, hres⟩ := stripGoW_ok tg T tw h0 hs hT hvb dn vis fe k _ a (f + 1)
+  obtain ⟨x, hrun, hS', hf, hlow, hres⟩ := stripGoW_ok tg T tw h0 hs hT hvb vis fe k _ a (f + 1)
     m m' 0 e r hw hS he (UInt64.le_iff_toNat_le.mpr (by simp)) (by simp [iwTop])
   have ht0 : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
   have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by simp)]
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
   have hgrow : iwTop m ≤ iwTop m' → IWGrow m m' := fun h =>
-    ⟨h, by rw [h129]; exact Nat.le_refl _, hlow, fun i _ => by rw [hE]⟩
+    ⟨h, by rw [h129]; exact Nat.le_refl _, hlow, fun i _ => by rw [hE],
+      by simp only [erecTop1]; rw [hf.ctl 130 (by simp)]; exact Nat.le_refl _,
+      fun i _ => by rw [hf.arr _ (by decide) (by decide)]⟩
   simp only [UInt64.toNat_zero, Nat.sub_zero] at hrun
   refine ⟨x, a, hrun, hS', ?_⟩
   cases x with
@@ -438,10 +425,10 @@ theorem stripTW_ok (tg : Word) (T : UInt32)
     · exact hb
 
 /-- **`strip_pis` refines `stripPis`** (the model; the census theorem is `stripPis_refines`). -/
-theorem stripTW_pis_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem stripTW_pis_ok (n : Nat) (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
-    RelW (stripTW 6 n) [k, e] (StageR dn vis fe) (stripPis k.toNat (decI e))
-      (KeepPost dn vis fe decOLE) :=
+    RelW (stripTW 6 n) [k, e] (StageR vis fe) (stripPis k.toNat (decI e))
+      (KeepPost vis fe decOLE) :=
   stripTW_ok 6 ETag.forallE stripPis (fun _ => rfl) stripPis_succ
     (fun w hw => tag_beq_iff w hw 6 (by decide))
     (fun m a w hR hw hne hg => by
@@ -450,13 +437,13 @@ theorem stripTW_pis_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Wor
       have hvb := viewBind_forall m a hR w hw hvok hg
       rw [hew]
       exact ⟨by rw [viewBind_run_s, hvb]; rfl, h1, h2⟩)
-    n dn vis fe k e he
+    n vis fe k e he
 
 /-- **`strip_lams` refines `stripLams`** (the model). -/
-theorem stripTW_lams_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem stripTW_lams_ok (n : Nat) (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
-    RelW (stripTW 5 n) [k, e] (StageR dn vis fe) (stripLams k.toNat (decI e))
-      (KeepPost dn vis fe decOLE) :=
+    RelW (stripTW 5 n) [k, e] (StageR vis fe) (stripLams k.toNat (decI e))
+      (KeepPost vis fe decOLE) :=
   stripTW_ok 5 ETag.lam stripLams (fun _ => rfl) stripLams_succ
     (fun w hw => tag_beq_iff w hw 5 (by decide))
     (fun m a w hR hw hne hg => by
@@ -465,7 +452,7 @@ theorem stripTW_lams_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Wo
       have hvb := viewBind_lam m a hR w hw hvok hg
       rw [hew]
       exact ⟨by rw [viewBind_run_s, hvb]; rfl, h1, h2⟩)
-    n dn vis fe k e he
+    n vis fe k e he
 
 /-! ## The fuel-free model
 
@@ -525,44 +512,44 @@ theorem stripLams_specF (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e
   triple_post (stripLams_specW p hp n s₀ k e) fun _ _ h => ⟨h.1, stripF_of_TW h.2⟩
 
 /-- **`strip_pis` refines `stripPis`**, the fuel-free model (replaces `IndStubs.stripPis_spec`). -/
-theorem stripF_pis_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem stripF_pis_ok (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
-    RelW (stripF 6) [k, e] (StageR dn vis fe) (stripPis k.toNat (decI e))
-      (KeepPost dn vis fe decOLE) :=
-  stripTW_pis_ok _ dn vis fe k e he
+    RelW (stripF 6) [k, e] (StageR vis fe) (stripPis k.toNat (decI e))
+      (KeepPost vis fe decOLE) :=
+  stripTW_pis_ok _ vis fe k e he
 
 /-- **`strip_lams` refines `stripLams`**, the fuel-free model (replaces `IndStubs.stripLams_spec`). -/
-theorem stripF_lams_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem stripF_lams_ok (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
-    RelW (stripF 5) [k, e] (StageR dn vis fe) (stripLams k.toNat (decI e))
-      (KeepPost dn vis fe decOLE) :=
-  stripTW_lams_ok _ dn vis fe k e he
+    RelW (stripF 5) [k, e] (StageR vis fe) (stripLams k.toNat (decI e))
+      (KeepPost vis fe decOLE) :=
+  stripTW_lams_ok _ vis fe k e he
 
 /-! ## The census theorems -/
 
 /-- **`strip_pis` refines `stripPis`** under the stage relation, at every L fuel. -/
 @[refines ConRon.Arena.stripPis]
-theorem stripPis_refines (p : Prog) (hp : StripProg p) (dn : NIdx → Option ConLeche.Name)
+theorem stripPis_refines (p : Prog) (hp : StripProg p)
     (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
-    RefAM p "strip_pis" [k, e] (StageR dn vis fe) (stripPis k.toNat (decI e))
-      (KeepPost dn vis fe decOLE) := by
+    RefAM p "strip_pis" [k, e] (StageR vis fe) (stripPis k.toNat (decI e))
+      (KeepPost vis fe decOLE) := by
   intro n s₀ a₀ hS
   refine triple_post (stripPis_specW p hp n s₀ k e) ?_
   rintro r s' ⟨hloc, hw⟩
-  obtain ⟨x, a', hrun, hpost⟩ := stripTW_pis_ok n dn vis fe k e he _ _ _ _ hw hS
+  obtain ⟨x, a', hrun, hpost⟩ := stripTW_pis_ok n vis fe k e he _ _ _ _ hw hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst, hres]; exact hpost⟩
 
 /-- **`strip_lams` refines `stripLams`** under the stage relation, at every L fuel. -/
 @[refines ConRon.Arena.stripLams]
-theorem stripLams_refines (p : Prog) (hp : StripProg p) (dn : NIdx → Option ConLeche.Name)
+theorem stripLams_refines (p : Prog) (hp : StripProg p)
     (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
-    RefAM p "strip_lams" [k, e] (StageR dn vis fe) (stripLams k.toNat (decI e))
-      (KeepPost dn vis fe decOLE) := by
+    RefAM p "strip_lams" [k, e] (StageR vis fe) (stripLams k.toNat (decI e))
+      (KeepPost vis fe decOLE) := by
   intro n s₀ a₀ hS
   refine triple_post (stripLams_specW p hp n s₀ k e) ?_
   rintro r s' ⟨hloc, hw⟩
-  obtain ⟨x, a', hrun, hpost⟩ := stripTW_lams_ok n dn vis fe k e he _ _ _ _ hw hS
+  obtain ⟨x, a', hrun, hpost⟩ := stripTW_lams_ok n vis fe k e he _ _ _ _ hw hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst, hres]; exact hpost⟩
 

@@ -70,7 +70,7 @@ theorem partsIwRd {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) {w : Wor
   simp only [iwN, nat?, Option.map_eq_some_iff] at h
   obtain ⟨x, hx, rfl⟩ := h
   obtain ⟨hi, hx'⟩ := truncM_iw_get hx
-  simp only [iwA] at hx'
+  simp only [iwA, aread_apply, aread_apply] at hx'
   refine ⟨?_, x.toNat_lt, hi⟩
   rw [rdW_of_get? hw.symm hx']; simp
 
@@ -82,13 +82,11 @@ theorem partsIwLt {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) : i < iw
 /-- The type handle of a constant decoded below the top. -/
 theorem partsCVType {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp (truncM m) q = some cv)
     {w : Word} (hw : w.toNat = q) :
-    (rdW (m.arr64 EREC) (w + 3)).toNat < 2 ^ 32 ∧ decI (rdW (m.arr64 EREC) (w + 3)) = cv.type := by
+    (erRd m (w + 3)).toNat < 2 ^ 32 ∧ decI (erRd m (w + 3)) = cv.type := by
   obtain ⟨x, hx, hxl, hxe⟩ := hd?_some (decCV_type h)
-  obtain ⟨hi, hx'⟩ := truncM_er_get hx
-  simp only [erA] at hx'
-  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-  have hw3 : (w + 3).toNat = q + 3 := by rw [UInt64.toNat_add]; simp; omega
-  rw [rdW_of_get? hw3.symm hx']
+  have hx' := truncM_er_get hx
+  have hw3 : (w + 3).toNat = q + 3 := by have := erecP_lt64 hx'; rw [UInt64.toNat_add]; simp; omega
+  rw [erRd_of_erA (by rw [hw3]; exact hx')]
   exact ⟨hxl, hxe.symm⟩
 
 /-- A word sum that does not wrap. -/

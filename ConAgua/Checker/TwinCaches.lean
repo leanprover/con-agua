@@ -197,12 +197,6 @@ theorem keeps_indPiTeleLen : ∀ (fuel : Nat) (h : EIdx), Keeps (indPiTeleLen fu
     intro c p; unfold indPiTeleLen
     repeat' keeps_step [keeps_view, keeps_indPiTeleLen fuel]
 
-theorem keeps_piResultD : ∀ (fuel : Nat) (h : EIdx), Keeps (piResultD fuel h)
-  | 0, h => by intro c p; unfold piResultD; repeat' keeps_step
-  | fuel + 1, h => by
-    intro c p; unfold piResultD
-    repeat' keeps_step [keeps_view, keeps_piResultD fuel]
-
 theorem keeps_piSortTeleLen : ∀ (fuel : Nat) (h : EIdx), Keeps (piSortTeleLen? fuel h)
   | 0, h => by intro c p; unfold piSortTeleLen?; repeat' keeps_step
   | fuel + 1, h => by
@@ -214,7 +208,7 @@ theorem keeps_validateIndD (st : StateD) (tys : List ConLeche.Frontend.IndTypeRe
     Keeps (validateIndD st tys cts rcs) := by
   intro c p; unfold validateIndD getDeclD
   repeat' keeps_step [keeps_StateD_name, keeps_StateD_expr, keeps_storeFuel, keeps_readName,
-    keeps_indPiTeleLen, keeps_piResultD, keeps_view, keeps_readLevel, keeps_viewN,
+    keeps_indPiTeleLen, keeps_view, keeps_readLevel, keeps_viewN,
     keeps_piSortTeleLen]
 
 theorem keeps_installIndD (st : StateD) (tys : List ConLeche.Frontend.IndTypeRec)
@@ -223,10 +217,14 @@ theorem keeps_installIndD (st : StateD) (tys : List ConLeche.Frontend.IndTypeRec
   intro c p; unfold installIndD pushDecl
   repeat' keeps_step [keeps_parseCVD, keeps_parseRuleD]
 
-theorem keeps_applyLine (st : StateD) (r : ConLeche.Frontend.LineRec) : Keeps (applyLine st r) := by
-  intro c p; unfold applyLine applyDeclD processLineCoreD pushDecl getDeclD
+theorem keeps_applyRecord (st : StateD) (r : ConLeche.Frontend.LineRec) : Keeps (applyRecord st r) := by
+  intro c p; unfold applyRecord applyDeclD processLineCoreD pushDecl getDeclD
   repeat' keeps_step [keeps_parseExprEntryD, keeps_parseNameEntryD, keeps_parseLevelEntryD,
     keeps_parseCVD, keeps_StateD_expr, keeps_validateIndD, keeps_installIndD]
+
+theorem keeps_applyLine (st : StateD) (r : ConLeche.Frontend.LineRec) (lineNo : Nat) :
+    Keeps (applyLine st r lineNo) := by
+  intro c p; unfold applyLine; repeat' keeps_step [keeps_applyRecord]
 
 theorem keeps_StateD_init : Keeps StateD.init := by
   intro c p; unfold StateD.init; repeat' keeps_step [keeps_internNNode, keeps_internLNode]
@@ -325,7 +323,7 @@ theorem keeps_isNatOpRecord (d : IDeclaration) : Keeps (isNatOpRecord d) := by
 
 theorem keeps_hoistClosure (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat) (i : Nat) :
     ∀ (fuel : Nat) (target : Std.HashMap Nat Nat) (stack : List Nat),
-      Keeps (hoistClosure ds idx i fuel target stack)
+      Keeps (hoistClosure IDeclaration.usedConsts ds idx i fuel target stack)
   | 0, target, stack => by intro c p; unfold hoistClosure; repeat' keeps_step
   | fuel + 1, target, stack => by
     intro c p; unfold hoistClosure hoistClosure.pushDeps
@@ -333,19 +331,19 @@ theorem keeps_hoistClosure (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat
 
 theorem keeps_hoistDeps (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat) (i : Nat) :
     ∀ (target : Std.HashMap Nat Nat) (gs : List NIdx),
-      Keeps (hoistTargetsGo.hoistDeps ds idx target i gs)
+      Keeps (hoistTargetsGo.hoistDeps IDeclaration.usedConsts ds idx target i gs)
   | target, [] => by intro c p; unfold hoistTargetsGo.hoistDeps; repeat' keeps_step
   | target, g :: gs => by
     intro c p; unfold hoistTargetsGo.hoistDeps
     repeat' keeps_step [keeps_hoistClosure, keeps_hoistDeps ds idx i _ gs]
 
 theorem keeps_hoistTargetsGo (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat)
-    (target : Std.HashMap Nat Nat) (i : Nat) : Keeps (hoistTargetsGo ds idx target i) := by
-  fun_induction hoistTargetsGo ds idx target i <;> intro c p <;>
+    (target : Std.HashMap Nat Nat) (i : Nat) : Keeps (hoistTargetsGo IDeclaration.usedConsts ds idx target i) := by
+  fun_induction hoistTargetsGo IDeclaration.usedConsts ds idx target i <;> intro c p <;>
     repeat' keeps_step [keeps_isNatOpRecord, keeps_natOpDeps, keeps_hoistDeps,
-      ‹∀ _, Keeps (hoistTargetsGo _ _ _ _)›, ‹Keeps (hoistTargetsGo _ _ _ _)›]
+      ‹∀ _, Keeps (hoistTargetsGo _ _ _ _ _)›, ‹Keeps (hoistTargetsGo _ _ _ _ _)›]
 
-theorem keeps_hoistNatOpGround (ds : Array IDeclaration) : Keeps (hoistNatOpGround ds) := by
+theorem keeps_hoistNatOpGround (ds : Array IDeclaration) : Keeps (hoistNatOpGround IDeclaration.usedConsts ds) := by
   intro c p; unfold hoistNatOpGround hoistTargets; repeat' keeps_step [keeps_hoistTargetsGo]
 
 theorem keeps_preparePrelude (pre : PreludeIx) (ds : Array IDeclaration) :

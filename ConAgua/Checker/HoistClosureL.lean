@@ -114,11 +114,14 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
     exact hE.ordR k hk
   · exact memoRV_frame hnSch hnSch_wf nmKey _ [IW, HSEEN] [73, 74] (by decide) (by decide) m m' hf.1
       (fun _ _ h => h) idx hE.nix
-  · obtain ⟨h1, h2, h3, h4, h5⟩ := hE.iwok
+  · obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hE.iwok
     have hER : m'.arr64 EREC = m.arr64 EREC := hD EREC (by decide) (by decide)
+    have hER1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hD (tier1 EREC) (by decide) (by decide)
     have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.1.ctl 129 (by decide)]
+    have h130 : erecTop1 m' = erecTop1 m := by simp only [erecTop1]; rw [hf.1.ctl 130 (by decide)]
     refine ⟨by rw [htop, hsz]; exact h1, by rw [h129, hER]; exact h2, by rw [hsz]; exact h3,
-      by rw [hER]; exact h4, by rw [hf.1.size CTL]; exact h5⟩
+      by rw [hER]; exact h4, by rw [hf.1.size CTL]; exact h5, by rw [h130, hER1]; exact h6,
+      by rw [hER1]; exact h7, by rw [hER]; exact h8, by rw [hER1]; exact h9⟩
 
 /-- **What an allocation keeps**: `IW` and `CTL[200]` only, the pool grown. -/
 structure AFr (m m' : Mem) : Prop where
@@ -597,7 +600,7 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
     (T : Std.HashMap Nat Nat) (r : Word) (hE : HEnv m a ds idx ord tg ws c) (hT : TgtR m tg c T)
     (hTv : TgtV T c) (hTi : ∀ (k t : Nat), T[k]? = some t → t ≤ i) (hij : i < j) (hlt : TLt T)
     (h : hClosureW n m (UInt64.ofNat i) (UInt64.ofNat j) ord tg ws = some (r, m')) :
-    ∃ T'', (hoistClosure ds idx i ds.size T [j]).run a = .ok (T'', a) ∧
+    ∃ T'', (hoistClosure IDeclaration.usedConsts ds idx i ds.size T [j]).run a = .ok (T'', a) ∧
       HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧ HFr tg ws c m m' ∧
       (∀ (k t : Nat), T''[k]? = some t → t ≤ i) ∧ (∀ k : Nat, (T[k]?).isSome → T''[k]? = T[k]?) ∧
       TLt T'' := by
@@ -614,7 +617,7 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
       cases e : T[j]? with
       | none => rw [hrd, e] at hm; exact absurd rfl hm
       | some _ => rfl
-    obtain ⟨T'', hrun, hget⟩ := closure_exact ds idx i a (depsOf ds a) (fun _ => False) T j hTi
+    obtain ⟨T'', hrun, hget⟩ := closure_exact IDeclaration.usedConsts ds idx i a (depsOf ds a) (fun _ => False) T j hTi
       (fun _ h => h.elim) (fun _ h => h.elim) (Or.inr hTj) (fun _ h => h.elim)
     have e : ∀ k : Nat, T''[k]? = T[k]? := fun k => by rw [hget k]; simp
     exact ⟨T'', hrun, hE, tgtR_congr hT e, fun x t hx => hTv x t (by rw [← e x]; exact hx),
@@ -697,7 +700,7 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
   let N : Nat → Prop := fun x => T[x]? = none ∧ (T'[x]?).isSome
   have hjT' : (T'[j]?).isSome := by
     rw [hmono' j (by simp)]; simp
-  obtain ⟨T'', hrun, hget⟩ := closure_exact ds idx i a (depsOf ds a) N T j hTi
+  obtain ⟨T'', hrun, hget⟩ := closure_exact IDeclaration.usedConsts ds idx i a (depsOf ds a) N T j hTi
     (fun k ⟨h0, hs⟩ => by
       obtain ⟨⟨hk, hr⟩, -⟩ := hI'.done k h0 hs (by simp)
       exact ⟨h0, hk, hr⟩)
@@ -753,7 +756,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
     TLt T → GrR m o q gs → q.toNat + gs.length = l.toNat → (gs ≠ [] → ws.toNat + c ≤ o.toNat) →
     o.toNat + l.toNat < 2 ^ 64 →
     hDepsW n m (UInt64.ofNat i) o l q ord tg ws = some (r, m') →
-    ∃ T'', (hoistTargetsGo.hoistDeps ds idx T i gs).run a = .ok (T'', a) ∧
+    ∃ T'', (hoistTargetsGo.hoistDeps IDeclaration.usedConsts ds idx T i gs).run a = .ok (T'', a) ∧
       HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧
       (∀ (k t : Nat), T''[k]? = some t → t ≤ i) ∧ HFr tg ws c m m' ∧ TLt T'' := by
   intro gs

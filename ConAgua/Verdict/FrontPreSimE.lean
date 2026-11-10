@@ -85,7 +85,6 @@ import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.ProjStore
-import all ConAgua.Arena.Promote
 import all ConAgua.Arena.PropRead
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecClass
@@ -139,6 +138,7 @@ import all ConAgua.Front.NatDec
 import all ConAgua.Front.Unescape
 import all ConAgua.L.Examples
 import all ConAgua.Rom.CIRead
+import all ConAgua.Rom.CIConst
 import all ConAgua.Rom.PinRead
 import all ConAgua.Rom.PinReadSpec
 import all ConAgua.Scan.Key
@@ -150,6 +150,9 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+import all ConAgua.Arena.BasisL
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.IndStream
 
 @[expose] public section
 

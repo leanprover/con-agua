@@ -157,7 +157,7 @@ in `mb`) at a source pointer `p0` satisfying `S`, the `nfs` slice above `hi` (or
 those of `PtrsB`. -/
 def CnsRec (mb : Mem) (S : Nat → Prop) (hi : Nat) (m : Mem) (w : Nat) (M : TargetMajor) : Prop :=
   ∃ p0 src eo el ps, DecB (fun m => decTM m p0) mb src ∧ S p0 ∧ hi ≤ w ∧ w + 13 ≤ iwTop m ∧
-    (∀ k < 13, k ≠ 9 → k ≠ 10 → (m.arr64 IW)[w + k]? = (iwA (truncM mb))[p0 + k]?) ∧
+    (∀ k < 13, k ≠ 9 → k ≠ 10 → (m.arr64 IW)[w + k]? = iwA (truncM mb) (p0 + k)) ∧
     iwN m (w + 9) = some eo ∧ iwN m (w + 10) = some el ∧ decNL m eo el = some ps ∧
     eo + el ≤ iwTop m ∧ (el = 0 ∨ hi ≤ eo) ∧ PtrsB mb ps M.nfs ∧ M = { src with nfs := M.nfs }
 
@@ -170,7 +170,7 @@ theorem decNL_frX {x : Nat} {m m' : Mem} (h : FrX x m m') {o l : Nat} (hb : o + 
   apply mapM_opt_congr
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
-  simp only [iwN, nat?, iwA]
+  simp only [iwN, nat?, iwA, aread_apply, aread_apply]
   rw [h.2 (o + j) (by omega) (by omega)]
 
 theorem CnsRec.frame {mb : Mem} {S : Nat → Prop} {hi x : Nat} {m m' : Mem} {w : Nat} {M : TargetMajor}
@@ -179,8 +179,8 @@ theorem CnsRec.frame {mb : Mem} {S : Nat → Prop} {hi x : Nat} {m m' : Mem} {w 
   refine ⟨p0, src, eo, el, ps, hsrc, hS0, hw, Nat.le_trans htop hF.1, fun k hk h9 h10 => ?_, ?_, ?_, ?_,
     Nat.le_trans hb hF.1, hfr, hpb, hM⟩
   · rw [hF.2 _ (by omega) (by omega)]; exact hwords k hk h9 h10
-  · simp only [iwN, nat?, iwA] at h9 ⊢; rw [hF.2 _ (by omega) (by omega)]; exact h9
-  · simp only [iwN, nat?, iwA] at h10 ⊢; rw [hF.2 _ (by omega) (by omega)]; exact h10
+  · simp only [iwN, nat?, iwA, aread_apply] at h9 ⊢; rw [hF.2 _ (by omega) (by omega)]; exact h9
+  · simp only [iwN, nat?, iwA, aread_apply] at h10 ⊢; rw [hF.2 _ (by omega) (by omega)]; exact h10
   · rw [decNL_frX hF hb (by omega)]; exact hps
 
 theorem PtrsB.mapM {mb m : Mem} (hg : IWGrow mb m) :
@@ -194,7 +194,7 @@ theorem PtrsB.mapM {mb m : Mem} (hg : IWGrow mb m) :
 theorem CnsRec.decB {mb : Mem} {S : Nat → Prop} {hi : Nat} {m : Mem} {w : Nat} {M : TargetMajor}
     (hg : IWGrow mb m) (h : CnsRec mb S hi m w M) : DecB (fun m => decTM m w) m M := by
   obtain ⟨p0, src, eo, el, ps, hsrc, -, hw, htop, hwords, h9, h10, hps, hb, -, hpb, hM⟩ := h
-  have ew : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 → (iwA (truncM m))[w + k]? = (iwA (truncM mb))[p0 + k]? :=
+  have ew : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 → iwA (truncM m) (w + k) = iwA (truncM mb) (p0 + k) :=
     fun k hk a b => by rw [truncM_iw_get?, ite_eq_left (by omega)]; exact hwords k hk a b
   have e : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 → iwN (truncM m) (w + k) = iwN (truncM mb) (p0 + k) :=
     fun k hk a b => by simp only [iwN, nat?, ew k hk a b]
@@ -245,20 +245,20 @@ theorem ptrsB_of_mapM {mb : Mem} : ∀ {ps : List Nat} {xs : List NestCtorNf},
     obtain ⟨x, hx, ys, hys, rfl⟩ := h
     exact .cons hx (ptrsB_of_mapM hys)
 
-theorem iwN_get {m : Mem} {i v : Nat} (h : iwN m i = some v) : ∃ w, (iwA m)[i]? = some w := by
+theorem iwN_get {m : Mem} {i v : Nat} (h : iwN m i = some v) : ∃ w, iwA m i = some w := by
   simp only [iwN, nat?, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, -⟩ := h; exact ⟨w, hw⟩
 
 theorem iwH_get {kk : IdxKind} {m : Mem} {i : Nat} {x : Idx kk} (h : iwH m i = some x) :
-    ∃ w, (iwA m)[i]? = some w := by
+    ∃ w, iwA m i = some w := by
   simp only [iwH, hd?] at h
-  cases hw : (iwA m)[i]? with
+  cases hw : iwA m i with
   | none => rw [hw] at h; cases h
   | some w => exact ⟨w, rfl⟩
 
 /-- **Every word of a decoded class record is read.** -/
 theorem decTM_get {m : Mem} {q : Nat} {M : TargetMajor} (h : decTM m q = some M) :
-    ∀ k < 13, ∃ w, (iwA m)[q + k]? = some w := by
+    ∀ k < 13, ∃ w, iwA m (q + k) = some w := by
   simp only [decTM, decAt, bind, Option.bind_eq_some_iff] at h
   obtain ⟨ind, hind, lv, hlv, ds, ⟨o2, h2, l2, h3, -⟩, nPc, h4, nIdx, h5, ctors, ⟨o6, h6, l6, h7, -⟩, w8, h8,
     nfs0, ⟨o9, h9, l9, h10, -⟩, pfvs, ⟨o11, h11, l11, h12, -⟩, -⟩ := h

@@ -44,8 +44,8 @@ theorem partsPSl_cons {α : Type} {f : Mem → Nat → Option α} {xs : List α}
 /-- A constant decoded below the tops: its name word, in any memory grown into. -/
 theorem partsCVName {m m' : Mem} (hg : IWGrow m m') {q : Nat} {cv : IConstantVal}
     (h : DecB (fun m => decCVp m q) m cv) (hq : q < 2 ^ 64) :
-    (rdW (m'.arr64 EREC) (UInt64.ofNat q)).toNat < 2 ^ 32 ∧
-      decI (rdW (m'.arr64 EREC) (UInt64.ofNat q)) = cv.name :=
+    (erRd m' (UInt64.ofNat q)).toNat < 2 ^ 32 ∧
+      decI (erRd m' (UInt64.ofNat q)) = cv.name :=
   decCVp_name_p (h.stab (OMono.decCVp _) m' hg) hq
 
 end L.Ind

@@ -7,9 +7,9 @@ public import ConAgua.Verdict.WhnfModels6E
 public import ConAgua.Arena.DefEqStuck
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfIotaRefine3
+public import ConAgua.Arena.DeclArmsCanon
 
 @[expose] public section
 
@@ -73,7 +73,7 @@ theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
     {n : NIdx} {us : LsIdx} {r : EIdx} (hrun : (internE (.const n us)).run a = .ok (r, a'))
     (hus : ∃ ls, denoteLs a.store.lss us = some ls) :
     CoreS dn m' a' vis fe M eb :=
-  hS.arena_frameD hD hcpl hf
+  hS.arena_frameD hD hcpl hf (hiw := hS.iwF hf) (hhb := hS.memos.hbF hf)
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -141,20 +141,15 @@ theorem callW_mkAppN' (hp : SpineProg p) (n : Nat) (m : Mem) (a₀ : AState) (hD
   exact ⟨hok, hD', hres, hfr, mkAppNFromW_hw k.toNat m a₀ f o k 0 (by simp) hD hf _ _ hm.2.2⟩
 
 /-- **`env_find` as a run** (`IotaProg'`'s lookups). -/
-theorem callW_envFindI (hp : IotaProg' p) (n : Nat) (m : Mem) {dn : NIdx → Option ConLeche.Name}
-    {fe : IFEnv} (vis w : Word) (hE : EnvR dn m vis fe) (hw : HW w) (r : List Word) (m' : Mem)
+theorem callW_envFindI (hp : IotaProg' p) (n : Nat) (m : Mem)
+    {fe : IFEnv} (vis w : Word) (hE : EnvR m vis fe) (hw : HW w) (r : List Word) (m' : Mem)
     (h : callW p n "env_find" [w, vis] m = some (r, m')) :
-    m' = m ∧ fe.find? (decI w) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
-    (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) dn (r.tail.headD 0).toNat = some ci) := by
-  obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_refines p hp.envix hp.envrow hp.envfind n _ vis w hE hw) h
-  obtain ⟨t₁', ht₁', hm₁', -, hfound⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envFind_found p hp.envix hp.envrow hp.envfind n _ vis w hw) h
-  refine ⟨ht₁.symm.trans hm₁, hfind, fun h0 => ?_⟩
-  obtain ⟨htag, hrow, hq⟩ := hfound h0
-  obtain ⟨ci, hci⟩ := hE.found_some w hw htag hrow
-  rw [← hq] at hci
-  exact ⟨ci, hci⟩
+    m' = m ∧ fe.find? (decI w) = envFound m (r.headD 0) (r.tail.headD 0) ∧
+    (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
+  obtain ⟨s', rfl, h1, -, h3⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envFind_refines p hp.envrow hp.baserow hp.envfind n _ vis w hE hw) h
+  exact ⟨h1, h3⟩
+
 
 end progs
 
@@ -164,6 +159,45 @@ structure M2CProg' (p : Prog) : Prop extends IotaProg4 p, M2CProg p where
   constFind' : p.lookup "const_find" = some constFind
   constPush' : p.lookup "const_push" = some constPush
   internConst' : p.lookup "intern_const" = some internConst
+  lvNever' : p.lookup "lv_never" = some lvNever
+  fvarFind' : p.lookup "fvar_find" = some fvarFind
+  fvarPush' : p.lookup "fvar_push" = some fvarPush
+  internFVar' : p.lookup "intern_fvar" = some internFVar
+  erSlEq' : p.lookup "er_sl_eq" = some L.Ind.erSlEq
+
+/-- `former_never_zero_at`'s program facts from the m2c program's (the level readers, `inst_lp`
+and `inst_entry` from the knot's). -/
+theorem M2CProg'.fnzaProg {p : Prog} (hp : M2CProg' p) (hpr : PropReadProg p) (hilp : InstLPOK p)
+    (hi : IotaInst1OK p) : FnzaProg p where
+  fsl := hp.fsl
+  fvf := hp.fvarFind'
+  fvp := hp.fvarPush'
+  fvi := hp.internFVar'
+  inst := hi
+  fnza := hp.fnza
+  pr := hp.spine.pires
+  frs := hp.formerResSort
+  fz := hp.formerZ
+  fnz := hp.formerNeverZero
+  lvn := hp.lvNever'
+  prop := hpr
+  ilp := hilp
+
+/-- **A call of a core function keeps the record pool's decoder view** (`callW_erec_closedT`). -/
+def ErecPKept (p : Prog) : Prop :=
+  ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
+    f ∈ coreFns → callW p n f vs m = some (r, m') → erecP m' = erecP m
+
+theorem ErecPKept.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
+    ErecPKept p :=
+  fun _ _ _ _ _ _ hf h => (callW_erec_closedT hcl hf h).2.2.2
+
+set_option maxRecDepth 8192 in
+theorem inferIO_coreFn : "infer_io" ∈ coreFns := List.elem_iff.mp (by decide)
+set_option maxRecDepth 8192 in
+theorem whnf_coreFn : "whnf" ∈ coreFns := List.elem_iff.mp (by decide)
+set_option maxRecDepth 8192 in
+theorem towerSlotsAll_coreFn : "tower_slots_all" ∈ coreFns := List.elem_iff.mp (by decide)
 
 /-! ## Results -/
 
@@ -173,6 +207,27 @@ theorem GrowRef.of_run {T : AM EIdx} {a a' : AState} {v : EIdx} {dn : NIdx → O
     (hr : ResH r) : GrowRef T a decH dn m vis fe M eb r m' := by
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hok, hst ▸ hA, hres.trans hv, hr⟩
+
+/-- **A unified kept-stack callee, then a growing rest**, both outcomes (`RefE.bind_coreE` with
+`GrowPost`). -/
+theorem RefE.bind_coreEG {α β γ : Type} [Inhabited γ] {G G' : Prop}
+    {x : Except Err (List Word × Mem)} {K : Except Err (List Word × Mem) → Except Err α}
+    (hK : ∀ e, K (.error e) = .error e) {T₁ : AM γ} {f : γ → AM β} {a₀ : AState}
+    {dec₁ : List Word → γ} {dec : List Word → β} {dn : NIdx → Option ConLeche.Name} {m₀ : Mem}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok₁ ok : List Word → Prop}
+    {w : α → List Word × Mem} (hG : G → G')
+    (h₁ : RefE G' x T₁ a₀ (CorePost dec₁ dn m₀ vis fe M eb ok₁))
+    (h₂ : ∀ r₁ m₁, x = .ok (r₁, m₁) → CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁ →
+      ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
+      RefE G (K (.ok (r₁, m₁))) (f (dec₁ r₁)) (AM.st T₁ a₀)
+        (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v) y a')) :
+    RefE G (K x) (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v) y a') := by
+  rcases hx : x with e | ⟨r₁, m₁⟩
+  · rw [hK]; rw [hx] at h₁; exact RefE.bind_left fun hg => h₁ (hG hg)
+  rw [hx] at h₁
+  obtain ⟨y, a', hrun, hP⟩ := h₁
+  have hc := hP.coreRef hrun
+  exact RefE.bind_growK hc (h₂ r₁ m₁ hx hc)
 
 /-! ## `m2c_pre` -/
 
@@ -213,7 +268,7 @@ structure PreOk (R : CoreFnsA) (d : Nat) (major : EIdx) (a : AState)
     (L : List Word) (m' : Mem) (a' : AState) : Prop where
   run : PreRun R d major a L a'
   after : CoreAfter dn m m' a' vis fe M eb
-  erec : m'.arr64 EREC = m.arr64 EREC
+  erec : erecP m' = erecP m
   hw : L.headD 0 ≠ 0 → HW (L.tail.headD 0) ∧ HW (L.tail.tail.headD 0) ∧
     HW (L.tail.tail.tail.headD 0)
 
@@ -237,7 +292,7 @@ theorem pre_err_whnf {R : CoreFnsA} {d : Nat} {major ta : EIdx} {a a₁ : AState
   simp only [m2cPreT, StateT.run_bind, h1, except_ok_bind, h]; rfl
 
 section pre
-variable (p : Prog) (hp : M2CProg' p) (hE : ErecKeptKnot p)
+variable (p : Prog) (hp : M2CProg' p) (hE : ErecPKept p)
 include hp hE
 
 /-- **`m2c_pre` refines the twin's prefix, both outcomes** (`PreRef`): the errors are the
@@ -246,7 +301,7 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb mode d major : Word)
     (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (hmaj : HW major) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) :
-    PreRef (M2CCtxE p N) (m2cPreE p (N + 1) m mode vis d major) (coreKnot (decMode mode) fe id F)
+    PreRef (M2CCtxE p N) (m2cPreE p (N + 1) m mode vis d major) (coreKnot (decMode mode) (decEager mode) fe id F)
       d.toNat (decE major) a dn m vis fe M eb := by
   rw [m2cPreE.arm1]
   rcases c1 : callE p N "infer_io" [mode, vis, d, major] m with e1 | ⟨r1, m1⟩
@@ -258,7 +313,7 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨ok1, ⟨M1, hS1, hK1, hSt1⟩, res1, hr1⟩ := CoreSpec.of_callW
     ((hk N (Nat.le_refl _)).inferIO F ⟨m, Locals.init []⟩ a dn vis fe M eb mode d major hnF hn62
       ⟨hS, hm4, hebm⟩ hmaj) (callW_of_callE c1)
-  have e1 : m1.arr64 EREC = m.arr64 EREC := hE _ _ _ _ _ _ (by simp) (callW_of_callE c1)
+  have e1 : erecP m1 = erecP m := hE _ _ _ _ _ _ inferIO_coreFn (callW_of_callE c1)
   have hrun1 := AM.run_of_ok _ _ ok1
   rw [res1] at hrun1
   rcases c2 : callE p N "whnf" [mode, vis, d, r1.headD 0] m1 with e2 | ⟨r2, m2⟩
@@ -270,7 +325,7 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
     ((hk N (Nat.le_refl _)).whnf F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d _ hnF hn62
       ⟨hS1, hm4, hebm⟩ hr1) (callW_of_callE c2)
-  have e2 : m2.arr64 EREC = m1.arr64 EREC := hE _ _ _ _ _ _ (by simp) (callW_of_callE c2)
+  have e2 : erecP m2 = erecP m1 := hE _ _ _ _ _ _ whnf_coreFn (callW_of_callE c2)
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res2] at hrun2
   rcases c3 : callW p N "get_app_fn" [r2.headD 0] m2 with _ | ⟨r3, m3⟩
@@ -342,7 +397,7 @@ def ProofIrrelOKM (p : Prog) : Prop :=
     (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
     eb = (mode >>> 1) &&& 1 → HW a → HW b →
     CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
-      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
+      (proofIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
       vis fe MM eb
 
 section check
@@ -356,7 +411,7 @@ theorem m2cCheck_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (htm : HW tmaj) (hfab : HW fab)
     (hmaj : HW major) (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) :
     RefE (M2CCtxE p N) (m2cCheckE p (N + 1) m mode vis d tmaj fab major)
-      (m2cCheckT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE tmaj)
+      (m2cCheckT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE tmaj)
         (decE fab) (decE major)) a (CorePost decH dn m vis fe M eb ResH) := by
   rw [m2cCheckE.arm1]
   cases N with
@@ -452,7 +507,7 @@ theorem PreRun.view {R : CoreFnsA} {d : Nat} {major : EIdx} {a a' : AState} {L :
 
 section karm
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
-  (hE : ErecKeptKnot p)
+  (hE : ErecPKept p)
 include hp hc hpi
 
 /-- **`m2c_k2` refines `m2cK2T`, both outcomes** (the arguments are left on the stack; the errors
@@ -464,7 +519,7 @@ theorem m2cK2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
     (hdus : ∃ ls, denoteLs a.store.lss (decI ust) = some ls) :
     RefE (M2CCtxE p N) (m2cK2E p (N + 1) m mode vis d ctor cnP tmaj ust major)
-      (m2cK2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+      (m2cK2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor)
         cnP.toNat (decE tmaj) (decI ust) (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cK2E.arm1]
   cases N with
@@ -522,7 +577,7 @@ theorem m2cK_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
     (hT : HW T) (hmaj : HW major) (hctor : HW ctor) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) :
     RefE (M2CCtxE p N) (m2cKE p (N + 1) m mode vis d T major ctor lpl cnP)
-      (m2cKT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+      (m2cKT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor)
         lpl.toNat cnP.toNat (decI T) (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cKE.arm1]
   cases N with
@@ -566,9 +621,9 @@ theorem m2cK_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
   rw [m2cKE.k_m2c_pre.arm4 _ _ _ _ _ _ _ _ _ _ _ _ g0 g2' g3']
   have hcd : ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ lpl.toNat = l.length) :=
     ⟨by rw [g2'], by rw [hll, g3']⟩
-  have hrun : (m2cKT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
+  have hrun : (m2cKT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor)
       lpl.toNat cnP.toNat (decI T) (decE major)).run a =
-      (m2cK2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor) cnP.toNat
+      (m2cK2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI ctor) cnP.toNat
         (decE (L.tail.headD 0)) (decI (L.tail.tail.tail.headD 0)) (decE major)).run a1 := by
     unfold m2cKT; rw [hpre']
     simp only [StateT.run_bind, hvls, except_ok_bind]

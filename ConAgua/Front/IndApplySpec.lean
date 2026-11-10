@@ -45,7 +45,6 @@ structure IndApplyLookups (p : Prog) : Prop where
   ifl_push : p.lookup "ifl_push" = some iflPush
   ctl_sum : p.lookup "ctl_sum" = some ctlSum
   store_fuel : p.lookup "store_fuel" = some storeFuel
-  pi_result_d : p.lookup "pi_result_d" = some piResultD
   ind_pi_tele_len : p.lookup "ind_pi_tele_len" = some indPiTeleLen
   pi_sort_tele_len : p.lookup "pi_sort_tele_len" = some piSortTeleLen
   name_rec_pre : p.lookup "name_rec_pre" = some nameRecPre
@@ -64,7 +63,6 @@ structure IndApplyLookups (p : Prog) : Prop where
   vi_order_in : p.lookup "vi_order_in" = some viOrderIn
   vi_order_go : p.lookup "vi_order_go" = some viOrderGo
   vi_order : p.lookup "vi_order" = some viOrder
-  vi_k_expected : p.lookup "vi_k_expected" = some viKExpected
   vi_rec_idx : p.lookup "vi_rec_idx" = some viRecIdx
   vi_rec : p.lookup "vi_rec" = some viRec
   vi_nested : p.lookup "vi_nested" = some viNested
@@ -116,11 +114,6 @@ theorem storeFuel_spec (n : Nat) (s₀ : St) :
 end
 
 /-! ## Telescopes -/
-
-l_model piRes_spec (p : Prog) (hL : IndApplyLookups p)
-  fns [hL.pi_result_d ↦ piResW ro]
-  specs [eView_spec p hL.e_view n]
-  grind [arena_grind] extra [ld64_rd_spec]
 
 /-- After `ind_pi_tele_len`'s recursive call. -/
 def teleK : Option Word → Option Word
@@ -497,48 +490,6 @@ def pmK {α : Type} (rest : Word → Word → Mem → Option α) : Option ((Word
 @[arena_grind =] theorem pmK_some {α : Type} (rest : Word → Word → Mem → Option α) (a b : Word)
     (m : Mem) : pmK rest (some ((a, b), m)) = rest a b m := rfl
 
-/-- `vi_k_expected` after `lv_equiv`. -/
-def keK3 (c : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (q, m) => if rdW (m.arr64 IFR) (c + 4) = 0 ∧ q = 2 then some (2, m) else some (1, m)
-
-@[arena_grind =] theorem keK3_none (c : Word) : keK3 c none = none := rfl
-@[arena_grind =] theorem keK3_some (c q : Word) (m : Mem) :
-    keK3 c (some (q, m)) = if rdW (m.arr64 IFR) (c + 4) = 0 ∧ q = 2 then some (2, m) else some (1, m) :=
-  rfl
-
-/-- `vi_k_expected` after `lh_mk`. -/
-def keK2 (n : Nat) (c s : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (z, m) => keK3 c (equivW n m s z)
-
-@[arena_grind =] theorem keK2_none (n : Nat) (c s : Word) : keK2 n c s none = none := rfl
-@[arena_grind =] theorem keK2_some (n : Nat) (c s z : Word) (m : Mem) :
-    keK2 n c s (some (z, m)) = keK3 c (equivW n m s z) := rfl
-
-/-- `vi_k_expected` after `pi_result_d`. -/
-def keK1 (n : Nat) (m : Mem) (oo : Word) : Option Word → Option (Word × Mem)
-  | none => none
-  | some r =>
-    if eViewW m r = [] then none
-    else if (eViewW m r).headD 0 ≠ 2 then some (0, m)
-    else keK2 n (rdW (m.arr64 IFL) oo) ((eViewW m r).tail.headD 0) (lhMkW (m.set64 CTL 192 0) 0 0 0)
-
-@[arena_grind =] theorem keK1_none (n : Nat) (m : Mem) (oo : Word) : keK1 n m oo none = none := rfl
-@[arena_grind =] theorem keK1_some (n : Nat) (m : Mem) (oo r : Word) :
-    keK1 n m oo (some r) =
-      if eViewW m r = [] then none
-      else if (eViewW m r).headD 0 ≠ 2 then some (0, m)
-      else keK2 n (rdW (m.arr64 IFL) oo) ((eViewW m r).tail.headD 0) (lhMkW (m.set64 CTL 192 0) 0 0 0) := rfl
-
-/-- **The model of `vi_k_expected(to, tn, tyt, oo, fuel)`**: `kExpected?` and the memory. -/
-def kExpW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, to, tn, tyt, oo, fuel =>
-    if tn ≠ 1 then some (1, m)
-    else if rdW (m.arr64 IFR) (to + 4) ≠ 1 then some (1, m)
-    else keK1 n m oo (piResW n m fuel (rdW (m.arr64 IFL) tyt))
-
 /-- **The model of `vi_nested(to, tn, j)`.** -/
 def nestedW : Nat → Mem → Word → Word → Word → Option Word
   | 0, _, _, _, _ => none
@@ -550,19 +501,6 @@ def nestedW : Nat → Mem → Word → Word → Word → Option Word
 section specs4
 variable (p : Prog) (hL : IndApplyLookups p)
 include hL
-
-theorem kExp_spec (n : Nat) (s₀ : St) (to tn tyt oo fuel : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_k_expected" [to, tn, tyt, oo, fuel]
-    ⦃fun r s' => LocEq s' s₀ ∧ kExpW n s₀.mem to tn tyt oo fuel = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.vi_k_expected]
-  simp only [callFn, viKExpected]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        piRes_spec p hL n, eView_spec p hL.e_view n, lhMk_spec p hL.level.alloc n,
-        lvEquiv_spec p hL.level hL.lv_equiv n] <;> finish (gen := 20) [kExpW]
 
 theorem nested_spec (n : Nat) : ∀ (s₀ : St) (to tn j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_nested" [to, tn, j]
