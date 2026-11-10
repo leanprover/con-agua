@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndCopy2
-import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.IndDecStab
