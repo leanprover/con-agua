@@ -307,18 +307,9 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
           rcases hb with rfl | rfl <;> decide)
       (by intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; subst hx; decide)
       _ _ hf a₁ hA₆
-  · obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hA₇.ok
-    have hf : MemFrame [IW, DECL] [] m₇ (m₉.set64 DECL 0 c) :=
+  · have hf : MemFrame [IW, DECL] [] m₇ (m₉.set64 DECL 0 c) :=
       hmf₉.trans ((MemFrame.set64 m₉ DECL (by decide) _ _).mono (by simp) (by simp))
-    have hER : (m₉.set64 DECL 0 c).arr64 EREC = m₇.arr64 EREC := hf.arr EREC (by decide) (by decide)
-    have h200 : iwTop (m₉.set64 DECL 0 c) = iwTop m₇ := by simp only [iwTop]; rw [hf.ctl 200 (by simp)]
-    have h129 : erTop (m₉.set64 DECL 0 c) = erTop m₇ := by simp only [erTop]; rw [hf.ctl 129 (by simp)]
-    exact ⟨by rw [h200, hf.size IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hf.size IW]; exact h3, by rw [hER]; exact h4, by rw [hf.size CTL]; exact h5,
-      by rw [show erecTop1 (m₉.set64 DECL 0 c) = erecTop1 m₇ by simp only [erecTop1]; rw [hf.ctl 130 (by simp)],
-        hf.arr (tier1 EREC) (by decide) (by decide)]; exact h6,
-      by rw [hf.arr (tier1 EREC) (by decide) (by decide)]; exact h7, by rw [hER]; exact h8,
-      by rw [hf.arr (tier1 EREC) (by decide) (by decide)]; exact h9⟩
+    exact IWOK.frameC hf (by decide) (by decide) (by simp) (by simp) (by simp) hA₇.ok
   · refine hP₆.congr ?_
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hmf₉.1 PINS (by decide) (by decide),
       hA₇.fr.1 PINS (by decide) (by decide)]
