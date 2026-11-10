@@ -5,7 +5,6 @@ public import ConAgua.Arena.DeclReducePin
 public import ConAgua.Arena.DeclAxQuotT
 import ConAgua.Arena.IndInstallSpec.PapW
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.RefWalk

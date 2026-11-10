@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.DeclArmT
 public import ConAgua.Arena.DeclArmAxiom
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree

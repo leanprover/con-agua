@@ -6,7 +6,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.DeclRec
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

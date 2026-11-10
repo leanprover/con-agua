@@ -7,7 +7,6 @@ import ConAgua.Arena.WhnfIotaRefine4
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclBase
 public import ConAgua.Arena.CoreErec
 import all ConAgua.Arena.WhnfEntry
 public import ConAgua.Arena.LeafFrame

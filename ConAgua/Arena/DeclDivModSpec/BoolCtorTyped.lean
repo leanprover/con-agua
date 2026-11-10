@@ -5,7 +5,6 @@ public import ConAgua.Arena.DeclDivModSpec.Cons
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclNatGate
 import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section

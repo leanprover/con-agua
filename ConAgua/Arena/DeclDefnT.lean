@@ -4,7 +4,6 @@ public import ConAgua.Arena.DeclAxQuotT
 public import ConAgua.Arena.DeclDivGateT
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.StageC
-import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.RefWalk
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree

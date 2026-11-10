@@ -4,7 +4,6 @@ public import ConAgua.Arena.DeclCanonNames
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclRec
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.IndInstallSpec.DomsW
 import Std.WP.Tactic

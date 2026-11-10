@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.Tiers
 public import ConAgua.Arena.ErecVocab
 public import ConRon.Arena.Inductives.GenRec
 meta import ConAgua.Arena.Tiers

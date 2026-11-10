@@ -9,7 +9,6 @@ import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.IndT.WalkC
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.IndT.Base
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.DeclValRef

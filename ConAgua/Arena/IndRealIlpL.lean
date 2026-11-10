@@ -5,7 +5,6 @@ import ConAgua.Arena.IndRealAbsT
 public import ConAgua.Arena.StageTLift
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclBase
 import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.WhnfCoreRefine

@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.ErecRd
+public import ConAgua.Arena.Tiers
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.ErecGrindAttr
 import Std.WP.Tactic
