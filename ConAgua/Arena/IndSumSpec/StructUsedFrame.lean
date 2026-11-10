@@ -228,9 +228,10 @@ theorem stripF_grow {tg : Word} {m m' : Mem} {args r : List Word} (h : stripF tg
   have hE1 := hf.arr (tier1 EREC) (by decide) (by decide)
   have h129 := hf.ctl 129 (by decide)
   have h130 := hf.ctl 130 (by decide)
-  refine ⟨hI', { iw := (by simpa [iwTop] using hot), er := (by simp [erTop, h129]),
-    iwGet := fun i hi => hlow i (by simpa [iwTop] using hi), erGet := (fun i _ => by rw [hE]),
-    er1 := (by simp [erecTop1, h130]), er1Get := fun i _ => by rw [hE1] }⟩
+  refine ⟨hI',
+    { iw := (by simpa [iwTop] using hot), er := (by simp [erTop, h129]),
+      iwGet := fun i hi => hlow i (by simpa [iwTop] using hi), erGet := (fun i _ => by rw [hE]),
+      er1 := (by simp [erecTop1, h130]), er1Get := fun i _ => by rw [hE1] }⟩
 
 /-- **`struct_used_later`'s model keeps `IWOK` and only grows the pool**, at any memory. -/
 theorem ustW_grow {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP j = some (r, m'))
