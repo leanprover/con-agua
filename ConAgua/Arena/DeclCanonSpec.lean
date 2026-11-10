@@ -270,7 +270,7 @@ theorem erSlEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
     simp only [callFn, erSlEq]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, ih] <;>
-      finish (gen := 20) [rdW_eq]
+      finish (gen := 20) [rdW_eq, erRd]
 
 theorem bEq_spec (n : Nat) (s₀ : St) (x y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "b_eq" [x, y]
@@ -296,7 +296,7 @@ theorem cvEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, erSlEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, cvEqB]
+      finish (gen := 20) [rdW_eq, cvEqB, erRd]
 
 theorem hintEq_spec (n : Nat) (s₀ : St) (h : Word) (g : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "hint_eq" [h, g]
@@ -309,7 +309,7 @@ theorem hintEq_spec (n : Nat) (s₀ : St) (h : Word) (g : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE] <;>
-      finish (gen := 20) [rdW_eq, hintEqB]
+      finish (gen := 20) [rdW_eq, hintEqB, erRd]
 
 theorem erSlAt_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_at" [x, y, i]
@@ -322,7 +322,7 @@ theorem erSlAt_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (i : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, erSlEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, erSlAtB]
+      finish (gen := 20) [rdW_eq, erSlAtB, erRd]
 
 theorem capsEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_a" [x, y]
@@ -335,7 +335,7 @@ theorem capsEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, bEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, capsEqAB]
+      finish (gen := 20) [rdW_eq, capsEqAB, erRd]
 
 theorem capsEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_b" [x, y]
@@ -348,7 +348,7 @@ theorem capsEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE] <;>
-      finish (gen := 20) [rdW_eq, capsEqBB]
+      finish (gen := 20) [rdW_eq, capsEqBB, erRd]
 
 theorem capsEqC_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_c" [x, y]
@@ -361,7 +361,7 @@ theorem capsEqC_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, erSlAt_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, capsEqCB]
+      finish (gen := 20) [rdW_eq, capsEqCB, erRd]
 
 theorem capsEq_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq" [x, y]
@@ -387,7 +387,7 @@ theorem ruleEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE] <;>
-      finish (gen := 20) [rdW_eq, ruleEqAB]
+      finish (gen := 20) [rdW_eq, ruleEqAB, erRd]
 
 theorem ruleEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_b" [x, y]
@@ -400,7 +400,7 @@ theorem ruleEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, erSlAt_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, ruleEqBB]
+      finish (gen := 20) [rdW_eq, ruleEqBB, erRd]
 
 theorem ruleEqButRhs_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_but_rhs" [x, y]
@@ -509,7 +509,7 @@ theorem ciEqRest_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (k : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, hintEq_spec p hp n, capsEq_spec p hp n, rulesEq_spec p hp n, bEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, ciEqRestB]
+      finish (gen := 20) [rdW_eq, ciEqRestB, erRd]
 
 theorem ciEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_eq" [x, y]
@@ -522,7 +522,7 @@ theorem ciEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, cvEq_spec' p hp n, ciEqRest_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, ciEqB]
+      finish (gen := 20) [rdW_eq, ciEqB, erRd]
 
 end specs
 

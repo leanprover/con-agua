@@ -420,7 +420,7 @@ theorem isCtorApp_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (vis 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
       evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
-    finish [icaW, tierW, idxW]
+    finish [icaW, tierW, idxW, erRd]
 
 theorem isCtorApp_run_not (fe : IFEnv) (a : AState) (e h : EIdx)
     (hga : (getAppFn coreWalkFuel e).run a = .ok (h, a)) (ht : h.tag ≠ ETag.const) :

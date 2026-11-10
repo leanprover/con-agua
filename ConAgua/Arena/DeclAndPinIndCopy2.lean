@@ -25,7 +25,7 @@ open ConRon.Arena
 namespace L.Arena
 
 open L.Front (DECL DLP trunc decCIs IndDeclAt dw)
-open L.Ind (erAllocW erAllocMem erTop erecAlloc erecPutMem erecPutMem_arr erecPutMem_ctl erTier erOff
+open L.Ind (erAllocW erAllocMem erecAlloc erecPutMem erecPutMem_arr erecPutMem_ctl erTier erOff
   erTopOf erAllocW_spec IWOK IWGrow iwTop)
 
 /-! ## The flag's tier -/

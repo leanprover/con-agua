@@ -73,7 +73,7 @@ theorem findProj_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (vis T 
   sym only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       evalE_tld, tld, ld64_rdT_spec, callW_spec p n "find_table"] <;>
-    finish [findProjK]
+    finish [findProjK, erRd]
 
 /-- **`find_proj` as words**: memory unchanged; the twin's lookup is the decoded answer; when the
 flag is set, the record decodes to a table the environment holds at that structure. -/
