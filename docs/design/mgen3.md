@@ -177,3 +177,196 @@ join points.
 Lines: `CIReadRefW` +99 −241 (−142), users +22 −12; the generator +38 −5 and its test +30. The
 gate build after the change rebuilt every `l_model` module and none changed (the option is off
 by default).
+
+### Batches 3–5: helpers, round 1
+
+Three Opus helpers (brief `_tmp/mgen3/helper-brief.md`), one file group each, from master
+3b4845e9; each branch merged with master, gated and submitted on its own. Module numbers are
+instructions / user s (`measure.sh`, before → after), peak RSS 0.9–1.5 GB throughout.
+
+**Batch 3, `mgen3-install`** (#243): 28 functions; 17 files, +576 −1362 (**−786**).
+`IndInstallSpec/IcaW` (`block_caps_head/one/fin/at`, `er_put5`, `ind_info_rec`: 99.1 G / 21.2 s →
+40.7 G / 7.0 s), `WhnfIotaRefine` (`is_ctor_app`, `const_ty_at`, `rule_rhs_at`, `pi_residual`
+with its loop: 32.9 → 30.9 G), `DeclHeader`, `IndInstallSpec/BlockRawRec` (35.1 → 20.9 G),
+`PartsShapeFacts`, `IndPartsSpec/Bsp` (`block_shape_large`; 17.2 → 28.7 G), `RecGenSpec/ClassFeR`
+(53.3 → 61.6 G), `nest_holes_go` (21.2 → 8.3 G), `IndT/BlockPD` (23.4 → 9.9 G), `IndT/PosMc`,
+`IndT/BlockWM`, `IndDeclConstsDeclared`. Bridges: `erPut5W_wrER`, `cfrRecW_some`,
+`nhGoW_three`, `fieldCopyW_step`, `ctorsCopyW_step` (a generated loop ends in a continuation that
+only passes the memory on), `resFromW_step`/`resContW_step`. Kept: `block_shape_fin/tail`
+(their models feed `bbW` in `IndPartsProg5`, which sits below their callee specs), `rom_names_to`
+(the `PINS` bounds check the refinement uses), `intern_reserved_pins` (a template),
+`mentions_any_const`, `is_str_lit`, `find_rule` (structural `fun_induction` users elsewhere).
+The lead removed `iirK5` (dead once `ind_info_rec` is generated) and the imports the generated
+proofs no longer need (`shake`; `ClassFeR`'s `LdRd` allowlisted: `ld64_rd_spec` is named only
+in the generated proofs).
+
+**Batch 4, `mgen3-decl`** (#244): 24 functions; 15 files, +555 −1226 (**−671**).
+`DeclAndPinIndCopy(2)` (4), `DeclCanonInfo`'s `canon_eq_list` (55.0 → 44.2 G), `DeclCanonConst`
+(14.1 → 19.6 G), `DeclRec`, `WhnfIotaRefine6`, `DeclBasisSpec`, `LevelIntern` (+`lv_sub_int`;
+`fold [lvG, lvA, lvB]`), `DeclReduceSpec`, `StubNamesRefine` (5; 21.2 → 27.5 G, the largest
+relative slowdown of round 1). `erecPut_specW`'s size fact is a guard in the generated models
+(extra `none` leaves), bridged by `dindCopyW_succ`, `ircW_kdc2`, `icgW_krc`, `dlpCopyW_succ`,
+`erecCiW_some`; `pinAtW` moved from `DeclBasisSpec` to `DeclRec` (an import cycle). Kept:
+`lp_lookup`/`lp_substl` (their models are generic over the key reader, shared with the
+template `lvLookupTG`), `LevelEquiv` (walked structurally in `LevelEquivRel`, `LevelArena`,
+`IndRealLvlT`), `ci_canon_*` (retried in round 2: the clash the helper met came from naming the
+program binder `pr`; the generated spec needs `p`).
+
+**Batch 5, `mgen3-consts`** (#245): about 30 functions; 21 files, +633 −1610 (**−977**).
+`ConsBlockRecsTF` (`check_struct_proj_table_scoped` with its `CallM` parameter,
+`rules_to_erec_go`, `rec_info_rec`: 75.4 → 68.2 G), `Front/IndApplySpec2` (the nine that lane
+mgen rejected for 7.4 → 14.5 s, plus `install_ind_d`: now 39.4 → 38.0 G, i.e. no slower: the
+generator's recipes improved since), the `IndDeclConsts*` files (Drop 27.2 → 8.7 G, Table 44.5 →
+24.1 G, Formers 23.8 → 7.7 G, Ctors 16.4 → 7.0 G, Ref 130.2 → 125.2 G, …), `TblProg`,
+`SumRules`, `TsrW`. Kept: `rule_copy`: its generated model copies the memory term after each of
+its 11 `erec_put`s into both places that read it, about 2^11 copies (definition 4.3 s, arm 4.9 s);
+a `let` for the memory in the generator would fix it.
+
+Generator gaps the helpers met (none patched by them): `fold` takes no memory readers (`fold
+[erRd]`: "unsupported term"; bridged by `rfl` lemmas); implicit binders do not become model
+parameters; the memory-term blow-up above.
+
+### Batch 6: `rci_rule` (lead)
+
+`rci_rule`'s model generated with `pfuel` (the hand `ruleW` with its parts `ruleTailW`,
+`ruleLvlW`, `rulePinW` and the 13-line hand spec at `maxHeartbeats 4000000` gone). The generated
+model is one `ntBW` chain whose two `if`s on the fire word end in join points (`ruleW.j1` after
+the level slice, `ruleW.j2` after the pin slice), where the hand model nested `ntBW (if … then
+ruleLvlW … else some ([q], m)) fun r2 m2 => …`. The two walks in `CIReadRefRule` (`rule_relP`,
+`rule_relL`) re-threaded: the `change` that named the hand tail now names the `if` and the join
+point (`change (if (0 : Word) = 1 ∨ … then _ else ruleW.j1 p k … (putERs m1 [...])) = … at hw`),
+`unfold ruleW.j1`/`ruleW.j2` take the place of `unfold ruleW.ruleTailW`/`ruleLvlW`, the
+`rdU_ntBW`/`putE_ntBW` steps (a read inside a nested `ntBW`) became the flat `u64_some`/
+`putE_some`. `rci_ci` stays hand-written for now: `ciPre` states the rest of the hand chain
+(`ntBW (ciTailW …) …`) as its post for four kind lemmas; the generated `ciW` has that rest inline
+in a join point's body, so `ciPre` needs restating first.
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Rom/CIReadRefW` | 90.3 → 70.1 G | 15.6 → 11.6 | 1199 → 1206 |
+| `Rom/CIReadRefRule` | 43.0 → 43.1 G | 5.0 → 5.1 | 1119 → 1152 |
+
+Lines: `CIReadRefW` +5 −51, `CIReadRefRule` +24 −19 (**−41**).
+
+### Batch 7: `rci_ci` (lead); `CIReadRefW` all generated
+
+`rci_ci`'s model generated (`pfuel`); gone: the hand `ciW` and its parts `ciTailW`, `ciDefnW`,
+`ciCtorW`, `ciRecW`, the hand spec (`maxHeartbeats 4000000`), and with them the last users of
+the `rdU` abbreviation and its lemmas `rdU_some`, `rdU_ntBW`, `putE_ntBW`. `ciSize` stays: it is
+the refinements' table of record sizes by kind. The generated model reads the kind word and
+dispatches on it to one join point `ciW.j1 … q k size m` (allocation, kind word, constant value,
+then the kind's part inline). So `CIReadRefCI`'s common lemma split in two: `ciHead` (the kind
+word read, the dispatch reduced against `ciSize`: one `by_cases` per kind) and `ciPre`, now over
+the rest of the chain `K` as a parameter: its hypothesis is the join point's body up to the
+constant value, `ntBW (erec_alloc) fun ρ₂ μ₂ => … ntBW (rci_cv …) (K ρ₂)`, and its post
+`K rA r2 m2 = some (r, m')`. A kind lemma unfolds `ciW.j1` in `ciHead`'s result and passes it;
+`K` is found by unification (a pattern: `K` applied to the bound `ρ₂`). The kind lemmas then
+read their part as before, with `u64_some`/`putE_some` for the hand `rdU_ntBW`/`putE_ntBW`.
+
+`rw [ite_eq_left h]` does not find a generated `if (k) = 0 then …` when `h : UInt64.ofNat kn =
+0` is stated by hand (the literal's instance differs; seen before in batch 1's `split`);
+`simp only [h, ↓reduceIte]` does.
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Rom/CIReadRefW` | 70.0 → 51.0 G | 11.6 → 8.2 | 1209 → 1364 |
+| `Rom/CIReadRefCI` | 39.5 → 50.6 G | 4.9 → 6.6 | 1155 → 1127 |
+| `Rom/CIReadRefCaps` | 25.2 → 25.1 G | 3.3 → 3.2 | 1080 → 1074 |
+
+Lines: +102 −189 (**−87**). Over batches 2, 6 and 7 `CIReadRefW` went from 430 to 150 lines and
+100.3 → 51.0 G; all 17 of its functions are generated.
+
+### Batch 8: `Arena/LevelEquiv` (lead)
+
+`lv_leq_top`, `lv_equiv`, `lv_equivs`, `lvl_eq`, `lvls_eq` generated (helper mgen3-decl had left
+them: their models are walked in `LevelEquivRel`, `CoreLevels`, `IndRealLvlT`, outside its
+files). The hand models already had the generator's shape: `evK₁ … evK₅` are
+`equivW.k_lv_eq`, `k_lv_simp`, `k_lv_simp_2`, `k_lv_eq_2`, `k_lv_leq` (their captured words in
+another order), `esK` is `equivsW.k_lv_equiv`, `lvlEqW` is the hand one exactly. So the walks
+only renamed (`evK₁_zero` → `equivW.k_lv_eq.arm2 (hc1 := rfl)`, …); two differences needed a
+step: `lv_equivs`' `some (if ln = k then 2 else 1, m)` is generated as an `if` of two `some`s,
+and `lvls_eq`'s one `∨` guard as two guards (`lvlsEqW.abort1/2`). `ls_node` stays: its model
+`lsNodeW` is a list (`r ≠ [] ∧ r = lsNodeW …`) the callers test against `[]`; the generated one
+would be an `Option`.
+
+| module | instructions | user s |
+|---|---|---|
+| `Arena/LevelEquiv` | 12.2 → 13.5 G | 2.9 → 3.2 |
+| `Arena/LevelEquivRel` | 2.7 → 2.7 G | 0.6 → 0.6 |
+| `Arena/CoreLevels` | 15.0 → 15.0 G | 3.5 → 3.5 |
+| `Arena/IndRealLvlT` | 21.5 → 21.6 G | 3.2 → 3.3 |
+
+Lines: +66 −237 (**−171**). `LevelEquiv` also holds the L code of these functions, so the change
+rebuilt the program modules (`Checker/ProgI*`) once.
+
+### Batch 9: generator `guards`; `node_bin`, `node_let`, `node_proj` (lead)
+
+**Generator: `guards ["f", …]`** (test `tGd`). A table lookup's spec (`name_get`, `expr_get`,
+`level_get`: `tblOK s₀.mem NID i = true ∧ r = [tblW s₀.mem NID i]`) was read as a list model
+with its other conjunct ignored (the rule for `i < 51`), so a generated caller would lose the
+check the refinements read the table with. For a callee listed in `guards`, those conjuncts are
+guards of the model (as for a total memory model: `¬ g` is `none`), and a list literal gives its
+elements (`tblW m NID i`, not `List.headD [tblW m NID i] 0`). Off by default: no existing model
+changed (the gate build rebuilt every `l_model` module).
+
+`Front/ApplyExpr`'s `node_bin`, `node_let`, `node_proj` generated with it (mgen's batch 4 had
+rejected `ApplyExpr` for time). The generated models check the lookups one at a time where the
+hand ones checked their conjunction (`if tblOK … ∧ tblOK … then … else none`), so the three
+refinements' `split` became a `by_cases` on the conjunction and a `simp` through the generated
+`if`s; `node_bin`'s three constructor calls join in `binW.k_mk_app` (one identity lemma,
+`binW_k`). `nodeW`/`applyExprW` (hand) moved below the generated models they call. The other
+`ApplyExpr` functions stay for now (`ls_put` is a fuel-free model over the input buffer `b`;
+`node_lit`/`node_lit_str`/`node_const`/`expr_node`/`apply_expr` carry the buffer and pool
+preconditions through their callees).
+
+| module | instructions | user s |
+|---|---|---|
+| `L/ModelGenTest` | 85.0 → 86.1 G | 21.4 → 20.7 |
+| `Front/ApplyExpr` | 33.3 → 33.8 G | 7.1 → 7.3 |
+| `Front/ApplyExprRefine` | 11.3 → 11.4 G | 2.4 → 2.6 |
+| `Front/FrontPreOK1` | 14.9 → 15.5 G | 2.7 → 2.6 |
+
+Lines: `ApplyExpr` and users +74 −100; the generator +46 −13, its test +24.
+
+### Batch 10: helper `mgen3-parts` (round 2)
+
+36 functions; 30 files, +655 −2162 (**−1507**), #250. `DeclCanonInfo`'s `ci_canon_defn/rec/eq`
+(the round-1 skip: the program binder must be `p`); `close_lams`, `class_rec_of`, `expr_get_d`;
+`IhW` (4, one with `pfuel`; 91.6 → 77.7 G); `CrW`/`Classes` (`class_read_slots` with its
+`_next`, `class_read_finish`, `class_read_rec_cls`; 126.3 → 103.4 G); `MnW` (66.3 → 41.3 G);
+`Verdict/IndBRec4` (30.7 → 16.3 G); `BpcW`'s four `block_shape_pins_*` (`pfuel`; `Bf` 97.1 →
+78.2 G); `BmoW`, `RecTW`'s `rec_target_of`, `BmgW` (38.9 → 20.0 G), `BlockRecNameSetOk`,
+`SetEqW`, `BsoK2`, `Icp`, `TpsW`, `RpLook`. The slowest module after is `CrW` at 22 s (before
+23 s); none got worse than 3×. Kept: functions whose models other helpers' files take apart
+(`mentions_any_const`, `ptr_names_copy`, `class_gen_rule`, `erase_fvar_tys` and its family,
+`ctors_have_name`, the `RulePrefixAt` family), `block_shape_fin/tail` and
+`block_rec_name_set_ok` (callees at several fuels), pure specs with nothing to generate
+(`class_read_n_slots`, `class_gen_minor_ci`), `rule_copy`. The lead fixed the imports `shake`
+found (one allowlisted: `NestCtx` names `blockShapeLps_spec2` in a `vcgen` list only).
+
+Generator observations from this round: a pure callee tested in an `if` elaborates its
+`if … then 1 else 0` at `Nat` (arms carry `(1 : Nat)`); a pure post `r = [a, b, c, d]` is
+inlined as `List.headD [a, b, c, d] 0` (batch 9's literal rule applies only under `guards`);
+a continuation sometimes carries a model parameter it does not use; `EREC` loads are
+`rdW (… tierA EREC …)` (`simp only [erRd_foldN]` bridges).
+
+### Batch 11: `node_lit`, `expr_node` (lead)
+
+`node_lit` generated with `pre [s₀.mem.arr8 IN = b ∧ pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat ≤
+pcap s₀.mem]` and `keep [hE.no_st8]` (the hand proof's `Triple.keep` around `nat_dec`): the
+generated model is the hand one (`litK` is `litW.k_nat_dec b`). `expr_node` generated over the
+others' specs, with `guards ["level_get"]`: its model is the hand `nodeW` but for the sort
+case's guard, now `¬ tblOK … = true` first. The hand `applyExpr_spec` proof goes through as it
+was over the generated `exprNode_spec` (its precondition a side goal the `finish` closes).
+Not generated: `node_lit_str` (`str_put_esc`'s post `r.headD 0 = s₀.mem.top ∧ strPutEscW … =
+some (r.tail.headD 0, s'.mem)` is not a model shape), `node_const` (`ls_put`'s post is a list
+and a memory model at once: "ambiguous post"), `ls_put` (fuel-free over `b`), `apply_expr`
+(its model's `putK` is `Front/IdTable`'s, shared with the other `apply_*`).
+
+| module | instructions (batch 9 → 11) | user s |
+|---|---|---|
+| `Front/ApplyExpr` | 33.8 → 37.7 G | 7.3 → 7.2 |
+| `Front/ApplyExprRefine` | 11.4 → 11.5 G | 2.6 → 2.1 |
+| `Front/FrontPreOK1` | 15.5 → 15.5 G | 2.6 → 2.3 |
+
+Lines: +48 −87 (**−39**).

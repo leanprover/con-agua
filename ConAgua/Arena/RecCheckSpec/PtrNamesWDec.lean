@@ -468,25 +468,6 @@ theorem plnW_stage {α : Type} {f : Mem → Nat → Option α} (cvOf : α → IC
 
 /-! ## `target_rec_pins_names` -/
 
-def tpnK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-def tpnK4 (p : Prog) (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rn, m) => tpnK5 (callW p n "sl_nodup" [rn.headD 0, rn.tail.headD 0] m)
-def tpnK3 (p : Prog) (n : Nat) (reco recl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (ro, m) => if ro.headD 0 = 0 then some ([0], m)
-    else tpnK4 p n (callW p n "ptr_list_names" [reco, recl] m)
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (reco recl auxo auxl : Word) (r rw : List Word)
-theorem tpnK5_some : tpnK5 (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem tpnK3_zero (h : r.headD 0 = 0) : tpnK3 p n reco recl (some (r, m)) = some ([0], m) := by
-  simp only [tpnK3]; rw [ite_eq_left h]
-theorem tpnK3_ok (h : ¬ r.headD 0 = 0) : tpnK3 p n reco recl (some (r, m)) =
-    tpnK4 p n (callW p n "ptr_list_names" [reco, recl] m) := by simp only [tpnK3]; rw [ite_eq_right h]
-end arms
-attribute [ind_grind] tpnK5_some tpnK3_zero tpnK3_ok
 
 end L.Ind
 

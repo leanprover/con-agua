@@ -285,10 +285,10 @@ theorem icprW_frame {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Na
     {r : List Word} {w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 : Word}
     (h : icprW p n m w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 = some (r, m'))
     (hS : StageR vis fe m a) : MemFrame [IW] [200] m m' := by
-  unfold icprW at h
+  rw [icprW.arm1] at h
   rcases c1 : callW p n "iw_alloc" [11] m with _ | ⟨rq, m1⟩
   · rw [c1] at h; cases h
-  rw [c1] at h
+  rw [c1, icprW.k_iw_alloc.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s1, hs1, -, hal⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (iwAlloc_specW p ha n _ 11) c1
   simp only at hs1 hal

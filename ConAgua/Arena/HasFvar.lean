@@ -6,6 +6,7 @@ import ConAgua.Census.Attr
 public import ConAgua.Arena.Abs1
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -53,20 +54,18 @@ def hasFvarL : FunDecl := lfn (e) locals (x) {
   return u64(x != 0)
 }
 
+l_model hasFvarFastL_spec (p : Prog) (hp : AbsProg p)
+    (hpf : p.lookup "has_fvar_fast" = some hasFvarFastL)
+  fns [hpf ↦ hffW]
+  specs [abFvb_spec p hp n]
+  grind [arena_grind] pfuel
+
+/-- The generated model is `hfK` after `ab_fvb` (shared with `has_fvar`'s spec). -/
+theorem hffW_eq (n : Nat) (m : Mem) (f e : Word) : hffW n m f e = hfK (fvbW n m e f) := by
+  simp only [hffW]; rcases fvbW n m e f with _ | ⟨x, m₁⟩ <;> rfl
+
 section specs
 variable (p : Prog) (hp : AbsProg p)
-
-include hp in
-theorem hasFvarFastL_spec (hpf : p.lookup "has_fvar_fast" = some hasFvarFastL) (n : Nat) (s₀ : St)
-    (f e : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "has_fvar_fast" [f, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ hfK (fvbW n s₀.mem e f) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hpf]
-  simp only [callFn, hasFvarFastL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp n] <;>
-    finish
 
 include hp in
 theorem hasFvarL_spec (hpf : p.lookup "has_fvar" = some hasFvarL) (n : Nat) (s₀ : St) (e : Word) :

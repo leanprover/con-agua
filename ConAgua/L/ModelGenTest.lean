@@ -792,4 +792,28 @@ example (p : Prog) (C : Nat → Mem → Word → Option (Word × Mem))
     ⦃fun r s' => LocEq s' s₀ ∧ tPfW C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄ :=
   tPf_spec p C hc hp n s₀ x
 
+/-- `guards`: a callee whose post is a table lookup (`G m x = true ∧ r = [F m x]`, as
+`name_get`'s): its guard is the model's, its result the literal's element. -/
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tGd : FunDecl := lfn (x) locals (y) {
+  y := call t_look(x);
+  return y + 1
+}
+
+l_model tGd_spec (p : Prog) (G : Mem → Word → Bool) (F : Mem → Word → Word)
+    (hc : ∀ n (s₀ : St) (x : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_look" [x]
+      ⦃fun r s' => s' = s₀ ∧ G s₀.mem x = true ∧ r = [F s₀.mem x]; ⊤⦄)
+    (hp : p.lookup "t_gd" = some tGd)
+  fns [hp ↦ tGdW ro]
+  specs [hc n]
+  grind [arena_grind] guards ["t_look"]
+
+example (G : Mem → Word → Bool) (F : Mem → Word → Word) (m : Mem) (x : Word)
+    (h : G m x = false) : tGdW G F m x = none := by
+  simp [tGdW, h]
+
+example (G : Mem → Word → Bool) (F : Mem → Word → Word) (m : Mem) (x : Word)
+    (h : G m x = true) : tGdW G F m x = some (F m x + 1) := by
+  simp [tGdW, h]
+
 end L.ModelGenTest

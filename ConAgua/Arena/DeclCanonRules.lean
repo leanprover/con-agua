@@ -5,6 +5,7 @@ public import ConAgua.Arena.DeclCanonExpr2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsCanon
@@ -25,79 +26,11 @@ namespace L.Ind
 
 open L.Arena
 
-mutual
-/-- **The model of `canon_rules_eq`**. -/
-def cnCrW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Option (Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, po, pl, qo, ql, co, cl, fuel, o1, l1, o2, l2 =>
-    if l1 = 0 ∧ l2 = 0 then some (1, m)
-    else if l1 = 0 ∨ l2 = 0 then some (0, m)
-    else crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2
-      (if ruleEqButRhsB (erRd m) o1 o2 then 1 else 0)
-
-/-- After `rule_eq_but_rhs`. -/
-def crK0 (k : Nat) (m : Mem) (po pl qo ql co cl fuel o1 l1 o2 l2 e : Word) : Option (Word × Mem) :=
-  if e = 0 then some (0, m)
-  else cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2
-    (ceW k m po pl qo ql co cl fuel (erRd m (o1 + 8)) (erRd m (o2 + 8)))
-
-/-- After `canon_expr_eq`. -/
-def cnCrK1 (k : Nat) (po pl qo ql co cl fuel o1 l1 o2 l2 : Word) : Option (Word × Mem) →
-    Option (Word × Mem)
-  | none => none
-  | some (e, m1) =>
-    if e = 0 then some (0, m1)
-    else cnCrW k m1 po pl qo ql co cl fuel (o1 + 11) (l1 - 1) (o2 + 11) (l2 - 1)
-end
-
-section arms
-variable (k : Nat) (m m1 : Mem) (po pl qo ql co cl fuel o1 l1 o2 l2 e : Word)
-theorem crW_succ : cnCrW (k + 1) m po pl qo ql co cl fuel o1 l1 o2 l2 =
-    (if l1 = 0 ∧ l2 = 0 then some (1, m)
-    else if l1 = 0 ∨ l2 = 0 then some (0, m)
-    else crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2
-      (if ruleEqButRhsB (erRd m) o1 o2 then 1 else 0)) := by rw [cnCrW]
-theorem crK0_def : crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2 e =
-    (if e = 0 then some (0, m)
-    else cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2
-      (ceW k m po pl qo ql co cl fuel (erRd m (o1 + 8)) (erRd m (o2 + 8)))) :=
-  by rw [crK0]
-theorem crK1_some : cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2 (some (e, m1)) =
-    (if e = 0 then some (0, m1)
-    else cnCrW k m1 po pl qo ql co cl fuel (o1 + 11) (l1 - 1) (o2 + 11) (l2 - 1)) := by rw [cnCrK1]
-end arms
-
-grind_pattern [ind_grind] crW_succ => cnCrW (k + 1) m po pl qo ql co cl fuel o1 l1 o2 l2
-grind_pattern [ind_grind] crK0_def => crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2 e
-grind_pattern [ind_grind] crK1_some => cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2 (some (e, m1))
-
-section specs6
-variable (p : Prog) (hp : CanonProg p)
-include hp
-
-set_option maxHeartbeats 4000000 in
-theorem canonRulesEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel o1 l1 o2 l2 : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "canon_rules_eq"
-      [po, pl, qo, ql, co, cl, fuel, o1, l1, o2, l2]
-    ⦃fun x s' => LocEq s' s₀ ∧ cnCrW n s₀.mem po pl qo ql co cl fuel o1 l1 o2 l2 = some (x.headD 0, s'.mem);
-      ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ po pl qo ql co cl fuel o1 l1 o2 l2
-    rw [invoke_eq _ (hp.get "canon_rules_eq")]; simp only [callFn, canonRulesEq]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ po pl qo ql co cl fuel o1 l1 o2 l2
-    rw [invoke_eq _ (hp.get "canon_rules_eq")]
-    simp only [callFn, canonRulesEq]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
-        evalE_tagE, evalE_idxAE, evalE_idxGE, ruleEqButRhs_spec p hp n, canonExprEq_spec p hp n, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd]
-
-end specs6
-
+/-- **The model of `canon_rules_eq`** (`cnCrW`). -/
+l_model canonRulesEq_spec (p : Prog) (hp : CanonProg p)
+  fns [hp.get "canon_rules_eq" ↦ cnCrW]
+  specs [ruleEqButRhs_spec p hp n, canonExprEq_spec p hp n]
+  grind [arena_grind]
 
 theorem decRules_length {R : Nat → Option Word} {o l : Nat} {xs : List IRecRule}
     (h : decRules R o l = some xs) : xs.length = l := by
@@ -133,7 +66,7 @@ theorem cnCrW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
   | zero => intro m m' a po pl qo ql co cl fuel o1 l1 o2 l2 x ps qs cs xs ys h; simp [cnCrW] at h
   | succ k ih =>
     intro m m' a po pl qo ql co cl fuel o1 l1 o2 l2 x ps qs cs xs ys h hS hC hL hP hxs hys
-    rw [crW_succ] at h
+    rw [cnCrW] at h
     have lx := decRules_length hxs
     have ly := decRules_length hys
     by_cases h0 : l1 = 0 ∧ l2 = 0
@@ -175,22 +108,19 @@ theorem cnCrW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     have hB := ruleEqButRhsB_ok (erRdOK m) hx1e hy1e
     have l1p : (l1 - 1).toNat = xs''.length := by rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp [l1e]
     have l2p : (l2 - 1).toNat = ys''.length := by rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp [l2e]
-    rw [crK0_def] at h
     rw [ConRon.Arena.canonRulesEq.eq_2]
     by_cases hbB : ruleEqButRhsB (erRd m) o1 o2 = true
     · have hd : ({ x1' with rhs := default } : IRecRule) = { y1' with rhs := default } :=
         of_decide_eq_true (hB ▸ hbB)
       have hcond : (({ x1' with rhs := default } : IRecRule) == { y1' with rhs := default }) = true :=
         beq_iff_eq.mpr hd
-      have hne : (if ruleEqButRhsB (erRd m) o1 o2 = true then (1 : Word) else 0) ≠ 0 := by
-        simp [hbB]
-      rw [ite_eq_right hne] at h
-      rw [e8, f8] at h
+      simp (config := { decide := true }) only [hbB, ↓reduceIte] at h
+      rw [erRd_foldN, erRd_foldN, e8, f8] at h
       cases hc : ceW k m po pl qo ql co cl fuel w8 v8 with
-      | none => rw [hc] at h; simp [cnCrK1] at h
+      | none => rw [hc] at h; simp [cnCrW.k_canon_expr_eq] at h
       | some xx =>
       obtain ⟨e1', m1⟩ := xx
-      rw [hc, crK1_some] at h
+      rw [hc, cnCrW.k_canon_expr_eq.eq_2] at h
       obtain ⟨b1, hb1, hr1, hS1, hg1, hP1⟩ := ceW_ok k m m1 a po pl qo ql co cl fuel w8 v8 e1' ps qs cs
         hc hS hC hL hP h8 g8
       rw [c8, d8] at *
@@ -210,9 +140,7 @@ theorem cnCrW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           exact ⟨rfl, hS1, hg1, hP1⟩)
       exact ⟨b, hb, hr, q1, q2, q3⟩
-    · have hB0 : (if ruleEqButRhsB (erRd m) o1 o2 = true then (1 : Word) else 0) = 0 := by
-        simp [hbB]
-      rw [ite_eq_left hB0] at h
+    · simp (config := { decide := true }) only [hbB, Bool.false_eq_true, ↓reduceIte] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hd : ¬ (({ x1' with rhs := default } : IRecRule) = { y1' with rhs := default }) := by
         intro e

@@ -12,7 +12,7 @@ public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 /-!
 # BpRecBpassR
 
-`decBPass`, `BPassR` (the 11-word `BlockPass` record), `bpMem_eq`, `icprW_ok`, `bpRec_bpassR`
+`decBPass`, `BPassR` (the 11-word `BlockPass` record), `bpMem_eq` (the record's writes), `icprW_ok`, `bpRec_bpassR`
 and the lemmas only they use.
 -/
 
@@ -86,9 +86,13 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## The record -/
 
+/-- The memory after `check_block_pass_rec`'s eleven writes (`q` the allocation). -/
 theorem bpMem_eq (m : Mem) (q w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 : Word) :
-    bpMem m q w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 = wrIW m q [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10] := by
-  simp only [bpMem, wrIW, UInt64.add_assoc]
+    ((((((((((m.set64 IW q w0).set64 IW (q + 1) w1).set64 IW (q + 2) w2).set64 IW (q + 3) w3
+      ).set64 IW (q + 4) w4).set64 IW (q + 5) w5).set64 IW (q + 6) w6).set64 IW (q + 7) w7
+      ).set64 IW (q + 8) w8).set64 IW (q + 9) w9).set64 IW (q + 10) w10 =
+      wrIW m q [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10] := by
+  simp only [wrIW, UInt64.add_assoc]
   rfl
 
 /-- **`check_block_pass_rec`'s run**: a fresh 11-word record at the old top, the stage relation
@@ -101,10 +105,10 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
     ∃ q : Word, r = [q] ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ PosMR m' ∧ q.toNat = iwTop m ∧
       q.toNat + 11 ≤ iwTop m' ∧
       ∀ j (_hj : j < 11), (m'.arr64 IW)[q.toNat + j]? = [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10][j]? := by
-  unfold icprW at h
+  rw [icprW.arm1] at h
   rcases c1 : callW p n "iw_alloc" [11] m with _ | ⟨rq, m1⟩
   · rw [c1] at h; cases h
-  rw [c1] at h
+  rw [c1, icprW.k_iw_alloc.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s1, hs1, -, hal⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (iwAlloc_specW p ha n _ 11) c1
   simp only at hs1 hal

@@ -9,6 +9,7 @@ import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.KnotE
 public import ConAgua.Verdict.WhnfModels2E
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -381,31 +382,10 @@ def rpArgT (fe : IFEnv) (verified : Bool) (k : NIdx) (args : List EIdx) (j : Nat
   if ← projCertAt fe verified k args then pure (some arg) else pure none
 
 /-- The model of `reduce_proj_arg`. -/
-def rpArgW (p : Prog) (n : Nat) (m : Mem) (mode vis k ao an j : Word) :
-    Option (Word × Word × Mem) :=
-  match callW p n "intern_bvar" [0] m with
-  | none => none
-  | some (r₁, m₁) =>
-    if mode &&& 1 = 0 then
-      match callW p n "proj_cert" [vis, k, ao, an] m₁ with
-      | none => none
-      | some (r₂, m₂) =>
-        if r₂.headD 0 ≠ 0 then
-          some (1, (if j < an then rdW (m₁.arr64 SPN) (ao + j) else r₁.headD 0), m₂)
-        else some (0, 0, m₂)
-    else some (1, (if j < an then rdW (m₁.arr64 SPN) (ao + j) else r₁.headD 0), m₁)
-
-theorem rpArg_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
-    (mode vis k ao an j : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_proj_arg" [mode, vis, k, ao, an, j]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      rpArgW p n s₀.mem mode vis k ao an j = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.rparg]
-  simp only [callFn, reduceProjArgL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "intern_bvar", callW_spec p n "proj_cert"] <;>
-    finish [rpArgW]
+l_model rpArg_spec (p : Prog) (hp : WhnfCoreProg p)
+  fns [hp.rparg ↦ rpArgW tuple]
+  specs [callW_spec p n "intern_bvar", callW_spec p n "proj_cert"]
+  grind [arena_grind] pfuel
 
 theorem mode_cases (mode : Word) (h : mode < 4) : mode = 0 ∨ mode = 1 ∨ mode = 2 ∨ mode = 3 := by
   have h' : mode.toNat < 4 := UInt64.lt_iff_toNat_lt.mp h
@@ -437,7 +417,11 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
   have hS := hs.rel
   unfold rpArgW at hW
   rcases hc1 : callW p n "intern_bvar" [0] s.mem with _ | ⟨r₁, m₁⟩
-    <;> simp only [hc1, reduceCtorEq] at hW
+    <;> simp only [hc1, rpArgW.k_intern_bvar, reduceCtorEq] at hW
+  replace hW : rpArgW.j1 p n mode vis k ao an (if j < an then rdW (m₁.arr64 SPN) (ao + j) else r₁.headD 0)
+      m₁ = some (r.headD 0, r.tail.headD 0, s'.mem) := by
+    rw [← hW]; by_cases hj : j < an <;> simp only [hj, ↓reduceIte]
+  unfold rpArgW.j1 at hW
   obtain ⟨hok1, hD1, hres1, hfr1, hhw1⟩ := callW_internBVar p hp n s a₀ hS.arena 0 r₁ m₁ hc1
   have h0 : (0 : Word).toNat = 0 := rfl
   rw [h0] at hok1 hD1 hres1
@@ -475,7 +459,7 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
   by_cases hv : mode &&& 1 = 0
   · rw [ite_eq_left hv] at hW
     rcases hc2 : callW p n "proj_cert" [vis, k, ao, an] m₁ with _ | ⟨r₂, m₂⟩
-      <;> simp only [hc2, reduceCtorEq] at hW
+      <;> simp only [hc2, rpArgW.k_proj_cert, rpArgW.j2, reduceCtorEq] at hW
     cases n with
     | zero => simp [callW_zero] at hc2
     | succ N =>
@@ -516,7 +500,8 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
       · rw [hres]; unfold decOptR; rw [← hr0]; rfl
       · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, by unfold HW; decide⟩
   · rw [ite_eq_right hv] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    simp only [rpArgW.j2, ne_eq, show ((1 : Word) = 0) = False from by decide, not_false_eq_true,
+      ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     obtain ⟨hwh, hwd⟩ := harg _ rfl
     have hver : (decMode mode).verifiedChecks = false := by rw [hMD]; simpa using hv
@@ -557,42 +542,13 @@ def rpFireT (mode : ConLeche.CheckMode) (fe : IFEnv) (entry : IProjEntry) (i : N
     else pure none
 
 /-- The model of `reduce_proj_fire`. -/
-def rpFireW (p : Prog) (n : Nat) (m : Mem) (mode vis e1 q i k us : Word) :
-    Option (Word × Word × Mem) :=
-  match callW p n "get_app_args" [e1] m with
-  | none => none
-  | some (r₁, m₁) =>
-    match callW p n "ls_node" [us] m₁ with
-    | none => none
-    | some (r₂, m₂) =>
-        if k = erRd m₂ (q + 6) ∧ i < erRd m₂ (q + 7) ∧
-            erRd m₂ (q + 7) ≤ r₁.tail.headD 0 ∧
-            r₁.tail.headD 0 - erRd m₂ (q + 7) = erRd m₂ (q + 5) ∧
-            r₂.tail.headD 0 = erRd m₂ (q + 4) then
-          match callW p n "reduce_proj_arg" [mode, vis, k, r₁.headD 0, r₁.tail.headD 0,
-              erRd m₂ (q + 5) + i] m₂ with
-          | none => none
-          | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄)
-        else some (0, 0, m₂)
+l_model rpFire_spec (p : Prog) (hp : WhnfCoreProg p)
+  fns [hp.rpfire ↦ rpFireW tuple]
+  specs [callW_spec p n "get_app_args", callW_spec p n "ls_node", callW_spec p n "reduce_proj_arg"]
+  grind [arena_grind] extra [ld64_rdT_spec, evalE_tld, tld] pfuel
 
 theorem getElem_rdW' (a : Array Word) (x : Word) (h : x.toNat < a.size) : a[x.toNat] = rdW a x := by
   simp [rdW, h]
-
-theorem rpFire_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
-    (mode vis e1 q i k us : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_proj_fire" [mode, vis, e1, q, i, k, us]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      rpFireW p n s₀.mem mode vis e1 q i k us = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.rpfire]
-  simp only [callFn, reduceProjFireL]
-  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      ld64_rdT_spec, evalE_tld, tld,
-      callW_spec p n "get_app_args", callW_spec p n "ls_node",
-      callW_spec p n "reduce_proj_arg"] <;>
-  simp_all [-UInt64.toNat_add, rpFireW, erRd, EREC, BinOp.eval, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
-    St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
-    Sig.retOr] <;>
-  (intro h1; first | exact absurd h1 (UInt64.not_lt.mpr ‹_›) | exact absurd h1 (UInt64.not_le.mpr ‹_›))
 
 /-! ## Runs that leave their pushed slice on the stack -/
 
@@ -690,14 +646,15 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
   unfold rpFireW at hW
   -- get_app_args
   rcases hc1 : callW p n "get_app_args" [e1] s.mem with _ | ⟨r₁, m₁⟩
-    <;> simp only [hc1, reduceCtorEq] at hW
+    <;> simp only [hc1, rpFireW.k_get_app_args, reduceCtorEq] at hW
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, ho₁, htop₁, xs, hxs, hsp₁⟩ := triple_of_callW
     (getAppArgs_spec' p hp.spine n s a₀ hS.arena.base e1 he1 hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop₁ hsp₁
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   have hE₁ : erRd m₁ = erRd s.mem := erRd_frame hf₁ (by simp [SPN, EREC]) (by simp [SPN, EREC])
   -- ls_node
-  rcases hc2 : callW p n "ls_node" [us] m₁ with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, reduceCtorEq] at hW
+  rcases hc2 : callW p n "ls_node" [us] m₁ with _ | ⟨r₂, m₂⟩ <;>
+    simp only [hc2, rpFireW.k_ls_node, L.Ind.erRd_foldN, reduceCtorEq] at hW
   obtain ⟨t₂, ht₂, ht₂s, hne₂, hr₂⟩ := triple_of_callW (lsNode_spec p hp.lsn n { s with mem := m₁ } us) hc2
   have hm₂ : m₂ = m₁ := by rw [← ht₂, ht₂s]
   subst hm₂
@@ -742,15 +699,15 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
       erRd m₂ (q + 7) ≤ r₁.tail.headD 0 ∧
       r₁.tail.headD 0 - erRd m₂ (q + 7) = erRd m₂ (q + 5) ∧
       ([o₂, l₂] : List Word).tail.headD 0 = erRd m₂ (q + 4)
-  · rw [ite_eq_left hLc] at hW
+  · simp only [eq_true hLc, ↓reduceIte] at hW
     have hTc := hcond.mpr hLc
     have hpre := hpreP hTc
     cases hc4 : callW p n "reduce_proj_arg" [mode, vis, k, r₁.headD 0, r₁.tail.headD 0,
         erRd m₂ (q + 5) + i] m₂ with
-    | none => simp only [hc4] at hW; cases hW
+    | none => simp only [hc4, rpFireW.k_reduce_proj_arg] at hW; cases hW
     | some q₄ =>
     obtain ⟨r₄, m₄⟩ := q₄
-    simp only [hc4, Option.some.injEq, Prod.mk.injEq] at hW
+    simp only [hc4, rpFireW.k_reduce_proj_arg, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     cases n with
     | zero => simp [callW_zero] at hc4
@@ -784,7 +741,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
       exact ⟨M₄, hS₄, hK₄, hg₁.trans hSt₄.toGrew⟩
     · rw [hres]; unfold decOptR; rw [← hr0, ← hr1]
     · unfold ResW; rw [← hr0, ← hr1]; exact hrw4
-  · rw [ite_eq_right hLc] at hW
+  · simp only [eq_false hLc, ↓reduceIte] at hW
     have hTc : ¬ (decI k = (tbl.entry i.toNat).ctor ∧ i.toNat < (tbl.entry i.toNat).numFields ∧
           xs.length = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).numFields ∧
           l₂.toNat = (tbl.entry i.toNat).levelParams.length) :=

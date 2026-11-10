@@ -7,6 +7,7 @@ import ConAgua.Arena.StageInst1
 import ConAgua.Arena.InstLPRef
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import ConAgua.Arena.SimLib
 import ConAgua.Front.ApplyExprRefine
 public import ConAgua.Arena.CallF
@@ -107,20 +108,9 @@ theorem naF_frame {m m' : Mem} {args r : List Word} (h : naF m args = some (r, m
 /-! ## Pool scratch: `pool_room`, `iw_pool`, and growing the pool above its top -/
 
 /-- **The model of `pool_room(k)`**: `k` words reserved at the pool top (inside the top's tier). -/
-def prW (m : Mem) (k : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) 0 + k < rdW (m.arr64 CTL) 0 then none
-  else if m.len64 (tierA POOL (rdW (m.arr64 CTL) 0 >>> 40)) < (rdW (m.arr64 CTL) 0 &&& 1099511627775) + k then none
-  else some (rdW (m.arr64 CTL) 0, m.set64 CTL 0 (rdW (m.arr64 CTL) 0 + k))
-
-theorem poolRoom_specW (p : Prog) (hp : p.lookup "pool_room" = some L.Stubs.poolRoom) (n : Nat)
-    (s₀ : St) (k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pool_room" [k]
-    ⦃fun r s' => LocEq s' s₀ ∧ prW s₀.mem k = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, L.Stubs.poolRoom]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64] <;>
-    finish [prW]
+l_model poolRoom_specW (p : Prog) (hp : p.lookup "pool_room" = some L.Stubs.poolRoom)
+  fns [hp ↦ prW]
+  grind [arena_grind] extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
 
 /-- No call returns at fuel `0`. -/
 theorem callW_zero_false {p : Prog} {f : FnName} {vs : List Word} {m m' : Mem} {r : List Word}
@@ -135,7 +125,7 @@ theorem callW_pr {p : Prog} (hp : p.lookup "pool_room" = some L.Stubs.poolRoom) 
   cases n with
   | zero => exact (callW_zero_false h).elim
   | succ n =>
-    obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (poolRoom_specW p hp n _ k) h
+    obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (poolRoom_specW p hp (n + 1) _ k) h
     rw [← hs']; exact hW
 
 /-- `prW`, unfolded: the old top, the top raised, the room inside the top's tier array. -/
@@ -196,35 +186,9 @@ theorem grows_raise (m : Mem) (k : Word) (hok : PoolOK m)
   Grows.write m m k hok (PFrame.refl _) (Agree.refl _ _) hk
 
 /-- **The model of `iw_pool(s, d, l)`**: `POOL⦃d + j⦄ := IW[s + j]` (each store decodes `d`'s tier). -/
-def iwpW : Nat → Mem → Word → Word → Word → Option Mem
-  | 0, _, _, _, _ => none
-  | n + 1, m, s, d, l =>
-    if l = 0 then some m
-    else iwpW n (m.set64 (tierA POOL (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 IW) s)) (s + 1) (d + 1) (l - 1)
-
-theorem iwpW_nil (n : Nat) (m : Mem) (s d l : Word) (h : l = 0) :
-    iwpW (n + 1) m s d l = some m := by simp [iwpW, h]
-theorem iwpW_cons (n : Nat) (m : Mem) (s d l : Word) (h : l ≠ 0) :
-    iwpW (n + 1) m s d l =
-      iwpW n (m.set64 (tierA POOL (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 IW) s)) (s + 1) (d + 1) (l - 1) := by
-  simp [iwpW, h]
-grind_pattern [arena_grind] iwpW_nil => iwpW (n + 1) m s d l
-grind_pattern [arena_grind] iwpW_cons => iwpW (n + 1) m s d l
-
-theorem iwPool_specW (p : Prog) (hp : p.lookup "iw_pool" = some L.Stubs.iwPool) (n : Nat) :
-    ∀ (s₀ : St) (s d l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "iw_pool" [s, d, l]
-    ⦃fun _ s' => LocEq s' s₀ ∧ iwpW n s₀.mem s d l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ s d l; rw [invoke_eq _ hp]; simp only [callFn, L.Stubs.iwPool]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ s d l
-    rw [invoke_eq _ hp]
-    simp only [callFn, L.Stubs.iwPool]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, ih] <;>
-      finish
+l_model iwPool_specW (p : Prog) (hp : p.lookup "iw_pool" = some L.Stubs.iwPool)
+  fns [hp ↦ iwpW void]
+  grind [arena_grind] extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
 
 theorem callW_ip {p : Prog} (hp : p.lookup "iw_pool" = some L.Stubs.iwPool) {n : Nat}
     {m m' : Mem} {s d l : Word} {r : List Word} (h : callW p n "iw_pool" [s, d, l] m = some (r, m')) :
@@ -258,9 +222,13 @@ theorem iwpW_ok {m₀ : Mem} (hok : PoolOK m₀) : ∀ (n : Nat) (m m' : Mem) (s
   | succ n ih =>
     intro m m' s d l h hg hd hd41 hdl hs
     by_cases hl : l = 0
-    · rw [iwpW_nil n m s d l hl] at h; cases h; subst hl
+    · rw [iwpW.arm1 (hc1 := hl)] at h; cases h; subst hl
       exact ⟨hg, MemFrame.refl _ _ _, fun _ _ => rfl, by simp [sliceL]⟩
-    rw [iwpW_cons n m s d l hl] at h
+    rw [iwpW.arm2 (hc1 := hl)] at h
+    rcases hk : iwpW n (m.set64 (tierA POOL (d >>> 40)) (d &&& 1099511627775) (rdW (m.arr64 IW) s))
+      (s + 1) (d + 1) (l - 1) with _ | m₁ <;> rw [hk, iwpW.k_iw_pool] at h
+    · cases h
+    cases h
     have hl1 : 1 ≤ l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
     have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.cap; omega
     have hsz := pcap_tier m (d >>> 40) hpc
@@ -273,7 +241,7 @@ theorem iwpW_ok {m₀ : Mem} (hok : PoolOK m₀) : ∀ (n : Nat) (m m' : Mem) (s
     have hne : tierA POOL (d >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
     have hg₁ := grows_pset0 hg hok (x := rdW (m.arr64 IW) s) hd41 hd (by omega)
     have hv₁ := vpool_stidx0 m d (rdW (m.arr64 IW) s) hd41 (by omega) (by omega)
-    obtain ⟨hg', hf, hbl, hsl⟩ := ih _ _ _ _ _ h hg₁ (by omega) (by omega)
+    obtain ⟨hg', hf, hbl, hsl⟩ := ih _ _ _ _ _ hk hg₁ (by omega) (by omega)
       (by rw [et, ei, hlm, size_set64]; omega) (by rw [hs1, hlm]; omega)
     have hmem : tierA POOL (d >>> 40) ∈ ([POOL, POOL1] : List TieredArray) := by
       rcases tierA_pool (d >>> 40) with e | e <;> simp [e]
@@ -324,25 +292,17 @@ def recBytes (m : Mem) (o : Word) : Mem :=
   ((m.set64 (tierA POOL (o >>> 40)) (o &&& 1099511627775) 114).set64 (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 1) 101).set64
     (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 2) 99
 
-/-- `name_rec`'s body over its callees' runs. -/
-def nrW (p : Prog) (n : Nat) (m : Mem) (x : Word) : Option (Word × Mem) :=
-  match callW p n "pool_room" [3] m with
-  | none => none
-  | some (r₁, m₁) =>
-    match callW p n "intern_nstr" [x, r₁.headD 0, 3] (recBytes m₁ (r₁.headD 0)) with
-    | none => none
-    | some (r₂, m₂) => if 4294967296 ≤ r₂.headD 0 then none else some (r₂.headD 0, m₂)
+/-- `name_rec`'s body over its callees' runs: `pool_room(3)`, the bytes `rec`, `intern_nstr`. -/
+l_model nameRec_specW (p : Prog) (hp : p.lookup "name_rec" = some L.Stubs.nameRecL)
+  fns [hp ↦ nrW]
+  specs [callW_spec p n "pool_room", callW_spec p n "intern_nstr"]
+  grind [arena_grind] extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] pfuel
 
-theorem nameRec_specW (p : Prog) (hp : p.lookup "name_rec" = some L.Stubs.nameRecL) (n : Nat)
-    (s₀ : St) (x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "name_rec" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ nrW p n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, L.Stubs.nameRecL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64,
-      callW_spec p n "pool_room", callW_spec p n "intern_nstr"] <;>
-    finish [nrW, recBytes]
+/-- The bytes `rec` as the generated model writes them. -/
+theorem recBytes_eq (m : Mem) (o : Word) :
+    ((m.set64 (tierA POOL (o >>> 40)) (o &&& 1099511627775) 114).set64 (tierA POOL (o >>> 40))
+      ((o &&& 1099511627775) + 1) 101).set64 (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 2) 99 =
+    recBytes m o := rfl
 
 theorem strWords_recB : strWords "rec" = [114, 101, 99] := by decide
 
@@ -407,7 +367,7 @@ theorem nrF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rcases h1 : callW nrProg n "pool_room" [3] m with _ | ⟨r₁, m₁⟩
   · rw [h1] at hW; cases hW
   rw [h1] at hW
-  simp only at hW
+  simp only [nrW.k_pool_room, recBytes_eq] at hW
   have hpool : PoolOK m := hS.check.arena.base.lit.1
   obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.cap; omega)
   rw [ho, hm₁] at hW
@@ -416,7 +376,7 @@ theorem nrF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rcases h2 : callW nrProg n "intern_nstr" [x, m.top, 3] m₂ with _ | ⟨r₂, m₃⟩
   · rw [h2] at hW; cases hW
   rw [h2] at hW
-  simp only at hW
+  simp only [nrW.k_intern_nstr] at hW
   obtain ⟨c, hW⟩ := of_ite_none hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hR₂ : ArenaR m₂ a := ArenaR.grow m m₂ hg a hS.check.arena.base
@@ -475,27 +435,10 @@ theorem ilF_frame {m m' : Mem} {args r : List Word} (h : ilF m args = some (r, m
   exact (run_memFrame ilProg_closed (by decide) (run_of_callW hc)).1
 
 /-- `intern_ls_iw`'s body over its callees' runs. -/
-def ilwW (p : Prog) (n : Nat) (m : Mem) (o l : Word) : Option (Word × Mem) :=
-  match callW p n "pool_room" [l] m with
-  | none => none
-  | some (r₁, m₁) =>
-    match callW p n "iw_pool" [o, r₁.headD 0, l] m₁ with
-    | none => none
-    | some (_, m₂) =>
-      match callW p n "intern_ls" [r₁.headD 0, l] m₂ with
-      | none => none
-      | some (r₃, m₃) => if 4294967296 ≤ r₃.headD 0 then none else some (r₃.headD 0, m₃)
-
-theorem internLsIw_specW (p : Prog) (hp : p.lookup "intern_ls_iw" = some L.Stubs.internLsIwL)
-    (n : Nat) (s₀ : St) (o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "intern_ls_iw" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilwW p n s₀.mem o l = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, L.Stubs.internLsIwL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64,
-      callW_spec p n "pool_room", callW_spec p n "iw_pool", callW_spec p n "intern_ls"] <;>
-    finish [ilwW]
+l_model internLsIw_specW (p : Prog) (hp : p.lookup "intern_ls_iw" = some L.Stubs.internLsIwL)
+  fns [hp ↦ ilwW]
+  specs [callW_spec p n "pool_room", callW_spec p n "iw_pool", callW_spec p n "intern_ls"]
+  grind [arena_grind] extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] pfuel
 
 /-- A decoded handle slice is the words of its list, inside the array. -/
 theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hslice? (aread a) o l = some us →
@@ -543,18 +486,18 @@ theorem ilF_ok (vis : Word) (fe : IFEnv) (o l : Word)
   rcases h1 : callW ilProg n "pool_room" [l] m with _ | ⟨r₁, m₁⟩
   · rw [h1] at hW; cases hW
   rw [h1] at hW
-  simp only at hW
+  simp only [ilwW.k_pool_room] at hW
   have hpool : PoolOK m := hS.check.arena.base.lit.1
   obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.cap; omega)
   rw [ho] at hW
   rcases h2 : callW ilProg n "iw_pool" [o, m.top, l] m₁ with _ | ⟨r₂, m₂⟩
   · rw [h2] at hW; cases hW
   rw [h2] at hW
-  simp only at hW
+  simp only [ilwW.k_iw_pool] at hW
   rcases h3 : callW ilProg n "intern_ls" [m.top, l] m₂ with _ | ⟨r₃, m₃⟩
   · rw [h3] at hW; cases hW
   rw [h3] at hW
-  simp only at hW
+  simp only [ilwW.k_intern_ls] at hW
   obtain ⟨c, hW⟩ := of_ite_none hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hc0 := hpool.ctl

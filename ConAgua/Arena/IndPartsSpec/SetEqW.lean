@@ -60,12 +60,12 @@ theorem allInW_ok (n : Nat) : ∀ (m : Mem) (o1 l1 o2 l2 r : Word) (ws1 ws2 : Li
         rw [ih _ _ _ _ _ _ _ _ hs h2 h]
         split at this <;> simp_all
 
-/-- The model of `sl_set_eq`. -/
-def setEqW (n : Nat) (m : Mem) (o1 l1 o2 l2 : Word) : Option Word :=
-  if l1 ≠ l2 then some 0
-  else match allInW n m o1 l1 o2 l2 with
-    | none => none
-    | some b => if b = 0 then some 0 else allInW n m o2 l2 o1 l1
+/-- **`sl_set_eq` is its model `setEqW`** (generated; body fuel `n`). -/
+l_model slSetEq_spec (p : Prog) (hc : p.lookup "sl_contains" = some slContains)
+    (ha : p.lookup "sl_all_in" = some slAllIn) (hp : p.lookup "sl_set_eq" = some slSetEq)
+  fns [hp ↦ setEqW ro]
+  specs [slAllIn_spec p hc ha n]
+  grind [arena_grind] pfuel
 
 theorem setEqW_ok {n : Nat} {m : Mem} {o1 l1 o2 l2 r : Word} {ws1 ws2 : List Word}
     (h1 : SlR m o1 l1 ws1) (h2 : SlR m o2 l2 ws2) (h : setEqW n m o1 l1 o2 l2 = some r) :
@@ -81,8 +81,8 @@ theorem setEqW_ok {n : Nat} {m : Mem} {o1 l1 o2 l2 r : Word} {ws1 ws2 : List Wor
     have hl' : l1 = l2 := by simpa using hl
     have hlen : ws1.length = ws2.length := by rw [e1, e2, hl']
     rcases ha : allInW n m o1 l1 o2 l2 with _ | b <;> rw [ha] at h
-    · simp at h
-    simp only at h
+    · simp [setEqW.k_sl_all_in] at h
+    simp only [setEqW.k_sl_all_in] at h
     have hb := allInW_ok n m o1 l1 o2 l2 b ws1 ws2 h1 h2 ha
     by_cases b0 : b = 0
     · rw [ite_eq_left b0] at h; simp at h; subst h

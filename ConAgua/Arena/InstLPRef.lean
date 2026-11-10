@@ -287,16 +287,15 @@ theorem slpOne_ok (ks : List Name) (vs : List Level) (n : Nat) (m m₁ : Mem) (a
     (ko kc vo vc w h : Word) (nm : Name) (hA : ArenaD m a) (hwf : NStoreWF a.store.lss.ls.ns)
     (hk : NmsR (nameN a.store.lss.ls.ns) m SPN ko kc ks)
     (hv : LvsR (nameN a.store.lss.ls.ns) m vo vc vs) (hn : nameN a.store.lss.ls.ns w nm)
-    (hW : slpOne n m w (lookupW (keyA SPN) POOL n m ko kc vo vc w) = some (h, m₁)) :
+    {f v : Word} (e : lookupW (keyA SPN) POOL n m ko kc vo vc w = some (f, v))
+    (hW : (if f ≠ 0 then lvInternW n m v else pinternW m w) = some (h, m₁)) :
     ∃ a₁, (internLevel (Level.subst ks vs (.param nm))).run a = .ok (decI h, a₁) ∧ ArenaD m₁ a₁ ∧
       MemFrame lvArrs lvCtl m m₁ ∧ LKeep a a₁ := by
-  rcases e : lookupW (keyA SPN) POOL n m ko kc vo vc w with _ | ⟨f, v⟩ <;> rw [e] at hW
-  · simp [slpOne] at hW
   rcases lookupW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ _ _ _ _ hk.toK hv.toAR hn e with ⟨hf, hvl⟩ | ⟨rfl, hgo⟩
-  · rw [slpOne_hit n m w f v hf] at hW
+  · rw [ite_eq_left hf] at hW
     obtain ⟨a₁, hrun, hA₁, hlt, hfr, hkp, -⟩ := lvInternW_ok _ n m a v h m₁ hA hwf hvl hW
     exact ⟨a₁, by simpa [Level.subst] using hrun, hA₁, hfr, hkp⟩
-  · rw [slpOne_miss] at hW
+  · simp only [ne_eq, not_true_eq_false, ↓reduceIte] at hW
     obtain ⟨ok, hR, res, hfr⟩ := L.Front.param_A m a hA h m₁ w hn.1 hW
     have hrun := node_run ok
     rw [res] at hrun
@@ -345,7 +344,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     cases n with
     | zero => simp [slpW] at hW
     | succ n =>
-    rw [slpW_nil n m o 0 b ko kc vo vc rfl] at hW; cases hW
+    rw [slpW.arm1 (hc1 := rfl)] at hW; cases hW
     exact ⟨[], a, rfl, hA, hwf, hrc, Ext.refl _, rfl, rfl, rfl, by simp [sliceL, lsWords], fun _ _ => rfl,
       MemFrame.refl _ _ _⟩
   | cons u us ih =>
@@ -378,13 +377,8 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     cases n with
     | zero => simp [slpW] at hW
     | succ n =>
-    rw [slpW_cons n m o l b ko kc vo vc hl0, hrd] at hW
-    rcases hS : slpOne n m w (lookupW (keyA SPN) POOL n m ko kc vo vc w) with _ | ⟨h, m₁⟩ <;> rw [hS] at hW
-    · simp [slpK] at hW
-    rw [slpK_some] at hW
-    by_cases hh : 4294967296 ≤ h
-    · simp [hh] at hW
-    simp only [hh, ↓reduceIte] at hW
+    obtain ⟨f, v, h, m₁, hlk, hS, hh, hW⟩ := slpW_cons_some hl0 hW
+    rw [hrd] at hlk hS
     -- the twin's readback
     obtain ⟨c, hrl, hrc', -, -, hcg⟩ := readNameM_run a (decI w) nm hdu hrc
     generalize hac : ({ a with caches := c } : AState) = ac at hrl hrc'
@@ -395,7 +389,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     have hv₀ := lvsR_of_slice hAc.base usIds vs _ _ hvs (by omega) (by rw [hstc]; exact hdv)
     obtain ⟨a₁, hrun₁, hA₁, hf₁, hkp₁⟩ := slpOne_ok ks vs n m m₁ ac ko kc vo vc w h nm hAc
       (by rw [hstc]; exact StoreWF.nwf hwf) (by rw [hstc]; exact hk) hv₀
-      ⟨hw, by rw [hstc]; exact hdu⟩ hS
+      ⟨hw, by rw [hstc]; exact hdu⟩ hlk hS
     obtain ⟨hwf₁, hx₁, hca₁, hpi₁, hme₁, -⟩ := internLevel_facts (by rw [hstc]; exact hwf) hrun₁
     rw [hstc] at hx₁
     have hlt₁ : h.toNat < 2 ^ 32 := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hh)

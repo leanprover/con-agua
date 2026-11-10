@@ -56,7 +56,7 @@ theorem hasFvarFast_refines (p : Prog) (hp : AbsProg p)
       ArenaA s'.mem (AM.st (hasFvarFast f.toNat (decE e)) a₀) ∧
       AM.res (hasFvarFast f.toNat (decE e)) a₀ = (r.headD 0 != 0) ∧
       r.headD 0 ≤ 1; ⊤⦄ :=
-  Sim.triple (hasFvarFastL_spec p hp hpf n s₀ f e) (hfK_sim n _ a₀ hA e f he)
+  Sim.triple (hasFvarFastL_spec p hp hpf n s₀ f e) (hffW_eq n _ f e ▸ hfK_sim n _ a₀ hA e f he)
 
 /-- **`has_fvar(e)` refines `hasFvarFast coreWalkFuel e`** (the stub interface `HasFvarOK`'s fuel),
 at every L fuel. -/

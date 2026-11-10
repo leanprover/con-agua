@@ -122,6 +122,12 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   them (`pcap`, the input buffer `arr8 IN`) holds again after each call, for the next call's
   side goal (the `grind` patterns `Keep.size`, `Keep.arr8`, `Keep.pcap`). The specs' binders
   must all be explicit.
+* `guards ["f", …]`: for these callees with a total model (pure results, or a list), the
+  post's other conjuncts over the memory and the arguments are guards of the model (`¬ g` is
+  `none`, as for a total memory model), and a list literal `r = [F₀, …]` gives the results
+  `F₀, …` themselves: a table lookup `tblOK s₀.mem NID i = true ∧ r = [tblW s₀.mem NID i]`
+  (`name_get`, `expr_get`) is `if tblOK m NID i = true then … tblW m NID i … else none`.
+  Without it such conjuncts are ignored (`i < 51`).
 * `pfuel` (one function that does not call itself as its model): the fuel is a parameter of the
   model, not matched on: the model is the body at fuel `n`, with its callees through specs over
   `n` (`callW_spec p n "f"`, lane whnf's "a call as a function of the memory"; its own recursive
@@ -432,10 +438,11 @@ meta inductive CKind where
   | eff (t : Term)
   /-- `F : Option (List Word × Mem)`: several results and the memory -/
   | effL (t : Term)
-  /-- results `F₀, F₁, …`, memory unchanged -/
-  | pure (ts : Array Term)
-  /-- results `F.headD 0, F.tail.headD 0, …`; `guard`: `F = []` is `none` -/
-  | list (t : Term) (guard : Bool)
+  /-- results `F₀, F₁, …`, memory unchanged; `gs`: the post's other conjuncts over the memory and
+  the arguments, guards only for a callee listed in `guards` -/
+  | pure (ts : Array Term) (gs : Array Term := #[])
+  /-- results `F.headD 0, F.tail.headD 0, …`; `guard`: `F = []` is `none`; `gs` as for `pure` -/
+  | list (t : Term) (guard : Bool) (gs : Array Term := #[])
   /-- `F : Option Mem` -/
   | memOpt (t : Term)
   /-- `F : Mem`, after the guards (`¬ gᵢ` is `none`); a guard with `true` has no `Decidable`
@@ -684,7 +691,7 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
         pure (CKind.ro (← delabT e))
       | none, none, none, none, some e =>
         unless memSame do throwError "l_model: list callee {fname} must keep the memory"
-        pure (CKind.list (← delabT e) nonempty)
+        pure (CKind.list (← delabT e) nonempty (← guards.mapM delabT))
       | none, none, none, none, none =>
         unless memSame do throwError "l_model: callee {fname}: no model in its post"
         let n := pures.foldl (fun k (i, _) => max k (i + 1)) 0
@@ -693,7 +700,7 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
           match pures.find? (·.1 == i) with
           | some (_, e) => ts := ts.push (← delabT e)
           | none => ts := ts.push (← `(0))
-        pure (CKind.pure ts)
+        pure (CKind.pure ts (← guards.mapM delabT))
       | _, _, _, _, _ => throwError "l_model: callee {fname}: ambiguous post"
     -- other conjuncts over the arguments and the initial state (`i < 51`) are facts the callee's
     -- post states besides its model: the model does not need them (only a total memory model
@@ -918,6 +925,9 @@ meta structure Env where
   folds : Array Fold
   /-- list callees whose `r ≠ []` does not become a `none` branch -/
   noguard : Array String := #[]
+  /-- `guards [..]`: the callees whose total (pure, list) models take their post's other
+  conjuncts over the memory and the arguments as guards (`¬ g` is `none`) -/
+  guardFns : Array String := #[]
   /-- the models' Lean parameters: the command's explicit binders that the callees' models
   mention (`p` in `callW p n "f" [..] m`); every model and continuation takes them first -/
   mps : Array Name := #[]
@@ -1475,6 +1485,17 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     | _ => pure ()
     let d ← if classical then `(@decide $g (Classical.propDecidable _)) else `(decide $g)
     return .not (.cmp "=" (.raw d) (.raw (← `(true))))
+  -- `guards [f]`: a total callee's other post conjuncts as guards, `¬ g` is `none`
+  let guarded (gs : Array Term) (body : MR) : GenM MR := do
+    unless E.guardFns.contains fname do return body
+    let mut r := body
+    for g in gs.reverse do
+      let g ← substT g memT argsT
+      let c ← match g with
+        | `($a = $b) => pure (MC.not (.cmp "=" (.raw a) (.raw b)))
+        | _ => negC g false
+      r := .ite c (← failMR E) r
+    return r
   -- a member of the group with a spec in `specs` is called through that spec (`callW_spec p n
   -- "f"`: the self-call stays a `callW` in the model, as in hand models whose refinements do
   -- induction over `callW`)
@@ -1525,10 +1546,11 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
   | .effL t =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
     bindK E ctx xk (.raw (← substC t)) rest
-  | .pure ts =>
+  | .pure ts gs =>
     let vs ← ts.mapM fun t => do return MT.raw (← substT t memT argsT)
-    transS E (assign ctx vs) rest
-  | .list t guard =>
+    let body ← transS E (assign ctx vs) rest
+    guarded gs body
+  | .list t guard gs =>
     let l ← substT t memT argsT
     -- the template `g __m __a0 …` of a list callee, for the fold rules of its results
     let gName? : Option Name := match t.raw with
@@ -1538,14 +1560,22 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
               Name.mkSimple s!"__a{i}") then
           some args[0]!.getId else none
       | _ => none
+    -- for a callee in `guards`, a list literal `[F₀, F₁, …]` (`r = [tblW m NID i]`): its
+    -- elements, not `List.headD`s
+    let lits? : Option (Array Term) := if !E.guardFns.contains fname then none else match l with
+      | `([$xs,*]) => some xs.getElems
+      | _ => none
     let vs ← (List.range xk.size).toArray.mapM fun i => do
       if let some g := gName? then
         if let some r := E.folds.find? (·.listProj == some (g, i)) then
           return MT.app r.name (#[ctx.mem] ++ (← args.mapM (transE E ctx)))
+      if let some xs := lits? then
+        return MT.raw (xs[i]?.getD (← `(0)))
       let mut e ← `($l)
       for _ in [0:i] do e ← `(List.tail $e)
       return MT.raw (← `(List.headD $e 0))
     let body ← transS E (assign ctx vs) rest
+    let body ← guarded gs body
     if guard && !E.noguard.contains fname then
       return .ite (.cmp "=" (.raw l) (.raw (← `([])))) (← failMR E) body
     return body
@@ -1906,7 +1936,8 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" unified")?
   (&" nv " "[" term "," term "]")?
   (&" cut " num)?
-  (&" pfuel")? : command
+  (&" pfuel")?
+  (&" guards " "[" str,* "]")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1988,6 +2019,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- (its callees through their specs, e.g. `callW_spec p n "f"`): the model is the body at fuel
   -- `n` (no `match` on the fuel), its spec at `exec p (n + 1)`, proved by one step, no induction
   let pfuel := stx[27].getNumArgs != 0
+  let guardFns : Array String := (optList 28).filterMap (·.isStrLit?)
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
@@ -2031,8 +2063,9 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     if let `(Lean.Parser.Term.bracketedBinderF| ($xs* : $ty)) := b then
       for x in xs do allBs := allBs.push (x.raw.getId, ty)
   let calleeIds : NameSet := callees.foldl (fun acc (_, c) => match c.kind with
-    | .eff t | .effL t | .list t _ | .memOpt t | .ro t | .roL t | .effT t _ | .roT t _ => idents t.raw acc
-    | .pure ts => ts.foldl (fun acc t => idents t.raw acc) acc
+    | .eff t | .effL t | .memOpt t | .ro t | .roL t | .effT t _ | .roT t _ => idents t.raw acc
+    | .list t _ gs => gs.foldl (fun acc t => idents t.raw acc) (idents t.raw acc)
+    | .pure ts gs => (ts ++ gs).foldl (fun acc t => idents t.raw acc) acc
     | .memTot t gs => gs.foldl (fun acc t => idents t.1.raw acc) (idents t.raw acc)
     | .unitOpt t => idents t.raw acc) {}
   -- `unified`: the callees without a spec are called through `callE p n "f"`
@@ -2080,7 +2113,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     if fi.tup > 0 then { fi with tup := max fi.tup (spliceArity blocks0 (blocks0.size + 1) fi.body) }
     else fi
   let grp := fis.map fun fi => (fi.lname, fi.model, fi.ro, fi.multi, fi.tup)
-  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps, blocks, bind := bindC, exc, voids := (fis.filter (·.void)).map (·.lname) }
+  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, guardFns, mps, blocks, bind := bindC, exc, voids := (fis.filter (·.void)).map (·.lname) }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
     let go : GenM (Array (MR × Array String × Array Name)) := fis.mapM fun fi => do
