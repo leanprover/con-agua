@@ -114,7 +114,9 @@ theorem sctW_mfr {c : CallM}
     sctW c n m vis nP lo ll bO bL = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, _, _, h => by simp [sctW] at h
   | n + 1, m, m', vis, nP, lo, ll, bO, bL, r, h => by
-    simp only [sctW, sctK1.eq_def, sctK2.eq_def, sctK3.eq_def, sctK4.eq_def, sctK5.eq_def] at h
+    simp only [sctW, sctW.k_has_fvar_fast.eq_def, sctW.k_all_level_params_defined.eq_def,
+      sctW.k_consts_resolve_ffast.eq_def, sctW.k_loose_bvars_bounded_fast.eq_def,
+      sctW.k_check_struct_proj_table_scoped.eq_def] at h
     mfr_auto h [sctW_mfr hc n _ _ _ _ _ _ _ _ _, hc _ _ _ _ _, crfF_mfr, MFr.ofHffF, MFr.ofLbbF]
 
 theorem efgW_mfr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),

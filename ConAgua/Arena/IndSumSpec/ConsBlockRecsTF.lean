@@ -44,81 +44,15 @@ open L.Arena
 
 /-! ## `check_struct_proj_table_scoped` -/
 
-/-- After the rest. -/
-def sctK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-/-- After `loose_bvars_bounded_fast`: the verdict. -/
-def sctK4 (rest : Mem → Option (List Word × Mem)) (r1 r2 r3 : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m) => if r1 = 0 ∧ r2 = 1 ∧ r3 = 1 ∧ r4.headD 0 = 1 then sctK5 (rest m) else some ([0], m)
-/-- After `consts_resolve_ffast`. -/
-def sctK3 (rest : Mem → Option (List Word × Mem)) (nP b r1 r2 : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m) => sctK4 rest r1 r2 (r3.headD 0)
-      (lbbF m [CWF, nP + 1, b])
-/-- After `all_level_params_defined`. -/
-def sctK2 (rest : Mem → Option (List Word × Mem)) (vis nP b r1 : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m) => sctK3 rest nP b r1 (r2.headD 0) (crfF m [vis, b])
-/-- After `has_fvar_fast`. -/
-def sctK1 (c : CallM) (n : Nat) (rest : Mem → Option (List Word × Mem)) (vis nP lo ll b : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m) => sctK2 rest vis nP b (r1.headD 0) (c n "all_level_params_defined" [lo, ll, b] m)
-
 /-- **The model of `check_struct_proj_table_scoped(vis, nP, lo, ll, bO, bL)`** at exec fuel `n`,
 reading `all_level_params_defined` through `c` (`stubCall`: the stub contract; `realCall p`: the
 program's own call, `IndRealSctC.lean`). -/
-def sctW (c : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, nP, lo, ll, bO, bL =>
-    if bL = 0 then some ([1], m)
-    else sctK1 c n (fun m' => sctW c n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
-      (hffF m [CWF, rdW (m.arr64 IW) bO])
-
-section arms
-variable (c : CallM) (rest : Mem → Option (List Word × Mem)) (n : Nat) (m : Mem)
-  (vis nP lo ll bO bL b r1 r2 r3 : Word) (r : List Word)
-theorem sctW_nil (h : bL = 0) : sctW c (n + 1) m vis nP lo ll bO bL = some ([1], m) := by simp [sctW, h]
-theorem sctW_cons (h : bL ≠ 0) : sctW c (n + 1) m vis nP lo ll bO bL =
-    sctK1 c n (fun m' => sctW c n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
-      (hffF m [CWF, rdW (m.arr64 IW) bO]) := by simp [sctW, h]
-theorem sctK5_some : sctK5 (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem sctK4_yes (h : r1 = 0 ∧ r2 = 1 ∧ r3 = 1 ∧ r.headD 0 = 1) :
-    sctK4 rest r1 r2 r3 (some (r, m)) = sctK5 (rest m) := by simp only [sctK4]; rw [ite_eq_left h]
-theorem sctK4_no (h : ¬ (r1 = 0 ∧ r2 = 1 ∧ r3 = 1 ∧ r.headD 0 = 1)) :
-    sctK4 rest r1 r2 r3 (some (r, m)) = some ([0], m) := by simp only [sctK4]; rw [ite_eq_right h]
-theorem sctK3_some : sctK3 rest nP b r1 r2 (some (r, m)) =
-    sctK4 rest r1 r2 (r.headD 0) (lbbF m [CWF, nP + 1, b]) := rfl
-theorem sctK2_some : sctK2 rest vis nP b r1 (some (r, m)) =
-    sctK3 rest nP b r1 (r.headD 0) (crfF m [vis, b]) := rfl
-theorem sctK1_some : sctK1 c n rest vis nP lo ll b (some (r, m)) =
-    sctK2 rest vis nP b (r.headD 0) (c n "all_level_params_defined" [lo, ll, b] m) := rfl
-end arms
-attribute [ind_grind] sctW_nil sctW_cons sctK5_some sctK4_yes sctK4_no sctK3_some sctK2_some sctK1_some
-
-theorem sctW_spec (p : Prog) (hb : BvbProg p) (hf : HfF p) (hcr : CrfF p)
+l_model sctW_spec (p : Prog) (hb : BvbProg p) (hf : HfF p) (hcr : CrfF p)
     (hp : p.lookup "check_struct_proj_table_scoped" = some checkStructProjTableScopedL)
-    (c : CallM) (hc : CallSpec p c) (n : Nat) : ∀ (s₀ : St) (vis nP lo ll bO bL : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_proj_table_scoped" [vis, nP, lo, ll, bO, bL]
-    ⦃fun r s' => LocEq s' s₀ ∧ sctW c n s₀.mem vis nP lo ll bO bL = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis nP lo ll bO bL; rw [invoke_eq _ hp]; simp only [callFn, checkStructProjTableScopedL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis nP lo ll bO bL
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkStructProjTableScopedL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        hffF_spec p hf n, hc n "all_level_params_defined",
-        crfF_spec p hcr n, lbbF_spec p hb n, ih] <;>
-      finish (gen := 30) (instances := 5000) [rdW_eq]
+    (c : CallM) (hc : CallSpec p c)
+  fns [hp ↦ sctW list]
+  specs [hffF_spec p hf n, hc n "all_level_params_defined", crfF_spec p hcr n, lbbF_spec p hb n]
+  grind [arena_grind]
 
 /-- The twin's per-body scoping test (`checkStructProjTable`'s `allM` body, verbatim). -/
 def scopeT (fe : IFEnv) (lps : List NIdx) (nP : Nat) (b : EIdx) : AM Bool := do
@@ -322,29 +256,9 @@ def cpMem (m : Mem) (b old : Word) : Mem :=
   let m10 := erecPutMem m9 (b + 9) (erRd m9 (old + 9))
   erecPutMem m10 (b + 10) (erRd m10 (old + 10))
 
-/-- **The model of `rule_copy`.** -/
+/-- **The model of `rule_copy`** (hand-written: the generated one inlines each copy's memory into
+the next copy's read, a term of `2 ^ 11` memories). -/
 def rcpW (m : Mem) (b old : Word) : Option (List Word × Mem) := some ([0], cpMem m b old)
-
-def rteK1 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => some ([0], m)
-
-/-- **The model of `rules_to_erec_go`** (exec fuel). -/
-def rteGoW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, b, ro, rl =>
-    if rl = 0 then some ([0], m)
-    else rteK1 (rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1))
-
-section arms
-variable (n : Nat) (m : Mem) (b ro rl : Word) (r : List Word)
-theorem rcW_eq (old : Word) : rcpW m b old = some ([0], cpMem m b old) := rfl
-theorem rteGoW_nil (h : rl = 0) : rteGoW (n + 1) m b ro rl = some ([0], m) := by simp [rteGoW, h]
-theorem rteGoW_cons (h : ¬ rl = 0) : rteGoW (n + 1) m b ro rl =
-    rteK1 (rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1)) := by simp [rteGoW, h]
-theorem rteK1_some : rteK1 (some (r, m)) = some ([0], m) := rfl
-end arms
-attribute [ind_grind] rcW_eq rteGoW_nil rteGoW_cons rteK1_some
 
 /-- The lookups of `block_rec_infos_tf`. -/
 structure CbrLook (p : Prog) : Prop where
@@ -359,6 +273,13 @@ structure CbrLook (p : Prog) : Prop where
   rke : p.lookup "rec_k_expected" = some recKExpected
   bri : p.lookup "block_rec_infos_tf" = some blockRecInfosTF
 
+/-- `erec_put`'s effect without its bound (the models of the record copies are total). -/
+theorem erecPut_specM (p : Prog) (hp : p.lookup "erec_put" = some erecPut) (n : Nat) (s₀ : St)
+    (a v : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_put" [a, v]
+    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = erecPutMem s₀.mem a v; ⊤⦄ :=
+  triple_post (erecPut_specW p hp n s₀ a v) fun _ _ h => ⟨h.1, h.2.1⟩
+
 theorem rc_spec (p : Prog) (L : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat)
     (s₀ : St) (b old : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_copy" [b, old]
@@ -372,21 +293,10 @@ theorem rc_spec (p : Prog) (L : CbrLook p) (hpu : p.lookup "erec_put" = some ere
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecPut_specW p hpu n] <;>
       finish [rcpW, cpMem, erRd]
 
-theorem rteGo_spec (p : Prog) (L : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat) :
-    ∀ (s₀ : St) (b ro rl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rules_to_erec_go" [b, ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ rteGoW n s₀.mem b ro rl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ b ro rl
-    rw [invoke_eq _ L.rteg]; simp only [callFn, rulesToErecGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ b ro rl
-    rw [invoke_eq _ L.rteg]
-    simp only [callFn, rulesToErecGo]
-    sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, rc_spec p L hpu n, ih] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq]
+l_model rteGo_spec (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut)
+  fns [hL.rteg ↦ rteGoW list]
+  specs [rc_spec p hL hpu n]
+  grind [arena_grind]
 
 l_model rte_spec (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut)
   fns [hL.rte ↦ rteW]
@@ -509,15 +419,15 @@ theorem rteGoW_mem : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word)
   | 0, _, _, _, _, _, _, h, _ => by simp [rteGoW] at h
   | n + 1, m, m', b, ro, rl, r, h, hfr => by
     by_cases h0 : rl = 0
-    · rw [rteGoW_nil (h := h0)] at h
+    · rw [rteGoW.arm1 (hc1 := h0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       subst h0; rw [← h.2]; simp [ruleWords, wrER]
-    rw [rteGoW_cons (h := h0)] at h
+    rw [rteGoW.arm2 (hc1 := h0), rcpW, rteGoW.k_rule_copy.arm1] at h
     have hl0 : rl.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
     have hl1 : (rl - 1).toNat = rl.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
     rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;>
-      simp only [h2, rteK1, reduceCtorEq] at h
+      simp only [h2, rteGoW.k_rules_to_erec_go, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     have hsrc : ∀ j, ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := fun j => by
       rw [UInt64.ofNat_add]; ac_rfl
@@ -638,27 +548,19 @@ def riMem (m1 : Mem) (q cv mi rp isK reo rel : Word) : Mem :=
   erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m6 (q + 5) mi) (q + 6) rp) (q + 7) reo)
     (q + 8) rel) (q + 9) isK
 
-/-- **The model of `rec_info_rec(cv, mI, rP, isK, reo, rel)`.** -/
-def riW (m : Mem) (cv mi rp isK reo rel : Word) : Option (Word × Mem) :=
-  match erAllocW m 10 with
-  | none => none
-  | some (q, m1) =>
-    if 4294967296 ≤ erRd (riMem m1 q cv mi rp isK reo rel) (q + 1) then none
-    else some (q, riMem m1 q cv mi rp isK reo rel)
+l_model ri_spec (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut)
+  fns [hL.rir ↦ riW]
+  specs [erecAlloc_specW p hL.tsr.ea n, erecPut_specM p hpu n]
+  grind [arena_grind]
 
-theorem ri_spec (p : Prog) (L : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat) (s₀ : St)
-    (cv mi rp isK reo rel : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_info_rec" [cv, mi, rp, isK, reo, rel]
-    ⦃fun r s' => LocEq s' s₀ ∧ riW s₀.mem cv mi rp isK reo rel = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.rir]
-  simp only [callFn, recInfoRec]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        erecAlloc_specW p L.tsr.ea n, erecPut_specW p hpu n] <;>
-      finish (gen := 30) (instances := 5000) [riW, riMem, erRd]
+/-- `riW` by its memory `riMem`. -/
+theorem riW_eq (m : Mem) (cv mi rp isK reo rel : Word) : riW m cv mi rp isK reo rel =
+    match erAllocW m 10 with
+    | none => none
+    | some (q, m1) =>
+      if 4294967296 ≤ erRd (riMem m1 q cv mi rp isK reo rel) (q + 1) then none
+      else some (q, riMem m1 q cv mi rp isK reo rel) := by
+  rw [riW.arm1]; rcases erAllocW m 10 with _ | ⟨q, m1⟩ <;> rfl
 
 theorem riMem_eq {m1 : Mem} {q cq mi rp isK reo rel : Word}
     (hfr : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], ∀ j < 10,
@@ -692,9 +594,9 @@ theorem riRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') q.toNat = some (.recInfo cv mi.toNat rp.toNat (isK != 0) rules) := by
   rcases h1 : erAllocW m 10 with _ | ⟨q1, m1⟩
-  · simp [riW, h1] at h
+  · simp [riW_eq, h1] at h
   have e : riW m cq mi rp isK reo rel = if 4294967296 ≤ erRd (riMem m1 q1 cq mi rp isK reo rel) (q1 + 1)
-      then none else some (q1, riMem m1 q1 cq mi rp isK reo rel) := by simp [riW, h1]
+      then none else some (q1, riMem m1 q1 cq mi rp isK reo rel) := by simp [riW_eq, h1]
   rw [e] at h
   split at h
   · cases h
@@ -771,10 +673,10 @@ theorem rteGoW_afr : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word)
   | 0, _, _, _, _, _, _, h => by simp [rteGoW] at h
   | n + 1, m, m', b, ro, rl, r, h => by
     by_cases h0 : rl = 0
-    · rw [rteGoW_nil (h := h0)] at h
+    · rw [rteGoW.arm1 (hc1 := h0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
-    rw [rteGoW_cons (h := h0)] at h
-    rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> simp only [h2, rteK1, reduceCtorEq] at h
+    rw [rteGoW.arm2 (hc1 := h0), rcpW, rteGoW.k_rule_copy.arm1] at h
+    rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> simp only [h2, rteGoW.k_rules_to_erec_go, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact (AFr.of_frame (cpMem_frame m b (rdW (m.arr64 IW) ro))).trans (rteGoW_afr n _ _ _ _ _ _ h2)
 
@@ -798,7 +700,7 @@ theorem riMem_frame (m : Mem) (q cv mi rp isK reo rel : Word) :
 
 theorem riW_afr {m m' : Mem} {cv mi rp isK reo rel q : Word}
     (h : riW m cv mi rp isK reo rel = some (q, m')) : AFr m m' := by
-  simp only [riW] at h
+  simp only [riW_eq] at h
   split at h; · cases h
   rename_i q1 m1 h1
   split at h; · cases h

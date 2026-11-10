@@ -202,40 +202,46 @@ theorem sctW_okR {p : Prog} (hp : ApdF p) {vis : Word}
       (fun r b m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧
         (r.headD 0).toNat ≤ 1 ∧ AbsOK m' ∧ sp a' = sp a) := by
   induction n with
-  | zero => intro m a bO bL bs _ _ _ _ _ _ _ _; exact Sim.of_none
+  | zero => intro m a bO bL bs _ _ _ _ _ _ _ _; rw [sctW.eq_1]; exact Sim.of_none
   | succ n ih =>
   intro m a bO bL bs hS hok hks hlps hlb hbs hbb hA
   by_cases hl : bL = 0
-  · rw [sctW_nil (h := hl)]
+  · rw [sctW.arm1 (hc1 := hl)]
     have : bs = [] := by
       subst hl; have := decHL_length m hbs; simp at this; exact this
     subst this
     exact Sim.ret ⟨hS, IWGrow.refl _, rfl, by decide, hA, rfl⟩
-  rw [sctW_cons (h := hl)]
+  rw [sctW.arm2 (hc1 := hl)]
   obtain ⟨w, bs', rfl, hw, hwl, hbs'⟩ := decHL_cons hbs hl (hS.lt64 hbb)
   rw [hw]
   simp only [List.allM, scopeT, bind_assoc, pure_bind]
   have hcwf : CWF.toNat = coreWalkFuel := CWF_eq
   have h1 := hffF_simR (dn := fun _ => none) (vis := vis) (fe := fe) CWF w hwl hS
   rw [hcwf] at h1
-  refine Sim.bindK (K := sctK1 (realCall p) n _ vis nP lo ll w) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := sctW.k_has_fvar_fast (realCall p) n vis nP lo ll bO bL w)
+    (sctW.k_has_fvar_fast.none ..) (fun _ _ => rfl)
     (Sim.withFr (F := AbsOK) h1 fun _ _ e => (show AFr _ _ from AFr.of_frame (hffF_frame e)) hA)
     fun r1 a1 m1 s1 hQ => ?_
   obtain ⟨⟨⟨hS1, hg1, hb1, hl1⟩, he1⟩, hA1⟩ := hQ
-  rw [sctK1_some]
-  refine Sim.bindK (K := sctK2 _ vis nP w (r1.headD 0)) rfl (fun _ _ => rfl)
+  rw [sctW.k_has_fvar_fast.arm1]
+  refine Sim.bindK (K := sctW.k_all_level_params_defined (realCall p) n vis nP lo ll bO bL w (r1.headD 0))
+    (sctW.k_all_level_params_defined.none ..) (fun _ _ => rfl)
     (apdCall_simR hp n lo ll w hwl lps hS1 hA1 (stateOK_of_sp hok he1)
       (by rw [decHL_grow hg1 hlb]; exact hlps) (names_of_sp he1 hks))
     fun r2 a2 m2 s2 hQ => ?_
   obtain ⟨hS2, hg2, ⟨hb2, hl2⟩, hA2, he2⟩ := hQ
-  rw [sctK2_some]
-  refine Sim.bindK (K := sctK3 _ nP w (r1.headD 0) (r2.headD 0)) rfl (fun _ _ => rfl)
+  rw [sctW.k_all_level_params_defined.arm1]
+  refine Sim.bindK (K := sctW.k_consts_resolve_ffast (realCall p) n vis nP lo ll bO bL w (r1.headD 0)
+      (r2.headD 0))
+    (sctW.k_consts_resolve_ffast.none ..) (fun _ _ => rfl)
     (crfF_simR w hwl hS2 hA2) fun r3 a3 m3 s3 hQ => ?_
   obtain ⟨⟨hS3, hg3, hb3, hl3⟩, hA3, he3⟩ := hQ
-  rw [sctK3_some]
+  rw [sctW.k_consts_resolve_ffast.arm1]
   have h4 := lbbF_simR (dn := fun _ => none) (vis := vis) (fe := fe) CWF (nP + 1) w hwl hS3
   rw [hcwf, sumToNat_succ (by omega)] at h4
-  refine Sim.bindK (K := sctK4 _ (r1.headD 0) (r2.headD 0) (r3.headD 0)) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := sctW.k_loose_bvars_bounded_fast (realCall p) n vis nP lo ll bO bL (r1.headD 0)
+      (r2.headD 0) (r3.headD 0))
+    (sctW.k_loose_bvars_bounded_fast.none ..) (fun _ _ => rfl)
     (Sim.withFr (F := AbsOK) h4 fun _ _ e => (show AFr _ _ from AFr.of_frame (lbbF_frame e)) hA3)
     fun r4 a4 m4 s4 hQ => ?_
   obtain ⟨⟨⟨hS4, hg4, hb4, hl4⟩, he4⟩, hA4⟩ := hQ
@@ -246,7 +252,7 @@ theorem sctW_okR {p : Prog} (hp : ApdF p) {vis : Word}
   obtain ⟨e3, -⟩ := sumB01 hb3 hl3
   obtain ⟨e4, -⟩ := sumB01 hb4 hl4
   by_cases hc : r1.headD 0 = 0 ∧ r2.headD 0 = 1 ∧ r3.headD 0 = 1 ∧ r4.headD 0 = 1
-  · rw [sctK4_yes (h := hc)]
+  · rw [sctW.k_loose_bvars_bounded_fast.arm1 (hc1 := hc)]
     have ht : (!a1 && a2 && a3 && a4) = true := by
       rw [e1.mp hc.1, e2.mp hc.2.1, e3.mp hc.2.2.1, e4.mp hc.2.2.2]; rfl
     simp only [ht]
@@ -254,13 +260,14 @@ theorem sctW_okR {p : Prog} (hp : ApdF p) {vis : Word}
     have hbL : bL.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
     have hb1' : (bO + 1).toNat + (bL - 1).toNat ≤ iwTop m := by
       rw [sumToNat_succ (by omega), sumToNat_pred hl]; omega
-    refine sumSim_map (K := sctK5) rfl (fun _ _ => rfl)
+    refine sumSim_map (K := sctW.k_check_struct_proj_table_scoped (realCall p))
+      (sctW.k_check_struct_proj_table_scoped.none _) (fun _ _ => rfl)
       (ih m4 s4 (bO + 1) (bL - 1) bs' hS4 (stateOK_of_sp hok he14) (names_of_sp he14 hks)
         (by rw [decHL_grow hg14 hlb]; exact hlps)
         (by have := hg14.iw; omega) (by rw [decHL_grow hg14 hb1']; exact hbs') (by have := hg14.iw; omega) hA4)
       fun r b m' a' hQ => ⟨hQ.1, hg14.trans hQ.2.1, by simpa using hQ.2.2.1, by simpa using hQ.2.2.2.1,
         hQ.2.2.2.2.1, hQ.2.2.2.2.2.trans he14⟩
-  · rw [sctK4_no (h := hc)]
+  · rw [sctW.k_loose_bvars_bounded_fast.arm2 (hc1 := hc)]
     have ht : (!a1 && a2 && a3 && a4) = false := by
       cases a1 <;> cases a2 <;> cases a3 <;> cases a4 <;> simp_all
     simp only [ht]
