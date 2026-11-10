@@ -444,8 +444,8 @@ theorem noConstWf_afr {n : Nat} {m m' : Mem} {no nl lo hi e r : Word}
   simp only [noConstWf, noConstW] at h
   split at h; · cases h
   refine (mclearG_afrS noSch rfl m).trans ?_
-  rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩; · rw [hg] at h; simp [noClrK] at h
-  rw [hg] at h; simp only [noClrK] at h
+  rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩; · rw [hg] at h; simp [noConstW.k_nest_occ_go] at h
+  rw [hg] at h; simp only [noConstW.k_nest_occ_go] at h
   split at h; · cases h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact ((noW_afr n).1 _ _ _ _ _ _ _ _ _ hg).trans (mclearG_afrS noSch rfl m1)

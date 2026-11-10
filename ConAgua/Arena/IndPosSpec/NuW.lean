@@ -262,7 +262,7 @@ theorem nestUniformOk_spec' (p : Prog) (hl : NuLook p) (cR : CallM) (hcR : CallS
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestCtxHiAt_specE p hl.hh 2, piDomsOcc_spec p hl.no hl.hpd 2,
         rootCanon_small p hl.hcv hl.pcc.hp' 2 (by omega)] <;>
-      finish [pdoW, pdoK1, noConstWf, noConstW, noClrK, noGoW]
+      finish [pdoW, pdoK1, noConstWf, noConstW, noConstW.k_nest_occ_go, noGoW]
   | k + 4 => exact nestUniformOk_spec p hl cR hcR k s₀ ctx cv
 
 theorem nestUniformCs_spec (p : Prog) (hl : NuLook p) (hp : p.lookup "nest_uniform_cs" = some nestUniformCsL)

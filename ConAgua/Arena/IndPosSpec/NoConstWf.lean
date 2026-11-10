@@ -1,6 +1,6 @@
 module
 
-import ConAgua.Arena.IndPosSpec.NestOccGo
+public import ConAgua.Arena.IndPosSpec.NestOccGo
 public import ConAgua.Arena.IndPosSpec.PiBWStage
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

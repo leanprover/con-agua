@@ -674,18 +674,6 @@ theorem noGoOK (n : Nat) : NoGoOK n := by
 
 /-! ### `nest_occ` -/
 
-def noClrK : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (r, m1) => if rdW (m1.arr64 CTL) noSch.cs + 2 = 0 then none else some (r, mclearG noSch m1)
-
-def noConstW (n : Nat) (m : Mem) (no nl lo hi e : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) noSch.cs + 2 = 0 then none else noClrK (noGoW n (mclearG noSch m) no nl lo hi CWF e)
-
-theorem noConstW_eq (n : Nat) (m : Mem) (no nl lo hi e : Word) (h0 : rdW (m.arr64 CTL) noSch.cs + 2 ≠ 0) :
-    noConstW n m no nl lo hi e = noClrK (noGoW n (mclearG noSch m) no nl lo hi CWF e) := by simp [noConstW, h0]
-theorem noClrK_some (r : Word) (m1 : Mem) (h0 : rdW (m1.arr64 CTL) noSch.cs + 2 ≠ 0) :
-    noClrK (some (r, m1)) = some (r, mclearG noSch m1) := by simp [noClrK, h0]
-attribute [ind_grind] noConstW_eq noClrK_some
 
 /-! ## `member_idx_at` -/
 
