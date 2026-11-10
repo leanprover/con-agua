@@ -1,6 +1,6 @@
 module
 
-import ConAgua.Arena.IndPartsSpec.BlockCounts
+public import ConAgua.Arena.IndPartsSpec.BlockCounts
 public import ConAgua.Arena.IndPartsSpec.BmfK2
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 public import ConAgua.Arena.IndPartsSpec.SetEqW
@@ -13,7 +13,6 @@ import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.RecClassSpec.Classes
 import ConRon.Bridge.Grind
-public import ConAgua.Arena.IndPartsSpec.RecTW
 import all ConAgua.Arena.IndParts
 
 @[expose] public section
