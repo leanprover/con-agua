@@ -6,6 +6,7 @@ import ConAgua.Arena.WhnfIotaRefine
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndDeclConsts
 
 @[expose] public section
@@ -41,37 +42,17 @@ def rrMem (m1 : Mem) (q old k flo fll fpo fpl : Word) : Mem :=
   erecPutMem (erecPutMem m10 (q + 9) 0) (q + 10) 0
 
 /-- **The model of `rules_refire(d, s, cnt, k, lo, ll, po, pl)`** at exec fuel `n`. -/
-def rrW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, d, s, cnt, k, lo, ll, po, pl =>
-    if cnt = 0 then some ([0], m)
-    else rteK1 (rrW n (rrMem m d s k lo ll po pl) (d + 11) (s + 11) (cnt - 1) k lo ll po pl)
+l_model rr_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
+    (hp : p.lookup "rules_refire" = some rulesRefire)
+  fns [hp ↦ rrW list]
+  specs [erecPut_specM p hpu n]
+  grind [arena_grind]
 
-section arms
-variable (n : Nat) (m : Mem) (d s cnt k lo ll po pl : Word)
-theorem rrW_nil (h : cnt = 0) : rrW (n + 1) m d s cnt k lo ll po pl = some ([0], m) := by simp [rrW, h]
-theorem rrW_cons (h : ¬ cnt = 0) : rrW (n + 1) m d s cnt k lo ll po pl =
-    rteK1 (rrW n (rrMem m d s k lo ll po pl) (d + 11) (s + 11) (cnt - 1) k lo ll po pl) := by
-  simp [rrW, h]
-end arms
-attribute [ind_grind] rrW_nil rrW_cons
-
-theorem rr_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
-    (hp : p.lookup "rules_refire" = some rulesRefire) (n : Nat) :
-    ∀ (s₀ : St) (d s cnt k lo ll po pl : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "rules_refire" [d, s, cnt, k, lo, ll, po, pl]
-    ⦃fun r s' => LocEq s' s₀ ∧ rrW n s₀.mem d s cnt k lo ll po pl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ d s cnt k lo ll po pl
-    rw [invoke_eq _ hp]; simp only [callFn, rulesRefire]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ d s cnt k lo ll po pl
-    rw [invoke_eq _ hp]
-    simp only [callFn, rulesRefire]
-    sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecPut_specW p hpu n, ih] <;>
-      finish (gen := 40) (instances := 20000) [rrMem, erRd, rteK1_some]
+/-- `rrW`'s recursive arm by its memory `rrMem`. -/
+theorem rrW_cons {n : Nat} {m : Mem} {d s cnt k lo ll po pl : Word} (h : cnt ≠ 0) :
+    rrW (n + 1) m d s cnt k lo ll po pl =
+      rrW.k_rules_refire (rrW n (rrMem m d s k lo ll po pl) (d + 11) (s + 11) (cnt - 1) k lo ll po pl) := by
+  rw [rrW.arm2 (hc1 := h)]; rfl
 
 /-! ## The written words -/
 
@@ -150,15 +131,15 @@ theorem rrW_mem (k lo ll po pl : Word) : ∀ (n : Nat) (m m' : Mem) (d s cnt : W
   | 0, _, _, _, _, _, _, h, _ => by simp [rrW] at h
   | n + 1, m, m', d, s, cnt, r, h, hfr => by
     by_cases h0 : cnt = 0
-    · rw [rrW_nil (h := h0)] at h
+    · rw [rrW.arm1 (hc1 := h0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       subst h0; rw [← h.2]; simp [refireWords, wrER]
-    rw [rrW_cons (h := h0)] at h
+    rw [rrW_cons h0] at h
     have hl0 : cnt.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
     have hl1 : (cnt - 1).toNat = cnt.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
     rcases h2 : rrW n (rrMem m d s k lo ll po pl) (d + 11) (s + 11) (cnt - 1) k lo ll po pl with _ | ⟨r2, m2⟩ <;>
-      simp only [h2, rteK1, reduceCtorEq] at h
+      simp only [h2, rrW.k_rules_refire, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     have hfr0 : ∀ x ∈ [s, s + 1, s + 8], ErApart d 11 x := by
       intro x hx

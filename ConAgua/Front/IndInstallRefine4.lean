@@ -31,25 +31,49 @@ def instGo (R : Nat → Mem → Word → Option (Word × Mem)) (ptr : Mem → Wo
     else allocK (fun q m₁ => instGo R ptr n (m₁.set64 DLP (bo + j) q) bo tn (j + 1)) (R n m (ptr m j))
 
 theorem instTypesW_eq (b : Array UInt8) (to : Word) :
-    ∀ n m bo tn j, instTypesW n b m bo to tn j =
+    ∀ n m bo tn j, instTypesW b n m bo to tn j =
       instGo (fun _ m p => typeW b m p) (fun _ j => to + 11 * j) n m bo tn j
-  | 0, _, _, _, _ => rfl
+  | 0, _, _, _, _ => by rw [instTypesW.eq_1]; rfl
   | n + 1, m, bo, tn, j => by
-    simp only [instTypesW, instGo, instTypesW_eq b to n]
+    simp only [instGo]
+    by_cases hc : tn ≤ j
+    · rw [instTypesW.arm1 (hc1 := hc), ite_eq_left hc]
+    · rw [instTypesW.arm2 (hc1 := hc), ite_eq_right hc]
+      cases h : typeW b m (to + 11 * j) with
+      | none => rw [instTypesW.k_ind_type.none]; rfl
+      | some x =>
+        obtain ⟨q, m₁⟩ := x
+        rw [instTypesW.k_ind_type.arm1, instTypesW.k_inst_types_id, instTypesW_eq b to n]; rfl
 
 theorem instCtorsW_eq (b : Array UInt8) (oo : Word) :
-    ∀ n m bo on j, instCtorsW n b m bo oo on j =
+    ∀ n m bo on j, instCtorsW b n m bo oo on j =
       instGo (fun _ m p => ctorRW b m p) (fun m j => rdW (m.arr64 IFL) (oo + j)) n m bo on j
-  | 0, _, _, _, _ => rfl
+  | 0, _, _, _, _ => by rw [instCtorsW.eq_1]; rfl
   | n + 1, m, bo, on, j => by
-    simp only [instCtorsW, instGo, instCtorsW_eq b oo n]
+    simp only [instGo]
+    by_cases hc : on ≤ j
+    · rw [instCtorsW.arm1 (hc1 := hc), ite_eq_left hc]
+    · rw [instCtorsW.arm2 (hc1 := hc), ite_eq_right hc]
+      cases h : ctorRW b m (rdW (m.arr64 IFL) (oo + j)) with
+      | none => rw [instCtorsW.k_ind_ctor.none]; rfl
+      | some x =>
+        obtain ⟨q, m₁⟩ := x
+        rw [instCtorsW.k_ind_ctor.arm1, instCtorsW.k_inst_ctors_id, instCtorsW_eq b oo n]; rfl
 
 theorem instRecsW_eq (b : Array UInt8) (ro : Word) :
-    ∀ n m bo rn j, instRecsW n b m bo ro rn j =
-      instGo (fun n m p => recRW n b m p) (fun _ j => ro + 11 * j) n m bo rn j
-  | 0, _, _, _, _ => rfl
+    ∀ n m bo rn j, instRecsW b n m bo ro rn j =
+      instGo (fun n m p => recRW b n m p) (fun _ j => ro + 11 * j) n m bo rn j
+  | 0, _, _, _, _ => by rw [instRecsW.eq_1]; rfl
   | n + 1, m, bo, rn, j => by
-    simp only [instRecsW, instGo, instRecsW_eq b ro n]
+    simp only [instGo]
+    by_cases hc : rn ≤ j
+    · rw [instRecsW.arm1 (hc1 := hc), ite_eq_left hc]
+    · rw [instRecsW.arm2 (hc1 := hc), ite_eq_right hc]
+      cases h : recRW b n m (ro + 11 * j) with
+      | none => rw [instRecsW.k_ind_rec.none]; rfl
+      | some x =>
+        obtain ⟨q, m₁⟩ := x
+        rw [instRecsW.k_ind_rec.arm1, instRecsW.k_inst_recs_id, instRecsW_eq b ro n]; rfl
 
 /-- **The install loop against the twin's `mapM`.** `R` at the `k`-th pointer is the twin's `f`
 on the `k`-th element (`hR`, for every memory that only differs from `m₀` in `DLP`). -/

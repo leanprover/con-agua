@@ -7,6 +7,7 @@ import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndDeclConsts
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
@@ -94,78 +95,15 @@ def btMem (m1 : Mem) (q pp c cv T elo ell ebo ebl : Word) : Mem :=
   erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m9 (q + 8) 0) (q + 9) ebo) (q + 10) ebl)
     (q + 11) 0) (q + 12) 0
 
-/-- After `erec_alloc`: the puts. -/
-def dbtK5 (pp c cv T elo ell ebo ebl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([1, r.headD 0], btMem m (r.headD 0) pp c cv T elo ell ebo ebl)
-
-/-- After the bodies' copy: the record. -/
-def dbtK4 (p : Prog) (n : Nat) (pp c cv T elo ell : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => dbtK5 pp c cv T elo ell (r.headD 0) (r.tail.headD 0) (callW p n "erec_alloc" [13] m)
-
-/-- After the level parameters' copy: the bodies'. -/
-def dbtK3 (p : Prog) (n : Nat) (pp c cv T bo bl : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => dbtK4 p n pp c cv T (r.headD 0) (r.tail.headD 0) (callW p n "er_from_iw" [bo, bl] m)
-
-/-- After `block_shape_lps`: their copy. -/
-def dbtK2 (p : Prog) (n : Nat) (pp c cv T bo bl : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => dbtK3 p n pp c cv T bo bl (callW p n "er_from_iw" [r.headD 0, r.tail.headD 0] m)
-
-/-- After `struct_proj_bodies`. -/
-def dbtK1 (p : Prog) (n : Nat) (pp c cv T : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some ([0, 0], m)
-    else dbtK2 p n pp c cv T (r.tail.headD 0) (r.tail.tail.headD 0) (callW p n "block_shape_lps" [pp] m)
-
 /-- **The model of `block_table(p, ms)`** at exec fuel `n`. -/
-def dbtW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, pp, ms =>
-    if rdW (m.arr64 IW) (ms + 3) ≠ 1 then some ([0, 0], m)
-    else if rdW (m.arr64 IW) (ms + 1) ≠ 0 then some ([0, 0], m)
-    else
-      let c := rdW (m.arr64 IW) (rdW (m.arr64 IW) (ms + 2))
-      let cv := rdW (m.arr64 IW) c
-      let T := erRd m (rdW (m.arr64 IW) (ms + 4))
-      dbtK1 p n pp c cv T (callW p n "struct_proj_bodies"
-        [T, rdW (m.arr64 IW) (pp + 4), rdW (m.arr64 IW) (c + 1), erRd m (cv + 3)] m)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (pp c cv T bo bl elo ell ebo ebl : Word) (r : List Word)
-theorem dbtK5_some : dbtK5 pp c cv T elo ell ebo ebl (some (r, m)) =
-    some ([1, r.headD 0], btMem m (r.headD 0) pp c cv T elo ell ebo ebl) := rfl
-theorem dbtK4_some : dbtK4 p n pp c cv T elo ell (some (r, m)) =
-    dbtK5 pp c cv T elo ell (r.headD 0) (r.tail.headD 0) (callW p n "erec_alloc" [13] m) := rfl
-theorem dbtK3_some : dbtK3 p n pp c cv T bo bl (some (r, m)) =
-    dbtK4 p n pp c cv T (r.headD 0) (r.tail.headD 0) (callW p n "er_from_iw" [bo, bl] m) := rfl
-theorem dbtK2_some : dbtK2 p n pp c cv T bo bl (some (r, m)) =
-    dbtK3 p n pp c cv T bo bl (callW p n "er_from_iw" [r.headD 0, r.tail.headD 0] m) := rfl
-theorem dbtK1_some : dbtK1 p n pp c cv T (some (r, m)) =
-    if r.headD 0 = 0 then some ([0, 0], m)
-    else dbtK2 p n pp c cv T (r.tail.headD 0) (r.tail.tail.headD 0) (callW p n "block_shape_lps" [pp] m) := rfl
-end arms
-attribute [ind_grind] dbtK5_some dbtK4_some dbtK3_some dbtK2_some dbtK1_some
-
-theorem dbt_spec {p : Prog} (hP : TablesProg p) (n : Nat) (s₀ : St) (pp ms : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_table" [pp, ms]
-    ⦃fun r s' => LocEq s' s₀ ∧ dbtW p n s₀.mem pp ms = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hP.bt]
-  simp only [callFn, blockTable]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "struct_proj_bodies", callW_spec p n "block_shape_lps",
-        callW_spec p n "er_from_iw", callW_spec p n "erec_alloc", erecPut_specW p hP.erPut n] <;>
-      finish (gen := 40) (instances := 20000) [dbtW, btMem, erRd, rdW_eq]
+l_model dbt_spec {p : Prog} (hP : TablesProg p)
+  fns [hP.bt ↦ dbtW list]
+  specs [spbW_spec p hP.alloc hP.iwCopy hP.slCons hP.sView hP.sDerB hP.sBvarFind hP.sBvarPush hP.sInternBVar
+      hP.sProjFind hP.sProjPush hP.sInternProj hP.sMkProj hP.sArgP hP.sGo hP.sPsAtGo hP.sPsAt hP.sProjPs
+      hP.spb hP.i1l hP.ipal n,
+    blockShapeLps_spec p hP.alloc hP.tErCopy hP.tErToIw hP.lps n, efF_spec p hP.cbr.tsr hP.erPut n,
+    erecAlloc_specW p hP.erAlloc n, erecPut_specM p hP.erPut n]
+  grind [arena_grind]
 
 /-! ## `block_table`: the record -/
 
@@ -215,11 +153,11 @@ theorem efF_afr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efF n m
   | succ n => exact efW_afr h
 
 /-- **`block_table` refines one member of `blockTables`** (`tblOne`). -/
-theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
+theorem btW_ok {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
     {a : AState} {pp ms : Word} {bs : BlockShape} {mS : MemberShape} {r : List Word}
     (hS : StageR vis fe m a) (hA : AbsOK m) (hq : DecB (fun m => decBS m pp.toNat) m bs)
     (hms : DecB (fun m => decMS m ms.toNat) m mS) (hnP : 1 + bs.nP < 2 ^ 64)
-    (h : dbtW p n m pp ms = some (r, m')) :
+    (h : dbtW n m pp ms = some (r, m')) :
     ∃ x a', (tblOne bs mS).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧
       DcTblR m' r x := by
   rcases n with _ | n
@@ -230,22 +168,21 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
   have hlen := decPL_length (truncM m) hcs
   obtain ⟨hclW, -⟩ := iwRd (o := ms) (w := 3) (by simpa using hcl)
   obtain ⟨hnIW, -⟩ := iwRd (o := ms) (w := 1) (by simpa using hnI)
-  simp only [dbtW] at h
   -- the declines
   by_cases h3 : rdW (m.arr64 IW) (ms + 3) ≠ 1
-  · rw [ite_eq_left h3] at h
+  · rw [dbtW.arm1 (hc1 := h3)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : mS.structCtor? = none := structCtor?_none (.inl (by
       rw [hlen, ← hclW]; intro e; exact h3 (UInt64.toNat_inj.mp (by simpa using e))))
     exact ⟨none, a, by simp [tblOne, this]; rfl, hS, IWGrow.refl m, hA, rfl⟩
-  rw [ite_eq_right h3] at h
   by_cases h1 : rdW (m.arr64 IW) (ms + 1) ≠ 0
-  · rw [ite_eq_left h1] at h
+  · rw [dbtW.arm2 (hc1 := Decidable.of_not_not h3) (hc2 := h1)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : mS.structCtor? = none := structCtor?_none (.inr (by
       rw [← hnIW]; intro e; exact h1 (UInt64.toNat_inj.mp (by simpa using e))))
     exact ⟨none, a, by simp [tblOne, this]; rfl, hS, IWGrow.refl m, hA, rfl⟩
-  rw [ite_eq_right h1] at h
+  rw [dbtW.arm3 (hc1 := Decidable.of_not_not h3) (hc2 := Decidable.of_not_not h1)] at h
+  simp only [erRd_foldN] at h
   have hcl1 : cl = 1 := by rw [← hclW]; simp at h3; rw [h3]; rfl
   have hnI0 : mS.nIdx = 0 := by rw [← hnIW]; simp at h1; rw [h1]; rfl
   -- the constructor
@@ -300,72 +237,58 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     omega
   -- `struct_proj_bodies`
-  obtain ⟨⟨r1, m1⟩, hc1, h⟩ := of_K h (by simp [dbtK1])
-  rcases n with _ | n
-  · exact (callW_zero_false hc1).elim
-  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (spbW_spec p hP.alloc hP.iwCopy hP.slCons hP.sView hP.sDerB hP.sBvarFind hP.sBvarPush hP.sInternBVar
-      hP.sProjFind hP.sProjPush hP.sInternProj hP.sMkProj hP.sArgP hP.sGo hP.sPsAtGo hP.sPsAt hP.sProjPs
-      hP.spb hP.i1l hP.ipal (n + 1) _ _ _ _ _) hc1
-  obtain ⟨x, a1, hrun1, hS1, hg1, hdec1, hA1⟩ := spbW_ok (fun _ => none) vis fe (n + 1) m s1.mem a _ _ _ _ r1
+  obtain ⟨⟨r1, m1⟩, hW1, h⟩ := of_K h (by simp [dbtW.k_struct_proj_bodies.none])
+  obtain ⟨x, a1, hrun1, hS1, hg1, hdec1, hA1⟩ := spbW_ok (fun _ => none) vis fe n m m1 a _ _ _ _ r1
     hW1 hS hw3lt (by rw [hnPW]; omega) (UInt64.toNat_lt _) hA
   rw [hnPW, hnFW, ← hname, ← hty0] at hrun1
-  rw [dbtK1_some] at h
   cases x with
   | none =>
     have h0 : r1.headD 0 = 0 := hdec1
-    rw [ite_eq_left h0] at h
+    rw [dbtW.k_struct_proj_bodies.arm1 (hc1 := h0)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a1, ?_, hS1, hg1, hA1, rfl⟩
     simp only [tblOne, hsc, StateT.run_bind, hrun1, except_ok_bind]
     rfl
   | some bodies =>
   obtain ⟨h01, hdb, hbb⟩ := hdec1
-  rw [ite_eq_right (by rw [h01]; decide)] at h
+  rw [dbtW.k_struct_proj_bodies.arm2 (hc1 := by rw [h01]; decide)] at h
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   -- `block_shape_lps`
-  obtain ⟨⟨r2, m2⟩, hc2, h⟩ := of_K h (by simp [dbtK2])
-  rw [dbtK2_some] at h
-  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (blockShapeLps_spec p hP.alloc hP.tErCopy hP.tErToIw hP.lps (n + 1) _ pp) hc2
-  have hq1 : decBS s1.mem pp.toNat = some bs := hq.stab (decBS_mono _) _ hg1
+  obtain ⟨⟨r2, m2⟩, hW2, h⟩ := of_K h (by simp [dbtW.k_block_shape_lps.none])
+  rw [dbtW.k_block_shape_lps.arm1] at h
+  have hq1 : decBS m1 pp.toNat = some bs := hq.stab (decBS_mono _) _ hg1
   obtain ⟨-, hdl2, hg2, hf2, hlb2, hroom2⟩ :=
     lpsW_dec hW2 hS1.iw.iwSize hS1.iw.ctl hS1.iw.erSize hq1 hpp9
-  have hS2 : StageR vis fe s2.mem a1 :=
+  have hS2 : StageR vis fe m2 a1 :=
     ⟨CheckR.frame_iw hf2 hS1.check, IWOK.of_iw hf2 hS1.iw (hroom2 hS1.iw.iw)⟩
-  have hA2 : AbsOK s2.mem := hA1.iw hf2
+  have hA2 : AbsOK m2 := hA1.iw hf2
   -- the level parameters' copy
-  obtain ⟨⟨r3, m3⟩, hc3, h⟩ := of_K h (by simp [dbtK3])
-  rw [dbtK3_some] at h
-  obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (efF_spec p hP.cbr.tsr hP.erPut (n + 1) _ _ _) hc3
+  obtain ⟨⟨r3, m3⟩, hW3, h⟩ := of_K h (by simp [dbtW.k_er_from_iw.none])
+  rw [dbtW.k_er_from_iw.arm1] at h
   obtain ⟨hS3, hg3, hl3, hsl3⟩ := efF_stage hW3 hS2 hdl2 hlb2
   have hA3 := efF_afr hW3 hA2
   -- the bodies' copy
-  obtain ⟨⟨r4, m4⟩, hc4, h⟩ := of_K h (by simp [dbtK4])
-  rw [dbtK4_some] at h
-  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (efF_spec p hP.cbr.tsr hP.erPut (n + 1) _ _ _) hc4
+  obtain ⟨⟨r4, m4⟩, hW4, h⟩ := of_K h (by simp [dbtW.k_er_from_iw_2.none])
+  rw [dbtW.k_er_from_iw_2.arm1] at h
   have hg13 := hg2.trans hg3
   have hdb3 := decHL_grow' hg13 hbb hdb
   obtain ⟨hS4, hg4, hl4, hsl4⟩ := efF_stage hW4 hS3 hdb3 (Nat.le_trans hbb hg13.iw)
   have hA4 := efF_afr hW4 hA3
-  have hg04 : IWGrow m s4.mem := hg1.trans (hg13.trans hg4)
+  have hg04 : IWGrow m m4 := hg1.trans (hg13.trans hg4)
   -- the record
-  obtain ⟨⟨r5, m5⟩, hc5, h⟩ := of_K h (by simp [dbtK5])
-  rw [dbtK5_some] at h
+  obtain ⟨⟨q, m5⟩, hW5, h⟩ := of_K h (by simp [dbtW.k_erec_alloc.none])
+  rw [dbtW.k_erec_alloc.arm1] at h
+  replace h : some ([1, q], btMem m5 q pp cw cvw w0 (r3.headD 0) (r3.tail.headD 0) (r4.headD 0)
+    (r4.tail.headD 0)) = some (r, m') := h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨s5, rfl, -, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (erecAlloc_specW p hP.erAlloc (n + 1) _ 13) hc5
-  generalize hqq : r5.headD 0 = q at hW5 ⊢
-  have hwn4 : erecP s4.mem cvw.toNat = some wn := by
+  have hwn4 : erecP m4 cvw.toNat = some wn := by
     exact IWGrow.ext hg04 _ _ hwn
   have hfr : ErApart q 13 cvw := fun j hj => erFresh hW5 hS4.iw hwn4 hj
   rw [btMem_eq hfr]
   obtain ⟨-, hf5, -⟩ := erAllocW_spec hW5 hS4.iw
-  have hr5 : ∀ x, erRd s5.mem x = erRd s4.mem x := fun x => by
+  have hr5 : ∀ x, erRd m5 x = erRd m4 x := fun x => by
     unfold erRd; rw [hf5.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
-  have hI5 : s5.mem.arr64 IW = s4.mem.arr64 IW := hf5.arr IW (by simp) (by decide)
+  have hI5 : m5.arr64 IW = m4.arr64 IW := hf5.arr IW (by simp) (by decide)
   have l4 : (pp + 4).toNat < iwTop m := by
     have := (iwRd (o := pp) (w := 4) (by simpa using hnPi)).2
     rw [UInt64.toNat_add]; simp at this ⊢; omega
@@ -375,15 +298,15 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
   rw [hr5, (erRd_of_erecP hwn4).1, hI5, rdW_iw_grow hg04 l4, rdW_iw_grow hg04 l1]
   obtain ⟨hS6, hg6, -, -, -, -, hget⟩ := erRec_stage hW5 hS4 [6, 0, w0, r3.headD 0, r3.tail.headD 0,
     rdW (m.arr64 IW) (pp + 4), wn, rdW (m.arr64 IW) (cw + 1), 0, r4.headD 0, r4.tail.headD 0, 0, 0] rfl
-  have hA6 : AbsOK (wrER s5.mem q [6, 0, w0, r3.headD 0, r3.tail.headD 0,
+  have hA6 : AbsOK (wrER m5 q [6, 0, w0, r3.headD 0, r3.tail.headD 0,
       rdW (m.arr64 IW) (pp + 4), wn, rdW (m.arr64 IW) (cw + 1), 0, r4.headD 0, r4.tail.headD 0, 0, 0]) :=
     (show AFr _ _ from AFr.of_frame (wrER_frame _ _ _)) (erAllocW_afr hW5 hA4)
   refine ⟨some ⟨mS.declared.name, bs.lps, bs.nP, cv0.name, nF, bodies⟩, a1, ?_, hS6, hg04.trans hg6, hA6,
     rfl, ?_⟩
   · simp only [tblOne, hsc, StateT.run_bind, hrun1, except_ok_bind]
     rfl
-  · generalize wrER s5.mem q _ = M at hg6 hget
-    have hgM : IWGrow s3.mem M := hg4.trans hg6
+  · generalize wrER m5 q _ = M at hg6 hget
+    have hgM : IWGrow m3 M := hg4.trans hg6
     have e2 := hget 2 (by simp)
     have e3 := hget 3 (by simp)
     have e4 := hget 4 (by simp)
@@ -406,61 +329,11 @@ theorem btW_ok {p : Prog} (hP : TablesProg p) {vis : Word} {fe : IFEnv} {n : Nat
 
 /-! ## `block_tables` -/
 
-mutual
 /-- **The model of `block_tables(p, mo, ml)`** at exec fuel `n`. -/
-def btsW (p : Prog) : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, pp, mo, ml =>
-    if ml = 0 then some ([0, 0], m)
-    else btsK1 p n pp mo ml (callW p n "block_table" [pp, rdW (m.arr64 IW) mo] m)
-/-- After the member's table: the rest, then the consing. -/
-def btsK1 (p : Prog) (n : Nat) (pp mo ml : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => btsK2 p n (r.headD 0) (r.tail.headD 0) (btsW p n m pp (mo + 1) (ml - 1))
-/-- After the rest: cons the table, if any. -/
-def btsK2 (p : Prog) (n : Nat) (ok q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if ok = 0 then some ([r.headD 0, r.tail.headD 0], m)
-    else bfgK4 (callW p n "sl_cons" [q, r.headD 0, r.tail.headD 0] m)
-end
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (pp mo ml ok q : Word) (r : List Word)
-theorem btsW_nil (h : ml = 0) : btsW p (n + 1) m pp mo ml = some ([0, 0], m) := by simp [btsW, h]
-theorem btsW_cons (h : ml ≠ 0) : btsW p (n + 1) m pp mo ml =
-    btsK1 p n pp mo ml (callW p n "block_table" [pp, rdW (m.arr64 IW) mo] m) := by simp [btsW, h]
-theorem btsK1_some : btsK1 p n pp mo ml (some (r, m)) =
-    btsK2 p n (r.headD 0) (r.tail.headD 0) (btsW p n m pp (mo + 1) (ml - 1)) := by simp [btsK1]
-theorem btsK2_some : btsK2 p n ok q (some (r, m)) =
-    if ok = 0 then some ([r.headD 0, r.tail.headD 0], m)
-    else bfgK4 (callW p n "sl_cons" [q, r.headD 0, r.tail.headD 0] m) := by simp [btsK2]
-end arms
-attribute [ind_grind] btsW_nil btsW_cons btsK1_some btsK2_some
-
-theorem bts_spec {p : Prog} (hP : TablesProg p) (n : Nat) :
-    ∀ (s₀ : St) (pp mo ml : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_tables" [pp, mo, ml]
-    ⦃fun r s' => LocEq s' s₀ ∧ btsW p n s₀.mem pp mo ml = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ pp mo ml; rw [invoke_eq _ hP.bts]; simp only [callFn, blockTables]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ pp mo ml
-    rw [invoke_eq _ hP.bts]
-    simp only [callFn, blockTables]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "block_table", callW_spec p n "sl_cons", ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-/-- `block_table`'s run, as its model. -/
-theorem btCall {p : Prog} (hP : TablesProg p) {n : Nat} {m m' : Mem} {pp ms : Word} {r : List Word}
-    (h : callW p n "block_table" [pp, ms] m = some (r, m')) : dbtW p n m pp ms = some (r, m') := by
-  obtain ⟨s', rfl, -, hK⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (dbt_spec hP n _ pp ms) h
-  exact hK
+l_model bts_spec {p : Prog} (hP : TablesProg p)
+  fns [hP.bts ↦ btsW list]
+  specs [dbt_spec hP n, slCons_specW p hP.alloc hP.iwCopy hP.slCons n]
+  grind [arena_grind]
 
 /-- A table record pointer consed onto a slice of `EREC` table records (`sl_cons`). -/
 theorem consW_tbl {vis : Word} {fe : IFEnv} {a : AState}
@@ -498,11 +371,11 @@ theorem decPL_tbl_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} {ts : List IP
 
 /-- **`block_tables` refines `blockTables`**: an `IW` slice of `EREC` table records below the
 pool's top. -/
-theorem btsW_ok {p : Prog} (hP : TablesProg p) (pp : Word) (bs : BlockShape) (vis : Word) (fe : IFEnv)
+theorem btsW_ok {p : Prog} (_hP : TablesProg p) (pp : Word) (bs : BlockShape) (vis : Word) (fe : IFEnv)
     (hnP : 1 + bs.nP < 2 ^ 64) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (mo ml : Word) (mss : List MemberShape) (r : List Word),
     StageR vis fe m a → AbsOK m → DecB (fun m => decBS m pp.toNat) m bs → PSlR0 decMS mss mo ml m →
-    btsW p n m pp mo ml = some (r, m') →
+    btsW n m pp mo ml = some (r, m') →
     ∃ ts a', (ConRon.Arena.blockTables bs mss).run a = .ok (ts, a') ∧
       decPL m' (decTbl (erecP m')) (r.headD 0).toNat (r.tail.headD 0).toNat = some ts ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
@@ -512,7 +385,7 @@ theorem btsW_ok {p : Prog} (hP : TablesProg p) (pp : Word) (bs : BlockShape) (vi
   | succ n ih =>
   intro m m' a mo ml mss r hS hA hq hmss h
   by_cases hl : ml = 0
-  · rw [btsW_nil p n m pp mo ml hl] at h
+  · rw [btsW.arm1 n m pp mo ml hl] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : mss = [] := by
       have h := hmss.1; simp only [DecB, hl] at h
@@ -520,33 +393,32 @@ theorem btsW_ok {p : Prog} (hP : TablesProg p) (pp : Word) (bs : BlockShape) (vi
     subst this
     exact ⟨[], a, rfl, by simp [decPL], by simp, hS, IWGrow.refl m, hA⟩
   obtain ⟨q, ms, rest, rfl, hw, hqb, hdms, hrest⟩ := partsPSl_cons ⟨hmss.1, hmss.2.resolve_left hl⟩ hl
-  rw [btsW_cons p n m pp mo ml hl, hw] at h
+  rw [btsW.arm2 n m pp mo ml hl, hw] at h
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [btsK1])
-  rw [btsK1_some] at h
-  obtain ⟨x, a1, hrun1, hS1, hg1, hA1, hx⟩ := btW_ok hP hS hA hq (by rw [hq']; exact hdms) hnP (btCall hP h1)
-  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [btsK2])
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [btsW.k_block_table.none])
+  rw [btsW.k_block_table.arm1] at h
+  obtain ⟨x, a1, hrun1, hS1, hg1, hA1, hx⟩ := btW_ok hS hA hq (by rw [hq']; exact hdms) hnP h1
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [btsW.k_block_tables.none])
   obtain ⟨ts, a3, hrun3, hd3, hb3, hS3, hg3, hA3⟩ := ih m1 m3 a1 (mo + 1) (ml - 1) rest r3 hS1 hA1
     (hq.grow (decBS_mono _) hg1) (PSlR0.grow decMS_mono ⟨hrest.dec, Or.inr hrest.bound⟩ hg1) h3
-  rw [btsK2_some] at h
   cases x with
   | none =>
     have h0 : r1.headD 0 = 0 := hx
-    rw [ite_eq_left h0] at h
+    rw [btsW.k_block_tables.arm1 (hc1 := h0)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨ts, a3, ?_, by simpa using hd3, by simpa using hb3, hS3, hg1.trans hg3, hA3⟩
     simp only [blockTables_cons, StateT.run_bind, hrun1, except_ok_bind, hrun3]
     rfl
   | some t =>
     obtain ⟨h01, hdt⟩ := hx
-    rw [ite_eq_right (by rw [h01]; decide)] at h
-    obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bfgK4])
-    rw [bfgK4_some] at h
+    rw [btsW.k_block_tables.arm2 (hc1 := by rw [h01]; decide)] at h
+    obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [btsW.k_sl_cons.none])
+    rw [btsW.k_sl_cons.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨hd5, hb5, hS5, hg5⟩ := consW_tbl (consCall hP.toFormersProg h4) hS3 hb3 hd3
+    obtain ⟨hd5, hb5, hS5, hg5⟩ := consW_tbl h4 hS3 hb3 hd3
       (hg3.ext.decTbl hdt)
     refine ⟨t :: ts, a3, ?_, by simpa using hd5, by simp only [List.headD_cons, List.tail_cons]; omega, hS5,
-      hg1.trans (hg3.trans hg5), hA3.consW (consCall hP.toFormersProg h4)⟩
+      hg1.trans (hg3.trans hg5), hA3.consW h4⟩
     simp only [blockTables_cons, StateT.run_bind, hrun1, except_ok_bind, hrun3]
     rfl
 

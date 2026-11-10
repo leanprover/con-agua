@@ -10,6 +10,8 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
 
+import ConAgua.L.ModelGen
+
 @[expose] public section
 
 /-!
@@ -46,49 +48,11 @@ structure DcCtorsProg (p : Prog) : Prop extends FormersProg p where
 
 /-! ## `block_ctors_go` -/
 
-mutual
 /-- **The model of `block_ctors_go(nP, co, cl)`** at exec fuel `n`. -/
-def bcgW (p : Prog) : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, nP, co, cl =>
-    if cl = 0 then some ([0, 0], m)
-    else bcgK1 p n nP co cl (callW p n "ctor_info_rec"
-      [rdW (m.arr64 IW) (rdW (m.arr64 IW) co), nP, rdW (m.arr64 IW) (rdW (m.arr64 IW) co + 1)] m)
-/-- After the record: the rest. -/
-def bcgK1 (p : Prog) (n : Nat) (nP co cl : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bfgK3 p n (r.headD 0) (bcgW p n m nP (co + 1) (cl - 1))
-end
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (nP co cl : Word) (r : List Word)
-theorem bcgW_nil (h : cl = 0) : bcgW p (n + 1) m nP co cl = some ([0, 0], m) := by
-  simp [bcgW, h]
-theorem bcgW_cons (h : cl ≠ 0) : bcgW p (n + 1) m nP co cl = bcgK1 p n nP co cl (callW p n "ctor_info_rec"
-      [rdW (m.arr64 IW) (rdW (m.arr64 IW) co), nP, rdW (m.arr64 IW) (rdW (m.arr64 IW) co + 1)] m) := by
-  simp [bcgW, h]
-theorem bcgK1_some : bcgK1 p n nP co cl (some (r, m)) =
-    bfgK3 p n (r.headD 0) (bcgW p n m nP (co + 1) (cl - 1)) := by simp [bcgK1]
-end arms
-attribute [ind_grind] bcgW_nil bcgW_cons bcgK1_some
-
-theorem bcg_spec (p : Prog) (hp : p.lookup "block_ctors_go" = some blockCtorsGo) (n : Nat) :
-    ∀ (s₀ : St) (nP co cl : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_ctors_go" [nP, co, cl]
-    ⦃fun r s' => LocEq s' s₀ ∧ bcgW p n s₀.mem nP co cl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ nP co cl; rw [invoke_eq _ hp]; simp only [callFn, blockCtorsGo]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ nP co cl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockCtorsGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "ctor_info_rec", callW_spec p n "sl_cons", ih] <;>
-      finish (gen := 20) [rdW_eq]
+l_model bcg_spec (p : Prog) (hp : p.lookup "block_ctors_go" = some blockCtorsGo)
+  fns [hp ↦ bcgW list]
+  specs [callW_spec p n "ctor_info_rec", callW_spec p n "sl_cons"]
+  grind [arena_grind]
 
 /-- `ctor_info_rec`'s run, as its model. -/
 theorem ciCall {p : Prog} (hP : DcCtorsProg p) {n : Nat} {m m' : Mem} {cv nP nF : Word} {r : List Word}
@@ -114,7 +78,7 @@ theorem bcgW_ok {p : Prog} (hP : DcCtorsProg p) (nP : Word) (a : AState) (vis : 
   | succ n ih =>
   intro m m' co cl cs r hS hcs h
   by_cases hl : cl = 0
-  · rw [bcgW_nil p n m nP co cl hl] at h
+  · rw [bcgW.arm1 p n m nP co cl hl] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : cs = [] := by
       have h := hcs.1; simp only [DecB, hl] at h
@@ -122,7 +86,7 @@ theorem bcgW_ok {p : Prog} (hP : DcCtorsProg p) (nP : Word) (a : AState) (vis : 
     subst this
     exact ⟨by simp [decPL, ctorsOf], by simp, hS, IWGrow.refl m⟩
   obtain ⟨q, ⟨cv, nF⟩, rest, rfl, hw, hqb, hdc, hrest⟩ := partsPSl_cons hcs hl
-  rw [bcgW_cons p n m nP co cl hl, hw] at h
+  rw [bcgW.arm2 p n m nP co cl hl, hw] at h
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
   have hdc' : decCN (truncM m) q = some (cv, nF) := hdc
   obtain ⟨⟨cqN, hcq, hcv⟩, hnF⟩ := decCN_some hdc'
@@ -133,15 +97,15 @@ theorem bcgW_ok {p : Prog} (hP : DcCtorsProg p) (nP : Word) (a : AState) (vis : 
   have hnF' : iwN (truncM m) (UInt64.ofNat q + 1 : Word).toNat = some nF := by rw [hw1]; exact hnF
   obtain ⟨w3, hw3, hw3v, -⟩ := rdW_of_iwN_truncM hnF'
   rw [hw2, hw3] at h
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [bcgK1])
-  rw [bcgK1_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [bcgW.k_ctor_info_rec.none])
+  rw [bcgW.k_ctor_info_rec.arm1] at h
   have hcvE : decCV (erecP m) w2.toNat = some cv := by rw [hw2v]; exact decCVp_truncM hcv
   obtain ⟨hS1, hg1, hci⟩ := ciRec_stage (ciCall hP h1) hS hcvE
-  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgK3])
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bcgW.k_block_ctors_go.none])
   obtain ⟨hd3, hb3, hS3, hg3⟩ := ih m1 m3 (co + 1) (cl - 1) rest r3 hS1 (hrest.grow decCN_mono hg1) h3
-  rw [bfgK3_some] at h
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bfgK4])
-  rw [bfgK4_some] at h
+  rw [bcgW.k_block_ctors_go.arm1] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bcgW.k_sl_cons.none])
+  rw [bcgW.k_sl_cons.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hd5, hb5, hS5, hg5⟩ := consW_ci (consCall hP.toFormersProg h4) hS3 hb3 hd3
     (hg3.ext.decCI hci)
@@ -150,37 +114,11 @@ theorem bcgW_ok {p : Prog} (hP : DcCtorsProg p) (nP : Word) (a : AState) (vis : 
 
 /-! ## `block_ctors` -/
 
-/-- After the constructor list: the records. -/
-def dbctK (p : Prog) (n : Nat) (pp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bfgK4 (callW p n "block_ctors_go" [rdW (m.arr64 IW) (pp + 4), r.headD 0, r.tail.headD 0] m)
-
 /-- **The model of `block_ctors(p)`** at exec fuel `n`. -/
-def dbctW (p : Prog) : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, pp => dbctK p n pp (callW p n "block_shape_all_ctors" [pp] m)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (pp : Word) (r : List Word)
-theorem dbctW_succ : dbctW p (n + 1) m pp = dbctK p n pp (callW p n "block_shape_all_ctors" [pp] m) := rfl
-theorem dbctK_some : dbctK p n pp (some (r, m)) =
-    bfgK4 (callW p n "block_ctors_go" [rdW (m.arr64 IW) (pp + 4), r.headD 0, r.tail.headD 0] m) := rfl
-end arms
-attribute [ind_grind] dbctW_succ dbctK_some
-
-theorem dbct_spec (p : Prog) (hp : p.lookup "block_ctors" = some blockCtors) (n : Nat)
-    (s₀ : St) (pp : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_ctors" [pp]
-    ⦃fun r s' => LocEq s' s₀ ∧ dbctW p n s₀.mem pp = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockCtors]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "block_shape_all_ctors", callW_spec p n "block_ctors_go"] <;>
-      finish (gen := 20)
+l_model dbct_spec (p : Prog) (hp : p.lookup "block_ctors" = some blockCtors)
+  fns [hp ↦ dbctW list]
+  specs [callW_spec p n "block_shape_all_ctors", callW_spec p n "block_ctors_go"]
+  grind [arena_grind]
 
 theorem getD_one_eq (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   rcases r with _ | ⟨x, _ | ⟨y, _⟩⟩ <;> rfl
@@ -210,11 +148,11 @@ theorem dbctW_ok {p : Prog} (hP : DcCtorsProg p) {n : Nat} {m m' : Mem} {pp : Wo
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a ∧ IWGrow m m' := by
   rcases n with _ | n
   · simp [dbctW] at h
-  rw [dbctW_succ] at h
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [dbctK])
-  rw [dbctK_some] at h
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bfgK4])
-  rw [bfgK4_some] at h
+  rw [dbctW.arm1] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [dbctW.k_block_shape_all_ctors.none])
+  rw [dbctW.k_block_shape_all_ctors.arm1] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [dbctW.k_block_ctors_go.none])
+  rw [dbctW.k_block_ctors_go.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s1, rfl, -, hS1, hg1, hd1, hb1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeAllCtors_refines p hP.alloc hP.iwCopy hP.numCtors hP.ctorsCopy hP.allCtorsGo hP.allCtors n

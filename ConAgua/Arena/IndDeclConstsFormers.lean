@@ -12,6 +12,8 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
 
+import ConAgua.L.ModelGen
+
 @[expose] public section
 
 /-!
@@ -58,68 +60,11 @@ theorem blockFormers_eq (bs : BlockShape) (b : Bool) :
 
 /-! ## `block_formers_go` -/
 
-/-- After the consing. -/
-def bfgK4 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
-
-mutual
 /-- **The model of `block_formers_go(p, isRec, dO, dL, i)`** at exec fuel `n`. -/
-def bfgW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, pp, isRec, dO, dL, i =>
-    if dL = 0 then some ([0, 0], m)
-    else bfgK1 p n pp isRec dO dL i (callW p n "block_caps_at" [pp, i, isRec] m)
-/-- After the capability record: the `.indInfo` record. -/
-def bfgK1 (p : Prog) (n : Nat) (pp isRec dO dL i : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bfgK2 p n pp isRec dO dL i
-      (callW p n "ind_info_rec" [rdW (m.arr64 IW) dO, r.headD 0] m)
-/-- After the record: the rest. -/
-def bfgK2 (p : Prog) (n : Nat) (pp isRec dO dL i : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bfgK3 p n (r.headD 0) (bfgW p n m pp isRec (dO + 1) (dL - 1) (i + 1))
-/-- After the rest: the consing. -/
-def bfgK3 (p : Prog) (n : Nat) (q : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bfgK4 (callW p n "sl_cons" [q, r.headD 0, r.tail.headD 0] m)
-end
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (pp isRec dO dL i q : Word) (r : List Word)
-theorem bfgW_nil (h : dL = 0) : bfgW p (n + 1) m pp isRec dO dL i = some ([0, 0], m) := by
-  simp [bfgW, h]
-theorem bfgW_cons (h : dL ≠ 0) : bfgW p (n + 1) m pp isRec dO dL i =
-    bfgK1 p n pp isRec dO dL i (callW p n "block_caps_at" [pp, i, isRec] m) := by simp [bfgW, h]
-theorem bfgK1_some : bfgK1 p n pp isRec dO dL i (some (r, m)) = bfgK2 p n pp isRec dO dL i
-    (callW p n "ind_info_rec" [rdW (m.arr64 IW) dO, r.headD 0] m) := by simp [bfgK1]
-theorem bfgK2_some : bfgK2 p n pp isRec dO dL i (some (r, m)) =
-    bfgK3 p n (r.headD 0) (bfgW p n m pp isRec (dO + 1) (dL - 1) (i + 1)) := by simp [bfgK2]
-theorem bfgK3_some : bfgK3 p n q (some (r, m)) =
-    bfgK4 (callW p n "sl_cons" [q, r.headD 0, r.tail.headD 0] m) := by simp [bfgK3]
-theorem bfgK4_some : bfgK4 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-end arms
-attribute [ind_grind] bfgW_nil bfgW_cons bfgK1_some bfgK2_some bfgK3_some bfgK4_some
-
-theorem bfg_spec (p : Prog) (hp : p.lookup "block_formers_go" = some blockFormersGo) (n : Nat) :
-    ∀ (s₀ : St) (pp isRec dO dL i : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_formers_go" [pp, isRec, dO, dL, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ bfgW p n s₀.mem pp isRec dO dL i = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ pp isRec dO dL i; rw [invoke_eq _ hp]; simp only [callFn, blockFormersGo]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ pp isRec dO dL i
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockFormersGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "block_caps_at", callW_spec p n "ind_info_rec", callW_spec p n "sl_cons", ih] <;>
-      finish (gen := 20) [rdW_eq]
+l_model bfg_spec (p : Prog) (hp : p.lookup "block_formers_go" = some blockFormersGo)
+  fns [hp ↦ bfgW list]
+  specs [callW_spec p n "block_caps_at", callW_spec p n "ind_info_rec", callW_spec p n "sl_cons"]
+  grind [arena_grind]
 
 /-- `sl_cons`' run, as its model. -/
 theorem consCall {p : Prog} (hP : FormersProg p) {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
@@ -144,7 +89,7 @@ theorem bfgW_ok {p : Prog} (hP : FormersProg p) (pp isRec : Word) (bs : BlockSha
   | succ n ih =>
   intro m m' dO dL i cvs r hS hq hsrc hcvs hil h
   by_cases hl : dL = 0
-  · rw [bfgW_nil p n m pp isRec dO dL i hl] at h
+  · rw [bfgW.arm1 p n m pp isRec dO dL i hl] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : cvs = [] := by
       have h := hcvs.1; simp only [DecB, hl] at h
@@ -152,13 +97,13 @@ theorem bfgW_ok {p : Prog} (hP : FormersProg p) (pp isRec : Word) (bs : BlockSha
     subst this
     exact ⟨by simp [decPL, formersFrom], by simp, hS, IWGrow.refl m⟩
   obtain ⟨q, cv, rest, rfl, hw, hqb, hdcv, hrest⟩ := partsPSl_cons hcvs hl
-  rw [bfgW_cons p n m pp isRec dO dL i hl] at h
+  rw [bfgW.arm2 p n m pp isRec dO dL i hl] at h
   rw [formersFrom_cons]
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [bfgK1])
-  rw [bfgK1_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [bfgW.k_block_caps_at.none])
+  rw [bfgW.k_block_caps_at.arm1] at h
   obtain ⟨hS1, hg1, hca⟩ := blockCapsAt_ok hP.toCapsProg n hq hsrc hb h1 hS
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bfgK2])
-  rw [bfgK2_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bfgW.k_ind_info_rec.none])
+  rw [bfgW.k_ind_info_rec.arm1] at h
   have hlpos : 0 < dL.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
   have hol : dO.toNat < iwTop m := by have := hcvs.2; omega
   have hw1 : rdW (m1.arr64 IW) dO = UInt64.ofNat q := by
@@ -169,7 +114,7 @@ theorem bfgW_ok {p : Prog} (hP : FormersProg p) (pp isRec : Word) (bs : BlockSha
   obtain ⟨hS2, hg2, hci⟩ := iirW_stage hW2 hS1 (by rw [hq']; exact hdcv.grow (OMono.decCVp _) hg1) hca
   have hg12 := hg1.trans hg2
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
-  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgK3])
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [bfgW.k_block_formers_go.none])
   simp only [List.headD_cons] at h
   have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hl1 : (dL - 1).toNat = dL.toNat - 1 := by
@@ -178,9 +123,9 @@ theorem bfgW_ok {p : Prog} (hP : FormersProg p) (pp isRec : Word) (bs : BlockSha
     (hq.grow (decBS_mono _) hg12) (partsHsrc_grow hg12 hq9 hsrc)
     (hrest.grow (fun q => OMono.decCVp q) hg12) (by omega) h3
   rw [hi1] at hd3
-  rw [bfgK3_some] at h
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bfgK4])
-  rw [bfgK4_some] at h
+  rw [bfgW.k_block_formers_go.arm1] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bfgW.k_sl_cons.none])
+  rw [bfgW.k_sl_cons.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hd5, hb5, hS5, hg5⟩ := consW_ci (consCall hP h4) hS3 hb3 hd3
     (hg3.ext.decCI hci)
@@ -210,37 +155,11 @@ theorem shapeFacts4 {m : Mem} {q : Word} {bs : BlockShape}
   obtain ⟨-, ⟨a, ha, -⟩, -⟩ := decMS_some hms
   exact partsIwLt ha
 
-/-- After the declared formers: the records. -/
-def bfK (p : Prog) (n : Nat) (pp isRec : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bfgK4 (callW p n "block_formers_go" [pp, isRec, r.headD 0, r.tail.headD 0, 0] m)
-
 /-- **The model of `block_formers(p, isRec)`** at exec fuel `n`. -/
-def dbfW (p : Prog) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, pp, isRec => bfK p n pp isRec (callW p n "block_shape_declared" [pp] m)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (pp isRec : Word) (r : List Word)
-theorem bfW_succ : dbfW p (n + 1) m pp isRec = bfK p n pp isRec (callW p n "block_shape_declared" [pp] m) := rfl
-theorem bfK_some : bfK p n pp isRec (some (r, m)) =
-    bfgK4 (callW p n "block_formers_go" [pp, isRec, r.headD 0, r.tail.headD 0, 0] m) := rfl
-end arms
-attribute [ind_grind] bfW_succ bfK_some
-
-theorem dbf_spec (p : Prog) (hp : p.lookup "block_formers" = some blockFormers) (n : Nat)
-    (s₀ : St) (pp isRec : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_formers" [pp, isRec]
-    ⦃fun r s' => LocEq s' s₀ ∧ dbfW p n s₀.mem pp isRec = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockFormers]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "block_shape_declared", callW_spec p n "block_formers_go"] <;>
-      finish (gen := 20)
+l_model dbf_spec (p : Prog) (hp : p.lookup "block_formers" = some blockFormers)
+  fns [hp ↦ dbfW list]
+  specs [callW_spec p n "block_shape_declared", callW_spec p n "block_formers_go"]
+  grind [arena_grind]
 
 /-- **`block_formers` refines `blockFormers`** (pure in the twin): an `IW` slice of `EREC`
 constant records below the pool's top. -/
@@ -253,11 +172,11 @@ theorem bfW_ok {p : Prog} (hP : FormersProg p) {n : Nat} {m m' : Mem} {pp isRec 
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a ∧ IWGrow m m' := by
   rcases n with _ | n
   · simp [dbfW] at h
-  rw [bfW_succ] at h
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [bfK])
-  rw [bfK_some] at h
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [bfgK4])
-  rw [bfgK4_some] at h
+  rw [dbfW.arm1] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [dbfW.k_block_shape_declared.none])
+  rw [dbfW.k_block_shape_declared.arm1] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [dbfW.k_block_formers_go.none])
+  rw [dbfW.k_block_formers_go.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeDeclared_spec p hP.alloc hP.fieldCopy hP.declared n _ pp) h1

@@ -13,6 +13,7 @@ import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import all ConAgua.Arena.RecCheck
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 
@@ -50,6 +51,12 @@ theorem SlR.length {m : Mem} : ∀ {o l : Word} {ws : List Word}, SlR m o l ws �
     rw [List.length_cons, h.length, UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]
     simp; omega
 
+/-- **The model of `er_from_iw(o, l)`** at exec fuel `n`. -/
+l_model efF_spec (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut)
+  fns [hL.ef ↦ efF list]
+  specs [erecAlloc_specW p hL.ea n, efgW_spec p hpu hL.efg n]
+  grind [arena_grind]
+
 /-- The copy loop writes the slice's words. -/
 theorem efgW_mem (n : Nat) : ∀ (m m' : Mem) (q o l : Word) (r ws : List Word),
     efgW n m q o l = some (r, m') → SlR m o l ws → m' = wrER m q ws := by
@@ -59,14 +66,14 @@ theorem efgW_mem (n : Nat) : ∀ (m m' : Mem) (q o l : Word) (r ws : List Word),
   intro m m' q o l r ws h hs
   cases hs with
   | nil =>
-    rw [efgW_nil n m q o 0 rfl] at h
+    rw [efgW.arm1 n m q o 0 rfl] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; rfl
   | cons hl hs' =>
-    rw [efgW_cons n m q o l hl] at h
+    rw [efgW.arm2 n m q o l hl] at h
     rcases h2 : efgW n (erecPutMem m q (rdW (m.arr64 IW) o)) (q + 1) (o + 1) (l - 1) with _ | ⟨r2, m2⟩ <;>
       rw [h2] at h
     · cases h
-    simp only [efgK, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+    simp only [efgW.k_er_from_iw_go, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     simp only [wrER]
     exact ih _ _ _ _ _ _ _ h2 (hs'.congr (erecPutMem_iw m q _))
 
@@ -102,17 +109,15 @@ theorem sumHslice_of_get {k : IdxKind} {a : Array Word} : ∀ (ws : List Word) (
 decoded in the record pool. -/
 theorem efW_stage {vis : Word} {fe : IFEnv} {a : AState} (n : Nat)
     {m m' : Mem} {o l : Word} {r : List Word} {kk : IdxKind} {xs : List (Idx kk)}
-    (h : efW n m o l = some (r, m'))
+    (h : efF (n + 1) m o l = some (r, m'))
     (hS : StageR vis fe m a) (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧
       hslice? (erecP m') (r.headD 0).toNat l.toNat = some xs := by
-  simp only [efW] at h
-  rcases ha : erAllocW m l with _ | ⟨q, m1⟩ <;> rw [ha] at h
-  · cases h
-  rw [efK1_some] at h
-  rcases h2 : efgW n m1 q o l with _ | ⟨r2, m2⟩ <;> rw [h2] at h
-  · cases h
-  rw [efK2_some] at h
+  rw [efF.arm1] at h
+  rcases ha : erAllocW m l with _ | ⟨q, m1⟩ <;>
+    simp only [ha, efF.k_erec_alloc.none, efF.k_erec_alloc.arm1, reduceCtorEq] at h
+  rcases h2 : efgW n m1 q o l with _ | ⟨r2, m2⟩ <;>
+    simp only [h2, efF.k_er_from_iw_go.none, efF.k_er_from_iw_go.arm1, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨ws, hws, rfl, hw32⟩ := slR_of_decHL m l.toNat o.toNat xs hd
     (by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega)
@@ -133,15 +138,15 @@ theorem efgW_afr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     efgW n m q o l = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, h => by simp [efgW] at h
   | n + 1, m, m', q, o, l, r, h => by
-    simp only [efgW, efgK.eq_def] at h
+    simp only [efgW, efgW.k_er_from_iw_go.eq_def] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     · refine AFr.trans (AFr.of_frame (erecPutMem_frame m q (rdW (m.arr64 IW) o))) ?_
       afr_auto h [efgW_afr n _ _ _ _ _ _]
 
-theorem efW_afr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m o l = some (r, m')) :
+theorem efW_afr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efF (n + 1) m o l = some (r, m')) :
     AFr m m' := by
-  simp only [efW, efK1.eq_def, efK2.eq_def] at h
+  simp only [efF, efF.k_erec_alloc.eq_def, efF.k_er_from_iw_go.eq_def] at h
   afr_auto h [erAllocW_afr, efgW_afr _ _ _ _ _ _ _]
 
 end L.Ind
@@ -223,24 +228,17 @@ def rmMem (m1 : Mem) (q old flo fll fpo fpl : Word) : Mem :=
   erecPutMem (erecPutMem m10 (q + 9) 0) (q + 10) 0
 
 /-- **The model of `generated_rule_nested`.** -/
-def trnW (m : Mem) (old flo fll fpo fpl : Word) : Option (List Word × Mem) :=
-  match erAllocW m 11 with
-  | none => none
-  | some (q, m1) => some ([q], rmMem m1 q old flo fll fpo fpl)
+l_model trn_spec (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut)
+  fns [hL.trn ↦ trnW list]
+  specs [erecAlloc_specW p hL.ea n, erecPut_specM p hpu n]
+  grind [arena_grind]
 
-theorem trn_spec (p : Prog) (L : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat)
-    (s₀ : St) (old flo fll fpo fpl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "generated_rule_nested" [old, flo, fll, fpo, fpl]
-    ⦃fun r s' => LocEq s' s₀ ∧ trnW s₀.mem old flo fll fpo fpl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.trn]
-  simp only [callFn, generatedRuleNested]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        erecAlloc_specW p L.ea n, erecPut_specW p hpu n] <;>
-      finish (gen := 30) (instances := 5000) [trnW, rmMem, erRd]
+/-- `trnW` by its memory `rmMem`. -/
+theorem trnW_eq (m : Mem) (old flo fll fpo fpl : Word) : trnW m old flo fll fpo fpl =
+    match erAllocW m 11 with
+    | none => none
+    | some (q, m1) => some ([q], rmMem m1 q old flo fll fpo fpl) := by
+  rw [trnW.arm1]; rcases erAllocW m 11 with _ | ⟨q, m1⟩ <;> rfl
 
 l_model tsrm_spec (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut)
   fns [hL.tsrm ↦ tsrmW]
@@ -438,12 +436,12 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
   rw [tsrmW.arm2 (hc1 := h0)] at h
   cases ha : erAllocW m 11 with
   | none =>
-    rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW, ha],
+    rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW_eq, ha],
       tsrmW.k_generated_rule_nested.none] at h; cases h
   | some x =>
   obtain ⟨q, m1⟩ := x
   rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = some ([q], rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl)
-    by simp [trnW, ha], tsrmW.k_generated_rule_nested.arm1] at h
+    by simp [trnW_eq, ha], tsrmW.k_generated_rule_nested.arm1] at h
   simp only [List.headD_cons] at h
   rw [hrd.1] at h
   have hold : rlDec m (UInt64.ofNat pp : Word).toNat = some rl0 := by
@@ -484,25 +482,27 @@ theorem rgoW_afr : ∀ (n : Nat) (m m' : Mem) (cO cL rO rL o : Word) (r : List W
     rgoW n m cO cL rO rL o = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, h => by simp [rgoW] at h
   | n + 1, m, m', cO, cL, rO, rL, o, r, h => by
-    simp only [rgoW] at h
-    split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
-    · rcases h2 : erAllocW m 11 with _ | ⟨q, m2⟩ <;> simp only [h2, rgoK2, reduceCtorEq] at h
+    by_cases hz : cL = 0 ∨ rL = 0
+    · rw [rgoW.arm1 (hc1 := hz)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
+    · rw [rgoW.arm2 (hc1 := hz)] at h
+      rcases h2 : erAllocW m 11 with _ | ⟨q, m2⟩ <;>
+        simp only [h2, rgoW.k_erec_alloc.none, rgoW.k_erec_alloc_some, reduceCtorEq] at h
       cases h3 : rgoW n ((ruleMem m2 q _ _ rO).set64 IW o q) (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) with
-      | none => rw [h3] at h; cases h
+      | none => rw [h3, rgoW.k_sum_rules_go.none] at h; cases h
       | some z =>
       obtain ⟨r3, m3⟩ := z
-      rw [h3, rgoK3] at h
+      rw [h3, rgoW.k_sum_rules_go.arm1] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
       exact (erAllocW_afr h2).trans
         (((ruleMem_afr _ _ _ _ _).trans (set64IW_afr _ _ _)).trans (rgoW_afr n _ _ _ _ _ _ _ _ h3))
 
 theorem rulesW_afr {n : Nat} {m m' : Mem} {cO cL rO rL : Word} {r : List Word}
-    (h : rulesW n m cO cL rO rL = some (r, m')) : AFr m m' := by
-  simp only [rulesW] at h
+    (h : rulesW (n + 1) m cO cL rO rL = some (r, m')) : AFr m m' := by
+  rw [rulesW_succ] at h
   generalize hk : (if rL < cL then rL else cL) = k at h
-  rcases h1 : allocW m k with _ | ⟨o, m1⟩ <;> simp only [h1, rulesK1, reduceCtorEq] at h
-  rcases h2 : rgoW n m1 cO cL rO rL o with _ | ⟨r2, m2⟩ <;> simp only [h2, rulesK2, reduceCtorEq] at h
+  rcases h1 : allocW m k with _ | ⟨o, m1⟩ <;> simp only [h1, rulesW.k_iw_alloc.none, rulesW.k_iw_alloc.arm1, reduceCtorEq] at h
+  rcases h2 : rgoW n m1 cO cL rO rL o with _ | ⟨r2, m2⟩ <;> simp only [h2, rulesW.k_sum_rules_go.none, rulesW.k_sum_rules_go.arm1, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (allocW_afr h1).trans (rgoW_afr n _ _ _ _ _ _ _ _ h2)
 
@@ -516,12 +516,12 @@ theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r
     rw [tsrmW.arm2 (hc1 := h0)] at h
     cases ha : erAllocW m 11 with
     | none =>
-      rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW, ha],
+      rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW_eq, ha],
         tsrmW.k_generated_rule_nested.none] at h; cases h
     | some x =>
     obtain ⟨q, m1⟩ := x
     rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl =
-      some ([q], rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) by simp [trnW, ha],
+      some ([q], rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) by simp [trnW_eq, ha],
       tsrmW.k_generated_rule_nested.arm1] at h
     have f1 : AFr m1 (rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) := AFr.of_frame (rmMem_frame _ _ _ _ _ _ _)
     generalize rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl = M at h f1
@@ -542,33 +542,9 @@ theorem rcPoolSmall {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
   have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega
 
-def efF : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, o, l => efW n m o l
-
-def rulesF : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, cO, cL, rO, rL => rulesW n m cO cL rO rL
-
-theorem rulesF_spec (p : Prog) (L : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat)
-    (s₀ : St) (cO cL rO rL : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "sum_rules" [cO, cL, rO, rL]
-    ⦃fun r s' => LocEq s' s₀ ∧ rulesF n s₀.mem cO cL rO rL = some (r, s'.mem); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact rulesW_spec p L.ea hpu L.srg L.rc.rx.ha L.sr n s₀ cO cL rO rL
-
-theorem efF_spec (p : Prog) (L : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat)
-    (s₀ : St) (o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_from_iw" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ efF n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact efW_spec p L.ea hpu L.efg L.ef n s₀ o l
-
 l_model tsr_spec (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut)
   fns [hL.tsr ↦ tsrW]
-  specs [rulesF_spec p hL hpu n, auxRuleFire_spec p hL.arf n, efF_spec p hL hpu n, tsrm_spec p hL hpu n]
+  specs [rulesW_spec p hL.ea hpu hL.srg hL.rc.rx.ha hL.sr n, auxRuleFire_spec p hL.arf n, efF_spec p hL hpu n, tsrm_spec p hL hpu n]
   grind [arena_grind]
 
 /-- A pointer-slice field `(off, len)` of a record decoded in the cut pools, at its word addresses. -/
@@ -617,13 +593,13 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {rP M rhso rhsl : Word} {r :
   obtain ⟨e8, t8⟩ := rec2RdN (w := M) (k := 8) hk8m hsz
   simp only [show UInt64.ofNat 8 = (8 : Word) from rfl] at e8
   cases n with
-  | zero => simp [rulesF, tsrW.k_sum_rules] at h
+  | zero => simp [rulesW, tsrW.k_sum_rules] at h
   | succ k =>
-  cases h1 : rulesW k m (rdW (m.arr64 IW) (M + 6)) (rdW (m.arr64 IW) (M + 7)) rhso rhsl with
-  | none => simp only [rulesF] at h; rw [h1] at h; simp [tsrW.k_sum_rules] at h
+  cases h1 : rulesW (k + 1) m (rdW (m.arr64 IW) (M + 6)) (rdW (m.arr64 IW) (M + 7)) rhso rhsl with
+  | none => rw [h1] at h; simp [tsrW.k_sum_rules] at h
   | some x =>
   obtain ⟨rs, m1⟩ := x
-  simp only [rulesF] at h; rw [h1] at h
+  rw [h1] at h
   obtain ⟨hS1, hg1, hd1, hR1, hb1⟩ := rulesW_ok k m _ _ rhso rhsl _ rhss rs m1 h1 hS hctors hrh
   have hA1 := rulesW_afr h1 hA
   have e8' : rdW (m1.arr64 IW) (M + 8) = UInt64.ofNat k8 := by
