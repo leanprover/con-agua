@@ -214,17 +214,17 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
   · unfold binW at h
     repeat' split at h
     all_goals try (cases h; done)
-    · exact DK.ofAbove (mkAppW_above h)
-    · exact DK.ofAbove (mkLamW_above h)
-    · exact DK.ofAbove (mkForallW_above h)
+    · rw [binW_k] at h; exact DK.ofAbove (mkAppW_above h)
+    · rw [binW_k] at h; exact DK.ofAbove (mkLamW_above h)
+    · rw [binW_k] at h; exact DK.ofAbove (mkForallW_above h)
   · unfold letW at h
-    split at h
-    · exact DK.ofAbove (mkLetW_above h)
-    · cases h
+    repeat' split at h
+    all_goals try (cases h; done)
+    exact DK.ofAbove (mkLetW_above h)
   · unfold projW at h
-    split at h
-    · exact DK.ofAbove (mkProjW_above h)
-    · cases h
+    repeat' split at h
+    all_goals try (cases h; done)
+    exact DK.ofAbove (mkProjW_above h)
   · unfold constW at h
     split at h
     · cases hP : lsPutW b m c with

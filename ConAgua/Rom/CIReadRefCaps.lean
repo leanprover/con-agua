@@ -30,18 +30,6 @@ open L.Arena L.Ind
 
 /-! ## Reading numbers -/
 
-theorem rdU_some {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i : Word}
-    {k : Word → Mem → Option (List Word × Mem)} {v : List Word × Mem} (h : rdU p n m i k = some v) :
-    k (u64W rom i) m = some v := by
-  change ntBW (callW p n "rom_u64_c" [i] m) (fun r m' => k (r.headD 0) m') = some v at h
-  cases hc : callW p n "rom_u64_c" [i] m with
-  | none => rw [hc] at h; simp at h
-  | some t =>
-    obtain ⟨r, m'⟩ := t
-    rw [hc, bW_some] at h
-    obtain ⟨rfl, rfl⟩ := u64Call hL hc
-    exact h
-
 /-- A `rom_u64` call in a model's `ntBW` chain: the continuation at the word read. -/
 theorem u64_some {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i : Word}
     {k : List Word → Mem → Option (List Word × Mem)} {v : List Word × Mem}
@@ -76,30 +64,6 @@ theorem putE_some {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat}
     k (erecPutMem m i v) = some x := by
   change ntBW (callW p n "erec_put" [i, v] m) (fun _ m' => k m') = some x at h
   cases hc : callW p n "erec_put" [i, v] m with
-  | none => rw [hc] at h; simp at h
-  | some t =>
-    obtain ⟨r, m'⟩ := t
-    rw [hc, bW_some] at h
-    rw [← putCall hL hc]; exact h
-
-theorem rdU_ntBW {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i : Word}
-    {k : Word → Mem → Option (List Word × Mem)} {f : List Word → Mem → Option (List Word × Mem)}
-    {v : List Word × Mem} (h : ntBW (rdU p n m i k) f = some v) : ntBW (k (u64W rom i) m) f = some v := by
-  change ntBW (ntBW (callW p n "rom_u64_c" [i] m) (fun r m' => k (r.headD 0) m')) f = some v at h
-  cases hc : callW p n "rom_u64_c" [i] m with
-  | none => rw [hc] at h; simp at h
-  | some t =>
-    obtain ⟨r, m'⟩ := t
-    rw [hc, bW_some] at h
-    obtain ⟨rfl, rfl⟩ := u64Call hL hc
-    exact h
-
-theorem putE_ntBW {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i w : Word}
-    {k : Mem → Option (List Word × Mem)} {f : List Word → Mem → Option (List Word × Mem)}
-    {v : List Word × Mem} (h : ntBW (putE p n m i w k) f = some v) :
-    ntBW (k (erecPutMem m i w)) f = some v := by
-  change ntBW (ntBW (callW p n "erec_put" [i, w] m) (fun _ m' => k m')) f = some v at h
-  cases hc : callW p n "erec_put" [i, w] m with
   | none => rw [hc] at h; simp at h
   | some t =>
     obtain ⟨r, m'⟩ := t

@@ -9,6 +9,7 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndParts
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -258,109 +259,14 @@ theorem viewConst_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h
 
 /-! ## `rec_target_of` -/
 
-mutual
-/-- **The model of `rec_target_of`**: strip the telescope, look at the major's domain head. -/
-def recTW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, no, nl, mI, ty => recTK1 n no nl (stripF 6 m [mI, ty])
-
-/-- After `strip_pis`. -/
-def recTK1 (n : Nat) (no nl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then some ([nl], m1)
-    else if tagW (r.tail.tail.tail.headD 0) ≠ 6 then some ([nl], m1)
-    else recTK2 n no nl m1 (eViewW m1 (r.tail.tail.tail.headD 0))
-
-/-- After the major's `e_view`. -/
-def recTK2 (n : Nat) (no nl : Word) (m1 : Mem) : List Word → Option (List Word × Mem)
-  | [] => none
-  | v => recTK3 n no nl (gafF m1 [CWF, v.getD 1 0])
-
-/-- After `get_app_fn`. -/
-def recTK3 (n : Nat) (no nl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) =>
-    if tagW (r.headD 0) ≠ 3 then some ([nl], m3)
-    else recTK4 n no nl m3 (eViewW m3 (r.headD 0))
-
-/-- After the head's `e_view`. -/
-def recTK4 (n : Nat) (no nl : Word) (m3 : Mem) : List Word → Option (List Word × Mem)
-  | [] => none
-  | v => recTK5 nl m3 (findW n m3 no nl (v.getD 1 0))
-
-/-- After `sl_find`. -/
-def recTK5 (nl : Word) (m3 : Mem) : Option (List Word) → Option (List Word × Mem)
-  | none => none
-  | some rf => if rf.headD 0 = 0 then some ([nl], m3) else some ([rf.tail.headD 0], m3)
-end
-
-section arms
-variable (n : Nat) (m m1 m3 : Mem) (no nl mI ty : Word) (r v rf : List Word)
-theorem recTW_step : recTW (n + 1) m no nl mI ty = recTK1 n no nl (stripF 6 m [mI, ty]) := rfl
-theorem recTK1_some_nil (h : r.headD 0 = 0) : recTK1 n no nl (some (r, m1)) = some ([nl], m1) := by
-  simp only [recTK1]; rw [ite_eq_left h]
-theorem recTK1_some_nf (h : r.headD 0 ≠ 0) (h2 : tagW (r.tail.tail.tail.headD 0) ≠ 6) :
-    recTK1 n no nl (some (r, m1)) = some ([nl], m1) := by
-  simp only [recTK1]; rw [ite_eq_right h, ite_eq_left h2]
-theorem recTK1_some_f (h : r.headD 0 ≠ 0) (h2 : ¬ tagW (r.tail.tail.tail.headD 0) ≠ 6) :
-    recTK1 n no nl (some (r, m1)) =
-      recTK2 n no nl m1 (eViewW m1 (r.tail.tail.tail.headD 0)) := by
-  simp only [recTK1]; rw [ite_eq_right h, ite_eq_right h2]
-theorem recTK2_nil : recTK2 n no nl m1 [] = none := rfl
-theorem recTK2_ne (h : v ≠ []) :
-    recTK2 n no nl m1 v = recTK3 n no nl (gafF m1 [CWF, v.getD 1 0]) := by
-  cases v with
-  | nil => exact absurd rfl h
-  | cons a as => rfl
-theorem recTK3_some_nc (h : tagW (r.headD 0) ≠ 3) : recTK3 n no nl (some (r, m3)) = some ([nl], m3) := by
-  simp only [recTK3]; rw [ite_eq_left h]
-theorem recTK3_some_c (h : ¬ tagW (r.headD 0) ≠ 3) :
-    recTK3 n no nl (some (r, m3)) = recTK4 n no nl m3 (eViewW m3 (r.headD 0)) := by
-  simp only [recTK3]; rw [ite_eq_right h]
-theorem recTK4_nil : recTK4 n no nl m3 [] = none := rfl
-theorem recTK4_ne (h : v ≠ []) :
-    recTK4 n no nl m3 v = recTK5 nl m3 (findW n m3 no nl (v.getD 1 0)) := by
-  cases v with
-  | nil => exact absurd rfl h
-  | cons a as => rfl
-theorem recTK5_miss (h : rf.headD 0 = 0) : recTK5 nl m3 (some rf) = some ([nl], m3) := by
-  simp only [recTK5]; rw [ite_eq_left h]
-theorem recTK5_hit (h : rf.headD 0 ≠ 0) : recTK5 nl m3 (some rf) = some ([rf.tail.headD 0], m3) := by
-  simp only [recTK5]; rw [ite_eq_right h]
-end arms
-
-grind_pattern [ind_grind] recTW_step => recTW (n + 1) m no nl mI ty
-grind_pattern [ind_grind] recTK1_some_nil => recTK1 n no nl (some (r, m1))
-grind_pattern [ind_grind] recTK1_some_nf => recTK1 n no nl (some (r, m1))
-grind_pattern [ind_grind] recTK1_some_f => recTK1 n no nl (some (r, m1))
-grind_pattern [ind_grind] recTK2_ne => recTK2 n no nl m1 v
-grind_pattern [ind_grind] recTK3_some_nc => recTK3 n no nl (some (r, m3))
-grind_pattern [ind_grind] recTK3_some_c => recTK3 n no nl (some (r, m3))
-grind_pattern [ind_grind] recTK4_ne => recTK4 n no nl m3 v
-grind_pattern [ind_grind] recTK5_miss => recTK5 nl m3 (some rf)
-grind_pattern [ind_grind] recTK5_hit => recTK5 nl m3 (some rf)
-
-section spec
-variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
-  (hp : p.lookup "rec_target_of" = some recTargetOf) (hst : StripProg p) (had : AdF p)
-include hv hf hp hst had
-
-theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_target_of" [no, nl, mI, ty]
-    ⦃fun r s' => LocEq s' s₀ ∧ recTW n s₀.mem no nl mI ty = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, recTargetOf]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stripPis_specF p hst n, gafF_spec p had n, eViewSpec4 p hv n,
-        slFind_spec p hf n] <;>
-      finish (gen := 20)
-
-end spec
+/-- **`rec_target_of` is its model `recTW`** (generated): strip the telescope, look at the
+major's domain head. -/
+l_model recTargetOf_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hf : p.lookup "sl_find" = some slFind) (hp : p.lookup "rec_target_of" = some recTargetOf)
+    (hst : StripProg p) (had : AdF p)
+  fns [hp ↦ recTW list]
+  specs [stripPis_specF p hst n, gafF_spec p had n, eViewSpec4 p hv n, slFind_spec p hf n]
+  grind [arena_grind, ind_grind]
 
 theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl mI ty : Word) (r : List Word) (names : List NIdx),
@@ -375,14 +281,14 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
   | succ n =>
   have hnl : nl.toNat = names.length := (decHL_length m hnames).symm
   have hnlw : [UInt64.ofNat names.length] = [nl] := by rw [← hnl, ofNat_toNat_word nl]
-  rw [recTW_step] at hrt
-  obtain ⟨r1, m1, hra, hrt⟩ := ipK_inv hrt (by simp [recTK1])
+  rw [recTW.arm1] at hrt
+  obtain ⟨r1, m1, hra, hrt⟩ := ipK_inv hrt (by simp [recTW.k_strip_pis])
   obtain ⟨x1, a1, hrun1, hS1, hg1, hdec1⟩ := stripF_pis_ok vis fe mI ty hty m m1 a r1 hra hS
   have hty' : (decI ty : EIdx) = decE ty := rfl
   cases x1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hdec1
-    rw [recTK1_some_nil n m1 no nl r1 h0] at hrt
+    rw [recTW.k_strip_pis.arm1 n no nl r1 m1 h0] at hrt
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
     refine ⟨names.length, a1, ?_, hnlw.symm, hS1, hg1⟩
     · simp only [ConRon.Arena.recTargetOf, StateT.run_bind, hrun1, except_ok_bind]
@@ -397,7 +303,7 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
     have hR1 : ArenaR m1 a1 := hS1.check.arena.base
     have hnamesz : names.length = nl.toNat := hnl.symm
     by_cases hg6 : tagW (r1.tail.tail.tail.headD 0) ≠ 6
-    · rw [recTK1_some_nf n m1 no nl r1 h1ne hg6] at hrt
+    · rw [recTW.k_strip_pis.arm2 n no nl r1 m1 h1ne hg6] at hrt
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
       have htag : e1.tag ≠ ETag.forallE := by
         rw [← hbe]; exact fun h' => hg6 ((decE_tag_forallE _ hbl).mp h')
@@ -406,33 +312,32 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
         simp [htag]
         rfl
     · have hg6' : tagW (r1.tail.tail.tail.headD 0) = 6 := by simpa using hg6
-      rw [recTK1_some_f n m1 no nl r1 h1ne hg6] at hrt
       by_cases hr : eViewW m1 (r1.tail.tail.tail.headD 0) = []
-      · rw [hr, recTK2_nil] at hrt; simp at hrt
+      · rw [recTW.k_strip_pis.abort1 n no nl r1 m1 h1ne hg6' hr] at hrt; cases hrt
       obtain ⟨hvok, hew⟩ := eViewW_forall m1 _ hg6' hr
-      rw [recTK2_ne n m1 no nl _ hr] at hrt
+      rw [recTW.k_strip_pis.arm3 n no nl r1 m1 h1ne hg6' hr] at hrt
       obtain ⟨hvw, hty2, hb2⟩ := view_forall m1 a1 hR1 _ hbl hvok hg6'
-      have hdomw : (eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0 =
+      have hdomw : (eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0 =
           tfld m1 FORALL (tierW (r1.tail.tail.tail.headD 0)) (idxW (r1.tail.tail.tail.headD 0)) 0 := by rw [hew]; rfl
-      have hdomlt : ((eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0).toNat < 2 ^ 32 := by
+      have hdomlt : ((eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0).toNat < 2 ^ 32 := by
         rw [hdomw]; exact hty2
-      obtain ⟨r3, m3, hra3, hrt⟩ := ipK_inv hrt (by simp [recTK3])
+      obtain ⟨r3, m3, hra3, hrt⟩ := ipK_inv hrt (by simp [recTW.k_get_app_fn_f])
       obtain ⟨x3, a3, hrun3, hS3, hg3, hdl3, hdI3⟩ :=
         gafF_ok vis fe CWF _ hdomlt m1 m3 a1 r3 hra3 hS1
       have hR3 : ArenaR m3 a3 := hS3.check.arena.base
       have hvb := viewBind_forall m1 a1 hR1 _ hbl hvok hg6'
       have hrun3' : StateT.run (getAppFn coreWalkFuel (decE
-          ((eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0))) a1 = Except.ok (x3, a3) := by
+          ((eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0))) a1 = Except.ok (x3, a3) := by
         rw [← CWF_eq]; exact hrun3
       subst hbe
       have hvb' : a1.store.viewBind (decI (r1.tail.tail.tail.headD 0)) = some
-          (decE ((eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0),
+          (decE ((eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0),
            decE ((eViewW m1 (r1.tail.tail.tail.headD 0)).getD 2 0)) := by
         rw [hew]; exact hvb
       have hftag : ((decI (r1.tail.tail.tail.headD 0) : EIdx).tag == ETag.forallE) = true := by
         simp only [beq_iff_eq]; exact (decE_tag_forallE _ hbl).mpr hg6'
       by_cases hc : tagW (r3.headD 0) ≠ 3
-      · rw [recTK3_some_nc n m3 no nl r3 hc] at hrt
+      · rw [recTW.k_get_app_fn_f.arm1 n no nl r3 m3 hc] at hrt
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
         have htag : x3.tag ≠ ETag.const := by
           rw [← hdI3]; exact fun h' => hc ((decE_tag_const _ hdl3).mp h')
@@ -444,16 +349,15 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
           simp only [hrun3', except_ok_bind, hctag]
           rfl
       · have hc3 : tagW (r3.headD 0) = 3 := by simpa using hc
-        rw [recTK3_some_c n m3 no nl r3 hc] at hrt
         by_cases hr2 : eViewW m3 (r3.headD 0) = []
-        · rw [hr2, recTK4_nil] at hrt; simp at hrt
+        · rw [recTW.k_get_app_fn_f.abort1 n no nl r3 m3 hc3 hr2] at hrt; cases hrt
         obtain ⟨hvok2, hew2⟩ := eViewW_const m3 _ hc3 hr2
-        rw [recTK4_ne n m3 no nl _ hr2] at hrt
+        rw [recTW.k_get_app_fn_f.arm2 n no nl r3 m3 hc3 hr2] at hrt
         obtain ⟨hvc, hn2, hu2⟩ := view_const_f m3 a3 hR3 _ hdl3 hvok2 hc3
-        have hxw : (eViewW m3 (r3.headD 0)).getD 1 0 =
+        have hxw : (eViewW m3 (r3.headD 0)).tail.headD 0 =
             tfld m3 CONST (tierW (r3.headD 0)) (idxW (r3.headD 0)) 0 := by
           rw [hew2]; rfl
-        have hxlt : ((eViewW m3 (r3.headD 0)).getD 1 0).toNat < 2 ^ 32 := by rw [hxw]; exact hn2
+        have hxlt : ((eViewW m3 (r3.headD 0)).tail.headD 0).toNat < 2 ^ 32 := by rw [hxw]; exact hn2
         have hvcc := viewConst_ok m3 a3 hR3 _ hdl3 hvok2
         have hnames3 : decHL m3 no.toNat nl.toNat = some names := by
           rw [decHL_grow3 (hg1.trans hg3) hbt]; exact hnames
@@ -462,34 +366,34 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
         have hlen : ws.length < 2 ^ 64 := by
           have := decHL_length m3 hnames3
           rw [hnm] at this; simp at this; omega
-        rcases hf : findW n m3 no nl ((eViewW m3 (r3.headD 0)).getD 1 0) with _ | rf
-        · rw [hf] at hrt; simp [recTK5] at hrt
+        rcases hf : findW n m3 no nl ((eViewW m3 (r3.headD 0)).tail.headD 0) with _ | rf
+        · rw [hf] at hrt; simp [recTW.k_sl_find] at hrt
         have hfk := findW_ok n m3 no nl _ rf ws hws hf hlen
         have hfi := findIdx_map_decI (k := .name) _ hxlt ws hwlt
         rw [← hnm] at hfi
         have hctag : (x3.tag == ETag.const) = true := by
           simp only [beq_iff_eq]; rw [← hdI3]; exact (decE_tag_const _ hdl3).mpr hc3
         have hvcc' : a3.store.viewConst x3 = some
-            (decI ((eViewW m3 (r3.headD 0)).getD 1 0), decI ((eViewW m3 (r3.headD 0)).getD 2 0)) := by
+            (decI ((eViewW m3 (r3.headD 0)).tail.headD 0), decI ((eViewW m3 (r3.headD 0)).getD 2 0)) := by
           rw [← hdI3, hew2]; exact hvcc
         rw [hf] at hrt
         by_cases hf0 : rf.headD 0 = 0
-        · rw [recTK5_miss m3 nl rf hf0] at hrt
+        · rw [recTW.k_sl_find.arm1 nl m3 rf hf0] at hrt
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
-          have hnone : ws.findIdx? (· == (eViewW m3 (r3.headD 0)).getD 1 0) = none := by
+          have hnone : ws.findIdx? (· == (eViewW m3 (r3.headD 0)).tail.headD 0) = none := by
             rw [hfk] at hf0
-            cases h' : ws.findIdx? (· == (eViewW m3 (r3.headD 0)).getD 1 0) with
+            cases h' : ws.findIdx? (· == (eViewW m3 (r3.headD 0)).tail.headD 0) with
             | none => rfl
             | some i => rw [h'] at hf0; simp at hf0
           refine ⟨names.length, a3, ?_, hnlw.symm, hS3, hg1.trans hg3⟩
           · simp only [ConRon.Arena.recTargetOf, StateT.run_bind, hrun1, except_ok_bind, hftag,
               ite_true, viewBind_run' _ a1, hvb', hrun3', hctag, viewConst_run', hvcc', hfi, hnone]
             rfl
-        · rw [recTK5_hit m3 nl rf hf0] at hrt
+        · rw [recTW.k_sl_find.arm2 nl m3 rf hf0] at hrt
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
-          obtain ⟨i, hi⟩ : ∃ i, ws.findIdx? (· == (eViewW m3 (r3.headD 0)).getD 1 0) = some i := by
+          obtain ⟨i, hi⟩ : ∃ i, ws.findIdx? (· == (eViewW m3 (r3.headD 0)).tail.headD 0) = some i := by
             rw [hfk] at hf0
-            cases h' : ws.findIdx? (· == (eViewW m3 (r3.headD 0)).getD 1 0) with
+            cases h' : ws.findIdx? (· == (eViewW m3 (r3.headD 0)).tail.headD 0) with
             | none => rw [h'] at hf0; simp at hf0
             | some i => exact ⟨i, rfl⟩
           refine ⟨i, a3, ?_, ?_, hS3, hg1.trans hg3⟩

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.RpLook
+public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
 import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
 public import ConAgua.Arena.GrindAttr
@@ -156,7 +157,7 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {vis : Word}
     (hx : decI n0 = x) :
     ∀ (m : Mem) (a : AState), StageR vis fe m a → PSlR0 decRS bs.recs reco recl m →
     PSlR decRS (rpAux bs) auxo auxl m →
-    Sim (tpnB p (n + 1) reco recl auxo auxl n0 m)
+    Sim (tpnW.j1 p (n + 1) reco recl auxo auxl n0 m)
       (do
         let wantAux ← (List.range (rpAux bs).length).mapM fun i => internNNode (.str x s!"rec_{i + 1}")
         if rpSetOk ((rpAux bs).map (·.cvR.name)) wantAux then pure (nameNodup (bs.recs.map (·.cvR.name)))
@@ -178,9 +179,9 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {vis : Word}
         (List.range (rpAux bs).length).mapM fun i => internNNode (.str x s!"rec_{i + 1}") := by
       unfold wantAuxFrom; rw [hx, hl]; simp only [UInt64.toNat_zero, Nat.zero_add]
     rw [heq] at h; exact h
-  refine Sim.bindK (K := tpnK1 p (n + 1) reco recl auxo auxl) rfl (fun _ _ => rfl) hwant ?_
+  refine Sim.bindK (K := tpnW.k_block_rec_want_aux_names p (n + 1) reco recl auxo auxl) rfl (fun _ _ => rfl) hwant ?_
   rintro rw want m1 a1 ⟨hd1, hb1, hS1, hg1⟩
-  refine Sim.mstep (K := tpnK2 p (n + 1) reco recl rw) rfl (fun _ _ => rfl) fun rg m2 h2 => ?_
+  refine Sim.mstep (K := tpnW.k_ptr_list_names p (n + 1) reco recl (rw.headD 0) (rw.tail.headD 0)) rfl (fun _ _ => rfl) fun rg m2 h2 => ?_
   obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (ptrListNames_spec p L.alloc L.pnc L.pln (n + 1) _ auxo auxl) h2
   dsimp only at hW2
@@ -188,7 +189,7 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {vis : Word}
   obtain ⟨hS2, hg2, hr2, hd2, ht2⟩ := plnW_stage (·.cvR) (fun q => decRS_mono q) decRS_cv decRS_lt hW2 hS1
     ⟨haux1.1, Or.inr haux1.2⟩
   subst hr2
-  refine Sim.mstep (K := tpnK3 p (n + 1) reco recl) rfl (fun _ _ => rfl) fun ro m3 h3 => ?_
+  refine Sim.mstep (K := tpnW.k_sl_set_eq p (n + 1) reco recl) rfl (fun _ _ => rfl) fun ro m3 h3 => ?_
   obtain ⟨s3, rfl, -, hm3, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (slSetEq_spec p L.contains L.allIn L.setEq n _ _ _ _ _) h3
   simp only [List.headD_cons, List.tail_cons] at hW3 hm3
@@ -208,28 +209,28 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {vis : Word}
       simp [Bool.and_comm, BEq.comm]
   by_cases hok : rpSetOk ((rpAux bs).map (·.cvR.name)) want = true
   · have hro : ro.headD 0 = 1 := by rw [hset, hcond, ite_eq_left hok]
-    rw [tpnK3_ok _ _ _ _ _ _ (by rw [hro]; decide), ite_eq_left hok]
-    refine Sim.mstep (K := tpnK4 p (n + 1)) rfl (fun _ _ => rfl) fun rn m4 h4 => ?_
+    rw [tpnW.k_sl_set_eq.arm2 (hc1 := by rw [hro]; decide), ite_eq_left hok]
+    refine Sim.mstep (K := tpnW.k_ptr_list_names_2 p (n + 1)) rfl (fun _ _ => rfl) fun rn m4 h4 => ?_
     obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
       (ptrListNames_spec p L.alloc L.pnc L.pln (n + 1) _ reco recl) h4
     dsimp only at hW4
     have hrs2 := PSlR0.grow (fun q => decRS_mono q) hrs (hg1.trans hg2)
     obtain ⟨hS4, hg4, hr4, hd4, ht4⟩ := plnW_stage (·.cvR) (fun q => decRS_mono q) decRS_cv decRS_lt hW4 hS2 hrs2
     subst hr4
-    refine Sim.mstep (K := tpnK5) rfl (fun _ _ => rfl) fun rd m5 h5 => ?_
+    refine Sim.mstep (K := tpnW.k_sl_nodup p) rfl (fun _ _ => rfl) fun rd m5 h5 => ?_
     obtain ⟨s5, rfl, -, hm5, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
       (slNodup_spec p L.contains L.nodup (n + 1) _ _ _) h5
     simp only [List.headD_cons, List.tail_cons] at hW5 hm5
     obtain ⟨nws, hns, hnm, hnl⟩ := slR_of_decHL s4.mem _ _ _ hd4 (by rw [ht4]; exact hT _)
     rw [ofNat_toNat_word, ofNat_toNat_word] at hns
     have hnd := nodupW_ok _ _ _ _ _ _ hns hW5
-    rw [tpnK5_some, hm5]
+    rw [tpnW.k_sl_nodup.arm1, hm5]
     refine Sim.ret ⟨?_, hS4, hg1.trans (hg2.trans hg4)⟩
     simp only [List.headD_cons]
     rw [hnd, hnm, nameNodup_map nws hnl]
     by_cases h : nws.Nodup <;> simp [h]
   · have hro : ro.headD 0 = 0 := by rw [hset, hcond, ite_eq_right hok]
-    rw [tpnK3_zero _ _ _ _ _ _ hro, ite_eq_right hok]
+    rw [tpnW.k_sl_set_eq.arm1 (hc1 := hro), ite_eq_right hok]
     exact Sim.ret ⟨by simp, hS2, hg1.trans hg2⟩
 
 /-- **`target_rec_pins_names`' model refines the twin's name pins** (through the stubs
@@ -247,7 +248,7 @@ theorem tpnW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
     have hm : bs.members = [] := hms.nil hk
     have h0 : rpN0 bs = internNNode .anonymous := by unfold rpN0; rw [hm]
     rw [h0]
-    refine Sim.bindK (K := tpnK0 p (n + 1) reco recl auxo auxl) rfl (fun _ _ => rfl)
+    refine Sim.bindK (K := tpnW.k_intern_nanon p (n + 1) reco recl auxo auxl) rfl (fun _ _ => rfl)
       (show Sim (callW p (n + 1) "intern_nanon" [] m) (internNNode .anonymous) a
         (fun r x m' a' => KeepPost vis fe decW0N m m' a' r x) from fun r m' e => by
         obtain ⟨s', rfl, -, hs⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (naF_spec p L.rna (n + 1) _ []) e
@@ -258,6 +259,7 @@ theorem tpnW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
     rintro r b m' a' ⟨h1, h2, h3⟩
     exact ⟨h1, h2, hg0.trans h3⟩
   · rw [ite_eq_right hk]
+    simp only [erRd_foldN]
     obtain ⟨pc, ms0, ms', hmeq, hw, hpb, hms0, -⟩ := partsPSl_cons (hms.pslr hk) hk
     obtain ⟨⟨ca, hca, hcv⟩, -⟩ := decMS_some (show decMS (truncM m) pc = some ms0 from hms0)
     obtain ⟨hcw, hcab, -⟩ := partsIwRd hca (UInt64.toNat_ofNat_of_lt' hpb)

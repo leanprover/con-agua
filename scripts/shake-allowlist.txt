@@ -26,6 +26,7 @@ ConAgua/Arena/IndInstallSpec/DomsW.lean	public import ConAgua.Arena.IndRealSpine
 ConAgua/Arena/IndInstallSpec/GrcTwinA.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/IndInstallSpec/IcbiW.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndInstallSpec/LvlEqFueledSpecC.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/IndInstallSpec/NestCtx.lean	import ConAgua.Arena.IndPartsSpec.BpcW	# the build needs it (vcgen [blockShapeLps_spec2]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/IndInstallSpec/Pos3MapMProj.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndPartsSpec/BmfK2.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndPosSpec/CanonW.lean	public import ConAgua.Arena.IndPosSpec.NestBlockOfKey	# the build needs it: its dependents reach the handle lemmas and this module's other names through it

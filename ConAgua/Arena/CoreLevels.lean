@@ -583,9 +583,10 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
   cases n with
   | zero => simp [lvlsEqW] at hl
   | succ n =>
-  simp only [lvlsEqW] at hl
-  have hn : ¬ (lsNodeW m us = [] ∨ lsNodeW m vs = []) := fun c => by rw [ite_eq_left c] at hl; cases hl
-  rw [ite_eq_right hn] at hl
+  have hu0 : lsNodeW m us ≠ [] := fun e => by rw [lvlsEqW.abort1 _ _ _ _ e] at hl; cases hl
+  have hv0 : lsNodeW m vs ≠ [] := fun e => by rw [lvlsEqW.abort2 _ _ _ _ hu0 e] at hl; cases hl
+  have hn : ¬ (lsNodeW m us = [] ∨ lsNodeW m vs = []) := fun c => c.elim hu0 hv0
+  rw [lvlsEqW.arm1 _ _ _ _ hu0 hv0] at hl
   -- `ls_node` read both handles, so both are stored and read back (`StoreDen.lsAll`)
   obtain ⟨lu, hdu⟩ := hS.den.lsAll _ (by
     obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.base hu (fun e => hn (.inl e)); rw [e]; rfl)

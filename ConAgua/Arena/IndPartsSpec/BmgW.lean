@@ -281,80 +281,12 @@ theorem bmfW_sim {vis : Word} {fe : IFEnv} {no nl mm : Word}
 
 /-! ## `block_member_counts_go`, `block_member_counts` -/
 
-mutual
-/-- **The model of `block_member_counts_go`.** -/
-def bmgW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, nPd, k, nC, no, nl, ro, rl, cto, ctl, idx =>
-    if ctl = 0 then some ([1, 0, 0], m)
-    else bmgK1 n nPd k nC no nl ro rl cto ctl idx (rdW (m.arr64 IW) cto) (bmfW n m no nl ro rl idx)
-/-- After `block_member_counts_find`. -/
-def bmgK1 (n : Nat) (nPd k nC no nl ro rl cto ctl idx cv : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    if 4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0 then none
-    else bmgK2 n nPd k nC no nl ro rl cto ctl idx
-      (bcW n m1 nPd k nC rl cv (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0))
-/-- After `block_counts`. -/
-def bmgK2 (n : Nat) (nPd k nC no nl ro rl cto ctl idx : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0, 0, 0], m2)
-    else bmgK3 n (r2.tail.tail.headD 0) (bmgW n m2 nPd k nC no nl ro rl (cto + 1) (ctl - 1) (idx + 1))
-/-- After the recursive call. -/
-def bmgK3 (n : Nat) (cb : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) =>
-    if r3.headD 0 = 0 then some ([0, 0, 0], m3)
-    else bsK3 (consW n m3 cb (r3.tail.headD 0) (r3.tail.tail.headD 0))
-end
-
-section arms
-variable (n : Nat) (m m1 : Mem) (nPd k nC no nl ro rl cto ctl idx cv cb : Word) (r1 : List Word)
-theorem bmgW_nil (h : ctl = 0) : bmgW (n + 1) m nPd k nC no nl ro rl cto ctl idx = some ([1, 0, 0], m) := by
-  simp [bmgW, h]
-theorem bmgW_cons (h : ctl ≠ 0) : bmgW (n + 1) m nPd k nC no nl ro rl cto ctl idx =
-    bmgK1 n nPd k nC no nl ro rl cto ctl idx (rdW (m.arr64 IW) cto) (bmfW n m no nl ro rl idx) := by
-  simp [bmgW, h]
-theorem bmgK1_ok (h : ¬ (4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0)) :
-    bmgK1 n nPd k nC no nl ro rl cto ctl idx cv (some (r1, m1)) = bmgK2 n nPd k nC no nl ro rl cto ctl idx
-      (bcW n m1 nPd k nC rl cv (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)) := by
-  simp only [bmgK1]; exact ite_eq_right h
-theorem bmgK2_fail (h : r1.headD 0 = 0) :
-    bmgK2 n nPd k nC no nl ro rl cto ctl idx (some (r1, m1)) = some ([0, 0, 0], m1) := by
-  simp only [bmgK2]; exact ite_eq_left h
-theorem bmgK2_ok (h : r1.headD 0 ≠ 0) :
-    bmgK2 n nPd k nC no nl ro rl cto ctl idx (some (r1, m1)) =
-      bmgK3 n (r1.tail.tail.headD 0) (bmgW n m1 nPd k nC no nl ro rl (cto + 1) (ctl - 1) (idx + 1)) := by
-  simp only [bmgK2]; exact ite_eq_right h
-theorem bmgK3_fail (h : r1.headD 0 = 0) : bmgK3 n cb (some (r1, m1)) = some ([0, 0, 0], m1) := by
-  simp only [bmgK3]; exact ite_eq_left h
-theorem bmgK3_ok (h : r1.headD 0 ≠ 0) : bmgK3 n cb (some (r1, m1)) =
-    bsK3 (consW n m1 cb (r1.tail.headD 0) (r1.tail.tail.headD 0)) := by
-  simp only [bmgK3]; exact ite_eq_right h
-end arms
-attribute [ind_grind] bmgW_nil bmgW_cons bmgK1_ok bmgK2_fail bmgK2_ok bmgK3_fail bmgK3_ok
-
-theorem bmg_spec (p : Prog) (hP : IndPartsProg4 p) (n : Nat) :
-    ∀ (s₀ : St) (nPd k nC no nl ro rl cto ctl idx : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_member_counts_go" [nPd, k, nC, no, nl, ro, rl, cto, ctl, idx]
-    ⦃fun r s' => LocEq s' s₀ ∧ bmgW n s₀.mem nPd k nC no nl ro rl cto ctl idx = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ nPd k nC no nl ro rl cto ctl idx; rw [invoke_eq _ hP.mcGo]
-    simp only [callFn, blockMemberCountsGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ nPd k nC no nl ro rl cto ctl idx
-    rw [invoke_eq _ hP.mcGo]
-    simp only [callFn, blockMemberCountsGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        bmf_spec p hP n, blockCounts_spec p hP.alloc hP.copy hP.view hP.cons hP.piB hP.bcHead hP.bcPure
-          hP.counts n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+/-- **`block_member_counts_go` is its model `bmgW`** (generated). -/
+l_model bmg_spec (p : Prog) (hP : IndPartsProg4 p)
+  fns [hP.mcGo ↦ bmgW list]
+  specs [bmf_spec p hP n, blockCounts_spec p hP.alloc hP.copy hP.view hP.cons hP.piB hP.bcHead hP.bcPure
+    hP.counts n, slCons_specW p hP.alloc hP.copy hP.cons n]
+  grind [arena_grind, ind_grind] finish [rdW_eq]
 
 /-- `block_member_counts`' result `(ok, off, len)` against the twin's `Option (List Nat)`. -/
 def NsR (x : Option (List Nat)) (r : List Word) (m : Mem) : Prop :=
@@ -386,17 +318,18 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
   | succ n ih =>
     intro m a cto ctl idx cvTs hS hts hrs hnm hnb hix
     by_cases hl : ctl = 0
-    · rw [bmgW_nil n m nPd k nC no nl ro rl cto ctl idx hl]
+    · rw [bmgW.arm1 n m nPd k nC no nl ro rl cto ctl idx hl]
       subst hl; rw [partsPSl_nil hts]
       exact Sim.ret ⟨⟨rfl, by show decNL _ _ _ = _; simp [decNL], by simp⟩, hS, IWGrow.refl _⟩
-    rw [bmgW_cons n m nPd k nC no nl ro rl cto ctl idx hl]
+    rw [bmgW.arm2 n m nPd k nC no nl ro rl cto ctl idx hl]
     obtain ⟨pc, cv0, ts', rfl, hw, hpb, hcv0, hts'⟩ := partsPSl_cons hts hl
     rw [hw]
     simp only [ConRon.Arena.blockMemberCounts?]
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
     have hrl : rs.length = rl.toNat := (decPL_length _ hrs.1)
-    refine Sim.bindK (by simp [bmgK1]) (fun _ _ => by rw [bmgK1]) (bmfW_sim n m a ro rl rs hS hrs hnm hnb) ?_
+    refine Sim.bindK (by simp [bmgW.k_block_member_counts_find])
+      (fun _ _ => by rw [bmgW.k_block_member_counts_find]) (bmfW_sim n m a ro rl rs hS hrs hnm hnb) ?_
     rintro r1 x m1 a1 ⟨rfl, hxb, hS1, hg1⟩
     by_cases hbig : 4294967296 ≤ (encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.headD 0 ∨
         4294967296 ≤ (encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.tail.headD 0
@@ -414,7 +347,7 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
       obtain ⟨w, hw3, -, -⟩ := hd?_some (decCV_type (show decCV (erA (truncM m)) pc = some cv0 from hcv0))
       exact erecP_lt64 (truncM_er_get hw3)
     generalize hE : encONN (x.map fun q => (q.2.1, q.2.2.1)) = E at h5 h6
-    refine Sim.bindK (by simp [bmgK2]) (fun _ _ => by rw [bmgK2])
+    refine Sim.bindK (by simp [bmgW.k_block_counts]) (fun _ _ => by rw [bmgW.k_block_counts])
       (Q := fun r2 x2 m2 a2 => a2 = a1 ∧ r2 = encONN x2 ∧ (∀ p q, x2 = some (p, q) → q < 2 ^ 64) ∧
         StageR vis fe m2 a1 ∧ IWGrow m1 m2) ?_ ?_
     · revert hE
@@ -455,7 +388,8 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
       (hrs.grow decSR_mono hg02) (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.iw)
       (by rw [hidx1, hctl1]; have := hg02.iw; omega)
     rw [hidx1] at hrec
-    refine Sim.bindK (by simp [bmgK3]) (fun _ _ => by rw [bmgK3]) hrec ?_
+    refine Sim.bindK (by simp [bmgW.k_block_member_counts_go])
+      (fun _ _ => by rw [bmgW.k_block_member_counts_go]) hrec ?_
     rintro r3 x3 m3 a3 ⟨hR3, hS3, hg3⟩
     cases x3 with
     | none =>
@@ -468,7 +402,7 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
     intro r m' e
     rcases h4 : consW n m3 ((encONN (some (c1, c2))).tail.tail.headD 0) (r3.tail.headD 0) (r3.tail.tail.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at e
     · cases e
-    rw [bsK3_some] at e
+    rw [bmgW.k_sl_cons.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS4, hg4, hd4, ht4⟩ := consW_stageN h4 hS3 hb3' (hd3.get (OMono.decNL _ _))
     refine ⟨some (c2 :: ns), a3, rfl, ⟨rfl, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩, hS4,
@@ -478,19 +412,11 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
     rw [hc2'] at hd4
     exact decNL_decB hd4 (Nat.le_of_eq ht4)
 
-/-- **The model of `block_member_counts`** (at exec fuel `n + 1`). -/
-def bmcW (n : Nat) (m : Mem) (nPd k nC no nl ro rl cto ctl : Word) : Option (List Word × Mem) :=
-  if 4294967296 ≤ nPd ∨ 4294967296 ≤ k ∨ 4294967296 ≤ nC ∨ 4294967296 ≤ rl then none
-  else bmfK2 (bmgW n m nPd k nC no nl ro rl cto ctl 0)
-
-theorem bmc_spec (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s₀ : St) (nPd k nC no nl ro rl cto ctl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_member_counts" [nPd, k, nC, no, nl, ro, rl, cto, ctl]
-    ⦃fun r s' => LocEq s' s₀ ∧ bmcW n s₀.mem nPd k nC no nl ro rl cto ctl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hP.mc]
-  simp only [callFn, blockMemberCounts]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bmg_spec p hP n] <;>
-    finish (gen := 20) [bmcW]
+/-- **`block_member_counts` is its model `bmcW`** (generated; body fuel `n`). -/
+l_model bmc_spec (p : Prog) (hP : IndPartsProg4 p)
+  fns [hP.mc ↦ bmcW list]
+  specs [bmg_spec p hP n]
+  grind [arena_grind, ind_grind] pfuel
 
 end L.Ind
 

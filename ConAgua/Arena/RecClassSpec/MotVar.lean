@@ -130,7 +130,7 @@ theorem classGenIhParts_refines (p : Prog) (hp : p.lookup "class_gen_ih_parts" =
       IWGrow s₀.mem s'.mem ∧
       IhRes s'.mem r (AM.res (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (classGenIhParts_spec p hp had hopf n s₀ g t tele w d) ?_
+  refine triple_post (classGenIhParts_spec p hp had hopf (n + 1) s₀ g t tele w d) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hS', hg, hres, hA'⟩ := ihW_ok dn vis fe _ _ a₀ g t tele w d G r hS hw hcls (by omega) hA hm
   obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀ a' res hrun
