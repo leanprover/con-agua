@@ -212,7 +212,7 @@ theorem checkB_thr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR1 (by simp_all)⟩
           | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done)
           | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob] at *; simp_all; done))
-      | (rw [St.setLocs_mem']; simp_all; done)
+      | (rw [L.St.setLocs_mem]; simp_all; done)
 
 /-- **`check` with the mode word `2` on a thread's memory**: `check_b` (as `checkB_thr`). -/
 theorem checkThr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some checkJobsL)

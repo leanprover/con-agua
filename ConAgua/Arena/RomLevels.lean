@@ -265,7 +265,7 @@ l_model romLvlsGo_specW (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p)
   specs [romLevel_specW rom p hL.toLevelProg n, stkPush_spec p hL.stk_push n]
   pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
   keep [hL.no_st8]
-  grind [arena_grind] finish [Keep.size, Keep.pcap] defs
+  grind [arena_grind] finish [Keep.size, L.Front.Keep.pcap] defs
 
 section lv
 variable (rom : List UInt8)
@@ -461,7 +461,7 @@ l_model romLvlsGo_specW (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p)
   specs [romLevel_specW rom p hL.toLevelProg n, stkPush_spec p hL.stk_push n]
   pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
   keep [hL.no_st8]
-  grind [arena_grind] finish [Keep.size, Keep.pcap] nodefs
+  grind [arena_grind] finish [Keep.size, L.Front.Keep.pcap] nodefs
 
 section spec
 variable (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p)

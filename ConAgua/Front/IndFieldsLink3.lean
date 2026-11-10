@@ -129,9 +129,9 @@ macro "blk_list " kn:term "," s:term "," _s1:term "," sub:term "," lnk:term "," 
   refine ⟨?_, ?_, ?_⟩
   all_goals first
     | exact .inl ⟨l2, b4, runR_stab _ _ $stb _ _ _ _ b2' _ _ l3 b4⟩
-    | exact seenR_or ‹_› (by decide) (fun hh => lstR_move _ _ (tyStab b) p m _ b2 _ _ _ _ rfl rfl _ hh)
-    | exact seenR_or ‹_› (by decide) (fun hh => lstR_move _ _ (ctStab b) p m _ b2 _ _ _ _ rfl rfl _ hh)
-    | exact seenR_or ‹_› (by decide) (fun hh => lstR_move _ _ (recStab b) p m _ b2 _ _ _ _ rfl rfl _
+    | exact seenR_or ‹_› (by decide) (fun hh => lstR_move _ _ (L.Front.Ind.tyF_stab b) p m _ b2 _ _ _ _ rfl rfl _ hh)
+    | exact seenR_or ‹_› (by decide) (fun hh => lstR_move _ _ (L.Front.Ind.ctF_stab b) p m _ b2 _ _ _ _ rfl rfl _ hh)
+    | exact seenR_or ‹_› (by decide) (fun hh => lstR_move _ _ (L.Front.Ind.recF_stab b) p m _ b2 _ _ _ _ rfl rfl _
         hh)))
 
 set_option maxHeartbeats 2000000 in
