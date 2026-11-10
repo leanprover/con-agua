@@ -323,34 +323,34 @@ the checker with `make`, runs both checkers in interleaved rounds and
 replaces them in this section.
 
 <!-- perf-overview: begin init -->
-On `Init`, on one thread, con-agua takes **1.01× con-ron's wall time** and executes **1.31× its instructions** (2.96 instructions per cycle against con-ron's 2.31).
+On `Init`, on one thread, con-agua takes **0.99× con-ron's wall time** and executes **1.19× its instructions** (2.94 instructions per cycle against con-ron's 2.45).
 
 | on `Init`, one thread | con-agua | con-ron | con-agua ÷ con-ron |
 |---|---:|---:|---:|
-| instructions (`perf stat`) | 241.2 G | 184.5 G | 1.31 |
-| instructions per cycle | 2.96 | 2.31 |  |
-| cycles (user + kernel) | 80.3–83.2 G | 79.6–80.2 G | 1.01 |
-| wall | 18.2–18.8 s | 18.0–18.1 s | 1.01 |
-| peak RSS | 741–744 MB | 490–492 MB | 1.51 |
+| instructions (`perf stat`) | 223.7 G | 188.1 G | 1.19 |
+| instructions per cycle | 2.94 | 2.45 |  |
+| cycles (user + kernel) | 75.5–76.7 G | 76.3–79.2 G | 0.99 |
+| wall | 17.1–17.3 s | 17.2–17.9 s | 0.99 |
+| peak RSS | 627–628 MB | 330–376 MB | 1.90 |
 
-(Master `11690fd5`, 2026-10-29, `scripts/perf-overview.py`: 4 interleaved rounds of each checker under `perf stat`; the ranges are over the rounds; the ratios compare the minima, for instructions the medians; load 2–6 on 96 cores.)
+(Master `d46e06a3`, 2026-11-10, `scripts/perf-overview.py`: 4 interleaved rounds of each checker under `perf stat`; the ranges are over the rounds; the ratios compare the minima, for instructions the medians; load 4–7 on 96 cores.)
 <!-- perf-overview: end init -->
 
 **Threads** (§9): `--jobs=N` runs the records' jobs on `N` threads; `Init` has
 57 919 records.
 
 <!-- perf-overview: begin threads -->
-Master `11690fd5`, 2026-10-29, `scripts/perf-overview.py`: `Init` at each `--jobs`, 3 interleaved rounds, the median wall time, peak RSS the largest `ru_maxrss`; load 6–10 on 96 cores:
+Master `d46e06a3`, 2026-11-10, `scripts/perf-overview.py`: `Init` at each `--jobs`, 3 interleaved rounds, the median wall time, peak RSS the largest `ru_maxrss`; load 4–6 on 96 cores:
 
 | `--jobs` | con-agua wall | peak RSS | con-ron wall | peak RSS | wall ÷ |
 |---:|---:|---:|---:|---:|---:|
-| 1 | 18.36 s | 744 MB | 18.04 s | 492 MB | 1.02 |
-| 2 | 10.90 s | 1001 MB | 10.27 s | 543 MB | 1.06 |
-| 4 | 7.37 s | 1001 MB | 6.37 s | 613 MB | 1.16 |
-| 8 | 4.65 s | 1001 MB | 4.26 s | 781 MB | 1.09 |
-| 16 | 3.62 s | 1001 MB | 3.24 s | 885 MB | 1.11 |
+| 1 | 17.21 s | 627 MB | 17.14 s | 376 MB | 1.00 |
+| 2 | 9.37 s | 772 MB | 9.53 s | 396 MB | 0.98 |
+| 4 | 5.63 s | 772 MB | 5.69 s | 425 MB | 0.99 |
+| 8 | 3.75 s | 772 MB | 3.65 s | 501 MB | 1.03 |
+| 16 | 2.76 s | 772 MB | 2.73 s | 670 MB | 1.01 |
 
-con-agua's speedup over one thread is 1.7×, 2.5×, 3.9× and 5.1× at 2, 4, 8 and 16 threads (con-ron: 1.8×, 2.8×, 4.2×, 5.6×).
+con-agua's speedup over one thread is 1.8×, 3.1×, 4.6× and 6.2× at 2, 4, 8 and 16 threads (con-ron: 1.8×, 3.0×, 4.7×, 6.3×).
 <!-- perf-overview: end threads -->
 
 con-agua's threaded peak memory does not grow with the number of threads: it
@@ -361,18 +361,18 @@ the workers stay below it.
 few records), and `--jobs` costs con-agua nothing there.
 
 <!-- perf-overview: begin others -->
-Master `75c5fabb`, 2026-10-30, `scripts/perf-overview.py`: the default run, 3 interleaved rounds, the median wall time and the largest peak RSS; load 1–2 on 96 cores:
+Master `d46e06a3`, 2026-11-10, `scripts/perf-overview.py`: the default run, 3 interleaved rounds, the median wall time and the largest peak RSS; load 4–5 on 96 cores:
 
 | input | con-agua | con-ron `--jobs=1` |
 |---|---|---|
-| app-lam | 7.78 s, 1767 MB | 5.40 s, 2762 MB |
-| beta-ladder | 1.86 s, 543 MB | 1.46 s, 962 MB |
-| let-ladder | 0.76 s, 293 MB | 0.69 s, 633 MB |
-| eager_open | 2.21 s, 513 MB | 2.07 s, 1021 MB |
-| c04a | 2.03 s, 370 MB | 1.80 s, 555 MB |
-| c05b | 1.28 s, 645 MB | 0.73 s, 208 MB |
-| c03d | 0.23 s, 128 MB | 0.22 s, 250 MB |
-| init-prelude | 0.09 s, 29 MB | 0.11 s, 60 MB |
+| app-lam | 9.53 s, 1126 MB | 10.04 s, 1461 MB |
+| beta-ladder | 1.95 s, 348 MB | 1.84 s, 583 MB |
+| let-ladder | 0.72 s, 200 MB | 0.77 s, 375 MB |
+| eager_open | 2.76 s, 364 MB | 2.68 s, 627 MB |
+| c04a | 2.01 s, 255 MB | 2.25 s, 377 MB |
+| c05b | 1.24 s, 101 MB | 1.00 s, 170 MB |
+| c03d | 0.22 s, 95 MB | 0.22 s, 154 MB |
+| init-prelude | 0.10 s, 26 MB | 0.11 s, 56 MB |
 <!-- perf-overview: end others -->
 
 ## 4. Architecture
