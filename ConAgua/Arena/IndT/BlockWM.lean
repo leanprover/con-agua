@@ -10,6 +10,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.IndParts
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -45,41 +46,12 @@ def wmWrites (m : Mem) (q p mo ml : Word) : Mem :=
   let m8 := cpyIW m7 (q + 7) (p + 7)
   cpyIW m8 (q + 8) (p + 8)
 
-/-- **`block_shape_with_members`' model.** -/
-def wmW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | _n + 1, m, p, mo, ml =>
-    match allocW m 9 with
-    | none => none
-    | some (q, m3) => some ([q], wmWrites m3 q p mo ml)
-
-theorem wmW_succ (n : Nat) (m : Mem) (p mo ml : Word) : wmW (n + 1) m p mo ml =
-    (match allocW m 9 with
-    | none => none
-    | some (q, m3) => some ([q], wmWrites m3 q p mo ml)) := rfl
-
-section spec
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hp : p.lookup "block_shape_with_members" = some blockShapeWithMembers)
-include ha hp
-
-set_option maxHeartbeats 1600000 in
-theorem blockShapeWithMembers_spec (n : Nat) (s₀ : St) (q mo ml : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_with_members" [q, mo, ml]
-    ⦃fun r s' => LocEq s' s₀ ∧ wmW n s₀.mem q mo ml = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeWithMembers]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, st64,
-      iwAlloc_specW p ha n]
-    all_goals subst_vars
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      BinOp.eval, Nat.reduceEqDiff, reduceIte] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, wmWrites, cpyIW, wmW_succ]
-
-end spec
+/-- **`block_shape_with_members`' model `wmW`** (generated; its stores are `wmWrites`). -/
+l_model blockShapeWithMembers_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hp : p.lookup "block_shape_with_members" = some blockShapeWithMembers)
+  fns [hp ↦ wmW list]
+  specs [iwAlloc_specW p ha n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 /-- Word `j` of the new record. -/
 def wmWd (m : Mem) (p s f : Word) (j : Nat) : Word :=
@@ -202,19 +174,18 @@ theorem wmWrites_frame (m : Mem) (q p mo ml : Word) : MemFrame [IW] [] m (wmWrit
 
 /-- **`block_shape_with_members`' model**: a fresh record of `{ bs with members := ms }` above
 the old top, the stage kept. -/
-theorem wmW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {p mo ml : Word}
-    {r : List Word} {bs : BlockShape} {ms : List MemberShape} (h : wmW n m p mo ml = some (r, m'))
+theorem wmW_ok {vis : Word} {fe : IFEnv} {a : AState} {m m' : Mem} {p mo ml : Word}
+    {r : List Word} {bs : BlockShape} {ms : List MemberShape} (h : wmW m p mo ml = some (r, m'))
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m p.toNat) m bs) (hsl : ShapeSl m p)
     (hmsB : DecB (fun m => decPL m (decMSB m) mo.toNat ml.toNat) m ms) (hb : mo.toNat + ml.toNat ≤ iwTop m) :
     ∃ q, r = [q] ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
       DecB (fun m => decBS m q.toNat) m' { bs with members := ms } ∧ ShapeSl m' q := by
   have hms : DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) m ms := decPL_decMSB hmsB
-  cases n with
-  | zero => simp [wmW] at h
-  | succ n =>
-  rw [wmW_succ] at h
-  rcases hal : allocW m 9 with _ | ⟨q, m3⟩ <;> rw [hal] at h
-  · simp at h
+  rw [wmW.arm1] at h
+  rcases hal : allocW m 9 with _ | ⟨q, m3⟩
+  · rw [hal, wmW.k_iw_alloc.none] at h; cases h
+  rw [hal, wmW.k_iw_alloc.arm1] at h
+  change some ([q], wmWrites m3 q p mo ml) = some (r, m') at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hIsz2 := hS.iw.iwSize
   have hCsz2 := hS.iw.ctl
